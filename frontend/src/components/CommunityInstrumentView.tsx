@@ -36,9 +36,14 @@ export function CommunityInstrumentView() {
     </div>
   );
   // 상단 IndieNet 브랜드 헤더 + IBL 커뮤니티 계기
+  // 헤더 자체를 드래그 영역으로(hiddenInset 창은 이게 없으면 창을 못 움직임).
+  // pl-20 = 좌상단 트래픽 라이트(신호등)와 아이콘이 겹치지 않게 확보.
   return (
     <div className="h-full w-full flex flex-col bg-stone-50">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-stone-200 bg-white shrink-0">
+      <div
+        className="flex items-center gap-2 pl-20 pr-5 py-3 border-b border-stone-200 bg-white shrink-0"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
         <span className="text-lg">{inst.icon}</span>
         <span className="font-semibold text-stone-800">{inst.name}</span>
       </div>

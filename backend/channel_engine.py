@@ -285,6 +285,8 @@ def execute_channel_action(action: str, params: dict,
         return _community_feed(params)
     if action == "board":
         return _community_board(params)
+    if action == "follow":
+        return _community_follow(params)
     if action == "nostr":
         return _nostr_identity(params)
 
@@ -417,31 +419,91 @@ def _community_feed(params: dict) -> dict:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    # read
+    # read — 4갈래: author(특정인) > following(팔로우 타임라인) > hashtag(보드) > 기본 피드
     limit = int(params.get("limit") or 50)
+    author = params.get("author") or params.get("pubkey") or params.get("npub")
+    following = str(params.get("following") or "").lower() in ("true", "1", "yes")
     hashtag = params.get("hashtag") or params.get("board")
     try:
-        raw = (indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
-               if hashtag else indienet.fetch_posts(limit=limit))
+        if author:
+            raw = indienet.fetch_author_posts(pubkey=author, limit=limit)
+        elif following:
+            raw = indienet.fetch_following_feed(limit=limit)
+        elif hashtag:
+            raw = indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
+        else:
+            raw = indienet.fetch_posts(limit=limit)
     except Exception as e:
         return {"success": False, "error": str(e)}
 
     posts = []
     for p in raw or []:
-        author = p.get("author", "") or ""
-        short = (author[:10] + "…") if author.startswith("npub") and len(author) > 12 else author
+        full = p.get("author", "") or ""
+        short = (full[:10] + "…") if full.startswith("npub") and len(full) > 12 else full
         content = (p.get("content", "") or "").strip()
         time_str = _fmt_unix(p.get("created_at"))
         ev_id = p.get("id", "") or ""
         posts.append({
             "author": short,
+            "author_full": full,  # 저자 드릴다운·팔로우에 쓰는 전체 npub
             "content": content,
             "time": time_str,
             "id": ev_id,
         })
     # 단일 통화 — native 글 dict(author/content/time/id 등)를 items로.
-    return {"items": posts, "count": len(posts),
-            "message": "" if posts else "아직 글이 없습니다."}
+    out = {"items": posts, "count": len(posts),
+           "message": "" if posts else "아직 글이 없습니다."}
+    # 저자 드릴다운이면 그 저자를 팔로우할 수 있게 한 줄짜리 author_row 동봉.
+    if author:
+        out["author_row"] = [{
+            "pubkey": author,
+            "name": (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else author,
+        }]
+    return out
+
+
+def _community_follow(params: dict) -> dict:
+    """팔로우 관리 — op:list/add/remove. 로컬 저장(settings.follows).
+
+    나중에 이 목록을 kind:3(NIP-02)으로 발행하면 다른 Nostr 앱과 공유되는
+    포터블 소셜 그래프로 승격 가능(현재는 로컬만)."""
+    op = (params.get("op") or "list").lower()
+    try:
+        indienet = _get_indienet()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+    if op == "add":
+        pk = params.get("pubkey") or params.get("npub") or params.get("author")
+        if not pk:
+            return {"success": False, "error": "팔로우할 pubkey(npub 또는 hex)가 필요합니다."}
+        try:
+            entry = indienet.add_follow(pk, name=params.get("name"))
+            return {"success": True, "follow": entry, "message": "팔로우했습니다."}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    if op == "remove":
+        pk = params.get("pubkey") or params.get("npub") or params.get("author")
+        if not pk:
+            return {"success": False, "error": "언팔로우할 pubkey가 필요합니다."}
+        ok = indienet.remove_follow(pk)
+        return {"success": bool(ok),
+                "message": "언팔로우했습니다." if ok else "팔로우 목록에 없습니다."}
+
+    # list
+    follows = indienet.get_follows() or []
+    out = []
+    for f in follows:
+        pk = f.get("pubkey", "") or ""
+        short = (pk[:12] + "…") if pk.startswith("npub") and len(pk) > 14 else pk
+        out.append({
+            "pubkey": pk,
+            "name": f.get("name") or short,
+            "short": short,
+        })
+    return {"items": out, "count": len(out),
+            "message": "" if out else "아직 팔로우한 사람이 없습니다."}
 
 
 def _community_board(params: dict) -> dict:

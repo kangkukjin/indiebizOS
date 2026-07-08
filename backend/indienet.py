@@ -239,6 +239,10 @@ class IndieNetSettings:
         # 커스텀 보드 (해시태그 기반 비공개 게시판)
         self.boards: List[Dict[str, Any]] = []  # [{"name": "내 보드", "hashtag": "indienetkukjin", "created_at": "..."}]
         self.active_board: Optional[str] = None  # 현재 활성 보드의 hashtag (None이면 기본 IndieNet)
+        # 팔로우 목록 (로컬 저장). [{"pubkey": npub_or_hex, "name": "표시이름", "added_at": "..."}]
+        # 지금은 로컬 settings에만 둔다. 나중에 이 목록을 kind:3(NIP-02)으로 발행하면
+        # 다른 Nostr 클라이언트와 공유되는 포터블 소셜 그래프로 승격 가능(마이그레이션 1회).
+        self.follows: List[Dict[str, Any]] = []
 
     def load(self) -> bool:
         """설정 로드"""
@@ -252,6 +256,7 @@ class IndieNetSettings:
                 self.refresh_interval = data.get('refresh_interval', 60)
                 self.boards = data.get('boards', [])
                 self.active_board = data.get('active_board', None)
+                self.follows = data.get('follows', [])
             return True
         except Exception as e:
             print(f"⚠️  IndieNet: 설정 로드 실패 - {e}")
@@ -268,7 +273,8 @@ class IndieNetSettings:
                 'auto_refresh': self.auto_refresh,
                 'refresh_interval': self.refresh_interval,
                 'boards': self.boards,
-                'active_board': self.active_board
+                'active_board': self.active_board,
+                'follows': self.follows
             }
 
             with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
@@ -287,7 +293,8 @@ class IndieNetSettings:
             'auto_refresh': self.auto_refresh,
             'refresh_interval': self.refresh_interval,
             'boards': self.boards,
-            'active_board': self.active_board
+            'active_board': self.active_board,
+            'follows': self.follows
         }
 
 
@@ -1054,6 +1061,137 @@ class IndieNet:
         같은 캐시 테이블에 보드 글이 섞여 쌓이지만, 태그 필터로 #indienet 글만 반환된다.
         """
         return self.fetch_board_posts(hashtag='indienet', limit=limit, since=since)
+
+    # ============ 팔로우 (로컬 저장) + 저자별/팔로잉 피드 ============
+
+    def _pubkey_to_hex(self, pubkey: str) -> str:
+        """npub/hex → hex (안전판). 실패 시 빈 문자열.
+
+        _to_hex 와 달리 예외를 던지지 않는다(팔로우 목록에 잘못된 값이 섞여도
+        전체 조회가 죽지 않게). 폰(HAS_NOSTR=False)에서 npub 디코드는 미지원 →
+        폰은 hex 로 저장돼 있어야 한다."""
+        pk = (pubkey or "").strip()
+        if not pk:
+            return ""
+        if pk.startswith("npub"):
+            if not HAS_NOSTR:
+                return ""
+            try:
+                return PublicKey.from_npub(pk).hex()
+            except Exception:
+                return ""
+        return pk  # hex 가정
+
+    def _same_pubkey(self, a: str, b: str) -> bool:
+        """두 pubkey(npub/hex 혼재 가능)가 같은 신원인지 비교."""
+        if not a or not b:
+            return False
+        if a.strip() == b.strip():
+            return True
+        ha, hb = self._pubkey_to_hex(a), self._pubkey_to_hex(b)
+        return bool(ha) and ha == hb
+
+    def get_follows(self) -> List[Dict[str, Any]]:
+        """팔로우 목록 조회."""
+        return list(self.settings.follows)
+
+    def add_follow(self, pubkey: str, name: str = None) -> Dict[str, Any]:
+        """팔로우 추가 (로컬 저장). 이미 있으면 이름만 갱신하고 그 항목 반환."""
+        pk = (pubkey or "").strip()
+        if not pk:
+            raise ValueError("팔로우할 pubkey(npub 또는 hex)가 필요합니다")
+        for f in self.settings.follows:
+            if self._same_pubkey(f.get("pubkey", ""), pk):
+                if name and f.get("name") != name:
+                    f["name"] = name
+                    self.settings.save()
+                return f
+        entry = {
+            "pubkey": pk,
+            "name": name or "",
+            "added_at": datetime.now().isoformat(),
+        }
+        self.settings.follows.append(entry)
+        self.settings.save()
+        print(f"✓ IndieNet: 팔로우 추가 - {pk[:16]}...")
+        return entry
+
+    def remove_follow(self, pubkey: str) -> bool:
+        """언팔로우 (로컬 저장)."""
+        pk = (pubkey or "").strip()
+        for i, f in enumerate(self.settings.follows):
+            if self._same_pubkey(f.get("pubkey", ""), pk):
+                self.settings.follows.pop(i)
+                self.settings.save()
+                print(f"✓ IndieNet: 언팔로우 - {pk[:16]}...")
+                return True
+        return False
+
+    def _author_accept(self, event: dict) -> Optional[dict]:
+        """kind:1 이벤트 → 표준 글 dict. 저자 hex → npub 변환."""
+        author_hex = event.get("pubkey", "")
+        try:
+            author_npub = PublicKey(bytes.fromhex(author_hex)).bech32()
+        except Exception:
+            author_npub = author_hex
+        return {
+            "id": event.get("id"),
+            "author": author_npub,
+            "content": event.get("content", ""),
+            "created_at": event.get("created_at"),
+            "tags": event.get("tags", []),
+        }
+
+    def fetch_author_posts(self, pubkey: str, limit: int = 50,
+                           since: int = None) -> List[dict]:
+        """특정 저자의 공개 글(kind:1)만 조회. authors 필터로 릴레이 질의.
+
+        get_user_info(kind:0)·fetch_dm_relays(kind:10050)와 같은 authors 필터
+        프리미티브를 kind:1 로 재사용 — 새 릴레이 로직 없음."""
+        if not self._initialized:
+            return []
+        author_hex = self._pubkey_to_hex(pubkey)
+        if not author_hex:
+            print(f"⚠️  IndieNet: 저자 pubkey 변환 실패 - {pubkey}")
+            return []
+        try:
+            req_filter = {"kinds": [1], "authors": [author_hex], "limit": limit}
+            if since:
+                req_filter["since"] = since
+            posts = self._query_relays(req_filter, self._author_accept)
+            try:
+                self._cache_posts(posts)
+            except Exception:
+                pass
+            posts.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+            return posts[:limit]
+        except Exception as e:
+            print(f"✗ IndieNet: 저자 글 조회 실패 - {e}")
+            return []
+
+    def fetch_following_feed(self, limit: int = 50,
+                             since: int = None) -> List[dict]:
+        """팔로우한 사람 전체의 최신 글(kind:1) 타임라인. authors 목록 필터 1회 질의."""
+        if not self._initialized:
+            return []
+        hexes = [self._pubkey_to_hex(f.get("pubkey", "")) for f in self.settings.follows]
+        hexes = [h for h in hexes if h]
+        if not hexes:
+            return []
+        try:
+            req_filter = {"kinds": [1], "authors": hexes, "limit": limit}
+            if since:
+                req_filter["since"] = since
+            posts = self._query_relays(req_filter, self._author_accept)
+            try:
+                self._cache_posts(posts)
+            except Exception:
+                pass
+            posts.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+            return posts[:limit]
+        except Exception as e:
+            print(f"✗ IndieNet: 팔로잉 피드 조회 실패 - {e}")
+            return []
 
     def get_user_info(self, pubkey: str) -> Optional[dict]:
         """

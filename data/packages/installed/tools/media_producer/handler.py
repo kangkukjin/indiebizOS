@@ -76,8 +76,33 @@ def execute(tool_input: dict, context) -> str:
 
     return f"알 수 없는 도구: {tool_name}"
 
+def _normalize_tts_text(text):
+    """TTS 낭독 품질용 보수적 텍스트 정규화.
+
+    모델(edge-tts=Azure 뉴럴)의 원본 음질은 이미 좋다 — 화자를 헷갈리게 하는
+    *서식 잡음*만 걷어낸다. 한국어 본문·숫자·퍼센트·문장 구조는 건드리지 않는다
+    (edge-tts 가 이미 자연스럽게 읽으므로 손대면 오히려 위험).
+
+    제거 대상: 마크다운 링크/강조/코드 기호, 줄머리 목록·헤더 기호, 날 URL,
+    잉여 공백. 영어 약어·티커의 한글 음차는 대본 작성자(가이드 규칙)의 몫 —
+    여기서 결정적으로 바꾸면 문맥 오독 위험이 크다.
+    """
+    if not text:
+        return text
+    import re
+    t = text
+    t = re.sub(r'\[([^\]]+)\]\([^)]*\)', r'\1', t)   # [텍스트](url) → 텍스트
+    t = re.sub(r'https?://\S+', ' ', t)               # 날 URL 제거 (읽으면 재앙)
+    t = re.sub(r'(?m)^\s*[-*•·▪◦>#]+\s*', '', t)      # 줄머리 목록/헤더 기호
+    t = re.sub(r'[*_`]{1,3}', '', t)                  # 강조/코드 기호(별표·언더스코어·백틱)
+    t = re.sub(r'[ \t]+', ' ', t)                     # 가로 공백 정리
+    t = re.sub(r'\n{2,}', '\n', t)                    # 빈 줄 축소
+    return t.strip()
+
+
 async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz"):
     import edge_tts  # 지연 import — 폰엔 없음(tts는 mac_only라 폰선 호출 안 됨)
+    text = _normalize_tts_text(text)  # 서식 잡음 제거 — 모든 tts 호출(브리핑·영상 나레이션) 공통
     communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
     await communicate.save(output_path)
 

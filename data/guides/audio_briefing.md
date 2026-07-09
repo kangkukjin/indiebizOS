@@ -8,6 +8,8 @@
 2. **저장 대상은 `project_id: "앱모드"`로 지정** — mp3·스크립트가 앱모드 프로젝트 outputs 에 떨어져야 폰/앱이 찾는다. `[engines:tts]`·`[self:write]` 에 `project_id: "앱모드"` 를 실으면 라우팅이 이를 존중해 `projects/앱모드/outputs/` 로 굽는다.
    - 이 레시피는 대개 위임(`[others:delegate]{scope:"system"}`)을 통해 시스템 AI가 실행하는데, **명시 project_id 는 호출자(시스템 AI)의 컨텍스트 경로보다 우선**한다(`ibl_routing._resolve_project_path`). 그래서 하드코딩 절대경로도 `self:move` 도 필요 없다 — 데스크탑 앱·MCP·위임 어느 경로든 `project_id: "앱모드"` 하나면 목적지에 바로 떨어진다.
 3. **귀로 듣는 글** — 번호·목록 기호 없이 자연스럽게 이어지는 라디오 진행자 멘트. 3~5문장 분량의 뉴스 소개.
+   - **영어 약어·티커는 한글 음차로**: `ETF`→"이티에프", `TIGER200`→"타이거 이백", `KOSPI`→"코스피", `GDP`→"지디피". 화자가 영문 철자를 어색하게 읽는 걸 막는다(뉴스 브리핑은 한영이 섞이므로 특히 중요).
+   - **숫자·기호도 우리말로**: "0.5%"→"영 점 오 퍼센트", "^KS11" 같은 코드·기호는 대본에 넣지 않는다. (마크다운·목록기호·URL 은 코드가 자동으로 걷어내지만, 약어 음차는 작성 단계에서 해야 정확하다.)
 
 ## 절차
 
@@ -32,7 +34,8 @@
 ```
 [engines:tts]{text: "<완성 대본 전체>", output_filename: "audio_briefing_current.mp3", project_id: "앱모드"}
 ```
-(tts 는 `project_id` 로 지정한 프로젝트의 `outputs/` 에 곧장 굽는다 → move 불필요. 핵심원칙 2 참조.)
+(tts 는 `project_id` 로 지정한 프로젝트의 `outputs/` 에 곧장 굽는다 → move 불필요. 핵심원칙 2 참조.
+ 화자 기본은 `ko-KR-SunHiNeural`(여성) — 바꾸려면 `voice` 지정: 남성 `ko-KR-InJoonNeural`, 멀티링구얼 `ko-KR-HyunsuMultilingualNeural`.)
 
 ### 4) 스크립트 저장 (폰/원격 뷰어용)
 ```

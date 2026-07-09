@@ -321,10 +321,58 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     setRenamingId(null);
   };
 
-  // 아이콘 정렬 — 홈의 앱·폴더를 현재 표시 순서대로 격자에 재배치하고 지속
+  // 아이콘 정렬 — 각 아이콘을 현재 위치에서 *가장 가까운 빈 격자 칸*으로 스냅(수동 배치 보존).
+  // 순번 기반 전체 재배치(reflow)가 아니라, 손으로 정돈한 대략적 배치를 격자에 맞춰 다듬기만 한다.
   const arrangeIcons = () => {
-    const ids = [...homeApps.map((d) => d.id), ...Object.keys(layout.folders)];
-    mutate((l) => { ids.forEach((id, i) => { l.positions[id] = autoPos(i); }); return l; });
+    // 홈의 앱·폴더를 현재 픽셀 위치와 함께 수집
+    const items = [...homeApps.map((d) => d.id), ...folderTargets].map((id) => {
+      const idx = catalogIndex.get(id) ?? (APPS.length + folderTargets.indexOf(id));
+      const [x, y] = posOf(id, idx);
+      return { id, x, y };
+    });
+
+    // 픽셀 ↔ 격자 칸(col,row) 변환
+    const cellOf = (x: number, y: number): [number, number] => [
+      Math.max(0, Math.round((x - GRID_X0) / GRID_DX)),
+      Math.max(0, Math.round((y - GRID_Y0) / GRID_DY)),
+    ];
+    const posAt = (c: number, r: number): [number, number] => [GRID_X0 + c * GRID_DX, GRID_Y0 + r * GRID_DY];
+    const dist2 = (ax: number, ay: number, bx: number, by: number) => (ax - bx) ** 2 + (ay - by) ** 2;
+
+    // 자기 이상적(가장 가까운) 칸에 이미 붙어 있는 아이콘부터 자리를 확정 → 가까운 아이콘이 칸을 선점.
+    const ranked = items
+      .map((it) => {
+        const [c, r] = cellOf(it.x, it.y);
+        const [px, py] = posAt(c, r);
+        return { ...it, d: dist2(it.x, it.y, px, py) };
+      })
+      .sort((a, b) => a.d - b.d);
+
+    const taken = new Set<string>();
+    const assigned: Record<string, [number, number]> = {};
+    for (const it of ranked) {
+      const [c0, r0] = cellOf(it.x, it.y);
+      // 원하는 칸이 차 있으면 체비셰프 링을 넓혀가며 픽셀상 가장 가까운 빈 칸을 찾는다.
+      let best: [number, number] | null = null;
+      for (let radius = 0; radius < 24 && !best; radius++) {
+        let bestD = Infinity;
+        for (let dc = -radius; dc <= radius; dc++) {
+          for (let dr = -radius; dr <= radius; dr++) {
+            if (Math.max(Math.abs(dc), Math.abs(dr)) !== radius) continue; // 링 테두리만
+            const c = c0 + dc, r = r0 + dr;
+            if (c < 0 || r < 0 || taken.has(`${c},${r}`)) continue;
+            const [px, py] = posAt(c, r);
+            const d = dist2(it.x, it.y, px, py);
+            if (d < bestD) { bestD = d; best = [c, r]; }
+          }
+        }
+      }
+      const [c, r] = best ?? cellOf(it.x, it.y);
+      taken.add(`${c},${r}`);
+      assigned[it.id] = posAt(c, r);
+    }
+
+    mutate((l) => { for (const id in assigned) l.positions[id] = assigned[id]; return l; });
   };
 
   const openApp = (a: App) => {

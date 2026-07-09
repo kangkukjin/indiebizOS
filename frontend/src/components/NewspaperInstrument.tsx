@@ -67,10 +67,34 @@ async function saveMarkdownFile(title: string, dateLabel: string, sections: Sect
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
 }
 
+// 마스트헤드(제호 아래 한 줄)에 얹을 날씨·지수 — 이미 가진 어휘로 best-effort 수집.
+// 도시는 오디오브리핑과 같은 설정(localStorage 'audioBriefing.city')을 공유, 없으면 '청주'.
+// 실패는 조용히 생략(신문 발행은 뉴스가 본질 — 마스트헤드 장식이 없어도 발행은 진행).
+interface MastheadData { weather?: string; index?: string }
+async function fetchMasthead(): Promise<MastheadData> {
+  let city = '청주';
+  try { city = localStorage.getItem('audioBriefing.city') || '청주'; } catch { /* ignore */ }
+  const [wRes, kRes] = await Promise.all([
+    iblExecuteApp(`[sense:weather]{city: ${JSON.stringify(city)}}`).catch(() => null),
+    iblExecuteApp(`[sense:stock]{op: "quote", ticker: "^KS11"}`).catch(() => null),
+  ]);
+  const md: MastheadData = {};
+  const w = (wRes as { current?: { temp?: number; condition?: string } } | null)?.current;
+  if (w && w.temp != null) md.weather = `${city} ${w.condition || ''} ${Math.round(w.temp)}°`.replace(/\s+/g, ' ').trim();
+  const k = (kRes as { data?: { current_price?: number; change_percent?: number } } | null)?.data;
+  if (k && k.current_price != null) {
+    const pct = k.change_percent ?? 0;
+    const arrow = pct > 0 ? '▲' : pct < 0 ? '▼' : '·';
+    md.index = `코스피 ${k.current_price.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${arrow}${Math.abs(pct).toFixed(2)}%`;
+  }
+  return md;
+}
+
 // 공유용 자기완결 HTML 판을 PC 에 쓴다 — 폰 뷰어의 공유 버튼이 이 파일을 카톡 등으로 보낸다(친구=브라우저 열람).
 async function saveHtmlFile(title: string, dateLabel: string, sections: Section[]): Promise<void> {
   try {
-    const html = buildNewspaperHtml(title, dateLabel, sections);
+    const masthead = await fetchMasthead().catch(() => ({} as MastheadData));
+    const html = buildNewspaperHtml(title, dateLabel, sections, masthead);
     await iblExecuteApp(`[self:write]{path: ${JSON.stringify(HTML_PATH)}, content: ${JSON.stringify(html)}}`);
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
 }
@@ -101,54 +125,132 @@ async function fetchHotTopics(): Promise<NewsItem[]> {
   return Array.isArray(items) ? items : [];
 }
 
+// ── 편집신문(사용자 큐레이션) ─────────────────────────────────
+// 자동발간은 섹션당 N=7 을 그대로 싣지만, 편집신문은 사용자가 마음에 안 드는 기사를 빼면
+// '다른 뉴스'로 빈칸을 메워야 한다. 그러려면 섹션마다 N 보다 큰 후보 풀(pool)을 미리 확보해
+// 두고, 화면엔 앞 N 개(selected)만 보인다 — 검색 브라우저를 섹션마다 반복하는 셈.
+const SECTION_SIZE = 7;    // 최종 신문에 실리는 섹션당 기사 수(자동발간과 동일)
+const POOL_CURATE = 21;    // 후보 풀 크기(> N) — 제거분을 중복 없이 대체할 여유분
+// 중복 판정 키: 링크 우선, 없으면 제목.
+const itemKey = (it: NewsItem) => it.url || it.title || '';
+
+async function fetchNewsPool(keyword: string): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: ${POOL_CURATE}}`);
+  const items = (result as { items?: NewsItem[] } | null)?.items;
+  return Array.isArray(items) ? items : [];
+}
+async function fetchHotTopicsPool(): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: ${POOL_CURATE}}`);
+  const items = (result as { items?: NewsItem[] } | null)?.items;
+  return Array.isArray(items) ? items : [];
+}
+
 // ── 자기완결 HTML 내보내기(친구에게 파일로 공유) ─────────────────
 const esc = (s?: string) =>
   (s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
 
-function buildNewspaperHtml(title: string, date: string, sections: Section[]): string {
-  const sectionsHtml = sections
-    .map((sec) => {
-      const arts = sec.items
-        .map(
-          (it) => `
-      <article>
-        <h3>${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>` : esc(it.title)}</h3>
+function buildNewspaperHtml(title: string, date: string, sections: Section[], masthead?: MastheadData): string {
+  // 기사 한 건. lead=1면 톱기사(큰 제목 + 드롭캡).
+  const article = (it: NewsItem, lead = false): string => {
+    const head = it.url
+      ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a>`
+      : esc(it.title);
+    return `<article class="art${lead ? ' lead' : ''}">
+        <h3>${head}</h3>
         ${it.meta ? `<div class="meta">${esc(it.meta)}</div>` : ''}
         ${it.summary ? `<p>${esc(it.summary)}</p>` : ''}
-      </article>`
-        )
-        .join('');
-      return `<section><h2>${esc(sec.keyword)}</h2><div class="grid">${arts || '<div class="empty">관련 뉴스가 없습니다.</div>'}</div></section>`;
-    })
-    .join('');
+      </article>`;
+  };
+
+  // 섹션. first=첫 섹션이면 첫 기사를 1면 리드(전폭)로 올리고 나머지는 컬럼 흐름.
+  const sectionHtml = (sec: Section, first: boolean): string => {
+    const items = sec.items || [];
+    const rubric = `<h2 class="rubric"><span>${esc(sec.keyword)}</span></h2>`;
+    if (!items.length) {
+      return `<section class="sec">${rubric}<div class="empty">관련 뉴스가 없습니다.</div></section>`;
+    }
+    let body: string;
+    if (first) {
+      const [lead, ...rest] = items;
+      body = article(lead, true) + (rest.length ? `<div class="cols">${rest.map((it) => article(it)).join('')}</div>` : '');
+    } else {
+      body = `<div class="cols">${items.map((it) => article(it)).join('')}</div>`;
+    }
+    return `<section class="sec">${rubric}${body}</section>`;
+  };
+
+  const strip = [esc(date), masthead?.weather && esc(masthead.weather), masthead?.index && esc(masthead.index)]
+    .filter(Boolean)
+    .join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+  const sectionsHtml = sections.map((sec, i) => sectionHtml(sec, i === 0)).join('\n');
+
   return `<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${esc(title)} — ${esc(date)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&display=swap" rel="stylesheet"/>
 <style>
-  :root { color-scheme: light; }
-  body { margin:0; background:#f0f2f5; color:#2b2b34; font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif; line-height:1.55; }
-  .paper { max-width:960px; margin:0 auto; background:#fff; padding:40px 32px 56px; box-shadow:0 1px 8px rgba(0,0,0,.06); }
-  h1 { text-align:center; font-family:'Noto Serif KR',serif; font-size:2.6rem; font-weight:900; letter-spacing:-.02em; color:#1a1a2e; border-bottom:4px solid #1a1a2e; padding-bottom:16px; margin:0; }
-  .date { text-align:center; color:#8a8a95; font-size:.9rem; margin:12px 0 4px; }
-  section { margin-top:36px; }
-  h2 { font-size:1.4rem; font-weight:800; color:#1a1a2e; border-bottom:2px solid #e5e5ea; padding-bottom:8px; margin:0 0 16px; }
-  .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); }
-  article { border:1px solid #e5e5ea; border-radius:10px; padding:16px; background:#fff; }
-  article h3 { font-size:1rem; font-weight:700; line-height:1.4; margin:0 0 6px; color:#22223b; }
-  article h3 a { color:#22223b; text-decoration:none; }
-  article h3 a:hover { text-decoration:underline; }
-  .meta { font-size:.78rem; color:#9a9aa2; margin-bottom:6px; }
-  article p { font-size:.9rem; color:#55555f; margin:0; }
-  .empty { color:#9a9aa2; font-size:.9rem; }
-  footer { margin-top:48px; text-align:center; color:#b0b0b8; font-size:.8rem; border-top:1px solid #eee; padding-top:20px; }
+  :root { color-scheme:light; --paper:#fbf9f3; --ink:#1b1b1b; --muted:#6b675e; --rule:#1b1b1b; --hair:#cfc9ba; --accent:#7a1f1f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e9e4d8; color:var(--ink); line-height:1.6;
+    font-family:'Noto Serif KR',Georgia,'Times New Roman',serif; -webkit-font-smoothing:antialiased; }
+  .paper { max-width:1060px; margin:28px auto; background:var(--paper); padding:44px 52px 60px;
+    box-shadow:0 2px 24px rgba(0,0,0,.14); border:1px solid #d8d2c4; }
+  /* 마스트헤드 */
+  .dateline { display:flex; justify-content:space-between; align-items:center;
+    font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+    font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    border-bottom:1px solid var(--hair); padding-bottom:8px; }
+  .nameplate { text-align:center; font-weight:900; letter-spacing:-.02em; color:#111;
+    font-size:clamp(2.6rem,7vw,4.4rem); line-height:1; margin:.28em 0 .14em; }
+  .strip { text-align:center; font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+    font-size:.82rem; letter-spacing:.03em; color:var(--muted);
+    border-top:3px double var(--rule); border-bottom:3px double var(--rule); padding:8px 0; margin-top:4px; }
+  /* 섹션 루브릭(가로줄 관통 라벨) */
+  .sec { margin-top:34px; }
+  .rubric { display:flex; align-items:center; gap:16px; margin:0 0 18px; color:var(--accent);
+    font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+    font-size:.9rem; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+  .rubric::before, .rubric::after { content:''; flex:1; border-top:1.5px solid var(--rule); }
+  .rubric span { white-space:nowrap; }
+  /* 기사 컬럼 흐름 */
+  .cols { columns:300px 3; column-gap:30px; }
+  .art { break-inside:avoid; margin:0 0 20px; padding-bottom:16px; border-bottom:1px solid var(--hair); }
+  .art h3 { font-size:1.05rem; font-weight:700; line-height:1.35; margin:0 0 6px; }
+  .art h3 a { color:var(--ink); text-decoration:none; }
+  .art h3 a:hover { text-decoration:underline; }
+  .art .meta { font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;
+    font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .art p { font-size:.92rem; color:#33322e; margin:0; text-align:justify; hyphens:auto; }
+  /* 1면 리드 */
+  .lead { border-bottom:2px solid var(--rule); padding-bottom:20px; margin-bottom:22px; }
+  .lead h3 { font-size:1.9rem; font-weight:900; line-height:1.18; letter-spacing:-.01em; }
+  .lead p { font-size:1.02rem; color:#26251f; }
+  .lead p::first-letter { float:left; font-size:3.1em; line-height:.72; font-weight:900; padding:.02em .1em 0 0; color:var(--accent); }
+  .empty { color:var(--muted); font-style:italic; }
+  footer { margin-top:52px; border-top:1px solid var(--hair); padding-top:18px; text-align:center; color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif; font-size:.72rem; letter-spacing:.1em; }
+  @media (max-width:600px) {
+    .paper { padding:26px 20px 40px; margin:0; border:none; }
+    .cols { columns:1; }
+    .lead h3 { font-size:1.5rem; }
+  }
+  @media print {
+    body { background:#fff; }
+    .paper { box-shadow:none; border:none; margin:0; max-width:none; padding:0; }
+    .art h3 a { color:#000; }
+    @page { margin:15mm; }
+  }
 </style></head>
-<body><div class="paper">
-  <h1>${esc(title)}</h1>
-  <div class="date">${esc(date)}</div>
+<body><main class="paper">
+  <div class="dateline"><span>IndieBiz OS</span><span>나만의 신문</span></div>
+  <h1 class="nameplate">${esc(title)}</h1>
+  <div class="strip">${strip}</div>
   ${sectionsHtml}
-  <footer>IndieBiz OS · 나만의 신문</footer>
-</div></body></html>`;
+  <footer>IndieBiz OS · 나만의 신문 · 자동 편집 지면</footer>
+</main></body></html>`;
 }
 
 const todayStr = () => {
@@ -165,6 +267,146 @@ const whenLabel = (iso: string | null): string | null => {
   } catch { return null; }
 };
 
+// 편집 중인 한 섹션: pool=후보 풀(>N), selected=현재 화면 N개, rejected=사용자가 뺀 기사 키(다시 안 나옴).
+interface EditSection { keyword: string; pool: NewsItem[]; selected: NewsItem[]; rejected: string[]; error?: boolean }
+
+// pool 앞에서부터 중복 없이 size 개를 고른다(이미 있는/거부된 키 제외).
+function pickFromPool(pool: NewsItem[], size: number, exclude: Set<string>): NewsItem[] {
+  const out: NewsItem[] = [];
+  for (const it of pool) {
+    const k = itemKey(it);
+    if (!k || exclude.has(k)) continue;
+    out.push(it);
+    exclude.add(k);
+    if (out.length >= size) break;
+  }
+  return out;
+}
+
+// 편집신문 마법사 — 섹션마다 후보를 보여주고, 사용자가 뺀 자리를 중복 없이 리필, OK 시 다음 섹션.
+// 마지막 섹션 확정 시 onDone(final) 으로 완성 섹션을 부모에 넘긴다(저장·렌더는 부모의 자동발간 경로 재사용).
+function EditFlow({ keywords, onDone, onCancel }: {
+  keywords: string[];
+  onDone: (sections: Section[]) => void;
+  onCancel: () => void;
+}) {
+  const [secs, setSecs] = useState<EditSection[] | null>(null);
+  const [step, setStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  // 진입 시 모든 섹션의 후보 풀을 한 번에 팬아웃(핫토픽 + 키워드들).
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoading(true); setErr(null);
+      try {
+        const [hot, kwPools] = await Promise.all([
+          fetchHotTopicsPool().catch(() => [] as NewsItem[]),
+          Promise.all(keywords.map(async (kw): Promise<{ kw: string; pool: NewsItem[]; error?: boolean }> => {
+            try { return { kw, pool: await fetchNewsPool(kw) }; }
+            catch { return { kw, pool: [], error: true }; }
+          })),
+        ]);
+        if (!alive) return;
+        const mk = (keyword: string, pool: NewsItem[], error?: boolean): EditSection => {
+          const used = new Set<string>();
+          return { keyword, pool, selected: pickFromPool(pool, SECTION_SIZE, used), rejected: [], error };
+        };
+        const built: EditSection[] = [];
+        if (hot.length) built.push(mk(HOT_KEYWORD, hot));
+        for (const { kw, pool, error } of kwPools) built.push(mk(kw, pool, error));
+        if (!built.length) { setErr('불러올 섹션이 없습니다. 키워드를 확인하세요.'); }
+        setSecs(built);
+      } catch { if (alive) setErr('뉴스를 불러오지 못했습니다.'); }
+      finally { if (alive) setLoading(false); }
+    })();
+    return () => { alive = false; };
+  }, [keywords]);
+
+  // 기사 제거 → 거부 목록에 넣고, 풀에서 아직 안 쓰고 안 거부된 다음 기사로 빈칸 보충(중복 없음).
+  const removeItem = (idx: number) => {
+    setSecs((prev) => {
+      if (!prev) return prev;
+      const next = prev.slice();
+      const s = next[step];
+      const removed = s.selected[idx];
+      const rejected = removed ? [...s.rejected, itemKey(removed)] : s.rejected;
+      const selected = s.selected.filter((_, i) => i !== idx);
+      const exclude = new Set<string>([...selected.map(itemKey), ...rejected]);
+      const fill = pickFromPool(s.pool, 1, exclude);
+      next[step] = { ...s, selected: [...selected, ...fill], rejected };
+      return next;
+    });
+  };
+
+  const confirmSection = () => {
+    if (!secs) return;
+    if (step + 1 < secs.length) { setStep((n) => n + 1); return; }
+    onDone(secs.map((s) => ({ keyword: s.keyword, items: s.selected, error: s.error })));
+  };
+
+  const cur = secs?.[step];
+  const total = secs?.length ?? 0;
+  const poolLeft = cur ? cur.pool.length - cur.selected.length - cur.rejected.length : 0;
+
+  return (
+    <div className="flex-1 min-h-0 overflow-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-sm text-stone-500">
+            {loading ? '후보 뉴스를 모으는 중…'
+              : total ? <>섹션 <b className="text-stone-800">{step + 1}</b> / {total} — 마음에 안 드는 기사를 빼면 다른 뉴스로 채워집니다.</>
+              : ''}
+          </div>
+          <button onClick={onCancel}
+            className="text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-stone-50">
+            편집 취소
+          </button>
+        </div>
+
+        {err && <div className="text-center text-rose-500 text-sm py-6">{err}</div>}
+        {loading && <div className="text-center text-stone-400 text-sm py-16">후보 뉴스를 모으는 중…</div>}
+
+        {!loading && cur && (
+          <div className="bg-white rounded-xl shadow-sm px-6 py-6">
+            <h2 className="text-2xl font-bold text-[#1a1a2e] border-b-2 border-stone-200 pb-2 mb-1">{cur.keyword}</h2>
+            <div className="text-xs text-stone-400 mb-4">
+              {cur.selected.length}건 선택됨{poolLeft > 0 ? ` · 대체 후보 ${poolLeft}건 남음` : ' · 대체 후보 소진'}
+            </div>
+            {cur.selected.length === 0 ? (
+              <div className="text-sm text-stone-400 py-2">{cur.error ? '뉴스를 불러오지 못했습니다.' : '남은 후보가 없습니다.'}</div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {cur.selected.map((it, i) => (
+                  <article key={itemKey(it) || i} className="relative border border-stone-200 rounded-lg p-4 pr-9 flex flex-col bg-white">
+                    <button onClick={() => removeItem(i)} title="이 기사 빼기"
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full text-stone-300 hover:text-white hover:bg-rose-500 leading-none flex items-center justify-center">✕</button>
+                    <h3 className="text-base font-semibold leading-snug text-[#22223b] mb-1.5">{it.title}</h3>
+                    {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
+                    {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}
+                    {it.url && (
+                      <button onClick={() => openExternal(it.url)}
+                        className="mt-auto self-start text-sm font-semibold text-[#3d5a80] hover:underline">기사 보기 →</button>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-stone-100">
+              <button onClick={confirmSection}
+                className="text-sm px-4 py-2 rounded-lg border border-stone-800 bg-[#1a1a2e] text-white hover:opacity-90">
+                {step + 1 < total ? '이 섹션 확정 · 다음 →' : '✓ 편집 완료 · 신문 발행'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function NewspaperInstrument() {
   const [keywords, setKeywords] = useState<string[]>(loadKeywords);
   const [title, setTitle] = useState<string>(() => localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE);
@@ -175,6 +417,7 @@ export function NewspaperInstrument() {
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [editFlow, setEditFlow] = useState(false);  // 편집신문 마법사 활성 여부
   // date=마스트헤드에 찍히는 발행일(스냅샷). 새로 발행하면 오늘로, 저장된 판을 열면 그 판의 발행일.
   const [date, setDate] = useState<string>(todayStr);
   const [issuedAt, setIssuedAt] = useState<string | null>(null);
@@ -232,6 +475,20 @@ export function NewspaperInstrument() {
 
   const copyShare = () => { if (shareUrl) navigator.clipboard?.writeText(shareUrl); };
 
+  // 완성된 섹션들을 최신 판으로 확정·저장 — 자동발간과 편집신문이 공유하는 저장 경로.
+  //  JSON(데스크톱 카드 재렌더) + MD(폰/원격 뷰어·공유) + HTML(폰 공유) 셋 다 같은 sections 에서 파생.
+  const commitEdition = useCallback(async (all: Section[]) => {
+    const nowLabel = todayStr();
+    const iso = new Date().toISOString();
+    setSections(all);
+    setDate(nowLabel);
+    setIssuedAt(iso);
+    const ttl = title || DEFAULT_TITLE;
+    await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso });
+    await saveMarkdownFile(ttl, nowLabel, all);  // 폰 뷰어 표시용
+    await saveHtmlFile(ttl, nowLabel, all);      // 폰 공유용(카톡 등)
+  }, [keywords, title]);
+
   // 새로 발행 = 키워드마다 search_gnews 팬아웃 → 섹션 → 판을 저장. (버튼을 눌러야만 실행; 열 때 자동 재취재 없음.)
   const issue = useCallback(async () => {
     setLoading(true); setError(null);
@@ -249,23 +506,22 @@ export function NewspaperInstrument() {
       const all: Section[] = [];
       if (hot.length) all.push({ keyword: HOT_KEYWORD, items: hot });
       all.push(...kwSections);
-      const nowLabel = todayStr();
-      const iso = new Date().toISOString();
-      setSections(all);
-      setDate(nowLabel);
-      setIssuedAt(iso);
-      // 발행된 판을 최신 하나로 저장 → 다음에 열면 재취재 없이 이 판을 보여준다.
-      // JSON(데스크톱 카드 재렌더) + MD(폰/원격 뷰어·공유) 둘 다 — PC 가 만들고 폰은 MD 를 본다.
-      const ttl = title || DEFAULT_TITLE;
-      await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso });
-      await saveMarkdownFile(ttl, nowLabel, all);  // 폰 뷰어 표시용(blocks)
-      await saveHtmlFile(ttl, nowLabel, all);      // 폰 공유용(카톡 등)
+      await commitEdition(all);
     } catch {
       setError('서버에 연결할 수 없습니다.');
     } finally {
       setLoading(false);
     }
-  }, [keywords, title]);
+  }, [keywords, commitEdition]);
+
+  // 편집신문 완료 → 사용자가 큐레이션한 섹션을 그대로 확정·저장(재취재 없음). 이후 일반 신문 뷰로 복귀.
+  const finishEdit = useCallback(async (edited: Section[]) => {
+    setEditFlow(false);
+    setLoading(true); setError(null);
+    try { await commitEdition(edited); }
+    catch { setError('신문 저장 중 오류가 발생했습니다.'); }
+    finally { setLoading(false); }
+  }, [commitEdition]);
 
   // 열 때: 저장된 최신 판을 보여준다(재취재 없음). 없으면 빈 상태 → 사용자가 '새로 발행'을 눌러 첫 판을 만든다.
   useEffect(() => {
@@ -306,7 +562,11 @@ export function NewspaperInstrument() {
             className="text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-40">
             {publishing ? '발행 중…' : '🔗 링크로 발행'}
           </button>
-          <button onClick={issue} disabled={loading}
+          <button onClick={() => { setError(null); setShareUrl(null); setEditFlow(true); }} disabled={loading || editFlow}
+            className="text-xs px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40">
+            ✏️ 편집신문 만들기
+          </button>
+          <button onClick={issue} disabled={loading || editFlow}
             className="text-xs px-2.5 py-1 rounded-lg border border-stone-800 bg-[#1a1a2e] text-white hover:opacity-90 disabled:opacity-40">
             🗞 {loading ? '발행 중…' : '새로 발행'}
           </button>
@@ -351,7 +611,11 @@ export function NewspaperInstrument() {
         </div>
       )}
 
+      {/* 편집신문 마법사 — 활성 시 본문 대신 단계별 큐레이션 화면 */}
+      {editFlow && <EditFlow keywords={keywords} onDone={finishEdit} onCancel={() => setEditFlow(false)} />}
+
       {/* 신문 본문 */}
+      {!editFlow && (
       <div className="flex-1 min-h-0 overflow-auto px-4 py-6">
         <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-sm px-8 py-8">
           {/* 제호 */}
@@ -399,6 +663,7 @@ export function NewspaperInstrument() {
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 }

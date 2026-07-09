@@ -292,6 +292,32 @@ def _action_description(node: str, action: str) -> str:
         return ""
 
 
+def _effect_description(node: str, action: str, params: dict) -> str:
+    """이 호출이 실제로 무엇을 하는지 (dry-run 효과 설명).
+
+    op 분기가 있는 액션이면 액션 전체의 두루뭉술한 설명 대신, 지금 고른 op
+    (없으면 기본 op)의 구체적 효과를 보여준다. 조종실 검수 패널이 "무엇을
+    하는지"를 op 단위로 정확히 읽게 한다.
+    """
+    try:
+        from ibl_access import _load_nodes_data
+        data = _load_nodes_data() or {}
+        ac = (data.get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})) or {}
+        base = ac.get("description", "")
+        ops = ac.get("ops") or {}
+        values = ops.get("values") or {}
+        if values:
+            op = (params or {}).get("op") or ops.get("default")
+            op_desc = values.get(op)
+            if op_desc:
+                # op 효과만 — 액션 정체는 아래 [node:action] 코드가 이미 보여준다.
+                # 전체 설명을 덧붙이면 사용자가 지적한 "두루뭉술한 요약"이 되돌아온다.
+                return f"{op}: {op_desc}"
+        return base
+    except Exception:
+        return _action_description(node, action)
+
+
 def _load_safety_map() -> dict:
     """self-check가 만든 부작용 분류(self_check_plan.json)를 (node, action) → safe(bool)로.
 
@@ -390,7 +416,7 @@ async def validate_ibl(req: ValidateRequest):
         steps.append({
             "node": node, "action": action, "params": params,
             "kind": "action",
-            "effect": _action_description(node, action) or "(설명 없음)",
+            "effect": _effect_description(node, action, params) or "(설명 없음)",
             "safety": safety,
             "valid": ok, "error": err,
             "param_warning": param_warning,

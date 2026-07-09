@@ -17,6 +17,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } fro
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { DirectionsInstrument } from './DirectionsInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
+import { AudioBriefingInstrument } from './AudioBriefingInstrument';
 import { BinNote } from './BinNote';
 import { YtMusicInstrument } from './YtMusicInstrument';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
@@ -60,6 +61,12 @@ const STATIC_DOMAINS: Domain[] = [
     ],
   },
   {
+    id: 'audio_briefing', icon: '🎙', label: '오디오 브리핑',
+    instruments: [
+      { id: 'audio_briefing', icon: '🎙', label: '오디오 브리핑', el: <AudioBriefingInstrument /> },
+    ],
+  },
+  {
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
       { id: 'photo', icon: '📷', label: '사진', onOpen: () => window.electron?.openPhotoManagerWindow?.(null) },
@@ -83,7 +90,7 @@ const STATIC_DOMAINS: Domain[] = [
 
 // 홈 그리드 기본 배치 순서 (평탄화된 앱 id 기준 — 사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리).
 const HOME_ORDER = [
-  'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'photo', 'files', 'launch',
+  'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'audio_briefing', 'photo', 'files', 'launch',
   'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
 ];
 

@@ -319,6 +319,26 @@ def execute(tool_input: dict, context) -> str:
                 path = str(get_base_path() / "data" / raw_path)
             else:
                 path = os.path.join(project_path, raw_path)
+            # client:true — 파일을 바이너리로 읽어 호출한 몸(폰)이 네이티브 저장하도록 b64 봉투로 반환.
+            # 폰 /ibl/execute 프록시(phone_api)가 download_in_client+b64 를 가로채 MediaStore(Music)에
+            # 네이티브 저장 → 음악앱이 인식(오프라인·백그라운드·잠금화면 재생). 텍스트 read 와 달리
+            # 바이너리(mp3·pdf·이미지)를 나른다. 일반 능력: 어떤 맥 파일이든 부른 몸으로. (오디오 브리핑
+            # "폰에 저장" 이 소비자 — [self:read]{path, client:true, mime:"audio/mpeg"}@hub)
+            if tool_input.get("client"):
+                import base64 as _b64
+                import mimetypes as _mt
+                if not os.path.isfile(path):
+                    return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
+                with open(path, 'rb') as _bf:
+                    _bytes = _bf.read()
+                _fn = os.path.basename(path)
+                _mime = (tool_input.get("mime") or "").strip() or _mt.guess_type(_fn)[0] or "application/octet-stream"
+                return json.dumps({
+                    "success": True, "download_in_client": True,
+                    "filename": _fn, "mime": _mime, "bytes": len(_bytes),
+                    "b64": _b64.b64encode(_bytes).decode("ascii"),
+                    "message": f"{_fn} 을(를) 폰에 저장 준비",
+                }, ensure_ascii=False)
             # blocks: 문서를 *타입 있는 문서 IR* items 로 반환(2026-07-03 승격 — 옛 {text}
             # 문단 조각은 표면에서 마크다운이 생으로 보였음). markdown_to_blocks(backend/doc_ir)
             # 가 heading/list/quote/table/code/divider 를 살려 blocks 뷰·render_document 가

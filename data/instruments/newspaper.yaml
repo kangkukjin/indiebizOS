@@ -30,3 +30,10 @@ modes:
     buttons:
       - label: 📤 폰에 저장·공유
         action: '[self:read]{path: "outputs/newspaper_current.html", scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'
+
+  # ── 발행: 시스템 AI(허브=PC)에 신문 발행 위임 — 폰/원격 어디서든 누르면 PC 에서 발행.
+  #  레시피=guides/newspaper_guide.md 현행 절(고정 파일 newspaper_current.md 에 저장). 정기보고 '작성' 선례. ──
+  - name: 발행
+    buttons:
+      - label: 📰 새 신문 발행
+        action: '[others:delegate]{scope: "system", message: "신문 새로 발행해줘 — newspaper_guide.md 현행 발행 레시피대로(핫토픽+키워드 섹션 gnews 팬아웃) 고정 파일(newspaper_current.md, project_id 앱모드)에 발행", from_agent: "신문앱"}@hub'

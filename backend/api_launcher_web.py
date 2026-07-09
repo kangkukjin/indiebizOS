@@ -2153,6 +2153,17 @@ function renderPrim(p,vi,data){
         '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div></div>';
     }).join('')+'</div>';
   }
+  if(p.type==='media_player'){
+    const arr=viewList(data,p.from);
+    if(!arr.length) return emptyMsg(p,data);
+    return arr.map(it=>{
+      const raw=p.src?tpl(p.src,it):'';
+      // 절대 URL 은 그대로, 백엔드 파일 절대경로는 /launcher/file 로 서빙(원격=동일오리진 상대경로).
+      const src=raw?(/^(https?:|data:)/.test(raw)?raw:'/launcher/file?path='+encodeURIComponent(raw)):'';
+      const title=p.title?tpl(p.title,it):'';
+      return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+(src?'<audio controls preload="metadata" src="'+src+'" style="width:100%"></audio>':'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
+    }).join('');
+  }
   if(p.type==='thread'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);

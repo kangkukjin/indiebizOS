@@ -393,7 +393,7 @@
     {
       "id": "newspaper",
       "name": "신문 제작 가이드",
-      "description": "뉴스를 수집하여 HTML 신문으로 제작. 구글 뉴스, 가디언 등 다양한 소스 지원. 2컬럼 카드 그리드 포맷.",
+      "description": "오늘의 핫토픽과 관심 키워드 섹션을 구글뉴스(search_gnews) 팬아웃으로 모아 신문 형태로 발행. 고정 파일 newspaper_current.md(project_id 앱모드)에 저장 — 폰/원격이 @hub로 읽어 본다. (옛 engines:newspaper 은퇴)",
       "keywords": [
         "신문",
         "뉴스",
@@ -408,9 +408,31 @@
         "구글뉴스",
         "기사",
         "모아서",
-        "수집"
+        "수집",
+        "발행",
+        "새로 발행"
       ],
       "file": "newspaper_guide.md"
+    },
+    {
+      "id": "audio_briefing",
+      "name": "오디오 브리핑 제작 가이드",
+      "description": "오늘의 날씨·코스피/TIGER200 등락·핫뉴스를 라디오 진행자 멘트로 엮어 TTS 음성(mp3)으로 만드는 레시피. 고정 파일 audio_briefing_current.mp3/.md(project_id 앱모드)에 저장 — 데스크탑·폰·원격이 그 파일을 재생.",
+      "keywords": [
+        "오디오 브리핑",
+        "브리핑",
+        "음성 브리핑",
+        "audio briefing",
+        "briefing",
+        "라디오",
+        "낭독",
+        "TTS 브리핑",
+        "음성 뉴스",
+        "오디오 뉴스",
+        "듣는 뉴스",
+        "브리핑 만들"
+      ],
+      "file": "audio_briefing.md"
     },
     {
       "id": "deep_research",

@@ -628,11 +628,11 @@ export default function ManualMode() {
                   <div className="text-[11px] text-stone-400 px-1 mb-1">{NODE_GLOSS[g.node] || g.node}</div>
                   <div className="space-y-1.5">
                     {g.actions.map((a) => (
-                      <div key={a.name} className="px-1">
+                      <div key={a.name} className="px-1 py-1 rounded-lg hover:bg-stone-50/80 transition">
                         <div className="flex flex-wrap items-center gap-1.5">
                           <button
                             onClick={() => seedFromAction(g.node, a.name, a.targetKey, a.opDefault || undefined)}
-                            title={a.description}
+                            title="클릭하면 명령줄에 넣습니다"
                             className="px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[12px] text-stone-700 font-mono transition"
                           >
                             <span className="text-stone-400">{g.node}:</span>{a.name}
@@ -649,8 +649,26 @@ export default function ManualMode() {
                             </button>
                           ))}
                         </div>
+                        {/* 정체(무슨 일을 하는지) — 늘 보이게. 예전엔 hover 툴팁에만 있어 "뭔지 모르겠던" 부분 */}
+                        {a.description && (
+                          <div className="text-[12px] text-stone-600 mt-1 leading-snug">{a.description}</div>
+                        )}
+                        {/* op별 뜻 — 분기가 있으면 각 op가 무슨 일인지 펼쳐 보여준다 */}
+                        {a.ops.length > 0 && (
+                          <ul className="mt-1 space-y-0.5">
+                            {a.ops.map((o) => (
+                              <li key={o.op} className="text-[11px] text-stone-500 leading-snug flex gap-1.5">
+                                <span className="font-mono text-amber-700 shrink-0">{o.op}{o.op === a.opDefault ? '★' : ''}</span>
+                                <span>{o.desc}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {/* 인자/사용법 */}
                         {a.targetDesc && (
-                          <div className="text-[10px] text-stone-400 mt-0.5 leading-snug">{a.targetDesc}</div>
+                          <div className="text-[10px] text-stone-400 mt-1 leading-snug">
+                            <span className="text-stone-300">인자 · </span>{a.targetDesc}
+                          </div>
                         )}
                       </div>
                     ))}

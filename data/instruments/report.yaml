@@ -63,6 +63,24 @@ modes:
             - type: blocks
               from: items
 
+  # ── 가이드: 각 보고서를 만드는 레시피(가이드 파일) 본문 (@hub = PC 에서 읽기) ──
+  #  보고서는 data/guides/*.md 레시피에 기초해 생성된다. 그 레시피를 앱에서 바로 열어 본다.
+  - name: 가이드
+    auto_run: true
+    inputs:
+      - key: guide
+        type: select
+        placeholder: 보고서 종류
+        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md"
+        options:
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md",   label: AI 동향 보고서 가이드}
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
+    action: '[self:read]{path: "$guide", scope: "workspace", blocks: true}@hub'
+    view:
+      - type: blocks
+        from: items
+        empty: 가이드 파일을 찾을 수 없습니다.
+
   # ── 작성: 자율주행(시스템 AI)에 보고서 작성 위임 ──
   - name: 작성
     buttons:

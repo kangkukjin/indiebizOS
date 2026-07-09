@@ -385,6 +385,9 @@ async def _mac_proxy(request: Request, path: str, *, timeout: float = 60.0):
         ct = request.headers.get("content-type")
         if ct:
             headers["content-type"] = ct
+        rng = request.headers.get("range")  # 오디오/비디오 시킹 — Range 를 맥으로 전달(FileResponse 206 통과)
+        if rng:
+            headers["range"] = rng
         async with httpx.AsyncClient(timeout=timeout) as c:
             return await c.request(method, f"{_mac_url}{path}",
                                    content=body or None, params=params or None,
@@ -402,7 +405,16 @@ async def _mac_proxy(request: Request, path: str, *, timeout: float = 60.0):
 
 
 def _relay(r):
-    """httpx.Response → JSONResponse(가능하면 JSON, 아니면 텍스트)."""
+    """httpx.Response → 폰 응답. **바이너리/미디어(오디오·이미지·비디오·pdf·octet-stream)는
+    원본 Content-Type + 원본 바이트로 통과**한다 — 예전엔 전부 JSON 으로 강제해 mp3 가 깨진
+    텍스트로 `{"response": ...}` 래핑돼 <audio> 가 재생 못 했다(폰 오디오 브리핑 재생 버튼
+    무반응의 원인). JSON/텍스트 응답은 기존대로."""
+    ct = (r.headers.get("content-type") or "").lower()
+    if ct and not ct.startswith("text/") and "json" not in ct:
+        from starlette.responses import Response as _Resp
+        headers = {k: r.headers[k] for k in ("content-range", "accept-ranges", "content-length")
+                   if k in r.headers}
+        return _Resp(content=r.content, status_code=r.status_code, media_type=ct, headers=headers)
     try:
         return JSONResponse(r.json(), status_code=r.status_code)
     except Exception:

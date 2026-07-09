@@ -1,0 +1,53 @@
+# 오디오 브리핑 앱(원격/폰용) — 어휘 없는 순수 매니페스트 (상부구조). 신문과 같은 "PC 문서" 형(型).
+#
+# PC(데스크톱 오디오 브리핑 계기 = frontend/src/components/AudioBriefingInstrument.tsx)가
+# "브리핑 만들기" 시 스크립트를 만들어 mp3(TTS)로 굽고, 판을 파일로 projects/앱모드/outputs/ 에
+# 저장한다(audio_briefing_current.mp3=오디오 · .md=스크립트 뷰어용, 둘 다 고정 파일명 "현재 판").
+#
+# ★오디오 파리티: mp3 재생은 media_player 뷰로 원격까지 온다 — file_find@hub 로 PC 의 mp3
+#  절대경로를 얻어 백엔드 /launcher/file 로 서빙(원격=터널 동일오리진, 폰=맥 포워드).
+#  폰 네이티브에 파일로 내리려면 스크립트 탭의 공유 버튼(텍스트) 또는 [limbs:phone]{op:save} 확장.
+#
+# ★다중 노드(신문과 동일 크리스털라이즈): 판 파일은 PC(맥)에 산다. 읽기를 `@hub`(주 컴퓨트
+#  노드=PC)로 지정 → 맥에선 로컬, 폰에선 맥으로 포워드해 당겨온다.
+
+instrument: audio_briefing
+icon: 🎙
+name: 오디오 브리핑
+order: 17
+
+modes:
+  # ── 재생: PC 가 구운 최신 mp3 를 @hub 로 찾아 오디오 플레이어로 재생(원격/폰 파리티). ──
+  - name: 재생
+    auto_run: true
+    action: '[self:file_find]{pattern: "audio_briefing_current.mp3", path: "outputs"}@hub'
+    view:
+      - type: media_player
+        from: items
+        src: "{url}"
+        empty: 아직 만들어진 브리핑이 없습니다 — PC 의 오디오 브리핑 앱에서 "브리핑 만들기"를 눌러 만드세요.
+    # 폰 네이티브 재생: mac mp3 를 @hub 로 b64 봉투로 받아 폰 프록시가 Music 폴더에 저장 →
+    # 폰 음악앱이 인식(오프라인·백그라운드·잠금화면 재생). 이동 중 청취가 오디오 브리핑의 본질.
+    buttons:
+      - label: 🎧 폰 음악앱에 저장
+        action: '[self:read]{path: "outputs/audio_briefing_current.mp3", client: true, mime: "audio/mpeg"}@hub'
+  # ── PC 가 만든 최신 브리핑 스크립트를 읽어 보여준다(재생성 없음). @hub = PC 에서 읽기. ──
+  - name: 스크립트
+    auto_run: true
+    action: '[self:read]{path: "outputs/audio_briefing_current.md", scope: "workspace", blocks: true}@hub'
+    view:
+      - type: blocks
+        from: items
+        empty: 아직 만들어진 브리핑이 없습니다 — PC 의 오디오 브리핑 앱에서 "브리핑 만들기"를 눌러 만드세요.
+    # 폰에 저장·공유 — 스크립트 텍스트를 @hub 로 읽어 폰 공유 시트로. mp3 오디오 자체는
+    # 데스크탑 앱의 "mp3 저장" 버튼으로 받는다(바이너리라 이 경로로는 나르지 않음).
+    buttons:
+      - label: 📤 스크립트 폰에 저장·공유
+        action: '[self:read]{path: "outputs/audio_briefing_current.md", scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "audio_briefing.md", mime: "text/markdown"}'
+
+  # ── 만들기: 시스템 AI(허브=PC)에 오늘 브리핑 생성 위임 — 폰/원격 어디서든 누르면 PC 에서 생성.
+  #  레시피=guides/audio_briefing.md (고정 파일 audio_briefing_current.mp3/.md 에 저장). 정기보고 '작성' 선례. ──
+  - name: 만들기
+    buttons:
+      - label: 🎙 오늘 브리핑 새로 만들기
+        action: '[others:delegate]{scope: "system", message: "오디오 브리핑 만들어줘 — 오늘 날씨·코스피·TIGER200 등락·핫뉴스를 guides/audio_briefing.md 레시피대로 고정 파일 audio_briefing_current.mp3/.md 로 생성. ★저장은 반드시 절대경로 projects/앱모드/outputs/ 로: TTS 는 data/outputs 에 구운 뒤 self:move 로 옮기고, md 는 절대경로로 self:write (위임 시 project_path 가 data 로 고정돼 project_id 파라미터로는 못 바꾼다 — 가이드 핵심원칙 2)", from_agent: "오디오브리핑앱"}@hub'

@@ -1,6 +1,15 @@
 # 신문 제작 가이드
 
-뉴스를 수집하여 HTML 신문 형태로 보여줍니다.
+뉴스를 수집하여 신문 형태로 보여줍니다.
+
+## ★현행 발행 레시피 (2026-07 — "신문 만들어줘"/"새로 발행" 위임 시 이대로)
+> 아래 옛 `[engines:newspaper]` 어휘는 **은퇴**했다. 현행 신문은 `[sense:search_gnews]` 팬아웃으로 만든다.
+
+1. **핫토픽**: `[sense:search_gnews]{headlines: true, curate: 7}` — 오늘 가장 많이 다뤄진 사건.
+2. **섹션별 기사**: 사용자 관심 키워드(예: AI, 청주, 경제 — 프로필 반영)마다 `[sense:search_gnews]{curate: 5}` 로 섹션 하나씩.
+3. **조립·저장(고정명)**: 핫토픽+섹션들을 마크다운 신문으로 엮어 고정 파일에 저장 —
+   `[self:write]{path: "outputs/newspaper_current.md", content: "<신문 마크다운>", project_id: "앱모드"}`.
+   ★ **project_id: "앱모드"** 필수(폰/원격이 이 고정 파일을 @hub 로 읽는다). 완료 조건 = `projects/앱모드/outputs/newspaper_current.md` 갱신.
 
 ---
 

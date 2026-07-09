@@ -63,7 +63,7 @@ export interface AppComposeChannels {
 }
 
 export interface AppViewPrim {
-  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar' | 'blocks';
+  type: 'metric' | 'kv' | 'kv_list' | 'card_list' | 'image_grid' | 'sparkline' | 'list_action' | 'thread' | 'form' | 'editable_list' | 'map' | 'group' | 'calendar' | 'blocks' | 'media_player';
   [k: string]: unknown;
 }
 
@@ -286,6 +286,8 @@ const imageUrl = (p: string) => `${IMAGE_BASE}/image?path=${encodeURIComponent(p
 // view 통화의 image 필드: 절대 URL(http…·data:)이면 그대로, 백엔드 상대경로(/photo/thumbnail?path=…)면 IMAGE_BASE 부착.
 // 데스크탑(file://·dev 5173)은 origin이 백엔드와 달라 상대경로가 깨지므로 필수. book/invest 외부 http URL은 무영향.
 const mediaSrc = (u: string) => (u && u.startsWith('/')) ? `${IMAGE_BASE}${u}` : u;
+// media_player 오디오 소스: 절대 URL(http/data)은 그대로, 그 외(백엔드 파일 절대경로)는 /launcher/file 로 서빙.
+const audioUrl = (u: string) => !u ? '' : (/^(https?:|data:)/.test(u) ? u : `${IMAGE_BASE}/launcher/file?path=${encodeURIComponent(u)}`);
 
 /** attachment_path(JSON 배열 또는 레거시 단일 문자열) → 경로 배열 */
 function parseImagePaths(v: unknown): string[] {
@@ -1081,6 +1083,26 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
     return (
       <div className="bg-white border border-stone-200 rounded-xl px-5 py-4">
         {arr.map((b, i) => <DocBlock key={i} b={b} />)}
+      </div>
+    );
+  }
+
+  if (p.type === 'media_player') {
+    const arr = asList(data, p.from);
+    if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    return (
+      <div className="flex flex-col gap-3">
+        {arr.map((it, i) => {
+          const src = audioUrl(p.src ? tpl(p.src, it) : '');
+          const title = p.title ? tpl(p.title, it) : '';
+          return (
+            <div key={i} className="bg-white border border-stone-200 rounded-xl px-4 py-3">
+              {title && <div className="text-sm font-semibold text-stone-800 mb-2">{title}</div>}
+              {src ? <audio controls preload="metadata" src={src} className="w-full" />
+                   : <div className="text-xs text-stone-400">재생할 오디오가 없습니다.</div>}
+            </div>
+          );
+        })}
       </div>
     );
   }

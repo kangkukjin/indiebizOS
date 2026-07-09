@@ -48,6 +48,50 @@ _IMG_EXT_BY_MEDIA = {
     "image/webp": ".webp",
 }
 
+# 프론트엔드가 채팅 텍스트에서 인식하는 지도 봉투 타입 (chatUtils.parseMapData 계약).
+_MAP_ENVELOPE_TYPES = ("route_map", "location_map")
+
+
+def _extract_map_tags(tool_result_text: str) -> List[str]:
+    """도구 결과 텍스트에서 지도 봉투(route_map/location_map)를 찾아 [MAP:{...}] 태그로 반환.
+
+    IBL 실행 경로는 지도 결과를 map_data 키(봉투)로만 담고 [MAP:] 태그를 붙이지 않으며,
+    파이프라인(`>>`)이면 봉투가 중첩 JSON 문자열 안에 있다. 그래서 문자열을 재귀적으로
+    파싱해(안쪽 JSON 문자열도 다시 loads) `type in (route_map, location_map)`인 dict 를
+    전부 찾아 프론트엔드 계약대로 [MAP:{clean json}] 로 직렬화한다. 중복은 제거.
+    파싱 불가 조각은 조용히 건너뜀(graceful).
+    """
+    found: List[dict] = []
+    seen: set = set()
+
+    def walk(obj, depth=0):
+        if depth > 8:
+            return
+        if isinstance(obj, dict):
+            if obj.get("type") in _MAP_ENVELOPE_TYPES:
+                key = json.dumps(obj, ensure_ascii=False, sort_keys=True)
+                if key not in seen:
+                    seen.add(key)
+                    found.append(obj)
+            for v in obj.values():
+                walk(v, depth + 1)
+        elif isinstance(obj, list):
+            for v in obj:
+                walk(v, depth + 1)
+        elif isinstance(obj, str):
+            s = obj.strip()
+            if s.startswith(("{", "[")) and len(s) < 500_000:
+                try:
+                    walk(json.loads(s), depth + 1)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+    try:
+        walk(json.loads(tool_result_text))
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return []
+    return [f"[MAP:{json.dumps(m, ensure_ascii=False)}]" for m in found]
+
 
 def find_claude_binary() -> Optional[str]:
     """claude CLI 위치 탐지 (크로스플랫폼).
@@ -268,6 +312,12 @@ class ClaudeCodeProvider(BaseProvider):
         # 도구 호출 구조화 이력 ({name, input, result, is_error}) — evaluator 시퀀스 근거용.
         # tool_start와 tool_result를 인덱스로 페어링하여 누적한다.
         self._last_tool_calls: List[Dict[str, Any]] = []
+        # 이번 턴 도구 결과에서 발견한 지도 봉투(route_map/location_map)를 [MAP:...] 태그로 모아,
+        # 최종 응답 끝에 재주입한다. in-process 프로바이더(anthropic/gemini/openai/ollama)는
+        # execute_tool 이 [MAP:] 태그를 붙이고 각자 재주입하지만, 아웃오브프로세스인 이 프로바이더는
+        # CLI 서브프로세스가 도구 결과를 산문으로 요약하며 마커를 흘려버려 프론트 지도가 안 뜬다.
+        # process_message_stream 시작 시 비워지고, tool_result 소비 중 누적된다.
+        self._pending_map_tags: List[str] = []
 
     def init_client(self) -> bool:
         """claude CLI 바이너리 탐지 + OAuth 토큰 로드 + 검증."""
@@ -375,6 +425,8 @@ class ClaudeCodeProvider(BaseProvider):
 
         # 턴 시작 시 라운드별 컨텍스트 크기 릴레이 초기화 (이전 턴 값 잔류 방지)
         self._last_context_size = 0
+        # 턴 시작 시 지도 태그 누적 초기화 (이전 턴 지도가 새 응답에 새는 것 방지)
+        self._pending_map_tags = []
 
         # 1) 이미지 → 임시 파일 → 프롬프트에 path 주입
         image_paths: List[str] = self._save_images_to_temp(images or [])
@@ -732,6 +784,15 @@ class ClaudeCodeProvider(BaseProvider):
                     result_preview = result_preview[:300] + "..."
                 err_tag = " (error)" if is_error else ""
                 print(f"[ClaudeCode/{self.agent_name}] tool_result{err_tag} {result_preview}")
+                # 지도 봉투(route_map/location_map)를 캡처해 최종 응답 끝에 재주입 예약.
+                # CLI 서브프로세스는 결과를 산문으로 요약하며 마커를 흘려버리므로 여기서 붙잡는다.
+                if not is_error:
+                    try:
+                        for tag in _extract_map_tags(result_text):
+                            if tag not in self._pending_map_tags:
+                                self._pending_map_tags.append(tag)
+                    except Exception:
+                        pass
                 out.append((
                     {
                         "type": "tool_result",
@@ -778,7 +839,12 @@ class ClaudeCodeProvider(BaseProvider):
                 else:
                     out.append(({"type": "error", "content": f"Claude Code 응답 오류: {final_text}"}, None))
             else:
-                out.append(({"type": "final", "content": (final_text or "").strip()}, None))
+                final_content = (final_text or "").strip()
+                # 이번 턴에 캡처한 지도 태그를 최종 응답 끝에 재주입 → 프론트 parseMapData 가 렌더.
+                if self._pending_map_tags:
+                    final_content = (final_content + "\n\n" + "\n".join(self._pending_map_tags)).strip()
+                    self._pending_map_tags = []
+                out.append(({"type": "final", "content": final_content}, None))
 
         return out
 

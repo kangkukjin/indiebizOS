@@ -6,6 +6,8 @@
 import json
 import os
 import urllib.request
+
+import anyio
 from mcp.server.fastmcp import FastMCP, Context
 
 mcp = FastMCP("indiebiz")
@@ -64,8 +66,28 @@ def _trim_for_agent(raw: str) -> str:
     return raw
 
 
+def _post_backend(path: str, payload: dict, timeout: int) -> str:
+    """백엔드 REST 로의 blocking HTTP POST. 반드시 워커 스레드에서 부를 것.
+
+    ★이벤트 루프에서 직접 부르면 안 된다: FastMCP 는 동기 툴을 루프 위에서 그대로
+    실행하는데, HTTP 마운트(/mcp)일 때 이 서버는 백엔드와 *같은 프로세스·같은 루프*라
+    자기가 막은 루프가 처리해야 할 /ibl/execute 응답을 기다리는 자기 교착이 된다
+    (모든 호출이 urllib timeout 까지 동결 — 라이브 검증에서 실측 120초). stdio 는
+    별도 프로세스라 우연히 무사했을 뿐, 같은 이유로 blocking 은 스레드로 뺀다.
+    """
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(f"{BASE}{path}", data=data, headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode()
+    except urllib.error.HTTPError as e:
+        return json.dumps({"error": e.read().decode()})
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
 @mcp.tool()
-def execute_ibl(code: str, project_path: str = "", ctx: Context = None) -> str:
+async def execute_ibl(code: str, project_path: str = "", ctx: Context = None) -> str:
     """IBL 코드를 실행합니다.
 
     예시:
@@ -83,19 +105,14 @@ def execute_ibl(code: str, project_path: str = "", ctx: Context = None) -> str:
     payload = {"code": code, "project_path": effective_path}
     if agent_id:
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
-    data = json.dumps(payload).encode()
-    req = urllib.request.Request(f"{BASE}/ibl/execute", data=data, headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return _trim_for_agent(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        return json.dumps({"error": e.read().decode()})
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    raw = await anyio.to_thread.run_sync(
+        lambda: _post_backend("/ibl/execute", payload, 120)
+    )
+    return _trim_for_agent(raw)
 
 
 @mcp.tool()
-def read_guide(query: str, read: bool = True) -> str:
+async def read_guide(query: str, read: bool = True) -> str:
     """작업 가이드(워크플로우·레시피)를 가이드 DB에서 검색해 읽습니다.
 
     복잡한 정기 작업(동향 보고서·작업계획서·출판·배포 등) 전에 관련 가이드를 먼저 확인하세요.
@@ -108,18 +125,9 @@ def read_guide(query: str, read: bool = True) -> str:
     ※ in-process 프로바이더(Gemini 등)는 이 도구를 자기 프로세스에서 직접 갖는다.
       이 MCP 노출은 아웃오브프로세스인 Claude Code 가 같은 능력을 갖게 하는 통로다.
     """
-    payload = json.dumps({"query": query, "read": read}).encode()
-    req = urllib.request.Request(
-        f"{BASE}/ibl/read_guide", data=payload,
-        headers={"Content-Type": "application/json"},
+    return await anyio.to_thread.run_sync(
+        lambda: _post_backend("/ibl/read_guide", {"query": query, "read": read}, 30)
     )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            return resp.read().decode()
-    except urllib.error.HTTPError as e:
-        return json.dumps({"error": e.read().decode()})
-    except Exception as e:
-        return json.dumps({"error": str(e)})
 
 
 if __name__ == "__main__":

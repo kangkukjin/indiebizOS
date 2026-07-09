@@ -44,7 +44,11 @@ export interface AppInput {
 
 // stream:true 버튼은 클라이언트 측 스트림 재생(StreamPlayer) — 행 데이터(url/playable)를
 // 직접 플레이어로 연다. 이 경우 action 은 불필요(서버 IBL 호출 없음).
-export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean }
+// phone_only: 폰 네이티브 동작([limbs:phone] 등 runs_on:phone_only)만 하는 버튼 — 맥 데스크탑에선
+// 실행 불가(phone_unreachable)라 숨긴다. GenericInstrument(데스크탑 전용 렌더러)만 이 필드를 거른다;
+// 원격/폰 렌더러(api_launcher_web)는 무시하고 그대로 노출(폰에선 정상 동작). 계기-레벨 phone_render:false
+// (폰에서 mac_only 숨김)의 반대 방향 짝 — 맥에서 phone_only 숨김.
+export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean }
 
 export interface AppCompose {
   placeholder?: string;
@@ -1515,16 +1519,20 @@ function ModePane({ mode }: { mode: AppMode }) {
         </div>
       )}
 
-      {(mode.buttons || []).length > 0 && (
-        <div className="flex gap-2 mb-3">
-          {mode.buttons!.map((b, i) => (
-            <button key={i} onClick={() => fireButton(b)}
-              className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-400">
-              {b.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {(() => {
+        // 맥 데스크탑 전용 렌더러 — phone_only 버튼([limbs:phone] 등)은 여기서 실행 불가라 숨긴다.
+        const visibleButtons = (mode.buttons || []).filter((b) => !b.phone_only);
+        return visibleButtons.length > 0 && (
+          <div className="flex gap-2 mb-3">
+            {visibleButtons.map((b, i) => (
+              <button key={i} onClick={() => fireButton(b)}
+                className="px-3 py-1.5 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 hover:border-stone-400">
+                {b.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {loading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" /></div>}
       {error && <p className="text-sm text-stone-400">오류: {error}</p>}

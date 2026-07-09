@@ -33,8 +33,12 @@ modes:
         from: items
         empty: 아직 작성된 보고서가 없습니다 — "작성" 탭에서 새 보고서를 만들어 보세요.
     # 폰에 저장·공유 — 최신 보고서를 @hub 로 읽어 폰 공유 시트로(카카오톡 등). 공유는 사용자 탭.
+    # phone_only: 맥 데스크탑(GenericInstrument)에선 숨긴다 — [limbs:phone] 는 runs_on:phone_only 라
+    # 맥에서 실행 불가(phone_unreachable). 폰/원격 뷰어(api_launcher_web)는 그대로 노출(폰서 정상 동작).
+    # 맥에선 보고서 파일이 이미 로컬에 있어 별도 '폰에 공유'가 무의미.
     buttons:
       - label: 📤 폰에 저장·공유
+        phone_only: true
         action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "report.md", mime: "text/markdown"}'
 
   # ── 목록: 선택 타입의 전체 보고서(최신순), 클릭하면 본문 ──

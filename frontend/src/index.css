@@ -92,6 +92,15 @@ body {
 /* 채팅 마크다운 스타일 */
 .chat-markdown {
   line-height: 1.6;
+  /* 긴 무구분 문자열(URL·base64 토큰)이 버블 밖으로 밀고 나가지 않게 강제 줄바꿈 */
+  overflow-wrap: anywhere;
+}
+
+/* 넓은 표는 버블을 밀어내지 말고 버블 안에서 가로 스크롤 */
+.chat-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .chat-markdown p {

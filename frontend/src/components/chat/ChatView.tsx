@@ -901,7 +901,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           isDialog ? (
             // 다이얼로그 모드: 버블 안에 모든 것
             <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm max-w-[80%]">
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3 shadow-sm max-w-[80%] min-w-0 break-words">
                 <TodoPanel todos={todos} variant="inline" />
                 <ToolHistoryPanel toolHistory={toolHistory} variant="neutral" />
                 {currentToolLabel && (
@@ -946,7 +946,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D97706] to-[#B45309] flex items-center justify-center flex-shrink-0 text-white">
                     <Bot size={16} />
                   </div>
-                  <div className="max-w-[70%] px-4 py-3 rounded-2xl bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm">
+                  <div className="max-w-[70%] min-w-0 break-words px-4 py-3 rounded-2xl bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm">
                     <div className="chat-markdown">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent}</ReactMarkdown>
                     </div>
@@ -1083,7 +1083,7 @@ function CognitionChip({ info }: { info: NonNullable<ChatMessage['cognition']> }
 
   return (
     <div className="flex justify-start">
-      <div className={`max-w-[80%] rounded-xl border px-3 py-2 text-[12px] ${meta.bg}`}>
+      <div className={`max-w-[80%] min-w-0 break-words rounded-xl border px-3 py-2 text-[12px] ${meta.bg}`}>
         <div className={`flex items-center gap-1.5 font-medium ${meta.color}`}>
           <Icon size={13} />
           <span>{meta.label}</span>
@@ -1119,7 +1119,7 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
   if (variant === 'neutral') {
     return (
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+        <div className={`max-w-[80%] min-w-0 break-words rounded-2xl px-4 py-2.5 ${
           isUser
             ? 'bg-amber-500 text-white rounded-br-md'
             : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
@@ -1146,7 +1146,7 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
       }`}>
         {isUser ? <User size={16} /> : <Bot size={16} />}
       </div>
-      <div className={`max-w-[70%] px-4 py-3 rounded-2xl ${
+      <div className={`max-w-[70%] min-w-0 break-words px-4 py-3 rounded-2xl ${
         isUser
           ? 'bg-[#3B82F6] text-white rounded-tr-sm'
           : 'bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm'

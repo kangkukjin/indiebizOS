@@ -152,7 +152,14 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   const loadManifest = useCallback(() => {
     fetch('http://127.0.0.1:8765/launcher/instruments')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d) => setManifest(d.instruments || []))
+      // ★window focus 마다 재조회하지만(새 앱 반영), 내용이 같으면 *같은 배열 참조를 유지*한다.
+      //  새 배열로 갈아끼우면 APPS(useMemo dep) → 계기 el → GenericInstrument → ModePane 이
+      //  전부 재생성돼, 열려 있던 앱의 검색 결과(ModePane data)가 mode-진입 effect 로 지워진다
+      //  (맛집 검색 후 다른 창 보다 돌아오면 결과 증발 버그). 내용 동일 시 setManifest 를 건너뛴다.
+      .then((d) => setManifest((prev) => {
+        const next: AppInstrument[] = d.instruments || [];
+        return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+      }))
       .catch(() => { /* 백엔드 미기동 시 static 도메인만 표시 */ });
   }, []);
 

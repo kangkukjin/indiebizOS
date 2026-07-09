@@ -54,6 +54,21 @@ def _drop_active_work_if_sysai():
             _active_work.pop(ident, None)
 
 
+def clear_sysai_active_work():
+    """모든 sysai 활성작업 등록을 스레드 아이덴티티와 무관하게 확정 해제.
+
+    시스템 AI 는 러너 없는 싱글턴이라 동시 sysai 런이 없다. 등록(set_current_task_id)과
+    해제(clear_current_task_id)가 서로 다른 스레드에서 돌면 스레드-키 대칭이 깨져 _active_work
+    에 유령이 남는다 — 조종실 '액티브 프로젝트'가 끝난 런을 최대 1시간(list_active_work 안전청소)
+    까지 busy 로 오표시한다. 에피소드 END 훅(episode_logger._finalize)이 이 함수로 확정 청소해,
+    어느 스레드가 런을 끝내든 대칭을 보장한다. 반환값=청소한 항목 수(진단용)."""
+    with _active_lock:
+        stale = [ident for ident, w in _active_work.items() if w.get("sysai")]
+        for ident in stale:
+            _active_work.pop(ident, None)
+        return len(stale)
+
+
 # System AI 대화창 존재(하트비트) — 조종실 '액티브 프로젝트'가 "창 열림=활성"을 판단.
 # 프로젝트는 started AgentRunner 로 창 존재를 알지만 System AI 는 싱글턴이라 러너가 없다.
 # SystemAIView 가 열려 있는 동안 주기적으로 갱신 → TTL 안이면 '창 열림'. 닫힘/크래시/백엔드

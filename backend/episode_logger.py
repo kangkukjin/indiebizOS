@@ -95,7 +95,18 @@ class EpisodeLogger:
 
     @classmethod
     def _finalize(cls, ep: "_Episode"):
-        """에피소드 1건을 DB에 저장 + 요약 추출. 컨텍스트 토글과 무관한 순수 저장."""
+        """에피소드 1건을 DB에 저장 + 요약 추출. 컨텍스트 토글과 무관한 순수 저장.
+
+        end_episode 와 start_episode 의 salvage 가 모두 지나는 단일 choke point이므로,
+        런 종료 시 조종실 '액티브 프로젝트'의 sysai 유령 등록을 여기서 확정 청소한다.
+        (등록/해제 스레드가 달라 _active_work 스레드-키 대칭이 깨지는 누수 방어)."""
+        # 저장과 독립적으로 먼저 청소 — 저장이 실패해도 유령은 반드시 사라진다.
+        if (ep.agent or "") == "system_ai":
+            try:
+                from thread_context import clear_sysai_active_work
+                clear_sysai_active_work()
+            except Exception:
+                pass
         try:
             log_text = "".join(ep.buffer)
             total_ms = int((datetime.now() - ep.started_at).total_seconds() * 1000)

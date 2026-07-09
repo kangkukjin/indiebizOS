@@ -50,4 +50,4 @@ modes:
   - name: 만들기
     buttons:
       - label: 🎙 오늘 브리핑 새로 만들기
-        action: '[others:delegate]{scope: "system", message: "오디오 브리핑 만들어줘 — 오늘 날씨·코스피·TIGER200 등락·핫뉴스를 guides/audio_briefing.md 레시피대로 고정 파일 audio_briefing_current.mp3/.md 로 생성. ★저장은 반드시 절대경로 projects/앱모드/outputs/ 로: TTS 는 data/outputs 에 구운 뒤 self:move 로 옮기고, md 는 절대경로로 self:write (위임 시 project_path 가 data 로 고정돼 project_id 파라미터로는 못 바꾼다 — 가이드 핵심원칙 2)", from_agent: "오디오브리핑앱"}@hub'
+        action: '[others:delegate]{scope: "system", message: "오디오 브리핑 만들어줘 — 오늘 날씨·코스피·TIGER200 등락·핫뉴스를 guides/audio_briefing.md 레시피대로 고정 파일 audio_briefing_current.mp3/.md 로 생성. ★저장은 tts·self:write 에 project_id: \"앱모드\" 를 실어 projects/앱모드/outputs/ 로 (명시 project_id 가 위임 컨텍스트보다 우선 — 가이드 핵심원칙 2. 하드코딩 절대경로·self:move 불필요)", from_agent: "오디오브리핑앱"}@hub'

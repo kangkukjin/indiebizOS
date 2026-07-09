@@ -117,34 +117,44 @@ def _resolve_path_by_scope(scope: str, project_path: str,
 
 def _resolve_project_path(project_path: str,
                           params: Optional[dict] = None) -> Optional[str]:
-    """project_path를 4단 우선순위로 해석 (scope='project' 전용).
+    """project_path를 우선순위로 해석 (scope='project' 전용).
 
     우선순위:
-      1) 호출자가 직접 인자로 넘긴 project_path (디폴트 '.' 가 아닐 때)
+      1) params["project_id"] — 작가가 IBL 코드에 손으로 명시한 대상 프로젝트.
+         '이 프로젝트를 뜻함'이라는 의도적 신호이므로, 호출자가 정체성으로
+         들고 있는 project_path(예: 위임된 시스템 AI의 data/)보다 우선한다.
+         해석에 실패하면(존재하지 않는 id 등) 조용히 넘어가 2번으로 폴백.
+      2) 호출자가 직접 인자로 넘긴 project_path (디폴트 '.' 가 아닐 때)
          — 프로젝트 에이전트 등 컨텍스트가 살아있는 정상 경로
-      2) params["project_id"] — ID만 알면 ProjectManager로 절대경로 변환 (메타 키)
       3) params["project_path"] — 명시 절대/상대 경로 (web-builder처럼 동일
-         키를 도구 인자로 쓰는 핸들러와의 충돌을 피하려고 positional이 빈
-         경우에만 본다 — 프로젝트 에이전트 흐름에서는 1번에서 결정되므로
-         params를 건드리지 않음)
+         키를 도구 인자로 쓰는 핸들러와의 충돌을 피하려고 positional·id가
+         비어있는 경우에만 본다)
       4) 안전망 — thread_context.project_id
 
-    시스템 AI처럼 자신의 project_path가 없는 호출자는 2·3번으로 대상 프로젝트를
-    명시한다. 1번이 살아있으면 params는 도구 인자로 그대로 보존된다.
+    ★1번이 2번보다 앞서는 이유(2026-07-09): 위임(delegate) 실행 시 시스템 AI는
+    자신의 정체성 경로 project_path=data/ 를 들고 온다. 이 값이 우선하면 작가가
+    코드에 적은 project_id 가 조용히 무시돼 산출물이 엉뚱한 data/outputs 로 떨어진다
+    (오디오 브리핑 사고 이력). 명시 project_id=의도, 호출자 경로=정체성 — 의도를
+    우선한다. project_id 가 없으면 1번은 건너뛰므로 프로젝트 에이전트 흐름은 무변경.
+    부수 효과로 프로젝트 에이전트의 교차 프로젝트 지정(`[self:read]{project_id:"투자"}`)도
+    라우팅 단에서 제대로 존중된다(이전엔 호출자 경로가 이겨 잠재 무시됐음).
     """
-    # 1) 호출자가 직접 인자로 넘긴 값 — 가장 신뢰
-    if project_path and project_path.strip() and project_path != ".":
-        return os.path.abspath(project_path)
-
-    # positional이 비어있을 때만 params에서 명시 키 탐색
+    # 1) 명시 project_id — 작가가 손으로 쓴 의도적 대상. 호출자 정체성 경로보다 우선.
+    #    (의미상 메타 키 — 도구 인자로 쓰는 핸들러 없음)
     if isinstance(params, dict):
-        # 2) params.project_id — 의미상 메타 키 (도구 인자로 쓰는 핸들러 없음)
         explicit_id = params.get("project_id")
         if isinstance(explicit_id, str) and explicit_id.strip():
             resolved = _resolve_project_id(explicit_id)
             if resolved:
                 return resolved
+            # 해석 실패 시엔 조용히 2번으로 폴백(침묵 오배치 방지)
 
+    # 2) 호출자가 직접 인자로 넘긴 값
+    if project_path and project_path.strip() and project_path != ".":
+        return os.path.abspath(project_path)
+
+    # positional·id가 비어있을 때만 params.project_path 명시 키 탐색
+    if isinstance(params, dict):
         # 3) params.project_path — 명시 경로
         explicit_path = params.get("project_path")
         if isinstance(explicit_path, str) and explicit_path.strip() and explicit_path != ".":

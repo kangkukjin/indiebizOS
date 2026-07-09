@@ -187,6 +187,7 @@ nodes:
             'on':
               marker_click:
                 stream: true
+              search_here: '[sense:cctv]{op: "nearby", lat: $lat, lng: $lng, radius_km: $radius_km}'
           - type: metric
             label: 검색 결과
             big: '{count}개'

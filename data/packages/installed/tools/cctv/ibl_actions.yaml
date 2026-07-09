@@ -49,6 +49,9 @@ nodes:
             'on':
               marker_click:
                 stream: true
+              # "이 지역에서 검색" 버튼 — 지도로 영역을 잡고 누르면 그 중심·반경의 CCTV를 nearby 로 찾는다.
+              # 키워드(이름) 검색과 별개로 지도에서 직접 영역 기반 탐색. viewport 보존(결과가 그 영역에 뜸).
+              search_here: '[sense:cctv]{op: "nearby", lat: $lat, lng: $lng, radius_km: $radius_km}'
           - type: metric
             label: 검색 결과
             big: '{count}개'

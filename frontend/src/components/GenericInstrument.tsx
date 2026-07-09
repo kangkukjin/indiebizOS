@@ -570,9 +570,11 @@ function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; data: unk
   useEffect(() => { pRef.current = p; evRef.current = onViewEvent; streamRef.current = onStream; });
 
   const on = (p.on as Record<string, string | { stream?: boolean }> | undefined) || undefined;
-  // viewport 보존(첫 로드만 fit) 모드는 *이동 재조회*(moveend/center_drag)가 있을 때만.
-  // marker_click(스트림/액션)만 있는 경우는 정적 fit 유지(CCTV: 매 검색마다 새 결과로 재fit).
-  const interactive = !!(on && (on.moveend || on.center_drag));
+  const searchHereTpl = (on && typeof on.search_here === 'string') ? on.search_here : undefined;
+  // viewport 보존(첫 로드만 fit) 모드는 *이동/버튼 재조회*(moveend/center_drag/search_here)가 있을 때만.
+  // marker_click(스트림/액션)만 있는 경우는 정적 fit 유지(CCTV 키워드검색: 매 검색마다 새 결과로 재fit).
+  // search_here(이 지역 검색 버튼)도 viewport 보존 — 사용자가 잡은 영역에 결과가 뜨고 지도가 튀지 않게.
+  const interactive = !!(on && (on.moveend || on.center_drag || on.search_here));
 
   const fireMove = useCallback((lat: number, lng: number) => {
     const pon = pRef.current.on as Record<string, string | { stream?: boolean }> | undefined;
@@ -580,8 +582,18 @@ function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; data: unk
     const map = mapRef.current;
     if (!tpl || !map || !evRef.current) return;
     const r = Math.round(map.distance(map.getCenter(), map.getBounds().getNorthEast())); // viewport 반경(m)
-    evRef.current(tpl, { lat: lat.toFixed(6), lng: lng.toFixed(6), radius: String(r) });
+    evRef.current(tpl, { lat: lat.toFixed(6), lng: lng.toFixed(6), radius: String(r), radius_km: (r / 1000).toFixed(2) });
   }, []);
+
+  // "이 지역에서 검색" 버튼 — 현재 지도 중심·반경을 액션 템플릿($lat/$lng/$radius/$radius_km)에 실어 재조회.
+  // moveend 자동 재조회와 달리 사용자가 영역을 잡고 명시적으로 누를 때만 실행(불필요한 팬-재조회 방지).
+  const fireSearchHere = useCallback(() => {
+    const map = mapRef.current;
+    if (!searchHereTpl || !map || !evRef.current) return;
+    const c = map.getCenter();
+    const r = Math.round(map.distance(c, map.getBounds().getNorthEast())); // viewport 반경(m)
+    evRef.current(searchHereTpl, { lat: c.lat.toFixed(6), lng: c.lng.toFixed(6), radius: String(r), radius_km: (r / 1000).toFixed(2) });
+  }, [searchHereTpl]);
 
   // 지도 1회 생성 + 사용자 이동 이벤트 바인딩 (data 변경에도 재생성 안 함 → viewport 보존)
   useEffect(() => {
@@ -655,7 +667,19 @@ function MapPrim({ p, data, onViewEvent, onStream }: { p: AppViewPrim; data: unk
     if (interactive && shouldFit) setTimeout(() => { readyRef.current = true; }, 700);
     setTimeout(() => map.invalidateSize(), 0);
   }, [p, data, interactive, on]);
-  return <div ref={ref} style={{ height: 320 }} className="rounded-xl overflow-hidden bg-stone-100 mb-2.5" />;
+  // ★isolate: leaflet 내부 pane/컨트롤 z-index(400~1000)를 이 스택 컨텍스트 안에 가둔다 —
+  //  안 그러면 지도가 런처 모드 드롭다운(z-50) 등 상위 오버레이 위로 새어 나와 가린다.
+  return (
+    <div className="relative mb-2.5">
+      <div ref={ref} style={{ height: 320 }} className="isolate rounded-xl overflow-hidden bg-stone-100" />
+      {searchHereTpl && (
+        <button onClick={fireSearchHere}
+          className="absolute top-2 left-1/2 -translate-x-1/2 z-[500] px-3 py-1.5 rounded-full bg-white shadow-md border border-stone-300 text-sm font-medium text-stone-700 hover:bg-stone-50 active:scale-95 transition">
+          📍 이 지역에서 검색
+        </button>
+      )}
+    </div>
+  );
 }
 
 // calendar 프리미티브 — 월 그리드 + 선택일 상세 + 정기목록 + 추가/삭제. 데이터=manifest items(자동 월필터),

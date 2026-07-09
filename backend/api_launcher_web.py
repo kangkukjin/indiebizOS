@@ -709,6 +709,7 @@ input,textarea,select{ font-family:inherit; }
 .calpanel{ margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
 .lmaptoggle{ position:absolute; top:10px; right:10px; z-index:500; background:rgba(20,20,35,.85); color:#fff; border:1px solid var(--line); border-radius:18px; padding:7px 14px; font-size:13px; font-weight:600; }
 .lmaptoggle.on{ background:var(--acc); border-color:var(--acc); }
+.lmapsearch{ position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:500; background:#fff; color:#333; border:1px solid var(--line); border-radius:18px; padding:7px 14px; font-size:13px; font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.25); cursor:pointer; }
 .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
 .chip{ padding:6px 12px; background:var(--bg2); border:1px solid var(--line); border-radius:20px; font-size:12px; }
 .filters{ display:flex; gap:6px; flex-wrap:wrap; }
@@ -1948,6 +1949,13 @@ async function mapViewEvent(tpl,payload){
   else out.innerHTML=renderView(VIEW_CTX.view,d)+renderComposeBar(VIEW_CTX.compose);
   initMaps();
 }
+/* "이 지역에서 검색" — 현재 지도 뷰포트(중심·반경)로 search_here 템플릿 재조회. viewport 는 _mapKeepView 로 보존. */
+function mapSearchHere(id){
+  const map=_LMAPS[id]; if(!map||!map._searchHere) return;
+  const c=map.getCenter(); _mapKeepView={c:c,z:map.getZoom()};
+  const r=Math.round(map.distance(c,map.getBounds().getNorthEast()));
+  mapViewEvent(map._searchHere,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r),radius_km:(r/1000).toFixed(2)});
+}
 /* 지도가 세로 스와이프를 먹어 페이지 스크롤을 막는 문제 해결:
    기본은 dragging(한 손가락 패닝) 끔 → 한 손가락 스와이프는 페이지 스크롤로 통과.
    핀치 줌(touchZoom)은 그대로(두 손가락이라 스크롤과 충돌 없음). 패닝이 필요하면 토글로 켠다. */
@@ -2001,12 +2009,13 @@ function initMaps(){
       else if(md.center&&md.center.lat!=null){ if(spec.on) _mapProg=true; map.setView([md.center.lat,md.center.lng],13); }
       else map.setView([37.4979,127.0276],11);
       if(spec.on){
+        map._searchHere=spec.on.search_here||null;  // "이 지역에서 검색" 버튼(mapSearchHere)이 읽는다
         const moveTpl=spec.on.moveend||spec.on.center_drag;
         if(moveTpl) map.on('moveend',()=>{ if(_mapProg){ _mapProg=false; return; } // 프로그래매틱 이동 무시
           if(map._reqT) clearTimeout(map._reqT);
           map._reqT=setTimeout(()=>{ const c=map.getCenter(); _mapKeepView={c:c,z:map.getZoom()};
             const r=Math.round(map.distance(c,map.getBounds().getNorthEast()));
-            mapViewEvent(moveTpl,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r)}); },600); });
+            mapViewEvent(moveTpl,{lat:c.lat.toFixed(6),lng:c.lng.toFixed(6),radius:String(r),radius_km:(r/1000).toFixed(2)}); },600); });
         setTimeout(()=>{ _mapProg=false; },500); // fit 이 moveend 안 내도 가드 해제(백업)
       }
       setTimeout(()=>map.invalidateSize(),60);
@@ -2089,9 +2098,11 @@ function renderPrim(p,vi,data){
     if(p.max&&mk.length>p.max) mk=mk.slice(0,p.max);  // 마커 폭주 방지(상권 등 수천건)
     const id='lmap_'+(_mapSeq++);
     _MAP_QUEUE[id]={md:md,markers:mk,on:p.on||null};
+    // search_here: "이 지역에서 검색" 버튼 — 현재 뷰포트 중심·반경으로 재조회(nearby 등). 데스크탑 GenericInstrument 와 파리티.
+    const searchBtn=(p.on&&p.on.search_here)?'<button class="lmapsearch" onclick="mapSearchHere(\\''+id+'\\')">📍 이 지역에서 검색</button>':'';
     return '<div style="position:relative;margin-bottom:10px">'
       +'<div id="'+id+'" class="lmap" style="height:320px;border-radius:12px;overflow:hidden;background:var(--bg3)"></div>'
-      +'<button class="lmaptoggle" onclick="toggleMapDrag(\\''+id+'\\',this)">🔓 지도 이동</button></div>';
+      +'<button class="lmaptoggle" onclick="toggleMapDrag(\\''+id+'\\',this)">🔓 지도 이동</button>'+searchBtn+'</div>';
   }
   if(p.type==='group'){
     // 파티션 콤비네이터(데스크탑 ViewPrim group 의 원격 쌍). from 리스트를 by 키로 나눠(입력순 보존)

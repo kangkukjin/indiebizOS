@@ -2656,8 +2656,44 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 )
         if tool_json_ok and tool_json_docs:
             print(f"[build_ibl_nodes] check: tool.json 파생 일치 ✓ ({len(tool_json_docs)}개 패키지)")
+        # 표준 코어 매니페스트 신선도 (git 추적 패키지/앱/어휘 집합 파생) — 코어/사용자 경계 단일 진실
+        core_manifest_ok = True
+        try:
+            import build_core_manifest as _bcm
+            _expected = _bcm._serialize(_bcm.build_manifest())
+            _cur = _bcm.MANIFEST_PATH.read_text(encoding="utf-8") if _bcm.MANIFEST_PATH.is_file() else None
+            if _cur != _expected:
+                core_manifest_ok = False
+                print(
+                    "[build_ibl_nodes] check: core_manifest.json 불일치 — "
+                    "`python3 scripts/build_core_manifest.py` 로 재생성 필요",
+                    file=sys.stderr,
+                )
+            else:
+                print("[build_ibl_nodes] check: core_manifest.json 일치 ✓")
+        except Exception as _e:
+            print(f"[build_ibl_nodes] check: core_manifest 검사 건너뜀 ({_e})")
+        # 설치 파일 필터 신선도 (매니페스트 주도 비-코어 제외가 package.json 에 반영됐나)
+        dist_filter_ok = True
+        try:
+            import build_dist_filter as _bdf
+            _pkg = json.loads(_bdf.PKG_JSON.read_text(encoding="utf-8"))
+            _entry = _bdf._data_entry(_pkg.get("build", {}))
+            _cur = list(_entry.get("filter", []))
+            _want = _bdf._with_generated_filter(_cur, _bdf._generated_block())
+            if _cur != _want:
+                dist_filter_ok = False
+                print(
+                    "[build_ibl_nodes] check: package.json 설치필터 stale — "
+                    "`python3 scripts/build_dist_filter.py` 재실행 필요",
+                    file=sys.stderr,
+                )
+            else:
+                print("[build_ibl_nodes] check: 설치필터(dist) 일치 ✓")
+        except Exception as _e:
+            print(f"[build_ibl_nodes] check: dist_filter 검사 건너뜀 ({_e})")
         return 0 if (bytes_ok and manifest_ok and pkg_meta_ok and fixtures_ok
-                     and tool_json_ok
+                     and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not profile_failed and not os_failed
@@ -2695,6 +2731,13 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             f"[build_ibl_nodes] tool.json 파생: {len(tool_json_docs)}개 패키지 "
             f"(갱신 {tj_written}개)"
         )
+    # 표준 코어 매니페스트 재생성 (git 추적 패키지/앱/어휘 집합 파생 — 코어/사용자 경계)
+    try:
+        import build_core_manifest as _bcm
+        _bcm.MANIFEST_PATH.write_text(_bcm._serialize(_bcm.build_manifest()), encoding="utf-8")
+        print(f"[build_ibl_nodes] 작성: {_bcm.MANIFEST_PATH} (표준 코어 매니페스트)")
+    except Exception as _e:
+        print(f"[build_ibl_nodes] core_manifest 재생성 건너뜀 ({_e})")
     return 0
 
 

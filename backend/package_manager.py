@@ -36,6 +36,44 @@ DATA_PATH = _get_base_path() / "data"
 PACKAGES_PATH = DATA_PATH / "packages"
 NOT_INSTALLED_PATH = PACKAGES_PATH / "not_installed"
 INSTALLED_PATH = PACKAGES_PATH / "installed"
+CORE_MANIFEST_PATH = DATA_PATH / "core_manifest.json"
+
+
+# ============ 표준 코어 경계 (origin 해소) ============
+# core_manifest.json = 배포에 딸려온 "표준 코어" 집합의 단일 진실
+# (scripts/build_core_manifest.py 가 git 추적 집합에서 파생·커밋).
+# 매니페스트에 없는 패키지 = 사용자가 나중에 더한 것 = origin:user.
+_CORE_PACKAGE_NAMES: Optional[set] = None
+
+
+def _load_core_package_names() -> set:
+    """core_manifest.json 에서 코어 패키지 이름 집합 로드 (프로세스 캐시)."""
+    global _CORE_PACKAGE_NAMES
+    if _CORE_PACKAGE_NAMES is not None:
+        return _CORE_PACKAGE_NAMES
+    names: set = set()
+    try:
+        if CORE_MANIFEST_PATH.exists():
+            with open(CORE_MANIFEST_PATH, 'r', encoding='utf-8') as f:
+                manifest = json.load(f)
+            pkgs = manifest.get("core", {}).get("packages", {})
+            names.update(pkgs.get("tools", []))
+            names.update(pkgs.get("extensions", []))
+    except Exception as e:
+        print(f"[PackageManager] core_manifest 로드 실패 (모두 user로 간주): {e}")
+    _CORE_PACKAGE_NAMES = names
+    return names
+
+
+def resolve_package_origin(package_id: str) -> str:
+    """패키지 origin 판정: 매니페스트에 있으면 'core', 없으면 'user'."""
+    return "core" if package_id in _load_core_package_names() else "user"
+
+
+def invalidate_core_manifest_cache() -> None:
+    """매니페스트 재생성 후 origin 캐시 무효화."""
+    global _CORE_PACKAGE_NAMES
+    _CORE_PACKAGE_NAMES = None
 
 
 def validate_tool_package(pkg_path: Path) -> Dict[str, Any]:
@@ -180,6 +218,8 @@ class PackageManager:
         """캐시 무효화 (패키지 설치/제거 시 호출)"""
         PackageManager._packages_cache = []
         PackageManager._cache_time = 0
+        # 표준 코어 매니페스트도 다시 읽어야 재생성된 origin 경계가 반영된다
+        invalidate_core_manifest_cache()
         # tool_loader의 도구↔패키지 매핑도 함께 비워야 신규/변경된 tool.json이 반영된다
         try:
             from tool_loader import clear_cache as _clear_tool_loader_cache
@@ -259,6 +299,9 @@ class PackageManager:
                 ]
             except:
                 pass
+
+        # origin: 표준 코어(배포 동봉) vs 사용자 추가
+        metadata["origin"] = resolve_package_origin(pkg_id)
 
         return metadata
 

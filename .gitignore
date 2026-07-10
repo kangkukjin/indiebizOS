@@ -143,6 +143,10 @@ data/**/*.json
 data/ibl_hippo_vecs.f32
 !data/guide_db.json
 !data/world_pulse_config.example.json
+# 표준 코어 경계의 단일 진실 — 반드시 커밋/배포되어야 함 (build_core_manifest.py 산출)
+!data/core_manifest.json
+# origin opt-out 마커 — 커밋된 개인 패키지를 코어(배포)에서 빼는 예외 선언
+!data/**/.origin
 !data/ibl_nodes.yaml
 !**/tool.json
 !**/ibl_actions.yaml

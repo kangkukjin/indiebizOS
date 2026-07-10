@@ -1,0 +1,77 @@
+{
+  "_comment": "표준 코어 경계의 단일 진실. build_core_manifest.py 가 git 추적 집합에서 파생. 손으로 편집 금지.",
+  "generated_from": "git ls-files",
+  "core": {
+    "packages": {
+      "tools": [
+        "android",
+        "blog",
+        "browser-action",
+        "business",
+        "cctv",
+        "cloudflare",
+        "computer-use",
+        "contest",
+        "context7",
+        "culture",
+        "data-ops",
+        "health-record",
+        "house-designer",
+        "ibl-core",
+        "investment",
+        "kosis",
+        "lecture_workspace",
+        "legal",
+        "local-info",
+        "location-services",
+        "media_producer",
+        "memory",
+        "nodejs",
+        "pc-manager",
+        "photo-manager",
+        "publishing",
+        "python-exec",
+        "radio",
+        "real-estate",
+        "remotion-video",
+        "shopping-assistant",
+        "startup",
+        "study",
+        "system_essentials",
+        "visualization",
+        "web",
+        "web-builder",
+        "web-collector",
+        "web-kr",
+        "youtube"
+      ],
+      "extensions": [
+        "conversation",
+        "gmail",
+        "indienet",
+        "notification-system",
+        "prompt-generator",
+        "scheduler",
+        "switch-runner",
+        "websocket-chat"
+      ]
+    },
+    "instruments": [
+      "audio_briefing",
+      "newspaper",
+      "report"
+    ],
+    "vocab_fragments": [
+      "engines.yaml",
+      "limbs.yaml",
+      "meta.yaml",
+      "others.yaml",
+      "self.yaml",
+      "sense.yaml",
+      "table.yaml"
+    ],
+    "vocab_artifacts": [
+      "ibl_nodes.yaml"
+    ]
+  }
+}

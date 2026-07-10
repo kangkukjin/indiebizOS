@@ -86,8 +86,13 @@ function isPortAvailable(port) {
  * 번들(src)의 파일을 userData(dest)에 동기화
  * 앱 코드 파일만 덮어쓰고, 사용자 데이터는 모두 보존
  * 새 파일(dest에 없는 것)은 무조건 복사
+ *
+ * forceOverwrite(destPath) 술어가 true 를 반환하면 확장자와 무관하게 덮어쓴다.
+ * 표준 코어 어휘 산출물(ibl_nodes.yaml, 코어 패키지 ibl_actions.yaml, 코어 앱 매니페스트)을
+ * 갱신하기 위한 것 — 이 파일들은 코어 소유라 git pull 경로에선 늘 덮어써지는데,
+ * DMG 경로에선 .yaml 이라 보존돼 어휘가 stale 해지던 증상을 core_manifest 기준으로 교정.
  */
-function syncDirOverwrite(srcDir, destDir) {
+function syncDirOverwrite(srcDir, destDir, forceOverwrite = null, skipPaths = null) {
   const skipDirs = new Set(['node_modules', '__pycache__', '.git', '_temp_']);
   // 덮어쓸 확장자 (앱 코드만)
   const overwriteExtensions = new Set([
@@ -113,17 +118,104 @@ function syncDirOverwrite(srcDir, destDir) {
 
     if (entry.isDirectory()) {
       if (skipDirs.has(entry.name)) continue;
-      syncDirOverwrite(srcPath, destPath);
+      if (skipPaths && skipPaths.has(srcPath)) continue;  // 별도 처리되는 하위트리(예: packages)
+      syncDirOverwrite(srcPath, destPath, forceOverwrite, skipPaths);
     } else if (entry.isFile()) {
       // dest에 없으면 무조건 복사 (새 파일)
       if (!fs.existsSync(destPath)) {
         fs.copyFileSync(srcPath, destPath);
         continue;
       }
-      // 이미 있으면 코드 파일 또는 패키지 메타데이터만 덮어쓰기
+      // 이미 있으면 코드 파일 / 패키지 메타데이터 / 코어 어휘 산출물만 덮어쓰기
       const ext = path.extname(entry.name).toLowerCase();
-      if (overwriteExtensions.has(ext) || alwaysOverwriteFiles.has(entry.name)) {
+      const isCore = forceOverwrite ? forceOverwrite(destPath) : false;
+      if (isCore || overwriteExtensions.has(ext) || alwaysOverwriteFiles.has(entry.name)) {
         fs.copyFileSync(srcPath, destPath);
+      }
+    }
+  }
+}
+
+/**
+ * 번들된 core_manifest.json 을 읽어 "코어 소유 어휘 산출물"을 판정하는 술어를 만든다.
+ * 매니페스트가 없으면 null → syncDirOverwrite 는 기존(보수적) 동작 유지.
+ */
+function makeCoreForceOverwrite(resourcesPath) {
+  let manifest;
+  try {
+    const p = path.join(resourcesPath, 'data', 'core_manifest.json');
+    if (!fs.existsSync(p)) return null;
+    manifest = JSON.parse(fs.readFileSync(p, 'utf-8'));
+  } catch (e) {
+    console.log(`[Init] core_manifest 로드 실패 (보수적 동기화 유지): ${e}`);
+    return null;
+  }
+  const core = manifest.core || {};
+  const vocabArtifacts = new Set(core.vocab_artifacts || []);   // 예: ibl_nodes.yaml
+  const coreInstruments = new Set(core.instruments || []);       // basename (확장자 제외)
+  const corePackages = new Set([
+    ...((core.packages || {}).tools || []),
+    ...((core.packages || {}).extensions || []),
+  ]);
+
+  return (destPath) => {
+    const norm = destPath.split(path.sep).join('/');
+    const base = path.basename(norm);
+    // 1) 빌드 산출 어휘 카탈로그
+    if (vocabArtifacts.has(base)) return true;
+    // 2) 코어 앱 매니페스트 (data/instruments/<name>.yaml)
+    const instMatch = norm.match(/\/data\/instruments\/([^/]+)\.yaml$/);
+    if (instMatch && coreInstruments.has(instMatch[1])) return true;
+    // 3) 코어 패키지의 어휘 정의 (installed|not_installed/<type>/<pkg>/ibl_actions.yaml)
+    if (base === 'ibl_actions.yaml') {
+      const pkgMatch = norm.match(/\/packages\/(?:installed|not_installed)\/(?:tools|extensions)\/([^/]+)\//);
+      if (pkgMatch && corePackages.has(pkgMatch[1])) return true;
+    }
+    return false;
+  };
+}
+
+/**
+ * 패키지 동기화 — ★설치 상태(installed/not_installed 폴더 배치)를 사용자 소유로 보존.
+ *
+ * 불변식2: 업데이트/재설치가 사용자의 켜고/끈 선택을 덮으면 안 된다.
+ * package_manager 의 진실은 "폴더 위치"(installed=활성 / not_installed=비활성)인데,
+ * 번들은 자기 기본 배치를 갖는다. 그대로 복사하면 사용자가 끈 걸 되켜거나(번들 installed→덮음)
+ * 켠 걸 중복 생성(번들 not_installed 되살림)한다.
+ *
+ * 그래서: 각 코어 패키지를 userData 의 *현재 위치*(둘 중 어디든)에서 찾아 그 자리에서
+ * 파일만 갱신한다. userData 어디에도 없을 때만(=이 릴리스의 새 패키지) 번들 기본 폴더에 추가.
+ * → 사용자의 활성/비활성 선택이 업데이트를 살아남는다. 동시에 "배포를 비활성으로 내보내기"는
+ *   단지 리포에서 패키지를 not_installed/ 에 두는 데이터 결정이 된다(불변식1의 토대).
+ *
+ * 사용자가 *직접 만든*(미추적) 패키지는 번들에 없어 여기서 순회조차 안 됨 = 보존.
+ */
+function syncPackagesPreservingState(resourcesPath, userDataPath, coreForceOverwrite) {
+  const kinds = ['tools', 'extensions'];
+  const states = ['installed', 'not_installed'];
+  for (const kind of kinds) {
+    for (const bundleState of states) {
+      const bundleDir = path.join(resourcesPath, 'data', 'packages', bundleState, kind);
+      if (!fs.existsSync(bundleDir)) continue;
+      for (const pkg of fs.readdirSync(bundleDir)) {
+        const pkgSrc = path.join(bundleDir, pkg);
+        if (!fs.statSync(pkgSrc).isDirectory()) continue;
+
+        // 사용자가 이 패키지를 어디에 두었나? (현재 배치 = 사용자 소유 상태)
+        const userInstalled = path.join(userDataPath, 'data', 'packages', 'installed', kind, pkg);
+        const userNotInstalled = path.join(userDataPath, 'data', 'packages', 'not_installed', kind, pkg);
+
+        let pkgDest;
+        if (fs.existsSync(userInstalled)) {
+          pkgDest = userInstalled;          // 사용자가 켜둠 → 그 자리에서 갱신
+        } else if (fs.existsSync(userNotInstalled)) {
+          pkgDest = userNotInstalled;       // 사용자가 꺼둠 → 그 자리에서 갱신
+        } else {
+          // 사용자에게 없음 = 이 릴리스의 새 패키지 → 번들 기본 상태로 추가
+          pkgDest = path.join(userDataPath, 'data', 'packages', bundleState, kind, pkg);
+        }
+        console.log(`[Init] 패키지 동기화(상태보존): ${kind}/${pkg} → ${path.basename(path.dirname(path.dirname(pkgDest)))}`);
+        syncDirOverwrite(pkgSrc, pkgDest, coreForceOverwrite);
       }
     }
   }
@@ -134,6 +226,7 @@ function syncDirOverwrite(srcDir, destDir) {
  * 앱 번들(resources/) 내의 데이터를 사용자 폴더(userData)로 동기화
  * - 재설치 시 무조건 최신 파일로 덮어쓰기
  * - .db 파일만 보존 (사용자 데이터)
+ * - 패키지는 설치 상태(폴더 배치) 보존 (syncPackagesPreservingState)
  */
 function initUserData() {
   const userDataPath = app.getPath('userData'); // Windows: %APPDATA%/IndieBiz, macOS: ~/Library/Application Support/IndieBiz
@@ -142,8 +235,16 @@ function initUserData() {
   console.log(`[Init] userData 경로: ${userDataPath}`);
   console.log(`[Init] resources 경로: ${resourcesPath}`);
 
+  // 표준 코어 경계 술어 (core_manifest.json 기준) — 코어 어휘 산출물 강제 갱신용.
+  // 번들(=배포 집합)에는 코어 소유 콘텐츠만 담기므로, 여기서 판정하는 대상은
+  // 이미 코어다. 사용자가 자기 머신에서 더한 패키지/앱은 번들에 없어 이 동기화가
+  // 아예 순회하지 않는다(=보존).
+  const coreForceOverwrite = makeCoreForceOverwrite(resourcesPath);
+
   // 1. 기본 폴더들 - 무조건 덮어쓰기 (.db 파일만 보존)
+  //    ★ packages 하위트리는 제외 — 설치 상태 보존을 위해 2에서 따로 처리.
   const dirsToSync = ['data', 'projects', 'templates', 'tokens'];
+  const skipPaths = new Set([path.join(resourcesPath, 'data', 'packages')]);
 
   for (const dir of dirsToSync) {
     const src = path.join(resourcesPath, dir);
@@ -151,33 +252,13 @@ function initUserData() {
 
     if (fs.existsSync(src)) {
       console.log(`[Init] 데이터 동기화: ${dir}`);
-      syncDirOverwrite(src, dest);
+      syncDirOverwrite(src, dest, coreForceOverwrite, skipPaths);
     }
   }
 
-  // 2. 패키지 폴더 동기화 - 무조건 덮어쓰기 (.db 파일만 보존)
-  const packageTypes = ['tools', 'extensions'];
-  for (const pkgType of packageTypes) {
-    const packagesSrc = path.join(resourcesPath, 'data', 'packages', 'installed', pkgType);
-    const packagesDest = path.join(userDataPath, 'data', 'packages', 'installed', pkgType);
-
-    if (!fs.existsSync(packagesSrc)) continue;
-
-    if (!fs.existsSync(packagesDest)) {
-      fs.mkdirSync(packagesDest, { recursive: true });
-    }
-
-    const srcPackages = fs.readdirSync(packagesSrc);
-    for (const pkg of srcPackages) {
-      const pkgSrc = path.join(packagesSrc, pkg);
-      const pkgDest = path.join(packagesDest, pkg);
-
-      if (!fs.statSync(pkgSrc).isDirectory()) continue;
-
-      console.log(`[Init] 패키지 동기화: ${pkgType}/${pkg}`);
-      syncDirOverwrite(pkgSrc, pkgDest);
-    }
-  }
+  // 2. 패키지 동기화 - ★설치 상태(installed/not_installed 배치)를 사용자 소유로 보존
+  //    (installed·not_installed 양쪽 카탈로그 갱신, 사용자의 활성/비활성 선택 불가침)
+  syncPackagesPreservingState(resourcesPath, userDataPath, coreForceOverwrite);
 
   // 3. common_prompts 폴더 동기화 (항상 최신으로 덮어쓰기)
   const promptsSrc = path.join(resourcesPath, 'data', 'common_prompts');

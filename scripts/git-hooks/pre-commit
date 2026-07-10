@@ -67,4 +67,31 @@ if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|bac
   echo "[pre-commit] 의식 출력 스키마 정합 OK ✓"
 fi
 
+# 표준 코어 매니페스트 드리프트 — 패키지/앱/중앙어휘가 추가·제거되면 core_manifest.json 이
+# 배포 집합(git 추적)과 어긋날 수 있다. 코어/사용자 경계의 단일 진실이므로 stale 커밋 차단.
+if echo "$staged" | grep -qE '^(data/packages/(installed|not_installed)/[^/]+/[^/]+/|data/instruments/.*\.yaml|data/ibl_nodes_src/.*\.yaml|scripts/build_core_manifest\.py|scripts/build_dist_filter\.py|frontend/package\.json)'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 표준 코어 매니페스트 검사 실행..."
+  if ! python3 "$repo_root/scripts/build_core_manifest.py" --check; then
+    echo "" >&2
+    echo "[pre-commit] core_manifest.json 이 배포 집합과 불일치 — 커밋 차단." >&2
+    echo "[pre-commit]   • \`python3 scripts/build_core_manifest.py\` 재실행하여 매니페스트 갱신 후 스테이지" >&2
+    echo "[pre-commit]   • 이 매니페스트는 코어/사용자(앱·어휘) 경계의 단일 진실 — 업데이터가 참조함" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 표준 코어 매니페스트 OK ✓"
+  # 설치 파일 필터도 매니페스트 주도로 최신인지 (개인 앱·패키지가 배포에 새지 않게)
+  echo "[pre-commit] 설치 파일 필터 검사 실행..."
+  if ! python3 "$repo_root/scripts/build_dist_filter.py" --check; then
+    echo "" >&2
+    echo "[pre-commit] package.json 설치필터가 매니페스트와 불일치 — 커밋 차단." >&2
+    echo "[pre-commit]   • \`python3 scripts/build_dist_filter.py\` 재실행 후 스테이지" >&2
+    echo "[pre-commit]   • 비-코어 패키지/앱이 설치 파일로 새는 걸 막는 매니페스트 주도 필터" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 설치 파일 필터 OK ✓"
+fi
+
 exit 0

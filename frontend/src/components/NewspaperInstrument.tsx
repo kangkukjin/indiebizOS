@@ -31,10 +31,36 @@ const HTML_PATH = 'outputs/newspaper_current.html';
 const DEFAULT_KEYWORDS = ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'];
 const DEFAULT_TITLE = '청주 데일리';
 
-interface NewsItem { title?: string; meta?: string; summary?: string; url?: string }
+interface NewsItem { title?: string; meta?: string; summary?: string; url?: string; role?: string; why?: string }
+
+// 편집장 역할 배지 — hot(널리 다룸)/delta(관점 코어 기준 새 정보)/surface(지배 프레임과 결이 다름)
+const ROLE_BADGE: Record<string, { icon: string; label: string; cls: string }> = {
+  hot:     { icon: '🔥', label: '많이 다룸',   cls: 'bg-orange-50 text-orange-600' },
+  delta:   { icon: '💡', label: '관점에 새 것', cls: 'bg-sky-50 text-sky-700' },
+  surface: { icon: '⚡', label: '결이 다름',   cls: 'bg-violet-50 text-violet-700' },
+};
+function RoleBadge({ it }: { it: NewsItem }) {
+  const b = it.role ? ROLE_BADGE[it.role] : undefined;
+  if (!b) return null;
+  return (
+    <span title={it.why || b.label}
+      className={`self-start text-[11px] px-1.5 py-0.5 rounded mb-1 cursor-help ${b.cls}`}>
+      {b.icon} {b.label}
+    </span>
+  );
+}
 interface Section { keyword: string; items: NewsItem[]; error?: boolean }
 // 저장되는 판. sections=스냅샷 내용, dateLabel/issuedAt=발행 시점. title/keywords 는 발행 당시 설정 사본.
-interface Edition { title: string; keywords: string[]; sections: Section[]; dateLabel: string; issuedAt: string }
+// perspective=이 판이 관점 코어(개인화) 반영으로 편성됐는지 — silent 폴백을 사용자에게 노출(감독 가능성).
+interface Edition { title: string; keywords: string[]; sections: Section[]; dateLabel: string; issuedAt: string; perspective?: boolean }
+
+// 편집장이 관점 코어(vault/위키/관점 코어.md)를 반영했는지 — curate 응답의 perspective 필드.
+// 모듈 변수로 최근 값을 기억: 발행/편집 풀 로드 직후의 setState 렌더에서 읽힌다.
+let PERSPECTIVE_ON: boolean | undefined;
+function notePerspective(result: unknown) {
+  const p = (result as { perspective?: boolean } | null)?.perspective;
+  if (typeof p === 'boolean') PERSPECTIVE_ON = p;
+}
 
 // 저장된 최신 판을 읽어온다. 없으면(파일 부재 → "Error: ..." 문자열) null.
 async function loadEdition(): Promise<Edition | null> {
@@ -52,8 +78,9 @@ async function saveEdition(ed: Edition): Promise<void> {
 }
 
 // 폰/원격 뷰어(정기보고식)가 읽을 마크다운 판을 PC 에 쓴다 — sections → 어휘 파이프(table:document
-// 마크다운 emitter)로 사람이 읽는 문서 텍스트를 얻어 self:write. 파생물이라 실패해도 발행 자체는 유지(best-effort).
-async function saveMarkdownFile(title: string, dateLabel: string, sections: Section[]): Promise<void> {
+// 마크다운 emitter)로 사람이 읽는 문서 텍스트를 얻어 self:write. 파생물이라 실패해도 발행 자체는
+// 유지(best-effort)하되, 성공 여부를 반환해 상단바에 부분 실패를 노출한다(조용한 삼킴 금지).
+async function saveMarkdownFile(title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
   try {
     const items = sections.flatMap((sec) => sec.items.map((it) => ({ ...it, section: sec.keyword })));
     const doc = (await iblExecuteApp(
@@ -63,8 +90,10 @@ async function saveMarkdownFile(title: string, dateLabel: string, sections: Sect
     const md = doc?.markdown;
     if (typeof md === 'string' && md) {
       await iblExecuteApp(`[self:write]{path: ${JSON.stringify(MD_PATH)}, content: ${JSON.stringify(md)}}`);
+      return true;
     }
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
+  return false;
 }
 
 // 마스트헤드(제호 아래 한 줄)에 얹을 날씨·지수 — 이미 가진 어휘로 best-effort 수집.
@@ -91,12 +120,14 @@ async function fetchMasthead(): Promise<MastheadData> {
 }
 
 // 공유용 자기완결 HTML 판을 PC 에 쓴다 — 폰 뷰어의 공유 버튼이 이 파일을 카톡 등으로 보낸다(친구=브라우저 열람).
-async function saveHtmlFile(title: string, dateLabel: string, sections: Section[]): Promise<void> {
+async function saveHtmlFile(title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
   try {
     const masthead = await fetchMasthead().catch(() => ({} as MastheadData));
     const html = buildNewspaperHtml(title, dateLabel, sections, masthead);
     await iblExecuteApp(`[self:write]{path: ${JSON.stringify(HTML_PATH)}, content: ${JSON.stringify(html)}}`);
+    return true;
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
+  return false;
 }
 
 function loadKeywords(): string[] {
@@ -113,6 +144,7 @@ const openExternal = (url?: string) => { if (url) window.electron?.openExternal?
 // curate: 경량 AI 섹션 편집자가 오버페치 pool에서 같은 사건 중복을 묶고 뉴스가치 순 7개 선별.
 async function fetchNews(keyword: string): Promise<NewsItem[]> {
   const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: 7}`);
+  notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
 }
@@ -121,6 +153,7 @@ async function fetchNews(keyword: string): Promise<NewsItem[]> {
 const HOT_KEYWORD = '🔥 오늘의 핫토픽';
 async function fetchHotTopics(): Promise<NewsItem[]> {
   const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: 7}`);
+  notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
 }
@@ -130,19 +163,25 @@ async function fetchHotTopics(): Promise<NewsItem[]> {
 // '다른 뉴스'로 빈칸을 메워야 한다. 그러려면 섹션마다 N 보다 큰 후보 풀(pool)을 미리 확보해
 // 두고, 화면엔 앞 N 개(selected)만 보인다 — 검색 브라우저를 섹션마다 반복하는 셈.
 const SECTION_SIZE = 7;    // 최종 신문에 실리는 섹션당 기사 수(자동발간과 동일)
-const POOL_CURATE = 21;    // 후보 풀 크기(> N) — 제거분을 중복 없이 대체할 여유분
 // 중복 판정 키: 링크 우선, 없으면 제목.
 const itemKey = (it: NewsItem) => it.url || it.title || '';
 
+// 편집 풀 = 편집장 픽(role/why 부착, 앞줄) + 안 뽑힌 나머지(pool, 대체 후보) —
+// EditFlow의 '앞 N개=selected' 논리가 그대로 편집장 편성을 첫 화면으로 만든다.
+function mergePicksAndPool(result: unknown): NewsItem[] {
+  notePerspective(result);
+  const r = result as { items?: NewsItem[]; pool?: NewsItem[] } | null;
+  const picks = Array.isArray(r?.items) ? r!.items! : [];
+  const rest = Array.isArray(r?.pool) ? r!.pool! : [];
+  return [...picks, ...rest];
+}
 async function fetchNewsPool(keyword: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: ${POOL_CURATE}}`);
-  const items = (result as { items?: NewsItem[] } | null)?.items;
-  return Array.isArray(items) ? items : [];
+  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: ${SECTION_SIZE}}`);
+  return mergePicksAndPool(result);
 }
 async function fetchHotTopicsPool(): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: ${POOL_CURATE}}`);
-  const items = (result as { items?: NewsItem[] } | null)?.items;
-  return Array.isArray(items) ? items : [];
+  const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: ${SECTION_SIZE}}`);
+  return mergePicksAndPool(result);
 }
 
 // ── 자기완결 HTML 내보내기(친구에게 파일로 공유) ─────────────────
@@ -373,6 +412,7 @@ function EditFlow({ keywords, onDone, onCancel }: {
             <h2 className="text-2xl font-bold text-[#1a1a2e] border-b-2 border-stone-200 pb-2 mb-1">{cur.keyword}</h2>
             <div className="text-xs text-stone-400 mb-4">
               {cur.selected.length}건 선택됨{poolLeft > 0 ? ` · 대체 후보 ${poolLeft}건 남음` : ' · 대체 후보 소진'}
+              {PERSPECTIVE_ON === true ? ' · 💡 관점 편성' : PERSPECTIVE_ON === false ? ' · 일반 편성(관점 코어 없음)' : ''}
             </div>
             {cur.selected.length === 0 ? (
               <div className="text-sm text-stone-400 py-2">{cur.error ? '뉴스를 불러오지 못했습니다.' : '남은 후보가 없습니다.'}</div>
@@ -382,6 +422,7 @@ function EditFlow({ keywords, onDone, onCancel }: {
                   <article key={itemKey(it) || i} className="relative border border-stone-200 rounded-lg p-4 pr-9 flex flex-col bg-white">
                     <button onClick={() => removeItem(i)} title="이 기사 빼기"
                       className="absolute top-2 right-2 w-6 h-6 rounded-full text-stone-300 hover:text-white hover:bg-rose-500 leading-none flex items-center justify-center">✕</button>
+                    <RoleBadge it={it} />
                     <h3 className="text-base font-semibold leading-snug text-[#22223b] mb-1.5">{it.title}</h3>
                     {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
                     {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}
@@ -421,6 +462,8 @@ export function NewspaperInstrument() {
   // date=마스트헤드에 찍히는 발행일(스냅샷). 새로 발행하면 오늘로, 저장된 판을 열면 그 판의 발행일.
   const [date, setDate] = useState<string>(todayStr);
   const [issuedAt, setIssuedAt] = useState<string | null>(null);
+  const [perspective, setPerspective] = useState<boolean | null>(null);  // 이 판이 관점 반영인지(#5)
+  const [deriveWarn, setDeriveWarn] = useState<string | null>(null);     // 파생 파일 부분 실패(#7)
 
   const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(KW_KEY, JSON.stringify(kw)); };
   const addKeyword = () => {
@@ -483,10 +526,13 @@ export function NewspaperInstrument() {
     setSections(all);
     setDate(nowLabel);
     setIssuedAt(iso);
+    setPerspective(PERSPECTIVE_ON ?? null);
     const ttl = title || DEFAULT_TITLE;
-    await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso });
-    await saveMarkdownFile(ttl, nowLabel, all);  // 폰 뷰어 표시용
-    await saveHtmlFile(ttl, nowLabel, all);      // 폰 공유용(카톡 등)
+    await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso, perspective: PERSPECTIVE_ON });
+    const mdOk = await saveMarkdownFile(ttl, nowLabel, all);   // 폰 뷰어 표시용
+    const htmlOk = await saveHtmlFile(ttl, nowLabel, all);     // 폰 공유용(카톡 등)
+    const fails = [...(mdOk ? [] : ['md(폰 뷰어)']), ...(htmlOk ? [] : ['html(공유)'])];
+    setDeriveWarn(fails.length ? `${fails.join(' · ')} 저장 실패 — 데스크탑 판(JSON)은 정상` : null);
   }, [keywords, title]);
 
   // 새로 발행 = 키워드마다 search_gnews 팬아웃 → 섹션 → 판을 저장. (버튼을 눌러야만 실행; 열 때 자동 재취재 없음.)
@@ -534,6 +580,7 @@ export function NewspaperInstrument() {
         setSections(ed.sections || []);
         if (ed.dateLabel) setDate(ed.dateLabel);
         setIssuedAt(ed.issuedAt || null);
+        setPerspective(typeof ed.perspective === 'boolean' ? ed.perspective : null);
       }
       setLoading(false);
     })();
@@ -546,8 +593,10 @@ export function NewspaperInstrument() {
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-stone-200 bg-white/70">
         <div className="text-xs text-stone-400">
           {loading ? '신문 발행 중…'
-            : issuedAt ? `${whenLabel(issuedAt)} 발행 · ${sections.length}개 섹션`
+            : issuedAt ? `${whenLabel(issuedAt)} 발행 · ${sections.length}개 섹션${
+                perspective === true ? ' · 💡 관점 반영' : perspective === false ? ' · 일반 판(관점 코어 없음)' : ''}`
             : '아직 발행되지 않음'}
+          {deriveWarn && <span className="ml-2 text-amber-600">⚠ {deriveWarn}</span>}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setEditing((e) => !e)}
@@ -646,6 +695,7 @@ export function NewspaperInstrument() {
                 <div className="grid gap-4 md:grid-cols-2">
                   {sec.items.map((it, i) => (
                     <article key={i} className="border border-stone-200 rounded-lg p-4 flex flex-col bg-white">
+                      <RoleBadge it={it} />
                       <h3 className="text-base font-semibold leading-snug text-[#22223b] mb-1.5">{it.title}</h3>
                       {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
                       {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}

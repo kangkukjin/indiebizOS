@@ -76,7 +76,7 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
         }
 
     try:
-        count = min(max(1, count), 30)
+        count = min(max(1, count), 100)  # 검색 RSS는 GET 1회에 ~105개 — 100까지 공짜(같은 요청)
         # region 자동 결정
         if region is None:
             region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
@@ -143,68 +143,179 @@ def _norm_title(t: str) -> str:
 
 
 def _heuristic_dedup(items: list, threshold: float = 0.86) -> list:
-    """제목 근접 유사도로 노골적 중복 제거(0토큰). 첫 등장만 남김.
-    AI 편집 전 pool 축소 + AI 실패 시 폴백 겸용."""
-    kept, seen = [], []
+    """제목 근접 유사도로 노골적 중복 제거(0토큰). 첫 등장만 남기되, 흡수한 중복 수를
+    `sources` 필드에 기록 — 군집 크기('얼마나 널리 다뤄졌나')는 편집장의 hot 신호,
+    군집 1('단독 보도')은 surface 후보 신호."""
+    kept, seen = [], []                        # seen: (정규화 제목, kept 인덱스)
     for it in items:
         n = _norm_title(it.get("title", ""))
         if not n:
-            kept.append(it)
+            kept.append(dict(it))
             continue
-        if any(n == s or difflib.SequenceMatcher(None, n, s).ratio() >= threshold for s in seen):
+        hit = None
+        for s, ki in seen:
+            if n == s or difflib.SequenceMatcher(None, n, s).ratio() >= threshold:
+                hit = ki
+                break
+        if hit is not None:
+            kept[hit]["sources"] = kept[hit].get("sources", 1) + 1
             continue
-        seen.append(n)
-        kept.append(it)
+        seen.append((n, len(kept)))
+        kept.append(dict(it))
     return kept
 
 
-def _curate_section(topic: str, items: list, keep: int) -> list:
-    """한 주제 섹션의 기사 pool → 경량 AI가 같은 사건 중복을 하나로 묶어 대표만
-    남기고 뉴스가치 순 상위 keep개를 고른다. AI는 '고르기'만(번호 선택) — 제목/URL
-    재작성 없음(환각·조작 차단). 실패 시 휴리스틱 dedup 폴백. 절대 빈 목록 반환 안 함."""
+_STUDY_HANDLER = None
+
+
+def _guardian_items(query: str, count: int = 30) -> list:
+    """가디언 기사 → 신문 items 통화. **정본 구현=study 패키지 [sense:search_guardian]**
+    (능력1·구현1 — web은 importlib로 빌려 쓴다, 고유 모듈명으로 충돌 회피).
+    study 미설치·GUARDIAN_API_KEY 부재·무결과 시 [] 반환 — 신문은 gnews만으로 진행."""
+    global _STUDY_HANDLER
+    try:
+        if _STUDY_HANDLER is None:
+            import importlib.util
+            p = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "study", "handler.py"))
+            spec = importlib.util.spec_from_file_location("_study_handler_for_web", p)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            _STUDY_HANDLER = mod
+        res = _STUDY_HANDLER._search_guardian({"query": query, "page_size": min(count, 50)})
+        if isinstance(res, dict) and res.get("items"):
+            return [{
+                "title": r.get("title", ""),
+                "meta": " · ".join(x for x in ["The Guardian", r.get("meta", "")] if x),
+                "summary": r.get("summary", ""),
+                "url": r.get("url", ""), "link_label": "기사 보기",
+            } for r in res["items"]]
+    except Exception as e:
+        print(f"[_guardian_items] 가디언 검색 생략: {e}", file=sys.stderr)
+    return []
+
+
+_PERSPECTIVE_CACHE: dict = {}
+
+
+def _load_perspective_core() -> str:
+    """관점 코어(블로그 12년치의 증류, vault/위키/관점 코어.md) — 편집장의 개인 기준선.
+    mtime 캐시. 없으면 빈 문자열 → 뉴스가치-only 폴백(신문은 항상 나옴).
+    경로는 PERSPECTIVE_CORE_PATH 환경변수로 재지정 가능(이식성)."""
+    global _PERSPECTIVE_CACHE
+    path = os.environ.get("PERSPECTIVE_CORE_PATH") or os.path.expanduser(
+        "~/Documents/iRepublic-Vault/위키/관점 코어.md")
+    try:
+        mtime = os.path.getmtime(path)
+    except OSError:
+        return ""
+    if _PERSPECTIVE_CACHE.get("path") == path and _PERSPECTIVE_CACHE.get("mtime") == mtime:
+        return _PERSPECTIVE_CACHE.get("text", "")
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+        text = re.sub(r"^---[\s\S]*?---\s*", "", text, count=1)   # frontmatter 제거
+        _PERSPECTIVE_CACHE = {"path": path, "mtime": mtime, "text": text}
+        return text
+    except OSError:
+        return ""
+
+
+def _curate_sections_batch(secs: list, keep: int) -> list:
+    """여러 섹션을 경량 AI '편집장' **1회 호출**로 선별. secs=[{topic, items}] →
+    같은 순서의 [{"picks": 선별(role/why 부착), "rest": 나머지 풀(편집신문 대체 후보)}].
+
+    편성(2026-07-11 관점 큐레이션): keep개를 세 슬롯으로 —
+      hot     여러 매체가 다룬 사건(dedup 군집 ×N) = 세상과의 접점 유지
+      delta   관점 코어(블로그 증류) 기준 *새 정보* — 입장 위반·확장/열린 질문/구체 단독.
+              '이미 믿는 것' 재확인 금지 = 기준선 뺄셈(반버블)
+      surface 섹션 지배 프레임과 결이 다른 이질 1건 의무(forager surface — 필터버블 반대힘)
+    관점 코어 없으면 뉴스가치+surface 폴백. AI 실패 시 휴리스틱 pool[:keep] — 절대 빈 신문 없음."""
     if keep < 1:
         keep = 1
-    pool = _heuristic_dedup(items)             # 1차: 값싼 근접중복 제거로 pool 축소
-    if len(pool) <= keep:
-        return pool[:keep]                     # 이미 충분히 적으면 AI 불필요
+    pools = [_heuristic_dedup(s.get("items") or []) for s in secs]
+    need_ai = [i for i, p in enumerate(pools) if len(p) > keep]
 
-    try:                                        # 2차: 경량 AI 의미 dedup + 뉴스가치 정렬
+    def _fallback():
+        return [{"picks": p[:keep], "rest": p[keep:]} for p in pools]
+
+    if not need_ai:
+        return _fallback()
+
+    try:
         from consciousness_agent import lightweight_ai_call
-        lines = []
-        for i, it in enumerate(pool, 1):
-            src = (it.get("meta") or "").split(" · ")[0].strip()
-            summ = (it.get("summary") or "").strip().replace("\n", " ")[:100]
-            line = f"{i}. {it.get('title', '')}"
-            if src:
-                line += f" [{src}]"
-            if summ:
-                line += f" — {summ}"
-            lines.append(line)
-        sys_prompt = (
-            "너는 개인 신문의 섹션 편집자다. 한 주제에 대한 기사 목록을 받는다.\n"
-            "같은 사건을 다룬 중복 기사는 하나로 묶고, 각 사건에서 가장 정보가 풍부한 기사 하나만 남겨라.\n"
-            "그 뒤 주제에 대한 뉴스 가치가 높은 순으로 정렬하라.\n"
-            "기사를 새로 쓰거나 제목을 바꾸지 말고, 주어진 번호 중에서만 골라라.\n"
-            "출력은 남길 기사 번호의 JSON 배열 하나만. 예: [3, 1, 8]. 다른 말 금지."
-        )
-        prompt = f"주제: {topic}\n목표 기사 수: {keep}\n\n기사 목록:\n" + "\n".join(lines)
-        resp = lightweight_ai_call(prompt, system_prompt=sys_prompt, role="classify")
-        if resp:
-            m = re.search(r"\[[\d,\s]*\]", resp)
-            if m:
-                picked, used = [], set()
-                for n in json.loads(m.group(0)):
-                    if isinstance(n, int) and 1 <= n <= len(pool) and n not in used:
-                        used.add(n)
-                        picked.append(pool[n - 1])
-                    if len(picked) >= keep:
-                        break
-                if picked:
-                    return picked
-    except Exception as e:
-        print(f"[_curate_section] 경량 AI 편집 실패, 휴리스틱 폴백: {e}", file=sys.stderr)
+        core = _load_perspective_core()
+        blocks = []
+        for i in need_ai:
+            lines = []
+            for j, it in enumerate(pools[i], 1):
+                src = (it.get("meta") or "").split(" · ")[0].strip()
+                line = f"{j}. {it.get('title', '')}"
+                if src:
+                    line += f" [{src}]"
+                if it.get("sources", 1) > 1:
+                    line += f" (×{it['sources']}매체)"
+                lines.append(line)
+            blocks.append(f"[섹션 {i}] 주제: {secs[i].get('topic', '')}\n" + "\n".join(lines))
 
-    return pool[:keep]                          # 폴백: 근접중복 제거된 pool 앞에서 keep개
+        persp = ""
+        delta_rule = ""
+        if core:
+            persp = (
+                "\n독자의 관점 코어(그의 블로그 12년치의 증류 — 이미 믿는 것, 배격하는 프레임, 열린 질문):\n"
+                "<관점>\n" + core + "\n</관점>\n"
+            )
+            delta_rule = (
+                "- delta: 독자의 관점에 *새 정보* — 그의 입장을 위반·확장하거나, 열린 질문에 닿거나,\n"
+                "  구체적 단독 사례. 관점의 '이미 믿는 것' 재확인(그가 오래전 끝낸 일반론)은 delta 로 뽑지 마라.\n"
+            )
+        sys_prompt = (
+            "너는 개인 신문의 편집장이다. 여러 섹션의 기사 제목 목록을 한 번에 받는다.\n"
+            + persp +
+            "섹션마다 목표 수만큼 골라 이렇게 편성하라:\n"
+            "- hot: 널리 다뤄진 중요 사건(×N=여러 매체 보도). 목표 수의 절반 이하.\n"
+            + delta_rule +
+            "- surface: 섹션의 지배적 흐름·프레임과 결이 다른 이질 기사 딱 1개(작게 다뤄졌어도). 의무.\n"
+            "같은 사건의 중복 기사는 하나만. 기사를 새로 쓰거나 제목을 바꾸지 말고 번호로만 골라라.\n"
+            '출력은 JSON 객체 하나만: {"0": [{"n": 3, "r": "hot", "w": "이유"}, ...], "2": [...]} '
+            "— 키=섹션 번호, n=기사 번호, r=hot|delta|surface, w=고른 이유(25자 이내). 다른 말 금지."
+        )
+        prompt = f"섹션당 목표 기사 수: {keep}\n\n" + "\n\n".join(blocks)
+        resp = lightweight_ai_call(prompt, system_prompt=sys_prompt, role="classify")
+        m = re.search(r"\{[\s\S]*\}", resp or "")
+        if not m:
+            return _fallback()
+        sel = json.loads(m.group(0))
+        out = []
+        for i, p in enumerate(pools):
+            if i not in need_ai:
+                out.append({"picks": p[:keep], "rest": p[keep:]})
+                continue
+            picked, used = [], set()
+            for e in (sel.get(str(i)) or []):
+                if isinstance(e, dict):
+                    n, r, w = e.get("n"), e.get("r"), e.get("w")
+                elif isinstance(e, int):            # 번호-만 응답도 수용(강건성)
+                    n, r, w = e, None, None
+                else:
+                    continue
+                if isinstance(n, int) and 1 <= n <= len(p) and n not in used:
+                    used.add(n)
+                    it = dict(p[n - 1])
+                    if r in ("hot", "delta", "surface"):
+                        it["role"] = r
+                    if w:
+                        it["why"] = str(w)[:60]
+                    picked.append(it)
+                if len(picked) >= keep:
+                    break
+            if not picked:
+                out.append({"picks": p[:keep], "rest": p[keep:]})
+            else:
+                rest = [it for j, it in enumerate(p, 1) if j not in used]
+                out.append({"picks": picked, "rest": rest})
+        return out
+    except Exception as e:
+        print(f"[_curate_sections_batch] 경량 AI 편집 실패, 휴리스틱 폴백: {e}", file=sys.stderr)
+        return _fallback()
 
 
 def _parse_curate(tool_input: dict):
@@ -404,7 +515,7 @@ def execute(tool_input: dict, context):
             _lang = tool_input.get("language", "auto")
             _curate = _parse_curate(tool_input)
             # curate 시 오버페치(약 3배)해 섹션별 dedup 후 빈 자리 자동 채움
-            _fetch = min(30, max(_curate * 3, _count)) if _curate else _count
+            _fetch = 100 if _curate else _count   # 편집장은 넓게 보고 좁게 뽑는다 — GET 1회라 공짜
 
             def _dl(q):
                 if _lang != "auto":
@@ -412,34 +523,51 @@ def execute(tool_input: dict, context):
                 kc = sum(1 for c in q if '가' <= c <= '힣' or 'ㄱ' <= c <= 'ㆎ')
                 return "ko" if kc > len(q) * 0.2 else "en"
 
-            all_items, sections = [], []
-            # 오늘의 핫토픽 — headlines:true 면 키워드 없는 톱헤드라인을 맨 앞 섹션으로(원격/폰 신문 파리티)
-            if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
-                _hl = search_gnews(count=_fetch, language=(_lang if _lang != "auto" else "ko"), headlines=True)
-                _hi = [{
+            # RSS 병렬 페치(키워드당 GET 1회) + 경량 AI 일괄 편집(전 섹션 1회 호출) —
+            # 직렬 (RSS+AI)×N 루프가 신문 조립을 느리게 하던 것을 해소(2026-07-11).
+            def _to_items(res, tag):
+                return [{
                     "title": r.get("title", ""),
                     "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
                     "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
-                    "url": r.get("url", ""), "link_label": "기사 보기", "query": "오늘의 핫토픽",
-                } for r in (_hl.get("results") or [])]
-                if _curate:
-                    _hi = _curate_section("오늘의 핫토픽", _hi, _curate)
-                all_items.extend(_hi)
-                sections.append({"query": "오늘의 핫토픽", "count": len(_hi)})
-            for q in _queries:
-                res = search_gnews(query=q, count=_fetch, language=_dl(q))
-                items = [{
-                    "title": r.get("title", ""),
-                    "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
-                    "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
-                    "url": r.get("url", ""), "link_label": "기사 보기", "query": q,
+                    "url": r.get("url", ""), "link_label": "기사 보기", "query": tag,
                 } for r in (res.get("results") or [])]
-                if _curate:
-                    items = _curate_section(q, items, _curate)
+
+            _sources = str(tool_input.get("sources") or "gnews,guardian")
+
+            def _fetch_section_items(q):
+                lang = _dl(q)
+                items = _to_items(search_gnews(query=q, count=_fetch, language=lang), q)
+                # 가디언 합류: curate(신문 편성) + 영어 키워드일 때만 — 한국어 질의는 가디언 코퍼스에 없음
+                if _curate and "guardian" in _sources and lang == "en":
+                    items += [{**g, "query": q} for g in _guardian_items(q, 30)]
+                return items
+
+            jobs = []  # (섹션명, items thunk) — 오늘의 핫토픽은 맨 앞 섹션(원격/폰 신문 파리티)
+            if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
+                jobs.append(("오늘의 핫토픽", lambda: _to_items(search_gnews(
+                    count=_fetch, language=(_lang if _lang != "auto" else "ko"), headlines=True), "오늘의 핫토픽")))
+            for q in _queries:
+                jobs.append((q, (lambda qq: (lambda: _fetch_section_items(qq)))(q)))
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
+                fetched = list(ex.map(lambda j: j[1](), jobs))
+            secs = [{"topic": jobs[i][0], "items": fetched[i]} for i in range(len(jobs))]
+            curated = _curate_sections_batch(secs, _curate) if _curate else None
+
+            all_items, pool_rest, sections = [], [], []
+            for i in range(len(secs)):
+                items = curated[i]["picks"] if curated else secs[i]["items"]
+                if curated:
+                    pool_rest.extend(curated[i]["rest"])
                 all_items.extend(items)
-                sections.append({"query": q, "count": len(items)})
-            return format_json({"success": True, "queries": _queries, "count": len(all_items),
-                                "sections": sections, "items": all_items})
+                sections.append({"query": jobs[i][0], "count": len(items)})
+            resp = {"success": True, "queries": _queries, "count": len(all_items),
+                    "sections": sections, "items": all_items}
+            if curated:
+                resp["pool"] = pool_rest   # 편집장이 안 뽑은 나머지(query 태그로 섹션 구분) — 편집신문 대체 후보
+                resp["perspective"] = bool(_load_perspective_core())  # 관점 코어 반영 여부 — silent 폴백을 UI에 노출
+            return format_json(resp)
 
         # 오늘의 핫토픽 — 키워드 없는 톱 헤드라인을 curate가 군집·랭킹(중복 많이 다뤄진=핫)
         if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
@@ -447,7 +575,7 @@ def execute(tool_input: dict, context):
             if language == "auto":
                 language = "ko"
             _curate = _parse_curate(tool_input)
-            _fetch = min(30, max(_curate * 3, tool_input.get("count", 12))) if _curate else tool_input.get("count", 12)
+            _fetch = 100 if _curate else tool_input.get("count", 12)   # 헤드라인 피드는 실제 최대 ~34
             result = search_gnews(count=_fetch, language=language, headlines=True)
             if isinstance(result, dict) and isinstance(result.get("results"), list):
                 result["items"] = [{
@@ -458,8 +586,10 @@ def execute(tool_input: dict, context):
                     "query": "오늘의 핫토픽",
                 } for r in result["results"]]
                 if _curate:
-                    result["items"] = _curate_section("오늘의 핫토픽", result["items"], _curate)
+                    cr = _curate_sections_batch([{"topic": "오늘의 핫토픽", "items": result["items"]}], _curate)[0]
+                    result["items"], result["pool"] = cr["picks"], cr["rest"]
                     result["count"] = len(result["items"])
+                    result["perspective"] = bool(_load_perspective_core())
             return format_json(result)
 
         query = tool_input.get("query", "")
@@ -473,7 +603,7 @@ def execute(tool_input: dict, context):
             language = "ko" if korean_chars > len(query) * 0.2 else "en"
 
         _curate = _parse_curate(tool_input)
-        _fetch = min(30, max(_curate * 3, tool_input.get("count", 10))) if _curate else tool_input.get("count", 10)
+        _fetch = 100 if _curate else tool_input.get("count", 10)   # 편집장은 넓게 보고 좁게 뽑는다
         result = search_gnews(
             query=query,
             count=_fetch,
@@ -488,8 +618,13 @@ def execute(tool_input: dict, context):
                 "query": query,  # 검색어 태그 → group 뷰/table:groupby 섹션화용
             } for r in result["results"]]
             if _curate:
-                result["items"] = _curate_section(query, result["items"], _curate)
+                # 가디언 합류(영어 키워드): 정본=study search_guardian, 실패 시 조용히 gnews만
+                if "guardian" in str(tool_input.get("sources") or "gnews,guardian") and language == "en":
+                    result["items"] += [{**g, "query": query} for g in _guardian_items(query, 30)]
+                cr = _curate_sections_batch([{"topic": query, "items": result["items"]}], _curate)[0]
+                result["items"], result["pool"] = cr["picks"], cr["rest"]
                 result["count"] = len(result["items"])
+                result["perspective"] = bool(_load_perspective_core())
         return format_json(result)
 
     # 사이트 런처

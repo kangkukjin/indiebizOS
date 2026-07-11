@@ -189,6 +189,50 @@
         },
         "required": []
       }
+    },
+    {
+      "name": "entity_op",
+      "description": "개체 해소·구조화된 사실 (op 분기) — [sense:entity]. Wikidata 지식 그래프. 동명이인·동음이의를 QID로 못박음. 일반 인물 OSINT는 search_ddg, 국내 연구자는 researcher_op.\n- op=resolve(기본): query(필수) + lang(기본 ko) + max_results → 후보별 QID·라벨·설명. 동명이인/동음이의 분리.\n- op=detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등). query만 주면 최상위 후보 자동 해소.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "resolve(기본)/detail",
+            "enum": [
+              "resolve",
+              "detail"
+            ],
+            "default": "resolve"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "wikidata"
+            ],
+            "default": "wikidata",
+            "description": "지식 그래프. 현재 wikidata(무API키)만 지원."
+          },
+          "query": {
+            "type": "string",
+            "description": "[resolve/detail] 개체명·검색어 (예 \"강국진\")"
+          },
+          "id": {
+            "type": "string",
+            "description": "[detail] Wikidata QID (예 Q42). resolve로 먼저 획득."
+          },
+          "lang": {
+            "type": "string",
+            "description": "라벨 언어(기본 ko, 없으면 en 폴백)",
+            "default": "ko"
+          },
+          "max_results": {
+            "type": "integer",
+            "description": "[resolve] 최대 후보 수(기본 7)"
+          }
+        },
+        "required": []
+      }
     }
   ]
 }

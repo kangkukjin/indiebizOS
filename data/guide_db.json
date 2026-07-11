@@ -393,7 +393,7 @@
     {
       "id": "newspaper",
       "name": "신문 제작 가이드",
-      "description": "오늘의 핫토픽과 관심 키워드 섹션을 구글뉴스(search_gnews) 팬아웃으로 모아 신문 형태로 발행. 고정 파일 newspaper_current.md(project_id 앱모드)에 저장 — 폰/원격이 @hub로 읽어 본다. (옛 engines:newspaper 은퇴)",
+      "description": "오늘의 핫토픽과 관심 키워드 섹션을 구글뉴스(search_gnews, curate 7) 팬아웃으로 모아 신문 형태로 발행. 판(edition) 3파일(newspaper_current.json/md/html, project_id 앱모드) — 데스크탑은 JSON을 읽어 카드 재렌더, 폰/원격은 md/html. 위임 시 JSON도 함께 써야 데스크탑 반영. 브라우저 자동 열기 없음(옛 engines:newspaper 은퇴).",
       "keywords": [
         "신문",
         "뉴스",

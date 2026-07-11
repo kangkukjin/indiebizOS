@@ -145,7 +145,8 @@ indiebizOS/
 │       ├── agents.yaml  # 에이전트 설정
 │       └── conversations.db # 대화 이력
 │
-├── scripts/             # 빌드/배포 스크립트 (build_ibl_nodes.py + git-hooks/pre-commit)
+├── scripts/             # 빌드/배포 스크립트 (build_ibl_nodes.py + build_core_manifest.py[표준 코어 경계] + build_dist_filter.py[설치필터] + git-hooks/pre-commit)
+│   │   # 코어/사용자 경계: data/core_manifest.json (git 파생 단일 진실) → package_manager origin(core|user) + main.js initUserData(코어만 갱신·설치상태 보존) + dist_filter(코어 기준 배포)
 ├── mcp_server.py        # MCP 서버 엔트리포인트
 ├── templates/           # 프로젝트 템플릿
 └── outputs/             # 출력 파일

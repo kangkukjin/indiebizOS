@@ -1467,6 +1467,36 @@ nodes:
         - 동명이인
         - 공저자
         - researcher
+      entity:
+        returns: items
+        fixture: '[sense:entity]{query: "강국진"}'
+        description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search_ddg, 국내 연구자는 researcher.
+        target_description: 'op로 분기 (기본 resolve).
+
+          - resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 ''강국진''=여러 인물). QID는 개체를 못박는 신원자.
+
+          - detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등, 속성:값 records). query만 주면 최상위 후보로 자동 해소.
+
+          '
+        target_key: op
+        group: research
+        router: handler
+        tool: entity_op
+        ops:
+          default: resolve
+          values:
+            resolve: 개체 후보 검색 (query→QID·라벨·설명, 동명이인/동음이의 분리)
+            detail: 구조화된 사실 (QID→속성:값 records)
+        implementation: study 패키지. Wikidata Action API — resolve=wbsearchentities, detail=wbgetentities(claims 라벨 해소). source 기본 wikidata(무API키).
+        keywords:
+        - 개체
+        - 위키데이터
+        - wikidata
+        - 동명이인
+        - 동음이의
+        - 신원
+        - 개체해소
+        - QID
       pew_research:
         returns: items
         fixture: '[sense:pew_research]{}'

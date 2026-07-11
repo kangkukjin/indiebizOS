@@ -66,7 +66,7 @@
           },
           "count": {
             "type": "integer",
-            "description": "결과 개수 (기본 10, 최대 30)"
+            "description": "결과 개수 (기본 10, 최대 100 — 검색 RSS는 GET 1회에 ~100개까지 줌)"
           },
           "language": {
             "type": "string",
@@ -78,11 +78,15 @@
           },
           "curate": {
             "type": "integer",
-            "description": "지정 시 경량 AI 섹션 편집자가 같은 사건 중복 기사를 하나로 묶고 뉴스가치 순으로 이 개수만큼 선별. 오버페치(약 3배) 후 dedup → 빈 자리 자동 채움. 신문 섹션용. 미지정 시 순수 검색."
+            "description": "지정 시 경량 AI '편집장'이 ~100개를 넓게 보고 이 개수만큼 편성 — 중복은 하나로 묶고, hot(널리 다뤄진 사건)·delta(독자 관점 코어 기준 새 정보)·surface(지배 프레임과 다른 이질 1건 의무)를 섞어 선별(각 기사에 role/why 부착). 안 뽑힌 나머지는 pool 필드로 반환(대체 후보). 관점 코어(vault/위키/관점 코어.md) 없으면 뉴스가치+surface 폴백. 신문 섹션용. 미지정 시 순수 검색."
           },
           "headlines": {
             "type": "boolean",
             "description": "true면 키워드 없이 구글뉴스 톱 헤드라인을 가져온다. curate와 함께 쓰면 오늘 가장 많이 다뤄진 사건 순으로 '오늘의 핫토픽' 섹션이 된다. query 불필요."
+          },
+          "sources": {
+            "type": "string",
+            "description": "큐레이션 풀에 합류할 소스(쉼표 나열). 기본 \"gnews,guardian\" — curate 지정 + 영어 키워드면 가디언 기사가 풀에 합류(정본 구현=study 패키지 search_guardian, GUARDIAN_API_KEY). 한국어 키워드는 자동 생략. \"gnews\"만 주면 가디언 끔."
           }
         },
         "required": []

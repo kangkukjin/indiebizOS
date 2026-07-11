@@ -12,7 +12,7 @@
  *
  * 키워드/제목은 편집 가능(localStorage 결정화) — '다음 판'에 쓸 편집 설정이다.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FC } from 'react';
 import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
 const KW_KEY = 'newspaper.keywords';
@@ -139,6 +139,11 @@ function loadKeywords(): string[] {
 }
 
 const openExternal = (url?: string) => { if (url) window.electron?.openExternal?.(url); };
+
+// <webview> — Electron 전용 escape-hatch(표준 JSX 아님). 메인 창의 webviewTag=true 필요(ForageBrowser와 공유).
+const WebView = 'webview' as unknown as FC<Record<string, unknown>>;
+// 데스크탑 Electron(메인 창)에서만 내부 브라우저(webview) 사용 가능. 원격/폰 웹런처엔 window.electron 없음.
+const canInternalBrowse = () => typeof window !== 'undefined' && !!window.electron?.openExternal;
 
 // [sense:search_gnews] 한 키워드 → items. /ibl/execute 응답을 견고하게 파싱.
 // curate: 경량 AI 섹션 편집자가 오버페치 pool에서 같은 사건 중복을 묶고 뉴스가치 순 7개 선별.
@@ -427,7 +432,7 @@ function EditFlow({ keywords, onDone, onCancel }: {
                     {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
                     {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}
                     {it.url && (
-                      <button onClick={() => openExternal(it.url)}
+                      <button onClick={() => openArticle(it.url, it.title)}
                         className="mt-auto self-start text-sm font-semibold text-[#3d5a80] hover:underline">기사 보기 →</button>
                     )}
                   </article>
@@ -464,6 +469,13 @@ export function NewspaperInstrument() {
   const [issuedAt, setIssuedAt] = useState<string | null>(null);
   const [perspective, setPerspective] = useState<boolean | null>(null);  // 이 판이 관점 반영인지(#5)
   const [deriveWarn, setDeriveWarn] = useState<string | null>(null);     // 파생 파일 부분 실패(#7)
+  // 내부 브라우저 리더 — 기사 링크를 외부 브라우저가 아니라 계기 안 webview 로 연다(포식 브라우저와 같은 크로미움).
+  const [reader, setReader] = useState<{ url: string; title?: string } | null>(null);
+  const openArticle = useCallback((url?: string, title?: string) => {
+    if (!url) return;
+    if (canInternalBrowse()) setReader({ url, title });   // 데스크탑: 내부 webview 리더
+    else window.open(url, '_blank', 'noopener');          // 원격/폰 웹런처: 새 탭 폴백
+  }, []);
 
   const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(KW_KEY, JSON.stringify(kw)); };
   const addKeyword = () => {
@@ -588,7 +600,21 @@ export function NewspaperInstrument() {
   }, []);
 
   return (
-    <div className="h-full w-full flex flex-col bg-[#f0f2f5] text-stone-800">
+    <div className="relative h-full w-full flex flex-col bg-[#f0f2f5] text-stone-800">
+      {/* 내부 브라우저 리더 — 기사 링크를 계기 안 webview 로 연다(외부 브라우저 대신). '외부로'로 탈출 가능. */}
+      {reader && (
+        <div className="absolute inset-0 z-30 flex flex-col bg-white">
+          <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-stone-200 bg-stone-50">
+            <button onClick={() => setReader(null)} title="닫기"
+              className="w-7 h-7 rounded-full text-stone-500 hover:text-white hover:bg-stone-700 leading-none flex items-center justify-center">✕</button>
+            <div className="flex-1 min-w-0 truncate text-sm text-stone-600">{reader.title || reader.url}</div>
+            <button onClick={() => { openExternal(reader.url); setReader(null); }}
+              className="shrink-0 text-xs px-2.5 py-1 rounded-lg border border-stone-200 bg-white text-stone-600 hover:bg-stone-100">외부 브라우저로 ↗</button>
+          </div>
+          <WebView key={reader.url} src={reader.url} partition="persist:forage" allowpopups="true"
+            style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} />
+        </div>
+      )}
       {/* 상단 바: 편집 토글 + 발행 */}
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-stone-200 bg-white/70">
         <div className="text-xs text-stone-400">
@@ -700,7 +726,7 @@ export function NewspaperInstrument() {
                       {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
                       {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}
                       {it.url && (
-                        <button onClick={() => openExternal(it.url)}
+                        <button onClick={() => openArticle(it.url, it.title)}
                           className="mt-auto self-start text-sm font-semibold text-[#3d5a80] hover:underline">
                           기사 보기 →
                         </button>

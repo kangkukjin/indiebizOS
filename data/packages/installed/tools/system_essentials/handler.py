@@ -117,13 +117,58 @@ DANGEROUS_PATTERNS_RE = [
 _DANGEROUS_RE = re.compile('|'.join(DANGEROUS_PATTERNS_RE), re.IGNORECASE)
 
 
-def _validate_path_in_scope(path: str, project_path: str) -> str | None:
-    """경로가 프로젝트 범위 내인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None
+# ── 자기개조 안전장치 Floor #1: RED 구역(살아있는 기질) 직접 쓰기 차단 ──
+# docs/SELF_MODIFICATION_SAFETY_DESIGN.md. 이 핸들러가 돌고 있는 코어 코드(backend/·
+# frontend/·scripts/)를 IBL 매개 쓰기가 직접 덮어쓰면 자해(uvicorn reload 가 개조 중인
+# 호출 자체를 절단)·관찰자 오염(자기채점 ACHIEVED)이 난다(에피소드 551 실측). 규칙:
+# 개조는 data/ 차원(어휘·yaml·상태)에서 끝내거나, 코어가 정말 필요하면 사람에게 제안.
+# repo 루트는 backend+frontend 동시 존재로 독립 탐지 — 설치 위치·경로 깊이에 안 흔들림.
+def _find_repo_root():
+    p = Path(__file__).resolve()
+    for anc in p.parents:
+        if (anc / "backend").is_dir() and (anc / "frontend").is_dir():
+            return anc
+    return None  # 미탐지 시 RED 가드 fail-open(정상 쓰기를 막지 않음 > 안전 과잉)
 
-    - 절대 경로: 허용 (에이전트가 명시적으로 지정한 시스템 파일 수정 등)
-    - 상대 경로가 ../로 프로젝트 밖으로 나가는 경우만 차단
+_REPO_ROOT = _find_repo_root()
+_RED_ZONE_DIRS = ("backend", "frontend", "scripts")
+
+
+def _red_zone_violation(abs_path: str) -> str | None:
+    """쓰기 대상 실경로가 RED 구역이면 거부 메시지, 아니면 None.
+    realpath 로 정규화 → 심볼릭·../ 우회(data/../backend/…)까지 잡는다."""
+    if _REPO_ROOT is None:
+        return None
+    real = os.path.realpath(abs_path)
+    for d in _RED_ZONE_DIRS:
+        red_root = str(_REPO_ROOT / d)
+        if real == red_root or real.startswith(red_root + os.sep):
+            rel = os.path.relpath(real, str(_REPO_ROOT))
+            return (
+                f"Error: RED 구역(살아있는 기질) 직접 쓰기는 금지됩니다: {rel}\n"
+                f"이 코드는 지금 시스템이 돌고 있는 기질이라, IBL 이 직접 덮어쓰면 "
+                f"reload 절단(자해)·자기채점 오염이 납니다.\n"
+                f"→ data/ 차원(어휘·yaml·상태)에서 끝낼 수 있는지 먼저 보고, "
+                f"코어 코드 변경이 정말 필요하면 사람에게 제안하세요."
+            )
+    return None
+
+
+def _validate_path_in_scope(path: str, project_path: str) -> str | None:
+    """쓰기 대상 경로가 허용 범위인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None
+
+    두 게이트(순서대로):
+    1. RED 구역(backend/·frontend/·scripts/) 직접 쓰기 금지 — 절대/상대 무관(Floor #1).
+    2. 상대 경로가 ../로 프로젝트 밖으로 나가는 경우 차단(기존 동작).
+    절대 경로는 RED 밖이면 허용(시스템 파일·다른 프로젝트 접근).
     """
-    # 원래 입력이 절대 경로면 허용 (시스템 파일 수정, 다른 프로젝트 파일 접근 등)
+    # 게이트 1: RED 구역 — 입력이 절대든 상대든, 최종 실경로로 판정(기존 해석과 동일하게 계산)
+    abs_for_red = path if os.path.isabs(path) else os.path.join(project_path, path)
+    red = _red_zone_violation(abs_for_red)
+    if red:
+        return red
+
+    # 게이트 2: RED 통과 후 절대 경로면 허용 (시스템 파일 수정, 다른 프로젝트 파일 접근 등)
     if os.path.isabs(path):
         return None
 

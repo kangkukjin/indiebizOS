@@ -224,7 +224,12 @@ def clear_session_for_agent(session_key: str):
 # raw 트랜스크립트가 임계 토큰을 넘으면 다음 턴에 fresh 세션으로 끊고 트림 히스토리로
 # 재시드한다. 턴 수가 아니라 *실측 토큰*(in+cache_read+cache_create)에 거는 이유:
 # 턴 크기가 비균일하다 — 이미지/긴 산출물 한 턴이 폭발 주범이지 턴 수가 아니다.
-SESSION_RESET_TOKEN_THRESHOLD = 150_000
+# ★임계값은 truncation 방어가 아니다: 모델(Opus 4.8)의 컨텍스트 윈도우는 1M 이라 이 값이
+# 조절하는 건 천장이 아니라 비용/지연/품질(낡은 tool_result 희석)이다. 옛 150K(윈도우 15%)는
+# goal-eval 재실행 3라운드를 태스크 도중에 끊어 탈선시켰다(episode 718). 300K(30%, 700K 여유)
+# 로 올려 멀티라운드 루프가 in-session 으로 끝나게 한다. 되돌릴 때 "200K 벽" 가정 금지 — 옛
+# Opus 200K 기억은 stale, 현 모델은 1M. 비용이 문제면 값 낮추기보다 낡은 tool_result 비우기.
+SESSION_RESET_TOKEN_THRESHOLD = 300_000
 
 
 def _session_size_path() -> Path:

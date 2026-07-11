@@ -194,6 +194,47 @@ def _guardian_items(query: str, count: int = 30) -> list:
     return []
 
 
+def _hn_items(query: str = "", count: int = 30, front_page: bool = False) -> list:
+    """Hacker News(Algolia API) → 신문 items 통화. 키 불요. points=주목도(편집장 hot 신호).
+    front_page=현재 프론트페이지(핫토픽 analog), 아니면 story 키워드 검색. 실패 시 [] (신문 무손상).
+    url=외부 기사 우선(없으면 HN 토론), hn_url=HN 토론(댓글)은 항상 보존."""
+    import urllib.request as _u, urllib.parse as _p
+    try:
+        n = min(max(count, 1), 50)
+        if front_page:
+            url = f"http://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage={n}"
+        else:
+            url = (f"http://hn.algolia.com/api/v1/search?query={_p.quote(query or '')}"
+                   f"&tags=story&hitsPerPage={n}&numericFilters=points>5")
+        with _u.urlopen(url, timeout=12) as r:
+            hits = json.loads(r.read()).get("hits", [])
+    except Exception as e:
+        print(f"[_hn_items] HN 검색 생략: {e}", file=sys.stderr)
+        return []
+    items = []
+    for h in hits:
+        oid = h.get("objectID", "")
+        ext = h.get("url") or ""
+        disc = f"https://news.ycombinator.com/item?id={oid}"
+        pts, nc = h.get("points") or 0, h.get("num_comments") or 0
+        dom = ""
+        if ext:
+            try:
+                dom = _p.urlparse(ext).netloc.replace("www.", "")
+            except Exception:
+                dom = ""
+        items.append({
+            "title": h.get("title") or h.get("story_title") or "(제목 없음)",
+            "meta": " · ".join(x for x in [f"▲{pts}", f"💬{nc}", dom or "news.ycombinator.com"] if x),
+            "summary": "",
+            "url": ext or disc,      # 외부 기사 우선, 없으면 HN 토론
+            "hn_url": disc,          # HN 토론(댓글) 항상 보존
+            "link_label": "기사 보기",
+            "points": pts,           # 편집장 hot 신호(gnews 의 ×N매체 대응)
+        })
+    return items
+
+
 _PERSPECTIVE_CACHE: dict = {}
 
 
@@ -252,7 +293,9 @@ def _curate_sections_batch(secs: list, keep: int) -> list:
                 if src:
                     line += f" [{src}]"
                 if it.get("sources", 1) > 1:
-                    line += f" (×{it['sources']}매체)"
+                    line += f" (×{it['sources']}매체)"      # gnews: 몇 매체가 다뤘나
+                elif it.get("points"):
+                    line += f" (▲{it['points']})"          # HN: 포인트 = 주목도
                 lines.append(line)
             blocks.append(f"[섹션 {i}] 주제: {secs[i].get('topic', '')}\n" + "\n".join(lines))
 
@@ -273,7 +316,7 @@ def _curate_sections_batch(secs: list, keep: int) -> list:
             "★핵심: 역할은 *절대 문턱*이 아니라 *분포(곡선)*다. 섹션의 기사를 서로 비교해 상대적으로 등급을 매겨라 —\n"
             "'많은 기사가 관점에 관련 있다'가 아니라 '이 섹션에서 가장 신선한 게 무엇인가'를 가려라.\n"
             "목표 수(N)를 대략 이렇게 나눠라 (N=7 기준):\n"
-            "- hot: 가장 널리 다뤄진 중요 사건(×N=여러 매체) 2~3개. **세상과의 접점이라 반드시 남긴다**(0개 금지).\n"
+            "- hot: 가장 널리 주목받은 중요 사건(여러 매체 ×N, 또는 HN 이면 ▲포인트 높음) 2~3개. **세상과의 접점이라 반드시 남긴다**(0개 금지).\n"
             + delta_rule +
             "  delta 는 2~3개까지만 — 실타래에 속한다고 다 delta 가 아니다. 널리 다뤄졌으면 hot 으로.\n"
             "- surface: 섹션의 지배적 흐름·프레임과 결이 다른 이질 기사 딱 1개(작게 다뤄졌어도). 의무.\n"
@@ -629,6 +672,57 @@ def execute(tool_input: dict, context):
                 result["count"] = len(result["items"])
                 result["perspective"] = bool(_load_perspective_core())
         return format_json(result)
+
+    # Hacker News 신문 소스 — gnews 와 형제. 별도 판(HN 전용)용. 편집장·관점 필터 공유.
+    elif tool_name == "search_hn":
+        _curate = _parse_curate(tool_input)
+        _fetch = 100 if _curate else tool_input.get("count", 15)
+        _front = tool_input.get("headlines") in (True, "true", "True", 1, "1") or \
+                 tool_input.get("front_page") in (True, "true", "True", 1, "1")
+
+        _queries = tool_input.get("queries")
+        if _queries:
+            if isinstance(_queries, str):
+                _queries = re.split(r"[,\n]", _queries)
+            _queries = [str(q).strip() for q in _queries if str(q).strip()]
+            if not _queries:
+                return format_json({"success": False, "error": "검색어(queries)가 비었습니다."})
+            jobs = []  # (섹션명, fetch thunk) — front_page 는 맨 앞(핫토픽 analog)
+            if _front:
+                jobs.append(("HN 프론트페이지", lambda: _hn_items(count=_fetch, front_page=True)))
+            for q in _queries:
+                jobs.append((q, (lambda qq: (lambda: _hn_items(qq, _fetch)))(q)))
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
+                fetched = list(ex.map(lambda j: j[1](), jobs))
+            secs = [{"topic": jobs[i][0],
+                     "items": [{**it, "query": jobs[i][0]} for it in fetched[i]]} for i in range(len(jobs))]
+            curated = _curate_sections_batch(secs, _curate) if _curate else None
+            all_items, pool_rest, sections = [], [], []
+            for i in range(len(secs)):
+                items = curated[i]["picks"] if curated else secs[i]["items"]
+                if curated:
+                    pool_rest.extend(curated[i]["rest"])
+                all_items.extend(items)
+                sections.append({"query": jobs[i][0], "count": len(items)})
+            resp = {"success": True, "queries": _queries, "count": len(all_items),
+                    "sections": sections, "items": all_items}
+            if curated:
+                resp["pool"] = pool_rest
+                resp["perspective"] = bool(_load_perspective_core())
+            return format_json(resp)
+
+        topic = "HN 프론트페이지" if _front else tool_input.get("query", "")
+        if not _front and not topic:
+            return format_json({"success": False, "error": "검색어(query/queries) 또는 headlines 가 필요합니다."})
+        items = [{**it, "query": topic} for it in _hn_items("" if _front else topic, _fetch, front_page=_front)]
+        resp = {"success": True, "query": topic, "count": len(items), "items": items}
+        if _curate:
+            cr = _curate_sections_batch([{"topic": topic, "items": items}], _curate)[0]
+            resp["items"], resp["pool"] = cr["picks"], cr["rest"]
+            resp["count"] = len(resp["items"])
+            resp["perspective"] = bool(_load_perspective_core())
+        return format_json(resp)
 
     # 사이트 런처
     elif tool_name == "launch_sites":

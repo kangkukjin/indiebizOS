@@ -15,21 +15,34 @@
 import { useCallback, useEffect, useState, type FC } from 'react';
 import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
-const KW_KEY = 'newspaper.keywords';
-const TITLE_KEY = 'newspaper.title';
-
-// 발행된 최신 판(edition)이 사는 곳 — 앱모드 프로젝트 outputs/ (self:write/read 가 project_id 기준 해소).
-// 최신 판 하나만 유지: 새로 발행하면 덮어쓴다.
-//  · JSON = 데스크톱이 카드 그리드로 다시 그리기 위한 구조화 판(이 컴포넌트 전용).
-//  · MD   = 폰/원격 뷰어(정기보고식)가 읽고, 파일로 공유하기 위한 사람이 읽는 판.
-//    둘 다 '새로 발행' 시 같은 sections 에서 파생 — PC 가 만들고 폰은 MD 를 보여주기만 한다.
-const EDITION_PATH = 'outputs/newspaper_current.json';
-const MD_PATH = 'outputs/newspaper_current.md';
-// 공유용 자기완결 HTML — 폰 뷰어의 "폰에 저장·공유" 버튼이 읽어 카톡 등으로 보낸다(친구가 브라우저로 바로 열람).
-const HTML_PATH = 'outputs/newspaper_current.html';
-
-const DEFAULT_KEYWORDS = ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'];
-const DEFAULT_TITLE = '청주 데일리';
+// ── 소스별 판(edition) ─────────────────────────────────────────
+// 신문은 소스마다 독립된 판을 갖는다: 종합(gnews+guardian)·HN 등. 각 판은 자기 키워드·제호·저장
+// 파일(버전)을 따로 유지한다. 소스 선택 = 어느 판을 보고/발행하나. "다 똑같이 하되 소스만" — 팬아웃·
+// 편집장·관점 필터는 공유하고, 바뀌는 건 fetch 액션(search_gnews vs search_hn)과 저장 경로뿐.
+interface EditionDef {
+  key: string;
+  label: string;         // 소스 선택 탭 라벨
+  action: string;        // IBL 뉴스 액션 (search_gnews | search_hn)
+  hotLabel: string;      // 핫토픽/프론트페이지 섹션 이름
+  defaultKw: string[];
+  defaultTitle: string;
+}
+const EDITIONS: EditionDef[] = [
+  { key: 'default', label: '종합', action: 'search_gnews', hotLabel: '🔥 오늘의 핫토픽',
+    defaultKw: ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'], defaultTitle: '청주 데일리' },
+  { key: 'hn', label: 'Hacker News', action: 'search_hn', hotLabel: '🔥 HN 프론트페이지',
+    defaultKw: ['AI', 'LLM', 'startup', 'programming', 'security', 'open source'], defaultTitle: 'Hacker News 데일리' },
+];
+const editionOf = (key: string): EditionDef => EDITIONS.find((e) => e.key === key) || EDITIONS[0];
+const EDITION_KEY = 'newspaper.edition';                 // 마지막으로 본 판
+const kwKey = (key: string) => `newspaper.keywords.${key}`;
+const titleKey = (key: string) => `newspaper.title.${key}`;
+// 판 파일: default 는 기존 이름(newspaper_current) 유지(하위호환), 그 외는 소스 키로. 앱모드 outputs/.
+//  · JSON = 데스크톱 카드 그리드 재렌더용(이 컴포넌트 전용).  · MD = 폰/원격 뷰어·공유.  · HTML = 폰 저장·공유.
+const editionPaths = (key: string) => {
+  const base = key === 'default' ? 'newspaper_current' : `newspaper_${key}`;
+  return { json: `outputs/${base}.json`, md: `outputs/${base}.md`, html: `outputs/${base}.html` };
+};
 
 interface NewsItem { title?: string; meta?: string; summary?: string; url?: string; role?: string; why?: string }
 
@@ -62,25 +75,25 @@ function notePerspective(result: unknown) {
   if (typeof p === 'boolean') PERSPECTIVE_ON = p;
 }
 
-// 저장된 최신 판을 읽어온다. 없으면(파일 부재 → "Error: ..." 문자열) null.
-async function loadEdition(): Promise<Edition | null> {
+// 저장된 최신 판을 읽어온다(소스별). 없으면(파일 부재 → "Error: ..." 문자열) null.
+async function loadEdition(edKey: string): Promise<Edition | null> {
   try {
-    const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(EDITION_PATH)}}`);
+    const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(editionPaths(edKey).json)}}`);
     if (r && typeof r === 'object' && Array.isArray((r as Edition).sections)) return r as Edition;
   } catch { /* 파일 없음/파싱 실패 → 저장된 판 없음 */ }
   return null;
 }
 
-// 판을 데이터 레이어에 저장(최신 하나 덮어쓰기). content 는 JSON 문자열(이중 stringify 로 IBL 문자열 리터럴).
-async function saveEdition(ed: Edition): Promise<void> {
+// 판을 데이터 레이어에 저장(소스별 최신 하나 덮어쓰기). content 는 JSON 문자열(이중 stringify 로 IBL 문자열 리터럴).
+async function saveEdition(edKey: string, ed: Edition): Promise<void> {
   const content = JSON.stringify(ed);
-  await iblExecuteApp(`[self:write]{path: ${JSON.stringify(EDITION_PATH)}, content: ${JSON.stringify(content)}}`);
+  await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).json)}, content: ${JSON.stringify(content)}}`);
 }
 
 // 폰/원격 뷰어(정기보고식)가 읽을 마크다운 판을 PC 에 쓴다 — sections → 어휘 파이프(table:document
 // 마크다운 emitter)로 사람이 읽는 문서 텍스트를 얻어 self:write. 파생물이라 실패해도 발행 자체는
 // 유지(best-effort)하되, 성공 여부를 반환해 상단바에 부분 실패를 노출한다(조용한 삼킴 금지).
-async function saveMarkdownFile(title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
+async function saveMarkdownFile(edKey: string, title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
   try {
     const items = sections.flatMap((sec) => sec.items.map((it) => ({ ...it, section: sec.keyword })));
     const doc = (await iblExecuteApp(
@@ -89,7 +102,7 @@ async function saveMarkdownFile(title: string, dateLabel: string, sections: Sect
     )) as { markdown?: string } | null;
     const md = doc?.markdown;
     if (typeof md === 'string' && md) {
-      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(MD_PATH)}, content: ${JSON.stringify(md)}}`);
+      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).md)}, content: ${JSON.stringify(md)}}`);
       return true;
     }
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
@@ -120,22 +133,22 @@ async function fetchMasthead(): Promise<MastheadData> {
 }
 
 // 공유용 자기완결 HTML 판을 PC 에 쓴다 — 폰 뷰어의 공유 버튼이 이 파일을 카톡 등으로 보낸다(친구=브라우저 열람).
-async function saveHtmlFile(title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
+async function saveHtmlFile(edKey: string, title: string, dateLabel: string, sections: Section[]): Promise<boolean> {
   try {
     const masthead = await fetchMasthead().catch(() => ({} as MastheadData));
     const html = buildNewspaperHtml(title, dateLabel, sections, masthead);
-    await iblExecuteApp(`[self:write]{path: ${JSON.stringify(HTML_PATH)}, content: ${JSON.stringify(html)}}`);
+    await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).html)}, content: ${JSON.stringify(html)}}`);
     return true;
   } catch { /* 파생 파일 실패는 발행을 막지 않는다 */ }
   return false;
 }
 
-function loadKeywords(): string[] {
+function loadKeywords(edKey: string): string[] {
   try {
-    const raw = localStorage.getItem(KW_KEY);
+    const raw = localStorage.getItem(kwKey(edKey));
     if (raw) { const a = JSON.parse(raw); if (Array.isArray(a) && a.length) return a; }
   } catch { /* ignore */ }
-  return DEFAULT_KEYWORDS;
+  return editionOf(edKey).defaultKw;
 }
 
 const openExternal = (url?: string) => { if (url) window.electron?.openExternal?.(url); };
@@ -145,19 +158,18 @@ const WebView = 'webview' as unknown as FC<Record<string, unknown>>;
 // 데스크탑 Electron(메인 창)에서만 내부 브라우저(webview) 사용 가능. 원격/폰 웹런처엔 window.electron 없음.
 const canInternalBrowse = () => typeof window !== 'undefined' && !!window.electron?.openExternal;
 
-// [sense:search_gnews] 한 키워드 → items. /ibl/execute 응답을 견고하게 파싱.
-// curate: 경량 AI 섹션 편집자가 오버페치 pool에서 같은 사건 중복을 묶고 뉴스가치 순 7개 선별.
-async function fetchNews(keyword: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: 7}`);
+// [sense:<action>] 한 키워드 → items. action=소스별(search_gnews|search_hn). /ibl/execute 응답 견고 파싱.
+// curate: 경량 AI 편집장이 오버페치 pool에서 중복을 묶고 hot/delta/surface 로 7개 편성.
+async function fetchNews(action: string, keyword: string): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:${action}]{query: ${JSON.stringify(keyword)}, curate: 7}`);
   notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
 }
 
-// 오늘의 핫토픽 — 키워드 없는 톱 헤드라인을 경량 AI가 군집·랭킹(가장 많이 다뤄진 사건 = 핫).
-const HOT_KEYWORD = '🔥 오늘의 핫토픽';
-async function fetchHotTopics(): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: 7}`);
+// 핫토픽/프론트페이지 — 검색어 없는 톱(가장 널리 주목받은 것)을 편집장이 편성.
+async function fetchHotTopics(action: string): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:${action}]{headlines: true, curate: 7}`);
   notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
@@ -180,12 +192,12 @@ function mergePicksAndPool(result: unknown): NewsItem[] {
   const rest = Array.isArray(r?.pool) ? r!.pool! : [];
   return [...picks, ...rest];
 }
-async function fetchNewsPool(keyword: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{query: ${JSON.stringify(keyword)}, curate: ${SECTION_SIZE}}`);
+async function fetchNewsPool(action: string, keyword: string): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:${action}]{query: ${JSON.stringify(keyword)}, curate: ${SECTION_SIZE}}`);
   return mergePicksAndPool(result);
 }
-async function fetchHotTopicsPool(): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: ${SECTION_SIZE}}`);
+async function fetchHotTopicsPool(action: string): Promise<NewsItem[]> {
+  const result = await iblExecuteApp(`[sense:${action}]{headlines: true, curate: ${SECTION_SIZE}}`);
   return mergePicksAndPool(result);
 }
 
@@ -329,7 +341,8 @@ function pickFromPool(pool: NewsItem[], size: number, exclude: Set<string>): New
 
 // 편집신문 마법사 — 섹션마다 후보를 보여주고, 사용자가 뺀 자리를 중복 없이 리필, OK 시 다음 섹션.
 // 마지막 섹션 확정 시 onDone(final) 으로 완성 섹션을 부모에 넘긴다(저장·렌더는 부모의 자동발간 경로 재사용).
-function EditFlow({ keywords, onDone, onCancel }: {
+function EditFlow({ edition, keywords, onDone, onCancel }: {
+  edition: EditionDef;
   keywords: string[];
   onDone: (sections: Section[]) => void;
   onCancel: () => void;
@@ -339,16 +352,16 @@ function EditFlow({ keywords, onDone, onCancel }: {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // 진입 시 모든 섹션의 후보 풀을 한 번에 팬아웃(핫토픽 + 키워드들).
+  // 진입 시 모든 섹션의 후보 풀을 한 번에 팬아웃(핫토픽/프론트페이지 + 키워드들). 소스=현재 판.
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true); setErr(null);
       try {
         const [hot, kwPools] = await Promise.all([
-          fetchHotTopicsPool().catch(() => [] as NewsItem[]),
+          fetchHotTopicsPool(edition.action).catch(() => [] as NewsItem[]),
           Promise.all(keywords.map(async (kw): Promise<{ kw: string; pool: NewsItem[]; error?: boolean }> => {
-            try { return { kw, pool: await fetchNewsPool(kw) }; }
+            try { return { kw, pool: await fetchNewsPool(edition.action, kw) }; }
             catch { return { kw, pool: [], error: true }; }
           })),
         ]);
@@ -358,7 +371,7 @@ function EditFlow({ keywords, onDone, onCancel }: {
           return { keyword, pool, selected: pickFromPool(pool, SECTION_SIZE, used), rejected: [], error };
         };
         const built: EditSection[] = [];
-        if (hot.length) built.push(mk(HOT_KEYWORD, hot));
+        if (hot.length) built.push(mk(edition.hotLabel, hot));
         for (const { kw, pool, error } of kwPools) built.push(mk(kw, pool, error));
         if (!built.length) { setErr('불러올 섹션이 없습니다. 키워드를 확인하세요.'); }
         setSecs(built);
@@ -366,7 +379,7 @@ function EditFlow({ keywords, onDone, onCancel }: {
       finally { if (alive) setLoading(false); }
     })();
     return () => { alive = false; };
-  }, [keywords]);
+  }, [edition, keywords]);
 
   // 기사 제거 → 거부 목록에 넣고, 풀에서 아직 안 쓰고 안 거부된 다음 기사로 빈칸 보충(중복 없음).
   const removeItem = (idx: number) => {
@@ -454,8 +467,14 @@ function EditFlow({ keywords, onDone, onCancel }: {
 }
 
 export function NewspaperInstrument() {
-  const [keywords, setKeywords] = useState<string[]>(loadKeywords);
-  const [title, setTitle] = useState<string>(() => localStorage.getItem(TITLE_KEY) || DEFAULT_TITLE);
+  // 현재 보고 있는 판(소스). 마지막 선택을 기억.
+  const [editionKey, setEditionKey] = useState<string>(() => {
+    const k = (() => { try { return localStorage.getItem(EDITION_KEY); } catch { return null; } })();
+    return EDITIONS.some((e) => e.key === k) ? (k as string) : 'default';
+  });
+  const edition = editionOf(editionKey);
+  const [keywords, setKeywords] = useState<string[]>(() => loadKeywords(editionKey));
+  const [title, setTitle] = useState<string>(() => localStorage.getItem(titleKey(editionKey)) || edition.defaultTitle);
   const [draft, setDraft] = useState('');
   const [editing, setEditing] = useState(false);
   const [sections, setSections] = useState<Section[]>([]);
@@ -477,24 +496,24 @@ export function NewspaperInstrument() {
     else window.open(url, '_blank', 'noopener');          // 원격/폰 웹런처: 새 탭 폴백
   }, []);
 
-  const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(KW_KEY, JSON.stringify(kw)); };
+  const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(kwKey(editionKey), JSON.stringify(kw)); };
   const addKeyword = () => {
     const k = draft.trim();
     if (k && !keywords.includes(k)) persistKw([...keywords, k]);
     setDraft('');
   };
   const removeKeyword = (k: string) => persistKw(keywords.filter((x) => x !== k));
-  const resetKeywords = () => persistKw(DEFAULT_KEYWORDS);
-  const onTitle = (t: string) => { setTitle(t); localStorage.setItem(TITLE_KEY, t); };
+  const resetKeywords = () => persistKw(edition.defaultKw);
+  const onTitle = (t: string) => { setTitle(t); localStorage.setItem(titleKey(editionKey), t); };
 
   // 자기완결 HTML 한 파일로 저장 → 친구에게 첨부 공유(백엔드·호스팅 불필요, Blob 다운로드).
   const exportHtml = () => {
-    const html = buildNewspaperHtml(title || DEFAULT_TITLE, date, sections);
+    const html = buildNewspaperHtml(title || edition.defaultTitle, date, sections);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const d = new Date();
     const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-    const safe = (title || DEFAULT_TITLE).replace(/[^\w가-힣]+/g, '_');
+    const safe = (title || edition.defaultTitle).replace(/[^\w가-힣]+/g, '_');
     const a = document.createElement('a');
     a.href = url;
     a.download = `${safe}_${stamp}.html`;
@@ -515,9 +534,9 @@ export function NewspaperInstrument() {
       const d = new Date();
       const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       const code =
-        `[table:document]{format: "markdown", title: ${JSON.stringify(title || DEFAULT_TITLE)}, ` +
+        `[table:document]{format: "markdown", title: ${JSON.stringify(title || edition.defaultTitle)}, ` +
         `meta: ${JSON.stringify(date)}, group_by: "section", items: ${JSON.stringify(items)}} ` +
-        `>> [others:publish]{title: ${JSON.stringify(`${title || DEFAULT_TITLE} · ${date}`)}, slug: ${JSON.stringify(`newspaper-${stamp}`)}}`;
+        `>> [others:publish]{title: ${JSON.stringify(`${title || edition.defaultTitle} · ${date}`)}, slug: ${JSON.stringify(`newspaper-${editionKey}-${stamp}`)}}`;
       const result = (await iblExecuteApp(code)) as { url?: string; error?: string } | null;
       if (result?.url) setShareUrl(result.url);
       else setError(result?.error || '발행에 실패했습니다. Nostr 설정을 확인하세요.');
@@ -539,30 +558,30 @@ export function NewspaperInstrument() {
     setDate(nowLabel);
     setIssuedAt(iso);
     setPerspective(PERSPECTIVE_ON ?? null);
-    const ttl = title || DEFAULT_TITLE;
-    await saveEdition({ title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso, perspective: PERSPECTIVE_ON });
-    const mdOk = await saveMarkdownFile(ttl, nowLabel, all);   // 폰 뷰어 표시용
-    const htmlOk = await saveHtmlFile(ttl, nowLabel, all);     // 폰 공유용(카톡 등)
+    const ttl = title || edition.defaultTitle;
+    await saveEdition(editionKey, { title: ttl, keywords, sections: all, dateLabel: nowLabel, issuedAt: iso, perspective: PERSPECTIVE_ON });
+    const mdOk = await saveMarkdownFile(editionKey, ttl, nowLabel, all);   // 폰 뷰어 표시용
+    const htmlOk = await saveHtmlFile(editionKey, ttl, nowLabel, all);     // 폰 공유용(카톡 등)
     const fails = [...(mdOk ? [] : ['md(폰 뷰어)']), ...(htmlOk ? [] : ['html(공유)'])];
     setDeriveWarn(fails.length ? `${fails.join(' · ')} 저장 실패 — 데스크탑 판(JSON)은 정상` : null);
-  }, [keywords, title]);
+  }, [editionKey, edition, keywords, title]);
 
-  // 새로 발행 = 키워드마다 search_gnews 팬아웃 → 섹션 → 판을 저장. (버튼을 눌러야만 실행; 열 때 자동 재취재 없음.)
+  // 새로 발행 = 키워드마다 현재 판의 소스 액션 팬아웃 → 섹션 → 판 저장. (버튼을 눌러야만; 열 때 자동 재취재 없음.)
   const issue = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      // 핫토픽(AI가 오늘의 사건 선정)과 키워드 섹션을 동시에 — 핫토픽을 맨 위에.
+      // 핫토픽/프론트페이지와 키워드 섹션을 동시에 — 핫토픽을 맨 위에. 소스=현재 판.
       const [hot, kwSections] = await Promise.all([
-        fetchHotTopics().catch(() => [] as NewsItem[]),
+        fetchHotTopics(edition.action).catch(() => [] as NewsItem[]),
         Promise.all(
           keywords.map(async (kw): Promise<Section> => {
-            try { return { keyword: kw, items: await fetchNews(kw) }; }
+            try { return { keyword: kw, items: await fetchNews(edition.action, kw) }; }
             catch { return { keyword: kw, items: [], error: true }; }
           })
         ),
       ]);
       const all: Section[] = [];
-      if (hot.length) all.push({ keyword: HOT_KEYWORD, items: hot });
+      if (hot.length) all.push({ keyword: edition.hotLabel, items: hot });
       all.push(...kwSections);
       await commitEdition(all);
     } catch {
@@ -570,7 +589,7 @@ export function NewspaperInstrument() {
     } finally {
       setLoading(false);
     }
-  }, [keywords, commitEdition]);
+  }, [edition, keywords, commitEdition]);
 
   // 편집신문 완료 → 사용자가 큐레이션한 섹션을 그대로 확정·저장(재취재 없음). 이후 일반 신문 뷰로 복귀.
   const finishEdit = useCallback(async (edited: Section[]) => {
@@ -581,23 +600,34 @@ export function NewspaperInstrument() {
     finally { setLoading(false); }
   }, [commitEdition]);
 
-  // 열 때: 저장된 최신 판을 보여준다(재취재 없음). 없으면 빈 상태 → 사용자가 '새로 발행'을 눌러 첫 판을 만든다.
+  // 소스(판) 전환 — 그 판의 키워드·제호를 불러오고 저장된 판을 연다. 판마다 완전히 독립.
+  const switchEdition = useCallback((key: string) => {
+    if (key === editionKey) return;
+    try { localStorage.setItem(EDITION_KEY, key); } catch { /* ignore */ }
+    setEditionKey(key);
+    setEditFlow(false); setEditing(false); setShareUrl(null); setError(null); setDeriveWarn(null);
+    setKeywords(loadKeywords(key));
+    setTitle(localStorage.getItem(titleKey(key)) || editionOf(key).defaultTitle);
+  }, [editionKey]);
+
+  // 열 때/판 전환 시: 그 판의 저장된 최신 판을 보여준다(재취재 없음). 없으면 빈 상태 → '새로 발행'.
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
-      const ed = await loadEdition();
+      setSections([]); setIssuedAt(null); setPerspective(null);   // 판 전환 시 이전 판 잔상 제거
+      const ed = await loadEdition(editionKey);
       if (!alive) return;
       if (ed) {
         setSections(ed.sections || []);
-        if (ed.dateLabel) setDate(ed.dateLabel);
+        setDate(ed.dateLabel || todayStr());
         setIssuedAt(ed.issuedAt || null);
         setPerspective(typeof ed.perspective === 'boolean' ? ed.perspective : null);
       }
       setLoading(false);
     })();
     return () => { alive = false; };
-  }, []);
+  }, [editionKey]);
 
   return (
     <div className="relative h-full w-full flex flex-col bg-[#f0f2f5] text-stone-800">
@@ -615,14 +645,26 @@ export function NewspaperInstrument() {
             style={{ width: '100%', height: '100%', border: 'none', flex: 1 }} />
         </div>
       )}
-      {/* 상단 바: 편집 토글 + 발행 */}
+      {/* 상단 바: 소스 선택 + 상태 + 편집/발행 */}
       <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b border-stone-200 bg-white/70">
-        <div className="text-xs text-stone-400">
-          {loading ? '신문 발행 중…'
-            : issuedAt ? `${whenLabel(issuedAt)} 발행 · ${sections.length}개 섹션${
-                perspective === true ? ' · 💡 관점 반영' : perspective === false ? ' · 일반 판(관점 코어 없음)' : ''}`
-            : '아직 발행되지 않음'}
-          {deriveWarn && <span className="ml-2 text-amber-600">⚠ {deriveWarn}</span>}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* 소스 선택 — 판마다 독립(키워드·제호·저장 버전 별도). 전환 시 그 판을 연다. */}
+          <div className="shrink-0 flex items-center rounded-lg border border-stone-200 overflow-hidden">
+            {EDITIONS.map((e) => (
+              <button key={e.key} onClick={() => switchEdition(e.key)} disabled={loading || editFlow || publishing}
+                className={`text-xs px-2.5 py-1 disabled:opacity-40 ${
+                  e.key === editionKey ? 'bg-[#1a1a2e] text-white' : 'bg-white text-stone-600 hover:bg-stone-50'}`}>
+                {e.label}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-stone-400 truncate">
+            {loading ? '신문 발행 중…'
+              : issuedAt ? `${whenLabel(issuedAt)} 발행 · ${sections.length}개 섹션${
+                  perspective === true ? ' · 💡 관점 반영' : perspective === false ? ' · 일반 판(관점 코어 없음)' : ''}`
+              : '아직 발행되지 않음'}
+            {deriveWarn && <span className="ml-2 text-amber-600">⚠ {deriveWarn}</span>}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setEditing((e) => !e)}
@@ -664,7 +706,7 @@ export function NewspaperInstrument() {
         <div className="shrink-0 px-4 py-3 border-b border-stone-200 bg-white space-y-2">
           <div className="flex items-center gap-2">
             <span className="text-xs text-stone-400 shrink-0">제호</span>
-            <input value={title} onChange={(e) => onTitle(e.target.value)} placeholder={DEFAULT_TITLE}
+            <input value={title} onChange={(e) => onTitle(e.target.value)} placeholder={edition.defaultTitle}
               className="flex-1 px-3 py-1.5 rounded-lg border border-stone-200 text-sm outline-none focus:border-stone-400" />
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -687,7 +729,7 @@ export function NewspaperInstrument() {
       )}
 
       {/* 편집신문 마법사 — 활성 시 본문 대신 단계별 큐레이션 화면 */}
-      {editFlow && <EditFlow keywords={keywords} onDone={finishEdit} onCancel={() => setEditFlow(false)} />}
+      {editFlow && <EditFlow edition={edition} keywords={keywords} onDone={finishEdit} onCancel={() => setEditFlow(false)} />}
 
       {/* 신문 본문 */}
       {!editFlow && (
@@ -696,7 +738,7 @@ export function NewspaperInstrument() {
           {/* 제호 */}
           <h1 className="text-center text-4xl font-black tracking-tight text-[#1a1a2e] border-b-4 border-[#1a1a2e] pb-4"
             style={{ fontFamily: "'Noto Serif KR', serif" }}>
-            {title || DEFAULT_TITLE}
+            {title || edition.defaultTitle}
           </h1>
           <div className="text-center text-sm text-stone-500 mt-3 mb-2">{date}</div>
 

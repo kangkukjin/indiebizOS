@@ -1566,6 +1566,16 @@ nodes:
         tool: search_gnews
         implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
         target_key: query
+      search_hn:
+        returns: items
+        fixture: '[sense:search_hn]{query: "AI"}'
+        description: Hacker News(Algolia) 기술·스타트업 포스팅 검색. gnews 형제 소스 — HN 전용 신문 판용. curate 시 편집장·관점 필터 공유, points(▲)=hot 신호.
+        group: research
+        target_description: 검색어(영어 권장). headlines:true 면 HN 프론트페이지.
+        router: handler
+        tool: search_hn
+        implementation: Hacker News Algolia API(hn.algolia.com). story 태그 검색 + front_page. 키 불요. items 통화(points/num_comments 포함).
+        target_key: query
       collect:
         aliases:
           site_id:

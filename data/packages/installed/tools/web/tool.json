@@ -93,6 +93,36 @@
       }
     },
     {
+      "name": "search_hn",
+      "description": "Hacker News(Algolia API)로 기술·스타트업 포스팅을 검색. search_gnews 의 형제 소스 — HN 전용 신문 판(별도 판)용. 편집장(curate)·관점 필터 공유.\n\n## 특징\n- API 키 불필요. points(▲)=주목도로 hot 신호. num_comments(💬)=토론 활발도.\n- front_page(headlines:true)=현재 HN 프론트페이지(핫토픽 analog).\n- url=외부 기사 우선(없으면 HN 토론), hn_url=HN 토론(댓글) 항상 보존.\n\n## 사용 시점\n- 기술·AI·스타트업 동향의 원천(1차 소스·실무자 주목)을 신문으로 볼 때.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색 키워드(영어 권장). story 태그로 검색."
+          },
+          "queries": {
+            "type": "string",
+            "description": "여러 키워드(쉼표/개행) 배치 팬아웃 — 섹션별로 한 목록. 신문 계기용."
+          },
+          "count": {
+            "type": "integer",
+            "description": "결과 개수 (기본 15, curate 시 100까지 오버페치)."
+          },
+          "curate": {
+            "type": "integer",
+            "description": "지정 시 경량 AI '편집장'이 hot(▲포인트 높음)·delta(관점 코어 기준 새 정보)·surface(이질 1건) 편성. search_gnews 와 동일 규칙·pool·perspective. HN 판 신문용."
+          },
+          "headlines": {
+            "type": "boolean",
+            "description": "true면 검색어 없이 HN 프론트페이지(오늘 크게 주목받은 포스팅)를 가져온다. curate 와 함께 'HN 프론트페이지' 섹션."
+          }
+        },
+        "required": []
+      }
+    },
+    {
       "name": "launch_sites",
       "description": "즐겨찾기 사이트 런처(대시보드) 및 관리.\n\n## 기능 (action)\n- open_ui (기본값): 즐겨찾기 대시보드 페이지를 브라우저에 띄움\n- list: 저장된 사이트 목록 텍스트로 확인\n- add: 새 사이트 추가 (name, url 필요)\n- remove: 사이트 삭제 (name 필요)",
       "input_schema": {

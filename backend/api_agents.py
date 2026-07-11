@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Any
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Request, Body
 from pydantic import BaseModel
 import copy
 import yaml
@@ -251,6 +251,15 @@ async def cancel_all_agents(project_id: str):
         return {"status": "cancelled", "cancelled_agents": cancelled}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/projects/{project_id}/presence")
+def project_window_presence(project_id: str, body: dict = Body(default={})):
+    """프로젝트 창 존재 하트비트 — 조종실 '액티브 프로젝트'가 '창 열림=활성'을 self-healing
+    으로 판단하게 한다(System AI presence 와 동형). open=false 는 닫힘 beacon(즉시 부재)."""
+    from thread_context import mark_project_window
+    mark_project_window(project_id, bool(body.get("open", True)))
+    return {"status": "ok"}
 
 
 @router.post("/projects/{project_id}/stop_all")

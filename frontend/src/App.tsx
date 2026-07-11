@@ -211,6 +211,33 @@ function App() {
     return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
+  // 프로젝트 창 존재 하트비트 — 이 창이 열려 있는 동안 조종실 '액티브 프로젝트'에 이 프로젝트가
+  // 뜨게 한다(창 열림=활성). System AI presence 와 동형: 닫힘/이탈 시 즉시 부재(open:false) +
+  // 하트비트 중단으로 TTL 만료 → 사라짐. stop_all 같은 별도 close 신호에 의존하지 않아 재발 없음.
+  useEffect(() => {
+    if (!projectId) return;
+    const url = `http://127.0.0.1:8765/projects/${encodeURIComponent(projectId)}/presence`;
+    const ping = (open: boolean) => {
+      try {
+        fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ open }),
+          keepalive: true,
+        }).catch(() => {});
+      } catch { /* noop */ }
+    };
+    ping(true);
+    const timer = setInterval(() => ping(true), 3000);
+    const onHide = () => ping(false);
+    window.addEventListener('pagehide', onHide);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('pagehide', onHide);
+      ping(false);
+    };
+  }, [projectId]);
+
   // 프로젝트 ID가 있으면 프로젝트 정보 로드 + 도구 자동 배분
   useEffect(() => {
     if (projectId) {

@@ -125,10 +125,12 @@ async def peer_status():
 def active_work():
     """조종실 '액티브 프로젝트' 계기 — 판단 기준 2층(사용자 확정, 2026-07-03):
 
-    · 칩(로스터) = **started AgentRunner 가 있는 프로젝트**. 사용자가 직접 명령하려면
-      창을 열어야 하고(창 열림=에이전트 시작), 창을 닫으면 Electron 이 stop_all 을
-      부르므로 "러너 레지스트리 = 창이 열려 당직 중"이 성립한다.
+    · 칩(창 열림) = **창이 열려 있는 프로젝트**. 프로젝트 창도 System AI 와 똑같이 창 존재
+      하트비트(open_project_windows)로 판단한다 — 창이 열려 있으면 칩, 닫힘/크래시/재시작은
+      하트비트 중단→TTL 만료로 self-healing 소멸. (예전엔 러너 레지스트리로 판단해 창 닫힘
+      stop_all 신호가 실패하면 유령 칩이 남아 재발했다.)
     · busy(펄스) = thread_context 활성 작업 레지스트리에 지금 처리 중으로 잡히는 곳.
+    · 러너 레지스트리(agent_runners)는 이제 칩의 에이전트 이름 소스로만 참조한다.
     · 시스템 AI 는 러너가 없는 싱글턴이라 대화창 하트비트(is_sysai_window_open)로
       "창 열림=활성"을 판단한다 — 창이 열려 있으면 칩, 처리 중이면 펄스(busy).
     · 창 없이 도는 런(위임 등)도 busy 로 잡히면 정직하게 표시한다(계기는 진실 우선).
@@ -163,31 +165,31 @@ def active_work():
                       "agents": [], "busy": sys_started is not None,
                       "elapsed_sec": int(now - sys_started) if sys_started is not None else 0})
 
-    # 당직 로스터 = started 러너 보유 프로젝트 (창 닫힘=stop_all 로 여기서 빠진다)
+    # 창 열림(하트비트) 프로젝트 집합 — self-healing. 창 닫힘 stop_all 신호에 의존하지 않는다.
+    try:
+        from thread_context import open_project_windows
+        open_pids = open_project_windows()
+    except Exception:
+        open_pids = set()
+
+    # 러너 레지스트리는 칩의 '에이전트 이름' 소스로만 참조 (창 열림 판단은 하트비트가 담당)
     try:
         from api_agents import get_agent_runners
         runners = get_agent_runners() or {}
     except Exception:
         runners = {}
-    for pid in sorted(runners.keys()):
+
+    # 칩 = 창이 열린 프로젝트 ∪ 지금 처리 중(창 없는 위임 런 등, 진실 우선)
+    for pid in sorted(set(open_pids) | set(busy_projects.keys())):
         names = []
         for aid, info in (runners.get(pid) or {}).items():
             r = (info or {}).get("runner")
             if (info or {}).get("running") and r is not None and getattr(r, "running", True):
                 names.append(((info.get("config") or {}).get("name")) or aid)
-        if not names:
-            continue
         busy = pid in busy_projects
         items.append({"kind": "project", "project_id": pid, "project_name": pid,
                       "agents": sorted(names), "busy": busy,
                       "elapsed_sec": int(now - busy_projects[pid]) if busy else 0})
-
-    # busy 인데 로스터에 없는 프로젝트(창 없는 위임 런 등) — 진실 우선으로 표시
-    listed = {it["project_id"] for it in items if it["kind"] == "project"}
-    for pid, st in sorted(busy_projects.items()):
-        if pid not in listed:
-            items.append({"kind": "project", "project_id": pid, "project_name": pid,
-                          "agents": [], "busy": True, "elapsed_sec": int(now - st)})
     return {"items": items}
 
 

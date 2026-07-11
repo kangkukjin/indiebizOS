@@ -89,6 +89,37 @@ def is_sysai_window_open() -> bool:
         return (time.time() - _sysai_presence["last_seen"]) < _SYSAI_PRESENCE_TTL
 
 
+# ============ 프로젝트 창 존재 (창 열림=활성) ============
+# System AI 와 완전히 같은 self-healing 하트비트. 예전엔 프로젝트 칩을 '창 닫힘→Electron
+# stop_all→러너 레지스트리에서 제거'로 지웠는데, 그 close 신호(fire-and-forget fetch)가
+# 한 번이라도 실패하면(500/네트워크 스왈로우) 칩이 영구히 남아 재발했다. 이제 프로젝트 창도
+# 열려 있는 동안 하트비트를 찍고, 닫힘/크래시/백엔드 재시작 모두 하트비트 중단으로 TTL 만료 →
+# 칩 소멸. 별도 close 신호에 의존하지 않는다.
+_project_presence = {}  # project_id → last_seen
+_PROJECT_PRESENCE_TTL = 8.0
+
+
+def mark_project_window(project_id: str, present: bool = True):
+    """프로젝트 창 하트비트. present=False 는 즉시 부재 처리(닫힘 beacon)."""
+    if not project_id:
+        return
+    with _active_lock:
+        if present:
+            _project_presence[project_id] = time.time()
+        else:
+            _project_presence.pop(project_id, None)
+
+
+def open_project_windows() -> set:
+    """마지막 하트비트가 TTL 안인 프로젝트 id 집합. 만료분은 청소."""
+    now = time.time()
+    with _active_lock:
+        for pid in list(_project_presence.keys()):
+            if now - _project_presence[pid] >= _PROJECT_PRESENCE_TTL:
+                _project_presence.pop(pid, None)
+        return set(_project_presence.keys())
+
+
 def list_active_work() -> list:
     """지금 실행 중인 작업 목록. 죽은 스레드/1시간 초과 잔재(clear 누락 방어)는 청소."""
     now = time.time()

@@ -2959,6 +2959,23 @@ nodes:
         tool: make_directory
         implementation: os.makedirs(exist_ok=True)로 빈 디렉토리 생성
         target_key: path
+      propose_patch:
+        returns: effect
+        exempt: RED 코어 파일·변경내용 인자 필요 + git worktree 부작용(고정 fixture 부적합)
+        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경. write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. worktree 사본에서 py_compile+build --check 로 기계검증한 뒤 diff·검증결과를 남기고, 채택(머지)·폐기는 사람이 한다(자기가 자기 몸에 자가 적용 안 함).
+        group: file
+        target_description: path — 대상 RED 파일(backend/·frontend/·scripts/ 하위). content — 새 전체 내용(신규/전체 교체) 또는 old_string+new_string — 부분 교체(HEAD 기준 유일해야). reason — 변경 근거(필수, 사람 검토용). RED 밖 파일은 그냥 write/edit 을 쓰라고 거부한다.
+        router: handler
+        tool: propose_patch
+        implementation: handler.py _propose_red_patch — git worktree add --detach HEAD 로 격리 사본 생성, 그 사본에만 기록, py_compile+build --check 검증, data/system_ai_state/patch_proposals/에 제안 기록. 라이브 무변경.
+        target_key: path
+        keywords:
+        - 자기수정
+        - 자기개조
+        - 코어수정
+        - propose
+        - patch
+        - backend수정
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     always_on: true
     tags:

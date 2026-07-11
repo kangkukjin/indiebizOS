@@ -381,6 +381,39 @@
       }
     },
     {
+      "name": "propose_patch",
+      "description": "자기개조 안전장치(Floor #2) — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안합니다. 라이브 트리는 절대 손대지 않습니다.\n\n## 언제\n- write/edit 가 막힌 RED 코어 파일을 고쳐야 할 때 (직접 쓰기는 자해 위험이라 금지됨)\n- 그 외 파일(data/·프로젝트)은 그냥 [self:write]/[self:edit] 를 쓰세요 — propose_patch 는 RED 전용\n\n## 동작\n1. HEAD 기준 git worktree 격리 사본 생성 (라이브 무변경)\n2. 변경을 사본에만 기록 (content 전체 또는 old_string→new_string)\n3. 사본에서 py_compile + build --check 기계 검증 (자기채점 아님)\n4. diff·검증결과를 patch_proposals/ 에 기록\n5. 채택(머지)·폐기는 사람이 검토 후 수행\n\n## 파라미터\n- path: 대상 RED 파일 경로\n- content: 새 전체 내용 (신규 파일·전체 교체) — 또는 old_string+new_string 부분 교체\n- reason: 변경 근거 (필수, 사람 검토용)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "대상 RED 파일 경로 (backend/·frontend/·scripts/ 하위). RED 밖이면 거부됨."
+          },
+          "content": {
+            "type": "string",
+            "description": "새 전체 파일 내용 (신규 생성 또는 전체 교체). old_string/new_string 과 택일."
+          },
+          "old_string": {
+            "type": "string",
+            "description": "부분 교체 — 교체할 기존 문자열 (HEAD 기준 파일 내 유일해야 함). new_string 과 함께."
+          },
+          "new_string": {
+            "type": "string",
+            "description": "부분 교체 — 새 문자열."
+          },
+          "reason": {
+            "type": "string",
+            "description": "변경 근거 (필수). 사람이 제안을 검토할 때 읽는다."
+          }
+        },
+        "required": [
+          "path",
+          "reason"
+        ]
+      }
+    },
+    {
       "name": "read_op",
       "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.",
       "input_schema": {

@@ -180,6 +180,118 @@ def _validate_path_in_scope(path: str, project_path: str) -> str | None:
     return None
 
 
+# ── 자기개조 안전장치 Floor #2: RED 개조를 격리 사본(worktree)에만 제안 ──
+# docs/SELF_MODIFICATION_SAFETY_DESIGN.md. Floor #1 이 RED 직접 쓰기를 막았으니,
+# RED(backend/·frontend/·scripts/)를 건드리는 유일한 정규 통로는 이 제안 채널이다.
+# 라이브 트리는 절대 손대지 않는다 — git worktree(HEAD 격리 사본)에만 기록하고,
+# 그 사본에서 py_compile + build --check 로 기계 검증한 뒤, diff·검증결과를
+# data/system_ai_state/patch_proposals/ 에 남긴다. 채택(머지)·폐기는 사람 몫(Floor #4).
+def _git(args, cwd):
+    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True, timeout=120)
+
+
+def _propose_red_patch(raw_path: str, content, old_string, new_string, reason: str) -> dict:
+    """RED 파일 변경을 worktree 격리 사본에 제안 + 검증. 라이브 무변경. dict 반환."""
+    repo = _REPO_ROOT
+    if repo is None:
+        return {"success": False, "error": "repo 루트를 찾지 못해 propose_patch 를 실행할 수 없습니다."}
+    repo = str(repo)
+
+    if not raw_path:
+        return {"success": False, "error": "대상 파일 경로(path)가 필요합니다."}
+    if not (reason or "").strip():
+        return {"success": False, "error": "reason(변경 근거)이 필요합니다 — 사람 검토용."}
+    has_content = content is not None
+    has_edit = old_string is not None and new_string is not None
+    if not has_content and not has_edit:
+        return {"success": False, "error": "변경 내용이 필요합니다: content(전체 내용) 또는 old_string+new_string(부분 교체)."}
+
+    # 대상 실경로 — RED 전용 게이트(밖이면 그냥 write/edit 쓰라고 안내)
+    abs_target = os.path.realpath(raw_path if os.path.isabs(raw_path) else os.path.join(repo, raw_path))
+    if _red_zone_violation(abs_target) is None:
+        return {"success": False, "error": "propose_patch 는 RED 구역(backend/·frontend/·scripts/) 전용입니다. 그 밖의 파일은 [self:write]/[self:edit]로 직접 쓰세요."}
+    rel_target = os.path.relpath(abs_target, repo)
+    if rel_target.startswith(".."):
+        return {"success": False, "error": f"repo 밖 경로는 propose_patch 대상이 아닙니다: {abs_target}"}
+
+    if _git(["rev-parse", "--git-dir"], repo).returncode != 0:
+        return {"success": False, "error": "git 저장소가 아니라 격리(worktree)를 만들 수 없습니다."}
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    wt_rel = os.path.join(".worktrees", f"selfpatch-{ts}")
+    wt_abs = os.path.join(repo, wt_rel)
+    add = _git(["worktree", "add", "--detach", wt_abs, "HEAD"], repo)
+    if add.returncode != 0:
+        return {"success": False, "error": f"worktree 생성 실패: {add.stderr.strip()}"}
+
+    try:
+        wt_file = os.path.join(wt_abs, rel_target)
+        # 변경은 격리 사본에만 적용 (HEAD 기준 — 라이브 미커밋 변경과 무관하게 깨끗한 베이스)
+        if has_content:
+            os.makedirs(os.path.dirname(wt_file), exist_ok=True)
+            with open(wt_file, "w", encoding="utf-8") as f:
+                f.write(content)
+        else:
+            if not os.path.exists(wt_file):
+                raise FileNotFoundError(f"대상 파일이 HEAD에 없어 old_string 교체 불가: {rel_target} (신규 파일은 content 로 제안)")
+            with open(wt_file, "r", encoding="utf-8") as f:
+                orig = f.read()
+            n = orig.count(old_string)
+            if n == 0:
+                raise ValueError("old_string 이 대상 파일에 없습니다.")
+            if n > 1:
+                raise ValueError(f"old_string 이 {n}번 나와 모호합니다 — 주변 맥락을 더 포함하세요.")
+            with open(wt_file, "w", encoding="utf-8") as f:
+                f.write(orig.replace(old_string, new_string, 1))
+
+        diff = _git(["diff", "--", rel_target], wt_abs).stdout
+
+        # 기계 검증 — 격리 사본에서만 (라이브 무오염). 자기채점 아님, pass/fail 기계값.
+        # gate: py_compile(구문) + plain build(삼각 검증 handler↔src↔tool.json, 실패 시 exit 1).
+        # --check 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물에
+        # 의존해 바레 worktree 에서 못 돈다 → 사람이 머지할 때(라이브·pre-commit) 완전 검증.
+        checks = []
+        if wt_file.endswith(".py"):
+            pc = subprocess.run(["python3", "-m", "py_compile", wt_file],
+                                capture_output=True, text=True, timeout=60)
+            checks.append({"gate": "py_compile", "passed": pc.returncode == 0,
+                           "detail": (pc.stderr or "").strip()[-500:]})
+        bc = subprocess.run(["python3", "scripts/build_ibl_nodes.py"],
+                            cwd=wt_abs, capture_output=True, text=True, timeout=240)
+        checks.append({"gate": "ibl_triangle", "passed": bc.returncode == 0,
+                       "detail": ((bc.stdout or "") + (bc.stderr or "")).strip()[-800:]})
+        verified = all(c["passed"] for c in checks)
+
+        prop_dir = os.path.join(repo, "data", "system_ai_state", "patch_proposals")
+        os.makedirs(prop_dir, exist_ok=True)
+        proposal = {
+            "id": ts, "target": rel_target, "reason": reason,
+            "diff": diff, "checks": checks, "verified": verified,
+            "worktree": wt_rel, "status": "proposed",
+            "created_at": datetime.now().isoformat(),
+        }
+        with open(os.path.join(prop_dir, f"{ts}.json"), "w", encoding="utf-8") as f:
+            json.dump(proposal, f, ensure_ascii=False, indent=2)
+
+        return {
+            "success": True,
+            "proposal_id": ts,
+            "target": rel_target,
+            "verified": verified,
+            "verdict": ("기계 검증 통과 ✓" if verified else "기계 검증 실패 ✗ — checks 확인"),
+            "checks": checks,
+            "worktree": wt_rel,
+            "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
+            "note": ("이 변경은 격리 사본(worktree)에만 있고 라이브는 무변경입니다. "
+                     "적용은 사람이 검토 후 수행합니다(자기가 자기 몸에 자가 적용하지 않음). "
+                     f"채택: cd {wt_rel} 확인 후 사람이 머지·리로드. "
+                     f"폐기: git worktree remove {wt_rel}."),
+        }
+    except Exception as e:
+        _git(["worktree", "remove", "--force", wt_abs], repo)
+        return {"success": False, "error": f"propose_patch 실패: {e}"}
+
+
 def is_dangerous_command(command: str) -> bool:
     """명령어가 위험한지 검사 (정규식 단어 경계 사용)"""
     return bool(_DANGEROUS_RE.search(command))
@@ -926,6 +1038,17 @@ def execute(tool_input: dict, context) -> str:
             existed = os.path.isdir(abs_target)
             os.makedirs(abs_target, exist_ok=True)
             return json.dumps({"success": True, "path": abs_target, "existed": existed}, ensure_ascii=False)
+
+        elif tool_name == "propose_patch":
+            # 자기개조 Floor #2: RED 개조를 worktree 격리 사본에만 제안 + 기계검증. 라이브 무변경.
+            result = _propose_red_patch(
+                raw_path=_get_path(tool_input),
+                content=tool_input.get("content"),
+                old_string=tool_input.get("old_string") or tool_input.get("old"),
+                new_string=tool_input.get("new_string") or tool_input.get("new"),
+                reason=tool_input.get("reason") or tool_input.get("rationale") or "",
+            )
+            return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "read_pdf":
             import fitz  # PyMuPDF

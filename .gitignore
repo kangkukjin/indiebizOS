@@ -298,3 +298,7 @@ data/common_prompts/OLD/
 # apply_edition.py 파킹 마커 (로컬 런타임 상태)
 **/.edition_parked
 data/packages/installed/tools/blog/data/
+
+# 자기개조 Floor #2: propose_patch 격리 사본 + 제안 기록
+.worktrees/
+data/system_ai_state/patch_proposals/

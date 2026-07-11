@@ -27,7 +27,7 @@
     },
     {
       "name": "music_op",
-      "description": "유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/queue/stop/download 분기 (기본 play).",
+      "description": "유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download 분기 (기본 play).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -38,6 +38,7 @@
               "play",
               "add",
               "skip",
+              "seek",
               "queue",
               "stop",
               "download"
@@ -47,6 +48,10 @@
           "query": {
             "type": "string",
             "description": "검색어 또는 URL (op=play/add 시)"
+          },
+          "position": {
+            "type": "number",
+            "description": "점프할 위치(초) (op=seek 시)"
           },
           "url": {
             "type": "string",

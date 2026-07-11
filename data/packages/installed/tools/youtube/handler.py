@@ -112,6 +112,14 @@ def _op_skip(tool_input, yt):
     return yt.skip_youtube()
 
 
+def _op_seek(tool_input, yt):
+    # 위치(초): position 우선, seconds/time 도 관용 수용
+    pos = tool_input.get('position',
+          tool_input.get('seconds',
+          tool_input.get('time', 0)))
+    return yt.seek_youtube(pos)
+
+
 def _op_queue(tool_input, yt):
     return yt.get_queue()
 
@@ -139,6 +147,7 @@ _OP_DISPATCHERS = {
         "play": _op_play,
         "add": _op_add,
         "skip": _op_skip,
+        "seek": _op_seek,
         "queue": _op_queue,
         "stop": _op_stop,
         "download": _op_download,

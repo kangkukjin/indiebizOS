@@ -721,6 +721,7 @@ def summarize_youtube(
 # ============================================================
 
 import threading
+import time
 
 # ffplay 기반 오디오 플레이어
 # 라디오와 동일한 고아 청소 전략: ffplay 명령줄(-window_title)에 이 표식을 박아,
@@ -732,6 +733,14 @@ _player_video_id = None  # 현재 재생 중인 video_id
 _player_title = None     # 현재 재생 중인 제목
 _player_queue = []       # 재생 대기열: [{'video_id', 'title', 'channel', 'duration'}, ...]
 _player_mode = "audio"   # 현재 재생 모드
+# ── 중간 점프(seek) 지원 상태 ──
+# ffplay 는 실행 중 조종 채널이 없어 위치 이동이 불가하다. 그래서 seek = "현 ffplay 를
+# 죽이고 -ss <초> 로 그 지점부터 재시작"(skip/next 가 쓰는 kill+relaunch 기계 재사용).
+# 위치 표시는 정확한 재생 헤드 대신 벽시계로 추정: elapsed = seek_offset + (now - started_at).
+_player_audio_url = None    # 현재 곡의 오디오 스트림 URL (seek 재시작에 재사용, 재-resolve 회피)
+_player_duration = 0        # 현재 곡 길이(초)
+_player_started_at = None   # 현재 ffplay 를 띄운 벽시계 시각(위치 추정용)
+_player_seek_offset = 0.0   # 현재 ffplay 를 -ss 로 시작한 오프셋(초)
 _player_lock = threading.Lock()  # 큐/상태 동시접근 보호
 
 
@@ -747,20 +756,29 @@ def _get_audio_url(video_id):
         return info.get('url', '')
 
 
-def _start_ffplay(audio_url):
-    """ffplay로 오디오 스트림 재생 (백그라운드 분리 프로세스, 전 OS)"""
-    global _player_process
+def _start_ffplay(audio_url, seek=0):
+    """ffplay로 오디오 스트림 재생 (백그라운드 분리 프로세스, 전 OS).
+
+    seek>0 이면 -ss 로 그 지점부터 시작 = 중간 점프(현 프로세스를 죽이고 이 지점부터 재시작).
+    -ss 를 입력 URL 앞에 두면 HTTP range 요청으로 빠르게 탐색한다(googlevideo 는 range 지원).
+    위치 추정용으로 시작 벽시계·오프셋을 함께 기록한다.
+    """
+    global _player_process, _player_audio_url, _player_started_at, _player_seek_offset
     ffplay_path = find_binary("ffplay")
     if not ffplay_path:
         raise FileNotFoundError(install_hint("ffplay"))
-    _player_process = spawn_detached(
-        [ffplay_path, '-nodisp', '-autoexit', '-loglevel', 'quiet',
-         '-window_title', YOUTUBE_MARKER,  # 고아 청소용 표식(-nodisp 라 창 없음)
-         '-reconnect', '1',
-         '-reconnect_streamed', '1',
-         '-reconnect_delay_max', '5',
-         audio_url]
-    )
+    cmd = [ffplay_path, '-nodisp', '-autoexit', '-loglevel', 'quiet',
+           '-window_title', YOUTUBE_MARKER]  # 고아 청소용 표식(-nodisp 라 창 없음)
+    if seek and seek > 0:
+        cmd += ['-ss', str(int(seek))]  # 입력 앞 -ss = range 빠른 탐색
+    cmd += ['-reconnect', '1',
+            '-reconnect_streamed', '1',
+            '-reconnect_delay_max', '5',
+            audio_url]
+    _player_process = spawn_detached(cmd)
+    _player_audio_url = audio_url
+    _player_seek_offset = float(seek or 0)
+    _player_started_at = time.time()
 
 
 def _queue_monitor():
@@ -788,7 +806,7 @@ def _queue_monitor():
 
 def _play_next_in_queue_locked():
     """큐에서 다음 곡 재생 (_player_lock 잡힌 상태에서 호출)"""
-    global _player_process, _player_video_id, _player_title
+    global _player_process, _player_video_id, _player_title, _player_duration
     if not _player_queue:
         return False
     next_item = _player_queue.pop(0)
@@ -800,19 +818,23 @@ def _play_next_in_queue_locked():
             _player_process = None
             _player_video_id = None
             _player_title = None
+            _player_duration = 0
             return False
+        _player_duration = int(next_item.get('duration') or 0)  # 큐 항목은 raw 초 저장
         _start_ffplay(audio_url)
         return True
     except Exception:
         _player_process = None
         _player_video_id = None
         _player_title = None
+        _player_duration = 0
         return False
 
 
 def _close_player():
     """재생 중지 + 큐 초기화"""
     global _player_process, _player_video_id, _player_title, _player_queue
+    global _player_audio_url, _player_duration, _player_started_at, _player_seek_offset
     with _player_lock:
         if _player_process:
             try:
@@ -830,6 +852,10 @@ def _close_player():
         _player_video_id = None
         _player_title = None
         _player_queue = []
+        _player_audio_url = None
+        _player_duration = 0
+        _player_started_at = None
+        _player_seek_offset = 0.0
 
 
 def _format_duration(seconds):
@@ -999,7 +1025,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         except Exception as e:
             return {'success': False, 'message': f'검색 실패: {str(e)}'}
 
-    global _player_video_id, _player_mode, _player_title, _player_process
+    global _player_video_id, _player_mode, _player_title, _player_process, _player_duration
 
     # ★ 이미 재생 중이면 자동으로 큐에 추가 (play_youtube 반복 호출 대응)
     with _player_lock:
@@ -1086,6 +1112,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
             audio_url = _get_audio_url(video_id)
             if not audio_url:
                 return {'success': False, 'message': '오디오 스트림 URL을 가져올 수 없습니다.'}
+            _player_duration = int(duration or 0)  # seek 진행바용 곡 길이(초)
             _start_ffplay(audio_url)
             _player_video_id = video_id
             _player_title = title
@@ -1296,14 +1323,82 @@ def skip_youtube() -> dict:
             }
 
 
+def seek_youtube(position) -> dict:
+    """현재 재생 중인 곡의 특정 지점(초)으로 점프.
+
+    ffplay 는 실행 중 위치 이동이 불가하므로, 현 프로세스를 죽이고 같은 오디오 URL 을
+    -ss <position> 으로 재시작한다(skip/next 와 동일한 kill+relaunch 기계 재사용).
+    """
+    global _player_process, _player_started_at
+    try:
+        pos = float(position)
+    except (TypeError, ValueError):
+        return {'success': False, 'message': 'position(초)이 올바르지 않습니다.'}
+    if pos < 0:
+        pos = 0.0
+
+    with _player_lock:
+        if not _player_video_id or not _player_audio_url:
+            return {'success': False, 'message': '재생 중인 곡이 없습니다.'}
+        # 오디오 모드(서버측 ffplay)만 seek 가능 — video/client 모드는 대상 아님
+        if _player_mode != 'audio':
+            return {'success': False, 'message': '이 재생 모드에서는 위치 이동을 지원하지 않습니다.'}
+
+        dur = _player_duration or 0
+        if dur and pos > dur - 1:
+            pos = max(0.0, dur - 1)  # 끝 직전으로 클램프(-autoexit 즉시 종료 방지)
+
+        audio_url = _player_audio_url
+        # 현 ffplay 종료. _player_process 를 먼저 None 으로 바꿔, 락 대기 중이던 옛
+        # 모니터 스레드가 깨어나도 `_player_process is not proc` 로 빠지게 한다(큐 오진행 방지).
+        old = _player_process
+        _player_process = None
+        if old:
+            try:
+                old.terminate()
+                old.wait(timeout=3)
+            except Exception:
+                try:
+                    old.kill()
+                except Exception:
+                    pass
+
+        # 같은 URL 을 -ss 로 재시작
+        try:
+            _start_ffplay(audio_url, seek=pos)
+        except Exception as e:
+            _player_started_at = None
+            return {'success': False, 'message': f'위치 이동 실패: {str(e)}'}
+
+        # 새 모니터 스레드(곡 끝나면 큐 진행)
+        t = threading.Thread(target=_queue_monitor, daemon=True)
+        t.start()
+
+    return {
+        'success': True,
+        'message': f'{int(pos)}초 지점으로 이동했습니다.',
+        'position': int(pos),
+        'duration': int(_player_duration or 0),
+    }
+
+
 def get_queue() -> dict:
     """현재 재생 대기열 조회"""
     with _player_lock:
         now_playing = None
         if _player_video_id:
+            # 위치(elapsed) 추정: seek 오프셋 + 재생 경과(벽시계). ffplay 는 정확한 재생
+            # 헤드를 노출하지 않으므로 근사값 — 진행바/시간표시엔 충분하다.
+            elapsed = 0
+            if _player_started_at is not None:
+                elapsed = _player_seek_offset + (time.time() - _player_started_at)
+                if _player_duration and elapsed > _player_duration:
+                    elapsed = float(_player_duration)
             now_playing = {
                 'video_id': _player_video_id,
                 'title': _player_title or '',
+                'duration': int(_player_duration or 0),
+                'elapsed': int(elapsed),
             }
 
         queue_list = []

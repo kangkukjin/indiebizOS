@@ -82,9 +82,9 @@ nodes:
       music:
         returns: effect
         runs_on: mac_only
-        description: 유튜브 음악 재생·큐 관리·MP3 다운로드 (op 분기). play/add/skip/queue/stop/download.
+        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download.
         group: media
-        target_description: play/add — query 파라미터로 검색어 또는 URL. download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
+        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
         target_key: op
         router: handler
         tool: music_op
@@ -94,10 +94,11 @@ nodes:
             play: 즉시 재생 (query 검색어/URL, 기본)
             add: 큐에 추가 (query 검색어/URL)
             skip: 현재 곡 스킵
+            seek: 현재 곡의 특정 지점으로 점프 (position 초)
             queue: 큐 목록 조회
             stop: 재생 중지
             download: MP3 다운로드 (url + output_path 옵션)
-        implementation: yt-dlp + mpv/ffplay 음악 재생·큐·다운로드 op 분기
+        implementation: yt-dlp + ffplay 음악 재생·큐·중간점프(-ss 재시작)·다운로드 op 분기
         keywords:
         - youtube
         - 유튜브
@@ -162,7 +163,7 @@ tool_json:
       required:
       - query
   - name: music_op
-    description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/queue/stop/download 분기 (기본 play).
+    description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download 분기 (기본 play).
     input_schema:
       type: object
       properties:
@@ -172,6 +173,9 @@ tool_json:
         query:
           type: string
           description: 검색어 또는 URL (op=play/add 시)
+        position:
+          type: number
+          description: 점프할 위치(초) (op=seek 시)
         url:
           type: string
           description: 유튜브 URL (op=download 시)

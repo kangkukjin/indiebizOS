@@ -1720,14 +1720,50 @@ function _npBar(){
   let b=document.getElementById('nowPlaying');
   if(!b){
     b=document.createElement('div'); b.id='nowPlaying';
-    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9998;display:none;align-items:center;gap:10px;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333;box-shadow:0 -2px 10px rgba(0,0,0,.5)';
-    b.innerHTML='<span style="font-size:18px">\\u266a</span><span id="npTitle" style="flex:1;color:#eee;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button onclick="stopRadioStream()" style="background:#e94560;color:#fff;border:none;border-radius:18px;padding:8px 18px;font-size:15px;font-weight:bold">\\u25a0 \\uc815\\uc9c0</button>';
+    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9998;display:none;align-items:stretch;gap:10px;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333;box-shadow:0 -2px 10px rgba(0,0,0,.5)';
+    // 컬럼: (1) 제목+정지 (2) 진행바 — 유한 길이(유튜브뮤직)일 때만 timeupdate 가 표시, 라이브(라디오)엔 숨김
+    b.innerHTML='<div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:18px">\\u266a</span>'
+      +'<span id="npTitle" style="flex:1;color:#eee;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>'
+      +'<button onclick="stopRadioStream()" style="background:#e94560;color:#fff;border:none;border-radius:18px;padding:8px 18px;font-size:15px;font-weight:bold">\\u25a0 \\uc815\\uc9c0</button>'
+      +'</div>'
+      +'<div id="npSeekRow" style="display:none;align-items:center;gap:8px">'
+      +'<span id="npCur" style="color:#aaa;font-size:11px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right">0:00</span>'
+      +'<input id="npSeek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#e94560;cursor:pointer">'
+      +'<span id="npDur" style="color:#aaa;font-size:11px;font-variant-numeric:tabular-nums;min-width:34px">0:00</span>'
+      +'</div>'
+      +'</div>';
     document.body.appendChild(b);
   }
   return b;
 }
 function _npShow(label){ const b=_npBar(); const t=document.getElementById('npTitle'); if(t) t.textContent=label||'\\uc7ac\\uc0dd \\uc911'; b.style.display='flex'; }
 function _npHide(){ const b=document.getElementById('nowPlaying'); if(b) b.style.display='none'; }
+/* 진행바(중간 점프): #radioAudio 는 실제 브라우저 <audio> 라 native seek 가 공짜.
+   유한 길이(유튜브뮤직)면 스크러버를 띄우고, 라이브 스트림(라디오, duration=Infinity)이면 숨긴다. */
+function _npFmtT(s){ if(!isFinite(s)||s<0) return '0:00'; s=Math.floor(s); var m=Math.floor(s/60), x=s%60, h=Math.floor(m/60); if(h>0){ m=m%60; return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); } return m+':'+String(x).padStart(2,'0'); }
+var _npSeeking=false;
+function npSeekTo(v){ var a=document.getElementById('radioAudio'); if(a && isFinite(a.duration)){ try{ a.currentTime=Number(v); }catch(e){} } }
+function _npWireSeek(a){
+  if(a._npWired) return; a._npWired=true;
+  a.addEventListener('timeupdate',function(){
+    if(_npSeeking) return;
+    var row=document.getElementById('npSeekRow'), sk=document.getElementById('npSeek');
+    var cur=document.getElementById('npCur'), du=document.getElementById('npDur');
+    if(isFinite(a.duration) && a.duration>0){
+      if(row) row.style.display='flex';
+      if(sk){ sk.max=Math.floor(a.duration); sk.value=Math.floor(a.currentTime); }
+      if(cur) cur.textContent=_npFmtT(a.currentTime);
+      if(du) du.textContent=_npFmtT(a.duration);
+    } else if(row){ row.style.display='none'; }  // 라이브(라디오)=무한 → 숨김
+  });
+  var sk=document.getElementById('npSeek');
+  if(sk){
+    sk.addEventListener('input',function(){ _npSeeking=true; var cur=document.getElementById('npCur'); if(cur) cur.textContent=_npFmtT(Number(sk.value)); });
+    sk.addEventListener('change',function(){ npSeekTo(sk.value); _npSeeking=false; });
+  }
+}
 function playRadioStream(url,vol,label){
   const a=_radioAudioEl();
   if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
@@ -1737,10 +1773,15 @@ function playRadioStream(url,vol,label){
     _radioHls.on(Hls.Events.MANIFEST_PARSED,()=>a.play().catch(()=>{}));
   } else { a.src=url; a.play().catch(()=>{}); }
   _npShow(label);
+  _npSeeking=false;
+  var row=document.getElementById('npSeekRow'); if(row) row.style.display='none';  // 새 곡=일단 숨김(메타 로드되면 timeupdate가 판단)
+  var sk=document.getElementById('npSeek'); if(sk) sk.value=0;
+  _npWireSeek(a);
 }
 function stopRadioStream(){
   if(_radioHls){ try{_radioHls.destroy();}catch(e){} _radioHls=null; }
   const a=document.getElementById('radioAudio'); if(a){ a.pause(); a.removeAttribute('src'); a.load(); }
+  var row=document.getElementById('npSeekRow'); if(row) row.style.display='none';
   _npHide();
 }
 /* CCTV 영상(item2): 지도 마커 클릭 → 전체화면 <video> 오버레이로 HLS 재생.

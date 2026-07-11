@@ -1,14 +1,15 @@
 /**
  * YtMusicInstrument — 유튜브 뮤직 "계기(instrument)" (앱 모드)
  *
- * 두 기능 (둘 다 [limbs:music] op 분기 — yt-dlp + mpv가 이 PC에서 처리):
+ * 두 기능 (둘 다 [limbs:music] op 분기 — yt-dlp + ffplay가 이 PC에서 처리):
  *   재생  [sense:search_youtube]{query} 로 검색 → 선택해서 큐에 넣고 재생
- *         play/add/skip/stop/queue. (에이전트가 주문대로 틀던 걸 사람이 직접 고르는 형태)
+ *         play/add/skip/seek/stop/queue. (에이전트가 주문대로 틀던 걸 사람이 직접 고르는 형태)
+ *         seek = 긴 곡 중간 점프 — ffplay 를 -ss 로 재시작(진행바 드래그).
  *   저장  [limbs:music]{op:download, url, name} → ~/Desktop/{이름}.mp3 로 추출
  *
  * 스키마 출처: data/ibl_nodes_src/sense.yaml(search_youtube), limbs.yaml(music), youtube/handler.py
  */
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
 const PROJECT_ID = '앱모드';
@@ -16,7 +17,7 @@ const PROJECT_ID = '앱모드';
 type Tab = 'play' | 'save';
 
 interface Video { video_id: string; title: string; channel?: string; duration?: string }
-interface NowPlaying { video_id?: string; title?: string }
+interface NowPlaying { video_id?: string; title?: string; duration?: number; elapsed?: number }
 interface QueueItem { position: number; video_id: string; title: string; channel?: string; duration?: string }
 interface QueueResult { success?: boolean; now_playing?: NowPlaying | null; queue?: QueueItem[]; message?: string }
 interface DlResult { success?: boolean; message?: string; error?: string; file?: string; path?: string; filename?: string }
@@ -24,6 +25,13 @@ interface DlResult { success?: boolean; message?: string; error?: string; file?:
 const watchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
 // 파일명에 부적합한 문자 제거
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+// 초 → M:SS (1시간 넘으면 H:MM:SS)
+const fmtTime = (s: number) => {
+  if (!s || s < 0 || !isFinite(s)) return '0:00';
+  s = Math.floor(s);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${m}:${String(sec).padStart(2, '0')}`;
+};
 
 async function runIBL<T = Record<string, unknown>>(code: string): Promise<T & { success?: boolean; error?: string }> {
   try {
@@ -48,6 +56,9 @@ export function YtMusicInstrument() {
   const [queue, setQueue] = useState<QueueResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 진행바(중간 점프): elapsed 는 폴링(4초)마다 서버값으로 재동기 + 로컬 1초 틱으로 보간.
+  const [elapsed, setElapsed] = useState(0);
+  const seekingRef = useRef(false);  // 드래그 중엔 폴링·틱이 위치를 덮지 않게
 
   // 저장
   const [dlUrl, setDlUrl] = useState('');
@@ -67,6 +78,24 @@ export function YtMusicInstrument() {
     return () => clearInterval(id);
   }, [tab, refreshQueue]);
 
+  // ----- 진행바 위치 동기 -----
+  const npElapsed = queue?.now_playing?.elapsed;
+  const npVid = queue?.now_playing?.video_id;
+  const npDur = queue?.now_playing?.duration || 0;
+  // 폴링(4초)마다 서버값으로 재동기. 곡이 바뀌면(video_id) 새 위치로 리셋. 드래그 중엔 skip.
+  useEffect(() => {
+    if (seekingRef.current) return;
+    if (typeof npElapsed === 'number') setElapsed(npElapsed);
+  }, [npElapsed, npVid]);
+  // 로컬 1초 틱 — 폴링 사이를 부드럽게 채움.
+  useEffect(() => {
+    if (!npVid || !npDur) return;
+    const id = setInterval(() => {
+      if (!seekingRef.current) setElapsed((e) => Math.min(npDur, e + 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [npVid, npDur]);
+
   // ----- 검색 -----
   const search = useCallback(async () => {
     const q = query.trim();
@@ -78,7 +107,7 @@ export function YtMusicInstrument() {
     if (r.error) setError(r.error); else setResults(r.items || []);
   }, [query]);
 
-  // ----- 재생 컨트롤 (mpv가 이 PC에서 재생) -----
+  // ----- 재생 컨트롤 (ffplay가 이 PC에서 재생) -----
   const ctrl = useCallback(async (code: string) => {
     setBusy(true); setError(null);
     const r = await runIBL(code);
@@ -89,6 +118,13 @@ export function YtMusicInstrument() {
 
   const playNow = (v: Video) => ctrl(`[limbs:music]{op: "play", query: "${watchUrl(v.video_id)}"}`);
   const addQueue = (v: Video) => ctrl(`[limbs:music]{op: "add", query: "${watchUrl(v.video_id)}"}`);
+
+  // 진행바 드래그 놓을 때 = 해당 초로 점프 (ffplay -ss 재시작). 낙관적으로 로컬 위치 먼저 반영.
+  const commitSeek = useCallback((sec: number) => {
+    seekingRef.current = false;
+    setElapsed(sec);
+    ctrl(`[limbs:music]{op: "seek", position: ${Math.round(sec)}}`);
+  }, [ctrl]);
 
   // 검색 결과 → 저장 탭으로 보내기 (URL/이름 채움)
   const toSave = (v: Video) => { setDlUrl(watchUrl(v.video_id)); setDlName(safeName(v.title)); setDlResult(null); setTab('save'); };
@@ -173,6 +209,23 @@ export function YtMusicInstrument() {
                 <button onClick={() => ctrl('[limbs:music]{op: "stop"}')} disabled={busy}
                   className="px-3 py-1.5 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-50">정지</button>
               </div>
+              {/* 진행바: 긴 곡 중간으로 점프 (드래그해서 놓으면 seek) */}
+              {npDur > 0 && (
+                <div className="flex items-center gap-2 mt-2.5">
+                  <span className="text-[10px] text-stone-400 tabular-nums w-10 text-right shrink-0">{fmtTime(elapsed)}</span>
+                  <input
+                    type="range" min={0} max={npDur} step={1}
+                    value={Math.min(Math.max(elapsed, 0), npDur)}
+                    onChange={(e) => { seekingRef.current = true; setElapsed(Number(e.target.value)); }}
+                    onMouseUp={(e) => commitSeek(Number((e.target as HTMLInputElement).value))}
+                    onTouchEnd={(e) => commitSeek(Number((e.target as HTMLInputElement).value))}
+                    disabled={busy}
+                    aria-label="재생 위치"
+                    className="flex-1 h-1.5 accent-rose-500 cursor-pointer disabled:opacity-50"
+                  />
+                  <span className="text-[10px] text-stone-400 tabular-nums w-10 shrink-0">{fmtTime(npDur)}</span>
+                </div>
+              )}
               {list.length > 0 && (
                 <div className="mt-2 max-h-28 overflow-auto space-y-1">
                   {list.map((q) => (

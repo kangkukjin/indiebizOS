@@ -2,6 +2,12 @@
 
 *작성: 2026-07-02 (Claude Code, 외부 개발 하네스). 근거: 에피소드 548~552 실측 + 코드베이스 조사 2건.*
 
+> **구현 상태 (2026-07-12 갱신):**
+> - **Floor #1 ✅ 구현·커밋** (`30a4116`): RED 구역 직접 쓰기 차단. `system_essentials/handler.py` `_validate_path_in_scope` 에 `_red_zone_violation`(realpath 정규화, repo 루트 backend+frontend 독립 탐지) 게이트. 쓰기 계열 단일 초크포인트 전부 커버, 읽기는 유지. 에피소드 551 구멍 폐쇄.
+> - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:propose_patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록. 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
+> - **미구현**: Phase 1(run_command 리다이렉션 게이트) · Floor #3 완전판(import smoke + health_check + 표적 스모크 — 격리 한계로 부분만) · Floor #4(승인 배선: 제안 diff→plan_mode UI→사람 머지) · Floor #5(스냅샷+자동 롤백+개조직후 self-check).
+> - **미이관**: `[self:propose_patch]` 해마 시드 용례 없음 → 다음 임베더 재학습 시 흡수.
+
 ## 0. 왜 이 문서인가 — 실측된 실패
 
 에피소드 551에서 시스템 AI(gemini-3.1-flash-lite, 절약 기어)는 **"자기 수정을 안전하게 하는 법"**을 묻자, 그 자리에서 자기 `backend/`에 새 파이썬 파일 2개를 직접 써넣었다:

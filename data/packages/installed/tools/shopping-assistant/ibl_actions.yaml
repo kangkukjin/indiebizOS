@@ -10,6 +10,27 @@ actions:
     tool: search_shopping
     implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
     target_key: query
+  used:
+    returns: items
+    fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
+    description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 통합 통화(records)로. 자주 하는 중고 검색을 어휘화.
+    group: research
+    target_description: "중고 거래 매물 검색. source로 플랫폼 선택.\n- source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 \"청주\") 주면 위치 substring 후필터(반경 아님).\n- source=danggeun: 당근 — region=동이름(예 \"죽백동\") 주면 그 동네+인근 동으로 스코프('내동네' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크.\n- source=joongna: 중고나라 web 검색(제목·가격·링크, best-effort 파싱).\n- source=naver: 네이버 카페 통합검색(중고나라 카페 등 게시글).\nquery=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring / danggeun=동네 스코프)."
+    target_key: query
+    router: handler
+    tool: used_search
+    scope: workspace
+    implementation: source 분기 — bunjang=api.bunjang.co.kr find_v2.json(위치 후필터) / danggeun=regions/keyword 지역해소→/kr/buy-sell JSON-LD ItemList(전체결과 한방) / joongna=web RSC 파싱 / naver=api_call cafearticle. tool_used.py.
+    keywords:
+    - 중고
+    - 중고거래
+    - 중고매물
+    - 번개장터
+    - 중고나라
+    - 당근
+    - 당근마켓
+    - 중고물건
+    - 세컨핸드
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
@@ -47,5 +68,34 @@ tool_json:
           type: integer
           description: 검색 결과 개수 (최대 10)
           default: 5
+      required:
+      - query
+  - name: used_search
+    description: '중고 C2C 매물 검색. source로 플랫폼 선택 — bunjang(번개장터, 내부 API,
+      위치 포함·region 후필터·기본), danggeun(당근, region=동이름으로 동네+인근 스코프 —
+      동네 매물엔 우선), joongna(중고나라 web), naver(네이버 카페 중고 게시글).
+      통화: {records: [{title, meta, summary, url, image}], total, source}.'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색어 (예 "맥미니 m4 pro")
+        source:
+          type: string
+          description: 검색 플랫폼 (동네 매물=danggeun+region, 위치 표기 매물=bunjang+region)
+          enum:
+          - bunjang
+          - danggeun
+          - joongna
+          - naver
+          default: bunjang
+        region:
+          type: string
+          description: 지역 필터 — bunjang=위치 substring(예 "청주"), danggeun=동이름(예 "죽백동", 그 동네+인근 동 스코프)
+        limit:
+          type: integer
+          description: 결과 개수 (기본 15)
+          default: 15
       required:
       - query

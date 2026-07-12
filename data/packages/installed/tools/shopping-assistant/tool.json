@@ -36,6 +36,42 @@
           "query"
         ]
       }
+    },
+    {
+      "name": "used_search",
+      "description": "중고 C2C 매물 검색. source로 플랫폼 선택 — bunjang(번개장터, 내부 API, 위치 포함·region 후필터·기본), danggeun(당근, region=동이름으로 동네+인근 스코프 — 동네 매물엔 우선), joongna(중고나라 web), naver(네이버 카페 중고 게시글). 통화: {records: [{title, meta, summary, url, image}], total, source}.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "검색어 (예 \"맥미니 m4 pro\")"
+          },
+          "source": {
+            "type": "string",
+            "description": "검색 플랫폼 (동네 매물=danggeun+region, 위치 표기 매물=bunjang+region)",
+            "enum": [
+              "bunjang",
+              "danggeun",
+              "joongna",
+              "naver"
+            ],
+            "default": "bunjang"
+          },
+          "region": {
+            "type": "string",
+            "description": "지역 필터 — bunjang=위치 substring(예 \"청주\"), danggeun=동이름(예 \"죽백동\", 그 동네+인근 동 스코프)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 개수 (기본 15)",
+            "default": 15
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
     }
   ]
 }

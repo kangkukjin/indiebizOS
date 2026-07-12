@@ -224,9 +224,66 @@ async def search_all_async(query: str, display: int = 5):
     return {"total": len(combined_items), "items": combined_items}
 
 
+def _search_naver_used(query: str, limit: int = 15):
+    """[sense:used] source=naver — 네이버 카페 통합검색(중고나라 카페 등 게시글)."""
+    ok, err = check_api_key("naver")
+    if not ok:
+        return {"source": "naver", "error": err, "records": []}
+    data = api_call("naver", "/v1/search/cafearticle.json",
+                    params={"query": query, "display": min(limit, 20), "sort": "date"})
+    if isinstance(data, dict) and "error" in data:
+        return {"source": "naver", "error": data["error"], "records": []}
+    records = []
+    for it in data.get("items", []):
+        records.append({
+            "title": clean_html(it.get("title", "")),
+            "meta": clean_html(it.get("cafename", "")),
+            "summary": clean_html(it.get("description", ""))[:200],
+            "url": it.get("link", ""),
+            "image": "",
+        })
+    return {"source": "naver", "total": len(records), "records": records,
+            "note": "네이버 카페 통합검색(중고나라 등) — 게시글 기준"}
+
+
+def _handle_used(tool_input: dict) -> str:
+    """[sense:used] — 중고 C2C 매물 검색(source 분기). records 통화."""
+    # sys.path+import는 sys.modules에 캐시돼 /packages/reload로 안 갈림 —
+    # real-estate(tool_zigbang) 선례대로 파일에서 매번 fresh 로드.
+    import importlib.util as _ilu
+    _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tool_used.py")
+    _spec = _ilu.spec_from_file_location("tool_used", _path)
+    _tu = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_tu)
+
+    query = tool_input.get("query") or tool_input.get("q")
+    if not query:
+        return format_json({"error": "검색어(query)를 입력해주세요.", "records": []})
+    source = (tool_input.get("source") or "bunjang").lower()
+    limit = int(tool_input.get("limit", 15))
+    region = tool_input.get("region")
+
+    if source == "bunjang":
+        res = _tu.search_bunjang(query, limit=limit, region=region)
+    elif source == "joongna":
+        res = _tu.search_joongna(query, limit=limit)
+    elif source == "naver":
+        res = _search_naver_used(query, limit)
+    elif source == "danggeun":
+        res = _tu.search_danggeun(query, limit=limit, region=region)
+    else:
+        return format_json({
+            "error": f"알 수 없는 source: {source} (bunjang/joongna/naver/danggeun)",
+            "records": [],
+        })
+    return format_json(res)
+
+
 def execute(tool_input: dict, context) -> str:
     """도구 실행 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
+    if tool_name == "used_search":
+        return _handle_used(tool_input)
     if tool_name == "search_shopping":
         query = tool_input.get("query")
         site = tool_input.get("site", "all")

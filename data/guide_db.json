@@ -983,6 +983,28 @@
         "앱개선"
       ],
       "file": "custom_app_instrument.md"
+    },
+    {
+      "id": "used_market",
+      "name": "중고 매물 검색 가이드 ([sense:used])",
+      "description": "중고 C2C 매물 검색 어휘 사용법. 소스 선택 기준(당근=동네 스코프/번개장터=위치 표기/중고나라/네이버카페), 당근 2단 레시피(지역ID 해소→JSON-LD)와 함정(슬러그 이름=장식, charset 없음), 옛 실패 지식(site: 해킹 은퇴).",
+      "keywords": [
+        "중고",
+        "중고거래",
+        "중고매물",
+        "당근",
+        "당근마켓",
+        "번개장터",
+        "중고나라",
+        "네이버카페",
+        "동네",
+        "직거래",
+        "used",
+        "danggeun",
+        "bunjang",
+        "joongna"
+      ],
+      "file": "used_market.md"
     }
   ]
 }

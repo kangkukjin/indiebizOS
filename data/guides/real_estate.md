@@ -83,6 +83,7 @@
   - `name` = `"죽백동 아파트 전세 2억 6,000만원 73m² 매물"` (동·유형·거래·가격·면적), `url` = `https://realty.daangn.com/articles/{id}`
 - ✅ **경로형 URL이 `search_region` 쿠키 문제를 우회한다** — 평택 데이터가 정상 반환됨(옛 가이드의 "browser-action으로 지역선택 UI 조작해야만"은 *정정*: 단순 목록은 경로 URL fetch로 충분).
 - ⚠️ **함정 — SSR 목록은 동·필터가 안 걸린다**: 경로의 동/쿼리(`realtyType`·`tradeType`)가 SSR에 **무시**된다. 죽백동/용이동/동삭동을 따로 불러도 **article ID가 동일한 20건**(평택시 기본 목록)에 *동 이름 라벨만* 갈아끼워질 뿐, 매매·월세·상가가 섞여 온다. **"도서관 반경" 같은 정밀 검색은 SSR로 불가** — 동·필터·반경이 진짜 먹는 **당근 내부 지도 JSON API(bbox+필터)는 아직 미발굴**. SSR 목록은 "맛보기"로만 쓰고, 개별 매물 상세는 `sense:crawl`(URL 1건)로 확인.
+- 참고(2026-07-12): 당근 **중고물건** 쪽(`www.daangn.com/kr/buy-sell/?in=x-{지역ID}&search=`)은 지역 필터가 **진짜 작동**하고 지역ID 해소 API(`/kr/api/v1/regions/keyword?keyword={동이름}`, 키불요)도 발굴됨 — `[sense:used]{source:"danggeun"}` 어휘로 결정화(`used_market.md`). realty.daangn.com이 같은 지역ID 체계를 쓰는지는 미검증 — 부동산 정밀 검색 재도전 시 이 API부터 시도할 것.
 
 ### 네이버부동산 — 매물 최다지만 미연동
 - 단지(`cortarNo`+bbox) 2단계 비공식 JSON API. 매물량 국내 1위. **해외 IP를 강차단**하지만 이 시스템은 한국 IP라 유리. 구현 난이도 중상(단지 단위라 단독/다가구엔 부적합). **현재 미연동 — 향후 `source:"naver"` 후보.**

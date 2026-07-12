@@ -66,18 +66,18 @@ actions:
       region_code: [district_code, dong_code, code]
     returns: items
     fixture: '[sense:realty]{op: "query", region: "강남구"}'
-    description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진), codes=법정동 코드. region 이름만 넣으면 자동 해소.
+    description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진 / source=naver 네이버부동산 현재 매물 — 아파트 최다·단지명 검색), codes=법정동 코드. region 이름만 넣으면 자동 해소.
     group: real_estate
-    target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
+    target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
     target_key: op
     router: handler
     tool: realty_op
     ops:
       default: query
       values:
-        query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물)
+        query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물 / source=naver 네이버부동산 매물)
         codes: 법정동 지역코드 조회 (보조)
-    implementation: query source=molit=type×deal 국토부 6종 API(region 자동해소). source=zigbang=tool_zigbang(지명→geohash5→직방 리스트→거리필터→상세 병렬→records). codes=get_region_codes.
+    implementation: query source=molit=type×deal 국토부 6종 API(region 자동해소). source=zigbang=tool_zigbang(지명→geohash5→직방 리스트→거리필터→상세 병렬→records). source=naver=tool_naver(curl_cffi 크롬위장+페이지 JWT→/api/search 지역·단지 해소→/api/articles→items). codes=get_region_codes.
     keywords:
     - 부동산
     - 실거래가
@@ -89,6 +89,8 @@ actions:
     - 매물
     - 호가
     - 직방
+    - 네이버부동산
+    - 단지
     - 빌라
     - 원룸
     app:

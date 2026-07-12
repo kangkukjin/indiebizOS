@@ -62,10 +62,13 @@ def execute(tool_input: dict, context):
         if _op == "codes":
             tool = load_module("tool_region_codes")
             return tool.get_region_codes(tool_input.get("city") or tool_input.get("region") or "")
-        # source 분기 (op=query): molit=국토부 실거래가(체결, 기본) / zigbang=직방 현재 매물(호가·링크·사진).
+        # source 분기 (op=query): molit=국토부 실거래가(체결, 기본) / zigbang=직방 현재 매물(호가·링크·사진)
+        # / naver=네이버부동산 현재 매물(아파트 최다·단지 검색).
         _source = (tool_input.get("source") or "molit").strip().lower()
         if _source in ("zigbang", "직방"):
             return load_module("tool_zigbang").get_zigbang_listings(tool_input)
+        if _source in ("naver", "네이버", "네이버부동산"):
+            return load_module("tool_naver").get_naver_listings(tool_input)
         tool_name = "realty_price"  # op=query, source=molit (기본)
 
     if tool_name in ("realty_price", "apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):

@@ -3,8 +3,9 @@
 `[sense:realty]` 단일 액션. **`source`로 데이터 종류를 가른다:**
 - `source:"molit"` (기본) — 국토부 공개 실거래가(체결된 과거 거래 = **시세**). **type × deal 매트릭스**가 핵심 분기. 링크·사진 없음.
 - `source:"zigbang"` — 직방 **현재 매물**(지금 나온 호가·사진·클릭 링크). 빌라/원룸/오피스텔. ↓ "source=zigbang" 절.
+- `source:"naver"` — 네이버부동산 **현재 매물**(전국 최다 풀, 아파트·단지 강함, 단지명 직조회). ↓ "source=naver" 절.
 
-> 매물 검색 전반(당근·네이버·다가구 주인세대 등 희소 매물)은 `real_estate.md` 가이드 참조.
+> 매물 검색 전반(당근·다가구 주인세대 등 희소 매물)은 `real_estate.md` 가이드 참조.
 
 ---
 
@@ -32,7 +33,20 @@
 - `region`(동·지명·건물명) 또는 `lat`/`lng`. `type`=villa/oneroom/officetel. `deal`=trade/rent + `lease`=전세|월세(좁힘).
 - `deposit_max`·`rent_max`(만원), `radius`(m, 기본 3000), `limit`(기본 30).
 - 반환 records `{title, meta, summary, url, image}` — url=직방 매물 페이지, image=썸네일.
-- **아파트·단독/다가구는 직방 약함** → real_estate.md §4·§5(네이버·당근·현지 부동산).
+- **아파트·단독/다가구는 직방 약함** → `source:"naver"` 또는 real_estate.md §5·§6(당근·현지 부동산).
+
+---
+
+## source=naver — 네이버부동산 현재 매물(아파트 최다·단지 검색)
+
+```
+[sense:realty]{source:"naver", region:"평택 비전동", type:"apt", lease:"전세", deposit_max:25000}
+[sense:realty]{source:"naver", region:"우미린센트럴파크", deal:"trade"}   # 아파트 단지명 직조회
+```
+- `region`=동 이름 **또는 아파트 단지명**(동 우선, 없으면 단지). `type`=apt(기본)/officetel/villa/house(단독다가구)/oneroom.
+- `deal`/`lease`는 zigbang과 동일. `deposit_min`/`deposit_max`(만원, 서버필터), `rent_max`(만원), `limit`(기본 30, 최대 60).
+- 반환 items `{title, meta, summary, url, image}` — url=네이버 매물 페이지(m.land), 동일매물 자동 묶음.
+- 내부 API + curl_cffi TLS 위장 + 익명 JWT(자동) — 상세는 real_estate.md §4·부록 C.
 
 ---
 
@@ -105,5 +119,5 @@
 
 ## 관련
 
-- 현재 매물(호가·사진·링크) — `[sense:realty]{source:"zigbang"}` (빌라/원룸/오피스텔) 또는 매물 검색 전반은 `real_estate.md`.
+- 현재 매물(호가·사진·링크) — `[sense:realty]{source:"naver"}`(아파트·단지) / `[sense:realty]{source:"zigbang"}`(빌라/원룸/오피스텔). 매물 검색 전반은 `real_estate.md`.
 - 상권 분석 — `search_commercial_district` (real-estate 패키지에 있음)

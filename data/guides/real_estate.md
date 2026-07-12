@@ -1,14 +1,15 @@
 # Real Estate 도구 가이드 — 시세·매물 검색
 
-## 0. 먼저 — 부동산 데이터는 3개 층이다 (무엇을 원하는지 구분)
+## 0. 먼저 — 무엇을 원하는지로 소스를 고른다 (시세 vs 호가 vs 유형)
 
 | 층 | 무엇 | IBL 어휘 | 링크·사진 |
 |----|------|----------|-----------|
 | **시세(실거래가)** | *체결된 과거 거래* — 가격이 얼마에 굳었나 | `[sense:realty]{source: "molit"}` (기본) | ❌ |
 | **호가(현재 매물)** | *지금 시장에 나온 매물* — 빌라·원룸·오피스텔 | `[sense:realty]{source: "zigbang"}` | ✅ (사진·클릭 링크) |
-| **희소·직거래** | 다가구 주인세대·단독 전세, 입소문 매물 | ❌ 어휘 없음 → 가이드 §4 (포털 직접·현지 부동산) | ✅ |
+| **호가(현재 매물)** | *지금 시장에 나온 매물* — **아파트·단지**(전국 최다 풀) | `[sense:realty]{source: "naver"}` | ✅ (클릭 링크) |
+| **다가구·단독** | 다가구 주인세대·단독 전세 | `[sense:realty]{source: "naver", type: "house"}` (1차) → 없으면 §5·§6 | ✅ |
 
-핵심: 사용자가 **"지금 사진·링크 볼 수 있는 매물"**을 원하면 `source: "zigbang"` (빌라/원룸/오피스텔) 또는 §4(아파트·희소 매물). **"얼마에 거래됐나(시세)"**면 `source: "molit"` (기본).
+핵심: 사용자가 **"지금 사진·링크 볼 수 있는 매물"**을 원하면 아파트·단지는 `source: "naver"`(§4), 빌라/원룸/오피스텔 개별 호실은 `source: "zigbang"`(§3). **"얼마에 거래됐나(시세)"**면 `source: "molit"` (기본).
 
 ---
 
@@ -18,6 +19,7 @@
 |------|------|
 | `[sense:realty]{op:"query", source:"molit"}` | 국토부 실거래가(체결·시세). 기본값 |
 | `[sense:realty]{op:"query", source:"zigbang"}` | 직방 현재 매물(호가·사진·링크) |
+| `[sense:realty]{op:"query", source:"naver"}` | 네이버부동산 현재 매물(아파트 최다·단지명 검색) |
 | `[sense:realty]{op:"codes"}` | 법정동 지역코드 조회(보조) |
 | `[sense:commercial]` | 상권/업종 분석 |
 
@@ -67,15 +69,49 @@
 - `url` = `https://www.zigbang.com/home/villa/items/49460021` (클릭 시 직방 매물 페이지)
 - `image` = 썸네일. `data[]`엔 lat/lng·deposit·rent·area_m2 등 원자료, `map_data`엔 지도 마커.
 
-### ⚠️ source=zigbang가 약한 것 (여기선 §4로)
-- **아파트** — 직방은 단지 단위라 이 경로는 거부됨. 아파트 매물은 네이버부동산(§4), 시세는 source=molit.
-- **단독·다가구·"주인세대" 전세** — 직방에 거의 없음(희소·직거래). §4 + 현지 부동산.
+### ⚠️ source=zigbang가 약한 것
+- **아파트** — 직방은 단지 단위라 이 경로는 거부됨. 아파트 매물은 `source:"naver"`(§4), 시세는 source=molit.
+- **단독·다가구·"주인세대" 전세** — 직방에 거의 없음. **`source:"naver", type:"house"`가 1차 소스**(§4·§6), 그래도 없으면 §5·현지 부동산.
 
 ---
 
-## 4. 매물 링크·사진 더 넓게 (당근·네이버) — 2026-06 실측 기준
+## 4. source=naver — 네이버부동산 현재 매물 (아파트 최다·단지 검색) — 2026-07-12 연동
 
-`source=zigbang`로 안 잡히는 아파트·희소 매물은 포털을 직접 친다. **아래는 실제로 찔러보고 확인한 사실이다.**
+중개사 등록 매물의 사실상 **전국 표준 풀**. 아파트·단지에 가장 강하고, 오피스텔·빌라·단독/다가구·원룸도 커버. **region에 아파트 단지명을 바로 넣으면 그 단지 매물만** 나온다(직방·molit엔 없는 능력).
+
+```
+[sense:realty]{source:"naver", region:"평택 비전동", type:"apt", lease:"전세", deposit_max:25000}
+[sense:realty]{source:"naver", region:"우미린센트럴파크", deal:"trade"}          # 단지명 직조회
+[sense:realty]{source:"naver", region:"평택 비전동", type:"oneroom", lease:"월세", rent_max:40}
+[sense:realty]{source:"naver", region:"서초동", type:"house", deal:"trade"}      # 단독/다가구도 가능
+```
+
+### 파라미터
+| 키 | 뜻 | 기본 |
+|----|----|------|
+| `region` | 동 이름(예 "평택 비전동") 또는 **아파트 단지명**(예 "우미린센트럴파크"). 동이 우선 매칭, 없으면 단지 | — |
+| `type` | `apt`(아파트+분양권+재건축)·`officetel`·`villa`·`house`(단독/다가구)·`oneroom` | apt |
+| `deal` / `lease` | `trade`/`rent` + `전세`/`월세`(좁힘) — zigbang과 동일 의미 | rent |
+| `deposit_min`/`deposit_max` | 매매가·보증금 범위(**만원**, 서버필터) | — |
+| `rent_max` | 월세 상한(만원, 후필터) | — |
+| `limit` | 최대 매물 수(페이지 자동 추적, 최대 60) | 30 |
+
+### 반환 (items 통화)
+- `meta` = `전세 2억 9,000 · 109/84㎡(공급/전용) · 8/22층 · 남향 · 확인 20260711 · ○○공인중개사 · 동일매물 5건`
+- `url` = `https://m.land.naver.com/article/info/{매물번호}` (클릭 시 네이버 매물 페이지)
+- 같은 집을 여러 중개사가 올린 것은 **동일매물 자동 묶음**(sameAddressGroup). `map_data`에 지도 마커.
+
+### ⚠️ 특성·함정
+- **호가다** — 부르는 값. 체결가는 `source:"molit"`와 갭 비교(§7).
+- 단지명 검색은 **전국에서 이름 매칭** — 동명 단지가 다른 도시에 있으면 엉뚱한 단지가 나올 수 있으니 결과의 `조회지역` 확인. 애매하면 "동 이름"으로 조회.
+- 사진(image)은 대표사진이 있는 매물만. 직방만큼 사진이 풍부하진 않음.
+- 비공식 내부 API(부록 C) — 봇 탐지(TLS 지문)를 curl_cffi로 우회하므로 **curl_cffi 의존**. 엔드포인트 변경 시 깨질 수 있음.
+
+---
+
+## 5. 매물 링크·사진 더 넓게 (당근) — 2026-06 실측 기준
+
+`source=zigbang`/`source=naver`로 안 잡히는 희소 매물은 포털을 직접 친다. **아래는 실제로 찔러보고 확인한 사실이다.**
 
 ### 당근(daangn) — SSR JSON-LD로 빠르게 추출 가능 (browser-action 불필요)
 - 경로형 URL: `https://realty.daangn.com/map/{시도}/{시군구}/{동}` (예 `…/경기도/평택시/죽백동`)을 **그냥 fetch(`sense:crawl`)** 하면 HTML 안에 **schema.org `ItemList` JSON-LD**가 박혀 온다. 로그인·JS 실행 불필요.
@@ -85,31 +121,32 @@
 - ⚠️ **함정 — SSR 목록은 동·필터가 안 걸린다**: 경로의 동/쿼리(`realtyType`·`tradeType`)가 SSR에 **무시**된다. 죽백동/용이동/동삭동을 따로 불러도 **article ID가 동일한 20건**(평택시 기본 목록)에 *동 이름 라벨만* 갈아끼워질 뿐, 매매·월세·상가가 섞여 온다. **"도서관 반경" 같은 정밀 검색은 SSR로 불가** — 동·필터·반경이 진짜 먹는 **당근 내부 지도 JSON API(bbox+필터)는 아직 미발굴**. SSR 목록은 "맛보기"로만 쓰고, 개별 매물 상세는 `sense:crawl`(URL 1건)로 확인.
 - 참고(2026-07-12): 당근 **중고물건** 쪽(`www.daangn.com/kr/buy-sell/?in=x-{지역ID}&search=`)은 지역 필터가 **진짜 작동**하고 지역ID 해소 API(`/kr/api/v1/regions/keyword?keyword={동이름}`, 키불요)도 발굴됨 — `[sense:used]{source:"danggeun"}` 어휘로 결정화(`used_market.md`). realty.daangn.com이 같은 지역ID 체계를 쓰는지는 미검증 — 부동산 정밀 검색 재도전 시 이 API부터 시도할 것.
 
-### 네이버부동산 — 매물 최다지만 미연동
-- 단지(`cortarNo`+bbox) 2단계 비공식 JSON API. 매물량 국내 1위. **해외 IP를 강차단**하지만 이 시스템은 한국 IP라 유리. 구현 난이도 중상(단지 단위라 단독/다가구엔 부적합). **현재 미연동 — 향후 `source:"naver"` 후보.**
-
 ### 비권장
 - 매물 링크에 `sense:search_youtube` 쓰지 말 것(시세 전망·임대주택 모집 영상만 나옴).
 - crawl이 텍스트를 반환해도 **기대 지역명이 본문에 없으면 의심**(지오로케이션/기본지역 폴백 가능성).
 
 ---
 
-## 5. 다가구 "주인세대" 전세 등 희소 매물 — 어휘로 안 잡힌다
+## 6. 다가구 "주인세대" 전세 등 희소 매물 — 먼저 naver로, 안 되면 현지
 
-신축 다가구 **주인세대**(건물주가 쓰던 제일 큰 세대) 전세 같은 매물은 *희소·직거래·입소문*이라 **어떤 플랫폼 API로도 잘 안 잡힌다**(2026-06 실측: 평택 전역 직방 0건). 이건 도구 부족이 아니라 **매물 희소성**이다. 정답:
-1. **당근(§4)** — 개인 직거래에 가장 강함. 동네 키워드로.
-2. **현지 부동산 직접 문의** — 주인세대·신축은 현장 매물이 다수.
+신축 다가구 **주인세대**(건물주가 쓰던 제일 큰 세대) 전세 같은 매물은 *희소·직거래·입소문* 성격이라 옛날엔 "어떤 API로도 안 잡힌다"고 봤다(2026-06 평택 직방 0건). **정정(2026-07-12 실측)**: 이건 *어휘 부족이 아니라 소스 선택 문제*였다. 다가구는 개별호실 중심인 직방(villa)엔 약해도, **`source:"naver", type:"house"`가 다가구 전세를 실제로 잡는다** — 오송읍에서 다가구 전세 13건(첫 매물 "다가구 · 즉시입주 주인…") 확인. 순서:
+
+0. **`[sense:realty]{source:"naver", type:"house", lease:"전세"}` 먼저** — 다가구·단독 전세의 1차 소스. `summary`에 "주인세대"가 박힌 매물이 실제로 나온다. zigbang `type:"villa"`도 교차 조회(둘의 매물 풀이 겹치지 않음).
+1. **당근(§5)** — 개인 직거래에 가장 강함. 동네 키워드로.
+2. **현지 부동산 직접 문의** — naver/당근에도 없으면 *진짜 희소*(현장 매물). 이 단계는 매물 희소성이지 도구 부족이 아니다.
 3. **건축물대장 API**(공공데이터포털) — 매물 발견 후 신축 여부·다가구 호수·구조·위반건축물 **검증** 단계에 활용.
+
+> ⚠️ "원룸 주인세대"는 모순어(2026-07-12 실측): 원룸=세입자용 개별 호실이라 '주인세대'가 존재하지 않는다. 주인세대는 다가구/단독(`type:"house"`) 단위 개념. 사용자가 "원룸 주인세대"를 물으면 유형을 되물어 다가구로 좁혀라.
 
 ---
 
-## 6. 매물 분석 판단 기준
+## 7. 매물 분석 판단 기준
 
 ### 다세대(빌라)/오피스텔 — 개별 호실
 - **단가**: 전용면적당 단가(평당가)를 인근 유사 매물과 비교
 - **전세가율**: 매매가 대비 전세가. 80%↑면 깡통전세 리스크
 - **126% 룰(HUG 보증보험)**: `주택공시가격 × 1.26` 기준 전세보증금 반환보증 가입 가능 여부
-- **호가 vs 실거래 갭**: `source:"zigbang"`(호가)와 `source:"molit"`(실거래가)를 같이 조회해 **나온 가격이 실제 체결가 대비 높은지/낮은지** 진단(같은 어휘라 바로 비교 가능)
+- **호가 vs 실거래 갭**: `source:"zigbang"`/`source:"naver"`(호가)와 `source:"molit"`(실거래가)를 같이 조회해 **나온 가격이 실제 체결가 대비 높은지/낮은지** 진단(같은 어휘라 바로 비교 가능)
 
 ### 다가구/상가주택 — 건물 통매매
 - **수익률**: `(월세 합계 × 12) / (매매가 − 보증금 합계 − 대출금)`
@@ -125,7 +162,7 @@
 
 ---
 
-## 7. 데이터 이해
+## 8. 데이터 이해
 
 - **단위 만원**: 64,000 = 6억 4천만원 · 30,000 = 3억 · 5,000 = 5천만
 - molit: 한 호출로 최대 12개월. zigbang: deposit/rent도 만원(전세는 rent=0).
@@ -153,3 +190,26 @@
 ## 부록 B. search_commercial_district (상권 분석)
 - 위경도(`lat`/`lng`+`radius`m) 또는 행정동코드로 주변 상가 조회. 업종 `indsLclsCd`: I 음식·Q 숙박·R 학문/교육·S 소매·T 생활서비스·U 의료·V 부동산·W 관광/여가/오락.
 - 결과 `data[]`(좌표 포함)를 `show_location_map`(location-services)의 `markers`로 넘기면 지도 시각화. 매물 입지의 상권 활성도 수치화에.
+
+---
+
+## 부록 C. 네이버부동산 내부 API 레퍼런스 (확장·디버깅용) — 2026-07-12 실측
+
+비공식(new.land.naver.com/api). **키 불필요** — 공식 오픈API(developers.naver.com)엔 부동산 카테고리가 아예 없음(SE05, 종료됨)이라 NAVER_CLIENT_ID와 무관. `tool_naver.py`가 이 흐름을 구현. 두 가지 진입 장벽:
+
+1. **TLS 지문 봇탐지**: 일반 curl(429 강제)·python requests(무응답 타임아웃)는 차단됨. **`curl_cffi`의 `Session(impersonate="chrome")`** 로 우회(이미 설치됨). 브라우저는 정상 접근 — 차단은 지문 기준.
+2. **익명 JWT**: 아무 페이지(예 `/houses?ms=위도,경도,줌`) HTML에 `eyJ…` Bearer 토큰이 심겨 옴 → `Authorization: Bearer {토큰}` 헤더로 전달. 만료(exp claim) 시 페이지 재요청으로 재발급.
+
+| 엔드포인트 | 용도 |
+|-----------|------|
+| `GET /api/search?keyword={지명/단지명}` | `regions[]`(동 단위 cortarNo·중심좌표) + `complexes[]`(단지 complexNo). 동이 있으면 동, 없으면 단지 |
+| `GET /api/regions/list?cortarNo={코드}` | 지역 트리 드릴(0000000000=전국→시도→시군구→동) |
+| `GET /api/articles?cortarNo=…&realEstateType=…&tradeType=…&page=N` | 동 단위 매물 리스트(20건/페이지, `isMoreData`) |
+| `GET /api/articles/complex/{complexNo}?…&complexNo=…` | 단지 매물 리스트 |
+| `GET /api/articles/{articleNo}` | 매물 상세(articleDetail/Price/Realtor/Space/Tax 등 — 현재 미사용) |
+
+- **realEstateType**: `APT` 아파트 · `ABYG` 분양권 · `JGC` 재건축 · `OPST` 오피스텔 · `VL` 빌라/연립 · `DDDGG` 단독/다가구 · `OR` 원룸 · `SG` 상가 (`:`로 복수 결합, 예 `APT:ABYG:JGC`)
+- **tradeType**: `A1` 매매 · `B1` 전세 · `B2` 월세 · `B3` 단기임대 (`:` 결합 가능)
+- 유용 파라미터: `priceMin`/`priceMax`(만원, 매매가·보증금 서버필터) · `sameAddressGroup=true`(동일매물 묶음) · `order=rank|prc|dateDesc`
+- 월세액은 `dealOrWarrantPrc`(보증금)와 별개인 **`rentPrc`** 필드(만원). 매물 웹 URL은 `https://m.land.naver.com/article/info/{articleNo}` (new.land 경로는 404).
+- 좌표 bbox 검색(`/api/articles?…&leftLon=&rightLon=&topLat=&bottomLat=`)도 존재하나 미채택 — 동/단지 해소가 더 정확.

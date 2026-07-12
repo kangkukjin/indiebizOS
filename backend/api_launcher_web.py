@@ -2288,12 +2288,23 @@ function renderPrim(p,vi,data){
   }
   if(p.type==='sparkline'){
     const arr=viewList(data,p.from);
-    const vals=arr.map(x=>Number(p.y?x[p.y]:x)).filter(v=>!isNaN(v));
-    if(vals.length<2) return '';
+    const xkey=p.x||(arr[0]&&typeof arr[0]==='object'?['date','time','label','x'].find(k=>arr[0][k]!=null):null);
+    const rows=arr.map(x=>({v:Number(p.y?x[p.y]:x),x:xkey?String(x[xkey]==null?'':x[xkey]):''})).filter(r=>!isNaN(r.v));
+    if(rows.length<2) return '';
+    const vals=rows.map(r=>r.v);
     const col=trendColor(p,data)||'var(--acc)';
     const w=280,hh=50,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),rg=(mx-mn)||1;
-    const pts=vals.map((v,i)=>((i/(vals.length-1))*w).toFixed(1)+','+(hh-((v-mn)/rg*hh)).toFixed(1)).join(' ');
-    return '<div class="card"><svg viewBox="0 0 '+w+' '+hh+'" style="width:100%; height:50px" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2"/></svg></div>';
+    const fmt=n=>{ const a=Math.abs(n); const d=a>=1000?0:a>=1?2:4; return Number(n).toLocaleString(undefined,{maximumFractionDigits:d}); };
+    const pts=rows.map((r,i)=>((i/(rows.length-1))*w).toFixed(1)+','+(hh-((r.v-mn)/rg*hh)).toFixed(1)).join(' ');
+    const lbl='position:absolute;right:0;font-size:10px;color:var(--dim);background:var(--bg2);padding:0 2px;border-radius:3px';
+    return '<div class="card"><div style="position:relative">'
+      +'<div style="position:relative;height:64px">'
+      +'<svg viewBox="0 0 '+w+' '+hh+'" style="width:100%;height:100%" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>'
+      +'<span style="'+lbl+';top:0">'+esc(fmt(mx))+'</span>'
+      +'<span style="'+lbl+';bottom:0">'+esc(fmt(mn))+'</span>'
+      +'</div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px"><span>'+esc(rows[0].x)+'</span><span>'+esc(rows[rows.length-1].x)+'</span></div>'
+      +'</div></div>';
   }
   if(p.type==='list_action'){
     const arr=viewList(data,p.from);

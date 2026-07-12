@@ -260,19 +260,67 @@ function KvRow({ k, v }: { k: string; v: string }) {
   );
 }
 
+// 스파크라인 수치 포맷 — 큰 값(가격)은 천단위 콤마·정수, 작은 값(환율·코인)은 소수.
+function fmtSpark(n: number): string {
+  const a = Math.abs(n);
+  const d = a >= 1000 ? 0 : a >= 1 ? 2 : 4;
+  return n.toLocaleString(undefined, { maximumFractionDigits: d });
+}
+
 function Sparkline({ p, data }: { p: AppViewPrim; data: unknown }) {
   const arr = asList(data, p.from);
-  const vals = arr.map((x) => Number(p.y ? (x as Json)[p.y as string] : x)).filter((v) => !isNaN(v));
-  if (vals.length < 2) return null;
+  // x축 라벨 필드: 매니페스트 p.x 우선, 없으면 흔한 시간 필드 자동 감지(date/time/label).
+  const first = arr[0] as Json | undefined;
+  const xkey = (p.x as string) || (first && typeof first === 'object'
+    ? ['date', 'time', 'label', 'x'].find((k) => (first as Json)[k] != null) : undefined);
+  const rows = arr
+    .map((x) => ({ v: Number(p.y ? (x as Json)[p.y as string] : x), x: xkey ? String((x as Json)[xkey] ?? '') : '' }))
+    .filter((r) => !isNaN(r.v));
+  const [hi, setHi] = useState<number | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  if (rows.length < 2) return null;
+  const vals = rows.map((r) => r.v);
   const up = !trendClass(p, data) || trendClass(p, data) === 'text-red-500';
   const w = 280, h = 50;
   const mn = Math.min(...vals), mx = Math.max(...vals), rg = mx - mn || 1;
-  const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(h - ((v - mn) / rg) * h).toFixed(1)}`).join(' ');
+  const px = (i: number) => (i / (rows.length - 1)) * w;
+  const py = (v: number) => h - ((v - mn) / rg) * h;
+  const pts = rows.map((r, i) => `${px(i).toFixed(1)},${py(r.v).toFixed(1)}`).join(' ');
+  const stroke = up ? 'stroke-red-400' : 'stroke-blue-500';
+  const dot = up ? 'bg-red-400' : 'bg-blue-500';
+
+  const onMove = (e: React.MouseEvent) => {
+    const el = boxRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    setHi(Math.round(frac * (rows.length - 1)));
+  };
+
+  const cur = hi != null ? rows[hi] : null;
   return (
     <Card>
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-12">
-        <polyline points={pts} fill="none" strokeWidth={2} className={up ? 'stroke-red-400' : 'stroke-blue-500'} />
-      </svg>
+      <div className="relative">
+        {/* 플롯 — y축 스케일(최고/최저가)은 플롯 안쪽에 얹어 날짜 줄과 겹치지 않게 한다 */}
+        <div ref={boxRef} className="relative h-16" onMouseMove={onMove} onMouseLeave={() => setHi(null)}>
+          <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-full">
+            <polyline points={pts} fill="none" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className={stroke} />
+            {cur && <line x1={px(hi!)} y1={0} x2={px(hi!)} y2={h} strokeWidth={0.5} vectorEffect="non-scaling-stroke" className="stroke-stone-300" />}
+          </svg>
+          {cur && (
+            <div className={`absolute w-1.5 h-1.5 -ml-[3px] -mt-[3px] rounded-full ${dot}`}
+              style={{ left: `${(hi! / (rows.length - 1)) * 100}%`, top: `${(py(cur.v) / h) * 100}%` }} />
+          )}
+          <div className="absolute right-0 top-0 text-[10px] text-stone-400 leading-none bg-white/70 px-0.5 rounded z-10">{fmtSpark(mx)}</div>
+          <div className="absolute right-0 bottom-0 text-[10px] text-stone-400 leading-none bg-white/70 px-0.5 rounded z-10">{fmtSpark(mn)}</div>
+        </div>
+        {/* x축 날짜 + 호버 시 해당 시점 값 */}
+        <div className="flex justify-between items-baseline text-[10px] text-stone-400 mt-1">
+          <span>{rows[0].x}</span>
+          <span className="text-stone-700 font-medium">{cur ? `${cur.x ? cur.x + ' · ' : ''}${fmtSpark(cur.v)}` : ''}</span>
+          <span>{rows[rows.length - 1].x}</span>
+        </div>
+      </div>
     </Card>
   );
 }

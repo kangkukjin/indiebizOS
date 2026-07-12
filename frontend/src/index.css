@@ -2,12 +2,10 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f3460;
-  --accent: #e94560;
-  --text-primary: #eaeaea;
-  --text-secondary: #a0a0a0;
+  /* 라이트(크림 #F5F1EB) 테마 토큰. 살아있는 것만 유지 —
+     기존 다크 팔레트 잔재(bg-*, text-secondary)는 미사용이라 제거함. */
+  --accent: #e94560;        /* NewspaperInstrument rubric·드롭캡 */
+  --text-primary: #292524;  /* body 기본 글자색 (stone-800, 크림 배경과 대비) */
 }
 
 /* Tailwind가 자체적으로 리셋을 처리하므로 box-sizing만 설정 */

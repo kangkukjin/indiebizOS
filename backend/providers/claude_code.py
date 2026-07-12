@@ -869,7 +869,7 @@ class ClaudeCodeProvider(BaseProvider):
     # 이 목록에 없는 도구는 사용 불가 (트레이드오프: 속도 향상 vs 도구 범위 제한).
     # 더 많은 도구가 필요해지면 여기에 추가.
     # 원칙: IBL 어휘를 *중복(그림자)* 하는 네이티브는 여기서 빼고 DISALLOWED 로 하드 차단한다.
-    #   Claude Code 2.1.170 에서 MCP execute_ibl 은 deferred(ToolSearch 경유)인데 네이티브는 eager 라,
+    #   MCP execute_ibl 은 deferred(ToolSearch 경유, 2.1.205 실측)인데 네이티브는 eager 라,
     #   중복 네이티브를 남기면 모델이 IBL 대신 그쪽으로 새는 회귀가 생긴다(Read·WebSearch 실측 누수).
     #   → 누수 차단 = 어휘 일관성·해마 학습·폰 이식성·실행 통제(게이팅/로깅/압축) 보존.
     # 남기는 것: 셸 탈출구(Bash 계열 — IBL 에 등가물 없는 의도된 peer: Python/Node/임의 명령) +
@@ -921,9 +921,12 @@ class ClaudeCodeProvider(BaseProvider):
         "가이드 읽기 도구의 정확한 이름은 `mcp__indiebizos__read_guide` 다(맨이름 `read_guide` 아님). "
         "공용 프롬프트·IBL 액션 설명이 `read_guide(query=...)` 로 가르치는 곳은 모두 이 도구를 뜻하니, "
         "`mcp__indiebizos__read_guide` 로 호출하라(file_find 로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
-        "★이 두 MCP 도구는 eager-load 돼 있어 **deferred 가 아니다** — `ToolSearch` 로 찾지 말고 위 정확한 이름으로 곧장 호출하라. "
-        "(`ToolSearch{select:execute_ibl, ...}` 처럼 맨이름으로 찾으면 'no matching deferred tools' 만 나오고 왕복만 버린다.) "
-        "만약 첫 호출이 도구 미등록(연결 중, still connecting)으로 실패하면, 그때만 키워드 `ToolSearch` 한 번으로 잠깐 대기한 뒤 위 정확한 이름으로 다시 직접 호출하라.\n"
+        "★이 두 MCP 도구는 이 CLI 에서 **deferred** 다 — 세션 시작 직후엔 스키마가 로드돼 있지 않아, "
+        "곧장 호출하면 `No such tool available` 로 한 번 실패한다. 그러니 **이번 턴 첫 IBL/가이드 호출 전에 딱 한 번** "
+        "아래 형태로 정확한 풀네임을 실어 `ToolSearch` 로 스키마를 먼저 로드한 뒤, 위 정확한 이름으로 호출하라:\n"
+        "`ToolSearch{query: \"select:mcp__indiebizos__execute_ibl,mcp__indiebizos__read_guide\"}`\n"
+        "(select 에는 반드시 `mcp__indiebizos__` 풀네임을 써라 — 맨이름 `execute_ibl` 로 찾으면 'no matching deferred tools' 만 나온다.) "
+        "resume 로 이어지는 턴이라도 이 프로세스엔 스키마가 새로 로드돼야 하니, 과거에 성공했더라도 이번 턴 첫 호출 전 ToolSearch 를 한 번 하라.\n"
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
         "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
         "`mcp__indiebizos__execute_ibl` 로 "
@@ -992,8 +995,11 @@ class ClaudeCodeProvider(BaseProvider):
         --no-session-persistence는 일부러 빼놓음 — Claude Code가 디스크에 세션을 저장해야
         다음 호출 시 --resume으로 자기 과거를 이어볼 수 있음.
 
-        --allowed-tools 는 deferred tool loading(ToolSearch)을 우회하기 위함 —
-        목록의 도구들은 eager-load되어 매 호출마다 ToolSearch round-trip이 사라짐.
+        --allowed-tools 는 built-in 도구(Bash/Write/Edit 등)를 eager-load + 권한 부여한다.
+        ★단, CLI 2.1.205 에서 **MCP 도구(execute_ibl/read_guide)는 --allowed-tools 에 넣어도
+        여전히 deferred** 다(allowed=권한이지 schema eager-load 아님, init tools 목록에 안 뜸).
+        그래서 첫 사용 전 ToolSearch 1회 왕복이 CLI 구조상 불가피 — TOOL_POLICY 가 모델에게
+        "곧장 호출" 대신 "먼저 ToolSearch(풀네임 select) 후 호출" 하도록 안내해 헛발질(No such tool)을 없앤다.
         """
         cmd = [
             self._binary_path,

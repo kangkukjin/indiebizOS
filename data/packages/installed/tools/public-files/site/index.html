@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>공개파일</title>
+<style>
+  :root {
+    --bg: #0d0f12; --card: #171a1f; --text: #e8eaed; --muted: #9aa0a6;
+    --line: #2a2e35; --accent: #4f9cf9;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg:#f5f6f8; --card:#fff; --text:#1a1c1e; --muted:#5f6368; --line:#e2e4e8; --accent:#1a73e8; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
+  header { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px); border-bottom:1px solid var(--line); padding:14px 18px;
+    display:flex; align-items:center; gap:12px; }
+  header .crumb { font-size:15px; font-weight:600; cursor:pointer; }
+  header .crumb .sep { color:var(--muted); margin:0 6px; font-weight:400; }
+  header .count { color:var(--muted); font-size:13px; margin-left:auto; }
+  main { max-width:1400px; margin:0 auto; padding:18px; }
+  .folders { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+  .folder { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px;
+    cursor:pointer; transition:transform .12s, border-color .12s; }
+  .folder:hover { transform:translateY(-2px); border-color:var(--accent); }
+  .folder .fname { font-size:16px; font-weight:600; margin-bottom:4px; word-break:break-all; }
+  .folder .fmeta { color:var(--muted); font-size:13px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  .tile { position:relative; aspect-ratio:1; background:var(--card); border-radius:10px; overflow:hidden;
+    cursor:pointer; border:1px solid var(--line); }
+  .tile img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s; }
+  .tile:hover img { transform:scale(1.05); }
+  .tile .play { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.28); font-size:34px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.6); }
+  .tile .noimg { width:100%; height:100%; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:6px; color:var(--muted); font-size:12px; padding:8px; text-align:center; }
+  .empty { color:var(--muted); text-align:center; padding:60px 20px; }
+  /* 라이트박스 */
+  .lb { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.92); display:none;
+    align-items:center; justify-content:center; padding:24px; }
+  .lb.open { display:flex; }
+  .lb img, .lb video { max-width:100%; max-height:100%; border-radius:8px; }
+  .lb .close { position:absolute; top:16px; right:20px; font-size:30px; color:#fff; cursor:pointer;
+    line-height:1; opacity:.85; }
+  .lb .nav { position:absolute; top:50%; transform:translateY(-50%); font-size:44px; color:#fff;
+    cursor:pointer; user-select:none; opacity:.7; padding:0 16px; }
+  .lb .nav:hover { opacity:1; }
+  .lb .prev { left:6px; } .lb .next { right:6px; }
+  .lb .cap { position:absolute; bottom:14px; left:0; right:0; text-align:center; color:#ddd; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="crumb" id="crumb"></span>
+  <span class="count" id="count"></span>
+</header>
+<main id="main"><div class="empty">불러오는 중…</div></main>
+
+<div class="lb" id="lb">
+  <span class="close" onclick="closeLb()">✕</span>
+  <span class="nav prev" onclick="step(-1)">‹</span>
+  <span class="nav next" onclick="step(1)">›</span>
+  <div id="lbBody"></div>
+  <div class="cap" id="lbCap"></div>
+</div>
+
+<script>
+// 공개파일 갤러리 — manifest.json 계약(설계문서 §6)만 읽는 멍청한 substrate.
+// 토큰 게이트는 Worker(worker.js)가 담당. 이 정적 페이지는 UX 만.
+const qs = new URLSearchParams(location.search);
+const TOKEN = qs.get("t") || "";
+const withTok = (u) => TOKEN ? u + (u.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN) : u;
+let MANIFEST = null, curFolder = null, curItems = [], lbIndex = -1;
+
+async function boot() {
+  try {
+    const r = await fetch(withTok("manifest.json"), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    MANIFEST = await r.json();
+  } catch (e) {
+    document.getElementById("main").innerHTML =
+      '<div class="empty">매니페스트를 불러오지 못했습니다. (링크·토큰을 확인하세요)</div>';
+    return;
+  }
+  document.title = MANIFEST.title || "공개파일";
+  renderFolders();
+}
+
+function renderFolders() {
+  curFolder = null;
+  const folders = MANIFEST.folders || [];
+  document.getElementById("crumb").innerHTML = `📁 ${MANIFEST.title || "공개파일"}`;
+  document.getElementById("crumb").onclick = renderFolders;
+  document.getElementById("count").textContent = `${folders.length}개 폴더`;
+  const main = document.getElementById("main");
+  if (!folders.length) { main.innerHTML = '<div class="empty">공개된 폴더가 없습니다.</div>'; return; }
+  const div = document.createElement("div"); div.className = "folders";
+  for (const f of folders) {
+    const kinds = (f.items || []).reduce((a, i) => (a[i.kind] = (a[i.kind]||0)+1, a), {});
+    const bits = [];
+    if (kinds.photo) bits.push(`사진 ${kinds.photo}`);
+    if (kinds.video) bits.push(`동영상 ${kinds.video}`);
+    if (kinds.file) bits.push(`파일 ${kinds.file}`);
+    const el = document.createElement("div"); el.className = "folder";
+    el.innerHTML = `<div class="fname">${esc(f.title)}</div>
+      <div class="fmeta">${bits.join(" · ") || (f.count||0)+"개"}</div>`;
+    el.onclick = () => renderGrid(f);
+    div.appendChild(el);
+  }
+  main.innerHTML = ""; main.appendChild(div);
+}
+
+function renderGrid(folder) {
+  curFolder = folder; curItems = folder.items || [];
+  const c = document.getElementById("crumb");
+  c.innerHTML = `<span onclick="renderFolders()" style="cursor:pointer">📁 ${esc(MANIFEST.title||"공개파일")}</span>`
+    + `<span class="sep">›</span>${esc(folder.title)}`;
+  document.getElementById("count").textContent = `${curItems.length}개`;
+  const main = document.getElementById("main");
+  if (!curItems.length) { main.innerHTML = '<div class="empty">이 폴더는 비어 있습니다.</div>'; return; }
+  const grid = document.createElement("div"); grid.className = "grid";
+  curItems.forEach((it, idx) => {
+    const tile = document.createElement("div"); tile.className = "tile";
+    if (it.thumb) {
+      tile.innerHTML = `<img loading="lazy" src="${withTok(esc(it.thumb))}" alt="${esc(it.title)}">`
+        + (it.kind === "video" ? '<div class="play">▶</div>' : "");
+    } else {
+      tile.innerHTML = `<div class="noimg">📄<span>${esc(it.title)}</span></div>`;
+    }
+    tile.onclick = () => openLb(idx);
+    grid.appendChild(tile);
+  });
+  main.innerHTML = ""; main.appendChild(grid);
+}
+
+function openLb(idx) {
+  const it = curItems[idx]; if (!it) return;
+  lbIndex = idx;
+  const body = document.getElementById("lbBody");
+  if (it.kind === "video" && it.src) {
+    body.innerHTML = `<video controls autoplay playsinline src="${withTok(esc(it.src))}"></video>`;
+  } else if (it.src) {
+    body.innerHTML = `<img src="${withTok(esc(it.src))}">`;
+  } else if (it.thumb) {
+    // 원본 미업로드(썸네일만) — 썸네일 확대 표시.
+    body.innerHTML = `<img src="${withTok(esc(it.thumb))}">`;
+  } else {
+    body.innerHTML = `<div class="empty" style="color:#ccc">${esc(it.title)}<br>미리보기 없음</div>`;
+  }
+  document.getElementById("lbCap").textContent = it.title || "";
+  document.getElementById("lb").classList.add("open");
+}
+function closeLb() {
+  document.getElementById("lb").classList.remove("open");
+  document.getElementById("lbBody").innerHTML = "";
+  lbIndex = -1;
+}
+function step(d) {
+  if (lbIndex < 0) return;
+  let n = lbIndex + d;
+  if (n < 0) n = curItems.length - 1; if (n >= curItems.length) n = 0;
+  openLb(n);
+}
+document.addEventListener("keydown", (e) => {
+  if (!document.getElementById("lb").classList.contains("open")) return;
+  if (e.key === "Escape") closeLb();
+  else if (e.key === "ArrowLeft") step(-1);
+  else if (e.key === "ArrowRight") step(1);
+});
+document.getElementById("lb").addEventListener("click", (e) => {
+  if (e.target.id === "lb") closeLb();
+});
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+  ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+boot();
+</script>
+</body>
+</html>

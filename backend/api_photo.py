@@ -189,42 +189,11 @@ async def get_thumbnail(path: str = Query(...), size: int = Query(200)):
         if os.path.getmtime(cache_path) >= os.path.getmtime(path):
             return FileResponse(cache_path, media_type="image/jpeg")
 
-    # 썸네일 생성
-    try:
-        from PIL import Image
-
-        with Image.open(path) as img:
-            # EXIF 회전 정보 적용
-            try:
-                from PIL import ExifTags
-                for orientation in ExifTags.TAGS.keys():
-                    if ExifTags.TAGS[orientation] == 'Orientation':
-                        break
-                exif = img._getexif()
-                if exif:
-                    orientation_value = exif.get(orientation)
-                    if orientation_value == 3:
-                        img = img.rotate(180, expand=True)
-                    elif orientation_value == 6:
-                        img = img.rotate(270, expand=True)
-                    elif orientation_value == 8:
-                        img = img.rotate(90, expand=True)
-            except (AttributeError, KeyError, IndexError):
-                pass
-
-            # RGB 변환 (RGBA, P 모드 대응)
-            if img.mode in ('RGBA', 'P', 'LA'):
-                img = img.convert('RGB')
-
-            # 썸네일 생성
-            img.thumbnail((size, size), Image.Resampling.LANCZOS)
-            img.save(cache_path, "JPEG", quality=80)
-
+    # 썸네일 생성 (공유 소스 backend/thumbnails.py — showcase 와 동일 로직)
+    from thumbnails import generate_image_thumbnail
+    if generate_image_thumbnail(path, cache_path, size):
         return FileResponse(cache_path, media_type="image/jpeg")
-
-    except Exception as e:
-        # 썸네일 생성 실패 시 빈 이미지 반환
-        raise HTTPException(status_code=500, detail=f"썸네일 생성 실패: {str(e)}")
+    raise HTTPException(status_code=500, detail="썸네일 생성 실패")
 
 
 @router.get("/image")
@@ -314,32 +283,11 @@ async def get_video_thumbnail(path: str = Query(...), size: int = Query(200)):
         if os.path.getmtime(cache_path) >= os.path.getmtime(path):
             return FileResponse(cache_path, media_type="image/jpeg")
 
-    # ffmpeg로 썸네일 생성
-    try:
-        cmd = [
-            'ffmpeg',
-            '-y',
-            '-i', path,
-            '-ss', '00:00:01',  # 1초 지점
-            '-vframes', '1',
-            '-vf', f'scale={size}:{size}:force_original_aspect_ratio=decrease',
-            '-q:v', '5',
-            cache_path
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, timeout=10)
-
-        if os.path.exists(cache_path):
-            return FileResponse(cache_path, media_type="image/jpeg")
-        else:
-            raise HTTPException(status_code=500, detail="썸네일 생성 실패")
-
-    except FileNotFoundError:
-        raise HTTPException(status_code=500, detail="ffmpeg가 설치되어 있지 않습니다")
-    except subprocess.TimeoutExpired:
-        raise HTTPException(status_code=500, detail="썸네일 생성 시간 초과")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"썸네일 생성 실패: {str(e)}")
+    # ffmpeg로 썸네일 생성 (공유 소스 backend/thumbnails.py — showcase 와 동일 로직)
+    from thumbnails import generate_video_thumbnail
+    if generate_video_thumbnail(path, cache_path, size, timeout=10):
+        return FileResponse(cache_path, media_type="image/jpeg")
+    raise HTTPException(status_code=500, detail="동영상 썸네일 생성 실패 (ffmpeg 미설치 또는 시간 초과)")
 
 
 # ============ 중복 탐지 ============

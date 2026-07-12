@@ -1,0 +1,222 @@
+nodes:
+  others:
+    actions:
+      showcase:
+        returns: items
+        fixture: '[others:showcase]{op: "status"}'
+        runs_on: mac_only
+        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/sync/config. 개인용 NAS 와 달리 "보여줄 것만 고른 창". 썸네일·매니페스트를 R2 로 push, 맥이 자도 공개 URL 은 켜져 있음. publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
+        target_description: 'op:status(공개 폴더 목록·URL·용량·동기화 시각 + 전역 설정 반환) / add(path 폴더를 공개, title 표시명·mode media|files) / remove(path 공개 해제, purge=true 면 R2 객체도 삭제) / sync(path 또는 전체 재동기화) / config(access link_only|public·strip_exif·push_originals·transcode_video 등 전역 설정 갱신). 폴더 선택이 곧 보안 경계 — 고른 폴더만 공개 사이트에 존재.'
+        target_key: op
+        group: showcase
+        router: handler
+        tool: showcase_op
+        ops:
+          default: status
+          values:
+            status: 공개 폴더 목록·URL·용량·동기화 상태 + 전역 설정 조회
+            add: 폴더를 공개 목록에 추가하고 첫 동기화
+            remove: 폴더 공개 해제 (purge=true 면 R2 객체도 삭제)
+            sync: 썸네일·매니페스트(설정 시 원본) R2 재push
+            config: 설정 갱신 — path 있으면 폴더별(표시명·공개/비공개), 없으면 전역(접근·EXIF·원본·동영상)
+            detail: 폴더 하나 상세 (앱 드릴용)
+        implementation: 'public-files 패키지 showcase_op — 폴더 walk→썸네일(self:photo 재사용)→(EXIF 제거·동영상 H.264 변환)→R2 push→manifest.json. 상태·설정은 data/showcase_state.json 에 영속. 공개 Worker 는 manifest.json 계약만 안다(이음매). P0=어휘 골격(스텁).'
+        keywords:
+        - 공개 파일
+        - 공개 폴더
+        - 파일 공개
+        - 공개 갤러리
+        - 열린 nas
+        - 사진 공개
+        - 외부 공유 사이트
+        - showcase
+        app:
+          instrument: showcase
+          icon: 🌐
+          name: 공개파일
+          order: 16
+          phone_render: false
+          modes:
+          - name: 공개 폴더
+            auto_run: true
+            note: 아래 주소로 공개됩니다. 폴더를 눌러 공개/비공개·표시명을 바꿀 수 있습니다.
+            action: '[others:showcase]{op: "status"}'
+            buttons:
+            - label: ↻ 전체 동기화
+              action: '[others:showcase]{op: "sync"}'
+              refresh: true
+            view:
+            - type: kv
+              title: 공개 사이트 주소
+              rows:
+              - k: 🌐 주소
+                v: '{public_base}'
+              - k: 안내
+                v: 이 주소를 열면 공개한 폴더의 사진을 볼 수 있습니다.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 공개 페이지 열기 →
+              item_click:
+                action: '[others:showcase]{op: "detail", path: "{path}"}'
+                view:
+                - type: form
+                  title: 폴더 설정
+                  fields:
+                  - key: title
+                    label: 표시명
+                    type: text
+                    value: '{folder.title}'
+                  - key: hidden
+                    label: 비공개 (끄면 공개)
+                    type: toggle
+                    value: '{folder.hidden}'
+                  action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title", hidden: "$hidden"}'
+                  button: 저장
+                  actions:
+                  - label: ↻ 이 폴더 동기화
+                    action: '[others:showcase]{op: "sync", path: "{folder.path}"}'
+                  - label: 공개 목록에서 제거
+                    action: '[others:showcase]{op: "remove", path: "{folder.path}", purge: true}'
+                    style: danger
+                    confirm: 이 폴더를 공개 목록에서 빼고 R2에서도 지울까요?
+                    back: true
+          - name: 폴더 추가
+            auto_run: true
+            note: 찾아보기로 폴더를 고르세요. 고른 폴더만 외부에 공개됩니다.
+            action: '[others:showcase]{op: "status"}'
+            view:
+            - type: form
+              title: 공개할 폴더
+              fields:
+              - key: path
+                label: 공개할 폴더
+                type: folder
+                placeholder: 찾아보기로 폴더를 선택하세요
+              - key: title
+                label: 표시명 (선택)
+                type: text
+              - key: mode
+                label: 종류
+                type: select
+                value: media
+                options:
+                - value: media
+                  label: 사진·동영상
+                - value: files
+                  label: 파일 전체
+              action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'
+              button: 공개 추가
+          - name: 설정
+            auto_run: true
+            note: 공개 사이트 전역 설정. 개인 사진이면 링크 전용을 권합니다.
+            action: '[others:showcase]{op: "status"}'
+            view:
+            - type: form
+              title: 공개 설정
+              fields:
+              - key: access
+                label: 접근
+                type: select
+                value: '{settings.access}'
+                options:
+                - value: link_only
+                  label: 링크 전용 (아는 사람만)
+                - value: public
+                  label: 완전 공개
+              - key: strip_exif
+                label: 위치·EXIF 제거
+                type: toggle
+                value: '{settings.strip_exif}'
+              - key: push_originals
+                label: 원본까지 업로드 (끄면 썸네일만)
+                type: toggle
+                value: '{settings.push_originals}'
+              - key: transcode_video
+                label: 동영상 H.264 변환
+                type: toggle
+                value: '{settings.transcode_video}'
+              action: '[others:showcase]{op: "config", access: "$access", strip_exif: "$strip_exif", push_originals: "$push_originals", transcode_video: "$transcode_video"}'
+              button: 저장
+
+# tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: public-files
+    name: Public Files
+    description: '선택한 폴더를 외부 공개 사이트(Cloudflare R2 + Worker)로 비추는 노출 도구. 개인용 NAS 와 달리 "보여줄 것만 고른 창".
+
+
+      ## 이음매
+
+      맥은 썸네일·매니페스트를 만들어 R2 로 push 하고, 공개 Worker 는 manifest.json 계약만 읽어 그린다. 앱을 지워도 사이트는 마지막 상태로 산다.
+
+
+      ## 보안
+
+      폴더 선택이 곧 보안 경계 — 고른 폴더만 공개 사이트에 존재한다. EXIF/GPS 는 기본 제거, 접근은 기본 링크 전용(토큰).'
+    version: 0.1.0
+    guide_file: guide.md
+  tools:
+  - name: showcase_op
+    description: '선택 폴더를 외부 공개 사이트로 비추는 노출 제어.
+
+
+      ## op 분기
+
+      - status (기본): 공개 폴더 목록·공개 URL·용량·동기화 시각 + 전역 설정 반환. items[] 각 폴더에 title/meta/path/url, 최상위 settings{access,strip_exif,push_originals,transcode_video}.
+
+      - add: path 폴더를 공개(title 표시명, mode media|files) 후 첫 동기화.
+
+      - remove: path 공개 해제. purge=true 면 R2 객체도 삭제.
+
+      - sync: path(생략 시 전체) 썸네일·매니페스트 R2 재push. 증분(mtime·크기).
+
+      - config: 전역 설정 갱신(access link_only|public, strip_exif, push_originals, transcode_video).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: status(기본)/add/remove/sync/config/detail
+        path:
+          type: string
+          description: 폴더 절대경로 (add/remove/sync/detail/config 폴더별)
+        title:
+          type: string
+          description: 표시명 (add·config 폴더별)
+        hidden:
+          type: boolean
+          description: config 폴더별 — true면 비공개(R2에서 내림·목록 제외), false면 공개(재업로드)
+        mode:
+          type: string
+          enum:
+          - media
+          - files
+          description: 'media=사진·동영상 그리드, files=파일 전체 (add, 기본 media)'
+        purge:
+          type: boolean
+          description: remove 시 R2 객체도 삭제 (기본 false)
+        access:
+          type: string
+          enum:
+          - link_only
+          - public
+          description: config — 링크전용/완전공개
+        strip_exif:
+          type: boolean
+          description: config — 위치·EXIF 제거
+        push_originals:
+          type: boolean
+          description: config — 원본까지 업로드 (false면 썸네일만)
+        transcode_video:
+          type: boolean
+          description: config — 동영상 H.264 변환
+      additionalProperties: true

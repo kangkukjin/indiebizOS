@@ -1,0 +1,21 @@
+# 공개파일 Worker 배포 설정 예시.
+# 복사: cp wrangler.toml.example wrangler.toml  후 값 채우기.
+# 배포: npx wrangler deploy   (정적 index.html 은 [assets] 로 함께 배포)
+
+name = "public-files"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# 정적 자산(index.html) — Worker 가 env.ASSETS 로 서빙.
+[assets]
+directory = "."
+binding = "ASSETS"
+
+# R2 버킷 바인딩 — [others:showcase]{op:sync} 가 여기에 manifest·thumbs·media 를 올린다.
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "public-files"          # 실제 버킷명으로
+
+# 링크 전용 토큰(선택) — 설정하면 ?t= 일치를 요구, 미설정이면 완전 공개.
+# 시크릿 등록: npx wrangler secret put SHOWCASE_TOKEN
+# [vars] 에 평문으로 두지 말 것.

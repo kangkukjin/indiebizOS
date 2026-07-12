@@ -1338,7 +1338,7 @@ function setupIPC() {
   ipcMain.handle('select-folder', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openDirectory'],
-      title: '패키지 폴더 선택',
+      title: '폴더 선택',
       buttonLabel: '선택'
     });
 

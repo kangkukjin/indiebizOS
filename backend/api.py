@@ -328,6 +328,7 @@ from api_pcmanager import router as pcmanager_router
 from api_photo import router as photo_router
 from api_android import router as android_router
 from api_nas import router as nas_router
+from api_showcase import router as showcase_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
 from api_ibl import router as ibl_router
@@ -370,6 +371,7 @@ app.include_router(pcmanager_router, tags=["pcmanager"])
 app.include_router(photo_router, tags=["photo"])
 app.include_router(android_router, tags=["android"])
 app.include_router(nas_router, tags=["nas"])
+app.include_router(showcase_router, tags=["showcase"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(ibl_router, tags=["ibl"])

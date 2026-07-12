@@ -781,7 +781,7 @@ APP_VIEW_TYPES = {"metric", "kv", "kv_list", "card_list", "image_grid", "sparkli
 APP_VIEW_EVENTS = {"marker_click", "moveend", "center_drag", "search_here"}
 APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "radius_km", "url"}  # 이벤트 페이로드가 액션 템플릿에 주입하는 $변수
 APP_INPUT_TYPES = {"text", "select"}
-APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence"}
+APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence", "folder"}
 # ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). BinNote 656 UX 를
 # 어휘로 흡수 — 어떤 선언형 form 이든 textarea 에 붙일 수 있다. dismiss 는 항상, 아래는 적용 모드.
 APP_AIDOCK_MODES = {"replace", "append"}

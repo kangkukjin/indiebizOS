@@ -312,6 +312,9 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 원격 파인더(/nas/*)는 자체 session_token 인증을 사용하므로 위임
     if path == "/nas" or path.startswith("/nas/"):
         return True
+    # 공개파일 온디맨드 원본(/showcase/origin/*)은 자체 X-Showcase-Secret 게이트 보유
+    if method == "GET" and path.startswith("/showcase/origin/"):
+        return True
     return False
 
 # === API 엔드포인트 ===
@@ -2258,6 +2261,7 @@ function renderPrim(p,vi,data){
       }
       else if(f.type==='recurrence') h+=_recurSelect(id,val);
       else if(f.type==='date'||f.type==='time'||f.type==='datetime') h+='<input type="'+_dateInputType(f.type)+'" class="field" id="'+id+'" value="'+esc(val)+'">';
+      else if(f.type==='folder') h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'폴더 경로 (선택은 데스크탑에서)')+'">';
       else h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'">';
       h+='</div>';
     });

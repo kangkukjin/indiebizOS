@@ -31,6 +31,7 @@
     "api_pipeline",
     "api_projects",
     "api_scheduler",
+    "api_showcase",
     "api_switches",
     "api_system_ai",
     "api_transforms",
@@ -107,6 +108,7 @@
     "project_manager",
     "prompt_benchmark",
     "prompt_builder",
+    "r2_client",
     "rebuild_usage_db",
     "runtime_utils",
     "safe_store",
@@ -122,6 +124,7 @@
     "system_hooks",
     "system_tools",
     "thread_context",
+    "thumbnails",
     "tool_context",
     "tool_loader",
     "tool_selector",
@@ -150,8 +153,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 144,
-    "engine": 131,
+    "total": 147,
+    "engine": 134,
     "blocklist": 13
   }
 }

@@ -74,7 +74,7 @@ export interface AppViewPrim {
 export interface AppFormField {
   key: string;
   label?: string;
-  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images' | 'date' | 'time' | 'datetime' | 'recurrence';
+  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images' | 'date' | 'time' | 'datetime' | 'recurrence' | 'folder';
   value?: string;        // 초기값 템플릿 (데이터에서 채움)
   placeholder?: string;
   options?: { value: string | number; label: string }[];
@@ -390,6 +390,25 @@ function ImagesField({ f, value, dispatch, busy, setBusy }:
   );
 }
 
+// 폴더 선택 필드 — 데스크탑은 네이티브 다이얼로그(window.electron.selectFolder), 원격은 텍스트 폴백.
+function FolderField({ f, value, onPick }: { f: AppFormField; value: string; onPick: (v: string) => void }) {
+  const electron = (window as unknown as { electron?: { selectFolder?: () => Promise<string | null> } }).electron;
+  const canPick = !!electron?.selectFolder;
+  return (
+    <div className="flex gap-2">
+      <input value={value} onChange={(e) => onPick(e.target.value)}
+        placeholder={f.placeholder || '찾아보기로 폴더를 선택하세요'}
+        className={`${fieldCls} flex-1 min-w-0`} />
+      {canPick && (
+        <button type="button" onClick={async () => { const p = await electron!.selectFolder!(); if (p) onPick(p); }}
+          className="px-3 py-2 rounded-lg border border-stone-300 text-sm text-stone-600 hover:border-stone-500 shrink-0 whitespace-nowrap">
+          📁 찾아보기
+        </button>
+      )}
+    </div>
+  );
+}
+
 // 반복 주기 표준 어휘 — recurrence 필드 타입의 baked 옵션(manage_events repeat 값과 일치). date/time 은 네이티브 input.
 const RECURRENCE_OPTS: [string, string][] = [['none', '한 번'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']];
 const dateInputType = (t: string) => (t === 'datetime' ? 'datetime-local' : t); // date/time 은 그대로, datetime → datetime-local
@@ -501,6 +520,8 @@ function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispat
               </>
             ) : f.type === 'images' ? (
               <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />
+            ) : f.type === 'folder' ? (
+              <FolderField f={f} value={vals[f.key] ?? ''} onPick={(v) => set(f.key, v)} />
             ) : f.type === 'recurrence' ? (
               <select value={vals[f.key] || 'none'} onChange={(e) => set(f.key, e.target.value)} className={fieldCls}>
                 {RECURRENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

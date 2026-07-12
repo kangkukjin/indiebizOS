@@ -1062,8 +1062,10 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   }
 
   // 풀페이지 모드
+  // min-w-0: flex-row 부모(Manager 메인영역) 안에서 이 열이 내용 고유폭 아래로 줄어들 수 있게 한다.
+  // 없으면 창 축소 시 열이 넓은 채로 남아 max-w-[70%] 버블이 부모 overflow-hidden에 잘린다.
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-[#F5F1EB]">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-[#F5F1EB]">
       {chatContent}
     </div>
   );

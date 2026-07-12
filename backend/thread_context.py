@@ -69,6 +69,38 @@ def clear_sysai_active_work():
         return len(stale)
 
 
+def clear_project_active_work(project_id: str = "", agent_name: str = "",
+                              started_at_max: float = None):
+    """끝난 프로젝트 런의 활성작업 등록을 스레드 아이덴티티와 무관하게 확정 해제.
+
+    sysai 와 같은 누수: set_user_input(_touch_active_work) 등록과 clear_all_context
+    (_drop_active_work) 해제가 서로 다른 스레드에서 돌면(자기반성 턴 등 thread-hop) 스레드-키
+    대칭이 깨져 유령이 남아, 조종실 '액티브 프로젝트'가 창 닫은 뒤에도 busy 로 오표시된다.
+    에피소드 END 훅(episode_logger._finalize)이 종료되는 에피소드의 project_id/agent_name 으로
+    이 함수를 호출해 확정 청소한다.
+
+    안전: sysai 등록은 건드리지 않는다. project_id 또는 agent_name 이 일치하는 항목만 지운다.
+    started_at_max 를 주면 그 시각 이전(=이 에피소드 런 이하)에 시작된 것만 지워, 같은 프로젝트의
+    *더 나중에 시작된* 동시 런은 보존한다. 반환값=청소한 항목 수(진단용)."""
+    if not project_id and not agent_name:
+        return 0
+    with _active_lock:
+        stale = []
+        for ident, w in _active_work.items():
+            if w.get("sysai"):
+                continue
+            pid_match = project_id and w.get("project_id") == project_id
+            name_match = agent_name and w.get("agent_name") == agent_name
+            if not (pid_match or name_match):
+                continue
+            if started_at_max is not None and w.get("started_at", 0) > started_at_max:
+                continue
+            stale.append(ident)
+        for ident in stale:
+            _active_work.pop(ident, None)
+        return len(stale)
+
+
 # System AI 대화창 존재(하트비트) — 조종실 '액티브 프로젝트'가 "창 열림=활성"을 판단.
 # 프로젝트는 started AgentRunner 로 창 존재를 알지만 System AI 는 싱글턴이라 러너가 없다.
 # SystemAIView 가 열려 있는 동안 주기적으로 갱신 → TTL 안이면 '창 열림'. 닫힘/크래시/백엔드

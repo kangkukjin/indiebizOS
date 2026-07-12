@@ -62,13 +62,14 @@ def _denoise_for_buffer(text: str) -> str:
 
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
-    __slots__ = ("agent", "user_message", "started_at", "buffer")
+    __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id")
 
-    def __init__(self, agent: str, user_message: str):
+    def __init__(self, agent: str, user_message: str, project_id: str = ""):
         self.agent = agent
         self.user_message = (user_message or "")[:500]
         self.started_at = datetime.now()
         self.buffer = []
+        self.project_id = project_id or ""
 
 
 class EpisodeLogger:
@@ -92,16 +93,19 @@ class EpisodeLogger:
         _ensure_episode_tables()
 
     @classmethod
-    def start_episode(cls, agent: str, user_message: str):
+    def start_episode(cls, agent: str, user_message: str, project_id: str = ""):
         """에피소드 시작 — 현재 실행 컨텍스트에 새 에피소드를 건다.
 
         ★동시 실행은 충돌하지 않는다: contextvar 는 태스크/스레드 로컬이라, 다른 태스크가
         시작한 에피소드는 여기서 보이지 않는다(옛 전역 _active 의 '강제종료' 충돌이 사라짐).
-        같은 컨텍스트에 미종료 에피소드가 남아 있으면(이른 return 등 누락) 먼저 박제해 보존한다."""
+        같은 컨텍스트에 미종료 에피소드가 남아 있으면(이른 return 등 누락) 먼저 박제해 보존한다.
+
+        project_id: 종료 시 조종실 '액티브 프로젝트' 유령 청소용(_finalize). 창닫힘 뒤 thread-hop
+        누수 방어 — sysai 청소와 대칭."""
         stale = _current_episode.get(None)
         if stale is not None:
             cls._finalize(stale)  # 같은 컨텍스트의 누락 에피소드 salvage (데이터 보존)
-        ep = _Episode(agent, user_message)
+        ep = _Episode(agent, user_message, project_id)
         _current_episode.set(ep)
         # 시작 마커 — contextvar 가 ep 로 설정된 뒤 print → write() 가 ep.buffer 로 캡처
         _msg_preview = (user_message or "")[:80].replace("\n", " ")
@@ -127,10 +131,21 @@ class EpisodeLogger:
         런 종료 시 조종실 '액티브 프로젝트'의 sysai 유령 등록을 여기서 확정 청소한다.
         (등록/해제 스레드가 달라 _active_work 스레드-키 대칭이 깨지는 누수 방어)."""
         # 저장과 독립적으로 먼저 청소 — 저장이 실패해도 유령은 반드시 사라진다.
+        # 등록/해제 스레드가 갈리는 thread-hop(자기반성 턴 등) 누수를 에피소드 END 에서 확정 청소.
         if (ep.agent or "") == "system_ai":
             try:
                 from thread_context import clear_sysai_active_work
                 clear_sysai_active_work()
+            except Exception:
+                pass
+        else:
+            # 프로젝트 런: 이 에피소드의 project_id/agent 로 유령 청소(창닫힘 뒤 busy 오표시 방어).
+            # started_at_max = 이 런 시작 이하만 → 같은 프로젝트의 더 나중 동시 런은 보존.
+            try:
+                from thread_context import clear_project_active_work
+                clear_project_active_work(
+                    project_id=ep.project_id, agent_name=(ep.agent or ""),
+                    started_at_max=ep.started_at.timestamp() + 1.0)
             except Exception:
                 pass
         try:

@@ -473,10 +473,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = _process_documents(data.get("documents", []), message)
 
-    # 에피소드 로그 시작
+    # 에피소드 로그 시작 (project_id 전달 — 종료 시 조종실 액티브 유령 청소용)
     try:
         from episode_logger import EpisodeLogger
-        EpisodeLogger.start_episode(agent_name, message)
+        EpisodeLogger.start_episode(agent_name, message, project_id=project_id)
     except Exception:
         pass
 

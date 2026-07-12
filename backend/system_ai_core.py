@@ -15,7 +15,7 @@ api_system_ai.py에서 분리된 코어 함수들로 구성됩니다.
 
 import json
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Generator, Callable
+from typing import Dict, Any, Optional, List
 
 # 메모리 관련
 from system_ai_memory import (
@@ -228,219 +228,35 @@ def _switch_to_role(runner, role):
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None,
                               action_hint: str = None, extra_role: str = "", force_role: str = "",
                               allowed_set=None):
-    """시스템 AI 메시지 처리 (동기 모드, AgentRunner 인지 파이프라인)
+    """시스템 AI 메시지 처리 (동기 모드) — cognitive_stream을 drain하는 블로킹 어댑터.
+
+    인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
+    runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다. 블로킹 경로가
+    내부적으로 스트림을 소비해 최종 응답만 취하므로, 반성 등 파이프라인 기능을
+    스트림 경로와 자동 공유한다(Task B 통합).
 
     Args:
         action_hint: 마법책에서 사용자가 명시적으로 선택한 액션 ID ("sense:price" 등).
-            지정되면 해마 검색 대신 그 액션을 Top-1로 <execution_memory>에 주입.
+        force_role: 표면 강제 EXECUTE(포식 등) — 분류·의식 건너뛰고 지정 모델로 실행.
 
     Returns:
         (response_text, tool_images)
     """
+    from agent_pipeline import drain_stream
     runner = get_system_ai_runner()
-
-    # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 무상태 검색을 개인 사실이
-    #   하이재킹하는 필터버블 드리프트 방지(개인화는 포식기억 owner_model 이 담당). 해마·포식기억은 유지.
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(
-        message, action_hint=action_hint, include_related=(force_role != "forage")
-    )
-
-    # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-    if force_role:
-        # 포식 등 강제 EXECUTE 표면: 어차피 EXECUTE 고정 → 무의식 분류기(경량 LLM 1회 호출)를 건너뛴다.
-        request_type, reflex_hint = "EXECUTE", None
-        print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
-    else:
-        request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
-
-    consciousness_output = None
-    original_provider = None
-    if force_role:
-        # 포식 등 표면별 전용 에이전트: 의식(THINK) 건너뛰고 지정 모델(기본 경량)로 바로 실행 — 빠르고 싸게.
-        original_provider = _switch_to_role(runner, force_role)
-    elif request_type == "THINK":
-        consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
-    elif reflex_hint:
-        # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
-        # (확정 2026-06-30). 모델 해소는 기어 'reflex' 역할이 경량 티어로 고정(model_resolver).
-        # 무의식 EXECUTE 는 기어 실행 축 모델 유지.
-        original_provider = _switch_to_midtier(runner)
-
-    # Clarification fast-path — 정보 부족 시 의식이 만든 질문을 그대로 응답으로 반환.
-    _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
-    if _clarify_text:
-        print(f"[시스템AI 의식] clarification fast-path: 실행 에이전트 스킵")
-        _restore_provider(runner, original_provider)
-        return _clarify_text, []
-
-    # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
-    role = runner._load_role()
-    augmented_message = message
-    if consciousness_output or execution_memory or reflex_hint or extra_role:
-        _exec_mem = execution_memory
-        if reflex_hint:
-            _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
-        stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
-            role, consciousness_output, _exec_mem, extra_role=extra_role, allowed_set=allowed_set
-        )
-        runner.ai.system_prompt = stable_prompt
-        runner.ai._provider.system_prompt = stable_prompt
-        if consciousness_output:
-            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
-            from prompt_builder import compile_user_command
-            _fused = compile_user_command(message, consciousness_output)
-            augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
-        elif dynamic_context:
-            augmented_message = f"{dynamic_context}\n\n{message}"
-
-    # 히스토리 편집
-    history = runner._apply_consciousness_to_history(history or [], consciousness_output)
-
-    try:
-        response = runner.ai.process_message_with_history(
-            message_content=augmented_message,
-            history=history,
-            images=images
-        )
-    finally:
-        # 중급 모델 사용 후 원래 provider 복원
-        _restore_provider(runner, original_provider)
-
-    # 평가 루프 — 달성 기준이 있으면 실행
-    if consciousness_output and response:
-        criteria = runner._extract_achievement_criteria(consciousness_output)
-        if criteria:
-            from world_pulse import _load_config as _load_wp_config
-            _goal_cfg = _load_wp_config().get("goal_eval", {})
-            if _goal_cfg.get("enabled", True):
-                print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                # provider가 누적한 도구 실행 결과를 평가자에 전달
-                tool_results_for_eval = runner.ai.get_last_tool_results()
-                tool_calls_for_eval = (
-                    runner.ai.get_last_tool_calls()
-                    if hasattr(runner.ai, "get_last_tool_calls") else None
-                )
-                evaluated = runner._run_goal_evaluation_loop(
-                    user_message=message,
-                    criteria=criteria,
-                    initial_response=response,
-                    history=history,
-                    consciousness_output=consciousness_output,
-                    max_rounds=_goal_cfg.get("max_rounds", 3),
-                    tool_results=tool_results_for_eval,
-                    tool_calls=tool_calls_for_eval,
-                    execution_memory=execution_memory,
-                )
-                if evaluated and evaluated.strip():
-                    response = evaluated
-
+    result = drain_stream(runner.cognitive_stream(
+        message, history or [],
+        images=images, action_hint=action_hint,
+        extra_role=extra_role, force_role=force_role, allowed_set=allowed_set,
+    ))
+    response = result["final"]
+    if not response and result.get("error"):
+        response = f"AI 응답 생성 실패: {result['error']}"
+    if result.get("clarify") or result.get("session_reset"):
+        # 실행 에이전트 미호출 — 이전 턴 잔여 도구 이미지가 새어들지 않게 빈 목록
+        return response, []
     tool_images = runner.ai.get_last_tool_images()
     return response, tool_images
-
-
-def process_system_ai_message_stream(
-    message: str,
-    history: List[Dict] = None,
-    images: List[Dict] = None,
-    cancel_check: Callable = None,
-    action_hint: str = None,
-    extra_role: str = "",
-    force_role: str = "",
-    allowed_set=None
-) -> Generator:
-    """시스템 AI 메시지 처리 (스트리밍 모드, AgentRunner 인지 파이프라인)
-
-    Args:
-        action_hint: 마법책에서 사용자가 명시적으로 선택한 액션 ID ("sense:price" 등).
-            지정되면 해마 검색 대신 그 액션을 Top-1로 <execution_memory>에 주입.
-
-    Yields:
-        스트리밍 이벤트 딕셔너리
-
-    Note:
-        평가 루프는 api_websocket.py의 시스템 AI 핸들러에서 처리
-        (프로젝트 에이전트와 동일한 패턴)
-    """
-    runner = get_system_ai_runner()
-
-    # 인지 파이프라인: 연상 → (Reflex 또는 무의식) → 의식 → 프롬프트 갱신
-    # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 무상태 검색을 개인 사실이
-    #   하이재킹하는 필터버블 드리프트 방지(개인화는 포식기억 owner_model 이 담당). 해마·포식기억은 유지.
-    execution_memory, _hippo_score, _top_code = runner._build_execution_memory(
-        message, action_hint=action_hint, include_related=(force_role != "forage")
-    )
-
-    # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-    if force_role:
-        # 포식 등 강제 EXECUTE 표면: 어차피 EXECUTE 고정 → 무의식 분류기(경량 LLM 1회 호출)를 건너뛴다.
-        request_type, reflex_hint = "EXECUTE", None
-        print(f"[무의식] 분류: EXECUTE (force_role={force_role} — 분류기 건너뜀)")
-    else:
-        request_type, reflex_hint = runner._decide_request_type(message, _hippo_score, _top_code)
-
-    consciousness_output = None
-    original_provider = None
-    if force_role:
-        # 포식 등 표면별 전용 에이전트: 의식(THINK) 건너뛰고 지정 모델(기본 경량)로 바로 실행 — 빠르고 싸게.
-        original_provider = _switch_to_role(runner, force_role)
-    elif request_type == "THINK":
-        consciousness_output = runner._run_consciousness_or_reuse(message, history or [], execution_memory)
-    elif reflex_hint:
-        # reflex(해마 고확신)는 *경량* 모델 — "이미 찾은 답을 그대로 내보냄"이라 가장 싼 티어로 충분
-        # (확정 2026-06-30). 모델 해소는 기어 'reflex' 역할이 경량 티어로 고정(model_resolver).
-        # 무의식 EXECUTE 는 기어 실행 축 모델 유지.
-        original_provider = _switch_to_midtier(runner)
-
-    # Clarification fast-path — 정보 부족 시 텍스트/종료 이벤트만 흘리고 종료.
-    # 평가 루프는 _consciousness_output 메타가 없으면 자동으로 안 탄다.
-    _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
-    if _clarify_text:
-        print(f"[시스템AI 의식] clarification fast-path: 실행 에이전트 스킵")
-        _restore_provider(runner, original_provider)
-        yield {"type": "text", "content": _clarify_text}
-        yield {"type": "final", "content": _clarify_text}
-        return
-
-    # 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존)
-    role = runner._load_role()
-    augmented_message = message
-    if consciousness_output or execution_memory or reflex_hint or extra_role:
-        _exec_mem = execution_memory
-        if reflex_hint:
-            _exec_mem = f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}" if execution_memory else f"[Reflex 매칭] {reflex_hint}"
-        stable_prompt, dynamic_context = runner._build_system_ai_prompt_split(
-            role, consciousness_output, _exec_mem, extra_role=extra_role, allowed_set=allowed_set
-        )
-        runner.ai.system_prompt = stable_prompt
-        runner.ai._provider.system_prompt = stable_prompt
-        if consciousness_output:
-            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
-            from prompt_builder import compile_user_command
-            _fused = compile_user_command(message, consciousness_output)
-            augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
-        elif dynamic_context:
-            augmented_message = f"{dynamic_context}\n\n{message}"
-
-    # 히스토리 편집
-    history = runner._apply_consciousness_to_history(history or [], consciousness_output)
-
-    # 스트리밍 실행 — 이벤트를 중간 수집하면서 yield
-    # consciousness_output을 메타데이터로 첫 이벤트에 첨부 (평가 루프용)
-    if consciousness_output:
-        yield {"type": "_consciousness_output", "data": consciousness_output,
-               "execution_memory": execution_memory}
-
-    try:
-        yield from runner.ai.process_message_stream(
-            message_content=augmented_message,
-            history=history,
-            images=images,
-            cancel_check=cancel_check
-        )
-    finally:
-        # 중급 모델 사용 후 원래 provider 복원
-        _restore_provider(runner, original_provider)
 
 
 # ============ 도구 실행 ============

@@ -1,4 +1,13 @@
-# 인지 파이프라인 통합 (Task B) — 핸드오프
+# 인지 파이프라인 통합 (Task B) — ✅ 구현 완료 (2026-07-12)
+
+> **✅ 완료 (2026-07-12):** 공유 드라이버 `AgentRunner.cognitive_stream`(신규 `backend/agent_pipeline.py`, `CognitivePipelineMixin`)으로 통합. **전 full-pipeline 복제(#1 프로젝트 스트림·#2 시스템AI 스트림·#3 프로젝트 블로킹·#5 이메일/외부채널·#7 시스템AI 블로킹) 5곳이 한 제너레이터를 pump(스트림)/drain(블로킹)한다.** 진입점은 이제 얇은 transport 어댑터.
+> - **스트림 어댑터**: WS 핸들러가 `for ev in runner.cognitive_stream(...)` 로 pump.
+> - **블로킹 어댑터**: `agent_pipeline.drain_stream(gen)` 이 final/error/clarify/session_reset 만 회수. → **이메일 경로가 자기반성을 자동 상속(★payoff 달성)**.
+> - **이벤트 어휘 +2**: `cognition`(작업전 공개, 클라이언트 전달) · `_turn_meta`(도구이력 등 내부 메타, 미전달).
+> - **죽은 코드 삭제**(no_temporary_patches): `run_self_reflection_turn`(api_websocket)·`process_system_ai_message_stream`(system_ai_core, 스트림 오케스트레이션 통째)·미사용 typing import. `process_system_ai_message`·`handle_chat_message`·이메일 핸들러는 drain 어댑터로 축소.
+> - **라이브 검증**(에피소드/에러 로그): 프로젝트 스트림(제주·서울)·시스템AI 스트림(부산·강릉)·프로젝트 블로킹(인천)·시스템AI 블로킹 REST(대전·광주)·SESSION_RESET — 모두 `[SelfReflect] 자기반성 턴` 마커 확인. build --check ✓, 백엔드 재시작 시 import 에러 0.
+> - **범위 밖(고의)**: **#4 안드로이드**(`handle_android_chat` → `get_android_agent().chat_stream_sync` = *별개 에이전트*, 인지 파이프라인 아님) · **#6 에이전트간 내부메시지**(`_check_internal_messages` = 의도적 경량 경로: exec_mem+직접실행, 분류·의식·평가·반성·증류 없음. 위임보고는 사용자 명령 아님 — 통합 시 위임 홉마다 반성=비용/행동 변화·블라스트 큼). 둘 다 full-pipeline 복제가 **아니라서** 드리프트 대상이 아님. 필요 시 후속.
+> - **⏳ 남은 것**: 미push. 실제 인바운드 이메일/Nostr로 #5 종단(현재는 drain+플래그 분기·wiring·SESSION_RESET 분기까지 검증). 비용 관찰(반성 2배는 v2 그대로 상속).
 
 **목표:** 여러 진입점에 복사-붙여넣기된 인지 파이프라인 오케스트레이션(연상→분류→의식→실행→평가→반성)을 **하나의 공유 드라이버**로 통합한다. 진입점은 얇은 transport 어댑터가 된다.
 

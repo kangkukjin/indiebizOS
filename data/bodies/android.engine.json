@@ -5,6 +5,7 @@
     "agent_cognitive",
     "agent_communication",
     "agent_goals",
+    "agent_pipeline",
     "agent_runner",
     "ai_agent",
     "android_agent",
@@ -148,8 +149,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 142,
-    "engine": 129,
+    "total": 143,
+    "engine": 130,
     "blocklist": 13
   }
 }

@@ -86,42 +86,6 @@ def set_cancel(client_id: str, value: bool):
     cancel_flags[client_id] = value
 
 
-def run_self_reflection_turn(stream_iter, event_queue, loop,
-                             eval_tool_calls, tool_results_log, tool_calls_log=None):
-    """실행 에이전트 자기반성 턴의 공통 실행기 (위치 독립 · 재사용 단위).
-
-    이미 '자기반성 메시지'로 시작된 스트림(runner.ai.process_message_stream 또는
-    process_system_ai_message_stream 등 어느 것이든)을 소비하며:
-      - 이벤트를 클라이언트로 pump (내부 메타 _consciousness_output은 제외)
-      - 반성 중 새로 부른 도구 호출/결과를 궤적 리스트에 이어 붙임(증류·후속 반영용)
-      - 새 최종 응답 텍스트를 반환
-
-    ★반성의 '위치'를 옮기려면 이 함수를 다른 지점에서 호출하면 된다 — 실행 로직은
-    한 곳에 모여 있어 호출부만 이동하면 된다(끝-턴/중간/도구화 어디서든 재사용).
-    """
-    refl_final = ""
-    for ev in stream_iter:
-        et = ev.get("type")
-        if et == "_consciousness_output":
-            continue  # 내부 메타 — 클라이언트 미전달
-        asyncio.run_coroutine_threadsafe(event_queue.put(ev), loop)
-        if et == "final":
-            refl_final = ev.get("content", "")
-        elif et == "tool_start":
-            _rn = ev.get("name", "")
-            _nn = _rn[len("mcp__indiebizos__"):] if _rn.startswith("mcp__indiebizos__") else _rn
-            eval_tool_calls.append({"name": _nn, "input": ev.get("input", {}), "result": "", "is_error": False})
-            if tool_calls_log is not None:
-                tool_calls_log.append({"tool_name": _nn, "input": ev.get("input", {}), "success": True})
-        elif et == "tool_result":
-            _rt = ev.get("result", "")
-            tool_results_log.append(_rt)
-            if eval_tool_calls and not eval_tool_calls[-1]["result"]:
-                eval_tool_calls[-1]["result"] = _rt
-                eval_tool_calls[-1]["is_error"] = bool(ev.get("is_error", False))
-    return refl_final
-
-
 def get_agent_runners():
     from api_agents import get_agent_runners as _get
     return _get()
@@ -427,53 +391,26 @@ async def handle_chat_message(client_id: str, data: dict):
         loop = asyncio.get_running_loop()
 
         def _work():
+            """워커 스레드 — 인지 파이프라인 제너레이터를 drain하는 블로킹 어댑터.
+
+            반성·평가·SESSION_RESET 등 파이프라인 기능을 스트림 경로와 자동 공유(Task B).
+            """
             from thread_context import (set_current_agent_id as _sa, set_current_agent_name as _sn,
                                         set_current_project_id as _sp, set_current_task_id as _st,
                                         set_user_input as _su, clear_all_context as _clear)
+            from agent_pipeline import drain_stream
             _sa(agent_id); _sn(agent_name); _sp(project_id); _st(task_id); _su(message)
             try:
-                # 실행기억 생성 (RAG + discover + implementation, 1회)
-                execution_memory, _ts, _tc = runner._build_execution_memory(message, action_hint=action_hint)
-
-                # 의식 에이전트 실행 — 메타 판단 (framing 재고 있으면 재사용)
-                consciousness_output = runner._run_consciousness_or_reuse(
-                    message, history, execution_memory
-                )
-
-                # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
-                # 실행 에이전트 호출을 건너뛰고 질문을 응답으로 반환.
-                _clarify_text = runner._consciousness_clarification(consciousness_output) if consciousness_output else None
-                if _clarify_text:
+                result = drain_stream(runner.cognitive_stream(
+                    message, history,
+                    images=images, action_hint=action_hint, agent_name=agent_name,
+                ))
+                if result.get("clarify"):
                     print(f"[의식] clarification fast-path (non-stream): 실행 에이전트 스킵")
-                    return {"clarify": _clarify_text}
-
-                # 안정/가변 분리 (캐시 prefix 보존)
-                augmented_message = message
-                conv_history = history
-                if consciousness_output:
-                    role_file = runner.project_path / f"agent_{agent_name}_role.txt"
-                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    stable_prompt, dynamic_context = runner._build_system_prompt_split(
-                        role, consciousness_output, execution_memory
-                    )
-                    runner.ai.system_prompt = stable_prompt
-                    if runner.ai._provider:
-                        runner.ai._provider.system_prompt = stable_prompt
-                    if dynamic_context:
-                        augmented_message = f"{dynamic_context}\n\n{message}"
-
-                    # 히스토리 편집 (의식 에이전트 판단에 따라)
-                    conv_history = runner._apply_consciousness_to_history(history, consciousness_output)
-
-                # AI 응답 생성
-                response = runner.ai.process_message_with_history(
-                    message_content=augmented_message,
-                    from_email="user@gui",
-                    history=conv_history,
-                    reply_to="user@gui",
-                    task_id=task_id,
-                    images=images
-                )
+                    return {"clarify": result["final"]}
+                response = result["final"]
+                if not response and result.get("error"):
+                    response = f"AI 응답 생성 실패: {result['error']}"
                 tool_images = runner.ai.get_last_tool_images()
                 return {"response": response, "tool_images": tool_images}
             finally:
@@ -620,142 +557,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 사용자 메시지 저장 (이미지 포함)
         db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
-        # 연상 단계 — 해마+심층메모리, 검색 1회로 점수/코드까지 확보
-        execution_memory, _hippocampus_score, _top_code = runner._build_execution_memory(message, action_hint=action_hint)
-
-        # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-        request_type, reflex_hint = runner._decide_request_type(message, _hippocampus_score, _top_code)
-
-        # SESSION_RESET 분기 — Claude Code 세션 매핑만 제거하고 표준 응답 반환 (AI 호출 없음)
-        is_session_reset = (request_type == "SESSION_RESET")
-        reset_text_predefined = None
-        if is_session_reset:
-            from agent_cognitive import handle_session_reset
-            reset_text_predefined = handle_session_reset()
-            print(f"[SESSION_RESET] {agent_name}: 표준 응답 반환, AI 호출 스킵")
-
-        # 판단형은 의식 에이전트 / reflex(해마 고확신)만 중급 모델 / 무의식 EXECUTE는 본격 모델 유지
-        consciousness_output = None
-        _original_provider = None
-        if is_session_reset:
-            pass  # 의식/중급 모두 스킵
-        elif request_type == "THINK":
-            consciousness_output = runner._run_consciousness_or_reuse(
-                message, history, execution_memory
-            )
-        elif reflex_hint:
-            # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
-            try:
-                from consciousness_agent import _get_midtier_provider
-                _midtier = _get_midtier_provider()
-                if _midtier is not None and runner.ai and runner.ai._provider:
-                    _original_provider = runner.ai._provider
-                    _midtier.system_prompt = runner.ai._provider.system_prompt
-                    _midtier.tools = runner.ai._provider.tools
-                    # 도구 호출 시 ToolContext 안전망(project_path 안전망 발동 WARN) 회피
-                    _midtier.project_path = runner.ai._provider.project_path
-                    _midtier.agent_id = runner.ai._provider.agent_id
-                    _midtier.agent_name = runner.ai._provider.agent_name
-                    # Gemini provider의 경우 도구 캐시 재구축
-                    if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
-                        try:
-                            from google.genai import types as _gtypes
-                            _midtier._cached_gemini_tools = [_gtypes.Tool(function_declarations=_midtier._convert_tools())]
-                        except Exception:
-                            pass
-                    runner.ai._provider = _midtier
-                    print(f"[프로젝트AI] 중급 모델로 전환: {_midtier.model}")
-            except Exception as _me:
-                print(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
-
-        # Clarification fast-path — 의식이 정보 부족으로 사용자 확인을 요청하면
-        # 실행 에이전트 호출을 건너뛰고 질문을 그대로 응답으로 노출. 평가 루프도 스킵.
-        _clarify_text = None
-        if consciousness_output:
-            _clarify_text = runner._consciousness_clarification(consciousness_output)
-        if _clarify_text:
-            print(f"[의식] clarification fast-path: 실행 에이전트 스킵")
-            # 기존 stream 형식(text 청크 + final)으로 클라이언트에 전송
-            await manager.send_message(client_id, {
-                "type": "text",
-                "content": _clarify_text,
-            })
-            await manager.send_message(client_id, {
-                "type": "final",
-                "content": _clarify_text,
-            })
-            # AI 메시지로 저장하여 다음 대화의 history에 들어가게
-            try:
-                db.save_message(target_agent_id, user_id, _clarify_text)
-            except Exception as _se:
-                print(f"[의식] clarification 메시지 저장 실패 (무시): {_se}")
-            # 중급 모델로 전환했었다면 원상복구 (THINK 분기에서는 안 바뀜)
-            if _original_provider is not None and runner.ai:
-                runner.ai._provider = _original_provider
-            from thread_context import clear_all_context
-            clear_all_context()
-            return
-
-        # 안정/가변 분리 (캐시 prefix 보존) — augmented_message는 run_stream에서 closure로 사용
-        augmented_message = message
-        if consciousness_output:
-            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
-            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            stable_prompt, dynamic_context = runner._build_system_prompt_split(
-                role, consciousness_output, execution_memory
-            )
-            runner.ai.system_prompt = stable_prompt
-            if runner.ai._provider:
-                runner.ai._provider.system_prompt = stable_prompt
-            # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
-            # dynamic_context(배경 참고)는 그 앞에 둔다.
-            from prompt_builder import compile_user_command
-            fused_command = compile_user_command(message, consciousness_output)
-            augmented_message = f"{dynamic_context}\n\n{fused_command}" if dynamic_context else fused_command
-            history = runner._apply_consciousness_to_history(history, consciousness_output)
-        elif execution_memory or reflex_hint:
-            # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
-            _exec_mem = execution_memory or ""
-            if reflex_hint:
-                _exec_mem += (
-                    f"\n\n<reflex_hint note=\"고확신 매칭된 IBL 패턴입니다. "
-                    f"이 코드를 우선적으로 사용하세요.\">"
-                    f"\n{reflex_hint}\n</reflex_hint>"
-                )
-            role_file = runner.project_path / f"agent_{agent_name}_role.txt"
-            role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-            stable_prompt, dynamic_context = runner._build_system_prompt_split(role, None, _exec_mem)
-            runner.ai.system_prompt = stable_prompt
-            if runner.ai._provider:
-                runner.ai._provider.system_prompt = stable_prompt
-            if dynamic_context:
-                augmented_message = f"{dynamic_context}\n\n{message}"
-
-        # 자율주행 작업전 공개(계기판 #2) — 실행 직전 채팅창에 "지금 얼마나 확신하나
-        # (해마점수)·무슨 판단(반사/숙고/실행)·무슨 IBL을 연상했나·달성기준(있다면)"을
-        # 먼저 보여준다. 운전자가 "믿고 맡길까"를 행동 전에 읽게 하는 신뢰 보정 계기.
-        if not is_session_reset:
-            try:
-                if reflex_hint:
-                    _decision = "reflex"
-                elif request_type == "THINK":
-                    _decision = "think"
-                else:
-                    _decision = "execute"
-                _criteria = ""
-                if consciousness_output:
-                    _criteria = runner._extract_achievement_criteria(consciousness_output) or ""
-                await manager.send_message(client_id, {
-                    "type": "cognition",
-                    "decision": _decision,
-                    "score": round(float(_hippocampus_score or 0.0), 3),
-                    "action": (reflex_hint or _top_code or ""),
-                    "criteria": _criteria,
-                    "agent": agent_name,
-                })
-            except Exception as _ce:
-                print(f"[WS] 작업전 공개(cognition) 전송 실패 (무시): {_ce}")
-
         # 태스크 생성
         task_id = f"task_{uuid.uuid4().hex[:8]}"
         try:
@@ -778,12 +579,14 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
-        tool_results_log = []  # 도구 실행 이력 수집 (legacy — 결과 문자열만)
-        tool_calls_log = []   # 경험 증류용 도구 호출 구조화 이력
-        eval_tool_calls = []  # 평가자용 도구 호출 trace ({name,input,result,is_error}, 시퀀스 보존)
+        tool_calls_log = []  # X-Ray/태스크 이력용 — 제너레이터 _turn_meta에서 수신
 
         def run_stream():
-            """스레드에서 스트리밍 실행"""
+            """워커 스레드 — 인지 파이프라인 제너레이터를 소비해 이벤트를 pump (transport 어댑터).
+
+            인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
+            runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다.
+            """
             nonlocal final_content
             # 별도 스레드이므로 컨텍스트 재설정 필요
             from thread_context import set_user_input as _set_user_input
@@ -793,42 +596,23 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             set_current_task_id(task_id)
             _set_user_input(message)
 
-            # SESSION_RESET: AI 호출 없이 표준 응답만 emit
-            if is_session_reset and reset_text_predefined:
-                final_content = reset_text_predefined
-                asyncio.run_coroutine_threadsafe(
-                    event_queue.put({"type": "text", "content": reset_text_predefined}),
-                    loop
-                )
-                asyncio.run_coroutine_threadsafe(
-                    event_queue.put({"type": "final", "content": reset_text_predefined}),
-                    loop
-                )
-                # 조기 return은 아래 try/finally 밖이라 종료 신호를 여기서 직접 넣어야
-                # while 루프가 600초 타임아웃까지 대기하지 않는다 (episode 565)
-                asyncio.run_coroutine_threadsafe(
-                    event_queue.put(None),
-                    loop
-                )
-                return
-
-            # 가변 컨텍스트는 augmented_message에 prepend된 상태 (캐시 prefix 보존)
             try:
-                for event in runner.ai.process_message_stream(
-                    message_content=augmented_message,
-                    history=history,
-                    images=images
+                for event in runner.cognitive_stream(
+                    message, history,
+                    images=images, action_hint=action_hint, agent_name=agent_name,
                 ):
                     event_type = event.get("type", "unknown")
-                    # tool_start/tool_result/thinking은 ClaudeCode provider에서 이미 print되므로 중복 제거.
-                    # text는 스트리밍이라 길이만, error/other는 가시화.
+                    if event_type == "_turn_meta":
+                        # 내부 메타 — 클라이언트 미전달, 도구 이력만 회수
+                        tool_calls_log.extend(event.get("tool_calls") or [])
+                        continue
+                    # tool_start/tool_result/thinking은 provider에서 이미 print되므로 중복 제거.
                     if event_type == "error":
                         print(f"[WS run_stream] error: {event.get('content', '')[:300]}")
                     elif event_type == "text":
                         _len = len(str(event.get("content", "")))
                         print(f"[WS run_stream] text: ({_len}자)")
-                    elif event_type not in ("tool_start", "tool_result", "thinking", "final"):
-                        # tool_*/thinking은 provider가 찍음, final은 아래에서 처리
+                    elif event_type not in ("tool_start", "tool_result", "thinking", "final", "cognition"):
                         print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
                         event_queue.put(event),
@@ -837,108 +621,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     if event_type == "final":
                         final_content = event.get("content", "")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
-                    elif event_type == "tool_start":
-                        # 경험 증류용: 도구 호출 시작 기록
-                        _raw_name = event.get("name", "")
-                        # MCP 도구 이름 정규화 — Claude Code provider는 execute_ibl을
-                        # 'mcp__indiebizos__execute_ibl' 로 부르므로 prefix 제거.
-                        # 이렇게 해야 distill_experience(tool_name == 'execute_ibl' 매칭)가
-                        # Claude Code 경유 호출도 학습 대상으로 인식한다.
-                        if _raw_name.startswith("mcp__indiebizos__"):
-                            _normalized_name = _raw_name[len("mcp__indiebizos__"):]
-                        else:
-                            _normalized_name = _raw_name
-                        tool_calls_log.append({
-                            "tool_name": _normalized_name,
-                            "input": event.get("input", {}),
-                            "success": True,  # tool_result에서 업데이트
-                        })
-                        # 평가자용 trace에도 동일한 헤더를 적재 (결과는 다음 tool_result에서 채움).
-                        # tool_calls_log와 키 형태가 다름에 유의 (tool_name vs name).
-                        eval_tool_calls.append({
-                            "name": _normalized_name,
-                            "input": event.get("input", {}),
-                            "result": "",
-                            "is_error": False,
-                        })
-                    elif event_type == "tool_result":
-                        # 도구 실행 결과 수집 (평가 루프에서 사용 — legacy)
-                        _result_text = event.get("result", "")
-                        tool_results_log.append(_result_text)
-                        # 가장 최근 trace 항목에 결과 페어링 (Claude Code는 도구 순차 실행).
-                        if eval_tool_calls and not eval_tool_calls[-1]["result"]:
-                            eval_tool_calls[-1]["result"] = _result_text
-                            eval_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
-
-                # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
-                if consciousness_output and final_content:
-                    criteria = runner._extract_achievement_criteria(consciousness_output)
-                    if criteria:
-                        from world_pulse import _load_config as _load_wp_config
-                        _goal_cfg = _load_wp_config().get("goal_eval", {})
-                        if _goal_cfg.get("enabled", True):
-                            print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                            evaluated = runner._run_goal_evaluation_loop(
-                                user_message=message,
-                                criteria=criteria,
-                                initial_response=final_content,
-                                history=history,
-                                consciousness_output=consciousness_output,
-                                max_rounds=_goal_cfg.get("max_rounds", 3),
-                                tool_results=tool_results_log,
-                                tool_calls=eval_tool_calls,
-                                execution_memory=execution_memory,
-                            )
-                            if evaluated and evaluated.strip() and evaluated != final_content:
-                                # 평가 후 재실행된 응답을 스트리밍으로 전송
-                                final_content = evaluated
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "text", "content": "\n\n---\n[평가 피드백 반영 재실행]\n\n"}),
-                                    loop
-                                )
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "text", "content": evaluated}),
-                                    loop
-                                )
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "final", "content": evaluated}),
-                                    loop
-                                )
-                                print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
-
-                # 실행 에이전트 자기반성 턴 (EXECUTE 경로) — 의식(THINK)이 없으면 위 평가
-                # 루프가 안 돌아 실패 인식이 통째로 빠진다(에피소드 727/728). 여기서 실행
-                # 에이전트 *자신*이 같은 세션(resume)을 이어받아 자기 궤적을 입력으로 받고
-                # 스스로 반성한다 — 판정자가 위에서 도장 찍는 게 아니라, 에이전트가 뭘 할지
-                # 스스로 정한다(도구를 그대로 들고 재시도·정직교정·마침 중 택). 도구를 실제로
-                # 부른 턴만·Reflex 제외·1회(반성의 반성 없음 → 폭주 없음).
-                elif (final_content and eval_tool_calls and not reflex_hint):
-                    try:
-                        from world_pulse import _load_config as _load_wp_config
-                        _refl_cfg = _load_wp_config().get("execution_reflection", {})
-                    except Exception:
-                        _refl_cfg = {}
-                    if _refl_cfg.get("enabled", True):
-                        from agent_cognitive import build_reflection_message
-                        _refl_msg = build_reflection_message(final_content, eval_tool_calls)
-                        print(f"[SelfReflect] 자기반성 턴 시작 — 실행 에이전트가 자기 궤적 재검토 (도구 {len(eval_tool_calls)}회)")
-                        asyncio.run_coroutine_threadsafe(
-                            event_queue.put({"type": "text", "content": "\n\n---\n[자기반성]\n\n"}),
-                            loop
-                        )
-                        # 같은 에이전트·같은 세션(resume) 이어서 — 자기 도구를 그대로 들고 스스로 판단·재행동.
-                        # 실행 로직은 run_self_reflection_turn 하나로 모임(위치 이동 시 이 호출부만 옮기면 됨).
-                        _refl_final = run_self_reflection_turn(
-                            runner.ai.process_message_stream(
-                                message_content=_refl_msg, history=history, images=None,
-                            ),
-                            event_queue, loop, eval_tool_calls, tool_results_log, tool_calls_log,
-                        )
-                        # 스트림이 이미 final 이벤트를 흘렸으므로 여기선 nonlocal만 갱신(중복 final 전송 안 함).
-                        if _refl_final and _refl_final.strip():
-                            final_content = _refl_final
-                            print(f"[SelfReflect] 반성 후 최종 응답 갱신 ({len(_refl_final)}자)")
-
             except Exception as e:
                 print(f"[WS run_stream] 예외 발생: {e}")
                 asyncio.run_coroutine_threadsafe(
@@ -946,9 +628,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
-                # 중급 모델 사용 후 원래 provider 복원
-                if _original_provider is not None and runner.ai:
-                    runner.ai._provider = _original_provider
                 print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, timed_out={timed_out}")
                 if timed_out and final_content:
                     # 타임아웃 이후 워커가 결과를 완성한 경우: DB에 미전달로 저장
@@ -958,23 +637,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
                     except Exception as save_err:
                         print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
-                # thread_context에서 node/action/ms 포함 도구 이력 수집 (X-Ray용)
-                try:
-                    from thread_context import get_tool_calls as _get_tc, clear_tool_calls as _clear_tc
-                    _tc = _get_tc()
-                    if _tc:
-                        # GoalEval 재실행 포함 모든 라운드의 액션을 누적
-                        tool_calls_log.extend(_tc)
-                    _clear_tc()
-                except Exception:
-                    pass
-
-                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(agent_cognitive._after_response)
-                runner._after_response(
-                    message, final_content,
-                    tool_calls=tool_calls_log, hippo_score=_hippocampus_score, top_code=_top_code,
-                )
-
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
                     loop
@@ -1079,6 +741,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     "agent": agent_name
                 })
 
+            elif event_type == "cognition":
+                # 자율주행 작업전 공개(계기판) — 실행 직전 판단/확신/연상 노출
+                await manager.send_message(client_id, {**event, "agent": agent_name})
+
             elif event_type == "final":
                 final_content = event.get("content", "")
                 print(f"[WS while루프] final 이벤트 수신 (len={len(final_content)})")
@@ -1178,9 +844,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """시스템 AI 채팅 메시지 처리 (스트리밍 방식)
 
-    **통합 아키텍처**: process_system_ai_message_stream()을 사용하여
-    AIAgent 클래스의 스트리밍 기능을 활용합니다.
-    모든 프로바이더(Anthropic, OpenAI, Gemini, Ollama)가 자동으로 지원됩니다.
+    **통합 아키텍처**: runner.cognitive_stream(agent_pipeline.py) 하나가 인지
+    파이프라인 전체를 수행하고, 이 핸들러는 이벤트를 pump하는 transport 어댑터.
     """
     message = data.get("message", "")
     images = data.get("images", [])
@@ -1217,10 +882,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         })
 
         # 시스템 AI 설정 및 헬퍼 함수 로드
-        from api_system_ai import (
-            load_system_ai_config,
-            process_system_ai_message_stream
-        )
+        from api_system_ai import load_system_ai_config
         from system_ai_memory import (
             save_conversation,
             get_history_for_ai,
@@ -1277,31 +939,27 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         set_cancel(client_id, False)
 
         def run_stream():
-            """스레드에서 시스템 AI 스트리밍 실행 (AgentRunner 인지 파이프라인)"""
+            """워커 스레드 — 시스템 AI 인지 파이프라인 제너레이터를 pump (transport 어댑터).
+
+            인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
+            runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다 — 프로젝트
+            경로(#handle_chat_message_stream)와 같은 드라이버, _is_system_ai 플래그 분기.
+            """
             nonlocal final_content
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
+            from system_ai_core import get_system_ai_runner
+            runner = get_system_ai_runner()
+            gen = runner.cognitive_stream(
+                message, history,
+                images=images if images else None,
+                action_hint=action_hint,
+                extra_role=extra_role,
+                cancel_check=lambda: is_cancelled(client_id),
+            )
             try:
-                # 도구 호출 이력 초기화 (경험 증류용)
-                from thread_context import clear_tool_calls as _clear_tc_sys
-                _clear_tc_sys()
-
-                # 인지 메타데이터 수집 (평가 루프용)
-                consciousness_output = None
-                execution_memory = ""
-                tool_results_log = []  # legacy — 결과 문자열만
-                eval_tool_calls = []  # 평가자용 trace ({name,input,result,is_error}, 시퀀스 보존)
-
-                # 통합된 스트리밍 함수 사용 - 모든 프로바이더 지원
-                for event in process_system_ai_message_stream(
-                    message=message,
-                    history=history,
-                    images=images if images else None,
-                    cancel_check=lambda: is_cancelled(client_id),  # 중단 체크 함수 전달
-                    action_hint=action_hint,
-                    extra_role=extra_role
-                ):
-                    # 중단 요청 시 루프 탈출
+                for event in gen:
+                    # 중단 요청 시 루프 탈출 (gen.close()가 제너레이터 뒷정리 실행)
                     if is_cancelled(client_id):
                         asyncio.run_coroutine_threadsafe(
                             event_queue.put({"type": "cancelled", "content": "사용자가 중단했습니다."}),
@@ -1310,115 +968,22 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         break
 
                     event_type = event.get("type")
-
-                    # 인지 메타데이터 수집 (클라이언트에 전달하지 않음)
-                    if event_type == "_consciousness_output":
-                        consciousness_output = event.get("data")
-                        execution_memory = event.get("execution_memory", "")
-                        continue
-
-                    # 도구 호출 헤더 수집 (시퀀스 보존)
-                    if event_type == "tool_start":
-                        _raw_name = event.get("name", "")
-                        if _raw_name.startswith("mcp__indiebizos__"):
-                            _norm_name = _raw_name[len("mcp__indiebizos__"):]
-                        else:
-                            _norm_name = _raw_name
-                        eval_tool_calls.append({
-                            "name": _norm_name,
-                            "input": event.get("input", {}),
-                            "result": "",
-                            "is_error": False,
-                        })
-
-                    # 도구 실행 결과 수집 (평가 루프에서 사용)
-                    if event_type == "tool_result":
-                        _result_text = event.get("result", "")
-                        tool_results_log.append(_result_text)
-                        if eval_tool_calls and not eval_tool_calls[-1]["result"]:
-                            eval_tool_calls[-1]["result"] = _result_text
-                            eval_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
-                        if event.get("images"):
-                            collected_tool_images.extend(event["images"])
+                    if event_type == "_turn_meta":
+                        continue  # 내부 메타 — 클라이언트 미전달
+                    if event_type == "tool_result" and event.get("images"):
+                        collected_tool_images.extend(event["images"])
 
                     asyncio.run_coroutine_threadsafe(event_queue.put(event), loop)
                     if event_type == "final":
                         final_content = event.get("content", "")
-
-                # 평가 루프 — 달성 기준이 있으면 프로젝트 에이전트와 동일하게 실행
-                if consciousness_output and final_content:
-                    from system_ai_core import get_system_ai_runner
-                    runner = get_system_ai_runner()
-                    criteria = runner._extract_achievement_criteria(consciousness_output)
-                    if criteria:
-                        from world_pulse import _load_config as _load_wp_config
-                        _goal_cfg = _load_wp_config().get("goal_eval", {})
-                        if _goal_cfg.get("enabled", True):
-                            print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                            evaluated = runner._run_goal_evaluation_loop(
-                                user_message=message,
-                                criteria=criteria,
-                                initial_response=final_content,
-                                history=history,
-                                consciousness_output=consciousness_output,
-                                max_rounds=_goal_cfg.get("max_rounds", 3),
-                                tool_results=tool_results_log,
-                                tool_calls=eval_tool_calls,
-                                execution_memory=execution_memory,
-                            )
-                            if evaluated and evaluated.strip() and evaluated != final_content:
-                                final_content = evaluated
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "text", "content": "\n\n---\n[평가 피드백 반영 재실행]\n\n"}),
-                                    loop
-                                )
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "text", "content": evaluated}),
-                                    loop
-                                )
-                                asyncio.run_coroutine_threadsafe(
-                                    event_queue.put({"type": "final", "content": evaluated}),
-                                    loop
-                                )
-                                print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
-
-                # 실행 에이전트 자기반성 턴 (System AI EXECUTE 경로) — 프로젝트 경로와 동일:
-                # 시스템 AI *자신*이 같은 세션을 이어받아 자기 궤적을 입력으로 받고 스스로 반성·
-                # 재행동한다(판정자 아님, 뭘 할지 스스로 결정). 이 스코프엔 reflex_hint가 없어
-                # Reflex도 포함되나 도구 부른 턴만·1회라 비용 제한적. 수리 없음.
-                elif (final_content and eval_tool_calls):
-                    try:
-                        from world_pulse import _load_config as _load_wp_config
-                        _refl_cfg = _load_wp_config().get("execution_reflection", {})
-                    except Exception:
-                        _refl_cfg = {}
-                    if _refl_cfg.get("enabled", True):
-                        from agent_cognitive import build_reflection_message
-                        _refl_msg = build_reflection_message(final_content, eval_tool_calls)
-                        print(f"[SelfReflect] 시스템AI 자기반성 턴 시작 (도구 {len(eval_tool_calls)}회)")
-                        asyncio.run_coroutine_threadsafe(
-                            event_queue.put({"type": "text", "content": "\n\n---\n[자기반성]\n\n"}),
-                            loop
-                        )
-                        # 같은 시스템 AI·같은 세션(resume) 이어서 — 자기 도구 들고 스스로 판단·재행동.
-                        # 프로젝트 경로와 동일한 공통 실행기(run_self_reflection_turn) 재사용.
-                        _refl_final = run_self_reflection_turn(
-                            process_system_ai_message_stream(
-                                message=_refl_msg, history=history, images=None,
-                                cancel_check=lambda: is_cancelled(client_id),
-                                action_hint=action_hint, extra_role=extra_role,
-                            ),
-                            event_queue, loop, eval_tool_calls, tool_results_log,
-                        )
-                        if _refl_final and _refl_final.strip():
-                            final_content = _refl_final
-                            print(f"[SelfReflect] 시스템AI 반성 후 최종 갱신 ({len(_refl_final)}자)")
             except Exception as e:
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
                     loop
                 )
             finally:
+                # 조기 종료(취소·예외)여도 제너레이터 finally(모델 복원·메모리 쓰기) 실행 보장
+                gen.close()
                 if timed_out and final_content:
                     # 타임아웃 이후 워커가 결과를 완성한 경우: 시스템 AI 대화 저장
                     try:
@@ -1427,27 +992,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
                     except Exception as save_err:
                         print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
-
-                # 시스템 AI runner 확보 (경험 증류 + 연상기억 증류용)
-                from system_ai_core import get_system_ai_runner
-                _runner = get_system_ai_runner()
-
-                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳. 시스템AI 경로는
-                # hippo/tool_calls 가 스코프에 없어 여기서 재계산해 넘긴다(입력 획득만 진입점 몫).
-                if final_content and _runner:
-                    _hs = _tc_top = _tcalls = None
-                    try:
-                        from ibl_usage_rag import get_top as _get_top
-                        from thread_context import get_tool_calls as _get_tc
-                        _hs, _tc_top = _get_top(message)
-                        _tcalls = _get_tc()
-                    except Exception as top_err:
-                        print(f"[경험증류] 시스템AI 입력 획득 실패 (무시): {top_err}")
-                    _runner._after_response(
-                        message, final_content,
-                        tool_calls=_tcalls, hippo_score=_hs, top_code=_tc_top,
-                    )
-
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 
         # 스레드에서 스트리밍 시작
@@ -1562,6 +1106,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     "content": event.get("content", ""),
                     "agent": "system_ai"
                 })
+
+            elif event_type == "cognition":
+                # 작업전 공개(계기판) — 실행 직전 판단/확신/연상 노출
+                await manager.send_message(client_id, {**event, "agent": "system_ai"})
 
             elif event_type == "final":
                 final_content = event.get("content", "")

@@ -30,9 +30,10 @@ from thread_context import (
 from agent_cognitive import AgentCognitiveMixin
 from agent_communication import AgentCommunicationMixin
 from agent_goals import AgentGoalsMixin
+from agent_pipeline import CognitivePipelineMixin
 
 
-class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin):
+class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin, CognitivePipelineMixin):
     """에이전트 실행기 - 비동기 메시지 큐 및 위임 체인 지원"""
 
     # 클래스 변수 (모든 인스턴스가 공유)

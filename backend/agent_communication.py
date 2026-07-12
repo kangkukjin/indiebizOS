@@ -295,174 +295,63 @@ class AgentCommunicationMixin:
             # 히스토리 로드
             history = self.db.get_history_for_ai(agent_id, user_id)
 
-            # AI 처리
+            # AI 처리 — 인지 파이프라인 제너레이터를 drain하는 블로킹 어댑터.
+            # 연상→분류→의식→실행→평가→반성→증류는 전부 runner.cognitive_stream
+            # (agent_pipeline.py) 안에서 일어난다. 스트림 경로(WS)와 같은 드라이버라
+            # 이메일/통신 경로도 자기반성을 자동 상속한다(★Task B payoff — 에피소드
+            # 727/728의 EXECUTE 무-반성 구멍이 여기서도 닫힘). 이 핸들러엔 채널 발송·
+            # 위임 체크만 남는다(SESSION_RESET·clarification은 result 플래그로 분기).
             if self.ai:
                 start_time = time_module.time()
+                from agent_pipeline import drain_stream
 
-                # 연상 단계 (해마+심층메모리 — 검색 1회로 점수/코드까지 확보)
-                execution_memory, _hippocampus_score, _top_code = self._build_execution_memory(content)
+                result = drain_stream(self.cognitive_stream(
+                    content, history, agent_name=agent_name,
+                ))
+                process_time = time_module.time() - start_time
 
-                # 도구 호출 이력 초기화 (경험 증류용)
-                from thread_context import clear_tool_calls, get_tool_calls
-                clear_tool_calls()
-
-                # 판정: 명시 태그(#think/#execute, 무조건) → Reflex(해마 고확신) → 무의식 분류
-                request_type, reflex_hint = self._decide_request_type(content, _hippocampus_score, _top_code)
-
-                # SESSION_RESET 분기 — Claude Code 세션만 클리어, AI 호출 없이 표준 응답
-                if request_type == "SESSION_RESET":
-                    from agent_cognitive import handle_session_reset
-                    response = handle_session_reset()
+                # SESSION_RESET — AI 호출 없이 표준 응답, DB 저장만
+                if result.get("session_reset"):
+                    response = result["final"]
                     self._log(f"[SESSION_RESET] 표준 응답 반환, AI 호출 스킵")
-                    # 응답을 DB에 저장 (UI는 polling으로 수신)
                     try:
                         self.db.save_message(agent_id, user_id, response, contact_type=contact_type)
                         self.db.complete_task(task_id, response[:500])
                     except Exception as send_err:
                         self._log(f"SESSION_RESET 응답 저장 실패: {send_err}")
-                    # 후속 처리 스킵 (의식·실행·증류)
                     clear_current_task_id()
                     clear_called_agent()
                     return
 
-                # 판단형은 의식 에이전트 / reflex(해마 고확신)만 중급 모델 / 무의식 EXECUTE는 본격 모델 유지
-                consciousness_output = None
-                _original_provider = None
-                if request_type == "THINK":
-                    consciousness_output = self._run_consciousness_or_reuse(
-                        content, history, execution_memory
-                    )
-
-                    # Clarification fast-path — 정보 부족 시 실행 에이전트 스킵하고
-                    # 의식이 만든 질문을 그대로 채널 응답으로 전송.
-                    _clarify_text = self._consciousness_clarification(consciousness_output)
-                    if _clarify_text:
-                        self._log("[의식] clarification fast-path: 실행 에이전트 스킵")
-                        try:
-                            channel.send_message(
-                                to=reply_to,
-                                subject=f"Re: {subject}",
-                                body=_clarify_text,
-                            )
-                            if is_from_owner:
-                                _an = self.config.get('name', '')
-                                _aid = self.db.get_or_create_agent(_an, "ai_agent")
-                                _uid = self.db.get_or_create_agent("user", "user")
-                                self.db.save_message(_aid, _uid, _clarify_text,
-                                                     contact_type=contact_type)
-                            self.db.complete_task(task_id, _clarify_text[:500])
-                        except Exception as send_err:
-                            self._log(f"clarification 응답 전송 실패: {send_err}")
-                        clear_current_task_id()
-                        clear_called_agent()
-                        return
-                elif reflex_hint:
-                    # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
+                # Clarification fast-path — 의식이 만든 질문을 그대로 채널 응답으로 전송
+                if result.get("clarify"):
+                    _clarify_text = result["final"]
+                    self._log("[의식] clarification fast-path: 실행 에이전트 스킵")
                     try:
-                        from consciousness_agent import _get_midtier_provider
-                        _midtier = _get_midtier_provider()
-                        if _midtier is not None and self.ai and self.ai._provider:
-                            _original_provider = self.ai._provider
-                            _midtier.system_prompt = self.ai._provider.system_prompt
-                            _midtier.tools = self.ai._provider.tools
-                            # 도구 호출 시 ToolContext 안전망(project_path 안전망 발동 WARN) 회피
-                            _midtier.project_path = self.ai._provider.project_path
-                            _midtier.agent_id = self.ai._provider.agent_id
-                            _midtier.agent_name = self.ai._provider.agent_name
-                            # Gemini provider의 경우 도구 캐시 재구축
-                            if hasattr(_midtier, '_cached_gemini_tools') and _midtier.tools:
-                                try:
-                                    from google.genai import types as _gtypes
-                                    _midtier._cached_gemini_tools = [
-                                        _gtypes.Tool(function_declarations=_midtier._convert_tools())
-                                    ]
-                                except Exception:
-                                    pass
-                            self.ai._provider = _midtier
-                            self._log(f"[프로젝트AI] 중급 모델로 전환: {_midtier.model}")
-                    except Exception as _me:
-                        self._log(f"[프로젝트AI] 중급 모델 전환 실패 (본격 모델 유지): {_me}")
-
-                # 안정/가변 분리 (캐시 prefix 보존)
-                augmented_content = content
-                if consciousness_output:
-                    role_file = self.project_path / f"agent_{agent_name}_role.txt"
-                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    stable_prompt, dynamic_context = self._build_system_prompt_split(
-                        role, consciousness_output, execution_memory
-                    )
-                    self.ai.system_prompt = stable_prompt
-                    if self.ai._provider:
-                        self.ai._provider.system_prompt = stable_prompt
-                    # 사용자 명령 변형: [원문 명령 + 의식 보강]을 한 '사용자 명령' 프레임으로 융합.
-                    from prompt_builder import compile_user_command
-                    fused_command = compile_user_command(content, consciousness_output)
-                    augmented_content = f"{dynamic_context}\n\n{fused_command}" if dynamic_context else fused_command
-
-                    # 히스토리 편집 (의식 에이전트 판단에 따라)
-                    history = self._apply_consciousness_to_history(history, consciousness_output)
-                elif execution_memory or reflex_hint:
-                    # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
-                    _exec_mem = execution_memory or ""
-                    if reflex_hint:
-                        _exec_mem += (
-                            f"\n\n<reflex_hint note=\"고확신 매칭된 IBL 패턴입니다. "
-                            f"이 코드를 우선적으로 사용하세요.\">"
-                            f"\n{reflex_hint}\n</reflex_hint>"
+                        channel.send_message(
+                            to=reply_to,
+                            subject=f"Re: {subject}",
+                            body=_clarify_text,
                         )
-                    role_file = self.project_path / f"agent_{agent_name}_role.txt"
-                    role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                    stable_prompt, dynamic_context = self._build_system_prompt_split(
-                        role, None, _exec_mem
-                    )
-                    self.ai.system_prompt = stable_prompt
-                    if self.ai._provider:
-                        self.ai._provider.system_prompt = stable_prompt
-                    if dynamic_context:
-                        augmented_content = f"{dynamic_context}\n\n{content}"
+                        if is_from_owner:
+                            _an = self.config.get('name', '')
+                            _aid = self.db.get_or_create_agent(_an, "ai_agent")
+                            _uid = self.db.get_or_create_agent("user", "user")
+                            self.db.save_message(_aid, _uid, _clarify_text,
+                                                 contact_type=contact_type)
+                        self.db.complete_task(task_id, _clarify_text[:500])
+                    except Exception as send_err:
+                        self._log(f"clarification 응답 전송 실패: {send_err}")
+                    clear_current_task_id()
+                    clear_called_agent()
+                    return
 
-                try:
-                    response = self.ai.process_message_with_history(
-                        message_content=augmented_content,
-                        from_email=from_addr,
-                        history=history,
-                        reply_to=reply_to,
-                        task_id=task_id
-                    )
-                    process_time = time_module.time() - start_time
-                    self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
+                response = result["final"]
+                if not response and result.get("error"):
+                    response = f"AI 응답 생성 실패: {result['error']}"
+                self._log(f"AI 응답 생성 ({process_time:.1f}초): {len(response)}자")
 
-                    # Goal 평가 루프 — 달성 기준이 있으면 평가 후 재시도
-                    if consciousness_output:
-                        criteria = self._extract_achievement_criteria(consciousness_output)
-                        if criteria:
-                            from world_pulse import _load_config as _load_wp_config
-                            _goal_cfg = _load_wp_config().get("goal_eval", {})
-                            if _goal_cfg.get("enabled", True):
-                                self._log(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                                # provider가 누적한 도구 실행 결과를 평가자에 전달
-                                tool_results_for_eval = self.ai.get_last_tool_results()
-                                tool_calls_for_eval = (
-                                    self.ai.get_last_tool_calls()
-                                    if hasattr(self.ai, "get_last_tool_calls") else None
-                                )
-                                response = self._run_goal_evaluation_loop(
-                                    user_message=content,
-                                    criteria=criteria,
-                                    initial_response=response,
-                                    history=history,
-                                    consciousness_output=consciousness_output,
-                                    max_rounds=_goal_cfg.get("max_rounds", 3),
-                                    tool_results=tool_results_for_eval,
-                                    tool_calls=tool_calls_for_eval,
-                                    execution_memory=execution_memory,
-                                )
-                finally:
-                    # 중급 모델 사용했으면 본격 모델로 복원
-                    if _original_provider is not None and self.ai:
-                        self.ai._provider = _original_provider
-
-                # call_agent 호출 여부 확인
+                # call_agent 호출 여부 확인 (위임했으면 직접 응답 스킵 — 위임 결과 대기)
                 called_another = did_call_agent()
 
                 if not called_another:
@@ -489,11 +378,8 @@ class AgentCommunicationMixin:
                 else:
                     self._log("call_agent 호출됨 - 위임 결과 대기")
 
-                # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(agent_cognitive._after_response)
-                self._after_response(
-                    content, response,
-                    tool_calls=get_tool_calls(), hippo_score=_hippocampus_score, top_code=_top_code,
-                )
+                # ★턴 종료 메모리 쓰기(경험+심층+포식)는 cognitive_stream 이 내부에서
+                # 수행 — 여기서 다시 호출하면 이중 증류. 진입점은 발송·위임만 관장.
 
             # 컨텍스트 정리
             clear_current_task_id()

@@ -54,7 +54,7 @@ if command -v npm >/dev/null 2>&1 && [ -d "frontend/node_modules" ]; then
     echo "✅ 프론트엔드 PID: $FRONTEND_PID"
 else
     echo "ℹ️  프론트엔드 스킵 (npm 또는 frontend/node_modules 없음) — 백엔드 전용으로 실행"
-    echo "   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install"
+    echo "   데스크탑 UI가 필요하면 Node ≥ 18 설치 후: cd frontend && npm install && npm run rebuild-trusted"
 fi
 
 # 종료 시 정리 - 프로세스 그룹 전체 종료 + 고아 프로세스 정리

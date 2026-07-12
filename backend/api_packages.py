@@ -791,3 +791,40 @@ async def install_from_text_api(request: DecodePackageRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── [self:install_lib] 승인-전-차단 게이트: 사람 전용 승인 채널 ──
+# 에이전트의 유일한 도구는 execute_ibl 이라 이 HTTP 경로에는 닿지 못한다(하드 게이트의 근거).
+# 경로를 /packages/ 밑에 두지 않는 이유: GET /packages/{package_id} 와일드카드와 충돌 회피.
+
+class LibApprovalRequest(BaseModel):
+    package: str
+
+
+@router.get("/install-approvals")
+async def list_install_approvals():
+    """설치 승인 대기열·승인 목록 조회"""
+    import install_approvals
+    return install_approvals.list_state()
+
+
+@router.post("/install-approvals/approve")
+async def approve_install(request: LibApprovalRequest):
+    """사람 전용: 라이브러리 설치 승인(1회용 — 설치 성공 시 소비됨)"""
+    import install_approvals
+    try:
+        entry = install_approvals.approve(request.package)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"success": True, "approved": entry,
+            "message": f"'{entry['package']}' 설치를 승인했습니다. AI가 다음 install_lib 호출에서 설치합니다."}
+
+
+@router.post("/install-approvals/reject")
+async def reject_install(request: LibApprovalRequest):
+    """사람 전용: 설치 요청 거부(대기열·승인 어디에 있든 제거)"""
+    import install_approvals
+    entry = install_approvals.reject(request.package)
+    if entry is None:
+        raise HTTPException(status_code=404, detail=f"'{request.package}' 는 대기열·승인 목록에 없습니다.")
+    return {"success": True, "removed": entry}

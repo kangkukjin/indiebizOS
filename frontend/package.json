@@ -17,8 +17,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
-    "predist:filter": "python3 ../scripts/build_core_manifest.py",
-    "dist:filter": "python3 ../scripts/build_dist_filter.py",
+    "dist:filter": "python3 ../scripts/build_core_manifest.py && python3 ../scripts/build_dist_filter.py",
     "electron:build": "npm run dist:filter && vite build && electron-builder",
     "electron:build:win": "npm run dist:filter && vite build && electron-builder --win",
     "electron:build:mac": "npm run dist:filter && vite build && electron-builder --mac",
@@ -27,7 +26,8 @@
     "prepare:python:win": "node scripts/prepare-python-win.js",
     "prepare:python:mac": "node scripts/prepare-python-mac.js",
     "prepare:node:win": "node scripts/prepare-node-win.js",
-    "prepare:runtime:win": "npm run prepare:python:win && npm run prepare:node:win"
+    "prepare:runtime:win": "npm run prepare:python:win && npm run prepare:node:win",
+    "rebuild-trusted": "npm rebuild --ignore-scripts=false --foreground-scripts electron esbuild electron-winstaller"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",

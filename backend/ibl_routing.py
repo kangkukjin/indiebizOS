@@ -260,7 +260,8 @@ def _route_handler(mapped_tool: str, params: dict,
             "error": (
                 f"도구 '{mapped_tool}' 실행에 필요한 라이브러리 '{_missing}' 가 설치돼 있지 않습니다. "
                 f"사용자에게 설치할지 물어본 뒤, 승낙하면 [self:install_lib]{{package: \"{_missing}\"}} 로 "
-                f"설치하고 다시 시도하세요. (거절하면 이 도구는 건너뜁니다.)"
+                f"설치를 요청하고 다시 시도하세요. (설치는 사람 승인 게이트를 거칩니다 — "
+                f"승인 전이면 대기열에 등록되니 사용자의 승인을 기다리세요. 거절하면 이 도구는 건너뜁니다.)"
             ),
             # 인지층/UI가 '설치할까요?' 흐름을 태울 수 있도록 기계가독 신호도 함께.
             "missing_dependency": _missing,
@@ -491,12 +492,52 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
 def _install_lib(params: dict) -> dict:
     """self:install_lib — 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치.
-    의존성 누락 에러('X 라이브러리 없음')를 사용자 승낙 후 그 자리에서 채우는 데 쓴다."""
+    의존성 누락 에러('X 라이브러리 없음')를 사용자 승낙 후 그 자리에서 채우는 데 쓴다.
+
+    ★공급망 방어 게이트(Floor #1 패턴): '사용자 승낙'을 프롬프트 문구가 아니라 코드로
+    강제한다. 사람이 HTTP 채널(POST /install-approvals/approve — IBL 로는 못 닿음)로
+    승인해 두지 않은 패키지는 pip 를 실행하지 않고 대기열 등록 + 알림으로 끝낸다.
+    승인은 설치 성공 시 1회 소비된다. 위협 모델·한계는 install_approvals 모듈 참조."""
     package = (params.get("package") or params.get("name") or params.get("lib") or "").strip()
     if not package:
         return {"error": "설치할 라이브러리를 package 로 지정하세요. 예: [self:install_lib]{package: \"ddgs\"}"}
+
+    import install_approvals
+
+    if not install_approvals.is_approved(package):
+        entry = install_approvals.request_approval(
+            package, reason=str(params.get("reason") or ""), source="ibl")
+        try:
+            from notification_manager import get_notification_manager
+            get_notification_manager().create(
+                title="패키지 설치 승인 대기",
+                message=(f"AI가 파이썬 라이브러리 '{package}' 설치를 요청했습니다. "
+                         f"승인: POST /install-approvals/approve {{\"package\": \"{package}\"}}"),
+                type="warning", source="install_gate",
+            )
+        except Exception:
+            pass  # 알림 실패가 게이트 응답을 막지 않는다
+        return {
+            "success": False,
+            "approval_required": True,
+            "package": entry["package"],
+            "message": (
+                f"'{package}' 설치에는 사람의 사전 승인이 필요합니다(공급망 방어 게이트). "
+                f"승인 대기열에 등록하고 알림을 보냈습니다. 사용자에게 이 패키지가 왜 필요한지 "
+                f"알리세요. 승인은 사용자가 직접 합니다(AI가 대신 승인할 수 없습니다) — "
+                f"승인 후 같은 호출을 다시 실행하면 설치됩니다."
+            ),
+            "how_to_approve": (
+                f"curl -X POST http://localhost:8765/install-approvals/approve "
+                f"-H 'Content-Type: application/json' -d '{{\"package\": \"{package}\"}}'"
+            ),
+        }
+
     from runtime_utils import install_python_dependency
-    return install_python_dependency(package)
+    result = install_python_dependency(package)
+    if result.get("success"):
+        install_approvals.consume(package)  # 실패 시엔 승인 유지 → 재시도 가능
+    return result
 
 
 def _rebuild_ibl_vocab() -> Optional[str]:

@@ -2059,7 +2059,7 @@ nodes:
         - 확장
       install_lib:
         returns: effect
-        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 userData/pylibs). 의존성 누락 에러('ddgs 라이브러리 없음' 등)를 사용자 승낙 후 그 자리에서 채운다. package="playwright"면 chromium 브라우저 바이너리도 함께 받는다.
+        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 userData/pylibs). 의존성 누락 에러('ddgs 라이브러리 없음' 등)를 채운다. ★사람 승인 게이트 — 사용자가 사전 승인(HTTP /install-approvals/approve)하지 않은 패키지는 설치되지 않고 승인 대기열에 등록된다(approval_required 응답). 승인 후 재호출하면 설치. package="playwright"면 chromium 브라우저 바이너리도 함께 받는다.
         target_description: 'package(필수) — pip 패키지명. 예: ddgs, playwright, matplotlib.'
         group: system
         router: system

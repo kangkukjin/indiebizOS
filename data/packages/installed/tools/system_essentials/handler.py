@@ -132,6 +132,9 @@ def _find_repo_root():
 
 _REPO_ROOT = _find_repo_root()
 _RED_ZONE_DIRS = ("backend", "frontend", "scripts")
+# 사람 전용 승인 상태 파일 — 에이전트가 IBL 파일 쓰기로 자가승인하면 게이트가 무의미해진다.
+# ([self:install_lib] 공급망 방어 게이트. 승인 채널은 HTTP /install-approvals/* 뿐.)
+_PROTECTED_STATE_FILES = ("data/system_ai_state/install_approvals.json",)
 
 
 def _red_zone_violation(abs_path: str) -> str | None:
@@ -140,6 +143,13 @@ def _red_zone_violation(abs_path: str) -> str | None:
     if _REPO_ROOT is None:
         return None
     real = os.path.realpath(abs_path)
+    for pf in _PROTECTED_STATE_FILES:
+        if real == str(_REPO_ROOT / pf):
+            return (
+                f"Error: 사람 전용 승인 상태 파일은 IBL 쓰기가 금지됩니다: {pf}\n"
+                f"이 파일은 [self:install_lib] 공급망 방어 게이트의 승인 원장입니다. "
+                f"승인·거부는 사용자가 HTTP 채널(/install-approvals/*)로만 합니다."
+            )
     for d in _RED_ZONE_DIRS:
         red_root = str(_REPO_ROOT / d)
         if real == red_root or real.startswith(red_root + os.sep):

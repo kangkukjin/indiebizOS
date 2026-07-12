@@ -300,6 +300,42 @@ def build_action_ledger(items: List[Union[str, Dict[str, Any]]]) -> str:
 
 
 # ============================================================
+# 실행 에이전트 자기반성 메시지 (끝내기 전, '너 자신의 점검')
+# ============================================================
+# ★판정이 아니다: 별도 경량 평가자가 위에서 도장 찍는 게 아니라, 실행 에이전트 *자신*이
+# 같은 세션(resume)을 이어받아 자기 궤적을 입력으로 받고 스스로 반성·재행동한다. 무엇을
+# 할지는 에이전트가 정한다(도구를 다시 써서 재시도하거나, 응답을 정직하게 고치거나, 충분하면
+# 마치거나). 궤적을 명시적으로 얹는 이유 = '앞으로 나아가는' 흐름을 '뒤돌아보는' 검사 대상으로
+# 바꾸는 병치 효과(에피소드 727/728: 도구 실패를 세계 사실로 오해).
+_REFLECTION_MSG_CACHE = {"text": ""}
+
+
+def build_reflection_message(response: str, tool_calls: list) -> str:
+    """실행 에이전트 자기반성 턴에 넣을 메시지를 만든다.
+
+    구성 = [자기점검 지시(파일)] + [지금까지의 궤적(도구 호출·결과 병치)] + [초안 응답].
+    같은 세션 resume이라 문맥은 이미 있지만, 궤적을 명시적으로 입력해 회고 자세를 촉발한다.
+    """
+    trace = serialize_tool_trace(tool_calls) if tool_calls else ""
+    if not _REFLECTION_MSG_CACHE["text"]:
+        p = Path(__file__).parent.parent / "data" / "common_prompts" / "execution_reflection_prompt.md"
+        try:
+            _REFLECTION_MSG_CACHE["text"] = p.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            _REFLECTION_MSG_CACHE["text"] = (
+                "일 마치기 전, 네가 밟은 궤적을 스스로 돌아보라. 도구가 빈 껍데기·깨진 데이터·"
+                "'없음'을 줬는데 그걸 세계의 사실로 오해하지 않았나? 하위 목표마다 실제로 됐나? "
+                "다시 시도할 게 있으면 지금 도구를 써서 하고, 응답이 실패를 얼버무렸으면 정직하게 "
+                "고쳐라. 이미 충분하면 그대로 마쳐라. 무엇을 할지는 네가 정한다."
+            )
+    parts = [_REFLECTION_MSG_CACHE["text"]]
+    if trace:
+        parts.append(f"## 지금까지의 궤적 (네가 부른 도구와 그 결과)\n{trace}")
+    parts.append(f"## 네가 내놓으려던 응답\n{(response or '')[:8000]}")
+    return "\n\n".join(parts)
+
+
+# ============================================================
 # SESSION_RESET 핸들러 (모듈 레벨 — call site에서 직접 호출)
 # ============================================================
 

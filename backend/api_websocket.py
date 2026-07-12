@@ -86,6 +86,42 @@ def set_cancel(client_id: str, value: bool):
     cancel_flags[client_id] = value
 
 
+def run_self_reflection_turn(stream_iter, event_queue, loop,
+                             eval_tool_calls, tool_results_log, tool_calls_log=None):
+    """실행 에이전트 자기반성 턴의 공통 실행기 (위치 독립 · 재사용 단위).
+
+    이미 '자기반성 메시지'로 시작된 스트림(runner.ai.process_message_stream 또는
+    process_system_ai_message_stream 등 어느 것이든)을 소비하며:
+      - 이벤트를 클라이언트로 pump (내부 메타 _consciousness_output은 제외)
+      - 반성 중 새로 부른 도구 호출/결과를 궤적 리스트에 이어 붙임(증류·후속 반영용)
+      - 새 최종 응답 텍스트를 반환
+
+    ★반성의 '위치'를 옮기려면 이 함수를 다른 지점에서 호출하면 된다 — 실행 로직은
+    한 곳에 모여 있어 호출부만 이동하면 된다(끝-턴/중간/도구화 어디서든 재사용).
+    """
+    refl_final = ""
+    for ev in stream_iter:
+        et = ev.get("type")
+        if et == "_consciousness_output":
+            continue  # 내부 메타 — 클라이언트 미전달
+        asyncio.run_coroutine_threadsafe(event_queue.put(ev), loop)
+        if et == "final":
+            refl_final = ev.get("content", "")
+        elif et == "tool_start":
+            _rn = ev.get("name", "")
+            _nn = _rn[len("mcp__indiebizos__"):] if _rn.startswith("mcp__indiebizos__") else _rn
+            eval_tool_calls.append({"name": _nn, "input": ev.get("input", {}), "result": "", "is_error": False})
+            if tool_calls_log is not None:
+                tool_calls_log.append({"tool_name": _nn, "input": ev.get("input", {}), "success": True})
+        elif et == "tool_result":
+            _rt = ev.get("result", "")
+            tool_results_log.append(_rt)
+            if eval_tool_calls and not eval_tool_calls[-1]["result"]:
+                eval_tool_calls[-1]["result"] = _rt
+                eval_tool_calls[-1]["is_error"] = bool(ev.get("is_error", False))
+    return refl_final
+
+
 def get_agent_runners():
     from api_agents import get_agent_runners as _get
     return _get()
@@ -870,6 +906,39 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                                 )
                                 print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
 
+                # 실행 에이전트 자기반성 턴 (EXECUTE 경로) — 의식(THINK)이 없으면 위 평가
+                # 루프가 안 돌아 실패 인식이 통째로 빠진다(에피소드 727/728). 여기서 실행
+                # 에이전트 *자신*이 같은 세션(resume)을 이어받아 자기 궤적을 입력으로 받고
+                # 스스로 반성한다 — 판정자가 위에서 도장 찍는 게 아니라, 에이전트가 뭘 할지
+                # 스스로 정한다(도구를 그대로 들고 재시도·정직교정·마침 중 택). 도구를 실제로
+                # 부른 턴만·Reflex 제외·1회(반성의 반성 없음 → 폭주 없음).
+                elif (final_content and eval_tool_calls and not reflex_hint):
+                    try:
+                        from world_pulse import _load_config as _load_wp_config
+                        _refl_cfg = _load_wp_config().get("execution_reflection", {})
+                    except Exception:
+                        _refl_cfg = {}
+                    if _refl_cfg.get("enabled", True):
+                        from agent_cognitive import build_reflection_message
+                        _refl_msg = build_reflection_message(final_content, eval_tool_calls)
+                        print(f"[SelfReflect] 자기반성 턴 시작 — 실행 에이전트가 자기 궤적 재검토 (도구 {len(eval_tool_calls)}회)")
+                        asyncio.run_coroutine_threadsafe(
+                            event_queue.put({"type": "text", "content": "\n\n---\n[자기반성]\n\n"}),
+                            loop
+                        )
+                        # 같은 에이전트·같은 세션(resume) 이어서 — 자기 도구를 그대로 들고 스스로 판단·재행동.
+                        # 실행 로직은 run_self_reflection_turn 하나로 모임(위치 이동 시 이 호출부만 옮기면 됨).
+                        _refl_final = run_self_reflection_turn(
+                            runner.ai.process_message_stream(
+                                message_content=_refl_msg, history=history, images=None,
+                            ),
+                            event_queue, loop, eval_tool_calls, tool_results_log, tool_calls_log,
+                        )
+                        # 스트림이 이미 final 이벤트를 흘렸으므로 여기선 nonlocal만 갱신(중복 final 전송 안 함).
+                        if _refl_final and _refl_final.strip():
+                            final_content = _refl_final
+                            print(f"[SelfReflect] 반성 후 최종 응답 갱신 ({len(_refl_final)}자)")
+
             except Exception as e:
                 print(f"[WS run_stream] 예외 발생: {e}")
                 asyncio.run_coroutine_threadsafe(
@@ -1312,6 +1381,38 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                                     loop
                                 )
                                 print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
+
+                # 실행 에이전트 자기반성 턴 (System AI EXECUTE 경로) — 프로젝트 경로와 동일:
+                # 시스템 AI *자신*이 같은 세션을 이어받아 자기 궤적을 입력으로 받고 스스로 반성·
+                # 재행동한다(판정자 아님, 뭘 할지 스스로 결정). 이 스코프엔 reflex_hint가 없어
+                # Reflex도 포함되나 도구 부른 턴만·1회라 비용 제한적. 수리 없음.
+                elif (final_content and eval_tool_calls):
+                    try:
+                        from world_pulse import _load_config as _load_wp_config
+                        _refl_cfg = _load_wp_config().get("execution_reflection", {})
+                    except Exception:
+                        _refl_cfg = {}
+                    if _refl_cfg.get("enabled", True):
+                        from agent_cognitive import build_reflection_message
+                        _refl_msg = build_reflection_message(final_content, eval_tool_calls)
+                        print(f"[SelfReflect] 시스템AI 자기반성 턴 시작 (도구 {len(eval_tool_calls)}회)")
+                        asyncio.run_coroutine_threadsafe(
+                            event_queue.put({"type": "text", "content": "\n\n---\n[자기반성]\n\n"}),
+                            loop
+                        )
+                        # 같은 시스템 AI·같은 세션(resume) 이어서 — 자기 도구 들고 스스로 판단·재행동.
+                        # 프로젝트 경로와 동일한 공통 실행기(run_self_reflection_turn) 재사용.
+                        _refl_final = run_self_reflection_turn(
+                            process_system_ai_message_stream(
+                                message=_refl_msg, history=history, images=None,
+                                cancel_check=lambda: is_cancelled(client_id),
+                                action_hint=action_hint, extra_role=extra_role,
+                            ),
+                            event_queue, loop, eval_tool_calls, tool_results_log,
+                        )
+                        if _refl_final and _refl_final.strip():
+                            final_content = _refl_final
+                            print(f"[SelfReflect] 시스템AI 반성 후 최종 갱신 ({len(_refl_final)}자)")
             except Exception as e:
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),

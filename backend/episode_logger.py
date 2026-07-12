@@ -34,6 +34,32 @@ _current_episode: contextvars.ContextVar = contextvars.ContextVar(
 )
 
 
+# ── 버퍼 무손실 청소 ──────────────────────────────────────────────────────
+# 에피소드 *버퍼에만* 적용한다(터미널 출력은 _original 로 전문 유지 → 라이브 디버깅 무손실).
+# ANSI 색상코드와 tqdm 진행바는 *의미 내용이 0* 인 순수 포맷팅이라 빼도 무손실 — 반성/판정
+# 에이전트가 궤적을 읽을 때 노이즈에 파묻히지 않게 한다. httpx·라운드 로그 등 '의미적'
+# 라인은 실패 진단의 증거일 수 있어 남긴다. 요약 추출기(_extract_and_save_summary)가 의존
+# 하는 마커 라인([무의식]/[Gemini] 라운드/score=/latency= 등)은 평문이라 무영향.
+_ANSI_RE = re.compile(
+    r'\x1b\[[0-9;?]*[ -/]*[@-~]'          # CSI (색상·커서)
+    r'|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)'  # OSC (하이퍼링크·타이틀)
+    r'|\x1b[@-Z\\-_]'                      # 기타 Fe 이스케이프
+)
+_PROGRESS_RE = re.compile(r'\d+%\||\bit/s\]|Batches:\s')
+
+
+def _denoise_for_buffer(text: str) -> str:
+    """버퍼 적재용 무손실 청소 — ANSI/OSC 이스케이프 제거 + tqdm 진행바 스팸 제거.
+
+    의미 내용은 보존한다(마커·httpx·에러 라인 그대로). 진행바는 캐리지리턴 갱신이라
+    내용이 0 → 통째로 버린다. 이스케이프가 write 청크 경계에 걸려 조각날 수 있으나
+    (best-effort) 대부분의 포맷 메시지는 한 청크 안에 온전히 들어온다."""
+    text = _ANSI_RE.sub('', text)
+    if '\r' in text and _PROGRESS_RE.search(text):
+        return ''
+    return text
+
+
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
     __slots__ = ("agent", "user_message", "started_at", "buffer")
@@ -131,13 +157,15 @@ class _TeeWriter:
 
     def write(self, text):
         if text:
-            self._original.write(text)
+            self._original.write(text)   # 터미널엔 전문(라이브 디버깅 손실 방지)
             ep = _current_episode.get(None)
             if ep is not None:
-                try:
-                    ep.buffer.append(text)
-                except Exception:
-                    pass
+                cleaned = _denoise_for_buffer(text)  # 버퍼엔 무손실 청소본
+                if cleaned:
+                    try:
+                        ep.buffer.append(cleaned)
+                    except Exception:
+                        pass
 
     def flush(self):
         self._original.flush()

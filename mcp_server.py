@@ -62,8 +62,70 @@ def _trim_for_agent(raw: str) -> str:
     if (isinstance(data, dict) and "final_result" in data
             and isinstance(data.get("results"), list) and data["results"]):
         data.pop("final_result", None)
-        return json.dumps(data, ensure_ascii=False)
-    return raw
+        raw = json.dumps(data, ensure_ascii=False)
+    return _budget_for_agent(raw, data if isinstance(data, dict) else None)
+
+
+# 에이전트에게 줄 응답의 크기 예산(문자). MCP 도구 결과가 호스트(claude_code) 한도를
+# 넘으면 파일덤프→jq 우회 루프에 빠지므로, 그 전에 여기서 우아하게 줄인다.
+_AGENT_BUDGET_CHARS = 24_000
+
+
+def _condense_items(obj, cap: int):
+    """재귀 축약: 중첩 JSON 문자열을 관통(파싱→축약→compact 재직렬화)하며
+    items 배열을 cap 개로 줄인다(_omitted_items 로 생략 수 노출, total 필드는 보존).
+
+    병렬(&) 결과는 'JSON문자열-in-리스트-in-문자열'로 겹치고(지도 수확과 같은 지형),
+    각 겹이 indent 직렬화라 compact 재직렬화만으로도 크게 준다.
+    """
+    if isinstance(obj, str):
+        s = obj.lstrip()
+        if s[:1] in ("[", "{"):
+            try:
+                parsed = json.loads(obj)
+            except Exception:
+                return obj
+            return json.dumps(_condense_items(parsed, cap), ensure_ascii=False)
+        return obj
+    if isinstance(obj, list):
+        return [_condense_items(x, cap) for x in obj]
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k == "items" and isinstance(v, list) and len(v) > cap:
+                out[k] = [_condense_items(x, cap) for x in v[:cap]]
+                out["_omitted_items"] = len(v) - cap
+            else:
+                out[k] = _condense_items(v, cap)
+        return out
+    return obj
+
+
+def _budget_for_agent(raw: str, parsed=None) -> str:
+    """예산 초과 응답을 단계 축약. 층 선택 원칙: 여기는 '에이전트 경계' —
+    REST/프론트/웹소켓이 받는 원본 계약은 건드리지 않는다."""
+    if len(raw) <= _AGENT_BUDGET_CHARS:
+        return raw
+    if parsed is None:
+        try:
+            parsed = json.loads(raw)
+        except Exception:
+            parsed = None
+    if parsed is not None:
+        for cap in (10, 5, 3, 1):
+            slim = _condense_items(parsed, cap)
+            out = json.dumps(slim, ensure_ascii=False)
+            if len(out) <= _AGENT_BUDGET_CHARS:
+                if isinstance(slim, dict):
+                    slim["_trimmed"] = (f"결과가 커서 items 를 소스당 {cap}개로 줄였습니다"
+                                        " — 전체 개수는 total/_omitted_items 참조, "
+                                        "더 필요하면 limit·필터로 범위를 좁혀 다시 실행하세요")
+                    out = json.dumps(slim, ensure_ascii=False)
+                return out
+        raw = json.dumps(_condense_items(parsed, 1), ensure_ascii=False)
+    # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다.
+    head = raw[:_AGENT_BUDGET_CHARS]
+    return head + f" …[{len(raw) - len(head)}자 생략 — 범위를 좁혀 다시 실행하세요]"
 
 
 def _post_backend(path: str, payload: dict, timeout: int) -> str:

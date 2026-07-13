@@ -3,7 +3,7 @@
  * Python 백엔드 관리 및 윈도우 생성
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -1219,6 +1219,10 @@ function createMultiChatWindow(roomId, roomName) {
 function setupIPC() {
   // API 포트 정보
   ipcMain.handle('get-api-port', () => API_PORT);
+
+  // 클립보드 읽기 — 메인 프로세스 경유. ★샌드박스 렌더러(Electron 20+ 기본)의 preload 엔
+  // clipboard 모듈이 없어서 preload 직접 호출은 throw 한다 → IPC 가 유일하게 확실한 경로.
+  ipcMain.handle('read-clipboard-text', () => clipboard.readText());
 
   // 외부 URL 열기
   ipcMain.handle('open-external', (_, url) => {

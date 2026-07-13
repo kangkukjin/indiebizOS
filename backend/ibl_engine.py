@@ -24,6 +24,7 @@ import os
 import json
 import asyncio
 import threading
+import time
 import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -139,6 +140,57 @@ def _phone_runnable(node: str, action: str) -> bool:
     return True if rs is None else (f"{node}:{action}" in rs)
 
 
+# 직결 부정 캐시: 최근 연결 실패한 폰 URL — 60초간 직결 시도를 건너뛰고 바로 푸시 큐로.
+# (LTE 폰에 버튼 연타 시 매번 4초 connect 대기하는 낭비 방지. Wi-Fi 복귀는 60초 내 자동 회복.)
+_phone_direct_fail: Dict[str, float] = {}
+_PHONE_DIRECT_RETRY = 60.0
+
+
+def _queue_push_fallback(phone_url: str, code: str, agent_id: str = None):
+    """직결 불가 폰(LTE/CGNAT)에 푸시 큐로 반전 전달. 대상 특정 실패 시 None.
+
+    폰의 heartbeat 롱폴(phone_api._register_with_hub)이 작업을 당겨 로컬 실행하고
+    /nodes/job-result 로 회신한다. 결과가 제때 오면 동기 의미 보존, 늦으면 queued 응답.
+    """
+    try:
+        import device_registry as dr
+        import phone_jobs
+    except Exception:
+        return None
+    try:
+        cands = [e for e in dr.live_with_capability(dr.PHONE_CLASS) if not e.get("self")]
+    except Exception:
+        return None
+    target = next((e for e in cands
+                   if (e.get("url") or "").rstrip("/") == phone_url.rstrip("/")), None)
+    if target is None and len(cands) == 1:
+        target = cands[0]  # 등록 URL 이 낡았어도(IP 변동) 라이브 폰 1대면 그 폰
+    if not target or not target.get("device_id"):
+        return None
+    job_id = phone_jobs.enqueue(target["device_id"], code, agent_id)
+    # ★이벤트 루프 스레드에서는 결과를 기다리지 않는다(자기교착): /ibl/execute 는 루프
+    # 위에서 동기 실행되는데, 여기서 블로킹하면 폰으로 나갈 heartbeat 롱폴 응답(작업 전달)
+    # 자체가 루프에 묶여 못 나간다 — 기다림이 스스로 전달을 막는 구조. 루프에선 즉시
+    # queued 반환(핸들러가 끝나야 전달이 나감, 실측 ~2초 내 폰 실행). 워커 스레드(에이전트
+    # 실행 경로)에선 블로킹해도 루프가 자유로우므로 동기 결과를 살린다.
+    try:
+        asyncio.get_running_loop()
+        on_event_loop = True
+    except RuntimeError:
+        on_event_loop = False
+    if on_event_loop:
+        return {"success": True, "queued": True, "_forwarded_to": "phone(queue)",
+                "message": "폰 직결 불가(LTE 등)라 푸시 큐에 담았습니다 — 폰이 곧 수신해 실행합니다."}
+    result = phone_jobs.wait_result(job_id, timeout=20.0)
+    if result is not None:
+        if isinstance(result, dict):
+            result.setdefault("_forwarded_to", "phone(push)")
+            return result
+        return {"result": result, "_forwarded_to": "phone(push)"}
+    return {"success": True, "queued": True, "_forwarded_to": "phone(queue)",
+            "message": "폰 직결 불가(LTE 등)라 푸시 큐에 담았습니다 — 폰이 곧 수신해 실행합니다."}
+
+
 def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
                       agent_id: str = None) -> Dict:
     """분산 IBL(#2) — phone_only 액션을 폰 /ibl/execute 로 HTTP 포워드(몸=폰).
@@ -157,19 +209,46 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     payload = {"code": code}
     if agent_id:
         payload["agent_id"] = agent_id
+    # 등록 주소가 사설 LAN(RFC1918)도 localhost 도 아니면(예: LTE CGNAT 의 192.0.0.x)
+    # 직결은 구조적으로 불가 — 4초 connect 대기 없이 바로 푸시 큐로 (버튼 체감 지연 절감).
+    _url_key = phone_url.rstrip('/')
+    _host = _url_key.split("//")[-1].split("/")[0].split(":")[0]
+    _parts = _host.split(".")
+    _is_lan = (_host in ("localhost", "127.0.0.1") or
+               (len(_parts) == 4 and _parts[0].isdigit() and (
+                   _parts[0] == "10" or
+                   (_parts[0] == "192" and _parts[1] == "168") or
+                   (_parts[0] == "172" and _parts[1].isdigit() and 16 <= int(_parts[1]) <= 31))))
+    if not _is_lan:
+        queued = _queue_push_fallback(phone_url, code, agent_id)
+        if queued is not None:
+            return queued
+    # 최근 직결 실패한 URL 은 60초간 직결을 건너뛰고 바로 푸시 큐로 (LTE 반복 대기 방지).
+    if time.time() - _phone_direct_fail.get(_url_key, 0) < _PHONE_DIRECT_RETRY:
+        queued = _queue_push_fallback(phone_url, code, agent_id)
+        if queued is not None:
+            return queued
     try:
         import requests
         headers = {"Content-Type": "application/json"}
         token = os.environ.get("INDIEBIZ_PHONE_TOKEN")
         if token:
             headers["X-Phone-Token"] = token  # #3 인에이블러(폰 인증) 대비 — 미설정이면 미동봉
+        # timeout=(connect, read): LTE/CGNAT 뒤의 폰은 connect 자체가 안 되므로 4초에
+        # 빨리 접고 푸시 큐 폴백으로 넘어간다. read 는 기존 30초 유지(느린 폰 op 무회귀).
         r = requests.post(f"{phone_url.rstrip('/')}/ibl/execute",
-                          json=payload, headers=headers, timeout=30)
+                          json=payload, headers=headers, timeout=(4, 30))
     except Exception as e:
+        _phone_direct_fail[_url_key] = time.time()
+        # LTE/CGNAT 폴백: 인바운드가 막힌 폰에는 heartbeat 롱폴 큐로 반전 전달.
+        queued = _queue_push_fallback(phone_url, code, agent_id)
+        if queued is not None:
+            return queued
         return {"error": f"[{node}:{action}]은 폰에서 실행되는 동작인데 폰({phone_url})에 "
                          f"연결할 수 없습니다. 폰 백엔드가 켜져 있는지 확인하세요. "
                          f"({e.__class__.__name__})",
                 "phone_unreachable": True}
+    _phone_direct_fail.pop(_url_key, None)  # 직결 성공 — 부정 캐시 해제
     if r.status_code != 200:
         return {"error": f"폰 실행 실패 (HTTP {r.status_code})",
                 "detail": r.text[:300], "phone_forward": True}

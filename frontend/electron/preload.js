@@ -8,8 +8,11 @@ const { contextBridge, ipcRenderer, clipboard } = require('electron');
 // 렌더러 프로세스에 노출할 API
 contextBridge.exposeInMainWorld('electron', {
   // 클립보드 기능
+  // ★주의: 아래 두 직접 호출은 샌드박스 렌더러(Electron 20+ 기본)에선 clipboard 가
+  // undefined 라 호출 시 throw. IPC 판(readClipboardText)이 확실한 경로다.
   copyToClipboard: (text) => clipboard.writeText(text),
   readFromClipboard: () => clipboard.readText(),
+  readClipboardText: () => ipcRenderer.invoke('read-clipboard-text'),
 
   // API 포트 가져오기
   getApiPort: () => ipcRenderer.invoke('get-api-port'),

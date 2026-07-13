@@ -31,6 +31,14 @@ class RegisterRequest(BaseModel):
 
 class HeartbeatRequest(BaseModel):
     device_id: str
+    # >0 이면 롱폴: 푸시 작업(phone_jobs) 도착까지 최대 wait초 hold. LTE(CGNAT) 뒤의
+    # 폰에 맥이 인바운드로 못 들어가므로, 폰이 이 hold 로 "밀어넣기"를 당겨간다.
+    wait: float = 0.0
+
+
+class JobResultRequest(BaseModel):
+    job_id: str
+    result: Optional[dict] = None
 
 
 class PrimaryRequest(BaseModel):
@@ -51,8 +59,31 @@ async def register_node(req: RegisterRequest):
 
 @router.post("/nodes/heartbeat")
 async def node_heartbeat(req: HeartbeatRequest):
+    """생존 신고 + (wait>0) 푸시 작업 롱폴 회수 — LTE 푸시의 하행 채널.
+
+    hold 는 워커 스레드(anyio.to_thread)에서 — 이벤트 루프 비차단. hold 를 마친
+    시점에 heartbeat 를 한 번 더 찍어 롱폴 자체가 라이브 판정을 노화시키지 않게 한다.
+    """
     ok = dr.heartbeat(req.device_id)
-    return {"success": ok, "live_count": len(dr.list_live())}
+    jobs = []
+    # 작업 회수는 wait>0(롱폴을 아는 신버전 폰의 opt-in)일 때만 — 응답을 버리는
+    # 구버전 폰의 heartbeat 가 큐를 비워 작업을 조용히 유실하는 것을 막는다.
+    if ok and req.wait > 0:
+        import anyio
+        import phone_jobs
+        wait = min(req.wait, 50.0)
+        jobs = await anyio.to_thread.run_sync(
+            phone_jobs.pull_blocking, req.device_id, wait)
+        dr.heartbeat(req.device_id)
+    return {"success": ok, "live_count": len(dr.list_live()), "jobs": jobs}
+
+
+@router.post("/nodes/job-result")
+async def node_job_result(req: JobResultRequest):
+    """폰이 푸시 작업 실행 결과를 회신 — 대기 중인 포워드(wait_result)를 깨운다."""
+    import phone_jobs
+    phone_jobs.set_result(req.job_id, req.result)
+    return {"success": True}
 
 
 @router.get("/nodes/live")

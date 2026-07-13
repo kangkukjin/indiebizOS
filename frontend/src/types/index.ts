@@ -191,6 +191,11 @@ export interface ItemDroppedData {
 export interface ElectronAPI {
   getApiPort: () => Promise<number>;
   openExternal: (url: string) => Promise<void>;
+  // preload.js 의 clipboard 브리지. ★동기 두 개는 샌드박스 렌더러에선 호출 시 throw —
+  // IPC 판(readClipboardText)이 확실한 경로.
+  copyToClipboard: (text: string) => void;
+  readFromClipboard: () => string;
+  readClipboardText?: () => Promise<string>;
   getAppInfo: () => Promise<{
     version: string;
     name: string;

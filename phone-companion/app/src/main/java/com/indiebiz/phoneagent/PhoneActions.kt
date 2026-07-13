@@ -64,6 +64,10 @@ object PhoneActions {
     @Volatile private var tts: TextToSpeech? = null
     @Volatile private var ttsReady = false
     private const val CHANNEL_ID = "indiebiz_brain"
+    // 능동 알림([limbs:phone]{op:notify}) 전용 — 소리·진동·헤즈업 있는 고중요도 채널.
+    // 옛 indiebiz_brain 은 IMPORTANCE_DEFAULT + 무음으로 이미 생성돼 있어(안드로이드는
+    // 생성 후 채널 중요도 상향 불가) "알림이 떠도 기척이 없는" 문제 → 새 채널로 분리.
+    private const val CHANNEL_ALERT = "indiebiz_alert"
     private val main = Handler(Looper.getMainLooper())
 
     /** App.onCreate 에서 1회 호출 — 컨텍스트 보관 + 알림 채널 + TTS 초기화. */
@@ -91,6 +95,14 @@ object PhoneActions {
                 NotificationChannel(CHANNEL_ID, "IndieBiz 뇌 알림", NotificationManager.IMPORTANCE_DEFAULT)
             )
         }
+        if (nm.getNotificationChannel(CHANNEL_ALERT) == null) {
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ALERT, "IndieBiz 알림(소리·진동)",
+                                    NotificationManager.IMPORTANCE_HIGH).apply {
+                    enableVibration(true)
+                }
+            )
+        }
     }
 
     /** 알림 표시. (Android 13+ 는 POST_NOTIFICATIONS 런타임 권한 필요 — 없으면 조용히 무시됨.) */
@@ -98,11 +110,13 @@ object PhoneActions {
     fun notify(title: String, body: String): Boolean {
         val ctx = appContext ?: return false
         return try {
-            val n = NotificationCompat.Builder(ctx, CHANNEL_ID)
+            val n = NotificationCompat.Builder(ctx, CHANNEL_ALERT)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle(title)
                 .setContentText(body)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setAutoCancel(true)
                 .build()
             val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

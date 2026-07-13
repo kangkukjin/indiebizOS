@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -165,6 +165,50 @@ export function Launcher() {
 
   // 스케줄러 관련 상태
   const [schedulerTasks, setSchedulerTasks] = useState<SchedulerTask[]>([]);
+
+  // "클립보드→폰" 버튼 상태 (idle → sending → ok/queued/err → idle)
+  const [clipToPhone, setClipToPhone] = useState<'idle' | 'sending' | 'ok' | 'queued' | 'err'>('idle');
+  const sendClipboardToPhone = useCallback(async () => {
+    if (clipToPhone === 'sending') return;
+    const done = (s: 'ok' | 'queued' | 'err') => {
+      setClipToPhone(s);
+      setTimeout(() => setClipToPhone('idle'), 3000);
+    };
+    // 클립보드 읽기: navigator.clipboard(렌더러 표준, Electron 기본 권한으로 동작) 우선.
+    // ★preload 의 readFromClipboard 는 폴백일 뿐 — Electron 20+ 기본 샌드박스 렌더러의
+    // preload 에는 clipboard 모듈이 없어서 호출 시 throw 한다(조용한 클릭 실패의 원인).
+    let text = '';
+    try {
+      text = await navigator.clipboard.readText();
+    } catch { /* 아래 폴백 */ }
+    if (!text.trim() && window.electron?.readClipboardText) {
+      try { text = (await window.electron.readClipboardText()) ?? ''; } catch { text = ''; }
+    }
+    if (!text.trim()) {
+      try { text = window.electron?.readFromClipboard?.() ?? ''; } catch { text = ''; }
+    }
+    if (!text.trim()) { done('err'); return; }
+    setClipToPhone('sending');
+    try {
+      // 맥 클립보드 → 폰 클립보드 + 도착 알림. 직결(Wi-Fi) 우선, LTE 면 백엔드가
+      // heartbeat 롱폴 푸시 큐로 폴백한다(ibl_engine._forward_to_phone).
+      const clip = { op: 'clipboard', text };
+      const noti = { op: 'notify', title: '📋 맥 클립보드 도착', body: '입력창을 길게 눌러 붙여넣기 하세요' };
+      const code = `[limbs:phone]${JSON.stringify(clip)} >> [limbs:phone]${JSON.stringify(noti)}`;
+      const r = await fetch('http://127.0.0.1:8765/ibl/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, project_id: '앱모드' }),
+      });
+      const data = await r.json().catch(() => ({}));
+      const raw = JSON.stringify(data ?? {});
+      if (raw.includes('"queued":true') || raw.includes('"queued": true')) done('queued');
+      else if (r.ok && data?.success !== false && !raw.includes('phone_unreachable')) done('ok');
+      else done('err');
+    } catch {
+      done('err');
+    }
+  }, [clipToPhone]);
 
   // 설정 다이얼로그 상태
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
@@ -1095,6 +1139,27 @@ export function Launcher() {
             >
               <Contact size={15} />
               <span className="text-[13px]">연락처</span>
+            </button>
+            <button
+              onClick={sendClipboardToPhone}
+              disabled={clipToPhone === 'sending'}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${
+                clipToPhone === 'ok' || clipToPhone === 'queued'
+                  ? 'text-emerald-700 bg-emerald-50'
+                  : clipToPhone === 'err'
+                    ? 'text-red-600 bg-red-50'
+                    : 'text-[#6B5B4F] hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'
+              }`}
+              title="맥 클립보드를 폰으로 — 지금 복사(⌘C)된 내용을 폰 클립보드에 넣고 알림을 띄웁니다 (LTE 여도 푸시 큐로 전달)"
+            >
+              <Smartphone size={15} />
+              <span className="text-[13px]">
+                {clipToPhone === 'idle' && '폰으로'}
+                {clipToPhone === 'sending' && '보내는 중…'}
+                {clipToPhone === 'ok' && '도착 ✓'}
+                {clipToPhone === 'queued' && '큐 대기 ✓'}
+                {clipToPhone === 'err' && '실패'}
+              </span>
             </button>
             <button
               onClick={() => { window.electron?.openSystemAIWindow?.(); }}

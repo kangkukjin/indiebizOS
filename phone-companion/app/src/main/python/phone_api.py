@@ -606,20 +606,93 @@ async def _register_with_hub(port: int):
     }
     import asyncio
     first = True
+    last_ip = ip
     while True:
+        # 기본 페이스: 롱폴(서버가 25초 hold)이라 루프 틈은 최소로 — 틈에 온 작업은
+        # 다음 폴까지 기다리므로, 이 값이 곧 푸시 전달의 최악 지연이다.
+        delay = 0.3
         try:
             if first:
                 r = await _mac_post_json("/nodes/register", payload, timeout=20.0)
                 if r is not None and getattr(r, "status_code", 0) == 200:
                     print(f"[phone_api] 허브 노드 등록: {alias} @ {payload['url']}")
                     first = False
+                    delay = 0.5
                 else:
                     print(f"[phone_api] 허브 등록 실패(재시도): {getattr(r,'status_code',None)}")
+                    delay = 60.0
             else:
-                await _mac_post_json("/nodes/heartbeat", {"device_id": device_id}, timeout=15.0)
+                # IP 변동(LTE↔Wi-Fi 전환 등) 감지 시 재등록(upsert) — 허브의 직결 URL 을 신선하게.
+                cur_ip = _phone_lan_ip()
+                if cur_ip and cur_ip != last_ip:
+                    last_ip = cur_ip
+                    payload["url"] = f"http://{cur_ip}:{port}"
+                    first = True
+                    delay = 0.5
+                    continue
+                # heartbeat 롱폴 — LTE 푸시 하행 채널. 서버(hold 25초)가 맥→폰 작업을
+                # 응답에 실어 내려보낸다(허브가 CGNAT 뒤의 폰에 인바운드로 못 들어오는 것의 반전).
+                r = await _mac_post_json(
+                    "/nodes/heartbeat", {"device_id": device_id, "wait": 25.0}, timeout=45.0)
+                if r is None or getattr(r, "status_code", 0) != 200:
+                    delay = 30.0  # 맥 미도달 — 과폴링 방지
+                else:
+                    try:
+                        body = r.json() or {}
+                    except Exception:
+                        body = {}
+                    if body.get("success") is False:
+                        first = True  # 허브 레지스트리가 나를 모름(재설치 등) → 재등록
+                        delay = 1.0
+                    elif "jobs" not in body:
+                        delay = 60.0  # 구버전 허브(롱폴 미지원) — 옛 60초 주기 유지
+                    else:
+                        _jobs = body.get("jobs") or []
+                        if _jobs:
+                            import time as _t
+                            print(f"[phone_api] push {len(_jobs)}건 수신 @{_t.strftime('%H:%M:%S')}")
+                        for job in _jobs:
+                            await _run_push_job(job, port)
         except Exception as e:
             print(f"[phone_api] 노드 등록/heartbeat 오류: {e}")
-        await asyncio.sleep(60)
+            delay = 30.0
+        await asyncio.sleep(delay)
+
+
+async def _run_push_job(job: dict, port: int):
+    """허브가 heartbeat 롱폴로 내려보낸 푸시 작업(맥→폰 반전 전달) 실행.
+
+    직결 포워드(_forward_to_phone)와 같은 페이로드 의미(code+agent_id)로 자기
+    /ibl/execute 에 넣는다(localhost=인증 통과, 실행 경로 단일화). 결과는
+    /nodes/job-result 로 회신 — 맥의 대기 중 포워드(wait_result)가 동기적으로 받아간다.
+    """
+    job_id = str(job.get("id") or "")
+    code = job.get("code") or ""
+    if not code:
+        return
+    import time as _t
+    result = None
+    _t0 = _t.time()
+    try:
+        payload = {"code": code}
+        if job.get("agent_id"):
+            payload["agent_id"] = job["agent_id"]
+        async with httpx.AsyncClient(timeout=120.0) as c:
+            r = await c.post(f"http://127.0.0.1:{port}/ibl/execute", json=payload)
+            try:
+                result = r.json()
+            except Exception:
+                result = {"result": (r.text or "")[:2000]}
+    except Exception as e:
+        result = {"success": False, "error": f"푸시 작업 실행 실패: {e}"}
+    _t1 = _t.time()
+    if job_id:
+        try:
+            await _mac_post_json("/nodes/job-result",
+                                 {"job_id": job_id, "result": result}, timeout=20.0)
+        except Exception as e:
+            print(f"[phone_api] job-result 회신 실패: {e}")
+    print(f"[phone_api] push job {job_id}: 실행 {(_t1-_t0)*1000:.0f}ms + 회신 {(_t.time()-_t1)*1000:.0f}ms")
 
 
 def _start_hub_registration(port: int):

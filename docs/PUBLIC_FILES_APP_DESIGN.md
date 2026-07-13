@@ -156,6 +156,7 @@ folder_id/item_id 만 안다). 시크릿(`SHOWCASE_ORIGIN_SECRET`==Worker `SHOWC
     "id": "fld_ab12", "title": "여행", "mode": "media", "count": 128,
     "items": [{
       "id": "img_001", "title": "IMG_1234.jpg", "kind": "photo",
+      "dir": "2012년/여행",                    // ★발행 루트 기준 하위 디렉토리(""=루트 직속)
       "thumb": "thumbs/fld_ab12/img_001.jpg",
       "src": "media/fld_ab12/img_001.jpg",   // 없으면 썸네일만 (원본 비공개)
       "w": 4032, "h": 3024, "size": 2600000
@@ -164,6 +165,7 @@ folder_id/item_id 만 안다). 시크릿(`SHOWCASE_ORIGIN_SECRET`==Worker `SHOWC
 }
 ```
 
+- **폴더 구조 보존**: 각 item 의 `dir`(발행 루트 기준 하위경로)로 공개 사이트가 원본 디렉토리 트리를 그대로 탐색(하위폴더 카드 + 브레드크럼, 다단계 중첩). manifest 는 여전히 폴더당 flat items 배열이고 트리는 사이트가 `dir` 로 클라이언트에서 구성(dir 없는 옛 manifest=""=루트 평면, 하위호환).
 - 동영상: `kind:"video"`, `thumb`=포스터, `src`=`media/<fid>/<iid>`. Worker 가 온디맨드로 맥에서 끌어올 때 브라우저 비재생 컨테이너(.mov/HEVC 등)는 origin 이 H.264 MP4 로 트랜스코드해 반환 → R2 캐시 후 `<video>` + range 스트리밍.
 - 원본 없는 아이템(`src` 부재)=썸네일만 공개. 큰 라이브러리 대비.
 - ★EXIF/GPS 제거·동영상 트랜스코드는 **origin 서빙 시점**(맥 `api_showcase.py`)에 일어난다 — sync 시점이 아님(온디맨드라 미리 처리할 원본이 없음). 처음 클릭 때 처리→R2 캐시, 이후는 캐시 서빙.

@@ -991,6 +991,12 @@ let apSwitches=[];
 
 /* ===== 공통 ===== */
 function esc(s){ const d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+// kv 값 렌더 — http(s) URL 이면 새 탭으로 여는 링크(공개 사이트 주소 등), 아니면 텍스트.
+function kvVal(v){ const t=String(v==null?'':v).trim();
+  const isUrl=(t.startsWith('http://')||t.startsWith('https://'))&&t.indexOf(' ')<0;
+  return isUrl
+    ? '<a href="'+esc(t)+'" target="_blank" rel="noopener" style="color:var(--info);word-break:break-all">'+esc(t)+'</a>'
+    : '<span>'+esc(v)+'</span>'; }
 function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{})); }
 async function ibl(code){
   const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
@@ -2175,12 +2181,12 @@ function renderPrim(p,vi,data){
   }
   if(p.type==='kv')
     return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
-      (p.rows||[]).map(r=>'<div class="kv"><span class="k">'+tpl(r.k,data)+'</span><span>'+tpl(r.v,data)+'</span></div>').join('')+'</div>';
+      (p.rows||[]).map(r=>'<div class="kv"><span class="k">'+tpl(r.k,data)+'</span>'+kvVal(tpl(r.v,data))+'</div>').join('')+'</div>';
   if(p.type==='kv_list'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
     return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
-      arr.map(it=>'<div class="kv"><span class="k">'+tpl(p.k,it)+'</span><span>'+tpl(p.v,it)+'</span></div>').join('')+'</div>';
+      arr.map(it=>'<div class="kv"><span class="k">'+tpl(p.k,it)+'</span>'+kvVal(tpl(p.v,it))+'</div>').join('')+'</div>';
   }
   if(p.type==='card_list'){
     const arr=viewList(data,p.from);

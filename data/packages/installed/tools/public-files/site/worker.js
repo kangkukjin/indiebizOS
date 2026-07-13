@@ -77,9 +77,13 @@ export default {
       const parts = path.split("/");           // ["media", fid, iid]
       if (parts.length < 3) return new Response("404", { status: 404 });
       const originUrl = `${env.ORIGIN_BASE.replace(/\/$/, "")}/showcase/origin/${encodeURIComponent(parts[1])}/${encodeURIComponent(parts[2])}`;
+      // ★Range 를 origin 으로 전달 — 브라우저의 동영상 스트리밍/seek 범위를 그대로 넘겨
+      // 긴 영상도 전체를 안 당기고 필요한 구간만 받아 즉시 재생·탐색.
+      const oheaders = { "X-Showcase-Secret": env.SHOWCASE_SECRET };
+      if (rangeHeader) oheaders["Range"] = rangeHeader;
       let orig;
       try {
-        orig = await fetch(originUrl, { headers: { "X-Showcase-Secret": env.SHOWCASE_SECRET } });
+        orig = await fetch(originUrl, { headers: oheaders });
       } catch (e) {
         return new Response("원본을 지금 불러올 수 없습니다 (맥 접근 불가).", { status: 503 });
       }
@@ -87,7 +91,17 @@ export default {
         return new Response("원본을 지금 불러올 수 없습니다 (맥이 꺼져 있거나 비공개).", { status: 503 });
       }
       const ctype = orig.headers.get("content-type") || ctypeOf(path);
-      // 스트림 분기 — 하나는 뷰어로, 하나는 R2 캐시로(메모리에 안 담음).
+      // Range 응답(206): 부분이라 R2 에 캐시하지 않고 그대로 중계 — 긴 영상 seek 이 곧바로 동작.
+      if (rangeHeader && orig.status === 206) {
+        const h = new Headers();
+        h.set("content-type", ctype);
+        h.set("accept-ranges", "bytes");
+        const cr = orig.headers.get("content-range"); if (cr) h.set("content-range", cr);
+        const cl = orig.headers.get("content-length"); if (cl) h.set("content-length", cl);
+        h.set("cache-control", "public, max-age=86400");
+        return new Response(orig.body, { status: 206, headers: h });
+      }
+      // 전체 요청(이미지 등): 스트림 분기 — 하나는 뷰어로, 하나는 R2 캐시로(메모리에 안 담음).
       const [toClient, toCache] = orig.body.tee();
       ctx.waitUntil(env.BUCKET.put(path, toCache, { httpMetadata: { contentType: ctype } }));
       return new Response(toClient, {

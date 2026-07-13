@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ★/f/<fid> 딥링크에서도 manifest·thumbs·media 상대경로가 루트 기준으로 풀리게 -->
+<base href="/">
 <title>공개파일</title>
 <style>
   :root {
@@ -86,14 +88,29 @@ async function boot() {
     return;
   }
   document.title = MANIFEST.title || "공개파일";
+  route();
+}
+
+// /f/<fid> 딥링크면 그 폴더로 바로 진입(앱 '공개페이지 열기'), 아니면 폴더 목록.
+function route() {
+  const m = location.pathname.match(/\/f\/([^/]+)/);
+  if (m) {
+    const fid = decodeURIComponent(m[1]);
+    const folder = (MANIFEST.folders || []).find(f => f.id === fid);
+    if (folder) { renderDir(folder, ""); return; }
+  }
   renderFolders();
 }
 
 function renderFolders() {
   curFolder = null;
   const folders = MANIFEST.folders || [];
-  document.getElementById("crumb").innerHTML = `📁 ${MANIFEST.title || "공개파일"}`;
-  document.getElementById("crumb").onclick = renderFolders;
+  const crumb = document.getElementById("crumb");
+  crumb.innerHTML = "";
+  const root = document.createElement("span");
+  root.textContent = `📁 ${MANIFEST.title || "공개파일"}`;
+  root.style.cursor = "pointer"; root.onclick = renderFolders;
+  crumb.appendChild(root);
   document.getElementById("count").textContent = `${folders.length}개 폴더`;
   const main = document.getElementById("main");
   if (!folders.length) { main.innerHTML = '<div class="empty">공개된 폴더가 없습니다.</div>'; return; }
@@ -105,35 +122,85 @@ function renderFolders() {
     if (kinds.video) bits.push(`동영상 ${kinds.video}`);
     if (kinds.file) bits.push(`파일 ${kinds.file}`);
     const el = document.createElement("div"); el.className = "folder";
-    el.innerHTML = `<div class="fname">${esc(f.title)}</div>
+    el.innerHTML = `<div class="fname">📁 ${esc(f.title)}</div>
       <div class="fmeta">${bits.join(" · ") || (f.count||0)+"개"}</div>`;
-    el.onclick = () => renderGrid(f);
+    el.onclick = () => renderDir(f, "");
     div.appendChild(el);
   }
   main.innerHTML = ""; main.appendChild(div);
 }
 
-function renderGrid(folder) {
-  curFolder = folder; curItems = folder.items || [];
-  const c = document.getElementById("crumb");
-  c.innerHTML = `<span onclick="renderFolders()" style="cursor:pointer">📁 ${esc(MANIFEST.title||"공개파일")}</span>`
-    + `<span class="sep">›</span>${esc(folder.title)}`;
-  document.getElementById("count").textContent = `${curItems.length}개`;
-  const main = document.getElementById("main");
-  if (!curItems.length) { main.innerHTML = '<div class="empty">이 폴더는 비어 있습니다.</div>'; return; }
-  const grid = document.createElement("div"); grid.className = "grid";
-  curItems.forEach((it, idx) => {
-    const tile = document.createElement("div"); tile.className = "tile";
-    if (it.thumb) {
-      tile.innerHTML = `<img loading="lazy" src="${withTok(esc(it.thumb))}" alt="${esc(it.title)}">`
-        + (it.kind === "video" ? '<div class="play">▶</div>' : "");
-    } else {
-      tile.innerHTML = `<div class="noimg">📄<span>${esc(it.title)}</span></div>`;
+// 브레드크럼: 공개파일 › 폴더 › 하위 › 하위 (각 세그먼트 클릭 시 그 깊이로 이동)
+function buildCrumb(folder, subpath) {
+  const crumb = document.getElementById("crumb");
+  crumb.innerHTML = "";
+  const seg = (label, handler) => {
+    const sp = document.createElement("span");
+    sp.textContent = label; sp.style.cursor = "pointer"; sp.onclick = handler;
+    crumb.appendChild(sp);
+  };
+  const sep = () => { const s = document.createElement("span"); s.className = "sep"; s.textContent = "›"; crumb.appendChild(s); };
+  seg(`📁 ${MANIFEST.title || "공개파일"}`, renderFolders);
+  sep(); seg(folder.title, () => renderDir(folder, ""));
+  let acc = "";
+  for (const s of (subpath ? subpath.split("/") : [])) {
+    acc = acc ? acc + "/" + s : s;
+    const cur = acc;
+    sep(); seg(s, () => renderDir(folder, cur));
+  }
+}
+
+// 원본 폴더 구조를 그대로 탐색 — item.dir(발행 루트 기준 하위경로)로 트리 구성.
+// dir 없는 옛 매니페스트는 ""로 취급 → 기존처럼 루트에 평면 표시(하위호환).
+function renderDir(folder, subpath) {
+  curFolder = folder; subpath = subpath || "";
+  const allItems = folder.items || [];
+  const prefix = subpath ? subpath + "/" : "";
+  const here = allItems.filter(it => (it.dir || "") === subpath);   // 이 디렉토리 직속 파일
+  const subs = new Map();                                            // 바로 아래 하위폴더 → 개수
+  for (const it of allItems) {
+    const d = it.dir || "";
+    if (d === subpath) continue;
+    if (subpath === "" || d.startsWith(prefix)) {
+      const name = (subpath === "" ? d : d.slice(prefix.length)).split("/")[0];
+      if (name) subs.set(name, (subs.get(name) || 0) + 1);
     }
-    tile.onclick = () => openLb(idx);
-    grid.appendChild(tile);
-  });
-  main.innerHTML = ""; main.appendChild(grid);
+  }
+  curItems = here;   // 라이트박스 ◀▶ 는 현재 디렉토리 사진 안에서만
+  buildCrumb(folder, subpath);
+  const parts = [];
+  if (subs.size) parts.push(`${subs.size}개 폴더`);
+  if (here.length) parts.push(`${here.length}개`);
+  document.getElementById("count").textContent = parts.join(" · ");
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+  if (!subs.size && !here.length) { main.innerHTML = '<div class="empty">이 폴더는 비어 있습니다.</div>'; return; }
+  if (subs.size) {
+    const fdiv = document.createElement("div"); fdiv.className = "folders";
+    if (here.length) fdiv.style.marginBottom = "18px";
+    [...subs.keys()].sort().forEach(name => {
+      const el = document.createElement("div"); el.className = "folder";
+      el.innerHTML = `<div class="fname">📁 ${esc(name)}</div><div class="fmeta">${subs.get(name)}개</div>`;
+      el.onclick = () => renderDir(folder, subpath ? subpath + "/" + name : name);
+      fdiv.appendChild(el);
+    });
+    main.appendChild(fdiv);
+  }
+  if (here.length) {
+    const grid = document.createElement("div"); grid.className = "grid";
+    here.forEach((it, idx) => {
+      const tile = document.createElement("div"); tile.className = "tile";
+      if (it.thumb) {
+        tile.innerHTML = `<img loading="lazy" src="${withTok(esc(it.thumb))}" alt="${esc(it.title)}">`
+          + (it.kind === "video" ? '<div class="play">▶</div>' : "");
+      } else {
+        tile.innerHTML = `<div class="noimg">📄<span>${esc(it.title)}</span></div>`;
+      }
+      tile.onclick = () => openLb(idx);
+      grid.appendChild(tile);
+    });
+    main.appendChild(grid);
+  }
 }
 
 function openLb(idx) {

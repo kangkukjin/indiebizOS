@@ -33,6 +33,9 @@ _STATE_PATH = _DATA_DIR / "showcase_state.json"
 #   showcase_stage/media/<folder_id>/<item_id>.<ext>   (P4 push_originals)
 _STAGE_DIR = _DATA_DIR / "showcase_stage"
 _THUMB_SIZE = 512
+# 점진적 표시 — 이만큼 처리할 때마다 부분 manifest+썸네일을 R2 로 flush 해서
+# 거대 폴더도 그리드가 실시간으로 자라게(폴더 완주 후 all-or-nothing 아님).
+_FLUSH_EVERY = 200
 _EXCLUDE_DIRS = {"node_modules", ".git", "__pycache__", ".venv", "venv", ".Trash", "thumbnail_cache"}
 
 _DEFAULT_SETTINGS = {
@@ -184,9 +187,10 @@ def _iter_files(folder_path: str, mode: str):
             yield ap
 
 
-def _sync_folder(folder: dict, files: list = None, progress_cb=None) -> tuple:
+def _sync_folder(folder: dict, files: list = None, progress_cb=None, flush_cb=None) -> tuple:
     """폴더 하나 동기화 — 썸네일을 스테이징에 생성, (items[], total_bytes) 반환.
-    증분: 썸네일이 원본보다 새로우면 재생성 스킵. progress_cb(done,total) 주기 호출."""
+    증분: 썸네일이 원본보다 새로우면 재생성 스킵. progress_cb(done,total) 주기 호출.
+    flush_cb(items_so_far, index_so_far) 를 _FLUSH_EVERY 마다 호출 → 점진적 R2 반영."""
     import os
     from thumbnails import generate_thumbnail, classify
     fid = folder["id"]
@@ -204,7 +208,10 @@ def _sync_folder(folder: dict, files: list = None, progress_cb=None) -> tuple:
         total += size
         iid = _item_id(ap)
         kind = classify(ap) or "file"
-        entry = {"id": iid, "title": os.path.basename(ap), "kind": kind, "size": size}
+        # 발행 루트 기준 하위 디렉토리(공개 사이트가 원본 폴더 구조를 그대로 탐색하도록).
+        rel = os.path.relpath(os.path.dirname(ap), folder["path"])
+        entry = {"id": iid, "title": os.path.basename(ap), "kind": kind, "size": size,
+                 "dir": "" if rel == "." else rel.replace(os.sep, "/")}
         if kind in ("photo", "video"):
             dst = thumb_dir / f"{iid}.jpg"
             fresh = dst.exists() and dst.stat().st_mtime >= os.path.getmtime(ap)
@@ -218,6 +225,8 @@ def _sync_folder(folder: dict, files: list = None, progress_cb=None) -> tuple:
         out.append(entry)
         if progress_cb and (i + 1) % 100 == 0:
             progress_cb(i + 1, n_total)
+        if flush_cb and (i + 1) % _FLUSH_EVERY == 0:
+            flush_cb(out, index)  # 점진적: 부분 manifest+새 썸네일 R2 반영
     return out, total, index
 
 
@@ -289,42 +298,29 @@ def _now_iso() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M")
 
 
-def _r2_note(res: dict) -> str:
-    """동기화 결과의 R2 업로드 상태를 사람 메시지로."""
-    if not res.get("r2"):
-        return "(로컬 스테이징 — R2 미설정, op:config 로 r2_bucket·키 필요)"
-    if res.get("r2_error"):
-        return f"(R2 업로드 {res.get('uploaded', 0)}개 후 오류: {res['r2_error']})"
-    return f"(R2 업로드 {res.get('uploaded', 0)}개 ✓)"
-
-
-def _upload_to_r2(state: dict, targets: list) -> dict:
-    """스테이징의 대상 폴더 썸네일 + manifest 를 R2 로 업로드(S3 SigV4).
-    R2 미설정/버킷 미지정이면 스킵(로컬 스테이징만). {r2, uploaded, error} 반환."""
+def _upload_partial_r2(state: dict, fid: str, items_so_far: list, uploaded_iids: set) -> int:
+    """지금까지 만든 썸네일 중 **아직 안 올린 것만** + manifest.json 을 R2 로 업로드.
+    uploaded_iids(참조로 전달) 로 재업로드 회피 → 거대 폴더 flush 가 싸다. 올린 수 반환."""
     from r2_client import is_configured, put_object
-    settings = state["settings"]
-    bucket = settings.get("r2_bucket")
+    bucket = state["settings"].get("r2_bucket")
     if not is_configured() or not bucket:
-        return {"r2": False, "uploaded": 0, "error": None}
-    uploaded, err = 0, None
-    for f in targets:
-        tdir = _STAGE_DIR / "thumbs" / f["id"]
-        if not tdir.exists():
+        return 0
+    tdir = _STAGE_DIR / "thumbs" / fid
+    n = 0
+    for it in items_so_far:
+        iid = it.get("id")
+        if not iid or iid in uploaded_iids:
             continue
-        for tf in sorted(tdir.glob("*.jpg")):
-            ok, msg = put_object(bucket, f"thumbs/{f['id']}/{tf.name}", tf.read_bytes())
+        tf = tdir / f"{iid}.jpg"
+        if tf.exists():
+            ok, _ = put_object(bucket, f"thumbs/{fid}/{tf.name}", tf.read_bytes())
             if ok:
-                uploaded += 1
-            elif err is None:
-                err = msg
+                uploaded_iids.add(iid)
+                n += 1
     mf = _manifest_path()
     if mf.exists():
-        ok, msg = put_object(bucket, "manifest.json", mf.read_bytes(), "application/json")
-        if ok:
-            uploaded += 1
-        elif err is None:
-            err = msg
-    return {"r2": True, "uploaded": uploaded, "error": err}
+        put_object(bucket, "manifest.json", mf.read_bytes(), "application/json")
+    return n
 
 
 def _update_folder(path: str, **kv) -> None:
@@ -354,9 +350,30 @@ def _bg_sync_worker(paths: list) -> None:
         try:
             files = list(_iter_files(path, folder.get("mode", "media")))
             _update_folder(path, syncing=True, interrupted=False, sync_total=len(files), sync_done=0)
+
+            # 점진적 flush — _FLUSH_EVERY 장마다 부분 manifest+새 썸네일을 R2 로 올려
+            # 그리드가 실시간으로 자라게. uploaded_iids 로 재업로드 회피(거대 폴더도 쌈).
+            uploaded_iids: set = set()
+
+            def _flush(items_so_far, index_so_far):
+                with _STATE_LOCK:
+                    st_f = _load_state()
+                    ff = next((x for x in st_f["folders"] if x.get("path") == path), None)
+                    if not ff or ff.get("hidden"):
+                        return  # 도중 제거/비공개면 flush 스킵
+                    full = _load_origin_index()
+                    full[fid] = dict(index_so_far)   # 클릭 시 원본 해소되도록 부분 색인
+                    _save_origin_index(full)
+                    ff["count"] = len(items_so_far)  # 그리드 헤더 진행 반영(state 저장은 안 함)
+                    items_by_fid = _load_manifest_items()
+                    items_by_fid[fid] = list(items_so_far)
+                    _write_manifest(st_f, items_by_fid)
+                _upload_partial_r2(st_f, fid, items_so_far, uploaded_iids)  # 네트워크는 락 밖
+
             items_list, total, index = _sync_folder(
                 folder, files=files,
                 progress_cb=lambda done, tot: _update_folder(path, sync_done=done),
+                flush_cb=_flush,
             )
             # 비공개 색인 저장(item_id→경로, 맥 전용) — 온디맨드 원본 끌어오기용.
             # 같은 락으로 remove/config 의 origin 색인 pop 과 직렬화(lost-update 방지).
@@ -380,9 +397,10 @@ def _bg_sync_worker(paths: list) -> None:
                 items_by_fid[fid] = items_list
                 _write_manifest(st, items_by_fid)
                 _save_state(st)
-            # R2 업로드(설정 시). 실패해도 로컬은 완료 상태.
-            if f2:
-                _upload_to_r2(st, [f2])
+            # R2 최종 업로드(설정 시) — 마지막 flush 이후 남은 썸네일 + 완성 manifest 만
+            # (uploaded_iids 로 이미 올린 건 스킵). 작은 폴더면 여기서 전량 업로드.
+            if f2 and not f2.get("hidden"):
+                _upload_partial_r2(st, fid, items_list, uploaded_iids)
         except Exception:
             _update_folder(path, syncing=False)
         finally:

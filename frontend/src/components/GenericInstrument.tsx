@@ -252,10 +252,17 @@ function EmptyMsg({ p, data }: { p: AppViewPrim; data: unknown }) {
 }
 
 function KvRow({ k, v }: { k: string; v: string }) {
+  // 값이 http(s) URL 이면 클릭 시 외부 브라우저로 열리는 링크로(공개 사이트 주소 등).
+  const isUrl = typeof v === 'string' && /^https?:\/\/\S+$/.test(v.trim());
   return (
-    <div className="flex justify-between py-1.5 border-b border-stone-100 last:border-0 text-sm">
-      <span className="text-stone-500">{k}</span>
-      <span className="text-stone-800 text-right">{v}</span>
+    <div className="flex justify-between py-1.5 border-b border-stone-100 last:border-0 text-sm gap-3">
+      <span className="text-stone-500 shrink-0">{k}</span>
+      {isUrl ? (
+        <a href={v.trim()} target="_blank" rel="noopener noreferrer"
+           className="text-blue-700 hover:underline text-right break-all">{v.trim()}</a>
+      ) : (
+        <span className="text-stone-800 text-right">{v}</span>
+      )}
     </div>
   );
 }

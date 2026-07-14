@@ -42,6 +42,10 @@
             "type": "string",
             "description": "폴더 id (basket_toggle 담기/빼기 대상)"
           },
+          "all_folders": {
+            "type": "boolean",
+            "description": "basket_save 생성 시 true면 모든 폴더 자동 포함(전체 공개 갤러리)"
+          },
           "title": {
             "type": "string",
             "description": "표시명 (add·config 폴더별·basket_save 바스켓 이름)"

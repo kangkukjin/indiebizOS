@@ -122,6 +122,12 @@ function renderFolders() {
   crumb.appendChild(root);
   document.getElementById("count").textContent = `${folders.length}개 폴더`;
   const main = document.getElementById("main");
+  // bare 루트(잠금) — 콘텐츠 없음. 공유 링크는 /s/<코드> 형태의 개별 주소로만.
+  if (MANIFEST.locked && SCOPE === "/") {
+    main.innerHTML = '<div class="empty">🔒 이 주소로는 볼 수 없습니다.<br>' +
+      '공유받은 갤러리 주소(…/s/코드)로 접속하세요.</div>';
+    return;
+  }
   if (!folders.length) { main.innerHTML = '<div class="empty">공개된 폴더가 없습니다.</div>'; return; }
   const div = document.createElement("div"); div.className = "folders";
   for (const f of folders) {

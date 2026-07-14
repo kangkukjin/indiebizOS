@@ -17,30 +17,34 @@
 - 접근 기본 `link_only`(토큰) — 개인 사진 안전판. `public` 은 명시 선택.
 - EXIF/GPS 기본 제거. 폴더 선택이 곧 보안 경계(고른 폴더만 공개 사이트에 존재).
 
-## 바스켓 (여러 비밀 공개주소)
+## 바스켓 = 공개 주소 (bare 루트는 잠금)
 
-한 폴더 집합을 하나의 공개 사이트로만 비추는 게 아니라, **여러 개의 비밀 주소**를
-만들고 각 주소마다 다른 폴더 부분집합을 노출한다. 주소 = `<base>/s/<slug>` 이고
-`slug` 는 긴 랜덤 토큰(≈22자)이라 **아는 사람만** 본다(진짜 비밀 링크).
+**모든 갤러리는 바스켓 하나 = 주소 하나**(`<base>/s/<slug>`). `slug` 는 5자 대문자
+코드(A-Z, 26⁵≈1180만). **bare 루트(`<base>/`)는 항상 잠겨** 콘텐츠·썸네일 전부 404 —
+그래서 어떤 주소의 코드를 지워도(=bare 루트) 아무것도 안 새어 나간다. 널리 공유하면
+공개 갤러리, 아는 사람만 주면 비밀 갤러리 — 구조는 동일.
 
 ```
-[others:showcase]{op: "basket_list"}                                  # 바스켓 목록·비밀 URL
-[others:showcase]{op: "basket_save", title: "가족에게"}                # 생성(새 slug 발급)
+[others:showcase]{op: "basket_list"}                                  # 주소(바스켓) 목록
+[others:showcase]{op: "basket_save", title: "가족에게"}                # 생성(5자 코드 발급)
+[others:showcase]{op: "basket_save", title: "전체 공개", all_folders: true}  # 전체 폴더 자동 포함 갤러리
 [others:showcase]{op: "basket_save", basket_id: "bsk_…", title: "새 이름"}   # 개명
-[others:showcase]{op: "basket_detail", basket_id: "bsk_…"}            # 전 폴더 + 소속여부
+[others:showcase]{op: "basket_detail", basket_id: "bsk_…"}            # 담긴 폴더 + 담기/빼기
 [others:showcase]{op: "basket_toggle", basket_id: "bsk_…", folder_id: "fld_…"}  # 담기/빼기
-[others:showcase]{op: "basket_delete", basket_id: "bsk_…"}            # 비밀주소 삭제(폴더 보존)
+[others:showcase]{op: "basket_delete", basket_id: "bsk_…"}            # 주소 삭제(폴더 보존)
 ```
 
+- **폴더는 바스켓에 담겨야 공개** — 어떤 바스켓에도 없는 폴더는 어디에도 안 보인다
+  (bare 루트 잠금이라 '루트 공개' 개념 폐기). 폴더 추가·동기화는 준비일 뿐, 공개는 바스켓.
+- **전체 공개 갤러리** = `all_folders: true` 바스켓. 모든 폴더 자동 포함, 폴더 추가 시
+  자동 반영. 이것도 자기 slug 주소를 가져 bare 루트엔 안 뜬다.
 - **버킷은 하나** — 바스켓은 R2 버킷이 아니라 `spaces/<slug>/manifest.json` 네임스페이스.
-  썸네일·원본은 전역(`thumbs/<fid>`·`media/<fid>`) 공유라 여러 바스켓이 같은 폴더를
-  담아도 중복 업로드 없음.
-- **루트 공개(hidden) ↔ 바스켓 소속은 독립.** 폴더를 '루트 비공개'로 두고 바스켓에만
-  담으면 그 비밀주소로만 공개된다. 루트(`.../` 전체공개)와 병존.
+  썸네일·원본은 전역(`thumbs/<fid>`·`media/<fid>`) 공유. 썸네일은 동기화 시 항상 올려두고
+  (bare 는 잠겨 안 샘) 바스켓에 담는 순간 그 주소에서 바로 보인다.
 - **게이팅(Worker)**: `spaces/<slug>/fids.json`(담긴 folder_id 화이트리스트)로 스코프
-  접근을 막는다. 잘못된 slug·비소속 폴더의 썸네일/원본은 404. bare `/thumbs`·`/media`
-  는 루트 `fids.json`(루트 공개 폴더)로만 게이트 — 바스켓 전용 폴더가 bare 경로로
-  안 샘. 원본 서빙(`api_showcase.py`)도 '루트 공개 OR 바스켓 소속'만 허용.
+  접근 제한 — 잘못된 slug·비소속 폴더의 썸네일/원본은 404. bare `/thumbs`·`/media` 는
+  루트 `fids.json`(=빈 배열)이라 전부 404. 원본 서빙(`api_showcase.py`)도 '어떤 바스켓에
+  담김'만 허용.
 
 ## 이음매 (헌법 1조)
 

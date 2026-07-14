@@ -62,10 +62,12 @@ async def origin(folder_id: str, item_id: str, x_showcase_secret: str = Header(d
     folder = next((f for f in state.get("folders", []) if f.get("id") == folder_id), None)
     if not folder:
         raise HTTPException(status_code=404, detail="not published")
-    # 서빙 조건 — 루트 공개(non-hidden) 또는 어떤 바스켓(비밀주소)에 담김.
+    # 서빙 조건 — 폴더가 어떤 바스켓(비밀주소)에 담겼는가. bare 루트는 잠겨 있어
+    # 바스켓만이 노출 경로다. all_folders(전체 공개 갤러리)는 모든 폴더 포함.
     # (Worker 가 이미 slug→바스켓→folder 소속을 검증하고 넘겨준다. 여기선 재확인.)
-    in_basket = any(folder_id in b.get("folder_ids", []) for b in state.get("baskets", []))
-    if folder.get("hidden") and not in_basket:
+    served = any(b.get("all_folders") or folder_id in b.get("folder_ids", [])
+                 for b in state.get("baskets", []))
+    if not served:
         raise HTTPException(status_code=404, detail="not published")
 
     idx = _load_json(_INDEX) or {}

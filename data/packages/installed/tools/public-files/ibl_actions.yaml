@@ -42,9 +42,9 @@ nodes:
           order: 16
           phone_render: false
           modes:
-          - name: 공개 폴더
+          - name: 폴더
             auto_run: true
-            note: 아래 주소로 공개됩니다. 폴더를 눌러 공개/비공개·표시명을 바꿀 수 있습니다.
+            note: 여기 폴더는 '바스켓' 탭에서 주소에 담아야 공개됩니다. 폴더만으론 어디에도 안 보여요.
             action: '[others:showcase]{op: "status"}'
             buttons:
             - label: ↻ 전체 동기화
@@ -52,12 +52,12 @@ nodes:
               refresh: true
             view:
             - type: kv
-              title: 공개 사이트 주소
+              title: 안내
               rows:
-              - k: 🌐 주소
-                v: '{public_base}'
-              - k: 안내
-                v: 이 주소를 열면 공개한 폴더의 사진을 볼 수 있습니다.
+              - k: 🔒 공개 방식
+                v: bare 주소(…/)는 잠겨 있습니다. 공유는 '바스켓' 탭에서 주소(…/s/코드)를 만들어 그 주소로만.
+              - k: 📁 이 목록
+                v: 추가·동기화한 폴더들입니다. 바스켓에 담기 전엔 공개되지 않습니다.
             - type: card_list
               from: items
               empty_from: message
@@ -65,9 +65,6 @@ nodes:
                 title: '{title}'
                 lines:
                 - '{meta}'
-                link:
-                  href: '{url}'
-                  label: 공개 페이지 열기 →
               item_click:
                 action: '[others:showcase]{op: "detail", path: "{path}"}'
                 view:
@@ -78,23 +75,19 @@ nodes:
                     label: 표시명
                     type: text
                     value: '{folder.title}'
-                  - key: hidden
-                    label: 비공개 (끄면 공개)
-                    type: toggle
-                    value: '{folder.hidden}'
-                  action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title", hidden: "$hidden"}'
+                  action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title"}'
                   button: 저장
                   actions:
                   - label: ↻ 이 폴더 동기화
                     action: '[others:showcase]{op: "sync", path: "{folder.path}"}'
-                  - label: 공개 목록에서 제거
+                  - label: 폴더 제거 (모든 주소에서)
                     action: '[others:showcase]{op: "remove", path: "{folder.path}", purge: true}'
                     style: danger
-                    confirm: 이 폴더를 공개 목록에서 빼고 R2에서도 지울까요?
+                    confirm: 이 폴더를 목록·모든 바스켓에서 빼고 R2에서도 지울까요?
                     back: true
           - name: 폴더 추가
             auto_run: true
-            note: 찾아보기로 폴더를 고르세요. 고른 폴더만 외부에 공개됩니다.
+            note: 찾아보기로 폴더를 고르세요. 추가 후 '바스켓' 탭에서 주소에 담아 공개합니다.
             action: '[others:showcase]{op: "status"}'
             view:
             - type: form
@@ -120,14 +113,14 @@ nodes:
               button: 공개 추가
           - name: 바스켓
             auto_run: true
-            note: 여러 비밀 주소를 만들어 각 주소마다 다른 폴더만 공개합니다. 주소는 길고 무작위라 아는 사람만 봅니다.
+            note: 각 바스켓 = 하나의 공개 주소(…/s/코드). 주소마다 다른 폴더만 담아 공개합니다. bare 주소는 잠겨 있어 코드를 알아야 봅니다.
             action: '[others:showcase]{op: "basket_list"}'
             view:
             - type: kv
               title: 바스켓이란
               rows:
               - k: 💡 안내
-                v: 각 바스켓은 자기만의 긴 비밀 주소를 가집니다. 폴더를 담으면 그 주소에서만 보입니다. 폴더를 '루트 비공개'로 두고 바스켓에만 담으면 그 비밀주소로만 공개됩니다.
+                v: 바스켓 하나가 공개 주소 하나입니다. 폴더를 담으면 그 주소에서만 보여요. 널리 공유하면 공개 갤러리, 아는 사람만 주면 비밀 갤러리 — 구조는 같아 주소 코드를 지워도 아무것도 안 새어 나갑니다.
             - type: card_list
               from: items
               empty_from: message
@@ -137,10 +130,17 @@ nodes:
                 - '{meta}'
                 link:
                   href: '{url}'
-                  label: 이 바스켓 열기 →
+                  label: 이 주소 열기 →
               item_click:
                 action: '[others:showcase]{op: "basket_detail", basket_id: "{id}"}'
                 view:
+                - type: kv
+                  title: 이 주소
+                  rows:
+                  - k: 🔗 주소
+                    v: '{basket.url}'
+                  - k: 안내
+                    v: '{note}'
                 - type: form
                   title: 바스켓 이름
                   fields:
@@ -151,10 +151,10 @@ nodes:
                   action: '[others:showcase]{op: "basket_save", basket_id: "{basket.id}", title: "$title"}'
                   button: 이름 저장
                   actions:
-                  - label: 이 바스켓(비밀주소) 삭제
+                  - label: 이 주소 삭제
                     action: '[others:showcase]{op: "basket_delete", basket_id: "{basket.id}"}'
                     style: danger
-                    confirm: 이 바스켓과 비밀주소를 삭제할까요? (폴더 자체는 안 지워집니다)
+                    confirm: 이 바스켓과 주소를 삭제할까요? (폴더 자체는 안 지워집니다)
                     back: true
                 - type: list_action
                   from: folders
@@ -165,14 +165,17 @@ nodes:
                     action: '[others:showcase]{op: "basket_toggle", basket_id: "{basket_id}", folder_id: "{id}"}'
                     refresh: true
             - type: form
-              title: 새 바스켓 만들기
+              title: 새 주소(바스켓) 만들기
               fields:
               - key: title
-                label: 바스켓 이름
+                label: 이름
                 type: text
-                placeholder: 예) 가족에게, 고객 A
-              action: '[others:showcase]{op: "basket_save", title: "$title"}'
-              button: 비밀주소 만들기
+                placeholder: 예) 가족에게, 고객 A, 전체 공개
+              - key: all_folders
+                label: 전체 폴더 자동 포함 (전체 공개 갤러리)
+                type: toggle
+              action: '[others:showcase]{op: "basket_save", title: "$title", all_folders: "$all_folders"}'
+              button: 주소 만들기
           - name: 설정
             auto_run: true
             note: 공개 사이트 전역 설정. 개인 사진이면 링크 전용을 권합니다.
@@ -270,6 +273,9 @@ tool_json:
         folder_id:
           type: string
           description: 폴더 id (basket_toggle 담기/빼기 대상)
+        all_folders:
+          type: boolean
+          description: basket_save 생성 시 true면 모든 폴더 자동 포함(전체 공개 갤러리)
         title:
           type: string
           description: 표시명 (add·config 폴더별·basket_save 바스켓 이름)

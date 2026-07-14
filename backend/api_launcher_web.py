@@ -312,8 +312,8 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 원격 파인더(/nas/*)는 자체 session_token 인증을 사용하므로 위임
     if path == "/nas" or path.startswith("/nas/"):
         return True
-    # 공개파일 온디맨드 원본(/showcase/origin/*)은 자체 X-Showcase-Secret 게이트 보유
-    if method == "GET" and path.startswith("/showcase/origin/"):
+    # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
+    if method == "GET" and path.startswith("/showcase/"):
         return True
     return False
 

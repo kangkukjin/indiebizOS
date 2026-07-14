@@ -1,44 +1,49 @@
 /**
- * 공개파일 Worker — 멍청한 substrate + 온디맨드 원본(option 1) + 바스켓(비밀 공개주소).
+ * 공개파일 Worker — 라이브 서빙(인덱싱 없음) + 지연 캐시.
  *
- * 라우팅:
- *   루트(전체공개):
- *     - manifest.json / thumbs/* → R2 직접. media/<fid>/<iid> → 온디맨드(맥 pull + R2 캐시).
- *     - thumbs·media 는 fids.json(루트 공개 폴더 화이트리스트)로 게이트 — 바스켓 전용
- *       (루트 비공개) 폴더의 객체가 bare 경로로 새지 않게.
- *   바스켓(/s/<slug>/...): slug 자체가 비밀 자격증명.
- *     - /s/<slug>/manifest.json → R2 spaces/<slug>/manifest.json.
- *     - /s/<slug>/thumbs·media/<fid>/... → spaces/<slug>/fids.json 에 fid 가 있어야 서빙
- *       (없으면 404). 실제 객체는 전역(thumbs/<fid>·media/<fid>) 공유 — 바스켓 간 중복 없음.
- *     - 그 외 → index.html(SPA). SPA 가 location 에서 스코프를 읽어 URL 을 접두사한다.
+ * 갤러리는 전부 바스켓(/s/<slug>/…). bare 루트는 잠금(index.html 이 안내).
+ *   - /s/<slug>/list?path=        → 맥(ORIGIN_BASE)이 그 디렉토리를 즉석에서 훑어 JSON(캐시 안 함=항상 최신).
+ *   - /s/<slug>/thumb/<fid>?rel=&v= → R2 캐시(cache/thumb/<fid>/<hash(rel)>_<v>.jpg) 우선, 없으면 맥이 생성 → 캐시.
+ *   - /s/<slug>/media/<fid>?rel=&v= → 원본. R2 캐시 우선, 없으면 맥에서 스트리밍(Range 통과) + 전체는 캐시.
+ *   - 그 외                        → index.html(SPA). SPA 가 location 에서 slug 를 읽어 스코프.
+ * v=<mtime> 가 캐시 버전키 — 파일이 바뀌면 mtime 이 바뀌어 새 키로 자동 재생성(옛 캐시는 고아).
  *
- * env: BUCKET(R2), ORIGIN_BASE(예 https://finder.kukjinkang.uk), SHOWCASE_SECRET,
- *      SHOWCASE_TOKEN(선택 — 루트 전용 링크 게이트. /s/ 스코프는 slug 가 게이트라 면제).
+ * env: BUCKET(R2, 캐시+SPA 호스팅), ORIGIN_BASE(맥 터널), SHOWCASE_SECRET.
  */
 
 const CT = {
-  json: "application/json", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png",
-  webp: "image/webp", gif: "image/gif", heic: "image/heic",
+  jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+  gif: "image/gif", heic: "image/heic",
   mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime", m4v: "video/x-m4v", mkv: "video/x-matroska",
 };
 function ctypeOf(key) {
   return CT[key.split(".").pop().toLowerCase()] || "application/octet-stream";
 }
+// 상대경로 → 짧은 안정 해시(캐시 키용). 폴더 내 충돌 확률 무시 가능.
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return (h2 >>> 0).toString(36) + (h1 >>> 0).toString(36);
+}
 function rangeOpts(rangeHeader) {
   if (!rangeHeader) return {};
   const m = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
-  if (!m) return {};
-  const offset = m[1] ? parseInt(m[1], 10) : undefined;
+  if (!m || !m[1]) return {};
+  const offset = parseInt(m[1], 10);
   const end = m[2] ? parseInt(m[2], 10) : undefined;
-  if (offset === undefined) return {};
   return { range: { offset, length: end !== undefined ? end - offset + 1 : undefined } };
 }
-function r2Response(obj, key, rangeHeader) {
+function r2Serve(obj, ctype, rangeHeader) {
   const headers = new Headers();
-  headers.set("content-type", ctypeOf(key));
-  headers.set("cache-control", key.endsWith("manifest.json") ? "no-cache" : "public, max-age=86400");
+  headers.set("content-type", ctype);
+  headers.set("cache-control", "public, max-age=86400");
   headers.set("accept-ranges", "bytes");
-  obj.writeHttpMetadata(headers);
   if (rangeHeader && obj.range) {
     const start = obj.range.offset || 0;
     const len = obj.range.length || (obj.size - start);
@@ -48,87 +53,72 @@ function r2Response(obj, key, rangeHeader) {
   return new Response(obj.body, { headers });
 }
 
-async function serveR2(env, request, key) {
-  const rangeHeader = request.headers.get("range");
-  const obj = await env.BUCKET.get(key, rangeOpts(rangeHeader));
-  if (!obj) return new Response("404", { status: 404 });
-  return r2Response(obj, key, rangeHeader);
-}
-
-// fids 화이트리스트 캐시(아이솔레이트 30초) — 게이트 조회가 그리드 100+ 썸네일마다
-// R2 GET 을 내는 걸 줄인다. 30초 staleness = 바스켓/폴더 편집이 반영되는 최대 지연.
-const _fidsCache = new Map(); // prefix -> {fids:Set, exp:number, present:boolean}
-async function fidsFor(env, prefix) {
-  const now = Date.now();
-  const hit = _fidsCache.get(prefix);
-  if (hit && hit.exp > now) return hit;
-  let fids = new Set(), present = false;
-  try {
-    const obj = await env.BUCKET.get(prefix + "fids.json");
-    if (obj) {
-      present = true;
-      const arr = await obj.json();
-      if (Array.isArray(arr)) fids = new Set(arr);
+async function serveIndex(env) {
+  if (env.BUCKET) {
+    const idx = await env.BUCKET.get("index.html");
+    if (idx) {
+      return new Response(idx.body, {
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache" },
+      });
     }
-  } catch (e) { /* 파싱 실패 = 화이트리스트 없음 취급 */ }
-  const rec = { fids, exp: now + 30000, present };
-  _fidsCache.set(prefix, rec);
-  return rec;
+  }
+  return new Response("index.html 미배포", { status: 500 });
 }
 
-async function serveMedia(env, ctx, request, objectKey) {
-  // objectKey = media/<fid>/<iid> (전역). R2 캐시 우선, 없으면 맥(ORIGIN_BASE)에서 온디맨드.
-  const rangeHeader = request.headers.get("range");
-  const cached = await env.BUCKET.get(objectKey, rangeOpts(rangeHeader));
-  if (cached) return r2Response(cached, objectKey, rangeHeader);
+function macUrl(env, sub) {
+  return `${env.ORIGIN_BASE.replace(/\/$/, "")}/showcase/${sub}`;
+}
 
-  if (!env.ORIGIN_BASE || !env.SHOWCASE_SECRET) {
-    return new Response("origin 미설정", { status: 500 });
+async function proxyList(env, slug, path) {
+  if (!env.ORIGIN_BASE || !env.SHOWCASE_SECRET) return new Response("origin 미설정", { status: 500 });
+  const u = macUrl(env, `list/${encodeURIComponent(slug)}?path=${encodeURIComponent(path)}`);
+  let r;
+  try {
+    r = await fetch(u, { headers: { "X-Showcase-Secret": env.SHOWCASE_SECRET } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "mac_offline" }), { status: 503, headers: { "content-type": "application/json" } });
   }
-  const parts = objectKey.split("/");        // ["media", fid, iid]
-  if (parts.length < 3) return new Response("404", { status: 404 });
-  const originUrl = `${env.ORIGIN_BASE.replace(/\/$/, "")}/showcase/origin/${encodeURIComponent(parts[1])}/${encodeURIComponent(parts[2])}`;
+  const body = await r.text();
+  return new Response(body, {
+    status: r.status,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-cache" },
+  });
+}
+
+async function serveCached(env, ctx, cacheKey, ctype, request, macSub, cacheable) {
+  // R2 캐시 우선 → 없으면 맥에서 pull. cacheable=true 면 전체 응답을 R2 에 캐시.
+  const rangeHeader = request.headers.get("range");
+  const cached = await env.BUCKET.get(cacheKey, rangeOpts(rangeHeader));
+  if (cached) return r2Serve(cached, ctype, rangeHeader);
+
+  if (!env.ORIGIN_BASE || !env.SHOWCASE_SECRET) return new Response("origin 미설정", { status: 500 });
   const oheaders = { "X-Showcase-Secret": env.SHOWCASE_SECRET };
-  if (rangeHeader) oheaders["Range"] = rangeHeader;   // 동영상 seek 범위 그대로 전달.
+  if (rangeHeader) oheaders["Range"] = rangeHeader;
   let orig;
   try {
-    orig = await fetch(originUrl, { headers: oheaders });
+    orig = await fetch(macUrl(env, macSub), { headers: oheaders });
   } catch (e) {
-    return new Response("원본을 지금 불러올 수 없습니다 (맥 접근 불가).", { status: 503 });
+    return new Response("맥 접근 불가", { status: 503 });
   }
-  if (!orig.ok || !orig.body) {
-    return new Response("원본을 지금 불러올 수 없습니다 (맥이 꺼져 있거나 비공개).", { status: 503 });
-  }
-  const ctype = orig.headers.get("content-type") || ctypeOf(objectKey);
-  // Range 응답(206): 부분이라 캐시하지 않고 중계 — 긴 영상 seek 이 곧바로.
+  if (!orig.ok || !orig.body) return new Response("원본 없음(맥 꺼짐/비공개)", { status: orig.status === 404 ? 404 : 503 });
+  const ct = orig.headers.get("content-type") || ctype;
+
+  // Range 응답(206): 부분이라 캐시 안 함 — 그대로 중계(긴 영상 seek).
   if (rangeHeader && orig.status === 206) {
     const h = new Headers();
-    h.set("content-type", ctype);
-    h.set("accept-ranges", "bytes");
+    h.set("content-type", ct); h.set("accept-ranges", "bytes");
     const cr = orig.headers.get("content-range"); if (cr) h.set("content-range", cr);
     const cl = orig.headers.get("content-length"); if (cl) h.set("content-length", cl);
     h.set("cache-control", "public, max-age=86400");
     return new Response(orig.body, { status: 206, headers: h });
   }
-  // 전체 요청: 스트림 분기 — 하나는 뷰어로, 하나는 R2 캐시로(메모리에 안 담음).
-  const [toClient, toCache] = orig.body.tee();
-  ctx.waitUntil(env.BUCKET.put(objectKey, toCache, { httpMetadata: { contentType: ctype } }));
-  return new Response(toClient, {
-    headers: { "content-type": ctype, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" },
-  });
-}
-
-async function serveIndex(env) {
-  if (env.BUCKET) {
-    const idx = await env.BUCKET.get("index.html");
-    if (idx) {
-      const h = new Headers();
-      h.set("content-type", "text/html; charset=utf-8");
-      h.set("cache-control", "no-cache");
-      return new Response(idx.body, { headers: h });
-    }
+  // 전체 응답: 캐시 대상이면 스트림 분기(뷰어 + R2), 아니면 그냥 중계.
+  if (cacheable) {
+    const [toClient, toCache] = orig.body.tee();
+    ctx.waitUntil(env.BUCKET.put(cacheKey, toCache, { httpMetadata: { contentType: ct } }));
+    return new Response(toClient, { headers: { "content-type": ct, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" } });
   }
-  return new Response("index.html 미배포 — showcase sync 로 업로드 필요", { status: 500 });
+  return new Response(orig.body, { headers: { "content-type": ct, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" } });
 }
 
 export default {
@@ -137,44 +127,32 @@ export default {
     const path = decodeURIComponent(url.pathname).replace(/^\/+/, "");
     if (!env.BUCKET) return serveIndex(env);
 
-    // 스코프 판별 — s/<slug>/<rest>. slug 자체가 비밀 자격증명.
-    const isScoped = path === "s" || path.startsWith("s/");
-    let rest = path, objPrefix = "", allowPrefix = "";
-    if (isScoped) {
-      const parts = path.split("/");          // ["s", slug, ...rest]
-      const slug = parts[1] || "";
-      if (!slug) return serveIndex(env);
-      rest = parts.slice(2).join("/");         // "" | "manifest.json" | "thumbs/.." | "media/.." | "f/.."
-      objPrefix = `spaces/${slug}/`;           // manifest 는 스코프 프리픽스
-      allowPrefix = objPrefix;                 // fids.json 도 스코프
-    } else {
-      // 루트 전용 링크 토큰(설정 시). 스코프는 slug 가 게이트라 면제.
-      if (env.SHOWCASE_TOKEN && env.SHOWCASE_TOKEN.length > 0) {
-        if ((url.searchParams.get("t") || "") !== env.SHOWCASE_TOKEN) {
-          return new Response("403 — 접근 토큰이 필요합니다.", { status: 403 });
-        }
+    // 스코프 경로만 서빙 — s/<slug>/<rest>. 그 외(및 bare 루트)는 SPA(잠금 안내).
+    if (path === "s" || !path.startsWith("s/")) return serveIndex(env);
+    const parts = path.split("/");            // ["s", slug, kind, fid?]
+    const slug = parts[1] || "";
+    const rest = parts.slice(2);              // ["list"] | ["thumb", fid] | ["media", fid]
+    if (!slug || rest.length === 0) return serveIndex(env);
+
+    const kind = rest[0];
+    if (kind === "list") {
+      return proxyList(env, slug, url.searchParams.get("path") || "");
+    }
+    if (kind === "thumb" || kind === "media") {
+      const fid = rest[1] || "";
+      const rel = url.searchParams.get("rel") || "";
+      const v = url.searchParams.get("v") || "0";
+      if (!fid || !rel) return new Response("bad request", { status: 400 });
+      const h = cyrb53(rel);
+      if (kind === "thumb") {
+        const key = `cache/thumb/${fid}/${h}_${v}.jpg`;
+        const macSub = `thumb/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`;
+        return serveCached(env, ctx, key, "image/jpeg", request, macSub, true);
       }
+      const key = `cache/media/${fid}/${h}_${v}`;
+      const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`;
+      return serveCached(env, ctx, key, ctypeOf(rel), request, macSub, true);
     }
-
-    // manifest.json (루트 or 스코프)
-    if (rest === "manifest.json") {
-      return serveR2(env, request, objPrefix + "manifest.json");
-    }
-
-    // thumbs/* · media/* — fids 화이트리스트 게이트
-    if (rest.startsWith("thumbs/") || rest.startsWith("media/")) {
-      const seg = rest.split("/");
-      const fid = seg[1] || "";
-      const allow = await fidsFor(env, allowPrefix);
-      // 루트에서 fids.json 이 아직 없으면(구배포 이관 중) fail-open = 옛 전체공개 동작.
-      // 스코프에선 fail-closed — 화이트리스트 없으면 접근 불가(비밀 보장).
-      const gated = isScoped ? true : allow.present;
-      if (gated && !allow.fids.has(fid)) return new Response("404", { status: 404 });
-      if (rest.startsWith("thumbs/")) return serveR2(env, request, rest);   // 전역 객체 키
-      return serveMedia(env, ctx, request, rest);
-    }
-
-    // 그 외 → index.html (SPA; 루트·바스켓·딥링크 f/<fid> 모두)
     return serveIndex(env);
   },
 };

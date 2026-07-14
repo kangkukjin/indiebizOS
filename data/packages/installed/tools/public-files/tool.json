@@ -2,24 +2,23 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "public-files",
   "name": "Public Files",
-  "description": "선택한 폴더를 외부 공개 사이트(Cloudflare R2 + Worker)로 비추는 노출 도구. 개인용 NAS 와 달리 \"보여줄 것만 고른 창\".\n\n## 이음매\n맥은 썸네일·매니페스트를 만들어 R2 로 push 하고, 공개 Worker 는 manifest.json 계약만 읽어 그린다. 앱을 지워도 사이트는 마지막 상태로 산다.\n\n## 보안\n폴더 선택이 곧 보안 경계 — 고른 폴더만 공개 사이트에 존재한다. EXIF/GPS 는 기본 제거, 접근은 기본 링크 전용(토큰).",
-  "version": "0.1.0",
+  "description": "선택한 폴더를 외부 공개 사이트(Cloudflare)로 라이브 서빙하는 노출 도구. 개인용 NAS 와 달리 \"보여줄 것만 고른 창\".\n\n## 이음매\n맥이 요청 시 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성(인덱싱 없음). 공개 Worker(substrate)는 slug 게이트 + 지연 캐시만. R2 는 SPA 호스팅 + 캐시.\n\n## 보안\nbare 루트는 잠금 — 모든 갤러리는 바스켓(/s/<5자 코드>). 폴더가 어느 주소에 담기느냐가 곧 보안 경계. EXIF/GPS 는 기본 제거.",
+  "version": "0.2.0",
   "guide_file": "guide.md",
   "tools": [
     {
       "name": "showcase_op",
-      "description": "선택 폴더를 외부 공개 사이트로 비추는 노출 제어.\n\n## op 분기\n- status (기본): 공개 폴더 목록·공개 URL·용량·동기화 시각 + 전역 설정 반환. items[] 각 폴더에 title/meta/path/url, 최상위 settings{access,strip_exif,push_originals,transcode_video}.\n- add: path 폴더를 공개(title 표시명, mode media|files) 후 첫 동기화.\n- remove: path 공개 해제. purge=true 면 R2 객체도 삭제.\n- sync: path(생략 시 전체) 썸네일·매니페스트 R2 재push. 증분(mtime·크기).\n- config: 전역 설정 갱신(access link_only|public, strip_exif, push_originals, transcode_video).\n\n## 바스켓 (여러 비밀 공개주소)\n- basket_list: 바스켓 목록(title·비밀 URL·담긴 폴더 수).\n- basket_save: basket_id 없으면 새 바스켓 생성(긴 랜덤 slug 발급), 있으면 이름 변경.\n- basket_detail: 바스켓 하나 상세 — 전 폴더에 소속여부·담기/빼기 액션 부착(앱 드릴).\n- basket_toggle: basket_id 바스켓에 folder_id 폴더 담기/빼기(토글). 담을 때 미동기화면 백그라운드 sync.\n- basket_delete: basket_id 바스켓(비밀주소) 삭제. 폴더·썸네일 자체는 보존.\n폴더의 루트 공개(hidden)와 바스켓 소속은 독립 — 루트에서 내리고 바스켓에만 담으면 그 비밀주소로만 공개.",
+      "description": "선택 폴더를 외부 공개 사이트로 라이브 서빙하는 노출 제어.\n\n## op 분기\n- status (기본): 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 반환. items[] 각 폴더에 title/meta/path, 최상위 settings{strip_exif,transcode_video,public_base}.\n- add: path 폴더를 목록에 추가(title 표시명, mode media|files). 추가만으론 비공개 — 바스켓에 담아야 공개.\n- remove: path 폴더 제거(모든 주소에서 빠짐). 원본 파일은 안 지움.\n- config: path 있으면 폴더 표시명, 없으면 전역 설정(strip_exif, transcode_video, public_base).\n\n## 바스켓 (공개 주소)\n- basket_list: 바스켓 목록(title·URL·담긴 폴더 수).\n- basket_save: basket_id 없으면 새 바스켓 생성(5자 코드 slug, all_folders=true면 전체공개 갤러리), 있으면 이름 변경.\n- basket_detail: 바스켓 하나 상세 — 전 폴더에 소속여부·담기/빼기 액션 부착(앱 드릴).\n- basket_toggle: basket_id 바스켓에 folder_id 폴더 담기/빼기(토글). 담는 즉시 라이브 공개.\n- basket_delete: basket_id 바스켓(주소) 삭제. 폴더 자체는 보존.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "status(기본)/add/remove/sync/config/detail/basket_list/basket_save/basket_detail/basket_toggle/basket_delete",
+            "description": "status(기본)/add/remove/config/detail/basket_list/basket_save/basket_detail/basket_toggle/basket_delete",
             "enum": [
               "status",
               "add",
               "remove",
-              "sync",
               "config",
               "detail",
               "basket_list",
@@ -32,7 +31,7 @@
           },
           "path": {
             "type": "string",
-            "description": "폴더 절대경로 (add/remove/sync/detail/config 폴더별)"
+            "description": "폴더 절대경로 (add/remove/detail/config 폴더별)"
           },
           "basket_id": {
             "type": "string",
@@ -50,10 +49,6 @@
             "type": "string",
             "description": "표시명 (add·config 폴더별·basket_save 바스켓 이름)"
           },
-          "hidden": {
-            "type": "boolean",
-            "description": "config 폴더별 — true면 비공개(R2에서 내림·목록 제외), false면 공개(재업로드)"
-          },
           "mode": {
             "type": "string",
             "enum": [
@@ -62,29 +57,17 @@
             ],
             "description": "media=사진·동영상 그리드, files=파일 전체 (add, 기본 media)"
           },
-          "purge": {
-            "type": "boolean",
-            "description": "remove 시 R2 객체도 삭제 (기본 false)"
-          },
-          "access": {
-            "type": "string",
-            "enum": [
-              "link_only",
-              "public"
-            ],
-            "description": "config — 링크전용/완전공개"
-          },
           "strip_exif": {
             "type": "boolean",
-            "description": "config — 위치·EXIF 제거"
-          },
-          "push_originals": {
-            "type": "boolean",
-            "description": "config — 원본까지 업로드 (false면 썸네일만)"
+            "description": "config 전역 — 원본 사진에서 위치·EXIF 제거"
           },
           "transcode_video": {
             "type": "boolean",
-            "description": "config — 동영상 H.264 변환"
+            "description": "config 전역 — 동영상 H.264 변환"
+          },
+          "public_base": {
+            "type": "string",
+            "description": "config 전역 — 공개 사이트 base URL"
           }
         },
         "additionalProperties": true

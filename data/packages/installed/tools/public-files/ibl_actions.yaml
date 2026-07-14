@@ -5,8 +5,8 @@ nodes:
         returns: items
         fixture: '[others:showcase]{op: "status"}'
         runs_on: mac_only
-        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/sync/config + 바스켓(basket_*). 개인용 NAS 와 달리 "보여줄 것만 고른 창". 썸네일·매니페스트를 R2 로 push, 맥이 자도 공개 URL 은 켜져 있음. 바스켓=여러 비밀 공개주소(각기 다른 폴더 부분집합을 긴 랜덤 slug 주소로 노출). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
-        target_description: 'op:status(공개 폴더 목록·URL·용량·동기화 시각 + 전역 설정 반환) / add(path 폴더를 공개, title 표시명·mode media|files) / remove(path 공개 해제, purge=true 면 R2 객체도 삭제) / sync(path 또는 전체 재동기화) / config(access link_only|public·strip_exif·push_originals·transcode_video 등 전역 설정 갱신). 바스켓(여러 비밀 공개주소): basket_list / basket_save(title, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더 선택이 곧 보안 경계 — 고른 폴더만 그 주소에 존재. 폴더의 루트 공개(hidden)와 바스켓 소속은 독립.'
+        description: '선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/config + 바스켓(basket_*). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 그 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성, 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자 코드>). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.'
+        target_description: 'op:status(추가한 폴더 목록·각 폴더가 담긴 주소 + 전역 설정 반환) / add(path 폴더를 추가, title 표시명·mode media|files — 추가만으론 비공개, 바스켓에 담아야 공개) / remove(path 폴더 제거, 모든 주소에서 빠짐) / config(path 있으면 폴더 표시명, 없으면 전역 strip_exif·transcode_video·public_base). 바스켓(공개 주소): basket_list / basket_save(title, all_folders=true면 전체공개 갤러리, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더가 어느 주소에 담기느냐가 곧 보안 경계.'
         target_key: op
         group: showcase
         router: handler
@@ -14,18 +14,17 @@ nodes:
         ops:
           default: status
           values:
-            status: 공개 폴더 목록·URL·용량·동기화 상태 + 전역 설정 조회
-            add: 폴더를 공개 목록에 추가하고 첫 동기화
-            remove: 폴더 공개 해제 (purge=true 면 R2 객체도 삭제)
-            sync: 썸네일·매니페스트(설정 시 원본) R2 재push
-            config: 설정 갱신 — path 있으면 폴더별(표시명·공개/비공개), 없으면 전역(접근·EXIF·원본·동영상)
+            status: 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 조회
+            add: 폴더를 목록에 추가 (바스켓에 담아야 공개; 인덱싱 없음)
+            remove: 폴더 제거 (모든 주소에서 빠짐)
+            config: 설정 갱신 — path 있으면 폴더 표시명, 없으면 전역(EXIF·동영상 변환·public_base)
             detail: 폴더 하나 상세 (앱 드릴용)
-            basket_list: 바스켓(비밀 공개주소) 목록 — 각 바스켓의 title·URL·담긴 폴더 수
-            basket_save: 바스켓 생성(basket_id 없으면 긴 랜덤 slug 발급) 또는 이름 변경(basket_id 있으면)
+            basket_list: 바스켓(공개 주소) 목록 — 각 주소의 title·URL·담긴 폴더 수
+            basket_save: 바스켓 생성(basket_id 없으면 5자 코드 slug 발급, all_folders=전체공개) 또는 이름 변경
             basket_detail: 바스켓 하나 상세 (앱 드릴용) — 전 폴더에 소속여부·담기/빼기 액션 부착
             basket_toggle: 바스켓에 폴더 하나 담기/빼기 (basket_id + folder_id)
-            basket_delete: 바스켓(비밀주소) 삭제 — 폴더 자체는 보존
-        implementation: 'public-files 패키지 showcase_op — 폴더 walk→썸네일(self:photo 재사용)→(EXIF 제거·동영상 H.264 변환)→R2 push→manifest.json. 상태·설정은 data/showcase_state.json 에 영속. 공개 Worker 는 manifest.json 계약만 안다(이음매). P0=어휘 골격(스텁).'
+            basket_delete: 바스켓(주소) 삭제 — 폴더 자체는 보존
+        implementation: 'public-files 패키지 showcase_op — 상태(폴더·바스켓)만 data/showcase_state.json 에 관리. 목록·썸네일·원본은 맥이 요청 시 라이브 서빙(backend/api_showcase.py: /showcase/list·thumb·media). 공개 Worker(substrate)는 slug 게이트 + 지연 캐시만. R2 는 SPA 호스팅 + 썸네일/원본 캐시.'
         keywords:
         - 공개 파일
         - 공개 폴더
@@ -44,20 +43,16 @@ nodes:
           modes:
           - name: 폴더
             auto_run: true
-            note: 여기 폴더는 '바스켓' 탭에서 주소에 담아야 공개됩니다. 폴더만으론 어디에도 안 보여요.
+            note: 여기 폴더는 '바스켓' 탭에서 주소에 담아야 공개됩니다. 담는 즉시 라이브로 보이고, 파일을 옮기거나 지우면 자동 반영돼요(동기화 불필요).
             action: '[others:showcase]{op: "status"}'
-            buttons:
-            - label: ↻ 전체 동기화
-              action: '[others:showcase]{op: "sync"}'
-              refresh: true
             view:
             - type: kv
               title: 안내
               rows:
               - k: 🔒 공개 방식
                 v: bare 주소(…/)는 잠겨 있습니다. 공유는 '바스켓' 탭에서 주소(…/s/코드)를 만들어 그 주소로만.
-              - k: 📁 이 목록
-                v: 추가·동기화한 폴더들입니다. 바스켓에 담기 전엔 공개되지 않습니다.
+              - k: ⚡ 라이브
+                v: 인덱싱이 없습니다. 폴더를 주소에 담으면 파일시스템 그대로 실시간 공개 — 옮기고 지우면 즉시 반영.
             - type: card_list
               from: items
               empty_from: message
@@ -78,12 +73,10 @@ nodes:
                   action: '[others:showcase]{op: "config", path: "{folder.path}", title: "$title"}'
                   button: 저장
                   actions:
-                  - label: ↻ 이 폴더 동기화
-                    action: '[others:showcase]{op: "sync", path: "{folder.path}"}'
                   - label: 폴더 제거 (모든 주소에서)
-                    action: '[others:showcase]{op: "remove", path: "{folder.path}", purge: true}'
+                    action: '[others:showcase]{op: "remove", path: "{folder.path}"}'
                     style: danger
-                    confirm: 이 폴더를 목록·모든 바스켓에서 빼고 R2에서도 지울까요?
+                    confirm: 이 폴더를 목록·모든 주소에서 뺄까요? (원본 파일은 안 지웁니다)
                     back: true
           - name: 폴더 추가
             auto_run: true
@@ -178,34 +171,21 @@ nodes:
               button: 주소 만들기
           - name: 설정
             auto_run: true
-            note: 공개 사이트 전역 설정. 개인 사진이면 링크 전용을 권합니다.
+            note: 원본 서빙 방식 설정. 개인 사진이면 위치·EXIF 제거를 켜두세요.
             action: '[others:showcase]{op: "status"}'
             view:
             - type: form
               title: 공개 설정
               fields:
-              - key: access
-                label: 접근
-                type: select
-                value: '{settings.access}'
-                options:
-                - value: link_only
-                  label: 링크 전용 (아는 사람만)
-                - value: public
-                  label: 완전 공개
               - key: strip_exif
-                label: 위치·EXIF 제거
+                label: 위치·EXIF 제거 (사진 원본에서)
                 type: toggle
                 value: '{settings.strip_exif}'
-              - key: push_originals
-                label: 원본까지 업로드 (끄면 썸네일만)
-                type: toggle
-                value: '{settings.push_originals}'
               - key: transcode_video
-                label: 동영상 H.264 변환
+                label: 동영상 H.264 변환 (브라우저 재생용)
                 type: toggle
                 value: '{settings.transcode_video}'
-              action: '[others:showcase]{op: "config", access: "$access", strip_exif: "$strip_exif", push_originals: "$push_originals", transcode_video: "$transcode_video"}'
+              action: '[others:showcase]{op: "config", strip_exif: "$strip_exif", transcode_video: "$transcode_video"}'
               button: 저장
 
 # tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
@@ -214,59 +194,55 @@ tool_json:
   header:
     id: public-files
     name: Public Files
-    description: '선택한 폴더를 외부 공개 사이트(Cloudflare R2 + Worker)로 비추는 노출 도구. 개인용 NAS 와 달리 "보여줄 것만 고른 창".
+    description: '선택한 폴더를 외부 공개 사이트(Cloudflare)로 라이브 서빙하는 노출 도구. 개인용 NAS 와 달리 "보여줄 것만 고른 창".
 
 
       ## 이음매
 
-      맥은 썸네일·매니페스트를 만들어 R2 로 push 하고, 공개 Worker 는 manifest.json 계약만 읽어 그린다. 앱을 지워도 사이트는 마지막 상태로 산다.
+      맥이 요청 시 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성(인덱싱 없음). 공개 Worker(substrate)는 slug 게이트 + 지연 캐시만. R2 는 SPA 호스팅 + 캐시.
 
 
       ## 보안
 
-      폴더 선택이 곧 보안 경계 — 고른 폴더만 공개 사이트에 존재한다. EXIF/GPS 는 기본 제거, 접근은 기본 링크 전용(토큰).'
-    version: 0.1.0
+      bare 루트는 잠금 — 모든 갤러리는 바스켓(/s/<5자 코드>). 폴더가 어느 주소에 담기느냐가 곧 보안 경계. EXIF/GPS 는 기본 제거.'
+    version: 0.2.0
     guide_file: guide.md
   tools:
   - name: showcase_op
-    description: '선택 폴더를 외부 공개 사이트로 비추는 노출 제어.
+    description: '선택 폴더를 외부 공개 사이트로 라이브 서빙하는 노출 제어.
 
 
       ## op 분기
 
-      - status (기본): 공개 폴더 목록·공개 URL·용량·동기화 시각 + 전역 설정 반환. items[] 각 폴더에 title/meta/path/url, 최상위 settings{access,strip_exif,push_originals,transcode_video}.
+      - status (기본): 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 반환. items[] 각 폴더에 title/meta/path, 최상위 settings{strip_exif,transcode_video,public_base}.
 
-      - add: path 폴더를 공개(title 표시명, mode media|files) 후 첫 동기화.
+      - add: path 폴더를 목록에 추가(title 표시명, mode media|files). 추가만으론 비공개 — 바스켓에 담아야 공개.
 
-      - remove: path 공개 해제. purge=true 면 R2 객체도 삭제.
+      - remove: path 폴더 제거(모든 주소에서 빠짐). 원본 파일은 안 지움.
 
-      - sync: path(생략 시 전체) 썸네일·매니페스트 R2 재push. 증분(mtime·크기).
-
-      - config: 전역 설정 갱신(access link_only|public, strip_exif, push_originals, transcode_video).
+      - config: path 있으면 폴더 표시명, 없으면 전역 설정(strip_exif, transcode_video, public_base).
 
 
-      ## 바스켓 (여러 비밀 공개주소)
+      ## 바스켓 (공개 주소)
 
-      - basket_list: 바스켓 목록(title·비밀 URL·담긴 폴더 수).
+      - basket_list: 바스켓 목록(title·URL·담긴 폴더 수).
 
-      - basket_save: basket_id 없으면 새 바스켓 생성(긴 랜덤 slug 발급), 있으면 이름 변경.
+      - basket_save: basket_id 없으면 새 바스켓 생성(5자 코드 slug, all_folders=true면 전체공개 갤러리), 있으면 이름 변경.
 
       - basket_detail: 바스켓 하나 상세 — 전 폴더에 소속여부·담기/빼기 액션 부착(앱 드릴).
 
-      - basket_toggle: basket_id 바스켓에 folder_id 폴더 담기/빼기(토글). 담을 때 미동기화면 백그라운드 sync.
+      - basket_toggle: basket_id 바스켓에 folder_id 폴더 담기/빼기(토글). 담는 즉시 라이브 공개.
 
-      - basket_delete: basket_id 바스켓(비밀주소) 삭제. 폴더·썸네일 자체는 보존.
-
-      폴더의 루트 공개(hidden)와 바스켓 소속은 독립 — 루트에서 내리고 바스켓에만 담으면 그 비밀주소로만 공개.'
+      - basket_delete: basket_id 바스켓(주소) 삭제. 폴더 자체는 보존.'
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: status(기본)/add/remove/sync/config/detail/basket_list/basket_save/basket_detail/basket_toggle/basket_delete
+          description: status(기본)/add/remove/config/detail/basket_list/basket_save/basket_detail/basket_toggle/basket_delete
         path:
           type: string
-          description: 폴더 절대경로 (add/remove/sync/detail/config 폴더별)
+          description: 폴더 절대경로 (add/remove/detail/config 폴더별)
         basket_id:
           type: string
           description: 바스켓 id (basket_save 개명·basket_detail·basket_toggle·basket_delete)
@@ -279,31 +255,19 @@ tool_json:
         title:
           type: string
           description: 표시명 (add·config 폴더별·basket_save 바스켓 이름)
-        hidden:
-          type: boolean
-          description: config 폴더별 — true면 비공개(R2에서 내림·목록 제외), false면 공개(재업로드)
         mode:
           type: string
           enum:
           - media
           - files
           description: 'media=사진·동영상 그리드, files=파일 전체 (add, 기본 media)'
-        purge:
-          type: boolean
-          description: remove 시 R2 객체도 삭제 (기본 false)
-        access:
-          type: string
-          enum:
-          - link_only
-          - public
-          description: config — 링크전용/완전공개
         strip_exif:
           type: boolean
-          description: config — 위치·EXIF 제거
-        push_originals:
-          type: boolean
-          description: config — 원본까지 업로드 (false면 썸네일만)
+          description: config 전역 — 원본 사진에서 위치·EXIF 제거
         transcode_video:
           type: boolean
-          description: config — 동영상 H.264 변환
+          description: config 전역 — 동영상 H.264 변환
+        public_base:
+          type: string
+          description: config 전역 — 공개 사이트 base URL
       additionalProperties: true

@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen, Zap, Brain, Gauge, Target } from 'lucide-react';
+import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen, Zap, Brain, Gauge, Target, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
@@ -1110,6 +1110,36 @@ function CognitionChip({ info }: { info: NonNullable<ChatMessage['cognition']> }
 
 // ── 메시지 버블 ──
 
+/**
+ * 메시지 복사 버튼 — 버블 호버 시 나타나 그 메시지 하나의 텍스트를 클립보드로 복사.
+ * Electron 샌드박스 렌더러에서 preload clipboard 동기 브리지는 throw 하므로
+ * navigator.clipboard(기본 권한으로 동작)를 사용한다.
+ */
+function MessageCopyButton({ text, tone }: { text: string; tone: 'onLight' | 'onDark' | 'onWarm' }) {
+  const [copied, setCopied] = useState(false);
+  const color = tone === 'onDark'
+    ? 'text-white/70 hover:text-white hover:bg-white/15'
+    : tone === 'onWarm'
+    ? 'text-[#A09080] hover:text-[#6B5B4F] hover:bg-black/5'
+    : 'text-gray-400 hover:text-gray-600 hover:bg-black/5';
+  return (
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch { /* clipboard 거부 시 무시 */ }
+      }}
+      title="이 메시지 복사"
+      className={`opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity inline-flex items-center justify-center p-1 rounded ${color}`}
+    >
+      {copied ? <Check size={13} /> : <Copy size={13} />}
+    </button>
+  );
+}
+
 function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; variant?: 'warm' | 'neutral' }) {
   const isUser = message.role === 'user';
 
@@ -1120,7 +1150,7 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
 
   if (variant === 'neutral') {
     return (
-      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-[80%] min-w-0 break-words rounded-2xl px-4 py-2.5 ${
           isUser
             ? 'bg-amber-500 text-white rounded-br-md'
@@ -1134,13 +1164,16 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
             toolActivities={message.toolActivities}
             variant="neutral"
           />
+          <div className={`flex ${isUser ? 'justify-start' : 'justify-end'} -mb-0.5 mt-0.5`}>
+            <MessageCopyButton text={message.content} tone={isUser ? 'onDark' : 'onLight'} />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div className={`group flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white ${
         isUser
           ? 'bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8]'
@@ -1161,8 +1194,9 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
           toolActivities={message.toolActivities}
           variant="warm"
         />
-        <div className={`text-xs mt-1 ${isUser ? 'text-blue-200' : 'text-[#A09080]'}`}>
-          {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+        <div className={`flex items-center gap-1 text-xs mt-1 ${isUser ? 'flex-row-reverse text-blue-200' : 'text-[#A09080]'}`}>
+          <span>{message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <MessageCopyButton text={message.content} tone={isUser ? 'onDark' : 'onWarm'} />
         </div>
       </div>
     </div>

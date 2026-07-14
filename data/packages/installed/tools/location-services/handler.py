@@ -1123,6 +1123,16 @@ def execute(tool_input: dict, context) -> str:
         result = amadeus_travel_search(tool_input)
         return json.dumps(result, ensure_ascii=False, indent=2)
 
+    elif tool_name == "search_stay":
+        # 국내 숙박·단기임대 (여기어때/삼삼엠투/TourAPI) — 소스별 로직은 tool_stay.py
+        import importlib.util as _ilu
+        _stay_path = os.path.join(os.path.dirname(__file__), "tool_stay.py")
+        _spec = _ilu.spec_from_file_location("tool_stay", _stay_path)
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        result = _mod.search_stay(tool_input)
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
     elif tool_name == "search_restaurants":
         query = tool_input.get("query", "")
         if not query:

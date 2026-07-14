@@ -66,15 +66,27 @@ export const LocationMap = memo(function LocationMap({ data }: LocationMapProps)
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    // 마커 추가 (유효한 마커만)
+    // 마커 추가 (유효한 마커만) — meta(가격 등)·url(상세 링크)이 있으면 클릭 팝업으로 노출
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     validMarkers.forEach((marker, index) => {
       const isCenter = index === 0;
       const markerIcon = L.divIcon({
         className: 'custom-marker',
-        html: `<div style="background: ${isCenter ? '#3B82F6' : '#EF4444'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">${marker.name || '위치'}</div>`,
+        html: `<div style="background: ${isCenter ? '#3B82F6' : '#EF4444'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer;">${esc(marker.name || '위치')}</div>`,
         iconAnchor: [40, 40],
       });
-      L.marker([marker.lat, marker.lng], { icon: markerIcon }).addTo(map);
+      const m = L.marker([marker.lat, marker.lng], { icon: markerIcon }).addTo(map);
+      const parts = [`<strong style="font-size:12px;">${esc(marker.name || '위치')}</strong>`];
+      if (marker.meta) {
+        parts.push(`<div style="font-size:11px; color:#555; margin-top:2px;">${esc(marker.meta)}</div>`);
+      }
+      if (marker.url) {
+        // target=_blank → Electron setWindowOpenHandler가 기본 브라우저로 연다
+        parts.push(`<a href="${esc(marker.url)}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top:4px; font-size:11px; color:#3B82F6; font-weight:bold;">자세히 보기 →</a>`);
+      }
+      if (marker.meta || marker.url) {
+        m.bindPopup(parts.join(''), { offset: L.point(-28, -36) });
+      }
     });
 
     // 마커가 여러 개면 모두 보이도록 범위 조정

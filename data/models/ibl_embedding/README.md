@@ -5,36 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4108
+- dataset_size:4411
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 시스템 AI 창 열기
+- source_sentence: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
   sentences:
-  - '[sense:search_naver]'
-  - '[limbs:open_window]'
-  - '[sense:crawl] >> [engines:slide] >> [limbs:os_open]'
-- source_sentence: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를
-    직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
-  sentences:
-  - '[sense:crypto]'
-  - '[sense:weather] & [sense:search_ddg]'
-  - '[sense:host]'
-- source_sentence: 일러스트가 들어간 강의 슬라이드 만들어
-  sentences:
-  - '[sense:startup]'
-  - '[limbs:browser]'
-  - '[engines:image_gemini] & [engines:image_gemini]'
-- source_sentence: 이 약 기록 잘못됐어 빼줘
-  sentences:
-  - '[self:file_find]'
+  - '[self:discover] >> [engines:image_gemini]'
   - '[self:health]'
-  - '[sense:paper] >> [self:output]'
-- source_sentence: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
+  - '[self:manage_events]'
+- source_sentence: 특정 질환의 자연 경과 및 보존적 치료 효과 확인
   sentences:
-  - '[limbs:screen] >> [engines:image_read]'
-  - 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
-  - '[table:document]'
+  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+  - 웹페이지 원문 읽기 (URL 필요). items=문단 단위(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+  - '[others:auto_response]'
+- source_sentence: Guardian 한국 경제 검색
+  sentences:
+  - '[self:local_save]'
+  - '[limbs:music]'
+  - '[sense:search_guardian]'
+- source_sentence: 사진 보여줘 앱 열어
+  sentences:
+  - '[self:work_guideline]'
+  - '[sense:paper]'
+  - '[limbs:photo_manager]'
+- source_sentence: 페이지 로딩 기다려
+  sentences:
+  - '[self:memory]'
+  - 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면
+    채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
+  - '[limbs:browser]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    'macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.',
-    '[limbs:screen] >> [engines:image_read]',
-    '전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.',
+    '페이지 로딩 기다려',
+    '[limbs:browser]',
+    '[self:memory]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.8024, -0.0384],
-#         [ 0.8024,  1.0000,  0.0134],
-#         [-0.0384,  0.0134,  1.0000]])
+# tensor([[ 1.0000,  0.8532, -0.1626],
+#         [ 0.8532,  1.0000, -0.1798],
+#         [-0.1626, -0.1798,  1.0000]])
 ```
 
 <!--
@@ -146,19 +146,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,108 training samples
+* Size: 4,411 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 13.03 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.73 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 12.76 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.17 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                                                               | sentence_1                                                                                                                                                                                                    |
-  |:-------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>{국가명}의 {경제지표}를 {특정 기간} 동안 시각화해줄래</code>                            | <code>세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items(행 dict — 연도+지표값) 반환, 소비자가 table 재구성.</code>                                                                                                         |
-  | <code>AI 뉴스 영상 좀 검색해줘해</code>                                            | <code>[sense:search_youtube]</code>                                                                                                                                                                           |
-  | <code>특정 도서의 구매 링크를 포함한 홍보 배너 컴포넌트를 만들어줘하여 웹사이트의 특정 섹션에 통합 및 검증하기</code> | <code>[sense:search_naver] 교보문고", type: "book"} >> [self:write]/book-banner-section.tsx", content: ""} >> [self:edit]/page.tsx", old_string: "", new_string: ""} >> [engines:web]"} >> [limbs:browser]</code> |
+  | sentence_0                          | sentence_1                                       |
+  |:------------------------------------|:-------------------------------------------------|
+  | <code>AI 공모전 찾아서 문서로 정리해</code>     | <code>[sense:contest] >> [table:document]</code> |
+  | <code>/Users/me/Pictures 갤러리</code> | <code>[self:photo]</code>                        |
+  | <code>네이버 카페 중고 거래 게시글 검색</code>    | <code>[sense:used]</code>                        |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -280,7 +280,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.9728 | 500  | 0.0177        |
+| 0.9058 | 500  | 0.0364        |
 
 
 ### Framework Versions

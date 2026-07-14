@@ -190,6 +190,111 @@ nodes:
                 title: '{title}'
                 lines:
                 - '{meta}'
+      stay:
+        aliases:
+          region: [query, city, keyword, location]
+          checkin: [check_in, start_date, startDate]
+          checkout: [check_out, end_date, endDate]
+        returns: items
+        fixture: '[sense:stay]{region: "제주", source: "goodchoice"}'
+        description: 국내 숙박·단기임대 검색 (source 분기). goodchoice=여기어때 호텔·모텔·펜션 실시간 할인가(기본) / 33m2=삼삼엠투 한 달 살기 주간임대 / tourapi=관광공사 공식 숙박 디렉토리. 통합 통화 items.
+        group: travel
+        target_description: |
+          숙박·단기임대 검색. source로 플랫폼 선택. region=지역/키워드 필수.
+          - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 상한(원). limit(기본20, 페이지 자동추적 최대100).
+          - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
+          - source=tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록·연락처·좌표. region=광역명(서울/제주 등 → 지역목록) 또는 키워드(예 "경주 한옥" → 키워드검색). limit(기본20).
+          해외 호텔은 [sense:travel]{op: "hotel"} (Amadeus).
+        router: handler
+        tool: search_stay
+        implementation: tool_stay.py — goodchoice=yeogi.com __NEXT_DATA__ SSR 추출(curl_cffi 크롬위장, 레거시 goodchoice.kr은 keyword 드랍이라 yeogi 직접) / 33m2=api.33m2.co.kr/v1/rooms 공개 JSON(키불요) / tourapi=KorService2 searchKeyword2·areaBasedList2(contentTypeId=32, DATA_GO_KR_API_KEY). 세 소스 모두 items+map_data 통화.
+        keywords:
+        - 숙박
+        - 숙소
+        - 호텔
+        - 모텔
+        - 펜션
+        - 게스트하우스
+        - 한옥
+        - 여기어때
+        - 한달살기
+        - 한달살이
+        - 단기임대
+        - 삼삼엠투
+        - 예약
+        - 리조트
+        app:
+          instrument: stay
+          icon: 🏨
+          name: 숙소
+          order: 17
+          modes:
+          - name: 숙소검색
+            inputs:
+            - key: region
+              type: text
+              label: 지역
+              placeholder: '지역 (예: 제주, 강남)'
+              required: true
+            - key: type
+              type: select
+              label: 종류
+              options:
+              - value: hotel
+                label: 호텔·리조트
+              - value: motel
+                label: 모텔
+              - value: pension
+                label: 펜션
+              - value: guesthouse
+                label: 게스트하우스
+            - key: checkin
+              type: text
+              label: 체크인
+              placeholder: 'YYYY-MM-DD (비우면 오늘)'
+            - key: checkout
+              type: text
+              label: 체크아웃
+              placeholder: 'YYYY-MM-DD'
+            action: '[sense:stay]{source: "goodchoice", region: "$region", type: "$type", checkin: "$checkin", checkout: "$checkout"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 숙소를 찾지 못했습니다
+              card:
+                title: '{title}'
+                image: '{image}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 여기어때에서 보기 →
+          - name: 한달살기
+            inputs:
+            - key: region
+              type: text
+              label: 지역
+              placeholder: '지역 (예: 제주, 평택)'
+              required: true
+            - key: max_week_fee
+              type: text
+              label: 주간요금 상한(원)
+              placeholder: '예: 300000'
+            action: '[sense:stay]{source: "33m2", region: "$region", max_week_fee: "$max_week_fee"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 매물이 없습니다
+              card:
+                title: '{title}'
+                image: '{image}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 삼삼엠투에서 보기 →
   limbs:
     actions:
       show_map:
@@ -435,3 +540,58 @@ tool_json:
       required:
       - lat
       - lon
+  - name: search_stay
+    description: '국내 숙박·단기임대 검색 (source 분기). 통합 통화 items[{title,meta,summary,url,image,lat,lng}] 반환.
+
+
+      ## source
+
+      - goodchoice(기본): 여기어때 — 호텔·모텔·펜션·게스트하우스 실시간 할인가·평점. checkin/checkout으로 날짜별 요금.
+
+      - 33m2: 삼삼엠투 한 달 살기 — 주 단위 임대료(usingFee)·관리비·평수.
+
+      - tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록.
+
+
+      ## 사용 예시
+
+      - region=''제주'', source=''goodchoice'', checkin=''2026-08-10'', checkout=''2026-08-11''
+
+      - region=''평택'', source=''33m2'', max_week_fee=300000
+
+      - region=''경주 한옥'', source=''tourapi'''
+    input_schema:
+      type: object
+      properties:
+        region:
+          type: string
+          description: 지역 또는 키워드 (예 "제주", "강남", "경주 한옥")
+        source:
+          type: string
+          description: goodchoice(여기어때, 기본) / 33m2(삼삼엠투 한달살기) / tourapi(관광공사 디렉토리)
+        type:
+          type: string
+          description: goodchoice 전용 — hotel(기본)/motel/pension/camping/guesthouse
+        checkin:
+          type: string
+          description: 체크인/입주 시작 (YYYY-MM-DD)
+        checkout:
+          type: string
+          description: 체크아웃/입주 종료 (YYYY-MM-DD)
+        personal:
+          type: integer
+          description: goodchoice 전용 — 인원 (기본 2)
+        max_price:
+          type: integer
+          description: goodchoice 전용 — 1박 가격 상한 (원)
+        max_week_fee:
+          type: integer
+          description: 33m2 전용 — 주간요금 상한 (원, 서버필터)
+        min_week_fee:
+          type: integer
+          description: 33m2 전용 — 주간요금 하한 (원, 서버필터)
+        limit:
+          type: integer
+          description: 결과 개수 (기본 20)
+      required:
+      - region

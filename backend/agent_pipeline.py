@@ -20,6 +20,32 @@ DB save_message, 태스크·세션·클라이언트 관리, 취소/타임아웃 
 from typing import Generator, Dict, Any, List, Optional
 
 
+def _extract_map_tag_texts(text: str) -> List[str]:
+    """응답 텍스트에 실린 [MAP:{...}] 지도 태그를 원문 그대로 추출 (대괄호 짝 맞춤 —
+    프론트 parseMapData 와 동일 규칙). 반성 턴이 응답을 교체할 때 이월용."""
+    tags, i = [], 0
+    while True:
+        i = text.find("[MAP:", i)
+        if i < 0:
+            break
+        depth, j = 0, i + 5
+        while j < len(text):
+            ch = text[j]
+            if ch == "[":
+                depth += 1
+            elif ch == "]":
+                if depth == 0:
+                    break
+                depth -= 1
+            j += 1
+        if j < len(text):
+            tags.append(text[i:j + 1])
+            i = j + 1
+        else:
+            break
+    return tags
+
+
 def drain_stream(gen) -> Dict[str, Any]:
     """블로킹 진입점용 어댑터 — 제너레이터를 소비해 최종 응답만 취한다.
 
@@ -308,6 +334,16 @@ class CognitivePipelineMixin:
                             _refl_final = ev.get("content", "")
                         yield ev
                     if _refl_final and _refl_final.strip():
+                        # 원 응답 끝의 [MAP:] 지도 태그(프로바이더가 도구 결과에서 수확해
+                        # 재주입한 표시 봉투)는 반성 턴 출력에 없으므로 이월한다 —
+                        # 교체가 지도를 삼키던 유실 지점(에피소드 767). 전송 계층(WS)은
+                        # *final 이벤트*의 content 를 저장·전송하므로 갱신 final 을 다시 흘린다.
+                        _lost_maps = [t for t in _extract_map_tag_texts(final_content)
+                                      if t not in _refl_final]
+                        if _lost_maps:
+                            _refl_final = _refl_final.rstrip() + "\n\n" + "\n".join(_lost_maps)
+                            print(f"[SelfReflect] 지도 태그 {len(_lost_maps)}건 이월")
+                            yield {"type": "final", "content": _refl_final}
                         final_content = _refl_final
                         print(f"[SelfReflect] 반성 후 최종 응답 갱신 ({len(_refl_final)}자)")
 

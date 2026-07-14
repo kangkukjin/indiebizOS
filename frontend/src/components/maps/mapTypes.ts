@@ -11,6 +11,8 @@ export interface MarkerData {
   name: string;
   lat: number;
   lng: number;
+  meta?: string;   // 부가 정보 한 줄 (가격·평점 등) — 마커 팝업에 표시
+  url?: string;    // 상세 페이지 링크 — 마커 팝업에 "자세히 보기 →"로 표시
 }
 
 export interface LocationMapData {

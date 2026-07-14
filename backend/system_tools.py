@@ -1120,20 +1120,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             from workflow_engine import execute_pipeline
             result = execute_pipeline(parsed, project_path, agent_id=agent_id)
 
-        # 파이프라인 결과에서 map_data를 최상위로 승격
-        if isinstance(result, dict) and "results" in result:
-            for step_result in result.get("results", []):
-                step_str = step_result.get("result", "")
-                if isinstance(step_str, str) and "map_data" in step_str:
-                    try:
-                        step_data = json.loads(step_str)
-                        if isinstance(step_data, dict) and "map_data" in step_data:
-                            result["map_data"] = step_data["map_data"]
-                            del step_data["map_data"]
-                            step_result["result"] = json.dumps(step_data, ensure_ascii=False, indent=2)
-                            break
-                    except (json.JSONDecodeError, TypeError):
-                        pass
+        # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
+        #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)
 
         # --- 서킷 브레이커 상태 업데이트 ---
         # 실패: fails 증가, 한도 도달 시 open_until 설정(open/재-open). 성공: 항목 제거(reset → closed).
@@ -1250,6 +1238,72 @@ def _dict_to_json(result) -> str:
 
 
 
+# ============ 지도 봉투 수확 (단일 관문) ============
+# 채팅 지도 전달 계약: 핸들러가 map_data 봉투를 어디에 두든(단독 최상위 / 파이프 step 내부 /
+# 병렬 브랜치 = JSON-문자열-in-리스트-in-문자열) 여기 한 곳에서 재귀 수확해 [MAP:] 태그로 변환한다.
+# 프론트 parseMapData(chatUtils.ts)는 type==location_map|route_map 만 렌더하므로 정규화까지 책임진다.
+# 모양별 승격 분기 금지 — 실행 모양이 늘 때마다 지도가 유실되던 원인(2026-07-13 에피소드 760~763).
+
+def _pluck_map_envelopes(node, found, depth=0):
+    """결과 트리에서 map_data 봉투를 pop 으로 뽑아 수집(변이). 중첩 JSON 문자열도 파고들어,
+    뽑힌 층만 재직렬화해 되돌린다. 반환값 = 정리된 노드."""
+    if depth > 8:
+        return node
+    if isinstance(node, dict):
+        md = node.pop("map_data", None)
+        if isinstance(md, dict):
+            found.append(md)
+        for k in list(node.keys()):
+            node[k] = _pluck_map_envelopes(node[k], found, depth + 1)
+        return node
+    if isinstance(node, list):
+        return [_pluck_map_envelopes(v, found, depth + 1) for v in node]
+    if isinstance(node, str) and "map_data" in node:
+        try:
+            inner = json.loads(node)
+        except (json.JSONDecodeError, TypeError):
+            return node
+        n_before = len(found)
+        inner = _pluck_map_envelopes(inner, found, depth + 1)
+        if len(found) > n_before:
+            return json.dumps(inner, ensure_ascii=False, indent=2)
+        return node
+    return node
+
+
+def _merge_map_envelopes(envelopes):
+    """수확한 봉투들 → 프론트 렌더 계약으로 정규화. route_map 은 각자 유지,
+    location 계열(type 없는 레거시 {markers} 포함)은 마커 합집합 한 장으로 병합."""
+    routes, markers, seen = [], [], set()
+    for e in envelopes:
+        if not isinstance(e, dict):
+            continue
+        if e.get("type") == "route_map":
+            routes.append(e)
+            continue
+        for m in e.get("markers", []) or []:
+            try:
+                lat, lng = float(m.get("lat")), float(m.get("lng"))
+            except (TypeError, ValueError):
+                continue
+            key = (m.get("name"), round(lat, 6), round(lng, 6))
+            if key in seen:
+                continue
+            seen.add(key)
+            markers.append({**m, "lat": lat, "lng": lng})
+    out = list(routes)
+    if markers:
+        clat = sum(m["lat"] for m in markers) / len(markers)
+        clng = sum(m["lng"] for m in markers) / len(markers)
+        spread = max(max(abs(m["lat"] - clat) for m in markers),
+                     max(abs(m["lng"] - clng) for m in markers))
+        zoom = 10 if spread > 0.2 else (11 if spread > 0.05 else 13)
+        out.append({"type": "location_map",
+                    "center": {"name": "검색 결과", "lat": clat, "lng": clng},
+                    "zoom": zoom, "markers": markers})
+    return out
+
+
 # ============ 도구 중단 지원 ============
 
 # 현재 실행 중인 도구 스레드 추적 (cancel 시 사용)
@@ -1288,18 +1342,20 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         else:
             result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
 
-        # [MAP:...] 태그 변환 — 모든 도구 결과에서 map_data를 프론트엔드용 태그로 변환
-        # (동적 핸들러 경로에서 이미 처리된 경우, json.loads가 실패하므로 안전하게 건너뜀)
-        if isinstance(result, str):
+        # [MAP:...] 태그 변환 — 결과 트리 전체를 재귀 수확하는 단일 관문.
+        # 단독/파이프/병렬/중첩 깊이 무관. 태그는 결과 끝에 부착(프로바이더 재주입 regex가 끝 앵커).
+        if isinstance(result, str) and "map_data" in result:
             try:
-                result_data = json.loads(result)
-                if isinstance(result_data, dict) and "map_data" in result_data:
-                    map_data = result_data["map_data"]
-                    map_tag = f"\n\n[MAP:{json.dumps(map_data, ensure_ascii=False)}]"
-                    del result_data["map_data"]
-                    result = json.dumps(result_data, ensure_ascii=False, indent=2) + map_tag
+                tree = json.loads(result)
             except (json.JSONDecodeError, TypeError):
-                pass
+                tree = None
+            if tree is not None:
+                _found = []
+                tree = _pluck_map_envelopes(tree, _found)
+                _maps = _merge_map_envelopes(_found)
+                if _maps:
+                    _tags = "".join(f"\n\n[MAP:{json.dumps(m, ensure_ascii=False)}]" for m in _maps)
+                    result = json.dumps(tree, ensure_ascii=False, indent=2) + _tags
 
         # 결과에서 성공/실패 판단
         if isinstance(result, str):

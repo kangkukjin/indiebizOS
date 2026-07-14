@@ -104,6 +104,7 @@
     "nostr_phone_bridge",
     "notification_manager",
     "package_manager",
+    "phone_jobs",
     "phone_notifications",
     "project_manager",
     "prompt_benchmark",
@@ -153,8 +154,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 147,
-    "engine": 134,
+    "total": 148,
+    "engine": 135,
     "blocklist": 13
   }
 }

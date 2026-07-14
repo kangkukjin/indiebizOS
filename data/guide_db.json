@@ -1010,6 +1010,34 @@
         "joongna"
       ],
       "file": "used_market.md"
+    },
+    {
+      "id": "stay",
+      "name": "숙박·단기임대 검색 (기술 참조)",
+      "description": "[sense:stay] source 분기. goodchoice=여기어때 실시간 할인가(호텔·모텔·펜션·게스트하우스, yeogi.com 직접호출 함정) / 33m2=삼삼엠투 한달살기 주간임대 / tourapi=관광공사 공식 숙박 디렉토리. 자주 하는 실수.",
+      "keywords": [
+        "숙박",
+        "숙소",
+        "호텔",
+        "모텔",
+        "펜션",
+        "게스트하우스",
+        "한옥",
+        "stay",
+        "여기어때",
+        "goodchoice",
+        "yeogi",
+        "한달살기",
+        "한달살이",
+        "단기임대",
+        "삼삼엠투",
+        "33m2",
+        "예약",
+        "리조트",
+        "관광공사",
+        "tourapi"
+      ],
+      "file": "stay.md"
     }
   ]
 }

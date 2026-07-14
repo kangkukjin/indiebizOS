@@ -207,6 +207,58 @@
           "lon"
         ]
       }
+    },
+    {
+      "name": "search_stay",
+      "description": "국내 숙박·단기임대 검색 (source 분기). 통합 통화 items[{title,meta,summary,url,image,lat,lng}] 반환.\n\n## source\n- goodchoice(기본): 여기어때 — 호텔·모텔·펜션·게스트하우스 실시간 할인가·평점. checkin/checkout으로 날짜별 요금.\n- 33m2: 삼삼엠투 한 달 살기 — 주 단위 임대료(usingFee)·관리비·평수.\n- tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록.\n\n## 사용 예시\n- region='제주', source='goodchoice', checkin='2026-08-10', checkout='2026-08-11'\n- region='평택', source='33m2', max_week_fee=300000\n- region='경주 한옥', source='tourapi'",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string",
+            "description": "지역 또는 키워드 (예 \"제주\", \"강남\", \"경주 한옥\")"
+          },
+          "source": {
+            "type": "string",
+            "description": "goodchoice(여기어때, 기본) / 33m2(삼삼엠투 한달살기) / tourapi(관광공사 디렉토리)"
+          },
+          "type": {
+            "type": "string",
+            "description": "goodchoice 전용 — hotel(기본)/motel/pension/camping/guesthouse"
+          },
+          "checkin": {
+            "type": "string",
+            "description": "체크인/입주 시작 (YYYY-MM-DD)"
+          },
+          "checkout": {
+            "type": "string",
+            "description": "체크아웃/입주 종료 (YYYY-MM-DD)"
+          },
+          "personal": {
+            "type": "integer",
+            "description": "goodchoice 전용 — 인원 (기본 2)"
+          },
+          "max_price": {
+            "type": "integer",
+            "description": "goodchoice 전용 — 1박 가격 상한 (원)"
+          },
+          "max_week_fee": {
+            "type": "integer",
+            "description": "33m2 전용 — 주간요금 상한 (원, 서버필터)"
+          },
+          "min_week_fee": {
+            "type": "integer",
+            "description": "33m2 전용 — 주간요금 하한 (원, 서버필터)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 개수 (기본 20)"
+          }
+        },
+        "required": [
+          "region"
+        ]
+      }
     }
   ]
 }

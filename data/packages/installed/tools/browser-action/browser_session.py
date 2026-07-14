@@ -4,7 +4,7 @@ browser_session.py - BrowserSession 싱글톤 + 공통 유틸리티
 브라우저 세션 관리, ref 매핑, locator 탐색, 출력 경로 등
 모든 브라우저 도구 모듈이 공유하는 핵심 컴포넌트.
 
-Version: 4.0.0
+Version: 4.1.0
 """
 
 import os
@@ -29,6 +29,13 @@ AUTO_CLOSE_SECONDS = 180
 MAX_CONSOLE_LOGS = 1000
 MAX_NETWORK_LOGS = 500
 BLOCKED_URL_SCHEMES = {"javascript:", "data:", "file:", "vbscript:"}
+
+# 로그인 상태(쿠키+localStorage) 자동 영속 파일 — 시작 시 복원, 종료 시 저장.
+# 사람이 headless:false로 한 번 로그인해 두면 이후 headless 크롤도 같은 세션으로
+# 로그인 벽(네이버 카페 등)을 통과한다. launch_persistent_context 대신 storage_state를
+# 쓰는 이유: webcrawl과 browser-action이 각자 브라우저를 띄울 수 있어 프로필 디렉토리
+# 공유 시 Chromium ProcessSingleton 락 충돌이 나기 때문.
+AUTO_STATE_FILENAME = "_auto_state.json"
 
 # Stealth User-Agent (일반 Chrome처럼 보이도록)
 STEALTH_UA = (
@@ -131,6 +138,7 @@ class BrowserSession:
     - 네트워크 요청 캡처
     - Dialog(alert/confirm/prompt) 자동 처리
     - Stealth 모드 (봇 감지 우회)
+    - 로그인 상태 자동 영속 (data/browser_cookies/_auto_state.json — 시작 시 복원, 종료 시 저장)
     """
 
     _instance = None
@@ -202,7 +210,7 @@ class BrowserSession:
 
         if not self._pages or self._active_tab_id not in self._pages:
             await self._start_browser(headless)
-        elif self._browser and not self._browser.is_connected():
+        elif not self.is_active:
             await self._close_internal()
             await self._start_browser(headless)
         elif self._headless != headless:
@@ -230,12 +238,22 @@ class BrowserSession:
                 '--disable-dev-shm-usage',
             ]
         )
-        self._context = await self._browser.new_context(
+        context_kwargs = dict(
             viewport={'width': 1280, 'height': 720},
             locale='ko-KR',
             timezone_id='Asia/Seoul',
             user_agent=STEALTH_UA,
         )
+        # 저장된 로그인 상태(쿠키+localStorage) 자동 복원
+        state_path = get_cookies_dir() / AUTO_STATE_FILENAME
+        if state_path.exists():
+            context_kwargs["storage_state"] = str(state_path)
+        try:
+            self._context = await self._browser.new_context(**context_kwargs)
+        except Exception:
+            # 상태 파일이 손상됐으면 무시하고 깨끗한 컨텍스트로
+            context_kwargs.pop("storage_state", None)
+            self._context = await self._browser.new_context(**context_kwargs)
 
         # 새 탭(팝업) 자동 감지
         self._context.on("page", self._on_new_page)
@@ -454,6 +472,19 @@ class BrowserSession:
             logs = [l for l in logs if url_pattern in l.get("url", "")]
         return logs[-limit:]
 
+    # ── 로그인 상태 영속 ──
+
+    async def save_storage_state(self):
+        """로그인 상태(쿠키+localStorage)를 자동 상태 파일로 저장. 다음 시작 시 복원된다."""
+        if not self._context:
+            return
+        try:
+            path = get_cookies_dir() / AUTO_STATE_FILENAME
+            await self._context.storage_state(path=str(path))
+            os.chmod(path, 0o600)
+        except Exception:
+            pass
+
     # ── 종료 ──
 
     async def close(self):
@@ -463,6 +494,8 @@ class BrowserSession:
         if self._cleanup_task and not self._cleanup_task.done():
             self._cleanup_task.cancel()
             self._cleanup_task = None
+        # 닫기 전에 로그인 상태 저장 (headful 로그인 → 자동 종료 경로에서도 세션이 남도록)
+        await self.save_storage_state()
         for tab_id, page in list(self._pages.items()):
             try:
                 if not page.is_closed():

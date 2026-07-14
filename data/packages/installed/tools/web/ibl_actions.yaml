@@ -19,7 +19,7 @@ nodes:
         target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
         router: handler
         tool: crawl_website
-        implementation: 1차 requests+BeautifulSoup 정적 크롤링, 콘텐츠 부족 시 Chrome MCP(실제 브라우저)로 자동 폴백. JS 렌더링 사이트도 처리 가능.
+        implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
         target_key: url
       search_gnews:
         returns: items

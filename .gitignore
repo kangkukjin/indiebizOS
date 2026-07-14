@@ -304,3 +304,7 @@ data/packages/installed/tools/blog/data/
 # 자기개조 Floor #2: propose_patch 격리 사본 + 제안 기록
 .worktrees/
 data/system_ai_state/patch_proposals/
+
+# 크롤 에스컬레이션: Playwright 브라우저 바이너리 + 로컬 python 라이브러리 (대용량, 로컬 설치물)
+ms-playwright/
+pylibs/

@@ -29,7 +29,9 @@ interface EditionDef {
 }
 const EDITIONS: EditionDef[] = [
   { key: 'default', label: '종합', action: 'search_gnews', hotLabel: '🔥 오늘의 핫토픽',
-    defaultKw: ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식'], defaultTitle: '청주 데일리' },
+    // 부동산·AI 에이전트·중국 경제: 2026-07-14 발아 대조 파일럿 — 활발한 실타래(임대차·하네스 생태계·중국 보고서)가
+    // 풀에 진입 불가한 구조적 공백 발견으로 추가. 키워드=취재의 prior, 실타래 따라 갱신.
+    defaultKw: ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식', '부동산', 'AI 에이전트', '중국 경제'], defaultTitle: '청주 데일리' },
   { key: 'hn', label: 'Hacker News', action: 'search_hn', hotLabel: '🔥 HN 프론트페이지',
     defaultKw: ['AI', 'LLM', 'startup', 'programming', 'security', 'open source'], defaultTitle: 'Hacker News 데일리' },
 ];
@@ -88,6 +90,15 @@ async function loadEdition(edKey: string): Promise<Edition | null> {
 async function saveEdition(edKey: string, ed: Edition): Promise<void> {
   const content = JSON.stringify(ed);
   await iblExecuteApp(`[self:write]{path: ${JSON.stringify(editionPaths(edKey).json)}, content: ${JSON.stringify(content)}}`);
+  // 발아 대조(germination)용 날짜별 아카이브 — 고정 파일은 덮어쓰기라 과거 판이 사라지므로
+  // 판별 사본을 남긴다(편집장 role/why 픽 ↔ 이후 에피소드·vault 대조의 원료). 실패해도 발행은 유지.
+  try {
+    const day = (ed.issuedAt || '').slice(0, 10);
+    if (day) {
+      const base = edKey === 'default' ? 'newspaper' : `newspaper_${edKey}`;
+      await iblExecuteApp(`[self:write]{path: ${JSON.stringify(`outputs/newspaper_archive/${base}_${day}.json`)}, content: ${JSON.stringify(content)}}`);
+    }
+  } catch { /* 아카이브 실패는 발행을 막지 않는다 */ }
 }
 
 // 폰/원격 뷰어(정기보고식)가 읽을 마크다운 판을 PC 에 쓴다 — sections → 어휘 파이프(table:document

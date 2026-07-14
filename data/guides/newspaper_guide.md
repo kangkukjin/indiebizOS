@@ -26,11 +26,12 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
 ## ★현행 발행 레시피 ("신문 만들어줘"/"새로 발행" 위임 시 이대로)
 
 1. **핫토픽**: `[sense:search_gnews]{headlines: true, curate: 7}` — 오늘 가장 많이 다뤄진 사건. 섹션 이름은 `🔥 오늘의 핫토픽`, 맨 위에.
-2. **섹션별 기사**: 사용자 관심 키워드마다 `[sense:search_gnews]{query: "<키워드>", curate: 7}` 로 섹션 하나씩. (계기 기본 키워드 9개: 청주·AI·문화·드라마·영화·만화·세종·경제·주식. 제호 기본값 `청주 데일리`.)
+2. **섹션별 기사**: 사용자 관심 키워드마다 `[sense:search_gnews]{query: "<키워드>", curate: 7}` 로 섹션 하나씩. (계기 기본 키워드 12개: 청주·AI·문화·드라마·영화·만화·세종·경제·주식·부동산·AI 에이전트·중국 경제. 제호 기본값 `청주 데일리`. 뒤 3개=2026-07-14 발아 대조가 찾은 실타래 공백 반영 — 키워드는 정적이 아니라 실타래 따라 갱신하는 취재 prior.)
 3. **조립·저장(판 3파일, 전부 `project_id: "앱모드"`)**:
    - JSON: `[self:write]{path: "outputs/newspaper_current.json", content: "<위 구조 JSON 문자열>", project_id: "앱모드"}` — **데스크탑 반영 필수**.
    - MD: 섹션 items를 `[table:document]{format: "markdown", title: ..., meta: "<날짜>", group_by: "section", items: [...]}` 로 직렬화 → `[self:write]{path: "outputs/newspaper_current.md", project_id: "앱모드"}`.
    - (선택) HTML: 폰 공유가 필요하면 자기완결 HTML도 같은 경로에.
+   - **아카이브(발아 대조용)**: 같은 JSON을 `[self:write]{path: "outputs/newspaper_archive/newspaper_<YYYY-MM-DD>.json", project_id: "앱모드"}` 로도 저장 — 고정 파일은 덮어쓰기라 과거 판이 사라지는데, 편집장 픽(role/why) ↔ 이후 에피소드·vault 발아 대조에는 판별 이력이 필요. (데스크탑 '새로 발행' 버튼은 자동으로 남김.)
    - 완료 조건 = `projects/앱모드/outputs/newspaper_current.json` + `.md` 갱신.
 
 `curate`는 넓게 오버페치(~100 후보) 후 경량 AI '편집장'이 dedup + 뉴스가치 순 상위 N(=curate 값)을 뽑고, 각 기사에 role을 붙입니다:

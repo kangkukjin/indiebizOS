@@ -228,11 +228,11 @@ def _search_naver_used(query: str, limit: int = 15):
     """[sense:used] source=naver — 네이버 카페 통합검색(중고나라 카페 등 게시글)."""
     ok, err = check_api_key("naver")
     if not ok:
-        return {"source": "naver", "error": err, "records": []}
+        return {"source": "naver", "error": err, "items": []}
     data = api_call("naver", "/v1/search/cafearticle.json",
                     params={"query": query, "display": min(limit, 20), "sort": "date"})
     if isinstance(data, dict) and "error" in data:
-        return {"source": "naver", "error": data["error"], "records": []}
+        return {"source": "naver", "error": data["error"], "items": []}
     records = []
     for it in data.get("items", []):
         records.append({
@@ -242,12 +242,12 @@ def _search_naver_used(query: str, limit: int = 15):
             "url": it.get("link", ""),
             "image": "",
         })
-    return {"source": "naver", "total": len(records), "records": records,
+    return {"source": "naver", "total": len(records), "items": records,
             "note": "네이버 카페 통합검색(중고나라 등) — 게시글 기준"}
 
 
 def _handle_used(tool_input: dict) -> str:
-    """[sense:used] — 중고 C2C 매물 검색(source 분기). records 통화."""
+    """[sense:used] — 중고 C2C 매물 검색(source 분기). items 통화(단일 통화 {items:[...]})."""
     # sys.path+import는 sys.modules에 캐시돼 /packages/reload로 안 갈림 —
     # real-estate(tool_zigbang) 선례대로 파일에서 매번 fresh 로드.
     import importlib.util as _ilu
@@ -258,7 +258,7 @@ def _handle_used(tool_input: dict) -> str:
 
     query = tool_input.get("query") or tool_input.get("q")
     if not query:
-        return format_json({"error": "검색어(query)를 입력해주세요.", "records": []})
+        return format_json({"error": "검색어(query)를 입력해주세요.", "items": []})
     source = (tool_input.get("source") or "bunjang").lower()
     limit = int(tool_input.get("limit", 15))
     region = tool_input.get("region")
@@ -274,7 +274,7 @@ def _handle_used(tool_input: dict) -> str:
     else:
         return format_json({
             "error": f"알 수 없는 source: {source} (bunjang/joongna/naver/danggeun)",
-            "records": [],
+            "items": [],
         })
     return format_json(res)
 

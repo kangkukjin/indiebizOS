@@ -4201,8 +4201,8 @@ nodes:
         returns: items
         fixture: '[others:showcase]{op: "status"}'
         runs_on: mac_only
-        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/sync/config. 개인용 NAS 와 달리 "보여줄 것만 고른 창". 썸네일·매니페스트를 R2 로 push, 맥이 자도 공개 URL 은 켜져 있음. publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
-        target_description: op:status(공개 폴더 목록·URL·용량·동기화 시각 + 전역 설정 반환) / add(path 폴더를 공개, title 표시명·mode media|files) / remove(path 공개 해제, purge=true 면 R2 객체도 삭제) / sync(path 또는 전체 재동기화) / config(access link_only|public·strip_exif·push_originals·transcode_video 등 전역 설정 갱신). 폴더 선택이 곧 보안 경계 — 고른 폴더만 공개 사이트에 존재.
+        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/sync/config + 바스켓(basket_*). 개인용 NAS 와 달리 "보여줄 것만 고른 창". 썸네일·매니페스트를 R2 로 push, 맥이 자도 공개 URL 은 켜져 있음. 바스켓=여러 비밀 공개주소(각기 다른 폴더 부분집합을 긴 랜덤 slug 주소로 노출). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
+        target_description: 'op:status(공개 폴더 목록·URL·용량·동기화 시각 + 전역 설정 반환) / add(path 폴더를 공개, title 표시명·mode media|files) / remove(path 공개 해제, purge=true 면 R2 객체도 삭제) / sync(path 또는 전체 재동기화) / config(access link_only|public·strip_exif·push_originals·transcode_video 등 전역 설정 갱신). 바스켓(여러 비밀 공개주소): basket_list / basket_save(title, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더 선택이 곧 보안 경계 — 고른 폴더만 그 주소에 존재. 폴더의 루트 공개(hidden)와 바스켓 소속은 독립.'
         target_key: op
         group: showcase
         router: handler
@@ -4216,6 +4216,11 @@ nodes:
             sync: 썸네일·매니페스트(설정 시 원본) R2 재push
             config: 설정 갱신 — path 있으면 폴더별(표시명·공개/비공개), 없으면 전역(접근·EXIF·원본·동영상)
             detail: 폴더 하나 상세 (앱 드릴용)
+            basket_list: 바스켓(비밀 공개주소) 목록 — 각 바스켓의 title·URL·담긴 폴더 수
+            basket_save: 바스켓 생성(basket_id 없으면 긴 랜덤 slug 발급) 또는 이름 변경(basket_id 있으면)
+            basket_detail: 바스켓 하나 상세 (앱 드릴용) — 전 폴더에 소속여부·담기/빼기 액션 부착
+            basket_toggle: 바스켓에 폴더 하나 담기/빼기 (basket_id + folder_id)
+            basket_delete: 바스켓(비밀주소) 삭제 — 폴더 자체는 보존
         implementation: public-files 패키지 showcase_op — 폴더 walk→썸네일(self:photo 재사용)→(EXIF 제거·동영상 H.264 변환)→R2 push→manifest.json. 상태·설정은 data/showcase_state.json 에 영속. 공개 Worker 는 manifest.json 계약만 안다(이음매). P0=어휘 골격(스텁).
         keywords:
         - 공개 파일
@@ -4309,6 +4314,61 @@ nodes:
                   label: 파일 전체
               action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'
               button: 공개 추가
+          - name: 바스켓
+            auto_run: true
+            note: 여러 비밀 주소를 만들어 각 주소마다 다른 폴더만 공개합니다. 주소는 길고 무작위라 아는 사람만 봅니다.
+            action: '[others:showcase]{op: "basket_list"}'
+            view:
+            - type: kv
+              title: 바스켓이란
+              rows:
+              - k: 💡 안내
+                v: 각 바스켓은 자기만의 긴 비밀 주소를 가집니다. 폴더를 담으면 그 주소에서만 보입니다. 폴더를 '루트 비공개'로 두고 바스켓에만 담으면 그 비밀주소로만 공개됩니다.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 이 바스켓 열기 →
+              item_click:
+                action: '[others:showcase]{op: "basket_detail", basket_id: "{id}"}'
+                view:
+                - type: form
+                  title: 바스켓 이름
+                  fields:
+                  - key: title
+                    label: 이름
+                    type: text
+                    value: '{basket.title}'
+                  action: '[others:showcase]{op: "basket_save", basket_id: "{basket.id}", title: "$title"}'
+                  button: 이름 저장
+                  actions:
+                  - label: 이 바스켓(비밀주소) 삭제
+                    action: '[others:showcase]{op: "basket_delete", basket_id: "{basket.id}"}'
+                    style: danger
+                    confirm: 이 바스켓과 비밀주소를 삭제할까요? (폴더 자체는 안 지워집니다)
+                    back: true
+                - type: list_action
+                  from: folders
+                  title: '{title}'
+                  sub: '{meta}'
+                  button:
+                    label: '{member_action}'
+                    action: '[others:showcase]{op: "basket_toggle", basket_id: "{basket_id}", folder_id: "{id}"}'
+                    refresh: true
+            - type: form
+              title: 새 바스켓 만들기
+              fields:
+              - key: title
+                label: 바스켓 이름
+                type: text
+                placeholder: 예) 가족에게, 고객 A
+              action: '[others:showcase]{op: "basket_save", title: "$title"}'
+              button: 비밀주소 만들기
           - name: 설정
             auto_run: true
             note: 공개 사이트 전역 설정. 개인 사진이면 링크 전용을 권합니다.

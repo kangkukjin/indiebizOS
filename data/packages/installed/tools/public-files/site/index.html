@@ -75,12 +75,20 @@
 // 토큰 게이트는 Worker(worker.js)가 담당. 이 정적 페이지는 UX 만.
 const qs = new URLSearchParams(location.search);
 const TOKEN = qs.get("t") || "";
-const withTok = (u) => TOKEN ? u + (u.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN) : u;
+// 스코프 — /s/<slug>/... 아래면 그 바스켓의 비밀 공간. manifest·thumb·media URL 을
+// 이 접두사로 절대경로화(<base href="/"> 를 우회)해 Worker 가 slug 로 게이트하게 한다.
+const _sm = location.pathname.match(/^\/s\/([^/]+)/);
+const SCOPE = _sm ? "/s/" + _sm[1] + "/" : "/";
+// 상대 리소스 경로(manifest.json·thumbs/..·media/..)를 스코프 절대경로 + 토큰으로.
+const url = (u) => {
+  const abs = SCOPE + String(u).replace(/^\/+/, "");
+  return TOKEN ? abs + (abs.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN) : abs;
+};
 let MANIFEST = null, curFolder = null, curItems = [], lbIndex = -1;
 
 async function boot() {
   try {
-    const r = await fetch(withTok("manifest.json"), { cache: "no-store" });
+    const r = await fetch(url("manifest.json"), { cache: "no-store" });
     if (!r.ok) throw new Error(r.status);
     MANIFEST = await r.json();
   } catch (e) {
@@ -192,7 +200,7 @@ function renderDir(folder, subpath) {
     here.forEach((it, idx) => {
       const tile = document.createElement("div"); tile.className = "tile";
       if (it.thumb) {
-        tile.innerHTML = `<img loading="lazy" src="${withTok(esc(it.thumb))}" alt="${esc(it.title)}">`
+        tile.innerHTML = `<img loading="lazy" src="${url(esc(it.thumb))}" alt="${esc(it.title)}">`
           + (it.kind === "video" ? '<div class="play">▶</div>' : "");
       } else {
         tile.innerHTML = `<div class="noimg">📄<span>${esc(it.title)}</span></div>`;
@@ -209,12 +217,12 @@ function openLb(idx) {
   lbIndex = idx;
   const body = document.getElementById("lbBody");
   if (it.kind === "video" && it.src) {
-    body.innerHTML = `<video controls autoplay playsinline src="${withTok(esc(it.src))}"></video>`;
+    body.innerHTML = `<video controls autoplay playsinline src="${url(esc(it.src))}"></video>`;
   } else if (it.src) {
-    body.innerHTML = `<img src="${withTok(esc(it.src))}">`;
+    body.innerHTML = `<img src="${url(esc(it.src))}">`;
   } else if (it.thumb) {
     // 원본 미업로드(썸네일만) — 썸네일 확대 표시.
-    body.innerHTML = `<img src="${withTok(esc(it.thumb))}">`;
+    body.innerHTML = `<img src="${url(esc(it.thumb))}">`;
   } else {
     body.innerHTML = `<div class="empty" style="color:#ccc">${esc(it.title)}<br>미리보기 없음</div>`;
   }

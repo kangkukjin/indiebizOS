@@ -8,20 +8,25 @@
   "tools": [
     {
       "name": "showcase_op",
-      "description": "선택 폴더를 외부 공개 사이트로 비추는 노출 제어.\n\n## op 분기\n- status (기본): 공개 폴더 목록·공개 URL·용량·동기화 시각 + 전역 설정 반환. items[] 각 폴더에 title/meta/path/url, 최상위 settings{access,strip_exif,push_originals,transcode_video}.\n- add: path 폴더를 공개(title 표시명, mode media|files) 후 첫 동기화.\n- remove: path 공개 해제. purge=true 면 R2 객체도 삭제.\n- sync: path(생략 시 전체) 썸네일·매니페스트 R2 재push. 증분(mtime·크기).\n- config: 전역 설정 갱신(access link_only|public, strip_exif, push_originals, transcode_video).",
+      "description": "선택 폴더를 외부 공개 사이트로 비추는 노출 제어.\n\n## op 분기\n- status (기본): 공개 폴더 목록·공개 URL·용량·동기화 시각 + 전역 설정 반환. items[] 각 폴더에 title/meta/path/url, 최상위 settings{access,strip_exif,push_originals,transcode_video}.\n- add: path 폴더를 공개(title 표시명, mode media|files) 후 첫 동기화.\n- remove: path 공개 해제. purge=true 면 R2 객체도 삭제.\n- sync: path(생략 시 전체) 썸네일·매니페스트 R2 재push. 증분(mtime·크기).\n- config: 전역 설정 갱신(access link_only|public, strip_exif, push_originals, transcode_video).\n\n## 바스켓 (여러 비밀 공개주소)\n- basket_list: 바스켓 목록(title·비밀 URL·담긴 폴더 수).\n- basket_save: basket_id 없으면 새 바스켓 생성(긴 랜덤 slug 발급), 있으면 이름 변경.\n- basket_detail: 바스켓 하나 상세 — 전 폴더에 소속여부·담기/빼기 액션 부착(앱 드릴).\n- basket_toggle: basket_id 바스켓에 folder_id 폴더 담기/빼기(토글). 담을 때 미동기화면 백그라운드 sync.\n- basket_delete: basket_id 바스켓(비밀주소) 삭제. 폴더·썸네일 자체는 보존.\n폴더의 루트 공개(hidden)와 바스켓 소속은 독립 — 루트에서 내리고 바스켓에만 담으면 그 비밀주소로만 공개.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "status(기본)/add/remove/sync/config/detail",
+            "description": "status(기본)/add/remove/sync/config/detail/basket_list/basket_save/basket_detail/basket_toggle/basket_delete",
             "enum": [
               "status",
               "add",
               "remove",
               "sync",
               "config",
-              "detail"
+              "detail",
+              "basket_list",
+              "basket_save",
+              "basket_detail",
+              "basket_toggle",
+              "basket_delete"
             ],
             "default": "status"
           },
@@ -29,9 +34,17 @@
             "type": "string",
             "description": "폴더 절대경로 (add/remove/sync/detail/config 폴더별)"
           },
+          "basket_id": {
+            "type": "string",
+            "description": "바스켓 id (basket_save 개명·basket_detail·basket_toggle·basket_delete)"
+          },
+          "folder_id": {
+            "type": "string",
+            "description": "폴더 id (basket_toggle 담기/빼기 대상)"
+          },
           "title": {
             "type": "string",
-            "description": "표시명 (add·config 폴더별)"
+            "description": "표시명 (add·config 폴더별·basket_save 바스켓 이름)"
           },
           "hidden": {
             "type": "boolean",

@@ -12,6 +12,7 @@ P0 = 어휘 골격. add/remove/sync/config/status 는 상태 파일(showcase_sta
 
 import sys
 import json
+import secrets
 from pathlib import Path
 
 # 프로젝트 루트 = data/packages/installed/tools/public-files/handler.py 에서 5단계 위.
@@ -51,7 +52,7 @@ _DEFAULT_SETTINGS = {
 
 
 def _load_state() -> dict:
-    """상태 로드 (없으면 기본). {settings, folders:[...]}"""
+    """상태 로드 (없으면 기본). {settings, folders:[...], baskets:[...]}"""
     if _STATE_PATH.exists():
         try:
             st = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
@@ -60,7 +61,13 @@ def _load_state() -> dict:
     else:
         st = {}
     settings = {**_DEFAULT_SETTINGS, **(st.get("settings") or {})}
-    return {"settings": settings, "folders": st.get("folders") or []}
+    return {
+        "settings": settings,
+        "folders": st.get("folders") or [],
+        # 바스켓(공간) = 여러 비밀 공개주소. 각 바스켓은 folder_ids 부분집합을
+        # 자기 slug(긴 랜덤 토큰) 아래 spaces/<slug>/manifest.json 으로 비춘다.
+        "baskets": st.get("baskets") or [],
+    }
 
 
 import threading
@@ -254,43 +261,144 @@ def _save_origin_index(full: dict) -> None:
     _origin_index_path().write_text(json.dumps(full, ensure_ascii=False), encoding="utf-8")
 
 
-def _load_manifest_items() -> dict:
-    """스테이징 manifest 에서 folder_id → items[] 로드(비-대상 폴더 보존용)."""
-    p = _manifest_path()
-    if not p.exists():
-        return {}
-    try:
-        m = json.loads(p.read_text(encoding="utf-8"))
-        return {f["id"]: f.get("items", []) for f in m.get("folders", [])}
-    except Exception:
-        return {}
+# === 폴더별 items 저장소 ===
+# items 를 루트 manifest 안이 아니라 폴더별 파일(showcase_stage/items/<fid>.json)에
+# 둔다. 이래야 hidden(루트 비공개)이라 루트 manifest 에서 빠진 폴더도 items 가 살아
+# 바스켓 manifest 를 조립할 수 있다(루트 공개 ↔ 바스켓 소속이 독립).
+
+def _items_dir() -> Path:
+    return _STAGE_DIR / "items"
 
 
-def _write_manifest(state: dict, items_by_fid: dict) -> None:
-    """전체 folders 로 manifest.json 재작성(§6 계약)."""
+def _items_path(fid: str) -> Path:
+    return _items_dir() / f"{fid}.json"
+
+
+def _save_items(fid: str, items_list: list) -> None:
+    _items_dir().mkdir(parents=True, exist_ok=True)
+    _items_path(fid).write_text(json.dumps(items_list, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_items(fid: str) -> list:
+    """폴더 items 로드. 폴더별 파일 우선, 없으면 옛 루트 manifest 에서 백필
+    (per-folder store 도입 전 동기화된 폴더를 재동기화 없이 이관)."""
+    p = _items_path(fid)
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    # 백필 — 기존 루트 manifest.json 에 남아 있으면 거기서.
+    mf = _manifest_path()
+    if mf.exists():
+        try:
+            m = json.loads(mf.read_text(encoding="utf-8"))
+            for f in m.get("folders", []):
+                if f.get("id") == fid:
+                    return f.get("items", [])
+        except Exception:
+            pass
+    return []
+
+
+def _delete_items(fid: str) -> None:
+    p = _items_path(fid)
+    if p.exists():
+        try:
+            p.unlink()
+        except OSError:
+            pass
+
+
+def _manifest_dict(state: dict, folders_src: list) -> dict:
+    """folders_src(폴더 리스트)로 manifest 계약(§6) dict 조립. items 는 폴더별 저장소에서."""
     settings = state["settings"]
     folders = []
-    for f in state["folders"]:
-        if f.get("hidden"):
-            continue  # 비공개 폴더는 공개 manifest 에서 제외(사이트에 안 보임).
+    for f in folders_src:
         folders.append({
             "id": f["id"],
             "title": f.get("title") or Path(f.get("path", "")).name,
             "mode": f.get("mode", "media"),
             "count": f.get("count", 0),
-            "items": items_by_fid.get(f["id"], []),
+            "items": _load_items(f["id"]),
         })
-    manifest = {
+    return {
         "version": 1,
         "title": "공개파일",
         "access": settings.get("access", "link_only"),
         "token_required": settings.get("access", "link_only") == "link_only",
         "folders": folders,
     }
+
+
+def _write_manifest(state: dict) -> None:
+    """루트 manifest.json + fids.json 재작성 — 비공개(hidden) 제외한 폴더만."""
+    visible = [f for f in state["folders"] if not f.get("hidden")]
+    manifest = _manifest_dict(state, visible)
     _STAGE_DIR.mkdir(parents=True, exist_ok=True)
     _manifest_path().write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    # fids.json — Worker 가 bare /thumbs·/media 접근을 루트 공개 폴더로만 게이트.
+    _fids_path().write_text(
+        json.dumps([f["id"] for f in visible], ensure_ascii=False), encoding="utf-8"
+    )
+
+
+# === 바스켓(공간) — 여러 비밀 공개주소 ===
+
+def _fids_path() -> Path:
+    return _STAGE_DIR / "fids.json"
+
+
+def _basket_id() -> str:
+    return "bsk_" + secrets.token_hex(6)
+
+
+def _new_slug() -> str:
+    # 긴 랜덤 토큰(≈22자, ~128bit) — 주소 자체가 비밀(추측 불가). "링크 아는 사람만".
+    return secrets.token_urlsafe(16)
+
+
+def _basket_url(settings: dict, basket: dict) -> str:
+    base = (settings.get("public_base") or "").rstrip("/")
+    slug = basket.get("slug") or ""
+    return f"{base}/s/{slug}" if base and slug else ""
+
+
+def _basket_stage_dir(slug: str) -> Path:
+    return _STAGE_DIR / "spaces" / slug
+
+
+def _basket_folders(state: dict, basket: dict) -> list:
+    """바스켓에 담긴 폴더 객체들(folder_ids 순서, 존재하는 것만)."""
+    by_id = {f["id"]: f for f in state["folders"]}
+    return [by_id[fid] for fid in basket.get("folder_ids", []) if fid in by_id]
+
+
+def _write_basket_local(state: dict, basket: dict) -> None:
+    """바스켓 manifest.json + fids.json 을 스테이징에 기록(spaces/<slug>/)."""
+    folders = _basket_folders(state, basket)
+    manifest = _manifest_dict(state, folders)
+    manifest["title"] = basket.get("title") or "공개파일"
+    d = _basket_stage_dir(basket["slug"])
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    (d / "fids.json").write_text(
+        json.dumps([f["id"] for f in folders], ensure_ascii=False), encoding="utf-8")
+
+
+def _baskets_with_folder(state: dict, fid: str) -> list:
+    return [b for b in state.get("baskets", []) if fid in b.get("folder_ids", [])]
+
+
+def _folder_served_anywhere(state: dict, fid: str) -> bool:
+    """폴더가 어디든 공개 중인가 — 루트 공개(non-hidden) 또는 바스켓 소속."""
+    f = next((x for x in state["folders"] if x.get("id") == fid), None)
+    if f and not f.get("hidden"):
+        return True
+    return bool(_baskets_with_folder(state, fid))
 
 
 def _now_iso() -> str:
@@ -320,7 +428,43 @@ def _upload_partial_r2(state: dict, fid: str, items_so_far: list, uploaded_iids:
     mf = _manifest_path()
     if mf.exists():
         put_object(bucket, "manifest.json", mf.read_bytes(), "application/json")
+    fp = _fids_path()
+    if fp.exists():
+        put_object(bucket, "fids.json", fp.read_bytes(), "application/json")
     return n
+
+
+def _r2_upload_basket(state: dict, basket: dict) -> None:
+    """바스켓의 스테이징 manifest.json + fids.json 을 R2 spaces/<slug>/ 로 push.
+    담긴 폴더의 썸네일은 전역(thumbs/<fid>) 공유라 재업로드 불필요(sync 가 이미 올림)."""
+    from r2_client import is_configured, put_object
+    bucket = state["settings"].get("r2_bucket")
+    if not is_configured() or not bucket:
+        return
+    slug = basket.get("slug")
+    if not slug:
+        return
+    _write_basket_local(state, basket)
+    d = _basket_stage_dir(slug)
+    for name in ("manifest.json", "fids.json"):
+        p = d / name
+        if p.exists():
+            put_object(bucket, f"spaces/{slug}/{name}", p.read_bytes(), "application/json")
+
+
+def _r2_delete_basket(state: dict, slug: str) -> None:
+    from r2_client import is_configured, delete_object
+    bucket = state["settings"].get("r2_bucket")
+    if not is_configured() or not bucket or not slug:
+        return
+    for name in ("manifest.json", "fids.json"):
+        delete_object(bucket, f"spaces/{slug}/{name}")
+
+
+def _refresh_baskets_for_folder(state: dict, fid: str) -> None:
+    """폴더 items 가 바뀌면(sync/remove) 그 폴더를 담은 모든 바스켓 manifest 재빌드·업로드."""
+    for b in _baskets_with_folder(state, fid):
+        _r2_upload_basket(state, b)
 
 
 def _update_folder(path: str, **kv) -> None:
@@ -359,15 +503,14 @@ def _bg_sync_worker(paths: list) -> None:
                 with _STATE_LOCK:
                     st_f = _load_state()
                     ff = next((x for x in st_f["folders"] if x.get("path") == path), None)
-                    if not ff or ff.get("hidden"):
-                        return  # 도중 제거/비공개면 flush 스킵
+                    if not ff or not _folder_served_anywhere(st_f, fid):
+                        return  # 도중 제거 / (루트 비공개 && 바스켓에도 없음)이면 flush 스킵
                     full = _load_origin_index()
                     full[fid] = dict(index_so_far)   # 클릭 시 원본 해소되도록 부분 색인
                     _save_origin_index(full)
                     ff["count"] = len(items_so_far)  # 그리드 헤더 진행 반영(state 저장은 안 함)
-                    items_by_fid = _load_manifest_items()
-                    items_by_fid[fid] = list(items_so_far)
-                    _write_manifest(st_f, items_by_fid)
+                    _save_items(fid, list(items_so_far))
+                    _write_manifest(st_f)
                 _upload_partial_r2(st_f, fid, items_so_far, uploaded_iids)  # 네트워크는 락 밖
 
             items_list, total, index = _sync_folder(
@@ -393,14 +536,16 @@ def _bg_sync_worker(paths: list) -> None:
                     f2["syncing"] = False
                     f2.pop("sync_total", None)
                     f2.pop("sync_done", None)
-                items_by_fid = _load_manifest_items()
-                items_by_fid[fid] = items_list
-                _write_manifest(st, items_by_fid)
+                _save_items(fid, items_list)
+                _write_manifest(st)
                 _save_state(st)
             # R2 최종 업로드(설정 시) — 마지막 flush 이후 남은 썸네일 + 완성 manifest 만
             # (uploaded_iids 로 이미 올린 건 스킵). 작은 폴더면 여기서 전량 업로드.
-            if f2 and not f2.get("hidden"):
+            # 비공개(hidden)라도 바스켓에 담겼으면 썸네일을 올려야 그 비밀주소에서 보인다.
+            if f2 and _folder_served_anywhere(st, fid):
                 _upload_partial_r2(st, fid, items_list, uploaded_iids)
+            # 이 폴더를 담은 바스켓들 manifest 재빌드·업로드(items 갱신 반영).
+            _refresh_baskets_for_folder(st, fid)
         except Exception:
             _update_folder(path, syncing=False)
         finally:
@@ -495,19 +640,27 @@ def _sc_remove(params: dict) -> str:
     removed = next((f for f in state["folders"] if f.get("path") == path), None)
     if not removed:
         return json.dumps(items([], success=False, message="공개 목록에 없는 폴더입니다."), ensure_ascii=False)
+    rid = removed["id"]
     state["folders"] = [f for f in state["folders"] if f.get("path") != path]
-    # 로컬 스테이징 정리 — 썸네일 디렉토리 삭제 + manifest 에서 폴더 제거.
-    items_by_fid = _load_manifest_items()
-    removed_items = items_by_fid.pop(removed["id"], [])  # R2 삭제용으로 키 확보
-    thumb_dir = _STAGE_DIR / "thumbs" / removed["id"]
+    # 담긴 바스켓에서도 제거(고아 folder_id 방지).
+    for b in state.get("baskets", []):
+        if rid in b.get("folder_ids", []):
+            b["folder_ids"] = [x for x in b["folder_ids"] if x != rid]
+    # 로컬 스테이징 정리 — 썸네일 디렉토리 삭제 + items 파일 삭제.
+    removed_items = _load_items(rid)  # R2 삭제용으로 키 확보
+    _delete_items(rid)
+    thumb_dir = _STAGE_DIR / "thumbs" / rid
     if thumb_dir.exists():
         shutil.rmtree(thumb_dir, ignore_errors=True)
     with _STATE_LOCK:  # bg sync 의 origin 색인 쓰기와 직렬화.
         oidx = _load_origin_index()
-        oidx.pop(removed["id"], None)
+        oidx.pop(rid, None)
         _save_origin_index(oidx)
-    _write_manifest(state, items_by_fid)
+    _write_manifest(state)
     _save_state(state)
+    # 이 폴더를 담았던 바스켓 manifest 재빌드·업로드(사이트에서 폴더 사라짐).
+    for b in state.get("baskets", []):
+        _r2_upload_basket(state, b)
     # R2 반영 — 설정 시: manifest 는 항상 갱신(사이트에서 폴더 사라짐).
     # purge=true 면 R2 객체(썸네일·원본)까지 삭제, 아니면 보존(freeze).
     purge = bool(params.get("purge"))
@@ -519,6 +672,9 @@ def _sc_remove(params: dict) -> str:
             mf = _manifest_path()
             if mf.exists():
                 put_object(bucket, "manifest.json", mf.read_bytes(), "application/json")
+            fp = _fids_path()
+            if fp.exists():
+                put_object(bucket, "fids.json", fp.read_bytes(), "application/json")
             if purge:
                 deleted = 0
                 for it in removed_items:
@@ -594,19 +750,29 @@ def _config_folder(params: dict) -> str:
                       message=f"'{f['title']}' 공개 전환 — 백그라운드 동기화 중"),
                 ensure_ascii=False)
         if new_hidden and not was_hidden and r2_on:
-            # 비공개 전환 → R2 객체 삭제(목록·접근 둘 다 차단).
-            for it in _load_manifest_items().get(f["id"], []):
-                for key in (it.get("thumb"), it.get("src")):
-                    if key:
-                        delete_object(bucket, key)
-            extra = " · R2에서 내림"
-    # manifest 재작성(hidden 제외/표시명 반영) + 업로드.
-    _write_manifest(state, _load_manifest_items())
+            # 비공개 전환 → 루트에서 내림. 단 바스켓에 담겨 있으면 썸네일은 보존
+            # (그 비밀주소에선 계속 보여야 함). 어느 바스켓에도 없을 때만 R2 객체 삭제.
+            if _baskets_with_folder(state, f["id"]):
+                extra = " · 루트에서 내림(바스켓 주소에선 유지)"
+            else:
+                for it in _load_items(f["id"]):
+                    for key in (it.get("thumb"), it.get("src")):
+                        if key:
+                            delete_object(bucket, key)
+                extra = " · R2에서 내림"
+    # 루트 manifest 재작성(hidden 제외/표시명 반영) + 업로드.
+    _write_manifest(state)
     _save_state(state)
     if r2_on:
         mf = _manifest_path()
         if mf.exists():
             put_object(bucket, "manifest.json", mf.read_bytes(), "application/json")
+        fp = _fids_path()
+        if fp.exists():
+            put_object(bucket, "fids.json", fp.read_bytes(), "application/json")
+        # 표시명이 바뀌었으면 담긴 바스켓 manifest 도 갱신.
+        for b in _baskets_with_folder(state, f["id"]):
+            _r2_upload_basket(state, b)
     return json.dumps(
         items([_folder_row(state["settings"], f)], success=True,
               message=f"'{f['title']}' 설정 저장{extra}"),
@@ -644,6 +810,123 @@ def _sc_config(params: dict) -> str:
     )
 
 
+# === 바스켓(공간) op — 여러 비밀 공개주소 ===
+
+def _basket_row(settings: dict, state: dict, b: dict) -> dict:
+    """바스켓 → 표시 통화(title/meta/url/id)."""
+    fids = b.get("folder_ids", [])
+    return {
+        "title": b.get("title") or "이름 없는 바스켓",
+        "meta": f"📁 {len(fids)}개 폴더 · 비밀주소",
+        "url": _basket_url(settings, b),
+        "id": b.get("id", ""),
+        "slug": b.get("slug", ""),
+    }
+
+
+def _sc_basket_list(params: dict) -> str:
+    state = _load_state()
+    settings = state["settings"]
+    rows = [_basket_row(settings, state, b) for b in state.get("baskets", [])]
+    return json.dumps(
+        items(rows, settings=settings, public_base=settings.get("public_base", "")),
+        ensure_ascii=False,
+    )
+
+
+def _sc_basket_save(params: dict) -> str:
+    """바스켓 생성(basket_id 없으면) 또는 이름 변경(있으면)."""
+    title = (params.get("title") or "").strip()
+    bid = (params.get("basket_id") or "").strip()
+    state = _load_state()
+    if bid:
+        b = next((x for x in state["baskets"] if x.get("id") == bid), None)
+        if not b:
+            return json.dumps(items([], success=False, message="바스켓을 찾을 수 없습니다."), ensure_ascii=False)
+        if title:
+            b["title"] = title
+        _save_state(state)
+        _r2_upload_basket(state, b)   # 제목이 manifest.title 로 들어가므로 재업로드.
+        return json.dumps(items([_basket_row(state["settings"], state, b)], success=True,
+                                message=f"'{b['title']}' 저장."), ensure_ascii=False)
+    # 신규 — 긴 랜덤 slug 발급.
+    b = {"id": _basket_id(), "slug": _new_slug(), "title": title or "새 바스켓",
+         "folder_ids": [], "created_at": _now_iso()}
+    state["baskets"].append(b)
+    _save_state(state)
+    _r2_upload_basket(state, b)       # 빈 manifest 라도 주소가 바로 살도록.
+    return json.dumps(items([_basket_row(state["settings"], state, b)], success=True,
+                            message=f"'{b['title']}' 바스켓 생성 — 비밀주소가 만들어졌습니다."),
+                      ensure_ascii=False)
+
+
+def _sc_basket_detail(params: dict) -> str:
+    """바스켓 하나 상세 — 앱 드릴용. {basket:{...}} + folders[](전 폴더에 소속여부·토글 액션)."""
+    bid = (params.get("basket_id") or "").strip()
+    state = _load_state()
+    b = next((x for x in state["baskets"] if x.get("id") == bid), None)
+    if not b:
+        return json.dumps(items([], success=False, message="바스켓을 찾을 수 없습니다."), ensure_ascii=False)
+    member = set(b.get("folder_ids", []))
+    folders = []
+    for f in state["folders"]:
+        inb = f["id"] in member
+        folders.append({
+            "id": f["id"],
+            "title": f.get("title") or Path(f.get("path", "")).name,
+            "meta": ("✅ 이 주소에 포함" if inb else "➕ 담기 가능")
+                     + (" · 🔒 루트 비공개" if f.get("hidden") else ""),
+            "in_basket": inb,
+            "member_action": "빼기" if inb else "담기",
+            "basket_id": b["id"],     # list_action 버튼이 참조(행 컨텍스트에 바스켓 못박음).
+        })
+    row = _basket_row(state["settings"], state, b)
+    return json.dumps(items([row], basket=row, folders=folders, settings=state["settings"]),
+                      ensure_ascii=False)
+
+
+def _sc_basket_toggle(params: dict) -> str:
+    """바스켓에 폴더 하나 담기/빼기. 담을 때 썸네일이 없으면(루트 비공개였다면) 동기화."""
+    bid = (params.get("basket_id") or "").strip()
+    fid = (params.get("folder_id") or "").strip()
+    state = _load_state()
+    b = next((x for x in state["baskets"] if x.get("id") == bid), None)
+    if not b:
+        return json.dumps(items([], success=False, message="바스켓을 찾을 수 없습니다."), ensure_ascii=False)
+    f = next((x for x in state["folders"] if x.get("id") == fid), None)
+    if not f:
+        return json.dumps(items([], success=False, message="폴더를 찾을 수 없습니다."), ensure_ascii=False)
+    fids = b.setdefault("folder_ids", [])
+    if fid in fids:
+        fids.remove(fid)
+        msg = f"'{f.get('title')}' 을(를) 바스켓에서 뺐습니다."
+    else:
+        fids.append(fid)
+        msg = f"'{f.get('title')}' 을(를) 바스켓에 담았습니다."
+    _save_state(state)
+    # 담긴 폴더 썸네일이 R2 에 없을 수 있음(루트 비공개라 안 올랐거나 미동기화) → 필요시 동기화.
+    need_sync = fid in fids and not _items_path(fid).exists() and not _load_items(fid)
+    if fid in fids and (need_sync or not f.get("synced_at")):
+        _start_bg_sync([f["path"]])   # 완료 후 _refresh_baskets_for_folder 가 바스켓 재빌드.
+    _r2_upload_basket(state, b)        # 즉시 manifest 반영(썸네일은 sync 완료 시 뒤따름).
+    return json.dumps(items([_basket_row(state["settings"], state, b)], success=True, message=msg),
+                      ensure_ascii=False)
+
+
+def _sc_basket_delete(params: dict) -> str:
+    bid = (params.get("basket_id") or "").strip()
+    state = _load_state()
+    b = next((x for x in state["baskets"] if x.get("id") == bid), None)
+    if not b:
+        return json.dumps(items([], success=False, message="바스켓을 찾을 수 없습니다."), ensure_ascii=False)
+    slug = b.get("slug", "")
+    state["baskets"] = [x for x in state["baskets"] if x.get("id") != bid]
+    _save_state(state)
+    _r2_delete_basket(state, slug)     # 그 비밀주소를 죽인다(폴더·썸네일 자체는 보존).
+    return json.dumps(items([], success=True, message="바스켓(비밀주소) 삭제 — 폴더는 그대로입니다."),
+                      ensure_ascii=False)
+
+
 _OP_DISPATCHERS = {
     "showcase_op": {
         "status": _sc_status,
@@ -652,6 +935,11 @@ _OP_DISPATCHERS = {
         "sync": _sc_sync,
         "config": _sc_config,
         "detail": _sc_detail,
+        "basket_list": _sc_basket_list,
+        "basket_save": _sc_basket_save,
+        "basket_detail": _sc_basket_detail,
+        "basket_toggle": _sc_basket_toggle,
+        "basket_delete": _sc_basket_delete,
     },
 }
 _OP_DEFAULTS = {

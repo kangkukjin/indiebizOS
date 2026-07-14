@@ -528,22 +528,45 @@ class ClaudeCodeProvider(BaseProvider):
                     #  --print 는 stdin EOF까지 읽은 뒤 응답하므로 먼저 써넣고 닫는다.
                     #  encoding=utf-8 명시: 윈도우 기본 로케일 인코딩(cp949 등)으로 stdin/stdout이
                     #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
-                    proc = subprocess.Popen(
-                        cmd,
-                        stdin=subprocess.PIPE,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True,
-                        encoding="utf-8",
-                        errors="replace",
-                        bufsize=1,
-                        cwd=cwd,
-                        env=env,
-                    )
+                    def _spawn():
+                        # cmd[0]=self._binary_path 를 참조하도록 매 호출 시 갱신값을 반영
+                        return subprocess.Popen(
+                            cmd,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True,
+                            encoding="utf-8",
+                            errors="replace",
+                            bufsize=1,
+                            cwd=cwd,
+                            env=env,
+                        )
+
+                    proc = _spawn()
                 except FileNotFoundError as e:
-                    self.metrics.record_error()
-                    yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
-                    return
+                    # 세션 도중 Claude Code 데스크톱 앱이 자동 업데이트되면 init 때 캐시한
+                    # self._binary_path(예: .../claude-code/2.1.205/...)가 삭제되어 spawn이
+                    # [Errno 2]로 터진다. 바이너리를 재해석해 새 버전 경로로 갱신하고 1회 재시도.
+                    new_bin = find_claude_binary()
+                    if new_bin and new_bin != self._binary_path:
+                        print(
+                            f"[ClaudeCode/{self.agent_name}] 바이너리 경로 재해석: "
+                            f"{self._binary_path} → {new_bin} (자동 업데이트 감지, 재시도)"
+                        )
+                        self._binary_path = new_bin
+                        self._client = {"binary": new_bin}
+                        cmd[0] = new_bin
+                        try:
+                            proc = _spawn()
+                        except FileNotFoundError as e2:
+                            self.metrics.record_error()
+                            yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패(재해석 후에도): {e2}"}
+                            return
+                    else:
+                        self.metrics.record_error()
+                        yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
+                        return
 
                 # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → claude 가 응답 시작)
                 try:

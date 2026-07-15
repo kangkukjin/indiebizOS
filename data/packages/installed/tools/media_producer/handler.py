@@ -768,7 +768,9 @@ def generate_ai_image(tool_input, output_base):
 
 # ─────────────────────────────────────────────────────────────────────
 # [engines:icon] — 앱 전용(prompt_hidden) 아이콘 생성
-#   사용자 아이디어 → AI 확장 프롬프트 → Pollinations flux(무료) 저해상도 아이콘
+#   기본 = Gemini 이미지 모델 단일 호출(한국어 아이디어 직접 이해 — 확장 단계가
+#   모델 안으로 접힘, GEMINI_API_KEY 는 맥·폰 공통 프로비저닝) → 실패/키 없음 시
+#   폴백 = AI 확장 프롬프트 → Pollinations flux(무료).
 #   → 미리보기(data URI) 반환 + (폰이면) 이미지 클립보드 자동 복사(카톡 붙여넣기용).
 #   ★AI 어휘에 노출 안 됨(prompt_hidden). runs_on: anywhere 라 폰서 로컬 실행.
 # ─────────────────────────────────────────────────────────────────────
@@ -891,6 +893,41 @@ def _sniff_image_mime(b: bytes):
     return "image/png", ".png"
 
 
+_ICON_GEMINI_MODEL = "gemini-3.1-flash-image"
+
+
+def _icon_via_gemini(user_prompt: str, style_hint: str, api_key: str):
+    """Gemini 이미지 모델 단일 호출 → (이미지 bytes, 사용한 프롬프트).
+
+    지시 이해력이 좋아 한국어 아이디어를 직접 넣는다 — 별도 확장 호출 불필요
+    (2단 호출이 1단으로 접힘). 출력은 1024px 고정이라 호출부에서 다운스케일."""
+    import httpx
+
+    extra = f" Extra style hint: {style_hint}." if style_hint else ""
+    prompt = (f"Draw a KakaoTalk emoticon sticker of: {user_prompt}.{extra} "
+              f"Style: {_ICON_FALLBACK_STYLE}")
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           f"{_ICON_GEMINI_MODEL}:generateContent")
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {"aspectRatio": "1:1"},
+        },
+    }
+    with httpx.Client(timeout=120.0) as client:
+        r = client.post(url, params={"key": api_key}, json=payload,
+                        headers={"Content-Type": "application/json"})
+        r.raise_for_status()
+        data = r.json()
+    parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+    for p in parts:
+        inline = p.get("inlineData") or p.get("inline_data")
+        if inline and inline.get("data"):
+            return base64.b64decode(inline["data"]), prompt
+    raise RuntimeError(f"응답에 이미지 파트 없음: {str(data)[:200]}")
+
+
 def generate_icon(tool_input, output_base):
     """[engines:icon] 앱 전용 아이콘 생성기. dict 통화 반환(app blocks 미리보기)."""
     import urllib.parse
@@ -909,19 +946,49 @@ def generate_icon(tool_input, output_base):
     do_copy = tool_input.get("copy")
     do_copy = True if do_copy is None else bool(do_copy)
 
-    expanded = _expand_icon_prompt(user_prompt, style_hint)
+    # 1순위 = Gemini 이미지(유료 ~$0.07/장, 벡터급 선·스타일 이행) — 키는 맥·폰 공통.
+    img_bytes = None
+    engine = None
+    expanded = None
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        try:
+            img_bytes, expanded = _icon_via_gemini(user_prompt, style_hint, api_key)
+            engine = _ICON_GEMINI_MODEL
+        except Exception as e:
+            print(f"[icon] Gemini 이미지 생성 실패 → Pollinations 폴백: {e}")
 
-    encoded = urllib.parse.quote(expanded)
-    url = (f"https://image.pollinations.ai/prompt/{encoded}"
-           f"?width={size}&height={size}&model=flux&nologo=true")
+    # 폴백 = 확장 프롬프트 → Pollinations flux(무료).
+    # flux 는 ~1024px 학습 분포 — 저해상도 네이티브 생성은 품질 열화라
+    # 크게 생성한 뒤 아래 공통 LANCZOS 다운스케일(슈퍼샘플링)을 태운다.
+    if img_bytes is None:
+        expanded = _expand_icon_prompt(user_prompt, style_hint)
+        gen_size = size if size >= 768 else 768
+        encoded = urllib.parse.quote(expanded)
+        url = (f"https://image.pollinations.ai/prompt/{encoded}"
+               f"?width={gen_size}&height={gen_size}&model=flux&nologo=true")
+        try:
+            with httpx.Client(timeout=120.0, follow_redirects=True) as client:
+                r = client.get(url)
+                r.raise_for_status()
+                img_bytes = r.content
+            engine = "flux"
+        except Exception as e:
+            return {"success": False, "message": f"아이콘 생성 실패: {e}",
+                    "prompt": expanded, "blocks": []}
+
+    # 공통 다운스케일 — 두 엔진 다 요청 size 보다 크게 생성됨. PNG 재인코딩으로 mime 확정.
     try:
-        with httpx.Client(timeout=120.0, follow_redirects=True) as client:
-            r = client.get(url)
-            r.raise_for_status()
-            img_bytes = r.content
+        from PIL import Image
+        import io
+        im = Image.open(io.BytesIO(img_bytes))
+        if im.size != (size, size):
+            im = im.convert("RGB").resize((size, size), Image.LANCZOS)
+            buf = io.BytesIO()
+            im.save(buf, format="PNG")
+            img_bytes = buf.getvalue()
     except Exception as e:
-        return {"success": False, "message": f"아이콘 생성 실패: {e}",
-                "prompt": expanded, "blocks": []}
+        print(f"[icon] 다운스케일 실패 → 원본 크기 사용: {e}")
 
     mime, ext = _sniff_image_mime(img_bytes)
     out_path = os.path.join(output_base, f"icon_{uuid.uuid4().hex[:8]}{ext}")
@@ -970,6 +1037,7 @@ def generate_icon(tool_input, output_base):
         ],
         "message": status,
         "prompt": expanded,
+        "engine": engine,
         "path": os.path.abspath(out_path),
         "copied": copied,
     }

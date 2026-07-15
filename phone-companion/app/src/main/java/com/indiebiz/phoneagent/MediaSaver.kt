@@ -1,5 +1,7 @@
 package com.indiebiz.phoneagent
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -108,6 +110,66 @@ object MediaSaver {
             "Download/$filename"
         } catch (e: Exception) {
             "ERROR: ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
+
+    /**
+     * 파일을 Downloads 에 저장한 뒤, 그 content:// URI 로 안드로이드 공유 시트(ACTION_SEND)를 연다.
+     * 사용자가 카카오톡 등 앱을 골라 공유한다(스테이징 — 실제 공유는 사용자 탭, sms/call 과 같은 모델).
+     * 백그라운드에서도 뜨도록 NEW_TASK, 대상 앱에 읽기 권한을 GRANT.
+     */
+    /**
+     * 이미지 바이트를 공용 Pictures(MediaStore.Images/IndieBiz)에 저장한 뒤, 그 content:// URI 를
+     * 클립보드에 이미지로 얹는다(ClipData.newUri). 다른 앱(카카오톡 등) 입력창에서 붙여넣기 가능.
+     * 공용 이미지 컬렉션이라 대상 앱이 URI 를 읽을 수 있다(FileProvider 불필요).
+     * 텍스트 setClipboard(PhoneActions) 의 이미지판 — 붙여넣기 패리티.
+     * 반환: 성공 "OK:<uri>", 실패 "ERROR: ...".
+     */
+    @JvmStatic
+    fun imageToClipboard(data: ByteArray, filename: String, mime: String): String {
+        return try {
+            val ctx: Context = (Python.getPlatform() as AndroidPlatform).application
+            val uri = writeToPictures(data, filename, mime)
+            val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newUri(ctx.contentResolver, filename, uri))
+            "OK:$uri"
+        } catch (e: Exception) {
+            "ERROR: ${e.javaClass.simpleName}: ${e.message}"
+        }
+    }
+
+    /** 이미지 바이트를 공용 Pictures/IndieBiz 에 쓰고 content:// URI 반환(같은 이름은 덮어씀). */
+    private fun writeToPictures(data: ByteArray, filename: String, mime: String): android.net.Uri {
+        val ctx: Context = (Python.getPlatform() as AndroidPlatform).application
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = ctx.contentResolver
+            try {
+                resolver.delete(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    "${MediaStore.Images.Media.DISPLAY_NAME}=? AND ${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?",
+                    arrayOf(filename, "${Environment.DIRECTORY_PICTURES}/IndieBiz%")
+                )
+            } catch (_: Exception) { /* 없으면 무시 */ }
+            val values = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                put(MediaStore.Images.Media.MIME_TYPE, mime)
+                put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/IndieBiz")
+                put(MediaStore.Images.Media.IS_PENDING, 1)
+            }
+            val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                ?: throw IllegalStateException("MediaStore insert 실패")
+            resolver.openOutputStream(uri)?.use { it.write(data) }
+                ?: throw IllegalStateException("openOutputStream 실패")
+            values.clear()
+            values.put(MediaStore.Images.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return uri
+        } else {
+            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "IndieBiz")
+            if (!dir.exists()) dir.mkdirs()
+            val f = File(dir, filename)
+            f.outputStream().use { it.write(data) }
+            return android.net.Uri.fromFile(f)
         }
     }
 

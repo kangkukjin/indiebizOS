@@ -262,9 +262,36 @@ def _phone_act(tool_input: dict) -> dict:
         return {"success": ok, "message": "토스트 표시"}
 
     if op == "clipboard":
+        # 이미지 클립보드(ClipData.newUri): image_path(로컬 경로)·image_b64/b64·image(data URI) 중
+        # 하나가 있으면 이미지로 얹는다 — 카카오톡 등 입력창에서 붙여넣기. 없으면 텍스트 경로.
+        image_path = tool_input.get("image_path") or tool_input.get("path")
+        img_b64 = tool_input.get("image_b64") or tool_input.get("b64") or tool_input.get("image")
+        if image_path or img_b64:
+            import base64 as _b64
+            import uuid as _uuid
+            try:
+                if img_b64:
+                    if isinstance(img_b64, str) and img_b64.startswith("data:"):
+                        img_b64 = img_b64.split(",", 1)[-1]
+                    data = _b64.b64decode(img_b64)
+                else:
+                    with open(image_path, "rb") as _f:
+                        data = _f.read()
+            except Exception as e:
+                return {"success": False, "error": f"이미지 로드 실패: {e}"}
+            mime = (tool_input.get("mime") or "image/png").strip()
+            filename = (tool_input.get("filename") or f"clip_{_uuid.uuid4().hex[:8]}.png").strip()
+            try:
+                MS = jclass("com.indiebiz.phoneagent.MediaSaver")
+            except Exception as e:
+                return {"success": False, "error": f"MediaSaver 브리지 로드 실패: {e}"}
+            res = str(MS.imageToClipboard(data, filename, mime))
+            if res.startswith("ERROR"):
+                return {"success": False, "error": res}
+            return {"success": True, "message": "이미지 클립보드 복사 — 카카오톡 등에서 붙여넣기"}
         text = tool_input.get("text")
         if text is None:
-            return {"success": False, "error": "clipboard 엔 text 가 필요합니다."}
+            return {"success": False, "error": "clipboard 엔 text 또는 image_path/b64 가 필요합니다."}
         ok = bool(PA.setClipboard(str(text)))
         return {"success": ok, "message": "클립보드 복사" if ok else "복사 실패."}
 

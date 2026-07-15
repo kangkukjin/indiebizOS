@@ -73,6 +73,36 @@
       }
     },
     {
+      "name": "generate_icon",
+      "description": "앱 전용 아이콘 생성. 사용자 아이디어를 AI가 전문 아이콘 프롬프트로 확장한 뒤 Pollinations flux(무료)로 저해상도 아이콘을 만들고, 폰에서는 이미지 클립보드에 자동 복사(카카오톡 붙여넣기용).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "무엇을 그릴지 짧게 (한국어 가능). AI가 전문 아이콘 프롬프트로 확장."
+          },
+          "size": {
+            "type": "integer",
+            "description": "정사각 픽셀 크기 (기본 384, 128~1024)",
+            "default": 384
+          },
+          "style": {
+            "type": "string",
+            "description": "추가 스타일 힌트 (선택)"
+          },
+          "copy": {
+            "type": "boolean",
+            "description": "폰에서 생성 후 이미지 클립보드 자동 복사 (기본 true)",
+            "default": true
+          }
+        },
+        "required": [
+          "prompt"
+        ]
+      }
+    },
+    {
       "name": "create_tts",
       "description": "텍스트를 음성 파일(MP3)로 변환합니다. Edge TTS 사용. 나레이션 생성용.",
       "input_schema": {

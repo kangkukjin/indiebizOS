@@ -4515,6 +4515,30 @@ nodes:
         - text to image
         - 이미지생성
         - AI이미지
+      icon:
+        returns: effect
+        runs_on: anywhere
+        prompt_hidden: true
+        description: 앱 전용 아이콘 생성. 사용자 아이디어를 AI가 귀여운 만화(kawaii/카툰) 스티커 프롬프트로 확장 → Pollinations flux(무료) 저해상도 아이콘 → 미리보기 + 폰이면 클립보드 자동 복사(카톡 붙여넣기).
+        target_description: prompt(무엇을 그릴지 짧게, 한국어 가능) 필수. size(정사각 px, 기본 384)·style(스타일 힌트)·copy(폰 클립보드 자동복사, 기본 true) 옵션.
+        group: media_produce
+        router: handler
+        tool: generate_icon
+        target_key: prompt
+        app:
+          instrument: icon
+          icon: 🎨
+          name: 아이콘
+          order: 20
+          inputs:
+          - key: prompt
+            type: text
+            label: 무엇을 그릴까요?
+            placeholder: 예) 커피 마시는 고양이, 웃는 해
+          action: '[engines:icon]{prompt: "$prompt"}'
+          view:
+          - type: blocks
+            from: blocks
       render_html:
         returns: effect
         runs_on: mac_only

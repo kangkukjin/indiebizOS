@@ -44,6 +44,8 @@ def execute(tool_input: dict, context) -> str:
         return render_html_to_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
+    elif tool_name == "generate_icon":
+        return generate_icon(tool_input, output_base)
     elif tool_name == "critique_gemini_image":
         return critique_gemini_image(tool_input, output_base)
     elif tool_name == "read_gemini_image":
@@ -762,6 +764,215 @@ def generate_ai_image(tool_input, output_base):
         return f"AI 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
     except Exception as e:
         return f"이미지 생성 중 오류 발생: {str(e)}"
+
+
+# ─────────────────────────────────────────────────────────────────────
+# [engines:icon] — 앱 전용(prompt_hidden) 아이콘 생성
+#   사용자 아이디어 → AI 확장 프롬프트 → Pollinations flux(무료) 저해상도 아이콘
+#   → 미리보기(data URI) 반환 + (폰이면) 이미지 클립보드 자동 복사(카톡 붙여넣기용).
+#   ★AI 어휘에 노출 안 됨(prompt_hidden). runs_on: anywhere 라 폰서 로컬 실행.
+# ─────────────────────────────────────────────────────────────────────
+
+_ICON_AUTHOR_SYSTEM_PROMPT = """You are an expert prompt engineer for CUTE CARTOON ICON / STICKER generation.
+Given a user's short idea (often written in Korean), output ONE single-line English
+image-generation prompt that yields an adorable, playful cartoon sticker suitable for a
+messaging app (KakaoTalk emoticon).
+
+Style — this is the most important part:
+- CUTE but COMICAL and EXAGGERATED cartoon / chibi style — like a funny meme sticker or
+  caricature. Over-the-top exaggerated proportions and expressions (huge head, tiny body,
+  giant sparkly eyes, dramatic emotion, wobbly goofy pose), bursting with personality and
+  humor. Bold, snappy, playful — make it read instantly and get a laugh.
+- Thick bold clean black outlines, FLAT cel-shaded solid colors (like a sticker or emoji),
+  punchy exaggerated shapes, bright saturated cheerful palette. Optional cartoon effect
+  lines / sparkles / sweat drops to amplify the emotion.
+- Emphasize that it is a flat 2D comic cartoon illustration / vector sticker.
+
+Strictly AVOID (do NOT let it look like this):
+- NOT photorealistic, NOT realistic, NOT 3D render.
+- NOT watercolor, NOT oil painting, NOT painterly, no visible brushstrokes.
+- No soft airbrush gradients, no realistic textures or shading, no photographic detail.
+
+Composition:
+- A single clear subject, centered, simple composition, generous padding around it.
+- Plain solid or simple flat background — no busy scenery, no clutter.
+- Absolutely NO text, letters, numbers, logos, or watermarks in the image.
+
+Output ONLY one single line: a comma-separated list of visual descriptors starting with
+the subject. Do NOT use headings, section labels, bullet points, markdown, or line breaks
+— just the prompt itself on one line. No quotes, no preamble, no explanation.
+"""
+
+_ICON_FALLBACK_STYLE = (
+    "comical exaggerated cute cartoon sticker, chibi caricature, funny meme style, "
+    "huge head tiny body, giant sparkly eyes, over-the-top dramatic expression, goofy "
+    "playful pose, thick bold black outlines, flat cel-shaded solid colors, punchy "
+    "exaggerated shapes, bright saturated palette, cartoon effect lines, flat 2D vector "
+    "illustration, single centered subject, plain simple background, generous padding, "
+    "NOT realistic, NOT watercolor, NOT painterly, no gradients, no text, no letters, no watermark"
+)
+
+
+def _flatten_expanded(text: str) -> str:
+    """Gemini 확장 응답을 한 줄 프롬프트로 평탄화 — 모델이 가끔 헤더/불릿/줄바꿈으로
+    구조화 응답을 내므로(첫 줄만 취하면 주제가 유실됨) 전체를 정리해 이어붙인다."""
+    import re
+    if not text:
+        return ""
+    t = text.strip()
+    t = re.sub(r"```[a-zA-Z]*", " ", t)          # 코드펜스 제거
+    t = t.replace("`", " ").replace("**", " ").replace("__", " ")
+    t = re.sub(r"(?m)^\s*[-*#>•·]+\s*", " ", t)  # 줄머리 불릿/헤더 기호
+    t = t.replace("\r", "\n")
+    t = re.sub(r"\n+", ", ", t)                    # 줄바꿈 → 쉼표 이음
+    t = t.strip().strip('"').strip()
+    t = re.sub(r"\s+", " ", t)                     # 공백 정리
+    t = re.sub(r"\s*,\s*(,\s*)+", ", ", t)         # 중복 쉼표
+    t = re.sub(r"[:：]\s*,", ": ", t)              # "라벨: ," 정리
+    t = t.strip(" ,")
+    return t[:600]
+
+
+def _expand_icon_prompt(user_prompt: str, style_hint: str = "") -> str:
+    """사용자의 짧은 아이디어 → 전문가 영어 아이콘 프롬프트.
+
+    ★Gemini 텍스트 모델로 확장 — GEMINI_API_KEY 는 맥·폰 양쪽에 프로비저닝돼 있어
+    폰-직결에서도 맥 없이 진짜 AI 확장이 된다(폰 인지는 맥 위임이라 Anthropic 키가
+    없다 — 그래서 content_text provider 대신 Gemini 를 쓴다). 실패 시 템플릿 폴백."""
+    base = (user_prompt or "").strip()
+    if not base:
+        return base
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if api_key:
+        try:
+            import httpx
+            model = os.environ.get("ICON_EXPAND_MODEL", "gemini-flash-latest")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            umsg = base if not style_hint else f"{base}\n\nStyle hint: {style_hint}"
+            payload = {
+                "systemInstruction": {"parts": [{"text": _ICON_AUTHOR_SYSTEM_PROMPT}]},
+                "contents": [{"parts": [{"text": umsg}]}],
+                # thinkingBudget=0: flash-latest 가 thinking 모델이면 추론이 토큰을 먹어
+                # 출력이 잘려 주제가 유실됨(빈/조각 응답) → thinking 끄고 넉넉히.
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 400,
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
+            }
+            with httpx.Client(timeout=30.0) as client:
+                r = client.post(url, params={"key": api_key}, json=payload,
+                                headers={"Content-Type": "application/json"})
+                r.raise_for_status()
+                data = r.json()
+            parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+            out = "".join(p.get("text", "") for p in parts)
+            out = _flatten_expanded(out)
+            if len(out) >= 4:
+                return out
+            print(f"[icon] Gemini 확장 결과 비어있음 → 템플릿 폴백")
+        except Exception as e:
+            print(f"[icon] Gemini 프롬프트 확장 실패 → 템플릿 폴백: {e}")
+    else:
+        print("[icon] GEMINI_API_KEY 없음 → 템플릿 폴백")
+    extra = f", {style_hint}" if style_hint else ""
+    return f"{base}{extra}, {_ICON_FALLBACK_STYLE}"
+
+
+def _sniff_image_mime(b: bytes):
+    """바이트 매직으로 이미지 mime/확장자 판정 (Pollinations 는 실제로 JPEG 를 줄 때가 많다 —
+    mime 을 png 로 박으면 클립보드 붙여넣기 시 대상 앱이 혼동)."""
+    if b[:3] == b"\xff\xd8\xff":
+        return "image/jpeg", ".jpg"
+    if b[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png", ".png"
+    if b[:4] == b"RIFF" and b[8:12] == b"WEBP":
+        return "image/webp", ".webp"
+    return "image/png", ".png"
+
+
+def generate_icon(tool_input, output_base):
+    """[engines:icon] 앱 전용 아이콘 생성기. dict 통화 반환(app blocks 미리보기)."""
+    import urllib.parse
+    import httpx
+
+    user_prompt = (tool_input.get("prompt") or tool_input.get("q") or "").strip()
+    if not user_prompt:
+        return {"success": False, "message": "무엇을 그릴지 한 줄로 알려주세요.", "blocks": []}
+
+    try:
+        size = int(tool_input.get("size") or 384)
+    except Exception:
+        size = 384
+    size = max(128, min(size, 1024))
+    style_hint = (tool_input.get("style") or "").strip()
+    do_copy = tool_input.get("copy")
+    do_copy = True if do_copy is None else bool(do_copy)
+
+    expanded = _expand_icon_prompt(user_prompt, style_hint)
+
+    encoded = urllib.parse.quote(expanded)
+    url = (f"https://image.pollinations.ai/prompt/{encoded}"
+           f"?width={size}&height={size}&model=flux&nologo=true")
+    try:
+        with httpx.Client(timeout=120.0, follow_redirects=True) as client:
+            r = client.get(url)
+            r.raise_for_status()
+            img_bytes = r.content
+    except Exception as e:
+        return {"success": False, "message": f"아이콘 생성 실패: {e}",
+                "prompt": expanded, "blocks": []}
+
+    mime, ext = _sniff_image_mime(img_bytes)
+    out_path = os.path.join(output_base, f"icon_{uuid.uuid4().hex[:8]}{ext}")
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    try:
+        with open(out_path, "wb") as f:
+            f.write(img_bytes)
+    except Exception as e:
+        return {"success": False, "message": f"아이콘 저장 실패: {e}",
+                "prompt": expanded, "blocks": []}
+
+    data_uri = f"data:{mime};base64," + base64.b64encode(img_bytes).decode("utf-8")
+
+    # 이미지 클립보드 자동 복사(ClipData.newUri) — 카톡 등에서 붙여넣기.
+    # ★capability 게이트: `from java import jclass` 는 폰 네이티브 런타임에만 성공
+    # (맥/PC 는 ImportError → 조용히 스킵). 환경변수 프로파일 분기 대신 이 능력감지가 무포크 규율.
+    copied = False
+    copy_note = ""
+    if do_copy:
+        try:
+            from java import jclass  # 폰 전용 브리지 = 능력 감지
+            MS = jclass("com.indiebiz.phoneagent.MediaSaver")
+            res = str(MS.imageToClipboard(img_bytes, f"icon_{uuid.uuid4().hex[:8]}{ext}", mime))
+            copied = res.startswith("OK")
+            if not copied:
+                copy_note = res
+        except ImportError:
+            pass  # 맥/PC — 폰 클립보드 없음(정상)
+        except Exception as e:
+            copy_note = str(e)
+
+    if copied:
+        status = "✓ 클립보드에 복사됨 — 카카오톡 대화창에서 붙여넣기하세요"
+    elif do_copy and copy_note:
+        status = f"생성 완료 (자동 복사 실패: {copy_note})"
+    elif do_copy:
+        status = "생성 완료 (클립보드 복사는 폰에서만 동작)"
+    else:
+        status = "생성 완료"
+
+    return {
+        "success": True,
+        "blocks": [
+            {"type": "image", "src": data_uri, "caption": user_prompt},
+            {"text": status},
+        ],
+        "message": status,
+        "prompt": expanded,
+        "path": os.path.abspath(out_path),
+        "copied": copied,
+    }
 
 
 STYLE_PRESETS = {

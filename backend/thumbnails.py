@@ -107,8 +107,11 @@ def generate_thumbnail(src: str, dst: str, size: int = 512, kind: str | None = N
 # 카메라·폰이 GPS/EXIF 를 흔히 심는 포맷만 sanitize 대상(그 외 png/gif/webp 는
 # 원본 그대로 두어 도표·스크린샷 화질 보존).
 _EXIF_BEARING_EXTS = {"jpg", "jpeg", "heic", "heif", "tiff", "tif"}
-# 브라우저가 대체로 그대로 재생 가능한 컨테이너(트랜스코드 불필요).
+# 브라우저가 대체로 그대로 재생 가능한 컨테이너(ffprobe 불가 시 폴백용).
 _WEB_PLAYABLE_VIDEO_EXTS = {"mp4", "m4v", "webm"}
+# 브라우저가 직접 디코딩 가능한 비디오 코덱(트랜스코드 불필요).
+# HEVC 는 제외 — Safari 만 재생하고 Chrome/Firefox 는 대체로 못 여니 변환한다.
+_WEB_PLAYABLE_VIDEO_CODECS = {"h264", "vp8", "vp9", "av1"}
 
 
 def needs_exif_strip(path: str) -> bool:
@@ -116,9 +119,35 @@ def needs_exif_strip(path: str) -> bool:
     return ext in _EXIF_BEARING_EXTS
 
 
+def _probe_video_codec(path: str) -> str | None:
+    """ffprobe 로 첫 비디오 스트림 코덱명 반환. 실패 시 None."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=codec_name", "-of", "csv=p=0", path],
+            capture_output=True, timeout=20,
+        )
+        if r.returncode == 0:
+            return r.stdout.decode("utf-8", "ignore").strip() or None
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        pass
+    return None
+
+
 def needs_video_transcode(path: str) -> bool:
+    """브라우저가 못 여는 동영상이면 True.
+
+    확장자가 아니라 실제 비디오 코덱으로 판정한다. `.mp4` 껍데기여도
+    알맹이가 mpeg4/HEVC 면 브라우저는 비디오를 못 읽어(소리만 남)
+    트랜스코드가 필요하다. ffprobe 실패 시엔 확장자 기준으로 폴백."""
+    if classify(path) != "video":
+        return False
+    codec = _probe_video_codec(path)
+    if codec is not None:
+        return codec.lower() not in _WEB_PLAYABLE_VIDEO_CODECS
+    # ffprobe 불가 — 확장자 기준 보수적 폴백(기존 동작).
     ext = os.path.splitext(path)[1].lower().lstrip(".")
-    return classify(path) == "video" and ext not in _WEB_PLAYABLE_VIDEO_EXTS
+    return ext not in _WEB_PLAYABLE_VIDEO_EXTS
 
 
 def sanitize_image_bytes(src: str, quality: int = 92):

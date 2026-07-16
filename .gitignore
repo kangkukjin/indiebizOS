@@ -308,3 +308,9 @@ data/system_ai_state/patch_proposals/
 # 크롤 에스컬레이션: Playwright 브라우저 바이너리 + 로컬 python 라이브러리 (대용량, 로컬 설치물)
 ms-playwright/
 pylibs/
+
+# 자유게시판·가족신문·포털 런타임 상태 (PII: 방문자 IP·글·방명록·감사로그 — 공개 repo 추적 금지)
+data/bulletin/
+data/family_news/
+data/portal_audit.jsonl
+data/*.lock

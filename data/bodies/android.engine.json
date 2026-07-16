@@ -12,9 +12,11 @@
     "android_calibrate",
     "api_agents",
     "api_android",
+    "api_bulletin",
     "api_business",
     "api_conversations",
     "api_engine",
+    "api_family_news",
     "api_gmail",
     "api_health",
     "api_ibl",
@@ -29,7 +31,9 @@
     "api_phone",
     "api_photo",
     "api_pipeline",
+    "api_portal",
     "api_projects",
+    "api_report",
     "api_scheduler",
     "api_showcase",
     "api_switches",
@@ -111,6 +115,7 @@
     "prompt_builder",
     "r2_client",
     "rebuild_usage_db",
+    "report_html",
     "runtime_utils",
     "safe_store",
     "scheduler",
@@ -154,8 +159,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 148,
-    "engine": 135,
+    "total": 153,
+    "engine": 140,
     "blocklist": 13
   }
 }

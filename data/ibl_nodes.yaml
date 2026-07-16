@@ -3949,6 +3949,171 @@ nodes:
         - 언팔로우
         - 구독
         - 저자
+      bulletin:
+        returns: items
+        fixture: '[others:bulletin]{op: "status"}'
+        runs_on: mac_only
+        description: 로그인 없는 자유게시판 — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. op:status(기본, 게시판 목록·주소)/create/config/delete/detail(모더레이션용 최근 글)/post_delete(글 삭제)/portals(포털 붙임 대상 목록). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 글을 저장·서빙, 파일시스템이 곧 진실. 여러 게시판이 각각 다른 주소를 갖고, 특정 게시판을 특정 포털에 붙이면(portal display) 포털 홈에서 그 게시판으로 들어간다. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.
+        target_description: op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.
+        target_key: op
+        group: bulletin
+        router: handler
+        tool: bulletin_op
+        ops:
+          default: status
+          values:
+            status: 게시판 목록(각 게시판 주소·글 수) + 전역 설정 조회
+            create: 새 게시판 생성 — 공개 주소(/b/5자) 발급
+            config: 게시판 설정(board_id — title 개명·사진 허용) 또는 전역(public_base)
+            delete: 게시판 삭제 — 주소·글·사진 동반 제거
+            detail: 게시판 하나 상세 + 최근 글(모더레이션용, 앱 드릴)
+            post_delete: 글 하나 삭제 (board_id + post_id)
+            portals: 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태
+        implementation: bulletin 패키지 bulletin_op — 게시판 메타는 data/bulletin/state.json, 글은 게시판별 data/bulletin/<board_id>/posts.json 에 즉석 append(bulletin_core, flock). 공개 서빙·익명 글쓰기는 backend/api_bulletin.py(/bulletin/page·media·post). 공개 Worker(substrate)는 slug 게이트+프록시. 포털 붙임=portal_core.listable_universe 가 board:<slug> 콘텐츠 타일 유도.
+        keywords:
+        - 게시판
+        - 자유게시판
+        - 방명록 게시판
+        - 익명 게시판
+        - 글쓰기 게시판
+        - 공개 게시판
+        - bulletin
+        - 주소로 글쓰기
+        app:
+          instrument: bulletin
+          icon: 📋
+          name: 게시판
+          order: 17
+          phone_render: false
+          modes:
+          - name: 게시판
+            auto_run: true
+            note: 게시판마다 공개 주소(…/b/코드)가 하나씩 있습니다. 주소를 아는 사람은 로그인 없이 글을 남길 수 있어요. 게시판을 눌러 설정·글 관리(삭제).
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: kv
+              title: 안내
+              rows:
+              - k: 🔓 자유게시판
+                v: 로그인이 없습니다. 주소(…/b/코드)를 아는 사람은 누구나 글·사진을 남깁니다. 주소를 공유하는 범위가 곧 공개 범위예요.
+              - k: ⚡ 라이브
+                v: 글은 바로 공개됩니다. 부적절한 글은 게시판을 눌러 들어가 삭제하세요.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 이 게시판 열기 →
+              item_click:
+                action: '[others:bulletin]{op: "detail", board_id: "{id}"}'
+                view:
+                - type: kv
+                  title: 이 게시판
+                  rows:
+                  - k: 🔗 주소
+                    v: '{board.url}'
+                  - k: 안내
+                    v: '{note}'
+                - type: form
+                  title: 게시판 설정
+                  fields:
+                  - key: title
+                    label: 이름
+                    type: text
+                    value: '{board.title}'
+                  - key: allow_images
+                    label: 사진 첨부 허용
+                    type: toggle
+                    value: '{board.allow_images}'
+                  action: '[others:bulletin]{op: "config", board_id: "{board.id}", title: "$title", allow_images: "$allow_images"}'
+                  button: 저장
+                  actions:
+                  - label: 이 게시판 삭제
+                    action: '[others:bulletin]{op: "delete", board_id: "{board.id}"}'
+                    style: danger
+                    confirm: 이 게시판과 주소, 모든 글·사진을 삭제할까요? (되돌릴 수 없습니다)
+                    back: true
+                - type: list_action
+                  from: posts
+                  title: '{title}'
+                  sub: '{meta}'
+                  button:
+                    label: 삭제
+                    action: '[others:bulletin]{op: "post_delete", board_id: "{board_id}", post_id: "{id}"}'
+                    refresh: true
+          - name: 게시판 만들기
+            auto_run: true
+            note: 새 게시판을 만들면 공개 주소가 생깁니다. 그 주소를 아는 사람은 로그인 없이 글을 쓸 수 있어요.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: form
+              title: 새 게시판
+              fields:
+              - key: title
+                label: 게시판 이름
+                type: text
+                placeholder: 예) 우리 동네 자유게시판, 행사 방명록
+              - key: allow_images
+                label: 사진 첨부 허용
+                type: toggle
+                value: 'true'
+              action: '[others:bulletin]{op: "create", title: "$title", allow_images: "$allow_images"}'
+              button: 게시판 만들기
+          - name: 포털 연결
+            auto_run: true
+            note: 게시판을 포털 홈에 붙이면(가족신문·공개파일처럼) 그 포털에서 게시판으로 들어갈 수 있습니다. 게시판을 눌러 붙일 포털을 고르세요.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: kv
+              title: 안내
+              rows:
+              - k: 🏘️ 포털에 붙이기
+                v: 붙임/떼기는 포털별로 따로 저장됩니다. 같은 게시판을 여러 포털에 붙일 수도, 한 곳에만 붙일 수도 있어요.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+              item_click:
+                action: '[others:bulletin]{op: "portals", board_id: "{id}"}'
+                view:
+                - type: kv
+                  title: 이 게시판
+                  rows:
+                  - k: 📋 게시판
+                    v: '{board.title}'
+                  - k: 🔗 주소
+                    v: '{board.url}'
+                  - k: 안내
+                    v: '{note}'
+                - type: list_action
+                  from: items
+                  title: '{title}'
+                  sub: '{meta}'
+                  button:
+                    label: '{action}'
+                    action: '[others:portal]{op: "display", portal: "{portal_slug}", key: "{board_key}", enabled: "{enabled_next}", min_level: "{min_level_next}"}'
+                    refresh: true
+          - name: 설정
+            auto_run: true
+            note: 공개 사이트 base 주소. 보통 공개파일·가족신문과 같은 Worker 주소가 자동으로 채워집니다.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: form
+              title: 공개 설정
+              fields:
+              - key: public_base
+                label: 공개 사이트 base URL
+                type: text
+                value: '{public_base}'
+              action: '[others:bulletin]{op: "config", public_base: "$public_base"}'
+              button: 저장
       messages:
         aliases:
           neighbor_id:
@@ -4197,6 +4362,391 @@ nodes:
         - 자동회신
         - 자동답장
         - auto reply
+      portal:
+        returns: items
+        fixture: '[others:portal]{op: "status"}'
+        runs_on: mac_only
+        description: 개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 레벨(0 손님/1 이웃/2 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).
+        target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+level_down:true=한 칸 열기[꺼짐→가족만→이웃→손님]·level_up:true=한 칸 잠그기[끝은 꺼짐]·toggle/min_level 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
+        target_key: op
+        group: portal
+        router: handler
+        tool: portal_op
+        ops:
+          default: status
+          values:
+            status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
+            portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)
+            create: 새 포털 만들기 (title — 새 5자 주소 발급)
+            remove: 포털 삭제 (portal 필수, 회원 있으면 force:true)
+            members: 이웃 목록 (레벨·아이디·개인 링크·오늘 사용량)
+            join: 이웃 직접 등록 — 링크 전용 회원 (name 필수, contact·level 옵션)
+            promote: 레벨 승급/강등 (member_id + level 지정 또는 +1, down:true 면 -1)
+            issue: 개인 링크 재발급 (옛 링크·세션 즉시 무효, 회수 해제 — 비밀번호 분실 복구)
+            revoke: 회수 — 그 사람의 링크·쿠키·아이디 로그인 차단 (재발급으로 복구)
+            display: 진열 다이얼(포털별) — 노출 사다리(level_down 열기/level_up 잠그기, min_level). 사용 횟수 캡은 config(포털 단위)
+            audit: 사용 기록 (누가·언제·어느 포털에서·무엇을)
+            config: 포털 설정 — title 이름 / intro 소개글 / 일일 한도(guest_daily·member_daily·global_daily, 그 포털 전 계기 공통) (portal 로 지정)
+        implementation: 'community-portal 패키지 portal_op — 상태·게이트 로직은 portal_core.py(운영자 어휘와 공개 서빙이 공유, flock 직렬화). 공개 서빙(홈 렌더·가입·개인 링크 쿠키·회원 실행 게이트)은 backend/api_portal.py, 공개 Worker 는 public-files 와 공유(/h/ 네임스페이스). 회원 실행 게이트=계기 app: 블록 선언 템플릿의 인스턴스만 실행(리터럴 파라미터 강제) + 회원/손님/전역 3중 일일 한도 + 감사로그(data/portal_audit.jsonl).'
+        keywords:
+        - 포털
+        - 커뮤니티 홈
+        - 마을 포털
+        - 이웃 가입
+        - 개인 링크
+        - 회원 레벨
+        - portal
+        - community
+        app:
+          instrument: portal
+          icon: 🏘️
+          name: 포털
+          order: 18
+          modes:
+          - name: 포털
+            auto_run: true
+            note: 대상별로 주소를 따로 만드세요 — 가족용·친구용 주소가 각자 자기 첫페이지(진열)와 회원 명부를 가집니다. 주소는 완전 공개해도 됩니다(가입=아이디·비밀번호, 레벨 0 자동 등록 — 승급이 곧 승인).
+            action: '[others:portal]{op: "portals"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: 🏘️ {title}
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 공개 홈 열기 →
+            - type: form
+              title: 새 포털 만들기
+              fields:
+              - key: title
+                label: 포털 이름 (예 우리 가족, 동창 모임)
+                type: text
+              action: '[others:portal]{op: "create", title: "$title"}'
+              button: ➕ 새 주소 만들기
+          - name: 이웃
+            auto_run: true
+            note: 홈에서 아이디·비밀번호로 가입하면 레벨 0(손님)으로 들어옵니다 — 승급해야 회원 계기가 열립니다. 개인 링크는 즉시 로그인 열쇠(비밀번호 분실 복구용) — 본인에게만 전달하세요.
+            inputs:
+            - key: portal
+              type: select
+              label: 포털
+              options_action: '[others:portal]{op: "portals"}'
+              options_from: items
+              option_value: slug
+              option_label: label
+            action: '[others:portal]{op: "members", portal: "$portal"}'
+            view:
+            - type: kv
+              title: '{portal.title}'
+              rows:
+              - k: 🔗 공개 홈
+                v: '{portal.url}'
+              - k: 이웃
+                v: '{portal.member_count}명 · 오늘 사용 {portal.usage_today}회 · 진열 {portal.display_on}개'
+            - type: form
+              title: 이웃 직접 등록 (링크 전용 회원)
+              fields:
+              - key: name
+                label: 이름
+                type: text
+              - key: contact
+                label: 연락처 (선택)
+                type: text
+              action: '[others:portal]{op: "join", portal: "$portal", name: "$name", contact: "$contact"}'
+              button: ➕ 등록
+            - type: list_action
+              from: items
+              icon: 👤
+              title: '{name} — {level_label}'
+              sub: '{meta}'
+              button:
+                label: ▲ 승급
+                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}"}'
+                refresh: true
+              button2:
+                label: ▼ 내림
+                action: '[others:portal]{op: "promote", portal: "{portal}", member_id: "{id}", down: true}'
+                refresh: true
+            - type: list_action
+              from: items
+              icon: 🔑
+              title: '{name}'
+              sub: '{key_hint}'
+              button:
+                label: 🔗 재발급
+                action: '[others:portal]{op: "issue", portal: "{portal}", member_id: "{id}"}'
+                refresh: true
+              button2:
+                label: ⛔ 회수
+                action: '[others:portal]{op: "revoke", portal: "{portal}", member_id: "{id}"}'
+                refresh: true
+            - type: kv_list
+              from: items
+              title: 개인 링크 (즉시 로그인 — 본인에게만)
+              k: '{name}'
+              v: '{key_link}'
+          - name: 진열
+            auto_run: true
+            note: 이 포털 첫페이지에 보여줄 것을 고르세요. 항목마다 노출 사다리 하나 — 꺼짐 ↔ 레벨 2(가족만) ↔ 1(이웃부터) ↔ 0(손님도). ▼ 열기=꺼진 것은 가족만으로 켜지고 계속 누르면 손님까지, ▲ 잠그기=끝까지 올리면 꺼짐. 사적/몸/발신 계기는 목록에 아예 없습니다. 크롤형 계기는 집 IP 평판을 지키려 손님에게 열지 마세요.
+            inputs:
+            - key: portal
+              type: select
+              label: 포털
+              options_action: '[others:portal]{op: "portals"}'
+              options_from: items
+              option_value: slug
+              option_label: label
+            action: '[others:portal]{op: "display", portal: "$portal"}'
+            view:
+            - type: list_action
+              from: items
+              icon: 🎛️
+              title: '{icon} {name} — {state}'
+              sub: '{meta}'
+              button:
+                label: ▼ 열기
+                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", level_down: true}'
+                refresh: true
+              button2:
+                label: ▲ 잠그기
+                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", level_up: true}'
+                refresh: true
+            - type: form
+              title: 한도 직접 설정
+              fields:
+              - key: key
+                label: 항목 key (위 목록의 회색 글씨)
+                type: text
+              - key: min_level
+                label: 최소 레벨
+                type: select
+                options:
+                - value: ''
+                  label: (유지)
+                - value: '0'
+                  label: 0 — 손님도 사용
+                - value: '1'
+                  label: 1 — 이웃부터
+                - value: '2'
+                  label: 2 — 가족만
+              - key: guest_daily
+                label: 손님 한도 (회/일·IP당)
+                type: text
+              - key: member_daily
+                label: 회원 한도 (회/일·1인당)
+                type: text
+              action: '[others:portal]{op: "display", portal: "$portal", key: "$key", min_level: "$min_level", guest_daily: "$guest_daily", member_daily: "$member_daily"}'
+              button: 적용
+          - name: 기록
+            auto_run: true
+            note: 회원 실행 게이트를 지나간 사용 기록입니다 (누가 · 언제 · 어느 포털에서 · 무엇을).
+            action: '[others:portal]{op: "audit"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+          - name: 설정
+            auto_run: true
+            note: 이름과 소개는 그 포털 공개 홈 맨 위에 실립니다. 아래에서 손님·회원 하루 사용 한도도 이 포털 전체에 정할 수 있어요.
+            inputs:
+            - key: portal
+              type: select
+              label: 포털
+              options_action: '[others:portal]{op: "portals"}'
+              options_from: items
+              option_value: slug
+              option_label: label
+            action: '[others:portal]{op: "status", portal: "$portal"}'
+            view:
+            - type: kv
+              title: 공개 주소
+              rows:
+              - k: 🔗 홈
+                v: '{portal.url}'
+            - type: form
+              title: 포털 설정
+              fields:
+              - key: title
+                label: 포털 이름
+                type: text
+                value: '{settings.title}'
+              - key: intro
+                label: 소개글
+                type: textarea
+                value: '{settings.intro}'
+              action: '[others:portal]{op: "config", portal: "$portal", title: "$title", intro: "$intro"}'
+              button: 저장
+            - type: kv
+              title: 일일 사용 한도
+              rows:
+              - k: 💡 안내
+                v: 이 포털의 모든 계기(앱)에 적용됩니다. 누가 보느냐(레벨)는 '진열' 탭의 계기별 사다리로, 하루 몇 번 쓰느냐는 여기서 한 번에 정합니다.
+            - type: form
+              title: 손님·회원 하루 사용 한도
+              fields:
+              - key: guest_daily
+                label: 손님(로그인 없음) 하루 사용 횟수 — 0이면 손님 금지
+                type: text
+                value: '{settings.guest_daily}'
+              - key: member_daily
+                label: 회원 1인당 하루 사용 횟수 — 0이면 무제한
+                type: text
+                value: '{settings.member_daily}'
+              - key: global_daily
+                label: 계기별 전체 하루 상한 — 0이면 무제한
+                type: text
+                value: '{settings.global_daily}'
+              action: '[others:portal]{op: "config", portal: "$portal", guest_daily: "$guest_daily", member_daily: "$member_daily", global_daily: "$global_daily"}'
+              button: 한도 저장
+      family_news:
+        returns: items
+        fixture: '[others:family_news]{op: "status"}'
+        runs_on: mac_only
+        description: 가족신문 — USB 로 연결된 폰의 사진(지난 발행 이후, 첫 판은 최근 7일)으로 신문 판을 조판해, 공개 주소(/n/<5자 코드>)에 판을 누적 발행하는 가족용 정기간행물. 사진의 EXIF GPS 를 행정동 장소명으로 바꿔 싣고(웹판 사진 자체는 EXIF 제거), 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
+        target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
+        target_key: op
+        group: family_news
+        router: handler
+        tool: family_news_op
+        ops:
+          default: status
+          values:
+            status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
+            create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인
+            publish: 초안 판을 공개 주소로 발행 (첫 발행 때 /n/<5자 코드> 주소 생성)
+            detail: 판 하나 상세 (앱 드릴용 — 기간·사진수·장소·미리보기/공개 주소)
+            delete: 판 삭제 (발행된 판은 force:true 필요, 실렸던 가족 사진은 후보로 복귀)
+            comments: 공개 페이지 방명록 글 목록 (edition_id 로 판별 필터)
+            uploads: 가족이 공개 페이지에서 보낸 사진 목록 (미사용분은 다음 판에 실림)
+            config: 설정 — title 제호 / photo_limit 판당 사진 상한 / public_base 공개 사이트
+        implementation: family-news 패키지 family_news_op — 폰 MediaStore(adb content query, DCIM 만) 조회 → 날짜별 비례 샘플링(캡) → adb pull → EXIF GPS→Kakao 역지오코딩(1km 격자 캐시) → 웹판(1600px, EXIF 제거) → 정적 신문 HTML(newspaper_html.py). 판·상태는 data/family_news/. 공개 서빙(발행판만)·방명록·업로드 수신은 backend/api_family_news.py, 공개 Worker 는 public-files 와 공유(/n/ 네임스페이스).
+        keywords:
+        - 가족신문
+        - 가족 신문
+        - 신문 발행
+        - 가족 사진 신문
+        - 사진 신문
+        - 주간 가족지
+        - family news
+        app:
+          instrument: family_news
+          icon: 🗞️
+          name: 가족신문
+          order: 17
+          phone_render: false
+          modes:
+          - name: 신문
+            auto_run: true
+            note: 초안은 미리보기로 확인한 뒤 발행하세요. 발행하면 가족 누구나 주소로 볼 수 있고, 지난 신문도 같은 주소에 쌓입니다.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: kv
+              title: 우리 신문
+              rows:
+              - k: 🔗 공개 주소
+                v: '{paper.url}'
+              - k: 📥 가족이 보낸 새 사진
+                v: '{paper.uploads_new}장 — 다음 신문에 실립니다 '
+            - type: card_list
+              from: drafts
+              empty_from: message
+              card:
+                title: 📝 {title} — 초안
+                lines:
+                - '{meta}'
+                - 📍 {places}
+                link:
+                  href: '{preview_url}'
+                  label: ① 미리보기로 확인 →
+            - type: list_action
+              from: drafts
+              icon: 📣
+              title: '{title} 발행하기'
+              sub: ② 미리보기 확인 후 누르세요 — 가족 누구나 볼 수 있게 됩니다
+              button:
+                label: 발행
+                action: '[others:family_news]{op: "publish", edition_id: "{id}"}'
+                refresh: true
+            - type: card_list
+              from: published
+              card:
+                title: 🗞️ {title}
+                lines:
+                - '{meta}'
+                - 📍 {places}
+                link:
+                  href: '{url}'
+                  label: 신문 열기 →
+          - name: 제작
+            auto_run: true
+            note: USB 로 폰을 연결한 뒤 누르세요. 지난 발행 이후의 사진(첫 판은 최근 7일)으로 신문을 만듭니다. 조판은 뒤에서 진행되니 잠시 후 '신문' 탭에서 초안을 확인하세요.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: kv
+              title: 지금 상태
+              rows:
+              - k: 알림
+                v: '{message}'
+            - type: form
+              title: 새 신문 만들기
+              fields:
+              - key: photo_limit
+                label: 사진 수 상한 (선택)
+                type: text
+                placeholder: 비우면 기본 48장
+              - key: days
+                label: 며칠치 (선택)
+                type: text
+                placeholder: 비우면 지난 발행 이후 (첫 판은 7일)
+              action: '[others:family_news]{op: "create", photo_limit: "$photo_limit", days: "$days"}'
+              button: 🗞️ 신문 만들기
+          - name: 방명록
+            auto_run: true
+            note: 가족들이 공개 신문에 남긴 글입니다.
+            action: '[others:family_news]{op: "comments"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: 💬 {title}
+                lines:
+                - '{summary}'
+                - '{meta}'
+          - name: 가족앨범
+            auto_run: true
+            note: 가족들이 공개 신문의 '사진 보내기'로 보내온 사진입니다. 아직 안 실린 사진은 다음 신문에 자동으로 실립니다.
+            action: '[others:family_news]{op: "uploads"}'
+            view:
+            - type: image_grid
+              from: items
+              empty_from: message
+          - name: 설정
+            auto_run: true
+            note: 제호는 신문 맨 위에 크게 실립니다.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: form
+              title: 신문 설정
+              fields:
+              - key: title
+                label: 제호 (신문 이름)
+                type: text
+                value: '{settings.title}'
+              - key: photo_limit
+                label: 판당 사진 수 상한
+                type: text
+                value: '{settings.photo_limit}'
+              action: '[others:family_news]{op: "config", title: "$title", photo_limit: "$photo_limit"}'
+              button: 저장
       showcase:
         returns: items
         fixture: '[others:showcase]{op: "status"}'

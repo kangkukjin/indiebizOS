@@ -1,0 +1,119 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "community-portal",
+  "name": "Community Portal",
+  "description": "개인 포털(커뮤니티 홈) — 가입을 받는 공개 홈(/h/<슬러그>/)으로 이웃을 수집하고, 레벨에 따라 콘텐츠와 계기를 원격으로 빌려 쓰게 하는 도구.\n\n## 이음매\n진열·승급·한도 판단은 전부 맥(운영자). 공개 Worker(substrate, public-files 와 공유)는 /h/ 게이트 + 무캐시 프록시만. 회원 실행은 범용 /ibl/execute 가 아니라 계기 app: 블록 선언의 인스턴스만 통과하는 화이트리스트 게이트를 지난다.\n\n## 신원\n가입/로그인=아이디+비밀번호(네이버식, 자동 로그인 쿠키 1년). 가입=레벨 0 자동 등록(공개층뿐이라 무위험) — 승급 행위가 곧 승인. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로). 유출·이탈=그 사람 것만 회수(revoke).",
+  "version": "0.1.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "portal_op",
+      "description": "개인 포털(커뮤니티 홈) 운영 제어.\n\n## op 분기\n포털은 여러 개(대상별 주소 — 가족용·친구용). 대부분 op 는 portal 파라미터(슬러그/이름)로 대상을 고른다 — 비우면 첫 포털.\n- status (기본): 그 포털의 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수.\n- portals: 포털 목록 (label·slug·url·회원/진열 수).\n- create: 새 포털 만들기 — title 필수, 새 5자 주소 발급. 진열은 전부 꺼진 채 시작(안전 기본).\n- remove: 포털 삭제 — portal 필수, 회원이 있으면 force:true.\n- members: 이웃 목록 — 레벨·아이디(셀프 가입)·가입일·오늘 사용량·개인 링크(key_link).\n- join: 이웃 직접 등록(링크 전용 회원 — 아이디 없음). name 필수, contact·level(기본 0) 옵션. 개인 링크(즉시 로그인)를 반환 — 본인에게만 전달.\n- promote: member_id 의 레벨 변경. level 을 주면 그 값으로, 없으면 +1 (down:true 면 -1). 레벨 0 손님/1 이웃/2 가족.\n- issue: member_id 개인 링크 재발급 — 옛 링크·로그인 세션 즉시 무효(비밀번호는 유지), 회수 해제. 비밀번호 분실 복구 경로.\n- revoke: member_id 회수 — 링크·쿠키·아이디 로그인 전부 차단(재발급으로 복구).\n- display: 진열 다이얼(포털별). key 없으면 진열 가능 목록(사적/몸/발신 계기는 목록 밖). key 와 함께 level_down:true(한 칸 열기 — 꺼짐→가족만(2)→이웃(1)→손님(0)), level_up:true(한 칸 잠그기 — 2에서 또 올리면 꺼짐), toggle:true(켬/끔), min_level(직접 값), enabled 로 설정. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다(display 로 넣어도 계기엔 포털 config 가 우선).\n- audit: 회원 실행 게이트 사용 기록 — 포털 표시 (limit 기본 100).\n- config: 그 포털의 title(이름)/intro(소개글), 공용 public_base, 그리고 일일 사용 한도(guest_daily 손님·member_daily 회원·global_daily 전체 — 그 포털 전 계기에 공통 적용) 설정.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "status(기본)/portals/create/remove/members/join/promote/issue/revoke/display/audit/config",
+            "enum": [
+              "status",
+              "portals",
+              "create",
+              "remove",
+              "members",
+              "join",
+              "promote",
+              "issue",
+              "revoke",
+              "display",
+              "audit",
+              "config"
+            ],
+            "default": "status"
+          },
+          "portal": {
+            "type": "string",
+            "description": "대상 포털 (슬러그 또는 이름) — 비우면 첫 포털"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "remove — 회원이 있는 포털을 지울 때 true 필요"
+          },
+          "member_id": {
+            "type": "string",
+            "description": "promote/issue/revoke — 대상 회원 id (members 로 조회)"
+          },
+          "name": {
+            "type": "string",
+            "description": "join — 이웃 이름 (필수)"
+          },
+          "contact": {
+            "type": "string",
+            "description": "join — 연락처 메모 (선택)"
+          },
+          "level": {
+            "type": "integer",
+            "description": "join/promote — 레벨 (0 손님/1 이웃/2 가족)"
+          },
+          "down": {
+            "type": "boolean",
+            "description": "promote — true 면 레벨 -1"
+          },
+          "key": {
+            "type": "string",
+            "description": "display — 진열 항목 key (계기 id 또는 news:·files: 콘텐츠 키)"
+          },
+          "toggle": {
+            "type": "boolean",
+            "description": "display — 켬/끔 뒤집기"
+          },
+          "level_down": {
+            "type": "boolean",
+            "description": "display — 사다리 한 칸 열기 (꺼짐→가족만(2)→이웃(1)→손님(0))"
+          },
+          "level_up": {
+            "type": "boolean",
+            "description": "display — 사다리 한 칸 잠그기 (레벨 +1, 2에서 또 올리면 꺼짐)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "display — 켬/끔 직접 지정"
+          },
+          "min_level": {
+            "type": "integer",
+            "description": "display — 최소 레벨 직접 지정"
+          },
+          "guest_daily": {
+            "type": "integer",
+            "description": "display/config — 손님(IP당) 일일 한도. 0=손님 금지 (config 는 포털 전 계기 공통)"
+          },
+          "member_daily": {
+            "type": "integer",
+            "description": "display/config — 회원 1인당 일일 한도. 0=무제한 (config 는 포털 전 계기 공통)"
+          },
+          "global_daily": {
+            "type": "integer",
+            "description": "display/config — 계기 전체 일일 캡 (키 쿼터·자원 보호, config 는 포털 전 계기 공통)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "audit — 최근 몇 건 (기본 100)"
+          },
+          "title": {
+            "type": "string",
+            "description": "create/config — 포털 이름"
+          },
+          "intro": {
+            "type": "string",
+            "description": "config — 홈 상단 소개글"
+          },
+          "public_base": {
+            "type": "string",
+            "description": "config — 공개 사이트 base URL (기본은 공개파일과 같은 Worker)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

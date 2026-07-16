@@ -1,0 +1,59 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "family-news",
+  "name": "Family News",
+  "description": "가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발행하는 가족용 정기간행물 도구.\n\n## 이음매\n판 조판·검수·발행 판단은 전부 맥. 공개 Worker(substrate, public-files 와 공유)는 /n/<slug> 게이트 + 지연 캐시만. 발행된 판만 공개되고, 웹판 사진은 EXIF/GPS 를 벗겨 내보낸다(장소는 텍스트로만).\n\n## 쓰기 방향\n공개 페이지에 방명록과 가족 사진 업로드가 달린다. 업로드는 공개되지 않고 다음 판 제작 때 \"가족이 보내온 사진\" 섹션으로 실린다(발행 전 검수).",
+  "version": "0.1.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "family_news_op",
+      "description": "가족신문 제작·발행 제어.\n\n## op 분기\n- status (기본): 판 목록(items, 초안 drafts/발행 published 구분)·공개 주소(paper.url)·가족이 보낸 새 사진 수(paper.uploads_new)·제작 진행(building) 반환.\n- create: 폰(USB) 사진으로 새 판 초안 제작. 즉시 반환하고 백그라운드로 조판 — 진행은 status 로. photo_limit(사진 상한, 기본 48), days(며칠치 — 비우면 지난 발행 이후, 첫 판 7일). 미발행 초안이 있으면 갈아엎고 호수를 재사용.\n- publish: edition_id 판을 공개 주소로 발행. 첫 발행 때 /n/<5자 코드> 주소가 만들어짐. edition_id 생략 시 초안이 하나뿐이면 그 판.\n- detail: edition_id 판 상세(기간·사진수·장소·미리보기/공개 주소).\n- delete: edition_id 판 삭제. 발행된 판은 force:true 필요. 실렸던 가족 업로드 사진은 다음 판 후보로 복귀.\n- comments: 공개 페이지 방명록 글 목록(최신 먼저, edition_id 필터 가능).\n- uploads: 가족이 보낸 사진 목록(미사용분은 다음 create 때 자동 합류).\n- config: title(제호)/photo_limit/public_base 설정.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "status(기본)/create/publish/detail/delete/comments/uploads/config",
+            "enum": [
+              "status",
+              "create",
+              "publish",
+              "detail",
+              "delete",
+              "comments",
+              "uploads",
+              "config"
+            ],
+            "default": "status"
+          },
+          "edition_id": {
+            "type": "string",
+            "description": "판 id (publish/detail/delete/comments 필터)"
+          },
+          "photo_limit": {
+            "type": "integer",
+            "description": "create — 이 판의 사진 수 상한 (기본 48, config 로 기본값 변경)"
+          },
+          "days": {
+            "type": "integer",
+            "description": "create — 최근 며칠치 사진으로 만들지 (비우면 지난 발행 이후, 첫 판은 7일)"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "delete — 발행된 판을 지울 때 true 필요"
+          },
+          "title": {
+            "type": "string",
+            "description": "config — 신문 제호 (기본 \"우리 가족 신문\")"
+          },
+          "public_base": {
+            "type": "string",
+            "description": "config — 공개 사이트 base URL (기본은 공개파일과 같은 Worker)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

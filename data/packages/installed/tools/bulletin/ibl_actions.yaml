@@ -1,0 +1,235 @@
+nodes:
+  others:
+    actions:
+      bulletin:
+        returns: items
+        fixture: '[others:bulletin]{op: "status"}'
+        runs_on: mac_only
+        description: '로그인 없는 자유게시판 — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. op:status(기본, 게시판 목록·주소)/create/config/delete/detail(모더레이션용 최근 글)/post_delete(글 삭제)/portals(포털 붙임 대상 목록). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 글을 저장·서빙, 파일시스템이 곧 진실. 여러 게시판이 각각 다른 주소를 갖고, 특정 게시판을 특정 포털에 붙이면(portal display) 포털 홈에서 그 게시판으로 들어간다. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.'
+        target_description: 'op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.'
+        target_key: op
+        group: bulletin
+        router: handler
+        tool: bulletin_op
+        ops:
+          default: status
+          values:
+            status: 게시판 목록(각 게시판 주소·글 수) + 전역 설정 조회
+            create: 새 게시판 생성 — 공개 주소(/b/5자) 발급
+            config: 게시판 설정(board_id — title 개명·사진 허용) 또는 전역(public_base)
+            delete: 게시판 삭제 — 주소·글·사진 동반 제거
+            detail: 게시판 하나 상세 + 최근 글(모더레이션용, 앱 드릴)
+            post_delete: 글 하나 삭제 (board_id + post_id)
+            portals: 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태
+        implementation: 'bulletin 패키지 bulletin_op — 게시판 메타는 data/bulletin/state.json, 글은 게시판별 data/bulletin/<board_id>/posts.json 에 즉석 append(bulletin_core, flock). 공개 서빙·익명 글쓰기는 backend/api_bulletin.py(/bulletin/page·media·post). 공개 Worker(substrate)는 slug 게이트+프록시. 포털 붙임=portal_core.listable_universe 가 board:<slug> 콘텐츠 타일 유도.'
+        keywords:
+        - 게시판
+        - 자유게시판
+        - 방명록 게시판
+        - 익명 게시판
+        - 글쓰기 게시판
+        - 공개 게시판
+        - bulletin
+        - 주소로 글쓰기
+        app:
+          instrument: bulletin
+          icon: 📋
+          name: 게시판
+          order: 17
+          phone_render: false
+          modes:
+          - name: 게시판
+            auto_run: true
+            note: 게시판마다 공개 주소(…/b/코드)가 하나씩 있습니다. 주소를 아는 사람은 로그인 없이 글을 남길 수 있어요. 게시판을 눌러 설정·글 관리(삭제).
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: kv
+              title: 안내
+              rows:
+              - k: 🔓 자유게시판
+                v: 로그인이 없습니다. 주소(…/b/코드)를 아는 사람은 누구나 글·사진을 남깁니다. 주소를 공유하는 범위가 곧 공개 범위예요.
+              - k: ⚡ 라이브
+                v: 글은 바로 공개됩니다. 부적절한 글은 게시판을 눌러 들어가 삭제하세요.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 이 게시판 열기 →
+              item_click:
+                action: '[others:bulletin]{op: "detail", board_id: "{id}"}'
+                view:
+                - type: kv
+                  title: 이 게시판
+                  rows:
+                  - k: 🔗 주소
+                    v: '{board.url}'
+                  - k: 안내
+                    v: '{note}'
+                - type: form
+                  title: 게시판 설정
+                  fields:
+                  - key: title
+                    label: 이름
+                    type: text
+                    value: '{board.title}'
+                  - key: allow_images
+                    label: 사진 첨부 허용
+                    type: toggle
+                    value: '{board.allow_images}'
+                  action: '[others:bulletin]{op: "config", board_id: "{board.id}", title: "$title", allow_images: "$allow_images"}'
+                  button: 저장
+                  actions:
+                  - label: 이 게시판 삭제
+                    action: '[others:bulletin]{op: "delete", board_id: "{board.id}"}'
+                    style: danger
+                    confirm: 이 게시판과 주소, 모든 글·사진을 삭제할까요? (되돌릴 수 없습니다)
+                    back: true
+                - type: list_action
+                  from: posts
+                  title: '{title}'
+                  sub: '{meta}'
+                  button:
+                    label: 삭제
+                    action: '[others:bulletin]{op: "post_delete", board_id: "{board_id}", post_id: "{id}"}'
+                    refresh: true
+          - name: 게시판 만들기
+            auto_run: true
+            note: 새 게시판을 만들면 공개 주소가 생깁니다. 그 주소를 아는 사람은 로그인 없이 글을 쓸 수 있어요.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: form
+              title: 새 게시판
+              fields:
+              - key: title
+                label: 게시판 이름
+                type: text
+                placeholder: 예) 우리 동네 자유게시판, 행사 방명록
+              - key: allow_images
+                label: 사진 첨부 허용
+                type: toggle
+                value: 'true'
+              action: '[others:bulletin]{op: "create", title: "$title", allow_images: "$allow_images"}'
+              button: 게시판 만들기
+          - name: 포털 연결
+            auto_run: true
+            note: 게시판을 포털 홈에 붙이면(가족신문·공개파일처럼) 그 포털에서 게시판으로 들어갈 수 있습니다. 게시판을 눌러 붙일 포털을 고르세요.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: kv
+              title: 안내
+              rows:
+              - k: 🏘️ 포털에 붙이기
+                v: 붙임/떼기는 포털별로 따로 저장됩니다. 같은 게시판을 여러 포털에 붙일 수도, 한 곳에만 붙일 수도 있어요.
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+              item_click:
+                action: '[others:bulletin]{op: "portals", board_id: "{id}"}'
+                view:
+                - type: kv
+                  title: 이 게시판
+                  rows:
+                  - k: 📋 게시판
+                    v: '{board.title}'
+                  - k: 🔗 주소
+                    v: '{board.url}'
+                  - k: 안내
+                    v: '{note}'
+                - type: list_action
+                  from: items
+                  title: '{title}'
+                  sub: '{meta}'
+                  button:
+                    label: '{action}'
+                    action: '[others:portal]{op: "display", portal: "{portal_slug}", key: "{board_key}", enabled: "{enabled_next}", min_level: "{min_level_next}"}'
+                    refresh: true
+          - name: 설정
+            auto_run: true
+            note: 공개 사이트 base 주소. 보통 공개파일·가족신문과 같은 Worker 주소가 자동으로 채워집니다.
+            action: '[others:bulletin]{op: "status"}'
+            view:
+            - type: form
+              title: 공개 설정
+              fields:
+              - key: public_base
+                label: 공개 사이트 base URL
+                type: text
+                value: '{public_base}'
+              action: '[others:bulletin]{op: "config", public_base: "$public_base"}'
+              button: 저장
+
+# tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: bulletin
+    name: Bulletin
+    description: '로그인 없는 자유게시판. 게시판마다 공개 주소(/b/<5자>)가 하나씩 — 주소를 아는 사람은 로그인 없이 글·사진을 남긴다.
+
+
+      ## 이음매
+
+      게시판 메타는 상태 파일, 글은 게시판별 파일에 즉석 append(인덱싱 없음). 맥이 요청 시 저장·서빙. 공개 Worker(substrate)는 slug 게이트 + 프록시.
+
+
+      ## 보안
+
+      bare 루트는 잠금 — 게시판은 /b/<5자 코드>. 첨부 이미지는 EXIF/GPS 제거·다운스케일. 익명 글쓰기는 IP 간격 제한 + 허니팟. 부적절한 글은 앱에서 삭제.
+
+
+      ## 포털 붙임
+
+      특정 게시판을 특정 포털에 붙이면([others:portal] display) 포털 홈에서 그 게시판으로 들어간다(가족신문·공개파일과 같은 색인 방식).'
+    version: 0.1.0
+    guide_file: guide.md
+  tools:
+  - name: bulletin_op
+    description: '로그인 없는 자유게시판 관리 — 게시판 CRUD + 글 모더레이션 + 포털 붙임 대상 조회.
+
+
+      ## op 분기
+
+      - status (기본): 게시판 목록 반환. items[] 각 게시판에 title/meta/url(주소)/id/slug/post_count, 최상위 settings{public_base, allow_images}.
+
+      - create: title 로 새 게시판 생성 — 공개 주소(/b/5자) 발급. allow_images(기본 true) 사진 첨부 허용.
+
+      - config: board_id 있으면 게시판 설정(title 개명·allow_images), 없으면 전역(public_base).
+
+      - delete: board_id 게시판 삭제 — 주소·글·사진 동반 제거.
+
+      - detail: board_id → 게시판 + 최근 글 200개(posts[], 모더레이션용 앱 드릴).
+
+      - post_delete: board_id + post_id 글 하나 삭제.
+
+      - portals: board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태(읽기). 실제 붙임/떼기는 [others:portal]{op:"display"}.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: status(기본)/create/config/delete/detail/post_delete/portals
+        board_id:
+          type: string
+          description: 게시판 id (config·delete·detail·post_delete·portals)
+        post_id:
+          type: string
+          description: 글 id (post_delete 삭제 대상)
+        title:
+          type: string
+          description: 게시판 이름 (create·config 개명)
+        allow_images:
+          type: boolean
+          description: 사진 첨부 허용 (create·config 게시판별, 기본 true)
+        public_base:
+          type: string
+          description: config 전역 — 공개 사이트 base URL
+      additionalProperties: true

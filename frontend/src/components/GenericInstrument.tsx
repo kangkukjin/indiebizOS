@@ -1415,7 +1415,9 @@ function ModePane({ mode }: { mode: AppMode }) {
   // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 새로고침
   const dispatch = useCallback<Dispatch>(async (template, fieldValues, rowContext, opts) => {
     try {
-      let code = buildAction(template, fieldValues || {});
+      // 모드 입력값도 $key 치환에 합류 — form/행 액션이 상단 셀렉터(포털 선택 등)를 참조 가능.
+      // 필드값이 우선이라 키 충돌 시 기존 동작 그대로. (원격 dispatchAction 과 파리티)
+      let code = buildAction(template, { ...valuesRef.current, ...(fieldValues || {}) });
       const ctx = rowContext ?? (drill ? drill.data : undefined);
       if (ctx) code = rowAction(code, ctx);
       const d = await runIBL(code);

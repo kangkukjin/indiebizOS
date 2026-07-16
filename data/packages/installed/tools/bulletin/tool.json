@@ -1,0 +1,54 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "bulletin",
+  "name": "Bulletin",
+  "description": "로그인 없는 자유게시판. 게시판마다 공개 주소(/b/<5자>)가 하나씩 — 주소를 아는 사람은 로그인 없이 글·사진을 남긴다.\n\n## 이음매\n게시판 메타는 상태 파일, 글은 게시판별 파일에 즉석 append(인덱싱 없음). 맥이 요청 시 저장·서빙. 공개 Worker(substrate)는 slug 게이트 + 프록시.\n\n## 보안\nbare 루트는 잠금 — 게시판은 /b/<5자 코드>. 첨부 이미지는 EXIF/GPS 제거·다운스케일. 익명 글쓰기는 IP 간격 제한 + 허니팟. 부적절한 글은 앱에서 삭제.\n\n## 포털 붙임\n특정 게시판을 특정 포털에 붙이면([others:portal] display) 포털 홈에서 그 게시판으로 들어간다(가족신문·공개파일과 같은 색인 방식).",
+  "version": "0.1.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "bulletin_op",
+      "description": "로그인 없는 자유게시판 관리 — 게시판 CRUD + 글 모더레이션 + 포털 붙임 대상 조회.\n\n## op 분기\n- status (기본): 게시판 목록 반환. items[] 각 게시판에 title/meta/url(주소)/id/slug/post_count, 최상위 settings{public_base, allow_images}.\n- create: title 로 새 게시판 생성 — 공개 주소(/b/5자) 발급. allow_images(기본 true) 사진 첨부 허용.\n- config: board_id 있으면 게시판 설정(title 개명·allow_images), 없으면 전역(public_base).\n- delete: board_id 게시판 삭제 — 주소·글·사진 동반 제거.\n- detail: board_id → 게시판 + 최근 글 200개(posts[], 모더레이션용 앱 드릴).\n- post_delete: board_id + post_id 글 하나 삭제.\n- portals: board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태(읽기). 실제 붙임/떼기는 [others:portal]{op:\"display\"}.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "status(기본)/create/config/delete/detail/post_delete/portals",
+            "enum": [
+              "status",
+              "create",
+              "config",
+              "delete",
+              "detail",
+              "post_delete",
+              "portals"
+            ],
+            "default": "status"
+          },
+          "board_id": {
+            "type": "string",
+            "description": "게시판 id (config·delete·detail·post_delete·portals)"
+          },
+          "post_id": {
+            "type": "string",
+            "description": "글 id (post_delete 삭제 대상)"
+          },
+          "title": {
+            "type": "string",
+            "description": "게시판 이름 (create·config 개명)"
+          },
+          "allow_images": {
+            "type": "boolean",
+            "description": "사진 첨부 허용 (create·config 게시판별, 기본 true)"
+          },
+          "public_base": {
+            "type": "string",
+            "description": "config 전역 — 공개 사이트 base URL"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

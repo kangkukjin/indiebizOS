@@ -108,7 +108,9 @@ def _instruments_mtime() -> float:
     return m
 
 # app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
-_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter")
+# phone_render 포함: 포털(개인 커뮤니티 홈)이 매니페스트에서 "브라우저에 못 싣는 모드"
+# (맥 스피커·네이티브 창 등)를 걸러내는 데 쓴다 — 렌더러들은 미지 필드를 무시하므로 무해.
+_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter", "phone_render")
 
 # 폰 프로파일(#3 runs_on): INDIEBIZ_PROFILE=phone 이면 phone_manifest.json 의 runnable_actions 에
 # 없는 계기(=폰서 못 도는 액션)를 홈 그리드에서 숨긴다. PC(프로파일 미설정)면 필터 없음.
@@ -314,6 +316,28 @@ def is_public_remote_path(method: str, path: str) -> bool:
         return True
     # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
     if method == "GET" and path.startswith("/showcase/"):
+        return True
+    # 가족신문 공개 서빙(/family-news/page·media·gb·upload)도 자체 X-Showcase-Secret 게이트 보유.
+    # 방명록·업로드는 POST — preview 는 로컬 전용이라 의도적으로 미등록(터널 차단).
+    if (path.startswith("/family-news/page/") or path.startswith("/family-news/media/")
+            or path.startswith("/family-news/gb/") or path.startswith("/family-news/upload/")):
+        return True
+    # 개인 포털 공개 서빙(/portal/*)도 자체 X-Showcase-Secret 게이트 보유.
+    # join(가입)·tool(회원 실행 게이트)은 POST. 그 외 /portal/ 경로는 없음(전부 등록).
+    if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
+                            or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")):
+        return True
+    if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
+                             or path.startswith("/portal/login/") or path.startswith("/portal/logout/")):
+        return True
+    # 자유게시판 공개 서빙(/bulletin/page·media)도 자체 X-Showcase-Secret 게이트 보유.
+    # 익명 글쓰기는 POST /bulletin/post/ — 로그인 없는 자유게시판.
+    if method == "GET" and (path.startswith("/bulletin/page/") or path.startswith("/bulletin/media/")):
+        return True
+    if method == "POST" and path.startswith("/bulletin/post/"):
+        return True
+    # 정기보고 발행 면(/report/page)도 자체 X-Showcase-Secret 게이트 보유(읽기 전용).
+    if method == "GET" and path.startswith("/report/page/"):
         return True
     return False
 
@@ -999,8 +1023,11 @@ function kvVal(v){ const t=String(v==null?'':v).trim();
     : '<span>'+esc(v)+'</span>'; }
 function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{})); }
 async function ibl(code){
-  const r=await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
-  if(!r.ok) throw new Error('[HTTP '+r.status+']');
+  /* 포털(회원 원격 계기): 범용 /ibl/execute 대신 회원 실행 게이트로 보낸다 — 렌더러 포크 금지·매개변수화 */
+  const r=window.__PORTAL
+    ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify({code:code})})
+    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
+  if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
   const data=await r.json();
   /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록 */
   if(data && typeof data==='object' && 'final_result' in data){
@@ -1013,9 +1040,25 @@ async function ibl(code){
 
 /* ===== 로그인 ===== */
 document.addEventListener('DOMContentLoaded',()=>{
+  if(window.__PORTAL){ portalBoot(); return; }
   document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter')doLogin(); });
   checkSession();
 });
+/* 포털(개인 커뮤니티 홈) 부트 — 이 셸을 회원용 단일 계기 페이지로 재사용(포크 금지·매개변수화).
+   로그인/표면 토글/계기판을 전부 건너뛰고 서버가 주입한 계기 하나(__PORTAL.instrument)를 바로
+   연다. 실행은 ibl() 이 __PORTAL.exec(회원 실행 게이트)로 보낸다. appHome 을 미리 숨겨
+   openInstrument 의 history push 를 막는다 → 뒤로가기 = 포털 홈. */
+function portalBoot(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').classList.add('on');
+  const top=document.querySelector('.top'); if(top) top.style.display='none';
+  const sf=document.querySelector('.surfaces'); if(sf) sf.style.display='none';
+  const ap=document.getElementById('p-autopilot'); if(ap) ap.classList.remove('on');
+  document.getElementById('p-app').classList.add('on');
+  document.getElementById('appHome').style.display='none';
+  INSTRUMENTS=[window.__PORTAL.instrument];
+  openInstrument(0);
+}
 async function checkSession(){
   // 비번 없는 표면(폰 자급·로컬)은 게이트 자체가 무의미 → config로 즉시 진입(맥 프록시 의존 제거).
   // 폰은 has_password=false 라 /projects(맥 터널 왕복) 결과와 무관히 바로 런처가 뜬다 = 로그인 화면 없음.
@@ -2412,7 +2455,9 @@ async function refreshCurrent(){
 /* 액션 실행기: $field 치환 + {path}(rowContext, 기본 현재 데이터) 치환 → 실행 → 새로고침.
    opts.back=true 면 성공 후 새로고침 대신 목록으로 복귀(삭제 등 — 현재 상세가 사라지는 경우). */
 async function dispatchAction(template,fieldValues,rowContext,opts){
-  let code=buildAction(template,fieldValues||{});
+  /* 모드 입력값(gatherInputs)도 $key 치환에 합류 — form/행 액션이 상단 셀렉터(포털 선택 등)를
+     참조할 수 있게. 필드값이 우선이라 키 충돌 시 기존 동작 그대로. (데스크탑 dispatch 와 파리티) */
+  let code=buildAction(template,Object.assign(gatherInputs(),fieldValues||{}));
   const ctx=rowContext||(VIEW_CTX&&VIEW_CTX.data);
   if(ctx) code=rowAction(code,ctx);
   const d=await ibl(code);

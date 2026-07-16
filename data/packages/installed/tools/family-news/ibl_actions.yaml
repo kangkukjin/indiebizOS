@@ -1,0 +1,211 @@
+nodes:
+  others:
+    actions:
+      family_news:
+        returns: items
+        fixture: '[others:family_news]{op: "status"}'
+        runs_on: mac_only
+        description: '가족신문 — USB 로 연결된 폰의 사진(지난 발행 이후, 첫 판은 최근 7일)으로 신문 판을 조판해, 공개 주소(/n/<5자 코드>)에 판을 누적 발행하는 가족용 정기간행물. 사진의 EXIF GPS 를 행정동 장소명으로 바꿔 싣고(웹판 사진 자체는 EXIF 제거), 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.'
+        target_description: 'op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).'
+        target_key: op
+        group: family_news
+        router: handler
+        tool: family_news_op
+        ops:
+          default: status
+          values:
+            status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
+            create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인
+            publish: 초안 판을 공개 주소로 발행 (첫 발행 때 /n/<5자 코드> 주소 생성)
+            detail: 판 하나 상세 (앱 드릴용 — 기간·사진수·장소·미리보기/공개 주소)
+            delete: 판 삭제 (발행된 판은 force:true 필요, 실렸던 가족 사진은 후보로 복귀)
+            comments: 공개 페이지 방명록 글 목록 (edition_id 로 판별 필터)
+            uploads: 가족이 공개 페이지에서 보낸 사진 목록 (미사용분은 다음 판에 실림)
+            config: 설정 — title 제호 / photo_limit 판당 사진 상한 / public_base 공개 사이트
+        implementation: 'family-news 패키지 family_news_op — 폰 MediaStore(adb content query, DCIM 만) 조회 → 날짜별 비례 샘플링(캡) → adb pull → EXIF GPS→Kakao 역지오코딩(1km 격자 캐시) → 웹판(1600px, EXIF 제거) → 정적 신문 HTML(newspaper_html.py). 판·상태는 data/family_news/. 공개 서빙(발행판만)·방명록·업로드 수신은 backend/api_family_news.py, 공개 Worker 는 public-files 와 공유(/n/ 네임스페이스).'
+        keywords:
+        - 가족신문
+        - 가족 신문
+        - 신문 발행
+        - 가족 사진 신문
+        - 사진 신문
+        - 주간 가족지
+        - family news
+        app:
+          instrument: family_news
+          icon: 🗞️
+          name: 가족신문
+          order: 17
+          phone_render: false
+          modes:
+          - name: 신문
+            auto_run: true
+            note: 초안은 미리보기로 확인한 뒤 발행하세요. 발행하면 가족 누구나 주소로 볼 수 있고, 지난 신문도 같은 주소에 쌓입니다.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: kv
+              title: 우리 신문
+              rows:
+              - k: 🔗 공개 주소
+                v: '{paper.url}'
+              - k: 📥 가족이 보낸 새 사진
+                v: '{paper.uploads_new}장 — 다음 신문에 실립니다
+'
+            - type: card_list
+              from: drafts
+              empty_from: message
+              card:
+                title: '📝 {title} — 초안'
+                lines:
+                - '{meta}'
+                - '📍 {places}'
+                link:
+                  href: '{preview_url}'
+                  label: ① 미리보기로 확인 →
+            - type: list_action
+              from: drafts
+              icon: 📣
+              title: '{title} 발행하기'
+              sub: '② 미리보기 확인 후 누르세요 — 가족 누구나 볼 수 있게 됩니다'
+              button:
+                label: 발행
+                action: '[others:family_news]{op: "publish", edition_id: "{id}"}'
+                refresh: true
+            - type: card_list
+              from: published
+              card:
+                title: '🗞️ {title}'
+                lines:
+                - '{meta}'
+                - '📍 {places}'
+                link:
+                  href: '{url}'
+                  label: 신문 열기 →
+          - name: 제작
+            auto_run: true
+            note: USB 로 폰을 연결한 뒤 누르세요. 지난 발행 이후의 사진(첫 판은 최근 7일)으로 신문을 만듭니다. 조판은 뒤에서 진행되니 잠시 후 '신문' 탭에서 초안을 확인하세요.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: kv
+              title: 지금 상태
+              rows:
+              - k: 알림
+                v: '{message}'
+            - type: form
+              title: 새 신문 만들기
+              fields:
+              - key: photo_limit
+                label: 사진 수 상한 (선택)
+                type: text
+                placeholder: 비우면 기본 48장
+              - key: days
+                label: 며칠치 (선택)
+                type: text
+                placeholder: 비우면 지난 발행 이후 (첫 판은 7일)
+              action: '[others:family_news]{op: "create", photo_limit: "$photo_limit", days: "$days"}'
+              button: 🗞️ 신문 만들기
+          - name: 방명록
+            auto_run: true
+            note: 가족들이 공개 신문에 남긴 글입니다.
+            action: '[others:family_news]{op: "comments"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '💬 {title}'
+                lines:
+                - '{summary}'
+                - '{meta}'
+          - name: 가족앨범
+            auto_run: true
+            note: 가족들이 공개 신문의 '사진 보내기'로 보내온 사진입니다. 아직 안 실린 사진은 다음 신문에 자동으로 실립니다.
+            action: '[others:family_news]{op: "uploads"}'
+            view:
+            - type: image_grid
+              from: items
+              empty_from: message
+          - name: 설정
+            auto_run: true
+            note: 제호는 신문 맨 위에 크게 실립니다.
+            action: '[others:family_news]{op: "status"}'
+            view:
+            - type: form
+              title: 신문 설정
+              fields:
+              - key: title
+                label: 제호 (신문 이름)
+                type: text
+                value: '{settings.title}'
+              - key: photo_limit
+                label: 판당 사진 수 상한
+                type: text
+                value: '{settings.photo_limit}'
+              action: '[others:family_news]{op: "config", title: "$title", photo_limit: "$photo_limit"}'
+              button: 저장
+
+# tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+tool_json:
+  header:
+    id: family-news
+    name: Family News
+    description: '가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발행하는 가족용 정기간행물 도구.
+
+
+      ## 이음매
+
+      판 조판·검수·발행 판단은 전부 맥. 공개 Worker(substrate, public-files 와 공유)는 /n/<slug> 게이트 + 지연 캐시만. 발행된 판만 공개되고, 웹판 사진은 EXIF/GPS 를 벗겨 내보낸다(장소는 텍스트로만).
+
+
+      ## 쓰기 방향
+
+      공개 페이지에 방명록과 가족 사진 업로드가 달린다. 업로드는 공개되지 않고 다음 판 제작 때 "가족이 보내온 사진" 섹션으로 실린다(발행 전 검수).'
+    version: 0.1.0
+    guide_file: guide.md
+  tools:
+  - name: family_news_op
+    description: '가족신문 제작·발행 제어.
+
+
+      ## op 분기
+
+      - status (기본): 판 목록(items, 초안 drafts/발행 published 구분)·공개 주소(paper.url)·가족이 보낸 새 사진 수(paper.uploads_new)·제작 진행(building) 반환.
+
+      - create: 폰(USB) 사진으로 새 판 초안 제작. 즉시 반환하고 백그라운드로 조판 — 진행은 status 로. photo_limit(사진 상한, 기본 48), days(며칠치 — 비우면 지난 발행 이후, 첫 판 7일). 미발행 초안이 있으면 갈아엎고 호수를 재사용.
+
+      - publish: edition_id 판을 공개 주소로 발행. 첫 발행 때 /n/<5자 코드> 주소가 만들어짐. edition_id 생략 시 초안이 하나뿐이면 그 판.
+
+      - detail: edition_id 판 상세(기간·사진수·장소·미리보기/공개 주소).
+
+      - delete: edition_id 판 삭제. 발행된 판은 force:true 필요. 실렸던 가족 업로드 사진은 다음 판 후보로 복귀.
+
+      - comments: 공개 페이지 방명록 글 목록(최신 먼저, edition_id 필터 가능).
+
+      - uploads: 가족이 보낸 사진 목록(미사용분은 다음 create 때 자동 합류).
+
+      - config: title(제호)/photo_limit/public_base 설정.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: status(기본)/create/publish/detail/delete/comments/uploads/config
+        edition_id:
+          type: string
+          description: 판 id (publish/detail/delete/comments 필터)
+        photo_limit:
+          type: integer
+          description: create — 이 판의 사진 수 상한 (기본 48, config 로 기본값 변경)
+        days:
+          type: integer
+          description: create — 최근 며칠치 사진으로 만들지 (비우면 지난 발행 이후, 첫 판은 7일)
+        force:
+          type: boolean
+          description: delete — 발행된 판을 지울 때 true 필요
+        title:
+          type: string
+          description: config — 신문 제호 (기본 "우리 가족 신문")
+        public_base:
+          type: string
+          description: config — 공개 사이트 base URL (기본은 공개파일과 같은 Worker)
+      additionalProperties: true

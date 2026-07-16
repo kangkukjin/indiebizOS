@@ -329,6 +329,10 @@ from api_photo import router as photo_router
 from api_android import router as android_router
 from api_nas import router as nas_router
 from api_showcase import router as showcase_router
+from api_family_news import router as family_news_router
+from api_portal import router as portal_router
+from api_bulletin import router as bulletin_router
+from api_report import router as report_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
 from api_ibl import router as ibl_router
@@ -372,6 +376,10 @@ app.include_router(photo_router, tags=["photo"])
 app.include_router(android_router, tags=["android"])
 app.include_router(nas_router, tags=["nas"])
 app.include_router(showcase_router, tags=["showcase"])
+app.include_router(family_news_router, tags=["family-news"])
+app.include_router(portal_router, tags=["portal"])
+app.include_router(bulletin_router, tags=["bulletin"])
+app.include_router(report_router, tags=["report"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(ibl_router, tags=["ibl"])

@@ -103,6 +103,28 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - 발신 신원: 앱/수동 표면(`앱모드`/`수동모드` 프로젝트)의 IBL 실행은 `agent_id=system_ai`로
   기본 설정(소유자=시스템 운영자) → 작성바 전송·게시가 자기 계정으로 동작.
 
+### 공개 표면 — 커뮤니티당 노드 하나 (2026-07 라이브)
+위 채널(Gmail·Nostr·메신저)은 *메시지 왕복*이다. 이와 별개로, 내 시스템을 **공개 웹 주소로 노출**해
+남이 브라우저로 닿게 하는 표면 가족이 `others` 노드에 자랐다. 전략=**"커뮤니티당 노드 하나"**: 모두가
+노드를 돌리는 게 아니라, 커뮤니티당 노드 하나(내 시스템)를 두고 구성원은 *설치 없이 브라우저로* 참여한다.
+공개 서빙은 전부 **브라우저 → Cloudflare Worker → 터널 → 맥** 3층(공유 `X-Showcase-Secret`,
+`is_public_remote_path` 화이트리스트, `public-files` Worker가 경로 접두로 분기).
+- **개인 포털** `[others:portal]` — `/h/<5자>/`. 여러 개 생성 가능하고, **각 주소가 자기 회원 명부 +
+  진열 다이얼(첫화면 구성)을 독립 소유**. 로그인=아이디/비번(네이버식) 또는 운영자 발급 열쇠(`/h/<슬러그>/k/<키>`,
+  비밀번호 분실 복구·유출 시 revoke). **회원 = 이웃 CRM(business.db) 통합, 레벨 0 손님 → 4 가족**(별도 계정
+  시스템 없음). 레벨(min_level)에 따라 콘텐츠(가족신문·공개파일)와 계기(아이콘·유튜브뮤직·날씨)를 빌려 씀.
+  유튜브뮤직 등 외부망 재생은 **포털별 오디오 프록시**(`/h/<슬러그>/tune/<vid>`)로 집 IP 중계. 회원 실행
+  게이트=계기 `app:` 블록 템플릿의 *인스턴스*만 허용(범용 execute 금지)+일일 한도(손님/회원/전역).
+- **공개 파일** `[others:showcase]` — `/s/<5자>/`. 주소별 폴더를 맥 디스크에서 즉석 walk+썸네일로 서빙
+  (인덱싱 없음, EXIF 제거·영상 트랜스코드).
+- **가족신문** `[others:family_news]` — `/n/<5자>/`. USB 폰 사진(DCIM)을 지난 발행 이후 구간으로 모아
+  조판→누적 발행, 방명록·가족 사진 업로드(쓰기 방향 개통).
+- **자유게시판** `[others:bulletin]` — `/b/<5자>/`. 로그인 없이 주소만 알면 글·사진 게시(family-news 방명록
+  배관 재사용: 이름·본문 캡, IP 간격 429, 허니팟, EXIF/GPS 제거).
+- **정기보고 발행 면** — `/r/<슬러그>/`. 로컬 `.md` 보고서를 "볼 때 렌더"로 서빙(새 어휘 없음).
+- **포털 붙임 = 색인**: 위 콘텐츠(가족신문·공개파일·게시판·보고서)를 포털에 노출하는 건
+  `[others:portal]{op:"display", key:"board:<slug>"...}` 다이얼로 켜고 끔(min_level로 손님~가족 범위 조정).
+
 ---
 
 ## 핵심 컴포넌트
@@ -1059,7 +1081,7 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 - 멀티에이전트 작업계획서는 동기 위임을 순차/병렬로 조합하여 실행
 
 ---
-*마지막 업데이트: 2026-03-27*
+*위임 시스템 이력:*
 *Phase 25: others 노드로 통합. `[others:delegate]`, `[others:delegate]{scope: "cross"}`.*
 *Phase 28: `create_plan`/`_execute_plan()` 폐지. 작업계획서는 자연어로 작성하고 기존 위임 도구로 실행.*
 *event_engine.py → trigger_engine.py로 이전 (event_engine.py는 하위 호환 래퍼로 유지).*
@@ -1069,4 +1091,4 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 시스템 AI용: `delegation_system_ai.md`
 > - 작업계획서 작성: `work_plan_writing.md`
 
-*마지막 업데이트: 2026-06-17 — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*
+*마지막 업데이트: 2026-07-17 — **공개 표면 가족(커뮤니티당 노드 하나)**: 메시지 왕복 채널(Gmail·Nostr·메신저)과 별개로, 내 시스템을 공개 웹 주소로 노출하는 표면이 `others` 노드에 자람 — `[others:portal]`(개인 포털 `/h/`, 다중·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`). 공개 서빙=브라우저→Cloudflare Worker→터널→맥 3층(공유 `X-Showcase-Secret`). 포털 붙임=`[others:portal]{op:display}` 색인 다이얼(min_level 손님~가족). 위 "공개 표면" 절 참조. 이전(2026-06-17) — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*

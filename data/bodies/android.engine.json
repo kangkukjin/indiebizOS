@@ -137,6 +137,8 @@
     "system_docs",
     "system_hooks",
     "system_tools",
+    "system_tools_delegate",
+    "system_tools_ibl",
     "thread_context",
     "thumbnails",
     "tool_context",
@@ -167,8 +169,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 161,
-    "engine": 148,
+    "total": 163,
+    "engine": 150,
     "blocklist": 13
   }
 }

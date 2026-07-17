@@ -80,6 +80,8 @@
     "ibl_executors",
     "ibl_param_vocab",
     "ibl_parser",
+    "ibl_parser_blocks",
+    "ibl_parser_values",
     "ibl_routing",
     "ibl_synthetic_opus",
     "ibl_usage_db",
@@ -169,8 +171,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 163,
-    "engine": 150,
+    "total": 165,
+    "engine": 152,
     "blocklist": 13
   }
 }

@@ -315,3 +315,4 @@ data/family_news/
 data/portal_audit.jsonl
 data/*.lock
 공유창고/
+data/warehouse.json

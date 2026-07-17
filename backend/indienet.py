@@ -758,6 +758,41 @@ class IndieNet:
             print(f"✗ IndieNet: 공개 글 발행 실패 - {e}")
             return None
 
+    def publish_intro(self, text: str, website: str = "", hashtag: str = None) -> Optional[str]:
+        """발견용 자기소개 노트(kind:1) 발행 — 기본 커뮤니티 태그 #IndieNet.
+        #IndieNet 을 구독/검색하는 낯선 사람도 나를 찾게 하는 '망으로 보내는 소개 메시지'다.
+        content = 사용자가 쓴 소개 + 공개 창고 주소(있으면). 서명(npub)이 신원을 실어 나른다.
+        보드 write 경로와 동일 규약(kind:1 + `['t', tag.lower()]` + 본문 #태그)이라 같은
+        #IndieNet 스트림에 얹혀 [others:feed]/[others:board] 로 서로 읽힌다."""
+        if not self._initialized:
+            print("✗ IndieNet이 초기화되지 않음")
+            return None
+        try:
+            tag = hashtag or INDIENET_TAG            # 기본 #IndieNet (그 태그를 만든 이유=망 발견)
+            now = int(time.time())
+            tags = [["t", tag.lower()]]              # 보드와 동일하게 t-태그는 소문자
+            body = (text or "").strip()
+            if website:
+                # 주소만 있으면 뭐하는 곳인지 모르니 "공유창고 : <주소>" 라벨을 붙인다(사람이 읽는 본문).
+                labeled = "공유창고 : " + website
+                body = (body + "\n\n" + labeled).strip() if body else labeled
+            body = (body + f"\n\n#{tag}").strip()    # 본문 표시용 #IndieNet
+            if _ON_PHONE:
+                import nostr_phone_bridge as bridge
+                relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
+                return bridge.publish_note(1, tags, body, relays, now)
+            event = Event(pubkey=self.identity.public_key.hex(), content=body, kind=1)
+            for t in tags:
+                event.tags.append(t)
+            event.sign(self.identity.private_key.hex())
+            event_id = self._publish_event(event)
+            if event_id:
+                print(f"✓ IndieNet: 발견 노트(kind:1 #{tag}) 발행 - {event_id[:16]}...")
+            return event_id
+        except Exception as e:
+            print(f"✗ IndieNet: 발견 노트 발행 실패 - {e}")
+            return None
+
     def article_url(self, slug: str) -> Optional[str]:
         """발행한 NIP-23 글의 공유 링크(njump). naddr(NIP-19 주소)라 같은 slug 재발행해도
         링크가 최신본을 가리킨다. 실패 시 npub 프로필 링크로 폴백."""

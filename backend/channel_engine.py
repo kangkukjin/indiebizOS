@@ -507,11 +507,10 @@ def _community_feed(params: dict) -> dict:
     try:
         if author:
             import concurrent.futures
-            _ex = concurrent.futures.ThreadPoolExecutor(max_workers=3)
+            _ex = concurrent.futures.ThreadPoolExecutor(max_workers=2)
             f_posts = _ex.submit(indienet.fetch_author_posts, pubkey=author, limit=limit)
             f_profile = _ex.submit(indienet.fetch_author_profile, author)
-            f_articles = _ex.submit(indienet.fetch_author_articles, pubkey=author, limit=20)
-            author_futures = (_ex, f_profile, f_articles)
+            author_futures = (_ex, f_profile)
             raw = f_posts.result()
         elif following:
             raw = indienet.fetch_following_feed(limit=limit)
@@ -550,7 +549,7 @@ def _community_feed(params: dict) -> dict:
         # 공개 얼굴: kind:0 인사말 + kind:30023 공개 문서를 동봉 → 드릴다운에서 프로필·문서에 도달.
         # (위에서 글 조회와 함께 병렬로 띄운 futures 를 회수 — 추가 릴레이 왕복 없음.)
         short_a = (author[:12] + "…") if str(author).startswith("npub") and len(str(author)) > 14 else str(author)
-        _ex, f_profile, f_articles = author_futures
+        _ex, f_profile = author_futures
         about, pname = "", ""
         try:
             info = f_profile.result() or {}
@@ -560,20 +559,11 @@ def _community_feed(params: dict) -> dict:
             pass
         out["profile"] = [{"name": pname or short_a, "about": about}] if about else []
         try:
-            arts = f_articles.result()
-        except Exception:
-            arts = []
-        try:
             _ex.shutdown(wait=False)
         except Exception:
             pass
-        out["articles"] = [{
-            "title": a.get("title") or "(제목 없음)",
-            "content": (a.get("content") or "").strip(),
-            "summary": a.get("summary") or "",
-            "time": _fmt_unix(a.get("created_at")),
-            "id": a.get("id") or "",
-        } for a in (arts or [])]
+        # 긴 글(kind:30023 NIP-23)은 더 이상 공개 얼굴에 싣지 않는다 — 내용은 공개 창고가 쥔다.
+        # (신문·비즈니스 문서를 Nostr 에 발행하지 않기로 함. 과거 발행분도 여기서 미표시.)
     # 게시판 계기용(with_boards: true) — 활성 보드 글 + 보드 목록을 한 액션·한 응답으로.
     if str(params.get("with_boards") or "").lower() in ("true", "1", "yes"):
         out["boards"] = _boards_items(indienet)

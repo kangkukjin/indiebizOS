@@ -630,34 +630,46 @@ def _doc_regenerate(bm, ti: dict) -> str:
     return _err((r or {}).get("message") or "문서 재생성에 실패했습니다.")
 
 
+def _public_base() -> str:
+    """공개 창고(Worker) base URL — 공개파일(showcase) 설정과 같은 소스.
+    설치본마다 다르므로 하드코딩 금지·변수로 읽는다(하부/상부 이음매). 미설정 시 빈 문자열."""
+    try:
+        p = Path(__file__).resolve().parents[4] / "showcase_state.json"
+        sc = json.loads(p.read_text(encoding="utf-8"))
+        return ((sc.get("settings") or {}).get("public_base") or "").rstrip("/")
+    except Exception:
+        return ""
+
+
 def _doc_publish(bm, ti: dict) -> str:
-    """공개인사프로필(kind:0) + 열린 비즈니스 문서 0(NIP-23)을 Nostr 공개 발행.
-    사용자가 공개문서 난에 직접 작성한 내용만 verbatim 발행 — 데이터 수집·합성 없음."""
+    """공개인사프로필(kind:0, website=공개창고 주소) + 발견 노트(kind:1 #IndieNet)를 Nostr 발행.
+    사용자가 쓴 공개인사프로필만 verbatim 발행 — 데이터 수집·합성 없음. *상세 내용은 Nostr에 안 싣고
+    공개 창고가 쥔다*(kind:0=항상 켜진 명함, kind:1=발견 메시지, 둘 다 창고 주소를 가리킴).
+    낯선 사람이 #IndieNet 으로 나를 찾고 → 창고에서 내 소개를 읽는다."""
     from business_manager import GREETING_DOC_LEVEL
     ind = _indienet()
     if not ind:
         return _err("IndieNet(Nostr) 미초기화 — 먼저 계정을 설정하세요.")
     greeting = ((bm.get_business_document(GREETING_DOC_LEVEL) or {}).get("content") or "").strip()
-    doc0 = bm.get_business_document(0) or {}
-    doc0_content = (doc0.get("content") or "").strip()
-    if not greeting and not doc0_content:
+    if not greeting:
         return _err("공개할 내용이 없습니다. 공개문서의 '공개인사프로필'을 먼저 작성하세요.")
     name = ""
     try:
         name = (ind.identity.display_name or "").strip()
     except Exception:
         pass
+    base = _public_base()
+    home = (base + "/") if base else ""   # 공개 창고 홈(안정 주소). 방문자=레벨0, npub 로그인으로 승급.
     published = {}
-    # 1) 공개인사프로필 → kind:0 (자기소개 카드)
-    pid = ind.publish_profile(about=greeting, name=name)
+    # 1) 공개인사프로필 → kind:0 (자기소개 명함). 창고 주소는 표준 website 필드에(항상 켜진 카드).
+    pid = ind.publish_profile(about=greeting, name=name,
+                              extra=({"website": home} if home else None))
     if pid:
         published["profile"] = pid
-    # 2) 열린 비즈니스 문서 0 → NIP-23 (장문 글). 같은 slug 재발행 = 같은 글 갱신.
-    if doc0_content:
-        aid = ind.publish_article(title=(doc0.get("title") or "비즈니스 안내"),
-                                  content=doc0_content, slug="open-business-0")
-        if aid:
-            published["article"] = aid
+    # 2) 발견 노트 → kind:1 #IndieNet (망으로 보내는 소개 메시지). npub(서명)+창고 주소를 실어 검색으로 발견됨.
+    iid = ind.publish_intro(text=greeting, website=home)
+    if iid:
+        published["intro"] = iid
     if not published:
         return _err("발행에 실패했습니다 (릴레이 응답 없음).")
     npub = ""
@@ -665,8 +677,9 @@ def _doc_publish(bm, ti: dict) -> str:
         npub = ind.identity.npub or ""
     except Exception:
         pass
-    msg = "공개 발행 완료" + (f" — https://njump.me/{npub}" if npub else "")
-    return _ok({"published": published, "npub": npub}, msg)
+    link = home or (f"https://njump.me/{npub}" if npub else "")   # 착지점=창고 홈(설정 시), 미설정 시 njump 폴백
+    msg = "공개 발행 완료 (#IndieNet 발견 노트 포함)" + (f" — {link}" if link else "")
+    return _ok({"published": published, "npub": npub, "home": home}, msg)
 
 
 def _guide_list(bm, ti: dict) -> str:

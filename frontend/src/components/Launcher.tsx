@@ -414,6 +414,16 @@ export function Launcher() {
     };
   }, [loadSwitches]);
 
+  // 다른 창(커뮤니티·메신저 등)의 메시지에서 URL 을 클릭하면 런처의 포식 브라우저 탭으로 연다.
+  useEffect(() => {
+    if (!window.electron?.onOpenForageUrl) return;
+    window.electron.onOpenForageUrl((url: string) => {
+      setLauncherTab('browser');
+      setPendingBrowserUrl(url);
+    });
+    return () => window.electron?.removeOpenForageUrl?.();
+  }, []);
+
   // 수동/앱 모드 표면이 IBL 컨텍스트로 쓰는 시스템 프로젝트 — 데스크탑에선 숨긴다.
   // (프로젝트 자체는 존재해 경로 해소는 계속 동작. 토글과 이름이 겹쳐 혼동·삭제 위험 방지)
   const SYSTEM_PROJECT_IDS = new Set(['수동모드', '앱모드']);

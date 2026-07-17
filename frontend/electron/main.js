@@ -1229,6 +1229,19 @@ function setupIPC() {
     shell.openExternal(url);
   });
 
+  // 메시지 등의 URL 을 런처(메인 창)의 인앱 포식 브라우저 탭으로 연다.
+  // 커뮤니티·메신저 등 별도 창에서 클릭해도 런처 창을 앞으로 세우고 그 안 브라우저에 띄운다.
+  ipcMain.handle('open-in-launcher-browser', (_, url) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.webContents.send('open-forage-url', url);
+    } else {
+      shell.openExternal(url);  // 런처 창이 없으면 외부 브라우저 폴백
+    }
+  });
+
   // 앱 정보
   ipcMain.handle('get-app-info', () => ({
     version: app.getVersion(),

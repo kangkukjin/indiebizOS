@@ -136,12 +136,6 @@
                     action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
                     refresh: true
                 - type: card_list
-                  from: articles
-                  card:
-                    title: 📄 {title}
-                    lines:
-                    - '{content}'
-                - type: card_list
                   from: items
                   empty_from: message
                   card:

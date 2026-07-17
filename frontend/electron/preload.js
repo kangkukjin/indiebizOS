@@ -20,6 +20,15 @@ contextBridge.exposeInMainWorld('electron', {
   // 외부 URL 열기
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
+  // 메시지 등의 URL 을 런처의 인앱 브라우저(포식 브라우저)로 열기 — 창을 넘어 런처로 전달
+  openInLauncherBrowser: (url) => ipcRenderer.invoke('open-in-launcher-browser', url),
+  onOpenForageUrl: (callback) => {
+    ipcRenderer.on('open-forage-url', (_, url) => callback(url));
+  },
+  removeOpenForageUrl: () => {
+    ipcRenderer.removeAllListeners('open-forage-url');
+  },
+
   // 앱 정보
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),
 

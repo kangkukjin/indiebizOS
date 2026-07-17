@@ -48,7 +48,7 @@ export interface AppInput {
 // 실행 불가(phone_unreachable)라 숨긴다. GenericInstrument(데스크탑 전용 렌더러)만 이 필드를 거른다;
 // 원격/폰 렌더러(api_launcher_web)는 무시하고 그대로 노출(폰에선 정상 동작). 계기-레벨 phone_render:false
 // (폰에서 mac_only 숨김)의 반대 방향 짝 — 맥에서 phone_only 숨김.
-export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean }
+export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean; confirm?: string }
 
 export interface AppCompose {
   placeholder?: string;
@@ -126,6 +126,7 @@ export interface AppInstrument extends AppMode {
   name: string;
   modes?: AppMode[];
   system?: boolean;  // 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외
+  top_buttons?: AppButton[];  // 탭과 무관하게 계기 최상단에 항상 보이는 버튼(예: 소개발행). 탭 전환과 독립.
 }
 
 type Json = Record<string, unknown>;
@@ -233,6 +234,34 @@ function composeChannelOptions(cmp: AppCompose | undefined, data: unknown): Chan
   }
   const seen = new Set<string>();
   return opts.filter((o) => (seen.has(o.key) ? false : (seen.add(o.key), true)));
+}
+
+// 메시지 등 텍스트 속 URL 을 인앱 브라우저(런처의 포식 브라우저)로 여는 클릭 가능한 링크로.
+// Electron 이면 openInLauncherBrowser(런처 창의 ForageBrowser 탭)로, 아니면 새 탭 폴백.
+function openUrlInApp(url: string) {
+  const w = window as unknown as { electron?: { openInLauncherBrowser?: (u: string) => void; openExternal?: (u: string) => void } };
+  if (w.electron?.openInLauncherBrowser) w.electron.openInLauncherBrowser(url);
+  else if (w.electron?.openExternal) w.electron.openExternal(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
+function linkify(text: string): React.ReactNode {
+  const s = String(text ?? '');
+  const re = /(https?:\/\/[^\s]+)/g;
+  const out: React.ReactNode[] = [];
+  let last = 0, m: RegExpExecArray | null;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > last) out.push(s.slice(last, m.index));
+    const url = m[0];
+    out.push(
+      <a key={m.index} onClick={(e) => { e.stopPropagation(); openUrlInApp(url); }}
+        className="text-emerald-700 underline cursor-pointer break-all">{url}</a>
+    );
+    last = m.index + url.length;
+  }
+  if (last === 0) return s;           // URL 없음 — 원본 문자열 그대로
+  if (last < s.length) out.push(s.slice(last));
+  return out;
 }
 
 // ===== 뷰 프리미티브 =====
@@ -1105,7 +1134,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
             <div className="min-w-0">
               <div className="font-semibold text-sm text-stone-800">{tpl(c.title, it)}</div>
               <div className="text-xs text-stone-500 leading-relaxed">
-                {((c.lines as string[]) || []).map((l, j) => <div key={j}>{tpl(l, it)}</div>)}
+                {((c.lines as string[]) || []).map((l, j) => <div key={j}>{linkify(tpl(l, it))}</div>)}
               </div>
               {link?.href && tpl(link.href, it) && (
                 <a href={tpl(link.href, it)} target="_blank" rel="noreferrer"
@@ -1144,7 +1173,7 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
                    : <div className="w-full aspect-[3/4] rounded-lg bg-stone-100" />}
               <div className="font-semibold text-xs text-stone-800 mt-1.5">{tpl(p.title, it)}</div>
               <div className="text-[11px] text-stone-500">
-                {((p.lines as string[]) || []).map((l, j) => <div key={j}>{tpl(l, it)}</div>)}
+                {((p.lines as string[]) || []).map((l, j) => <div key={j}>{linkify(tpl(l, it))}</div>)}
               </div>
             </div>
           );
@@ -1711,20 +1740,44 @@ export function GenericInstrument({ instrument }: { instrument: AppInstrument })
   const modes: AppMode[] = instrument.modes || [instrument];
   const [modeIdx, setModeIdx] = useState(0);
   const mode = modes[Math.min(modeIdx, modes.length - 1)];
+  // 최상단 고정 버튼(탭 무관·항상 보임) — 데스크탑선 phone_only 숨김.
+  const topButtons = (instrument.top_buttons || []).filter((b) => !b.phone_only);
+  const [topBusy, setTopBusy] = useState(false);
+  const [topMsg, setTopMsg] = useState('');
+  const fireTop = async (b: AppButton) => {
+    if (!b.action || topBusy) return;
+    if (b.confirm && !window.confirm(b.confirm)) return;
+    setTopBusy(true); setTopMsg('');
+    try {
+      const r = await runIBL(b.action);
+      setTopMsg(String((r && (r.message as string)) || '완료'));
+    } catch (e) {
+      setTopMsg('오류: ' + String(e));
+    } finally {
+      setTopBusy(false);
+    }
+  };
 
   return (
     <div className="h-full w-full overflow-auto bg-stone-50">
-      {instrument.modes && (
-        <div className="flex gap-1.5 max-w-2xl mx-auto px-5 pt-4">
-          {instrument.modes.map((m, i) => (
+      {(instrument.modes || topButtons.length > 0) && (
+        <div className="flex items-center gap-1.5 max-w-2xl mx-auto px-5 pt-4">
+          {(instrument.modes || []).map((m, i) => (
             <button key={i} onClick={() => setModeIdx(i)}
               className={`px-3.5 py-1.5 rounded-lg text-sm border transition ${
                 i === modeIdx ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-500 border-stone-200 hover:border-stone-400'}`}>
               {m.name}
             </button>
           ))}
+          {topButtons.map((b, i) => (
+            <button key={'t' + i} onClick={() => fireTop(b)} disabled={topBusy}
+              className={`${i === 0 ? 'ml-auto' : ''} px-3.5 py-1.5 rounded-lg text-sm font-semibold border border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition`}>
+              {b.label}
+            </button>
+          ))}
         </div>
       )}
+      {topMsg && <div className="max-w-2xl mx-auto px-5 pt-2 text-sm text-emerald-700">{topMsg}</div>}
       <ModePane mode={mode} />
     </div>
   );

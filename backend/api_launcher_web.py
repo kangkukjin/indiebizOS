@@ -192,6 +192,9 @@ def _derive_instruments() -> dict:
         # 원격/폰(리모컨) 그리드는 무시하고 그대로 노출.
         if primary.get("system"):
             inst["system"] = True
+        # top_buttons: 탭 무관 최상단 고정 버튼(소개발행 등) — 인스트루먼트 레벨 통과.
+        if primary.get("top_buttons"):
+            inst["top_buttons"] = primary.get("top_buttons")
         explicit = primary.get("modes")
         if isinstance(explicit, list) and explicit:
             # 명시적 modes — 한 액션이 여러 탭을 선언(주식/코인/자원). 탭별로 다른 액션 호출 가능.
@@ -1686,9 +1689,10 @@ function openInstrument(ix){
     else document.getElementById('modeBody').innerHTML='<p class="muted">렌더러 없음: '+esc(inst.renderer)+'</p>';
     return;
   }
-  if(inst.modes && inst.modes.length>1){  // 모드 1개면 탭 바 불필요(공간 절약) — setMode(0)이 가드(if(t))라 안전
-    h+='<div class="tabs">'+inst.modes.map((m,i)=>'<button class="tab" id="modeTab'+i+'" onclick="setMode('+i+')">'+esc(m.name)+'</button>').join('')+'</div>';
-  }
+  // 탭 + 최상단 고정 버튼(소개발행 등)을 같은 줄에 — 버튼은 오른쪽 끝(margin-left:auto)
+  const _tabsHtml=(inst.modes && inst.modes.length>1)?inst.modes.map((m,i)=>'<button class="tab" id="modeTab'+i+'" onclick="setMode('+i+')">'+esc(m.name)+'</button>').join(''):'';
+  const _topHtml=(inst.top_buttons||[]).map((b,i)=>'<button class="btn2" style="'+(i===0?'margin-left:auto':'')+'" onclick="fireTop('+i+')">'+esc(b.label)+'</button>').join('');
+  if(_tabsHtml||_topHtml){ h+='<div class="tabs" style="align-items:center">'+_tabsHtml+_topHtml+'</div>'; }
   h+='<div id="modeBody"></div>';
   box.innerHTML=h;
   setMode(0);
@@ -1904,6 +1908,16 @@ async function fireButton(bi,btn){
   }
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ btn.disabled=false; }
+}
+/* 최상단 고정 버튼(소개발행 등) — 탭 무관, CUR.inst.top_buttons 에서 실행 */
+async function fireTop(i){
+  const b=(CUR.inst.top_buttons||[])[i]; if(!b||!b.action) return;
+  if(b.confirm && !confirm(b.confirm)) return;
+  try{ let d=await ibl(b.action);
+    if(d&&typeof d==='object'&&'final_result' in d){ let fr=d.final_result; if(typeof fr==='string'){try{fr=JSON.parse(fr)}catch(e){}} if(fr&&typeof fr==='object') d=fr; }
+    if(d&&d.error){ alert(d.error); } else{ alert((d&&d.message)||'완료'); }
+  }
+  catch(e){ alert('실행 실패: '+e.message); }
 }
 
 /* ----- 액션 템플릿: $key=사용자 입력, {path}=데이터 행 필드 ----- */

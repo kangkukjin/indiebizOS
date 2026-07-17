@@ -57,7 +57,7 @@ indiebizOS/
 │   ├── agent_cognitive.py # 인지 시스템 통합
 │   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단 + achievement_criteria + 메타 인지 가드(자해/의심 갱신/재시도)
 │   ├── model_resolver.py # 모델 기어 — 역할→축→기어→티어→모델 단일 리졸버 (data/model_gear.json, 핫리로드)
-│   ├── world_pulse.py   # Consciousness Pulse + Self-Check (자의식/면역, 5노드 전체)
+│   ├── world_pulse.py   # Consciousness Pulse + Self-Check (자의식/면역, 6노드 전체)
 │   ├── world_pulse_health.py # Self-Check 엔진 + 정적 정합성 합류 (run_static_ibl_check, build_ibl_nodes --check 통합)
 │   ├── ibl_description_audit.py # IBL 설명 의미 드리프트 점검 (결정적 교차참조 + 경량 LLM, 주 1회 self-check 합류)
 │   ├── goal_evaluator.py # 목표 평가 시스템
@@ -118,7 +118,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (38개 — op-bearing 10개는 _OP_DISPATCHERS 표준)
+│   │   │   ├── tools/       # 도구 패키지 (40개 — op-bearing 10개는 _OP_DISPATCHERS 표준)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (9개)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중

@@ -191,6 +191,10 @@ export interface ItemDroppedData {
 export interface ElectronAPI {
   getApiPort: () => Promise<number>;
   openExternal: (url: string) => Promise<void>;
+  // 메시지 등의 URL 을 런처의 인앱 브라우저(포식 브라우저) 탭으로 열기
+  openInLauncherBrowser?: (url: string) => Promise<void>;
+  onOpenForageUrl?: (callback: (url: string) => void) => void;
+  removeOpenForageUrl?: () => void;
   // preload.js 의 clipboard 브리지. ★동기 두 개는 샌드박스 렌더러에선 호출 시 throw —
   // IPC 판(readClipboardText)이 확실한 경로.
   copyToClipboard: (text: string) => void;

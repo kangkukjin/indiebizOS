@@ -22,7 +22,8 @@ set -euo pipefail
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
 # 검사 트리거 — 위 4종 중 하나라도 스테이지되어 있으면 실행.
-if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/ibl_actions\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|data/training/.*\.json|scripts/build_ibl_nodes\.py)$'; then
+# (2026-07-18: 빌더가 iblbuild_* 형제 모듈로 분할 — 가드 본체 편집도 트리거에 포함)
+if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/ibl_actions\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|data/training/.*\.json|scripts/(build_ibl_nodes|iblbuild_[a-z]+)\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] IBL 정합성 검사 실행..."
   if ! python3 "$repo_root/scripts/build_ibl_nodes.py" --check; then

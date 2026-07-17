@@ -91,7 +91,8 @@ def check_view_renderers(root: Path) -> list[str]:
     build 는 app: 블록이 *선언한* view type 이 enum 에 있는지만 봤다 — 하지만 그 type 을
     실제로 *그리는* 렌더러 코드가 없으면 success:true 인데 빈 화면(좀비 어휘)이다.
     check_launcher_handlers(어휘→라우터→main.js) 와 같은 패턴을 뷰 계층에 적용:
-    데스크탑(GenericInstrument.tsx if-chain)·원격(api_launcher_web.py renderPrim if-chain)
+    데스크탑(GenericInstrument.tsx if-chain)·원격(launcher_web_render.py renderPrim if-chain
+    — 2026-07-18 api_launcher_web.py 에서 분리, HTML 3분할 중 렌더 JS 조각)
     두 렌더러가 각 view type 을 디스패치하는지 정규식으로 확인한다.
 
     견고화(경량 모델·리팩터 대비):
@@ -105,7 +106,7 @@ def check_view_renderers(root: Path) -> list[str]:
     import re as _re
     issues: list[str] = []
     desktop = root / "frontend" / "src" / "components" / "GenericInstrument.tsx"
-    remote = root / "backend" / "api_launcher_web.py"
+    remote = root / "backend" / "launcher_web_render.py"
     if not desktop.is_file() or not remote.is_file():
         return issues  # 소스 부재(폰/헤드리스) — graceful skip
     try:
@@ -137,7 +138,7 @@ def check_view_renderers(root: Path) -> list[str]:
     for missing in sorted(APP_VIEW_TYPES - remote_types):
         issues.append(
             f"뷰 어휘 {missing!r} 가 APP_VIEW_TYPES 에 선언됐으나 원격 렌더러 "
-            f"(backend/api_launcher_web.py renderPrim)에 p.type 케이스 없음 — "
+            f"(backend/launcher_web_render.py renderPrim)에 p.type 케이스 없음 — "
             f"데스크탑/원격 파리티 깨짐. 원격 렌더러에 추가."
         )
     return issues

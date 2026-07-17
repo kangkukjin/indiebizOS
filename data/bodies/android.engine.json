@@ -89,6 +89,9 @@
     "install_approvals",
     "korean_utils",
     "launcher_layout",
+    "launcher_web_app",
+    "launcher_web_render",
+    "launcher_web_shell",
     "logging_utils",
     "memory_consolidation",
     "migrate_alias_retirement",
@@ -164,8 +167,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 158,
-    "engine": 145,
+    "total": 161,
+    "engine": 148,
     "blocklist": 13
   }
 }

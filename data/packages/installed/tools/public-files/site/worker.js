@@ -299,6 +299,12 @@ export default {
       if (hrest[0] === "logout" && request.method === "POST") {
         return proxyPortal(env, request, `logout/${encodeURIComponent(hslug)}`);
       }
+      if (hrest[0] === "reset" && request.method === "POST") {
+        return proxyPortal(env, request, `reset/${encodeURIComponent(hslug)}`);
+      }
+      if (hrest[0] === "password" && request.method === "POST") {
+        return proxyPortal(env, request, `password/${encodeURIComponent(hslug)}`);
+      }
       if (hrest[0] === "inst" && hrest[1]) {
         return proxyPortal(env, request, `inst/${encodeURIComponent(hslug)}/${encodeURIComponent(hrest[1])}`);
       }

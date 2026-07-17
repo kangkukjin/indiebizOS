@@ -77,11 +77,22 @@ def render_home(portal: dict, viewer, tiles: list) -> str:
     intro = portal.get("intro") or ""
 
     hello = ""
+    pwcard = ""
     if viewer:
         lv = int(viewer.get("level", 0))
         hello = (f'<div class="hello"><span class="chip">👋 <b>{_esc(viewer.get("name"))}</b>님 · '
                  f'레벨 {lv} ({_esc(_LEVEL_LABELS.get(lv, lv))})</span>'
+                 f'<button onclick="togglePw()">비밀번호 변경</button>'
                  f'<button onclick="doLogout()">로그아웃</button></div>')
+        pwcard = """
+<div class="card" id="pwcard" style="display:none;margin-top:12px">
+ <h3>🔑 비밀번호 변경</h3>
+ <form onsubmit="return doChangePw(event)">
+  <input class="f" id="npw" type="password" autocomplete="new-password" placeholder="새 비밀번호 (4자 이상)">
+  <button class="go" id="npb" type="submit">바꾸기</button>
+ </form>
+ <div class="err" id="pwe"></div>
+</div>"""
 
     inst_tiles, content_tiles = [], []
     for t in tiles:
@@ -118,35 +129,45 @@ def render_home(portal: dict, viewer, tiles: list) -> str:
   <input class="f" id="lp" name="password" type="password" autocomplete="current-password" placeholder="비밀번호">
   <label class="chk"><input type="checkbox" id="lauto" checked> 자동 로그인</label>
   <button class="go" id="lb" type="submit">로그인</button>
+  <p style="text-align:center;margin-top:10px"><a href="#" onclick="return authTab('reset')" style="color:#a2937a;font-size:13px">비밀번호를 잊으셨나요?</a></p>
  </form>
  <form id="fJoin" style="display:none" onsubmit="return doJoin(event)">
-  <p class="m" style="margin-bottom:10px">이름과 아이디만 있으면 바로 등록돼요.
-  운영자가 등급을 올려주면 더 많은 것이 열립니다.</p>
+  <p class="m" style="margin-bottom:10px">이름·아이디·이메일만 있으면 바로 등록돼요.
+  이메일은 비밀번호를 잊었을 때 찾는 데 씁니다. 운영자가 등급을 올려주면 더 많은 것이 열립니다.</p>
   <input class="f" id="jn" maxlength="24" placeholder="이름 (닉네임)">
   <input class="f" id="ji" name="username" autocomplete="username" placeholder="아이디 (영문 소문자·숫자 3~20자)" autocapitalize="none">
+  <input class="f" id="je" name="email" type="email" autocomplete="email" placeholder="이메일 (비밀번호 찾기용)" autocapitalize="none">
   <input class="f" id="jp" name="new-password" type="password" autocomplete="new-password" placeholder="비밀번호 (4자 이상)">
   <label class="chk"><input type="checkbox" id="jauto" checked> 자동 로그인</label>
   <button class="go" id="jb" type="submit">가입하고 시작하기</button>
+ </form>
+ <form id="fReset" style="display:none" onsubmit="return doReset(event)">
+  <p class="m" style="margin-bottom:10px">가입할 때 쓴 이메일을 넣으면, 임시 비밀번호를 그 이메일로 보내드려요.
+  받은 비밀번호로 로그인한 뒤 바꾸시면 됩니다.</p>
+  <input class="f" id="re" name="email" type="email" autocomplete="email" placeholder="가입 이메일" autocapitalize="none">
+  <button class="go" id="rb" type="submit">임시 비밀번호 메일로 받기</button>
+  <p style="text-align:center;margin-top:10px"><a href="#" onclick="return authTab('login')" style="color:#a2937a;font-size:13px">← 로그인으로</a></p>
  </form>
  <div class="err" id="ae"></div>
 </div>
 <script>
 function authTab(t){
-  var lg=(t==='login');
-  document.getElementById('fLogin').style.display=lg?'block':'none';
-  document.getElementById('fJoin').style.display=lg?'none':'block';
-  document.getElementById('tabLogin').className=lg?'on':'';
-  document.getElementById('tabJoin').className=lg?'':'on';
+  var show={login:'none',join:'none',reset:'none'}; show[t]='block';
+  document.getElementById('fLogin').style.display=show.login;
+  document.getElementById('fJoin').style.display=show.join;
+  document.getElementById('fReset').style.display=show.reset;
+  document.getElementById('tabLogin').className=(t==='login')?'on':'';
+  document.getElementById('tabJoin').className=(t==='join')?'on':'';
   document.getElementById('ae').textContent='';
   return false;
 }
-async function _auth(url,body,btn){
+async function _auth(url,body,btn,onOk){
   var e=document.getElementById('ae'); e.textContent=''; btn.disabled=true;
   try{
     var r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     var d=await r.json().catch(function(){return {};});
     if(!r.ok||!d.ok){ e.textContent=d.detail||d.error||'실패했어요 — 다시 시도해 주세요'; btn.disabled=false; return; }
-    location.reload();
+    if(onOk){ onOk(d); btn.disabled=false; } else { location.reload(); }
   }catch(x){ e.textContent='연결 실패 — 잠시 후 다시'; btn.disabled=false; }
 }
 function doLogin(ev){ ev.preventDefault();
@@ -155,9 +176,17 @@ function doLogin(ev){ ev.preventDefault();
   _auth('login',{user_id:u,password:p,auto:document.getElementById('lauto').checked},document.getElementById('lb'));
   return false; }
 function doJoin(ev){ ev.preventDefault();
-  var n=document.getElementById('jn').value.trim(), u=document.getElementById('ji').value.trim(), p=document.getElementById('jp').value;
-  if(!n||!u||!p){ document.getElementById('ae').textContent='이름·아이디·비밀번호를 입력해 주세요'; return false; }
-  _auth('join',{name:n,user_id:u,password:p,auto:document.getElementById('jauto').checked},document.getElementById('jb'));
+  var n=document.getElementById('jn').value.trim(), u=document.getElementById('ji').value.trim(),
+      em=document.getElementById('je').value.trim(), p=document.getElementById('jp').value;
+  if(!n||!u||!em||!p){ document.getElementById('ae').textContent='이름·아이디·이메일·비밀번호를 입력해 주세요'; return false; }
+  _auth('join',{name:n,user_id:u,email:em,password:p,auto:document.getElementById('jauto').checked},document.getElementById('jb'));
+  return false; }
+function doReset(ev){ ev.preventDefault();
+  var em=document.getElementById('re').value.trim();
+  if(!em){ document.getElementById('ae').textContent='가입 이메일을 입력해 주세요'; return false; }
+  _auth('reset',{email:em},document.getElementById('rb'),function(d){
+    var e=document.getElementById('ae'); e.style.color='#2e7d32';
+    e.textContent=d.message||'임시 비밀번호를 이메일로 보냈어요'; });
   return false; }
 </script>"""
 
@@ -167,6 +196,20 @@ async function doLogout(){
   try{ await fetch('logout',{method:'POST'}); }catch(e){}
   location.reload();
 }
+function togglePw(){ var c=document.getElementById('pwcard');
+  c.style.display=(c.style.display==='none')?'block':'none'; }
+async function doChangePw(ev){ ev.preventDefault();
+  var e=document.getElementById('pwe'); e.style.color='#a33'; e.textContent='';
+  var p=document.getElementById('npw').value, b=document.getElementById('npb');
+  if(!p||p.length<4){ e.textContent='새 비밀번호는 4자 이상이어야 해요'; return false; }
+  b.disabled=true;
+  try{
+    var r=await fetch('password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({new_password:p})});
+    var d=await r.json().catch(function(){return {};});
+    if(!r.ok||!d.ok){ e.textContent=d.detail||'실패했어요'; b.disabled=false; return false; }
+    e.style.color='#2e7d32'; e.textContent=d.message||'바꿨어요'; document.getElementById('npw').value=''; b.disabled=false;
+  }catch(x){ e.textContent='연결 실패'; b.disabled=false; }
+  return false; }
 </script>""" if viewer else ""
 
     # PC(≥900px): 손님이면 본문+로그인 사이드바 2단(.cols), 회원이면 넓은 1단. 폰은 늘 1단.
@@ -181,12 +224,13 @@ async function doLogout(){
 {('<p class="intro">' + _esc(intro) + '</p>') if intro else ''}
 {hello}
 </header>
+{pwcard}
 <main>
 {sections}
 </main>
 {aside}
 {logout_js}
-<footer>비밀번호를 잊으면 운영자에게 — 바로 들어가는 링크를 새로 보내드려요<br>powered by IndieBiz OS</footer>
+<footer>비밀번호를 잊으면 로그인 화면의 '비밀번호를 잊으셨나요?'에서 이메일로 임시 비밀번호를 받으세요<br>powered by IndieBiz OS</footer>
 </div></body></html>"""
 
 

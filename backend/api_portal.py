@@ -156,10 +156,13 @@ async def join(slug: str, request: Request, x_showcase_secret: str = Header(defa
     name = str(body.get("name", "")).strip()
     user_id = str(body.get("user_id", "")).strip()
     password = str(body.get("password", ""))
+    email = str(body.get("email", "")).strip()
     if not name:
         raise HTTPException(status_code=400, detail="이름을 입력해 주세요")
     if not user_id or not password:
         raise HTTPException(status_code=400, detail="아이디와 비밀번호를 입력해 주세요")
+    if not core.valid_email(email):
+        raise HTTPException(status_code=400, detail="비밀번호 찾기에 쓸 이메일을 정확히 입력해 주세요")
 
     holder = {}
 
@@ -167,7 +170,7 @@ async def join(slug: str, request: Request, x_showcase_secret: str = Header(defa
         p = core.portal_by_slug(st, slug)
         if not p:
             raise ValueError("포털이 없습니다")
-        holder["m"] = core.create_member(p, name, "", 0, login_id=user_id, password=password)
+        holder["m"] = core.create_member(p, name, email, 0, login_id=user_id, password=password)
 
     try:
         core.mutate_state(_fn)
@@ -218,6 +221,123 @@ async def logout(slug: str, x_showcase_secret: str = Header(default="")):
     _check_secret(x_showcase_secret)
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(key=f"pk_{slug}", path=f"/h/{slug}")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+# ── 비밀번호 찾기 (임시 비밀번호를 등록 이메일로 발송) ─────────────────────
+
+def _send_email(to: str, subject: str, body: str):
+    """시스템 Gmail 계정으로 발송. (성공, 오류메시지)."""
+    try:
+        from channel_engine import _get_system_gmail_address
+        from api_gmail import get_gmail_client_for_email
+        sys_email = _get_system_gmail_address()
+        if not sys_email:
+            return False, "시스템 Gmail 계정이 설정되지 않았어요 (gmail extension config.yaml)"
+        client = get_gmail_client_for_email(sys_email)
+        if not client:
+            return False, "Gmail 클라이언트를 준비하지 못했어요 (인증 필요)"
+        client.send_message(to=to, subject=subject, body=body)
+        return True, ""
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+
+
+def _reset_email_body(portal: dict, home: str, member: dict, temp: str) -> str:
+    title = portal.get("title") or "포털"
+    return (
+        f"{member.get('name','')}님, 안녕하세요.\n\n"
+        f"'{title}' 로그인용 임시 비밀번호를 보내드려요.\n\n"
+        f"    아이디: {member.get('login_id','')}\n"
+        f"    임시 비밀번호: {temp}\n\n"
+        f"이 비밀번호로 로그인한 뒤, 홈에서 '비밀번호 변경'으로 원하는 비밀번호로 바꿔 주세요.\n"
+        f"로그인: {home}\n\n"
+        f"본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다 (기존 비밀번호는 이미 바뀌었으니, "
+        f"다시 '비밀번호 찾기'로 재설정해 주세요).\n"
+    )
+
+
+@router.post("/reset/{slug}")
+async def reset_password(slug: str, request: Request, x_showcase_secret: str = Header(default=""),
+                         x_client_ip: str = Header(default="")):
+    _check_secret(x_showcase_secret)
+    core = _core()
+    state = core.load_state()
+    portal = _portal_or_404(core, state, slug)
+    ip = _client_ip(request, x_client_ip)
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    email = str(body.get("email", "")).strip()
+    if not core.valid_email(email):
+        raise HTTPException(status_code=400, detail="가입할 때 쓴 이메일을 정확히 입력해 주세요")
+    # 메일 폭탄 방어 — 같은 이메일·같은 IP 둘 다 제한.
+    if not core.reset_rate_ok(email.lower()) or not core.reset_rate_ok(f"ip:{ip}"):
+        raise HTTPException(status_code=429, detail="요청이 너무 잦아요 — 잠시 후 다시 시도해 주세요")
+
+    m = core.find_member_by_email(portal, email)
+    if not m or m.get("revoked") or not m.get("login_id"):
+        # 작은 가족 포털이라 명확히 안내(남용은 rate limit 이 막음).
+        return JSONResponse({"ok": False, "detail": "그 이메일로 가입된 계정이 없어요"}, status_code=404)
+
+    temp = core.gen_temp_password()
+    home = core.portal_url(state, portal) or f"/h/{slug}/"
+    # ★비밀번호는 메일 발송에 성공한 뒤에만 바꾼다(발송 실패로 잠기는 것 방지).
+    ok, err = _send_email(email, f"[{portal.get('title','포털')}] 임시 비밀번호",
+                          _reset_email_body(portal, home, m, temp))
+    if not ok:
+        core.audit_log(f"reset-fail:{ip}", "portal", f"pw reset {m.get('login_id')}", False,
+                       note=err, portal=slug)
+        raise HTTPException(status_code=502, detail=f"메일을 보내지 못했어요: {err}")
+
+    def _fn(st):
+        p = core.portal_by_slug(st, slug)
+        mm = core.find_member_by_email(p, email)
+        if mm:
+            core.set_password(mm, temp)
+    core.mutate_state(_fn)
+    core.audit_log(f"reset:{ip}", "portal", f"pw reset {m.get('login_id')}", True, portal=slug)
+    resp = JSONResponse({"ok": True, "message": "등록된 이메일로 임시 비밀번호를 보냈어요 — 메일함을 확인해 주세요"})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+# ── 비밀번호 변경 (로그인한 회원 본인) ────────────────────────────────────
+
+@router.post("/password/{slug}")
+async def change_password(slug: str, request: Request, x_showcase_secret: str = Header(default="")):
+    _check_secret(x_showcase_secret)
+    core = _core()
+    state = core.load_state()
+    portal = _portal_or_404(core, state, slug)
+    viewer = _viewer(core, portal, request, slug)
+    if not viewer:
+        raise HTTPException(status_code=401, detail="로그인이 필요해요")
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    new_pw = str(body.get("new_password", ""))
+    holder = {}
+
+    def _fn(st):
+        p = core.portal_by_slug(st, slug)
+        m = core.find_member(p, member_id=viewer["id"])
+        if not m:
+            holder["err"] = "회원을 찾을 수 없어요"
+            return
+        try:
+            core.set_password(m, new_pw)
+        except ValueError as e:
+            holder["err"] = str(e)
+
+    core.mutate_state(_fn)
+    if holder.get("err"):
+        raise HTTPException(status_code=400, detail=holder["err"])
+    core.audit_log(f"{viewer['name']}({viewer['id']})", "portal", "pw change", True, portal=slug)
+    resp = JSONResponse({"ok": True, "message": "비밀번호를 바꿨어요"})
     resp.headers["Cache-Control"] = "no-store"
     return resp
 

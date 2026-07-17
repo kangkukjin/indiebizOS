@@ -230,6 +230,32 @@ def find_member_by_login(portal: dict, login_id: str):
     return None
 
 
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def valid_email(s: str) -> bool:
+    return bool(_EMAIL_RE.match((s or "").strip()))
+
+
+def find_member_by_email(portal: dict, email: str):
+    """복구용 이메일(contact)로 회원 찾기 — 셀프 가입(login_id 보유)만."""
+    e = (email or "").strip().lower()
+    if not e:
+        return None
+    for m in (portal or {}).get("members", []):
+        if m.get("login_id") and (m.get("contact") or "").strip().lower() == e:
+            return m
+    return None
+
+
+# 임시 비밀번호 알파벳 — 헷갈리는 0/O·1/I/l 제외(메일로 읽고 입력하기 쉽게).
+_TEMP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def gen_temp_password(n: int = 10) -> str:
+    return "".join(secrets.choice(_TEMP_ALPHABET) for _ in range(n))
+
+
 def set_password(m: dict, pw: str) -> None:
     import hashlib
     if not (4 <= len(pw or "") <= 64):
@@ -663,6 +689,21 @@ def login_rate_ok(ip: str) -> bool:
         return False
     tries.append(now)
     _LOGIN_TRIES[ip or "?"] = tries
+    return True
+
+
+_RESET_HITS = {}   # 이메일/ip -> [timestamps] — 재설정 메일 폭탄 방어
+
+
+def reset_rate_ok(key: str) -> bool:
+    """비밀번호 재설정 요청 제한 — 같은 키(이메일·ip) 5분에 1회, 하루 5회."""
+    now = time.time()
+    hits = [t for t in _RESET_HITS.get(key or "?", []) if now - t < 86400]
+    if len(hits) >= 5 or (hits and now - hits[-1] < 300):
+        _RESET_HITS[key or "?"] = hits
+        return False
+    hits.append(now)
+    _RESET_HITS[key or "?"] = hits
     return True
 
 

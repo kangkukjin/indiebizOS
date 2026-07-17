@@ -328,7 +328,8 @@ def is_public_remote_path(method: str, path: str) -> bool:
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")):
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
-                             or path.startswith("/portal/login/") or path.startswith("/portal/logout/")):
+                             or path.startswith("/portal/login/") or path.startswith("/portal/logout/")
+                             or path.startswith("/portal/reset/") or path.startswith("/portal/password/")):
         return True
     # 자유게시판 공개 서빙(/bulletin/page·media)도 자체 X-Showcase-Secret 게이트 보유.
     # 익명 글쓰기는 POST /bulletin/post/ — 로그인 없는 자유게시판.

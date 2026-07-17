@@ -200,6 +200,95 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
     }
 
 
+# ── 창고 홈 (사람용) — 사이트 맨 루트(/)가 이 페이지다. 가장 짧은 주소 = 노드의 얼굴. ──
+# 옛 bare-루트 잠금은 showcase(주소=비밀) 시절 규칙 — 창고는 보안이 레벨이라 루트를 당당히 연다.
+
+def _warehouse_files(level: int, cap: int = _WAREHOUSE_LIST_CAP) -> list:
+    """한 레벨 창고의 파일들(재귀, 상한) — [{name(rel), bytes, url}]."""
+    from urllib.parse import quote
+    base_dir = _warehouse_dir(level)
+    out = []
+    try:
+        for p in sorted(base_dir.rglob("*")):
+            if not p.is_file() or p.name.startswith("."):
+                continue
+            rel = str(p.relative_to(base_dir))
+            out.append({"name": rel, "bytes": p.stat().st_size,
+                        "url": f"/w/{level}/file?path={quote(rel)}"})
+            if len(out) >= cap:
+                break
+    except Exception:
+        pass
+    return out
+
+
+def _fmt_bytes(n: float) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f}{unit}" if unit == "B" else f"{n:.1f}{unit}"
+        n /= 1024
+    return f"{n:.0f}B"
+
+
+@router.get("/home")
+async def node_home(request: Request, x_showcase_secret: str = Header(default="")):
+    """창고 홈(사람용 HTML) — 내 레벨 이하 창고의 파일들 + 로그인. 루트(/)에서 서빙."""
+    import html as _h
+    _check_secret(x_showcase_secret)
+    core = _core()
+    state = core.load_state()
+    portal = core.ensure_default_portal(state)
+    viewer, level = _viewer_level(core, request)
+    _ensure_warehouses()
+
+    title = _h.escape(portal.get("title", "") or "공유창고")
+    sections = []
+    for lv in sorted(_WAREHOUSE_LEVELS):
+        if lv > level:
+            continue
+        files = _warehouse_files(lv)
+        rows = "".join(
+            f'<li><a href="{_h.escape(f["url"])}">{_h.escape(f["name"])}</a>'
+            f'<span class="sz">{_fmt_bytes(f["bytes"])}</span></li>'
+            for f in files) or '<li class="empty">비어 있어요</li>'
+        sections.append(f'<section><h2>창고 {lv}</h2><ul>{rows}</ul></section>')
+    locked_note = ('<p class="locked">🔒 더 높은 레벨의 창고가 있어요 — 로그인하거나 승급하면 열립니다.</p>'
+                   if level < max(_WAREHOUSE_LEVELS) else '')
+    if viewer:
+        who = (f'<span>{_h.escape(viewer.get("name",""))} · 레벨 {level}</span> '
+               f'<button onclick="lo()">로그아웃</button>')
+        login_form = ''
+    else:
+        who = '<span>손님 (레벨 0)</span>'
+        login_form = ('<form onsubmit="return li(this)"><input name="u" placeholder="아이디" '
+                      'autocomplete="username"><input name="p" type="password" placeholder="비밀번호" '
+                      'autocomplete="current-password"><button>로그인</button></form>')
+    html_doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>{title}</title><link rel="alternate" type="application/json" href="/manifest">
+<style>
+body{{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:2rem auto;padding:0 1rem;color:#222}}
+header{{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;border-bottom:2px solid #222;padding-bottom:.7rem}}
+h1{{font-size:1.4rem;margin:0}} h2{{font-size:1rem;margin:1.2rem 0 .4rem;color:#555}}
+ul{{list-style:none;padding:0;margin:0}} li{{padding:.45rem .2rem;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:1rem}}
+a{{color:#0a58ca;text-decoration:none;word-break:break-all}} a:hover{{text-decoration:underline}}
+.sz{{color:#999;font-size:.85rem;white-space:nowrap}} .empty{{color:#aaa}} .locked{{color:#888;font-size:.9rem}}
+form{{display:flex;gap:.4rem;flex-wrap:wrap}} input{{padding:.35rem .5rem;border:1px solid #ccc;border-radius:6px;width:8.5rem}}
+button{{padding:.35rem .8rem;border:1px solid #222;background:#222;color:#fff;border-radius:6px;cursor:pointer}}
+.acct{{display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:#555}}
+</style></head><body>
+<header><h1>{title}</h1><div class="acct">{who}{login_form}</div></header>
+{''.join(sections)}
+{locked_note}
+<script>
+async function li(f){{const r=await fetch('/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{user_id:f.u.value,password:f.p.value,auto:true}})}});
+if(r.ok)location.reload();else alert((await r.json()).detail||'로그인 실패');return false}}
+async function lo(){{await fetch('/logout',{{method:'POST'}});location.reload()}}
+</script></body></html>"""
+    return HTMLResponse(html_doc, headers={"Cache-Control": "no-store"})
+
+
 @router.get("/manifest")
 async def node_manifest(request: Request, x_showcase_secret: str = Header(default="")):
     """노드의 공개 얼굴 — 슬러그 없는 canonical 창고 목록. 익명=레벨0, 쿠키(pk)=회원 레벨."""

@@ -326,7 +326,8 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # join(가입)·tool(회원 실행 게이트)은 POST. 그 외 /portal/ 경로는 없음(전부 등록).
     if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")
-                            or path == "/portal/manifest" or path.startswith("/portal/warehouse/")):
+                            or path == "/portal/manifest" or path == "/portal/home"
+                            or path.startswith("/portal/warehouse/")):
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
                              or path.startswith("/portal/login/") or path.startswith("/portal/logout/")

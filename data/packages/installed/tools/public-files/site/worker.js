@@ -356,7 +356,12 @@ export default {
       return new Response("not found", { status: 404 });
     }
 
-    // 노드의 공개 얼굴 — 슬러그 없는 canonical 매니페스트(단일 노드). 익명=레벨0 포식면.
+    // 맨 루트(/) = 창고 홈(사람용) — 가장 짧은 주소가 노드의 얼굴. 레벨0은 원래 공개라
+    // 옛 bare-루트 잠금(showcase 주소=비밀 시절)을 창고에는 적용하지 않는다.
+    if (path === "") {
+      return proxyPortal(env, request, "home");
+    }
+    // 노드의 공개 얼굴(기계용) — 슬러그 없는 canonical 매니페스트. 익명=레벨0 포식면.
     if (path === "manifest" || path === "manifest/") {
       return proxyPortal(env, request, "manifest");
     }

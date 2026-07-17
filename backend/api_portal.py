@@ -126,9 +126,8 @@ async def page(slug: str, request: Request, x_showcase_secret: str = Header(defa
 #     냄새로만(이름·개수 안 샘). 서빙은 즉석 walk(공개파일 '구조' 재사용 — 인덱싱 없음).
 # 주소: 노드는 하나, canonical `/manifest`. 창고는 `/w/<level>/`(레벨 자체가 주소 — 슬러그 없음).
 
-_MANIFEST_ABOUT = ("이 노드가 레벨에 따라 공개하는 창고(폴더) 목록. url 로 들어가면 그 창고의 "
-                   "파일 목록(JSON)을 받고, 파일 url 로 내용을 가져간다. 운영자가 이웃으로 "
-                   "승급하면 더 높은 레벨 창고가 열린다. has_restricted=위 레벨에 잠긴 창고 "
+_MANIFEST_ABOUT = ("이 노드가 공유하는 파일 목록(요청자 레벨로 절단). url 로 내용을 가져간다. "
+                   "운영자가 이웃으로 승급하면 더 많은 파일이 열린다. has_restricted=잠긴 것 "
                    "존재(내용은 안 샘 = FOAF 라우팅 단서).")
 
 _WAREHOUSE_ROOT = _ROOT / "공유창고"
@@ -180,56 +179,43 @@ def _viewer_level(core, request: Request):
     return viewer, (int(viewer.get("level", 0)) if viewer else 0)
 
 
-def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -> dict:
-    _ensure_warehouses()
-    warehouses, has_restricted = [], False
-    for lv in sorted(_WAREHOUSE_LEVELS):
-        if lv > level:
-            has_restricted = True       # 위 레벨 창고 존재만 신호(이름·개수 안 샘)
-            continue
+def _accessible_files(level: int, base: str = "") -> list:
+    """레벨 0..level 창고를 병합한 단일 파일 목록 — 방문자에게 레벨 구조를 흘리지 않는다.
+    같은 상대경로는 높은 레벨 판이 이김 → 비즈니스문서.md 가 자동으로 딱 1개(내 레벨 판)."""
+    from urllib.parse import quote
+    seen = {}
+    for lv in sorted((l for l in _WAREHOUSE_LEVELS if l <= level), reverse=True):
         d = _warehouse_dir(lv)
         try:
-            cnt = sum(1 for p in d.rglob("*") if p.is_file() and not p.name.startswith("."))
+            for p in d.rglob("*"):
+                if not p.is_file() or p.name.startswith("."):
+                    continue
+                rel = str(p.relative_to(d))
+                if rel not in seen:
+                    seen[rel] = {"name": rel, "bytes": p.stat().st_size,
+                                 "url": f"{base}/f?path={quote(rel)}"}
         except Exception:
-            cnt = 0
-        warehouses.append({
-            "level": lv,
-            "name": _WAREHOUSE_LEVELS[lv],
-            "count": cnt,
-            "url": (f"{base}/w/{lv}/" if base else f"/w/{lv}/"),
-        })
+            continue
+    # 비즈니스문서(노드 소개)가 맨 앞, 나머지는 이름순
+    files = sorted(seen.values(), key=lambda f: (f["name"] != _BIZDOC_NAME, f["name"]))
+    return files[:_WAREHOUSE_LIST_CAP]
+
+
+def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -> dict:
+    _ensure_warehouses()
     return {
         "about": _MANIFEST_ABOUT,
         "title": node_title,
         "node_url": (base + "/manifest") if base else "/manifest",
         "viewer_level": level,
         "is_member": is_member,
-        "warehouses": warehouses,
-        "has_restricted": has_restricted,
+        "files": _accessible_files(level, base),
+        "has_restricted": level < max(_WAREHOUSE_LEVELS),
     }
 
 
 # ── 창고 홈 (사람용) — 사이트 맨 루트(/)가 이 페이지다. 가장 짧은 주소 = 노드의 얼굴. ──
 # 옛 bare-루트 잠금은 showcase(주소=비밀) 시절 규칙 — 창고는 보안이 레벨이라 루트를 당당히 연다.
-
-def _warehouse_files(level: int, cap: int = _WAREHOUSE_LIST_CAP) -> list:
-    """한 레벨 창고의 파일들(재귀, 상한) — [{name(rel), bytes, url}]."""
-    from urllib.parse import quote
-    base_dir = _warehouse_dir(level)
-    out = []
-    try:
-        for p in sorted(base_dir.rglob("*")):
-            if not p.is_file() or p.name.startswith("."):
-                continue
-            rel = str(p.relative_to(base_dir))
-            out.append({"name": rel, "bytes": p.stat().st_size,
-                        "url": f"/w/{level}/file?path={quote(rel)}"})
-            if len(out) >= cap:
-                break
-    except Exception:
-        pass
-    return out
-
 
 def _fmt_bytes(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB"):
@@ -251,16 +237,14 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     _ensure_warehouses()
 
     title = _h.escape(_warehouse_title())
-    sections = []
-    for lv in sorted(_WAREHOUSE_LEVELS):
-        if lv > level:
-            continue
-        files = _warehouse_files(lv)
-        rows = "".join(
-            f'<li><a href="{_h.escape(f["url"])}">{_h.escape(f["name"])}</a>'
-            f'<span class="sz">{_fmt_bytes(f["bytes"])}</span></li>'
-            for f in files) or '<li class="empty">비어 있어요</li>'
-        sections.append(f'<section><h2>창고 {lv}</h2><ul>{rows}</ul></section>')
+    # 단일 목록 — 방문자에게 레벨 구조(어느 파일이 어느 등급인지)를 보여주지 않는다.
+    # 비즈니스문서는 내 레벨 판 1개만(높은 레벨 판이 이기는 병합 규칙이 자동으로 보장).
+    files = _accessible_files(level)
+    rows = "".join(
+        f'<li><a href="{_h.escape(f["url"])}">{_h.escape(f["name"])}</a>'
+        f'<span class="sz">{_fmt_bytes(f["bytes"])}</span></li>'
+        for f in files) or '<li class="empty">비어 있어요</li>'
+    sections = [f'<section><ul>{rows}</ul></section>']
     locked_note = ('<p class="locked">🔒 더 높은 레벨의 창고가 있어요 — 로그인하거나 승급하면 열립니다.</p>'
                    if level < max(_WAREHOUSE_LEVELS) else '')
     if viewer:
@@ -311,17 +295,10 @@ async def node_manifest(request: Request, x_showcase_secret: str = Header(defaul
                         headers={"Cache-Control": "no-store"})
 
 
-# ── 창고 서빙 — 목록(즉석 walk) + 파일. 레벨 게이트가 서빙 자체에 걸린다. ────
-# 공개파일(/s/)과 달리 주소를 알아도 레벨이 안 되면 403 — 창고의 보안은 주소가 아니라 레벨.
-
-def _warehouse_gate(core, request: Request, level: int) -> None:
-    if level not in _WAREHOUSE_LEVELS:
-        raise HTTPException(status_code=404, detail="no such warehouse")
-    _viewer, vlevel = _viewer_level(core, request)
-    if level > vlevel:
-        raise HTTPException(status_code=403,
-                            detail=f"레벨 {level} 창고입니다 — 로그인하거나 승급이 필요해요")
-
+# ── 창고 파일 서빙 — /f?path= 단일 관문. 레벨 게이트가 서빙 자체에 걸린다. ────
+# 주소에 레벨이 안 드러난다(어느 파일이 어느 등급인지 = 정보라서 숨김). 서버가 방문자 레벨
+# 이하 창고를 높은 레벨부터 뒤져 첫 일치를 서빙. 레벨 밖 파일은 403 이 아니라 404(존재 자체
+# 를 안 흘림). 공개파일(/s/)과 달리 주소를 알아도 레벨이 안 되면 열리지 않는다.
 
 def _safe_rel(base: Path, rel: str) -> Path:
     p = (base / rel.lstrip("/")).resolve()
@@ -330,54 +307,22 @@ def _safe_rel(base: Path, rel: str) -> Path:
     return p
 
 
-@router.get("/warehouse/{level}")
-async def warehouse_list(level: int, request: Request, path: str = "",
-                         x_showcase_secret: str = Header(default="")):
-    """창고 한 디렉토리 즉석 walk — 파일/하위폴더 목록(JSON). AI·사람 공용 통화."""
+@router.get("/file")
+async def node_file(request: Request, path: str = "",
+                    x_showcase_secret: str = Header(default="")):
     _check_secret(x_showcase_secret)
     core = _core()
-    _warehouse_gate(core, request, level)
+    _viewer, level = _viewer_level(core, request)
     _ensure_warehouses()
-    base_dir = _warehouse_dir(level)
-    d = _safe_rel(base_dir, path) if path else base_dir
-    if not d.is_dir():
-        raise HTTPException(status_code=404, detail="no such folder")
-    dirs, files = [], []
-    try:
-        for p in sorted(d.iterdir(), key=lambda x: x.name):
-            if p.name.startswith("."):
-                continue
-            rel = str(p.relative_to(base_dir))
-            if p.is_dir():
-                dirs.append({"name": p.name, "path": rel})
-            elif p.is_file():
-                from urllib.parse import quote
-                files.append({"name": p.name, "path": rel, "bytes": p.stat().st_size,
-                              "url": f"/w/{level}/file?path={quote(rel)}"})
-            if len(dirs) + len(files) >= _WAREHOUSE_LIST_CAP:
-                break
-    except Exception:
-        raise HTTPException(status_code=500, detail="목록을 읽지 못했어요")
-    return JSONResponse({"warehouse": _WAREHOUSE_LEVELS[level], "level": level,
-                         "path": path, "dirs": dirs, "files": files},
-                        headers={"Cache-Control": "no-store"})
-
-
-@router.get("/warehouse/{level}/file")
-async def warehouse_file(level: int, request: Request, path: str = "",
-                         x_showcase_secret: str = Header(default="")):
-    """창고 파일 서빙 — 같은 레벨 게이트 + 경로 이탈 방어."""
-    _check_secret(x_showcase_secret)
-    core = _core()
-    _warehouse_gate(core, request, level)
-    f = _safe_rel(_warehouse_dir(level), path)
-    if not f.is_file():
-        raise HTTPException(status_code=404, detail="no such file")
-    import mimetypes
-    ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
-    from fastapi.responses import FileResponse
-    return FileResponse(str(f), media_type=ctype,
-                        headers={"Cache-Control": "no-store"})
+    for lv in sorted((l for l in _WAREHOUSE_LEVELS if l <= level), reverse=True):
+        f = _safe_rel(_warehouse_dir(lv), path)
+        if f.is_file():
+            import mimetypes
+            ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+            from fastapi.responses import FileResponse
+            return FileResponse(str(f), media_type=ctype,
+                                headers={"Cache-Control": "no-store"})
+    raise HTTPException(status_code=404, detail="no such file")
 
 
 # ── 단일 노드 로그인 — 루트(/) 스코프 쿠키 pk. 슬러그 없는 주소에서도 레벨 절단면을 읽게. ──

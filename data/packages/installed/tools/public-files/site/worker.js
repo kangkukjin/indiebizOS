@@ -372,21 +372,10 @@ export default {
     if (path === "logout" && request.method === "POST") {
       return proxyPortal(env, request, "node/logout");
     }
-    // 레벨 창고 — w/<level>/ 목록(JSON), w/<level>/file?path= 파일. 레벨 게이트는 맥이 판정
-    // (쿠키 pk → 레벨, 부족하면 403). 개인화 응답이라 no-store(proxyPortal).
-    if (path.startsWith("w/")) {
-      const wp = path.split("/");             // ["w", level, ...rest]
-      const wlevel = wp[1] || "";
-      const wrest = wp.slice(2).filter(Boolean);
-      if (!/^[0-4]$/.test(wlevel)) return new Response("not found", { status: 404 });
-      const qs = url.search || "";
-      if (wrest.length === 0) {
-        return proxyPortal(env, request, `warehouse/${wlevel}${qs}`);
-      }
-      if (wrest[0] === "file") {
-        return proxyPortal(env, request, `warehouse/${wlevel}/file${qs}`);
-      }
-      return new Response("not found", { status: 404 });
+    // 창고 파일 — f?path= 단일 관문(주소에 레벨 안 드러남). 레벨 게이트는 맥이 판정
+    // (쿠키 pk → 레벨, 밖이면 404). 개인화 응답이라 no-store(proxyPortal).
+    if (path === "f") {
+      return proxyPortal(env, request, `file${url.search || ""}`);
     }
 
     // 스코프 경로만 서빙 — s/<slug>/<rest>. 그 외(및 bare 루트)는 SPA(잠금 안내).

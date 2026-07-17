@@ -327,7 +327,7 @@ def is_public_remote_path(method: str, path: str) -> bool:
     if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")
                             or path == "/portal/manifest" or path == "/portal/home"
-                            or path.startswith("/portal/warehouse/")):
+                            or path == "/portal/file"):
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
                              or path.startswith("/portal/login/") or path.startswith("/portal/logout/")

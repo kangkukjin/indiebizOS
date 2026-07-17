@@ -118,6 +118,50 @@ async def page(slug: str, request: Request, x_showcase_secret: str = Header(defa
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
+# ── AI 포식 가능 매니페스트 — 공개 홈의 기계용 짝 ──────────────────────────
+# 홈 페이지(사람용 HTML)의 기계 판독 JSON 짝. 외부 AI(이웃의 포식자)가 /h/<slug>/manifest 로
+# 이 노드가 '내 레벨에서' 공유하는 것들의 냄새 지도를 받는다 — 이름·종류·링크(레벨별 절단면).
+# 익명=레벨0(누구나 포식하는 공개 얼굴), 쿠키=회원 레벨. 레벨 위 잠긴 건 이름 없이 has_restricted
+# 로만 신호(냄새는 주되 제목은 안 샘 = FOAF 라우팅 단서). 항목 url 을 따라가면 실제 표면(실체).
+
+@router.get("/manifest/{slug}")
+async def manifest(slug: str, request: Request, x_showcase_secret: str = Header(default="")):
+    _check_secret(x_showcase_secret)
+    core = _core()
+    state = core.load_state()
+    portal = _portal_or_404(core, state, slug)
+    viewer = _viewer(core, portal, request, slug)
+    level = int(viewer.get("level", 0)) if viewer else 0
+    base = (state.get("public_base") or "").rstrip("/")
+    tiles = core.visible_tiles(state, portal, viewer.get("level") if viewer else None)
+
+    items = []
+    has_restricted = False
+    for t in tiles:
+        if not t.get("unlocked"):
+            has_restricted = True       # 레벨 위 잠긴 항목 존재 = 냄새(제목은 안 샘)
+            continue
+        entry = {"key": t["key"], "name": t["name"], "kind": t["kind"],
+                 "min_level": t["min_level"]}
+        url = t.get("url") or ""
+        if url:                          # 콘텐츠 타일(신문·파일·게시판·보고)은 절대 url 로
+            entry["url"] = (base + url) if (base and url.startswith("/")) else url
+        items.append(entry)
+
+    return JSONResponse({
+        "about": ("이 노드가 공유하는 것들의 목록(냄새 지도). url 을 따라가면 실제 내용. "
+                  "운영자가 이웃으로 승급하면 더 많이 보입니다."),
+        "node": slug,
+        "title": portal.get("title", ""),
+        "intro": portal.get("intro", ""),
+        "node_url": core.portal_url(state, portal),
+        "viewer_level": level,
+        "is_member": bool(viewer),
+        "items": items,
+        "has_restricted": has_restricted,
+    }, headers={"Cache-Control": "no-store"})
+
+
 # ── 개인 링크 착지 (운영자 발급 열쇠 → 쿠키. 비밀번호 분실 복구 경로 겸용) ──
 
 @router.get("/key/{slug}/{memberkey}")

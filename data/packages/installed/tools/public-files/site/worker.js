@@ -305,6 +305,10 @@ export default {
       if (hrest[0] === "password" && request.method === "POST") {
         return proxyPortal(env, request, `password/${encodeURIComponent(hslug)}`);
       }
+      if (hrest[0] === "manifest") {
+        // AI 포식 가능 매니페스트 — 쿠키 개인화(레벨별 절단면)라 proxyPortal(no-store)
+        return proxyPortal(env, request, `manifest/${encodeURIComponent(hslug)}`);
+      }
       if (hrest[0] === "inst" && hrest[1]) {
         return proxyPortal(env, request, `inst/${encodeURIComponent(hslug)}/${encodeURIComponent(hrest[1])}`);
       }

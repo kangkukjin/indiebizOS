@@ -305,10 +305,6 @@ export default {
       if (hrest[0] === "password" && request.method === "POST") {
         return proxyPortal(env, request, `password/${encodeURIComponent(hslug)}`);
       }
-      if (hrest[0] === "manifest") {
-        // AI 포식 가능 매니페스트 — 쿠키 개인화(레벨별 절단면)라 proxyPortal(no-store)
-        return proxyPortal(env, request, `manifest/${encodeURIComponent(hslug)}`);
-      }
       if (hrest[0] === "inst" && hrest[1]) {
         return proxyPortal(env, request, `inst/${encodeURIComponent(hslug)}/${encodeURIComponent(hrest[1])}`);
       }
@@ -356,6 +352,34 @@ export default {
       }
       if (rrest.length === 0 || (rrest.length === 1 && rrest[0] === "")) {
         return proxyReport(env, request, `page/${encodeURIComponent(rslug)}`);
+      }
+      return new Response("not found", { status: 404 });
+    }
+
+    // 노드의 공개 얼굴 — 슬러그 없는 canonical 매니페스트(단일 노드). 익명=레벨0 포식면.
+    if (path === "manifest" || path === "manifest/") {
+      return proxyPortal(env, request, "manifest");
+    }
+    // 단일 노드 로그인/로그아웃 — 루트 스코프 쿠키 pk(레벨 절단면). POST 만.
+    if (path === "login" && request.method === "POST") {
+      return proxyPortal(env, request, "node/login");
+    }
+    if (path === "logout" && request.method === "POST") {
+      return proxyPortal(env, request, "node/logout");
+    }
+    // 레벨 창고 — w/<level>/ 목록(JSON), w/<level>/file?path= 파일. 레벨 게이트는 맥이 판정
+    // (쿠키 pk → 레벨, 부족하면 403). 개인화 응답이라 no-store(proxyPortal).
+    if (path.startsWith("w/")) {
+      const wp = path.split("/");             // ["w", level, ...rest]
+      const wlevel = wp[1] || "";
+      const wrest = wp.slice(2).filter(Boolean);
+      if (!/^[0-4]$/.test(wlevel)) return new Response("not found", { status: 404 });
+      const qs = url.search || "";
+      if (wrest.length === 0) {
+        return proxyPortal(env, request, `warehouse/${wlevel}${qs}`);
+      }
+      if (wrest[0] === "file") {
+        return proxyPortal(env, request, `warehouse/${wlevel}/file${qs}`);
       }
       return new Response("not found", { status: 404 });
     }

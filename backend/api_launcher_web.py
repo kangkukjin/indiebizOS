@@ -326,11 +326,12 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # join(가입)·tool(회원 실행 게이트)은 POST. 그 외 /portal/ 경로는 없음(전부 등록).
     if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")
-                            or path.startswith("/portal/manifest/")):
+                            or path == "/portal/manifest" or path.startswith("/portal/warehouse/")):
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
                              or path.startswith("/portal/login/") or path.startswith("/portal/logout/")
-                             or path.startswith("/portal/reset/") or path.startswith("/portal/password/")):
+                             or path.startswith("/portal/reset/") or path.startswith("/portal/password/")
+                             or path == "/portal/node/login" or path == "/portal/node/logout"):
         return True
     # 자유게시판 공개 서빙(/bulletin/page·media)도 자체 X-Showcase-Secret 게이트 보유.
     # 익명 글쓰기는 POST /bulletin/post/ — 로그인 없는 자유게시판.

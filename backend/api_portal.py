@@ -118,48 +118,206 @@ async def page(slug: str, request: Request, x_showcase_secret: str = Header(defa
     return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
-# ── AI 포식 가능 매니페스트 — 공개 홈의 기계용 짝 ──────────────────────────
-# 홈 페이지(사람용 HTML)의 기계 판독 JSON 짝. 외부 AI(이웃의 포식자)가 /h/<slug>/manifest 로
-# 이 노드가 '내 레벨에서' 공유하는 것들의 냄새 지도를 받는다 — 이름·종류·링크(레벨별 절단면).
-# 익명=레벨0(누구나 포식하는 공개 얼굴), 쿠키=회원 레벨. 레벨 위 잠긴 건 이름 없이 has_restricted
-# 로만 신호(냄새는 주되 제목은 안 샘 = FOAF 라우팅 단서). 항목 url 을 따라가면 실제 표면(실체).
+# ── 노드의 공개 얼굴 = 레벨 창고(전용 폴더 0~4 + 로그인/레벨) ────────────────
+# 설계(FOAF 창고): 레벨0~4 마다 '전용 폴더'가 따로 있다 — 기존 공개파일(사진 바스켓)과 무관.
+#   · 기본 내용물 = 그 레벨의 비즈니스 문서(business_documents, 레벨별)가 자동 물질화(.md)
+#   · 사용자는 Finder 로 그 폴더에 뭐든 던져넣는다(형식 자유 창고 — schema-on-read)
+#   · 익명=레벨0 창고만, 로그인(단일 노드 쿠키 pk)=자기 레벨 이하 전부. 위 레벨은 has_restricted
+#     냄새로만(이름·개수 안 샘). 서빙은 즉석 walk(공개파일 '구조' 재사용 — 인덱싱 없음).
+# 주소: 노드는 하나, canonical `/manifest`. 창고는 `/w/<level>/`(레벨 자체가 주소 — 슬러그 없음).
 
-@router.get("/manifest/{slug}")
-async def manifest(slug: str, request: Request, x_showcase_secret: str = Header(default="")):
+_MANIFEST_ABOUT = ("이 노드가 레벨에 따라 공개하는 창고(폴더) 목록. url 로 들어가면 그 창고의 "
+                   "파일 목록(JSON)을 받고, 파일 url 로 내용을 가져간다. 운영자가 이웃으로 "
+                   "승급하면 더 높은 레벨 창고가 열린다. has_restricted=위 레벨에 잠긴 창고 "
+                   "존재(내용은 안 샘 = FOAF 라우팅 단서).")
+
+_WAREHOUSE_ROOT = Path.home() / "Desktop" / "공유창고"
+_WAREHOUSE_LEVELS = {0: "0_손님", 1: "1_지인", 2: "2_이웃", 3: "3_친구", 4: "4_가족"}
+_BIZDOC_NAME = "비즈니스문서.md"
+_WAREHOUSE_LIST_CAP = 500          # 창고 한 디렉토리 목록 상한(응답 폭주 방지)
+
+
+def _warehouse_dir(level: int) -> Path:
+    return _WAREHOUSE_ROOT / _WAREHOUSE_LEVELS[level]
+
+
+def _ensure_warehouses() -> None:
+    """창고 폴더 0~4 생성 + 레벨별 비즈니스 문서 물질화(DB 가 바뀌면 파일 갱신 — 볼 때 렌더)."""
+    try:
+        import business_manager
+        bm = business_manager.BusinessManager()
+    except Exception:
+        bm = None
+    for lv, name in _WAREHOUSE_LEVELS.items():
+        d = _WAREHOUSE_ROOT / name
+        d.mkdir(parents=True, exist_ok=True)
+        if bm is None:
+            continue
+        try:
+            doc = bm.get_business_document(lv)
+            if doc and (doc.get("content") or "").strip():
+                body = f"# {doc.get('title') or '비즈니스 문서'}\n\n{doc['content']}\n"
+                f = d / _BIZDOC_NAME
+                if not f.exists() or f.read_text(encoding="utf-8") != body:
+                    f.write_text(body, encoding="utf-8")
+        except Exception:
+            pass
+
+
+def _viewer_level(core, request: Request):
+    """단일 노드 쿠키(pk) → (viewer, level). 익명이면 (None, 0)."""
+    key = request.cookies.get("pk", "")
+    viewer = core.find_member(None, key=key) if key else None
+    return viewer, (int(viewer.get("level", 0)) if viewer else 0)
+
+
+def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -> dict:
+    _ensure_warehouses()
+    warehouses, has_restricted = [], False
+    for lv in sorted(_WAREHOUSE_LEVELS):
+        if lv > level:
+            has_restricted = True       # 위 레벨 창고 존재만 신호(이름·개수 안 샘)
+            continue
+        d = _warehouse_dir(lv)
+        try:
+            cnt = sum(1 for p in d.rglob("*") if p.is_file() and not p.name.startswith("."))
+        except Exception:
+            cnt = 0
+        warehouses.append({
+            "level": lv,
+            "name": _WAREHOUSE_LEVELS[lv],
+            "count": cnt,
+            "url": (f"{base}/w/{lv}/" if base else f"/w/{lv}/"),
+        })
+    return {
+        "about": _MANIFEST_ABOUT,
+        "title": node_title,
+        "node_url": (base + "/manifest") if base else "/manifest",
+        "viewer_level": level,
+        "is_member": is_member,
+        "warehouses": warehouses,
+        "has_restricted": has_restricted,
+    }
+
+
+@router.get("/manifest")
+async def node_manifest(request: Request, x_showcase_secret: str = Header(default="")):
+    """노드의 공개 얼굴 — 슬러그 없는 canonical 창고 목록. 익명=레벨0, 쿠키(pk)=회원 레벨."""
     _check_secret(x_showcase_secret)
     core = _core()
     state = core.load_state()
-    portal = _portal_or_404(core, state, slug)
-    viewer = _viewer(core, portal, request, slug)
-    level = int(viewer.get("level", 0)) if viewer else 0
+    portal = core.ensure_default_portal(state)
+    viewer, level = _viewer_level(core, request)
     base = (state.get("public_base") or "").rstrip("/")
-    tiles = core.visible_tiles(state, portal, viewer.get("level") if viewer else None)
+    return JSONResponse(_manifest_payload(portal.get("title", ""), base, level, bool(viewer)),
+                        headers={"Cache-Control": "no-store"})
 
-    items = []
-    has_restricted = False
-    for t in tiles:
-        if not t.get("unlocked"):
-            has_restricted = True       # 레벨 위 잠긴 항목 존재 = 냄새(제목은 안 샘)
-            continue
-        entry = {"key": t["key"], "name": t["name"], "kind": t["kind"],
-                 "min_level": t["min_level"]}
-        url = t.get("url") or ""
-        if url:                          # 콘텐츠 타일(신문·파일·게시판·보고)은 절대 url 로
-            entry["url"] = (base + url) if (base and url.startswith("/")) else url
-        items.append(entry)
 
-    return JSONResponse({
-        "about": ("이 노드가 공유하는 것들의 목록(냄새 지도). url 을 따라가면 실제 내용. "
-                  "운영자가 이웃으로 승급하면 더 많이 보입니다."),
-        "node": slug,
-        "title": portal.get("title", ""),
-        "intro": portal.get("intro", ""),
-        "node_url": core.portal_url(state, portal),
-        "viewer_level": level,
-        "is_member": bool(viewer),
-        "items": items,
-        "has_restricted": has_restricted,
-    }, headers={"Cache-Control": "no-store"})
+# ── 창고 서빙 — 목록(즉석 walk) + 파일. 레벨 게이트가 서빙 자체에 걸린다. ────
+# 공개파일(/s/)과 달리 주소를 알아도 레벨이 안 되면 403 — 창고의 보안은 주소가 아니라 레벨.
+
+def _warehouse_gate(core, request: Request, level: int) -> None:
+    if level not in _WAREHOUSE_LEVELS:
+        raise HTTPException(status_code=404, detail="no such warehouse")
+    _viewer, vlevel = _viewer_level(core, request)
+    if level > vlevel:
+        raise HTTPException(status_code=403,
+                            detail=f"레벨 {level} 창고입니다 — 로그인하거나 승급이 필요해요")
+
+
+def _safe_rel(base: Path, rel: str) -> Path:
+    p = (base / rel.lstrip("/")).resolve()
+    if not str(p).startswith(str(base.resolve()) + os.sep) and p != base.resolve():
+        raise HTTPException(status_code=400, detail="bad path")
+    return p
+
+
+@router.get("/warehouse/{level}")
+async def warehouse_list(level: int, request: Request, path: str = "",
+                         x_showcase_secret: str = Header(default="")):
+    """창고 한 디렉토리 즉석 walk — 파일/하위폴더 목록(JSON). AI·사람 공용 통화."""
+    _check_secret(x_showcase_secret)
+    core = _core()
+    _warehouse_gate(core, request, level)
+    _ensure_warehouses()
+    base_dir = _warehouse_dir(level)
+    d = _safe_rel(base_dir, path) if path else base_dir
+    if not d.is_dir():
+        raise HTTPException(status_code=404, detail="no such folder")
+    dirs, files = [], []
+    try:
+        for p in sorted(d.iterdir(), key=lambda x: x.name):
+            if p.name.startswith("."):
+                continue
+            rel = str(p.relative_to(base_dir))
+            if p.is_dir():
+                dirs.append({"name": p.name, "path": rel})
+            elif p.is_file():
+                from urllib.parse import quote
+                files.append({"name": p.name, "path": rel, "bytes": p.stat().st_size,
+                              "url": f"/w/{level}/file?path={quote(rel)}"})
+            if len(dirs) + len(files) >= _WAREHOUSE_LIST_CAP:
+                break
+    except Exception:
+        raise HTTPException(status_code=500, detail="목록을 읽지 못했어요")
+    return JSONResponse({"warehouse": _WAREHOUSE_LEVELS[level], "level": level,
+                         "path": path, "dirs": dirs, "files": files},
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.get("/warehouse/{level}/file")
+async def warehouse_file(level: int, request: Request, path: str = "",
+                         x_showcase_secret: str = Header(default="")):
+    """창고 파일 서빙 — 같은 레벨 게이트 + 경로 이탈 방어."""
+    _check_secret(x_showcase_secret)
+    core = _core()
+    _warehouse_gate(core, request, level)
+    f = _safe_rel(_warehouse_dir(level), path)
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="no such file")
+    import mimetypes
+    ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+    from fastapi.responses import FileResponse
+    return FileResponse(str(f), media_type=ctype,
+                        headers={"Cache-Control": "no-store"})
+
+
+# ── 단일 노드 로그인 — 루트(/) 스코프 쿠키 pk. 슬러그 없는 주소에서도 레벨 절단면을 읽게. ──
+
+@router.post("/node/login")
+async def node_login(request: Request, x_showcase_secret: str = Header(default=""),
+                     x_client_ip: str = Header(default="")):
+    _check_secret(x_showcase_secret)
+    core = _core()
+    ip = _client_ip(request, x_client_ip)
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    user_id = str(body.get("user_id", "")).strip()
+    password = str(body.get("password", ""))
+    if not core.login_rate_ok(ip):
+        raise HTTPException(status_code=429, detail="시도가 너무 잦아요 — 잠시 후 다시")
+    m = core.find_member_by_login(None, user_id)
+    if not m or m.get("revoked") or not core.verify_password(m, password):
+        core.audit_log(f"node-login-fail:{ip}", "portal", f"login {user_id}", False)
+        raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 맞지 않아요")
+    core.audit_log(f"{m['name']}({m['id']})", "portal", "node login", True)
+    resp = JSONResponse({"ok": True, "name": m["name"], "level": m["level"]})
+    kw = {"max_age": _COOKIE_MAX_AGE} if bool(body.get("auto", True)) else {}
+    resp.set_cookie(key="pk", value=m["key"], path="/", httponly=True,
+                    samesite="lax", secure=True, **kw)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@router.post("/node/logout")
+async def node_logout(x_showcase_secret: str = Header(default="")):
+    _check_secret(x_showcase_secret)
+    resp = JSONResponse({"ok": True})
+    resp.delete_cookie(key="pk", path="/")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 # ── 개인 링크 착지 (운영자 발급 열쇠 → 쿠키. 비밀번호 분실 복구 경로 겸용) ──

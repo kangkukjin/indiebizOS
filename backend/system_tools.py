@@ -1247,7 +1247,9 @@ def _dict_to_json(result) -> str:
 def _pluck_map_envelopes(node, found, depth=0):
     """결과 트리에서 map_data 봉투를 pop 으로 뽑아 수집(변이). 중첩 JSON 문자열도 파고들어,
     뽑힌 층만 재직렬화해 되돌린다. 반환값 = 정리된 노드."""
-    if depth > 8:
+    # 상한 16 (claude_code._extract_map_tags 와 동일): 실행 모양이 한두 겹 더 감싸져도
+    # (래핑 문자열 1겹 = +2 깊이) 봉투가 조용히 유실되지 않게 여유를 둔다 — 에피소드 802.
+    if depth > 16:
         return node
     if isinstance(node, dict):
         md = node.pop("map_data", None)

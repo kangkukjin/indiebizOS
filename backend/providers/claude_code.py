@@ -65,7 +65,10 @@ def _extract_map_tags(tool_result_text: str) -> List[str]:
     seen: set = set()
 
     def walk(obj, depth=0):
-        if depth > 8:
+        # 상한 16: CLI relay 는 MCP str 반환을 {"result": "<json>"} 로 한 겹 더 감싸고
+        # (문자열+dict = +2 깊이), 병렬(`&`) 파이프라인은 봉투를 깊이 9까지 밀어넣는다
+        # (에피소드 802 실측). 옛 상한 8은 이 조합에서 1칸 모자라 지도가 조용히 유실됐다.
+        if depth > 16:
             return
         if isinstance(obj, dict):
             if obj.get("type") in _MAP_ENVELOPE_TYPES:

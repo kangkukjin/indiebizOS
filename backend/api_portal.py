@@ -145,7 +145,7 @@ async def join(slug: str, request: Request, x_showcase_secret: str = Header(defa
     _check_secret(x_showcase_secret)
     core = _core()
     state = core.load_state()
-    _portal_or_404(core, state, slug)
+    portal = _portal_or_404(core, state, slug)
     ip = _client_ip(request, x_client_ip)
     if not core.join_rate_ok(ip):
         raise HTTPException(status_code=429, detail="너무 빨라요 — 잠시 후 다시 시도해 주세요")
@@ -164,16 +164,9 @@ async def join(slug: str, request: Request, x_showcase_secret: str = Header(defa
     if not core.valid_email(email):
         raise HTTPException(status_code=400, detail="비밀번호 찾기에 쓸 이메일을 정확히 입력해 주세요")
 
-    holder = {}
-
-    def _fn(st):
-        p = core.portal_by_slug(st, slug)
-        if not p:
-            raise ValueError("포털이 없습니다")
-        holder["m"] = core.create_member(p, name, email, 0, login_id=user_id, password=password)
-
+    # 회원 = 이웃(business.db) — 가입하면 이웃 책에 레벨 0 으로 등록/연결된다.
     try:
-        core.mutate_state(_fn)
+        m = core.create_member(portal, name, email, 0, login_id=user_id, password=password)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     core.audit_log(f"join:{ip}", "portal", f"가입 {name} ({user_id})", True, portal=slug)
@@ -185,7 +178,7 @@ async def join(slug: str, request: Request, x_showcase_secret: str = Header(defa
     except Exception:
         pass
     resp = JSONResponse({"ok": True, "name": name})
-    return _set_session(resp, slug, holder["m"]["key"], persistent=bool(body.get("auto", True)))
+    return _set_session(resp, slug, m["key"], persistent=bool(body.get("auto", True)))
 
 
 # ── 로그인 / 로그아웃 (네이버식 — 아이디+비밀번호, 자동 로그인) ────────────
@@ -292,12 +285,7 @@ async def reset_password(slug: str, request: Request, x_showcase_secret: str = H
                        note=err, portal=slug)
         raise HTTPException(status_code=502, detail=f"메일을 보내지 못했어요: {err}")
 
-    def _fn(st):
-        p = core.portal_by_slug(st, slug)
-        mm = core.find_member_by_email(p, email)
-        if mm:
-            core.set_password(mm, temp)
-    core.mutate_state(_fn)
+    core.set_password(m, temp)   # 이웃 레코드의 portal_pw 갱신(전역)
     core.audit_log(f"reset:{ip}", "portal", f"pw reset {m.get('login_id')}", True, portal=slug)
     resp = JSONResponse({"ok": True, "message": "등록된 이메일로 임시 비밀번호를 보냈어요 — 메일함을 확인해 주세요"})
     resp.headers["Cache-Control"] = "no-store"
@@ -320,22 +308,13 @@ async def change_password(slug: str, request: Request, x_showcase_secret: str = 
     except Exception:
         raise HTTPException(status_code=400, detail="bad json")
     new_pw = str(body.get("new_password", ""))
-    holder = {}
-
-    def _fn(st):
-        p = core.portal_by_slug(st, slug)
-        m = core.find_member(p, member_id=viewer["id"])
-        if not m:
-            holder["err"] = "회원을 찾을 수 없어요"
-            return
-        try:
-            core.set_password(m, new_pw)
-        except ValueError as e:
-            holder["err"] = str(e)
-
-    core.mutate_state(_fn)
-    if holder.get("err"):
-        raise HTTPException(status_code=400, detail=holder["err"])
+    m = core.find_member(portal, member_id=viewer["id"])
+    if not m:
+        raise HTTPException(status_code=400, detail="회원을 찾을 수 없어요")
+    try:
+        core.set_password(m, new_pw)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     core.audit_log(f"{viewer['name']}({viewer['id']})", "portal", "pw change", True, portal=slug)
     resp = JSONResponse({"ok": True, "message": "비밀번호를 바꿨어요"})
     resp.headers["Cache-Control"] = "no-store"

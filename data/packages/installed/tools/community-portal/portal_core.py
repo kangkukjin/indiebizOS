@@ -37,8 +37,11 @@ _STATE_PATH = _ROOT / "data" / "portal_state.json"
 _LOCK_PATH = _ROOT / "data" / "portal_state.lock"
 _AUDIT_PATH = _ROOT / "data" / "portal_audit.jsonl"
 
-LEVEL_LABELS = {0: "손님", 1: "이웃", 2: "가족"}
-LEVEL_MAX = 2
+# 레벨 = 메신저 이웃등급(info_level 0~4)과 같은 눈금. 0=최공개(손님·익명 방문자가 도달),
+# 4=가장 가까운 사이. 메신저에서 이웃을 승급하면 포털 앱 접근도 함께 열린다.
+# (이름은 안내용일 뿐 — 판단은 숫자로. 운영자가 원하면 바꿔도 됨.)
+LEVEL_LABELS = {0: "손님", 1: "지인", 2: "이웃", 3: "친구", 4: "가족"}
+LEVEL_MAX = 4
 
 _NAME_MAX = 24
 _CONTACT_MAX = 60
@@ -208,106 +211,206 @@ def member_link(state: dict, portal: dict, m: dict) -> str:
     return f"{u}k/{m.get('key','')}" if u and m.get("key") else ""
 
 
-# ── 회원 (포털별 명부) ───────────────────────────────────────────────────
+# ── 회원 = 이웃 (business.db 전역 명부) ───────────────────────────────────
+# 포털 회원은 별도 명부가 아니라 메신저와 같은 이웃 책(business.db)이다. 레벨(info_level 0~4)이
+# 전역 하나 — 어느 포털에서 승급해도, 메신저에서 승급해도 같은 값이 바뀐다. 포털 로그인·개인
+# 링크 열쇠는 이웃 레코드의 portal_* 컬럼(맥 전용). 사용량 카운터만 포털별로 portal_state.json 에
+# 이웃 id 로 남긴다(한도가 포털 단위라서).
 
 _LOGIN_ID_RE = re.compile(r"^[a-z0-9_.-]{3,20}$")
-
-
-def find_member(portal: dict, member_id: str = "", key: str = ""):
-    for m in (portal or {}).get("members", []):
-        if member_id and m.get("id") == member_id:
-            return m
-        if key and m.get("key") and m.get("key") == key and not m.get("revoked"):
-            return m
-    return None
-
-
-def find_member_by_login(portal: dict, login_id: str):
-    lid = (login_id or "").strip().lower()
-    for m in (portal or {}).get("members", []):
-        if lid and m.get("login_id") == lid:
-            return m
-    return None
-
-
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# 임시 비밀번호 알파벳 — 헷갈리는 0/O·1/I/l 제외(메일로 읽고 입력하기 쉽게).
+_TEMP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+_BM_INSTANCE = None
+
+
+def _bm():
+    """business.db 매니저 (프로세스당 1 인스턴스)."""
+    global _BM_INSTANCE
+    if _BM_INSTANCE is None:
+        import business_manager
+        _BM_INSTANCE = business_manager.BusinessManager()
+    return _BM_INSTANCE
 
 
 def valid_email(s: str) -> bool:
     return bool(_EMAIL_RE.match((s or "").strip()))
 
 
-def find_member_by_email(portal: dict, email: str):
-    """복구용 이메일(contact)로 회원 찾기 — 셀프 가입(login_id 보유)만."""
-    e = (email or "").strip().lower()
-    if not e:
-        return None
-    for m in (portal or {}).get("members", []):
-        if m.get("login_id") and (m.get("contact") or "").strip().lower() == e:
-            return m
-    return None
+def _hash_pw(pw: str) -> str:
+    import hashlib
+    salt = secrets.token_hex(8)
+    h = hashlib.pbkdf2_hmac("sha256", (pw or "").encode(), salt.encode(), 100_000).hex()
+    return f"pbkdf2${salt}${h}"
 
 
-# 임시 비밀번호 알파벳 — 헷갈리는 0/O·1/I/l 제외(메일로 읽고 입력하기 쉽게).
-_TEMP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+def _check_pw(stored: str, pw: str) -> bool:
+    import hashlib
+    try:
+        _algo, salt, h = (stored or "").split("$")
+        return hashlib.pbkdf2_hmac("sha256", (pw or "").encode(), salt.encode(), 100_000).hex() == h
+    except Exception:
+        return False
 
 
 def gen_temp_password(n: int = 10) -> str:
     return "".join(secrets.choice(_TEMP_ALPHABET) for _ in range(n))
 
 
+def _parse_nid(member_id) -> int:
+    """회원 id('n5' 또는 5) → 이웃 정수 id. 실패 시 0."""
+    s = str(member_id or "").strip()
+    if s.startswith("n"):
+        s = s[1:]
+    try:
+        return int(s)
+    except ValueError:
+        return 0
+
+
+def _email_of(bm, nid: int) -> str:
+    try:
+        for c in bm.get_contacts(nid):
+            if (c.get("contact_type") or "").lower() == "email" and c.get("contact_value"):
+                return c["contact_value"]
+    except Exception:
+        pass
+    return ""
+
+
+def _member_view(bm, nb) -> dict:
+    """이웃 레코드 → 포털 코드가 기대하는 회원 dict. _pw·_nid 는 서버 내부용(직렬화 금지)."""
+    if not nb:
+        return None
+    nid = nb.get("id")
+    return {
+        "id": f"n{nid}",
+        "_nid": nid,
+        "_pw": nb.get("portal_pw") or "",
+        "name": nb.get("name", ""),
+        "contact": _email_of(bm, nid),
+        "level": max(0, min(LEVEL_MAX, int(nb.get("info_level") or 0))),
+        "key": nb.get("portal_key") or "",
+        "login_id": nb.get("portal_login_id") or "",
+        "revoked": bool(nb.get("portal_revoked")),
+        "joined_at": nb.get("portal_joined_at") or "",
+        "last_used": nb.get("portal_last_used") or "",
+    }
+
+
+def find_member(portal: dict, member_id: str = "", key: str = ""):
+    """이웃(전역)에서 회원 해소. member_id 는 회수 포함(운영자 조회용), key 는 회수 제외(세션)."""
+    bm = _bm()
+    if member_id:
+        nid = _parse_nid(member_id)
+        return _member_view(bm, bm.get_neighbor(nid)) if nid else None
+    if key:
+        return _member_view(bm, bm.find_neighbor_by_portal_key(key))
+    return None
+
+
+def find_member_by_login(portal: dict, login_id: str):
+    return _member_view(_bm(), _bm().find_neighbor_by_portal_login(login_id))
+
+
+def find_member_by_email(portal: dict, email: str):
+    """복구용 이메일(contact)로 회원 찾기 — 셀프 가입(portal_login_id 보유)만."""
+    e = (email or "").strip().lower()
+    if not e:
+        return None
+    bm = _bm()
+    nb = bm.get_neighbor_by_contact("email", e)
+    if nb and nb.get("portal_login_id"):
+        return _member_view(bm, nb)
+    return None
+
+
+def list_members(state: dict = None) -> list:
+    """전역 이웃 책 전체를 회원 뷰로 (포털 '이웃 탭' = 메신저 이웃 목록과 같은 책)."""
+    bm = _bm()
+    return [_member_view(bm, nb) for nb in bm.get_neighbors()]
+
+
 def set_password(m: dict, pw: str) -> None:
-    import hashlib
     if not (4 <= len(pw or "") <= 64):
         raise ValueError("비밀번호는 4~64자여야 해요")
-    salt = secrets.token_hex(8)
-    h = hashlib.pbkdf2_hmac("sha256", pw.encode(), salt.encode(), 100_000).hex()
-    m["pw"] = f"pbkdf2${salt}${h}"
+    h = _hash_pw(pw)
+    _bm().update_neighbor_portal(m["_nid"], portal_pw=h)
+    m["_pw"] = h
 
 
 def verify_password(m: dict, pw: str) -> bool:
-    import hashlib
-    try:
-        _algo, salt, h = (m.get("pw") or "").split("$")
-        return hashlib.pbkdf2_hmac("sha256", (pw or "").encode(), salt.encode(), 100_000).hex() == h
-    except Exception:
-        return False
+    return _check_pw((m or {}).get("_pw") or "", pw)
 
 
 def create_member(portal: dict, name: str, contact: str = "", level: int = 0,
                   login_id: str = "", password: str = "") -> dict:
-    """회원 생성 — login_id+password 를 주면 셀프 가입형(로그인 가능), 없으면 링크 전용."""
+    """회원 생성 = 이웃 등록/연결. login_id+password 면 셀프 가입형(로그인 가능), 없으면 링크 전용.
+    이메일이 이미 이웃에 있으면 그 이웃에 연결(중복 안 만듦)."""
+    bm = _bm()
     name = (name or "").strip()[:_NAME_MAX]
     if not name:
         raise ValueError("이름이 필요합니다")
-    if len(portal.get("members", [])) >= _MEMBER_CAP:
-        raise ValueError("회원 수 상한에 도달했습니다")
-    m = {
-        "id": "m" + secrets.token_hex(3),
-        "name": name,
-        "contact": (contact or "").strip()[:_CONTACT_MAX],
-        "level": max(0, min(LEVEL_MAX, int(level))),
-        "key": secrets.token_urlsafe(18),   # 쿠키 세션 토큰 겸 개인 링크 열쇠
-        "joined_at": _now(),
-        "last_used": "",
-        "revoked": False,
-        "usage": {},
-    }
-    if login_id:
-        lid = login_id.strip().lower()
+    email = (contact or "").strip()[:_CONTACT_MAX]
+    lid = (login_id or "").strip().lower()
+    if lid:
         if not _LOGIN_ID_RE.match(lid):
             raise ValueError("아이디는 영문 소문자·숫자 3~20자예요")
-        if find_member_by_login(portal, lid):
+        if bm.find_neighbor_by_portal_login(lid):
             raise ValueError("이미 있는 아이디예요")
-        m["login_id"] = lid
-        set_password(m, password)
-    portal.setdefault("members", []).append(m)
-    return m
+    # 이메일로 기존 이웃 연결 (중복 방지)
+    nb = None
+    if email and valid_email(email):
+        nb = bm.get_neighbor_by_contact("email", email)
+    if nb is not None and lid and nb.get("portal_login_id") and not nb.get("portal_revoked"):
+        raise ValueError("이미 가입된 이메일이에요 — 로그인하거나 비밀번호 찾기를 이용하세요")
+    if nb is None:
+        nb = bm.create_neighbor(name, info_level=max(0, min(LEVEL_MAX, int(level))))
+        if email and valid_email(email):
+            try:
+                bm.add_contact(nb["id"], "email", email)
+            except Exception:
+                pass
+    nid = nb["id"]
+    fields = {"portal_key": secrets.token_urlsafe(18), "portal_revoked": 0,
+              "portal_joined_at": _now()}
+    if lid:
+        fields["portal_login_id"] = lid
+        fields["portal_pw"] = _hash_pw(password)
+    bm.update_neighbor_portal(nid, **fields)
+    return _member_view(bm, bm.get_neighbor(nid))
 
 
-def member_usage_today(m: dict) -> int:
+def set_member_level(m: dict, level) -> int:
+    """이웃 레벨(info_level) 변경 — 전역. 메신저 이웃등급과 같은 값. (updated_at 갱신=폰 동기화)"""
+    lv = max(0, min(LEVEL_MAX, int(float(level))))
+    _bm().update_neighbor(m["_nid"], info_level=lv)
+    m["level"] = lv
+    return lv
+
+
+def regen_member_key(m: dict) -> str:
+    """개인 링크/세션 열쇠 재발급 — 옛 링크·쿠키 무효, 회수 해제."""
+    key = secrets.token_urlsafe(18)
+    _bm().update_neighbor_portal(m["_nid"], portal_key=key, portal_revoked=0)
+    m["key"] = key
+    m["revoked"] = False
+    return key
+
+
+def set_member_revoked(m: dict, revoked: bool) -> None:
+    """회수/복구 — 링크·쿠키·아이디 로그인을 막거나 푼다(비밀번호는 그대로)."""
+    _bm().update_neighbor_portal(m["_nid"], portal_revoked=1 if revoked else 0)
+    m["revoked"] = bool(revoked)
+
+
+def member_usage_today(portal: dict, member_id: str) -> int:
+    """그 포털에서 이 회원의 오늘 사용 횟수 (포털별 카운터)."""
     t = _today()
-    return sum(int(d.get(t, 0)) for d in (m.get("usage") or {}).values())
+    mu = ((portal or {}).get("member_usage") or {}).get(str(member_id)) or {}
+    return sum(int(d.get(t, 0)) for d in mu.values())
 
 
 def usage_global_today(portal: dict) -> int:
@@ -601,6 +704,8 @@ def authorize_and_count(slug: str, iid: str, member_key: str, ip: str) -> dict:
     if iid not in universe or universe[iid]["kind"] != "instrument":
         raise PortalDenied(404, "그런 계기가 없습니다")
 
+    # 신원·레벨은 이웃(business.db)에서 먼저 해소 — 사용량 카운트만 flock 안에서 원자적으로.
+    viewer = find_member(None, key=member_key) if member_key else None
     result = {}
 
     def _fn(state):
@@ -610,23 +715,22 @@ def authorize_and_count(slug: str, iid: str, member_key: str, ip: str) -> dict:
         d = display_entry(portal, universe[iid])
         if not d.get("enabled"):
             raise PortalDenied(403, "지금은 열려 있지 않은 계기입니다")
-        viewer = find_member(portal, key=member_key) if member_key else None
         ml = int(d.get("min_level", 1))
         t = _today()
         if viewer:
             if int(viewer.get("level", 0)) < ml:
                 raise PortalDenied(403, f"레벨 {ml} 이상 회원만 쓸 수 있어요")
             per = int(d.get("member_daily", 0))
-            u = viewer.setdefault("usage", {}).setdefault(iid, {})
-            if per and int(u.get(t, 0)) >= per:
+            # 회원별 사용량은 포털별 카운터(portal_state.json) — 레벨은 전역, 한도는 포털 단위.
+            mu = portal.setdefault("member_usage", {}).setdefault(str(viewer["id"]), {}).setdefault(iid, {})
+            if per and int(mu.get(t, 0)) >= per:
                 raise PortalDenied(429, f"오늘 사용 한도({per}회)에 도달했어요 — 내일 다시 만나요")
-            u[t] = int(u.get(t, 0)) + 1
-            # 날짜 키 청소(최근 14일만)
-            for k in [k for k in u if k < t and (len(u) > 14)]:
-                u.pop(k, None)
-            viewer["last_used"] = _now()
+            mu[t] = int(mu.get(t, 0)) + 1
+            for k in [k for k in mu if k < t and (len(mu) > 14)]:
+                mu.pop(k, None)
             result["who"] = f"{viewer['name']}({viewer['id']})"
             result["member"] = {"id": viewer["id"], "name": viewer["name"], "level": viewer["level"]}
+            result["_nid"] = viewer["_nid"]
         else:
             if ml > 0:
                 raise PortalDenied(403, "회원 전용 계기입니다 — 로그인해 주세요")
@@ -647,6 +751,12 @@ def authorize_and_count(slug: str, iid: str, member_key: str, ip: str) -> dict:
             g.pop(k, None)
 
     mutate_state(_fn)
+    # 마지막 사용 시각은 이웃 레코드에 기록(맥 전용 컬럼, updated_at 불변).
+    if result.get("_nid"):
+        try:
+            _bm().update_neighbor_portal(result["_nid"], portal_last_used=_now())
+        except Exception:
+            pass
     return result
 
 

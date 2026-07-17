@@ -8,7 +8,7 @@
   "tools": [
     {
       "name": "portal_op",
-      "description": "개인 포털(커뮤니티 홈) 운영 제어.\n\n## op 분기\n포털은 여러 개(대상별 주소 — 가족용·친구용). 대부분 op 는 portal 파라미터(슬러그/이름)로 대상을 고른다 — 비우면 첫 포털.\n- status (기본): 그 포털의 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수.\n- portals: 포털 목록 (label·slug·url·회원/진열 수).\n- create: 새 포털 만들기 — title 필수, 새 5자 주소 발급. 진열은 전부 꺼진 채 시작(안전 기본).\n- remove: 포털 삭제 — portal 필수, 회원이 있으면 force:true.\n- members: 이웃 목록 — 레벨·아이디(셀프 가입)·가입일·오늘 사용량·개인 링크(key_link).\n- join: 이웃 직접 등록(링크 전용 회원 — 아이디 없음). name 필수, contact·level(기본 0) 옵션. 개인 링크(즉시 로그인)를 반환 — 본인에게만 전달.\n- promote: member_id 의 레벨 변경. level 을 주면 그 값으로, 없으면 +1 (down:true 면 -1). 레벨 0 손님/1 이웃/2 가족.\n- issue: member_id 개인 링크 재발급 — 옛 링크·로그인 세션 즉시 무효(비밀번호는 유지), 회수 해제. 비밀번호 분실 복구 경로.\n- revoke: member_id 회수 — 링크·쿠키·아이디 로그인 전부 차단(재발급으로 복구).\n- display: 진열 다이얼(포털별). key 없으면 진열 가능 목록(사적/몸/발신 계기는 목록 밖). key 와 함께 level_down:true(한 칸 열기 — 꺼짐→가족만(2)→이웃(1)→손님(0)), level_up:true(한 칸 잠그기 — 2에서 또 올리면 꺼짐), toggle:true(켬/끔), min_level(직접 값), enabled 로 설정. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다(display 로 넣어도 계기엔 포털 config 가 우선).\n- audit: 회원 실행 게이트 사용 기록 — 포털 표시 (limit 기본 100).\n- config: 그 포털의 title(이름)/intro(소개글), 공용 public_base, 그리고 일일 사용 한도(guest_daily 손님·member_daily 회원·global_daily 전체 — 그 포털 전 계기에 공통 적용) 설정.",
+      "description": "개인 포털(커뮤니티 홈) 운영 제어.\n\n## op 분기\n포털은 여러 개(대상별 주소 — 가족용·친구용). 대부분 op 는 portal 파라미터(슬러그/이름)로 대상을 고른다 — 비우면 첫 포털.\n- status (기본): 그 포털의 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수.\n- portals: 포털 목록 (label·slug·url·회원/진열 수).\n- create: 새 포털 만들기 — title 필수, 새 5자 주소 발급. 진열은 전부 꺼진 채 시작(안전 기본).\n- remove: 포털 삭제 — portal 필수, 회원이 있으면 force:true.\n- members: 이웃 목록 — 레벨·아이디(셀프 가입)·가입일·오늘 사용량·개인 링크(key_link).\n- join: 이웃 직접 등록(링크 전용 회원 — 아이디 없음). name 필수, contact·level(기본 0) 옵션. 개인 링크(즉시 로그인)를 반환 — 본인에게만 전달.\n- promote: member_id 의 레벨 변경. level 을 주면 그 값으로, 없으면 +1 (down:true 면 -1). 레벨 0~4 = 메신저 이웃등급과 같은 전역 값(0 손님 ~ 4 가족) — 여기서 승급하면 메신저에서도 바뀐다.\n- issue: member_id 개인 링크 재발급 — 옛 링크·로그인 세션 즉시 무효(비밀번호는 유지), 회수 해제. 비밀번호 분실 복구 경로.\n- revoke: member_id 회수 — 링크·쿠키·아이디 로그인 전부 차단(재발급으로 복구).\n- display: 진열 다이얼(포털별). key 없으면 진열 가능 목록(사적/몸/발신 계기는 목록 밖). key 와 함께 set_level(\"off\"=끔 / \"0\"~\"4\"=그 레벨부터 켬)이 기본 조작 — 진열 탭 행 드롭다운이 이걸 쓴다. toggle:true(켬/끔), min_level(직접 값 0~4), enabled 도 가능. (구식 level_up/level_down 사다리도 아직 동작.) 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다(display 로 넣어도 계기엔 포털 config 가 우선).\n- audit: 회원 실행 게이트 사용 기록 — 포털 표시 (limit 기본 100).\n- config: 그 포털의 title(이름)/intro(소개글), 공용 public_base, 그리고 일일 사용 한도(guest_daily 손님·member_daily 회원·global_daily 전체 — 그 포털 전 계기에 공통 적용) 설정.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -53,7 +53,7 @@
           },
           "level": {
             "type": "integer",
-            "description": "join/promote — 레벨 (0 손님/1 이웃/2 가족)"
+            "description": "join/promote — 레벨 0~4 (메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)"
           },
           "down": {
             "type": "boolean",
@@ -63,17 +63,21 @@
             "type": "string",
             "description": "display — 진열 항목 key (계기 id 또는 news:·files: 콘텐츠 키)"
           },
+          "set_level": {
+            "type": "string",
+            "description": "display — 진열 드롭다운 한 방 설정: 'off'=끔, '0'~'4'=그 레벨부터 켬"
+          },
           "toggle": {
             "type": "boolean",
             "description": "display — 켬/끔 뒤집기"
           },
           "level_down": {
             "type": "boolean",
-            "description": "display — 사다리 한 칸 열기 (꺼짐→가족만(2)→이웃(1)→손님(0))"
+            "description": "display — (구식) 사다리 한 칸 열기 (꺼짐→가족만→…→손님)"
           },
           "level_up": {
             "type": "boolean",
-            "description": "display — 사다리 한 칸 잠그기 (레벨 +1, 2에서 또 올리면 꺼짐)"
+            "description": "display — (구식) 사다리 한 칸 잠그기 (레벨 +1, 최대에서 또 올리면 꺼짐)"
           },
           "enabled": {
             "type": "boolean",
@@ -81,7 +85,7 @@
           },
           "min_level": {
             "type": "integer",
-            "description": "display — 최소 레벨 직접 지정"
+            "description": "display — 최소 레벨 직접 지정 (0~4)"
           },
           "guest_daily": {
             "type": "integer",

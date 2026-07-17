@@ -55,30 +55,42 @@ def _get_portal(core, params: dict):
 
 
 def _member_rows(core, state, portal) -> list:
+    """전역 이웃 책(business.db) = 포털 회원 명부. 메신저 이웃 목록과 같은 책."""
     rows = []
-    for m in portal.get("members", []):
+    for m in core.list_members():
         lv = int(m.get("level", 0))
-        meta = f"가입 {m.get('joined_at', '')}"
         if m.get("login_id"):
-            meta += f" · 아이디 {m['login_id']}"
+            access = f"아이디 {m['login_id']}"
+        elif m.get("key"):
+            access = "링크 전용"
         else:
-            meta += " · 링크 전용"
+            access = "로그인 없음"
+        bits = [access]
+        if m.get("joined_at"):
+            bits.append(f"가입 {m['joined_at']}")
         if m.get("contact"):
-            meta += f" · {m['contact']}"
+            bits.append(m["contact"])
         if m.get("last_used"):
-            meta += f" · 최근 {m['last_used']}"
-        meta += f" · 오늘 {core.member_usage_today(m)}회"
+            bits.append(f"최근 {m['last_used']}")
+        bits.append(f"오늘 {core.member_usage_today(portal, m['id'])}회")
         if m.get("revoked"):
-            meta += " · ⛔ 회수됨"
+            bits.append("⛔ 회수됨")
+        if m.get("revoked"):
+            key_hint = "⛔ 회수됨 — 재발급하면 새 링크·재로그인"
+        elif m.get("login_id"):
+            key_hint = f"레벨 {lv} · 아이디 로그인 가능"
+        elif m.get("key"):
+            key_hint = f"레벨 {lv} · 링크로만 입장"
+        else:
+            key_hint = f"레벨 {lv} · 재발급하면 개인 링크 생성"
         rows.append({
             "id": m.get("id", ""),
             "portal": portal.get("slug", ""),
             "name": m.get("name", ""),
             "level": lv,
             "level_label": f"레벨 {lv} ({core.LEVEL_LABELS.get(lv, lv)})" + (" ⛔" if m.get("revoked") else ""),
-            "meta": meta,
-            "key_hint": "⛔ 회수됨 — 재발급하면 새 링크·재로그인" if m.get("revoked")
-                        else f"레벨 {lv} · " + ("아이디 로그인 가능" if m.get("login_id") else "링크로만 입장"),
+            "meta": " · ".join(bits),
+            "key_hint": key_hint,
             "key_link": "(회수됨)" if m.get("revoked") else core.member_link(state, portal, m),
         })
     return rows
@@ -102,7 +114,7 @@ def _portal_kv(core, state, portal) -> dict:
         "url": core.portal_url(state, portal),
         "slug": portal.get("slug", ""),
         "title": portal.get("title", ""),
-        "member_count": len(portal.get("members", [])),
+        "member_count": len(core.list_members()),   # 전역 이웃 책
         "usage_today": core.usage_global_today(portal),
         "display_on": sum(1 for u in core.listable_universe(state)
                           if core.display_entry(portal, u).get("enabled")),
@@ -116,7 +128,7 @@ def _portal_row(core, state, p) -> dict:
         "title": p.get("title", ""),
         "label": f"{p.get('title','')} ({p.get('slug','')})",
         "url": core.portal_url(state, p),
-        "meta": f"회원 {len(p.get('members', []))}명 · 진열 "
+        "meta": f"이웃 {len(core.list_members())}명 · 진열 "
                 f"{sum(1 for u in core.listable_universe(state) if core.display_entry(p, u).get('enabled'))}개 · "
                 f"오늘 {core.usage_global_today(p)}회",
     }
@@ -195,107 +207,82 @@ def _fn_members(params: dict) -> str:
 
 
 def _fn_join(params: dict) -> str:
-    """운영자가 이웃을 직접 등록(링크 전용 회원) — 공개 홈의 셀프 가입과 별개 경로."""
+    """운영자가 이웃을 직접 등록(링크 전용 회원) — 공개 홈의 셀프 가입과 별개 경로.
+    회원 = 이웃(business.db) 이므로 여기 등록은 메신저 이웃 목록에도 그대로 나타난다."""
     core = _core()
     name = (params.get("name") or "").strip()
     if not name:
         return _fail("이름을 입력해 주세요.")
-    holder = {}
-
-    def _fn(st):
-        core.ensure_default_portal(st)
-        p = core.portal_by_ref(st, params.get("portal") or "")
-        m = core.create_member(p, name, params.get("contact") or "",
-                               int(params.get("level") or 0))
-        holder["p"] = p
-        holder["link"] = core.member_link(st, p, m)
-
     try:
-        core.mutate_state(_fn)
+        level = int(params.get("level") or 0)
+    except (ValueError, TypeError):
+        level = 0
+    state, portal = _get_portal(core, params)
+    try:
+        m = core.create_member(portal, name, params.get("contact") or "", level)
     except ValueError as e:
         return _fail(str(e))
-    core.audit_log("operator", "portal", f"join {name}", True, portal=holder["p"]["slug"])
-    return _ok([], success=True, link=holder["link"],
-               message=f"{name} 등록({holder['p']['title']}) — 개인 링크(자동 로그인)를 본인에게만 전달하세요: {holder['link']}")
+    link = core.member_link(state, portal, m)
+    core.audit_log("operator", "portal", f"join {name}", True, portal=portal["slug"])
+    return _ok([], success=True, link=link,
+               message=f"{name} 등록({portal['title']}) — 개인 링크(자동 로그인)를 본인에게만 전달하세요: {link}")
 
 
-def _member_op(params: dict, fn, done_msg):
-    """member_id 로 회원을 찾아 fn(state, portal, member) 적용하는 공통 틀."""
+def _member_op(params: dict, apply_fn, done_msg):
+    """member_id(전역 이웃)로 회원을 찾아 apply_fn(core, member) 적용하는 공통 틀.
+    회원 변경은 business.db(전역)에 쓰이고, portal 은 링크 URL·감사 컨텍스트로만 쓰인다."""
     core = _core()
     mid = (params.get("member_id") or "").strip()
-    holder = {}
-
-    def _mut(st):
-        core.ensure_default_portal(st)
-        p = core.portal_by_ref(st, params.get("portal") or "")
-        m = core.find_member(p, member_id=mid)
-        if not m:
-            # portal 미지정 시 전 포털에서 탐색 (행 버튼이 portal 을 실어 오지만 방어)
-            if not (params.get("portal") or "").strip():
-                for cand in st["portals"]:
-                    m = core.find_member(cand, member_id=mid)
-                    if m:
-                        p = cand
-                        break
-        if not m:
-            raise ValueError(f"회원을 찾을 수 없습니다: {mid}")
-        fn(st, p, m)
-        holder["p"], holder["m"] = p, dict(m)
-
+    m = core.find_member(None, member_id=mid)
+    if not m:
+        return _fail(f"회원을 찾을 수 없습니다: {mid}")
+    state, portal = _get_portal(core, params)
     try:
-        core.mutate_state(_mut)
-    except ValueError as e:
+        apply_fn(core, m)
+    except (ValueError, TypeError) as e:
         return _fail(str(e))
-    p, m = holder["p"], holder["m"]
-    core.audit_log("operator", "portal", done_msg(m), True, portal=p["slug"])
-    return core, p, m
+    core.audit_log("operator", "portal", done_msg(m), True, portal=portal.get("slug", ""))
+    return core, state, portal, m
 
 
 def _fn_promote(params: dict) -> str:
-    core = _core()
     down = str(params.get("down")).lower() in ("true", "1")
 
-    def _apply(st, p, m):
+    def _apply(core, m):
         if params.get("level") not in (None, ""):
-            m["level"] = max(0, min(core.LEVEL_MAX, int(float(params["level"]))))
+            core.set_member_level(m, params["level"])
         else:
-            m["level"] = max(0, min(core.LEVEL_MAX, int(m.get("level", 0)) + (-1 if down else 1)))
+            core.set_member_level(m, int(m.get("level", 0)) + (-1 if down else 1))
 
     r = _member_op(params, _apply, lambda m: f"promote {m['name']} → {m['level']}")
     if isinstance(r, str):
         return r
-    core, p, m = r
+    core, state, portal, m = r
     return _ok([], success=True,
                message=f"{m['name']} → 레벨 {m['level']} ({core.LEVEL_LABELS.get(m['level'])})")
 
 
 def _fn_issue(params: dict) -> str:
-    import secrets as _sec
-
-    def _apply(st, p, m):
-        m["key"] = _sec.token_urlsafe(18)
-        m["revoked"] = False
+    def _apply(core, m):
+        core.regen_member_key(m)
 
     r = _member_op(params, _apply, lambda m: f"issue {m['name']}")
     if isinstance(r, str):
         return r
-    core, p, m = r
-    state = core.load_state()
-    p2 = core.portal_by_ref(state, p["slug"])
-    m2 = core.find_member(p2, member_id=m["id"])
-    link = core.member_link(state, p2, m2)
+    core, state, portal, m = r
+    link = core.member_link(state, portal, m)
     return _ok([], success=True, link=link,
                message=f"{m['name']} 새 링크: {link} (옛 링크·로그인 세션은 무효 — 비밀번호는 그대로)")
 
 
 def _fn_revoke(params: dict) -> str:
-    def _apply(st, p, m):
-        m["revoked"] = True
+    def _apply(core, m):
+        core.set_member_revoked(m, True)
 
     r = _member_op(params, _apply, lambda m: f"revoke {m['name']}")
     if isinstance(r, str):
         return r
-    core, p, m = r
+    core, state, portal, m = r
     return _ok([], success=True,
                message=f"{m['name']} 회수 — 링크·쿠키·아이디 로그인이 전부 막힙니다 (재발급으로 복구).")
 
@@ -333,6 +320,17 @@ def _fn_display(params: dict) -> str:
                     cur["min_level"] = core.LEVEL_MAX
                 elif ml > 0:
                     cur["min_level"] = ml - 1
+            # 드롭다운 한 방 설정: 'off'=끔 / '0'~'4'=그 레벨부터 켬 (진열 탭 행 셀렉트).
+            sel = str(params.get("set_level") or "").strip().lower()
+            if sel:
+                if sel in ("off", "끔", "false", "-1"):
+                    cur["enabled"] = False
+                else:
+                    try:
+                        cur["min_level"] = max(0, min(core.LEVEL_MAX, int(float(sel))))
+                        cur["enabled"] = True
+                    except (ValueError, TypeError):
+                        pass
             for f in ("min_level", "guest_daily", "member_daily", "global_daily"):
                 if params.get(f) not in (None, ""):
                     cur[f] = max(0, int(float(params[f])))
@@ -356,6 +354,8 @@ def _fn_display(params: dict) -> str:
         rows.append({
             "key": u["key"], "icon": u["icon"], "name": u["name"], "kind": u["kind"],
             "portal": portal.get("slug", ""),
+            # 행 드롭다운의 현재 선택값 — 꺼짐이면 'off', 켜졌으면 최소 레벨(0~4).
+            "level_sel": "off" if not d.get("enabled") else str(int(d.get("min_level", 1))),
             "state": ("🟢 켜짐" if d.get("enabled") else "⚪ 꺼짐") + f" · 레벨 {d.get('min_level')}+",
             "meta": f"{u['key']} · 손님 {d.get('guest_daily')}/일 · 회원 {d.get('member_daily')}/일"
                     + (f" · 전체 {d.get('global_daily')}/일" if d.get("global_daily") else "")

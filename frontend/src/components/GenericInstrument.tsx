@@ -1220,11 +1220,14 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
     const btn = p.button as AppButton | undefined;
     const btn2 = p.button2 as AppButton | undefined;
+    // 행 드롭다운(select) — 선택 즉시 action 실행({sel}=고른 값). button 과 공존 가능.
+    const sel = p.select as { value?: string; options?: { value: string; label: string }[]; action?: string; refresh?: boolean } | undefined;
     return (
       <>
         {arr.map((it, i) => {
           const rowKey = `${p.type}-${i}`;
           const rowKey2 = `${p.type}-${i}-2`;
+          const rowKeyS = `${p.type}-${i}-sel`;
           return (
             <Card key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
               <div className="flex items-center gap-3">
@@ -1233,6 +1236,14 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
                   <div className="font-semibold text-sm text-stone-800">{tpl(p.title, it)}</div>
                   <div className="text-xs text-stone-500 truncate">{tpl(p.sub, it)}</div>
                 </div>
+                {sel && sel.action && (
+                  <select disabled={busyRow === rowKeyS} value={tpl(sel.value, it)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => { e.stopPropagation(); onRowAction(sel.action!, { ...it, sel: e.target.value }, rowKeyS, sel.refresh); }}
+                    className="px-2 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-800 hover:border-stone-400 disabled:opacity-40 bg-white">
+                    {(sel.options || []).map((o, j) => <option key={j} value={String(o.value)}>{o.label}</option>)}
+                  </select>
+                )}
                 {btn && (
                   <button disabled={busyRow === rowKey}
                     onClick={(e) => { e.stopPropagation(); btn.stream ? onStream(it) : btn.action && onRowAction(btn.action, it, rowKey, btn.refresh); }}

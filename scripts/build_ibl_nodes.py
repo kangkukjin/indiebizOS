@@ -943,6 +943,9 @@ def _app_action_templates(app: dict) -> list[str]:
                 btn = p.get(_bk)
                 if isinstance(btn, dict) and isinstance(btn.get("action"), str):
                     out.append(btn["action"])
+            rsel = p.get("select")  # list_action 행 드롭다운({sel}=고른 값 주입)
+            if isinstance(rsel, dict) and isinstance(rsel.get("action"), str):
+                out.append(rsel["action"])
             drill = p.get("item_click")
             if isinstance(drill, dict):
                 if isinstance(drill.get("action"), str):
@@ -1213,6 +1216,12 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
                     continue
                 if not isinstance(btn, dict) or not isinstance(btn.get("action"), str):
                     issues.append(f"{where}: {_bk} 은 action 템플릿 필수")
+            rsel = p.get("select")  # list_action 행 드롭다운 — action(IBL 템플릿)+options 필수
+            if rsel is not None:
+                if not isinstance(rsel, dict) or not isinstance(rsel.get("action"), str):
+                    issues.append(f"{where}: select 는 action 템플릿 필수")
+                elif not isinstance(rsel.get("options"), list) or not rsel["options"]:
+                    issues.append(f"{where}: select 는 options 목록 필수")
     return issues
 
 

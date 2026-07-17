@@ -28,6 +28,10 @@ CHILD_TABLES = {
 }
 # level 싱글턴(0-4) — level 로 식별
 LEVEL_TABLES = ["business_documents", "work_guidelines"]
+# 맥 전용 컬럼(개인 포털 인증) — 폰엔 포털이 없으므로 머지에서 제외한다. 이 컬럼들을
+# 덮어쓰면 폰의 이웃 편집(이름·레벨)이 LWW 로 이겼을 때 포털 로그인·열쇠가 NULL 로 지워진다.
+PORTAL_LOCAL_COLS = {"portal_login_id", "portal_pw", "portal_key",
+                     "portal_revoked", "portal_joined_at", "portal_last_used"}
 # 머지/내보내기 순서 (부모 먼저여야 자식 remap 가능)
 SYNC_TABLES = ENTITY_TABLES + list(CHILD_TABLES.keys()) + LEVEL_TABLES
 
@@ -39,7 +43,12 @@ def export_business_db(bm) -> dict:
     out = {}
     for t in SYNC_TABLES:
         cur.execute(f"SELECT * FROM {t}")
-        out[t] = [dict(r) for r in cur.fetchall()]
+        rows = [dict(r) for r in cur.fetchall()]
+        if t == "neighbors":  # 맥 전용 포털 인증(비밀번호 해시 포함)은 폰으로 내보내지 않는다
+            for r in rows:
+                for c in PORTAL_LOCAL_COLS:
+                    r.pop(c, None)
+        out[t] = rows
     conn.close()
     return out
 
@@ -60,8 +69,9 @@ def _insert_row(cur, t, row: dict, cols: list, parent_id_col, local_parent_id):
 
 
 def _update_row(cur, t, key_col, key_val, row: dict, cols: list, parent_id_col, local_parent_id):
-    """로컬 행을 remote 값으로 덮어씀(LWW 승자). id 와 식별키는 건드리지 않음."""
-    setc = [c for c in cols if c not in ("id", key_col)]
+    """로컬 행을 remote 값으로 덮어씀(LWW 승자). id 와 식별키는 건드리지 않음.
+    맥 전용 포털 인증 컬럼은 제외 — 폰 편집이 이겨도 로컬 포털 로그인을 보존한다."""
+    setc = [c for c in cols if c not in ("id", key_col) and c not in PORTAL_LOCAL_COLS]
     sets = ",".join(f"{c}=?" for c in setc)
     vals = [local_parent_id if c == parent_id_col else row.get(c) for c in setc]
     vals.append(key_val)

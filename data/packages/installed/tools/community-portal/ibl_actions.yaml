@@ -5,8 +5,8 @@ nodes:
         returns: items
         fixture: '[others:portal]{op: "status"}'
         runs_on: mac_only
-        description: '개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 레벨(0 손님/1 이웃/2 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).'
-        target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+level_down:true=한 칸 열기[꺼짐→가족만→이웃→손님]·level_up:true=한 칸 잠그기[끝은 꺼짐]·toggle/min_level 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
+        description: '개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 회원 = 메신저 이웃과 같은 책(business.db)이고 레벨(0~4, 메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다(어디서 승급하든 같은 값). 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).'
+        target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
         target_key: op
         group: portal
         router: handler
@@ -20,10 +20,10 @@ nodes:
             remove: 포털 삭제 (portal 필수, 회원 있으면 force:true)
             members: 이웃 목록 (레벨·아이디·개인 링크·오늘 사용량)
             join: 이웃 직접 등록 — 링크 전용 회원 (name 필수, contact·level 옵션)
-            promote: 레벨 승급/강등 (member_id + level 지정 또는 +1, down:true 면 -1)
+            promote: 레벨 승급/강등 (member_id + level 0~4 지정 또는 +1, down:true 면 -1 — 전역 이웃등급)
             issue: 개인 링크 재발급 (옛 링크·세션 즉시 무효, 회수 해제 — 비밀번호 분실 복구)
             revoke: 회수 — 그 사람의 링크·쿠키·아이디 로그인 차단 (재발급으로 복구)
-            display: 진열 다이얼(포털별) — 노출 사다리(level_down 열기/level_up 잠그기, min_level). 사용 횟수 캡은 config(포털 단위)
+            display: 진열 다이얼(포털별) — 항목마다 최소 레벨 드롭다운(set_level=off 또는 0~4). 사용 횟수 캡은 config(포털 단위)
             audit: 사용 기록 (누가·언제·어느 포털에서·무엇을)
             config: 포털 설정 — title 이름 / intro 소개글 / 일일 한도(guest_daily·member_daily·global_daily, 그 포털 전 계기 공통) (portal 로 지정)
         implementation: 'community-portal 패키지 portal_op — 상태·게이트 로직은 portal_core.py(운영자 어휘와 공개 서빙이 공유, flock 직렬화). 공개 서빙(홈 렌더·가입·개인 링크 쿠키·회원 실행 게이트)은 backend/api_portal.py, 공개 Worker 는 public-files 와 공유(/h/ 네임스페이스). 회원 실행 게이트=계기 app: 블록 선언 템플릿의 인스턴스만 실행(리터럴 파라미터 강제) + 회원/손님/전역 3중 일일 한도 + 감사로그(data/portal_audit.jsonl).'
@@ -67,7 +67,7 @@ nodes:
               button: ➕ 새 주소 만들기
           - name: 이웃
             auto_run: true
-            note: 홈에서 아이디·비밀번호로 가입하면 레벨 0(손님)으로 들어옵니다 — 승급해야 회원 계기가 열립니다. 개인 링크는 즉시 로그인 열쇠(비밀번호 분실 복구용) — 본인에게만 전달하세요.
+            note: 이 목록은 메신저의 이웃과 같은 책입니다 — 여기서 승급하면 메신저 이웃등급도, 포털 앱 접근도 함께 바뀝니다(레벨 0~4 하나). 홈에서 아이디·비밀번호로 가입한 사람은 레벨 0(손님)으로 이 책에 자동 등록됩니다 — 승급해야 회원 계기가 열려요. 개인 링크는 즉시 로그인 열쇠(비밀번호 분실 복구용) — 본인에게만 전달하세요.
             inputs:
             - key: portal
               type: select
@@ -129,7 +129,7 @@ nodes:
               v: '{key_link}'
           - name: 진열
             auto_run: true
-            note: 이 포털 첫페이지에 보여줄 것을 고르세요. 항목마다 노출 사다리 하나 — 꺼짐 ↔ 레벨 2(가족만) ↔ 1(이웃부터) ↔ 0(손님도). ▼ 열기=꺼진 것은 가족만으로 켜지고 계속 누르면 손님까지, ▲ 잠그기=끝까지 올리면 꺼짐. 사적/몸/발신 계기는 목록에 아예 없습니다. 크롤형 계기는 집 IP 평판을 지키려 손님에게 열지 마세요.
+            note: 이 포털 첫페이지에 보여줄 것을 고르세요. 항목마다 드롭다운으로 최소 레벨(0~4)을 고르면 됩니다 — 레벨은 이웃등급과 같은 눈금이라, 예컨대 '2 이웃부터'로 두면 레벨 2 이상 이웃에게만 보입니다. '끔'은 안 보이게. '0 손님·전체 공개'는 로그인 안 한 손님도 사용. 사적/몸/발신 계기는 목록에 아예 없습니다. 크롤형 계기는 집 IP 평판을 지키려 손님(0)에게 열지 마세요.
             inputs:
             - key: portal
               type: select
@@ -145,40 +145,23 @@ nodes:
               icon: 🎛️
               title: '{icon} {name} — {state}'
               sub: '{meta}'
-              button:
-                label: ▼ 열기
-                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", level_down: true}'
-                refresh: true
-              button2:
-                label: ▲ 잠그기
-                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", level_up: true}'
-                refresh: true
-            - type: form
-              title: 한도 직접 설정
-              fields:
-              - key: key
-                label: 항목 key (위 목록의 회색 글씨)
-                type: text
-              - key: min_level
-                label: 최소 레벨
-                type: select
+              select:
+                value: '{level_sel}'
                 options:
-                - value: ''
-                  label: (유지)
+                - value: 'off'
+                  label: 끔 (안 보임)
                 - value: '0'
-                  label: 0 — 손님도 사용
+                  label: 0 손님·전체 공개
                 - value: '1'
-                  label: 1 — 이웃부터
+                  label: 1 지인부터
                 - value: '2'
-                  label: 2 — 가족만
-              - key: guest_daily
-                label: 손님 한도 (회/일·IP당)
-                type: text
-              - key: member_daily
-                label: 회원 한도 (회/일·1인당)
-                type: text
-              action: '[others:portal]{op: "display", portal: "$portal", key: "$key", min_level: "$min_level", guest_daily: "$guest_daily", member_daily: "$member_daily"}'
-              button: 적용
+                  label: 2 이웃부터
+                - value: '3'
+                  label: 3 친구부터
+                - value: '4'
+                  label: 4 가족만
+                action: '[others:portal]{op: "display", portal: "{portal}", key: "{key}", set_level: "{sel}"}'
+                refresh: true
           - name: 기록
             auto_run: true
             note: 회원 실행 게이트를 지나간 사용 기록입니다 (누가 · 언제 · 어느 포털에서 · 무엇을).
@@ -227,7 +210,7 @@ nodes:
               title: 일일 사용 한도
               rows:
               - k: 💡 안내
-                v: 이 포털의 모든 계기(앱)에 적용됩니다. 누가 보느냐(레벨)는 '진열' 탭의 계기별 사다리로, 하루 몇 번 쓰느냐는 여기서 한 번에 정합니다.
+                v: 이 포털의 모든 계기(앱)에 적용됩니다. 누가 보느냐(레벨 0~4)는 '진열' 탭의 계기별 드롭다운으로, 하루 몇 번 쓰느냐는 여기서 한 번에 정합니다.
             - type: form
               title: 손님·회원 하루 사용 한도
               fields:
@@ -285,13 +268,13 @@ tool_json:
 
       - join: 이웃 직접 등록(링크 전용 회원 — 아이디 없음). name 필수, contact·level(기본 0) 옵션. 개인 링크(즉시 로그인)를 반환 — 본인에게만 전달.
 
-      - promote: member_id 의 레벨 변경. level 을 주면 그 값으로, 없으면 +1 (down:true 면 -1). 레벨 0 손님/1 이웃/2 가족.
+      - promote: member_id 의 레벨 변경. level 을 주면 그 값으로, 없으면 +1 (down:true 면 -1). 레벨 0~4 = 메신저 이웃등급과 같은 전역 값(0 손님 ~ 4 가족) — 여기서 승급하면 메신저에서도 바뀐다.
 
       - issue: member_id 개인 링크 재발급 — 옛 링크·로그인 세션 즉시 무효(비밀번호는 유지), 회수 해제. 비밀번호 분실 복구 경로.
 
       - revoke: member_id 회수 — 링크·쿠키·아이디 로그인 전부 차단(재발급으로 복구).
 
-      - display: 진열 다이얼(포털별). key 없으면 진열 가능 목록(사적/몸/발신 계기는 목록 밖). key 와 함께 level_down:true(한 칸 열기 — 꺼짐→가족만(2)→이웃(1)→손님(0)), level_up:true(한 칸 잠그기 — 2에서 또 올리면 꺼짐), toggle:true(켬/끔), min_level(직접 값), enabled 로 설정. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다(display 로 넣어도 계기엔 포털 config 가 우선).
+      - display: 진열 다이얼(포털별). key 없으면 진열 가능 목록(사적/몸/발신 계기는 목록 밖). key 와 함께 set_level("off"=끔 / "0"~"4"=그 레벨부터 켬)이 기본 조작 — 진열 탭 행 드롭다운이 이걸 쓴다. toggle:true(켬/끔), min_level(직접 값 0~4), enabled 도 가능. (구식 level_up/level_down 사다리도 아직 동작.) 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다(display 로 넣어도 계기엔 포털 config 가 우선).
 
       - audit: 회원 실행 게이트 사용 기록 — 포털 표시 (limit 기본 100).
 
@@ -319,28 +302,31 @@ tool_json:
           description: join — 연락처 메모 (선택)
         level:
           type: integer
-          description: join/promote — 레벨 (0 손님/1 이웃/2 가족)
+          description: join/promote — 레벨 0~4 (메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)
         down:
           type: boolean
           description: promote — true 면 레벨 -1
         key:
           type: string
           description: 'display — 진열 항목 key (계기 id 또는 news:·files: 콘텐츠 키)'
+        set_level:
+          type: string
+          description: 'display — 진열 드롭다운 한 방 설정: ''off''=끔, ''0''~''4''=그 레벨부터 켬'
         toggle:
           type: boolean
           description: display — 켬/끔 뒤집기
         level_down:
           type: boolean
-          description: display — 사다리 한 칸 열기 (꺼짐→가족만(2)→이웃(1)→손님(0))
+          description: display — (구식) 사다리 한 칸 열기 (꺼짐→가족만→…→손님)
         level_up:
           type: boolean
-          description: display — 사다리 한 칸 잠그기 (레벨 +1, 2에서 또 올리면 꺼짐)
+          description: display — (구식) 사다리 한 칸 잠그기 (레벨 +1, 최대에서 또 올리면 꺼짐)
         enabled:
           type: boolean
           description: display — 켬/끔 직접 지정
         min_level:
           type: integer
-          description: display — 최소 레벨 직접 지정
+          description: display — 최소 레벨 직접 지정 (0~4)
         guest_daily:
           type: integer
           description: display/config — 손님(IP당) 일일 한도. 0=손님 금지 (config 는 포털 전 계기 공통)

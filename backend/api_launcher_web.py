@@ -2367,6 +2367,7 @@ function renderPrim(p,vi,data){
     return arr.map((it,ri)=>
       '<div class="card sw-item"'+(p.item_click?' onclick="rowDrill('+vi+','+ri+')"':'')+click+'>'+(p.icon?'<span>'+esc(p.icon)+'</span>':'')+
       '<div style="flex:1"><div class="nm">'+tpl(p.title,it)+'</div><div class="pr">'+tpl(p.sub,it)+'</div></div>'+
+      (p.select&&p.select.action?'<select class="btn2" onclick="event.stopPropagation()" onchange="event.stopPropagation();rowSel('+vi+','+ri+',this)">'+(p.select.options||[]).map(function(o){var sv=String(o.value);return '<option value="'+esc(sv)+'"'+(String(tpl(p.select.value,it))===sv?' selected':'')+'>'+esc(o.label)+'</option>';}).join('')+'</select>':'')+
       (p.button?'<button class="btn2" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'▶')+'</button>':'')+
       (p.button2?'<button class="btn2" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this,\\'button2\\')">'+esc(p.button2.label||'⬇')+'</button>':'')+'</div>'
     ).join('');
@@ -2603,6 +2604,19 @@ async function rowBtn(vi,ri,btn,key){
   }
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ btn.disabled=false; btn.textContent=old; }
+}
+async function rowSel(vi,ri,sel){
+  const r=rowItem(vi,ri); if(!r||!r.prim.select||!r.prim.select.action) return;
+  const item=Object.assign({},r.item,{sel:sel.value});
+  const action=rowAction(r.prim.select.action,item);
+  sel.disabled=true;
+  try{
+    const d=await ibl(action);
+    if(d&&d.error) alert(d.error);
+    else{ if(d&&d.message) toast(d.message); if(r.prim.select.refresh) await refreshCurrent(); }
+  }
+  catch(e){ alert('실행 실패: '+e.message); }
+  finally{ sel.disabled=false; }
 }
 function openFileOverlay(path, html){
   const name=path.split('/').pop().split('\\\\').pop();

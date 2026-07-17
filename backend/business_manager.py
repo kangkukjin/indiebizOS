@@ -137,6 +137,18 @@ class BusinessManager:
             except sqlite3.OperationalError:
                 pass  # 이미 존재하면 무시
 
+        # 마이그레이션: 개인 포털 인증 (이웃 = 포털 회원 통합). 포털 로그인한 사람이 이웃으로
+        # 자동 등록되고, info_level(0~4) 하나가 메신저 이웃등급 겸 포털 앱 사용등급이 된다.
+        # ★이 컬럼들은 맥(운영자) 전용 — 폰엔 포털이 없다. business_sync 가 머지에서 제외해
+        #   폰 편집이 포털 인증을 지우지 않게 한다(business_sync.PORTAL_LOCAL_COLS).
+        for _col, _ddl in (("portal_login_id", "TEXT"), ("portal_pw", "TEXT"),
+                           ("portal_key", "TEXT"), ("portal_revoked", "INTEGER DEFAULT 0"),
+                           ("portal_joined_at", "TEXT"), ("portal_last_used", "TEXT")):
+            try:
+                cursor.execute(f"ALTER TABLE neighbors ADD COLUMN {_col} {_ddl}")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재하면 무시
+
         # 연락처 테이블 (이웃당 여러 연락처)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
@@ -873,6 +885,59 @@ class BusinessManager:
         )
         conn.commit()
         conn.close()
+
+    # ============ 개인 포털 인증 (이웃 = 포털 회원 통합) ============
+    # 포털 로그인·개인 링크 열쇠는 이웃 레코드에 붙는 맥 전용 속성. info_level(0~4)이 곧
+    # 포털 앱 사용등급이라, 메신저에서 이웃을 승급하면 포털 접근도 함께 열린다.
+    # ★portal_* 갱신은 updated_at 을 건드리지 않는다(동기화 LWW 는 실제 내용 편집만으로 결정 —
+    #   맥 전용 인증은 동기화 대상이 아니므로 last_used 잦은 write 가 머지 충돌을 만들지 않게).
+
+    _PORTAL_COLS = ("portal_login_id", "portal_pw", "portal_key",
+                    "portal_revoked", "portal_joined_at", "portal_last_used")
+
+    def update_neighbor_portal(self, neighbor_id: int, **fields) -> Optional[Dict]:
+        """이웃의 포털 인증 컬럼만 갱신(updated_at 불변). 허용 컬럼 외는 무시."""
+        sets, params = [], []
+        for k, v in fields.items():
+            if k in self._PORTAL_COLS:
+                sets.append(f"{k} = ?")
+                params.append(v)
+        if not sets:
+            return self.get_neighbor(neighbor_id)
+        params.append(neighbor_id)
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"UPDATE neighbors SET {', '.join(sets)} WHERE id = ?", params)
+        conn.commit()
+        conn.close()
+        return self.get_neighbor(neighbor_id)
+
+    def find_neighbor_by_portal_key(self, key: str, include_revoked: bool = False) -> Optional[Dict]:
+        """개인 링크/세션 열쇠로 이웃 찾기(전역). 기본은 회수된 회원 제외."""
+        if not key:
+            return None
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        q = "SELECT * FROM neighbors WHERE portal_key = ? AND (deleted IS NOT 1)"
+        if not include_revoked:
+            q += " AND (portal_revoked IS NOT 1)"
+        cursor.execute(q, (key,))
+        row = cursor.fetchone()
+        conn.close()
+        return self._row_to_dict(row)
+
+    def find_neighbor_by_portal_login(self, login_id: str) -> Optional[Dict]:
+        """포털 로그인 아이디로 이웃 찾기(전역, 대소문자 무시). 회수 여부는 호출측이 확인."""
+        lid = (login_id or "").strip().lower()
+        if not lid:
+            return None
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM neighbors WHERE LOWER(portal_login_id) = ? AND (deleted IS NOT 1)", (lid,))
+        row = cursor.fetchone()
+        conn.close()
+        return self._row_to_dict(row)
 
     # ============ 연락처 (Contacts) CRUD ============
 

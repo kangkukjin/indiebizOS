@@ -51,6 +51,11 @@
     "calendar_manager",
     "channel_engine",
     "channel_poller",
+    "cognitive_consciousness",
+    "cognitive_distill",
+    "cognitive_eval",
+    "cognitive_recall",
+    "cognitive_trace",
     "consciousness_agent",
     "conversation_db",
     "device_registry",
@@ -159,8 +164,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 153,
-    "engine": 140,
+    "total": 158,
+    "engine": 145,
     "blocklist": 13
   }
 }

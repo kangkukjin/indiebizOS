@@ -7,9 +7,49 @@ api_nas.py에서 분리됨
 
 import asyncio
 import re
+import time
+import threading
 
 from fastapi import HTTPException, Request, Query
 from fastapi.responses import StreamingResponse
+
+
+# ============ 오디오 URL 캐시 (구간 탐색용 Range 프록시) ============
+# 예전엔 yt-dlp stdout 을 그대로 파이프해서 스트리밍했는데, 그러면 Content-Length·
+# Accept-Ranges 가 없어 브라우저가 곡 duration 을 모르고 중간 지점으로 seek 도 못 한다.
+# 대신 direct 오디오 URL(googlevideo)을 해소해두고 Range 헤더를 그대로 중계하면
+# 206 Partial + Content-Range 가 흘러 <audio> 진행바 드래그(중간 건너뛰기)가 동작한다.
+# (포털 tune 프록시와 같은 방식.)
+_AUDIO_URL_CACHE: dict = {}      # video_id -> (googlevideo_url, expire_ts)
+_AUDIO_URL_LOCK = threading.Lock()
+
+
+def _audio_cache_put(vid: str, url: str) -> None:
+    m = re.search(r"[?&]expire=(\d{10})", url)
+    exp = int(m.group(1)) if m else time.time() + 3600
+    with _AUDIO_URL_LOCK:
+        _AUDIO_URL_CACHE[vid] = (url, min(exp, time.time() + 5 * 3600))
+        if len(_AUDIO_URL_CACHE) > 200:
+            now = time.time()
+            for k in [k for k, (_, e) in _AUDIO_URL_CACHE.items() if e < now]:
+                _AUDIO_URL_CACHE.pop(k, None)
+
+
+def _audio_cache_get(vid: str):
+    with _AUDIO_URL_LOCK:
+        v = _AUDIO_URL_CACHE.get(vid)
+    if v and v[1] > time.time() + 60:
+        return v[0]
+    return None
+
+
+def _resolve_audio_url(vid: str) -> str:
+    """video_id → direct 오디오 스트림 URL. m4a 우선(iOS 사파리 호환 + moov 로 duration 확정)."""
+    import yt_dlp
+    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True,
+                           "format": "bestaudio[ext=m4a]/bestaudio/best"}) as ydl:
+        info = ydl.extract_info(f"https://www.youtube.com/watch?v={vid}", download=False)
+        return info.get("url", "") or ""
 
 
 # ============ 유틸리티 ============
@@ -41,19 +81,6 @@ def _search_youtube(query: str, count: int = 5) -> list:
     return results
 
 
-def _detect_audio_mime(header: bytes) -> str:
-    """스트림 첫 바이트의 매직 바이트로 오디오 포맷 감지"""
-    if header[:4] == b'\x1a\x45\xdf\xa3':       # EBML header → WebM/MKV
-        return "audio/webm"
-    if len(header) >= 8 and header[4:8] == b'ftyp':  # MP4/M4A
-        return "audio/mp4"
-    if header[:4] == b'OggS':                     # Ogg (Opus/Vorbis)
-        return "audio/ogg"
-    if header[:3] == b'ID3' or header[:2] in (b'\xff\xfb', b'\xff\xf3', b'\xff\xf2'):
-        return "audio/mpeg"                       # MP3
-    return "audio/webm"  # fallback
-
-
 # ============ API 핸들러 ============
 
 async def api_music_search(request: Request, q: str, count: int, STREAM_CHUNK_SIZE: int):
@@ -67,61 +94,68 @@ async def api_music_search(request: Request, q: str, count: int, STREAM_CHUNK_SI
 
 
 async def api_music_stream(request: Request, video_id: str, STREAM_CHUNK_SIZE: int):
-    """YouTube 오디오 스트리밍 (yt-dlp → stdout → 클라이언트)
+    """YouTube 오디오 스트리밍 (direct URL Range 프록시)
 
-    yt-dlp를 1회만 호출하고, 첫 청크의 매직 바이트로 포맷을 감지하여
-    올바른 MIME 타입으로 스트리밍. Windows/Mac 모두 동작.
+    direct 오디오 URL 을 해소(캐시)한 뒤, 클라이언트의 Range 헤더를 googlevideo 로
+    그대로 중계한다. 응답이 Content-Length·Accept-Ranges·(부분요청 시)206 Content-Range 를
+    실어 오므로 브라우저 <audio> 가 곡 길이를 알고 중간 지점으로 seek(구간 건너뛰기)할 수 있다.
     """
     if not re.match(r'^[a-zA-Z0-9_-]{11}$', video_id):
         raise HTTPException(status_code=400, detail="잘못된 video_id")
 
-    url = f"https://www.youtube.com/watch?v={video_id}"
-    cmd = [
-        "yt-dlp",
-        "-f", "bestaudio[ext=webm]/bestaudio",
-        "-o", "-",
-        "--no-playlist",
-        "--no-warnings",
-        url,
-    ]
+    loop = asyncio.get_event_loop()
+
+    # direct 오디오 URL 해소 (blocking → executor)
+    audio_url = _audio_cache_get(video_id)
+    if not audio_url:
+        try:
+            audio_url = await loop.run_in_executor(None, _resolve_audio_url, video_id)
+        except Exception:
+            audio_url = ""
+        if not audio_url:
+            raise HTTPException(status_code=502, detail="오디오를 가져오지 못했어요")
+        _audio_cache_put(video_id, audio_url)
+
+    import requests as _rq
+
+    fwd = {}
+    rng = request.headers.get("range")
+    if rng:
+        fwd["Range"] = rng
+
+    def _open(url: str):
+        return _rq.get(url, headers=fwd, stream=True, timeout=(10, 30))
+
     try:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-        )
+        r = await loop.run_in_executor(None, _open, audio_url)
+        if r.status_code in (403, 410):     # URL 만료/IP 불일치 — 1회 재해소
+            r.close()
+            audio_url = await loop.run_in_executor(None, _resolve_audio_url, video_id)
+            _audio_cache_put(video_id, audio_url)
+            r = await loop.run_in_executor(None, _open, audio_url)
+    except Exception:
+        raise HTTPException(status_code=502, detail="스트림 연결 실패")
 
-        # 첫 청크를 읽어서 매직 바이트로 포맷 감지
-        first_chunk = await process.stdout.read(STREAM_CHUNK_SIZE)
-        if not first_chunk:
-            if process.returncode is None:
-                process.kill()
-            raise HTTPException(status_code=502, detail="오디오 데이터 없음")
+    if r.status_code not in (200, 206):
+        r.close()
+        raise HTTPException(status_code=502, detail="스트림 오류")
 
-        content_type = _detect_audio_mime(first_chunk)
+    headers = {k: r.headers[k] for k in ("Content-Type", "Content-Length", "Content-Range")
+               if k in r.headers}
+    headers.setdefault("Content-Type", "audio/mp4")
+    headers["Accept-Ranges"] = "bytes"
+    headers["Cache-Control"] = "no-cache"
 
-        async def audio_gen():
-            try:
-                yield first_chunk  # 이미 읽은 첫 청크 먼저 전송
-                while True:
-                    chunk = await process.stdout.read(STREAM_CHUNK_SIZE)
-                    if not chunk:
-                        break
+    def audio_gen():
+        try:
+            for chunk in r.iter_content(STREAM_CHUNK_SIZE):
+                if chunk:
                     yield chunk
-            finally:
-                if process.returncode is None:
-                    process.kill()
-                try:
-                    await process.wait()
-                except Exception:
-                    pass
+        finally:
+            r.close()
 
-        return StreamingResponse(
-            audio_gen(),
-            media_type=content_type,
-            headers={"Cache-Control": "no-cache"},
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"스트리밍 실패: {str(e)}")
+    return StreamingResponse(
+        audio_gen(),
+        status_code=r.status_code,
+        headers=headers,
+    )

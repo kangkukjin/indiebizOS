@@ -173,8 +173,8 @@ actions:
   document:
     returns: effect
     runs_on: anywhere
-    description: blocks(문서 구조 배열) 또는 items(단일 통화)를 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
-    target_description: 'blocks 또는 items(둘 중 하나) — blocks(문서 IR 블록 배열) 또는 items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할). 각 블록은 {type, ...}:
+    description: blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
+    target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
 
       - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 
@@ -316,9 +316,12 @@ tool_json:
       properties:
         blocks:
           type: array
-          description: 문서 IR 블록 배열 (각 블록 {type, ...}). 필수.
+          description: 문서 IR 블록 배열 (각 블록 {type, ...}). blocks/items/markdown 중 하나.
           items:
             type: object
+        markdown:
+          type: string
+          description: 마크다운 텍스트 입구 — 이미 글로 존재하는 문서(보고서·신문·블로그 글)를 그대로 렌더. 기계 변환이라 LLM 0(내용을 고쳐 쓰지 않음). >> 파이프로 앞 단계가 준 텍스트(예 [self:read])도 자동 수용.
         title:
           type: string
           description: 문서 제목 (선택, 최상단 h1)
@@ -340,10 +343,10 @@ tool_json:
           - docx
           - pptx
           - typst
+          - markdown
           default: html
           description: '출력 포맷: html(기본)/pdf/png(동일 HTML을 Playwright 렌더)/docx/pptx(문서 IR을 사무 포맷으로 투영)/typst(책 품질 조판 PDF).'
-      required:
-      - blocks
+      required: []
   - name: structure_document
     description: '원본 콘텐츠를 문서 IR(blocks)로 구조화 — [table:structure]. LLM 편집자가 내용을 heading/paragraph/list/table/quote/code/divider
       블록으로 정리. render_document로 이어 렌더(>> 파이프 지원: 이전 텍스트 결과를 content로 받음).

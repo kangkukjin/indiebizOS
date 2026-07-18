@@ -19,6 +19,8 @@ actions:
 
       - vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link — rebuild=vault→검색DB 재구축(복구 경로), link=글 간 시맨틱 연결 생성.
 
+      - latest: 가장 최근 글 1개를 고른다. 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: >> [self:read]{} >> [table:document]{format:"html"} >> [self:copy]{destination:...}
+
       '
     target_key: op
     group: blog
@@ -33,7 +35,8 @@ actions:
         rebuild_index: 검색 인덱스(벡터) 재구축
         stats: 블로그 통계 (글 수·분포·트렌드)
         vault: Obsidian vault(진실소스) 운영 (mode stats/export/rebuild/link)
-    implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats, vault=blog_vault_*(mode — 2026-07-03 고아 기능 op 승격).
+        latest: 최근 글 1개 선택 — vault .md 경로 반환(발행 파이프의 머리)
+    implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats, vault=blog_vault_*(mode — 2026-07-03 고아 기능 op 승격), latest=blog_latest_post(2026-07-18 — 선택만, 발행은 read/document/copy 재사용).
     keywords:
     - 블로그
     - 블로그 검색

@@ -20,7 +20,8 @@
               "check_new",
               "rebuild_index",
               "stats",
-              "vault"
+              "vault",
+              "latest"
             ],
             "default": "posts"
           },

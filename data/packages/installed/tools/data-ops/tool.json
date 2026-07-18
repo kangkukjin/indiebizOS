@@ -147,10 +147,14 @@
         "properties": {
           "blocks": {
             "type": "array",
-            "description": "문서 IR 블록 배열 (각 블록 {type, ...}). 필수.",
+            "description": "문서 IR 블록 배열 (각 블록 {type, ...}). blocks/items/markdown 중 하나.",
             "items": {
               "type": "object"
             }
+          },
+          "markdown": {
+            "type": "string",
+            "description": "마크다운 텍스트 입구 — 이미 글로 존재하는 문서(보고서·신문·블로그 글)를 그대로 렌더. 기계 변환이라 LLM 0(내용을 고쳐 쓰지 않음). >> 파이프로 앞 단계가 준 텍스트(예 [self:read])도 자동 수용."
           },
           "title": {
             "type": "string",
@@ -176,15 +180,14 @@
               "png",
               "docx",
               "pptx",
-              "typst"
+              "typst",
+              "markdown"
             ],
             "default": "html",
             "description": "출력 포맷: html(기본)/pdf/png(동일 HTML을 Playwright 렌더)/docx/pptx(문서 IR을 사무 포맷으로 투영)/typst(책 품질 조판 PDF)."
           }
         },
-        "required": [
-          "blocks"
-        ]
+        "required": []
       }
     },
     {

@@ -19,7 +19,7 @@ from common.response_formatter import format_json
 
 # 2026-06-03 dispatcher 표준화 — [self:blog]{op} 키 메타데이터. 분기는 execute() 상단.
 _OP_DISPATCHERS = {
-    "blog_op": {"posts": None, "search": None, "check_new": None, "rebuild_index": None, "stats": None, "vault": None},
+    "blog_op": {"posts": None, "search": None, "check_new": None, "rebuild_index": None, "stats": None, "vault": None, "latest": None},
 }
 _OP_DEFAULTS = {"blog_op": "posts"}
 
@@ -93,6 +93,7 @@ def execute(tool_input: dict, context) -> str:
                 "check_new": "blog_check_new_posts",
                 "rebuild_index": "rebuild_search_index",
                 "stats": "blog_stats",
+                "latest": "blog_latest_post",
             }.get(op, "blog_get_posts")
     try:
         # 인사이트 도구들
@@ -100,6 +101,52 @@ def execute(tool_input: dict, context) -> str:
             from tool_blog_insight import blog_check_new_posts
             result = blog_check_new_posts()
             return format_json(result)
+
+        elif tool_name == "blog_latest_post":
+            # 최근 글 1개 **선택**. 본문을 여기서 렌더하지 않는다 — vault .md 경로만 준다.
+            # 발행은 기존 동사로 잇는다(>> [self:read]{} >> [table:document] >> [self:copy]).
+            # self:read 는 path 가 없으면 _prev_result 에서 경로를 자동 추출하므로(_extract_path_from_prev)
+            # 이 op 이 top-level `path` 를 내면 파이프가 그대로 이어진다.
+            # ★전용 발행 기계를 만들지 않는 이유: 그건 self:copy·table:document 재구현이다
+            #   (2026-07-18 warehouse_publish.py 를 같은 이유로 폐기했다).
+            from tool_blog_insight import get_db, BLOG_URL
+            conn = get_db()
+            row = conn.execute(
+                "SELECT post_id, title, category, pub_date FROM posts "
+                "ORDER BY pub_date DESC LIMIT 1"
+            ).fetchone()
+            conn.close()
+            if not row:
+                return format_json({"success": False, "error": "블로그 글이 없습니다. 먼저 op:check_new 로 수집하세요."})
+
+            post_id = str(row["post_id"])
+            from tool_blog_vault import find_post_md, write_post_md
+            path = find_post_md(post_id)
+            if not path or not os.path.exists(path):
+                # vault(진실소스)에 아직 .md 가 없으면 지금 만든다 — 옛 글은 vault 이관 전일 수 있다.
+                conn2 = get_db()
+                full = conn2.execute(
+                    "SELECT post_id, title, category, pub_date, content FROM posts WHERE post_id = ?",
+                    (post_id,)).fetchone()
+                conn2.close()
+                if not full:
+                    return format_json({"success": False, "error": f"글을 찾을 수 없습니다: {post_id}"})
+                path = write_post_md({
+                    "post_id": post_id, "title": full["title"], "category": full["category"],
+                    "pub_date": full["pub_date"], "content": full["content"],
+                })
+
+            title = row["title"]
+            meta = f"{row['pub_date']} · {row['category']}"
+            url = f"{BLOG_URL}/{post_id}"
+            return format_json({
+                "success": True, "post_id": post_id, "title": title,
+                "category": row["category"], "pub_date": row["pub_date"],
+                "path": path, "url": url,
+                # 단일 통화 — 목록 소비자(앱·카드 뷰)도 이 op 을 읽을 수 있게.
+                "items": [{"title": title, "meta": meta, "path": path, "url": url}],
+                "message": f"최근 글: {title} ({row['pub_date']})",
+            })
 
         elif tool_name == "blog_get_posts":
             from tool_blog_insight import blog_get_posts

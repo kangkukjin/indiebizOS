@@ -231,6 +231,117 @@ def parse_rss_date(rss_date: str) -> Optional[str]:
 strip_html = clean_html
 
 
+# 마크다운 변환기가 소비하는 블록만 낸다(제목·문단·목록·인용·이미지·구분선·코드) —
+# data-ops `_markdown_to_blocks` 가 이해하는 부분집합과 일부러 맞췄다.
+_MD_BLOCK_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "blockquote",
+                  "ul", "ol", "pre", "hr", "figure", "img", "div")
+
+
+def _md_inline(node) -> str:
+    """인라인 노드 → 마크다운 텍스트. 링크는 살리고 span 같은 포장은 벗긴다.
+
+    ★재귀 안에서 strip 하지 말 것. 티스토리는 단어마다 `<span>낱말<span>&nbsp;</span></span>` 로
+    감싸는데, 중첩 호출이 각자 strip 하면 그 `&nbsp;` 가 지워져 **단어가 전부 붙어버린다**
+    (2026-07-18 실측: "우리는여러가지플랫폼에"). 다듬기는 최상위에서 한 번만.
+    """
+    return re.sub(r"[ \t]+", " ", _md_inline_raw(node)).strip()
+
+
+def _md_inline_raw(node) -> str:
+    """_md_inline 의 재귀 본체 — 공백을 보존한 채 이어 붙이기만 한다."""
+    from bs4 import NavigableString
+    out = []
+    for c in getattr(node, "children", []):
+        if isinstance(c, NavigableString):
+            out.append(str(c))
+            continue
+        name = (c.name or "").lower()
+        if name == "br":
+            out.append("\n")
+        elif name == "a":
+            href = (c.get("href") or "").strip()
+            txt = _md_inline_raw(c).strip()
+            out.append(f"[{txt}]({href})" if href and txt else txt)
+        elif name == "img":
+            src = (c.get("src") or "").strip()
+            out.append(f"![]({src})" if src else "")
+        elif name in ("strong", "b"):
+            t = _md_inline_raw(c).strip()
+            out.append(f"**{t}**" if t else "")
+        elif name in ("em", "i"):
+            t = _md_inline_raw(c).strip()
+            out.append(f"*{t}*" if t else "")
+        elif name == "code":
+            t = _md_inline_raw(c).strip()
+            out.append(f"`{t}`" if t else "")
+        else:
+            out.append(_md_inline_raw(c))          # span 등 의미 없는 포장은 통과
+    return "".join(out).replace("\xa0", " ")
+
+
+def html_to_markdown(html: str) -> str:
+    """블로그 본문 HTML → 마크다운.
+
+    ★왜 clean_html(평문) 이 아닌가: RSS 는 문단(`<p>`)과 이미지를 **이미 다 주는데**,
+    평문으로 뭉개면 3,990자가 한 덩어리가 되어 읽을 수 없는 벽이 된다(2026-07-18 발행에서 실측).
+    원문을 따로 긁을 필요가 없다 — 버리던 구조를 안 버리면 된다.
+    ★clean_html 은 공유 유틸(여러 패키지가 '평문' 계약으로 쓴다)이라 건드리지 않고 여기서 분기한다.
+    ★새 의존성(markdownify 등) 없이 bs4 로 — 티스토리가 내는 태그 집합이 좁다(p·span·figure·img).
+    """
+    if not html:
+        return ""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "html.parser")
+    parts = []
+
+    def walk(el):
+        for child in getattr(el, "children", []):
+            name = (getattr(child, "name", "") or "").lower()
+            if not name:
+                continue
+            if name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                t = _md_inline(child)
+                if t:
+                    parts.append("#" * int(name[1]) + " " + t)
+            elif name == "p":
+                t = _md_inline(child)
+                if t:
+                    parts.append(t)
+            elif name == "blockquote":
+                t = _md_inline(child)
+                if t:
+                    parts.append("\n".join("> " + ln for ln in t.split("\n")))
+            elif name in ("ul", "ol"):
+                items = []
+                for i, li in enumerate(child.find_all("li", recursive=False), 1):
+                    t = _md_inline(li)
+                    if t:
+                        items.append((f"{i}. " if name == "ol" else "- ") + t)
+                if items:
+                    parts.append("\n".join(items))
+            elif name == "pre":
+                t = child.get_text()
+                if t.strip():
+                    parts.append("```\n" + t.strip("\n") + "\n```")
+            elif name == "hr":
+                parts.append("---")
+            elif name == "img":
+                src = (child.get("src") or "").strip()
+                if src:
+                    parts.append(f"![]({src})")
+            elif name in ("figure", "div"):
+                walk(child)               # 포장 — 안쪽 블록을 그대로 이어 받는다
+            else:
+                t = _md_inline(child)
+                if t:
+                    parts.append(t)
+
+    walk(soup)
+    if not parts:                          # 블록이 하나도 없으면(태그 없는 본문) 평문 폴백
+        return clean_html(html)
+    return "\n\n".join(parts).strip()
+
+
 def fetch_rss_feed() -> List[Dict[str, Any]]:
     url = f"{RSS_URL}?size={RSS_SIZE}"
     response = requests.get(url, timeout=30)
@@ -252,7 +363,9 @@ def fetch_rss_feed() -> List[Dict[str, Any]]:
         categories = [cat.text for cat in item.find_all('category')]
         category = categories[0] if categories else ""
         
-        content_text = strip_html(description)
+        # 평문이 아니라 마크다운으로 — RSS 가 이미 주는 문단·이미지를 버리지 않는다.
+        # (vault 정본이 .md 라 마크다운이 이 코퍼스의 자연스러운 형태이기도 하다.)
+        content_text = html_to_markdown(description)
         
         posts.append({
             'post_id': post_id,

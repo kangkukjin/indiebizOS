@@ -613,10 +613,12 @@ def _doc_blocks_to_html(blocks: list) -> str:
             for i in (b.get("items") or []):
                 # 항목은 문자열 또는 {text, url}(링크 — 목차·북마크 등)
                 if isinstance(i, dict):
+                    # note = 링크 뒤에 붙는 설명(평문). 링크는 제목에만 건다.
+                    note = f' <span class="li-note">{esc(i.get("note"))}</span>' if i.get("note") else ""
                     if i.get("url"):
-                        li.append(f'<li><a href="{esc(i.get("url"))}">{esc(i.get("text"))}</a></li>')
+                        li.append(f'<li><a href="{esc(i.get("url"))}">{esc(i.get("text"))}</a>{note}</li>')
                     else:
-                        li.append(f"<li>{esc(i.get('text'))}</li>")
+                        li.append(f"<li>{esc(i.get('text'))}{note}</li>")
                 else:
                     li.append(f"<li>{esc(i)}</li>")
             parts.append(f"<{tag}>{''.join(li)}</{tag}>")
@@ -663,23 +665,31 @@ def _doc_blocks_to_html(blocks: list) -> str:
     return "\n".join(parts)
 
 
+def _item_line(it) -> str:
+    """목록 항목 → 한 줄 평문(note 포함). 링크를 못 다는 emitter(pptx 등)에서 유실 방지."""
+    if not isinstance(it, dict):
+        return str(it)
+    return f"{it.get('text') or ''} {it.get('note') or ''}".strip()
+
+
 def _doc_css(theme: str) -> str:
     """문서 emitter의 <style> 본문을 테마별로. default(기사형) / newspaper(제호+카드 그리드)."""
     # 공통: 카드 그리드 골격(테마 무관 동일 구조, 색·여백만 테마가 덧칠)
     base_cards = """
 .cards{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:18px;margin:1.2em 0}
 @media(max-width:680px){.cards{grid-template-columns:1fr}}
-.card{border:1px solid #e1e4e8;border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:#fff}
+.card{border:1px solid var(--line,#e1e4e8);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:var(--card,#fff)}
 .card img.card-img{width:100%;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:10px;background:#f5f5f5}
-.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:#22223b}
+.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:var(--ink,#22223b)}
 .card .card-meta{color:#888;font-size:0.82em;margin:0 0 8px}
-.card .card-sum{color:#444;font-size:0.92em;margin:0 0 10px;flex:1}
+.card .card-sum{color:var(--ink,#444);font-size:0.92em;margin:0 0 10px;flex:1}
 .card a{margin-top:auto;color:#3d5a80;font-weight:bold;font-size:0.9em;text-decoration:none}
 .card a:hover{text-decoration:underline}
+.li-note{color:var(--dim,#4a5563)}
 """
     if theme == "newspaper":
         return """
-body{max-width:1100px;margin:30px auto;padding:0 16px;font-family:'Noto Sans KR','Pretendard',-apple-system,sans-serif;line-height:1.6;color:#333;background:#f0f2f5}
+body{max-width:1100px;margin:30px auto;padding:0 16px;font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;line-height:1.6;color:#333;background:#f0f2f5}
 .docwrap{background:#fff;padding:40px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
 h1{color:#1a1a2e;font-size:2.5em;margin:0 0 15px;border-bottom:4px solid #1a1a2e;padding-bottom:15px;text-align:center}
 .doc-meta{text-align:center;color:#666;font-size:0.95em;margin-bottom:30px;background:#f8f9fa;padding:15px;border-radius:8px}
@@ -690,16 +700,43 @@ table{border-collapse:collapse;width:100%;margin:1.2em 0} th,td{border:1px solid
 blockquote{border-left:4px solid #ccc;margin:1.2em 0;padding:0.5em 1em;color:#555}
 hr{border:none;border-top:1px solid #eee;margin:30px 0}
 """ + base_cards
-    # default(기사형 단일단)
+    # default(기사형 단일단) — 읽는 문서용. html/pdf/png 가 같은 CSS 를 쓰므로
+    # 화면(카드+배경틴트)·인쇄(흰 바탕)·다크모드를 전부 여기서 갈라둔다.
     return """
-body{max-width:760px;margin:40px auto;padding:0 20px;font-family:'Pretendard','Noto Sans KR',sans-serif;line-height:1.7;color:#1a1a1a}
-.docwrap{}
-h1,h2,h3,h4{line-height:1.3;margin:1.4em 0 0.5em} h1{font-size:2em}
-.doc-meta{color:#666;font-size:0.95em;margin:-0.5em 0 1.5em}
-img{max-width:100%;border-radius:8px} figure{margin:1.5em 0} figcaption{color:#666;font-size:0.9em;text-align:center;margin-top:0.5em}
-table{border-collapse:collapse;width:100%;margin:1.5em 0} th,td{border:1px solid #ddd;padding:8px 12px;text-align:left} th{background:#f5f5f5}
-blockquote{border-left:4px solid #ccc;margin:1.5em 0;padding:0.5em 1em;color:#555} blockquote cite{display:block;margin-top:0.5em;font-size:0.9em}
-pre{background:#f6f8fa;padding:1em;border-radius:6px;overflow:auto} hr{border:none;border-top:1px solid #e0e0e0;margin:2em 0}
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2330;--dim:#6b7683;--line:#e2e6ec;--accent:#2f5fd0;--code:#eef1f6}
+@media(prefers-color-scheme:dark){:root{--bg:#12151a;--card:#191d24;--ink:#e4e8ee;--dim:#98a3b0;--line:#2a313b;--accent:#7aa2f7;--code:#212831}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-text-size-adjust:100%;
+  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}
+.docwrap{max-width:820px;margin:32px auto;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:34px 38px 46px}
+@media(max-width:680px){.docwrap{margin:0;border:0;border-radius:0;padding:22px 16px 40px}}
+.docwrap>h1:first-child{margin-top:0}
+h1,h2,h3,h4{line-height:1.32;font-weight:700}
+h1{font-size:clamp(1.5rem,4.5vw,2.05rem);margin:0 0 .5em;padding-bottom:.34em;border-bottom:2px solid var(--line);letter-spacing:-.01em}
+h2{font-size:1.24rem;margin:1.9em 0 .6em;padding-left:11px;border-left:5px solid var(--accent)}
+h3{font-size:1.06rem;margin:1.5em 0 .45em;color:var(--dim)}
+p{margin:.75em 0;word-break:break-word}
+.doc-meta{color:var(--dim);font-size:.9rem;margin:-.2em 0 1.6em}
+ul,ol{margin:.7em 0 1em;padding-left:1.35em} li{margin:.34em 0}
+.li-note{color:var(--dim)}
+a{color:var(--accent);text-decoration:none;word-break:break-word} a:hover{text-decoration:underline}
+img{max-width:100%;border-radius:8px} figure{margin:1.5em 0}
+figcaption{color:var(--dim);font-size:.88rem;text-align:center;margin-top:.5em}
+table{border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.93rem;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left} th{background:var(--code)}
+blockquote{margin:1.2em 0;padding:.6em 15px;border-left:4px solid var(--line);background:var(--code);
+  color:var(--dim);border-radius:0 8px 8px 0}
+blockquote cite{display:block;margin-top:.5em;font-size:.9em;font-style:normal}
+code{background:var(--code);border-radius:5px;padding:.1em .38em;font-size:.9em;
+  font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace}
+pre{background:var(--code);padding:1em;border-radius:10px;overflow:auto} pre code{background:none;padding:0}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+@media print{
+  body{background:#fff} 
+  .docwrap{margin:0;max-width:none;border:0;border-radius:0;padding:0}
+  a{color:inherit;text-decoration:underline}
+}
 """ + base_cards
 
 
@@ -771,6 +808,8 @@ def _doc_blocks_to_typst(blocks: list, title: str, meta: str, out_path: str):
         elif t == "list":
             for it in (b.get("items") or []):
                 txt = it.get("text") if isinstance(it, dict) else it
+                if isinstance(it, dict) and it.get("note"):
+                    txt = f"{txt} {it['note']}"
                 lines.append("- " + _typ_esc(txt))
         elif t == "table":
             cols = b.get("columns") or []
@@ -1026,7 +1065,7 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
             add_bullet(b.get("text") or "", level=0)
         elif t == "list":
             for it in (b.get("items") or []):
-                add_bullet(it.get("text") if isinstance(it, dict) else it, level=1)
+                add_bullet(_item_line(it), level=1)
         elif t == "quote":
             txt = str(b.get("text") or "")
             cite = b.get("cite")
@@ -1176,6 +1215,215 @@ def _items_to_blocks(rows: list, group_by: str = None) -> list:
     return [{"type": "cards", "columns": 2, "items": rows}]
 
 
+_MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)[^)]*\)")
+# 강조는 *짝*일 때만 떼어낸다 — 무조건 떼면 snake_case 이름(ai_trend_report_…)이 뭉개진다.
+_MD_EMPH = (
+    (re.compile(r"\*\*([^*]+)\*\*"), r"\1"),
+    (re.compile(r"__([^_]+)__"), r"\1"),
+    (re.compile(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])"), r"\1"),
+    (re.compile(r"(?<![\w_])_([^_\n]+)_(?![\w_])"), r"\1"),
+    (re.compile(r"`([^`]+)`"), r"\1"),
+)
+
+
+def _md_plain(s: str) -> str:
+    """인라인 마크다운 → 평문(링크는 라벨만, 강조 기호 제거). 블록 IR 은 전부 이스케이프된다."""
+    text = _MD_LINK.sub(lambda x: x.group(1), s or "")
+    for pat, rep in _MD_EMPH:
+        text = pat.sub(rep, text)
+    return text.strip()
+
+
+def _md_inline(s: str) -> tuple:
+    """인라인 마크다운 한 줄 → (평문, 첫 링크 url)."""
+    m = _MD_LINK.search(s or "")
+    return _md_plain(s), (m.group(2) if m else "")
+
+
+def _md_list_item(s: str):
+    """목록 한 줄 → 항목. 링크가 있으면 {text, url, note}.
+
+    링크는 *제목에만* 걸고 뒤따르는 설명은 평문 note 로 남긴다 — 줄 전체를 링크로 만들면
+    뉴스 한 줄이 통째로 파랗게 되어 읽기 나쁘다(원본 마크다운도 제목만 링크다).
+    """
+    m = _MD_LINK.search(s or "")
+    if not m:
+        return _md_plain(s)
+    text = _md_plain((s[:m.start()] or "") + m.group(1))
+    note = _md_plain(s[m.end():])
+    item = {"text": text, "url": m.group(2)}
+    if note:
+        item["note"] = note
+    return item
+
+
+def _apply_frontmatter(fm: dict, tool_input: dict) -> None:
+    """벗겨낸 YAML frontmatter 를 문서 제목·부제로 올린다(호출자가 명시한 값이 이긴다).
+
+    Obsidian vault 의 .md 가 전부 frontmatter 를 이고 있어서, 안 올리면 날짜·출처 같은
+    쓸모 있는 메타가 통째로 버려진다(벗기기만 하면 손실). meta 는 'YYYY-MM-DD · 분류' 꼴로 조립.
+    """
+    if not fm:
+        return
+    if not (tool_input.get("title") or "").strip():
+        t = (fm.get("title") or "").strip()
+        if t:
+            tool_input["title"] = t
+    if not (tool_input.get("meta") or "").strip():
+        bits = [b for b in ((fm.get("pub_date") or fm.get("date") or "").strip(),
+                            (fm.get("category") or "").strip()) if b]
+        if bits:
+            tool_input["meta"] = " · ".join(bits)
+
+
+def _lift_doc_title(blocks: list, tool_input: dict) -> list:
+    """글이 스스로 단 첫 제목(# …)을 문서 제목으로 올리고 본문에서 뺀다.
+
+    문서 제목은 마스트헤드 h1 과 <title> 로 렌더되므로, 본문에 그대로 두면 같은 제목이
+    두 번 보인다. 호출자가 title 을 명시했으면 그쪽이 이긴다(본문 제목은 그때만 남긴다).
+    """
+    if not blocks or blocks[0].get("type") != "heading" or int(blocks[0].get("level") or 2) != 1:
+        return blocks
+    head = blocks[0].get("text") or ""
+    given = (tool_input.get("title") or "").strip()
+    if not given:
+        tool_input["title"] = head
+        return blocks[1:]
+    if given == head.strip():
+        return blocks[1:]
+    return blocks
+
+
+def _markdown_to_blocks(md: str, meta_out: dict = None) -> list:
+    """마크다운 텍스트 → 문서 IR 블록. `_doc_blocks_to_markdown` 의 역방향.
+
+    문서를 이미 마크다운으로 갖고 있을 때(보고서·신문·블로그 글) emitter 로 넘기는 입구.
+    지원: 제목·목록(순서 유무)·인용·코드펜스·구분선·이미지·표·문단 + YAML frontmatter 제거.
+
+    meta_out: 주면 frontmatter 파싱 결과가 담긴다(본문에서는 빠진다).
+    """
+    blocks, para, lst = [], [], None
+
+    def flush():
+        nonlocal para, lst
+        if lst:
+            blocks.append(lst)
+            lst = None
+        if para:
+            text = " ".join(para).strip()
+            if text:
+                t, u = _md_inline(text)
+                blocks.append({"type": "paragraph", "text": t, **({"url": u} if u else {})})
+            para = []
+
+    lines = (md or "").replace("\r\n", "\n").split("\n")
+
+    # YAML frontmatter(`---` … `---`)는 메타지 본문이 아니다 — 벗겨서 meta 로 올린다.
+    # 안 벗기면 `post_id: "…" title: "…"` 이 글 맨 위에 그대로 보인다(2026-07-18 블로그
+    # 발행에서 실측). Obsidian vault 의 .md 가 전부 이 형식이라 vault→발행 경로 전반에 해당.
+    # ★첫 `---` 만 frontmatter 로 본다(본문 중간의 `---` 는 divider 로 남는다).
+    # 호출자가 meta_out 을 주면 파싱한 키를 거기 담는다(제목·날짜를 문서 meta 로 쓸 수 있게).
+    if lines and lines[0].strip() == "---":
+        for _end in range(1, len(lines)):
+            if lines[_end].strip() == "---":
+                if meta_out is not None:
+                    for _fl in lines[1:_end]:
+                        if ":" in _fl:
+                            _k, _v = _fl.split(":", 1)
+                            meta_out[_k.strip()] = _v.strip().strip('"').strip("'")
+                lines = lines[_end + 1:]
+                break
+
+    i = 0
+    while i < len(lines):
+        raw = lines[i]
+        line = raw.strip()
+        if line.startswith("```"):                       # 코드 펜스 — 안쪽은 날것 그대로
+            flush()
+            i += 1
+            buf = []
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                buf.append(lines[i])
+                i += 1
+            blocks.append({"type": "code", "text": "\n".join(buf)})
+            i += 1
+            continue
+        if not line:
+            flush()
+            i += 1
+            continue
+        if re.match(r"^(-{3,}|\*{3,}|_{3,})$", line):
+            flush()
+            blocks.append({"type": "divider"})
+            i += 1
+            continue
+        m = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m:
+            flush()
+            t, _u = _md_inline(m.group(2))
+            blocks.append({"type": "heading", "level": len(m.group(1)), "text": t})
+            i += 1
+            continue
+        m = re.match(r"^!\[([^\]]*)\]\(([^)\s]+)[^)]*\)$", line)
+        if m:
+            flush()
+            blocks.append({"type": "image", "src": m.group(2), "caption": m.group(1)})
+            i += 1
+            continue
+        if line.startswith(">"):
+            flush()
+            buf = []
+            while i < len(lines) and lines[i].strip().startswith(">"):
+                buf.append(lines[i].strip().lstrip(">").strip())
+                i += 1
+            cite = ""
+            if buf and buf[-1].startswith("—"):
+                cite = buf.pop().lstrip("—").strip()
+            t, _u = _md_inline(" ".join(buf))
+            blocks.append({"type": "quote", "text": t, **({"cite": cite} if cite else {})})
+            continue
+        if line.startswith("|") and i + 1 < len(lines) and re.match(
+                r"^\|[\s:|-]+\|$", lines[i + 1].strip()):
+            flush()
+            cells = lambda s: [c.strip() for c in s.strip().strip("|").split("|")]
+            cols = cells(line)
+            i += 2
+            rows = []
+            while i < len(lines) and lines[i].strip().startswith("|"):
+                rows.append(cells(lines[i]))
+                i += 1
+            blocks.append({"type": "table", "columns": cols, "rows": rows})
+            continue
+        m = re.match(r"^\s*(?:[-*+]|(\d+)\.)\s+(.*)$", raw)
+        if m:
+            if para:
+                flush()
+            ordered = bool(m.group(1))
+            if lst is None or bool(lst.get("ordered")) != ordered:
+                if lst:
+                    blocks.append(lst)
+                lst = {"type": "list", "ordered": ordered, "items": []}
+            lst["items"].append(_md_list_item(m.group(2)))
+            i += 1
+            continue
+        if lst:                                          # 목록 뒤 들여쓴 줄 = 앞 항목의 이어짐
+            if raw.startswith(("  ", "\t")) and lst["items"]:
+                t = _md_plain(line)
+                last = lst["items"][-1]
+                if isinstance(last, dict):
+                    last["note"] = f"{last.get('note','')} {t}".strip()
+                else:
+                    lst["items"][-1] = f"{last} {t}".strip()
+                i += 1
+                continue
+            blocks.append(lst)
+            lst = None
+        para.append(line)
+        i += 1
+    flush()
+    return blocks
+
+
 def _doc_blocks_to_markdown(blocks: list, title: str = "", meta: str = "") -> str:
     """문서 IR → 마크다운. cards = 링크 목록(뉴스/검색결과 공용). NIP-23 발행 등 범용."""
     out = []
@@ -1198,7 +1446,10 @@ def _doc_blocks_to_markdown(blocks: list, title: str = "", meta: str = "") -> st
                 mark = f"{idx}." if ordered else "-"
                 if isinstance(i, dict):
                     txt = i.get("text") or ""
-                    out.append(f"{mark} [{txt}]({i.get('url')})" if i.get("url") else f"{mark} {txt}")
+                    line = f"{mark} [{txt}]({i.get('url')})" if i.get("url") else f"{mark} {txt}"
+                    if i.get("note"):
+                        line += f" {i['note']}"
+                    out.append(line)
                 else:
                     out.append(f"{mark} {i}")
             out.append("")
@@ -1253,12 +1504,30 @@ def render_document(tool_input, output_base="."):
     # 직접 items 파라미터 (조립된 단일 통화 items 전달 — >> 파이프 밖 호출, 예: 데스크탑 신문)
     if not blocks and isinstance(tool_input.get("items"), list) and tool_input["items"]:
         blocks = _items_to_blocks(tool_input["items"], group_by)
+    # 마크다운 텍스트 입구 — 이미 글로 존재하는 문서(보고서·신문·블로그)를 emitter 로.
+    if not blocks and isinstance(tool_input.get("markdown"), str) and tool_input["markdown"].strip():
+        _fm = {}
+        blocks = _markdown_to_blocks(tool_input["markdown"], meta_out=_fm)
+        _apply_frontmatter(_fm, tool_input)
+        blocks = _lift_doc_title(blocks, tool_input)
     if not blocks:
         # >> 파이프: 이전 생산자 결과(_prev_result)의 blocks·items·title·meta·theme 자동 수용
         pr = tool_input.get("_prev_result")
         if pr:
             try:
-                po = _json.loads(pr) if isinstance(pr, str) else pr
+                po = pr
+                if isinstance(pr, str):
+                    try:
+                        po = _json.loads(pr)
+                    except Exception:
+                        po = None
+                    # JSON 이 아닌 앞 단계 문자열 = 글 그대로(예: [self:read] 가 읽은 .md)
+                    if not isinstance(po, dict):
+                        _fm = {}
+                        _b = _markdown_to_blocks(pr, meta_out=_fm)
+                        _apply_frontmatter(_fm, tool_input)
+                        blocks = _lift_doc_title(_b, tool_input)
+                        po = None
                 if isinstance(po, dict):
                     if po.get("blocks"):
                         blocks = po["blocks"]
@@ -1291,8 +1560,14 @@ def render_document(tool_input, output_base="."):
         fmt = "html"
 
     os.makedirs(output_base, exist_ok=True)
-    base = tool_input.get("filename") or "document"
-    base = os.path.splitext(os.path.basename(str(base)))[0] or "document"
+    _raw_name = str(tool_input.get("filename") or "document")
+    base = os.path.splitext(os.path.basename(_raw_name))[0] or "document"
+    # 산출 위치는 output_base 가 정한다(프로젝트 outputs). filename 에 경로를 적어도 파일명만
+    # 취하는데, 예전엔 그걸 말없이 했다 → "원하는 위치에 썼다"고 착각하기 쉬웠다(침묵 실패).
+    # 자르는 동작은 유지하되 note 로 소리를 낸다. 원하는 위치로 옮기려면 `>> [self:copy]`.
+    if os.path.dirname(_raw_name):
+        note += (f" (filename 의 경로 부분은 무시하고 '{base}' 만 씁니다 — 산출 위치는 "
+                 f"{output_base}. 다른 곳에 두려면 >> [self:copy]{{destination: ...}})")
 
     # markdown emitter — 문서 IR → md 텍스트(+.md 파일). NIP-23 발행 등 텍스트 파이프.
     if fmt == "markdown":

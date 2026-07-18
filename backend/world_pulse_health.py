@@ -14,7 +14,6 @@ world_pulse.py에서 분리된 모듈로, 시스템 건강 점검(Self-Check)과
     from world_pulse_health import generate_guide, run_daily_health_check, get_system_health
 """
 
-import hashlib
 import json
 import logging
 import sys
@@ -77,88 +76,12 @@ def generate_guide():
 # Self-Check — 주기적 IBL 액션 자가 점검 (면역 순찰)
 # ============================================================
 
-# ============================================================
-# AI 기반 테스트 계획 생성 — 액션 변경 시 자동 갱신
-# ============================================================
-
-_TEST_PLAN_PATH = Path(__file__).parent.parent / "data" / "self_check_plan.json"
-
-_TEST_PLAN_SYSTEM_PROMPT = """당신은 IndieBiz OS의 자가점검 시스템입니다.
-IBL 액션 목록을 분석하여 안전하게 테스트할 수 있는 액션을 분류합니다.
-자가점검의 목적은 "이 액션이 에러 없이 동작하는가"를 확인하는 것입니다.
-
-safe: false로 분류 (테스트하면 안 되는 것):
-- 삭제, 쓰기, 전송, 생성, 배포, 실행 등 부작용 있는 액션
-- GUI 창을 여는 액션 (open_window, os_open, launch 등)
-- 재생/정지 액션 (play, stop, play_radio, stop_radio 등)
-- android/adb 그룹 액션 (하드웨어 의존)
-- photo 그룹 액션 (외장하드 의존 — photo_gallery, photo_timeline, photo_duplicates, photo_stats, gallery, timeline 등)
-- 브라우저 조작 (click, type, navigate, scroll, screenshot 등)
-- 파일 변경 (write, file, save, move, copy, delete, rebuild_index 등)
-- 스케줄/워크플로우 변경 (schedule, save_workflow, create, delete_trigger 등)
-
-safe: true로 분류 (테스트해도 되는 것):
-- 읽기 전용 조회, 검색, 상태 확인 액션 (로컬이든 외부 API든)
-- 외부 API 호출 검색도 포함 — 동작 여부 확인이 중요
-- 목록 조회, 정보 조회, 통계 조회 등
-
-test_params: safe: true인 액션만. 최소한으로. 검색류는 {"query": "test"} 정도. 파라미터 없이 호출 가능하면 {}.
-
-반드시 JSON 배열로만 응답하세요. 다른 텍스트 없이.
-[{"action": "...", "safe": true/false, "test_params": {...}}]"""
-
-
-def _get_actions_hash() -> str:
-    """현재 ibl_nodes.yaml의 액션 목록 해시 — 변경 감지용"""
-    try:
-        from ibl_engine import _load_nodes_config
-        reg = _load_nodes_config()
-        nodes = reg.get("nodes", {})
-        # 노드별 액션 이름만 정렬하여 해시
-        action_keys = []
-        for node_name in sorted(nodes.keys()):
-            actions = sorted(nodes[node_name].get("actions", {}).keys())
-            for a in actions:
-                action_keys.append(f"{node_name}:{a}")
-        return hashlib.md5("|".join(action_keys).encode()).hexdigest()
-    except Exception:
-        return ""
-
-
-def _load_test_plan() -> Optional[Dict]:
-    """캐시된 테스트 계획 로드"""
-    if not _TEST_PLAN_PATH.exists():
-        return None
-    try:
-        return json.loads(_TEST_PLAN_PATH.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-
-
-def _save_test_plan(plan: Dict):
-    """테스트 계획 저장"""
-    _TEST_PLAN_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _TEST_PLAN_PATH.write_text(
-        json.dumps(plan, ensure_ascii=False, indent=2),
-        encoding="utf-8"
-    )
-
-
-def _parse_ai_json(response: str) -> Optional[list]:
-    """AI 응답에서 JSON 배열을 추출"""
-    if not response:
-        return None
-    text = response.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        return None
-
+# 【제거됨 2026-07-18】 AI 기반 테스트 계획 생성
+# 경량 LLM 이 액션을 훑어 부작용을 분류하고 data/self_check_plan.json 에 캐시하던 층.
+# 생성 함수는 2026-06-27(065c5a9)에 self-check 가 fixture 방식으로 바뀌며 삭제됐는데,
+# 헬퍼(_load_test_plan/_save_test_plan/_get_actions_hash)와 캐시 파일만 남아
+# 3주 넘게 118개짜리 낡은 목록이 조종실 dry-run 의 부작용 라벨을 대신해 왔다(당시 157개).
+# → 분류는 backend/ibl_safety.py 가 레지스트리 `returns:` 선언에서 파생한다(캐시 없음).
 
 def run_ibl_health_check() -> List[Dict]:
     """IBL 건강검사의 단일 소스 — scripts/ibl_health_check.py 를 subprocess 1회 실행하고
@@ -233,6 +156,17 @@ def run_ibl_health_check() -> List[Dict]:
                 "success": gp_ok, "response_ms": 0,
                 "data_quality": "ok" if gp_ok else "error",
                 "error_message": None if gp_ok else f"{passed}/{total} PASS"})
+    # §1C-2 연산자(?? · &) — 골든파이프가 못 보는 문법층. 이 항목이 없던 동안 `??` 가
+    # NameError 로 죽은 채 몇 달을 버텼다(문서·프롬프트는 가르치는데 아무도 검사 안 함).
+    # 옛 요약(operators 키 없음)은 total=0 → 스킵하고 항목을 남기지 않는다.
+    op = s.get("operators") or {}
+    op_passed, op_total = int(op.get("passed", 0)), int(op.get("total", 0))
+    if op_total > 0:
+        op_ok = op_passed == op_total
+        out.append({"node": "__ibl_health__", "action": "operators",
+                    "success": op_ok, "response_ms": 0,
+                    "data_quality": "ok" if op_ok else "error",
+                    "error_message": None if op_ok else f"{op_passed}/{op_total} PASS"})
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})

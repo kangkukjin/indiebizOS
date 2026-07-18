@@ -84,6 +84,7 @@
     "ibl_parser_blocks",
     "ibl_parser_values",
     "ibl_routing",
+    "ibl_safety",
     "ibl_synthetic_opus",
     "ibl_usage_db",
     "ibl_usage_generator",
@@ -177,8 +178,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 171,
-    "engine": 158,
+    "total": 172,
+    "engine": 159,
     "blocklist": 13
   }
 }

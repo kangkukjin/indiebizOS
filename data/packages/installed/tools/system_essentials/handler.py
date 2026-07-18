@@ -882,6 +882,10 @@ def execute(tool_input: dict, context) -> str:
                 return scope_err
 
             if not os.path.exists(target):
+                # missing_ok: 없으면 '이미 없음'을 성공으로 — 지우고 다시 올리는 정기 작업처럼
+                # 멱등하게 돌아야 하는 곳에서, 첫 실행이 에러로 파이프를 끊지 않게 한다.
+                if tool_input.get("missing_ok"):
+                    return f"이미 없습니다: {os.path.abspath(target)}"
                 return f"Error: 경로가 존재하지 않습니다: {target}"
 
             abs_target = os.path.abspath(target)

@@ -81,6 +81,7 @@ nodes:
         - 카톡
       here:
         returns: scalar
+        side_effect: true
         exempt: 폰 GPS 센서 — 맥서 오프라인
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
@@ -99,6 +100,7 @@ nodes:
         - location
       listen:
         returns: scalar
+        side_effect: true
         exempt: 폰 마이크 — 맥서 오프라인
         description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
         group: device
@@ -123,6 +125,7 @@ nodes:
         - voice
       see:
         returns: scalar
+        side_effect: true
         exempt: 폰 카메라 — 맥서 오프라인
         description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
         group: device
@@ -2212,6 +2215,8 @@ nodes:
 
           - vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link — rebuild=vault→검색DB 재구축(복구 경로), link=글 간 시맨틱 연결 생성.
 
+          - latest: 가장 최근 글 1개를 고른다. 본문이 아니라 vault .md **경로**(path)를 준다 — 발행은 기존 동사로 잇는다: >> [self:read]{} >> [table:document]{format:"html"} >> [self:copy]{destination:...}
+
           '
         target_key: op
         group: blog
@@ -2226,7 +2231,8 @@ nodes:
             rebuild_index: 검색 인덱스(벡터) 재구축
             stats: 블로그 통계 (글 수·분포·트렌드)
             vault: Obsidian vault(진실소스) 운영 (mode stats/export/rebuild/link)
-        implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats, vault=blog_vault_*(mode — 2026-07-03 고아 기능 op 승격).
+            latest: 최근 글 1개 선택 — vault .md 경로 반환(발행 파이프의 머리)
+        implementation: blog 패키지 op 분기. posts=blog_get_posts, search=blog_search_op(mode), check_new=blog_check_new_posts, rebuild_index=rebuild_search_index, stats=blog_stats, vault=blog_vault_*(mode — 2026-07-03 고아 기능 op 승격), latest=blog_latest_post(2026-07-18 — 선택만, 발행은 read/document/copy 재사용).
         keywords:
         - 블로그
         - 블로그 검색
@@ -5430,8 +5436,8 @@ nodes:
       document:
         returns: effect
         runs_on: anywhere
-        description: blocks(문서 구조 배열) 또는 items(단일 통화)를 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
-        target_description: 'blocks 또는 items(둘 중 하나) — blocks(문서 IR 블록 배열) 또는 items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할). 각 블록은 {type, ...}:
+        description: blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
+        target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
 
           - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 

@@ -22,6 +22,9 @@ nodes:
         - 카톡
       here:
         returns: scalar
+        # 통화 모양(scalar)과 부작용이 어긋나는 자리 — GPS 를 실제로 켜서 위치를 읽는다.
+        # dry-run 이 "부작용 없음"으로 표시하면 안 되고, 자동 점검이 함부로 실행해서도 안 된다.
+        side_effect: true
         exempt: '폰 GPS 센서 — 맥서 오프라인'
         description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
         group: device
@@ -40,6 +43,8 @@ nodes:
         - location
       listen:
         returns: scalar
+        # scalar 를 반환하지만 실제로 마이크를 켜고 녹음한다 — 부작용으로 선언.
+        side_effect: true
         exempt: '폰 마이크 — 맥서 오프라인'
         description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
         group: device
@@ -64,6 +69,8 @@ nodes:
         - voice
       see:
         returns: scalar
+        # scalar 를 반환하지만 실제로 셔터를 눌러 사진 파일을 남긴다 — 부작용으로 선언.
+        side_effect: true
         exempt: '폰 카메라 — 맥서 오프라인'
         description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
         group: device

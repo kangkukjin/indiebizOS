@@ -42,6 +42,56 @@ def _get_workflows_path() -> Path:
     return wf_path
 
 
+# === 실패 판정 (단일 소스) ===
+
+def _is_error_result(result) -> bool:
+    """도구 결과가 실패인지 판정한다 — `>>`·`??` 공용 **단일 소스**.
+
+    도구가 실패를 알리는 방식이 **네 갈래**라 판정이 곳곳에 복제됐다가 갈라졌었다
+    (2026-07-18: `??` 만 문자열 에러를 성공으로 세어, NameError 를 고친 뒤에도 폴백이 안 됨).
+    새 소비자는 이 함수를 부를 것 — 판정을 다시 손으로 적지 말 것.
+
+    실패로 치는 것:
+      1. dict: `success is False`, 또는 최상위 `error` 키가 있고 success 가 참이 아님
+      2. str `"Error:"` 접두 — system_essentials 계열(self:read/delete/copy)
+      3. **JSON 문자열** — handler 라우터는 `format_json(...)` 으로 *문자열*을 돌려주므로
+         `{"success": false, "message": …}` 가 문자열에 실려 온다. 파싱해서 1번 규칙 적용.
+         ★이걸 안 보면 handler 도구의 실패가 전부 성공으로 샌다(2026-07-18 블로그 파이프에서
+         실측: `[self:blog]` 가 실패했는데 파이프가 success=True 로 보고).
+      4. 예외 — 호출부가 잡아서 별도 처리(이 함수 밖).
+
+    실패로 치지 않는 것:
+      - `status == "not_implemented"` — 미구현은 고장이 아님
+      - `{"success": true, "error": null}` — 성공인데 error 키가 있는 모양
+        (서킷 브레이커가 `verify.error: null` 로 성공을 실패로 오인했던 전례를 판정에 반영)
+
+    ★한계: `"Error:"` 접두 판정은 **휴리스틱**이다. 본문이 그렇게 시작하는 정당한 콘텐츠
+    (로그 요약·코드 스니펫)를 실패로 오인할 수 있다. 도구 반환 규약을 통화로 수렴시키기 전까지의
+    잠정 규칙이며, **최상위 result 에만** 적용한다(중첩 dict 의 error 키는 보지 않는다).
+    """
+    if isinstance(result, dict):
+        if result.get("status") == "not_implemented":
+            return False
+        if result.get("success") is False:
+            return True
+        return ("error" in result) and not result.get("success")
+    if isinstance(result, str):
+        s = result.lstrip()
+        if s.startswith("Error:"):
+            return True
+        # handler 라우터의 JSON 문자열 — 최상위만 파싱해 dict 규칙 재사용
+        if s.startswith("{"):
+            try:
+                import json as _json
+                parsed = _json.loads(s)
+            except Exception:
+                return False
+            if isinstance(parsed, dict):
+                return _is_error_result(parsed)
+        return False
+    return False
+
+
 # === 파이프라인 실행 ===
 
 def _first_step_project_id(steps: list):
@@ -164,7 +214,33 @@ def execute_pipeline(steps: list, project_path: str = ".",
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)
 
+    # ── 문장 경계(`;` · 개행) ──────────────────────────────────────────────
+    # 여러 문장이 한 리스트로 평탄화돼 들어오므로, 파서가 각 문장 첫 step 에 `_seq_boundary` 를
+    # 붙여 둔다. `>>` 는 "성공했을 때만 다음"이지만 문장 경계는 "되든 안 되든 다음"이다.
+    # 실패해도 다음 문장으로 건너뛰어 계속 실행하고, _prev_result 는 경계를 넘기지 않는다(독립).
+    # ★정직: 건너뛰었다고 실패를 숨기지 않는다 — 실패한 문장이 하나라도 있으면 success=False 이고
+    #   results 에 그 실패가 그대로 남는다(스케줄러가 조용히 성공으로 착각하지 않게).
+    def _next_boundary(from_idx: int) -> int:
+        for j in range(from_idx, total):
+            if isinstance(steps[j], dict) and steps[j].get("_seq_boundary"):
+                return j
+        return -1
+
+    _seq = {"skip_until": -1, "failed": 0}
+
+    def _handle_failure(idx: int, abort_payload: dict):
+        """실패 처리. 뒤에 독립 문장이 있으면 거기로 건너뛰고 계속(None 반환),
+        없으면 기존대로 중단할 payload 를 돌려준다."""
+        b = _next_boundary(idx + 1)
+        if b < 0:
+            return abort_payload
+        _seq["skip_until"] = b
+        _seq["failed"] += 1
+        return None
+
     for i, step in enumerate(steps):
+        if i < _seq["skip_until"]:
+            continue  # 실패한 문장의 남은 step — 건너뛴다(다음 문장 경계까지)
         step_start = time.time()
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
@@ -178,11 +254,15 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     "error": str(e),
                     "duration_ms": int((time.time() - step_start) * 1000),
                 })
-                return {
+                _abort = _handle_failure(i, {
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": None,
                     "error": f"Step {i+1} 병렬 실행 예외: {str(e)}",
-                }
+                })
+                if _abort is not None:
+                    return _abort
+                prev_result = ""
+                continue
 
             duration_ms = int((time.time() - step_start) * 1000)
             result_str = _to_string(result)
@@ -201,24 +281,29 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if "_fallback_chain" in step:
             # Fallback 실행
             try:
-                result, fallback_log = _execute_fallback(step["_fallback_chain"], project_path, prev_result)
+                result, fallback_log = _execute_fallback(step["_fallback_chain"], project_path,
+                                                         prev_result, agent_id=agent_id)
             except Exception as e:
                 results.append({
                     "step": i + 1, "type": "fallback",
                     "error": str(e),
                     "duration_ms": int((time.time() - step_start) * 1000),
                 })
-                return {
+                _abort = _handle_failure(i, {
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": None,
                     "error": f"Step {i+1} fallback 실행 예외: {str(e)}",
-                }
+                })
+                if _abort is not None:
+                    return _abort
+                prev_result = ""
+                continue
 
             duration_ms = int((time.time() - step_start) * 1000)
             result_str = _to_string(result)
 
-            # fallback 결과에 에러가 있으면 (모든 체인 실패)
-            is_err = isinstance(result, dict) and "error" in result and result.get("_all_failed")
+            # fallback 결과에 에러가 있으면 (모든 체인 실패 — `_all_failed` 는 _execute_fallback 이 붙인다)
+            is_err = isinstance(result, dict) and result.get("_all_failed") and _is_error_result(result)
             action_count += 1
             results.append({
                 "step": i + 1, "type": "fallback",
@@ -229,11 +314,15 @@ def execute_pipeline(steps: list, project_path: str = ".",
             })
 
             if is_err:
-                return {
+                _abort = _handle_failure(i, {
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": result,
                     "error": f"Step {i+1} fallback 체인 전체 실패",
-                }
+                })
+                if _abort is not None:
+                    return _abort
+                prev_result = ""
+                continue
 
             prev_result = result_str
             continue
@@ -270,27 +359,26 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "error": str(e),
                 "duration_ms": int((time.time() - step_start) * 1000),
             })
-            return {
+            _abort = _handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
                 "steps_total": total,
                 "results": results,
                 "final_result": None,
                 "error": f"Step {i+1} 실행 중 예외: {str(e)}",
-            }
+            })
+            if _abort is not None:
+                return _abort
+            prev_result = ""
+            continue
 
         duration_ms = int((time.time() - step_start) * 1000)
 
         # 결과를 문자열로 변환 (다음 step 주입용)
         result_str = _to_string(result)
 
-        # 에러 확인
-        is_err = False
-        if isinstance(result, dict):
-            if "error" in result and result.get("status") != "not_implemented":
-                is_err = True
-        elif isinstance(result, str) and result.startswith("Error:"):
-            is_err = True
+        # 에러 확인 (단일 소스)
+        is_err = _is_error_result(result)
 
         action_count += 1
         results.append({
@@ -303,26 +391,37 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
         if is_err:
             err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
-            return {
+            _abort = _handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
                 "steps_total": total,
                 "results": results,
                 "final_result": result,
                 "error": f"Step {i+1} 에러: {err_msg}",
-            }
+            })
+            if _abort is not None:
+                return _abort
+            prev_result = ""
+            continue
 
         # 다음 step으로 전달
         prev_result = result_str
 
-    return {
-        "success": True,
+    # 문장 경계를 넘어 계속 실행했더라도 실패는 숨기지 않는다 — 실패한 문장이 있으면 success=False.
+    # (건너뛰기는 "계속 실행"이지 "없던 일"이 아니다. 스케줄러·평가자가 조용히 성공으로 읽으면 안 된다.)
+    _failed = _seq["failed"]
+    out = {
+        "success": _failed == 0,
         "steps_completed": total,
         "steps_total": total,
         "_action_count": action_count,
         "results": results,
         "final_result": prev_result,
     }
+    if _failed:
+        out["statements_failed"] = _failed
+        out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
+    return out
 
 
 # 병렬 실행 브랜치별 타임아웃 (초)
@@ -425,7 +524,8 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     return branch_results
 
 
-def _execute_fallback(chain: list, project_path: str, prev_result: str) -> tuple:
+def _execute_fallback(chain: list, project_path: str, prev_result: str,
+                      agent_id: str = None) -> tuple:
     """
     Fallback 실행 - 첫 번째 성공하는 액션까지 순차 시도 (Phase 9)
 
@@ -433,6 +533,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str) -> tuple
         chain: 순서대로 시도할 step 리스트
         project_path: 프로젝트 경로
         prev_result: 이전 step 결과
+        agent_id: 호출자 신원 — 일반 step 과 같게 전파(빠지면 NameError 로 ?? 가 통째로 죽는다)
 
     Returns:
         (result, log) - 성공한 결과 또는 마지막 에러, 시도 로그
@@ -467,8 +568,8 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str) -> tuple
 
         duration_ms = int((time.time() - start) * 1000)
 
-        # 에러 확인
-        is_err = isinstance(result, dict) and "error" in result and result.get("status") != "not_implemented"
+        # 에러 확인 — `>>` 와 **같은 함수**를 쓴다(갈라지면 폴백이 문자열 에러를 성공으로 센다)
+        is_err = _is_error_result(result)
         log.append({
             "attempt": idx + 1,
             "node": tool_input.get("_node", "?"),
@@ -486,8 +587,11 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str) -> tuple
     # 모든 체인 실패
     if last_result is None:
         last_result = {"error": "fallback 체인이 비어있습니다."}
-    if isinstance(last_result, dict):
-        last_result["_all_failed"] = True
+    if not isinstance(last_result, dict):
+        # 문자열 에러("Error: …")는 `_all_failed` 표식을 달 수 없어 호출부가 성공으로 세어 버린다
+        # → 전체 실패 경로에서만 error dict 로 감싼다(성공 결과는 원형 그대로 반환되므로 무영향).
+        last_result = {"error": str(last_result)}
+    last_result["_all_failed"] = True
     return last_result, log
 
 

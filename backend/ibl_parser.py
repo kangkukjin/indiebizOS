@@ -113,7 +113,7 @@ def parse(code: str) -> List[Dict]:
     statements, variables = _extract_statements(lines)
 
     all_steps = []
-    for stmt in statements:
+    for _stmt_idx, stmt in enumerate(statements):
         # 파이프 문법 설탕(| where:/sort:/take:/select:/dedup:)을 >> [table:동사] 로 desugar.
         # 의미는 engines 변환자에 이미 있고, 이건 빈도 높은 단항 변환자의 짧은 문법 표면.
         stmt = _desugar_pipe_sugar(stmt)
@@ -126,6 +126,11 @@ def parse(code: str) -> List[Dict]:
                 raise IBLSyntaxError(f"파싱 실패: {seg_text.strip()}")
             # 변수 참조 치환
             parsed = _resolve_variables(parsed, variables)
+            # 문장 경계 표식 — 문장들은 한 리스트로 평탄화되므로, 실행기가 "여기부터 새 문장"을
+            # 알 방법이 이 표식뿐이다. 경계에서는 앞 문장의 실패가 전파되지 않고
+            # _prev_result 도 넘어가지 않는다(독립이란 뜻이므로). 첫 step 에만 붙인다.
+            if _stmt_idx > 0 and idx == 0:
+                parsed["_seq_boundary"] = True
             all_steps.append(parsed)
 
     if not all_steps:
@@ -264,6 +269,11 @@ def _extract_statements(lines: List[str]) -> Tuple[List[str], Dict[str, str]]:
     """
     statements = []
     variables = {}  # 변수명 → 위치 정보 (몇 번째 step의 결과인지)
+
+    # `;` = 한 줄 안의 줄바꿈. 독립 문장을 한 줄에 늘어놓는 순차 연산자로,
+    # 여기서 개행과 **같은 것**으로 접는다(실행기는 둘을 구분하지 않는다).
+    # 문자열·중괄호 안의 `;` 는 _split_by_operator 가 알아서 무시한다.
+    lines = [s for line in lines for s in (_split_by_operator(line, ';') or [line])]
 
     step_index = 0
     for line in lines:

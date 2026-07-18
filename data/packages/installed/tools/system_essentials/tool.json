@@ -372,7 +372,12 @@
         "properties": {
           "path": {
             "type": "string",
-            "description": "생성할 폴더 경로"
+            "description": "삭제할 파일 또는 폴더 경로"
+          },
+          "missing_ok": {
+            "type": "boolean",
+            "default": false,
+            "description": "대상이 없을 때 오류 대신 성공으로 넘어간다(멱등). 지우고 다시 올리는 정기 작업에서 첫 실행이 파이프를 끊지 않게 할 때."
           }
         },
         "required": [

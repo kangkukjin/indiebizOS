@@ -100,11 +100,14 @@ RETURNS = {f"{n}:{a}": (ad.get("returns") or "?")
 #   · 한계: currency GREEN = "액션이 통화를 냈다"까지. override 렌더 컴포넌트가 그걸 실제로
 #     그리는지는 이 게이트 범위 밖(Phase 3 소관).
 def _load_safety_map():
-    """self_check_plan.json → (node, action) → safe(bool). api_ibl._load_safety_map 와 같은 계약."""
+    """(node, action) → safe(bool). 판정은 backend/ibl_safety 단일 소스(api_ibl 과 같은 함수).
+
+    옛 구현은 self_check_plan.json(LLM 분류 캐시)을 읽었으나 그 생성 경로가 삭제된 뒤
+    낡은 목록으로 게이팅해 왔다 → 레지스트리 `returns:` 선언에서 파생으로 교체."""
     try:
-        plan = json.load(open("data/self_check_plan.json", encoding="utf-8"))
-        return {(a.get("node", ""), a.get("action", "")): bool(a.get("safe"))
-                for a in plan.get("actions", [])}
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        from ibl_safety import build_safety_map
+        return build_safety_map(_nodes.get("nodes") or {})
     except Exception:
         return {}
 
@@ -243,6 +246,81 @@ for name, code, kind in PIPES:
     pipe_pass += ok
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
 
+# ── §1C-2 연산자 (문법 자체 — 최종 통화가 아니라 *동작*을 본다) ──
+# 왜 별도 절인가: §1C 는 final_result 의 모양만 보므로 "폴백을 탔는가/단축했는가" 를 못 본다.
+# `??` 가 몇 달간 죽은 채 살아 있던 이유가 정확히 이 사각지대였다(NameError → 아무도 안 봄).
+# 각 케이스는 시도 로그(attempts)·분기 수를 직접 단언한다.
+def _attempts_of(d):
+    """파이프 결과에서 fallback step 의 시도 로그를 꺼낸다(없으면 [])."""
+    for r in (d.get("results") or []) if isinstance(d, dict) else []:
+        if r.get("type") == "fallback":
+            return r.get("attempts") or []
+    return []
+
+def _op_fallback_string_err(d):
+    """앞이 **문자열** 에러여도 폴백해야 한다 — 실패 판정 단일화(_is_error_result)의 회귀 테스트.
+    이전엔 `??` 만 문자열 에러를 성공으로 세어, 1차가 status:ok 로 기록되고 폴백을 안 탔다."""
+    a = _attempts_of(d)
+    return (len(a) == 2 and a[0].get("status") == "error" and a[1].get("status") == "ok",
+            f"attempts={[x.get('status') for x in a]}")
+
+def _op_fallback_shortcut(d):
+    """앞이 성공하면 폴백을 타지 않아야 한다(단축 평가)."""
+    a = _attempts_of(d)
+    return (len(a) == 1 and a[0].get("status") == "ok",
+            f"attempts={[x.get('status') for x in a]}")
+
+def _op_parallel_merge(d):
+    """병렬 두 분기가 실제로 합류해 단일 통화가 되는지."""
+    fr = final_of(d)
+    n = len(fr.get("items", [])) if isinstance(fr, dict) and isinstance(fr.get("items"), list) else 0
+    return (n > 0, f"merged items={n}")
+
+def _op_seq_continues(d):
+    """`;` — 앞 문장이 실패해도 뒤 문장이 실행돼야 한다("되든 안 되든 다음").
+    동시에 실패를 숨기지 않아야 한다(success=False + statements_failed)."""
+    if not isinstance(d, dict):
+        return False, f"파이프 결과 아님: {str(d)[:60]}"
+    done, tot = d.get("steps_completed"), d.get("steps_total")
+    return (done == tot and tot == 2 and d.get("statements_failed") == 1
+            and d.get("success") is False,
+            f"steps={done}/{tot} failed={d.get('statements_failed')} success={d.get('success')}")
+
+def _op_pipe_still_stops(d):
+    """회귀 가드 — `>>` 는 문장 *안*에서 여전히 실패 시 중단해야 한다(`;` 와 뒤섞이면 안 됨)."""
+    if not isinstance(d, dict):
+        return False, f"파이프 결과 아님: {str(d)[:60]}"
+    return (d.get("success") is False and d.get("steps_completed") == 0,
+            f"steps={d.get('steps_completed')}/{d.get('steps_total')} success={d.get('success')}")
+
+def _op_json_string_failure(d):
+    """handler 도구의 실패는 `format_json` 때문에 **JSON 문자열**로 온다 — 그것도 실패로 봐야 한다.
+    이 판정이 없던 동안 handler 실패가 전부 성공으로 샜다(2026-07-18 블로그 파이프에서 실측).
+    `[table:document]` 에 입력 통화를 안 주면 `{"success": false, "message": …}` 문자열을 낸다
+    (error 키가 아니라 message 라, 옛 판정은 이 실패를 볼 방법이 아예 없었다)."""
+    if not isinstance(d, dict):
+        return False, f"파이프 결과 아님: {str(d)[:60]}"
+    return (d.get("success") is False and d.get("steps_completed") == 0,
+            f"steps={d.get('steps_completed')}/{d.get('steps_total')} success={d.get('success')}")
+
+OPERATORS = [
+  ("JSON문자열 실패감지", '[table:document]{} >> [table:take]{n: 1}', _op_json_string_failure),
+  ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search_naver]{query: "AI"}', _op_seq_continues),
+  (">> 실패시 중단(회귀)", '[self:read]{path: "__없는파일__.md"} >> [table:take]{n: 1}', _op_pipe_still_stops),
+  ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search_naver]{query: "AI"}', _op_fallback_string_err),
+  ("?? 성공→단축평가",   '[sense:search_naver]{query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),
+  ("& 병렬 합류",        '[sense:search_naver]{query: "AI"} & [sense:search_ddg]{query: "AI"} >> [table:merge]{by: "title"}', _op_parallel_merge),
+]
+print("\n" + "="*72); print("§1C-2 연산자 (?? · & — 동작 단언)"); print("="*72)
+op_pass = 0
+for name, code, assertion in OPERATORS:
+    try:
+        ok, detail = assertion(execute(code))
+    except Exception as e:
+        ok, detail = False, f"단언 예외: {e}"
+    op_pass += ok
+    print(f"  [{'PASS' if ok else 'FAIL':4}] {name:22} {detail}")
+
 # ── §1D 런타임 건강 ──
 print("\n" + "="*72); print("§1D 런타임 건강 (world_pulse.db action_health, 실패율 상위)"); print("="*72)
 try:
@@ -266,10 +344,12 @@ print("\n" + "="*72); print("종합 판정"); print("="*72)
 print(f"  §1A 정적:        {'✅' if static_ok else '❌'}")
 print(f"  §1B 통화:        GREEN {len(buckets['GREEN'])} / YELLOW {len(buckets['YELLOW'])} / RED {len(buckets['RED'])}")
 print(f"  §1C 골든파이프:  {pipe_pass}/{len(PIPES)} PASS")
+print(f"  §1C-2 연산자:    {op_pass}/{len(OPERATORS)} PASS")
 if buckets["RED"]:
     print("\n  ⚠️ RED (통화 결함 — 처리 필요):")
     for n, r in buckets["RED"]: print(f"     - {n}: {r}")
-verdict = "건강 ✅" if (static_ok and not buckets["RED"] and pipe_pass == len(PIPES)) else "주의 ⚠️"
+verdict = "건강 ✅" if (static_ok and not buckets["RED"] and pipe_pass == len(PIPES)
+                      and op_pass == len(OPERATORS)) else "주의 ⚠️"
 print(f"\n  ▶ IBL 구조 건강: {verdict}")
 
 # ── 기계 판독 요약 — world_pulse_health.run_ibl_health_check 가 이 한 줄을 파싱한다.
@@ -281,5 +361,6 @@ _summary = {
         "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],
     },
     "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES)},
+    "operators": {"passed": int(op_pass), "total": len(OPERATORS)},
 }
 print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))

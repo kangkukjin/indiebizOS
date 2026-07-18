@@ -318,19 +318,23 @@ def _effect_description(node: str, action: str, params: dict) -> str:
         return _action_description(node, action)
 
 
-def _load_safety_map() -> dict:
-    """self-check가 만든 부작용 분류(self_check_plan.json)를 (node, action) → safe(bool)로.
-
-    self-check가 이미 쓰는 캐시를 그대로 재사용한다. LLM 재생성은 트리거하지 않는다
-    (dry-run 자체가 부작용을 내면 안 되므로 파일만 읽는다)."""
-    plan_path = os.path.join(os.path.dirname(__file__), "..", "data", "self_check_plan.json")
+def _known_nodes() -> list:
+    """등록된 노드 이름 목록(정렬) — 에러 문구가 레지스트리를 따라가게."""
     try:
-        with open(plan_path, encoding="utf-8") as f:
-            plan = json.load(f)
-        return {(a.get("node", ""), a.get("action", "")): bool(a.get("safe"))
-                for a in plan.get("actions", [])}
+        from ibl_engine import _load_nodes_config
+        return sorted((_load_nodes_config().get("nodes") or {}).keys())
     except Exception:
-        return {}
+        return []
+
+
+def _load_safety_map() -> dict:
+    """부작용 분류를 (node, action) → safe(bool)로. 판정은 ibl_safety 단일 소스.
+
+    옛 구현은 `self_check_plan.json`(LLM 분류 캐시)을 읽었는데, 그 생성 경로가 삭제된 뒤에도
+    파일만 남아 3주 넘게 118개짜리 낡은 목록으로 판정해 왔다(현재 157개). 이제 레지스트리의
+    `returns:` 선언에서 파생하므로 새 액션이 자동 분류된다."""
+    from ibl_safety import load_safety_map
+    return load_safety_map()
 
 
 @router.post("/validate")
@@ -388,7 +392,9 @@ async def validate_ibl(req: ValidateRequest):
         if not node:
             ok, err = False, "노드가 지정되지 않았습니다."
         elif not valid_actions:
-            ok, err = False, f"'{node}'는 알 수 없는 노드입니다. (sense/self/limbs/others/engines)"
+            # 노드 목록은 레지스트리에서 파생 — 손으로 적으면 어긋난다
+            # (2026-06-30 table 노드 분리 후 이 문구가 5노드로 남아 있었다)
+            ok, err = False, f"'{node}'는 알 수 없는 노드입니다. ({'/'.join(_known_nodes())})"
         elif action not in valid_actions:
             ok, err = False, f"'{node}' 노드에 '{action}' 액션이 없습니다."
         else:

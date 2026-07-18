@@ -332,6 +332,15 @@ def execute(tool_input: dict, context) -> str:
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":
+        # end(끝 줄/블록) → limit 흡수: start 는 액션 aliases(레지스트리)가 offset 으로
+        # 변환하지만, end 는 이름변경이 아니라 계산(limit = end − offset)이라 여기서 흡수.
+        # (모델이 start/end 를 써 조용히 무시되고 통파일이 오던 silent-ignore 해소.)
+        if tool_input.get("end") is not None and tool_input.get("limit") is None:
+            try:
+                _end_off = int(tool_input.get("offset") or tool_input.get("start") or 0)
+                tool_input = {**tool_input, "limit": max(1, int(tool_input["end"]) - _end_off)}
+            except (TypeError, ValueError):
+                pass  # 숫자 아님 — 기존 흐름(무시)에 맡김, 런타임 param 경고층이 알림
         # 파이프라인 자동 바인딩: path 가 없으면 직전 step 결과에서 파일 경로 추출.
         # "방금 찾은 파일을 읽기"([self:file_find]{...} | take: 1 >> [self:read]) 조합 개통.
         if not (tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target")):

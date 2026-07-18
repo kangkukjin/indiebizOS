@@ -20,7 +20,9 @@ PROFILE_BRANCH_ALLOWLIST = {
     "backend/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/_forward_to_phone)
     "backend/api_launcher_web.py",    # phone_manifest runnable 필터(라우팅/렌더 substrate)
     "backend/channel_engine.py",      # nostr 채널 프로토콜 바인딩(드라이버)
-    "backend/indienet.py",            # nostr 통합 바인딩
+    "backend/indienet_common.py",     # nostr 통합 바인딩 — _ON_PHONE(프로파일 감지) 정의처
+                                      # (2026-07-18 모듈화: indienet.py 의 분기가 여기로 이주,
+                                      #  본체·믹스인은 _ON_PHONE 이름만 참조)
     "backend/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
     "backend/phone_notifications.py", # 폰 알림 센서 바인딩
     "backend/calendar_actions.py",    # 스케줄 발화 실행 substrate — 맥=GUI창+WS '보이는 실행' /

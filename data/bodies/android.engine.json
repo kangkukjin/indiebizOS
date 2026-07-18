@@ -88,6 +88,10 @@
     "ibl_usage_generator",
     "ibl_usage_rag",
     "indienet",
+    "indienet_common",
+    "indienet_publish",
+    "indienet_relay",
+    "indienet_social",
     "install_approvals",
     "korean_utils",
     "launcher_layout",
@@ -171,8 +175,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 165,
-    "engine": 152,
+    "total": 169,
+    "engine": 156,
     "blocklist": 13
   }
 }

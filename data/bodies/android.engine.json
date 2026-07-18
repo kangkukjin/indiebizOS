@@ -40,6 +40,7 @@
     "api_system_ai",
     "api_transforms",
     "api_tunnel",
+    "api_warehouse_feed",
     "api_websocket",
     "api_xray",
     "auto_response",
@@ -152,6 +153,7 @@
     "tool_selector",
     "trigger_engine",
     "vocab_crystallization",
+    "warehouse_feed",
     "web_collector",
     "websocket_manager",
     "workflow_engine",
@@ -175,8 +177,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 169,
-    "engine": 156,
+    "total": 171,
+    "engine": 158,
     "blocklist": 13
   }
 }

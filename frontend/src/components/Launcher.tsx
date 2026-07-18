@@ -26,6 +26,7 @@ import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
 import ManualMode from './ManualMode';
 import { ForageBrowser } from './ForageBrowser';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
+import { WarehouseView } from './WarehouseView';
 import { useLauncherDesktop } from './launcher-components/useLauncherDesktop';
 import type {
   SystemAISettings,
@@ -33,8 +34,8 @@ import type {
   MidtierAISettings,
 } from './launcher-components';
 
-// 런처 상단 모드 선택기의 다섯 표면 (순서 = 드롭다운 표시 순서).
-const LAUNCHER_MODES = ['browser', 'autopilot', 'manual', 'app', 'business'] as const;
+// 런처 상단 모드 선택기의 여섯 표면 (순서 = 드롭다운 표시 순서).
+const LAUNCHER_MODES = ['browser', 'autopilot', 'manual', 'app', 'business', 'warehouse'] as const;
 type LauncherMode = typeof LAUNCHER_MODES[number];
 const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
   browser: { label: '검색 브라우저', icon: Search },
@@ -42,6 +43,7 @@ const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = 
   manual: { label: '조종실', icon: Gauge },
   app: { label: '앱', icon: LayoutGrid },
   business: { label: '비즈니스', icon: Building2 },
+  warehouse: { label: '공유창고', icon: Package },
 };
 
 export function Launcher() {
@@ -851,6 +853,8 @@ export function Launcher() {
           <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} />
         ) : launcherTab === 'business' ? (
           <BusinessInstrumentView />
+        ) : launcherTab === 'warehouse' ? (
+          <WarehouseView />
         ) : launcherTab === 'manual' ? (
           <ManualMode />
         ) : isLoading ? (

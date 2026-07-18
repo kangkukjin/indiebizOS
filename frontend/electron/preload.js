@@ -3,7 +3,7 @@
  * 렌더러 프로세스에서 안전하게 사용할 수 있는 API 노출
  */
 
-const { contextBridge, ipcRenderer, clipboard } = require('electron');
+const { contextBridge, ipcRenderer, clipboard, webUtils } = require('electron');
 
 // 렌더러 프로세스에 노출할 API
 contextBridge.exposeInMainWorld('electron', {
@@ -131,6 +131,12 @@ contextBridge.exposeInMainWorld('electron', {
 
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => ipcRenderer.invoke('select-images'),
+
+  // 임의 파일 선택 다이얼로그 (다중 선택, 확장자 무필터 — 공유창고 넣기)
+  selectFiles: () => ipcRenderer.invoke('select-files'),
+
+  // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
+  getPathForFile: (file) => webUtils.getPathForFile(file),
 
   // === 포식 브라우저 비밀번호 금고 (크롬 비번 채우기) ===
   foragePwListHost: (url) => ipcRenderer.invoke('forage-pw-list-host', url),

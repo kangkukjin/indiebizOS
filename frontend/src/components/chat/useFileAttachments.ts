@@ -38,7 +38,9 @@ export function useFileAttachments() {
 
   // 문서 파일 처리 (.pages, .docx, .pdf)
   const handleDocumentFile = (file: File) => {
-    const filePath = (file as any).path || '';
+    // Electron 32+ 에서 File.path 가 제거됨 → webUtils.getPathForFile 브리지로 실경로 확보.
+    // 브라우저(비Electron) 환경에선 window.electron 부재 → 빈 문자열 폴백(내용 폴백 경로).
+    const filePath = window.electron?.getPathForFile?.(file) || '';
     const fileName = file.name;
     const ext = fileName.toLowerCase().split('.').pop() || '';
     setAttachedDocuments(prev => [...prev, { file, filePath, fileName, fileType: ext }]);

@@ -212,16 +212,226 @@ document.addEventListener('change',function(ev){
 /* ===== 표면 토글 ===== */
 function setSurface(s){
   surface=s;
-  ['autopilot','manual','app','forage'].forEach(k=>{
+  ['autopilot','manual','app','forage','warehouse'].forEach(k=>{
     document.getElementById('t-'+k).classList.toggle('on',k===s);
     document.getElementById('p-'+k).classList.toggle('on',k===s);
   });
   if(s==='app' && !appHomeRendered) renderAppHome();
   if(s==='forage' && !fgInit){ fgInit=true; fgNav('board'); }
+  if(s==='warehouse') whLoad(WH_LEVEL);
 }
 function refreshSurface(){
   if(surface==='autopilot') apLoad();
   else if(surface==='app'){ appBackHome(); appHomeRendered=false; renderAppHome(true); }  /* 매니페스트 강제 재fetch */
+  else if(surface==='warehouse') whLoad(WH_LEVEL);
+}
+
+/* ================= 공유창고 (레벨별 폴더 — 소유자 리모컨) =================
+   list/remove 는 로그인 세션으로 warehouse-admin 에 그대로 도달. 넣기는 데스크탑처럼
+   로컬 경로가 없으므로 파일 바이트를 upload 엔드포인트로 직접 올린다(한 파일 = 한 요청). */
+let WH_LEVEL = Number(localStorage.getItem('indiebiz_wh_level')) || 0;
+if(!(WH_LEVEL>=0 && WH_LEVEL<=4)) WH_LEVEL = 0;
+let whData = null;
+function whBytes(n){ if(n<1024)return n+'B'; if(n<1048576)return (n/1024).toFixed(1)+'KB'; if(n<1073741824)return (n/1048576).toFixed(1)+'MB'; return (n/1073741824).toFixed(2)+'GB'; }
+function whIcon(name){ const e=(name.split('.').pop()||'').toLowerCase();
+  if(/^(mp4|mov|avi|mkv|webm)$/.test(e))return '🎬'; if(/^(mp3|m4a|wav|flac|ogg)$/.test(e))return '🎵';
+  if(/^(zip|tar|gz|7z|rar)$/.test(e))return '🗜️'; if(/^(md|txt|pdf|docx?|hwp|xlsx|csv|pptx?)$/.test(e))return '📄'; return '📁'; }
+/* 소유자 열람 URL — 세션 쿠키로 도달. 사진 표시·동영상 재생(비호환 코덱은 서버가 H.264 변환)·텍스트 열람. */
+function whFileUrl(name){ return API+'/portal/warehouse-admin/file?level='+WH_LEVEL+'&name='+encodeURIComponent(name); }
+function whErr(m){ const e=document.getElementById('whErr'); if(!e)return;
+  if(m){ e.textContent=m; e.style.display=''; } else e.style.display='none'; }
+async function whLoad(lv){
+  WH_LEVEL = lv; localStorage.setItem('indiebiz_wh_level', String(lv));
+  whErr('');
+  try{
+    const r=await jfetch('/portal/warehouse-admin/list?level='+lv);
+    if(!r.ok){
+      /* 폰은 맥 프록시라 집 PC 가 꺼져 있으면 503 — 서버가 준 안내를 그대로 보여준다 */
+      let m='HTTP '+r.status;
+      try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){}
+      throw new Error(m);
+    }
+    whData=await r.json(); whRender();
+  }catch(e){ whErr('불러오기 실패: '+e.message); }
+}
+function whRender(){
+  const d=whData; if(!d) return;
+  document.getElementById('whTitle').textContent=d.title||'공유창고';
+  const url=document.getElementById('whUrl');
+  if(d.public_url){ url.href=d.public_url; url.textContent=d.public_url.replace(/^https?:\\/\\//,''); url.style.display=''; }
+  else url.style.display='none';
+  /* 레벨 탭 */
+  const lv=document.getElementById('whLevels'); let h='';
+  /* 레벨=0~4 숫자일 뿐 — 의미(누가 몇인지)는 사용자가 정한다. 이름표 붙이지 않음 */
+  for(let i=0;i<=4;i++){ const cnt=(d.levels&&d.levels[String(i)])||0;
+    h+='<button class="wh-lv'+(i===WH_LEVEL?' on':'')+'" onclick="whLoad('+i+')">'
+      +'<span>레벨 '+i+'</span><span class="cnt">'+cnt+'</span></button>'; }
+  lv.innerHTML=h;
+  /* 파일 목록 */
+  const list=document.getElementById('whList'); const files=d.files||[];
+  if(!files.length){ list.innerHTML='<div class="wh-empty">📦 비어 있어요<br>＋ 파일 올리기로 이 레벨 창고에 넣으세요</div>'; return; }
+  list.innerHTML=files.map(f=>{
+    const enc=encodeURIComponent(f.name);
+    const url=whFileUrl(f.name);           /* 열기 = 사진 표시·동영상 재생·텍스트 열람 */
+    const isImg=/\\.(jpe?g|png|gif|webp)$/i.test(f.name);
+    const thumb=isImg
+      ? '<img src="'+url+'" onerror="this.style.display=\\'none\\'">'
+      : '<span class="ic">'+whIcon(f.name)+'</span>';
+    return '<div class="wh-item">'
+      +'<a class="op" href="'+url+'" target="_blank" rel="noopener">'+thumb+'</a>'
+      +'<a class="tx op" href="'+url+'" target="_blank" rel="noopener">'
+      +'<div class="nm">'+esc(f.name)+'</div>'
+      +'<div class="mt">'+whBytes(f.bytes)+' · '+esc((f.mtime||'').replace('T',' '))+'</div></a>'
+      +'<a class="dl" href="'+url+'&download=1" download title="내려받기">⬇</a>'
+      +'<button class="rm" title="빼기 (휴지통으로 이동 — 복구 가능)" onclick="whRemove(\\''+enc+'\\')">🗑</button></div>';
+  }).join('');
+}
+async function whUpload(files){
+  if(!files||!files.length) return;
+  const arr=Array.from(files); const busy=document.getElementById('whBusy');
+  whErr('');
+  let ok=0, fail=0;
+  for(let i=0;i<arr.length;i++){
+    const f=arr[i]; busy.textContent='올리는 중… '+(i+1)+'/'+arr.length;
+    try{
+      const r=await fetch(API+'/portal/warehouse-admin/upload?level='+WH_LEVEL+'&filename='+encodeURIComponent(f.name),
+        {method:'POST', headers:{'Content-Type':f.type||'application/octet-stream'}, body:f});
+      if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
+      ok++;
+    }catch(e){ fail++; whErr(esc(f.name)+' 실패: '+e.message); }
+  }
+  busy.textContent='';
+  document.getElementById('whFile').value='';
+  await whLoad(WH_LEVEL);
+  if(fail && !ok) whErr(fail+'건 업로드 실패');
+}
+async function whRemove(nameEnc){
+  const name=decodeURIComponent(nameEnc);
+  try{
+    await jfetch('/portal/warehouse-admin/remove',{method:'POST',body:JSON.stringify({level:WH_LEVEL,name:name})});
+  }catch(e){ /* 재조회가 진실 */ }
+  whLoad(WH_LEVEL);
+}
+
+/* ===== 공유창고 — 이웃 탭 (창고 피드: 등기부 + 타임라인 + 전수 파일명 검색) =====
+   백엔드 /warehouse-feed/* — 폴러(30분 주기, AI·토큰 0)가 쌓은 걸 읽는다.
+   클릭 = 이웃의 공개 창고(/·/f?path=)가 새 탭으로 — 이웃 쪽 표면 재사용, 신규 0. */
+let WH_TAB='mine'; let wfNb=[]; let wfCands=[]; let wfItems=[]; let wfResults=null; let wfShown=[];
+function whTab(t){ WH_TAB=t;
+  document.getElementById('whTabMine').classList.toggle('on', t==='mine');
+  document.getElementById('whTabNb').classList.toggle('on', t!=='mine');
+  document.getElementById('whMine').style.display = (t==='mine'?'':'none');
+  document.getElementById('whNb').style.display = (t==='mine'?'none':'');
+  document.getElementById('whAddBtn').style.display = (t==='mine'?'':'none');
+  if(t!=='mine') wfLoad();
+}
+function whRefresh(){ if(WH_TAB==='mine') whLoad(WH_LEVEL); else wfPoll(); }
+function wfErr(m){ const e=document.getElementById('wfErr'); if(!e)return;
+  if(m){ e.textContent=m; e.style.display=''; } else e.style.display='none'; }
+async function wfLoad(){
+  wfErr('');
+  try{
+    const [rn,rf]=await Promise.all([jfetch('/warehouse-feed/neighbors'), jfetch('/warehouse-feed/feed?limit=100')]);
+    if(!rn.ok||!rf.ok) throw new Error('HTTP '+rn.status+'/'+rf.status);
+    const dn=await rn.json(), df=await rf.json();
+    wfNb=dn.neighbors||[]; wfCands=dn.candidates||[]; wfItems=df.items||[]; wfResults=null;
+    const qi=document.getElementById('wfQ'); if(qi) qi.value='';
+    wfRender();
+  }catch(e){ wfErr('불러오기 실패: '+e.message); }
+}
+function wfRender(){
+  const bar=document.getElementById('wfNeighbors'); let h='';
+  wfNb.forEach(n=>{
+    const st = n.ok===0 ? '<span class="err">연결 안 됨</span>'
+                        : '<span class="cnt">'+(n.file_count==null?'?':n.file_count)+'개</span>';
+    h+='<span class="wh-chip"><a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
+      +st
+      +'<button title="창고 메모" onclick="wfMemo('+n.neighbor_id+')">✎</button>'
+      +'<button title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)" onclick="wfRemove('+n.contact_id+')">✕</button></span>';
+  });
+  h+='<button class="wh-chip" style="border-style:dashed;background:none;color:var(--dim);cursor:pointer" onclick="wfToggleAdd()">＋ 창고이웃 등록</button>';
+  h+='<span style="flex:1"></span><button class="wf-go" title="모든 이웃 창고를 지금 둘러보기 (평소엔 30분마다 자동)" onclick="wfPoll()">↻ 지금 둘러보기</button>';
+  bar.innerHTML=h;
+  const sel=document.getElementById('wfCand');
+  sel.innerHTML='<option value="">새 이웃으로…</option>'+wfCands.map(c=>'<option value="'+c.id+'">기존 이웃: '+esc(c.name)+'</option>').join('');
+  const list=document.getElementById('wfFeed'); const items=(wfResults!=null?wfResults:wfItems);
+  wfShown=items;
+  if(!wfNb.length){ list.innerHTML='<div class="wh-empty">📡 창고이웃이 아직 없어요<br>＋ 창고이웃 등록으로 이웃의 창고 주소를 넣으면<br>창고의 변화가 여기로 흘러옵니다</div>'; return; }
+  if(!items.length){ list.innerHTML='<div class="wh-empty">'+(wfResults!=null?'검색 결과가 없어요':'아직 새 소식이 없어요')+'</div>'; return; }
+  list.innerHTML=items.map((f,i)=>{
+    const kind=f.kind==='new'?'<span class="wf-kind">새 파일</span>'
+      :(f.kind==='changed'?'<span class="wf-kind" style="color:var(--dim)">갱신</span>':'');
+    return '<div class="wh-item">'
+      +'<span class="ic">'+whIcon(f.path)+'</span>'
+      +'<div class="tx">'
+      +'<a class="op" style="display:block" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기"><div class="nm">'+esc(f.path)+'</div></a>'
+      +'<div class="mt">'+kind+'<span style="color:var(--acc)">'+esc(f.neighbor_name)+'</span> · '+whBytes(f.bytes||0)+' · '+esc((f.mtime||'').replace('T',' '))+'</div>'
+      +'</div>'
+      +'<a class="dl" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기">↗</a>'
+      +'<a class="dl" href="'+esc(f.neighbor_home||'#')+'" target="_blank" rel="noopener" title="'+esc(f.neighbor_name)+'의 창고 열기">📦</a>'
+      +'<button class="rm" title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성)" onclick="wfRetweet('+i+')">📣</button>'
+      +'<a class="dl" href="'+esc(f.url)+(f.url&&f.url.indexOf('?')>=0?'&':'?')+'download=1" title="내려받기">⬇</a>'
+      +'</div>';
+  }).join('');
+}
+async function wfRetweet(i){
+  const f=(wfShown||[])[i]; if(!f) return;
+  /* 레벨=0~4 숫자일 뿐, 의미는 사용자가 정한다 */
+  const lvRaw=prompt("'"+f.path+"' 을(를) 내 창고 어느 레벨(0~4)에 링크 파일로 소개할까요?", '0');
+  if(lvRaw===null) return;
+  const lv=parseInt(lvRaw,10);
+  if(!(lv>=0 && lv<=4)){ wfErr('레벨은 0~4 숫자여야 해요'); return; }
+  document.getElementById('whBusy').textContent='내 창고에 소개하는 중…';
+  try{
+    const r=await jfetch('/warehouse-feed/retweet',{method:'POST',body:JSON.stringify({url:f.url,name:f.path,level:lv})});
+    if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
+  }catch(e){ wfErr('리트윗 실패: '+e.message); }
+  document.getElementById('whBusy').textContent='';
+}
+function wfToggleAdd(){ const r=document.getElementById('wfAddRow');
+  r.style.display = (r.style.display==='none'?'':'none'); }
+async function wfAdd(){
+  const cand=document.getElementById('wfCand').value;
+  const name=document.getElementById('wfName').value.trim();
+  const url=document.getElementById('wfUrl').value.trim();
+  if(!url){ wfErr('창고 주소가 필요해요 (이름은 비우면 창고 제목으로)'); return; }
+  const body={url:url}; if(cand) body.neighbor_id=Number(cand); else if(name) body.name=name;
+  document.getElementById('whBusy').textContent='창고 등록·첫 폴링 중…';
+  try{
+    const r=await jfetch('/warehouse-feed/neighbors/add',{method:'POST',body:JSON.stringify(body)});
+    if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
+    document.getElementById('wfName').value=''; document.getElementById('wfUrl').value='';
+    document.getElementById('wfAddRow').style.display='none';
+  }catch(e){ wfErr(e.message); }
+  document.getElementById('whBusy').textContent='';
+  wfLoad();
+}
+async function wfRemove(contactId){
+  try{ await jfetch('/warehouse-feed/neighbors/remove',{method:'POST',body:JSON.stringify({contact_id:contactId})}); }
+  catch(e){ /* 재조회가 진실 */ }
+  wfLoad();
+}
+async function wfMemo(id){
+  const n=wfNb.find(x=>x.neighbor_id===id);
+  const memo=prompt('창고 메모 — 이 창고에 뭐가 사는지 적어두면 나중에 어느 이웃부터 볼지 압니다', (n&&n.warehouse_memo)||'');
+  if(memo===null) return;
+  try{ await jfetch('/warehouse-feed/neighbors/memo',{method:'POST',body:JSON.stringify({neighbor_id:id,memo:memo})}); }
+  catch(e){ /* 재조회가 진실 */ }
+  wfLoad();
+}
+async function wfPoll(){
+  document.getElementById('whBusy').textContent='이웃 창고 둘러보는 중…';
+  try{ await jfetch('/warehouse-feed/poll',{method:'POST',body:'{}'}); }catch(e){}
+  document.getElementById('whBusy').textContent='';
+  wfLoad();
+}
+async function wfSearch(v){
+  const t=(v||'').trim();
+  if(!t){ wfResults=null; wfRender(); return; }
+  try{
+    const r=await jfetch('/warehouse-feed/search?q='+encodeURIComponent(t));
+    const d=await r.json(); wfResults=d.items||[]; wfRender();
+  }catch(e){ /* 검색 실패는 조용히 */ }
 }
 
 /* ================= 자율주행 (드릴다운) ================= */

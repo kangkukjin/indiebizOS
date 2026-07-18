@@ -244,6 +244,9 @@ export interface ElectronAPI {
   // 이미지 파일 선택 다이얼로그 (다중 선택)
   selectImages: () => Promise<string[] | null>;
 
+  // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
+  getPathForFile?: (file: File) => string;
+
   copyToClipboard?: (text: string) => void;
 }
 

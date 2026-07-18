@@ -292,6 +292,50 @@ a{ color:var(--info); }
 .fg-row .rx .ru{ font-size:10px; color:var(--dim); opacity:.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .fg-row .rd{ color:var(--dim); font-size:16px; padding:2px 8px; }
 .fg-row .rprev{ font-size:11px; color:var(--dim); }
+
+/* === 공유창고 (레벨별 폴더 관리 — 원격 리모컨) === */
+.wh-head{ display:flex; align-items:center; gap:8px; padding:11px 14px; background:var(--bg2); border-bottom:1px solid var(--line); flex-shrink:0; }
+.wh-title{ font-weight:700; font-size:15px; }
+.wh-url{ font-size:11px; color:var(--dim); text-decoration:none; word-break:break-all; }
+.wh-url:hover{ color:var(--acc); }
+.wh-busy{ font-size:12px; color:var(--dim); }
+.wh-add{ display:inline-flex; align-items:center; padding:8px 13px; background:var(--acc); color:#fff; border-radius:9px; font-size:13px; font-weight:600; cursor:pointer; }
+.wh-add:hover{ background:var(--acc2); }
+.wh-levels{ display:flex; gap:6px; flex-wrap:wrap; padding:10px 14px; background:var(--bg2); border-bottom:1px solid var(--line); flex-shrink:0; }
+.wh-lv{ display:flex; align-items:center; gap:6px; padding:7px 12px; background:var(--bg); border:1px solid var(--line); border-radius:999px; color:var(--dim); font-size:12px; font-weight:600; }
+.wh-lv.on{ background:var(--acc); border-color:var(--acc); color:#fff; }
+.wh-lv .cnt{ padding:1px 7px; border-radius:999px; background:var(--bg3); color:var(--dim); font-size:11px; }
+.wh-lv.on .cnt{ background:rgba(255,255,255,.25); color:#fff; }
+.wh-err{ margin:10px 14px 0; padding:9px 12px; background:rgba(220,38,38,.12); border:1px solid rgba(220,38,38,.3); border-radius:9px; color:#f87171; font-size:12px; }
+.wh-list{ flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+.wh-item{ display:flex; align-items:center; gap:11px; padding:9px 11px; background:var(--bg2); border:1px solid var(--line); border-radius:11px; }
+.wh-item img,.wh-item .ic{ width:42px; height:42px; border-radius:8px; flex-shrink:0; object-fit:cover; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:20px; }
+.wh-item .op{ text-decoration:none; color:inherit; display:block; flex-shrink:0; }
+.wh-item .op:hover .nm{ color:var(--info); text-decoration:underline; }
+.wh-item .tx{ flex:1; min-width:0; }
+.wh-item .tx .nm{ font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wh-item .tx .mt{ font-size:11px; color:var(--dim); margin-top:2px; }
+.wh-item .dl{ color:var(--dim); text-decoration:none; font-size:16px; padding:4px 8px; flex-shrink:0; }
+.wh-item .dl:hover{ color:var(--info); }
+.wh-item .rm{ background:none; border:none; color:var(--dim); font-size:16px; padding:4px 8px; flex-shrink:0; }
+.wh-item .rm:hover{ color:var(--acc); }
+.wh-empty{ padding:44px 14px; text-align:center; color:var(--dim); font-size:13px; line-height:1.7; }
+/* 공유창고 — 이웃 탭 (창고 피드) */
+.wh-tabs{ display:flex; gap:3px; background:var(--bg3); border-radius:9px; padding:3px; margin-left:6px; }
+.wh-tabs button{ border:none; background:transparent; color:var(--dim); font-size:12px; font-weight:600; padding:6px 12px; border-radius:7px; }
+.wh-tabs button.on{ background:var(--bg2); color:var(--acc); }
+.wh-nb-bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:10px 14px; background:var(--bg2); border-bottom:1px solid var(--line); }
+.wh-chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; background:var(--bg); border:1px solid var(--line); border-radius:999px; font-size:12px; }
+.wh-chip a{ color:var(--txt); text-decoration:none; font-weight:600; }
+.wh-chip a:hover{ color:var(--info); text-decoration:underline; }
+.wh-chip .cnt{ color:var(--dim); font-size:11px; }
+.wh-chip .err{ color:#f87171; font-size:11px; }
+.wh-chip button{ background:none; border:none; color:var(--dim); font-size:11px; padding:0 2px; }
+.wf-go{ background:var(--acc); color:#fff; border:none; border-radius:8px; font-size:12px; font-weight:600; padding:7px 12px; }
+.wf-row{ display:flex; gap:6px; padding:8px 14px; background:var(--bg2); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.wf-row input,.wf-row select{ background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:12px; padding:7px 9px; }
+.wf-row input.grow{ flex:1; min-width:180px; }
+.wf-kind{ font-size:10px; padding:1px 5px; border-radius:5px; background:var(--bg3); color:var(--acc); margin-right:5px; }
 </style>
 </head>
 <body>
@@ -325,6 +369,8 @@ a{ color:var(--info); }
       <span class="em">📱</span><span>앱</span><span class="hint">속도·주권</span></button>
     <button class="surf-tab" id="t-forage" onclick="setSurface('forage')">
       <span class="em">🔍</span><span>포식</span><span class="hint">검색·수집</span></button>
+    <button class="surf-tab" id="t-warehouse" onclick="setSurface('warehouse')">
+      <span class="em">📦</span><span>공유창고</span><span class="hint">레벨·공개</span></button>
   </div>
 
   <!-- 자율주행 — 드릴다운: ① 대상 선택(시스템AI/스위치/프로젝트→에이전트) → ② 대화/결과 -->
@@ -459,6 +505,43 @@ a{ color:var(--info); }
         <button id="fgnav-library" onclick="fgNav('library')">도서관</button>
       </div>
       <div class="fg-list" id="fgList"></div>
+    </div>
+  </div>
+
+  <!-- 공유창고 — 레벨(0 손님~4 가족)별 폴더. 원격은 파일을 업로드로 넣고(맥은 드롭/선택),
+       빼기=휴지통 이동(가역). 소유자 리모컨: 로그인 세션으로 warehouse-admin 도달. -->
+  <div class="panel" id="p-warehouse">
+    <div class="wh-head">
+      <span class="wh-title" id="whTitle">공유창고</span>
+      <a class="wh-url" id="whUrl" href="#" target="_blank" rel="noopener" style="display:none"></a>
+      <span class="wh-tabs">
+        <button id="whTabMine" class="on" onclick="whTab('mine')">내 창고</button>
+        <button id="whTabNb" onclick="whTab('nb')">이웃</button>
+      </span>
+      <span style="flex:1"></span>
+      <span class="wh-busy" id="whBusy"></span>
+      <label class="wh-add" id="whAddBtn">
+        <input type="file" id="whFile" multiple style="display:none" onchange="whUpload(this.files)">＋ 파일 올리기</label>
+      <button class="iconbtn" title="새로고침" onclick="whRefresh()">↻</button>
+    </div>
+    <div id="whMine">
+      <div class="wh-levels" id="whLevels"></div>
+      <div class="wh-err" id="whErr" style="display:none"></div>
+      <div class="wh-list" id="whList"></div>
+    </div>
+    <div id="whNb" style="display:none">
+      <div class="wh-nb-bar" id="wfNeighbors"></div>
+      <div class="wf-row" id="wfAddRow" style="display:none">
+        <select id="wfCand"><option value="">새 이웃으로…</option></select>
+        <input id="wfName" placeholder="이웃 이름 (비우면 창고 제목)">
+        <input id="wfUrl" class="grow" placeholder="창고 주소 (https://…)">
+        <button class="wf-go" onclick="wfAdd()">등록</button>
+      </div>
+      <div class="wf-row">
+        <input id="wfQ" class="grow" placeholder="🔍 이웃 창고 전체에서 파일 이름으로 찾기" oninput="wfSearch(this.value)">
+      </div>
+      <div class="wh-err" id="wfErr" style="display:none"></div>
+      <div class="wh-list" id="wfFeed"></div>
     </div>
   </div>
 </div>

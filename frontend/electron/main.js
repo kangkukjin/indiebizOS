@@ -1406,6 +1406,19 @@ function setupIPC() {
 
     return result.filePaths;
   });
+
+  // 임의 파일 선택 다이얼로그 (다중 선택, 확장자 무필터 — 공유창고 넣기)
+  ipcMain.handle('select-files', async () => {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      title: '파일 선택',
+      buttonLabel: '선택'
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+    return result.filePaths;
+  });
 }
 
 // ─── Launcher WS 브릿지 (메인 프로세스 상주) ───

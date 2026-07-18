@@ -16,6 +16,7 @@ import re
 import json
 import time
 import threading
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Header, Request
@@ -128,7 +129,8 @@ async def page(slug: str, request: Request, x_showcase_secret: str = Header(defa
 
 _MANIFEST_ABOUT = ("이 노드가 공유하는 파일 목록(요청자 레벨로 절단). url 로 내용을 가져간다. "
                    "운영자가 이웃으로 승급하면 더 많은 파일이 열린다. has_restricted=잠긴 것 "
-                   "존재(내용은 안 샘 = FOAF 라우팅 단서).")
+                   "존재(내용은 안 샘 = FOAF 라우팅 단서). 회원이면 login 계약대로 로그인해 "
+                   "쿠키를 받으면 같은 주소들이 더 열린다.")
 
 _WAREHOUSE_ROOT = _ROOT / "공유창고"
 _WAREHOUSE_LEVELS = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4"}
@@ -179,6 +181,20 @@ def _viewer_level(core, request: Request):
     return viewer, (int(viewer.get("level", 0)) if viewer else 0)
 
 
+def _parse_urlfile(p) -> str:
+    """.url(InternetShortcut) 파일에서 URL= 대상 추출. 실패하면 빈 문자열(일반 파일로 서빙)."""
+    try:
+        for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if line.upper().startswith("URL="):
+                t = line[4:].strip()
+                if t.startswith("http://") or t.startswith("https://"):
+                    return t
+    except Exception:
+        pass
+    return ""
+
+
 def _accessible_files(level: int, base: str = "") -> list:
     """레벨 0..level 창고를 병합한 단일 파일 목록 — 방문자에게 레벨 구조를 흘리지 않는다.
     같은 상대경로는 높은 레벨 판이 이김 → 비즈니스문서.md 가 자동으로 딱 1개(내 레벨 판)."""
@@ -192,8 +208,18 @@ def _accessible_files(level: int, base: str = "") -> list:
                     continue
                 rel = str(p.relative_to(d))
                 if rel not in seen:
-                    seen[rel] = {"name": rel, "bytes": p.stat().st_size,
-                                 "url": f"{base}/f?path={quote(rel)}"}
+                    st = p.stat()
+                    entry = {"name": rel, "bytes": st.st_size,
+                             "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds"),
+                             "url": f"{base}/f?path={quote(rel)}"}
+                    # 리트윗 링크 파일(.url, InternetShortcut) — target 을 해석해 url 로 노출:
+                    # 방문자·구독자 클릭이 곧장 원 창고의 원 파일로 간다(포인터=파일인 FOAF 발견).
+                    if rel.lower().endswith(".url") and st.st_size <= 4096:
+                        target = _parse_urlfile(p)
+                        if target:
+                            entry["url"] = target
+                            entry["link"] = True
+                    seen[rel] = entry
         except Exception:
             continue
     # 비즈니스문서(노드 소개)가 맨 앞, 나머지는 이름순
@@ -209,6 +235,11 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
         "node_url": (base + "/manifest") if base else "/manifest",
         "viewer_level": level,
         "is_member": is_member,
+        # 로그인 계약(기계 판독) — 외부 AI가 홈 HTML 을 역공학하지 않아도 되게 여기 명시.
+        "login": {"url": (base + "/login") if base else "/login", "method": "POST",
+                  "content_type": "application/json",
+                  "body": {"user_id": "<아이디>", "password": "<비밀번호>"},
+                  "note": "성공 시 쿠키(pk)가 실리고 이후 /manifest·파일 url 이 내 레벨로 열린다."},
         "files": _accessible_files(level, base),
         "has_restricted": level < max(_WAREHOUSE_LEVELS),
     }
@@ -240,10 +271,15 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     # 단일 목록 — 방문자에게 레벨 구조(어느 파일이 어느 등급인지)를 보여주지 않는다.
     # 비즈니스문서는 내 레벨 판 1개만(높은 레벨 판이 이기는 병합 규칙이 자동으로 보장).
     files = _accessible_files(level)
-    rows = "".join(
-        f'<li><a href="{_h.escape(f["url"])}">{_h.escape(f["name"])}</a>'
-        f'<span class="sz">{_fmt_bytes(f["bytes"])}</span></li>'
-        for f in files) or '<li class="empty">비어 있어요</li>'
+    # 이름 = 열기(브라우저가 표시·재생), ⬇ = 내려받기(원본 바이트). 해석은 가져간 쪽 몫.
+    def _row(f):
+        u = _h.escape(f["url"])
+        sep = "&" if "?" in f["url"] else "?"
+        return (f'<li><a href="{u}">{_h.escape(f["name"])}</a>'
+                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>'
+                f'<a class="dl" href="{u}{sep}download=1" download '
+                f'title="내려받기">⬇</a></li>')
+    rows = "".join(_row(f) for f in files) or '<li class="empty">비어 있어요</li>'
     sections = [f'<section><ul>{rows}</ul></section>']
     locked_note = ('<p class="locked">🔒 더 높은 레벨의 창고가 있어요 — 로그인하거나 승급하면 열립니다.</p>'
                    if level < max(_WAREHOUSE_LEVELS) else '')
@@ -263,9 +299,11 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
 body{{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:2rem auto;padding:0 1rem;color:#222}}
 header{{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;border-bottom:2px solid #222;padding-bottom:.7rem}}
 h1{{font-size:1.4rem;margin:0}} h2{{font-size:1rem;margin:1.2rem 0 .4rem;color:#555}}
-ul{{list-style:none;padding:0;margin:0}} li{{padding:.45rem .2rem;border-bottom:1px solid #eee;display:flex;justify-content:space-between;gap:1rem}}
+ul{{list-style:none;padding:0;margin:0}} li{{padding:.45rem .2rem;border-bottom:1px solid #eee;display:flex;align-items:center;gap:1rem}}
+li>a:first-child{{flex:1;min-width:0}}
 a{{color:#0a58ca;text-decoration:none;word-break:break-all}} a:hover{{text-decoration:underline}}
 .sz{{color:#999;font-size:.85rem;white-space:nowrap}} .empty{{color:#aaa}} .locked{{color:#888;font-size:.9rem}}
+.dl{{color:#555;text-decoration:none;font-size:1.05rem;padding:0 .2rem;flex-shrink:0}} .dl:hover{{color:#0a58ca;text-decoration:none}}
 form{{display:flex;gap:.4rem;flex-wrap:wrap}} input{{padding:.35rem .5rem;border:1px solid #ccc;border-radius:6px;width:8.5rem}}
 button{{padding:.35rem .8rem;border:1px solid #222;background:#222;color:#fff;border-radius:6px;cursor:pointer}}
 .acct{{display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:#555}}
@@ -307,9 +345,86 @@ def _safe_rel(base: Path, rel: str) -> Path:
     return p
 
 
+_WH_MEDIA_CACHE = _ROOT / "data" / "warehouse_media_web"   # 동영상 트랜스코드 캐시
+
+
+def _download_headers(name: str) -> dict:
+    """Content-Disposition: attachment — 한글 파일명은 RFC 5987(filename*)로.
+
+    ASCII 폴백은 구형 클라이언트용. 한글만 있는 이름은 ASCII 로 죽으니(예 '비즈니스문서.md'
+    → '.md') 확장자는 살리고 몸통은 'file' 로 세운다. 요즘 브라우저는 filename* 를 쓴다."""
+    from urllib.parse import quote
+    stem, dot, ext = name.rpartition(".")
+    a_stem = (stem if dot else name).encode("ascii", "ignore").decode().strip(" .") or "file"
+    a_ext = ext.encode("ascii", "ignore").decode().strip() if dot else ""
+    ascii_fb = f"{a_stem}.{a_ext}" if a_ext else a_stem
+    return {"Content-Disposition":
+            f'attachment; filename="{ascii_fb}"; filename*=UTF-8\'\'{quote(name)}'}
+
+
+def _serve_warehouse_file(abspath: Path, strip_exif: bool, download: bool = False):
+    """창고 파일 서빙 — showcase 와 같은 thumbnails 모듈 재사용.
+
+    ① 사진 + strip_exif → EXIF/GPS 벗긴 JPEG (공개면 전용. 창고는 '뭐든 던져넣기'라
+       촬영 위치가 딸려 나가기 쉽다 — 경계는 또렷해야 한다). 다운로드에도 적용 —
+       받아가는 경로로 GPS 가 새면 열람만 막은 게 무의미하다.
+    ② 동영상 + 브라우저 비재생 코덱(HEVC 등) → H.264 MP4 로 변환해 캐시.
+       코덱 판정이라 `.mp4` 껍데기 안의 HEVC 도 잡는다. 소유자 열람에도 적용 — 안 그러면
+       원격 런처에서 아이폰 영상이 그냥 안 열린다.
+       ★단 download 면 변환하지 않는다 — 받는 사람이 원하는 건 *원본*이지 재생용 사본이
+       아니고, 변환은 손실이다(브라우저 재생 제약은 다운로드엔 해당 없음).
+    ③ 그 외 → FileResponse 가 Content-Type + Range(206) 자동 처리 = 브라우저가 사진 표시·
+       동영상 재생·텍스트 열람. download 면 Content-Disposition 으로 저장 강제.
+
+    ★파일을 *읽어* 텍스트로 바꿔주지는 않는다(pdf/docx 변환 등). 창고는 바이트만 내주고
+    해석은 가져간 쪽 몫 = asker-pays. 변환을 여기서 하면 비용이 소유자에게 되돌아온다.
+    """
+    import mimetypes
+    from fastapi.responses import FileResponse, Response
+    import thumbnails
+
+    p = str(abspath)
+    nostore = {"Cache-Control": "no-store"}
+    if download:
+        nostore = {**nostore, **_download_headers(abspath.name)}
+    try:
+        kind = thumbnails.classify(p)
+    except Exception:
+        kind = None
+
+    if strip_exif and kind == "photo":
+        try:
+            if thumbnails.needs_exif_strip(p):
+                data = thumbnails.sanitize_image_bytes(p)
+                if data:
+                    return Response(content=data, media_type="image/jpeg", headers=nostore)
+        except Exception:
+            pass   # 벗기기 실패 시 아래 원본 폴백
+
+    if kind == "video" and not download:   # 다운로드는 원본 그대로
+        try:
+            if thumbnails.needs_video_transcode(p):
+                import hashlib
+                st = abspath.stat()
+                # mtime+size 를 키에 넣어 같은 이름으로 갈아끼워도 캐시가 낡지 않게.
+                key = hashlib.md5(f"{p}|{st.st_mtime_ns}|{st.st_size}".encode("utf-8")).hexdigest()[:16]
+                cache = _WH_MEDIA_CACHE / (key + ".mp4")
+                if not (cache.exists() and cache.stat().st_size > 0):
+                    cache.parent.mkdir(parents=True, exist_ok=True)
+                    thumbnails.transcode_video_to_mp4(p, str(cache))
+                if cache.exists() and cache.stat().st_size > 0:
+                    return FileResponse(str(cache), media_type="video/mp4", headers=nostore)
+        except Exception:
+            pass   # 변환 실패 시 원본 폴백(적어도 받아는 진다)
+
+    ctype = mimetypes.guess_type(abspath.name)[0] or "application/octet-stream"
+    return FileResponse(p, media_type=ctype, headers=nostore)
+
+
 @router.get("/file")
-async def node_file(request: Request, path: str = "",
+async def node_file(request: Request, path: str = "", download: int = 0,
                     x_showcase_secret: str = Header(default="")):
+    """공개 파일 서빙. `download=1` 이면 저장(내려받기) — 방문자·외부 AI 가 바이트를 가져간다."""
     _check_secret(x_showcase_secret)
     core = _core()
     _viewer, level = _viewer_level(core, request)
@@ -317,12 +432,151 @@ async def node_file(request: Request, path: str = "",
     for lv in sorted((l for l in _WAREHOUSE_LEVELS if l <= level), reverse=True):
         f = _safe_rel(_warehouse_dir(lv), path)
         if f.is_file():
-            import mimetypes
-            ctype = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
-            from fastapi.responses import FileResponse
-            return FileResponse(str(f), media_type=ctype,
-                                headers={"Cache-Control": "no-store"})
+            # 공개면 = EXIF 제거(열람이든 다운로드든)
+            return _serve_warehouse_file(f, strip_exif=True, download=bool(download))
     raise HTTPException(status_code=404, detail="no such file")
+
+
+# ── 창고 관리(소유자 전용) — 런처 '공유창고' 표면(데스크탑·원격)이 부른다. ────────
+# _check_secret 없음 + is_public_remote_path 미등록 → 익명 외부는 터널 게이트 401.
+# 단, 로그인된 원격 런처는 launcher_session 쿠키가 있어 remote_access_guard 를 통과한다
+# (= 소유자의 리모컨). 그래서 이 관리 엔드포인트는 "맥 로컬 + 로그인한 소유자 원격"에서
+# 도달한다. add=맥 로컬 파일 경로 복사(데스크탑 드롭/선택), upload=raw body 업로드(원격
+# 브라우저는 로컬 경로가 없으므로 바이트를 직접 올린다), 빼기=공유창고/휴지통/<level>/
+# 이동(가역 — 0..4 폴더만 서빙 대상이라 휴지통은 공개면에 안 나온다).
+_WH_UPLOAD_MAX_BYTES = 200 * 1024 * 1024   # 원격 업로드 1건 상한(200MB)
+
+def _admin_level(level) -> int:
+    try:
+        lv = int(level)
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad level")
+    if lv not in _WAREHOUSE_LEVELS:
+        raise HTTPException(status_code=400, detail="bad level")
+    return lv
+
+
+@router.get("/warehouse-admin/list")
+async def warehouse_admin_list(level: int = 0):
+    lv = _admin_level(level)
+    _ensure_warehouses()
+    counts = {}
+    for l in _WAREHOUSE_LEVELS:
+        d = _warehouse_dir(l)
+        counts[l] = sum(1 for p in d.rglob("*") if p.is_file() and not p.name.startswith("."))
+    files = []
+    d = _warehouse_dir(lv)
+    for p in d.rglob("*"):
+        if not p.is_file() or p.name.startswith("."):
+            continue
+        st = p.stat()
+        files.append({"name": str(p.relative_to(d)), "bytes": st.st_size, "path": str(p),
+                      "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
+    files.sort(key=lambda f: f["mtime"], reverse=True)
+    core = _core()
+    state = core.load_state()
+    base = (state.get("public_base") or "").rstrip("/")
+    labels = getattr(core, "LEVEL_LABELS", {}) or {}
+    return {"title": _warehouse_title(), "public_url": (base + "/") if base else "",
+            "levels": counts, "level": lv, "files": files,
+            "level_labels": {str(k): v for k, v in labels.items()}}
+
+
+@router.post("/warehouse-admin/add")
+async def warehouse_admin_add(request: Request):
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    lv = _admin_level(body.get("level", 0))
+    paths = body.get("paths") or []
+    if not isinstance(paths, list) or not paths:
+        raise HTTPException(status_code=400, detail="paths required")
+    import shutil
+    _ensure_warehouses()
+    dest_dir = _warehouse_dir(lv)
+    added, skipped = [], []
+    for raw in paths[:200]:
+        src = Path(str(raw)).expanduser()
+        if not src.is_file():
+            skipped.append({"path": str(raw), "reason": "파일이 아니에요(폴더이거나 없음)"})
+            continue
+        dest = dest_dir / src.name
+        n = 2
+        while dest.exists():
+            dest = dest_dir / f"{src.stem} ({n}){src.suffix}"
+            n += 1
+        try:
+            shutil.copy2(str(src), str(dest))
+            added.append(dest.name)
+        except Exception as e:
+            skipped.append({"path": str(raw), "reason": str(e)})
+    return {"ok": True, "level": lv, "added": added, "skipped": skipped}
+
+
+@router.post("/warehouse-admin/remove")
+async def warehouse_admin_remove(request: Request):
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    lv = _admin_level(body.get("level", 0))
+    name = str(body.get("name", ""))
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    src = _safe_rel(_warehouse_dir(lv), name)
+    if not src.is_file():
+        raise HTTPException(status_code=404, detail="no such file")
+    trash = _WAREHOUSE_ROOT / "휴지통" / _WAREHOUSE_LEVELS[lv]
+    trash.mkdir(parents=True, exist_ok=True)
+    dest = trash / src.name
+    if dest.exists():
+        dest = trash / f"{src.stem}.{int(time.time())}{src.suffix}"
+    src.rename(dest)   # 같은 볼륨 → 이동
+    return {"ok": True, "trashed": str(dest)}
+
+
+@router.get("/warehouse-admin/file")
+async def warehouse_admin_file(level: int = 0, name: str = "", download: int = 0):
+    """소유자 열람·내려받기 — 런처 창고 표면(데스크탑·원격)에서 파일을 연다/받는다.
+
+    공개면과 달리 EXIF 를 벗기지 않는다(내 파일의 원본을 본다). 동영상 변환은 열람에만 —
+    안 그러면 원격 런처에서 아이폰 영상이 열리지 않는다. `download=1` 은 원본 그대로."""
+    lv = _admin_level(level)
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    f = _safe_rel(_warehouse_dir(lv), name)
+    if not f.is_file():
+        raise HTTPException(status_code=404, detail="no such file")
+    return _serve_warehouse_file(f, strip_exif=False, download=bool(download))
+
+
+@router.post("/warehouse-admin/upload")
+async def warehouse_admin_upload(request: Request, level: int = 0, filename: str = ""):
+    """원격 업로드 — raw body(멀티파트 아님). 원격 런처는 로컬 파일 경로가 없으므로
+    바이트를 직접 올린다(add=맥 로컬 복사의 원격 짝). 한 번에 한 파일."""
+    lv = _admin_level(level)
+    name = os.path.basename((filename or "").strip()).lstrip(".")
+    if not name:
+        raise HTTPException(status_code=400, detail="filename required")
+    cl = request.headers.get("content-length")
+    if cl and int(cl) > _WH_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="too large")
+    body = await request.body()
+    if not body:
+        raise HTTPException(status_code=400, detail="empty body")
+    if len(body) > _WH_UPLOAD_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="too large")
+    _ensure_warehouses()
+    dest_dir = _warehouse_dir(lv)
+    dest = _safe_rel(dest_dir, name)     # 경로이탈 방어(../ 등)
+    stem, suffix = dest.stem, dest.suffix
+    n = 2
+    while dest.exists():
+        dest = dest_dir / f"{stem} ({n}){suffix}"
+        n += 1
+    dest.write_bytes(body)
+    return {"ok": True, "level": lv, "added": dest.name}
 
 
 # ── 단일 노드 로그인 — 루트(/) 스코프 쿠키 pk. 슬러그 없는 주소에서도 레벨 절단면을 읽게. ──

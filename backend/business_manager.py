@@ -149,6 +149,17 @@ class BusinessManager:
             except sqlite3.OperationalError:
                 pass  # 이미 존재하면 무시
 
+        # 마이그레이션: 창고이웃 등기부 (2026-07-18) — 이웃 레코드에 창고 축.
+        # warehouse_url=이웃 공유창고 공개 주소(그 노드의 얼굴), warehouse_memo=그 창고에 대한
+        # 냄새 메모(additional_info 수기 메모와 분리 — AI 갱신이 사용자 메모를 덮지 않게),
+        # warehouse_key=레벨1+ 열람 자격(/k/ 키, 추후). warehouse_feed.py 폴러가 url 을 순회한다.
+        # ★맥 전용 — business_sync 머지 제외(business_sync.PORTAL_LOCAL_COLS 에 합류).
+        for _col in ("warehouse_url", "warehouse_memo", "warehouse_key"):
+            try:
+                cursor.execute(f"ALTER TABLE neighbors ADD COLUMN {_col} TEXT")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재하면 무시
+
         # 연락처 테이블 (이웃당 여러 연락처)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
@@ -207,6 +218,24 @@ class BusinessManager:
         # 인덱스 생성
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contacts_neighbor_id ON contacts(neighbor_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contacts_type_value ON contacts(contact_type, contact_value)")
+
+        # 마이그레이션(2026-07-18 2차): 창고주소 = 연락방법 — neighbors.warehouse_url 컬럼(1차)을
+        # contacts(contact_type='warehouse') 행으로 이관. 창고주소도 이메일·nostr 처럼 그 사람에게
+        # 닿는 접점(풀로 읽는 길)이므로 연락처 테이블이 곧 창고이웃 등기부가 된다 — 이웃당 여러
+        # 창고 가능, "창고주소만 아는 상대"도 그 주소가 연락처라 정상 이웃. 컬럼은 이관 후 비움.
+        cursor.execute("SELECT id, uuid, warehouse_url FROM neighbors "
+                       "WHERE warehouse_url IS NOT NULL AND warehouse_url != ''")
+        for _nid, _nuuid, _wurl in cursor.fetchall():
+            cursor.execute("SELECT 1 FROM contacts WHERE neighbor_id=? AND contact_type='warehouse' "
+                           "AND contact_value=? AND (deleted IS NOT 1)", (_nid, _wurl))
+            if not cursor.fetchone():
+                _now = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO contacts (neighbor_id, contact_type, contact_value,
+                                          created_at, updated_at, uuid, neighbor_uuid)
+                    VALUES (?, 'warehouse', ?, ?, ?, ?, ?)
+                """, (_nid, _wurl, _now, _now, _new_uuid(), _nuuid))
+            cursor.execute("UPDATE neighbors SET warehouse_url = NULL WHERE id = ?", (_nid,))
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_neighbor_id ON messages(neighbor_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_processed ON messages(processed)")
@@ -894,6 +923,40 @@ class BusinessManager:
 
     _PORTAL_COLS = ("portal_login_id", "portal_pw", "portal_key",
                     "portal_revoked", "portal_joined_at", "portal_last_used")
+    _WAREHOUSE_COLS = ("warehouse_url", "warehouse_memo", "warehouse_key")
+
+    def update_neighbor_warehouse(self, neighbor_id: int, **fields) -> Optional[Dict]:
+        """이웃의 창고 컬럼만 갱신(창고이웃 등기부). 허용 컬럼 외는 무시."""
+        sets, params = [], []
+        for k, v in fields.items():
+            if k in self._WAREHOUSE_COLS:
+                sets.append(f"{k} = ?")
+                params.append(v)
+        if not sets:
+            return self.get_neighbor(neighbor_id)
+        params.append(neighbor_id)
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"UPDATE neighbors SET {', '.join(sets)} WHERE id = ?", params)
+        conn.commit()
+        conn.close()
+        return self.get_neighbor(neighbor_id)
+
+    def get_warehouse_contacts(self) -> List[Dict]:
+        """창고이웃 등기부 = contacts(contact_type='warehouse') — 창고주소도 연락방법(2026-07-18 2차).
+        이웃당 여러 창고 가능. 반환: contact_id·neighbor_id·name·url·warehouse_memo·info_level."""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.id AS contact_id, c.neighbor_id, c.contact_value AS url,
+                   n.name, n.warehouse_memo, n.info_level
+            FROM contacts c JOIN neighbors n ON n.id = c.neighbor_id
+            WHERE c.contact_type = 'warehouse' AND (c.deleted IS NOT 1) AND (n.deleted IS NOT 1)
+            ORDER BY n.name
+        """)
+        rows = cursor.fetchall()
+        conn.close()
+        return [self._row_to_dict(row) for row in rows]
 
     def update_neighbor_portal(self, neighbor_id: int, **fields) -> Optional[Dict]:
         """이웃의 포털 인증 컬럼만 갱신(updated_at 불변). 허용 컬럼 외는 무시."""

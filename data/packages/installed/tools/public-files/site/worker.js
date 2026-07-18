@@ -142,7 +142,10 @@ async function proxyPortal(env, request, sub) {
   const h = new Headers();
   h.set("content-type", r.headers.get("content-type") || "text/plain; charset=utf-8");
   h.set("cache-control", "no-store");
-  for (const k of ["location", "set-cookie", "content-length", "content-range", "accept-ranges"]) {
+  // content-disposition = 창고 파일 내려받기(?download=1)의 저장 강제 + 원래 파일명.
+  // 빠지면 브라우저가 인라인 표시로 되돌아가고 비-브라우저 클라이언트는 이름을 잃는다.
+  for (const k of ["location", "set-cookie", "content-length", "content-range",
+                   "accept-ranges", "content-disposition"]) {
     const v = r.headers.get(k);
     if (v) h.set(k, v);
   }

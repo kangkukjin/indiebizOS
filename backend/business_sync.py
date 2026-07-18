@@ -31,7 +31,10 @@ LEVEL_TABLES = ["business_documents", "work_guidelines"]
 # 맥 전용 컬럼(개인 포털 인증) — 폰엔 포털이 없으므로 머지에서 제외한다. 이 컬럼들을
 # 덮어쓰면 폰의 이웃 편집(이름·레벨)이 LWW 로 이겼을 때 포털 로그인·열쇠가 NULL 로 지워진다.
 PORTAL_LOCAL_COLS = {"portal_login_id", "portal_pw", "portal_key",
-                     "portal_revoked", "portal_joined_at", "portal_last_used"}
+                     "portal_revoked", "portal_joined_at", "portal_last_used",
+                     # 창고이웃 등기부(2026-07-18)도 맥 전용 — 폴러·피드가 맥에 살고,
+                     # 구 번들 폰이 이 컬럼을 몰라도 동기화가 깨지지 않게 제외.
+                     "warehouse_url", "warehouse_memo", "warehouse_key"}
 # 머지/내보내기 순서 (부모 먼저여야 자식 remap 가능)
 SYNC_TABLES = ENTITY_TABLES + list(CHILD_TABLES.keys()) + LEVEL_TABLES
 

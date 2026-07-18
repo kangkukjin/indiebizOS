@@ -143,6 +143,14 @@ async def lifespan(app: FastAPI):
     poller = get_channel_poller()
     poller.start()
 
+    # 창고 피드 폴러 자동 시작 — 이웃 공유창고 매니페스트 주기 폴링(AI·토큰 0, 30분 주기)
+    try:
+        from warehouse_feed import start_poller as _wf_start
+        _wf_start()
+        print("[창고피드] 이웃 창고 폴러 시작 (30분 주기)")
+    except Exception as e:
+        print(f"[창고피드] 폴러 시작 실패 (무시): {e}")
+
     # 폰 컴패니언 알림 폴러 — 2026-06-06 사용자 요청으로 일단 중단.
     # 알림/걸음/위치 신호를 indiebizOS 에 저장할 필요가 없다고 판단해 비활성화.
     # 재개하려면 아래 3줄의 주석을 해제하면 됨 (NIP-17 DM → SQLite 저장 재개).
@@ -331,6 +339,7 @@ from api_nas import router as nas_router
 from api_showcase import router as showcase_router
 from api_family_news import router as family_news_router
 from api_portal import router as portal_router
+from api_warehouse_feed import router as warehouse_feed_router
 from api_bulletin import router as bulletin_router
 from api_report import router as report_router
 from api_launcher_web import router as launcher_web_router
@@ -378,6 +387,7 @@ app.include_router(nas_router, tags=["nas"])
 app.include_router(showcase_router, tags=["showcase"])
 app.include_router(family_news_router, tags=["family-news"])
 app.include_router(portal_router, tags=["portal"])
+app.include_router(warehouse_feed_router, tags=["warehouse-feed"])
 app.include_router(bulletin_router, tags=["bulletin"])
 app.include_router(report_router, tags=["report"])
 app.include_router(launcher_web_router, tags=["launcher-web"])

@@ -143,6 +143,8 @@ data/**/*.json
 data/ibl_hippo_vecs.f32
 # 공개파일 런타임 스테이징(썸네일 캐시·비공개 실경로 색인 = PII) — 절대 커밋 금지
 data/showcase_stage/
+# 공유창고 동영상 트랜스코드 캐시(파생물 — 원본은 공유창고/에)
+data/warehouse_media_web/
 !data/guide_db.json
 !data/world_pulse_config.example.json
 # 표준 코어 경계의 단일 진실 — 반드시 커밋/배포되어야 함 (build_core_manifest.py 산출)

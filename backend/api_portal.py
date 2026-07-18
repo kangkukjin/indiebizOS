@@ -287,6 +287,13 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     # 단일 목록 — 방문자에게 레벨 구조(어느 파일이 어느 등급인지)를 보여주지 않는다.
     # 비즈니스문서는 내 레벨 판 1개만(높은 레벨 판이 이기는 병합 규칙이 자동으로 보장).
     files = _accessible_files(level)
+    # 방명록도 같은 절단면으로 — 상위 레벨 파일에 달린 글은 여기서 이미 빠져 있다.
+    gb = _gb_for_level(level)
+    gb_counts: dict = {}
+    for _e in gb:
+        if _e.get("about"):
+            gb_counts[_e["about"]] = gb_counts.get(_e["about"], 0) + 1
+
     # 이름 = 열기(브라우저가 표시·재생), ⬇ = 내려받기(원본 바이트). 해석은 가져간 쪽 몫.
     def _row(f):
         u = _h.escape(f["url"])
@@ -295,12 +302,44 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         wh = f.get("warehouse")
         wh_link = (f'<a class="dl" href="{_h.escape(wh)}/" title="이 파일이 있는 창고 열기">📦</a>'
                    if wh else '')
+        # 이 파일에서 방명록 글 시작 — 경로는 폼에 인용으로 실린다(레코드의 키가 아니라 기록).
+        n = gb_counts.get(f["name"], 0)
+        gb_link = (f'<a class="dl gb" href="#gb" data-p="{_h.escape(f["name"])}" '
+                   f'onclick="return ab(this)" title="이 파일에 글 남기기">💬{n or ""}</a>')
         return (f'<li><a href="{u}">{_h.escape(f["name"])}</a>'
-                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}'
+                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}{gb_link}'
                 f'<a class="dl" href="{u}{sep}download=1" download '
                 f'title="내려받기">⬇</a></li>')
     rows = "".join(_row(f) for f in files) or '<li class="empty">비어 있어요</li>'
     sections = [f'<section><ul>{rows}</ul></section>']
+
+    # ── 방명록 ── 인용(about)은 세 상태로 정직하게 표시: 현재 판 / 이전 판 / 없는 파일.
+    from urllib.parse import quote as _q
+    def _gb_row(e):
+        who = _h.escape(e["name"])
+        tag = (f'<span class="mb">레벨 {e["level"]}</span>' if e["member"]
+               else '<span class="gs">손님</span>')
+        st, ab = e.get("about_state", ""), e.get("about", "")
+        if not ab:
+            q = ''
+        elif st == "current":
+            q = f'<div class="q"><a href="/f?path={_q(ab)}">{_h.escape(ab)}</a></div>'
+        elif st == "old":
+            q = f'<div class="q stale">{_h.escape(ab)} · 이전 판에 대한 글</div>'
+        else:
+            q = f'<div class="q stale">{_h.escape(ab)} · 지금은 없는 파일</div>'
+        return (f'<li>{q}<div class="gm">{_h.escape(e["msg"])}</div>'
+                f'<div class="gw">{who} {tag} · {_h.escape(e["at"])}</div></li>')
+    gb_rows = "".join(_gb_row(e) for e in reversed(gb)) or '<li class="empty">아직 글이 없어요</li>'
+    gb_ph = '손님으로 글을 남깁니다' if not viewer else '글을 남깁니다'
+    sections.append(
+        f'<h2 id="gb">방명록</h2><section>'
+        f'<form onsubmit="return gp(this)">'
+        f'<input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
+        f'<div id="abt" class="abt"></div>'
+        f'<textarea name="msg" rows="2" placeholder="{gb_ph}"></textarea>'
+        f'<button>남기기</button></form>'
+        f'<ul class="gbl">{gb_rows}</ul></section>')
     locked_note = ('<p class="locked">🔒 더 높은 레벨의 창고가 있어요 — 로그인하거나 승급하면 열립니다.</p>'
                    if level < max(_WAREHOUSE_LEVELS) else '')
     if viewer:
@@ -316,7 +355,8 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>{title}</title><link rel="alternate" type="application/json" href="/manifest">
 <style>
-body{{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:2rem auto;padding:0 1rem;color:#222}}
+/* 배경을 명시하지 않으면 다크모드 방문자에겐 UA 검은 배경 위에 color:#222 라 글이 안 보인다 */
+body{{font-family:-apple-system,'Apple SD Gothic Neo',sans-serif;max-width:680px;margin:2rem auto;padding:0 1rem;color:#222;background:#fff}}
 header{{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;border-bottom:2px solid #222;padding-bottom:.7rem}}
 h1{{font-size:1.4rem;margin:0}} h2{{font-size:1rem;margin:1.2rem 0 .4rem;color:#555}}
 ul{{list-style:none;padding:0;margin:0}} li{{padding:.45rem .2rem;border-bottom:1px solid #eee;display:flex;align-items:center;gap:1rem}}
@@ -327,6 +367,18 @@ a{{color:#0a58ca;text-decoration:none;word-break:break-all}} a:hover{{text-decor
 form{{display:flex;gap:.4rem;flex-wrap:wrap}} input{{padding:.35rem .5rem;border:1px solid #ccc;border-radius:6px;width:8.5rem}}
 button{{padding:.35rem .8rem;border:1px solid #222;background:#222;color:#fff;border-radius:6px;cursor:pointer}}
 .acct{{display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:#555}}
+.hp{{position:absolute;left:-9999px;width:1px;height:1px}}
+textarea{{width:100%;padding:.45rem .55rem;border:1px solid #ccc;border-radius:6px;font:inherit;resize:vertical;box-sizing:border-box}}
+form textarea+button{{margin-top:.4rem}}
+.abt{{font-size:.85rem;color:#555;margin-bottom:.3rem}} .abt b{{color:#222}}
+.abt button{{background:none;border:none;color:#999;padding:0 .3rem;cursor:pointer;font-size:.9rem}}
+.gbl li{{display:block;padding:.6rem .2rem}}
+.gm{{white-space:pre-wrap;word-break:break-word}}
+.gw{{color:#888;font-size:.82rem;margin-top:.25rem}}
+.mb{{background:#222;color:#fff;border-radius:4px;padding:0 .3rem;font-size:.75rem}}
+.gs{{color:#aaa;font-size:.78rem;border:1px solid #ddd;border-radius:4px;padding:0 .3rem}}
+.q{{font-size:.85rem;color:#555;border-left:3px solid #ddd;padding-left:.5rem;margin-bottom:.3rem}}
+.q.stale{{color:#aaa;font-style:italic}}
 </style></head><body>
 <header><h1>{title}</h1><div class="acct">{who}{login_form}</div></header>
 {''.join(sections)}
@@ -336,6 +388,24 @@ async function li(f){{const r=await fetch('/login',{{method:'POST',headers:{{'Co
 body:JSON.stringify({{user_id:f.u.value,password:f.p.value,auto:true}})}});
 if(r.ok)location.reload();else alert((await r.json()).detail||'로그인 실패');return false}}
 async function lo(){{await fetch('/logout',{{method:'POST'}});location.reload()}}
+// 파일 옆 💬 → 그 경로를 인용으로 달고 방명록 폼으로. 인용은 글의 키가 아니라 기록이라
+// 지우고 일반 글로 남겨도 된다.
+var AB='';
+function ab(a){{AB=a.dataset.p;
+document.getElementById('abt').innerHTML='<b>'+AB.replace(/</g,'&lt;')+'</b>에 대해 '+
+'<button type="button" onclick="ax()" title="인용 빼기">✕</button>';
+document.querySelector('textarea').focus();return false}}
+function ax(){{AB='';document.getElementById('abt').innerHTML=''}}
+async function gp(f){{
+const m=f.msg.value.trim(); if(!m)return false;
+const r=await fetch('/gb',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{msg:m,about:AB,website:f.website.value}})}});
+// 상태코드만 믿지 않는다 — /gb 라우트가 없는 Worker 는 SPA 폴백을 200 으로 준다.
+// 그때 성공으로 오판하면 새로고침되며 글이 조용히 사라진다(침묵 유실 > 정직한 실패).
+let j=null; try{{j=await r.json()}}catch(e){{}}
+if(r.ok&&j&&j.ok){{location.reload()}}
+else{{alert((j&&j.detail)||'남기지 못했어요 — 잠시 후 다시 시도해 주세요')}}
+return false}}
 </script></body></html>"""
     return HTMLResponse(html_doc, headers={"Cache-Control": "no-store"})
 
@@ -455,6 +525,154 @@ async def node_file(request: Request, path: str = "", download: int = 0,
             # 공개면 = EXIF 제거(열람이든 다운로드든)
             return _serve_warehouse_file(f, strip_exif=True, download=bool(download))
     raise HTTPException(status_code=404, detail="no such file")
+
+
+# ── 창고 방명록 — 한 창고에 스트림 하나. 파일별 댓글이 아니라 "파일에서 시작하는 글". ──
+# 설계(왜 파일별 댓글이 아닌가): 창고의 불변식은 '색인 없음 · 파일시스템이 진실 · 즉석 walk'
+# 라 파일에 안정적 ID 가 없다. 경로로 키잉하면 Finder 이름변경에 고아가 되고(감지도 못 함),
+# 내용해시로 키잉하면 한 줄만 고쳐도 사라진다. 그래서 `about` 은 **외래키가 아니라 출처 기록**:
+# 무결성을 강제하지 않고, GC 도 없고, 어긋나면 레코드가 깨지는 대신 '낡은 인용'이 될 뿐이다.
+# 그 대신 어긋남을 읽는 사람에게 **보여준다**(about_state). 특정 파일의 글 모아보기는 별도
+# 기능이 아니라 이 스트림을 about 으로 거르는 것 = 조회 방식.
+#
+# 판(version) 문제: 같은 이름 파일이 교체되면 경로는 같고 내용이 달라져 글이 조용히 엉뚱한
+# 판에 붙는다(이름변경의 반대 방향 누수). 글 남길 때 그때의 mtime 을 함께 적어 두고 렌더 때
+# 대조해 '이전 판에 대한 글'로 표시한다. 해시가 아니라 mtime 인 이유 = 이미 walk 에 들어 있어
+# 공짜고, **이웃 폴러가 `changed` 를 판정하는 바로 그 신호**다(한 시스템에 '바뀌었다' 정의 2개 금지).
+#
+# 레벨: about 에 파일 이름이 박히므로 그대로 두면 레벨 0 손님이 상위 파일명을 알게 된다
+# (404≠403 · has_restricted='이름 없는 냄새' 규율이 깨짐). 그래서 렌더 시 방문자 절단면과
+# 대조해 **상위 레벨 파일에 달린 글은 항목째 숨긴다**(about 만 지우면 본문이 그 파일을 언급할
+# 수 있다). 결과적으로 방명록이 레벨 게이트를 공짜로 물려받는다.
+#
+# 신원: 손님은 이름을 입력하지 않는다(자동 '손님') — 입력란이 없으면 회원 사칭이 불가능하다.
+# 로그인 상태면 쿠키(pk)에서 이름·레벨이 붙는다(서명된 글). 이름은 그 시점 스냅샷.
+
+_GB_STORE = _ROOT / "data" / "warehouse_guestbook.json"
+_GB_MSG_MAX = 1000
+_GB_MAX_ENTRIES = 2000
+_GB_MIN_INTERVAL_S = 20          # IP 간격(연타·봇) — 초과 시 429
+_GB_LOCK = threading.Lock()
+_GB_LAST_BY_IP: dict = {}
+
+
+def _gb_load() -> list:
+    try:
+        return json.loads(_GB_STORE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _gb_save(entries: list) -> None:
+    _GB_STORE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = _GB_STORE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(entries[-_GB_MAX_ENTRIES:], ensure_ascii=False, indent=1),
+                   encoding="utf-8")
+    tmp.replace(_GB_STORE)
+
+
+def _all_warehouse_paths() -> dict:
+    """전 레벨(0..4) 상대경로 → mtime. '내 레벨 위라 숨김'과 '아예 없음(이름변경·삭제)'을 가른다."""
+    out = {}
+    for lv in sorted(_WAREHOUSE_LEVELS, reverse=True):
+        try:
+            d = _warehouse_dir(lv)
+            for p in d.rglob("*"):
+                if not p.is_file() or p.name.startswith("."):
+                    continue
+                rel = str(p.relative_to(d))
+                if rel not in out:
+                    out[rel] = datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")
+        except Exception:
+            continue
+    return out
+
+
+def _gb_for_level(level: int) -> list:
+    """방문자 절단면 기준으로 방명록을 거른다 — 4가지 경우(설계 주석 참조).
+      about 없음        → 그냥 보임(일반 인사)
+      내 절단면 · mtime 같음 → current (현재 판에 대한 글)
+      내 절단면 · mtime 다름 → old     ('이전 판에 대한 글')
+      내 레벨 위          → 숨김(누수 방지)
+      어디에도 없음        → gone    (낡은 인용 — 없는 파일이라 누수 아님)
+    """
+    mine = {f["name"]: f.get("mtime", "") for f in _accessible_files(level)}
+    every = _all_warehouse_paths()
+    out = []
+    for e in _gb_load():
+        about = (e.get("about") or "").strip()
+        row = {"id": e.get("id", ""), "name": e.get("name", "손님"),
+               "member": bool(e.get("member")), "level": int(e.get("level", 0) or 0),
+               "msg": e.get("msg", ""), "at": e.get("at", ""), "about": about}
+        if not about:
+            row["about_state"] = ""
+        elif about in mine:
+            row["about_state"] = "current" if mine[about] == e.get("about_mtime", "") else "old"
+        elif about in every:
+            continue                      # 내 레벨 위 — 이름도 본문도 안 흘린다
+        else:
+            row["about_state"] = "gone"
+        out.append(row)
+    return out
+
+
+@router.get("/gb")
+async def gb_list(request: Request, about: str = "", x_showcase_secret: str = Header(default="")):
+    """방명록 목록(내 레벨 절단). about= 주면 그 파일에 달린 글만 = '파일별 댓글' 조회."""
+    _check_secret(x_showcase_secret)
+    core = _core()
+    _viewer, level = _viewer_level(core, request)
+    _ensure_warehouses()
+    entries = _gb_for_level(level)
+    if about:
+        entries = [e for e in entries if e.get("about") == about]
+    entries.reverse()
+    return JSONResponse({"entries": entries[:200]}, headers={"Cache-Control": "no-store"})
+
+
+@router.post("/gb")
+async def gb_post(request: Request, x_showcase_secret: str = Header(default=""),
+                  x_client_ip: str = Header(default="")):
+    """글 남기기. 손님=자동 '손님'(이름 입력란 없음 → 사칭 불가), 회원=쿠키 신원 서명."""
+    _check_secret(x_showcase_secret)
+    core = _core()
+    viewer, level = _viewer_level(core, request)
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    if str(body.get("website", "")).strip():        # 허니팟 — 사람은 못 보는 칸
+        return JSONResponse({"ok": True})
+    msg = str(body.get("msg", "")).strip()[:_GB_MSG_MAX]
+    if not msg:
+        raise HTTPException(status_code=400, detail="msg required")
+
+    ip = x_client_ip or (request.client.host if request.client else "")
+    now = time.time()
+    if ip and now - _GB_LAST_BY_IP.get(ip, 0) < _GB_MIN_INTERVAL_S:
+        raise HTTPException(status_code=429, detail="너무 빠릅니다. 잠시 후 다시 시도해 주세요.")
+
+    # about 은 클라이언트 말을 믿지 않는다 — 내 절단면에 실제로 있는 파일일 때만 달리고,
+    # 그 시점 mtime 은 서버가 찍는다(볼 수 없는 파일에 글 달아 존재를 떠보는 것도 차단).
+    about = str(body.get("about", "")).strip()[:400]
+    about_mtime = ""
+    if about:
+        mine = {f["name"]: f.get("mtime", "") for f in _accessible_files(level)}
+        if about not in mine:
+            raise HTTPException(status_code=404, detail="no such file")
+        about_mtime = mine[about]
+
+    _GB_LAST_BY_IP[ip] = now
+    entry = {"id": f"{int(now*1000):x}", "msg": msg,
+             "name": (viewer.get("name") or "이웃") if viewer else "손님",
+             "member": bool(viewer), "level": level if viewer else 0,
+             "about": about, "about_mtime": about_mtime,
+             "at": datetime.now().strftime("%Y-%m-%d %H:%M"), "ip": ip}
+    with _GB_LOCK:
+        entries = _gb_load()
+        entries.append(entry)
+        _gb_save(entries)
+    return JSONResponse({"ok": True})
 
 
 # ── 창고 관리(소유자 전용) — 런처 '공유창고' 표면(데스크탑·원격)이 부른다. ────────
@@ -597,6 +815,31 @@ async def warehouse_admin_upload(request: Request, level: int = 0, filename: str
         n += 1
     dest.write_bytes(body)
     return {"ok": True, "level": lv, "added": dest.name}
+
+
+@router.get("/warehouse-admin/gb")
+async def warehouse_admin_gb_list():
+    """소유자 모더레이션 — 레벨 절단 없이 전부(상위 파일에 달린 글 포함). ip 는 안 내보낸다."""
+    entries = [{k: v for k, v in e.items() if k != "ip"} for e in _gb_load()]
+    entries.reverse()
+    return {"entries": entries, "count": len(entries)}
+
+
+@router.post("/warehouse-admin/gb/delete")
+async def warehouse_admin_gb_delete(request: Request):
+    try:
+        eid = str((await request.json()).get("id", "")).strip()
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    if not eid:
+        raise HTTPException(status_code=400, detail="id required")
+    with _GB_LOCK:
+        entries = _gb_load()
+        left = [e for e in entries if e.get("id") != eid]
+        if len(left) == len(entries):
+            raise HTTPException(status_code=404, detail="no such entry")
+        _gb_save(left)
+    return {"ok": True, "removed": eid}
 
 
 # ── 단일 노드 로그인 — 루트(/) 스코프 쿠키 pk. 슬러그 없는 주소에서도 레벨 절단면을 읽게. ──

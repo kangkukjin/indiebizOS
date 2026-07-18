@@ -375,6 +375,11 @@ export default {
     if (path === "logout" && request.method === "POST") {
       return proxyPortal(env, request, "node/logout");
     }
+    // 창고 방명록 — GET=목록(내 레벨 절단·about= 로 파일별 조회), POST=글 남기기.
+    // 쿠키(pk)로 신원이 갈리는 개인화 응답이라 no-store(proxyPortal).
+    if (path === "gb" && (request.method === "GET" || request.method === "POST")) {
+      return proxyPortal(env, request, `gb${url.search || ""}`);
+    }
     // 창고 파일 — f?path= 단일 관문(주소에 레벨 안 드러남). 레벨 게이트는 맥이 판정
     // (쿠키 pk → 레벨, 밖이면 404). 개인화 응답이라 no-store(proxyPortal).
     if (path === "f") {

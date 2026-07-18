@@ -335,7 +335,11 @@ def is_public_remote_path(method: str, path: str) -> bool:
     if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")
                             or path == "/portal/manifest" or path == "/portal/home"
-                            or path == "/portal/file"):
+                            or path == "/portal/file" or path == "/portal/gb"):
+        return True
+    # 창고 방명록 쓰기(손님도 가능 — 이름은 자동 '손님'). warehouse-admin/gb 는 소유자
+    # 전용이라 여기 등록하지 않는다(익명 외부는 터널 게이트 401 = 모더레이션 보호).
+    if method == "POST" and path == "/portal/gb":
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
                              or path.startswith("/portal/login/") or path.startswith("/portal/logout/")

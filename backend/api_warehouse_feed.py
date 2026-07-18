@@ -35,6 +35,8 @@ def _cards():
             "name": ct["name"], "info_level": ct.get("info_level", 0),
             "warehouse_url": base,
             "warehouse_memo": ct.get("warehouse_memo") or "",
+            # 즐겨찾기는 이웃의 성질(neighbors.favorite) — 빠른 연락처와 같은 표식을 공유한다.
+            "favorite": bool(ct.get("favorite")),
             "last_poll": st.get("last_poll"), "ok": st.get("ok"),
             "error": st.get("error"), "file_count": st.get("file_count"),
             "title": st.get("title") or "", "has_restricted": bool(st.get("has_restricted")),
@@ -116,6 +118,19 @@ async def remove_warehouse_neighbor(request: Request):
     return {"success": True}
 
 
+@router.post("/neighbors/favorite")
+async def toggle_warehouse_favorite(request: Request):
+    """즐겨찾기 토글 — 이웃 단위(neighbors.favorite). 한 이웃의 창고가 여럿이면 함께 움직인다."""
+    body = await _body(request)
+    nid = body.get("neighbor_id")
+    if not isinstance(nid, int):
+        raise HTTPException(status_code=400, detail="neighbor_id(정수)가 필요해요")
+    n = _bm().toggle_neighbor_favorite(nid)
+    if not n:
+        raise HTTPException(status_code=404, detail="그런 이웃이 없어요")
+    return {"neighbor_id": nid, "favorite": bool(n.get("favorite"))}
+
+
 @router.post("/neighbors/memo")
 async def set_warehouse_memo(request: Request):
     """창고 메모(냄새) 갱신 — additional_info(수기)와 분리된 창고 전용 필드."""
@@ -163,17 +178,20 @@ async def feed(limit: int = 100):
 
 
 @router.get("/search")
-async def search(q: str = "", limit: int = 100):
-    """전수 키워드 조사(검색 사다리 1층) — 이웃 전체 창고의 현재 파일명 색인에서."""
+async def search(q: str = "", limit: int = 100, sort: str = "recent"):
+    """전수 키워드 조사(검색 사다리 1층) — 이웃 전체 창고의 현재 파일명 색인에서.
+
+    sort: recent=최신순(기본) / match=이름 일치순.
+    """
     names = _name_map()
     items = []
-    for e in wf.search_snapshots(q, limit=limit):
+    for e in wf.search_snapshots(q, limit=limit, sort=sort):
         if e["wh_url"] not in names:
             continue
         e["neighbor_name"] = names[e["wh_url"]]
         e["neighbor_home"] = e["wh_url"] + "/"
         items.append(e)
-    return {"items": items, "q": q}
+    return {"items": items, "q": q, "sort": sort}
 
 
 # ── 리트윗: 남의 창고 파일을 가리키는 링크 파일을 내 창고에 놓는다 ──
@@ -182,6 +200,28 @@ async def search(q: str = "", limit: int = 100):
 # 이 target 을 해석해 매니페스트·홈에서 곧장 원 파일로 링크한다.
 
 _URLFILE_BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+
+
+def _source_warehouse(target: str, hint: str = "") -> str:
+    """링크가 가리키는 파일이 사는 창고의 베이스 주소.
+
+    파일 주소가 곧 창고를 말한다(`{base}/f?path=…`) → 목표에서 직접 유도하는 게 가장 정확.
+    리트윗의 리트윗이면 목표가 이미 원 창고를 가리키므로 중간 창고가 아니라 원 창고가 잡힌다.
+    유도 실패 시 호출자 힌트(피드 항목의 wh_url), 그것도 없으면 등기부 주소 접두 일치."""
+    head = target.split("/f?", 1)[0]
+    if head != target and head.startswith("http"):
+        return wf.normalize_base(head)
+    hint = wf.normalize_base(hint or "")
+    if hint and target.startswith(hint):
+        return hint
+    try:
+        for ct in _bm().get_warehouse_contacts():
+            base = wf.normalize_base(ct["url"])
+            if base and target.startswith(base + "/"):
+                return base
+    except Exception:
+        pass
+    return hint
 
 
 @router.post("/retweet")
@@ -208,5 +248,12 @@ async def retweet(request: Request):
     while (dest_dir / fname).exists():
         fname = f"{name} ({i}).url"
         i += 1
-    (dest_dir / fname).write_text(f"[InternetShortcut]\nURL={target}\n", encoding="utf-8")
-    return {"success": True, "file": fname, "level": level}
+    # 파일 주소 + 그 파일이 사는 창고 주소를 함께 적는다. 파일은 지워지거나 옮겨져도
+    # 창고는 남는다 — 구독자가 원 파일을 놓쳐도 출처 창고로 건너갈 수 있어야 발견이 이어진다.
+    # (WarehouseURL 은 InternetShortcut 표준 밖 키 — 모르는 파서는 조용히 무시한다)
+    wh = _source_warehouse(target, body.get("warehouse") or "")
+    lines = ["[InternetShortcut]", f"URL={target}"]
+    if wh:
+        lines.append(f"WarehouseURL={wh}")
+    (dest_dir / fname).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return {"success": True, "file": fname, "level": level, "warehouse": wh}

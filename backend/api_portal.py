@@ -152,7 +152,12 @@ def _warehouse_dir(level: int) -> Path:
 
 
 def _ensure_warehouses() -> None:
-    """창고 폴더 0~4 생성 + 레벨별 비즈니스 문서 물질화(DB 가 바뀌면 파일 갱신 — 볼 때 렌더)."""
+    """창고 폴더 0~4 생성 + 레벨별 비즈니스 문서 물질화(DB 가 바뀌면 파일 갱신 — 볼 때 렌더).
+
+    정기 산출물(보고서·신문·블로그)은 여기서 만들지 않는다 — 그건 IBL 파이프의 일이다:
+    `[self:read] >> [table:document]{format:html} >> [self:copy]{destination: 공유창고/<레벨>/…}`
+    (창고에 놓기 = self:copy. 전용 기계를 두면 파이프가 쓴 파일을 덮어써 서로 싸운다.)
+    """
     try:
         import business_manager
         bm = business_manager.BusinessManager()
@@ -181,18 +186,26 @@ def _viewer_level(core, request: Request):
     return viewer, (int(viewer.get("level", 0)) if viewer else 0)
 
 
-def _parse_urlfile(p) -> str:
-    """.url(InternetShortcut) 파일에서 URL= 대상 추출. 실패하면 빈 문자열(일반 파일로 서빙)."""
+def _parse_urlfile(p) -> tuple:
+    """.url(InternetShortcut) 파일에서 (대상, 출처 창고) 추출.
+    출처 창고(WarehouseURL)는 표준 밖 확장 키라 없을 수도 있다(옛 리트윗 파일).
+    대상 추출 실패면 ("", "") — 일반 파일로 서빙한다."""
+    target, warehouse = "", ""
     try:
         for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
             line = line.strip()
-            if line.upper().startswith("URL="):
+            up = line.upper()
+            if up.startswith("URL="):
                 t = line[4:].strip()
                 if t.startswith("http://") or t.startswith("https://"):
-                    return t
+                    target = t
+            elif up.startswith("WAREHOUSEURL="):
+                w = line[len("WarehouseURL="):].strip()
+                if w.startswith("http://") or w.startswith("https://"):
+                    warehouse = w
     except Exception:
         pass
-    return ""
+    return (target, warehouse) if target else ("", "")
 
 
 def _accessible_files(level: int, base: str = "") -> list:
@@ -215,10 +228,13 @@ def _accessible_files(level: int, base: str = "") -> list:
                     # 리트윗 링크 파일(.url, InternetShortcut) — target 을 해석해 url 로 노출:
                     # 방문자·구독자 클릭이 곧장 원 창고의 원 파일로 간다(포인터=파일인 FOAF 발견).
                     if rel.lower().endswith(".url") and st.st_size <= 4096:
-                        target = _parse_urlfile(p)
+                        target, warehouse = _parse_urlfile(p)
                         if target:
                             entry["url"] = target
                             entry["link"] = True
+                            # 출처 창고 = 다음 이웃 후보. 파일이 사라져도 이 주소는 남는다.
+                            if warehouse:
+                                entry["warehouse"] = warehouse
                     seen[rel] = entry
         except Exception:
             continue
@@ -275,8 +291,12 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     def _row(f):
         u = _h.escape(f["url"])
         sep = "&" if "?" in f["url"] else "?"
+        # 소개한 파일(링크)이면 그 파일이 사는 창고로 건너뛰는 문 하나 — 발견이 한 홉 더 간다
+        wh = f.get("warehouse")
+        wh_link = (f'<a class="dl" href="{_h.escape(wh)}/" title="이 파일이 있는 창고 열기">📦</a>'
+                   if wh else '')
         return (f'<li><a href="{u}">{_h.escape(f["name"])}</a>'
-                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>'
+                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}'
                 f'<a class="dl" href="{u}{sep}download=1" download '
                 f'title="내려받기">⬇</a></li>')
     rows = "".join(_row(f) for f in files) or '<li class="empty">비어 있어요</li>'

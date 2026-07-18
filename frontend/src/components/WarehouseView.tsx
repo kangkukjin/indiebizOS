@@ -10,7 +10,7 @@
  *   백엔드: /warehouse-feed/*. 둘 다 로컬 전용 — 터널·Worker 미노출.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2 } from 'lucide-react';
+import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star } from 'lucide-react';
 
 const API = 'http://127.0.0.1:8765';
 
@@ -22,7 +22,7 @@ interface WhData {
 }
 interface WfNeighbor {
   contact_id: number; neighbor_id: number; name: string; info_level: number;
-  warehouse_url: string; warehouse_memo: string;
+  warehouse_url: string; warehouse_memo: string; favorite: boolean;
   last_poll: string | null; ok: number | null; error: string | null;
   file_count: number | null; title: string; has_restricted: boolean;
 }
@@ -56,7 +56,47 @@ function openExternalUrl(url: string) {
   else window.open(url, '_blank', 'noopener');
 }
 
-/** 이웃 탭 — 창고이웃 등기부 + 변화 피드 + 전수 파일명 검색. */
+/** 이웃 창고의 파일 한 줄 — 피드와 검색이 같은 줄을 쓴다. */
+function FileRow({ f, onRetweet }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void }) {
+  const Icon = fileIcon(f.path);
+  return (
+    <li className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
+      <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-1" />
+      <div className="flex-1 min-w-0 cursor-pointer" title="파일 열기" onClick={() => openExternalUrl(f.url)}>
+        <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{f.path}</div>
+        <div className="text-[11px] text-stone-400">
+          <span className="text-[#B45309]/70 mr-1.5">{f.neighbor_name}</span>
+          {f.kind === 'new' && <span className="mr-1.5 px-1 rounded bg-amber-100 text-[#B45309]">새 파일</span>}
+          {f.kind === 'changed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">갱신</span>}
+          {fmtBytes(f.bytes || 0)} · {(f.mtime || '').replace('T', ' ')}
+        </div>
+      </div>
+      <button
+        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
+        title="파일 열기"
+        onClick={() => openExternalUrl(f.url)}
+      >
+        <ExternalLink className="w-4 h-4" />
+      </button>
+      <button
+        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
+        title={`${f.neighbor_name}의 창고 열기`}
+        onClick={() => { if (f.neighbor_home) openExternalUrl(f.neighbor_home); }}
+      >
+        <Package className="w-4 h-4" />
+      </button>
+      <button
+        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
+        title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성, 레벨 선택)"
+        onClick={() => onRetweet(f)}
+      >
+        <Repeat2 className="w-4 h-4" />
+      </button>
+    </li>
+  );
+}
+
+/** 이웃 탭 — 창고이웃 등기부 + [피드 | 검색] 두 섹션. */
 function NeighborsPane() {
   const [neighbors, setNeighbors] = useState<WfNeighbor[]>([]);
   const [candidates, setCandidates] = useState<{ id: number; name: string }[]>([]);
@@ -67,8 +107,11 @@ function NeighborsPane() {
   const [addName, setAddName] = useState('');
   const [addCandidate, setAddCandidate] = useState<number | ''>('');
   const [addUrl, setAddUrl] = useState('');
+  const [sub, setSub] = useState<'feed' | 'search' | 'favorites'>('feed');
   const [q, setQ] = useState('');
+  const [sort, setSort] = useState<'recent' | 'match'>('recent');
   const [results, setResults] = useState<WfFeedItem[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [memoEdit, setMemoEdit] = useState<{ id: number; text: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
   const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number } | null>(null);
@@ -146,7 +189,7 @@ function NeighborsPane() {
     try {
       const r = await fetch(`${API}/warehouse-feed/retweet`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: item.url, name: item.path, level }),
+        body: JSON.stringify({ url: item.url, name: item.path, level, warehouse: item.wh_url || '' }),
       });
       if (!r.ok) {
         const d = await r.json().catch(() => null);
@@ -157,6 +200,19 @@ function NeighborsPane() {
     }
     setBusy(null);
   }, [retweetPick]);
+
+  const toggleFavorite = useCallback(async (neighborId: number) => {
+    try {
+      const r = await fetch(`${API}/warehouse-feed/neighbors/favorite`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ neighbor_id: neighborId }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+    load();
+  }, [load]);
 
   const saveMemo = useCallback(async () => {
     if (!memoEdit) return;
@@ -170,19 +226,34 @@ function NeighborsPane() {
     load();
   }, [memoEdit, load]);
 
-  const doSearch = useCallback(async (query: string) => {
+  const doSearch = useCallback(async (query: string, order: 'recent' | 'match') => {
     const t = query.trim();
-    if (!t) { setResults(null); return; }
+    if (!t) { setResults(null); setSearching(false); return; }
+    setSearching(true);
     try {
-      const r = await fetch(`${API}/warehouse-feed/search?q=${encodeURIComponent(t)}`);
+      const r = await fetch(
+        `${API}/warehouse-feed/search?q=${encodeURIComponent(t)}&sort=${order}&limit=300`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const d = await r.json();
       setResults(d.items || []);
+      setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
+    setSearching(false);
   }, []);
 
-  const items = results ?? feed;
+  // 타자마다 서버를 때리지 않도록 잠깐 묵힌다 (검색어·정렬 어느 쪽이 바뀌어도 같은 경로).
+  useEffect(() => {
+    if (sub !== 'search') return;
+    const t = setTimeout(() => doSearch(q, sort), 200);
+    return () => clearTimeout(t);
+  }, [q, sort, sub, doSearch]);
+
+  const items = sub === 'search' ? (results ?? []) : feed;
+  const favorites = neighbors.filter((n) => n.favorite);
+  // 창고별 최근 파일 — 피드에 이미 있는 것에서 뽑는다(추가 조회 없음).
+  const recentOf = (whUrl: string) => feed.filter((f) => f.wh_url === whUrl).slice(0, 3);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -190,7 +261,14 @@ function NeighborsPane() {
       <div className="px-5 py-3 border-b border-stone-200 bg-white/60 shrink-0 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           {neighbors.map((n) => (
-            <div key={n.contact_id} className="group flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-xl bg-white border border-stone-200 text-xs">
+            <div key={n.contact_id} className="group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-xl bg-white border border-stone-200 text-xs">
+              <button
+                className={`p-0.5 rounded ${n.favorite ? 'text-[#D97706]' : 'text-stone-300 hover:text-[#D97706]'}`}
+                title={n.favorite ? '즐겨찾기 해제' : '즐겨찾기 — 즐겨찾기 탭에 모아 보여요'}
+                onClick={() => toggleFavorite(n.neighbor_id)}
+              >
+                <Star className={`w-3.5 h-3.5 ${n.favorite ? 'fill-current' : ''}`} />
+              </button>
               <button
                 className="font-medium text-stone-700 hover:text-[#D97706] hover:underline"
                 title={`${n.title || n.name} 창고 열기\n${n.warehouse_url}`}
@@ -301,24 +379,51 @@ function NeighborsPane() {
           </div>
         )}
 
-        {/* 전수 파일명 검색 — 폴러 스냅샷 = 내 동네 전체 색인 */}
-        <div className="flex items-center gap-2">
-          <Search className="w-3.5 h-3.5 text-stone-400" />
-          <input
-            className="flex-1 px-2 py-1.5 rounded-lg border border-stone-200 text-xs"
-            placeholder="이웃 창고 전체에서 파일 이름으로 찾기"
-            value={q}
-            onChange={(e) => { setQ(e.target.value); doSearch(e.target.value); }}
-          />
-          {results !== null && (
-            <button className="text-xs text-stone-400 hover:text-stone-600" onClick={() => { setQ(''); setResults(null); }}>
-              피드로 돌아가기
+        {/* 섹션 — 피드(변화) | 검색(현재) | 즐겨찾기(자주 가는 창고). */}
+        <div className="flex items-center gap-1">
+          {([['feed', '피드', Rss], ['search', '검색', Search], ['favorites', '즐겨찾기', Star]] as const).map(([key, label, SubIcon]) => (
+            <button
+              key={key}
+              onClick={() => setSub(key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                sub === key ? 'bg-amber-50 text-[#B45309] font-medium' : 'text-stone-500 hover:text-stone-700'
+              }`}
+            >
+              <SubIcon className="w-3.5 h-3.5" /> {label}
             </button>
-          )}
+          ))}
         </div>
+
+        {/* 전수 파일명 검색 — 폴러 스냅샷 = 내 동네 전체 색인 */}
+        {sub === 'search' && (
+          <div className="flex items-center gap-2">
+            <Search className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+            <input
+              autoFocus
+              className="flex-1 px-2 py-1.5 rounded-lg border border-stone-200 text-xs"
+              placeholder="이웃 창고 전체에서 파일 이름으로 찾기 (예: 축구)"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+            <select
+              className="px-2 py-1.5 rounded-lg border border-stone-200 bg-white text-xs text-stone-700 shrink-0"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as 'recent' | 'match')}
+              title="결과 순서"
+            >
+              <option value="recent">최신순</option>
+              <option value="match">이름 일치순</option>
+            </select>
+            {q.trim() && (
+              <span className="text-[11px] text-stone-400 shrink-0 w-16 text-right">
+                {searching ? '찾는 중…' : `${(results ?? []).length}개`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 피드 / 검색 결과 */}
+      {/* 피드(변화) / 검색 결과(현재) */}
       <div className="flex-1 min-h-0 overflow-auto">
         {error && (
           <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100">{error}</div>
@@ -329,54 +434,105 @@ function NeighborsPane() {
             <p className="text-sm">창고이웃이 아직 없어요 — 위에서 이웃의 창고 주소를 등록하세요</p>
             <p className="text-xs">등록하면 창고의 변화가 여기로 흘러옵니다</p>
           </div>
+        ) : sub === 'favorites' ? (
+          favorites.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
+              <Star className="w-10 h-10" />
+              <p className="text-sm">즐겨찾기한 창고가 없어요</p>
+              <p className="text-xs">위 이웃 칩의 ☆ 를 누르면 그 창고가 여기 모입니다</p>
+            </div>
+          ) : (
+            <ul className="px-5 py-3 space-y-2">
+              {favorites.map((n) => {
+                const recent = recentOf(n.warehouse_url);
+                return (
+                  <li key={n.contact_id} className="px-4 py-3 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-[#D97706] fill-current shrink-0" />
+                      <button
+                        className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"
+                        title={`${n.warehouse_url} 열기`}
+                        onClick={() => openExternalUrl(n.warehouse_url + '/')}
+                      >
+                        {n.name}
+                      </button>
+                      {n.title && n.title !== n.name && (
+                        <span className="text-xs text-stone-400 truncate">{n.title}</span>
+                      )}
+                      {n.has_restricted && (
+                        <span className="text-[11px] px-1.5 rounded-full bg-stone-100 text-stone-500 shrink-0"
+                              title="내 레벨 위에 더 있다는 신호 — 제목은 안 보입니다">더 있음</span>
+                      )}
+                      <div className="flex-1" />
+                      <button
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
+                        title="창고 열기"
+                        onClick={() => openExternalUrl(n.warehouse_url + '/')}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
+                        title="즐겨찾기 해제"
+                        onClick={() => toggleFavorite(n.neighbor_id)}
+                      >
+                        <Star className="w-4 h-4 fill-current" />
+                      </button>
+                    </div>
+
+                    {n.warehouse_memo && (
+                      <p className="mt-1.5 text-xs text-stone-600">{n.warehouse_memo}</p>
+                    )}
+
+                    <div className="mt-1.5 text-[11px] text-stone-400 truncate">
+                      <span className="text-stone-500">{n.warehouse_url}</span>
+                      {' · '}
+                      {n.ok === 0
+                        ? <span className="text-red-500">연결 안 됨{n.error ? ` (${n.error})` : ''}</span>
+                        : <>파일 {n.file_count ?? '?'}개</>}
+                      {n.last_poll && ` · 둘러본 때 ${n.last_poll.replace('T', ' ')}`}
+                    </div>
+
+                    {recent.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-stone-100 space-y-1">
+                        {recent.map((f) => (
+                          <button
+                            key={`${f.id ?? f.path}:${f.seen_at}`}
+                            className="block w-full text-left text-xs text-stone-500 hover:text-[#D97706] truncate"
+                            title={`${f.path} 열기`}
+                            onClick={() => openExternalUrl(f.url)}
+                          >
+                            {f.kind === 'new' ? '새 파일 · ' : f.kind === 'changed' ? '갱신 · ' : ''}{f.path}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        ) : sub === 'search' && !q.trim() ? (
+          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
+            <Search className="w-10 h-10" />
+            <p className="text-sm">이웃 창고 {neighbors.length}곳의 파일 이름에서 찾습니다</p>
+            <p className="text-xs">찾을 말을 입력하세요 — 지난 둘러보기에서 본 파일 전부가 대상입니다</p>
+          </div>
         ) : items.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
-            <Rss className="w-10 h-10" />
-            <p className="text-sm">{results !== null ? '검색 결과가 없어요' : '아직 새 소식이 없어요'}</p>
+            {sub === 'search' ? <Search className="w-10 h-10" /> : <Rss className="w-10 h-10" />}
+            <p className="text-sm">{sub === 'search' ? `'${q.trim()}' 이(가) 든 파일 이름이 없어요` : '아직 새 소식이 없어요'}</p>
+            {sub === 'search' && <p className="text-xs">이웃이 아직 안 올렸거나, 마지막 둘러보기 뒤에 올렸을 수 있어요</p>}
           </div>
         ) : (
           <ul className="px-5 py-3 space-y-1.5">
-            {items.map((f) => {
-              const Icon = fileIcon(f.path);
-              return (
-                <li
-                  key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
-                  className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40"
-                >
-                  <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-1" />
-                  <div className="flex-1 min-w-0 cursor-pointer" title="파일 열기" onClick={() => openExternalUrl(f.url)}>
-                    <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{f.path}</div>
-                    <div className="text-[11px] text-stone-400">
-                      <span className="text-[#B45309]/70 mr-1.5">{f.neighbor_name}</span>
-                      {f.kind === 'new' && <span className="mr-1.5 px-1 rounded bg-amber-100 text-[#B45309]">새 파일</span>}
-                      {f.kind === 'changed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">갱신</span>}
-                      {fmtBytes(f.bytes || 0)} · {(f.mtime || '').replace('T', ' ')}
-                    </div>
-                  </div>
-                  <button
-                    className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-                    title="파일 열기"
-                    onClick={() => openExternalUrl(f.url)}
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-                    title={`${f.neighbor_name}의 창고 열기`}
-                    onClick={() => { if (f.neighbor_home) openExternalUrl(f.neighbor_home); }}
-                  >
-                    <Package className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-                    title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성, 레벨 선택)"
-                    onClick={() => setRetweetPick({ item: f, level: 0 })}
-                  >
-                    <Repeat2 className="w-4 h-4" />
-                  </button>
-                </li>
-              );
-            })}
+            {items.map((f) => (
+              <FileRow
+                key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
+                f={f}
+                onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
+              />
+            ))}
           </ul>
         )}
       </div>

@@ -212,19 +212,44 @@ def get_feed(limit: int = 100, wh_url: Optional[str] = None) -> List[Dict]:
         return [dict(r) for r in c.execute(q, params).fetchall()]
 
 
-def search_snapshots(query: str, limit: int = 100) -> List[Dict]:
-    """전수 키워드 조사(검색 사다리 1층) — 이웃 전부의 현재 파일명에서 부분일치."""
+def _match_rank(path: str, q: str) -> int:
+    """이름 일치의 질 — 낮을수록 좋다. 폴더 경로보다 파일 이름의 일치를 높게 본다.
+
+    '축구' 로 찾을 때 `축구.md` 가 `2024_지역행사_축구부_명단_최종.xlsx` 보다 앞서야 한다.
+    """
+    name = path.rsplit("/", 1)[-1].lower()
+    stem = name.rsplit(".", 1)[0] if "." in name else name
+    ql = q.lower()
+    if stem == ql:
+        return 0                                  # 이름이 곧 검색어
+    if stem.startswith(ql) or name.startswith(ql):
+        return 1                                  # 이름이 검색어로 시작
+    if ql in name:
+        return 2                                  # 이름 안에 있음
+    return 3                                      # 폴더 경로에서만 걸림
+
+
+def search_snapshots(query: str, limit: int = 100, sort: str = "recent") -> List[Dict]:
+    """전수 키워드 조사(검색 사다리 1층) — 이웃 전부의 현재 파일명에서 부분일치.
+
+    sort: recent=최신순(기본) / match=이름 일치순. 순위는 파이썬에서 매긴다 —
+    자르기 전에 순위를 매겨야 해서(SQL LIMIT 뒤 정렬은 상위를 놓친다).
+    """
     _init_db()
     q = (query or "").strip()
     if not q:
         return []
+    cap = max(1, min(500, limit))
+    like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     with _db_lock, _conn() as c:
-        rows = c.execute("""
+        rows = [dict(r) for r in c.execute("""
             SELECT * FROM snapshots WHERE path LIKE ? ESCAPE '\\'
-            ORDER BY mtime DESC LIMIT ?
-        """, ("%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%",
-              max(1, min(500, limit)))).fetchall()
-        return [dict(r) for r in rows]
+            ORDER BY mtime DESC LIMIT 1000
+        """, (like,)).fetchall()]
+    if sort == "match":
+        # SQL 이 이미 mtime DESC 로 주고 파이썬 정렬은 안정적 → 같은 순위 안에서는 최신순이 유지된다.
+        rows.sort(key=lambda r: _match_rank(r["path"], q))
+    return rows[:cap]
 
 
 def get_status_map() -> Dict[str, Dict]:

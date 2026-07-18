@@ -383,7 +383,7 @@ async function wfRetweet(i){
   if(!(lv>=0 && lv<=4)){ wfErr('레벨은 0~4 숫자여야 해요'); return; }
   document.getElementById('whBusy').textContent='내 창고에 소개하는 중…';
   try{
-    const r=await jfetch('/warehouse-feed/retweet',{method:'POST',body:JSON.stringify({url:f.url,name:f.path,level:lv})});
+    const r=await jfetch('/warehouse-feed/retweet',{method:'POST',body:JSON.stringify({url:f.url,name:f.path,level:lv,warehouse:f.wh_url||''})});
     if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
   }catch(e){ wfErr('리트윗 실패: '+e.message); }
   document.getElementById('whBusy').textContent='';

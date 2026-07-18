@@ -949,7 +949,7 @@ class BusinessManager:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT c.id AS contact_id, c.neighbor_id, c.contact_value AS url,
-                   n.name, n.warehouse_memo, n.info_level
+                   n.name, n.warehouse_memo, n.info_level, n.favorite
             FROM contacts c JOIN neighbors n ON n.id = c.neighbor_id
             WHERE c.contact_type = 'warehouse' AND (c.deleted IS NOT 1) AND (n.deleted IS NOT 1)
             ORDER BY n.name

@@ -26,6 +26,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+# ★Windows CI 등 비-UTF-8 로케일(cp1252/cp949)에서 ✓·한글 출력이 UnicodeEncodeError 로
+# 죽지 않도록 stdout/stderr 를 UTF-8 로 고정한다(audit_bundle_secrets.py 와 같은 처방 —
+# 이 스크립트는 npm run dist:filter 첫 단계라, 여기서 죽으면 윈도우 설치 파일이 안 나온다).
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = REPO_ROOT / "data" / "core_manifest.json"
 

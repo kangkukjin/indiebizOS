@@ -352,11 +352,14 @@ function pickFromPool(pool: NewsItem[], size: number, exclude: Set<string>): New
 
 // 편집신문 마법사 — 섹션마다 후보를 보여주고, 사용자가 뺀 자리를 중복 없이 리필, OK 시 다음 섹션.
 // 마지막 섹션 확정 시 onDone(final) 으로 완성 섹션을 부모에 넘긴다(저장·렌더는 부모의 자동발간 경로 재사용).
-function EditFlow({ edition, keywords, onDone, onCancel }: {
+function EditFlow({ edition, keywords, onDone, onCancel, onOpenArticle }: {
   edition: EditionDef;
   keywords: string[];
   onDone: (sections: Section[]) => void;
   onCancel: () => void;
+  // 기사 열기는 부모가 준다 — 내부 리더(webview) 상태가 부모에 살기 때문.
+  // 예전엔 부모의 openArticle 을 여기서 직접 불러 클릭 시 ReferenceError 였다(스코프 밖).
+  onOpenArticle: (url?: string, title?: string) => void;
 }) {
   const [secs, setSecs] = useState<EditSection[] | null>(null);
   const [step, setStep] = useState(0);
@@ -456,7 +459,7 @@ function EditFlow({ edition, keywords, onDone, onCancel }: {
                     {it.meta && <div className="text-xs text-stone-400 mb-1.5">{it.meta}</div>}
                     {it.summary && <p className="text-sm text-stone-600 leading-relaxed mb-3 flex-1 line-clamp-4">{it.summary}</p>}
                     {it.url && (
-                      <button onClick={() => openArticle(it.url, it.title)}
+                      <button onClick={() => onOpenArticle(it.url, it.title)}
                         className="mt-auto self-start text-sm font-semibold text-[#3d5a80] hover:underline">기사 보기 →</button>
                     )}
                   </article>
@@ -740,7 +743,7 @@ export function NewspaperInstrument() {
       )}
 
       {/* 편집신문 마법사 — 활성 시 본문 대신 단계별 큐레이션 화면 */}
-      {editFlow && <EditFlow edition={edition} keywords={keywords} onDone={finishEdit} onCancel={() => setEditFlow(false)} />}
+      {editFlow && <EditFlow edition={edition} keywords={keywords} onDone={finishEdit} onCancel={() => setEditFlow(false)} onOpenArticle={openArticle} />}
 
       {/* 신문 본문 */}
       {!editFlow && (

@@ -246,8 +246,6 @@ export interface ElectronAPI {
 
   // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
   getPathForFile?: (file: File) => string;
-
-  copyToClipboard?: (text: string) => void;
 }
 
 declare global {

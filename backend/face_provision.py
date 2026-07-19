@@ -281,6 +281,100 @@ def provision_use(req: UseReq):
             "message": f"공식 주소를 옮겼습니다: {base}"}
 
 
+@router.post("/close")
+def provision_close(req: UseReq):
+    """얼굴 닫기 — 그 주소의 서빙을 내린다(가역: /open 또는 /use 로 재개).
+
+    창고를 2개 열든 1개만 열든 다 닫든 사용자 자유(2026-07-20 피드백 — 공식 주소
+    가드 없음). 닫기=direct_hosts 제거+터널 내림 — 발급물(터널·DNS·주소)은
+    남으므로 삭제가 아니라 휴면이다. 공식 주소를 닫으면 그 주소가 잠시 오프라인일
+    뿐 정체(public_base)는 유지된다."""
+    provider = (req.provider or "").strip().lower()
+    if provider not in ("cloudflare", "tailscale"):
+        return JSONResponse({"success": False, "error": "provider 는 cloudflare|tailscale"},
+                            status_code=400)
+
+    if provider == "tailscale":
+        r = api_tunnel.stop_funnel()   # funnel reset + direct_hosts 에서 .ts.net 제거
+        if not r.get("success"):
+            return JSONResponse({"success": False, "error": r.get("error", "funnel 종료 실패")},
+                                status_code=502)
+        return {"success": True, "message": "Tailscale 창고 주소를 닫았습니다 (열기로 재개)"}
+
+    tcfg = api_tunnel.load_config()
+    host = tcfg.get("hostname", "")
+    if not (host and tcfg.get("tunnel_token")):
+        return JSONResponse({"success": False, "error": "발급된 Cloudflare 주소가 없습니다"},
+                            status_code=400)
+    api_tunnel.stop_tunnel()
+    cfg = public_face.load_config()
+    cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or []) if h != host]
+    public_face.save_config(cfg)
+    try:
+        from api_launcher_web import reload_external_hostnames
+        reload_external_hostnames()
+    except Exception:
+        pass
+    return {"success": True, "message": "Cloudflare 창고 주소를 닫았습니다 (열기로 재개)"}
+
+
+@router.post("/open")
+def provision_open(req: UseReq):
+    """얼굴 열기 — 공식 주소는 건드리지 않고 그 주소의 서빙만 재개 (/close 의 반대).
+    공식 주소까지 옮기려면 /use."""
+    provider = (req.provider or "").strip().lower()
+    if provider not in ("cloudflare", "tailscale"):
+        return JSONResponse({"success": False, "error": "provider 는 cloudflare|tailscale"},
+                            status_code=400)
+
+    if provider == "tailscale":
+        # start_funnel 은 정체(public_base·provider)까지 ts 로 배선하므로 — 열기 전
+        # 값을 보존했다가 되돌린다(열기=서빙 재개일 뿐 정체 이동은 /use 의 일).
+        before = public_face.load_config()
+        keep_base = before.get("public_base", "")
+        keep_provider = before.get("provider", "")
+        tcfg = api_tunnel.load_config()
+        r = api_tunnel.start_funnel(int(tcfg.get("funnel_port") or 8765))
+        if not r.get("success"):
+            return JSONResponse({"success": False, "error": r.get("error", "funnel 시작 실패")},
+                                status_code=400)
+        cfg = public_face.load_config()
+        if keep_base:
+            cfg["public_base"] = keep_base
+        if keep_provider:
+            cfg["provider"] = keep_provider
+        public_face.save_config(cfg)
+        try:
+            from api_launcher_web import reload_external_hostnames
+            reload_external_hostnames()
+        except Exception:
+            pass
+        return {"success": True, "message": "Tailscale 창고 주소를 열었습니다"}
+
+    tcfg = api_tunnel.load_config()
+    host = tcfg.get("hostname", "")
+    if not (host and tcfg.get("tunnel_token")):
+        return JSONResponse({"success": False, "error": "발급된 Cloudflare 주소가 없습니다"},
+                            status_code=400)
+    if not api_tunnel.is_tunnel_running():
+        r = api_tunnel.start_tunnel(tcfg.get("tunnel_name", ""),
+                                    tunnel_token=tcfg.get("tunnel_token"))
+        if not r.get("success"):
+            return JSONResponse({"success": False, "error": r.get("error", "터널 시작 실패")},
+                                status_code=502)
+    cfg = public_face.load_config()
+    hosts = set(cfg.get("direct_hosts") or [])
+    hosts.add(host)
+    cfg["direct_hosts"] = sorted(hosts)
+    public_face.save_config(cfg)
+    try:
+        from api_launcher_web import reload_external_hostnames
+        reload_external_hostnames()
+    except Exception:
+        pass
+    return {"success": True, "message": "Cloudflare 창고 주소를 열었습니다"}
+
+
 # ── ② cloudflare 발급 — CF API 원격관리 터널 + DNS + 직접 서빙 ────────────────────
 
 class CloudflareReq(BaseModel):

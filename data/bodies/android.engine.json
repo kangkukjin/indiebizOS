@@ -155,6 +155,7 @@
     "trigger_engine",
     "vocab_crystallization",
     "warehouse_feed",
+    "warehouse_items",
     "web_collector",
     "websocket_manager",
     "workflow_engine",
@@ -178,8 +179,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 172,
-    "engine": 159,
+    "total": 173,
+    "engine": 160,
     "blocklist": 13
   }
 }

@@ -146,6 +146,37 @@ def _warehouse_title() -> str:
     except Exception:
         return "공유창고"
 _BIZDOC_NAME = "비즈니스문서.md"
+_NODE_NPUB = None   # 프로세스 캐시 — IndieNetIdentity 로드가 매 요청 로그를 찍지 않게
+
+
+def _node_npub() -> str:
+    """노드의 Nostr 주소. 시스템 AI 의 nostr 서명·수신 신원 = indienet 신원(channel_engine 공유)
+    이므로 이 npub 이 곧 'AI 에게 닿는 연락처'다."""
+    global _NODE_NPUB
+    if _NODE_NPUB is None:
+        try:
+            from indienet import IndieNetIdentity
+            idn = IndieNetIdentity()
+            _NODE_NPUB = (idn.npub or "") if idn.load_or_create() else ""
+        except Exception:
+            _NODE_NPUB = ""
+    return _NODE_NPUB
+
+
+def _contact_block() -> str:
+    """비즈니스문서 꼬리의 연락처 절. npub=자동(신원 의무), 이메일=warehouse.json 에
+    사용자가 선택적으로 넣은 것만(email 키 — 미추적 파일이라 PII 가 repo 밖에 머문다)."""
+    lines = []
+    npub = _node_npub()
+    if npub:
+        lines.append(f"- Nostr (DM): {npub}")
+    try:
+        email = (json.loads(_WAREHOUSE_CONFIG.read_text(encoding="utf-8")).get("email") or "").strip()
+    except Exception:
+        email = ""
+    if email:
+        lines.append(f"- 이메일: {email}")
+    return ("\n## 연락처\n\n" + "\n".join(lines) + "\n") if lines else ""
 # 창고 전체(레벨 0..요청자, 하위폴더 재귀) 목록 상한 — 응답 폭주 방지용 러너웨이 가드.
 # ★옛 값 500 은 "한 디렉토리 목록" 상한이었다(디렉토리 단위 브라우징 시절). 뷰가 평면화되면서
 #   같은 상수가 창고 전체에 걸리게 범위가 넓어졌으므로 재산정. 절단 시 매니페스트가
@@ -177,11 +208,25 @@ def _ensure_warehouses() -> None:
             continue
         try:
             doc = bm.get_business_document(lv)
-            if doc and (doc.get("content") or "").strip():
-                body = f"# {doc.get('title') or '비즈니스 문서'}\n\n{doc['content']}\n"
+            content = ((doc or {}).get("content") or "").strip()
+            contact = _contact_block()
+            # 내용이 없어도 연락처가 있으면 쓴다 — 문서의 최소 의무=신원(연락 방법).
+            if content or contact:
+                title = (doc or {}).get("title") or "비즈니스 문서"
+                body = f"# {title}\n\n{content}\n" if content else f"# {title}\n"
+                body += contact
                 f = d / _BIZDOC_NAME
                 if not f.exists() or f.read_text(encoding="utf-8") != body:
                     f.write_text(body, encoding="utf-8")
+        except Exception:
+            pass
+    # 아이템 물질화 — 가레지세일 진열: 아이템마다 문서(+사진)를 <레벨>/<비즈니스 이름>/ 에.
+    # 파생 구역 경계·청소는 warehouse_items 사이드카가 책임진다(사용자 파일 불가침).
+    if bm is not None:
+        try:
+            import warehouse_items
+            warehouse_items.sync(bm, {lv: _WAREHOUSE_ROOT / name
+                                      for lv, name in _WAREHOUSE_LEVELS.items()})
         except Exception:
             pass
 

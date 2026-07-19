@@ -263,12 +263,20 @@ def get_tailscale_path() -> str:
             return hit
     except Exception:
         pass
-    candidates = [
-        "/Applications/Tailscale.app/Contents/MacOS/Tailscale",  # macOS 앱(App Store/직배포)
-        "/opt/homebrew/bin/tailscale",
-        "/usr/local/bin/tailscale",
-        "/usr/bin/tailscale",
-    ]
+    # PATH 폴백 — 앱을 띄운 프로세스가 설치 이전 PATH 를 물고 있으면(윈도우 시작메뉴
+    # 실행 등) find_binary 가 놓친다 → OS 표준 설치 경로를 직접 짚는다(cloudflared 동형).
+    if os.name == "nt":
+        candidates = [
+            r"C:\Program Files\Tailscale\tailscale.exe",
+            r"C:\Program Files (x86)\Tailscale\tailscale.exe",
+        ]
+    else:
+        candidates = [
+            "/Applications/Tailscale.app/Contents/MacOS/Tailscale",  # macOS 앱(App Store/직배포)
+            "/opt/homebrew/bin/tailscale",
+            "/usr/local/bin/tailscale",
+            "/usr/bin/tailscale",
+        ]
     for c in candidates:
         if Path(c).exists():
             return c

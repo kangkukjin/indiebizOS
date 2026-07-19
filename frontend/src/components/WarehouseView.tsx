@@ -255,6 +255,27 @@ function DiscoverPane() {
     if (last < text.length) parts.push(text.slice(last));
     return parts;
   };
+  // 작성자 클릭 = DM — 이웃이면 그 이웃으로, 아니면 npub 로 이웃 등록부터([others:neighbor] save 는
+  // npub 멱등: 같은 npub 이웃이 있으면 그대로 반환). 그 뒤 메신저 창을 그 이웃의 대화로 딥링크
+  // (localStorage 핸드오프 — MessengerInstrumentView 가 마운트/storage 이벤트로 소비).
+  const openDm = async (it: IntroItem) => {
+    const npub = it.author_full || '';
+    if (!npub.startsWith('npub')) { window.alert('작성자의 nostr 주소를 확인할 수 없어요.'); return; }
+    try {
+      const r = (await runIBL(
+        `[others:neighbor]{op: "save", name: ${JSON.stringify(it.author)}, npub: ${JSON.stringify(npub)}}`,
+      )) as Record<string, unknown>;
+      const nb = (r?.neighbor ?? null) as { id?: number } | null;
+      if (!nb?.id) throw new Error(String(r?.error || r?.message || '이웃 등록 실패'));
+      localStorage.setItem('indiebiz_messenger_dm_nid', String(nb.id));
+      const el = (window as any).electron;
+      if (el?.openMessengerWindow) el.openMessengerWindow();
+      else window.location.hash = '#/messenger';   // 브라우저 폴백 (런처 연락처 버튼과 동일)
+    } catch (e) {
+      window.alert(`DM 열기 실패: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   // 게시판처럼 한마디 — [others:feed]{op:"post"} 로 #IndieNet 보드에 kind:1 발행(커뮤니티 계기와 동일 경로).
   // 소개만이 아니라 일반 대화도 이 스트림에서 오간다. ★내용은 JSON.stringify 로 이스케이프(따옴표·줄바꿈).
   const postMsg = async () => {
@@ -339,7 +360,13 @@ function DiscoverPane() {
             return (
               <li key={it.id || i} className="px-4 py-3 rounded-xl bg-white border border-stone-200">
                 <div className="flex items-center gap-2 text-xs text-stone-400 mb-1">
-                  <span className="font-medium text-stone-600">{it.author}</span>
+                  <button
+                    className="font-medium text-stone-600 hover:text-[#B45309] hover:underline underline-offset-2"
+                    title="DM 보내기 — 메신저에서 이 사람과의 대화를 엽니다 (이웃이 아니면 등록부터)"
+                    onClick={() => openDm(it)}
+                  >
+                    💬 {it.author}
+                  </button>
                   <span>{it.time}</span>
                 </div>
                 <p className="text-sm text-stone-800 whitespace-pre-wrap break-words">{linkify(it.content)}</p>

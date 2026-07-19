@@ -762,7 +762,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
           <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-6 h-6 text-purple-700" />
-              <strong className="text-purple-800">👥 이웃 관리 — 상단 "연락처" 버튼 (메신저 계기)</strong>
+              <strong className="text-purple-800">👥 이웃 관리 — 상단 "메신저" 버튼</strong>
             </div>
             <div className="text-sm text-purple-700 space-y-1">
               <p>• 이웃 목록에서 사람을 고르면 <strong>대화 탭</strong>(채팅)과 <strong>이웃 정보 탭</strong>이 열립니다</p>

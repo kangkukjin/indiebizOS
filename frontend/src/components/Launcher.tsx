@@ -721,10 +721,10 @@ export function Launcher() {
                 }
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
-              title="메신저 · 연락처"
+              title="메신저 — 대화 · 이웃 관리 (레벨·연락처)"
             >
               <Contact size={15} />
-              <span className="text-[13px]">연락처</span>
+              <span className="text-[13px]">메신저</span>
             </button>
             <button
               onClick={sendClipboardToPhone}

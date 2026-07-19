@@ -12,9 +12,29 @@ import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 
 const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
 
+// DM 딥링크 핸드오프 — 다른 창(이웃찾기 등)이 이 키에 이웃 id 를 넣고 메신저 창을 연다.
+// 같은 오리진의 창들이 localStorage 를 공유하므로 main.js(재시작 필요) 손대지 않고 전달 가능.
+const DM_NID_KEY = 'indiebiz_messenger_dm_nid';
+
 export function MessengerInstrumentView() {
   const [inst, setInst] = useState<AppInstrument | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // 마운트 시 1회 소비 + 창이 이미 떠 있으면 storage 이벤트로 수신(발신 창에서 setItem 시 발화)
+  const [dmNid, setDmNid] = useState<number | null>(() => {
+    const v = localStorage.getItem(DM_NID_KEY);
+    if (v) { localStorage.removeItem(DM_NID_KEY); return Number(v) || null; }
+    return null;
+  });
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === DM_NID_KEY && e.newValue) {
+        localStorage.removeItem(DM_NID_KEY);
+        setDmNid(Number(e.newValue) || null);
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -48,7 +68,7 @@ export function MessengerInstrumentView() {
         <span className="font-semibold text-stone-800">{inst.name}</span>
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
-        <GenericInstrument instrument={inst} />
+        <GenericInstrument instrument={inst} openNeighborId={dmNid} onDeepLinkDone={() => setDmNid(null)} />
       </div>
     </div>
   );

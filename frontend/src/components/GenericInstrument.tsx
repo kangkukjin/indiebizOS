@@ -383,7 +383,11 @@ function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<
 type DrillTab = { name: string; view: AppViewPrim[]; compose?: AppCompose };
 type DrillState = { data: Json; action: string; item: Json; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] };
 
-function ModePane({ mode }: { mode: AppMode }) {
+function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
+  mode: AppMode;
+  openNeighborId?: number | null;   // 딥링크 — 이 이웃 id 의 행으로 자동 드릴(메신저 DM 진입 등)
+  onDeepLinkDone?: () => void;
+}) {
   const initVals = useCallback(() => {
     const v: Record<string, string> = {};
     (mode.inputs || []).forEach((inp) => { v[inp.key] = inp.default || ''; });
@@ -449,16 +453,41 @@ function ModePane({ mode }: { mode: AppMode }) {
     }
   }, []);
 
+  // 딥링크 — 창을 "이 이웃의 대화"로 바로 연다(이웃찾기 DM 등). 목록 데이터가 도착한 뒤
+  // 마스터 card_list 에서 id 일치 행을 찾아 자동 드릴. 못 찾으면(검색·레벨 필터에 가려짐 등)
+  // 조용히 소비만 한다 — 목록은 이미 떠 있으니 사용자가 직접 고르면 된다.
+  useEffect(() => {
+    if (openNeighborId == null || !data) return;
+    const p = (mode.view || []).find(
+      (v) => v?.type === 'card_list' && (v as { item_click?: unknown }).item_click,
+    );
+    if (p) {
+      const items = asList(data, (p as { from?: string }).from) as Json[];
+      const target = items.find((it) => String(jget(it, 'id')) === String(openNeighborId));
+      if (target) onDrill(p, target);
+    }
+    onDeepLinkDone?.();
+  }, [openNeighborId, data, mode, onDrill, onDeepLinkDone]);
+
   // 현재 뷰 새로고침 (드릴이면 드릴 액션 재실행, 아니면 모드 액션)
   const refreshCurrent = useCallback(async () => {
     if (drill) {
       const nd = await runIBL(drill.action);
       if (nd && typeof nd === 'object') (nd as Json)._item = drill.item;
       setDrill((s) => (s ? { ...s, data: nd } : s));
+      // ★마스터 목록도 함께 갱신 — 드릴 폼 저장이 바꾼 값(비즈니스 레벨 등)이 왼쪽 목록에
+      //   바로 반영되게. run()은 setDrill(null)로 드릴을 닫아버리므로 데이터만 조용히 다시 당긴다.
+      if (mode.action) {
+        const vals = valuesRef.current;
+        const ok = (mode.inputs || []).every((inp) => !inp.required || vals[inp.key]);
+        if (ok) {
+          try { setData(await runIBL(buildAction(mode.action, vals))); } catch { /* 목록은 다음 조회가 진실 */ }
+        }
+      }
     } else {
       run();
     }
-  }, [drill, run]);
+  }, [drill, run, mode]);
 
   // 액션 실행기: $field 치환 + {path}(rowContext, 기본 드릴 데이터) 치환 → 실행 → 새로고침
   const dispatch = useCallback<Dispatch>(async (template, fieldValues, rowContext, opts) => {
@@ -744,7 +773,11 @@ function ModePane({ mode }: { mode: AppMode }) {
   );
 }
 
-export function GenericInstrument({ instrument }: { instrument: AppInstrument }) {
+export function GenericInstrument({ instrument, openNeighborId, onDeepLinkDone }: {
+  instrument: AppInstrument;
+  openNeighborId?: number | null;
+  onDeepLinkDone?: () => void;
+}) {
   const modes: AppMode[] = instrument.modes || [instrument];
   const [modeIdx, setModeIdx] = useState(0);
   const mode = modes[Math.min(modeIdx, modes.length - 1)];
@@ -786,7 +819,7 @@ export function GenericInstrument({ instrument }: { instrument: AppInstrument })
         </div>
       )}
       {topMsg && <div className="max-w-2xl mx-auto px-5 pt-2 text-sm text-emerald-700">{topMsg}</div>}
-      <ModePane mode={mode} />
+      <ModePane mode={mode} openNeighborId={openNeighborId} onDeepLinkDone={onDeepLinkDone} />
     </div>
   );
 }

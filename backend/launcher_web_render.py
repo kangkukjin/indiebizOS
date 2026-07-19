@@ -476,6 +476,20 @@ async function refreshCurrent(){
   if(VIEW_CTX&&VIEW_CTX.refresh==='drill'){
     const nd=await ibl(VIEW_CTX.action); if(nd&&typeof nd==='object') nd._item=VIEW_CTX.item;
     VIEW_CTX.data=nd; renderDrill();
+    /* ★SPLIT(master_detail)이면 왼쪽 목록도 조용히 갱신 — 드릴 폼 저장이 바꾼 값(비즈니스 레벨 등)이
+       목록에 바로 반영되게. runMode()는 드릴을 닫으므로 데이터만 다시 당겨 mdList 만 재렌더. */
+    if(SPLIT&&LIST&&CUR.mode&&CUR.mode.action){
+      try{
+        const vals=gatherInputs(); let ok=true;
+        for(const inp of (CUR.mode.inputs||[])) if(inp.required&&!vals[inp.key]) ok=false;
+        if(ok){
+          const md=await ibl(buildAction(CUR.mode.action,vals));
+          LIST.data=md;
+          const ml=document.getElementById('mdList');
+          if(ml){ ml.innerHTML=renderView(CUR.mode.view,md); initMaps(); }
+        }
+      }catch(e){ /* 목록은 다음 조회가 진실 */ }
+    }
   } else { runMode(); }
 }
 

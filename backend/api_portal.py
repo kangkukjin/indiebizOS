@@ -892,6 +892,44 @@ async def warehouse_admin_remove(request: Request):
     return {"ok": True, "trashed": str(dest)}
 
 
+@router.post("/warehouse-admin/move")
+async def warehouse_admin_move(request: Request):
+    """창고 안에서 옮기기 — 파일이든 폴더든 다른 폴더 밑으로. 같은 레벨 안에서만.
+
+    레벨을 넘나드는 이동은 '공개 범위 변경'이라 뜻이 다르다(여기선 안 한다).
+    같은 볼륨이라 rename = 원자적 이동 — 복사본이 생기지 않는다.
+    """
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    lv = _admin_level(body.get("level", 0))
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    root = _warehouse_dir(lv)
+    src = _safe_rel(root, name)
+    if not src.exists():
+        raise HTTPException(status_code=404, detail="no such item")
+    dst_dir = _safe_rel(root, str(body.get("dest", "")).strip())   # 빈 값 = 창고 루트
+    if not dst_dir.is_dir():
+        raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
+    # 폴더를 자기 자신·자기 하위로 옮기면 트리가 끊긴다(자기를 삼킴).
+    if src.is_dir() and (dst_dir == src
+                         or str(dst_dir.resolve()).startswith(str(src.resolve()) + os.sep)):
+        raise HTTPException(status_code=400, detail="폴더를 자기 안으로는 옮길 수 없어요")
+    if src.parent == dst_dir:
+        return {"ok": True, "moved": name, "noop": True}
+    target = dst_dir / src.name
+    n = 2
+    while target.exists():
+        target = dst_dir / (f"{src.stem} ({n}){src.suffix}" if src.is_file()
+                            else f"{src.name} ({n})")
+        n += 1
+    src.rename(target)
+    return {"ok": True, "moved": str(target.relative_to(root))}
+
+
 @router.get("/warehouse-admin/file")
 async def warehouse_admin_file(level: int = 0, name: str = "", download: int = 0):
     """소유자 열람·내려받기 — 런처 창고 표면(데스크탑·원격)에서 파일을 연다/받는다.

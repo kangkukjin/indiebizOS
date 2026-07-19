@@ -55,21 +55,28 @@ function fileIcon(name: string) {
 
 /* 창고 안 상대경로("매매/망의 시대.txt")를 폴더 트리로 되접는다. 임의 깊이.
    표시만 짧아지고(파일명), 열기·내려받기·빼기의 키는 전체 경로 f.name 그대로 쓴다. */
-interface WhNode { dirs: Record<string, WhNode>; files: { f: WhFile; label: string }[] }
+/* path = 창고 루트 기준 폴더 경로(루트는 ''). 드래그 이동의 목적지 키로 쓴다. */
+interface WhNode { dirs: Record<string, WhNode>; files: { f: WhFile; label: string }[]; path: string }
 
 function whTree(files: WhFile[]): WhNode {
-  const root: WhNode = { dirs: {}, files: [] };
+  const root: WhNode = { dirs: {}, files: [], path: '' };
   for (const f of files) {
     const parts = f.name.split('/');
     let node = root;
     for (const seg of parts.slice(0, -1)) {
-      if (!node.dirs[seg]) node.dirs[seg] = { dirs: {}, files: [] };
+      if (!node.dirs[seg]) {
+        node.dirs[seg] = { dirs: {}, files: [], path: node.path ? `${node.path}/${seg}` : seg };
+      }
       node = node.dirs[seg];
     }
     node.files.push({ f, label: parts[parts.length - 1] });
   }
   return root;
 }
+
+/* 창고 안 드래그 = 이 MIME 로 옮길 항목의 상대경로를 싣는다. 바깥에서 끌어온 파일
+   투입(dataTransfer.files)과 구별하는 표식 — 없으면 둘이 같은 drop 핸들러에서 엉킨다. */
+const WH_DRAG = 'application/x-indiebiz-warehouse-path';
 
 /* 폴더 요약 = 하위 전체 개수·크기 + 가장 최근 mtime(폴더 정렬 키 — 목록이 최신순이므로) */
 function whAgg(node: WhNode): { count: number; bytes: number; mtime: string } {
@@ -641,6 +648,8 @@ export function WarehouseView() {
   const [data, setData] = useState<WhData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);   // 지금 조준된 폴더 경로
+  const [innerDrag, setInnerDrag] = useState(false);                   // 창고 안 이동 vs 바깥 투입
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async (lv: number) => {
@@ -662,6 +671,7 @@ export function WarehouseView() {
   const addPaths = useCallback(async (paths: string[]) => {
     if (!paths.length) return;
     setBusy(`${paths.length}개 넣는 중…`);
+    let msg: string | null = null;
     try {
       const r = await fetch(`${API}/portal/warehouse-admin/add`, {
         method: 'POST',
@@ -670,19 +680,49 @@ export function WarehouseView() {
       });
       const d = await r.json();
       if (d.skipped?.length) {
-        setError(`건너뜀 ${d.skipped.length}건: ${d.skipped[0].reason}`);
+        msg = `건너뜀 ${d.skipped.length}건: ${d.skipped[0].reason}`;
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(null);
-      load(level);
+      msg = e instanceof Error ? e.message : String(e);
     }
+    setBusy(null);
+    await load(level);      // load 가 setError(null) 을 하므로 사유는 그 뒤에 담는다
+    if (msg) setError(msg);
+  }, [level, load]);
+
+  /* 창고 안에서 옮기기 — dest='' 는 창고 루트. 같은 레벨 안에서만 움직인다. */
+  const moveItem = useCallback(async (name: string, dest: string) => {
+    if (!name) return;
+    const parent = name.includes('/') ? name.slice(0, name.lastIndexOf('/')) : '';
+    if (parent === dest) return;                 // 제자리 — 서버 왕복도 아깝다
+    setError(null);
+    let msg: string | null = null;
+    try {
+      const r = await fetch(`${API}/portal/warehouse-admin/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level, name, dest }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        msg = d.detail || `HTTP ${r.status}`;
+      }
+    } catch (e) {
+      msg = e instanceof Error ? e.message : String(e);
+    }
+    // ★목록 새로고침이 먼저다 — load 가 성공 시 setError(null) 을 하므로 순서가 뒤집히면
+    //   방금 담은 실패 사유가 지워져 "끌었는데 아무 일도 안 일어남"이 된다.
+    await load(level);
+    if (msg) setError(msg);
   }, [level, load]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    /* 창고 안 항목을 빈 곳에 떨어뜨림 = 창고 루트로 빼기(바깥 파일 투입과 구별) */
+    setInnerDrag(false);
+    const inner = e.dataTransfer.getData(WH_DRAG);
+    if (inner) { moveItem(inner, ''); return; }
     const el = (window as any).electron;
     if (!el?.getPathForFile) {
       setError('파일 경로 배선이 아직 없어요 — 앱을 재시작해 주세요.');
@@ -696,7 +736,7 @@ export function WarehouseView() {
       } catch { /* 개별 실패 무시 */ }
     }
     addPaths(paths);
-  }, [addPaths]);
+  }, [addPaths, moveItem]);
 
   const pickFiles = useCallback(async () => {
     const el = (window as any).electron;
@@ -811,15 +851,20 @@ export function WarehouseView() {
 
       {/* 폴더 뷰 = 드롭존 */}
       <div
-        className={`flex-1 min-h-0 overflow-auto relative ${dragOver ? 'bg-amber-50' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={(e) => { if (e.currentTarget === e.target) setDragOver(false); }}
+        className={`flex-1 min-h-0 overflow-auto relative ${dragOver && !dropTarget ? 'bg-amber-50' : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setInnerDrag(e.dataTransfer.types.includes(WH_DRAG));
+          setDragOver(true);
+        }}
+        onDragLeave={(e) => { if (e.currentTarget === e.target) { setDragOver(false); setDropTarget(null); } }}
         onDrop={onDrop}
       >
-        {dragOver && (
+        {/* 폴더를 조준 중이면 그 폴더가 스스로 표시한다 — 루트 안내는 비켜준다 */}
+        {dragOver && !dropTarget && (
           <div className="absolute inset-3 z-10 border-2 border-dashed border-[#D97706] rounded-2xl flex items-center justify-center pointer-events-none bg-amber-50/80">
             <div className="text-[#B45309] font-medium">
-              레벨 {level} 창고에 넣기
+              {innerDrag ? '창고 맨 위로 빼기' : `레벨 ${level} 창고에 넣기`}
             </div>
           </div>
         )}
@@ -860,16 +905,43 @@ export function WarehouseView() {
         {dirNames.map((name) => {
           const sub = node.dirs[name];
           const a = whAgg(sub);
+          const isOver = dropTarget === sub.path;
           return (
-            <li key={`d:${depth}:${name}`}>
-              <details className="group/fd rounded-xl bg-white border border-stone-200">
+            <li
+              key={`d:${depth}:${name}`}
+              draggable
+              onDragStart={(e) => {
+                e.stopPropagation();
+                e.dataTransfer.setData(WH_DRAG, sub.path);
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              /* 폴더 = 드롭 대상. stopPropagation 이 없으면 안쪽 폴더에 떨어뜨린 게
+                 바깥 폴더·루트까지 함께 처리돼 목적지가 뒤집힌다. */
+              onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes(WH_DRAG)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                e.dataTransfer.dropEffect = 'move';
+                setDropTarget(sub.path);
+              }}
+              onDragLeave={(e) => { e.stopPropagation(); setDropTarget((t) => (t === sub.path ? null : t)); }}
+              onDrop={(e) => {
+                const dragged = e.dataTransfer.getData(WH_DRAG);
+                if (!dragged) return;                 // 바깥 파일 투입은 패널이 받는다
+                e.preventDefault();
+                e.stopPropagation();
+                setDropTarget(null);
+                moveItem(dragged, sub.path);
+              }}
+            >
+              <details className={`group/fd rounded-xl bg-white border ${isOver ? 'border-[#D97706] bg-amber-50' : 'border-stone-200'}`}>
                 <summary className="flex items-center gap-3 px-3 py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                   <ChevronRight className="w-4 h-4 text-stone-400 shrink-0 transition-transform group-open/fd:rotate-90" />
-                  <Folder className="w-5 h-5 text-stone-400 shrink-0" />
+                  <Folder className={`w-5 h-5 shrink-0 ${isOver ? 'text-[#D97706]' : 'text-stone-400'}`} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-stone-800 truncate">{name}</div>
                     <div className="text-[11px] text-stone-400">
-                      {a.count}개 · {fmtBytes(a.bytes)}
+                      {isOver ? '여기로 옮기기' : `${a.count}개 · ${fmtBytes(a.bytes)}`}
                     </div>
                   </div>
                 </summary>
@@ -890,6 +962,12 @@ export function WarehouseView() {
     return (
                 <li
                   key={f.name}
+                  draggable
+                  onDragStart={(e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.setData(WH_DRAG, f.name);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40"
                 >
                   {isImg ? (

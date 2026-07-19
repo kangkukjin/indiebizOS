@@ -737,6 +737,10 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
           ))}
           <button onClick={() => setMode('search')} title="새 탭"
             className={`shrink-0 px-2.5 py-1.5 rounded-t-lg text-lg leading-none text-stone-500 hover:bg-stone-200 ${mode === 'search' ? 'bg-white' : ''}`}>+</button>
+          <div className="flex-1" />
+          {/* 앱모드의 앱이 된 뒤 보이는 출구 — 오버레이를 닫고 있던 표면으로 복귀(Esc 와 동일). */}
+          <button onClick={onClose} title="검색 브라우저 닫기 (Esc)"
+            className="shrink-0 self-center px-2.5 py-1 rounded-lg text-sm text-stone-500 hover:bg-stone-200 whitespace-nowrap">✕ 닫기</button>
         </div>
       )}
 
@@ -885,6 +889,11 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
               <span>판 도서관</span>
             </button>
           </div>
+          {/* 앱모드의 앱이 된 뒤 보이는 출구 — 오버레이를 닫고 있던 표면으로 복귀(Esc 와 동일). */}
+          <button onClick={onClose} title="검색 브라우저 닫기 (Esc)"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 bg-white text-sm text-stone-600 hover:bg-stone-100 hover:border-stone-300 transition">
+            <span>✕ 닫기</span>
+          </button>
         </div>
       )}
 

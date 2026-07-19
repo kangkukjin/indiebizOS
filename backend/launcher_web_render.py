@@ -669,8 +669,10 @@ function openFileOverlay(path, html){
 window.addEventListener('popstate', function(){
   const _ov=document.querySelector('.fileov');
   if(_ov){ _ov.remove(); return; }              // 1) 파일 오버레이(신문 등)
+  const _fg=document.getElementById('p-forage');
+  if(_fg && _fg.classList.contains('on')){ setSurface('app'); return; }  // 2) 검색브라우저(앱) → 앱 그리드
   const _inst=document.getElementById('appInst');
-  if(_inst && _inst.style.display!=='none'){ appBackHome(); return; }  // 2) 계기 → 앱 그리드
+  if(_inst && _inst.style.display!=='none'){ appBackHome(); return; }  // 3) 계기 → 앱 그리드
 });
 async function rowDrill(vi,ri){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.

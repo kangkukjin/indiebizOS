@@ -13,6 +13,24 @@ let apSwitches=[];
 
 /* ===== 공통 ===== */
 function esc(s){ const d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML; }
+/* 채팅 버블용 경량 마크다운 — AI 응답의 **·`·##·리스트·링크가 생짜로 보이던 것을 얇게 해석.
+   버블은 white-space:pre-wrap 이라 블록 요소를 만들지 않고 인라인 치환만 한다(줄바꿈은 원문 그대로). */
+function mdChat(t){
+  let s=String(t==null?'':t);
+  s=s.replace(/\\s*\\[MAP:\\{[\\s\\S]*?\\}\\]\\s*/g,'\\n');  /* 지도 봉투(데스크탑 렌더 전용)는 원격 표시서 제거 */
+  s=esc(s);
+  const fences=[];
+  s=s.replace(/```[a-zA-Z0-9_-]*\\n?([\\s\\S]*?)```/g,function(_m,c){ fences.push(c.replace(/\\n+$/,'')); return '\\u0000F'+(fences.length-1)+'\\u0000'; });
+  s=s.replace(/`([^`\\n]+)`/g,'<code>$1</code>');
+  s=s.replace(/\\*\\*([^*\\n]+)\\*\\*/g,'<b>$1</b>');
+  s=s.replace(/^#{1,6}\\s+(.+)$/gm,'<span class="mdh">$1</span>');
+  s=s.replace(/^&gt; ?(.+)$/gm,'<span class="mdq">▏ $1</span>');
+  s=s.replace(/^(\\s*)[-*]\\s+/gm,'$1• ');
+  s=s.replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/(^|[^"'>=\\]])(https?:\\/\\/[^\\s<>"']+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  s=s.replace(/\\u0000F(\\d+)\\u0000/g,function(_m,i){ return '<pre>'+fences[+i]+'</pre>'; });
+  return s;
+}
 // kv 값 렌더 — http(s) URL 이면 새 탭으로 여는 링크(공개 사이트 주소 등), 아니면 텍스트.
 function kvVal(v){ const t=String(v==null?'':v).trim();
   const isUrl=(t.startsWith('http://')||t.startsWith('https://'))&&t.indexOf(' ')<0;
@@ -212,8 +230,10 @@ document.addEventListener('change',function(ev){
 /* ===== 표면 토글 ===== */
 function setSurface(s){
   surface=s;
+  /* 포식은 표면 탭이 아니라 앱모드의 앱 — 탭 하이라이트는 '앱'에 매핑, 탭 없는 표면은 건너뜀 */
+  const hl=(s==='forage')?'app':s;
   ['autopilot','manual','app','forage','warehouse'].forEach(k=>{
-    document.getElementById('t-'+k).classList.toggle('on',k===s);
+    const t=document.getElementById('t-'+k); if(t) t.classList.toggle('on',k===hl);
     document.getElementById('p-'+k).classList.toggle('on',k===s);
   });
   if(s==='app' && !appHomeRendered) renderAppHome();
@@ -223,6 +243,7 @@ function setSurface(s){
 function refreshSurface(){
   if(surface==='autopilot') apLoad();
   else if(surface==='app'){ appBackHome(); appHomeRendered=false; renderAppHome(true); }  /* 매니페스트 강제 재fetch */
+  else if(surface==='forage') fgNav('board');
   else if(surface==='warehouse') whLoad(WH_LEVEL);
 }
 
@@ -726,7 +747,7 @@ function apAddMsg(role,text){
   const c=document.getElementById('apMsgs');
   const ph=c.querySelector('.empty'); if(ph) ph.remove();
   const el=document.createElement('div'); el.className='msg '+role;
-  el.innerHTML='<div class="av">'+(role==='user'?'🧑':'🤖')+'</div><div class="bub">'+esc(text)+'</div>';
+  el.innerHTML='<div class="av">'+(role==='user'?'🧑':'🤖')+'</div><div class="bub">'+(role==='user'?esc(text):mdChat(text))+'</div>';
   c.appendChild(el); c.scrollTop=c.scrollHeight;
 }
 function apKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apSend(); } }
@@ -779,7 +800,7 @@ async function apSend(){
     }
     if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
     last.textContent='작업 중…';
-    last.textContent=await apPollAssistant(baselineId,last);
+    last.innerHTML=mdChat(await apPollAssistant(baselineId,last));
   }catch(e){ last.textContent='연결 오류: '+e.message; }
   finally{ btn.disabled=false; }
 }
@@ -931,8 +952,15 @@ async function renderAppHome(force){
     '<p class="muted" style="margin-bottom:12px">직접 조작 — 아이콘을 눌러 바로 실행 (0 토큰)</p>'+
     '<div class="grid">'+INSTRUMENTS.map((inst,ix)=>
       '<button class="tile" onclick="openInstrument('+ix+')"><span class="em">'+esc(inst.icon||'🔧')+'</span><span class="nm">'+esc(inst.name)+'</span></button>'
-    ).join('')+'</div>';
+    ).join('')+
+    /* 내장 앱(매니페스트 밖): 포식(검색) 브라우저 — 구 표면 탭에서 앱으로 이사 */
+    '<button class="tile" onclick="openForage()"><span class="em">🔍</span><span class="nm">검색브라우저</span></button>'+
+    '</div>';
   appHomeRendered=true;
+}
+function openForage(){
+  setSurface('forage');
+  try{ history.pushState({forage:1}, ''); }catch(e){}  /* 안드로이드 뒤로가기 → 앱 그리드 복귀 */
 }
 function appBackHome(){
   document.getElementById('appInst').style.display='none';
@@ -1045,18 +1073,18 @@ function _npBar(){
   let b=document.getElementById('nowPlaying');
   if(!b){
     b=document.createElement('div'); b.id='nowPlaying';
-    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9998;display:none;align-items:stretch;gap:10px;padding:10px 14px;background:#1a1a2e;border-top:1px solid #333;box-shadow:0 -2px 10px rgba(0,0,0,.5)';
+    b.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:9998;display:none;align-items:stretch;gap:10px;padding:10px 14px;background:var(--bg2);border-top:1px solid var(--line);box-shadow:0 -2px 10px rgba(74,64,53,.12)';
     // 컬럼: (1) 제목+정지 (2) 진행바 — 유한 길이(유튜브뮤직)일 때만 timeupdate 가 표시, 라이브(라디오)엔 숨김
     b.innerHTML='<div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">'
       +'<div style="display:flex;align-items:center;gap:10px">'
       +'<span style="font-size:18px">\\u266a</span>'
-      +'<span id="npTitle" style="flex:1;color:#eee;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>'
-      +'<button onclick="stopRadioStream()" style="background:#e94560;color:#fff;border:none;border-radius:18px;padding:8px 18px;font-size:15px;font-weight:bold">\\u25a0 \\uc815\\uc9c0</button>'
+      +'<span id="npTitle" style="flex:1;color:var(--txt);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>'
+      +'<button onclick="stopRadioStream()" style="background:var(--acc);color:#fff;border:none;border-radius:18px;padding:8px 18px;font-size:15px;font-weight:bold">\\u25a0 \\uc815\\uc9c0</button>'
       +'</div>'
       +'<div id="npSeekRow" style="display:none;align-items:center;gap:8px">'
-      +'<span id="npCur" style="color:#aaa;font-size:11px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right">0:00</span>'
-      +'<input id="npSeek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:#e94560;cursor:pointer">'
-      +'<span id="npDur" style="color:#aaa;font-size:11px;font-variant-numeric:tabular-nums;min-width:34px">0:00</span>'
+      +'<span id="npCur" style="color:var(--dim);font-size:11px;font-variant-numeric:tabular-nums;min-width:34px;text-align:right">0:00</span>'
+      +'<input id="npSeek" type="range" min="0" max="100" value="0" step="1" style="flex:1;accent-color:var(--acc);cursor:pointer">'
+      +'<span id="npDur" style="color:var(--dim);font-size:11px;font-variant-numeric:tabular-nums;min-width:34px">0:00</span>'
       +'</div>'
       +'</div>';
     document.body.appendChild(b);

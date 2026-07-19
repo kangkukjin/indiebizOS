@@ -86,12 +86,16 @@ const STATIC_DOMAINS: Domain[] = [
       { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
     ],
   },
+  // 검색(포식) 브라우저 — 구 런처 모드에서 앱으로 이사. ForageBrowser 오버레이는 Launcher 에
+  // 상시 마운트돼 있어(탭·사냥판 상태 보존) 여기선 열기 신호만 쏜다(같은 창 CustomEvent).
+  { id: 'forage', icon: '🔍', label: '검색브라우저',
+    onOpen: () => window.dispatchEvent(new CustomEvent('indiebiz:open-forage')), instruments: [] },
 ];
 
 // 홈 그리드 기본 배치 순서 (평탄화된 앱 id 기준 — 사용자 레이아웃이 없는 첫 실행/신규 앱의 자동 자리).
 const HOME_ORDER = [
   'realty', 'commercial', 'book', 'obsidian', 'calendar', 'newspaper', 'audio_briefing', 'photo', 'files', 'launch',
-  'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic',
+  'lecture', 'binnote', 'invest', 'restaurant', 'directions', 'weather', 'culture', 'radio', 'ytmusic', 'forage',
 ];
 
 // STATIC 도메인을 평탄한 앱 목록으로 — instruments 있으면 각각을 앱으로, 없으면(onOpen 도메인)

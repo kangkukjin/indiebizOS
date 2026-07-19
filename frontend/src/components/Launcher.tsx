@@ -34,11 +34,11 @@ import type {
   MidtierAISettings,
 } from './launcher-components';
 
-// 런처 상단 모드 선택기의 여섯 표면 (순서 = 드롭다운 표시 순서).
-const LAUNCHER_MODES = ['browser', 'autopilot', 'manual', 'app', 'business', 'warehouse'] as const;
+// 런처 상단 모드 선택기의 다섯 표면 (순서 = 드롭다운 표시 순서).
+// 검색 브라우저는 모드가 아니라 앱모드의 앱(ActionDesktop 'forage' 타일) — 오버레이로 뜬다.
+const LAUNCHER_MODES = ['autopilot', 'manual', 'app', 'business', 'warehouse'] as const;
 type LauncherMode = typeof LAUNCHER_MODES[number];
 const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
-  browser: { label: '검색 브라우저', icon: Search },
   autopilot: { label: '자율주행', icon: Compass },
   manual: { label: '조종실', icon: Gauge },
   app: { label: '앱', icon: LayoutGrid },
@@ -55,10 +55,10 @@ export function Launcher() {
     error,
   } = useAppStore();
 
-  // 런처는 하나의 모드 전환 버튼(상단 X-Ray 앞)으로 오가는 다섯 표면이다:
-  //   browser(검색 브라우저) = 공동 포식 크로미움  ·  autopilot(자율주행) = 데스크탑 아이콘
-  //   manual(조종실) = IBL 번역·검수·실행  ·  app(앱) = 아이콘 GUI 계기
-  //   business(비즈니스) = 비즈니스 계기(옛 전용 창을 인라인 모드로 흡수)
+  // 런처는 하나의 모드 전환 버튼(상단 X-Ray 앞)으로 오가는 표면들이다:
+  //   autopilot(자율주행) = 데스크탑 아이콘  ·  manual(조종실) = IBL 번역·검수·실행
+  //   app(앱) = 아이콘 GUI 계기  ·  business(비즈니스) = 비즈니스 계기  ·  warehouse(공유창고)
+  // 검색 브라우저(공동 포식 크로미움)는 모드에서 빠져 앱모드의 앱 — browserOpen 오버레이로 뜬다.
   // (옛 3토글 자율주행/조종실/앱은 이 단일 모드 선택기로 대체됨)
   const [launcherTab, setLauncherTab] = useState<LauncherMode>(() => {
     const saved = localStorage.getItem('indiebiz_launcher_mode');
@@ -99,8 +99,8 @@ export function Launcher() {
     [promotedIds, appMetaById]
   );
 
-  // 검색 브라우저에서 ✕닫기 시 돌아갈 직전 모드(브라우저 제외).
-  const prevModeRef = useRef<Exclude<LauncherMode, 'browser'>>('autopilot');
+  // 검색 브라우저 오버레이 — 모드가 아니라 현재 표면 위를 덮는다(닫으면 그 표면 그대로).
+  const [browserOpen, setBrowserOpen] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
   const modeMenuRef = useRef<HTMLDivElement>(null);
   // 검색 브라우저를 특정 URL로 열도록 넘기는 신호(예: X-Ray). ForageBrowser가 소비 후 null 복귀.
@@ -302,10 +302,9 @@ export function Launcher() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showModeMenu]);
 
-  // 선택 모드 영속화 + 브라우저로 갈 때 직전 모드 기억(✕닫기 복귀용)
+  // 선택 모드 영속화
   useEffect(() => {
     localStorage.setItem('indiebiz_launcher_mode', launcherTab);
-    if (launcherTab !== 'browser') prevModeRef.current = launcherTab;
   }, [launcherTab]);
 
   // PC Manager 창 열기 요청 폴링
@@ -410,14 +409,21 @@ export function Launcher() {
     };
   }, [loadSwitches]);
 
-  // 다른 창(커뮤니티·메신저 등)의 메시지에서 URL 을 클릭하면 런처의 포식 브라우저 탭으로 연다.
+  // 다른 창(커뮤니티·메신저 등)의 메시지에서 URL 을 클릭하면 포식 브라우저 오버레이로 연다.
   useEffect(() => {
     if (!window.electron?.onOpenForageUrl) return;
     window.electron.onOpenForageUrl((url: string) => {
-      setLauncherTab('browser');
+      setBrowserOpen(true);
       setPendingBrowserUrl(url);
     });
     return () => window.electron?.removeOpenForageUrl?.();
+  }, []);
+
+  // 앱모드의 검색브라우저 타일(ActionDesktop 'forage')이 쏘는 열기 신호 — 같은 창 내 CustomEvent.
+  useEffect(() => {
+    const openForage = () => setBrowserOpen(true);
+    window.addEventListener('indiebiz:open-forage', openForage);
+    return () => window.removeEventListener('indiebiz:open-forage', openForage);
   }, []);
 
   const handleCreateProject = async (templateName: string) => {
@@ -578,10 +584,10 @@ export function Launcher() {
   const activeMeta = activeAppId ? appMetaById[activeAppId] : null;
   const showingApp = launcherTab === 'app' && !!activeMeta;
 
-  // 기본 다섯 모드 선택 — 승격 딥링크 해제.
-  const selectMode = (m: LauncherMode) => { setActiveAppId(null); setLauncherTab(m); setShowModeMenu(false); };
+  // 기본 다섯 모드 선택 — 승격 딥링크 해제. 검색 브라우저 오버레이도 닫는다(모드가 가려지는 사고 방지).
+  const selectMode = (m: LauncherMode) => { setActiveAppId(null); setLauncherTab(m); setShowModeMenu(false); setBrowserOpen(false); };
   // 승격 앱 선택 — 앱 모드로 전환하고 그 앱을 딥링크로 연다.
-  const selectPromoted = (id: string) => { setActiveAppId(id); setLauncherTab('app'); setShowModeMenu(false); };
+  const selectPromoted = (id: string) => { setActiveAppId(id); setLauncherTab('app'); setShowModeMenu(false); setBrowserOpen(false); };
   // 승격 앱 빼기 — 드롭다운 ✕에서 바로. 레이아웃을 읽어 promoted 만 걷어내고 다시 저장(다른 필드 보존).
   const demotePromoted = async (id: string) => {
     setPromotedIds((prev) => prev.filter((x) => x !== id));  // 낙관적
@@ -601,7 +607,7 @@ export function Launcher() {
       {/* 상단 툴바 */}
       <div className="h-11 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
         <div className="flex items-center gap-1.5 no-drag">
-          {/* 모드 선택기 — 다섯 표면(검색 브라우저/자율주행/조종실/앱/비즈니스)을 오간다. X-Ray 앞. */}
+          {/* 모드 선택기 — 다섯 표면(자율주행/조종실/앱/비즈니스/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
               onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted(); return !v; })}
@@ -673,8 +679,8 @@ export function Launcher() {
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => {
-                // 외부 브라우저 대신 검색 브라우저(포식)의 한 탭으로 X-Ray 대시보드를 연다.
-                setLauncherTab('browser');
+                // 외부 브라우저 대신 검색 브라우저(포식) 오버레이의 한 탭으로 X-Ray 대시보드를 연다.
+                setBrowserOpen(true);
                 setPendingBrowserUrl('http://127.0.0.1:8765/xray/app');
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
@@ -1010,11 +1016,11 @@ export function Launcher() {
         )}
       </div>
 
-        {/* 포식 브라우저 — 이제 독립 모드('browser'). 상시 마운트해 탭·사냥판 상태를 보존하고
-            open 으로 표시/숨김만 토글한다. ✕닫기는 직전 모드로 복귀. 데스크탑 영역을 덮는다(헤더 보존). */}
+        {/* 포식 브라우저 — 앱모드의 앱(forage 타일)이자 X-Ray·타 창 URL의 착지점. 상시 마운트해
+            탭·사냥판 상태를 보존하고 open 으로 표시/숨김만 토글한다. ✕닫기는 현재 표면으로 복귀(오버레이). */}
         <ForageBrowser
-          open={launcherTab === 'browser'}
-          onClose={() => setLauncherTab(prevModeRef.current)}
+          open={browserOpen}
+          onClose={() => setBrowserOpen(false)}
           openUrl={pendingBrowserUrl}
           onUrlConsumed={() => setPendingBrowserUrl(null)}
         />

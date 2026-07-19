@@ -9,8 +9,9 @@ import {
   Folder, Bot, Zap, Package,
   Users, Building2, Key,
   MessageSquare, FileText,
-  HardDrive, Cloud, Mail,
-  Compass, Gauge, LayoutGrid, Search
+  Cloud, Mail, Smartphone,
+  Compass, Gauge, LayoutGrid, Search,
+  Warehouse, Map as MapIcon
 } from 'lucide-react';
 import guideExampleImage from '../assets/guide-example.jpg';
 
@@ -38,30 +39,120 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
             <strong>IndieBiz OS</strong>에 오신 것을 환영합니다!
           </p>
           <p className="text-gray-600 text-center">
-            데려다주는 "자율주행차"가 아니라,<br/>
-            내가 입는 <strong>인지 외골격</strong>입니다.
+            IndieBiz OS에는 두 개의 축이 있습니다.<br/>
+            뭐든 세상에 내놓는 <strong>공유창고</strong>,<br/>
+            그리고 그것을 채우고 읽는 <strong>AI 에이전트 시스템</strong>.
           </p>
           <p className="text-gray-500 text-sm text-center">
-            힘은 AI가 대되, 어디로 뻗을지는 매 순간 <strong>사람이</strong> 정합니다.
+            창고는 한 페이지면 설명이 끝날 만큼 단순합니다.<br/>
+            그래서 이 가이드는 <strong>창고부터</strong> 시작합니다 — 목적이 분명해야 나머지가 의미를 갖습니다.
           </p>
-          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-            <img src={guideExampleImage} alt="IndieBiz OS 사용 예시" className="w-full" />
+          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm w-fit mx-auto">
+            <img src={guideExampleImage} alt="IndieBiz OS 사용 예시 — 프로젝트와 스위치를 구성한 화면" className="max-h-48 w-auto" />
           </div>
-          <p className="text-gray-600 text-sm text-center">
-            ▲ 프로젝트와 스위치를 구성한 예시 화면
-          </p>
         </div>
       )
     },
     {
-      title: 'API 키 설정',
+      title: '공유창고 — 뭐든 내놓는 창고',
+      icon: <Warehouse className="w-10 h-10 text-emerald-600" />,
+      content: (
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            <strong>공유창고</strong>는 폴더에 파일을 던져 넣으면 <strong>세상에 발행</strong>되는 창고입니다.
+            그게 전부입니다 — 그런데 그 전부가 꽤 큽니다.
+          </p>
+          <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200 text-sm text-emerald-800 space-y-1">
+            <p>동영상을 넣으면 → <strong>유튜브</strong>가 하던 일</p>
+            <p>글을 넣으면 → <strong>블로그</strong>가 하던 일</p>
+            <p>상품 목록을 넣으면 → <strong>쇼핑몰</strong>이 하던 일</p>
+            <p>서비스 목록을 넣으면 → <strong>프리랜서 마켓</strong>이 하던 일</p>
+          </div>
+          <p className="text-gray-600 text-sm">
+            플랫폼이 종류별로 따로 있었던 건 <strong>인간용 매대</strong>가 각각 필요했기 때문입니다.
+            읽는 쪽이 AI라면 매대는 필요 없습니다 — <strong>창고 하나면 됩니다.</strong>
+          </p>
+          <div className="bg-sky-50 p-3 rounded-lg border border-sky-200 text-sm text-sky-800 space-y-1">
+            <p>• <strong>레벨 0~4 폴더</strong> — 어느 폴더에 넣느냐가 공개 범위 (0=누구나, 4=가장 가까운 이웃만)</p>
+            <p>• <strong>이웃 피드</strong> — 이웃 창고의 새 파일이 내게 흘러들어오고, 리트윗으로 되소개</p>
+            <p>• <strong>내 주소 = 내 정체</strong> — 플랫폼 계정이 아니라 내가 소유한 도메인 위에 섭니다</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '왜 AI 에이전트인가',
+      icon: <Bot className="w-10 h-10 text-indigo-600" />,
+      content: (
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            창고는 단순하지만, 두 가지를 <strong>요구</strong>합니다. 사람 손만으로는 둘 다 벅찹니다.
+          </p>
+          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200 text-sm">
+            <p className="text-amber-800 font-medium mb-1">① 채울 생산자</p>
+            <p className="text-amber-700">
+              창고는 채워져야 삽니다. IndieBiz OS의 에이전트는 보고서·신문·카탈로그를
+              <strong> 매일 만들어 창고에 자동 발행</strong>합니다 — 생산이 곧 발행이 됩니다.
+            </p>
+          </div>
+          <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-200 text-sm">
+            <p className="text-indigo-800 font-medium mb-1">② 읽을 지능</p>
+            <p className="text-indigo-700">
+              이웃 창고들은 매대 없는 raw 파일 더미입니다. 그걸 뒤져 이해하는 것은
+              <strong> 내 AI의 몫</strong> — 이웃의 나눔·구함 목록을 대조하고, 필요한 것을 찾아냅니다.
+            </p>
+          </div>
+          <p className="text-gray-600 text-sm">
+            블로그가 글쓰기를, 유튜브가 동영상을 의미 있게 했듯 —
+            <strong> 뭐든 내놓을 수 있는 창고는 뭐든 만들 수 있는 AI를 의미 있게 합니다.</strong>
+          </p>
+          <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700">
+            💡 AI 에이전트 시스템은 세상에 많습니다. IndieBiz OS가 다른 점은
+            <strong> 배포·연결 채널과 한 몸</strong>이라는 것 — 이 목적을 쥐고 보면
+            뒤에 나올 3표면·IBL·프로젝트가 전부 이 순환의 부품임이 보입니다.
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '시작에 필요한 것',
+      icon: <MapIcon className="w-10 h-10 text-emerald-600" />,
+      content: (
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            가능한 일은 아주 많지만, <strong>시작에 필요한 것</strong>은 명확합니다.<br/>
+            필수 기둥 둘, 준필수 하나 — 나머지는 자동이거나 선택입니다.
+          </p>
+          <div className="bg-red-50 p-3 rounded-lg border border-red-200 text-sm">
+            <p className="text-red-800"><strong>기둥① AI API 키 + 외부 하네스</strong> (필수)</p>
+            <p className="text-red-700">시스템 AI가 깨어납니다. 하네스(Claude Desktop 등)는 설치와 수리를 맡습니다.</p>
+          </div>
+          <div className="bg-sky-50 p-3 rounded-lg border border-sky-200 text-sm">
+            <p className="text-sky-800"><strong>기둥② Cloudflare 계정 + 본인 도메인</strong> (강력 권장)</p>
+            <p className="text-sky-700">공개 얼굴이 켜집니다 — 원격 접속·공유창고·포털. 없으면 시스템이 <strong>반쪽</strong>입니다.</p>
+          </div>
+          <div className="bg-violet-50 p-3 rounded-lg border border-violet-200 text-sm">
+            <p className="text-violet-800"><strong>기둥③ 스마트폰</strong> (준필수)</p>
+            <p className="text-violet-700">브라우저만으로 설치 0 — 안드로이드는 앱을 깔면 폰이 두 번째 노드가 됩니다.</p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 space-y-1">
+            <p>• <strong>Nostr 통신</strong>: 자동 — 키 생성이 곧 계정, 할 일이 없습니다</p>
+            <p>• <strong>이메일·텔레그램 등</strong>: 선택 — 원할 때 추가</p>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
+            💰 변동비는 AI API 사용량 하나, 고정비는 도메인 연 1~2만 원이 전부. 나머지는 무료입니다.
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '기둥① AI 키 + 하네스',
       icon: <Key className="w-10 h-10 text-red-500" />,
       content: (
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+        <div className="space-y-3">
           <div className="bg-red-50 p-3 rounded-lg border border-red-200">
             <p className="text-red-800 text-sm">
-              가장 중요한 첫 단계는 <strong>AI의 API 키를 얻는 것</strong>입니다.
-              Claude건 ChatGPT건 Gemini건 상관없지만, 추천하는 프로바이더는 있습니다.
+              첫 관문은 <strong>AI API 키 1개</strong>입니다. Claude건 ChatGPT건 Gemini건 상관없지만, 추천은 있습니다.
             </p>
           </div>
           <div className="bg-green-50 p-3 rounded-lg border border-green-200">
@@ -75,23 +166,91 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
           <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <p className="text-blue-800 text-sm font-medium mb-2">모델 선택</p>
             <div className="space-y-1 text-blue-700 text-sm">
-              <p>• 설정 화면에서 프로바이더가 제공하는 <strong>최신 모델</strong>을 고르면 됩니다.</p>
-              <p>• 가볍고 빠른 <strong>Flash 계열</strong>은 일상용, <strong>Pro 계열</strong>은 복잡한 작업용.</p>
+              <p>• 프로바이더의 <strong>최신 모델</strong>을 고르면 됩니다. Flash 계열은 일상용, Pro 계열은 복잡한 작업용.</p>
               <p>• <strong>모델 기어</strong>가 가벼운 판단은 경량 모델에, 복잡한 계획은 본격 모델에 자동 배분합니다.</p>
             </div>
           </div>
+          <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+            <p className="text-purple-800 text-sm font-medium mb-1">외부 하네스도 사실상 필수입니다</p>
+            <p className="text-purple-700 text-sm">
+              <strong>Claude Desktop</strong> 같은 외부 AI가 두 역할을 맡습니다:
+              시스템을 지어주는 <strong>설치 대장장이</strong>, 그리고 시스템이 고장 나 스스로 못 고칠 때의
+              <strong> 복구 경로</strong> — 의식을 잃은 환자는 자가 수술을 못 하니까요.
+            </p>
+          </div>
           <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
             <p className="text-amber-800 text-sm">
-              <strong>API 키를 설정했다면</strong> 이제 대화창에서 시스템 AI와 대화할 수 있습니다.
+              <strong>키를 넣었다면</strong> 시스템 AI에게 <strong>"필요한 라이브러리들을 깔아줘"</strong>라고 하세요
+              (목록: <code>INSTALL_DEPENDENCIES.md</code>). ⏳ 처음엔 시간이 걸립니다.
             </p>
-            <p className="text-amber-700 text-sm mt-2">
-              처음 IndieBiz OS를 사용한다면 여러 도구에 필요한 라이브러리가 없을 수 있습니다.
-              시스템 AI에게 <strong>"IndieBiz OS의 파이썬을 써서 필요한 라이브러리들을 깔아줘"</strong>라고 하세요.
-              필요한 목록은 <code>INSTALL_DEPENDENCIES.md</code>에 있습니다.
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '기둥② Cloudflare + 도메인',
+      icon: <Cloud className="w-10 h-10 text-sky-600" />,
+      content: (
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            이게 없어도 에이전트 시스템은 돌지만, <strong>공개 얼굴 전부</strong>가 잠깁니다 —
+            원격 런처·원격 Finder·<strong>공유창고</strong>·포털·가족신문·게시판.
+            만드는 건 되는데 배포와 연결이 안 되는 <strong>반쪽 시스템</strong>이 됩니다.
+          </p>
+          <div className="bg-sky-50 p-3 rounded-lg border border-sky-200 text-sm">
+            <p className="text-sky-800 font-medium mb-1">왜 Cloudflare인가</p>
+            <p className="text-sky-700">
+              터널(포트포워딩 없이 집 PC를 공개 인터넷에 연결)·엣지 서빙·캐시·DNS를
+              <strong> 무료로 한 계정에</strong> 묶어주는 곳이 현재 여기뿐입니다. 서버비·대역폭비 0으로 운영됩니다.
             </p>
-            <p className="text-amber-600 text-sm mt-2">
-              ⏳ 시간이 오래 걸릴 수 있으니 기다리세요.
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg border border-orange-200 text-sm">
+            <p className="text-orange-800 font-medium mb-1">본인 도메인이 필요합니다</p>
+            <p className="text-orange-700">
+              연 1~2만 원 — 시스템 전체의 <strong>유일한 고정비</strong>입니다. 그리고 도메인은 빌린 계정명이 아니라
+              <strong> 내가 소유하는 주소</strong>입니다. 공유창고에서는 주소가 곧 나의 정체가 됩니다.
             </p>
+          </div>
+          <div className="bg-gray-100 p-3 rounded-lg text-sm">
+            <div className="text-gray-700 space-y-1">
+              <p>1. <span className="text-blue-600 underline">dash.cloudflare.com</span> 무료 가입</p>
+              <p>2. 도메인 구매(원가 판매) 또는 보유 도메인 연결</p>
+              <p>3. API 토큰·Account ID 발급 → 설정에 입력</p>
+              <p>4. 나머지는 AI에게: <strong>"원격 접근 터널과 공유창고를 설정해줘"</strong></p>
+            </div>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+            📖 자세한 방법: <strong>data/system_docs/remote_access.md</strong>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: '기둥③ 스마트폰',
+      icon: <Smartphone className="w-10 h-10 text-violet-600" />,
+      content: (
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            폰은 <strong>두 단계 사다리</strong>입니다. 1단만으로도 일상 사용에 충분합니다.
+          </p>
+          <div className="bg-cyan-50 p-3 rounded-lg border border-cyan-200 text-sm">
+            <p className="text-cyan-800 font-medium mb-1">1단 — 아무 폰, 브라우저 (설치 0)</p>
+            <p className="text-cyan-700">
+              기둥②가 서면 <strong>자동으로 열립니다</strong>. 아이폰이든 안드로이드든 주소 하나로
+              원격 런처(집 시스템 리모컨)·원격 Finder·공유창고에 접속합니다. 설치할 게 없습니다.
+            </p>
+          </div>
+          <div className="bg-violet-50 p-3 rounded-lg border border-violet-200 text-sm">
+            <p className="text-violet-800 font-medium mb-1">2단 — 안드로이드 앱 (폰 = 두 번째 노드)</p>
+            <p className="text-violet-700">
+              폰 자체에 IndieBiz OS가 돌아 리모컨이 아니라 <strong>독립된 몸</strong>이 됩니다 —
+              위치·마이크·카메라 감각, 폰 하드웨어 조작, 클립보드로 카카오톡 직결,
+              집 PC가 꺼져 있어도 동작합니다.
+            </p>
+          </div>
+          <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-700">
+            💡 2단 설치는 USB 연결이 필요해 다소 번거롭습니다 — 하네스에게
+            <strong> "폰에 IndieBiz 설치해줘"</strong>라고 맡기세요.
           </div>
         </div>
       )
@@ -155,7 +314,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       title: '런처의 3표면',
       icon: <Compass className="w-10 h-10 text-slate-600" />,
       content: (
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+        <div className="space-y-3">
           <p className="text-gray-600">
             같은 시스템을 <strong>세 가지 방식</strong>으로 모십니다.<br/>
             런처 상단의 3토글로 오갑니다.
@@ -197,10 +356,10 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       title: 'IBL 노드 & 도구 패키지',
       icon: <Package className="w-10 h-10 text-green-600" />,
       content: (
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
+        <div className="space-y-3">
           <p className="text-gray-600">
             에이전트는 <strong>IBL(IndieBiz Logic)</strong>이라는 통합 명령어로<br/>
-            6개 노드의 <strong>141개 액션</strong>을 실행합니다.
+            6개 노드의 <strong>157개 액션</strong>을 실행합니다.
           </p>
           <div className="grid grid-cols-3 gap-2 text-sm">
             <div className="bg-blue-50 p-2 rounded text-center">
@@ -231,7 +390,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
           <div className="bg-gray-50 p-3 rounded-lg text-sm">
             <p className="text-gray-700">
               각 노드는 <strong>도구 패키지</strong>로 확장됩니다.<br/>
-              현재 <strong>36개</strong>의 도구 패키지가 설치되어 있습니다.
+              현재 <strong>40개</strong>의 도구 패키지가 설치되어 있습니다.
             </p>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
@@ -241,59 +400,34 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       )
     },
     {
-      title: '스위치 (원클릭 자동화)',
+      title: '스위치 & 메모',
       icon: <Zap className="w-10 h-10 text-yellow-600" />,
       content: (
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            <strong>스위치</strong>는 반복 작업을 저장해두고<br/>
-            원클릭으로 실행하는 버튼입니다.
+        <div className="space-y-3">
+          <p className="text-gray-600 text-sm">
+            <strong>스위치</strong>는 반복 작업을 저장해두고 원클릭으로 실행하는 버튼입니다.
           </p>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-gray-900">
-              <Zap className="w-4 h-4 text-yellow-600" />
-              <div>
-                <strong>오늘의 뉴스</strong>
-                <p className="text-gray-700 text-sm">"AI, 블록체인 뉴스 5줄 요약해줘"</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-gray-900">
-              <Zap className="w-4 h-4 text-yellow-600" />
-              <div>
-                <strong>관심종목 체크</strong>
-                <p className="text-gray-700 text-sm">"삼성전자, 애플 현재가 알려줘"</p>
-              </div>
+          <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-gray-900 text-sm">
+            <Zap className="w-4 h-4 text-yellow-600" />
+            <div>
+              <strong>오늘의 뉴스</strong>
+              <p className="text-gray-700">"AI, 블록체인 뉴스 5줄 요약해줘"</p>
             </div>
           </div>
           <div className="bg-yellow-50 p-3 rounded-lg text-sm text-yellow-700">
             ⚡ 바탕화면 우클릭 → <strong>새 스위치</strong>로 생성
           </div>
-        </div>
-      )
-    },
-    {
-      title: '메모 (AI의 장기 기억)',
-      icon: <FileText className="w-10 h-10 text-blue-600" />,
-      content: (
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            <strong>메모</strong>는 AI가 항상 기억하는 내용입니다.<br/>
-            대화가 길어져도 메모는 계속 전달됩니다.
+          <p className="text-gray-600 text-sm pt-1">
+            <FileText className="w-4 h-4 inline mr-1 text-blue-600" />
+            <strong>메모</strong>는 AI가 항상 기억하는 내용입니다 — 대화가 길어져도 계속 전달됩니다.
           </p>
-          <div className="space-y-2 text-sm">
-            <div className="bg-blue-50 p-2 rounded text-gray-900">
-              <strong>시스템 메모</strong> - 시스템 AI용
-            </div>
-            <div className="bg-purple-50 p-2 rounded text-gray-900">
-              <strong>노트</strong> - 프로젝트 에이전트용
-            </div>
-            <div className="bg-indigo-50 p-2 rounded text-gray-900">
-              <strong>근무지침</strong> - 자동응답 AI용
-            </div>
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="bg-blue-50 p-2 rounded text-center text-blue-700">시스템 메모</div>
+            <div className="bg-purple-50 p-2 rounded text-center text-purple-700">노트</div>
+            <div className="bg-indigo-50 p-2 rounded text-center text-indigo-700">근무지침</div>
           </div>
           <div className="bg-orange-50 p-3 rounded-lg text-sm text-orange-700">
-            ⚠️ <strong>짧을수록 좋습니다!</strong><br/>
-            5~10줄 이내로, 정말 중요한 것만.
+            ⚠️ <strong>짧을수록 좋습니다!</strong> 5~10줄 이내로, 정말 중요한 것만.
           </div>
         </div>
       )
@@ -342,83 +476,38 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
       )
     },
     {
-      title: '원격 접근 (Finder & 런처)',
-      icon: <HardDrive className="w-10 h-10 text-cyan-600" />,
-      content: (
-        <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
-          <p className="text-gray-600">
-            집에 있는 PC를 <strong>어디서든 제어 가능한 개인 서버</strong>로 만드세요.
-          </p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-cyan-50 p-2 rounded text-center">
-              <span className="text-xl">📁</span>
-              <p className="text-cyan-700 font-medium">원격 Finder</p>
-              <p className="text-cyan-600 text-xs">파일 탐색 & 스트리밍</p>
-            </div>
-            <div className="bg-purple-50 p-2 rounded text-center">
-              <span className="text-xl">🤖</span>
-              <p className="text-purple-700 font-medium">원격 런처</p>
-              <p className="text-purple-600 text-xs">AI 채팅 & 스위치 실행</p>
-            </div>
-          </div>
-          <div className="bg-gray-100 p-3 rounded-lg text-sm">
-            <p className="text-gray-700">
-              <strong>Cloudflare Tunnel</strong>을 사용하면 포트 포워딩이나
-              DDNS 설정 없이 안전하게 외부에서 접근할 수 있습니다.
-            </p>
-          </div>
-          <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-            <p className="text-amber-800 text-sm font-medium mb-2">
-              <Cloud className="w-4 h-4 inline mr-1" />
-              사용하려면 Cloudflare 계정이 필요합니다
-            </p>
-            <div className="text-amber-700 text-sm space-y-1">
-              <p>1. <span className="text-blue-600 underline">dash.cloudflare.com</span>에서 무료 가입</p>
-              <p>2. 자신의 도메인을 Cloudflare에 연결</p>
-              <p>3. <strong>API 토큰</strong>과 <strong>Account ID</strong> 발급</p>
-              <p>4. IndieBiz OS 설정 → 환경변수에 입력</p>
-            </div>
-          </div>
-          <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-            📖 자세한 설정 방법: <strong>data/system_docs/remote_access.md</strong>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
-            💡 설정 후 시스템 AI에게 <strong>"원격 접근용 터널을 설정해줘"</strong>라고 하세요.
-          </div>
-        </div>
-      )
-    },
-    {
       title: '시작하기',
       icon: <span className="text-4xl">🚀</span>,
       content: (
-        <div className="space-y-4">
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border border-amber-200">
-            <p className="text-amber-800 font-medium mb-2">Step 1: API 키 설정</p>
+        <div className="space-y-3">
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-lg border border-amber-200">
+            <p className="text-amber-800 font-medium">Step 1: AI API 키</p>
             <p className="text-amber-700 text-sm">
-              안경 메뉴 → <strong>설정</strong> → Gemini API 키 입력
+              안경 메뉴 → <strong>설정</strong> → API 키 입력. 여기까지가 최소 동작입니다.
             </p>
           </div>
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <p className="text-blue-800 font-medium mb-2">Step 2: 시스템 AI와 대화</p>
-            <p className="text-blue-700 text-sm mb-2">
-              상단의 <strong>시스템 AI</strong> 버튼을 클릭하고 이렇게 말하세요:
-            </p>
-            <div className="bg-white p-2 rounded border border-blue-300 text-blue-900 text-sm">
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <p className="text-blue-800 font-medium">Step 2: 시스템 AI와 대화</p>
+            <div className="bg-white p-2 rounded border border-blue-300 text-blue-900 text-sm mt-1">
               "나는 이게 처음이야. 필요한 것들을 하나씩 설치해줘."
             </div>
           </div>
-          <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <p className="text-green-800 font-medium mb-2">Step 3: 프로젝트 만들기</p>
-            <p className="text-green-700 text-sm">
-              바탕화면 <strong>우클릭</strong> → "새 프로젝트"로<br/>
-              관심 분야의 작업 공간을 만들어보세요.
+          <div className="bg-sky-50 p-3 rounded-lg border border-sky-200">
+            <p className="text-sky-800 font-medium">Step 3: 공개 얼굴 켜기 (강력 권장)</p>
+            <p className="text-sky-700 text-sm">
+              Cloudflare 가입 + 도메인 연결 후 AI에게:
+              <strong> "원격 접근 터널과 공유창고를 설정해줘"</strong>
+            </p>
+          </div>
+          <div className="bg-violet-50 p-3 rounded-lg border border-violet-200">
+            <p className="text-violet-800 font-medium">Step 4: 폰과 프로젝트</p>
+            <p className="text-violet-700 text-sm">
+              폰 브라우저로 원격 런처 접속 · 바탕화면 <strong>우클릭</strong> → "새 프로젝트"
             </p>
           </div>
           <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
             <p className="text-orange-800 text-sm">
-              <strong>⏳ 처음에는 시간이 걸립니다!</strong><br/>
-              시스템 AI가 필요한 라이브러리들을 설치합니다.
+              <strong>⏳ 처음에는 시간이 걸립니다!</strong> 나머지는 전부 시스템 AI와 대화로 해나가면 됩니다.
             </p>
           </div>
         </div>
@@ -459,7 +548,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-[640px] max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-[640px] max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-amber-50 to-orange-50">
           <div className="flex items-center gap-3">
@@ -475,7 +564,7 @@ export function GuideDialog({ show, onClose }: GuideDialogProps) {
         </div>
 
         {/* 콘텐츠 */}
-        <div className="p-6 min-h-[380px] overflow-y-auto">
+        <div className="p-6 h-[420px] min-h-0 overflow-y-auto">
           {currentGuide.content}
         </div>
 

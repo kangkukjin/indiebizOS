@@ -71,10 +71,18 @@ async def add_warehouse_neighbor(request: Request):
     url = wf.normalize_base(body.get("url") or "")
     if not url:
         raise HTTPException(status_code=400, detail="창고 주소(url)가 필요해요")
+    # npub = 서명된 신원(선택) — 이웃찾기 탭이 소개 작성자의 npub 을 함께 보낸다.
+    # 창고(풀)·nostr(푸시) 두 접점을 한 이웃에 모으고, 신원 기준 중복 등록을 막는 앵커.
+    npub = (body.get("npub") or "").strip()
+    if not npub.startswith("npub"):
+        npub = ""                      # hex·축약 등 비정형은 버림 (contacts 규약 = npub 문자열)
     bm = _bm()
-    # 같은 주소가 이미 등기부에 있으면 그 카드 반환 (중복 등록 방지)
+    # 같은 주소가 이미 등기부에 있으면 그 카드 반환 (중복 등록 방지).
+    # npub 이 딸려 왔고 아직 누구에게도 없으면 그 이웃에게 붙여준다 — 재클릭이 신원을 치유.
     dup = bm.get_neighbor_by_contact("warehouse", url)
     if dup:
+        if npub and not bm.get_neighbor_by_contact("nostr", npub):
+            bm.add_contact(dup["id"], "nostr", npub)
         return {"neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None),
                 "poll": {"ok": True, "note": "이미 등록된 창고"}}
     # 첫 폴링을 먼저 — 연결 확인 + 이름 유도(title)에 쓴다. ★스레드로(자기교착 방지:
@@ -82,17 +90,22 @@ async def add_warehouse_neighbor(request: Request):
     poll = await to_thread.run_sync(wf.poll_warehouse, url)
     neighbor_id = body.get("neighbor_id")
     name = (body.get("name") or "").strip()
-    if neighbor_id:
+    # ★신원 앵커 우선: 같은 npub 의 이웃이 이미 있으면(커뮤니티/메신저 경로로 등록된 그 사람)
+    #   새 이웃을 만들지 않고 그에게 창고 연락처를 단다 — 경로가 달라도 레코드는 하나.
+    n = bm.get_neighbor_by_contact("nostr", npub) if npub else None
+    if n is None and neighbor_id:
         n = bm.get_neighbor(int(neighbor_id))
         if not n:
             raise HTTPException(status_code=404, detail="이웃을 찾을 수 없어요")
-    else:
+    elif n is None:
         if not name:
             # 주소만 아는 상대 — 창고 제목이 곧 그 사람의 이름표
             name = (poll.get("title") or "").strip() or (urlparse(url).hostname or url)
         matches = [x for x in bm.get_neighbors(search=name) if x["name"] == name]
         n = matches[0] if matches else bm.create_neighbor(name=name, info_level=0)
     bm.add_contact(n["id"], "warehouse", url)
+    if npub and not bm.get_neighbor_by_contact("nostr", npub):
+        bm.add_contact(n["id"], "nostr", npub)
     if body.get("memo") is not None:
         bm.update_neighbor_warehouse(n["id"], warehouse_memo=str(body.get("memo")))
     return {"neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None),

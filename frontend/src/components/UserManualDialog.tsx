@@ -16,7 +16,8 @@ import {
   BookOpen, HardDrive, Eye,
   Compass, Gauge, LayoutGrid,
   Network, Brain, Database, Search,
-  Smartphone, Mail, Monitor, Sparkles
+  Smartphone, Mail, Monitor, Sparkles,
+  Warehouse
 } from 'lucide-react';
 
 interface UserManualDialogProps {
@@ -42,25 +43,26 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
         <div className="space-y-4">
           <p className="text-gray-800 text-base mb-4">
             IndieBiz OS는 데려다주는 <strong>자율주행차</strong>가 아니라, 입는 <strong>인지 외골격</strong>입니다.
-            아래 순서대로 읽으면 전체가 잡힙니다.
+            목적인 <strong>공유창고</strong>부터 시작합니다 — 목적이 분명해야 나머지 복잡함이 의미를 갖습니다.
           </p>
           <div className="grid grid-cols-2 gap-3 text-base">
             {[
               ['1. 무엇인가', '인지 외골격이라는 생각', 'bg-amber-50 hover:bg-amber-100'],
-              ['2. 런처의 3표면', '자율주행 · 조종실 · 앱', 'bg-slate-50 hover:bg-slate-100'],
-              ['3. 바탕화면 & 오브젝트', '프로젝트 · 스위치 · 폴더 · 앱', 'bg-yellow-50 hover:bg-yellow-100'],
-              ['4. IBL — 신경계', '6개 노드 141개 액션', 'bg-green-50 hover:bg-green-100'],
-              ['5. 자율주행 — 인지', '분류→의식→실행→평가→증류', 'bg-indigo-50 hover:bg-indigo-100'],
-              ['6. 조종실', '감독·개입의 주권 기관', 'bg-cyan-50 hover:bg-cyan-100'],
-              ['7. 앱 모드', '결정화된 계기 24종', 'bg-orange-50 hover:bg-orange-100'],
-              ['8. 메모리 — 7종', '해마 · 심층 · 포식 기억', 'bg-blue-50 hover:bg-blue-100'],
-              ['9. 포식 브라우저', '정답이 아닌 시야를 넓히는 검색', 'bg-teal-50 hover:bg-teal-100'],
-              ['10. AI 프로바이더 설정', 'API 키 · 모델 기어', 'bg-red-50 hover:bg-red-100'],
-              ['11. 도구 패키지', '설치 · 제작 · 공유', 'bg-purple-50 hover:bg-purple-100'],
-              ['12. 소통 & 자동 비즈니스', 'Gmail · Nostr · IndieNet', 'bg-pink-50 hover:bg-pink-100'],
-              ['13. 두 자아 (맥 & 폰)', '독립 자아 · CRDT 공유', 'bg-sky-50 hover:bg-sky-100'],
-              ['14. 원격 접근', 'Cloudflare 터널 · 리모컨', 'bg-lime-50 hover:bg-lime-100'],
-              ['15. 버전 정보', '현재 상태 · 철학 · 문서', 'bg-gray-100 hover:bg-gray-200'],
+              ['2. 공유창고 — 먼저', '뭐든 발행 · 이웃 피드 · 사용법', 'bg-emerald-50 hover:bg-emerald-100'],
+              ['3. 런처의 3표면', '자율주행 · 조종실 · 앱', 'bg-slate-50 hover:bg-slate-100'],
+              ['4. 바탕화면 & 오브젝트', '프로젝트 · 스위치 · 폴더 · 앱', 'bg-yellow-50 hover:bg-yellow-100'],
+              ['5. IBL — 신경계', '6개 노드 157개 액션', 'bg-green-50 hover:bg-green-100'],
+              ['6. 자율주행 — 인지', '분류→의식→실행→평가→증류', 'bg-indigo-50 hover:bg-indigo-100'],
+              ['7. 조종실', '주권 기관 · 모델 기어 레버', 'bg-cyan-50 hover:bg-cyan-100'],
+              ['8. 앱 모드', '결정화된 계기 24종', 'bg-orange-50 hover:bg-orange-100'],
+              ['9. 메모리 — 7종', '해마 · 심층 · 포식 기억', 'bg-blue-50 hover:bg-blue-100'],
+              ['10. 포식 브라우저', '정답이 아닌 시야를 넓히는 검색', 'bg-teal-50 hover:bg-teal-100'],
+              ['11. AI 프로바이더 설정', 'API 키 · 모델 기어 · 외부 하네스', 'bg-red-50 hover:bg-red-100'],
+              ['12. 도구 패키지', '설치 · 제작 · 공유', 'bg-purple-50 hover:bg-purple-100'],
+              ['13. 소통 & 이웃 관리', 'Gmail · Nostr · 레벨 · 게시판', 'bg-pink-50 hover:bg-pink-100'],
+              ['14. 두 자아 (맥 & 폰)', '독립 자아 · 클립보드 푸시', 'bg-sky-50 hover:bg-sky-100'],
+              ['15. 원격 접근', 'Cloudflare 터널 + 도메인 · 리모컨', 'bg-lime-50 hover:bg-lime-100'],
+              ['16. 버전 정보', '현재 상태 · 철학 · 문서', 'bg-gray-100 hover:bg-gray-200'],
             ].map(([title, sub, cls], i) => (
               <button
                 key={i}
@@ -122,11 +124,70 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               <strong> 도구는 인간의 시야를 가리기보다 넓혀야 한다.</strong>
             </p>
           </div>
+
+          <div className="bg-emerald-50 p-3 rounded-lg text-sm text-emerald-700">
+            🏭 그리고 이 모든 기관이 향하는 곳이 다음 장 — <strong>공유창고</strong>입니다.
+            만든 것을 세상에 내놓는 채널이 있어야, 뭐든 만들 수 있는 힘이 의미를 가집니다.
+          </div>
         </div>
       )
     },
 
-    // 2. 런처의 3표면
+    // 2. 공유창고 — 먼저
+    {
+      title: '공유창고 — 먼저 이것부터',
+      icon: <Warehouse className="w-12 h-12 text-emerald-600" />,
+      content: (
+        <div className="space-y-4 text-base">
+          <div className="bg-emerald-50 p-4 rounded-lg">
+            <p className="text-emerald-800 font-medium mb-2">파일을 던져 넣으면 세상에 발행됩니다</p>
+            <p className="text-emerald-700 text-sm">
+              동영상을 넣으면 유튜브가, 글을 넣으면 블로그가, 상품 목록을 넣으면 쇼핑몰이 하던 일을
+              — 전부 파일 하나로 합니다. 플랫폼이 종류별로 따로 있었던 건 <strong>인간용 매대</strong>가
+              각각 필요했기 때문이고, 읽는 쪽이 AI면 창고 하나면 됩니다.
+              이 창고가 있어서 뒤에 나오는 모든 기관(에이전트·IBL·스케줄러)이
+              "만든 것을 세상에 내놓는 순환"의 부품이 됩니다.
+            </p>
+          </div>
+
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="font-medium text-blue-800 mb-2">📤 내놓기 — 내 창고 탭</p>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>1. 런처 좌상단 <strong>모드 전환</strong> → <strong>공유창고</strong> → <strong>내 창고</strong> 탭</p>
+              <p>2. <strong>레벨 0~4 폴더</strong>가 열립니다 — 파일을 넣으면 그걸로 발행 끝. 업로드 절차도 색인도 없습니다 (누가 열어볼 때 맥이 직접 서빙)</p>
+              <p>3. 어느 폴더에 넣느냐가 공개 범위: <strong>0=주소를 아는 누구나</strong> · 1~4=그 레벨 이상의 이웃만 (레벨은 메신저에서 이웃마다 부여)</p>
+              <p className="text-red-600">⚠️ 레벨 배치가 곧 프라이버시 — 0에 넣은 것은 어떤 사람·어떤 AI든 봅니다</p>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <p className="font-medium text-purple-800 mb-2">📥 받아보기 — 이웃 탭</p>
+            <div className="text-sm text-purple-700 space-y-1">
+              <p>1. <strong>이웃</strong> 탭에서 이웃의 창고 주소를 등록 (이름을 비우면 창고 제목으로 자동 생성 — 주소만 알아도 이웃이 됩니다)</p>
+              <p>2. 30분마다 이웃 창고를 훑어 <strong>새 파일·변경이 피드로</strong> 흘러들어옵니다 (AI·토큰 0의 순수 기계 폴링)</p>
+              <p>3. 피드 행 버튼: <strong>↗ 파일 열기</strong> · <strong>📦 그 창고 열기</strong> · <strong>📣 리트윗</strong>(원본을 가리키는 바로가기 파일을 내 창고에 놓아 소개 — 레벨 선택 가능)</p>
+              <p>4. <strong>검색</strong>은 등록한 모든 이웃의 파일명을 한 번에 뒤집니다 — 내 동네 전체의 색인</p>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 p-4 rounded-lg">
+            <p className="font-medium text-amber-800 mb-2">🤖 AI가 채우는 창고 — 생산이 곧 발행</p>
+            <div className="text-sm text-amber-700 space-y-1">
+              <p>• 스케줄러가 매일 <strong>AI 보고서·블로그 요약·신문</strong>을 레벨 0에 자동 발행합니다 — 같은 파일명을 덮어써서 항상 최신판 하나</p>
+              <p>• 비즈니스 아이템(나눕니다·구합니다·팔아요 등)은 <strong>카탈로그 문서</strong>로 자동 진열 — 외부인이 묻지 않고도 봅니다</p>
+              <p>• 발행 문서 끝에 <strong>연락처(npub·이메일)</strong>가 자동으로 붙습니다 — 보고 연락할 길</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-100 p-3 rounded-lg text-sm text-gray-700">
+            💡 필요한 세팅은 <strong>원격 접근과 동일</strong>합니다 — Cloudflare 터널 + 본인 도메인 (15장).
+            세팅 전에도 폴더에 파일을 모아둘 수는 있고, 세팅되는 순간 그대로 공개 창고가 됩니다.
+          </div>
+        </div>
+      )
+    },
+
+    // 3. 런처의 3표면
     {
       title: '런처의 3표면',
       icon: <Compass className="w-12 h-12 text-slate-600" />,
@@ -182,7 +243,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 3. 바탕화면 & 오브젝트
+    // 4. 바탕화면 & 오브젝트
     {
       title: '바탕화면 & 오브젝트',
       icon: <HardDrive className="w-12 h-12 text-slate-600" />,
@@ -248,7 +309,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 4. IBL — 신경계
+    // 5. IBL — 신경계
     {
       title: 'IBL — 신경계',
       icon: <Network className="w-12 h-12 text-green-600" />,
@@ -289,7 +350,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
             <p className="text-indigo-700 text-sm">
               표현력은 어휘 크기가 아니라 <strong>조합</strong>에서 나옵니다.
-              적게 고른 프리미티브 <strong>6개 노드 · 141개 액션</strong>을
+              적게 고른 프리미티브 <strong>6개 노드 · 157개 액션</strong>을
               <span className="font-mono"> {'>>'} </span>(순차) ·
               <span className="font-mono"> & </span>(병렬) ·
               <span className="font-mono"> ?? </span>(폴백)로 엮으면 사실상 무한한 워크플로가 됩니다.
@@ -304,7 +365,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 5. 자율주행 — 인지 파이프라인
+    // 6. 자율주행 — 인지 파이프라인
     {
       title: '자율주행 — 인지 파이프라인',
       icon: <Brain className="w-12 h-12 text-indigo-600" />,
@@ -346,7 +407,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 6. 조종실
+    // 7. 조종실
     {
       title: '조종실 — 주권 기관',
       icon: <Gauge className="w-12 h-12 text-cyan-600" />,
@@ -377,10 +438,22 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
           </div>
 
+          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+            <p className="font-medium text-amber-800 mb-2">⚙️ 모델 기어 — 조종실에서 가장 자주 만지는 레버</p>
+            <div className="text-sm text-amber-700 space-y-1">
+              <p>• <strong>절약 / 균형 / 최대</strong> 세 프리셋이 네 인지 축(분류·평가·실행·의식)을
+                경량/중급/본격 모델 티어에 매핑합니다 — 레버 하나로 시스템 전체의 비용 대 품질을
+                <strong> 재시작 없이 즉시</strong> 변속합니다.</p>
+              <p>• <strong>의식 토글</strong>: 끄면 깊은 계획(THINK) 경로를 건너뛰어 빠르고 저렴해집니다.
+                꺼둔 상태에서도 메시지 앞에 <code>#think</code>를 붙이면 그 한 번만 깊게 생각합니다.</p>
+              <p>• 감각: 평소엔 <strong>균형</strong>, 대량 반복 작업엔 <strong>절약</strong>,
+                중요한 판단엔 <strong>최대</strong>. API 키도 기어를 따라 흐르므로 에이전트마다 만질 필요가 없습니다.</p>
+            </div>
+          </div>
+
           <div className="bg-slate-50 p-4 rounded-lg">
             <p className="font-medium text-slate-800 mb-2">🎛️ 계기판에 모인 것들</p>
             <div className="text-sm text-slate-700 space-y-1">
-              <p>• <strong>모델 기어 레버</strong>: 절약/균형/최대 + 의식 토글</p>
               <p>• <strong>시스템 상태</strong>: 서비스 건강 · 자가점검 결과</p>
               <p>• <strong>프레즌스</strong>: 지금 어떤 자아(맥/폰)가 깨어 있는지</p>
               <p>• <strong>액티브 프로젝트</strong>: 지금 일하는 대화창 (클릭하면 맨 앞으로)</p>
@@ -392,7 +465,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 7. 앱 모드
+    // 8. 앱 모드
     {
       title: '앱 모드 — 결정화된 계기',
       icon: <LayoutGrid className="w-12 h-12 text-orange-600" />,
@@ -430,7 +503,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 8. 메모리 — 7종
+    // 9. 메모리 — 7종
     {
       title: '메모리 — 7종',
       icon: <Database className="w-12 h-12 text-blue-600" />,
@@ -480,7 +553,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 9. 포식 브라우저
+    // 10. 포식 브라우저
     {
       title: '포식 브라우저',
       icon: <Search className="w-12 h-12 text-teal-600" />,
@@ -529,7 +602,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 10. AI 프로바이더 설정
+    // 11. AI 프로바이더 설정
     {
       title: 'AI 프로바이더 설정',
       icon: <Key className="w-12 h-12 text-red-500" />,
@@ -583,6 +656,15 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </p>
           </div>
 
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <p className="text-purple-800 font-medium mb-1">🛠️ 외부 하네스도 곁에 두세요</p>
+            <p className="text-purple-700 text-sm">
+              <strong>Claude Desktop</strong> 같은 외부 AI는 설치를 도와주는 대장장이이자,
+              시스템이 고장 나 <strong>스스로 못 고칠 때의 복구 경로</strong>입니다 —
+              백엔드가 죽으면 시스템 AI도 함께 멈추니, 밖에서 고쳐줄 손이 필요합니다.
+            </p>
+          </div>
+
           <div className="bg-green-50 p-3 rounded-lg text-sm text-green-700">
             🔌 <strong>도구도 API가 필요할 수 있습니다</strong> — 뉴스·주식·날씨·지도 등.
             시스템 AI에게 "이 키를 <strong>환경변수로</strong> 저장해줘"라고 하면 안전하게 설정합니다.
@@ -591,7 +673,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 11. 도구 패키지
+    // 12. 도구 패키지
     {
       title: '도구 패키지',
       icon: <Package className="w-12 h-12 text-green-600" />,
@@ -637,12 +719,12 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 12. 소통 & 자동 비즈니스
+    // 13. 소통 & 이웃 관리
     {
-      title: '소통 & 자동 비즈니스',
+      title: '소통 & 이웃 관리',
       icon: <Mail className="w-12 h-12 text-pink-600" />,
       content: (
-        <div className="space-y-4 text-base max-h-[440px] overflow-y-auto pr-1">
+        <div className="space-y-4 text-base">
           <div className="bg-pink-50 p-4 rounded-lg">
             <p className="text-pink-800 font-medium mb-2">AI가 사람을 잇는 미디어</p>
             <p className="text-pink-700 text-sm">
@@ -677,15 +759,42 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
           </div>
 
+          <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-6 h-6 text-purple-700" />
+              <strong className="text-purple-800">👥 이웃 관리 — 상단 "연락처" 버튼 (메신저 계기)</strong>
+            </div>
+            <div className="text-sm text-purple-700 space-y-1">
+              <p>• 이웃 목록에서 사람을 고르면 <strong>대화 탭</strong>(채팅)과 <strong>이웃 정보 탭</strong>이 열립니다</p>
+              <p>• 이웃 정보에서 <strong>레벨(0~4)</strong>·즐겨찾기·연락처를 편집합니다 —
+                연락처 한 줄이 그 사람에게 닿는 길입니다: 이메일=편지, npub=암호화 DM, <strong>창고 주소=그의 창고를 구독</strong></p>
+              <p>• 여기서 정한 <strong>레벨 하나가 시스템 전체를 관통</strong>합니다:
+                자동응답이 보여줄 공개 문서 · 포털 접근 범위 · <strong>공유창고 폴더 공개 범위</strong></p>
+            </div>
+          </div>
+
           <div className="bg-orange-50 p-4 rounded-lg">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-6 h-6 text-orange-600" />
               <strong className="text-orange-800">🏪 비즈니스 계기</strong>
             </div>
             <div className="text-sm text-orange-700 space-y-1">
-              <p>• 내 비즈니스와 아이템을 정의하고, 이웃(연락처)마다 <strong>정보 레벨</strong>을 부여</p>
-              <p>• 레벨별 <strong>공개 문서</strong>를 자동 생성 → 자동응답이 이를 참조</p>
+              <p>• 내 비즈니스와 아이템을 정의하면, 이웃 레벨별 <strong>공개 문서</strong>가 자동 생성됩니다 → 자동응답이 이를 참조</p>
+              <p>• 아이템은 <strong>공유창고에 카탈로그로 자동 진열</strong>됩니다 (앞의 2장)</p>
               <p>• 예전의 "비즈니스 관리창 · 이웃 관리창 · 빠른 연락처"는 이제 앱 모드의 계기로 통합되었습니다</p>
+            </div>
+          </div>
+
+          <div className="bg-teal-50 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-1">
+              <MessageSquare className="w-6 h-6 text-teal-600" />
+              <strong className="text-teal-800">📋 게시판 만들기 — 두 가지</strong>
+            </div>
+            <div className="text-sm text-teal-700 space-y-1">
+              <p>• <strong>자유게시판</strong>(앱 모드의 게시판 계기): 만들면 공개 주소 <code>/b/…</code>가 생기고,
+                주소를 아는 사람은 <strong>로그인 없이</strong> 글·사진을 남깁니다 — 가족·모임 방명록에 적합, 포털 첫화면에 붙일 수 있습니다</p>
+              <p>• <strong>커뮤니티 보드</strong>(커뮤니티 계기): Nostr 해시태그 기반 반공개 게시판 —
+                IndieNet 이웃들과 태그 하나로 모입니다</p>
             </div>
           </div>
 
@@ -704,7 +813,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 13. 두 자아 (맥 & 폰)
+    // 14. 두 자아 (맥 & 폰)
     {
       title: '두 자아 (맥 & 폰)',
       icon: <Smartphone className="w-12 h-12 text-sky-600" />,
@@ -742,6 +851,18 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </div>
           </div>
 
+          <div className="bg-orange-50 p-4 rounded-lg">
+            <p className="font-medium text-orange-800 mb-1">📋 맥 → 폰으로 내용 보내기</p>
+            <div className="text-sm text-orange-700 space-y-1">
+              <p>• 런처 상단의 <strong>클립보드 버튼</strong>: 맥에서 ⌘C로 복사한 내용을
+                <strong> 폰 클립보드에 넣고 알림</strong>을 띄웁니다 — 폰이 Wi-Fi 밖(LTE)이어도 푸시 큐로 전달됩니다</p>
+              <p>• <strong>스위치·에이전트로도</strong> 보냅니다: "이 요약 폰으로 보내줘" 같은 반복 작업을
+                스위치로 굳히면 원클릭 — 폰 알림·진동·클립보드로 도착합니다</p>
+              <p>• 폰 앱의 <strong>아이콘 생성기</strong>는 만든 이미지를 폰 클립보드에 자동 복사 —
+                카카오톡에 바로 붙여넣을 수 있습니다</p>
+            </div>
+          </div>
+
           <div className="bg-amber-50 p-2 rounded-lg text-amber-700 text-sm">
             💡 어느 자아가 지금 깨어 있는지는 <strong>조종실의 프레즌스</strong>에서 확인합니다.
           </div>
@@ -749,16 +870,18 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 14. 원격 접근
+    // 15. 원격 접근
     {
       title: '원격 접근',
       icon: <Monitor className="w-12 h-12 text-lime-600" />,
       content: (
-        <div className="space-y-4 text-base max-h-[440px] overflow-y-auto pr-1">
+        <div className="space-y-4 text-base">
           <div className="bg-lime-50 p-4 rounded-lg">
             <p className="text-lime-800 font-medium mb-2">집 PC를 어디서든 접근하는 개인 서버로</p>
             <p className="text-lime-700 text-sm">
               <strong>Cloudflare Tunnel</strong>로 포트 포워딩·DDNS 없이 HTTPS 보호된 외부 접근이 가능합니다.
+              안정된 공개 주소에는 <strong>본인 도메인</strong>이 필요합니다(연 1~2만 원 — 시스템 전체의 유일한 고정비).
+              이 세팅 하나로 원격 Finder·원격 런처는 물론 <strong>공유창고·포털</strong>까지 함께 켜집니다.
             </p>
           </div>
 
@@ -803,7 +926,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 15. 버전 정보
+    // 16. 버전 정보
     {
       title: '버전 정보',
       icon: <FileText className="w-12 h-12 text-gray-800" />,
@@ -886,7 +1009,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-[900px] max-h-[95vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-[900px] max-h-[95vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="flex items-center justify-between p-5 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center gap-4">
@@ -902,7 +1025,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
         </div>
 
         {/* 콘텐츠 */}
-        <div className="p-8 min-h-[500px] max-h-[65vh] overflow-y-auto">
+        <div className="p-8 h-[65vh] min-h-0 overflow-y-auto">
           {currentGuide.content}
         </div>
 

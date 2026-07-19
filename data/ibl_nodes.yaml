@@ -1509,7 +1509,7 @@ nodes:
       used:
         returns: items
         fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
-        description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 통합 통화(records)로. 자주 하는 중고 검색을 어휘화.
+        description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 items 통화로. 자주 하는 중고 검색을 어휘화.
         group: research
         target_description: '중고 거래 매물 검색. source로 플랫폼 선택.
 
@@ -2277,10 +2277,6 @@ nodes:
           name: 비즈니스
           order: 11
           system: true
-          top_buttons:
-          - label: 🌐 소개발행
-            action: '[self:business_document]{op: "publish"}'
-            confirm: 공개인사프로필과 공개 창고 주소를
           modes:
           - name: 비즈니스
             auto_run: true

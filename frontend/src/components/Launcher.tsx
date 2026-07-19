@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Building2, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
+import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -25,7 +25,6 @@ import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
 import ManualMode from './ManualMode';
 import { ForageBrowser } from './ForageBrowser';
-import { BusinessInstrumentView } from './BusinessInstrumentView';
 import { WarehouseView } from './WarehouseView';
 import { useLauncherDesktop } from './launcher-components/useLauncherDesktop';
 import type {
@@ -34,16 +33,16 @@ import type {
   MidtierAISettings,
 } from './launcher-components';
 
-// 런처 상단 모드 선택기의 다섯 표면 (순서 = 드롭다운 표시 순서).
+// 런처 상단 모드 선택기의 네 표면 (순서 = 드롭다운 표시 순서 — 공유창고가 맨 위: 목적 우선).
 // 검색 브라우저는 모드가 아니라 앱모드의 앱(ActionDesktop 'forage' 타일) — 오버레이로 뜬다.
-const LAUNCHER_MODES = ['autopilot', 'manual', 'app', 'business', 'warehouse'] as const;
+// 비즈니스는 모드가 아니라 공유창고의 탭(2026-07-19 이동) — 창고를 채우는 관리 기능이라서.
+const LAUNCHER_MODES = ['warehouse', 'autopilot', 'manual', 'app'] as const;
 type LauncherMode = typeof LAUNCHER_MODES[number];
 const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
+  warehouse: { label: '공유창고', icon: Package },
   autopilot: { label: '자율주행', icon: Compass },
   manual: { label: '조종실', icon: Gauge },
   app: { label: '앱', icon: LayoutGrid },
-  business: { label: '비즈니스', icon: Building2 },
-  warehouse: { label: '공유창고', icon: Package },
 };
 
 export function Launcher() {
@@ -57,7 +56,7 @@ export function Launcher() {
 
   // 런처는 하나의 모드 전환 버튼(상단 X-Ray 앞)으로 오가는 표면들이다:
   //   autopilot(자율주행) = 데스크탑 아이콘  ·  manual(조종실) = IBL 번역·검수·실행
-  //   app(앱) = 아이콘 GUI 계기  ·  business(비즈니스) = 비즈니스 계기  ·  warehouse(공유창고)
+  //   app(앱) = 아이콘 GUI 계기  ·  warehouse(공유창고 — 비즈니스 관리는 이 안의 탭)
   // 검색 브라우저(공동 포식 크로미움)는 모드에서 빠져 앱모드의 앱 — browserOpen 오버레이로 뜬다.
   // (옛 3토글 자율주행/조종실/앱은 이 단일 모드 선택기로 대체됨)
   const [launcherTab, setLauncherTab] = useState<LauncherMode>(() => {
@@ -607,7 +606,7 @@ export function Launcher() {
       {/* 상단 툴바 */}
       <div className="h-11 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
         <div className="flex items-center gap-1.5 no-drag">
-          {/* 모드 선택기 — 다섯 표면(자율주행/조종실/앱/비즈니스/공유창고)을 오간다. X-Ray 앞. */}
+          {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
               onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted(); return !v; })}
@@ -857,8 +856,6 @@ export function Launcher() {
         {launcherTab === 'app' ? (
           // key 에 activeAppId 를 넣어 승격 앱 전환 시 깨끗이 remount(딥링크 재적용).
           <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} />
-        ) : launcherTab === 'business' ? (
-          <BusinessInstrumentView />
         ) : launcherTab === 'warehouse' ? (
           <WarehouseView />
         ) : launcherTab === 'manual' ? (

@@ -551,7 +551,10 @@ a{ color:var(--info); }
       <span class="wh-tabs">
         <button id="whTabMine" class="on" onclick="whTab('mine')">내 창고</button>
         <button id="whTabNb" onclick="whTab('nb')">이웃</button>
+        <button id="whTabDs" onclick="whTab('ds')">이웃찾기</button>
       </span>
+      <button class="wh-add" id="whIntroBtn" onclick="whIntro()"
+        title="나를 알리기 — 공개 인사 프로필과 공개 창고 주소를 #IndieNet 에 발행합니다 (창고이웃을 구하는 첫걸음)">🌐 소개발행</button>
       <span style="flex:1"></span>
       <span class="wh-busy" id="whBusy"></span>
       <label class="wh-add" id="whAddBtn">
@@ -580,6 +583,15 @@ a{ color:var(--info); }
       </div>
       <div class="wh-err" id="wfErr" style="display:none"></div>
       <div class="wh-list" id="wfFeed"></div>
+    </div>
+    <!-- 이웃찾기 — #IndieNet 발견 노트(소개발행의 수신면). 소개 속 창고 주소 → 창고이웃 등록. -->
+    <div id="whDs" style="display:none">
+      <div class="wf-row">
+        <input id="wdDraft" class="grow" placeholder="#IndieNet 게시판에 한마디 — 소개도, 대화도 좋아요 (모두에게 공개)"
+          onkeydown="if(event.key==='Enter')wdPost()">
+        <button class="wf-go" id="wdPostBtn" onclick="wdPost()">게시</button>
+      </div>
+      <div class="wh-list" id="wdList"></div>
     </div>
   </div>
 </div>

@@ -52,6 +52,8 @@ IndieBiz OS는 단순한 AI 챗봇이 아닙니다. 당신만의 AI 페르소나
 - Python 3.10 이상
 - Node.js 18 이상
 - AI 프로바이더 API 키 (Claude, OpenAI, Gemini 등) 또는 Ollama (로컬 LLM)
+- (권장) Claude Desktop 등 외부 AI 하네스 — 설치 도우미이자 시스템 고장 시 복구 경로
+- (권장) Cloudflare 계정 + 본인 도메인 — 원격 런처·원격 NAS·공유창고·포털 등 공개 표면에 필요. 없어도 로컬 에이전트 시스템은 동작 (전체 그림은 `GUIDE.md` 1장 "시작하기" 참고)
 
 ### 2.2 설치 방법
 

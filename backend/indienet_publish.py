@@ -419,8 +419,10 @@ class IndieNetPublishMixin:
             tags = [["t", tag.lower()]]              # 보드와 동일하게 t-태그는 소문자
             body = (text or "").strip()
             if website:
-                # 주소만 있으면 뭐하는 곳인지 모르니 "공유창고 : <주소>" 라벨을 붙인다(사람이 읽는 본문).
-                labeled = "공유창고 : " + website
+                # 주소만 있으면 뭐하는 곳인지 모르니 "공유창고 Warehouse : <주소>" 라벨을 붙인다
+                # (사람이 읽는 본문 + 기계가 파싱하는 계약 — 한/영 키워드 병기로 보편성 확보,
+                #  이웃찾기 탭의 창고이웃 등록 버튼이 이 키워드를 보고 붙는다).
+                labeled = "공유창고 Warehouse : " + website
                 body = (body + "\n\n" + labeled).strip() if body else labeled
             body = (body + f"\n\n#{tag}").strip()    # 본문 표시용 #IndieNet
             if _ON_PHONE:

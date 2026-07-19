@@ -304,7 +304,7 @@ The easiest way to install IndieBiz OS is through **Claude Desktop**.
 
 > **Why Claude Desktop?** IndieBiz OS is a living system, not a static `npm install`. The agent that installs it becomes the blacksmith who keeps forging it to fit you.
 
-**You'll provide:** an LLM API key (Anthropic, Google, or OpenAI); answers to a few questions about what you want; external API keys only as you actually use those features.
+**You'll provide:** an LLM API key (Anthropic, Google, or OpenAI); answers to a few questions about what you want; external API keys only as you actually use those features. To also turn on the public surfaces — Shared Warehouse, remote access — you'll additionally need a **Cloudflare account + your own domain**; the full setup map is in the [Getting Started guide](GUIDE_EN.md#1-getting-started).
 
 <details>
 <summary><strong>Alternative: download the desktop app (no Claude Desktop)</strong></summary>

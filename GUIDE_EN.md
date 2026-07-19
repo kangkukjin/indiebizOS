@@ -61,7 +61,31 @@ Over time, it becomes "your own AI environment." The examples below show this pr
 
 ## 1. Getting Started
 
-### Installation and Launch
+### Purpose first — the Shared Warehouse, and why an AI agent
+
+Hold one purpose in mind before starting, and everything else gains meaning. One axis of IndieBiz OS is the **Shared Warehouse** — drop a file into a folder and it is published to the world. Put in a video and it does what YouTube did; a post, what a blog did; a product list, what a shopping mall did. Platforms existed per-category because each needed a human-facing storefront; when the reader is an AI, no storefront is needed — one warehouse suffices.
+
+And that warehouse is what demands the other axis, the **AI agent system**. A warehouse lives only if it is filled (agents produce reports, newspapers, and catalogs daily and auto-publish them — production becomes publication), and digging through neighbors' raw file piles to understand them is your AI's job. Just as blogs made writing meaningful and YouTube made video meaningful, a warehouse that can publish anything makes an AI that can produce anything meaningful. There are many AI agent systems in the world; what sets IndieBiz OS apart is that it is one body with its distribution and connection channel.
+
+With that purpose in hand, what you need to get started is clearly defined: **two essential pillars** (AI + a public address), **one near-essential** (your phone), **one automatic** (Nostr), and **a few optional items** (extra communication channels). This chapter walks through them in that order.
+
+### Core Features ↔ Required Setup (the Map)
+
+| What you get | What it is | What it needs |
+|---|---|---|
+| AI agent system | Three surfaces (autopilot / cockpit / apps) — your own AI running on your PC | Pillar ① AI API key |
+| Installation & repair | An external hand that builds the system and fixes it when it breaks | Pillar ① External harness |
+| Shared Warehouse | Drop a file in and it's published to the world + a feed of your neighbors' warehouses | Pillar ② Cloudflare + domain |
+| Remote launcher, remote NAS, portal, family newspaper, bulletin board | Every public surface you use from a browser, anywhere | Pillar ② Cloudflare + domain |
+| Using it from your phone | Any phone via browser (zero install) · on Android, the phone itself becomes a second node | Pillar ③ (Android only) app install |
+| Messaging other users | Nostr communication | Automatic (key = account) |
+| Email, Telegram, etc. | Additional channels | Optional (when you want them) |
+
+With pillar ① alone the agent system runs. But without pillar ② every public surface — remote access and the Shared Warehouse — stays locked, and **the system is half of itself**: it can produce, but it cannot publish or connect.
+
+**The cost structure is simple**: the only variable cost is AI API usage. The only fixed cost is a domain, once a year (~$10). Everything else (Cloudflare, Nostr, the software itself) is free.
+
+### Installation
 
 1. Download the latest version from [GitHub Releases](https://github.com/kangkukjin/indiebizOS/releases)
    - macOS: `.dmg` file
@@ -71,40 +95,83 @@ Over time, it becomes "your own AI environment." The examples below show this pr
 
 When the app starts, the backend server automatically starts with it.
 
-### For Developers (Running from Source)
+An even better way is to **hand the whole installation to an AI harness like Claude Desktop (or Claude Code)** — one line, "Install https://github.com/kangkukjin/indiebizOS on my PC", and it clones, installs dependencies, and walks the initial setup with you in conversation. Why we recommend this is explained in pillar ① below.
+
+**For Developers (Running from Source)**
 
 ```bash
 cd backend && python api.py        # Terminal 1
 cd frontend && npm run electron:dev # Terminal 2
 ```
 
-### API Key Setup - The Most Important First Step
+### Pillar ① — AI API Key + External Harness (Essential)
 
-To use IndieBiz OS, you need **at least one AI API key**. This is the biggest first hurdle. But once you get past this, you can ask or instruct the System AI for everything else.
+**You need at least one AI API key.** This is the only variable cost and the first gate. Once past it, you can ask or instruct the System AI for everything else.
 
-**Recommended as of Jan 2026: Google Gemini API (Free)**
-
-Currently, Gemini API can be used for free for a while, making it a good starting point.
+**Recommended as of 2026: Google Gemini API (free to start)**
 
 1. Get an API key at https://aistudio.google.com
-2. Enter the Gemini API key in the app's settings screen
+2. Enter it in Settings → API Keys tab
 3. Select a model:
-   - `gemini-3-flash-preview`: Fast and lightweight (recommended for general use)
-   - `gemini-3-pro-preview`: More powerful (for complex tasks)
+   - `gemini-3-flash-preview`: fast and lightweight (recommended for general use)
+   - `gemini-3-pro-preview`: more powerful (for complex tasks)
 
-If you don't know how to get an API key, just ask any AI like ChatGPT or Claude: "How do I get a Gemini API key?"
+If you don't know how to get an API key, ask any AI: "How do I get a Gemini API key?" Once the key is in, the System AI wakes up, and from then on you install tools, create projects, and change settings by conversation.
 
-**After entering the API key?**
+**An external harness (Claude Desktop, Claude Code, etc.) is effectively essential too.** Not an alternative — the other half of this pillar. Two reasons:
 
-The System AI becomes active. From then on, you can chat with the System AI to install tools, create projects, change settings, and more.
+- **The installing blacksmith**: IndieBiz OS is not a static app finished by `npm install`; it is a system continuously forged to fit you. The harness that installs it becomes that blacksmith.
+- **The recovery path**: the System AI can repair its own system, but **not when the backend itself is broken** — a patient who has lost consciousness cannot operate on themselves. That is when the external harness opens the system folder and fixes it. You can only drive a car with confidence if there is a garage to tow it to when it won't start.
 
-**Alternative: Use Claude Desktop**
+**Tool API keys (weather, real estate, statistics, …) are optional and for later.** The moment you need one, the System AI tells you which key and where to get it (Settings → API Keys has per-key signup guidance and live tests).
 
-If getting an API key is difficult, you can install [Claude Desktop](https://claude.ai/download) instead. You can have Claude Desktop open the indiebizOS folder, explore the system, install tools, or make system modifications.
+### Pillar ② — Cloudflare Account + Your Own Domain (the Public Face)
 
-**Tool APIs (Optional, for later)**
+Without this the agent system still runs, but all of the following stay locked: **remote launcher** (drive your home system from a phone browser anywhere), **remote NAS**, **Shared Warehouse** (file publishing + neighbor feed), **personal portal**, **family newspaper**, **bulletin board**. In short: the system's entire public face.
 
-Some tool packages require external APIs. You can set these up later by asking the System AI when you need them.
+**Why Cloudflare**: the four parts you need — a tunnel (connects your home PC to the public internet without port forwarding), Workers (edge logic), R2 (cache storage), and DNS — are bundled free in one account only at Cloudflare today. The architecture costs nothing to keep running: no server fees, no bandwidth fees.
+
+**A domain is required**: to attach a stable public address to the tunnel, your own domain must be registered on Cloudflare. About $10/year — the single fixed cost of the whole system. And it is more than a cost: your YouTube channel name belongs to YouTube, but **a domain is an address you own** — you take it with you if you ever switch providers. In the Shared Warehouse, your address *is* your identity.
+
+**Outline** (hand the details to your harness or System AI):
+
+1. Sign up for Cloudflare (free)
+2. Buy a domain (Cloudflare Registrar, sold at cost) or move an existing domain's nameservers to Cloudflare
+3. Create a tunnel (cloudflared) — connects your home PC to Cloudflare
+4. Deploy the Worker — serves the public surfaces
+5. Designate the Shared Warehouse folder — from now on, drop a file in and it's published
+
+The easiest path: tell your harness "set up the Cloudflare tunnel and the Shared Warehouse", and do only the account signup and domain payment yourself.
+
+### Pillar ③ — Your Smartphone (Near-Essential)
+
+The phone is a two-rung ladder:
+
+- **Rung 1 — any phone, browser (zero install)**: opens automatically once pillar ② is up. iPhone or Android, one browser address gets you the remote launcher (a remote control for your home system), remote NAS, and Shared Warehouse. Nothing to install.
+- **Rung 2 — the Android app (your phone becomes a second node)**: IndieBiz OS runs on the phone itself — not a remote control but an independent body: location/microphone/camera senses, phone hardware control, clipboard straight into KakaoTalk, working even when the home PC is off. Installation currently needs a USB cable and a script, so we recommend telling your harness "install IndieBiz on my phone".
+
+Rung 1 is enough for daily use. Climb to rung 2 when the phone becomes a place you actively work.
+
+### Automatic — Your Nostr Identity
+
+Nostr is a communication protocol with no signup: generating a key *is* opening an account. IndieBiz OS generates the key automatically, and its public key (npub) becomes your contact address, automatically attached to what you publish in the Shared Warehouse. There is nothing for you to do.
+
+### Optional — More Communication Channels
+
+Set these up only when you want them. Let the System AI drive, but know the difficulty going in:
+
+- **Telegram (bot)**: easy — one chat with BotFather issues a token
+- **Matrix**: easy — sign up on a homeserver
+- **Email (Gmail)**: hard — creating a Google Cloud project, configuring the OAuth consent screen, issuing a client ID, and publishing the app takes several steps. Walk through it with your harness if you want it.
+- **KakaoTalk**: no personal messaging API exists, so it can't be a channel — instead the Android app (pillar ③, rung 2) reaches it via the clipboard.
+
+### Getting-Started Checklist
+
+1. **Install** — tell Claude Desktop "install it" (or download from Releases)
+2. **Enter an AI API key** — the System AI wakes up (minimum working system ends here)
+3. **Cloudflare + domain** — the public face turns on (strongly recommended — without it the system is half of itself)
+4. **Phone** — open the remote launcher in a browser; on Android, install the app
+5. **Everything else** — by conversation with the System AI: create projects, install tools, add channels
 
 ---
 

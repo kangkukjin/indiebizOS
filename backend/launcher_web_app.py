@@ -383,13 +383,90 @@ async function whRemove(nameEnc){
 let WH_TAB='mine'; let wfNb=[]; let wfCands=[]; let wfItems=[]; let wfResults=null; let wfShown=[];
 function whTab(t){ WH_TAB=t;
   document.getElementById('whTabMine').classList.toggle('on', t==='mine');
-  document.getElementById('whTabNb').classList.toggle('on', t!=='mine');
+  document.getElementById('whTabNb').classList.toggle('on', t==='nb');
+  document.getElementById('whTabDs').classList.toggle('on', t==='ds');
   document.getElementById('whMine').style.display = (t==='mine'?'':'none');
-  document.getElementById('whNb').style.display = (t==='mine'?'none':'');
+  document.getElementById('whNb').style.display = (t==='nb'?'':'none');
+  document.getElementById('whDs').style.display = (t==='ds'?'':'none');
   document.getElementById('whAddBtn').style.display = (t==='mine'?'':'none');
-  if(t!=='mine') wfLoad();
+  if(t==='nb') wfLoad();
+  if(t==='ds') wdLoad();
 }
-function whRefresh(){ if(WH_TAB==='mine') whLoad(WH_LEVEL); else wfPoll(); }
+function whRefresh(){ if(WH_TAB==='mine') whLoad(WH_LEVEL); else if(WH_TAB==='ds') wdLoad(); else wfPoll(); }
+/* 소개발행 — 비즈니스 계기에서 이동(2026-07-19): "나를 알리기"는 창고의 일. 소유자 셸 전용. */
+async function whIntro(){
+  if(!confirm('공개 인사 프로필과 공개 창고 주소를 #IndieNet 에 발행할까요? (명함 kind:0 + 발견 노트 kind:1)')) return;
+  const b=document.getElementById('whIntroBtn'); if(b){ b.disabled=true; b.textContent='발행 중…'; }
+  try{
+    const r=await ibl('[self:business_document]{op: "publish"}');
+    alert((r&&r.message)||'소개를 발행했어요.');
+  }catch(e){ alert('소개발행 실패: '+e); }
+  if(b){ b.disabled=false; b.textContent='🌐 소개발행'; }
+}
+/* ===== 이웃찾기 — #IndieNet 발견 노트(소개발행의 수신면) =====
+   데이터=[others:feed]{op:"read"} (활성 보드 #indienet, IndieNet 창과 동일). 소개 본문의
+   "공유창고 : <url>" 라벨(indienet_publish.publish_intro 계약)을 파싱해 창고이웃 등록으로 잇는다. */
+let wdItems=[]; let wdAdded={};
+async function wdLoad(){
+  const l=document.getElementById('wdList'); if(!l) return;
+  if(!wdItems.length) l.innerHTML='<div class="wh-empty">📡 릴레이에서 소개를 모으는 중…</div>';
+  try{
+    const r=await ibl('[others:feed]{op: "read", limit: 50}');
+    if(r&&r.error) throw new Error(r.error);
+    wdItems=(r&&r.items)||[];
+    wdRender();
+  }catch(e){ l.innerHTML='<div class="wh-empty">불러오기 실패: '+esc(String(e))+'</div>'; }
+}
+function wdLinkify(h){ return String(h||'').replace(/https?:\\/\\/[^\\s<]+/g,
+  u=>'<a href="'+u+'" target="_blank" rel="noopener" style="color:var(--acc);word-break:break-all">'+u+'</a>'); }
+function wdWh(c){
+  const t=String(c||'');
+  /* 계약: "공유창고 Warehouse : <url>" (한/영 병기). 키워드 게이트 — 공유창고와 warehouse
+     **둘 다** 있어야 창고 글(정식 발행=항상 병기, 잡담에 한쪽만 나오면 무시). 라벨 형식 아니면 마지막 URL 폴백. */
+  if(!(/공유창고/.test(t) && /warehouse/i.test(t))) return null;
+  const m=t.match(/(?:공유창고|warehouse)[^\\n]*?:\\s*(https?:\\/\\/\\S+)/i); if(m) return m[1];
+  const urls=t.match(/https?:\\/\\/\\S+/g);
+  return (urls&&urls.length)?urls[urls.length-1]:null;
+}
+function wdRender(){
+  const l=document.getElementById('wdList'); if(!l) return;
+  if(!wdItems.length){ l.innerHTML='<div class="wh-empty">아직 소개가 없어요 — 🌐 소개발행으로 나를 알려보세요</div>'; return; }
+  l.innerHTML='<div class="wf-more">#IndieNet 게시판 — 소개도 대화도 여기서. 공유창고 Warehouse 병기 표시가 있는 글은 그 자리에서 창고이웃 등록 (정식 소개는 🌐 소개발행)</div>'
+    +wdItems.map((it,i)=>{
+    const wh=wdWh(it.content);
+    const btns=wh?('<div style="margin-top:6px;display:flex;gap:8px">'
+      +'<a class="wf-go" style="text-decoration:none" target="_blank" rel="noopener" href="'+esc(wh)+'">📦 창고 열기</a>'
+      +(wdAdded[wh]?'<button class="wf-go" disabled>등록됨</button>'
+                   :'<button class="wf-go" onclick="wdAdd('+i+')">＋ 창고이웃 등록</button>')
+      +'</div>'):'';
+    return '<div class="wh-item" style="display:block">'
+      +'<div class="mt">'+esc(it.author||'')+' · '+esc(it.time||'')+'</div>'
+      +'<div style="white-space:pre-wrap;word-break:break-word;margin-top:4px">'+wdLinkify(esc(it.content||''))+'</div>'
+      +btns+'</div>';
+  }).join('');
+}
+async function wdAdd(i){
+  const it=wdItems[i]; const wh=it&&wdWh(it.content); if(!wh) return;
+  try{
+    /* npub 동봉 — 서버가 창고+nostr 두 접점을 한 이웃에 모으고 신원 기준 중복을 막는다 */
+    await jfetch('/warehouse-feed/neighbors/add',{method:'POST',body:JSON.stringify({url:wh, npub:(it.author_full||'')})});
+    wdAdded[wh]=true; wdRender();
+    alert('창고이웃으로 등록했어요 — 이웃 탭 피드에 이 창고의 소식이 흐릅니다.');
+  }catch(e){ alert('등록 실패: '+e); }
+}
+/* 게시판처럼 한마디 — 커뮤니티 계기와 같은 [others:feed]{op:"post"} 경로. 내용=JSON.stringify 이스케이프. */
+async function wdPost(){
+  const inp=document.getElementById('wdDraft'); const btn=document.getElementById('wdPostBtn');
+  const t=(inp&&inp.value||'').trim(); if(!t) return;
+  if(btn){ btn.disabled=true; btn.textContent='게시 중…'; }
+  try{
+    const r=await ibl('[others:feed]{op: "post", content: '+JSON.stringify(t)+'}');
+    if(r&&(r.error||r.success===false)) throw new Error(r.error||r.message||'게시 실패');
+    if(inp) inp.value='';
+    await wdLoad();
+  }catch(e){ alert('게시 실패: '+e); }
+  if(btn){ btn.disabled=false; btn.textContent='게시'; }
+}
 function wfErr(m){ const e=document.getElementById('wfErr'); if(!e)return;
   if(m){ e.textContent=m; e.style.display=''; } else e.style.display='none'; }
 async function wfLoad(){

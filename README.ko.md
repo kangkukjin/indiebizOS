@@ -298,7 +298,7 @@ IBL 정의는 단일 진실 소스(`data/ibl_nodes_src/`, `scripts/build_ibl_nod
 
 > **왜 Claude Desktop인가?** IndieBiz OS는 `npm install`로 끝나는 정적인 앱이 아닙니다. 설치하는 에이전트가 곧 당신에게 맞춰 계속 단조하는 대장장이가 됩니다.
 
-**필요한 것:** LLM API 키(Anthropic·Google·OpenAI); 몇 가지 질문에 대한 답; 외부 API 키는 해당 기능을 실제로 쓸 때만.
+**필요한 것:** LLM API 키(Anthropic·Google·OpenAI); 몇 가지 질문에 대한 답; 외부 API 키는 해당 기능을 실제로 쓸 때만. 공유창고·원격 접속 같은 공개 표면까지 켜려면 **Cloudflare 계정+본인 도메인**이 추가로 필요합니다 — 전체 세팅 지도는 [시작 가이드](GUIDE.md#1-시작하기)에 있습니다.
 
 <details>
 <summary><strong>대안: 수동 설치</strong></summary>

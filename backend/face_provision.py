@@ -27,6 +27,7 @@ import json
 import os
 import platform
 import re
+import secrets as _secrets
 from pathlib import Path
 from typing import Optional
 
@@ -85,6 +86,30 @@ def _err_text(res: dict) -> str:
     return "; ".join(str(e.get("message", e)) for e in (res.get("errors") or [])) or "알 수 없는 오류"
 
 
+def _ensure_origin_secret() -> dict:
+    """SHOWCASE_ORIGIN_SECRET 보장 — 없으면 랜덤 생성해 .env 에 기록.
+
+    공개 서빙 경로는 터널 익명 게이트를 통과하므로, 이 시크릿이 '공식 정문
+    (Worker 또는 직접 서빙 게이트웨이)만 노크할 수 있다'는 악수다. 비어 있으면
+    _check_secret 이 무조건 403 → 발급 직후 공개면이 'failed to fetch'로 죽는다
+    (2026-07-20 윈도우 첫 발급에서 실측). 양쪽 검사기가 매 호출 .env 를 다시
+    읽으므로 재시작 없이 즉시 반영된다."""
+    existing = _env_value("SHOWCASE_ORIGIN_SECRET")
+    if existing:
+        return {"created": False}
+    value = _secrets.token_urlsafe(32)
+    envp = _ROOT / ".env"
+    try:
+        prev = envp.read_text(encoding="utf-8") if envp.exists() else ""
+        sep = "" if (not prev or prev.endswith("\n")) else "\n"
+        with open(envp, "a", encoding="utf-8") as f:
+            f.write(f"{sep}SHOWCASE_ORIGIN_SECRET={value}\n")
+        os.environ["SHOWCASE_ORIGIN_SECRET"] = value
+        return {"created": True}
+    except Exception as e:
+        return {"created": False, "error": str(e)}
+
+
 def _machine_slug() -> str:
     """이 머신의 기본 이름 — 서브도메인·터널명 제안용 (소문자 영숫자-하이픈)."""
     raw = (platform.node() or "indiebiz").split(".")[0].lower()
@@ -121,6 +146,7 @@ async def provision_status():
             "provider": face.get("provider", ""),
             "direct_hosts": face.get("direct_hosts", []),
             "moved_to": face.get("moved_to", ""),
+            "origin_secret_present": bool(_env_value("SHOWCASE_ORIGIN_SECRET")),
         },
         "tunnel": {
             "provider": tcfg.get("provider", ""),
@@ -183,9 +209,10 @@ def provision_tailscale(req: TailscaleReq = TailscaleReq()):
     tcfg.update({"provider": "tailscale", "enabled": True, "auto_start": True,
                  "funnel_port": port})
     api_tunnel.save_config(tcfg)
+    secret = _ensure_origin_secret()   # 직접 서빙 악수 — 없으면 공개면이 403으로 죽는다
     applied = public_face.apply_public_base(base) if base else {}
     return {"success": True, "public_base": base, "dns_name": result.get("dns_name", ""),
-            "applied": applied,
+            "applied": applied, "origin_secret": secret,
             "message": f"창고 주소가 발급되었습니다: {base or '(주소 확인 실패)'}"}
 
 
@@ -304,6 +331,10 @@ def provision_cloudflare(req: CloudflareReq):
                     "재시작 시 자동 시작을 다시 시도합니다", 502)
 
     # 6) 공개 얼굴 배선 — Worker 없이 직접 서빙(direct_hosts)으로 공개면 성립
+    sec = _ensure_origin_secret()      # 직접 서빙 악수 — 없으면 공개면이 403으로 죽는다
+    steps.append({"step": "secret", "ok": "error" not in sec,
+                  "detail": ("시크릿 생성(.env)" if sec.get("created")
+                             else sec.get("error") or "기존 시크릿 사용")})
     base = f"https://{hostname}"
     fcfg = public_face.load_config()
     hosts = set(fcfg.get("direct_hosts") or [])

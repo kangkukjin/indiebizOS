@@ -291,9 +291,13 @@ def provision_cloudflare(req: CloudflareReq):
     steps.append({"step": "token", "ok": True, "detail": "실행 토큰 발급"})
 
     # 3) ingress 원격 설정 — hostname → 백엔드 (원격관리형이라 config.yml 불필요)
+    # ★httpHostHeader: cloudflared 가 원본으로 보내는 Host 를 공개호스트로 고정.
+    #   없으면 서비스 기준(localhost:8765)으로 재작성돼 is_direct_host 미스 →
+    #   게이트웨이 미작동 → 공개면 404 (2026-07-20 윈도우 실측).
     res = _cf_call("PUT", f"/accounts/{acc}/cfd_tunnel/{tunnel_id}/configurations", token,
                    body={"config": {"ingress": [
-                       {"hostname": hostname, "service": "http://localhost:8765"},
+                       {"hostname": hostname, "service": "http://localhost:8765",
+                        "originRequest": {"httpHostHeader": hostname}},
                        {"service": "http_status:404"}]}})
     if not res["ok"]:
         return fail(f"ingress 설정 실패: {_err_text(res)}", 502)

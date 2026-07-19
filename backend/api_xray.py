@@ -650,8 +650,15 @@ def _collect_tool_inventory() -> Dict[str, Any]:
     projects = []
     try:
         projects_path = BASE_PATH / "projects"
+        try:
+            from project_manager import ProjectManager
+            system_ids = set(ProjectManager.SYSTEM_PROJECT_IDS)
+        except Exception:
+            system_ids = {"앱모드", "수동모드"}
         for project_dir in sorted(projects_path.iterdir()):
             if not project_dir.is_dir() or project_dir.name in ['trash', '.DS_Store']:
+                continue
+            if project_dir.name in system_ids:  # 런처 표면용 시스템 프로젝트 — 데스크탑과 동일하게 숨김
                 continue
             agents_yaml = project_dir / "agents.yaml"
             if not agents_yaml.exists():
@@ -893,6 +900,19 @@ def _collect_cognition() -> Dict:
     except Exception as e:
         out["trends_error"] = str(e)
 
+    # 모델 기어 — 4축(분류/평가/실행/의식) → 티어 배치의 현재 상태 (단일 진실원=model_gear.json)
+    try:
+        import model_resolver
+        gear_name = model_resolver.get_gear()
+        out["gear"] = {
+            "current": gear_name,
+            "presets": model_resolver.list_gears(),
+            "axes": model_resolver.get_presets().get(gear_name, {}),
+            "consciousness_enabled": model_resolver.consciousness_enabled(),
+        }
+    except Exception as e:
+        out["gear_error"] = str(e)
+
     try:
         conn = sqlite3.connect(str(DATA_PATH / "world_pulse.db"), timeout=5)
         conn.row_factory = sqlite3.Row
@@ -930,10 +950,10 @@ def _collect_cognition() -> Dict:
 
 
 def _collect_memory() -> Dict:
-    """메모리 관리의 라이브 상태 — 6종 기억 + 정리 패스 현황.
+    """메모리 관리의 라이브 상태 — 7종 기억 + 정리 패스 현황.
 
-    의미·작업·일화·절차·관계·자기상태 각 기억의 규모와, 두 자기학습 기억
-    (해마/심층메모리)의 정리 패스 마커를 집계한다.
+    의미·작업·일화·절차·관계·자기상태·포식 각 기억의 규모와, 자기학습 기억
+    (해마/심층메모리/포식)의 정리 패스 마커를 집계한다.
     """
     out: Dict[str, Any] = {}
     wp = DATA_PATH / "world_pulse.db"
@@ -990,6 +1010,19 @@ def _collect_memory() -> Dict:
         conn.close()
     except Exception as e:
         out["episodic_error"] = str(e)
+
+    # 포식기억 — 냄새지도(forage_map) + 주인모델(owner_model)
+    try:
+        import forage_memory
+        fs = forage_memory.stats()
+        out["forage"] = {
+            "forage_map": fs.get("forage_map"),
+            "owner_model": fs.get("owner_model"),
+            "bodies": fs.get("bodies", []),
+            "last_consolidated": (forage_memory.get_meta("last_consolidated") or "")[:19] or None,
+        }
+    except Exception as e:
+        out["forage_error"] = str(e)
 
     # 의미기억 — 시스템 문서
     try:

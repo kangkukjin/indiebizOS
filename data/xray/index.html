@@ -520,6 +520,12 @@ body {
 
 <script>
 const API_BASE = window.location.origin;
+// 노드 표시 라벨 — 미등록 노드는 이름 그대로 표기 (label() 폴백)
+const NODE_LABELS = {
+  sense: '감각 (Sense)', self: '자아 (Self)', limbs: '팔다리 (Limbs)',
+  others: '타자 (Others)', engines: '엔진 (Engines)', table: '표 (Table)',
+};
+function nodeLabel(k) { return NODE_LABELS[k] || k; }
 let DATA = null;
 let tooltip = null;
 
@@ -637,9 +643,12 @@ function render() {
   const prop = ibl.proprioception || {};
 
   // IBL 노드 건강도 매핑 (3단계: verified/assumed/failed)
+  // 노드 목록은 하드코딩하지 않고 백엔드 by_node에서 유도 — 노드 추가/제거에 자동 추종.
   const nodes = ibl.by_node || {};
-  const nodeKeys = ['sense', 'self', 'limbs', 'others', 'engines'];
-  const nodeLabels = { sense: '감각 (Sense)', self: '자아 (Self)', limbs: '팔다리 (Limbs)', others: '타자 (Others)', engines: '엔진 (Engines)' };
+  const NODE_ORDER = ['sense', 'self', 'limbs', 'others', 'engines', 'table'];
+  const nodeKeys = [...NODE_ORDER.filter(k => nodes[k]),
+                    ...Object.keys(nodes).filter(k => !NODE_ORDER.includes(k)).sort()];
+  const nodeLabels = NODE_LABELS;
   const nodeHealth = {};
   nodeKeys.forEach(k => {
     const n = nodes[k];
@@ -887,39 +896,59 @@ function renderCognition() {
     return `<div style="flex:1;min-width:120px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:14px;"><div style="font-size:11px;color:#64748b;">${label}</div><div style="font-size:22px;color:#e2e8f0;font-weight:600;margin-top:4px;">${val ?? '—'}<span style="font-size:12px;color:#64748b;"> ${unit||''}</span></div></div>`;
   }
   const pct = v => v!=null ? Math.round(v*100)+'%' : '—';
+  // 모델 기어 — 4축(분류/평가/실행/의식) → 티어. model_gear.json이 단일 진실원.
+  const gear = c.gear || {};
+  const tierColor = t => t === '경량' ? '#22c55e' : t === '중급' ? '#f59e0b' : t === '고급' ? '#a78bfa' : '#64748b';
+  const tierBadge = t => `<span style="color:${tierColor(t)};font-size:10px;">${t || '?'}</span>`;
+  const axes = gear.axes || {};
+  const consOn = gear.consciousness_enabled !== false;
+  const gearBox = gear.current ? `
+      <div style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+          <span style="color:#60a5fa;font-size:12px;font-weight:600;">⚙ 모델 기어</span>
+          ${(gear.presets||[]).map(p => `<span style="padding:2px 10px;border-radius:10px;font-size:11px;${p===gear.current ? 'background:#1e3a5f;color:#60a5fa;border:1px solid #3b82f6;font-weight:600;' : 'background:#1e293b;color:#64748b;'}">${p}</span>`).join('')}
+          <span style="padding:2px 10px;border-radius:10px;font-size:11px;${consOn ? 'background:#064e3b;color:#34d399;' : 'background:#7c2d12;color:#fb923c;'}">의식 ${consOn ? 'ON' : 'OFF — THINK 차단'}</span>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#94a3b8;">
+          ${['분류','평가','실행','의식'].map(a => `<span>${a} → ${tierBadge(axes[a])}</span>`).join('')}
+        </div>
+      </div>` : '';
   const html = `
   <div class="section">
-    <div class="section-title">사고 과정 — 3단 인지 + 3단계 모델 티어</div>
+    <div class="section-title">사고 과정 — 3단 인지 + 모델 기어</div>
     <div style="color:#94a3b8;font-size:13px;line-height:1.7;margin-bottom:16px;">
       사용자 명령은 인간의 인지 과정을 본뜬 <b style="color:#e2e8f0;">분류(반사) → 의식(계획) → 실행 → 평가(성찰)</b> 파이프라인을 거칩니다.
-      비용·속도를 위해 단계마다 모델을 갈아끼웁니다 —
-      <span style="color:#22c55e;">경량</span>(분류·평가),
-      <span style="color:#f59e0b;">중급</span>(EXECUTE 실행),
-      <span style="color:#a78bfa;">본격</span>(THINK 의식·실행).
+      단계별 모델은 고정이 아니라 <b style="color:#60a5fa;">모델 기어</b>가 결정합니다 —
+      4축(분류·평가·실행·의식)을 현재 기어 프리셋이
+      <span style="color:#22c55e;">경량</span> /
+      <span style="color:#f59e0b;">중급</span> /
+      <span style="color:#a78bfa;">고급</span> 티어로 매핑합니다.
+      예외는 <b>Reflex</b>(해마 고확신)뿐 — 기어와 무관하게 항상 경량입니다.
     </div>
+    ${gearBox}
     <div style="display:flex;flex-direction:column;gap:12px;">
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 0</div>
         <div style="flex:1;border-left:2px solid #1e293b;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">연상기억 생성 <span style="font-size:10px;color:#64748b;font-weight:400;">· 명령당 1회</span></div>
-          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">해마(과거 IBL 코드 사례)와 심층메모리(사용자 사실·선호)를 합성합니다. 이후 모든 하위 에이전트가 이 기억을 공유하여 중복 검색을 피합니다.</div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">연상기억 생성 <span style="font-size:10px;color:#64748b;font-weight:400;">· 명령당 1회 · LLM 0</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">4채널 회상 — 해마(과거 IBL 코드 사례) + 심층메모리(사용자 사실·선호) + 포식 기억(냄새지도·주인모델) + 디스크 골격(집중 폴더, 포식 의도일 때)을 합성합니다. 이후 모든 하위 에이전트가 이 기억을 공유하여 중복 검색을 피합니다.</div>
         </div>
       </div>
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 1</div>
         <div style="flex:1;border-left:2px solid #22c55e;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">분류 · 반사 <span style="color:#22c55e;font-size:10px;">경량</span></div>
-          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">경량 AI가 요청을 <b style="color:#f59e0b;">EXECUTE</b>(의식 생략, 즉시 실행)와 <b style="color:#a78bfa;">THINK</b>(의식 경유)로 분류합니다. 단, 해마 점수가 <b>Reflex 임계(0.85)</b> 이상이면 분류조차 건너뛰고 과거 top-1 코드를 그대로 실행합니다(척수반사).</div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">분류 · 반사 ${tierBadge(axes['분류'] || '경량')}</div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">경량 AI가 요청을 <b style="color:#f59e0b;">EXECUTE</b>(의식 생략, 즉시 실행)와 <b style="color:#a78bfa;">THINK</b>(의식 경유)로 분류합니다. 단, 해마 점수가 <b>Reflex 임계(0.85)</b> 이상이면 분류조차 건너뛰고 과거 top-1 코드를 그대로 실행합니다(척수반사) — 이미 찾은 답을 내보내는 것이라 <b style="color:#22c55e;">항상 경량</b>(기어 무관)입니다.</div>
         </div>
       </div>
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 2</div>
         <div style="flex:1;border-left:2px solid #a78bfa;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">의식 · 계획 <span style="color:#a78bfa;font-size:10px;">본격</span> <span style="font-size:10px;color:#64748b;font-weight:400;">· THINK 경로만</span></div>
-          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">의식 에이전트가 히스토리를 요약하고, 도구 한계를 인식한 채 문제를 정의(<b style="color:#e2e8f0;">task framing</b>)하고, 달성 기준을 세우고, 관련 IBL 노드·가이드 파일을 짚어줍니다. 이것이 실행 에이전트의 초점이 됩니다.</div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">의식 · 계획 ${tierBadge(axes['의식'])} <span style="font-size:10px;color:#64748b;font-weight:400;">· THINK 경로만 · 기어 '의식' 축</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">의식 에이전트가 히스토리를 요약하고, 도구 한계를 인식한 채 문제를 정의(<b style="color:#e2e8f0;">task framing</b>)하고, 달성 기준을 세우고, 관련 IBL 노드·가이드 파일을 짚어줍니다. 이것이 실행 에이전트의 초점이 됩니다. 계기판의 <b>의식 토글</b>이 OFF면 이 단계 전체가 차단되어 모든 요청이 EXECUTE로 흐릅니다(#think로 메시지 단위 재개).</div>
         </div>
       </div>
 
@@ -928,9 +957,9 @@ function renderCognition() {
         <div style="flex:1;background:#0f172a;border:1px solid #312e54;border-radius:8px;padding:12px 14px;">
           <div style="color:#c4b5fd;font-size:12px;font-weight:600;margin-bottom:4px;">↻ framing 재사용 — 의식 호출 절약</div>
           <div style="color:#94a3b8;font-size:12px;line-height:1.6;">
-            같은 대화의 연속 질문이라면 매번 본격 모델(의식)을 다시 부르지 않습니다.
+            같은 대화의 연속 질문이라면 매번 의식 축 모델을 다시 부르지 않습니다.
             직전에 만든 framing이 있으면 경량 <b style="color:#22c55e;">적합성 게이트</b>가 "이 framing이 새 질문에도 맞는가"를 1회 판정합니다 —
-            <b style="color:#e2e8f0;">맞으면</b> 의식(본격) 호출을 건너뛰고 framing을 재사용하되, 매 턴 달라지는 <b>달성 기준</b>만 게이트가 새로 뽑습니다.
+            <b style="color:#e2e8f0;">맞으면</b> 의식 호출을 건너뛰고 framing을 재사용하되, 매 턴 달라지는 <b>달성 기준</b>만 게이트가 새로 뽑습니다.
             주제가 바뀌었다면(<b style="color:#e2e8f0;">안 맞으면</b>) 의식이 새 framing을 만듭니다. framing은 30분간 유지됩니다.
             → 같은 맥락의 후속 대화에서 비용 큰 의식 단계를 반복하지 않는 것이 핵심입니다.
           </div>
@@ -940,15 +969,15 @@ function renderCognition() {
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 3</div>
         <div style="flex:1;border-left:2px solid #f59e0b;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">실행 <span style="color:#f59e0b;font-size:10px;">중급</span> <span style="color:#a78bfa;font-size:10px;">/ 본격</span></div>
-          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">실행 에이전트가 IBL 엔진으로 도구를 실행합니다. EXECUTE 경로는 중급 모델, THINK 경로는 본격 모델을 씁니다.</div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">실행 <span style="font-size:10px;color:#64748b;font-weight:400;">EXECUTE→기어 '실행' 축 ${tierBadge(axes['실행'])} · THINK→'의식' 축 ${tierBadge(axes['의식'])}</span></div>
+          <div style="color:#94a3b8;font-size:12px;line-height:1.6;">실행 에이전트가 IBL 엔진으로 도구를 실행합니다. EXECUTE 경로는 기어의 <b>실행</b> 축 모델, THINK 경로는 <b>의식</b> 축 모델을 씁니다 (오분류 품질 방어를 위해 EXECUTE도 기본은 상위 티어).</div>
         </div>
       </div>
 
       <div style="display:flex;gap:14px;align-items:flex-start;">
         <div style="flex-shrink:0;width:54px;font-size:10px;color:#475569;text-align:right;padding-top:3px;">단계 4</div>
         <div style="flex:1;border-left:2px solid #22c55e;padding-left:14px;">
-          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">평가 · 성찰 <span style="color:#22c55e;font-size:10px;">경량</span></div>
+          <div style="color:#e2e8f0;font-size:13px;font-weight:600;">평가 · 성찰 ${tierBadge(axes['평가'])} <span style="font-size:10px;color:#64748b;font-weight:400;">· 기어 '평가' 축</span></div>
           <div style="color:#94a3b8;font-size:12px;line-height:1.6;">평가 에이전트가 단계 2의 달성 기준 대비 결과를 검증합니다. 미달(NOT_ACHIEVED)이면 피드백과 함께 최대 3라운드까지 재실행합니다. 성공 경험은 해마로 증류됩니다.</div>
         </div>
       </div>
@@ -993,15 +1022,15 @@ function renderMemory() {
     const body = rows.map(([k,v])=>`<div style="display:flex;justify-content:space-between;font-size:12px;margin:4px 0;"><span style="color:#64748b;">${k}</span><span style="color:#e2e8f0;font-weight:500;">${v}</span></div>`).join('');
     return `<div style="background:#0f172a;border:1px solid #1e293b;border-left:3px solid ${accent};border-radius:8px;padding:14px;"><div style="font-size:13px;color:#e2e8f0;font-weight:600;">${title}</div><div style="font-size:11px;color:#475569;margin-bottom:8px;">${subtitle}</div>${body}</div>`;
   }
-  const proc=m.procedural||{}, rel=m.relational||{}, epi=m.episodic||{}, ss=m.self_state||{}, sem=m.semantic||{}, wk=m.working||{}, con=m.consolidation||{};
+  const proc=m.procedural||{}, rel=m.relational||{}, epi=m.episodic||{}, ss=m.self_state||{}, sem=m.semantic||{}, wk=m.working||{}, con=m.consolidation||{}, fg=m.forage||{};
   const catRows = Object.entries(rel.by_category||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const html = `
   <div class="section">
-    <div class="section-title">메모리 관리 — 6종 기억</div>
+    <div class="section-title">메모리 관리 — 7종 기억</div>
     <div style="color:#94a3b8;font-size:13px;line-height:1.7;">
-      indiebizOS의 기억은 인간 기억 분류에 대응하는 <b style="color:#e2e8f0;">6종</b>으로 구성됩니다.
-      이 중 <b style="color:#22d3ee;">절차기억(해마)</b>과 <b style="color:#a78bfa;">관계기억(심층메모리)</b>은
-      대화에서 자동으로 증류되고, 주기적 <b>정리 패스</b>로 중복·노화·모순을 청소합니다.
+      indiebizOS의 기억은 인간 기억 분류에 대응하는 <b style="color:#e2e8f0;">7종</b>으로 구성됩니다.
+      이 중 <b style="color:#22d3ee;">절차기억(해마)</b>·<b style="color:#a78bfa;">관계기억(심층메모리)</b>·<b style="color:#f97316;">포식 기억(냄새지도)</b>은
+      대화·탐색에서 자동으로 증류되고, 주기적 <b>정리 패스</b>로 중복·노화·모순을 청소합니다.
     </div>
   </div>
   <div class="section">
@@ -1017,6 +1046,11 @@ function renderMemory() {
         ['정리된 DB', (rel.consolidated_dbs ?? '—')+' / '+(rel.agents ?? '—')],
         ...catRows,
       ], '#a78bfa')}
+      ${card('포식 기억 · 냄새지도', '디스크·코드·웹 탐색 자기학습', [
+        ['지도 항목(map)', fg.forage_map ?? '—'],
+        ['주인 모델(owner)', fg.owner_model ?? '—'],
+        ['포식 공간(bodies)', (fg.bodies || []).length ? fg.bodies.join(', ') : '—'],
+      ], '#f97316')}
       ${card('일화기억', '에피소드 로그 + 인지 요약', [
         ['에피소드', epi.episode_log ?? '—'],
         ['요약(영구)', epi.episode_summary ?? '—'],
@@ -1042,6 +1076,7 @@ function renderMemory() {
         <tr><td>해마 정리 (증류물 위생)</td><td>${con.hippocampus ? con.hippocampus.replace('T',' ') : '미실행'}</td></tr>
         <tr><td>데이터 정리 (retention)</td><td>${con.cleanup ? con.cleanup.replace('T',' ') : '미실행'}</td></tr>
         <tr><td>심층메모리 정리</td><td>${rel.consolidated_dbs ?? 0} / ${rel.agents ?? 0} DB</td></tr>
+        <tr><td>포식 기억 정리 (근접중복 병합)</td><td>${fg.last_consolidated ? fg.last_consolidated.replace('T',' ') : '미실행'}</td></tr>
       </tbody>
     </table>
   </div>`;
@@ -1144,13 +1179,15 @@ function renderSystemDashboard() {
     { bio: '반사 신경', impl: '무의식 에이전트', role: 'EXECUTE/THINK 분류', color: '#34d399' },
     { bio: '자기 교정', impl: '평가 에이전트', role: '달성 기준 대비 평가', color: '#fbbf24' },
     { bio: '자의식/각성', impl: 'World Pulse', role: '매시간 상태 수집', color: '#fb923c' },
-    { bio: '면역계', impl: 'Self-Check', role: '매 6시간 자가 점검', color: '#ef4444' },
+    { bio: '면역계', impl: 'Self-Check', role: '매 24시간 정적 정합성 우선 점검', color: '#ef4444' },
     { bio: '자율신경계', impl: '스케줄러 · 이벤트', role: '의식 없이 돌아가는 리듬', color: '#a78bfa' },
     { bio: '해마', impl: '실행기억 (RAG)', role: '과거 경험 자동 인출', color: '#2dd4bf' },
+    { bio: '후각/공간 기억', impl: '포식 기억 (Forager)', role: '탐색에서 배운 냄새지도 누적', color: '#f97316' },
+    { bio: '대사 조절', impl: '모델 기어', role: '4축 역할 → 모델 티어 변속', color: '#60a5fa' },
   ];
 
   // 노드 바 색상
-  const nodeColors = { sense: '#22d3ee', self: '#34d399', limbs: '#f472b6', others: '#fbbf24', engines: '#818cf8' };
+  const nodeColors = { sense: '#22d3ee', self: '#34d399', limbs: '#f472b6', others: '#fbbf24', engines: '#818cf8', table: '#2dd4bf' };
   const maxActions = Math.max(...nodeNames.map(n => nodes[n] ? nodes[n].action_count : 0), 1);
 
   const actionBars = nodeNames.map(n => {
@@ -1173,7 +1210,7 @@ function renderSystemDashboard() {
       <div class="dash-stat"><div class="dash-stat-val">${toolCount}</div><div class="dash-stat-lbl">패키지</div></div>
       <div class="dash-stat"><div class="dash-stat-val">${nodeNames.length}</div><div class="dash-stat-lbl">IBL 노드</div></div>
       <div class="dash-stat"><div class="dash-stat-val">${totalActions}</div><div class="dash-stat-lbl">IBL 액션</div></div>
-      <div class="dash-stat"><div class="dash-stat-val">4</div><div class="dash-stat-lbl">AI 프로바이더</div></div>
+      <div class="dash-stat"><div class="dash-stat-val">7</div><div class="dash-stat-lbl">기억 체계</div></div>
     </div>
 
     <div class="dash-section-title">신체 구조 (생명체 메타포)</div>
@@ -1269,10 +1306,6 @@ function toggleDocSection(el) {
   }
 }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
 function renderBodyMap(nodeHealth, sh, cog, nodes) {
   function labelStyle(status) {
     if (status === 'verified') return 'background:rgba(6,78,59,0.8);color:#34d399;border:1px solid rgba(34,197,94,0.4);';
@@ -1295,29 +1328,30 @@ function renderBodyMap(nodeHealth, sh, cog, nodes) {
   const cogCompleted = cogStatus.completed || 0;
   const cogState = cogTotal > 0 ? (cogCompleted / cogTotal >= 0.5 ? 'verified' : 'failed') : 'assumed';
 
+  // 노드 오버레이 — 위치만 수동(이미지 기준 %), 목록은 데이터에서 유도.
+  // 등록 안 된 새 노드는 좌하단에 차곡차곡 쌓인다(위치 미지정이어도 반드시 보이게).
+  const NODE_POS = {
+    sense: 'top:8%;left:55%;', self: 'top:35%;left:25%;', limbs: 'top:55%;left:8%;',
+    others: 'top:22%;right:5%;', engines: 'top:55%;right:5%;', table: 'top:74%;left:36%;',
+  };
+  let fallbackIdx = 0;
+  const nodeOverlays = Object.keys(nodes).map(k => {
+    const pos = NODE_POS[k] || `top:${86 - fallbackIdx++ * 7}%;left:4%;`;
+    const name = k.charAt(0).toUpperCase() + k.slice(1);
+    return `<div class="overlay-label" style="${pos}${labelStyle(nodeHealth[k])};cursor:pointer;" onclick="showNodeDetail('${k}')">
+          ${name} <span class="overlay-value">${val(nodeHealth[k], k)}</span>
+        </div>`;
+  }).join('');
+
   // 이미지 + 오버레이 라벨 (% 위치는 이미지 기준)
   return `
     <div class="body-map-container" id="body-map-img">
       <img src="/xray/body-image" alt="Body Map" onerror="this.parentElement.innerHTML=renderBodySVG_fallback();" />
       <div class="body-map-overlay">
-        <div class="overlay-label" style="top:5%;left:32%;${labelStyle(cogState)}" onclick="scrollToSection('cognitive')">
+        <div class="overlay-label" style="top:5%;left:32%;${labelStyle(cogState)}" onclick="switchTab('cognition')">
           인지 <span class="overlay-value">${cogTotal > 0 ? cogCompleted + '/' + cogTotal : '—'}</span>
         </div>
-        <div class="overlay-label" style="top:8%;left:55%;${labelStyle(nodeHealth.sense)};cursor:pointer;" onclick="showNodeDetail('sense')">
-          Sense <span class="overlay-value">${val(nodeHealth.sense, 'sense')}</span>
-        </div>
-        <div class="overlay-label" style="top:35%;left:25%;${labelStyle(nodeHealth.self)};cursor:pointer;" onclick="showNodeDetail('self')">
-          Self <span class="overlay-value">${val(nodeHealth.self, 'self')}</span>
-        </div>
-        <div class="overlay-label" style="top:55%;left:8%;${labelStyle(nodeHealth.limbs)};cursor:pointer;" onclick="showNodeDetail('limbs')">
-          Limbs <span class="overlay-value">${val(nodeHealth.limbs, 'limbs')}</span>
-        </div>
-        <div class="overlay-label" style="top:22%;right:5%;${labelStyle(nodeHealth.others)};cursor:pointer;" onclick="showNodeDetail('others')">
-          Others <span class="overlay-value">${val(nodeHealth.others, 'others')}</span>
-        </div>
-        <div class="overlay-label" style="top:55%;right:5%;${labelStyle(nodeHealth.engines)};cursor:pointer;" onclick="showNodeDetail('engines')">
-          Engines <span class="overlay-value">${val(nodeHealth.engines, 'engines')}</span>
-        </div>
+        ${nodeOverlays}
       </div>
     </div>`;
 }
@@ -1325,7 +1359,6 @@ function renderBodyMap(nodeHealth, sh, cog, nodes) {
 function showNodeDetail(nodeKey) {
   const ibl = DATA.ibl || {};
   const allActions = ibl.all_actions || [];
-  const nodeLabels = { sense: '감각 (Sense)', self: '자아 (Self)', limbs: '팔다리 (Limbs)', others: '타자 (Others)', engines: '엔진 (Engines)' };
 
   const actions = allActions.filter(a => a.node === nodeKey);
   const verified = actions.filter(a => a.status === 'verified').sort((a,b) => a.action.localeCompare(b.action));
@@ -1354,7 +1387,7 @@ function showNodeDetail(nodeKey) {
   modal.innerHTML = `
     <div class="node-modal">
       <button class="close-btn" onclick="this.closest('.node-modal-overlay').remove()">&times;</button>
-      <h3>${nodeLabels[nodeKey] || nodeKey} — 액션 상세</h3>
+      <h3>${nodeLabel(nodeKey)} — 액션 상세</h3>
       <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">
         정상 ${verified.length} · 미확인 ${assumed.length} · 비정상 ${failed.length} · 총 ${actions.length}개
       </div>
@@ -1651,17 +1684,17 @@ function renderTaskItem(t) {
 }
 
 function escHtml(s) {
-  if (!s) return '';
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function scrollToSection(id) {
-  // 해당 섹션으로 스크롤
+  // 해당 섹션으로 스크롤 (인지는 전용 섹션이 없어 사고 과정 탭으로 전환)
+  if (id === 'cognitive') { switchTab('cognition'); return; }
   const sections = document.querySelectorAll('.section-title');
   for (const s of sections) {
     if (id === 'ibl' && s.textContent.includes('IBL')) { s.scrollIntoView({behavior:'smooth'}); return; }
     if (id === 'projects' && s.textContent.includes('프로젝트')) { s.scrollIntoView({behavior:'smooth'}); return; }
-    if (id === 'cognitive' && s.textContent.includes('IBL')) { s.scrollIntoView({behavior:'smooth'}); return; }
   }
 }
 

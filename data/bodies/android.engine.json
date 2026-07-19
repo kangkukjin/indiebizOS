@@ -129,6 +129,7 @@
     "project_manager",
     "prompt_benchmark",
     "prompt_builder",
+    "public_face",
     "r2_client",
     "rebuild_usage_db",
     "report_html",
@@ -156,6 +157,7 @@
     "vocab_crystallization",
     "warehouse_feed",
     "warehouse_items",
+    "warehouse_likes",
     "web_collector",
     "websocket_manager",
     "workflow_engine",
@@ -180,8 +182,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 174,
-    "engine": 160,
+    "total": 176,
+    "engine": 162,
     "blocklist": 14
   }
 }

@@ -311,6 +311,27 @@ async def remote_access_guard(request: Request, call_next):
             pass
     return await call_next(request)
 
+
+# === 공개 얼굴 직접 서빙 게이트웨이 (public_face) ===
+# Host 가 data/public_face.json 의 direct_hosts 에 있을 때만(예: tailscale funnel 의
+# *.ts.net) Worker 의 공개 경로 지도를 백엔드 안에서 적용한다. 나중에 정의된 미들웨어가
+# 바깥(먼저 실행) — 매핑된 공개 경로는 인증 게이트 전에 처리, 매핑 밖 경로는 그대로
+# 통과해 위의 remote_access_guard 가 받는다(직접 서빙 호스트도 '외부'로 판별되도록
+# _load_external_hostnames 가 public_face.json 을 합류해 읽는다).
+@app.middleware("http")
+async def public_face_gateway(request: Request, call_next):
+    try:
+        import public_face
+        host = request.headers.get("host") or ""
+        if public_face.is_direct_host(host):
+            resp = await public_face.handle(request)
+            if resp is not None:
+                return resp
+    except Exception as e:
+        # 게이트웨이 오류가 전체 서비스를 막지 않게 — 통과 시 인증 게이트가 받는다
+        print(f"[PublicFace] 게이트웨이 오류 (통과): {e}")
+    return await call_next(request)
+
 # 매니저 인스턴스
 project_manager = ProjectManager(BASE_PATH)
 switch_manager = SwitchManager()
@@ -371,6 +392,9 @@ app.include_router(projects_router, tags=["projects"])
 app.include_router(switches_router, tags=["switches"])
 app.include_router(config_router, tags=["config"])
 app.include_router(env_router, tags=["env"])  # 로컬 전용 — is_public_remote_path 등록 금지
+import public_face as _public_face
+_public_face.attach_app(app)  # 직접 서빙 인프로세스 프록시 연결
+app.include_router(_public_face.router, tags=["public-face"])  # 로컬 전용 — is_public_remote_path 등록 금지
 app.include_router(system_ai_router, tags=["system-ai"])
 app.include_router(agents_router, tags=["agents"])
 app.include_router(conversations_router, tags=["conversations"])
@@ -390,6 +414,8 @@ app.include_router(showcase_router, tags=["showcase"])
 app.include_router(family_news_router, tags=["family-news"])
 app.include_router(portal_router, tags=["portal"])
 app.include_router(warehouse_feed_router, tags=["warehouse-feed"])
+from warehouse_likes import router as warehouse_likes_router
+app.include_router(warehouse_likes_router, tags=["portal"])  # 창고 파일 좋아요 (/portal/like)
 app.include_router(bulletin_router, tags=["bulletin"])
 app.include_router(report_router, tags=["report"])
 app.include_router(launcher_web_router, tags=["launcher-web"])

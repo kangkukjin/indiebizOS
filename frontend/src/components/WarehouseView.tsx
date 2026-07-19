@@ -10,7 +10,7 @@
  *   백엔드: /warehouse-feed/*. 둘 다 로컬 전용 — 터널·Worker 미노출.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight, Globe, Building2 } from 'lucide-react';
+import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight, Globe, Building2, Heart } from 'lucide-react';
 import { runIBL } from './generic/manifest';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
 
@@ -30,7 +30,7 @@ interface WfNeighbor {
 }
 interface WfFeedItem {
   id?: number; wh_url: string; path: string; mtime: string; bytes: number;
-  url: string; kind?: string; seen_at: string;
+  url: string; kind?: string; seen_at: string; likes?: number;
   neighbor_name: string; neighbor_home: string;
   /* 폴더 단위로 접힌 줄 — 한 폴링에서 같은 폴더에 GROUP_MIN 이상 들어왔을 때.
      원장은 파일 단위 그대로고 여기 표현만 접힌다(warehouse_feed._group_feed). */
@@ -101,7 +101,7 @@ function openExternalUrl(url: string) {
 }
 
 /** 이웃 창고의 파일 한 줄 — 피드와 검색이 같은 줄을 쓴다. */
-function FileRow({ f, onRetweet, label }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void; label?: string }) {
+function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void; onLike: (f: WfFeedItem) => void; label?: string }) {
   const Icon = fileIcon(f.path);
   return (
     <li className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
@@ -115,6 +115,14 @@ function FileRow({ f, onRetweet, label }: { f: WfFeedItem; onRetweet: (f: WfFeed
           {fmtBytes(f.bytes || 0)} · {(f.mtime || '').replace('T', ' ')}
         </div>
       </div>
+      <button
+        className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 flex items-center gap-0.5"
+        title="좋아요 — 카운트는 이 파일의 창고 주인에게 쌓입니다"
+        onClick={() => onLike(f)}
+      >
+        <Heart className="w-4 h-4" />
+        {(f.likes || 0) > 0 && <span className="text-[11px] tabular-nums">{f.likes}</span>}
+      </button>
       <button
         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
         title="파일 열기"
@@ -131,7 +139,7 @@ function FileRow({ f, onRetweet, label }: { f: WfFeedItem; onRetweet: (f: WfFeed
       </button>
       <button
         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-        title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성, 레벨 선택)"
+        title="리트윗 — 내 창고 리트윗 폴더에 소개(링크=추천 / 복사=소장·재서빙, 레벨 선택)"
         onClick={() => onRetweet(f)}
       >
         <Repeat2 className="w-4 h-4" />
@@ -141,7 +149,7 @@ function FileRow({ f, onRetweet, label }: { f: WfFeedItem; onRetweet: (f: WfFeed
 }
 
 /** 폴더 단위로 접힌 피드 줄 — "이웃이 폴더 하나를 올렸다"를 한 줄로. 펼치면 안의 파일들. */
-function GroupRow({ g, onRetweet }: { g: WfFeedItem; onRetweet: (f: WfFeedItem) => void }) {
+function GroupRow({ g, onRetweet, onLike }: { g: WfFeedItem; onRetweet: (f: WfFeedItem) => void; onLike: (f: WfFeedItem) => void }) {
   const shown = g.items || [];
   const rest = (g.count || shown.length) - shown.length;
   return (
@@ -175,6 +183,7 @@ function GroupRow({ g, onRetweet }: { g: WfFeedItem; onRetweet: (f: WfFeedItem) 
               f={{ ...f, neighbor_name: g.neighbor_name, neighbor_home: g.neighbor_home }}
               label={f.path.split('/').pop()}
               onRetweet={onRetweet}
+              onLike={onLike}
             />
           ))}
           {rest > 0 && (
@@ -416,7 +425,7 @@ function NeighborsPane() {
   const [searching, setSearching] = useState(false);
   const [memoEdit, setMemoEdit] = useState<{ id: number; text: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
-  const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number } | null>(null);
+  const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number; mode: 'link' | 'copy' } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -483,15 +492,41 @@ function NeighborsPane() {
     load();
   }, [load]);
 
+  // 좋아요 — 카운터는 파일 주인(그 창고)이 센다. 응답 count 로 화면·로컬 스냅샷 즉시 갱신.
+  const doLike = useCallback(async (f: WfFeedItem) => {
+    try {
+      const r = await fetch(`${API}/warehouse-feed/like`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wh_url: f.wh_url, path: f.path }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => null);
+        throw new Error(d?.detail || `HTTP ${r.status}`);
+      }
+      const d = await r.json();
+      const patch = (arr: WfFeedItem[]) => arr.map((x) => {
+        if (x.wh_url === f.wh_url && x.path === f.path) return { ...x, likes: d.count };
+        if (x.group && x.items) {
+          return { ...x, items: x.items.map((y) => (y.wh_url === f.wh_url && y.path === f.path ? { ...y, likes: d.count } : y)) };
+        }
+        return x;
+      });
+      setFeed((cur) => patch(cur));
+      setResults((cur) => (cur ? patch(cur) : cur));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
   const doRetweet = useCallback(async () => {
     if (!retweetPick) return;
-    const { item, level } = retweetPick;
+    const { item, level, mode } = retweetPick;
     setRetweetPick(null);
-    setBusy('내 창고에 소개하는 중…');
+    setBusy(mode === 'copy' ? '파일을 내 창고로 복사하는 중…' : '내 창고에 소개하는 중…');
     try {
       const r = await fetch(`${API}/warehouse-feed/retweet`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: item.url, name: item.path, level, warehouse: item.wh_url || '' }),
+        body: JSON.stringify({ url: item.url, name: item.path, level, mode, warehouse: item.wh_url || '' }),
       });
       if (!r.ok) {
         const d = await r.json().catch(() => null);
@@ -675,8 +710,17 @@ function NeighborsPane() {
             >
               {[0, 1, 2, 3, 4].map((lv) => <option key={lv} value={lv}>{lv}</option>)}
             </select>
-            <span className="text-stone-500 shrink-0">에 링크 파일로 소개</span>
-            <button className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]" onClick={doRetweet}>소개하기</button>
+            <span className="text-stone-500 shrink-0">의 리트윗 폴더에</span>
+            {/* 링크=추천(포인터, 원 창고 직행·저장 0) / 복사=전파·소유(내 창고가 재서빙, 원본 꺼져도 생존) */}
+            <select
+              className="px-2 py-1.5 rounded-lg border border-stone-200 bg-white text-stone-700"
+              value={retweetPick.mode}
+              onChange={(e) => setRetweetPick({ ...retweetPick, mode: e.target.value as 'link' | 'copy' })}
+            >
+              <option value="link">링크로 소개 (원 창고 직행)</option>
+              <option value="copy">복사해 소장 (내 창고가 서빙)</option>
+            </select>
+            <button className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]" onClick={doRetweet}>리트윗</button>
             <button className="px-3 py-1.5 rounded-lg border border-stone-200 text-stone-500 hover:text-stone-700" onClick={() => setRetweetPick(null)}>취소</button>
           </div>
         )}
@@ -833,13 +877,15 @@ function NeighborsPane() {
                 <GroupRow
                   key={`g:${f.wh_url}:${f.folder}:${f.seen_at}:${f.kind}`}
                   g={f}
-                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
+                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
+                  onLike={doLike}
                 />
               ) : (
                 <FileRow
                   key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
                   f={f}
-                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
+                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
+                  onLike={doLike}
                 />
               )
             ))}

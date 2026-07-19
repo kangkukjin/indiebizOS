@@ -79,6 +79,12 @@ def _init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_feed_seen ON feed(seen_at DESC, mtime DESC);
             CREATE INDEX IF NOT EXISTS idx_feed_wh ON feed(wh_url);
         """)
+        # 좋아요 컬럼 마이그레이션(2026-07-19) — 매니페스트 likes 를 스냅샷에 담아 피드에 하트.
+        for tbl in ("snapshots", "feed"):
+            try:
+                c.execute(f"ALTER TABLE {tbl} ADD COLUMN likes INTEGER")
+            except Exception:
+                pass  # 이미 있음
 
 
 def normalize_base(url: str) -> str:
@@ -114,13 +120,52 @@ def fetch_manifest(url: str) -> Dict:
     return r.json()
 
 
-def poll_warehouse(url: str) -> Dict:
-    """창고 하나를 폴링해 스냅샷 갱신 + 변화를 피드에 기록. AI 없음 — 순수 diff."""
+def _migrate_warehouse(old: str, new: str) -> Dict:
+    """이사 치유 — 등기부(contacts warehouse 행)의 옛 주소를 새 주소로, 캐시(wh_url 키)도 이관.
+
+    매니페스트 moved_to 를 본 폴러가 부른다. 새 주소에 이미 스냅샷이 있으면(양쪽을 따로
+    등록했던 경우) 옛 캐시는 버린다 — 캐시는 재폴링이 복구하는 파생물이라 안전.
+    """
+    old, new = normalize_base(old), normalize_base(new)
+    healed = {"contacts": 0, "cache": "none"}
+    try:
+        bm = _bm()
+        for ct in bm.get_warehouse_contacts():
+            if normalize_base(ct.get("url") or "") == old:
+                bm.update_contact(ct["contact_id"], contact_value=new)
+                healed["contacts"] += 1
+    except Exception as e:
+        healed["contacts_error"] = str(e)
+    with _db_lock, _conn() as c:
+        has_new = c.execute("SELECT 1 FROM snapshots WHERE wh_url=? LIMIT 1", (new,)).fetchone()
+        if has_new:
+            c.execute("DELETE FROM snapshots WHERE wh_url=?", (old,))
+            c.execute("DELETE FROM feed WHERE wh_url=?", (old,))
+            c.execute("DELETE FROM poll_status WHERE wh_url=?", (old,))
+            healed["cache"] = "dropped_old"
+        else:
+            c.execute("UPDATE snapshots SET wh_url=? WHERE wh_url=?", (new, old))
+            c.execute("UPDATE feed SET wh_url=? WHERE wh_url=?", (new, old))
+            c.execute("DELETE FROM poll_status WHERE wh_url=?", (old,))
+            healed["cache"] = "rekeyed"
+    return healed
+
+
+def poll_warehouse(url: str, _hop: int = 0) -> Dict:
+    """창고 하나를 폴링해 스냅샷 갱신 + 변화를 피드에 기록. AI 없음 — 순수 diff.
+
+    매니페스트에 moved_to(이사 공지)가 있으면 등기부·캐시를 새 주소로 치유하고
+    새 주소를 이어서 폴링한다(1홉만 — 공지 루프 방어)."""
     _init_db()
     base = normalize_base(url)
     now = datetime.now().isoformat(timespec="seconds")
     try:
         data = fetch_manifest(base)
+        moved = normalize_base(data.get("moved_to") or "")
+        if moved and moved != base and _hop == 0:
+            healed = _migrate_warehouse(base, moved)
+            print(f"[창고피드] 이사 공지 감지: {base} → {moved} (치유: {healed})")
+            return poll_warehouse(moved, _hop=1)
         files = data.get("files") or []
         title = data.get("title") or ""
         has_restricted = 1 if data.get("has_restricted") else 0
@@ -149,6 +194,7 @@ def poll_warehouse(url: str) -> Dict:
             mtime = f.get("mtime") or ""
             fbytes = f.get("bytes")
             furl = f.get("url") or f"{base}/f?path={quote(path)}"
+            flikes = f.get("likes") or 0
             if path not in existing:
                 kind = "seed" if first_poll else "new"
             elif (existing[path] or "") != mtime:
@@ -156,17 +202,17 @@ def poll_warehouse(url: str) -> Dict:
             else:
                 kind = None
             c.execute("""
-                INSERT INTO snapshots(wh_url, path, mtime, bytes, url, seen_at)
-                VALUES(?, ?, ?, ?, ?, ?)
+                INSERT INTO snapshots(wh_url, path, mtime, bytes, url, seen_at, likes)
+                VALUES(?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(wh_url, path) DO UPDATE SET
                     mtime=excluded.mtime, bytes=excluded.bytes,
-                    url=excluded.url, seen_at=excluded.seen_at
-            """, (base, path, mtime, fbytes, furl, now))
+                    url=excluded.url, seen_at=excluded.seen_at, likes=excluded.likes
+            """, (base, path, mtime, fbytes, furl, now, flikes))
             if kind:
                 c.execute("""
-                    INSERT INTO feed(wh_url, path, mtime, bytes, url, kind, seen_at)
-                    VALUES(?, ?, ?, ?, ?, ?, ?)
-                """, (base, path, mtime, fbytes, furl, kind, now))
+                    INSERT INTO feed(wh_url, path, mtime, bytes, url, kind, seen_at, likes)
+                    VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                """, (base, path, mtime, fbytes, furl, kind, now, flikes))
                 new_events += 1
         # 매니페스트에서 사라진 파일 = 스냅샷에서도 제거 (조용히 — 트윗 삭제처럼 피드 무이벤트)
         # ★단 절단 신고를 받았으면 삭제 판정을 보류한다. 상한에 밀려 목록에서 빠진 것뿐일 수

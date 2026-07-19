@@ -207,12 +207,21 @@ async def search(q: str = "", limit: int = 100, sort: str = "recent"):
     return {"items": items, "q": q, "sort": sort}
 
 
-# ── 리트윗: 남의 창고 파일을 가리키는 링크 파일을 내 창고에 놓는다 ──
-# 리트윗=포인터 파일(FOAF 발견을 파일로): 내 구독자 피드에 흘러가고, 클릭=원 창고의
-# 원 파일. 형식=.url(InternetShortcut) — OS·타 하네스도 아는 표준, 공개면(_accessible_files)
-# 이 target 을 해석해 매니페스트·홈에서 곧장 원 파일로 링크한다.
+# ── 리트윗: 남의 창고 파일을 내 창고에 소개한다 — 두 모드 (2026-07-19 확장) ──
+# link = 포인터(.url, InternetShortcut): 추천. 클릭=원 창고의 원 파일. 저장 비용 0,
+#        원 창고가 꺼지면 죽는다. 큰 파일(동영상)에 자연 선택.
+# copy = 전파(진짜 리트윗): 파일 자체를 내려받아 내 창고가 재서빙. 원본 불가동에도 살고,
+#        내 이웃은 나에게서 받는다(신뢰 간선을 타는 store-and-forward). "소유하고 싶어서"도 copy.
+# 두 모드 모두 <레벨>/리트윗/ 전용 폴더에 놓고(폴더 청결), 사이드카(.<파일명>.rt.json)에
+# 출처 사슬을 남긴다 — origin(최초 제공 창고·파일)·via(직전 창고)·hops(리트윗 횟수).
+# 리트윗의 리트윗이면 원 창고 매니페스트의 rt 필드에서 사슬을 계승한다(hops+1).
+# 사이드카는 dotfile 이라 매니페스트 walk 에서 자동으로 숨고, _walk_accessible 이 읽어
+# 항목의 rt 필드로 노출한다(이웃 폴러·AI 가 최초 출처로 거슬러 갈 수 있게).
 
 _URLFILE_BAD = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+_RT_DIRNAME = "리트윗"
+_COPY_TIMEOUT = 300          # 초 — 큰 파일 내려받기 여유
+_COPY_MAX_BYTES = 4 * 1024 * 1024 * 1024   # 4GB 러너웨이 가드 (이보다 크면 link 를 권함)
 
 
 def _source_warehouse(target: str, hint: str = "") -> str:
@@ -237,13 +246,113 @@ def _source_warehouse(target: str, hint: str = "") -> str:
     return hint
 
 
+def _like_remote(wh_base: str, path: str) -> dict:
+    """이웃 창고의 /like 를 눌러준다(스레드에서 호출) — 손님 좋아요(그쪽에서 내 IP 단위)."""
+    import requests
+    r = requests.post(wh_base + "/like", json={"path": path},
+                      timeout=20, headers={"User-Agent": wf._UA})
+    r.raise_for_status()
+    return r.json()
+
+
+@router.post("/like")
+async def like_neighbor_file(request: Request):
+    """피드·검색에서 본 이웃 파일에 좋아요 — 카운터는 그 파일의 원 창고가 센다.
+    성공하면 로컬 스냅샷의 하트 수도 즉시 갱신(다음 폴링을 안 기다림)."""
+    body = await _body(request)
+    wh_base = wf.normalize_base(body.get("wh_url") or "")
+    path = (body.get("path") or "").strip()
+    if not wh_base or not path:
+        raise HTTPException(status_code=400, detail="wh_url 과 path 가 필요해요")
+    try:
+        res = await to_thread.run_sync(_like_remote, wh_base, path)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"좋아요를 전하지 못했어요: {e}")
+    count = int(res.get("count") or 0)
+    try:
+        with wf._db_lock, wf._conn() as c:
+            c.execute("UPDATE snapshots SET likes=? WHERE wh_url=? AND path=?",
+                      (count, wh_base, path))
+            c.execute("UPDATE feed SET likes=? WHERE wh_url=? AND path=?",
+                      (count, wh_base, path))
+    except Exception:
+        pass
+    return {"success": True, "liked": bool(res.get("liked")), "count": count}
+
+
+def _chain_from_source(source_wh: str, target: str, path_hint: str) -> dict:
+    """출처 사슬 계승 — 원 창고 매니페스트를 그 자리에서 한 번 읽어(폴러 캐시가 아니라
+    현재 상태), 리트윗하려는 항목이 이미 리트윗이면 origin·hops 를 이어받는다.
+
+    반환: {origin_warehouse, origin_url, origin_name, hops} — hops 는 *내 것 포함* 사슬 길이.
+    매니페스트를 못 읽거나 항목을 못 찾으면 = 원 창고가 최초 제공자(hops 1)."""
+    origin = {"origin_warehouse": source_wh, "origin_url": target,
+              "origin_name": path_hint, "hops": 1}
+    if not source_wh:
+        return origin
+    try:
+        data = wf.fetch_manifest(source_wh)
+    except Exception:
+        return origin
+    for f in (data.get("files") or []):
+        if (f.get("url") or "") != target and (f.get("name") or "") != path_hint:
+            continue
+        rt = f.get("rt") or {}
+        if rt.get("origin_url"):
+            # 사슬이 이미 있다 — 최초 출처를 그대로 이어받고 한 홉 늘린다
+            return {"origin_warehouse": rt.get("origin") or rt.get("origin_warehouse") or "",
+                    "origin_url": rt["origin_url"],
+                    "origin_name": rt.get("origin_name") or f.get("name") or path_hint,
+                    "hops": int(rt.get("hops") or 1) + 1}
+        if f.get("link"):
+            # 구식 포인터(.url, 사이드카 없음) — 리트윗을 한 번 거친 것은 확실
+            return {"origin_warehouse": f.get("warehouse") or "",
+                    "origin_url": f.get("url") or target,
+                    "origin_name": f.get("name") or path_hint, "hops": 2}
+        break
+    return origin
+
+
+def _download_to(target: str, dest) -> int:
+    """원 파일을 스트리밍으로 내려받는다(스레드에서 호출). 반환=바이트 수."""
+    import requests
+    total = 0
+    with requests.get(target, stream=True, timeout=_COPY_TIMEOUT,
+                      headers={"User-Agent": wf._UA}) as r:
+        r.raise_for_status()
+        with open(dest, "wb") as fh:
+            for chunk in r.iter_content(chunk_size=1024 * 256):
+                if not chunk:
+                    continue
+                total += len(chunk)
+                if total > _COPY_MAX_BYTES:
+                    raise ValueError("파일이 4GB를 넘어요 — 링크 리트윗을 쓰세요")
+                fh.write(chunk)
+    return total
+
+
+def _unique_name(dest_dir, name: str) -> str:
+    stem, dot, ext = name.rpartition(".")
+    if not dot:
+        stem, ext = name, ""
+    fname, i = name, 2
+    while (dest_dir / fname).exists():
+        fname = f"{stem} ({i}).{ext}" if ext else f"{stem} ({i})"
+        i += 1
+    return fname
+
+
 @router.post("/retweet")
 async def retweet(request: Request):
-    """피드·검색에서 본 파일을 내 창고 레벨 폴더에 링크 파일로 소개."""
+    """피드·검색에서 본 파일을 내 창고 <레벨>/리트윗/ 에 소개.
+    mode: "link"(기본, 포인터 .url=추천) | "copy"(파일 복사=전파·소유)."""
     body = await _body(request)
     target = (body.get("url") or "").strip()
     if not (target.startswith("http://") or target.startswith("https://")):
         raise HTTPException(status_code=400, detail="가리킬 파일 주소(url)가 필요해요")
+    mode = (body.get("mode") or "link").strip().lower()
+    if mode not in ("link", "copy"):
+        raise HTTPException(status_code=400, detail="mode 는 link|copy")
     level = body.get("level", 0)
     try:
         level = int(level)
@@ -251,22 +360,63 @@ async def retweet(request: Request):
         level = 0
     if level < 0 or level > 4:
         raise HTTPException(status_code=400, detail="레벨은 0~4")
-    name = _URLFILE_BAD.sub("_", (body.get("name") or "").strip()) or "링크"
-    if name.lower().endswith(".url"):    # 리트윗의 리트윗 → .url.url 방지
-        name = name[:-4] or "링크"
+    raw_path = (body.get("name") or "").strip()
+
     import api_portal
     api_portal._ensure_warehouses()
-    dest_dir = api_portal._warehouse_dir(level)
-    fname, i = f"{name}.url", 2
-    while (dest_dir / fname).exists():
-        fname = f"{name} ({i}).url"
-        i += 1
-    # 파일 주소 + 그 파일이 사는 창고 주소를 함께 적는다. 파일은 지워지거나 옮겨져도
-    # 창고는 남는다 — 구독자가 원 파일을 놓쳐도 출처 창고로 건너갈 수 있어야 발견이 이어진다.
-    # (WarehouseURL 은 InternetShortcut 표준 밖 키 — 모르는 파서는 조용히 무시한다)
+    dest_dir = api_portal._warehouse_dir(level) / _RT_DIRNAME
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
     wh = _source_warehouse(target, body.get("warehouse") or "")
-    lines = ["[InternetShortcut]", f"URL={target}"]
-    if wh:
-        lines.append(f"WarehouseURL={wh}")
-    (dest_dir / fname).write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return {"success": True, "file": fname, "level": level, "warehouse": wh}
+    # 출처 사슬 + (copy 면) 파일 내려받기 — 둘 다 바깥 HTTP 라 스레드로 내린다
+    # (이벤트 루프 위 동기 HTTP 금지 — 자기 창고 리트윗이 터널로 되돌아오는 경우 자기교착)
+    chain = await to_thread.run_sync(_chain_from_source, wh, target, raw_path)
+
+    if mode == "copy":
+        # 파일명 = 경로의 마지막 조각(원 폴더 구조는 origin_name 이 기억한다)
+        base_name = _URLFILE_BAD.sub("_", raw_path.rsplit("/", 1)[-1]) or "파일"
+        if base_name.lower().endswith(".url"):
+            base_name = base_name[:-4] or "파일"
+        fname = _unique_name(dest_dir, base_name)
+        dest = dest_dir / fname
+        try:
+            size = await to_thread.run_sync(_download_to, target, dest)
+        except Exception as e:
+            try:
+                dest.unlink(missing_ok=True)
+            except Exception:
+                pass
+            raise HTTPException(status_code=502, detail=f"원 파일을 못 가져왔어요: {e}")
+    else:
+        name = _URLFILE_BAD.sub("_", raw_path) or "링크"
+        if name.lower().endswith(".url"):    # 리트윗의 리트윗 → .url.url 방지
+            name = name[:-4] or "링크"
+        fname = _unique_name(dest_dir, f"{name}.url")
+        # 파일 주소 + 그 파일이 사는 창고 주소를 함께 적는다. 파일은 지워지거나 옮겨져도
+        # 창고는 남는다 — 구독자가 원 파일을 놓쳐도 출처 창고로 건너갈 수 있어야 발견이 이어진다.
+        # (WarehouseURL 은 InternetShortcut 표준 밖 키 — 모르는 파서는 조용히 무시한다)
+        lines = ["[InternetShortcut]", f"URL={target}"]
+        if wh:
+            lines.append(f"WarehouseURL={wh}")
+        (dest_dir / fname).write_text("\n".join(lines) + "\n", encoding="utf-8")
+        size = None
+
+    # 사이드카 = 출처 사슬(최초 제공자·직전 창고·리트윗 횟수). dotfile 이라 매니페스트
+    # walk 에서 숨고, _walk_accessible 이 읽어 rt 필드로 노출한다.
+    from datetime import datetime
+    sidecar = {
+        "mode": mode,
+        "origin_warehouse": chain["origin_warehouse"],
+        "origin_url": chain["origin_url"],
+        "origin_name": chain["origin_name"],
+        "via_warehouse": wh,
+        "hops": chain["hops"],
+        "retweeted_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    (dest_dir / f".{fname}.rt.json").write_text(
+        json.dumps(sidecar, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    return {"success": True, "mode": mode, "file": f"{_RT_DIRNAME}/{fname}",
+            "level": level, "warehouse": wh,
+            "origin": chain["origin_warehouse"], "hops": chain["hops"],
+            **({"bytes": size} if size is not None else {})}

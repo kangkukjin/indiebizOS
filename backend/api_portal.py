@@ -132,7 +132,10 @@ _MANIFEST_ABOUT = ("이 노드가 공유하는 파일 목록(요청자 레벨로
                    "존재(내용은 안 샘 = FOAF 라우팅 단서). 회원이면 login 계약대로 로그인해 "
                    "쿠키를 받으면 같은 주소들이 더 열린다. name 은 창고 안 상대경로라 "
                    "'폴더/파일' 로 폴더 구조가 실린다. truncated=true 면 목록이 상한에서 "
-                   "잘린 것(total=실제 개수) — 빠진 이름을 '삭제'로 해석하면 안 된다.")
+                   "잘린 것(total=실제 개수) — 빠진 이름을 '삭제'로 해석하면 안 된다. "
+                   "rt 필드가 있으면 리트윗(남의 창고에서 소개해 온 것): origin=최초 제공 창고, "
+                   "origin_url=최초 파일, hops=리트윗 횟수. link=true 는 포인터(url=원 창고 직행), "
+                   "link 없는 rt 항목은 이 창고가 사본을 직접 서빙한다.")
 
 _WAREHOUSE_ROOT = _ROOT / "공유창고"
 _WAREHOUSE_LEVELS = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4"}
@@ -293,6 +296,19 @@ def _walk_accessible(level: int, base: str = "") -> tuple:
                             # 출처 창고 = 다음 이웃 후보. 파일이 사라져도 이 주소는 남는다.
                             if warehouse:
                                 entry["warehouse"] = warehouse
+                    # 리트윗 사이드카(.<파일명>.rt.json, dotfile 이라 목록엔 안 나옴) —
+                    # 출처 사슬(최초 제공 창고·파일, 리트윗 횟수)을 rt 필드로 노출.
+                    # 이웃 폴러·AI 가 사본을 최초 출처로 거슬러 가고, 같은 origin 사본을 묶는다.
+                    sc = p.parent / f".{p.name}.rt.json"
+                    if sc.exists():
+                        try:
+                            rt = json.loads(sc.read_text(encoding="utf-8"))
+                            entry["rt"] = {"origin": rt.get("origin_warehouse") or "",
+                                           "origin_url": rt.get("origin_url") or "",
+                                           "origin_name": rt.get("origin_name") or "",
+                                           "hops": int(rt.get("hops") or 1)}
+                        except Exception:
+                            pass
                     seen[rel] = entry
         except Exception:
             continue
@@ -333,7 +349,21 @@ def _tree_agg(node: dict) -> tuple:
 def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -> dict:
     _ensure_warehouses()
     files, total = _walk_accessible(level, base)
+    # 좋아요 카운트 — 파일 항목에 likes 필드(0 이면 생략). 이웃 폴러가 피드에 하트를 싣는다.
+    import warehouse_likes
+    warehouse_likes.annotate(files)
+    # 이사 공지 — 프로바이더 교체 등으로 공개 주소가 바뀌면(public_face.moved_to) 매니페스트에
+    # 실어, 옛 주소를 폴링하는 이웃의 폴러가 등기부를 자동 치유하게 한다(우체국 주소이전).
+    # 옛 주소가 살아 있는 동안만 전파되므로, 전환기엔 두 프로바이더를 함께 켜 둔다.
+    moved_to = ""
+    try:
+        import public_face
+        moved_to = public_face.get_moved_to()
+    except Exception:
+        pass
+    payload_extra = {"moved_to": moved_to} if moved_to else {}
     return {
+        **payload_extra,
         "about": _MANIFEST_ABOUT,
         "title": node_title,
         "node_url": (base + "/manifest") if base else "/manifest",
@@ -380,6 +410,9 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     # ★평면인 건 '레벨'뿐이다. 사용자가 만든 폴더는 name 의 상대경로에 살아 있으므로
     #   여기서 접이식 트리로 되살린다(레벨 은닉과 폴더 은닉은 서로 다른 문제).
     files, total = _walk_accessible(level)
+    # 좋아요 카운트 — 파일 옆 ♥N (누르면 토글, 회원=계정·손님=IP 단위)
+    import warehouse_likes
+    lk_counts = warehouse_likes.count_map()
     # 방명록도 같은 절단면으로 — 상위 레벨 파일에 달린 글은 여기서 이미 빠져 있다.
     gb = _gb_for_level(level)
     gb_counts: dict = {}
@@ -401,8 +434,11 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         n = gb_counts.get(f["name"], 0)
         gb_link = (f'<a class="dl gb" href="#gb" data-p="{_h.escape(f["name"])}" '
                    f'onclick="return ab(this)" title="이 파일에 글 남기기">💬{n or ""}</a>')
+        nl = lk_counts.get(f["name"], 0)
+        lk_link = (f'<a class="dl lk" href="#" data-p="{_h.escape(f["name"])}" '
+                   f'onclick="return lk(this)" title="좋아요">♥<span>{nl or ""}</span></a>')
         return (f'<li><a href="{u}">{_h.escape(label if label is not None else f["name"])}</a>'
-                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}{gb_link}'
+                f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}{lk_link}{gb_link}'
                 f'<a class="dl" href="{u}{sep}download=1" download '
                 f'title="내려받기">⬇</a></li>')
 
@@ -511,6 +547,14 @@ async function li(f){{const r=await fetch('/login',{{method:'POST',headers:{{'Co
 body:JSON.stringify({{user_id:f.u.value,password:f.p.value,auto:true}})}});
 if(r.ok)location.reload();else alert((await r.json()).detail||'로그인 실패');return false}}
 async function lo(){{await fetch('/logout',{{method:'POST'}});location.reload()}}
+// 파일 옆 ♥ → 좋아요 토글(회원=계정, 손님=IP 단위). 새로고침 없이 숫자만 갱신.
+async function lk(a){{
+const r=await fetch('/like',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{path:a.dataset.p}})}});
+let j=null; try{{j=await r.json()}}catch(e){{}}
+if(r.ok&&j&&j.ok){{a.querySelector('span').textContent=j.count||'';a.style.color=j.liked?'#d63384':''}}
+else{{alert((j&&j.detail)||'좋아요를 남기지 못했어요')}}
+return false}}
 // 파일 옆 💬 → 그 경로를 인용으로 달고 방명록 폼으로. 인용은 글의 키가 아니라 기록이라
 // 지우고 일반 글로 남겨도 된다.
 var AB='';

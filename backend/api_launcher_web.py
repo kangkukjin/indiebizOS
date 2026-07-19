@@ -270,7 +270,7 @@ def verify_session(request: Request) -> bool:
 # 들어온 외부 요청만 골라내 인증 게이트를 적용한다. (localhost 데스크탑은 통과)
 
 def _load_external_hostnames():
-    """tunnel_config.json에서 외부 노출 호스트네임 집합 로드"""
+    """tunnel_config.json + public_face.json에서 외부 노출 호스트네임 집합 로드"""
     hosts = set()
     try:
         cfg_path = os.path.join(os.path.dirname(__file__), "..", "data", "tunnel_config.json")
@@ -279,6 +279,19 @@ def _load_external_hostnames():
                 cfg = json.load(f)
             for key in ("launcher_hostname", "finder_hostname", "hostname"):
                 h = (cfg.get(key) or "").strip().lower()
+                if h:
+                    hosts.add(h)
+    except Exception:
+        pass
+    # 직접 서빙(공개 얼굴) 호스트 — tailscale funnel 등. 이게 빠지면 funnel 트래픽이
+    # '로컬'로 오인돼 인증 게이트를 건너뛴다(공개 경로 밖 데이터 API 노출 위험).
+    try:
+        pf_path = os.path.join(os.path.dirname(__file__), "..", "data", "public_face.json")
+        if os.path.exists(pf_path):
+            with open(pf_path, 'r', encoding='utf-8') as f:
+                pf = json.load(f)
+            for h in (pf.get("direct_hosts") or []):
+                h = (h or "").split(":")[0].strip().lower()
                 if h:
                     hosts.add(h)
     except Exception:
@@ -340,6 +353,9 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 창고 방명록 쓰기(손님도 가능 — 이름은 자동 '손님'). warehouse-admin/gb 는 소유자
     # 전용이라 여기 등록하지 않는다(익명 외부는 터널 게이트 401 = 모더레이션 보호).
     if method == "POST" and path == "/portal/gb":
+        return True
+    # 창고 파일 좋아요(손님도 가능 — IP 단위 중복 방지, 자체 시크릿 게이트 보유)
+    if method == "POST" and path == "/portal/like":
         return True
     if method == "POST" and (path.startswith("/portal/join/") or path.startswith("/portal/tool/")
                              or path.startswith("/portal/login/") or path.startswith("/portal/logout/")

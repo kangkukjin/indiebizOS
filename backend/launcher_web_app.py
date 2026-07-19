@@ -532,20 +532,34 @@ function wfFileRow(f, label){
     +'</div>'
     +'<a class="dl" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기">↗</a>'
     +'<a class="dl" href="'+esc(f.neighbor_home||'#')+'" target="_blank" rel="noopener" title="'+esc(f.neighbor_name)+'의 창고 열기">📦</a>'
-    +'<button class="rm" title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성)" onclick="wfRetweet('+i+')">📣</button>'
+    +'<button class="rm" title="좋아요 — 카운트는 파일 주인에게 쌓입니다" onclick="wfLike('+i+',this)">♥'+((f.likes||0)>0?('<span class="lkn">'+f.likes+'</span>'):'<span class="lkn"></span>')+'</button>'
+    +'<button class="rm" title="리트윗 — 내 창고 리트윗 폴더에 소개(복사=소장/링크=추천)" onclick="wfRetweet('+i+')">📣</button>'
     +'<a class="dl" href="'+esc(f.url)+(f.url&&f.url.indexOf('?')>=0?'&':'?')+'download=1" title="내려받기">⬇</a>'
     +'</div>';
+}
+async function wfLike(i,btn){
+  const f=(wfShown||[])[i]; if(!f) return;
+  try{
+    const r=await jfetch('/warehouse-feed/like',{method:'POST',body:JSON.stringify({wh_url:f.wh_url,path:f.path})});
+    if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
+    const d=await r.json(); f.likes=d.count;
+    const s=btn.querySelector('.lkn'); if(s) s.textContent=d.count>0?d.count:'';
+    btn.style.color=d.liked?'#d63384':'';
+  }catch(e){ wfErr('좋아요 실패: '+e.message); }
 }
 async function wfRetweet(i){
   const f=(wfShown||[])[i]; if(!f) return;
   /* 레벨=0~4 숫자일 뿐, 의미는 사용자가 정한다 */
-  const lvRaw=prompt("'"+f.path+"' 을(를) 내 창고 어느 레벨(0~4)에 링크 파일로 소개할까요?", '0');
+  const lvRaw=prompt("'"+f.path+"' 을(를) 내 창고 어느 레벨(0~4)의 리트윗 폴더에 소개할까요?", '0');
   if(lvRaw===null) return;
   const lv=parseInt(lvRaw,10);
   if(!(lv>=0 && lv<=4)){ wfErr('레벨은 0~4 숫자여야 해요'); return; }
-  document.getElementById('whBusy').textContent='내 창고에 소개하는 중…';
+  /* 확인=복사(파일 소장, 내 창고가 재서빙) / 취소=링크(포인터, 원 창고 직행) */
+  const doCopy=confirm('파일을 복사해 소장할까요?\\n확인=복사(내 창고가 서빙, 원본 꺼져도 생존)\\n취소=링크로만 소개(원 창고 직행)');
+  const mode=doCopy?'copy':'link';
+  document.getElementById('whBusy').textContent=doCopy?'파일을 내 창고로 복사하는 중…':'내 창고에 소개하는 중…';
   try{
-    const r=await jfetch('/warehouse-feed/retweet',{method:'POST',body:JSON.stringify({url:f.url,name:f.path,level:lv,warehouse:f.wh_url||''})});
+    const r=await jfetch('/warehouse-feed/retweet',{method:'POST',body:JSON.stringify({url:f.url,name:f.path,level:lv,mode:mode,warehouse:f.wh_url||''})});
     if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
   }catch(e){ wfErr('리트윗 실패: '+e.message); }
   document.getElementById('whBusy').textContent='';

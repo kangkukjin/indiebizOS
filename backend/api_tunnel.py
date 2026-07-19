@@ -1,6 +1,11 @@
 """
-api_tunnel.py - Cloudflare Tunnel 관리 API
-터널 프로세스 시작/종료 및 설정 관리
+api_tunnel.py - 터널(공개 도달성) 관리 API — 프로바이더 교체형
+
+「공개 HTTPS 주소 → localhost:8765」 계약의 두 구현(2026-07-19, public_face 참조):
+  - cloudflare: 이름 있는 터널(cloudflared, 도메인 필요) + Worker 가속기(R2 캐시·은닉)
+  - tailscale : Funnel(무도메인 `*.ts.net`) → public_face 직접 서빙 게이트웨이가 받음
+AI 모델 프로바이더처럼 config["provider"] 로 갈아끼운다. tailscale 선택 시 이 모듈이
+Funnel 을 켜고, ts.net 주소를 public_face(direct_hosts·public_base)에 배선한다.
 """
 
 import json
@@ -28,13 +33,15 @@ _tunnel_process: Optional[subprocess.Popen] = None
 def get_default_config():
     """기본 설정"""
     return {
+        "provider": "cloudflare",   # cloudflare | tailscale — 공개 도달성 프로바이더
         "enabled": False,
         "auto_start": False,
         "tunnel_name": "",
         "hostname": "",
         "finder_hostname": "",
         "launcher_hostname": "",
-        "config_path": str(Path.home() / ".cloudflared" / "config.yml")
+        "config_path": str(Path.home() / ".cloudflared" / "config.yml"),
+        "funnel_port": 8765,        # tailscale funnel 이 노출할 로컬 포트
     }
 
 
@@ -231,6 +238,136 @@ def stop_tunnel() -> dict:
         return {"success": False, "error": "터널 종료 실패"}
 
 
+# === Tailscale Funnel 프로바이더 ==============================================
+# Funnel = 도메인 없이 `https://<기기>.<테일넷>.ts.net` 안정 공개 주소. cloudflared 와
+# 달리 상주 프로세스를 우리가 띄우지 않는다 — tailscaled(앱/데몬)가 이미 돌고 있고,
+# `tailscale funnel --bg <port>` 는 그 데몬에 서빙 설정을 심는 선언이라 명령은 즉시
+# 끝난다(재부팅에도 설정 유지). 전제: Tailscale 앱 설치 + 로그인 + 테일넷에서 HTTPS
+# 인증서·Funnel 노드 속성 허용(미충족이면 CLI 가 안내 문구를 stderr 로 내줌 → 그대로 노출).
+
+def get_tailscale_path() -> str:
+    """tailscale CLI 경로 (PATH + macOS 앱 번들 + 표준 설치 경로)"""
+    try:
+        from common.platform_utils import find_binary
+        hit = find_binary("tailscale")
+        if hit:
+            return hit
+    except Exception:
+        pass
+    candidates = [
+        "/Applications/Tailscale.app/Contents/MacOS/Tailscale",  # macOS 앱(App Store/직배포)
+        "/opt/homebrew/bin/tailscale",
+        "/usr/local/bin/tailscale",
+        "/usr/bin/tailscale",
+    ]
+    for c in candidates:
+        if Path(c).exists():
+            return c
+    return ""
+
+
+def is_tailscale_installed() -> bool:
+    return bool(get_tailscale_path())
+
+
+def _ts_run(args: list, timeout: int = 20) -> dict:
+    """tailscale CLI 실행 — {rc, out, err}"""
+    binp = get_tailscale_path()
+    if not binp:
+        return {"rc": -1, "out": "", "err": "tailscale 미설치"}
+    try:
+        p = subprocess.run([binp] + args, capture_output=True, text=True, timeout=timeout)
+        return {"rc": p.returncode, "out": p.stdout or "", "err": p.stderr or ""}
+    except subprocess.TimeoutExpired:
+        return {"rc": -1, "out": "", "err": f"tailscale {' '.join(args)} 시간 초과"}
+    except Exception as e:
+        return {"rc": -1, "out": "", "err": str(e)}
+
+
+def tailscale_info() -> dict:
+    """tailscale 상태 — 설치·로그인·ts.net 주소(DNSName)"""
+    info = {"installed": is_tailscale_installed(), "logged_in": False,
+            "backend_state": "", "dns_name": "", "error": ""}
+    if not info["installed"]:
+        info["error"] = ("Tailscale이 설치되지 않았습니다. "
+                         "https://tailscale.com/download (macOS는 앱 설치 후 로그인)")
+        return info
+    r = _ts_run(["status", "--json"])
+    if r["rc"] != 0:
+        info["error"] = (r["err"] or r["out"]).strip()[:300]
+        return info
+    try:
+        st = json.loads(r["out"])
+        info["backend_state"] = st.get("BackendState", "")
+        info["logged_in"] = info["backend_state"] == "Running"
+        dns = ((st.get("Self") or {}).get("DNSName") or "").rstrip(".")
+        info["dns_name"] = dns
+        if not info["logged_in"]:
+            info["error"] = f"Tailscale 로그인 필요 (상태: {info['backend_state'] or '알 수 없음'})"
+    except Exception as e:
+        info["error"] = f"상태 파싱 실패: {e}"
+    return info
+
+
+def is_funnel_running() -> bool:
+    """Funnel 서빙 설정이 살아 있는지 — `funnel status` 출력에 proxy 대상이 보이면 on."""
+    r = _ts_run(["funnel", "status"])
+    if r["rc"] != 0:
+        return False
+    out = r["out"]
+    return ("proxy" in out or "Funnel on" in out) and "No serve config" not in out
+
+
+def start_funnel(port: int = 8765) -> dict:
+    """Funnel 켜기 — https://<기기>.ts.net → localhost:<port>. --bg = 데몬에 영속 선언."""
+    info = tailscale_info()
+    if not info["installed"] or not info["logged_in"]:
+        return {"success": False, "error": info["error"] or "tailscale 준비 안 됨", **info}
+    r = _ts_run(["funnel", "--bg", str(port)], timeout=30)
+    if r["rc"] != 0:
+        # 인증서/노드속성 미허용 등 — CLI 안내문을 그대로 (설정 마법사의 다음 단계 안내)
+        return {"success": False, "error": (r["err"] or r["out"]).strip()[:500], **info}
+    base = f"https://{info['dns_name']}" if info["dns_name"] else ""
+    # 직접 서빙 게이트웨이 배선 — ts.net 주소가 공개 얼굴이 된다
+    wired = {}
+    try:
+        import public_face
+        cfg = public_face.load_config()
+        cfg["provider"] = "tailscale"
+        cfg["direct_hosts"] = [info["dns_name"]] if info["dns_name"] else []
+        if base:
+            cfg["public_base"] = base
+        public_face.save_config(cfg)
+        wired = {"direct_hosts": cfg["direct_hosts"], "public_base": cfg.get("public_base", "")}
+        from api_launcher_web import reload_external_hostnames
+        reload_external_hostnames()
+    except Exception as e:
+        wired = {"error": f"public_face 배선 실패: {e}"}
+    return {"success": True, "message": f"Funnel 시작됨: {base or '(주소 확인 실패)'}",
+            "public_base": base, "dns_name": info["dns_name"], "wired": wired,
+            "cli_output": (r["out"] or r["err"]).strip()[:300]}
+
+
+def stop_funnel() -> dict:
+    """Funnel 끄기 — serve/funnel 선언 전체 제거(reset)."""
+    r = _ts_run(["funnel", "reset"], timeout=20)
+    if r["rc"] != 0:
+        # 구버전 CLI 폴백
+        r = _ts_run(["serve", "reset"], timeout=20)
+    if r["rc"] != 0:
+        return {"success": False, "error": (r["err"] or r["out"]).strip()[:300]}
+    try:
+        import public_face
+        cfg = public_face.load_config()
+        cfg["direct_hosts"] = []
+        public_face.save_config(cfg)
+        from api_launcher_web import reload_external_hostnames
+        reload_external_hostnames()
+    except Exception:
+        pass
+    return {"success": True, "message": "Funnel이 종료되었습니다."}
+
+
 def parse_ingress_hostnames(config_path: str = None) -> dict:
     """config.yml의 ingress 규칙에서 서비스별 외부 호스트명 추출"""
     result = {"finder_hostname": "", "launcher_hostname": ""}
@@ -288,6 +425,7 @@ def parse_ingress_hostnames(config_path: str = None) -> dict:
 # === API 엔드포인트 ===
 
 class TunnelConfig(BaseModel):
+    provider: Optional[str] = None
     enabled: Optional[bool] = None
     auto_start: Optional[bool] = None
     tunnel_name: Optional[str] = None
@@ -295,6 +433,7 @@ class TunnelConfig(BaseModel):
     finder_hostname: Optional[str] = None
     launcher_hostname: Optional[str] = None
     config_path: Optional[str] = None
+    funnel_port: Optional[int] = None
 
 
 @router.get("/config")
@@ -312,11 +451,13 @@ async def get_tunnel_config():
         if not launcher_host:
             launcher_host = ingress["launcher_hostname"]
 
+    provider = config.get("provider", "cloudflare")
     return {
         "success": True,
         **config,
         "cloudflared_installed": is_cloudflared_installed(),
-        "running": is_tunnel_running(),
+        "tailscale_installed": is_tailscale_installed(),
+        "running": is_funnel_running() if provider == "tailscale" else is_tunnel_running(),
         "finder_hostname": finder_host,
         "launcher_hostname": launcher_host,
     }
@@ -338,16 +479,18 @@ async def update_tunnel_config(update: TunnelConfig):
 
 @router.post("/start")
 def api_start_tunnel():
-    """터널 시작 (동기 함수 - subprocess/sleep 사용으로 인해 def 사용)"""
+    """터널 시작 — provider 분기 (동기 함수 - subprocess/sleep 사용으로 인해 def 사용)"""
     config = load_config()
 
-    if not config.get("tunnel_name"):
-        raise HTTPException(status_code=400, detail="터널 이름이 설정되지 않았습니다.")
-
-    result = start_tunnel(
-        tunnel_name=config["tunnel_name"],
-        config_path=config.get("config_path")
-    )
+    if config.get("provider") == "tailscale":
+        result = start_funnel(int(config.get("funnel_port") or 8765))
+    else:
+        if not config.get("tunnel_name"):
+            raise HTTPException(status_code=400, detail="터널 이름이 설정되지 않았습니다.")
+        result = start_tunnel(
+            tunnel_name=config["tunnel_name"],
+            config_path=config.get("config_path")
+        )
 
     if result["success"]:
         config["enabled"] = True
@@ -358,11 +501,14 @@ def api_start_tunnel():
 
 @router.post("/stop")
 def api_stop_tunnel():
-    """터널 종료 (동기 함수 - subprocess 사용으로 인해 def 사용)"""
-    result = stop_tunnel()
+    """터널 종료 — provider 분기 (동기 함수 - subprocess 사용으로 인해 def 사용)"""
+    config = load_config()
+    if config.get("provider") == "tailscale":
+        result = stop_funnel()
+    else:
+        result = stop_tunnel()
 
     if result["success"]:
-        config = load_config()
         config["enabled"] = False
         save_config(config)
 
@@ -371,24 +517,74 @@ def api_stop_tunnel():
 
 @router.get("/status")
 async def get_tunnel_status():
-    """터널 상태 조회"""
-    running = is_tunnel_running()
+    """터널 상태 조회 — provider 분기"""
     config = load_config()
+    provider = config.get("provider", "cloudflare")
 
+    if provider == "tailscale":
+        info = tailscale_info()
+        return {
+            "success": True,
+            "provider": provider,
+            "running": is_funnel_running() if info["logged_in"] else False,
+            "hostname": info["dns_name"],
+            "tailscale_installed": info["installed"],
+            "logged_in": info["logged_in"],
+            "error": info["error"],
+        }
     return {
         "success": True,
-        "running": running,
+        "provider": provider,
+        "running": is_tunnel_running(),
         "tunnel_name": config.get("tunnel_name", ""),
         "hostname": config.get("hostname", ""),
         "cloudflared_installed": is_cloudflared_installed()
     }
 
 
+@router.post("/provider")
+def set_tunnel_provider(update: TunnelConfig):
+    """프로바이더 전환 — AI 모델 갈아끼우듯. 실행 중인 반대편은 끄지 않는다(이사 공지
+    기간엔 양쪽이 함께 살아 있어야 moved_to 가 이웃에게 전파된다 — public_face 참조)."""
+    provider = (update.provider or "").strip().lower()
+    if provider not in ("cloudflare", "tailscale"):
+        raise HTTPException(status_code=400, detail="provider 는 cloudflare|tailscale")
+    config = load_config()
+    config["provider"] = provider
+    save_config(config)
+
+    result = {"success": True, "provider": provider}
+    if provider == "tailscale":
+        result["tailscale"] = tailscale_info()
+    else:
+        result["cloudflared_installed"] = is_cloudflared_installed()
+        # cloudflare 로 복귀 — 직접 서빙은 끈다(공개 얼굴은 다시 Worker 가 받는다)
+        try:
+            import public_face
+            cfg = public_face.load_config()
+            cfg["provider"] = "cloudflare"
+            cfg["direct_hosts"] = []
+            public_face.save_config(cfg)
+            from api_launcher_web import reload_external_hostnames
+            reload_external_hostnames()
+        except Exception:
+            pass
+    return result
+
+
 # 앱 시작 시 자동 시작 체크
 def auto_start_if_enabled():
-    """설정에 따라 자동 시작"""
+    """설정에 따라 자동 시작 — provider 분기"""
     config = load_config()
-    if config.get("auto_start") and config.get("tunnel_name"):
+    if not config.get("auto_start"):
+        return
+    if config.get("provider") == "tailscale":
+        # funnel 은 tailscaled 에 영속 선언이라 보통 이미 살아 있다 — 죽었을 때만 재선언
+        if not is_funnel_running():
+            result = start_funnel(int(config.get("funnel_port") or 8765))
+            print(f"[Tunnel] funnel 자동 시작: {result.get('message') or result.get('error')}")
+        return
+    if config.get("tunnel_name"):
         result = start_tunnel(
             tunnel_name=config["tunnel_name"],
             config_path=config.get("config_path")

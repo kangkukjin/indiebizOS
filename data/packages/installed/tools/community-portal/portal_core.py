@@ -22,11 +22,36 @@ import sys
 import json
 import copy
 import time
-import fcntl
 import secrets
 import importlib.util
 from pathlib import Path
 from datetime import datetime
+
+# 파일락 이식성 — fcntl(flock)은 유닉스 전용, 윈도우는 msvcrt.locking 으로 등가.
+# import fcntl 을 톱레벨에 두면 윈도우에서 모듈 로드 자체가 죽어 /portal/* 전체가
+# 500 이 된다(2026-07-20 윈도우 첫 설치 실측). 아래 두 함수만 통해 잠근다.
+try:
+    import fcntl as _fcntl
+except ImportError:                     # 윈도우
+    _fcntl = None
+    import msvcrt as _msvcrt
+
+
+def _flock_ex(f):
+    """배타 락 (블로킹). 윈도우: 첫 1바이트 범위락 — append 모드 쓰기엔 영향 없음."""
+    if _fcntl is not None:
+        _fcntl.flock(f, _fcntl.LOCK_EX)
+    else:
+        f.seek(0)
+        _msvcrt.locking(f.fileno(), _msvcrt.LK_LOCK, 1)
+
+
+def _flock_un(f):
+    if _fcntl is not None:
+        _fcntl.flock(f, _fcntl.LOCK_UN)
+    else:
+        f.seek(0)
+        _msvcrt.locking(f.fileno(), _msvcrt.LK_UNLCK, 1)
 
 _ROOT = Path(__file__).resolve().parents[5]
 _BACKEND = str(_ROOT / "backend")
@@ -129,7 +154,7 @@ def mutate_state(fn):
     """load-modify-save 를 파일락으로 직렬화. fn(state) 가 수정하면 저장 후 반환."""
     _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(_LOCK_PATH, "w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+        _flock_ex(lk)
         try:
             state = load_state()
             ret = fn(state)
@@ -138,7 +163,7 @@ def mutate_state(fn):
             tmp.replace(_STATE_PATH)
             return state if ret is None else ret
         finally:
-            fcntl.flock(lk, fcntl.LOCK_UN)
+            _flock_un(lk)
 
 
 def _default_public_base() -> str:
@@ -833,9 +858,9 @@ def audit_log(who: str, instrument: str, code: str, ok: bool, note: str = "",
         if note:
             entry["note"] = note[:200]
         with open(_AUDIT_PATH, "a", encoding="utf-8") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+            _flock_ex(f)
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            fcntl.flock(f, fcntl.LOCK_UN)
+            _flock_un(f)
     except Exception:
         pass
 

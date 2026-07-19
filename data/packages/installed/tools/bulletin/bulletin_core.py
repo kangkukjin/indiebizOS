@@ -22,12 +22,35 @@ import re
 import sys
 import json
 import time
-import fcntl
 import string
 import secrets
 import unicodedata
 from pathlib import Path
 from datetime import datetime
+
+# 파일락 이식성 — fcntl(flock)은 유닉스 전용, 윈도우는 msvcrt.locking 으로 등가.
+# 톱레벨 import fcntl 은 윈도우에서 모듈 로드 자체를 죽인다(portal_core 와 같은 부류).
+try:
+    import fcntl as _fcntl
+except ImportError:                     # 윈도우
+    _fcntl = None
+    import msvcrt as _msvcrt
+
+
+def _flock_ex(f):
+    if _fcntl is not None:
+        _fcntl.flock(f, _fcntl.LOCK_EX)
+    else:
+        f.seek(0)
+        _msvcrt.locking(f.fileno(), _msvcrt.LK_LOCK, 1)
+
+
+def _flock_un(f):
+    if _fcntl is not None:
+        _fcntl.flock(f, _fcntl.LOCK_UN)
+    else:
+        f.seek(0)
+        _msvcrt.locking(f.fileno(), _msvcrt.LK_UNLCK, 1)
 
 _ROOT = Path(__file__).resolve().parents[5]
 _BACKEND = str(_ROOT / "backend")
@@ -84,7 +107,7 @@ def mutate_state(fn):
     """load-modify-save 를 파일락으로 직렬화. fn(state) 반환값이 있으면 그걸, 없으면 state 반환."""
     _DATA.mkdir(parents=True, exist_ok=True)
     with open(_LOCK_PATH, "w") as lk:
-        fcntl.flock(lk, fcntl.LOCK_EX)
+        _flock_ex(lk)
         try:
             state = load_state()
             ret = fn(state)
@@ -93,7 +116,7 @@ def mutate_state(fn):
             tmp.replace(_STATE_PATH)
             return state if ret is None else ret
         finally:
-            fcntl.flock(lk, fcntl.LOCK_UN)
+            _flock_un(lk)
 
 
 # ── 유틸 ─────────────────────────────────────────────────────────────────

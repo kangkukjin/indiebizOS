@@ -176,12 +176,28 @@ def _name_map():
     return m
 
 
+def _allowed_urls(min_level: int, favorites: bool):
+    """피드·검색 필터의 허용 창고 집합 — 내가 이웃에게 준 레벨(info_level)·즐겨찾기 기준.
+    같은 주소에 여러 이웃이면 하나라도 조건을 넘으면 허용. 필터 없으면 None(전체)."""
+    if min_level <= 0 and not favorites:
+        return None
+    allowed = set()
+    for ct in _bm().get_warehouse_contacts():
+        if int(ct.get("info_level") or 0) < min_level:
+            continue
+        if favorites and not ct.get("favorite"):
+            continue
+        allowed.add(wf.normalize_base(ct["url"]))
+    return sorted(allowed)
+
+
 @router.get("/feed")
-async def feed(limit: int = 100):
-    """타임라인 — 이웃 이름·창고 홈을 붙여 반환."""
+async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0):
+    """타임라인 — 이웃 이름·창고 홈을 붙여 반환.
+    min_level=그 레벨 이상 이웃만(레벨=숫자, 의미는 사용자가 정함) / favorites=즐겨찾기만."""
     names = _name_map()
     items = []
-    for e in wf.get_feed(limit=limit):
+    for e in wf.get_feed(limit=limit, wh_urls=_allowed_urls(min_level, bool(favorites))):
         if e["wh_url"] not in names:
             continue  # 등기부에서 떼어진 창고의 잔여 이벤트는 숨김
         e["neighbor_name"] = names[e["wh_url"]]
@@ -191,14 +207,16 @@ async def feed(limit: int = 100):
 
 
 @router.get("/search")
-async def search(q: str = "", limit: int = 100, sort: str = "recent"):
+async def search(q: str = "", limit: int = 100, sort: str = "recent",
+                 min_level: int = 0, favorites: int = 0):
     """전수 키워드 조사(검색 사다리 1층) — 이웃 전체 창고의 현재 파일명 색인에서.
 
-    sort: recent=최신순(기본) / match=이름 일치순.
+    sort: recent=최신순(기본) / match=이름 일치순. min_level·favorites=피드와 같은 신뢰 필터.
     """
     names = _name_map()
     items = []
-    for e in wf.search_snapshots(q, limit=limit, sort=sort):
+    for e in wf.search_snapshots(q, limit=limit, sort=sort,
+                                 wh_urls=_allowed_urls(min_level, bool(favorites))):
         if e["wh_url"] not in names:
             continue
         e["neighbor_name"] = names[e["wh_url"]]

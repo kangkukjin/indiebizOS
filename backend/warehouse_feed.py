@@ -303,11 +303,12 @@ def _group_feed(rows: List[Dict], limit: int) -> List[Dict]:
 
 
 def get_feed(limit: int = 100, wh_url: Optional[str] = None,
-             group: bool = True) -> List[Dict]:
+             group: bool = True, wh_urls: Optional[List[str]] = None) -> List[Dict]:
     """피드 조회 — 내가 새로 본 순(seen_at) → 파일 자체 시간(mtime) 순.
 
     group=True 면 폴더 단위로 접어서 limit '줄'을 채운다. 접기 전 원장을 넉넉히 훑어야
     (한 폴더 폭주가 창을 다 먹지 않게) 이전 소식까지 같이 올라온다.
+    wh_urls=허용 집합(레벨·즐겨찾기 필터) — 접기 *전에* 걸러야 필터가 limit 를 안 갉아먹는다.
     """
     _init_db()
     lim = max(1, min(500, limit))
@@ -316,6 +317,11 @@ def get_feed(limit: int = 100, wh_url: Optional[str] = None,
     if wh_url:
         q += " WHERE wh_url=?"
         params.append(normalize_base(wh_url))
+    elif wh_urls is not None:
+        if not wh_urls:
+            return []
+        q += f" WHERE wh_url IN ({','.join('?' * len(wh_urls))})"
+        params.extend(wh_urls)
     q += " ORDER BY seen_at DESC, mtime DESC, id DESC LIMIT ?"
     params.append(_SCAN_CAP if group else lim)
     with _db_lock, _conn() as c:
@@ -340,11 +346,13 @@ def _match_rank(path: str, q: str) -> int:
     return 3                                      # 폴더 경로에서만 걸림
 
 
-def search_snapshots(query: str, limit: int = 100, sort: str = "recent") -> List[Dict]:
+def search_snapshots(query: str, limit: int = 100, sort: str = "recent",
+                     wh_urls: Optional[List[str]] = None) -> List[Dict]:
     """전수 키워드 조사(검색 사다리 1층) — 이웃 전부의 현재 파일명에서 부분일치.
 
     sort: recent=최신순(기본) / match=이름 일치순. 순위는 파이썬에서 매긴다 —
     자르기 전에 순위를 매겨야 해서(SQL LIMIT 뒤 정렬은 상위를 놓친다).
+    wh_urls=허용 집합(레벨·즐겨찾기 필터, 피드와 같은 신뢰 축).
     """
     _init_db()
     q = (query or "").strip()
@@ -352,11 +360,18 @@ def search_snapshots(query: str, limit: int = 100, sort: str = "recent") -> List
         return []
     cap = max(1, min(500, limit))
     like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+    where = "path LIKE ? ESCAPE '\\'"
+    params: list = [like]
+    if wh_urls is not None:
+        if not wh_urls:
+            return []
+        where += f" AND wh_url IN ({','.join('?' * len(wh_urls))})"
+        params.extend(wh_urls)
     with _db_lock, _conn() as c:
-        rows = [dict(r) for r in c.execute("""
-            SELECT * FROM snapshots WHERE path LIKE ? ESCAPE '\\'
+        rows = [dict(r) for r in c.execute(f"""
+            SELECT * FROM snapshots WHERE {where}
             ORDER BY mtime DESC LIMIT 1000
-        """, (like,)).fetchall()]
+        """, params).fetchall()]
     if sort == "match":
         # SQL 이 이미 mtime DESC 로 주고 파이썬 정렬은 안정적 → 같은 순위 안에서는 최신순이 유지된다.
         rows.sort(key=lambda r: _match_rank(r["path"], q))

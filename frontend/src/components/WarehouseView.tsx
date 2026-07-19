@@ -426,12 +426,15 @@ function NeighborsPane() {
   const [memoEdit, setMemoEdit] = useState<{ id: number; text: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
   const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number; mode: 'link' | 'copy' } | null>(null);
+  // 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만. 레벨=숫자, 의미 라벨 없음.
+  const [feedMinLevel, setFeedMinLevel] = useState(0);
+  const [feedFavOnly, setFeedFavOnly] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [rn, rf] = await Promise.all([
         fetch(`${API}/warehouse-feed/neighbors`),
-        fetch(`${API}/warehouse-feed/feed?limit=100`),
+        fetch(`${API}/warehouse-feed/feed?limit=100&min_level=${feedMinLevel}&favorites=${feedFavOnly ? 1 : 0}`),
       ]);
       if (!rn.ok || !rf.ok) throw new Error(`HTTP ${rn.status}/${rf.status}`);
       const dn = await rn.json();
@@ -443,7 +446,7 @@ function NeighborsPane() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [feedMinLevel, feedFavOnly]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -738,6 +741,29 @@ function NeighborsPane() {
               <SubIcon className="w-3.5 h-3.5" /> {label}
             </button>
           ))}
+          {/* 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만 (레벨=숫자, 의미 라벨 없음) */}
+          {sub === 'feed' && (
+            <div className="ml-auto flex items-center gap-1.5">
+              <select
+                className="px-2 py-1 rounded-lg border border-stone-200 bg-white text-xs text-stone-600"
+                value={feedMinLevel}
+                onChange={(e) => setFeedMinLevel(Number(e.target.value))}
+                title="이 레벨 이상의 이웃이 보낸 소식만"
+              >
+                <option value={0}>모든 레벨</option>
+                {[1, 2, 3, 4].map((lv) => <option key={lv} value={lv}>레벨 {lv} 이상</option>)}
+              </select>
+              <button
+                onClick={() => setFeedFavOnly((v) => !v)}
+                title="즐겨찾기한 이웃만"
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors ${
+                  feedFavOnly ? 'border-[#D97706] bg-amber-50 text-[#B45309]' : 'border-stone-200 text-stone-500 hover:text-stone-700'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${feedFavOnly ? 'fill-[#D97706] text-[#D97706]' : ''}`} /> 즐겨찾기만
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 전수 파일명 검색 — 폴러 스냅샷 = 내 동네 전체 색인 */}

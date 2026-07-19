@@ -343,7 +343,12 @@ def start_funnel(port: int = 8765) -> dict:
         import public_face
         cfg = public_face.load_config()
         cfg["provider"] = "tailscale"
-        cfg["direct_hosts"] = [info["dns_name"]] if info["dns_name"] else []
+        # 합류(교체 아님) — cloudflare 직접서빙 호스트 등 다른 얼굴은 산 채로 둔다.
+        # 두 얼굴 공존이 정상 상태(이사 공지 기간엔 양쪽이 함께 서빙해야 moved_to 전파).
+        hosts = set(cfg.get("direct_hosts") or [])
+        if info["dns_name"]:
+            hosts.add(info["dns_name"])
+        cfg["direct_hosts"] = sorted(hosts)
         if base:
             cfg["public_base"] = base
         public_face.save_config(cfg)
@@ -368,7 +373,9 @@ def stop_funnel() -> dict:
     try:
         import public_face
         cfg = public_face.load_config()
-        cfg["direct_hosts"] = []
+        # ts.net 얼굴만 내린다 — cloudflare 직접서빙 호스트는 funnel 과 무관하게 유지.
+        cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or [])
+                               if not h.endswith(".ts.net")]
         public_face.save_config(cfg)
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -568,14 +575,13 @@ def set_tunnel_provider(update: TunnelConfig):
         result["tailscale"] = tailscale_info()
     else:
         result["cloudflared_installed"] = is_cloudflared_installed()
-        # cloudflare 로 복귀 — ts.net 직접 서빙만 끈다. cloudflare 갈래의 직접 서빙
-        # 호스트(face_provision 발급, Worker 없는 새 몸)는 보존해야 얼굴이 안 죽는다.
+        # cloudflare 로 복귀 — provider 라벨만 바꾼다. direct_hosts(얼굴들)는 건드리지
+        # 않는다: 얼굴의 생사는 발급(합류)·중지(stop_funnel 이 ts.net 만 제거)가 관리하고,
+        # 전환 기간엔 양쪽 얼굴이 함께 살아 있어야 moved_to 가 이웃에게 전파된다.
         try:
             import public_face
             cfg = public_face.load_config()
             cfg["provider"] = "cloudflare"
-            cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or [])
-                                   if not h.endswith(".ts.net")]
             public_face.save_config(cfg)
             from api_launcher_web import reload_external_hostnames
             reload_external_hostnames()

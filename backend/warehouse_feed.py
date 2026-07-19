@@ -168,6 +168,7 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
             return poll_warehouse(moved, _hop=1)
         files = data.get("files") or []
         title = data.get("title") or ""
+        npub = (data.get("npub") or "").strip()
         has_restricted = 1 if data.get("has_restricted") else 0
         # 상대가 목록을 상한에서 잘랐다고 신고하면 "안 보이는 것"과 "사라진 것"을 가를 수 없다.
         truncated = bool(data.get("truncated"))
@@ -227,8 +228,44 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
                 last_poll=?, ok=1, error=NULL, file_count=?, title=?, has_restricted=?
         """, (base, now, len(files), title, has_restricted,
               now, len(files), title, has_restricted))
+    _reconcile_identity(base, npub)
     return {"ok": True, "url": base, "file_count": len(files),
-            "new_events": new_events, "title": title}
+            "new_events": new_events, "title": title, "npub": npub}
+
+
+def _reconcile_identity(base: str, npub: str) -> None:
+    """매니페스트가 자기선언한 npub 으로 등기부 신원을 치유 — 신원의 닻=키, 주소=연락처.
+
+    - 창고 주인 이웃에게 그 npub 이 없고 아무도 안 가졌으면 → 붙인다(신원 습득).
+    - 그 npub 이 이미 다른 이웃 것이면 → 같은 사람이 두 레코드 — 창고 연락처를 npub
+      이웃에게 옮긴다("주소만 알던 껍데기"가 소개글 경로의 진짜 레코드에 합류).
+      옛 레코드는 남긴다(이웃 자동 삭제는 하지 않는다 — 판단은 사용자 몫).
+    npub 은 무서명 자기선언이라 절취 가능성이 이론상 있으나, 등록 자체가 사용자 행위이고
+    잘못 합쳐져도 옮겨지는 건 창고 연락처(구독)뿐 — 권한(레벨·키)은 안 움직인다."""
+    if not npub.startswith("npub"):
+        return
+    try:
+        bm = _bm()
+        owner = bm.get_neighbor_by_contact("warehouse", base)
+        if not owner:
+            return
+        claimed = bm.get_neighbor_by_contact("nostr", npub)
+        if claimed is None:
+            bm.add_contact(owner["id"], "nostr", npub)
+        elif claimed["id"] != owner["id"]:
+            ct = next((c for c in bm.get_warehouse_contacts()
+                       if normalize_base(c["url"]) == base
+                       and c["neighbor_id"] == owner["id"]), None)
+            if ct:
+                bm.delete_contact(ct["contact_id"])
+                bm.add_contact(claimed["id"], "warehouse", ct["url"])
+                memo = (ct.get("warehouse_memo") or "").strip()
+                if memo and not (claimed.get("warehouse_memo") or "").strip():
+                    bm.update_neighbor_warehouse(claimed["id"], warehouse_memo=memo)
+                print(f"[창고피드] 신원 치유: {base} 창고를 '{owner.get('name')}' → "
+                      f"'{claimed.get('name')}' 레코드로 이동 (npub 일치)")
+    except Exception as e:
+        print(f"[창고피드] 신원 치유 실패(무시): {e}")
 
 
 def poll_all() -> List[Dict]:

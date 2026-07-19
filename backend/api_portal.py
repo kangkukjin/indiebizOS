@@ -366,6 +366,9 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
         **payload_extra,
         "about": _MANIFEST_ABOUT,
         "title": node_title,
+        # 신원의 닻 — 주소(창고 url)는 프로바이더 전환으로 바뀔 수 있지만 키(npub)는
+        # 그 사람이다. 이웃 폴러가 이걸 읽어 등기부 신원을 치유한다(같은 사람 2명 방지).
+        "npub": _node_npub(),
         "node_url": (base + "/manifest") if base else "/manifest",
         "viewer_level": level,
         "is_member": is_member,

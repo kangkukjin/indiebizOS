@@ -88,6 +88,11 @@ async def add_warehouse_neighbor(request: Request):
     # 첫 폴링을 먼저 — 연결 확인 + 이름 유도(title)에 쓴다. ★스레드로(자기교착 방지:
     # 루프에서 동기 HTTP 를 하면 Worker→터널로 돌아오는 자기 manifest 요청을 못 받는다)
     poll = await to_thread.run_sync(wf.poll_warehouse, url)
+    # 호출자가 npub 을 안 줬으면(주소만 등록) 매니페스트의 자기선언 npub 을 앵커로 —
+    # 주소만 아는 상대도 신원 있는 레코드로 합류해 "같은 사람 2명"을 처음부터 막는다.
+    if not npub:
+        m_npub = (poll.get("npub") or "").strip()
+        npub = m_npub if m_npub.startswith("npub") else ""
     neighbor_id = body.get("neighbor_id")
     name = (body.get("name") or "").strip()
     # ★신원 앵커 우선: 같은 npub 의 이웃이 이미 있으면(커뮤니티/메신저 경로로 등록된 그 사람)

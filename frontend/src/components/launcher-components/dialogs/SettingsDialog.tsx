@@ -7,11 +7,12 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw } from 'lucide-react';
+import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
 import { api } from '../../../lib/api';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
 import { SettingsRemoteTab } from './SettingsRemoteTab';
+import { SettingsEnvTab } from './SettingsEnvTab';
 
 interface PromptTemplate {
   id: string;
@@ -56,7 +57,7 @@ export function SettingsDialog({
   onSave,
   onClose,
 }: SettingsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'models' | 'persona' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('models');
+  const [activeTab, setActiveTab] = useState<'models' | 'apikeys' | 'persona' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('models');
 
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
@@ -256,6 +257,7 @@ export function SettingsDialog({
         <div className="flex border-b border-gray-200 bg-gray-50 shrink-0">
           {([
             { key: 'models', icon: Brain, label: '모델 설정' },
+            { key: 'apikeys', icon: KeyRound, label: 'API 키' },
             { key: 'persona', icon: FileText, label: '시스템 AI 역할' },
             { key: 'channels', icon: Radio, label: '통신채널' },
             { key: 'data', icon: Package, label: '데이터' },
@@ -633,6 +635,10 @@ export function SettingsDialog({
           )}
 
           {/* 통신채널 탭 */}
+          {activeTab === 'apikeys' && (
+            <SettingsEnvTab show={show} />
+          )}
+
           {activeTab === 'channels' && (
             <SettingsChannelsTab show={show} />
           )}

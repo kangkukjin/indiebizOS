@@ -321,6 +321,7 @@ switch_manager = SwitchManager()
 from api_projects import router as projects_router, init_managers as init_projects_managers, init_multi_chat_manager as init_projects_multi_chat
 from api_switches import router as switches_router, init_manager as init_switches_manager
 from api_config import router as config_router, init_manager as init_config_manager
+from api_env import router as env_router
 from api_system_ai import router as system_ai_router
 from api_agents import router as agents_router, init_manager as init_agents_manager
 from api_conversations import router as conversations_router, init_manager as init_conversations_manager
@@ -369,6 +370,7 @@ init_projects_multi_chat(get_multi_chat_manager())
 app.include_router(projects_router, tags=["projects"])
 app.include_router(switches_router, tags=["switches"])
 app.include_router(config_router, tags=["config"])
+app.include_router(env_router, tags=["env"])  # 로컬 전용 — is_public_remote_path 등록 금지
 app.include_router(system_ai_router, tags=["system-ai"])
 app.include_router(agents_router, tags=["agents"])
 app.include_router(conversations_router, tags=["conversations"])

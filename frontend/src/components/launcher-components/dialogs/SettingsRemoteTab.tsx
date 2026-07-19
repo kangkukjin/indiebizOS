@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, CheckCircle, AlertCircle } from 'lucide-react';
+import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, CheckCircle, AlertCircle, Globe, Package } from 'lucide-react';
 
 interface SettingsRemoteTabProps {
   activeTab: 'nas' | 'launcher' | 'tunnel';
@@ -39,6 +39,15 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const [isTunnelToggling, setIsTunnelToggling] = useState(false);
   const [tunnelSaveResult, setTunnelSaveResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // 창고 신원(공개 얼굴) 자동 발급 상태 — /tunnel/provision/*
+  const [provStatus, setProvStatus] = useState<any>(null);
+  const [provZones, setProvZones] = useState<{ id: string; name: string }[]>([]);
+  const [provDomain, setProvDomain] = useState('');
+  const [provSub, setProvSub] = useState('');
+  const [provBusy, setProvBusy] = useState<'' | 'ts' | 'cf'>('');
+  const [provResult, setProvResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [provSteps, setProvSteps] = useState<{ step: string; ok: boolean; detail: string }[]>([]);
+
   // NAS 설정 로드
   useEffect(() => {
     if (show && activeTab === 'nas') {
@@ -57,6 +66,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   useEffect(() => {
     if (show && activeTab === 'tunnel') {
       loadTunnelConfig();
+      loadProvision();
     }
   }, [show, activeTab]);
 
@@ -246,6 +256,77 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       setTunnelSaveResult({ success: false, message: '요청 실패: ' + (err as Error).message });
     } finally {
       setIsTunnelToggling(false);
+    }
+  };
+
+  // ── 창고 신원 자동 발급 (새 몸 = 새 주소) ──────────────────────────────────
+
+  const loadProvision = async () => {
+    try {
+      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/status');
+      if (!r.ok) return;
+      const d = await r.json();
+      setProvStatus(d);
+      setProvSub(prev => prev || d.machine_slug || '');
+      if (d.cloudflare?.api_token_present) {
+        try {
+          const zr = await fetch('http://127.0.0.1:8765/tunnel/provision/zones');
+          if (zr.ok) {
+            const zd = await zr.json();
+            if (zd.success) {
+              setProvZones(zd.zones || []);
+              setProvDomain(prev => prev || (zd.zones?.[0]?.name ?? ''));
+            }
+          }
+        } catch { /* zone 조회 실패는 조용히 — 카드에서 토큰 안내로 대체 */ }
+      }
+    } catch (err) {
+      console.error('Failed to load provision status:', err);
+    }
+  };
+
+  const provisionTailscale = async () => {
+    try {
+      setProvBusy('ts');
+      setProvResult(null);
+      setProvSteps([]);
+      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/tailscale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const d = await r.json();
+      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
+      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+    } catch (err) {
+      setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
+    } finally {
+      setProvBusy('');
+    }
+  };
+
+  const provisionCloudflare = async () => {
+    if (!provDomain || !provSub.trim()) {
+      setProvResult({ success: false, message: '도메인과 서브도메인을 입력하세요' });
+      return;
+    }
+    try {
+      setProvBusy('cf');
+      setProvResult(null);
+      setProvSteps([]);
+      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/cloudflare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: provDomain, subdomain: provSub.trim() }),
+      });
+      const d = await r.json();
+      setProvSteps(d.steps || []);
+      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
+      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+    } catch (err) {
+      setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
+    } finally {
+      setProvBusy('');
     }
   };
 
@@ -518,9 +599,135 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         <>
           <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
             <p className="text-sm text-sky-800">
-              Cloudflare Tunnel을 통해 외부에서 안전하게 IndieBiz OS에 접근할 수 있습니다.
-              터널이 실행 중이어야 원격 Finder와 원격 런처가 외부에서 작동합니다.
+              공개 주소(터널)가 있어야 공유창고·원격 런처·원격 Finder가 외부에서 작동합니다.
+              새 컴퓨터는 새 주소(새 신원)를 발급받아야 공유창고가 열립니다.
             </p>
+          </div>
+
+          {/* ── 창고 신원(공개 주소) 자동 발급 ── */}
+          <div className="bg-gray-50 rounded-lg p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Package size={18} className="text-[#D97706]" />
+              <h3 className="font-semibold text-gray-900">이 컴퓨터의 창고 주소</h3>
+            </div>
+
+            {provStatus?.identity?.public_base ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+                현재 주소: <code className="bg-green-100 px-1 rounded">{provStatus.identity.public_base}</code>
+                <span className="ml-2 text-xs text-green-700">
+                  ({provStatus.identity.provider === 'tailscale' ? 'Tailscale Funnel' : 'Cloudflare'}
+                  {provStatus.tunnel?.running ? ' · 실행 중' : ' · 중지됨'})
+                </span>
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                아직 이 컴퓨터의 창고 주소가 없습니다 — 아래 두 방법 중 하나로 발급하세요.
+              </div>
+            )}
+
+            {/* ① Tailscale — 원클릭, 도메인 불필요 */}
+            <div className="border border-gray-200 bg-white rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <Globe size={15} className="text-gray-500" /> Tailscale로 발급 (간단 — 도메인 불필요)
+                  </h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Tailscale 앱에 로그인만 되어 있으면 <code className="bg-gray-100 px-1 rounded">https://이컴퓨터.ts.net</code> 주소가 자동으로 생깁니다.
+                  </p>
+                </div>
+                <button
+                  onClick={provisionTailscale}
+                  disabled={provBusy !== '' || !provStatus?.tailscale?.logged_in}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    provStatus?.tailscale?.logged_in && provBusy === ''
+                      ? 'bg-[#D97706] text-white hover:bg-[#B45309]'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {provBusy === 'ts' ? '발급 중…' : '주소 발급'}
+                </button>
+              </div>
+              {!provStatus?.tailscale?.installed && (
+                <p className="text-xs text-red-600">
+                  Tailscale 미설치 — <code className="bg-red-50 px-1 rounded">{provStatus?.tailscale?.install_hint || 'https://tailscale.com/download'}</code>
+                </p>
+              )}
+              {provStatus?.tailscale?.installed && !provStatus?.tailscale?.logged_in && (
+                <p className="text-xs text-red-600">Tailscale 로그인 필요 — 앱을 열어 로그인하세요. {provStatus?.tailscale?.error}</p>
+              )}
+            </div>
+
+            {/* ② Cloudflare — 내 도메인의 서브도메인으로 발급 */}
+            <div className="border border-gray-200 bg-white rounded-lg p-4 space-y-3">
+              <div>
+                <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                  <Globe size={15} className="text-gray-500" /> Cloudflare로 발급 (내 도메인 사용)
+                </h4>
+                <p className="text-xs text-gray-500 mt-1">
+                  API 토큰으로 터널 생성 → DNS 연결 → 실행까지 자동으로 처리합니다. (Worker 불필요)
+                </p>
+              </div>
+              {!provStatus?.cloudflare?.api_token_present || !provStatus?.cloudflare?.account_id_present ? (
+                <p className="text-xs text-red-600">
+                  Cloudflare API 토큰·계정 ID가 필요합니다 — 설정의 'API 키' 탭에서
+                  CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID를 등록하세요.
+                </p>
+              ) : (
+                <>
+                  {!provStatus?.cloudflare?.cloudflared_installed && (
+                    <p className="text-xs text-red-600">
+                      cloudflared 미설치 — <code className="bg-red-50 px-1 rounded">{provStatus?.cloudflare?.install_hint}</code>
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={provSub}
+                      onChange={(e) => setProvSub(e.target.value)}
+                      placeholder="win"
+                      className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
+                    />
+                    <span className="text-gray-500">.</span>
+                    <select
+                      value={provDomain}
+                      onChange={(e) => setProvDomain(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 text-sm"
+                    >
+                      {provZones.length === 0 && <option value="">도메인 없음</option>}
+                      {provZones.map(z => <option key={z.id} value={z.name}>{z.name}</option>)}
+                    </select>
+                    <button
+                      onClick={provisionCloudflare}
+                      disabled={provBusy !== '' || !provDomain || !provSub.trim() || !provStatus?.cloudflare?.cloudflared_installed}
+                      className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                        provBusy === '' && provDomain && provSub.trim() && provStatus?.cloudflare?.cloudflared_installed
+                          ? 'bg-[#D97706] text-white hover:bg-[#B45309]'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      {provBusy === 'cf' ? '발급 중…' : '주소 발급'}
+                    </button>
+                  </div>
+                </>
+              )}
+              {provSteps.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2 space-y-0.5">
+                  {provSteps.map((s, i) => (
+                    <p key={i} className={`text-xs ${s.ok ? 'text-gray-600' : 'text-red-600'}`}>
+                      {s.ok ? '✓' : '✗'} {s.step}: {s.detail}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {provResult && (
+              <p className={`text-sm ${provResult.success ? 'text-green-600' : 'text-red-600'}`}>
+                {provResult.success ? <CheckCircle size={16} className="inline mr-1" /> : <AlertCircle size={16} className="inline mr-1" />}
+                {provResult.message}
+              </p>
+            )}
           </div>
 
           {/* cloudflared 설치 상태 */}
@@ -537,6 +744,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
           )}
 
           <div className="bg-gray-50 rounded-lg p-5 space-y-4">
+            <p className="text-xs text-gray-400 font-medium">수동 설정 (고급) — 이미 만든 터널을 직접 지정할 때만</p>
             {/* 터널 실행 토글 */}
             <div className="flex items-center justify-between">
               <div>

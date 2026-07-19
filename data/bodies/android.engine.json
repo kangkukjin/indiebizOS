@@ -64,6 +64,7 @@
     "document_converter",
     "episode_logger",
     "event_engine",
+    "face_provision",
     "file_index",
     "focus_map",
     "forage_consolidation",
@@ -182,8 +183,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 176,
-    "engine": 162,
+    "total": 177,
+    "engine": 163,
     "blocklist": 14
   }
 }

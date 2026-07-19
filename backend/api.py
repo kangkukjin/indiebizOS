@@ -366,6 +366,7 @@ from api_bulletin import router as bulletin_router
 from api_report import router as report_router
 from api_launcher_web import router as launcher_web_router
 from api_tunnel import router as tunnel_router, auto_start_if_enabled as tunnel_auto_start
+from face_provision import router as face_provision_router
 from api_ibl import router as ibl_router
 from api_nodes import router as nodes_router
 from api_xray import router as xray_router
@@ -420,6 +421,7 @@ app.include_router(bulletin_router, tags=["bulletin"])
 app.include_router(report_router, tags=["report"])
 app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
+app.include_router(face_provision_router, tags=["tunnel-provision"])  # 로컬 전용 — is_public_remote_path 등록 금지
 app.include_router(ibl_router, tags=["ibl"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(xray_router, tags=["xray"])

@@ -130,8 +130,11 @@ def is_tunnel_running() -> bool:
         return False
 
 
-def start_tunnel(tunnel_name: str, config_path: str = None) -> dict:
-    """터널 시작"""
+def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = None) -> dict:
+    """터널 시작 — 두 모드:
+    - 토큰 모드(tunnel_token): `tunnel run --token` — 원격관리 터널(face_provision 발급).
+      cert.pem·config.yml 불필요, ingress 는 CF 쪽 원격 설정이 담당.
+    - 이름 모드(tunnel_name+config.yml): 기존 로컬관리 터널(맥의 indiebiz-os)."""
     global _tunnel_process
 
     if is_tunnel_running():
@@ -141,7 +144,8 @@ def start_tunnel(tunnel_name: str, config_path: str = None) -> dict:
         return {
             "success": False,
             "error": "cloudflared가 설치되지 않았습니다.",
-            "hint": "brew install cloudflared (macOS) 또는 apt install cloudflared (Linux)"
+            "hint": ("winget install Cloudflare.cloudflared (Windows) 또는 "
+                     "brew install cloudflared (macOS)")
         }
 
     try:
@@ -150,13 +154,15 @@ def start_tunnel(tunnel_name: str, config_path: str = None) -> dict:
         if not cloudflared_bin:
             return {"success": False, "error": "cloudflared를 찾을 수 없습니다."}
 
-        # config.yml이 있으면 사용 (--config은 글로벌 플래그이므로 tunnel 앞에 위치)
         cmd = [cloudflared_bin]
 
-        if config_path and Path(config_path).exists():
-            cmd.extend(["--config", config_path])
-
-        cmd.extend(["tunnel", "run", tunnel_name])
+        if tunnel_token:
+            cmd.extend(["tunnel", "run", "--token", tunnel_token])
+        else:
+            # config.yml이 있으면 사용 (--config은 글로벌 플래그이므로 tunnel 앞에 위치)
+            if config_path and Path(config_path).exists():
+                cmd.extend(["--config", config_path])
+            cmd.extend(["tunnel", "run", tunnel_name])
 
         # 백그라운드 프로세스로 실행
         # start_new_session 사용하지 않음 → 부모(FastAPI)와 같은 프로세스 그룹
@@ -185,7 +191,10 @@ def start_tunnel(tunnel_name: str, config_path: str = None) -> dict:
             # stderr 우선, 없으면 stdout 사용
             output = (stderr_data.strip() or stdout_data.strip())
             details = f"(exit code: {returncode}) {output[:500]}" if output else f"프로세스 종료 코드: {returncode}"
-            print(f"[Tunnel] 시작 실패 - cmd: {' '.join(cmd)}")
+            # 토큰은 시크릿 — 로그에 남기지 않는다
+            safe_cmd = ["***" if (i > 0 and cmd[i - 1] == "--token") else c
+                        for i, c in enumerate(cmd)]
+            print(f"[Tunnel] 시작 실패 - cmd: {' '.join(safe_cmd)}")
             print(f"[Tunnel] stdout: {stdout_data[:300]}")
             print(f"[Tunnel] stderr: {stderr_data[:300]}")
             return {
@@ -485,11 +494,12 @@ def api_start_tunnel():
     if config.get("provider") == "tailscale":
         result = start_funnel(int(config.get("funnel_port") or 8765))
     else:
-        if not config.get("tunnel_name"):
+        if not config.get("tunnel_name") and not config.get("tunnel_token"):
             raise HTTPException(status_code=400, detail="터널 이름이 설정되지 않았습니다.")
         result = start_tunnel(
-            tunnel_name=config["tunnel_name"],
-            config_path=config.get("config_path")
+            tunnel_name=config.get("tunnel_name", ""),
+            config_path=config.get("config_path"),
+            tunnel_token=config.get("tunnel_token") or None,
         )
 
     if result["success"]:
@@ -558,12 +568,14 @@ def set_tunnel_provider(update: TunnelConfig):
         result["tailscale"] = tailscale_info()
     else:
         result["cloudflared_installed"] = is_cloudflared_installed()
-        # cloudflare 로 복귀 — 직접 서빙은 끈다(공개 얼굴은 다시 Worker 가 받는다)
+        # cloudflare 로 복귀 — ts.net 직접 서빙만 끈다. cloudflare 갈래의 직접 서빙
+        # 호스트(face_provision 발급, Worker 없는 새 몸)는 보존해야 얼굴이 안 죽는다.
         try:
             import public_face
             cfg = public_face.load_config()
             cfg["provider"] = "cloudflare"
-            cfg["direct_hosts"] = []
+            cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or [])
+                                   if not h.endswith(".ts.net")]
             public_face.save_config(cfg)
             from api_launcher_web import reload_external_hostnames
             reload_external_hostnames()
@@ -584,12 +596,13 @@ def auto_start_if_enabled():
             result = start_funnel(int(config.get("funnel_port") or 8765))
             print(f"[Tunnel] funnel 자동 시작: {result.get('message') or result.get('error')}")
         return
-    if config.get("tunnel_name"):
+    if config.get("tunnel_name") or config.get("tunnel_token"):
         result = start_tunnel(
-            tunnel_name=config["tunnel_name"],
-            config_path=config.get("config_path")
+            tunnel_name=config.get("tunnel_name", ""),
+            config_path=config.get("config_path"),
+            tunnel_token=config.get("tunnel_token") or None,
         )
         if result["success"]:
-            print(f"[Tunnel] 자동 시작됨: {config['tunnel_name']}")
+            print(f"[Tunnel] 자동 시작됨: {config.get('tunnel_name') or '(토큰 모드)'}")
         else:
             print(f"[Tunnel] 자동 시작 실패: {result.get('error', 'unknown')}")

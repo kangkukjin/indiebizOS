@@ -52,13 +52,13 @@ BUSINESS_TOOLS = [
     },
     {
         "name": "no_response_needed",
-        "description": "응답이 필요하지 않을 때 호출. 스팸, 광고, 개인적 대화 등 자동응답이 부적절한 경우 사용합니다.",
+        "description": "응답하지 않기로 결정했을 때 호출. 판단 기준은 시스템 프롬프트와 근무지침을 따릅니다.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "reason": {
                     "type": "string",
-                    "description": "응답하지 않는 이유 (예: 스팸 메시지, 개인적 대화)"
+                    "description": "응답하지 않는 이유"
                 }
             },
             "required": ["reason"]
@@ -84,123 +84,17 @@ BUSINESS_TOOLS = [
     }
 ]
 
-# OpenAI 형식 도구 정의
+# OpenAI/Google 형식은 위 BUSINESS_TOOLS(Anthropic 형식)에서 파생 — 도구 정의의 진실원은 한 곳.
 BUSINESS_TOOLS_OPENAI = [
-    {
-        "type": "function",
-        "function": {
-            "name": "search_business_items",
-            "description": "비즈니스 데이터베이스에서 상품/서비스 검색. 상대방 요청과 관련된 아이템을 찾을 때 사용합니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "category": {
-                        "type": "string",
-                        "description": "검색할 비즈니스 카테고리명 (예: 팔아요, 할수있습니다, 구합니다, 나눕니다, 빌려줍니다)"
-                    },
-                    "keywords": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "검색 키워드 목록 (예: ['세탁기', '수리'])"
-                    }
-                },
-                "required": ["category"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "no_response_needed",
-            "description": "응답이 필요하지 않을 때 호출. 스팸, 광고, 개인적 대화 등 자동응답이 부적절한 경우 사용합니다.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "reason": {
-                        "type": "string",
-                        "description": "응답하지 않는 이유 (예: 스팸 메시지, 개인적 대화)"
-                    }
-                },
-                "required": ["reason"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "send_response",
-            "description": "응답 메시지를 발신자에게 즉시 전송합니다. 검색 후 응답을 작성했으면 반드시 이 도구로 발송하세요.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "subject": {
-                        "type": "string",
-                        "description": "응답 메시지 제목"
-                    },
-                    "body": {
-                        "type": "string",
-                        "description": "응답 메시지 본문"
-                    }
-                },
-                "required": ["subject", "body"]
-            }
-        }
-    }
+    {"type": "function",
+     "function": {"name": t["name"], "description": t["description"],
+                  "parameters": t["input_schema"]}}
+    for t in BUSINESS_TOOLS
 ]
 
-# Google 형식 도구 정의
 BUSINESS_TOOLS_GOOGLE = [
-    {
-        "name": "search_business_items",
-        "description": "비즈니스 데이터베이스에서 상품/서비스 검색. 상대방 요청과 관련된 아이템을 찾을 때 사용합니다.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string",
-                    "description": "검색할 비즈니스 카테고리명 (예: 팔아요, 할수있습니다, 구합니다, 나눕니다, 빌려줍니다)"
-                },
-                "keywords": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "검색 키워드 목록 (예: ['세탁기', '수리'])"
-                }
-            },
-            "required": ["category"]
-        }
-    },
-    {
-        "name": "no_response_needed",
-        "description": "응답이 필요하지 않을 때 호출. 스팸, 광고, 개인적 대화 등 자동응답이 부적절한 경우 사용합니다.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "reason": {
-                    "type": "string",
-                    "description": "응답하지 않는 이유 (예: 스팸 메시지, 개인적 대화)"
-                }
-            },
-            "required": ["reason"]
-        }
-    },
-    {
-        "name": "send_response",
-        "description": "응답 메시지를 발신자에게 즉시 전송합니다. 검색 후 응답을 작성했으면 반드시 이 도구로 발송하세요.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "subject": {
-                    "type": "string",
-                    "description": "응답 메시지 제목"
-                },
-                "body": {
-                    "type": "string",
-                    "description": "응답 메시지 본문"
-                }
-            },
-            "required": ["subject", "body"]
-        }
-    }
+    {"name": t["name"], "description": t["description"], "parameters": t["input_schema"]}
+    for t in BUSINESS_TOOLS
 ]
 
 
@@ -281,9 +175,10 @@ class AutoResponseService:
                 return AUTORESPONSE_PROMPT_PATH.read_text(encoding='utf-8')
             except:
                 pass
-        return """당신은 IndieBizOS의 비즈니스 매칭 에이전트입니다.
-외부에서 들어온 메시지에 친근하고 전문적으로 응답합니다.
-검색 결과에 없는 정보를 지어내지 마세요."""
+        return """당신은 IndieBizOS 노드의 응대 에이전트입니다.
+외부에서 들어온 메시지에 응답하며, 근무지침(<work_guideline>)이 있으면 그것이 최우선입니다.
+검색 결과·창고 목록에 없는 정보를 지어내지 마세요.
+반드시 도구 호출로 끝내세요: 응답하면 send_response, 하지 않으면 no_response_needed."""
 
     def start(self):
         if self._running:
@@ -483,14 +378,40 @@ class AutoResponseService:
         except:
             pass
 
+        # 공유창고 — 이 이웃의 레벨에서 보이는 내 창고(공개 주소 + 파일 목록).
+        # 창고에 이미 공개된 내용은 다시 타이핑하는 대신 주소로 안내할 수 있게 한다.
+        warehouse = self._collect_warehouse(info_level)
+
         return {
             'message': message,
             'neighbor': neighbor,
             'conversation_history': conversation_history,
             'work_guideline': work_guideline,
             'business_doc': business_doc,
-            'business_list': business_list
+            'business_list': business_list,
+            'warehouse': warehouse
         }
+
+    # 창고 파일명을 컨텍스트에 넣는 상한 — 파일이 아주 많아도 프롬프트가 폭주하지 않게.
+    _WAREHOUSE_NAME_CAP = 40
+
+    def _collect_warehouse(self, info_level: int) -> Optional[dict]:
+        """이웃 레벨에서 보이는 내 공유창고 요약. 조회 실패 = None(창고 없음으로 강등)."""
+        try:
+            import api_portal
+            lv = max(0, min(4, int(info_level or 0)))
+            base = (api_portal._core().load_state().get("public_base") or "").rstrip("/")
+            files, total = api_portal._walk_accessible(lv, base)
+            return {
+                'title': api_portal._warehouse_title(),
+                'public_url': (base + "/") if base else "",
+                'level': lv,
+                'names': [f['name'] for f in files[:self._WAREHOUSE_NAME_CAP]],
+                'total': total,
+            }
+        except Exception as e:
+            self._log(f"창고 컨텍스트 조회 실패(생략): {e}")
+            return None
 
     def _execute_tool(self, tool_name: str, tool_input: dict) -> str:
         """도구 실행"""
@@ -633,6 +554,23 @@ class AutoResponseService:
             business_lines = [f"- {b['name']}: {b.get('description', '')}" for b in business_list]
             business_list_text = '\n'.join(business_lines)
 
+        # 공유창고 포맷 — 이 이웃 레벨에서 보이는 그대로(주소 + 파일명). 파일 내용은 넣지 않는다.
+        warehouse = context.get('warehouse')
+        warehouse_text = '공유창고 정보를 조회할 수 없습니다.'
+        if warehouse:
+            names = warehouse.get('names') or []
+            total = warehouse.get('total', len(names))
+            wh_lines = [f"창고 이름: {warehouse.get('title', '공유창고')}"]
+            if warehouse.get('public_url'):
+                wh_lines.append(f"공개 주소: {warehouse['public_url']}")
+            else:
+                wh_lines.append("공개 주소: (미설정 — 주소 안내 불가)")
+            wh_lines.append(f"이 발신자가 열람할 수 있는 파일 {total}개:")
+            wh_lines += [f"- {n}" for n in names]
+            if total > len(names):
+                wh_lines.append(f"…외 {total - len(names)}개 생략")
+            warehouse_text = '\n'.join(wh_lines)
+
         return f"""<context>
 <work_guideline>
 {work_guideline}
@@ -646,6 +584,10 @@ class AutoResponseService:
 {business_list_text}
 </available_categories>
 
+<my_warehouse>
+{warehouse_text}
+</my_warehouse>
+
 <conversation_history>
 {history_text}
 </conversation_history>
@@ -658,18 +600,9 @@ class AutoResponseService:
 </incoming_message>
 
 <instructions>
-위 메시지를 분석하고 적절히 처리하세요.
-
-1. 스팸, 광고, 개인적 대화 등 자동응답이 부적절하면 → no_response_needed 도구 호출
-2. 비즈니스 문의라면 → search_business_items로 검색 → send_response로 발송
-3. 단순 인사/감사면 → 검색 없이 send_response로 발송
-
-중요: 응답을 작성했으면 반드시 send_response 도구로 발송하세요.
-
-응답 원칙:
-- 친근하지만 전문적인 어조
-- 검색 결과에 없는 정보 지어내지 않기
-- 핵심부터 답변하고 다음 단계 제안으로 마무리
+위 메시지를 처리하세요. 응답 여부와 내용의 판단 기준은 시스템 프롬프트와
+<work_guideline>(근무지침)을 따르고, 둘이 다르면 근무지침이 우선합니다.
+반드시 도구 호출로 끝내세요: 응답하면 send_response, 하지 않으면 no_response_needed.
 </instructions>"""
 
     def _call_ai_with_tools(self, context: dict) -> dict:
@@ -851,8 +784,15 @@ class AutoResponseService:
             config=config
         )
 
+        # 응답 parts 안전 추출 — Gemini 는 도구 응답 뒤 빈 content(parts=None)를 줄 수 있다.
+        def _parts(resp):
+            try:
+                return list(resp.candidates[0].content.parts or [])
+            except Exception:
+                return []
+
         # Tool Use 루프
-        while response.candidates[0].content.parts:
+        while _parts(response):
             has_function_call = False
             function_responses = []
 
@@ -894,7 +834,7 @@ class AutoResponseService:
 
         # 최종 텍스트 추출
         final_text = ""
-        for part in response.candidates[0].content.parts:
+        for part in _parts(response):
             if hasattr(part, 'text') and part.text:
                 final_text += part.text
 

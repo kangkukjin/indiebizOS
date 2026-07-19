@@ -833,12 +833,12 @@ nodes:
       restaurant:
         returns: items
         fixture: '[sense:restaurant]{query: "강남 파스타"}'
-        description: 맛집/음식점 검색 (카카오+네이버 Local API). 상호명·주소·전화·카테고리·place 링크 반환. 별점·리뷰 숫자는 공개 API 미제공 — 카카오 place_url(카카오맵 페이지)에서 확인. 커뮤니티 후기는 sense:search_local.
+        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건). 상호명·주소·전화·카테고리·place 링크에 더해 네이버 블로그 후기로 추천 근거 부착 — blog_count(언급 수)·reason(후기 제목), 언급 많은 순 정렬. 별점 숫자는 공개 API 미제공(카카오 place_url에서 확인). 커뮤니티 후기 원문은 sense:search_local.
         group: places
-        target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색 가능.
+        target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler
         tool: search_restaurants
-        implementation: Kakao + Naver Local API 듀얼 검색. 반환 combined[]에 상호명·주소·전화·카테고리·url(카카오는 place.map.kakao.com=평점/리뷰 페이지). 별점 숫자 자체는 API에 없음.
+        implementation: Kakao(페이지네이션 15×3=45) + Naver Local 듀얼 검색, 가게명 정규화로 중복 병합. 상위 12곳은 네이버 블로그 검색(/v1/search/blog.json)으로 blog_count·reason(가게명 등장 글 제목만) 병렬 부착 후 언급순 정렬. url=카카오 place.map.kakao.com(평점/리뷰 페이지).
         target_key: query
         app:
           icon: 🍴
@@ -850,13 +850,21 @@ nodes:
             placeholder: '예: 강남역 맛집 / 성수동 카페'
             required: true
           action: '[sense:restaurant]{query: "$q"}'
+          filter:
+            from_field: cat
           view:
+          - type: map
+            markers: items
+            'on':
+              search_here: '[sense:restaurant]{query: "$q", x: "$lng", y: "$lat", radius: $radius}'
           - type: card_list
             from: items
+            empty: 검색 결과가 없습니다
             card:
               title: '{name}'
               lines:
-              - '{category}'
+              - '{cat}{blog_count|opt:  ·  💬 블로그 ,건}{distance|opt:  ·  📏 ,m}'
+              - '{reason|opt:“,”}'
               - '📍 {address}{phone|opt:  ·  ☎ ,}'
               link:
                 href: '{url}'

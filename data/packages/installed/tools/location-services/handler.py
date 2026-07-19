@@ -69,55 +69,67 @@ def build_route_map(origin: dict, destination: dict, path: list, summary: dict) 
 def search_kakao_restaurants(query: str, x: str = None, y: str = None,
                              radius: int = 5000, size: int = 10, sort: str = "accuracy"):
     """
-    카카오 로컬 API로 맛집/음식점 검색
+    카카오 로컬 API로 맛집/음식점 검색 (페이지네이션 — 최대 45건)
 
     Args:
         query: 검색 키워드 (예: "강남 파스타", "홍대 맛집")
         x: 중심 좌표 경도
         y: 중심 좌표 위도
         radius: 검색 반경 (미터, 최대 20000)
-        size: 결과 수 (최대 15)
+        size: 결과 수 (최대 45 = 15×3페이지)
         sort: 정렬 (accuracy: 정확도순, distance: 거리순)
     """
     key_ok, key_error = check_api_key("kakao")
     if not key_ok:
         return {"error": f"{key_error} https://developers.kakao.com 에서 발급받으세요."}
 
-    params = {
-        "query": query,
-        "category_group_code": "FD6",  # 음식점 카테고리
-        "size": min(size, 15),
-        "sort": sort
-    }
-
-    if x and y:
-        params["x"] = x
-        params["y"] = y
-        params["radius"] = min(radius, 20000)
-
-    data = api_call("kakao", "/v2/local/search/keyword.json", params=params, timeout=10)
-    if isinstance(data, dict) and "error" in data:
-        return data
-
-    documents = data.get("documents", [])
-
+    size = min(size, 45)
     restaurants = []
-    for doc in documents:
-        # 카카오: x=경도, y=위도 (문자열) → 표준 {lat,lng} float
-        coords = _normalize_coords(doc.get("y"), doc.get("x")) or {"lat": None, "lng": None}
-        restaurants.append({
-            "name": doc.get("place_name", ""),
-            "category": doc.get("category_name", ""),
-            "address": doc.get("road_address_name") or doc.get("address_name", ""),
-            "phone": doc.get("phone", ""),
-            "url": doc.get("place_url", ""),
-            "distance": doc.get("distance", ""),
-            "lat": coords["lat"],
-            "lng": coords["lng"],
-        })
+    total = 0
+    page = 1
+    # 페이지 크기는 15 고정 (페이지마다 size가 바뀌면 오프셋이 어긋남) — 마지막에 잘라냄
+    while len(restaurants) < size and page <= 3:
+        params = {
+            "query": query,
+            "category_group_code": "FD6",  # 음식점 카테고리
+            "size": 15,
+            "sort": sort,
+            "page": page,
+        }
+        if x and y:
+            params["x"] = x
+            params["y"] = y
+            params["radius"] = min(radius, 20000)
 
+        data = api_call("kakao", "/v2/local/search/keyword.json", params=params, timeout=10)
+        if isinstance(data, dict) and "error" in data:
+            if page == 1:
+                return data
+            break
+
+        total = data.get("meta", {}).get("total_count", total)
+        for doc in data.get("documents", []):
+            # 카카오: x=경도, y=위도 (문자열) → 표준 {lat,lng} float
+            coords = _normalize_coords(doc.get("y"), doc.get("x")) or {"lat": None, "lng": None}
+            restaurants.append({
+                "name": doc.get("place_name", ""),
+                "category": doc.get("category_name", ""),
+                "cat": _simple_category(doc.get("category_name", "")),
+                "address": doc.get("road_address_name") or doc.get("address_name", ""),
+                "phone": doc.get("phone", ""),
+                "url": doc.get("place_url", ""),
+                "distance": doc.get("distance", ""),
+                "lat": coords["lat"],
+                "lng": coords["lng"],
+            })
+
+        if data.get("meta", {}).get("is_end", True):
+            break
+        page += 1
+
+    restaurants = restaurants[:size]
     return {
-        "total": data.get("meta", {}).get("total_count", 0),
+        "total": total,
         "restaurants": restaurants,
         "message": f"'{query}' 검색 결과 {len(restaurants)}개의 맛집을 찾았습니다."
     }
@@ -164,6 +176,7 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
         restaurants.append({
             "name": clean_html(item.get("title", "")),
             "category": item.get("category", ""),
+            "cat": _simple_category(item.get("category", "")),
             "address": item.get("roadAddress") or item.get("address", ""),
             "phone": item.get("telephone", ""),
             "url": item.get("link", ""),
@@ -179,19 +192,78 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
     }
 
 
+def _norm_name(name: str) -> str:
+    """가게명 비교용 정규화 — 괄호(지점 표기)·기호·공백 제거."""
+    base = re.sub(r'\([^)]*\)', '', name or '')
+    return re.sub(r'[^0-9a-zA-Z가-힣]', '', base).lower()
+
+
+def _simple_category(category: str) -> str:
+    """'음식점 > 양식 > 이탈리안' → '양식'. 앱 필터 칩용 굵은 분류."""
+    parts = [p.strip() for p in (category or "").split(">") if p.strip()]
+    if len(parts) >= 2 and parts[0] in ("음식점", "카페"):
+        return parts[1] if parts[0] == "음식점" else "카페"
+    return parts[-1] if parts else "기타"
+
+
+def _blog_evidence(region: str, name: str):
+    """
+    네이버 블로그 검색으로 추천 근거 수집 — 언급 수(인기 신호) + 후기 제목(추천 이유).
+    가게명이 실제로 등장하는 글의 제목만 reason 재료로 채택 (동음이의 잡음 필터).
+    """
+    q = f"{region} {name}".strip()
+    data = api_call("naver", "/v1/search/blog.json",
+                    params={"query": q, "display": 5, "sort": "sim"}, timeout=5)
+    if not isinstance(data, dict) or "error" in data:
+        return None
+
+    def strip_html(t):
+        return re.sub('<[^<]+?>', '', t or '')
+
+    key = _norm_name(name)
+    titles = []
+    for it in data.get("items", []):
+        title = strip_html(it.get("title", ""))
+        blob = _norm_name(title + strip_html(it.get("description", "")))
+        if key and key in blob:
+            titles.append(title)
+    return {"blog_count": data.get("total", 0), "blog_titles": titles[:2]}
+
+
+def _enrich_with_blogs(items: list, region: str, top_n: int = 12):
+    """상위 top_n개 가게에 블로그 언급 수·후기 제목을 병렬로 붙임 (in-place)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def work(r):
+        try:
+            ev = _blog_evidence(region, r.get("name", ""))
+        except Exception:
+            return
+        if ev:
+            r["blog_count"] = ev["blog_count"]
+            if ev["blog_titles"]:
+                r["reason"] = " / ".join(ev["blog_titles"])[:90]
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        list(ex.map(work, items[:top_n]))
+
+
 def search_restaurants_combined(query: str, x: str = None, y: str = None,
-                                 radius: int = 5000, kakao_size: int = 10,
-                                 naver_size: int = 5, naver_sort: str = "comment"):
+                                 radius: int = 5000, kakao_size: int = 30,
+                                 naver_size: int = 5, naver_sort: str = "comment",
+                                 enrich: bool = True):
     """
     카카오 + 네이버 API를 병합하여 맛집 검색
+    (중복 가게 병합 + 네이버 블로그 후기로 추천 근거 부착)
 
     Args:
         query: 검색 키워드
         x, y: 좌표 (카카오용)
         radius: 검색 반경 (카카오용)
-        kakao_size: 카카오 결과 수
-        naver_size: 네이버 결과 수
+        kakao_size: 카카오 결과 수 (최대 45)
+        naver_size: 네이버 결과 수 (API 상한 5)
         naver_sort: 네이버 정렬 (random/comment)
+        enrich: True면 상위 가게에 블로그 언급 수·후기 제목 부착
     """
     results = {
         "query": query,
@@ -212,20 +284,39 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
             r["source"] = "kakao"
             results["combined"].append(r)
 
-    # 네이버 검색
+    # 네이버 검색 — 같은 가게는 카카오 항목에 병합(설명만 취함), 새 가게만 추가
     naver_result = search_naver_local(query, naver_size, naver_sort)
     if "error" not in naver_result:
         results["naver"] = {
             "restaurants": naver_result.get("restaurants", []),
             "total": naver_result.get("total", 0)
         }
+        by_name = {_norm_name(r["name"]): r for r in results["combined"]}
         for r in naver_result.get("restaurants", []):
-            r["source"] = "naver"
-            results["combined"].append(r)
+            k = _norm_name(r.get("name", ""))
+            dup = by_name.get(k)
+            if dup:
+                dup["source"] = "kakao+naver"
+                if r.get("description"):
+                    dup["description"] = r["description"]
+            else:
+                r["source"] = "naver"
+                results["combined"].append(r)
+                if k:
+                    by_name[k] = r
+
+    # 추천 근거: 네이버 블로그 검색 — 언급 수(blog_count) + 후기 제목(reason)
+    if enrich and results["combined"]:
+        region = query.split()[0] if query.split() else ""
+        _enrich_with_blogs(results["combined"], region)
+        # 블로그 언급 많은 순으로 정렬 (안정 정렬 — 동률은 API 정확도순 유지)
+        results["combined"].sort(key=lambda r: -(r.get("blog_count") or 0))
 
     kakao_count = len(results["kakao"]["restaurants"])
     naver_count = len(results["naver"]["restaurants"])
-    results["message"] = f"'{query}' 검색 결과: 카카오 {kakao_count}개 + 네이버 {naver_count}개 = 총 {kakao_count + naver_count}개"
+    results["message"] = (f"'{query}' 검색 결과 {len(results['combined'])}개 "
+                          f"(카카오 {kakao_count} + 네이버 {naver_count}, 중복 병합"
+                          f"{', 블로그 후기 언급순 정렬' if enrich else ''})")
 
     # 좌표 계약(#1): 위치 액션 출력 항목은 lat/lng 보장 — 좌표 없는 항목은 드롭.
     results["combined"] = [r for r in results["combined"]
@@ -241,6 +332,7 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
     # 단일 통화 — native 맛집 dict(name/category/address/phone/url/distance 등 풍부)를 items로.
     # (옛 records 5칸 변환은 distance/phone 등을 납작하게 버려 손실적이라 은퇴.) map_data는 별도 유지.
     results["items"] = results.pop("combined")
+    results["count"] = len(results["items"])
     return results
 
 
@@ -1155,12 +1247,20 @@ def execute(tool_input: dict, context) -> str:
             if simplified != query:
                 query = simplified
 
-        # 카카오 + 네이버 병합 검색
+        # 카카오 + 네이버 병합 검색 (+블로그 후기 추천 근거)
+        try:
+            limit = int(tool_input.get("limit") or 30)
+        except (TypeError, ValueError):
+            limit = 30
+        enrich = tool_input.get("enrich")
+        enrich = True if enrich is None else str(enrich).lower() not in ("false", "0", "no")
         result = search_restaurants_combined(
             query=query,
             x=tool_input.get("x"),
             y=tool_input.get("y"),
-            radius=tool_input.get("radius", 5000)
+            radius=tool_input.get("radius", 5000),
+            kakao_size=limit,
+            enrich=enrich
         )
         return json.dumps(result, ensure_ascii=False, indent=2)
 

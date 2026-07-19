@@ -417,7 +417,8 @@ async function wdLoad(){
   try{
     const r=await ibl('[others:feed]{op: "read", limit: 50}');
     if(r&&r.error) throw new Error(r.error);
-    wdItems=(r&&r.items)||[];
+    /* 보드 통화는 채팅방 관례(과거→최신) — 게시판형 목록은 최신 글이 맨 위 */
+    wdItems=((r&&r.items)||[]).slice().reverse();
     wdRender();
   }catch(e){ l.innerHTML='<div class="wh-empty">불러오기 실패: '+esc(String(e))+'</div>'; }
 }

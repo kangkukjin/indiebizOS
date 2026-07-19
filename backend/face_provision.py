@@ -110,6 +110,40 @@ def _ensure_origin_secret() -> dict:
         return {"created": False, "error": str(e)}
 
 
+def _ingress_config(hostname: str) -> dict:
+    """원격관리 터널의 ingress 선언 — 발급·부팅 재선언의 단일 소스.
+    httpHostHeader: cloudflared 의 Host 재작성(localhost:8765) 방지 — 없으면
+    is_direct_host 미스로 공개면 404 (2026-07-20 윈도우 실측)."""
+    return {"config": {"ingress": [
+        {"hostname": hostname, "service": "http://localhost:8765",
+         "originRequest": {"httpHostHeader": hostname}},
+        {"service": "http_status:404"}]}}
+
+
+def reassert_ingress() -> dict:
+    """부팅 시 ingress 재선언(멱등) — 원격 설정 드리프트 치유.
+
+    ingress 는 CF 쪽에 사는 원격 설정이라 코드가 원하는 모양이 바뀌어도(예:
+    httpHostHeader 추가) '주소 발급'을 다시 누르기 전엔 낡은 채 남는다. 부팅마다
+    재선언하면 코드 갱신이 자동 반영된다(창고 폴더 부팅 보장과 같은 철학).
+    발급된 몸(tunnel_token·tunnel_id·hostname)에서만 — 맥(로컬관리 config.yml)은
+    해당 없음. 실패는 조용히(오프라인 부팅 무해)."""
+    tcfg = api_tunnel.load_config()
+    host, tid = tcfg.get("hostname", ""), tcfg.get("tunnel_id", "")
+    if not (host and tid and tcfg.get("tunnel_token")):
+        return {"skipped": "발급된 원격관리 터널 없음"}
+    creds = _cf_creds()
+    if not (creds["token"] and creds["account_id"]):
+        return {"skipped": "CF 자격증명 없음"}
+    res = _cf_call("PUT", f"/accounts/{creds['account_id']}/cfd_tunnel/{tid}/configurations",
+                   creds["token"], body=_ingress_config(host))
+    if res["ok"]:
+        print(f"[Tunnel] ingress 재선언 OK ({host})")
+        return {"ok": True, "hostname": host}
+    print(f"[Tunnel] ingress 재선언 실패(무시): {_err_text(res)}")
+    return {"ok": False, "error": _err_text(res)}
+
+
 def _machine_slug() -> str:
     """이 머신의 기본 이름 — 서브도메인·터널명 제안용 (소문자 영숫자-하이픈)."""
     raw = (platform.node() or "indiebiz").split(".")[0].lower()
@@ -449,15 +483,10 @@ def provision_cloudflare(req: CloudflareReq):
     tunnel_token = res["result"] if isinstance(res["result"], str) else str(res["result"])
     steps.append({"step": "token", "ok": True, "detail": "실행 토큰 발급"})
 
-    # 3) ingress 원격 설정 — hostname → 백엔드 (원격관리형이라 config.yml 불필요)
-    # ★httpHostHeader: cloudflared 가 원본으로 보내는 Host 를 공개호스트로 고정.
-    #   없으면 서비스 기준(localhost:8765)으로 재작성돼 is_direct_host 미스 →
-    #   게이트웨이 미작동 → 공개면 404 (2026-07-20 윈도우 실측).
+    # 3) ingress 원격 설정 — hostname → 백엔드 (원격관리형이라 config.yml 불필요).
+    #    선언 본문은 _ingress_config 단일 소스(부팅 재선언 reassert_ingress 와 공유).
     res = _cf_call("PUT", f"/accounts/{acc}/cfd_tunnel/{tunnel_id}/configurations", token,
-                   body={"config": {"ingress": [
-                       {"hostname": hostname, "service": "http://localhost:8765",
-                        "originRequest": {"httpHostHeader": hostname}},
-                       {"service": "http_status:404"}]}})
+                   body=_ingress_config(hostname))
     if not res["ok"]:
         return fail(f"ingress 설정 실패: {_err_text(res)}", 502)
     steps.append({"step": "ingress", "ok": True, "detail": f"{hostname} → localhost:8765"})

@@ -171,6 +171,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Tunnel] 자동 시작 중 오류: {e}")
 
+    # 원격관리 터널 ingress 재선언 (멱등, 백그라운드) — 코드가 원하는 ingress 모양이
+    # 바뀌어도 '주소 발급' 재클릭 없이 부팅마다 CF 원격 설정에 수렴시킨다.
+    # 발급된 몸에서만 동작(맥의 로컬관리 config.yml 터널은 스킵), 오프라인 부팅 무해.
+    try:
+        import threading
+        from face_provision import reassert_ingress
+        threading.Thread(target=reassert_ingress, daemon=True,
+                         name="ingress-reassert").start()
+    except Exception as e:
+        print(f"[Tunnel] ingress 재선언 시작 실패 (무시): {e}")
+
     # 첫 실행 공유창고 — 창고 폴더(공유창고/0~4)를 부팅 시점에 보장한다(멱등).
     # 새 몸(fresh 설치)에서 내 창고 탭을 열기 전에도 폴더가 존재해, 사용자가
     # 파일 탐색기에서 바로 찾고 파일을 넣을 수 있다. (탭·매니페스트가 열릴 때도

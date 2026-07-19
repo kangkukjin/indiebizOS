@@ -305,6 +305,25 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     }
   };
 
+  const provisionUse = async (provider: 'cloudflare' | 'tailscale') => {
+    try {
+      setProvBusy(provider === 'tailscale' ? 'ts' : 'cf');
+      setProvResult(null);
+      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      });
+      const d = await r.json();
+      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '전환 완료' : '전환 실패') });
+      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+    } catch (err) {
+      setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
+    } finally {
+      setProvBusy('');
+    }
+  };
+
   const provisionCloudflare = async () => {
     if (!provDomain || !provSub.trim()) {
       setProvResult({ success: false, message: '도메인과 서브도메인을 입력하세요' });
@@ -625,6 +644,52 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
               </div>
             )}
 
+            {/* 공식 주소 스위치 — 발급(주소 만들기)과 분리된 명시적 선택.
+                발급된 주소들이 라디오로 나열되고, 고르는 쪽이 공식 주소(public_base)가 된다.
+                반대쪽 주소도 계속 서빙(이사 공지 기간 공존). */}
+            {(() => {
+              const cfHost = provStatus?.cloudflare?.provisioned ? provStatus.cloudflare.hostname : '';
+              const tsHost = provStatus?.tailscale?.logged_in ? provStatus.tailscale.dns_name : '';
+              const faces = [
+                ...(cfHost ? [{ key: 'cloudflare' as const, label: 'Cloudflare', url: `https://${cfHost}` }] : []),
+                ...(tsHost ? [{ key: 'tailscale' as const, label: 'Tailscale', url: `https://${tsHost}` }] : []),
+              ];
+              if (faces.length === 0) return null;
+              const activeBase = (provStatus?.identity?.public_base || '').replace(/\/$/, '');
+              return (
+                <div className="border border-gray-200 bg-white rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs font-medium text-gray-500">공식 주소 선택 — 이웃에게 알리는 주소</p>
+                  {faces.map(f => {
+                    const active = f.url === activeBase;
+                    return (
+                      <div key={f.key} className="flex items-center gap-2 text-sm">
+                        <span className={`w-3.5 h-3.5 rounded-full border-2 shrink-0 ${
+                          active ? 'border-[#D97706] bg-[#D97706]' : 'border-gray-300 bg-white'
+                        }`} />
+                        <code className={`px-1 rounded truncate ${active ? 'bg-amber-50 text-gray-900' : 'text-gray-600'}`}>{f.url}</code>
+                        <span className="text-xs text-gray-400 shrink-0">{f.label}</span>
+                        <div className="flex-1" />
+                        {active ? (
+                          <span className="text-xs text-[#B45309] font-medium shrink-0">공식 주소</span>
+                        ) : (
+                          <button
+                            onClick={() => provisionUse(f.key)}
+                            disabled={provBusy !== ''}
+                            className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium ${
+                              provBusy === '' ? 'bg-white border border-[#D97706] text-[#B45309] hover:bg-amber-50'
+                                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            이 주소 사용
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             {/* ① Tailscale — 원클릭, 도메인 불필요 */}
             <div className="border border-gray-200 bg-white rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -706,7 +771,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       }`}
                     >
-                      {provBusy === 'cf' ? '발급 중…' : '주소 발급'}
+                      {provBusy === 'cf' ? '발급 중…' : (provStatus?.cloudflare?.provisioned ? '재발급' : '주소 발급')}
                     </button>
                   </div>
                 </>

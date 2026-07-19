@@ -168,6 +168,9 @@ async def provision_status():
             "account_id_present": bool(creds["account_id"]),
             "install_hint": ("winget install Cloudflare.cloudflared" if os.name == "nt"
                              else "brew install cloudflared"),
+            # 직접서빙 발급 여부 — UI 얼굴 스위치의 재료 (맥의 Worker 얼굴은 여기 안 잡힘)
+            "hostname": tcfg.get("hostname", ""),
+            "provisioned": bool(tcfg.get("tunnel_token") and tcfg.get("hostname")),
         },
         "machine_slug": _machine_slug(),
     }
@@ -214,6 +217,68 @@ def provision_tailscale(req: TailscaleReq = TailscaleReq()):
     return {"success": True, "public_base": base, "dns_name": result.get("dns_name", ""),
             "applied": applied, "origin_secret": secret,
             "message": f"창고 주소가 발급되었습니다: {base or '(주소 확인 실패)'}"}
+
+
+# ── 공식 주소 스위치 — 발급(얼굴 만들기)과 분리된 명시적 전환 ─────────────────────
+
+class UseReq(BaseModel):
+    provider: str = ""    # "cloudflare" | "tailscale"
+
+
+@router.post("/use")
+def provision_use(req: UseReq):
+    """이미 발급된 두 얼굴 사이에서 공식 주소(public_base)를 옮긴다 — UI 의 스위치.
+
+    발급="주소 만들기", 스위치="어느 주소를 공식으로 쓸까"의 분리(2026-07-20 사용자
+    피드백: 재발급=전환은 아는 사람만 아는 의미론). 반대쪽 얼굴은 계속 서빙
+    (direct_hosts 불변 — moved_to 전파 기간 양쪽 공존). 그쪽 터널이 죽어 있으면 켠다."""
+    provider = (req.provider or "").strip().lower()
+    if provider not in ("cloudflare", "tailscale"):
+        return JSONResponse({"success": False, "error": "provider 는 cloudflare|tailscale"},
+                            status_code=400)
+    tcfg = api_tunnel.load_config()
+
+    if provider == "tailscale":
+        info = api_tunnel.tailscale_info()
+        if not info["logged_in"] or not info["dns_name"]:
+            return JSONResponse({"success": False, "error":
+                                 "Tailscale 주소가 아직 없습니다 — 먼저 발급하세요. "
+                                 + (info["error"] or "")}, status_code=400)
+        # funnel 은 선언형·멱등 — 죽어 있어도 이 호출이 되살리고 public_face 합류까지 한다
+        r = api_tunnel.start_funnel(int(tcfg.get("funnel_port") or 8765))
+        if not r.get("success"):
+            return JSONResponse({"success": False, "error": r.get("error", "funnel 시작 실패")},
+                                status_code=400)
+        host = info["dns_name"]
+    else:
+        host = tcfg.get("hostname", "")
+        if not (host and tcfg.get("tunnel_token")):
+            return JSONResponse({"success": False, "error":
+                                 "Cloudflare 주소가 아직 없습니다 — 먼저 발급하세요."},
+                                status_code=400)
+        if not api_tunnel.is_tunnel_running():
+            r = api_tunnel.start_tunnel(tcfg.get("tunnel_name", ""),
+                                        tunnel_token=tcfg.get("tunnel_token"))
+            if not r.get("success"):
+                return JSONResponse({"success": False,
+                                     "error": r.get("error", "터널 시작 실패")}, status_code=502)
+
+    base = f"https://{host}"
+    fcfg = public_face.load_config()
+    hosts = set(fcfg.get("direct_hosts") or [])
+    hosts.add(host)
+    fcfg.update({"provider": provider, "direct_hosts": sorted(hosts), "public_base": base})
+    public_face.save_config(fcfg)
+    try:
+        from api_launcher_web import reload_external_hostnames
+        reload_external_hostnames()
+    except Exception:
+        pass
+    tcfg.update({"provider": provider, "enabled": True})
+    api_tunnel.save_config(tcfg)
+    applied = public_face.apply_public_base(base)
+    return {"success": True, "provider": provider, "public_base": base, "applied": applied,
+            "message": f"공식 주소를 옮겼습니다: {base}"}
 
 
 # ── ② cloudflare 발급 — CF API 원격관리 터널 + DNS + 직접 서빙 ────────────────────

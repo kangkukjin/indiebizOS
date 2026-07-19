@@ -167,6 +167,7 @@
     "_slide_proto": "force_exclude (프로파일 명시)",
     "api": "top-level import: dotenv",
     "api_config": "force_exclude (프로파일 명시)",
+    "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
     "ffmpeg_provision": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
@@ -179,8 +180,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 173,
+    "total": 174,
     "engine": 160,
-    "blocklist": 13
+    "blocklist": 14
   }
 }

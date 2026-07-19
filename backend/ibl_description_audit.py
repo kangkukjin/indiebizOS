@@ -135,8 +135,10 @@ def _audit_batch_llm(batch: List[Dict], valid_names: List[str]) -> List[Dict]:
         f"{_VOCAB_ANCHOR}\n"
         f"[감사 대상 설명들]\n{listing}\n\n"
         "각 설명을 위 어휘 앵커에 비춰 *의미*만 검사하라. 플래그 기준(둘뿐):\n"
-        "  1. currency: 옛 통화 어휘(records/table 통화·두 모양 등) 사용 — 현재는 items 하나. (단, 이항 변환자의 '두 입력'은 정상.)\n"
-        "  2. contradiction: returns/ops와 *명백히* 어긋난 주장(예: returns:scalar인데 '목록 반환'). 애매하면 플래그하지 마라.\n"
+        "  1. currency: 옛 통화 어휘(records/table 통화·두 모양 등) 사용 — 현재는 items 하나. (단, 이항 변환자의 '두 입력'은 정상. "
+        "'items 통화'·'통합 통화 items'는 *현행* 어휘이므로 절대 플래그하지 마라.)\n"
+        "  2. contradiction: returns/ops와 *명백히* 어긋난 주장(예: returns:scalar인데 '목록 반환'). 애매하면 플래그하지 마라. "
+        "(op 분기 액션에서 '단건 op는 해당 객체 응답'처럼 설명이 op별 반환 차이를 *명시*하는 것은 모순이 아니라 정확한 문서다 — returns는 대표 op 기준의 액션 단위 선언일 뿐이다.)\n"
         "★다른 액션을 가리키는 교차참조의 존재 여부는 검사하지 마라(별도 결정적 검사가 한다). 모르면 침묵하라 — 오탐은 검사의 신뢰를 깎는다.\n"
         "문제 있는 항목만 JSON 배열로: "
         '[{"action":"node:name","kind":"currency|contradiction","issue":"한 줄 근거"}]. '

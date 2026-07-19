@@ -137,11 +137,25 @@ export const STATIC_APP_META = STATIC_DOMAINS.flatMap((d) =>
 );
 
 // openAppId: 런처 모드 선택기의 승격 앱에서 넘어온 딥링크 대상. 마운트/변경 시 그 앱을 바로 연다.
+// 매니페스트·레이아웃 로컬 캐시 — static 앱(코드 내장)은 첫 페인트에 바로 그려지지만
+// 매니페스트 앱은 백엔드 fetch 후에야 합쳐져 항상 두 박자로 나타났고, 백엔드가
+// auto-reload 재기동 중이면(워커 부팅 ~16초) 그 시간 내내 절반만 보였다.
+// 지난 응답을 캐시해 첫 페인트부터 전체 카탈로그를 그리고, fetch 결과로 갱신한다.
+const MANIFEST_CACHE_KEY = 'indiebiz_app_manifest_v1';
+const LAYOUT_CACHE_KEY = 'indiebiz_app_layout_v1';
+
+function readCache<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch { return fallback; }
+}
+
 export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {}) {
   // 레벨2로 열린 앱 id(인라인 el). null = 홈. 도메인→계기 2단이 없어져 단일 상태로 충분.
   const [openId, setOpenId] = useState<string | null>(null);
-  const [manifest, setManifest] = useState<AppInstrument[]>([]);
-  const [layout, setLayout] = useState<AppLayout>(EMPTY_LAYOUT);
+  const [manifest, setManifest] = useState<AppInstrument[]>(() => readCache(MANIFEST_CACHE_KEY, []));
+  const [layout, setLayout] = useState<AppLayout>(() => readCache(LAYOUT_CACHE_KEY, EMPTY_LAYOUT));
   const [storeOpen, setStoreOpen] = useState(false);
   const [makerOpen, setMakerOpen] = useState(false);  // 앱메이커 플로팅 패널(앱 저술 전용 AI)
   const [openFolderId, setOpenFolderId] = useState<string | null>(null);
@@ -153,8 +167,13 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   const [menu, setMenu] = useState<{ x: number; y: number; target?: { id: string; kind: 'app' | 'folder' } } | null>(null);
   const folderRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // 실패 시 백오프 재시도 — 백엔드 auto-reload 워커 교체 순간엔 fetch 가 즉시 실패하는데,
+  // 예전엔 다음 window focus 까지 방치돼 앱들이 한참 뒤에야 나타났다. 1→2→4…최대 10초.
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelay = useRef(1000);
+
   const loadManifest = useCallback(() => {
-    fetch('http://127.0.0.1:8765/launcher/instruments')
+    return fetch('http://127.0.0.1:8765/launcher/instruments')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       // ★window focus 마다 재조회하지만(새 앱 반영), 내용이 같으면 *같은 배열 참조를 유지*한다.
       //  새 배열로 갈아끼우면 APPS(useMemo dep) → 계기 el → GenericInstrument → ModePane 이
@@ -162,22 +181,39 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
       //  (맛집 검색 후 다른 창 보다 돌아오면 결과 증발 버그). 내용 동일 시 setManifest 를 건너뛴다.
       .then((d) => setManifest((prev) => {
         const next: AppInstrument[] = d.instruments || [];
-        return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
-      }))
-      .catch(() => { /* 백엔드 미기동 시 static 도메인만 표시 */ });
+        const s = JSON.stringify(next);
+        try { localStorage.setItem(MANIFEST_CACHE_KEY, s); } catch { /* 저장 실패 무해 */ }
+        return JSON.stringify(prev) === s ? prev : next;
+      }));
   }, []);
 
   const loadLayout = useCallback(() => {
-    api.getAppLayout().then(setLayout).catch(() => { /* 미기동/미생성 시 빈 레이아웃 */ });
+    return api.getAppLayout().then((l: AppLayout) => {
+      try { localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(l)); } catch { /* 저장 실패 무해 */ }
+      setLayout(l);
+    });
   }, []);
 
-  useEffect(() => {
-    loadManifest();
-    loadLayout();
-    const onFocus = () => { loadManifest(); loadLayout(); };
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
+  const loadAll = useCallback(() => {
+    Promise.all([loadManifest(), loadLayout()])
+      .then(() => { retryDelay.current = 1000; })
+      .catch(() => {
+        // 백엔드 미기동/재기동 중 — 캐시로 그린 화면 유지, 백오프 재시도로 자동 회복
+        if (retryTimer.current) clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(loadAll, retryDelay.current);
+        retryDelay.current = Math.min(retryDelay.current * 2, 10000);
+      });
   }, [loadManifest, loadLayout]);
+
+  useEffect(() => {
+    loadAll();
+    const onFocus = () => loadAll();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+    };
+  }, [loadAll]);
 
   // 레이아웃 낙관적 갱신 + 지속 (함수형 업데이트로 연속 드래그 race 방지)
   const mutate = useCallback((fn: (l: AppLayout) => AppLayout) => {
@@ -192,6 +228,7 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
         promoted: [...(prev.promoted || [])],
       });
       api.saveAppLayout(next).catch((e) => console.error('레이아웃 저장 실패:', e));
+      try { localStorage.setItem(LAYOUT_CACHE_KEY, JSON.stringify(next)); } catch { /* 저장 실패 무해 */ }
       return next;
     });
   }, []);

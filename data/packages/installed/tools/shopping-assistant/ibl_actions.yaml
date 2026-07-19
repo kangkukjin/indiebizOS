@@ -13,7 +13,7 @@ actions:
   used:
     returns: items
     fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
-    description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 통합 통화(records)로. 자주 하는 중고 검색을 어휘화.
+    description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 items 통화로. 자주 하는 중고 검색을 어휘화.
     group: research
     target_description: "중고 거래 매물 검색. source로 플랫폼 선택.\n- source=bunjang(기본): 번개장터 내부 API — 제목·가격·위치·링크가 담긴 깨끗한 매물. region=지역이름(예 \"청주\") 주면 위치 substring 후필터(반경 아님).\n- source=danggeun: 당근 — region=동이름(예 \"죽백동\") 주면 그 동네+인근 동으로 스코프('내동네' 검색, 지역ID 자동 해소). ★동네 매물 검색엔 이걸 우선. 제목·가격·설명·사진·링크.\n- source=joongna: 중고나라 web 검색(제목·가격·링크, best-effort 파싱).\n- source=naver: 네이버 카페 통합검색(중고나라 카페 등 게시글).\nquery=검색어(필수). limit=개수(기본15). region=지역 필터(bunjang=위치 substring / danggeun=동네 스코프)."
     target_key: query

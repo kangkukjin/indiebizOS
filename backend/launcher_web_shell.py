@@ -319,6 +319,18 @@ a{ color:var(--info); }
 .wh-item .dl:hover{ color:var(--info); }
 .wh-item .rm{ background:none; border:none; color:var(--dim); font-size:16px; padding:4px 8px; flex-shrink:0; }
 .wh-item .rm:hover{ color:var(--acc); }
+/* 폴더 = 접이식. 창고 안 상대경로를 트리로 되접어 보여준다(데스크탑 WarehouseView 와 같은 모양). */
+.wh-fd{ background:var(--bg2); border:1px solid var(--line); border-radius:11px; }
+.wh-fd>summary{ display:flex; align-items:center; gap:11px; padding:9px 11px; cursor:pointer; list-style:none; }
+.wh-fd>summary::-webkit-details-marker{ display:none; }
+.wh-fd>summary .tw{ color:var(--dim); font-size:11px; flex-shrink:0; transition:transform .12s; }
+.wh-fd[open]>summary .tw{ transform:rotate(90deg); }
+.wh-fd>summary .ic{ width:42px; height:42px; border-radius:8px; flex-shrink:0; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:20px; }
+.wh-fd>summary .tx{ flex:1; min-width:0; }
+.wh-fd>summary .tx .nm{ font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wh-fd>summary .tx .mt{ font-size:11px; color:var(--dim); margin-top:2px; }
+.wh-fd>.kids{ display:flex; flex-direction:column; gap:8px; padding:0 10px 10px 22px; margin-left:20px; border-left:1px solid var(--line); }
+.wh-fd .wf-more{ font-size:11px; color:var(--dim); padding:2px 4px; }
 .wh-empty{ padding:44px 14px; text-align:center; color:var(--dim); font-size:13px; line-height:1.7; }
 /* 공유창고 — 이웃 탭 (창고 피드) */
 .wh-tabs{ display:flex; gap:3px; background:var(--bg3); border-radius:9px; padding:3px; margin-left:6px; }
@@ -522,6 +534,10 @@ a{ color:var(--info); }
       <span class="wh-busy" id="whBusy"></span>
       <label class="wh-add" id="whAddBtn">
         <input type="file" id="whFile" multiple style="display:none" onchange="whUpload(this.files)">＋ 파일 올리기</label>
+      <!-- 브라우저는 폴더를 통째로 못 보낸다 — webkitdirectory 로 안의 파일을 전부 받아
+           각 파일의 webkitRelativePath(하위 경로)를 붙여 올린다(맥은 add 가 통째 복사). -->
+      <label class="wh-add" id="whAddDirBtn">
+        <input type="file" id="whDir" webkitdirectory directory multiple style="display:none" onchange="whUpload(this.files)">＋ 폴더 올리기</label>
       <button class="iconbtn" title="새로고침" onclick="whRefresh()">↻</button>
     </div>
     <div id="whMine">

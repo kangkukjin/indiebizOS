@@ -124,6 +124,8 @@ def poll_warehouse(url: str) -> Dict:
         files = data.get("files") or []
         title = data.get("title") or ""
         has_restricted = 1 if data.get("has_restricted") else 0
+        # 상대가 목록을 상한에서 잘랐다고 신고하면 "안 보이는 것"과 "사라진 것"을 가를 수 없다.
+        truncated = bool(data.get("truncated"))
     except Exception as e:
         with _db_lock, _conn() as c:
             c.execute("""
@@ -167,7 +169,9 @@ def poll_warehouse(url: str) -> Dict:
                 """, (base, path, mtime, fbytes, furl, kind, now))
                 new_events += 1
         # 매니페스트에서 사라진 파일 = 스냅샷에서도 제거 (조용히 — 트윗 삭제처럼 피드 무이벤트)
-        gone = [p for p in existing if p not in seen_paths]
+        # ★단 절단 신고를 받았으면 삭제 판정을 보류한다. 상한에 밀려 목록에서 빠진 것뿐일 수
+        #   있고, 그걸 지우면 다음 폴링에 같은 파일이 new 로 되살아나 피드가 요동친다.
+        gone = [] if truncated else [p for p in existing if p not in seen_paths]
         for p in gone:
             c.execute("DELETE FROM snapshots WHERE wh_url=? AND path=?", (base, p))
         c.execute("""
@@ -198,18 +202,79 @@ def poll_all() -> List[Dict]:
     return results
 
 
-def get_feed(limit: int = 100, wh_url: Optional[str] = None) -> List[Dict]:
-    """피드 조회 — 내가 새로 본 순(seen_at) → 파일 자체 시간(mtime) 순."""
+GROUP_MIN = 3           # 한 폴링에서 같은 폴더에 이만큼 이상 = 한 줄로 접는다
+GROUP_ITEMS_CAP = 20    # 접힌 줄이 품고 가는 내역 수(개수는 count 가 사실대로 말한다)
+_SCAN_CAP = 5000        # 묶기 위해 훑는 원장 행 수 상한
+
+
+def _group_feed(rows: List[Dict], limit: int) -> List[Dict]:
+    """폴더 단위로 접기 — 폴더 하나 던져넣은 게 이웃 타임라인에 N 연속 트윗이 되는 걸 막는다.
+
+    묶는 키 = (창고, 폴링 시각, 종류, 최상위 폴더). seen_at 이 한 폴링에서 같은 값이므로
+    "이번에 이 폴더에 들어온 것들"이 자연히 한 덩어리가 된다. 원장(feed 테이블)은 파일
+    단위 그대로 두고 여기서 표현만 접는다 — 스키마 변경 없음, 기준 바꾸기도 쉽다.
+
+    루트 파일(경로에 / 없음)은 묶지 않는다 — 그건 낱개 트윗이 맞다.
+    """
+    buckets: Dict[tuple, Dict] = {}
+    order: List[tuple] = []
+    for r in rows:
+        path = r.get("path") or ""
+        folder = path.split("/")[0] if "/" in path else None
+        if folder is None:
+            key = ("__solo__", r.get("id"))
+        else:
+            key = (r.get("wh_url"), r.get("seen_at"), r.get("kind"), folder)
+        if key not in buckets:
+            buckets[key] = {"folder": folder, "rows": []}
+            order.append(key)
+        buckets[key]["rows"].append(r)
+
+    out: List[Dict] = []
+    for key in order:
+        b = buckets[key]
+        members = b["rows"]
+        if b["folder"] is None or len(members) < GROUP_MIN:
+            out.extend(members)          # 접을 만큼이 아니면 있는 그대로
+        else:
+            head = members[0]
+            out.append({
+                "group": True,
+                "folder": b["folder"],
+                "path": b["folder"],
+                "count": len(members),
+                "bytes": sum((m.get("bytes") or 0) for m in members),
+                "mtime": max((m.get("mtime") or "") for m in members),
+                "kind": head.get("kind"),
+                "wh_url": head.get("wh_url"),
+                "seen_at": head.get("seen_at"),
+                "url": head.get("url"),
+                "items": members[:GROUP_ITEMS_CAP],
+            })
+        if len(out) >= limit:
+            break
+    return out[:limit]
+
+
+def get_feed(limit: int = 100, wh_url: Optional[str] = None,
+             group: bool = True) -> List[Dict]:
+    """피드 조회 — 내가 새로 본 순(seen_at) → 파일 자체 시간(mtime) 순.
+
+    group=True 면 폴더 단위로 접어서 limit '줄'을 채운다. 접기 전 원장을 넉넉히 훑어야
+    (한 폴더 폭주가 창을 다 먹지 않게) 이전 소식까지 같이 올라온다.
+    """
     _init_db()
+    lim = max(1, min(500, limit))
     q = "SELECT * FROM feed"
     params: list = []
     if wh_url:
         q += " WHERE wh_url=?"
         params.append(normalize_base(wh_url))
     q += " ORDER BY seen_at DESC, mtime DESC, id DESC LIMIT ?"
-    params.append(max(1, min(500, limit)))
+    params.append(_SCAN_CAP if group else lim)
     with _db_lock, _conn() as c:
-        return [dict(r) for r in c.execute(q, params).fetchall()]
+        rows = [dict(r) for r in c.execute(q, params).fetchall()]
+    return _group_feed(rows, lim) if group else rows
 
 
 def _match_rank(path: str, q: str) -> int:

@@ -10,7 +10,7 @@
  *   백엔드: /warehouse-feed/*. 둘 다 로컬 전용 — 터널·Worker 미노출.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star } from 'lucide-react';
+import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight } from 'lucide-react';
 
 const API = 'http://127.0.0.1:8765';
 
@@ -30,6 +30,9 @@ interface WfFeedItem {
   id?: number; wh_url: string; path: string; mtime: string; bytes: number;
   url: string; kind?: string; seen_at: string;
   neighbor_name: string; neighbor_home: string;
+  /* 폴더 단위로 접힌 줄 — 한 폴링에서 같은 폴더에 GROUP_MIN 이상 들어왔을 때.
+     원장은 파일 단위 그대로고 여기 표현만 접힌다(warehouse_feed._group_feed). */
+  group?: boolean; folder?: string; count?: number; items?: WfFeedItem[];
 }
 
 const IMG_EXT = /\.(jpe?g|png|gif|webp)$/i;
@@ -50,6 +53,38 @@ function fileIcon(name: string) {
   return FileIcon;
 }
 
+/* 창고 안 상대경로("매매/망의 시대.txt")를 폴더 트리로 되접는다. 임의 깊이.
+   표시만 짧아지고(파일명), 열기·내려받기·빼기의 키는 전체 경로 f.name 그대로 쓴다. */
+interface WhNode { dirs: Record<string, WhNode>; files: { f: WhFile; label: string }[] }
+
+function whTree(files: WhFile[]): WhNode {
+  const root: WhNode = { dirs: {}, files: [] };
+  for (const f of files) {
+    const parts = f.name.split('/');
+    let node = root;
+    for (const seg of parts.slice(0, -1)) {
+      if (!node.dirs[seg]) node.dirs[seg] = { dirs: {}, files: [] };
+      node = node.dirs[seg];
+    }
+    node.files.push({ f, label: parts[parts.length - 1] });
+  }
+  return root;
+}
+
+/* 폴더 요약 = 하위 전체 개수·크기 + 가장 최근 mtime(폴더 정렬 키 — 목록이 최신순이므로) */
+function whAgg(node: WhNode): { count: number; bytes: number; mtime: string } {
+  let count = node.files.length;
+  let bytes = node.files.reduce((s, { f }) => s + (f.bytes || 0), 0);
+  let mtime = node.files.reduce((m, { f }) => (f.mtime > m ? f.mtime : m), '');
+  for (const sub of Object.values(node.dirs)) {
+    const a = whAgg(sub);
+    count += a.count;
+    bytes += a.bytes;
+    if (a.mtime > mtime) mtime = a.mtime;
+  }
+  return { count, bytes, mtime };
+}
+
 function openExternalUrl(url: string) {
   const el = (window as any).electron;
   if (el?.openExternal) el.openExternal(url);
@@ -57,13 +92,13 @@ function openExternalUrl(url: string) {
 }
 
 /** 이웃 창고의 파일 한 줄 — 피드와 검색이 같은 줄을 쓴다. */
-function FileRow({ f, onRetweet }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void }) {
+function FileRow({ f, onRetweet, label }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void; label?: string }) {
   const Icon = fileIcon(f.path);
   return (
     <li className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
       <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-1" />
-      <div className="flex-1 min-w-0 cursor-pointer" title="파일 열기" onClick={() => openExternalUrl(f.url)}>
-        <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{f.path}</div>
+      <div className="flex-1 min-w-0 cursor-pointer" title={f.path} onClick={() => openExternalUrl(f.url)}>
+        <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{label ?? f.path}</div>
         <div className="text-[11px] text-stone-400">
           <span className="text-[#B45309]/70 mr-1.5">{f.neighbor_name}</span>
           {f.kind === 'new' && <span className="mr-1.5 px-1 rounded bg-amber-100 text-[#B45309]">새 파일</span>}
@@ -92,6 +127,54 @@ function FileRow({ f, onRetweet }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) =
       >
         <Repeat2 className="w-4 h-4" />
       </button>
+    </li>
+  );
+}
+
+/** 폴더 단위로 접힌 피드 줄 — "이웃이 폴더 하나를 올렸다"를 한 줄로. 펼치면 안의 파일들. */
+function GroupRow({ g, onRetweet }: { g: WfFeedItem; onRetweet: (f: WfFeedItem) => void }) {
+  const shown = g.items || [];
+  const rest = (g.count || shown.length) - shown.length;
+  return (
+    <li>
+      <details className="group/fd rounded-xl bg-white border border-stone-200">
+        <summary className="flex items-center gap-3 px-3 py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="w-4 h-4 text-stone-400 shrink-0 transition-transform group-open/fd:rotate-90" />
+          <Folder className="w-5 h-5 text-stone-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-stone-800 truncate">{g.folder}</div>
+            <div className="text-[11px] text-stone-400">
+              <span className="text-[#B45309]/70 mr-1.5">{g.neighbor_name}</span>
+              {g.kind === 'new' && <span className="mr-1.5 px-1 rounded bg-amber-100 text-[#B45309]">새 파일 {g.count}개</span>}
+              {g.kind === 'changed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">갱신 {g.count}개</span>}
+              {g.kind === 'seed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">{g.count}개</span>}
+              {fmtBytes(g.bytes || 0)} · {(g.mtime || '').replace('T', ' ')}
+            </div>
+          </div>
+          <button
+            className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
+            title={`${g.neighbor_name}의 창고 열기`}
+            onClick={(e) => { e.preventDefault(); if (g.neighbor_home) openExternalUrl(g.neighbor_home); }}
+          >
+            <Package className="w-4 h-4" />
+          </button>
+        </summary>
+        <ul className="pl-4 pr-2 pb-2 space-y-1.5 border-l border-stone-100 ml-5">
+          {shown.map((f) => (
+            <FileRow
+              key={`${f.wh_url}:${f.id ?? f.path}`}
+              f={{ ...f, neighbor_name: g.neighbor_name, neighbor_home: g.neighbor_home }}
+              label={f.path.split('/').pop()}
+              onRetweet={onRetweet}
+            />
+          ))}
+          {rest > 0 && (
+            <li className="px-3 py-1.5 text-[11px] text-stone-400">
+              외 {rest}개 — 창고를 열어 전부 보기
+            </li>
+          )}
+        </ul>
+      </details>
     </li>
   );
 }
@@ -527,11 +610,19 @@ function NeighborsPane() {
         ) : (
           <ul className="px-5 py-3 space-y-1.5">
             {items.map((f) => (
-              <FileRow
-                key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
-                f={f}
-                onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
-              />
+              f.group ? (
+                <GroupRow
+                  key={`g:${f.wh_url}:${f.folder}:${f.seen_at}:${f.kind}`}
+                  g={f}
+                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
+                />
+              ) : (
+                <FileRow
+                  key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
+                  f={f}
+                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0 })}
+                />
+              )
             ))}
           </ul>
         )}
@@ -676,7 +767,7 @@ export function WarehouseView() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]"
             onClick={pickFiles}
           >
-            <FilePlus className="w-3.5 h-3.5" /> 파일 넣기
+            <FilePlus className="w-3.5 h-3.5" /> 파일·폴더 넣기
           </button>
         )}
         {tab === 'mine' && (
@@ -746,14 +837,57 @@ export function WarehouseView() {
         ) : data.files.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
             <Package className="w-10 h-10" />
-            <p className="text-sm">비어 있어요 — 파일을 끌어다 놓으세요</p>
+            <p className="text-sm">비어 있어요 — 파일이나 폴더를 끌어다 놓으세요</p>
           </div>
         ) : (
           <ul className="px-5 py-3 space-y-1.5">
-            {data.files.map((f) => {
-              const Icon = fileIcon(f.name);
-              const isImg = IMG_EXT.test(f.name);
-              return (
+            {renderWhNode(whTree(data.files))}
+          </ul>
+        )}
+      </div>
+      </>)}
+    </div>
+  );
+
+  /* 파일 먼저(최신순 — 백엔드 정렬 유지), 폴더 나중(안에서 가장 최근 것 순) */
+  function renderWhNode(node: WhNode, depth = 0): React.ReactNode {
+    const dirNames = Object.keys(node.dirs).sort(
+      (a, b) => (whAgg(node.dirs[b]).mtime > whAgg(node.dirs[a]).mtime ? 1 : -1)
+    );
+    return (
+      <>
+        {node.files.map(({ f, label }) => renderWhFile(f, label))}
+        {dirNames.map((name) => {
+          const sub = node.dirs[name];
+          const a = whAgg(sub);
+          return (
+            <li key={`d:${depth}:${name}`}>
+              <details className="group/fd rounded-xl bg-white border border-stone-200">
+                <summary className="flex items-center gap-3 px-3 py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="w-4 h-4 text-stone-400 shrink-0 transition-transform group-open/fd:rotate-90" />
+                  <Folder className="w-5 h-5 text-stone-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-stone-800 truncate">{name}</div>
+                    <div className="text-[11px] text-stone-400">
+                      {a.count}개 · {fmtBytes(a.bytes)}
+                    </div>
+                  </div>
+                </summary>
+                <ul className="pl-4 pr-2 pb-2 space-y-1.5 border-l border-stone-100 ml-5">
+                  {renderWhNode(sub, depth + 1)}
+                </ul>
+              </details>
+            </li>
+          );
+        })}
+      </>
+    );
+  }
+
+  function renderWhFile(f: WhFile, label: string): React.ReactNode {
+    const Icon = fileIcon(f.name);
+    const isImg = IMG_EXT.test(f.name);
+    return (
                 <li
                   key={f.name}
                   className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40"
@@ -773,7 +907,7 @@ export function WarehouseView() {
                     title="열기 (사진 보기 · 동영상 재생 · 텍스트 읽기)"
                     onClick={() => openFile(f.name)}
                   >
-                    <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{f.name}</div>
+                    <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline" title={f.name}>{label}</div>
                     <div className="text-[11px] text-stone-400">{fmtBytes(f.bytes)} · {f.mtime.replace('T', ' ')}</div>
                   </div>
                   <a
@@ -792,12 +926,6 @@ export function WarehouseView() {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-      </>)}
-    </div>
-  );
+    );
+  }
 }

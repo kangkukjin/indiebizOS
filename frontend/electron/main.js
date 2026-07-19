@@ -1410,8 +1410,9 @@ function setupIPC() {
   // 임의 파일 선택 다이얼로그 (다중 선택, 확장자 무필터 — 공유창고 넣기)
   ipcMain.handle('select-files', async () => {
     const result = await dialog.showOpenDialog({
-      properties: ['openFile', 'multiSelections'],
-      title: '파일 선택',
+      // 폴더도 고를 수 있다 — 창고는 폴더를 구조 그대로 받는다(안의 파일이 각각 공개 항목).
+      properties: ['openFile', 'openDirectory', 'multiSelections'],
+      title: '파일 · 폴더 선택',
       buttonLabel: '선택'
     });
     if (result.canceled || result.filePaths.length === 0) {

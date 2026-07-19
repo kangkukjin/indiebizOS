@@ -130,7 +130,9 @@ async def page(slug: str, request: Request, x_showcase_secret: str = Header(defa
 _MANIFEST_ABOUT = ("이 노드가 공유하는 파일 목록(요청자 레벨로 절단). url 로 내용을 가져간다. "
                    "운영자가 이웃으로 승급하면 더 많은 파일이 열린다. has_restricted=잠긴 것 "
                    "존재(내용은 안 샘 = FOAF 라우팅 단서). 회원이면 login 계약대로 로그인해 "
-                   "쿠키를 받으면 같은 주소들이 더 열린다.")
+                   "쿠키를 받으면 같은 주소들이 더 열린다. name 은 창고 안 상대경로라 "
+                   "'폴더/파일' 로 폴더 구조가 실린다. truncated=true 면 목록이 상한에서 "
+                   "잘린 것(total=실제 개수) — 빠진 이름을 '삭제'로 해석하면 안 된다.")
 
 _WAREHOUSE_ROOT = _ROOT / "공유창고"
 _WAREHOUSE_LEVELS = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4"}
@@ -144,7 +146,12 @@ def _warehouse_title() -> str:
     except Exception:
         return "공유창고"
 _BIZDOC_NAME = "비즈니스문서.md"
-_WAREHOUSE_LIST_CAP = 500          # 창고 한 디렉토리 목록 상한(응답 폭주 방지)
+# 창고 전체(레벨 0..요청자, 하위폴더 재귀) 목록 상한 — 응답 폭주 방지용 러너웨이 가드.
+# ★옛 값 500 은 "한 디렉토리 목록" 상한이었다(디렉토리 단위 브라우징 시절). 뷰가 평면화되면서
+#   같은 상수가 창고 전체에 걸리게 범위가 넓어졌으므로 재산정. 절단 시 매니페스트가
+#   truncated 로 반드시 신고한다 — 조용히 자르면 이웃 폴러가 "삭제"로 오독한다.
+_WAREHOUSE_LIST_CAP = 5000
+_WAREHOUSE_OPEN_MAX = 50           # 이하면 홈에서 최상위 폴더를 펼쳐 둔다(그 이상은 접힘)
 
 
 def _warehouse_dir(level: int) -> Path:
@@ -208,9 +215,15 @@ def _parse_urlfile(p) -> tuple:
     return (target, warehouse) if target else ("", "")
 
 
-def _accessible_files(level: int, base: str = "") -> list:
-    """레벨 0..level 창고를 병합한 단일 파일 목록 — 방문자에게 레벨 구조를 흘리지 않는다.
-    같은 상대경로는 높은 레벨 판이 이김 → 비즈니스문서.md 가 자동으로 딱 1개(내 레벨 판)."""
+def _walk_accessible(level: int, base: str = "") -> tuple:
+    """(상한까지 자른 목록, 자르기 전 총 개수) — 절단 여부를 호출자가 알 수 있게 총계도 준다.
+
+    레벨 0..level 창고를 병합 — 방문자에게 레벨 구조를 흘리지 않는다. 같은 상대경로는 높은
+    레벨 판이 이김 → 비즈니스문서.md 가 자동으로 딱 1개(내 레벨 판).
+
+    폴더는 항목이 되지 않고 그 안의 파일만 나온다. 폴더 구조는 name 의 상대경로로 보존
+    ("매매/망의 시대.txt") — 레벨 병합만 평면이고, 사용자가 만든 폴더 의미는 살아남는다.
+    """
     from urllib.parse import quote
     seen = {}
     for lv in sorted((l for l in _WAREHOUSE_LEVELS if l <= level), reverse=True):
@@ -240,11 +253,41 @@ def _accessible_files(level: int, base: str = "") -> list:
             continue
     # 비즈니스문서(노드 소개)가 맨 앞, 나머지는 이름순
     files = sorted(seen.values(), key=lambda f: (f["name"] != _BIZDOC_NAME, f["name"]))
-    return files[:_WAREHOUSE_LIST_CAP]
+    return files[:_WAREHOUSE_LIST_CAP], len(files)
+
+
+def _accessible_files(level: int, base: str = "") -> list:
+    """_walk_accessible 의 목록만 — 총계가 필요 없는 호출자용."""
+    return _walk_accessible(level, base)[0]
+
+
+def _file_tree(files: list) -> dict:
+    """평면 목록의 상대경로("매매/망의 시대.txt")를 폴더 트리로 되접는다. 임의 깊이.
+    각 파일은 (원본 entry, 표시용 파일명) 쌍으로 담긴다 — 표시는 짧게, 키는 전체 경로."""
+    root = {"dirs": {}, "files": []}
+    for f in files:
+        parts = f["name"].split("/")
+        node = root
+        for seg in parts[:-1]:
+            node = node["dirs"].setdefault(seg, {"dirs": {}, "files": []})
+        node["files"].append((f, parts[-1]))
+    return root
+
+
+def _tree_agg(node: dict) -> tuple:
+    """(하위 전체 파일 수, 바이트 합) — 폴더 요약에 쓴다."""
+    cnt = len(node["files"])
+    size = sum(f.get("bytes") or 0 for f, _ in node["files"])
+    for sub in node["dirs"].values():
+        c2, s2 = _tree_agg(sub)
+        cnt += c2
+        size += s2
+    return cnt, size
 
 
 def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -> dict:
     _ensure_warehouses()
+    files, total = _walk_accessible(level, base)
     return {
         "about": _MANIFEST_ABOUT,
         "title": node_title,
@@ -256,7 +299,10 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
                   "content_type": "application/json",
                   "body": {"user_id": "<아이디>", "password": "<비밀번호>"},
                   "note": "성공 시 쿠키(pk)가 실리고 이후 /manifest·파일 url 이 내 레벨로 열린다."},
-        "files": _accessible_files(level, base),
+        "files": files,
+        # 절단 신고 — 이게 없으면 폴러가 밀려난 파일을 "삭제"로 오독한다(조용한 유실).
+        "truncated": total > len(files),
+        "total": total,
         "has_restricted": level < max(_WAREHOUSE_LEVELS),
     }
 
@@ -286,7 +332,9 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     title = _h.escape(_warehouse_title())
     # 단일 목록 — 방문자에게 레벨 구조(어느 파일이 어느 등급인지)를 보여주지 않는다.
     # 비즈니스문서는 내 레벨 판 1개만(높은 레벨 판이 이기는 병합 규칙이 자동으로 보장).
-    files = _accessible_files(level)
+    # ★평면인 건 '레벨'뿐이다. 사용자가 만든 폴더는 name 의 상대경로에 살아 있으므로
+    #   여기서 접이식 트리로 되살린다(레벨 은닉과 폴더 은닉은 서로 다른 문제).
+    files, total = _walk_accessible(level)
     # 방명록도 같은 절단면으로 — 상위 레벨 파일에 달린 글은 여기서 이미 빠져 있다.
     gb = _gb_for_level(level)
     gb_counts: dict = {}
@@ -295,7 +343,9 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
             gb_counts[_e["about"]] = gb_counts.get(_e["about"], 0) + 1
 
     # 이름 = 열기(브라우저가 표시·재생), ⬇ = 내려받기(원본 바이트). 해석은 가져간 쪽 몫.
-    def _row(f):
+    # label = 화면에 보일 이름(폴더 안에선 파일명만). f["name"] 은 창고 기준 전체 상대경로라
+    # 방명록 인용 키로는 그쪽을 쓴다 — 표시만 짧아지고 기록의 키는 안 흔들린다.
+    def _row(f, label=None):
         u = _h.escape(f["url"])
         sep = "&" if "?" in f["url"] else "?"
         # 소개한 파일(링크)이면 그 파일이 사는 창고로 건너뛰는 문 하나 — 발견이 한 홉 더 간다
@@ -306,12 +356,31 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         n = gb_counts.get(f["name"], 0)
         gb_link = (f'<a class="dl gb" href="#gb" data-p="{_h.escape(f["name"])}" '
                    f'onclick="return ab(this)" title="이 파일에 글 남기기">💬{n or ""}</a>')
-        return (f'<li><a href="{u}">{_h.escape(f["name"])}</a>'
+        return (f'<li><a href="{u}">{_h.escape(label if label is not None else f["name"])}</a>'
                 f'<span class="sz">{_fmt_bytes(f["bytes"])}</span>{wh_link}{gb_link}'
                 f'<a class="dl" href="{u}{sep}download=1" download '
                 f'title="내려받기">⬇</a></li>')
-    rows = "".join(_row(f) for f in files) or '<li class="empty">비어 있어요</li>'
-    sections = [f'<section><ul>{rows}</ul></section>']
+
+    # 파일 먼저, 폴더 나중 — 비즈니스문서(노드의 얼굴)가 맨 위에 남게 하는 정렬을 존중한다.
+    def _render(node, top=False):
+        out = []
+        lis = "".join(_row(f, label) for f, label in node["files"])
+        if lis:
+            out.append(f'<ul>{lis}</ul>')
+        for name in sorted(node["dirs"]):
+            sub = node["dirs"][name]
+            cnt, size = _tree_agg(sub)
+            # 작은 창고는 펼쳐 두고(방문자가 바로 봄), 커지면 접는다(뒤죽박죽 방지).
+            op = " open" if (top and total <= _WAREHOUSE_OPEN_MAX) else ""
+            out.append(f'<details class="fd"{op}><summary>📁 {_h.escape(name)}'
+                       f'<span class="sz">{cnt}개 · {_fmt_bytes(size)}</span></summary>'
+                       f'{_render(sub)}</details>')
+        return "".join(out)
+
+    body = _render(_file_tree(files), top=True) or '<ul><li class="empty">비어 있어요</li></ul>'
+    trunc_note = (f'<p class="locked">목록이 {_WAREHOUSE_LIST_CAP}개에서 잘렸어요 '
+                  f'(전체 {total}개).</p>' if total > len(files) else '')
+    sections = [f'<section>{body}{trunc_note}</section>']
 
     # ── 방명록 ── 인용(about)은 세 상태로 정직하게 표시: 현재 판 / 이전 판 / 없는 파일.
     from urllib.parse import quote as _q
@@ -363,6 +432,15 @@ ul{{list-style:none;padding:0;margin:0}} li{{padding:.45rem .2rem;border-bottom:
 li>a:first-child{{flex:1;min-width:0}}
 a{{color:#0a58ca;text-decoration:none;word-break:break-all}} a:hover{{text-decoration:underline}}
 .sz{{color:#999;font-size:.85rem;white-space:nowrap}} .empty{{color:#aaa}} .locked{{color:#888;font-size:.9rem}}
+/* 폴더 = 접이식. 안쪽은 들여쓰기로 계층을 보이되 세로선 하나로 가볍게. */
+.fd{{border-bottom:1px solid #eee}}
+.fd>summary{{padding:.45rem .2rem;cursor:pointer;display:flex;align-items:center;gap:1rem;list-style:none}}
+.fd>summary::-webkit-details-marker{{display:none}}
+.fd>summary::before{{content:"▸";color:#999;font-size:.8rem;flex-shrink:0}}
+.fd[open]>summary::before{{content:"▾"}}
+.fd>summary>.sz{{margin-left:auto}}
+.fd>ul,.fd>.fd{{margin-left:1rem;border-left:1px solid #eee;padding-left:.6rem}}
+.fd>.fd{{border-bottom:none}} .fd>ul>li:last-child{{border-bottom:none}}
 .dl{{color:#555;text-decoration:none;font-size:1.05rem;padding:0 .2rem;flex-shrink:0}} .dl:hover{{color:#0a58ca;text-decoration:none}}
 form{{display:flex;gap:.4rem;flex-wrap:wrap}} input{{padding:.35rem .5rem;border:1px solid #ccc;border-radius:6px;width:8.5rem}}
 button{{padding:.35rem .8rem;border:1px solid #222;background:#222;color:#fff;border-radius:6px;cursor:pointer}}
@@ -720,6 +798,37 @@ async def warehouse_admin_list(level: int = 0):
             "level_labels": {str(k): v for k, v in labels.items()}}
 
 
+_WH_ADD_MAX_FILES = 2000     # 폴더 하나를 넣을 때 딸려 들어갈 수 있는 파일 수 상한
+
+
+def _copy_folder_into(src: Path, dest_dir: Path):
+    """폴더를 하위 구조 그대로 창고에 복사 — (넣은 폴더 이름, 파일 수).
+
+    폴더는 창고에서 '한 덩어리'가 아니다. 안의 파일 하나하나가 공개 항목이 되고
+    폴더는 그 이름의 접두사로 남는다(_walk_accessible). 그래서 통째로 넣는 건
+    '안 열어본 하위 폴더까지 이 레벨로 공개'라는 뜻 — 상한과 자기포함 방어를 둔다.
+    """
+    import shutil
+    src_r = src.resolve()
+    # 목적지를 품은 폴더를 넣으면 복사가 자기를 다시 먹는다(무한 증식).
+    if str(dest_dir.resolve()).startswith(str(src_r) + os.sep):
+        raise ValueError("이 폴더 안에 창고가 들어 있어요 — 통째로는 넣을 수 없어요")
+    # 숨김(.DS_Store 등)은 세지도 넣지도 않는다 — 공개면도 어차피 숨김을 뺀다.
+    files = [p for p in src_r.rglob("*")
+             if p.is_file() and not any(s.startswith(".") for s in p.relative_to(src_r).parts)]
+    if not files:
+        raise ValueError("빈 폴더예요")
+    if len(files) > _WH_ADD_MAX_FILES:
+        raise ValueError(f"파일이 너무 많아요({len(files)}개, 상한 {_WH_ADD_MAX_FILES}개)")
+    dest = dest_dir / src_r.name
+    n = 2
+    while dest.exists():
+        dest = dest_dir / f"{src_r.name} ({n})"
+        n += 1
+    shutil.copytree(str(src_r), str(dest), ignore=shutil.ignore_patterns(".*"))
+    return dest.name, len(files)
+
+
 @router.post("/warehouse-admin/add")
 async def warehouse_admin_add(request: Request):
     try:
@@ -736,8 +845,17 @@ async def warehouse_admin_add(request: Request):
     added, skipped = [], []
     for raw in paths[:200]:
         src = Path(str(raw)).expanduser()
+        if src.is_dir():
+            try:
+                name, cnt = _copy_folder_into(src, dest_dir)
+                added.append(f"{name}/ ({cnt}개)")
+            except ValueError as e:
+                skipped.append({"path": str(raw), "reason": str(e)})
+            except Exception as e:
+                skipped.append({"path": str(raw), "reason": str(e)})
+            continue
         if not src.is_file():
-            skipped.append({"path": str(raw), "reason": "파일이 아니에요(폴더이거나 없음)"})
+            skipped.append({"path": str(raw), "reason": "없는 경로예요"})
             continue
         dest = dest_dir / src.name
         n = 2
@@ -792,9 +910,16 @@ async def warehouse_admin_file(level: int = 0, name: str = "", download: int = 0
 @router.post("/warehouse-admin/upload")
 async def warehouse_admin_upload(request: Request, level: int = 0, filename: str = ""):
     """원격 업로드 — raw body(멀티파트 아님). 원격 런처는 로컬 파일 경로가 없으므로
-    바이트를 직접 올린다(add=맥 로컬 복사의 원격 짝). 한 번에 한 파일."""
+    바이트를 직접 올린다(add=맥 로컬 복사의 원격 짝). 한 번에 한 파일.
+
+    filename 에 상대경로("사진/2024/a.jpg")가 오면 하위 폴더째 만든다 — 브라우저는
+    폴더를 통째로 못 보내므로 폴더 넣기 = 이 호출을 파일 수만큼 반복하는 것이다.
+    """
     lv = _admin_level(level)
-    name = os.path.basename((filename or "").strip()).lstrip(".")
+    # 경로는 살리되 각 마디는 살균: 숨김(.)·상위이동(..)·빈 마디를 떨어낸다.
+    segs = [s.strip().lstrip(".") for s in (filename or "").replace("\\", "/").split("/")]
+    segs = [s for s in segs if s and s not in (".", "..")]
+    name = "/".join(segs)
     if not name:
         raise HTTPException(status_code=400, detail="filename required")
     cl = request.headers.get("content-length")
@@ -808,13 +933,14 @@ async def warehouse_admin_upload(request: Request, level: int = 0, filename: str
     _ensure_warehouses()
     dest_dir = _warehouse_dir(lv)
     dest = _safe_rel(dest_dir, name)     # 경로이탈 방어(../ 등)
-    stem, suffix = dest.stem, dest.suffix
+    parent, stem, suffix = dest.parent, dest.stem, dest.suffix
     n = 2
     while dest.exists():
-        dest = dest_dir / f"{stem} ({n}){suffix}"
+        dest = parent / f"{stem} ({n}){suffix}"
         n += 1
+    parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(body)
-    return {"ok": True, "level": lv, "added": dest.name}
+    return {"ok": True, "level": lv, "added": str(dest.relative_to(dest_dir))}
 
 
 @router.get("/warehouse-admin/gb")

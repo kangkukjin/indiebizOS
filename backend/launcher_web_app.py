@@ -269,22 +269,61 @@ function whRender(){
   lv.innerHTML=h;
   /* 파일 목록 */
   const list=document.getElementById('whList'); const files=d.files||[];
-  if(!files.length){ list.innerHTML='<div class="wh-empty">📦 비어 있어요<br>＋ 파일 올리기로 이 레벨 창고에 넣으세요</div>'; return; }
-  list.innerHTML=files.map(f=>{
-    const enc=encodeURIComponent(f.name);
-    const url=whFileUrl(f.name);           /* 열기 = 사진 표시·동영상 재생·텍스트 열람 */
-    const isImg=/\\.(jpe?g|png|gif|webp)$/i.test(f.name);
-    const thumb=isImg
-      ? '<img src="'+url+'" onerror="this.style.display=\\'none\\'">'
-      : '<span class="ic">'+whIcon(f.name)+'</span>';
-    return '<div class="wh-item">'
-      +'<a class="op" href="'+url+'" target="_blank" rel="noopener">'+thumb+'</a>'
-      +'<a class="tx op" href="'+url+'" target="_blank" rel="noopener">'
-      +'<div class="nm">'+esc(f.name)+'</div>'
-      +'<div class="mt">'+whBytes(f.bytes)+' · '+esc((f.mtime||'').replace('T',' '))+'</div></a>'
-      +'<a class="dl" href="'+url+'&download=1" download title="내려받기">⬇</a>'
-      +'<button class="rm" title="빼기 (휴지통으로 이동 — 복구 가능)" onclick="whRemove(\\''+enc+'\\')">🗑</button></div>';
-  }).join('');
+  if(!files.length){ list.innerHTML='<div class="wh-empty">📦 비어 있어요<br>＋ 파일 올리기 · ＋ 폴더 올리기로 이 레벨 창고에 넣으세요</div>'; return; }
+  list.innerHTML=whRenderNode(whTree(files));
+}
+/* 창고 안 상대경로("매매/망의 시대.txt")를 폴더 트리로 되접는다. 임의 깊이.
+   표시만 파일명으로 짧아지고, 열기·내려받기·빼기의 키는 전체 경로 f.name 그대로. */
+function whTree(files){
+  const root={dirs:{}, files:[]};
+  for(const f of files){
+    const parts=f.name.split('/'); let node=root;
+    for(const seg of parts.slice(0,-1)){
+      if(!node.dirs[seg]) node.dirs[seg]={dirs:{}, files:[]};
+      node=node.dirs[seg];
+    }
+    node.files.push({f:f, label:parts[parts.length-1]});
+  }
+  return root;
+}
+/* 폴더 요약 = 하위 전체 개수·크기 + 가장 최근 mtime(폴더 정렬 키 — 목록이 최신순이므로) */
+function whAgg(node){
+  let count=node.files.length;
+  let bytes=node.files.reduce((s,x)=>s+(x.f.bytes||0),0);
+  let mtime=node.files.reduce((m,x)=>(x.f.mtime>m?x.f.mtime:m),'');
+  for(const k in node.dirs){ const a=whAgg(node.dirs[k]);
+    count+=a.count; bytes+=a.bytes; if(a.mtime>mtime) mtime=a.mtime; }
+  return {count:count, bytes:bytes, mtime:mtime};
+}
+/* 파일 먼저(최신순 — 백엔드 정렬 유지), 폴더 나중(안에서 가장 최근 것 순) */
+function whRenderNode(node){
+  let h=node.files.map(x=>whFileRow(x.f, x.label)).join('');
+  const names=Object.keys(node.dirs).sort((a,b)=>
+    whAgg(node.dirs[b]).mtime>whAgg(node.dirs[a]).mtime?1:-1);
+  for(const name of names){
+    const sub=node.dirs[name]; const a=whAgg(sub);
+    h+='<details class="wh-fd"><summary>'
+      +'<span class="tw">▶</span><span class="ic">📁</span>'
+      +'<span class="tx"><div class="nm">'+esc(name)+'</div>'
+      +'<div class="mt">'+a.count+'개 · '+whBytes(a.bytes)+'</div></span></summary>'
+      +'<div class="kids">'+whRenderNode(sub)+'</div></details>';
+  }
+  return h;
+}
+function whFileRow(f, label){
+  const enc=encodeURIComponent(f.name);
+  const url=whFileUrl(f.name);           /* 열기 = 사진 표시·동영상 재생·텍스트 열람 */
+  const isImg=/\\.(jpe?g|png|gif|webp)$/i.test(f.name);
+  const thumb=isImg
+    ? '<img src="'+url+'" onerror="this.style.display=\\'none\\'">'
+    : '<span class="ic">'+whIcon(f.name)+'</span>';
+  return '<div class="wh-item">'
+    +'<a class="op" href="'+url+'" target="_blank" rel="noopener">'+thumb+'</a>'
+    +'<a class="tx op" href="'+url+'" target="_blank" rel="noopener" title="'+esc(f.name)+'">'
+    +'<div class="nm">'+esc(label!==undefined?label:f.name)+'</div>'
+    +'<div class="mt">'+whBytes(f.bytes)+' · '+esc((f.mtime||'').replace('T',' '))+'</div></a>'
+    +'<a class="dl" href="'+url+'&download=1" download title="내려받기">⬇</a>'
+    +'<button class="rm" title="빼기 (휴지통으로 이동 — 복구 가능)" onclick="whRemove(\\''+enc+'\\')">🗑</button></div>';
 }
 async function whUpload(files){
   if(!files||!files.length) return;
@@ -293,15 +332,19 @@ async function whUpload(files){
   let ok=0, fail=0;
   for(let i=0;i<arr.length;i++){
     const f=arr[i]; busy.textContent='올리는 중… '+(i+1)+'/'+arr.length;
+    /* 폴더 올리기면 webkitRelativePath 가 "사진/2024/a.jpg" — 그 구조 그대로 창고에 만든다.
+       (f.path 는 drop 으로 걸어 들어온 항목이 채워 넣는 같은 뜻의 필드) */
+    const rel=f.webkitRelativePath||f._relPath||f.name;
     try{
-      const r=await fetch(API+'/portal/warehouse-admin/upload?level='+WH_LEVEL+'&filename='+encodeURIComponent(f.name),
+      const r=await fetch(API+'/portal/warehouse-admin/upload?level='+WH_LEVEL+'&filename='+encodeURIComponent(rel),
         {method:'POST', headers:{'Content-Type':f.type||'application/octet-stream'}, body:f});
       if(!r.ok){ let m='HTTP '+r.status; try{ const e=await r.json(); if(e&&e.detail) m=e.detail; }catch(_e){} throw new Error(m); }
       ok++;
-    }catch(e){ fail++; whErr(esc(f.name)+' 실패: '+e.message); }
+    }catch(e){ fail++; whErr(esc(rel)+' 실패: '+e.message); }
   }
   busy.textContent='';
   document.getElementById('whFile').value='';
+  const dirIn=document.getElementById('whDir'); if(dirIn) dirIn.value='';
   await whLoad(WH_LEVEL);
   if(fail && !ok) whErr(fail+'건 업로드 실패');
 }
@@ -355,24 +398,45 @@ function wfRender(){
   const sel=document.getElementById('wfCand');
   sel.innerHTML='<option value="">새 이웃으로…</option>'+wfCands.map(c=>'<option value="'+c.id+'">기존 이웃: '+esc(c.name)+'</option>').join('');
   const list=document.getElementById('wfFeed'); const items=(wfResults!=null?wfResults:wfItems);
-  wfShown=items;
+  wfShown=[];   /* 리트윗 대상(파일)만 렌더 순서대로 — 접힌 줄 안의 파일도 여기 들어간다 */
   if(!wfNb.length){ list.innerHTML='<div class="wh-empty">📡 창고이웃이 아직 없어요<br>＋ 창고이웃 등록으로 이웃의 창고 주소를 넣으면<br>창고의 변화가 여기로 흘러옵니다</div>'; return; }
   if(!items.length){ list.innerHTML='<div class="wh-empty">'+(wfResults!=null?'검색 결과가 없어요':'아직 새 소식이 없어요')+'</div>'; return; }
-  list.innerHTML=items.map((f,i)=>{
-    const kind=f.kind==='new'?'<span class="wf-kind">새 파일</span>'
-      :(f.kind==='changed'?'<span class="wf-kind" style="color:var(--dim)">갱신</span>':'');
-    return '<div class="wh-item">'
-      +'<span class="ic">'+whIcon(f.path)+'</span>'
-      +'<div class="tx">'
-      +'<a class="op" style="display:block" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기"><div class="nm">'+esc(f.path)+'</div></a>'
-      +'<div class="mt">'+kind+'<span style="color:var(--acc)">'+esc(f.neighbor_name)+'</span> · '+whBytes(f.bytes||0)+' · '+esc((f.mtime||'').replace('T',' '))+'</div>'
-      +'</div>'
-      +'<a class="dl" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기">↗</a>'
-      +'<a class="dl" href="'+esc(f.neighbor_home||'#')+'" target="_blank" rel="noopener" title="'+esc(f.neighbor_name)+'의 창고 열기">📦</a>'
-      +'<button class="rm" title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성)" onclick="wfRetweet('+i+')">📣</button>'
-      +'<a class="dl" href="'+esc(f.url)+(f.url&&f.url.indexOf('?')>=0?'&':'?')+'download=1" title="내려받기">⬇</a>'
-      +'</div>';
-  }).join('');
+  list.innerHTML=items.map(f=>f.group?wfGroupRow(f):wfFileRow(f)).join('');
+}
+/* 폴더 단위로 접힌 줄 — 이웃이 폴더 하나 올린 걸 N 연속 소식이 아니라 한 줄로.
+   원장은 파일 단위 그대로고 표현만 접힌다(warehouse_feed._group_feed). */
+function wfGroupRow(g){
+  const shown=g.items||[]; const rest=(g.count||shown.length)-shown.length;
+  const kind=g.kind==='new'?'<span class="wf-kind">새 파일 '+g.count+'개</span>'
+    :(g.kind==='changed'?'<span class="wf-kind" style="color:var(--dim)">갱신 '+g.count+'개</span>'
+                        :'<span class="wf-kind" style="color:var(--dim)">'+g.count+'개</span>');
+  return '<details class="wh-fd"><summary>'
+    +'<span class="tw">▶</span><span class="ic">📁</span>'
+    +'<span class="tx"><div class="nm">'+esc(g.folder)+'</div>'
+    +'<div class="mt">'+kind+'<span style="color:var(--acc)">'+esc(g.neighbor_name)+'</span> · '
+    +whBytes(g.bytes||0)+' · '+esc((g.mtime||'').replace('T',' '))+'</div></span>'
+    +'<a class="dl" href="'+esc(g.neighbor_home||'#')+'" target="_blank" rel="noopener" title="'+esc(g.neighbor_name)+'의 창고 열기">📦</a>'
+    +'</summary><div class="kids">'
+    +shown.map(f=>wfFileRow(Object.assign({}, f,
+        {neighbor_name:g.neighbor_name, neighbor_home:g.neighbor_home}), f.path.split('/').pop())).join('')
+    +(rest>0?'<div class="wf-more">외 '+rest+'개 — 창고를 열어 전부 보기</div>':'')
+    +'</div></details>';
+}
+function wfFileRow(f, label){
+  const i=wfShown.push(f)-1;      /* 리트윗은 이 인덱스로 원본 항목을 찾는다 */
+  const kind=f.kind==='new'?'<span class="wf-kind">새 파일</span>'
+    :(f.kind==='changed'?'<span class="wf-kind" style="color:var(--dim)">갱신</span>':'');
+  return '<div class="wh-item">'
+    +'<span class="ic">'+whIcon(f.path)+'</span>'
+    +'<div class="tx">'
+    +'<a class="op" style="display:block" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="'+esc(f.path)+'"><div class="nm">'+esc(label!==undefined?label:f.path)+'</div></a>'
+    +'<div class="mt">'+kind+'<span style="color:var(--acc)">'+esc(f.neighbor_name)+'</span> · '+whBytes(f.bytes||0)+' · '+esc((f.mtime||'').replace('T',' '))+'</div>'
+    +'</div>'
+    +'<a class="dl" href="'+esc(f.url)+'" target="_blank" rel="noopener" title="파일 열기">↗</a>'
+    +'<a class="dl" href="'+esc(f.neighbor_home||'#')+'" target="_blank" rel="noopener" title="'+esc(f.neighbor_name)+'의 창고 열기">📦</a>'
+    +'<button class="rm" title="리트윗 — 내 창고에 이 파일을 소개(링크 파일 생성)" onclick="wfRetweet('+i+')">📣</button>'
+    +'<a class="dl" href="'+esc(f.url)+(f.url&&f.url.indexOf('?')>=0?'&':'?')+'download=1" title="내려받기">⬇</a>'
+    +'</div>';
 }
 async function wfRetweet(i){
   const f=(wfShown||[])[i]; if(!f) return;

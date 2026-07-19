@@ -21,6 +21,7 @@ interface WhData {
   title: string; public_url: string; level: number;
   levels: Record<string, number>; files: WhFile[];
   level_labels: Record<string, string>;
+  root_path?: string; folder_path?: string;
 }
 interface WfNeighbor {
   contact_id: number; neighbor_id: number; name: string; info_level: number;
@@ -1139,6 +1140,21 @@ export function WarehouseView() {
       {tab === 'business' && <div className="flex-1 min-h-0"><BusinessInstrumentView /></div>}
 
       {tab === 'mine' && (<>
+      {/* 창고 폴더 위치 — 이 몸의 창고가 디스크 어디에 사는지 (클릭 = 파일 탐색기로 열기) */}
+      {data?.root_path && (
+        <div className="flex items-center gap-1.5 px-5 py-1.5 border-b border-stone-100 bg-stone-50/70 shrink-0 text-[11px] text-stone-500 min-w-0">
+          <Folder className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+          <span className="shrink-0">창고 폴더:</span>
+          <button
+            className="font-mono text-stone-600 hover:text-[#B45309] hover:underline truncate"
+            title="파일 탐색기로 열기"
+            onClick={() => (window as any).electron?.openExternal?.('file://' + data.root_path)}
+          >
+            {data.root_path}
+          </button>
+          <span className="text-stone-400 shrink-0 hidden sm:inline">— 0~4 하위폴더에 파일을 직접 넣어도 됩니다</span>
+        </div>
+      )}
       {/* 레벨 탭 — 선택 = 보이는 폴더 전환 */}
       <div className="flex items-center gap-1.5 px-5 py-2.5 border-b border-stone-200 bg-white/60 shrink-0">
         {[0, 1, 2, 3, 4].map((lv) => {

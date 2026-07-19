@@ -884,7 +884,9 @@ async def warehouse_admin_list(level: int = 0):
     labels = getattr(core, "LEVEL_LABELS", {}) or {}
     return {"title": _warehouse_title(), "public_url": (base + "/") if base else "",
             "levels": counts, "level": lv, "files": files,
-            "level_labels": {str(k): v for k, v in labels.items()}}
+            "level_labels": {str(k): v for k, v in labels.items()},
+            # 이 몸의 창고가 디스크 어디에 사는지 — UI 상단 표기용 (새 PC에서 "창고가 어디지?" 답)
+            "root_path": str(_WAREHOUSE_ROOT), "folder_path": str(d)}
 
 
 _WH_ADD_MAX_FILES = 2000     # 폴더 하나를 넣을 때 딸려 들어갈 수 있는 파일 수 상한

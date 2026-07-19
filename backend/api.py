@@ -171,6 +171,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Tunnel] 자동 시작 중 오류: {e}")
 
+    # 첫 실행 공유창고 — 창고 폴더(공유창고/0~4)를 부팅 시점에 보장한다(멱등).
+    # 새 몸(fresh 설치)에서 내 창고 탭을 열기 전에도 폴더가 존재해, 사용자가
+    # 파일 탐색기에서 바로 찾고 파일을 넣을 수 있다. (탭·매니페스트가 열릴 때도
+    # _ensure_warehouses 가 다시 돌므로 여기 실패는 치명적이지 않다.)
+    try:
+        from api_portal import _ensure_warehouses
+        _ensure_warehouses()
+    except Exception as e:
+        print(f"[공유창고] 폴더 보장 실패 (무시): {e}")
+
     # IBL 용례 임베딩 모델 백그라운드 로딩 (서버 블로킹 없음)
     try:
         from ibl_usage_db import IBLUsageDB

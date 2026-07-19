@@ -286,6 +286,18 @@ def _op_seq_continues(d):
             and d.get("success") is False,
             f"steps={done}/{tot} failed={d.get('statements_failed')} success={d.get('success')}")
 
+def _op_seq_boundary_isolates(d):
+    """`;` 경계=독립 — 앞 문장이 **성공**해도 그 결과가 뒤 문장으로 넘어가면 안 된다.
+    프로브: 성공하는 검색 ; 빈 입력의 take. 누수면 take 가 앞 문장의 items 를 받아
+    성공해 버리고(2/2 success=True), 단절돼 있으면 take 가 입력 통화 없음으로 실패한다
+    (1/2 success=False — 실패가 정답인 단언). _op_seq_continues 는 실패 경로만 보므로
+    이 사각(성공 경로 누수)은 이 케이스만 잡는다(2026-07-19 실측으로 발견된 회귀 가드)."""
+    if not isinstance(d, dict):
+        return False, f"파이프 결과 아님: {str(d)[:60]}"
+    done, tot = d.get("steps_completed"), d.get("steps_total")
+    return (d.get("success") is False and done == 1 and tot == 2,
+            f"steps={done}/{tot} success={d.get('success')} (뒤 문장이 앞 결과를 못 받아 실패=정답)")
+
 def _op_pipe_still_stops(d):
     """회귀 가드 — `>>` 는 문장 *안*에서 여전히 실패 시 중단해야 한다(`;` 와 뒤섞이면 안 됨)."""
     if not isinstance(d, dict):
@@ -306,6 +318,7 @@ def _op_json_string_failure(d):
 OPERATORS = [
   ("JSON문자열 실패감지", '[table:document]{} >> [table:take]{n: 1}', _op_json_string_failure),
   ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search_naver]{query: "AI"}', _op_seq_continues),
+  ("; 경계=prev 단절",    '[sense:search_naver]{query: "AI"} ; [table:take]{n: 3}', _op_seq_boundary_isolates),
   (">> 실패시 중단(회귀)", '[self:read]{path: "__없는파일__.md"} >> [table:take]{n: 1}', _op_pipe_still_stops),
   ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search_naver]{query: "AI"}', _op_fallback_string_err),
   ("?? 성공→단축평가",   '[sense:search_naver]{query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),

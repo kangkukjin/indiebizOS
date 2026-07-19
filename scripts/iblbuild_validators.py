@@ -468,6 +468,16 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
                         f"또는 ibl_nodes_src)에 `fixture: '[...]'` 한 줄 추가 "
                         f"(실행 인자 의존이면 `exempt: '<사유>'`)"
                     )
+            elif action.get("fixture") or action.get("exempt"):
+                # 역방향 가드: 확률대상 밖(effect·transform) 액션의 fixture/exempt 는 잉여이고,
+                # fixture 는 §1B 가 실제로 실행하므로 부작용 액션이면 점검마다 부작용을 낸다
+                # (2026-07-19 실측: mkdir fixture 가 검진마다 폴더를 만들고 있었다).
+                field = "fixture" if action.get("fixture") else "exempt"
+                issues.append(
+                    f"{node_name}:{action_name}: returns:{action.get('returns')} 인데 "
+                    f"`{field}:` 필드 보유 — items/scalar 전용 필드다. 제거할 것"
+                    + (" (부작용 액션 fixture 는 건강검진마다 부작용 실행)" if field == "fixture" else "")
+                )
     return issues
 
 

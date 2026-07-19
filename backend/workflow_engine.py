@@ -241,6 +241,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
     for i, step in enumerate(steps):
         if i < _seq["skip_until"]:
             continue  # 실패한 문장의 남은 step — 건너뛴다(다음 문장 경계까지)
+        if isinstance(step, dict) and step.get("_seq_boundary"):
+            # 문장 경계 — 앞 문장이 성공했어도 결과를 넘기지 않는다(독립).
+            # 실패 경로는 각 _handle_failure 뒤에서 리셋하지만, 성공 경로는 여기가 유일한 관문
+            # (없으면 _auto_inject_prev 가 앞 문장 결과를 다음 문장 첫 step 에 무조건 주입한다).
+            prev_result = ""
         step_start = time.time()
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)

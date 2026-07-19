@@ -499,14 +499,24 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
       if (ctx) code = rowAction(code, ctx);
       const d = await runIBL(code);
       if (d?.error || d?.success === false) { alert(String(d.error || d.message || '실패')); return false; }
-      if (opts?.back && drill) { setDrill(null); setComposeText(''); setComposeCh(''); }
-      else await refreshCurrent();
+      if (opts?.back && drill) {
+        setDrill(null); setComposeText(''); setComposeCh('');
+        // ★목록도 재조회 — 삭제된 행이 옛 목록에 남지 않게(원격 runMode() 파리티).
+        //   refreshCurrent()는 방금 닫은 드릴 액션을 재실행하므로 목록만 조용히 당긴다.
+        if (mode.action) {
+          const vals = valuesRef.current;
+          const filled = (mode.inputs || []).every((inp) => !inp.required || vals[inp.key]);
+          if (filled) {
+            try { setData(await runIBL(buildAction(mode.action, vals))); } catch { /* 목록은 다음 조회가 진실 */ }
+          }
+        }
+      } else await refreshCurrent();
       return true;
     } catch (e) {
       alert('실패: ' + (e instanceof Error ? e.message : String(e)));
       return false;
     }
-  }, [drill, refreshCurrent]);
+  }, [drill, refreshCurrent, mode]);
 
   // 작성바 전송 — $text + {path}(드릴 데이터) 치환 → 실행 → 새로고침
   const composeSend = useCallback(async (cmp: AppCompose) => {

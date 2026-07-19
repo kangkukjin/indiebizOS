@@ -1130,7 +1130,7 @@ export function WarehouseView() {
             <p className="text-sm">비어 있어요 — 파일이나 폴더를 끌어다 놓으세요</p>
           </div>
         ) : (
-          <ul className="px-5 py-3 space-y-1.5">
+          <ul className="px-5 py-3 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-2 content-start">
             {renderWhNode(whTree(data.files))}
           </ul>
         )}
@@ -1139,7 +1139,9 @@ export function WarehouseView() {
     </div>
   );
 
-  /* 파일 먼저(최신순 — 백엔드 정렬 유지), 폴더 나중(안에서 가장 최근 것 순) */
+  /* 파일 먼저(최신순 — 백엔드 정렬 유지), 폴더 나중(안에서 가장 최근 것 순).
+     레이아웃: 파일=타일 그리드(넓은 창에서 한 줄 여러 개 — 행 하나에 파일 하나는 빈공간 낭비),
+     폴더=col-span-full 전체 폭 행(드롭 대상 + 펼침 목록이라 행이 자연스럽다). */
   function renderWhNode(node: WhNode, depth = 0): React.ReactNode {
     const dirNames = Object.keys(node.dirs).sort(
       (a, b) => (whAgg(node.dirs[b]).mtime > whAgg(node.dirs[a]).mtime ? 1 : -1)
@@ -1154,6 +1156,7 @@ export function WarehouseView() {
           return (
             <li
               key={`d:${depth}:${name}`}
+              className="col-span-full"
               draggable
               onDragStart={(e) => {
                 e.stopPropagation();
@@ -1190,7 +1193,7 @@ export function WarehouseView() {
                     </div>
                   </div>
                 </summary>
-                <ul className="pl-4 pr-2 pb-2 space-y-1.5 border-l border-stone-100 ml-5">
+                <ul className="ml-5 pl-4 pr-2 pb-2 border-l border-stone-100 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-2 content-start">
                   {renderWhNode(sub, depth + 1)}
                 </ul>
               </details>
@@ -1213,7 +1216,7 @@ export function WarehouseView() {
                     e.dataTransfer.setData(WH_DRAG, f.name);
                     e.dataTransfer.effectAllowed = 'move';
                   }}
-                  className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40"
+                  className="group flex items-center gap-2 px-2.5 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40 min-w-0"
                 >
                   {isImg ? (
                     <img
@@ -1223,7 +1226,7 @@ export function WarehouseView() {
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ) : (
-                    <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-2.5" />
+                    <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-1.5" />
                   )}
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
@@ -1231,7 +1234,9 @@ export function WarehouseView() {
                     onClick={() => openFile(f.name)}
                   >
                     <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline" title={f.name}>{label}</div>
-                    <div className="text-[11px] text-stone-400">{fmtBytes(f.bytes)} · {f.mtime.replace('T', ' ')}</div>
+                    <div className="text-[11px] text-stone-400 truncate" title={`${fmtBytes(f.bytes)} · ${f.mtime.replace('T', ' ')}`}>
+                      {fmtBytes(f.bytes)} · {f.mtime.replace('T', ' ')}
+                    </div>
                   </div>
                   <a
                     className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 transition-opacity"

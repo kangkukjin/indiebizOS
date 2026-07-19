@@ -781,6 +781,75 @@ class BusinessManager:
 
         return [self._row_to_dict(row) for row in rows]
 
+    def get_inbox_summary(self, search: Optional[str] = None,
+                          info_level: Optional[int] = None) -> List[Dict]:
+        """메신저 inbox용 이웃 일괄 요약 — 이웃 N명을 연결 1개·쿼리 4개로.
+
+        이웃당 개별 조회(마지막 메시지·미답신 수·연락처)를 반복하면 이웃 수에
+        비례해 느려지고, /ibl/execute 가 이벤트 루프 동기 실행이라 그 시간만큼
+        백엔드 전체가 멈춘다. 여기서 GROUP BY/윈도우로 한 번에 뽑는다.
+
+        반환: get_neighbors 와 같은 이웃 dict + 밑줄 필드 셋
+          _last: 마지막 메시지 dict(message_time DESC 첫 행) 또는 None
+          _unread: 미답신 수신 수 (replied=0, is_from_user=0)
+          _channel_contacts: [(contact_type, contact_value)] — gmail/nostr만, type 순
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM neighbors WHERE (deleted IS NOT 1)"
+        params: list = []
+        if search:
+            query += " AND name LIKE ?"
+            params.append(f"%{search}%")
+        if info_level is not None:
+            query += " AND info_level = ?"
+            params.append(info_level)
+        query += " ORDER BY name"
+        cursor.execute(query, params)
+        neighbors = [self._row_to_dict(r) for r in cursor.fetchall()]
+
+        # 이웃별 마지막 메시지 (get_messages 와 동일하게 message_time DESC 기준)
+        cursor.execute("""
+            SELECT * FROM (
+                SELECT m.*, ROW_NUMBER() OVER (
+                    PARTITION BY neighbor_id ORDER BY message_time DESC
+                ) AS _rn
+                FROM messages m WHERE neighbor_id IS NOT NULL
+            ) WHERE _rn = 1
+        """)
+        last_by_nid = {}
+        for r in cursor.fetchall():
+            d = dict(r)
+            d.pop("_rn", None)
+            last_by_nid[d["neighbor_id"]] = d
+
+        cursor.execute("""
+            SELECT neighbor_id, COUNT(*) AS cnt FROM messages
+            WHERE replied = 0 AND is_from_user = 0 AND neighbor_id IS NOT NULL
+            GROUP BY neighbor_id
+        """)
+        unread_by_nid = {r["neighbor_id"]: r["cnt"] for r in cursor.fetchall()}
+
+        # 메시징 채널 연락처 — get_contacts 와 같은 contact_type 순 (gmail < nostr)
+        cursor.execute("""
+            SELECT neighbor_id, contact_type, contact_value FROM contacts
+            WHERE (deleted IS NOT 1) AND contact_type IN ('gmail', 'nostr')
+            ORDER BY contact_type
+        """)
+        contacts_by_nid: Dict[int, list] = {}
+        for r in cursor.fetchall():
+            contacts_by_nid.setdefault(r["neighbor_id"], []).append(
+                (r["contact_type"], r["contact_value"]))
+        conn.close()
+
+        for n in neighbors:
+            nid = n["id"]
+            n["_last"] = last_by_nid.get(nid)
+            n["_unread"] = unread_by_nid.get(nid, 0)
+            n["_channel_contacts"] = contacts_by_nid.get(nid, [])
+        return neighbors
+
     def get_neighbor(self, neighbor_id: int) -> Optional[Dict]:
         """이웃 상세 조회"""
         conn = self._get_connection()

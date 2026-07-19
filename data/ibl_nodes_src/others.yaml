@@ -100,203 +100,64 @@
           # 시스템 표면 — 도메인 앱이 아니라 런처 직속(전용 창·런처 버튼). 데스크탑 앱 그리드에서 제외.
           # 원격/폰은 리모컨이라 계기 노출 유지.
           system: true
+          # ★브라우저 은유 (2026-07-19, 게시판 단독 표면에서 재편): #태그=주소(태그를 아는
+          #   사람들끼리 모이는 방 — 태그가 곧 입장 열쇠), 보드 저장=즐겨찾기(멱등 create).
+          #   게시판 탭=주소창+말풍선 스레드(내/남 구분, 메신저와 동일 thread 뷰)+글쓰기 바.
+          #   즐겨찾기 탭=저장된 태그 목록 → 선택하면 그 방의 스레드로. follow/nostr 어휘는
+          #   표면에서만 은퇴(수동 모드에서 사용 가능).
           modes:
-          - name: 팔로잉
-            auto_run: true
-            action: '[others:feed]{op: "read", following: true}'
-            view:
-            - type: card_list
-              from: items
-              empty_from: message
-              card:
-                title: '{author}'
-                lines:
-                - '{content}'
-                - '{time}'
-              item_click:
-                action: '[others:feed]{op: "read", author: "{author_full}"}'
-                view:
-                - type: card_list
-                  from: profile
-                  card:
-                    title: '{name}'
-                    lines:
-                    - '{about}'
-                - type: list_action
-                  from: author_row
-                  icon: '@'
-                  title: '{name}'
-                  sub: '{status}'
-                  button:
-                    label: ＋ 팔로우
-                    action: '[others:follow]{op: "add", pubkey: "{pubkey}", name: "{name}"}'
-                    refresh: true
-                  button2:
-                    label: 이웃 등록
-                    action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
-                    refresh: true
-                - type: card_list
-                  from: items
-                  empty_from: message
-                  card:
-                    title: '{author}'
-                    lines:
-                    - '{content}'
-                    - '{time}'
-          - name: 팔로우 목록
-            auto_run: true
-            inputs:
-            - key: npub
-              type: text
-              placeholder: 팔로우할 npub 붙여넣기
-            buttons:
-            - label: ＋ 팔로우
-              action: '[others:follow]{op: "add", pubkey: "$npub"}'
-              refresh: true
-            action: '[others:follow]{op: "list"}'
-            view:
-            - type: list_action
-              from: items
-              empty_from: message
-              icon: '@'
-              title: '{name}{neighbor_mark}'
-              sub: '{pubkey}'
-              button:
-                label: 이웃 등록
-                action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
-                refresh: true
-              button2:
-                label: 언팔로우
-                action: '[others:follow]{op: "remove", pubkey: "{pubkey}"}'
-                refresh: true
-              item_click:
-                action: '[others:feed]{op: "read", author: "{pubkey}"}'
-                view:
-                - type: card_list
-                  from: profile
-                  card:
-                    title: '{name}'
-                    lines:
-                    - '{about}'
-                - type: card_list
-                  from: articles
-                  card:
-                    title: 📄 {title}
-                    lines:
-                    - '{content}'
-                - type: card_list
-                  from: items
-                  empty_from: message
-                  card:
-                    title: '{author}'
-                    lines:
-                    - '{content}'
-                    - '{time}'
           - name: 게시판
             auto_run: true
             inputs:
-            - key: name
-              type: text
-              placeholder: 새 보드 이름
             - key: tag
               type: text
-              placeholder: 해시태그(영문)
+              default: indienet
+              placeholder: '#태그 주소 — 태그를 아는 사람들의 방'
             buttons:
-            - label: ＋ 보드 만들기
-              action: '[others:board]{op: "create", name: "$name", hashtag: "$tag"}'
+            - label: ⭐ 즐겨찾기
+              action: '[others:board]{op: "create", hashtag: "$tag"}'
               refresh: true
-            action: '[others:feed]{op: "read", with_boards: true}'
+            action: '[others:feed]{op: "read", hashtag: "$tag"}'
             view:
-            - type: card_list
+            - type: thread
               from: items
               empty_from: message
-              card:
-                title: '{author}'
-                lines:
-                - '{content}'
-                - '{time}'
-              item_click:
-                action: '[others:feed]{op: "read", author: "{author_full}"}'
-                view:
-                - type: card_list
-                  from: profile
-                  card:
-                    title: '{name}'
-                    lines:
-                    - '{about}'
-                - type: list_action
-                  from: author_row
-                  icon: '@'
-                  title: '{name}'
-                  sub: '{status}'
-                  button:
-                    label: ＋ 팔로우
-                    action: '[others:follow]{op: "add", pubkey: "{pubkey}", name: "{name}"}'
-                    refresh: true
-                  button2:
-                    label: 이웃 등록
-                    action: '[others:neighbor]{op: "save", name: "{name}", npub: "{pubkey}"}'
-                    refresh: true
-                - type: card_list
-                  from: articles
-                  card:
-                    title: 📄 {title}
-                    lines:
-                    - '{content}'
-                - type: card_list
-                  from: items
-                  empty_from: message
-                  card:
-                    title: '{author}'
-                    lines:
-                    - '{content}'
-                    - '{time}'
+              mine: is_mine
+              text: '{content}'
+              meta: '{author}'
+              time: '{time}'
+            compose:
+              placeholder: 이 게시판에 글 쓰기…
+              action: '[others:feed]{op: "post", content: "$text", hashtag: "$tag"}'
+              button: 게시
+          - name: 즐겨찾기
+            auto_run: true
+            action: '[others:board]{op: "list"}'
+            view:
             - type: list_action
-              from: boards
+              from: items
+              empty_from: message
               icon: '#'
-              title: '{active_mark}{name}'
+              title: '{name}'
               sub: '#{hashtag}'
               button:
-                label: 전환
-                action: '[others:board]{op: "switch", hashtag: "{hashtag}"}'
-                refresh: true
-              button2:
                 label: 삭제
                 action: '[others:board]{op: "delete", hashtag: "{hashtag}"}'
                 refresh: true
-            compose:
-              placeholder: 이 보드에 글 쓰기…
-              action: '[others:feed]{op: "post", content: "$text"}'
-              button: 게시
-          - name: 설정
-            auto_run: true
-            note: 표시 이름·릴레이만 여기서. nsec 가져오기/신원 초기화는 수동 모드에서 [others:nostr]{op:"import_key"/"reset_identity"}.
-            inputs:
-            - key: name
-              type: text
-              placeholder: 표시 이름 변경
-            buttons:
-            - label: 이름 저장
-              action: '[others:nostr]{op: "rename", name: "$name"}'
-            - label: 릴레이 기본값으로
-              action: '[others:nostr]{op: "relays", restore_defaults: true}'
-            action: '[others:nostr]{op: "profile"}'
-            view:
-            - type: kv
-              rows:
-              - k: 내 npub
-                v: '{npub}'
-              - k: 표시 이름
-                v: '{display_name}'
-              - k: 활성 보드
-                v: '#{active_board}'
-              - k: 생성일
-                v: '{created_at}'
-            - type: kv_list
-              title: 릴레이
-              from: relays
-              k: '{url}'
-              v: ''
+              item_click:
+                action: '[others:feed]{op: "read", hashtag: "{hashtag}"}'
+                view:
+                - type: thread
+                  from: items
+                  empty_from: message
+                  mine: is_mine
+                  text: '{content}'
+                  meta: '{author}'
+                  time: '{time}'
+                compose:
+                  placeholder: 이 게시판에 글 쓰기…
+                  action: '[others:feed]{op: "post", content: "$text", hashtag: "{hashtag}"}'
+                  button: 게시
         keywords:
         - 커뮤니티
         - 피드
@@ -326,8 +187,8 @@
       board:
         returns: items
         fixture: '[others:board]{op: "list"}'
-        description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch/delete.
-        target_description: 'op:list(기본 — 보드 목록) / op:create(name+hashtag 필수 — 새 보드) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet. 전환하면 게시 기본값과 [others:feed] 기본 조회가 모두 그 보드를 따름) / op:delete(hashtag 필수 — 보드 삭제. 기본 #indienet 불가, 글은 릴레이에 남아 재생성 시 복원).'
+        description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch/delete. 보드=해시태그가 주소인 방(태그를 아는 사람들끼리), 보드 목록=즐겨찾기.
+        target_description: 'op:list(기본 — 즐겨찾기한 보드 목록) / op:create(hashtag 필수, name 옵션=태그 — 보드를 즐겨찾기에 저장. 이미 있으면 그대로 성공=멱등) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet. 전환하면 게시 기본값과 [others:feed] 기본 조회가 모두 그 보드를 따름) / op:delete(hashtag 필수 — 즐겨찾기에서 삭제. 기본 #indienet 불가, 글은 릴레이에 남아 재저장 시 복원).'
         group: channel
         target_key: op
         router: channel_engine

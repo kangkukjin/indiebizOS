@@ -235,21 +235,23 @@ def _msg_inbox(bm, tool_input: dict) -> str:
     _lv = tool_input.get("level")
     level_int = _int_or(_lv) if (_lv not in (None, "", "all", "전체")) else None
     # 이웃관리 모델: 메시지 없는 이웃도 포함(연락처/정보 관리 위해). 대화 있으면 미리보기·최근순.
-    for n in bm.get_neighbors(search=search, info_level=level_int):
-        last_list = bm.get_messages(neighbor_id=n["id"], limit=1)
-        if last_list:
-            last = last_list[0]
+    # ★이웃당 개별 쿼리(마지막 메시지·미답신·연락처) 금지 — 이웃 수백 명이면 그 시간만큼
+    #   이벤트 루프가 멈춘다. get_inbox_summary 가 연결 1개·집계 쿼리로 한 번에 준다.
+    for n in bm.get_inbox_summary(search=search, info_level=level_int):
+        last = n.pop("_last", None)
+        unread = n.pop("_unread", 0)
+        ch_contacts = n.pop("_channel_contacts", [])
+        primary = ch_contacts[0][0] if ch_contacts else "nostr"  # 구 _primary_channel 과 동일
+        if last:
             ct = last.get("contact_type", "")
-            channel = ct if ct in ("gmail", "nostr") else _primary_channel(bm, n["id"])
+            channel = ct if ct in ("gmail", "nostr") else primary
             to = last.get("contact_value") or ""
             preview = (last.get("content", "") or "")[:40]
             ts = last.get("message_time") or last.get("created_at") or ""
             sort, time_s = _epoch(ts), _short_time(ts)
-            unread = len(bm.get_messages(neighbor_id=n["id"], unreplied_only=True, limit=50))
         else:
-            channel = _primary_channel(bm, n["id"])
-            to = next((c.get("contact_value") for c in (bm.get_contacts(n["id"]) or [])
-                       if c.get("contact_type") in ("gmail", "nostr") and c.get("contact_value")), "")
+            channel = primary
+            to = next((v for (t, v) in ch_contacts if v), "")
             preview, time_s, sort, unread = "", "", 0.0, 0
         if channel == "nostr" and to:
             biz_nostr_hex.add(_npub_to_hex(to))

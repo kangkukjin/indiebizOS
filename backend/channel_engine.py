@@ -514,13 +514,14 @@ def _community_feed(params: dict) -> dict:
             raw = f_posts.result()
         elif following:
             raw = indienet.fetch_following_feed(limit=limit)
-        elif hashtag:
-            raw = indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
         else:
-            raw = indienet.fetch_posts(limit=limit)
+            # 보드 읽기 — hashtag 없으면 fetch_board_posts 가 활성 보드/기본 indienet 으로 해소.
+            # (#태그=주소 은유: 게시판 계기의 주소창이 이 경로를 탄다.)
+            raw = indienet.fetch_board_posts(hashtag=hashtag, limit=limit)
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+    my_npub = getattr(getattr(indienet, "identity", None), "npub", None) or ""
     posts = []
     for p in raw or []:
         full = p.get("author", "") or ""
@@ -534,10 +535,18 @@ def _community_feed(params: dict) -> dict:
             "content": content,
             "time": time_str,
             "id": ev_id,
+            "is_mine": bool(my_npub) and full == my_npub,  # thread 뷰 내/남 말풍선 구분
         })
+    board_read = not author and not following
+    if board_read:
+        posts.reverse()  # 보드=채팅방 — 과거→최신(말풍선 스레드 관례). fetch 는 최신순.
     # 단일 통화 — native 글 dict(author/content/time/id 등)를 items로.
     out = {"items": posts, "count": len(posts),
            "message": "" if posts else "아직 글이 없습니다."}
+    if board_read:
+        # 어느 방을 읽었는지 에코 — 즐겨찾기 드릴의 compose 가 {hashtag}로 게시 대상을 잡는다.
+        out["hashtag"] = (str(hashtag).lstrip('#').lower() if hashtag
+                         else (getattr(indienet.settings, "active_board", None) or "indienet"))
     # 저자 드릴다운이면 그 저자를 팔로우/이웃 등록할 수 있게 한 줄짜리 author_row 동봉
     # (+승격 다리 상태: 팔로우 여부 · 이웃 등록 여부).
     if author:
@@ -635,13 +644,22 @@ def _community_board(params: dict) -> dict:
         return {"success": False, "error": str(e)}
 
     if op == "create":
-        name = params.get("name") or params.get("board_name")
+        # 즐겨찾기 의미론 — #태그=주소, 저장=북마크. name 생략 시 태그가 이름, 이미 있으면 성공(멱등).
         hashtag = params.get("hashtag") or params.get("tag")
-        if not name or not hashtag:
-            return {"success": False, "error": "보드 이름(name)과 해시태그(hashtag)가 필요합니다."}
+        if not hashtag:
+            return {"success": False, "error": "해시태그(hashtag)가 필요합니다."}
+        tag = str(hashtag).lstrip('#').lower().replace(' ', '')
+        if not tag:
+            return {"success": False, "error": "해시태그(hashtag)가 필요합니다."}
+        if tag == "indienet":
+            return {"success": True, "message": "#indienet 은 기본 게시판이라 항상 즐겨찾기에 있습니다."}
+        for b in indienet.get_boards() or []:
+            if b.get("hashtag") == tag:
+                return {"success": True, "board": b, "message": f"#{tag} 는 이미 즐겨찾기에 있습니다."}
+        name = params.get("name") or params.get("board_name") or tag
         try:
-            board = indienet.create_board(name=name, hashtag=hashtag)
-            return {"success": True, "board": board, "message": f"보드 '{name}' 생성"}
+            board = indienet.create_board(name=name, hashtag=tag)
+            return {"success": True, "board": board, "message": f"#{tag} 를 즐겨찾기에 저장했습니다."}
         except Exception as e:
             return {"success": False, "error": str(e)}
 

@@ -29,6 +29,14 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.removeAllListeners('open-forage-url');
   },
 
+  // 웹뷰(포식 브라우저) 링크 우클릭 → "내 창고에 리트윗" 신호 (main.js guest context-menu 발신)
+  onForageRetweetLink: (callback) => {
+    ipcRenderer.on('forage-retweet-link', (_, info) => callback(info));
+  },
+  removeForageRetweetLink: () => {
+    ipcRenderer.removeAllListeners('forage-retweet-link');
+  },
+
   // 앱 정보
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),
 

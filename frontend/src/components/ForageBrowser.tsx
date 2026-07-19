@@ -26,6 +26,21 @@ import {
   BrowserTabView, FavoritesPage, PoolRow, PoolCard, HistoryPage, BoardsPage, TabFav, NavBtn,
 } from './forage/views';
 
+/** 링크 URL에서 리트윗 파일명 후보 — 창고 파일(/f?path=…)이면 path 그대로, 아니면 경로 마지막 조각. */
+function retweetNameFromUrl(url: string, text?: string): string {
+  const t = (text || '').trim();
+  if (t && !/^https?:\/\//i.test(t)) return t;
+  try {
+    const u = new URL(url);
+    const p = u.searchParams.get('path');
+    if (p) return decodeURIComponent(p);
+    const seg = decodeURIComponent(u.pathname).split('/').filter(Boolean).pop();
+    return seg || u.hostname;
+  } catch {
+    return url;
+  }
+}
+
 export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   open: boolean;
   onClose: () => void;
@@ -47,6 +62,42 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
 
   // 첨부(이미지·텍스트파일) — 프로젝트 에이전트 입력창과 같은 훅 재사용. 이건 에이전트 입력창이니까.
   const att = useFileAttachments();
+
+  // --- 리트윗 — 웹뷰 링크 우클릭(main.js context-menu 신호) 또는 툴바 📣(현재 페이지)로 연다.
+  // 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음). API 는 공유창고 피드와 동일.
+  const [retweetAsk, setRetweetAsk] = useState<{ url: string; name: string; level: number; mode: 'link' | 'copy' } | null>(null);
+  const [retweetMsg, setRetweetMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const el = (window as any).electron;
+    if (!el?.onForageRetweetLink) return;
+    el.onForageRetweetLink((info: { url?: string; text?: string }) => {
+      if (!info?.url) return;
+      setRetweetAsk({ url: info.url, name: retweetNameFromUrl(info.url, info.text), level: 0, mode: 'link' });
+    });
+    return () => el.removeForageRetweetLink?.();
+  }, []);
+
+  const doRetweet = async () => {
+    if (!retweetAsk) return;
+    const { url, name, level, mode } = retweetAsk;
+    setRetweetAsk(null);
+    setRetweetMsg(mode === 'copy' ? '파일을 내 창고로 복사하는 중…' : '내 창고에 소개하는 중…');
+    try {
+      const r = await fetch(`${API}/warehouse-feed/retweet`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, name, level, mode }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => null);
+        throw new Error(d?.detail || `HTTP ${r.status}`);
+      }
+      setRetweetMsg(`레벨 ${level} 리트윗 폴더에 담았어요`);
+    } catch (e) {
+      setRetweetMsg(`리트윗 실패: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setTimeout(() => setRetweetMsg(null), 4000);
+  };
 
   // --- 사냥판 상태 — AI가 채우고, 인간이 치우고(✕)·담는(📌) 공유 작업대 ---
   const [hunt, setHuntState] = useState<Hunt | null>(null);
@@ -744,6 +795,37 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
         </div>
       )}
 
+      {/* 리트윗 선택 띠 — 우클릭 메뉴/📣 가 연다. 레벨(0~4)과 모드(링크=추천/복사=소장·재서빙)를 골라 확정.
+          webview 위 오버레이 대신 셸의 한 줄(shrink-0)로 — 합성 레이어 가림 문제를 원천 회피. */}
+      {retweetAsk && (
+        <div className="shrink-0 flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-200 text-sm overflow-x-auto whitespace-nowrap">
+          <span className="select-none">📣</span>
+          <span className="text-stone-700 truncate max-w-[280px]" title={retweetAsk.url}>{retweetAsk.name}</span>
+          <span className="text-stone-500 shrink-0">을(를) 레벨</span>
+          <select
+            className="px-2 py-1 rounded-lg border border-stone-200 bg-white"
+            value={retweetAsk.level}
+            onChange={(e) => setRetweetAsk({ ...retweetAsk, level: Number(e.target.value) })}
+          >
+            {[0, 1, 2, 3, 4].map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <span className="text-stone-500 shrink-0">의 리트윗 폴더에</span>
+          <select
+            className="px-2 py-1 rounded-lg border border-stone-200 bg-white"
+            value={retweetAsk.mode}
+            onChange={(e) => setRetweetAsk({ ...retweetAsk, mode: e.target.value as 'link' | 'copy' })}
+          >
+            <option value="link">링크로 소개 (원본을 가리킴)</option>
+            <option value="copy">복사해 소장 (내 창고가 재서빙)</option>
+          </select>
+          <button className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]" onClick={doRetweet}>리트윗</button>
+          <button className="px-2.5 py-1.5 rounded-lg text-stone-500 hover:bg-stone-200" onClick={() => setRetweetAsk(null)}>취소</button>
+        </div>
+      )}
+      {retweetMsg && (
+        <div className="shrink-0 px-3 py-2 bg-stone-800 text-white text-sm">{retweetMsg}</div>
+      )}
+
       {/* 상단 바 — 모드별로 다르다. 브라우즈에선 주소·검색줄이 자동 숨김(센서 띠로 되살림). */}
       {mode === 'browse' ? (
         barHidden ? (
@@ -797,6 +879,18 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
               }`}
             >
               {currentFav ? '★' : '☆'}
+            </button>
+            {/* 현재 페이지를 내 창고에 리트윗 — 파일을 보고 있을 때 그 파일을 소개/소장.
+                페이지 안 개별 링크는 우클릭 메뉴("내 창고에 리트윗…")로. */}
+            <button
+              onClick={() => {
+                if (!/^https?:\/\//i.test(addr)) return;
+                setRetweetAsk({ url: addr, name: retweetNameFromUrl(addr, activeTab?.title), level: 0, mode: 'link' });
+              }}
+              title="이 페이지를 내 창고에 리트윗 (페이지 안 링크는 우클릭)"
+              className="px-2.5 py-1.5 rounded-lg text-base leading-none whitespace-nowrap text-stone-400 hover:bg-stone-200 transition"
+            >
+              📣
             </button>
             {/* 사냥판에 담기 — 진행 중 사냥이 있을 때만. 즐겨찾기(영구)와 달리 이번 사냥의 후보로. */}
             {hunt && (

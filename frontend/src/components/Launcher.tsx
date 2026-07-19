@@ -425,6 +425,19 @@ export function Launcher() {
     return () => window.removeEventListener('indiebiz:open-forage', openForage);
   }, []);
 
+  // 같은 창의 표면(공유창고 등)이 특정 URL을 포식 브라우저로 열도록 쏘는 신호 — detail=url.
+  // 이웃 창고를 내부 브라우저로 열어야 창틀이 내 것이라 우클릭 리트윗이 산다.
+  useEffect(() => {
+    const openForageUrl = (e: Event) => {
+      const url = (e as CustomEvent<string>).detail;
+      if (!url) return;
+      setBrowserOpen(true);
+      setPendingBrowserUrl(url);
+    };
+    window.addEventListener('indiebiz:open-forage-url', openForageUrl);
+    return () => window.removeEventListener('indiebiz:open-forage-url', openForageUrl);
+  }, []);
+
   const handleCreateProject = async (templateName: string) => {
     if (!newProjectName.trim()) return;
 

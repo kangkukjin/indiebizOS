@@ -100,6 +100,12 @@ function openExternalUrl(url: string) {
   else window.open(url, '_blank', 'noopener');
 }
 
+/** 이웃 창고 방문은 내부(포식) 브라우저로 — 창틀이 내 것이어야 파일 링크 우클릭 리트윗이 산다.
+    Launcher 가 'indiebiz:open-forage-url' 을 받아 브라우저 오버레이를 그 URL 로 연다. */
+function openWarehouseInBrowser(url: string) {
+  window.dispatchEvent(new CustomEvent('indiebiz:open-forage-url', { detail: url }));
+}
+
 /** 이웃 창고의 파일 한 줄 — 피드와 검색이 같은 줄을 쓴다. */
 function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void; onLike: (f: WfFeedItem) => void; label?: string }) {
   const Icon = fileIcon(f.path);
@@ -132,8 +138,8 @@ function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f
       </button>
       <button
         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-        title={`${f.neighbor_name}의 창고 열기`}
-        onClick={() => { if (f.neighbor_home) openExternalUrl(f.neighbor_home); }}
+        title={`${f.neighbor_name}의 창고 열기 — 파일 링크 우클릭으로 리트윗`}
+        onClick={() => { if (f.neighbor_home) openWarehouseInBrowser(f.neighbor_home); }}
       >
         <Package className="w-4 h-4" />
       </button>
@@ -171,7 +177,7 @@ function GroupRow({ g, onRetweet, onLike }: { g: WfFeedItem; onRetweet: (f: WfFe
           <button
             className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
             title={`${g.neighbor_name}의 창고 열기`}
-            onClick={(e) => { e.preventDefault(); if (g.neighbor_home) openExternalUrl(g.neighbor_home); }}
+            onClick={(e) => { e.preventDefault(); if (g.neighbor_home) openWarehouseInBrowser(g.neighbor_home); }}
           >
             <Package className="w-4 h-4" />
           </button>
@@ -216,7 +222,9 @@ function DiscoverPane() {
     try {
       const r = (await runIBL('[others:feed]{op: "read", limit: 50}')) as Record<string, unknown>;
       if (r?.error) throw new Error(String(r.error));
-      setItems(Array.isArray(r?.items) ? (r.items as IntroItem[]) : []);
+      // 보드 통화는 채팅방 관례(과거→최신)로 온다 — 게시판형 목록은 최신 글이 맨 위.
+      const arr = Array.isArray(r?.items) ? (r.items as IntroItem[]) : [];
+      setItems(arr.slice().reverse());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -612,7 +620,7 @@ function NeighborsPane() {
               <button
                 className="font-medium text-stone-700 hover:text-[#D97706] hover:underline"
                 title={`${n.title || n.name} 창고 열기\n${n.warehouse_url}`}
-                onClick={() => openExternalUrl(n.warehouse_url + '/')}
+                onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
               >
                 {n.name}
               </button>
@@ -824,7 +832,7 @@ function NeighborsPane() {
                       <button
                         className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"
                         title={`${n.warehouse_url} 열기`}
-                        onClick={() => openExternalUrl(n.warehouse_url + '/')}
+                        onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
                       >
                         {n.name}
                       </button>
@@ -839,7 +847,7 @@ function NeighborsPane() {
                       <button
                         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
                         title="창고 열기"
-                        onClick={() => openExternalUrl(n.warehouse_url + '/')}
+                        onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>

@@ -165,7 +165,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             <div className="text-sm text-purple-700 space-y-1">
               <p>1. <strong>이웃</strong> 탭에서 이웃의 창고 주소를 등록 (이름을 비우면 창고 제목으로 자동 생성 — 주소만 알아도 이웃이 됩니다)</p>
               <p>2. 30분마다 이웃 창고를 훑어 <strong>새 파일·변경이 피드로</strong> 흘러들어옵니다 (AI·토큰 0의 순수 기계 폴링)</p>
-              <p>3. 피드 행 버튼: <strong>↗ 파일 열기</strong> · <strong>📦 그 창고 열기</strong> · <strong>📣 리트윗</strong>(원본을 가리키는 바로가기 파일을 내 창고에 놓아 소개 — 레벨 선택 가능)</p>
+              <p>3. 피드 행 버튼: <strong>↗ 파일 열기</strong> · <strong>📦 그 창고 열기</strong>(내부 브라우저로 — 창고를 구경하다 <strong>파일 링크 우클릭 → "내 창고에 리트윗"</strong>) · <strong>📣 리트윗</strong>(원본을 가리키는 바로가기 파일을 내 창고에 놓아 소개 — 레벨 선택 가능)</p>
               <p>4. <strong>검색</strong>은 등록한 모든 이웃의 파일명을 한 번에 뒤집니다 — 내 동네 전체의 색인</p>
             </div>
           </div>

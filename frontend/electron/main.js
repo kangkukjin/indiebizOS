@@ -546,6 +546,31 @@ function createWindow() {
       else if (k === '-' || k === '_') { guest.setZoomLevel(Math.max(guest.getZoomLevel() - 0.5, -3)); event.preventDefault(); }
       else if (k === '0') { guest.setZoomLevel(0); event.preventDefault(); }
     });
+
+    // 웹뷰 안 우클릭 — 링크 위면 "내 창고에 리트윗"을 얹는다. 이웃 창고를 내부 브라우저로
+    // 방문했을 때 파일 링크가 주 대상이지만, 어떤 웹 링크든 된다(포인터 .url = 어디든 가리킴).
+    // 레벨·모드 선택과 실제 POST 는 렌더러(ForageBrowser)가 잇는다 — 여기선 신호만.
+    guest.on('context-menu', (_event, params) => {
+      const linkURL = params.linkURL || '';
+      const template = [];
+      if (/^https?:\/\//i.test(linkURL)) {
+        template.push(
+          {
+            label: '내 창고에 리트윗…',
+            click: () => mainWindow?.webContents.send('forage-retweet-link', {
+              url: linkURL,
+              text: (params.linkText || '').trim(),
+            }),
+          },
+          { label: '링크 주소 복사', click: () => clipboard.writeText(linkURL) },
+          { type: 'separator' },
+        );
+      }
+      if (params.isEditable) template.push({ role: 'cut', label: '잘라내기' }, { role: 'paste', label: '붙여넣기' });
+      if (params.selectionText) template.push({ role: 'copy', label: '복사' });
+      template.push({ role: 'selectAll', label: '전체 선택' });
+      Menu.buildFromTemplate(template).popup({ window: mainWindow });
+    });
   });
 
   mainWindow.on('closed', () => {

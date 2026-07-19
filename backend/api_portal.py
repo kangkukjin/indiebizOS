@@ -881,10 +881,17 @@ async def warehouse_admin_list(level: int = 0):
         files.append({"name": str(p.relative_to(d)), "bytes": st.st_size, "path": str(p),
                       "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
     files.sort(key=lambda f: f["mtime"], reverse=True)
-    core = _core()
-    state = core.load_state()
-    base = (state.get("public_base") or "").rstrip("/")
-    labels = getattr(core, "LEVEL_LABELS", {}) or {}
+    # 공개면 부품(portal_core)은 여기선 장식(공개 주소 표시·레벨 라벨)일 뿐 —
+    # 로컬 창고 창은 공개 사이트가 하나도 없어도(부품이 죽어도) 열려야 한다
+    # (2026-07-20 윈도우: portal_core 이식성 버그가 로컬 목록까지 연좌 500).
+    base, labels = "", {}
+    try:
+        core = _core()
+        state = core.load_state()
+        base = (state.get("public_base") or "").rstrip("/")
+        labels = getattr(core, "LEVEL_LABELS", {}) or {}
+    except Exception as e:
+        print(f"[창고] 공개면 부품 로드 실패(로컬 목록은 계속): {e}")
     return {"title": _warehouse_title(), "public_url": (base + "/") if base else "",
             "levels": counts, "level": lv, "files": files,
             "level_labels": {str(k): v for k, v in labels.items()},

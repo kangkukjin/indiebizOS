@@ -1,0 +1,54 @@
+# 윈도우 이식성 게이트 — 매 푸시마다 fcntl 부류를 커밋 시점에 잡는다.
+#
+# 왜 build.yml 과 별도인가: build.yml 은 태그 푸시 때만 도는 배포 빌드라
+# 평시 커밋의 이식성 회귀를 못 잡는다(2026-07-20 윈도우 첫 설치에서
+# data/packages/ 의 fcntl 이 설치 후에야 발견된 부류).
+#
+# 두 층:
+#   static-scan   — AST 정적 검사(의존성 0, 우분투). 유닉스 전용 stdlib 의
+#                   무가드 톱레벨 import. pre-commit 훅과 같은 스크립트.
+#   import-smoke  — 실제 윈도우에서 `import api`(= 부팅 등가). 배포 번들과
+#                   같은 requirements-core.txt 로 설치.
+name: Windows Portability
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'data/packages/**'
+      - 'scripts/check_win_portability.py'
+      - 'scripts/ci_import_smoke.py'
+      - '.github/workflows/portability.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'data/packages/**'
+      - 'scripts/check_win_portability.py'
+      - 'scripts/ci_import_smoke.py'
+      - '.github/workflows/portability.yml'
+  workflow_dispatch:
+
+jobs:
+  static-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 유닉스 전용 무가드 import 검사
+        run: python scripts/check_win_portability.py
+
+  import-smoke:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"   # 윈도우 러너 기본 cp1252/cp949 로그 인코딩 함정 회피
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'   # 배포 임베디드 파이썬(build.yml)과 동일 계열
+      - name: 코어 의존성 설치 (배포 번들과 동일)
+        run: pip install -r backend/requirements-core.txt
+      - name: 백엔드 모듈 그래프 import 스모크
+        run: python scripts/ci_import_smoke.py

@@ -95,4 +95,20 @@ if echo "$staged" | grep -qE '^(data/packages/(installed|not_installed)/[^/]+/[^
   echo "[pre-commit] 설치 파일 필터 OK ✓"
 fi
 
+# 윈도우 이식성 정적 검사 — 유닉스 전용 stdlib(fcntl 등)의 무가드 톱레벨 import 는
+# 윈도우에서 모듈 로드 자체를 죽인다(2026-07-20 portal_core/bulletin_core 실측 부류).
+# 의존성 0 AST 검사라 빠름. CI(portability.yml) 정적 잡과 같은 스크립트.
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_win_portability\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 윈도우 이식성 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_win_portability.py"; then
+    echo "" >&2
+    echo "[pre-commit] 윈도우 이식성 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • try/except ImportError 폴백(portal_core.py 참조) 또는 lazy import 로 가드" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 윈도우 이식성 OK ✓"
+fi
+
 exit 0

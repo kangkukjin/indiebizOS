@@ -3,15 +3,20 @@
 - 스크린샷 위에 좌표 그리드를 오버레이
 - 터치 좌표를 정확히 파악할 수 있게 도움
 """
+import os
 import subprocess
 import sys
+import tempfile
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
+
+# 윈도우엔 /tmp 가 없다 — 플랫폼 임시 디렉토리로.
+_DEFAULT_OUTPUT = os.path.join(tempfile.gettempdir(), "android_calibrated.png")
 
 
 def capture_with_grid(
     grid_spacing: int = 200,
-    output_path: str = "/tmp/android_calibrated.png",
+    output_path: str = _DEFAULT_OUTPUT,
     show_crosshair: bool = True,
 ):
     """스크린샷을 찍고 좌표 그리드를 오버레이한다."""
@@ -77,5 +82,5 @@ def capture_with_grid(
 
 if __name__ == "__main__":
     spacing = int(sys.argv[1]) if len(sys.argv) > 1 else 200
-    output = sys.argv[2] if len(sys.argv) > 2 else "/tmp/android_calibrated.png"
+    output = sys.argv[2] if len(sys.argv) > 2 else _DEFAULT_OUTPUT
     capture_with_grid(grid_spacing=spacing, output_path=output)

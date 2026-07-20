@@ -417,14 +417,16 @@ async function whIntro(){
   if(b){ b.disabled=false; b.textContent='🌐 소개발행'; }
 }
 /* ===== 이웃찾기 — #IndieNet 발견 노트(소개발행의 수신면) =====
-   데이터=[others:feed]{op:"read"} (활성 보드 #indienet, IndieNet 창과 동일). 소개 본문의
+   발견 채널은 #indienet 고정([others:feed]{hashtag:"indienet"}) — publish_intro 가 항상
+   #IndieNet 으로 발신하므로 수신도 같은 주파수. hashtag 를 안 넘기면 활성 보드(active_board)로
+   폴백해, 보드를 전환한 기기(윈도우 사례)에선 조용히 다른 방을 읽는다. 소개 본문의
    "공유창고 : <url>" 라벨(indienet_publish.publish_intro 계약)을 파싱해 창고이웃 등록으로 잇는다. */
 let wdItems=[]; let wdAdded={};
 async function wdLoad(){
   const l=document.getElementById('wdList'); if(!l) return;
   if(!wdItems.length) l.innerHTML='<div class="wh-empty">📡 릴레이에서 소개를 모으는 중…</div>';
   try{
-    const r=await ibl('[others:feed]{op: "read", limit: 50}');
+    const r=await ibl('[others:feed]{op: "read", hashtag: "indienet", limit: 50}');
     if(r&&r.error) throw new Error(r.error);
     /* 보드 통화는 채팅방 관례(과거→최신) — 게시판형 목록은 최신 글이 맨 위 */
     wdItems=((r&&r.items)||[]).slice().reverse();
@@ -468,13 +470,14 @@ async function wdAdd(i){
     alert('창고이웃으로 등록했어요 — 이웃 탭 피드에 이 창고의 소식이 흐릅니다.');
   }catch(e){ alert('등록 실패: '+e); }
 }
-/* 게시판처럼 한마디 — 커뮤니티 계기와 같은 [others:feed]{op:"post"} 경로. 내용=JSON.stringify 이스케이프. */
+/* 게시판처럼 한마디 — 커뮤니티 계기와 같은 [others:feed]{op:"post"} 경로. 내용=JSON.stringify 이스케이프.
+   ★hashtag 고정 필수: 없으면 post_to_board 활성 보드 폴백 — 보드 전환 기기에선 다른 방에 발행. */
 async function wdPost(){
   const inp=document.getElementById('wdDraft'); const btn=document.getElementById('wdPostBtn');
   const t=(inp&&inp.value||'').trim(); if(!t) return;
   if(btn){ btn.disabled=true; btn.textContent='게시 중…'; }
   try{
-    const r=await ibl('[others:feed]{op: "post", content: '+JSON.stringify(t)+'}');
+    const r=await ibl('[others:feed]{op: "post", hashtag: "indienet", content: '+JSON.stringify(t)+'}');
     if(r&&(r.error||r.success===false)) throw new Error(r.error||r.message||'게시 실패');
     if(inp) inp.value='';
     await wdLoad();

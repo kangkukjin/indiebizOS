@@ -126,9 +126,29 @@ def is_tunnel_running() -> bool:
     # 외부에서 실행 중인 cloudflared 확인 (psutil, 전 OS — 구 pgrep 대체)
     try:
         from common.platform_utils import is_process_running_by_marker
-        return is_process_running_by_marker("cloudflared tunnel run")
+        return any(is_process_running_by_marker(p) for p in _tunnel_markers())
     except Exception:
         return False
+
+
+def _tunnel_markers():
+    """이 앱이 관리하는 indiebiz 터널 프로세스만 집는 마커 패턴들(조각 전부 포함 매칭).
+
+    ★두 함정의 균형(2026-07-20 실측):
+    - 옛 단일 부분문자열 "cloudflared tunnel run" 은 `--config x.yml` 이 사이에 끼는
+      순간 못 잡는다 → stop 이 못 죽이고 is_running 이 못 봐서 유령 5마리 축적.
+    - 그렇다고 ["cloudflared", "tunnel run"] 으로 넓히면 같은 기계의 **다른**
+      cloudflared(원격관리 터널 remote-desktop.yml, 별도 상주)까지 죽인다.
+    → 이 앱이 띄우는 두 형태만 정확히: 토큰 모드("tunnel run --token") +
+      이름 모드("tunnel run <이름>"). 플래그가 어디 끼든 조각 매칭이라 안전."""
+    patterns = [["cloudflared", "tunnel run --token"]]
+    try:
+        name = (load_config().get("tunnel_name") or "").strip()
+    except Exception:
+        name = ""
+    if name:
+        patterns.append(["cloudflared", f"tunnel run {name}"])
+    return patterns
 
 
 def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = None,
@@ -179,35 +199,44 @@ def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = 
         # 백그라운드 프로세스로 실행
         # start_new_session 사용하지 않음 → 부모(FastAPI)와 같은 프로세스 그룹
         # → Ctrl+C(SIGINT) 시 cloudflared도 함께 시그널 수신하여 종료됨
-        _tunnel_process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        #
+        # ★stdout/stderr 를 PIPE 로 잡아놓고 안 읽으면 안 된다 — 정상 기동 경로에선
+        # 아무도 파이프를 안 읽어, 윈도우 익명 파이프 버퍼(~4KB)가 기동 로그로 차는
+        # 순간 cloudflared(Go)가 로그 쓰기에서 통째로 블록된다(2026-07-20 윈도우 실측:
+        # conns=1 degraded·ingress 미수신 빈 404·재시작 코인토스가 전부 이것. 어는
+        # 시점이 레이스라 증상이 제멋대로였다). 맥은 버퍼가 64KB 라 늦게 터질 뿐 같은
+        # 폭탄. 로그 파일 리다이렉트는 막히지 않고, 즉사 진단·평시 터널 디버깅도
+        # 이 파일로 한다. 이게 있어야 자가치유 재기동(95e57d1)도 코인토스가 아니게 된다.
+        log_path = DATA_PATH / "cloudflared.log"
+        try:
+            if log_path.exists() and log_path.stat().st_size > 5 * 1024 * 1024:
+                log_path.replace(log_path.with_suffix(".log.1"))   # 단순 1세대 로테이션
+        except Exception:
+            pass
+        log_f = open(log_path, "ab")
+        try:
+            _tunnel_process = subprocess.Popen(cmd, stdout=log_f, stderr=log_f)
+        finally:
+            log_f.close()   # 자식은 물려받은 핸들로 쓴다 — 부모 쪽 핸들은 닫아 누수 방지
 
         # 잠시 대기 후 상태 확인
         time.sleep(2)
 
         if _tunnel_process.poll() is not None:
-            # 프로세스가 즉시 종료됨 - stdout/stderr 모두 읽기
+            # 프로세스가 즉시 종료됨 — 로그 파일 꼬리에서 원인 읽기
             returncode = _tunnel_process.returncode
-            stdout_data = ""
-            stderr_data = ""
+            _tunnel_process = None
+            output = ""
             try:
-                stdout_data = _tunnel_process.stdout.read().decode(errors="replace") if _tunnel_process.stdout else ""
-                stderr_data = _tunnel_process.stderr.read().decode(errors="replace") if _tunnel_process.stderr else ""
+                output = log_path.read_bytes()[-2000:].decode(errors="replace").strip()
             except Exception:
                 pass
-            _tunnel_process = None
-            # stderr 우선, 없으면 stdout 사용
-            output = (stderr_data.strip() or stdout_data.strip())
-            details = f"(exit code: {returncode}) {output[:500]}" if output else f"프로세스 종료 코드: {returncode}"
+            details = f"(exit code: {returncode}) {output[-500:]}" if output else f"프로세스 종료 코드: {returncode}"
             # 토큰은 시크릿 — 로그에 남기지 않는다
             safe_cmd = ["***" if (i > 0 and cmd[i - 1] == "--token") else c
                         for i, c in enumerate(cmd)]
             print(f"[Tunnel] 시작 실패 - cmd: {' '.join(safe_cmd)}")
-            print(f"[Tunnel] stdout: {stdout_data[:300]}")
-            print(f"[Tunnel] stderr: {stderr_data[:300]}")
+            print(f"[Tunnel] log tail: {output[-300:]}")
             return {
                 "success": False,
                 "error": "터널 시작 실패",
@@ -245,10 +274,12 @@ def stop_tunnel() -> dict:
         _tunnel_process = None
 
     # 외부 프로세스도 종료 (psutil, 전 OS — 구 pkill 대체)
+    # ★이 앱의 터널 패턴만(_tunnel_markers) — 다른 cloudflared(원격관리 터널)는 남긴다
     try:
         from common.platform_utils import kill_processes_by_marker
-        if kill_processes_by_marker("cloudflared tunnel run"):
-            stopped = True
+        for p in _tunnel_markers():
+            if kill_processes_by_marker(p):
+                stopped = True
     except Exception:
         pass
 

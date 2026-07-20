@@ -145,25 +145,33 @@ def spawn_detached(cmd: list[str], **kwargs) -> subprocess.Popen:
 # 프로세스 탐색/종료 (표식 = 명령줄 부분 문자열)
 # ─────────────────────────────────────────────────────────────
 
-def _iter_procs_by_marker(marker: str):
-    """명령줄에 marker 를 포함한 프로세스를 순회. (psutil 필요)"""
+def _iter_procs_by_marker(marker):
+    """명령줄에 marker 를 포함한 프로세스를 순회. (psutil 필요)
+
+    marker 는 문자열 하나 또는 문자열 목록 — 목록이면 **전부** 포함해야 매칭.
+    ★단일 부분문자열의 함정(2026-07-20 실측): "cloudflared tunnel run" 은
+    `cloudflared --config x.yml tunnel run` 을 못 잡는다(플래그가 사이에 끼면
+    연속 부분문자열이 깨짐) → stop 이 못 죽이고 is_running 이 못 봐서 유령이
+    축적됐다. 조각 목록("cloudflared", "tunnel run")은 어순·플래그와 무관."""
     if not psutil:
         return
+    markers = [marker] if isinstance(marker, str) else list(marker)
     me = os.getpid()
     for proc in psutil.process_iter(["pid", "cmdline"]):
         try:
             if proc.info["pid"] == me:
                 continue
-            cmdline = proc.info.get("cmdline") or []
-            if marker in " ".join(cmdline):
+            joined = " ".join(proc.info.get("cmdline") or [])
+            if joined and all(m in joined for m in markers):
                 yield proc
         except (psutil.NoSuchProcess, psutil.AccessDenied, Exception):
             continue
 
 
-def kill_processes_by_marker(marker: str) -> bool:
+def kill_processes_by_marker(marker) -> bool:
     """명령줄에 marker 가 박힌 프로세스를 모두 종료(전 OS). 하나라도 종료했으면 True.
 
+    marker = 문자열 또는 문자열 목록(전부 포함 매칭 — _iter_procs_by_marker 참조).
     라디오 mpv 의 --force-media-title 표식처럼, 어느 백엔드가 띄웠든(고아 포함)
     표식만으로 찾아 정지·중복재생을 해결한다. psutil 이 없으면 유닉스 pgrep/pkill 폴백.
     """
@@ -176,25 +184,28 @@ def kill_processes_by_marker(marker: str) -> bool:
             except Exception:
                 pass
         return found
-    # psutil 없는 극단적 폴백 (유닉스 전용)
+    # psutil 없는 극단적 폴백 (유닉스 전용) — 목록이면 첫 조각으로 넓게 잡는다
     if not IS_WINDOWS:
         try:
-            subprocess.run(["pkill", "-f", marker], timeout=5)
-            found = True
+            first = marker if isinstance(marker, str) else (marker[0] if marker else "")
+            if first:
+                subprocess.run(["pkill", "-f", first], timeout=5)
+                found = True
         except Exception:
             pass
     return found
 
 
-def is_process_running_by_marker(marker: str) -> bool:
-    """명령줄에 marker 가 박힌 프로세스가 살아있는지(전 OS)."""
+def is_process_running_by_marker(marker) -> bool:
+    """명령줄에 marker 가 박힌 프로세스가 살아있는지(전 OS). marker=문자열 또는 목록(전부 포함)."""
     if psutil:
         for _ in _iter_procs_by_marker(marker):
             return True
         return False
     if not IS_WINDOWS:
         try:
-            out = subprocess.run(["pgrep", "-f", marker], capture_output=True, text=True, timeout=5)
+            first = marker if isinstance(marker, str) else (marker[0] if marker else "")
+            out = subprocess.run(["pgrep", "-f", first], capture_output=True, text=True, timeout=5)
             return bool(out.stdout.strip())
         except Exception:
             return False

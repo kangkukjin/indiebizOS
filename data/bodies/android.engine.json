@@ -156,6 +156,7 @@
     "tool_selector",
     "trigger_engine",
     "vocab_crystallization",
+    "warehouse_adapters",
     "warehouse_feed",
     "warehouse_items",
     "warehouse_likes",
@@ -183,8 +184,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 177,
-    "engine": 163,
+    "total": 178,
+    "engine": 164,
     "blocklist": 14
   }
 }

@@ -491,8 +491,10 @@ function wfRender(){
   wfNb.forEach(n=>{
     const st = n.ok===0 ? '<span class="err">연결 안 됨</span>'
                         : '<span class="cnt">'+(n.file_count==null?'?':n.file_count)+'개</span>';
+    const ad = (n.adapter && n.adapter!=='native')
+      ? '<span class="cnt" style="background:#e0f2fe;color:#0284c7" title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다">'+esc(n.adapter_label||n.adapter)+'</span>' : '';
     h+='<span class="wh-chip"><a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
-      +st
+      +st+ad
       +'<button title="창고 메모" onclick="wfMemo('+n.neighbor_id+')">✎</button>'
       +'<button title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)" onclick="wfRemove('+n.contact_id+')">✕</button></span>';
   });

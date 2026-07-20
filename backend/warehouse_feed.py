@@ -85,6 +85,11 @@ def _init_db() -> None:
                 c.execute(f"ALTER TABLE {tbl} ADD COLUMN likes INTEGER")
             except Exception:
                 pass  # 이미 있음
+        # 어댑터 컬럼 마이그레이션(2026-07-20) — 이 창고를 어떤 방언으로 읽었나 캐시.
+        try:
+            c.execute("ALTER TABLE poll_status ADD COLUMN adapter TEXT")
+        except Exception:
+            pass  # 이미 있음
 
 
 def normalize_base(url: str) -> str:
@@ -154,13 +159,21 @@ def _migrate_warehouse(old: str, new: str) -> Dict:
 def poll_warehouse(url: str, _hop: int = 0) -> Dict:
     """창고 하나를 폴링해 스냅샷 갱신 + 변화를 피드에 기록. AI 없음 — 순수 diff.
 
+    2026-07-20 어댑터 층: indiebizOS 매니페스트가 아니어도(autoindex·RSS·Nextcloud
+    공유·일반 페이지) warehouse_adapters 가 같은 통화로 정규화해 온다 — 상대가 아무것도
+    설치하지 않아도 이웃이 된다. 감지 결과는 poll_status.adapter 에 캐시(실패 시 재감지).
+
     매니페스트에 moved_to(이사 공지)가 있으면 등기부·캐시를 새 주소로 치유하고
     새 주소를 이어서 폴링한다(1홉만 — 공지 루프 방어)."""
+    import warehouse_adapters
     _init_db()
     base = normalize_base(url)
     now = datetime.now().isoformat(timespec="seconds")
+    with _db_lock, _conn() as c:
+        row = c.execute("SELECT adapter FROM poll_status WHERE wh_url=?", (base,)).fetchone()
+        cached_adapter = row["adapter"] if row else None
     try:
-        data = fetch_manifest(base)
+        data, adapter = warehouse_adapters.fetch_any(base, hint=cached_adapter)
         moved = normalize_base(data.get("moved_to") or "")
         if moved and moved != base and _hop == 0:
             healed = _migrate_warehouse(base, moved)
@@ -222,14 +235,16 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
         for p in gone:
             c.execute("DELETE FROM snapshots WHERE wh_url=? AND path=?", (base, p))
         c.execute("""
-            INSERT INTO poll_status(wh_url, last_poll, ok, error, file_count, title, has_restricted)
-            VALUES(?, ?, 1, NULL, ?, ?, ?)
+            INSERT INTO poll_status(wh_url, last_poll, ok, error, file_count, title,
+                                    has_restricted, adapter)
+            VALUES(?, ?, 1, NULL, ?, ?, ?, ?)
             ON CONFLICT(wh_url) DO UPDATE SET
-                last_poll=?, ok=1, error=NULL, file_count=?, title=?, has_restricted=?
-        """, (base, now, len(files), title, has_restricted,
-              now, len(files), title, has_restricted))
+                last_poll=?, ok=1, error=NULL, file_count=?, title=?, has_restricted=?,
+                adapter=?
+        """, (base, now, len(files), title, has_restricted, adapter,
+              now, len(files), title, has_restricted, adapter))
     _reconcile_identity(base, npub)
-    return {"ok": True, "url": base, "file_count": len(files),
+    return {"ok": True, "url": base, "file_count": len(files), "adapter": adapter,
             "new_events": new_events, "title": title, "npub": npub}
 
 

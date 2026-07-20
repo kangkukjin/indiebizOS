@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from anyio import to_thread
 from fastapi import APIRouter, HTTPException, Request
 
+import warehouse_adapters
 import warehouse_feed as wf
 
 router = APIRouter(prefix="/warehouse-feed", tags=["warehouse-feed"])
@@ -40,6 +41,9 @@ def _cards():
             "last_poll": st.get("last_poll"), "ok": st.get("ok"),
             "error": st.get("error"), "file_count": st.get("file_count"),
             "title": st.get("title") or "", "has_restricted": bool(st.get("has_restricted")),
+            # 방언 어댑터(2026-07-20): native 외에도 autoindex·rss·nextcloud·page 창고 지원
+            "adapter": st.get("adapter") or "native",
+            "adapter_label": warehouse_adapters.adapter_label(st.get("adapter")),
         })
     return cards
 

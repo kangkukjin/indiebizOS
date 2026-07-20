@@ -29,6 +29,7 @@ interface WfNeighbor {
   warehouse_url: string; warehouse_memo: string; favorite: boolean;
   last_poll: string | null; ok: number | null; error: string | null;
   file_count: number | null; title: string; has_restricted: boolean;
+  adapter?: string; adapter_label?: string;
 }
 interface WfFeedItem {
   id?: number; wh_url: string; path: string; mtime: string; bytes: number;
@@ -638,6 +639,14 @@ function NeighborsPane() {
               <span className={`px-1.5 rounded-full ${n.ok === 0 ? 'bg-red-50 text-red-500' : 'bg-stone-100 text-stone-500'}`}>
                 {n.ok === 0 ? '연결 안 됨' : `${n.file_count ?? '?'}개`}
               </span>
+              {n.adapter && n.adapter !== 'native' && (
+                <span
+                  className="px-1.5 rounded-full bg-sky-50 text-sky-600"
+                  title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다"
+                >
+                  {n.adapter_label || n.adapter}
+                </span>
+              )}
               <button
                 className="p-1 rounded text-stone-300 hover:text-[#D97706] opacity-0 group-hover:opacity-100"
                 title={n.warehouse_memo ? `창고 메모: ${n.warehouse_memo}` : '창고 메모 쓰기'}

@@ -873,9 +873,15 @@ async def warehouse_admin_list(level: int = 0):
         d = _warehouse_dir(l)
         counts[l] = sum(1 for p in d.rglob("*") if p.is_file() and not p.name.startswith("."))
     files = []
+    dirs = []          # 빈 폴더도 뷰에 보여야 한다(mkdir 직후) — 파일 접두사만으론 못 유도
     d = _warehouse_dir(lv)
     for p in d.rglob("*"):
-        if not p.is_file() or p.name.startswith("."):
+        if p.name.startswith("."):
+            continue
+        if p.is_dir():
+            dirs.append(str(p.relative_to(d)))
+            continue
+        if not p.is_file():
             continue
         st = p.stat()
         files.append({"name": str(p.relative_to(d)), "bytes": st.st_size, "path": str(p),
@@ -893,7 +899,7 @@ async def warehouse_admin_list(level: int = 0):
     except Exception as e:
         print(f"[창고] 공개면 부품 로드 실패(로컬 목록은 계속): {e}")
     return {"title": _warehouse_title(), "public_url": (base + "/") if base else "",
-            "levels": counts, "level": lv, "files": files,
+            "levels": counts, "level": lv, "files": files, "dirs": dirs,
             "level_labels": {str(k): v for k, v in labels.items()},
             # 이 몸의 창고가 디스크 어디에 사는지 — UI 상단 표기용 (새 PC에서 "창고가 어디지?" 답)
             "root_path": str(_WAREHOUSE_ROOT), "folder_path": str(d)}
@@ -942,7 +948,10 @@ async def warehouse_admin_add(request: Request):
         raise HTTPException(status_code=400, detail="paths required")
     import shutil
     _ensure_warehouses()
-    dest_dir = _warehouse_dir(lv)
+    # dest = 창고 안 하위폴더(상대경로, 빈 값=레벨 루트) — 파인더식 "보고 있는 폴더로 넣기"
+    dest_dir = _safe_rel(_warehouse_dir(lv), str(body.get("dest", "")).strip())
+    if not dest_dir.is_dir():
+        raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
     added, skipped = [], []
     for raw in paths[:200]:
         src = Path(str(raw)).expanduser()
@@ -982,22 +991,25 @@ async def warehouse_admin_remove(request: Request):
     if not name:
         raise HTTPException(status_code=400, detail="name required")
     src = _safe_rel(_warehouse_dir(lv), name)
-    if not src.is_file():
-        raise HTTPException(status_code=404, detail="no such file")
+    if not src.exists() or src == _warehouse_dir(lv):
+        raise HTTPException(status_code=404, detail="no such item")
     trash = _WAREHOUSE_ROOT / "휴지통" / _WAREHOUSE_LEVELS[lv]
     trash.mkdir(parents=True, exist_ok=True)
     dest = trash / src.name
     if dest.exists():
-        dest = trash / f"{src.stem}.{int(time.time())}{src.suffix}"
-    src.rename(dest)   # 같은 볼륨 → 이동
+        dest = (trash / f"{src.stem}.{int(time.time())}{src.suffix}" if src.is_file()
+                else trash / f"{src.name}.{int(time.time())}")
+    src.rename(dest)   # 같은 볼륨 → 이동. 폴더도 통째로(파인더식 빼기).
     return {"ok": True, "trashed": str(dest)}
 
 
 @router.post("/warehouse-admin/move")
 async def warehouse_admin_move(request: Request):
-    """창고 안에서 옮기기 — 파일이든 폴더든 다른 폴더 밑으로. 같은 레벨 안에서만.
+    """창고 안에서 옮기기·이름변경 — 파일이든 폴더든. self:move 와 같은 의미론
+    (같은 폴더+new_name=이름변경, dest 다르면 이동)의 창고 스코프판.
 
-    레벨을 넘나드는 이동은 '공개 범위 변경'이라 뜻이 다르다(여기선 안 한다).
+    dest_level 이 있으면 레벨을 넘는 이동 = '공개 범위 변경' — 드래그로 레벨 탭에
+    떨어뜨리는 명시적 제스처에만 쓴다(2026-07-20 사용자 승인으로 허용).
     같은 볼륨이라 rename = 원자적 이동 — 복사본이 생기지 않는다.
     """
     try:
@@ -1012,23 +1024,155 @@ async def warehouse_admin_move(request: Request):
     src = _safe_rel(root, name)
     if not src.exists():
         raise HTTPException(status_code=404, detail="no such item")
-    dst_dir = _safe_rel(root, str(body.get("dest", "")).strip())   # 빈 값 = 창고 루트
+    dst_lv = _admin_level(body.get("dest_level", lv))
+    _ensure_warehouses()                                # dest_level 폴더가 아직 없을 수 있다
+    dst_root = _warehouse_dir(dst_lv)
+    dst_dir = _safe_rel(dst_root, str(body.get("dest", "")).strip())   # 빈 값 = 창고 루트
     if not dst_dir.is_dir():
         raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
     # 폴더를 자기 자신·자기 하위로 옮기면 트리가 끊긴다(자기를 삼킴).
     if src.is_dir() and (dst_dir == src
                          or str(dst_dir.resolve()).startswith(str(src.resolve()) + os.sep)):
         raise HTTPException(status_code=400, detail="폴더를 자기 안으로는 옮길 수 없어요")
-    if src.parent == dst_dir:
+    new_name = str(body.get("new_name", "")).strip()
+    if new_name and ("/" in new_name or new_name.startswith(".")):
+        raise HTTPException(status_code=400, detail="쓸 수 없는 이름이에요")
+    base_name = new_name or src.name
+    if src.parent == dst_dir and base_name == src.name:
         return {"ok": True, "moved": name, "noop": True}
-    target = dst_dir / src.name
+
+    def _is_src(p: Path) -> bool:
+        # 맥 기본 파일시스템은 대소문자 무시 — 케이스만 바꾸는 이름변경에서
+        # target.exists() 가 자기 자신을 보고 참이 된다. 문자열 비교로는 못 가른다.
+        try:
+            return os.path.samefile(p, src)
+        except OSError:
+            return False
+    target = dst_dir / base_name
+    if new_name and target.exists() and not _is_src(target):
+        raise HTTPException(status_code=409, detail="같은 이름이 이미 있어요")
     n = 2
-    while target.exists():
-        target = dst_dir / (f"{src.stem} ({n}){src.suffix}" if src.is_file()
-                            else f"{src.name} ({n})")
+    while target.exists() and not _is_src(target):
+        stem, dot, ext = base_name.rpartition(".")
+        target = dst_dir / (f"{stem} ({n}).{ext}" if (dot and src.is_file())
+                            else f"{base_name} ({n})")
         n += 1
     src.rename(target)
-    return {"ok": True, "moved": str(target.relative_to(root))}
+    return {"ok": True, "moved": str(target.relative_to(dst_root)), "level": dst_lv}
+
+
+@router.post("/warehouse-admin/mkdir")
+async def warehouse_admin_mkdir(request: Request):
+    """빈 폴더 생성 — 파인더식 '새 폴더'. AI 는 self:mkdir 로 같은 일을 한다(어휘 중복
+    아님 — 이건 GUI 배관: 경로 감옥 + 이름 충돌 시 '(2)' 관례가 창고 스코프에 산다)."""
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    lv = _admin_level(body.get("level", 0))
+    _ensure_warehouses()
+    root = _warehouse_dir(lv)
+    parent = _safe_rel(root, str(body.get("dest", "")).strip())    # 빈 값 = 창고 루트
+    if not parent.is_dir():
+        raise HTTPException(status_code=400, detail="목적지가 폴더가 아니에요")
+    name = str(body.get("name", "")).strip() or "새 폴더"
+    if "/" in name or name.startswith("."):
+        raise HTTPException(status_code=400, detail="쓸 수 없는 이름이에요")
+    target = parent / name
+    n = 2
+    while target.exists():
+        target = parent / f"{name} ({n})"
+        n += 1
+    target.mkdir()
+    return {"ok": True, "created": str(target.relative_to(root))}
+
+
+@router.get("/warehouse-admin/trash")
+async def warehouse_admin_trash():
+    """휴지통 내용 — 뺀 단위(파일·폴더) 그대로, 전 레벨 합쳐서. 복구 목적지를 알아야
+    하니 각 항목에 원래 레벨이 실린다(휴지통/<level>/ 구조가 그 기억)."""
+    items = []
+    trash_root = _WAREHOUSE_ROOT / "휴지통"
+    for lv, sub in _WAREHOUSE_LEVELS.items():
+        d = trash_root / sub
+        if not d.is_dir():
+            continue
+        for p in d.iterdir():
+            if p.name.startswith("."):
+                continue
+            st = p.stat()
+            if p.is_dir():
+                inner = [f for f in p.rglob("*") if f.is_file() and not f.name.startswith(".")]
+                items.append({"name": p.name, "level": lv, "is_dir": True,
+                              "count": len(inner), "bytes": sum(f.stat().st_size for f in inner),
+                              "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
+            else:
+                items.append({"name": p.name, "level": lv, "is_dir": False,
+                              "count": 1, "bytes": st.st_size,
+                              "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
+    items.sort(key=lambda i: i["mtime"], reverse=True)
+    return {"items": items, "count": len(items)}
+
+
+@router.post("/warehouse-admin/restore")
+async def warehouse_admin_restore(request: Request):
+    """휴지통에서 원래 레벨의 창고 루트로 복구 — remove 의 역방향."""
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    lv = _admin_level(body.get("level", 0))
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    trash_dir = _WAREHOUSE_ROOT / "휴지통" / _WAREHOUSE_LEVELS[lv]
+    src = _safe_rel(trash_dir, name)
+    if src.parent != trash_dir or not src.exists():
+        raise HTTPException(status_code=404, detail="no such item")
+    _ensure_warehouses()
+    root = _warehouse_dir(lv)
+    target = root / src.name
+    n = 2
+    while target.exists():
+        target = root / (f"{src.stem} ({n}){src.suffix}" if src.is_file()
+                         else f"{src.name} ({n})")
+        n += 1
+    src.rename(target)
+    return {"ok": True, "restored": str(target.relative_to(root)), "level": lv}
+
+
+@router.post("/warehouse-admin/trash-delete")
+async def warehouse_admin_trash_delete(request: Request):
+    """휴지통 영구 삭제 — {level, name} 단건 또는 {all: true} 비우기. 여기만 파괴적
+    (창고 본체의 remove 는 언제나 휴지통 이동) — UI 가 confirm 을 앞세운다."""
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    import shutil
+    trash_root = _WAREHOUSE_ROOT / "휴지통"
+    if body.get("all"):
+        removed = 0
+        for sub in _WAREHOUSE_LEVELS.values():
+            d = trash_root / sub
+            if not d.is_dir():
+                continue
+            for p in d.iterdir():
+                if p.name.startswith("."):
+                    continue
+                shutil.rmtree(p) if p.is_dir() else p.unlink()
+                removed += 1
+        return {"ok": True, "removed": removed}
+    lv = _admin_level(body.get("level", 0))
+    name = str(body.get("name", "")).strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    trash_dir = trash_root / _WAREHOUSE_LEVELS[lv]
+    src = _safe_rel(trash_dir, name)
+    if src.parent != trash_dir or not src.exists():
+        raise HTTPException(status_code=404, detail="no such item")
+    shutil.rmtree(src) if src.is_dir() else src.unlink()
+    return {"ok": True, "removed": 1}
 
 
 @router.get("/warehouse-admin/file")

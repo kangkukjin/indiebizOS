@@ -219,23 +219,6 @@ class BusinessManager:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contacts_neighbor_id ON contacts(neighbor_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_contacts_type_value ON contacts(contact_type, contact_value)")
 
-        # 마이그레이션(2026-07-18 2차): 창고주소 = 연락방법 — neighbors.warehouse_url 컬럼(1차)을
-        # contacts(contact_type='warehouse') 행으로 이관. 창고주소도 이메일·nostr 처럼 그 사람에게
-        # 닿는 접점(풀로 읽는 길)이므로 연락처 테이블이 곧 창고이웃 등기부가 된다 — 이웃당 여러
-        # 창고 가능, "창고주소만 아는 상대"도 그 주소가 연락처라 정상 이웃. 컬럼은 이관 후 비움.
-        cursor.execute("SELECT id, uuid, warehouse_url FROM neighbors "
-                       "WHERE warehouse_url IS NOT NULL AND warehouse_url != ''")
-        for _nid, _nuuid, _wurl in cursor.fetchall():
-            cursor.execute("SELECT 1 FROM contacts WHERE neighbor_id=? AND contact_type='warehouse' "
-                           "AND contact_value=? AND (deleted IS NOT 1)", (_nid, _wurl))
-            if not cursor.fetchone():
-                _now = datetime.now().isoformat()
-                cursor.execute("""
-                    INSERT INTO contacts (neighbor_id, contact_type, contact_value,
-                                          created_at, updated_at, uuid, neighbor_uuid)
-                    VALUES (?, 'warehouse', ?, ?, ?, ?, ?)
-                """, (_nid, _wurl, _now, _now, _new_uuid(), _nuuid))
-            cursor.execute("UPDATE neighbors SET warehouse_url = NULL WHERE id = ?", (_nid,))
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_neighbor_id ON messages(neighbor_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_messages_processed ON messages(processed)")
@@ -296,6 +279,37 @@ class BusinessManager:
 
         # 동기화용 컬럼(uuid/parent_uuid/updated_at/deleted) — 폰↔PC 합집합 머지 토대
         self._migrate_sync_columns()
+
+        # 창고주소 컬럼→연락처 행 이관 — ★반드시 sync 컬럼 뒤(아래 메서드 주석 참조)
+        self._migrate_warehouse_contacts()
+
+    def _migrate_warehouse_contacts(self):
+        """마이그레이션(2026-07-18 2차): 창고주소 = 연락방법 — neighbors.warehouse_url 컬럼(1차)을
+        contacts(contact_type='warehouse') 행으로 이관. 창고주소도 이메일·nostr 처럼 그 사람에게
+        닿는 접점(풀로 읽는 길)이므로 연락처 테이블이 곧 창고이웃 등기부가 된다 — 이웃당 여러
+        창고 가능, "창고주소만 아는 상대"도 그 주소가 연락처라 정상 이웃. 컬럼은 이관 후 비움.
+
+        ★호출 순서: 반드시 _migrate_sync_columns 뒤 — 이관 INSERT 가 uuid·neighbor_uuid·
+        updated_at 을 쓰는데 신선 DB 는 그 컬럼들이 sync 마이그레이션에서야 생긴다.
+        (2026-07-20 CI 윈도우 import 스모크가 신선 DB 부팅 죽음(no such column: uuid)으로
+        검출 — 기존 DB 는 이전 실행이 컬럼을 이미 만들어 안 걸렸던 순서 버그.)"""
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, uuid, warehouse_url FROM neighbors "
+                       "WHERE warehouse_url IS NOT NULL AND warehouse_url != ''")
+        for _nid, _nuuid, _wurl in cursor.fetchall():
+            cursor.execute("SELECT 1 FROM contacts WHERE neighbor_id=? AND contact_type='warehouse' "
+                           "AND contact_value=? AND (deleted IS NOT 1)", (_nid, _wurl))
+            if not cursor.fetchone():
+                _now = datetime.now().isoformat()
+                cursor.execute("""
+                    INSERT INTO contacts (neighbor_id, contact_type, contact_value,
+                                          created_at, updated_at, uuid, neighbor_uuid)
+                    VALUES (?, 'warehouse', ?, ?, ?, ?, ?)
+                """, (_nid, _wurl, _now, _now, _new_uuid(), _nuuid))
+            cursor.execute("UPDATE neighbors SET warehouse_url = NULL WHERE id = ?", (_nid,))
+        conn.commit()
+        conn.close()
 
     def _migrate_sync_columns(self):
         """동기화용 컬럼 추가 + 기존 행 backfill (멱등).

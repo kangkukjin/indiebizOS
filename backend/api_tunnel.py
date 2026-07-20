@@ -337,8 +337,16 @@ def _ts_run(args: list, timeout: int = 20) -> dict:
     try:
         p = subprocess.run([binp] + args, capture_output=True, text=True, timeout=timeout)
         return {"rc": p.returncode, "out": p.stdout or "", "err": p.stderr or ""}
-    except subprocess.TimeoutExpired:
-        return {"rc": -1, "out": "", "err": f"tailscale {' '.join(args)} 시간 초과"}
+    except subprocess.TimeoutExpired as e:
+        # ★타임아웃 전까지의 출력을 버리면 안 된다 — funnel 미승인 시 CLI 가 승인 URL 을
+        # 찍고 대기하는데, 그 URL 이 사용자에게 가장 필요한 정보다(2026-07-20 윈도우 실측).
+        def _s(v):
+            if isinstance(v, bytes):
+                return v.decode(errors="replace")
+            return v or ""
+        return {"rc": -1, "out": _s(e.stdout), "err": _s(e.stderr),
+                "timed_out": True,
+                "note": f"tailscale {' '.join(args)} 시간 초과"}
     except Exception as e:
         return {"rc": -1, "out": "", "err": str(e)}
 
@@ -380,12 +388,24 @@ def is_funnel_running() -> bool:
 def start_funnel(port: int = 8765) -> dict:
     """Funnel 켜기 — https://<기기>.ts.net → localhost:<port>. --bg = 데몬에 영속 선언."""
     info = tailscale_info()
+    # ★스프레드 순서: **info 를 앞에 — info["error"]="" (정상 상태)가 뒤에 오면
+    #   우리가 채운 error 메시지를 조용히 덮어써 UI 엔 맹탕 "발급 실패"만 남는다(실측).
     if not info["installed"] or not info["logged_in"]:
-        return {"success": False, "error": info["error"] or "tailscale 준비 안 됨", **info}
+        return {**info, "success": False, "error": info["error"] or "tailscale 준비 안 됨"}
     r = _ts_run(["funnel", "--bg", str(port)], timeout=30)
     if r["rc"] != 0:
-        # 인증서/노드속성 미허용 등 — CLI 안내문을 그대로 (설정 마법사의 다음 단계 안내)
-        return {"success": False, "error": (r["err"] or r["out"]).strip()[:500], **info}
+        combined = f"{r['out']}\n{r['err']}".strip()
+        # Funnel 노드속성 미승인 — CLI 가 관리 콘솔 승인 URL 을 찍고 승인될 때까지
+        # 대기한다(그래서 타임아웃으로 끝남). 그 URL 을 에러에 묻지 말고 "다음 단계"로
+        # 승격해 반환 — 사용자가 발급 버튼에서 바로 승인 링크를 받는다.
+        m = re.search(r"https://login\.tailscale\.com/\S+", combined)
+        if m:
+            url = m.group(0).rstrip(".,)")
+            return {**info, "success": False, "needs_approval": True, "approval_url": url,
+                    "error": "Funnel 승인이 필요해요 — 아래 링크에서 허용한 뒤 다시 발급을 누르세요."}
+        # 그 외(인증서 미허용 등) — CLI 안내문을 그대로 (설정 마법사의 다음 단계 안내)
+        return {**info, "success": False,
+                "error": (combined or r.get("note") or "").strip()[:500]}
     base = f"https://{info['dns_name']}" if info["dns_name"] else ""
     # 직접 서빙 게이트웨이 배선 — ts.net 주소가 공개 얼굴이 된다
     wired = {}

@@ -46,7 +46,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const [provDomain, setProvDomain] = useState('');
   const [provSub, setProvSub] = useState('');
   const [provBusy, setProvBusy] = useState<'' | 'ts' | 'cf'>('');
-  const [provResult, setProvResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [provResult, setProvResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
   const [provSteps, setProvSteps] = useState<{ step: string; ok: boolean; detail: string }[]>([]);
 
   // NAS 설정 로드 — 실패는 throw 되어 useRetryingLoad 가 백오프 재시도한다.
@@ -275,7 +275,8 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         body: JSON.stringify({}),
       });
       const d = await r.json();
-      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
+      // needs_approval: Funnel 미승인 — CLI 가 찍은 관리 콘솔 승인 URL 을 링크로 승격
+      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패'), url: d.approval_url });
       if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
     } catch (err) {
       setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
@@ -793,6 +794,19 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
               <p className={`text-sm ${provResult.success ? 'text-green-600' : 'text-red-600'}`}>
                 {provResult.success ? <CheckCircle size={16} className="inline mr-1" /> : <AlertCircle size={16} className="inline mr-1" />}
                 {provResult.message}
+                {provResult.url && (
+                  <a
+                    className="ml-1 underline text-[#D97706] hover:text-[#B45309] cursor-pointer break-all"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const el = (window as any).electron;
+                      if (el?.openExternal) el.openExternal(provResult.url);
+                      else window.open(provResult.url, '_blank', 'noopener');
+                    }}
+                  >
+                    {provResult.url}
+                  </a>
+                )}
               </p>
             )}
           </div>

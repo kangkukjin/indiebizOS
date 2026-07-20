@@ -8,6 +8,7 @@ import {
   Folder, RefreshCw, Image, Trash2, MapPin
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 
 // 타입 및 유틸리티
 import type { PhotoManagerProps, Scan, MediaItem, DuplicateGroup, ViewMode } from './types';
@@ -81,12 +82,11 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
       }
     } catch (error) {
       console.error('Failed to load scans:', error);
+      throw error;                    // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
   }, [getApiUrl, initialPath]);
 
-  useEffect(() => {
-    loadScans();
-  }, [loadScans]);
+  useRetryingLoad(loadScans);
 
   // 갤러리 로드
   const loadGallery = useCallback(async () => {
@@ -104,6 +104,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
       }
     } catch (error) {
       console.error('Failed to load gallery:', error);
+      throw error;                    // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
   }, [selectedPath, currentPage, sortBy, mediaType, getApiUrl]);
 
@@ -126,6 +127,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
       }
     } catch (error) {
       console.error('Failed to load duplicates:', error);
+      throw error;                    // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
   }, [selectedPath, getApiUrl]);
 
@@ -143,32 +145,14 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
       }
     } catch (error) {
       console.error('Failed to load stats:', error);
+      throw error;                    // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
   }, [selectedPath, getApiUrl]);
 
-  // 뷰 모드 변경 시 데이터 로드
-  useEffect(() => {
-    if (!selectedPath) return;
-
-    switch (viewMode) {
-      case 'gallery':
-        loadGallery();
-        break;
-      case 'duplicates':
-        loadDuplicates();
-        break;
-      case 'stats':
-        loadStats();
-        break;
-    }
-  }, [viewMode, selectedPath, loadGallery, loadDuplicates, loadStats]);
-
-  // 페이지 변경 시 갤러리 리로드
-  useEffect(() => {
-    if (viewMode === 'gallery' && selectedPath) {
-      loadGallery();
-    }
-  }, [currentPage, sortBy, mediaType, viewMode, selectedPath, loadGallery]);
+  // 뷰 모드별 데이터 로드 — 조회 조건(페이지·정렬·타입)은 각 로더의 deps 가 표현한다
+  useRetryingLoad(loadGallery, { enabled: viewMode === 'gallery' && !!selectedPath });
+  useRetryingLoad(loadDuplicates, { enabled: viewMode === 'duplicates' && !!selectedPath });
+  useRetryingLoad(loadStats, { enabled: viewMode === 'stats' && !!selectedPath });
 
   // 폴더 선택
   const handleSelectFolder = async () => {
@@ -201,7 +185,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
 
       if (data.success) {
         setScanProgress(`완료! 사진 ${data.photo_count}개, 동영상 ${data.video_count}개`);
-        await loadScans();
+        await loadScans().catch(() => {});
         setSelectedPath(path);
         setViewMode('gallery');
       } else {
@@ -250,7 +234,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
           setGalleryItems([]);
           setTotalItems(0);
         }
-        await loadScans();
+        await loadScans().catch(() => {});
       } else {
         alert(`삭제 실패: ${data.error}`);
       }

@@ -2,8 +2,9 @@
  * TimeMapView - 타임라인 기반 지역별 보기 (타임지도)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, RefreshCw, RotateCcw } from 'lucide-react';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar
@@ -61,6 +62,7 @@ export function TimeMapView({
       }
     } catch (err) {
       console.error('타임라인 로드 실패:', err);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     } finally {
       setTimelineLoading(false);
     }
@@ -99,17 +101,15 @@ export function TimeMapView({
     }
   };
 
-  // 초기 로드
-  useEffect(() => {
-    loadTimelineZoom();
-  }, [loadTimelineZoom]);
+  // 초기 로드 (줌·범위 변경은 아래 이벤트 핸들러가 직접 조회)
+  useRetryingLoad(loadTimelineZoom);
 
   const resetTimeline = () => {
     setTimelineStartDate('');
     setTimelineEndDate('');
     setZoomHistory([]);
     setSelectedRegion(null);
-    loadTimelineZoom();
+    loadTimelineZoom().catch(() => {});
   };
 
   const zoomOut = () => {
@@ -126,7 +126,7 @@ export function TimeMapView({
     setZoomHistory(newHistory);
     setTimelineStartDate(prev?.start || '');
     setTimelineEndDate(prev?.end || '');
-    loadTimelineZoom(prev?.start || undefined, prev?.end || undefined);
+    loadTimelineZoom(prev?.start || undefined, prev?.end || undefined).catch(() => {});
   };
 
   const handleBarClick = (data: any) => {
@@ -152,7 +152,7 @@ export function TimeMapView({
 
     setTimelineStartDate(startDate);
     setTimelineEndDate(endDate);
-    loadTimelineZoom(startDate, endDate);
+    loadTimelineZoom(startDate, endDate).catch(() => {});
   };
 
   if (timelineLoading && !timelineData) {

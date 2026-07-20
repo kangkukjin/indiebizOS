@@ -3,7 +3,7 @@
  * 원본 manager.py의 기능을 React로 구현
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ArrowLeft,
   Settings,
@@ -18,6 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 import { Chat } from './Chat';
 import type { Agent, Switch } from '../types';
 
@@ -119,26 +120,19 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   // ============ useEffect 훅들 ============
 
-  useEffect(() => {
-    if (currentProject) {
-      loadAgents(currentProject.id);
-      loadSwitches();  // 스위치 로드
-      // 프로젝트 로드 시 default_tools도 함께 로드
-      const loadDefaultTools = async () => {
-        try {
-          const config = await api.getProjectConfig(currentProject.id);
-          if (config.default_tools) {
-            setDefaultTools(config.default_tools as string[]);
-          } else {
-            setDefaultTools([]);
-          }
-        } catch (error) {
-          console.error('default_tools 로드 실패:', error);
-        }
-      };
-      loadDefaultTools();
-    }
+  // 프로젝트 진입 시 에이전트·스위치·default_tools 로드.
+  // loadAgents/loadSwitches(스토어)는 실패를 삼키므로, 같은 백엔드로 가는
+  // getProjectConfig 의 실패 전파가 셋을 함께 재시도시킨다.
+  const loadProjectData = useCallback(async () => {
+    if (!currentProject) return;
+    const [config] = await Promise.all([
+      api.getProjectConfig(currentProject.id),
+      loadAgents(currentProject.id),
+      loadSwitches(),  // 스위치 로드
+    ]);
+    setDefaultTools((config.default_tools as string[]) || []);
   }, [currentProject, loadAgents, loadSwitches]);
+  useRetryingLoad(loadProjectData, { enabled: !!currentProject });
 
   // 모델 기어/프리셋/핀이 계기판(별도 창)에서 바뀌면 에이전트 카드의 effective_model 을 갱신.
   // 계기판이 같은 origin localStorage 를 bump → 이 창에서 storage 이벤트 수신 → 재조회.
@@ -200,24 +194,11 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     };
   }, [agents]);
 
-  useEffect(() => {
-    const checkOllamaStatus = async () => {
-      try {
-        const status = await api.getOllamaStatus();
-        setOllamaRunning(status.running);
-      } catch {
-        // 무시
-      }
-    };
-    checkOllamaStatus();
+  const checkOllamaStatus = useCallback(async () => {
+    const status = await api.getOllamaStatus();
+    setOllamaRunning(status.running);
   }, []);
-
-
-  useEffect(() => {
-    if (showSettingsDialog && currentProject) {
-      loadSettingsData();
-    }
-  }, [showSettingsDialog, currentProject]);
+  useRetryingLoad(checkOllamaStatus);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -229,23 +210,16 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
         x: (window.innerWidth - chatDialogSize.width) / 2,
         y: (window.innerHeight - chatDialogSize.height) / 2
       });
-      loadAllChatAgents();
     }
   }, [showTeamChatDialog, currentProject]);
 
+  // 대화 에이전트가 바뀌면 상대·메시지 선택을 초기화 (조회는 아래 useRetryingLoad 가 담당)
   useEffect(() => {
     if (selectedChatAgent && currentProject) {
       setSelectedPartner(null);
       setTeamChatMessages([]);
-      loadChatPartners(selectedChatAgent);
     }
   }, [selectedChatAgent, currentProject]);
-
-  useEffect(() => {
-    if (selectedPartner && selectedChatAgent && currentProject) {
-      loadMessagesBetween(selectedChatAgent, selectedPartner);
-    }
-  }, [selectedPartner, selectedChatAgent, currentProject]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -280,63 +254,50 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   // ============ 데이터 로딩 함수들 ============
 
-  const loadSettingsData = async () => {
+  const loadSettingsData = useCallback(async () => {
     if (!currentProject) return;
+    const config = await api.getProjectConfig(currentProject.id);
+    // 프로젝트 기본 노드 로드
+    setDefaultTools((config.default_tools as string[]) || []);
+  }, [currentProject]);
+  useRetryingLoad(loadSettingsData, { enabled: showSettingsDialog && !!currentProject });
 
-    try {
-      const config = await api.getProjectConfig(currentProject.id);
-      // 프로젝트 기본 노드 로드
-      if (config.default_tools) {
-        setDefaultTools(config.default_tools as string[]);
-      } else {
-        setDefaultTools([]);
-      }
-    } catch (error) {
-      console.error('Failed to load settings:', error);
-    }
-  };
-
-  const loadAllChatAgents = async () => {
+  const loadAllChatAgents = useCallback(async () => {
     if (!currentProject) return;
-    try {
-      const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}`);
-      const data = await res.json();
-      const agentList = data.conversations || [];
-      const sortedAgents = [...agentList].sort((a: ChatAgent, b: ChatAgent) => {
-        if (a.type === 'human' && b.type !== 'human') return -1;
-        if (a.type !== 'human' && b.type === 'human') return 1;
-        return a.name.localeCompare(b.name);
-      });
-      setChatAgents(sortedAgents);
-    } catch (error) {
-      console.error('에이전트 로드 실패:', error);
-    }
-  };
+    const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}`);
+    const data = await res.json();
+    const agentList = data.conversations || [];
+    const sortedAgents = [...agentList].sort((a: ChatAgent, b: ChatAgent) => {
+      if (a.type === 'human' && b.type !== 'human') return -1;
+      if (a.type !== 'human' && b.type === 'human') return 1;
+      return a.name.localeCompare(b.name);
+    });
+    setChatAgents(sortedAgents);
+  }, [currentProject]);
+  useRetryingLoad(loadAllChatAgents, { enabled: showTeamChatDialog && !!currentProject });
 
-  const loadChatPartners = async (agentId: number) => {
-    if (!currentProject) return;
-    try {
-      const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/${agentId}/partners`);
-      const data = await res.json();
-      setChatPartners(data.partners || []);
-    } catch (error) {
-      console.error('대화 상대 로드 실패:', error);
-    }
-  };
+  const loadChatPartners = useCallback(async () => {
+    if (!currentProject || !selectedChatAgent) return;
+    const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/${selectedChatAgent}/partners`);
+    const data = await res.json();
+    setChatPartners(data.partners || []);
+  }, [currentProject, selectedChatAgent]);
+  useRetryingLoad(loadChatPartners, { enabled: !!(selectedChatAgent && currentProject) });
 
-  const loadMessagesBetween = async (agent1Id: number, agent2Id: number) => {
-    if (!currentProject) return;
+  const loadMessagesBetween = useCallback(async () => {
+    if (!currentProject || !selectedChatAgent || !selectedPartner) return;
     setTeamChatLoading(true);
     try {
-      const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/between/${agent1Id}/${agent2Id}?limit=200`);
+      const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/between/${selectedChatAgent}/${selectedPartner}?limit=200`);
       const data = await res.json();
       setTeamChatMessages(data.messages || []);
-    } catch (error) {
-      console.error('대화 메시지 로드 실패:', error);
     } finally {
       setTeamChatLoading(false);
     }
-  };
+  }, [currentProject, selectedChatAgent, selectedPartner]);
+  const { retry: refreshMessages } = useRetryingLoad(loadMessagesBetween, {
+    enabled: !!(selectedPartner && selectedChatAgent && currentProject),
+  });
 
   // ============ 유틸리티 함수들 ============
 
@@ -983,7 +944,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
         teamChatMessages={teamChatMessages}
         teamChatLoading={teamChatLoading}
         getAgentNameById={getAgentNameById}
-        onRefresh={() => selectedPartner && selectedChatAgent && loadMessagesBetween(selectedChatAgent, selectedPartner)}
+        onRefresh={() => { if (selectedPartner && selectedChatAgent) refreshMessages(); }}
         onDragStart={handleDragStart}
         onResizeStart={handleResizeStart}
       />

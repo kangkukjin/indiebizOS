@@ -18,6 +18,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { StreamPlayer } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
 const PROJECT_ID = '앱모드';
@@ -42,15 +43,14 @@ interface Cctv { name?: string; url?: string; lat?: number; lng?: number; road_t
 interface CctvResult { items?: Cctv[]; count?: number; error?: string }
 
 /* ── IBL 직접 실행 ──────────────────────────────── */
+// 연결 실패는 throw — 호출부(runSearch)가 에러 표시·재시도를 다룬다.
 async function runRoute(origin: string, destination: string): Promise<RouteResult> {
-  try {
-    const o = origin.replace(/"/g, ''); const d = destination.replace(/"/g, '');
-    const res = await fetch(IBL_ENDPOINT, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code: `[sense:navigate_route]{origin: "${o}", destination: "${d}"}`, project_id: PROJECT_ID }),
-    });
-    return await res.json();
-  } catch { return { error: '서버에 연결할 수 없습니다.' }; }
+  const o = origin.replace(/"/g, ''); const d = destination.replace(/"/g, '');
+  const res = await fetch(IBL_ENDPOINT, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: `[sense:navigate_route]{origin: "${o}", destination: "${d}"}`, project_id: PROJECT_ID }),
+  });
+  return await res.json();
 }
 async function runCctvNearby(lat: number, lng: number, radius_km: number, count: number): Promise<CctvResult> {
   try {
@@ -146,7 +146,14 @@ export function DirectionsInstrument() {
     const ds = d.coord ? `${d.coord.lng},${d.coord.lat}` : d.text.trim();
     if (!os || !ds) return;
     setLoading(true); setError(null);
-    const r = await runRoute(os, ds);
+    let r: RouteResult;
+    try {
+      r = await runRoute(os, ds);
+    } catch (e) {
+      setLoading(false);
+      setError('서버에 연결할 수 없습니다.');
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
     setLoading(false);
     if (r.error) { setError(r.error); setResult(null); return; }
     setResult(r);
@@ -159,6 +166,15 @@ export function DirectionsInstrument() {
       if (cctvOnRef.current) loadCctvAlongRoute(r.map_data.path);
     }
   }, [loadCctvAlongRoute]);
+
+  // 수동 실행(버튼·Enter)용 — 연결 실패 에러는 runSearch 안에서 이미 화면에 표시된다.
+  const searchNow = (o: Point, d: Point) => { runSearch(o, d).catch(() => {}); };
+
+  // 캐시 복원분 자동 길찾기 — 마운트 1회. 백엔드가 아직 안 떠 있으면 훅이 백오프 재시도.
+  const hasCache = !!((init.origin.text || init.origin.coord) && (init.destination.text || init.destination.coord));
+  useRetryingLoad(
+    useCallback(() => runSearch(init.origin, init.destination), [init, runSearch]),
+    { enabled: hasCache });
 
   /* ── 지도 1회 초기화 ── */
   useEffect(() => {
@@ -177,10 +193,6 @@ export function DirectionsInstrument() {
     });
 
     setTimeout(() => map.invalidateSize(), 120);
-    // 캐시 복원분 자동 길찾기
-    if ((init.origin.text || init.origin.coord) && (init.destination.text || init.destination.coord)) {
-      runSearch(init.origin, init.destination);
-    }
     return () => { map.remove(); mapRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -261,7 +273,7 @@ export function DirectionsInstrument() {
               className={`w-9 shrink-0 text-base rounded-lg py-1.5 border ${pick === 'origin' ? 'bg-green-50 border-green-300' : 'bg-white border-stone-200'}`}>📍</button>
             <input value={origin.text} onChange={(e) => setOrigin({ text: e.target.value, coord: null })}
               onFocus={() => setPick('origin')}
-              onKeyDown={(e) => e.key === 'Enter' && runSearch(origin, destination)}
+              onKeyDown={(e) => e.key === 'Enter' && searchNow(origin, destination)}
               placeholder="출발지 — 지도 클릭 / 우리집 / 강남역"
               className="flex-1 px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm outline-none focus:border-stone-400" />
             <button onClick={useHome} title={home ? `우리집: ${home}` : '우리집 주소 등록'}
@@ -272,12 +284,12 @@ export function DirectionsInstrument() {
               className={`w-9 shrink-0 text-base rounded-lg py-1.5 border ${pick === 'destination' ? 'bg-rose-50 border-rose-300' : 'bg-white border-stone-200'}`}>🏁</button>
             <input value={destination.text} onChange={(e) => setDestination({ text: e.target.value, coord: null })}
               onFocus={() => setPick('destination')}
-              onKeyDown={(e) => e.key === 'Enter' && runSearch(origin, destination)}
+              onKeyDown={(e) => e.key === 'Enter' && searchNow(origin, destination)}
               placeholder="목적지 — 지도 클릭 / 수원역 / 시청"
               className="flex-1 px-3 py-2 rounded-xl border border-stone-200 bg-white text-sm outline-none focus:border-stone-400" />
             <button onClick={swap} title="출발↔도착 바꾸기"
               className="shrink-0 px-2.5 py-2 rounded-xl text-sm border bg-white border-stone-200 text-stone-600 hover:bg-stone-50">⇅</button>
-            <button onClick={() => runSearch(origin, destination)} disabled={loading || (!origin.text.trim() && !origin.coord) || (!destination.text.trim() && !destination.coord)}
+            <button onClick={() => searchNow(origin, destination)} disabled={loading || (!origin.text.trim() && !origin.coord) || (!destination.text.trim() && !destination.coord)}
               className="shrink-0 px-4 py-2 rounded-xl bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40">
               {loading ? '…' : '길찾기'}
             </button>

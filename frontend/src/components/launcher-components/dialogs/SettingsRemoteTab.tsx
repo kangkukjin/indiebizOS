@@ -2,8 +2,9 @@
  * SettingsRemoteTab - 원격 접속 관련 설정 탭 (NAS, 런처, 터널)
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, CheckCircle, AlertCircle, Globe, Package } from 'lucide-react';
+import { useRetryingLoad } from '../../../lib/use-retrying-load';
 
 interface SettingsRemoteTabProps {
   activeTab: 'nas' | 'launcher' | 'tunnel';
@@ -48,31 +49,10 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const [provResult, setProvResult] = useState<{ success: boolean; message: string } | null>(null);
   const [provSteps, setProvSteps] = useState<{ step: string; ok: boolean; detail: string }[]>([]);
 
-  // NAS 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'nas') {
-      loadNasConfig();
-    }
-  }, [show, activeTab]);
-
-  // 원격 런처 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'launcher') {
-      loadLauncherConfig();
-    }
-  }, [show, activeTab]);
-
-  // 터널 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'tunnel') {
-      loadTunnelConfig();
-      loadProvision();
-    }
-  }, [show, activeTab]);
-
-  const loadNasConfig = async () => {
+  // NAS 설정 로드 — 실패는 throw 되어 useRetryingLoad 가 백오프 재시도한다.
+  const loadNasConfig = useCallback(async () => {
+    setIsLoadingNas(true);
     try {
-      setIsLoadingNas(true);
       const response = await fetch('http://127.0.0.1:8765/nas/config');
       if (response.ok) {
         const data = await response.json();
@@ -80,12 +60,11 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         setNasHasPassword(data.has_password || false);
         setNasAllowedPaths(data.allowed_paths || []);
       }
-    } catch (err) {
-      console.error('Failed to load NAS config:', err);
     } finally {
       setIsLoadingNas(false);
     }
-  };
+  }, []);
+  useRetryingLoad(loadNasConfig, { enabled: show && activeTab === 'nas' });
 
   const saveNasConfig = async () => {
     try {
@@ -138,21 +117,21 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     setNasAllowedPaths(nasAllowedPaths.filter(p => p !== path));
   };
 
-  const loadLauncherConfig = async () => {
+  // 원격 런처 설정 로드
+  const loadLauncherConfig = useCallback(async () => {
+    setIsLoadingLauncher(true);
     try {
-      setIsLoadingLauncher(true);
       const response = await fetch('http://127.0.0.1:8765/launcher/config');
       if (response.ok) {
         const data = await response.json();
         setLauncherEnabled(data.enabled || false);
         setLauncherHasPassword(data.has_password || false);
       }
-    } catch (err) {
-      console.error('Failed to load launcher config:', err);
     } finally {
       setIsLoadingLauncher(false);
     }
-  };
+  }, []);
+  useRetryingLoad(loadLauncherConfig, { enabled: show && activeTab === 'launcher' });
 
   const saveLauncherConfig = async () => {
     try {
@@ -184,9 +163,9 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     }
   };
 
-  const loadTunnelConfig = async () => {
+  const loadTunnelConfig = useCallback(async () => {
+    setIsLoadingTunnel(true);
     try {
-      setIsLoadingTunnel(true);
       const response = await fetch('http://127.0.0.1:8765/tunnel/config');
       if (response.ok) {
         const data = await response.json();
@@ -196,12 +175,10 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         setTunnelHostname(data.hostname || '');
         setTunnelCloudflaredInstalled(data.cloudflared_installed || false);
       }
-    } catch (err) {
-      console.error('Failed to load tunnel config:', err);
     } finally {
       setIsLoadingTunnel(false);
     }
-  };
+  }, []);
 
   const saveTunnelConfig = async () => {
     try {
@@ -261,29 +238,31 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
 
   // ── 창고 신원 자동 발급 (새 몸 = 새 주소) ──────────────────────────────────
 
-  const loadProvision = async () => {
-    try {
-      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/status');
-      if (!r.ok) return;
-      const d = await r.json();
-      setProvStatus(d);
-      setProvSub(prev => prev || d.machine_slug || '');
-      if (d.cloudflare?.api_token_present) {
-        try {
-          const zr = await fetch('http://127.0.0.1:8765/tunnel/provision/zones');
-          if (zr.ok) {
-            const zd = await zr.json();
-            if (zd.success) {
-              setProvZones(zd.zones || []);
-              setProvDomain(prev => prev || (zd.zones?.[0]?.name ?? ''));
-            }
+  const loadProvision = useCallback(async () => {
+    const r = await fetch('http://127.0.0.1:8765/tunnel/provision/status');
+    if (!r.ok) return;
+    const d = await r.json();
+    setProvStatus(d);
+    setProvSub(prev => prev || d.machine_slug || '');
+    if (d.cloudflare?.api_token_present) {
+      try {
+        const zr = await fetch('http://127.0.0.1:8765/tunnel/provision/zones');
+        if (zr.ok) {
+          const zd = await zr.json();
+          if (zd.success) {
+            setProvZones(zd.zones || []);
+            setProvDomain(prev => prev || (zd.zones?.[0]?.name ?? ''));
           }
-        } catch { /* zone 조회 실패는 조용히 — 카드에서 토큰 안내로 대체 */ }
-      }
-    } catch (err) {
-      console.error('Failed to load provision status:', err);
+        }
+      } catch { /* zone 조회 실패는 조용히 — 카드에서 토큰 안내로 대체 */ }
     }
-  };
+  }, []);
+
+  // 터널 설정 로드
+  const loadTunnelTab = useCallback(async () => {
+    await Promise.all([loadTunnelConfig(), loadProvision()]);
+  }, [loadTunnelConfig, loadProvision]);
+  useRetryingLoad(loadTunnelTab, { enabled: show && activeTab === 'tunnel' });
 
   const provisionTailscale = async () => {
     try {
@@ -297,7 +276,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       });
       const d = await r.json();
       setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
-      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+      if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
     } catch (err) {
       setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
     } finally {
@@ -317,7 +296,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       });
       const d = await r.json();
       setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '완료' : '실패') });
-      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+      if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
     } catch (err) {
       setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
     } finally {
@@ -343,7 +322,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       const d = await r.json();
       setProvSteps(d.steps || []);
       setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
-      if (d.success) { await loadProvision(); await loadTunnelConfig(); }
+      if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
     } catch (err) {
       setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
     } finally {

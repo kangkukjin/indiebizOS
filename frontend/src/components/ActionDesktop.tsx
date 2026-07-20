@@ -24,6 +24,7 @@ import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { DraggableIcon } from './launcher-components/DraggableIcon';
 import { ChatView } from './chat/ChatView';
 import { api } from '../lib/api';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 import type { AppLayout } from '../types';
 
 // 계기는 두 종류 — 인라인으로 펼쳐지는 것(el)과, 누르면 별도 네이티브 창을 띄우는 것(onOpen).
@@ -167,11 +168,6 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   const [menu, setMenu] = useState<{ x: number; y: number; target?: { id: string; kind: 'app' | 'folder' } } | null>(null);
   const folderRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // 실패 시 백오프 재시도 — 백엔드 auto-reload 워커 교체 순간엔 fetch 가 즉시 실패하는데,
-  // 예전엔 다음 window focus 까지 방치돼 앱들이 한참 뒤에야 나타났다. 1→2→4…최대 10초.
-  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const retryDelay = useRef(1000);
-
   const loadManifest = useCallback(() => {
     return fetch('http://127.0.0.1:8765/launcher/instruments')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
@@ -194,26 +190,14 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
     });
   }, []);
 
-  const loadAll = useCallback(() => {
-    Promise.all([loadManifest(), loadLayout()])
-      .then(() => { retryDelay.current = 1000; })
-      .catch(() => {
-        // 백엔드 미기동/재기동 중 — 캐시로 그린 화면 유지, 백오프 재시도로 자동 회복
-        if (retryTimer.current) clearTimeout(retryTimer.current);
-        retryTimer.current = setTimeout(loadAll, retryDelay.current);
-        retryDelay.current = Math.min(retryDelay.current * 2, 10000);
-      });
-  }, [loadManifest, loadLayout]);
+  const loadAll = useCallback(
+    () => Promise.all([loadManifest(), loadLayout()]),
+    [loadManifest, loadLayout]
+  );
 
-  useEffect(() => {
-    loadAll();
-    const onFocus = () => loadAll();
-    window.addEventListener('focus', onFocus);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      if (retryTimer.current) clearTimeout(retryTimer.current);
-    };
-  }, [loadAll]);
+  // 백엔드 미기동/재기동 중이면 캐시로 그린 화면 유지 + 백오프 재시도로 자동 회복,
+  // window focus 마다 재조회(새 앱 반영) — useRetryingLoad 로 공용화.
+  useRetryingLoad(loadAll, { onFocus: true });
 
   // 레이아웃 낙관적 갱신 + 지속 (함수형 업데이트로 연속 드래그 race 방지)
   const mutate = useCallback((fn: (l: AppLayout) => AppLayout) => {

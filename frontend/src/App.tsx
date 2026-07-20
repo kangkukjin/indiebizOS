@@ -2,7 +2,7 @@
  * IndieBiz 메인 앱
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from './stores/appStore';
 import { Launcher } from './components/Launcher';
 import { Manager } from './components/Manager';
@@ -17,6 +17,7 @@ import { AndroidManager } from './components/AndroidManager';
 import { SystemAIView } from './components/SystemAIView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { api } from './lib/api';
+import { useRetryingLoad } from './lib/use-retrying-load';
 
 // URL 해시 → 라우트. ★첫 렌더 전에 동기로 계산해야 한다 — useEffect에서 늦게 읽으면
 // 전용 창(메신저 등)도 첫 프레임에 기본 뷰(런처 전체)가 마운트돼 무거운 초기 요청
@@ -145,32 +146,25 @@ function App() {
   }, [projectId]);
 
   // 프로젝트 ID가 있으면 프로젝트 정보 로드 + 도구 자동 배분
-  useEffect(() => {
-    if (projectId) {
-      const loadProject = async () => {
-        try {
-          const projects = await api.getProjects();
-          const project = projects.find((p: { id: string }) => p.id === projectId);
-          if (project) {
-            setCurrentProject(project);
+  const loadProject = useCallback(async () => {
+    if (!projectId) return;
+    const projects = await api.getProjects();
+    const project = projects.find((p: { id: string }) => p.id === projectId);
+    if (project) {
+      setCurrentProject(project);
 
-            // 프로젝트 열 때 도구 자동 배분 (allowed_tools가 없는 에이전트만)
-            try {
-              const result = await api.initTools(project.id);
-              if (result.status === 'success') {
-                console.log(`[도구 자동 배분] ${result.message}:`, result.agents);
-              }
-            } catch (e) {
-              // 무시 (이미 배분됨 또는 에러)
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load project:', error);
+      // 프로젝트 열 때 도구 자동 배분 (allowed_tools가 없는 에이전트만)
+      try {
+        const result = await api.initTools(project.id);
+        if (result.status === 'success') {
+          console.log(`[도구 자동 배분] ${result.message}:`, result.agents);
         }
-      };
-      loadProject();
+      } catch (e) {
+        // 무시 (이미 배분됨 또는 에러)
+      }
     }
   }, [projectId, setCurrentProject]);
+  useRetryingLoad(loadProject, { enabled: !!projectId });
 
   // 서버 연결 확인
   useEffect(() => {

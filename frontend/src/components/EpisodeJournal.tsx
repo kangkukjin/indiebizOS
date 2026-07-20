@@ -5,8 +5,9 @@
  * 각 행의 "분석" 스위치 → 시스템 AI 창이 그 주행의 전체 로그를 받아 분석하고,
  * 거기서 곧바로 고칠 것을 명령할 수 있다(수동적 상태판 → 능동적 수리대).
  */
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 const API_BASE = 'http://127.0.0.1:8765';
 
@@ -90,15 +91,13 @@ export function EpisodeJournal() {
       const res = await fetch(`${API_BASE}/world-pulse/episodes?limit=20`);
       const data = await res.json();
       setRows(data.episodes || []);
-    } catch {
-      setRows([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   // 펼칠 때 첫 1회만 조회(지연 로드) — 접혀 있을 땐 호출 안 함
-  useEffect(() => { if (open && rows === null) load(); }, [open, rows, load]);
+  const { retry: reload } = useRetryingLoad(load, { enabled: open && rows === null });
 
   const canAnalyze = typeof window !== 'undefined' && !!window.electron?.openSystemAIWindow;
   const analyze = (id: number) => {
@@ -123,7 +122,7 @@ export function EpisodeJournal() {
         </button>
         {open && (
           <button
-            onClick={load}
+            onClick={reload}
             disabled={loading}
             title="새로고침"
             className="px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition"

@@ -5,9 +5,10 @@
  * 내부 페이지·사냥판 행/카드·파비콘·내비 버튼. 본체(모놀리식 상태)와 달리
  * 전부 props 만 받는 독립 컴포넌트라 그대로 옮겨진다.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { API, WebView } from './support';
 import type { Tab, PoolItem } from './support';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 
 // 탭 하나 = webview 하나. 자기 네비 이벤트를 부모 Tab 상태로 올리고, 팝업(target=_blank 등)은 새 탭으로.
 // src 는 initialUrl 로 최초 1회만 로드 — 이후 이동은 goBack/reload 등 imperative 로만(재로드 튐 방지).
@@ -196,15 +197,20 @@ function CardThumb({ url, image }: { url: string; image?: string }) {
 export function HistoryPage({ onOpen, active }: { onOpen: (url: string) => void; active: boolean }) {
   const [items, setItems] = useState<{ id: number; ts: string; url: string; title: string; hunt_query: string }[]>([]);
   const [q, setQ] = useState('');
-  const load = async (query = '') => {
+  const load = useCallback(async (query = '') => {
     try {
       const r = await fetch(`${API}/forage/history?limit=300${query ? `&q=${encodeURIComponent(query)}` : ''}`);
       const d = await r.json();
       setItems(Array.isArray(d.items) ? d.items : []);
-    } catch { setItems([]); }
-  };
+    } catch (e) {
+      setItems([]);
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
+  }, []);
   // 탭이 보일 때마다 최신 목록 — 브라우징하다 돌아와도 방금 방문이 반영되게.
-  useEffect(() => { if (active) load(q); }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 검색어는 ref 로 읽는다(타자마다 재조회하지 않게 — 조회는 활성화·제출 때만).
+  const qRef = useRef(q); qRef.current = q;
+  useRetryingLoad(useCallback(() => load(qRef.current), [load]), { enabled: active });
   const del = async (id: number) => {
     try { await fetch(`${API}/forage/history/${id}`, { method: 'DELETE' }); setItems((p) => p.filter((i) => i.id !== id)); } catch { /* */ }
   };
@@ -220,7 +226,7 @@ export function HistoryPage({ onOpen, active }: { onOpen: (url: string) => void;
           <button onClick={clearAll}
             className="px-3 py-1.5 rounded-lg text-xs text-stone-400 hover:bg-red-50 hover:text-red-500 transition">전체 비우기</button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); load(q); }} className="mb-4">
+        <form onSubmit={(e) => { e.preventDefault(); load(q).catch(() => { /* 빈 목록 반영됨 */ }); }} className="mb-4">
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="기록 검색"
             className="w-full px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-stone-300" />
         </form>
@@ -253,15 +259,18 @@ export function BoardsPage({ onOpenBoard, active }: {
   active: boolean;
 }) {
   const [boards, setBoards] = useState<{ id: string; name: string; ts: string; updated: string; count: number; preview: string[] }[]>([]);
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       const r = await fetch(`${API}/forage/boards`);
       const d = await r.json();
       setBoards(Array.isArray(d.items) ? d.items : []);
-    } catch { setBoards([]); }
-  };
+    } catch (e) {
+      setBoards([]);
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
+  }, []);
   // 탭이 보일 때마다 최신 목록 — 방금 보존한 판이 반영되게.
-  useEffect(() => { if (active) load(); }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
+  useRetryingLoad(load, { enabled: active });
   const open = async (id: string) => {
     try {
       const r = await fetch(`${API}/forage/boards/${id}`);

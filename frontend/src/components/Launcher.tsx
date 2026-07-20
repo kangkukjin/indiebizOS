@@ -7,6 +7,7 @@ import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, Help
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 import type { Switch, SchedulerTask } from '../types';
 import {
   DraggableIcon,
@@ -74,20 +75,18 @@ export function Launcher() {
   const [appMetaById, setAppMetaById] = useState<Record<string, { icon: string; label: string }>>({});
 
   const loadPromoted = useCallback(async () => {
-    try {
-      const layout = await api.getAppLayout();
-      setPromotedIds(layout.promoted || []);
-    } catch { /* 백엔드 미기동 시 무시 */ }
-    try {
-      const r = await fetch('http://127.0.0.1:8765/launcher/instruments');
-      if (r.ok) {
+    // 두 조회는 독립 실행 — 실패는 throw 해서 useRetryingLoad 가 백오프 재시도
+    await Promise.all([
+      api.getAppLayout().then((layout) => setPromotedIds(layout.promoted || [])),
+      fetch('http://127.0.0.1:8765/launcher/instruments').then(async (r) => {
+        if (!r.ok) return;
         const d = await r.json();
         const map: Record<string, { icon: string; label: string }> = {};
         for (const m of STATIC_APP_META) map[m.id] = { icon: m.icon, label: m.label };
         for (const inst of (d.instruments || [])) map[inst.id] = { icon: inst.icon, label: inst.name };
         setAppMetaById(map);
-      }
-    } catch { /* 무시 */ }
+      }),
+    ]);
   }, []);
 
   // 승격 목록에서 실제로 해소되는(카탈로그에 존재하는) 앱만 바에 표시.
@@ -249,12 +248,16 @@ export function Launcher() {
 
   const desktopRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadProjects();
-    loadSwitches();
-    loadMultiChatRooms();
-    loadPromoted();
+  // 마운트 조회 — 스토어 로더들은 실패를 내부에서 삼키므로(error 상태만 남김),
+  // 조회 후 error 가 있으면 throw 해서 useRetryingLoad 가 백오프 재시도하게 둔다.
+  const loadLauncherData = useCallback(async () => {
+    await Promise.all([loadProjects(), loadSwitches(), loadMultiChatRooms(), loadPromoted()]);
+    const storeError = useAppStore.getState().error;
+    if (storeError) throw new Error(storeError);
+    // loadMultiChatRooms 는 useLauncherDesktop 이 렌더마다 재생성 — deps 에 넣으면 무한 재조회
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadProjects, loadSwitches, loadPromoted]);
+  const { retry: retryLauncherData } = useRetryingLoad(loadLauncherData);
 
   // 활성(승격) 앱 영속화 — 다음 실행 시 마지막으로 연 승격 앱으로 복귀.
   useEffect(() => {
@@ -610,7 +613,7 @@ export function Launcher() {
       await api.saveAppLayout(next);
     } catch (e) {
       console.error('승격 해제 실패:', e);
-      loadPromoted();  // 실패 시 서버 상태로 되돌림
+      loadPromoted().catch(() => {});  // 실패 시 서버 상태로 되돌림
     }
   };
 
@@ -622,7 +625,7 @@ export function Launcher() {
           {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
-              onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted(); return !v; })}
+              onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted().catch(() => {}); return !v; })}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors text-[#6B5B4F] ${showModeMenu ? 'bg-[#EAE4DA]' : 'hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'}`}
               title="모드 전환"
               aria-haspopup="true"
@@ -881,10 +884,7 @@ export function Launcher() {
           <div className="flex flex-col items-center justify-center h-full text-[#B45309]">
             <p>{error}</p>
             <button
-              onClick={() => {
-                loadProjects();
-                loadSwitches();
-              }}
+              onClick={retryLauncherData}
               className="mt-4 px-4 py-2 bg-[#FEF3C7] rounded-lg hover:bg-[#FDE68A] text-[#92400E]"
             >
               다시 시도

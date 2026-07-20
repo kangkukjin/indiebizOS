@@ -2,8 +2,9 @@
  * MapView - 지도 뷰 컴포넌트
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { MapPin } from 'lucide-react';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import type { GpsPhoto } from './types';
@@ -25,29 +26,27 @@ export function MapView({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchGpsPhotos = useCallback(async () => {
     if (!apiUrl || !selectedPath) return;
-
-    const fetchGpsPhotos = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`${apiUrl}/photo/gps-photos?path=${encodeURIComponent(selectedPath)}`);
-        const data = await res.json();
-        if (data.success) {
-          setGpsPhotos(data.items);
-        } else {
-          setError(data.error || '데이터를 불러올 수 없습니다');
-        }
-      } catch (e) {
-        setError('서버 연결 실패');
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${apiUrl}/photo/gps-photos?path=${encodeURIComponent(selectedPath)}`);
+      const data = await res.json();
+      if (data.success) {
+        setGpsPhotos(data.items);
+      } else {
+        setError(data.error || '데이터를 불러올 수 없습니다');
       }
-    };
-
-    fetchGpsPhotos();
+    } catch (e) {
+      setError('서버 연결 실패');
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    } finally {
+      setLoading(false);
+    }
   }, [apiUrl, selectedPath]);
+
+  useRetryingLoad(fetchGpsPhotos, { enabled: !!(apiUrl && selectedPath) });
 
   if (loading) {
     return (

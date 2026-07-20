@@ -9,8 +9,9 @@
  * 4탭: 비즈니스(목록+상세 — 정보 form·아이템) / 공개문서 / 근무지침 / 자동응답.
  * 단일 진실 소스: /launcher/instruments 매니페스트. 메신저·커뮤니티와 같은 패턴.
  */
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
 
@@ -18,19 +19,19 @@ export function BusinessInstrumentView() {
   const [inst, setInst] = useState<AppInstrument | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    fetch(IBL_INSTRUMENTS)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!alive) return;
-        const b = (d.instruments || []).find((i: AppInstrument) => i.id === 'business');
-        if (b) setInst(b);
-        else setError('비즈니스 계기를 찾을 수 없습니다.');
-      })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : String(e)));
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(IBL_INSTRUMENTS);
+      const d = await r.json();
+      const b = (d.instruments || []).find((i: AppInstrument) => i.id === 'business');
+      if (b) { setInst(b); setError(null); }
+      else setError('비즈니스 계기를 찾을 수 없습니다.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
   }, []);
+  useRetryingLoad(load);
 
   if (error) return <div className="h-full w-full flex items-center justify-center text-sm text-stone-500 bg-stone-50">{error}</div>;
   if (!inst) return (

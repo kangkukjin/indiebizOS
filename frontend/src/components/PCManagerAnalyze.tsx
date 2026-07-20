@@ -3,7 +3,7 @@
  * 트리맵, 타임라인, 확장자 차트, 폴더맵, 산점도 5가지 시각화 제공
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -18,7 +18,18 @@ import {
   ZoomIn, ZoomOut, RotateCcw
 } from 'lucide-react';
 
+import { useRetryingLoad } from '../lib/use-retrying-load';
+
 type ViewMode = 'treemap' | 'timeline' | 'extensions' | 'folders' | 'scatter';
+
+// API URL 가져오기
+const getApiUrl = async () => {
+  if (window.electron?.getApiPort) {
+    const port = await window.electron.getApiPort();
+    return `http://127.0.0.1:${port}`;
+  }
+  return 'http://127.0.0.1:8765';
+};
 
 // 색상 팔레트
 const COLORS = [
@@ -38,15 +49,6 @@ interface VolumeInfo {
 }
 
 export function PCManagerAnalyze() {
-  // API URL 가져오기
-  const getApiUrl = async () => {
-    if (window.electron?.getApiPort) {
-      const port = await window.electron.getApiPort();
-      return `http://127.0.0.1:${port}`;
-    }
-    return 'http://127.0.0.1:8765';
-  };
-
   const [apiUrl, setApiUrl] = useState('http://127.0.0.1:8765');
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [volumes, setVolumes] = useState<VolumeInfo[]>([]);
@@ -68,7 +70,7 @@ export function PCManagerAnalyze() {
   const [zoomHistory, setZoomHistory] = useState<Array<{start: string, end: string}>>([]);
 
   // 볼륨 목록 로드
-  const loadVolumes = async (url: string) => {
+  const loadVolumes = useCallback(async (url: string) => {
     try {
       const res = await fetch(`${url}/pcmanager/analyze/volumes`);
       const result = await res.json();
@@ -84,8 +86,9 @@ export function PCManagerAnalyze() {
       }
     } catch (err) {
       console.error('볼륨 목록 로드 실패:', err);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
-  };
+  }, []);
 
   // 스캔 삭제
   const deleteScan = async (scanId: number) => {
@@ -106,7 +109,7 @@ export function PCManagerAnalyze() {
           setData(null);
         }
         // 볼륨 목록 새로고침
-        await loadVolumes(apiUrl);
+        await loadVolumes(apiUrl).catch(() => {});
       } else {
         setError(result.error || '삭제 실패');
       }
@@ -160,7 +163,7 @@ export function PCManagerAnalyze() {
           last_scan: result.scan_time
         });
         setNewScanPath('');
-        await loadVolumes(apiUrl);
+        await loadVolumes(apiUrl).catch(() => {});
         loadData(viewMode, scanPath);
       } else {
         setError(result.error || '스캔 실패');
@@ -205,15 +208,17 @@ export function PCManagerAnalyze() {
   };
 
   // 초기 로드
-  useEffect(() => {
-    const init = async () => {
+  useRetryingLoad(
+    useCallback(async () => {
       const url = await getApiUrl();
       setApiUrl(url);
-      await loadVolumes(url);
-      setIsLoading(false);
-    };
-    init();
-  }, []);
+      try {
+        await loadVolumes(url);
+      } finally {
+        setIsLoading(false);
+      }
+    }, [loadVolumes]),
+  );
 
   // 선택된 경로 변경 시 데이터 로드
   useEffect(() => {

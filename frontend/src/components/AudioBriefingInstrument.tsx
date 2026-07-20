@@ -12,8 +12,9 @@
  *  저장된 판을 그대로 보여준다(재생성 없음). mp3 자체는 프로젝트 outputs/ 에 파일로 남고,
  *  재생은 기존 /launcher/file 엔드포인트(산출물 바이트 서빙, 백엔드 기존 API)로 스트리밍한다.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { iblExecuteApp, askAI } from '../lib/instrument';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 const API = 'http://127.0.0.1:8765';
 const CITY_KEY = 'audioBriefing.city';
@@ -34,11 +35,10 @@ interface Edition {
 
 const audioFileUrl = (absPath: string) => `${API}/launcher/file?path=${encodeURIComponent(absPath)}`;
 
+// 저장된 판이 없으면 null(에러 payload 엔 audioPath 가 없다) — 연결 실패만 throw.
 async function loadEdition(): Promise<Edition | null> {
-  try {
-    const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(EDITION_PATH)}}`);
-    if (r && typeof r === 'object' && (r as Edition).audioPath) return r as Edition;
-  } catch { /* 저장된 판 없음 */ }
+  const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(EDITION_PATH)}}`);
+  if (r && typeof r === 'object' && (r as Edition).audioPath) return r as Edition;
   return null;
 }
 
@@ -199,25 +199,27 @@ export function AudioBriefingInstrument() {
   }, [city]);
 
   // 열 때: 저장된 최신 판을 보여준다(재생성 없음). 없으면 빈 상태 → "브리핑 만들기"로 첫 판 생성.
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      setLoading(true);
-      const ed = await loadEdition();
-      if (!alive) return;
-      if (ed) {
-        setScript(ed.script || '');
-        setArticles(ed.articles || []);
-        setAudioPath(ed.audioPath || null);
-        setDurationSec(ed.durationSec);
-        if (ed.dateLabel) setDate(ed.dateLabel);
-        setIssuedAt(ed.issuedAt || null);
-        if (ed.city) setCity(ed.city);
-      }
+  const loadSaved = useCallback(async () => {
+    setLoading(true);
+    let ed: Edition | null;
+    try {
+      ed = await loadEdition();
+    } catch (e) {
       setLoading(false);
-    })();
-    return () => { alive = false; };
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
+    if (ed) {
+      setScript(ed.script || '');
+      setArticles(ed.articles || []);
+      setAudioPath(ed.audioPath || null);
+      setDurationSec(ed.durationSec);
+      if (ed.dateLabel) setDate(ed.dateLabel);
+      setIssuedAt(ed.issuedAt || null);
+      if (ed.city) setCity(ed.city);
+    }
+    setLoading(false);
   }, []);
+  useRetryingLoad(loadSaved);
 
   const openExternal = (url?: string) => { if (url) window.electron?.openExternal?.(url); };
 

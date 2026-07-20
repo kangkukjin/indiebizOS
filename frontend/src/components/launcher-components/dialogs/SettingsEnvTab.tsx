@@ -6,8 +6,9 @@
  * 입력창에 새 값을 넣고 저장하면 해당 줄만 교체된다 (write-only).
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { KeyRound, ExternalLink, Eye, EyeOff, Save, CheckCircle, AlertCircle, FlaskConical, Loader2, RefreshCw, Plus } from 'lucide-react';
+import { useRetryingLoad } from '../../../lib/use-retrying-load';
 
 const API = 'http://127.0.0.1:8765';
 
@@ -50,21 +51,18 @@ export function SettingsEnvTab({ show }: { show: boolean }) {
   const [newName, setNewName] = useState('');
   const [newValue, setNewValue] = useState('');
 
-  const load = async () => {
+  // 실패는 throw 되어 useRetryingLoad 가 백오프 재시도한다.
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(`${API}/config/env`);
       const data = await res.json();
       setGroups(data.groups || []);
-    } catch (e) {
-      console.error('Failed to load env config:', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (show) load();
-  }, [show]);
+  }, []);
+  const { retry } = useRetryingLoad(load, { enabled: show });
 
   const saveEntry = async (name: string, value: string) => {
     if (!value.trim()) return;
@@ -85,7 +83,7 @@ export function SettingsEnvTab({ show }: { show: boolean }) {
           },
         }));
         setDrafts(prev => ({ ...prev, [name]: '' }));
-        await load();
+        await load().catch(() => {});
       } else {
         setResults(prev => ({ ...prev, [name]: { ok: false, message: data.detail || '저장 실패' } }));
       }
@@ -132,7 +130,7 @@ export function SettingsEnvTab({ show }: { show: boolean }) {
           </p>
         </div>
         <button
-          onClick={load}
+          onClick={retry}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors shrink-0"
           title="새로고침"
         >

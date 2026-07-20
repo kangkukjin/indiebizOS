@@ -2,8 +2,9 @@
  * TimelineView - 타임라인 뷰 (줌 가능)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Camera, Video, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, BarChart, Bar
@@ -46,19 +47,18 @@ export function TimelineView({
       }
     } catch (err) {
       console.error('타임라인 로드 실패:', err);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     } finally {
       setTimelineLoading(false);
     }
   }, [apiUrl, selectedPath]);
 
-  // 초기 로드
-  useEffect(() => {
-    loadTimelineZoom();
-  }, [loadTimelineZoom]);
+  // 초기 로드 (줌·범위 변경은 아래 이벤트 핸들러가 직접 조회)
+  useRetryingLoad(loadTimelineZoom);
 
   // 타임라인 범위 변경 핸들러
   const handleTimelineRangeChange = () => {
-    loadTimelineZoom(timelineStartDate || undefined, timelineEndDate || undefined);
+    loadTimelineZoom(timelineStartDate || undefined, timelineEndDate || undefined).catch(() => {});
   };
 
   // 타임라인 리셋
@@ -66,7 +66,7 @@ export function TimelineView({
     setTimelineStartDate('');
     setTimelineEndDate('');
     setZoomHistory([]);
-    loadTimelineZoom();
+    loadTimelineZoom().catch(() => {});
   };
 
   // 한 단계 줌아웃 (뒤로가기)
@@ -80,7 +80,7 @@ export function TimelineView({
     setZoomHistory(newHistory);
     setTimelineStartDate(prev?.start || '');
     setTimelineEndDate(prev?.end || '');
-    loadTimelineZoom(prev?.start || undefined, prev?.end || undefined);
+    loadTimelineZoom(prev?.start || undefined, prev?.end || undefined).catch(() => {});
   };
 
   // 막대 클릭으로 줌인
@@ -110,7 +110,7 @@ export function TimelineView({
 
     setTimelineStartDate(startDate);
     setTimelineEndDate(endDate);
-    loadTimelineZoom(startDate, endDate);
+    loadTimelineZoom(startDate, endDate).catch(() => {});
   };
 
   // 파일 열기

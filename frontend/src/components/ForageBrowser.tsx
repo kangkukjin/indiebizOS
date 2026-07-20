@@ -12,7 +12,7 @@
  *
  * webview 는 main.js 의 webviewTag=true 필요(앱 재시작 후 적용).
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useFileAttachments } from './chat/useFileAttachments';
@@ -25,6 +25,7 @@ import type { Destination, PoolItem, Hunt, Tab } from './forage/support';
 import {
   BrowserTabView, FavoritesPage, PoolRow, PoolCard, HistoryPage, BoardsPage, TabFav, NavBtn,
 } from './forage/views';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 /** 링크 URL에서 리트윗 파일명 후보 — 창고 파일(/f?path=…)이면 path 그대로, 아니면 경로 마지막 조각. */
 function retweetNameFromUrl(url: string, text?: string): string {
@@ -680,16 +681,20 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
     return res;
   };
 
+  // 즐겨찾기 목록 당김 — 연결 실패는 throw(아래 훅이 백오프 재시도).
+  const fetchFavorites = useCallback(async () => {
+    const res = await iblExec('[limbs:launch]{action: "list"}');
+    const items = res && Array.isArray(res.items) ? res.items : [];
+    setFavorites(items.filter((s: any) => s?.url).map((s: any) => ({ name: s.name || s.url, url: s.url })));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 이벤트(토글·삭제 뒤 최신화)용 — 실패는 조용히.
   const loadFavorites = async () => {
-    try {
-      const res = await iblExec('[limbs:launch]{action: "list"}');
-      const items = res && Array.isArray(res.items) ? res.items : [];
-      setFavorites(items.filter((s: any) => s?.url).map((s: any) => ({ name: s.name || s.url, url: s.url })));
-    } catch { /* 즐겨찾기 없으면 조용히 비움 */ }
+    try { await fetchFavorites(); } catch { /* 즐겨찾기 없으면 조용히 비움 */ }
   };
 
   // 열릴 때마다 즐겨찾기를 당긴다(계기에서 편집한 게 즉시 반영).
-  useEffect(() => { if (open) loadFavorites(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useRetryingLoad(fetchFavorites, { enabled: open });
 
   // 현재 페이지가 이미 즐겨찾기인가 — 끝 슬래시 무시하고 비교.
   const normUrl = (u: string) => (u || '').replace(/\/+$/, '').toLowerCase();

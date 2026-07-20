@@ -7,8 +7,9 @@
  *
  * 디자인 원칙: 기능 메뉴가 아니라 마법사의 책장. 사용자 인지를 보완한다.
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
+import { useRetryingLoad } from '../../lib/use-retrying-load';
 
 interface ActionMeta {
   description: string;
@@ -106,22 +107,22 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
   const [visible, setVisible] = useState(false);
 
   // 카탈로그 페치 — 한 번만 (모달이 처음 열릴 때)
-  useEffect(() => {
-    if (!open || catalog) return;
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    fetch('http://127.0.0.1:8765/ibl/actions/catalog')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data: CatalogResponse) => setCatalog(data))
-      .catch((err) => {
-        console.error('[마법책] 카탈로그 페치 실패:', err);
-        setError(String(err));
-      })
-      .finally(() => setLoading(false));
-  }, [open, catalog]);
+    try {
+      const r = await fetch('http://127.0.0.1:8765/ibl/actions/catalog');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setCatalog((await r.json()) as CatalogResponse);
+    } catch (err) {
+      console.error('[마법책] 카탈로그 페치 실패:', err);
+      setError(String(err));
+      setLoading(false);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
+    setLoading(false);
+  }, []);
+  useRetryingLoad(load, { enabled: open && !catalog });
 
   // 등장 애니메이션: 다음 프레임에 visible=true로 전환
   useEffect(() => {

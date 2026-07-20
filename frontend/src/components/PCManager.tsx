@@ -2,7 +2,7 @@
  * PCManager - AI 파일 탐색기
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Folder,
   File,
@@ -17,6 +17,16 @@ import {
   FolderOpen
 } from 'lucide-react';
 import { PCManagerAnalyze } from './PCManagerAnalyze';
+import { useRetryingLoad } from '../lib/use-retrying-load';
+
+// API 포트 가져오기
+const getApiUrl = async () => {
+  if (window.electron?.getApiPort) {
+    const port = await window.electron.getApiPort();
+    return `http://127.0.0.1:${port}`;
+  }
+  return 'http://127.0.0.1:8765';
+};
 
 interface FileItem {
   name: string;
@@ -47,17 +57,8 @@ export function PCManager({ initialPath }: PCManagerProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isAnalyzeMode, setIsAnalyzeMode] = useState(false);
 
-  // API 포트 가져오기
-  const getApiUrl = async () => {
-    if (window.electron?.getApiPort) {
-      const port = await window.electron.getApiPort();
-      return `http://127.0.0.1:${port}`;
-    }
-    return 'http://127.0.0.1:8765';
-  };
-
   // 드라이브 목록 로드
-  const loadDrives = async () => {
+  const loadDrives = useCallback(async () => {
     try {
       const apiUrl = await getApiUrl();
       const response = await fetch(`${apiUrl}/pcmanager/drives`);
@@ -67,11 +68,12 @@ export function PCManager({ initialPath }: PCManagerProps) {
       }
     } catch (err) {
       console.error('드라이브 로드 실패:', err);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
-  };
+  }, []);
 
   // 디렉토리 내용 로드
-  const loadDirectory = async (path: string) => {
+  const loadDirectory = useCallback(async (path: string) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -88,16 +90,24 @@ export function PCManager({ initialPath }: PCManagerProps) {
     } catch (err) {
       setError('서버에 연결할 수 없습니다.');
       console.error('디렉토리 로드 실패:', err);
+      throw err;                      // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  // 사용자 조작 경로 — 실패는 위 error 표시로 끝난다
+  const openDirectory = (path: string) => {
+    loadDirectory(path).catch(() => {});
   };
 
   // 초기 로드
-  useEffect(() => {
-    loadDrives();
-    loadDirectory(initialPath || '');
-  }, [initialPath]);
+  useRetryingLoad(
+    useCallback(
+      () => Promise.all([loadDrives(), loadDirectory(initialPath || '')]),
+      [loadDrives, loadDirectory, initialPath],
+    ),
+  );
 
   // 상위 디렉토리로 이동
   const goUp = () => {
@@ -105,24 +115,24 @@ export function PCManager({ initialPath }: PCManagerProps) {
     const parts = currentPath.split('/').filter(Boolean);
     parts.pop();
     const parentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
-    loadDirectory(parentPath);
+    openDirectory(parentPath);
   };
 
   // 홈으로 이동
   const goHome = () => {
-    loadDirectory('');
+    openDirectory('');
   };
 
   // 아이템 더블클릭
   const handleItemDoubleClick = (item: FileItem) => {
     if (item.type === 'directory') {
-      loadDirectory(item.path);
+      openDirectory(item.path);
     }
   };
 
   // 드라이브 클릭
   const handleDriveClick = (drive: DriveInfo) => {
-    loadDirectory(drive.path);
+    openDirectory(drive.path);
   };
 
   // 파일 크기 포맷
@@ -221,7 +231,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
                 <ArrowUp className="w-4 h-4 text-[#6B5B4F]" />
               </button>
               <button
-                onClick={() => loadDirectory(currentPath)}
+                onClick={() => openDirectory(currentPath)}
                 className="p-1.5 rounded hover:bg-[#E8E4DC]"
                 title="새로고침"
               >
@@ -239,7 +249,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
                     <button
                       onClick={() => {
                         const targetPath = '/' + pathParts.slice(0, idx + 1).join('/');
-                        loadDirectory(targetPath);
+                        openDirectory(targetPath);
                       }}
                       className="hover:text-[#6B5B4F] truncate max-w-32"
                     >

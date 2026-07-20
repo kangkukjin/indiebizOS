@@ -6,10 +6,11 @@
  *   SettingsRemoteTab.tsx   - 원격 Finder / 원격 런처 / Cloudflare 터널
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
 import { api } from '../../../lib/api';
+import { useRetryingLoad } from '../../../lib/use-retrying-load';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
 import { SettingsRemoteTab } from './SettingsRemoteTab';
 import { SettingsEnvTab } from './SettingsEnvTab';
@@ -94,55 +95,32 @@ export function SettingsDialog({
     setIsSavingMemo(false);
   };
 
-  // '시스템 AI 역할' 탭: 프롬프트 템플릿 + 시스템 메모 로드
-  useEffect(() => {
-    if (show && activeTab === 'persona') {
-      loadPromptTemplates();
-      api.getProfile().then(c => setSystemMemo(c || '')).catch(() => setSystemMemo(''));
+  // 터널 설정 로드 (다이얼로그가 열릴 때 항상 로드 - 외부 URL 표시를 위해)
+  // 실패는 throw 되어 useRetryingLoad 가 백오프 재시도한다.
+  const loadTunnelHostnames = useCallback(async () => {
+    const response = await fetch('http://127.0.0.1:8765/tunnel/config');
+    if (response.ok) {
+      const data = await response.json();
+      setFinderHostname(data.finder_hostname || '');
+      setLauncherHostname(data.launcher_hostname || '');
     }
-  }, [show, activeTab]);
+  }, []);
+  useRetryingLoad(loadTunnelHostnames, { enabled: show });
 
   // World Pulse 설정 로드
-  useEffect(() => {
-    if (show && activeTab === 'world') {
-      loadWorldConfig();
-    }
-  }, [show, activeTab]);
-
-  // 터널 설정 로드 (다이얼로그가 열릴 때 항상 로드 - 외부 URL 표시를 위해)
-  useEffect(() => {
-    if (show) {
-      loadTunnelHostnames();
-    }
-  }, [show]);
-
-  const loadTunnelHostnames = async () => {
+  const loadWorldConfig = useCallback(async () => {
+    setIsLoadingWorld(true);
     try {
-      const response = await fetch('http://127.0.0.1:8765/tunnel/config');
-      if (response.ok) {
-        const data = await response.json();
-        setFinderHostname(data.finder_hostname || '');
-        setLauncherHostname(data.launcher_hostname || '');
-      }
-    } catch (err) {
-      console.error('Failed to load tunnel config:', err);
-    }
-  };
-
-  const loadWorldConfig = async () => {
-    try {
-      setIsLoadingWorld(true);
       const response = await fetch('http://127.0.0.1:8765/world-pulse/config');
       if (response.ok) {
         const data = await response.json();
         setWorldConfig(data);
       }
-    } catch (err) {
-      console.error('Failed to load world pulse config:', err);
     } finally {
       setIsLoadingWorld(false);
     }
-  };
+  }, []);
+  useRetryingLoad(loadWorldConfig, { enabled: show && activeTab === 'world' });
 
   const saveWorldConfig = async () => {
     if (!worldConfig) return;
@@ -181,18 +159,25 @@ export function SettingsDialog({
     }
   };
 
-  const loadPromptTemplates = async () => {
+  const loadPromptTemplates = useCallback(async () => {
+    setIsLoadingTemplates(true);
     try {
-      setIsLoadingTemplates(true);
       const data = await api.getPromptTemplates();
       setTemplates(data.templates);
       setSelectedTemplate(data.selected_template);
-    } catch (err) {
-      console.error('Failed to load prompt templates:', err);
     } finally {
       setIsLoadingTemplates(false);
     }
-  };
+  }, []);
+
+  // '시스템 AI 역할' 탭: 프롬프트 템플릿 + 시스템 메모 로드
+  const loadPersona = useCallback(async () => {
+    await Promise.all([
+      loadPromptTemplates(),
+      api.getProfile().then(c => setSystemMemo(c || '')),
+    ]);
+  }, [loadPromptTemplates]);
+  useRetryingLoad(loadPersona, { enabled: show && activeTab === 'persona' });
 
   const handleTemplateChange = async (templateId: string) => {
     try {

@@ -6,8 +6,9 @@
  * GenericInstrument 로 그대로 렌더한다. 단일 진실 소스: /launcher/instruments 매니페스트.
  * 표면(자율주행/수동/앱)과 무관하게 커뮤니티 서비스로 바로 진입하는 통로.
  */
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
 
@@ -15,19 +16,19 @@ export function CommunityInstrumentView() {
   const [inst, setInst] = useState<AppInstrument | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    fetch(IBL_INSTRUMENTS)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!alive) return;
-        const c = (d.instruments || []).find((i: AppInstrument) => i.id === 'community');
-        if (c) setInst(c);
-        else setError('커뮤니티 계기를 찾을 수 없습니다.');
-      })
-      .catch((e) => alive && setError(e instanceof Error ? e.message : String(e)));
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(IBL_INSTRUMENTS);
+      const d = await r.json();
+      const c = (d.instruments || []).find((i: AppInstrument) => i.id === 'community');
+      if (c) { setInst(c); setError(null); }
+      else setError('커뮤니티 계기를 찾을 수 없습니다.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
+    }
   }, []);
+  useRetryingLoad(load);
 
   if (error) return <div className="h-full w-full flex items-center justify-center text-sm text-stone-500 bg-stone-50">{error}</div>;
   if (!inst) return (

@@ -7,7 +7,7 @@
  * 앱 정리 탭 → AndroidAppsTab.tsx
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Phone, MessageSquare, Users, Clock, PhoneIncoming, PhoneOutgoing,
   PhoneMissed, Trash2, Search, Send, RefreshCw, Smartphone,
@@ -17,6 +17,7 @@ import { AndroidMessagesTab } from './AndroidMessagesTab';
 import type { SMSItem, ContactItem } from './AndroidMessagesTab';
 import { AndroidAppsTab } from './AndroidAppsTab';
 import type { AppItem } from './AndroidAppsTab';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 
 // API 기본 URL
 const getApiUrl = () => {
@@ -103,15 +104,14 @@ export function AndroidManager(_props: AndroidManagerProps) {
   const [wsConnected, setWsConnected] = useState(false);
 
   // ─── 초기 로드 ─────────────────────
+  // (연결 확인·에이전트 시작은 아래 useRetryingLoad 훅이 수행)
 
   useEffect(() => {
-    checkConnection();
-    startAndroidAgent();
     return () => { stopAndroidAgent(); };
   }, []);
 
   // 안드로이드 전용 에이전트 시작
-  const startAndroidAgent = async () => {
+  const startAndroidAgent = useCallback(async () => {
     try {
       console.log('[AndroidManager] 에이전트 시작 요청...');
       const res = await fetch(`${getApiUrl()}/android/agent/start`, { method: 'POST' });
@@ -124,8 +124,11 @@ export function AndroidManager(_props: AndroidManagerProps) {
       }
     } catch (e) {
       console.error('[AndroidManager] 에이전트 시작 예외:', e);
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
-  };
+  }, []);
+
+  useRetryingLoad(startAndroidAgent);
 
   const stopAndroidAgent = async () => {
     if (!androidAgentId) return;
@@ -198,7 +201,7 @@ export function AndroidManager(_props: AndroidManagerProps) {
 
   // ─── 데이터 로드 ───────────────────
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -221,9 +224,14 @@ export function AndroidManager(_props: AndroidManagerProps) {
       console.error('[AndroidManager] checkConnection error:', e);
       setIsConnected(false);
       setErrorMessage(e.message || '서버 연결 실패');
+      setLoading(false);
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
     setLoading(false);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const { retry: retryConnection } = useRetryingLoad(checkConnection);
 
   const loadAllData = async () => {
     setRefreshing(true);
@@ -464,7 +472,7 @@ export function AndroidManager(_props: AndroidManagerProps) {
             </p>
           )}
           <button
-            onClick={checkConnection}
+            onClick={() => retryConnection()}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
           >
             <RefreshCw className="w-4 h-4" />

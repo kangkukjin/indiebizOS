@@ -245,20 +245,38 @@ def _allowed_urls(min_level: int, favorites: bool, min_score: int = 0):
 
 @router.get("/feed")
 async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0,
-               min_score: int = 0):
+               min_score: int = 0, cards: int = 0):
     """타임라인 — 이웃 이름·창고 홈을 붙여 반환.
     min_level=그 레벨 이상 이웃만(레벨=숫자, 의미는 사용자가 정함) /
-    min_score=내가 준 즐겨찾기 점수 이상의 창고만 / favorites=구 boolean(호환)."""
+    min_score=내가 준 즐겨찾기 점수 이상의 창고만 / favorites=구 boolean(호환) /
+    cards=1 이면 (창고×폴링×종류) 카드 묶음(데스크탑 새 피드) — 기본 0=행 묶음(원격 호환)."""
     names = _name_map()
+    status = wf.get_status_map()
     items = []
-    for e in wf.get_feed(limit=limit,
+    for e in wf.get_feed(limit=limit, cards=bool(cards),
                          wh_urls=_allowed_urls(min_level, bool(favorites), min_score)):
         if e["wh_url"] not in names:
             continue  # 등기부에서 떼어진 창고의 잔여 이벤트는 숨김
         e["neighbor_name"] = names[e["wh_url"]]
+        # 창고 제목(매니페스트 title) — 이웃 이름이 npub 같은 주소일 때 카드가 이걸 앞세운다
+        e["neighbor_title"] = (status.get(e["wh_url"]) or {}).get("title") or ""
         e["neighbor_home"] = e["wh_url"] + "/"
         items.append(e)
     return {"items": items}
+
+
+@router.get("/browse")
+async def browse(url: str, path: str = ""):
+    """이웃 창고 인앱 파인더 — 폴러 스냅샷(현재 색인)을 폴더 단위로 서빙.
+    피드가 '변화의 강'이라면 이건 '현재의 창고' — 전체를 보러 외부 브라우저로
+    이탈하지 않아도 된다. 데이터는 이미 로컬 DB, 왕복 0."""
+    base = wf.normalize_base(url)
+    if not base:
+        raise HTTPException(400, "창고 주소(url)가 필요합니다")
+    out = wf.browse_snapshots(base, path)
+    out["neighbor_name"] = _name_map().get(base, base)
+    out["wh_url"] = base
+    return out
 
 
 @router.get("/search")

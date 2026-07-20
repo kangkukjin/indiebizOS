@@ -501,6 +501,7 @@ def poll_all() -> List[Dict]:
 
 GROUP_MIN = 3           # 한 폴링에서 같은 폴더에 이만큼 이상 = 한 줄로 접는다
 GROUP_ITEMS_CAP = 20    # 접힌 줄이 품고 가는 내역 수(개수는 count 가 사실대로 말한다)
+CARD_ITEMS_CAP = 60     # 카드가 품는 파일 칩 수 — 나머지는 count 가 말하고 인앱 브라우저로
 _SCAN_CAP = 5000        # 묶기 위해 훑는 원장 행 수 상한
 
 
@@ -553,12 +554,64 @@ def _group_feed(rows: List[Dict], limit: int) -> List[Dict]:
     return out[:limit]
 
 
+def _card_feed(rows: List[Dict], limit: int) -> List[Dict]:
+    """(창고, 폴링 시각, 종류) 단위 카드 — 트위터 문법: 카드 1장 = 이웃의 발화 1건.
+
+    행 단위 접기(_group_feed)의 후속 세대: 저자·시간을 카드 헤더로 한 번만 올리고,
+    파일들은 카드 본문의 칩 그리드가 된다. 원장은 여전히 파일 단위 그대로, 여기선
+    표현만 접는다.
+
+    ★폴더 안 파일은 펼치지 않는다 — 폴더째 올라온 수백 장이 카드를 다 먹지 않게,
+    최상위 폴더 이름으로 접어 folders 에 집계만 내린다(열람은 인앱 파인더의 몫).
+    items 에는 루트 파일(경로에 / 없음)만 남는다.
+    """
+    buckets: Dict[tuple, List[Dict]] = {}
+    order: List[tuple] = []
+    for r in rows:
+        key = (r.get("wh_url"), r.get("seen_at"), r.get("kind"))
+        if key not in buckets:
+            buckets[key] = []
+            order.append(key)
+        buckets[key].append(r)
+    out: List[Dict] = []
+    for key in order:
+        members = buckets[key]
+        head = members[0]
+        folders: Dict[str, Dict] = {}
+        root: List[Dict] = []
+        for m in members:
+            p = m.get("path") or ""
+            if "/" in p:
+                top = p.split("/")[0]
+                agg = folders.setdefault(top, {"name": top, "count": 0, "bytes": 0})
+                agg["count"] += 1
+                agg["bytes"] += m.get("bytes") or 0
+            else:
+                root.append(m)
+        out.append({
+            "card": True,
+            "wh_url": head.get("wh_url"),
+            "seen_at": head.get("seen_at"),
+            "kind": head.get("kind"),
+            "count": len(members),
+            "bytes": sum((m.get("bytes") or 0) for m in members),
+            "mtime": max((m.get("mtime") or "") for m in members),
+            "items": root[:CARD_ITEMS_CAP],
+            "folders": sorted(folders.values(), key=lambda d: str(d["name"]).lower()),
+        })
+        if len(out) >= limit:
+            break
+    return out[:limit]
+
+
 def get_feed(limit: int = 100, wh_url: Optional[str] = None,
-             group: bool = True, wh_urls: Optional[List[str]] = None) -> List[Dict]:
+             group: bool = True, wh_urls: Optional[List[str]] = None,
+             cards: bool = False) -> List[Dict]:
     """피드 조회 — 내가 새로 본 순(seen_at) → 파일 자체 시간(mtime) 순.
 
     group=True 면 폴더 단위로 접어서 limit '줄'을 채운다. 접기 전 원장을 넉넉히 훑어야
     (한 폴더 폭주가 창을 다 먹지 않게) 이전 소식까지 같이 올라온다.
+    cards=True 면 (창고×폴링×종류) 카드로 접는다 — 데스크탑 이웃 탭의 새 표현.
     wh_urls=허용 집합(레벨·즐겨찾기 필터) — 접기 *전에* 걸러야 필터가 limit 를 안 갉아먹는다.
     """
     _init_db()
@@ -574,10 +627,49 @@ def get_feed(limit: int = 100, wh_url: Optional[str] = None,
         q += f" WHERE wh_url IN ({','.join('?' * len(wh_urls))})"
         params.extend(wh_urls)
     q += " ORDER BY seen_at DESC, mtime DESC, id DESC LIMIT ?"
-    params.append(_SCAN_CAP if group else lim)
+    params.append(_SCAN_CAP if (group or cards) else lim)
     with _db_lock, _conn() as c:
         rows = [dict(r) for r in c.execute(q, params).fetchall()]
+    if cards:
+        return _card_feed(rows, lim)
     return _group_feed(rows, lim) if group else rows
+
+
+def browse_snapshots(url: str, path: str = "") -> Dict:
+    """이웃 창고 스냅샷을 폴더 단위로 열람(인앱 파인더) — 폴러가 모아둔 현재 색인을
+    그대로 서빙하므로 릴레이·창고 왕복 0. dirs=직계 하위 폴더(집계), files=직계 파일.
+    스냅샷은 매니페스트의 현재 상태이므로 '지금 그 창고에 있는 전부'다(truncated 방언 제외)."""
+    _init_db()
+    base = normalize_base(url)
+    prefix = (path or "").strip("/")
+    with _db_lock, _conn() as c:
+        rows = [dict(r) for r in c.execute(
+            "SELECT * FROM snapshots WHERE wh_url=?", (base,)).fetchall()]
+    dirs: Dict[str, Dict] = {}
+    files: List[Dict] = []
+    for r in rows:
+        p = r.get("path") or ""
+        if prefix:
+            if not p.startswith(prefix + "/"):
+                continue
+            rest = p[len(prefix) + 1:]
+        else:
+            rest = p
+        if "/" in rest:
+            d = rest.split("/")[0]
+            agg = dirs.setdefault(d, {"name": d, "count": 0, "bytes": 0, "mtime": ""})
+            agg["count"] += 1
+            agg["bytes"] += r.get("bytes") or 0
+            agg["mtime"] = max(agg["mtime"], r.get("mtime") or "")
+        else:
+            files.append(r)
+    files.sort(key=lambda f: (f.get("path") or "").lower())
+    return {
+        "path": prefix,
+        "dirs": sorted(dirs.values(), key=lambda d: str(d["name"]).lower()),
+        "files": files,
+        "total": len(rows),
+    }
 
 
 def _match_rank(path: str, q: str) -> int:

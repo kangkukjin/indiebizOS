@@ -1,19 +1,23 @@
 /**
- * NeighborsPane — 이웃 탭. 창고이웃 등기부(이웃 DB 의 창고 축) + 변화 피드(트위터식
- * 타임라인) + 전수 검색 + 즐겨찾기. 폴러(warehouse_feed.py)가 이웃 매니페스트를 30분
- * 주기 폴링(AI·토큰 0) — 여기선 그 결과를 읽고, 클릭=이웃의 공개 창고가 내부(포식)
- * 브라우저로 열림(이웃 쪽 표면 재사용, 신규 0). 백엔드: /warehouse-feed/*.
+ * NeighborsPane — 이웃 탭. 창고이웃 등기부(이웃 DB 의 창고 축) + 변화 피드(카드
+ * 타임라인, cards=1) + 전수 검색 + 즐겨찾기 + 인앱 파인더(NeighborBrowser).
+ * 폴러(warehouse_feed.py)가 이웃 매니페스트를 30분 주기 폴링(AI·토큰 0) — 피드는
+ * 그 '변화의 강'을 카드로, 파인더는 스냅샷의 '현재의 창고' 전체를 보여준다(이웃
+ * 이름 클릭). 백엔드: /warehouse-feed/*.
  */
 import { useCallback, useEffect, useState } from 'react';
 import {
   Package, RefreshCw, Trash2, ExternalLink, Search, Plus, Pencil, Rss, Repeat2,
-  Star, Folder, ChevronRight, Heart, KeyRound,
+  Star, Heart, KeyRound,
 } from 'lucide-react';
 import { API, fmtBytes, fileIcon, openExternalUrl, openWarehouseInBrowser } from './shared';
-import type { WfNeighbor, WfFeedItem } from './shared';
+import type { WfNeighbor, WfFeedItem, WfCard } from './shared';
+import { FeedCard } from './FeedCard';
+import { NeighborBrowser } from './NeighborBrowser';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
 
-/** 이웃 창고의 파일 한 줄 — 피드와 검색이 같은 줄을 쓴다. */
+/** 이웃 창고의 파일 한 줄 — 검색 결과가 쓴다(행마다 이웃이 달라 행 단위가 맞다).
+    피드는 FeedCard(카드 단위), 전체 열람은 NeighborBrowser(파인더)가 맡는다. */
 function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f: WfFeedItem) => void; onLike: (f: WfFeedItem) => void; label?: string }) {
   const Icon = fileIcon(f.path);
   return (
@@ -61,60 +65,11 @@ function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f
   );
 }
 
-/** 폴더 단위로 접힌 피드 줄 — "이웃이 폴더 하나를 올렸다"를 한 줄로. 펼치면 안의 파일들. */
-function GroupRow({ g, onRetweet, onLike }: { g: WfFeedItem; onRetweet: (f: WfFeedItem) => void; onLike: (f: WfFeedItem) => void }) {
-  const shown = g.items || [];
-  const rest = (g.count || shown.length) - shown.length;
-  return (
-    <li>
-      <details className="group/fd rounded-xl bg-white border border-stone-200">
-        <summary className="flex items-center gap-3 px-3 py-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-          <ChevronRight className="w-4 h-4 text-stone-400 shrink-0 transition-transform group-open/fd:rotate-90" />
-          <Folder className="w-5 h-5 text-stone-400 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-stone-800 truncate">{g.folder}</div>
-            <div className="text-[11px] text-stone-400">
-              <span className="text-[#B45309]/70 mr-1.5">{g.neighbor_name}</span>
-              {g.kind === 'new' && <span className="mr-1.5 px-1 rounded bg-amber-100 text-[#B45309]">새 파일 {g.count}개</span>}
-              {g.kind === 'changed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">갱신 {g.count}개</span>}
-              {g.kind === 'seed' && <span className="mr-1.5 px-1 rounded bg-stone-100 text-stone-500">{g.count}개</span>}
-              {fmtBytes(g.bytes || 0)} · {(g.mtime || '').replace('T', ' ')}
-            </div>
-          </div>
-          <button
-            className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
-            title={`${g.neighbor_name}의 창고 열기`}
-            onClick={(e) => { e.preventDefault(); if (g.neighbor_home) openWarehouseInBrowser(g.neighbor_home); }}
-          >
-            <Package className="w-4 h-4" />
-          </button>
-        </summary>
-        <ul className="pl-4 pr-2 pb-2 space-y-1.5 border-l border-stone-100 ml-5">
-          {shown.map((f) => (
-            <FileRow
-              key={`${f.wh_url}:${f.id ?? f.path}`}
-              f={{ ...f, neighbor_name: g.neighbor_name, neighbor_home: g.neighbor_home }}
-              label={f.path.split('/').pop()}
-              onRetweet={onRetweet}
-              onLike={onLike}
-            />
-          ))}
-          {rest > 0 && (
-            <li className="px-3 py-1.5 text-[11px] text-stone-400">
-              외 {rest}개 — 창고를 열어 전부 보기
-            </li>
-          )}
-        </ul>
-      </details>
-    </li>
-  );
-}
-
-/** 이웃 탭 — 창고이웃 등기부 + [피드 | 검색 | 즐겨찾기] 섹션. */
+/** 이웃 탭 — 창고이웃 등기부 + [피드 | 검색 | 즐겨찾기] 섹션 + 인앱 파인더. */
 export function NeighborsPane() {
   const [neighbors, setNeighbors] = useState<WfNeighbor[]>([]);
   const [candidates, setCandidates] = useState<{ id: number; name: string }[]>([]);
-  const [feed, setFeed] = useState<WfFeedItem[]>([]);
+  const [feed, setFeed] = useState<WfCard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -134,12 +89,14 @@ export function NeighborsPane() {
   // 두 축은 독립(레벨=접근 계약 / 점수=내 평가). 레벨·점수 모두 숫자, 의미 라벨 없음.
   const [feedMinLevel, setFeedMinLevel] = useState(0);
   const [feedMinScore, setFeedMinScore] = useState(0);
+  // 인앱 파인더 — 이웃 이름·카드 헤더·폴더 칩 클릭으로 그 창고의 스냅샷을 앱 안에서 연다.
+  const [browse, setBrowse] = useState<{ url: string; name: string; path?: string } | null>(null);
 
   const load = useCallback(async () => {
     try {
       const [rn, rf] = await Promise.all([
         fetch(`${API}/warehouse-feed/neighbors`),
-        fetch(`${API}/warehouse-feed/feed?limit=100&min_level=${feedMinLevel}&min_score=${feedMinScore}`),
+        fetch(`${API}/warehouse-feed/feed?limit=50&cards=1&min_level=${feedMinLevel}&min_score=${feedMinScore}`),
       ]);
       if (!rn.ok || !rf.ok) throw new Error(`HTTP ${rn.status}/${rf.status}`);
       const dn = await rn.json();
@@ -213,15 +170,11 @@ export function NeighborsPane() {
         throw new Error(d?.detail || `HTTP ${r.status}`);
       }
       const d = await r.json();
-      const patch = (arr: WfFeedItem[]) => arr.map((x) => {
-        if (x.wh_url === f.wh_url && x.path === f.path) return { ...x, likes: d.count };
-        if (x.group && x.items) {
-          return { ...x, items: x.items.map((y) => (y.wh_url === f.wh_url && y.path === f.path ? { ...y, likes: d.count } : y)) };
-        }
-        return x;
-      });
-      setFeed((cur) => patch(cur));
-      setResults((cur) => (cur ? patch(cur) : cur));
+      const hit = (x: WfFeedItem) => x.wh_url === f.wh_url && x.path === f.path;
+      setFeed((cur) => cur.map((c) => ({
+        ...c, items: c.items.map((y) => (hit(y) ? { ...y, likes: d.count } : y)),
+      })));
+      setResults((cur) => (cur ? cur.map((x) => (hit(x) ? { ...x, likes: d.count } : x)) : cur));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -246,6 +199,17 @@ export function NeighborsPane() {
     }
     setBusy(null);
   }, [retweetPick]);
+
+  // DM — 메신저 창을 이 창고 주인(이웃)의 대화로 딥링크 (localStorage 핸드오프,
+  // MessengerInstrumentView 가 마운트/storage 이벤트로 소비 — DiscoverPane 과 동일 경로).
+  const openDm = useCallback((whUrl: string) => {
+    const nb = neighbors.find((n) => n.warehouse_url === whUrl);
+    if (!nb) return;
+    localStorage.setItem('indiebiz_messenger_dm_nid', String(nb.neighbor_id));
+    const el = (window as any).electron;
+    if (el?.openMessengerWindow) el.openMessengerWindow();
+    else window.location.hash = '#/messenger';   // 브라우저 폴백 (런처 연락처 버튼과 동일)
+  }, [neighbors]);
 
   // 즐겨찾기 점수(0~3) — 내가 이 창고에 주는 평가. 키=창고 url(창고=주소가 정체).
   const setScore = useCallback(async (url: string, score: number) => {
@@ -322,12 +286,12 @@ export function NeighborsPane() {
     return () => clearTimeout(t);
   }, [q, sort, sub, doSearch]);
 
-  const items = sub === 'search' ? (results ?? []) : feed;
   // 즐겨찾기 탭 = 점수 준 창고(점수 높은 순 — 정렬이 곧 점수의 첫 쓸모)
   const favorites = neighbors.filter((n) => (n.score ?? 0) > 0)
     .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  // 창고별 최근 파일 — 피드에 이미 있는 것에서 뽑는다(추가 조회 없음).
-  const recentOf = (whUrl: string) => feed.filter((f) => f.wh_url === whUrl).slice(0, 3);
+  // 창고별 최근 파일 — 피드 카드에 이미 있는 것에서 뽑는다(추가 조회 없음).
+  const recentOf = (whUrl: string) =>
+    feed.filter((c) => c.wh_url === whUrl).flatMap((c) => c.items).slice(0, 3);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -346,8 +310,8 @@ export function NeighborsPane() {
               </button>
               <button
                 className="font-medium text-stone-700 hover:text-[#D97706] hover:underline"
-                title={`${n.title || n.name} 창고 열기\n${n.warehouse_url}`}
-                onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
+                title={`${n.title || n.name} 창고를 앱 안에서 둘러보기\n${n.warehouse_url}`}
+                onClick={() => setBrowse({ url: n.warehouse_url, name: n.title || n.name })}
               >
                 {n.name}
               </button>
@@ -530,7 +494,7 @@ export function NeighborsPane() {
           {([['feed', '피드', Rss], ['search', '검색', Search], ['favorites', '즐겨찾기', Star]] as const).map(([key, label, SubIcon]) => (
             <button
               key={key}
-              onClick={() => setSub(key)}
+              onClick={() => { setSub(key); setBrowse(null); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                 sub === key ? 'bg-amber-50 text-[#B45309] font-medium' : 'text-stone-500 hover:text-stone-700'
               }`}
@@ -595,7 +559,17 @@ export function NeighborsPane() {
         )}
       </div>
 
-      {/* 피드(변화) / 검색 결과(현재) */}
+      {/* 인앱 파인더(현재의 창고 전체) — 피드·검색 위에 겹치지 않고 자리를 대신한다 */}
+      {browse ? (
+        <NeighborBrowser
+          url={browse.url}
+          name={browse.name}
+          initialPath={browse.path}
+          onBack={() => setBrowse(null)}
+          onLike={doLike}
+          onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
+        />
+      ) : (
       <div className="flex-1 min-h-0 overflow-auto">
         {error && (
           <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100 flex items-center gap-2">
@@ -636,8 +610,8 @@ export function NeighborsPane() {
                       </button>
                       <button
                         className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"
-                        title={`${n.warehouse_url} 열기`}
-                        onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
+                        title={`${n.warehouse_url} — 앱 안에서 둘러보기`}
+                        onClick={() => setBrowse({ url: n.warehouse_url, name: n.title || n.name })}
                       >
                         {n.name}
                       </button>
@@ -703,34 +677,53 @@ export function NeighborsPane() {
             <p className="text-sm">이웃 창고 {neighbors.length}곳의 파일 이름에서 찾습니다</p>
             <p className="text-xs">찾을 말을 입력하세요 — 지난 둘러보기에서 본 파일 전부가 대상입니다</p>
           </div>
-        ) : items.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
-            {sub === 'search' ? <Search className="w-10 h-10" /> : <Rss className="w-10 h-10" />}
-            <p className="text-sm">{sub === 'search' ? `'${q.trim()}' 이(가) 든 파일 이름이 없어요` : '아직 새 소식이 없어요'}</p>
-            {sub === 'search' && <p className="text-xs">이웃이 아직 안 올렸거나, 마지막 둘러보기 뒤에 올렸을 수 있어요</p>}
-          </div>
-        ) : (
-          <ul className="px-5 py-3 space-y-1.5">
-            {items.map((f) => (
-              f.group ? (
-                <GroupRow
-                  key={`g:${f.wh_url}:${f.folder}:${f.seen_at}:${f.kind}`}
-                  g={f}
-                  onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
-                  onLike={doLike}
-                />
-              ) : (
+        ) : sub === 'search' ? (
+          (results ?? []).length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
+              <Search className="w-10 h-10" />
+              <p className="text-sm">{`'${q.trim()}' 이(가) 든 파일 이름이 없어요`}</p>
+              <p className="text-xs">이웃이 아직 안 올렸거나, 마지막 둘러보기 뒤에 올렸을 수 있어요</p>
+            </div>
+          ) : (
+            <ul className="px-5 py-3 space-y-1.5">
+              {(results ?? []).map((f) => (
                 <FileRow
                   key={`${f.wh_url}:${f.id ?? f.path}:${f.seen_at}`}
                   f={f}
                   onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
                   onLike={doLike}
                 />
-              )
+              ))}
+            </ul>
+          )
+        ) : feed.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
+            <Rss className="w-10 h-10" />
+            <p className="text-sm">아직 새 소식이 없어요</p>
+          </div>
+        ) : (
+          <ul className="px-5 py-3 space-y-2">
+            {feed.map((c) => (
+              <FeedCard
+                key={`c:${c.wh_url}:${c.seen_at}:${c.kind}`}
+                c={c}
+                onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
+                onLike={doLike}
+                onDm={openDm}
+                onOpenBrowser={(whUrl, path) => {
+                  const nb = neighbors.find((n) => n.warehouse_url === whUrl);
+                  setBrowse({
+                    url: whUrl,
+                    name: c.neighbor_title || nb?.title || nb?.name || c.neighbor_name,
+                    path,
+                  });
+                }}
+              />
             ))}
           </ul>
         )}
       </div>
+      )}
     </div>
   );
 }

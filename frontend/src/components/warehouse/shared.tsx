@@ -33,10 +33,31 @@ export interface WfNeighbor {
 export interface WfFeedItem {
   id?: number; wh_url: string; path: string; mtime: string; bytes: number;
   url: string; kind?: string; seen_at: string; likes?: number;
-  neighbor_name: string; neighbor_home: string;
+  /* 피드·검색 행에는 API 가 붙여주고, 인앱 브라우저(browse)의 스냅샷 행에는 없다 */
+  neighbor_name?: string; neighbor_home?: string;
   /* 폴더 단위로 접힌 줄 — 한 폴링에서 같은 폴더에 GROUP_MIN 이상 들어왔을 때.
      원장은 파일 단위 그대로고 여기 표현만 접힌다(warehouse_feed._group_feed). */
   group?: boolean; folder?: string; count?: number; items?: WfFeedItem[];
+}
+
+/** 피드 카드(cards=1) — 카드 1장 = 이웃의 발화 1건(창고×둘러보기 회차×종류).
+    items=루트 파일만(CARD_ITEMS_CAP 까지), 폴더 안 파일은 folders 로 이름만 접힌다
+    (열람은 인앱 파인더). 전체 개수는 count 가 사실대로 말한다. */
+export interface WfCard {
+  card: true; wh_url: string; seen_at: string; kind: string;
+  count: number; bytes: number; mtime: string; items: WfFeedItem[];
+  folders?: WfBrowseDir[];
+  neighbor_name: string; neighbor_home: string;
+  /** 창고 제목(매니페스트 title) — 이웃 이름이 npub 주소일 때 카드가 이걸 앞세운다 */
+  neighbor_title?: string;
+}
+
+/** 인앱 브라우저(browse)의 하위 폴더 한 줄 — 스냅샷에서 집계 파생. */
+export interface WfBrowseDir { name: string; count: number; bytes: number; mtime: string }
+
+/** "2026-07-21T07:55:21" → "07-21 07:55" — 피드 카드의 시간 표기. */
+export function fmtWhen(s: string): string {
+  return (s || '').slice(5, 16).replace('T', ' ');
 }
 
 export const IMG_EXT = /\.(jpe?g|png|gif|webp)$/i;

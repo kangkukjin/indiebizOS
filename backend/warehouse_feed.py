@@ -90,6 +90,28 @@ def _init_db() -> None:
             c.execute("ALTER TABLE poll_status ADD COLUMN adapter TEXT")
         except Exception:
             pass  # 이미 있음
+        # 회원 로그인(2026-07-20) — 상대 창고에 내가 가입한 계정으로 폴링해 내 레벨의
+        # 매니페스트를 받는다(익명 폴링=항상 레벨 0 이던 갭 해소). 저장하는 자격은
+        # *내가 만든* 발신용 계정 — 브라우저 비밀번호 관리자와 같은 부류. 맥 로컬 DB
+        # (gitignore·배포 제외·폰 미동기)에만 산다.
+        # ★credentials 는 캐시가 아니라 등기부의 부속(재폴링으로 복구 불가) — 캐시
+        #   마이그레이션에서 드롭 금지. pk_cookie 만 파생물(만료 시 재로그인이 복구).
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS credentials(
+                wh_url      TEXT PRIMARY KEY,
+                user_id     TEXT,
+                password    TEXT,
+                pk_cookie   TEXT,
+                login_ok    INTEGER,
+                login_error TEXT,
+                updated_at  TEXT
+            )
+        """)
+        # 폴링이 마지막으로 받은 내 레벨(매니페스트 viewer_level) — 이웃 카드 배지용.
+        try:
+            c.execute("ALTER TABLE poll_status ADD COLUMN viewer_level INTEGER")
+        except Exception:
+            pass  # 이미 있음
 
 
 def normalize_base(url: str) -> str:
@@ -125,6 +147,110 @@ def fetch_manifest(url: str) -> Dict:
     return r.json()
 
 
+# ── 회원 로그인 — 승급받은 레벨로 폴링하기 (2026-07-20) ──────────────
+# 창고 가입은 내가 정한 아이디+비밀번호(네이버식) — 자격은 이미 내 손에 있으므로
+# 별도 키 교환이 필요 없다. 매니페스트가 기계 판독용 로그인 계약(POST /login →
+# pk 쿠키)을 싣는 게 정확히 이 용도. 쿠키는 캐시하고 만료·회수(is_member=false)면
+# 재로그인 — 어댑터 캐시와 같은 자가치유 패턴.
+
+def _get_cred(base: str) -> Optional[Dict]:
+    with _db_lock, _conn() as c:
+        row = c.execute("SELECT * FROM credentials WHERE wh_url=?", (base,)).fetchone()
+        return dict(row) if row else None
+
+
+def _save_login_state(base: str, pk: Optional[str], ok: int, error: Optional[str]) -> None:
+    now = datetime.now().isoformat(timespec="seconds")
+    with _db_lock, _conn() as c:
+        if pk is not None:
+            c.execute("UPDATE credentials SET pk_cookie=?, login_ok=?, login_error=?, "
+                      "updated_at=? WHERE wh_url=?", (pk, ok, error, now, base))
+        else:
+            c.execute("UPDATE credentials SET login_ok=?, login_error=?, updated_at=? "
+                      "WHERE wh_url=?", (ok, error, now, base))
+
+
+def _login(base: str, user_id: str, password: str) -> Dict:
+    """창고 로그인 계약(POST /login) — 성공 시 {pk, level, name}. 실패는 예외."""
+    r = requests.post(base + "/login",
+                      json={"user_id": user_id, "password": password, "auto": True},
+                      timeout=_REQUEST_TIMEOUT, headers={"User-Agent": _UA},
+                      allow_redirects=False)
+    if r.status_code == 401:
+        raise ValueError("아이디 또는 비밀번호가 맞지 않아요")
+    r.raise_for_status()
+    pk = r.cookies.get("pk") or ""
+    if not pk:
+        raise ValueError("로그인 응답에 세션 쿠키(pk)가 없어요")
+    body = {}
+    try:
+        body = r.json()
+    except Exception:
+        pass
+    return {"pk": pk, "level": body.get("level"), "name": body.get("name")}
+
+
+def _fetch_with_auth(base: str, hint: Optional[str]):
+    """자격이 등록된 창고면 회원 세션으로 매니페스트를 받는다. 반환 (data, adapter).
+
+    쿠키가 없거나 죽어 있으면(익명 응답 is_member=false) 한 번 재로그인 후 재조회 —
+    실패하면 익명(레벨 0)으로 계속 폴링하고 login_error 만 기록한다(창고가 방언이거나
+    로그인이 안 돼도 피드는 멈추지 않는다)."""
+    import warehouse_adapters
+    cred = _get_cred(base)
+    if not cred or not (cred.get("user_id") or "").strip():
+        return warehouse_adapters.fetch_any(base, hint=hint)
+    cookies = {"pk": cred["pk_cookie"]} if cred.get("pk_cookie") else None
+    data, adapter = warehouse_adapters.fetch_any(base, hint=hint, cookies=cookies)
+    if adapter.split("|")[0] == "native" and not data.get("is_member"):
+        try:
+            res = _login(base, cred["user_id"], cred.get("password") or "")
+            _save_login_state(base, res["pk"], ok=1, error=None)
+            data, adapter = warehouse_adapters.fetch_any(
+                base, hint=adapter, cookies={"pk": res["pk"]})
+        except Exception as e:
+            _save_login_state(base, None, ok=0, error=str(e))
+    elif adapter.split("|")[0] == "native":
+        _save_login_state(base, None, ok=1, error=None)
+    return data, adapter
+
+
+def set_credentials(url: str, user_id: str, password: str) -> Dict:
+    """창고 계정 등록(빈 user_id=해제) + 즉시 로그인 확인. 반환 {ok, level?, error?}."""
+    _init_db()
+    base = normalize_base(url)
+    now = datetime.now().isoformat(timespec="seconds")
+    if not user_id.strip():
+        with _db_lock, _conn() as c:
+            c.execute("DELETE FROM credentials WHERE wh_url=?", (base,))
+        return {"ok": True, "cleared": True}
+    with _db_lock, _conn() as c:
+        c.execute("""
+            INSERT INTO credentials(wh_url, user_id, password, updated_at)
+            VALUES(?, ?, ?, ?)
+            ON CONFLICT(wh_url) DO UPDATE SET
+                user_id=excluded.user_id, password=excluded.password,
+                pk_cookie=NULL, login_ok=NULL, login_error=NULL, updated_at=excluded.updated_at
+        """, (base, user_id.strip(), password, now))
+    try:
+        res = _login(base, user_id.strip(), password)
+        _save_login_state(base, res["pk"], ok=1, error=None)
+        return {"ok": True, "level": res.get("level"), "name": res.get("name")}
+    except Exception as e:
+        _save_login_state(base, None, ok=0, error=str(e))
+        return {"ok": False, "error": str(e)}
+
+
+def get_credentials_map() -> Dict[str, Dict]:
+    """창고 url → 로그인 상태(비밀번호 제외 — UI 카드용)."""
+    _init_db()
+    with _db_lock, _conn() as c:
+        return {r["wh_url"]: {"user_id": r["user_id"], "login_ok": r["login_ok"],
+                              "login_error": r["login_error"]}
+                for r in c.execute("SELECT wh_url, user_id, login_ok, login_error "
+                                   "FROM credentials").fetchall()}
+
+
 def _migrate_warehouse(old: str, new: str) -> Dict:
     """이사 치유 — 등기부(contacts warehouse 행)의 옛 주소를 새 주소로, 캐시(wh_url 키)도 이관.
 
@@ -153,6 +279,13 @@ def _migrate_warehouse(old: str, new: str) -> Dict:
             c.execute("UPDATE feed SET wh_url=? WHERE wh_url=?", (new, old))
             c.execute("DELETE FROM poll_status WHERE wh_url=?", (old,))
             healed["cache"] = "rekeyed"
+        # 로그인 자격도 새 주소를 따라간다(계정은 창고의 것 — 주소가 바뀌어도 그 창고).
+        # 새 주소에 이미 자격이 있으면 그쪽을 존중하고 옛 것은 버린다.
+        has_cred = c.execute("SELECT 1 FROM credentials WHERE wh_url=?", (new,)).fetchone()
+        if has_cred:
+            c.execute("DELETE FROM credentials WHERE wh_url=?", (old,))
+        else:
+            c.execute("UPDATE credentials SET wh_url=? WHERE wh_url=?", (new, old))
     return healed
 
 
@@ -173,7 +306,7 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
         row = c.execute("SELECT adapter FROM poll_status WHERE wh_url=?", (base,)).fetchone()
         cached_adapter = row["adapter"] if row else None
     try:
-        data, adapter = warehouse_adapters.fetch_any(base, hint=cached_adapter)
+        data, adapter = _fetch_with_auth(base, cached_adapter)
         moved = normalize_base(data.get("moved_to") or "")
         if moved and moved != base and _hop == 0:
             healed = _migrate_warehouse(base, moved)
@@ -183,6 +316,7 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
         title = data.get("title") or ""
         npub = (data.get("npub") or "").strip()
         has_restricted = 1 if data.get("has_restricted") else 0
+        viewer_level = data.get("viewer_level")   # 회원 로그인 폴링이면 내 레벨(배지용)
         # 상대가 목록을 상한에서 잘랐다고 신고하면 "안 보이는 것"과 "사라진 것"을 가를 수 없다.
         truncated = bool(data.get("truncated"))
     except Exception as e:
@@ -236,13 +370,13 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
             c.execute("DELETE FROM snapshots WHERE wh_url=? AND path=?", (base, p))
         c.execute("""
             INSERT INTO poll_status(wh_url, last_poll, ok, error, file_count, title,
-                                    has_restricted, adapter)
-            VALUES(?, ?, 1, NULL, ?, ?, ?, ?)
+                                    has_restricted, adapter, viewer_level)
+            VALUES(?, ?, 1, NULL, ?, ?, ?, ?, ?)
             ON CONFLICT(wh_url) DO UPDATE SET
                 last_poll=?, ok=1, error=NULL, file_count=?, title=?, has_restricted=?,
-                adapter=?
-        """, (base, now, len(files), title, has_restricted, adapter,
-              now, len(files), title, has_restricted, adapter))
+                adapter=?, viewer_level=?
+        """, (base, now, len(files), title, has_restricted, adapter, viewer_level,
+              now, len(files), title, has_restricted, adapter, viewer_level))
     _reconcile_identity(base, npub)
     return {"ok": True, "url": base, "file_count": len(files), "adapter": adapter,
             "new_events": new_events, "title": title, "npub": npub}
@@ -446,6 +580,7 @@ def forget_warehouse(url: str) -> None:
         c.execute("DELETE FROM snapshots WHERE wh_url=?", (base,))
         c.execute("DELETE FROM feed WHERE wh_url=?", (base,))
         c.execute("DELETE FROM poll_status WHERE wh_url=?", (base,))
+        c.execute("DELETE FROM credentials WHERE wh_url=?", (base,))
 
 
 def start_poller() -> None:

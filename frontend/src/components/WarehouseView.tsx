@@ -10,7 +10,7 @@
  *   백엔드: /warehouse-feed/*. 둘 다 로컬 전용 — 터널·Worker 미노출.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight, Globe, Building2, Heart } from 'lucide-react';
+import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight, Globe, Building2, Heart, KeyRound } from 'lucide-react';
 import { runIBL } from './generic/manifest';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
@@ -30,6 +30,9 @@ interface WfNeighbor {
   last_poll: string | null; ok: number | null; error: string | null;
   file_count: number | null; title: string; has_restricted: boolean;
   adapter?: string; adapter_label?: string;
+  /* 회원 로그인 — 내가 그 창고에 가입한 계정으로 폴링하면 내 레벨의 매니페스트를 받는다 */
+  login_user?: string; login_ok?: number | null; login_error?: string;
+  viewer_level?: number | null;
 }
 interface WfFeedItem {
   id?: number; wh_url: string; path: string; mtime: string; bytes: number;
@@ -443,6 +446,7 @@ function NeighborsPane() {
   const [results, setResults] = useState<WfFeedItem[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [memoEdit, setMemoEdit] = useState<{ id: number; text: string } | null>(null);
+  const [loginEdit, setLoginEdit] = useState<{ url: string; name: string; user: string; pw: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
   const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number; mode: 'link' | 'copy' } | null>(null);
   // 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만. 레벨=숫자, 의미 라벨 없음.
@@ -586,6 +590,31 @@ function NeighborsPane() {
     retry();
   }, [memoEdit, retry]);
 
+  // 창고 계정 저장(빈 아이디=해제) — 서버가 즉시 로그인 확인 + 성공 시 재폴링까지 한다.
+  const saveLogin = useCallback(async (clear = false) => {
+    if (!loginEdit) return;
+    setBusy(clear ? '로그인 해제 중…' : '로그인 확인 중…');
+    try {
+      const r = await fetch(`${API}/warehouse-feed/credentials`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: loginEdit.url,
+          user_id: clear ? '' : loginEdit.user.trim(),
+          password: clear ? '' : loginEdit.pw,
+        }),
+      });
+      const d = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(d?.detail || `HTTP ${r.status}`);
+      if (!clear && !d?.ok) throw new Error(d?.error || '로그인에 실패했어요');
+      setLoginEdit(null);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+    setBusy(null);
+    retry();
+  }, [loginEdit, retry]);
+
   const doSearch = useCallback(async (query: string, order: 'recent' | 'match') => {
     const t = query.trim();
     if (!t) { setResults(null); setSearching(false); return; }
@@ -646,6 +675,32 @@ function NeighborsPane() {
                 >
                   {n.adapter_label || n.adapter}
                 </span>
+              )}
+              {/* 회원 로그인 상태 — 계정으로 폴링하면 승급받은 레벨의 파일까지 피드에 들어온다 */}
+              {n.login_user && n.login_ok === 1 && (
+                <span
+                  className="px-1.5 rounded-full bg-emerald-50 text-emerald-600"
+                  title={`'${n.login_user}' 계정으로 폴링 중 — 이 창고가 나에게 준 레벨`}
+                >
+                  레벨 {n.viewer_level ?? '?'}
+                </span>
+              )}
+              {n.login_user && n.login_ok === 0 && (
+                <span
+                  className="px-1.5 rounded-full bg-red-50 text-red-500"
+                  title={`로그인 실패: ${n.login_error || '원인 미상'} — 열쇠 버튼으로 다시 등록하세요`}
+                >
+                  로그인 실패
+                </span>
+              )}
+              {(!n.adapter || n.adapter === 'native') && (
+                <button
+                  className={`p-1 rounded opacity-0 group-hover:opacity-100 ${n.login_user ? 'text-emerald-500 hover:text-emerald-600' : 'text-stone-300 hover:text-[#D97706]'}`}
+                  title="이 창고에 내가 가입한 계정 등록 — 폴러가 로그인해 승급받은 레벨로 읽어요"
+                  onClick={() => setLoginEdit({ url: n.warehouse_url, name: n.name, user: n.login_user || '', pw: '' })}
+                >
+                  <KeyRound className="w-3 h-3" />
+                </button>
               )}
               <button
                 className="p-1 rounded text-stone-300 hover:text-[#D97706] opacity-0 group-hover:opacity-100"
@@ -711,6 +766,34 @@ function NeighborsPane() {
             >
               등록
             </button>
+          </div>
+        )}
+
+        {loginEdit && (
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            <KeyRound className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="text-stone-500 shrink-0">{loginEdit.name} 창고 내 계정:</span>
+            <input
+              autoFocus
+              className="px-2 py-1.5 rounded-lg border border-stone-200 w-36"
+              placeholder="아이디"
+              value={loginEdit.user}
+              onChange={(e) => setLoginEdit({ ...loginEdit, user: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Escape') setLoginEdit(null); }}
+            />
+            <input
+              type="password"
+              className="px-2 py-1.5 rounded-lg border border-stone-200 w-36"
+              placeholder="비밀번호"
+              value={loginEdit.pw}
+              onChange={(e) => setLoginEdit({ ...loginEdit, pw: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveLogin(); if (e.key === 'Escape') setLoginEdit(null); }}
+            />
+            <button className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]" onClick={() => saveLogin()}>로그인 확인·저장</button>
+            {neighbors.find((n) => n.warehouse_url === loginEdit.url)?.login_user && (
+              <button className="px-3 py-1.5 rounded-lg border border-stone-200 text-stone-500 hover:text-red-500 hover:border-red-300" onClick={() => saveLogin(true)}>해제</button>
+            )}
+            <span className="text-stone-400">가입은 창고 홈에서 — 여기엔 그때 만든 아이디·비밀번호를 넣어요</span>
           </div>
         )}
 

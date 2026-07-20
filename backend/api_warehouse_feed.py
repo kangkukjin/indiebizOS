@@ -27,10 +27,12 @@ def _bm():
 def _cards():
     """등기부(창고 연락처) + 폴링 상태를 합친 카드 목록."""
     status = wf.get_status_map()
+    creds = wf.get_credentials_map()
     cards = []
     for ct in _bm().get_warehouse_contacts():
         base = wf.normalize_base(ct["url"])
         st = status.get(base) or {}
+        cr = creds.get(base) or {}
         cards.append({
             "contact_id": ct["contact_id"], "neighbor_id": ct["neighbor_id"],
             "name": ct["name"], "info_level": ct.get("info_level", 0),
@@ -44,6 +46,11 @@ def _cards():
             # 방언 어댑터(2026-07-20): native 외에도 autoindex·rss·nextcloud·page 창고 지원
             "adapter": st.get("adapter") or "native",
             "adapter_label": warehouse_adapters.adapter_label(st.get("adapter")),
+            # 회원 로그인(2026-07-20): 내 계정으로 폴링하면 내 레벨의 매니페스트를 받는다
+            "login_user": cr.get("user_id") or "",
+            "login_ok": cr.get("login_ok"),
+            "login_error": cr.get("login_error") or "",
+            "viewer_level": st.get("viewer_level"),
         })
     return cards
 
@@ -163,6 +170,26 @@ async def set_warehouse_memo(request: Request):
     _bm().update_neighbor_warehouse(int(neighbor_id),
                                     warehouse_memo=str(body.get("memo") or ""))
     return {"neighbor": next((c for c in _cards() if c["neighbor_id"] == int(neighbor_id)), None)}
+
+
+@router.post("/credentials")
+async def set_warehouse_credentials(request: Request):
+    """창고 계정 등록 — 상대 창고에 *내가 가입한* 아이디·비밀번호. 폴러가 이걸로 로그인해
+    내 레벨의 매니페스트를 받는다(익명 폴링=항상 레벨 0 이던 갭 해소). 빈 아이디=해제.
+
+    즉시 로그인 확인 후, 성공하면 그 자리에서 재폴링 — 승급된 레벨의 파일들이 피드에
+    바로 들어온다(30분을 안 기다림). ★스레드로(자기교착 방지 — add/poll 과 같은 부류)."""
+    body = await _body(request)
+    url = wf.normalize_base(body.get("url") or "")
+    if not url:
+        raise HTTPException(status_code=400, detail="창고 주소(url)가 필요해요")
+    user_id = str(body.get("user_id") or "")
+    password = str(body.get("password") or "")
+    result = await to_thread.run_sync(wf.set_credentials, url, user_id, password)
+    if result.get("ok") and not result.get("cleared"):
+        await to_thread.run_sync(wf.poll_warehouse, url)
+    return {**result,
+            "neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None)}
 
 
 @router.post("/poll")

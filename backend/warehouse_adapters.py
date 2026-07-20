@@ -102,8 +102,10 @@ def _human_bytes(s: Optional[str]) -> Optional[int]:
 
 # ── native: indiebizOS /manifest ─────────────────────────────────
 
-def _native(base: str) -> Dict:
-    r = _get(base + "/manifest")
+def _native(base: str, cookies: Optional[Dict] = None) -> Dict:
+    # cookies = 회원 세션(pk) — 창고 주인이 나를 승급했으면 매니페스트가 내 레벨로 열린다.
+    # 로그인은 native 창고만의 개념이라 다른 방언은 쿠키를 받지 않는다.
+    r = _get(base + "/manifest", cookies=cookies)
     data = r.json()
     if not isinstance(data, dict) or not isinstance(data.get("files"), list):
         raise ValueError("native 매니페스트 형식이 아님")
@@ -434,10 +436,10 @@ def _page_parse(text: str, final_url: str) -> Dict:
 
 # ── 감지·디스패치 ────────────────────────────────────────────────
 
-def _run(adapter: str, base: str) -> Dict:
+def _run(adapter: str, base: str, cookies: Optional[Dict] = None) -> Dict:
     kind, _, arg = adapter.partition("|")
     if kind == "native":
-        return _native(base)
+        return _native(base, cookies=cookies)
     if kind == "autoindex_json":
         return _autoindex_json(base)
     if kind == "autoindex_html":
@@ -451,19 +453,22 @@ def _run(adapter: str, base: str) -> Dict:
     raise ValueError(f"모르는 어댑터: {adapter}")
 
 
-def fetch_any(base: str, hint: Optional[str] = None) -> Tuple[Dict, str]:
+def fetch_any(base: str, hint: Optional[str] = None,
+              cookies: Optional[Dict] = None) -> Tuple[Dict, str]:
     """주소 하나를 어떤 방언이든 매니페스트 통화로 — 반환 (manifest, adapter).
 
     hint = poll_status 에 캐시된 어댑터(빠른 길). 실패하면 전체 재감지(자가 치유).
     감지 순서: native → URL 모양(nextcloud) → 본문 냄새(JSON/피드XML/목록HTML/일반페이지).
+    cookies = native 회원 세션(pk). 본문 냄새 감지 경로는 익명으로 두어도 된다 —
+    다음 폴링부터 hint=native 로 쿠키가 실린다.
     """
     if hint:
         try:
-            return _run(hint, base), hint
+            return _run(hint, base, cookies=cookies), hint
         except Exception:
             pass                              # 표면이 바뀌었나 — 재감지로
     try:
-        return _native(base), "native"
+        return _native(base, cookies=cookies), "native"
     except Exception:
         pass
     if _NC_TOKEN.search(urlparse(base).path):

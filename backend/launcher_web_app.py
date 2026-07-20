@@ -488,13 +488,20 @@ async function wfLoad(){
 }
 function wfRender(){
   const bar=document.getElementById('wfNeighbors'); let h='';
-  wfNb.forEach(n=>{
+  wfNb.forEach((n,i)=>{
     const st = n.ok===0 ? '<span class="err">연결 안 됨</span>'
                         : '<span class="cnt">'+(n.file_count==null?'?':n.file_count)+'개</span>';
     const ad = (n.adapter && n.adapter!=='native')
       ? '<span class="cnt" style="background:#e0f2fe;color:#0284c7" title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다">'+esc(n.adapter_label||n.adapter)+'</span>' : '';
+    /* 회원 로그인 — 계정으로 폴링하면 승급받은 레벨의 파일까지 피드에 들어온다 */
+    const lg = (n.login_user && n.login_ok===1)
+      ? '<span class="cnt" style="background:#d1fae5;color:#059669" title="'+esc(n.login_user)+' 계정으로 폴링 중 — 이 창고가 나에게 준 레벨">레벨 '+(n.viewer_level==null?'?':n.viewer_level)+'</span>'
+      : ((n.login_user && n.login_ok===0)
+      ? '<span class="err" title="'+esc(n.login_error||'')+'">로그인 실패</span>' : '');
+    const kb = (!n.adapter || n.adapter==='native')
+      ? '<button title="이 창고에 내가 가입한 계정 등록 — 폴러가 로그인해 승급받은 레벨로 읽어요" onclick="wfLogin('+i+')">🔑</button>' : '';
     h+='<span class="wh-chip"><a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
-      +st+ad
+      +st+ad+lg+kb
       +'<button title="창고 메모" onclick="wfMemo('+n.neighbor_id+')">✎</button>'
       +'<button title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)" onclick="wfRemove('+n.contact_id+')">✕</button></span>';
   });
@@ -607,6 +614,22 @@ async function wfMemo(id){
   if(memo===null) return;
   try{ await jfetch('/warehouse-feed/neighbors/memo',{method:'POST',body:JSON.stringify({neighbor_id:id,memo:memo})}); }
   catch(e){ /* 재조회가 진실 */ }
+  wfLoad();
+}
+async function wfLogin(i){
+  const n=wfNb[i]; if(!n) return;
+  const uid=prompt('내 계정 아이디 — 가입은 창고 홈에서 (비우고 확인=로그인 해제)', n.login_user||'');
+  if(uid===null) return;
+  let pw='';
+  if(uid.trim()){ pw=prompt('비밀번호'); if(pw===null) return; }
+  document.getElementById('whBusy').textContent='로그인 확인 중…';
+  try{
+    const r=await jfetch('/warehouse-feed/credentials',{method:'POST',
+      body:JSON.stringify({url:n.warehouse_url,user_id:uid.trim(),password:pw})});
+    const d=await r.json();
+    if(uid.trim() && !(d&&d.ok)) alert('로그인 실패: '+((d&&d.error)||'원인 미상'));
+  }catch(e){ alert('로그인 확인 실패: '+e); }
+  document.getElementById('whBusy').textContent='';
   wfLoad();
 }
 async function wfPoll(){

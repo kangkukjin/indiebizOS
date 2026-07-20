@@ -13,6 +13,7 @@ import subprocess
 import signal
 import os
 import re
+import time
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -130,15 +131,24 @@ def is_tunnel_running() -> bool:
         return False
 
 
-def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = None) -> dict:
+def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = None,
+                 force: bool = False, protocol: str = "") -> dict:
     """터널 시작 — 두 모드:
     - 토큰 모드(tunnel_token): `tunnel run --token` — 원격관리 터널(face_provision 발급).
       cert.pem·config.yml 불필요, ingress 는 CF 쪽 원격 설정이 담당.
-    - 이름 모드(tunnel_name+config.yml): 기존 로컬관리 터널(맥의 indiebiz-os)."""
+    - 이름 모드(tunnel_name+config.yml): 기존 로컬관리 터널(맥의 indiebiz-os).
+
+    force=True 면 이미 떠 있어도 내리고 다시 띄운다 — 원격관리 터널은 *접속 시점에*
+    ingress 를 받아오므로, 낡은 설정을 물고 있는 프로세스는 재기동만이 갱신 수단이다
+    (같은 내용 재PUT 은 CF 가 버전을 안 올려 푸시 자체가 없다 — 2026-07-20 윈도우 실측).
+    protocol="http2" 는 QUIC(UDP 7844)이 막힌 망의 폴백."""
     global _tunnel_process
 
     if is_tunnel_running():
-        return {"success": True, "message": "터널이 이미 실행 중입니다."}
+        if not force:
+            return {"success": True, "message": "터널이 이미 실행 중입니다."}
+        stop_tunnel()
+        time.sleep(1.5)
 
     if not is_cloudflared_installed():
         return {
@@ -156,6 +166,8 @@ def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = 
 
         cmd = [cloudflared_bin]
 
+        if protocol:
+            cmd.extend(["--protocol", protocol])   # QUIC 막힌 망 폴백(http2)
         if tunnel_token:
             cmd.extend(["tunnel", "run", "--token", tunnel_token])
         else:
@@ -174,7 +186,6 @@ def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = 
         )
 
         # 잠시 대기 후 상태 확인
-        import time
         time.sleep(2)
 
         if _tunnel_process.poll() is not None:
@@ -515,6 +526,7 @@ def api_start_tunnel():
             tunnel_name=config.get("tunnel_name", ""),
             config_path=config.get("config_path"),
             tunnel_token=config.get("tunnel_token") or None,
+            protocol=config.get("protocol") or "",
         )
 
     if result["success"]:
@@ -615,6 +627,7 @@ def auto_start_if_enabled():
             tunnel_name=config.get("tunnel_name", ""),
             config_path=config.get("config_path"),
             tunnel_token=config.get("tunnel_token") or None,
+            protocol=config.get("protocol") or "",
         )
         if result["success"]:
             print(f"[Tunnel] 자동 시작됨: {config.get('tunnel_name') or '(토큰 모드)'}")

@@ -28,6 +28,7 @@ import os
 import platform
 import re
 import secrets as _secrets
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -120,28 +121,86 @@ def _ingress_config(hostname: str) -> dict:
         {"service": "http_status:404"}]}}
 
 
-def reassert_ingress() -> dict:
-    """부팅 시 ingress 재선언(멱등) — 원격 설정 드리프트 치유.
+def _probe_public_face(base: str, timeout: int = 12) -> dict:
+    """공개면 자가검증 — 내 공개 주소를 한 번 찔러 본다.
 
-    ingress 는 CF 쪽에 사는 원격 설정이라 코드가 원하는 모양이 바뀌어도(예:
-    httpHostHeader 추가) '주소 발급'을 다시 누르기 전엔 낡은 채 남는다. 부팅마다
-    재선언하면 코드 갱신이 자동 반영된다(창고 폴더 부팅 보장과 같은 철학).
-    발급된 몸(tunnel_token·tunnel_id·hostname)에서만 — 맥(로컬관리 config.yml)은
-    해당 없음. 실패는 조용히(오프라인 부팅 무해)."""
+    구별해야 할 두 404:
+    - cloudflared catch-all(빈 본문 404) = 실행 중 프로세스의 활성 ingress 에 내
+      hostname 규칙이 없다 = 낡은 설정을 물고 있다 → 재기동으로만 고쳐진다.
+    - 백엔드가 낸 404(본문 있음) = 배관은 정상, 경로 문제.
+    ★반드시 이벤트 루프 밖(스레드)에서 — 이 요청은 CF 를 돌아 내 서버로 되돌아온다."""
+    try:
+        r = requests.get(base + "/manifest", timeout=timeout,
+                         allow_redirects=False)
+        body_len = len(r.content or b"")
+        catch_all = (r.status_code == 404 and body_len == 0)
+        return {"reached": True, "status": r.status_code, "bytes": body_len,
+                "catch_all": catch_all}
+    except Exception as e:
+        return {"reached": False, "error": str(e)}
+
+
+def verify_public_face(delay: float = 8.0) -> dict:
+    """부팅 자가검증·자가치유 — 공개면이 catch-all 404 면 cloudflared 를 재기동한다.
+
+    왜 재PUT 이 아니라 재기동인가(2026-07-20 윈도우 실측): 원격관리 터널의 ingress 는
+    *접속 시점에* 받아간다. 같은 내용을 다시 PUT 하면 CF 가 버전을 올리지 않아
+    푸시 자체가 없고, 실행 중 프로세스는 낡은 설정을 계속 물고 있다. 그래서
+    '설정을 다시 쓰기'가 아니라 '연결을 다시 맺기'가 유일한 수렴 수단이다.
+    (발급 때 공개면이 살아난 것도 재PUT 이 아니라 *실제 변경*이 푸시된 덕이었다.)
+
+    발급된 몸에서만 — 맥(로컬관리 config.yml)·미발급은 조용히 스킵. 오프라인 무해."""
     tcfg = api_tunnel.load_config()
-    host, tid = tcfg.get("hostname", ""), tcfg.get("tunnel_id", "")
-    if not (host and tid and tcfg.get("tunnel_token")):
+    host = tcfg.get("hostname", "")
+    if not (host and tcfg.get("tunnel_token")):
         return {"skipped": "발급된 원격관리 터널 없음"}
-    creds = _cf_creds()
-    if not (creds["token"] and creds["account_id"]):
-        return {"skipped": "CF 자격증명 없음"}
-    res = _cf_call("PUT", f"/accounts/{creds['account_id']}/cfd_tunnel/{tid}/configurations",
-                   creds["token"], body=_ingress_config(host))
-    if res["ok"]:
-        print(f"[Tunnel] ingress 재선언 OK ({host})")
-        return {"ok": True, "hostname": host}
-    print(f"[Tunnel] ingress 재선언 실패(무시): {_err_text(res)}")
-    return {"ok": False, "error": _err_text(res)}
+    if host not in set(public_face.load_config().get("direct_hosts") or []):
+        return {"skipped": "이 얼굴은 닫혀 있음"}   # 사용자가 닫아둔 주소는 깨우지 않는다
+    base = f"https://{host}"
+    time.sleep(delay)                                # cloudflared 접속 완료 대기
+    p = _probe_public_face(base)
+    if not p.get("reached"):
+        print(f"[Tunnel] 공개면 검증 건너뜀(도달 실패: {p.get('error')})")
+        return {"ok": False, "probe": p}
+    if not p.get("catch_all"):
+        print(f"[Tunnel] 공개면 정상 ({base} → {p['status']})")
+        return {"ok": True, "probe": p}
+
+    # catch-all = 낡은 ingress. 재기동으로 설정을 다시 받아오게 한다.
+    print(f"[Tunnel] 공개면 catch-all 404 — cloudflared 재기동으로 ingress 갱신 시도")
+    r = api_tunnel.start_tunnel(tcfg.get("tunnel_name", ""),
+                                tunnel_token=tcfg.get("tunnel_token"), force=True)
+    if not r.get("success"):
+        print(f"[Tunnel] 재기동 실패: {r.get('error')}")
+        return {"ok": False, "restarted": False, "error": r.get("error"), "probe": p}
+    time.sleep(delay)
+    p2 = _probe_public_face(base)
+    if p2.get("reached") and not p2.get("catch_all"):
+        print(f"[Tunnel] 재기동 후 공개면 정상 ({base} → {p2['status']})")
+        return {"ok": True, "restarted": True, "probe": p2}
+
+    # 여전히 catch-all — QUIC(UDP 7844) 차단 의심(연결 수가 모자라면 설정 수신도 불안정).
+    # http2 폴백으로 한 번 더. (윈도우 방화벽·공유기에서 흔한 실패 모드)
+    print("[Tunnel] 여전히 catch-all — http2 프로토콜 폴백으로 재기동")
+    r = api_tunnel.start_tunnel(tcfg.get("tunnel_name", ""),
+                                tunnel_token=tcfg.get("tunnel_token"),
+                                force=True, protocol="http2")
+    if not r.get("success"):
+        return {"ok": False, "restarted": True, "error": r.get("error"), "probe": p2}
+    time.sleep(delay)
+    p3 = _probe_public_face(base)
+    ok = bool(p3.get("reached") and not p3.get("catch_all"))
+    print(f"[Tunnel] http2 폴백 결과: {'정상' if ok else '여전히 실패'} ({base})")
+    if ok:
+        tcfg["protocol"] = "http2"      # 다음 부팅부터 이 프로토콜로 기동
+        api_tunnel.save_config(tcfg)
+    return {"ok": ok, "restarted": True, "protocol": "http2", "probe": p3}
+
+
+@router.post("/verify")
+def api_verify_public_face():
+    """공개면 즉시 자가검증(수동 트리거) — 설정 UI 의 '지금 점검' 용."""
+    return verify_public_face(delay=0.0)
 
 
 def _machine_slug() -> str:

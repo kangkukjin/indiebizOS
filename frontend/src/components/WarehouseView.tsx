@@ -26,7 +26,8 @@ interface WhData {
 }
 interface WfNeighbor {
   contact_id: number; neighbor_id: number; name: string; info_level: number;
-  warehouse_url: string; warehouse_memo: string; favorite: boolean;
+  /* 즐겨찾기 점수(0~3) — 내가 이 창고에 주는 평가. 접근 레벨(준/받은)과 독립인 내 쪽 축. */
+  warehouse_url: string; warehouse_memo: string; score?: number;
   last_poll: string | null; ok: number | null; error: string | null;
   file_count: number | null; title: string; has_restricted: boolean;
   adapter?: string; adapter_label?: string;
@@ -449,15 +450,16 @@ function NeighborsPane() {
   const [loginEdit, setLoginEdit] = useState<{ url: string; name: string; user: string; pw: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
   const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number; mode: 'link' | 'copy' } | null>(null);
-  // 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만. 레벨=숫자, 의미 라벨 없음.
+  // 피드 필터 — 내가 이웃에게 준 레벨(이상) + 내가 창고에 준 즐겨찾기 점수(이상).
+  // 두 축은 독립(레벨=접근 계약 / 점수=내 평가). 레벨·점수 모두 숫자, 의미 라벨 없음.
   const [feedMinLevel, setFeedMinLevel] = useState(0);
-  const [feedFavOnly, setFeedFavOnly] = useState(false);
+  const [feedMinScore, setFeedMinScore] = useState(0);
 
   const load = useCallback(async () => {
     try {
       const [rn, rf] = await Promise.all([
         fetch(`${API}/warehouse-feed/neighbors`),
-        fetch(`${API}/warehouse-feed/feed?limit=100&min_level=${feedMinLevel}&favorites=${feedFavOnly ? 1 : 0}`),
+        fetch(`${API}/warehouse-feed/feed?limit=100&min_level=${feedMinLevel}&min_score=${feedMinScore}`),
       ]);
       if (!rn.ok || !rf.ok) throw new Error(`HTTP ${rn.status}/${rf.status}`);
       const dn = await rn.json();
@@ -470,7 +472,7 @@ function NeighborsPane() {
       setError(e instanceof Error ? e.message : String(e));
       throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
-  }, [feedMinLevel, feedFavOnly]);
+  }, [feedMinLevel, feedMinScore]);
 
   const { retry, retrying } = useRetryingLoad(load);
 
@@ -565,11 +567,12 @@ function NeighborsPane() {
     setBusy(null);
   }, [retweetPick]);
 
-  const toggleFavorite = useCallback(async (neighborId: number) => {
+  // 즐겨찾기 점수(0~3) — 내가 이 창고에 주는 평가. 키=창고 url(창고=주소가 정체).
+  const setScore = useCallback(async (url: string, score: number) => {
     try {
-      const r = await fetch(`${API}/warehouse-feed/neighbors/favorite`, {
+      const r = await fetch(`${API}/warehouse-feed/score`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ neighbor_id: neighborId }),
+        body: JSON.stringify({ url, score }),
       });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
     } catch (e) {
@@ -640,7 +643,9 @@ function NeighborsPane() {
   }, [q, sort, sub, doSearch]);
 
   const items = sub === 'search' ? (results ?? []) : feed;
-  const favorites = neighbors.filter((n) => n.favorite);
+  // 즐겨찾기 탭 = 점수 준 창고(점수 높은 순 — 정렬이 곧 점수의 첫 쓸모)
+  const favorites = neighbors.filter((n) => (n.score ?? 0) > 0)
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   // 창고별 최근 파일 — 피드에 이미 있는 것에서 뽑는다(추가 조회 없음).
   const recentOf = (whUrl: string) => feed.filter((f) => f.wh_url === whUrl).slice(0, 3);
 
@@ -652,11 +657,12 @@ function NeighborsPane() {
           {neighbors.map((n) => (
             <div key={n.contact_id} className="group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-xl bg-white border border-stone-200 text-xs">
               <button
-                className={`p-0.5 rounded ${n.favorite ? 'text-[#D97706]' : 'text-stone-300 hover:text-[#D97706]'}`}
-                title={n.favorite ? '즐겨찾기 해제' : '즐겨찾기 — 즐겨찾기 탭에 모아 보여요'}
-                onClick={() => toggleFavorite(n.neighbor_id)}
+                className={`flex items-center gap-0.5 p-0.5 rounded ${(n.score ?? 0) > 0 ? 'text-[#D97706]' : 'text-stone-300 hover:text-[#D97706]'}`}
+                title={`즐겨찾기 점수 ${n.score ?? 0} — 누르면 0→1→2→3 순환. 점수는 피드 필터·즐겨찾기 탭이 씁니다 (내 평가라 상대에겐 안 보여요)`}
+                onClick={() => setScore(n.warehouse_url, ((n.score ?? 0) + 1) % 4)}
               >
-                <Star className={`w-3.5 h-3.5 ${n.favorite ? 'fill-current' : ''}`} />
+                <Star className={`w-3.5 h-3.5 ${(n.score ?? 0) > 0 ? 'fill-current' : ''}`} />
+                {(n.score ?? 0) > 0 && <span className="text-[10px] font-semibold">{n.score}</span>}
               </button>
               <button
                 className="font-medium text-stone-700 hover:text-[#D97706] hover:underline"
@@ -852,7 +858,8 @@ function NeighborsPane() {
               <SubIcon className="w-3.5 h-3.5" /> {label}
             </button>
           ))}
-          {/* 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만 (레벨=숫자, 의미 라벨 없음) */}
+          {/* 피드 필터 — 두 독립 축: 내가 이웃에게 준 레벨(접근 계약) + 내가 창고에 준
+              즐겨찾기 점수(평가). 레벨·점수 모두 숫자, 의미 라벨 없음. */}
           {sub === 'feed' && (
             <div className="ml-auto flex items-center gap-1.5">
               <select
@@ -864,15 +871,17 @@ function NeighborsPane() {
                 <option value={0}>모든 레벨</option>
                 {[1, 2, 3, 4].map((lv) => <option key={lv} value={lv}>레벨 {lv} 이상</option>)}
               </select>
-              <button
-                onClick={() => setFeedFavOnly((v) => !v)}
-                title="즐겨찾기한 이웃만"
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs transition-colors ${
-                  feedFavOnly ? 'border-[#D97706] bg-amber-50 text-[#B45309]' : 'border-stone-200 text-stone-500 hover:text-stone-700'
+              <select
+                className={`px-2 py-1 rounded-lg border text-xs ${
+                  feedMinScore > 0 ? 'border-[#D97706] bg-amber-50 text-[#B45309]' : 'border-stone-200 bg-white text-stone-600'
                 }`}
+                value={feedMinScore}
+                onChange={(e) => setFeedMinScore(Number(e.target.value))}
+                title="내가 준 즐겨찾기 점수(이상)의 창고만 — 점수는 이웃 칩의 별로 줍니다"
               >
-                <Star className={`w-3.5 h-3.5 ${feedFavOnly ? 'fill-[#D97706] text-[#D97706]' : ''}`} /> 즐겨찾기만
-              </button>
+                <option value={0}>즐겨찾기 무관</option>
+                {[1, 2, 3].map((s) => <option key={s} value={s}>★{s} 이상</option>)}
+              </select>
             </div>
           )}
         </div>
@@ -926,7 +935,7 @@ function NeighborsPane() {
             <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
               <Star className="w-10 h-10" />
               <p className="text-sm">즐겨찾기한 창고가 없어요</p>
-              <p className="text-xs">위 이웃 칩의 ☆ 를 누르면 그 창고가 여기 모입니다</p>
+              <p className="text-xs">위 이웃 칩의 ☆ 를 눌러 점수(1~3)를 주면 그 창고가 여기 모입니다</p>
             </div>
           ) : (
             <ul className="px-5 py-3 space-y-2">
@@ -935,7 +944,16 @@ function NeighborsPane() {
                 return (
                   <li key={n.contact_id} className="px-4 py-3 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 text-[#D97706] fill-current shrink-0" />
+                      {/* 점수만큼 별 — 클릭=순환(3 다음은 1, 해제는 오른쪽 버튼) */}
+                      <button
+                        className="flex items-center shrink-0"
+                        title={`즐겨찾기 점수 ${n.score ?? 0} — 누르면 순환`}
+                        onClick={() => setScore(n.warehouse_url, ((n.score ?? 0) % 3) + 1)}
+                      >
+                        {Array.from({ length: n.score ?? 0 }, (_, k) => (
+                          <Star key={k} className="w-4 h-4 text-[#D97706] fill-current" />
+                        ))}
+                      </button>
                       <button
                         className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"
                         title={`${n.warehouse_url} 열기`}
@@ -960,8 +978,8 @@ function NeighborsPane() {
                       </button>
                       <button
                         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
-                        title="즐겨찾기 해제"
-                        onClick={() => toggleFavorite(n.neighbor_id)}
+                        title="즐겨찾기 해제 (점수 0)"
+                        onClick={() => setScore(n.warehouse_url, 0)}
                       >
                         <Star className="w-4 h-4 fill-current" />
                       </button>

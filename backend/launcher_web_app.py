@@ -381,10 +381,19 @@ async function whRemove(nameEnc){
    백엔드 /warehouse-feed/* — 폴러(30분 주기, AI·토큰 0)가 쌓은 걸 읽는다.
    클릭 = 이웃의 공개 창고(/·/f?path=)가 새 탭으로 — 이웃 쪽 표면 재사용, 신규 0. */
 let WH_TAB='mine'; let wfNb=[]; let wfCands=[]; let wfItems=[]; let wfResults=null; let wfShown=[];
-/* 피드 필터 — 내가 이웃에게 준 레벨(이상) + 즐겨찾기만. 레벨=숫자, 의미 라벨 없음. */
-let wfMinLv=0; let wfFavOnly=false;
+/* 피드 필터 — 두 독립 축: 내가 이웃에게 준 레벨(접근 계약) + 내가 창고에 준 즐겨찾기
+   점수(평가 — 레벨 비대칭과 무관하게 내가 정함). 레벨·점수=숫자, 의미 라벨 없음. */
+let wfMinLv=0; let wfMinScore=0;
 function wfSetLv(v){ wfMinLv=parseInt(v,10)||0; wfLoad(); }
-function wfToggleFav(){ wfFavOnly=!wfFavOnly; wfLoad(); }
+function wfSetSc(v){ wfMinScore=parseInt(v,10)||0; wfLoad(); }
+/* 즐겨찾기 점수(0~3) — 칩의 별을 누르면 순환. 키=창고 url(창고=주소가 정체). */
+async function wfScore(i){
+  const n=wfNb[i]; if(!n) return;
+  try{ await jfetch('/warehouse-feed/score',{method:'POST',
+    body:JSON.stringify({url:n.warehouse_url,score:((n.score||0)+1)%4})}); }
+  catch(e){ /* 재조회가 진실 */ }
+  wfLoad();
+}
 function whTab(t){ WH_TAB=t;
   document.getElementById('whTabMine').classList.toggle('on', t==='mine');
   document.getElementById('whTabNb').classList.toggle('on', t==='nb');
@@ -478,7 +487,7 @@ async function wfLoad(){
   wfErr('');
   try{
     const [rn,rf]=await Promise.all([jfetch('/warehouse-feed/neighbors'),
-      jfetch('/warehouse-feed/feed?limit=100&min_level='+wfMinLv+'&favorites='+(wfFavOnly?1:0))]);
+      jfetch('/warehouse-feed/feed?limit=100&min_level='+wfMinLv+'&min_score='+wfMinScore)]);
     if(!rn.ok||!rf.ok) throw new Error('HTTP '+rn.status+'/'+rf.status);
     const dn=await rn.json(), df=await rf.json();
     wfNb=dn.neighbors||[]; wfCands=dn.candidates||[]; wfItems=df.items||[]; wfResults=null;
@@ -500,7 +509,12 @@ function wfRender(){
       ? '<span class="err" title="'+esc(n.login_error||'')+'">로그인 실패</span>' : '');
     const kb = (!n.adapter || n.adapter==='native')
       ? '<button title="이 창고에 내가 가입한 계정 등록 — 폴러가 로그인해 승급받은 레벨로 읽어요" onclick="wfLogin('+i+')">🔑</button>' : '';
-    h+='<span class="wh-chip"><a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
+    /* 즐겨찾기 점수 별 — 누르면 0→1→2→3 순환. 내 평가라 상대에겐 안 보인다. */
+    const sc=(n.score||0);
+    h+='<span class="wh-chip">'
+      +'<button title="즐겨찾기 점수 '+sc+' — 누르면 0→1→2→3 순환 (피드·검색 필터가 씁니다)"'
+      +(sc>0?' style="color:#B45309"':'')+' onclick="wfScore('+i+')">'+(sc>0?'★'+sc:'☆')+'</button>'
+      +'<a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
       +st+ad+lg+kb
       +'<button title="창고 메모" onclick="wfMemo('+n.neighbor_id+')">✎</button>'
       +'<button title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)" onclick="wfRemove('+n.contact_id+')">✕</button></span>';
@@ -510,8 +524,10 @@ function wfRender(){
   h+='<select class="wf-go" title="이 레벨 이상의 이웃이 보낸 소식만" onchange="wfSetLv(this.value)">'
     +[0,1,2,3,4].map(l=>'<option value="'+l+'"'+(wfMinLv===l?' selected':'')+'>'+(l===0?'모든 레벨':'레벨 '+l+' 이상')+'</option>').join('')
     +'</select>';
-  h+='<button class="wf-go" title="즐겨찾기한 이웃만" onclick="wfToggleFav()"'
-    +(wfFavOnly?' style="color:#B45309;border-color:#D97706"':'')+'>'+(wfFavOnly?'★':'☆')+' 즐겨찾기만</button>';
+  h+='<select class="wf-go" title="내가 준 즐겨찾기 점수(이상)의 창고만 — 점수는 이웃 칩의 별로 줍니다"'
+    +(wfMinScore>0?' style="color:#B45309;border-color:#D97706"':'')+' onchange="wfSetSc(this.value)">'
+    +[0,1,2,3].map(s=>'<option value="'+s+'"'+(wfMinScore===s?' selected':'')+'>'+(s===0?'즐겨찾기 무관':'★'+s+' 이상')+'</option>').join('')
+    +'</select>';
   h+='<button class="wf-go" title="모든 이웃 창고를 지금 둘러보기 (평소엔 30분마다 자동)" onclick="wfPoll()">↻ 지금 둘러보기</button>';
   bar.innerHTML=h;
   const sel=document.getElementById('wfCand');
@@ -644,7 +660,7 @@ async function wfSearch(v){
   try{
     /* 필터(레벨·즐겨찾기)는 검색에도 같은 신뢰 축으로 적용 — 컨트롤이 같은 화면에 있다 */
     const r=await jfetch('/warehouse-feed/search?q='+encodeURIComponent(t)
-      +'&min_level='+wfMinLv+'&favorites='+(wfFavOnly?1:0));
+      +'&min_level='+wfMinLv+'&min_score='+wfMinScore);
     const d=await r.json(); wfResults=d.items||[]; wfRender();
   }catch(e){ /* 검색 실패는 조용히 */ }
 }

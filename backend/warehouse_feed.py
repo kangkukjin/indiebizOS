@@ -112,6 +112,39 @@ def _init_db() -> None:
             c.execute("ALTER TABLE poll_status ADD COLUMN viewer_level INTEGER")
         except Exception:
             pass  # 이미 있음
+        # 즐겨찾기 점수(2026-07-20) — *내가 이 창고에 주는* 평가(0~3). 레벨은 비대칭이다:
+        # 그쪽이 내게 준 레벨(viewer_level)·내가 그 이웃에게 준 레벨(info_level)은 접근 계약이고,
+        # "내 창고엔 관심 없지만 훌륭한 창고"를 높게 치는 축은 따로 필요하다 — 그게 이 점수.
+        # 피드·검색 필터가 소비. ★credentials 처럼 등기부의 부속(재폴링 복구 불가) — 캐시
+        # 마이그레이션에서 드롭 금지. 맥 로컬·비공유(내 평가는 상대에게 보이지 않는다).
+        had_scores = c.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                               "AND name='scores'").fetchone() is not None
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS scores(
+                wh_url     TEXT PRIMARY KEY,
+                score      INTEGER NOT NULL,
+                updated_at TEXT
+            )
+        """)
+    if not had_scores:
+        _seed_scores_from_favorites()
+
+
+def _seed_scores_from_favorites() -> None:
+    """scores 첫 생성 때 1회 — 기존 이웃 즐겨찾기(boolean)를 점수 1로 이어받는다
+    (즐겨찾기의 점수화 — 이미 별을 준 창고가 개편으로 별을 잃지 않게)."""
+    try:
+        bases = {normalize_base(ct["url"]) for ct in _bm().get_warehouse_contacts()
+                 if ct.get("favorite") and ct.get("url")}
+    except Exception:
+        return  # 등기부를 못 읽으면 조용히 — 점수는 사용자가 다시 주면 된다
+    if not bases:
+        return
+    now = datetime.now().isoformat(timespec="seconds")
+    with _db_lock, _conn() as c:
+        for base in bases:
+            c.execute("INSERT OR IGNORE INTO scores(wh_url, score, updated_at) "
+                      "VALUES(?, 1, ?)", (base, now))
 
 
 def normalize_base(url: str) -> str:
@@ -251,6 +284,32 @@ def get_credentials_map() -> Dict[str, Dict]:
                                    "FROM credentials").fetchall()}
 
 
+def set_score(url: str, score: int) -> Dict:
+    """즐겨찾기 점수(0~3) 저장 — 0 이면 행 삭제(즐겨찾기 해제). 키=창고 url(창고=주소가 정체)."""
+    _init_db()
+    base = normalize_base(url)
+    sc = max(0, min(3, int(score)))
+    now = datetime.now().isoformat(timespec="seconds")
+    with _db_lock, _conn() as c:
+        if sc <= 0:
+            c.execute("DELETE FROM scores WHERE wh_url=?", (base,))
+        else:
+            c.execute("""
+                INSERT INTO scores(wh_url, score, updated_at) VALUES(?, ?, ?)
+                ON CONFLICT(wh_url) DO UPDATE SET
+                    score=excluded.score, updated_at=excluded.updated_at
+            """, (base, sc, now))
+    return {"url": base, "score": sc}
+
+
+def get_scores_map() -> Dict[str, int]:
+    """창고 url → 즐겨찾기 점수 (카드 표시·피드/검색 필터용). 없는 창고=0."""
+    _init_db()
+    with _db_lock, _conn() as c:
+        return {r["wh_url"]: r["score"]
+                for r in c.execute("SELECT wh_url, score FROM scores").fetchall()}
+
+
 def _migrate_warehouse(old: str, new: str) -> Dict:
     """이사 치유 — 등기부(contacts warehouse 행)의 옛 주소를 새 주소로, 캐시(wh_url 키)도 이관.
 
@@ -286,6 +345,12 @@ def _migrate_warehouse(old: str, new: str) -> Dict:
             c.execute("DELETE FROM credentials WHERE wh_url=?", (old,))
         else:
             c.execute("UPDATE credentials SET wh_url=? WHERE wh_url=?", (new, old))
+        # 즐겨찾기 점수도 이사를 따라간다(평가는 창고의 것 — 주소가 바뀌어도 그 창고).
+        has_score = c.execute("SELECT 1 FROM scores WHERE wh_url=?", (new,)).fetchone()
+        if has_score:
+            c.execute("DELETE FROM scores WHERE wh_url=?", (old,))
+        else:
+            c.execute("UPDATE scores SET wh_url=? WHERE wh_url=?", (new, old))
     return healed
 
 
@@ -581,6 +646,7 @@ def forget_warehouse(url: str) -> None:
         c.execute("DELETE FROM feed WHERE wh_url=?", (base,))
         c.execute("DELETE FROM poll_status WHERE wh_url=?", (base,))
         c.execute("DELETE FROM credentials WHERE wh_url=?", (base,))
+        c.execute("DELETE FROM scores WHERE wh_url=?", (base,))
 
 
 def start_poller() -> None:

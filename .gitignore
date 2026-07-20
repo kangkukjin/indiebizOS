@@ -319,3 +319,7 @@ data/*.lock
 공유창고/
 data/warehouse.json
 backend/*.log
+
+# cloudflared 터널 런타임 로그 (5MB 1세대 로테이션 — api_tunnel.py)
+data/cloudflared.log
+data/cloudflared.log.1

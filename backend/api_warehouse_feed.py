@@ -28,6 +28,7 @@ def _cards():
     """등기부(창고 연락처) + 폴링 상태를 합친 카드 목록."""
     status = wf.get_status_map()
     creds = wf.get_credentials_map()
+    scores = wf.get_scores_map()
     cards = []
     for ct in _bm().get_warehouse_contacts():
         base = wf.normalize_base(ct["url"])
@@ -38,8 +39,9 @@ def _cards():
             "name": ct["name"], "info_level": ct.get("info_level", 0),
             "warehouse_url": base,
             "warehouse_memo": ct.get("warehouse_memo") or "",
-            # 즐겨찾기는 이웃의 성질(neighbors.favorite) — 빠른 연락처와 같은 표식을 공유한다.
-            "favorite": bool(ct.get("favorite")),
+            # 즐겨찾기 점수(2026-07-20) — *내가 이 창고에 주는* 평가(0~3, 창고 단위·맥 로컬).
+            # 접근 레벨(info_level=내가 준 것 / viewer_level=받은 것)과 독립인 내 쪽 축.
+            "score": int(scores.get(base) or 0),
             "last_poll": st.get("last_poll"), "ok": st.get("ok"),
             "error": st.get("error"), "file_count": st.get("file_count"),
             "title": st.get("title") or "", "has_restricted": bool(st.get("has_restricted")),
@@ -147,17 +149,24 @@ async def remove_warehouse_neighbor(request: Request):
     return {"success": True}
 
 
-@router.post("/neighbors/favorite")
-async def toggle_warehouse_favorite(request: Request):
-    """즐겨찾기 토글 — 이웃 단위(neighbors.favorite). 한 이웃의 창고가 여럿이면 함께 움직인다."""
+@router.post("/score")
+async def set_warehouse_score(request: Request):
+    """즐겨찾기 점수(0~3) — *내가 이 창고에 주는* 평가. 접근 레벨과 독립인 축(레벨 비대칭
+    해소: 내 창고엔 관심 없는 상대의 훌륭한 창고를 높게 칠 수 있어야 한다). 0=해제.
+    창고=주소가 정체이므로 키는 url(이웃 단위 즐겨찾기 boolean 을 창고 단위 점수로 대체)."""
     body = await _body(request)
-    nid = body.get("neighbor_id")
-    if not isinstance(nid, int):
-        raise HTTPException(status_code=400, detail="neighbor_id(정수)가 필요해요")
-    n = _bm().toggle_neighbor_favorite(nid)
-    if not n:
-        raise HTTPException(status_code=404, detail="그런 이웃이 없어요")
-    return {"neighbor_id": nid, "favorite": bool(n.get("favorite"))}
+    url = wf.normalize_base(body.get("url") or "")
+    if not url:
+        raise HTTPException(status_code=400, detail="창고 주소(url)가 필요해요")
+    try:
+        score = int(body.get("score", 0))
+    except Exception:
+        raise HTTPException(status_code=400, detail="score 는 0~3 숫자")
+    if score < 0 or score > 3:
+        raise HTTPException(status_code=400, detail="score 는 0~3")
+    res = wf.set_score(url, score)
+    return {**res,
+            "neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None)}
 
 
 @router.post("/neighbors/memo")
@@ -212,28 +221,38 @@ def _name_map():
     return m
 
 
-def _allowed_urls(min_level: int, favorites: bool):
-    """피드·검색 필터의 허용 창고 집합 — 내가 이웃에게 준 레벨(info_level)·즐겨찾기 기준.
-    같은 주소에 여러 이웃이면 하나라도 조건을 넘으면 허용. 필터 없으면 None(전체)."""
-    if min_level <= 0 and not favorites:
+def _allowed_urls(min_level: int, favorites: bool, min_score: int = 0):
+    """피드·검색 필터의 허용 창고 집합 — 두 독립 축의 교집합:
+    min_level=내가 이웃에게 준 레벨(info_level, 접근 계약 축) /
+    min_score=내가 창고에 준 즐겨찾기 점수(평가 축 — 레벨 비대칭과 무관하게 내가 정함).
+    favorites=구 이웃 단위 boolean(호환 유지). 같은 주소에 여러 이웃이면 하나라도 조건을
+    넘으면 허용. 필터 없으면 None(전체)."""
+    if min_level <= 0 and not favorites and min_score <= 0:
         return None
+    scores = wf.get_scores_map() if min_score > 0 else {}
     allowed = set()
     for ct in _bm().get_warehouse_contacts():
+        base = wf.normalize_base(ct["url"])
         if int(ct.get("info_level") or 0) < min_level:
             continue
         if favorites and not ct.get("favorite"):
             continue
-        allowed.add(wf.normalize_base(ct["url"]))
+        if min_score > 0 and int(scores.get(base) or 0) < min_score:
+            continue
+        allowed.add(base)
     return sorted(allowed)
 
 
 @router.get("/feed")
-async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0):
+async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0,
+               min_score: int = 0):
     """타임라인 — 이웃 이름·창고 홈을 붙여 반환.
-    min_level=그 레벨 이상 이웃만(레벨=숫자, 의미는 사용자가 정함) / favorites=즐겨찾기만."""
+    min_level=그 레벨 이상 이웃만(레벨=숫자, 의미는 사용자가 정함) /
+    min_score=내가 준 즐겨찾기 점수 이상의 창고만 / favorites=구 boolean(호환)."""
     names = _name_map()
     items = []
-    for e in wf.get_feed(limit=limit, wh_urls=_allowed_urls(min_level, bool(favorites))):
+    for e in wf.get_feed(limit=limit,
+                         wh_urls=_allowed_urls(min_level, bool(favorites), min_score)):
         if e["wh_url"] not in names:
             continue  # 등기부에서 떼어진 창고의 잔여 이벤트는 숨김
         e["neighbor_name"] = names[e["wh_url"]]
@@ -244,15 +263,17 @@ async def feed(limit: int = 100, min_level: int = 0, favorites: int = 0):
 
 @router.get("/search")
 async def search(q: str = "", limit: int = 100, sort: str = "recent",
-                 min_level: int = 0, favorites: int = 0):
+                 min_level: int = 0, favorites: int = 0, min_score: int = 0):
     """전수 키워드 조사(검색 사다리 1층) — 이웃 전체 창고의 현재 파일명 색인에서.
 
-    sort: recent=최신순(기본) / match=이름 일치순. min_level·favorites=피드와 같은 신뢰 필터.
+    sort: recent=최신순(기본) / match=이름 일치순.
+    min_level·min_score(·구 favorites)=피드와 같은 신뢰·평가 필터.
     """
     names = _name_map()
     items = []
     for e in wf.search_snapshots(q, limit=limit, sort=sort,
-                                 wh_urls=_allowed_urls(min_level, bool(favorites))):
+                                 wh_urls=_allowed_urls(min_level, bool(favorites),
+                                                       min_score)):
         if e["wh_url"] not in names:
             continue
         e["neighbor_name"] = names[e["wh_url"]]

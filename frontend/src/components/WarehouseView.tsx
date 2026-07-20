@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Package, RefreshCw, FilePlus, Trash2, Download, ExternalLink, FileText, Film, Music, Archive, File as FileIcon, Users, Search, Plus, Pencil, Rss, Repeat2, Star, Folder, ChevronRight, Globe, Building2, Heart } from 'lucide-react';
 import { runIBL } from './generic/manifest';
+import { useRetryingLoad } from '../lib/use-retrying-load';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
 
 const API = 'http://127.0.0.1:8765';
@@ -228,10 +229,12 @@ function DiscoverPane() {
       setItems(arr.slice().reverse());
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
     setBusy(false);
   }, []);
-  useEffect(() => { load(); }, [load]);
+  const { retry, retrying } = useRetryingLoad(load);
 
   // 소개 본문에서 공유창고 주소를 뽑는다 — 계약: "공유창고 Warehouse : <url>" 라벨
   // (indienet_publish.publish_intro, 한/영 병기). ★키워드 게이트: "공유창고"와 "warehouse"가
@@ -304,7 +307,7 @@ function DiscoverPane() {
       const r = (await runIBL(`[others:feed]{op: "post", content: ${JSON.stringify(t)}}`)) as Record<string, unknown>;
       if (r?.error || r?.success === false) throw new Error(String(r.error || r.message || '게시 실패'));
       setDraft('');
-      await load();   // 릴레이 반영이 늦으면 목록에 아직 없을 수 있다 — 새로고침으로 다시 확인
+      await retry();  // 릴레이 반영이 늦으면 목록에 아직 없을 수 있다 — 새로고침으로 다시 확인
     } catch (e) {
       window.alert(`게시 실패: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -342,7 +345,7 @@ function DiscoverPane() {
           <div className="flex-1" />
           <button
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 shrink-0"
-            title="새로고침" onClick={load}
+            title="새로고침" onClick={() => retry()}
           >
             <RefreshCw className={`w-4 h-4 ${busy ? 'animate-spin' : ''}`} />
           </button>
@@ -364,7 +367,13 @@ function DiscoverPane() {
             {posting ? '게시 중…' : '게시'}
           </button>
         </div>
-        {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+        {error && (
+          <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <span className="flex-1">{error}{retrying && <span className="ml-1 text-red-400">— 백엔드를 기다리는 중…</span>}</span>
+            <button className="shrink-0 px-2 py-0.5 rounded-md border border-red-200 bg-white hover:bg-red-50"
+                    onClick={() => retry()}>다시 시도</button>
+          </div>
+        )}
         {busy && !items.length && <div className="text-sm text-stone-400 py-8 text-center">릴레이에서 소개를 모으는 중…</div>}
         {!busy && !items.length && !error && (
           <div className="text-center text-stone-400 py-10">
@@ -454,10 +463,11 @@ function NeighborsPane() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      throw e;                        // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
   }, [feedMinLevel, feedFavOnly]);
 
-  useEffect(() => { load(); }, [load]);
+  const { retry, retrying } = useRetryingLoad(load);
 
   const pollAll = useCallback(async () => {
     setBusy('이웃 창고 둘러보는 중…');
@@ -467,8 +477,8 @@ function NeighborsPane() {
       });
     } catch { /* 재조회가 진실 */ }
     setBusy(null);
-    load();
-  }, [load]);
+    retry();
+  }, [retry]);
 
   const addNeighbor = useCallback(async () => {
     if (!addUrl.trim()) return;
@@ -491,7 +501,7 @@ function NeighborsPane() {
       setError(e instanceof Error ? e.message : String(e));
     }
     setBusy(null);
-    load();
+    retry();
   }, [addUrl, addName, addCandidate, load]);
 
   const removeNeighbor = useCallback(async (contactId: number) => {
@@ -501,8 +511,8 @@ function NeighborsPane() {
         body: JSON.stringify({ contact_id: contactId }),
       });
     } catch { /* 재조회가 진실 */ }
-    load();
-  }, [load]);
+    retry();
+  }, [retry]);
 
   // 좋아요 — 카운터는 파일 주인(그 창고)이 센다. 응답 count 로 화면·로컬 스냅샷 즉시 갱신.
   const doLike = useCallback(async (f: WfFeedItem) => {
@@ -560,8 +570,8 @@ function NeighborsPane() {
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
-    load();
-  }, [load]);
+    retry();
+  }, [retry]);
 
   const saveMemo = useCallback(async () => {
     if (!memoEdit) return;
@@ -572,8 +582,8 @@ function NeighborsPane() {
       });
     } catch { /* 재조회가 진실 */ }
     setMemoEdit(null);
-    load();
-  }, [memoEdit, load]);
+    retry();
+  }, [memoEdit, retry]);
 
   const doSearch = useCallback(async (query: string, order: 'recent' | 'match') => {
     const t = query.trim();
@@ -807,7 +817,11 @@ function NeighborsPane() {
       {/* 피드(변화) / 검색 결과(현재) */}
       <div className="flex-1 min-h-0 overflow-auto">
         {error && (
-          <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100">{error}</div>
+          <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100 flex items-center gap-2">
+            <span className="flex-1">{error}{retrying && <span className="ml-1 text-red-400">— 백엔드를 기다리는 중…</span>}</span>
+            <button className="shrink-0 px-2 py-0.5 rounded-md border border-red-200 bg-white hover:bg-red-50"
+                    onClick={() => retry()}>다시 시도</button>
+          </div>
         )}
         {neighbors.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
@@ -947,6 +961,9 @@ export function WarehouseView() {
   const [innerDrag, setInnerDrag] = useState(false);                   // 창고 안 이동 vs 바깥 투입
   const [busy, setBusy] = useState<string | null>(null);
 
+  // ★실패를 굳히지 않는다 — 앱 시작 직후엔 백엔드(8765)가 아직 안 떠 있을 수 있어
+  //   첫 조회가 실패한다. throw 해서 useRetryingLoad 가 백오프 재시도하게 둔다
+  //   (예전엔 에러만 세팅하고 끝나 창을 나갔다 와야 회복됐다 — 2026-07-20 윈도우 실측).
   const load = useCallback(async (lv: number) => {
     try {
       const r = await fetch(`${API}/portal/warehouse-admin/list?level=${lv}`);
@@ -955,13 +972,15 @@ export function WarehouseView() {
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      throw e;
     }
   }, []);
 
   useEffect(() => {
     localStorage.setItem('indiebiz_warehouse_level', String(level));
-    load(level);
-  }, [level, load]);
+  }, [level]);
+  const { retry, retrying } = useRetryingLoad(
+    useCallback(() => load(level), [load, level]));
 
   const addPaths = useCallback(async (paths: string[]) => {
     if (!paths.length) return;
@@ -981,7 +1000,7 @@ export function WarehouseView() {
       msg = e instanceof Error ? e.message : String(e);
     }
     setBusy(null);
-    await load(level);      // load 가 setError(null) 을 하므로 사유는 그 뒤에 담는다
+    await load(level).catch(() => {});   // load 가 setError(null) 을 하므로 사유는 그 뒤에 담는다
     if (msg) setError(msg);
   }, [level, load]);
 
@@ -1007,7 +1026,7 @@ export function WarehouseView() {
     }
     // ★목록 새로고침이 먼저다 — load 가 성공 시 setError(null) 을 하므로 순서가 뒤집히면
     //   방금 담은 실패 사유가 지워져 "끌었는데 아무 일도 안 일어남"이 된다.
-    await load(level);
+    await load(level).catch(() => {});
     if (msg) setError(msg);
   }, [level, load]);
 
@@ -1060,8 +1079,8 @@ export function WarehouseView() {
         body: JSON.stringify({ level, name }),
       });
     } catch { /* 재조회가 진실 */ }
-    load(level);
-  }, [level, load]);
+    retry();
+  }, [level, retry]);
 
   const hasElectron = typeof (window as any).electron?.selectFiles === 'function';
 
@@ -1126,7 +1145,7 @@ export function WarehouseView() {
           <button
             className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100"
             title="새로고침"
-            onClick={() => load(level)}
+            onClick={() => retry()}
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -1211,8 +1230,17 @@ export function WarehouseView() {
         )}
 
         {error && (
-          <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100">
-            {error}
+          <div className="mx-5 mt-3 px-3 py-2 text-xs rounded-lg bg-red-50 text-red-600 border border-red-100 flex items-center gap-2">
+            <span className="flex-1">
+              {error}
+              {retrying && <span className="ml-1 text-red-400">— 백엔드를 기다리는 중…</span>}
+            </span>
+            <button
+              className="shrink-0 px-2 py-0.5 rounded-md border border-red-200 bg-white hover:bg-red-50"
+              onClick={() => retry()}
+            >
+              다시 시도
+            </button>
           </div>
         )}
 

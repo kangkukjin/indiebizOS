@@ -522,14 +522,39 @@ class TunnelConfig(BaseModel):
     funnel_port: Optional[int] = None
 
 
+def _served_host() -> str:
+    """이 몸이 *실제로* 직접 서빙하는 공개 호스트 (public_face.direct_hosts 의 첫 항목).
+
+    ★새 몸(발급기 경로)의 진실 소스 — face_provision 이 터널을 발급하면 그 호스트 하나로
+    8765 전체를 서빙한다(/launcher/app·/nas/* 포함). 반면 finder/launcher 호스트명은
+    옛 경로(tunnel_config.json 수기값 + ~/.cloudflared/config.yml ingress)만 보고 있었고
+    발급기가 그 둘을 안 건드려서, 새 몸에서 **남의 몸 주소가 그대로 표시**됐다
+    (윈도우 PC 에서 맥의 finder/launcher.kukjinkang.uk 가 보인 사고 — 그 주소로 가면
+    DNS 가 맥 터널을 가리키므로 그 몸의 런처가 아니라 맥이 응답한다).
+
+    Worker 를 얼굴로 쓰는 몸(맥)은 direct_hosts 가 비어 있어 "" 를 돌려주고,
+    기존 ingress 폴백이 그대로 쓰인다 — 회귀 없음.
+    """
+    try:
+        import public_face
+        hosts = public_face.load_config().get("direct_hosts") or []
+        return hosts[0] if hosts else ""
+    except Exception:
+        return ""
+
+
 @router.get("/config")
 async def get_tunnel_config():
     """터널 설정 조회"""
     config = load_config()
 
-    # 설정 파일에 호스트명이 없으면 config.yml에서 자동 추출 (폴백)
-    finder_host = config.get("finder_hostname", "")
-    launcher_host = config.get("launcher_hostname", "")
+    # 호스트명 우선순위: ①이 몸이 직접 서빙하는 공개 호스트(발급된 얼굴 — 가장 확실)
+    #                  ②tunnel_config.json 수기값  ③~/.cloudflared/config.yml ingress
+    # ①을 최우선으로 두는 이유: ②③은 낡거나(다른 몸에서 복사된 config.yml) 남의 주소일 수
+    # 있는데, ①은 이 몸의 터널이 지금 서빙 중이라는 사실 그 자체다.
+    served = _served_host()
+    finder_host = served or config.get("finder_hostname", "")
+    launcher_host = served or config.get("launcher_hostname", "")
     if not finder_host or not launcher_host:
         ingress = parse_ingress_hostnames(config.get("config_path"))
         if not finder_host:

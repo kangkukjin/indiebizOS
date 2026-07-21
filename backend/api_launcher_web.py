@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
+import re
 import json
 import uuid
 import hashlib
@@ -338,15 +339,58 @@ def reload_external_hostnames():
     return _EXTERNAL_HOSTNAMES
 
 
+# 루프백 — 데스크탑 Electron·MCP·스크립트. `localhost` 와 `127.0.0.1` 이 둘 다 실제로 쓰인다
+# (Manager.tsx·mcp_server.py·ibl_health_check.py 는 localhost, 나머지 대부분은 127.0.0.1).
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "[::1]", ""}
+
+# 사설망 — 집 와이파이의 폰·구형 기기. 사용자 결정(2026-07-21): LAN 은 로컬로 신뢰한다.
+# 100.64/10 은 CGNAT = tailnet 내부 주소(funnel 공개 경로가 아니라 tailnet 직결).
+_PRIVATE_HOST_RE = re.compile(
+    r"^(?:"
+    r"127\.\d{1,3}\.\d{1,3}\.\d{1,3}"          # 루프백 대역 전체
+    r"|10\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+    r"|192\.168\.\d{1,3}\.\d{1,3}"
+    r"|172\.(?:1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}"
+    r"|169\.254\.\d{1,3}\.\d{1,3}"             # 링크로컬
+    r"|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}"  # CGNAT = tailnet
+    r")$"
+)
+
+# 프록시(터널·CDN) 경유 신호. 이게 있으면 Host 가 뭐든 외부다.
+_PROXY_SIGNAL_HEADERS = ("cf-connecting-ip", "cf-ray", "x-forwarded-for", "x-forwarded-proto")
+
+
 def is_external_request(request: Request) -> bool:
-    """터널 호스트네임으로 들어온 원격 요청인지 판별"""
+    """원격(비신뢰) 요청인지 판별 — 인증 게이트의 판정자.
+
+    ★fail-closed 다: **로컬임이 증명될 때만** 로컬이고, 모르는 호스트는 외부로 본다.
+    옛 구현은 "알려진 터널 호스트 목록에 있으면 외부"(모르면 로컬)라 fail-open 이었다 —
+    사용자가 우리 UI 를 안 거치고 터미널에서 `tailscale funnel 8765` 를 켜면 그 ts.net
+    호스트가 등기부에 없어 **로컬로 오인**되고, 인증 게이트를 통째로 건너뛴 데이터 API
+    (/projects·/system-ai/chat·대화·키)가 공개 인터넷에 열렸다. 실측으로 재현 확인
+    (2026-07-21: 미등록 Host → /projects 200, 등록 Host → 401).
+
+    ★순서가 중요하다 — 프록시 신호를 Host 검사보다 **먼저** 본다. cloudflared 는 구성에
+    따라 Host 를 `localhost:8765` 로 재작성해 오리진에 넘긴다(face_provision.py:117 의
+    윈도우 실측 기록). Host 부터 보면 그 구성에서 터널 트래픽 전체가 로컬로 통과한다.
+    """
+    # ① 프록시·CDN 경유 = 외부 확정 (Host 재작성 방어)
+    for h in _PROXY_SIGNAL_HEADERS:
+        if request.headers.get(h):
+            return True
+
     host = (request.headers.get("host") or "").split(":")[0].strip().lower()
+
+    # ② 알려진 외부 호스트 (터널 설정 + 공개 얼굴 등기부)
     if host and host in _EXTERNAL_HOSTNAMES:
         return True
-    # 호스트네임 설정이 비어있을 때를 위한 폴백: Cloudflare 경유 신호
-    if request.headers.get("cf-connecting-ip"):
-        return True
-    return False
+
+    # ③ 루프백 / 사설망 = 로컬로 신뢰
+    if host in _LOOPBACK_HOSTS or host.endswith(".local") or _PRIVATE_HOST_RE.match(host):
+        return False
+
+    # ④ 나머지(모르는 공개 호스트명) = 외부. 여기가 fail-closed 의 핵심이다.
+    return True
 
 
 def is_public_remote_path(method: str, path: str) -> bool:

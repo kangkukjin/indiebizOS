@@ -949,6 +949,16 @@ async function fgHistory(){
 }
 function fgHistOpen(idx){ const it=fgHist[idx]; if(it) fgVisit(it.url); }
 async function fgHistDelete(id){ try{ await jfetch('/forage/history/'+id,{method:'DELETE'}); fgHistory(); }catch(e){} }
+
+/* ===== 홈 화면 설치: 서비스워커 등록 =====
+   크롬이 '설치 가능'으로 보려면 fetch 핸들러를 가진 서비스워커가 있어야 한다. 우리 워커는
+   캐시하지 않고 통과만 시킨다(개인화·실시간 표면이라 캐싱이 곧 버그). 보안 컨텍스트
+   (https 또는 localhost)에서만 등록된다 — http://<집IP>:8765 직접 접속은 조용히 건너뛴다. */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('/launcher/sw.js', {scope:'/launcher/'}).catch(function(e){});
+  });
+}
 </script>
 </body>
 </html>

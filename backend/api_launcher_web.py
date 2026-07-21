@@ -398,6 +398,13 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 런처 앱 셸 + 로그인 흐름
     if path == "/launcher/app":
         return True
+    # 홈 화면 설치 3종(매니페스트·서비스워커·아이콘) — 설치 판단은 로그인보다 먼저 일어난다.
+    # 셋 다 정적 자산이라 노출해도 새는 정보가 없다(아이콘·앱 이름뿐).
+    if method == "GET" and (path == "/launcher/manifest.webmanifest"
+                            or path == "/launcher/sw.js"
+                            or (path.startswith("/launcher/icon-") and path.endswith(".png"))
+                            or path == "/launcher/apple-touch-icon.png"):
+        return True
     if path in ("/launcher/auth/login", "/launcher/auth/logout"):
         return True
     # 생존 핑(피어 연결상태 표시용) — 민감정보 없음, 다른 몸이 무인증으로 핑
@@ -654,6 +661,89 @@ async def logout(request: Request, response: Response):
 async def get_webapp():
     """원격 런처 웹앱"""
     return get_launcher_webapp_html()
+
+
+# ── 홈 화면 설치 (웹 앱 매니페스트 + 아이콘 + 서비스워커) ──────────────────
+# 원격런처를 안드로이드·아이폰·태블릿 어디서든 '설치'하게 하는 3종 세트. 브라우저가
+# 이걸 읽어야 아이콘·이름·주소창 없는 독립 창을 우리가 정한 대로 띄운다.
+# ★셋 다 로그인 전에 읽혀야 한다(설치 판단이 로그인보다 먼저) → is_public_remote_path 등록.
+# ★이름 주의: 여기서 말하는 '매니페스트'는 웹 표준이다 — 계기 매니페스트
+#   (/launcher/instruments)·창고 매니페스트(/portal/manifest)와 다른 물건.
+
+_LAUNCHER_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "launcher")
+
+
+@router.get("/manifest.webmanifest")
+async def launcher_manifest():
+    """웹 앱 매니페스트 — 아이콘·이름·창 모양 선언."""
+    return JSONResponse({
+        "name": "IndieBiz OS",
+        "short_name": "IndieBiz",
+        "description": "내 시스템을 어디서나 — 자율주행·조종실·앱·공유창고",
+        "start_url": "/launcher/app",
+        "scope": "/launcher/",
+        "display": "standalone",
+        "orientation": "portrait-primary",
+        "background_color": "#F5F1EB",
+        "theme_color": "#D97706",
+        "lang": "ko",
+        "icons": [
+            {"src": "/launcher/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/launcher/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            # maskable=안드로이드가 원형·둥근사각으로 잘라 쓰는 판(마크를 안전지대 안에 축소)
+            {"src": "/launcher/icon-maskable-512.png", "sizes": "512x512", "type": "image/png",
+             "purpose": "maskable"},
+        ],
+    }, media_type="application/manifest+json")
+
+
+@router.get("/sw.js")
+async def launcher_service_worker():
+    """서비스워커 — **캐시하지 않는다**.
+
+    크롬이 '설치 가능'으로 판정하려면 fetch 핸들러를 가진 서비스워커가 있어야 한다.
+    그 조건만 만족시키고 요청은 전부 네트워크로 흘려보낸다(respondWith 없음 = 기본 동작).
+    원격런처는 세션 쿠키로 개인화되고 실시간 상태를 그리는 표면이라 **캐싱이 곧 버그**다
+    (포털 /h/ 를 no-store 로 두는 것과 같은 이유).
+    """
+    js = (
+        "self.addEventListener('install', function(e){ self.skipWaiting(); });\n"
+        "self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });\n"
+        "// 통과만 한다 — 캐시 없음(개인화·실시간 표면)\n"
+        "self.addEventListener('fetch', function(e){});\n"
+    )
+    return Response(content=js, media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/icon-192.png")
+async def launcher_icon_192():
+    return _launcher_asset("icon-192.png")
+
+
+@router.get("/icon-512.png")
+async def launcher_icon_512():
+    return _launcher_asset("icon-512.png")
+
+
+@router.get("/icon-maskable-512.png")
+async def launcher_icon_maskable():
+    return _launcher_asset("icon-maskable-512.png")
+
+
+@router.get("/apple-touch-icon.png")
+async def launcher_apple_icon():
+    return _launcher_asset("apple-touch-icon.png")
+
+
+def _launcher_asset(name: str):
+    from fastapi.responses import FileResponse
+    p = os.path.join(_LAUNCHER_ASSETS, name)
+    if not os.path.exists(p):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    # 아이콘은 좀처럼 안 바뀌므로 길게 캐시(바뀌면 파일명을 바꾼다)
+    return FileResponse(p, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
 
 
 def get_launcher_webapp_html():

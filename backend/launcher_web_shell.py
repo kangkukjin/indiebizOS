@@ -10,6 +10,15 @@ LAUNCHER_SHELL_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>IndieBiz OS — Remote Launcher</title>
+<!-- 홈 화면 설치(안드로이드·아이폰·태블릿 공통) — 브라우저가 이 선언을 읽어야 아이콘·이름·
+     주소창 없는 독립 창이 우리가 정한 대로 뜬다. 서비스워커 등록은 앱 셸 JS 말미에 있다. -->
+<link rel="manifest" href="/launcher/manifest.webmanifest">
+<meta name="theme-color" content="#D97706">
+<!-- 아이폰·아이패드는 매니페스트를 부분만 본다 — 홈화면 아이콘·독립 실행은 이 셋이 담당 -->
+<link rel="apple-touch-icon" href="/launcher/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="IndieBiz">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <!-- 폰 라디오 재생용: 한국 방송은 HLS(.m3u8)라 Android WebView 직접재생에 hls.js 필요 -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <!-- 지도 render 프리미티브(길찾기·부동산·상권·CCTV): leaflet -->

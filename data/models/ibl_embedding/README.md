@@ -5,36 +5,35 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4411
+- dataset_size:4682
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
+- source_sentence: 시간 좀 알려줘
   sentences:
-  - '[self:discover] >> [engines:image_gemini]'
-  - '[self:health]'
-  - '[self:manage_events]'
-- source_sentence: 특정 질환의 자연 경과 및 보존적 치료 효과 확인
+  - '[self:schedule]"}'
+  - '[sense:abc_search]'
+  - '[self:time]'
+- source_sentence: 커뮤니티 보드 목록이랑 활성 보드 글 같이 보여줄래
   sentences:
-  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
-  - 웹페이지 원문 읽기 (URL 필요). items=문단 단위(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
-  - '[others:auto_response]'
-- source_sentence: Guardian 한국 경제 검색
+  - '[sense:host]'
+  - '[others:family_news]'
+  - '[others:feed]'
+- source_sentence: 분기 실적 슬라이드 홍보팀이 만들어줘
   sentences:
-  - '[self:local_save]'
-  - '[limbs:music]'
-  - '[sense:search_guardian]'
-- source_sentence: 사진 보여줘 앱 열어
+  - '[sense:used]'
+  - '[others:delegate]'
+  - '[sense:researcher]'
+- source_sentence: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
   sentences:
-  - '[self:work_guideline]'
-  - '[sense:paper]'
-  - '[limbs:photo_manager]'
-- source_sentence: 페이지 로딩 기다려
+  - '[sense:performance]'
+  - 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
+  - '[sense:stock] & [sense:stock] >> [table:join] >> [table:chart]'
+- source_sentence: 포털 이름을 우리 마을로 바꿔줘
   sentences:
-  - '[self:memory]'
-  - 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면
-    채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
-  - '[limbs:browser]'
+  - '[others:bulletin]'
+  - '[sense:realty]'
+  - '[others:portal]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +87,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '페이지 로딩 기다려',
-    '[limbs:browser]',
-    '[self:memory]',
+    '포털 이름을 우리 마을로 바꿔줘',
+    '[others:portal]',
+    '[others:bulletin]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +98,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.8532, -0.1626],
-#         [ 0.8532,  1.0000, -0.1798],
-#         [-0.1626, -0.1798,  1.0000]])
+# tensor([[1.0000, 0.6738, 0.3596],
+#         [0.6738, 1.0000, 0.5619],
+#         [0.3596, 0.5619, 1.0000]])
 ```
 
 <!--
@@ -146,19 +145,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,411 training samples
+* Size: 4,682 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 12.76 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.17 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 13.59 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 22.63 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                          | sentence_1                                       |
-  |:------------------------------------|:-------------------------------------------------|
-  | <code>AI 공모전 찾아서 문서로 정리해</code>     | <code>[sense:contest] >> [table:document]</code> |
-  | <code>/Users/me/Pictures 갤러리</code> | <code>[self:photo]</code>                        |
-  | <code>네이버 카페 중고 거래 게시글 검색</code>    | <code>[sense:used]</code>                        |
+  | sentence_0                             | sentence_1                                                                       |
+  |:---------------------------------------|:---------------------------------------------------------------------------------|
+  | <code>오만과 편견 원문 텍스트 어디서 볼 수 있어?</code> | <code>고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).</code> |
+  | <code>지역 데이터에서 찾아봐</code>              | <code>[sense:local_query]</code>                                                 |
+  | <code>고전 철학 텍스트 찾아줘</code>             | <code>[sense:classic]</code>                                                     |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -280,7 +279,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.9058 | 500  | 0.0364        |
+| 0.8532 | 500  | 0.0205        |
 
 
 ### Framework Versions

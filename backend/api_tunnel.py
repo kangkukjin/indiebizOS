@@ -322,8 +322,12 @@ def stop_tunnel() -> dict:
         pass
 
     if stopped or not is_tunnel_running():
-        # 관이 내려갔으니 얼굴도 내린다 — 창고·런처·파인더가 함께 닫힌다
-        _wire_cf_face(False)
+        # ★여기서 얼굴 등기부(direct_hosts)를 지우면 안 된다 — stop_tunnel 은 프로세스
+        # 층이고, 백엔드 lifespan *종료 정리*도 이걸 부른다. 처음 여닫기 연동 때 여기에
+        # _wire_cf_face(False) 를 넣었더니 재시작마다 얼굴이 등기부에서 지워져, 부팅
+        # auto_start 가 "닫힌 얼굴"로 보고 CF 를 안 살렸다(2026-07-21 실측: tailscale
+        # 공식 전환 뒤 CF 얼굴이 리로드 한 번에 영구 소멸). 얼굴 닫기(등기부 제거)는
+        # 사용자 의도가 실린 provision_close 만의 일 — 거긴 자체적으로 제거한다.
         return {"success": True, "message": "터널이 종료되었습니다."}
     else:
         return {"success": False, "error": "터널 종료 실패"}
@@ -830,24 +834,54 @@ def set_tunnel_provider(update: TunnelConfig):
 
 # 앱 시작 시 자동 시작 체크
 def auto_start_if_enabled():
-    """설정에 따라 자동 시작 — provider 분기"""
+    """부팅 자동 시작 — ★공식 provider 하나가 아니라 **열려 있는 얼굴 전부**를 되살린다.
+
+    cloudflared 는 백엔드의 자식(같은 프로세스 그룹 — 종료 신호 동반 수신)이라 백엔드가
+    재시작하면 함께 죽는다. 옛 구현은 provider 분기 후 return 이라, 공식 얼굴을
+    tailscale 로 옮긴 뒤 재시작하면 CF 터널을 아무도 안 살렸다 — 등기부(direct_hosts)엔
+    열림으로 남은 채 주소만 죽는 유령 얼굴(2026-07-21 실측: 전환 뒤 CF 창고·런처 530,
+    '그 외 열려 있는 주소'에서 CF 증발). 두 얼굴 공존은 이사 공지(moved_to) 전파의
+    전제라, 재시작이 조용히 반쪽을 죽이면 안 된다.
+
+    funnel 은 tailscaled(별도 상주 데몬)에 영속 선언이라 원래 재시작에 강하다 —
+    비대칭의 뿌리가 CF 쪽(자식 프로세스)이므로 이 함수가 그 쪽을 책임진다.
+    등기부 기준: 사용자가 '닫기'로 내린 얼굴(direct_hosts 에서 제거됨)은 안 깨운다."""
     config = load_config()
     if not config.get("auto_start"):
         return
-    if config.get("provider") == "tailscale":
-        # funnel 은 tailscaled 에 영속 선언이라 보통 이미 살아 있다 — 죽었을 때만 재선언
+    try:
+        import public_face
+        registry = {h for h in (public_face.load_config().get("direct_hosts") or []) if h}
+    except Exception:
+        registry = set()
+    provider = config.get("provider", "cloudflare")
+
+    # tailscale 얼굴 — 공식이거나 등기부에 열려 있으면 재선언 (영속이라 보통 no-op)
+    if provider == "tailscale" or any(h.endswith(".ts.net") for h in registry):
         if not is_funnel_running():
             result = start_funnel(int(config.get("funnel_port") or 8765))
             print(f"[Tunnel] funnel 자동 시작: {result.get('message') or result.get('error')}")
-        return
-    if config.get("tunnel_name") or config.get("tunnel_token"):
-        result = start_tunnel(
-            tunnel_name=config.get("tunnel_name", ""),
-            config_path=config.get("config_path"),
-            tunnel_token=config.get("tunnel_token") or None,
-            protocol=config.get("protocol") or "",
-        )
-        if result["success"]:
-            print(f"[Tunnel] 자동 시작됨: {config.get('tunnel_name') or '(토큰 모드)'}")
-        else:
-            print(f"[Tunnel] 자동 시작 실패: {result.get('error', 'unknown')}")
+
+    # cloudflare 얼굴 — 공식이거나(옛 동작 보존: 미발급 이름 모드 포함),
+    # 발급된 얼굴이 등기부에 열려 있으면 기동.
+    # ★force=True — 부팅은 관의 소유권을 새로 잡는다. uvicorn 리로드는 새 워커를 옛
+    # 워커의 종료와 *병렬로* 띄우므로, 여기서 is_tunnel_running 이 보는 프로세스는
+    # 몇 초 뒤 옛 워커와 함께 죽을 운명일 수 있다(자식 = 같은 프로세스 그룹). force
+    # 없이는 "이미 실행 중" no-op → 직후 고아 사망 → 얼굴만 등기부에 남는 유령
+    # (2026-07-21 실측: 리로드마다 CF 창고·런처 530). 진짜 부팅에선 옛 프로세스가
+    # 없거나(정상 종료) 고아(크래시 잔재)뿐이라 force 의 재기동 비용은 수 초로 무해.
+    cf_host = (config.get("hostname") or "").strip().lower()
+    cf_open = bool(cf_host and cf_host in registry and config.get("tunnel_token"))
+    if provider != "tailscale" or cf_open:
+        if config.get("tunnel_name") or config.get("tunnel_token"):
+            result = start_tunnel(
+                tunnel_name=config.get("tunnel_name", ""),
+                config_path=config.get("config_path"),
+                tunnel_token=config.get("tunnel_token") or None,
+                force=True,
+                protocol=config.get("protocol") or "",
+            )
+            if result["success"]:
+                print(f"[Tunnel] 자동 시작됨: {config.get('tunnel_name') or '(토큰 모드)'}")
+            else:
+                print(f"[Tunnel] 자동 시작 실패: {result.get('error', 'unknown')}")

@@ -119,11 +119,23 @@ def _ensure_origin_secret() -> dict:
 def _ingress_config(hostname: str) -> dict:
     """원격관리 터널의 ingress 선언 — 발급·부팅 재선언의 단일 소스.
     httpHostHeader: cloudflared 의 Host 재작성(localhost:8765) 방지 — 없으면
-    is_direct_host 미스로 공개면 404 (2026-07-20 윈도우 실측)."""
-    return {"config": {"ingress": [
-        {"hostname": hostname, "service": "http://localhost:8765",
-         "originRequest": {"httpHostHeader": hostname}},
-        {"service": "http_status:404"}]}}
+    is_direct_host 미스로 공개면 404 (2026-07-20 윈도우 실측).
+
+    ★tunnel_config `extra_hostnames` 도 함께 선언한다 — 한 몸이 역사적 이유로 주소를
+    여러 개 가질 때(맥: launcher.kukjinkang.uk 가 폰 위임 INDIEBIZ_MAC_URL 에 박혀
+    있어 즉시 접을 수 없음, 2026-07-21 수제 터널 이주). 여기(단일 소스)에 안 넣고
+    발급 때만 일회성으로 넣으면 부팅 재선언이 그 규칙을 지워버린다."""
+    hosts = [hostname]
+    try:
+        for h in (api_tunnel.load_config().get("extra_hostnames") or []):
+            h = (h or "").strip().lower()
+            if h and h != hostname:
+                hosts.append(h)
+    except Exception:
+        pass
+    rules = [{"hostname": h, "service": "http://localhost:8765",
+              "originRequest": {"httpHostHeader": h}} for h in hosts]
+    return {"config": {"ingress": rules + [{"service": "http_status:404"}]}}
 
 
 def _probe_public_face(base: str, timeout: int = 12) -> dict:
@@ -561,23 +573,27 @@ def provision_cloudflare(req: CloudflareReq):
         return fail(f"ingress 설정 실패: {_err_text(res)}", 502)
     steps.append({"step": "ingress", "ok": True, "detail": f"{hostname} → localhost:8765"})
 
-    # 4) DNS CNAME — 있으면 내용 갱신, 없으면 생성 (멱등)
+    # 4) DNS CNAME — 있으면 내용 갱신, 없으면 생성 (멱등).
+    #    extra_hostnames(같은 zone 인 것만)도 같은 터널로 — ingress 선언(_ingress_config)과 짝.
     target = f"{tunnel_id}.cfargotunnel.com"
-    res = _cf_call("GET", f"/zones/{zone_id}/dns_records", token, params={"name": hostname})
-    if not res["ok"]:
-        return fail(f"DNS 조회 실패: {_err_text(res)}", 502)
-    rec = (res["result"] or [None])[0]
-    if rec:
-        res = _cf_call("PUT", f"/zones/{zone_id}/dns_records/{rec['id']}", token,
-                       body={"type": "CNAME", "name": hostname, "content": target,
-                             "proxied": True})
-    else:
-        res = _cf_call("POST", f"/zones/{zone_id}/dns_records", token,
-                       body={"type": "CNAME", "name": hostname, "content": target,
-                             "proxied": True})
-    if not res["ok"]:
-        return fail(f"DNS CNAME 설정 실패: {_err_text(res)}", 502)
-    steps.append({"step": "dns", "ok": True, "detail": f"CNAME {hostname} → {target}"})
+    extra = [h for h in (api_tunnel.load_config().get("extra_hostnames") or [])
+             if h and h != hostname and h.endswith("." + domain)]
+    for hn in [hostname] + extra:
+        res = _cf_call("GET", f"/zones/{zone_id}/dns_records", token, params={"name": hn})
+        if not res["ok"]:
+            return fail(f"DNS 조회 실패({hn}): {_err_text(res)}", 502)
+        rec = (res["result"] or [None])[0]
+        if rec:
+            res = _cf_call("PUT", f"/zones/{zone_id}/dns_records/{rec['id']}", token,
+                           body={"type": "CNAME", "name": hn, "content": target,
+                                 "proxied": True})
+        else:
+            res = _cf_call("POST", f"/zones/{zone_id}/dns_records", token,
+                           body={"type": "CNAME", "name": hn, "content": target,
+                                 "proxied": True})
+        if not res["ok"]:
+            return fail(f"DNS CNAME 설정 실패({hn}): {_err_text(res)}", 502)
+        steps.append({"step": "dns", "ok": True, "detail": f"CNAME {hn} → {target}"})
 
     # 5) tunnel_config 저장 + cloudflared 실행 (토큰 모드 — cert.pem·config.yml 불필요)
     tcfg = api_tunnel.load_config()
@@ -604,9 +620,13 @@ def provision_cloudflare(req: CloudflareReq):
     cdn_ok = False
     if not req.skip_cdn:
         import cdn_provision
+        # ★이미 흡수·발급된 Worker 가 있으면 그 이름을 재사용한다 — 재발급이 새 이름의
+        # Worker 를 만들어 창고 공개주소가 바뀌면 이웃 등기부가 전부 낡는다(moved_to
+        # 전파를 강제하는 사고). 이름 유지 = 주소 유지.
         cdn = cdn_provision.provision_cdn(token, acc, hostname,
                                           _env_value("SHOWCASE_ORIGIN_SECRET"),
-                                          _machine_slug())
+                                          _machine_slug(),
+                                          worker=tcfg.get("cdn_worker", ""))
         steps.extend(cdn["steps"])
         if cdn.get("ok"):
             cdn_ok = True

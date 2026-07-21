@@ -30,10 +30,13 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     : '';
   const noFaceHint = 'Cloudflare 터널 또는 Tailscale Funnel 로 주소를 발급하면 여기에 자동 표시됩니다';
 
-  // 위에 이미 보여준 주소 말고 *그 외* 열려 있는 주소들. 얼굴 전환은 반대쪽을 닫지 않으므로
-  // 두 프로바이더의 주소가 동시에 살아 있을 수 있고, 런처·파인더는 양쪽 다 열린다.
+  // 위에 이미 보여준 주소 말고 *따로* 열려 있는 얼굴들(예: tailscale 공존). 얼굴 전환은
+  // 반대쪽을 닫지 않으므로 두 프로바이더가 동시에 살아 있을 수 있고, 런처·파인더는 양쪽 다
+  // 열린다. ★finder/launcher 두 기본 주소는 같은 터널의 별칭이라 서로의 '그 외'에서 제외
+  // — 파인더 탭에 런처 주소가 뜨는 건 정보가 아니라 혼란(2026-07-21 피드백).
   const otherHosts = (primary: string) =>
-    (openHosts || []).filter((h) => h.host && h.host !== primary);
+    (openHosts || []).filter((h) =>
+      h.host && h.host !== primary && h.host !== finderHostname && h.host !== launcherHostname);
 
   const renderOtherHosts = (primary: string, path: string) => {
     const rest = otherHosts(primary);

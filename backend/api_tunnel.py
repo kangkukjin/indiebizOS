@@ -631,21 +631,25 @@ def origin_host() -> str:
 
 
 def open_hosts() -> list:
-    """지금 8765 로 런처·파인더가 열려 있는 호스트 전부 — [{host, provider, official}].
+    """지금 8765 로 런처·파인더가 열려 있는 **얼굴들** — [{host, provider, official}].
 
     ★얼굴 전환은 반대쪽을 닫지 않는다(provision_use: 이사 공지 기간 공존이 의도). 게다가
     런처·파인더는 창고 공개면과 달리 `direct_hosts` 등록과 무관하게 **8765 에 닿는 아무
     호스트로나** 열린다(public_face._map 이 그 경로에 None 을 반환해 통과시킨다). 그래서
     실제로 열린 주소가 여럿인데 UI 는 공식 얼굴 하나만 보여줬다 — 이 함수가 그 간극을 메운다.
-    """
+
+    ★얼굴(프로바이더)당 **하나** — 같은 터널의 별칭들(finder./launcher. 두 이름,
+    extra_hostnames)은 같은 문의 다른 이름일 뿐이라 전부 나열하면 정보가 아니라 소음이다
+    (2026-07-21 사용자 피드백: 파인더 탭 '그 외'에 런처 주소가 뜨는 혼란). 대표 하나만
+    — cloudflare 는 발급 canonical(hostname) 우선, 그다음 수기 finder/launcher 순."""
     official = origin_host()
-    found, seen = [], set()
+    found, seen_providers = [], set()
 
     def add(host: str, provider: str):
         host = (host or "").strip().lower()
-        if not host or host in seen:
+        if not host or provider in seen_providers:
             return
-        seen.add(host)
+        seen_providers.add(provider)
         found.append({"host": host, "provider": provider, "official": host == official})
 
     try:
@@ -653,6 +657,7 @@ def open_hosts() -> list:
         if is_funnel_running():
             add(tailscale_info().get("dns_name", ""), "tailscale")
         if is_tunnel_running():
+            # 우선순위 = canonical 부터. add 가 프로바이더당 첫 것만 받는다.
             add(cfg.get("hostname", ""), "cloudflare")
             add(cfg.get("finder_hostname", ""), "cloudflare")
             add(cfg.get("launcher_hostname", ""), "cloudflare")
@@ -663,7 +668,7 @@ def open_hosts() -> list:
         pass
 
     # 공식 얼굴은 터널 감지가 실패해도 반드시 목록에 있어야 한다
-    if official and official not in seen:
+    if official and not any(f["host"] == official for f in found):
         found.insert(0, {"host": official, "provider": _face_provider() or "", "official": True})
     return found
 

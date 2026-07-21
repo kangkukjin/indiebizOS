@@ -389,8 +389,9 @@ a{ color:var(--info); }
 <div class="app" id="app">
   <div class="top">
     <div class="brand"><span>IndieBiz OS</span><span class="badge" id="surfBadge">REMOTE</span></div>
-    <!-- 폰 전용(IS_PHONE 시 JS 가 노출) — 폰 클립보드를 맥 클립보드로. 데스크탑 '폰으로'의 역방향 -->
-    <button class="clipmac" id="clipToMacBtn" onclick="clipToMac()" style="display:none">📋 맥으로 보내기</button>
+    <!-- 보고 있는 기계의 클립보드를 허브 PC 로 (JS 가 노출) — 데스크탑 '폰으로'의 역방향.
+         라벨은 OS 중립: 허브는 맥일 수도 윈도우일 수도 있다. -->
+    <button class="clipmac" id="clipToMacBtn" onclick="clipToMac()" style="display:none">📋 PC로 보내기</button>
     <div style="display:flex; gap:8px;" id="headerActions">
       <button class="iconbtn" onclick="refreshSurface()" title="새로고침">↻</button>
       <button class="iconbtn" onclick="doLogout()" title="로그아웃">⏻</button>

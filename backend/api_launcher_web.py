@@ -527,9 +527,14 @@ def app_source(app_id: str):
 async def get_config():
     """설정 조회"""
     config = load_config()
+    import platform as _plat
+    _sys = _plat.system()
     return {
         "enabled": config.get("enabled", False),
-        "has_password": bool(config.get("password_hash"))
+        "has_password": bool(config.get("password_hash")),
+        # 이 허브가 어느 OS 인가 — 원격런처가 붙여넣기 안내 키를 고르는 데만 쓴다
+        # (⌘V vs Ctrl+V). 표면 라벨 자체는 OS 중립('PC로 보내기').
+        "platform": {"Darwin": "mac", "Windows": "windows"}.get(_sys, "linux"),
     }
 
 @router.post("/config")

@@ -100,10 +100,14 @@ async function showApp(){
   // 전용이라 폰에선 숨긴다(폰=자기 몸, 로그아웃/원격 새로고침 의미 없음).
   try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
     IS_PHONE=(c.host==='phone-local');
+    /* 허브 OS — 붙여넣기 안내 키에만 쓴다. 폰 네이티브가 받는 config 는 폰 자신의 것이라
+       허브 OS 를 모른다 → 그때는 두 키를 다 보여준다(라벨은 어차피 OS 중립). */
+    if(c.platform==='mac') PASTE_KEY='⌘V';
+    else if(c.platform==='windows'||c.platform==='linux') PASTE_KEY='Ctrl+V';
     if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none';
       const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
   } }catch(e){}
-  /* 클립보드 '맥으로'는 두 표면 공통 — 방향은 표면이 정한다(보고 있는 기계 → 맥).
+  /* 클립보드 'PC로'는 두 표면 공통 — 방향은 표면이 정한다(보고 있는 기계 → 허브 PC).
      읽는 방법만 갈린다: 폰 네이티브=Java ClipboardManager, 원격런처=브라우저 clipboard API. */
   const cm=document.getElementById('clipToMacBtn'); if(cm) cm.style.display='block';
   apLoad();
@@ -111,18 +115,21 @@ async function showApp(){
   loadGear();  /* 모델 기어 레버(계기판) */
 }
 
-/* ===== 여기→맥 클립보드 (헤더 버튼) — 데스크탑 '폰으로'의 역방향 =====
-   방향은 *표면*이 정한다: 보고 있는 기계의 클립보드를 맥으로 민다. 데스크탑 런처는
-   '폰으로'(맥→폰), 이 표면은 '맥으로'. 사용자가 방향을 고를 일이 없다(당기기 없음).
+/* ===== 여기→허브PC 클립보드 (헤더 버튼) — 데스크탑 '폰으로'의 역방향 =====
+   방향은 *표면*이 정한다: 보고 있는 기계의 클립보드를 허브 PC 로 민다. 데스크탑 런처는
+   '폰으로'(PC→폰), 이 표면은 'PC로'. 사용자가 방향을 고를 일이 없다(당기기 없음).
+   ★라벨은 OS 중립 — 허브는 맥일 수도 윈도우일 수도 있다(둘 다 indiebizOS 설치 대상).
+   내부 라우트 이름(/launcher/clip-to-mac)은 폰 번들에 박혀 있어 그대로 둔다.
    읽는 방법만 표면별로 갈린다:
      - 폰 네이티브: /launcher/clip-to-mac (Java ClipboardManager — WebView 의 readText 는 불가)
      - 원격런처(브라우저): navigator.clipboard.readText → 실패하면 붙여넣기 칸 폴백
-   놓는 쪽은 둘 다 기존 어휘 [self:output]{op:"clipboard"} — 맥 백엔드가 실행하니 맥에 박힌다. */
+   놓는 쪽은 둘 다 기존 어휘 [self:output]{op:"clipboard"} — 허브 백엔드가 실행하니 거기 박힌다. */
 let clipMacBusy=false;
+let PASTE_KEY='⌘V / Ctrl+V';   /* 허브 OS 를 알기 전 기본값 — showApp 에서 확정 */
 function clipMacFlash(msg){
   const b=document.getElementById('clipToMacBtn'); if(!b) return;
   b.textContent=msg;
-  setTimeout(()=>{ b.textContent='📋 맥으로 보내기'; clipMacBusy=false; }, 3500);
+  setTimeout(()=>{ b.textContent='📋 PC로 보내기'; clipMacBusy=false; }, 3500);
 }
 async function clipToMac(){
   if(clipMacBusy) return;
@@ -134,7 +141,7 @@ async function clipToMac(){
     try{
       const r=await jfetch('/launcher/clip-to-mac',{method:'POST'});
       const d=await r.json().catch(()=>({}));
-      if(d && d.success) msg='맥 도착 ✓ ('+(d.chars||0)+'자) — ⌘V 로 붙여넣으세요';
+      if(d && d.success) msg='PC 도착 ✓ ('+(d.chars||0)+'자) — '+PASTE_KEY+' 로 붙여넣으세요';
       else msg=(d && d.error) ? d.error : '실패';
     }catch(e){ msg='연결 실패'; }
     clipMacFlash(msg);
@@ -144,14 +151,14 @@ async function clipToMac(){
      → 실패·빈값이면 붙여넣기 칸으로 떨어뜨린다. 어디서든 되는 최후 경로. */
   let text='';
   try{ text=await navigator.clipboard.readText(); }catch(e){ text=''; }
-  if(!(text||'').trim()){ clipMacBusy=false; b.textContent='📋 맥으로 보내기'; clipPasteBox(); return; }
+  if(!(text||'').trim()){ clipMacBusy=false; b.textContent='📋 PC로 보내기'; clipPasteBox(); return; }
   clipSendToMac(text);
 }
 async function clipSendToMac(text){
   /* JSON.stringify = IBL 문자열 이스케이프 (따옴표·줄바꿈·중괄호·백슬래시 왕복 검증됨) */
   try{
     const d=await ibl('[self:output]{op: "clipboard", content: '+JSON.stringify(String(text))+'}');
-    if(d && (d.copied_length || d.ok)) clipMacFlash('맥 도착 ✓ ('+(d.copied_length||String(text).length)+'자) — ⌘V 로 붙여넣으세요');
+    if(d && (d.copied_length || d.ok)) clipMacFlash('PC 도착 ✓ ('+(d.copied_length||String(text).length)+'자) — '+PASTE_KEY+' 로 붙여넣으세요');
     else clipMacFlash((d && d.error) ? d.error : '실패');
   }catch(e){ clipMacFlash('전송 실패: '+e.message); }
 }
@@ -162,12 +169,12 @@ function clipPasteBox(){
     ov=document.createElement('div'); ov.id='clipPasteOv';
     ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:56px 16px';
     ov.innerHTML='<div style="background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(74,64,53,.25)">'
-      +'<div style="font-size:15px;font-weight:600;margin-bottom:6px">📋 맥으로 보내기</div>'
+      +'<div style="font-size:15px;font-weight:600;margin-bottom:6px">📋 PC로 보내기</div>'
       +'<div style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.5">브라우저가 클립보드를 직접 읽지 못했어요.<br>아래 칸을 길게 눌러 <b>붙여넣기</b> 한 뒤 보내세요.</div>'
       +'<textarea id="clipPasteTa" rows="5" placeholder="여기에 붙여넣기" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--txt);font-size:14px;resize:vertical"></textarea>'
       +'<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'
       +'<button onclick="clipPasteClose()" style="background:var(--bg3);border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:8px 16px;font-size:14px">취소</button>'
-      +'<button onclick="clipPasteSend()" style="background:var(--acc);border:none;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:600">맥으로 보내기</button>'
+      +'<button onclick="clipPasteSend()" style="background:var(--acc);border:none;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:600">PC로 보내기</button>'
       +'</div></div>';
     document.body.appendChild(ov);
   }

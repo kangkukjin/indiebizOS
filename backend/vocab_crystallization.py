@@ -59,6 +59,23 @@ _ARROW_RE = re.compile(
 _IBL_CODE_RE = re.compile(r"^\[IBL_DEBUG\] code=(.*)$")
 _STEP_RE = re.compile(r"\[(\w+:\w+)\]")
 
+# claude_code 프로바이더 라인 (2026-07-21 실명 수리 — 화살표는 in-process 전용이라
+# 주력 프로바이더의 Bash 42·execute_ibl 162/7일이 통째로 불가시였다. 형식 사양은
+# providers/claude_code.py 759·817행: input JSON은 300자에서 잘릴 수 있음(…접미),
+# tool_result 는 (error) 태그 + 300자 preview):
+#   [ClaudeCode/집사] tool_use Bash {"command": "ADB=...", ...}
+#   [ClaudeCode/집사] tool_use mcp__indiebizos__execute_ibl {"code": "[self:read]{...}"}
+#   [ClaudeCode/집사] tool_result (error) Exit code 1 ...
+_CC_TOOLUSE_RE = re.compile(r"^\[ClaudeCode/[^\]]*\] tool_use (\S+) ?(.*)$")
+_CC_TOOLRESULT_RE = re.compile(r"^\[ClaudeCode/[^\]]*\] tool_result( \(error\))? ?(.*)$")
+# 잘린 JSON 대비 — json.loads 대신 값 앞부분만 정규식으로 뜯는다(집계 키·shape 추출에 충분).
+_CC_CMD_RE = re.compile(r'"command"\s*:\s*"([^"]*)')
+_CC_CODE_RE = re.compile(r'"code"\s*:\s*"(.*)')
+# tool_result preview 안의 IBL-수준 실패 (도구 호출은 성공했지만 내용이 실패인 부류)
+_CC_RESULT_FAIL_RE = re.compile(
+    r'\\?"success\\?"\s*:\s*false|\'success\'\s*:\s*False|_param_hint|timed out',
+    re.IGNORECASE)
+
 
 def _should_run(force: bool = False) -> bool:
     if force:
@@ -81,31 +98,75 @@ def _save_state() -> None:
 def _parse_episode(log: str) -> Dict[str, Any]:
     """한 에피소드의 stdout 에서 (쉘 호출, IBL 호출, IBL 실패, IBL 코드) 추출.
 
+    두 로그 방언을 모두 읽는다:
+      · in-process(Gemini 등): 화살표 라인 + [IBL_DEBUG] (엔진 실행 래퍼가 찍음)
+      · claude_code: [ClaudeCode/X] tool_use/tool_result (프로바이더가 찍음 —
+        MCP→HTTP 경로라 화살표 래퍼를 안 지나 2026-07-21까지 통째로 불가시였음)
     라인 순서 = 시간 순서이므로 '실패 후 쉘' 판정은 인덱스 비교로 충분하다.
+    claude_code 의 use↔result 페어링은 FIFO 근사 — 병렬 호출이 완료 순서로 섞이면
+    개별 귀속이 어긋날 수 있지만, 집계(A)·'실패 후 쉘'(B) 판정에는 충분하다.
     """
     shell_calls: List[tuple] = []   # (line_idx, cmd)
     ibl_calls: List[tuple] = []     # (line_idx, "node:action", ok)
     ibl_codes: List[str] = []
+    cc_pending: List[dict] = []     # claude_code tool_use 대기열 (FIFO)
     for idx, line in enumerate(log.split("\n")):
-        m = _IBL_CODE_RE.match(line.strip())
+        s = line.strip()
+        m = _IBL_CODE_RE.match(s)
         if m:
             ibl_codes.append(m.group(1).strip())
             continue
-        m = _ARROW_RE.match(line.strip())
-        if not m:
+        m = _ARROW_RE.match(s)
+        if m:
+            marker, arg, token = m.group(1), m.group(2), m.group(3)
+            if marker == "tool:run_command":
+                shell_calls.append((idx, arg))
+            elif ":" in marker and not marker.startswith("tool:"):
+                ibl_calls.append((idx, marker, token == "OK"))
             continue
-        marker, arg, token = m.group(1), m.group(2), m.group(3)
-        if marker == "tool:run_command":
-            shell_calls.append((idx, arg))
-        elif ":" in marker and not marker.startswith("tool:"):
-            ibl_calls.append((idx, marker, token == "OK"))
+        m = _CC_TOOLUSE_RE.match(s)
+        if m:
+            tool_name, input_repr = m.group(1), m.group(2)
+            base = tool_name.rsplit("__", 1)[-1]
+            entry = {"idx": idx, "kind": "other"}
+            if base == "Bash":
+                cm = _CC_CMD_RE.search(input_repr)
+                # JSON 이스케이프 \n·\" 을 공백으로 펴서 첫 토큰 집계가 덜 깨지게
+                cmd = (cm.group(1) if cm else "?").replace("\\n", " ").replace('\\"', '"')
+                shell_calls.append((idx, cmd))
+                entry["kind"] = "shell"
+            elif base == "execute_ibl":
+                cm = _CC_CODE_RE.search(input_repr)
+                code = (cm.group(1) if cm else "").replace('\\"', '"').rstrip('"}')
+                if code:
+                    ibl_codes.append(code)
+                entry.update(kind="ibl",
+                             actions=_STEP_RE.findall(input_repr) or ["?:?"])
+            cc_pending.append(entry)
+            continue
+        m = _CC_TOOLRESULT_RE.match(s)
+        if m and cc_pending:
+            err_tag, preview = m.group(1), m.group(2)
+            entry = cc_pending.pop(0)  # FIFO 근사
+            if entry["kind"] == "ibl":
+                ok = not err_tag and not _CC_RESULT_FAIL_RE.search(preview or "")
+                for na in entry["actions"]:
+                    ibl_calls.append((entry["idx"], na, ok))
+    # 결과 라인을 못 받은 잔여 IBL use(로그 절단 등)는 성공으로 간주해 집계에만 넣는다
+    for entry in cc_pending:
+        if entry["kind"] == "ibl":
+            for na in entry["actions"]:
+                ibl_calls.append((entry["idx"], na, True))
     return {"shell": shell_calls, "ibl": ibl_calls, "codes": ibl_codes}
 
 
 def _cmd_head(cmd: str) -> str:
-    """쉘 명령의 집계 키 — 첫 토큰(경로면 basename)."""
-    head = (cmd.split() or ["?"])[0]
-    return head.rsplit("/", 1)[-1]
+    """쉘 명령의 집계 키 — 첫 토큰(경로면 basename). 앞의 VAR=값 할당은 건너뛴다."""
+    tokens = cmd.split() or ["?"]
+    for t in tokens:
+        if not re.match(r"^\w+=", t):
+            return t.rsplit("/", 1)[-1]
+    return tokens[0].split("=", 1)[0]  # 전부 할당이면 변수명으로
 
 
 def scan(days: int = _WINDOW_DAYS) -> Dict[str, Any]:

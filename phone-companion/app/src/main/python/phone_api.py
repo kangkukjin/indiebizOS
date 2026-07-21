@@ -172,6 +172,41 @@ def launcher_config():
     return {"remote_enabled": True, "has_password": False, "host": "phone-local"}
 
 
+@app.post("/launcher/clip-to-mac")
+async def clip_to_mac():
+    """폰 클립보드 → 맥 클립보드 — 데스크탑 런처 '폰으로' 버튼의 역방향 짝.
+
+    읽기=네이티브 ClipboardManager(PhoneActions.getClipboard — WebView JS 의
+    navigator.clipboard.readText 는 안드로이드서 신뢰 불가). Android 10+ 은 포그라운드
+    앱만 읽을 수 있는데 버튼 탭 시점엔 이 앱이 포그라운드라 허용 케이스.
+    놓기=기존 어휘 [self:output]{op:clipboard}(맥서 pbcopy) 를 _forward_to_mac 으로
+    단건 포워드(세션 로그인·재시도 재사용). self:output 은 폰 manifest 서도 runnable 이라
+    엔진 자동 위임이 안 됨 — 버튼 의미 자체가 "맥으로"라 명시 포워드가 맞음.
+    역방향(맥→폰)과 달리 폰이 발신자·맥은 터널로 상시 도달 가능이라 푸시 큐 불필요.
+    """
+    def _read():
+        from java import jclass  # 능력감지 — 폰에서만 성공 (INDIEBIZ_PROFILE 분기 금지)
+        return str(jclass("com.indiebiz.phoneagent.PhoneActions").getClipboard() or "")
+    try:
+        text = await asyncio.to_thread(_read)
+    except Exception:
+        return JSONResponse({"success": False, "error": "폰 전용 기능"})
+    if not text.strip():
+        return JSONResponse({"success": False, "error": "클립보드가 비어 있음"})
+
+    def _send():
+        from ibl_engine import _forward_to_mac
+        return _forward_to_mac("self", "output",
+                               {"op": "clipboard", "content": text}, agent_id="phone")
+    res = await asyncio.to_thread(_send)
+    # 성공 판정: _output_clipboard 성공 시에만 copied_length 가 (중첩 어디든) 등장한다.
+    raw = json.dumps(res, ensure_ascii=False, default=str) if isinstance(res, (dict, list)) else str(res)
+    if "copied_length" in raw:
+        return JSONResponse({"success": True, "chars": len(text)})
+    err = (res.get("error") if isinstance(res, dict) else None) or "맥 전달 실패"
+    return JSONResponse({"success": False, "error": str(err)[:120]})
+
+
 # ============ 모델 기어 (폰 계기판 변속) — model_resolver 번들 위에서 로컬 ============
 # ★catch-all(맥 프록시) 보다 먼저. 폰은 api_config 미번들이라 여기 인라인(맥 엔드포인트와 동형).
 

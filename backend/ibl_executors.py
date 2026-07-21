@@ -321,7 +321,10 @@ def _output_clipboard(content: str, params: dict) -> Any:
     text = str(content) if not isinstance(content, str) else content
 
     if platform.system() == "Darwin":
-        p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+        # ★pbcopy 는 LC_CTYPE locale 로 stdin 을 해석한다 — 백엔드 프로세스(런처/Electron 기동)엔
+        # UTF-8 locale 이 없어 한글이 mojibake 로 박히던 함정. UTF-8 을 명시해야 비ASCII 가 살아남는다.
+        env = {**os.environ, "LC_CTYPE": "en_US.UTF-8"}
+        p = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE, env=env)
         p.communicate(text.encode("utf-8"))
     elif platform.system() == "Windows":
         p = subprocess.Popen(["clip"], stdin=subprocess.PIPE)

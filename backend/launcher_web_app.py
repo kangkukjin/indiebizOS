@@ -99,11 +99,30 @@ async function showApp(){
   try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
     IS_PHONE=(c.host==='phone-local');
     if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none';
-      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
+      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none';
+      const cm=document.getElementById('clipToMacBtn'); if(cm) cm.style.display='block'; }
   } }catch(e){}
   apLoad();
   loadPeer(); setInterval(loadPeer, 20000);  /* 다른 몸 연결상태 폴링(계기판) */
   loadGear();  /* 모델 기어 레버(계기판) */
+}
+
+/* ===== 폰→맥 클립보드 (폰 전용 헤더 버튼) — 데스크탑 '폰으로'의 역방향 ===== */
+let clipMacBusy=false;
+async function clipToMac(){
+  if(clipMacBusy) return;
+  const b=document.getElementById('clipToMacBtn'); if(!b) return;
+  clipMacBusy=true;
+  b.textContent='보내는 중…';
+  let msg='실패';
+  try{
+    const r=await jfetch('/launcher/clip-to-mac',{method:'POST'});
+    const d=await r.json().catch(()=>({}));
+    if(d && d.success) msg='맥 도착 ✓ ('+(d.chars||0)+'자) — ⌘V 로 붙여넣으세요';
+    else msg=(d && d.error) ? d.error : '실패';
+  }catch(e){ msg='연결 실패'; }
+  b.textContent=msg;
+  setTimeout(()=>{ b.textContent='📋 맥으로 보내기'; clipMacBusy=false; }, 3500);
 }
 
 /* ===== 다른 몸(피어) 연결상태 — 계기판 안에 표기 ===== */

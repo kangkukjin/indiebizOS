@@ -166,6 +166,31 @@ object PhoneActions {
         }
     }
 
+    /**
+     * 클립보드 텍스트 읽기 — setClipboard 의 역방향 짝(폰→맥 복사 배관).
+     * Android 10+ 은 입력 포커스를 가진 포그라운드 앱만 읽을 수 있다 — 런처 버튼 탭
+     * 시점엔 이 앱이 포그라운드라 허용 케이스. HTTP 워커 스레드에서 불리므로
+     * 메인 스레드로 홉(일부 기기는 백그라운드 스레드 읽기를 무시) + 래치 대기.
+     * 반환: 텍스트(빈 클립보드/비텍스트면 ""), 실패 시 "".
+     */
+    @JvmStatic
+    fun getClipboard(): String {
+        val ctx = appContext ?: return ""
+        var out = ""
+        val latch = CountDownLatch(1)
+        main.post {
+            try {
+                val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val item = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)
+                out = item?.coerceToText(ctx)?.toString() ?: ""
+            } catch (e: Throwable) {
+                android.util.Log.e("PhoneActions", "getClipboard failed: $e")
+            } finally { latch.countDown() }
+        }
+        latch.await(2, TimeUnit.SECONDS)
+        return out
+    }
+
     /** TTS 음성 출력. (한국어 음성 미설치 시 실패 가능.) */
     @JvmStatic
     fun speak(text: String): Boolean {

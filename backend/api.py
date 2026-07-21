@@ -291,18 +291,15 @@ ALLOWED_ORIGINS = os.environ.get("CORS_ORIGINS", "").split(",") if os.environ.ge
     "file://",                    # Electron 로컬 파일
 ]
 
-# Cloudflare Tunnel 도메인 자동 추가 (원격 접속용)
+# 외부 노출 호스트 자동 추가 (원격 접속용) — tunnel_config.json + public_face.json 양쪽.
+# ★api_launcher_web 에 리스트를 맡긴다: (1) 외부 판별(_load_external_hostnames)과 CORS 가
+# 같은 호스트 집합을 읽어 비대칭이 생기지 않고, (2) 얼굴을 새로 발급하면
+# reload_external_hostnames() 가 이 리스트를 제자리 수정해 재시작 없이 반영된다.
+# 옛 구현은 tunnel_config 만 임포트 시점 1회 읽어서, tailscale funnel 로 켠 ts.net 주소가
+# '외부'로는 잡히는데 CORS 에선 끝까지 막혔다.
 try:
-    _tunnel_config_path = os.path.join(os.path.dirname(__file__), "..", "data", "tunnel_config.json")
-    if os.path.exists(_tunnel_config_path):
-        with open(_tunnel_config_path, 'r', encoding='utf-8') as _f:
-            _tunnel_cfg = json.load(_f)
-        for _key in ["finder_hostname", "launcher_hostname", "hostname"]:
-            _host = _tunnel_cfg.get(_key, "")
-            if _host:
-                _origin = f"https://{_host}"
-                if _origin not in ALLOWED_ORIGINS:
-                    ALLOWED_ORIGINS.append(_origin)
+    from api_launcher_web import register_cors_origins as _register_cors_origins
+    _register_cors_origins(ALLOWED_ORIGINS)
 except Exception:
     pass
 

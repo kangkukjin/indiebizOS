@@ -301,11 +301,40 @@ def _load_external_hostnames():
 
 _EXTERNAL_HOSTNAMES = _load_external_hostnames()
 
+# api.py 의 ALLOWED_ORIGINS 리스트 *자체*를 들고 있는다(사본 아님). CORSMiddleware 는
+# 생성 시 받은 리스트를 참조로 보관하고 매 요청 `origin in self.allow_origins` 로 확인하므로,
+# 같은 객체를 제자리 수정하면 재시작 없이 반영된다. 이게 없으면 새로 발급한 얼굴(ts.net 등)이
+# 임포트 시점 1회 계산된 화이트리스트에 영원히 못 들어간다.
+_CORS_ORIGINS_REF = None
+
+
+def _sync_cors_origins():
+    """외부 호스트네임 집합을 CORS 화이트리스트에 반영 (추가만 — 기존 항목 불변)"""
+    if _CORS_ORIGINS_REF is None:
+        return
+    for host in _EXTERNAL_HOSTNAMES:
+        origin = f"https://{host}"
+        if origin not in _CORS_ORIGINS_REF:
+            _CORS_ORIGINS_REF.append(origin)
+
+
+def register_cors_origins(origins: list):
+    """api.py 가 부팅 때 자기 ALLOWED_ORIGINS 를 맡긴다 (제자리 수정 대상 등록)"""
+    global _CORS_ORIGINS_REF
+    _CORS_ORIGINS_REF = origins
+    _sync_cors_origins()
+    return origins
+
 
 def reload_external_hostnames():
-    """터널 설정 변경 후 호스트네임 캐시 갱신"""
+    """터널 설정 변경 후 호스트네임 캐시 갱신 (+CORS 화이트리스트 동반 갱신)
+
+    ★얼굴 발급/전환 뒤 이 함수 하나만 부르면 인증 게이트(외부 판별)와 CORS 가 함께
+    따라온다 — 둘이 갈라져 있어서 ts.net 이 '외부'로는 잡히는데 CORS 에선 막히던 비대칭을
+    한 지점으로 묶는다."""
     global _EXTERNAL_HOSTNAMES
     _EXTERNAL_HOSTNAMES = _load_external_hostnames()
+    _sync_cors_origins()
     return _EXTERNAL_HOSTNAMES
 
 

@@ -78,6 +78,9 @@ export function SettingsDialog({
   // Cloudflare 터널 정보 (외부 URL 표시용)
   const [finderHostname, setFinderHostname] = useState('');
   const [launcherHostname, setLauncherHostname] = useState('');
+  // 오리진 호스트(=이 몸의 얼굴)에서 파생된 주소인지 / 어느 프로바이더인지 — 주소 안내 문구용
+  const [originHost, setOriginHost] = useState('');
+  const [tunnelProvider, setTunnelProvider] = useState('');
 
   // World Pulse 설정 상태
   const [worldConfig, setWorldConfig] = useState<any>(null);
@@ -103,6 +106,9 @@ export function SettingsDialog({
       const data = await response.json();
       setFinderHostname(data.finder_hostname || '');
       setLauncherHostname(data.launcher_hostname || '');
+      setOriginHost(data.origin_host || '');
+      // 얼굴 축(origin_provider)을 쓴다 — data.provider 는 프로세스 축이라 어긋날 수 있다
+      setTunnelProvider(data.origin_provider || data.provider || '');
     }
   }, []);
   useRetryingLoad(loadTunnelHostnames, { enabled: show });
@@ -773,6 +779,8 @@ export function SettingsDialog({
               show={show}
               finderHostname={finderHostname}
               launcherHostname={launcherHostname}
+              originHost={originHost}
+              tunnelProvider={tunnelProvider}
             />
           )}
 

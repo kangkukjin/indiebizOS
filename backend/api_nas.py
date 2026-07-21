@@ -863,12 +863,18 @@ async def nas_login(request: Request, login: LoginRequest, response: Response):
     }
 
     # 쿠키 설정
+    # ★secure 는 조건부다: 파인더는 런처와 달리 로컬(http://localhost:8765/nas/app)에서도
+    # 쓰이므로 무조건 secure=True 면 로컬 로그인이 깨진다. HTTPS 로 들어온 요청(터널·funnel
+    # 경유 = 원격)일 때만 붙여, 공개망 구간에서 세션이 평문으로 새지 않게 한다.
+    forwarded_proto = (request.headers.get("x-forwarded-proto") or "").split(",")[0].strip().lower()
+    is_https = forwarded_proto == "https" or request.url.scheme == "https"
     response.set_cookie(
         key="nas_session",
         value=session_token,
         max_age=timeout_hours * 3600,
         httponly=True,
         samesite="lax",
+        secure=is_https,
     )
 
     return {"status": "success", "message": "로그인 성공", "session_token": session_token}

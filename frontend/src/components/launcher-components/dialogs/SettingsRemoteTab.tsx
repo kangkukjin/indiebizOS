@@ -11,9 +11,22 @@ interface SettingsRemoteTabProps {
   show: boolean;
   finderHostname: string;
   launcherHostname: string;
+  /** 이 몸의 오리진 호스트 — 값이 있으면 주소가 수기설정이 아니라 발급된 얼굴에서 파생됐다 */
+  originHost?: string;
+  /** 'cloudflare' | 'tailscale' — 주소 안내 문구를 프로바이더에 맞춘다 */
+  tunnelProvider?: string;
 }
 
-export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHostname }: SettingsRemoteTabProps) {
+export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHostname,
+                                    originHost, tunnelProvider }: SettingsRemoteTabProps) {
+  // 원격 주소가 창고 얼굴을 따라왔는지 / 아직 아무 얼굴도 없는지 — 두 안내 문구의 재료.
+  // ★런처·파인더는 창고 공개주소(public_base)가 아니라 *오리진 호스트*를 따라간다.
+  // Worker 얼굴은 공개주소가 CDN 이고 그 CDN 이 /launcher/app·/nas/* 를 라우팅하지 않기 때문.
+  const isTailscale = tunnelProvider === 'tailscale';
+  const originNote = originHost
+    ? `${isTailscale ? 'Tailscale Funnel' : 'Cloudflare 터널'} 주소를 따라갑니다 (공유창고와 같은 얼굴)`
+    : '';
+  const noFaceHint = 'Cloudflare 터널 또는 Tailscale Funnel 로 주소를 발급하면 여기에 자동 표시됩니다';
   // NAS 설정 상태
   const [nasEnabled, setNasEnabled] = useState(false);
   const [nasHasPassword, setNasHasPassword] = useState(false);
@@ -448,13 +461,14 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                       <strong>내부 주소:</strong> <code className="bg-blue-100 px-1 rounded">http://localhost:8765/nas/app</code>
                     </p>
                     {finderHostname ? (
-                      <p className="text-sm text-green-700">
-                        <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{finderHostname}/nas/app</code>
-                      </p>
+                      <>
+                        <p className="text-sm text-green-700">
+                          <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{finderHostname}/nas/app</code>
+                        </p>
+                        {originNote && <p className="text-xs text-green-600">{originNote}</p>}
+                      </>
                     ) : (
-                      <p className="text-xs text-blue-600">
-                        Cloudflare Tunnel 설정 후 외부 주소가 자동으로 표시됩니다
-                      </p>
+                      <p className="text-xs text-blue-600">{noFaceHint}</p>
                     )}
                   </div>
                 </div>
@@ -556,13 +570,14 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                       <strong>내부 주소:</strong> <code className="bg-blue-100 px-1 rounded">http://localhost:8765/launcher/app</code>
                     </p>
                     {launcherHostname ? (
-                      <p className="text-sm text-green-700">
-                        <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{launcherHostname}/launcher/app</code>
-                      </p>
+                      <>
+                        <p className="text-sm text-green-700">
+                          <strong>외부 주소:</strong> <code className="bg-green-100 px-1 rounded">https://{launcherHostname}/launcher/app</code>
+                        </p>
+                        {originNote && <p className="text-xs text-green-600">{originNote}</p>}
+                      </>
                     ) : (
-                      <p className="text-xs text-blue-600">
-                        Cloudflare Tunnel 설정 후 외부 주소가 자동으로 표시됩니다
-                      </p>
+                      <p className="text-xs text-blue-600">{noFaceHint}</p>
                     )}
                   </div>
                 </div>

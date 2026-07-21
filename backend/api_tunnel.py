@@ -522,8 +522,17 @@ class TunnelConfig(BaseModel):
     funnel_port: Optional[int] = None
 
 
-def _served_host() -> str:
-    """이 몸이 *실제로* 직접 서빙하는 공개 호스트 (public_face.direct_hosts 의 첫 항목).
+def _face_provider() -> str:
+    """공식 얼굴의 provider (public_face.json) — 프로세스 축(tunnel_config)과 별개."""
+    try:
+        import public_face
+        return (public_face.load_config().get("provider") or "").strip().lower()
+    except Exception:
+        return ""
+
+
+def origin_host() -> str:
+    """이 몸의 8765 를 실제로 서빙하는 공개 호스트 — 런처·파인더·직접서빙 창고의 공통 주소.
 
     ★새 몸(발급기 경로)의 진실 소스 — face_provision 이 터널을 발급하면 그 호스트 하나로
     8765 전체를 서빙한다(/launcher/app·/nas/* 포함). 반면 finder/launcher 호스트명은
@@ -532,13 +541,51 @@ def _served_host() -> str:
     (윈도우 PC 에서 맥의 finder/launcher.kukjinkang.uk 가 보인 사고 — 그 주소로 가면
     DNS 가 맥 터널을 가리키므로 그 몸의 런처가 아니라 맥이 응답한다).
 
-    Worker 를 얼굴로 쓰는 몸(맥)은 direct_hosts 가 비어 있어 "" 를 돌려주고,
-    기존 ingress 폴백이 그대로 쓰인다 — 회귀 없음.
+    ★**public_base(창고 공개주소)와 다른 개념이다.** Worker 를 얼굴로 쓰는 몸은 공개주소가
+    CDN(…workers.dev)이고 오리진은 그 뒤의 터널 호스트다. Worker 는 /launcher/app·/nas/*
+    를 라우팅하지 않으므로(worker.js 에 그 분기가 없다 — 미매칭은 SPA index 로 떨어진다)
+    런처·파인더 주소는 반드시 이 오리진 호스트여야 한다. tailscale funnel 과 CF 직접발급은
+    오리진=공개주소라 결과적으로 "창고 주소를 따라간다"가 되고, Worker 얼굴에서만 갈린다.
+
+    ★provider 를 본다 — 옛 구현은 direct_hosts[0](정렬 첫 항목)만 봐서, 이사 공지 기간
+    두 얼굴이 공존하면(provision_use 는 반대쪽을 지우지 않는다) **사전순으로** 주소가
+    정해졌다. 프로바이더를 바꿔도 표시 주소가 안 따라오거나 엉뚱한 쪽이 잡히던 원인.
+
+    Worker 얼굴인 몸(맥)은 어느 갈래에도 안 걸려 "" 를 돌려주고, 기존 수기값·ingress
+    폴백이 그대로 쓰인다 — 회귀 없음.
     """
     try:
-        import public_face
-        hosts = public_face.load_config().get("direct_hosts") or []
-        return hosts[0] if hosts else ""
+        cfg = load_config()
+        try:
+            import public_face
+            face = public_face.load_config()
+            hosts = [h for h in (face.get("direct_hosts") or []) if h]
+            face_provider = (face.get("provider") or "").strip().lower()
+        except Exception:
+            hosts, face_provider = [], ""
+
+        # ★권위는 public_face.provider 다 — tunnel_config.provider 가 아니다.
+        # 둘은 다른 축이다: public_face = "어느 얼굴이 공식인가"(provision_use 가 쓰는 스위치),
+        # tunnel_config = "어느 터널 프로세스를 관리하는가"(/tunnel/start·stop·auto_start).
+        # 그리고 둘은 실제로 어긋난다 — start_funnel 은 public_face 만 배선하고
+        # tunnel_config 는 provision_* 경로에서만 갱신된다. 실측(2026-07-21)에서 funnel 이
+        # 살아 있는데 tunnel_config 가 cloudflare 로 남아 주소가 안 따라오는 걸 확인했다.
+        # 두 터널이 동시에 살아 있을 수도 있으므로(맥: cloudflared + funnel) "어느 쪽이 공식
+        # 얼굴인가"로 정하는 게 맞다.
+        provider = face_provider or (cfg.get("provider") or "cloudflare").strip().lower()
+
+        if provider == "tailscale":
+            # 주소의 존재는 로그인 여부로 판정한다(running 은 /tunnel/config 가 별도 필드로
+            # 알린다) — funnel 이 잠깐 꺼져 있다고 주소 표시가 사라지면 UI 가 깜빡인다.
+            info = tailscale_info()
+            if info["dns_name"]:
+                return info["dns_name"]
+            return next((h for h in hosts if h.endswith(".ts.net")), "")
+
+        host = (cfg.get("hostname") or "").strip()
+        if host and cfg.get("tunnel_token"):
+            return host
+        return next((h for h in hosts if not h.endswith(".ts.net")), "")
     except Exception:
         return ""
 
@@ -548,11 +595,14 @@ async def get_tunnel_config():
     """터널 설정 조회"""
     config = load_config()
 
-    # 호스트명 우선순위: ①이 몸이 직접 서빙하는 공개 호스트(발급된 얼굴 — 가장 확실)
+    # 호스트명 우선순위: ①이 몸의 오리진 호스트(현재 프로바이더가 서빙 중인 얼굴 — 가장 확실)
     #                  ②tunnel_config.json 수기값  ③~/.cloudflared/config.yml ingress
     # ①을 최우선으로 두는 이유: ②③은 낡거나(다른 몸에서 복사된 config.yml) 남의 주소일 수
     # 있는데, ①은 이 몸의 터널이 지금 서빙 중이라는 사실 그 자체다.
-    served = _served_host()
+    # ①이 잡히면 finder/launcher 가 같은 값으로 수렴한다 — 한 호스트가 8765 전체를 서빙하니
+    # 이름을 둘로 나눌 이유가 없다(맥의 finder./launcher. 두 이름도 같은 포트를 가리키는
+    # 역사적 잔재다). 옛 수기 설정은 ②에서 per-purpose 값을 그대로 유지한다 — 회귀 없음.
+    served = origin_host()
     finder_host = served or config.get("finder_hostname", "")
     launcher_host = served or config.get("launcher_hostname", "")
     if not finder_host or not launcher_host:
@@ -571,6 +621,13 @@ async def get_tunnel_config():
         "running": is_funnel_running() if provider == "tailscale" else is_tunnel_running(),
         "finder_hostname": finder_host,
         "launcher_hostname": launcher_host,
+        # 오리진 호스트를 명시 노출 — UI 가 "런처/파인더가 창고 얼굴을 따라간다"를 표시하고,
+        # 값이 있으면 수기 입력이 아니라 발급된 얼굴에서 파생됐음을 알 수 있다.
+        "origin_host": served,
+        # ★얼굴 축의 provider (위 "provider" 는 프로세스 축이라 다를 수 있다 — origin_host()
+        # 주석 참조). 주소 옆 라벨은 반드시 이쪽을 써야 ts.net 주소에 "Cloudflare" 가 붙는
+        # 어긋남이 안 생긴다.
+        "origin_provider": _face_provider() or provider,
     }
 
 

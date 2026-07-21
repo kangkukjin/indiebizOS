@@ -32,9 +32,6 @@ for _p in _extra_paths:
     if os.path.exists(_p) and _p not in os.environ.get("PATH", ""):
         os.environ["PATH"] = _p + os.pathsep + os.environ.get("PATH", "")
 
-# 윈도우 임베디드 파이썬의 mimetypes 구멍 보강 (.md 등 — 없으면 문서가 다운로드로 열림)
-import mime_compat  # noqa: F401  (임포트 = 전역 레지스트리 보강)
-
 from datetime import datetime
 from contextlib import asynccontextmanager, nullcontext
 
@@ -58,6 +55,12 @@ BASE_PATH = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(BACKEND_PATH.parent)))
 DATA_PATH = BASE_PATH / "data"
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(BACKEND_PATH))
+
+# 윈도우 임베디드 파이썬의 mimetypes 구멍 보강 (.md 등 — 없으면 문서가 다운로드로 열림).
+# ★반드시 sys.path.insert 뒤에: 임베디드 파이썬(_pth isolated)은 스크립트 폴더를
+# sys.path 에 자동으로 넣지 않아, 이 줄보다 앞에 두면 backend 모듈을 못 찾고 죽는다
+# (맥 표준 파이썬만 sys.path[0]=스크립트 폴더라 통과 — v1.3.6 윈도우 기동 실패의 원인).
+import mime_compat  # noqa: F401, E402  (임포트 = 전역 레지스트리 보강)
 
 # 매니저 임포트
 from project_manager import ProjectManager

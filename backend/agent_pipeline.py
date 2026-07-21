@@ -315,10 +315,20 @@ class CognitivePipelineMixin:
                     _refl_cfg = _load_wp_config().get("execution_reflection", {})
                 except Exception:
                     _refl_cfg = {}
-                if _refl_cfg.get("enabled", True):
+                # 게이트 (2026-07-21): 짧고·성공했고·읽기만인 궤적은 반성이 재작성 비용만
+                # 낸다(에피소드 806~808 실측 +45~58%). 실패 신호·복잡도·세계 변경 중
+                # 하나라도 있어야 반성 — 판정·사유는 cognitive_trace.should_self_reflect.
+                from cognitive_trace import should_self_reflect
+                _do_reflect, _refl_reason = should_self_reflect(
+                    eval_tool_calls,
+                    min_tool_calls=_refl_cfg.get("min_tool_calls", 3),
+                )
+                if _refl_cfg.get("enabled", True) and not _do_reflect:
+                    print(f"[SelfReflect] 스킵 — {_refl_reason}")
+                elif _refl_cfg.get("enabled", True):
                     from agent_cognitive import build_reflection_message
                     _refl_msg = build_reflection_message(final_content, eval_tool_calls)
-                    print(f"[SelfReflect] 자기반성 턴 시작 — 실행 에이전트가 자기 궤적 재검토 (도구 {len(eval_tool_calls)}회)")
+                    print(f"[SelfReflect] 자기반성 턴 시작 — {_refl_reason} (도구 {len(eval_tool_calls)}회)")
                     yield {"type": "text", "content": "\n\n---\n[자기반성]\n\n"}
                     _refl_final = ""
                     # 같은 에이전트·같은 세션(resume) 이어서 — 실행 부분만 재호출(파이프라인

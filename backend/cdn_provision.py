@@ -172,14 +172,19 @@ def _probe(url: str, retries: int = 3, wait: float = 3.0) -> dict:
 
 
 def provision_cdn(token: str, acc: str, origin_hostname: str, secret: str,
-                  slug: str) -> dict:
+                  slug: str, worker: str = "") -> dict:
     """Worker+R2 를 통째로 발급. 반환 {ok, worker, url, steps[]} — 스텝은 발급기 로그 형식.
 
     멱등: 버킷·Worker 모두 이름 기준 재사용/덮어쓰기라 재실행 = 갱신 배포.
     (worker.js 가 저장소에서 바뀐 뒤 다시 부르면 새 코드로 갈아끼워진다.)
+
+    worker= 이름 지정 — 기존 Worker 를 발급기 관리로 *흡수*할 때 쓴다(맥의 수공예
+    `public-files` 이주, 2026-07-21 1단계): 같은 이름으로 재배포하면 주소·버킷이
+    그대로인 채 관리 주체만 바뀐다. 생략하면 몸-유일 이름(public-files-<슬러그>).
     """
     steps = []
-    name = worker_name_for(slug)
+    name = re.sub(r"[^a-z0-9-]+", "-", worker.lower()).strip("-")[:63] if worker \
+        else worker_name_for(slug)
     bucket = name  # 버킷 이름 = Worker 이름 (몸-유일 쌍)
 
     def step(key, r):

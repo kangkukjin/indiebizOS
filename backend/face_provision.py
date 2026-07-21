@@ -641,26 +641,36 @@ def provision_cloudflare(req: CloudflareReq):
                         "시작합니다 (스텝 로그 참조, '캐시 켜기'로 재시도 가능)")}
 
 
+class CdnReq(BaseModel):
+    worker: str = ""    # 이름 지정 — 기존 Worker 를 발급기 관리로 흡수(맥 이주). 생략=자동
+
+
 @router.post("/cdn")
-def provision_cdn_endpoint():
+def provision_cdn_endpoint(req: CdnReq = CdnReq()):
     """CDN(Worker+R2)만 (재)발급 — CF 발급 때 실패했거나 worker.js 갱신을 반영할 때.
-    멱등: 재실행 = 최신 worker.js·index.html 로 갈아끼우는 갱신 배포."""
+    멱등: 재실행 = 최신 worker.js·index.html 로 갈아끼우는 갱신 배포.
+
+    오리진 = 발급된 터널 호스트, 없으면 수기 finder_hostname(맥의 수제 터널 몸) —
+    맥의 수공예 Worker(`public-files`) 이주(1단계)가 이 폴백으로 가능해진다.
+    이름 우선순위: 요청 worker > 저장된 cdn_worker(재배포) > 몸-유일 자동 이름."""
     creds = _cf_creds()
     if not creds["token"] or not creds["account_id"]:
         return JSONResponse({"success": False,
                              "error": "CLOUDFLARE_API_TOKEN·ACCOUNT_ID 가 없습니다"},
                             status_code=400)
     tcfg = api_tunnel.load_config()
-    hostname = tcfg.get("hostname", "")
-    if not (hostname and tcfg.get("tunnel_token")):
+    hostname = tcfg.get("hostname", "") if tcfg.get("tunnel_token") else ""
+    hostname = hostname or tcfg.get("finder_hostname", "")
+    if not hostname:
         return JSONResponse({"success": False, "error":
-                             "발급된 Cloudflare 주소가 없습니다 — 먼저 주소를 발급하세요"},
+                             "오리진 호스트가 없습니다 — 먼저 Cloudflare 주소를 발급하세요"},
                             status_code=400)
     _ensure_origin_secret()
+    worker_name = (req.worker or "").strip() or tcfg.get("cdn_worker", "")
     import cdn_provision
     cdn = cdn_provision.provision_cdn(creds["token"], creds["account_id"], hostname,
                                       _env_value("SHOWCASE_ORIGIN_SECRET"),
-                                      _machine_slug())
+                                      _machine_slug(), worker=worker_name)
     if not cdn.get("ok"):
         return JSONResponse({"success": False, "steps": cdn["steps"],
                              "error": "CDN 발급 실패 — 스텝 로그 참조"}, status_code=502)

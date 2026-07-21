@@ -843,8 +843,9 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                       {provBusy === 'cf' ? '발급 중…' : (provStatus?.cloudflare?.provisioned ? '재발급' : '주소 발급')}
                     </button>
                   </div>
-                  {/* CDN(Worker+R2) — CF 경로의 존재 이유(엣지 캐시). 발급되면 상태, 아니면 켜기 버튼 */}
-                  {provStatus?.cloudflare?.provisioned && (
+                  {/* CDN(Worker+R2) — CF 경로의 존재 이유(엣지 캐시). cdn_url 이 있으면 상태
+                      (발급기 몸 + 흡수된 맥 수공예 Worker 둘 다), 발급됐는데 없으면 켜기 버튼 */}
+                  {(provStatus?.cloudflare?.provisioned || provStatus?.cloudflare?.cdn_url) && (
                     provStatus?.cloudflare?.cdn_url ? (
                       <p className="text-xs text-green-700">
                         R2 캐시 켜짐: <code className="bg-green-50 px-1 rounded">{provStatus.cloudflare.cdn_url}</code>

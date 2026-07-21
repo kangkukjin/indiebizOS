@@ -32,6 +32,8 @@ import time
 from pathlib import Path
 from typing import Optional
 
+from common.platform_utils import IS_WINDOWS  # OS 이음매 — 날 os.name 분기 금지(OS-가드)
+
 import requests
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
@@ -252,14 +254,14 @@ async def provision_status():
         "tailscale": {
             "installed": ts["installed"], "logged_in": ts["logged_in"],
             "dns_name": ts["dns_name"], "error": ts["error"],
-            "install_hint": ("winget install tailscale.tailscale" if os.name == "nt"
+            "install_hint": ("winget install tailscale.tailscale" if IS_WINDOWS
                              else "https://tailscale.com/download (앱 설치 후 로그인)"),
         },
         "cloudflare": {
             "cloudflared_installed": api_tunnel.is_cloudflared_installed(),
             "api_token_present": bool(creds["token"]),
             "account_id_present": bool(creds["account_id"]),
-            "install_hint": ("winget install Cloudflare.cloudflared" if os.name == "nt"
+            "install_hint": ("winget install Cloudflare.cloudflared" if IS_WINDOWS
                              else "brew install cloudflared"),
             # 직접서빙 발급 여부 — UI 얼굴 스위치의 재료 (맥의 Worker 얼굴은 여기 안 잡힘)
             "hostname": tcfg.get("hostname", ""),
@@ -515,7 +517,7 @@ def provision_cloudflare(req: CloudflareReq):
                 "tunnel_name": tunnel_name, "steps": steps}
 
     if not api_tunnel.is_cloudflared_installed():
-        hint = "winget install Cloudflare.cloudflared" if os.name == "nt" else "brew install cloudflared"
+        hint = "winget install Cloudflare.cloudflared" if IS_WINDOWS else "brew install cloudflared"
         return fail(f"cloudflared 가 설치되지 않았습니다. 먼저 설치하세요: {hint}")
 
     # 1) 터널 — 같은 이름이 있으면 재사용(멱등), 없으면 원격관리형으로 생성

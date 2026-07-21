@@ -235,6 +235,8 @@ def _map(method: str, path: str, query: dict, raw_query: str):
         return {"target": "/portal/node/login", "cache": "no-store"}
     if path == "logout" and method == "POST":
         return {"target": "/portal/node/logout", "cache": "no-store"}
+    if path == "join" and method == "POST":
+        return {"target": "/portal/node/join", "cache": "no-store"}
     if path == "gb" and method in ("GET", "POST"):
         q = f"?{raw_query}" if raw_query else ""
         return {"target": f"/portal/gb{q}", "cache": "no-store"}

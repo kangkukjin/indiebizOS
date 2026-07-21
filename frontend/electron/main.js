@@ -3,7 +3,7 @@
  * Python 백엔드 관리 및 윈도우 생성
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, session } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -1544,6 +1544,44 @@ function startLauncherWS() {
 // 앱 준비
 app.whenReady().then(async () => {
   console.log('[Electron] 앱 시작');
+
+  // ── 창고 자격 캡처: 포식 브라우저(persist:forage)에서 창고 가입/로그인 POST 를 관찰해
+  //    아이디·비밀번호를 백엔드 창고 자격 저장소로 흘린다 — 다음 방문의 로그인 상태는
+  //    이 세션의 pk 쿠키(1년)가, 시스템 탐색은 폴러가 이 자격으로 맡는다.
+  //    범위=루트 /login·/join(창고 계약 경로)만. 백엔드가 실로그인으로 '정말 창고인지'
+  //    검증하므로 일반 사이트의 우연한 일치는 저장되지 않는다. ★일반 사이트 비밀번호
+  //    금고(forage-passwords, 평문은 백엔드로 안 나감)와 별개 축 — 창고 자격은 폴러가
+  //    서버측 로그인에 써야 해서 백엔드 저장이 승인된 예외(🔑 수동 등록과 같은 저장소).
+  try {
+    const forage = session.fromPartition('persist:forage');
+    forage.webRequest.onBeforeRequest(
+      { urls: ['*://*/login', '*://*/join'] },
+      (details, cb) => {
+        cb({});
+        try {
+          if (details.method !== 'POST' || !details.uploadData?.length) return;
+          const raw = Buffer.concat(
+            details.uploadData.map((d) => d.bytes).filter(Boolean)
+          ).toString('utf8');
+          const body = JSON.parse(raw);
+          const userId = String(body.user_id || '').trim();
+          const password = String(body.password || '');
+          if (!userId || !password) return;
+          const origin = new URL(details.url).origin;
+          if (/^https?:\/\/(127\.0\.0\.1|localhost)(:|$)/.test(origin)) return; // 자기 백엔드 제외
+          fetch('http://127.0.0.1:8765/warehouse-feed/capture', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: origin, user_id: userId, password }),
+          }).catch(() => {});
+          // 포식 금고에도 — 로그아웃 후 재로그인 때 자동 채움이 되도록 (host 단위)
+          try { foragePw.upsert(origin, userId, password); } catch { /* 키체인 불가 등 — 무시 */ }
+        } catch { /* 캡처 실패는 조용히 — 탐색을 막지 않는다 */ }
+      }
+    );
+  } catch (e) {
+    console.error('[Electron] 창고 자격 캡처 배선 실패:', e);
+  }
 
   // macOS 기본 메뉴 설정 (복사/붙여넣기 등)
   const template = [

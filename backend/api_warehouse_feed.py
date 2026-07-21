@@ -201,6 +201,64 @@ async def set_warehouse_credentials(request: Request):
             "neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None)}
 
 
+def _auto_register_warehouse(url: str) -> bool:
+    """등기부에 없으면 창고이웃 자동 등록 — 가입/로그인한 창고는 관계가 생긴 창고다.
+    add_warehouse_neighbor 의 '주소만 아는 상대' 분기와 같은 규칙(매니페스트 title·npub 앵커).
+    반환 True=새로 등록."""
+    bm = _bm()
+    if bm.get_neighbor_by_contact("warehouse", url):
+        return False
+    poll = wf.poll_warehouse(url)
+    npub = (poll.get("npub") or "").strip()
+    npub = npub if npub.startswith("npub") else ""
+    n = bm.get_neighbor_by_contact("nostr", npub) if npub else None
+    if n is None:
+        name = (poll.get("title") or "").strip() or (urlparse(url).hostname or url)
+        matches = [x for x in bm.get_neighbors(search=name) if x["name"] == name]
+        n = matches[0] if matches else bm.create_neighbor(name=name, info_level=0)
+    bm.add_contact(n["id"], "warehouse", url)
+    if npub and not bm.get_neighbor_by_contact("nostr", npub):
+        bm.add_contact(n["id"], "nostr", npub)
+    return True
+
+
+@router.post("/capture")
+async def capture_credentials(request: Request):
+    """포식 브라우저 자격 캡처 — 사용자가 이웃 창고 페이지에서 가입/수동 로그인하는 순간
+    Electron main(webRequest)이 아이디·비밀번호를 여기로 흘린다(로컬 전용 — 원격 미노출).
+
+    ①실로그인으로 '정말 창고인지' 검증 — 일반 사이트의 우연한 /login POST 는 흔적 0.
+      (가입 직후엔 계정 생성이 반영 중일 수 있어 실패 시 잠깐 쉬고 1회 재시도.)
+    ②등기부에 없으면 창고이웃 자동 등록 — 가입/로그인=관계 맺음.
+    ③자격 저장+재폴링 — 다음 폴링부터 시스템이 그 계정 레벨로 탐색한다.
+    다음 방문의 '로그인된 상태'는 포식 브라우저(persist:forage)의 pk 쿠키가 맡는다."""
+    body = await _body(request)
+    url = wf.normalize_base(body.get("url") or "")
+    user_id = str(body.get("user_id") or "").strip()
+    password = str(body.get("password") or "")
+    if not url or not user_id or not password:
+        raise HTTPException(status_code=400, detail="url·user_id·password가 필요해요")
+
+    def _verify_with_retry():
+        import time as _t
+        try:
+            return wf._login(url, user_id, password)
+        except Exception:
+            _t.sleep(2)                       # 가입 직후 레이스 완충
+            return wf._login(url, user_id, password)
+    try:
+        await to_thread.run_sync(_verify_with_retry)
+    except Exception as e:
+        return {"ok": False, "captured": False,
+                "error": f"창고 로그인 확인 실패 — 저장하지 않음: {e}"}
+
+    registered_new = await to_thread.run_sync(_auto_register_warehouse, url)
+    result = await to_thread.run_sync(wf.set_credentials, url, user_id, password)
+    if result.get("ok"):
+        await to_thread.run_sync(wf.poll_warehouse, url)   # 그 계정 레벨로 즉시 반영
+    return {**result, "captured": True, "registered_new": registered_new}
+
+
 @router.post("/poll")
 async def poll_now(request: Request):
     """수동 새로고침 — url 없으면 전체 폴링. ★스레드로(자기교착 방지)."""

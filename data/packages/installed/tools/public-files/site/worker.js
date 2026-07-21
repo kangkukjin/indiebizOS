@@ -375,6 +375,10 @@ export default {
     if (path === "logout" && request.method === "POST") {
       return proxyPortal(env, request, "node/logout");
     }
+    // 창고 가입 — 아이디·비밀번호 셀프 생성 + 이메일(복구용). 레벨 0 즉시 로그인.
+    if (path === "join" && request.method === "POST") {
+      return proxyPortal(env, request, "node/join");
+    }
     // 창고 방명록 — GET=목록(내 레벨 절단·about= 로 파일별 조회), POST=글 남기기.
     // 쿠키(pk)로 신원이 갈리는 개인화 응답이라 no-store(proxyPortal).
     if (path === "gb" && (request.method === "GET" || request.method === "POST")) {

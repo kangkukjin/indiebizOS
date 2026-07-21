@@ -372,11 +372,16 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
         "node_url": (base + "/manifest") if base else "/manifest",
         "viewer_level": level,
         "is_member": is_member,
-        # 로그인 계약(기계 판독) — 외부 AI가 홈 HTML 을 역공학하지 않아도 되게 여기 명시.
+        # 로그인·가입 계약(기계 판독) — 외부 AI가 홈 HTML 을 역공학하지 않아도 되게 여기 명시.
         "login": {"url": (base + "/login") if base else "/login", "method": "POST",
                   "content_type": "application/json",
                   "body": {"user_id": "<아이디>", "password": "<비밀번호>"},
                   "note": "성공 시 쿠키(pk)가 실리고 이후 /manifest·파일 url 이 내 레벨로 열린다."},
+        "join": {"url": (base + "/join") if base else "/join", "method": "POST",
+                 "content_type": "application/json",
+                 "body": {"name": "<이름>", "user_id": "<아이디>", "password": "<비밀번호>",
+                          "email": "<복구용 이메일>"},
+                 "note": "가입=레벨 0 등록+즉시 로그인(쿠키 pk). 높은 레벨은 창고 주인이 준다."},
         "files": files,
         # 절단 신고 — 이게 없으면 폴러가 밀려난 파일을 "삭제"로 오독한다(조용한 유실).
         "truncated": total > len(files),
@@ -499,11 +504,25 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         who = (f'<span>{_h.escape(viewer.get("name",""))} · 레벨 {level}</span> '
                f'<button onclick="lo()">로그아웃</button>')
         login_form = ''
+        join_box = ''
     else:
         who = '<span>손님 (레벨 0)</span>'
         login_form = ('<form onsubmit="return li(this)"><input name="u" placeholder="아이디" '
                       'autocomplete="username"><input name="p" type="password" placeholder="비밀번호" '
-                      'autocomplete="current-password"><button>로그인</button></form>')
+                      'autocomplete="current-password"><button>로그인</button></form>'
+                      '<button type="button" class="jt" onclick="jf()">가입</button>')
+        # 가입 = 아이디·비밀번호를 스스로 만들고 이메일(비밀번호 찾기용)을 남긴다.
+        # 레벨 0 자동 등록 + 즉시 로그인 — 높은 레벨은 창고 주인이 이웃 레벨로 준다.
+        join_box = ('<section id="joinbox" class="joinbox" style="display:none">'
+                    '<h2>창고 가입</h2>'
+                    '<form onsubmit="return jn(this)">'
+                    '<input name="n" placeholder="이름" autocomplete="name">'
+                    '<input name="u" placeholder="아이디 (영문 소문자·숫자 3~20자)" autocomplete="username">'
+                    '<input name="p" type="password" placeholder="비밀번호" autocomplete="new-password">'
+                    '<input name="e" type="email" placeholder="이메일 (비밀번호 찾기용)" autocomplete="email">'
+                    '<button>가입하기</button></form>'
+                    '<p class="jn-note">가입하면 레벨 0 회원으로 바로 로그인됩니다 — '
+                    '더 높은 레벨은 창고 주인이 열어줍니다.</p></section>')
     html_doc = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
 <title>{title}</title><link rel="alternate" type="application/json" href="/manifest">
@@ -541,8 +560,14 @@ form textarea+button{{margin-top:.4rem}}
 .gs{{color:#aaa;font-size:.78rem;border:1px solid #ddd;border-radius:4px;padding:0 .3rem}}
 .q{{font-size:.85rem;color:#555;border-left:3px solid #ddd;padding-left:.5rem;margin-bottom:.3rem}}
 .q.stale{{color:#aaa;font-style:italic}}
+.jt{{background:none;color:#0a58ca;border:1px solid #0a58ca}}
+.joinbox{{border:1px solid #ddd;border-radius:10px;padding: .8rem 1rem;margin-top:1rem}}
+.joinbox h2{{margin:.1rem 0 .6rem}}
+.joinbox input{{width:14rem;max-width:100%}}
+.jn-note{{color:#888;font-size:.85rem;margin:.5rem 0 0}}
 </style></head><body>
 <header><h1>{title}</h1><div class="acct">{who}{login_form}</div></header>
+{join_box}
 {''.join(sections)}
 {locked_note}
 <script>
@@ -550,6 +575,18 @@ async function li(f){{const r=await fetch('/login',{{method:'POST',headers:{{'Co
 body:JSON.stringify({{user_id:f.u.value,password:f.p.value,auto:true}})}});
 if(r.ok)location.reload();else alert((await r.json()).detail||'로그인 실패');return false}}
 async function lo(){{await fetch('/logout',{{method:'POST'}});location.reload()}}
+// 가입 폼 토글 + 제출 — 성공하면 쿠키(pk)가 실린 채 새로고침(즉시 로그인).
+function jf(){{const b=document.getElementById('joinbox');
+b.style.display=b.style.display==='none'?'':'none';
+if(b.style.display!=='none')b.querySelector('input').focus()}}
+async function jn(f){{
+const r=await fetch('/join',{{method:'POST',headers:{{'Content-Type':'application/json'}},
+body:JSON.stringify({{name:f.n.value,user_id:f.u.value,password:f.p.value,email:f.e.value,auto:true}})}});
+// /join 라우트가 없는 옛 Worker 는 SPA 폴백을 200 으로 줄 수 있다 — json ok 까지 확인(침묵 실패 방지).
+let j=null; try{{j=await r.json()}}catch(e){{}}
+if(r.ok&&j&&j.ok){{location.reload()}}
+else{{alert((j&&j.detail)||'가입하지 못했어요 — 잠시 후 다시 시도해 주세요')}}
+return false}}
 // 파일 옆 ♥ → 좋아요 토글(회원=계정, 손님=IP 단위). 새로고침 없이 숫자만 갱신.
 async function lk(a){{
 const r=await fetch('/like',{{method:'POST',headers:{{'Content-Type':'application/json'}},
@@ -1288,6 +1325,53 @@ async def node_logout(x_showcase_secret: str = Header(default="")):
     _check_secret(x_showcase_secret)
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(key="pk", path="/")
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+@router.post("/node/join")
+async def node_join(request: Request, x_showcase_secret: str = Header(default=""),
+                    x_client_ip: str = Header(default="")):
+    """창고 가입 — 방문자가 아이디·비밀번호를 만들고 이메일(복구용)을 남긴다.
+    레벨 0 자동 등록 → 즉시 로그인(루트 스코프 pk 쿠키, node_login 과 동일).
+    회원=이웃(business.db) — 포털 가입(join/{slug})과 같은 전역 명부라, 창고에서
+    가입한 계정으로 포털에도 로그인된다(레벨 승급은 창고 주인이 이웃 레벨로)."""
+    _check_secret(x_showcase_secret)
+    core = _core()
+    ip = _client_ip(request, x_client_ip)
+    if not core.join_rate_ok(ip):
+        raise HTTPException(status_code=429, detail="너무 빨라요 — 잠시 후 다시 시도해 주세요")
+    try:
+        body = json.loads((await request.body()).decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="bad json")
+    name = str(body.get("name", "")).strip()
+    user_id = str(body.get("user_id", "")).strip()
+    password = str(body.get("password", ""))
+    email = str(body.get("email", "")).strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="이름을 입력해 주세요")
+    if not user_id or not password:
+        raise HTTPException(status_code=400, detail="아이디와 비밀번호를 입력해 주세요")
+    if not core.valid_email(email):
+        raise HTTPException(status_code=400, detail="비밀번호 찾기에 쓸 이메일을 정확히 입력해 주세요")
+    try:
+        m = core.create_member(None, name, email, 0, login_id=user_id, password=password)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    core.audit_log(f"join:{ip}", "portal", f"창고 가입 {name} ({user_id})", True)
+    try:  # 운영자 알림 — best effort
+        from notification_manager import get_notification_manager
+        get_notification_manager().info(
+            "창고 가입",
+            f"{name} 님이 공개 창고에 가입했어요 (레벨 0) — 이웃 레벨을 주면 그 레벨 창고가 열립니다.",
+            source="portal")
+    except Exception:
+        pass
+    resp = JSONResponse({"ok": True, "name": name, "level": 0})
+    kw = {"max_age": _COOKIE_MAX_AGE} if bool(body.get("auto", True)) else {}
+    resp.set_cookie(key="pk", value=m["key"], path="/", httponly=True,
+                    samesite="lax", secure=True, **kw)
     resp.headers["Cache-Control"] = "no-store"
     return resp
 

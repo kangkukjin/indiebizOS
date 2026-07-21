@@ -82,7 +82,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const [provZones, setProvZones] = useState<{ id: string; name: string }[]>([]);
   const [provDomain, setProvDomain] = useState('');
   const [provSub, setProvSub] = useState('');
-  const [provBusy, setProvBusy] = useState<'' | 'ts' | 'cf'>('');
+  const [provBusy, setProvBusy] = useState<'' | 'ts' | 'cf' | 'cdn'>('');
   const [provResult, setProvResult] = useState<{ success: boolean; message: string; url?: string } | null>(null);
   const [provSteps, setProvSteps] = useState<{ step: string; ok: boolean; detail: string }[]>([]);
 
@@ -360,6 +360,27 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       const d = await r.json();
       setProvSteps(d.steps || []);
       setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '발급 완료' : '발급 실패') });
+      if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
+    } catch (err) {
+      setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
+    } finally {
+      setProvBusy('');
+    }
+  };
+
+  // CDN(Worker+R2) 재발급 — CF 발급 때 실패했거나 worker.js 갱신 반영. 멱등.
+  const provisionCdn = async () => {
+    try {
+      setProvBusy('cdn');
+      setProvResult(null);
+      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/cdn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const d = await r.json();
+      if (d.steps) setProvSteps(d.steps);
+      setProvResult({ success: !!d.success, message: d.message || d.error || (d.success ? '캐시 켜짐' : '실패') });
       if (d.success) { await Promise.all([loadProvision(), loadTunnelConfig()]).catch(() => {}); }
     } catch (err) {
       setProvResult({ success: false, message: '요청 실패: ' + (err as Error).message });
@@ -778,7 +799,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                   <Globe size={15} className="text-gray-500" /> Cloudflare로 발급 (내 도메인 사용)
                 </h4>
                 <p className="text-xs text-gray-500 mt-1">
-                  API 토큰으로 터널 생성 → DNS 연결 → 실행까지 자동으로 처리합니다. (Worker 불필요)
+                  API 토큰으로 터널 생성 → DNS 연결 → 실행 → R2 캐시(Worker)까지 자동으로 처리합니다.
                 </p>
               </div>
               {!provStatus?.cloudflare?.api_token_present || !provStatus?.cloudflare?.account_id_present ? (
@@ -822,6 +843,29 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                       {provBusy === 'cf' ? '발급 중…' : (provStatus?.cloudflare?.provisioned ? '재발급' : '주소 발급')}
                     </button>
                   </div>
+                  {/* CDN(Worker+R2) — CF 경로의 존재 이유(엣지 캐시). 발급되면 상태, 아니면 켜기 버튼 */}
+                  {provStatus?.cloudflare?.provisioned && (
+                    provStatus?.cloudflare?.cdn_url ? (
+                      <p className="text-xs text-green-700">
+                        R2 캐시 켜짐: <code className="bg-green-50 px-1 rounded">{provStatus.cloudflare.cdn_url}</code>
+                        <button
+                          onClick={provisionCdn}
+                          disabled={provBusy !== ''}
+                          className="ml-2 px-2 py-0.5 rounded text-xs bg-gray-100 hover:bg-gray-200 text-gray-600"
+                          title="worker.js 갱신을 반영하는 재배포 (멱등)"
+                        >{provBusy === 'cdn' ? '배포 중…' : '재배포'}</button>
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-600">
+                        R2 캐시(파일을 엣지가 대신 서빙 — 트래픽이 붙어도 이 PC 가 버팀)가 아직 꺼져 있습니다.
+                        <button
+                          onClick={provisionCdn}
+                          disabled={provBusy !== ''}
+                          className="ml-2 px-2 py-0.5 rounded text-xs bg-[#D97706] text-white hover:bg-[#B45309]"
+                        >{provBusy === 'cdn' ? '켜는 중…' : '캐시 켜기'}</button>
+                      </p>
+                    )
+                  )}
                 </>
               )}
               {provSteps.length > 0 && (

@@ -35,14 +35,16 @@
     "api_config",
     "api_lecture_workspace",
     "ibl_opus_bulk_gen",
-    "ffmpeg_provision"
+    "ffmpeg_provision",
+    "cdn_provision"
   ],
   "_force_exclude_reasons": {
     "api": "맥 백엔드 진입점(dotenv) — 폰은 phone_api.serve()",
     "api_config": "python-multipart 부재(FastAPI Form). 폰 설정/기어 REST는 phone_api 가 자체 제공",
     "api_lecture_workspace": "python-multipart 부재(FastAPI Form/Upload)",
     "ibl_opus_bulk_gen": "학습데이터 생성 스크립트 — 모듈 import 시 /tmp 파일 읽음(부작용)",
-    "ffmpeg_provision": "데스크탑 전용 ffmpeg 자동공급 — 폰은 라디오를 클라이언트(WebView, hls.js)에서 재생해 ffmpeg 불필요"
+    "ffmpeg_provision": "데스크탑 전용 ffmpeg 자동공급 — 폰은 라디오를 클라이언트(WebView, hls.js)에서 재생해 ffmpeg 불필요",
+    "cdn_provision": "CF CDN(Worker+R2) 발급기 — 얼굴 발급은 몸의 주인 PC 전용(폰은 face_provision 자체가 없는 위임 몸). CF API 토큰도 폰에 프로비저닝 안 됨"
   },
   "_force_exclude_glob": [
     "test_*"

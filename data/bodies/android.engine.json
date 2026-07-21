@@ -174,6 +174,7 @@
     "api_config": "force_exclude (프로파일 명시)",
     "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
+    "cdn_provision": "force_exclude (프로파일 명시)",
     "ffmpeg_provision": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
     "ibl_synthetic_generator": "top-level import: google",
@@ -185,8 +186,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 179,
+    "total": 180,
     "engine": 165,
-    "blocklist": 14
+    "blocklist": 15
   }
 }

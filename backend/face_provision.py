@@ -15,9 +15,12 @@ face_provision.py — 창고 신원(공개 얼굴) 자동 발급.
      터널 생성(cfd_tunnel, config_src=cloudflare = cert.pem·대화형 login 불필요)
      → 실행 토큰 → ingress 원격 설정(hostname→localhost:8765) → DNS CNAME
      (<sub>.<도메인> → <터널id>.cfargotunnel.com) → `cloudflared tunnel run --token`
-     → public_face 직접 서빙(direct_hosts)에 합류. ★Worker 는 선택적 가속기일 뿐
-     (R2 캐시·원본 은닉) — 발급 단계에선 배포하지 않고 직접 서빙으로 공개면이 선다.
-     (맥의 기존 얼굴은 Worker 경유 그대로 — 이 갈래는 새 몸의 기본 경로.)
+     → public_face 직접 서빙(direct_hosts)에 합류
+     → ★CDN(Worker+R2)까지 발급(cdn_provision) — CF 경로의 존재 이유가 캐시이므로
+     (2026-07-21 결정: R2 없는 CF 는 "도메인 비용만 내는 tailscale"이 된다). 성공 시
+     public_base = workers.dev 주소(엣지 캐시 + 원본 은닉). 실패해도 발급은 성공 —
+     직접 서빙 폴백으로 공개면이 서고, 스텝 로그의 힌트로 /cdn 재시도가 가능하다.
+     (맥의 기존 얼굴은 수공예 Worker(`public-files`) 경유 그대로 — 이름이 달라 충돌 없음.)
 
 안전: 전부 소유자 전용(/tunnel/* = is_public_remote_path 미등록 → 터널서 401).
 cloudflare 발급은 dry_run=true 로 변이 없이 계획만 미리 볼 수 있다.
@@ -266,6 +269,9 @@ async def provision_status():
             # 직접서빙 발급 여부 — UI 얼굴 스위치의 재료 (맥의 Worker 얼굴은 여기 안 잡힘)
             "hostname": tcfg.get("hostname", ""),
             "provisioned": bool(tcfg.get("tunnel_token") and tcfg.get("hostname")),
+            # 발급기가 배포한 CDN(Worker+R2) — 있으면 public_base 가 이 주소다
+            "cdn_worker": tcfg.get("cdn_worker", ""),
+            "cdn_url": tcfg.get("cdn_url", ""),
         },
         "machine_slug": _machine_slug(),
     }
@@ -478,6 +484,7 @@ class CloudflareReq(BaseModel):
     domain: str = ""          # zone 이름 (예: kukjinkang.uk)
     subdomain: str = ""       # 머신별 서브도메인 (예: win) → win.kukjinkang.uk
     dry_run: bool = False     # true = 변이 없이 계획만
+    skip_cdn: bool = False    # true = Worker+R2 없이 직접 서빙만 (옛 동작)
 
 
 @router.post("/cloudflare")
@@ -585,12 +592,31 @@ def provision_cloudflare(req: CloudflareReq):
         return fail(f"cloudflared 실행 실패: {run.get('error')} — 설정은 저장되어 "
                     "재시작 시 자동 시작을 다시 시도합니다", 502)
 
-    # 6) 공개 얼굴 배선 — Worker 없이 직접 서빙(direct_hosts)으로 공개면 성립
-    sec = _ensure_origin_secret()      # 직접 서빙 악수 — 없으면 공개면이 403으로 죽는다
+    # 6) 시크릿 — 공식 정문(Worker 또는 직접 서빙 게이트웨이)의 악수. CDN 보다 먼저
+    #    (Worker 바인딩에 이 값이 실린다).
+    sec = _ensure_origin_secret()
     steps.append({"step": "secret", "ok": "error" not in sec,
                   "detail": ("시크릿 생성(.env)" if sec.get("created")
                              else sec.get("error") or "기존 시크릿 사용")})
+
+    # 7) CDN(Worker+R2) — CF 경로의 존재 이유. 실패해도 발급 실패가 아니다(직접 서빙 폴백).
     base = f"https://{hostname}"
+    cdn_ok = False
+    if not req.skip_cdn:
+        import cdn_provision
+        cdn = cdn_provision.provision_cdn(token, acc, hostname,
+                                          _env_value("SHOWCASE_ORIGIN_SECRET"),
+                                          _machine_slug())
+        steps.extend(cdn["steps"])
+        if cdn.get("ok"):
+            cdn_ok = True
+            base = cdn["url"]
+            tcfg.update({"cdn_worker": cdn["worker"], "cdn_url": cdn["url"]})
+            api_tunnel.save_config(tcfg)
+
+    # 8) 공개 얼굴 배선 — direct_hosts 에는 CDN 여부와 무관하게 터널 호스트가 들어간다:
+    #    직접 서빙일 땐 그 자체가 정문, CDN 일 땐 Worker 의 오리진(ORIGIN_BASE)이자
+    #    런처·파인더의 주소(origin_host)다.
     fcfg = public_face.load_config()
     hosts = set(fcfg.get("direct_hosts") or [])
     hosts.add(hostname)
@@ -603,8 +629,47 @@ def provision_cloudflare(req: CloudflareReq):
     except Exception:
         pass
     applied = public_face.apply_public_base(base)
-    steps.append({"step": "face", "ok": True, "detail": f"직접 서빙 배선 + 표면 전파: {base}"})
+    steps.append({"step": "face", "ok": True, "detail":
+                  (f"CDN 얼굴 배선 + 표면 전파: {base} (오리진 {hostname})" if cdn_ok
+                   else f"직접 서빙 배선 + 표면 전파: {base}")})
 
     return {"success": True, "public_base": base, "hostname": hostname,
-            "tunnel_name": tunnel_name, "tunnel_id": tunnel_id, "steps": steps,
-            "message": f"창고 주소가 발급되었습니다: {base}"}
+            "cdn": cdn_ok, "tunnel_name": tunnel_name, "tunnel_id": tunnel_id,
+            "steps": steps,
+            "message": (f"창고 주소가 발급되었습니다: {base} (R2 캐시 켜짐)" if cdn_ok else
+                        f"창고 주소가 발급되었습니다: {base} — R2 캐시는 실패해 직접 서빙으로 "
+                        "시작합니다 (스텝 로그 참조, '캐시 켜기'로 재시도 가능)")}
+
+
+@router.post("/cdn")
+def provision_cdn_endpoint():
+    """CDN(Worker+R2)만 (재)발급 — CF 발급 때 실패했거나 worker.js 갱신을 반영할 때.
+    멱등: 재실행 = 최신 worker.js·index.html 로 갈아끼우는 갱신 배포."""
+    creds = _cf_creds()
+    if not creds["token"] or not creds["account_id"]:
+        return JSONResponse({"success": False,
+                             "error": "CLOUDFLARE_API_TOKEN·ACCOUNT_ID 가 없습니다"},
+                            status_code=400)
+    tcfg = api_tunnel.load_config()
+    hostname = tcfg.get("hostname", "")
+    if not (hostname and tcfg.get("tunnel_token")):
+        return JSONResponse({"success": False, "error":
+                             "발급된 Cloudflare 주소가 없습니다 — 먼저 주소를 발급하세요"},
+                            status_code=400)
+    _ensure_origin_secret()
+    import cdn_provision
+    cdn = cdn_provision.provision_cdn(creds["token"], creds["account_id"], hostname,
+                                      _env_value("SHOWCASE_ORIGIN_SECRET"),
+                                      _machine_slug())
+    if not cdn.get("ok"):
+        return JSONResponse({"success": False, "steps": cdn["steps"],
+                             "error": "CDN 발급 실패 — 스텝 로그 참조"}, status_code=502)
+    tcfg.update({"cdn_worker": cdn["worker"], "cdn_url": cdn["url"]})
+    api_tunnel.save_config(tcfg)
+    fcfg = public_face.load_config()
+    fcfg["public_base"] = cdn["url"]
+    public_face.save_config(fcfg)
+    applied = public_face.apply_public_base(cdn["url"])
+    return {"success": True, "url": cdn["url"], "worker": cdn["worker"],
+            "steps": cdn["steps"], "applied": applied,
+            "message": f"R2 캐시가 켜졌습니다: {cdn['url']}"}

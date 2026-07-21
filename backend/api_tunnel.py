@@ -590,6 +590,44 @@ def origin_host() -> str:
         return ""
 
 
+def open_hosts() -> list:
+    """지금 8765 로 런처·파인더가 열려 있는 호스트 전부 — [{host, provider, official}].
+
+    ★얼굴 전환은 반대쪽을 닫지 않는다(provision_use: 이사 공지 기간 공존이 의도). 게다가
+    런처·파인더는 창고 공개면과 달리 `direct_hosts` 등록과 무관하게 **8765 에 닿는 아무
+    호스트로나** 열린다(public_face._map 이 그 경로에 None 을 반환해 통과시킨다). 그래서
+    실제로 열린 주소가 여럿인데 UI 는 공식 얼굴 하나만 보여줬다 — 이 함수가 그 간극을 메운다.
+    """
+    official = origin_host()
+    found, seen = [], set()
+
+    def add(host: str, provider: str):
+        host = (host or "").strip().lower()
+        if not host or host in seen:
+            return
+        seen.add(host)
+        found.append({"host": host, "provider": provider, "official": host == official})
+
+    try:
+        cfg = load_config()
+        if is_funnel_running():
+            add(tailscale_info().get("dns_name", ""), "tailscale")
+        if is_tunnel_running():
+            add(cfg.get("hostname", ""), "cloudflare")
+            add(cfg.get("finder_hostname", ""), "cloudflare")
+            add(cfg.get("launcher_hostname", ""), "cloudflare")
+            ingress = parse_ingress_hostnames(cfg.get("config_path"))
+            add(ingress.get("finder_hostname", ""), "cloudflare")
+            add(ingress.get("launcher_hostname", ""), "cloudflare")
+    except Exception:
+        pass
+
+    # 공식 얼굴은 터널 감지가 실패해도 반드시 목록에 있어야 한다
+    if official and official not in seen:
+        found.insert(0, {"host": official, "provider": _face_provider() or "", "official": True})
+    return found
+
+
 @router.get("/config")
 async def get_tunnel_config():
     """터널 설정 조회"""
@@ -628,6 +666,8 @@ async def get_tunnel_config():
         # 주석 참조). 주소 옆 라벨은 반드시 이쪽을 써야 ts.net 주소에 "Cloudflare" 가 붙는
         # 어긋남이 안 생긴다.
         "origin_provider": _face_provider() or provider,
+        # 지금 열려 있는 주소 전부 — 전환은 반대쪽을 닫지 않으므로 여럿일 수 있다
+        "open_hosts": open_hosts(),
     }
 
 

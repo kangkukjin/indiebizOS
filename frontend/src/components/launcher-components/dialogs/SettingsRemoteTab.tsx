@@ -15,10 +15,12 @@ interface SettingsRemoteTabProps {
   originHost?: string;
   /** 'cloudflare' | 'tailscale' — 주소 안내 문구를 프로바이더에 맞춘다 */
   tunnelProvider?: string;
+  /** 지금 열려 있는 주소 전부 (얼굴 전환은 반대쪽을 닫지 않는다) */
+  openHosts?: Array<{ host: string; provider: string; official: boolean }>;
 }
 
 export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHostname,
-                                    originHost, tunnelProvider }: SettingsRemoteTabProps) {
+                                    originHost, tunnelProvider, openHosts }: SettingsRemoteTabProps) {
   // 원격 주소가 창고 얼굴을 따라왔는지 / 아직 아무 얼굴도 없는지 — 두 안내 문구의 재료.
   // ★런처·파인더는 창고 공개주소(public_base)가 아니라 *오리진 호스트*를 따라간다.
   // Worker 얼굴은 공개주소가 CDN 이고 그 CDN 이 /launcher/app·/nas/* 를 라우팅하지 않기 때문.
@@ -27,6 +29,28 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     ? `${isTailscale ? 'Tailscale Funnel' : 'Cloudflare 터널'} 주소를 따라갑니다 (공유창고와 같은 얼굴)`
     : '';
   const noFaceHint = 'Cloudflare 터널 또는 Tailscale Funnel 로 주소를 발급하면 여기에 자동 표시됩니다';
+
+  // 위에 이미 보여준 주소 말고 *그 외* 열려 있는 주소들. 얼굴 전환은 반대쪽을 닫지 않으므로
+  // 두 프로바이더의 주소가 동시에 살아 있을 수 있고, 런처·파인더는 양쪽 다 열린다.
+  const otherHosts = (primary: string) =>
+    (openHosts || []).filter((h) => h.host && h.host !== primary);
+
+  const renderOtherHosts = (primary: string, path: string) => {
+    const rest = otherHosts(primary);
+    if (rest.length === 0) return null;
+    return (
+      <div className="pt-1 border-t border-blue-200">
+        <p className="text-xs text-blue-700 mb-0.5">그 외 열려 있는 주소</p>
+        {rest.map((h) => (
+          <p key={h.host} className="text-xs text-blue-600">
+            <code className="bg-blue-100 px-1 rounded">https://{h.host}{path}</code>
+            {h.provider && <span className="ml-1 text-blue-400">
+              ({h.provider === 'tailscale' ? 'Tailscale' : 'Cloudflare'})</span>}
+          </p>
+        ))}
+      </div>
+    );
+  };
   // NAS 설정 상태
   const [nasEnabled, setNasEnabled] = useState(false);
   const [nasHasPassword, setNasHasPassword] = useState(false);
@@ -470,6 +494,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                     ) : (
                       <p className="text-xs text-blue-600">{noFaceHint}</p>
                     )}
+                    {renderOtherHosts(finderHostname, '/nas/app')}
                   </div>
                 </div>
               )}
@@ -579,6 +604,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                     ) : (
                       <p className="text-xs text-blue-600">{noFaceHint}</p>
                     )}
+                    {renderOtherHosts(launcherHostname, '/launcher/app')}
                   </div>
                 </div>
               )}

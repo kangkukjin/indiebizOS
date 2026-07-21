@@ -81,6 +81,8 @@ export function SettingsDialog({
   // 오리진 호스트(=이 몸의 얼굴)에서 파생된 주소인지 / 어느 프로바이더인지 — 주소 안내 문구용
   const [originHost, setOriginHost] = useState('');
   const [tunnelProvider, setTunnelProvider] = useState('');
+  // 지금 열려 있는 주소 전부 — 얼굴 전환이 반대쪽을 닫지 않아 여럿일 수 있다
+  const [openHosts, setOpenHosts] = useState<Array<{ host: string; provider: string; official: boolean }>>([]);
 
   // World Pulse 설정 상태
   const [worldConfig, setWorldConfig] = useState<any>(null);
@@ -109,6 +111,7 @@ export function SettingsDialog({
       setOriginHost(data.origin_host || '');
       // 얼굴 축(origin_provider)을 쓴다 — data.provider 는 프로세스 축이라 어긋날 수 있다
       setTunnelProvider(data.origin_provider || data.provider || '');
+      setOpenHosts(Array.isArray(data.open_hosts) ? data.open_hosts : []);
     }
   }, []);
   useRetryingLoad(loadTunnelHostnames, { enabled: show });
@@ -781,6 +784,7 @@ export function SettingsDialog({
               launcherHostname={launcherHostname}
               originHost={originHost}
               tunnelProvider={tunnelProvider}
+              openHosts={openHosts}
             />
           )}
 

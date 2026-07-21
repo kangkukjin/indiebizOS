@@ -101,6 +101,61 @@ def _fmt_unix(ts) -> str:
         return ""
 
 
+# --- 숨긴 DM 상대(대화 숨김) — "이웃을 지워도 대화가 부활"의 봉합.
+#     릴레이가 DM의 진실원이라 이웃(business.db)을 지워도 dms.db 캐시가 재시작마다
+#     그 npub 를 '쪽지' 대화로 되살린다. 숨김={hex: hidden_at}. 숨긴 시각 이후의
+#     '새' 메시지가 오면 다시 보인다(놓침 방지) — 과거 글 재수신은 조용.
+_HIDDEN_DM_PATH = Path(__file__).resolve().parents[4] / "hidden_dm_peers.json"
+
+
+def _load_hidden_dm() -> dict:
+    try:
+        return {str(k): float(v)
+                for k, v in json.loads(_HIDDEN_DM_PATH.read_text(encoding="utf-8")).items()}
+    except Exception:
+        return {}
+
+
+def _hide_dm_peer(hex_or_npub: str) -> None:
+    h = _npub_to_hex(hex_or_npub)
+    if not h:
+        return
+    import time as _t
+    hidden = _load_hidden_dm()
+    hidden[h] = _t.time()
+    try:
+        _HIDDEN_DM_PATH.write_text(json.dumps(hidden, ensure_ascii=False, indent=1), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _warehouse_score_of(contacts) -> int:
+    """이웃의 창고점수(0~3) — 창고 연락처(contact_type='warehouse') url 들의 점수 최대값.
+    점수 저장소는 warehouse_feed.db(scores, 키=창고 url) — 메신저 즐겨찾기(neighbors.favorite
+    boolean)와 별개 축이다(창고점수=내가 그 창고에 주는 평가)."""
+    urls = [c.get("contact_value") for c in (contacts or [])
+            if c.get("contact_type") == "warehouse" and c.get("contact_value")]
+    if not urls:
+        return 0
+    try:
+        import warehouse_feed as wf
+        scores = wf.get_scores_map()
+        return max(int(scores.get(wf.normalize_base(u)) or 0) for u in urls)
+    except Exception:
+        return 0
+
+
+def _set_warehouse_score(bm, neighbor_id: int, score: int) -> None:
+    """이웃의 모든 창고 연락처에 창고점수 저장 — 창고 없는 이웃이면 조용히 무시."""
+    try:
+        import warehouse_feed as wf
+        for c in bm.get_contacts(neighbor_id) or []:
+            if c.get("contact_type") == "warehouse" and c.get("contact_value"):
+                wf.set_score(c["contact_value"], score)
+    except Exception:
+        pass
+
+
 def _badge(is_nb, level, rating) -> str:
     """대화/이웃 배지 — 이웃이면 'L{레벨}'(+평점), DM이면 '쪽지'. (이웃관리 창의 레벨 태그처럼 항상 표시)"""
     if not is_nb:
@@ -208,6 +263,8 @@ def _msg_thread(bm, tool_input: dict) -> str:
     return json.dumps({
         "name": name, "channel": channel or "nostr", "to": to,
         "items": items,
+        # 쪽지(비이웃) 삭제 버튼이 대화 숨김으로 동작하도록 상대 npub 를 동봉
+        "pubkey": (_hex_to_npub(target_hex) if target_hex else (pubkey or "")),
         "neighbor_id": (nb.get("id") if nb else (0 if not has_neighbor else neighbor_id)),
         "info_level": nb.get("info_level", 0) if nb else 0,
         "rating": nb.get("rating", 0) if nb else 0,
@@ -215,6 +272,7 @@ def _msg_thread(bm, tool_input: dict) -> str:
         "info_share": nb.get("info_share", 0) if nb else 0,
         "additional_info": nb.get("additional_info") or "" if nb else "",
         "business_doc": nb.get("business_doc") or "" if nb else "",
+        "warehouse_score": _warehouse_score_of(contacts),  # 창고점수(0~3) — 정보 탭 select용
         "is_neighbor": bool(nb),
         "badge": _badge(bool(nb), nb.get("info_level", 0) if nb else 0, nb.get("rating", 0) if nb else 0),
         "contacts": contacts,
@@ -270,6 +328,7 @@ def _msg_inbox(bm, tool_input: dict) -> str:
     ind = _indienet() if level_int is None else None
     if ind:
         try:
+            hidden = _load_hidden_dm()
             groups = {}
             for d in ind._get_cached_dms(limit=500):
                 h = d.get("from", "")
@@ -281,6 +340,9 @@ def _msg_inbox(bm, tool_input: dict) -> str:
                 if g["last"] is None or (d.get("created_at") or 0) > (g["last"].get("created_at") or 0):
                     g["last"] = d
             for h, g in groups.items():
+                # 숨긴 상대 — 숨긴 시각 이후의 새 메시지가 없으면 목록에서 제외
+                if h in hidden and float((g["last"] or {}).get("created_at") or 0) <= hidden[h]:
+                    continue
                 npub = _hex_to_npub(h)
                 if search and search.lower() not in npub.lower():
                     continue  # 검색어가 있으면 npub 매칭만
@@ -338,6 +400,8 @@ def _nb_save(bm, ti: dict) -> str:
         nb = bm.update_neighbor(nid, **fields)
         if npub:
             _ensure_nostr_contact(bm, nid, npub)
+        if ti.get("warehouse_score") is not None:
+            _set_warehouse_score(bm, nid, _int_or(ti.get("warehouse_score"), 0))
         return _ok({"neighbor": nb}, "이웃 정보를 저장했습니다.")
     # 승격 멱등 가드 — 같은 npub 이 이미 이웃이면 그대로 반환
     if npub:
@@ -366,11 +430,20 @@ def _ensure_nostr_contact(bm, neighbor_id: int, npub: str):
 
 
 def _nb_delete(bm, ti: dict) -> str:
+    """이웃 삭제 — nostr 대화(DM 캐시)도 함께 숨긴다(안 숨기면 릴레이 캐시가
+    재시작마다 '쪽지'로 부활). id 없이 pubkey(npub)만 오면 = 비이웃 쪽지 상대 → 대화 숨김."""
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
     if not nid:
+        pk = (ti.get("pubkey") or "").strip()
+        if pk.startswith("npub"):
+            _hide_dm_peer(pk)
+            return _ok({}, "쪽지 상대의 대화를 숨겼습니다 — 새 메시지가 오면 다시 보입니다.")
         return _err("id(neighbor_id)가 필요합니다.")
+    for c in bm.get_contacts(nid) or []:
+        if c.get("contact_type") == "nostr" and c.get("contact_value"):
+            _hide_dm_peer(c["contact_value"])
     bm.delete_neighbor(nid)
-    return _ok({"deleted": nid}, "이웃을 삭제했습니다.")
+    return _ok({"deleted": nid}, "이웃을 삭제했습니다 (nostr 대화도 숨김).")
 
 
 def _nb_favorite(bm, ti: dict) -> str:

@@ -5,7 +5,7 @@
  * 파일마다 버튼 4개짜리 행이 만들던 소음 제거. "외 N개"는 인앱 파인더(NeighborBrowser)로.
  */
 import { useState } from 'react';
-import { MessageCircle, Heart, Repeat2, Folder } from 'lucide-react';
+import { MessageCircle, Heart, Repeat2, Folder, Star } from 'lucide-react';
 import { fmtBytes, fileIcon, openExternalUrl, IMG_EXT, fmtWhen } from './shared';
 import type { WfCard, WfFeedItem } from './shared';
 
@@ -93,8 +93,11 @@ const KIND_BADGE: Record<string, [string, string]> = {
   seed: ['첫 둘러보기', 'bg-sky-50 text-sky-600'],
 };
 
-export function FeedCard({ c, onLike, onRetweet, onOpenBrowser, onDm }: {
+export function FeedCard({ c, score, onScore, onLike, onRetweet, onOpenBrowser, onDm }: {
   c: WfCard;
+  /** 이 창고에 내가 준 창고점수(0~3) — 칩 줄 은퇴 후 카드가 점수의 집 */
+  score: number;
+  onScore: (whUrl: string, score: number) => void;
   onOpenBrowser: (whUrl: string, path?: string) => void;
   /** 이 이웃에게 nostr DM — 메신저 창을 그 이웃의 대화로 딥링크 */
   onDm: (whUrl: string) => void;
@@ -108,6 +111,15 @@ export function FeedCard({ c, onLike, onRetweet, onOpenBrowser, onDm }: {
   return (
     <li className="rounded-xl bg-white border border-stone-200 p-3 space-y-2">
       <div className="flex items-center gap-2 min-w-0">
+        {/* 창고점수(0~3) — 클릭 순환. 내 평가 축이라 상대에겐 안 보인다 */}
+        <button
+          className="flex items-center gap-0.5 shrink-0"
+          title={`창고점수 ${score} — 누르면 0→1→2→3 순환 (내 평가, 상대에겐 안 보여요)`}
+          onClick={() => onScore(c.wh_url, (score + 1) % 4)}
+        >
+          <Star className={`w-4 h-4 ${score > 0 ? 'text-[#D97706] fill-current' : 'text-stone-300 hover:text-[#D97706]'}`} />
+          {score > 0 && <span className="text-[11px] font-semibold text-[#D97706]">{score}</span>}
+        </button>
         {/* 창고 제목 우선 — 이웃 이름이 npub 주소일 때도 사람이 읽는 이름이 앞선다 */}
         <button
           className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"

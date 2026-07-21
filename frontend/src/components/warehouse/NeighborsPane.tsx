@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Package, RefreshCw, Trash2, ExternalLink, Search, Plus, Pencil, Rss, Repeat2,
-  Star, Heart, KeyRound,
+  Star, Heart, KeyRound, MessageCircle,
 } from 'lucide-react';
 import { API, fmtBytes, fileIcon, openExternalUrl, openWarehouseInBrowser } from './shared';
 import type { WfNeighbor, WfFeedItem, WfCard } from './shared';
@@ -286,88 +286,20 @@ export function NeighborsPane() {
     return () => clearTimeout(t);
   }, [q, sort, sub, doSearch]);
 
-  // 즐겨찾기 탭 = 점수 준 창고(점수 높은 순 — 정렬이 곧 점수의 첫 쓸모)
-  const favorites = neighbors.filter((n) => (n.score ?? 0) > 0)
-    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  // 창고 탭 = 등기부(등록된 전체 창고) — 창고점수 내림차순(정렬이 곧 점수의 첫 쓸모).
+  // 칩 줄 은퇴 후 "피드에 안 나오는 창고"에 닿는 유일한 목록이라 점수 0도 다 보인다.
+  const favorites = neighbors.slice()
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || a.name.localeCompare(b.name));
   // 창고별 최근 파일 — 피드 카드에 이미 있는 것에서 뽑는다(추가 조회 없음).
   const recentOf = (whUrl: string) =>
     feed.filter((c) => c.wh_url === whUrl).flatMap((c) => c.items).slice(0, 3);
 
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      {/* 이웃 카드 줄 */}
+      {/* 헤더 — 등록·둘러보기·섹션 탭만. 이웃별 관리(점수·메모·로그인·떼기)는 칩 줄 대신
+          피드 카드와 인앱 파인더 헤더로 이사(이웃 100명이어도 헤더가 안 터진다). */}
       <div className="px-5 py-3 border-b border-stone-200 bg-white/60 shrink-0 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          {neighbors.map((n) => (
-            <div key={n.contact_id} className="group flex items-center gap-2 pl-2 pr-1.5 py-1.5 rounded-xl bg-white border border-stone-200 text-xs">
-              <button
-                className={`flex items-center gap-0.5 p-0.5 rounded ${(n.score ?? 0) > 0 ? 'text-[#D97706]' : 'text-stone-300 hover:text-[#D97706]'}`}
-                title={`즐겨찾기 점수 ${n.score ?? 0} — 누르면 0→1→2→3 순환. 점수는 피드 필터·즐겨찾기 탭이 씁니다 (내 평가라 상대에겐 안 보여요)`}
-                onClick={() => setScore(n.warehouse_url, ((n.score ?? 0) + 1) % 4)}
-              >
-                <Star className={`w-3.5 h-3.5 ${(n.score ?? 0) > 0 ? 'fill-current' : ''}`} />
-                {(n.score ?? 0) > 0 && <span className="text-[10px] font-semibold">{n.score}</span>}
-              </button>
-              <button
-                className="font-medium text-stone-700 hover:text-[#D97706] hover:underline"
-                title={`${n.title || n.name} 창고를 앱 안에서 둘러보기\n${n.warehouse_url}`}
-                onClick={() => setBrowse({ url: n.warehouse_url, name: n.title || n.name })}
-              >
-                {n.name}
-              </button>
-              <span className={`px-1.5 rounded-full ${n.ok === 0 ? 'bg-red-50 text-red-500' : 'bg-stone-100 text-stone-500'}`}>
-                {n.ok === 0 ? '연결 안 됨' : `${n.file_count ?? '?'}개`}
-              </span>
-              {n.adapter && n.adapter !== 'native' && (
-                <span
-                  className="px-1.5 rounded-full bg-sky-50 text-sky-600"
-                  title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다"
-                >
-                  {n.adapter_label || n.adapter}
-                </span>
-              )}
-              {/* 회원 로그인 상태 — 계정으로 폴링하면 승급받은 레벨의 파일까지 피드에 들어온다 */}
-              {n.login_user && n.login_ok === 1 && (
-                <span
-                  className="px-1.5 rounded-full bg-emerald-50 text-emerald-600"
-                  title={`'${n.login_user}' 계정으로 폴링 중 — 이 창고가 나에게 준 레벨`}
-                >
-                  레벨 {n.viewer_level ?? '?'}
-                </span>
-              )}
-              {n.login_user && n.login_ok === 0 && (
-                <span
-                  className="px-1.5 rounded-full bg-red-50 text-red-500"
-                  title={`로그인 실패: ${n.login_error || '원인 미상'} — 열쇠 버튼으로 다시 등록하세요`}
-                >
-                  로그인 실패
-                </span>
-              )}
-              {(!n.adapter || n.adapter === 'native') && (
-                <button
-                  className={`p-1 rounded opacity-0 group-hover:opacity-100 ${n.login_user ? 'text-emerald-500 hover:text-emerald-600' : 'text-stone-300 hover:text-[#D97706]'}`}
-                  title="이 창고에 내가 가입한 계정 등록 — 폴러가 로그인해 승급받은 레벨로 읽어요"
-                  onClick={() => setLoginEdit({ url: n.warehouse_url, name: n.name, user: n.login_user || '', pw: '' })}
-                >
-                  <KeyRound className="w-3 h-3" />
-                </button>
-              )}
-              <button
-                className="p-1 rounded text-stone-300 hover:text-[#D97706] opacity-0 group-hover:opacity-100"
-                title={n.warehouse_memo ? `창고 메모: ${n.warehouse_memo}` : '창고 메모 쓰기'}
-                onClick={() => setMemoEdit({ id: n.neighbor_id, text: n.warehouse_memo })}
-              >
-                <Pencil className="w-3 h-3" />
-              </button>
-              <button
-                className="p-1 rounded text-stone-300 hover:text-red-500 opacity-0 group-hover:opacity-100"
-                title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)"
-                onClick={() => removeNeighbor(n.contact_id)}
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
           <button
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-dashed border-stone-300 text-xs text-stone-500 hover:border-[#D97706] hover:text-[#D97706]"
             onClick={() => setAddOpen((v) => !v)}
@@ -489,9 +421,9 @@ export function NeighborsPane() {
           </div>
         )}
 
-        {/* 섹션 — 피드(변화) | 검색(현재) | 즐겨찾기(자주 가는 창고). */}
+        {/* 섹션 — 피드(변화) | 검색(현재) | 창고(등기부 — 등록된 전체 창고, 창고점수 내림차순). */}
         <div className="flex items-center gap-1">
-          {([['feed', '피드', Rss], ['search', '검색', Search], ['favorites', '즐겨찾기', Star]] as const).map(([key, label, SubIcon]) => (
+          {([['feed', '피드', Rss], ['search', '검색', Search], ['favorites', '창고', Package]] as const).map(([key, label, SubIcon]) => (
             <button
               key={key}
               onClick={() => { setSub(key); setBrowse(null); }}
@@ -521,9 +453,9 @@ export function NeighborsPane() {
                 }`}
                 value={feedMinScore}
                 onChange={(e) => setFeedMinScore(Number(e.target.value))}
-                title="내가 준 즐겨찾기 점수(이상)의 창고만 — 점수는 이웃 칩의 별로 줍니다"
+                title="내가 준 창고점수(이상)의 창고만 — 점수는 카드·파인더의 별로 줍니다"
               >
-                <option value={0}>즐겨찾기 무관</option>
+                <option value={0}>창고점수 무관</option>
                 {[1, 2, 3].map((s) => <option key={s} value={s}>★{s} 이상</option>)}
               </select>
             </div>
@@ -565,6 +497,9 @@ export function NeighborsPane() {
           url={browse.url}
           name={browse.name}
           initialPath={browse.path}
+          score={neighbors.find((n) => n.warehouse_url === browse.url)?.score ?? 0}
+          onScore={setScore}
+          onDm={openDm}
           onBack={() => setBrowse(null)}
           onLike={doLike}
           onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
@@ -585,28 +520,24 @@ export function NeighborsPane() {
             <p className="text-xs">등록하면 창고의 변화가 여기로 흘러옵니다</p>
           </div>
         ) : sub === 'favorites' ? (
-          favorites.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-stone-400 gap-2">
-              <Star className="w-10 h-10" />
-              <p className="text-sm">즐겨찾기한 창고가 없어요</p>
-              <p className="text-xs">위 이웃 칩의 ☆ 를 눌러 점수(1~3)를 주면 그 창고가 여기 모입니다</p>
-            </div>
-          ) : (
+          (
             <ul className="px-5 py-3 space-y-2">
               {favorites.map((n) => {
                 const recent = recentOf(n.warehouse_url);
                 return (
                   <li key={n.contact_id} className="px-4 py-3 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
                     <div className="flex items-center gap-2">
-                      {/* 점수만큼 별 — 클릭=순환(3 다음은 1, 해제는 오른쪽 버튼) */}
+                      {/* 창고점수 별 — 클릭=0→1→2→3 순환. 점수 0이면 빈 별 하나(줄 자리). */}
                       <button
                         className="flex items-center shrink-0"
-                        title={`즐겨찾기 점수 ${n.score ?? 0} — 누르면 순환`}
-                        onClick={() => setScore(n.warehouse_url, ((n.score ?? 0) % 3) + 1)}
+                        title={`창고점수 ${n.score ?? 0} — 누르면 0→1→2→3 순환 (내 평가, 상대에겐 안 보여요)`}
+                        onClick={() => setScore(n.warehouse_url, ((n.score ?? 0) + 1) % 4)}
                       >
-                        {Array.from({ length: n.score ?? 0 }, (_, k) => (
-                          <Star key={k} className="w-4 h-4 text-[#D97706] fill-current" />
-                        ))}
+                        {(n.score ?? 0) > 0
+                          ? Array.from({ length: n.score ?? 0 }, (_, k) => (
+                              <Star key={k} className="w-4 h-4 text-[#D97706] fill-current" />
+                            ))
+                          : <Star className="w-4 h-4 text-stone-300 hover:text-[#D97706]" />}
                       </button>
                       <button
                         className="text-sm font-medium text-stone-800 hover:text-[#D97706] hover:underline truncate"
@@ -622,20 +553,62 @@ export function NeighborsPane() {
                         <span className="text-[11px] px-1.5 rounded-full bg-stone-100 text-stone-500 shrink-0"
                               title="내 레벨 위에 더 있다는 신호 — 제목은 안 보입니다">더 있음</span>
                       )}
+                      {/* 회원 로그인·어댑터 상태 배지 — 칩 줄에서 이사 */}
+                      {n.adapter && n.adapter !== 'native' && (
+                        <span className="text-[11px] px-1.5 rounded-full bg-sky-50 text-sky-600 shrink-0"
+                              title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다">
+                          {n.adapter_label || n.adapter}
+                        </span>
+                      )}
+                      {n.login_user && n.login_ok === 1 && (
+                        <span className="text-[11px] px-1.5 rounded-full bg-emerald-50 text-emerald-600 shrink-0"
+                              title={`'${n.login_user}' 계정으로 폴링 중 — 이 창고가 나에게 준 레벨`}>
+                          레벨 {n.viewer_level ?? '?'}
+                        </span>
+                      )}
+                      {n.login_user && n.login_ok === 0 && (
+                        <span className="text-[11px] px-1.5 rounded-full bg-red-50 text-red-500 shrink-0"
+                              title={`로그인 실패: ${n.login_error || '원인 미상'} — 열쇠 버튼으로 다시 등록하세요`}>
+                          로그인 실패
+                        </span>
+                      )}
                       <div className="flex-1" />
                       <button
                         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
-                        title="창고 열기"
+                        title="이 이웃에게 DM — 메신저로 대화"
+                        onClick={() => openDm(n.warehouse_url)}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
+                        title={n.warehouse_memo ? `창고 메모: ${n.warehouse_memo}` : '창고 메모 쓰기'}
+                        onClick={() => setMemoEdit({ id: n.neighbor_id, text: n.warehouse_memo })}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      {(!n.adapter || n.adapter === 'native') && (
+                        <button
+                          className={`p-1.5 rounded-lg hover:bg-amber-50 shrink-0 ${n.login_user ? 'text-emerald-500 hover:text-emerald-600' : 'text-stone-400 hover:text-[#D97706]'}`}
+                          title="이 창고에 내가 가입한 계정 등록 — 폴러가 로그인해 승급받은 레벨로 읽어요"
+                          onClick={() => setLoginEdit({ url: n.warehouse_url, name: n.name, user: n.login_user || '', pw: '' })}
+                        >
+                          <KeyRound className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
+                        title="브라우저로 창고 열기"
                         onClick={() => openWarehouseInBrowser(n.warehouse_url + '/')}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>
                       <button
-                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
-                        title="즐겨찾기 해제 (점수 0)"
-                        onClick={() => setScore(n.warehouse_url, 0)}
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 shrink-0"
+                        title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)"
+                        onClick={() => { if (window.confirm(`'${n.name}' 창고를 등기부에서 뗄까요? (이웃은 남고 창고 연락처만 지워집니다)`)) removeNeighbor(n.contact_id); }}
                       >
-                        <Star className="w-4 h-4 fill-current" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -707,6 +680,8 @@ export function NeighborsPane() {
               <FeedCard
                 key={`c:${c.wh_url}:${c.seen_at}:${c.kind}`}
                 c={c}
+                score={neighbors.find((n) => n.warehouse_url === c.wh_url)?.score ?? 0}
+                onScore={setScore}
                 onRetweet={(picked) => setRetweetPick({ item: picked, level: 0, mode: 'link' })}
                 onLike={doLike}
                 onDm={openDm}

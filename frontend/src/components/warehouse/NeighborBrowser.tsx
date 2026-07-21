@@ -6,7 +6,7 @@
  * 클릭 한 번 = 폴더 진입/파일 열기(브라우저 관례 — 편집이 없어 선택이 필요 없다).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, ChevronRight, ExternalLink, Folder, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ExternalLink, Folder, RefreshCw, Star, MessageCircle } from 'lucide-react';
 import { API, fmtBytes, fileIcon, openExternalUrl, openWarehouseInBrowser, IMG_EXT } from './shared';
 import type { WfBrowseDir, WfFeedItem } from './shared';
 import { ChipActions } from './FeedCard';
@@ -16,12 +16,16 @@ interface Props {
   name: string;
   /** 피드 카드의 폴더 칩에서 들어올 때 — 그 폴더를 바로 연다 */
   initialPath?: string;
+  /** 이 창고에 내가 준 창고점수(0~3) — 파인더에서도 바로 조정 */
+  score: number;
+  onScore: (url: string, score: number) => void;
+  onDm: (url: string) => void;
   onBack: () => void;
   onLike: (f: WfFeedItem) => Promise<void> | void;
   onRetweet: (f: WfFeedItem) => void;
 }
 
-export function NeighborBrowser({ url, name, initialPath, onBack, onLike, onRetweet }: Props) {
+export function NeighborBrowser({ url, name, initialPath, score, onScore, onDm, onBack, onLike, onRetweet }: Props) {
   const [path, setPath] = useState(initialPath || '');
   const [dirs, setDirs] = useState<WfBrowseDir[]>([]);
   const [files, setFiles] = useState<WfFeedItem[]>([]);
@@ -78,6 +82,15 @@ export function NeighborBrowser({ url, name, initialPath, onBack, onLike, onRetw
         >
           <ArrowLeft className="w-3.5 h-3.5" /> 피드
         </button>
+        {/* 창고점수(0~3) — 파인더에서도 바로 조정 */}
+        <button
+          className="flex items-center gap-0.5 shrink-0"
+          title={`창고점수 ${score} — 누르면 0→1→2→3 순환 (내 평가, 상대에겐 안 보여요)`}
+          onClick={() => onScore(url, (score + 1) % 4)}
+        >
+          <Star className={`w-4 h-4 ${score > 0 ? 'text-[#D97706] fill-current' : 'text-stone-300 hover:text-[#D97706]'}`} />
+          {score > 0 && <span className="text-[11px] font-semibold text-[#D97706]">{score}</span>}
+        </button>
         <div className="flex items-center gap-1 min-w-0 flex-1">
           <button
             className={`font-medium truncate ${path ? 'text-stone-500 hover:text-[#D97706] hover:underline' : 'text-stone-800'}`}
@@ -98,6 +111,13 @@ export function NeighborBrowser({ url, name, initialPath, onBack, onLike, onRetw
           ))}
         </div>
         <span className="text-[11px] text-stone-400 shrink-0">파일 {total}개</span>
+        <button
+          className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
+          title="이 이웃에게 DM — 메신저로 대화"
+          onClick={() => onDm(url)}
+        >
+          <MessageCircle className="w-4 h-4" />
+        </button>
         <button
           className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
           title="이 창고만 지금 둘러보기 (스냅샷 새로고침)"

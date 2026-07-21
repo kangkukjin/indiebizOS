@@ -465,6 +465,19 @@ nodes:
                       label: ★4
                     - value: 5
                       label: ★5
+                  - key: warehouse_score
+                    label: 창고점수 (창고 등록된 이웃만)
+                    type: select
+                    value: '{warehouse_score}'
+                    options:
+                    - value: 0
+                      label: 점수 없음
+                    - value: 1
+                      label: ★1
+                    - value: 2
+                      label: ★2
+                    - value: 3
+                      label: ★3
                   - key: info_share
                     label: 정보 공유 동의
                     type: toggle
@@ -477,15 +490,15 @@ nodes:
                     label: 비즈니스 문서(공개)
                     type: textarea
                     value: '{business_doc}'
-                  action: '[others:neighbor]{op: "save", id: "{neighbor_id}", name: "$name", info_level: "$info_level", rating: "$rating", info_share: "$info_share", additional_info: "$additional_info", business_doc: "$business_doc"}'
+                  action: '[others:neighbor]{op: "save", id: "{neighbor_id}", name: "$name", info_level: "$info_level", rating: "$rating", warehouse_score: "$warehouse_score", info_share: "$info_share", additional_info: "$additional_info", business_doc: "$business_doc"}'
                   button: 저장
                   actions:
                   - label: ⭐ 즐겨찾기 토글
                     action: '[others:neighbor]{op: "favorite", id: "{neighbor_id}"}'
-                  - label: 이웃 삭제
-                    action: '[others:neighbor]{op: "delete", id: "{neighbor_id}"}'
+                  - label: 이웃 삭제 · 대화 숨김
+                    action: '[others:neighbor]{op: "delete", id: "{neighbor_id}", pubkey: "{pubkey}"}'
                     style: danger
-                    confirm: 이 이웃을 삭제할까요? 대화·연락처도 함께 사라집니다.
+                    confirm: 삭제할까요? 이웃이면 연락처·대화가 사라지고, 이웃 아닌 쪽지 상대면 대화가 숨겨집니다(새 메시지가 오면 다시 보여요).
                     back: true
                 - type: editable_list
                   from: contacts
@@ -531,7 +544,7 @@ nodes:
         returns: items
         fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
-        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id 필수) / favorite(id 필수, 토글).
+        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글).
         group: neighbor
         target_key: op
         router: handler
@@ -542,7 +555,7 @@ nodes:
             list: 이웃 목록 (search/info_level 필터)
             detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
             save: 이웃 생성(id 없음)/수정(id 있음)
-            delete: 이웃 삭제
+            delete: 이웃 삭제 (비이웃 쪽지 상대는 대화 숨김)
             favorite: 즐겨찾기 토글
         implementation: business 패키지 neighbor_op — business_manager.get_neighbors/get_neighbor/create_neighbor/update_neighbor/delete_neighbor.
         keywords:

@@ -1404,6 +1404,84 @@ async def music_stream(request: Request, video_id: str):
     return await api_music_stream(request, video_id, STREAM_CHUNK_SIZE)
 
 
+# ============ 홈 화면 설치 (IBFind) ============
+# 원격런처(/launcher/*)와 같은 3종 세트 — 매니페스트·통과 전용 서비스워커·아이콘.
+# 여기 라우트에는 @require_auth 를 걸지 않는다: 설치 판단은 로그인보다 먼저 일어나고,
+# 정적 자산이라 새는 정보가 없다(아이콘·앱 이름뿐). /nas/* 는 이미 자체 세션 인증이라
+# is_public_remote_path 가 통째로 위임하고 있어 추가 등록도 불필요하다.
+# ★'매니페스트'는 웹 표준을 뜻한다 — 계기/창고 매니페스트와 다른 물건.
+
+_FINDER_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "finder")
+
+
+@router.get("/manifest.webmanifest")
+async def finder_manifest():
+    """웹 앱 매니페스트 — IBFind 아이콘·이름·창 모양 선언."""
+    from fastapi.responses import JSONResponse
+    return JSONResponse({
+        "name": "IBFind — Remote Finder",
+        "short_name": "IBFind",
+        "description": "내 파일을 어디서나 — 원격 파인더",
+        "start_url": "/nas/app",
+        "scope": "/nas/",
+        "display": "standalone",
+        "background_color": "#1a1a2e",
+        "theme_color": "#1a1a2e",
+        "lang": "ko",
+        "icons": [
+            {"src": "/nas/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/nas/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            {"src": "/nas/icon-maskable-512.png", "sizes": "512x512", "type": "image/png",
+             "purpose": "maskable"},
+        ],
+    }, media_type="application/manifest+json")
+
+
+@router.get("/sw.js")
+async def finder_service_worker():
+    """서비스워커 — 캐시하지 않는다(설치 판정 조건만 충족).
+
+    파인더는 세션 쿠키로 인증하고 파일 목록·미디어를 실시간으로 긁는 표면이라
+    캐싱하면 남의 세션 결과나 낡은 목록이 남는다. 요청은 전부 네트워크로 흘린다.
+    """
+    js = (
+        "self.addEventListener('install', function(e){ self.skipWaiting(); });\n"
+        "self.addEventListener('activate', function(e){ e.waitUntil(self.clients.claim()); });\n"
+        "// 통과만 한다 — 캐시 없음(세션 인증·실시간 목록)\n"
+        "self.addEventListener('fetch', function(e){});\n"
+    )
+    return Response(content=js, media_type="application/javascript",
+                    headers={"Cache-Control": "no-cache"})
+
+
+@router.get("/icon-192.png")
+async def finder_icon_192():
+    return _finder_asset("icon-192.png")
+
+
+@router.get("/icon-512.png")
+async def finder_icon_512():
+    return _finder_asset("icon-512.png")
+
+
+@router.get("/icon-maskable-512.png")
+async def finder_icon_maskable():
+    return _finder_asset("icon-maskable-512.png")
+
+
+@router.get("/apple-touch-icon.png")
+async def finder_apple_icon():
+    return _finder_asset("apple-touch-icon.png")
+
+
+def _finder_asset(name: str):
+    p = os.path.join(_FINDER_ASSETS, name)
+    if not os.path.exists(p):
+        return HTMLResponse(content="not found", status_code=404)
+    return FileResponse(p, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
 # ============ 웹앱 서빙 ============
 
 @router.get("/app", response_class=HTMLResponse)

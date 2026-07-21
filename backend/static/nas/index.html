@@ -6,7 +6,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1a1a2e">
-    <title>Remote Finder</title>
+    <title>IBFind — Remote Finder</title>
+    <!-- 홈 화면 설치(안드로이드·아이폰·태블릿 공통). 서비스워커 등록은 문서 끝. -->
+    <link rel="manifest" href="/nas/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/nas/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="IBFind">
     <style>
         :root {
             --bg: #0f0f1a;
@@ -822,6 +826,14 @@ function esc(s) { const el=document.createElement('span'); el.textContent=s||'';
 
 // ==================== INIT ====================
 checkAuth();
+
+/* 홈 화면 설치: 서비스워커 등록 — 캐시하지 않는 통과 전용(설치 판정 조건만 충족).
+   보안 컨텍스트(https 또는 localhost)에서만 등록된다. */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/nas/sw.js', { scope: '/nas/' }).catch(function (e) {});
+    });
+}
 </script>
 </body>
 </html>

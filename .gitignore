@@ -320,9 +320,10 @@ data/*.lock
 data/warehouse.json
 backend/*.log
 
-# cloudflared 터널 런타임 로그 (5MB 1세대 로테이션 — api_tunnel.py)
-data/cloudflared.log
-data/cloudflared.log.1
+# 런타임 로그 일반 (백엔드 재시작 로그 등 — 실행 흔적이지 소스가 아니다).
+# cloudflared 터널 로그(api_tunnel.py, 5MB 1세대 로테이션)도 여기 포함된다.
+data/*.log
+data/*.log.1
 
 # 공개파일 Worker 배포 설정 — 몸마다 다른 값(Worker 이름·ORIGIN_BASE=이 몸의 공개 호스트).
 # 템플릿은 wrangler.toml.example 이 추적된다.

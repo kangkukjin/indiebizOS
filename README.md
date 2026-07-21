@@ -83,7 +83,7 @@ You say what you want. *How* you say it depends only on how often you do it:
 
 One system, one person, from a one-off question to a superapp you authored just by using it. It starts minimal and grows only what you ask for; an AI agent is the blacksmith who keeps forging it to fit you.
 
-**New here?** → [What it actually is](#the-one-idea) · [See it on a phone](#the-phone-is-where-you-see-it) · [Install in 3 lines](#getting-started-recommended)
+**New here?** → [What it actually is](#the-one-idea) · [See it on a phone](#it-arrives-as-a-link-and-installs-anywhere) · [Install in 3 lines](#getting-started-recommended)
 
 ---
 
@@ -134,9 +134,15 @@ A single person doing real work needs both — and a third thing between them �
 
 No single *task* needs all three; a single *life* does. The market doesn't sell the continuum not because it's unwanted, but because it only collapses into one product **at personal scale**. In a company the three stages split across three roles — developers generate, ops run automation, users tap apps — three people, so three products. Put all of it in *one* pair of hands and it has to be one system. **Single-user isn't a limitation here; it's the condition that makes the spectrum coherent.** That is what "IndieBiz" means.
 
-### The phone is where you see it
+### It arrives as a link, and installs anywhere
 
-The clearest demonstration is IndieBiz OS on a phone, where it behaves like a **superapp you authored by using it** — and where the alternatives can't follow. A phone is a sealed *consumption* device: no build toolchain, no server, no way to author-and-run your own app. A code-generation agent's output **strands** there — an app you can't run. IndieBiz OS's "app" is not a compiled binary but a *manifest over the IBL the runtime already speaks*, so **authoring and running collapse into one device and one moment — no store, no build, no deploy.** (How a phone runs the engine at all is Core #2.)
+The clearest demonstration is IndieBiz OS on the device already in your hand — and you get it there with **a link, not an install**. The remote launcher serves the *same four surfaces the desktop has* — autopilot, cockpit, apps, and your shared warehouse — to any browser: Android, iPhone, iPad, an old tablet propped up in the kitchen, a laptop you borrowed for the afternoon.
+
+Then, if you want, it stops looking like a browser tab. The launcher ships a web app manifest, so **"add to home screen" makes it an app** — its own icon, its own name, no address bar, its own entry in the app switcher. Two taps on Android or iOS. Nothing built per platform, nothing signed, nothing approved by a store, and nothing to update. The remote finder installs the same way as a second app, **IBFind**, for reaching your files. Neither one caches: both are live views of a machine you own, so their service workers pass every request straight through.
+
+That matters because a phone is a sealed *consumption* device: no build toolchain, no server, no way to author-and-run your own app. A code-generation agent's output **strands** there — an app you cannot run. IndieBiz OS's "app" is not a compiled binary but a *declaration over the IBL the runtime already speaks* — declare an instrument once and it renders on every surface at once, and one of those surfaces is a browser on any device you own. **Authoring and running collapse into one moment, and the hardware stops mattering.**
+
+And the browser is a **client, not a screen**. Files cross both ways — upload from the gallery, download to the device. Audio plays out of the thing in your hand, not out of the machine that fetched the stream. The clipboard reaches your PC in one tap. The one honest condition is that your own machine has to be awake: this is your system reaching you, not a cloud renting it back to you.
 
 The closest existing thing — Apple Shortcuts, Tasker — proves the demand is real, but it's only the bottom of the spectrum: you still hand-author each shortcut in a fixed visual language, nothing crystallizes from *use*, and it's bound to the OS's actions, not your context. IndieBiz OS is that on-device execution **plus** an autopilot on-ramp **plus** a vocabulary that's yours. Not "like a superapp" — **the first superapp a person builds for themselves, without being a developer.**
 

@@ -40,9 +40,11 @@ function kvVal(v){ const t=String(v==null?'':v).trim();
 function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{})); }
 async function ibl(code){
   /* 포털(회원 원격 계기): 범용 /ibl/execute 대신 회원 실행 게이트로 보낸다 — 렌더러 포크 금지·매개변수화 */
+  /* surface:'web' = 보고 있는 곳이 브라우저라는 표식 — 소리·저장이 맥이 아니라 여기서 나게 한다
+     (포털은 게이트가 서버측에서 같은 표식을 붙인다). */
   const r=window.__PORTAL
     ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify({code:code})})
-    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.'})});
+    : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.',surface:'web'})});
   if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
   const data=await r.json();
   /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록 */
@@ -99,30 +101,86 @@ async function showApp(){
   try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
     IS_PHONE=(c.host==='phone-local');
     if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none';
-      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none';
-      const cm=document.getElementById('clipToMacBtn'); if(cm) cm.style.display='block'; }
+      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
   } }catch(e){}
+  /* 클립보드 '맥으로'는 두 표면 공통 — 방향은 표면이 정한다(보고 있는 기계 → 맥).
+     읽는 방법만 갈린다: 폰 네이티브=Java ClipboardManager, 원격런처=브라우저 clipboard API. */
+  const cm=document.getElementById('clipToMacBtn'); if(cm) cm.style.display='block';
   apLoad();
   loadPeer(); setInterval(loadPeer, 20000);  /* 다른 몸 연결상태 폴링(계기판) */
   loadGear();  /* 모델 기어 레버(계기판) */
 }
 
-/* ===== 폰→맥 클립보드 (폰 전용 헤더 버튼) — 데스크탑 '폰으로'의 역방향 ===== */
+/* ===== 여기→맥 클립보드 (헤더 버튼) — 데스크탑 '폰으로'의 역방향 =====
+   방향은 *표면*이 정한다: 보고 있는 기계의 클립보드를 맥으로 민다. 데스크탑 런처는
+   '폰으로'(맥→폰), 이 표면은 '맥으로'. 사용자가 방향을 고를 일이 없다(당기기 없음).
+   읽는 방법만 표면별로 갈린다:
+     - 폰 네이티브: /launcher/clip-to-mac (Java ClipboardManager — WebView 의 readText 는 불가)
+     - 원격런처(브라우저): navigator.clipboard.readText → 실패하면 붙여넣기 칸 폴백
+   놓는 쪽은 둘 다 기존 어휘 [self:output]{op:"clipboard"} — 맥 백엔드가 실행하니 맥에 박힌다. */
 let clipMacBusy=false;
+function clipMacFlash(msg){
+  const b=document.getElementById('clipToMacBtn'); if(!b) return;
+  b.textContent=msg;
+  setTimeout(()=>{ b.textContent='📋 맥으로 보내기'; clipMacBusy=false; }, 3500);
+}
 async function clipToMac(){
   if(clipMacBusy) return;
   const b=document.getElementById('clipToMacBtn'); if(!b) return;
   clipMacBusy=true;
   b.textContent='보내는 중…';
-  let msg='실패';
+  if(IS_PHONE){
+    let msg='실패';
+    try{
+      const r=await jfetch('/launcher/clip-to-mac',{method:'POST'});
+      const d=await r.json().catch(()=>({}));
+      if(d && d.success) msg='맥 도착 ✓ ('+(d.chars||0)+'자) — ⌘V 로 붙여넣으세요';
+      else msg=(d && d.error) ? d.error : '실패';
+    }catch(e){ msg='연결 실패'; }
+    clipMacFlash(msg);
+    return;
+  }
+  /* 브라우저 표면: 읽기는 권한·제스처에 걸린다(iOS 는 확인 UI, 일부 브라우저는 아예 불가)
+     → 실패·빈값이면 붙여넣기 칸으로 떨어뜨린다. 어디서든 되는 최후 경로. */
+  let text='';
+  try{ text=await navigator.clipboard.readText(); }catch(e){ text=''; }
+  if(!(text||'').trim()){ clipMacBusy=false; b.textContent='📋 맥으로 보내기'; clipPasteBox(); return; }
+  clipSendToMac(text);
+}
+async function clipSendToMac(text){
+  /* JSON.stringify = IBL 문자열 이스케이프 (따옴표·줄바꿈·중괄호·백슬래시 왕복 검증됨) */
   try{
-    const r=await jfetch('/launcher/clip-to-mac',{method:'POST'});
-    const d=await r.json().catch(()=>({}));
-    if(d && d.success) msg='맥 도착 ✓ ('+(d.chars||0)+'자) — ⌘V 로 붙여넣으세요';
-    else msg=(d && d.error) ? d.error : '실패';
-  }catch(e){ msg='연결 실패'; }
-  b.textContent=msg;
-  setTimeout(()=>{ b.textContent='📋 맥으로 보내기'; clipMacBusy=false; }, 3500);
+    const d=await ibl('[self:output]{op: "clipboard", content: '+JSON.stringify(String(text))+'}');
+    if(d && (d.copied_length || d.ok)) clipMacFlash('맥 도착 ✓ ('+(d.copied_length||String(text).length)+'자) — ⌘V 로 붙여넣으세요');
+    else clipMacFlash((d && d.error) ? d.error : '실패');
+  }catch(e){ clipMacFlash('전송 실패: '+e.message); }
+}
+/* 붙여넣기 칸 폴백 — 셸 마크업을 늘리지 않도록 필요할 때만 만든다 */
+function clipPasteBox(){
+  let ov=document.getElementById('clipPasteOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='clipPasteOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:56px 16px';
+    ov.innerHTML='<div style="background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(74,64,53,.25)">'
+      +'<div style="font-size:15px;font-weight:600;margin-bottom:6px">📋 맥으로 보내기</div>'
+      +'<div style="font-size:12px;color:var(--dim);margin-bottom:10px;line-height:1.5">브라우저가 클립보드를 직접 읽지 못했어요.<br>아래 칸을 길게 눌러 <b>붙여넣기</b> 한 뒤 보내세요.</div>'
+      +'<textarea id="clipPasteTa" rows="5" placeholder="여기에 붙여넣기" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--txt);font-size:14px;resize:vertical"></textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'
+      +'<button onclick="clipPasteClose()" style="background:var(--bg3);border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:8px 16px;font-size:14px">취소</button>'
+      +'<button onclick="clipPasteSend()" style="background:var(--acc);border:none;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:600">맥으로 보내기</button>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  const ta=document.getElementById('clipPasteTa'); if(ta){ ta.value=''; setTimeout(()=>{ try{ta.focus();}catch(e){} }, 60); }
+}
+function clipPasteClose(){ const ov=document.getElementById('clipPasteOv'); if(ov) ov.style.display='none'; }
+function clipPasteSend(){
+  const ta=document.getElementById('clipPasteTa'); const t=ta?ta.value:'';
+  if(!(t||'').trim()){ if(ta) ta.focus(); return; }
+  clipPasteClose(); clipMacBusy=true;
+  const b=document.getElementById('clipToMacBtn'); if(b) b.textContent='보내는 중…';
+  clipSendToMac(t);
 }
 
 /* ===== 다른 몸(피어) 연결상태 — 계기판 안에 표기 ===== */

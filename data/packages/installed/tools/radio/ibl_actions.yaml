@@ -99,7 +99,10 @@ nodes:
       radio:
         returns: effect
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
-        target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. stop — 파라미터 없음.
+        target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio
+          결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서)
+          / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC).
+          stop — 파라미터 없음.'
         group: media
         target_key: op
         router: handler
@@ -234,6 +237,10 @@ tool_json:
         volume:
           type: integer
           description: 볼륨 0-100 (op=play 시, 기본 70)
+        mode:
+          type: string
+          description: 출력지 (op=play 시) — client=보고 있는 기기에서 재생 / host=이 PC 스피커에서
+            재생. 생략하면 요청 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC).
   - name: radio_search_op
     description: '라디오 방송국 검색·탐색 (op 분기) — [sense:radio]. 재생은 [limbs:radio].
 

@@ -344,8 +344,15 @@ def _find_ffplay():
     return find_binary("ffplay")
 
 
-def play_radio(station_id=None, stream_url=None, volume=70, name=None):
-    """라디오 재생. name: stream_url 재생 시 채널명(검색 결과 등) — 미지정 시 '외부 방송'."""
+def play_radio(station_id=None, stream_url=None, volume=70, name=None, mode=None):
+    """라디오 재생. name: stream_url 재생 시 채널명(검색 결과 등) — 미지정 시 '외부 방송'.
+
+    mode: 출력지 — "client"(보고 있는 기기에서) / "host"(이 기계 스피커에서).
+      미지정이면 *요청 표면*이 정한다(브라우저=client, 그 기계 자신=host).
+      2026-07-21: 옛 판정은 `INDIEBIZ_PROFILE=="phone"`(어느 몸이 실행하는가)이었는데,
+      원격런처는 맥이 실행하고 폰이 보고 있어 폰에서 눌러도 맥 스피커로 나갔다.
+      유튜브뮤직([limbs:music]{op:play, mode:"client"})이 이미 쓰는 축을 여기 맞춘다.
+    """
     global _player_process, _current_station, _play_start_time
 
     # 스트림 URL 결정 (mpv 유무와 무관 — 폰은 클라이언트가 재생)
@@ -370,8 +377,23 @@ def play_radio(station_id=None, stream_url=None, volume=70, name=None):
         volume = 70
     volume = max(0, min(100, volume))
 
-    # 폰: mpv 없음 → WebView 가 stream_url 을 직접 재생(HTML5/hls.js). 소리는 폰 스피커.
-    if os.environ.get("INDIEBIZ_PROFILE") == "phone":
+    # 출력지 결정: 명시 mode 가 최우선, 없으면 표면이 정한다.
+    #  - 브라우저 표면(원격런처·포털·폰 WebView) → client: stream_url 을 돌려주면
+    #    그쪽 <audio>/hls.js 가 직접 문다(소리는 보고 있는 기기에서).
+    #  - 표면 힌트 없음(데스크탑 일렉트론 = 맥 자신) → host: ffplay 로 이 기계에서.
+    #  - 폰 네이티브 백엔드는 ffplay 자체가 없으므로 최후 폴백으로 몸 프로파일도 본다.
+    mode = (mode or "").strip().lower() or None
+    if mode not in ("client", "host", None):
+        mode = None
+    if mode is None:
+        try:
+            from thread_context import is_web_surface
+            web_surface = is_web_surface()
+        except Exception:
+            web_surface = False
+        mode = "client" if (web_surface or os.environ.get("INDIEBIZ_PROFILE") == "phone") else "host"
+
+    if mode == "client":
         return json.dumps({
             "success": True,
             "play_in_client": True,
@@ -473,15 +495,23 @@ def stop_radio():
         _current_station = None
         _play_start_time = None
 
-    if killed:
-        return json.dumps({
-            "success": True,
-            "message": f"{station_name or '라디오'} 재생을 중지했습니다.",
-        }, ensure_ascii=False)
-    return json.dumps({
+    # 브라우저 표면에서 누른 '정지'는 그쪽 재생도 함께 멈춘다 — 표면이 client 로 틀었으면
+    # 소리는 거기서 나고 있고, 맥에 옛 ffplay 가 남아 있을 수도 있으므로 둘 다 끈다.
+    # (미니플레이어의 ■정지는 IBL 왕복 없이 stopRadioStream 을 직접 부른다 — 그쪽은 무관.)
+    payload = {
         "success": True,
-        "message": "재생 중인 라디오가 없습니다.",
-    }, ensure_ascii=False)
+        "message": (f"{station_name or '라디오'} 재생을 중지했습니다." if killed
+                    else "재생 중인 라디오가 없습니다."),
+    }
+    try:
+        from thread_context import is_web_surface
+        if is_web_surface():
+            payload["stop_in_client"] = True
+            if not killed:
+                payload["message"] = "재생을 중지했습니다."
+    except Exception:
+        pass
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def radio_status():

@@ -14,6 +14,10 @@ class IBLRequest(BaseModel):
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
                                        # MCP→HTTP로 자기 agent_id를 실어 보내는 통로. None이면 신원 없음(외부 채널 차단).
+    surface: Optional[str] = None      # 요청한 *표면* ('web' = 원격런처/포털/폰 WebView).
+                                       # 소리·저장 같은 "어디서 나야 하는가"의 판정 축 — 실행하는 몸이
+                                       # 아니라 보고 있는 표면이 정한다(thread_context.set_current_surface).
+                                       # 데스크탑 일렉트론은 맥 자신이라 보내지 않는다(= 맥 재생이 곧 여기서 재생).
 
 
 class EmbedRequest(BaseModel):
@@ -84,15 +88,20 @@ async def execute_ibl_code(req: IBLRequest):
         # 남긴 project_id가 thread-local에 남아 있을 수 있다(누수). 이를 덮어써,
         # scope 판단(예: lecture 저장 위치=프로젝트 vs 전역)이 엉뚱한 프로젝트로
         # 새는 것을 막는다. 호출 후 이전 값으로 복원.
-        from thread_context import set_current_project_id, get_current_project_id
+        from thread_context import (set_current_project_id, get_current_project_id,
+                                    set_current_surface, get_current_surface)
         _prev_pid = get_current_project_id()
+        _prev_surface = get_current_surface()
         if req.project_id:
             set_current_project_id(req.project_id)
+        # 표면 힌트도 같은 누수 방어(이벤트 루프 스레드 공유) — 호출 후 원복.
+        set_current_surface(req.surface)
         try:
             from system_tools import _execute_ibl_unified
             result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
         finally:
             set_current_project_id(_prev_pid)
+            set_current_surface(_prev_surface)
 
         # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
         # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)

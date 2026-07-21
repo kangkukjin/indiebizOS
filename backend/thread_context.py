@@ -189,6 +189,30 @@ def get_current_project_id() -> str:
     return getattr(_thread_local, 'project_id', None)
 
 
+def set_current_surface(surface: str):
+    """현재 실행을 요청한 *표면* 설정 ('web' = 브라우저 표면, None = 이 기계에서 직접).
+
+    2026-07-21 신설. 배경: 소리·저장처럼 "어디서 나야 하는가"가 갈리는 액션이
+    몸 프로파일(어느 몸이 실행하는가)로 판정되고 있었다. 원격런처는 맥 백엔드가
+    실행하고 폰이 보고 있으므로, 몸 기준이면 폰에서 눌러도 소리가 맥에서 난다.
+    판정 축은 실행하는 몸이 아니라 *보고 있는 표면*이다 — 그 힌트를 여기 싣는다.
+
+    'web' = 원격런처·포털·폰 네이티브 WebView (셋 다 같은 런처 셸 = 브라우저가 재생·저장 가능).
+    None = 데스크탑 일렉트론 등 그 기계 자신 (맥 스피커가 곧 '여기서 재생').
+    """
+    _thread_local.surface = surface
+
+
+def get_current_surface() -> str:
+    """현재 실행을 요청한 표면 ('web' 또는 None)."""
+    return getattr(_thread_local, 'surface', None)
+
+
+def is_web_surface() -> bool:
+    """요청 표면이 브라우저인가 — 출력지(소리·저장) 판정용."""
+    return get_current_surface() == 'web'
+
+
 def get_current_registry_key() -> str:
     """현재 스레드의 레지스트리 키 가져오기 (project_id:agent_id 형식)"""
     project_id = get_current_project_id()
@@ -374,6 +398,7 @@ def clear_all_context():
     _thread_local.agent_id = None
     _thread_local.agent_name = None
     _thread_local.project_id = None
+    _thread_local.surface = None
     _thread_local.task_id = None
     _thread_local.called_agent = False
     _thread_local.allowed_nodes = None

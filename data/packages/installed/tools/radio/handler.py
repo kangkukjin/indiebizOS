@@ -71,6 +71,8 @@ def execute(tool_input: dict, context):
                 stream_url=tool_input.get("stream_url"),
                 volume=tool_input.get("volume", 70),
                 name=tool_input.get("name"),
+                # 출력지(client=보고 있는 기기 / host=이 기계). 미지정이면 표면이 정한다.
+                mode=tool_input.get("mode"),
             )
         elif op == "stop":
             return radio.stop_radio()

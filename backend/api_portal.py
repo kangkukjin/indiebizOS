@@ -1656,7 +1656,9 @@ async def tool_gate(slug: str, iid: str, request: Request,
     # ③ 실행 — 앱 모드와 같은 경로(/ibl/execute 내부 재사용: 프로젝트 해소 + 단일 통화 정규화)
     try:
         from api_ibl import execute_ibl_code, IBLRequest
-        result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드"))
+        # surface='web': 회원은 브라우저로 보고 있다 — 소리·저장이 맥이 아니라 회원 기기에서
+        # 나야 한다(운영자 집에서 소리가 나면 안 된다). 게이트가 서버측에서 붙인다.
+        result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드", surface="web"))
         # 유튜브뮤직 등 클라이언트 재생: googlevideo URL 은 맥 IP 에 잠겨 외부망 회원은 403.
         # 오디오 프록시(/h/<slug>/tune/<vid>)로 바꿔치기 — 맥이 집 IP 로 받아 중계한다.
         if (isinstance(result, dict) and result.get("play_in_client")

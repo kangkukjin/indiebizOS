@@ -131,7 +131,7 @@ class ChannelPoller:
         """메시지가 소유자(사용자)로부터 왔는지 확인"""
         contact_value = contact_value.lower().strip()
 
-        if contact_type == 'gmail':
+        if contact_type == 'email':
             # 이메일에서 주소만 추출
             email_match = re.search(r'<([^>]+)>', contact_value)
             if email_match:
@@ -706,7 +706,7 @@ class ChannelPoller:
 
                 # DB 저장 / 시스템 AI 처리
                 self._save_message_to_db(
-                    contact_type='gmail',
+                    contact_type='email',
                     contact_value=self._extract_email(msg.get('from', '')),
                     subject=msg.get('subject', ''),
                     content=msg.get('body', msg.get('snippet', '')),
@@ -884,7 +884,7 @@ class ChannelPoller:
             # 이웃이 없으면 자동 생성
             if neighbor_id is None:
                 # 이름 추출
-                if contact_type == 'gmail':
+                if contact_type == 'email':
                     name = contact_value.split('@')[0] if '@' in contact_value else contact_value
                 elif contact_type == 'nostr':
                     name = contact_value[:20] + '...' if len(contact_value) > 20 else contact_value
@@ -1050,7 +1050,7 @@ class ChannelPoller:
     def _send_response(self, contact_type: str, contact_value: str, subject: str, body: str):
         """외부 채널로 응답 전송"""
         try:
-            if contact_type == 'gmail' and self._gmail_client:
+            if contact_type == 'email' and self._gmail_client:
                 self._gmail_client.send_message(
                     to=contact_value,
                     subject=subject,
@@ -1158,7 +1158,7 @@ class ChannelPoller:
         bm = self._get_business_manager()
 
         msg_id = msg.get('id')
-        contact_type = msg.get('contact_type', 'gmail')
+        contact_type = msg.get('contact_type', 'email')
         contact_value = msg.get('contact_value', '')
         subject = msg.get('subject', '')
         content = msg.get('content', '')
@@ -1172,7 +1172,7 @@ class ChannelPoller:
         self._log(f"메시지 발송 시작: {contact_type} → {contact_value[:30]}...")
 
         try:
-            if contact_type in ('gmail', 'email'):
+            if contact_type == 'email':
                 self._send_gmail_message(contact_value, subject, content, attachment_path)
             elif contact_type == 'nostr':
                 self._send_nostr_dm(contact_value, content)

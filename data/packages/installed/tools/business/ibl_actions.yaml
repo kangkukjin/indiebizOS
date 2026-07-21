@@ -420,8 +420,11 @@ nodes:
                     from: contacts
                     type: contact_type
                     value: contact_value
+                    # 발신 가능한 *주소 종류*(contact_type). 발신 수단(channel_type)으로의
+                    # 변환은 channel_engine.CONTACT_TO_CHANNEL 이 맡는다 — email 주소는 gmail 로 나간다.
+                    # (warehouse 는 주소일 뿐 발신 수단이 없어 제외)
                     sendable:
-                    - gmail
+                    - email
                     - nostr
                   action: '[others:channel_send]{channel_type: "$channel_type", to: "$to", body: "$text"}'
               - name: 이웃 정보

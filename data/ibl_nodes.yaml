@@ -4054,7 +4054,7 @@ nodes:
                     type: contact_type
                     value: contact_value
                     sendable:
-                    - gmail
+                    - email
                     - nostr
                   action: '[others:channel_send]{channel_type: "$channel_type", to: "$to", body: "$text"}'
               - name: 이웃 정보

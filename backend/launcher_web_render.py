@@ -462,8 +462,11 @@ function renderComposeBar(cmp){
   if(!cmp) return '';
   const opts=composeChannelOptions(cmp);
   let sel='';
+  /* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */
   if(opts.length>=2) sel='<select id="composeChannel" class="field" style="flex:0 0 auto;max-width:42%;border-radius:22px">'
     +opts.map(o=>'<option value="'+esc(o.key)+'">'+esc(o.label)+'</option>').join('')+'</select>';
+  else if(opts.length===1) sel='<span class="muted" title="발신 채널" style="flex:0 0 auto;max-width:42%;align-self:center;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+    +esc(opts[0].label)+'</span>';
   return '<div class="composebar">'+sel+'<input id="composeInput" class="field" placeholder="'+esc(cmp.placeholder||'메시지 입력…')+'" '
     +'onkeydown="if(event.key===\\'Enter\\')composeSend(document.getElementById(\\'composeSendBtn\\'))">'
     +'<button id="composeSendBtn" class="go" onclick="composeSend(this)">'+esc(cmp.button||'전송')+'</button></div>';

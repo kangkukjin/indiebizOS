@@ -283,6 +283,30 @@ class BusinessManager:
         # 창고주소 컬럼→연락처 행 이관 — ★반드시 sync 컬럼 뒤(아래 메서드 주석 참조)
         self._migrate_warehouse_contacts()
 
+        # 주소 종류 어휘 통일 — contact_type 'gmail' → 'email'
+        self._migrate_contact_type_email()
+
+    def _migrate_contact_type_email(self):
+        """마이그레이션(2026-07-21): 주소 종류(contact_type) 어휘를 'email' 하나로 통일.
+
+        contact_type = 상대 **주소의 종류**(email/nostr/warehouse)이고,
+        channel_type = 내가 쓰는 **발신 수단**(gmail=내 Gmail 계정/nostr=릴레이)이다.
+        서로 다른 축인데 주소 종류 칸에 수단 이름 'gmail' 이 쌓여 있었다(Gmail 수신 →
+        이웃 자동 생성 경로). 한 단어=한 개념 원칙대로 주소 종류는 'email' 로 굳힌다.
+        폰도 같은 코드를 부팅하므로 양쪽에서 돌고, phone_sync 머지 뒤에도 어휘가 일치한다.
+        멱등 — 이미 통일됐으면 0행 UPDATE.
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE contacts SET contact_type = 'email' WHERE contact_type = 'gmail'")
+        n_c = cursor.rowcount
+        cursor.execute("UPDATE messages SET contact_type = 'email' WHERE contact_type = 'gmail'")
+        n_m = cursor.rowcount
+        conn.commit()
+        conn.close()
+        if n_c or n_m:
+            print(f"[business_manager] contact_type 'gmail'→'email' 이관: 연락처 {n_c}행, 메시지 {n_m}행")
+
     def _migrate_warehouse_contacts(self):
         """마이그레이션(2026-07-18 2차): 창고주소 = 연락방법 — neighbors.warehouse_url 컬럼(1차)을
         contacts(contact_type='warehouse') 행으로 이관. 창고주소도 이메일·nostr 처럼 그 사람에게
@@ -845,10 +869,11 @@ class BusinessManager:
         """)
         unread_by_nid = {r["neighbor_id"]: r["cnt"] for r in cursor.fetchall()}
 
-        # 메시징 채널 연락처 — get_contacts 와 같은 contact_type 순 (gmail < nostr)
+        # 메시징 채널 연락처 — get_contacts 와 같은 contact_type 순 (email < nostr).
+        # 발신 가능한 주소 종류만(warehouse 는 주소일 뿐 발신 수단이 없다).
         cursor.execute("""
             SELECT neighbor_id, contact_type, contact_value FROM contacts
-            WHERE (deleted IS NOT 1) AND contact_type IN ('gmail', 'nostr')
+            WHERE (deleted IS NOT 1) AND contact_type IN ('email', 'nostr')
             ORDER BY contact_type
         """)
         contacts_by_nid: Dict[int, list] = {}

@@ -600,13 +600,19 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
     const selKey = chOpts.find((o) => o.key === composeCh) ? composeCh : (chOpts[0]?.key || '');
     return (
       <div className="sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex gap-2 shrink-0">
-        {chOpts.length >= 2 && (
+        {/* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */}
+        {chOpts.length >= 2 ? (
           <select value={selKey} onChange={(e) => setComposeCh(e.target.value)}
             title="발신 채널"
             className="shrink-0 px-2 py-2 rounded-full border border-stone-200 bg-white text-xs text-stone-700 focus:outline-none focus:border-stone-400 max-w-[42%]">
             {chOpts.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
-        )}
+        ) : chOpts.length === 1 ? (
+          <span title={`발신 채널 · ${chOpts[0].label}`}
+            className="shrink-0 self-center px-2.5 py-1.5 rounded-full border border-stone-200 bg-white text-xs text-stone-500 max-w-[42%] truncate">
+            {chOpts[0].label}
+          </span>
+        ) : null}
         <input value={composeText} onChange={(e) => setComposeText(e.target.value)}
           placeholder={cmp.placeholder || '메시지 입력…'}
           onKeyDown={(e) => { if (e.key === 'Enter' && !sending) composeSend(cmp); }}

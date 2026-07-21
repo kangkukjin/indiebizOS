@@ -80,7 +80,7 @@ class AgentCommunicationMixin:
 
         from_addr_lower = from_addr.lower().strip()
 
-        if contact_type == 'gmail':
+        if contact_type == 'email':
             # 이메일 주소 비교 (< > 제거)
             email_match = re.search(r'<([^>]+)>', from_addr)
             if email_match:
@@ -249,7 +249,7 @@ class AgentCommunicationMixin:
             # 채널 타입 파악
             channel_type = channel.__class__.__name__
             if 'Gmail' in channel_type:
-                contact_type = 'gmail'
+                contact_type = 'email'
                 reply_to = from_addr
             elif 'Nostr' in channel_type:
                 contact_type = 'nostr'

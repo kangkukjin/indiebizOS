@@ -20,6 +20,11 @@ from typing import Any, Dict, List, Optional
 
 # === 지원 채널 ===
 SUPPORTED_CHANNELS = ["gmail", "nostr"]
+# 주소 종류(contact_type) → 발신 수단(channel_type).
+# ★두 축은 다른 개념이다: contact_type 은 상대 주소가 무엇인가(email/nostr/warehouse),
+#   channel_type 은 내가 무엇으로 보내는가(gmail=내 Gmail 계정, nostr=릴레이).
+#   어떤 이메일 주소든(hanmail·naver 포함) 발신 수단은 gmail 하나뿐이라 여기로 모인다.
+CONTACT_TO_CHANNEL = {"email": "gmail", "nostr": "nostr"}
 
 # 시스템 AI(=indiebizOS 운영 주체) 식별자. 런처 indienet과 nostr 신원을 공유한다.
 SYSTEM_AI_ID = "system_ai"
@@ -310,6 +315,8 @@ def execute_channel_action(action: str, params: dict,
         }
 
     channel_type = channel_type_raw.lower().strip()
+    # 주소 종류가 그대로 넘어와도(계기 작성바가 contact_type 을 실어 보냄) 발신 수단으로 접는다.
+    channel_type = CONTACT_TO_CHANNEL.get(channel_type, channel_type)
     if channel_type not in SUPPORTED_CHANNELS:
         return {
             "error": f"지원하지 않는 채널: {channel_type}",
@@ -749,6 +756,44 @@ def _nostr_identity(params: dict) -> dict:
 
 # === 내부 구현 ===
 
+# 발신 수단 → 그 수단으로 닿는 주소 종류 (CONTACT_TO_CHANNEL 의 역방향)
+_CHANNEL_CONTACT_TYPE = {"gmail": "email", "nostr": "nostr"}
+
+
+def _record_outgoing(channel_type: str, to: str, content: str,
+                     subject: Optional[str] = None, external_id: Optional[str] = None) -> None:
+    """보낸 메시지를 주소록 스레드(business.db messages)에 남긴다.
+
+    ★메신저 '대화'의 정본은 business.db 다 — 여기에 안 남기면 내가 보낸 말이 어디에도
+    보이지 않는다(Gmail 보낸편지함·Nostr 릴레이엔 남지만 스레드 뷰는 business.db 와
+    수신 DM 캐시만 읽는다). 기록 실패가 발신 성공을 뒤집지 않도록 전부 삼킨다.
+    """
+    try:
+        from business_manager import BusinessManager
+        from datetime import datetime as _dt
+
+        addr = _norm_addr(channel_type, to)  # nostr 는 npub 로 통일(주소록 저장형)
+        ctype = _CHANNEL_CONTACT_TYPE.get(channel_type, channel_type)
+        bm = BusinessManager()
+        nb = bm.get_neighbor_by_contact(ctype, addr)
+        bm.create_message(
+            content=content,
+            contact_type=ctype,
+            contact_value=addr,
+            subject=subject,
+            neighbor_id=(nb or {}).get("id"),
+            is_from_user=1,
+            status="sent",
+            external_id=external_id,
+            message_time=_dt.now().isoformat(),
+        )
+    except Exception as e:
+        try:
+            print(f"[channel_engine] 발신 기록 저장 실패({channel_type}): {e}")
+        except Exception:
+            pass
+
+
 def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 발송"""
     if channel_type == "gmail":
@@ -778,6 +823,7 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                 to=to, subject=subject, body=body,
                 attachment_path=attachment_path
             )
+            _record_outgoing("gmail", to, body, subject=subject, external_id=result.get("id"))
             return {
                 "success": True,
                 "channel": "gmail",
@@ -824,6 +870,7 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
             # 수신자의 kind:10050 DM relay로 배달. (구 NIP-04 send_dm은 최신 앱이 복호 못 함)
             event_id = indienet.send_dm_nip17(to_pubkey=to, content=content)
             if event_id:
+                _record_outgoing("nostr", to, content, subject="Nostr DM", external_id=event_id)
                 return {
                     "success": True,
                     "channel": "nostr",

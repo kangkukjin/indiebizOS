@@ -252,8 +252,8 @@ monthly 타입은 date 필드의 day 값을 매월 반복일로 사용합니다.
 
 1. 사용자가 일정/반복 작업을 요청
 2. 필요시 `[self:switch]{op: "list"}`로 사용 가능한 스위치 확인
-3. `[self:manage_events]{action: "list"}`로 기존 스케줄 확인
-4. `[self:manage_events]{action: "create", ...}`로 새 스케줄 등록
+3. `[self:manage_events]{op: "list"}`로 기존 스케줄 확인
+4. `[self:manage_events]{op: "create", ...}`로 새 스케줄 등록
 5. 등록 결과를 사용자에게 안내
 
 ## 주의사항
@@ -271,7 +271,7 @@ monthly 타입은 date 필드의 day 값을 매월 반복일로 사용합니다.
 올바른 워크플로우:
 1. `[self:time]`으로 현재 시각 확인
 2. 현재 시각 + N분 계산
-3. `manage_events` `add`로 미래 시각에 `repeat: "none"` 이벤트 등록
+3. `manage_events` `create`로 미래 시각에 `repeat: "none"` 이벤트 등록
 4. 사용자에게 "HH:MM에 실행 예약했습니다" 안내
 5. **여기서 끝.** 스케줄러가 지정 시각에 자동 실행함.
 
@@ -362,4 +362,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 
 ---
 
-*마지막 업데이트: 2026-07-17 — 현 상태 정합화: **6노드 157 액션**(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지. 스케줄 어휘(`[self:manage_events]`·`[self:schedule]`·`[self:switch]`·`[self:trigger]`·`[self:workflow]`) 및 CalendarManager 데이터 구조는 변경 없음. 참고: 정기보고 04시 스케줄러가 은퇴된 `[self:report]` 대신 `[others:delegate]{scope:"system"}`(자율주행 위임, 헤드리스 fire-and-forget)로 교체됨. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 폐지된 도구명(`manage_schedule`·`list_switches` 도구) 잔재 정정: 현재 스케줄 어휘는 `[self:manage_events]`(등록/조회/삭제)·`[self:schedule]`(지연/예약/반복)·`[self:switch]{op}`·`[self:trigger]{op}`·`[self:workflow]{op}`. 본문 JSON/REST 모델·CalendarManager 데이터 구조는 변경 없음. 이전: 2026-03-27*
+*마지막 업데이트: 2026-07-21 — `[self:manage_events]` op 어휘 단일화 합류: 파라미터 `action:`→`op:` 정규화(+`ops:` 블록으로 값 어휘화 list/create/update/delete/toggle/run_now, 구 action=은 aliases 호환). 이전(2026-07-17) — 현 상태 정합화: **6노드 157 액션**(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지. 스케줄 어휘(`[self:manage_events]`·`[self:schedule]`·`[self:switch]`·`[self:trigger]`·`[self:workflow]`) 및 CalendarManager 데이터 구조는 변경 없음. 참고: 정기보고 04시 스케줄러가 은퇴된 `[self:report]` 대신 `[others:delegate]{scope:"system"}`(자율주행 위임, 헤드리스 fire-and-forget)로 교체됨. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 폐지된 도구명(`manage_schedule`·`list_switches` 도구) 잔재 정정: 현재 스케줄 어휘는 `[self:manage_events]`(등록/조회/삭제)·`[self:schedule]`(지연/예약/반복)·`[self:switch]{op}`·`[self:trigger]{op}`·`[self:workflow]{op}`. 본문 JSON/REST 모델·CalendarManager 데이터 구조는 변경 없음. 이전: 2026-03-27*

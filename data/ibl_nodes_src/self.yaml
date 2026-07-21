@@ -44,15 +44,26 @@
         - 도구검색
         - 액션
       manage_events:
+        aliases:
+          op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)
         returns: items
-        fixture: '[self:manage_events]{action: "list"}'
-        description: 이벤트·스케줄 통합 관리 (생성/조회/삭제). 캘린더 이벤트 인터페이스.
-        target_description: action (create/list/delete). 추가 파라미터는 action별로 다름.
+        fixture: '[self:manage_events]{op: "list"}'
+        description: 이벤트·스케줄 통합 관리 (op 분기). 캘린더 이벤트 + 정기 발행·자동화 스케줄 인터페이스 (트리거는 [self:trigger] 별도).
+        target_description: 'create는 title 필수(date/time/repeat/type/description, event_action 있으면 실행 이벤트). update/delete/toggle/run_now는 event_id 필요. list는 year/month 필터 가능.'
         group: schedule
+        target_key: op
         router: system
         func: manage_events
         runs_on: mac_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
-        implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반)
+        ops:
+          values:
+            list: 이벤트·스케줄 목록 (year/month 필터 가능)
+            create: 이벤트 추가 (title 필수. event_action 있으면 지정 시각 자동 실행)
+            update: 이벤트 수정 (event_id + 변경 필드)
+            delete: 이벤트 삭제 (event_id)
+            toggle: 실행 이벤트 켜기/끄기 (event_id)
+            run_now: 실행 이벤트 즉시 실행 (event_id)
+        implementation: event_engine으로 이벤트/스케줄 CRUD (SQLite 기반). _execute_manage_events 입구에서 op→action 재매핑(aliases) 후 기존 분기 그대로.
         keywords:
         - 일정
         - 스케줄관리
@@ -63,14 +74,14 @@
           name: 일정
           order: 13
           auto_run: true
-          action: '[self:manage_events]{action: "list"}'
+          action: '[self:manage_events]{op: "list"}'
           view:
           - type: calendar
             from: items
             color_field: type
-            delete_action: '[self:manage_events]{action: "delete", event_id: "{id}"}'
+            delete_action: '[self:manage_events]{op: "delete", event_id: "{id}"}'
             add:
-              action: '[self:manage_events]{action: "create", title: "$title", date: "$date", time: "$time", repeat: "$repeat", type: "$type", description: "$description"}'
+              action: '[self:manage_events]{op: "create", title: "$title", date: "$date", time: "$time", repeat: "$repeat", type: "$type", description: "$description"}'
               fields:
               - {key: title, type: text, placeholder: 제목}
               - {key: time, type: time}

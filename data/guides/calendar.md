@@ -8,7 +8,7 @@
 | 지정 시간에 알림/스위치 자동 실행 | `manage_events` (event_action 사용) | 실행 가능 이벤트 |
 | 백그라운드 반복 작업 (스위치 실행) | `manage_schedule` | 스케줄러 전용 작업 |
 
-**핵심**: `manage_events`는 캘린더 + 실행 가능 이벤트를 모두 처리합니다. `event_action` 필드가 있으면 자동 실행, 없으면 순수 기록입니다.
+**핵심**: `manage_events`는 `op:` 파라미터로 분기합니다(list/create/update/delete/toggle/run_now — 구 `action:`은 별칭으로만 호환). 캘린더 + 실행 가능 이벤트를 모두 처리합니다. `event_action` 필드가 있으면 자동 실행, 없으면 순수 기록입니다.
 
 ---
 
@@ -49,34 +49,34 @@
 
 ```json
 // 기념일 등록
-{"action": "add", "title": "결혼기념일", "date": "2020-05-15", "type": "anniversary", "repeat": "yearly"}
+{"op": "create", "title": "결혼기념일", "date": "2020-05-15", "type": "anniversary", "repeat": "yearly"}
 
 // 약속 등록
-{"action": "add", "title": "치과 예약", "date": "2026-02-15", "time": "14:00", "type": "appointment", "repeat": "none"}
+{"op": "create", "title": "치과 예약", "date": "2026-02-15", "time": "14:00", "type": "appointment", "repeat": "none"}
 
 // 생일 등록
-{"action": "add", "title": "엄마 생일", "date": "1960-09-25", "type": "birthday", "repeat": "yearly"}
+{"op": "create", "title": "엄마 생일", "date": "1960-09-25", "type": "birthday", "repeat": "yearly"}
 
 // 매일 알림 스케줄
-{"action": "add", "title": "아침 인사", "time": "09:00", "type": "schedule", "repeat": "daily", "event_action": "send_notification", "action_params": {"title": "좋은 아침!", "message": "오늘도 화이팅!"}}
+{"op": "create", "title": "아침 인사", "time": "09:00", "type": "schedule", "repeat": "daily", "event_action": "send_notification", "action_params": {"title": "좋은 아침!", "message": "오늘도 화이팅!"}}
 
 // 스위치 실행 스케줄 (매주 금요일)
-{"action": "add", "title": "주간 리포트", "time": "18:00", "type": "schedule", "repeat": "weekly", "weekdays": [4], "event_action": "run_switch", "action_params": {"switch_id": "switch_abc123"}}
+{"op": "create", "title": "주간 리포트", "time": "18:00", "type": "schedule", "repeat": "weekly", "weekdays": [4], "event_action": "run_switch", "action_params": {"switch_id": "switch_abc123"}}
 
 // 기념일 하루 전 알림
-{"action": "add", "title": "결혼기념일 리마인더", "date": "2020-05-14", "time": "09:00", "type": "schedule", "repeat": "yearly", "month": 5, "day": 14, "event_action": "send_notification", "action_params": {"title": "내일은 결혼기념일!", "message": "준비하세요!"}}
+{"op": "create", "title": "결혼기념일 리마인더", "date": "2020-05-14", "time": "09:00", "type": "schedule", "repeat": "yearly", "month": 5, "day": 14, "event_action": "send_notification", "action_params": {"title": "내일은 결혼기념일!", "message": "준비하세요!"}}
 
 // 목록 조회 / 특정 월 조회
-{"action": "list"}
-{"action": "list", "year": 2026, "month": 5}
+{"op": "list"}
+{"op": "list", "year": 2026, "month": 5}
 
 // 수정 / 삭제 / 토글
-{"action": "update", "event_id": "evt_xxx", "title": "새 제목"}
-{"action": "delete", "event_id": "evt_xxx"}
-{"action": "toggle", "event_id": "evt_xxx"}
+{"op": "update", "event_id": "evt_xxx", "title": "새 제목"}
+{"op": "delete", "event_id": "evt_xxx"}
+{"op": "toggle", "event_id": "evt_xxx"}
 
 // 즉시 실행 (이미 등록된 이벤트를 지금 당장 실행)
-{"action": "run_now", "event_id": "evt_xxx"}
+{"op": "run_now", "event_id": "evt_xxx"}
 ```
 
 ### ⚠️ 시간 지연 실행 시 주의사항 (중요)
@@ -85,12 +85,12 @@
 
 ```
 ❌ 잘못된 패턴 — 이렇게 하면 즉시 실행됨:
-  1. manage_events add → time: "11:56" (1분 후)
+  1. manage_events create → time: "11:56" (1분 후)
   2. manage_events run_now           ← 11:56을 무시하고 지금 실행!
 
 ✅ 올바른 패턴 — 스케줄러가 자동 실행:
   1. [self:time]                      ← 현재 시간 확인
-  2. manage_events add → time: "11:56", repeat: "none", event_action: "run_switch"
+  2. manage_events create → time: "11:56", repeat: "none", event_action: "run_switch"
   3. 사용자에게 "11:56에 실행 예약했습니다" 안내
   (끝. run_now 호출하지 않음. 스케줄러가 11:56에 자동 실행)
 ```
@@ -103,7 +103,7 @@
 
 ```
 ❌ "1분 후에 음악 틀어줘" → 스위치 생성 → 스위치 실행 예약 (불필요한 2단계)
-✅ "1분 후에 음악 틀어줘" → manage_events add (event_action: "run_switch", 기존 스위치 or send_notification)
+✅ "1분 후에 음악 틀어줘" → manage_events create (event_action: "run_switch", 기존 스위치 or send_notification)
 
 ❌ switches.json을 직접 읽고 쓰기 (cat, execute_python)
 ✅ [self:switch]{op: "list"}로 조회, manage_events로 예약
@@ -115,21 +115,21 @@
 ```
 1. [self:time]  →  현재 시각 확인
 2. 현재 시각 + N분 계산
-3. [self:manage_events]{action: "add", title: "작업명", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[node:action]{params}"}}
+3. [self:manage_events]{op: "create", title: "작업명", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[node:action]{params}"}}
 4. 텍스트 응답으로 예약 완료 안내
 ```
 
 **"N분 후에 음악 틀어줘" 패턴:**
 ```
 1. [self:time]  →  현재 시각 확인 (예: 11:55)
-2. [self:manage_events]{action: "add", title: "아이유 밤편지 재생", date: "2026-03-09", time: "11:56", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[limbs:music]{op: "play", query: '아이유 밤편지'}"}}
+2. [self:manage_events]{op: "create", title: "아이유 밤편지 재생", date: "2026-03-09", time: "11:56", type: "schedule", repeat: "none", event_action: "run_pipeline", action_params: {pipeline: "[limbs:music]{op: "play", query: '아이유 밤편지'}"}}
 3. 텍스트 응답: "11:56에 아이유 밤편지를 재생합니다"
 ```
 
 **"N분 후에 알림 보내줘" 패턴:**
 ```
 1. [self:time]  →  현재 시각 확인
-2. [self:manage_events]{action: "add", title: "알림", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "send_notification", action_params: {title: "리마인더", message: "알림 내용"}}
+2. [self:manage_events]{op: "create", title: "알림", date: "YYYY-MM-DD", time: "HH:MM", type: "schedule", repeat: "none", event_action: "send_notification", action_params: {title: "리마인더", message: "알림 내용"}}
 3. 텍스트 응답으로 예약 완료 안내
 ```
 
@@ -157,13 +157,13 @@
 
 ```json
 // 기념일 알림
-{"action": "add", "name": "결혼기념일 알림", "time": "09:00", "repeat": "yearly", "month": 5, "day": 15, "task_action": "send_notification", "action_params": {"title": "결혼기념일", "message": "특별한 하루 보내세요!", "type": "info"}}
+{"op": "create", "name": "결혼기념일 알림", "time": "09:00", "repeat": "yearly", "month": 5, "day": 15, "task_action": "send_notification", "action_params": {"title": "결혼기념일", "message": "특별한 하루 보내세요!", "type": "info"}}
 
 // 매주 월/수/금 스위치 실행
-{"action": "add", "name": "주간 뉴스 브리핑", "time": "08:00", "repeat": "weekly", "weekdays": [0, 2, 4], "task_action": "run_switch", "action_params": {"switch_id": "switch_xxx"}}
+{"op": "create", "name": "주간 뉴스 브리핑", "time": "08:00", "repeat": "weekly", "weekdays": [0, 2, 4], "task_action": "run_switch", "action_params": {"switch_id": "switch_xxx"}}
 
 // 1회성 약속 알림
-{"action": "add", "name": "치과 예약", "time": "13:00", "repeat": "once", "date": "2026-02-15", "task_action": "send_notification", "action_params": {"title": "치과 예약", "message": "오후 2시 치과 예약", "type": "warning"}}
+{"op": "create", "name": "치과 예약", "time": "13:00", "repeat": "once", "date": "2026-02-15", "task_action": "send_notification", "action_params": {"title": "치과 예약", "message": "오후 2시 치과 예약", "type": "warning"}}
 ```
 
 ---

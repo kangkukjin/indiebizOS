@@ -336,10 +336,15 @@ def _execute_call_project_agent(tool_input: dict) -> str:
 
 
 def _execute_manage_events(tool_input: dict) -> str:
-    """manage_events 통합 도구 실행 (캘린더 + 스케줄러)"""
+    """manage_events 통합 도구 실행 (캘린더 + 스케줄러)
+
+    정규 키=op (2026-07-21 op 어휘 단일화 합류, trigger 선례 — 입구 재매핑 후 기존 분기 그대로).
+    action= 은 별칭: IBL 경로는 aliases 선언으로 op 정규화되지만, 레거시 도구 경로
+    (별칭 정규화 미경유 직접 호출)도 있어 여기서도 폴백으로 받는다.
+    """
     from calendar_manager import get_calendar_manager
 
-    action = tool_input.get("action", "")
+    action = tool_input.get("op") or tool_input.get("action", "")
     cm = get_calendar_manager()
 
     try:
@@ -441,7 +446,7 @@ def _execute_manage_events(tool_input: dict) -> str:
             return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다. (실행 가능한 이벤트만 run_now 가능)"}, ensure_ascii=False)
 
         else:
-            return json.dumps({"success": False, "error": f"알 수 없는 action: {action}. list, add, update, delete, toggle, run_now 중 선택하세요."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"알 수 없는 op: {action}. list, create, update, delete, toggle, run_now 중 선택하세요."}, ensure_ascii=False)
 
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)

@@ -65,6 +65,43 @@ CRUFT_PATTERNS = [
 ]
 
 
+# 몸 전속 신원·상태·개인 콘텐츠 — 새 몸이 물려받으면 안 되는 것들.
+#
+# ★배경(2026-07-21): 윈도우 PC 가 맥의 원격 런처 주소를 그대로 보여준 사고를 쫓다가,
+#   data 필터가 "이름으로 하나씩 빼는 denylist" 라서 *신원 파일 전체*가 빠져 있는 걸 발견.
+#   지금 배포본은 CI(fresh checkout)에서 빌드돼 무사하지만, 개발 맥에서 로컬 빌드하면
+#   showcase_state.json(창고 주소)·portal_state.json(회원 비번 해시·발급 키)·dms.db·
+#   Gmail OAuth 토큰이 설치 파일에 그대로 실린다.
+#
+# 두 부류를 함께 막는다:
+#   (a) 신원·상태 — 물려받으면 새 몸이 남의 주소·남의 회원 명부를 갖게 된다.
+#   (b) 개인 콘텐츠·자격증명 — 애초에 남에게 가면 안 되는 것.
+# 전부 각 모듈이 없으면 기본값으로 새로 만드는 파일이라, 빼도 새 설치가 깨지지 않는다.
+PERSONAL_STATE_PATTERNS = [
+    # (a) 이 몸의 공개 신원 — 주소는 몸마다 달라야 한다
+    "!showcase_state.json",
+    "!public_face.json",
+    "!warehouse.json",
+    "!warehouse_feed.db",
+    "!warehouse_guestbook.json",
+    "!warehouse_likes.json",
+    "!device_registry.json",
+    # (b) 개인 명부·대화·기억
+    "!portal_state.json",          # 포털 회원 명부(비밀번호 해시·발급한 개인 링크 키)
+    "!dms.db",                     # Nostr DM 캐시
+    "!conversation.db",            # (복수형 conversations.db 는 위 손목록에 이미 있음)
+    "!forage_*.db",                # 포식 기억 — 개인 디스크 지도
+    "!hidden_dm_peers.json",
+    "!auto_response_state.json",
+    "!bulletin/**",                # 자유게시판 글·사진
+    "!family_news/**",             # 가족신문 사진·방명록·업로드
+    # (c) 자격증명 — ★`!tokens/**` 는 data/ 최상위만 매칭해서 패키지 안 토큰이 새어나갔다
+    "!**/tokens/**",               # packages/installed/extensions/gmail/tokens/*.json 등
+    "!packages/installed/extensions/gmail/config.yaml",
+    "!*.log",                      # cloudflared.log 등 — 호스트명·경로가 찍힌다
+]
+
+
 def _load_manifest_core() -> dict:
     m = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     core = m.get("core", {})
@@ -106,6 +143,7 @@ def _generated_block() -> list[str]:
     core = _load_manifest_core()
     block = [GEN_START]
     block += CRUFT_PATTERNS
+    block += PERSONAL_STATE_PATTERNS
     block += _noncore_package_excludes(core)
     block += _noncore_instrument_excludes(core)
     block.append(GEN_END)
@@ -159,6 +197,7 @@ def main() -> int:
     n_pkg = sum(1 for x in gen if x.startswith("!packages/"))
     n_inst = sum(1 for x in gen if x.startswith("!instruments/"))
     print(f"[dist-filter] ✓ 재생성: 크러프트 {len(CRUFT_PATTERNS)} · "
+          f"몸 전속 신원·개인 {len(PERSONAL_STATE_PATTERNS)} · "
           f"비-코어 패키지 제외 {n_pkg} · 비-코어 계기 제외 {n_inst}")
     print(f"[dist-filter]   → {PKG_JSON}")
     return 0

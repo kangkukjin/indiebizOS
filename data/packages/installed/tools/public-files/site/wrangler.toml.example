@@ -1,7 +1,14 @@
 # 공개파일 Worker 배포 설정 예시.
 # 복사: cp wrangler.toml.example wrangler.toml  후 값 채우기.
 # 배포: npx wrangler deploy   (정적 index.html 은 [assets] 로 함께 배포)
+#
+# ★wrangler.toml(실물)은 git 밖이다 — 아래 두 값이 **몸마다 다르기** 때문.
+#   Worker 이름과 ORIGIN_BASE 를 다른 몸 것으로 두면, 배포하는 순간 그 몸의 Worker 를
+#   덮어쓰고(같은 CF 계정이면 이름이 곧 주소) 원본도 남의 몸을 가리킨다.
+#   Worker 는 선택적 가속기다 — 없어도 창고는 직접 서빙(터널)으로 성립한다.
 
+# ① Worker 이름 = 공개 주소(https://<이름>.<계정>.workers.dev). CF 계정 안에서 유일.
+#    ★몸이 여럿이면 몸마다 다른 이름을 쓸 것(예: public-files-<몸 이름>).
 name = "public-files"
 main = "worker.js"
 compatibility_date = "2026-01-01"
@@ -16,6 +23,13 @@ binding = "ASSETS"
 binding = "BUCKET"
 bucket_name = "public-files"          # 실제 버킷명으로
 
-# 링크 전용 토큰(선택) — 설정하면 ?t= 일치를 요구, 미설정이면 완전 공개.
-# 시크릿 등록: npx wrangler secret put SHOWCASE_TOKEN
+# ② 온디맨드 원본 — **이 몸의** 공개 호스트(터널). 클릭 시 여기서 원본을 끌어와 R2 에 캐시.
+#    설정→터널 탭의 "이 컴퓨터의 창고 주소"(= public_face 의 direct_hosts)와 같아야 한다.
+#    다른 몸의 호스트를 적으면 내 Worker 가 남의 파일을 서빙한다.
+[vars]
+ORIGIN_BASE = "https://<이-몸의-공개-호스트>"
+
+# 시크릿(평문 아님, wrangler secret put 으로 등록):
+#   SHOWCASE_SECRET   — 이 몸 .env 의 SHOWCASE_ORIGIN_SECRET 와 동일(원본 끌어오기 인증)
+#   SHOWCASE_TOKEN    — (선택) 링크전용 게이트. 설정하면 ?t= 일치 요구, 미설정이면 완전 공개.
 # [vars] 에 평문으로 두지 말 것.

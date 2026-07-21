@@ -49,8 +49,12 @@
   /showcase/list   디렉토리 즉석 walk            그 외 → index.html(SPA)
   /showcase/thumb  썸네일 즉석 생성              bare / → 잠금 안내
   /showcase/media  원본(EXIF strip·트랜스코드)
-     ▲ finder.kukjinkang.uk(터널) + X-Showcase-Secret
+     ▲ 이 몸의 공개 호스트(터널, wrangler.toml 의 ORIGIN_BASE) + X-Showcase-Secret
 ```
+
+★ORIGIN_BASE·Worker 이름은 **몸마다 다르다**(wrangler.toml 은 git 밖, 템플릿만 추적).
+다른 몸의 값을 복사해 쓰면 배포가 그 몸의 Worker 를 덮어쓰고 원본도 남의 몸을 가리킨다.
+이 몸의 공개 호스트는 설정→터널 탭의 "이 컴퓨터의 창고 주소"에서 확인한다.
 
 **핵심 불변식**:
 - **인덱싱·manifest·썸네일 사전 push 없음.** 파일시스템이 곧 진실 — 파일 변경은 즉시 반영.

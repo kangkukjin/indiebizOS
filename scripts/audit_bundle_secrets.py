@@ -54,9 +54,21 @@ CONTENT_PATTERNS = [
 ]
 
 # 파일명 기반(이름만으로 비밀/개인 확정). basename 소문자 비교.
+# ★2026-07-21 보강: 이 감사는 "고신뢰 비밀 값"(토큰·개인키) 위주라, 값에 비밀 패턴이 없는
+#   *신원·명부* 파일은 통과시켰다(showcase_state.json=창고 주소, portal_state.json=회원
+#   비밀번호 해시·발급 키, dms.db=DM 캐시). 새 몸이 물려받으면 안 되는 것들이라 이름으로 막는다.
+#   dist 필터(build_dist_filter.PERSONAL_STATE_PATTERNS)가 1차, 여기가 최후 방어선.
 NAME_EXACT = {".env", "nostr_keys", "business.db", "my_profile.txt",
-              "multi_chat.db", "conversations.db", "device_id.txt"}
-NAME_GLOBS = ["credentials*.json", "*credential*.json", "*.pem", "*.key"]
+              "multi_chat.db", "conversations.db", "conversation.db", "device_id.txt",
+              # 몸 전속 신원 — 주소는 몸마다 달라야 한다
+              "showcase_state.json", "public_face.json", "warehouse.json",
+              "warehouse_feed.db", "device_registry.json",
+              # 개인 명부·대화·기억
+              "portal_state.json", "dms.db"}
+NAME_GLOBS = ["credentials*.json", "*credential*.json", "*.pem", "*.key",
+              "forage_*.db"]
+# 디렉토리 이름만으로 개인/비밀 확정 — 통째로 잡는다(nostr_keys 와 같은 처리).
+DIR_EXACT = {"nostr_keys", "tokens"}
 
 
 def _fnmatch(name, pat):
@@ -79,10 +91,12 @@ def audit(root):
         parts = dirpath.replace("\\", "/").split("/")
         # 런타임 디렉토리는 통째로 가지치기(성능+오탐 방지)
         dirnames[:] = [d for d in dirnames if d.lower() not in SKIP_SEGMENTS]
-        # nostr_keys 가 디렉토리로 존재하는 경우도 잡는다
+        # nostr_keys·tokens 가 디렉토리로 존재하는 경우도 잡는다
+        # (★tokens: dist 필터의 `!tokens/**` 가 data/ 최상위만 매칭해서
+        #  packages/installed/extensions/gmail/tokens/ 의 OAuth 토큰이 새어나간 적 있음)
         for d in list(dirnames):
-            if d.lower() == "nostr_keys" and _in_bundle(parts + [d]):
-                findings.append((os.path.join(dirpath, d), "파일명: nostr_keys(디렉토리)"))
+            if d.lower() in DIR_EXACT and _in_bundle(parts + [d]):
+                findings.append((os.path.join(dirpath, d), f"파일명: {d}(디렉토리)"))
         if not _in_bundle(parts):
             continue
         for fn in filenames:

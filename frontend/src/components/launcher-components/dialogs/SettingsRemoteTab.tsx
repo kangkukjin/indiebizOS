@@ -685,6 +685,10 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
                   <p className="text-xs font-medium text-gray-500">
                     내 창고 주소들 — 공식 주소(이웃에게 알리는 주소)를 고르고, 각 주소는 자유롭게 열고 닫습니다
                   </p>
+                  <p className="text-xs text-gray-400">
+                    주소를 닫으면 그 주소의 창고·원격 런처·원격 Finder 가 <strong>함께</strong> 닫힙니다
+                    (같은 터널을 쓰기 때문입니다). 다른 주소는 영향받지 않습니다.
+                  </p>
                   {faces.map(f => {
                     const active = f.url === activeBase;
                     const open = directHosts.includes(f.host);

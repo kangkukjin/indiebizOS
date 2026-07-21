@@ -394,7 +394,8 @@ def provision_close(req: UseReq):
         if not r.get("success"):
             return JSONResponse({"success": False, "error": r.get("error", "funnel 종료 실패")},
                                 status_code=502)
-        return {"success": True, "message": "Tailscale 창고 주소를 닫았습니다 (열기로 재개)"}
+        return {"success": True, "message": "Tailscale 주소를 닫았습니다 — 창고·원격 런처·"
+                                           "원격 Finder 가 함께 닫힙니다 (열기로 재개)"}
 
     tcfg = api_tunnel.load_config()
     host = tcfg.get("hostname", "")
@@ -410,7 +411,8 @@ def provision_close(req: UseReq):
         reload_external_hostnames()
     except Exception:
         pass
-    return {"success": True, "message": "Cloudflare 창고 주소를 닫았습니다 (열기로 재개)"}
+    return {"success": True, "message": "Cloudflare 주소를 닫았습니다 — 창고·원격 런처·"
+                                       "원격 Finder 가 함께 닫힙니다 (열기로 재개)"}
 
 
 @router.post("/open")

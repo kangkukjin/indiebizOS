@@ -243,6 +243,7 @@ def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = 
                 "details": details
             }
 
+        _wire_cf_face(True)
         return {
             "success": True,
             "message": f"터널 '{tunnel_name}' 시작됨",
@@ -251,6 +252,43 @@ def start_tunnel(tunnel_name: str, config_path: str = None, tunnel_token: str = 
 
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+def _wire_cf_face(up: bool) -> None:
+    """cloudflare 터널의 기동·종료를 공개 얼굴(direct_hosts)과 **함께 움직인다**.
+
+    ★사용자 요구(2026-07-21): 창고를 닫으면 그 관을 쓰는 원격 런처·파인더도 같이 닫히고,
+    열면 같이 열려야 한다. tailscale 은 start_funnel/stop_funnel 이 이미 이 배선을 갖고
+    있었는데 cloudflare 쪽만 빠져 있어, 터널만 따로 기동하면 **터널은 살아 있는데 등기부엔
+    없는** 비대칭 상태(창고 404 / 런처는 열림)가 생겼다.
+
+    ★게이트 — `tunnel_token`+`hostname` 이 둘 다 있는 **발급기가 만든 직접서빙 얼굴**일
+    때만 배선한다. 맥처럼 Worker 를 얼굴로 쓰는 몸은 이 조건에 안 걸리므로(수제 터널,
+    토큰 없음) 손대지 않는다 — 직접서빙을 켜면 Worker 의 원본 은닉이 깨지므로 오히려
+    건드리면 안 된다.
+    """
+    try:
+        cfg = load_config()
+        host = (cfg.get("hostname") or "").strip().lower()
+        if not (host and cfg.get("tunnel_token")):
+            return
+        import public_face
+        face = public_face.load_config()
+        hosts = [h for h in (face.get("direct_hosts") or []) if h]
+        changed = False
+        if up and host not in hosts:
+            hosts.append(host)
+            changed = True
+        elif not up and host in hosts:
+            hosts = [h for h in hosts if h != host]
+            changed = True
+        if changed:
+            face["direct_hosts"] = sorted(hosts)
+            public_face.save_config(face)
+            from api_launcher_web import reload_external_hostnames
+            reload_external_hostnames()
+    except Exception:
+        pass
 
 
 def stop_tunnel() -> dict:
@@ -284,6 +322,8 @@ def stop_tunnel() -> dict:
         pass
 
     if stopped or not is_tunnel_running():
+        # 관이 내려갔으니 얼굴도 내린다 — 창고·런처·파인더가 함께 닫힌다
+        _wire_cf_face(False)
         return {"success": True, "message": "터널이 종료되었습니다."}
     else:
         return {"success": False, "error": "터널 종료 실패"}

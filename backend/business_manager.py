@@ -960,6 +960,73 @@ class BusinessManager:
         conn.close()
         return self.get_neighbor(neighbor_id)
 
+    def merge_neighbors(self, target_id: int, source_id: int) -> Optional[Dict]:
+        """이웃 병합 — 같은 사람이 두 경로(창고 등록/창고 가입 등)로 두 번 등록됐을 때.
+
+        source 의 연락처·메시지를 target 으로 옮기고, target 의 빈 자리(메모·문서·창고메모·
+        포털 로그인 자격)를 source 로 보강한 뒤 source 는 은퇴(soft delete). 레벨·평점은
+        큰 값(같은 사람이니 더 가까운 관계가 사실). 판별은 사람이, 병합은 여기가 한다."""
+        if target_id == source_id:
+            raise ValueError("같은 이웃입니다")
+        t = self.get_neighbor(target_id)
+        s = self.get_neighbor(source_id)
+        if not t or not s:
+            raise ValueError("이웃을 찾을 수 없습니다")
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        # 연락처 이관 — (type, value) 가 target 에 이미 있으면 source 쪽만 은퇴(중복 방지)
+        cursor.execute(
+            "SELECT contact_type, contact_value FROM contacts "
+            "WHERE neighbor_id = ? AND (deleted IS NOT 1)", (target_id,))
+        existing = {(r["contact_type"], r["contact_value"]) for r in cursor.fetchall()}
+        cursor.execute(
+            "SELECT id, contact_type, contact_value FROM contacts "
+            "WHERE neighbor_id = ? AND (deleted IS NOT 1)", (source_id,))
+        for r in cursor.fetchall():
+            if (r["contact_type"], r["contact_value"]) in existing:
+                cursor.execute("UPDATE contacts SET deleted = 1, updated_at = ? WHERE id = ?",
+                               (now, r["id"]))
+            else:
+                cursor.execute("UPDATE contacts SET neighbor_id = ?, updated_at = ? WHERE id = ?",
+                               (target_id, now, r["id"]))
+        # 대화 이관 — 두 레코드의 메시지 역사가 한 사람의 스레드로 합류
+        cursor.execute("UPDATE messages SET neighbor_id = ? WHERE neighbor_id = ?",
+                       (target_id, source_id))
+        # 필드 병합 — target 우선, 빈 자리만 보강. 숫자 축은 큰 값.
+        sets, params = [], []
+        def _fill(col, val):
+            sets.append(f"{col} = ?")
+            params.append(val)
+        if (s.get("info_level") or 0) > (t.get("info_level") or 0):
+            _fill("info_level", s["info_level"])
+        if (s.get("rating") or 0) > (t.get("rating") or 0):
+            _fill("rating", s["rating"])
+        if (s.get("favorite") or 0) and not (t.get("favorite") or 0):
+            _fill("favorite", 1)
+        for col in ("additional_info", "business_doc", "warehouse_memo"):
+            if not (t.get(col) or "").strip() and (s.get(col) or "").strip():
+                _fill(col, s[col])
+        # 포털 로그인 자격 — target 에 없고 source 에 있으면 이사(가입 계정 연속성).
+        # 둘 다 있으면 target 것 유지(source 쪽은 아래 은퇴에서 로그인 아이디를 비워 무효화).
+        if not (t.get("portal_login_id") or "") and (s.get("portal_login_id") or ""):
+            for col in ("portal_login_id", "portal_pw", "portal_key",
+                        "portal_revoked", "portal_joined_at", "portal_last_used"):
+                _fill(col, s.get(col))
+        if sets:
+            params.extend([now, target_id])
+            cursor.execute(f"UPDATE neighbors SET {', '.join(sets)}, updated_at = ? WHERE id = ?",
+                           params)
+        # source 은퇴 — 로그인 아이디도 비워 유령 로그인 차단(아이디 유니크 재사용 가능)
+        cursor.execute(
+            "UPDATE neighbors SET deleted = 1, portal_login_id = NULL, updated_at = ? WHERE id = ?",
+            (now, source_id))
+        cursor.execute("UPDATE contacts SET deleted = 1, updated_at = ? WHERE neighbor_id = ?",
+                       (now, source_id))
+        conn.commit()
+        conn.close()
+        return self.get_neighbor(target_id)
+
     def delete_neighbor(self, neighbor_id: int):
         """이웃 삭제 (소프트 삭제 — tombstone, 연락처도 함께)"""
         conn = self._get_connection()

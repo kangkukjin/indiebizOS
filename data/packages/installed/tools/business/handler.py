@@ -446,6 +446,38 @@ def _nb_delete(bm, ti: dict) -> str:
     return _ok({"deleted": nid}, "이웃을 삭제했습니다 (nostr 대화도 숨김).")
 
 
+def _nb_merge(bm, ti: dict) -> str:
+    """이웃 병합 — id(남길 이웃) + from(합칠 이웃의 id 또는 이름).
+
+    같은 사람이 두 경로(내가 창고 등록 / 그가 내 창고 가입)로 두 번 등록되는 구조적
+    중복의 수동 뒷문. npub·주소를 사람이 외울 수 없으니 판별은 사람이(이름으로),
+    병합은 business_manager.merge_neighbors 가(연락처·대화·자격·메모 합류)."""
+    tid = _int_or(ti.get("id") or ti.get("neighbor_id"))
+    raw = str(ti.get("from") or ti.get("from_id") or ti.get("from_name") or "").strip()
+    if not tid or not raw:
+        return _err("남길 이웃 id 와 합칠 이웃(from: 이름 또는 id)이 필요합니다.")
+    sid = _int_or(raw)
+    if not sid:
+        same = [n for n in bm.get_neighbors(search=raw) if n["name"] == raw and n["id"] != tid]
+        if not same:
+            near = [f"{n['name']}({n['id']})" for n in bm.get_neighbors(search=raw)
+                    if n["id"] != tid][:5]
+            return _err(f"'{raw}' 이름의 이웃을 못 찾았어요."
+                        + (f" 비슷한 이웃: {', '.join(near)}" if near else ""))
+        if len(same) > 1:
+            return _err(f"'{raw}' 이름의 이웃이 여럿이에요 — id 로 지정해 주세요: "
+                        + ", ".join(str(n["id"]) for n in same))
+        sid = same[0]["id"]
+    if sid == tid:
+        return _err("자기 자신과는 합칠 수 없어요.")
+    try:
+        nb = bm.merge_neighbors(tid, sid)
+    except ValueError as e:
+        return _err(str(e))
+    return _ok({"neighbor": nb, "merged_from": sid},
+               f"이웃을 합쳤습니다 — 연락처·대화·가입 자격이 '{(nb or {}).get('name', '')}' 하나로 합류했어요.")
+
+
 def _nb_favorite(bm, ti: dict) -> str:
     """즐겨찾기 토글."""
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
@@ -890,7 +922,7 @@ def _phone_sync(bm, ti: dict) -> str:
 
 _OP_DISPATCHERS = {
     "messages_op": {"thread": _msg_thread, "inbox": _msg_inbox},
-    "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete, "favorite": _nb_favorite},
+    "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete, "favorite": _nb_favorite, "merge": _nb_merge},
     "contact_op": {"add": _ct_add, "update": _ct_update, "delete": _ct_delete},
     "business_op": {"list": _biz_list, "detail": _biz_detail, "save": _biz_save, "delete": _biz_delete},
     "business_item_op": {"list": _item_list, "detail": _item_detail, "save": _item_save, "delete": _item_delete,

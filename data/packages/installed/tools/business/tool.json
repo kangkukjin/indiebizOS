@@ -46,7 +46,8 @@
               "detail",
               "save",
               "delete",
-              "favorite"
+              "favorite",
+              "merge"
             ],
             "default": "list"
           },

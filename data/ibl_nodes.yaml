@@ -4133,6 +4133,14 @@ nodes:
                     style: danger
                     confirm: 삭제할까요? 이웃이면 연락처·대화가 사라지고, 이웃 아닌 쪽지 상대면 대화가 숨겨집니다(새 메시지가 오면 다시 보여요).
                     back: true
+                - type: form
+                  title: 이웃 합치기
+                  fields:
+                  - key: merge_from
+                    label: 합칠 이웃 (이름 또는 id) — 그쪽의 연락처·대화·가입 자격이 이 이웃으로 합류하고, 그쪽 레코드는 은퇴합니다
+                    type: text
+                  action: '[others:neighbor]{op: "merge", id: "{neighbor_id}", from: "$merge_from"}'
+                  button: 이 이웃으로 합치기
                 - type: editable_list
                   from: contacts
                   title: 연락처
@@ -4176,8 +4184,8 @@ nodes:
       neighbor:
         returns: items
         fixture: '[others:neighbor]{op: "list"}'
-        description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite.
-        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글).
+        description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite/merge.
+        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글) / merge(id=남길 이웃, from=합칠 이웃의 이름 또는 id — 같은 사람이 창고 등록·창고 가입 두 경로로 중복 등록됐을 때 연락처·대화·가입 자격·메모를 한 레코드로 합류, 합쳐진 쪽은 은퇴).
         group: neighbor
         target_key: op
         router: handler
@@ -4190,6 +4198,7 @@ nodes:
             save: 이웃 생성(id 없음)/수정(id 있음)
             delete: 이웃 삭제 (비이웃 쪽지 상대는 대화 숨김)
             favorite: 즐겨찾기 토글
+            merge: 이웃 병합 (중복 등록된 같은 사람을 하나로 — 합쳐진 쪽 은퇴)
         implementation: business 패키지 neighbor_op — business_manager.get_neighbors/get_neighbor/create_neighbor/update_neighbor/delete_neighbor.
         keywords:
         - 이웃

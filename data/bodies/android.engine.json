@@ -115,6 +115,7 @@
     "migrate_video_action",
     "migrate_web_action",
     "migrate_webcam_action",
+    "mime_compat",
     "model_resolver",
     "multi_chat_db",
     "multi_chat_manager",
@@ -184,8 +185,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 178,
-    "engine": 164,
+    "total": 179,
+    "engine": 165,
     "blocklist": 14
   }
 }

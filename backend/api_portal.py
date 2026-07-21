@@ -677,7 +677,10 @@ def _serve_warehouse_file(abspath: Path, strip_exif: bool, download: bool = Fals
         except Exception:
             pass   # 변환 실패 시 원본 폴백(적어도 받아는 진다)
 
+    # .md 등의 매핑은 mime_compat 가 부팅 시 전역 보강(윈도우 임베디드 파이썬 구멍).
     ctype = mimetypes.guess_type(abspath.name)[0] or "application/octet-stream"
+    if ctype.startswith("text/") and "charset" not in ctype:
+        ctype += "; charset=utf-8"   # 한글 문서가 브라우저 인코딩 추측으로 깨지지 않게
     return FileResponse(p, media_type=ctype, headers=nostore)
 
 

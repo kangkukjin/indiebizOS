@@ -31,6 +31,10 @@ else:
 for _p in _extra_paths:
     if os.path.exists(_p) and _p not in os.environ.get("PATH", ""):
         os.environ["PATH"] = _p + os.pathsep + os.environ.get("PATH", "")
+
+# 윈도우 임베디드 파이썬의 mimetypes 구멍 보강 (.md 등 — 없으면 문서가 다운로드로 열림)
+import mime_compat  # noqa: F401  (임포트 = 전역 레지스트리 보강)
+
 from datetime import datetime
 from contextlib import asynccontextmanager, nullcontext
 

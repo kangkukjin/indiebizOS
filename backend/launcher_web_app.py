@@ -91,21 +91,20 @@ async function doLogin(){
     if(r.ok){ showApp(); } else { const d=await r.json().catch(()=>({})); el.textContent=d.detail||'로그인 실패'; }
   }catch(e){ el.textContent='서버 연결 실패'; }
 }
-async function doLogout(){ try{ await jfetch('/launcher/auth/logout',{method:'POST'}); }catch(e){} location.reload(); }
 let IS_PHONE=false;
 async function showApp(){
   document.getElementById('login').style.display='none';
   document.getElementById('app').classList.add('on');
-  // 자급 컴패니언(폰-로컬)인지 판별 — REMOTE 배지·로그아웃(⏻)·새로고침(↻)은 원격 시나리오
-  // 전용이라 폰에선 숨긴다(폰=자기 몸, 로그아웃/원격 새로고침 의미 없음).
+  // 자급 컴패니언(폰-로컬)인지 판별 — REMOTE 배지는 원격 시나리오 전용이라 폰에선 숨긴다.
+  // (2026-07-21 헤더의 ↻ 새로고침·⏻ 로그아웃 제거 — 새로고침은 브라우저와 겹치고,
+  //  로그아웃은 표면에 상주할 만큼 자주 쓰지 않는다. 세션 해제는 브라우저 데이터 삭제.)
   try{ const r=await jfetch('/launcher/config'); if(r.ok){ const c=await r.json();
     IS_PHONE=(c.host==='phone-local');
     /* 허브 OS — 붙여넣기 안내 키에만 쓴다. 폰 네이티브가 받는 config 는 폰 자신의 것이라
        허브 OS 를 모른다 → 그때는 두 키를 다 보여준다(라벨은 어차피 OS 중립). */
     if(c.platform==='mac') PASTE_KEY='⌘V';
     else if(c.platform==='windows'||c.platform==='linux') PASTE_KEY='Ctrl+V';
-    if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none';
-      const ha=document.getElementById('headerActions'); if(ha) ha.style.display='none'; }
+    if(IS_PHONE){ const b=document.getElementById('surfBadge'); if(b) b.style.display='none'; }
   } }catch(e){}
   /* 클립보드 'PC로'는 두 표면 공통 — 방향은 표면이 정한다(보고 있는 기계 → 허브 PC).
      읽는 방법만 갈린다: 폰 네이티브=Java ClipboardManager, 원격런처=브라우저 clipboard API. */
@@ -324,13 +323,6 @@ function setSurface(s){
   if(s==='forage' && !fgInit){ fgInit=true; fgNav('board'); }
   if(s==='warehouse') whLoad(WH_LEVEL);
 }
-function refreshSurface(){
-  if(surface==='autopilot') apLoad();
-  else if(surface==='app'){ appBackHome(); appHomeRendered=false; renderAppHome(true); }  /* 매니페스트 강제 재fetch */
-  else if(surface==='forage') fgNav('board');
-  else if(surface==='warehouse') whLoad(WH_LEVEL);
-}
-
 /* ================= 공유창고 (레벨별 폴더 — 소유자 리모컨) =================
    list/remove 는 로그인 세션으로 warehouse-admin 에 그대로 도달. 넣기는 데스크탑처럼
    로컬 경로가 없으므로 파일 바이트를 upload 엔드포인트로 직접 올린다(한 파일 = 한 요청). */

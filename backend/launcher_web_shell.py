@@ -52,7 +52,7 @@ input,textarea,select{ font-family:inherit; }
 .top .brand{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; letter-spacing:-.01em; }
 .top .badge{ background:var(--acc-soft); color:var(--acc2); font-size:10px; font-weight:700; padding:3px 8px; border-radius:999px; letter-spacing:.6px; }
 .iconbtn{ background:var(--bg3); border:1px solid transparent; color:var(--txt); width:34px; height:34px; border-radius:10px; font-size:15px; }
-/* 폰→맥 클립보드 — 제목과 나란히 오른쪽 끝까지, 길고 얇게 (폰에선 headerActions 가 숨어 우측 전폭) */
+/* 여기→허브PC 클립보드 — 제목과 나란히 오른쪽 끝까지, 길고 얇게 (헤더의 유일한 동작 버튼) */
 .clipmac{ flex:1; margin-left:12px; height:26px; border-radius:999px; background:var(--bg3); border:1px solid var(--line); color:var(--dim); font-size:11px; font-weight:600; letter-spacing:-.01em; padding:0 12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .clipmac:active{ border-color:var(--acc); color:var(--acc2); }
 .iconbtn:hover{ border-color:var(--acc); color:var(--acc2); }
@@ -392,10 +392,6 @@ a{ color:var(--info); }
     <!-- 보고 있는 기계의 클립보드를 허브 PC 로 (JS 가 노출) — 데스크탑 '폰으로'의 역방향.
          라벨은 OS 중립: 허브는 맥일 수도 윈도우일 수도 있다. -->
     <button class="clipmac" id="clipToMacBtn" onclick="clipToMac()" style="display:none">📋 PC로 보내기</button>
-    <div style="display:flex; gap:8px;" id="headerActions">
-      <button class="iconbtn" onclick="refreshSurface()" title="새로고침">↻</button>
-      <button class="iconbtn" onclick="doLogout()" title="로그아웃">⏻</button>
-    </div>
   </div>
   <div class="surfaces">
     <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">

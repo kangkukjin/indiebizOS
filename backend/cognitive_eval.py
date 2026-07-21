@@ -20,6 +20,45 @@ from cognitive_trace import (
     _FILE_WRITE_TOOL_NAMES,
 )
 
+# 판정 줄 매칭 — 줄 앞의 마크다운 장식(**, ##, >, 백틱, 괄호 등)을 관통해
+# ACHIEVED / NOT_ACHIEVED 로 *시작*하는 줄을 찾는다. NOT 변형(NOT ACHIEVED,
+# NOT-ACHIEVED)도 흡수. 대안 순서상 NOT 쪽을 먼저 둬야 ACHIEVED 부분매칭에 안 먹힌다.
+_VERDICT_LINE_RE = re.compile(
+    r"^[\s*_#>\"'`\[\(-]*(NOT[\s_-]?ACHIEVED|ACHIEVED)\b", re.IGNORECASE)
+_VERDICT_WORD_RE = re.compile(r"\bNOT[\s_-]?ACHIEVED\b|\bACHIEVED\b", re.IGNORECASE)
+_SEVERITY_RE = re.compile(r"SEVERITY\s*[:：]\s*([123])", re.IGNORECASE)
+
+
+def parse_eval_verdict(text: str) -> tuple:
+    """평가자 응답에서 (achieved: bool, severity: int)를 관용적으로 파싱한다.
+
+    프롬프트는 '첫 줄에 ACHIEVED/NOT_ACHIEVED만'을 지시하지만, 평가자가 에이전틱
+    프로바이더(claude_code 등 도구 사용)로 돌면 최종 응답이 서사체가 되어 판정이
+    서두 문장 뒤 마크다운 볼드(**ACHIEVED**)로 밀려나는 일탈이 실측됨(에피소드 812 —
+    첫 줄만 보던 옛 파서가 ACHIEVED 를 NOT_ACHIEVED 로 오판해 불필요한 재실행 발동).
+    지시 강화로는 못 막으므로 파서가 흡수한다:
+      1차: 판정 토큰으로 시작하는 첫 줄 (장식 관통)
+      2차: 본문 어디든 첫 판정 토큰 등장
+      3차: 판정 토큰 부재 → 통과 (기존 '평가 스킵=통과' 편향과 일치 —
+           잘못된 NOT_ACHIEVED 는 전체 재실행 낭비를 부른다)
+    severity 는 NOT_ACHIEVED 일 때 본문 전체에서 SEVERITY: n 탐색 (미표기=2).
+    """
+    achieved = None
+    for line in text.strip().split('\n'):
+        m = _VERDICT_LINE_RE.match(line.strip())
+        if m:
+            achieved = not m.group(1).upper().startswith("NOT")
+            break
+    if achieved is None:
+        m = _VERDICT_WORD_RE.search(text)
+        achieved = (m is None) or not m.group(0).upper().startswith("NOT")
+
+    severity = 0
+    if not achieved:
+        m = _SEVERITY_RE.search(text)
+        severity = int(m.group(1)) if m else 2  # 미표기 시 중간값
+    return achieved, severity
+
 
 class CognitiveEvalMixin:
     """Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가 메서드 모음."""
@@ -343,22 +382,8 @@ class CognitiveEvalMixin:
 
             self._log(f"[GoalEval] 평가 응답: {eval_response[:200]}")
 
-            lines = eval_response.strip().split('\n')
-            first_line = lines[0].strip().upper()
-            achieved = "ACHIEVED" in first_line and "NOT" not in first_line
-
-            # Failure Severity 파싱 (NOT_ACHIEVED일 때)
-            severity = 0
-            if not achieved and len(lines) > 1:
-                second_line = lines[1].strip().upper()
-                if "SEVERITY:" in second_line:
-                    try:
-                        severity = int(second_line.split("SEVERITY:")[-1].strip()[0])
-                        severity = max(1, min(3, severity))
-                    except (ValueError, IndexError):
-                        severity = 2  # 파싱 실패 시 중간값
-                else:
-                    severity = 2  # severity 미표기 시 중간값
+            # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
+            achieved, severity = parse_eval_verdict(eval_response)
 
             return achieved, eval_response, severity
 

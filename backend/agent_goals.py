@@ -549,8 +549,10 @@ class AgentGoalsMixin:
                 task_id=f"goal_eval_{goal.get('goal_id', '')}"
             )
 
-            first_line = response.strip().split('\n')[0].strip().upper()
-            achieved = "ACHIEVED" in first_line and "NOT" not in first_line
+            # 관용 파서 공용화 (cognitive_eval) — 첫 줄만 보던 옛 파서는 서두 문장이나
+            # **볼드** 뒤로 밀린 판정을 NOT_ACHIEVED 로 오판했다 (에피소드 812 부류).
+            from cognitive_eval import parse_eval_verdict
+            achieved, _severity = parse_eval_verdict(response)
             return achieved, response
         except Exception as e:
             self._log(f"[Goal] success_condition 평가 오류: {e}")

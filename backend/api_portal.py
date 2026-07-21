@@ -492,7 +492,7 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
     gb_ph = '손님으로 글을 남깁니다' if not viewer else '글을 남깁니다'
     sections.append(
         f'<h2 id="gb">방명록</h2><section>'
-        f'<form onsubmit="return gp(this)">'
+        f'<form onsubmit="gp(this);return false">'
         f'<input name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">'
         f'<div id="abt" class="abt"></div>'
         f'<textarea name="msg" rows="2" placeholder="{gb_ph}"></textarea>'
@@ -507,7 +507,7 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         join_box = ''
     else:
         who = '<span>손님 (레벨 0)</span>'
-        login_form = ('<form onsubmit="return li(this)"><input name="u" placeholder="아이디" '
+        login_form = ('<form onsubmit="li(this);return false"><input name="u" placeholder="아이디" '
                       'autocomplete="username"><input name="p" type="password" placeholder="비밀번호" '
                       'autocomplete="current-password"><button>로그인</button></form>'
                       '<button type="button" class="jt" onclick="jf()">가입</button>')
@@ -515,7 +515,7 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         # 레벨 0 자동 등록 + 즉시 로그인 — 높은 레벨은 창고 주인이 이웃 레벨로 준다.
         join_box = ('<section id="joinbox" class="joinbox" style="display:none">'
                     '<h2>창고 가입</h2>'
-                    '<form onsubmit="return jn(this)">'
+                    '<form onsubmit="jn(this);return false">'
                     '<input name="n" placeholder="이름" autocomplete="name">'
                     '<input name="u" placeholder="아이디 (영문 소문자·숫자 3~20자)" autocomplete="username">'
                     '<input name="p" type="password" placeholder="비밀번호" autocomplete="new-password">'
@@ -571,6 +571,9 @@ form textarea+button{{margin-top:.4rem}}
 {''.join(sections)}
 {locked_note}
 <script>
+// ★폼 핸들러 계약: 인라인 onsubmit 은 "fn(this);return false" — async 함수의 return false 는
+//   Promise 라 기본 제출을 못 막고, 기본 GET 제출이 fetch 와 경주해 로그인/글이 조용히
+//   유실되고 비밀번호가 URL 에 노출된다(실측: POST 와 GET /?u=&p= 동시 발생).
 async function li(f){{const r=await fetch('/login',{{method:'POST',headers:{{'Content-Type':'application/json'}},
 body:JSON.stringify({{user_id:f.u.value,password:f.p.value,auto:true}})}});
 if(r.ok)location.reload();else alert((await r.json()).detail||'로그인 실패');return false}}

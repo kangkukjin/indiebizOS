@@ -1,10 +1,12 @@
 """원격 런처 웹앱 — 문서 셸(head·CSS·body 골격). launcher_web_app/render 와 연결돼 한 문서.
 
-api_launcher_web.get_launcher_webapp_html() 이 세 조각을 그대로 이어붙인다(바이트 동일 조립).
-2026-07-18 모듈화(1500줄 규칙) — api_launcher_web.py 의 단일 문자열에서 verbatim 이동.
+2026-07-22 표면 분리 1단계: 단일 문자열을 조각 상수(머리·표면 탭줄·패널별·꼬리)로 분해 —
+LAUNCHER_SHELL_HTML 은 전 조각을 원래 순서로 이어붙인 원격런처(5탭) 조립(바이트 동일).
+표면 탭줄(SHELL_SURFACES_HTML)과 패널 유무=표면 정체 — 폰 표면 조립은 자기 탭줄과
+부분집합 패널로 따로 조립한다(launcher_surface_phone).
 """
 
-LAUNCHER_SHELL_HTML = """<!DOCTYPE html>
+SHELL_HEAD_HTML = """<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -402,7 +404,9 @@ a{ color:var(--info); }
          라벨은 OS 중립: 허브는 맥일 수도 윈도우일 수도 있다. -->
     <button class="clipmac" id="clipToMacBtn" onclick="clipToMac()" style="display:none">📋 PC로 보내기</button>
   </div>
-  <div class="surfaces">
+"""
+
+SHELL_SURFACES_HTML = """  <div class="surfaces">
     <button class="surf-tab on" id="t-autopilot" onclick="setSurface('autopilot')">
       <span class="em">🛰️</span><span>자율주행</span><span class="hint">속도·표현력</span></button>
     <button class="surf-tab" id="t-manual" onclick="setSurface('manual')">
@@ -412,7 +416,9 @@ a{ color:var(--info); }
     <button class="surf-tab" id="t-warehouse" onclick="setSurface('warehouse')">
       <span class="em">📦</span><span>공유창고</span><span class="hint">레벨·공개</span></button>
   </div>
+"""
 
+SHELL_PANEL_AUTOPILOT_HTML = """
   <!-- 자율주행 — 드릴다운: ① 대상 선택(시스템AI/스위치/프로젝트→에이전트) → ② 대화/결과 -->
   <div class="panel on" id="p-autopilot">
     <!-- ① 대상 브라우저 (루트 ↔ 프로젝트 에이전트 드릴) -->
@@ -436,7 +442,9 @@ a{ color:var(--info); }
       </div>
     </div>
   </div>
+"""
 
+SHELL_PANEL_MANUAL_HTML = """
   <!-- 조종실 (구 계기판) -->
   <div class="panel" id="p-manual">
     <div class="wrap">
@@ -524,13 +532,17 @@ a{ color:var(--info); }
       </div>
     </div>
   </div>
+"""
 
+SHELL_PANEL_APP_HTML = """
   <!-- 앱 -->
   <div class="panel" id="p-app">
     <div class="wrap" id="appHome"></div>
     <div class="wrap" id="appInst" style="display:none"></div>
   </div>
+"""
 
+SHELL_PANEL_FORAGE_HTML = """
   <!-- 포식(검색) 브라우저 — 앱모드의 앱(표면 탭 아님, 홈 그리드 타일로 진입).
        검색 → 후보판 → 진입(시스템 브라우저) → 판 유지 + ✕제외/📌담기 -->
   <div class="panel" id="p-forage">
@@ -552,7 +564,9 @@ a{ color:var(--info); }
       <div class="fg-list" id="fgList"></div>
     </div>
   </div>
+"""
 
+SHELL_PANEL_WAREHOUSE_HTML = """
   <!-- 공유창고 — 레벨(0 손님~4 가족)별 폴더. 원격은 파일을 업로드로 넣고(맥은 드롭/선택),
        빼기=휴지통 이동(가역). 소유자 리모컨: 로그인 세션으로 warehouse-admin 도달. -->
   <div class="panel" id="p-warehouse">
@@ -605,6 +619,19 @@ a{ color:var(--info); }
       <div class="wh-list" id="wdList"></div>
     </div>
   </div>
-</div>
+"""
+
+SHELL_TAIL_HTML = """</div>
 
 """
+
+LAUNCHER_SHELL_HTML = (
+    SHELL_HEAD_HTML
+    + SHELL_SURFACES_HTML
+    + SHELL_PANEL_AUTOPILOT_HTML
+    + SHELL_PANEL_MANUAL_HTML
+    + SHELL_PANEL_APP_HTML
+    + SHELL_PANEL_FORAGE_HTML
+    + SHELL_PANEL_WAREHOUSE_HTML
+    + SHELL_TAIL_HTML
+)

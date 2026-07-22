@@ -100,6 +100,11 @@
     "indienet_social",
     "install_approvals",
     "korean_utils",
+    "launcher_app_appmode",
+    "launcher_app_autopilot",
+    "launcher_app_common",
+    "launcher_app_manual",
+    "launcher_app_warehouse",
     "launcher_layout",
     "launcher_web_app",
     "launcher_web_render",
@@ -190,8 +195,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 184,
-    "engine": 169,
+    "total": 189,
+    "engine": 174,
     "blocklist": 15
   }
 }

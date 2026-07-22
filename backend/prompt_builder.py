@@ -156,9 +156,17 @@ class PromptBuilder:
                 logger.warning(f"[PromptBuilder] World Pulse 로드 실패: {e}")
                 content = ""
 
+        # 이웃 몸 명함 냄새(실험 3) — 캐시된 peer 명함 요약을 세계 인식 옆에 부착.
+        # 캐시 없으면 ""(비용 0). 사전이 아니라 냄새 — "저 몸에 부탁할 수 있다"의 인지.
+        try:
+            from peer_cards import scent_text
+            _scent = scent_text()
+        except Exception:
+            _scent = ""
+
         if content:
             logger.info(f"[PromptBuilder] World Pulse 주입: ~{len(content)}자")
-            return content
+            return content + (f"\n\n{_scent}" if _scent else "")
 
         # 폴백(폰-자아 호스팅 §6.7): world_pulse.md 가 아직 없는 몸(예: 펄스 수집이 안 도는 폰)
         # 에서도 *정체성*만은 반드시 주입한다 — "나는 어느 몸인가"를 모르면 자기-모델이 깨진다
@@ -185,7 +193,7 @@ class PromptBuilder:
                 if cap.get("has_peer"):
                     lines.append(f"- 못 하는 일은 {cap.get('peer_name','상대 노드')}의 액션을 빌릴 수 있다(분산 IBL 자동 위임).")
                 logger.info("[PromptBuilder] World Pulse 부재 → 정체성+마이크로 폴백 주입")
-                return "\n".join(lines)
+                return "\n".join(lines) + (f"\n\n{_scent}" if _scent else "")
         except Exception as e:
             logger.debug(f"[PromptBuilder] 정체성 폴백 실패: {e}")
         return ""

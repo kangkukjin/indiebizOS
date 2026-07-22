@@ -44,12 +44,14 @@
     "api_websocket",
     "api_xray",
     "auto_response",
+    "body_ask",
     "boot_common",
     "business_manager",
     "business_sync",
     "calendar_actions",
     "calendar_html",
     "calendar_manager",
+    "capability_card",
     "channel_engine",
     "channel_poller",
     "cognitive_consciousness",
@@ -126,6 +128,7 @@
     "nostr_phone_bridge",
     "notification_manager",
     "package_manager",
+    "peer_cards",
     "phone_jobs",
     "phone_notifications",
     "project_manager",
@@ -186,8 +189,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 180,
-    "engine": 165,
+    "total": 183,
+    "engine": 168,
     "blocklist": 15
   }
 }

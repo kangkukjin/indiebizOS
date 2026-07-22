@@ -140,6 +140,35 @@ def _phone_runnable(node: str, action: str) -> bool:
     return True if rs is None else (f"{node}:{action}" in rs)
 
 
+# === Phase 0 (몸 독립 마이그레이션) — 포워딩 인구조사 ===
+# 관문(_resolve_and_maybe_forward)이 원격을 택할 때마다 한 줄 적재(관찰 전용, 실행 무영향).
+# 목적: 어떤 어휘가 어느 방향으로 전선을 건너는지 실측 → 명함/의도(delegate) 전환 범위 산정.
+# 집계: scripts/forwarding_census_report.py. 몸마다 자기 data/ 에 쌓임(맥=즉시,
+# 폰=다음 재빌드 후 — 폰→맥 방향은 폰의 관문에서 결정되므로 폰 번들에 실려야 잡힌다).
+def _census_log(node: str, action: str, target_alias, agent_id, project_path, dist):
+    try:
+        base = os.environ.get("INDIEBIZ_BASE_PATH") or os.path.join(os.path.dirname(__file__), "..")
+        path = os.path.join(base, "data", "forwarding_census.jsonl")
+        outcome = "other"
+        if isinstance(dist, dict):
+            outcome = (dist.get("_forwarded_to")
+                       or ("needs_choice" if dist.get("needs_node_choice")
+                           else ("error" if dist.get("error") else "other")))
+        rec = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "self": os.environ.get("INDIEBIZ_PROFILE") or "desktop",
+            "act": f"{node}:{action}",
+            "to": outcome,  # mac / phone / phone(push) / phone(queue) / error / needs_choice
+            "why": "hub" if target_alias == "hub" else ("alias" if target_alias else "auto"),
+            "agent": agent_id,
+            "project": os.path.basename(project_path.rstrip("/")) if project_path else None,
+        }
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass  # 인구조사가 실행을 깨서는 안 됨
+
+
 # 직결 부정 캐시: 최근 연결 실패한 폰 URL — 60초간 직결 시도를 건너뛰고 바로 푸시 큐로.
 # (LTE 폰에 버튼 연타 시 매번 4초 connect 대기하는 낭비 방지. Wi-Fi 복귀는 60초 내 자동 회복.)
 _phone_direct_fail: Dict[str, float] = {}
@@ -779,6 +808,8 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     _dist = _resolve_and_maybe_forward(node, action, action_config, params,
                                        tool_input.get("target_node"), agent_id)
     if _dist is not None:
+        _census_log(node, action, tool_input.get("target_node"), agent_id,
+                    project_path, _dist)  # Phase 0 인구조사(관찰 전용)
         return _attach_param_warning(_dist, _param_warning)
 
     # 라우터별 실행 + 개별 액션 기록 (X-Ray용)

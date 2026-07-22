@@ -102,6 +102,10 @@ data/packages/installed/photo_index.db-wal
 data/conversation.db*
 data/location_cache.json
 data/param_friction.jsonl
+# 몸 독립 소통 연구 런타임 계측·캐시 (docs/BODY_CARD_RESEARCH.md)
+data/forwarding_census.jsonl
+data/body_ask_log.jsonl
+data/peer_cards/
 data/regime_change_analysis.html
 data/business_images/
 

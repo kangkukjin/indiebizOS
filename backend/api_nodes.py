@@ -54,6 +54,18 @@ async def register_node(req: RegisterRequest):
                         auth=req.auth, owner=req.owner, primary=req.primary)
     if entry.get("error"):
         return {"success": False, **entry}
+    # 명함 교환(실험 3): 등록해 온 몸의 명함을 백그라운드로 가져와 캐시(냄새).
+    # 실패해도 등록엔 무영향 — 명함은 낡아도 냄새로 유효, 다음 등록 때 재시도.
+    if req.url and not entry.get("self"):
+        import os as _os
+        import threading as _th
+        _hdrs = {}
+        _tok = _os.environ.get("INDIEBIZ_PHONE_TOKEN")
+        if _tok and (req.auth == "x_phone_token" or dr.PHONE_CLASS in caps):
+            _hdrs["X-Phone-Token"] = _tok
+        from peer_cards import fetch_and_cache
+        _th.Thread(target=fetch_and_cache, args=(req.url, req.alias),
+                   kwargs={"headers": _hdrs}, daemon=True).start()
     return {"success": True, "node": entry, "live_count": len(dr.list_live())}
 
 
@@ -103,6 +115,34 @@ async def list_nodes():
             for e in live
         ],
     }
+
+
+@router.get("/nodes/card")
+async def capability_card(detail: str = "full"):
+    """이 몸의 명함 — 자기 레지스트리에서 파생한 능력 자기소개(desc-프로젝션).
+
+    몸 독립 소통 연구(실험 1): 두 몸이 서로의 어휘를 통째로 아는 대신 명함을
+    교환한다. detail=full(액션 desc 전부) | summary(노드·그룹 집계).
+    """
+    from capability_card import build_card
+    return build_card(detail=detail)
+
+
+class AskRequest(BaseModel):
+    message: str          # 자연어 부탁 — 상대는 내 코드를 조립하지 않는다
+    from_body: str = ""   # 발신 몸 식별(선택, 계측용)
+    dry_run: bool = False # True=컴파일만(실험 계측: 번역 품질을 실행과 분리 측정)
+
+
+@router.post("/nodes/ask")
+def body_ask(req: AskRequest):
+    """부탁 경로 — 몸 독립 소통 연구(실험 2).
+
+    명함만 아는 상대의 자연어 부탁을 받아 내 사전으로 컴파일·실행·통화 반환.
+    동기 def(스레드풀) — LLM 번역·실행이 이벤트 루프를 막지 않게(자기교착 방지).
+    """
+    from body_ask import handle_ask
+    return handle_ask(req.message, dry_run=req.dry_run, from_body=req.from_body)
 
 
 @router.get("/nodes/peer-status")

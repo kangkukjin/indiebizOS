@@ -166,6 +166,25 @@ def instruments():
     return JSONResponse(_lw._derive_instruments())
 
 
+@app.get("/nodes/card")
+def capability_card(detail: str = "full"):
+    # 이 몸(폰)의 명함 — 몸 독립 소통 연구(실험 1). capability_card 가 몸-인식이라
+    # 폰에선 phone_manifest.runnable_actions 만 실린다. 맥의 /nodes/card 와 동일 계약.
+    from capability_card import build_card
+    return JSONResponse(build_card(detail=detail))
+
+
+@app.post("/nodes/ask")
+def body_ask_endpoint(payload: dict):
+    # 부탁 경로(실험 2) — 자연어 부탁을 이 몸(폰)이 자기 사전으로 컴파일·실행.
+    # 폰엔 인지 프로바이더가 없어 body_ask 가 Gemini+자기사전으로 능력-감지 폴백.
+    # 동기 def(스레드풀) — 컴파일·실행이 이벤트 루프를 막지 않게(자기교착 방지).
+    from body_ask import handle_ask
+    return JSONResponse(handle_ask((payload or {}).get("message", ""),
+                                   dry_run=bool((payload or {}).get("dry_run")),
+                                   from_body=(payload or {}).get("from_body", "")))
+
+
 @app.get("/launcher/config")
 def launcher_config():
     # 폰 로컬 = 비번 게이트 없음(localhost 자기 자신)
@@ -656,6 +675,16 @@ async def _register_with_hub(port: int):
                     print(f"[phone_api] 허브 노드 등록: {alias} @ {payload['url']}")
                     first = False
                     delay = 0.5
+                    # 명함 교환(실험 3): 등록 성공 시 맥(허브)의 명함을 가져와 캐시.
+                    # 세션 헤더는 _mac_post_json 이 갱신한 _mac_session 재사용.
+                    try:
+                        import threading as _th
+                        from peer_cards import fetch_and_cache as _fcc
+                        _h = {"X-Launcher-Session": _mac_session} if _mac_session else {}
+                        _th.Thread(target=_fcc, args=(_mac_url, "맥"),
+                                   kwargs={"headers": _h}, daemon=True).start()
+                    except Exception as _e:
+                        print(f"[phone_api] 맥 명함 fetch 스킵: {_e}")
                 else:
                     print(f"[phone_api] 허브 등록 실패(재시도): {getattr(r,'status_code',None)}")
                     delay = 60.0

@@ -202,9 +202,9 @@ async def clip_to_mac():
     읽기=네이티브 ClipboardManager(PhoneActions.getClipboard — WebView JS 의
     navigator.clipboard.readText 는 안드로이드서 신뢰 불가). Android 10+ 은 포그라운드
     앱만 읽을 수 있는데 버튼 탭 시점엔 이 앱이 포그라운드라 허용 케이스.
-    놓기=이웃 문법 [others:ask](특권 소멸 1단계) — 맥에 자연어 부탁+payload 동봉.
-    맥이 자기 사전으로 [self:output]{op:clipboard} 를 컴파일·실행한다. HTTP 직결(터널)
-    우선, 불가 시 우편함(Nostr DM) 폴백은 ask_peer 안에 있다.
+    놓기=이웃 문법 [others:ask] — 맥에 자연어 부탁+payload 동봉. 맥이 자기 사전으로
+    [self:output]{op:clipboard} 를 컴파일·실행한다. 폰→맥은 맥이 상시 도달(터널)이라
+    HTTP ask 상행으로 충분하다.
     """
     def _read():
         from java import jclass  # 능력감지 — 폰에서만 성공 (INDIEBIZ_PROFILE 분기 금지)
@@ -221,16 +221,12 @@ async def clip_to_mac():
         return ask_peer({
             "message": "첨부한 텍스트(payload.text)를 이 컴퓨터의 클립보드에 넣어줘",
             "payload": {"text": text},
-            "timeout": 45,
         })
     res = await asyncio.to_thread(_send)
     # 성공 판정: 맥의 _output_clipboard 성공 시 copied_length 가 (중첩 어디든) 등장.
-    # 우편함 폴백으로 결과가 늦으면 queued=true — 부탁 자체는 살아 있다.
     raw = json.dumps(res, ensure_ascii=False, default=str) if isinstance(res, (dict, list)) else str(res)
     if "copied_length" in raw:
         return JSONResponse({"success": True, "chars": len(text)})
-    if isinstance(res, dict) and res.get("queued"):
-        return JSONResponse({"success": True, "queued": True, "chars": len(text)})
     err = (res.get("error") if isinstance(res, dict) else None) or "맥 전달 실패"
     return JSONResponse({"success": False, "error": str(err)[:120]})
 
@@ -670,13 +666,6 @@ async def _register_with_hub(port: int):
         "url": f"http://{ip}:{port}", "auth": "x_phone_token", "owner": "self",
         "primary": False,
     }
-    # 서명 신원(npub) 동봉 — 허브가 부여식에 npub 접점을 붙여 우편함(Nostr DM)
-    # 부탁이 이 몸의 레벨로 판정되게 한다(device_id 자기보고의 서명 승격).
-    try:
-        import nostr_phone_bridge as _bridge
-        payload["npub"] = _bridge.pub_hex() or ""
-    except Exception:
-        pass
     import asyncio
     first = True
     last_ip = ip
@@ -702,17 +691,13 @@ async def _register_with_hub(port: int):
                         def _fetch_and_grant():
                             c = _fcc(_mac_url, "맥", headers=_h)
                             try:
-                                ident = ((c or {}).get("identity") or {})
-                                did = ident.get("device_id")
+                                did = ((c or {}).get("identity") or {}).get("device_id")
                                 if did:
-                                    from body_trust import grant_body, attach_npub
+                                    from body_trust import grant_body
                                     g = grant_body(did, "맥", level=4,
                                                    granted_by="provision-register")
                                     if g.get("granted"):
                                         print(f"[phone_api] 신뢰 부여식: 맥({did}) → 레벨 {g['level']}")
-                                    # 맥 npub 접점 부착 — 맥발 우편함 부탁이 레벨 4로 판정(멱등)
-                                    if ident.get("npub"):
-                                        attach_npub(did, ident["npub"])
                             except Exception as e:
                                 print(f"[phone_api] 맥 부여식 스킵: {e}")
 
@@ -804,30 +789,6 @@ def _start_hub_registration(port: int):
             asyncio.run(_register_with_hub(port))
         except Exception as e:
             print(f"[phone_api] 허브 등록 루프 종료: {e}")
-    threading.Thread(target=_run, daemon=True).start()
-
-
-def _start_ask_mailbox():
-    """ask 우편함(Nostr DM) 폴 데몬 — 특권 소멸 1단계의 하행 수신 채널.
-
-    릴레이가 EOSE 에 닫히는 원샷 REQ(RelayClient.query)라 상시 구독 대신 주기 폴.
-    폴 주기 = 우편함 경로(LTE 등 직결 불가)의 최악 수신 지연. 허브 하트비트와 독립 —
-    env 주소·토큰 없이도(=전용선 없이도) 맥의 부탁이 닿는다는 것이 이 데몬의 의미.
-    """
-    import threading, time as _t
-
-    def _run():
-        _t.sleep(20)  # 부팅 직후 네트워크·브리지 안정 대기
-        while True:
-            try:
-                import ask_mailbox
-                n = ask_mailbox.poll_once()
-                if n:
-                    print(f"[phone_api] ask 우편함 {n}건 처리")
-            except Exception as e:
-                print(f"[phone_api] ask 우편함 폴 오류: {e}")
-            _t.sleep(12)
-
     threading.Thread(target=_run, daemon=True).start()
 
 
@@ -1618,11 +1579,6 @@ def serve(port=8765, base_path=None):
         _start_hub_registration(int(port))
     except Exception as e:
         print(f"[phone_api] 허브 등록 기동 스킵: {e}")
-    # ask 우편함(Nostr DM) 수신 데몬 — 허브 등록과 독립(전용선 없이도 부탁이 닿는 길).
-    try:
-        _start_ask_mailbox()
-    except Exception as e:
-        print(f"[phone_api] ask 우편함 기동 스킵: {e}")
     config = uvicorn.Config(
         app, host=_bind,
         port=int(port), log_level="info", loop="asyncio")

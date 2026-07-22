@@ -43,7 +43,6 @@
 compute=런처 세션) → 상대 `/nodes/ask` → 상대 body_ask.handle_ask 가 자기 컴파일러
 (해마 있으면 조종실, 없으면 사전-동봉 Gemini)로 번역·실행·1회 자가교정. 수신측
 **소유-가드**: 자기 사전 밖(미지 포함) 액션으로 번역되면 1회 교정 후 정직 거절 —
-남의 어휘로 컴파일해 관문 위임으로 되튕기지 않는다. HTTP 직결 불가(LTE 등) 시
-**우편함**(ask_mailbox — NIP-17 DM 위 ask 봉투, 명함의 npub 필요) 자동 폴백,
-`timeout`=우편함 결과 대기 초(기본 60, 미도착=queued). 연구 정본
+남의 어휘로 컴파일해 관문 위임으로 되튕기지 않는다. 전송=상대 몸의 주소로 HTTP
+하나(창고와 같은 문법 — 별도 신호층 없음). 연구 정본
 = docs/BODY_CARD_RESEARCH.md, 특권 소멸 = docs/NO_PRIVILEGED_RAILS_HANDOFF.md.

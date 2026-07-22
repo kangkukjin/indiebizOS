@@ -43,7 +43,6 @@
     "api_warehouse_feed",
     "api_websocket",
     "api_xray",
-    "ask_mailbox",
     "auto_response",
     "body_ask",
     "body_trust",
@@ -74,7 +73,6 @@
     "forage_consolidation",
     "forage_memory",
     "gen_newspaper",
-    "generate_missing_intents",
     "generate_newspaper",
     "goal_evaluator",
     "health_sync",
@@ -145,7 +143,6 @@
     "prompt_builder",
     "public_face",
     "r2_client",
-    "rebuild_usage_db",
     "report_html",
     "runtime_utils",
     "safe_store",
@@ -198,8 +195,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 192,
-    "engine": 177,
+    "total": 189,
+    "engine": 174,
     "blocklist": 15
   }
 }

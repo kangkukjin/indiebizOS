@@ -632,16 +632,6 @@ class ChannelPoller:
             if not content:
                 return
 
-            # ask 우편함(특권 소멸 1단계): 봉투(indiebiz_ask)면 우편함이 소비 — 일반 DM 로
-            # 흘리지 않는다. 자체 TTL·중복제거가 있어 백필 가드보다 앞에 둔다(재시작 후에도
-            # 신선한 부탁은 처리, 낡은 것은 우편함이 스스로 거른다).
-            try:
-                from ask_mailbox import handle_dm_content
-                if handle_dm_content(out.get('sender', ''), content, out.get('created_at')):
-                    return
-            except Exception:
-                pass
-
             # 백필 가드: 리스닝 시작 이전(여유 120초) 메시지는 자동응답 트리거 안 함(이미 dms.db 에 있음).
             rumor_ca = out.get('created_at') or 0
             started = getattr(self, '_nostr_listen_started', 0)

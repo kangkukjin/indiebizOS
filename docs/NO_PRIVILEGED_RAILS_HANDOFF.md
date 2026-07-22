@@ -3,7 +3,69 @@
 2026-07-22 세션 종료 시점. 표면 분리(docs/SURFACE_SPLIT_HANDOFF.md, 완료) 직후의
 설계 논의에서 사용자가 확정한 다음 착수 과제.
 
-## ★1단계 구현 상태 (2026-07-22 후속 세션 — 맥 측 완결, 폰 설치 대기)
+## ★★재설계 (2026-07-22 3차 — 두 목표 분리, 우편함 철회) — 이 절이 현행 정본
+
+아래 "1단계 구현 상태"(우편함)는 **철회됐다**. 사용자가 뒤엉킨 두 목표를 분리:
+
+- **목표 1 (핵심)**: 두 indiebizOS 의 소통 — 대부분 **PC 둘**이고, 각자 공개 얼굴
+  (CF 터널/tailscale)+공유창고를 가진다. **전송층은 이미 풀려 있다**(주소로 HTTP —
+  창고 폴링·게시판·포털·ask). 폰네이티브는 이 목표의 *도구*였을 뿐이고, 폰의 고생
+  (CGNAT=얼굴 없음)은 목표 1의 문제가 아니다. 하트비트 푸시큐도 우편함도 폰-특수
+  배관이라 목표 1에 기여 없음. **끝 그림 = "몸의 주소로 HTTP ask 하나"** — Nostr 는
+  사람-메신저·커뮤니티 층으로 복귀(몸의 신호 버스 아님).
+  남은 것은 전송이 아니라 **관계·정책**: ①낯선 몸의 만남·부여 절차(소유주 승인 UI)
+  ②검증 가능한 신원(자기보고 device_id → 서명) ③정책 바닥 — "남의 의도 자동실행
+  금지"와 ask 의 정리(남의 부탁은 읽기-전용까지만 자동, 그 이상=승인 대기함).
+  특권 소멸 2~5는 유효하되 **순수한 빼기**(대체 전송층 신설 없음).
+- **목표 2 (개인 기능, 비핵심)**: 내 폰↔PC 메시지. 원격런처를 **연 상태에서만**
+  받아도 무방(사용자 확정). → 새 배관 0으로 원격런처에 재배치.
+
+### 작업 계획 (이 순서대로 — A→D) — ✅A·B·C 완료(같은 날, 커밋 참조), D=문서·메모리
+
+검증 실측: clipbox 적재→원격런처(실브라우저) 조종실 카드 렌더→📋 복사→consume→카드
+소멸 종단 · 빈 내용 가드 · ask payload dry_run 회귀(compiled=[self:output] 유지) ·
+build --check·번들 파생(ask_mailbox 이탈)·tsc 통과. 폰 APK 재빌드=USB 연결 시 설치
+(구버전 폰도 목표 2 는 원격런처로 즉시 동작 — 폰 번들과 무관, 갱신은 clip_to_mac
+ask 경로·불용 코드 정리 목적).
+
+**A. 우편함 걷어내기** (커밋 `8bb6010` 부분 철회):
+- 삭제: backend/ask_mailbox.py · data/ask_mailbox_seen.json(+.gitignore 줄) ·
+  channel_poller giftwrap ask 훅 · body_ask `_ask_mailbox_fallback`+호출 2곳+
+  `timeout` 파라미터 · api_nodes RegisterRequest.npub+attach_npub 호출 ·
+  body_trust.attach_npub · capability_card `_self_npub`+identity.npub ·
+  phone_api `_start_ask_mailbox` 데몬+기동 · register payload npub ·
+  _fetch_and_grant 의 npub 부착 · others.yaml ask desc 의 우편함/timeout 문구 ·
+  guides/body_ask.md 우편함 문구.
+- **남김** (전송 무관 ask 개선 = 목표 1 자산): payload 동봉("$payload.<키>" 치환)·
+  AskRequest.payload · 소유-가드(capability_card.foreign_actions 위임)+해마 용례
+  필터 · ask_peer connect 5초 분리 · 해마 시딩 6용례+ibl_distilled ·
+  peer_cards identity-갱신 fix · PRIVILEGE_LEVELS "철거 목록" 재정위 ·
+  phone_api clip_to_mac 의 ask 경로(폰→PC ask 상행 — 맥은 상시 도달, timeout 만 제거).
+
+**B. 목표 2 재배치 — 맥 메시지함 + 원격런처 수신면**:
+- 백엔드(api_launcher_web, 원격런처 인증층 뒤): data/clipbox.json —
+  POST /launcher/clipbox {text}(적재) · GET /launcher/clipbox(최근 목록) ·
+  POST /launcher/clipbox/consume {id}(수신 처리).
+- 데스크탑 Launcher.tsx '폰으로' 버튼: [others:ask] 대신 POST /launcher/clipbox.
+  피드백 "담김 ✓ — 폰에서 런처 열면 받아요".
+- 원격런처(launcher_app_common.py): "PC에서 온 메시지" 면 — loadPeer 패턴으로 20초
+  폴링, 카드(미리보기+📋 복사=navigator.clipboard.writeText, 복사 시 consume).
+  IS_PHONE(폰네이티브)이면 비활성 — clipbox 는 허브(맥)의 것, 원격런처 전용.
+  ★Python-내-JS 따옴표 함정 · 두 표면 조립(launcher_surface_remote/phone) 재확인.
+
+**C. 재빌드·검증·커밋**: py_compile · build_ibl_nodes(+--check) ·
+  build_body_bundle android(ask_mailbox 이탈 177→176) · APK 재빌드(설치=USB 대기) ·
+  tsc · 라이브 스모크(/ping·ask dry_run payload 회귀·clipbox 왕복) · main 커밋 push.
+
+**D. 문서·메모리 정합화**: 이 문서(완료 표시) · BODY_CARD_RESEARCH.md "✅해소(우편함)"
+  절→철회 기록 · 메모리 architecture_no_privileged_rails(1항 Nostr 처방 재작성)·
+  MEMORY.md START HERE · 태스크 #3(폰 APK) 설명 갱신.
+
+**이번 범위 밖(하지 않음)**: 배관 #1(하트비트+푸시큐) 실제 삭제 — [limbs:phone]
+어휘의 에이전트 빌림이 아직 이 배관에 탄다(census 확인 후 별도 단계) · 폰 얼굴
+(tailscale) 보류 · 낯선 몸 만남·신원·승인 = 목표 1 의 다음 단계(설계부터).
+
+## [철회됨] 1단계 구현 상태 (2026-07-22 후속 세션 — 우편함, 기록용으로만 보존)
 
 **구현**: `backend/ask_mailbox.py` 신설 — NIP-17 DM 위 ask 봉투(`{"indiebiz_ask":1,
 op: ask|result, id, ts, message, payload, ...}`), ASK_RELAYS=nos.lol+damus(수신 선언

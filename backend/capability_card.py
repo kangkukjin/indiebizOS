@@ -90,22 +90,6 @@ def _action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
     return entry
 
 
-def _self_npub() -> str:
-    """이 몸의 nostr 공개키(hex) — 몸-인식. 신원 미가용이면 ""(명함에 미기재)."""
-    try:
-        from runtime_utils import detect_body
-        if (detect_body() or {}).get("profile") == "phone":
-            import nostr_phone_bridge as bridge
-            return bridge.pub_hex() or ""
-        from indienet import get_indienet
-        idn = get_indienet()
-        if getattr(idn, "_initialized", False):
-            return idn.identity.public_key.hex()
-    except Exception:
-        pass
-    return ""
-
-
 def build_card(detail: str = "full") -> Dict[str, Any]:
     """자기 명함 파생. detail: full(액션 desc 전부) | summary(노드·그룹 집계만)."""
     data = _registry()
@@ -164,9 +148,6 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
         identity = {"device_id": self_device_id()}
     except Exception:
         identity = {}
-    npub = _self_npub()
-    if npub:
-        identity["npub"] = npub  # 서명 신원 앵커(hex) — 우편함(ask_mailbox) 수신처·부여식 키
 
     return {
         "kind": "indiebiz-capability-card",

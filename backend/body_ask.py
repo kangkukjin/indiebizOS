@@ -293,10 +293,6 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"error": 'message 가 필요합니다. 예: [others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장"}'}
     to = str(params.get("to") or "").strip().lstrip("@")
     enclosure = params.get("payload") if isinstance(params.get("payload"), dict) else None
-    try:
-        mailbox_timeout = float(params.get("timeout") or 60.0)
-    except (TypeError, ValueError):
-        mailbox_timeout = 60.0
 
     entry = None
     try:
@@ -341,13 +337,8 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
                 headers["X-Phone-Token"] = tok
             is_compute_peer = False
         if not url:
-            # 주소 없음 — 우편함(Nostr DM)이 유일한 길일 수 있다(명함에 npub 있으면).
-            fb = _ask_mailbox_fallback(to, entry, message, enclosure, params, mailbox_timeout)
-            if fb is not None:
-                return fb
             return {"error": (f"'{to or '이웃 몸'}'에 닿을 주소가 없습니다 — 지금 연결된 몸이 없고 "
-                              "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있고 "
-                              "명함의 npub 도 없습니다."),
+                              "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있습니다."),
                     "node_unreachable": True}
 
     try:
@@ -362,15 +353,12 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
     import requests
     try:
         # connect 5초 분리 — LTE/CGNAT 뒤 몸은 connect 자체가 안 되므로 빨리 접고
-        # 우편함(Nostr DM) 폴백으로 넘어간다(특권 소멸 1단계 — 신호층은 보편 매체).
+        # 명확한 unreachable 로 돌아간다(120초 hang 방지).
         r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=(5, 120))
         if r.status_code in (401, 403) and is_compute_peer and _peer_mac_login(url):
             headers["X-Launcher-Session"] = _peer_mac_session["session"]
             r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=(5, 120))
     except Exception as e:  # noqa: BLE001
-        fb = _ask_mailbox_fallback(to, entry, message, enclosure, params, mailbox_timeout)
-        if fb is not None:
-            return fb
         return {"error": f"이웃 몸({url})에 연결할 수 없습니다 ({e.__class__.__name__}). "
                          "그 몸이 켜져 있는지 확인하세요.", "node_unreachable": True}
     if r.status_code != 200:
@@ -382,34 +370,6 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(out, dict):
         out["_asked"] = (entry or {}).get("alias") or url
     return out
-
-
-def _ask_mailbox_fallback(to: str, entry, message: str, enclosure, params,
-                          timeout: float):
-    """HTTP 직결 불가 시 우편함(Nostr DM) 경로 — npub 를 알 때만. 모르면 None.
-
-    특권 소멸 1단계: 하트비트 푸시 큐(허브-위성 전용선)의 이웃-문법 대체. 발신자
-    신원은 npub 서명이 증명하므로 공유 토큰·env 주소가 필요 없다.
-    """
-    try:
-        from ask_mailbox import ask_via_mailbox, peer_npub
-        alias = (entry or {}).get("alias") or to
-        to_hex = peer_npub(alias)
-        if not to_hex:
-            return None
-        try:
-            from device_registry import self_device_id
-            my_id = self_device_id()
-        except Exception:
-            my_id = ""
-        out = ask_via_mailbox(to_hex, message, payload=enclosure,
-                              from_body=_self_label(), device_id=my_id,
-                              dry_run=bool(params.get("dry_run")), timeout=timeout)
-        if isinstance(out, dict):
-            out.setdefault("_asked", alias or f"npub:{to_hex[:12]}…")
-        return out
-    except Exception:
-        return None
 
 
 def _self_label() -> str:

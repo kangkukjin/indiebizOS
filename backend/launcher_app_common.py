@@ -111,6 +111,7 @@ async function showApp(){
   const cm=document.getElementById('clipToMacBtn'); if(cm) cm.style.display='block';
   apLoad();
   loadPeer(); setInterval(loadPeer, 20000);  /* 다른 몸 연결상태 폴링(계기판) */
+  loadClipbox(); setInterval(loadClipbox, 20000);  /* PC에서 온 메시지(clipbox) — IS_PHONE 이면 내부 스킵 */
   loadGear();  /* 모델 기어 레버(계기판) */
 }
 
@@ -187,6 +188,75 @@ function clipPasteSend(){
   clipPasteClose(); clipMacBusy=true;
   const b=document.getElementById('clipToMacBtn'); if(b) b.textContent='보내는 중…';
   clipSendToMac(t);
+}
+
+/* ===== PC에서 온 메시지(clipbox) — 계기판 수신면 =====
+   데스크탑 '폰으로' 버튼이 허브의 함(data/clipbox.json)에 담은 메시지를, 열려 있는
+   원격런처가 폴링해 탭 한 번으로 이 기기 클립보드에 복사한다. 특권 소멸 재설계(목표 2):
+   폰으로 밀어넣는 배관 없음 — 런처가 가져간다. 폰 네이티브 표면은 제외(IS_PHONE —
+   jfetch 가 폰 자신 백엔드로 가서 함이 없다). */
+let clipboxItems=[];
+function renderClipbox(){
+  const el=document.getElementById('clipboxCard'); if(!el) return;
+  if(!clipboxItems.length){ el.style.display='none'; el.innerHTML=''; return; }
+  let h='<div style="font-weight:700;font-size:14px;margin-bottom:4px">📥 PC에서 온 메시지 <span style="color:var(--dim);font-weight:400;font-size:12px">'+clipboxItems.length+'건</span></div>';
+  clipboxItems.forEach(function(it){
+    const t=String(it.text||'');
+    const prev=t.length>140 ? t.slice(0,140)+'…' : t;
+    h+='<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)">'
+      +'<div style="flex:1;font-size:13px;white-space:pre-wrap;word-break:break-all">'+esc(prev)+'</div>'
+      +'<button data-cbid="'+esc(it.id)+'" onclick="clipboxCopy(this)" style="flex:none;background:var(--acc);border:none;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px">📋 복사</button>'
+      +'</div>';
+  });
+  el.innerHTML=h; el.style.display='block';
+}
+async function loadClipbox(){
+  if(IS_PHONE) return;
+  try{
+    const r=await jfetch('/launcher/clipbox'); if(!r.ok) return;
+    const d=await r.json().catch(function(){return null;}); if(!d) return;
+    clipboxItems=d.items||[]; renderClipbox();
+  }catch(e){}
+}
+async function clipboxConsume(id){
+  try{ await jfetch('/launcher/clipbox/consume',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})}); }catch(e){}
+  clipboxItems=clipboxItems.filter(function(x){return x.id!==id;});
+  renderClipbox();
+}
+async function clipboxCopy(btn){
+  const id=btn.getAttribute('data-cbid');
+  const it=clipboxItems.find(function(x){return x.id===id;}); if(!it) return;
+  let ok=false;
+  try{ await navigator.clipboard.writeText(String(it.text||'')); ok=true; }catch(e){}
+  if(ok){ btn.textContent='복사됨 ✓'; setTimeout(function(){ clipboxConsume(id); }, 900); return; }
+  /* 클립보드 API 불가(권한·비보안 컨텍스트) — 전체 텍스트를 펼쳐 길게 눌러 복사 */
+  clipboxShowFull(it);
+}
+function clipboxShowFull(it){
+  let ov=document.getElementById('clipboxOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='clipboxOv';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:flex-start;justify-content:center;padding:56px 16px';
+    ov.innerHTML='<div style="background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:16px;width:100%;max-width:420px">'
+      +'<div style="font-size:15px;font-weight:600;margin-bottom:6px">📥 PC에서 온 메시지</div>'
+      +'<div style="font-size:12px;color:var(--dim);margin-bottom:10px">브라우저가 클립보드에 직접 못 넣었어요. 아래 칸을 길게 눌러 <b>전체 선택 → 복사</b>하세요.</div>'
+      +'<textarea id="clipboxTa" rows="6" readonly style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--txt);font-size:14px"></textarea>'
+      +'<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'
+      +'<button onclick="clipboxOvClose(false)" style="background:var(--bg3);border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:8px 16px;font-size:14px">닫기</button>'
+      +'<button onclick="clipboxOvClose(true)" style="background:var(--acc);border:none;color:#fff;border-radius:999px;padding:8px 18px;font-size:14px;font-weight:600">받았어요 (함에서 지움)</button>'
+      +'</div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  ov.setAttribute('data-cbid', it.id);
+  const ta=document.getElementById('clipboxTa');
+  if(ta){ ta.value=String(it.text||''); setTimeout(function(){ try{ ta.focus(); ta.select(); }catch(e){} }, 60); }
+}
+function clipboxOvClose(consume){
+  const ov=document.getElementById('clipboxOv'); if(!ov) return;
+  const id=ov.getAttribute('data-cbid');
+  ov.style.display='none';
+  if(consume && id) clipboxConsume(id);
 }
 
 /* ===== 다른 몸(피어) 연결상태 — 계기판 안에 표기 ===== */

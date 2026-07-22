@@ -490,6 +490,8 @@ SHELL_PANEL_MANUAL_HTML = """
       <div id="palette" class="palette" style="display:none"></div>
       <!-- 다른 몸(피어) 연결상태 — 폰이면 맥, 맥-원격이면 폰 -->
       <div id="peerStatus" style="display:none"></div>
+      <!-- PC에서 온 메시지(clipbox) — 데스크탑 '폰으로'가 담은 함. 원격런처 전용(JS가 IS_PHONE 게이트) -->
+      <div id="clipboxCard" class="card" style="display:none"></div>
       <!-- 모델 기어 — 계기판 변속 레버 (절약/균형/최대) + 설정(프리셋·핀) -->
       <div id="gearLever" class="card" style="display:none"></div>
       <div class="step">

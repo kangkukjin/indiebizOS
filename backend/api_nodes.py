@@ -27,7 +27,6 @@ class RegisterRequest(BaseModel):
     auth: str = "x_phone_token"   # 포워드 인증 방식
     owner: str = "self"
     primary: bool = False
-    npub: str = ""                # 서명 신원(hex) — 우편함(ask_mailbox) 부여식 접점
 
 
 class HeartbeatRequest(BaseModel):
@@ -61,14 +60,11 @@ async def register_node(req: RegisterRequest):
     # — 그들의 만남·부여는 별도 절차(소유주 승인)로.
     if not entry.get("self"):
         try:
-            from body_trust import grant_body, attach_npub
+            from body_trust import grant_body
             _g = grant_body(req.device_id, req.alias, level=4,
                             granted_by="provision-register")
             if _g.get("granted"):
                 print(f"[nodes] 신뢰 부여식: {req.alias}({req.device_id}) → 레벨 {_g['level']}")
-            # npub 접점 부착 — 우편함(Nostr DM) 부탁이 이 몸의 레벨로 판정되게(멱등)
-            if req.npub:
-                attach_npub(req.device_id, req.npub)
         except Exception as _e:
             print(f"[nodes] 부여식 스킵: {_e}")
 

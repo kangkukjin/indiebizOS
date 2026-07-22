@@ -528,6 +528,75 @@ def app_source(app_id: str):
     raise HTTPException(status_code=404, detail=f"'{app_id}' 앱의 소스를 찾지 못했습니다(선언형/커스텀 매핑 없음).")
 
 
+# ===== 클립박스 — PC→폰 메시지함 (목표 2: 개인 기능의 재배치) =====
+# 특권 소멸 재설계(docs/NO_PRIVILEGED_RAILS_HANDOFF.md ★★재설계): 하트비트 푸시큐로
+# 폰에 밀어넣는 대신, 맥이 메시지를 자기 함에 담고 **열려 있는 원격런처**가 가져간다
+# (폴링+복사 버튼) — 새 배관 0. 런처가 닫혀 있으면 다음에 열 때 받는다(사용자 수용).
+import threading as _threading
+
+_clipbox_lock = _threading.Lock()
+_CLIPBOX_MAX = 20
+
+
+def _clipbox_path() -> str:
+    base = os.environ.get("INDIEBIZ_BASE_PATH") or os.path.join(os.path.dirname(__file__), "..")
+    return os.path.join(base, "data", "clipbox.json")
+
+
+def _clipbox_load() -> list:
+    try:
+        with open(_clipbox_path(), "r", encoding="utf-8") as f:
+            items = json.load(f)
+        return items if isinstance(items, list) else []
+    except Exception:
+        return []
+
+
+def _clipbox_save(items: list) -> None:
+    with open(_clipbox_path(), "w", encoding="utf-8") as f:
+        json.dump(items[-_CLIPBOX_MAX:], f, ensure_ascii=False)
+
+
+class ClipboxAdd(BaseModel):
+    text: str
+
+
+class ClipboxConsume(BaseModel):
+    id: str
+
+
+@router.post("/clipbox")
+async def clipbox_add(req: ClipboxAdd):
+    """데스크탑 '폰으로' 버튼 — 메시지를 함에 담는다(localhost=무인증 통과)."""
+    text = (req.text or "").strip()
+    if not text:
+        return {"success": False, "error": "빈 내용"}
+    item = {"id": uuid.uuid4().hex[:12], "text": text,
+            "ts": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
+    with _clipbox_lock:
+        items = _clipbox_load()
+        items.append(item)
+        _clipbox_save(items)
+    return {"success": True, "id": item["id"], "count": len(items)}
+
+
+@router.get("/clipbox")
+async def clipbox_list():
+    """원격런처 수신면 폴링 — 남은(미수신) 메시지 목록."""
+    with _clipbox_lock:
+        return {"items": _clipbox_load()}
+
+
+@router.post("/clipbox/consume")
+async def clipbox_consume(req: ClipboxConsume):
+    """수신 처리 — 원격런처에서 복사한 메시지를 함에서 뺀다."""
+    with _clipbox_lock:
+        items = _clipbox_load()
+        left = [it for it in items if it.get("id") != req.id]
+        _clipbox_save(left)
+    return {"success": True, "count": len(left)}
+
+
 @router.get("/config")
 async def get_config():
     """설정 조회"""

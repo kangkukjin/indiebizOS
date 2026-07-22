@@ -25,7 +25,7 @@
         returns: items
         fixture: '[others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장", dry_run: true}'
         description: 이웃 몸(다른 indiebizOS 기기)에 자연어로 부탁. 상대가 자기 사전으로 컴파일·실행해 결과(items 통화)를 돌려준다. 내 어휘에 없는 상대 능력(이웃 몸 명함의 냄새)은 이 액션으로 — 상대 액션 이름을 흉내내지 말 것.
-        target_description: 'to=상대 몸 별칭(프레즌스 등록명, 예 "폰-9f2b"). 생략 시 유일한 이웃 몸 자동, 여럿이면 되물음. message=자연어 부탁(필수 — 상대 사전을 몰라도 됨). payload=동봉(선택, dict) — 클립보드 텍스트처럼 그대로 전달할 리터럴 데이터. message 에서 payload.<키> 로 지칭하면 상대가 원문 그대로 치환해 쓴다(LLM 이 베끼지 않음). dry_run=true면 상대가 컴파일만(실행 안 함). timeout=우편함(Nostr DM) 폴백 시 결과 대기 초(기본 60). 반환=상대 실행 결과 + compiled_ibl(상대가 부탁을 어떻게 이해했는지). HTTP 직결 불가 시 우편함으로 자동 폴백.'
+        target_description: 'to=상대 몸 별칭(프레즌스 등록명, 예 "폰-9f2b"). 생략 시 유일한 이웃 몸 자동, 여럿이면 되물음. message=자연어 부탁(필수 — 상대 사전을 몰라도 됨). payload=동봉(선택, dict) — 클립보드 텍스트처럼 그대로 전달할 리터럴 데이터. message 에서 payload.<키> 로 지칭하면 상대가 원문 그대로 치환해 쓴다(LLM 이 베끼지 않음). dry_run=true면 상대가 컴파일만(실행 안 함). 반환=상대 실행 결과 + compiled_ibl(상대가 부탁을 어떻게 이해했는지).'
         group: delegation
         target_key: to
         router: system

@@ -109,9 +109,25 @@
   사용자 위치=폰에 명시적 부탁).
 - 효과: 맥 카탈로그 153→154(here 복귀), 명함 105→106(hash 변경→다음 등록 때
   자동 재교환), 맥→폰 here 자동 포워딩 소멸(인구조사에서 확인 가능).
-  sense:see/listen 은 phone_only 유지(맥에 카메라·마이크 프로브 없음 — 정직).
-- 캐시=data/here_cache.json(gitignore). ⏳폰 재빌드(USB 재연결 후) — 폰 동작
-  무변경(GPS 경로 그대로), source/measured_at 필드 통일만 편승.
+- 캐시=data/here_cache.json(gitignore). 폰 재빌드 완료(GPS 경로 회귀 확인 —
+  실측 오송읍 ±20.6m, source/measured_at 통일).
+
+### see/listen 도 지표어 (같은 날 후속 — 사용자 교정)
+
+"see/listen 은 phone_only 유지가 정직"이라던 위 단정은 **틀렸다** — 이 맥미니에
+카메라가 없는 것은 우연이지 어휘의 법칙이 아니다(카메라·마이크 달린 PC 는 흔하다).
+사용자 교정: **각자 자기 몸의 하드웨어를 쓰고, 없으면 작동불능** — 어휘를 특정
+몸에 묶는 것이 위험한 것.
+- phone_only 해제 + 데스크탑 프로브 `desktop_av.py`: ffmpeg 장치 열거
+  (avfoundation/dshow/v4l2·alsa — 라디오·유튜브의 ffmpeg 공급 체계 재사용),
+  see=웹캠 1프레임(★화면캡처 장치는 카메라 아님=제외), listen=마이크 녹음(m4a)
+  + transcribe=Gemini 오디오 받아쓰기(키 없으면 녹음만 정직 반환).
+- **하드웨어 없음 = no_hardware 정직 거절** + [others:ask] 힌트 — 맥미니 실측:
+  see→"이 몸에 카메라가 없습니다"(카메라 0 정상 사례), listen→유일 오디오
+  장치(Zoom 가상)로 녹음·STT 종단('무음→음'). 폰 회귀: Camera2 실촬영 4080×3060.
+- 원칙 확정: 지표어 판정은 "이 몸에 프로브를 지을 수 있는가"가 아니라
+  **"이 감각이 몸-보편 개념인가"** — 프로브 유무는 런타임의 정직성(no_hardware)이
+  담당하고, 어휘는 모든 몸의 것.
 
 ## 함정 기록
 

@@ -45,16 +45,15 @@ nodes:
         returns: scalar
         # scalar 를 반환하지만 실제로 마이크를 켜고 녹음한다 — 부작용으로 선언.
         side_effect: true
-        exempt: '폰 마이크 — 맥서 오프라인'
-        description: 폰 마이크로 음성 입력 (op 분기). 상시 청취 아닌 호출 시 1회. transcribe=받아쓰기(STT→텍스트), record=녹음(→파일).
+        exempt: '마이크 하드웨어 — 자동 점검 실행 금지'
+        description: 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
         group: device
-        target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(ko-KR, timeout_sec 대기). record: duration_sec 초 동안 녹음해 오디오 파일로 저장(경로 반환).'
+        target_description: 'op=transcribe(기본): 지금 발화를 텍스트로 받아쓴다(timeout_sec 대기). record: duration_sec 초 동안 녹음해 오디오 파일로 저장(경로 반환). 이 몸에 마이크가 없으면 no_hardware — 폰 몸에 [others:ask]로 부탁.'
         target_key: op
         router: handler
         tool: phone_listen
         scope: system
-        runs_on: phone_only
-        implementation: 폰 네이티브 — transcribe=Android SpeechRecognizer(온디바이스/Google, ko-KR), record=MediaRecorder(AAC/m4a→filesDir). Chaquopy→Kotlin PhoneActions. PC/원격은 분산 IBL 로 폰 포워드 (transcribe 텍스트는 무손실, record 파일은 폰 잔류).
+        implementation: 지표어 몸별 프로브(능력 감지=jclass) — 폰=SpeechRecognizer(ko-KR)/MediaRecorder(Chaquopy→Kotlin) / 데스크탑=desktop_av.py ffmpeg(avfoundation·dshow·alsa) 녹음 + transcribe 는 Gemini 오디오 받아쓰기(키 없으면 녹음만 정직 반환). 하드웨어 무=no_hardware.
         ops:
           default: transcribe
           values:
@@ -71,15 +70,14 @@ nodes:
         returns: scalar
         # scalar 를 반환하지만 실제로 셔터를 눌러 사진 파일을 남긴다 — 부작용으로 선언.
         side_effect: true
-        exempt: '폰 카메라 — 맥서 오프라인'
-        description: 폰 카메라로 사진 1장 촬영 (호출 시 1회). facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환.
+        exempt: '카메라 하드웨어 — 자동 점검 실행 금지'
+        description: 이 몸의 카메라로 사진 1장 촬영 (지표어 — 폰=Camera2 back/front, 데스크탑=ffmpeg 웹캠). 카메라 없는 몸(예 맥미니)이면 작동불능(정직 거절). 호출 시 1회, jpg 경로 반환.
         group: device
-        target_description: facing=back(후면, 기본)/front(전면). 미리보기 없이 정지 캡처 → 폰 파일 경로 반환. "사진 찍어", "촬영해", "카메라로 찍어줘".
+        target_description: 'facing=back(후면, 기본)/front(전면) — 폰에서만 의미(데스크탑=첫 웹캠). 미리보기 없이 정지 캡처 → 파일 경로 반환. 이 몸에 카메라가 없으면 no_hardware — 폰 몸에 [others:ask]로 부탁. "사진 찍어", "촬영해".'
         router: handler
         tool: phone_capture
         scope: system
-        runs_on: phone_only
-        implementation: 폰 네이티브 Camera2 + ImageReader(JPEG) 정지 캡처(미리보기 없음, 백그라운드 HandlerThread). Chaquopy→Kotlin PhoneActions.capturePhoto. PC/원격은 분산 IBL 로 폰 포워드(파일은 폰 잔류).
+        implementation: 지표어 몸별 프로브(능력 감지=jclass) — 폰=Camera2+ImageReader JPEG(Chaquopy→Kotlin PhoneActions.capturePhoto) / 데스크탑=desktop_av.py ffmpeg 웹캠 1프레임(avfoundation·dshow·v4l2, 화면캡처 장치는 카메라 아님=제외). 하드웨어 무=no_hardware.
         keywords:
         - 촬영
         - 사진

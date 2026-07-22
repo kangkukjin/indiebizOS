@@ -528,12 +528,13 @@ def _phone_listen(tool_input: dict) -> dict:
     """
     op = (tool_input.get("op") or _OP_DEFAULTS["phone_listen"]).strip()
     try:
-        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+        from java import jclass  # Chaquopy 브리지 — 능력 감지(폰 네이티브 런타임에만 존재)
     except Exception:
-        return {"success": False,
-                "error": "[sense:listen] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
-                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
-                "phone_only": True}
+        jclass = None
+    if jclass is None:
+        # 지표어 — 데스크탑 몸의 마이크 프로브(ffmpeg). 하드웨어 없으면 정직한 작동불능.
+        from desktop_av import listen_desktop
+        return listen_desktop(op, tool_input)
     try:
         PA = jclass("com.indiebiz.phoneagent.PhoneActions")
     except Exception as e:
@@ -571,12 +572,13 @@ def _phone_capture(tool_input: dict) -> dict:
     (경로 반환, 회수는 후속). 상시 촬영 아닌 호출 시 1회. 앱 포그라운드일 때 가장 안정적.
     """
     try:
-        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+        from java import jclass  # Chaquopy 브리지 — 능력 감지(폰 네이티브 런타임에만 존재)
     except Exception:
-        return {"success": False,
-                "error": "[sense:see] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
-                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
-                "phone_only": True}
+        jclass = None
+    if jclass is None:
+        # 지표어 — 데스크탑 몸의 카메라 프로브(ffmpeg 웹캠). 하드웨어 없으면 정직한 작동불능.
+        from desktop_av import see_desktop
+        return see_desktop(tool_input)
     try:
         PA = jclass("com.indiebiz.phoneagent.PhoneActions")
     except Exception as e:

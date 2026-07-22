@@ -1327,6 +1327,72 @@ async def execute(req: Request):
     return JSONResponse(obj)
 
 
+# === 조종실(수동) 폰-로컬 — 번역·검수·증류·사전 (2026-07-22 표면 분리) ==================
+# 조종실은 폰네이티브 3탭의 핵심(사용자 확정). 리모컨 은퇴 후 catch-all 404 로 끊겨 있던
+# /ibl/translate·validate·distill·actions/catalog 를 몸-로컬로 채운다.
+# 번역 = body_ask 컴파일러 재사용(능력 축=해마 — 폰은 해마가 없어 사전-동봉 Gemini 경로,
+# 소유-필터로 자기 어휘만). 검수·사전 = 정본 api_ibl 로직 그대로(레지스트리=폰 번들 사전).
+
+
+@app.post("/ibl/translate")
+async def ibl_translate(payload: dict):
+    intent = str((payload or {}).get("intent") or "").strip()
+    if not intent:
+        return JSONResponse({"detail": "빈 명령입니다."}, status_code=400)
+
+    def _run():
+        from body_ask import _compile
+        return _compile(intent)
+
+    r = await asyncio.to_thread(_run)
+    if not (r.get("ok") and r.get("code")):
+        return JSONResponse({"detail": r.get("error") or "번역 실패"}, status_code=503)
+    # 리터러시 병기: 이 몸이 어느 컴파일러로 번역했는지 (해마 용례가 없는 몸=사전-동봉 gemini)
+    refs = ("(폰-로컬 컴파일: %s — 이 몸의 사전이 근거)" % r.get("compiler", "?")
+            if not r.get("had_references") else "")
+    return JSONResponse({"intent": intent, "ibl_code": r["code"],
+                         "references": refs, "raw": r.get("raw") or r["code"]})
+
+
+@app.post("/ibl/validate")
+async def ibl_validate(payload: dict):
+    # 정본 검수기 재사용 — 순수 함수(파싱+레지스트리 조회)라 직접 await. 빈 코드=400(HTTPException).
+    import api_ibl
+
+    class _Req:
+        code = str((payload or {}).get("code") or "")
+
+    return JSONResponse(await api_ibl.validate_ibl(_Req()))
+
+
+@app.post("/ibl/distill")
+async def ibl_distill(payload: dict):
+    # 정본 distill_ibl 과 동형(경량 LLM 일반화·top_score<0.7 게이트). 폰의 축적은 폰-로컬
+    # ibl_distilled.json — 로컬 해마 인덱스는 없으니 즉효는 없고, 재학습 코퍼스 몸별 분리에서 합류.
+    intent = str((payload or {}).get("intent") or "").strip()
+    code = str((payload or {}).get("code") or "").strip()
+    if not intent or not code:
+        return JSONResponse({"distilled": False, "reason": "intent/code 가 비어 있습니다."})
+
+    def _run():
+        from ibl_usage_rag import distill_experience
+        tool_calls = [{"tool_name": "execute_ibl", "input": {"code": code}, "success": True}]
+        return distill_experience(intent, tool_calls, float((payload or {}).get("top_score") or 0.0))
+
+    try:
+        ok = await asyncio.to_thread(_run)
+        return JSONResponse({"distilled": bool(ok)})
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"distilled": False, "reason": str(e)})
+
+
+@app.get("/ibl/actions/catalog")
+async def ibl_catalog():
+    # 조종실 'IBL 사전' 팔레트 — 폰 번들 레지스트리(자기 어휘만)가 그대로 카탈로그.
+    import api_ibl
+    return JSONResponse(await api_ibl.get_actions_catalog())
+
+
 # ============================================================================
 # 사진/미디어 서빙 — 폰 로컬 (몸-로컬 I/O, 맥 프록시 아님). ★catch-all 보다 먼저 등록.
 # [self:photo] 가 반환하는 records.image = "/photo/thumbnail?path=<폰 MediaStore 경로>" 를

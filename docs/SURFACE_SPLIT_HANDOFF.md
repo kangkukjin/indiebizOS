@@ -1,7 +1,37 @@
 # 표면 분리 핸드오프 — 원격런처(PC의 일부) vs 폰네이티브(독립 시스템)
 
 2026-07-22 세션 종료 시점. 몸 독립 소통 연구(docs/BODY_CARD_RESEARCH.md)의 다음
-착수 과제. **아직 코드 손 안 댐 — 조사·결정까지 완료 상태.**
+착수 과제.
+
+## ✅ 구현 완료 (2026-07-22 후속 세션, 커밋 `4feb402`·`6d1ea80`)
+
+- **1단계(모듈화, `4feb402`)**: launcher_web_app.py 1517줄 → 탭별 5모듈
+  (launcher_app_common/warehouse/autopilot/manual/appmode) + launcher_web_shell.py 를
+  조각 상수(머리·표면 탭줄·패널별·꼬리)로 분해. LAUNCHER_APP_JS·LAUNCHER_SHELL_HTML
+  이름으로 원래 순서 재조립 — git HEAD 값 비교 + 라이브 /launcher/app sha1(84f1aec4)
+  동일. setSurface·appHome·탭줄을 별도 상수로 둔 것이 폰 변형의 이음매.
+- **2단계(표면 조립, `6d1ea80`)**: launcher_surface_remote(5탭 전판, 바이트 동일) /
+  launcher_surface_phone(3탭 + PHONE_SURFACES/SETSURFACE/APPHOME 변형) 신설.
+  phone_api /launcher/app → 폰 표면. /portal/warehouse-admin/* 4종 + _wh_proxy +
+  _relay_raw 철거(남는 호출=catch-all census+404).
+- **발견**: clip-to-mac 은 _forward_to_mac 경로 — _mac_proxy·_relay·_list_or_empty 는
+  이제 **사용처 0**(아래 원문의 "clip-to-mac 정도" 가정은 실측과 다름). 매장은 인구조사
+  확인 후 별도(열린 과제의 관문 dead code 매장과 같은 묶음).
+- **조종실 폰-로컬 완결**: 원문 함정 항목("폰-로컬 번역 실측 필요")의 실측 결과 —
+  /ibl/translate 는 폰에 **아예 없어** catch-all 404 였다(리모컨 은퇴 때 이미 끊김).
+  phone_api 에 4 라우트 신설: translate(=body_ask._compile 재사용 — 해마 없는 몸이라
+  사전-동봉 gemini-2.5-flash 경로, 소유-필터) / validate(정본 api_ibl.validate_ibl 직접
+  재사용) / distill(정본 동형, 폰-로컬 ibl_distilled.json 축적) / actions/catalog(폰 번들
+  사전 124 어휘 그대로). A36 실측: 번역 "수원 날씨"→`[sense:weather]{city:"수원"}` →
+  검수 valid·read → 실행 실날씨 → 조종실 탭 실렌더(피어·기어·의식 토글 포함).
+- **폰 재빌드·회귀 완료**: setup_phone.sh --build + force-stop 재기동. 폰 3탭 실기 확인
+  (창고 탭 자체 없음·warehouse-admin 404 census·REMOTE 배지 숨김·자율주행 스위치 없음),
+  원격런처는 라이브 sha1 84f1aec4 불변(회귀 0).
+- **잔여**: IS_PHONE 런타임 분기(부트·클립 경로·자율주행 스위치 숨김)는 공통 조각에
+  남아 폰 config(host=phone-local)로 작동 — 정적 흡수는 후속 후보.
+  phone_proxy_census.jsonl 며칠 관찰 후 _mac_proxy·_relay·_list_or_empty 매장 판단.
+
+이하 원문(조사·결정 기록).
 
 ## 원칙 (사용자 확정)
 

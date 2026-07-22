@@ -7,6 +7,7 @@ IndieBiz OS Core
 - OpenAI (GPT)
 - Google (Gemini)
 - OpenRouter (650+ 모델, 무료 포함)
+- DeepSeek (V4 Pro/Flash, OpenAI 호환)
 - Ollama (로컬 LLM)
 - Claude Code (CLI subprocess, Max 플랜 사용)
 """
@@ -16,6 +17,7 @@ from .anthropic import AnthropicProvider
 from .openai import OpenAIProvider
 from .gemini import GeminiProvider
 from .openrouter import OpenRouterProvider
+from .deepseek import DeepSeekProvider
 from .ollama import OllamaProvider
 from .claude_code import ClaudeCodeProvider
 from .gemini_http import GeminiHTTPProvider  # SDK 없는 Gemini REST (폰 네이티브)
@@ -26,6 +28,7 @@ __all__ = [
     'OpenAIProvider',
     'GeminiProvider',
     'OpenRouterProvider',
+    'DeepSeekProvider',
     'OllamaProvider',
     'ClaudeCodeProvider',
     'GeminiHTTPProvider',
@@ -40,6 +43,7 @@ def get_provider(provider_name: str, **kwargs):
         'google': GeminiProvider,
         'gemini': GeminiProvider,
         'openrouter': OpenRouterProvider,
+        'deepseek': DeepSeekProvider,
         'ollama': OllamaProvider,
         'claude_code': ClaudeCodeProvider,
         'claude-code': ClaudeCodeProvider,

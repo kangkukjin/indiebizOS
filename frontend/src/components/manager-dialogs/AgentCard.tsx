@@ -17,6 +17,7 @@ const providerColors: Record<string, string> = {
   openai: 'bg-green-500',
   google: 'bg-blue-500',
   openrouter: 'bg-purple-500',
+  deepseek: 'bg-indigo-500',
   claude_code: 'bg-amber-600',
 };
 

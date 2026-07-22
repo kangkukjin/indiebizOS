@@ -50,6 +50,7 @@ export function ToolAIDialog({
               <option value="openai">OpenAI</option>
               <option value="anthropic">Anthropic</option>
               <option value="openrouter">OpenRouter</option>
+              <option value="deepseek">DeepSeek</option>
               <option value="claude_code">Claude Code (Max 플랜)</option>
             </select>
           </div>

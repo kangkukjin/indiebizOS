@@ -56,7 +56,7 @@ export interface Agent {
   email?: string;
   active: boolean;
   ai: {
-    provider: 'anthropic' | 'openai' | 'google' | 'openrouter' | 'claude_code' | 'ollama';
+    provider: 'anthropic' | 'openai' | 'google' | 'openrouter' | 'deepseek' | 'claude_code' | 'ollama';
     api_key?: string;
     model: string;
   };

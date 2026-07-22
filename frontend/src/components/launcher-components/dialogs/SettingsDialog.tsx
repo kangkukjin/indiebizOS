@@ -301,6 +301,7 @@ export function SettingsDialog({
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="openai">OpenAI (GPT)</option>
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
+                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
                   </select>
                 </div>
@@ -411,6 +412,7 @@ export function SettingsDialog({
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="openai">OpenAI (GPT)</option>
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
+                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
                   </select>
                 </div>
@@ -483,6 +485,7 @@ export function SettingsDialog({
                     <option value="anthropic">Anthropic (Claude)</option>
                     <option value="openai">OpenAI (GPT)</option>
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
+                    <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
                   </select>
                 </div>

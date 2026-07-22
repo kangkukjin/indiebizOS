@@ -22,7 +22,7 @@ IndieBiz OS Core - Phase 8
     execute_trigger("watch", {
         "type": "schedule",
         "config": {"repeat": "daily", "time": "08:00"},
-        "pipeline": '[sense:search_gnews]{query: "AI"} >> [others:channel_send]{channel: "gmail", to: "me"}'
+        "pipeline": '[sense:search_gnews]{query: "AI"} >> [others:channel_send]{channel_type: "email", to: "me"}'
     }, ".")
 """
 

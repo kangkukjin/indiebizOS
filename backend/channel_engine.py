@@ -1,9 +1,9 @@
 """
 channel_engine.py - IBL 채널 노드 실행 엔진
 
-[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}
-[others:channel_read]{channel_type: "gmail", max_results: 10}
-[others:channel_read]{channel_type: "gmail", query: "from:someone"}  # query 주면 검색
+[others:channel_send]{channel_type: "email", to: "user@mail.com", subject: "제목", body: "내용"}
+[others:channel_read]{channel_type: "email", max_results: 10}
+[others:channel_read]{channel_type: "email", query: "from:someone"}  # query 주면 검색
 
 에이전트 identity 기반 발송:
 - 외부 에이전트: 에이전트에 설정된 주소(email/nostr)를 사용
@@ -19,12 +19,14 @@ from typing import Any, Dict, List, Optional
 
 
 # === 지원 채널 ===
-SUPPORTED_CHANNELS = ["gmail", "nostr"]
-# 주소 종류(contact_type) → 발신 수단(channel_type).
-# ★두 축은 다른 개념이다: contact_type 은 상대 주소가 무엇인가(email/nostr/warehouse),
-#   channel_type 은 내가 무엇으로 보내는가(gmail=내 Gmail 계정, nostr=릴레이).
-#   어떤 이메일 주소든(hanmail·naver 포함) 발신 수단은 gmail 하나뿐이라 여기로 모인다.
-CONTACT_TO_CHANNEL = {"email": "gmail", "nostr": "nostr"}
+# ★채널 어휘 = 주소 종류(contact_type)와 같은 낱말을 쓴다(email/nostr) — 번역 테이블을
+#   두지 않는다. 두 어휘가 갈라져 있던 시절(email↔gmail) 매핑 누락으로 주소록 조회가
+#   빗나가는 버그가 반복됐다(contacts 'gmail'→'email' 이관 이력도 같은 병).
+#   Gmail 이라는 이름은 email 채널을 구현하는 드라이버(extensions/gmail)에만 남는다 —
+#   어떤 이메일 주소든(hanmail·naver 포함) 현재 발신 구현은 Gmail 계정 하나다.
+SUPPORTED_CHANNELS = ["email", "nostr"]
+# 옛 채널 이름 별칭 — 해마 코퍼스·저장된 스케줄·구 호출자의 "gmail"을 email로 접는다.
+CHANNEL_ALIASES = {"gmail": "email"}
 
 # 시스템 AI(=indiebizOS 운영 주체) 식별자. 런처 indienet과 nostr 신원을 공유한다.
 SYSTEM_AI_ID = "system_ai"
@@ -59,7 +61,7 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     채널 발신/수신 시 '누구로서' 동작할지(발신 신원)를 결정한다.
 
     신원 모델:
-    - 시스템 AI(SYSTEM_AI_ID): 시스템 자체 계정 사용 (gmail=config.yaml, nostr=indienet 신원).
+    - 시스템 AI(SYSTEM_AI_ID): 시스템 자체 계정 사용 (email=gmail 드라이버 config.yaml, nostr=indienet 신원).
       신뢰된 주체이므로 account 명시 override 허용. 항상 발신 가능.
     - 프로젝트 에이전트: 자기 agents.yaml에 설정된 계정(email/npub)만 사용.
       계정이 비어 있으면 '연락처 없음'으로 보고 외부 발신을 차단한다.
@@ -78,7 +80,7 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     # 0) 시스템 AI — 신뢰된 운영 주체. 시스템 자체 계정 사용.
     if agent_id == SYSTEM_AI_ID:
         account = params.get("account")
-        if channel_type == "gmail":
+        if channel_type == "email":
             email = account or _get_system_gmail_address()
             if not email:
                 return {"error": "시스템 gmail 계정이 설정되지 않았습니다. (gmail extension config.yaml의 email)"}
@@ -118,10 +120,10 @@ def _resolve_agent_identity(channel_type: str, params: dict,
         return {"error": f"내부 에이전트 '{agent_id}'는 외부 채널을 사용할 수 없습니다."}
 
     # 발신 게이트: 계정(연락처)이 비어 있으면 외부 발신 차단
-    if channel_type == "gmail":
+    if channel_type == "email":
         email = agent_config.get("email")
         if not email:
-            return {"error": f"에이전트 '{agent_id}'에 gmail 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
+            return {"error": f"에이전트 '{agent_id}'에 email 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
         return {"email": email}
 
     elif channel_type == "nostr":
@@ -138,7 +140,7 @@ def _resolve_agent_identity(channel_type: str, params: dict,
 def _looks_like_address(channel_type: str, to: str) -> bool:
     """to가 이미 채널 주소 형식인지 판별."""
     to = (to or "").strip()
-    if channel_type == "gmail":
+    if channel_type == "email":
         return "@" in to
     elif channel_type == "nostr":
         if to.startswith("npub"):
@@ -170,7 +172,7 @@ def _load_owner_addresses(channel_type: str) -> list:
         load_dotenv(get_base_path() / ".env")
     except Exception:
         pass
-    if channel_type == "gmail":
+    if channel_type == "email":
         raw = os.getenv("OWNER_EMAILS", "")
     elif channel_type == "nostr":
         raw = os.getenv("OWNER_NOSTR_PUBKEYS", "")
@@ -299,24 +301,24 @@ def execute_channel_action(action: str, params: dict,
 
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
-        # 수신자가 이메일 형식이면 gmail로 추론 (코퍼스 다수가 channel_type 생략).
+        # 수신자가 이메일 형식이면 email로 추론 (코퍼스 다수가 channel_type 생략).
         _to = str(params.get("to", "")).strip()
         if "@" in _to and "." in _to.split("@")[-1]:
-            channel_type_raw = "gmail"
+            channel_type_raw = "email"
     if not channel_type_raw:
         return {
             "error": "channel_type이 필요합니다.",
             "supported_channels": SUPPORTED_CHANNELS,
             "usage": {
-                "send": '[others:channel_send]{channel_type: "gmail", to: "user@mail.com", subject: "제목", body: "내용"}',
-                "read": '[others:channel_read]{channel_type: "gmail", max_results: 10}',
-                "search": '[others:channel_read]{channel_type: "gmail", query: "from:someone"}',
+                "send": '[others:channel_send]{channel_type: "email", to: "user@mail.com", subject: "제목", body: "내용"}',
+                "read": '[others:channel_read]{channel_type: "email", max_results: 10}',
+                "search": '[others:channel_read]{channel_type: "email", query: "from:someone"}',
             }
         }
 
     channel_type = channel_type_raw.lower().strip()
-    # 주소 종류가 그대로 넘어와도(계기 작성바가 contact_type 을 실어 보냄) 발신 수단으로 접는다.
-    channel_type = CONTACT_TO_CHANNEL.get(channel_type, channel_type)
+    # 옛 이름("gmail")이 넘어와도 정본 어휘로 접는다 — 채널 어휘 = 주소 종류 어휘.
+    channel_type = CHANNEL_ALIASES.get(channel_type, channel_type)
     if channel_type not in SUPPORTED_CHANNELS:
         return {
             "error": f"지원하지 않는 채널: {channel_type}",
@@ -756,10 +758,6 @@ def _nostr_identity(params: dict) -> dict:
 
 # === 내부 구현 ===
 
-# 발신 수단 → 그 수단으로 닿는 주소 종류 (CONTACT_TO_CHANNEL 의 역방향)
-_CHANNEL_CONTACT_TYPE = {"gmail": "email", "nostr": "nostr"}
-
-
 def _record_outgoing(channel_type: str, to: str, content: str,
                      subject: Optional[str] = None, external_id: Optional[str] = None) -> None:
     """보낸 메시지를 주소록 스레드(business.db messages)에 남긴다.
@@ -773,7 +771,7 @@ def _record_outgoing(channel_type: str, to: str, content: str,
         from datetime import datetime as _dt
 
         addr = _norm_addr(channel_type, to)  # nostr 는 npub 로 통일(주소록 저장형)
-        ctype = _CHANNEL_CONTACT_TYPE.get(channel_type, channel_type)
+        ctype = channel_type  # 채널 어휘 = 주소 종류 어휘 (email/nostr)
         bm = BusinessManager()
         nb = bm.get_neighbor_by_contact(ctype, addr)
         bm.create_message(
@@ -796,7 +794,7 @@ def _record_outgoing(channel_type: str, to: str, content: str,
 
 def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 발송"""
-    if channel_type == "gmail":
+    if channel_type == "email":
         to = params.get("to")
         subject = params.get("subject", "(제목 없음)")
         body = params.get("body", "")
@@ -806,9 +804,9 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
             return {"error": "수신자(to)가 필요합니다. (이웃 이름 또는 이메일 주소)"}
 
         # 수신자 해소: 이름/주인 별칭 → 주소록·.env 확정 원천. 미등록 주소는 확인 요청.
-        resolved = _resolve_recipient("gmail", to, confirmed=bool(params.get("confirmed")))
+        resolved = _resolve_recipient("email", to, confirmed=bool(params.get("confirmed")))
         if resolved.get("error") or resolved.get("needs_confirmation"):
-            out = {"success": False, "channel": "gmail", "error": resolved.get("error")}
+            out = {"success": False, "channel": "email", "error": resolved.get("error")}
             if resolved.get("needs_confirmation"):
                 out["needs_confirmation"] = True
                 out["address"] = resolved.get("address")
@@ -823,10 +821,10 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                 to=to, subject=subject, body=body,
                 attachment_path=attachment_path
             )
-            _record_outgoing("gmail", to, body, subject=subject, external_id=result.get("id"))
+            _record_outgoing("email", to, body, subject=subject, external_id=result.get("id"))
             return {
                 "success": True,
-                "channel": "gmail",
+                "channel": "email",
                 "from": identity.get("email"),
                 "message_id": result.get("id"),
                 "thread_id": result.get("threadId"),
@@ -834,7 +832,7 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                 "subject": subject
             }
         except Exception as e:
-            return {"success": False, "channel": "gmail", "error": str(e)}
+            return {"success": False, "channel": "email", "error": str(e)}
 
     elif channel_type == "nostr":
         to = params.get("to") or params.get("to_pubkey")
@@ -887,7 +885,7 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
 
 def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 읽기"""
-    if channel_type == "gmail":
+    if channel_type == "email":
         query = params.get("query")
         max_results = params.get("max_results", 10)
 
@@ -910,14 +908,14 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
 
             return {
                 "success": True,
-                "channel": "gmail",
+                "channel": "email",
                 "account": identity.get("email"),
                 "count": len(simplified),
                 "query": query,
                 "items": simplified  # 단일 통화 items = native 메시지 dict(id/subject/from/date/snippet/body)
             }
         except Exception as e:
-            return {"success": False, "channel": "gmail", "error": str(e)}
+            return {"success": False, "channel": "email", "error": str(e)}
 
     elif channel_type == "nostr":
         limit = params.get("limit", 20)
@@ -940,7 +938,7 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
 
 def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 검색"""
-    if channel_type == "gmail":
+    if channel_type == "email":
         query = params.get("query", "")
         max_results = params.get("max_results", 10)
 
@@ -965,14 +963,14 @@ def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
 
             return {
                 "success": True,
-                "channel": "gmail",
+                "channel": "email",
                 "account": identity.get("email"),
                 "query": query,
                 "count": len(simplified),
                 "messages": simplified
             }
         except Exception as e:
-            return {"success": False, "channel": "gmail", "error": str(e)}
+            return {"success": False, "channel": "email", "error": str(e)}
 
     elif channel_type == "nostr":
         query_text = params.get("query", "")

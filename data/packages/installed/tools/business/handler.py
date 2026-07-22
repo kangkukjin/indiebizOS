@@ -48,21 +48,22 @@ def _epoch(s: str) -> float:
         return 0.0
 
 
-# 주소 종류(contact_type) → 발신 수단(channel_type) — channel_engine.CONTACT_TO_CHANNEL 과 같은 표.
-# email 은 gmail 의 하위 종류가 아니라 *주소 종류*이고, 그 주소로 보내는 수단이 gmail 이다.
-_CONTACT_TO_CHANNEL = {"email": "gmail", "nostr": "nostr"}
+# 발신 가능한 주소 종류 — 채널 어휘 = 주소 종류 어휘(channel_engine.SUPPORTED_CHANNELS 와 동일).
+# warehouse/body 등은 주소일 뿐 발신 수단이 없어 제외. (옛 email→gmail 번역 테이블은 소멸 —
+# 채널 이름이 email 로 통일되면서 변환이 필요 없어졌다.)
+_SENDABLE_CONTACT_TYPES = {"email", "nostr"}
 
 
 def _primary_channel(bm, neighbor_id: int) -> str:
-    """이웃의 기본 발신 수단(gmail/nostr) — 연락처 종류에서 추론, 없으면 nostr.
+    """이웃의 기본 발신 수단(email/nostr) — 연락처 종류에서 추론, 없으면 nostr.
 
     ★이메일 주소(contact_type='email')를 인정하지 않으면 이메일만 있는 이웃이 nostr
     기본값으로 떨어져, 이메일 주소로 nostr 발신을 시도하게 된다.
     """
     try:
         for c in bm.get_contacts(neighbor_id):
-            ch = _CONTACT_TO_CHANNEL.get(c.get("contact_type"))
-            if ch:
+            ch = c.get("contact_type")
+            if ch in _SENDABLE_CONTACT_TYPES:
                 return ch
     except Exception:
         pass
@@ -309,10 +310,12 @@ def _msg_inbox(bm, tool_input: dict) -> str:
         last = n.pop("_last", None)
         unread = n.pop("_unread", 0)
         ch_contacts = n.pop("_channel_contacts", [])
-        # 주소 종류 → 발신 수단 (_primary_channel 과 같은 표)
-        primary = _CONTACT_TO_CHANNEL.get(ch_contacts[0][0], "nostr") if ch_contacts else "nostr"
+        # 발신 가능한 주소 종류만 채널로 인정 (_primary_channel 과 같은 집합)
+        _first_ct = ch_contacts[0][0] if ch_contacts else ""
+        primary = _first_ct if _first_ct in _SENDABLE_CONTACT_TYPES else "nostr"
         if last:
-            ct = _CONTACT_TO_CHANNEL.get(last.get("contact_type", ""))
+            _last_ct = last.get("contact_type", "")
+            ct = _last_ct if _last_ct in _SENDABLE_CONTACT_TYPES else None
             channel = ct or primary
             to = last.get("contact_value") or ""
             preview = (last.get("content", "") or "")[:40]

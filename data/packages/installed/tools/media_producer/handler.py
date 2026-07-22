@@ -848,7 +848,10 @@ def _expand_icon_prompt(user_prompt: str, style_hint: str = "") -> str:
     if api_key:
         try:
             import httpx
-            model = os.environ.get("ICON_EXPAND_MODEL", "gemini-flash-latest")
+            # ★gemini-flash-latest 별칭은 2026-07 중순 이후 thinkingBudget:0 을
+            # 400 INVALID_ARGUMENT 로 거부(별칭이 tb=0 미지원 모델로 이동) →
+            # 버전 고정 gemini-2.5-flash 사용(body_ask._compile_gemini 와 동일 조합).
+            model = os.environ.get("ICON_EXPAND_MODEL", "gemini-2.5-flash")
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
             umsg = base if not style_hint else f"{base}\n\nStyle hint: {style_hint}"
             payload = {

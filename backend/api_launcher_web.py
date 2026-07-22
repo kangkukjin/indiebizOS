@@ -15,10 +15,8 @@ import uuid
 import hashlib
 from datetime import datetime
 
-# 원격 웹앱 HTML 3분할 모듈 (2026-07-18, 1500줄 규칙) — get_launcher_webapp_html 이 이어붙인다.
-from launcher_web_shell import LAUNCHER_SHELL_HTML
-from launcher_web_app import LAUNCHER_APP_JS
-from launcher_web_render import LAUNCHER_RENDER_JS
+# 원격런처 표면 조립(2026-07-22 표면 분리) — 정체(어떤 탭)는 launcher_surface_remote 가 정한다.
+from launcher_surface_remote import launcher_html as _launcher_surface_html
 
 router = APIRouter(prefix="/launcher")
 
@@ -747,11 +745,11 @@ def _launcher_asset(name: str):
 
 
 def get_launcher_webapp_html():
-    """원격 런처 웹앱 HTML — 3표면(자율주행/수동/앱) 구조.
+    """원격 런처 웹앱 HTML — 원격런처 표면(5탭 전판) 조립에 위임.
 
-    2026-07-18 모듈화(1500줄 규칙): 거대 단일 문자열을 launcher_web_shell(문서 셸)·
-    launcher_web_app(앱 셸 JS)·launcher_web_render(뷰 렌더 JS) 세 모듈로 분리 —
-    여기서 그대로 이어붙인다(바이트 동일 조립). ★renderPrim(p.type 디스패치)은
-    launcher_web_render.py 에 산다 — 뷰-렌더러 가드가 그 파일 경로를 스캔한다.
+    2026-07-22 표면 분리: 조각(셸·탭별 JS·렌더=기질)은 launcher_web_shell/app_*/render 에,
+    표면 정체(어떤 탭이 존재하는가)는 launcher_surface_remote(원격런처)·launcher_surface_phone
+    (폰네이티브 3탭)에 산다. ★renderPrim(p.type 디스패치)은 launcher_web_render.py —
+    뷰-렌더러 가드가 그 파일 경로를 스캔한다.
     """
-    return LAUNCHER_SHELL_HTML + LAUNCHER_APP_JS + LAUNCHER_RENDER_JS
+    return _launcher_surface_html()

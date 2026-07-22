@@ -158,7 +158,10 @@ async def _phone_token_gate(request: Request, call_next):
 
 @app.get("/launcher/app")
 def launcher_app():
-    return HTMLResponse(_lw.get_launcher_webapp_html())
+    # 폰네이티브 표면(3탭: 자율주행·조종실·앱) — 원격런처(맥 얼굴, 5탭)와 몸별 조립 분리.
+    # 창고·포식은 이 몸의 표면이 아니다(창고=숙주 맥의 살림 — 폰에선 원격런처가 리모컨).
+    from launcher_surface_phone import phone_html
+    return HTMLResponse(phone_html())
 
 
 @app.get("/launcher/instruments")
@@ -1103,60 +1106,11 @@ async def switch_execute(switch_id: str, request: Request):
         return JSONResponse({"success": False, "error": f"스위치 실행 오류: {e}"}, status_code=500)
 
 
-# === 공유창고 — 맥 프록시 (런처 '공유창고' 표면이 부른다) =========================
-# ★창고는 맥에 산다. 공개 얼굴(터널·Worker·레벨 게이트)이 맥에 있으므로 폰이 자기 창고를
-# 따로 갖는 건 의미가 없다 — 폰은 /projects·/switches 와 똑같이 *맥 창고의 리모컨*이다.
-# 그래서 폰의 값어치 = 사진이 태어나는 자리에서 바로 창고에 넣는 것(올리면 그 레벨로 즉시 공개).
-# `add`(맥 로컬 경로 복사)는 폰에 그런 경로가 없으므로 프록시하지 않는다 — 폰은 upload 를 쓴다.
-
-def _relay_raw(r):
-    """파일 **내용 그대로** 통과 — 텍스트도 JSON 으로 감싸지 않는다.
-
-    ★`_relay` 는 `text/*` 를 `{"response": ...}` 로 감싼다(비-JSON 텍스트용 안전망). API 응답엔
-    맞지만 **창고 파일엔 그 감싸기가 곧 내용 훼손**이다 — .md/.txt/.csv/.html 을 받으면 JSON
-    문자열이 담긴 파일이 나온다(실기 검증에서 실제로 밟은 버그. 이미지는 바이너리 경로라
-    멀쩡해서 텍스트만 조용히 깨졌다)."""
-    from starlette.responses import Response as _Resp
-    ct = r.headers.get("content-type") or "application/octet-stream"
-    headers = {k: r.headers[k] for k in ("content-range", "accept-ranges", "content-length",
-                                         "content-disposition") if k in r.headers}
-    return _Resp(content=r.content, status_code=r.status_code, media_type=ct, headers=headers)
-
-
-async def _wh_proxy(request: Request, path: str, *, timeout: float = 60.0, raw: bool = False):
-    """창고 프록시 공통 — 맥 미설정/미도달을 폰 사용자에게 친절히 알린다.
-    raw=True 는 파일 내용 경로(열람·내려받기) — 감싸지 않고 원본 바이트."""
-    r = await _mac_proxy(request, path, timeout=timeout)
-    if r is None:
-        return JSONResponse({"error": "맥 백엔드 미연결 — 집 PC 가 켜져 있어야 창고를 씁니다."},
-                            status_code=503)
-    if r == "error":
-        return JSONResponse({"error": "맥 백엔드 연결 실패"}, status_code=502)
-    if raw and r.status_code == 200:
-        return _relay_raw(r)
-    return _relay(r)
-
-
-@app.get("/portal/warehouse-admin/list")
-async def wh_list(request: Request):
-    return await _wh_proxy(request, "/portal/warehouse-admin/list")
-
-
-@app.get("/portal/warehouse-admin/file")
-async def wh_file(request: Request):
-    # 열람(사진·동영상·텍스트)과 내려받기(?download=1) 둘 다. raw=파일 내용은 감싸지 않는다.
-    return await _wh_proxy(request, "/portal/warehouse-admin/file", timeout=180.0, raw=True)
-
-
-@app.post("/portal/warehouse-admin/upload")
-async def wh_upload(request: Request):
-    # 폰 사진·영상 원본은 클 수 있고 LTE 면 느리다 — 넉넉한 타임아웃.
-    return await _wh_proxy(request, "/portal/warehouse-admin/upload", timeout=600.0)
-
-
-@app.post("/portal/warehouse-admin/remove")
-async def wh_remove(request: Request):
-    return await _wh_proxy(request, "/portal/warehouse-admin/remove")
+# === 공유창고 프록시 은퇴 (2026-07-22 표면 분리) =========================
+# 옛 /portal/warehouse-admin/* 4종 + _wh_proxy + _relay_raw 를 철거했다. 창고=숙주(맥)
+# 몸의 살림+네트워크 얼굴이라 폰네이티브는 창고 표면 자체를 갖지 않는다
+# (launcher_surface_phone: 3탭). 폰에서 창고를 만지려면 원격런처(맥 얼굴, 기능 완비).
+# 남는 경로 호출은 catch-all 이 census 에 적고 404 — 잔존 UI 가 있으면 거기서 드러난다.
 
 
 def _run_local_harness(message: str, images: list):

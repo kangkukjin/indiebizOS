@@ -106,6 +106,8 @@
     "launcher_app_manual",
     "launcher_app_warehouse",
     "launcher_layout",
+    "launcher_surface_phone",
+    "launcher_surface_remote",
     "launcher_web_app",
     "launcher_web_render",
     "launcher_web_shell",
@@ -195,8 +197,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 189,
-    "engine": 174,
+    "total": 191,
+    "engine": 176,
     "blocklist": 15
   }
 }

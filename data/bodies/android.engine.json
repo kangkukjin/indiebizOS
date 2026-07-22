@@ -45,6 +45,7 @@
     "api_xray",
     "auto_response",
     "body_ask",
+    "body_trust",
     "boot_common",
     "business_manager",
     "business_sync",
@@ -189,8 +190,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 183,
-    "engine": 168,
+    "total": 184,
+    "engine": 169,
     "blocklist": 15
   }
 }

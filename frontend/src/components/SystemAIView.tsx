@@ -80,16 +80,11 @@ export function SystemAIView() {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const handleBack = () => {
-    window.location.hash = '';
-  };
-
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <ChatView
         chatTarget={{ type: 'system_ai' }}
         layout="fullpage"
-        onBack={handleBack}
         initialMessage={initialMessage}
         initialMessageLabel={initialLabel}
       />

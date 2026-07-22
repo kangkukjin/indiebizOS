@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, Loader2, X, RefreshCw, History, ArrowLeft, RotateCw, BookOpen, Zap, Brain, Gauge, Target, Copy, Check } from 'lucide-react';
+import { Bot, User, Loader2, X, RefreshCw, History, RotateCw, BookOpen, Zap, Brain, Gauge, Target, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
@@ -46,8 +46,6 @@ export interface ChatViewProps {
   // dialog 모드 전용
   show?: boolean;
   onClose?: () => void;
-  // 풀페이지 모드: 뒤로가기 핸들러
-  onBack?: () => void;
   // 연결되면 자동으로 한 번 전송할 첫 메시지(예: 지난 주행 분석 요청).
   // initialMessageLabel이 있으면 화면 버블엔 그것만 보이고, 실제 전송은 initialMessage.
   initialMessage?: string;
@@ -69,7 +67,7 @@ interface DialogPosition { x: number; y: number; }
 
 // ── 메인 컴포넌트 ───────────────────────────────────────
 
-export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, onBack, initialMessage, initialMessageLabel }: ChatViewProps) {
+export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose, initialMessage, initialMessageLabel }: ChatViewProps) {
   const isAgent = chatTarget.type === 'agent';
   const isAppMaker = chatTarget.type === 'appmaker';  // system_ai 분기(!isAgent)를 공유하되 스레드/타이틀만 분기
   const isDialog = layout === 'dialog';
@@ -852,12 +850,6 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         onMouseDown={isDialog ? handleDragStart : undefined}
       >
         <div className={`flex items-center gap-3${isDialog ? '' : ' no-drag'}`}>
-          {/* 뒤로가기 버튼 (풀페이지 + onBack 있을 때) */}
-          {!isDialog && onBack && (
-            <button onClick={onBack} className="p-2 rounded-lg hover:bg-[#DDD5C8] transition-colors text-[#6B5B4F]" title="뒤로">
-              <ArrowLeft size={20} />
-            </button>
-          )}
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${
             isDialog ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gradient-to-br from-[#D97706] to-[#B45309]'
           }`}>

@@ -5,7 +5,6 @@
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import {
-  ArrowLeft,
   Settings,
   Users,
   Zap,
@@ -50,7 +49,6 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     currentAgent,
     loadAgents,
     setCurrentAgent,
-    setCurrentView,
     switches,
     loadSwitches,
   } = useAppStore();
@@ -740,16 +738,6 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
       {/* 헤더 */}
       <div className="h-12 flex items-center justify-between px-4 bg-[#EAE4DA] border-b border-[#E5DFD5] drag">
         <div className="flex items-center gap-2 no-drag">
-          <button
-            onClick={() => {
-              setCurrentAgent(null);
-              setCurrentView('launcher');
-            }}
-            className="p-2 rounded-lg hover:bg-[#DDD5C8] transition-colors text-[#6B5B4F]"
-            title="뒤로"
-          >
-            <ArrowLeft size={20} />
-          </button>
           <span className="font-semibold text-[#4A4035]">{currentProject.name}</span>
         </div>
 

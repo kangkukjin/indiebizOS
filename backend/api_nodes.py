@@ -54,6 +54,20 @@ async def register_node(req: RegisterRequest):
                         auth=req.auth, owner=req.owner, primary=req.primary)
     if entry.get("error"):
         return {"success": False, **entry}
+    # 신뢰 부여식(몸=이웃): 인증된 등록(전역 가드의 런처 세션 = 소유주 프로비저닝의
+    # 증명)으로 처음 만난 몸-신원을 이웃 명부에 최고 레벨로 올린다 — 폰↔맥의 특별함은
+    # 배관이 아니라 이 부여된 레벨. 낯선 몸은 이 문(세션)을 못 지나므로 자동 부여 없음
+    # — 그들의 만남·부여는 별도 절차(소유주 승인)로.
+    if not entry.get("self"):
+        try:
+            from body_trust import grant_body
+            _g = grant_body(req.device_id, req.alias, level=4,
+                            granted_by="provision-register")
+            if _g.get("granted"):
+                print(f"[nodes] 신뢰 부여식: {req.alias}({req.device_id}) → 레벨 {_g['level']}")
+        except Exception as _e:
+            print(f"[nodes] 부여식 스킵: {_e}")
+
     # 명함 교환(실험 3): 등록해 온 몸의 명함을 백그라운드로 가져와 캐시(냄새).
     # 실패해도 등록엔 무영향 — 명함은 낡아도 냄새로 유효, 다음 등록 때 재시도.
     if req.url and not entry.get("self"):
@@ -130,19 +144,21 @@ async def capability_card(detail: str = "full"):
 
 class AskRequest(BaseModel):
     message: str          # 자연어 부탁 — 상대는 내 코드를 조립하지 않는다
-    from_body: str = ""   # 발신 몸 식별(선택, 계측용)
+    from_body: str = ""   # 발신 몸 표시명(계측용)
+    device_id: str = ""   # 발신 몸 신원 — 신뢰 원장(이웃 통합) 조회 키. 없으면 소유주 표면.
     dry_run: bool = False # True=컴파일만(실험 계측: 번역 품질을 실행과 분리 측정)
 
 
 @router.post("/nodes/ask")
 def body_ask(req: AskRequest):
-    """부탁 경로 — 몸 독립 소통 연구(실험 2).
+    """부탁 경로 — 몸 독립 소통 연구(실험 2) + 신뢰 게이트(이웃 원장).
 
     명함만 아는 상대의 자연어 부탁을 받아 내 사전으로 컴파일·실행·통화 반환.
     동기 def(스레드풀) — LLM 번역·실행이 이벤트 루프를 막지 않게(자기교착 방지).
     """
     from body_ask import handle_ask
-    return handle_ask(req.message, dry_run=req.dry_run, from_body=req.from_body)
+    return handle_ask(req.message, dry_run=req.dry_run, from_body=req.from_body,
+                      device_id=req.device_id)
 
 
 @router.get("/nodes/peer-status")

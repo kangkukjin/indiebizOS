@@ -274,7 +274,12 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
                               "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있습니다."),
                     "node_unreachable": True}
 
-    payload = {"message": message, "from_body": _self_label(),
+    try:
+        from device_registry import self_device_id
+        my_id = self_device_id()
+    except Exception:
+        my_id = ""
+    payload = {"message": message, "from_body": _self_label(), "device_id": my_id,
                "dry_run": bool(params.get("dry_run"))}
     import requests
     try:
@@ -304,11 +309,33 @@ def _self_label() -> str:
         return "이웃 몸"
 
 
-def handle_ask(message: str, dry_run: bool = False, from_body: str = "") -> Dict[str, Any]:
+def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
+               device_id: str = "") -> Dict[str, Any]:
     t0 = time.time()
     message = (message or "").strip()
     if not message:
         return {"success": False, "error": "message 가 비었습니다."}
+
+    # 신뢰 게이트(이웃 통합 원장): 몸-신원이 오면 레벨로 판정 — 폰↔맥의 특별함은
+    # 배관이 아니라 부여식에서 받은 레벨이다(낯선 몸과 같은 문, 다른 파라미터).
+    # 신원 없는 호출 = 소유주 표면(전송층 인증을 이미 통과한 자기 조작) — 원장 밖.
+    trust_level = None
+    if device_id:
+        from body_trust import get_body_level, ASK_MIN_LEVEL
+        trust_level = get_body_level(device_id)
+        if trust_level is None:
+            _log({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "from": from_body,
+                  "device_id": device_id, "message": message, "compiled": None,
+                  "success": False, "rejected": "stranger", "ms": 0})
+            return {"success": False, "trust": "unknown",
+                    "error": "낯선 몸입니다 — 신뢰 부여식 전에는 부탁을 받지 않습니다. "
+                             "(소유주의 부여로 이웃 명부에 오르면 레벨만큼 소통합니다.)"}
+        if trust_level < ASK_MIN_LEVEL:
+            _log({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "from": from_body,
+                  "device_id": device_id, "message": message, "compiled": None,
+                  "success": False, "rejected": f"level<{ASK_MIN_LEVEL}", "ms": 0})
+            return {"success": False, "trust": trust_level,
+                    "error": f"신뢰 레벨({trust_level})이 부탁 수신 최소({ASK_MIN_LEVEL}) 미만입니다."}
 
     comp = _compile(message)
     if not comp.get("ok"):

@@ -129,10 +129,17 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
     except Exception:
         body = {"profile": "unknown"}  # detect_body 불가 시 — 포크-가드: env 직접 참조 금지
 
+    try:
+        from device_registry import self_device_id
+        identity = {"device_id": self_device_id()}
+    except Exception:
+        identity = {}
+
     return {
         "kind": "indiebiz-capability-card",
         "version": 1,
         "body": body,
+        "identity": identity,  # 몸-신원 앵커(현재 device_id, npub 전환 예정) — 신뢰 부여식의 키
         "standard": {
             "core_nodes": core_nodes,   # 공통어휘 — 명함에 안 싣는 부분의 선언
             "grammar": "[node:action]{params} · 파이프 >> · 병렬 & · 폴백 ??",

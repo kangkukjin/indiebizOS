@@ -182,7 +182,8 @@ def body_ask_endpoint(payload: dict):
     from body_ask import handle_ask
     return JSONResponse(handle_ask((payload or {}).get("message", ""),
                                    dry_run=bool((payload or {}).get("dry_run")),
-                                   from_body=(payload or {}).get("from_body", "")))
+                                   from_body=(payload or {}).get("from_body", ""),
+                                   device_id=(payload or {}).get("device_id", "")))
 
 
 @app.get("/launcher/config")
@@ -675,14 +676,28 @@ async def _register_with_hub(port: int):
                     print(f"[phone_api] 허브 노드 등록: {alias} @ {payload['url']}")
                     first = False
                     delay = 0.5
-                    # 명함 교환(실험 3): 등록 성공 시 맥(허브)의 명함을 가져와 캐시.
-                    # 세션 헤더는 _mac_post_json 이 갱신한 _mac_session 재사용.
+                    # 명함 교환(실험 3) + 신뢰 부여식(몸=이웃): 등록 성공 시 맥(허브)의
+                    # 명함을 가져와 캐시하고, 명함의 신원(device_id)을 이웃 명부에 최고
+                    # 레벨로 기록 — 폰도 맥을 "부여식을 거친 이웃 몸"으로 안다(대칭).
                     try:
                         import threading as _th
                         from peer_cards import fetch_and_cache as _fcc
                         _h = {"X-Launcher-Session": _mac_session} if _mac_session else {}
-                        _th.Thread(target=_fcc, args=(_mac_url, "맥"),
-                                   kwargs={"headers": _h}, daemon=True).start()
+
+                        def _fetch_and_grant():
+                            c = _fcc(_mac_url, "맥", headers=_h)
+                            try:
+                                did = ((c or {}).get("identity") or {}).get("device_id")
+                                if did:
+                                    from body_trust import grant_body
+                                    g = grant_body(did, "맥", level=4,
+                                                   granted_by="provision-register")
+                                    if g.get("granted"):
+                                        print(f"[phone_api] 신뢰 부여식: 맥({did}) → 레벨 {g['level']}")
+                            except Exception as e:
+                                print(f"[phone_api] 맥 부여식 스킵: {e}")
+
+                        _th.Thread(target=_fetch_and_grant, daemon=True).start()
                     except Exception as _e:
                         print(f"[phone_api] 맥 명함 fetch 스킵: {_e}")
                 else:

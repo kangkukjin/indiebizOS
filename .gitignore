@@ -106,6 +106,7 @@ data/param_friction.jsonl
 data/forwarding_census.jsonl
 data/body_ask_log.jsonl
 data/peer_cards/
+data/here_cache.json
 data/regime_change_analysis.html
 data/business_images/
 

@@ -82,20 +82,20 @@ nodes:
       here:
         returns: scalar
         side_effect: true
-        exempt: 폰 GPS 센서 — 맥서 오프라인
-        description: 지금 현재 위치를 즉석에서 한 번 조회 (폰 GPS). 상시 추적/저장 없이 물을 때만. 좌표+주소.
+        exempt: 위치 측정(폰=GPS 센서) — 자동 점검 실행 금지
+        description: 지금 이 몸이 있는 곳 (지표어 — 몸마다 자기 방식으로 측정. 폰=GPS ±수십 m, 데스크탑=IP 도시 수준+움직임증거 캐시=재측정 0원). 반환에 source/accuracy_m/measured_at — 정밀도 보고 판단. 상시 추적 없이 물을 때만.
         group: device
-        target_description: 파라미터 없음 — 호출 즉시 폰의 현재 위치(위경도+역지오코딩 주소)를 한 번 가져온다. "지금 어디", "내 위치", 날씨/맛집/길찾기의 출발점.
+        target_description: '파라미터 없음(선택 refresh: true = 강제 재측정, 이사·이동 후). "지금 어디"는 이 몸의 여기 — 도시 수준이면 날씨·지역뉴스에 충분. 사용자의 정밀 위치(길찾기 출발점)가 필요하면 폰 몸에 부탁: [others:ask]{message: "지금 위치 알려줘"}.'
         router: handler
         tool: phone_locate
         scope: system
-        runs_on: phone_only
-        implementation: 폰 네이티브 fused location 1회 조회(Chaquopy→Kotlin PhoneActions.getCurrentLocationNow) + Android Geocoder 역지오코딩. PC/원격에선 분산 IBL(ibl_engine)이 INDIEBIZ_PHONE_URL 로 폰에 포워드.
+        implementation: 지표어 몸별 프로브 — 폰=fused location 1회(Chaquopy→Kotlin PhoneActions.getCurrentLocationNow, 캐시 없음=움직이는 몸) / 데스크탑=IP 지오(ipapi.co→ip-api 폴백) + 네트워크 지문(로컬 IP) 캐시(data/here_cache.json — 지문 불변=캐시 반환). 능력 감지=jclass import.
         keywords:
         - 현재위치
         - 지금위치
         - 내위치
         - 어디
+        - 여기
         - gps
         - location
       listen:

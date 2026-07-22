@@ -388,25 +388,34 @@ def _phone_act(tool_input: dict) -> dict:
 
 
 def _phone_locate(tool_input: dict) -> dict:
-    """현재 위치 온디맨드 조회 ([sense:here]) — 폰 fused GPS (Chaquopy→Kotlin). phone_only.
+    """지금 이 몸이 있는 곳 ([sense:here]) — 지표어(deixis): 몸마다 자기 방식으로 측정.
 
-    상시 수집·저장 없이, 물을 때 그 순간 위치를 한 번 가져온다(augmentation-over-autonomy).
-    PC/원격에서 부르면 분산 IBL(ibl_engine)이 폰으로 포워드하므로, 맥의 AI 도 자기 위치를 안다.
-    반환: {success, lat, lng, accuracy, captured_at, address?}.
+    어휘는 하나, 값은 몸이 정한다: 폰=fused GPS(±수십 m) / 데스크탑=IP 지오(도시 수준)
+    + 움직임-증거 캐시(네트워크 지문 불변이면 재측정 안 함 = 0원. 데스크탑은 사실상
+    평생 1회). 상시 추적 없이 물을 때만(augmentation-over-autonomy) — 캐시는 수집이
+    아니라 읽기 시점의 신선도 검사다.
+    통화 정직성: {success, lat, lng, source(gps|ip), accuracy_m, measured_at,
+    address?, cached?} — 소비자가 정밀도를 보고 판단한다(도시 수준이면 날씨엔 충분,
+    길찾기 출발점이면 폰 몸에 [others:ask]).
     """
     try:
-        from java import jclass  # Chaquopy 브리지 — 폰 네이티브 런타임에만 존재
+        from java import jclass  # Chaquopy 브리지 — 능력 감지(폰 네이티브 런타임에만 존재)
     except Exception:
-        return {"success": False,
-                "error": "[sense:here] 는 폰 네이티브 앱에서만 동작합니다(Chaquopy 브리지 부재). "
-                         "맥/원격에선 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 이 폰으로 포워드합니다.",
-                "phone_only": True}
+        jclass = None
+    if jclass is not None:
+        return _here_phone(jclass)  # 폰 프로브 — 내부 예외는 폰 에러로 정직 반환(데스크탑로 새지 않음)
+    return _here_desktop(tool_input)
+
+
+def _here_phone(jclass) -> dict:
+    """폰 프로브 — fused GPS 1회 (Chaquopy→Kotlin). 폰=움직이는 몸이라 캐시 없음(항상 실측)."""
     try:
         PA = jclass("com.indiebiz.phoneagent.PhoneActions")
     except Exception as e:
         return {"success": False, "error": f"PhoneActions 브리지 로드 실패: {e}"}
 
     import json as _json
+    import time as _time
     raw = PA.getCurrentLocationNow()
     try:
         data = _json.loads(str(raw))
@@ -414,7 +423,101 @@ def _phone_locate(tool_input: dict) -> dict:
         return {"success": False, "error": f"위치 응답 파싱 실패: {raw}"}
     if data.get("error"):
         return {"success": False, "error": data["error"]}
-    return {"success": True, **data}
+    out = {"success": True, **data}
+    out.setdefault("source", "gps")
+    if "accuracy" in out and "accuracy_m" not in out:
+        out["accuracy_m"] = out["accuracy"]
+    out.setdefault("measured_at", out.get("captured_at")
+                   or _time.strftime("%Y-%m-%dT%H:%M:%S"))
+    return out
+
+
+def _here_net_fingerprint() -> str:
+    """움직임-증거 지문 — 로컬 IP(라우팅 기준). 네트워크가 안 바뀌면 몸도 안 움직였다고
+    본다(데스크탑 기준 충분). 순수 stdlib·무권한·윈도우 호환(SSID 는 macOS 권한 필요라 배제)."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.settimeout(2)
+        s.connect(("8.8.8.8", 53))  # 실제 송신 없음(UDP connect) — 라우팅 소스 IP 만 얻음
+        return s.getsockname()[0]
+    except Exception:
+        return "offline"
+    finally:
+        s.close()
+
+
+def _here_desktop(tool_input: dict) -> dict:
+    """데스크탑 프로브 — IP 지오(도시 수준) + 움직임-증거 캐시.
+
+    정책(보편): 움직였다는 증거(지문 변경)가 없으면 캐시를 내놓는다 — 안 바뀌는 걸
+    시간·돈 들여 재확인하지 않는다. refresh=true 로 강제 재측정.
+    """
+    import json as _json
+    import os as _os
+    import time as _time
+
+    base = _os.environ.get("INDIEBIZ_BASE_PATH") or _os.path.join(
+        _os.path.dirname(__file__), "..", "..", "..", "..")
+    cache_path = _os.path.join(base, "data", "here_cache.json")
+    fp = _here_net_fingerprint()
+
+    if not tool_input.get("refresh"):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cache = _json.load(f)
+            if cache.get("fingerprint") == fp and cache.get("result", {}).get("success"):
+                out = dict(cache["result"])
+                out["cached"] = True
+                out["note"] = ("네트워크 지문 불변 → 캐시(측정 " + str(out.get("measured_at"))
+                               + "). 이사/이동했으면 refresh: true 로 재측정.")
+                return out
+        except Exception:
+            pass
+
+    if fp == "offline":
+        return {"success": False, "error": "오프라인 — 네트워크 없이 이 몸의 위치를 측정할 수 없습니다.",
+                "source": "ip"}
+
+    # 측정: 공인 IP 지오 (1차 https ipapi.co, 2차 ip-api.com lang=ko)
+    import requests
+    result = None
+    try:
+        r = requests.get("https://ipapi.co/json/", timeout=10)
+        d = r.json()
+        if r.status_code == 200 and d.get("latitude") is not None:
+            result = {"lat": d.get("latitude"), "lng": d.get("longitude"),
+                      "city": d.get("city"), "ip": d.get("ip"),
+                      "address": " ".join(x for x in (d.get("country_name"),
+                                                      d.get("region"), d.get("city")) if x)}
+    except Exception:
+        pass
+    if result is None:
+        try:
+            r = requests.get("http://ip-api.com/json/?lang=ko", timeout=10)
+            d = r.json()
+            if d.get("status") == "success":
+                result = {"lat": d.get("lat"), "lng": d.get("lon"),
+                          "city": d.get("city"), "ip": d.get("query"),
+                          "address": " ".join(x for x in (d.get("country"),
+                                                          d.get("regionName"), d.get("city")) if x)}
+        except Exception:
+            pass
+    if result is None:
+        return {"success": False, "error": "IP 위치 측정 실패(지오 서비스 모두 미응답).",
+                "source": "ip"}
+
+    out = {"success": True, **result, "source": "ip", "accuracy_m": 10000,
+           "measured_at": _time.strftime("%Y-%m-%dT%H:%M:%S"), "cached": False,
+           "note": "IP 기반 — 도시 수준 정밀도. 사용자의 정밀 위치(길찾기 출발점 등)가 "
+                   "필요하면 폰 몸에 부탁: [others:ask]{message: \"지금 위치 알려줘\"}"}
+    try:
+        _os.makedirs(_os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            _json.dump({"fingerprint": fp, "result": out}, f, ensure_ascii=False)
+    except Exception:
+        pass
+    return out
 
 
 def _phone_listen(tool_input: dict) -> dict:

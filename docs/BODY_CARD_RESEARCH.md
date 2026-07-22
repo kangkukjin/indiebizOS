@@ -94,6 +94,25 @@
 관문 자동 포워딩 은퇴(기존 계기·스케줄의 ask 전환 후), 폰 번들 물리 필터,
 재학습 코퍼스 몸별 분리.
 
+## here 지표어 전환 (2026-07-22 — 2단계의 첫 시범: 제거가 아니라 재분류)
+
+`sense:here`의 phone_only 는 의미의 제약이 아니라 구현의 우연이었다("여기"는
+지표어 — 어휘는 하나, 값은 몸이 정한다). anywhere 로 재분류하고 몸별 프로브:
+- **폰** = fused GPS(±수십 m, 캐시 없음 — 움직이는 몸). 능력 감지 = jclass import.
+- **데스크탑** = IP 지오(ipapi.co→ip-api lang=ko 폴백, 도시 수준) +
+  **움직임-증거 캐시**: 네트워크 지문(로컬 IP, UDP connect 트릭 — 무권한·stdlib·
+  윈도우 호환)이 불변이면 캐시 반환(재측정 0원). refresh:true 강제 재측정.
+  정책(증거 없으면 캐시)=보편, 프로브(지문·측정법)=몸의 어휘.
+- **통화 정직성**: {source: gps|ip, accuracy_m, measured_at, cached} — 실측에서
+  맥 IP 지오가 "성남시"(ISP 위치)를 내놓음 = 정직성 필드가 필요한 이유의 실증.
+  note 가 정밀 요구 시 [others:ask] 경로를 안내(두-층 분리: here=자기 몸 /
+  사용자 위치=폰에 명시적 부탁).
+- 효과: 맥 카탈로그 153→154(here 복귀), 명함 105→106(hash 변경→다음 등록 때
+  자동 재교환), 맥→폰 here 자동 포워딩 소멸(인구조사에서 확인 가능).
+  sense:see/listen 은 phone_only 유지(맥에 카메라·마이크 프로브 없음 — 정직).
+- 캐시=data/here_cache.json(gitignore). ⏳폰 재빌드(USB 재연결 후) — 폰 동작
+  무변경(GPS 경로 그대로), source/measured_at 필드 통일만 편승.
+
 ## 함정 기록
 
 - ★`gemini-flash-latest` + `thinkingBudget:0` = 2026-07 중순부터 400 INVALID_ARGUMENT

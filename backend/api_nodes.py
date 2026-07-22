@@ -27,6 +27,7 @@ class RegisterRequest(BaseModel):
     auth: str = "x_phone_token"   # 포워드 인증 방식
     owner: str = "self"
     primary: bool = False
+    npub: str = ""                # 서명 신원(hex) — 우편함(ask_mailbox) 부여식 접점
 
 
 class HeartbeatRequest(BaseModel):
@@ -60,11 +61,14 @@ async def register_node(req: RegisterRequest):
     # — 그들의 만남·부여는 별도 절차(소유주 승인)로.
     if not entry.get("self"):
         try:
-            from body_trust import grant_body
+            from body_trust import grant_body, attach_npub
             _g = grant_body(req.device_id, req.alias, level=4,
                             granted_by="provision-register")
             if _g.get("granted"):
                 print(f"[nodes] 신뢰 부여식: {req.alias}({req.device_id}) → 레벨 {_g['level']}")
+            # npub 접점 부착 — 우편함(Nostr DM) 부탁이 이 몸의 레벨로 판정되게(멱등)
+            if req.npub:
+                attach_npub(req.device_id, req.npub)
         except Exception as _e:
             print(f"[nodes] 부여식 스킵: {_e}")
 
@@ -147,6 +151,7 @@ class AskRequest(BaseModel):
     from_body: str = ""   # 발신 몸 표시명(계측용)
     device_id: str = ""   # 발신 몸 신원 — 신뢰 원장(이웃 통합) 조회 키. 없으면 소유주 표면.
     dry_run: bool = False # True=컴파일만(실험 계측: 번역 품질을 실행과 분리 측정)
+    payload: Optional[dict] = None  # 동봉 — 리터럴 데이터. 코드의 "$payload.<키>" 자리에 치환.
 
 
 @router.post("/nodes/ask")
@@ -158,7 +163,7 @@ def body_ask(req: AskRequest):
     """
     from body_ask import handle_ask
     return handle_ask(req.message, dry_run=req.dry_run, from_body=req.from_body,
-                      device_id=req.device_id)
+                      device_id=req.device_id, payload=req.payload)
 
 
 @router.get("/nodes/peer-status")

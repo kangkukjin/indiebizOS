@@ -53,7 +53,10 @@ def fetch_and_cache(url: str, alias: str, headers: Optional[Dict] = None,
         card["_fetched_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
         if old and old.get("dictionary_hash") == card.get("dictionary_hash"):
             old["_fetched_at"] = card["_fetched_at"]
-            card = old  # 어휘 불변 — 본문 유지(시각만)
+            # 신원(identity)은 어휘와 독립 축 — npub 부착 등 신원 갱신은 hash 불변이어도 반영.
+            if card.get("identity"):
+                old["identity"] = card["identity"]
+            card = old  # 어휘 불변 — 본문 유지(시각·신원만)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(card, f, ensure_ascii=False)
     except Exception:

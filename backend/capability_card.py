@@ -49,22 +49,36 @@ def _self_can_run(node: str, action: str, cfg: dict) -> bool:
 _ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
 
 
+def foreign_actions(code: str) -> List[str]:
+    """코드에서 이 몸이 실행할 수 없는 액션 목록 — 소유 판정의 단일 구현.
+
+    ★미지 액션도 남의 어휘로 친다: 설치 필터(물리 분리, `_prune_foreign_vocabulary`)
+    후 남의 몸 어휘는 이 몸의 레지스트리에 아예 없어 '미지'로 나타난다(맥의
+    limbs:phone 실측). 사전에 없는 것 = 이 몸이 실행할 수 없는 것(폐어휘 포함).
+    예외는 삼키지 않는다 — fail-open 이 필요한 호출자는 code_is_own 을 쓸 것.
+    """
+    nodes = _registry().get("nodes") or {}
+    bad: List[str] = []
+    for node, action in _ACT_RE.findall(code or ""):
+        cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
+        if cfg is None or not _self_can_run(node, action, cfg):
+            bad.append(f"{node}:{action}")
+    return bad
+
+
 def code_is_own(code: str) -> bool:
-    """IBL 코드가 이 몸의 사전으로만 구성돼 있는가 — 소유-필터(해마 회상·카탈로그)용.
+    """IBL 코드가 이 몸의 사전으로만 구성돼 있는가 — 소유-필터(해마 회상·학습)용.
 
     몸 독립 원칙: 남의 몸 어휘(맥의 phone_only, 폰의 비-runnable)는 학습·회상 대상이
     아니다. 상대 능력은 명함(냄새)으로 알고 [others:ask]로 부탁한다.
-    미지 액션은 소유 판정 밖(실행이 판정) — 여기선 '남의 것으로 확인된 것'만 거른다.
+    ★미지=남의 것: 물리 분리 후 남의 어휘는 레지스트리에 없어 '미지'로만 보이므로,
+    옛 '미지=판정 밖(열어둠)' 방침은 남의 용례를 통째로 통과시켰다(실측: 맥 해마가
+    limbs:phone 용례를 회상 → 컴파일러가 남의 몸 어휘로 번역).
     """
     try:
-        nodes = _registry().get("nodes") or {}
-        for node, action in _ACT_RE.findall(code or ""):
-            cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
-            if cfg is not None and not _self_can_run(node, action, cfg):
-                return False
-        return True
+        return not foreign_actions(code)
     except Exception:
-        return True  # 판정 불가 시 열어둠 — 소유-필터가 실행을 깨서는 안 됨
+        return True  # 판정 불가(레지스트리 로드 실패 등) 시 열어둠 — 소유-필터가 회상을 깨서는 안 됨
 
 
 def _action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
@@ -74,6 +88,22 @@ def _action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
     if isinstance(ops, dict) and isinstance(ops.get("values"), dict):
         entry["ops"] = list(ops["values"].keys())
     return entry
+
+
+def _self_npub() -> str:
+    """이 몸의 nostr 공개키(hex) — 몸-인식. 신원 미가용이면 ""(명함에 미기재)."""
+    try:
+        from runtime_utils import detect_body
+        if (detect_body() or {}).get("profile") == "phone":
+            import nostr_phone_bridge as bridge
+            return bridge.pub_hex() or ""
+        from indienet import get_indienet
+        idn = get_indienet()
+        if getattr(idn, "_initialized", False):
+            return idn.identity.public_key.hex()
+    except Exception:
+        pass
+    return ""
 
 
 def build_card(detail: str = "full") -> Dict[str, Any]:
@@ -134,6 +164,9 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
         identity = {"device_id": self_device_id()}
     except Exception:
         identity = {}
+    npub = _self_npub()
+    if npub:
+        identity["npub"] = npub  # 서명 신원 앵커(hex) — 우편함(ask_mailbox) 수신처·부여식 키
 
     return {
         "kind": "indiebiz-capability-card",

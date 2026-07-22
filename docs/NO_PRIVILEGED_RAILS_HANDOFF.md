@@ -1,7 +1,54 @@
 # 특권 소멸 핸드오프 — 몸 간 특권 배관 전면 철거 (폰-맥 = 최고 레벨 이웃)
 
 2026-07-22 세션 종료 시점. 표면 분리(docs/SURFACE_SPLIT_HANDOFF.md, 완료) 직후의
-설계 논의에서 사용자가 확정한 다음 착수 과제. **아직 코드 손 안 댐 — 원칙·순서 확정 상태.**
+설계 논의에서 사용자가 확정한 다음 착수 과제.
+
+## ★1단계 구현 상태 (2026-07-22 후속 세션 — 맥 측 완결, 폰 설치 대기)
+
+**구현**: `backend/ask_mailbox.py` 신설 — NIP-17 DM 위 ask 봉투(`{"indiebiz_ask":1,
+op: ask|result, id, ts, message, payload, ...}`), ASK_RELAYS=nos.lol+damus(수신 선언
+kind:10050 과 정렬). 상관관계 id + 결과 대기(수동 배달 _waiters + 능동 폴 자급),
+중복제거 2층(gift id 프로세스 내 + 봉투 id 디스크 영속 data/ask_mailbox_seen.json),
+freshness TTL 600초(백필 대량 실행 방지), 60KB 신호층 한도. 수신: 맥=channel_poller
+giftwrap 훅(백필 가드보다 앞 — 우편함 자체 TTL) / 폰=phone_api `_start_ask_mailbox`
+폴 데몬(12초 주기 — RelayClient 가 EOSE 에 닫혀 상시 구독 불가).
+
+**신원**: 명함 identity.npub(capability_card._self_npub — 몸-인식) + 부여식 npub
+접점(body_trust.attach_npub — contact_type='body', 값 "npub:<hex>") + 등록 payload
+npub 동봉(api_nodes RegisterRequest / phone_api). 우편함 부탁은 seal 서명의 npub 로
+원장 판정(handle_ask device_id="npub:<hex>") — 낯선 npub=정직 거절. peer_cards 는
+hash 불변이어도 identity 갱신(npub 부착이 캐시에 스미도록).
+
+**payload 동봉**: handle_ask(payload) — 컴파일 프롬프트에 "$payload.<키>" 자리표시자
+안내, 실행 직전 원문 치환(body_ask._substitute_payload — 따옴표 감싼 형태는 JSON
+인코딩 통치환). 응답 compiled_ibl 은 자리표시자 유지(원문 미반향). [others:ask]
+params: payload·timeout 추가(desc 갱신·재빌드 완료, 액션 수 불변 158).
+
+**소유-가드**(구현 중 실측 버그): 맥 컴파일러가 부탁을 [limbs:phone](남의 어휘)로
+번역 — 물리 분리 후 남의 어휘는 레지스트리에 "미지"라 code_is_own 이 열어줌 →
+handle_ask 에 엄격 가드(_foreign_actions — 미지=남의 것, 1회 교정 후 정직 거절) +
+해마 참고 용례 소유-필터(_filter_foreign_refs). 맥 해마의 phone_only 용례 오염은
+별도 과제로 분리(스폰). 해마 시딩 6용례(manual_seed, ask_enclosure)+ibl_distilled
+800→806 — 클립보드 부탁 컴파일 결정론화(재학습 대기열).
+
+**클립보드 이주**: '폰으로'(Launcher.tsx)=`[others:ask]{message, payload:{text},
+timeout:20}` (관문 [limbs:phone] 직결 은퇴) / 'PC로'(phone_api clip_to_mac)=
+body_ask.ask_peer (HTTP ask 상행 + 우편함 폴백, _forward_to_mac 은퇴). ask_peer:
+HTTP connect 5초 분리 + 실패 시 우편함 폴백(_ask_mailbox_fallback — 명함 npub 해소).
+
+**검증(맥)**: 실릴레이 자기-DM 종단 왕복 9.5초(발행→폴→언랩→신뢰 게이트 낯선 몸
+거절→결과 봉투→상관관계 배달) · 부여식 후 dry_run 왕복 9.7초(compiled=[self:output]
+{op:"clipboard", content:"$payload.text"}) · 로컬 실행 6.7초(치환→실제 클립보드,
+원상복구) · build --check·번들 파생(ask_mailbox 합류 177)·tsc 통과. PRIVILEGE_LEVELS
+선언은 "철거 대상 목록"으로 재정위(body_trust.py). 임시 부여식·테스트 산출물 정리.
+
+**⏳폰 설치 대기(USB 필요)**: APK 는 새 번들로 빌드 완료(app-debug.apk — ask_mailbox
+·소유가드 body_ask·npub 등록·폴 데몬·clip_to_mac ask 이주 포함). USB 연결 시:
+`./phone-companion/scripts/setup_phone.sh` 설치 → force-stop 재기동 → A36 실기
+회귀 기준 검증 ①'폰으로'(Wi-Fi=HTTP ask, LTE=우편함 — 현재 폰이 LTE 라 구버전은
+node_unreachable 실측) ②'PC로' ③폰 재등록 시 맥 원장에 npub 접점 부착 확인
+④맥→폰 우편함 종단(폰 npub 명함 교환 후). 구버전 폰과의 과도기: 구 폰은 payload
+를 모른 채 /nodes/ask 를 받으므로 '폰으로'는 폰 갱신 전까지 미완(회귀 기준 미충족).
 
 ## 원칙 (사용자 확정 — 원문 취지 그대로)
 

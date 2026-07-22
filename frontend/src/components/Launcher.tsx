@@ -202,11 +202,15 @@ export function Launcher() {
     if (!text.trim()) { done('err'); return; }
     setClipToPhone('sending');
     try {
-      // 맥 클립보드 → 폰 클립보드 + 도착 알림. 직결(Wi-Fi) 우선, LTE 면 백엔드가
-      // heartbeat 롱폴 푸시 큐로 폴백한다(ibl_engine._forward_to_phone).
-      const clip = { op: 'clipboard', text };
-      const noti = { op: 'notify', title: '📋 맥 클립보드 도착', body: '입력창을 길게 눌러 붙여넣기 하세요' };
-      const code = `[limbs:phone]${JSON.stringify(clip)} >> [limbs:phone]${JSON.stringify(noti)}`;
+      // 맥 클립보드 → 폰: 이웃 문법 [others:ask](특권 소멸 1단계) — 폰에 자연어
+      // 부탁+텍스트 동봉(payload). 폰이 자기 사전으로 클립보드+알림을 컴파일·실행한다.
+      // HTTP 직결(Wi-Fi) 우선, LTE 면 우편함(Nostr DM) 폴백은 ask_peer 안에 있다.
+      const ask = {
+        message: '첨부한 텍스트(payload.text)를 폰 클립보드에 넣고, "📋 맥 클립보드 도착 — 입력창을 길게 눌러 붙여넣기" 알림을 띄워줘',
+        payload: { text },
+        timeout: 20,
+      };
+      const code = `[others:ask]${JSON.stringify(ask)}`;
       const r = await fetch('http://127.0.0.1:8765/ibl/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -215,7 +219,7 @@ export function Launcher() {
       const data = await r.json().catch(() => ({}));
       const raw = JSON.stringify(data ?? {});
       if (raw.includes('"queued":true') || raw.includes('"queued": true')) done('queued');
-      else if (r.ok && data?.success !== false && !raw.includes('phone_unreachable')) done('ok');
+      else if (r.ok && data?.success !== false && !raw.includes('node_unreachable') && !raw.includes('"error"')) done('ok');
       else done('err');
     } catch {
       done('err');
@@ -752,7 +756,7 @@ export function Launcher() {
                     ? 'text-red-600 bg-red-50'
                     : 'text-[#6B5B4F] hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'
               }`}
-              title="맥 클립보드를 폰으로 — 지금 복사(⌘C)된 내용을 폰 클립보드에 넣고 알림을 띄웁니다 (LTE 여도 푸시 큐로 전달)"
+              title="맥 클립보드를 폰으로 — 지금 복사(⌘C)된 내용을 폰에 부탁([others:ask])해 클립보드에 넣고 알림을 띄웁니다 (LTE 여도 우편함(Nostr DM)으로 전달)"
             >
               <Smartphone size={15} />
               <span className="text-[13px]">

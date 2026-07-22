@@ -19,11 +19,13 @@ from typing import Any, Dict, Optional
 # === 정책 (숫자 레벨만) ===
 ASK_MIN_LEVEL = 1           # 부탁(ask) 수신 허용 최소 레벨
 PRIVILEGE_LEVELS = {
-    # 최고 신뢰 전용 특권 선언 — 현 전송층(공유 비밀)이 사실상 집행 중이며,
-    # 전송 신원이 npub 로 일반화될 때 이 선언이 실제 게이트가 된다.
-    "core_delegation": 4,   # 코어 어휘 @alias 크로스바디 위임 (/ibl/execute)
-    "data_sync": 4,         # business/health CRDT union 동기화
-    "hippo_rent": 4,        # 해마 인덱스 렌트
+    # ★소멸 예정 특권 목록 (2026-07-22 사용자 확정 — docs/NO_PRIVILEGED_RAILS_HANDOFF.md):
+    # 이 선언은 더 이상 "레벨로 집행할 게이트"가 아니라 **철거 대상 배관의 목록**이다.
+    # 특권은 감독(레벨 게이트)이 아니라 소멸이 목표 — 몸 간 문법은 이웃 문법 하나
+    # (명함·[others:ask]·신뢰레벨·창고)로 통일된다. 각 항목은 이웃-문법 재표현 후 제거.
+    "core_delegation": 4,   # → [others:ask] (관문 자동위임 매장, 핸드오프 #2)
+    "data_sync": 4,         # → 교환 문법(ask/창고/릴레이 계약, 핸드오프 #4)
+    "hippo_rent": 4,        # → 폰 자기 키·자기 축적(핸드오프 #3)
 }
 
 _CONTACT_TYPE = "body"
@@ -65,3 +67,27 @@ def grant_body(device_id: str, name: str, level: int = 4,
                          f"{time.strftime('%Y-%m-%dT%H:%M:%S')}"))
     bm.add_contact(n["id"], _CONTACT_TYPE, str(device_id))
     return {"granted": True, "neighbor_id": n["id"], "level": int(level)}
+
+
+def attach_npub(device_id: str, npub_hex: str) -> bool:
+    """몸-이웃에 npub 접점("npub:<hex>") 부착 — 서명 신원의 원장 합류.
+
+    우편함(ask_mailbox — Nostr DM)의 발신자는 npub 로 증명되므로, 부여식을 거친
+    몸의 npub 를 같은 이웃의 접점으로 붙여야 우편함 부탁이 그 몸의 레벨로 판정된다.
+    (device_id 자기보고 → npub 서명으로의 신원 승격 경로. 멱등.)
+    """
+    if not device_id or not npub_hex:
+        return False
+    key = f"npub:{npub_hex}"
+    try:
+        from business_manager import BusinessManager
+        bm = BusinessManager()
+        if bm.get_neighbor_by_contact(_CONTACT_TYPE, key):
+            return True  # 이미 부착됨
+        n = bm.get_neighbor_by_contact(_CONTACT_TYPE, str(device_id))
+        if not n:
+            return False  # 부여식 전 — npub 만으로 명부에 올리지 않는다
+        bm.add_contact(n["id"], _CONTACT_TYPE, key)
+        return True
+    except Exception:
+        return False

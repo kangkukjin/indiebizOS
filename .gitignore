@@ -105,6 +105,7 @@ data/param_friction.jsonl
 # 몸 독립 소통 연구 런타임 계측·캐시 (docs/BODY_CARD_RESEARCH.md)
 data/forwarding_census.jsonl
 data/body_ask_log.jsonl
+data/ask_mailbox_seen.json
 data/peer_cards/
 data/here_cache.json
 # 몸-사전 파생본(빌드마다 gradle 이 재생성 — 사전집=ibl_nodes.yaml 이 정본)

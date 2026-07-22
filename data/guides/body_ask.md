@@ -31,10 +31,19 @@
 4. `dry_run: true` = 상대가 컴파일만(실행 안 함) — 파괴적일 수 있는 부탁 전 확인용.
 5. 실패 모양: 상대 어휘 밖이면 정직한 거절("내 어휘로 수행할 수 없는 부탁입니다"),
    상대 미도달이면 node_unreachable.
+6. **동봉(payload)**: 클립보드 텍스트처럼 *그대로* 전달할 리터럴 데이터는 message 에
+   옮겨 적지 말고 `payload` dict 로 동봉하고, message 에서 `payload.<키>` 로 지칭한다.
+   상대 컴파일러는 값 자리에 `"$payload.<키>"` 자리표시자만 놓고 실행 직전 원문 치환
+   — LLM 이 긴 텍스트를 베끼다 깨뜨리지 않는다.
+   예: `[others:ask]{message: "첨부한 텍스트(payload.text)를 폰 클립보드에 넣어줘", payload: {text: "…"}}`
 
 ## 배관 (참고)
 
 발신=body_ask.ask_peer (프레즌스 레지스트리 별칭 해소, phone-class=X-Phone-Token /
 compute=런처 세션) → 상대 `/nodes/ask` → 상대 body_ask.handle_ask 가 자기 컴파일러
-(해마 있으면 조종실, 없으면 사전-동봉 Gemini)로 번역·실행·1회 자가교정. 연구 정본
-= docs/BODY_CARD_RESEARCH.md.
+(해마 있으면 조종실, 없으면 사전-동봉 Gemini)로 번역·실행·1회 자가교정. 수신측
+**소유-가드**: 자기 사전 밖(미지 포함) 액션으로 번역되면 1회 교정 후 정직 거절 —
+남의 어휘로 컴파일해 관문 위임으로 되튕기지 않는다. HTTP 직결 불가(LTE 등) 시
+**우편함**(ask_mailbox — NIP-17 DM 위 ask 봉투, 명함의 npub 필요) 자동 폴백,
+`timeout`=우편함 결과 대기 초(기본 60, 미도착=queued). 연구 정본
+= docs/BODY_CARD_RESEARCH.md, 특권 소멸 = docs/NO_PRIVILEGED_RAILS_HANDOFF.md.

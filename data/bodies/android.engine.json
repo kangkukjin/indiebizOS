@@ -43,6 +43,7 @@
     "api_warehouse_feed",
     "api_websocket",
     "api_xray",
+    "ask_mailbox",
     "auto_response",
     "body_ask",
     "body_trust",
@@ -197,8 +198,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 191,
-    "engine": 176,
+    "total": 192,
+    "engine": 177,
     "blocklist": 15
   }
 }

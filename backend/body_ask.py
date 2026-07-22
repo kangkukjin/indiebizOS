@@ -25,7 +25,67 @@ def _log(rec: Dict[str, Any]) -> None:
         pass
 
 
-def _compile(message: str, correction: str = "") -> Dict[str, Any]:
+def _payload_note(payload) -> str:
+    """동봉(payload) 안내 — 컴파일 프롬프트 공통 조각. 부탁에 물건(리터럴 데이터)을
+    동봉하면, 컴파일러는 값을 옮겨 적지 않고 "$payload.<키>" 자리표시자만 놓는다
+    (긴 텍스트를 LLM 이 베끼다 깨뜨리는 것 방지 — 실행 전 원문 치환)."""
+    if not isinstance(payload, dict) or not payload:
+        return ""
+    return ("첨부 데이터(payload) 키: " + ", ".join(sorted(payload.keys())) +
+            ' — 코드 파라미터 값 자리에 "$payload.<키>" 를 그대로 쓰면 실행 전에 실제 값으로 '
+            "치환된다. 첨부 내용을 코드에 옮겨 적지 마라.\n\n")
+
+
+def _foreign_actions(code: str) -> list:
+    """이 몸이 실행할 수 없는 액션 목록 — 부탁 컴파일 산출물의 소유-가드.
+
+    판정 단일 구현은 capability_card.foreign_actions(미지=남의 것 — 물리 분리 후
+    남의 어휘는 레지스트리에 없어 미지로 나타난다). 여기선 판정 불가 시만 열어둔다
+    (가드가 부탁 자체를 깨서는 안 됨).
+    """
+    try:
+        from capability_card import foreign_actions
+        return foreign_actions(code)
+    except Exception:
+        return []
+
+
+def _filter_foreign_refs(references: str) -> str:
+    """해마 참고 용례에서 남의 어휘가 낀 줄을 뺀다 — 물리 분리 후 맥 해마에 남은
+    phone_only 용례가 컴파일을 남의 몸 어휘로 끌고 가는 것 방지(실측: limbs:phone)."""
+    if not references:
+        return references
+    kept = [ln for ln in references.splitlines()
+            if "<ref " not in ln or not _foreign_actions(ln)]
+    return "\n".join(kept)
+
+
+_PAYLOAD_RE = None
+
+
+def _substitute_payload(code: str, payload) -> str:
+    """컴파일된 코드의 "$payload.<키>" 자리표시자를 실제 값(JSON 인코딩)으로 치환.
+
+    따옴표로 감싼 형태("$payload.text")를 통째로 값의 JSON 표현으로 바꿔 문자열
+    이스케이프가 항상 올바르게 된다. 따옴표 없는 형태도 지원(숫자·객체 값).
+    """
+    if not isinstance(payload, dict) or not payload or "$payload." not in code:
+        return code
+    global _PAYLOAD_RE
+    if _PAYLOAD_RE is None:
+        import re
+        _PAYLOAD_RE = re.compile(r'"\$payload\.([A-Za-z0-9_]+)"|\$payload\.([A-Za-z0-9_]+)')
+
+    def _rep(m):
+        key = m.group(1) or m.group(2)
+        if key not in payload:
+            return m.group(0)
+        return json.dumps(payload[key], ensure_ascii=False)
+
+    return _PAYLOAD_RE.sub(_rep, code)
+
+
+def _compile(message: str, correction: str = "", payload=None) -> Dict[str, Any]:
     """자연어 부탁 → 내 사전의 IBL. 몸의 능력에 따라 컴파일러를 고른다.
 
     능력 축 = **해마**(용례 연상)다, 프로바이더 유무가 아니다 — 폰도 gemini_http
@@ -40,25 +100,28 @@ def _compile(message: str, correction: str = "") -> Dict[str, Any]:
     """
     try:
         from ibl_usage_rag import IBLUsageRAG
-        references = IBLUsageRAG().get_references(message)
+        references = _filter_foreign_refs(IBLUsageRAG().get_references(message))
     except Exception:
         references = ""
 
     if not references:
-        r = _compile_gemini(message, correction)
+        r = _compile_gemini(message, correction, payload=payload)
         if r.get("ok") or r.get("compiler") == "gemini":
             return r  # 성공/정직한 CANNOT 은 신뢰. compiler 없는 실패=수단 부재 → 조종실로.
 
-    return _compile_cockpit(message, correction, references)
+    return _compile_cockpit(message, correction, references, payload=payload)
 
 
-def _compile_cockpit(message: str, correction: str, references: str) -> Dict[str, Any]:
+def _compile_cockpit(message: str, correction: str, references: str,
+                     payload=None) -> Dict[str, Any]:
     """조종실 번역기(해마 용례 + translate 기어) — 해마 있는 몸의 컴파일러."""
     from api_ibl import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
     from consciousness_agent import system_ai_call
     prompt = f'사용자 명령: "{message}"\n\n'
+    prompt += _payload_note(payload)
     if references:
-        prompt += f"참고 용례 (이 액션 이름들만 사용하라):\n{references}\n\n"
+        prompt += ("참고 용례 (내 사전 액션 사용의 근거 — 용례가 무관하면 무시하고 "
+                   f"스펙의 액션으로 직접 번역하라):\n{references}\n\n")
     else:
         prompt += "(관련 과거 용례 없음 — 위 6개 노드 지식으로 직접 번역하라.)\n\n"
     if correction:
@@ -99,7 +162,7 @@ def _own_vocab_lines() -> str:
     return "\n".join(lines)
 
 
-def _compile_gemini(message: str, correction: str = "") -> Dict[str, Any]:
+def _compile_gemini(message: str, correction: str = "", payload=None) -> Dict[str, Any]:
     """인지 프로바이더 없는 몸의 컴파일러 — Gemini flash + 자기 사전(desc 프로젝션).
 
     ★thinkingBudget=0 필수(engines:icon 선례) — flash-latest 는 thinking 이 출력
@@ -118,6 +181,9 @@ def _compile_gemini(message: str, correction: str = "") -> Dict[str, Any]:
         f"<내 사전>\n{_own_vocab_lines()}\n</내 사전>"
     )
     user_text = f'사용자 명령: "{message}"'
+    note = _payload_note(payload)
+    if note:
+        user_text += "\n\n" + note.strip()
     if correction:
         user_text += f"\n\n직전 번역이 실행에 실패했다. 아래 에러/힌트에 맞춰 수정 번역하라:\n{correction}"
 
@@ -226,6 +292,11 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
     if not message:
         return {"error": 'message 가 필요합니다. 예: [others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장"}'}
     to = str(params.get("to") or "").strip().lstrip("@")
+    enclosure = params.get("payload") if isinstance(params.get("payload"), dict) else None
+    try:
+        mailbox_timeout = float(params.get("timeout") or 60.0)
+    except (TypeError, ValueError):
+        mailbox_timeout = 60.0
 
     entry = None
     try:
@@ -270,8 +341,13 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
                 headers["X-Phone-Token"] = tok
             is_compute_peer = False
         if not url:
+            # 주소 없음 — 우편함(Nostr DM)이 유일한 길일 수 있다(명함에 npub 있으면).
+            fb = _ask_mailbox_fallback(to, entry, message, enclosure, params, mailbox_timeout)
+            if fb is not None:
+                return fb
             return {"error": (f"'{to or '이웃 몸'}'에 닿을 주소가 없습니다 — 지금 연결된 몸이 없고 "
-                              "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있습니다."),
+                              "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있고 "
+                              "명함의 npub 도 없습니다."),
                     "node_unreachable": True}
 
     try:
@@ -281,13 +357,20 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
         my_id = ""
     payload = {"message": message, "from_body": _self_label(), "device_id": my_id,
                "dry_run": bool(params.get("dry_run"))}
+    if enclosure:
+        payload["payload"] = enclosure
     import requests
     try:
-        r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=120)
+        # connect 5초 분리 — LTE/CGNAT 뒤 몸은 connect 자체가 안 되므로 빨리 접고
+        # 우편함(Nostr DM) 폴백으로 넘어간다(특권 소멸 1단계 — 신호층은 보편 매체).
+        r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=(5, 120))
         if r.status_code in (401, 403) and is_compute_peer and _peer_mac_login(url):
             headers["X-Launcher-Session"] = _peer_mac_session["session"]
-            r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=120)
+            r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=(5, 120))
     except Exception as e:  # noqa: BLE001
+        fb = _ask_mailbox_fallback(to, entry, message, enclosure, params, mailbox_timeout)
+        if fb is not None:
+            return fb
         return {"error": f"이웃 몸({url})에 연결할 수 없습니다 ({e.__class__.__name__}). "
                          "그 몸이 켜져 있는지 확인하세요.", "node_unreachable": True}
     if r.status_code != 200:
@@ -301,6 +384,34 @@ def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
+def _ask_mailbox_fallback(to: str, entry, message: str, enclosure, params,
+                          timeout: float):
+    """HTTP 직결 불가 시 우편함(Nostr DM) 경로 — npub 를 알 때만. 모르면 None.
+
+    특권 소멸 1단계: 하트비트 푸시 큐(허브-위성 전용선)의 이웃-문법 대체. 발신자
+    신원은 npub 서명이 증명하므로 공유 토큰·env 주소가 필요 없다.
+    """
+    try:
+        from ask_mailbox import ask_via_mailbox, peer_npub
+        alias = (entry or {}).get("alias") or to
+        to_hex = peer_npub(alias)
+        if not to_hex:
+            return None
+        try:
+            from device_registry import self_device_id
+            my_id = self_device_id()
+        except Exception:
+            my_id = ""
+        out = ask_via_mailbox(to_hex, message, payload=enclosure,
+                              from_body=_self_label(), device_id=my_id,
+                              dry_run=bool(params.get("dry_run")), timeout=timeout)
+        if isinstance(out, dict):
+            out.setdefault("_asked", alias or f"npub:{to_hex[:12]}…")
+        return out
+    except Exception:
+        return None
+
+
 def _self_label() -> str:
     try:
         from runtime_utils import detect_body
@@ -310,7 +421,7 @@ def _self_label() -> str:
 
 
 def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
-               device_id: str = "") -> Dict[str, Any]:
+               device_id: str = "", payload: Dict[str, Any] = None) -> Dict[str, Any]:
     t0 = time.time()
     message = (message or "").strip()
     if not message:
@@ -337,7 +448,19 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
             return {"success": False, "trust": trust_level,
                     "error": f"신뢰 레벨({trust_level})이 부탁 수신 최소({ASK_MIN_LEVEL}) 미만입니다."}
 
-    comp = _compile(message)
+    # 소유-가드: 부탁받은 몸은 **자기 사전**으로만 컴파일한다. 남의 어휘(예: 맥이
+    # phone_only 를 컴파일)로 번역되면 관문 자동위임으로 남의 몸에 되튕겨 나간다 —
+    # 특권 배관을 ask 가 도로 여는 꼴. 1회 교정 재컴파일, 그래도 남의 어휘면 정직 거절.
+    comp = _compile(message, payload=payload)
+    if comp.get("ok"):
+        foreign = _foreign_actions(comp["code"])
+        if foreign:
+            comp = _compile(message, payload=payload, correction=(
+                f"직전 번역 {comp['code']} 은 이 몸이 실행할 수 없는 액션을 썼다: "
+                f"{', '.join(foreign)}. 이 몸의 사전에 있는 액션만으로 다시 번역하라."))
+            if comp.get("ok") and _foreign_actions(comp["code"]):
+                comp = {"ok": False, "compiler": comp.get("compiler"),
+                        "error": "내 어휘로 수행할 수 없는 부탁입니다(남의 몸 어휘로만 번역됨)."}
     if not comp.get("ok"):
         out = {"success": False, "error": comp.get("error"), "raw": comp.get("raw"),
                "compiler": comp.get("compiler"),
@@ -359,7 +482,9 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
         return out
 
     try:
-        result = _execute(code)
+        # 동봉 치환은 실행 직전에만 — 응답의 compiled_ibl 은 자리표시자 그대로
+        # (긴 원문을 봉투로 되돌려 보내지 않는다: 크기·투명성 둘 다).
+        result = _execute(_substitute_payload(code, payload))
     except Exception as e:  # noqa: BLE001 — 부탁 응답은 항상 dict 로
         result = {"error": f"실행 오류: {e}"}
 
@@ -375,10 +500,11 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
         if result.get("available_actions"):
             hint += f"\n사용 가능한 액션: {result['available_actions']}"
         if hint:
-            comp2 = _compile(message, correction=f"실패 코드: {code}\n에러: {result.get('error')}\n{hint}")
+            comp2 = _compile(message, correction=f"실패 코드: {code}\n에러: {result.get('error')}\n{hint}",
+                             payload=payload)
             if comp2.get("ok") and comp2["code"] != code:
                 try:
-                    result2 = _execute(comp2["code"])
+                    result2 = _execute(_substitute_payload(comp2["code"], payload))
                 except Exception as e:  # noqa: BLE001
                     result2 = {"error": f"실행 오류: {e}"}
                 if _ok(result2):

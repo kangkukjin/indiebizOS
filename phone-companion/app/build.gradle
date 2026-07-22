@@ -114,7 +114,7 @@ tasks.register('bundleIndiebizBase', Zip) {
         if (!file("${_ROOT}/data/common_prompts").exists()) missing << "data/common_prompts"
         if (!file("${_ROOT}/data/ibl_hippo_index.json").exists()) missing << "data/ibl_hippo_index.json (scripts/export_hippo_index.py 실행)"
         if (!file("${_ROOT}/data/ibl_hippo_vecs.f32").exists()) missing << "data/ibl_hippo_vecs.f32 (scripts/export_hippo_index.py 실행)"
-        if (!file("${_ROOT}/data/ibl_nodes.yaml").exists()) missing << "data/ibl_nodes.yaml"
+        if (!file("${_ROOT}/data/bodies/android.nodes.yaml").exists()) missing << "data/bodies/android.nodes.yaml (build_body_bundle.py 파생)"
         _PHONE_PACKAGES.each { p -> if (!file("${_ROOT}/data/packages/installed/tools/${p}").exists()) missing << "tools/${p}" }
         if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
     }
@@ -133,8 +133,12 @@ tasks.register('bundleIndiebizBase', Zip) {
         into 'backend/providers'
         include '**/*.py'
     }
-    // 레지스트리 + 폰 프로파일 매니페스트 (단일 진실 소스)
-    from("${_ROOT}/data/ibl_nodes.yaml") { into 'data' }
+    // 레지스트리 = 몸-사전 파생본 (전체 사전집이 아니라 이 몸의 어휘만 — 폰은 PC 전용
+    // 어휘를 알 필요가 없다. build_body_bundle.py 가 runnable_actions 로 물리 필터)
+    from("${_ROOT}/data/bodies/android.nodes.yaml") {
+        into 'data'
+        rename { 'ibl_nodes.yaml' }
+    }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }
     // 어휘 없는 순수 앱(상부구조) — data/instruments/*.yaml (신문·정기보고 등). _derive_instruments 가
     // 폰서도 로드 → 폰 네이티브 앱에 이 계기들이 뜬다(파일은 @맥 으로 PC 에서 당겨옴).

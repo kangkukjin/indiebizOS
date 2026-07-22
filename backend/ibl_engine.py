@@ -549,7 +549,31 @@ def _load_nodes_config() -> Dict:
     # api_registry에서 node 바인딩된 액션 자동 병합
     _merge_api_registry_actions(_nodes.get("nodes", {}))
 
+    # 몸-사전 설치 필터(몸 독립 2단계): 배포물(yaml)=전체 사전집이지만, 이 몸의
+    # 런타임에 설치되는 어휘는 자기 것만 — PC는 phone_only 를 모르고, 폰은 runnable
+    # 만 안다. 남의 몸 능력은 명함(냄새)으로 알고 [others:ask] 로 부탁한다.
+    # 코어(항상-on) 어휘는 양 몸 공통이라 @alias 크로스바디 포워딩이 그대로 산다.
+    _prune_foreign_vocabulary(_nodes)
+
     return _nodes
+
+
+def _prune_foreign_vocabulary(nodes_cfg: Dict) -> None:
+    """카탈로그·해마 소유-필터의 실행층 완결판 — 로드가 곧 설치다."""
+    try:
+        from runtime_utils import detect_body
+        profile = (detect_body() or {}).get("profile", "")
+    except Exception:
+        profile = ""
+    for node_name, node_cfg in (nodes_cfg.get("nodes") or {}).items():
+        actions = (node_cfg or {}).get("actions") or {}
+        if profile == "phone":
+            drop = [a for a in actions if not _phone_runnable(node_name, a)]
+        else:
+            drop = [a for a, c in actions.items()
+                    if isinstance(c, dict) and c.get("runs_on") == "phone_only"]
+        for a in drop:
+            del actions[a]
 
 
 def reload_nodes():

@@ -107,6 +107,8 @@ data/forwarding_census.jsonl
 data/body_ask_log.jsonl
 data/peer_cards/
 data/here_cache.json
+# 몸-사전 파생본(빌드마다 gradle 이 재생성 — 사전집=ibl_nodes.yaml 이 정본)
+data/bodies/*.nodes.yaml
 data/regime_change_analysis.html
 data/business_images/
 

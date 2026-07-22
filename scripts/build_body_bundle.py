@@ -113,6 +113,37 @@ def derive(body):
     }
 
 
+def derive_nodes_registry(body):
+    """몸-사전 물리 파생 — 배포물(data/ibl_nodes.yaml = 전체 사전집)에서 이 몸의
+    어휘만 추출해 번들용 레지스트리를 만든다. 폰은 PC 전용 어휘를 알 필요가 없고
+    그 역도 마찬가지 — 번들은 애초에 남의 어휘를 싣지 않는다(설치=자기 사전만).
+    소유 기준 = phone_manifest.runnable_actions (런타임 로더의 설치 필터와 동일 기준).
+    출력: data/bodies/<body>.nodes.yaml → build.gradle 이 zip 의 data/ibl_nodes.yaml 로 rename.
+    """
+    import yaml
+    full = yaml.safe_load((ROOT / "data" / "ibl_nodes.yaml").read_text(encoding="utf-8"))
+    manifest = json.loads((ROOT / "data" / "phone_manifest.json").read_text(encoding="utf-8"))
+    runnable = set(manifest.get("runnable_actions") or [])
+    nodes, kept = {}, 0
+    for node, cfg in (full.get("nodes") or {}).items():
+        acts = {a: c for a, c in ((cfg or {}).get("actions") or {}).items()
+                if f"{node}:{a}" in runnable}
+        if not acts:
+            continue  # 이 몸에 어휘가 0인 노드는 노드째 제외
+        ncfg = {k: v for k, v in cfg.items() if k != "actions"}
+        ncfg["actions"] = acts
+        nodes[node] = ncfg
+        kept += len(acts)
+    out = {"meta": {**(full.get("meta") or {}), "_body": body,
+                    "_doc": "몸-사전 파생본 — build_body_bundle.py 가 전체 사전집에서 "
+                            "이 몸의 어휘만 추출. 직접 편집 금지(사전집·매니페스트를 고치고 재생성)."},
+           "nodes": nodes}
+    path = BODIES / f"{body}.nodes.yaml"
+    path.write_text(yaml.safe_dump(out, allow_unicode=True, sort_keys=False),
+                    encoding="utf-8")
+    return kept, path
+
+
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     check = "--check" in sys.argv
@@ -138,6 +169,8 @@ def main():
         return 0
 
     out_path.write_text(json.dumps(derived, ensure_ascii=False, indent=2), encoding="utf-8")
+    kept, npath = derive_nodes_registry(body)
+    print(f"✓ {npath.relative_to(ROOT)} 파생: 몸-사전 {kept}개 어휘 (남의 어휘 미탑재)")
     c = derived["counts"]
     print(f"✓ {out_path.relative_to(ROOT)} 파생: 엔진 {c['engine']} / blocklist {c['blocklist']} / 전체 {c['total']}")
     for m, why in derived["blocklist"].items():

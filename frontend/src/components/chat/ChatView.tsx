@@ -443,15 +443,20 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       try {
         const undelivered = await api.getUndeliveredMessages(projectId, agentName);
         if (undelivered && undelivered.length > 0) {
-          setMessages(prev => [
-            ...prev,
-            ...undelivered.map((msg: { id: number; content: string; timestamp: string }) => ({
-              id: String(msg.id),
-              role: 'assistant' as const,
-              content: msg.content,
-              timestamp: new Date(msg.timestamp),
-            })),
-          ]);
+          setMessages(prev => {
+            // 이력 로더가 같은 messages 테이블에서 이미 실은 id 는 건너뛴다.
+            const existing = new Set(prev.map(m => m.id));
+            const fresh = undelivered
+              .filter((msg: { id: number }) => !existing.has(String(msg.id)))
+              .map((msg: { id: number; content: string; timestamp: string }) => ({
+                id: String(msg.id),
+                role: 'assistant' as const,
+                content: msg.content,
+                timestamp: new Date(msg.timestamp),
+              }));
+            if (fresh.length === 0) return prev;
+            return [...prev, ...fresh];
+          });
           setIsLoading(false);
           resetStreamingState();
         }
@@ -470,7 +475,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   // 시스템 AI 대화 이력 로드 (마운트 시 1회)
   useEffect(() => {
-    if (isAgent) return; // 프로젝트 에이전트는 별도 이력 로드 있음
+    if (isAgent) return; // 에이전트는 아래 별도 이력 로더가 처리
 
     const loadSystemAIHistory = async () => {
       try {
@@ -490,6 +495,42 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
     loadSystemAIHistory();
   }, [isAgent, targetKey]);
+
+  // 프로젝트 에이전트 대화 이력 로드 (마운트 시 1회) — 시스템 AI처럼 창을 다시 열면
+  // 이전 대화 스레드를 채팅 뷰에 복원한다. WS 응답 핸들러의 message_id 중복 가드가
+  // 이력↔실시간 중복을 막아준다.
+  useEffect(() => {
+    if (!isAgent || !projectId || !agentId) return;
+
+    const loadAgentHistory = async () => {
+      try {
+        // 백엔드는 message_time DESC(최신순)로 반환 → reverse 해서 시간순으로 표시.
+        const rows = await api.getMessages(projectId, agentId, 30);
+        if (rows && rows.length > 0) {
+          const history = rows
+            .slice()
+            .reverse()
+            .map((msg) => ({
+              id: String(msg.id),
+              role: msg.is_agent ? 'assistant' as const : 'user' as const,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+            }));
+          // 미전달 폴러/실시간 WS가 먼저 채운 메시지와 겹치지 않게 병합(id 중복 제거).
+          // 이력은 앞에 붙이고, 이미 존재하는 id 는 건너뛴다.
+          setMessages(prev => {
+            const existing = new Set(prev.map(m => m.id));
+            const fresh = history.filter(m => !existing.has(m.id));
+            return [...fresh, ...prev];
+          });
+        }
+      } catch {
+        // 이력 로드 실패는 무시
+      }
+    };
+
+    loadAgentHistory();
+  }, [isAgent, projectId, agentId, targetKey]);
 
   // TODO/질문/계획 모드 상태 폴링
   useEffect(() => {

@@ -216,6 +216,7 @@ def _ensure_warehouses() -> None:
             # 내용이 없어도 연락처가 있으면 쓴다 — 문서의 최소 의무=신원(연락 방법).
             if content or contact:
                 title = (doc or {}).get("title") or "비즈니스 문서"
+                # 인사말은 문서 내용(regenerate 출력) 자체에 포함되므로 여기선 붙이지 않는다.
                 body = f"# {title}\n\n{content}\n" if content else f"# {title}\n"
                 body += contact
                 f = d / _BIZDOC_NAME

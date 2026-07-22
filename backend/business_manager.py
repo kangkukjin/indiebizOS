@@ -35,6 +35,25 @@ DB_PATH = DATA_PATH / "business.db"
 # 건드리지 않는다(= AI 재생성 대상 아님, 순수 사용자 작성). ORDER BY level 에서 맨 앞(공개문서 최상단).
 GREETING_DOC_LEVEL = -1
 
+# 자동생성(재생성) 비즈니스 문서 첫머리 인사말 — 창고를 사람이 열어 읽을 수 있으므로 친근한 소개 한 줄.
+# 재생성 버튼이 만드는 문서 내용 자체에 박히므로 '공개문서' 탭 표시본 = 창고 발행본이 일치한다.
+# ★1순위=사용자가 공개문서 탭에서 쓴 '공개인사프로필'(레벨 -1) 내용 → 그게 곧 Nostr 프로필이자
+#   창고 문서 첫머리(한 곳에 쓰면 두 곳에 반영, 일관). 비어 있으면 아래 기본 문구로 폴백.
+# 기본값은 코드에, 문구 교체·끄기는 warehouse.json 의 greeting 키로(미추적 파일, title/email 과 같은 자리).
+_WAREHOUSE_CONFIG = DATA_PATH / "warehouse.json"
+_DEFAULT_GREETING = "안녕하세요. 이건 저의 비즈니스 내용들입니다. 둘러보시고 관심 있으시면 연락 바랍니다."
+
+
+def _fallback_greeting() -> str:
+    """공개인사프로필(-1)이 비었을 때 쓰는 폴백 인사말. warehouse.json 에 greeting 키가 없으면
+    기본 인사말, 빈 문자열이면 사용자가 명시적으로 끈 것(생략)."""
+    import json
+    try:
+        g = json.loads(_WAREHOUSE_CONFIG.read_text(encoding="utf-8")).get("greeting")
+    except Exception:
+        g = None
+    return _DEFAULT_GREETING if g is None else str(g).strip()
+
 
 class BusinessManager:
     """비즈니스 관리 매니저"""
@@ -739,6 +758,14 @@ class BusinessManager:
         try:
             now = datetime.now().isoformat()
 
+            # 첫머리 인사말 결정 — 사용자가 쓴 공개인사프로필(-1) 우선, 없으면 폴백 문구.
+            cursor.execute(
+                "SELECT content FROM business_documents WHERE level = ?", (GREETING_DOC_LEVEL,)
+            )
+            _gr = cursor.fetchone()
+            _profile = ((_gr["content"] if _gr else None) or "").strip()
+            greeting = _profile or _fallback_greeting()
+
             for doc_level in range(5):  # 레벨 0~4
                 # 해당 레벨 이하의 모든 비즈니스 조회
                 cursor.execute("""
@@ -776,7 +803,9 @@ class BusinessManager:
                         content_lines.append("  └ 아이템: (없음)")
                     content_lines.append("")  # 빈 줄
 
-                content = "\n".join(content_lines) if content_lines else "(등록된 비즈니스가 없습니다)"
+                body = "\n".join(content_lines) if content_lines else "(등록된 비즈니스가 없습니다)"
+                # 첫머리 인사말(루프 전 결정) — 재생성 문서 내용 자체에 포함(공개문서 탭 = 창고 발행본 일치).
+                content = f"{greeting}\n\n{body}" if greeting else body
 
                 # 문서 업데이트
                 cursor.execute("""

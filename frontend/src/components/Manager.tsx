@@ -206,9 +206,19 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   useEffect(() => {
     if (showTeamChatDialog && currentProject) {
+      // 다이얼로그를 현재 창 크기에 맞춰 클램프 — 창이 900×600 보다 작아도
+      // 내용이 잘리거나(음수 위치로) 화면 밖으로 밀려나지 않게 한다.
+      const MARGIN_X = 16;       // 좌우 여백
+      const MARGIN_TOP = 44;     // 상단 여백(창 신호등 버튼 영역 확보)
+      const MARGIN_BOTTOM = 16;  // 하단 여백
+      const maxW = Math.max(320, window.innerWidth - MARGIN_X * 2);
+      const maxH = Math.max(320, window.innerHeight - MARGIN_TOP - MARGIN_BOTTOM);
+      const width = Math.min(900, maxW);
+      const height = Math.min(600, maxH);
+      setChatDialogSize({ width, height });
       setChatDialogPos({
-        x: (window.innerWidth - chatDialogSize.width) / 2,
-        y: (window.innerHeight - chatDialogSize.height) / 2
+        x: Math.max(MARGIN_X, Math.round((window.innerWidth - width) / 2)),
+        y: Math.max(MARGIN_TOP, Math.round((window.innerHeight - height) / 2)),
       });
     }
   }, [showTeamChatDialog, currentProject]);

@@ -8,7 +8,7 @@
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
  */
 
-import type { Project, Switch, Agent, Message, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
+import type { Project, Switch, Agent, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
 import { applySystemAIMethods } from './api-system-ai';
 import { applyPackagesMethods } from './api-packages';
 import { applyBusinessMethods } from './api-business';
@@ -292,9 +292,19 @@ class APIClientBase {
     return data.conversations;
   }
 
-  async getMessages(projectId: string, agentId: number, limit = 50, offset = 0) {
-    const data = await this.request<{ messages: Message[] }>(
-      `/conversations/${projectId}/${agentId}/messages?limit=${limit}&offset=${offset}`
+  async getMessages(projectId: string, agentId: number | string, limit = 50, offset = 0) {
+    // 백엔드는 숫자 대화 id 또는 yaml id('agent_001') 둘 다 허용.
+    const data = await this.request<{
+      messages: Array<{
+        id: number;
+        from_agent_id: number;
+        to_agent_id: number;
+        is_agent: boolean;
+        content: string;
+        timestamp: string;
+      }>;
+    }>(
+      `/conversations/${projectId}/${encodeURIComponent(String(agentId))}/messages?limit=${limit}&offset=${offset}`
     );
     return data.messages;
   }

@@ -92,6 +92,18 @@ class IBLUsageRAG:
             self._set_cached(cache_key, "")
             return ""
 
+        # 몸 소유-필터(몸 독립, 2026-07-22): 내 몸이 실행 못 하는 어휘가 담긴 용례는
+        # 회상하지 않는다 — 해마도 자기 사전만 배우고 떠올린다. 남의 능력은
+        # 이웃 몸 명함(냄새) + [others:ask] 경로가 담당.
+        try:
+            from capability_card import code_is_own
+            results = [r for r in results if code_is_own(r.ibl_code)]
+        except Exception:
+            pass
+        if not results:
+            self._set_cached(cache_key, "")
+            return ""
+
         # 점수 게이트: 통과분(>=MIN_SCORE) 우선. 없으면 저신뢰 top-2(>=LOW_CONF_FLOOR).
         selected, low_conf = self._select_references(results)
         if not selected:

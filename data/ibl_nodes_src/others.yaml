@@ -21,6 +21,27 @@
         - 파이프라인
         - 프로젝트위임
         - 다른프로젝트
+      ask:
+        returns: items
+        fixture: '[others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장", dry_run: true}'
+        description: 이웃 몸(다른 indiebizOS 기기)에 자연어로 부탁. 상대가 자기 사전으로 컴파일·실행해 결과(items 통화)를 돌려준다. 내 어휘에 없는 상대 능력(이웃 몸 명함의 냄새)은 이 액션으로 — 상대 액션 이름을 흉내내지 말 것.
+        target_description: 'to=상대 몸 별칭(프레즌스 등록명, 예 "폰-9f2b"). 생략 시 유일한 이웃 몸 자동, 여럿이면 되물음. message=자연어 부탁(필수 — 상대 사전을 몰라도 됨). dry_run=true면 상대가 컴파일만(실행 안 함). 반환=상대 실행 결과 + compiled_ibl(상대가 부탁을 어떻게 이해했는지).'
+        group: delegation
+        target_key: to
+        router: system
+        func: ask_body
+        implementation: |
+          body_ask.ask_peer — device_registry 라이브에서 to 별칭 해소(생략 시 유일 피어),
+          몸별 인증(phone-class=X-Phone-Token, compute=런처 세션)으로 상대 /nodes/ask 에
+          POST. 상대가 자기 사전으로 컴파일·실행(사전은 전선을 건너지 않는다 — 몸 독립
+          소통 연구 docs/BODY_CARD_RESEARCH.md).
+        keywords:
+        - 부탁
+        - 이웃몸
+        - 폰에부탁
+        - 몸간요청
+        - 명함
+        - 다른기기
       agents:
         returns: scalar
         fixture: '[others:agents]{}'

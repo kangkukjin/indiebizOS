@@ -221,6 +221,16 @@ def build_environment(
             # 배관 액션(예: slide_shadcn — native가 사용자 경로, slide_shadcn은 내부 렌더/내보내기)에 사용.
             if action_config.get("prompt_hidden"):
                 continue
+            # 몸 소유-필터(몸 독립, 2026-07-22): 이 몸이 실행 못 하는 남의 어휘는
+            # 카탈로그에서 제외 — 학습·구사 대상이 아니다(맥=phone_only 제외, 폰=runnable만).
+            # 상대 능력은 이웃 몸 명함(냄새)으로 알고 [others:ask]{to, message}로 부탁한다.
+            # 실행 경로(ibl_engine)는 과도기 동안 유지 — 기존 계기·스케줄 호환.
+            try:
+                from capability_card import _self_can_run
+                if not _self_can_run(node_name, action_name, action_config):
+                    continue
+            except Exception:
+                pass
             key = action_config.get("group")
             if key:
                 grouped.setdefault(key, []).append((action_name, action_config))

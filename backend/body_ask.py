@@ -182,6 +182,128 @@ def _execute(code: str) -> Any:
     return derive_items(result)
 
 
+# === 발신측: [others:ask] — 이웃 몸에 자연어 부탁 ===
+_peer_mac_session = {"session": None}  # 폰→맥 부탁용 런처 세션 캐시(ibl_engine 과 독립)
+
+
+def _peer_auth_headers(entry: Dict[str, Any]) -> Dict[str, str]:
+    """피어 몸별 인증 헤더 — phone-class=X-Phone-Token, compute=런처 세션(캐시)."""
+    h = {"Content-Type": "application/json"}
+    caps = entry.get("capabilities") or []
+    if entry.get("auth") == "x_phone_token" or "phone-class" in caps:
+        tok = os.environ.get("INDIEBIZ_PHONE_TOKEN")
+        if tok:
+            h["X-Phone-Token"] = tok
+    elif _peer_mac_session.get("session"):
+        h["X-Launcher-Session"] = _peer_mac_session["session"]
+    return h
+
+
+def _peer_mac_login(url: str) -> bool:
+    """compute 피어(맥) 세션 로그인 — ibl_engine._forward_to_mac 과 같은 춤(부탁 채널용)."""
+    password = os.environ.get("INDIEBIZ_MAC_PASSWORD")
+    if not password:
+        return False
+    try:
+        import requests
+        r = requests.post(f"{url}/launcher/auth/login", json={"password": password}, timeout=15)
+        sid = (r.json() or {}).get("session_id") if r.status_code == 200 else None
+        if sid:
+            _peer_mac_session["session"] = sid
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def ask_peer(params: Dict[str, Any]) -> Dict[str, Any]:
+    """[others:ask] 발신 — 이웃 몸에 자연어로 부탁. 사전은 전선을 건너지 않는다.
+
+    상대가 자기 사전으로 컴파일·실행해 통화(items)+compiled_ibl 을 돌려준다.
+    피어 해소: 프레즌스 레지스트리(라이브) 별칭 → 유일 피어 자동 → env 폴백.
+    """
+    message = (params.get("message") or params.get("query") or "").strip()
+    if not message:
+        return {"error": 'message 가 필요합니다. 예: [others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장"}'}
+    to = str(params.get("to") or "").strip().lstrip("@")
+
+    entry = None
+    try:
+        import device_registry as dr
+        live = [e for e in dr.list_live() if not e.get("self")]
+        if to:
+            entry = next((e for e in live
+                          if e.get("alias") == to or e.get("device_id") == to), None)
+        elif len(live) == 1:
+            entry = live[0]
+        elif len(live) > 1:
+            return {"needs_node_choice": True,
+                    "message": "어느 몸에 부탁할까요?",
+                    "options": [e.get("alias") for e in live],
+                    "hint": '[others:ask]{to: "<별칭>", message: "..."} 로 지정하세요.'}
+    except Exception:
+        pass
+
+    if entry and entry.get("url"):
+        url = entry["url"].rstrip("/")
+        headers = _peer_auth_headers(entry)
+        is_compute_peer = "phone-class" not in (entry.get("capabilities") or []) \
+            and entry.get("auth") != "x_phone_token"
+    else:
+        # env 폴백(레지스트리 미가용/미등록): 몸-인식 — 폰의 피어=맥, 컴퓨트의 피어=폰.
+        try:
+            from runtime_utils import detect_body
+            profile = (detect_body() or {}).get("profile")
+        except Exception:
+            profile = ""  # 포크-가드: PROFILE env 직접 분기 금지 — detect_body 만
+        if profile == "phone":
+            url = (os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
+            headers = {"Content-Type": "application/json"}
+            if _peer_mac_session.get("session"):
+                headers["X-Launcher-Session"] = _peer_mac_session["session"]
+            is_compute_peer = True
+        else:
+            url = (os.environ.get("INDIEBIZ_PHONE_URL") or "").rstrip("/")
+            headers = {"Content-Type": "application/json"}
+            tok = os.environ.get("INDIEBIZ_PHONE_TOKEN")
+            if tok:
+                headers["X-Phone-Token"] = tok
+            is_compute_peer = False
+        if not url:
+            return {"error": (f"'{to or '이웃 몸'}'에 닿을 주소가 없습니다 — 지금 연결된 몸이 없고 "
+                              "env 폴백(INDIEBIZ_MAC_URL/INDIEBIZ_PHONE_URL)도 비어 있습니다."),
+                    "node_unreachable": True}
+
+    payload = {"message": message, "from_body": _self_label(),
+               "dry_run": bool(params.get("dry_run"))}
+    import requests
+    try:
+        r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=120)
+        if r.status_code in (401, 403) and is_compute_peer and _peer_mac_login(url):
+            headers["X-Launcher-Session"] = _peer_mac_session["session"]
+            r = requests.post(f"{url}/nodes/ask", json=payload, headers=headers, timeout=120)
+    except Exception as e:  # noqa: BLE001
+        return {"error": f"이웃 몸({url})에 연결할 수 없습니다 ({e.__class__.__name__}). "
+                         "그 몸이 켜져 있는지 확인하세요.", "node_unreachable": True}
+    if r.status_code != 200:
+        return {"error": f"부탁 실패 (HTTP {r.status_code})", "detail": r.text[:300]}
+    try:
+        out = r.json()
+    except Exception:
+        return {"result": r.text[:2000]}
+    if isinstance(out, dict):
+        out["_asked"] = (entry or {}).get("alias") or url
+    return out
+
+
+def _self_label() -> str:
+    try:
+        from runtime_utils import detect_body
+        return (detect_body() or {}).get("label") or "이웃 몸"
+    except Exception:
+        return "이웃 몸"
+
+
 def handle_ask(message: str, dry_run: bool = False, from_body: str = "") -> Dict[str, Any]:
     t0 = time.time()
     message = (message or "").strip()

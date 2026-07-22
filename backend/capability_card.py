@@ -18,6 +18,7 @@
 import hashlib
 import json
 import os
+import re
 import time
 from typing import Any, Dict, List
 
@@ -33,11 +34,37 @@ def _self_can_run(node: str, action: str, cfg: dict) -> bool:
         return False
     if cfg.get("prompt_hidden"):
         return False  # 내 AI 어휘 밖 — 부탁이 와도 컴파일 못 함
-    profile = os.environ.get("INDIEBIZ_PROFILE", "")
+    # 포크-가드: 프로파일 직접 분기 금지 — detect_body 경유(감지하되 적어주지 않음).
+    try:
+        from runtime_utils import detect_body
+        profile = (detect_body() or {}).get("profile", "")
+    except Exception:
+        profile = ""
     if profile == "phone":
         from ibl_engine import _phone_runnable
         return _phone_runnable(node, action)
     return cfg.get("runs_on") != "phone_only"
+
+
+_ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
+
+
+def code_is_own(code: str) -> bool:
+    """IBL 코드가 이 몸의 사전으로만 구성돼 있는가 — 소유-필터(해마 회상·카탈로그)용.
+
+    몸 독립 원칙: 남의 몸 어휘(맥의 phone_only, 폰의 비-runnable)는 학습·회상 대상이
+    아니다. 상대 능력은 명함(냄새)으로 알고 [others:ask]로 부탁한다.
+    미지 액션은 소유 판정 밖(실행이 판정) — 여기선 '남의 것으로 확인된 것'만 거른다.
+    """
+    try:
+        nodes = _registry().get("nodes") or {}
+        for node, action in _ACT_RE.findall(code or ""):
+            cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
+            if cfg is not None and not _self_can_run(node, action, cfg):
+                return False
+        return True
+    except Exception:
+        return True  # 판정 불가 시 열어둠 — 소유-필터가 실행을 깨서는 안 됨
 
 
 def _action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
@@ -100,7 +127,7 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
         from runtime_utils import detect_body
         body = detect_body()
     except Exception:
-        body = {"profile": os.environ.get("INDIEBIZ_PROFILE") or "desktop"}
+        body = {"profile": "unknown"}  # detect_body 불가 시 — 포크-가드: env 직접 참조 금지
 
     return {
         "kind": "indiebiz-capability-card",

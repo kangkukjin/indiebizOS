@@ -314,6 +314,11 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "delegate":
         return _delegate_unified(params, project_path)
 
+    elif func_name == "ask_body":
+        # [others:ask] — 이웃 몸(다른 indiebizOS 기기)에 자연어 부탁 (몸 독립 소통).
+        from body_ask import ask_peer
+        return ask_peer(dict(params))
+
     elif func_name == "agents":
         agent_id = params.get("agent_id", "")
         if agent_id:

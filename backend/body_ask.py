@@ -26,18 +26,35 @@ def _log(rec: Dict[str, Any]) -> None:
 
 
 def _compile(message: str, correction: str = "") -> Dict[str, Any]:
-    """자연어 부탁 → 내 사전의 IBL. 조종실 번역기(해마 용례 + translate 기어) 재사용.
+    """자연어 부탁 → 내 사전의 IBL. 몸의 능력에 따라 컴파일러를 고른다.
+
+    능력 축 = **해마**(용례 연상)다, 프로바이더 유무가 아니다 — 폰도 gemini_http
+    프로바이더는 있지만(폰 AI config) 해마가 없어 조종실 번역이 문법 교재만으로
+    폰-동사를 놓친다(실측: '지금 위치' CANNOT). 그래서:
+      - 해마 용례 있음 → 조종실(용례 기반 — 그 몸의 축적이 최선의 근거)
+      - 해마 용례 없음 → 사전-동봉 컴파일(_compile_gemini — 실물 사전이 근거라
+        환각 불가, 사전 작은 몸일수록 싸고 빠름). Gemini 불가(키·네트워크)면 조종실 최후 폴백.
 
     correction: 직전 실행 실패의 에러+힌트 — 1회 자가교정 재컴파일용.
     (컴파일은 내 사전·내 책임이므로 교정도 내 쪽 일 — 부탁한 상대는 힌트를 이해할 수 없다.)
     """
-    from api_ibl import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
     try:
         from ibl_usage_rag import IBLUsageRAG
         references = IBLUsageRAG().get_references(message)
     except Exception:
         references = ""
 
+    if not references:
+        r = _compile_gemini(message, correction)
+        if r.get("ok") or r.get("compiler") == "gemini":
+            return r  # 성공/정직한 CANNOT 은 신뢰. compiler 없는 실패=수단 부재 → 조종실로.
+
+    return _compile_cockpit(message, correction, references)
+
+
+def _compile_cockpit(message: str, correction: str, references: str) -> Dict[str, Any]:
+    """조종실 번역기(해마 용례 + translate 기어) — 해마 있는 몸의 컴파일러."""
+    from api_ibl import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
     from consciousness_agent import system_ai_call
     prompt = f'사용자 명령: "{message}"\n\n'
     if references:
@@ -53,15 +70,15 @@ def _compile(message: str, correction: str = "") -> Dict[str, Any]:
     system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
     raw = system_ai_call(prompt, system_prompt=system_prompt, role="translate")
     if not raw:
-        # 능력 감지 폴백(프로파일 분기 아님): 인지 프로바이더가 없는 몸(폰=데이터 키만
-        # 프로비저닝)은 system_ai_call 이 None → Gemini + 자기 사전으로 컴파일.
-        return _compile_gemini(message, correction)
+        return {"ok": False, "error": "이 몸에 컴파일 수단이 없습니다(번역 모델 무응답)."}
     if "CANNOT" in raw and "[" not in raw:
-        return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200]}
+        return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
+                "compiler": "cockpit"}
     code = _strip_code_fence(raw)
     if not code.startswith("["):
-        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200]}
-    return {"ok": True, "code": code, "had_references": bool(references)}
+        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
+                "compiler": "cockpit"}
+    return {"ok": True, "code": code, "had_references": bool(references), "compiler": "cockpit"}
 
 
 def _own_vocab_lines() -> str:
@@ -129,11 +146,13 @@ def _compile_gemini(message: str, correction: str = "") -> Dict[str, Any]:
     if not raw:
         return {"ok": False, "error": "번역 모델 무응답(Gemini)"}
     if "CANNOT" in raw and "[" not in raw:
-        return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200]}
+        return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
+                "compiler": "gemini"}
     from api_ibl import _strip_code_fence
     code = _strip_code_fence(raw)
     if not code.startswith("["):
-        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200]}
+        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
+                "compiler": "gemini"}
     return {"ok": True, "code": code, "had_references": False, "compiler": "gemini"}
 
 
@@ -172,6 +191,7 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "") -> Dict
     comp = _compile(message)
     if not comp.get("ok"):
         out = {"success": False, "error": comp.get("error"), "raw": comp.get("raw"),
+               "compiler": comp.get("compiler"),
                "elapsed_ms": int((time.time() - t0) * 1000)}
         _log({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "from": from_body,
               "message": message, "compiled": None, "success": False,
@@ -182,6 +202,7 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "") -> Dict
     if dry_run:
         out = {"success": True, "dry_run": True, "compiled_ibl": code,
                "had_references": comp.get("had_references"),
+               "compiler": comp.get("compiler", "cockpit"),
                "elapsed_ms": int((time.time() - t0) * 1000)}
         _log({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "from": from_body,
               "message": message, "compiled": code, "success": True,
@@ -217,6 +238,7 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "") -> Dict
     ok = _ok(result)
     out = {"success": ok, "compiled_ibl": code,
            "had_references": comp.get("had_references"),
+           "compiler": comp.get("compiler", "cockpit"),
            "elapsed_ms": int((time.time() - t0) * 1000), "result": result}
     if self_corrected:
         out["self_corrected"] = True

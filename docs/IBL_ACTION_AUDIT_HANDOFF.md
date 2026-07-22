@@ -42,7 +42,7 @@ lecture_plan, list_api, logs, mss, navigate, price_target, recent, search_schola
 2. **[빠른 처리] world_pulse action_health 유령 32 삭제** — valid_names 재확인 후 `DELETE FROM action_health WHERE action IN (...)`. self_checks도 동일 점검(현재 0).
 3. **미점검 표면 전수 sweep** (위 죽은 이름들 + 라운드2 개명 액션 전반으로):
    - `data/guides/*.md`, `data/guide_db.json`, `data/system_docs/*.md`(historical changelog 줄은 보존)
-   - `backend/generate_missing_intents.py`, `backend/rebuild_usage_db.py` 시드
+   - ~~정적 시드 스크립트~~ 전부 폐기 완료 (2026-07-22): rebuild_usage_db.py(전량 삭제 로직)·generate_missing_intents.py(옛 안드로이드 45액션 등 폐어휘 시드 + 소유-게이트 밖 raw INSERT) 삭제. 시딩은 `add_examples_batch` 단일 경로만. 라이브 DB 잔존 `source='manual_coverage'` 16건은 전부 현행 어휘(table:spreadsheet·self:read xlsx)라 유지.
    - `backend/ibl_routing.py` `_ACTION_NAME_ALIASES` / param alias가 죽은 액션 가리키나
 4. **Orphan 점검**: 각 패키지 `tool.json`에 정의됐지만 *어떤 IBL 액션도 `tool:`로 안 가리키는* 도구 / handler `_OP_DISPATCHERS` 고아 / `ibl-core/tool.json` enum 레거시.
 5. **프론트(app 모드)**: `frontend/src` 계기(Instrument)들의 하드코딩 IBL 코드에 죽은 액션 없나.

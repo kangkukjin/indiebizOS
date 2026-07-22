@@ -106,8 +106,7 @@ indiebizOS/
 │   ├── gen_newspaper.py # 신문 생성
 │   ├── generate_newspaper.py # 신문 생성 (대안)
 │   ├── migrate_nodes.py # 노드 마이그레이션
-│   ├── migrate_health_persons.py # 건강/인물 DB 마이그레이션
-│   └── rebuild_usage_db.py # 사용량 DB 재구축
+│   └── migrate_health_persons.py # 건강/인물 DB 마이그레이션
 │
 ├── frontend/            # Electron + React (TypeScript)
 │   ├── electron/        # 메인/프리로드

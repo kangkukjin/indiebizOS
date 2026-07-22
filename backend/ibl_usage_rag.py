@@ -18,6 +18,19 @@ from typing import List, Optional, Set
 logger = logging.getLogger(__name__)
 
 
+def _own_only(results: list) -> list:
+    """몸 소유-필터(몸 독립, 2026-07-22): 내 몸이 실행 못 하는 어휘가 담긴 용례는
+    회상하지 않는다 — 해마도 자기 사전만 배우고 떠올린다. 남의 능력은
+    이웃 몸 명함(냄새) + [others:ask] 경로가 담당.
+    ★모든 search_hybrid 호출 뒤에 적용할 것 — 참조 주입(get_references)뿐 아니라
+    Reflex/증류 판정용 top-1(get_top_score·get_top·search_with_metadata)도
+    남의 용례가 주도해선 안 된다(고점수 Reflex 는 top-1 코드를 그대로 실행)."""
+    try:
+        from capability_card import code_is_own
+        return [r for r in results if code_is_own(r.ibl_code)]
+    except Exception:
+        return results
+
 
 class IBLUsageRAG:
     """IBL 용례 RAG 참조 시스템 (싱글톤)"""
@@ -92,14 +105,7 @@ class IBLUsageRAG:
             self._set_cached(cache_key, "")
             return ""
 
-        # 몸 소유-필터(몸 독립, 2026-07-22): 내 몸이 실행 못 하는 어휘가 담긴 용례는
-        # 회상하지 않는다 — 해마도 자기 사전만 배우고 떠올린다. 남의 능력은
-        # 이웃 몸 명함(냄새) + [others:ask] 경로가 담당.
-        try:
-            from capability_card import code_is_own
-            results = [r for r in results if code_is_own(r.ibl_code)]
-        except Exception:
-            pass
+        results = _own_only(results)
         if not results:
             self._set_cached(cache_key, "")
             return ""
@@ -263,6 +269,8 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
         logger.error(f"[IBL RAG] 검색 실패: {e}")
         return ("", 0.0, "")
 
+    # 소유-필터를 top_score 확정 전에 — 남의 용례가 Reflex/증류 판정을 주도하면 안 됨
+    results = _own_only(results)
     top_score = results[0].score if results else 0.0
     top_code = results[0].ibl_code if results else ""
 
@@ -439,7 +447,7 @@ def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        results = db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes)
+        results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
         if results:
             return results[0].score
         return 0.0
@@ -454,7 +462,7 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        results = db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes)
+        results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
         if results:
             return (results[0].score, results[0].ibl_code)
         return (0.0, "")

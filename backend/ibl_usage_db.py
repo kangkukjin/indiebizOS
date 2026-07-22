@@ -390,11 +390,28 @@ class IBLUsageDB:
     # CRUD - 용례
     # =========================================================================
 
+    @staticmethod
+    def _is_foreign_vocab(ibl_code: str) -> bool:
+        """입구 소유-게이트: 이 몸이 실행 못 하는 어휘(미지 포함)가 담긴 용례인가.
+
+        해마는 자기 사전만 배운다(몸 독립) — 코퍼스(전체 사전집)를 시딩·재임포트할 때
+        남의 몸 용례가 이 몸의 라이브 해마로 들어오는 것을 입구에서 막는다.
+        회상 게이트(ibl_usage_rag._own_only)의 쓰기 쪽 짝. 판정 불가 시 열어둠.
+        """
+        try:
+            from capability_card import code_is_own
+            return not code_is_own(ibl_code)
+        except Exception:
+            return False
+
     def add_example(self, intent: str, ibl_code: str,
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "") -> int:
-        """용례 추가 (임베딩 자동 생성). Returns: example ID"""
+        """용례 추가 (임베딩 자동 생성). Returns: example ID (남의 어휘로 거부되면 0)"""
+        if self._is_foreign_vocab(ibl_code):
+            logger.warning(f"[IBL Usage DB] 남의 어휘 용례 거부(입구 소유-게이트): {ibl_code}")
+            return 0
         now = datetime.now().isoformat()
         with self._get_connection() as conn:
             cursor = conn.execute(
@@ -415,10 +432,19 @@ class IBLUsageDB:
 
         Args:
             examples: [{intent, ibl_code, nodes?, category?, difficulty?, source?, tags?}]
-        Returns: 추가된 수
+        Returns: 추가된 수 (남의 어휘 용례는 입구 소유-게이트가 걸러 제외)
         """
         if not examples:
             return 0
+
+        dropped = [ex['ibl_code'] for ex in examples if self._is_foreign_vocab(ex['ibl_code'])]
+        if dropped:
+            logger.warning(
+                f"[IBL Usage DB] 남의 어휘 용례 {len(dropped)}건 거부(입구 소유-게이트): "
+                + "; ".join(dropped[:5]) + (" …" if len(dropped) > 5 else ""))
+            examples = [ex for ex in examples if ex['ibl_code'] not in set(dropped)]
+            if not examples:
+                return 0
 
         now = datetime.now().isoformat()
         ids = []

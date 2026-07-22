@@ -1001,7 +1001,15 @@ async def project_delete(project_id: str):
 
 @app.get("/switches")
 async def switches(request: Request):
-    return _list_or_empty(await _mac_proxy(request, "/switches"), {"switches": []})
+    # 폰-자아의 스위치 — 자기 살림(맥 스위치를 보려면 원격런처=리모컨).
+    # 몸 독립 원칙(2026-07-22): 자율주행 표면은 자기 것, 프록시 변장 은퇴.
+    try:
+        from switch_manager import SwitchManager
+        sw = await asyncio.to_thread(lambda: SwitchManager().list_switches())
+        return JSONResponse({"switches": sw})
+    except Exception as e:
+        print(f"[phone_api] 로컬 스위치 목록 실패: {e}")
+        return JSONResponse({"switches": []})
 
 
 def _phone_agents_yaml(project_id: str):
@@ -1080,13 +1088,19 @@ async def agent_delete(project_id: str, agent_id: str):
 
 @app.post("/switches/{switch_id}/execute")
 async def switch_execute(switch_id: str, request: Request):
-    # 스위치 실행=맥의 IBL/에이전트 — 길어질 수 있어 넉넉한 타임아웃.
-    r = await _mac_proxy(request, f"/switches/{switch_id}/execute", timeout=300.0)
-    if r is None:
-        return JSONResponse({"success": False, "error": "맥 백엔드 미연결(INDIEBIZ_MAC_URL 미설정)"}, status_code=503)
-    if r == "error":
-        return JSONResponse({"success": False, "error": "맥 백엔드 연결 실패"}, status_code=502)
-    return _relay(r)
+    # 폰-자아 스위치 실행 — 자기 스위치를 자기 러너로(맥 스위치는 원격런처에서).
+    def _run():
+        from switch_manager import SwitchManager
+        from switch_runner import SwitchRunner
+        sw = SwitchManager().get_switch(switch_id)
+        if not sw:
+            return {"success": False, "error": "스위치 없음(이 몸의 스위치가 아닙니다 — 맥 스위치는 원격 런처에서)"}
+        return SwitchRunner(sw).run()
+    try:
+        result = await asyncio.to_thread(_run)
+        return JSONResponse(result if isinstance(result, dict) else {"result": result})
+    except Exception as e:
+        return JSONResponse({"success": False, "error": f"스위치 실행 오류: {e}"}, status_code=500)
 
 
 # === 공유창고 — 맥 프록시 (런처 '공유창고' 표면이 부른다) =========================
@@ -1205,13 +1219,11 @@ async def system_ai_chat(request: Request):
             import traceback
             print(f"[phone_api] 로컬 하네스 실패 → 맥 프록시 폴백: {e}\n{traceback.format_exc()[-500:]}")
 
-    # 폴백: 맥 프록시 (로컬 하네스 미가용 — 하네스 미번들/모델 미설정/맥 의존 등)
-    r = await _mac_proxy(request, "/system-ai/chat", timeout=300.0)
-    if r is None:
-        return JSONResponse({"response": "맥 백엔드에 연결되어 있지 않습니다. (INDIEBIZ_MAC_URL 미설정 — 집 PC가 켜져 있어야 자율주행이 동작합니다.)"})
-    if r == "error":
-        return JSONResponse({"response": "맥 백엔드 연결에 실패했습니다. 집 PC와 네트워크를 확인하세요."})
-    return _relay(r)
+    # 몸 독립 원칙(2026-07-22): 맥 프록시 폴백 은퇴 — 이 몸의 하네스가 실패했는데
+    # 맥-자아가 변장 대답하는 것은 정체성 위반(맥 시스템 AI = 다른 기억·다른 자아).
+    # 맥의 시스템 AI 와 대화하려면 원격 런처(리모컨), 맥의 능력이 필요하면 [others:ask].
+    return JSONResponse({"response": "이 몸의 하네스가 응답하지 못했습니다 — 폰 AI 설정(모델·키)과 "
+                                     "네트워크를 확인하세요. 맥의 시스템 AI 와 대화하려면 원격 런처를 여세요."})
 
 
 @app.get("/system-ai/conversations")
@@ -1430,25 +1442,34 @@ async def _photo_video(path: str, request: Request):
 
 
 # ============================================================================
-# ★ 패리티 기본값 — catch-all 맥 프록시 (반드시 마지막 라우트로 등록).
-# 폰에 명시적 라우트가 없는 모든 요청을 맥으로 포워드(리모컨). FastAPI 는 더 구체적인
-# 명시 라우트를 먼저 매칭하므로, 로컬 하네스(/system-ai/chat·conversations)·sync·ibl 등
-# "충분한 이유가 있어 폰에서 다르게 동작하는" 것만 위에서 가로채고 나머지는 자동으로 맥.
-# → 맥에 새 엔드포인트가 생기면 폰에서 *그냥 된다*. 갈라짐이 기본이 아니라 패리티가 기본.
-# (사용자 원칙 2026-06-14: "맥에서 되는 건 폰에서도 되게, 어길 충분한 이유가 없으면.")
+# ★ 은퇴한 리모컨 — 옛 catch-all 맥 프록시 자리 (반드시 마지막 라우트로 등록).
+# 옛 원칙(06-14 "맥에서 되는 건 폰에서도")은 몸 독립 원칙(07-22)으로 재해석됐다:
+# "폰에서도 되게"의 수단은 프록시 변장이 아니라 ①자기 어휘 ②[others:ask] ③원격런처.
+# 남은 명시적 리모컨(창고 프록시·clip-to-mac)은 의도적 편의로 위에서 개별 선언된다.
 # ============================================================================
 @app.api_route("/{full_path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def _catch_all_mac_proxy(full_path: str, request: Request):
+    # === 은퇴한 리모컨 (2026-07-22 몸 독립 원칙) ===
+    # 옛 원칙(06-14 "맥에서 되는 건 폰에서도")의 수단이 프록시 변장이었다면, 이제 수단은
+    # ①자기 어휘(로컬) ②[others:ask](부탁) ③원격런처(맥 살림의 리모컨)다. 폰네이티브는
+    # 독립된 몸이지 맥의 얼굴이 아니다 — 폰에 없는 경로는 정직한 404 + 안내.
+    # 무엇이 여기 걸리는지 phone_proxy_census.jsonl 에 적재 → 다음 로컬화 후보 목록.
     path = "/" + full_path
-    r = await _mac_proxy(request, path, timeout=120.0)
-    if r is None:
-        return JSONResponse(
-            {"error": "맥 백엔드 미연결(INDIEBIZ_MAC_URL 미설정 — 이 기능은 집 PC가 필요합니다)"},
-            status_code=503)
-    if r == "error":
-        return JSONResponse({"error": "맥 백엔드 연결 실패 — 집 PC와 네트워크를 확인하세요."},
-                            status_code=502)
-    return _relay(r)
+    try:
+        import json as _j
+        import os as _o
+        import time as _t
+        _base = _o.environ.get("INDIEBIZ_BASE_PATH") or "."
+        with open(_o.path.join(_base, "data", "phone_proxy_census.jsonl"), "a",
+                  encoding="utf-8") as f:
+            f.write(_j.dumps({"ts": _t.strftime("%Y-%m-%dT%H:%M:%S"), "path": path,
+                              "method": request.method}, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+    return JSONResponse(
+        {"error": f"이 몸(폰)에 없는 기능입니다: {path} — 폰네이티브는 맥의 리모컨이 아닙니다. "
+                  "맥의 살림은 원격 런처로 보고, 맥의 능력이 필요하면 [others:ask]로 부탁하세요."},
+        status_code=404)
 
 
 def _save_audio_to_phone(obj: dict) -> dict:

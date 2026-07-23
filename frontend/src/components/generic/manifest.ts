@@ -33,7 +33,7 @@ export interface AppInput {
 // phone_only: 폰 네이티브 동작([limbs:phone] 등 runs_on:phone_only)만 하는 버튼 — 맥 데스크탑에선
 // 실행 불가(phone_unreachable)라 숨긴다. GenericInstrument(데스크탑 전용 렌더러)만 이 필드를 거른다;
 // 원격/폰 렌더러(api_launcher_web)는 무시하고 그대로 노출(폰에선 정상 동작). 계기-레벨 phone_render:false
-// (폰에서 mac_only 숨김)의 반대 방향 짝 — 맥에서 phone_only 숨김.
+// (폰에서 pc_only 숨김)의 반대 방향 짝 — 맥에서 phone_only 숨김.
 export interface AppButton { label: string; action?: string; refresh?: boolean; stream?: boolean; phone_only?: boolean; confirm?: string }
 
 export interface AppCompose {
@@ -249,8 +249,9 @@ export const imageUrl = (p: string) => `${IMAGE_BASE}/image?path=${encodeURIComp
 // view 통화의 image 필드: 절대 URL(http…·data:)이면 그대로, 백엔드 상대경로(/photo/thumbnail?path=…)면 IMAGE_BASE 부착.
 // 데스크탑(file://·dev 5173)은 origin이 백엔드와 달라 상대경로가 깨지므로 필수. book/invest 외부 http URL은 무영향.
 export const mediaSrc = (u: string) => (u && u.startsWith('/')) ? `${IMAGE_BASE}${u}` : u;
-// media_player 오디오 소스: 절대 URL(http/data)은 그대로, 그 외(백엔드 파일 절대경로)는 /launcher/file 로 서빙.
-export const audioUrl = (u: string) => !u ? '' : (/^(https?:|data:)/.test(u) ? u : `${IMAGE_BASE}/launcher/file?path=${encodeURIComponent(u)}`);
+// media_player 오디오 소스: 절대 URL(http/data)은 그대로, 백엔드 상대경로(/music/stream?…)는 IMAGE_BASE 부착(mediaSrc 와 동일),
+// 그 외(백엔드 파일 절대경로)는 /launcher/file 로 서빙.
+export const audioUrl = (u: string) => !u ? '' : (/^(https?:|data:)/.test(u) ? u : u.startsWith('/') ? `${IMAGE_BASE}${u}` : `${IMAGE_BASE}/launcher/file?path=${encodeURIComponent(u)}`);
 
 // 반복 주기 표준 어휘 — recurrence 필드 타입의 baked 옵션(manage_events repeat 값과 일치). date/time 은 네이티브 input.
 export const RECURRENCE_OPTS: [string, string][] = [['none', '한 번'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']];

@@ -1109,14 +1109,14 @@ nodes:
         target_key: op
         router: handler
         tool: host_op
-        runs_on: mac_only
+        runs_on: pc_only
         ops:
           default: status
           values:
             status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
             apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
             resources: 상세 지표 (per-core CPU·스왑·디스크 파티션·네트워크·배터리)
-        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 mac_only.
+        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 pc_only.
         keywords:
         - 내컴퓨터
         - 시스템상태
@@ -1746,7 +1746,7 @@ nodes:
           - keyword
         returns: items
         fixture: '[sense:collect]{op: "query", action: "recent"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
         target_description: 'op로 분기 (기본 run).
 
@@ -1786,7 +1786,7 @@ nodes:
       video:
         returns: scalar
         fixture: '[sense:video]{op: "meta", query: "jazz"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: 'op로 분기 (기본 info). url 또는 video_id 필수.
 
@@ -1820,7 +1820,7 @@ nodes:
       search_youtube:
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media
         keywords:
@@ -1951,7 +1951,7 @@ nodes:
         target_key: op
         router: system
         func: manage_events
-        runs_on: mac_only
+        runs_on: pc_only
         ops:
           values:
             list: 이벤트·스케줄 목록 (year/month 필터 가능)
@@ -2217,7 +2217,7 @@ nodes:
       blog:
         returns: items
         fixture: '[self:blog]{op: "list"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.
         target_description: 'op로 분기 (기본 posts).
 
@@ -2589,7 +2589,7 @@ nodes:
         target_description: (파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).
         router: handler
         tool: phone_sync
-        runs_on: mac_only
+        runs_on: pc_only
         implementation: business 패키지 phone_sync — adb forward 로 폰 백엔드(:8765) 도달 후 export/merge 양방향. business_sync.merge_business_db(LWW+tombstone).
         keywords:
         - 폰 동기화
@@ -2616,6 +2616,31 @@ nodes:
         - CCTV 현황
         - CCTV 통계
         - CCTV 갱신
+      limb:
+        returns: effect
+        description: USB 손발 자격 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
+        target_description: 'op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. list: 발급한 손발과 연결 상태. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용.'
+        group: identity
+        target_key: op
+        router: handler
+        tool: limb_op
+        scope: system
+        runs_on: pc_only
+        ops:
+          default: issue
+          values:
+            issue: 새 손발 키 발급 + USB 페이로드 생성 (alias 만 필수, 기본=전 OS·무기한 휴대용)
+            list: 발급한 손발 자격과 지금 연결 상태
+            revoke: 손발 키 폐기 — 영구 차단 (target = 키·device_id·별칭)
+            approve: 손발 수동 잠금/열기 (target, approved) — 자동승인이라 평소 불필요
+        implementation: 허브 handler(limb_op) → limb_keys.py 원장(mint/list_keys/revoke/approve). issue 는 public_face.get_public_base() 주소 + 새 키로 outputs/limb_issue/<alias>/indiebiz-helper.json + 안내문을 쓰고, helper/dist 의 빌드된 실행파일을 동봉(os 생략=전 OS, 지정=그 OS 만).
+        keywords:
+        - 손발발급
+        - USB헬퍼
+        - limb
+        - 손발승인
+        - 손발폐기
+        - 헬퍼만들기
       health:
         returns: items
         fixture: '[self:health]{op: "query", query_type: "medications"}'
@@ -2642,7 +2667,7 @@ nodes:
       lecture:
         returns: items
         fixture: '[self:lecture]{op: "list"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
         group: lecture
         target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.
@@ -2667,7 +2692,7 @@ nodes:
         scope: workspace
       slide:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정.
         group: lecture
         target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
@@ -2693,7 +2718,7 @@ nodes:
         scope: workspace
       material:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 강의 재료 관리 (op 분기). 추가/삭제.
         group: lecture
         target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
@@ -2713,7 +2738,7 @@ nodes:
         scope: workspace
       deck:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
         group: lecture
         target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).
@@ -2768,6 +2793,296 @@ nodes:
         - 메모리 검색
         - 메모리 삭제
         - 메모리 읽기
+      music:
+        returns: items
+        fixture: '[self:music]{op: "sources"}'
+        runs_on: pc_only
+        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
+        target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
+        target_key: op
+        group: music
+        router: handler
+        tool: music_library_op
+        aliases:
+          q:
+          - query
+          - keyword
+          path:
+          - file
+        ops:
+          default: library
+          values:
+            library: 곡 검색·목록 (q/artist/album/folder 필터, 기본 op)
+            track: 곡 하나 상세 — 태그 + 관련곡 + 담을 플레이리스트 목록
+            albums: 앨범 목록 (곡 수·아티스트·앨범아트)
+            artists: 아티스트 목록 (곡·앨범 수)
+            related: 곡의 관련곡 top-10 (연결 근거 동봉)
+            walk: 관련곡 랜덤 워크 재생목록 — 시작곡에서 관련곡을 이어가는 산책
+            folders: 곡을 담은 폴더 목록 (폴더 단위 재생용)
+            graph: 에고 그래프 (중심곡+1·2홉 노드·간선 — 그래프 뷰용)
+            playlists: 플레이리스트 목록
+            playlist: 플레이리스트 상세 (담긴 곡 순서대로)
+            playlist_create: 새 플레이리스트 (name)
+            playlist_delete: 플레이리스트 삭제 (name)
+            playlist_add: 곡 담기 (name + path)
+            playlist_remove: 곡 빼기 (name + path)
+            sources: 등록 폴더 목록 + 라이브러리 통계 + 스캔 상태
+            add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
+            remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림
+            scan: 전체 폴더 재스캔 (백그라운드, 증분)
+        implementation: music-player 패키지 music_library_op — 로직은 music_core.py(소스 data/music/sources.json, 트랙 인덱스 library.db sqlite WAL, 플레이리스트 playlists.json, 스캔 상태 scan_state.json). 태그=mutagen(미설치 시 파일명·폴더명 폴백). 스캔=백그라운드 스레드(증분 mtime, family-news building 선례). 스트리밍·앨범아트=backend/api_music.py(/music/stream Range·/music/cover 캐시) — music_core 를 sys.modules 공유 키로 같이 문다(bulletin_core 선례). 소스 폴더 화이트리스트 밖 경로는 스트리밍 거부.
+        keywords:
+        - 음악
+        - 음악 라이브러리
+        - 노래
+        - 내 음악
+        - 앨범
+        - 플레이리스트
+        - 음악 폴더
+        - 음악 재생
+        - mp3
+        - flac
+        app:
+          instrument: music
+          icon: 🎧
+          name: 음악
+          order: 18
+          phone_render: false
+          modes:
+          - name: 전곡
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 곡·아티스트·앨범 검색
+            action: '[self:music]{op: "library", q: "$q", limit: 300}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{artist} · {album}'
+                - '{duration_str}'
+                image: '{image}'
+              item_click:
+                action: '[self:music]{op: "track", path: "{path}"}'
+                tabs:
+                - name: 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 관련곡
+                  view:
+                  - type: list_action
+                    from: related
+                    empty_from: related_note
+                    title: '{title}'
+                    sub: '{artist} · {album} — {reason}'
+                - name: 플레이리스트에 담기
+                  view:
+                  - type: list_action
+                    from: playlists
+                    empty_from: playlists_note
+                    title: '{name}'
+                    sub: '{meta}'
+                    button:
+                      label: 담기
+                      action: '[self:music]{op: "playlist_add", name: "{name}", path: "{track_path}"}'
+                      refresh: true
+                - name: 정보
+                  view:
+                  - type: kv
+                    title: 태그
+                    rows:
+                    - k: 제목
+                      v: '{track.title}'
+                    - k: 아티스트
+                      v: '{track.artist}'
+                    - k: 앨범
+                      v: '{track.album}'
+                    - k: 장르
+                      v: '{track.genre|opt:}'
+                    - k: 연도
+                      v: '{track.year|opt:}'
+                    - k: 길이
+                      v: '{track.duration_str}'
+                    - k: 파일
+                      v: '{track.path}'
+          - name: 이어듣기
+            auto_run: true
+            note: 관련곡 그래프를 산책하며 다음 곡을 랜덤으로 이어갑니다. 시작곡을 검색하거나, 비워 두면 아무 곡에서나 출발해요. 다시 조회하면 매번 다른 산책이 나옵니다.
+            inputs:
+            - key: q
+              type: text
+              placeholder: 시작곡 검색 (비우면 랜덤 시작)
+            action: '[self:music]{op: "walk", q: "$q", length: 30}'
+            view:
+            - type: media_player
+              from: items
+              continuous: true
+              src: '{stream}'
+              title: '{step}. {title} — {artist} ({reason})'
+          - name: 폴더
+            auto_run: true
+            note: 폴더 구조 그대로 봅니다. 폴더를 누르면 그 폴더(하위 포함)를 이어서 재생해요.
+            action: '[self:music]{op: "folders"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{name}'
+              sub: '{meta}'
+              item_click:
+                action: '[self:music]{op: "library", folder: "{path}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {album} · {duration_str}'
+          - name: 앨범
+            auto_run: true
+            action: '[self:music]{op: "albums"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{album}'
+                lines:
+                - '{artist}'
+                - '{n}곡 · {duration_str}'
+                image: '{image}'
+              item_click:
+                action: '[self:music]{op: "library", album: "{album}", albumartist: "{albumartist}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{track_no|opt:,.} {title} — {artist}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {duration_str}'
+          - name: 아티스트
+            auto_run: true
+            action: '[self:music]{op: "artists"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{artist}'
+              sub: '{meta}'
+              item_click:
+                action: '[self:music]{op: "library", artist: "{artist}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {album}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{album} · {duration_str}'
+          - name: 플레이리스트
+            auto_run: true
+            note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.
+            action: '[self:music]{op: "playlists"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{name}'
+              sub: '{meta}'
+              button:
+                label: 삭제
+                action: '[self:music]{op: "playlist_delete", name: "{name}"}'
+                confirm: 이 플레이리스트를 삭제할까요? (곡 파일은 그대로 남습니다)
+                refresh: true
+              item_click:
+                action: '[self:music]{op: "playlist", name: "{name}"}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 곡 관리
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {album}'
+                    button:
+                      label: 빼기
+                      action: '[self:music]{op: "playlist_remove", name: "{playlist_name}", path: "{path}"}'
+                      refresh: true
+            - type: form
+              title: 새 플레이리스트
+              fields:
+              - key: name
+                label: 이름
+                type: text
+                placeholder: 예) 드라이브, 잠들기 전
+              action: '[self:music]{op: "playlist_create", name: "$name"}'
+              button: 만들기
+          - name: 보관함
+            auto_run: true
+            note: 음악 폴더를 등록하면 안의 음악 파일을 스캔해 라이브러리를 만듭니다. 폴더가 진실 — 파일을 옮기면 다시 스캔하세요.
+            action: '[self:music]{op: "sources"}'
+            buttons:
+            - label: 전체 다시 스캔
+              action: '[self:music]{op: "scan"}'
+              refresh: true
+            view:
+            - type: kv
+              title: 라이브러리
+              rows:
+              - k: 곡
+                v: '{stats.tracks}곡'
+              - k: 앨범
+                v: '{stats.albums}개'
+              - k: 아티스트
+                v: '{stats.artists}명'
+              - k: 플레이리스트
+                v: '{stats.playlists}개'
+              - k: 스캔
+                v: '{scan.label}'
+            - type: editable_list
+              from: items
+              display: '{path} · {n}곡'
+              add:
+                fields:
+                - key: path
+                  label: 음악 폴더
+                  type: folder
+                action: '[self:music]{op: "add_source", path: "$path"}'
+                button: 폴더 등록
+              delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
       storage:
         returns: scalar
         fixture: '[self:storage]{op: "volumes"}'
@@ -3172,6 +3487,7 @@ nodes:
     - lecture_workspace.md
     - trigger.md
     - photo.md
+    - music_player.md
   limbs:
     actions:
       os_open:
@@ -3182,7 +3498,7 @@ nodes:
         target_key: path
         router: system
         func: output_open
-        runs_on: mac_only
+        runs_on: pc_only
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
@@ -3196,7 +3512,7 @@ nodes:
         target_key: app
         router: system
         func: launcher_command
-        runs_on: mac_only
+        runs_on: pc_only
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창
@@ -3279,7 +3595,7 @@ nodes:
           target_ref:
           - to_ref
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
         target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
         group: browser
@@ -3358,7 +3674,7 @@ nodes:
         - Pages
       screen:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
         target_description: 'op별 파라미터 — snapshot: 없음(화면 독해 → 요소+ref+글자+좌표) / click: ref(요소, 좌표 없이 누름·권장) 또는 x,y / type: ref+text(입력칸 직접) 또는 text(현재 포커스) / mouse_move: x,y / key: key / drag: start_x,start_y,end_x,end_y / scroll: direction,amount / screenshot: x,y,width,height(옵션). 좌표는 1280x800 가상 기준. 흐름 — snapshot으로 읽고 → ref로 클릭(강건). OCR 글자는 ref 없어 x,y.'
         group: desktop
@@ -3394,6 +3710,36 @@ nodes:
         - OCR
         - 화면분석
         - 버튼찾기
+      guestpc:
+        returns: effect
+        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기). 두뇌는 허브(내 PC), 이 액션은 명령을 손발로 내려보내 그 PC 에서 돌린다. 눈 없음(화면 캡처·GUI 조작은 미지원) — 셸/파일만. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
+        group: device
+        target_key: op
+        router: handler
+        tool: guestpc_op
+        scope: system
+        runs_on: pc_only
+        ops:
+          default: shell
+          values:
+            shell: 게스트 PC 셸 명령 실행 (cmd — win=cmd/c, mac·linux=sh -c)
+            read: 게스트 PC 파일 읽기 (path, 200KB 상한)
+            write: 게스트 PC 파일 쓰기 (path + content)
+            list: 게스트 PC 디렉토리 목록 (path, 생략 시 현재)
+            info: 게스트 PC 정보 (os/arch/hostname/cwd)
+            detach: 손발 해제 — 헬퍼 종료 (그 PC 무잔류, 재실행 시 자동 재연결)
+        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기. 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 실행 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제.
+        keywords:
+        - 게스트PC
+        - 남의PC
+        - USB
+        - 손발
+        - 원격셸
+        - 원격PC
+        - 파일처리
+        - 손발해제
+        - 연결해제
       show_map:
         aliases:
           query:
@@ -3408,7 +3754,7 @@ nodes:
         target_key: query
       explorer:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
         group: open
         target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
@@ -3418,7 +3764,7 @@ nodes:
         target_key: path
       photo_manager:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
         group: open
         target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
@@ -3524,7 +3870,7 @@ nodes:
                 label: 열기 →
       music:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download.
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
@@ -3597,6 +3943,7 @@ nodes:
     - desktop.md
     - open_window.md
     - android.md
+    - guest_helper.md
   others:
     actions:
       delegate:
@@ -3849,7 +4196,7 @@ nodes:
       bulletin:
         returns: items
         fixture: '[others:bulletin]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 로그인 없는 자유게시판 — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. op:status(기본, 게시판 목록·주소)/create/config/delete/detail(모더레이션용 최근 글)/post_delete(글 삭제)/portals(포털 붙임 대상 목록). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 글을 저장·서빙, 파일시스템이 곧 진실. 여러 게시판이 각각 다른 주소를 갖고, 특정 게시판을 특정 포털에 붙이면(portal display) 포털 홈에서 그 게시판으로 들어간다. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.
         target_description: op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.
         target_key: op
@@ -4264,7 +4611,7 @@ nodes:
         returns: effect
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
-        runs_on: mac_only
+        runs_on: pc_only
         target_description: op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.
         target_key: op
         router: handler
@@ -4284,7 +4631,7 @@ nodes:
       portal:
         returns: items
         fixture: '[others:portal]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 회원 = 메신저 이웃과 같은 책(business.db)이고 레벨(0~4, 메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다(어디서 승급하든 같은 값). 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).
         target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
         target_key: op
@@ -4511,7 +4858,7 @@ nodes:
       family_news:
         returns: items
         fixture: '[others:family_news]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 가족신문 — USB 로 연결된 폰의 사진(지난 발행 이후, 첫 판은 최근 7일)으로 신문 판을 조판해, 공개 주소(/n/<5자 코드>)에 판을 누적 발행하는 가족용 정기간행물. 사진의 EXIF GPS 를 행정동 장소명으로 바꿔 싣고(웹판 사진 자체는 EXIF 제거), 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
         target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
         target_key: op
@@ -4652,7 +4999,7 @@ nodes:
       showcase:
         returns: items
         fixture: '[others:showcase]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/config + 바스켓(basket_*). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 그 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성, 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자 코드>). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
         target_description: 'op:status(추가한 폴더 목록·각 폴더가 담긴 주소 + 전역 설정 반환) / add(path 폴더를 추가, title 표시명·mode media|files — 추가만으론 비공개, 바스켓에 담아야 공개) / remove(path 폴더 제거, 모든 주소에서 빠짐) / config(path 있으면 폴더 표시명, 없으면 전역 strip_exif·transcode_video·public_base). 바스켓(공개 주소): basket_list / basket_save(title, all_folders=true면 전체공개 갤러리, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더가 어느 주소에 담기느냐가 곧 보안 경계.'
         target_key: op
@@ -4851,7 +5198,7 @@ nodes:
     actions:
       html_video:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)
         target_description: scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.
         group: media_produce
@@ -4867,7 +5214,7 @@ nodes:
         - HTML영상
       tts:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
         group: media_produce
@@ -4888,7 +5235,7 @@ nodes:
         - 나레이션
       slide_shadcn:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         prompt_hidden: true
         description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
         target_description: '★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
@@ -4918,7 +5265,7 @@ nodes:
         - PNG
       slide:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.
         target_description: "instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).\n★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).\nstyle(선택) — 미지정 기본값=\"native\":\n  · 네이티브 통짜형 \"native\"(기본): 이미지 모델이 한글 글자·다이어그램·일러스트를 한 장에 통째로 저작 — NotebookLM식 시각=의미 융합(합성층 없음). aesthetic(vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint)으로 톤 고정, image_size(1K/2K/4K)·verify(한글 OCR 재생성) 옵션. 한 덱은 한 톤으로 고정하면 일관된 책이 됨.\n  · 텍스트형 \"text\"(빠름·무료): 자유형 custom HTML(이미지 API 안 씀). 카드/리포트 타일 등 발표 슬라이드가 아닌 경량·대량 용도에만 명시. design_system(vintage_book/academic_paper/tech_minimal/magazine_modern) 톤.\nwidth/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.\n"
         group: media_produce
@@ -4993,7 +5340,7 @@ nodes:
             from: blocks
       render_html:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce
@@ -5044,7 +5391,7 @@ nodes:
         - image ocr
       remotion:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
         target_description: 'op로 분기 (기본 render_inline).
 
@@ -5068,9 +5415,24 @@ nodes:
         - MP4
         - 렌더링
         - 상태
+      newspaper:
+        returns: effect
+        runs_on: pc_only
+        description: 신문 발행 — 서버 설정(제호·키워드, 앱모드 outputs/newspaper_config.json)의 키워드로 gnews 팬아웃+경량 편집장 편성(curate 7) 후 판 3파일(newspaper_current.json/md/html)+날짜 아카이브를 앱모드 outputs/에 저장. 기본 백그라운드(즉시 반환, ~1분 소요) — 진행은 outputs/newspaper_publish_state.json. 파라미터 없이 호출 가능. 신문 계기·뷰어가 저장된 판을 읽어 표시.
+        group: media_produce
+        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued).
+        router: handler
+        tool: publish_newspaper
+        implementation: tool_newspaper.py — handler 의 search_gnews 배치 경로(RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
+        keywords:
+        - 신문
+        - 신문 발행
+        - 새 신문
+        - 발행
+        - 뉴스 신문
       web_site:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
         target_description: 'op로 분기 (기본 list).
 
@@ -5095,7 +5457,7 @@ nodes:
         - 사이트수정
       web:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
         target_description: 'op로 분기 (기본 preview).
 
@@ -5137,7 +5499,7 @@ nodes:
         - vercel
       web_component:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
         target_description: 'op로 분기 (기본 fetch).
 
@@ -5381,7 +5743,7 @@ nodes:
         - 페이지
       spreadsheet:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: items 통화 → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart
@@ -5401,7 +5763,7 @@ nodes:
           chart_type:
           - type
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
         target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
 

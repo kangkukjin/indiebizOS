@@ -231,15 +231,23 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   if (p.type === 'media_player') {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    // continuous: 한 곡이 끝나면 같은 프리미티브의 다음 곡 자동 재생 (앨범·플레이리스트 연속 듣기)
+    const onEnded = p.continuous ? (e: { currentTarget: HTMLAudioElement }) => {
+      const group = e.currentTarget.closest('[data-mp-group]');
+      if (!group) return;
+      const all = Array.from(group.querySelectorAll('audio'));
+      const next = all[all.indexOf(e.currentTarget) + 1];
+      if (next) { next.play().catch(() => {}); next.scrollIntoView({ block: 'nearest' }); }
+    } : undefined;
     return (
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3" data-mp-group={p.continuous ? '1' : undefined}>
         {arr.map((it, i) => {
           const src = audioUrl(p.src ? tpl(p.src, it) : '');
           const title = p.title ? tpl(p.title, it) : '';
           return (
             <div key={i} className="bg-white border border-stone-200 rounded-xl px-4 py-3">
               {title && <div className="text-sm font-semibold text-stone-800 mb-2">{title}</div>}
-              {src ? <audio controls preload="metadata" src={src} className="w-full" />
+              {src ? <audio controls preload="metadata" src={src} className="w-full" onEnded={onEnded} />
                    : <div className="text-xs text-stone-400">재생할 오디오가 없습니다.</div>}
             </div>
           );

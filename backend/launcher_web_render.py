@@ -48,6 +48,12 @@ function emptyMsg(p,data){
   const m=(p.empty_from?jget(data,p.empty_from):null)||p.empty||'결과가 없습니다';
   return '<p class="muted" style="margin-top:10px">'+esc(m)+'</p>';
 }
+/* media_player continuous — 끝난 곡의 다음 audio(data-mp)를 자동 재생 (데스크탑 onEnded 파리티) */
+function mpNext(el){
+  const all=Array.prototype.slice.call(document.querySelectorAll('audio[data-mp]'));
+  const nx=all[all.indexOf(el)+1];
+  if(nx){ nx.play().catch(function(){}); nx.scrollIntoView({block:'nearest'}); }
+}
 /* 지도 render 프리미티브 — leaflet. innerHTML 후 initMaps()로 지연 초기화.
    봉투: route_map{origin,destination,path:[[lat,lng]],summary} | location_map{center,markers:[{name,lat,lng}]}.
    spec: {type:'map', from:'map_data'(봉투 위치), markers:'cctvs'(추가 마커, 옵션)} */
@@ -286,12 +292,14 @@ function renderPrim(p,vi,data){
   if(p.type==='media_player'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
+    // continuous: 한 곡이 끝나면 다음 곡 자동 재생(앨범·플레이리스트 연속 듣기) — 데스크탑 파리티
+    const cont=p.continuous?' data-mp="1" onended="mpNext(this)"':'';
     return arr.map(it=>{
       const raw=p.src?tpl(p.src,it):'';
-      // 절대 URL 은 그대로, 백엔드 파일 절대경로는 /launcher/file 로 서빙(원격=동일오리진 상대경로).
-      const src=raw?(/^(https?:|data:)/.test(raw)?raw:'/launcher/file?path='+encodeURIComponent(raw)):'';
+      // 절대 URL 은 그대로, 백엔드 상대경로(/music/stream?…)는 동일오리진이라 그대로, 파일 절대경로는 /launcher/file 로 서빙.
+      const src=raw?(/^(https?:|data:)/.test(raw)?raw:(raw.startsWith('/')?raw:'/launcher/file?path='+encodeURIComponent(raw))):'';
       const title=p.title?tpl(p.title,it):'';
-      return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+(src?'<audio controls preload="metadata" src="'+src+'" style="width:100%"></audio>':'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
+      return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+(src?'<audio controls preload="metadata" src="'+src+'" style="width:100%"'+cont+'></audio>':'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
     }).join('');
   }
   if(p.type==='thread'){
@@ -634,9 +642,9 @@ async function rowBtn(vi,ri,btn,key){
     if(d&&d.play_in_client&&d.stream_url){ playRadioStream(d.stream_url,d.volume,d.title||d.station||d.name); }  // 폰 라디오·유튜브뮤직: WebView 직접 재생 + 미니플레이어
     else if(d&&d.download_in_client){ toast(d.saved===false?('⚠ '+(d.message||'저장 실패')):('📥 '+(d.message||'저장됨'))); }  // mp3 폰 저장 결과
     else if(d&&d.error){
-      // 폰: os_open(집 PC GUI)이 mac_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
+      // 폰: os_open(집 PC GUI)이 pc_only 로 막히면, 로컬 생성한 HTML 을 인앱 뷰어로 띄운다.
       const m=action.match(/path:\\s*"([^"]+\\.html?)"/i);
-      if(d.mac_only && m){ openFileOverlay(m[1]); }
+      if(d.pc_only && m){ openFileOverlay(m[1]); }
       else alert(d.error);
     }
     else{  // 즐겨찾기 추가/삭제 등: 성공 메시지 토스트 + refresh 플래그면 현재 뷰 재조회

@@ -1,0 +1,81 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "music-player",
+  "name": "Music Player",
+  "description": "내 음악 라이브러리 — 소스 폴더의 음악 파일을 스캔해 정리하고(태그·앨범아트), 검색·앨범·아티스트로 보고, 플레이리스트를 만든다.\n\n## 이음매\n스캔·질의·플레이리스트는 이 패키지(music_core), 스트리밍·앨범아트 서빙은 backend/api_music.py(/music/stream Range·/music/cover). 재생은 보는 표면의 <audio> — 서버는 소리 내지 않는다.\n\n## 보안\n스트리밍은 등록된 소스 폴더 아래의 실존 파일만(화이트리스트). 폴더 제거 시 그 곡들은 라이브러리·플레이리스트에서 내려간다(파일은 무손상).",
+  "version": "0.1.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "music_library_op",
+      "description": "내 음악 라이브러리 — 폴더 스캔·곡 검색·앨범/아티스트·플레이리스트.\n\n## op 분기\n- library (기본): 곡 목록. q(제목·아티스트·앨범·파일명 부분검색), artist/album/albumartist(정확 필터), folder(폴더 절대경로 — 폴더 단위), path(단일 곡), limit(기본 300). items 각 곡에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트)/path.\n- track: path 곡 하나 상세 — track(태그) + related(관련곡) + playlists(담을 플레이리스트 후보).\n- related: path 곡의 관련곡 top-10 (관련곡 그래프 간선 — reason 연결 근거 동봉).\n- walk: 관련곡 랜덤 워크 재생목록 — q(시작곡 검색) 또는 path, 둘 다 없으면 랜덤 시작. length(기본 30). 산책하듯 관련곡을 이어간 시퀀스.\n- graph: 에고 그래프 — path/q 중심곡 + 1홉(top-10) + 2홉. items=노드, edges=[노드 인덱스 쌍], center.\n- folders: 곡을 직접 담은 폴더 목록 (폴더 단위 재생용 — library 의 folder 파라미터와 짝).\n- albums / artists: 앨범·아티스트 묶음 목록.\n- playlists: 플레이리스트 목록. playlist: name 상세(담긴 곡 순서대로).\n- playlist_create / playlist_delete: name 으로 생성·삭제. playlist_add / playlist_remove: name+path 로 곡 담기·빼기.\n- sources: 등록 폴더 + 통계 + 스캔 상태. add_source/remove_source: path 폴더 등록(즉시 백그라운드 스캔)·제거.\n- scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "library(기본)/track/albums/artists/related/walk/folders/graph/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan",
+            "enum": [
+              "library",
+              "track",
+              "albums",
+              "artists",
+              "related",
+              "walk",
+              "folders",
+              "graph",
+              "playlists",
+              "playlist",
+              "playlist_create",
+              "playlist_delete",
+              "playlist_add",
+              "playlist_remove",
+              "sources",
+              "add_source",
+              "remove_source",
+              "scan"
+            ],
+            "default": "library"
+          },
+          "q": {
+            "type": "string",
+            "description": "검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)"
+          },
+          "artist": {
+            "type": "string",
+            "description": "아티스트 정확 필터 (library)"
+          },
+          "album": {
+            "type": "string",
+            "description": "앨범 정확 필터 (library)"
+          },
+          "albumartist": {
+            "type": "string",
+            "description": "앨범 아티스트 정확 필터 (library — 같은 앨범명 동명이인 구분)"
+          },
+          "path": {
+            "type": "string",
+            "description": "파일 절대경로(track·related·walk·graph·playlist_add·playlist_remove) 또는 폴더 절대경로(add_source·remove_source)"
+          },
+          "folder": {
+            "type": "string",
+            "description": "폴더 절대경로 — 그 폴더(하위 포함) 곡만 (library, folders 결과의 path 와 짝)"
+          },
+          "name": {
+            "type": "string",
+            "description": "플레이리스트 이름 (playlist·playlist_create·playlist_delete·playlist_add·playlist_remove)"
+          },
+          "length": {
+            "type": "integer",
+            "description": "워크 재생목록 곡 수 (walk, 기본 30·최대 100)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "곡 수 상한 (library, 기본 300)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

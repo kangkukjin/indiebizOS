@@ -54,7 +54,7 @@
         target_key: op
         router: system
         func: manage_events
-        runs_on: mac_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
+        runs_on: pc_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         ops:
           values:
             list: 이벤트·스케줄 목록 (year/month 필터 가능)
@@ -316,3 +316,4 @@
     - lecture_workspace.md
     - trigger.md
     - photo.md
+    - music_player.md

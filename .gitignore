@@ -336,3 +336,4 @@ data/*.log.1
 # 공개파일 Worker 배포 설정 — 몸마다 다른 값(Worker 이름·ORIGIN_BASE=이 몸의 공개 호스트).
 # 템플릿은 wrangler.toml.example 이 추적된다.
 data/packages/installed/tools/public-files/site/wrangler.toml
+data/music/

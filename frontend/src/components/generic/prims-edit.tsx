@@ -257,6 +257,11 @@ export function EditableListPrim({ p, data, dispatch }: { p: AppViewPrim; data: 
           ) : (f.type === 'date' || f.type === 'time' || f.type === 'datetime') ? (
             <input key={i} type={dateInputType(f.type)} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
               className={`${fieldCls} shrink-0`} />
+          ) : f.type === 'folder' ? (
+            // 폴더 선택 — form 의 FolderField 재사용(데스크탑 📁 찾아보기 네이티브 다이얼로그, 원격은 텍스트 폴백)
+            <div key={i} className="flex-1 min-w-0">
+              <FolderField f={f} value={addVals[f.key] ?? ''} onPick={(v) => setAddVals((s) => ({ ...s, [f.key]: v }))} />
+            </div>
           ) : (
             <input key={i} value={addVals[f.key] ?? ''} onChange={(e) => setAddVals((s) => ({ ...s, [f.key]: e.target.value }))}
               placeholder={f.placeholder || ''} className={`${fieldCls} flex-1 min-w-0`} />

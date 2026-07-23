@@ -16,6 +16,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { DirectionsInstrument } from './DirectionsInstrument';
+import { MusicGraphInstrument } from './MusicGraphInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { AudioBriefingInstrument } from './AudioBriefingInstrument';
 import { BinNote } from './BinNote';
@@ -40,7 +41,7 @@ type App = Instrument;
 
 // escape hatch: 매니페스트보다 풍부한 데스크탑 전용 컴포넌트가 있으면 그걸 쓴다.
 const OVERRIDES: Record<string, ReactNode> = {
-  ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=mac_only)
+  ytmusic: <YtMusicInstrument />,       // 다운로드·큐 통합 UI(youtube=pc_only)
 };
 
 // 데스크탑 전용 도메인 — 지도·네이티브 창·파일 경로 등 렌더 어휘 밖(영구 escape).
@@ -85,6 +86,13 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
     instruments: [
       { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
+    ],
+  },
+  {
+    id: 'music_graph', icon: '🕸️', label: '음악 그래프',
+    instruments: [
+      // 관련곡 에고 그래프(SVG) — 선언형 뷰 어휘 밖이라 커스텀 계기. 데이터=[self:music]{op:"graph"}.
+      { id: 'music_graph', icon: '🕸️', label: '음악 그래프', el: <MusicGraphInstrument /> },
     ],
   },
   // 검색(포식) 브라우저 — 구 런처 모드에서 앱으로 이사. ForageBrowser 오버레이는 Launcher 에

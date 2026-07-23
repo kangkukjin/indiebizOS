@@ -1,0 +1,372 @@
+nodes:
+  self:
+    actions:
+      music:
+        returns: items
+        fixture: '[self:music]{op: "sources"}'
+        runs_on: pc_only
+        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
+        target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
+        target_key: op
+        group: music
+        router: handler
+        tool: music_library_op
+        aliases:
+          q: [query, keyword]
+          path: [file]
+        ops:
+          default: library
+          values:
+            library: 곡 검색·목록 (q/artist/album/folder 필터, 기본 op)
+            track: 곡 하나 상세 — 태그 + 관련곡 + 담을 플레이리스트 목록
+            albums: 앨범 목록 (곡 수·아티스트·앨범아트)
+            artists: 아티스트 목록 (곡·앨범 수)
+            related: 곡의 관련곡 top-10 (연결 근거 동봉)
+            walk: 관련곡 랜덤 워크 재생목록 — 시작곡에서 관련곡을 이어가는 산책
+            folders: 곡을 담은 폴더 목록 (폴더 단위 재생용)
+            graph: 에고 그래프 (중심곡+1·2홉 노드·간선 — 그래프 뷰용)
+            playlists: 플레이리스트 목록
+            playlist: 플레이리스트 상세 (담긴 곡 순서대로)
+            playlist_create: 새 플레이리스트 (name)
+            playlist_delete: 플레이리스트 삭제 (name)
+            playlist_add: 곡 담기 (name + path)
+            playlist_remove: 곡 빼기 (name + path)
+            sources: 등록 폴더 목록 + 라이브러리 통계 + 스캔 상태
+            add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
+            remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림
+            scan: 전체 폴더 재스캔 (백그라운드, 증분)
+        implementation: 'music-player 패키지 music_library_op — 로직은 music_core.py(소스 data/music/sources.json, 트랙 인덱스 library.db sqlite WAL, 플레이리스트 playlists.json, 스캔 상태 scan_state.json). 태그=mutagen(미설치 시 파일명·폴더명 폴백). 스캔=백그라운드 스레드(증분 mtime, family-news building 선례). 스트리밍·앨범아트=backend/api_music.py(/music/stream Range·/music/cover 캐시) — music_core 를 sys.modules 공유 키로 같이 문다(bulletin_core 선례). 소스 폴더 화이트리스트 밖 경로는 스트리밍 거부.'
+        keywords:
+        - 음악
+        - 음악 라이브러리
+        - 노래
+        - 내 음악
+        - 앨범
+        - 플레이리스트
+        - 음악 폴더
+        - 음악 재생
+        - mp3
+        - flac
+        app:
+          instrument: music
+          icon: 🎧
+          name: 음악
+          order: 18
+          phone_render: false
+          modes:
+          - name: 전곡
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 곡·아티스트·앨범 검색
+            action: '[self:music]{op: "library", q: "$q", limit: 300}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{artist} · {album}'
+                - '{duration_str}'
+                image: '{image}'
+              item_click:
+                action: '[self:music]{op: "track", path: "{path}"}'
+                tabs:
+                - name: 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 관련곡
+                  view:
+                  - type: list_action
+                    from: related
+                    empty_from: related_note
+                    title: '{title}'
+                    sub: '{artist} · {album} — {reason}'
+                - name: 플레이리스트에 담기
+                  view:
+                  - type: list_action
+                    from: playlists
+                    empty_from: playlists_note
+                    title: '{name}'
+                    sub: '{meta}'
+                    button:
+                      label: 담기
+                      action: '[self:music]{op: "playlist_add", name: "{name}", path: "{track_path}"}'
+                      refresh: true
+                - name: 정보
+                  view:
+                  - type: kv
+                    title: 태그
+                    rows:
+                    - k: 제목
+                      v: '{track.title}'
+                    - k: 아티스트
+                      v: '{track.artist}'
+                    - k: 앨범
+                      v: '{track.album}'
+                    - k: 장르
+                      v: '{track.genre|opt:}'
+                    - k: 연도
+                      v: '{track.year|opt:}'
+                    - k: 길이
+                      v: '{track.duration_str}'
+                    - k: 파일
+                      v: '{track.path}'
+          - name: 이어듣기
+            auto_run: true
+            note: 관련곡 그래프를 산책하며 다음 곡을 랜덤으로 이어갑니다. 시작곡을 검색하거나, 비워 두면 아무 곡에서나 출발해요. 다시 조회하면 매번 다른 산책이 나옵니다.
+            inputs:
+            - key: q
+              type: text
+              placeholder: 시작곡 검색 (비우면 랜덤 시작)
+            action: '[self:music]{op: "walk", q: "$q", length: 30}'
+            view:
+            - type: media_player
+              from: items
+              continuous: true
+              src: '{stream}'
+              title: '{step}. {title} — {artist} ({reason})'
+          - name: 폴더
+            auto_run: true
+            note: 폴더 구조 그대로 봅니다. 폴더를 누르면 그 폴더(하위 포함)를 이어서 재생해요.
+            action: '[self:music]{op: "folders"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{name}'
+              sub: '{meta}'
+              item_click:
+                action: '[self:music]{op: "library", folder: "{path}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {album} · {duration_str}'
+          - name: 앨범
+            auto_run: true
+            action: '[self:music]{op: "albums"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{album}'
+                lines:
+                - '{artist}'
+                - '{n}곡 · {duration_str}'
+                image: '{image}'
+              item_click:
+                action: '[self:music]{op: "library", album: "{album}", albumartist: "{albumartist}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{track_no|opt:,.} {title} — {artist}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {duration_str}'
+          - name: 아티스트
+            auto_run: true
+            action: '[self:music]{op: "artists"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{artist}'
+              sub: '{meta}'
+              item_click:
+                action: '[self:music]{op: "library", artist: "{artist}", limit: 500}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {album}'
+                - name: 곡 목록
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{album} · {duration_str}'
+          - name: 플레이리스트
+            auto_run: true
+            note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.
+            action: '[self:music]{op: "playlists"}'
+            view:
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{name}'
+              sub: '{meta}'
+              button:
+                label: 삭제
+                action: '[self:music]{op: "playlist_delete", name: "{name}"}'
+                confirm: 이 플레이리스트를 삭제할까요? (곡 파일은 그대로 남습니다)
+                refresh: true
+              item_click:
+                action: '[self:music]{op: "playlist", name: "{name}"}'
+                tabs:
+                - name: 연속 재생
+                  view:
+                  - type: media_player
+                    from: items
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
+                - name: 곡 관리
+                  view:
+                  - type: list_action
+                    from: items
+                    title: '{title}'
+                    sub: '{artist} · {album}'
+                    button:
+                      label: 빼기
+                      action: '[self:music]{op: "playlist_remove", name: "{playlist_name}", path: "{path}"}'
+                      refresh: true
+            - type: form
+              title: 새 플레이리스트
+              fields:
+              - key: name
+                label: 이름
+                type: text
+                placeholder: 예) 드라이브, 잠들기 전
+              action: '[self:music]{op: "playlist_create", name: "$name"}'
+              button: 만들기
+          - name: 보관함
+            auto_run: true
+            note: 음악 폴더를 등록하면 안의 음악 파일을 스캔해 라이브러리를 만듭니다. 폴더가 진실 — 파일을 옮기면 다시 스캔하세요.
+            action: '[self:music]{op: "sources"}'
+            buttons:
+            - label: 전체 다시 스캔
+              action: '[self:music]{op: "scan"}'
+              refresh: true
+            view:
+            - type: kv
+              title: 라이브러리
+              rows:
+              - k: 곡
+                v: '{stats.tracks}곡'
+              - k: 앨범
+                v: '{stats.albums}개'
+              - k: 아티스트
+                v: '{stats.artists}명'
+              - k: 플레이리스트
+                v: '{stats.playlists}개'
+              - k: 스캔
+                v: '{scan.label}'
+            - type: editable_list
+              from: items
+              display: '{path} · {n}곡'
+              add:
+                fields:
+                - key: path
+                  label: 음악 폴더
+                  type: folder
+                action: '[self:music]{op: "add_source", path: "$path"}'
+                button: 폴더 등록
+              delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
+
+# tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+tool_json:
+  header:
+    id: music-player
+    name: Music Player
+    description: '내 음악 라이브러리 — 소스 폴더의 음악 파일을 스캔해 정리하고(태그·앨범아트), 검색·앨범·아티스트로 보고, 플레이리스트를 만든다.
+
+
+      ## 이음매
+
+      스캔·질의·플레이리스트는 이 패키지(music_core), 스트리밍·앨범아트 서빙은 backend/api_music.py(/music/stream Range·/music/cover). 재생은 보는 표면의 <audio> — 서버는 소리 내지 않는다.
+
+
+      ## 보안
+
+      스트리밍은 등록된 소스 폴더 아래의 실존 파일만(화이트리스트). 폴더 제거 시 그 곡들은 라이브러리·플레이리스트에서 내려간다(파일은 무손상).'
+    version: 0.1.0
+    guide_file: guide.md
+  tools:
+  - name: music_library_op
+    description: '내 음악 라이브러리 — 폴더 스캔·곡 검색·앨범/아티스트·플레이리스트.
+
+
+      ## op 분기
+
+      - library (기본): 곡 목록. q(제목·아티스트·앨범·파일명 부분검색), artist/album/albumartist(정확 필터), folder(폴더 절대경로 — 폴더 단위), path(단일 곡), limit(기본 300). items 각 곡에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트)/path.
+
+      - track: path 곡 하나 상세 — track(태그) + related(관련곡) + playlists(담을 플레이리스트 후보).
+
+      - related: path 곡의 관련곡 top-10 (관련곡 그래프 간선 — reason 연결 근거 동봉).
+
+      - walk: 관련곡 랜덤 워크 재생목록 — q(시작곡 검색) 또는 path, 둘 다 없으면 랜덤 시작. length(기본 30). 산책하듯 관련곡을 이어간 시퀀스.
+
+      - graph: 에고 그래프 — path/q 중심곡 + 1홉(top-10) + 2홉. items=노드, edges=[노드 인덱스 쌍], center.
+
+      - folders: 곡을 직접 담은 폴더 목록 (폴더 단위 재생용 — library 의 folder 파라미터와 짝).
+
+      - albums / artists: 앨범·아티스트 묶음 목록.
+
+      - playlists: 플레이리스트 목록. playlist: name 상세(담긴 곡 순서대로).
+
+      - playlist_create / playlist_delete: name 으로 생성·삭제. playlist_add / playlist_remove: name+path 로 곡 담기·빼기.
+
+      - sources: 등록 폴더 + 통계 + 스캔 상태. add_source/remove_source: path 폴더 등록(즉시 백그라운드 스캔)·제거.
+
+      - scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: library(기본)/track/albums/artists/related/walk/folders/graph/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan
+        q:
+          type: string
+          description: 검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)
+        artist:
+          type: string
+          description: 아티스트 정확 필터 (library)
+        album:
+          type: string
+          description: 앨범 정확 필터 (library)
+        albumartist:
+          type: string
+          description: 앨범 아티스트 정확 필터 (library — 같은 앨범명 동명이인 구분)
+        path:
+          type: string
+          description: 파일 절대경로(track·related·walk·graph·playlist_add·playlist_remove) 또는 폴더 절대경로(add_source·remove_source)
+        folder:
+          type: string
+          description: 폴더 절대경로 — 그 폴더(하위 포함) 곡만 (library, folders 결과의 path 와 짝)
+        name:
+          type: string
+          description: 플레이리스트 이름 (playlist·playlist_create·playlist_delete·playlist_add·playlist_remove)
+        length:
+          type: integer
+          description: 워크 재생목록 곡 수 (walk, 기본 30·최대 100)
+        limit:
+          type: integer
+          description: 곡 수 상한 (library, 기본 300)
+      additionalProperties: true

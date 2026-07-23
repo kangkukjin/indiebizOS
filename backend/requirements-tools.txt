@@ -37,3 +37,6 @@ google-auth-httplib2
 # 기타
 markdown
 python-pptx
+
+# music-player 패키지 — 음악 태그(ID3/FLAC/MP4) 추출
+mutagen

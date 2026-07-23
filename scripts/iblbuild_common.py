@@ -39,9 +39,9 @@ NOT_INSTALLED_PACKAGE_DIRS = [
 ]
 
 # === runs_on 능력 태그 (2026-06-11, #3 폰 네이티브) ===
-# 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / mac_only(집 PC 하드웨어·
-# 무거운 의존·미검증 패키지) / phone_only(폰 하드웨어=알림·센서, 미래 M3).
-VALID_RUNS_ON = {"anywhere", "mac_only", "phone_only"}
+# 액션이 어디서 도는가: anywhere(기본·이식가능 로직/HTTP) / pc_only(데스크톱=맥·리눅스·
+# 윈도우 하드웨어·무거운 의존·미검증 패키지, 폰 아님) / phone_only(폰 하드웨어=알림·센서).
+VALID_RUNS_ON = {"anywhere", "pc_only", "phone_only"}
 DEFAULT_RUNS_ON = "anywhere"
 
 # 실기기(Galaxy A36)에서 import+종단 실행이 검증된 폰안전 패키지 — 폰 프로파일의 단일 진실 소스.
@@ -56,8 +56,8 @@ PHONE_VERIFIED_PACKAGES = {
     "web",
     "web-kr",     # web에서 분리된 네이버 검색(naver_search). 순수 HTTP API — web과 동일하게 폰서 동작(분리 전 web으로 검증됨).
     "real-estate",
-    "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 mac_only 태그로 제외.
-    "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 mac_only 로 제외(PC 전용 폴러).
+    "android",   # M3: [sense:phone] 폰 로컬 알림. limbs:android(android_op)은 pc_only 태그로 제외.
+    "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 pc_only 로 제외(PC 전용 폴러).
     "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
     "health-record",  # 의료기록(self:health save/query) — storage 가 stdlib(sqlite)만. health_records.db 폰↔맥 합집합 머지(health_sync, business.db 선례) 토대.
     # 2026-06-13 runs_on 정직성 회복: anywhere 인데 폰 미번들이던 이식 가능 패키지(HTTP API 조회류,
@@ -72,17 +72,17 @@ PHONE_VERIFIED_PACKAGES = {
     "memory",   # 심층기억(self:memory). 자아별 사적 로컬 DB(동기화 안 함). 모듈레벨 stdlib만(numpy/sqlite_vec 지연) → 폰서 import 안전, 시맨틱 미가용 시 LIKE/FTS 키워드 폴백(기존 graceful 강등). 시맨틱-온-폰(/embed 렌트+brute-force)은 후속.
     # self 노드 = AI 자신 → file 액션은 자기 몸의 fs 에 작용(각 몸 자기 파일·시계). 둘 다 모듈레벨 stdlib,
     # 무거운 것(fitz/docx/openpyxl·api_pcmanager)은 지연 import → 폰 import 안전. read 의 PDF/docx 포맷만
-    # 폰서 graceful 실패(텍스트는 됨). explorer(GUI)·spreadsheet(openpyxl write)는 액션별 mac_only 유지.
+    # 폰서 graceful 실패(텍스트는 됨). explorer(GUI)·spreadsheet(openpyxl write)는 액션별 pc_only 유지.
     "system_essentials",  # self:time(자기 시계)·read/write/list/grep/copy/move/delete/file_find/edit(자기 fs)
-    "pc-manager",         # self:storage/fs_query/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 mac_only 유지.
+    "pc-manager",         # self:storage/fs_query/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 pc_only 유지.
     "photo-manager",      # self:photo 라이브 질의 — backend/file_index 가 몸 분기(맥 Spotlight↔폰 MediaStore via PhoneActions.queryMedia). 핸들러 얇은 preset, photo_db/scanner 는 guard import(폰선 질의 경로 미사용). A36 종단 검증.
 
     "contest",          # AI 경진대회 검색(sense:contest, Kaggle API HTTP + stdlib). KAGGLE_API_TOKEN 폰 프로비저닝 전제.
-    "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 mac_only)
+    "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 pc_only)
     # python-exec 은퇴(2026-07-02 d4408c6): pre-IBL 화석 → not_installed. 어휘 미배선이라
     #   execute_ibl 단일도구로 도달 불가 → 폰 번들에서도 제외(맥·폰 대칭). 부활 시 installed 복귀 + 재등재.
     "data-ops",  # 통화→통화 변환자(filter/sort/take/select/dedup/groupby/join/union/merge) + 표준 코어 문서 emitter(table:structure/document — 2026-07-03 media_producer서 이관). 순수 superstructure(IBL 문법, 몸 무관), 모듈레벨 stdlib만(json/re, 서드파티 0 — 문서 emitter의 playwright/docx/pptx/typst는 함수 안 지연 import, html 렌더=문자열이라 폰서도 동작). 폰-로컬 통화(sense:here 등)는 폰서 거르고 정렬해야 맞음 → anywhere 가 정직.
-    "media_producer",  # ★순수 연산만 anywhere(image_critic/image_gemini=httpx+Gemini REST). 무거운 emitter(html_video·tts·slide·render_html·remotion=moviepy/edge_tts/playwright)는 액션별 mac_only 유지 → 폰선 포워드. moviepy·edge_tts 모듈레벨 import를 지연화해 폰서 모듈 import 성공(폰 시뮬 검증). (table:document/structure 문서 emitter는 data-ops로 이관.)
+    "media_producer",  # ★순수 연산만 anywhere(image_critic/image_gemini=httpx+Gemini REST). 무거운 emitter(html_video·tts·slide·render_html·remotion=moviepy/edge_tts/playwright)는 액션별 pc_only 유지 → 폰선 포워드. moviepy·edge_tts 모듈레벨 import를 지연화해 폰서 모듈 import 성공(폰 시뮬 검증). (table:document/structure 문서 emitter는 data-ops로 이관.)
 }
 
 

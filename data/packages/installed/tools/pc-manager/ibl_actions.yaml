@@ -10,14 +10,14 @@ nodes:
         target_key: op
         router: handler
         tool: host_op
-        runs_on: mac_only
+        runs_on: pc_only
         ops:
           default: status
           values:
             status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
             apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
             resources: 상세 지표 (per-core CPU·스왑·디스크 파티션·네트워크·배터리)
-        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 mac_only.
+        implementation: pc-manager 패키지 host_op 핸들러 — psutil로 CPU/메모리/스왑/디스크/네트워크/배터리, lsappinfo로 전면 앱(권한 프롬프트 無), runtime_utils.detect_body로 몸 이름. 폰은 자기 센서 별도라 pc_only.
         keywords:
         - 내컴퓨터
         - 시스템상태
@@ -227,7 +227,7 @@ nodes:
     actions:
       explorer:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
         group: open
         target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.

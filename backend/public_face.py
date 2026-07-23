@@ -262,6 +262,16 @@ def _map(method: str, path: str, query: dict, raw_query: str):
                 return {"status": 400}
             return {"target": f"/showcase/{kind}/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}",
                     "cache": "public, max-age=86400"}
+        if kind == "sub" and len(rest) > 1 and rest[1]:
+            # 자막 — srt/ass/smi 를 WebVTT 로 변환해 서빙(worker.js 의 sub 라우트와 동형).
+            fid = rest[1]
+            rel = query.get("rel", "")
+            if not rel:
+                return {"status": 400}
+            cls = query.get("cls", "")
+            tail = f"&cls={_enc(cls)}" if cls else ""
+            return {"target": f"/showcase/subtitle/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
+                    "cache": "public, max-age=86400"}
         return {"spa": True}
 
     # 매핑 밖 — 일반 앱 라우팅으로 통과(런처 셸·핑 등은 기존 원격 게이트가 받는다)
@@ -280,12 +290,14 @@ def _get_client():
     global _client
     if _client is None:
         import httpx
-        if _app is None:
-            raise RuntimeError("public_face: attach_app() 미호출")
+        # ★루프백 HTTP(진짜 스트리밍) — ASGITransport 는 앱이 응답을 다 만들 때까지
+        # body 를 통째로 버퍼링해(httpx handle_async_request 가 body_parts 수집 후 반환)
+        # 대용량 미디어·트랜스코드 생방송의 첫 바이트가 영영 안 나간다. 실측: 긴 동영상
+        # 직접 얼굴 재생이 전체 변환/전체 파일 적재를 기다리다 cloudflared 502.
+        port = int(os.environ.get("INDIEBIZ_API_PORT", 8765))
         _client = httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=_app),
-            base_url="http://public-face.internal",
-            timeout=httpx.Timeout(300.0),
+            base_url=f"http://127.0.0.1:{port}",
+            timeout=httpx.Timeout(300.0, connect=10.0),
         )
     return _client
 
@@ -314,6 +326,8 @@ async def _proxy(request: Request, target: str, cache: str):
 
     out_headers = {"content-type": resp.headers.get("content-type", "text/plain; charset=utf-8"),
                    "cache-control": cache}
+    if resp.headers.get("x-transcode-live"):
+        out_headers["cache-control"] = "no-store"   # 트랜스코드 생방송 — 캐시 금지
     for name in _PASS_RESP_HEADERS:
         if name == "set-cookie":
             continue  # 다중 헤더 — 아래에서 append

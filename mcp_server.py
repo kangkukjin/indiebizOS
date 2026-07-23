@@ -17,6 +17,9 @@ DEFAULT_PROJECT_PATH = os.environ.get("INDIEBIZOS_PROJECT_PATH", ".")
 # 내부 spawn 시 부모가 이 에이전트의 신원(agent_id)을 env로 주입.
 # channel_send/read의 발신 신원 게이트에 사용된다. 외부(Claude Desktop) 사용 시엔 없음 → 신원 없음.
 DEFAULT_AGENT_ID = os.environ.get("INDIEBIZOS_AGENT_ID", "")
+# 내부 spawn 시 부모가 현재 태스크 ID를 env로 주입 (시스템 AI 위임 체인).
+# threading.local 컨텍스트가 재진입 /ibl/execute 스레드에 없으므로 payload로 복원한다.
+DEFAULT_TASK_ID = os.environ.get("INDIEBIZOS_TASK_ID", "")
 
 # ── 신원 주입: 두 전송 경로 대응 ──────────────────────────────────────────
 # stdio  : 부모가 매 spawn 마다 env(INDIEBIZOS_*)로 주입 → 위 DEFAULT_* 가 그 값.
@@ -25,11 +28,12 @@ DEFAULT_AGENT_ID = os.environ.get("INDIEBIZOS_AGENT_ID", "")
 # 우선순위: 명시 인자 > HTTP 헤더 > env 기본값. (헤더가 없으면 stdio 동작 그대로 = 하위호환.)
 _HDR_AGENT = "x-indiebiz-agent-id"
 _HDR_PROJECT = "x-indiebiz-project-path"
+_HDR_TASK = "x-indiebiz-task-id"
 
 
 def _http_identity(ctx):
-    """HTTP 마운트 경로면 요청 헤더에서 (agent_id, project_path)를 꺼낸다.
-    stdio(요청 없음)면 (None, None) → 호출부가 env 기본값으로 폴백.
+    """HTTP 마운트 경로면 요청 헤더에서 (agent_id, project_path, task_id)를 꺼낸다.
+    stdio(요청 없음)면 (None, None, None) → 호출부가 env 기본값으로 폴백.
 
     ★HTTP 헤더는 ASCII 전용이라, 한글 agent_id("홈페이지")·프로젝트 경로는 퍼센트 인코딩으로
     실어 보낸다(프로바이더가 quote) → 여기서 unquote. ASCII 값은 unquote no-op."""
@@ -38,10 +42,11 @@ def _http_identity(ctx):
         req = ctx.request_context.request if ctx is not None else None
         if req is not None:
             return (unquote(req.headers.get(_HDR_AGENT) or "") or None,
-                    unquote(req.headers.get(_HDR_PROJECT) or "") or None)
+                    unquote(req.headers.get(_HDR_PROJECT) or "") or None,
+                    unquote(req.headers.get(_HDR_TASK) or "") or None)
     except Exception:
         pass
-    return (None, None)
+    return (None, None, None)
 
 
 def _trim_for_agent(raw: str) -> str:
@@ -161,12 +166,15 @@ async def execute_ibl(code: str, project_path: str = "", ctx: Context = None) ->
     project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
     """
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
-    h_agent, h_project = _http_identity(ctx)
+    h_agent, h_project, h_task = _http_identity(ctx)
     effective_path = project_path or h_project or DEFAULT_PROJECT_PATH
     agent_id = h_agent or DEFAULT_AGENT_ID
+    task_id = h_task or DEFAULT_TASK_ID
     payload = {"code": code, "project_path": effective_path}
     if agent_id:
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
+    if task_id:
+        payload["task_id"] = task_id  # 태스크 컨텍스트 복원 (시스템 AI cross 위임 체인)
     raw = await anyio.to_thread.run_sync(
         lambda: _post_backend("/ibl/execute", payload, 120)
     )

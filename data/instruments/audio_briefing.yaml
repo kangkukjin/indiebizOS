@@ -34,7 +34,7 @@ modes:
   # ── PC 가 만든 최신 브리핑 스크립트를 읽어 보여준다(재생성 없음). @hub = PC 에서 읽기. ──
   - name: 스크립트
     auto_run: true
-    action: '[self:read]{path: "outputs/audio_briefing_current.md", scope: "workspace", blocks: true}@hub'
+    action: '[self:read]{path: "outputs/audio_briefing_current.md", blocks: true}@hub'
     view:
       - type: blocks
         from: items
@@ -43,7 +43,7 @@ modes:
     # 데스크탑 앱의 "mp3 저장" 버튼으로 받는다(바이너리라 이 경로로는 나르지 않음).
     buttons:
       - label: 📤 스크립트 폰에 저장·공유
-        action: '[self:read]{path: "outputs/audio_briefing_current.md", scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "audio_briefing.md", mime: "text/markdown"}'
+        action: '[self:read]{path: "outputs/audio_briefing_current.md"}@hub >> [limbs:phone]{op: "share", filename: "audio_briefing.md", mime: "text/markdown"}'
 
   # ── 만들기: 시스템 AI(허브=PC)에 오늘 브리핑 생성 위임 — 폰/원격 어디서든 누르면 PC 에서 생성.
   #  레시피=guides/audio_briefing.md (고정 파일 audio_briefing_current.mp3/.md 에 저장). 정기보고 '작성' 선례. ──

@@ -335,7 +335,7 @@ nodes:
         target_description: (파라미터 없음). 폰 USB 연결 필요(미기동 시 앱 자동 기동). 양방향 1회 머지 — 추가는 합치고 수정은 최신 우선, 삭제는 양쪽 반영. 메시지/글 내용은 비대상(릴레이/Gmail 진실원).
         router: handler
         tool: phone_sync
-        runs_on: mac_only
+        runs_on: pc_only
         implementation: business 패키지 phone_sync — adb forward 로 폰 백엔드(:8765) 도달 후 export/merge 양방향. business_sync.merge_business_db(LWW+tombstone).
         keywords:
         - 폰 동기화
@@ -598,7 +598,7 @@ nodes:
         returns: effect
         description: 외부 메시지 자동응답 서비스 제어 — op:status(기본)/start/stop. on/off 는 영속(재시작 유지).
         group: channel
-        runs_on: mac_only
+        runs_on: pc_only
         target_description: op:status(가동 여부·켜짐설정·점검주기·처리수) / start(켜기, 영속) / stop(끄기, 영속). 자동응답은 이웃 정보공개수준별 근무지침·비즈니스문서를 맥락으로 AI가 응답 생성·발송.
         target_key: op
         router: handler

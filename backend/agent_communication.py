@@ -266,6 +266,15 @@ class AgentCommunicationMixin:
                 self._log(f"외부인 메시지 무시: {from_addr}")
                 return
 
+            # 에피소드 로깅 — 외부 채널(이메일/Nostr) 명령도 주행기록에 남긴다. 소유자 확인
+            # 통과 후에만 시작(외부인·시스템 메시지는 에피소드 안 만듦). 종료는 아래 finally
+            # 한 곳 — SESSION_RESET·clarification 조기 return 경로까지 전부 지나간다.
+            try:
+                from episode_logger import EpisodeLogger
+                EpisodeLogger.start_episode(self.config.get('name', ''), content, project_id=self.project_id or "")
+            except Exception:
+                pass
+
             # 태스크 생성
             task_id = f"task_{uuid.uuid4().hex[:8]}"
             requester_info = f"{from_addr}@{contact_type}"
@@ -389,6 +398,12 @@ class AgentCommunicationMixin:
             import traceback
             self._log(f"채널 메시지 처리 실패: {e}")
             traceback.print_exc()
+        finally:
+            try:
+                from episode_logger import EpisodeLogger
+                EpisodeLogger.end_episode()  # 미시작(비소유자 조기 return)이면 no-op
+            except Exception:
+                pass
 
     def _check_internal_messages(self):
         """내부 메시지 확인 및 처리"""
@@ -443,6 +458,16 @@ class AgentCommunicationMixin:
 
                 # call_agent 호출 플래그 초기화
                 clear_called_agent()
+
+                # 에피소드 로깅 — 내부 위임 경로(시스템 AI→에이전트 하달, 에이전트 간 위임·
+                # 보고 회수)도 주행기록에 남긴다. 그동안 start/end 가 WebSocket 채팅 핸들러에만
+                # 배선돼 이 루프는 사각지대였다(SystemAIRunner._check_internal_messages 와
+                # 같은 패턴). 에이전트 전용 스레드라 다른 에피소드(다른 컨텍스트)와 충돌 없음.
+                try:
+                    from episode_logger import EpisodeLogger
+                    EpisodeLogger.start_episode(my_name or "", content, project_id=self.project_id or "")
+                except Exception:
+                    pass
 
                 # 시스템 AI 위임 여부 확인
                 is_from_system_ai = False
@@ -537,14 +562,20 @@ class AgentCommunicationMixin:
                             # 태스크 ID 없이 받은 메시지 - 발신자에게 직접 응답
                             self._send_response_to_sender(from_agent, response)
 
-                # 컨텍스트 정리
-                clear_current_task_id()
-                clear_called_agent()
-
             except Exception as e:
                 import traceback
                 print(f"[AgentRunner] {my_name} 메시지 처리 실패: {e}")
                 traceback.print_exc()
+            finally:
+                # 기존엔 예외 시 컨텍스트 정리가 건너뛰어졌음(except 가 잡고 다음 메시지로
+                # 넘어가 task_id 누수) → finally 로 이동해 에피소드 종료와 함께 확정.
+                clear_current_task_id()
+                clear_called_agent()
+                try:
+                    from episode_logger import EpisodeLogger
+                    EpisodeLogger.end_episode()  # 미시작이면 no-op
+                except Exception:
+                    pass
 
             # 다음 메시지 가져오기 (스레드 안전)
             with AgentRunner._lock:

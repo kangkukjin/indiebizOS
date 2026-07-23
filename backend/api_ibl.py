@@ -14,6 +14,9 @@ class IBLRequest(BaseModel):
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
                                        # MCP→HTTP로 자기 agent_id를 실어 보내는 통로. None이면 신원 없음(외부 채널 차단).
+    task_id: Optional[str] = None      # 태스크 컨텍스트(위임 체인). claude_code 재진입 경로는 원 요청과 다른
+                                       # 스레드라 threading.local의 task_id가 비어 [others:delegate]{scope:"cross"}가
+                                       # "현재 태스크 ID 없음"으로 실패했다 → agent_id처럼 payload로 복원 (없으면 현 동작 그대로).
     surface: Optional[str] = None      # 요청한 *표면* ('web' = 원격런처/포털/폰 WebView).
                                        # 소리·저장 같은 "어디서 나야 하는가"의 판정 축 — 실행하는 몸이
                                        # 아니라 보고 있는 표면이 정한다(thread_context.set_current_surface).
@@ -84,24 +87,47 @@ async def execute_ibl_code(req: IBLRequest):
             agent_id = "system_ai"
 
         # 직접조작 표면은 thread_context에 자기 project_id를 명시한다.
-        # 이 엔드포인트는 이벤트 루프 스레드에서 동기 실행되므로, 직전 에이전트가
-        # 남긴 project_id가 thread-local에 남아 있을 수 있다(누수). 이를 덮어써,
+        # thread_context 는 thread-local 이라, 워커 스레드 풀에선 직전 호출이 남긴
+        # project_id 가 남아 있을 수 있다(누수) — 덮어쓰고 호출 후 이전 값으로 복원.
         # scope 판단(예: lecture 저장 위치=프로젝트 vs 전역)이 엉뚱한 프로젝트로
-        # 새는 것을 막는다. 호출 후 이전 값으로 복원.
+        # 새는 것을 막는다.
+        # ★실행은 워커 스레드에서(asyncio.to_thread) — 블로킹 핸들러(예: guestpc 가
+        # phone_jobs.wait_result 로 손발 회신을 동기 대기)가 이벤트 루프 위에서 돌면,
+        # 그 대기를 풀어줄 /limb/poll·/phone 요청 자체를 서버가 못 받아 자기교착한다
+        # (창고 폴러 anyio.to_thread 선례와 같은 부류). thread-local set/restore 는
+        # 같은 스레드 안에서 해야 하므로 래퍼째 내린다.
         from thread_context import (set_current_project_id, get_current_project_id,
-                                    set_current_surface, get_current_surface)
-        _prev_pid = get_current_project_id()
-        _prev_surface = get_current_surface()
-        if req.project_id:
-            set_current_project_id(req.project_id)
-        # 표면 힌트도 같은 누수 방어(이벤트 루프 스레드 공유) — 호출 후 원복.
-        set_current_surface(req.surface)
-        try:
-            from system_tools import _execute_ibl_unified
-            result = _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
-        finally:
-            set_current_project_id(_prev_pid)
-            set_current_surface(_prev_surface)
+                                    set_current_surface, get_current_surface,
+                                    set_current_task_id, get_current_task_id,
+                                    clear_current_task_id)
+
+        def _run_in_context():
+            _prev_pid = get_current_project_id()
+            _prev_surface = get_current_surface()
+            _prev_task = get_current_task_id()
+            if req.project_id:
+                set_current_project_id(req.project_id)
+            set_current_surface(req.surface)
+            # 태스크 컨텍스트 복원 — claude_code(MCP→HTTP 재진입)가 실어 보낸 부모 task_id.
+            # cross 위임(_execute_call_project_agent)이 get_current_task_id()로 부모를 찾는다.
+            if req.task_id:
+                set_current_task_id(req.task_id)
+            try:
+                from system_tools import _execute_ibl_unified
+                return _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
+            finally:
+                set_current_project_id(_prev_pid)
+                set_current_surface(_prev_surface)
+                if req.task_id:
+                    # clear 는 set 과 대칭 — task_sysai_ 접두사가 이 워커 스레드에 등록한
+                    # 활성작업(_touch_active_work)도 함께 해제된다.
+                    if _prev_task:
+                        set_current_task_id(_prev_task)
+                    else:
+                        clear_current_task_id()
+
+        import asyncio
+        result = await asyncio.to_thread(_run_in_context)
 
         # 결과가 str이면 JSON 파싱 시도. 실패 시 plain text로 wrap.
         # (일부 IBL 액션은 JSON이 아닌 평문/markdown/빈문자열을 반환)

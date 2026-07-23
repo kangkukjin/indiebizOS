@@ -369,7 +369,7 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
         return {"result": r.text, "_forwarded_to": "mac"}
     if isinstance(result, dict):
         result.setdefault("_forwarded_to", "mac")
-        # ★빌림-완성: mac_only 는 "폰서 못 함"이 아니라 "맥서 실행되는, 빌려오는 액션"이다.
+        # ★빌림-완성: pc_only 는 "폰서 못 함"이 아니라 "맥서 실행되는, 빌려오는 액션"이다.
         # 폰서 호출하면 맥이 만든 산출 파일이 폰으로 돌아와야 정상(폰 프로파일에서만 풀).
         if os.environ.get("INDIEBIZ_PROFILE") == "phone":
             sess = _mac_session_cache.get("session")
@@ -380,7 +380,7 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
 def _pull_remote_artifacts(result: dict, remote_url: str, headers: dict) -> dict:
     """포워드 결과 안의 *원격* 파일 경로를 로컬로 내려받아 경로 재작성 (빌림-완성, 양방향 공용).
 
-    ★빌림은 양쪽 다다 — 폰이 mac_only 를, 맥이 phone_only 를 빌리고, 어느 방향이든 산출
+    ★빌림은 양쪽 다다 — 폰이 pc_only 를, 맥이 phone_only 를 빌리고, 어느 방향이든 산출
     파일은 *부른 몸*으로 돌아와야 한다(그게 정상). 원격 /launcher/file 로 바이트를 받아
     (포워드와 같은 인증 헤더 재사용) 로컬 outputs 에 쓰고, file/path 류 필드를 로컬 경로로 바꾼다.
     chart 처럼 중첩(data.path)도 있어 재귀 _walk 로 어느 깊이든 탐색."""

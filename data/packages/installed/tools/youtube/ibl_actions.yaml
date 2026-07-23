@@ -4,7 +4,7 @@ nodes:
       video:
         returns: scalar
         fixture: '[sense:video]{op: "meta", query: "jazz"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
         target_description: 'op로 분기 (기본 info). url 또는 video_id 필수.
 
@@ -38,7 +38,7 @@ nodes:
       search_youtube:
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
         group: media
         keywords:
@@ -81,7 +81,7 @@ nodes:
     actions:
       music:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download.
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.

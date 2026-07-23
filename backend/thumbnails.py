@@ -187,3 +187,67 @@ def transcode_video_to_mp4(src: str, dst: str, timeout: int = 180) -> bool:
         return r.returncode == 0 and os.path.exists(dst) and os.path.getsize(dst) > 0
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
         return False
+
+
+# ── 스트리밍 트랜스코드 ────────────────────────────────────────────────
+# 전체 변환을 기다리지 않고 재생을 시작해야 하는 긴 동영상용. tee 머서로
+# ① fMP4 를 stdout 에 흘리고(뷰어가 수 초 안에 재생 시작) ② 같은 인코딩으로
+# faststart 캐시도 쓴다(인코딩 1회). 캐시는 .part 로 쓰다 완성 시에만 rename —
+# 다음 재생부터는 캐시 직행(Range·seek 완전).
+
+def start_stream_transcode(src: str, cache_dst: str):
+    """스트리밍 트랜스코드 시작. (proc, tmp경로) 반환 — 호출자가 proc.stdout 을 읽어
+    흘리고, 끝나면 finish_/중단하면 detach_stream_transcode 를 불러야 한다.
+    tee 슬레이브 경로의 특수문자(| [ ] 및 윈도우 드라이브 콜론) 이슈를 피하려고
+    cwd 를 캐시 폴더로 두고 상대 이름만 쓴다."""
+    import uuid
+    cache_dir = os.path.dirname(cache_dst) or "."
+    os.makedirs(cache_dir, exist_ok=True)
+    tmp_name = f".{uuid.uuid4().hex[:12]}.part.mp4"
+    cmd = [
+        "ffmpeg", "-v", "error",
+        "-i", os.path.abspath(src),
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k",
+        "-map", "0:v:0", "-map", "0:a:0?",
+        "-f", "tee",
+        f"[f=mp4:movflags=+faststart]{tmp_name}|"
+        f"[f=mp4:movflags=frag_keyframe+empty_moov+default_base_moof]pipe:1",
+    ]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                            cwd=cache_dir)
+    return proc, os.path.join(cache_dir, tmp_name)
+
+
+def finish_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
+    """ffmpeg 종료 대기 후 성공이면 tmp→캐시 원자 교체, 실패면 tmp 폐기.
+    동시 시청으로 변환이 겹치면 tmp 가 제각각이라 마지막 완주가 캐시가 된다(무해)."""
+    try:
+        rc = proc.wait()
+        if rc == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 0:
+            os.replace(tmp, cache_dst)
+            return
+    except Exception:
+        pass
+    try:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    except OSError:
+        pass
+
+
+def detach_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
+    """시청 중단 — 데몬 스레드가 파이프를 마저 비워 ffmpeg 가 블록되지 않게 하고,
+    인코딩을 완주시켜 캐시를 완성한다(다음 재생은 즉시 시작)."""
+    import threading
+
+    def _drain():
+        try:
+            while proc.stdout.read(1 << 20):
+                pass
+        except Exception:
+            pass
+        finish_stream_transcode(proc, tmp, cache_dst)
+
+    threading.Thread(target=_drain, daemon=True).start()

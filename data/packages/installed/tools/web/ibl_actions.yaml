@@ -45,6 +45,27 @@ nodes:
         tool: search_hn
         implementation: Hacker News Algolia API(hn.algolia.com). story 태그 검색 + front_page. 키 불요. items 통화(points/num_comments 포함).
         target_key: query
+  engines:
+    actions:
+      # 신문 발행 — 옛 engines:newspaper(수집+조립+브라우저 열기 박제, 은퇴)와 다른 개념:
+      # 현행 '판(edition) 3파일' 모델(newspaper_guide.md)을 한 액션으로 결정화.
+      # 배경: 발행 로직이 데스크탑 계기 React 코드에만 살아 원격/폰 버튼이 시스템 AI
+      # 자연어 위임으로 우회(무시되면 끝)하던 것을 결정론 경로로 교체(2026-07-23).
+      newspaper:
+        returns: effect
+        runs_on: pc_only
+        description: 신문 발행 — 서버 설정(제호·키워드, 앱모드 outputs/newspaper_config.json)의 키워드로 gnews 팬아웃+경량 편집장 편성(curate 7) 후 판 3파일(newspaper_current.json/md/html)+날짜 아카이브를 앱모드 outputs/에 저장. 기본 백그라운드(즉시 반환, ~1분 소요) — 진행은 outputs/newspaper_publish_state.json. 파라미터 없이 호출 가능. 신문 계기·뷰어가 저장된 판을 읽어 표시.
+        group: media_produce
+        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued).
+        router: handler
+        tool: publish_newspaper
+        implementation: tool_newspaper.py — handler 의 search_gnews 배치 경로(RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
+        keywords:
+        - 신문
+        - 신문 발행
+        - 새 신문
+        - 발행
+        - 뉴스 신문
   limbs:
     actions:
       launch:
@@ -274,6 +295,43 @@ tool_json:
         headlines:
           type: boolean
           description: true면 검색어 없이 HN 프론트페이지(오늘 크게 주목받은 포스팅)를 가져온다. curate 와 함께 'HN 프론트페이지' 섹션.
+      required: []
+  - name: publish_newspaper
+    description: '신문 발행 — 판(edition) 3파일을 앱모드 outputs/ 에 저장합니다.
+
+
+      ## 흐름
+
+      - 서버 설정(newspaper_config.json)의 제호·키워드 로드 (없으면 기본값 결정화)
+
+      - search_gnews 배치 팬아웃 1회 (핫토픽 headlines + 키워드별, 경량 편집장 curate 7, 가디언 합류)
+
+      - 판 조립 → newspaper_current.json(데스크탑)/md(뷰어)/html(공유) + newspaper_archive/ 날짜본
+
+
+      ## 사용 시점
+
+      - "신문 발행해줘", 신문앱 새 신문 발행 버튼 — 파라미터 없이 호출하면 서버 설정대로.
+
+
+      ## 다른 도구와의 관계
+
+      - 개별 뉴스 검색: search_gnews / 발행된 판 읽기: 파일 읽기(newspaper_current.md)'
+    input_schema:
+      type: object
+      properties:
+        keywords:
+          type: string
+          description: 섹션 키워드 목록 (쉼표/개행 구분, JSON 리스트도 허용). 미지정 시 서버 설정(newspaper_config.json).
+        title:
+          type: string
+          description: 제호 (미지정 시 서버 설정, 기본 "청주 데일리").
+        sources:
+          type: string
+          description: 큐레이션 소스 (기본 "gnews,guardian" — 영어 키워드에 가디언 합류, "gnews"만 주면 끔).
+        wait:
+          type: boolean
+          description: true면 동기 발행(완료까지 ~1분 블로킹). 기본 false=백그라운드 시작 후 즉시 반환, 진행은 outputs/newspaper_publish_state.json.
       required: []
   - name: launch_sites
     description: '즐겨찾기 사이트 런처(대시보드) 및 관리.

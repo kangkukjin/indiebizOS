@@ -3,7 +3,7 @@ nodes:
     actions:
       html_video:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 slide/lecture 사용. (가이드 html_video.md)
         target_description: scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.
         group: media_produce
@@ -19,7 +19,7 @@ nodes:
         - HTML영상
       tts:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
         target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
         group: media_produce
@@ -40,7 +40,7 @@ nodes:
         - 나레이션
       slide_shadcn:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         prompt_hidden: true
         description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
         target_description: '★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
@@ -70,7 +70,7 @@ nodes:
         - PNG
       slide:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: 명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.
         target_description: "instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).\n★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).\nstyle(선택) — 미지정 기본값=\"native\":\n  · 네이티브 통짜형 \"native\"(기본): 이미지 모델이 한글 글자·다이어그램·일러스트를 한 장에 통째로 저작 — NotebookLM식 시각=의미 융합(합성층 없음). aesthetic(vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint)으로 톤 고정, image_size(1K/2K/4K)·verify(한글 OCR 재생성) 옵션. 한 덱은 한 톤으로 고정하면 일관된 책이 됨.\n  · 텍스트형 \"text\"(빠름·무료): 자유형 custom HTML(이미지 API 안 씀). 카드/리포트 타일 등 발표 슬라이드가 아닌 경량·대량 용도에만 명시. design_system(vintage_book/academic_paper/tech_minimal/magazine_modern) 톤.\nwidth/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.\n"
         group: media_produce
@@ -144,7 +144,7 @@ nodes:
             from: blocks
       render_html:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce

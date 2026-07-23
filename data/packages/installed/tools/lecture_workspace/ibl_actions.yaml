@@ -3,7 +3,7 @@ actions:
   lecture:
     returns: items
     fixture: '[self:lecture]{op: "list"}'
-    runs_on: mac_only
+    runs_on: pc_only
     description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
     group: lecture
     target_description: create는 title 필수(+audience/thesis/duration_minutes/design_system 옵션). load/delete/open은 lecture_id 필수(open은 미지정시 목록 화면). delete는 confirm=true 추가.
@@ -28,7 +28,7 @@ actions:
     scope: workspace
   slide:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정.
     group: lecture
     target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
@@ -54,7 +54,7 @@ actions:
     scope: workspace
   material:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 강의 재료 관리 (op 분기). 추가/삭제.
     group: lecture
     target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
@@ -74,7 +74,7 @@ actions:
     scope: workspace
   deck:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
     group: lecture
     target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).

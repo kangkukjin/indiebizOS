@@ -411,9 +411,9 @@ def validate_transform_contract(data: dict) -> list[str]:
 def validate_phone_reachability(data: dict, root: Path) -> list[str]:
     """runs_on 정직성: anywhere(기본) 액션인데 handler/driver 패키지가 PHONE_VERIFIED 가 아니면
     적발. 그런 액션은 폰서 _phone_runnable=False → 조용히 _forward_to_mac 된다(ibl_engine.py).
-    즉 anywhere 와 mac_only 가 폰에서 행동이 같아 태그가 거짓 → silent-forward 라 self-check 가
-    못 잡던 부류. 해소: 패키지를 PHONE_VERIFIED 에 넣거나(폰 로컬 실행) 액션에 runs_on: mac_only
-    명시(맥 포워드 명시). 비-패키지(system/engine 등) 액션은 대상 아님(번들 모듈로 폰서 실행)."""
+    즉 anywhere 와 pc_only 가 폰에서 행동이 같아 태그가 거짓 → silent-forward 라 self-check 가
+    못 잡던 부류. 해소: 패키지를 PHONE_VERIFIED 에 넣거나(폰 로컬 실행) 액션에 runs_on: pc_only
+    명시(허브 포워드 명시). 비-패키지(system/engine 등) 액션은 대상 아님(번들 모듈로 폰서 실행)."""
     issues: list[str] = []
     tool_index = build_tool_index(root)
     nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
@@ -425,7 +425,7 @@ def validate_phone_reachability(data: dict, root: Path) -> list[str]:
                 continue
             ro = action.get("runs_on", DEFAULT_RUNS_ON)
             if ro != "anywhere":
-                continue  # mac_only/phone_only = 명시적(정직)
+                continue  # pc_only/phone_only = 명시적(정직)
             tool = action.get("tool")
             if not tool or tool not in tool_index:
                 continue  # 비-패키지 액션(system/engine 등) — 번들 모듈로 폰 실행
@@ -433,8 +433,8 @@ def validate_phone_reachability(data: dict, root: Path) -> list[str]:
             if pkg not in PHONE_VERIFIED_PACKAGES:
                 issues.append(
                     f"{node_name}:{action_name} — runs_on=anywhere 인데 패키지 '{pkg}' 폰 미검증 "
-                    f"→ 폰서 조용히 맥 포워드(태그 거짓). 패키지를 PHONE_VERIFIED_PACKAGES 에 넣거나 "
-                    f"액션에 'runs_on: mac_only' 명시."
+                    f"→ 폰서 조용히 허브 포워드(태그 거짓). 패키지를 PHONE_VERIFIED_PACKAGES 에 넣거나 "
+                    f"액션에 'runs_on: pc_only' 명시."
                 )
     return issues
 

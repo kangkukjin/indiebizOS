@@ -12,7 +12,7 @@
  *
  * 키워드/제목은 편집 가능(localStorage 결정화) — '다음 판'에 쓸 편집 설정이다.
  */
-import { useCallback, useEffect, useState, type FC } from 'react';
+import { useCallback, useEffect, useRef, useState, type FC } from 'react';
 import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공용 헬퍼(project_id 내장)
 
 // ── 소스별 판(edition) ─────────────────────────────────────────
@@ -160,6 +160,28 @@ function loadKeywords(edKey: string): string[] {
     if (raw) { const a = JSON.parse(raw); if (Array.isArray(a) && a.length) return a; }
   } catch { /* ignore */ }
   return editionOf(edKey).defaultKw;
+}
+
+// ── 서버 설정(제호·키워드) — outputs/newspaper_config.json 이 단일 소스 ─────────
+// [engines:newspaper](원격/폰 발행 버튼·자연어 발행)와 데스크탑 계기가 같은 설정을 읽고 쓴다 —
+// 어느 표면에서 발행해도 같은 신문(2026-07-23 localStorage → 서버 이전). localStorage 는
+// 서버 미응답 시 첫 렌더 폴백 캐시로만 유지.
+interface NewspaperConfig { [ed: string]: { title?: string; keywords?: string[] } }
+const CONFIG_PATH = 'outputs/newspaper_config.json';
+let SERVER_CFG: NewspaperConfig | null = null;   // 마지막으로 읽은 설정(판별 merge 저장용)
+async function loadServerConfig(): Promise<NewspaperConfig | null> {
+  try {
+    const r = await iblExecuteApp(`[self:read]{path: ${JSON.stringify(CONFIG_PATH)}}`);
+    if (r && typeof r === 'object' && !Array.isArray(r)) { SERVER_CFG = r as NewspaperConfig; return SERVER_CFG; }
+  } catch { /* 파일 없음 — 첫 발행 때 핸들러가 기본값을 결정화 */ }
+  return null;
+}
+function saveServerConfig(edKey: string, patch: { title?: string; keywords?: string[] }) {
+  const cfg: NewspaperConfig = { ...(SERVER_CFG || {}) };
+  cfg[edKey] = { ...(cfg[edKey] || {}), ...patch };
+  SERVER_CFG = cfg;
+  iblExecuteApp(`[self:write]{path: ${JSON.stringify(CONFIG_PATH)}, content: ${JSON.stringify(JSON.stringify(cfg))}}`)
+    .catch(() => { /* best-effort — localStorage 캐시가 폴백 */ });
 }
 
 const openExternal = (url?: string) => { if (url) window.electron?.openExternal?.(url); };
@@ -510,7 +532,12 @@ export function NewspaperInstrument() {
     else window.open(url, '_blank', 'noopener');          // 원격/폰 웹런처: 새 탭 폴백
   }, []);
 
-  const persistKw = (kw: string[]) => { setKeywords(kw); localStorage.setItem(kwKey(editionKey), JSON.stringify(kw)); };
+  // 키워드·제호 변경 = 서버 설정 write-through(단일 소스) + localStorage 캐시.
+  const persistKw = (kw: string[]) => {
+    setKeywords(kw);
+    localStorage.setItem(kwKey(editionKey), JSON.stringify(kw));
+    saveServerConfig(editionKey, { keywords: kw });
+  };
   const addKeyword = () => {
     const k = draft.trim();
     if (k && !keywords.includes(k)) persistKw([...keywords, k]);
@@ -518,7 +545,13 @@ export function NewspaperInstrument() {
   };
   const removeKeyword = (k: string) => persistKw(keywords.filter((x) => x !== k));
   const resetKeywords = () => persistKw(edition.defaultKw);
-  const onTitle = (t: string) => { setTitle(t); localStorage.setItem(titleKey(editionKey), t); };
+  const titleTimer = useRef<number | null>(null);   // 제호는 타이핑당 호출이라 서버 저장만 디바운스
+  const onTitle = (t: string) => {
+    setTitle(t);
+    localStorage.setItem(titleKey(editionKey), t);
+    if (titleTimer.current) window.clearTimeout(titleTimer.current);
+    titleTimer.current = window.setTimeout(() => saveServerConfig(editionKey, { title: t }), 800);
+  };
 
   // 자기완결 HTML 한 파일로 저장 → 친구에게 첨부 공유(백엔드·호스팅 불필요, Blob 다운로드).
   const exportHtml = () => {
@@ -622,6 +655,26 @@ export function NewspaperInstrument() {
     setEditFlow(false); setEditing(false); setShareUrl(null); setError(null); setDeriveWarn(null);
     setKeywords(loadKeywords(key));
     setTitle(localStorage.getItem(titleKey(key)) || editionOf(key).defaultTitle);
+  }, [editionKey]);
+
+  // 서버 설정(단일 소스)을 로드해 로컬 캐시를 덮는다 — 원격/폰([engines:newspaper])에서 바뀐
+  // 키워드·제호가 데스크탑에도 반영. 파일 없으면(첫 발행 전) 로컬/기본값 유지.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const cfg = await loadServerConfig();
+      const ed = cfg?.[editionKey];
+      if (!alive || !ed) return;
+      if (Array.isArray(ed.keywords) && ed.keywords.length) {
+        setKeywords(ed.keywords);
+        try { localStorage.setItem(kwKey(editionKey), JSON.stringify(ed.keywords)); } catch { /* ignore */ }
+      }
+      if (typeof ed.title === 'string' && ed.title) {
+        setTitle(ed.title);
+        try { localStorage.setItem(titleKey(editionKey), ed.title); } catch { /* ignore */ }
+      }
+    })();
+    return () => { alive = false; };
   }, [editionKey]);
 
   // 열 때/판 전환 시: 그 판의 저장된 최신 판을 보여준다(재취재 없음). 없으면 빈 상태 → '새로 발행'.

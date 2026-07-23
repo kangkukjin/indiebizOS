@@ -222,10 +222,14 @@ def execute(tool_input: dict, context) -> str:
                     limit=tool_input.get("limit", 5)
                 )
             elif mode == "content":
-                from tool_blog_rag import get_post_content
-                result = get_post_content(
-                    post_id=tool_input.get("post_id")
-                )
+                # post_id 없이 query만 온 호출은 query를 제목 검색어로 폴백
+                target = tool_input.get("post_id") or tool_input.get("query")
+                if not target or not str(target).strip():
+                    result = {"success": False,
+                              "message": 'post_id 또는 query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
+                else:
+                    from tool_blog_rag import get_post_content
+                    result = get_post_content(post_id=str(target).strip())
             else:
                 result = {"success": False, "error": f"알 수 없는 mode '{mode}'. (hybrid|semantic|content)"}
             # 레코드 통화 부착(비파괴) — 검색 results 목록을 records로(content는 단건이라 미부착).

@@ -83,6 +83,10 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
 
 function thumbUrl(it) { return api(`thumb/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
 function mediaUrl(it) { return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
+function subUrl(it, s) {
+  return api(`sub/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(s.rel)}&v=${s.mtime || it.mtime}`
+    + (s.cls ? `&cls=${encodeURIComponent(s.cls)}` : ""));
+}
 
 function boot() {
   if (!SLUG) {  // bare 루트 — 잠금.
@@ -170,7 +174,11 @@ function openLb(idx) {
   lbIndex = idx;
   const body = document.getElementById("lbBody");
   if (it.kind === "video") {
-    body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}"></video>`;
+    // 형제 자막(subs — 백엔드가 목록에서 붙여줌)을 <track> 으로. 첫 번째(한국어 우선)가 기본 표시.
+    const tracks = (it.subs || []).map((s, i) =>
+      `<track kind="subtitles" src="${subUrl(it, s)}" label="${esc(s.label || "자막")}"${i === 0 ? " default" : ""}>`
+    ).join("");
+    body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}">${tracks}</video>`;
   } else if (it.kind === "photo") {
     body.innerHTML = `<img src="${mediaUrl(it)}">`;
   } else {

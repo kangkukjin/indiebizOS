@@ -2,7 +2,7 @@ node: engines
 actions:
   remotion:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).'
     target_description: 'op로 분기 (기본 render_inline).
 

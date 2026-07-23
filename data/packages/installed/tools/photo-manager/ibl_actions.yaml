@@ -72,7 +72,7 @@ nodes:
     actions:
       photo_manager:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
         group: open
         target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).

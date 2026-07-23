@@ -1,8 +1,10 @@
 # 신문 제작 가이드
 
-뉴스를 수집하여 신문 형태로 발행합니다. 신문은 **앱 모드의 계기(NewspaperInstrument)**이자, 위임("신문 만들어줘")으로도 만들 수 있습니다. 두 경로가 **같은 판(edition) 파일**을 쓰도록 맞춰야 데스크탑·폰·원격이 같은 신문을 봅니다.
+뉴스를 수집하여 신문 형태로 발행합니다. **발행의 정본 = `[engines:newspaper]{}`** — 아래 발행 레시피 전체(팬아웃→편집장 편성→판 3파일+아카이브)를 한 액션이 결정론적으로 실행합니다(2026-07-23 결정화). "신문 발행해줘"류 요청은 이 액션 하나면 됩니다. 데스크탑 계기(NewspaperInstrument)·원격/폰 신문앱 발행 버튼·자연어 요청이 전부 **같은 판(edition) 파일**을 쓰므로 어느 표면에서든 같은 신문을 봅니다.
 
-> ⚠️ 옛 `[engines:newspaper]` 어휘는 **은퇴**했습니다(브라우저 자동 열기 포함). 현행 신문은 `[sense:search_gnews]` 팬아웃 + 판 파일 저장 모델입니다. 아래는 실제 계기(`frontend/src/components/NewspaperInstrument.tsx`) 동작에 맞춘 정본입니다.
+> `[engines:newspaper]`는 기본 **백그라운드**(즉시 queued 반환, ~1분 소요) — 진행·결과는 `outputs/newspaper_publish_state.json`(status: building/done/error). `wait: true`면 동기. 파라미터 없이 호출하면 서버 설정(`outputs/newspaper_config.json`, project_id 앱모드 — 제호·키워드의 단일 소스, 데스크탑 계기 설정 UI와 공유)대로 발행. `keywords`(쉼표 구분)·`title`·`sources`로 일회 재정의.
+>
+> ⚠️ 옛 `[engines:newspaper]`(수집+조립+**브라우저 자동 열기** 박제)와는 다른 개념입니다 — 그 어휘는 은퇴했고, 현행 액션은 판 파일 저장만 합니다(브라우저 열기 없음).
 
 ## 발행 모델 — '판(edition)'
 
@@ -23,7 +25,7 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
   "dateLabel": "2026년 7월 11일 (토)", "issuedAt": "2026-07-11T..." }
 ```
 
-## ★현행 발행 레시피 ("신문 만들어줘"/"새로 발행" 위임 시 이대로)
+## 발행 레시피 (= `[engines:newspaper]`가 하는 일 — 수동으로 따라할 필요 없음, 참조용)
 
 1. **핫토픽**: `[sense:search_gnews]{headlines: true, curate: 7}` — 오늘 가장 많이 다뤄진 사건. 섹션 이름은 `🔥 오늘의 핫토픽`, 맨 위에.
 2. **섹션별 기사**: 사용자 관심 키워드마다 `[sense:search_gnews]{query: "<키워드>", curate: 7}` 로 섹션 하나씩. (계기 기본 키워드 12개: 청주·AI·문화·드라마·영화·만화·세종·경제·주식·부동산·AI 에이전트·중국 경제. 제호 기본값 `청주 데일리`. 뒤 3개=2026-07-14 발아 대조가 찾은 실타래 공백 반영 — 키워드는 정적이 아니라 실타래 따라 갱신하는 취재 prior.)
@@ -57,4 +59,4 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
 
 ---
 
-*최종 업데이트: 2026-07-11 — 판(edition) 3파일 모델·curate 7·브라우저 열기 없음·위임/계기 저장 경로 통일로 정본화. 옛 `[engines:newspaper]` 사용법 절 제거.*
+*최종 업데이트: 2026-07-23 — 발행을 `[engines:newspaper]` 액션으로 결정화(web 패키지 tool_newspaper.py, 백그라운드+상태 파일). 원격/폰 신문앱 발행 버튼이 시스템 AI 위임 대신 이 액션을 직접 호출. 제호·키워드=`outputs/newspaper_config.json` 단일 소스(데스크탑 계기도 read/write). 이전(2026-07-11): 판 3파일 모델·curate 7·브라우저 열기 없음.*

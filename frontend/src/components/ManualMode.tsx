@@ -17,7 +17,7 @@ import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
-import { NodePresence, ModelGearLever, ActiveProjects } from './launcher-components';
+import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
 import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallPreviewResult } from '../lib/api-ibl';
 
@@ -522,6 +522,9 @@ export default function ManualMode() {
           </div>
           )}
         </div>
+
+        {/* USB 손발 — 낯선 PC 를 착탈식 손발로 붙이는 발급·승인 스위치 (시스템 컨트롤, 앱모드 아이콘 아님) */}
+        <LimbSwitch />
 
         {/* 주행기록계 — 지난 주행 목록 + 분석 스위치 */}
         <EpisodeJournal />

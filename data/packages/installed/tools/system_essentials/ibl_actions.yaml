@@ -174,7 +174,7 @@ nodes:
     actions:
       spreadsheet:
         returns: effect
-        runs_on: mac_only
+        runs_on: pc_only
         description: items 통화 → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
         group: chart

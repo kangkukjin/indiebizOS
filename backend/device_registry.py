@@ -84,7 +84,7 @@ def required_capability(runs_on: Optional[str]) -> Optional[str]:
     """액션의 runs_on → 요구 능력 클래스. anywhere/None = 요구 없음(로컬 가능)."""
     if runs_on == "phone_only":
         return PHONE_CLASS
-    if runs_on == "mac_only":
+    if runs_on == "pc_only":   # 폰이 아닌 데스크톱(맥·리눅스·윈도우) 몸 = compute-class
         return COMPUTE_CLASS
     return None
 

@@ -69,6 +69,14 @@ class CognitiveRecallMixin:
             if forage:
                 result = (result + "\n" + forage) if result else forage
 
+            # 연결된 손발(게스트 PC) 프레즌스 — ★강제주입(질의 무관, 라이브일 때만).
+            #   손발 별칭(p0 등)=사용자가 지은 런타임 상태라 어휘·해마가 원리적으로 모른다
+            #   (ep840: "p0 시스템 상태"에 회상이 sense:self_check 로 오도 → others:agents/
+            #   self:limb 탐색 우회 98초). owner 냄새와 같은 상시-노출 원리, 없으면 0토큰.
+            limbs_scent = self._limb_presence_scent()
+            if limbs_scent:
+                result = (result + "\n" + limbs_scent) if result else limbs_scent
+
             # 거친 디스크 골격(어디에) — ★포식 의도일 때만(상시-on 폐기, 웹랜드마크와 같은 게이트).
             #   집중 관심 폴더 아래 거친 디렉토리 트리(맥/윈도우/리눅스 각자 자기 루트). ~5천 자라
             #   파일·디스크 질의에만 값을 하고 그 외엔 무관 → _FORAGE_CUES 없으면 빈 결과(메서드 내 게이트).
@@ -90,6 +98,8 @@ class CognitiveRecallMixin:
                     parts.append("관련기억")
                 if "forage_memory" in result:
                     parts.append("포식기억")
+                if "connected_limbs" in result:
+                    parts.append("손발")
                 if "disk_skeleton" in result:
                     parts.append("디스크골격")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
@@ -102,6 +112,40 @@ class CognitiveRecallMixin:
             print(f"[연상] 생성 실패: {e}")
             traceback.print_exc()
             return ("", 0.0, "")
+
+    def _limb_presence_scent(self) -> str:
+        """연결된 USB 손발(게스트 PC)의 이름+의미 — ★강제주입 냄새.
+
+        별칭은 발급 때 사용자가 짓는 런타임 상태(등기부=limb_keys, 라이브=device_registry)라
+        어휘 설명·해마 용례로는 알 길이 없다 → 라이브 손발이 있는 동안만 이름과 뜻을
+        연상 블록에 상시 노출해 "p0 상태 알아봐"가 탐색 없이 [limbs:guestpc] 로 한 번에
+        라우팅되게 한다. 레지스트리 JSON 읽기뿐(LLM 0)·손발 없으면 빈 문자열(0토큰).
+        limbs 노드가 이 에이전트 어휘 밖이면 냄새도 생략(쓸 수 없는 길 안내=오도)."""
+        try:
+            allowed_nodes = self.config.get("allowed_nodes")
+            if allowed_nodes:
+                from ibl_access import resolve_allowed_nodes
+                allowed = resolve_allowed_nodes(allowed_nodes)
+                if allowed is not None and "limbs" not in allowed:
+                    return ""
+            import device_registry as dr
+            import limb_keys
+            live = dr.live_with_capability(limb_keys.GUEST_PC_CLASS)
+            if not live:
+                return ""
+            rows = []
+            for e in live:
+                alias = e.get("alias") or e.get("device_id") or "?"
+                rec = limb_keys.get_by_device(e.get("device_id") or "") or {}
+                host = rec.get("last_host") or ""
+                host_attr = f' host="{host}"' if host else ""
+                rows.append(f'  <limb name="{alias}"{host_attr}/>')
+            note = ("USB 손발(게스트 PC)이 지금 연결되어 있다. 명령에 아래 이름이 나오면 그 PC를 뜻한다 — "
+                    "그 PC의 셸·파일·시스템 상태 조회는 [limbs:guestpc]{limb: \"이름\", op: shell/read/write/list/info}. "
+                    "이름 언급 없는 시스템 상태는 본체([sense:host]).")
+            return f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>"
+        except Exception:
+            return ""
 
     def _search_related_memory(self, user_message: str) -> str:
         """심층 메모리에서 관련기억 검색 (top-3)

@@ -266,34 +266,56 @@ class SystemAIRunner:
                     if _is_health_check:
                         set_health_check_mode(True)
 
-                    response = self.ai.process_message_with_history(
-                        message_content=ai_message,
-                        from_email=f"{from_agent}@internal",
-                        history=history,
-                        reply_to=f"{from_agent}@internal"
-                    )
-                    print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
+                    # 에피소드 로깅 — 위임 경로도 주행기록에 남긴다. 이 루프는 스케줄러의
+                    # [others:delegate]{scope:system} 하달과 프로젝트 에이전트의 위임 보고 회수가
+                    # 전부 지나는 단일 통로인데, 그동안 start/end 가 WebSocket 핸들러에만 배선돼
+                    # 사각지대였다. ★자가점검(__health_check__)은 제외 — 12시간 전수 순찰이
+                    # episode_log(최근 1000개 보존)를 밀어내 실사용 에피소드를 증발시킨다.
+                    # 자가점검 기록은 self_checks 테이블이 이미 담당. 러너 전용 스레드라
+                    # WebSocket 경로의 에피소드(다른 컨텍스트)와 충돌하지 않는다.
+                    if not _is_health_check:
+                        try:
+                            from episode_logger import EpisodeLogger
+                            EpisodeLogger.start_episode("system_ai", content)
+                        except Exception:
+                            pass
 
-                    # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
-                    # (에이전트에게 응답하는 것이 아님 - 시스템 AI는 위임만 하고 위임받지 않음)
-                    # 최종 응답은 _finalize_task()에서 save_conversation("assistant", response)로 기록됨
+                    try:
+                        response = self.ai.process_message_with_history(
+                            message_content=ai_message,
+                            from_email=f"{from_agent}@internal",
+                            history=history,
+                            reply_to=f"{from_agent}@internal"
+                        )
+                        print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
 
-                    called_another = did_call_agent()
+                        # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
+                        # (에이전트에게 응답하는 것이 아님 - 시스템 AI는 위임만 하고 위임받지 않음)
+                        # 최종 응답은 _finalize_task()에서 save_conversation("assistant", response)로 기록됨
 
-                    if called_another:
-                        # 새 위임이 발생함 → 태스크 유지, 위임 결과 대기
-                        print(f"[SystemAIRunner] call_project_agent 호출됨 - 새 위임 사이클 시작")
-                    else:
-                        # 새 위임 없음 → 최종 응답, 태스크 완료 (삭제됨)
-                        if extracted_task_id:
-                            self._finalize_task(extracted_task_id, response)
+                        called_another = did_call_agent()
+
+                        if called_another:
+                            # 새 위임이 발생함 → 태스크 유지, 위임 결과 대기
+                            print(f"[SystemAIRunner] call_project_agent 호출됨 - 새 위임 사이클 시작")
                         else:
-                            print(f"[SystemAIRunner] 응답 (태스크 없음): {response[:200]}...")
-
-                    clear_current_task_id()
-                    clear_called_agent()
-                    if _is_health_check:
-                        set_health_check_mode(False)
+                            # 새 위임 없음 → 최종 응답, 태스크 완료 (삭제됨)
+                            if extracted_task_id:
+                                self._finalize_task(extracted_task_id, response)
+                            else:
+                                print(f"[SystemAIRunner] 응답 (태스크 없음): {response[:200]}...")
+                    finally:
+                        # 기존엔 예외 시 컨텍스트 정리가 건너뛰어졌음(밖 except 가 잡고 다음
+                        # 메시지로 넘어가 task_id 누수) → finally 로 이동해 에피소드 종료와 함께 확정.
+                        clear_current_task_id()
+                        clear_called_agent()
+                        if _is_health_check:
+                            set_health_check_mode(False)
+                        try:
+                            from episode_logger import EpisodeLogger
+                            EpisodeLogger.end_episode()  # 미시작(자가점검)이면 no-op
+                        except Exception:
+                            pass
 
             except Exception as e:
                 import traceback

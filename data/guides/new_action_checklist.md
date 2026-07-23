@@ -127,8 +127,8 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
         #   기본은 검사 대상: 핸들러가 읽지 않는 파라미터 키는 실행 결과에 param_warning 으로
         #   경고된다 (ibl_param_vocab.check_params — 허용집합=패키지 읽기키∪input_schema∪aliases).
-        # runs_on: mac_only      # (선택) 폰 네이티브: 집 PC 전용이면. 기본 anywhere.
-        #   집 하드웨어/무거운 의존/미검증 패키지=mac_only · 폰 센서=phone_only.
+        # runs_on: pc_only       # (선택) 폰 네이티브: 데스크톱(맥·리눅스·윈도우) 전용이면. 기본 anywhere.
+        #   데스크톱 하드웨어/무거운 의존/미검증 패키지=pc_only · 폰 센서=phone_only.
         #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).
         # op 분기 액션이면:
         ops:

@@ -982,6 +982,19 @@ class ClaudeCodeProvider(BaseProvider):
             print(f"[ClaudeCodeProvider] {self.agent_name}: 시스템 프롬프트 파일 생성 실패({e}) → 인자 폴백")
             return None
 
+    @staticmethod
+    def _current_task_id() -> Optional[str]:
+        """spawn 시점(요청 워커 스레드)의 task_id.
+
+        threading.local 은 subprocess→MCP→HTTP 재진입 스레드로 전파되지 않으므로,
+        여기서 떠서 env(stdio)/헤더(HTTP)로 동봉한다 — agent_id 전파와 같은 부류.
+        시스템 AI cross 위임(_execute_call_project_agent)이 부모 task 를 찾는 데 필요."""
+        try:
+            from thread_context import get_current_task_id
+            return get_current_task_id()
+        except Exception:
+            return None
+
     def _http_mcp_config_path(self) -> Optional[str]:
         """HTTP MCP config 를 spawn 마다 유니크 temp 파일로 쓴다 (플래그 ON일 때만).
 
@@ -998,6 +1011,9 @@ class ClaudeCodeProvider(BaseProvider):
             headers["X-IndieBiz-Agent-Id"] = quote(str(self.agent_id))
         if self.project_path and self.project_path != ".":
             headers["X-IndieBiz-Project-Path"] = quote(str(self.project_path))
+        task_id = self._current_task_id()
+        if task_id:
+            headers["X-IndieBiz-Task-Id"] = quote(str(task_id))
         cfg = {"mcpServers": {"indiebizos": {
             "type": "http",
             # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
@@ -1093,6 +1109,11 @@ class ClaudeCodeProvider(BaseProvider):
         # env가 유일한 통로. channel_send/read의 신원 게이트(시스템 AI=system_ai, 프로젝트 에이전트=자기 계정)에 필요.
         if self.agent_id:
             env["INDIEBIZOS_AGENT_ID"] = str(self.agent_id)
+        # 태스크 컨텍스트: 시스템 AI cross 위임의 부모 task_id 도 같은 통로로 동봉
+        # (threading.local 은 재진입 /ibl/execute 스레드에 없다 — _current_task_id 참조).
+        task_id = self._current_task_id()
+        if task_id:
+            env["INDIEBIZOS_TASK_ID"] = str(task_id)
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

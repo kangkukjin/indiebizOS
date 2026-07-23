@@ -700,6 +700,10 @@ def search_blog_semantic(query: str, limit: int = 5) -> dict:
 
 def get_post_content(post_id: str) -> dict:
     """포스트 전체 내용 조회 (ID 또는 제목으로)"""
+    if not post_id or not str(post_id).strip():
+        return {'success': False,
+                'message': 'post_id 또는 query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
+    post_id = str(post_id).strip()
     try:
         conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row

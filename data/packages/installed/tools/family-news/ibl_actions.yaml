@@ -4,7 +4,7 @@ nodes:
       family_news:
         returns: items
         fixture: '[others:family_news]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: '가족신문 — USB 로 연결된 폰의 사진(지난 발행 이후, 첫 판은 최근 7일)으로 신문 판을 조판해, 공개 주소(/n/<5자 코드>)에 판을 누적 발행하는 가족용 정기간행물. 사진의 EXIF GPS 를 행정동 장소명으로 바꿔 싣고(웹판 사진 자체는 EXIF 제거), 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.'
         target_description: 'op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).'
         target_key: op

@@ -4,7 +4,7 @@ nodes:
       portal:
         returns: items
         fixture: '[others:portal]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: '개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 회원 = 메신저 이웃과 같은 책(business.db)이고 레벨(0~4, 메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다(어디서 승급하든 같은 값). 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).'
         target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
         target_key: op

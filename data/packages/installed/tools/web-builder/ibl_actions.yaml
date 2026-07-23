@@ -2,7 +2,7 @@ node: engines
 actions:
   web_site:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
     target_description: 'op로 분기 (기본 list).
 
@@ -27,7 +27,7 @@ actions:
     - 사이트수정
   web:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
     target_description: 'op로 분기 (기본 preview).
 
@@ -69,7 +69,7 @@ actions:
     - vercel
   web_component:
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
     target_description: 'op로 분기 (기본 fetch).
 

@@ -219,12 +219,17 @@ async function serveCached(env, ctx, cacheKey, ctype, request, macAbsUrl, cachea
     return new Response(orig.body, { status: 206, headers: h });
   }
   // 전체 응답: 캐시 대상이면 스트림 분기(뷰어 + R2), 아니면 그냥 중계.
-  if (cacheable) {
+  // X-Transcode-Live = 맥이 지금 인코딩하며 흘리는 생방송(fMP4) — 중단되면 반쪽이라
+  // R2 캐시 금지. 맥 쪽 faststart 캐시가 완성되면 다음 조회 때 완전판이 캐시된다.
+  const live = orig.headers.get("x-transcode-live");
+  if (cacheable && !live) {
     const [toClient, toCache] = orig.body.tee();
     ctx.waitUntil(env.BUCKET.put(cacheKey, toCache, { httpMetadata: { contentType: ct } }));
     return new Response(toClient, { headers: { "content-type": ct, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" } });
   }
-  return new Response(orig.body, { headers: { "content-type": ct, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" } });
+  const passHeaders = { "content-type": ct, "cache-control": live ? "no-store" : "public, max-age=86400" };
+  if (!live) passHeaders["accept-ranges"] = "bytes";   // 생방송은 Range 불가
+  return new Response(orig.body, { headers: passHeaders });
 }
 
 export default {
@@ -405,7 +410,7 @@ export default {
     if (kind === "list") {
       return proxyList(env, slug, url.searchParams.get("path") || "");
     }
-    if (kind === "thumb" || kind === "media") {
+    if (kind === "thumb" || kind === "media" || kind === "sub") {
       const fid = rest[1] || "";
       const rel = url.searchParams.get("rel") || "";
       const v = url.searchParams.get("v") || "0";
@@ -415,6 +420,14 @@ export default {
         const key = `cache/thumb/${fid}/${h}_${v}.jpg`;
         const macSub = `thumb/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`;
         return serveCached(env, ctx, key, "image/jpeg", request, macUrl(env, macSub), true);
+      }
+      if (kind === "sub") {
+        // 자막 — 맥이 srt/ass/smi 를 WebVTT 로 변환해 주고 R2 에 캐시. cls=SMI 언어 클래스.
+        const cls = url.searchParams.get("cls") || "";
+        const key = `cache/sub/${fid}/${h}_${cls ? cyrb53(cls) + "_" : ""}${v}.vtt`;
+        const macSub = `subtitle/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}`
+          + `?rel=${encodeURIComponent(rel)}${cls ? "&cls=" + encodeURIComponent(cls) : ""}`;
+        return serveCached(env, ctx, key, "text/vtt; charset=utf-8", request, macUrl(env, macSub), true);
       }
       const key = `cache/media/${fid}/${h}_${v}`;
       const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`;

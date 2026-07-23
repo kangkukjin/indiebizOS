@@ -4,7 +4,7 @@ actions:
     aliases:
       chart_type: [type]
     returns: effect
-    runs_on: mac_only
+    runs_on: pc_only
     description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
     target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).
 

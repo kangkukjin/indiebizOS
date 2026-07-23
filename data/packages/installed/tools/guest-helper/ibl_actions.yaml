@@ -1,0 +1,117 @@
+nodes:
+  limbs:
+    actions:
+      guestpc:
+        returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
+        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기). 두뇌는 허브(내 PC), 이 액션은 명령을 손발로 내려보내 그 PC 에서 돌린다. 눈 없음(화면 캡처·GUI 조작은 미지원) — 셸/파일만. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
+        group: device
+        target_key: op
+        router: handler
+        tool: guestpc_op
+        scope: system
+        runs_on: pc_only   # 허브(데스크톱)에서 실행 → 손발로 하달. 폰/손발 자신은 이 액션의 주체가 아니다.
+        ops:
+          default: shell
+          values:
+            shell: 게스트 PC 셸 명령 실행 (cmd — win=cmd/c, mac·linux=sh -c)
+            read: 게스트 PC 파일 읽기 (path, 200KB 상한)
+            write: 게스트 PC 파일 쓰기 (path + content)
+            list: 게스트 PC 디렉토리 목록 (path, 생략 시 현재)
+            info: 게스트 PC 정보 (os/arch/hostname/cwd)
+            detach: 손발 해제 — 헬퍼 종료 (그 PC 무잔류, 재실행 시 자동 재연결)
+        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기. 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 실행 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제.
+        keywords:
+        - 게스트PC
+        - 남의PC
+        - USB
+        - 손발
+        - 원격셸
+        - 원격PC
+        - 파일처리
+        - 손발해제
+        - 연결해제
+  self:
+    actions:
+      limb:
+        returns: effect   # 발급·폐기는 부작용. effect 는 자가점검이 자동 실행하지 않는다.
+        description: USB 손발 자격 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
+        target_description: 'op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. list: 발급한 손발과 연결 상태. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용.'
+        group: identity
+        target_key: op
+        router: handler
+        tool: limb_op
+        scope: system
+        runs_on: pc_only   # 자격 원장·USB 페이로드는 허브(데스크톱)에서 발급.
+        ops:
+          default: issue
+          values:
+            issue: 새 손발 키 발급 + USB 페이로드 생성 (alias 만 필수, 기본=전 OS·무기한 휴대용)
+            list: 발급한 손발 자격과 지금 연결 상태
+            revoke: 손발 키 폐기 — 영구 차단 (target = 키·device_id·별칭)
+            approve: 손발 수동 잠금/열기 (target, approved) — 자동승인이라 평소 불필요
+        implementation: 허브 handler(limb_op) → limb_keys.py 원장(mint/list_keys/revoke/approve). issue 는 public_face.get_public_base() 주소 + 새 키로 outputs/limb_issue/<alias>/indiebiz-helper.json + 안내문을 쓰고, helper/dist 의 빌드된 실행파일을 동봉(os 생략=전 OS, 지정=그 OS 만).
+        keywords:
+        - 손발발급
+        - USB헬퍼
+        - limb
+        - 손발승인
+        - 손발폐기
+        - 헬퍼만들기
+
+tool_json:
+  header:
+    id: guest-helper
+    name: Guest PC Helper (USB 손발)
+    description: USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령을 하달해 그 PC 에서 실행. 발급([self:limb])과 조작([limbs:guestpc]).
+    version: 1.0.0
+  tools:
+  - name: guestpc_op
+    description: 게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. detach=헬퍼 종료+승인 해제.
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 수행할 동작
+        limb:
+          type: string
+          description: 대상 손발 별칭 또는 device_id (여러 개 붙어 있을 때. 하나면 생략)
+        cmd:
+          type: string
+          description: 실행할 셸 명령 (op=shell; win=cmd/c, mac·linux=sh -c)
+        cwd:
+          type: string
+          description: 셸 작업 디렉토리 (op=shell, 선택)
+        timeout:
+          type: integer
+          description: 셸 타임아웃 초 (op=shell, 기본 120)
+        path:
+          type: string
+          description: 대상 파일/디렉토리 경로 (op=read/write/list)
+        content:
+          type: string
+          description: 쓸 내용 (op=write)
+  - name: limb_op
+    description: USB 손발 자격 원장 디스패처. op으로 issue/list/revoke/approve 분기 (기본 issue).
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 수행할 동작
+        alias:
+          type: string
+          description: 손발 이름 (op=issue, 생략 시 자동)
+        ttl_days:
+          type: integer
+          description: 키 유효기간 일수 (op=issue, 기본 14, 0=무기한)
+        os:
+          type: string
+          description: 헬퍼 실행파일 동봉 대상 win/mac/linux (op=issue, 생략 시 빌드된 전 OS 동봉)
+        target:
+          type: string
+          description: 대상 키·device_id·별칭 (op=revoke/approve)
+        approved:
+          type: boolean
+          description: 승인 여부 (op=approve, 기본 true — false면 승인취소)

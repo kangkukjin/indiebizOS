@@ -9,4 +9,5 @@ export { ContextMenu } from './ContextMenu';
 export { NodePresence } from './NodePresence';
 export { ActiveProjects } from './ActiveProjects';
 export { ModelGearLever } from './ModelGearLever';
+export { LimbSwitch } from './LimbSwitch';
 export * from './dialogs';

@@ -123,6 +123,32 @@
       }
     },
     {
+      "name": "publish_newspaper",
+      "description": "신문 발행 — 판(edition) 3파일을 앱모드 outputs/ 에 저장합니다.\n\n## 흐름\n- 서버 설정(newspaper_config.json)의 제호·키워드 로드 (없으면 기본값 결정화)\n- search_gnews 배치 팬아웃 1회 (핫토픽 headlines + 키워드별, 경량 편집장 curate 7, 가디언 합류)\n- 판 조립 → newspaper_current.json(데스크탑)/md(뷰어)/html(공유) + newspaper_archive/ 날짜본\n\n## 사용 시점\n- \"신문 발행해줘\", 신문앱 새 신문 발행 버튼 — 파라미터 없이 호출하면 서버 설정대로.\n\n## 다른 도구와의 관계\n- 개별 뉴스 검색: search_gnews / 발행된 판 읽기: 파일 읽기(newspaper_current.md)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "string",
+            "description": "섹션 키워드 목록 (쉼표/개행 구분, JSON 리스트도 허용). 미지정 시 서버 설정(newspaper_config.json)."
+          },
+          "title": {
+            "type": "string",
+            "description": "제호 (미지정 시 서버 설정, 기본 \"청주 데일리\")."
+          },
+          "sources": {
+            "type": "string",
+            "description": "큐레이션 소스 (기본 \"gnews,guardian\" — 영어 키워드에 가디언 합류, \"gnews\"만 주면 끔)."
+          },
+          "wait": {
+            "type": "boolean",
+            "description": "true면 동기 발행(완료까지 ~1분 블로킹). 기본 false=백그라운드 시작 후 즉시 반환, 진행은 outputs/newspaper_publish_state.json."
+          }
+        },
+        "required": []
+      }
+    },
+    {
       "name": "launch_sites",
       "description": "즐겨찾기 사이트 런처(대시보드) 및 관리.\n\n## 기능 (action)\n- open_ui (기본값): 즐겨찾기 대시보드 페이지를 브라우저에 띄움\n- list: 저장된 사이트 목록 텍스트로 확인\n- add: 새 사이트 추가 (name, url 필요)\n- remove: 사이트 삭제 (name 필요)",
       "input_schema": {

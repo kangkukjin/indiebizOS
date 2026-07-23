@@ -546,6 +546,14 @@ def execute(tool_input: dict, context):
         except Exception as e:
             return format_json({"success": False, "error": str(e)})
 
+    # 신문 발행 — 판 3파일 결정화([engines:newspaper]). 아래 search_gnews 배치 경로를
+    # 그대로 재사용(shim 컨텍스트로 자기 재호출) — 취재·편성 로직 중복 없음.
+    elif tool_name == "publish_newspaper":
+        from types import SimpleNamespace
+        tool_np = load_module("tool_newspaper")
+        _shim = SimpleNamespace(tool_name="search_gnews", project_path=project_path)
+        return format_json(tool_np.publish_newspaper(tool_input, lambda ti: execute(ti, _shim)))
+
     # Google News 검색
     elif tool_name == "search_gnews":
         # 배치 팬아웃(queries: 리스트/콤마·개행) — 각 검색어를 돌려 query 태그된 항목을 한 목록으로.

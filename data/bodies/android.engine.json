@@ -21,8 +21,10 @@
     "api_health",
     "api_ibl",
     "api_launcher_web",
+    "api_limb",
     "api_models",
     "api_multi_chat",
+    "api_music",
     "api_nas",
     "api_nodes",
     "api_notifications",
@@ -110,6 +112,7 @@
     "launcher_web_app",
     "launcher_web_render",
     "launcher_web_shell",
+    "limb_keys",
     "logging_utils",
     "memory_consolidation",
     "migrate_alias_retirement",
@@ -195,8 +198,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 189,
-    "engine": 174,
+    "total": 192,
+    "engine": 177,
     "blocklist": 15
   }
 }

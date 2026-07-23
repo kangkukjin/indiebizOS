@@ -8,7 +8,7 @@
         target_key: path
         router: system
         func: output_open
-        runs_on: mac_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
+        runs_on: pc_only   # 집 PC Finder/탐색기 GUI — 폰 무의미
         implementation: subprocess로 OS 기본 앱(Finder/브라우저) 실행
         keywords:
         - 열기
@@ -22,7 +22,7 @@
         target_key: app
         router: system
         func: launcher_command
-        runs_on: mac_only   # Electron 데스크탑 런처 창 — 폰 무의미
+        runs_on: pc_only   # Electron 데스크탑 런처 창 — 폰 무의미
         implementation: WebSocket으로 Electron Launcher에 open_<app>_window 명령 전송
         keywords:
         - 창
@@ -53,3 +53,4 @@
     - desktop.md
     - open_window.md
     - android.md
+    - guest_helper.md

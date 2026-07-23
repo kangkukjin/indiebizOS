@@ -8,8 +8,10 @@
 #  읽기를 `@hub` 으로 지정해 컴퓨트 노드(맥)에서 실행시킨다:
 #   - 맥/데스크탑/원격(맥 백엔드)  : @hub = 자기 자신 → 로컬 읽기.
 #   - 폰 네이티브                 : @hub = 맥으로 포워드(project_id=앱모드 동봉) → 맥이 읽어 결과 반환.
-#  경로는 %BASE% 절대경로(=서빙 노드 기준이라 포워드 시 어긋남) 대신 **상대경로 + scope:workspace**
-#  를 써서 어느 노드에서 실행되든 그 노드의 projects/앱모드/outputs 로 풀리게 한다.
+#  경로는 %BASE% 절대경로(=서빙 노드 기준이라 포워드 시 어긋남) 대신 **상대경로**를 써서
+#  어느 노드에서 실행되든 프로젝트 컨텍스트(project_id=앱모드)의 projects/앱모드/outputs 로 풀리게 한다.
+#  (★scope 는 params 로 넘겨도 무시됨 — handler 라우팅의 scope 는 액션 *정의*의 선언만 읽는다.
+#   경로 해소의 실제 주체는 앱모드 프로젝트 컨텍스트다. 2026-07-24 죽은 param 제거.)
 
 instrument: newspaper
 icon: 📰
@@ -20,7 +22,7 @@ modes:
   # ── PC 가 발행한 최신 신문 판을 읽어 보여준다(재취재 없음). @hub = 맥에서 읽기(폰은 포워드). ──
   - name: 신문
     auto_run: true
-    action: '[self:read]{path: "outputs/newspaper_current.md", scope: "workspace", blocks: true}@hub'
+    action: '[self:read]{path: "outputs/newspaper_current.md", blocks: true}@hub'
     view:
       - type: blocks
         from: items
@@ -29,11 +31,15 @@ modes:
     # read 는 @hub(맥에서 읽기), share 는 phone_only(폰에서 저장+ACTION_SEND). 공유는 사용자 탭.
     buttons:
       - label: 📤 폰에 저장·공유
-        action: '[self:read]{path: "outputs/newspaper_current.html", scope: "workspace"}@hub >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'
+        action: '[self:read]{path: "outputs/newspaper_current.html"}@hub >> [limbs:phone]{op: "share", filename: "newspaper.html", mime: "text/html"}'
 
-  # ── 발행: 시스템 AI(허브=PC)에 신문 발행 위임 — 폰/원격 어디서든 누르면 PC 에서 발행.
-  #  레시피=guides/newspaper_guide.md 현행 절(고정 파일 newspaper_current.md 에 저장). 정기보고 '작성' 선례. ──
+  # ── 발행: 결정론적 IBL — [engines:newspaper] 가 허브(PC)에서 발행 레시피를 직접 실행.
+  #  (구 방식=시스템 AI 자연어 위임: AI 가 레시피를 안 따르면 조용히 무시됐음 → 2026-07-23 결정화.)
+  #  백그라운드 발행(즉시 반환, ~1분): 폰 @hub 포워드 타임아웃(30s)보다 발행이 길어서.
+  #  진행 확인=발행 상태 버튼(newspaper_publish_state.json). 완료 후 신문 탭 재열림=새 판.
   - name: 발행
     buttons:
       - label: 📰 새 신문 발행
-        action: '[others:delegate]{scope: "system", message: "신문 새로 발행해줘 — newspaper_guide.md 현행 발행 레시피대로(핫토픽+키워드 섹션 gnews 팬아웃) 고정 파일(newspaper_current.md, project_id 앱모드)에 발행", from_agent: "신문앱"}@hub'
+        action: '[engines:newspaper]{}@hub'
+      - label: 🔎 발행 상태
+        action: '[self:read]{path: "outputs/newspaper_publish_state.json"}@hub'

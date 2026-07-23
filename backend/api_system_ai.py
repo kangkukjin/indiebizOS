@@ -162,6 +162,7 @@ def chat_with_system_ai(chat: ChatMessage):
     import uuid
     from thread_context import set_current_task_id, clear_current_task_id, did_call_agent, clear_called_agent
     from system_ai_memory import create_task as create_system_ai_task
+    from episode_logger import EpisodeLogger
 
     global _docs_initialized
 
@@ -199,6 +200,14 @@ def chat_with_system_ai(chat: ChatMessage):
         )
         set_current_task_id(task_id)
         clear_called_agent()
+        # 에피소드 로깅 — /system-ai/chat 는 원격 런처 자율주행 탭이 타는 HTTP 경로인데,
+        # 그동안 start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼 있어 주행기록
+        # 사각지대였다(forage_chat 선례와 같은 한 쌍). 동기·백그라운드 모두 _process()
+        # 한 덩어리를 한 스레드에서 지나므로 여기 한 곳이면 두 경우를 다 덮는다.
+        try:
+            EpisodeLogger.start_episode("system_ai", chat.message)
+        except Exception:
+            pass
         try:
             # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
             history = get_history_for_ai(limit=7)
@@ -218,7 +227,18 @@ def chat_with_system_ai(chat: ChatMessage):
                 images=images_data
             )
 
-            if did_call_agent():
+            delegated = did_call_agent()
+            if not delegated:
+                # claude_code(아웃오브프로세스) 경로: cross 위임이 MCP→HTTP 재진입 스레드에서
+                # 실행돼 set_called_agent 가 이 스레드의 threading.local 에 안 찍힌다 →
+                # DB pending_delegations 로 최종 확인 (WS 핸들러의 3단 감지와 같은 폴백).
+                try:
+                    from system_ai_memory import get_task as _get_task
+                    _t = _get_task(task_id)
+                    delegated = bool(_t and (_t.get('pending_delegations') or 0) > 0)
+                except Exception:
+                    pass
+            if delegated:
                 # 위임이 발생함 → 결과는 나중에 _finalize_task 가 저장(폴링/WebSocket이 회수)
                 return f"[위임 중] 프로젝트 에이전트에게 작업을 위임했습니다. 결과는 잠시 후 도착합니다.\n\n{response_text}"
 
@@ -230,6 +250,10 @@ def chat_with_system_ai(chat: ChatMessage):
         finally:
             clear_current_task_id()
             clear_called_agent()
+            try:
+                EpisodeLogger.end_episode()
+            except Exception:
+                pass
 
     if chat.background:
         def _worker():

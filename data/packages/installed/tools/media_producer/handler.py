@@ -103,7 +103,7 @@ def _normalize_tts_text(text):
 
 
 async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz"):
-    import edge_tts  # 지연 import — 폰엔 없음(tts는 mac_only라 폰선 호출 안 됨)
+    import edge_tts  # 지연 import — 폰엔 없음(tts는 pc_only라 폰선 호출 안 됨)
     text = _normalize_tts_text(text)  # 서식 잡음 제거 — 모든 tts 호출(브리핑·영상 나레이션) 공통
     communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
     await communicate.save(output_path)

@@ -4,7 +4,7 @@ nodes:
       bulletin:
         returns: items
         fixture: '[others:bulletin]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: '로그인 없는 자유게시판 — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. op:status(기본, 게시판 목록·주소)/create/config/delete/detail(모더레이션용 최근 글)/post_delete(글 삭제)/portals(포털 붙임 대상 목록). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 글을 저장·서빙, 파일시스템이 곧 진실. 여러 게시판이 각각 다른 주소를 갖고, 특정 게시판을 특정 포털에 붙이면(portal display) 포털 홈에서 그 게시판으로 들어간다. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.'
         target_description: 'op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.'
         target_key: op

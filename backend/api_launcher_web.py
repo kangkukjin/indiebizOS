@@ -28,8 +28,8 @@ CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "launcher_we
 async def serve_artifact_file(path: str):
     """산출물 파일 바이트 서빙 — 빌림-완성(borrow-completion)용.
 
-    폰서 mac_only 액션을 호출하면 맥이 실행해 *맥 fs*에 파일을 만든다. 폰은 그 파일을
-    이 엔드포인트로 되가져와(_forward_to_mac 의 artifact pull) 로컬에 쓴다 → mac_only 도
+    폰서 pc_only 액션을 호출하면 맥이 실행해 *맥 fs*에 파일을 만든다. 폰은 그 파일을
+    이 엔드포인트로 되가져와(_forward_to_mac 의 artifact pull) 로컬에 쓴다 → pc_only 도
     폰서 호출하면 산출물까지 제대로 돌아온다. 인증은 remote_access_guard(외부=세션 필요).
     보안: BASE_PATH 하위(산출물 트리)만, realpath 로 심볼릭 우회 차단, 파일만.
     """
@@ -412,6 +412,10 @@ def is_public_remote_path(method: str, path: str) -> bool:
         return True
     # 원격 파인더(/nas/*)는 자체 session_token 인증을 사용하므로 위임
     if path == "/nas" or path.startswith("/nas/"):
+        return True
+    # USB 헬퍼(손발) 수신(/limb/connect·poll·result)은 자체 limb key 인증 보유.
+    # USB 엔 맥 비밀번호가 아니라 limb key 가 실리므로 런처 세션을 요구하지 않는다.
+    if method == "POST" and path.startswith("/limb/"):
         return True
     # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
     if method == "GET" and path.startswith("/showcase/"):

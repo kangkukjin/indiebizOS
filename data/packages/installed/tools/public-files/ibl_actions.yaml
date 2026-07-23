@@ -4,7 +4,7 @@ nodes:
       showcase:
         returns: items
         fixture: '[others:showcase]{op: "status"}'
-        runs_on: mac_only
+        runs_on: pc_only
         description: '선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/config + 바스켓(basket_*). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 그 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성, 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자 코드>). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.'
         target_description: 'op:status(추가한 폴더 목록·각 폴더가 담긴 주소 + 전역 설정 반환) / add(path 폴더를 추가, title 표시명·mode media|files — 추가만으론 비공개, 바스켓에 담아야 공개) / remove(path 폴더 제거, 모든 주소에서 빠짐) / config(path 있으면 폴더 표시명, 없으면 전역 strip_exif·transcode_video·public_base). 바스켓(공개 주소): basket_list / basket_save(title, all_folders=true면 전체공개 갤러리, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더가 어느 주소에 담기느냐가 곧 보안 경계.'
         target_key: op

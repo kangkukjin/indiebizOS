@@ -1,0 +1,95 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "guest-helper",
+  "name": "Guest PC Helper (USB 손발)",
+  "description": "USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령을 하달해 그 PC 에서 실행. 발급([self:limb])과 조작([limbs:guestpc]).",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "guestpc_op",
+      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. detach=헬퍼 종료+승인 해제.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "수행할 동작",
+            "enum": [
+              "shell",
+              "read",
+              "write",
+              "list",
+              "info",
+              "detach"
+            ],
+            "default": "shell"
+          },
+          "limb": {
+            "type": "string",
+            "description": "대상 손발 별칭 또는 device_id (여러 개 붙어 있을 때. 하나면 생략)"
+          },
+          "cmd": {
+            "type": "string",
+            "description": "실행할 셸 명령 (op=shell; win=cmd/c, mac·linux=sh -c)"
+          },
+          "cwd": {
+            "type": "string",
+            "description": "셸 작업 디렉토리 (op=shell, 선택)"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "셸 타임아웃 초 (op=shell, 기본 120)"
+          },
+          "path": {
+            "type": "string",
+            "description": "대상 파일/디렉토리 경로 (op=read/write/list)"
+          },
+          "content": {
+            "type": "string",
+            "description": "쓸 내용 (op=write)"
+          }
+        }
+      }
+    },
+    {
+      "name": "limb_op",
+      "description": "USB 손발 자격 원장 디스패처. op으로 issue/list/revoke/approve 분기 (기본 issue).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "수행할 동작",
+            "enum": [
+              "issue",
+              "list",
+              "revoke",
+              "approve"
+            ],
+            "default": "issue"
+          },
+          "alias": {
+            "type": "string",
+            "description": "손발 이름 (op=issue, 생략 시 자동)"
+          },
+          "ttl_days": {
+            "type": "integer",
+            "description": "키 유효기간 일수 (op=issue, 기본 14, 0=무기한)"
+          },
+          "os": {
+            "type": "string",
+            "description": "헬퍼 실행파일 동봉 대상 win/mac/linux (op=issue, 생략 시 빌드된 전 OS 동봉)"
+          },
+          "target": {
+            "type": "string",
+            "description": "대상 키·device_id·별칭 (op=revoke/approve)"
+          },
+          "approved": {
+            "type": "boolean",
+            "description": "승인 여부 (op=approve, 기본 true — false면 승인취소)"
+          }
+        }
+      }
+    }
+  ]
+}

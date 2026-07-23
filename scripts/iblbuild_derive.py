@@ -76,10 +76,10 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
 
     runnable_actions(폰서 실행 가능):
       - runs_on == phone_only  → 폰 전용 하드웨어 액션(항상 포함)
-      - runs_on == mac_only   → 제외
+      - runs_on == pc_only    → 제외
       - runs_on == anywhere(기본):
           · handler/driver 라우터(패키지 보유) → 패키지가 PHONE_VERIFIED 일 때만
-          · 비-패키지(system/engine 등) → 기본 포함(mac_only 로 명시 태그 안 한 한)
+          · 비-패키지(system/engine 등) → 기본 포함(pc_only 로 명시 태그 안 한 한)
     packages: 폰에 번들할 패키지 = PHONE_VERIFIED (Gradle 이 읽음).
     """
     tool_index = build_tool_index(root)
@@ -93,7 +93,7 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
                 continue
             qualified = f"{node_name}:{action_name}"
             ro = action.get("runs_on", DEFAULT_RUNS_ON)
-            if ro == "mac_only":
+            if ro == "pc_only":
                 continue
             if ro == "phone_only":
                 runnable.append(qualified)

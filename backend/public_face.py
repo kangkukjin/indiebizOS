@@ -260,7 +260,9 @@ def _map(method: str, path: str, query: dict, raw_query: str):
             rel = query.get("rel", "")
             if not rel:
                 return {"status": 400}
-            return {"target": f"/showcase/{kind}/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}",
+            t = query.get("t", "")
+            tail = f"&t={_enc(t)}" if t else ""       # 오프셋 스트림(첫 시청 중 seek)
+            return {"target": f"/showcase/{kind}/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
                     "cache": "public, max-age=86400"}
         if kind == "sub" and len(rest) > 1 and rest[1]:
             # 자막 — srt/ass/smi 를 WebVTT 로 변환해 서빙(worker.js 의 sub 라우트와 동형).
@@ -269,7 +271,8 @@ def _map(method: str, path: str, query: dict, raw_query: str):
             if not rel:
                 return {"status": 400}
             cls = query.get("cls", "")
-            tail = f"&cls={_enc(cls)}" if cls else ""
+            shift = query.get("shift", "")
+            tail = (f"&cls={_enc(cls)}" if cls else "") + (f"&shift={_enc(shift)}" if shift else "")
             return {"target": f"/showcase/subtitle/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
                     "cache": "public, max-age=86400"}
         return {"spa": True}

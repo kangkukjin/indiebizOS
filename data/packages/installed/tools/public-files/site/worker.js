@@ -422,15 +422,22 @@ export default {
         return serveCached(env, ctx, key, "image/jpeg", request, macUrl(env, macSub), true);
       }
       if (kind === "sub") {
-        // 자막 — 맥이 srt/ass/smi 를 WebVTT 로 변환해 주고 R2 에 캐시. cls=SMI 언어 클래스.
+        // 자막 — 맥이 srt/ass/smi 를 WebVTT 로 변환해 주고 R2 에 캐시. cls=SMI 언어 클래스,
+        // shift=오프셋 스트림(t)과 짝인 시각 당김(캐시 키에 포함).
         const cls = url.searchParams.get("cls") || "";
-        const key = `cache/sub/${fid}/${h}_${cls ? cyrb53(cls) + "_" : ""}${v}.vtt`;
+        const shift = url.searchParams.get("shift") || "";
+        const key = `cache/sub/${fid}/${h}_${cls ? cyrb53(cls) + "_" : ""}${shift ? "s" + shift + "_" : ""}${v}.vtt`;
         const macSub = `subtitle/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}`
-          + `?rel=${encodeURIComponent(rel)}${cls ? "&cls=" + encodeURIComponent(cls) : ""}`;
+          + `?rel=${encodeURIComponent(rel)}${cls ? "&cls=" + encodeURIComponent(cls) : ""}`
+          + (shift ? "&shift=" + encodeURIComponent(shift) : "");
         return serveCached(env, ctx, key, "text/vtt; charset=utf-8", request, macUrl(env, macSub), true);
       }
-      const key = `cache/media/${fid}/${h}_${v}`;
-      const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`;
+      // t = 오프셋 스트림(첫 시청 중 seek) — 키를 갈라 R2 의 전체판 캐시가 잘못 응답하지
+      // 않게 하고, 생방송(X-Transcode-Live)이라 저장도 안 된다.
+      const t = url.searchParams.get("t") || "";
+      const key = `cache/media/${fid}/${h}_${v}${t ? "_t" + t : ""}`;
+      const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`
+        + (t ? "&t=" + encodeURIComponent(t) : "");
       return serveCached(env, ctx, key, ctypeOf(rel), request, macUrl(env, macSub), true);
     }
     return serveIndex(env);

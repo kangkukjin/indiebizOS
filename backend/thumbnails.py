@@ -195,15 +195,84 @@ def transcode_video_to_mp4(src: str, dst: str, timeout: int = 180) -> bool:
 # faststart 캐시도 쓴다(인코딩 1회). 캐시는 .part 로 쓰다 완성 시에만 rename —
 # 다음 재생부터는 캐시 직행(Range·seek 완전).
 
+
+def probe_video_duration(path: str) -> float:
+    """ffprobe 로 총 길이(초). 실패 시 0.0."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "csv=p=0", path],
+            capture_output=True, timeout=20,
+        )
+        if r.returncode == 0:
+            return float(r.stdout.decode("utf-8", "ignore").strip() or 0)
+    except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, Exception):
+        pass
+    return 0.0
+
+
+def patch_fmp4_duration(head: bytes, duration_s: float) -> bytes:
+    """fMP4 init 세그먼트(ftyp+moov)의 mvhd·tkhd·mdhd duration 을 실제 길이로 패치.
+
+    empty_moov 생방송은 duration=0 이라 브라우저가 '버퍼된 만큼'을 총 길이로 표시
+    (긴 영화가 몇 초짜리로 보임). 세 박스를 모두 박아야 Chrome(libavformat)이 총
+    길이를 믿는다 — mvhd 만으론 트랙 duration 0 이 이겨 무시됨(실측). 박스 크기는
+    안 바뀌므로 in-place 치환. 실패해도 원본 그대로 반환(재생엔 지장 없음)."""
+    import struct
+    if duration_s <= 0:
+        return head
+    try:
+        buf = bytearray(head)
+        moof = head.find(b"moof")
+        end = moof if moof > 0 else len(head)
+
+        def _find_all(tag):
+            pos, out = 0, []
+            while True:
+                i = head.find(tag, pos, end)
+                if i < 0:
+                    return out
+                out.append(i)
+                pos = i + 4
+
+        mvhd = _find_all(b"mvhd")
+        if not mvhd:
+            return head
+        i = mvhd[0]
+        if head[i + 4] == 0:
+            movie_ts = struct.unpack(">I", head[i + 16:i + 20])[0]
+            buf[i + 20:i + 24] = struct.pack(">I", int(duration_s * movie_ts))
+        else:
+            movie_ts = struct.unpack(">I", head[i + 24:i + 28])[0]
+            buf[i + 28:i + 36] = struct.pack(">Q", int(duration_s * movie_ts))
+        for i in _find_all(b"tkhd"):          # duration 단위 = 무비 타임스케일
+            if head[i + 4] == 0:
+                buf[i + 24:i + 28] = struct.pack(">I", int(duration_s * movie_ts))
+            else:
+                buf[i + 32:i + 40] = struct.pack(">Q", int(duration_s * movie_ts))
+        for i in _find_all(b"mdhd"):          # duration 단위 = 그 트랙 타임스케일
+            if head[i + 4] == 0:
+                ts = struct.unpack(">I", head[i + 16:i + 20])[0]
+                buf[i + 20:i + 24] = struct.pack(">I", int(duration_s * ts))
+            else:
+                ts = struct.unpack(">I", head[i + 24:i + 28])[0]
+                buf[i + 28:i + 36] = struct.pack(">Q", int(duration_s * ts))
+        return bytes(buf)
+    except Exception:
+        return head
+
 def start_stream_transcode(src: str, cache_dst: str):
     """스트리밍 트랜스코드 시작. (proc, tmp경로) 반환 — 호출자가 proc.stdout 을 읽어
-    흘리고, 끝나면 finish_/중단하면 detach_stream_transcode 를 불러야 한다.
-    tee 슬레이브 경로의 특수문자(| [ ] 및 윈도우 드라이브 콜론) 이슈를 피하려고
-    cwd 를 캐시 폴더로 두고 상대 이름만 쓴다."""
+    흘리면서 같은 바이트를 tmp(.part)에 쓰고, 끝나면 finish_/중단하면
+    detach_stream_transcode 를 불러야 한다(완주 시 faststart 리먹스로 캐시 완성).
+
+    ★tee 머서 금지: tee 의 파이프 슬레이브엔 h264 extradata(avcC)가 빠져
+    'missing picture in access unit' — 디코드 불가 스트림이 나온다(실측).
+    단일 fMP4 출력 + 파이썬 tee 가 정답."""
     import uuid
     cache_dir = os.path.dirname(cache_dst) or "."
     os.makedirs(cache_dir, exist_ok=True)
-    tmp_name = f".{uuid.uuid4().hex[:12]}.part.mp4"
+    tmp = os.path.join(cache_dir, f".{uuid.uuid4().hex[:12]}.part.mp4")
     cmd = [
         "ffmpeg", "-v", "error",
         "-i", os.path.abspath(src),
@@ -211,22 +280,53 @@ def start_stream_transcode(src: str, cache_dst: str):
         "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "128k",
         "-map", "0:v:0", "-map", "0:a:0?",
-        "-f", "tee",
-        f"[f=mp4:movflags=+faststart]{tmp_name}|"
-        f"[f=mp4:movflags=frag_keyframe+empty_moov+default_base_moof]pipe:1",
+        "-f", "mp4",
+        "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+        "pipe:1",
     ]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                            cwd=cache_dir)
-    return proc, os.path.join(cache_dir, tmp_name)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    return proc, tmp
+
+
+def start_offset_stream(src: str, t: float, copy: bool = False):
+    """t초 지점부터의 fMP4 오프셋 스트림(캐시 tee 없음 — 부분이라 캐시 부적격).
+    copy=True 면 재인코딩 없이 스트림 복사(이미 H.264 캐시가 소스일 때, 즉시 시작).
+    타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
+    if copy:
+        codec = ["-c", "copy"]
+    else:
+        codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+                 "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k"]
+    cmd = (["ffmpeg", "-v", "error", "-ss", str(max(0.0, t)), "-i", os.path.abspath(src)]
+           + codec + ["-map", "0:v:0", "-map", "0:a:0?", "-f", "mp4",
+                      "-movflags", "frag_keyframe+empty_moov+default_base_moof", "pipe:1"])
+    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+
+def kill_stream(proc) -> None:
+    """오프셋 스트림 중단 — 캐시 완주 의무가 없으니 그냥 죽인다."""
+    try:
+        proc.kill()
+    except Exception:
+        pass
 
 
 def finish_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
-    """ffmpeg 종료 대기 후 성공이면 tmp→캐시 원자 교체, 실패면 tmp 폐기.
-    동시 시청으로 변환이 겹치면 tmp 가 제각각이라 마지막 완주가 캐시가 된다(무해)."""
+    """ffmpeg 종료 대기 후 성공이면 tmp(fMP4)를 faststart 로 리먹스해 캐시 완성
+    (-c copy, 초 단위), 실패면 tmp 폐기. 동시 시청으로 변환이 겹치면 tmp 가
+    제각각이라 마지막 완주가 캐시가 된다(무해)."""
     try:
         rc = proc.wait()
         if rc == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 0:
-            os.replace(tmp, cache_dst)
+            r = subprocess.run(
+                ["ffmpeg", "-v", "error", "-y", "-i", tmp,
+                 "-c", "copy", "-movflags", "+faststart", cache_dst],
+                capture_output=True, timeout=600)
+            if not (r.returncode == 0 and os.path.exists(cache_dst)
+                    and os.path.getsize(cache_dst) > 0):
+                os.replace(tmp, cache_dst)   # 리먹스 실패 — fMP4 그대로도 재생 가능
+            else:
+                os.unlink(tmp)
             return
     except Exception:
         pass
@@ -237,17 +337,36 @@ def finish_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
         pass
 
 
+_DETACHED_ENCODES = set()   # 백그라운드 완주 중인 cache_dst — 같은 파일 중복 완주 방지
+
+
 def detach_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
-    """시청 중단 — 데몬 스레드가 파이프를 마저 비워 ffmpeg 가 블록되지 않게 하고,
-    인코딩을 완주시켜 캐시를 완성한다(다음 재생은 즉시 시작)."""
+    """시청 중단 — 데몬 스레드가 파이프의 남은 바이트를 tmp 에 마저 쓰며(ffmpeg 블록
+    방지) 인코딩을 완주시켜 캐시를 완성한다(다음 재생은 즉시 시작).
+    같은 캐시를 향한 완주가 이미 달리는 중이면(재시청·seek 재요청) 이 판은 죽인다."""
     import threading
+
+    if cache_dst in _DETACHED_ENCODES:
+        kill_stream(proc)
+        try:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+        except OSError:
+            pass
+        return
+    _DETACHED_ENCODES.add(cache_dst)
 
     def _drain():
         try:
-            while proc.stdout.read(1 << 20):
-                pass
+            with open(tmp, "ab") as f:
+                while True:
+                    chunk = proc.stdout.read(1 << 20)
+                    if not chunk:
+                        break
+                    f.write(chunk)
         except Exception:
             pass
         finish_stream_transcode(proc, tmp, cache_dst)
+        _DETACHED_ENCODES.discard(cache_dst)
 
     threading.Thread(target=_drain, daemon=True).start()

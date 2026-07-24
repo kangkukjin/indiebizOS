@@ -52,6 +52,10 @@
   .lb .nav:hover { opacity:1; }
   .lb .prev { left:6px; } .lb .next { right:6px; }
   .lb .cap { position:absolute; bottom:14px; left:0; right:0; text-align:center; color:#ddd; font-size:13px; }
+  /* 생방송 트랜스코드 전용 시크바 — 브라우저가 스트림을 탐색불가로 취급해 네이티브 바가 죽으므로 */
+  .lb .seek { position:absolute; bottom:36px; left:8%; right:8%; display:none; align-items:center;
+    gap:10px; color:#ddd; font-size:12px; }
+  .lb .seek input { flex:1; accent-color:var(--accent); cursor:pointer; }
 </style>
 </head>
 <body>
@@ -66,6 +70,11 @@
   <span class="nav prev" onclick="step(-1)">‹</span>
   <span class="nav next" onclick="step(1)">›</span>
   <div id="lbBody"></div>
+  <div class="seek" id="lbSeek">
+    <span id="lbSeekNow">0:00</span>
+    <input type="range" id="lbSeekBar" min="0" max="100" step="1" value="0">
+    <span id="lbSeekTotal">0:00</span>
+  </div>
   <div class="cap" id="lbCap"></div>
 </div>
 
@@ -83,9 +92,61 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
 
 function thumbUrl(it) { return api(`thumb/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
 function mediaUrl(it) { return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
-function subUrl(it, s) {
+function subUrl(it, s, shift) {
   return api(`sub/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(s.rel)}&v=${s.mtime || it.mtime}`
-    + (s.cls ? `&cls=${encodeURIComponent(s.cls)}` : ""));
+    + (s.cls ? `&cls=${encodeURIComponent(s.cls)}` : "")
+    + (shift ? `&shift=${shift}` : ""));
+}
+function trackHtml(it, shift) {
+  return (it.subs || []).map((s, i) =>
+    `<track kind="subtitles" src="${subUrl(it, s, shift)}" label="${esc(s.label || "자막")}"${i === 0 ? " default" : ""}>`
+  ).join("");
+}
+// 첫 시청(캐시 전 생방송 트랜스코드)은 브라우저가 스트림을 탐색불가(seekable 0)로
+// 취급해 네이티브 시크바가 죽는다 → 커스텀 시크바를 보여주고, 드래그하면 그 지점부터의
+// 오프셋 스트림(&t=)으로 스왑한다. 오프셋 스트림은 0 기준 타임라인이라 자막도
+// &shift= 로 같이 당긴다. 캐시 완성 뒤(두 번째 재생)는 네이티브 seek 이라 바 숨김.
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = String(sec % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+}
+function attachSeekRescue(v, it) {
+  let off = 0, dragging = false;
+  const cap = document.getElementById("lbCap");
+  const seek = document.getElementById("lbSeek");
+  const bar = document.getElementById("lbSeekBar");
+  const now = document.getElementById("lbSeekNow");
+  const total = document.getElementById("lbSeekTotal");
+  function fullDur() { return off + (isFinite(v.duration) ? v.duration : 0); }
+  function swap(absTarget) {
+    off = Math.min(Math.max(0, Math.floor(absTarget)), Math.max(0, Math.floor(fullDur() - 10)));
+    v.innerHTML = trackHtml(it, off);
+    v.src = mediaUrl(it) + "&t=" + off;
+    v.load();
+    v.play().catch(() => {});
+    cap.textContent = `${it.title || ""} — ⏩ ${fmtTime(off)}부터 이어보는 중`;
+  }
+  v.addEventListener("loadedmetadata", () => {
+    // 탐색불가 스트림(생방송)일 때만 커스텀 바. 캐시/원본(Range 지원)은 네이티브가 완전.
+    const live = !v.seekable.length || v.seekable.end(v.seekable.length - 1) < fullDur() - off - 60;
+    seek.style.display = live ? "flex" : "none";
+    if (live) { bar.max = Math.floor(fullDur()); total.textContent = fmtTime(fullDur()); }
+  });
+  v.addEventListener("timeupdate", () => {
+    if (dragging || seek.style.display === "none") return;
+    bar.value = Math.floor(off + v.currentTime);
+    now.textContent = fmtTime(off + v.currentTime);
+  });
+  bar.addEventListener("input", () => { dragging = true; now.textContent = fmtTime(+bar.value); });
+  bar.addEventListener("change", () => {
+    dragging = false;
+    const target = +bar.value;
+    const rel = target - off;
+    for (let i = 0; i < v.buffered.length; i++)
+      if (rel >= v.buffered.start(i) && rel <= v.buffered.end(i) + 1) { v.currentTime = rel; return; }
+    swap(target);   // 버퍼 밖 — 그 지점부터의 오프셋 스트림으로 즉시 이동
+  });
 }
 
 function boot() {
@@ -172,13 +233,12 @@ function render(path, data) {
 function openLb(idx) {
   const it = curItems[idx]; if (!it) return;
   lbIndex = idx;
+  document.getElementById("lbSeek").style.display = "none";
   const body = document.getElementById("lbBody");
   if (it.kind === "video") {
     // 형제 자막(subs — 백엔드가 목록에서 붙여줌)을 <track> 으로. 첫 번째(한국어 우선)가 기본 표시.
-    const tracks = (it.subs || []).map((s, i) =>
-      `<track kind="subtitles" src="${subUrl(it, s)}" label="${esc(s.label || "자막")}"${i === 0 ? " default" : ""}>`
-    ).join("");
-    body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}">${tracks}</video>`;
+    body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}">${trackHtml(it, 0)}</video>`;
+    attachSeekRescue(body.querySelector("video"), it);
   } else if (it.kind === "photo") {
     body.innerHTML = `<img src="${mediaUrl(it)}">`;
   } else {
@@ -190,6 +250,7 @@ function openLb(idx) {
 function closeLb() {
   document.getElementById("lb").classList.remove("open");
   document.getElementById("lbBody").innerHTML = "";
+  document.getElementById("lbSeek").style.display = "none";
   lbIndex = -1;
 }
 function step(d) {

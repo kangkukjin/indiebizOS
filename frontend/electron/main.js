@@ -3,12 +3,15 @@
  * Python 백엔드 관리 및 윈도우 생성
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, session } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, session, nativeImage } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import net from 'net';
+import crypto from 'crypto';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import * as foragePw from './forage-passwords.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1266,6 +1269,48 @@ function setupIPC() {
       shell.openExternal(url);  // 런처 창이 없으면 외부 브라우저 폴백
     }
   });
+
+  // ── 창고 드래그 아웃: 이웃 창고 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 ──
+  // HTML5 dnd 는 브라우저 밖으로 파일을 못 내보낸다 → 네이티브 startDrag 로 전환하는데,
+  // startDrag 는 *로컬 파일*이 필요해 먼저 내려받는다. 회원 레벨 파일은 익명 요청이면
+  // 404("no such file")라 포식 세션(persist:forage — 창고 로그인 pk 쿠키가 산다)으로 받는다.
+  // 캐시 키=url+mtime: 다운로드 중 버튼을 놓으면(렌더러가 cancel) 드래그는 접되 받은
+  // 파일은 남겨 — 큰 파일도 두 번째 끌기는 즉시 집힌다.
+  const whDragDir = path.join(app.getPath('temp'), 'indiebiz-wh-drag');
+  let whDragSeq = 0;          // 드래그 시도 일련번호
+  let whDragCancelledUpTo = 0; // 이 번호 이하의 시도는 취소됨(버튼을 놓았다 = 드래그 종료)
+  app.on('will-quit', () => {  // 캐시는 세션 한정 — 종료 때 비워 임시폴더가 안 쌓이게
+    try { fs.rmSync(whDragDir, { recursive: true, force: true }); } catch { /* 무시 */ }
+  });
+
+  ipcMain.on('warehouse-drag-out', async (event, payload) => {
+    const token = ++whDragSeq;
+    try {
+      const { url, name, mtime } = payload || {};
+      if (!/^https?:\/\//.test(String(url || ''))) return;
+      const safeName = String(name || '파일').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') || '파일';
+      const key = crypto.createHash('md5').update(`${url}|${mtime || ''}`).digest('hex').slice(0, 16);
+      const dest = path.join(whDragDir, key, safeName);
+      if (!(fs.existsSync(dest) && fs.statSync(dest).size > 0)) {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        const ses = session.fromPartition('persist:forage');
+        const res = await ses.fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const tmp = dest + '.part';
+        await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(tmp));
+        fs.renameSync(tmp, dest); // 원자 교체 — 반쪽 파일이 캐시로 남지 않게
+      }
+      if (token <= whDragCancelledUpTo) return; // 받는 동안 버튼을 놓았다 — 캐시만 남긴다
+      let icon = null;
+      try { icon = await app.getFileIcon(dest); } catch { /* 아이콘 실패는 드래그를 안 막는다 */ }
+      event.sender.startDrag({ file: dest, icon: icon || nativeImage.createEmpty() });
+    } catch (e) {
+      console.error('[Electron] 창고 드래그 아웃 실패:', e?.message || e);
+    }
+  });
+
+  // 버튼을 놓았다 = 아직 안 시작한 드래그는 전부 접는다(시작된 건 OS 가 이미 가져감).
+  ipcMain.on('warehouse-drag-cancel', () => { whDragCancelledUpTo = whDragSeq; });
 
   // 앱 정보
   ipcMain.handle('get-app-info', () => ({

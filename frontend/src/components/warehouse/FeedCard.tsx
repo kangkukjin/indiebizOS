@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { MessageCircle, Heart, Repeat2, Folder, Star } from 'lucide-react';
-import { fmtBytes, fileIcon, openExternalUrl, IMG_EXT, fmtWhen } from './shared';
+import { fmtBytes, fileIcon, openNeighborFile, IMG_EXT, fmtWhen } from './shared';
 import type { WfCard, WfFeedItem } from './shared';
 
 interface ActionProps {
@@ -46,7 +46,7 @@ function ThumbTile({ f, onLike, onRetweet }: { f: WfFeedItem } & ActionProps) {
     <div
       className="group/chip relative aspect-square rounded-lg overflow-hidden border border-stone-200 bg-stone-100 cursor-pointer"
       title={`${f.path}\n${fmtBytes(f.bytes || 0)} · ${(f.mtime || '').replace('T', ' ')}`}
-      onClick={() => openExternalUrl(f.url)}
+      onClick={() => openNeighborFile(f.url)}
     >
       {fail ? (
         <div className="w-full h-full flex flex-col items-center justify-center gap-1 p-1">
@@ -77,7 +77,7 @@ function FileChip({ f, onLike, onRetweet }: { f: WfFeedItem } & ActionProps) {
     <div
       className="group/chip relative flex items-center gap-1.5 pl-2 pr-1.5 py-1.5 rounded-lg bg-stone-50 border border-stone-200 hover:border-[#D97706]/40 cursor-pointer min-w-0"
       title={`${f.path}\n${fmtBytes(f.bytes || 0)} · ${(f.mtime || '').replace('T', ' ')}`}
-      onClick={() => openExternalUrl(f.url)}
+      onClick={() => openNeighborFile(f.url)}
     >
       <Icon className="w-4 h-4 text-stone-400 shrink-0" />
       <span className="flex-1 min-w-0 text-xs text-stone-700 truncate group-hover/chip:text-[#B45309]">{name}</span>

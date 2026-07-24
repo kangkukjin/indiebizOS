@@ -10,7 +10,7 @@ import {
   Package, RefreshCw, Trash2, ExternalLink, Search, Plus, Pencil, Rss, Repeat2,
   Star, Heart, KeyRound, MessageCircle,
 } from 'lucide-react';
-import { API, fmtBytes, fileIcon, openExternalUrl, openWarehouseInBrowser } from './shared';
+import { API, fmtBytes, fileIcon, openNeighborFile, openWarehouseInBrowser } from './shared';
 import type { WfNeighbor, WfFeedItem, WfCard } from './shared';
 import { FeedCard } from './FeedCard';
 import { NeighborBrowser } from './NeighborBrowser';
@@ -23,7 +23,7 @@ function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f
   return (
     <li className="group flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-stone-200 hover:border-[#D97706]/40">
       <Icon className="w-5 h-5 text-stone-400 shrink-0 mx-1" />
-      <div className="flex-1 min-w-0 cursor-pointer" title={f.path} onClick={() => openExternalUrl(f.url)}>
+      <div className="flex-1 min-w-0 cursor-pointer" title={f.path} onClick={() => openNeighborFile(f.url)}>
         <div className="text-sm text-stone-800 truncate group-hover:text-[#D97706] group-hover:underline">{label ?? f.path}</div>
         <div className="text-[11px] text-stone-400">
           <span className="text-[#B45309]/70 mr-1.5">{f.neighbor_name}</span>
@@ -43,7 +43,7 @@ function FileRow({ f, onRetweet, onLike, label }: { f: WfFeedItem; onRetweet: (f
       <button
         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50"
         title="파일 열기"
-        onClick={() => openExternalUrl(f.url)}
+        onClick={() => openNeighborFile(f.url)}
       >
         <ExternalLink className="w-4 h-4" />
       </button>
@@ -632,7 +632,7 @@ export function NeighborsPane() {
                             key={`${f.id ?? f.path}:${f.seen_at}`}
                             className="block w-full text-left text-xs text-stone-500 hover:text-[#D97706] truncate"
                             title={`${f.path} 열기`}
-                            onClick={() => openExternalUrl(f.url)}
+                            onClick={() => openNeighborFile(f.url)}
                           >
                             {f.kind === 'new' ? '새 파일 · ' : f.kind === 'changed' ? '갱신 · ' : ''}{f.path}
                           </button>

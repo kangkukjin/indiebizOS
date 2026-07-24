@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, ChevronRight, ExternalLink, Folder, RefreshCw, Star, MessageCircle } from 'lucide-react';
-import { API, fmtBytes, fileIcon, openExternalUrl, openWarehouseInBrowser, IMG_EXT } from './shared';
+import { API, fmtBytes, fileIcon, openNeighborFile, openWarehouseInBrowser, dragOutNeighborFile, IMG_EXT } from './shared';
 import type { WfBrowseDir, WfFeedItem } from './shared';
 import { ChipActions } from './FeedCard';
 
@@ -169,8 +169,10 @@ export function NeighborBrowser({ url, name, initialPath, score, onScore, onDm, 
                 <li
                   key={f.path}
                   className="group/chip relative flex flex-col items-center gap-1 p-2 rounded-xl cursor-pointer select-none min-w-0 hover:bg-stone-100"
-                  title={`${label}\n${fmtBytes(f.bytes || 0)} · ${(f.mtime || '').replace('T', ' ')}`}
-                  onClick={() => openExternalUrl(f.url)}
+                  title={`${label}\n${fmtBytes(f.bytes || 0)} · ${(f.mtime || '').replace('T', ' ')}\n끌어서 바탕화면·폴더에 저장`}
+                  onClick={() => openNeighborFile(f.url)}
+                  draggable
+                  onDragStart={(e) => dragOutNeighborFile(e, f)}
                 >
                   {isImg ? (
                     <img

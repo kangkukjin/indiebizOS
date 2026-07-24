@@ -2,6 +2,7 @@
  * warehouse/shared — 공유창고 창의 세 패널(내 창고·이웃·이웃찾기)이 함께 쓰는
  * 타입·포맷터·아이콘 매핑. WarehouseView 가 1500줄 규칙에 걸려 분리(2026-07-20).
  */
+import type { DragEvent as ReactDragEvent } from 'react';
 import { File as FileIcon, FileText, Film, Music, Archive } from 'lucide-react';
 
 export const API = 'http://127.0.0.1:8765';
@@ -93,4 +94,30 @@ export function openExternalUrl(url: string) {
     Launcher 가 'indiebiz:open-forage-url' 을 받아 브라우저 오버레이를 그 URL 로 연다. */
 export function openWarehouseInBrowser(url: string) {
   window.dispatchEvent(new CustomEvent('indiebiz:open-forage-url', { detail: url }));
+}
+
+/** 이웃 창고의 *파일*도 포식 브라우저로 — 내 로그인 쿠키(pk, persist:forage 세션)가 거기 산다.
+    기본 브라우저로 열면 익명(레벨 0)이라 회원 레벨 파일이 404("no such file")가 된다:
+    폴러는 저장된 자격으로 내 레벨 스냅샷을 받으므로, 여는 쪽도 같은 신원이어야 한다. */
+export function openNeighborFile(url: string) {
+  const el = (window as any).electron;
+  if (el) openWarehouseInBrowser(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
+/** 이웃 창고 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 — dragstart 에서 부른다.
+    HTML5 드래그는 브라우저 밖으로 파일을 못 내보내므로 preventDefault 로 접고,
+    메인 프로세스가 파일을 (포식 세션 쿠키로 — 회원 레벨 파일도) 내려받아 네이티브
+    OS 드래그로 전환한다. 받는 동안 버튼을 놓으면 cancel — 받은 캐시는 남아
+    큰 파일도 두 번째 끌기는 즉시. 비 Electron(웹)에선 아무것도 안 한다. */
+export function dragOutNeighborFile(e: ReactDragEvent, f: Pick<WfFeedItem, 'url' | 'path' | 'mtime'>) {
+  const el = (window as any).electron;
+  if (!el?.warehouseDragOut) return;
+  e.preventDefault();
+  el.warehouseDragOut({
+    url: f.url,
+    name: f.path.split('/').pop() || f.path,
+    mtime: f.mtime || '',
+  });
+  window.addEventListener('mouseup', () => el.warehouseDragCancel?.(), { once: true });
 }

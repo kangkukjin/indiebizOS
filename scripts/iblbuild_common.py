@@ -100,6 +100,62 @@ CORPUS_FILES = [
 ]
 
 
+# ── 가드 입력 선언 (--check 트리거의 단일 진실 소스) ───────────────────────────
+#
+# ★왜 여기 있나 (2026-07-25): pre-commit 훅이 트리거 정규식을 자기 안에 하드코딩하고
+# 있었고, 그 목록이 가드가 *실제로 읽는 파일*과 어긋나 있었다. 대표 사례 —
+# 뷰-렌더러 가드(iblbuild_appview.check_view_renderers)는
+# frontend/.../GenericInstrument.tsx 와 backend/launcher_web_render.py 를 열어
+# p.type 파리티를 대조하는데, 그 두 파일 중 어느 것도 트리거에 없었다. 즉 이 가드는
+# **어휘를 고칠 때만 발동하고 렌더러를 고칠 때는 발동하지 않았다** — 렌더러에서
+# 프리미티브 케이스를 지워도 커밋이 그냥 통과했다.
+#
+# 그래서 "무엇이 --check 를 트리거하는가"를 훅이 아니라 빌더가 선언한다. 새 가드가
+# 새 파일을 읽기 시작하면 이 목록에 한 줄 더하면 되고, 훅은 손대지 않는다.
+# 훅은 `build_ibl_nodes.py --inputs-regex` 로 물어본다.
+#
+# 형식: git ls-files 스타일 상대경로에 대한 POSIX ERE (전체 매칭, ^…$ 는 훅이 씌움).
+GUARD_INPUT_PATTERNS = [
+    # ── 어휘 정의 (기존 트리거) ──
+    r"data/ibl_nodes_src/.*\.yaml",
+    r"data/packages/(installed|not_installed)/.*/ibl_actions\.yaml",
+    r"data/packages/(installed|not_installed)/.*/tool\.json",
+    # 패키지 실행 코드 전체 — op 분기는 handler.py 지만 코퍼스 param 키 추출과
+    # OS-가드는 tool_*.py 등 형제 모듈도 읽는다(예: radio/tool_radio.py).
+    r"data/packages/(installed|not_installed)/.*\.py",
+    r"data/training/.*\.json",
+    r"scripts/(build_ibl_nodes|iblbuild_[a-z]+)\.py",
+
+    # ── 빌드 산출물 (바이트 일치 대조 대상 — 손으로 고치면 즉시 어긋난다) ──
+    r"data/(ibl_nodes\.yaml|ibl_fixtures\.json|package_meta\.json|phone_manifest\.json|core_manifest\.json)",
+
+    # ── backend (2026-07-25 신규) ──
+    # validate_corpus_params 가 (root/"backend").glob("*.py") 를 통째로 읽고,
+    # 표준-코어 가드=ibl_parser.py, 뷰-렌더러 가드=launcher_web_render.py,
+    # launcher-가드=ibl_routing.py, OS-가드=backend 파일 12종,
+    # iblbuild_common=ibl_param_vocab.py, derive=common/auth_manager.py 를 읽는다.
+    r"backend/.*\.py",
+
+    # ── frontend (2026-07-25 신규) ──
+    # 뷰-렌더러 가드(데스크탑 쪽)와 launcher-가드(창 명령 ↔ main.js switch).
+    r"frontend/src/components/GenericInstrument\.tsx",
+    r"frontend/src/components/generic/.*\.tsx",
+    r"frontend/electron/main\.js",
+
+    # ── 문서·프롬프트 (2026-07-25 신규) ──
+    # 뷰-어휘 문서-동기 가드 = ibl.md·new_action_checklist.md 의 어휘 줄,
+    # 교재-가드 = 12_ibl_only.md ↔ 카탈로그, 노드 guides 실존 = data/guides/.
+    r"data/system_docs/ibl\.md",
+    r"data/guides/.*\.md",
+    r"data/common_prompts/fragments/12_ibl_only\.md",
+]
+
+
+def guard_inputs_regex() -> str:
+    """GUARD_INPUT_PATTERNS 를 훅이 쓸 단일 ERE 로 합친다(^…$ 포함)."""
+    return "^(" + "|".join(GUARD_INPUT_PATTERNS) + ")$"
+
+
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 

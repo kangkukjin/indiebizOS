@@ -316,25 +316,49 @@ app.add_middleware(
 # 데이터 엔드포인트(/projects, /switches, /system-ai/chat 등)는 데스크탑과 공유되어
 # 로컬에선 무인증으로 열려 있다. 터널을 통해 들어온 외부 요청에 대해서만 런처 세션을
 # 강제해, 비밀번호 없이 데이터·API 키가 새는 것을 막는다. (localhost 데스크탑은 통과)
+# ★fail-closed (2026-07-25) — 옛 구현은 이 블록 전체를 `except Exception: pass` 로
+# 감싸고 그 통과를 "보수적"이라 불렀지만, 실제로는 fail-open 이었다: import 나
+# verify_session 이 어떤 이유로든 던지면 인증 없이 전부 통과했다. 판정자
+# (is_external_request)는 "로컬임이 증명될 때만 로컬"로 공들여 fail-closed 인데,
+# 래퍼 한 줄이 그 규율을 통째로 무효화하는 구조였다.
+#
+# 실패를 두 종류로 나눠 각각 정직한 코드로 답한다:
+#   ① 판정 불능(게이트 고장·import 실패) → 503. 이 요청이 로컬인지 외부인지 *모르는*
+#      것이므로 통과시킬 수 없다. 게이트가 완전히 깨지면 앱 전체가 조용히 열리는 대신
+#      시끄럽게 멈춘다 — 침묵 노출보다 시끄러운 고장이 낫다.
+#   ② 외부로 판정됨 + 세션 검증 불능/실패 → 401. 세션을 확인하지 못했으면
+#      세션은 확인되지 않은 것이다.
 @app.middleware("http")
 async def remote_access_guard(request: Request, call_next):
     if request.method != "OPTIONS":
+        # ① 외부/로컬 판정 — 실패 시 통과 불가
         try:
             from api_launcher_web import (
                 is_external_request,
                 is_public_remote_path,
                 verify_session,
             )
-            if is_external_request(request):
-                path = request.url.path
-                if not is_public_remote_path(request.method, path) and not verify_session(request):
-                    return JSONResponse(
-                        {"detail": "인증이 필요합니다. 원격 런처에 로그인하세요."},
-                        status_code=401,
-                    )
-        except Exception:
-            # 게이트 자체의 오류로 서비스가 막히지 않도록 보수적으로 통과
-            pass
+            external = is_external_request(request)
+        except Exception as e:
+            print(f"[AuthGate] 판정 불능 → 거절 ({request.method} {request.url.path}): {e}")
+            return JSONResponse(
+                {"detail": "인증 게이트 오류로 요청을 거절했습니다."},
+                status_code=503,
+            )
+
+        if external:
+            path = request.url.path
+            # ② 세션 검증 — 예외는 '미인증'으로 친다(fail-closed)
+            try:
+                allowed = is_public_remote_path(request.method, path) or verify_session(request)
+            except Exception as e:
+                print(f"[AuthGate] 세션 검증 실패 → 미인증 처리 ({request.method} {path}): {e}")
+                allowed = False
+            if not allowed:
+                return JSONResponse(
+                    {"detail": "인증이 필요합니다. 원격 런처에 로그인하세요."},
+                    status_code=401,
+                )
     return await call_next(request)
 
 

@@ -66,6 +66,8 @@ from iblbuild_common import (  # noqa: E402,F401
     DEFAULT_RUNS_ON,
     PHONE_VERIFIED_PACKAGES,
     CORPUS_FILES,
+    GUARD_INPUT_PATTERNS,
+    guard_inputs_regex,
     repo_root,
     _extract_action_param_aliases,
 )
@@ -605,7 +607,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="삼각 검증만 수행 (yaml 작성·바이트 비교 없음)",
     )
+    ap.add_argument(
+        "--inputs-regex",
+        action="store_true",
+        help="가드가 읽는 파일들의 ERE 한 줄 출력 (pre-commit 훅 트리거용 — 빌드 안 함)",
+    )
+    ap.add_argument(
+        "--inputs",
+        action="store_true",
+        help="가드가 읽는 파일 패턴을 한 줄에 하나씩 출력 (사람 확인용 — 빌드 안 함)",
+    )
     args = ap.parse_args(argv)
+    if args.inputs_regex:
+        print(guard_inputs_regex())
+        return 0
+    if args.inputs:
+        for p in GUARD_INPUT_PATTERNS:
+            print(p)
+        return 0
     return build(check=args.check, validate_only=args.validate)
 
 

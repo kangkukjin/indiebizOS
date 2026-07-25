@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 # IBL 어휘 정합성 pre-commit 훅
 #
-# 다음 파일이 스테이징될 때만 `build_ibl_nodes.py --check` 를 실행:
-#   - data/ibl_nodes_src/*.yaml          (src 편집)
-#   - data/packages/installed/**/ibl_actions.yaml (패키지 어휘 fragment — aliases/ops/tool_json)
-#   - data/packages/installed/**/tool.json   (op enum/default — 빌드 파생물)
-#   - data/packages/installed/**/handler.py  (op 분기 substring + 코퍼스 param 정합)
-#   - data/training/*.json                   (코퍼스 param 정합)
-#   - scripts/build_ibl_nodes.py             (빌더 자체)
-# (2026-07-03: 파라미터 별칭이 ibl_routing.ACTION_PARAM_ALIASES → 어휘 데이터의
-#  aliases: 블록으로 이주 — ibl_routing.py 트리거를 ibl_actions.yaml 로 교체)
+# `build_ibl_nodes.py --check` 의 트리거 목록은 **여기 없다** — 빌더가 선언하고
+# (iblbuild_common.GUARD_INPUT_PATTERNS) 훅이 `--inputs-regex` 로 물어본다.
+# 무엇이 트리거인지 보려면: python3 scripts/build_ibl_nodes.py --inputs
+#
+# (2026-07-25: 훅이 목록을 하드코딩하던 시절, 그 목록이 가드가 실제로 읽는 파일과
+#  어긋나 뷰-렌더러 가드가 렌더러 편집에 발동하지 않았다. 목록의 거처를 옮겨 봉합.)
 #
 # 검사 실패 시 커밋 차단. `--no-verify` 로 우회 가능하지만 권장 X.
 #
@@ -21,10 +18,23 @@ set -euo pipefail
 # 스테이징된 파일 목록.
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
-# 검사 트리거 — 위 4종 중 하나라도 스테이지되어 있으면 실행.
-# (2026-07-18: 빌더가 iblbuild_* 형제 모듈로 분할 — 가드 본체 편집도 트리거에 포함)
-if echo "$staged" | grep -qE '^(data/ibl_nodes_src/.*\.yaml|data/packages/installed/.*/ibl_actions\.yaml|data/packages/installed/.*/tool\.json|data/packages/installed/.*/handler\.py|data/training/.*\.json|scripts/(build_ibl_nodes|iblbuild_[a-z]+)\.py)$'; then
-  repo_root=$(git rev-parse --show-toplevel)
+# 검사 트리거 — ★빌더에게 물어본다(2026-07-25).
+#
+# 옛 구현은 이 정규식을 훅 안에 하드코딩했고, 그 목록이 가드가 *실제로 읽는 파일*과
+# 어긋나 있었다: 뷰-렌더러 가드는 GenericInstrument.tsx·launcher_web_render.py 를
+# 읽는데 둘 다 트리거에 없어, 렌더러에서 프리미티브 케이스를 지워도 커밋이 통과했다.
+# 이제 트리거의 단일 진실 소스는 iblbuild_common.GUARD_INPUT_PATTERNS 이고
+# 훅은 `--inputs-regex` 로 물어보기만 한다 — 가드가 새 파일을 읽기 시작해도 훅은 불변.
+repo_root=$(git rev-parse --show-toplevel)
+if ! ibl_trigger=$(python3 "$repo_root/scripts/build_ibl_nodes.py" --inputs-regex 2>/dev/null) \
+   || [ -z "$ibl_trigger" ]; then
+  # 트리거를 물어보지 못하면 *넓게* 잡는다(fail-closed) — 트리거 조회 실패를 이유로
+  # 검사를 건너뛰면, 게이트 고장이 곧 무검사가 된다.
+  echo "[pre-commit] ⚠ 가드 입력 목록 조회 실패 — 검사를 강제 실행합니다." >&2
+  ibl_trigger='.'
+fi
+
+if echo "$staged" | grep -qE "$ibl_trigger"; then
   echo "[pre-commit] IBL 정합성 검사 실행..."
   if ! python3 "$repo_root/scripts/build_ibl_nodes.py" --check; then
     echo "" >&2

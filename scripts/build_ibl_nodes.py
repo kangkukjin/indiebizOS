@@ -460,6 +460,48 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             )
         else:
             print("[build_ibl_nodes] check: 바이트 일치 ✓")
+        # ── 파생물 불일치 시 *무엇이* 다른지 (2026-07-25) ──────────────────────
+        # "불일치 — 재생성 필요"만 찍고 마는 검사는 약하다: 내 기계에서 재생성하면
+        # 사라지는 차이일 때(= 환경 의존 파생) 원인을 영영 못 본다. 실제로 CI 첫
+        # 실행에서 package_meta 가 리눅스에서만 어긋났고, 그 메시지만으로는 진단이
+        # 불가능했다. 파생물은 전부 JSON 이므로 키 단위로 갈라 보여준다.
+        def _print_derived_diff(label: str, on_disk_text, built_text) -> None:
+            print(f"  ↳ {label} 차이:", file=sys.stderr)
+            if on_disk_text is None:
+                print("     · 디스크에 파일 없음 (커밋 누락?)", file=sys.stderr)
+                return
+            try:
+                a = json.loads(on_disk_text)
+                b = json.loads(built_text)
+            except Exception:
+                import difflib
+                d = list(difflib.unified_diff(on_disk_text.splitlines(), built_text.splitlines(),
+                                              "on-disk", "built", lineterm="", n=0))
+                for line in d[:40]:
+                    print(f"     {line}", file=sys.stderr)
+                return
+
+            def walk(x, y, path=""):
+                out = []
+                if isinstance(x, dict) and isinstance(y, dict):
+                    for k in sorted(set(x) | set(y)):
+                        p = f"{path}.{k}" if path else k
+                        if k not in x:
+                            out.append(f"+ {p} = {y[k]!r}")
+                        elif k not in y:
+                            out.append(f"- {p} = {x[k]!r}")
+                        else:
+                            out += walk(x[k], y[k], p)
+                elif x != y:
+                    out.append(f"~ {path}: 디스크={x!r} → 빌드={y!r}")
+                return out
+
+            diffs = walk(a, b)
+            for line in diffs[:40]:
+                print(f"     {line}", file=sys.stderr)
+            if len(diffs) > 40:
+                print(f"     … 외 {len(diffs) - 40}건", file=sys.stderr)
+
         # 폰 매니페스트 정합 (드리프트 방지)
         manifest_ok = True
         if manifest_text is not None:
@@ -471,6 +513,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                     f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
                     file=sys.stderr,
                 )
+                _print_derived_diff("phone_manifest.json", on_disk, manifest_text)
             else:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
         # 능력 메타 정합 (드리프트 방지 — needs_key/weight/locale 은 코드가 유일한 소스)
@@ -482,6 +525,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
                 file=sys.stderr,
             )
+            _print_derived_diff("package_meta.json", pkg_meta_on_disk, pkg_meta_text)
         else:
             print("[build_ibl_nodes] check: package_meta.json 일치 ✓")
         # fixture 파생 정합 (드리프트 방지 — 소스는 액션별 fixture:/exempt: 필드)
@@ -495,6 +539,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                     f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
                     file=sys.stderr,
                 )
+                _print_derived_diff("ibl_fixtures.json", fx_on_disk, fixtures_text)
             else:
                 print("[build_ibl_nodes] check: ibl_fixtures.json 일치 ✓")
         # tool.json 파생 정합 (드리프트 방지 — 소스는 ibl_actions.yaml tool_json 블록 + ops)

@@ -42,6 +42,12 @@ _VALIDATE_OK_MODULES = {"api_limb"}
 
 MAX_DEPTH = 3
 
+# 공허한 통과 방지용 하한 — 앱이 온전히 로드되면 훨씬 크다(2026-07-25 실측: 전체 400+,
+# 공개 72). 넉넉히 낮게 잡아 정상 변동에는 안 걸리되, "라우트가 거의 안 실렸다"는
+# 확실히 잡는다. 라우트가 크게 줄어드는 정당한 변경이라면 이 숫자를 함께 낮출 것.
+MIN_TOTAL_ROUTES = 150
+MIN_PUBLIC_ROUTES = 40
+
 # 의도적으로 인증 없이 열린 경로 — (METHOD, PATH): 사유.
 # ★여기 추가하는 것은 "이 경로를 공개 인터넷에 익명으로 연다"는 선언이다.
 ANONYMOUS_ALLOW = {
@@ -206,7 +212,29 @@ def main() -> int:
             else:
                 unguarded.append((method, path, endpoint.__name__, mod_name))
 
-    print(f"[공개 라우트] 자체인증 {guarded} · 익명 선언 {exempted} · 무검사 {len(unguarded)}")
+    total_routes = sum(1 for r in api.app.routes if getattr(r, "path", None))
+    inspected = guarded + exempted + len(unguarded)
+    print(f"[공개 라우트] 전체 라우트 {total_routes} · 공개 {inspected} "
+          f"(자체인증 {guarded} · 익명 선언 {exempted} · 무검사 {len(unguarded)})")
+
+    # ★공허한 통과 방지 (2026-07-25). CI 첫 실행에서 이 가드가 공개 라우트를 1개만
+    # 세고 초록으로 통과했다 — 로컬은 72개였다. 아무것도 검사하지 못한 가드가 초록이면
+    # 거짓 안전이고, 그건 붉은 것보다 나쁘다. 라우트가 제대로 안 실렸다는 뜻이므로
+    # (앱 부분 로드·라우터 등록 실패) 통과시키지 않는다.
+    if total_routes < MIN_TOTAL_ROUTES or inspected < MIN_PUBLIC_ROUTES:
+        print()
+        print(f"[FAIL] 검사 대상이 비정상적으로 적습니다 — 앱이 온전히 로드되지 않았습니다.")
+        print(f"  전체 라우트 {total_routes} (최소 기대 {MIN_TOTAL_ROUTES})"
+              f" · 공개 라우트 {inspected} (최소 기대 {MIN_PUBLIC_ROUTES})")
+        print("  이 상태의 '통과'는 아무것도 검사하지 않은 통과입니다.")
+        print("  라우터 등록이 조용히 빠졌는지, 의존성이 모자라 일부 모듈이 안 실렸는지 확인하세요.")
+        by_prefix: dict = {}
+        for r in api.app.routes:
+            p = getattr(r, "path", "") or ""
+            if p.startswith("/"):
+                by_prefix[p.split("/")[1]] = by_prefix.get(p.split("/")[1], 0) + 1
+        print(f"  실린 경로 접두사: {dict(sorted(by_prefix.items()))}")
+        return 1
 
     if unguarded:
         print()

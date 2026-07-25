@@ -135,6 +135,38 @@ def _auth_reachable(fn_src: str, funcs: dict, mod_name: str, depth: int = 0) -> 
     return False
 
 
+def _iter_effective_routes(app):
+    """app 의 *실효* 라우트를 FastAPI 버전과 무관하게 훑는다.
+
+    ★왜 필요한가 (2026-07-25): FastAPI 0.137.0 부터 `include_router()` 가 라우트를
+    app.routes 로 **펼치지 않는다**. 대신 `_IncludedRouter`(원본 라우터 + 포함 컨텍스트)
+    를 하나 넣고 요청 시점에 해소한다(지연 포함, 캐시됨). 그래서 app.routes 를 그대로
+    믿으면 이 저장소 기준 522개 → 46개(자체 4 + 기본 4 + _IncludedRouter 37 + Mount 1)
+    로 보이고, 라우터 유래 경로가 통째로 안 보인다.
+
+    ★그건 고장이 아니다 — 앱은 멀쩡히 응답한다(실측: /projects·/nas/status·/portal/manifest
+    가 401/403 로 정상 인증 판정). 처음엔 이걸 "새 설치가 빈 서버가 된다"로 오진해
+    requirements-core 에 fastapi 상한까지 걸었다가 되돌렸다. 표현이 바뀐 것을 부재로 읽은
+    것이고, 그 오독의 거처가 바로 이 함수다.
+
+    두 표현을 모두 지원한다:
+      · 0.136 이하 — app.routes 에 APIRoute 가 평평하게
+      · 0.137 이상 — _IncludedRouter.effective_candidates() 가 .path/.endpoint/.methods 보유
+    private API 라 언젠가 또 바뀔 수 있다 → 실패하면 조용히 넘기지 말고 그대로 세운다
+    (하한 검사 MIN_* 가 "아무것도 못 셌다"를 잡는 2차 그물이다).
+    """
+    for route in app.routes:
+        if type(route).__name__ == "_IncludedRouter":
+            for cand in route.effective_candidates():
+                if type(cand).__name__ == "_IncludedRouter":
+                    for sub in cand.effective_candidates():
+                        yield sub
+                else:
+                    yield cand
+        else:
+            yield route
+
+
 def self_test() -> int:
     """_auth_reachable 의 정확도 회귀 (--self-test).
 
@@ -183,7 +215,7 @@ def main() -> int:
     mod_cache: dict = {}
     unguarded, guarded, exempted = [], 0, 0
 
-    for route in api.app.routes:
+    for route in _iter_effective_routes(api.app):
         path = getattr(route, "path", None)
         endpoint = getattr(route, "endpoint", None)
         if not path or endpoint is None:
@@ -212,7 +244,7 @@ def main() -> int:
             else:
                 unguarded.append((method, path, endpoint.__name__, mod_name))
 
-    total_routes = sum(1 for r in api.app.routes if getattr(r, "path", None))
+    total_routes = sum(1 for r in _iter_effective_routes(api.app) if getattr(r, "path", None))
     inspected = guarded + exempted + len(unguarded)
     print(f"[공개 라우트] 전체 라우트 {total_routes} · 공개 {inspected} "
           f"(자체인증 {guarded} · 익명 선언 {exempted} · 무검사 {len(unguarded)})")
@@ -229,7 +261,7 @@ def main() -> int:
         print("  이 상태의 '통과'는 아무것도 검사하지 않은 통과입니다.")
         print("  라우터 등록이 조용히 빠졌는지, 의존성이 모자라 일부 모듈이 안 실렸는지 확인하세요.")
         by_prefix: dict = {}
-        for r in api.app.routes:
+        for r in _iter_effective_routes(api.app):
             p = getattr(r, "path", "") or ""
             if p.startswith("/"):
                 by_prefix[p.split("/")[1]] = by_prefix.get(p.split("/")[1], 0) + 1

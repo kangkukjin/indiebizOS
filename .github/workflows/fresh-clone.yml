@@ -65,3 +65,18 @@ jobs:
         run: |
           python scripts/build_ibl_nodes.py --inputs-regex > /dev/null
           echo "가드 입력 패턴 $(python scripts/build_ibl_nodes.py --inputs | wc -l)개"
+
+      # 파생이 환경(설치된 서드파티)에 의존하면 안 된다 — 2026-07-25 실측: auth
+      # 레지스트리를 import 로 읽던 탓에 requests 없는 환경에서 조용히 빈 dict 가 되고
+      # package_meta 의 needs_key/locale 이 통째로 틀리게 파생됐다. 이 잡 자체가
+      # pyyaml 만 깔린 환경이므로, 아래 한 줄이 그 부류의 상시 회귀 가드다.
+      - name: 파생 결정성 — 의존성 없이도 레지스트리가 온전한가
+        run: |
+          python - <<'PY'
+          import sys; sys.path.insert(0, "scripts")
+          from pathlib import Path
+          from iblbuild_derive import _load_auth_registry
+          reg = _load_auth_registry(Path("."))
+          assert len(reg) >= 10, f"레지스트리가 빈약하다({len(reg)}) — import 의존 회귀 의심"
+          print(f"auth 레지스트리 {len(reg)}개 — 서드파티 의존 없이 정적 추출 OK")
+          PY

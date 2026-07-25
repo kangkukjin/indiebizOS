@@ -4,6 +4,7 @@ build_ibl_nodes.py 에서 verbatim 이동: tool.json 인덱스/파생, 패키지
 수집·병합, 폰 매니페스트·fixture·패키지 메타 파생, 최종 직렬화.
 """
 from __future__ import annotations
+import ast
 import json
 import re
 import sys
@@ -392,20 +393,46 @@ def _registry_env_vars(auth_config: dict) -> set[str]:
 
 def _load_auth_registry(root: Path) -> dict:
     """backend/common/auth_manager.py 의 _AUTH_REGISTRY 재사용 — 매핑을 복제하지 않고
-    단일 소스를 그대로 import(KR-lock 서비스가 그쪽에서 바뀌면 이쪽도 즉시 정합)."""
-    import sys as _sys
-    backend_dir = str(root / "backend")
-    added = backend_dir not in _sys.path
-    if added:
-        _sys.path.insert(0, backend_dir)
+    단일 소스를 그대로 읽는다(KR-lock 서비스가 그쪽에서 바뀌면 이쪽도 즉시 정합).
+
+    ★import 가 아니라 AST 로 읽는다 (2026-07-25). 옛 구현은 `from common.auth_manager
+    import _AUTH_REGISTRY` 였는데, `common/__init__.py` 가 api_client → **requests** 를
+    끌어오는 바람에 서드파티 의존성이 없는 환경에서 ImportError 가 나고
+    `except Exception: return {}` 가 그걸 조용히 삼켰다. 그 결과 **파생물이 환경에
+    의존**했다: 의존성 깔린 맥에서는 needs_key/locale 이 채워지고, 신선 CI(우분투,
+    pyyaml 만)에서는 같은 커밋 트리인데 needs_key 가 비고 locale 이 kr→universal 로
+    떨어졌다(2026-07-25 신선 clone CI 첫 실행이 잡음).
+
+    파생물은 소스만으로 재현돼야 한다. _AUTH_REGISTRY 는 순수 리터럴이므로
+    ast.literal_eval 로 충분하고, 이러면 의존성이 0 이 된다.
+
+    ★실패를 조용히 넘기지 않는다 — 빈 레지스트리는 "키 필요 없음"이라는 *틀린 사실*을
+    파생물에 박아 넣기 때문이다(런타임 ibl_access 가 이걸로 키 부재를 판정한다).
+    """
+    path = root / "backend" / "common" / "auth_manager.py"
     try:
-        from common.auth_manager import _AUTH_REGISTRY  # type: ignore
-        return dict(_AUTH_REGISTRY)
-    except Exception:  # noqa: BLE001
-        return {}
-    finally:
-        if added:
-            _sys.path.remove(backend_dir)
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (OSError, SyntaxError) as e:
+        raise RuntimeError(f"_AUTH_REGISTRY 소스를 읽지 못함 ({path}): {e}") from e
+
+    for node in tree.body:
+        target = None
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target, value = node.target.id, node.value
+        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            target, value = node.targets[0].id, node.value
+        if target == "_AUTH_REGISTRY" and value is not None:
+            try:
+                reg = ast.literal_eval(value)
+            except ValueError as e:
+                raise RuntimeError(
+                    f"_AUTH_REGISTRY 가 순수 리터럴이 아니라 정적 추출 불가 ({path}): {e}"
+                ) from e
+            if not isinstance(reg, dict) or not reg:
+                raise RuntimeError(f"_AUTH_REGISTRY 가 비었거나 dict 가 아님 ({path})")
+            return dict(reg)
+
+    raise RuntimeError(f"_AUTH_REGISTRY 를 찾지 못함 ({path})")
 
 
 def derive_package_meta(root: Path, package_dirs=None) -> dict:

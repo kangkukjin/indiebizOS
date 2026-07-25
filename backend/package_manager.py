@@ -560,12 +560,18 @@ class PackageManager:
         if pip_packages:
             installation_log.append(f"pip 패키지 설치: {', '.join(pip_packages)}")
             try:
+                import asyncio
                 python_cmd = get_python_cmd()
-                subprocess.run(
-                    [python_cmd, "-m", "pip", "install"] + pip_packages,
-                    capture_output=True,
-                    text=True,
-                    timeout=120
+                # ★스레드로 내린다 — pip install 은 timeout 120 이라, 이벤트 루프에서
+                # 직접 돌리면 최대 2분간 서버 전체가 선다(이 프로세스가 API·스케줄러·
+                # 폴러를 다 이고 있고, 자기 자신을 부르는 경로도 있어 자기교착까지 난다).
+                await asyncio.to_thread(
+                    lambda: subprocess.run(
+                        [python_cmd, "-m", "pip", "install"] + pip_packages,
+                        capture_output=True,
+                        text=True,
+                        timeout=120
+                    )
                 )
             except Exception as e:
                 installation_log.append(f"pip 설치 경고: {str(e)}")

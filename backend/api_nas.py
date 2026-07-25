@@ -1331,7 +1331,7 @@ async def transcode_video(
 
 
 @router.get("/embedded-subtitle")
-async def get_embedded_subtitle(
+def get_embedded_subtitle(
     request: Request,
     path: str = Query(..., description="동영상 파일 경로"),
     track: int = Query(default=0, description="자막 트랙 인덱스"),

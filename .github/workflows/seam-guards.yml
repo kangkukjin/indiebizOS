@@ -1,0 +1,42 @@
+# 이음매 가드 — 액션이 아니라서 기존 검증망에 안 걸리던 것들.
+#
+# 배경(2026-07-25 진단): 이 저장소의 검증망(--check 가드 17개 · ibl_fixtures 기반
+# §1B 일일 행동 그물 · 자가점검)은 전부 "액션 하나"를 단위로 삼는다. 액션에는
+# 시민권이 있어 커밋 게이트와 일일 점검을 받지만, 미들웨어·이벤트 루프 규율·
+# 두 렌더러의 동작 동일성·부팅 순서·노출 등록은 액션이 아니라 걸릴 자리가 없었다.
+# 실제로 재발한 버그 부류가 정확히 그 목록이다(자기교착 3회 · 지도 미렌더 3연속 ·
+# 터널 마커 오매칭). 새 규율을 들이는 대신, 이 저장소가 이미 지키는 방식(AST 가드)
+# 으로 이음매에 시민권을 준다.
+#
+# 여기 모이는 가드는 전부 pre-commit 훅과 같은 스크립트를 부른다 — 로컬은 워킹트리를
+# 보고 CI 는 커밋된 것만 보므로, 둘 다 있어야 틈이 없다.
+name: Seam Guards
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'data/packages/installed/**'
+      - 'scripts/check_event_loop.py'
+      - '.github/workflows/seam-guards.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  event-loop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      # 의존성 0 (AST 파싱만) — 이식성 검사와 같은 성질.
+      - name: async 본문의 동기 블로킹 호출 검사
+        run: python scripts/check_event_loop.py
+
+      # 가드가 스스로 정확한지 — 음성(중첩 sync + executor = 정석 패턴)을 오탐하면
+      # 가드가 꺼진다. 실제로 나이브 스캔이 backend/api_nodes.py 의 모범 사례를
+      # 오탐했던 적이 있어(2026-07-25), 그 케이스를 회귀로 박아둔다.
+      - name: 가드 자체 픽스처 (오탐/미탐 회귀)
+        run: python scripts/check_event_loop_fixtures.py

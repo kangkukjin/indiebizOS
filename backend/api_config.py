@@ -559,7 +559,7 @@ ollama_running = False
 
 
 @router.get("/ollama/status")
-async def get_ollama_status():
+def get_ollama_status():
     """Ollama 상태 확인"""
     import subprocess
     global ollama_running
@@ -578,7 +578,7 @@ async def get_ollama_status():
 
 
 @router.post("/ollama/start")
-async def start_ollama():
+def start_ollama():
     """Ollama 서버 시작"""
     import subprocess
     import time
@@ -649,7 +649,7 @@ async def stop_ollama():
 
 
 @router.get("/ollama/models")
-async def get_ollama_models():
+def get_ollama_models():
     """설치된 Ollama 모델 목록 조회"""
     import subprocess
     import json

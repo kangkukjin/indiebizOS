@@ -177,7 +177,7 @@ async def get_pending_windows():
 
 
 @router.get("/open")
-async def open_path_in_finder(path: str = Query(...), reveal: bool = Query(True)):
+def open_path_in_finder(path: str = Query(...), reveal: bool = Query(True)):
     """파일/폴더 열기
     - reveal=True: Finder에서 파일 선택 (기본값)
     - reveal=False: 기본 앱으로 파일 열기

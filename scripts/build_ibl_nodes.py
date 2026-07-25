@@ -546,6 +546,30 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print("[build_ibl_nodes] check: 설치필터(dist) 일치 ✓")
         except Exception as _e:
             print(f"[build_ibl_nodes] check: dist_filter 검사 건너뜀 ({_e})")
+
+        # ── 프롬프트 예산 계측 (판정하지 않음 — 숫자만 보인다) ────────────────
+        # 어휘 카탈로그는 매 요청 프롬프트에 통째로 들어간다. 액션을 하나 늘리는 비용이
+        # 로컬에선 yaml 몇 줄로 보이지만 실제로는 *전 요청 과금*이라, 그 청구서가
+        # 커밋 시점에 안 보이면 어휘만 늘고 줄어들 힘이 없다.
+        #
+        # ★스코핑으로도 못 줄이는 바닥이 있다: always_on 기능어 코어(self·others·table)는
+        #   IBL 헌법상 항상 켜져 있어 어떤 노드 스코핑을 걸어도 남는다. 이건 버그가 아니라
+        #   헌법의 청구서다 — 상한을 걸려면 언어 개정 사안이므로 지금은 계측만 한다.
+        try:
+            _pb_prev = sys.path[:]
+            if str(root / "backend") not in sys.path:
+                sys.path.insert(0, str(root / "backend"))
+            from ibl_access import build_environment as _be   # type: ignore
+            _full = len(_be(allowed_nodes=None))
+            _core = len(_be(allowed_set=set(STANDARD_CORE_NODES)))
+            _pct = (_core / _full * 100) if _full else 0.0
+            print(f"[build_ibl_nodes] 프롬프트 예산: 카탈로그 {_full:,}자 · "
+                  f"always_on 코어({'·'.join(sorted(STANDARD_CORE_NODES))}) {_core:,}자 "
+                  f"= {_pct:.1f}% (스코핑 최대 절감 {100 - _pct:.1f}%)")
+            sys.path[:] = _pb_prev
+        except Exception as _e:
+            print(f"[build_ibl_nodes] 프롬프트 예산 계측 건너뜀 ({_e.__class__.__name__})")
+
         return 0 if (bytes_ok and manifest_ok and pkg_meta_ok and fixtures_ok
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and not validation_failed

@@ -61,6 +61,7 @@ sys.path.insert(0, str(BACKEND_PATH))
 # sys.path 에 자동으로 넣지 않아, 이 줄보다 앞에 두면 backend 모듈을 못 찾고 죽는다
 # (맥 표준 파이썬만 sys.path[0]=스크립트 폴더라 통과 — v1.3.6 윈도우 기동 실패의 원인).
 import mime_compat  # noqa: F401, E402  (임포트 = 전역 레지스트리 보강)
+import boot_status  # 부팅 서브시스템 성패 원장 (관측 — /world-pulse/health 가 노출)
 
 # 매니저 임포트
 from project_manager import ProjectManager
@@ -115,8 +116,10 @@ async def lifespan(app: FastAPI):
     try:
         from boot_common import wire_local_subsystems
         wire_local_subsystems(profile="mac")
+        boot_status.record("boot", True)
     except Exception as e:
         print(f"[boot] 부팅 배선 실패 (무시): {e}")
+        boot_status.record("boot", False, e)
 
     print("🚀 IndieBiz OS 서버 시작")
 
@@ -129,16 +132,20 @@ async def lifespan(app: FastAPI):
         _self = _dr.ensure_self(auth="launcher_session", primary=True)
         print(f"[device_registry] 자기등록: {_self.get('alias')} ({_self.get('device_id')}) "
               f"caps={_self.get('capabilities')}")
+        boot_status.record("device_registry", True)
     except Exception as e:
         print(f"[device_registry] 자기등록 실패 (무시): {e}")
+        boot_status.record("device_registry", False, e)
 
     # World Pulse: 펄스 수집 & 자가점검 스케줄 등록 (스케줄러 시작 전에 등록해야 함)
     try:
         from world_pulse import register_pulse_tasks
         register_pulse_tasks()
         print("[WorldPulse] 펄스 수집 & 자가점검 스케줄 등록")
+        boot_status.record("WorldPulse", True)
     except Exception as e:
         print(f"[WorldPulse] 등록 실패 (무시): {e}")
+        boot_status.record("WorldPulse", False, e)
 
     # 통합 스케줄러 자동 시작
     from calendar_manager import get_calendar_manager
@@ -155,8 +162,10 @@ async def lifespan(app: FastAPI):
         from warehouse_feed import start_poller as _wf_start
         _wf_start()
         print("[창고피드] 이웃 창고 폴러 시작 (30분 주기)")
+        boot_status.record("창고피드", True)
     except Exception as e:
         print(f"[창고피드] 폴러 시작 실패 (무시): {e}")
+        boot_status.record("창고피드", False, e)
 
     # 폰 컴패니언 알림 폴러 — 2026-06-06 사용자 요청으로 일단 중단.
     # 알림/걸음/위치 신호를 indiebizOS 에 저장할 필요가 없다고 판단해 비활성화.
@@ -187,8 +196,10 @@ async def lifespan(app: FastAPI):
         from face_provision import verify_public_face
         threading.Thread(target=verify_public_face, daemon=True,
                          name="public-face-verify").start()
+        boot_status.record("Tunnel", True)
     except Exception as e:
         print(f"[Tunnel] 공개면 자가검증 시작 실패 (무시): {e}")
+        boot_status.record("Tunnel", False, e)
 
     # 첫 실행 공유창고 — 창고 폴더(공유창고/0~4)를 부팅 시점에 보장한다(멱등).
     # 새 몸(fresh 설치)에서 내 창고 탭을 열기 전에도 폴더가 존재해, 사용자가
@@ -197,15 +208,19 @@ async def lifespan(app: FastAPI):
     try:
         from api_portal import _ensure_warehouses
         _ensure_warehouses()
+        boot_status.record("공유창고", True)
     except Exception as e:
         print(f"[공유창고] 폴더 보장 실패 (무시): {e}")
+        boot_status.record("공유창고", False, e)
 
     # IBL 용례 임베딩 모델 백그라운드 로딩 (서버 블로킹 없음)
     try:
         from ibl_usage_db import IBLUsageDB
         IBLUsageDB._start_background_model_load()
+        boot_status.record("IBL", True)
     except Exception as e:
         print(f"[IBL] 모델 로딩 시작 실패 (무시): {e}")
+        boot_status.record("IBL", False, e)
 
     # 첫 실행 해마 공급 — 모델·용례·런타임이 없으면(주로 fresh 윈도우 설치) GitHub Release 에셋에서
     # userData 로 내려받고 임베딩 런타임을 설치한다(백그라운드·멱등, 이미 있으면 즉시 통과).
@@ -213,8 +228,10 @@ async def lifespan(app: FastAPI):
     try:
         from hippocampus_provision import provision_async
         provision_async(enabled=os.environ.get("INDIEBIZ_HIPPOCAMPUS_AUTO", "1") != "0")
+        boot_status.record("해마공급", True)
     except Exception as e:
         print(f"[해마공급] 시작 실패 (무시): {e}")
+        boot_status.record("해마공급", False, e)
 
     # 첫 실행 ffmpeg 공급 — 라디오(ffplay)·유튜브 재생용 ffmpeg 가 없으면(주로 fresh 윈도우)
     # 정적 빌드를 userData/bin 에 내려받는다(백그라운드·멱등, 시스템 ffmpeg 있으면 즉시 통과).
@@ -222,8 +239,10 @@ async def lifespan(app: FastAPI):
     try:
         from ffmpeg_provision import provision_async as _ffmpeg_provision_async
         _ffmpeg_provision_async(enabled=os.environ.get("INDIEBIZ_FFMPEG_AUTO", "1") != "0")
+        boot_status.record("ffmpeg공급", True)
     except Exception as e:
         print(f"[ffmpeg공급] 시작 실패 (무시): {e}")
+        boot_status.record("ffmpeg공급", False, e)
 
     # World Pulse: 오늘의 세계 상태 스냅샷 확인 (없으면 백그라운드 수집)
     # 서버 시작을 블로킹하지 않도록 별도 스레드에서 실행
@@ -239,8 +258,10 @@ async def lifespan(app: FastAPI):
                 print(f"[WorldPulse] 오늘 스냅샷 신규 수집 완료 ({result.get('date')})")
             elif status == "error":
                 print(f"[WorldPulse] 수집 실패: {result.get('detail')}")
+            boot_status.record("WorldPulse:today", True)
         except Exception as e:
             print(f"[WorldPulse] 초기화 실패 (무시): {e}")
+            boot_status.record("WorldPulse:today", False, e)
     threading.Thread(target=_deferred_world_pulse, daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
 

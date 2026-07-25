@@ -49,6 +49,7 @@
     "body_ask",
     "body_trust",
     "boot_common",
+    "boot_status",
     "business_manager",
     "business_sync",
     "calendar_actions",
@@ -198,8 +199,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 192,
-    "engine": 177,
+    "total": 193,
+    "engine": 178,
     "blocklist": 15
   }
 }

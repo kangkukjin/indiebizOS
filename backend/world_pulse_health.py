@@ -663,7 +663,18 @@ def get_system_health() -> Dict:
     else:
         avg_rate = 100.0
 
-    if not all_services_ok:
+    # 부팅 서브시스템 성패 — lifespan 이 "실패 (무시)" 로 넘긴 것들의 명단.
+    # 이것들은 없이도 서버가 뜨므로(창고 폴러·터널·해마 공급 등) 실패해도 조용했다:
+    # 그 조용함이 "사흘 뒤 왜 스케줄이 안 도나"의 원인이었다. degraded 로 승격시켜
+    # 조종실·API 에서 보이게 한다. (치명 3종=스케줄러·채널폴러·system_ai_runner 는
+    # try 밖 맨몸 호출이라 실패하면 부팅 자체가 죽는다 — 여기 대상 아님.)
+    try:
+        import boot_status as _bs
+        boot = _bs.snapshot()
+    except Exception:
+        boot = {"ok": True, "failed": [], "total": 0, "entries": []}
+
+    if not all_services_ok or boot["failed"]:
         overall = "degraded"
     elif avg_rate < 80:
         overall = "warning"
@@ -676,6 +687,7 @@ def get_system_health() -> Dict:
     return {
         "overall": overall,
         "services": services,
+        "boot": boot,
         "disk_free_gb": self_state.get("disk_free_gb"),
         "self_check_avg_success_rate": round(avg_rate, 1),
         "self_check_actions": health_summary,

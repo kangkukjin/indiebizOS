@@ -1,0 +1,67 @@
+# 신선 clone 게이트 — "이 기계에서만 통과"를 막는다.
+#
+# 왜 필요한가 (2026-07-25 실측): main 이 신선 clone 에서 `--check` 실패 상태였는데
+# 개발 기계에서는 통과했다. 원인 둘 다 *커밋되지 않은 로컬 상태*였다:
+#
+#   ① 유령 디렉토리 — 2026-07-02(78d4635)에 git 에서 지운 확장 ai-agent 의 잔재
+#      (.install_info.json + 죽은 3.12 pyc)가 디스크에 남아, 설치필터의 제외 줄을
+#      정당화했다. git 에는 그 패키지가 없으니 clone 에서는 그 줄이 stale.
+#   ② 미추적 파생물 — ibl_fixtures/phone_manifest/package_meta 가 gitignore 되어
+#      clone 에 없고, --check 의 바이트 일치 3건이 전부 '불일치'로 떨어졌다.
+#      (ibl_fixtures.json 은 특히 §1B 일일 행동 그물이 런타임에 읽는 파일이라,
+#       없으면 신선 설치에 행동 그물 자체가 없다.)
+#
+# 두 원인 모두 "검증망이 액션 모양이라 이음매에 시민권이 없다"의 사례다. 로컬 훅은
+# 워킹트리를 보고, 배포·새 개발자·CI 는 커밋된 것만 본다 — 그 틈을 이 잡이 메운다.
+#
+# 이 워크플로는 checkout 이 곧 신선 clone 이라는 점을 이용한다(gitignore 된 로컬
+# 잔재가 없는 상태). 따로 clone 하지 않는다.
+name: Fresh Clone Check
+
+on:
+  push:
+    paths:
+      - 'data/**'
+      - 'backend/**'
+      - 'frontend/package.json'
+      - 'frontend/src/components/GenericInstrument.tsx'
+      - 'frontend/src/components/generic/**'
+      - 'frontend/electron/main.js'
+      - 'scripts/**'
+      - '.gitignore'
+      - '.github/workflows/fresh-clone.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      # --check 의 코퍼스 param 검사는 data/training/*.json 을 읽는데, 그 코퍼스는
+      # 사용자 실사용에서 증류된 개인 데이터라 의도적으로 미추적이다. 그 검사만
+      # "코퍼스/파서 미가용 — 건너뜀"으로 스스로 알리고 빠진다(침묵 아님).
+      - name: IBL 어휘 의존성
+        run: pip install pyyaml
+
+      # 커밋된 트리만으로 --check 가 통과해야 한다. 실패하면 개발 기계에서만
+      # 통과하는 상태를 커밋한 것이다.
+      - name: build_ibl_nodes --check (커밋된 트리만으로)
+        run: python scripts/build_ibl_nodes.py --check
+
+      - name: core_manifest --check
+        run: python scripts/build_core_manifest.py --check
+
+      - name: dist filter --check
+        run: python scripts/build_dist_filter.py --check
+
+      # 훅이 쓰는 트리거 선언이 살아 있는지 (조회 실패 시 훅은 전체 매칭으로
+      # 폴백하므로 조용히 죽지는 않지만, 죽은 채로 두지는 않는다).
+      - name: 가드 입력 선언 조회 가능
+        run: |
+          python scripts/build_ibl_nodes.py --inputs-regex > /dev/null
+          echo "가드 입력 패턴 $(python scripts/build_ibl_nodes.py --inputs | wc -l)개"

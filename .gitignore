@@ -157,6 +157,14 @@ data/warehouse_media_web/
 !data/world_pulse_config.example.json
 # 표준 코어 경계의 단일 진실 — 반드시 커밋/배포되어야 함 (build_core_manifest.py 산출)
 !data/core_manifest.json
+# build_ibl_nodes.py 파생물 3종 — `--check` 가 바이트 일치를 요구하므로 커밋돼야 한다.
+# (2026-07-25: 미추적이라 신선 clone 에서 세 검사가 전부 '불일치'로 떨어졌다. 셋 다
+#  git 추적 입력만으로 재현되는 순수 파생물이다 — package_meta 의 49개 패키지 전부
+#  추적 정의를 가진다. ibl_fixtures.json 은 특히 중요: scripts/ibl_health_check.py 의
+#  §1B 일일 행동 그물이 런타임에 이 파일을 읽으므로, 없으면 신선 설치에 행동 그물이 없다.)
+!data/ibl_fixtures.json
+!data/phone_manifest.json
+!data/package_meta.json
 # origin opt-out 마커 — 커밋된 개인 패키지를 코어(배포)에서 빼는 예외 선언
 !data/**/.origin
 !data/ibl_nodes.yaml

@@ -1,0 +1,445 @@
+{
+  "packages": {
+    "android": {
+      "needs_key": [
+        "GEMINI_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "blog": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "browser-action": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "bulletin": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "business": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "cctv": {
+      "needs_key": [
+        "ITS_API_KEY",
+        "KAKAO_REST_API_KEY",
+        "UTIC_API_KEY",
+        "WINDY_API_KEY"
+      ],
+      "weight": "heavy",
+      "locale": "kr"
+    },
+    "cloudflare": {
+      "needs_key": [
+        "CLOUDFLARE_ACCOUNT_ID",
+        "CLOUDFLARE_API_TOKEN"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "community-portal": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "computer-use": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "contest": {
+      "needs_key": [
+        "KAGGLE_API_TOKEN"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "context7": {
+      "needs_key": [
+        "CONTEXT7_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "conversation": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "culture": {
+      "needs_key": [
+        "DATA4LIBRARY_API_KEY",
+        "DATA_GO_KR_API_KEY",
+        "KOPIS_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "data-ops": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "family-news": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "gmail": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "guest-helper": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "health-record": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "ibl-core": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "indienet": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "investment": {
+      "needs_key": [
+        "DART_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "kosis": {
+      "needs_key": [
+        "KOSIS_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "lecture_workspace": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "legal": {
+      "needs_key": [
+        "LAW_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "local-info": {
+      "needs_key": [
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET"
+      ],
+      "weight": "heavy",
+      "locale": "kr"
+    },
+    "location-services": {
+      "needs_key": [
+        "AMADEUS_API_KEY",
+        "AMADEUS_API_SECRET",
+        "DATA_GO_KR_API_KEY",
+        "KAKAO_REST_API_KEY",
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "media_producer": {
+      "needs_key": [
+        "GEMINI_API_KEY"
+      ],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "memory": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "music-player": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "pc-manager": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "photo-manager": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "prompt-generator": {
+      "needs_key": [
+        "GEMINI_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "public-files": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "radio": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "real-estate": {
+      "needs_key": [
+        "DATA_GO_KR_API_KEY",
+        "KAKAO_REST_API_KEY",
+        "MOLIT_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "remotion-video": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "scheduler": {
+      "needs_key": [
+        "GEMINI_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "shopping-assistant": {
+      "needs_key": [
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET"
+      ],
+      "weight": "heavy",
+      "locale": "kr"
+    },
+    "startup": {
+      "needs_key": [
+        "DATA_GO_KR_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "study": {
+      "needs_key": [
+        "GOOGLE_BOOKS_API_KEY",
+        "GUARDIAN_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "switch-runner": {
+      "needs_key": [
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "OPENAI_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "system_essentials": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "visualization": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "web": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
+    },
+    "web-builder": {
+      "needs_key": [
+        "VERCEL_TOKEN"
+      ],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "web-collector": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "web-kr": {
+      "needs_key": [
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
+    "websocket-chat": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "youtube": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    }
+  },
+  "action_owner": {
+    "engines:html_video": "media_producer",
+    "engines:icon": "media_producer",
+    "engines:image_critic": "media_producer",
+    "engines:image_gemini": "media_producer",
+    "engines:image_read": "media_producer",
+    "engines:newspaper": "web",
+    "engines:remotion": "remotion-video",
+    "engines:render_html": "media_producer",
+    "engines:slide": "media_producer",
+    "engines:slide_shadcn": "media_producer",
+    "engines:tts": "media_producer",
+    "engines:web": "web-builder",
+    "engines:web_component": "web-builder",
+    "engines:web_site": "web-builder",
+    "limbs:android": "android",
+    "limbs:browser": "browser-action",
+    "limbs:cctv": "cctv",
+    "limbs:cloudflare_api": "cloudflare",
+    "limbs:explorer": "pc-manager",
+    "limbs:guestpc": "guest-helper",
+    "limbs:launch": "web",
+    "limbs:music": "youtube",
+    "limbs:phone": "android",
+    "limbs:photo_manager": "photo-manager",
+    "limbs:player_status": "radio",
+    "limbs:radio": "radio",
+    "limbs:radio_favorite": "radio",
+    "limbs:screen": "computer-use",
+    "limbs:show_map": "location-services",
+    "limbs:volume": "radio",
+    "others:auto_response": "business",
+    "others:bulletin": "bulletin",
+    "others:contact": "business",
+    "others:family_news": "family-news",
+    "others:messages": "business",
+    "others:neighbor": "business",
+    "others:portal": "community-portal",
+    "others:showcase": "public-files",
+    "self:ask": "system_essentials",
+    "self:blog": "blog",
+    "self:business": "business",
+    "self:business_document": "business",
+    "self:business_item": "business",
+    "self:cctv": "cctv",
+    "self:copy": "system_essentials",
+    "self:deck": "lecture_workspace",
+    "self:delete": "system_essentials",
+    "self:edit": "system_essentials",
+    "self:file_find": "system_essentials",
+    "self:fill": "system_essentials",
+    "self:folder_note": "pc-manager",
+    "self:forage": "pc-manager",
+    "self:fs_query": "pc-manager",
+    "self:grep": "system_essentials",
+    "self:health": "health-record",
+    "self:lecture": "lecture_workspace",
+    "self:limb": "guest-helper",
+    "self:list": "system_essentials",
+    "self:local_save": "local-info",
+    "self:material": "lecture_workspace",
+    "self:memory": "memory",
+    "self:mkdir": "system_essentials",
+    "self:move": "system_essentials",
+    "self:music": "music-player",
+    "self:phone_sync": "business",
+    "self:photo": "photo-manager",
+    "self:propose_patch": "system_essentials",
+    "self:read": "system_essentials",
+    "self:residual": "pc-manager",
+    "self:slide": "lecture_workspace",
+    "self:storage": "pc-manager",
+    "self:time": "system_essentials",
+    "self:work_guideline": "business",
+    "self:write": "system_essentials",
+    "sense:book": "culture",
+    "sense:cctv": "cctv",
+    "sense:classic": "culture",
+    "sense:collect": "web-collector",
+    "sense:commercial": "real-estate",
+    "sense:company": "investment",
+    "sense:contest": "contest",
+    "sense:crawl": "web",
+    "sense:crypto": "investment",
+    "sense:devdocs": "context7",
+    "sense:entity": "study",
+    "sense:exhibit": "culture",
+    "sense:here": "android",
+    "sense:host": "pc-manager",
+    "sense:kosis": "kosis",
+    "sense:legal": "legal",
+    "sense:listen": "android",
+    "sense:local_query": "local-info",
+    "sense:navigate_route": "location-services",
+    "sense:paper": "study",
+    "sense:performance": "culture",
+    "sense:pew_research": "study",
+    "sense:phone": "android",
+    "sense:radio": "radio",
+    "sense:realty": "real-estate",
+    "sense:researcher": "study",
+    "sense:restaurant": "location-services",
+    "sense:reverse_geocode": "location-services",
+    "sense:search_books": "study",
+    "sense:search_ddg": "web",
+    "sense:search_gnews": "web",
+    "sense:search_guardian": "study",
+    "sense:search_hn": "web",
+    "sense:search_local": "local-info",
+    "sense:search_naver": "web-kr",
+    "sense:search_shopping": "shopping-assistant",
+    "sense:search_youtube": "youtube",
+    "sense:see": "android",
+    "sense:startup": "startup",
+    "sense:stay": "location-services",
+    "sense:stock": "investment",
+    "sense:travel": "location-services",
+    "sense:used": "shopping-assistant",
+    "sense:video": "youtube",
+    "sense:weather": "location-services",
+    "sense:world_bank": "study",
+    "table:chart": "visualization",
+    "table:dedup": "data-ops",
+    "table:document": "data-ops",
+    "table:filter": "data-ops",
+    "table:groupby": "data-ops",
+    "table:join": "data-ops",
+    "table:merge": "data-ops",
+    "table:select": "data-ops",
+    "table:sort": "data-ops",
+    "table:spreadsheet": "system_essentials",
+    "table:structure": "data-ops",
+    "table:take": "data-ops",
+    "table:union": "data-ops"
+  }
+}

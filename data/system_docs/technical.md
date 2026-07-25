@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-06-30
+last_updated: 2026-07-25
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -133,6 +133,35 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/start` - 자동응답 시작
 - `POST /business/auto-response/stop` - 자동응답 중지
 
+### 몸 사이 소통 (/nodes) — api_nodes.py
+- `GET /nodes/card` - 내 **명함**(capability card): 레지스트리 파생 desc-프로젝션(표준 코어 제외·params 미포함·몸 인식 필터·`dictionary_hash`)
+- `POST /nodes/ask` - 이웃 몸의 **자연어 부탁** 수신 → 자기 사전으로 컴파일→실행→통화 회신(1회 자가교정, 어휘 밖=정직 거절). 어휘 진입점은 `[others:ask]`
+- 신뢰=이웃 등급(`body_trust`) 게이트. 몸 사이 전용 특권 배관은 두지 않는다.
+
+### USB 손발 (/limb) — api_limb.py
+- `POST /limb/connect` - 헬퍼 등록(limb key 인증, device 단위)
+- `GET /limb/poll` - 셸 봉투 롱폴(아웃바운드 — 게스트 PC 방화벽 무설정)
+- `POST /limb/result` - 실행 결과 회신
+- 발급·폐기는 `[self:limb]{op: issue/list/revoke}`, 하달은 `[limbs:guestpc]{op}`. 큐는 폰 푸시 큐(`phone_jobs`) 재사용.
+
+### 공개 표면 서빙 (브라우저 → Cloudflare Worker → 터널 → 허브)
+공유 `X-Showcase-Secret` + `is_public_remote_path` 화이트리스트.
+- `/h/<slug>/` 개인 포털(api_portal) · `/s/<slug>/` 공개 파일(api_showcase — 동영상 스트리밍 트랜스코드·`/sub` 자막) · `/n/<slug>/` 가족신문(api_family_news) · `/b/<slug>/` 게시판(api_bulletin) · `/r/<slug>/` 정기보고(api_report, 볼 때 렌더)
+- 창고(노드 맨 주소): `GET /` 사람 페이지 · `GET /manifest` 기계 얼굴(JSON) · `GET /f?path=` 파일 · 쿠키 로그인. **이게 계약의 전부.**
+- 몸의 주소는 `origin_host()`가 실제 서빙 얼굴에서 파생(권위=`public_face.provider`), 발급은 `cdn_provision.provision_cdn`(터널+Worker+R2 캐시).
+
+### 이웃 창고 피드 (/warehouse-feed) — api_warehouse_feed.py, 소유자 전용
+- `POST /warehouse-feed/neighbors` 등록(즉시 seed 폴링) · `DELETE …` 해제 · `POST /warehouse-feed/poll` 즉시 폴링
+- `GET /warehouse-feed/feed` 타임라인(seed/new/changed) · `GET /warehouse-feed/search` 동네 전체 파일명 검색 · `POST /warehouse-feed/retweet` 리트윗(`.url` 포인터 파일)
+- 어댑터: native / autoindex(nginx·Apache) / rss(HTML 자동발견) / nextcloud / page — `poll_status.adapter` 캐시, 실패 시 재감지(자가치유). **모델 호출 0**.
+
+### 내 음악 (/music) — api_music.py
+- `GET /music/stream` 부분 응답(Range 206, 소스 폴더 화이트리스트) · `GET /music/cover` 앨범아트(내장 태그→폴더 아트→SVG 폴백)
+- 어휘는 `[self:music]{op}`. 재생은 **서버 무음** — 통화의 `stream` 필드를 보는 표면의 `<audio>`가 문다.
+
+### 클립박스 (/launcher/clipbox)
+- 브라우저(원격 런처)와 PC 사이 메시지 함 — 데스크탑 '폰으로'가 적재하고 조종실이 보여준다. 몸 사이 특권 배관 대신 표면 축을 쓴다.
+
 ### 의식 시스템 (/world-pulse) — api_config.py에서 라우팅
 - `GET /world-pulse/consciousness` - 최근 의식 펄스 조회 (hours 파라미터로 시간 범위 지정)
 - `GET /world-pulse/self-checks` - 최근 자가점검 결과 (hours 파라미터로 시간 범위 지정)
@@ -153,7 +182,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 ## IBL 도구 — execute_ibl
 
-모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 6노드(sense/self/limbs/others/engines/table) 157 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
+모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 6노드(sense/self/limbs/others/engines/table) 162 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조.
 
 예시:
 ```
@@ -195,10 +224,10 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - **업데이트 시 사용자 보존 규칙 (`frontend/electron/main.js` `initUserData`)**: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
-- **Anthropic Claude**: claude-sonnet-4-20250514, claude-3-5-haiku-20241022, claude-3-5-sonnet-latest
-- **OpenAI GPT**: gpt-4o, gpt-4o-mini
-- **Google Gemini**: gemini-2.0-flash-exp, gemini-1.5-pro, gemini-1.5-flash
-- **Ollama**: 로컬 LLM (llama3.2 등)
+`backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code
+- **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**(맥 하네스 렌트)
+- 모델·API 키는 **모델 기어**가 해소한 티어에서 상속(에이전트별 설정 폐지). 구체 모델 ID 는 `data/*_ai_config.json` 슬롯이 보유 — 이 문서는 목록만 유지(모델명은 빨리 낡는다).
+- ★함정: Gemini `flash-latest` 별칭은 `thinkingConfig.thinkingBudget:0` 을 400 으로 거부 — 버전 명시(`gemini-2.5-flash`) 필요.
 
 ### Tool Result 절삭
 - **기본 한도**: 16KB — tool result가 이 크기를 초과하면 절삭
@@ -226,10 +255,10 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `backend/`: 서버 소스 코드
 - `backend/providers/`: AI 프로바이더 (스트리밍)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (38개 — op-bearing 10개 `_OP_DISPATCHERS` 표준)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (42개 — op-bearing 10개 `_OP_DISPATCHERS` 표준)
 - `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
-- `data/packages/installed/extensions/`: 백엔드 코어 모듈 (9개)
-- `projects/`: 사용자 프로젝트 데이터 (20개)
+- `data/packages/installed/extensions/`: 백엔드 코어 모듈 (8개, ai-agent 폐기)
+- `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `scripts/`: 빌드/배포 스크립트 (`build_ibl_nodes.py` + `build_core_manifest.py`[표준 코어 매니페스트] + `build_dist_filter.py`[설치 파일 필터] + `build_body_bundle.py`[폰 번들] + `git-hooks/pre-commit`)
 - `data/core_manifest.json`: 표준 코어 vs 사용자 경계의 단일 진실 (git 파생, 배포 동봉)
 
@@ -267,4 +296,4 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*마지막 업데이트: 2026-07-17 — **공개 표면 가족(커뮤니티당 노드 하나) + 3층 서빙**: `others` 노드 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`)이 브라우저→Cloudflare Worker→터널→맥 3층으로 서빙(공유 `X-Showcase-Secret`·`is_public_remote_path` 화이트리스트). 개인 포털=아이디/비번 또는 운영자 열쇠 로그인·회원=이웃 CRM(business.db) 레벨 0~4·포털별 오디오 프록시(`/h/<주소>/tune/`). 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`(Wikidata)·`[sense:used]`·`[self:install_lib]`(공급망 승인 게이트, auth 불필요)·`[engines:icon]`(폰-로컬, GEMINI_API_KEY). **table 노드 분리**(2026-06-30). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합 + `data/model_gear.json`(기어·프리셋·핀) + `/model-gear` REST(GET/PUT, 핫리로드). 4축=분류·평가·실행·의식. per-agent 모델 폐지(yaml provider/model/apiKey 무시, 모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 프로파일 파생(`build_body_bundle.py`). 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 외부 API 키 `NANET_API_KEY`(`.env`, losi-open.nanet.go.kr) + auth_manager 'nanet' 레지스트리. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지. 포식기억(forager) 추가로 기억 7종. 이전(2026-06-17) — 맥↔폰 양방향 연합 인증 라이브: 환경변수 `INDIEBIZ_PHONE_URL`(맥→폰 LAN)·`INDIEBIZ_PHONE_TOKEN`(공유 인증 토큰, 맥·폰 동일)·`INDIEBIZ_BIND_HOST`(폰 바인드 오버라이드; 미설정 시 토큰 있으면 0.0.0.0·없으면 127.0.0.1). 폰 `phone_api` 미들웨어가 비localhost 요청 토큰 검증, `AgentForegroundService`가 앱 없이 백엔드 상주, `provision_phone_keys.py`가 `.env`→폰 keys.json 토큰 푸시. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*
+*마지막 업데이트: 2026-07-25 — **몸의 주소·몸 사이 소통·손발·음악의 기술면**: ①**공유창고 서빙**(2026-07-18~21): 노드 맨 주소에서 `공유창고/0..4/` 직접 서빙 + `GET /manifest`(기계 얼굴) + `GET /f?path=` + 쿠키 로그인이 계약의 전부. 이웃 창고 폴러(`/warehouse-feed/*`, 30분 diff·모델 호출 0) + **방언 어댑터**(native/autoindex/rss/nextcloud/page, `poll_status.adapter` 캐시·자가치유) + 리트윗(`.url` 포인터). 몸의 공개 주소는 `origin_host()`가 실제 서빙 얼굴에서 **파생**(권위=`public_face.provider`), 발급은 `cdn_provision.provision_cdn`(터널+Worker+R2 캐시, 워커명=몸-유일). 인증 게이트 **fail-closed**(미등록 호스트=외부, 프록시 신호를 `Host` 보다 먼저 — cloudflared 가 Host 를 재작성). ②**몸 사이 소통**(2026-07-22): `GET /nodes/card`(명함) + `POST /nodes/ask`(부탁, 어휘 `[others:ask]`) + 신뢰=이웃 등급(`body_trust`). 사전 물리 분리(설치=자기 어휘만·해마 소유-필터). **DeepSeek 프로바이더** 신설(V4 Pro/Flash, OpenAI 호환). 채널 어휘 `gmail`→`email` 단일화(별칭만 잔존). ③**USB 손발**(2026-07-23): `/limb/connect·poll·result`(limb key 인증, 아웃바운드 롱폴) + `[self:limb]`/`[limbs:guestpc]`. `runs_on mac_only`→**`pc_only`** 전역 개명. ④**내 음악**(2026-07-24): `/music/stream`(Range 206·소스 폴더 화이트리스트)·`/music/cover`, 어휘 `[self:music]`. **공개 파일 동영상 생방송 재생**: 비재생 코덱을 fMP4 로 흘리며 같은 인코딩이 캐시를 만들고(중단해도 백그라운드 완주), 길이는 init 세그먼트 mvhd+tkhd+mdhd 3박스 패치로 표시, 첫 시청 시크는 커스텀 시크바+`?t=` 오프셋 스트림(+`sub?shift=`). ★인프로세스 프록시(httpx ASGITransport)는 스트리밍 불가 → 공개 얼굴은 **루프백 HTTP** 로 전환. **현 상태: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13)·42 도구 패키지 + 8 extensions·backend 192 파일(api_*.py 38)**. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + 3층 서빙**: `others` 노드 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`)이 브라우저→Cloudflare Worker→터널→맥 3층으로 서빙(공유 `X-Showcase-Secret`·`is_public_remote_path` 화이트리스트). 개인 포털=아이디/비번 또는 운영자 열쇠 로그인·회원=이웃 CRM(business.db) 레벨 0~4·포털별 오디오 프록시(`/h/<주소>/tune/`). 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`(Wikidata)·`[sense:used]`·`[self:install_lib]`(공급망 승인 게이트, auth 불필요)·`[engines:icon]`(폰-로컬, GEMINI_API_KEY). **table 노드 분리**(2026-06-30). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합 + `data/model_gear.json`(기어·프리셋·핀) + `/model-gear` REST(GET/PUT, 핫리로드). 4축=분류·평가·실행·의식. per-agent 모델 폐지(yaml provider/model/apiKey 무시, 모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 프로파일 파생(`build_body_bundle.py`). 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 외부 API 키 `NANET_API_KEY`(`.env`, losi-open.nanet.go.kr) + auth_manager 'nanet' 레지스트리. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지. 포식기억(forager) 추가로 기억 7종. 이전(2026-06-17) — 맥↔폰 양방향 연합 인증 라이브: 환경변수 `INDIEBIZ_PHONE_URL`(맥→폰 LAN)·`INDIEBIZ_PHONE_TOKEN`(공유 인증 토큰, 맥·폰 동일)·`INDIEBIZ_BIND_HOST`(폰 바인드 오버라이드; 미설정 시 토큰 있으면 0.0.0.0·없으면 127.0.0.1). 폰 `phone_api` 미들웨어가 비localhost 요청 토큰 검증, `AgentForegroundService`가 앱 없이 백엔드 상주, `provision_phone_keys.py`가 `.env`→폰 keys.json 토큰 푸시. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰-로컬 in-process Gemini 두뇌(claude_code 원격 렌트 은퇴) + detect_body() 하드웨어 자기감지 + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + 의료기록 CRDT 동기화/삭제 op + channel 트리거 맥 발화 경로 + 124 액션 정합화(폰 감각 삼각 + self:show_calendar 폐지). 이전(2026-06-12): /business/sync/* 동기화 엔드포인트(LWW+tombstone, self:phone_sync) + api_indienet REST 제거(IndieNet→IBL 계기) + 122 액션 + 해마 로컬 M4 Pro 재학습(code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 중급 모델 Reflex 전용화, 폰 컴패니언 피드(/phone API), NIP-17/44 모듈. 이전(2026-05-28): op 어휘 단일화 + 삼각 검증. 이전(2026-05-17): 3단계 모델 티어, 심층메모리 DB, XML 구조.*

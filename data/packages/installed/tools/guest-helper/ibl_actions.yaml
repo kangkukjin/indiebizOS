@@ -4,7 +4,7 @@ nodes:
       guestpc:
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
         description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기). 두뇌는 허브(내 PC), 이 액션은 명령을 손발로 내려보내 그 PC 에서 돌린다. 눈 없음(화면 캡처·GUI 조작은 미지원) — 셸/파일만. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
-        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
+        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending(잠시 후 재확인). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
         group: device
         target_key: op
         router: handler
@@ -14,13 +14,14 @@ nodes:
         ops:
           default: shell
           values:
-            shell: 게스트 PC 셸 명령 실행 (cmd — win=cmd/c, mac·linux=sh -c)
+            shell: 게스트 PC 셸 명령 실행 (cmd — win=cmd/c, mac·linux=sh -c. 긴 명령은 background:true)
             read: 게스트 PC 파일 읽기 (path, 200KB 상한)
             write: 게스트 PC 파일 쓰기 (path + content)
             list: 게스트 PC 디렉토리 목록 (path, 생략 시 현재)
             info: 게스트 PC 정보 (os/arch/hostname/cwd)
+            result: 백그라운드/시간초과 셸 명령의 결과 회수 (job=작업 ID, 아직이면 pending)
             detach: 손발 해제 — 헬퍼 종료 (그 PC 무잔류, 재실행 시 자동 재연결)
-        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기. 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 실행 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제.
+        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기(상한 100s — MCP 층 120s 아래). 시간 초과·background:true 면 job_id 를 돌려주고 op=result 가 phone_jobs 결과(RESULT_TTL 5분, 1회 pop)를 회수. background 기본 timeout=1800s(동기 기본 120s). 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 고루틴으로 병렬 실행(긴 명령 중에도 폴링=heartbeat 지속) 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True+job_id. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제.
         keywords:
         - 게스트PC
         - 남의PC
@@ -67,7 +68,7 @@ tool_json:
     version: 1.0.0
   tools:
   - name: guestpc_op
-    description: 게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. detach=헬퍼 종료+승인 해제.
+    description: 게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/result/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. 긴 셸 명령은 background:true→op=result 회수. detach=헬퍼 종료+승인 해제.
     input_schema:
       type: object
       properties:
@@ -85,7 +86,13 @@ tool_json:
           description: 셸 작업 디렉토리 (op=shell, 선택)
         timeout:
           type: integer
-          description: 셸 타임아웃 초 (op=shell, 기본 120)
+          description: 셸 타임아웃 초 (op=shell, 기본 120 — background 면 기본 1800)
+        background:
+          type: boolean
+          description: true 면 즉시 job_id 반환, 결과는 op=result 로 회수 (op=shell — 설치·빌드 등 오래 걸리는 명령)
+        job:
+          type: string
+          description: 결과를 회수할 작업 ID (op=result — shell 응답의 job_id)
         path:
           type: string
           description: 대상 파일/디렉토리 경로 (op=read/write/list)

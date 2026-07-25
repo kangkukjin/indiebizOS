@@ -53,21 +53,25 @@ def _epoch(s: str) -> float:
 # 채널 이름이 email 로 통일되면서 변환이 필요 없어졌다.)
 _SENDABLE_CONTACT_TYPES = {"email", "nostr"}
 
+# 채널 기본 우선순위 — nostr 를 가진 이웃은 nostr 가 1순위 기본 채널이 된다.
+# nostr 는 주소(npub)=수신 채널이 암호학적으로 묶여 있어, 신경 쓰지 않고 보내도
+# "메신저처럼" 왕복이 보장된다. 이메일은 상대가 그 계정을 폴링한다는 보장이 없어
+# nostr 가 없을 때의 폴백. ★사용자가 작성바에서 채널을 직접 고르면 그 선택이 이긴다.
+_CHANNEL_PREFERENCE = ["nostr", "email"]
+
 
 def _primary_channel(bm, neighbor_id: int) -> str:
-    """이웃의 기본 발신 수단(email/nostr) — 연락처 종류에서 추론, 없으면 nostr.
+    """이웃의 기본 발신 수단 — 보유 채널 중 _CHANNEL_PREFERENCE 순서(nostr 우선), 없으면 nostr.
 
-    ★이메일 주소(contact_type='email')를 인정하지 않으면 이메일만 있는 이웃이 nostr
-    기본값으로 떨어져, 이메일 주소로 nostr 발신을 시도하게 된다.
+    ★nostr 를 가진 이웃은 등록 순서와 무관하게 nostr 가 1순위가 되어, 신경 쓰지 않고
+    보내도 nostr 메신저가 된다. (이메일이 먼저 등록돼 있어도 nostr 가 있으면 nostr 로 보낸다.)
+    이메일만 있는 이웃은 email 로, 발신 가능한 채널이 없으면 nostr 로 떨어진다.
     """
     try:
-        for c in bm.get_contacts(neighbor_id):
-            ch = c.get("contact_type")
-            if ch in _SENDABLE_CONTACT_TYPES:
-                return ch
+        available = {c.get("contact_type") for c in bm.get_contacts(neighbor_id)}
     except Exception:
-        pass
-    return "nostr"
+        available = set()
+    return next((ch for ch in _CHANNEL_PREFERENCE if ch in available), "nostr")
 
 
 # --- IndieNet Nostr DM 통합 (dms.db 캐시 — 비이웃 npub도 메신저에 표시) ---
@@ -310,20 +314,23 @@ def _msg_inbox(bm, tool_input: dict) -> str:
         last = n.pop("_last", None)
         unread = n.pop("_unread", 0)
         ch_contacts = n.pop("_channel_contacts", [])
-        # 발신 가능한 주소 종류만 채널로 인정 (_primary_channel 과 같은 집합)
-        _first_ct = ch_contacts[0][0] if ch_contacts else ""
-        primary = _first_ct if _first_ct in _SENDABLE_CONTACT_TYPES else "nostr"
+        # 발신 가능한 주소 종류만 채널로 인정 — nostr 우선(_primary_channel 과 같은 규칙).
+        # 마지막 메시지가 이메일로 왔더라도, 상대가 nostr 를 가지고 있으면 nostr 가 기본
+        # 채널이 되어 스레드(작성바)와 일관되게 nostr 로 답신하게 한다.
+        _avail = {t for (t, v) in ch_contacts if t in _SENDABLE_CONTACT_TYPES}
+        primary = next((ch for ch in _CHANNEL_PREFERENCE if ch in _avail), "nostr")
+        # 선택 채널의 주소를 우선 사용, 없으면 아무 연락처 주소로 폴백.
+        primary_to = next((v for (t, v) in ch_contacts if t == primary and v),
+                          next((v for (t, v) in ch_contacts if v), ""))
         if last:
-            _last_ct = last.get("contact_type", "")
-            ct = _last_ct if _last_ct in _SENDABLE_CONTACT_TYPES else None
-            channel = ct or primary
-            to = last.get("contact_value") or ""
+            channel = primary
+            to = primary_to or (last.get("contact_value") or "")
             preview = (last.get("content", "") or "")[:40]
             ts = last.get("message_time") or last.get("created_at") or ""
             sort, time_s = _epoch(ts), _short_time(ts)
         else:
             channel = primary
-            to = next((v for (t, v) in ch_contacts if v), "")
+            to = primary_to
             preview, time_s, sort, unread = "", "", 0.0, 0
         if channel == "nostr" and to:
             biz_nostr_hex.add(_npub_to_hex(to))

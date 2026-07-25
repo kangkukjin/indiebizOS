@@ -315,6 +315,9 @@ _RESULT_FAILURE_RE = re.compile(
     re.IGNORECASE)
 _IBL_ACTION_RE = re.compile(r'\[(\w+):(\w+)\]')
 _SAFETY_MAP_CACHE: dict = {}
+# 빈 tool_result 가 정상인 도구 — ToolSearch 는 스키마를 별도 <functions> 블록으로 싣고
+# 본문은 비워 돌려준다. 이걸 "빈 껍데기"로 오인해 반성 턴을 돌리면 매번 20~40초 낭비.
+_EMPTY_RESULT_OK = {"ToolSearch"}
 
 
 def _ibl_safety_map() -> dict:
@@ -345,14 +348,16 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
         if not isinstance(tc, dict):
             continue
         name = str(tc.get("name", ""))
+        base_name = name.rsplit("__", 1)[-1]  # mcp__indiebizos__execute_ibl → execute_ibl
         result = tc.get("result", "")
         if tc.get("is_error"):
             return True, f"도구 오류 ({name})"
-        if not str(result).strip():
+        # ToolSearch(스키마 로더)는 tool_result 본문이 비어 보이는 게 정상 동작이다
+        # (도구 정의는 별도 블록으로 실림) — 빈-결과 트리거에서 제외 (에피소드 855·857 오발동).
+        if not str(result).strip() and base_name not in _EMPTY_RESULT_OK:
             return True, f"빈 결과 ({name}) — 빈 껍데기 오해 위험"
         if _RESULT_FAILURE_RE.search(str(result)):
             return True, f"결과 내 실패 신호 ({name})"
-        base_name = name.rsplit("__", 1)[-1]  # mcp__indiebizos__execute_ibl → execute_ibl
         if base_name in _FILE_WRITE_TOOL_NAMES:
             return True, f"파일 변경 ({base_name})"
         if base_name == "execute_ibl":

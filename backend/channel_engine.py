@@ -28,6 +28,12 @@ SUPPORTED_CHANNELS = ["email", "nostr"]
 # 옛 채널 이름 별칭 — 해마 코퍼스·저장된 스케줄·구 호출자의 "gmail"을 email로 접는다.
 CHANNEL_ALIASES = {"gmail": "email"}
 
+# 채널 기본 우선순위 — channel_type 을 명시하지 않은 발송에서 상대가 nostr 를 가지고
+# 있으면 nostr 가 1순위. nostr 는 주소(npub)=수신 채널이 암호학적으로 묶여 있어
+# "메신저처럼" 왕복이 보장된다. 이메일은 상대가 그 계정을 폴링한다는 보장이 없어 폴백.
+# ★channel_type 을 명시하면 이 우선순위를 타지 않는다(사용자 선택이 이긴다).
+CHANNEL_PREFERENCE = ["nostr", "email"]
+
 # 시스템 AI(=indiebizOS 운영 주체) 식별자. 런처 indienet과 nostr 신원을 공유한다.
 SYSTEM_AI_ID = "system_ai"
 
@@ -274,6 +280,42 @@ def _resolve_recipient(channel_type: str, to: str, confirmed: bool = False) -> d
     return {"value": uniq[0]}
 
 
+def _default_channel_for(to: str) -> Optional[str]:
+    """channel_type 생략 시 수신자에게 자연스러운 기본 채널을 고른다(nostr 우선).
+
+    - 이미 주소 형식이면 형식이 곧 채널(npub→nostr, @ 포함→email).
+    - 이름/주인 별칭이면 보유 채널을 CHANNEL_PREFERENCE 순서로 본다(nostr 있으면 nostr,
+      없으면 email 폴백).
+    - 정할 수 없으면 None → 호출부가 channel_type 필요 에러로 되돌린다.
+    """
+    to = (to or "").strip()
+    if not to:
+        return None
+    # 1) 이미 주소 형식 → 형식이 채널을 규정
+    if _looks_like_address("nostr", to):
+        return "nostr"
+    if _looks_like_address("email", to):
+        return "email"
+    # 2) 이름/주인 → 보유 채널을 nostr 우선으로
+    available = set()
+    if to.lower() in _OWNER_ALIASES:
+        available = {ch for ch in CHANNEL_PREFERENCE if _load_owner_addresses(ch)}
+    else:
+        try:
+            from business_manager import BusinessManager
+            bm = BusinessManager()
+            name_l = to.lower()
+            for n in bm.get_neighbors():
+                if (n.get("name") or "").strip().lower() != name_l:
+                    continue
+                for c in bm.get_contacts(n.get("id")):
+                    if c.get("contact_value") and c.get("contact_type") in CHANNEL_PREFERENCE:
+                        available.add(c["contact_type"])
+        except Exception:
+            return None
+    return next((ch for ch in CHANNEL_PREFERENCE if ch in available), None)
+
+
 # === IBL 노드 액션 핸들러 (ibl_engine에서 호출) ===
 
 def execute_channel_action(action: str, params: dict,
@@ -301,10 +343,10 @@ def execute_channel_action(action: str, params: dict,
 
     channel_type_raw = params.get("channel_type", "")
     if not channel_type_raw:
-        # 수신자가 이메일 형식이면 email로 추론 (코퍼스 다수가 channel_type 생략).
-        _to = str(params.get("to", "")).strip()
-        if "@" in _to and "." in _to.split("@")[-1]:
-            channel_type_raw = "email"
+        # channel_type 생략 시 수신자에게 자연스러운 기본 채널을 고른다(nostr 우선).
+        # 상대가 nostr 를 가지고 있으면 nostr 로, 없으면 email 로 폴백한다.
+        # 코퍼스 다수가 channel_type 을 생략하므로, 이름/주소 어느 쪽으로 와도 해소한다.
+        channel_type_raw = _default_channel_for(str(params.get("to", ""))) or ""
     if not channel_type_raw:
         return {
             "error": "channel_type이 필요합니다.",

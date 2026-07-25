@@ -193,7 +193,15 @@ class CognitiveDistillMixin:
             # 1단계: 대화에서 기억할 정보 조각 추출
             extract_prompt = f"""다음 대화에서 나중에 기억해둘 만한 사실 정보를 추출하라.
 (이름, 중요한 날짜, 사용자 선호, 결정사항, 작업 결과 등)
-일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외. JSON 배열로만 응답.
+일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외.
+
+★사용자선호 = *지속적* 성향·취향·환경만(예: "중고는 안 삼", "존댓말 선호", "라벨 프린터는 Netum POS9260 보유").
+이번 한 번의 요청·지시("~찾아줘", "~해줘")나 이번 검색의 일회성 조건(용량·가격대·수량)은
+선호가 아니다 → 저장하지 마라. 요청문 자체를 그대로 content 로 옮기는 것 금지.
+(나쁜 예: "4T나 5T 제품을 찾아줘" → 이건 그 순간의 요청이지 선호가 아님 — 제외.
+ 좋은 예: "중고는 필요없어" 라고 말했다면 → "중고 제품은 원하지 않음" 은 선호.)
+
+JSON 배열로만 응답.
 [{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|사용자정보|작업기록|의사결정|중요날짜"}}]
 정보가 없으면 빈 배열 [] 반환.
 
@@ -208,15 +216,9 @@ AI: {ai_response[:500]}"""
             if not result:
                 return
 
-            # JSON 파싱
-            cleaned = result.strip()
-            if cleaned.startswith("```"):
-                cleaned = cleaned.split("\n", 1)[-1]
-                if cleaned.endswith("```"):
-                    cleaned = cleaned[:-3]
-                cleaned = cleaned.strip()
-
-            facts = json.loads(cleaned)
+            # JSON 파싱 — 첫 JSON 값만 안전 추출(뒤에 잡담이 붙어도 유실 안 함, ep855 부류)
+            from runtime_utils import parse_first_json
+            facts = parse_first_json(result)
             if not isinstance(facts, list) or not facts:
                 return
 
@@ -273,16 +275,8 @@ AI: {ai_response[:500]}"""
                     role="background",
                 )
                 if resp:
-                    rc = resp.strip()
-                    if rc.startswith("```"):
-                        rc = rc.split("\n", 1)[-1]
-                        if rc.endswith("```"):
-                            rc = rc[:-3]
-                        rc = rc.strip()
-                    try:
-                        verdicts = (json.loads(rc) or {}).get("verdicts", [])
-                    except json.JSONDecodeError:
-                        verdicts = []
+                    parsed = parse_first_json(resp)
+                    verdicts = (parsed or {}).get("verdicts", []) if isinstance(parsed, dict) else []
 
             # 4단계: 판정 적용 (verdict 누락/불명은 NEW로 안전 처리)
             for i, (fact, top) in enumerate(pending):
@@ -398,6 +392,8 @@ AI: {ai_response[:500]}"""
 - **owner vs convention 경계**: 검색·탐색 *방법/기법*(예 "흔한 이름은 전공·소속 등 비식별 고유값으로 좁혀라", "동명이인 주의", "본명이 남는 공개기록 우선")은 *주인이 누구인가*가 아니다 → 그 공간의 map.convention 으로(owner 금지). owner.habit/lexicon 은 *주인 자신*에 관한 것만(예 "이력서를 docx+pdf 쌍으로 관리"=정리습관 / "Amari=甘利俊一"=어휘매핑).
 - prior_class: 동질이라 싸게 재검증되면 "structural", 의미·정체 주장이면 "semantic".
 - surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus/owner value 를 surface 에 적고 why.
+- ★간결히: map 최대 6건·owner 최대 4건, 각 claim/value 는 한 문장. 그보다 많으면 출력이
+  잘려(max_tokens) 전부 유실된다 — 가장 일반화 가능한 것만 골라라. 설명·서론 없이 JSON 만.
 - 확실치 않으면 비워라. JSON 으로만 응답.
 
 이미 아는 지도(전 공간):
@@ -419,14 +415,10 @@ AI 답변: {ai_response[:1400]}
             )
             if not resp:
                 return
-            rc = resp.strip()
-            if rc.startswith("```"):
-                rc = rc.split("\n", 1)[-1]
-                if rc.endswith("```"):
-                    rc = rc[:-3]
-                rc = rc.strip()
-            data = json.loads(rc)
+            from runtime_utils import parse_first_json
+            data = parse_first_json(resp)
             if not isinstance(data, dict):
+                print("[포식기억] JSON 추출 실패 (무시)")
                 return
 
             # 공간 = AI 가 명명(없으면 mac). 매체가 늘어도 분기 없음 — 라벨 그대로 body 키.

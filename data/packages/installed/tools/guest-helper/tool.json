@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "guestpc_op",
-      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. detach=헬퍼 종료+승인 해제.",
+      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/result/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. 긴 셸 명령은 background:true→op=result 회수. detach=헬퍼 종료+승인 해제.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -20,6 +20,7 @@
               "write",
               "list",
               "info",
+              "result",
               "detach"
             ],
             "default": "shell"
@@ -38,7 +39,15 @@
           },
           "timeout": {
             "type": "integer",
-            "description": "셸 타임아웃 초 (op=shell, 기본 120)"
+            "description": "셸 타임아웃 초 (op=shell, 기본 120 — background 면 기본 1800)"
+          },
+          "background": {
+            "type": "boolean",
+            "description": "true 면 즉시 job_id 반환, 결과는 op=result 로 회수 (op=shell — 설치·빌드 등 오래 걸리는 명령)"
+          },
+          "job": {
+            "type": "string",
+            "description": "결과를 회수할 작업 ID (op=result — shell 응답의 job_id)"
           },
           "path": {
             "type": "string",

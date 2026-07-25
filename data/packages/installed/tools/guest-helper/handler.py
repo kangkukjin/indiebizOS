@@ -24,6 +24,7 @@ _OP_DISPATCHERS = {
         "write": None,
         "list": None,
         "info": None,
+        "result": None,
         "detach": None,
     },
     "limb_op": {
@@ -133,11 +134,37 @@ def _detach(tool_input: dict) -> dict:
                        f"손발 '{alias}' 에 해제 명령을 보냈지만 응답이 없습니다(이미 닫혔을 수 있음)."}
 
 
+# 동기 대기 상한(초) — MCP 층(/ibl/execute urllib timeout 120s)보다 확실히 아래.
+# 이걸 넘기면 호출자는 불투명한 {"error":"timed out"} 을 받는다(에피소드 852 실측) —
+# 그보다 일찍 우리가 job_id 를 실어 정직하게 돌려주는 게 낫다.
+_SYNC_WAIT_CAP = 100.0
+
+
+def _job_result(tool_input: dict) -> dict:
+    """op=result — 백그라운드/시간초과 셸 명령의 결과를 job_id 로 회수.
+
+    결과는 헬퍼가 회신한 뒤 phone_jobs 에 RESULT_TTL(5분)간 보존되고, 회수는 1회(pop)다.
+    아직 없으면 pending — 명령이 그 PC 에서 계속 실행 중일 수 있다."""
+    import phone_jobs
+    job_id = (tool_input.get("job") or tool_input.get("job_id") or "").strip()
+    if not job_id:
+        return {"success": False, "error": "result 엔 job(작업 ID)이 필요합니다 — shell 응답의 job_id 를 넣으세요."}
+    result = phone_jobs.wait_result(job_id, timeout=float(tool_input.get("wait") or 5.0))
+    if result is None:
+        return {"success": False, "op": "result", "job_id": job_id, "pending": True,
+                "message": ("아직 결과가 없습니다 — 명령이 그 PC 에서 실행 중이면 잠시 후 같은 op 로 "
+                            "다시 확인하세요. (완료 후 5분이 지났거나 백엔드가 재시작됐으면 결과가 유실된 것 — "
+                            "상태 확인 명령을 새로 보내세요.)")}
+    return {"success": True, "op": "result", "job_id": job_id, "result": result}
+
+
 def _guestpc(tool_input: dict) -> dict:
     import phone_jobs
     op = (tool_input.get("op") or _OP_DEFAULTS["guestpc_op"]).strip()
     if op == "detach":
         return _detach(tool_input)
+    if op == "result":
+        return _job_result(tool_input)   # job_id 전역 조회 — 손발 해소·liveness 불요
     device_id, alias, err = _resolve_limb(tool_input.get("limb") or tool_input.get("target"))
     if err:
         return {"success": False, "error": err}
@@ -145,6 +172,7 @@ def _guestpc(tool_input: dict) -> dict:
     _task_start_note(device_id)   # 작업 시작 서사(원 요청)를 그 손발 창에 — 한 번만
     envelope = {"op": op}
     wait = 30.0
+    background = bool(tool_input.get("background"))
     if op == "shell":
         cmd = tool_input.get("cmd") or ""
         if not cmd.strip():
@@ -152,9 +180,13 @@ def _guestpc(tool_input: dict) -> dict:
         envelope["cmd"] = cmd
         if tool_input.get("cwd"):
             envelope["cwd"] = tool_input["cwd"]
-        to = int(tool_input.get("timeout") or 120)
+        # 헬퍼가 이 시간에 명령을 죽인다. 백그라운드 모드의 기본은 넉넉히(30분) —
+        # 명시 120s 기본을 그대로 두면 설치·빌드가 헬퍼 쪽에서 잘린다.
+        to = tool_input.get("timeout")
+        to = int(to) if to else (1800 if background else 120)
         envelope["timeout"] = to
-        wait = float(to) + 25.0        # 명령 실행시간 + 왕복 여유
+        # 명령 실행시간 + 왕복 여유 — 단, MCP 층이 120s 에 먼저 끊으므로 상한을 둔다.
+        wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
     elif op in ("read", "list"):
         envelope["path"] = tool_input.get("path") or ""
     elif op == "write":
@@ -165,13 +197,26 @@ def _guestpc(tool_input: dict) -> dict:
     elif op == "info":
         pass
     else:
-        return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: shell/read/write/list/info"}
+        return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: shell/read/write/list/info/result"}
 
     job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
+
+    # 백그라운드 모드(설치·빌드 등 오래 걸리는 셸) — 즉시 job_id 반환, 결과는 op=result 로.
+    if background and op == "shell":
+        return {"success": True, "op": "shell", "background": True,
+                "limb": device_id, "limb_name": alias, "job_id": job_id,
+                "message": (f"손발 '{alias}' 에서 백그라운드로 실행 중입니다. 결과는 "
+                            f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 확인하세요.')}
+
     result = phone_jobs.wait_result(job_id, timeout=wait)
     if result is None:
-        return {"success": False, "queued": True,
-                "message": f"손발 '{alias}' 이(가) 응답하지 않습니다(오프라인이거나 명령이 오래 걸림). 헬퍼 창이 떠 있는지 확인하세요."}
+        # ★실패 단정 금지: 명령은 그 PC 에서 계속 실행 중일 수 있다(오프라인과 구별 불가).
+        #   같은 명령 재전송은 이중 실행 위험 — job_id 로 결과를 회수하는 게 정도(正道).
+        return {"success": False, "queued": True, "job_id": job_id,
+                "message": (f"손발 '{alias}' 의 응답을 {wait:.0f}초 안에 못 받았습니다 — 명령이 오래 걸리는 "
+                            f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
+                            f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 결과를 확인하세요. '
+                            f'오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다.')}
     # limb_name 을 항상 실어 어느 PC 에서 돌았는지 결과에 명시(오배송 사후 인지).
     return {"success": True, "limb": device_id, "limb_name": alias, "result": result}
 

@@ -1127,7 +1127,7 @@
     {
       "id": "guest_helper",
       "name": "USB 손발(게스트 PC 헬퍼) 가이드",
-      "description": "USB 를 낯선 PC 에 꽂아 그 PC 에서 셸·파일 작업을 시키는 손발 시스템. [self:limb]{op:issue/list/revoke/approve} 발급·승인·폐기 + [limbs:guestpc]{op:shell/read/write/list/info} 조작. 두뇌·신원은 맥, USB 엔 limb key 하나.",
+      "description": "USB 를 낯선 PC 에 꽂아 그 PC 에서 셸·파일 작업을 시키는 손발 시스템. [self:limb]{op:issue/list/revoke/approve} 발급·승인·폐기 + [limbs:guestpc]{op:shell/read/write/list/info/result} 조작 — 오래 걸리는 명령(설치·빌드)은 background:true 로 보내고 op:result 로 회수. 두뇌·신원은 허브(내 PC), USB 엔 limb key 하나.",
       "keywords": [
         "USB",
         "손발",
@@ -1139,7 +1139,10 @@
         "guestpc",
         "헬퍼만들기",
         "다른PC",
-        "원격PC"
+        "원격PC",
+        "백그라운드",
+        "긴명령",
+        "설치"
       ],
       "file": "guest_helper.md"
     },
@@ -1164,7 +1167,11 @@
         "랜덤 재생",
         "mp3",
         "flac",
-        "music"
+        "music",
+        "AI 추천",
+        "추천 플레이리스트",
+        "선곡",
+        "AI 플레이리스트"
       ],
       "file": "music_player.md"
     }

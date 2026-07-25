@@ -18,6 +18,7 @@
 | track | path | track(태그) + related(관련곡) + playlists(담기 후보, track_path 동봉) |
 | related | path (+limit) | 관련곡 top-10 (reason 연결 근거) |
 | walk | q 또는 path (없으면 랜덤) + length(30) | 관련곡 랜덤 워크 재생목록 (step·reason) |
+| compose | theme(주제 자연어, 필수) + size(25) + name(생략=AI 작명) | AI 추천 플레이리스트 — 경량 AI 2단 선곡(아티스트·폴더 개요→후보 곡), 플레이리스트로 저장 + items 즉시 재생. 30초~2분 |
 | graph | path/q 중심곡 | 에고 그래프 — items=노드(ring 0/1/2), edges=[인덱스 쌍], center |
 | folders | — | 곡을 담은 폴더 목록 (library folder 와 짝) |
 | albums / artists | — | 묶음 목록 (곡 수·앨범아트) |

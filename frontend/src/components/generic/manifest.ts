@@ -222,7 +222,16 @@ export function composeChannelOptions(cmp: AppCompose | undefined, data: unknown
     if (to) opts = [mk(ct, to, ct || '기본')];
   }
   const seen = new Set<string>();
-  return opts.filter((o) => (seen.has(o.key) ? false : (seen.add(o.key), true)));
+  const uniq = opts.filter((o) => (seen.has(o.key) ? false : (seen.add(o.key), true)));
+  // 백엔드가 정한 기본 채널(data.channel = _primary_channel, nostr 우선)을 맨 앞으로 옮긴다.
+  // 작성바 기본 선택 = opts[0] 이므로, 연락처 등록 순서와 무관하게 nostr 를 가진 이웃은
+  // nostr 가 기본이 된다. ★사용자가 드롭다운에서 다른 채널을 고르면 그 선택이 이긴다.
+  const prefCt = String(jget(data, 'channel') ?? '');
+  if (prefCt) {
+    const i = uniq.findIndex((o) => o.channel_type === prefCt);
+    if (i > 0) { const [pick] = uniq.splice(i, 1); uniq.unshift(pick); }
+  }
+  return uniq;
 }
 
 // 메시지 등 텍스트 속 URL 을 인앱 브라우저(런처의 포식 브라우저)로 여는 헬퍼.

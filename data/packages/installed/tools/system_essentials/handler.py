@@ -46,6 +46,159 @@ def _is_dead_dir(path):
     return any(n in p for n in _DEAD_SUBSTR)
 
 
+# === grep_files 내용 검색 2층 =====================================================
+# ripgrep(rg) 있으면 --json 고속 경로, 없으면 파이썬 줄 스캔 폴백(윈도우 등 rg 미보장).
+# ★한글(비ASCII) 패턴은 cp949 파일과 바이트 표현이 달라 rg 로는 원리적으로 못 찾으므로
+#   항상 파이썬 경로(인코딩 폴백)를 탄다. ASCII 패턴은 cp949 파일에서도 바이트가 같아 rg 안전.
+_GREP_SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache'}
+_GREP_SKIP_EXTS = {'.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin',
+                   '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
+                   '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv',
+                   '.zip', '.gz', '.tar', '.rar', '.7z', '.bz2',
+                   '.woff', '.woff2', '.ttf', '.eot', '.otf',
+                   '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+                   '.db', '.sqlite', '.sqlite3'}
+# utf-8 실패 시 cp949 재시도, 그래도 실패 시 utf-8(replace) — 옛 한글(cp949) 문서가
+# UnicodeDecodeError 로 파일째 조용히 탈락하던 침묵 실패 부류 봉합(음악 태그 모지바케와 같은 계열).
+_GREP_ENCODINGS = (("utf-8", "strict"), ("cp949", "strict"), ("utf-8", "replace"))
+
+
+def _find_rg():
+    """rg 바이너리 탐색 — 백엔드 프로세스 PATH 에 brew 경로가 없을 수 있어 관용 후보도 본다."""
+    p = shutil.which("rg")
+    if p:
+        return p
+    for cand in ("/opt/homebrew/bin/rg", "/usr/local/bin/rg", "/usr/bin/rg"):
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+_RG_BIN = _find_rg()
+
+
+def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars):
+    """ripgrep --json 위임(고속 경로). 성공 시 (rows, search_done, hit_size_cap) —
+    rows=[(절대경로, 줄번호, 내용)]. 매칭 0 은 정상 결과([], False, False).
+    rg 실행 실패·패턴 문법 오류(exit 2)면 None 반환 → 호출부가 파이썬 경로로 폴백.
+    바이너리는 rg 가 자동 스킵, .gitignore·숨김 파일 기본 스킵(파이썬 glob 도 dot 미매칭이라 동등).
+    """
+    cmd = [_RG_BIN, "--json", "--no-messages", "--max-count", str(max_results)]
+    if not use_regex:
+        cmd.append("-F")
+    if not os.path.isfile(root) and file_pattern and file_pattern != "**/*":
+        cmd += ["--glob", file_pattern]
+    for d in _GREP_SKIP_DIRS:
+        cmd += ["--glob", f"!**/{d}/**"]
+    # svg 는 텍스트라 rg 가 검색해버림 — 파이썬 경로의 SKIP_EXTS 와 의미 정렬(나머지는 바이너리 자동 스킵)
+    cmd += ["--glob", "!*.svg", "--regexp", pattern, root]
+    rows, total_chars = [], 0
+    search_done = hit_size_cap = False
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                                text=True, encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    deadline = time.time() + _FIND_DEADLINE_S
+    try:
+        for raw in proc.stdout:
+            if time.time() > deadline:
+                search_done = True
+                break
+            try:
+                ev = json.loads(raw)
+            except ValueError:
+                continue
+            if ev.get("type") != "match":
+                continue
+            d = ev.get("data") or {}
+            fp = (d.get("path") or {}).get("text")
+            if not fp:
+                continue  # 비-utf8 파일명(base64 통보)은 드묾 — 생략
+            snippet = ((d.get("lines") or {}).get("text") or "").rstrip()
+            rows.append((os.path.abspath(fp), d.get("line_number") or 0, snippet))
+            total_chars += min(len(snippet), max_line_chars)
+            if len(rows) >= max_results or total_chars >= max_total_chars:
+                search_done = True
+                hit_size_cap = total_chars >= max_total_chars
+                break
+    finally:
+        try:
+            proc.stdout.close()
+        except Exception:
+            pass
+        proc.terminate()
+        try:
+            proc.wait(timeout=3)
+        except Exception:
+            proc.kill()
+    if not rows and proc.returncode == 2:
+        return None  # 패턴 문법 등 rg 오류 — 파이썬 경로가 컴파일 폴백까지 처리
+    return rows, search_done, hit_size_cap
+
+
+def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars):
+    """파이썬 스캔 경로 — rg 없거나 한글(비ASCII) 패턴일 때.
+    파일별로 _GREP_ENCODINGS 순서로 처음부터 재시도(부분 커밋 없음=중복 방지).
+    반환 (rows, search_done, hit_size_cap, regex_error) — rows=[(절대경로, 줄번호, 내용)].
+    """
+    regex_pattern, regex_error = None, None
+    if use_regex:
+        # 잘못된 정규식(짝 안 맞는 괄호 등)은 크래시 대신 리터럴 검색으로 폴백한다 —
+        # 절대 크래시도 침묵 실패도 만들지 않는다. 폴백 시 결과에 안내를 덧붙인다.
+        try:
+            regex_pattern = re.compile(pattern)
+        except re.error as e:
+            regex_error = str(e)
+            use_regex = False
+    # 검색할 파일 목록 (불필요 파일 필터링). root 가 단일 파일이면 그 파일만 검색한다 —
+    # file_pattern 기본값 '**/*' 를 파일 경로에 join 하면 빈 목록 → 조용한 No matches 버그.
+    # 사용자가 직접 지정한 파일이므로 SKIP 필터도 적용하지 않는다.
+    if os.path.isfile(root):
+        files = [root]
+    else:
+        files = glob.glob(os.path.join(root, file_pattern), recursive=True)
+        files = [
+            f for f in files
+            if os.path.isfile(f)
+            and os.path.splitext(f)[1].lower() not in _GREP_SKIP_EXTS
+            and not any(skip in f.split(os.sep) for skip in _GREP_SKIP_DIRS)
+        ]
+
+    def _scan_one(fp):
+        """한 파일 → [(줄번호, 내용)] (파일당 max_results 상한)."""
+        for enc, err in _GREP_ENCODINGS:
+            found = []
+            try:
+                with open(fp, 'r', encoding=enc, errors=err) as f:
+                    for ln, line in enumerate(f, 1):
+                        matched = regex_pattern.search(line) if use_regex else (pattern in line)
+                        if matched:
+                            found.append((ln, line.rstrip()))
+                            if len(found) >= max_results:
+                                break
+                return found
+            except UnicodeDecodeError:
+                continue
+            except (PermissionError, OSError):
+                return []
+        return []
+
+    rows, total_chars = [], 0
+    search_done = hit_size_cap = False
+    for fp in files:
+        for ln, snippet in _scan_one(fp):
+            rows.append((os.path.abspath(fp), ln, snippet))
+            total_chars += min(len(snippet), max_line_chars)
+            if len(rows) >= max_results or total_chars >= max_total_chars:
+                search_done = True
+                hit_size_cap = total_chars >= max_total_chars
+                break
+        if search_done:
+            break
+    return rows, search_done, hit_size_cap, regex_error
+
+
 def _bounded_find(root, basename_pat, max_results):
     """root 하위를 바운드 재귀 순회 — 정크 가지치기 + dot-dir 스킵(glob ** 와 동일) + 시간 예산.
 
@@ -526,79 +679,34 @@ def execute(tool_input: dict, context) -> str:
             # 100줄로도 수십만 자가 된다. 줄 길이·총량 상한을 함께 둔다.
             MAX_LINE_CHARS = 500       # 한 줄 매칭 내용 상한 (초과 시 잘라 표시)
             MAX_TOTAL_CHARS = 40_000   # content 누적 총량 상한 (초과 시 검색 중단 + 좁히기 안내)
-            total_chars = 0
-            hit_size_cap = False
 
-            # 검색 제외 디렉토리/확장자 (바이너리, 캐시, VCS)
-            SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache'}
-            SKIP_EXTS = {'.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin',
-                         '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
-                         '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv',
-                         '.zip', '.gz', '.tar', '.rar', '.7z', '.bz2',
-                         '.woff', '.woff2', '.ttf', '.eot', '.otf',
-                         '.pdf', '.doc', '.docx', '.xls', '.xlsx',
-                         '.db', '.sqlite', '.sqlite3'}
-
-            # 검색할 파일 목록 가져오기 (불필요 파일 필터링)
-            # root 가 단일 파일이면 그 파일만 검색한다. file_pattern 기본값 '**/*' 를 파일 경로에
-            # join 하면 'file.py/**/*' 가 되어 빈 목록 → 조용한 "No matches" 버그가 된다.
-            # 모델(Claude Grep 습관)은 흔히 단일 파일을 겨누므로 이 케이스를 명시 처리한다.
-            # 사용자가 직접 지정한 파일이므로 SKIP 확장자/디렉토리 필터도 적용하지 않는다.
-            if os.path.isfile(root):
-                files = [root]
-            else:
-                files = glob.glob(os.path.join(root, file_pattern), recursive=True)
-                files = [
-                    f for f in files
-                    if os.path.isfile(f)
-                    and os.path.splitext(f)[1].lower() not in SKIP_EXTS
-                    and not any(skip in f.split(os.sep) for skip in SKIP_DIRS)
-                ]
+            # === 2층 검색: rg 고속 경로 → 파이썬 인코딩-인지 경로 (_rg_grep/_py_grep 참조) ===
+            # 한글(비ASCII) 패턴은 cp949 파일을 rg 가 원리적으로 못 찾으므로 파이썬 경로로.
+            raw_rows = None
+            regex_error = None
+            if _RG_BIN and pattern.isascii():
+                rg_out = _rg_grep(pattern, root, file_pattern, use_regex,
+                                  max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS)
+                if rg_out is not None:
+                    raw_rows, search_done, hit_size_cap = rg_out
+            if raw_rows is None:
+                raw_rows, search_done, hit_size_cap, regex_error = _py_grep(
+                    pattern, root, file_pattern, use_regex,
+                    max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS)
 
             results = []
             match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
             file_counts = {}  # output_mode=files_with_matches/count용 {파일: 매칭 수}
             file_order = []   # 파일 첫 등장 순서 보존
-            # 잘못된 정규식(짝 안 맞는 괄호 등)은 크래시 대신 리터럴 검색으로 폴백한다 —
-            # 절대 크래시도 침묵 실패도 만들지 않는다. 폴백 시 결과에 안내를 덧붙인다.
-            regex_pattern = None
-            regex_error = None
-            if use_regex:
-                try:
-                    regex_pattern = re.compile(pattern)
-                except re.error as e:
-                    regex_error = str(e)
-                    use_regex = False  # 리터럴로 폴백
-            search_done = False
-
-            for file_path in files:
-                if search_done:
-                    break
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        for line_num, line in enumerate(f, 1):
-                            if use_regex:
-                                matched = regex_pattern.search(line)
-                            else:
-                                matched = pattern in line
-
-                            if matched:
-                                rel_path = os.path.relpath(file_path, project_path)
-                                snippet = line.rstrip()
-                                if len(snippet) > MAX_LINE_CHARS:
-                                    snippet = snippet[:MAX_LINE_CHARS] + " …(줄 잘림)"
-                                results.append(f"{rel_path}:{line_num}: {snippet}")
-                                match_rows.append([rel_path, line_num, snippet])
-                                if rel_path not in file_counts:
-                                    file_order.append(rel_path)
-                                file_counts[rel_path] = file_counts.get(rel_path, 0) + 1
-                                total_chars += len(snippet)
-                                if len(results) >= max_results or total_chars >= MAX_TOTAL_CHARS:
-                                    search_done = True
-                                    hit_size_cap = total_chars >= MAX_TOTAL_CHARS
-                                    break
-                except (UnicodeDecodeError, PermissionError, OSError):
-                    continue
+            for abs_fp, line_num, snippet in raw_rows:
+                rel_path = os.path.relpath(abs_fp, project_path)
+                if len(snippet) > MAX_LINE_CHARS:
+                    snippet = snippet[:MAX_LINE_CHARS] + " …(줄 잘림)"
+                results.append(f"{rel_path}:{line_num}: {snippet}")
+                match_rows.append([rel_path, line_num, snippet])
+                if rel_path not in file_counts:
+                    file_order.append(rel_path)
+                file_counts[rel_path] = file_counts.get(rel_path, 0) + 1
 
             regex_note = ""
             if regex_error:

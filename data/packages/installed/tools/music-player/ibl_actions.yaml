@@ -5,8 +5,8 @@ nodes:
         returns: items
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
-        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-        target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
+        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/compose(AI 추천 플레이리스트 — theme 주제로 경량 AI 선곡·저장)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
+        target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / compose(theme 주제 자연어 필수, size 곡 수 기본 25, name 생략 시 AI 작명 — 결과는 플레이리스트로 저장) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
         target_key: op
         group: music
         router: handler
@@ -31,6 +31,7 @@ nodes:
             playlist_delete: 플레이리스트 삭제 (name)
             playlist_add: 곡 담기 (name + path)
             playlist_remove: 곡 빼기 (name + path)
+            compose: AI 추천 플레이리스트 — theme(주제 자연어)로 경량 AI가 라이브러리 전체에서 선곡·순서·이름까지 정해 플레이리스트로 저장 (size 기본 25)
             sources: 등록 폴더 목록 + 라이브러리 통계 + 스캔 상태
             add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
             remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림
@@ -117,6 +118,24 @@ nodes:
                       v: '{track.duration_str}'
                     - k: 파일
                       v: '{track.path}'
+          - name: AI 추천
+            note: 주제를 말하면 AI가 라이브러리 전체에서 곡을 골라 플레이리스트로 만들어 줍니다 (플레이리스트 탭에도 저장). 선곡에 30초~2분쯤 걸려요 — 기다리면 바로 이어서 재생됩니다.
+            inputs:
+            - key: theme
+              type: text
+              placeholder: 예) 비 오는 날 조용한 발라드, 90년대 한국 포크
+            action: '[self:music]{op: "compose", theme: "$theme"}'
+            view:
+            - type: media_player
+              from: items
+              continuous: true
+              src: '{stream}'
+              title: '{title} — {artist}'
+            - type: list_action
+              from: items
+              empty_from: message
+              title: '{title}'
+              sub: '{artist} · {album} · {duration_str}'
           - name: 이어듣기
             auto_run: true
             note: 관련곡 그래프를 산책하며 다음 곡을 랜덤으로 이어갑니다. 시작곡을 검색하거나, 비워 두면 아무 곡에서나 출발해요. 다시 조회하면 매번 다른 산책이 나옵니다.
@@ -323,6 +342,8 @@ tool_json:
 
       - walk: 관련곡 랜덤 워크 재생목록 — q(시작곡 검색) 또는 path, 둘 다 없으면 랜덤 시작. length(기본 30). 산책하듯 관련곡을 이어간 시퀀스.
 
+      - compose: AI 추천 플레이리스트 — theme(주제 자연어, 필수)로 경량 AI가 아티스트·폴더 개요→후보 곡 2단으로 선곡하고 듣는 순서·이름까지 정해 플레이리스트로 저장. size(기본 25·최대 60), name(생략 시 AI 작명). items=선곡 결과(즉시 연속재생 가능).
+
       - graph: 에고 그래프 — path/q 중심곡 + 1홉(top-10) + 2홉. items=노드, edges=[노드 인덱스 쌍], center.
 
       - folders: 곡을 직접 담은 폴더 목록 (폴더 단위 재생용 — library 의 folder 파라미터와 짝).
@@ -341,7 +362,7 @@ tool_json:
       properties:
         op:
           type: string
-          description: library(기본)/track/albums/artists/related/walk/folders/graph/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan
+          description: library(기본)/track/albums/artists/related/walk/compose/folders/graph/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan
         q:
           type: string
           description: 검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)
@@ -366,6 +387,12 @@ tool_json:
         length:
           type: integer
           description: 워크 재생목록 곡 수 (walk, 기본 30·최대 100)
+        theme:
+          type: string
+          description: AI 추천 플레이리스트 주제 자연어 (compose 필수 — 예 "비 오는 날 조용한 발라드")
+        size:
+          type: integer
+          description: AI 추천 선곡 수 (compose, 기본 25·최대 60)
         limit:
           type: integer
           description: 곡 수 상한 (library, 기본 300)

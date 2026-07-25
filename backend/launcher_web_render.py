@@ -464,7 +464,13 @@ function composeChannelOptions(cmp){
   let opts=viewList(data,ch.from).map(c=>({ct:String(jget(c,ch.type)||''),to:String(jget(c,ch.value)||'')}))
     .filter(o=>o.to&&(!ch.sendable||ch.sendable.indexOf(o.ct)>=0)).map(o=>mk(o.ct,o.to,o.ct+' · '+o.to));
   if(!opts.length){ const ct=String(jget(data,'channel')||''),to=String(jget(data,'to')||''); if(to) opts=[mk(ct,to,ct||'기본')]; }
-  const seen={}; return opts.filter(o=>seen[o.key]?false:(seen[o.key]=1,true));
+  const seen={}; const uniq=opts.filter(o=>seen[o.key]?false:(seen[o.key]=1,true));
+  /* 백엔드가 정한 기본 채널(data.channel=_primary_channel, nostr 우선)을 맨 앞으로 —
+     작성바 기본 선택=opts[0] 이라 등록 순서와 무관하게 nostr 를 가진 이웃은 nostr 가 기본.
+     ★사용자가 드롭다운에서 다른 채널을 고르면 그 선택이 이긴다. (데스크탑 manifest.ts 와 파리티) */
+  const prefCt=String(jget(data,'channel')||'');
+  if(prefCt){ const i=uniq.findIndex(o=>o.channel_type===prefCt); if(i>0){ const pick=uniq.splice(i,1)[0]; uniq.unshift(pick); } }
+  return uniq;
 }
 function renderComposeBar(cmp){
   if(!cmp) return '';

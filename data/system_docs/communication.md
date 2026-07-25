@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py
-last_updated: 2026-05-17
+last_updated: 2026-07-25
 see_also: [architecture.md, scheduler_guide.md]
 ---
 
@@ -124,6 +124,60 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **정기보고 발행 면** — `/r/<슬러그>/`. 로컬 `.md` 보고서를 "볼 때 렌더"로 서빙(새 어휘 없음).
 - **포털 붙임 = 색인**: 위 콘텐츠(가족신문·공개파일·게시판·보고서)를 포털에 노출하는 건
   `[others:portal]{op:"display", key:"board:<slug>"...}` 다이얼로 켜고 끔(min_level로 손님~가족 범위 조정).
+
+### 공유창고 — 노드 자신의 주소 (2026-07-18~21 라이브)
+
+위 표면들이 *만드는 목적지*라면, 창고는 **노드 자신이 주소를 갖는 것**이다. 발행 행위는 하나뿐 — **폴더에 파일을 놓는다.**
+
+- **서빙**: `공유창고/0..4/` 가 노드의 맨 주소에서 그대로 서빙된다(색인 없음·변환 없음, 파일시스템이 진실).
+  바이트를 그대로 내주므로(schema-on-read) PDF 는 PDF 로, 표는 표로 가고 **해석은 읽는 쪽 AI 몫**이다.
+- **레벨이 문**: 방문자 등급 0~4 는 이웃 CRM 등급과 **같은 자**(한 번 승급하면 메신저·포털·창고에 함께 적용).
+  보는 사람은 `0..자기 레벨`을 **한 장의 평평한 목록**으로 보고(같은 이름은 높은 레벨이 이김), 그 위 파일은
+  403 이 아니라 **404**(존재 자체가 정보라서). 의도적 누출은 `has_restricted` 한 비트뿐 — "여기 더 있다"는 냄새.
+- **기계 얼굴**: `GET /manifest` 가 같은 목록을 JSON 으로(제목·파일 크기·mtime·직접 URL·`about`·`login` 블록).
+  계약은 `GET /manifest` + `GET /f?path=` + 쿠키 로그인 **셋뿐** — IBL 도, 인지 파이프라인도, indiebizOS 자체도 계약이 아니다.
+- **읽는 쪽(이웃 피드)**: `warehouse_feed.py` 폴러가 등록된 이웃 창고 매니페스트를 30분마다 가져와 경로·mtime
+  diff → `seed`(팔로우 직후 지난 것) / `new` / `changed` 타임라인. **모델 호출 0·토큰 0의 순수 기계층**이고,
+  보존 스냅샷은 곧 **동네 전체 파일명 색인**(검색 한 번이 이웃 창고 전부를 쓸어본다).
+- **방언 어댑터**: 이웃이 indiebizOS 가 아니어도 된다 — nginx/Apache 디렉터리 색인, RSS/Atom(HTML `<link rel=alternate>`
+  자동발견), Nextcloud 공개 공유, 일반 웹페이지의 파일 링크를 전부 같은 매니페스트 통화로 정규화(`warehouse_adapters.py`).
+  **콜드 스타트 우회** — 블로그 RSS 하나로 첫 이웃이 생긴다.
+- **창고 주소 = 연락 방법**: 이웃의 `contacts` 에 `contact_type='warehouse'` 행으로 저장(이메일·Nostr 키 옆).
+  주소만 아는 상대도 정상 이웃(매니페스트 제목으로 자동 명명). 리트윗은 내 창고에 놓는 `.url` 포인터 파일 —
+  구독자의 클릭이 **원본 창고로 직행**한다(FOAF 발견이 프로토콜이 아니라 파일).
+- **자격과 평가는 다른 축**: 상대가 준 접근 **레벨**(가입/로그인 자격을 폴러가 그대로 사용, 쿠키 만료·회수 시
+  자가치유 재로그인, 실패해도 익명 폴백이라 피드는 안 멈춤)과 내가 매기는 **창고 점수 0~3**(피드·검색 필터)은 독립.
+- **AI 가 채운다**: 스케줄 파이프라인이 아침 신문·AI 동향 보고서·최신 블로그 글을 창고에 떨어뜨리고, 비즈니스
+  아이템(나눔·판매·가능)은 DB 에서 창고 선반으로 자동 진열된다 — **생산이 곧 발행**.
+
+### 몸 사이 소통 — 명함과 부탁 (2026-07-22)
+
+여러 몸(맥·폰·낯선 PC)이 서로를 부리는 방식이 **공유 사전 RPC** 에서 **명함 + 자연어 부탁**으로 바뀌었다.
+
+| | 옛 방식(은퇴) | 지금 |
+|---|---|---|
+| 남의 몸을 부림 | 내 어휘로 상대 액션을 원격 호출(공유 레지스트리) | `[others:ask]{to, message}` — 자연어로 부탁 |
+| 상대가 하는 일 | 시킨 코드를 실행 | **자기 사전으로** 컴파일→실행→통화 회신(1회 자가교정, 어휘 밖이면 정직한 거절) |
+| 상대 능력 파악 | 사전을 통째로 공유 | **명함** `GET /nodes/card`(desc-프로젝션, ~70토큰/몸, 등록 시 상호 자동 교환) |
+| 특별한 관계 | 전용 배관(특권) | **이웃 등급**(`body_trust`) — 폰-맥도 "최고 레벨 이웃"일 뿐 |
+
+- **사전 물리 분리**: 배포물은 전체 사전집이되 설치된 몸은 자기 어휘만 싣는다. 카탈로그와 해마 회상이
+  소유-필터를 지나 **"남의 어휘를 학습하지 않는다"**(미지 어휘=남의 것).
+- **컴파일러 능력 축은 해마 유무**: 용례가 있으면 조종실 경로로, 없으면 사전-동봉 경량 모델로 컴파일한다.
+- **`delegate` 와의 구별**: `[others:delegate]`=**인격**(에이전트)에게 일을 맡김 / `[others:ask]`=**몸**에게 능력을 부탁함.
+- **표면 분리**: 원격 런처(=PC 의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 갈랐다
+  (`launcher_surface_remote.py` / `launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate·validate·distill·catalog).
+- **클립보드는 표면 축으로**: 몸 사이 특권 배관 대신 원격 런처 **clipbox**(`/launcher/clipbox`)에 담아 조종실에서 꺼낸다.
+
+### USB 손발 — 낯선 PC 에 꽂는 얇은 몸 (2026-07-23)
+
+- **발급** `[self:limb]{op: issue/list/revoke}` → `outputs/limb_issue/<이름>/`(허브 주소 + limb key + 헬퍼 실행파일 + 사용법).
+  USB 에 실리는 것은 허브 비밀번호가 아니라 **limb key 하나**이고, 분실 시 그 키만 폐기한다.
+- **조작** `[limbs:guestpc]{op: shell/read/write/list/info}` — 허브에서 하달. 눈은 없다(셸·파일만).
+- **연결 방향**: 헬퍼(Go 단일파일)가 그 PC 에서 허브로 **아웃바운드** 접속 → 폰 푸시 큐(`phone_jobs`)를 그대로
+  재사용해 셸 봉투를 당겨가 실행·회신. 그 PC 방화벽을 건드리지 않는다. 큐에 흐르는 것은 IBL 이 아니라
+  **셸 봉투 JSON**(손발=IBL 엔진 없는 얇은 몸).
+- 헬퍼 콘솔은 실행 봉투를 생중계하고, 허브는 작업 시작 시 원 요청을 `note` 봉투로 한 번 하달한다(무슨 일로 움직이는지 보이게).
 
 ---
 
@@ -276,8 +330,8 @@ V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없
 |------|------|------|
 | id | INTEGER | PK |
 | neighbor_id | INTEGER | FK → neighbors |
-| contact_type | TEXT | gmail, nostr |
-| contact_value | TEXT | 이메일 주소, npub |
+| contact_type | TEXT | email(구 gmail=별칭), nostr, warehouse(창고 주소) |
+| contact_value | TEXT | 이메일 주소, npub, 창고 URL |
 | subject | TEXT | 제목 |
 | content | TEXT | 본문 |
 | is_from_user | INTEGER | 0=수신, 1=발신 |
@@ -293,7 +347,7 @@ V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없
 |------|------|------|
 | id | INTEGER | PK |
 | name | TEXT | 이웃 이름 |
-| info_level | INTEGER | 정보 수준 (0-5) |
+| info_level | INTEGER | 등급 0~4 (창고·포털·메신저가 공유하는 한 자. 숫자만이며 의미 라벨은 사용자가 정함) |
 | notes | TEXT | 메모 |
 
 ### contacts 테이블
@@ -302,14 +356,14 @@ V3에서는 `send_response` 도구가 즉시 발송합니다 (pending 대기 없
 |------|------|------|
 | id | INTEGER | PK |
 | neighbor_id | INTEGER | FK → neighbors |
-| contact_type | TEXT | gmail, nostr |
+| contact_type | TEXT | email(구 gmail=별칭), nostr, warehouse — 창고 주소도 '그 사람에게 닿는 접점' |
 | contact_value | TEXT | 연락처 값 |
 
 ### channel_settings 테이블
 
 | 컬럼 | 타입 | 설명 |
 |------|------|------|
-| channel_type | TEXT | PK (gmail, nostr) |
+| channel_type | TEXT | PK (email, nostr — 2026-07-22 채널 어휘 `gmail`→`email` 단일화, gmail 은 별칭만) |
 | enabled | INTEGER | 활성화 여부 |
 | polling_interval | INTEGER | 폴링 주기 (초) |
 | config | TEXT | JSON 설정 |
@@ -1091,4 +1145,4 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 시스템 AI용: `delegation_system_ai.md`
 > - 작업계획서 작성: `work_plan_writing.md`
 
-*마지막 업데이트: 2026-07-17 — **공개 표면 가족(커뮤니티당 노드 하나)**: 메시지 왕복 채널(Gmail·Nostr·메신저)과 별개로, 내 시스템을 공개 웹 주소로 노출하는 표면이 `others` 노드에 자람 — `[others:portal]`(개인 포털 `/h/`, 다중·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`). 공개 서빙=브라우저→Cloudflare Worker→터널→맥 3층(공유 `X-Showcase-Secret`). 포털 붙임=`[others:portal]{op:display}` 색인 다이얼(min_level 손님~가족). 위 "공개 표면" 절 참조. 이전(2026-06-17) — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*
+*마지막 업데이트: 2026-07-25 — **몸이 주소를 갖고, 몸끼리 말을 트다**: ①**공유창고**(2026-07-18~21, 위 '공유창고' 절): 발행=폴더에 파일 놓기 → 노드 맨 주소에서 그대로 서빙(색인·변환 없음), 레벨 0~4=이웃 CRM 과 같은 자(위 레벨은 403 아닌 404·`has_restricted` 냄새 한 비트), 기계 얼굴 `GET /manifest`+`GET /f?path=`+쿠키 로그인이 계약의 전부. 읽는 쪽=30분 폴러(seed/new/changed, 모델 호출 0)와 **방언 어댑터**(nginx 색인·RSS/Atom·Nextcloud·일반 웹페이지)로 설치 안 한 이웃까지 편입, 리트윗=`.url` 포인터 파일, 창고 주소=이웃의 `contact_type='warehouse'`, 회원 자격 폴링(자가치유·익명 폴백)과 창고 점수 0~3(접근 레벨과 독립인 내 평가 축). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card` + `POST /nodes/ask`(어휘 `[others:ask]`) — 상대 액션 이름을 흉내 내는 대신 자연어로 부탁하고 받는 몸이 자기 사전으로 컴파일·실행. 사전 물리 분리(설치=자기 어휘만·소유-필터), 신뢰=이웃 등급(`body_trust`), **몸 사이 특권 배관 없음**. 표면 분리(원격 런처 5탭 / 폰 네이티브 3탭), 클립보드는 clipbox 로 재배치. **채널 어휘 `gmail`→`email` 단일화**(별칭만 잔존 — 번역 테이블 3사본 소멸). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 + `[limbs:guestpc]` 조작, 헬퍼가 허브로 아웃바운드(푸시 큐 재사용·셸 봉투 JSON). 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나)**: 메시지 왕복 채널(Gmail·Nostr·메신저)과 별개로, 내 시스템을 공개 웹 주소로 노출하는 표면이 `others` 노드에 자람 — `[others:portal]`(개인 포털 `/h/`, 다중·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`). 공개 서빙=브라우저→Cloudflare Worker→터널→맥 3층(공유 `X-Showcase-Secret`). 포털 붙임=`[others:portal]{op:display}` 색인 다이얼(min_level 손님~가족). 위 "공개 표면" 절 참조. 이전(2026-06-17) — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*

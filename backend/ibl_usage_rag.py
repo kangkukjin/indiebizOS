@@ -256,12 +256,20 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     if not user_message or not rag._is_ibl_relevant(user_message):
         return ("", 0.0, "")
 
+    # ★긴 붙여넣기 문서(에세이·기사·계약서 등)는 명령이 아니라 *내용*이다 — 본문 한가운데의
+    #   표면 단어(예: 에세이 속 '도로교통법')가 무관 용례를 고신뢰(0.69)로 끌어온다(에피소드
+    #   858/860 실측). 질의는 의도가 실리는 머리만 쓰고, 참조는 저신뢰로 강등하며,
+    #   top_score 는 Reflex 임계(0.85) 아래로 눌러 표면 매칭 반사 실행을 차단한다.
+    LONG_DOC_CHARS = 1200
+    is_long_doc = len(user_message) > LONG_DOC_CHARS
+    query = user_message[:400] if is_long_doc else user_message
+
     # 1) 해마 — 단일 검색으로 결과/최고 점수/최고 코드 모두 확보
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         results = db.search_hybrid(
-            query=user_message,
+            query=query,
             top_k=rag.DEFAULT_K,
             allowed_nodes=allowed_nodes,
         )
@@ -273,10 +281,15 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     results = _own_only(results)
     top_score = results[0].score if results else 0.0
     top_code = results[0].ibl_code if results else ""
+    if is_long_doc:
+        top_score = min(top_score, 0.80)   # Reflex(≥0.85) 발동 금지 — 문서는 반사 대상이 아님
 
     # 점수 게이트 (get_references와 동일 정책): 통과분 없으면 저신뢰 top-2.
     # top_score는 위에서 results[0]로 이미 확정 — Reflex/증류 판정엔 영향 없음.
     selected, low_conf = rag._select_references(results)
+    if is_long_doc and selected:
+        # 문서 매칭은 표면 단어 우연일 가능성이 높다 — 저신뢰 라벨(직접 검증 지시)로 강등.
+        selected, low_conf = selected[:rag.LOW_CONF_MAX], True
 
     sections = []
     refs_xml = rag._format_references(selected, low_conf=low_conf) if selected else ""
@@ -617,27 +630,13 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
         if not result:
             return False
 
-        # JSON 파싱
-        import json
-        # ```json ... ``` 래핑 제거 + JSON 객체 추출
-        cleaned = result.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[-1]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
-
-        # JSON 객체가 텍스트 안에 섞여 있을 때 추출
-        if not cleaned.startswith("{"):
-            json_start = cleaned.find("{")
-            json_end = cleaned.rfind("}")
-            if json_start >= 0 and json_end > json_start:
-                cleaned = cleaned[json_start:json_end + 1]
-            else:
-                print(f"[경험증류] JSON 추출 실패: {cleaned[:100]}")
-                return False
-
-        distilled = json.loads(cleaned)
+        # JSON 파싱 — 첫 JSON 값만 안전 추출(뒤에 잡담·중복 JSON 이 붙어도 살림.
+        # 옛 find/rfind 방식은 '{...}잡담' 을 통째로 loads 해 Extra data 로 전체 유실 — ep855).
+        from runtime_utils import parse_first_json
+        distilled = parse_first_json(result)
+        if not isinstance(distilled, dict):
+            print(f"[경험증류] JSON 추출 실패: {result.strip()[:100]}")
+            return False
         intent = distilled.get("intent", "").strip()
         code = distilled.get("code", "").strip()
 

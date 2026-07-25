@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 40개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택.
+scope: 패키지 구조(handler/tool.json), 설치 절차, 42개 패키지 목록. IBL 어휘 등록은 ibl_nodes_src/ 직접 편집(ibl.md 참조). op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-06-30
+last_updated: 2026-07-25
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -232,23 +232,27 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (38개)
+## 현재 설치된 도구 패키지 (42개)
 
 **op-bearing 10 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): browser-action / youtube / computer-use / radio / cctv / photo-manager / memory / health-record / lecture_workspace / android.
 
 | ID | 이름 | 설명 |
 |----|------|------|
-| android | Android | 안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). ADB+uiautomator, 한글 입력=cliphelper IME. 2026-06-05 얇은 부활(옛 45 액션은 `data/packages/_archive/` 백업) |
-| blog | Blog | 블로그 RAG 검색 및 인사이트 분석 |
+| android | Android | 안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). 집 PC=ADB+uiautomator(USB) / 폰 자신=네이티브 AccessibilityService(USB 불필요) — 핸들러가 프로파일로 분기. 폰 온디맨드 감각(`sense:here`/`listen`/`see`/`phone`) 핸들러도 이 패키지 |
+| blog | Blog | 블로그 RAG 검색 및 인사이트 분석 (진실 소스=Obsidian vault, DB는 파생 검색 인덱스) |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
+| bulletin | Bulletin | 로그인 없는 자유게시판 `[others:bulletin]` — 게시판마다 공개 주소 `/b/<5자>`, 주소 아는 사람이 로그인 없이 글·사진 게시 |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
 | cctv | CCTV | CCTV/웹캠 관련 도구 |
 | cloudflare | Cloudflare | Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel) |
+| community-portal | Community Portal | 개인 포털 `[others:portal]` — `/h/<5자>/` 다중 포털, 회원=이웃 CRM 레벨 0~4, 진열 다이얼·회원 실행 게이트·감사 로그 |
 | computer-use | Computer Use | 컴퓨터 사용 자동화 |
 | contest | Contest | AI 공모전·경진대회 검색 (Kaggle, `sense:contest`) |
 | context7 | Context7 | Context7 라이브러리 문서 검색 |
 | culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
-| data-ops | Data Ops | 통화 변환자 9동사 (filter/sort/take/select/dedup/groupby/join/union/merge) — records·table 순수 변환. `group: transform`, `scope: workspace`, `runs_on: anywhere`. 파이프(`>>`·`&`)와 같은 닫힌 계급. + 표준 코어 문서 emitter `table:structure`(콘텐츠→문서 IR)·`table:document`(IR→html/pdf/png/docx/pptx/typst) — 2026-07-03 media_producer서 이관(표준 어휘의 개인 패키지 거주 경계 이상 해소) |
+| data-ops | Data Ops | 통화 변환자 9동사 (filter/sort/take/select/dedup/groupby/join/union/merge) — 순수 변환. `group: transform`, `scope: workspace`, `runs_on: anywhere`. 파이프(`>>`·`&`)와 같은 닫힌 계급. + 표준 코어 문서 emitter `table:structure`·`table:document` (2026-07-03 media_producer서 이관) |
+| family-news | Family News | 가족신문 `[others:family_news]` — 폰(USB) 사진으로 판 조판→`/n/<5자>` 누적 발행, 방명록·가족 사진 업로드 |
+| guest-helper | Guest Helper | USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만) |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
 | ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
@@ -256,37 +260,40 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | lecture_workspace | Lecture Workspace | 강의 워크스페이스 (강의/슬라이드/재료/데크 op 분기) |
 | legal | Legal | 대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등) |
 | local-info | Local Info | 지역 정보 도구 |
-| location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보) |
-| media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지 생성 (table:document/structure 문서 emitter는 2026-07-03 data-ops로 이관) |
-| memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류. IBL 액션 없음) |
-| nodejs | Nodejs | Node.js/JavaScript 코드 실행 |
+| location-services | Location Services | 위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보, 숙박·한달살기 `sense:stay`) |
+| media_producer | Media Producer | 홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지·아이콘 생성(`engines:icon` 폰-로컬) |
+| memory | Memory | 심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류) |
+| music-player | Music Player | 내 음악 라이브러리 `[self:music]` — 폴더 스캔·태그·앨범아트·플레이리스트 + 관련곡 그래프(top-10 간선·랜덤 산책 walk·AI 추천 compose). 재생=표면의 `<audio>` + `/music/stream` |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 |
-| python-exec | Python Exec | Python 코드 실행 |
+| public-files | Public Files | 공개 파일 `[others:showcase]` — `/s/<5자>/` 로 디스크의 폴더를 그대로 공개(EXIF 제거·동영상 스트리밍 트랜스코드·자막) |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
-| real-estate | Real Estate | 국토교통부 부동산 실거래가 API |
+| real-estate | Real Estate | 부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`) |
 | remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
-| shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 |
+| shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 + 중고 매물 (`sense:used`) |
 | startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
-| study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 기반 인물/학위논문 찾기 (`sense:researcher` 연구자 검색·동명이인 분리, `sense:paper source:nanet` 국내 학술·학위논문 — 한국 인물·국내 학위 추적의 닻) |
-| system_essentials | System Essentials | 파일 읽기/쓰기/검색, todo, 계획 모드, 이웃 조회 |
+| study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
+| system_essentials | System Essentials | 파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회 |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
-| web | Web Tools | 웹 검색, 크롤링, 뉴스, 신문 생성, 즐겨찾기 |
+| web | Web Tools | 웹 검색, 크롤링, 뉴스, **신문 발행 `[engines:newspaper]`**, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
+| web-kr | Web Search (Korea) | 네이버 검색 API 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책) |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
-**참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [원격 Finder 문서](remote_finder.md)
+**미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).
+
+
+**참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [remote_access.md](remote_access.md)
 
 ---
 
-## 백엔드 코어 모듈 (extensions/)
+## 백엔드 코어 모듈 (extensions/) — 8개
 
 `installed/extensions/`에 위치한 모듈들은 에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈입니다.
 
 | ID | 설명 |
 |----|------|
-| ai-agent | AI 에이전트 실행 엔진 (agent_runner, tool_executor, providers) |
 | conversation | 대화 이력 관리 (conversation_db) |
 | gmail | Gmail 연동 |
 | indienet | 외부 메신저 연동 (Nostr 기반) |
@@ -337,4 +344,4 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*마지막 업데이트: 2026-07-17 — **공개 표면 가족 신설(커뮤니티당 노드 하나)**: 신규 패키지 — community-portal(`[others:portal]` 개인 포털 `/h/`)·public-files(`[others:showcase]` 공개 파일 `/s/`)·family-news(`[others:family_news]` 가족신문 `/n/`)·bulletin(`[others:bulletin]` 로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`, 어휘 없음). 그 외 신규: `[sense:stay]`(location-services 숙박)·`[sense:entity]`(study Wikidata)·`[sense:used]`(shopping-assistant 중고)·`[self:install_lib]`(공급망 승인 게이트)·`[engines:icon]`(media_producer 폰-로컬 아이콘). **table 노드 분리**(2026-06-30, engines 변환자/emitter→table). publishing·music-composer는 not_installed 이동. **현 상태: 40개 도구 패키지 + 8개 extensions(ai-agent 폐기), 6노드 157 액션**. 이전(2026-07-02) — **report-viewer 패키지 은퇴 → 정기보고 앱을 어휘 없는 standalone 매니페스트로 재구성**(`data/instruments/report.yaml`). 옛 `self:report` 전용 액션(list/read/latest/new)을 삭제하고, 앱을 일반 부품 조합으로 재작성: 보기=`[self:file_find]`+`[self:read]{blocks}`, 생성=`[others:delegate]{scope: system}`(자율주행 위임), 레시피=가이드 파일. **일반 부품 2가지 강화**(둘 다 앱-비종속·재사용): ①`others:delegate` 에 `scope: system`(시스템 AI 타겟) 추가 — 앱 "생성" 버튼이 자율주행에 자연어 의도를 fire-and-forget. ②`self:read` 가 `blocks` 옵션 + 파이프 이전 step 의 파일경로 자동 바인딩(`file_find | take:1 >> read`). **인프라**: `data/instruments/*.yaml` standalone 앱 매니페스트 소스 신설(`api_launcher_web._derive_instruments` 병합 + `%BASE%` 레포루트 토큰 서버측 치환) + `build_ibl_nodes.validate_standalone_instruments`(저술-시점 [node:action] 참조 검증, 음성테스트 확인). 액션 142→**141**(self:report 삭제, 순증 어휘 0). 해마 self:report 용례 14건 회수(ibl_examples+FTS+ibl_distilled 638→624). 앱 UX 데스크탑·원격 동일 보존. 설계=`docs/APP_AS_MANIFEST_DESIGN.md`. 이전(2026-06-30) — 패키지 목록 정합화(contest 추가로 38개 명시) + **폰 엔진 번들 파생 구조**: 백엔드 코어 모듈(extensions)을 손-유지 리스트(`_ENGINE_MODULES`)가 아니라 `data/bodies/*.json` 몸 프로파일에서 파생(`scripts/build_body_bundle.py`, 3겹 게이트=빌드 재생성+pre-commit `--check`+온디바이스 자가점검) — 새 backend 모듈이 폰에 자동 흐름. 폰 자아 도구 번들은 여전히 `build_ibl_nodes.PHONE_VERIFIED_PACKAGES`+runs_on 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 38개 도구 패키지(+백엔드 extensions 9). IBL 142 액션. study 패키지에 국회도서관 국가학술정보 기반 인물/학위논문 액션 추가(`sense:researcher`·`sense:paper source:nanet` — 동명이인 분리·국내 학위 추적). 목록에 data-ops(통화 변환자 9동사)·report-viewer 반영. 이전(2026-06-14): 35개 도구 패키지 유지. 폰 자아 번들=22 패키지(runnable 95) — `build_ibl_nodes.PHONE_VERIFIED_PACKAGES` + runs_on 태그로 파생, 폰 못 도는 액션은 맥에 위임. 라이브러리=비계/API=몸 원칙으로 무거운 의존 대신 경량 HTTP 호출(arxiv·shopping 이식 증명, 지연 import). 이전(2026-06-12): business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합·contact·messages·feed/board/nostr·auto_response + self:phone_sync). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화. 이전(2026-05-28): IBL 단일 진실 소스화*
+*마지막 업데이트: 2026-07-25 — **신규 패키지 2 + 어휘 5**: **guest-helper**(USB 손발 — 발급 `[self:limb]{op}` + 조작 `[limbs:guestpc]{op}`, Go 헬퍼가 허브로 아웃바운드·푸시 큐 재사용, 눈 없음=셸/파일만)와 **music-player**(내 음악 `[self:music]` — 스캔·태그·앨범아트·플레이리스트 + 관련곡 그래프[가중 간선 top-10·랜덤 산책·AI 추천 compose], 재생은 서버 무음=표면의 `<audio>`+`/music/stream`) 신설. 기존 패키지 확장: web 에 **`[engines:newspaper]`**(신문 발행 결정화 — 데스크탑 계기 코드에만 살던 레시피를 액션으로, 기본 백그라운드), others 코어에 **`[others:ask]`**(이웃 몸에 자연어 부탁), public-files 에 동영상 생방송 재생(스트리밍 트랜스코드·자막·오프셋 시크), system_essentials `self:grep` 2층화(rg 고속 경로 + 인코딩 폴백). **`runs_on` `mac_only`→`pc_only` 전역 개명**(소스 yaml·검증자·문서 — 그 값의 뜻은 macOS 가 아니라 compute-class). ★서브모듈 함정: `/packages/reload` 는 `handler.py` 만 라이브 — 패키지의 `tool_*.py`·코어 모듈은 sys.modules 캐시에 남으므로 백엔드 재시작(또는 backend 파일 touch) 필요. **현 상태: 42개 도구 패키지 + 8개 extensions(ai-agent 폐기), 6노드 162 액션**(sense 48·self 51·limbs 18·others 18·engines 14·table 13). 이전(2026-07-17) — **공개 표면 가족 신설(커뮤니티당 노드 하나)**: 신규 패키지 — community-portal(`[others:portal]` 개인 포털 `/h/`)·public-files(`[others:showcase]` 공개 파일 `/s/`)·family-news(`[others:family_news]` 가족신문 `/n/`)·bulletin(`[others:bulletin]` 로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`, 어휘 없음). 그 외 신규: `[sense:stay]`(location-services 숙박)·`[sense:entity]`(study Wikidata)·`[sense:used]`(shopping-assistant 중고)·`[self:install_lib]`(공급망 승인 게이트)·`[engines:icon]`(media_producer 폰-로컬 아이콘). **table 노드 분리**(2026-06-30, engines 변환자/emitter→table). publishing·music-composer는 not_installed 이동. **현 상태: 40개 도구 패키지 + 8개 extensions(ai-agent 폐기), 6노드 157 액션**. 이전(2026-07-02) — **report-viewer 패키지 은퇴 → 정기보고 앱을 어휘 없는 standalone 매니페스트로 재구성**(`data/instruments/report.yaml`). 옛 `self:report` 전용 액션(list/read/latest/new)을 삭제하고, 앱을 일반 부품 조합으로 재작성: 보기=`[self:file_find]`+`[self:read]{blocks}`, 생성=`[others:delegate]{scope: system}`(자율주행 위임), 레시피=가이드 파일. **일반 부품 2가지 강화**(둘 다 앱-비종속·재사용): ①`others:delegate` 에 `scope: system`(시스템 AI 타겟) 추가 — 앱 "생성" 버튼이 자율주행에 자연어 의도를 fire-and-forget. ②`self:read` 가 `blocks` 옵션 + 파이프 이전 step 의 파일경로 자동 바인딩(`file_find | take:1 >> read`). **인프라**: `data/instruments/*.yaml` standalone 앱 매니페스트 소스 신설(`api_launcher_web._derive_instruments` 병합 + `%BASE%` 레포루트 토큰 서버측 치환) + `build_ibl_nodes.validate_standalone_instruments`(저술-시점 [node:action] 참조 검증, 음성테스트 확인). 액션 142→**141**(self:report 삭제, 순증 어휘 0). 해마 self:report 용례 14건 회수(ibl_examples+FTS+ibl_distilled 638→624). 앱 UX 데스크탑·원격 동일 보존. 설계=`docs/APP_AS_MANIFEST_DESIGN.md`. 이전(2026-06-30) — 패키지 목록 정합화(contest 추가로 38개 명시) + **폰 엔진 번들 파생 구조**: 백엔드 코어 모듈(extensions)을 손-유지 리스트(`_ENGINE_MODULES`)가 아니라 `data/bodies/*.json` 몸 프로파일에서 파생(`scripts/build_body_bundle.py`, 3겹 게이트=빌드 재생성+pre-commit `--check`+온디바이스 자가점검) — 새 backend 모듈이 폰에 자동 흐름. 폰 자아 도구 번들은 여전히 `build_ibl_nodes.PHONE_VERIFIED_PACKAGES`+runs_on 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 38개 도구 패키지(+백엔드 extensions 9). IBL 142 액션. study 패키지에 국회도서관 국가학술정보 기반 인물/학위논문 액션 추가(`sense:researcher`·`sense:paper source:nanet` — 동명이인 분리·국내 학위 추적). 목록에 data-ops(통화 변환자 9동사)·report-viewer 반영. 이전(2026-06-14): 35개 도구 패키지 유지. 폰 자아 번들=22 패키지(runnable 95) — `build_ibl_nodes.PHONE_VERIFIED_PACKAGES` + runs_on 태그로 파생, 폰 못 도는 액션은 맥에 위임. 라이브러리=비계/API=몸 원칙으로 무거운 의존 대신 경량 HTTP 호출(arxiv·shopping 이식 증명, 지연 import). 이전(2026-06-12): business 패키지 도메인 전면 IBL화(self:business/business_item/business_document/work_guideline op + others:neighbor 통합·contact·messages·feed/board/nostr·auto_response + self:phone_sync). 옛 BusinessManager.tsx·NeighborManagerDialog.tsx 은퇴. 이전(2026-06-10): 35개 정합화. 이전(2026-05-28): IBL 단일 진실 소스화*

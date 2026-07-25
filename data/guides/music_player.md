@@ -24,6 +24,7 @@
 [self:music]{op: "track", path: "/…/곡.mp3"}         # 곡 상세 (태그 + 관련곡 + 담을 플레이리스트 후보)
 [self:music]{op: "related", path: "/…/곡.mp3"}       # 관련곡 top-10 (reason 연결 근거)
 [self:music]{op: "walk", q: "김광석", length: 30}    # 관련곡 랜덤 워크 재생목록 (q 생략=랜덤 시작)
+[self:music]{op: "compose", theme: "비 오는 날 발라드", size: 20}  # AI 추천 플레이리스트 (저장까지)
 [self:music]{op: "graph", q: "사계"}                 # 에고 그래프 (items=노드, edges=인덱스 쌍)
 [self:music]{op: "playlist_create", name: "드라이브"}
 [self:music]{op: "playlist_add", name: "드라이브", path: "/…/곡.mp3"}
@@ -40,6 +41,16 @@ edges 테이블). walk=이 그래프의 가중 랜덤 산책(최근 20곡 재방
 
 결과 items 구조 필드: title/artist/album/albumartist/genre/year/track_no/duration/duration_str/
 path/stream(재생 URL)/image(앨범아트) → `>> [table:filter/sort/groupby]` 파이프 직결.
+
+## AI 추천 플레이리스트 (compose)
+
+`theme`(주제 자연어, 필수)로 경량 AI가 선곡한다 — 2단 하강: ①아티스트·폴더 개요에서 후보
+무리 선별(세상 지식: 가수·시대·분위기) → ②후보 곡(번호|아티스트|제목|폴더)에서 선곡·듣는
+순서·플레이리스트 이름까지. 결과는 플레이리스트로 **저장**되고(이름 충돌 시 숫자 붙임,
+`by: "ai"` 표기) items 로 즉시 연속재생 가능. `size` 기본 25·최대 60, `name` 생략 시 AI 작명.
+**소요 30초~2분**(경량 LLM 2왕복 — 에이전트 경로의 도구 60초 제한에 걸릴 수 있음. 타임아웃이
+나도 백그라운드 스레드가 완주해 플레이리스트는 저장되는 경우가 있으니 playlists 로 확인).
+앱 계기 "AI 추천" 탭이 이 op 를 문다.
 
 ## 재생
 

@@ -495,3 +495,30 @@ def build_capability_portrait() -> dict:
         p["peer_name"] = "안드로이드 폰"
     p["has_peer"] = bool(peer_url)
     return p
+
+
+def parse_first_json(text: str):
+    """LLM 응답에서 첫 JSON 값(객체/배열)만 안전 추출. 실패 시 None.
+
+    경량 모델(증류·포식·심층메모리)이 JSON 뒤에 잡담·중복 JSON·Auto-Continue 이어붙임
+    잔재를 붙이면 json.loads 가 'Extra data' 로 통째 실패해 학습이 유실된다(에피소드 855
+    실측) — 코드펜스를 벗기고 첫 '{'/'[' 에서 raw_decode 로 *첫 값만* 살린다.
+    """
+    import json as _json
+    if not text:
+        return None
+    t = text.strip()
+    if t.startswith("```"):
+        t = t.split("\n", 1)[-1]
+        if t.rstrip().endswith("```"):
+            t = t.rstrip()[:-3]
+        t = t.strip()
+    dec = _json.JSONDecoder()
+    for i, ch in enumerate(t):
+        if ch in "[{":
+            try:
+                val, _end = dec.raw_decode(t, i)
+                return val
+            except _json.JSONDecodeError:
+                continue  # 다음 시작 후보에서 재시도 (앞머리 잡담 관통)
+    return None

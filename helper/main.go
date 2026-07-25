@@ -165,17 +165,31 @@ func loop(cfg *Config) {
 			continue
 		}
 		for _, j := range jobs {
-			res := runJob(j)
-			// 실행은 이미 끝났으므로 회신만 실패하면 결과가 유실된다 — 짧게 재시도.
-			for attempt := 0; attempt < 3; attempt++ {
-				if err := postResult(cfg, j.ID, res); err == nil {
-					break
+			// exit 만 동기 처리(loop 를 끝내야 하므로). 나머지는 고루틴 —
+			// 긴 명령(winget install 등)이 폴링을 막으면 heartbeat 가 끊겨 허브가
+			// 이 손발을 오프라인으로 오인한다(에피소드 852 실측). 병렬 실행이면
+			// 실행 중에도 폴 루프가 계속 돌아 liveness 가 유지되고, 다음 명령도 받는다.
+			var c Command
+			if json.Unmarshal([]byte(j.Code), &c) == nil && c.Op == "exit" {
+				res := runJob(j)
+				for attempt := 0; attempt < 3; attempt++ {
+					if err := postResult(cfg, j.ID, res); err == nil {
+						break
+					}
+					time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
 				}
-				time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
-			}
-			if op, _ := res["op"].(string); op == "exit" {
 				return // 허브가 해제 — loop 종료(main 이 마무리 안내)
 			}
+			go func(j Job) {
+				res := runJob(j)
+				// 실행은 이미 끝났으므로 회신만 실패하면 결과가 유실된다 — 짧게 재시도.
+				for attempt := 0; attempt < 3; attempt++ {
+					if err := postResult(cfg, j.ID, res); err == nil {
+						break
+					}
+					time.Sleep(time.Duration(attempt+1) * 2 * time.Second)
+				}
+			}(j)
 		}
 	}
 }

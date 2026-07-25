@@ -14,10 +14,14 @@ name: Seam Guards
 
 on:
   push:
+    # ★가드 스크립트 자신을 빠뜨리지 말 것 — 2026-07-25 에 check_public_routes.py 를
+    # 여기 안 넣어서, 그 가드를 고치는 커밋에 정작 그 가드가 안 돌았다. 훅에서 고친
+    # "게이트가 자기 입력을 안 본다"와 정확히 같은 부류를 CI 에서 반복한 것.
     paths:
       - 'backend/**'
       - 'data/packages/installed/**'
-      - 'scripts/check_event_loop.py'
+      - 'scripts/check_event_loop*.py'
+      - 'scripts/check_public_routes.py'
       - '.github/workflows/seam-guards.yml'
   pull_request:
   workflow_dispatch:

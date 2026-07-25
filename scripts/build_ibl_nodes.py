@@ -497,6 +497,24 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 return out
 
             diffs = walk(a, b)
+            if not diffs:
+                # ★JSON 은 같은데 바이트가 다르다 = 값이 아니라 표현의 차이
+                # (키 순서·개행·인코딩·후행 개행). 이걸 안 보여주면 "차이:" 헤더만
+                # 찍히고 아무것도 안 나온다 — CI 첫 진단에서 실제로 그랬다.
+                print("     · 값은 동일 — 표현(바이트)만 다름", file=sys.stderr)
+                print(f"     · 길이 {len(on_disk_text)} → {len(built_text)}"
+                      f" / 후행개행 {on_disk_text.endswith(chr(10))} → {built_text.endswith(chr(10))}"
+                      f" / CR 포함 {chr(13) in on_disk_text} → {chr(13) in built_text}",
+                      file=sys.stderr)
+                ka, kb = list(a), list(b)
+                if isinstance(a, dict) and ka != kb:
+                    print(f"     · 최상위 키 순서 다름: {ka} → {kb}", file=sys.stderr)
+                import difflib
+                for line in list(difflib.unified_diff(
+                        on_disk_text.splitlines(), built_text.splitlines(),
+                        "on-disk", "built", lineterm="", n=0))[:30]:
+                    print(f"     {line}", file=sys.stderr)
+                return
             for line in diffs[:40]:
                 print(f"     {line}", file=sys.stderr)
             if len(diffs) > 40:

@@ -234,6 +234,19 @@ def main() -> int:
             if p.startswith("/"):
                 by_prefix[p.split("/")[1]] = by_prefix.get(p.split("/")[1], 0) + 1
         print(f"  실린 경로 접두사: {dict(sorted(by_prefix.items()))}")
+        # 어느 라우터 모듈이 안 실렸는지 — 임포트해 보고 실패 사유를 그대로 찍는다.
+        # (api.py 의 라우터 임포트는 무가드라 실패하면 import api 자체가 죽어야 하는데,
+        #  CI 에서 죽지 않고 라우트만 비었다 → 무엇이 다른지 여기서 말하게 한다.)
+        print(f"  api 모듈 실체: {getattr(api, '__file__', '?')}")
+        import importlib
+        probe = ["api_projects", "api_nas", "api_showcase", "api_portal", "api_launcher_web"]
+        for name in probe:
+            try:
+                m = importlib.import_module(name)
+                n = len(getattr(getattr(m, "router", None), "routes", []) or [])
+                print(f"    · {name}: import OK, router 라우트 {n}개")
+            except Exception as e:
+                print(f"    · {name}: import 실패 — {e.__class__.__name__}: {e}")
         return 1
 
     if unguarded:

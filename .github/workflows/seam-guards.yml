@@ -40,3 +40,24 @@ jobs:
       # 오탐했던 적이 있어(2026-07-25), 그 케이스를 회귀로 박아둔다.
       - name: 가드 자체 픽스처 (오탐/미탐 회귀)
         run: python scripts/check_event_loop_fixtures.py
+
+  public-routes:
+    # is_public_remote_path 가 세션 없이 통과시키는 경로가 자체 인증을 실제로 가졌는지.
+    # 오라클을 코드가 아니라 살아있는 라우트 테이블로 삼으므로 앱을 임포트한다 —
+    # 배포 번들과 같은 requirements-core.txt 로 설치(ci_import_smoke 와 같은 조건).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      # 간접 추적 로직 회귀 — 앱 임포트가 필요 없어 먼저 돌린다(설치 실패와 무관하게 신호).
+      - name: 가드 자체 회귀 (간접 호출 추적)
+        run: python scripts/check_public_routes.py --self-test
+
+      - name: 코어 의존성 설치 (배포 번들과 동일)
+        run: pip install -r backend/requirements-core.txt
+
+      - name: 공개 라우트 ↔ 인증 대조
+        run: python scripts/check_public_routes.py

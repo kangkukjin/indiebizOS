@@ -140,4 +140,20 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 이벤트 루프 규율 OK ✓"
 fi
 
+# 공개 노출 ↔ 인증 대조 — is_public_remote_path 가 세션 없이 통과시키는 경로가 자체
+# 인증을 실제로 가졌는지. "자체 시크릿 게이트 보유"는 지금까지 주석으로만 있던 불변식이라
+# 등록만 하고 검사를 빠뜨리면 그 라우트가 조용히 공개 인터넷에 열렸다.
+if echo "$staged" | grep -qE '^(backend/api_.*\.py|backend/public_face\.py|scripts/check_public_routes\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 공개 라우트 인증 대조 실행..."
+  if ! python3 "$repo_root/scripts/check_public_routes.py"; then
+    echo "" >&2
+    echo "[pre-commit] 무인증 공개 라우트 — 커밋 차단." >&2
+    echo "[pre-commit]   • 자체 게이트 추가(_check_secret / @require_auth / limb_keys.validate)" >&2
+    echo "[pre-commit]   • 또는 is_public_remote_path 에서 제거해 런처 세션을 요구" >&2
+    echo "[pre-commit]   • 정말 익명이어야 하면 check_public_routes.py 의 ANONYMOUS_ALLOW 에 사유와 함께 선언" >&2
+    exit 1
+  fi
+fi
+
 exit 0

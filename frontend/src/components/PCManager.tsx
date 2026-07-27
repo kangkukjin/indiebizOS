@@ -109,12 +109,31 @@ export function PCManager({ initialPath }: PCManagerProps) {
     ),
   );
 
+  // 경로 유틸 — 윈도우(C:\·\\NAS\공유 UNC)와 POSIX(/)를 모두 다룬다.
+  // 옛 구현은 '/' 전용이라 윈도우에서 뒤로가기·브레드크럼이 "/C:\..." 깨진 경로를 보냈다.
+  const isWinPath = (p: string) => p.includes('\\') || /^[A-Za-z]:/.test(p);
+  const splitParts = (p: string) => p.split(/[\\/]+/).filter(Boolean);
+  const joinParts = (parts: string[], template: string): string => {
+    if (parts.length === 0) return '';
+    if (isWinPath(template)) {
+      const unc = template.startsWith('\\\\');
+      const body = parts.join('\\');
+      if (unc) return '\\\\' + body;
+      // 드라이브 루트("C:")는 "C:\"로 — "C:"만 보내면 CWD 상대 경로가 된다
+      return parts.length === 1 ? body + '\\' : body;
+    }
+    return '/' + parts.join('/');
+  };
+
   // 상위 디렉토리로 이동
   const goUp = () => {
     if (!currentPath) return;
-    const parts = currentPath.split('/').filter(Boolean);
+    const parts = splitParts(currentPath);
     parts.pop();
-    const parentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
+    // POSIX 는 최상위가 "/"(루트), 윈도우 드라이브 루트 위는 홈(빈 경로=백엔드 기본값)
+    const parentPath = parts.length === 0 && !isWinPath(currentPath)
+      ? '/'
+      : joinParts(parts, currentPath);
     openDirectory(parentPath);
   };
 
@@ -145,7 +164,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
   };
 
   // 경로 표시 (브레드크럼)
-  const pathParts = currentPath.split('/').filter(Boolean);
+  const pathParts = splitParts(currentPath);
 
   return (
     <div className="h-full flex flex-col bg-[#FAFAF8]">
@@ -224,7 +243,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
             <div className="h-10 bg-[#F5F1EB] border-b border-[#E5E0D8] flex items-center px-3 gap-2">
               <button
                 onClick={goUp}
-                disabled={!currentPath || currentPath === '/'}
+                disabled={!currentPath || splitParts(currentPath).length === 0}
                 className="p-1.5 rounded hover:bg-[#E8E4DC] disabled:opacity-40"
                 title="상위 폴더"
               >
@@ -248,8 +267,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
                     <ChevronRight className="w-3 h-3 mx-1 text-[#A0A0A0]" />
                     <button
                       onClick={() => {
-                        const targetPath = '/' + pathParts.slice(0, idx + 1).join('/');
-                        openDirectory(targetPath);
+                        openDirectory(joinParts(pathParts.slice(0, idx + 1), currentPath));
                       }}
                       className="hover:text-[#6B5B4F] truncate max-w-32"
                     >

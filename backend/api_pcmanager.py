@@ -91,37 +91,47 @@ async def list_directory(path: Optional[str] = Query(None)):
 
     target_path = Path(path)
 
-    # 경로 유효성 검사
-    if not target_path.exists():
-        raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
-
-    if not target_path.is_dir():
-        raise HTTPException(status_code=400, detail="디렉토리가 아닙니다")
+    # 경로 유효성 검사 — 끊긴 네트워크 드라이브는 exists() 자체가 OSError 를 던진다
+    try:
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
+        if not target_path.is_dir():
+            raise HTTPException(status_code=400, detail="디렉토리가 아닙니다")
+    except OSError as e:
+        raise HTTPException(status_code=502, detail=f"경로 접근 실패 (네트워크/드라이브 오류): {e}")
 
     items = []
 
+    # os.scandir: DirEntry 는 디렉토리 열거 때 딸려온 속성을 캐시한다 — 특히 윈도우는
+    # is_dir/stat 가 추가 왕복 0회. 옛 pathlib(iterdir + 항목당 is_dir/stat)은 원격
+    # NAS(SMB)에서 항목수×2~3회 네트워크 왕복이라 폴더 하나가 분 단위로 걸렸다
+    # (2026-07-28 윈도우 NAS "폴더를 클릭해도 안 열림" 신고의 진범 후보 ①).
     try:
-        for entry in sorted(target_path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
-            # 숨김 파일 건너뛰기 (옵션)
-            if entry.name.startswith('.'):
-                continue
-
-            try:
-                stat = entry.stat()
-                item = {
-                    "name": entry.name,
-                    "path": str(entry),
-                    "type": "directory" if entry.is_dir() else "file",
-                    "size": stat.st_size if entry.is_file() else None,
-                    "modified": stat.st_mtime
-                }
-                items.append(item)
-            except (PermissionError, OSError):
-                # 권한 오류 무시
-                continue
-
+        with os.scandir(target_path) as it:
+            for entry in it:
+                if entry.name.startswith('.'):
+                    continue
+                try:
+                    is_dir = entry.is_dir(follow_symlinks=False)
+                    stat = entry.stat(follow_symlinks=False)
+                    items.append({
+                        "name": entry.name,
+                        "path": entry.path,
+                        "type": "directory" if is_dir else "file",
+                        "size": None if is_dir else stat.st_size,
+                        "modified": stat.st_mtime,
+                    })
+                except OSError:
+                    # 항목 하나의 오류(권한·네트워크 순단)로 목록 전체를 잃지 않는다
+                    continue
     except PermissionError:
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    except OSError as e:
+        # SMB/네트워크 드라이브 특유의 WinError(59·64·1326 등)를 500 이 아니라
+        # 진단 가능한 메시지로 — 진범 후보 ② (프론트가 "서버에 연결할 수 없습니다"로 오인).
+        raise HTTPException(status_code=502, detail=f"경로 접근 실패 (네트워크/드라이브 오류): {e}")
+
+    items.sort(key=lambda x: (x["type"] != "directory", x["name"].lower()))
 
     return {
         "path": str(target_path),

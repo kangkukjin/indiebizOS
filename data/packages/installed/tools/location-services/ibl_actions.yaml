@@ -49,7 +49,7 @@ nodes:
       restaurant:
         returns: items
         fixture: '[sense:restaurant]{query: "강남 파스타"}'
-        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건). 상호명·주소·전화·카테고리·place 링크에 더해 네이버 블로그 후기로 추천 근거 부착 — blog_count(언급 수)·reason(후기 제목), 언급 많은 순 정렬. 별점 숫자는 공개 API 미제공(카카오 place_url에서 확인). 커뮤니티 후기 원문은 sense:search_local.
+        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건) — 상호·주소·전화·place 링크 + 네이버 블로그 후기 근거(blog_count·reason), 언급 많은 순. 별점 숫자는 공개 API 미제공. 커뮤니티 후기 원문은 sense:search_local.
         group: places
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler

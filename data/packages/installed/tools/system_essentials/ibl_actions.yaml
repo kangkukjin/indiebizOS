@@ -13,7 +13,7 @@ nodes:
       ask:
         returns: scalar
         exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
-        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate].
+        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate], 이웃 몸에 부탁은 [others:ask].
         group: system
         target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
         target_key: prompt
@@ -156,7 +156,7 @@ nodes:
         target_key: path
       propose_patch:
         returns: effect
-        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경. write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. worktree 사본에서 py_compile+build --check 로 기계검증한 뒤 diff·검증결과를 남기고, 채택(머지)·폐기는 사람이 한다(자기가 자기 몸에 자가 적용 안 함).
+        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경, write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. 기계검증 후 diff 를 남기고 채택·폐기는 사람이 한다.
         group: file
         target_description: 'path — 대상 RED 파일(backend/·frontend/·scripts/ 하위). content — 새 전체 내용(신규/전체 교체) 또는 old_string+new_string — 부분 교체(HEAD 기준 유일해야). reason — 변경 근거(필수, 사람 검토용). RED 밖 파일은 그냥 write/edit 을 쓰라고 거부한다.'
         router: handler

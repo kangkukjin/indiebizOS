@@ -5,7 +5,7 @@ nodes:
         returns: items
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
-        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/compose(AI 추천 플레이리스트 — theme 주제로 경량 AI 선곡·저장)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
+        description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리하고 곡마다 관련곡 그래프(top-10 간선)를 만든다. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
         target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / compose(theme 주제 자연어 필수, size 곡 수 기본 25, name 생략 시 AI 작명 — 결과는 플레이리스트로 저장) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
         target_key: op
         group: music

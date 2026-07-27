@@ -63,7 +63,7 @@ nodes:
       phone:
         returns: items
         fixture: '[sense:phone]{}'
-        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요. 폰 동작 실행은 [limbs:phone].
         group: device
         target_description: 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별, pkg로 앱 필터(예 com.kakao.talk). limit=개수.
         target_key: op
@@ -143,7 +143,7 @@ nodes:
       cctv:
         returns: items
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
-        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 자세히 read_guide(query="cctv").
+        description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 재생·캡처는 [limbs:cctv]. 자세히 read_guide(query="cctv").
         group: media
         keywords:
         - cctv
@@ -831,7 +831,7 @@ nodes:
       restaurant:
         returns: items
         fixture: '[sense:restaurant]{query: "강남 파스타"}'
-        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건). 상호명·주소·전화·카테고리·place 링크에 더해 네이버 블로그 후기로 추천 근거 부착 — blog_count(언급 수)·reason(후기 제목), 언급 많은 순 정렬. 별점 숫자는 공개 API 미제공(카카오 place_url에서 확인). 커뮤니티 후기 원문은 sense:search_local.
+        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건) — 상호·주소·전화·place 링크 + 네이버 블로그 후기 근거(blog_count·reason), 언급 많은 순. 별점 숫자는 공개 API 미제공. 커뮤니티 후기 원문은 sense:search_local.
         group: places
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler
@@ -1913,7 +1913,7 @@ nodes:
       agents:
         returns: scalar
         fixture: '[self:agents]{}'
-        description: 등록된 에이전트 목록 조회 (사용자·AI 구분). conversations.db 기반.
+        description: 등록된 에이전트 목록 조회 (사용자·AI 구분). 프로젝트 단위 트리·상세는 [others:agents].
         target_description: (파라미터 없음 — 전체 에이전트 목록)
         group: conversation
         router: driver
@@ -2203,8 +2203,8 @@ nodes:
         - 확장
       install_lib:
         returns: effect
-        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 userData/pylibs). 의존성 누락 에러('ddgs 라이브러리 없음' 등)를 채운다. ★사람 승인 게이트 — 사용자가 사전 승인(HTTP /install-approvals/approve)하지 않은 패키지는 설치되지 않고 승인 대기열에 등록된다(approval_required 응답). 승인 후 재호출하면 설치. package="playwright"면 chromium 브라우저 바이너리도 함께 받는다.
-        target_description: 'package(필수) — pip 패키지명. 예: ddgs, playwright, matplotlib.'
+        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 pylibs). 의존성 누락 에러를 채운다. ★사람 승인 게이트 — 미승인 패키지는 설치되지 않고 승인 대기열 등록(approval_required), 승인 후 재호출하면 설치. package="playwright"면 chromium 바이너리도 함께 받는다.
+        target_description: 'package(필수) — pip 패키지명. 예: ddgs, playwright, matplotlib. 설치 위치=쓰기가능 userData/pylibs, 승인은 사용자가 HTTP /install-approvals/approve 로.'
         group: system
         router: system
         func: install_lib
@@ -2599,7 +2599,7 @@ nodes:
       cctv:
         returns: scalar
         exempt: 기기 의존(카메라 연결)
-        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신.'
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
         group: cctv
         target_description: '파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
         target_key: op
@@ -2693,7 +2693,7 @@ nodes:
       slide:
         returns: effect
         runs_on: pc_only
-        description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정.
+        description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. 강의 밖 단발 생성은 [engines:slide].
         group: lecture
         target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
         target_key: op
@@ -2797,7 +2797,7 @@ nodes:
         returns: items
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
-        description: '내 음악 라이브러리 — 소스 폴더를 등록하면 안의 음악 파일(mp3/m4a/flac/ogg 등)을 스캔해 라이브러리로 정리(태그: 제목·아티스트·앨범·앨범아트) + 관련곡 그래프(Obsidian 로컬 그래프의 음악판 — 곡마다 관련곡 top-10 간선, 자기 제외). op:library(기본, 곡 검색·목록 — folder 로 폴더 단위)/track(곡 상세+관련곡)/related(관련곡)/walk(관련곡 랜덤 워크 재생목록)/compose(AI 추천 플레이리스트 — theme 주제로 경량 AI 선곡·저장)/graph(에고 그래프)/folders(폴더 목록)/albums/artists/playlists/playlist(상세)/playlist_create/playlist_delete/playlist_add/playlist_remove/sources(폴더·통계·스캔상태)/add_source/remove_source/scan(전체 재스캔, 백그라운드). 재생은 통화의 stream 필드(/music/stream)를 보는 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
+        description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리하고 곡마다 관련곡 그래프(top-10 간선)를 만든다. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
         target_description: 'op 별 입력: library(q 검색어, artist/album/albumartist 정확 필터, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track·related(path) / walk(q 시작곡 검색 또는 path, 둘 다 없으면 랜덤 시작, length 기본 30) / compose(theme 주제 자연어 필수, size 곡 수 기본 25, name 생략 시 AI 작명 — 결과는 플레이리스트로 저장) / graph(path 또는 q — 중심곡) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / albums·artists·folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결. walk/related 는 reason(연결 근거)도 동봉.'
         target_key: op
         group: music
@@ -3319,7 +3319,7 @@ nodes:
       ask:
         returns: scalar
         exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
-        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate].
+        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate], 이웃 몸에 부탁은 [others:ask].
         group: system
         target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
         target_key: prompt
@@ -3472,7 +3472,7 @@ nodes:
         target_key: path
       propose_patch:
         returns: effect
-        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경. write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. worktree 사본에서 py_compile+build --check 로 기계검증한 뒤 diff·검증결과를 남기고, 채택(머지)·폐기는 사람이 한다(자기가 자기 몸에 자가 적용 안 함).
+        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경, write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. 기계검증 후 diff 를 남기고 채택·폐기는 사람이 한다.
         group: file
         target_description: path — 대상 RED 파일(backend/·frontend/·scripts/ 하위). content — 새 전체 내용(신규/전체 교체) 또는 old_string+new_string — 부분 교체(HEAD 기준 유일해야). reason — 변경 근거(필수, 사람 검토용). RED 밖 파일은 그냥 write/edit 을 쓰라고 거부한다.
         router: handler
@@ -3658,7 +3658,7 @@ nodes:
         - 페이지
       cctv:
         returns: effect
-        description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장).
+        description: CCTV 실시간 영상 열기·캡처 (op 분기). open(브라우저 재생) / capture(이미지 저장). 검색은 [sense:cctv].
         group: open
         target_description: name 또는 url 중 하나. open — 브라우저에서 HLS/RTSP 재생. capture — ffmpeg로 단일 프레임 PNG 캡처 (save_path 옵션, AI 분석용).
         target_key: op
@@ -3794,7 +3794,7 @@ nodes:
         target_key: path
       radio:
         returns: effect
-        description: 인터넷 라디오 재생·중지 (op 분기). play/stop.
+        description: 인터넷 라디오 재생·중지 (op 분기). play/stop. 방송국 검색은 [sense:radio].
         target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서) / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC). stop — 파라미터 없음.
         group: media
         target_key: op
@@ -3891,7 +3891,7 @@ nodes:
       music:
         returns: effect
         runs_on: pc_only
-        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download.
+        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download. 내 파일 라이브러리는 [self:music].
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
         target_key: op
@@ -3994,7 +3994,7 @@ nodes:
       ask:
         returns: items
         fixture: '[others:ask]{to: "폰-9f2b", message: "전면 카메라로 사진 한 장", dry_run: true}'
-        description: 이웃 몸(다른 indiebizOS 기기)에 자연어로 부탁. 상대가 자기 사전으로 컴파일·실행해 결과(items 통화)를 돌려준다. 내 어휘에 없는 상대 능력(이웃 몸 명함의 냄새)은 이 액션으로 — 상대 액션 이름을 흉내내지 말 것.
+        description: 이웃 몸(다른 indiebizOS 기기)에 자연어로 부탁. 상대가 자기 사전으로 컴파일·실행해 결과(items 통화)를 돌려준다. 내 어휘에 없는 상대 능력(이웃 몸 명함의 냄새)은 이 액션으로 — 상대 액션 이름을 흉내내지 말 것. 내 시스템 AI 원샷 질문은 [self:ask].
         target_description: to=상대 몸 별칭(프레즌스 등록명, 예 "폰-9f2b"). 생략 시 유일한 이웃 몸 자동, 여럿이면 되물음. message=자연어 부탁(필수 — 상대 사전을 몰라도 됨). payload=동봉(선택, dict) — 클립보드 텍스트처럼 그대로 전달할 리터럴 데이터. message 에서 payload.<키> 로 지칭하면 상대가 원문 그대로 치환해 쓴다(LLM 이 베끼지 않음). dry_run=true면 상대가 컴파일만(실행 안 함). 반환=상대 실행 결과 + compiled_ibl(상대가 부탁을 어떻게 이해했는지).
         group: delegation
         target_key: to
@@ -4019,7 +4019,7 @@ nodes:
       agents:
         returns: scalar
         fixture: '[others:agents]{}'
-        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세.
+        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세. 단순 에이전트 명부는 [self:agents].
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
         target_key: agent_id
@@ -4217,7 +4217,7 @@ nodes:
         returns: items
         fixture: '[others:bulletin]{op: "status"}'
         runs_on: pc_only
-        description: 로그인 없는 자유게시판 — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. op:status(기본, 게시판 목록·주소)/create/config/delete/detail(모더레이션용 최근 글)/post_delete(글 삭제)/portals(포털 붙임 대상 목록). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 글을 저장·서빙, 파일시스템이 곧 진실. 여러 게시판이 각각 다른 주소를 갖고, 특정 게시판을 특정 포털에 붙이면(portal display) 포털 홈에서 그 게시판으로 들어간다. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.
+        description: 로그인 없는 자유게시판 (op 분기) — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. 게시판 여러 개=각각 다른 주소, 포털에 붙이면([others:portal]{op:display}) 포털 홈에서 진입. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.
         target_description: op:status(게시판 목록 — 각 게시판의 title·주소·글 수 + 전역 설정) / create(title 로 새 게시판+주소 발급, allow_images 사진 허용 여부) / config(board_id 게시판 설정 — title 개명·allow_images, board_id 없으면 전역 public_base) / delete(board_id 게시판 삭제 — 주소·글·사진 동반 제거) / detail(board_id → 게시판 + 최근 글 200개, 모더레이션용) / post_delete(board_id+post_id 글 삭제) / portals(board_id → 이 게시판을 붙일 수 있는 포털 목록 + 현재 붙임 상태). 실제 붙임/떼기는 [others:portal]{op:"display"} 로.
         target_key: op
         group: bulletin
@@ -4652,7 +4652,7 @@ nodes:
         returns: items
         fixture: '[others:portal]{op: "status"}'
         runs_on: pc_only
-        description: 개인 포털(커뮤니티 홈) — 대상별 공개 주소(/h/<5자 코드>/)를 여러 개 만들어(가족용·친구용…) 이웃을 모으고, 각 주소마다 첫페이지에 진열할 콘텐츠(가족신문·공개파일)와 계기(아이콘 생성 등)를 따로 고르는 커뮤니티 노드의 얼굴. 가입=아이디+비밀번호(네이버식, 자동 로그인)로 레벨 0 자동 등록 — 승급이 곧 승인. 회원 = 메신저 이웃과 같은 책(business.db)이고 레벨(0~4, 메신저 이웃등급과 같은 눈금 — 0 손님 ~ 4 가족)에 따라 계기를 원격 브라우저로 빌려 쓴다(어디서 승급하든 같은 값). 사적/몸/발신 계기(사진·메신저·파일·시스템 등)는 진열 자체가 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠(비밀번호 분실 복구 경로).
+        description: 개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을 따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.
         target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
         target_key: op
         group: portal
@@ -4879,8 +4879,8 @@ nodes:
         returns: items
         fixture: '[others:family_news]{op: "status"}'
         runs_on: pc_only
-        description: 가족신문 — USB 로 연결된 폰의 사진(지난 발행 이후, 첫 판은 최근 7일)으로 신문 판을 조판해, 공개 주소(/n/<5자 코드>)에 판을 누적 발행하는 가족용 정기간행물. 사진의 EXIF GPS 를 행정동 장소명으로 바꿔 싣고(웹판 사진 자체는 EXIF 제거), 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
-        target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
+        description: 가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
+        target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음. 사진 EXIF GPS→행정동 장소명 표기, 웹판 사진 자체는 EXIF 제거) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
         target_key: op
         group: family_news
         router: handler
@@ -5020,7 +5020,7 @@ nodes:
         returns: items
         fixture: '[others:showcase]{op: "status"}'
         runs_on: pc_only
-        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 — op:status(기본)/add/remove/config + 바스켓(basket_*). 라이브 서빙(인덱싱 없음) — 맥이 요청 시 그 디렉토리를 즉석에서 훑고 썸네일을 그 자리에서 생성, 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자 코드>). publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
+        description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 (op 분기) — 라이브 서빙이라 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자>)에 담아야 공개. publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.
         target_description: 'op:status(추가한 폴더 목록·각 폴더가 담긴 주소 + 전역 설정 반환) / add(path 폴더를 추가, title 표시명·mode media|files — 추가만으론 비공개, 바스켓에 담아야 공개) / remove(path 폴더 제거, 모든 주소에서 빠짐) / config(path 있으면 폴더 표시명, 없으면 전역 strip_exif·transcode_video·public_base). 바스켓(공개 주소): basket_list / basket_save(title, all_folders=true면 전체공개 갤러리, basket_id 있으면 개명) / basket_detail(basket_id) / basket_toggle(basket_id+folder_id 담기·빼기) / basket_delete(basket_id). 폴더가 어느 주소에 담기느냐가 곧 보안 경계.'
         target_key: op
         group: showcase
@@ -5257,7 +5257,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         prompt_hidden: true
-        description: 'Shadcn UI HTML 슬라이드(2층: 글자 레이어 + 별도 그림 합성). **마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용.** ★강의·발표·NotebookLM식 슬라이드는 이 액션을 쓰지 말 것 — 대신 [engines:slide]{style:"native"}(슬라이드마다 통짜 이미지) 또는 [self:lecture] 워크스페이스(design_system 미지정=native 기본)를 써라(시각=의미 융합·한글 OCR 검증). 슬라이드 IR(slides[]) → png/pdf/pptx emit.'
+        description: Shadcn UI HTML 슬라이드(글자 레이어+그림 합성) — 마케팅·랜딩·피치덱·순수 텍스트 레이아웃 덱 전용. ★강의·발표·NotebookLM식 슬라이드는 쓰지 말 것 — [engines:slide]{style:"native"} 또는 [self:lecture] 워크스페이스를 쓸 것. 슬라이드 IR(slides[]) → png/pdf/pptx emit.
         target_description: '★★강의·발표 슬라이드는 이 액션이 아니다. NotebookLM식 통짜 이미지가 기본 — [engines:slide]{style:"native", aesthetic:...}를 슬라이드마다 호출하거나 [self:lecture] 워크스페이스(native 기본)를 써라. 이 액션은 **마케팅/랜딩/피치덱/순수 텍스트 레이아웃 덱**에만 쓴다.
 
           ★슬라이드 IR(슬라이드 전용 — 문서 IR과 별개, 텍스트 문서는 table:document를 쓸 것): slides 배열, 각 슬라이드 = {layout, title, ...}(named layout 계약). + design_system/theme/output_dir/width/height. 인라인 배열만 (topic 미지원).
@@ -5286,7 +5286,7 @@ nodes:
       slide:
         returns: effect
         runs_on: pc_only
-        description: 명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.
+        description: 명령 한 줄 → 슬라이드 1장(PNG). 기본 native(통짜 이미지, 시각=의미 융합·한글 OK). 여러 장은 슬라이드마다 호출, 덱 관리는 [self:lecture], 강의 내 장 편집은 [self:slide]. 텍스트 위주는 style:"text", 마케팅 덱은 slide_shadcn.
         target_description: "instruction(필수) — 무엇을 말하는 한 장인지 자연어로. content(선택) — 근거 사실·원문(환각 방지).\n★여러 장 강의 덱: 슬라이드 outline(장당 명제+장치)을 먼저 짜고, 슬라이드마다 이 액션을 같은 aesthetic으로 호출(병렬 & 가능).\nstyle(선택) — 미지정 기본값=\"native\":\n  · 네이티브 통짜형 \"native\"(기본): 이미지 모델이 한글 글자·다이어그램·일러스트를 한 장에 통째로 저작 — NotebookLM식 시각=의미 융합(합성층 없음). aesthetic(vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint)으로 톤 고정, image_size(1K/2K/4K)·verify(한글 OCR 재생성) 옵션. 한 덱은 한 톤으로 고정하면 일관된 책이 됨.\n  · 텍스트형 \"text\"(빠름·무료): 자유형 custom HTML(이미지 API 안 씀). 카드/리포트 타일 등 발표 슬라이드가 아닌 경량·대량 용도에만 명시. design_system(vintage_book/academic_paper/tech_minimal/magazine_modern) 톤.\nwidth/height(선택, 기본 1280x720). 제목=명제·한 장 한 아이디어 원칙. AI가 조합해 리포트→슬라이드 등 더 큰 산출물을 만드는 기층 액션.\n"
         group: media_produce
         router: handler
@@ -5438,9 +5438,9 @@ nodes:
       newspaper:
         returns: effect
         runs_on: pc_only
-        description: 신문 발행 — 서버 설정(제호·키워드, 앱모드 outputs/newspaper_config.json)의 키워드로 gnews 팬아웃+경량 편집장 편성(curate 7) 후 판 3파일(newspaper_current.json/md/html)+날짜 아카이브를 앱모드 outputs/에 저장. 기본 백그라운드(즉시 반환, ~1분 소요) — 진행은 outputs/newspaper_publish_state.json. 파라미터 없이 호출 가능. 신문 계기·뷰어가 저장된 판을 읽어 표시.
+        description: 신문 발행 — 서버 설정(제호·키워드)의 키워드로 gnews 팬아웃+경량 편집장 편성 후 판(json/md/html)+날짜 아카이브를 저장. 파라미터 없이 호출 가능, 기본 백그라운드(즉시 반환, ~1분) — wait:true=동기. 신문 계기·뷰어가 저장된 판을 읽어 표시.
         group: media_produce
-        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued).
+        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.
         router: handler
         tool: publish_newspaper
         implementation: tool_newspaper.py — handler 의 search_gnews 배치 경로(RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.

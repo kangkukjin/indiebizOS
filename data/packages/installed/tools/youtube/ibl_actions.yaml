@@ -82,7 +82,7 @@ nodes:
       music:
         returns: effect
         runs_on: pc_only
-        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download.
+        description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드 (op 분기). play/add/skip/seek/queue/stop/download. 내 파일 라이브러리는 [self:music].
         group: media
         target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). skip/queue/stop — 파라미터 없음.
         target_key: op

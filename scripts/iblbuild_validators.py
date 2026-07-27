@@ -356,6 +356,151 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
     return issues
 
 
+def _enum_param_branch_literals(
+    handler_text: str, params: set[str]
+) -> dict[str, set[str]] | None:
+    """handler.py AST에서 tool_input.get("<param>") 유래 값과 비교되는 ASCII 리터럴 수집.
+
+    잡는 모양 (realty naver 드리프트 실사례 기준):
+      _source = (tool_input.get("source") or "molit").strip().lower()
+      if _source in ("zigbang", "직방"): ...   ← "zigbang" 수집 ("직방"=한글 별칭이라 제외)
+      if tool_input.get("deal") == "trade": ... ← 중간 변수 없는 직접 비교도 수집
+    반환 {param: {literal,...}} / 파싱 실패 시 None."""
+    try:
+        tree = ast.parse(handler_text)
+    except SyntaxError:
+        return None
+
+    _ascii_val = re.compile(r"^[a-z0-9_]+$")
+
+    def _params_in(node) -> set[str]:
+        found: set[str] = set()
+        for sub in ast.walk(node):
+            if (
+                isinstance(sub, ast.Call)
+                and isinstance(sub.func, ast.Attribute)
+                and sub.func.attr == "get"
+                and isinstance(sub.func.value, ast.Name)
+                and sub.func.value.id == "tool_input"
+                and sub.args
+                and isinstance(sub.args[0], ast.Constant)
+                and isinstance(sub.args[0].value, str)
+                and sub.args[0].value in params
+            ):
+                found.add(sub.args[0].value)
+        return found
+
+    def _str_literals(comparators) -> set[str]:
+        lits: set[str] = set()
+        for comp in comparators:
+            if isinstance(comp, ast.Constant) and isinstance(comp.value, str):
+                lits.add(comp.value)
+            elif isinstance(comp, (ast.Tuple, ast.List, ast.Set)):
+                for elt in comp.elts:
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                        lits.add(elt.value)
+        return {s for s in lits if _ascii_val.match(s)}
+
+    out: dict[str, set[str]] = {}
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        varmap: dict[str, set[str]] = {}
+        for node in ast.walk(fn):
+            if (
+                isinstance(node, ast.Assign)
+                and len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+            ):
+                ps = _params_in(node.value)
+                if ps:
+                    varmap[node.targets[0].id] = ps
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Compare):
+                continue
+            if not all(
+                isinstance(op, (ast.Eq, ast.NotEq, ast.In, ast.NotIn))
+                for op in node.ops
+            ):
+                continue
+            left = node.left
+            if isinstance(left, ast.Name) and left.id in varmap:
+                ps = varmap[left.id]
+            else:
+                ps = _params_in(left)
+            if not ps:
+                continue
+            lits = _str_literals(node.comparators)
+            if not lits:
+                continue
+            for p in ps:
+                out.setdefault(p, set()).update(lits)
+    return out
+
+
+# handler 가 관용으로 받아주는 입력 *별칭* — 정규화 후 enum 값으로 처리되므로
+# enum(광고 계약)에 싣지 않는 게 의도인 값들. 새 별칭을 handler 에 추가하면 여기 등록.
+# ★진짜 새 기능 값(예 realty source=naver)은 여기 넣지 말고 enum 을 갱신할 것 —
+#   여기는 "이미 enum 에 있는 값의 다른 표기"만 허용된다.
+_ENUM_VALUE_ALIASES: dict[tuple[str, str], set[str]] = {
+    ("data-ops", "format"): {"md"},                # md → markdown 정규화
+    ("lecture_workspace", "format"): {"pptx_image"},  # pptx_image → pptx(이미지)와 동일 경로
+    ("study", "source"): {
+        "pmc",                                     # → pubmed 경로
+        "semantic_scholar", "s2",                  # → semantic
+        "kr", "dissertation",                      # → nanet
+        "wd", "wikimedia",                         # → wikidata
+    },
+}
+
+
+def validate_enum_handler_branches(root: Path) -> list[str]:
+    """파라미터 enum ↔ handler 분기 리터럴 정합 (2026-07-28 신설).
+
+    드리프트 부류: handler 가 실제로 지원하는 discriminator 값(예 realty source="naver")이
+    tool.json(파생 스키마) enum 에 빠져, 실행 에이전트가 그 값의 존재를 desc 산문으로만
+    알게 되는 것. 방향은 handler 분기 리터럴 ⊆ enum 한쪽만 본다 — 역방향(enum 값이
+    handler 에 미등장)은 default fallthrough(molit 등)가 정상이라 검사하지 않는다.
+    op 파라미터는 기존 _OP_DISPATCHERS 삼각 검증 담당이므로 제외."""
+    issues: list[str] = []
+    tool_index = build_tool_index(root)
+
+    # 패키지별 {param: enum 값 합집합} — subset 검사라 합집합은 안전한 방향(느슨해질 뿐).
+    by_pkg: dict[Path, dict[str, set[str]]] = {}
+    for _tool_name, (pkg_dir, tool_def) in tool_index.items():
+        props = (tool_def.get("input_schema") or {}).get("properties") or {}
+        for pname, pdef in props.items():
+            if pname == "op" or not isinstance(pdef, dict):
+                continue
+            enum = pdef.get("enum")
+            if not enum:
+                continue
+            allowed = {v for v in enum if isinstance(v, str)}
+            if isinstance(pdef.get("default"), str):
+                allowed.add(pdef["default"])
+            by_pkg.setdefault(pkg_dir, {}).setdefault(pname, set()).update(allowed)
+
+    for pkg_dir, enum_map in sorted(by_pkg.items()):
+        handler_py = pkg_dir / "handler.py"
+        if not handler_py.is_file():
+            continue
+        got = _enum_param_branch_literals(
+            handler_py.read_text(encoding="utf-8"), set(enum_map)
+        )
+        if not got:
+            continue
+        for pname, lits in sorted(got.items()):
+            allowed_aliases = _ENUM_VALUE_ALIASES.get((pkg_dir.name, pname), set())
+            extra = sorted(lits - enum_map[pname] - allowed_aliases)
+            if extra:
+                issues.append(
+                    f"{pkg_dir.name}/handler.py: 파라미터 {pname!r} 분기 리터럴 {extra} 가 "
+                    f"enum {sorted(enum_map[pname])} 에 없음 — "
+                    f"ibl_actions.yaml tool_json 블록의 enum 갱신 필요"
+                )
+    return issues
+
+
 def validate_runs_on(data: dict) -> list[str]:
     """모든 액션의 runs_on 값이 유효 enum 인지 검사 (미지정=anywhere 허용)."""
     issues: list[str] = []
@@ -574,6 +719,45 @@ def validate_always_on(data: dict) -> list[str]:
     return issues
 
 
+def validate_desc_discipline(data: dict) -> list[str]:
+    """desc 위생 lint (2026-07-28 카탈로그 감사 후속).
+
+    description 은 '존재 신호 + 파라미터/사용 계약 + 변별'만 싣는다 — 서사·유래·구현담은
+    미주입 필드(target_description/implementation)로, op 나열은 ops 블록이 카탈로그에
+    이미 찍히므로 중복 금지.
+    ① 길이 상한 DESC_MAX — 넘으면 서사가 새어 들어온 신호.
+    ② 노드 간 이름 충돌 액션(cctv 3형제 등)은 desc 에 다른 멤버([node:action])를 언급해
+       변별 근거를 싣는다 — 설명 없이는 어느 쪽인지 판단 근거가 사라지는 부류."""
+    DESC_MAX = 200
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    by_name: dict[str, list[tuple[str, str]]] = {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for aname, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict):
+                continue
+            desc = action.get("description") or ""
+            if len(desc) > DESC_MAX:
+                issues.append(
+                    f"{node_name}:{aname}: description {len(desc)}자 > {DESC_MAX}자 — "
+                    f"서사·구현담은 target_description/implementation 으로, op 나열은 ops 블록으로"
+                )
+            by_name.setdefault(aname, []).append((node_name, desc))
+    for aname, members in by_name.items():
+        if len(members) < 2:
+            continue
+        for node_name, desc in members:
+            others = [f"{m}:{aname}" for m, _ in members if m != node_name]
+            if not any(o in desc for o in others):
+                issues.append(
+                    f"{node_name}:{aname}: 이름 충돌({'/'.join(sorted(m for m, _ in members))})인데 "
+                    f"desc 에 변별 언급 없음 — {', '.join(others)} 중 하나를 언급할 것"
+                )
+    return issues
+
+
 def validate(data: dict, root: Path) -> list[str]:
     """전체 yaml 데이터에 대해 삼각 검증 수행."""
     issues: list[str] = []
@@ -596,4 +780,5 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_node_guides(data, root))
     issues.extend(validate_always_on(data))
     issues.extend(validate_standard_core(data, root))
+    issues.extend(validate_desc_discipline(data))
     return issues

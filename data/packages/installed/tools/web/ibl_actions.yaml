@@ -54,9 +54,9 @@ nodes:
       newspaper:
         returns: effect
         runs_on: pc_only
-        description: 신문 발행 — 서버 설정(제호·키워드, 앱모드 outputs/newspaper_config.json)의 키워드로 gnews 팬아웃+경량 편집장 편성(curate 7) 후 판 3파일(newspaper_current.json/md/html)+날짜 아카이브를 앱모드 outputs/에 저장. 기본 백그라운드(즉시 반환, ~1분 소요) — 진행은 outputs/newspaper_publish_state.json. 파라미터 없이 호출 가능. 신문 계기·뷰어가 저장된 판을 읽어 표시.
+        description: 신문 발행 — 서버 설정(제호·키워드)의 키워드로 gnews 팬아웃+경량 편집장 편성 후 판(json/md/html)+날짜 아카이브를 저장. 파라미터 없이 호출 가능, 기본 백그라운드(즉시 반환, ~1분) — wait:true=동기. 신문 계기·뷰어가 저장된 판을 읽어 표시.
         group: media_produce
-        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued).
+        target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.
         router: handler
         tool: publish_newspaper
         implementation: tool_newspaper.py — handler 의 search_gnews 배치 경로(RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
@@ -248,9 +248,10 @@ tool_json:
         language:
           type: string
           enum:
+          - auto
           - ko
           - en
-          description: 언어 (기본 ko)
+          description: 언어 (기본 auto=키워드의 한글 비율로 자동 감지)
         curate:
           type: integer
           description: 지정 시 경량 AI '편집장'이 ~100개를 넓게 보고 이 개수만큼 편성 — 중복은 하나로 묶고, hot(널리 다뤄진 사건)·delta(독자 관점 코어 기준 새 정보)·surface(지배 프레임과 다른 이질 1건 의무)를 섞어 선별(각 기사에 role/why 부착). 안 뽑힌 나머지는 pool 필드로 반환(대체 후보). 관점 코어(vault/위키/관점 코어.md) 없으면 뉴스가치+surface 폴백. 신문 섹션용. 미지정 시 순수 검색.

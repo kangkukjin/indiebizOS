@@ -168,9 +168,10 @@
             "type": "string",
             "enum": [
               "pdf",
-              "pptx"
+              "pptx",
+              "pptx_editable"
             ],
-            "description": "export 필수 — 출력 형식"
+            "description": "export 필수 — 출력 형식 (pptx=이미지 슬라이드, pptx_editable=텍스트 편집 가능)"
           }
         },
         "required": [

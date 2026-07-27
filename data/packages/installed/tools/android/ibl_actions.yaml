@@ -4,7 +4,7 @@ nodes:
       phone:
         returns: items
         fixture: '[sense:phone]{}'
-        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요.
+        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요. 폰 동작 실행은 [limbs:phone].
         group: device
         target_description: 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별, pkg로 앱 필터(예 com.kakao.talk). limit=개수.
         target_key: op

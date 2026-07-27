@@ -71,10 +71,11 @@
           "language": {
             "type": "string",
             "enum": [
+              "auto",
               "ko",
               "en"
             ],
-            "description": "언어 (기본 ko)"
+            "description": "언어 (기본 auto=키워드의 한글 비율로 자동 감지)"
           },
           "curate": {
             "type": "integer",

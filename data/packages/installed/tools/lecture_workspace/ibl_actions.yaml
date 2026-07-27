@@ -29,7 +29,7 @@ actions:
   slide:
     returns: effect
     runs_on: pc_only
-    description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정.
+    description: 슬라이드 한 장 관리 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. 강의 밖 단발 생성은 [engines:slide].
     group: lecture
     target_description: 공통 lecture_id 필수. create는 instruction(+insert_at 옵션), edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
     target_key: op
@@ -247,7 +247,8 @@ tool_json:
           enum:
           - pdf
           - pptx
-          description: export 필수 — 출력 형식
+          - pptx_editable
+          description: export 필수 — 출력 형식 (pptx=이미지 슬라이드, pptx_editable=텍스트 편집 가능)
       required:
       - op
       - lecture_id

@@ -140,6 +140,7 @@ from iblbuild_validators import (  # noqa: E402,F401
     validate_phone_reachability,
     validate_fixture_coverage,
     validate_node_guides,
+    validate_enum_handler_branches,
     STANDARD_CORE_NODES,
     validate_standard_core,
     validate_always_on,
@@ -273,6 +274,24 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] fixture 완전성 통과 ✓ (모든 items/scalar 액션이 fixture/exempt 보유)")
 
+    # --- enum-가드: 파라미터 enum ↔ handler 분기 리터럴 정합 (--check/--validate 전용) ---
+    # 드리프트 부류: handler 가 지원하는 discriminator 값(예 realty source=naver)이
+    # 파생 스키마 enum 에 빠져 desc 산문만 진실을 아는 상태 (2026-07-28 메모 감사에서 발굴).
+    enum_failed = False
+    if check or validate_only:
+        eissues = validate_enum_handler_branches(root)
+        if eissues:
+            enum_failed = True
+            print(
+                f"[build_ibl_nodes] enum-가드 실패: {len(eissues)}건 "
+                f"(handler 분기 리터럴이 enum 에 없음)",
+                file=sys.stderr,
+            )
+            for issue in eissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] enum-가드 통과 ✓ (handler 분기 리터럴 ⊆ 파라미터 enum)")
+
     # --- 포크-가드: INDIEBIZ_PROFILE 분기 위치 (--check/--validate 전용) ---
     profile_failed = False
     if check or validate_only:
@@ -405,6 +424,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
 
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
+                     or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed
                      or renderer_failed or appparam_failed) else 0
@@ -637,6 +657,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
+                     and not enum_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed
                      and not appvocab_failed

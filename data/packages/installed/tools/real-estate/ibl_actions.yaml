@@ -275,7 +275,9 @@ tool_json:
     description: "부동산 시세·매물 (op 분기) — [sense:realty].\n- op=query(기본): source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가(체결된\
       \ 과거 거래, 링크·사진 없음). region(시군구명, 자동코드변환) 또는 region_code(5자리) + type(apt/house/villa) + deal(trade/rent) + dong + start_month/end_month.\n\
       \  · source=zigbang: 직방 현재 매물(지금 나온 호가·사진·클릭 링크). region(지명/동/건물명) 또는 lat/lng + type(villa/oneroom/officetel) + deal(trade/rent)\
-      \ + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit. 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n- op=codes:\
+      \ + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit. 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n  · source=naver:\
+      \ 네이버부동산 현재 매물(중개사 등록 전국 최다 풀, 아파트 강함). region(동 이름 또는 아파트 단지명 → 단지 직조회) + type(apt 기본/officetel/villa/house/oneroom)\
+      \ + deal(trade/rent) + lease + deposit_min/deposit_max/rent_max(만원) + limit(기본30). 아파트·단지 검색은 naver, 빌라·원룸 개별 호실은 zigbang.\n- op=codes:\
       \ city(시/도명) → 법정동 지역코드 목록(보조, region 자동변환으로 보통 불필요)."
     input_schema:
       type: object
@@ -288,11 +290,12 @@ tool_json:
           enum:
           - molit
           - zigbang
+          - naver
           default: molit
-          description: '[query] 데이터 소스. molit=국토부 실거래가(체결·기본), zigbang=직방 현재 매물(호가·링크·사진)'
+          description: '[query] 데이터 소스. molit=국토부 실거래가(체결·기본), zigbang=직방 현재 매물(호가·링크·사진), naver=네이버부동산 현재 매물(아파트 최다·단지명 검색)'
         region:
           type: string
-          description: '[query] 지역명(molit=강남구 등 시군구 / zigbang=동·지명·건물명 예 ''평택 죽백동'', ''배다리도서관'')'
+          description: '[query] 지역명(molit=강남구 등 시군구 / zigbang=동·지명·건물명 예 ''평택 죽백동'', ''배다리도서관'' / naver=동 이름 또는 아파트 단지명 예 ''우미린센트럴파크'')'
         region_code:
           type: string
           description: '[query molit] 법정동 5자리'
@@ -304,7 +307,7 @@ tool_json:
           - villa
           - oneroom
           - officetel
-          description: '[query] molit=apt/house/villa · zigbang=villa/oneroom/officetel'
+          description: '[query] molit=apt/house/villa · zigbang=villa/oneroom/officetel · naver=apt(기본)/officetel/villa/house/oneroom'
         deal:
           type: string
           enum:
@@ -316,7 +319,7 @@ tool_json:
           enum:
           - 전세
           - 월세
-          description: '[query zigbang] deal=rent를 전세/월세로 좁힘'
+          description: '[query zigbang/naver] deal=rent를 전세/월세로 좁힘'
         dong:
           type: string
           description: '[query molit] 법정동으로 결과 좁히기'
@@ -329,15 +332,18 @@ tool_json:
         radius:
           type: integer
           description: '[query zigbang] 검색 반경(m), 기본 3000'
+        deposit_min:
+          type: integer
+          description: '[query naver] 보증금 하한(만원)'
         deposit_max:
           type: integer
-          description: '[query zigbang] 보증금 상한(만원)'
+          description: '[query zigbang/naver] 보증금 상한(만원)'
         rent_max:
           type: integer
-          description: '[query zigbang] 월세 상한(만원)'
+          description: '[query zigbang/naver] 월세 상한(만원)'
         limit:
           type: integer
-          description: '[query zigbang] 최대 매물 수(기본 30)'
+          description: '[query zigbang/naver] 최대 매물 수(기본 30)'
         start_month:
           type: string
           description: '[query molit] YYYYMM'

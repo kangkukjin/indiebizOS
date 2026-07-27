@@ -271,12 +271,14 @@ async def lifespan(app: FastAPI):
     async with _mcp_ctx:
         yield
 
-    # Cloudflare 터널 종료
+    # Cloudflare 터널 종료 — ★own_only: 떠나는 워커는 *자기가 띄운* 터널만 치운다.
+    # 마커 전수 소탕을 여기서 하면, 리로드 때 새 워커가 방금 띄운 터널까지 죽여
+    # 아무도 다시 안 띄우는 상태로 남는다(api_tunnel.stop_tunnel 주석의 실측 참조).
     try:
         from api_tunnel import stop_tunnel
-        result = stop_tunnel()
+        result = stop_tunnel(own_only=True)
         if result.get("success"):
-            print("[Tunnel] 터널 종료됨")
+            print(f"[Tunnel] {result.get('message', '터널 종료됨')}")
     except Exception as e:
         print(f"[Tunnel] 종료 중 오류: {e}")
 

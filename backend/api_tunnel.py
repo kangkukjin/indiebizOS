@@ -291,8 +291,24 @@ def _wire_cf_face(up: bool) -> None:
         pass
 
 
-def stop_tunnel() -> dict:
-    """터널 종료"""
+def stop_tunnel(own_only: bool = False) -> dict:
+    """터널 종료.
+
+    own_only=True 면 *이 워커가 띄운 자식*만 내리고 마커 전수 소탕은 건너뛴다.
+    ★백엔드 lifespan 종료 정리 전용 — uvicorn 리로드는 새 워커의 startup 과 옛 워커의
+    shutdown 이 *병렬로* 도는데, 마커 소탕엔 소유권 개념이 없어 옛 워커의 정리가 늦게
+    도착하면 **새 워커가 방금 띄운 터널까지** 걷어찬다. 그러면 죽인 쪽은 이미 종료 중이라
+    아무도 다시 띄우지 않는다(2026-07-26 00:32 실측: 새 워커가 00:32:32 에 기동해 커넥션
+    4개 등록 → 00:32:37 옛 워커의 정리가 kill → 이후 이틀간 Error 1033. 백엔드는 멀쩡히
+    살아 있어 증상이 '인터넷 문제'처럼 보였다).
+
+    start_tunnel(force=True) 이 막은 레이스(옛 터널을 새 워커가 물고 죽는 것)의 거울상 —
+    그쪽은 "부팅이 관의 소유권을 새로 잡는다"로 풀었고, 이쪽은 "떠나는 워커는 자기 것만
+    치운다"로 푼다. 사용자 의도가 실린 /tunnel/stop·얼굴 닫기(provision_close)는 고아
+    청소가 목적이므로 전수 소탕을 그대로 쓴다.
+
+    own_only 로 남을 수 있는 고아(이 워커가 마커로 '입양'만 했던 터널)는 다음 부팅의
+    auto_start(force=True) 소탕이 거둔다."""
     global _tunnel_process
 
     stopped = False
@@ -310,6 +326,11 @@ def stop_tunnel() -> dict:
             except:
                 pass
         _tunnel_process = None
+
+    if own_only:
+        return {"success": True,
+                "message": "터널이 종료되었습니다." if stopped
+                           else "이 워커가 띄운 터널이 없습니다 (건드리지 않음)."}
 
     # 외부 프로세스도 종료 (psutil, 전 OS — 구 pkill 대체)
     # ★이 앱의 터널 패턴만(_tunnel_markers) — 다른 cloudflared(원격관리 터널)는 남긴다

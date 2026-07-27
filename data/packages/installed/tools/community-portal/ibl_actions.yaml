@@ -25,7 +25,7 @@ nodes:
             revoke: 회수 — 그 사람의 링크·쿠키·아이디 로그인 차단 (재발급으로 복구)
             display: 진열 다이얼(포털별) — 항목마다 최소 레벨 드롭다운(set_level=off 또는 0~4). 사용 횟수 캡은 config(포털 단위)
             audit: 사용 기록 (누가·언제·어느 포털에서·무엇을)
-            config: 포털 설정 — title 이름 / intro 소개글 / 일일 한도(guest_daily·member_daily·global_daily, 그 포털 전 계기 공통) (portal 로 지정)
+            config: 포털 설정 — title/intro/일일 한도(guest_daily·member_daily·global_daily). portal 로 대상 지정
         implementation: 'community-portal 패키지 portal_op — 상태·게이트 로직은 portal_core.py(운영자 어휘와 공개 서빙이 공유, flock 직렬화). 공개 서빙(홈 렌더·가입·개인 링크 쿠키·회원 실행 게이트)은 backend/api_portal.py, 공개 Worker 는 public-files 와 공유(/h/ 네임스페이스). 회원 실행 게이트=계기 app: 블록 선언 템플릿의 인스턴스만 실행(리터럴 파라미터 강제) + 회원/손님/전역 3중 일일 한도 + 감사로그(data/portal_audit.jsonl).'
         keywords:
         - 포털

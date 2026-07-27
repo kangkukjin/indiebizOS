@@ -3,7 +3,7 @@ nodes:
     actions:
       guestpc:
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
-        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기). 두뇌는 허브(내 PC), 이 액션은 명령을 손발로 내려보내 그 PC 에서 돌린다. 눈 없음(화면 캡처·GUI 조작은 미지원) — 셸/파일만. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기) — 허브에서 명령을 내려보낸다. 눈 없음(화면·GUI 미지원, 셸/파일만). 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
         target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending(잠시 후 재확인). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
         group: device
         target_key: op

@@ -31,7 +31,7 @@ nodes:
             playlist_delete: 플레이리스트 삭제 (name)
             playlist_add: 곡 담기 (name + path)
             playlist_remove: 곡 빼기 (name + path)
-            compose: AI 추천 플레이리스트 — theme(주제 자연어)로 경량 AI가 라이브러리 전체에서 선곡·순서·이름까지 정해 플레이리스트로 저장 (size 기본 25)
+            compose: AI 추천 플레이리스트 — theme(주제 자연어)로 경량 AI 가 선곡·순서·이름까지 정해 저장 (size 기본 25)
             sources: 등록 폴더 목록 + 라이브러리 통계 + 스캔 상태
             add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
             remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림

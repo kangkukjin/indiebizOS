@@ -65,28 +65,28 @@ RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여
 
 ## 단일 액션 + op 분기 패턴 (라운드 2 통합 후 표준)
 
-같은 도메인의 여러 도구는 **하나의 IBL 액션 + op 파라미터**로 통합되어 있다. 카탈로그에서 액션 옆에 `<op>` 자식 요소가 보이면 이 패턴이다.
+같은 도메인의 여러 도구는 **하나의 IBL 액션 + op 파라미터**로 통합되어 있다. 카탈로그에서 액션 줄 아래 들여쓴 `.op이름` 줄이 보이면 이 패턴이다.
 
 ```
-<action name="browser" description="브라우저(웹) 조작 — DOM ref 기반 (op 분기)...">
-  <op name="snapshot" default="true">접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)</op>
-  <op name="click">요소 클릭 (ref; mode single|double|right)</op>
-  <op name="type">입력 필드에 텍스트 입력 (ref, text)</op>
-</action>
+  limbs:browser :: 브라우저(웹) 조작 — DOM ref 기반 (op 분기)...
+    .snapshot* 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+    .click 요소 클릭 (ref; mode single|double|right)
+    .type 입력 필드에 텍스트 입력 (ref, text)
 ```
 
 호출:
 ```
-[limbs:browser]                                        # op 생략 → default "snapshot" 적용
+[limbs:browser]                                        # op 생략 → 기본 op(*표) "snapshot" 적용
 [limbs:browser]{op: "click", ref: "abc"}                # op 명시 + op별 파라미터
-[limbs:browser]{op: "type", ref: "e5", text: "검색어"}   # op별 파라미터는 <op> 설명 참조
+[limbs:browser]{op: "type", ref: "e5", text: "검색어"}   # op별 파라미터는 .op 줄 설명 참조
 ```
 
 **규약**:
-- `<op default="true">`가 있으면 op 생략 가능 (기본값 자동 적용)
-- default 가 없으면 op 필수 — 생략하면 "op 파라미터 필요" 에러
-- op 값은 카탈로그의 `<op name="...">` 목록 안에서만 골라야 함 (오타·창작 금지)
-- 어떤 액션이 op-bearing인지는 **아래 카탈로그**에서 액션 옆 `<op>` 자식으로 확인한다 (여기 재나열하지 않음 — 단일 소스는 카탈로그).
+- `*`표 붙은 op(기본 op)가 있으면 op 생략 가능 (기본값 자동 적용)
+- 기본 op 가 없으면 op 필수 — 생략하면 "op 파라미터 필요" 에러
+- op 값은 카탈로그의 `.op이름` 목록 안에서만 골라야 함 (오타·창작 금지)
+- 어떤 액션이 op-bearing인지는 **아래 카탈로그**에서 액션 아래 들여쓴 `.op` 줄로 확인한다 (여기 재나열하지 않음 — 단일 소스는 카탈로그).
+- 호출은 카탈로그 줄의 노드:액션 이름에 그대로 대괄호를 씌운다 — 위 예시라면 `[limbs:browser]{op: "click"}`.
 
 ## Pipeline Operators
 

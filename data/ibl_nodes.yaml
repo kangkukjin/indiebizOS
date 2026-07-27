@@ -1356,7 +1356,7 @@ nodes:
           - code
         returns: items
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
-        description: 부동산 시세·매물 (op 분기). query=시세/매물(source=molit 국토부 실거래가 기본 / source=zigbang 직방 현재 매물·링크·사진 / source=naver 네이버부동산 현재 매물 — 아파트 최다·단지명 검색), codes=법정동 코드. region 이름만 넣으면 자동 해소.
+        description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
         group: real_estate
         target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
         target_key: op
@@ -1776,7 +1776,7 @@ nodes:
       search_naver:
         returns: items
         fixture: '[sense:search_naver]{query: "인공지능"}'
-        description: 네이버 검색 API. 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책/백과 등)에서 DuckDuckGo/Google보다 압도적으로 강함. type 파라미터로 도메인 선택 (기본 webkr). 뉴스 단독 검색은 type='news' 또는 search_gnews(Google News) 중 한국 출처 우선이면 이쪽.
+        description: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책 등)에 압도적. type 으로 도메인 선택(기본 webkr). 한국 출처 뉴스는 이쪽(type='news'), 글로벌 뉴스는 search_gnews.
         group: research
         target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
         router: handler
@@ -2826,7 +2826,7 @@ nodes:
             playlist_delete: 플레이리스트 삭제 (name)
             playlist_add: 곡 담기 (name + path)
             playlist_remove: 곡 빼기 (name + path)
-            compose: AI 추천 플레이리스트 — theme(주제 자연어)로 경량 AI가 라이브러리 전체에서 선곡·순서·이름까지 정해 플레이리스트로 저장 (size 기본 25)
+            compose: AI 추천 플레이리스트 — theme(주제 자연어)로 경량 AI 가 선곡·순서·이름까지 정해 저장 (size 기본 25)
             sources: 등록 폴더 목록 + 라이브러리 통계 + 스캔 상태
             add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
             remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림
@@ -3105,7 +3105,7 @@ nodes:
       storage:
         returns: scalar
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — scan(용량 인덱스 구축)/summary(폴더·확장자별 용량 집계)/volumes(스캔된 볼륨 개요). 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -3246,7 +3246,7 @@ nodes:
         returns: items
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
-        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환. 실행되는 몸의 미디어(맥·폰 각자). 타임라인/통계/중복은 >> table 변환자(groupby/filter).
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(실행되는 몸의 미디어). 타임라인·통계·중복은 >> table 변환자.
         target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 items에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: q
@@ -3731,7 +3731,7 @@ nodes:
         - 버튼찾기
       guestpc:
         returns: effect
-        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기). 두뇌는 허브(내 PC), 이 액션은 명령을 손발로 내려보내 그 PC 에서 돌린다. 눈 없음(화면 캡처·GUI 조작은 미지원) — 셸/파일만. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기) — 허브에서 명령을 내려보낸다. 눈 없음(화면·GUI 미지원, 셸/파일만). 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
         target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending(잠시 후 재확인). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
         group: device
         target_key: op
@@ -4672,7 +4672,7 @@ nodes:
             revoke: 회수 — 그 사람의 링크·쿠키·아이디 로그인 차단 (재발급으로 복구)
             display: 진열 다이얼(포털별) — 항목마다 최소 레벨 드롭다운(set_level=off 또는 0~4). 사용 횟수 캡은 config(포털 단위)
             audit: 사용 기록 (누가·언제·어느 포털에서·무엇을)
-            config: 포털 설정 — title 이름 / intro 소개글 / 일일 한도(guest_daily·member_daily·global_daily, 그 포털 전 계기 공통) (portal 로 지정)
+            config: 포털 설정 — title/intro/일일 한도(guest_daily·member_daily·global_daily). portal 로 대상 지정
         implementation: 'community-portal 패키지 portal_op — 상태·게이트 로직은 portal_core.py(운영자 어휘와 공개 서빙이 공유, flock 직렬화). 공개 서빙(홈 렌더·가입·개인 링크 쿠키·회원 실행 게이트)은 backend/api_portal.py, 공개 Worker 는 public-files 와 공유(/h/ 네임스페이스). 회원 실행 게이트=계기 app: 블록 선언 템플릿의 인스턴스만 실행(리터럴 파라미터 강제) + 회원/손님/전역 3중 일일 한도 + 감사로그(data/portal_audit.jsonl).'
         keywords:
         - 포털

@@ -100,41 +100,69 @@ def get_denied_message(node: str, allowed: Set[str]) -> dict:
 
 # ============ 환경 프롬프트 생성 ============
 
-def _emit_action_xml(node_name: str, action_name: str, action_config, indent: str = "") -> str:
-    """단일 액션을 XML 문자열로 직렬화.
 
-    ops 블록이 있으면 자식 <op> 요소로 펼친다 — 실행 에이전트가 op 선택 시
-    description의 자연어가 아닌 구조화된 정보를 보도록.
+# 카탈로그 줄-표기 범례 — R1q+R3 인코딩(2026-07-28). 아래 _emit_action_line 과 한 몸.
+CATALOG_LEGEND = (
+    "# 표기법: '노드:액션 :: 설명' = 액션 한 줄 (호출은 [노드:액션]{...}). "
+    "그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표 = 기본 op, op 생략 시 적용; "
+    "설명 없는 .op 는 이름 그대로의 동작). (dormant: 키이름) = API 키가 없어 휴면 중."
+)
 
-    2026-05-28: ops 블록 도입과 함께 추가. 비용은 24 op 사용 액션에 한정.
-    2026-07-01 (Phase 4): dormant 표시 추가 — 키가 없어 못 쓰는 패키지 소유 액션은
-    카탈로그에서 지우지 않고 dormant="키이름..." 속성으로 노출한다(SIM 슬롯 비유).
-    지워버리면 에이전트가 "그런 능력 자체가 없다"고 오판해 재발견을 못 하고, 반대로
-    조용히 실행 실패만 하면 헛수고를 반복한다 — dormant 표시가 둘 다 피한다.
+# R3: 이름이 자명한 op 는 설명을 방출하지 않는다(이름만) — 데이터(ops.values)는 그대로,
+# 방출만 억제(마법책 UI 등은 계속 전체 설명을 봄). 판정 3조건: 자명 동사 어간 + 60자 이하
+# + 파라미터 신호('='·'필수') 없음 — realty.query 처럼 source 열거를 실은 설명은 자동 보존.
+# 근거: catalog_encoding_eval 150표본에서 R3=82.0%(R0 동률, 쌍별 5:5) — 억제 무손실.
+_SELF_EVIDENT_OPS = {
+    "list", "detail", "create", "delete", "update", "save", "add", "remove", "search",
+    "play", "stop", "pause", "status", "scan", "refresh", "run", "open", "close", "send",
+    "read", "write", "get", "set", "start", "download", "upload", "install", "uninstall",
+    "enable", "disable", "clear", "cancel", "query", "info", "stats", "summary", "check",
+    "test", "preview", "publish", "export", "import", "sync", "toggle", "history",
+    "recent", "rename", "move", "copy", "edit", "view", "show",
+}
+
+
+def _op_desc_suppressible(op_name: str, op_desc: str) -> bool:
+    base = op_name.split("_")[0]
+    d = op_desc or ""
+    return ((op_name in _SELF_EVIDENT_OPS or base in _SELF_EVIDENT_OPS)
+            and len(d) <= 60 and "=" not in d and "필수" not in d)
+
+
+def _emit_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:
+    """단일 액션을 완전수식 줄-표기(R1q)로 직렬화.
+
+    형식: '노드:액션 :: 설명' + 들여쓴 '.op* 설명' 자식 줄.
+    2026-07-28 XML(<action>/<op>) → 줄-표기 전환: 오프라인 선택 정확도 평가
+    (scripts/catalog_encoding_eval.py, 표본 150·경량 티어)에서 완전수식 줄-표기가
+    XML 과 액션 정확도 동률(82.0%, 쌍별 5:5)·op 정확도 우위(93.2% vs 88.5%)로
+    카탈로그 −26% 무손실 확인. ★비수식 이름(액션명만)은 75.3%로 유의 손실
+    (그룹명을 노드로 오인) — 완전수식(node:action)이 무손실의 조건이다.
+
+    2026-05-28: ops 블록 도입(op 선택이 desc 산문 아닌 구조 정보를 보도록).
+    2026-07-01 (Phase 4): dormant 표시 — 키가 없어 못 쓰는 액션은 지우지 않고
+    표시만 한다(SIM 슬롯 비유). 지우면 "능력 자체가 없다"고 오판하고, 조용히
+    실패만 하면 헛수고를 반복한다 — dormant 표시가 둘 다 피한다.
     """
     dormant = _dormant_reason(node_name, action_name)
+    dormant_suffix = f" (dormant: {dormant})" if dormant else ""
+    qualified = f"{node_name}:{action_name}"
 
     if not isinstance(action_config, dict):
-        attrs = f' dormant="{dormant}"' if dormant else ""
-        return f'{indent}<action name="{action_name}"{attrs}/>'
+        return f"{indent}{qualified}{dormant_suffix}"
 
     desc = action_config.get("description", "")
     ops = action_config.get("ops")
-    dormant_attr = f' dormant="{dormant}"' if dormant else ""
 
-    if not isinstance(ops, dict) or not ops.get("values"):
-        return f'{indent}<action name="{action_name}" description="{desc}"{dormant_attr}/>'
-
-    # ops 펼치기
-    values = ops.get("values") or {}
-    default = ops.get("default")
-    lines = [f'{indent}<action name="{action_name}" description="{desc}"{dormant_attr}>']
-    for op_name, op_desc in values.items():
-        attrs = f'name="{op_name}"'
-        if op_name == default:
-            attrs += ' default="true"'
-        lines.append(f'{indent}  <op {attrs}>{op_desc}</op>')
-    lines.append(f'{indent}</action>')
+    lines = [f"{indent}{qualified} :: {desc}{dormant_suffix}"]
+    if isinstance(ops, dict) and ops.get("values"):
+        default = ops.get("default")
+        for op_name, op_desc in (ops.get("values") or {}).items():
+            star = "*" if op_name == default else ""
+            if _op_desc_suppressible(op_name, op_desc):
+                lines.append(f"{indent}  .{op_name}{star}")
+            else:
+                lines.append(f"{indent}  .{op_name}{star} {op_desc}")
     return "\n".join(lines)
 
 
@@ -189,14 +217,16 @@ def build_environment(
         logger.warning("12_ibl_only.md not found, IBL 기본 교재 누락")
 
     # 액션 카탈로그 시작 — 12_ibl_only.md가 개념을, 여기서는 "뭐가 있는지"를 담당
+    # (외곽 <ibl_actions> 래퍼는 경계 표시로 유지 — 내용은 R1q 줄-표기, 2026-07-28)
     parts.append("<ibl_actions>")
 
     # 환경 선언
     node_names = sorted(visible.keys())
     constraint = nodes_data.get("meta", {}).get("constraint", "")
-    parts.append(f'<nodes available="{", ".join(node_names)}">')
+    parts.append(CATALOG_LEGEND)
+    parts.append(f"# 사용 가능 노드: {', '.join(node_names)}")
     if constraint:
-        parts.append(f"<constraint>{constraint}</constraint>")
+        parts.append(f"# 제약: {constraint}")
 
     # usage, pipeline, principles는 12_ibl_only.md에서 이미 커버하므로 생략
 
@@ -207,7 +237,7 @@ def build_environment(
         if not actions:
             continue
 
-        parts.append(f'<node name="{node_name}" description="{desc}">')
+        parts.append(f"\n= 노드 {node_name} :: {desc}")
 
         # group별 그룹화 (프롬프트 가독성용). group이 없는 액션은 ungrouped.
         # 2026-05-26 cleanup: category 폴백 제거 — 모든 액션에 group 부여 완료.
@@ -239,20 +269,12 @@ def build_environment(
 
         if grouped:
             for grp_name, grp_actions in grouped.items():
-                parts.append(f'<group name="{grp_name}">')
+                parts.append(f"  [{grp_name}]")
                 for action_name, action_config in grp_actions:
-                    parts.append(_emit_action_xml(node_name, action_name, action_config, indent="  "))
-                parts.append("</group>")
+                    parts.append(_emit_action_line(node_name, action_name, action_config))
 
-        if ungrouped:
-            parts.append("<actions>")
-            for action_name, action_config in ungrouped:
-                parts.append(_emit_action_xml(node_name, action_name, action_config, indent="  "))
-            parts.append("</actions>")
-
-        parts.append("</node>")
-
-    parts.append("</nodes>")
+        for action_name, action_config in ungrouped:
+            parts.append(_emit_action_line(node_name, action_name, action_config))
 
     # 동료 에이전트 노드
     peers = _load_peer_agents(project_path, agent_id)

@@ -725,10 +725,11 @@ def validate_desc_discipline(data: dict) -> list[str]:
     description 은 '존재 신호 + 파라미터/사용 계약 + 변별'만 싣는다 — 서사·유래·구현담은
     미주입 필드(target_description/implementation)로, op 나열은 ops 블록이 카탈로그에
     이미 찍히므로 중복 금지.
-    ① 길이 상한 DESC_MAX — 넘으면 서사가 새어 들어온 신호.
+    ① 길이 상한 DESC_MAX(액션)·OP_DESC_MAX(op) — 넘으면 서사가 새어 들어온 신호.
     ② 노드 간 이름 충돌 액션(cctv 3형제 등)은 desc 에 다른 멤버([node:action])를 언급해
        변별 근거를 싣는다 — 설명 없이는 어느 쪽인지 판단 근거가 사라지는 부류."""
     DESC_MAX = 200
+    OP_DESC_MAX = 80
     issues: list[str] = []
     nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
     by_name: dict[str, list[tuple[str, str]]] = {}
@@ -744,6 +745,13 @@ def validate_desc_discipline(data: dict) -> list[str]:
                     f"{node_name}:{aname}: description {len(desc)}자 > {DESC_MAX}자 — "
                     f"서사·구현담은 target_description/implementation 으로, op 나열은 ops 블록으로"
                 )
+            ops = action.get("ops") if isinstance(action.get("ops"), dict) else {}
+            for op_name, op_desc in (ops.get("values") or {}).items():
+                if isinstance(op_desc, str) and len(op_desc) > OP_DESC_MAX:
+                    issues.append(
+                        f"{node_name}:{aname}.{op_name}: op 설명 {len(op_desc)}자 > {OP_DESC_MAX}자 — "
+                        f"파라미터 상세는 target_description 으로"
+                    )
             by_name.setdefault(aname, []).append((node_name, desc))
     for aname, members in by_name.items():
         if len(members) < 2:

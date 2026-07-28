@@ -496,6 +496,14 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
     }
   };
 
+  // 탭청소 — 모든 탭을 한 번에 비우고 검색홈으로 (마지막 탭을 닫았을 때와 동일한 착지).
+  const closeAllTabs = () => {
+    webviewRefs.current = {};
+    setTabs([]);
+    setActiveId(null);
+    setMode('search');
+  };
+
   // 주소·검색줄 자동 숨김 — 본문 볼 땐 감췄다가 상단 얇은 센서에 마우스를 올리면 다시 나온다.
   // (본문 webview 위의 마우스 이동은 호스트로 안 올라오므로, flex 흐름 안의 센서 띠로 되살린다.)
   const [barHidden, setBarHidden] = useState(false);
@@ -794,6 +802,9 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
           <button onClick={() => setMode('search')} title="새 탭"
             className={`shrink-0 px-2.5 py-1.5 rounded-t-lg text-lg leading-none text-stone-500 hover:bg-stone-200 ${mode === 'search' ? 'bg-white' : ''}`}>+</button>
           <div className="flex-1" />
+          {/* 탭청소 — 열린 탭 전부 한 번에 정리(검색홈 복귀). 닫기 전 손 여러 번 가던 마찰 제거. */}
+          <button onClick={closeAllTabs} title="모든 탭 닫기"
+            className="shrink-0 self-center px-2.5 py-1 rounded-lg text-sm text-stone-500 hover:bg-stone-200 whitespace-nowrap">🧹 탭청소</button>
           {/* 앱모드의 앱이 된 뒤 보이는 출구 — 오버레이를 닫고 있던 표면으로 복귀(Esc 와 동일). */}
           <button onClick={onClose} title="검색 브라우저 닫기 (Esc)"
             className="shrink-0 self-center px-2.5 py-1 rounded-lg text-sm text-stone-500 hover:bg-stone-200 whitespace-nowrap">✕ 닫기</button>

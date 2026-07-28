@@ -427,8 +427,8 @@ function updateBread(path) {
             } else {
                 acc += (i === 1 && /^[A-Za-z]:/.test(acc) ? '' : sep) + p;
             }
-            const ep = acc.replace(/'/g, "\\'");
-            html += ` <span>&#8250;</span> <a onclick="navTo('${ep}')">${p}</a>`;
+            const ep = jsEsc(acc);
+            html += ` <span>&#8250;</span> <a onclick="navTo('${ep}')">${esc(p)}</a>`;
         });
     }
     $('breadcrumb').innerHTML = html;
@@ -452,7 +452,7 @@ async function loadDir(path) {
 function renderFiles(items, parentPath) {
     let html = '';
     if (parentPath) {
-        const ep = parentPath.replace(/'/g, "\\'");
+        const ep = jsEsc(parentPath);
         html += `<div class="file-item" onclick="navTo('${ep}')">
             <div class="file-icon">&#11014;</div>
             <div class="file-info"><div class="file-name" style="color:var(--text-dim)">.. Parent</div></div>
@@ -465,7 +465,7 @@ function renderFiles(items, parentPath) {
     }
     items.sort((a,b) => { if(a.is_dir===b.is_dir) return a.name.localeCompare(b.name); return a.is_dir?-1:1; });
     items.forEach(item => {
-        const ep = (item.path||'').replace(/'/g, "\\'");
+        const ep = jsEsc(item.path||'');
         let click;
         if (item.is_dir) {
             click = `onclick="navTo('${ep}')"`;
@@ -823,6 +823,14 @@ if ('mediaSession' in navigator) {
 
 // ==================== UTIL ====================
 function esc(s) { const el=document.createElement('span'); el.textContent=s||''; return el.innerHTML; }
+// 인라인 onclick JS 문자열용 경로 이스케이프.
+// ★백슬래시 필수: 윈도우 경로 D:\NAS\문서 를 \' 처리만 하면 JS 파싱에서 \N·\문 이
+// 이스케이프로 먹혀 "D:NAS문서"로 뭉개짐 → 서버 404 (맥 경로엔 \가 없어 잠복하던 버그).
+// 뒤의 HTML 엔티티 치환은 속성(onclick="...") 경계 보호 — 파서가 엔티티를 먼저 풀므로 JS엔 원문 도달.
+function jsEsc(s) {
+    return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+        .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
 
 // ==================== INIT ====================
 checkAuth();

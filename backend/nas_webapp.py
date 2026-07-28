@@ -193,7 +193,7 @@ def get_default_webapp_html() -> str:
             // 상위 폴더
             if (data.parent) {
                 html += `
-                    <div class="file-item p-3 flex items-center gap-3 cursor-pointer" onclick="loadFiles('${data.parent}')">
+                    <div class="file-item p-3 flex items-center gap-3 cursor-pointer" onclick="loadFiles('${jsEsc(data.parent)}')">
                         <span class="text-2xl">&#11014;&#65039;</span>
                         <span class="text-gray-600">상위 폴더</span>
                     </div>
@@ -203,23 +203,23 @@ def get_default_webapp_html() -> str:
             for (const item of data.items) {
                 const icon = item.is_dir ? '&#128193;' : getFileIcon(item.category);
                 const size = item.size ? formatSize(item.size) : '';
-                const escapedPath = item.path.replace(/'/g, "\\\\'");
+                const escapedPath = jsEsc(item.path);
 
                 if (item.is_dir) {
                     html += `
                         <div class="file-item p-3 flex items-center gap-3 cursor-pointer" onclick="loadFiles('${escapedPath}')">
                             <span class="text-2xl">${icon}</span>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium truncate">${item.name}</p>
+                                <p class="font-medium truncate">${escapeHtml(item.name)}</p>
                             </div>
                         </div>
                     `;
                 } else {
                     html += `
-                        <div class="file-item p-3 flex items-center gap-3 cursor-pointer" onclick="openFile('${escapedPath}', '${item.category}', '${item.name}')">
+                        <div class="file-item p-3 flex items-center gap-3 cursor-pointer" onclick="openFile('${escapedPath}', '${item.category}', '${jsEsc(item.name)}')">
                             <span class="text-2xl">${icon}</span>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium truncate">${item.name}</p>
+                                <p class="font-medium truncate">${escapeHtml(item.name)}</p>
                                 <p class="text-sm text-gray-500">${size}</p>
                             </div>
                         </div>
@@ -354,6 +354,14 @@ def get_default_webapp_html() -> str:
 
         function escapeHtml(str) {
             return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // 인라인 onclick JS 문자열용 경로 이스케이프.
+        // ★백슬래시 필수: 윈도우 경로 D:\\NAS\\문서 를 따옴표만 처리하면 JS 파싱에서
+        // \\N 등이 이스케이프로 먹혀 경로가 뭉개짐 → 서버 404 (맥 경로엔 \\가 없어 잠복).
+        function jsEsc(s) {
+            return String(s==null?'':s).replace(/\\\\/g,'\\\\\\\\').replace(/'/g,"\\\\'")
+                .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
         }
 
         // 미디어 요소 정리 (메모리 누수 방지)

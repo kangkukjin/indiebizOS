@@ -719,11 +719,13 @@ async function rowDrill(vi,ri){
     const code=rowAction(buildAction(dc.action,gatherInputs()),item);  /* $입력(현재 다이얼)+{필드}(클릭 행) 둘 다 치환 */
     const d=await ibl(code);
     if(d&&typeof d==='object') d._item=item; /* 드릴 뷰에서 클릭한 행 참조용 */
-    /* recursive: 지금 보고 있는 드릴 뷰를 그대로 재사용 — 깊이를 모르는 트리(폴더 등)를
-       한 벌 선언으로 무제한 탐색(데스크탑 onDrill 과 같은 규칙). 선언 view/tabs 가 이긴다. */
-    const inherited = (!SPLIT && VIEW_CTX) ? VIEW_CTX.view : null;
-    const dview = dc.view || (dc.recursive ? inherited : null);
-    VIEW_CTX={view:dview,tabs:dc.tabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,refresh:'drill'};
+    /* recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 재사용 — 깊이를 모르는
+       트리(폴더 등)를 한 벌 선언으로 무제한 탐색(데스크탑 onDrill 과 같은 규칙).
+       선언 view/tabs 가 이긴다. */
+    const inh = (dc.recursive && !SPLIT && VIEW_CTX) ? VIEW_CTX : null;
+    const dview = dc.view || (inh ? inh.view : null);
+    const dtabs = dc.tabs || (inh ? inh.tabs : null);
+    VIEW_CTX={view:dview,tabs:dtabs,activeTab:0,data:d,action:code,item:item,compose:dc.compose,refresh:'drill'};
     if(SPLIT){ const s=document.getElementById('mdSplit'); if(s) s.classList.add('has-detail'); }
     renderDrill();
   }catch(e){ detail.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }

@@ -107,7 +107,7 @@ nodes:
                       v: '{track.path}'
           - name: 폴더
             auto_run: true
-            note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 폴더를 열면 그 안의 하위 폴더가 나오고, 아래 재생기는 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어서 재생합니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
+            note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 탐색 중에는 폴더만 보이고, 다 골랐으면 '이 폴더 전부 재생' 탭에서 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어 듣습니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
             action: '[self:music]{op: "folders"}'
             view:
             - type: list_action
@@ -117,24 +117,30 @@ nodes:
               sub: '{meta}'
               item_click:
                 action: '[self:music]{op: "folders", folder: "{path}"}'
-                view:
-                - type: list_action
-                  from: items
-                  empty_from: message
-                  title: '{title}'
-                  sub: '{meta}'
-                  item_click:
-                    # 같은 선언을 다시 쓴다(깊이 무제한 트리) — 렌더러가 지금 보고 있는
-                    # 드릴 뷰를 그대로 재사용한다. 폴더 트리는 깊이를 미리 알 수 없으므로
-                    # 단계마다 손으로 중첩해 쓰면 반드시 어딘가에서 막힌다.
-                    action: '[self:music]{op: "folders", folder: "{path}"}'
-                    recursive: true
-                - type: media_player
-                  from: tracks
-                  empty_from: play_note
-                  continuous: true
-                  src: '{stream}'
-                  title: '{title} — {artist}'
+                tabs:
+                # 탐색 탭이 먼저다 — 폴더를 고르는 동안 곡은 보이지 않는다(폴더 안에 폴더밖에
+                # 없는데 하위 곡이 깔리면 그 폴더에 든 것으로 오해된다).
+                - name: 폴더
+                  view:
+                  - type: list_action
+                    from: items
+                    empty_from: message
+                    title: '{title}'
+                    sub: '{meta}'
+                    item_click:
+                      # 같은 화면(이 탭 구성)을 그대로 다시 쓴다 — 깊이 무제한 트리.
+                      # 폴더 트리는 깊이를 미리 알 수 없어 손으로 중첩하면 반드시 막힌다.
+                      action: '[self:music]{op: "folders", folder: "{path}"}'
+                      recursive: true
+                # '선택을 마쳤을 때' 누르는 탭 — 하위 폴더 곡까지 모아 이어 재생.
+                - name: 이 폴더 전부 재생
+                  view:
+                  - type: media_player
+                    from: tracks
+                    empty_from: play_note
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
           - name: 플레이리스트
             auto_run: true
             note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.

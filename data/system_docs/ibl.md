@@ -622,7 +622,7 @@ self:
           view:                   # 프리미티브 목록은 아래 어휘 줄 참조(빌드 가드가 동기 검증)
           # compose: 하단 작성바 — $text=작성, {field}=드릴 데이터. 전송 후 새로고침
           # item_click.tabs: 드릴 상세 탭(대화↔이웃정보 등) — 한 액션 데이터를 탭별 view 로 분할
-          # item_click.recursive: 드릴 안의 드릴이 '지금 보고 있는 뷰'를 그대로 재사용(view 와 배타).
+          # item_click.recursive: 드릴 안의 드릴이 '지금 보고 있는 화면(view 또는 tabs)'을 그대로 재사용(view 와 배타).
           #   깊이를 모르는 트리(폴더 등)를 한 벌 선언으로 탐색 — 손으로 중첩하면 그 깊이에서 막힌다.
           # form/editable_list: $field=입력값, {field}=드릴 데이터 → 저장/추가/삭제 액션 실행 후 새로고침
           - { type: metric, big: '{data.current_price_krw|num}', trend: data.change_24h_percent }

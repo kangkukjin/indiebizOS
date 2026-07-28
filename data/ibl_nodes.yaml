@@ -2940,7 +2940,7 @@ nodes:
                       v: '{track.path}'
           - name: 폴더
             auto_run: true
-            note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 폴더를 열면 그 안의 하위 폴더가 나오고, 아래 재생기는 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어서 재생합니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
+            note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 탐색 중에는 폴더만 보이고, 다 골랐으면 '이 폴더 전부 재생' 탭에서 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어 듣습니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
             action: '[self:music]{op: "folders"}'
             view:
             - type: list_action
@@ -2950,21 +2950,25 @@ nodes:
               sub: '{meta}'
               item_click:
                 action: '[self:music]{op: "folders", folder: "{path}"}'
-                view:
-                - type: list_action
-                  from: items
-                  empty_from: message
-                  title: '{title}'
-                  sub: '{meta}'
-                  item_click:
-                    action: '[self:music]{op: "folders", folder: "{path}"}'
-                    recursive: true
-                - type: media_player
-                  from: tracks
-                  empty_from: play_note
-                  continuous: true
-                  src: '{stream}'
-                  title: '{title} — {artist}'
+                tabs:
+                - name: 폴더
+                  view:
+                  - type: list_action
+                    from: items
+                    empty_from: message
+                    title: '{title}'
+                    sub: '{meta}'
+                    item_click:
+                      action: '[self:music]{op: "folders", folder: "{path}"}'
+                      recursive: true
+                - name: 이 폴더 전부 재생
+                  view:
+                  - type: media_player
+                    from: tracks
+                    empty_from: play_note
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
           - name: 플레이리스트
             auto_run: true
             note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.

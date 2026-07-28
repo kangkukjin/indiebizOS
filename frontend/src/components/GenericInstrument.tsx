@@ -457,12 +457,13 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
       const code = rowAction(buildAction(dc.action, valuesRef.current), item);
       const d = await runIBL(code);
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
-      // recursive: 지금 보고 있는 드릴 뷰를 그대로 다시 쓴다 — 깊이를 모르는 트리(폴더 등)를
-      // 한 벌 선언으로 무제한 탐색. 선언에 view/tabs 가 있으면 그것이 이긴다.
-      const inherited = drillRef.current?.view;
+      // recursive: 지금 보고 있는 드릴 화면(뷰 또는 탭)을 그대로 다시 쓴다 — 깊이를 모르는
+      // 트리(폴더 등)를 한 벌 선언으로 무제한 탐색. 선언에 view/tabs 가 있으면 그것이 이긴다.
+      const inh = dc.recursive ? drillRef.current : null;
       setDrill({
-        data: d, action: code, item, compose: dc.compose, tabs: dc.tabs,
-        view: dc.view ?? (dc.recursive ? inherited : undefined),
+        data: d, action: code, item, compose: dc.compose,
+        view: dc.view ?? inh?.view,
+        tabs: dc.tabs ?? inh?.tabs,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

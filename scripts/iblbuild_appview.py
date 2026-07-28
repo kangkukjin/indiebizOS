@@ -447,13 +447,13 @@ def _app_check_view(qualified: str, view, depth: int = 0, in_group: bool = False
                 elif "tabs" in drill:
                     issues.append(f"{where}: item_click.tabs 는 비어있지 않은 리스트여야 함")
                 elif drill.get("recursive") is True:
-                    # 재귀 드릴 — 지금 보고 있는 드릴 뷰를 그대로 재사용한다(렌더러 2곳 동형).
-                    # 깊이를 미리 알 수 없는 트리(폴더 등)를 한 벌 선언으로 탐색하는 유일한 길:
-                    # 단계마다 손으로 중첩해 쓰면 declared depth 에서 반드시 막힌다.
-                    # 물려받을 뷰가 있어야 하므로 드릴 안(depth>0)에서만 쓸 수 있다.
+                    # 재귀 드릴 — 지금 보고 있는 드릴 화면(view 또는 tabs)을 그대로 재사용한다
+                    # (렌더러 2곳 동형). 깊이를 미리 알 수 없는 트리(폴더 등)를 한 벌 선언으로
+                    # 탐색하는 유일한 길: 단계마다 손으로 중첩해 쓰면 declared depth 에서 막힌다.
+                    # 물려받을 화면이 있어야 하므로 드릴 안(depth>0)에서만 쓸 수 있다.
                     if depth == 0:
-                        issues.append(f"{where}: item_click.recursive 는 드릴 뷰 안에서만 — "
-                                      f"최상위 드릴은 물려받을 뷰가 없다(view 를 선언하라)")
+                        issues.append(f"{where}: item_click.recursive 는 드릴 화면 안에서만 — "
+                                      f"최상위 드릴은 물려받을 화면이 없다(view/tabs 를 선언하라)")
                     if drill.get("view") is not None:
                         issues.append(f"{where}: item_click.recursive 와 view 는 함께 쓸 수 없다 "
                                       f"(view 가 있으면 재귀가 아니다)")

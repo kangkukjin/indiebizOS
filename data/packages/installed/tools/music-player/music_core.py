@@ -475,6 +475,24 @@ def count_folders() -> int:
     return len(_track_dirs())
 
 
+def direct_tracks(folder: str, limit: int = 500) -> list:
+    """그 폴더에 **직접** 든 곡만 (하위 폴더 제외) — 파인더의 '이 폴더 안 파일'.
+
+    query_tracks(folder=…) 는 하위까지 훑으므로 여기선 부모 디렉토리가 정확히 일치하는
+    것만 고른다. 폴더 안 순서는 디스크 번호·트랙 번호(앨범 순서), 없으면 파일명.
+    """
+    f = norm_path(folder)
+    if not f:
+        return []
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM tracks WHERE path LIKE ? AND path NOT LIKE ? "
+            "ORDER BY disc_no, track_no, filename LIMIT ?",
+            (f + os.sep + "%", f + os.sep + "%" + os.sep + "%", max(1, int(limit))),
+        ).fetchall()
+    return [track_row(r) for r in rows]
+
+
 def browse_folders(parent: str = "") -> dict:
     """파인더식 한 단계 탐색 — parent 의 **바로 아래** 폴더만 돌려준다.
 

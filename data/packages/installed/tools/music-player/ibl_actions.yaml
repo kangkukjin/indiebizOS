@@ -132,6 +132,14 @@ nodes:
                       # 폴더 트리는 깊이를 미리 알 수 없어 손으로 중첩하면 반드시 막힌다.
                       action: '[self:music]{op: "folders", folder: "{path}"}'
                       recursive: true
+                  # 파인더처럼 폴더와 '그 폴더에 직접 든 곡'을 한 화면에. 하위 폴더 곡은
+                  # 여기 없다(그건 옆 탭) — 폴더만 든 곳에선 이 자리가 조용하다.
+                  - type: media_player
+                    from: direct
+                    empty_from: direct_note
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
                 # '선택을 마쳤을 때' 누르는 탭 — 하위 폴더 곡까지 모아 이어 재생.
                 - name: 이 폴더 전부 재생
                   view:

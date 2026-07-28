@@ -2961,6 +2961,12 @@ nodes:
                     item_click:
                       action: '[self:music]{op: "folders", folder: "{path}"}'
                       recursive: true
+                  - type: media_player
+                    from: direct
+                    empty_from: direct_note
+                    continuous: true
+                    src: '{stream}'
+                    title: '{title} — {artist}'
                 - name: 이 폴더 전부 재생
                   view:
                   - type: media_player

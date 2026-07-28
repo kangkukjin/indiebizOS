@@ -95,6 +95,12 @@ def _folders(params: dict) -> dict:
     out = items(br["items"], count=len(br["items"]),
                 folder=br["folder"], parent=br["parent"], n_tracks=br["n_tracks"])
     if folder:
+        # direct — 이 폴더에 **직접** 든 곡. 파인더가 그러듯 폴더와 파일을 같은 화면에 보인다
+        # (폴더만 있는 곳엔 안 보이고, 곡이 든 곳엔 그 자리에서 바로 재생).
+        direct = c.direct_tracks(br["folder"])
+        out["direct"] = direct
+        out["direct_note"] = "" if direct else "이 폴더에 직접 든 곡은 없습니다."
+        # tracks — 하위 폴더까지 포함한 전체(별도 탭에서 '다 골랐을 때' 재생).
         tracks = c.query_tracks(folder=br["folder"], limit=_PLAY_CAP)
         out["tracks"] = tracks
         out["folder_label"] = c._rel_folder(br["folder"])

@@ -854,7 +854,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
           <div className="bg-orange-50 p-4 rounded-lg">
             <p className="font-medium text-orange-800 mb-1">📋 맥 → 폰으로 내용 보내기</p>
             <div className="text-sm text-orange-700 space-y-1">
-              <p>• 런처 상단의 <strong>클립보드 버튼</strong>: 맥에서 ⌘C로 복사한 내용을
+              <p>• 런처 상단의 <strong>'폰으로' 버튼</strong>: 맥에서 ⌘C로 복사한 내용을
                 <strong> 폰 클립보드에 넣고 알림</strong>을 띄웁니다 — 폰이 Wi-Fi 밖(LTE)이어도 푸시 큐로 전달됩니다</p>
               <p>• <strong>스위치·에이전트로도</strong> 보냅니다: "이 요약 폰으로 보내줘" 같은 반복 작업을
                 스위치로 굳히면 원클릭 — 폰 알림·진동·클립보드로 도착합니다</p>

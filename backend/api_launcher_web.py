@@ -532,73 +532,52 @@ def app_source(app_id: str):
     raise HTTPException(status_code=404, detail=f"'{app_id}' 앱의 소스를 찾지 못했습니다(선언형/커스텀 매핑 없음).")
 
 
-# ===== 클립박스 — PC→폰 메시지함 (목표 2: 개인 기능의 재배치) =====
-# 특권 소멸 재설계(docs/NO_PRIVILEGED_RAILS_HANDOFF.md ★★재설계): 하트비트 푸시큐로
-# 폰에 밀어넣는 대신, 맥이 메시지를 자기 함에 담고 **열려 있는 원격런처**가 가져간다
-# (폴링+복사 버튼) — 새 배관 0. 런처가 닫혀 있으면 다음에 열 때 받는다(사용자 수용).
-import threading as _threading
-
-_clipbox_lock = _threading.Lock()
-_CLIPBOX_MAX = 20
+# ===== '폰으로' — 맥 클립보드 → 폰 클립보드 + 도착 알림 (2026-07-28 clipbox 철회·원복) =====
+# 사전 물리 분리(6cb85ea) 후 맥 레지스트리엔 limbs:phone 이 없어 /ibl/execute 경유가
+# 불가("액션 없음" 정직 에러). 엔진 사전을 거치지 않고 폰 사전의 고정 봉투를
+# ibl_engine._forward_to_phone 으로 보낸다 — 직결(Wi-Fi) 우선, LTE/CGNAT 면 heartbeat
+# 롱폴 푸시 큐로 반전 전달(폰이 자기 사전으로 실행). 어휘 사용이 아니라 리모컨 계약.
 
 
-def _clipbox_path() -> str:
-    base = os.environ.get("INDIEBIZ_BASE_PATH") or os.path.join(os.path.dirname(__file__), "..")
-    return os.path.join(base, "data", "clipbox.json")
-
-
-def _clipbox_load() -> list:
-    try:
-        with open(_clipbox_path(), "r", encoding="utf-8") as f:
-            items = json.load(f)
-        return items if isinstance(items, list) else []
-    except Exception:
-        return []
-
-
-def _clipbox_save(items: list) -> None:
-    with open(_clipbox_path(), "w", encoding="utf-8") as f:
-        json.dump(items[-_CLIPBOX_MAX:], f, ensure_ascii=False)
-
-
-class ClipboxAdd(BaseModel):
+class ClipToPhone(BaseModel):
     text: str
 
 
-class ClipboxConsume(BaseModel):
-    id: str
-
-
-@router.post("/clipbox")
-async def clipbox_add(req: ClipboxAdd):
-    """데스크탑 '폰으로' 버튼 — 메시지를 함에 담는다(localhost=무인증 통과)."""
+@router.post("/clip-to-phone")
+async def clip_to_phone(req: ClipToPhone):
+    """데스크탑 '폰으로' 버튼(localhost=무인증 통과). 워커 스레드 실행 — 직결 connect
+    대기·큐 동기결과 대기(wait_result)가 이벤트 루프(heartbeat 응답 통로)를 막으면
+    전달 자체가 안 나가는 자기교착 부류라 반드시 스레드로 내린다."""
     text = (req.text or "").strip()
     if not text:
         return {"success": False, "error": "빈 내용"}
-    item = {"id": uuid.uuid4().hex[:12], "text": text,
-            "ts": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")}
-    with _clipbox_lock:
-        items = _clipbox_load()
-        items.append(item)
-        _clipbox_save(items)
-    return {"success": True, "id": item["id"], "count": len(items)}
 
+    def _send() -> dict:
+        try:
+            import device_registry as dr
+            cands = [e for e in dr.live_with_capability(dr.PHONE_CLASS)
+                     if not e.get("self")]
+        except Exception:
+            cands = []
+        url = next((e.get("url") for e in cands if e.get("url")), None) \
+            or os.environ.get("INDIEBIZ_PHONE_URL")
+        if not url:
+            return {"success": False, "error": "연결된 폰이 없습니다.",
+                    "phone_unreachable": True}
+        from ibl_engine import _forward_to_phone
+        r1 = _forward_to_phone(url, "limbs", "phone", {"op": "clipboard", "text": text})
+        r2 = _forward_to_phone(url, "limbs", "phone", {
+            "op": "notify", "title": "📋 맥 클립보드 도착",
+            "body": "입력창을 길게 눌러 붙여넣기 하세요"})
+        results = [r1, r2]
+        bad = [r for r in results
+               if not isinstance(r, dict) or r.get("phone_unreachable")
+               or (r.get("success") is False and not r.get("queued"))]
+        queued = any(isinstance(r, dict) and r.get("queued") for r in results)
+        return {"success": not bad, "queued": queued, "results": results}
 
-@router.get("/clipbox")
-async def clipbox_list():
-    """원격런처 수신면 폴링 — 남은(미수신) 메시지 목록."""
-    with _clipbox_lock:
-        return {"items": _clipbox_load()}
-
-
-@router.post("/clipbox/consume")
-async def clipbox_consume(req: ClipboxConsume):
-    """수신 처리 — 원격런처에서 복사한 메시지를 함에서 뺀다."""
-    with _clipbox_lock:
-        items = _clipbox_load()
-        left = [it for it in items if it.get("id") != req.id]
-        _clipbox_save(left)
-    return {"success": True, "count": len(left)}
+    import anyio
+    return await anyio.to_thread.run_sync(_send)
 
 
 @router.get("/config")

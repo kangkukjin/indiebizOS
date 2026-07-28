@@ -202,16 +202,18 @@ export function Launcher() {
     if (!text.trim()) { done('err'); return; }
     setClipToPhone('sending');
     try {
-      // 맥 클립보드 → 폰: 메시지함(clipbox) 적재 — 특권 소멸 재설계(목표 2 재배치).
-      // 폰에 밀어넣는 배관 없이, 폰에서 원격런처를 열면 "PC에서 온 메시지" 면이
-      // 함을 폴링해 탭 한 번으로 폰 클립보드에 복사한다(LTE 무관 — 런처=터널 경유).
-      const r = await fetch('http://127.0.0.1:8765/launcher/clipbox', {
+      // 맥 클립보드 → 폰 클립보드 + 도착 알림 (2026-07-28 원복 — clipbox 철회).
+      // ★사전 물리 분리 후 맥 엔진엔 limbs:phone 이 없으므로 /ibl/execute 가 아니라
+      // 전용 라우트로 — 백엔드가 폰 사전의 고정 봉투를 직결(Wi-Fi) 또는 heartbeat
+      // 롱폴 푸시 큐(LTE)로 전달한다(api_launcher_web.clip_to_phone).
+      const r = await fetch('http://127.0.0.1:8765/launcher/clip-to-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
       });
       const data = await r.json().catch(() => ({}));
-      if (r.ok && data?.success) done('ok');
+      if (r.ok && data?.success && data?.queued) done('queued');
+      else if (r.ok && data?.success) done('ok');
       else done('err');
     } catch {
       done('err');
@@ -748,14 +750,14 @@ export function Launcher() {
                     ? 'text-red-600 bg-red-50'
                     : 'text-[#6B5B4F] hover:bg-[#EAE4DA] active:bg-[#E0D9CC]'
               }`}
-              title="맥 클립보드를 폰으로 — 지금 복사(⌘C)된 내용을 메시지함에 담습니다. 폰에서 런처를 열면 'PC에서 온 메시지'에서 탭 한 번으로 받습니다"
+              title="맥 클립보드를 폰으로 — 지금 복사(⌘C)된 내용을 폰 클립보드에 넣고 알림을 띄웁니다 (Wi-Fi 직결, LTE 여도 푸시 큐로 전달)"
             >
               <Smartphone size={15} />
               <span className="text-[13px]">
                 {clipToPhone === 'idle' && '폰으로'}
-                {clipToPhone === 'sending' && '담는 중…'}
-                {clipToPhone === 'ok' && '담김 ✓'}
-                {clipToPhone === 'queued' && '담김 ✓'}
+                {clipToPhone === 'sending' && '보내는 중…'}
+                {clipToPhone === 'ok' && '복사됨 ✓'}
+                {clipToPhone === 'queued' && '전달됨 ✓'}
                 {clipToPhone === 'err' && '실패'}
               </span>
             </button>

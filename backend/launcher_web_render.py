@@ -477,13 +477,14 @@ function renderComposeBar(cmp){
   const opts=composeChannelOptions(cmp);
   let sel='';
   /* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */
-  if(opts.length>=2) sel='<select id="composeChannel" class="field" style="flex:0 0 auto;max-width:42%;border-radius:22px">'
+  if(opts.length>=2) sel='<select id="composeChannel" class="field chan" style="border-radius:22px">'
     +opts.map(o=>'<option value="'+esc(o.key)+'">'+esc(o.label)+'</option>').join('')+'</select>';
-  else if(opts.length===1) sel='<span class="muted" title="발신 채널" style="flex:0 0 auto;max-width:42%;align-self:center;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+  else if(opts.length===1) sel='<span class="muted chan" title="발신 채널" style="font-size:12px">'
     +esc(opts[0].label)+'</span>';
-  return '<div class="composebar">'+sel+'<input id="composeInput" class="field" placeholder="'+esc(cmp.placeholder||'메시지 입력…')+'" '
+  /* 발신 채널(어디로 보내나)은 제 줄에 — 입력+전송과 한 줄로 묶으면 좁은 드릴 패널에서 넘친다 */
+  return '<div class="composebar">'+(sel?'<div class="chanrow">'+sel+'</div>':'')+'<div class="sendrow">'+'<input id="composeInput" class="field" placeholder="'+esc(cmp.placeholder||'메시지 입력…')+'" '
     +'onkeydown="if(event.key===\\'Enter\\')composeSend(document.getElementById(\\'composeSendBtn\\'))">'
-    +'<button id="composeSendBtn" class="go" onclick="composeSend(this)">'+esc(cmp.button||'전송')+'</button></div>';
+    +'<button id="composeSendBtn" class="go" onclick="composeSend(this)">'+esc(cmp.button||'전송')+'</button></div></div>';
 }
 /* 현재 렌더 중인 view(탭이면 활성 탭 view, 아니면 모드/드릴 view) */
 function activeView(){ return (VIEW_CTX&&(VIEW_CTX._activeView||VIEW_CTX.view))||[]; }

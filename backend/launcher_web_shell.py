@@ -272,9 +272,16 @@ input,textarea,select{ font-family:inherit; }
 .docv .dfig figcaption{ font-size:11px; color:var(--dim); text-align:center; margin-top:4px; }
 .docv code{ background:var(--bg3); padding:1px 4px; border-radius:4px; font-size:0.9em; }
 .docv a{ color:var(--acc); }
-.composebar{ position:sticky; bottom:0; display:flex; gap:8px; padding:10px 0 6px; margin-top:8px; background:linear-gradient(transparent,var(--bg) 35%); }
-.composebar .field{ border-radius:22px; }
+/* 작성바 — 발신 채널은 윗줄, 입력+전송은 아랫줄. 셋을 한 줄에 두면 드릴 패널이 좁을 때
+   (원격은 목록+상세 2분할이라 상세가 400px 안팎) 줄이 컨테이너를 넘어 모양이 깨진다
+   — 실측 168+197+59+간격 = 440px > 399px. ★.field 의 min-width:0 은 flex 기본값
+   min-width:auto(=입력창의 고유 너비 ~197px) 때문에 입력창이 안 줄어드는 것을 푸는 열쇠. */
+.composebar{ position:sticky; bottom:0; display:flex; flex-direction:column; gap:6px; padding:10px 0 6px; margin-top:8px; background:linear-gradient(transparent,var(--bg) 35%); }
+.composebar .chanrow{ display:flex; }
+.composebar .sendrow{ display:flex; gap:8px; }
+.composebar .field{ border-radius:22px; min-width:0; }
 .composebar .go{ border-radius:22px; }
+.composebar .chan{ flex:0 1 auto; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* master-detail 반응형(메신저): 넓으면 2분할(리스트+상세), 좁으면 드릴(리스트↔상세 토글) */
 .mdsplit{ display:flex; flex-direction:column; gap:10px; }
 .mddetail{ display:flex; flex-direction:column; min-width:0; }

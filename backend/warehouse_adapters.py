@@ -317,8 +317,12 @@ def _rss_parse(content: bytes) -> Dict:
 
 
 def _discover_feed(text: str, page_url: str) -> str:
-    """HTML <link rel=alternate type=rss/atom> 에서 피드 주소 자동발견."""
-    for m in re.finditer(r"<link\s[^>]*>", text[:200_000], re.I):
+    """HTML <link rel=alternate type=rss/atom> 에서 피드 주소 자동발견.
+
+    스캔 창 3MB — 옛 200KB 는 유튜브 채널(HTML 1.4MB, rss link 태그가 ~700KB 지점)
+    같은 거대 페이지에서 실존 태그를 놓쳤다(2026-07-28 실측). 정규식은 link 태그만
+    훑으므로 MB 단위 텍스트도 ms 급."""
+    for m in re.finditer(r"<link\s[^>]*>", text[:3_000_000], re.I):
         tag = m.group(0)
         if not re.search(r'rel=["\']?alternate', tag, re.I):
             continue

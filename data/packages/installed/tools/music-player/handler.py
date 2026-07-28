@@ -74,12 +74,35 @@ def _track(params: dict) -> dict:
                  playlists_note="" if pls else "플레이리스트가 아직 없습니다. 플레이리스트 탭에서 만드세요.")
 
 
+# 폴더 하나를 열 때 함께 싣는 재생 목록 상한. 표면이 곡마다 <audio> 를 하나씩 그리므로
+# 무제한이면 큰 폴더에서 화면이 죽는다. 넘치면 앞에서부터 이만큼만 재생 대상.
+_PLAY_CAP = 500
+
+
 def _folders(params: dict) -> dict:
+    """파인더식 한 단계 탐색 — 바로 아래 폴더 + '이 폴더 전부 재생'용 곡 목록.
+
+    폴더를 하나 열면 (a) 그 안의 하위 폴더(더 들어갈 수 있게)와 (b) 그 폴더 **아래
+    전체**(하위 폴더 포함) 곡을 함께 돌려준다. 표면은 (a)로 계속 파고들다가 원하는
+    단계에서 (b)를 재생하면 된다 — "폴더 선택을 마치면 그 안 음악을 다 재생".
+    """
     c = _core()
-    rows = c.list_folders()
-    if not rows:
-        return items([], message=_EMPTY_HINT)
-    return items(rows, count=len(rows))
+    folder = (params.get("folder") or "").strip()
+    br = c.browse_folders(folder)
+    if not br["items"]:
+        return items([], message=_EMPTY_HINT if not c.load_sources() else "하위 폴더가 없습니다.")
+
+    out = items(br["items"], count=len(br["items"]),
+                folder=br["folder"], parent=br["parent"], n_tracks=br["n_tracks"])
+    if folder:
+        tracks = c.query_tracks(folder=br["folder"], limit=_PLAY_CAP)
+        out["tracks"] = tracks
+        out["folder_label"] = c._rel_folder(br["folder"])
+        out["play_note"] = (
+            f"{br['n_tracks']}곡 중 앞 {len(tracks)}곡" if br["n_tracks"] > len(tracks)
+            else f"{len(tracks)}곡"
+        ) + " — 하위 폴더 곡까지 이어서 재생합니다."
+    return out
 
 
 # ── 플레이리스트 ─────────────────────────────────────────────────────────

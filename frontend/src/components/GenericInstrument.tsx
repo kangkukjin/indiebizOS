@@ -421,6 +421,10 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
   const [sending, setSending] = useState(false);
   const valuesRef = useRef(values);
   valuesRef.current = values;
+  // onDrill 은 의존성 없이(정체성 고정) 만들어지므로 현재 드릴을 ref 로 본다 — recursive 드릴이
+  // "지금 보고 있는 뷰"를 물려받아야 하는데, 클로저로 잡으면 첫 렌더 값에 박제된다.
+  const drillRef = useRef<DrillState | null>(null);
+  drillRef.current = drill;
 
   const run = useCallback(async (override?: Record<string, string>) => {
     if (!mode.action) return;
@@ -444,7 +448,7 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
   }, [mode, initVals, run]);
 
   const onDrill = useCallback(async (p: AppViewPrim, item: Json) => {
-    const dc = p.item_click as { action: string; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
+    const dc = p.item_click as { action: string; recursive?: boolean; view?: AppViewPrim[]; compose?: AppCompose; tabs?: DrillTab[] } | undefined;
     if (!dc) return;
     setLoading(true); setError(null); setComposeText(''); setComposeCh(''); setTabIdx(0);
     try {
@@ -453,7 +457,13 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
       const code = rowAction(buildAction(dc.action, valuesRef.current), item);
       const d = await runIBL(code);
       if (d && typeof d === 'object') (d as Json)._item = item; // 드릴 뷰에서 클릭 행 참조용
-      setDrill({ data: d, action: code, item, view: dc.view, compose: dc.compose, tabs: dc.tabs });
+      // recursive: 지금 보고 있는 드릴 뷰를 그대로 다시 쓴다 — 깊이를 모르는 트리(폴더 등)를
+      // 한 벌 선언으로 무제한 탐색. 선언에 view/tabs 가 있으면 그것이 이긴다.
+      const inherited = drillRef.current?.view;
+      setDrill({
+        data: d, action: code, item, compose: dc.compose, tabs: dc.tabs,
+        view: dc.view ?? (dc.recursive ? inherited : undefined),
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

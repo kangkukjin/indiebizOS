@@ -2837,7 +2837,7 @@ nodes:
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / folders·playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결.'
+        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결.'
         target_key: op
         group: music
         router: handler
@@ -2853,7 +2853,7 @@ nodes:
           values:
             library: 곡 검색·목록 (q 검색어 / folder 폴더 단위 / path 단일 곡, 기본 op)
             track: 곡 하나 상세 — 태그 + 담을 플레이리스트 목록
-            folders: 곡을 담은 폴더 목록 (폴더 단위 재생용)
+            folders: 폴더 한 단계 탐색 (folder 없으면 소스 루트, 있으면 그 아래 폴더 + 그 폴더 전체 곡)
             playlists: 플레이리스트 목록
             playlist: 플레이리스트 상세 (담긴 곡 순서대로)
             playlist_create: 새 플레이리스트 (name)
@@ -2940,30 +2940,31 @@ nodes:
                       v: '{track.path}'
           - name: 폴더
             auto_run: true
-            note: 폴더 구조 그대로 봅니다. 폴더를 누르면 그 폴더(하위 포함)를 이어서 재생해요.
+            note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 폴더를 열면 그 안의 하위 폴더가 나오고, 아래 재생기는 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어서 재생합니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
             action: '[self:music]{op: "folders"}'
             view:
             - type: list_action
               from: items
               empty_from: message
-              title: '{name}'
+              title: '{title}'
               sub: '{meta}'
               item_click:
-                action: '[self:music]{op: "library", folder: "{path}", limit: 500}'
-                tabs:
-                - name: 연속 재생
-                  view:
-                  - type: media_player
-                    from: items
-                    continuous: true
-                    src: '{stream}'
-                    title: '{title} — {artist}'
-                - name: 곡 목록
-                  view:
-                  - type: list_action
-                    from: items
-                    title: '{title}'
-                    sub: '{artist} · {album} · {duration_str}'
+                action: '[self:music]{op: "folders", folder: "{path}"}'
+                view:
+                - type: list_action
+                  from: items
+                  empty_from: message
+                  title: '{title}'
+                  sub: '{meta}'
+                  item_click:
+                    action: '[self:music]{op: "folders", folder: "{path}"}'
+                    recursive: true
+                - type: media_player
+                  from: tracks
+                  empty_from: play_note
+                  continuous: true
+                  src: '{stream}'
+                  title: '{title} — {artist}'
           - name: 플레이리스트
             auto_run: true
             note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.

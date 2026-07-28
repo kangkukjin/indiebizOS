@@ -441,7 +441,7 @@ def stats() -> dict:
     with _conn() as conn:
         tracks = conn.execute("SELECT COUNT(*) FROM tracks").fetchone()[0]
         per_source = {r["source"]: r["n"] for r in conn.execute("SELECT source, COUNT(*) AS n FROM tracks GROUP BY source")}
-    return {"tracks": tracks, "folders": len(list_folders()),
+    return {"tracks": tracks, "folders": count_folders(),
             "playlists": len(load_playlists()), "per_source": per_source}
 
 
@@ -458,8 +458,8 @@ def _rel_folder(dirpath: str) -> str:
     return dirpath
 
 
-def list_folders() -> list:
-    """곡을 직접 담은 폴더 목록 (폴더 구조=사용자의 의미 단위 — 폴더 단위 재생용)."""
+def _track_dirs() -> dict:
+    """곡을 **직접** 담은 폴더 → {n, dur}. 트리 집계의 원재료."""
     agg = {}
     with _conn() as conn:
         for r in conn.execute("SELECT path, duration FROM tracks"):
@@ -467,15 +467,68 @@ def list_folders() -> list:
             a = agg.setdefault(d, {"n": 0, "dur": 0.0})
             a["n"] += 1
             a["dur"] += r["duration"] or 0
-    rows = []
-    for d in sorted(agg):
-        rel = _rel_folder(d)
-        rows.append({
-            "title": rel, "name": rel, "path": d,
-            "n": agg[d]["n"], "duration_str": fmt_duration(agg[d]["dur"]),
-            "meta": f"{agg[d]['n']}곡 · {fmt_duration(agg[d]['dur'])}",
-        })
-    return rows
+    return agg
+
+
+def count_folders() -> int:
+    """곡을 담은 폴더 수 (보관함 통계용)."""
+    return len(_track_dirs())
+
+
+def browse_folders(parent: str = "") -> dict:
+    """파인더식 한 단계 탐색 — parent 의 **바로 아래** 폴더만 돌려준다.
+
+    옛 list_folders 는 곡을 담은 폴더를 전부(275개) 평평하게 늘어놓아, 많아지면
+    찾아 들어갈 수가 없었다. 트리는 한 단계씩 — 각 행에 그 폴더 **아래 전체**(하위 폴더 포함)
+    곡 수를 실어, 들어가기 전에 규모를 보고 고를 수 있게 한다.
+
+    - parent 없음 → 등록된 소스 폴더(루트)
+    - parent 있음 → 그 폴더의 직속 하위 폴더 + 맨 앞에 '⬆️ 상위 폴더' 행
+      (상위 행의 path 가 비면 루트로 돌아간다 — 같은 액션 하나로 오르내린다)
+
+    곡이 하나도 없는 가지는 아예 내지 않는다(빈 폴더를 헤매지 않게).
+    """
+    agg = _track_dirs()
+    roots = [s["path"] for s in load_sources()]
+    p = norm_path(parent) if parent else ""
+
+    def subtree(d: str):
+        """d 아래(자기 포함) 전체 곡 수·길이."""
+        n = dur = 0
+        pre = d + os.sep
+        for k, v in agg.items():
+            if k == d or k.startswith(pre):
+                n += v["n"]; dur += v["dur"]
+        return n, dur
+
+    def row(d: str, label: str) -> dict:
+        n, dur = subtree(d)
+        pre = d + os.sep
+        subs = {k[len(pre):].split(os.sep)[0] for k in agg if k.startswith(pre)}
+        bits = [f"{n}곡"]
+        if subs:
+            bits.append(f"하위 {len(subs)}폴더")
+        if fmt_duration(dur):
+            bits.append(fmt_duration(dur))
+        return {"title": label, "name": label, "path": d, "kind": "folder",
+                "n": n, "sub": len(subs), "duration_str": fmt_duration(dur),
+                "meta": " · ".join(bits)}
+
+    if not p:
+        items = [row(r, os.path.basename(r) or r) for r in roots if subtree(r)[0]]
+        return {"folder": "", "parent": "", "items": sorted(items, key=lambda x: x["title"]),
+                "n_tracks": sum(v["n"] for v in agg.values())}
+
+    pre = p + os.sep
+    kids = sorted({k[len(pre):].split(os.sep)[0] for k in agg if k.startswith(pre)})
+    items = [row(os.path.join(p, k), k) for k in kids]
+
+    # 상위로 — 소스 루트에서 오르면 최상위(빈 path)로 돌아간다.
+    up = "" if p in roots else os.path.dirname(p)
+    items.insert(0, {"title": "⬆️ 상위 폴더", "name": "⬆️ 상위 폴더", "path": up,
+                     "kind": "up", "n": 0, "sub": 0, "meta": _rel_folder(up) if up else "최상위"})
+    n, _ = subtree(p)
+    return {"folder": p, "parent": up, "items": items, "n_tracks": n}
 
 
 # ── 플레이리스트 ─────────────────────────────────────────────────────────

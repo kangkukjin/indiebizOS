@@ -2026,7 +2026,9 @@ nodes:
                 type: text
                 placeholder: 메모
       switch:
-        returns: effect
+        returns: items
+        side_effect: true
+        fixture: '[self:switch]{op: "list"}'
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
         target_description: list는 파라미터 없음. run은 switch_id 필요.
         group: schedule
@@ -3387,7 +3389,9 @@ nodes:
           offset:
           - start
       fill:
-        returns: effect
+        returns: items
+        side_effect: true
+        exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
         description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
         group: file
         target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'

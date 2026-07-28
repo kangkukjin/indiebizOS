@@ -474,7 +474,11 @@ def _execute_list_switches(tool_input: dict) -> str:
                 "last_run": sw.get("last_run")
             })
 
-        return json.dumps({"success": True, "switches": result, "count": len(result)}, ensure_ascii=False)
+        # items 병행 방출 — self:agents(d74461b)와 같은 이유·같은 방식. `switches` 만 내면
+        # `[self:switch]{op:"list"} >> [table:take]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
+        # 기존 키는 그대로 둔다(소비처 무손상).
+        return json.dumps({"success": True, "switches": result, "items": result,
+                           "count": len(result)}, ensure_ascii=False)
 
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)

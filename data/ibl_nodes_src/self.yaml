@@ -91,7 +91,14 @@
               - {key: type, type: select, placeholder: 종류, options: [{value: other, label: 기타}, {value: meeting, label: 회의/약속}, {value: task, label: 할 일}, {value: birthday, label: 생일}, {value: anniversary, label: 기념일}, {value: holiday, label: 휴일}]}
               - {key: description, type: text, placeholder: 메모}
       switch:
-        returns: effect
+        # list op 가 목록을 내므로 items — 설명이 약속한 것을 통화 선언이 부정하고 있었다
+        # (주간 설명 감사가 짚은 건, self:agents 와 같은 부류. 실측: `>> [table:take]` 가
+        #  "items 통화를 찾지 못했습니다"로 끊겼다).
+        returns: items
+        # ★통화 축과 안전 축은 다르다(58ac392) — run op 는 스위치를 실제로 실행한다.
+        # 선언이 없으면 returns:items 에서 '읽기'로 파생돼 조종실 dry-run 이 거짓 초록불을 켠다.
+        side_effect: true
+        fixture: '[self:switch]{op: "list"}'
         description: 스위치 관리 (op 분기). 목록 조회 / 즉시 실행.
         target_description: 'list는 파라미터 없음. run은 switch_id 필요.'
         group: schedule

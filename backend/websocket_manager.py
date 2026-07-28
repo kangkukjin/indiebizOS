@@ -3,7 +3,8 @@ websocket_manager.py - WebSocket 연결 관리
 IndieBiz OS Core
 """
 
-from typing import Dict
+import asyncio
+from typing import Dict, Optional
 from fastapi import WebSocket
 
 
@@ -12,10 +13,12 @@ class WebSocketManager:
 
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
+        self._loop: Optional[asyncio.AbstractEventLoop] = None  # 서버 이벤트 루프 (워커 스레드 발신용)
 
     async def connect(self, websocket: WebSocket, client_id: str):
         """클라이언트 연결"""
         await websocket.accept()
+        self._loop = asyncio.get_running_loop()
         self.active_connections[client_id] = websocket
         print(f"[WS] 연결 등록: {client_id} (총 {len(self.active_connections)}개)")
 
@@ -133,3 +136,28 @@ class WebSocketManager:
 
 # 싱글톤 인스턴스
 manager = WebSocketManager()
+
+
+def broadcast_message(message: dict) -> bool:
+    """동기·스레드 안전 브로드캐스트 — 워커 스레드(IBL 실행 등)에서 호출 가능.
+
+    ibl_executors._output_gui 등이 이 이름으로 import 하지만 실제 함수가 없어
+    [out:gui]의 WS 푸시가 조용히 전멸하던 결함의 수선(2026-07-28).
+    루프 스레드면 예약, 워커 스레드면 run_coroutine_threadsafe로 넘긴다.
+    """
+    loop = manager._loop
+    if loop is None or loop.is_closed() or not manager.active_connections:
+        return False
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    try:
+        if running is loop:
+            asyncio.ensure_future(manager.broadcast(message))
+        else:
+            asyncio.run_coroutine_threadsafe(manager.broadcast(message), loop)
+        return True
+    except Exception as e:
+        print(f"[WS] broadcast_message 실패: {e}")
+        return False

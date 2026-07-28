@@ -65,6 +65,7 @@
     "cognitive_trace",
     "consciousness_agent",
     "conversation_db",
+    "desktop_notify",
     "device_registry",
     "doc_ir",
     "document_converter",
@@ -138,6 +139,7 @@
     "node_registry",
     "nostr_phone_bridge",
     "notification_manager",
+    "notify_dispatch",
     "package_manager",
     "peer_cards",
     "phone_jobs",
@@ -199,8 +201,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 193,
-    "engine": 178,
+    "total": 195,
+    "engine": 180,
     "blocklist": 15
   }
 }

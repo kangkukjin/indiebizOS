@@ -99,13 +99,15 @@ def init_manager(pm):
 # ============ Launcher WebSocket ============
 
 _launcher_ws = None  # Launcher 전용 WS 연결 (1개)
+_launcher_loop = None  # 런처 WS가 붙은 이벤트 루프 (워커 스레드 발신용)
 
 @router.websocket("/ws/launcher")
 async def websocket_launcher(websocket: WebSocket):
     """런처 전용 WebSocket — 백엔드→런처 명령 전달 채널"""
-    global _launcher_ws
+    global _launcher_ws, _launcher_loop
     await websocket.accept()
     _launcher_ws = websocket
+    _launcher_loop = asyncio.get_running_loop()
     print("[WS] Launcher 연결됨")
 
     try:
@@ -141,6 +143,30 @@ async def send_launcher_command(command: str, params: dict = None) -> bool:
 def get_launcher_ws():
     """Launcher WS 연결 상태 확인 (동기 호출용)"""
     return _launcher_ws
+
+
+def send_launcher_command_sync(command: str, params: dict = None, timeout: float = 3.0) -> bool:
+    """워커 스레드(채널 폴러·IBL 실행 등)에서 런처 명령 전송 — 동기 래퍼.
+
+    런처 미연결이면 False (호출부가 OS 알림 등으로 폴백 판단).
+    루프 스레드에서 불리면 결과를 기다리지 않고 예약만 한다(자기교착 방지).
+    """
+    if not _launcher_ws or not _launcher_loop or _launcher_loop.is_closed():
+        return False
+    coro = send_launcher_command(command, params)
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    try:
+        if running is _launcher_loop:
+            asyncio.ensure_future(coro)
+            return True  # 전송 예약됨 — 결과 확인 불가 지점이라 낙관 반환
+        fut = asyncio.run_coroutine_threadsafe(coro, _launcher_loop)
+        return bool(fut.result(timeout=timeout))
+    except Exception as e:
+        print(f"[WS] Launcher 동기 명령 전달 실패: {e}")
+        return False
 
 
 # ============ WebSocket 채팅 ============

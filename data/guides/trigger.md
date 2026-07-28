@@ -100,7 +100,7 @@ config:{repeat:"once", date:"2026-06-15", time:"14:00"}
 [self:trigger]{op:"create", trigger_id:"gmail_alert_keyword",
   type:"channel",
   config:{channel:"gmail", subject_contains:"긴급"},
-  pipeline:'[limbs:notify_user]{message:"긴급 메일 도착"}'
+  pipeline:'[self:notify_user]{message:"긴급 메일 도착"}'
 }
 ```
 

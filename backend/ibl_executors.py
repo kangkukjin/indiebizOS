@@ -170,16 +170,10 @@ def _output_gui(content: str, params: dict, project_path: str) -> Any:
         "content": content,
     }
 
-    # WebSocket으로 프론트엔드에 전송
+    # WebSocket으로 프론트엔드에 전송 (동기·스레드 안전 헬퍼 — 워커 스레드에서 호출됨)
     try:
         from websocket_manager import broadcast_message
-        import asyncio
-        msg = {"type": "ibl_output", "data": result}
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.ensure_future(broadcast_message(msg))
-        else:
-            loop.run_until_complete(broadcast_message(msg))
+        broadcast_message({"type": "ibl_output", "data": result})
     except Exception:
         pass
 

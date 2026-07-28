@@ -63,7 +63,7 @@
 ```
 [self:trigger]{op:"create", trigger_id:"weekly_startup_check",
   type:"schedule", config:{repeat:"weekly", weekdays:["mon"], time:"09:00"},
-  pipeline:'[sense:startup]{query:"<관심분야>"} >> [limbs:notify_user]{message:"이번주 공고"}'
+  pipeline:'[sense:startup]{query:"<관심분야>"} >> [self:notify_user]{message:"이번주 공고"}'
 }
 ```
 

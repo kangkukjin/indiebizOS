@@ -3,7 +3,7 @@
  * Python 백엔드 관리 및 윈도우 생성
  */
 
-import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, session, nativeImage } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog, Menu, clipboard, session, nativeImage, Notification, Tray } from 'electron';
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
@@ -34,6 +34,8 @@ let photoManagerWindow = null; // Photo Manager 창
 let androidManagerWindow = null; // Android Manager 창
 let systemAIWindow = null; // 시스템 AI 창
 let lectureWorkspaceWindow = null; // 강의 만들기 워크스페이스 창
+let tray = null; // 트레이 (win/linux — 창을 다 닫아도 상주해 메시지 수신·알림 유지)
+let _badgeCount = 0; // 미확인 알림 수 (독/트레이 배지)
 
 // API 포트
 const API_PORT = 8765;
@@ -936,6 +938,10 @@ function createMessengerWindow() {
     messengerWindow = null;
   });
 
+  // 메신저를 보면 미확인 배지 해소 (열림·재포커스 모두)
+  clearBadge();
+  messengerWindow.on('focus', () => clearBadge());
+
   return messengerWindow;
 }
 
@@ -1492,9 +1498,130 @@ function setupIPC() {
   });
 }
 
+// ─── 알림 · 배지 · 트레이 ───
+
+function updateBadge() {
+  // macOS 독 / Linux(Unity) 배지 — 미지원 플랫폼은 조용히 무시
+  try { app.setBadgeCount(_badgeCount); } catch { /* 미지원 */ }
+  if (tray) {
+    try { tray.setToolTip(_badgeCount > 0 ? `IndieBiz — 새 알림 ${_badgeCount}건` : 'IndieBiz OS'); } catch { /* 무시 */ }
+  }
+}
+
+function clearBadge() {
+  if (_badgeCount === 0) return;
+  _badgeCount = 0;
+  updateBadge();
+}
+
+function showNativeNotification(params = {}) {
+  if (!Notification.isSupported()) return;
+  try {
+    const notif = new Notification({
+      title: params.title || 'IndieBiz',
+      body: params.body || ''
+    });
+    notif.on('click', () => {
+      // 클릭 → 런처 명령과 같은 어휘로 창 열기 (예: open_messenger_window)
+      if (params.command) {
+        handleLauncherCommand(params.command, params.command_params || {});
+      } else if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+    notif.show();
+  } catch (e) {
+    console.error('[알림] 네이티브 알림 실패:', e);
+  }
+  if (params.badge !== false) {
+    _badgeCount += 1;
+    updateBadge();
+  }
+}
+
+// 트레이 아이콘 (내장 32px PNG — 별도 자산 없이 자립)
+const TRAY_ICON_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAqUlEQVR4nO2XQQ6EIAxFPz+eQ9d6hZnjj1fQtV5EV2Mao6AorQn+FW2avk9JCAC5y4UKyvozXQGMfetluFTgo0aoAff1pAbc15ta8D0GYSxq7n6LRRiLrwHkbqAIFQzdb1lXzTc6HzWBQTST8dl8tAEN8dEGqtUZ/uOzeZ+cxVUs3weEsfgawFMMjIHX652SLMJYlIHGFNYMhgpSwjcNpDKx19NZf82QvWbq9ks3SZ7+MAAAAABJRU5ErkJggg==';
+
+function createTray() {
+  // win/linux 전용 — 창을 다 닫아도 앱이 상주해 메시지 수신·알림이 계속되게 한다.
+  // (macOS는 독 상주가 기본이라 트레이 불필요)
+  if (tray || process.platform === 'darwin') return;
+  try {
+    const icon = nativeImage.createFromDataURL(TRAY_ICON_DATA_URL);
+    tray = new Tray(icon);
+    tray.setToolTip('IndieBiz OS');
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: '열기', click: () => showMainWindow() },
+      { type: 'separator' },
+      { label: '종료', click: () => app.quit() }
+    ]));
+    tray.on('click', () => showMainWindow());
+  } catch (e) {
+    console.error('[트레이] 생성 실패:', e);
+    tray = null;
+  }
+}
+
+function showMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createWindow();
+  }
+}
+
 // ─── Launcher WS 브릿지 (메인 프로세스 상주) ───
 let _launcherWS = null;
 let _launcherReconnectTimer = null;
+
+function handleLauncherCommand(command, params) {
+  switch (command) {
+    case 'open_project_window':
+      createProjectWindow(
+        params?.project_id || '',
+        params?.project_name || params?.project_id || '',
+        params?.agent_name || ''
+      );
+      break;
+    case 'open_system_ai_window':
+      createSystemAIWindow();
+      break;
+    case 'open_messenger_window':
+      // 메신저 창 (옛 이웃관리·빠른 연락처 → IBL 메신저 계기).
+      createMessengerWindow();
+      break;
+    case 'open_community_window':
+      // 커뮤니티 창 (옛 IndieNet — 공개 피드·게시판). 레거시 app:"indienet"도 여기로.
+      createCommunityWindow();
+      break;
+    case 'open_business_window':
+      createBusinessWindow();
+      break;
+    case 'open_multichat_window':
+      createMultiChatWindow(
+        params?.room_id || '',
+        params?.room_name || ''
+      );
+      break;
+    case 'open_folder_window':
+      createFolderWindow(
+        params?.folder_id || '',
+        params?.folder_name || ''
+      );
+      break;
+    case 'open_lecture_workspace':
+      createLectureWorkspaceWindow(params?.lecture_id || null);
+      break;
+    case 'show_notification':
+      // 백엔드 발신 사용자 알림 (새 메시지·notify_user 등) → OS 네이티브 알림 + 배지
+      showNativeNotification(params || {});
+      break;
+    default:
+      console.warn('[Launcher WS] 알 수 없는 명령:', command);
+  }
+}
 
 function startLauncherWS() {
   if (_launcherWS) return;
@@ -1519,47 +1646,7 @@ function startLauncherWS() {
       if (data.type === 'launcher_command') {
         const { command, params } = data;
         console.log('[Launcher WS] 명령 수신:', command, params);
-
-        switch (command) {
-          case 'open_project_window':
-            createProjectWindow(
-              params?.project_id || '',
-              params?.project_name || params?.project_id || '',
-              params?.agent_name || ''
-            );
-            break;
-          case 'open_system_ai_window':
-            createSystemAIWindow();
-            break;
-          case 'open_messenger_window':
-            // 메신저 창 (옛 이웃관리·빠른 연락처 → IBL 메신저 계기).
-            createMessengerWindow();
-            break;
-          case 'open_community_window':
-            // 커뮤니티 창 (옛 IndieNet — 공개 피드·게시판). 레거시 app:"indienet"도 여기로.
-            createCommunityWindow();
-            break;
-          case 'open_business_window':
-            createBusinessWindow();
-            break;
-          case 'open_multichat_window':
-            createMultiChatWindow(
-              params?.room_id || '',
-              params?.room_name || ''
-            );
-            break;
-          case 'open_folder_window':
-            createFolderWindow(
-              params?.folder_id || '',
-              params?.folder_name || ''
-            );
-            break;
-          case 'open_lecture_workspace':
-            createLectureWorkspaceWindow(params?.lecture_id || null);
-            break;
-          default:
-            console.warn('[Launcher WS] 알 수 없는 명령:', command);
-        }
+        handleLauncherCommand(command, params);
       }
     } catch (e) {
       console.error('[Launcher WS] 메시지 파싱 오류:', e);
@@ -1589,6 +1676,14 @@ function startLauncherWS() {
 // 앱 준비
 app.whenReady().then(async () => {
   console.log('[Electron] 앱 시작');
+
+  // Windows 토스트 알림 발신자 식별 (electron-builder appId와 동일)
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.indiebiz.app');
+  }
+
+  // win/linux 트레이 상주 — 창을 다 닫아도 백엔드·수신·알림 유지
+  createTray();
 
   // ── 창고 자격 캡처: 포식 브라우저(persist:forage)에서 창고 가입/로그인 POST 를 관찰해
   //    아이디·비밀번호를 백엔드 창고 자격 저장소로 흘린다 — 다음 방문의 로그인 상태는
@@ -1719,9 +1814,9 @@ app.whenReady().then(async () => {
   });
 });
 
-// 모든 윈도우 닫힘
+// 모든 윈도우 닫힘 — 트레이가 있으면 상주(메시지 수신·알림 계속), 없을 때만 종료
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (process.platform !== 'darwin' && !tray) {
     app.quit();
   }
 });

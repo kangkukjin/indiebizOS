@@ -919,6 +919,14 @@ class ChannelPoller:
 
             self._log(f"메시지 저장: {subject[:30]}..." if len(subject) > 30 else f"메시지 저장: {subject}")
 
+            # 새 메시지 사용자 알림 (런처 네이티브 알림 → 미연결 시 OS 알림 폴백)
+            try:
+                from notify_dispatch import notify_new_message
+                sender_name = (neighbor or {}).get('name') or contact_value
+                notify_new_message(sender_name, subject, content, contact_type)
+            except Exception as _ne:
+                self._log(f"새 메시지 알림 실패: {_ne}")
+
         except Exception as e:
             self._log(f"메시지 저장 실패: {e}")
 

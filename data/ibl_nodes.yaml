@@ -2086,13 +2086,13 @@ nodes:
         - 진행상황
       notify_user:
         returns: effect
-        description: 사용자에게 알림 전송 (프론트엔드 + 텔레그램). 중요 이벤트 통지용.
-        target_description: 알림 메시지. priority 옵션 (info/warn/error).
+        description: 사용자에게 데스크탑 알림 전송. 중요 이벤트 통지용.
+        target_description: 알림 메시지. title·type 옵션 (info/warning/error).
         group: system
         target_key: message
         router: system
         func: send_notification
-        implementation: notification_manager를 통해 프론트엔드/텔레그램 알림 전송
+        implementation: notify_dispatch 관문 — 알림함 기록 + 런처 WS 네이티브 알림, 런처 미연결 시 desktop_notify로 백엔드가 직접 OS 알림
         keywords:
         - 알림
         - 통지

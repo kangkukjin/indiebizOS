@@ -429,16 +429,16 @@ from system_tools_delegate import (  # noqa: E402,F401
 
 
 def execute_send_notification(tool_input: dict, project_path: str) -> str:
-    """send_notification 도구 실행"""
+    """send_notification 도구 실행 — notify_dispatch 관문으로 실제 전달
+    (알림함 기록 + 런처 네이티브 알림, 미연결 시 백엔드 직접 OS 알림 폴백)"""
     title = tool_input.get("title", "")
     message = tool_input.get("message", "")
     noti_type = tool_input.get("type", "info")
 
     try:
-        from notification_manager import get_notification_manager
-        nm = get_notification_manager()
-        notification = nm.create(title=title, message=message, type=noti_type)
-        return json.dumps({"success": True, "notification_id": notification["id"]}, ensure_ascii=False)
+        from notify_dispatch import notify_user
+        delivered = notify_user(title=title, body=message, kind=noti_type, source="ai")
+        return json.dumps({"success": True, "delivered_to_launcher": delivered}, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 

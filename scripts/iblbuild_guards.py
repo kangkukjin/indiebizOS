@@ -109,6 +109,7 @@ OS_SEAM_ALLOWLIST = {
     "backend/providers/claude_code.py",  # claude CLI 바이너리 탐색(Win %APPDATA%\\...\\claude.exe vs 맥 .app 번들) — 외부 바이너리 finder, api_tunnel 과 동류
     "backend/common/platform_utils.py",  # 크로스플랫폼 이음매 그 자체(find_binary/spawn_detached/open_url/install_hint — os.name·sys.platform 분기가 존재 이유)
     "backend/ffmpeg_provision.py",  # ffmpeg 자동 공급(윈도우 첫 실행 시 BtbN 정적 빌드 다운로드 — os.name 분기)
+    "backend/desktop_notify.py",  # OS 네이티브 데스크탑 알림(osascript/PowerShell 토스트/notify-send — 3 OS 분기가 존재 이유)
 }
 OS_SCAN_DIRS = ["backend"]
 # 강한 OS 신호만 — 일반 'open'/'start' 같은 건 오탐이라 제외.

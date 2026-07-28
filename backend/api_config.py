@@ -5,9 +5,13 @@ IndieBiz OS Core
 
 import os
 import json
+import logging
+import threading
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 import yaml
@@ -1396,3 +1400,54 @@ def run_ibl_health_check_sync():
             pass
     healthy = len(events) > 0 and all(ev.get("success") for ev in events)
     return {"healthy": healthy, "events": events}
+
+
+# ── 설명 감사(설명 정합) 수동 재실행 ──
+# 주 1회 카덴스 감사가 남긴 빨간불은 드리프트를 고쳐도 다음 주간 실행까지 잔존한다
+# ('지금 점검'은 어휘 정합·통화·파이프만 재검사). 경량 LLM ~6회 비용이 있어
+# 기본 '지금 점검'(AI 0)에 합류시키지 않고 명시적 별도 경로로만 노출.
+_desc_audit_lock = threading.Lock()
+_desc_audit_state: Dict[str, Any] = {
+    "running": False, "started_at": None, "finished_at": None, "error": None,
+}
+
+
+@router.get("/world-pulse/description-audit")
+def description_audit_status():
+    """설명 감사 재실행 진행 상태 — 조종실 버튼이 폴링해 완료를 감지한다."""
+    with _desc_audit_lock:
+        return dict(_desc_audit_state)
+
+
+@router.post("/world-pulse/description-audit")
+def trigger_description_audit():
+    """설명 정합(description_drift) 감사 강제 재실행 (백그라운드, 경량 LLM ~6회).
+
+    완료 시 self_checks(__ibl_health__:description_drift)를 갱신해 조종실의 옛
+    빨간불 유령을 즉시 해소한다. 진행 상태는 GET 으로 폴링."""
+    with _desc_audit_lock:
+        if _desc_audit_state["running"]:
+            return {"status": "already_running", "started_at": _desc_audit_state["started_at"]}
+        _desc_audit_state.update(
+            running=True, started_at=datetime.now().isoformat(), finished_at=None, error=None,
+        )
+
+    def _run():
+        err = None
+        try:
+            from ibl_description_audit import run_description_drift_check
+            from world_pulse_health import save_self_check
+            res = run_description_drift_check(force=True)
+            if res.get("node"):
+                save_self_check(res)  # 조종실이 읽는 '마지막 기록'을 갱신
+        except Exception as e:
+            err = str(e)
+            logger.error(f"[DescAudit] 수동 설명 감사 실패: {e}")
+        finally:
+            with _desc_audit_lock:
+                _desc_audit_state.update(
+                    running=False, finished_at=datetime.now().isoformat(), error=err,
+                )
+
+    threading.Thread(target=_run, daemon=True, name="manual-desc-audit").start()
+    return {"status": "started"}

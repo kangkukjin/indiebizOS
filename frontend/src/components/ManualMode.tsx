@@ -173,6 +173,7 @@ export default function ManualMode() {
   // 계기판: 시스템 상태 (마지막 IBL 건강 + vitals) + 수동 재점검
   const [dashboard, setDashboard] = useState<DashboardStatus | null>(null);
   const [healthChecking, setHealthChecking] = useState(false);
+  const [descAuditing, setDescAuditing] = useState(false);   // 설명 정합 재감사 진행 중
   // 시스템 상태 접이식 — 기본 접힘(한 줄 요약), 선택은 localStorage에 기억
   const [statusOpen, setStatusOpen] = useState<boolean>(() => {
     try { return localStorage.getItem('cockpit_status_open') === '1'; } catch { return false; }
@@ -350,6 +351,31 @@ export default function ManualMode() {
     }
   };
 
+  // 설명 감사 다시 실행 — 설명 정합(주 1회 카덴스)만 강제 재감사 (경량 AI ~6회, 백그라운드).
+  // 드리프트를 고쳐도 다음 주간 실행까지 남는 옛 빨간불을 즉시 해소한다. '지금 점검'(AI 0)과 분리.
+  const handleDescAudit = async () => {
+    if (descAuditing) return;
+    setErr(null);
+    setDescAuditing(true);
+    try {
+      await api.runDescriptionAudit();
+      // 완료 폴링 — 백그라운드 감사가 끝나면 계기판 갱신 (최대 5분)
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const st = await api.getDescriptionAuditStatus();
+        if (!st.running) {
+          if (st.error) setErr(`설명 감사 실패: ${st.error}`);
+          break;
+        }
+      }
+      await loadDashboard();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '설명 감사 실행 실패');
+    } finally {
+      setDescAuditing(false);
+    }
+  };
+
   // 학습(증류) — 사용자가 결과를 인정했을 때만 명시적으로 호출. intent가 있어야 함.
   const handleLearn = async () => {
     if (!intent.trim() || !iblCode.trim() || distilling || learned) return;
@@ -485,6 +511,18 @@ export default function ManualMode() {
                   <span className="text-stone-700">{it.label}</span>
                   {it.ok === false && it.detail && (
                     <span className="block text-[11px] text-red-600 break-words">{it.detail}</span>
+                  )}
+                  {/* 설명 정합은 주 1회 카덴스라 고쳐도 옛 빨간불이 잔존 — 빨간불일 때만 재감사 버튼 노출 */}
+                  {it.key === 'description_drift' && it.ok === false && (
+                    <button
+                      onClick={handleDescAudit}
+                      disabled={descAuditing}
+                      title="설명 정합만 강제 재감사 — 주간 감사를 기다리지 않고 지금 갱신 (경량 AI ~6회, 수 분)"
+                      className="mt-1 px-2 py-0.5 rounded text-[11px] inline-flex items-center gap-1 border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
+                    >
+                      {descAuditing ? <Loader2 size={11} className="animate-spin" /> : <RotateCw size={11} />}
+                      {descAuditing ? '설명 감사 실행 중… (수 분)' : '설명 감사 다시 실행'}
+                    </button>
                   )}
                 </span>
               </div>

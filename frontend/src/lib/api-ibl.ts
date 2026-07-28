@@ -88,6 +88,14 @@ export interface DashboardStatus {
   disk_free_gb: number | null;
 }
 
+// 설명 감사(설명 정합) 재실행 진행 상태 — 완료 폴링용
+export interface DescriptionAuditStatus {
+  running: boolean;
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+}
+
 // 조종실 '기억 회상 검증' — 0단계 연상 묶음(해마+심층+포식+디스크골격) 미리보기
 export interface RecallSection {
   key: string;
@@ -159,6 +167,16 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
     /** 계기판 상태 — 마지막 IBL 건강 + 핵심 vitals (검사 실행 X, 즉각). */
     async getDashboardStatus() {
       return client.request<DashboardStatus>('/world-pulse/dashboard');
+    },
+
+    /** 설명 정합 감사만 강제 재실행 (백그라운드, 경량 LLM ~6회). 완료는 status 폴링으로 감지. */
+    async runDescriptionAudit() {
+      return client.request<{ status: string }>('/world-pulse/description-audit', { method: 'POST' });
+    },
+
+    /** 설명 감사 재실행 진행 상태. */
+    async getDescriptionAuditStatus() {
+      return client.request<DescriptionAuditStatus>('/world-pulse/description-audit');
     },
   });
 }

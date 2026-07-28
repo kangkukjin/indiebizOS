@@ -1157,6 +1157,16 @@ def _route_driver(driver_type: str, node: str, action: str,
 
     # 노드 정보를 params에 전달 (driver_node 우선, 없으면 node)
     params["_node"] = driver_node or node
+
+    # project_path 해소 — 작가가 IBL 코드에 손으로 쓴 `{project_id: "…"}` 를 핸들러
+    # 라우터(_route_handler → _resolve_project_path)와 **같은 규칙**으로 존중한다.
+    # 종전엔 호출자 경로만 그대로 실어, 드라이버 액션에 project_id 를 적으면 조용히
+    # 무시되고 *빈 결과가 success 로* 돌아왔다(실측: `[self:agents]{project_id:"study"}`
+    # → "에이전트 0명", 같은 DB 직접 조회는 3명). 도구 실패 힌트 문구가 바로 그
+    # `{…, project_id: "…"}` 를 안내하고 있어서 AI 는 시킨 대로 쓰고 빈손을 받았다.
+    # project_id 가 없으면 종전 경로 그대로 — 프로젝트 에이전트 흐름 무변경.
+    if isinstance(params.get("project_id"), str) and params["project_id"].strip():
+        project_path = _resolve_project_path(project_path, params) or project_path
     if project_path:
         params["project_path"] = project_path
 

@@ -200,6 +200,9 @@ class ConsciousnessAgent:
 
             # JSON 파싱
             result = self._parse_response(response)
+            if not result:
+                # 형식은 어겼어도 *내용*은 살린다 (아래 _salvage_framing 참조).
+                result = self._salvage_framing(response)
             if result:
                 # 의식이 추천한 도구를 실제 가용 도구로 필터링.
                 # 가용 목록 밖의 도구를 추천하면 실행 에이전트가 헛걸음(ToolSearch 실패 등)
@@ -369,6 +372,33 @@ class ConsciousnessAgent:
             logger.warning("[ConsciousnessAgent] task_framing 누락")
             return None
         return result
+
+    # 살릴 가치가 있는 최소 분량 — 이보다 짧으면 프레이밍이라 부를 게 없다.
+    _SALVAGE_MIN_CHARS = 40
+
+    def _salvage_framing(self, response: str) -> Optional[Dict]:
+        """형식(JSON)은 어겼지만 *내용*은 있는 응답을 task_framing 으로 건져낸다.
+
+        종전엔 파싱 실패 = `None` = **의식 산출물 전량 폐기**였다. 실측(에피소드 869):
+        의식 에이전트가 238초·도구 14회로 진단을 끝내고 권고까지 냈는데 응답이 JSON이
+        아니라 산문이라 통째로 버려졌고, 실행 에이전트가 같은 조사를 245초 반복했다
+        (그 뒤 자기반성이 98초 더). 버려진 쪽이 최종 답보다 나았다.
+
+        형식 위반의 대가가 '4분치 사고를 버리고 처음부터 다시'여선 안 된다. 구조화
+        필드(capability_focus·guide_files·achievement_criteria)는 복구할 수 없지만,
+        주 산출물인 프레이밍은 그대로 실행 에이전트에게 넘긴다. 소비자는 전부
+        `.get()` 이라 나머지 키가 없어도 안전하다.
+
+        ★ 실패를 숨기지 않는다 — 경고 로그는 그대로 남고, `_salvaged` 로 표시해
+        프롬프트 개선의 단서를 지운 채 넘어가지 않는다.
+        """
+        if not isinstance(response, str):
+            return None
+        text = response.strip()
+        if len(text) < self._SALVAGE_MIN_CHARS:
+            return None
+        print(f"[ConsciousnessAgent] 형식 위반 — 내용만 구제해 task_framing 으로 전달 ({len(text)}자)")
+        return {"task_framing": text, "_salvaged": True}
 
 
 # ============ 유틸리티 함수 ============

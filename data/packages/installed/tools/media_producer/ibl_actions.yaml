@@ -157,7 +157,13 @@ nodes:
         - 이미지
         - 렌더링
       image_critic:
-        returns: effect
+        # 세계를 바꾸지 않는 순수 읽기(Gemini Vision 조회) — effect 는 '행동·종착'이라
+        # 오선언이었다. effect 였을 때 ibl_safety.is_side_effect 가 부작용으로 파생해
+        # 조종실 dry-run 이 write 로 표시하고 계기 read-only 게이트가 실행을 건너뛰었다.
+        # 반환은 verdict 한 건(passed/score/issues/notes) = 단일값 → scalar.
+        returns: scalar
+        # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
+        exempt: Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
@@ -174,7 +180,10 @@ nodes:
         - critic
         - image evaluation
       image_read:
-        returns: effect
+        # image_critic 과 같은 이유 — 이미지를 *읽을* 뿐 세계를 바꾸지 않는다.
+        # 반환은 자유서술 답변 하나 = 단일값 → scalar.
+        returns: scalar
+        exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
         description: Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).

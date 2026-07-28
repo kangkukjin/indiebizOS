@@ -5417,7 +5417,8 @@ nodes:
         - 이미지
         - 렌더링
       image_critic:
-        returns: effect
+        returns: scalar
+        exempt: Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
         description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
@@ -5434,7 +5435,8 @@ nodes:
         - critic
         - image evaluation
       image_read:
-        returns: effect
+        returns: scalar
+        exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
         description: Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).

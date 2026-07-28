@@ -82,6 +82,8 @@
     "sense:world_bank": "[sense:world_bank]{indicator: \"GDP\", country: \"한국\"}"
   },
   "exempt": {
+    "engines:image_critic": "Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합",
+    "engines:image_read": "Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합",
     "limbs:player_status": "재생 기기 상태 — 상시 가용 아님",
     "self:ask": "LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합",
     "self:cctv": "기기 의존(카메라 연결)",

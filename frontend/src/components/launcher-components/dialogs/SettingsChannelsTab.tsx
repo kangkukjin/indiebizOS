@@ -385,8 +385,15 @@ export function SettingsChannelsTab({ show }: SettingsChannelsTabProps) {
                   {/* Nostr 설정 */}
                   {channel.channel_type === 'nostr' && (
                     <>
+                      {/* Gmail 안내와 대칭이 아니어야 한다 — Gmail 은 OAuth 를 붙이기 전엔
+                          송·수신이 다 막히지만, Nostr 는 키가 자동 생성돼 설정할 게 없고
+                          이 스위치는 수신만 여닫는다(발신은 channel_engine 이 enabled 를
+                          보지 않고, 공개글은 poller 밖 경로). 그 차이를 적어 둔다. */}
                       <p className="text-xs text-purple-600 bg-purple-50 p-2 rounded">
-                        Nostr는 실시간 WebSocket으로 DM을 수신합니다
+                        Nostr는 실시간 WebSocket으로 DM을 수신합니다. 키는 IndieNet이 자동으로
+                        만들어 두므로 따로 설정할 것이 없고, 이 스위치는{' '}
+                        <strong className="font-semibold">DM 수신</strong>만 여닫습니다 —
+                        DM 발신과 IndieNet 공개글 송수신은 스위치와 무관하게 작동합니다.
                       </p>
 
                       {/* 내 주소 (npub) 표시 */}
@@ -464,11 +471,15 @@ export function SettingsChannelsTab({ show }: SettingsChannelsTabProps) {
                         />
                       </div>
 
-                      {/* 연결 상태 */}
-                      <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${channel.enabled === 1 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                      {/* 연결 상태 — 끈 상태의 '결과'를 적는다. 옛 "비활성화됨" 은 무엇이
+                          멈추는지를 안 알려줘, 발신은 되는데 DM 만 조용히 안 들어오는 상태를
+                          "Nostr 가 되는 중" 으로 오해하게 만들었다. */}
+                      <div className="flex items-start gap-2">
+                        <div className={`mt-1.5 shrink-0 w-2 h-2 rounded-full ${channel.enabled === 1 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
                         <span className="text-sm text-gray-600">
-                          {channel.enabled === 1 ? '실시간 연결 중' : '비활성화됨'}
+                          {channel.enabled === 1
+                            ? '실시간 연결 중 — DM을 받고 있습니다'
+                            : 'DM 수신 꺼짐 — 이 상태에서도 DM 발신과 공개글 송수신은 됩니다'}
                         </span>
                       </div>
                     </>

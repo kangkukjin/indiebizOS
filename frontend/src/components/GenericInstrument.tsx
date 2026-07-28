@@ -625,28 +625,33 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
     const chOpts = composeChannelOptions(cmp, drill?.data);
     const selKey = chOpts.find((o) => o.key === composeCh) ? composeCh : (chOpts[0]?.key || '');
     return (
-      <div className="sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex gap-2 shrink-0">
+      // 두 줄 — 발신 채널(어디로 보내나)이 윗줄, 입력+전송이 아랫줄. 셋을 한 줄에 두면 채널 칩이
+      // 바의 40%를 먹어 정작 쓸 자리가 좁다(실측 635px 바에서 채널 263 · 입력 291).
+      // 원격 런처(.composebar chanrow/sendrow)와 같은 배치 — 좁은 패널에선 거기서 아예 넘쳤다.
+      <div className="sticky bottom-0 mt-2 px-1 py-2.5 bg-stone-50/95 backdrop-blur border-t border-stone-200 flex flex-col gap-1.5 shrink-0">
         {/* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */}
         {chOpts.length >= 2 ? (
           <select value={selKey} onChange={(e) => setComposeCh(e.target.value)}
             title="발신 채널"
-            className="shrink-0 px-2 py-2 rounded-full border border-stone-200 bg-white text-xs text-stone-700 focus:outline-none focus:border-stone-400 max-w-[42%]">
+            className="self-start max-w-full px-2 py-2 rounded-full border border-stone-200 bg-white text-xs text-stone-700 focus:outline-none focus:border-stone-400">
             {chOpts.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
         ) : chOpts.length === 1 ? (
           <span title={`발신 채널 · ${chOpts[0].label}`}
-            className="shrink-0 self-center px-2.5 py-1.5 rounded-full border border-stone-200 bg-white text-xs text-stone-500 max-w-[42%] truncate">
+            className="self-start max-w-full px-2.5 py-1.5 rounded-full border border-stone-200 bg-white text-xs text-stone-500 truncate">
             {chOpts[0].label}
           </span>
         ) : null}
-        <input value={composeText} onChange={(e) => setComposeText(e.target.value)}
-          placeholder={cmp.placeholder || '메시지 입력…'}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !sending) composeSend(cmp); }}
-          className="flex-1 min-w-0 px-3.5 py-2 rounded-full border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
-        <button disabled={sending || !composeText.trim()} onClick={() => composeSend(cmp)}
-          className="px-4 py-2 rounded-full bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">
-          {sending ? '…' : (cmp.button || '전송')}
-        </button>
+        <div className="flex gap-2">
+          <input value={composeText} onChange={(e) => setComposeText(e.target.value)}
+            placeholder={cmp.placeholder || '메시지 입력…'}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !sending) composeSend(cmp); }}
+            className="flex-1 min-w-0 px-3.5 py-2 rounded-full border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400" />
+          <button disabled={sending || !composeText.trim()} onClick={() => composeSend(cmp)}
+            className="px-4 py-2 rounded-full bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40 shrink-0">
+            {sending ? '…' : (cmp.button || '전송')}
+          </button>
+        </div>
       </div>
     );
   };

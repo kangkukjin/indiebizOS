@@ -232,6 +232,10 @@ def run_maintenance_bundle() -> Dict:
         result["description_drift"] = dd
         if dd.get("flags"):
             logger.warning(f"[Maintenance] IBL 설명 드리프트 {len(dd['flags'])}건 — ibl_description_flags.json")
+        # 판정 불가(LLM 응답 못 읽음)도 남긴다 — 깃발 0 이 '깨끗함'인지 '못 봤음'인지
+        # 이 줄이 없으면 유지보수 로그만 봐선 구별할 수 없다.
+        if dd.get("unchecked"):
+            logger.warning(f"[Maintenance] IBL 설명 감사 판정 불가 {len(dd['unchecked'])}개 — 이번 주 감사는 전수 아님")
         # 실제 실행됐으면 성공/실패 무관하게 기록 — 깃발 있을 때만 저장하면 깨끗해진 뒤에도
         # 옛 fail 이 '마지막 기록'으로 영구 잔존한다(조종실 유령 빨간불).
         if dd.get("node"):

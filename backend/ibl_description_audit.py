@@ -20,7 +20,7 @@ import re
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     from logging_utils import get_logger
@@ -121,8 +121,17 @@ _SYS_PROMPT = (
 )
 
 
+class _AuditUnreadable(Exception):
+    """배치 응답을 읽지 못했다 — '깨끗함'이 아니라 '판정 불가'."""
+
+
 def _audit_batch_llm(batch: List[Dict], valid_names: List[str]) -> List[Dict]:
-    """한 배치의 설명을 경량 LLM으로 감사. 플래그된 항목만 반환."""
+    """한 배치의 설명을 경량 LLM으로 감사. 플래그된 항목만 반환.
+
+    응답을 못 읽으면 빈 리스트가 아니라 _AuditUnreadable 을 던진다 — 침묵과
+    무결을 같은 값으로 뭉개면 이 점검은 조용할수록 안심되는 게 아니라
+    판단이 불가능해진다(2026-07-28).
+    """
     from consciousness_agent import lightweight_ai_call
 
     lines = []
@@ -147,22 +156,38 @@ def _audit_batch_llm(batch: List[Dict], valid_names: List[str]) -> List[Dict]:
 
     resp = lightweight_ai_call(prompt, system_prompt=_SYS_PROMPT, role="background")
     if not resp:
-        return []
+        raise _AuditUnreadable("빈 응답")
     return _parse_flags(resp)
 
 
 def _parse_flags(resp: str) -> List[Dict]:
-    """LLM 응답에서 JSON 배열을 관대하게 추출."""
+    """LLM 응답에서 JSON 배열을 관대하게 추출. 못 읽으면 _AuditUnreadable.
+
+    ★빈 배열 `[]` 은 정상(모델이 "문제 없음"이라 답한 것)이고, *파싱 실패*와 구별된다.
+      실측 실패 모드는 출력 상한(4096) 절단 — 잘린 JSON 은 여기서 예외가 되어야
+      상위가 재시도·집계를 할 수 있다.
+    """
     txt = resp.strip()
     # 코드펜스 제거
     txt = re.sub(r"^```(?:json)?\s*|\s*```$", "", txt, flags=re.MULTILINE).strip()
-    m = re.search(r"\[.*\]", txt, re.DOTALL)
-    if not m:
-        return []
-    try:
-        arr = json.loads(m.group(0))
-    except Exception:
-        return []
+    arr = None
+    m = re.search(r"\[.*\]", txt, re.DOTALL)   # 1차: 최외곽 탐욕 매칭
+    if m:
+        try:
+            arr = json.loads(m.group(0))
+        except Exception:
+            arr = None
+    if arr is None:
+        # 2차: 모델이 서술을 앞에 붙이면 탐욕 매칭이 그 대괄호까지 삼킨다 →
+        #      중첩 없는 배열 후보를 뒤에서부터(최종 답이 보통 끝) 시도.
+        for cand in reversed(re.findall(r"\[[^\[\]]*\]", txt, re.DOTALL)):
+            try:
+                arr = json.loads(cand)
+                break
+            except Exception:
+                continue
+    if arr is None:
+        raise _AuditUnreadable(f"JSON 배열 파싱 실패 (응답 {len(txt)}자)")
     out = []
     for item in arr if isinstance(arr, list) else []:
         if isinstance(item, dict) and item.get("action") and item.get("issue"):
@@ -174,10 +199,38 @@ def _parse_flags(resp: str) -> List[Dict]:
     return out
 
 
+def _audit_batch_resilient(batch: List[Dict], valid_names: List[str],
+                           depth: int = 0) -> Tuple[List[Dict], List[Dict]]:
+    """배치 감사 + 못 읽으면 반으로 쪼개 재시도.
+
+    관측된 실패 원인은 출력 절단이므로 *배치를 줄이면* 대개 통과한다. 그래도 못 읽은
+    액션은 삼키지 않고 unchecked 로 올려보낸다.
+
+    Returns: (flags, unchecked)  — unchecked = [{"action": …, "reason": …}]
+    """
+    try:
+        return _audit_batch_llm(batch, valid_names), []
+    except Exception as e:
+        reason = str(e) or e.__class__.__name__
+        # 쪼갤 여지가 있으면 절반씩 재시도(깊이 2 = 30→15→7·8 까지).
+        if depth < 2 and len(batch) > 4:
+            mid = len(batch) // 2
+            left = _audit_batch_resilient(batch[:mid], valid_names, depth + 1)
+            right = _audit_batch_resilient(batch[mid:], valid_names, depth + 1)
+            return left[0] + right[0], left[1] + right[1]
+        logger.warning(f"[DescAudit] 배치 {len(batch)}개 판정 불가: {reason}")
+        return [], [{"action": a["fullname"], "reason": reason} for a in batch]
+
+
 def audit_descriptions(use_llm: bool = True, limit: Optional[int] = None) -> Dict:
     """전체 설명 감사 — 결정적 교차참조 + (옵션) 경량 LLM 의미 드리프트.
 
-    Returns: {"total": N, "flags": [...], "llm": bool}
+    Returns: {"total": N, "audited": M, "flags": [...], "unchecked": [...], "llm": bool}
+
+    ★`flags: []` 만으로 "깨끗하다"고 읽지 마라 — `unchecked` 가 비어야 비로소
+      전수 판정이다. 옛 판(2026-07-28 이전)은 응답을 못 읽어도 빈 리스트를 돌려줘
+      침묵과 무결이 같은 값이었고, 그래서 조용한 주가 안심인지 눈먼 것인지
+      구별할 수 없었다.
     """
     actions = _load_actions()
     if limit:
@@ -185,14 +238,14 @@ def audit_descriptions(use_llm: bool = True, limit: Optional[int] = None) -> Dic
     valid_names = [a["fullname"] for a in actions]
 
     flags = check_broken_crossrefs(actions)
+    unchecked: List[Dict] = []
 
     if use_llm:
         for i in range(0, len(actions), _BATCH):
             batch = actions[i:i + _BATCH]
-            try:
-                flags.extend(_audit_batch_llm(batch, valid_names))
-            except Exception as e:
-                logger.warning(f"[DescAudit] 배치 {i//_BATCH} LLM 실패 (무시): {e}")
+            bf, bu = _audit_batch_resilient(batch, valid_names)
+            flags.extend(bf)
+            unchecked.extend(bu)
 
     # 액션별 dedup (같은 액션 여러 kind는 보존하되 동일 issue만 합침)
     seen = set()
@@ -204,7 +257,13 @@ def audit_descriptions(use_llm: bool = True, limit: Optional[int] = None) -> Dic
         seen.add(key)
         deduped.append(f)
 
-    return {"total": len(actions), "flags": deduped, "llm": use_llm}
+    return {
+        "total": len(actions),
+        "audited": len(actions) - len(unchecked),
+        "flags": deduped,
+        "unchecked": unchecked,
+        "llm": use_llm,
+    }
 
 
 # ──────────────── 카덴스 게이트 + self-check 합류 ────────────────
@@ -246,22 +305,30 @@ def run_description_drift_check(force: bool = False) -> Dict:
     _save_state(result)
 
     flags = result["flags"]
-    note = None
+    unchecked = result.get("unchecked") or []
+    notes = []
     if flags:
         head = "; ".join(f"{f['action']}({f['kind']})" for f in flags[:6])
-        note = f"{len(flags)}건 드리프트: {head}"
+        notes.append(f"{len(flags)}건 드리프트: {head}")
         logger.warning(f"[DescAudit] 설명 드리프트 {len(flags)}건 — {_FLAGS_PATH.name} 참조")
-    else:
-        logger.info(f"[DescAudit] 설명 {result['total']}개 감사 — 드리프트 0")
+    if unchecked:
+        notes.append(f"{len(unchecked)}개 액션 판정 불가(응답 못 읽음) — 이번 감사는 전수가 아님")
+        logger.warning(f"[DescAudit] 판정 불가 {len(unchecked)}개 — {_FLAGS_PATH.name} unchecked 참조")
+    if not notes:
+        logger.info(f"[DescAudit] 설명 {result['total']}개 전수 감사 — 드리프트 0")
 
+    # ★판정 불가도 실패다 — 못 본 것을 '이상 없음'으로 보고하면 이 점검은
+    #   조용할수록 안심되는 게 아니라 눈이 먼 것이다.
     return {
         "node": "__ibl_health__",
         "action": "description_drift",
-        "success": len(flags) == 0,
+        "success": not flags and not unchecked,
         "response_ms": 0,
-        "data_quality": "ok" if not flags else "description_drift",
-        "error_message": note,
+        "data_quality": ("ok" if not flags and not unchecked
+                         else "description_drift" if flags else "audit_incomplete"),
+        "error_message": " / ".join(notes) if notes else None,
         "flags": flags,
+        "unchecked": unchecked,
     }
 
 
@@ -273,6 +340,12 @@ if __name__ == "__main__":
         if a.startswith("--limit="):
             lim = int(a.split("=", 1)[1])
     res = audit_descriptions(use_llm=use_llm, limit=lim)
-    print(f"감사 {res['total']}개 액션 (LLM={res['llm']}) → 플래그 {len(res['flags'])}건")
+    unchecked = res.get("unchecked") or []
+    scope = "전수" if not unchecked else f"{res['audited']}/{res['total']}"
+    print(f"감사 {res['total']}개 액션 (LLM={res['llm']}, 판정 {scope}) → 플래그 {len(res['flags'])}건")
     for f in res["flags"]:
         print(f"  [{f['kind']:14}] {f['action']:24} {f['issue']}")
+    if unchecked:
+        print(f"판정 불가 {len(unchecked)}개 — 아래는 '이상 없음'이 아니라 '못 봤음':")
+        for u in unchecked:
+            print(f"  [unchecked     ] {u['action']:24} {u['reason']}")

@@ -3,11 +3,15 @@
  * 타입·포맷터·아이콘 매핑. WarehouseView 가 1500줄 규칙에 걸려 분리(2026-07-20).
  */
 import type { DragEvent as ReactDragEvent } from 'react';
-import { File as FileIcon, FileText, Film, Music, Archive } from 'lucide-react';
+import { File as FileIcon, FileText, Film, Music, Archive, Link2 } from 'lucide-react';
 
 export const API = 'http://127.0.0.1:8765';
 
-export interface WhFile { name: string; bytes: number; path: string; mtime: string }
+export interface WhFile {
+  name: string; bytes: number; path: string; mtime: string;
+  /** 리트윗 포인터(.url)의 해석된 목적지 — 있으면 열기=원 창고 직행(다운로드 아님) */
+  link?: string;
+}
 export interface WhData {
   title: string; public_url: string; level: number;
   levels: Record<string, number>; files: WhFile[];
@@ -77,6 +81,7 @@ export function fmtBytes(n: number): string {
 
 export function fileIcon(name: string) {
   const ext = name.split('.').pop()?.toLowerCase() || '';
+  if (ext === 'url') return Link2;   // 리트윗 포인터 — 열기=원 창고 직행
   if (/^(mp4|mov|avi|mkv|webm)$/.test(ext)) return Film;
   if (/^(mp3|m4a|wav|flac|ogg)$/.test(ext)) return Music;
   if (/^(zip|tar|gz|7z|rar)$/.test(ext)) return Archive;

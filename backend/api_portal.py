@@ -185,7 +185,6 @@ def _contact_block() -> str:
 #   같은 상수가 창고 전체에 걸리게 범위가 넓어졌으므로 재산정. 절단 시 매니페스트가
 #   truncated 로 반드시 신고한다 — 조용히 자르면 이웃 폴러가 "삭제"로 오독한다.
 _WAREHOUSE_LIST_CAP = 5000
-_WAREHOUSE_OPEN_MAX = 50           # 이하면 홈에서 최상위 폴더를 펼쳐 둔다(그 이상은 접힘)
 
 
 def _warehouse_dir(level: int) -> Path:
@@ -452,7 +451,7 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
                 f'title="내려받기">⬇</a></li>')
 
     # 파일 먼저, 폴더 나중 — 비즈니스문서(노드의 얼굴)가 맨 위에 남게 하는 정렬을 존중한다.
-    def _render(node, top=False):
+    def _render(node):
         out = []
         lis = "".join(_row(f, label) for f, label in node["files"])
         if lis:
@@ -460,14 +459,14 @@ async def node_home(request: Request, x_showcase_secret: str = Header(default=""
         for name in sorted(node["dirs"]):
             sub = node["dirs"][name]
             cnt, size = _tree_agg(sub)
-            # 작은 창고는 펼쳐 두고(방문자가 바로 봄), 커지면 접는다(뒤죽박죽 방지).
-            op = " open" if (top and total <= _WAREHOUSE_OPEN_MAX) else ""
-            out.append(f'<details class="fd"{op}><summary>📁 {_h.escape(name)}'
+            # 폴더는 항상 접힌 채로 시작 — 방문자가 골라서 연다(2026-07-28 사용자 결정,
+            # 옛 "작으면 펼침" 자동 규칙 폐기). 개수·용량 표시가 열기 전 단서.
+            out.append(f'<details class="fd"><summary>📁 {_h.escape(name)}'
                        f'<span class="sz">{cnt}개 · {_fmt_bytes(size)}</span></summary>'
                        f'{_render(sub)}</details>')
         return "".join(out)
 
-    body = _render(_file_tree(files), top=True) or '<ul><li class="empty">비어 있어요</li></ul>'
+    body = _render(_file_tree(files)) or '<ul><li class="empty">비어 있어요</li></ul>'
     trunc_note = (f'<p class="locked">목록이 {_WAREHOUSE_LIST_CAP}개에서 잘렸어요 '
                   f'(전체 {total}개).</p>' if total > len(files) else '')
     sections = [f'<section>{body}{trunc_note}</section>']
@@ -928,8 +927,17 @@ async def warehouse_admin_list(level: int = 0):
         if not p.is_file():
             continue
         st = p.stat()
-        files.append({"name": str(p.relative_to(d)), "bytes": st.st_size, "path": str(p),
-                      "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")})
+        entry = {"name": str(p.relative_to(d)), "bytes": st.st_size, "path": str(p),
+                 "mtime": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="seconds")}
+        # 리트윗 포인터(.url) — 공개면(_walk_accessible)과 동형으로 target 해석.
+        # 없으면 로컬 창고 창이 포인터를 일반 파일로 취급해 다운로드한다(2026-07-28 신고).
+        if p.name.lower().endswith(".url") and st.st_size <= 4096:
+            target, warehouse = _parse_urlfile(p)
+            if target:
+                entry["link"] = target
+                if warehouse:
+                    entry["warehouse"] = warehouse
+        files.append(entry)
     files.sort(key=lambda f: f["mtime"], reverse=True)
     # 공개면 부품(portal_core)은 여기선 장식(공개 주소 표시·레벨 라벨)일 뿐 —
     # 로컬 창고 창은 공개 사이트가 하나도 없어도(부품이 죽어도) 열려야 한다

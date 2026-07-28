@@ -70,6 +70,7 @@ interface Entry {
   label: string;          // basename
   path: string;           // 창고 루트 기준 상대경로 = 서버 키
   bytes: number; mtime: string; count?: number;
+  link?: string;          // 리트윗 포인터(.url) 목적지 — 열기=원 창고 직행
 }
 
 type SortKey = 'name' | 'mtime' | 'bytes';
@@ -146,7 +147,7 @@ export function MinePane() {
     });
     const files: Entry[] = node.files.map((f) => ({
       kind: 'file' as const, label: f.name.split('/').pop() || f.name,
-      path: f.name, bytes: f.bytes, mtime: f.mtime,
+      path: f.name, bytes: f.bytes, mtime: f.mtime, link: f.link,
     }));
     const cmp = (a: Entry, b: Entry) => {
       let c = 0;
@@ -328,6 +329,8 @@ export function MinePane() {
 
   const openEntry = useCallback((en: Entry) => {
     if (en.kind === 'dir') { setPath(en.path); setSel([]); }
+    // 리트윗 포인터(.url)는 다운로드가 아니라 목적지(원 창고)로 — 공개면 클릭과 동형
+    else if (en.link) openExternalUrl(en.link);
     else openFile(en.path);
   }, [openFile]);
 

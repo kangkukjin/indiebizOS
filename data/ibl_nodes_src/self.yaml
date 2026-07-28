@@ -206,7 +206,12 @@
       trigger:
         aliases:
           trigger_id: [id]
-        returns: effect
+        # list·history op 가 목록을 낸다 — self:switch 와 같은 부류(실측: `>> [table:take]` 끊김).
+        returns: items
+        # ★create/update/delete/enable/disable 은 실제 부작용 — 통화가 items 라고
+        # 안전까지 '읽기'로 파생되면 조종실 dry-run 이 거짓 초록불을 켠다(58ac392).
+        side_effect: true
+        fixture: '[self:trigger]{op: "list"}'
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
         target_description: 'create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
         group: schedule
@@ -270,7 +275,11 @@
         - 다운로드
         - 파일받기
       package:
-        returns: effect
+        # list op 가 목록을 낸다 — self:switch·self:trigger 와 같은 부류.
+        returns: items
+        # ★install/remove 는 폴더를 옮기고 어휘를 재빌드한다 — 명백한 부작용.
+        side_effect: true
+        fixture: '[self:package]{op: "list"}'
         description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화.
         target_description: 'list — (파라미터 없음). info/install/remove — package_id(필수).'
         group: system

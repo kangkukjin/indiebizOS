@@ -401,7 +401,9 @@ def _limb(tool_input: dict) -> dict:
         rows = limb_keys.list_keys()
         for r in rows:
             r["connected"] = r["device_id"] in live_ids
-        return {"success": True, "op": "list", "limbs": rows,
+        # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
+        # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
+        return {"success": True, "op": "list", "limbs": rows, "items": rows,
                 "connected_count": len(live_ids)}
     if op == "revoke":
         target = tool_input.get("target") or tool_input.get("key") or tool_input.get("device_id")

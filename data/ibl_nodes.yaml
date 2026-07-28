@@ -2136,7 +2136,9 @@ nodes:
         aliases:
           trigger_id:
           - id
-        returns: effect
+        returns: items
+        side_effect: true
+        fixture: '[self:trigger]{op: "list"}'
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
         target_description: create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.
         group: schedule
@@ -2202,7 +2204,9 @@ nodes:
         - 다운로드
         - 파일받기
       package:
-        returns: effect
+        returns: items
+        side_effect: true
+        fixture: '[self:package]{op: "list"}'
         description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화.
         target_description: list — (파라미터 없음). info/install/remove — package_id(필수).
         group: system
@@ -2646,7 +2650,9 @@ nodes:
         - CCTV 통계
         - CCTV 갱신
       limb:
-        returns: effect
+        returns: items
+        side_effect: true
+        fixture: '[self:limb]{op: "list"}'
         description: USB 손발 자격 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가 아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
         target_description: 'op=issue(기본): 새 손발 키 발급 + USB 페이로드 생성 — alias(손발 이름, 명령할 때 이 이름으로 대상 지정)만 정하면 된다. ttl_days(유효기간, 기본 0=무기한)·os(win/mac/linux — 지정 시 그 OS 실행파일만, 기본은 생략=빌드된 전 OS 동봉=휴대용) 선택. list: 발급한 손발과 연결 상태. revoke: target(키·device_id·별칭) 폐기(영구 차단). approve: target 을 수동으로 잠그거나(approved=false) 다시 열기 — 붙으면 자동승인이므로 평소엔 불필요, 특정 손발 일시 차단용.'
         group: identity

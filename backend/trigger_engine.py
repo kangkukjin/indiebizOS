@@ -217,8 +217,13 @@ def _list_triggers(params: dict) -> dict:
     # calendar_manager의 schedule 이벤트도 수집 (IBL 트리거가 아닌 기존 이벤트)
     existing_events = _get_existing_schedule_events()
 
+    # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
+    # `triggers` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
+    # ★items = triggers 만이다. existing_schedules 는 calendar_manager 의 옛 이벤트로
+    #   종류가 다르므로 한 통화에 섞지 않는다(합치는 건 통화 수리가 아니라 의미 결정).
     return {
         "triggers": triggers,
+        "items": triggers,
         "count": len(triggers),
         "existing_schedules": existing_events,
         "existing_count": len(existing_events)
@@ -471,8 +476,10 @@ def _trigger_history(target: str, params: dict) -> dict:
     history = history[-limit:]
     history.reverse()  # 최신 순
 
+    # list 와 같은 이유의 items 병행 방출(history op 도 목록이다).
     return {
         "history": history,
+        "items": history,
         "count": len(history)
     }
 

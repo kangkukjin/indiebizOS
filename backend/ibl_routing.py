@@ -604,10 +604,16 @@ def _package_op(params: dict) -> dict:
             p for p in package_manager.list_available(package_type="tools")
             if not p.get("installed")
         ]
+        inst = [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in installed]
+        avail = [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in not_installed]
         return {
             "success": True,
-            "installed": [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in installed],
-            "available": [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in not_installed],
+            "installed": inst,
+            "available": avail,
+            # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유.
+            # ★여기선 두 목록이 *같은 종류*(패키지)라 상태 필드를 달아 한 통화로 합친다
+            #   (`>> [table:filter]{where: "installed == true"}` 로 갈라 쓰게). 기존 두 키는 그대로.
+            "items": [{**p, "installed": True} for p in inst] + [{**p, "installed": False} for p in avail],
         }
 
     package_id = (params.get("package_id") or params.get("name") or "").strip()

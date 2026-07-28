@@ -47,6 +47,16 @@ Electron은 맥에서 돌므로 맥 스피커, 원격 런처는 그 브라우저
   플레이스홀더. 캐시 `data/music/covers/`.
 - **화이트리스트**: 등록된 소스 폴더 아래의 실존 파일만 서빙 (sources.json 이 진실).
 
+## 형식·변환 (2026-07-28)
+
+- 색인: AUDIO_EXTS + **cue 시트**. cue 앨범은 곡마다 `media_path`(실파일)·`start`(초)를 들고,
+  cue 가 가리키는 파일은 따로 색인하지 않는다(`_walk_audio` 의 claimed 집합).
+- 재생: 브라우저가 못 무는 형식(wma·ape)이거나 start>0(cue 구간)이면 api_music 이
+  ffmpeg 으로 mp3 변환 → `data/music/transcoded/<sha1>.mp3` 캐시(4GB LRU, atime 기준).
+  캐시 파일은 일반 파일이라 **Range·seek 가 그대로** 산다(공개파일 동영상은 생방송 파이프였지만
+  음악은 곡이 짧아 캐시가 낫다). 키=미디어 mtime_ns+크기+구간 → 파일이 바뀌면 자동 무효.
+- 실측: cue 구간(FLAC 4분) 1.7초 · wma 전곡(15분) 6.2초 · 2회차 0.014초(캐시).
+
 ## 저장 구조 (data/music/)
 
 - `sources.json` — 등록 폴더 목록 (photo scans.json 선례)
@@ -54,6 +64,7 @@ Electron은 맥에서 돌므로 맥 스피커, 원격 런처는 그 브라우저
   스캔 시 라이브러리·플레이리스트에서 자동 제거.
 - `playlists.json` — 플레이리스트 (이름 + 트랙 경로 순서 목록)
 - `scan_state.json` — 백그라운드 스캔 진행 상태 (scanning/done/error)
+- `transcoded/` — ffmpeg mp3 변환 캐시 (**파생물** — 지워도 다음 재생 때 다시 만든다)
 
 ## 2026-07-28 은퇴 — 되살리지 말 것
 

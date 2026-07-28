@@ -102,6 +102,13 @@ def _conn() -> sqlite3.Connection:
             duration REAL, has_cover INTEGER DEFAULT 0,
             added_at TEXT
         )""")
+    # CD 통이미지(.ape/.flac + .cue) 지원 — 곡 하나가 '큰 파일의 한 구간'일 수 있다.
+    # media_path=실제 파일(비면 path 자신), start=구간 시작(초). 옛 DB 도 여기서 따라온다.
+    for col, ddl in (("media_path", "TEXT"), ("start", "REAL")):
+        try:
+            conn.execute(f"ALTER TABLE tracks ADD COLUMN {col} {ddl}")
+        except sqlite3.OperationalError:
+            pass                                    # 이미 있음
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title)")
@@ -299,21 +306,209 @@ def _set_scan_state(st: dict) -> None:
     _save_json(SCAN_STATE_JSON, {**st, "updated_at": _now_iso()})
 
 
+# ── CUE 시트 (CD 통이미지) ──────────────────────────────────────────────
+# 무손실 립은 흔히 "CD 한 장 = 큰 파일 하나(.ape/.flac) + .cue" 로 온다. cue 에 트랙 제목·
+# 연주자·시작시각이 들어 있으므로, 그걸 읽어 **곡 단위로** 색인한다(파일은 하나여도 곡은 여럿).
+# 재생은 api_music 이 그 구간만 잘라 변환해 흘린다. cue 가 가리키는 파일 자체는 따로 색인하지
+# 않는다(중복 방지).
+
+_CUE_EXTS = {".cue"}
+
+
+def _decode_text(raw: bytes) -> str:
+    """cue 인코딩 추정 — utf-8 → cp949(한글이 나올 때만) → cp1252/latin-1."""
+    for enc in ("utf-8-sig", "utf-8"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            pass
+    try:
+        t = raw.decode("cp949")
+        if _looks_cjk(t):
+            return t
+    except UnicodeDecodeError:
+        pass
+    for enc in ("cp1252", "latin-1"):
+        try:
+            return raw.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return raw.decode("utf-8", "replace")
+
+
+def _cue_time(s: str) -> float:
+    """MM:SS:FF(프레임 75/초) → 초."""
+    parts = (s or "").strip().split(":")
+    try:
+        mm, ss, ff = (int(parts[0]), int(parts[1]), int(parts[2]) if len(parts) > 2 else 0)
+    except (ValueError, IndexError):
+        return 0.0
+    return mm * 60 + ss + ff / 75.0
+
+
+def _unquote(s: str) -> str:
+    s = (s or "").strip()
+    return s[1:-1] if len(s) >= 2 and s[0] == '"' and s[-1] == '"' else s
+
+
+def parse_cue(cue_path: str):
+    """cue 한 장 → {album, albumartist, genre, year, tracks:[{no,title,artist,media,start}]}.
+
+    FILE 이 여러 번 나오는 cue(트랙마다 파일)도 지원 — 트랙은 직전 FILE 에 속한다.
+    가리키는 파일이 실제로 없으면 None(깨진 cue 는 조용히 건너뛴다).
+    """
+    try:
+        txt = _decode_text(Path(cue_path).read_bytes())
+    except OSError:
+        return None
+    base = os.path.dirname(cue_path)
+    album = albumartist = genre = year = ""
+    cur_media = ""
+    tracks: list = []
+    cur = None
+    for raw_line in txt.splitlines():
+        line = raw_line.strip()
+        up = line.upper()
+        if up.startswith("REM GENRE "):
+            genre = _unquote(line[10:])
+        elif up.startswith("REM DATE "):
+            year = _unquote(line[9:])[:4]
+        elif up.startswith("FILE "):
+            name = _unquote(line[5:].rsplit(" ", 1)[0])
+            cand = norm_path(os.path.join(base, name))
+            cur_media = cand if os.path.isfile(cand) else ""
+        elif up.startswith("TRACK "):
+            if cur:
+                tracks.append(cur)
+            bits = line.split()
+            no = int(bits[1]) if len(bits) > 1 and bits[1].isdigit() else len(tracks) + 1
+            cur = {"no": no, "title": "", "artist": "", "media": cur_media, "start": 0.0}
+        elif up.startswith("TITLE "):
+            if cur:
+                cur["title"] = _unquote(line[6:])
+            else:
+                album = _unquote(line[6:])          # 트랙 앞의 TITLE = 앨범명
+        elif up.startswith("PERFORMER "):
+            if cur:
+                cur["artist"] = _unquote(line[10:])
+            else:
+                albumartist = _unquote(line[10:])
+        elif up.startswith("INDEX 01 ") and cur:
+            cur["start"] = _cue_time(line[9:])
+    if cur:
+        tracks.append(cur)
+    tracks = [t for t in tracks if t["media"]]
+    if not tracks:
+        return None
+    return {"album": album, "albumartist": albumartist, "genre": genre,
+            "year": year, "tracks": tracks}
+
+
+def cue_rows(cue_path: str, source_root: str) -> list:
+    """cue → tracks 테이블 행 목록. path 는 '<미디어>#<트랙번호>' 합성 키(폴더는 그대로)."""
+    cue = parse_cue(cue_path)
+    if not cue:
+        return []
+    # 미디어별 총 길이 — 마지막 트랙 길이 계산용
+    lengths: dict = {}
+    for t in cue["tracks"]:
+        if t["media"] not in lengths:
+            try:
+                mf = _MutagenFile(t["media"]) if _MutagenFile else None
+                lengths[t["media"]] = float(mf.info.length) if mf and mf.info else 0.0
+            except Exception:
+                lengths[t["media"]] = 0.0
+    rows = []
+    for i, t in enumerate(cue["tracks"]):
+        nxt = cue["tracks"][i + 1] if i + 1 < len(cue["tracks"]) else None
+        if nxt and nxt["media"] == t["media"]:
+            dur = max(0.0, nxt["start"] - t["start"])
+        else:
+            dur = max(0.0, lengths.get(t["media"], 0.0) - t["start"])
+        try:
+            st = os.stat(t["media"])
+            size, mtime = st.st_size, st.st_mtime
+        except OSError:
+            continue
+        rows.append({
+            "path": f"{t['media']}#{t['no']:02d}",
+            "media_path": t["media"], "start": round(t["start"], 3),
+            "source": source_root, "filename": os.path.basename(t["media"]),
+            "ext": Path(t["media"]).suffix.lower().lstrip("."),
+            "size": size, "mtime": mtime,
+            "title": t["title"] or f"Track {t['no']:02d}",
+            "artist": t["artist"] or cue["albumartist"],
+            "album": cue["album"], "albumartist": cue["albumartist"],
+            "genre": cue["genre"], "year": cue["year"],
+            "track_no": t["no"], "disc_no": None,
+            "duration": round(dur, 3), "has_cover": 0,
+        })
+    return rows
+
+
 def _walk_audio(root: str):
+    """색인할 오디오 파일 + cue 시트. cue 가 가리키는 미디어 파일은 제외(곡은 cue 가 낸다)."""
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        cues = [f for f in filenames if not f.startswith(".") and Path(f).suffix.lower() in _CUE_EXTS]
+        claimed = set()
+        for c in cues:
+            cue_path = norm_path(os.path.join(dirpath, c))
+            parsed = parse_cue(cue_path)
+            if parsed:
+                claimed.update(t["media"] for t in parsed["tracks"])
+                yield cue_path
         for fn in filenames:
             if fn.startswith("."):
                 continue
-            if Path(fn).suffix.lower() in AUDIO_EXTS:
-                yield norm_path(os.path.join(dirpath, fn))
+            p = norm_path(os.path.join(dirpath, fn))
+            if Path(fn).suffix.lower() in AUDIO_EXTS and p not in claimed:
+                yield p
 
 
 def _scan_source(conn: sqlite3.Connection, root: str, progress: dict) -> None:
     found = set()
     known = {r["path"]: (r["mtime"], r["size"]) for r in
              conn.execute("SELECT path, mtime, size FROM tracks WHERE source = ?", (root,))}
+
+    def _upsert(row: dict) -> None:
+        conn.execute("""
+            INSERT INTO tracks (path, source, filename, ext, size, mtime, title, artist, album,
+                                albumartist, genre, year, track_no, disc_no, duration, has_cover,
+                                media_path, start, added_at)
+            VALUES (:path, :source, :filename, :ext, :size, :mtime, :title, :artist, :album,
+                    :albumartist, :genre, :year, :track_no, :disc_no, :duration, :has_cover,
+                    :media_path, :start, :added_at)
+            ON CONFLICT(path) DO UPDATE SET
+                source=:source, filename=:filename, ext=:ext, size=:size, mtime=:mtime,
+                title=:title, artist=:artist, album=:album, albumartist=:albumartist,
+                genre=:genre, year=:year, track_no=:track_no, disc_no=:disc_no,
+                duration=:duration, has_cover=:has_cover, media_path=:media_path, start=:start
+        """, {"media_path": None, "start": None, **row, "added_at": _now_iso()})
+
     for p in _walk_audio(root):
+        # cue 한 장은 곡 여러 개를 낸다 — 파일 하나:행 하나 규칙의 유일한 예외.
+        if Path(p).suffix.lower() in _CUE_EXTS:
+            progress["seen"] += 1
+            try:
+                cue_st = os.stat(p)
+            except OSError:
+                continue
+            rows = cue_rows(p, root)
+            for row in rows:
+                found.add(row["path"])
+                old = known.get(row["path"])
+                # cue 나 미디어 중 하나라도 바뀌면 그 앨범을 다시 읽는다.
+                if old and abs(old[0] - max(row["mtime"], cue_st.st_mtime)) < 1 and old[1] == row["size"]:
+                    continue
+                row = {**row, "mtime": max(row["mtime"], cue_st.st_mtime)}
+                _upsert(row)
+                progress["updated"] += 1
+            if rows and progress["updated"] % 50 < len(rows):
+                conn.commit()
+                _set_scan_state({"status": "scanning", **progress})
+            continue
+
         found.add(p)
         progress["seen"] += 1
         try:
@@ -323,18 +518,7 @@ def _scan_source(conn: sqlite3.Connection, root: str, progress: dict) -> None:
         old = known.get(p)
         if old and abs(old[0] - st.st_mtime) < 1 and old[1] == st.st_size:
             continue  # 변경 없음 — 증분 스킵
-        row = extract_tags(p, root)
-        conn.execute("""
-            INSERT INTO tracks (path, source, filename, ext, size, mtime, title, artist, album,
-                                albumartist, genre, year, track_no, disc_no, duration, has_cover, added_at)
-            VALUES (:path, :source, :filename, :ext, :size, :mtime, :title, :artist, :album,
-                    :albumartist, :genre, :year, :track_no, :disc_no, :duration, :has_cover, :added_at)
-            ON CONFLICT(path) DO UPDATE SET
-                source=:source, filename=:filename, ext=:ext, size=:size, mtime=:mtime,
-                title=:title, artist=:artist, album=:album, albumartist=:albumartist,
-                genre=:genre, year=:year, track_no=:track_no, disc_no=:disc_no,
-                duration=:duration, has_cover=:has_cover
-        """, {**row, "added_at": _now_iso()})
+        _upsert(extract_tags(p, root))     # 일반 파일 — media_path/start 는 비운다(자기 자신)
         progress["updated"] += 1
         if progress["updated"] % 50 == 0:
             conn.commit()

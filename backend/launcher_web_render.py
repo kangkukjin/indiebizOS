@@ -709,7 +709,10 @@ window.addEventListener('popstate', function(){
 async function rowDrill(vi,ri){
   // split이면 리스트(LIST)에서 행을 찾아 상세 패널(#mdDetail)로, 아니면 현재 view(VIEW_CTX)에서 instOut으로.
   const src = SPLIT ? LIST : VIEW_CTX; if(!src) return;
-  const p=(src.view||[])[vi]; if(!p||!p.item_click) return;
+  /* ★탭 드릴이면 활성 탭 view(_activeView)에서 찾는다 — 드릴이 tabs 로만 구성되면
+     src.view 가 없어 행 클릭이 조용히 죽던 버그(음악 폴더 2단계에서 멈춤). vi 는
+     renderDrill 이 renderView(av)에 넘긴 활성 view 배열 기준이라 activeView()와 정합. */
+  const p=(SPLIT?(src.view||[]):activeView())[vi]; if(!p||!p.item_click) return;
   // 동적 카테고리 필터가 활성이면 카드가 필터된 배열로 렌더되므로 ri 도 그 기준 → 같은 필터 적용 후 인덱싱(비분할만; split=master_detail 은 동적필터 없음).
   const drillData = SPLIT ? src.data : applyCatFilter(CUR.mode, src.data);
   const item=viewList(drillData,p.from)[ri]; if(item==null) return;

@@ -264,9 +264,16 @@ class BusinessManager:
         """, (GREETING_DOC_LEVEL, "공개인사프로필", ""))
 
         # 기본 통신채널 설정
+        # ★nostr 만 기본 켜짐 — 두 채널의 처지가 다르다. gmail 은 OAuth 를 붙이기 전엔
+        #   송·수신 자체가 불가라 꺼둔 게 사실과 맞지만, nostr 는 indienet 이 키를
+        #   자동 생성(indienet.py PrivateKey())하므로 사용자가 설정할 게 없는데도 꺼져
+        #   있었다. 게다가 이 토글이 여닫는 건 수신(릴레이 구독)뿐이라 — 발신은
+        #   channel_engine 이 enabled 를 아예 보지 않고, 공개 메시지는 poller 밖 경로다 —
+        #   꺼진 채로도 DM 이 나가고 공개글도 오간다. 그래서 "되는 줄 알았는데 DM 만
+        #   조용히 안 들어오는" 상태가 기본값이었다. 켜둔 채로 시작한다(2026-07-28).
         default_channels = [
             ("gmail", 0, "{}", 60),
-            ("nostr", 0, "{}", 30),
+            ("nostr", 1, "{}", 30),
         ]
         for channel_type, enabled, config, interval in default_channels:
             cursor.execute("""

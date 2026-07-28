@@ -3,6 +3,7 @@ nodes:
     actions:
       bulletin:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:bulletin]{op: "status"}'
         runs_on: pc_only
         description: '로그인 없는 자유게시판 (op 분기) — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. 게시판 여러 개=각각 다른 주소, 포털에 붙이면([others:portal]{op:display}) 포털 홈에서 진입. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.'

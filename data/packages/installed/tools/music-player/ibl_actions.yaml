@@ -3,6 +3,7 @@ nodes:
     actions:
       music:
         returns: items
+        side_effect: true    # playlist_*·compose·add_source·remove_source·scan 이 라이브러리를 쓴다
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리하고 곡마다 관련곡 그래프(top-10 간선)를 만든다. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'

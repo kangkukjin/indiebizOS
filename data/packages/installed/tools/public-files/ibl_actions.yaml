@@ -3,6 +3,7 @@ nodes:
     actions:
       showcase:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:showcase]{op: "status"}'
         runs_on: pc_only
         description: '선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 (op 분기) — 라이브 서빙이라 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자>)에 담아야 공개. publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.'

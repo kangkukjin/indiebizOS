@@ -2,6 +2,7 @@ node: sense
 actions:
   stock:
     returns: scalar
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:stock]{query: "삼성전자"}'
     description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
     group: finance
@@ -173,6 +174,7 @@ actions:
             v: '{data.volume|num}'
   company:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
     description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items 통화. 주가·시세는 stock.
     group: finance

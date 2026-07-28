@@ -10,6 +10,7 @@ nodes:
     actions:
       world:
         returns: scalar
+        side_effect: true
         fixture: '[sense:world]{op: "snapshot"}'
         description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
         target_description: 'op로 분기 (기본 snapshot).
@@ -62,6 +63,7 @@ nodes:
         - self-check
       phone:
         returns: items
+        side_effect: false
         fixture: '[sense:phone]{}'
         description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요. 폰 동작 실행은 [limbs:phone].
         group: device
@@ -142,6 +144,7 @@ nodes:
         - camera
       cctv:
         returns: items
+        side_effect: false
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
         description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 재생·캡처는 [limbs:cctv]. 자세히 read_guide(query="cctv").
         group: media
@@ -265,6 +268,7 @@ nodes:
           - id
           - lib_id
         returns: items
+        side_effect: false
         fixture: '[sense:devdocs]{op: "resolve", library_name: "react"}'
         description: 소프트웨어 라이브러리/프레임워크 공식 문서 (op 분기, Context7). 코드 작성 시 API 참조용. 논문은 paper.
         target_description: 'op로 분기 (기본 resolve).
@@ -291,6 +295,7 @@ nodes:
         - 공식문서
       performance:
         returns: items
+        side_effect: false
         fixture: '[sense:performance]{}'
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
         group: culture
@@ -349,6 +354,7 @@ nodes:
             - '{area} · {prfstate}'
       book:
         returns: items
+        side_effect: false
         fixture: '[sense:book]{query: "역사"}'
         description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
         group: culture
@@ -470,6 +476,7 @@ nodes:
                   label: 원문 읽기 →
       classic:
         returns: items
+        side_effect: false
         fixture: '[sense:classic]{op: "western", query: "plato"}'
         description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
         group: culture
@@ -523,6 +530,7 @@ nodes:
             - '{area} · {realmName}'
       stock:
         returns: scalar
+        side_effect: false
         fixture: '[sense:stock]{query: "삼성전자"}'
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
@@ -694,6 +702,7 @@ nodes:
                 v: '{data.volume|num}'
       company:
         returns: items
+        side_effect: false
         fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
         description: 기업 펀더멘털 조회 (op 분기) — 기업정보·재무·공시. items 통화. 주가·시세는 stock.
         group: finance
@@ -921,6 +930,7 @@ nodes:
         implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
         returns: items
+        side_effect: false
         fixture: '[sense:travel]{op: "flight", to: "도쿄"}'
         description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
         group: travel
@@ -1102,6 +1112,7 @@ nodes:
                   label: 삼삼엠투에서 보기 →
       host:
         returns: scalar
+        side_effect: false
         fixture: '[sense:host]{op: "status"}'
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
@@ -1188,6 +1199,7 @@ nodes:
               v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       radio:
         returns: items
+        side_effect: false
         fixture: '[sense:radio]{op: "search", query: "jazz"}'
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: 'op로 분기 (기본 search).
@@ -1355,6 +1367,7 @@ nodes:
           - dong_code
           - code
         returns: items
+        side_effect: false
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
         description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
         group: real_estate
@@ -1587,6 +1600,7 @@ nodes:
                   label: 공고 상세 →
       paper:
         returns: items
+        side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
         description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
         target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
@@ -1609,6 +1623,7 @@ nodes:
         - 학위논문
       researcher:
         returns: items
+        side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
         description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
         target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
@@ -1631,6 +1646,7 @@ nodes:
         - researcher
       entity:
         returns: items
+        side_effect: false
         fixture: '[sense:entity]{query: "강국진"}'
         description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search_ddg, 국내 연구자는 researcher.
         target_description: 'op로 분기 (기본 resolve).
@@ -1745,6 +1761,7 @@ nodes:
           query:
           - keyword
         returns: items
+        side_effect: true
         fixture: '[sense:collect]{op: "query", action: "recent"}'
         runs_on: pc_only
         description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
@@ -1785,6 +1802,7 @@ nodes:
         target_key: query
       video:
         returns: scalar
+        side_effect: true
         fixture: '[sense:video]{op: "meta", query: "jazz"}'
         runs_on: pc_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.
@@ -1944,6 +1962,7 @@ nodes:
           op:
           - action
         returns: items
+        side_effect: true
         fixture: '[self:manage_events]{op: "list"}'
         description: 이벤트·스케줄 통합 관리 (op 분기). 캘린더 이벤트 + 정기 발행·자동화 스케줄 인터페이스 (트리거는 [self:trigger] 별도).
         target_description: create는 title 필수(date/time/repeat/type/description, event_action 있으면 실행 이벤트). update/delete/toggle/run_now는 event_id 필요. list는 year/month 필터 가능.
@@ -2039,6 +2058,7 @@ nodes:
         - 반복
       goal:
         returns: scalar
+        side_effect: true
         fixture: '[self:goal]{op: "list"}'
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
         target_description: list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.
@@ -2077,6 +2097,7 @@ nodes:
         - 메시지
       workflow:
         returns: scalar
+        side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
         target_description: get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.
@@ -2216,6 +2237,7 @@ nodes:
         - 라이브러리설치
       blog:
         returns: items
+        side_effect: true
         fixture: '[self:blog]{op: "list"}'
         runs_on: pc_only
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.
@@ -2260,6 +2282,7 @@ nodes:
         - vault
       business:
         returns: items
+        side_effect: true
         fixture: '[self:business]{op: "list"}'
         description: 나의 비즈니스(사업) 조회·관리 — op:list(기본, items 통화)/detail/save/delete(단건 op는 해당 객체 응답).
         group: business
@@ -2515,6 +2538,7 @@ nodes:
                 v: '{interval_label}'
       business_item:
         returns: items
+        side_effect: true
         fixture: '[self:business_item]{op: "list"}'
         description: 비즈니스 아이템(상품/항목) 조회·관리 — op:list(기본, items 통화)/detail/save/delete/add_image/remove_image(단건 op는 해당 객체 응답).
         group: business
@@ -2540,6 +2564,7 @@ nodes:
         - 사업 항목
       business_document:
         returns: items
+        side_effect: true
         fixture: '[self:business_document]{op: "list"}'
         description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate/publish(공개인사프로필+공개창고 주소를 Nostr 발행 — 명함+발견 메시지, 내용은 창고가 쥠).
         group: business
@@ -2563,6 +2588,7 @@ nodes:
         - 레벨별 문서
       work_guideline:
         returns: items
+        side_effect: true
         fixture: '[self:work_guideline]{op: "list"}'
         description: 레벨별 근무 지침(업무 가이드라인) 조회·관리 — op:list(기본, items 통화)/detail/update(단건 op는 해당 지침 응답).
         group: business
@@ -2598,6 +2624,7 @@ nodes:
         - 기기 동기화
       cctv:
         returns: scalar
+        side_effect: true
         exempt: 기기 의존(카메라 연결)
         description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
         group: cctv
@@ -2643,6 +2670,7 @@ nodes:
         - 헬퍼만들기
       health:
         returns: items
+        side_effect: true
         fixture: '[self:health]{op: "query", query_type: "medications"}'
         description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
         group: health
@@ -2666,6 +2694,7 @@ nodes:
         - 투약
       lecture:
         returns: items
+        side_effect: true
         fixture: '[self:lecture]{op: "list"}'
         runs_on: pc_only
         description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.
@@ -2771,6 +2800,7 @@ nodes:
         - 저장
       memory:
         returns: items
+        side_effect: true
         fixture: '[self:memory]{op: "search", query: "test"}'
         description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
         group: memory
@@ -2795,6 +2825,7 @@ nodes:
         - 메모리 읽기
       music:
         returns: items
+        side_effect: true
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리하고 곡마다 관련곡 그래프(top-10 간선)를 만든다. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
@@ -3104,6 +3135,7 @@ nodes:
               delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
       storage:
         returns: scalar
+        side_effect: true
         fixture: '[self:storage]{op: "volumes"}'
         description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
@@ -3184,6 +3216,7 @@ nodes:
           root_path:
           - path
         returns: scalar
+        side_effect: true
         fixture: '[self:folder_note]{op: "get"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
@@ -3199,6 +3232,7 @@ nodes:
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         returns: scalar
+        side_effect: true
         fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
         group: file
@@ -3220,6 +3254,7 @@ nodes:
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
       residual:
         returns: scalar
+        side_effect: false
         exempt: 모집단 표본 인자 필요(sample/estimate)
         description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
         group: file
@@ -4076,6 +4111,7 @@ nodes:
         - 메시지검색
       feed:
         returns: items
+        side_effect: true
         fixture: '[others:feed]{op: "read"}'
         description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
         target_description: op:read(기본 — 활성 보드 글 조회. hashtag 옵션=특정 보드 / author 옵션=특정인(npub)의 글만 / following:true=팔로우한 사람 전체 타임라인 / with_boards:true=보드 목록(boards)·활성 보드명 동봉 — 게시판 화면용) / op:post(content 필수 — 활성 보드에 글 게시, hashtag 옵션=다른 보드).
@@ -4175,6 +4211,7 @@ nodes:
         - 닉네임
       board:
         returns: items
+        side_effect: true
         fixture: '[others:board]{op: "list"}'
         description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch/delete. 보드=해시태그가 주소인 방(태그를 아는 사람들끼리), 보드 목록=즐겨찾기.
         target_description: 'op:list(기본 — 즐겨찾기한 보드 목록) / op:create(hashtag 필수, name 옵션=태그 — 보드를 즐겨찾기에 저장. 이미 있으면 그대로 성공=멱등) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet. 전환하면 게시 기본값과 [others:feed] 기본 조회가 모두 그 보드를 따름) / op:delete(hashtag 필수 — 즐겨찾기에서 삭제. 기본 #indienet 불가, 글은 릴레이에 남아 재저장 시 복원).'
@@ -4195,6 +4232,7 @@ nodes:
         - 커뮤니티
       follow:
         returns: items
+        side_effect: true
         fixture: '[others:follow]{op: "list"}'
         description: 팔로우 관리 (IndieNet) — op:list/add/remove. 로컬 저장. 팔로우한 사람 글은 [others:feed]{op:"read", following:true}, 특정인 글은 author 파라미터로.
         target_description: op:list(기본 — 팔로우 목록) / op:add(pubkey 필수 — npub 또는 hex, name 옵션) / op:remove(pubkey 필수 — 언팔로우).
@@ -4215,6 +4253,7 @@ nodes:
         - 저자
       bulletin:
         returns: items
+        side_effect: true
         fixture: '[others:bulletin]{op: "status"}'
         runs_on: pc_only
         description: 로그인 없는 자유게시판 (op 분기) — 게시판을 만들면 공개 주소(/b/<5자>)가 생기고, 주소를 아는 사람은 로그인 없이 들어가 글·사진을 남긴다. 게시판 여러 개=각각 다른 주소, 포털에 붙이면([others:portal]{op:display}) 포털 홈에서 진입. 커뮤니티 릴레이 보드([others:board])와 달리 익명 로컬 웹 게시판.
@@ -4385,6 +4424,7 @@ nodes:
           - name
           - id
         returns: items
+        side_effect: false
         fixture: '[others:messages]{op: "inbox"}'
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read).
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
@@ -4585,6 +4625,7 @@ nodes:
         - 받은메시지
       neighbor:
         returns: items
+        side_effect: true
         fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite/merge.
         target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글) / merge(id=남길 이웃, from=합칠 이웃의 이름 또는 id — 같은 사람이 창고 등록·창고 가입 두 경로로 중복 등록됐을 때 연락처·대화·가입 자격·메모를 한 레코드로 합류, 합쳐진 쪽은 은퇴).
@@ -4650,6 +4691,7 @@ nodes:
         - auto reply
       portal:
         returns: items
+        side_effect: true
         fixture: '[others:portal]{op: "status"}'
         runs_on: pc_only
         description: 개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을 따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.
@@ -4877,6 +4919,7 @@ nodes:
               button: 한도 저장
       family_news:
         returns: items
+        side_effect: true
         fixture: '[others:family_news]{op: "status"}'
         runs_on: pc_only
         description: 가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
@@ -5018,6 +5061,7 @@ nodes:
               button: 저장
       showcase:
         returns: items
+        side_effect: true
         fixture: '[others:showcase]{op: "status"}'
         runs_on: pc_only
         description: 선택한 폴더를 외부 공개 사이트(Cloudflare)로 비추는 노출 층 (op 분기) — 라이브 서빙이라 파일을 옮기거나 지우면 즉시 반영. bare 루트는 잠금, 모든 갤러리는 바스켓(=주소 하나, /s/<5자>)에 담아야 공개. publish(Nostr 이벤트 발행)와 구별되는 파일 공개 진열.

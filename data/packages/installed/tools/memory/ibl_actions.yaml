@@ -2,6 +2,7 @@ node: self
 actions:
   memory:
     returns: items
+    side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:memory]{op: "search", query: "test"}'
     description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
     group: memory

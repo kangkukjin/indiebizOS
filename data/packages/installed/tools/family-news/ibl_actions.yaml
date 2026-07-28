@@ -3,6 +3,7 @@ nodes:
     actions:
       family_news:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:family_news]{op: "status"}'
         runs_on: pc_only
         description: '가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.'

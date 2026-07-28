@@ -2,6 +2,7 @@ node: self
 actions:
   blog:
     returns: items
+    side_effect: true    # rebuild_index·vault(rebuild/link) 가 색인·vault 를 쓴다
     fixture: '[self:blog]{op: "list"}'
     runs_on: pc_only
     description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.

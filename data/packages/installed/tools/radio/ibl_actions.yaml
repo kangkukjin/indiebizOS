@@ -3,6 +3,7 @@ nodes:
     actions:
       radio:
         returns: items
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:radio]{op: "search", query: "jazz"}'
         description: 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
         target_description: 'op로 분기 (기본 search).

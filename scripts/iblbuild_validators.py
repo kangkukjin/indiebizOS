@@ -695,6 +695,41 @@ def validate_standard_core(data: dict, root: Path) -> list[str]:
     return issues
 
 
+def validate_side_effect_declaration(data: dict) -> list[str]:
+    """op-분기 액션은 안전 여부를 *말로* 선언해야 한다 (2026-07-28 신설).
+
+    `returns:` 는 오래 두 가지 일을 겸했다 — 통화 선언이자, ibl_safety.is_side_effect 가
+    부작용 여부를 파생하는 근거(`returns == "effect"`). 두 축이 어긋나면 조종실 dry-run 의
+    실행 자물쇠(ManualMode canExecute)가 안 걸린다. 실제로 `[self:memory]{op:"delete"}` ·
+    `[others:portal]{op:"revoke"}` 등 18개가 '부작용 없음'으로 판정돼 확인 없이 실행됐다.
+
+    규칙: op 분기가 있고 `returns` 가 effect 가 아니면 `side_effect:` 를 명시하라.
+
+    ★op *이름*으로 추측하지 않는 것이 요점. 처음엔 읽기 전용 op 허용목록으로 짜봤는데
+      quote·inbox·nearby·hotel·transcript 처럼 도메인마다 새 낱말이 끝없이 나와
+      오탐 25건이 났다(파괴적 op 목록을 쓰면 반대로 조용히 샌다). 어느 쪽이든 손으로
+      기르는 낱말 목록이 되고, 그 목록이 낡는 순간 이 가드가 거짓말을 한다.
+      한 줄로 적게 하면 낱말 목록이 아예 없어지고, 아는 사람이 아는 것을 말하게 된다.
+    """
+    issues: list[str] = []
+    for node_name, node_def in (data.get("nodes") or {}).items():
+        for action_name, adef in ((node_def or {}).get("actions") or {}).items():
+            if not isinstance(adef, dict):
+                continue
+            if not (((adef.get("ops") or {}).get("values")) or {}):
+                continue
+            if adef.get("returns") == "effect" or isinstance(adef.get("side_effect"), bool):
+                continue
+            issues.append(
+                f"안전-가드: [{node_name}:{action_name}] 는 op 분기 액션인데 "
+                f"returns:{adef.get('returns')} 이고 side_effect: 선언이 없음 — "
+                "부작용 op 가 하나라도 있으면 조종실 dry-run 이 '부작용 없음'으로 표시해 "
+                "실행 확인을 건너뛴다. `side_effect: true/false` 를 명시하라 "
+                "(op 하나라도 쓰기·전송·삭제·외부변경이면 true)"
+            )
+    return issues
+
+
 def validate_always_on(data: dict) -> list[str]:
     """노드 레벨 always_on 플래그 검증 — 인프라/문법 노드 항상-on 의 단일 소스(2026-07-03 데이터화).
 
@@ -787,6 +822,7 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_phone_reachability(data, root))
     issues.extend(validate_node_guides(data, root))
     issues.extend(validate_always_on(data))
+    issues.extend(validate_side_effect_declaration(data))
     issues.extend(validate_standard_core(data, root))
     issues.extend(validate_desc_discipline(data))
     return issues

@@ -2,6 +2,7 @@ node: self
 actions:
   lecture:
     returns: items
+    side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:lecture]{op: "list"}'
     runs_on: pc_only
     description: 강의 워크스페이스 관리 (op 분기). 생성/조회/로드/삭제/창 열기.

@@ -139,6 +139,7 @@ nodes:
         implementation: Kakao Map API로 GPS 좌표→주소 변환
       travel:
         returns: items
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:travel]{op: "flight", to: "도쿄"}'
         description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
         group: travel

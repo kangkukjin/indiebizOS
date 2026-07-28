@@ -3,6 +3,7 @@ nodes:
     actions:
       cctv:
         returns: items
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
         description: CCTV/웹캠 조회 (op 분기). search(키워드 통합검색)/nearby(좌표 근처, lat·lng 필수). 출력은 항상 lat/lng·playable 포함, stream_tags 동봉 시 채팅창 재생. 재생·캡처는 [limbs:cctv]. 자세히 read_guide(query="cctv").
         group: media
@@ -68,6 +69,7 @@ nodes:
     actions:
       cctv:
         returns: scalar
+        side_effect: true    # refresh 가 UTIC 캐시를 갱신한다
         exempt: '기기 의존(카메라 연결)'
         description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
         group: cctv

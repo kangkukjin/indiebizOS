@@ -2,6 +2,7 @@
     actions:
       world:
         returns: scalar
+        side_effect: true    # refresh 가 save_snapshot() 으로 pulse DB 를 쓴다
         fixture: '[sense:world]{op: "snapshot"}'
         description: 세계 상태 감각 (op 분기). 경제·뉴스·기술·날씨 스냅샷 조회/추이/재수집.
         target_description: |

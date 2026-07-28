@@ -5,6 +5,7 @@ actions:
       site_id: [site]
       query: [keyword]
     returns: items
+    side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[sense:collect]{op: "query", action: "recent"}'
     runs_on: pc_only
     description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.

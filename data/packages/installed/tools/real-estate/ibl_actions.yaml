@@ -65,6 +65,7 @@ actions:
     aliases:
       region_code: [district_code, dong_code, code]
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:realty]{op: "query", region: "강남구"}'
     description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
     group: real_estate

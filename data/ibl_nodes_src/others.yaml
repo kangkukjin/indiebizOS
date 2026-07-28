@@ -101,6 +101,7 @@
         - 메시지검색
       feed:
         returns: items
+        side_effect: true    # post 가 커뮤니티에 글을 게시한다
         fixture: '[others:feed]{op: "read"}'
         description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
         target_description: 'op:read(기본 — 활성 보드 글 조회. hashtag 옵션=특정 보드 / author 옵션=특정인(npub)의 글만 / following:true=팔로우한 사람 전체 타임라인 / with_boards:true=보드 목록(boards)·활성 보드명 동봉 — 게시판 화면용) / op:post(content 필수 — 활성 보드에 글 게시, hashtag 옵션=다른 보드).'
@@ -207,6 +208,7 @@
         - 닉네임
       board:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:board]{op: "list"}'
         description: 커뮤니티 보드(게시판) 관리 (IndieNet) — op:list/create/switch/delete. 보드=해시태그가 주소인 방(태그를 아는 사람들끼리), 보드 목록=즐겨찾기.
         target_description: 'op:list(기본 — 즐겨찾기한 보드 목록) / op:create(hashtag 필수, name 옵션=태그 — 보드를 즐겨찾기에 저장. 이미 있으면 그대로 성공=멱등) / op:switch(hashtag — 활성 보드 전환, 생략 시 기본 #indienet. 전환하면 게시 기본값과 [others:feed] 기본 조회가 모두 그 보드를 따름) / op:delete(hashtag 필수 — 즐겨찾기에서 삭제. 기본 #indienet 불가, 글은 릴레이에 남아 재저장 시 복원).'
@@ -227,6 +229,7 @@
         - 커뮤니티
       follow:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:follow]{op: "list"}'
         description: 팔로우 관리 (IndieNet) — op:list/add/remove. 로컬 저장. 팔로우한 사람 글은 [others:feed]{op:"read", following:true}, 특정인 글은 author 파라미터로.
         target_description: 'op:list(기본 — 팔로우 목록) / op:add(pubkey 필수 — npub 또는 hex, name 옵션) / op:remove(pubkey 필수 — 언팔로우).'

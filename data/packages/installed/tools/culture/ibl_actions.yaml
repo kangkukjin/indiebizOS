@@ -2,6 +2,7 @@ node: sense
 actions:
   performance:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:performance]{}'
     description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
     group: culture
@@ -60,6 +61,7 @@ actions:
         - '{area} · {prfstate}'
   book:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:book]{query: "역사"}'
     description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
     group: culture
@@ -181,6 +183,7 @@ actions:
               label: 원문 읽기 →
   classic:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:classic]{op: "western", query: "plato"}'
     description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
     group: culture

@@ -3,6 +3,7 @@ nodes:
     actions:
       host:
         returns: scalar
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:host]{op: "status"}'
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
@@ -91,6 +92,7 @@ nodes:
     actions:
       storage:
         returns: scalar
+        side_effect: true    # scan 이 용량 인덱스를 구축한다
         fixture: '[self:storage]{op: "volumes"}'
         description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
@@ -168,6 +170,7 @@ nodes:
           folder_path: [path]
           root_path: [path]
         returns: scalar
+        side_effect: true    # set 이 폴더 주석을 저장한다
         fixture: '[self:folder_note]{op: "get"}'
         description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
@@ -183,6 +186,7 @@ nodes:
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         returns: scalar
+        side_effect: true    # note 가 누적하고 forget 이 폐기한다
         fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
         group: file
@@ -204,6 +208,7 @@ nodes:
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
       residual:
         returns: scalar
+        side_effect: false    # 전 op 읽기 전용
         exempt: '모집단 표본 인자 필요(sample/estimate)'
         description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
         group: file

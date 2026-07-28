@@ -3,6 +3,7 @@ nodes:
     actions:
       portal:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:portal]{op: "status"}'
         runs_on: pc_only
         description: '개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을 따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.'

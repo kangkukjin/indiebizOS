@@ -3,6 +3,7 @@ nodes:
     actions:
       phone:
         returns: items
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:phone]{}'
         description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요. 폰 동작 실행은 [limbs:phone].
         group: device

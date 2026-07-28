@@ -2,6 +2,7 @@ node: sense
 actions:
   paper:
     returns: items
+    side_effect: true    # download 가 PDF 를 로컬에 저장한다
     fixture: '[sense:paper]{query: "attention"}'
     description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
     target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
@@ -24,6 +25,7 @@ actions:
     - 학위논문
   researcher:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
     description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
     target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
@@ -46,6 +48,7 @@ actions:
     - researcher
   entity:
     returns: items
+    side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:entity]{query: "강국진"}'
     description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search_ddg, 국내 연구자는 researcher.
     target_description: "op로 분기 (기본 resolve).\n- resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 '강국진'=여러 인물). QID는 개체를 못박는 신원자.\n- detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등, 속성:값 records). query만 주면 최상위 후보로 자동 해소.\n"

@@ -3,6 +3,7 @@ nodes:
     actions:
       business:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:business]{op: "list"}'
         description: 나의 비즈니스(사업) 조회·관리 — op:list(기본, items 통화)/detail/save/delete(단건 op는 해당 객체 응답).
         group: business
@@ -261,6 +262,7 @@ nodes:
                 v: '{interval_label}'
       business_item:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:business_item]{op: "list"}'
         description: 비즈니스 아이템(상품/항목) 조회·관리 — op:list(기본, items 통화)/detail/save/delete/add_image/remove_image(단건 op는 해당 객체 응답).
         group: business
@@ -286,6 +288,7 @@ nodes:
         - 사업 항목
       business_document:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:business_document]{op: "list"}'
         description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate/publish(공개인사프로필+공개창고 주소를 Nostr 발행 — 명함+발견 메시지, 내용은 창고가 쥠).
         group: business
@@ -309,6 +312,7 @@ nodes:
         - 레벨별 문서
       work_guideline:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:work_guideline]{op: "list"}'
         description: 레벨별 근무 지침(업무 가이드라인) 조회·관리 — op:list(기본, items 통화)/detail/update(단건 op는 해당 지침 응답).
         group: business
@@ -348,6 +352,7 @@ nodes:
         aliases:
           neighbor_id: [contact, name, id]
         returns: items
+        side_effect: false    # 전 op 읽기 전용
         fixture: '[others:messages]{op: "inbox"}'
         description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read).
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
@@ -552,6 +557,7 @@ nodes:
         - 받은메시지
       neighbor:
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite/merge.
         target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글) / merge(id=남길 이웃, from=합칠 이웃의 이름 또는 id — 같은 사람이 창고 등록·창고 가입 두 경로로 중복 등록됐을 때 연락처·대화·가입 자격·메모를 한 레코드로 합류, 합쳐진 쪽은 은퇴).

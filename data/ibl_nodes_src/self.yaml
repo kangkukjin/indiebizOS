@@ -48,6 +48,7 @@
         aliases:
           op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)
         returns: items
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:manage_events]{op: "list"}'
         description: 이벤트·스케줄 통합 관리 (op 분기). 캘린더 이벤트 + 정기 발행·자동화 스케줄 인터페이스 (트리거는 [self:trigger] 별도).
         target_description: 'create는 title 필수(date/time/repeat/type/description, event_action 있으면 실행 이벤트). update/delete/toggle/run_now는 event_id 필요. list는 year/month 필터 가능.'
@@ -123,6 +124,7 @@
         - 반복
       goal:
         returns: scalar
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:goal]{op: "list"}'
         description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
         target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
@@ -161,6 +163,7 @@
         - 메시지
       workflow:
         returns: scalar
+        side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
         description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
         target_description: 'get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'

@@ -3,6 +3,7 @@ nodes:
     actions:
       video:
         returns: scalar
+        side_effect: true    # summarize 가 HTML 보고서를 쓰고 브라우저를 연다
         fixture: '[sense:video]{op: "meta", query: "jazz"}'
         runs_on: pc_only
         description: 유튜브 동영상 조회 (op 분기). 메타·자막·요약. 검색은 search_youtube, 재생은 limbs:music.

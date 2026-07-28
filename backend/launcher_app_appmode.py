@@ -213,6 +213,9 @@ function stopRadioStream(){
   const a=document.getElementById('radioAudio'); if(a){ a.pause(); a.removeAttribute('src'); a.load(); }
   var row=document.getElementById('npSeekRow'); if(row) row.style.display='none';
   _npHide();
+  /* 라디오 말고도 표면이 내는 소리는 다 멈춘다 — media_player 로 그려진 곡들(음악앱은 한 폴더가
+     수백 곡이라 재생 중인 <audio> 를 찾아 누를 수가 없다). stop_in_client 규약의 뜻 그대로. */
+  document.querySelectorAll('audio').forEach(function(el){ if(!el.paused) el.pause(); });
 }
 /* CCTV 영상(item2): 지도 마커 클릭 → 전체화면 <video> 오버레이로 HLS 재생.
    onclick 은 URL 대신 _streamUrls 정수 인덱스를 넘겨 따옴표 이스케이프 함정을 원천 회피. */

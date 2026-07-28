@@ -586,6 +586,13 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
     try {
       // $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 빈 입력 파라미터는 제거됨
       const d = await runIBL(buildAction(b.action, valuesRef.current));
+      // stop_in_client — "소리는 이 표면이 내고 있으니 네가 멈춰라"(라디오 client 모드 규약).
+      // 음악 파일은 늘 표면의 <audio> 가 문다: 곡이 수백 개면 재생 중인 것을 찾아 누를 수가
+      // 없으므로 라디오 '■ 정지'와 같은 자리·같은 규약으로 멈춘다.
+      if (d?.stop_in_client) {
+        document.querySelectorAll('audio').forEach((a) => { if (!a.paused) a.pause(); });
+        return;
+      }
       if (d?.error) { alert(String(d.error)); return; }
       if (b.refresh) run();  // 실행 후 현재 모드 재조회(토글/재생성 결과 즉시 반영)
     } catch (e) {

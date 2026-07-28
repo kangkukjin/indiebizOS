@@ -68,6 +68,7 @@
 [self:music]{op: "playlist_create", name: "드라이브"}
 [self:music]{op: "playlist_add", name: "드라이브", path: "/…/곡.mp3"}
 [self:music]{op: "playlist", name: "드라이브"}       # 담긴 곡 순서대로
+[self:music]{op: "stop"}                             # 재생 중지 (표면의 <audio> 를 멈춘다)
 ```
 
 결과 items 구조 필드: title/artist/album/albumartist/genre/year/track_no/duration/duration_str/
@@ -96,6 +97,12 @@ path/stream(재생 URL)/image(앨범아트) → `>> [table:filter/sort/groupby]`
 재생되고, 폴더·플레이리스트 드릴의 "연속 재생"은 한 곡이 끝나면 다음 곡을 자동 재생한다
 (`media_player`의 `continuous: true` 렌더러 옵션). 스피커에서 소리를 내달라는 요청이면
 이 액션이 아니라 계기를 안내하라 — 서버측 재생 op는 없다.
+
+**정지**는 `op: "stop"` — 서버가 소리를 내지 않으므로 `stop_in_client: true` 를 돌려주고,
+그걸 받은 표면이 자기 `<audio>` 를 멈춘다(라디오 client 모드와 **같은 규약**). 계기 상단에
+라디오와 같은 자리의 `■ 정지` 버튼이 세 탭(전곡·폴더·플레이리스트)에 있다 — 한 폴더가
+수백 곡이면 재생 중인 곡을 눈으로 찾아 누르는 게 사실상 불가능하기 때문. 멈춘 위치는
+남으므로 다시 누르면 이어서 재생된다.
 
 ## 앱 계기 (4탭)
 

@@ -8,13 +8,13 @@
   "tools": [
     {
       "name": "music_library_op",
-      "description": "내 음악 라이브러리 — 폴더 스캔·곡 검색·폴더 단위 재생·플레이리스트.\n\n## op 분기\n- library (기본): 곡 목록. q(제목·아티스트·앨범·파일명 부분검색), folder(폴더 절대경로 — 폴더 단위, 하위 포함), path(단일 곡), limit(기본 300). items 각 곡에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트)/path.\n- track: path 곡 하나 상세 — track(태그) + playlists(담을 플레이리스트 후보).\n- folders: 파인더식 한 단계 탐색. folder(폴더 절대경로) 생략=등록된 소스 루트, 지정=그 폴더의 직속 하위 폴더(맨 앞 ⬆️ 상위 행, path 가 비면 최상위) + tracks=그 폴더 아래 전체 곡(하위 폴더 포함, 상한 500). 각 행의 n/sub 는 그 가지 아래 전체 곡 수·하위 폴더 수 — 들어가기 전에 규모를 본다. 폴더 구조=사용자의 의미 단위라 이 앱의 주 축이다.\n- playlists: 플레이리스트 목록. playlist: name 상세(담긴 곡 순서대로).\n- playlist_create / playlist_delete: name 으로 생성·삭제. playlist_add / playlist_remove: name+path 로 곡 담기·빼기.\n- sources: 등록 폴더 + 통계 + 스캔 상태. add_source/remove_source: path 폴더 등록(즉시 백그라운드 스캔)·제거.\n- scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.",
+      "description": "내 음악 라이브러리 — 폴더 스캔·곡 검색·폴더 단위 재생·플레이리스트.\n\n## op 분기\n- library (기본): 곡 목록. q(제목·아티스트·앨범·파일명 부분검색), folder(폴더 절대경로 — 폴더 단위, 하위 포함), path(단일 곡), limit(기본 300). items 각 곡에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트)/path.\n- track: path 곡 하나 상세 — track(태그) + playlists(담을 플레이리스트 후보).\n- folders: 파인더식 한 단계 탐색. folder(폴더 절대경로) 생략=등록된 소스 루트, 지정=그 폴더의 직속 하위 폴더(맨 앞 ⬆️ 상위 행, path 가 비면 최상위) + tracks=그 폴더 아래 전체 곡(하위 폴더 포함, 상한 500). 각 행의 n/sub 는 그 가지 아래 전체 곡 수·하위 폴더 수 — 들어가기 전에 규모를 본다. 폴더 구조=사용자의 의미 단위라 이 앱의 주 축이다.\n- playlists: 플레이리스트 목록. playlist: name 상세(담긴 곡 순서대로).\n- playlist_create / playlist_delete: name 으로 생성·삭제. playlist_add / playlist_remove: name+path 로 곡 담기·빼기.\n- sources: 등록 폴더 + 통계 + 스캔 상태. add_source/remove_source: path 폴더 등록(즉시 백그라운드 스캔)·제거.\n- scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.\n- stop: 재생 중지. 서버는 소리를 내지 않으므로 `stop_in_client: true` 를 돌려주고, 그걸 받은 표면이 자기 <audio> 를 멈춘다(라디오 client 모드와 같은 규약).",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "library(기본)/track/folders/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan",
+            "description": "library(기본)/track/folders/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan/stop",
             "enum": [
               "library",
               "track",
@@ -28,7 +28,8 @@
               "sources",
               "add_source",
               "remove_source",
-              "scan"
+              "scan",
+              "stop"
             ],
             "default": "library"
           },

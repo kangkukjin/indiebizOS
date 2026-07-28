@@ -192,6 +192,17 @@ def _playlist_remove(params: dict) -> dict:
     return items([], success=True, message=f"'{name}'에서 뺐습니다 ({len(pl['tracks'])}곡).")
 
 
+def _stop(params: dict) -> dict:
+    """재생 중지 — 소리를 내는 건 서버가 아니라 표면의 <audio> 라, 표면에 '멈춰라'를 돌려준다.
+
+    라디오의 client 모드와 같은 규약(`stop_in_client`): 서버가 스피커를 잡고 있으면 서버가
+    끄고(mpv), 표면이 물고 있으면 표면이 끈다. 음악 파일은 늘 후자다.
+    한 폴더가 수백 곡이면 재생 중인 <audio> 를 눈으로 찾아 누르는 게 사실상 불가능하므로
+    계기 상단에 라디오와 같은 자리의 '■ 정지' 버튼이 이 op 를 부른다.
+    """
+    return items([], success=True, stop_in_client=True, message="재생을 멈췄습니다.")
+
+
 # ── 소스 폴더 · 스캔 ─────────────────────────────────────────────────────
 
 def _sources(params: dict) -> dict:
@@ -249,6 +260,7 @@ _OP_DISPATCHERS = {
         "add_source": _add_source,
         "remove_source": _remove_source,
         "scan": _scan,
+        "stop": _stop,
     }
 }
 _OP_DEFAULTS = {"music_library_op": "library"}

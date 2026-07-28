@@ -31,6 +31,7 @@ nodes:
             add_source: 음악 폴더 등록 — 즉시 백그라운드 스캔
             remove_source: 폴더 제거 — 그 폴더의 곡을 라이브러리에서 내림
             scan: 전체 폴더 재스캔 (백그라운드, 증분)
+            stop: 재생 중지 — 소리를 내는 표면(<audio>)에 멈추라고 알린다 (라디오 stop 과 같은 규약)
         implementation: 'music-player 패키지 music_library_op — 로직은 music_core.py(소스 data/music/sources.json, 트랙 인덱스 library.db sqlite WAL, 플레이리스트 playlists.json, 스캔 상태 scan_state.json). 태그=mutagen(미설치 시 파일명·폴더명 폴백). 스캔=백그라운드 스레드(증분 mtime, family-news building 선례). 스트리밍·앨범아트=backend/api_music.py(/music/stream Range·/music/cover 캐시) — music_core 를 sys.modules 공유 키로 같이 문다(bulletin_core 선례). 소스 폴더 화이트리스트 밖 경로는 스트리밍 거부.'
         keywords:
         - 음악
@@ -51,6 +52,9 @@ nodes:
           modes:
           - name: 전곡
             auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[self:music]{op: "stop"}'
             inputs:
             - key: q
               type: text
@@ -107,6 +111,9 @@ nodes:
                       v: '{track.path}'
           - name: 폴더
             auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[self:music]{op: "stop"}'
             note: 파인더처럼 폴더를 하나씩 찾아 들어갑니다. 탐색 중에는 폴더만 보이고, 다 골랐으면 '이 폴더 전부 재생' 탭에서 그 폴더 아래 전체(하위 폴더 포함) 곡을 이어 듣습니다. 맨 위 ⬆️ 상위 폴더로 되돌아갑니다.
             action: '[self:music]{op: "folders"}'
             view:
@@ -151,6 +158,9 @@ nodes:
                     title: '{title} — {artist}'
           - name: 플레이리스트
             auto_run: true
+            buttons:
+            - label: ■ 정지
+              action: '[self:music]{op: "stop"}'
             note: 플레이리스트를 만들고, 전곡 탭에서 곡을 눌러 담으세요. 플레이리스트를 누르면 연속 재생됩니다.
             action: '[self:music]{op: "playlists"}'
             view:
@@ -263,13 +273,15 @@ tool_json:
 
       - sources: 등록 폴더 + 통계 + 스캔 상태. add_source/remove_source: path 폴더 등록(즉시 백그라운드 스캔)·제거.
 
-      - scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.'
+      - scan: 전체 재스캔(백그라운드·증분). 진행 상태는 sources 로 확인.
+
+      - stop: 재생 중지. 서버는 소리를 내지 않으므로 `stop_in_client: true` 를 돌려주고, 그걸 받은 표면이 자기 <audio> 를 멈춘다(라디오 client 모드와 같은 규약).'
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: library(기본)/track/folders/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan
+          description: library(기본)/track/folders/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan/stop
         q:
           type: string
           description: 검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)

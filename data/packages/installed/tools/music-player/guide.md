@@ -33,6 +33,7 @@ tabs)을 그대로 다시 쓴다". 한 벌 선언으로 깊이 제한 없이 파
 | sources | — | 등록 폴더 + stats + scan 상태 (보관함 탭 한 화면) |
 | add_source / remove_source | path(폴더) | 등록(즉시 백그라운드 스캔)·제거 |
 | scan | — | 전체 재스캔 (백그라운드·증분 mtime) |
+| stop | — | 재생 중지 — `stop_in_client: true` 를 돌려주고 표면이 자기 <audio> 를 멈춘다 |
 
 ## 재생 아키텍처
 
@@ -42,6 +43,11 @@ Electron은 맥에서 돌므로 맥 스피커, 원격 런처는 그 브라우저
 `media_player`의 `continuous: true`(이 패키지에서 추가된 렌더러 옵션)는 한 곡이 끝나면
 같은 목록의 다음 곡을 자동 재생한다 — 폴더·플레이리스트 연속 듣기.
 
+- **정지**: 서버가 스피커를 잡고 있지 않으므로 서버가 끌 것이 없다 → `op:"stop"` 이
+  `stop_in_client: true` 를 돌려주고 표면이 자기 소리를 멈춘다. 라디오가 폰/원격 client
+  모드에서 쓰던 규약을 그대로 쓴다(tool_radio.stop_radio 선례). 렌더러 2곳 모두
+  이 플래그를 보면 `document.querySelectorAll('audio')` 를 전부 pause —
+  원격 `stopRadioStream()` 도 라디오 전용에서 '표면의 모든 소리'로 넓혔다.
 - 스트리밍: `backend/api_music.py` `GET /music/stream` — HTTP Range(206) 지원, seek 가능.
 - 앨범아트: `GET /music/cover?path=&size=` — 내장 태그 → 폴더 아트(cover.jpg 등) → SVG 음표
   플레이스홀더. 캐시 `data/music/covers/`.

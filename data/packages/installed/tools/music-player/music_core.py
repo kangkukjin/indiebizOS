@@ -105,14 +105,9 @@ def _conn() -> sqlite3.Connection:
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title)")
-    # 관련곡 그래프 — 곡마다 관련곡 top-K 간선(자기 제외). 스캔 산출물에서 파생(재빌드 가능).
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS edges (
-            src TEXT NOT NULL, dst TEXT NOT NULL,
-            weight REAL, reasons TEXT,
-            PRIMARY KEY (src, dst)
-        )""")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_edges_src ON edges(src)")
+    # 2026-07-28 관련곡 그래프 은퇴 — 파생 캐시라 그냥 버린다(원본 파일 무손상).
+    # 스키마에서 뺀 채로 두면 옛 설치본에 40,000행짜리 유령 테이블이 남으므로 여기서 떨군다.
+    conn.execute("DROP TABLE IF EXISTS edges")
     return conn
 
 
@@ -150,7 +145,6 @@ def remove_source(path: str) -> dict:
         conn.execute("DELETE FROM tracks WHERE source = ?", (p,))
     if removed_paths:
         _strip_from_playlists(set(removed_paths))
-        build_graph()   # 간선도 파생물 — 내려간 곡을 그래프에서 제거
     return {"ok": True, "path": p, "removed": len(removed_paths)}
 
 
@@ -363,9 +357,7 @@ def _scan_worker(roots: list) -> None:
                 conn.commit()
         finally:
             conn.close()
-        g = build_graph()   # 관련곡 그래프 재빌드 (파생물 — 스캔이 진실을 바꿨으니)
-        _set_scan_state({"status": "done", **progress, "graph_edges": g.get("edges", 0),
-                         "finished_at": _now_iso()})
+        _set_scan_state({"status": "done", **progress, "finished_at": _now_iso()})
     except Exception as e:
         _set_scan_state({"status": "error", **progress, "message": str(e)})
     finally:
@@ -419,8 +411,12 @@ def track_row(r) -> dict:
     }
 
 
-def query_tracks(q: str = "", artist: str = "", album: str = "", albumartist: str = "",
-                 path: str = "", folder: str = "", limit: int = 300) -> list:
+def query_tracks(q: str = "", path: str = "", folder: str = "", limit: int = 300) -> list:
+    """곡 질의 — q(부분검색) · folder(폴더 단위) · path(단일 곡).
+
+    artist/album/albumartist 정확 필터는 2026-07-28 은퇴 — 앨범·아티스트 목록 뷰의
+    드릴다운 전용이었고 그 축이 사라졌다. 아티스트·앨범명 검색은 q 가 그대로 덮는다.
+    """
     where, args = [], []
     if path:
         where.append("path = ?"); args.append(norm_path(path))
@@ -430,12 +426,6 @@ def query_tracks(q: str = "", artist: str = "", album: str = "", albumartist: st
     if q:
         where.append("(title LIKE ? OR artist LIKE ? OR album LIKE ? OR filename LIKE ?)")
         args += [f"%{q}%"] * 4
-    if artist:
-        where.append("artist = ?"); args.append(artist)
-    if album:
-        where.append("album = ?"); args.append(album)
-    if albumartist:
-        where.append("COALESCE(NULLIF(albumartist, ''), artist) = ?"); args.append(albumartist)
     sql = "SELECT * FROM tracks"
     if where:
         sql += " WHERE " + " AND ".join(where)
@@ -445,47 +435,13 @@ def query_tracks(q: str = "", artist: str = "", album: str = "", albumartist: st
         return [track_row(r) for r in conn.execute(sql, args)]
 
 
-def list_albums() -> list:
-    sql = """
-        SELECT album, COALESCE(NULLIF(albumartist, ''), artist) AS aartist,
-               COUNT(*) AS n, SUM(COALESCE(duration, 0)) AS total_dur,
-               MIN(path) AS any_path,
-               MIN(CASE WHEN has_cover = 1 THEN path END) AS cover_path
-        FROM tracks WHERE album != ''
-        GROUP BY album, aartist ORDER BY aartist, album
-    """
-    rows = []
-    with _conn() as conn:
-        for r in conn.execute(sql):
-            cover = r["cover_path"] or r["any_path"]
-            rows.append({
-                "title": r["album"], "album": r["album"],
-                "artist": r["aartist"] or "", "albumartist": r["aartist"] or "",
-                "n": r["n"], "duration_str": fmt_duration(r["total_dur"]),
-                "meta": " · ".join(x for x in (r["aartist"], f"{r['n']}곡", fmt_duration(r["total_dur"])) if x),
-                "image": f"/music/cover?path={quote(cover)}" if cover else "",
-            })
-    return rows
-
-
-def list_artists() -> list:
-    sql = """
-        SELECT artist, COUNT(*) AS n, COUNT(DISTINCT NULLIF(album, '')) AS n_albums
-        FROM tracks WHERE artist != '' GROUP BY artist ORDER BY artist
-    """
-    with _conn() as conn:
-        return [{"title": r["artist"], "artist": r["artist"], "n": r["n"], "n_albums": r["n_albums"],
-                 "meta": f"{r['n']}곡 · 앨범 {r['n_albums']}개"}
-                for r in conn.execute(sql)]
-
-
 def stats() -> dict:
+    """라이브러리 요약 — 곡·폴더·플레이리스트. 앨범/아티스트 집계는 2026-07-28 은퇴
+    (앨범·아티스트 축을 지운 자리에 폴더 수가 들어왔다 — 폴더가 이 앱의 뼈대)."""
     with _conn() as conn:
         tracks = conn.execute("SELECT COUNT(*) FROM tracks").fetchone()[0]
-        albums = conn.execute("SELECT COUNT(DISTINCT album || '|' || COALESCE(NULLIF(albumartist,''), artist)) FROM tracks WHERE album != ''").fetchone()[0]
-        artists = conn.execute("SELECT COUNT(DISTINCT artist) FROM tracks WHERE artist != ''").fetchone()[0]
         per_source = {r["source"]: r["n"] for r in conn.execute("SELECT source, COUNT(*) AS n FROM tracks GROUP BY source")}
-    return {"tracks": tracks, "albums": albums, "artists": artists,
+    return {"tracks": tracks, "folders": len(list_folders()),
             "playlists": len(load_playlists()), "per_source": per_source}
 
 
@@ -520,232 +476,6 @@ def list_folders() -> list:
             "meta": f"{agg[d]['n']}곡 · {fmt_duration(agg[d]['dur'])}",
         })
     return rows
-
-
-# ── 관련곡 그래프 (Obsidian 로컬 그래프의 음악판) ────────────────────────
-# 곡마다 관련곡 top-K 간선. 근거=같은 앨범/아티스트/폴더/장르/연대(가중 합산).
-# 다양성 제약(같은 앨범·아티스트 쏠림 캡)으로 클러스터 밖 간선을 보장 — 랜덤 워크가
-# 앨범 안에 갇히지 않게. 자기 간선 없음. 스캔 후 자동 재빌드(파생물).
-
-GRAPH_TOP_K = 10
-_W_ALBUM, _W_ARTIST, _W_FOLDER, _W_GENRE, _W_ERA = 4.0, 3.0, 2.5, 1.5, 1.0
-_CAP_ALBUM, _CAP_ARTIST = 3, 5          # top-K 안에서 같은 앨범/아티스트 최대 수
-_BIG_BUCKET_SAMPLE = 20                  # 대형 버킷(장르 등)은 곡마다 표본만 연결
-
-
-def build_graph() -> dict:
-    import random as _random
-    from collections import defaultdict
-    with _conn() as conn:
-        tracks = [dict(r) for r in conn.execute(
-            "SELECT path, artist, album, albumartist, genre, year FROM tracks")]
-        if not tracks:
-            conn.execute("DELETE FROM edges")
-            return {"tracks": 0, "edges": 0}
-        buckets = defaultdict(list)   # (종류, 키) → [path]
-        info = {}
-        for t in tracks:
-            p = t["path"]
-            info[p] = t
-            aartist = (t["albumartist"] or t["artist"] or "").strip()
-            if (t["album"] or "").strip():
-                buckets[("album", (t["album"].strip(), aartist))].append(p)
-            if (t["artist"] or "").strip():
-                buckets[("artist", t["artist"].strip())].append(p)
-            buckets[("folder", os.path.dirname(p))].append(p)
-            if (t["genre"] or "").strip():
-                buckets[("genre", t["genre"].strip().lower())].append(p)
-            y = _int_of(t["year"] or "")
-            if y:
-                buckets[("era", y // 5)].append(p)
-        weights = {"album": _W_ALBUM, "artist": _W_ARTIST, "folder": _W_FOLDER,
-                   "genre": _W_GENRE, "era": _W_ERA}
-        labels = {"album": "같은 앨범", "artist": "같은 아티스트", "folder": "같은 폴더",
-                  "genre": "같은 장르", "era": "같은 연대"}
-        cand = defaultdict(lambda: defaultdict(lambda: [0.0, set()]))  # src → dst → [score, kinds]
-        for (kind, _key), members in buckets.items():
-            if len(members) < 2:
-                continue
-            w = weights[kind]
-            for p in members:
-                # 대형 버킷은 곡마다 표본만 — O(bucket²) 폭발 방지 (곡 경로 시드=결정론)
-                others = [m for m in members if m != p]
-                if len(others) > _BIG_BUCKET_SAMPLE:
-                    others = _random.Random(hash((p, kind))).sample(others, _BIG_BUCKET_SAMPLE)
-                for m in others:
-                    c = cand[p][m]
-                    c[0] += w
-                    c[1].add(kind)
-        rows = []
-        for src, dsts in cand.items():
-            ranked = sorted(dsts.items(), key=lambda kv: (-kv[1][0], kv[0]))
-            src_t = info[src]
-            src_album = ((src_t["album"] or "").strip(),
-                         (src_t["albumartist"] or src_t["artist"] or "").strip())
-            n_album = n_artist = 0
-            picked = []
-            for dst, (score, kinds) in ranked:
-                if len(picked) >= GRAPH_TOP_K:
-                    break
-                dst_t = info[dst]
-                same_album = "album" in kinds and src_album[0]
-                same_artist = (dst_t["artist"] or "").strip() == (src_t["artist"] or "").strip() and (src_t["artist"] or "").strip()
-                if same_album and n_album >= _CAP_ALBUM:
-                    continue
-                if same_artist and n_artist >= _CAP_ARTIST:
-                    continue
-                if same_album:
-                    n_album += 1
-                if same_artist:
-                    n_artist += 1
-                reasons = ",".join(labels[k] for k in ("album", "artist", "folder", "genre", "era") if k in kinds)
-                picked.append((src, dst, score, reasons))
-            rows.extend(picked)
-        conn.execute("DELETE FROM edges")
-        conn.executemany("INSERT OR REPLACE INTO edges (src, dst, weight, reasons) VALUES (?,?,?,?)", rows)
-        conn.commit()
-        return {"tracks": len(tracks), "edges": len(rows)}
-
-
-def _ensure_graph() -> None:
-    """간선이 비어 있으면(코드 갱신 직후 등) 즉석 빌드 — 곡이 있을 때만."""
-    with _conn() as conn:
-        n_edges = conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
-        n_tracks = conn.execute("SELECT COUNT(*) FROM tracks").fetchone()[0]
-    if n_edges == 0 and n_tracks > 1:
-        build_graph()
-
-
-def related_of(path: str, limit: int = GRAPH_TOP_K) -> list:
-    """곡 하나의 관련곡 (간선 가중치 순, reason 동봉)."""
-    p = norm_path(path)
-    _ensure_graph()
-    with _conn() as conn:
-        rows = []
-        for e in conn.execute(
-                "SELECT e.dst, e.weight, e.reasons FROM edges e WHERE e.src = ? ORDER BY e.weight DESC LIMIT ?",
-                (p, max(1, min(int(limit or GRAPH_TOP_K), 50)))):
-            t = conn.execute("SELECT * FROM tracks WHERE path = ?", (e["dst"],)).fetchone()
-            if t is not None:
-                rows.append(dict(track_row(t), reason=e["reasons"], weight=e["weight"]))
-    return rows
-
-
-def walk_playlist(start_path: str = "", q: str = "", length: int = 30) -> list:
-    """관련곡 랜덤 워크 — 시작곡에서 관련곡 top-K 중 가중 랜덤으로 다음 곡을 이어감.
-    최근 20곡 재방문 금지, 막다른 곳이면 전체에서 랜덤 점프. Obsidian 그래프 산책의 재생판."""
-    import random as _random
-    from collections import deque
-    length = max(2, min(int(length or 30), 100))
-    _ensure_graph()
-    conn = _conn()
-    try:
-        def row_of(p):
-            r = conn.execute("SELECT * FROM tracks WHERE path = ?", (p,)).fetchone()
-            return dict(r) if r is not None else None
-        start = None
-        if q:
-            m = query_tracks(q=q, limit=1)
-            start = m[0]["path"] if m else None
-        elif start_path:
-            start = norm_path(start_path)
-            if row_of(start) is None:
-                start = None
-        if start is None:
-            r = conn.execute("SELECT path FROM tracks ORDER BY RANDOM() LIMIT 1").fetchone()
-            if r is None:
-                return []
-            start = r["path"]
-        seq, reasons = [start], [""]
-        recent = deque(seq, maxlen=20)
-        cur = start
-        while len(seq) < length:
-            nbrs = [(e["dst"], e["weight"], e["reasons"]) for e in
-                    conn.execute("SELECT dst, weight, reasons FROM edges WHERE src = ?", (cur,))
-                    if e["dst"] not in recent]
-            if nbrs:
-                total = sum(w for _, w, _ in nbrs)
-                pick = _random.uniform(0, total)
-                acc = 0.0
-                chosen = nbrs[-1]
-                for cand_e in nbrs:
-                    acc += cand_e[1]
-                    if pick <= acc:
-                        chosen = cand_e
-                        break
-                cur, reason = chosen[0], chosen[2]
-            else:
-                r = conn.execute(
-                    "SELECT path FROM tracks WHERE path NOT IN ({}) ORDER BY RANDOM() LIMIT 1".format(
-                        ",".join("?" * len(recent))), list(recent)).fetchone()
-                if r is None:
-                    break
-                cur, reason = r["path"], "랜덤 점프"
-            seq.append(cur)
-            reasons.append(reason)
-            recent.append(cur)
-        out = []
-        for i, p in enumerate(seq):
-            r = row_of(p)
-            if r is None:
-                continue
-            item = track_row(r)
-            item["step"] = i + 1
-            item["reason"] = reasons[i] or "시작곡"
-            out.append(item)
-        return out
-    finally:
-        conn.close()
-
-
-def ego_graph(path: str = "", q: str = "", k: int = GRAPH_TOP_K, ring2: int = 4) -> dict:
-    """에고 그래프 — 중심곡 + 1홉(top-k) + 2홉(각 이웃의 top-ring2). 그래프 뷰용."""
-    _ensure_graph()
-    with _conn() as conn:
-        center = None
-        if q:
-            m = query_tracks(q=q, limit=1)
-            center = m[0]["path"] if m else None
-        elif path:
-            center = norm_path(path)
-        if center is None or conn.execute("SELECT 1 FROM tracks WHERE path = ?", (center,)).fetchone() is None:
-            r = conn.execute(
-                "SELECT src, COUNT(*) c FROM edges GROUP BY src ORDER BY c DESC, src LIMIT 1").fetchone()
-            if r is None:
-                return {"nodes": [], "edges": [], "center": None}
-            center = r["src"]
-        nodes, index, edges = [], {}, []
-
-        def add_node(p, ring):
-            if p in index:
-                return index[p]
-            t = conn.execute("SELECT * FROM tracks WHERE path = ?", (p,)).fetchone()
-            if t is None:
-                return None
-            i = len(nodes)
-            nodes.append(dict(track_row(t), ring=ring))
-            index[p] = i
-            return i
-
-        ci = add_node(center, 0)
-        ring1 = [e["dst"] for e in conn.execute(
-            "SELECT dst FROM edges WHERE src = ? ORDER BY weight DESC LIMIT ?", (center, k))]
-        for p1 in ring1:
-            i1 = add_node(p1, 1)
-            if i1 is not None:
-                edges.append([ci, i1])
-        for p1 in ring1:
-            for e in conn.execute(
-                    "SELECT dst FROM edges WHERE src = ? ORDER BY weight DESC LIMIT ?", (p1, ring2)):
-                p2 = e["dst"]
-                if p2 == center:
-                    continue
-                i2 = add_node(p2, 2) if p2 not in index else index[p2]
-                if i2 is not None:
-                    pair = [index[p1], i2]
-                    if pair not in edges and [pair[1], pair[0]] not in edges:
-                        edges.append(pair)
-    return {"nodes": nodes, "edges": edges, "center": center}
 
 
 # ── 플레이리스트 ─────────────────────────────────────────────────────────

@@ -16,7 +16,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { DirectionsInstrument } from './DirectionsInstrument';
-import { MusicGraphInstrument } from './MusicGraphInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { AudioBriefingInstrument } from './AudioBriefingInstrument';
 import { BinNote } from './BinNote';
@@ -86,13 +85,6 @@ const STATIC_DOMAINS: Domain[] = [
     id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
     instruments: [
       { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
-    ],
-  },
-  {
-    id: 'music_graph', icon: '🕸️', label: '음악 그래프',
-    instruments: [
-      // 관련곡 에고 그래프(SVG) — 선언형 뷰 어휘 밖이라 커스텀 계기. 데이터=[self:music]{op:"graph"}.
-      { id: 'music_graph', icon: '🕸️', label: '음악 그래프', el: <MusicGraphInstrument /> },
     ],
   },
   // 검색(포식) 브라우저 — 구 런처 모드에서 앱으로 이사. ForageBrowser 오버레이는 Launcher 에

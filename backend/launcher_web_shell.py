@@ -614,17 +614,42 @@ SHELL_PANEL_WAREHOUSE_HTML = """
       <div class="wf-row">
         <input id="wfQ" class="grow" placeholder="🔍 이웃 창고 전체에서 파일 이름으로 찾기" oninput="wfSearch(this.value)">
       </div>
+      <!-- 창고 추천 초안 — 공개 발행이라 반드시 사람이 읽고 고칠 자리를 준다(📣 버튼이 연다) -->
+      <div class="wf-row" id="wfRecRow" style="display:none;flex-direction:column;align-items:stretch;gap:6px">
+        <div style="font-size:12px;color:var(--dim)" id="wfRecHead"></div>
+        <textarea id="wfRecText" rows="5"
+          style="width:100%;box-sizing:border-box;resize:vertical;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg2);color:var(--txt);font:inherit;font-size:13px"></textarea>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span style="font-size:11px;color:var(--dim);flex:1"><b>공유창고 Warehouse : 주소</b> 줄은 남겨두세요 — 받는 사람 화면에서 그 자리로 바로 창고이웃 등록이 됩니다.</span>
+          <button class="wf-go" onclick="wfRecCancel()">닫기</button>
+          <button class="wf-go" id="wfRecBtn" onclick="wfRecPost()">공개 추천 발행</button>
+        </div>
+      </div>
       <div class="wh-err" id="wfErr" style="display:none"></div>
       <div class="wh-list" id="wfFeed"></div>
     </div>
-    <!-- 이웃찾기 — #IndieNet 발견 노트(소개발행의 수신면). 소개 속 창고 주소 → 창고이웃 등록. -->
+    <!-- 이웃찾기 — 두 갈래. 소개글=#IndieNet 발견 노트(소개발행의 수신면, 나를 알린 사람이
+         오는 쪽) / 둘러보기=아직 나를 모르는 창고를 장르로 훑는 쪽. 방향이 반대다. -->
     <div id="whDs" style="display:none">
       <div class="wf-row">
-        <input id="wdDraft" class="grow" placeholder="#IndieNet 게시판에 한마디 — 소개도, 대화도 좋아요 (모두에게 공개)"
-          onkeydown="if(event.key==='Enter')wdPost()">
-        <button class="wf-go" id="wdPostBtn" onclick="wdPost()">게시</button>
+        <span class="wh-tabs" style="margin-left:0">
+          <button id="wdSubIntro" class="on" onclick="wdSub('intro')" title="#IndieNet 에 자기를 알린 사람들">소개글</button>
+          <button id="wdSubBrowse" onclick="wdSub('browse')" title="장르별 후보 창고 — 아직 관계 없는 곳">둘러보기</button>
+        </span>
       </div>
-      <div class="wh-list" id="wdList"></div>
+      <div id="wdIntro">
+        <div class="wf-row">
+          <input id="wdDraft" class="grow" placeholder="#IndieNet 게시판에 한마디 — 소개도, 대화도 좋아요 (모두에게 공개)"
+            onkeydown="if(event.key==='Enter')wdPost()">
+          <button class="wf-go" id="wdPostBtn" onclick="wdPost()">게시</button>
+        </div>
+        <div class="wh-list" id="wdList"></div>
+      </div>
+      <div id="wdBrowse" style="display:none">
+        <div class="wh-nb-bar" id="wgGenres"></div>
+        <div class="wh-err" id="wgErr" style="display:none"></div>
+        <div class="wh-list" id="wgList"></div>
+      </div>
     </div>
   </div>
 """

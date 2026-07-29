@@ -240,6 +240,125 @@ async function wdPost(){
   }catch(e){ alert('게시 실패: '+e); }
   if(btn){ btn.disabled=false; btn.textContent='게시'; }
 }
+/* ===== 둘러보기 — 장르별 후보 창고 (데스크탑 DirectoryPane 의 원격 판) =====
+   소개글이 '나를 알린 사람'의 수신면이라면 여기는 아직 나를 모르는 창고를 훑는 면.
+   후보는 백엔드 warehouse_directory 가 만든다(live=Neocities 태그 브라우즈 / seed=사람이 적은 목록).
+   등록은 소개글 면과 같은 /warehouse-feed/neighbors/add — 신규 배관 0. */
+let wgGenres=[]; let wgKey=''; let wgItems=[]; let wgLoaded=false;
+function wdSub(t){
+  document.getElementById('wdSubIntro').classList.toggle('on', t==='intro');
+  document.getElementById('wdSubBrowse').classList.toggle('on', t==='browse');
+  document.getElementById('wdIntro').style.display = (t==='intro'?'':'none');
+  document.getElementById('wdBrowse').style.display = (t==='browse'?'':'none');
+  if(t==='browse' && !wgLoaded){ wgLoaded=true; wgLoad(); }
+}
+function wgErr(m){ const e=document.getElementById('wgErr'); if(!e)return;
+  if(m){ e.textContent=m; e.style.display=''; } else e.style.display='none'; }
+async function wgLoad(){
+  try{
+    const r=await jfetch('/warehouse-feed/directory'); if(!r.ok) throw new Error('HTTP '+r.status);
+    wgGenres=(await r.json()).genres||[];
+    if(wgGenres.length){ wgPick(wgGenres[0].key); } else wgChips();
+  }catch(e){ wgErr('장르 목록을 못 받았어요: '+e.message); }
+}
+function wgChips(){
+  const bar=document.getElementById('wgGenres'); if(!bar) return;
+  bar.innerHTML=wgGenres.map(g=>'<button class="wh-chip" title="'+esc(g.hint||'')+'"'
+    +(g.key===wgKey?' style="border-color:#D97706;color:#B45309;font-weight:700"':'')
+    +' onclick="wgPick('+JSON.stringify(g.key)+')">'+esc(g.icon||'📦')+' '+esc(g.label)+'</button>').join('')
+    +'<span style="flex:1"></span>'
+    +'<button class="wf-go" title="목록 새로 받기 (평소엔 6시간 캐시)" onclick="wgPick('+JSON.stringify(wgKey)+',1)">↻ 새로 받기</button>';
+}
+async function wgPick(k, refresh){
+  wgKey=k; wgChips(); wgErr('');
+  const l=document.getElementById('wgList');
+  if(l) l.innerHTML='<div class="wh-empty">후보 창고를 모으는 중…</div>';
+  try{
+    const r=await jfetch('/warehouse-feed/directory/'+encodeURIComponent(k)+'?limit=60'+(refresh?'&refresh=1':''));
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    wgItems=d.items||[]; if(d.note) wgErr(d.note);
+    wgRender();
+  }catch(e){ wgErr('불러오기 실패: '+e.message); if(l) l.innerHTML=''; }
+}
+function wgRender(){
+  const l=document.getElementById('wgList'); if(!l) return;
+  const g=wgGenres.filter(x=>x.key===wgKey)[0];
+  if(!wgItems.length){ l.innerHTML='<div class="wh-empty">이 장르엔 아직 후보가 없어요</div>'; return; }
+  /* 썸네일이 있으면 눈으로 고른다 — Neocities 브라우즈가 스크린샷을 준다 */
+  l.innerHTML=(g&&g.hint?'<div class="wf-more">'+esc(g.hint)+'</div>':'')
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">'
+    +wgItems.map((c,i)=>{
+      const shot = c.thumb
+        ? '<img src="'+esc(c.thumb)+'" alt="" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;object-position:top;display:block;background:var(--bg3)">'
+        : '<div style="width:100%;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--bg3)">📦</div>';
+      const views = (c.views!=null)? '<span class="cnt">👁 '+Number(c.views).toLocaleString()+'</span>' : '';
+      const btn = c.registered
+        ? '<button class="wf-go" disabled>등록됨</button>'
+        : '<button class="wf-go" onclick="wgAdd('+i+')">＋ 이웃 등록</button>';
+      return '<div style="border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--bg2);display:flex;flex-direction:column">'
+        +'<a href="'+esc(c.url)+'" target="_blank" rel="noopener" title="브라우저로 열어보기">'+shot+'</a>'
+        +'<div style="padding:8px 9px;display:flex;flex-direction:column;gap:3px;flex:1">'
+        +'<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(c.title||c.name)+'">'+esc(c.title||c.name)+'</div>'
+        +'<div class="cnt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.url.replace(/^https?:\\/\\//,''))+'</div>'
+        +(c.desc?'<div class="cnt" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(c.desc)+'</div>':'')
+        +'<div style="display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:6px">'+views+'<span style="flex:1"></span>'+btn+'</div>'
+        +'</div></div>';
+    }).join('')+'</div>';
+}
+async function wgAdd(i){
+  const c=wgItems[i]; if(!c) return;
+  try{
+    /* adapter = 백엔드가 이미 아는 정체. 커스텀 도메인 Neocities 는 자동 감지가
+       'page'(1파일)로 떨어지는데 둘러보기는 사이트명을 알고 오므로 박아 보낸다. */
+    const r=await jfetch('/warehouse-feed/neighbors/add',{method:'POST',
+      body:JSON.stringify({url:c.url, name:(c.title||c.name), adapter:(c.adapter||'')})});
+    const d=await r.json().catch(()=>null);
+    if(!r.ok) throw new Error((d&&d.detail)||('HTTP '+r.status));
+    c.registered=true; wgRender();
+    const p=(d&&d.poll)||{};
+    if(p.ok===false||p.error){
+      alert('등록은 했지만 아직 못 읽었어요: '+(p.error||'연결 실패')
+        +'\\n창고 주소가 파일 목록(색인)이 아닐 수 있어요 — 하위 폴더 주소로 다시 등록해 보세요.');
+    } else {
+      alert('창고이웃으로 등록했어요'+(p.file_count!=null?(' — 파일 '+p.file_count+'개를 읽었습니다'):'')
+        +'\\n이웃 탭 피드에 이 창고의 변화가 흐릅니다.');
+    }
+  }catch(e){ alert('등록 실패: '+e); }
+}
+/* ===== 창고 추천 — 내 이웃의 창고를 #IndieNet 에 공개 발행 =====
+   초안은 기계가 사실만 채우고(이름·주소·내가 쓴 메모) ★보내는 글은 사용자가 직접 쓴 것이어야
+   한다 — 고쳐 쓰고 확인해야 나간다. 본문이 '공유창고 Warehouse : <url>' 계약을 지키면
+   받는 쪽 소개글 면(wdWh)이 그 자리에 '＋ 창고이웃 등록' 버튼을 붙인다. */
+let wfRecUrl='';
+function wfRec(i){
+  const n=wfNb[i]; if(!n) return;
+  const title=(n.title&&n.title!==n.name)?(n.name+' — '+n.title):n.name;
+  const memo=(n.warehouse_memo||'').trim();
+  wfRecUrl=n.warehouse_url;
+  document.getElementById('wfRecHead').textContent="'"+n.name+"' 창고 추천 — #IndieNet 에 공개 발행됩니다. 고쳐 쓰세요";
+  document.getElementById('wfRecText').value='📦 이웃 창고를 추천합니다 — '+title+'\\n'
+    +(memo?(memo+'\\n'):'')+'\\n공유창고 Warehouse : '+n.warehouse_url+'\\n';
+  document.getElementById('wfRecRow').style.display='';
+  document.getElementById('wfRecText').focus();
+}
+function wfRecCancel(){ document.getElementById('wfRecRow').style.display='none'; wfRecUrl=''; }
+async function wfRecPost(){
+  const ta=document.getElementById('wfRecText'); const btn=document.getElementById('wfRecBtn');
+  const t=(ta&&ta.value||'').trim(); if(!t) return;
+  const ok = /공유창고/.test(t) && /warehouse/i.test(t) && /https?:\\/\\/\\S+/.test(t);
+  if(!ok && !confirm('이 글엔 "공유창고 Warehouse : 주소" 형식이 없어요.\\n'
+      +'그러면 받는 사람 화면에 바로 등록 버튼이 안 붙고 그냥 글로만 보입니다.\\n\\n그래도 발행할까요?')) return;
+  if(!confirm('#IndieNet 에 공개로 발행합니다 — 모두가 볼 수 있어요.\\n\\n'+t)) return;
+  if(btn){ btn.disabled=true; btn.textContent='발행 중…'; }
+  try{
+    const r=await ibl('[others:feed]{op: "post", hashtag: "indienet", content: '+JSON.stringify(t)+'}');
+    if(r&&(r.error||r.success===false)) throw new Error(r.error||r.message||'게시 실패');
+    wfRecCancel();
+    alert('추천을 발행했어요 — 이웃찾기 탭 소개글에서도 보입니다.');
+  }catch(e){ alert('발행 실패: '+e); }
+  if(btn){ btn.disabled=false; btn.textContent='공개 추천 발행'; }
+}
 function wfErr(m){ const e=document.getElementById('wfErr'); if(!e)return;
   if(m){ e.textContent=m; e.style.display=''; } else e.style.display='none'; }
 async function wfLoad(){
@@ -275,6 +394,7 @@ function wfRender(){
       +(sc>0?' style="color:#B45309"':'')+' onclick="wfScore('+i+')">'+(sc>0?'★'+sc:'☆')+'</button>'
       +'<a href="'+esc(n.warehouse_url)+'/" target="_blank" rel="noopener" title="'+esc(n.warehouse_memo||'창고 열기')+'">'+esc(n.name)+'</a>'
       +st+ad+lg+kb
+      +'<button title="이 창고를 #IndieNet 에 공개 추천 — 초안을 고쳐 쓰고 확인해야 나갑니다" onclick="wfRec('+i+')">📣</button>'
       +'<button title="창고 메모" onclick="wfMemo('+n.neighbor_id+')">✎</button>'
       +'<button title="등기부에서 떼기 (이웃은 남고 창고 연락처만 지움)" onclick="wfRemove('+n.contact_id+')">✕</button></span>';
   });

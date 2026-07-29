@@ -260,7 +260,7 @@ function wfRender(){
     const st = n.ok===0 ? '<span class="err">연결 안 됨</span>'
                         : '<span class="cnt">'+(n.file_count==null?'?':n.file_count)+'개</span>';
     const ad = (n.adapter && n.adapter!=='native')
-      ? '<span class="cnt" style="background:#e0f2fe;color:#0284c7" title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다">'+esc(n.adapter_label||n.adapter)+'</span>' : '';
+      ? '<span class="cnt" style="background:#e0f2fe;color:#0284c7" title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·Neocities·페이지)을 어댑터가 읽어옵니다">'+esc(n.adapter_label||n.adapter)+'</span>' : '';
     /* 회원 로그인 — 계정으로 폴링하면 승급받은 레벨의 파일까지 피드에 들어온다 */
     const lg = (n.login_user && n.login_ok===1)
       ? '<span class="cnt" style="background:#d1fae5;color:#059669" title="'+esc(n.login_user)+' 계정으로 폴링 중 — 이 창고가 나에게 준 레벨">레벨 '+(n.viewer_level==null?'?':n.viewer_level)+'</span>'

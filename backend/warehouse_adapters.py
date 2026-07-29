@@ -6,7 +6,8 @@
   설치하지 않아도 이웃이 된다(콜드 스타트 우회: 기존 웹이 창고망의 첫 이웃들).
 - 지원 방언: native(indiebizOS /manifest) / autoindex_json(nginx autoindex_format json) /
   autoindex_html(nginx·Apache 디렉토리 목록) / rss(RSS·Atom, HTML 에서 자동발견 포함) /
-  nextcloud(공개 공유 /s/<token> → WebDAV) / page(일반 웹페이지의 파일 링크).
+  nextcloud(공개 공유 /s/<token> → WebDAV) / neocities(공개 프로필 업데이트 이벤트) /
+  page(일반 웹페이지의 파일 링크).
 - 폴러(warehouse_feed)는 어댑터가 뭘 읽었는지 모른다: 모든 방언이 같은 통화
   {title, files:[{name, mtime, bytes, url}], truncated} 로 정규화된다. AI·토큰 0 유지.
 - 감지는 등록·복구 때 한 번(native → URL 모양 → 본문 냄새), 이후엔 poll_status.adapter
@@ -41,6 +42,7 @@ ADAPTER_LABELS = {            # 표면(UI)용 짧은 한글 라벨
     "autoindex_html": "색인",
     "rss": "RSS",
     "nextcloud": "Nextcloud",
+    "neocities": "Neocities",
     "page": "페이지",
 }
 
@@ -53,6 +55,13 @@ def adapter_label(adapter: Optional[str]) -> str:
 def _get(url: str, **kw) -> requests.Response:
     r = requests.get(url, timeout=_TIMEOUT, headers={"User-Agent": _UA}, **kw)
     r.raise_for_status()
+    if r.encoding and "charset" not in (r.headers.get("content-type") or "").lower():
+        # 헤더에 charset 이 없으면 requests 는 text/* 를 ISO-8859-1 로 읽는다 →
+        # <meta charset> 을 먼저 존중한다. 안 그러면 제목·파일명이 모지바케가 되고
+        # (실측: 'â\x96· ESPY.WORLD') euc-kr 한글 페이지는 통째로 깨진다.
+        m = re.search(rb'charset\s*=\s*["\']?([A-Za-z0-9_\-]+)', r.content[:4096], re.I)
+        r.encoding = (m.group(1).decode("ascii", "ignore") if m
+                      else r.apparent_encoding) or r.encoding
     return r
 
 
@@ -438,6 +447,162 @@ def _page_parse(text: str, final_url: str) -> Dict:
     return {"title": _page_title(text), "files": files, "truncated": True}
 
 
+# ── Neocities (공개 프로필 업데이트 이벤트 + 사이트 루트 링크) ───
+
+# Neocities 는 남의 사이트 파일 목록 API 를 열지 않는다(/api/list 는 그 사이트 자신의
+# 키 필요, 폴더 요청은 404 — 실측 2026-07-29). 대신 공개된 두 창이 있다:
+#   ① /api/info?sitename= (무인증) — 커스텀 도메인·최종수정·태그
+#   ② /site/<이름> 프로필의 "updated their site" 이벤트 — 갱신된 파일의 실제 URL + 시각
+# ②가 곧 그 사이트의 변경 피드다(RSS 와 같은 성질: 최근 창 → truncated=True).
+# 여기에 사이트 루트의 링크를 얹어 첫 폴링부터 사이트의 페이지들이 색인되게 한다.
+# mtime 은 이벤트에서만 온다 — 루트 링크에 사이트 last_updated 를 찍으면 사이트가
+# 한 번 갱신될 때마다 전 파일이 changed 로 요동친다.
+
+_NEO_HOST = re.compile(r"^([A-Za-z0-9][A-Za-z0-9\-]*)\.neocities\.org$", re.I)
+_NEO_PROFILE = re.compile(r"^/site/([A-Za-z0-9][A-Za-z0-9\-_]*)/?$", re.I)
+_NEO_BADGE = re.compile(r"neocities\.org/site/([A-Za-z0-9][A-Za-z0-9\-_]*)", re.I)
+_NEO_SELF = re.compile(r"\b([A-Za-z0-9][A-Za-z0-9\-]*)\.neocities\.org", re.I)
+_NEO_ITEM = re.compile(r'<div\s+class="news-item\s+([a-z_]+)"', re.I)
+_NEO_TS = re.compile(r'data-timestamp="(\d+)"')
+_NEO_FILES = re.compile(r'class="files"(.*?)(?:class="actions"|\Z)', re.I | re.S)
+_NEO_HREF = re.compile(r'href\s*=\s*["\']([^"\']+)["\']', re.I)
+_NEO_API = "https://neocities.org/api/info"
+_NEO_SITE = "https://neocities.org/site/"
+_NEO_BADGE_TRIES = 3          # 배지가 여럿인 페이지에서 확인 API 남발 방지
+
+
+def _neo_norm_host(h: str) -> str:
+    h = (h or "").lower().split(":")[0]
+    return h[4:] if h.startswith("www.") else h
+
+
+def _neo_info(name: str) -> Dict:
+    """공개 사이트 정보 — 없는 사이트면 400 이라 예외로 걸러진다."""
+    data = _get(f"{_NEO_API}?sitename={quote(name)}").json()
+    if not isinstance(data, dict) or data.get("result") != "success":
+        raise ValueError(f"Neocities 사이트가 아님: {name}")
+    return data.get("info") or {}
+
+
+def _neo_base(name: str, info: Dict) -> str:
+    """그 사이트의 정식 주소 — 커스텀 도메인을 쓰면 프로필의 파일 링크도 그쪽이다."""
+    domain = (info.get("domain") or "").strip()
+    return f"https://{domain}" if domain else f"https://{name}.neocities.org"
+
+
+def _neo_name(url: str, site_base: str) -> str:
+    """파일 URL → 사이트 루트 기준 경로. 루트·디렉토리는 index.html 로 접는다."""
+    if not url.startswith(site_base):
+        return ""
+    rel = unquote(url[len(site_base):].split("?")[0].split("#")[0]).lstrip("/")
+    if not rel or rel.endswith("/"):
+        rel += "index.html"
+    return rel
+
+
+def _neo_events(name: str, site_base: str) -> List[Dict]:
+    """프로필의 update 이벤트 → 파일들. 페이지가 최신순이라 첫 등장이 최신 mtime."""
+    text = _get(_NEO_SITE + quote(name)).text[:_MAX_BODY]
+    marks = list(_NEO_ITEM.finditer(text))
+    out: List[Dict] = []
+    for i, m in enumerate(marks):
+        if m.group(1).lower() != "update":
+            continue                          # comment·follow 는 파일 변화가 아니다
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+        chunk = text[m.end():end]
+        tm = _NEO_TS.search(chunk)
+        mtime = _iso(datetime.fromtimestamp(int(tm.group(1)))) if tm else ""
+        fb = _NEO_FILES.search(chunk)
+        if not fb:
+            continue
+        for hm in _NEO_HREF.finditer(fb.group(1)):
+            url = urljoin(site_base + "/", html_mod.unescape(hm.group(1)).strip())
+            fname = _neo_name(url, site_base)
+            if fname:
+                out.append({"name": fname, "mtime": mtime, "bytes": None, "url": url})
+    return out
+
+
+def _neocities(name: str) -> Dict:
+    info = _neo_info(name)
+    site_base = _neo_base(name, info)
+    files: Dict[str, Dict] = {}
+    try:
+        for f in _neo_events(name, site_base):
+            files.setdefault(f["name"], f)    # 최신 이벤트 우선
+    except Exception:
+        pass                                  # 프로필이 막혀도 사이트 링크로 창고는 선다
+    title = ""
+    try:
+        r = _get(site_base + "/")
+        text = r.text[:_MAX_BODY]
+        title = _page_title(text)
+        try:
+            for f in _page_parse(text, r.url)["files"]:
+                if f["url"].startswith(site_base):
+                    files.setdefault(f["name"], f)   # 이벤트가 있으면 그 mtime 을 지킨다
+        except Exception:
+            pass                              # 링크 없는 한 장짜리 사이트도 정상
+    except Exception:
+        pass                                  # 사이트가 잠깐 죽어도 이벤트 목록은 산다
+    return {"title": title or f"{name} (Neocities)",
+            "files": list(files.values()), "truncated": True}
+
+
+def _neo_sitename(base: str) -> str:
+    """등록 주소가 Neocities 사이트를 가리키면 사이트 이름 — 아니면 ""."""
+    p = urlparse(base)
+    host = _neo_norm_host(p.netloc)
+    path = p.path or "/"
+    if host == "neocities.org":
+        m = _NEO_PROFILE.match(path)          # 프로필 주소를 그대로 등록한 경우
+        return m.group(1) if m else ""
+    if path.strip("/") == "":                 # 루트만 — 깊은 주소는 사용자 의도를 존중
+        m = _NEO_HOST.match(p.netloc.split(":")[0])
+        if m and m.group(1).lower() != "www":
+            return m.group(1)
+    return ""
+
+
+def _neo_candidates(text: str, host: str) -> List[str]:
+    """커스텀 도메인 페이지에서 사이트 이름 후보 — 문서 순서대로, 중복 제거.
+
+    ① 도메인 첫 라벨(plasticdino.net → plasticdino) — 대개 사이트 이름과 같다.
+    ② 본문의 neocities.org/site/<이름> 배지.
+    ③ 본문의 <이름>.neocities.org 자기참조 — 커스텀 도메인을 써도 서브도메인은 남아
+       있어 사이트가 자기 파일을 그 주소로 부르는 일이 흔하다(실측 plasticdino).
+    ②③ 에는 웹링·친구 배지로 남의 이름이 잔뜩 섞이므로, 채택은 반드시 API 대조로."""
+    out: List[str] = []
+    seen = set()
+
+    def add(c):
+        c = (c or "").strip().lower()
+        if c and c != "www" and c not in seen:
+            seen.add(c)
+            out.append(c)
+
+    add(host.split(".")[0])
+    body = text[:_MAX_BODY]
+    for m in _NEO_BADGE.finditer(body):
+        add(m.group(1))
+    for m in _NEO_SELF.finditer(body):
+        add(m.group(1))
+    return out[:_NEO_BADGE_TRIES]
+
+
+def _neo_from_page(text: str, page_url: str) -> str:
+    """커스텀 도메인 사이트 — 후보를 API 로 대조해 확인(추측만으로 채택하지 않는다)."""
+    host = _neo_norm_host(urlparse(page_url).netloc)
+    for cand in _neo_candidates(text, host):
+        try:
+            info = _neo_info(cand)
+        except Exception:
+            continue
+        if _neo_norm_host(info.get("domain") or "") == host:
+            return cand                       # 그 사이트가 이 도메인을 자기 것이라 선언
+    return ""
+
+
 # ── 감지·디스패치 ────────────────────────────────────────────────
 
 def _run(adapter: str, base: str, cookies: Optional[Dict] = None) -> Dict:
@@ -452,6 +617,8 @@ def _run(adapter: str, base: str, cookies: Optional[Dict] = None) -> Dict:
         return _rss(arg or base)
     if kind == "nextcloud":
         return _nextcloud(base)
+    if kind == "neocities":
+        return _neocities(arg or _neo_sitename(base))
     if kind == "page":
         return _page(base)
     raise ValueError(f"모르는 어댑터: {adapter}")
@@ -478,6 +645,12 @@ def fetch_any(base: str, hint: Optional[str] = None,
     if _NC_TOKEN.search(urlparse(base).path):
         try:
             return _nextcloud(base), "nextcloud"
+        except Exception:
+            pass
+    neo = _neo_sitename(base)
+    if neo:
+        try:
+            return _neocities(neo), f"neocities|{neo}"
         except Exception:
             pass
     r = _get(base)                            # 여기 실패하면 폴러가 error 로 기록
@@ -508,6 +681,13 @@ def fetch_any(base: str, hint: Optional[str] = None,
     if feed:
         try:
             return _rss(feed), f"rss|{feed}"
+        except Exception:
+            pass
+    # 커스텀 도메인 Neocities — 주인이 피드를 선언했으면 그쪽이 먼저다(위에서 잡힌다).
+    neo = _neo_from_page(text, r.url)
+    if neo:
+        try:
+            return _neocities(neo), f"neocities|{neo}"
         except Exception:
             pass
     return _page_parse(text, r.url), "page"

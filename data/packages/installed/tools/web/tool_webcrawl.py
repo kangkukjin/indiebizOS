@@ -151,6 +151,96 @@ def _truncate(text: str, max_length: int) -> tuple[str, int, bool]:
 
 # ─── 1단계: 정적 크롤링 (curl_cffi 우선, requests 폴백) ───
 
+# ─── 인코딩 판별 (일본·중국·옛 한국 사이트 모지바케 방지) ───
+# 함정: Content-Type 헤더에 charset 이 없고 <meta charset> 에만 선언한 사이트가 많다
+#   (예: kakaku.com = Shift_JIS). curl_cffi 는 그럴 때 encoding 을 'utf-8' 로 단정하고
+#   apparent_encoding 속성 자체가 없어서, 옛 가드(None|ISO-8859-1 → apparent_encoding)는
+#   *발동도 안 하고* 발동해도 AttributeError 로 삼켜졌다 → 본문 전체 모지바케(에피소드 881).
+_META_CHARSET_RE = re.compile(
+    rb'<meta[^>]{0,200}?charset\s*=\s*["\']?\s*([a-zA-Z0-9_\-:.]+)', re.I)
+# 서버가 명시해도 CJK 페이지에선 못 믿는 값 — HTTP 기본값이라 "미선언"과 사실상 같다.
+_WEAK_CHARSETS = {"iso-8859-1", "latin-1", "latin1", "ascii", "us-ascii"}
+_BOMS = ((b'\xef\xbb\xbf', 'utf-8-sig'), (b'\xff\xfe', 'utf-16'), (b'\xfe\xff', 'utf-16'))
+
+
+def _try_decode(raw: bytes, enc: str):
+    """strict 디코드 성공 시 문자열, 실패하면 None."""
+    if not enc:
+        return None
+    try:
+        return raw.decode(enc, errors="strict")
+    except (UnicodeDecodeError, LookupError, TypeError):
+        return None
+
+
+def _header_charset(response) -> str:
+    try:
+        headers = getattr(response, "headers", {}) or {}
+        ctype = headers.get("Content-Type") or headers.get("content-type") or ""
+    except Exception:
+        return ""
+    m = re.search(r'charset\s*=\s*["\']?([a-zA-Z0-9_\-:.]+)', str(ctype), re.I)
+    return m.group(1).strip() if m else ""
+
+
+def _decode_body(response) -> str:
+    """응답 바이트를 옳은 인코딩으로 디코드. 브라우저와 같은 우선순위:
+    BOM → HTTP 헤더 charset → <meta charset> → 자동감지 → utf-8(대체문자).
+    """
+    try:
+        raw = response.content or b""
+    except Exception:
+        raw = b""
+    if not raw:
+        return getattr(response, "text", "") or ""
+
+    # 1) BOM 이 있으면 그게 결정적
+    for bom, enc in _BOMS:
+        if raw.startswith(bom):
+            dec = _try_decode(raw, enc)
+            if dec is not None:
+                return dec
+
+    # 2) HTTP 헤더가 *구체적으로* 선언했으면 신뢰
+    declared = _header_charset(response)
+    if declared and declared.lower() not in _WEAK_CHARSETS:
+        dec = _try_decode(raw, declared)
+        if dec is not None:
+            return dec
+
+    # 3) HTML <meta charset> — 헤더에 없을 때 브라우저가 쓰는 선언
+    m = _META_CHARSET_RE.search(raw[:4096])
+    if m:
+        try:
+            meta_enc = m.group(1).decode("ascii", errors="ignore").strip()
+        except Exception:
+            meta_enc = ""
+        dec = _try_decode(raw, meta_enc)
+        if dec is not None:
+            return dec
+
+    # 4) 선언이 없거나 틀렸다 → 자동감지(charset_normalizer 는 requests 의존성이라 사실상 상주)
+    for detector in ("charset_normalizer", "chardet"):
+        try:
+            mod = __import__(detector)
+        except ImportError:
+            continue
+        try:
+            if detector == "charset_normalizer":
+                best = mod.from_bytes(raw).best()
+                guess = best.encoding if best else None
+            else:
+                guess = (mod.detect(raw) or {}).get("encoding")
+        except Exception:
+            guess = None
+        dec = _try_decode(raw, guess)
+        if dec is not None:
+            return dec
+
+    # 5) 최후 — 깨진 바이트는 버리되 본문은 살린다(진단이라도 하게)
+    return raw.decode("utf-8", errors="replace")
+
+
 def _crawl_static(url: str, max_length: int) -> dict:
     """정적 크롤링. curl_cffi(TLS 크롬 위장)가 있으면 그것으로, 없으면 requests."""
     try:
@@ -166,14 +256,10 @@ def _crawl_static(url: str, max_length: int) -> dict:
 
         status = response.status_code
         final_url = str(getattr(response, 'url', '') or url)
-        try:
-            if response.encoding is None or response.encoding == 'ISO-8859-1':
-                response.encoding = response.apparent_encoding
-        except Exception:
-            pass
+        html = _decode_body(response)
 
         # 에러 페이지도 파싱한다 — 봇차단/로그인 벽 진단에 본문이 필요
-        title, text = _parse_html(response.text, url)
+        title, text = _parse_html(html, url)
         reason = _diagnose(status, final_url, url, text)
         if reason is None and _needs_render(url):
             reason = "insufficient_content"  # iframe 전용 호스트 — 정적 텍스트는 본문이 아님

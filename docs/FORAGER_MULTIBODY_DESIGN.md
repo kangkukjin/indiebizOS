@@ -182,7 +182,7 @@ over-design 금지: 웹 saturation 측정기·berrypicking 컨트롤러 짓지 �
 | 층 | 게이트 | 역할 |
 |---|---|---|
 | **map**(지도, 큼·위치특정) | query 필터 (관련 위치만) | 일단 포식할 때 길 안내 — 관련 없으면 0 |
-| **owner**(주인모델, 작음) | *상시 노출*(query 면제) | 냄새(scent) — "이 주제로 내 자료 있을 수 있다"를 늘 상기 → 능동 포식 촉발 |
+| **owner**(주인모델, 작음) | *상시 노출*(query 면제) — ★단 §10-1의 빈도 게이트를 통과한 것만 | 냄새(scent) — "이 주제로 내 자료 있을 수 있다"를 늘 상기 → 능동 포식 촉발 |
 
 **읽기/쓰기**: 회상(읽기)=항상-on(query 자기-게이트). 증류(쓰기)=전 티어 post-response(매 포식서 학습). 둘 다 게이트가 *관련성*이지 tier가 아니다.
 
@@ -192,6 +192,42 @@ over-design 금지: 웹 saturation 측정기·berrypicking 컨트롤러 짓지 �
 - THINK 플러밍 **제거**: `_attach_forage_if_requested`·`_fold_forage`·빌더 fold·consciousness_prompt `recall_forage`/`forage_query`/§5b 전부 삭제(단순화).
 
 **검증**: 포식 질의→map(mypaper)+owner / 주제 안 밝힌 질의("이 데이터 분석해줘")→map 비고 owner(냄새)만 짧은 note(능동 포식 단서) / 빈 owner면 "" / 전 모듈 임포트·build --check 통과.
+
+---
+
+## §10-1 owner 냄새의 *빈도 게이트* — 1회 추론은 임시(provisional) (2026-07-29)
+
+**§10의 미결 구멍**: "owner는 상시 노출"까지는 옳았는데, *무엇이 owner가 되는가*에 문턱이 없었다. 증류 LLM이 **단 한 번의 포식**에서 추론한 일반화가 그대로 owner로 박히고, owner는 query 면제라 그 순간부터 **모든 프롬프트에 영구 주입**된다.
+
+**실측(에피소드 881 분석)**: `owner_model` 66건 **전부 obs=1** — 재확인된 항목이 하나도 없었다. 그 66건이 상시 냄새로 돌고 있었고(주입분 ~1,477자/프롬프트), 내용에는 명백한 오염이 섞여 있었다.
+
+| 실제 오염 사례 | 무엇이 잘못됐나 |
+|---|---|
+| `identity: DeepSeek (중국 AI 스타트업…)` | 사용자가 *물어본 대상*이 주인의 정체가 됨 |
+| `affiliation: DeepSeek (중국, 본사 선전? 불명)` | 질문 대상이 주인의 **소속**이 됨 |
+| `habit: 원엔 환율을 실시간 추적하고…` | 한 번 물어본 것이 **습관**이 됨 |
+| `domain: 한국 인터넷 공유 문화의 주 무대는…` | owner가 아니라 map.convention |
+
+프롬프트 예산 문제이기도 하지만 본질은 **정확성**이다 — 검증된 적 없는 추론이 "주인에 관한 사실"의 지위로 매 턴 제시된다.
+
+**해결 — territory와 대칭인 빈도 결정화**(`_TERRITORY_PROMOTE_AT`의 owner판):
+
+| 상태 | 조건 | 노출 |
+|---|---|---|
+| 임시(`scent=0`) | 관측 1회 | map처럼 **query 필터** — 지명될 때만 |
+| 결정화(`scent=1`) | **서로 다른 포식** 2회 이상 재확인 | 상시 냄새(query 면제), `_OWNER_SCENT_CAP=8` 상한 |
+
+**설계 요점**:
+- **잃는 정보 0** — 임시 항목도 지워지지 않는다. 질의가 지명하면 그대로 회상된다. 빼는 건 *상시* 비용뿐.
+- **자기-바운딩** — 진짜 주인 사실은 여러 포식에서 다시 나타나 2턴 안에 결정화된다. 한 번뿐인 추론만 임시로 남는다.
+- **facet 특례 없음** — identity/habit만 막고 lexicon은 통과시키는 분기를 두지 않았다(§9 "매체는 가짜 축"과 같은 이유). lexicon("Amari=甘利俊一")은 애초에 query 필터로 잘 동작한다.
+- **같은 포식 반복은 안 셈** — 관측 수는 provenance의 *서로 다른 query* 기준(`_distinct_observations`).
+- **마이그레이션은 삭제가 아니라 강등** — 기존 행의 provenance를 읽어 실제 obs≥2인 것만 결정화(결과: 66건 전부 임시로 강등).
+- 모델에게 `provisional="1"` 속성으로 노출 — "미확인이니 주인에 관한 사실로 단정하지 말라".
+
+**구현**: `forage_memory.py`(`owner_model.scent` 컬럼+마이그레이션, `_distinct_observations`, `note_owner` 승격, `recall` 게이팅, `recall_xml` provisional 표기, `merge_entries` 불변식 유지, `stats` owner_scent/owner_provisional) · `cognitive_distill.py`(로그에 `[임시]`/`⇧scent` 표기).
+
+**검증**: 마이그레이션(66→결정화 0·임시 66) / 무관 질의→owner 0건(이전 12건 상시) / 관련 질의→해당 항목 회상(정보 보존) / 서로 다른 query 2회→`promoted_scent` 승격·상시 노출 전환 / 같은 query 2회→미승격 / 라이브 `[self:forage]{op:recall}` 종단 / py_compile·build --check·이식성 게이트·ibl_health_check(GREEN 62/RED 0).
 
 ---
 

@@ -465,7 +465,10 @@ AI 답변: {ai_response[:1400]}
                     confidence=0.65, provenance=dict(prov))
                 if r.get("success"):
                     noted += 1
-                    print(f"[포식기억] {r['action']} owner[{facet}]: \"{value[:48]}\"")
+                    # 첫 관측은 임시(질의 필터) — 다른 포식에서 재확인돼야 상시 냄새로 결정화된다.
+                    tag = (" ⇧scent(빈도 결정화)" if r.get("promoted_scent")
+                           else ("" if r.get("action") == "reinforced" else " [임시]"))
+                    print(f"[포식기억] {r['action']} owner[{facet}]{tag}: \"{value[:48]}\"")
 
             # step 5: surface — 기존 라벨 의심 표식(이질 내용 발견).
             #   위반은 폴더 라벨(map)일 수도, *주인모델*(owner)일 수도 → 둘 다 독립 표식.

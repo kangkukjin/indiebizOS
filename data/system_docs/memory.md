@@ -119,13 +119,14 @@ see_also: [architecture.md, ibl.md]
 - **저장소** (`backend/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
 - **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`fs_query`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
+- **★owner 빈도 게이트**(2026-07-29): 주인모델은 상시 노출이라 **1회 추론이 영구 주입**되는 구멍이 있었다(실측: 66건 전부 obs=1, 질문 *대상*이 주인의 "소속"이 되는 오염). → 첫 관측은 **임시**(`scent=0`, map처럼 query 필터), **서로 다른 포식에서 재확인**되면 상시 냄새로 결정화(`_OWNER_SCENT_PROMOTE_AT=2`, 상한 8). territory 승격과 같은 '빈도가 결정화한다' 모티프. 임시 항목도 지워지지 않아 **잃는 정보 0**, 모델에는 `provisional="1"`로 노출. 상세=`docs/FORAGER_MULTIBODY_DESIGN.md` §10-1.
 - **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).
 - **수동 액세서**(augmentation): `[self:forage]{op:recall|note|forget}` — 사람이 직접 조회·정정·재오픈.
 - **다중 몸**(`forage_map.body`=포식 *공간*): 디스크(`mac`)·코드(`code:<repo>`)·웹(`web`) 등 같은 자아가 여러 공간을 포식하면 body가 갈린다(하드웨어 자아=게이트 / 포식 공간=body 키 분리). `owner_model`은 1명·전 공간 공유 → 한 공간서 강화한 주인모델이 다른 공간 포식까지 풍부화(교차-몸 전이). **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
 - **음성-단언 측정** `[self:residual]{op:sample|estimate}`: 포식 출력의 "거기 없음 vs 덜 봤음"을 측정으로 가른다(sample=미관측 균일 무작위 표본 / estimate=Wilson 이항추정). 판단은 AI 몫, 도구는 측정·중립 해석만(열거 가능한 공간 전용 — 웹은 무한·비열거라 제외).
 - **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FORAGER_MULTIBODY_DESIGN.md`(다중 몸), `docs/FILE_FORAGING_RESEARCH.md`(연구).
 - **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
-- **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). 회상은 실행기억처럼 항상-on, owner 모델은 query 면제(상시 노출=냄새). 증류(쓰기)는 전 티어 post-response 유지.
+- **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). 회상은 실행기억처럼 항상-on, owner 모델은 query 면제(상시 노출=냄새) — 단 2026-07-29부터 *결정화된*(재확인 2회) owner만 상시이고 1회 관측은 임시(query 필터). 증류(쓰기)는 전 티어 post-response 유지.
 
 ---
 

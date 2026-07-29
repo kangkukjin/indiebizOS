@@ -179,12 +179,16 @@ def _normalize_symbol(symbol: str) -> str:
     return s
 
 
-def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d") -> list:
+def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
+                 meta_sink: dict = None) -> list:
     """Yahoo Finance chart API 직접 호출(requests) → 일별 바 리스트.
 
     yfinance 라이브러리는 Yahoo 봇차단에 막히고(최신판은 curl_cffi 네이티브 의존),
     이 v8/finance/chart 엔드포인트는 브라우저 UA 헤더면 열려 있다 — 폰(Chaquopy)·데스크탑 공통.
-    반환: [{date, open, high, low, close, volume}] (close 결측 바 제외)."""
+    반환: [{date, open, high, low, close, volume}] (close 결측 바 제외).
+
+    meta_sink(dict)를 주면 응답의 meta 블록을 담아준다 — currency/instrumentType 등
+    *권위 있는* 메타데이터가 여기 있다(심볼 접미사 추측 금지)."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     r = requests.get(url, params={"range": period, "interval": interval},
@@ -193,6 +197,8 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d") -> list:
     if not res:
         return []
     res0 = res[0]
+    if meta_sink is not None and isinstance(res0.get("meta"), dict):
+        meta_sink.update(res0["meta"])
     ts = res0.get("timestamp") or []
     q = ((res0.get("indicators") or {}).get("quote") or [{}])[0]
     o, h, l, c, v = (q.get(k) or [] for k in ("open", "high", "low", "close", "volume"))
@@ -210,6 +216,41 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d") -> list:
             "volume": int(v[i]) if i < len(v) and v[i] is not None else 0,
         })
     return bars
+
+
+# 거래소 접미사 → 표시통화 (meta.currency 를 못 얻었을 때만 쓰는 폴백).
+_SUFFIX_CCY = {
+    ".KS": "KRW", ".KQ": "KRW", ".T": "JPY", ".HK": "HKD", ".SS": "CNY",
+    ".SZ": "CNY", ".L": "GBP", ".DE": "EUR", ".PA": "EUR", ".AS": "EUR",
+    ".MI": "EUR", ".SW": "CHF", ".TO": "CAD", ".AX": "AUD", ".NS": "INR",
+    ".BO": "INR", ".TW": "TWD", ".SI": "SGD", ".SA": "BRL",
+}
+
+
+def _resolve_currency(symbol: str, meta: dict = None) -> str:
+    """이 시세의 표시통화. Yahoo meta.currency 가 **권위** — 있으면 그대로 쓴다.
+
+    옛 코드는 `".KS/.KQ 면 KRW 아니면 USD"` 이진 추측이라 환율쌍(JPYKRW=X→KRW)과
+    비미국 거래소(7203.T→JPY)를 전부 USD 로 잘못 라벨했다(에피소드 881에서 발견).
+    meta 를 못 얻은 경우에만 접미사·환율쌍 규칙으로 폴백한다.
+    """
+    ccy = (meta or {}).get("currency")
+    if isinstance(ccy, str) and ccy.strip():
+        return ccy.strip().upper()
+
+    s = (symbol or "").upper()
+    # 환율쌍: "JPYKRW=X"=원/엔 → 표시통화는 뒤(quote) 통화. "KRW=X"=USD/KRW → KRW.
+    if s.endswith("=X"):
+        base = s[:-2]
+        if len(base) == 6:
+            return base[3:]
+        if len(base) == 3:
+            return base
+        return "USD"
+    for suf, c in _SUFFIX_CCY.items():
+        if s.endswith(suf):
+            return c
+    return "USD"
 
 
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
@@ -234,7 +275,8 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
 
     try:
         # yfinance 라이브러리(봇차단) 대신 Yahoo chart API 직접(requests) — 폰·데스크탑 공통.
-        all_history = _yahoo_chart(symbol, period, interval)
+        chart_meta: dict = {}
+        all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta)
         if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
@@ -250,7 +292,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             change_percent = 0
 
         direction = "▲" if change >= 0 else "▼"
-        currency = "KRW" if symbol.endswith((".KS", ".KQ")) else "USD"
+        currency = _resolve_currency(symbol, chart_meta)
         total_days = len(all_history)
 
         base_data = {
@@ -317,11 +359,18 @@ def get_stock_info(symbol: str) -> dict:
         year_high = hist["High"].max()
         year_low = hist["Low"].min()
 
+        # fast_info.currency 가 권위(yfinance 가 Yahoo meta 를 그대로 노출) — 없으면 폴백.
+        fast_ccy = None
+        try:
+            fast_ccy = getattr(fast, "currency", None)
+        except Exception:
+            fast_ccy = None
+
         return {
             "success": True,
             "data": {
                 "symbol": symbol.upper(),
-                "currency": "KRW" if symbol.endswith((".KS", ".KQ")) else "USD",
+                "currency": _resolve_currency(symbol, {"currency": fast_ccy} if fast_ccy else None),
                 "current_price": round(latest["Close"], 2),
                 "market_cap": getattr(fast, 'market_cap', None),
                 "market_cap_formatted": _format_number(getattr(fast, 'market_cap', None)),

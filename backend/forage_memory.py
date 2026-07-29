@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS owner_model (
     provenance   TEXT,
     last_seen    TEXT,
     surface_flag INTEGER NOT NULL DEFAULT 0,
+    scent        INTEGER NOT NULL DEFAULT 0,  -- 상시-on 냄새로 결정화됐나(빈도 게이트). 0=임시(질의 필터)
     UNIQUE(facet, value)
 );
 CREATE TABLE IF NOT EXISTS forage_meta (
@@ -73,6 +74,15 @@ _TERRITORY_CLAIM_MAX = 64  # 영토 한 줄 claim 길이 상한(거친 윤곽만
 # 자동승격: identity 가 reinforced_by 로 이만큼 재확인되면(=여러 번 되돌아온 가지) territory 로 결정화.
 # '빈도가 결정화한다'(자율주행→수동→앱)와 같은 모티프 — 자기-바운딩(대부분 가지는 1회뿐). cap 이 2차 백스톱.
 _TERRITORY_PROMOTE_AT = 2
+
+# owner(주인모델)도 같은 빈도 게이트를 쓴다 — territory 와 대칭.
+# 왜: owner 는 query 면제 *상시* 노출(냄새)이라, 단 1회 포식에서 LLM 이 추론한 일반화가
+# 그대로 모든 프롬프트에 영구 주입된다. 한 번 물어본 주제가 "습관"이 되고, 질문 *대상*이
+# 주인의 "소속"이 되는 오염이 실제로 쌓였다(에피소드 881 진단 — 전 66건이 obs=1이었음).
+# → 서로 다른 포식에서 재확인된 것만 냄새로 결정화. 임시(scent=0)도 *지워지지 않고*
+#   map 처럼 query 필터로 회상된다(잃는 정보 0, 상시 비용만 뺀다).
+_OWNER_SCENT_PROMOTE_AT = 2
+_OWNER_SCENT_CAP = 8  # 결정화된 냄새의 하드 상한(프롬프트 무한증식 차단, _TERRITORY_CAP 대응)
 
 
 def _territory_eligible(kind: str, locus: str) -> bool:
@@ -104,6 +114,18 @@ def _connect() -> sqlite3.Connection:
     if "territory" not in cols:
         conn.execute("ALTER TABLE forage_map ADD COLUMN territory INTEGER NOT NULL DEFAULT 0")
         conn.commit()
+    # 마이그레이션: owner_model.scent — 기존 행은 *지우지 않고* provenance 의 실제 관측 수로 판정.
+    #   재확인된 적 없는(obs=1) 항목은 임시로 강등되어 질의 필터로만 회상된다.
+    ocols = {r["name"] for r in conn.execute("PRAGMA table_info(owner_model)")}
+    if "scent" not in ocols:
+        conn.execute("ALTER TABLE owner_model ADD COLUMN scent INTEGER NOT NULL DEFAULT 0")
+        promoted = 0
+        for r in conn.execute("SELECT id, provenance FROM owner_model").fetchall():
+            if _distinct_observations(r["provenance"]) >= _OWNER_SCENT_PROMOTE_AT:
+                conn.execute("UPDATE owner_model SET scent=1 WHERE id=?", (r["id"],))
+                promoted += 1
+        conn.commit()
+        print(f"[포식기억] owner_model.scent 마이그레이션: 결정화 {promoted}건, 나머지는 임시(질의 필터)")
     return conn
 
 
@@ -123,6 +145,29 @@ def _clamp_conf(v: Any, default: float) -> float:
     except (TypeError, ValueError):
         return default
     return max(0.0, min(1.0, f))
+
+
+def _distinct_observations(provenance: Any) -> int:
+    """provenance 에 기록된 *서로 다른* 관측 수(query 기준).
+
+    같은 포식에서 같은 값을 두 번 적어도 1회로 센다 — '빈도'는 서로 다른 포식이어야 의미가 있다.
+    """
+    try:
+        p = json.loads(provenance) if isinstance(provenance, str) else (provenance or {})
+    except (ValueError, TypeError):
+        p = {}
+    if not isinstance(p, dict):
+        return 1
+    seen = set()
+    q0 = str(p.get("query") or "").strip()
+    if q0:
+        seen.add(q0)
+    for stamp in (p.get("reinforced_by") or []):
+        if isinstance(stamp, dict):
+            q = str(stamp.get("query") or "").strip()
+            if q:
+                seen.add(q)
+    return max(1, len(seen))
 
 
 def _merge_provenance(old_json: Optional[str], new_prov: Optional[Dict[str, Any]]) -> str:
@@ -226,29 +271,37 @@ def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
     conf = _clamp_conf(confidence, 0.6)
     now = _now()
     conn = _connect()
+    promoted = False
     try:
         row = conn.execute(
-            "SELECT id, confidence, provenance FROM owner_model WHERE facet=? AND value=?",
+            "SELECT id, confidence, provenance, scent FROM owner_model WHERE facet=? AND value=?",
             (facet, value)).fetchone()
         if row:
             merged = _merge_provenance(row["provenance"], prov)
             new_conf = max(conf, float(row["confidence"] or 0))
+            # 빈도 게이트: 서로 다른 포식에서 재확인됐으면 상시-on 냄새로 결정화(territory 와 대칭).
+            scent = 1 if row["scent"] else 0
+            if not scent and _distinct_observations(merged) >= _OWNER_SCENT_PROMOTE_AT:
+                scent = 1
+                promoted = True
             conn.execute(
                 "UPDATE owner_model SET prior_class=?, confidence=?, provenance=?, "
-                "last_seen=?, surface_flag=? WHERE id=?",
-                (prior_class, new_conf, merged, now, 1 if surface_flag else 0, row["id"]))
+                "last_seen=?, surface_flag=?, scent=? WHERE id=?",
+                (prior_class, new_conf, merged, now, 1 if surface_flag else 0, scent, row["id"]))
             entry_id = row["id"]
             action = "reinforced"
         else:
+            # 첫 관측은 항상 임시(scent=0) — 1회 추론이 모든 프롬프트에 영구 주입되지 않게.
             cur = conn.execute(
                 "INSERT INTO owner_model (facet, value, prior_class, confidence, provenance, "
-                "last_seen, surface_flag) VALUES (?,?,?,?,?,?,?)",
+                "last_seen, surface_flag, scent) VALUES (?,?,?,?,?,?,?,0)",
                 (facet, value, prior_class, conf,
                  json.dumps(prov, ensure_ascii=False), now, 1 if surface_flag else 0))
             entry_id = cur.lastrowid
             action = "noted"
         conn.commit()
-        return {"success": True, "action": action, "id": entry_id, "table": "owner_model"}
+        return {"success": True, "action": action, "id": entry_id, "table": "owner_model",
+                "promoted_scent": promoted}
     finally:
         conn.close()
 
@@ -339,11 +392,26 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         map_items.append(d)
         if len(map_items) >= limit:
             break
+    # owner — 냄새 모드(filter_owner=False)에서도 *결정화된 것만* 상시 노출.
+    #   임시(scent=0, 1회 관측)는 map 처럼 query 가 지명할 때만 나온다 → 정보는 남고 상시 비용만 사라짐.
     owner_items: List[Dict[str, Any]] = []
+    scent_shown = 0
     for r in owner_rows:
-        if filter_owner and terms and not (_match(r["value"], terms) or _match(r["facet"], terms)):
-            continue
-        owner_items.append(dict(r))
+        matched = (not terms) or _match(r["value"], terms) or _match(r["facet"], terms)
+        if filter_owner:
+            if not matched:
+                continue
+        else:
+            if not r["scent"]:
+                if not (terms and matched):
+                    continue          # 임시 항목 — 질의가 지명하지 않으면 침묵
+            elif scent_shown >= _OWNER_SCENT_CAP:
+                continue              # 결정화 냄새 상한 초과
+            else:
+                scent_shown += 1
+        d = dict(r)
+        d["provisional"] = 0 if r["scent"] else 1
+        owner_items.append(d)
         if len(owner_items) >= limit:
             break
     return {"success": True, "map": map_items, "owner": owner_items,
@@ -424,11 +492,14 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
             lines.append(f'    <locus path="{loc}" {attrs}>{m["claim"]}</locus>')
         lines.append('  </map>')
     if res["owner"]:
-        lines.append('  <owner>')
+        onote = ('provisional="1" 은 *단 한 번의 포식*에서 추론된 미확인 항목입니다 — 참고만 하고 '
+                 '주인에 관한 사실로 단정하지 마세요(다른 포식에서 재확인되면 결정화됩니다).')
+        lines.append(f'  <owner note="{onote}">')
         for o in res["owner"]:
             sf = ' surface="1"' if o.get("surface_flag") else ''
+            pv = ' provisional="1"' if o.get("provisional") else ''
             lines.append(f'    <facet name="{o["facet"]}" prior="{o["prior_class"]}" '
-                         f'conf="{o["confidence"]:.2f}"{sf}>{o["value"]}</facet>')
+                         f'conf="{o["confidence"]:.2f}"{sf}{pv}>{o["value"]}</facet>')
         lines.append('  </owner>')
     lines.append('</forage_memory>')
     return "\n".join(lines)
@@ -469,8 +540,11 @@ def stats() -> Dict[str, Any]:
     try:
         m = conn.execute("SELECT COUNT(*) FROM forage_map").fetchone()[0]
         o = conn.execute("SELECT COUNT(*) FROM owner_model").fetchone()[0]
+        # 결정화된 냄새(상시-on)와 임시(질의 필터)의 비 — 주인모델이 실제로 굳고 있나 관측용
+        os_ = conn.execute("SELECT COUNT(*) FROM owner_model WHERE scent=1").fetchone()[0]
         bodies = [r[0] for r in conn.execute("SELECT DISTINCT body FROM forage_map").fetchall()]
-        return {"success": True, "forage_map": m, "owner_model": o, "bodies": bodies}
+        return {"success": True, "forage_map": m, "owner_model": o,
+                "owner_scent": os_, "owner_provisional": o - os_, "bodies": bodies}
     finally:
         conn.close()
 
@@ -575,6 +649,10 @@ def merge_entries(*, table: str, keep_id: int, drop_ids: List[int],
         params = [fields[c] for c in cols] + [prov, _now(), int(keep_id)]
         conn.execute(f"UPDATE {table} SET {sets} WHERE id=?", params)
         conn.execute(f"DELETE FROM {table} WHERE id IN ({','.join('?'*len(drops))})", drops)
+        # 병합으로 provenance 가 합쳐지면 관측 수도 합쳐진다 — 서로 다른 포식에서 같은 말을 달리
+        # 적었던 것이므로 냄새 결정화 조건을 다시 본다(scent ⟺ 관측 2회 이상 불변식 유지).
+        if table == "owner_model" and _distinct_observations(prov) >= _OWNER_SCENT_PROMOTE_AT:
+            conn.execute("UPDATE owner_model SET scent=1 WHERE id=?", (int(keep_id),))
         conn.commit()
         return {"success": True, "kept": int(keep_id), "dropped": len(drops)}
     finally:

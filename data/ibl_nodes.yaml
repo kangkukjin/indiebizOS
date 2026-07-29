@@ -5674,10 +5674,11 @@ nodes:
         - 통합
         - 목록합치기
       structure:
-        returns: effect
+        returns: scalar
+        exempt: 경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)
         runs_on: anywhere
         scope: workspace
-        description: 원본 콘텐츠를 blocks(문서 구조 배열)로 정리하는 편집자 원자 — 획득→구조화→렌더 파이프라인의 중간. >> [table:document]로 이어 렌더.
+        description: 원본 콘텐츠를 문서 IR 한 건(title·blocks 필드를 가진 단일 응답)으로 정리하는 편집자 원자 — 획득→구조화→렌더 파이프라인의 중간. >> [table:document]로 이어 렌더.
         target_description: content(필수, 구조화할 원본 텍스트 — >> 파이프 시 이전 결과를 content로 받아 생략 가능). instruction(선택, 정리 방향 예 "3섹션 요약 보고서로"·"비교는 표로"). 반환에 title·blocks(문서 IR) 포함 — 그대로 table:document로 >> 파이프하면 렌더.
         group: media_produce
         router: handler

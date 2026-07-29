@@ -570,8 +570,23 @@ def _biz_list(bm, ti: dict) -> str:
     level = _int_or(lv) if lv not in (None, "", "all", "전체") else None
     search = (ti.get("search") or "").strip() or None
     businesses = bm.get_businesses(level=level, search=search)
-    # 단일 통화 items = native 비즈니스 dict(name/id/level/description). card_list·셀렉터가 직독.
-    return _ok(items(businesses))
+    # 아이템 수·사진 수를 카드 줄에 — 아이템 편집 창구가 '아이템' 탭 하나뿐이라, 여기선
+    # "이 비즈니스에 뭐가 얼마나 들었나"만 보여 준다(카탈로그 진열 상태의 한눈 확인).
+    out = []
+    for b in businesses:
+        b = dict(b)
+        try:
+            its = bm.get_business_items(b["id"])
+        except Exception:
+            its = []
+        photos = sum(len(_item_paths(i)) for i in its)
+        b["item_count"] = len(its)
+        b["photo_count"] = photos
+        b["item_label"] = (f"아이템 {len(its)}개" + (f" · 사진 {photos}장" if photos else "")
+                           if its else "아이템 없음")
+        out.append(b)
+    # 단일 통화 items = native 비즈니스 dict(name/id/level/description) + 표시용 파생 필드.
+    return _ok(items(out))
 
 
 def _biz_detail(bm, ti: dict) -> str:
@@ -608,18 +623,54 @@ def _biz_delete(bm, ti: dict) -> str:
     bid = _int_or(ti.get("id") or ti.get("business_id"))
     if not bid:
         return _err("id(business_id)가 필요합니다.")
+    for it in bm.get_business_items(bid):    # 아이템이 함께 사라지므로 사진 사본도 함께
+        _drop_copies(it)
     bm.delete_business(bid)
     return _ok({"deleted": bid}, "비즈니스를 삭제했습니다.")
 
 
+def _item_enrich(it: dict, biz_name: str) -> dict:
+    """아이템 dict 에 표시용 파생 필드 부착 — 원본 열은 그대로 두고 더하기만 한다.
+
+    business_name = 어느 비즈니스 것인지(전체 목록에서 필요) / image = 첫 사진의 서빙 URL
+    (card_list card.image 가 문다) / photo_count = 사진 장수(카드 줄에 '📷 3').
+    """
+    from urllib.parse import quote
+    paths = _item_paths(it)
+    out = dict(it)
+    out["business_name"] = biz_name
+    out["photo_count"] = len(paths)
+    out["photo_label"] = f"📷 {len(paths)}" if paths else ""
+    # 백엔드 상대경로 — 데스크탑(mediaSrc)·원격(같은 origin) 양쪽이 그대로 문다.
+    # 원본이 아니라 썸네일 관문으로 보낸다(목록에 원본 수십 장을 끌어오지 않게 — 캐시도 그쪽에 있다).
+    out["image"] = f"/photo/thumbnail?path={quote(paths[0])}&size=240" if paths else ""
+    return out
+
+
 def _item_list(bm, ti: dict) -> str:
-    """한 비즈니스의 아이템(상품/항목) 목록. business_id 미지정 시 빈 목록(계기 셀렉터 미선택 대비)."""
+    """아이템(상품/항목) 목록. business_id 있으면 그 비즈니스만, 없으면 **전체 비즈니스**.
+
+    전체가 기본인 이유: 아이템 관리 계기는 "내 카탈로그 전체"가 첫 화면이어야 한다
+    (셀렉터를 고르기 전엔 빈 화면이던 옛 동작은 '아무것도 없다'로 오독된다).
+    search 는 제목·설명 부분일치.
+    """
     bid = _int_or(ti.get("business_id"))
-    if not bid:
-        return _ok({"items": [], "business_id": None})
-    items = bm.get_business_items(bid)
-    # 단일 통화 items = native 아이템 dict(title/details/id). editable_list 직독.
-    return _ok({"items": items, "business_id": bid})
+    q = (ti.get("search") or ti.get("q") or "").strip().lower()
+    if bid:
+        biz = bm.get_business(bid)
+        pairs = [(bid, (biz or {}).get("name") or "")]
+    else:
+        pairs = [(b["id"], b.get("name") or "") for b in bm.get_businesses()]
+    items = []
+    for b_id, b_name in pairs:
+        for it in bm.get_business_items(b_id):
+            if q and q not in f"{it.get('title') or ''} {it.get('details') or ''}".lower():
+                continue
+            items.append(_item_enrich(it, b_name))
+    # 단일 통화 items = 아이템 dict(title/details/id/attachment_path) + 표시용 파생 필드.
+    return _ok({"items": items, "business_id": bid,
+                "message": "아이템이 없습니다. 위에서 비즈니스를 고르고 제목을 적어 ＋추가 하세요."
+                           if not items else ""})
 
 
 def _item_detail(bm, ti: dict) -> str:
@@ -643,18 +694,34 @@ def _item_save(bm, ti: dict) -> str:
         it = bm.update_business_item(iid, **fields)
         return _ok({"item": it}, "아이템을 저장했습니다.")
     bid = _int_or(ti.get("business_id"))
-    title = ti.get("title")
-    if not bid or not title:
-        return _err("business_id·title이 필요합니다.")
+    title = (ti.get("title") or "").strip()
+    if not bid:
+        return _err("어느 비즈니스의 아이템인지 골라 주세요(business_id).")
+    if not title:
+        return _err("아이템 제목을 적어 주세요(title).")
     it = bm.create_business_item(business_id=bid, title=title,
                                  details=ti.get("details"), attachment_path=ti.get("attachment_path"))
     return _ok({"item": it}, "아이템을 추가했습니다.")
+
+
+def _drop_copies(it) -> None:
+    """아이템에 딸린 사진 사본(business_images 안의 것만) 삭제 — 아이템이 사라지면
+    사본도 따라 사라진다(원본은 사용자 것이라 손대지 않는다). 실패는 무시."""
+    from pathlib import Path as _P
+    for p in _item_paths(it):
+        try:
+            fp = _P(p)
+            if fp.exists() and "business_images" in str(fp):
+                fp.unlink()
+        except Exception:
+            pass
 
 
 def _item_delete(bm, ti: dict) -> str:
     iid = _int_or(ti.get("id") or ti.get("item_id"))
     if not iid:
         return _err("item_id가 필요합니다.")
+    _drop_copies(bm.get_business_item(iid))
     bm.delete_business_item(iid)
     return _ok({"deleted": iid}, "아이템을 삭제했습니다.")
 

@@ -173,7 +173,7 @@ indiebizOS/
 │   ├── cdn_provision.py # Cloudflare 발급(터널·Worker·R2 캐시) — 새 몸=새 주소
 │   ├── face_provision.py # 얼굴 개폐·origin_host 권위
 │   ├── warehouse_feed.py # 이웃 창고 폴러(30분 diff, seed/new/changed) + 자격 로그인
-│   ├── warehouse_adapters.py # 방언 어댑터(native/autoindex/RSS·Atom/Nextcloud/page)
+│   ├── warehouse_adapters.py # 방언 어댑터(native/autoindex/RSS·Atom/Nextcloud/Neocities/page)
 │   ├── warehouse_items.py # 비즈니스 아이템 → 창고 진열(파생 존)
 │   ├── warehouse_likes.py # 좋아요·창고 점수(0~3)
 │   ├── r2_client.py     # R2 캐시 클라이언트

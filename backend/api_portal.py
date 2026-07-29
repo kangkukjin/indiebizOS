@@ -166,19 +166,28 @@ def _node_npub() -> str:
     return _NODE_NPUB
 
 
-def _contact_block() -> str:
-    """비즈니스문서 꼬리의 연락처 절. npub=자동(신원 의무), 이메일=warehouse.json 에
-    사용자가 선택적으로 넣은 것만(email 키 — 미추적 파일이라 PII 가 repo 밖에 머문다)."""
-    lines = []
+def _contact_pairs() -> list:
+    """창고의 연락처 (라벨, 값) 목록 — 비즈니스문서 꼬리와 카탈로그 꼬리의 단일 소스.
+
+    npub=자동(신원 의무), 이메일=warehouse.json 에 사용자가 선택적으로 넣은 것만
+    (email 키 — 미추적 파일이라 PII 가 repo 밖에 머문다)."""
+    pairs = []
     npub = _node_npub()
     if npub:
-        lines.append(f"- Nostr (DM): {npub}")
+        pairs.append(("Nostr (DM)", npub))
     try:
         email = (json.loads(_WAREHOUSE_CONFIG.read_text(encoding="utf-8")).get("email") or "").strip()
     except Exception:
         email = ""
     if email:
-        lines.append(f"- 이메일: {email}")
+        pairs.append(("이메일", email))
+    return pairs
+
+
+def _contact_block() -> str:
+    """비즈니스문서 꼬리의 연락처 절(마크다운)."""
+    pairs = _contact_pairs()
+    lines = [f"- {k}: {v}" for k, v in pairs]
     return ("\n## 연락처\n\n" + "\n".join(lines) + "\n") if lines else ""
 # 창고 전체(레벨 0..요청자, 하위폴더 재귀) 목록 상한 — 응답 폭주 방지용 러너웨이 가드.
 # ★옛 값 500 은 "한 디렉토리 목록" 상한이었다(디렉토리 단위 브라우징 시절). 뷰가 평면화되면서
@@ -223,13 +232,15 @@ def _ensure_warehouses() -> None:
                     f.write_text(body, encoding="utf-8")
         except Exception:
             pass
-    # 아이템 물질화 — 가레지세일 진열: 아이템마다 문서(+사진)를 <레벨>/<비즈니스 이름>/ 에.
+    # 아이템 물질화 — 가레지세일 진열: 아이템마다 문서(+사진)를 <레벨>/<비즈니스 이름>/ 에,
+    # 그 위에 사람이 훑는 카탈로그 한 장(<비즈니스 이름> 카탈로그.html)을 레벨 루트에.
     # 파생 구역 경계·청소는 warehouse_items 사이드카가 책임진다(사용자 파일 불가침).
     if bm is not None:
         try:
             import warehouse_items
             warehouse_items.sync(bm, {lv: _WAREHOUSE_ROOT / name
-                                      for lv, name in _WAREHOUSE_LEVELS.items()})
+                                      for lv, name in _WAREHOUSE_LEVELS.items()},
+                                 house=_warehouse_title(), contacts=_contact_pairs())
         except Exception:
             pass
 

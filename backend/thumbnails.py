@@ -33,41 +33,66 @@ def classify(path: str) -> str | None:
     return None
 
 
-def generate_image_thumbnail(src: str, dst: str, size: int = 512) -> bool:
-    """이미지 → JPEG 썸네일. EXIF 회전 적용. 성공 시 True."""
+def _scaled_rgb(src: str, size: int):
+    """이미지 열기 → EXIF 회전 적용 → RGB 변환 → size 안에 맞춤. 실패는 None."""
     from PIL import Image
 
+    img = Image.open(src)
+    # EXIF 회전 정보 적용
     try:
-        with Image.open(src) as img:
-            # EXIF 회전 정보 적용
-            try:
-                from PIL import ExifTags
-                orientation = None
-                for k in ExifTags.TAGS:
-                    if ExifTags.TAGS[k] == "Orientation":
-                        orientation = k
-                        break
-                exif = img._getexif() if hasattr(img, "_getexif") else None
-                if exif and orientation is not None:
-                    ov = exif.get(orientation)
-                    if ov == 3:
-                        img = img.rotate(180, expand=True)
-                    elif ov == 6:
-                        img = img.rotate(270, expand=True)
-                    elif ov == 8:
-                        img = img.rotate(90, expand=True)
-            except (AttributeError, KeyError, IndexError):
-                pass
+        from PIL import ExifTags
+        orientation = None
+        for k in ExifTags.TAGS:
+            if ExifTags.TAGS[k] == "Orientation":
+                orientation = k
+                break
+        exif = img._getexif() if hasattr(img, "_getexif") else None
+        if exif and orientation is not None:
+            ov = exif.get(orientation)
+            if ov == 3:
+                img = img.rotate(180, expand=True)
+            elif ov == 6:
+                img = img.rotate(270, expand=True)
+            elif ov == 8:
+                img = img.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError):
+        pass
 
-            if img.mode in ("RGBA", "P", "LA"):
-                img = img.convert("RGB")
+    if img.mode in ("RGBA", "P", "LA"):
+        img = img.convert("RGB")
 
-            img.thumbnail((size, size), Image.Resampling.LANCZOS)
-            os.makedirs(os.path.dirname(dst), exist_ok=True)
-            img.save(dst, "JPEG", quality=80)
+    img.thumbnail((size, size), Image.Resampling.LANCZOS)
+    return img
+
+
+def generate_image_thumbnail(src: str, dst: str, size: int = 512) -> bool:
+    """이미지 → JPEG 썸네일. EXIF 회전 적용. 성공 시 True."""
+    try:
+        img = _scaled_rgb(src, size)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        img.save(dst, "JPEG", quality=80)
+        img.close()
         return os.path.exists(dst)
     except Exception:
         return False
+
+
+def image_thumbnail_bytes(src: str, size: int = 512, quality: int = 80):
+    """generate_image_thumbnail 의 바이트 판 — 파일 대신 JPEG 바이트를 돌려준다.
+
+    자족(self-contained) 문서에 사진을 data URI 로 심을 때 쓴다(카탈로그 HTML).
+    EXIF 는 다시 굽는 과정에서 통째로 떨어져 나가므로 촬영 위치가 따라가지 않는다.
+    실패는 None — 사진 한 장 때문에 문서 생성이 죽지 않게.
+    """
+    import io
+    try:
+        img = _scaled_rgb(src, size)
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=quality)
+        img.close()
+        return buf.getvalue() or None
+    except Exception:
+        return None
 
 
 def generate_video_thumbnail(src: str, dst: str, size: int = 512, timeout: int = 15) -> bool:

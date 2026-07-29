@@ -167,7 +167,7 @@
     },
     {
       "name": "business_item_op",
-      "description": "비즈니스 아이템(상품/항목) CRUD + 첨부 이미지.\n\n## op 분기\n- list (기본): business_id 필수. 그 비즈니스의 아이템 목록. 반환 {items:[{id,business_id,title,details,attachment_path}], business_id}\n- detail: item_id 필수\n- save: id 없으면 생성(business_id·title 필수), 있으면 수정. 필드: title, details, attachment_path\n- delete: item_id 필수\n- add_image: item_id·path 필수. 로컬 이미지 파일을 business_images 로 복사해 첨부(attachment_path JSON 배열에 추가)\n- remove_image: item_id·path 필수. 첨부 이미지 제거 + 파일 삭제",
+      "description": "비즈니스 아이템(상품/항목) CRUD + 첨부 이미지.\n\n## op 분기\n- list (기본): business_id 있으면 그 비즈니스, 없으면 전체 비즈니스의 아이템. search=제목·설명 부분일치. 반환 {items:[{id,business_id,title,details,attachment_path,business_name,photo_count,image}], business_id}\n- detail: item_id 필수\n- save: id 없으면 생성(business_id·title 필수), 있으면 수정. 필드: title, details, attachment_path\n- delete: item_id 필수\n- add_image: item_id·path 필수. 로컬 이미지 파일을 business_images 로 복사해 첨부(attachment_path JSON 배열에 추가)\n- remove_image: item_id·path 필수. 첨부 이미지 제거 + 파일 삭제",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -194,7 +194,11 @@
           },
           "business_id": {
             "type": "integer",
-            "description": "소속 비즈니스 ID (list / 생성 시 필수)"
+            "description": "소속 비즈니스 ID (생성 시 필수 / list 는 생략하면 전체)"
+          },
+          "search": {
+            "type": "string",
+            "description": "제목·설명 부분일치 필터 (list)"
           },
           "title": {
             "type": "string",

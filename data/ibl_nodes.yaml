@@ -2352,83 +2352,67 @@ nodes:
               master_detail: true
               item_click:
                 action: '[self:business]{op: "detail", id: "{id}"}'
-                tabs:
-                - name: 정보
-                  view:
-                  - type: form
-                    title: 비즈니스 정보
-                    fields:
-                    - key: name
-                      label: 이름
-                      type: text
-                      value: '{business.name}'
-                    - key: level
-                      label: 공개 수준
-                      type: select
-                      value: '{business.level}'
-                      options:
-                      - value: -1
-                        label: 폐쇄
-                      - value: 0
-                        label: L0 · 최소
-                      - value: 1
-                        label: L1
-                      - value: 2
-                        label: L2
-                      - value: 3
-                        label: L3
-                      - value: 4
-                        label: L4 · 전체
-                    - key: description
-                      label: 설명
-                      type: textarea
-                      value: '{business.description}'
-                    action: '[self:business]{op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
-                    button: 저장
-                    actions:
-                    - label: 비즈니스 삭제
-                      action: '[self:business]{op: "delete", id: "{business.id}"}'
-                      style: danger
-                      confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
-                      back: true
-                - name: 아이템
-                  view:
-                  - type: editable_list
-                    from: items
-                    title: 아이템 (상품·항목)
-                    display: '{title}{details|opt:  —  ,}'
-                    empty: 등록된 아이템 없음
-                    delete_action: '[self:business_item]{op: "delete", item_id: "{id}"}'
-                    add:
-                      fields:
-                      - key: title
-                        type: text
-                        placeholder: 제목
-                      - key: details
-                        type: text
-                        placeholder: 설명
-                      action: '[self:business_item]{op: "save", business_id: "{business.id}", title: "$title", details: "$details"}'
-                      button: 추가
+                view:
+                - type: form
+                  title: 비즈니스 정보
+                  fields:
+                  - key: name
+                    label: 이름
+                    type: text
+                    value: '{business.name}'
+                  - key: level
+                    label: 공개 수준
+                    type: select
+                    value: '{business.level}'
+                    options:
+                    - value: -1
+                      label: 폐쇄
+                    - value: 0
+                      label: L0 · 최소
+                    - value: 1
+                      label: L1
+                    - value: 2
+                      label: L2
+                    - value: 3
+                      label: L3
+                    - value: 4
+                      label: L4 · 전체
+                  - key: description
+                    label: 설명
+                    type: textarea
+                    value: '{business.description}'
+                  action: '[self:business]{op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  button: 저장
+                  actions:
+                  - label: 비즈니스 삭제
+                    action: '[self:business]{op: "delete", id: "{business.id}"}'
+                    style: danger
+                    confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
+                    back: true
               card:
                 title: '{name}'
                 lines:
-                - 레벨 {level} · {description|trunc:44}
+                - 레벨 {level} · {description|trunc:40}
+                - '{item_label}'
           - name: 아이템
             auto_run: true
-            note: 비즈니스를 고르면 그 아이템(상품·항목)을 사진까지 편집할 수 있습니다. 사진 추가는 데스크탑(파일 선택)에서만.
+            note: 카드를 눌러 제목·설명·사진을 고칩니다(사진은 고르는 즉시 붙음 · 추가는 데스크탑에서만). 여기 있는 아이템은 공유창고에 카탈로그로 자동 진열됩니다.
             inputs:
             - key: biz
               type: select
-              placeholder: 비즈니스 선택
+              placeholder: 전체 비즈니스
               options_action: '[self:business]{op: "list"}'
               options_from: items
               option_value: id
               option_label: name
+            - key: q
+              type: text
+              placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:business_item]{op: "save", business_id: "$biz", title: "새 아이템"}'
+              action: '[self:business_item]{op: "save", business_id: "$biz", title: "$q"}'
               refresh: true
-            action: '[self:business_item]{op: "list", business_id: "$biz"}'
+            action: '[self:business_item]{op: "list", business_id: "$biz", search: "$q"}'
             view:
             - type: card_list
               from: items
@@ -2463,8 +2447,10 @@ nodes:
                     confirm: 이 아이템을 삭제할까요?
                     back: true
               card:
+                image: '{image}'
                 title: '{title}'
                 lines:
+                - '{business_name}{photo_label|opt:  ·  ,}'
                 - '{details|trunc:50}'
           - name: 공개문서
             auto_run: true
@@ -2548,14 +2534,14 @@ nodes:
         fixture: '[self:business_item]{op: "list"}'
         description: 비즈니스 아이템(상품/항목) 조회·관리 — op:list(기본, items 통화)/detail/save/delete/add_image/remove_image(단건 op는 해당 객체 응답).
         group: business
-        target_description: op:list(business_id 필수) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
+        target_description: op:list(business_id 없으면 전체 비즈니스·search 제목/설명 필터) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
         target_key: op
         router: handler
         tool: business_item_op
         ops:
           default: list
           values:
-            list: 한 비즈니스의 아이템 목록 (business_id 필수)
+            list: 아이템 목록 (business_id 없으면 전체, search 필터)
             detail: 아이템 상세 (item_id 필수)
             save: 생성(business_id·title 필수)/수정(id 있음)
             delete: 아이템 삭제 (item_id 필수)

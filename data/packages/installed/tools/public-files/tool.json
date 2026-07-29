@@ -55,7 +55,7 @@
               "media",
               "files"
             ],
-            "description": "media=사진·동영상 그리드, files=파일 전체 (add, 기본 media)"
+            "description": "media=사진·동영상·음악 그리드, files=파일 전체 (add, 기본 media)"
           },
           "strip_exif": {
             "type": "boolean",

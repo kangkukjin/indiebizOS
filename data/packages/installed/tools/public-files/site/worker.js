@@ -15,6 +15,10 @@ const CT = {
   jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
   gif: "image/gif", heic: "image/heic",
   mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime", m4v: "video/x-m4v", mkv: "video/x-matroska",
+  // 오디오 — 빠지면 octet-stream 이라 브라우저가 재생 대신 내려받는다.
+  // backend/thumbnails.py 의 AUDIO_MIME 과 짝(늘릴 땐 같이).
+  mp3: "audio/mpeg", m4a: "audio/mp4", aac: "audio/aac", flac: "audio/flac",
+  wav: "audio/wav", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", weba: "audio/webm",
 };
 function ctypeOf(key) {
   return CT[key.split(".").pop().toLowerCase()] || "application/octet-stream";

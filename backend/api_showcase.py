@@ -373,6 +373,11 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
             # 첫 바이트도 못 뽑음(ffmpeg 부재 등) — 정리 후 원본 폴백.
             await run_in_threadpool(thumbnails.finish_stream_transcode, proc, tmp, str(cache))
 
+    # ③ 오디오 — filename 을 주면 Content-Disposition: attachment 라 브라우저가 재생
+    #    대신 내려받는다. inline + 명시 MIME 으로 <audio> 가 물게. Range 는 FileResponse.
+    if kind == "audio":
+        return FileResponse(abspath, media_type=thumbnails.audio_mime(abspath))
+
     # 그 외(또는 폴백) — FileResponse 가 content-type + Range 자동 처리.
     return FileResponse(abspath, filename=os.path.basename(abspath))
 

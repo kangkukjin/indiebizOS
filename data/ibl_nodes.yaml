@@ -5073,7 +5073,7 @@ nodes:
                 value: media
                 options:
                 - value: media
-                  label: 사진·동영상
+                  label: 사진·동영상·음악
                 - value: files
                   label: 파일 전체
               action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'

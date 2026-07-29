@@ -13,7 +13,7 @@
 [others:showcase]{op: "config", strip_exif: true, transcode_video: true}   # 전역 설정
 ```
 
-- `mode`: `media`(사진·동영상 그리드) / `files`(파일 전체).
+- `mode`: `media`(사진·동영상·음악 그리드 — 브라우저가 바로 열고 재생하는 것) / `files`(파일 전체).
 - 폴더 추가만으론 **비공개** — '바스켓'(주소)에 담아야 공개. 담는 즉시 라이브.
 - EXIF/GPS 는 원본 서빙 시 기본 제거. 동영상은 브라우저 비재생 컨테이너면 H.264 변환.
 

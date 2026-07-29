@@ -100,7 +100,7 @@ nodes:
                 value: media
                 options:
                 - value: media
-                  label: 사진·동영상
+                  label: 사진·동영상·음악
                 - value: files
                   label: 파일 전체
               action: '[others:showcase]{op: "add", path: "$path", title: "$title", mode: "$mode"}'
@@ -261,7 +261,7 @@ tool_json:
           enum:
           - media
           - files
-          description: 'media=사진·동영상 그리드, files=파일 전체 (add, 기본 media)'
+          description: 'media=사진·동영상·음악 그리드, files=파일 전체 (add, 기본 media)'
         strip_exif:
           type: boolean
           description: config 전역 — 원본 사진에서 위치·EXIF 제거

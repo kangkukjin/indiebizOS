@@ -39,12 +39,23 @@
     background:rgba(0,0,0,.28); font-size:34px; color:#fff; text-shadow:0 1px 6px rgba(0,0,0,.6); }
   .tile .noimg { min-height:150px; display:flex; align-items:center; justify-content:center;
     flex-direction:column; gap:6px; color:var(--muted); font-size:12px; padding:8px; text-align:center; }
+  /* 음악 — 썸네일이 없으므로(앨범아트 미추출) 타일 자체가 표지 역할 */
+  .tile .noimg.audio { min-height:110px; color:var(--text);
+    background:linear-gradient(150deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card)); }
+  .tile .noimg.audio .ico { font-size:26px; }
+  .tile .noimg.audio span { word-break:break-all; line-height:1.35; }
   .empty { color:var(--muted); text-align:center; padding:60px 20px; line-height:1.6; }
   /* 라이트박스 */
   .lb { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.92); display:none;
     align-items:center; justify-content:center; padding:24px; }
   .lb.open { display:flex; }
   .lb img, .lb video { max-width:100%; max-height:100%; border-radius:8px; }
+  .lb .audiobox { width:min(520px, 86vw); background:var(--card); border:1px solid var(--line);
+    border-radius:16px; padding:28px 22px 22px; text-align:center; }
+  .lb .audiobox .ico { font-size:52px; line-height:1; }
+  .lb .audiobox .atitle { margin:14px 0 18px; font-size:15px; font-weight:600; color:var(--text);
+    word-break:break-all; line-height:1.4; }
+  .lb .audiobox audio { width:100%; display:block; }
   .lb .close { position:absolute; top:16px; right:20px; font-size:30px; color:#fff; cursor:pointer;
     line-height:1; opacity:.85; }
   .lb .nav { position:absolute; top:50%; transform:translateY(-50%); font-size:44px; color:#fff;
@@ -220,6 +231,8 @@ function render(path, data) {
       if (it.thumb) {
         tile.innerHTML = `<img loading="lazy" src="${thumbUrl(it)}" alt="${esc(it.title)}">`
           + (it.kind === "video" ? '<div class="play">▶</div>' : "");
+      } else if (it.kind === "audio") {
+        tile.innerHTML = `<div class="noimg audio"><div class="ico">🎵</div><span>${esc(it.title)}</span></div>`;
       } else {
         tile.innerHTML = `<div class="noimg">📄<span>${esc(it.title)}</span></div>`;
       }
@@ -228,6 +241,11 @@ function render(path, data) {
     });
     main.appendChild(grid);
   }
+}
+
+function nextAudioIndex(from) {
+  for (let i = from + 1; i < curItems.length; i++) if (curItems[i].kind === "audio") return i;
+  return -1;
 }
 
 function openLb(idx) {
@@ -239,6 +257,16 @@ function openLb(idx) {
     // 형제 자막(subs — 백엔드가 목록에서 붙여줌)을 <track> 으로. 첫 번째(한국어 우선)가 기본 표시.
     body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}">${trackHtml(it, 0)}</video>`;
     attachSeekRescue(body.querySelector("video"), it);
+  } else if (it.kind === "audio") {
+    // 트랜스코드 층이 없다(브라우저가 무는 포맷만 audio 로 분류) — 원본 그대로 <audio>.
+    body.innerHTML = `<div class="audiobox"><div class="ico">🎵</div>`
+      + `<div class="atitle">${esc(it.title)}</div>`
+      + `<audio controls autoplay src="${mediaUrl(it)}"></audio></div>`;
+    // 곡이 끝나면 같은 폴더의 다음 곡으로 — 앨범 폴더를 연속으로 듣게. 끝에서 멈춘다(순환 없음).
+    body.querySelector("audio").addEventListener("ended", () => {
+      const n = nextAudioIndex(lbIndex);
+      if (n >= 0) openLb(n);
+    });
   } else if (it.kind === "photo") {
     body.innerHTML = `<img src="${mediaUrl(it)}">`;
   } else {

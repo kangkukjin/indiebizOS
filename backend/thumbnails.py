@@ -21,16 +21,36 @@ VIDEO_EXTENSIONS = {
     "mp4", "mkv", "avi", "mov", "wmv", "flv",
     "webm", "mpg", "mpeg", "m4v", "mts", "3gp",
 }
+# 브라우저 <audio> 가 그대로 무는 포맷만. 동영상과 달리 트랜스코드 층이 없으므로
+# 여기 넣은 것은 곧 "재생된다"는 약속이다(wma·aiff·alac 는 일부러 뺌 — files 모드에서
+# 일반 파일로는 여전히 보인다). 늘릴 땐 AUDIO_MIME 과 worker.js 의 CT 를 같이 늘릴 것.
+AUDIO_EXTENSIONS = {
+    "mp3", "m4a", "aac", "flac", "wav", "ogg", "oga", "opus", "weba",
+}
+AUDIO_MIME = {
+    "mp3": "audio/mpeg", "m4a": "audio/mp4", "aac": "audio/aac",
+    "flac": "audio/flac", "wav": "audio/wav",
+    "ogg": "audio/ogg", "oga": "audio/ogg", "opus": "audio/ogg",
+    "weba": "audio/webm",
+}
 
 
 def classify(path: str) -> str | None:
-    """확장자로 photo/video/None 판정."""
+    """확장자로 photo/video/audio/None 판정."""
     ext = os.path.splitext(path)[1].lower().lstrip(".")
     if ext in PHOTO_EXTENSIONS:
         return "photo"
     if ext in VIDEO_EXTENSIONS:
         return "video"
+    if ext in AUDIO_EXTENSIONS:
+        return "audio"
     return None
+
+
+def audio_mime(path: str) -> str:
+    """오디오 MIME — mimetypes 추측(플랫폼마다 flac/opus 가 빈다)에 안 맡긴다."""
+    ext = os.path.splitext(path)[1].lower().lstrip(".")
+    return AUDIO_MIME.get(ext, "audio/mpeg")
 
 
 def _scaled_rgb(src: str, size: int):

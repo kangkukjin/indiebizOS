@@ -8,8 +8,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Package, RefreshCw, Trash2, ExternalLink, Search, Plus, Pencil, Rss, Repeat2,
-  Star, Heart, KeyRound, MessageCircle,
+  Star, Heart, KeyRound, MessageCircle, Megaphone,
 } from 'lucide-react';
+import { runIBL } from '../generic/manifest';
 import { API, fmtBytes, fileIcon, openNeighborFile, openWarehouseInBrowser } from './shared';
 import type { WfNeighbor, WfFeedItem, WfCard } from './shared';
 import { FeedCard } from './FeedCard';
@@ -82,6 +83,10 @@ export function NeighborsPane() {
   const [results, setResults] = useState<WfFeedItem[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [memoEdit, setMemoEdit] = useState<{ id: number; text: string } | null>(null);
+  /* 창고 추천 — 내 이웃의 창고를 #IndieNet 에 공개 발행. 초안은 기계가 채우지만
+     ★보내는 글은 사용자가 직접 쓴 것이어야 한다: 여기서 고쳐 쓰고 확인해야 나간다. */
+  const [recEdit, setRecEdit] = useState<{ url: string; name: string; text: string } | null>(null);
+  const [recBusy, setRecBusy] = useState(false);
   const [loginEdit, setLoginEdit] = useState<{ url: string; name: string; user: string; pw: string } | null>(null);
   // 리트윗 레벨 선택 — 레벨은 0~4 숫자일 뿐, 의미는 사용자가 정한다(이름표 붙이지 않음)
   const [retweetPick, setRetweetPick] = useState<{ item: WfFeedItem; level: number; mode: 'link' | 'copy' } | null>(null);
@@ -237,6 +242,45 @@ export function NeighborsPane() {
     retry();
   }, [memoEdit, retry]);
 
+  /* 추천 초안 열기 — 기계가 채우는 건 사실뿐(이웃 이름·창고 주소·내가 쓴 메모).
+     ★수신면 계약: 본문에 '공유창고'와 'Warehouse' 가 **둘 다** 있고 뒤에 주소가 와야
+     받는 쪽 이웃찾기가 그 자리에서 '＋ 창고이웃 등록' 버튼을 붙인다(DiscoverPane.whUrlOf).
+     그래서 이 두 낱말과 주소 줄은 지우지 말라고 안내한다. */
+  const openRec = (n: WfNeighbor) => {
+    const title = n.title && n.title !== n.name ? `${n.name} — ${n.title}` : n.name;
+    const memo = (n.warehouse_memo || '').trim();
+    setRecEdit({
+      url: n.warehouse_url, name: n.name,
+      text: `📦 이웃 창고를 추천합니다 — ${title}\n`
+        + (memo ? `${memo}\n` : '')
+        + `\n공유창고 Warehouse : ${n.warehouse_url}\n`,
+    });
+  };
+
+  /* 공개 발행 — 소개글 면의 게시와 같은 경로([others:feed]{op:"post"}).
+     ★hashtag 고정: 안 넘기면 활성 보드로 폴백해 다른 방에 발행된다. */
+  const publishRec = useCallback(async () => {
+    if (!recEdit || recBusy) return;
+    const t = recEdit.text.trim();
+    if (!t) return;
+    if (!(/공유창고/.test(t) && /warehouse/i.test(t) && /https?:\/\/\S+/.test(t))
+        && !window.confirm(
+          '이 글엔 "공유창고 Warehouse : 주소" 형식이 없어요.\n'
+          + '그러면 받는 사람 화면에 바로 등록 버튼이 안 붙고 그냥 글로만 보입니다.\n\n그래도 발행할까요?')) return;
+    if (!window.confirm(`#IndieNet 에 공개로 발행합니다 — 모두가 볼 수 있어요.\n\n${t}`)) return;
+    setRecBusy(true);
+    try {
+      const r = (await runIBL(
+        `[others:feed]{op: "post", hashtag: "indienet", content: ${JSON.stringify(t)}}`)) as Record<string, unknown>;
+      if (r?.error || r?.success === false) throw new Error(String(r.error || r.message || '게시 실패'));
+      setRecEdit(null);
+      window.alert('추천을 발행했어요 — 이웃찾기 탭 소개글에서도 보입니다.');
+    } catch (e) {
+      window.alert(`발행 실패: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    setRecBusy(false);
+  }, [recEdit, recBusy]);
+
   // 창고 계정 저장(빈 아이디=해제) — 서버가 즉시 로그인 확인 + 성공 시 재폴링까지 한다.
   const saveLogin = useCallback(async (clear = false) => {
     if (!loginEdit) return;
@@ -391,6 +435,40 @@ export function NeighborsPane() {
               onKeyDown={(e) => { if (e.key === 'Enter') saveMemo(); if (e.key === 'Escape') setMemoEdit(null); }}
             />
             <button className="px-3 py-1.5 rounded-lg bg-[#D97706] text-white hover:bg-[#B45309]" onClick={saveMemo}>저장</button>
+          </div>
+        )}
+
+        {/* 창고 추천 초안 — 공개 발행이라 반드시 사람이 읽고 고칠 자리를 준다 */}
+        {recEdit && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-xs">
+              <Megaphone className="w-3.5 h-3.5 text-[#B45309] shrink-0" />
+              <span className="text-stone-600 font-medium">'{recEdit.name}' 창고 추천</span>
+              <span className="text-stone-400">— #IndieNet 에 공개 발행됩니다. 고쳐 쓰세요</span>
+              <div className="flex-1" />
+              <button className="text-stone-400 hover:text-stone-700" onClick={() => setRecEdit(null)}>닫기</button>
+            </div>
+            <textarea
+              autoFocus
+              rows={6}
+              className="w-full resize-y px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-800 outline-none focus:border-[#D97706]/50"
+              value={recEdit.text}
+              onChange={(e) => setRecEdit({ ...recEdit, text: e.target.value })}
+            />
+            <div className="flex items-center gap-2 text-[11px] text-stone-500">
+              <span>
+                <strong>공유창고 Warehouse : 주소</strong> 줄은 남겨두세요 — 받는 사람 화면에서
+                그 자리로 <strong>바로 창고이웃 등록</strong>이 됩니다.
+              </span>
+              <div className="flex-1" />
+              <button
+                className="px-3 py-1.5 text-xs rounded-lg bg-[#D97706] text-white hover:bg-[#B45309] disabled:opacity-50 shrink-0"
+                disabled={recBusy || !recEdit.text.trim()}
+                onClick={publishRec}
+              >
+                {recBusy ? '발행 중…' : '공개 추천 발행'}
+              </button>
+            </div>
           </div>
         )}
 
@@ -556,7 +634,7 @@ export function NeighborsPane() {
                       {/* 회원 로그인·어댑터 상태 배지 — 칩 줄에서 이사 */}
                       {n.adapter && n.adapter !== 'native' && (
                         <span className="text-[11px] px-1.5 rounded-full bg-sky-50 text-sky-600 shrink-0"
-                              title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·페이지)을 어댑터가 읽어옵니다">
+                              title="창고 방언 — indiebizOS 창고가 아닌 표면(색인·RSS·Nextcloud·Neocities·페이지)을 어댑터가 읽어옵니다">
                           {n.adapter_label || n.adapter}
                         </span>
                       )}
@@ -573,6 +651,13 @@ export function NeighborsPane() {
                         </span>
                       )}
                       <div className="flex-1" />
+                      <button
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-[#B45309] hover:bg-amber-50 shrink-0"
+                        title="이 창고를 #IndieNet 에 공개 추천 — 초안을 고쳐 쓰고 확인해야 나갑니다"
+                        onClick={() => openRec(n)}
+                      >
+                        <Megaphone className="w-4 h-4" />
+                      </button>
                       <button
                         className="p-1.5 rounded-lg text-stone-400 hover:text-[#D97706] hover:bg-amber-50 shrink-0"
                         title="이 이웃에게 DM — 메신저로 대화"

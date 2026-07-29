@@ -354,7 +354,7 @@ def _migrate_warehouse(old: str, new: str) -> Dict:
     return healed
 
 
-def poll_warehouse(url: str, _hop: int = 0) -> Dict:
+def poll_warehouse(url: str, _hop: int = 0, hint: str = "") -> Dict:
     """창고 하나를 폴링해 스냅샷 갱신 + 변화를 피드에 기록. AI 없음 — 순수 diff.
 
     2026-07-20 어댑터 층: indiebizOS 매니페스트가 아니어도(autoindex·RSS·Nextcloud
@@ -362,14 +362,19 @@ def poll_warehouse(url: str, _hop: int = 0) -> Dict:
     설치하지 않아도 이웃이 된다. 감지 결과는 poll_status.adapter 에 캐시(실패 시 재감지).
 
     매니페스트에 moved_to(이사 공지)가 있으면 등기부·캐시를 새 주소로 치유하고
-    새 주소를 이어서 폴링한다(1홉만 — 공지 루프 방어)."""
+    새 주소를 이어서 폴링한다(1홉만 — 공지 루프 방어).
+
+    hint: 첫 폴링에 쓸 어댑터 힌트(캐시가 없을 때만). 등록하는 쪽이 이미 정체를
+    아는 경우에 쓴다 — 장르 둘러보기가 Neocities 브라우즈에서 사이트명을 알고
+    오는 경우가 그렇다(커스텀 도메인이면 자동 감지가 'page' 로 떨어져 변화
+    피드가 얇아진다). 감지 자체는 그대로라 틀린 힌트는 다음 폴링에 교정된다."""
     import warehouse_adapters
     _init_db()
     base = normalize_base(url)
     now = datetime.now().isoformat(timespec="seconds")
     with _db_lock, _conn() as c:
         row = c.execute("SELECT adapter FROM poll_status WHERE wh_url=?", (base,)).fetchone()
-        cached_adapter = row["adapter"] if row else None
+        cached_adapter = (row["adapter"] if row else None) or (hint or None)
     try:
         data, adapter = _fetch_with_auth(base, cached_adapter)
         moved = normalize_base(data.get("moved_to") or "")

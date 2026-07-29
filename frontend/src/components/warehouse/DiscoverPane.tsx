@@ -11,8 +11,10 @@ import { Package, RefreshCw, Search, Plus } from 'lucide-react';
 import { runIBL } from '../generic/manifest';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
 import { API } from './shared';
+import { DirectoryPane } from './DirectoryPane';
 
 export function DiscoverPane() {
+  const [sub, setSub] = useState<'intro' | 'browse'>('intro');
   interface IntroItem { author: string; author_full: string; content: string; time: string; id?: string }
   const [items, setItems] = useState<IntroItem[]>([]);
   const [busy, setBusy] = useState(false);
@@ -139,7 +141,28 @@ export function DiscoverPane() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 py-4">
+    <div className="flex-1 min-h-0 flex flex-col">
+      {/* 이웃찾기의 두 갈래 — 소개글=나를 알린 사람이 오는 수신면(#IndieNet) /
+          둘러보기=아직 나를 모르는 세상의 창고를 장르로 훑는 발신면. 방향이 반대다. */}
+      <div className="px-5 pt-3 shrink-0">
+        <div className="inline-flex gap-1 p-1 rounded-xl bg-stone-100">
+          {([['intro', '소개글', '#IndieNet 에 자기를 알린 사람들'],
+             ['browse', '둘러보기', '장르별 후보 창고 — 아직 관계 없는 곳']] as const).map(([k, label, tip]) => (
+            <button
+              key={k}
+              title={tip}
+              onClick={() => setSub(k)}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                sub === k ? 'bg-white text-[#B45309] shadow-sm font-medium' : 'text-stone-500 hover:text-stone-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {sub === 'browse' ? <DirectoryPane /> : (
+      <div className="flex-1 overflow-y-auto px-5 py-4">
       <div className="max-w-3xl mx-auto space-y-3">
         <div className="flex items-center gap-2">
           <p className="text-xs text-stone-500">
@@ -225,6 +248,8 @@ export function DiscoverPane() {
           })}
         </ul>
       </div>
+      </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,7 @@ from anyio import to_thread
 from fastapi import APIRouter, HTTPException, Request
 
 import warehouse_adapters
+import warehouse_directory
 import warehouse_feed as wf
 
 router = APIRouter(prefix="/warehouse-feed", tags=["warehouse-feed"])
@@ -68,6 +69,30 @@ async def list_warehouse_neighbors():
     return {"neighbors": cards, "candidates": candidates}
 
 
+# ── 창고 둘러보기(장르별 후보) ────────────────────────────────────
+# 이웃찾기(#IndieNet)가 "나를 알린 사람"의 수신면이라면, 여기는 아직 아무 관계도
+# 없는 창고를 장르로 훑는 면. 등록은 아래 /neighbors/add 를 그대로 쓴다(신규 배관 0).
+
+@router.get("/directory")
+async def directory_genres():
+    """장르 칩 목록 — data/warehouse_directory.json 이 단일 소스(사용자 편집 가능)."""
+    return {"genres": warehouse_directory.list_genres()}
+
+
+@router.get("/directory/{key}")
+async def directory_candidates(key: str, limit: int = 60, refresh: int = 0):
+    """한 장르의 후보 창고. 이미 내 등기부에 있는 주소는 registered 로 표시해
+    '＋ 등록' 버튼이 중복으로 뜨지 않게 한다."""
+    # ★스레드로: 남의 서버로 나가는 동기 HTTP 를 이벤트 루프에서 하면 그 사이
+    #   들어오는 요청(자기 매니페스트 포함)을 못 받는다 — neighbors/add 와 같은 이유.
+    out = await to_thread.run_sync(
+        lambda: warehouse_directory.candidates(key, limit=limit, refresh=bool(refresh)))
+    mine = {c["warehouse_url"] for c in _cards()}
+    for it in out.get("items", []):
+        it["registered"] = wf.normalize_base(it.get("url") or "") in mine
+    return out
+
+
 async def _body(request: Request) -> dict:
     try:
         return json.loads((await request.body()).decode("utf-8"))
@@ -100,7 +125,10 @@ async def add_warehouse_neighbor(request: Request):
                 "poll": {"ok": True, "note": "이미 등록된 창고"}}
     # 첫 폴링을 먼저 — 연결 확인 + 이름 유도(title)에 쓴다. ★스레드로(자기교착 방지:
     # 루프에서 동기 HTTP 를 하면 Worker→터널로 돌아오는 자기 manifest 요청을 못 받는다)
-    poll = await to_thread.run_sync(wf.poll_warehouse, url)
+    # adapter = 등록하는 쪽이 이미 아는 정체(장르 둘러보기의 'neocities|<사이트명>').
+    # 커스텀 도메인 Neocities 는 자동 감지가 'page' 로 떨어져 변화 피드가 얇아진다.
+    hint = (body.get("adapter") or "").strip()
+    poll = await to_thread.run_sync(lambda: wf.poll_warehouse(url, hint=hint))
     # 호출자가 npub 을 안 줬으면(주소만 등록) 매니페스트의 자기선언 npub 을 앵커로 —
     # 주소만 아는 상대도 신원 있는 레코드로 합류해 "같은 사람 2명"을 처음부터 막는다.
     if not npub:

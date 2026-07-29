@@ -343,7 +343,17 @@ class CognitivePipelineMixin:
                         if ev.get("type") == "final":
                             _refl_final = ev.get("content", "")
                         yield ev
-                    if _refl_final and _refl_final.strip():
+                    # 출력 계약 (에피소드 875·876): 반성 턴 출력은 초안을 *대체*하므로
+                    # "수정 없음"은 NO_REVISION 신호로 받는다 — 약한 모델이 초안을 다시
+                    # 베끼는 대신 반성문("확인 완료…")을 내놓아 답이 통째로 사라지던 부류.
+                    _refl_first_line = (_refl_final or "").strip().splitlines()[0].strip() \
+                        if (_refl_final or "").strip() else ""
+                    if _refl_first_line.startswith("NO_REVISION"):
+                        # 초안 유지 — 반성 턴이 흘린 final(신호 텍스트)을 초안으로 되덮는다
+                        # (전송 계층(WS)은 마지막 final 이벤트를 저장·전송한다).
+                        print("[SelfReflect] NO_REVISION — 초안 유지")
+                        yield {"type": "final", "content": final_content}
+                    elif _refl_final and _refl_final.strip():
                         # 원 응답 끝의 [MAP:] 지도 태그(프로바이더가 도구 결과에서 수확해
                         # 재주입한 표시 봉투)는 반성 턴 출력에 없으므로 이월한다 —
                         # 교체가 지도를 삼키던 유실 지점(에피소드 767). 전송 계층(WS)은

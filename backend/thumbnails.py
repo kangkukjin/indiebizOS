@@ -157,6 +157,9 @@ _WEB_PLAYABLE_VIDEO_EXTS = {"mp4", "m4v", "webm"}
 # 브라우저가 직접 디코딩 가능한 비디오 코덱(트랜스코드 불필요).
 # HEVC 는 제외 — Safari 만 재생하고 Chrome/Firefox 는 대체로 못 여니 변환한다.
 _WEB_PLAYABLE_VIDEO_CODECS = {"h264", "vp8", "vp9", "av1"}
+# 브라우저가 직접 디코딩 가능한 오디오 코덱. DTS/AC3/EAC3/TrueHD 는 못 열어
+# 비디오가 h264 여도 화면만 나오고 무음이 된다(BDRip mkv 흔함) — 변환 사유.
+_WEB_PLAYABLE_AUDIO_CODECS = {"aac", "mp3", "opus", "vorbis", "flac"}
 
 
 def needs_exif_strip(path: str) -> bool:
@@ -164,35 +167,51 @@ def needs_exif_strip(path: str) -> bool:
     return ext in _EXIF_BEARING_EXTS
 
 
-def _probe_video_codec(path: str) -> str | None:
-    """ffprobe 로 첫 비디오 스트림 코덱명 반환. 실패 시 None."""
+def _probe_av_codecs(path: str) -> tuple[str | None, str | None]:
+    """ffprobe 로 (첫 비디오, 첫 오디오) 스트림 코덱명 반환. 실패 시 (None, None)."""
+    import json
     try:
         r = subprocess.run(
-            ["ffprobe", "-v", "error", "-select_streams", "v:0",
-             "-show_entries", "stream=codec_name", "-of", "csv=p=0", path],
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name",
+             "-of", "json", path],
             capture_output=True, timeout=20,
         )
         if r.returncode == 0:
-            return r.stdout.decode("utf-8", "ignore").strip() or None
+            streams = json.loads(r.stdout.decode("utf-8", "ignore")).get("streams", [])
+            v = next((s.get("codec_name") for s in streams
+                      if s.get("codec_type") == "video" and s.get("codec_name")), None)
+            a = next((s.get("codec_name") for s in streams
+                      if s.get("codec_type") == "audio" and s.get("codec_name")), None)
+            return v, a
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
         pass
-    return None
+    return None, None
 
 
 def needs_video_transcode(path: str) -> bool:
     """브라우저가 못 여는 동영상이면 True.
 
-    확장자가 아니라 실제 비디오 코덱으로 판정한다. `.mp4` 껍데기여도
-    알맹이가 mpeg4/HEVC 면 브라우저는 비디오를 못 읽어(소리만 남)
-    트랜스코드가 필요하다. ffprobe 실패 시엔 확장자 기준으로 폴백."""
+    확장자가 아니라 실제 코덱으로 판정한다. `.mp4` 껍데기여도 알맹이가
+    mpeg4/HEVC 면 브라우저는 비디오를 못 읽고, 비디오가 h264 여도 오디오가
+    DTS/AC3 면 화면만 나오고 무음이라(BDRip mkv) 둘 다 봐야 한다.
+    ffprobe 실패 시엔 확장자 기준으로 폴백."""
     if classify(path) != "video":
         return False
-    codec = _probe_video_codec(path)
-    if codec is not None:
-        return codec.lower() not in _WEB_PLAYABLE_VIDEO_CODECS
+    v, a = _probe_av_codecs(path)
+    if v is not None:
+        if v.lower() not in _WEB_PLAYABLE_VIDEO_CODECS:
+            return True
+        return a is not None and a.lower() not in _WEB_PLAYABLE_AUDIO_CODECS
     # ffprobe 불가 — 확장자 기준 보수적 폴백(기존 동작).
     ext = os.path.splitext(path)[1].lower().lstrip(".")
     return ext not in _WEB_PLAYABLE_VIDEO_EXTS
+
+
+def video_codec_web_playable(path: str) -> bool:
+    """비디오 스트림이 이미 웹 코덱(h264 등)이라 트랜스코드 시 -c:v copy 가능하면 True.
+    (오디오만 문제인 파일에서 1080p 재인코딩을 통째로 아낀다.) 실패 시 False(보수적 재인코딩)."""
+    v, _ = _probe_av_codecs(path)
+    return v is not None and v.lower() in _WEB_PLAYABLE_VIDEO_CODECS
 
 
 def sanitize_image_bytes(src: str, quality: int = 92):
@@ -216,18 +235,20 @@ def sanitize_image_bytes(src: str, quality: int = 92):
 
 
 def transcode_video_to_mp4(src: str, dst: str, timeout: int = 180) -> bool:
-    """동영상 → H.264/AAC MP4(웹 재생용). faststart 로 스트리밍 가능. 성공 시 True."""
+    """동영상 → H.264/AAC MP4(웹 재생용). faststart 로 스트리밍 가능. 성공 시 True.
+    비디오가 이미 웹 코덱(오디오만 DTS/AC3)이면 -c:v copy — 리먹스 속도라
+    긴 파일도 timeout 안에 끝날 확률이 크게 오른다."""
     try:
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", src,
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-            "-pix_fmt", "yuv420p",
-            "-c:a", "aac", "-b:a", "128k",
-            "-movflags", "+faststart",
-            dst,
-        ]
+        vcodec = (["-c:v", "copy"] if video_codec_web_playable(src) else
+                  ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+                   "-pix_fmt", "yuv420p"])
+        cmd = (
+            ["ffmpeg", "-y", "-i", src]
+            + vcodec
+            + ["-c:a", "aac", "-b:a", "128k", "-ac", "2",
+               "-movflags", "+faststart", dst]
+        )
         r = subprocess.run(cmd, capture_output=True, timeout=timeout)
         return r.returncode == 0 and os.path.exists(dst) and os.path.getsize(dst) > 0
     except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
@@ -306,10 +327,14 @@ def patch_fmp4_duration(head: bytes, duration_s: float) -> bytes:
     except Exception:
         return head
 
-def start_stream_transcode(src: str, cache_dst: str):
+def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False):
     """스트리밍 트랜스코드 시작. (proc, tmp경로) 반환 — 호출자가 proc.stdout 을 읽어
     흘리면서 같은 바이트를 tmp(.part)에 쓰고, 끝나면 finish_/중단하면
     detach_stream_transcode 를 불러야 한다(완주 시 faststart 리먹스로 캐시 완성).
+
+    video_copy=True 면 비디오는 -c:v copy(이미 h264 등 웹 코덱 — 오디오만 DTS/AC3 인
+    파일에서 재인코딩 없이 사실상 리먹스 속도). 오디오는 항상 AAC 스테레오 —
+    -ac 2 는 5.1 다운믹스(브라우저 5.1 재생은 기기별 편차·대사 묻힘, 웹 표준은 스테레오).
 
     ★tee 머서 금지: tee 의 파이프 슬레이브엔 h264 extradata(avcC)가 빠져
     'missing picture in access unit' — 디코드 불가 스트림이 나온다(실측).
@@ -318,30 +343,34 @@ def start_stream_transcode(src: str, cache_dst: str):
     cache_dir = os.path.dirname(cache_dst) or "."
     os.makedirs(cache_dir, exist_ok=True)
     tmp = os.path.join(cache_dir, f".{uuid.uuid4().hex[:12]}.part.mp4")
-    cmd = [
-        "ffmpeg", "-v", "error",
-        "-i", os.path.abspath(src),
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "128k",
-        "-map", "0:v:0", "-map", "0:a:0?",
-        "-f", "mp4",
-        "-movflags", "frag_keyframe+empty_moov+default_base_moof",
-        "pipe:1",
-    ]
+    vcodec = (["-c:v", "copy"] if video_copy else
+              ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+               "-pix_fmt", "yuv420p"])
+    cmd = (
+        ["ffmpeg", "-v", "error", "-i", os.path.abspath(src)]
+        + vcodec
+        + ["-c:a", "aac", "-b:a", "128k", "-ac", "2",
+           "-map", "0:v:0", "-map", "0:a:0?",
+           "-f", "mp4",
+           "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+           "pipe:1"]
+    )
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     return proc, tmp
 
 
-def start_offset_stream(src: str, t: float, copy: bool = False):
+def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool = False):
     """t초 지점부터의 fMP4 오프셋 스트림(캐시 tee 없음 — 부분이라 캐시 부적격).
     copy=True 면 재인코딩 없이 스트림 복사(이미 H.264 캐시가 소스일 때, 즉시 시작).
+    video_copy=True 면 비디오만 copy·오디오는 AAC(원본 비디오가 웹 코덱, 오디오만 DTS/AC3).
     타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
     if copy:
         codec = ["-c", "copy"]
+    elif video_copy:
+        codec = ["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     else:
         codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-                 "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k"]
+                 "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     cmd = (["ffmpeg", "-v", "error", "-ss", str(max(0.0, t)), "-i", os.path.abspath(src)]
            + codec + ["-map", "0:v:0", "-map", "0:a:0?", "-f", "mp4",
                       "-movflags", "frag_keyframe+empty_moov+default_base_moof", "pipe:1"])

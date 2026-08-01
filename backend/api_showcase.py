@@ -325,14 +325,18 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
         cache = _WEB_MEDIA / fid / (key + ".mp4")
         use_cache = cache.exists() and cache.stat().st_size > 0
         src = str(cache) if use_cache else abspath
+        # 원본 소스면 비디오 copy 가능 여부(웹 코덱인데 오디오만 DTS/AC3) 판정.
+        vcopy = (False if use_cache
+                 else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
         total = await run_in_threadpool(thumbnails.probe_video_duration, src)
-        proc = thumbnails.start_offset_stream(src, t, copy=use_cache)
+        proc = thumbnails.start_offset_stream(src, t, copy=use_cache, video_copy=vcopy)
         head = await _read_init_segment(proc)
         if not head and use_cache:
             # 캐시 스트림 복사 실패(드묾) — 원본 재인코딩 재시도.
             thumbnails.kill_stream(proc)
             total = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
-            proc = thumbnails.start_offset_stream(abspath, t, copy=False)
+            vcopy = await run_in_threadpool(thumbnails.video_codec_web_playable, abspath)
+            proc = thumbnails.start_offset_stream(abspath, t, copy=False, video_copy=vcopy)
             head = await _read_init_segment(proc)
         if not head:
             thumbnails.kill_stream(proc)
@@ -359,7 +363,10 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
             return FileResponse(str(cache), media_type="video/mp4")
         if await run_in_threadpool(thumbnails.needs_video_transcode, abspath):
             duration = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
-            proc, tmp = thumbnails.start_stream_transcode(abspath, str(cache))
+            # 비디오가 이미 웹 코덱(h264 등, 오디오만 DTS/AC3)이면 -c:v copy —
+            # 1080p 재인코딩 없이 리먹스 속도로 흘린다.
+            vcopy = await run_in_threadpool(thumbnails.video_codec_web_playable, abspath)
+            proc, tmp = thumbnails.start_stream_transcode(abspath, str(cache), video_copy=vcopy)
             # init 세그먼트(ftyp+moov)가 통째로 잡힐 때까지 모아 duration 패치 —
             # 안 하면 empty_moov 생방송이 '버퍼된 만큼'을 총 길이로 표시(몇 초짜리로 보임).
             head = await _read_init_segment(proc)

@@ -242,6 +242,14 @@ class BaseProvider(ABC):
     MAX_AUTO_CONTINUES = 3  # max_tokens 초과 시 이어쓰기 최대 횟수
     CONTINUATION_PROMPT = "이전 응답이 잘렸습니다. 중단된 곳에서 이어서 작성해주세요."
 
+    # 원샷(분류·평가·증류·번역) 계약용 — True면 하이브리드 thinking 모델의 추론 모드를 끈다.
+    # 지원 프로바이더만 해석(DeepSeek/Gemini/OpenRouter 등), 나머지는 무시. ep889: thinking이
+    # max_tokens를 전부 태워 텍스트 0자 → Auto-Continue/빈응답 재시도 연쇄로 증류 1건에 7콜 4.5분.
+    disable_thinking = False
+    # thinking 차단 파라미터를 400 거부하는 모델(gemini flash-latest 부류) 자가치유 표식 —
+    # 한 번 거부되면 그 프로바이더 인스턴스(=모델별 캐시)에선 차단 시도를 접는다.
+    _thinking_off_unsupported = False
+
     def _soft_trim_content(self, content: str) -> str:
         """긴 텍스트를 head + tail로 soft-trim"""
         if len(content) <= self.TOOL_RESULT_SOFT_LIMIT:

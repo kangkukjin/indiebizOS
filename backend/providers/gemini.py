@@ -215,6 +215,15 @@ class GeminiProvider(BaseProvider):
                 thinking = types.ThinkingConfig(thinking_budget=self.thinking_budget)
             except Exception as e:
                 print(f"[Gemini] ThinkingConfig 생성 실패 (무시): {e}")
+        elif self.disable_thinking and not self._thinking_off_unsupported:
+            # 원샷 계약(분류·증류 등): 2.5 flash 계열은 config 미지정 시 *기본 thinking ON*
+            # (dynamic) — 추론이 출력 예산을 태우는 DeepSeek ep889 부류의 Gemini 판 방지.
+            # ★일부 모델(flash-latest 별칭, 2026-07~)은 budget 0 을 400 거부 →
+            # _create_stream_with_retry 가 감지해 _thinking_off_unsupported 로 자가치유.
+            try:
+                thinking = types.ThinkingConfig(thinking_budget=0)
+            except Exception as e:
+                print(f"[Gemini] ThinkingConfig(0) 생성 실패 (무시): {e}")
 
         if self._cache_name:
             # 캐시에 system_instruction + tools 포함됨
@@ -611,6 +620,16 @@ class GeminiProvider(BaseProvider):
                     with self._cache_lock:
                         self._cache_name = None
                         self._cached_system_prompt = None
+                    config = self._build_config(self._cached_gemini_tools)
+                    continue
+                elif (self.disable_thinking and not self._thinking_off_unsupported
+                      and ("400" in error_str or "INVALID_ARGUMENT" in error_str)):
+                    # budget 0 거부 모델(flash-latest 부류) → 이 인스턴스에선 포기하고 재시도.
+                    # ★거부 문구가 범용("invalid argument"만 — 08-01 gemini_http 실측)이라
+                    # 'thinking' 매칭 불가 → 차단 상태의 400이면 빼고 재시도(다른 원인이면
+                    # 재시도도 같은 400 → 정상 raise). 프로바이더=모델별 캐시라 재발 없음.
+                    print(f"[Gemini] 400 — thinkingBudget:0 거부 추정, thinking 차단 포기 후 재시도")
+                    self._thinking_off_unsupported = True
                     config = self._build_config(self._cached_gemini_tools)
                     continue
                 else:

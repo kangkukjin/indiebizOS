@@ -71,6 +71,13 @@ class OpenAIProvider(BaseProvider):
             print(f"[OpenAIProvider] 초기화 실패: {e}")
             return False
 
+    def _thinking_off_params(self) -> Dict[str, Any]:
+        """disable_thinking=True일 때 요청 body에 합칠 프로바이더별 파라미터.
+
+        OpenAI 본가는 하이브리드 thinking 기본 모델이 없어 no-op.
+        DeepSeek 등 호환 API는 오버라이드로 자기 방언을 반환한다."""
+        return {}
+
     def process_message(
         self,
         message: str,
@@ -246,6 +253,7 @@ class OpenAIProvider(BaseProvider):
         empty_response_retries: int = 0,
         auto_continues: int = 0,
         accumulated_text: str = "",
+        zero_output_retries: int = 0,
         cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
@@ -294,6 +302,13 @@ class OpenAIProvider(BaseProvider):
                     # o1/o3는 max_tokens 대신 max_completion_tokens 사용
                     create_params.pop("max_tokens", None)
                     create_params["max_completion_tokens"] = max_tokens
+
+            # 원샷 계약(분류·증류 등): 하이브리드 thinking 모델의 추론 모드 차단.
+            # 파라미터는 프로바이더별(_thinking_off_params 오버라이드) — 기본은 no-op.
+            if self.disable_thinking:
+                _off = self._thinking_off_params()
+                if _off:
+                    create_params.setdefault("extra_body", {}).update(_off)
 
             collected_text = ""
             tool_calls = {}  # id -> {id, name, arguments}
@@ -357,9 +372,31 @@ class OpenAIProvider(BaseProvider):
                 input_tokens = getattr(usage_info, 'prompt_tokens', 0)
                 output_tokens = getattr(usage_info, 'completion_tokens', 0)
                 self.metrics.record_request(latency_ms, input_tokens, output_tokens)
-                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}, 지연={latency_ms:.0f}ms")
+                # 추론 토큰 가시화 — "출력=4096인데 텍스트 0자" 부류(ep889)를 로그에서 즉시 판별
+                _det = getattr(usage_info, 'completion_tokens_details', None)
+                _rt = getattr(_det, 'reasoning_tokens', 0) if _det else 0
+                _rt_note = f", 추론={_rt}" if _rt else ""
+                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}{_rt_note}, 지연={latency_ms:.0f}ms")
             else:
                 self.metrics.record_request(latency_ms)
+
+            # thinking 소진 가드(ep889 부류): length인데 보이는 텍스트·도구 호출이 0
+            # — 추론이 max_tokens를 전부 태운 경우. 이어쓰기(Auto-Continue)도 응답
+            # 유도(빈 응답 복구)도 무의미하다(이어쓸 본문이 없음). 1회만 재시도 후 포기.
+            if finish_reason == "length" and not collected_text.strip() and not tool_calls:
+                if zero_output_retries < 1:
+                    print(f"[OpenAI] 출력 0자 length 감지 (추론 토큰 소진 추정) — 동일 요청 1회 재시도")
+                    yield from self._agentic_loop(
+                        messages, openai_tools, execute_tool, depth, max_tokens,
+                        empty_response_retries=empty_response_retries,
+                        auto_continues=auto_continues, accumulated_text=accumulated_text,
+                        zero_output_retries=zero_output_retries + 1,
+                        cancel_check=cancel_check
+                    )
+                else:
+                    print(f"[OpenAI] 출력 0자 length 재발 — 포기(누적 텍스트만 반환)")
+                    yield {"type": "final", "content": accumulated_text}
+                return
 
             # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
             if not collected_text.strip() and not tool_calls and depth > 0 and empty_response_retries < 2:

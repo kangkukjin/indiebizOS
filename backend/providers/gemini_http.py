@@ -108,14 +108,27 @@ class GeminiHTTPProvider(BaseProvider):
     # ── REST 호출 ───────────────────────────────────────────
     def _generate(self, contents: list, tools: Optional[list]) -> dict:
         url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        gen_config: Dict[str, Any] = {"temperature": self.temperature}
+        # 원샷 계약: 2.5 flash 계열 기본 thinking 차단(ep889 부류 — gemini.py 와 대칭).
+        _try_thinking_off = self.disable_thinking and not self._thinking_off_unsupported
+        if _try_thinking_off:
+            gen_config["thinkingConfig"] = {"thinkingBudget": 0}
         body: Dict[str, Any] = {"contents": contents,
-                                "generationConfig": {"temperature": self.temperature}}
+                                "generationConfig": gen_config}
         if self.system_prompt:
             body["system_instruction"] = {"parts": [{"text": self.system_prompt}]}
         if tools:
             body["tools"] = tools
         r = requests.post(url, json=body, timeout=120)
         if r.status_code != 200:
+            # budget 0 거부 모델(flash-latest 부류) → 표식 후 1회 재시도(자가치유).
+            # ★거부 응답이 범용 문구("invalid argument"만, 'thinking' 미언급 — 08-01 실측)라
+            # 문구 매칭 불가 → 차단을 보낸 상태의 400이면 일단 빼고 재시도한다.
+            # 다른 원인의 400이면 재시도도 같은 400 → 정상 raise (여분 요청 1회뿐).
+            if _try_thinking_off and r.status_code == 400:
+                print("[GeminiHTTP] thinkingBudget:0 400 거부 추정 — thinking 차단 포기 후 재시도")
+                self._thinking_off_unsupported = True
+                return self._generate(contents, tools)
             raise RuntimeError(f"Gemini REST {r.status_code}: {r.text[:300]}")
         return r.json()
 

@@ -382,8 +382,10 @@ class CognitivePipelineMixin:
             # ★force_role 표면(포식 등)은 제외 — stateless 검색이 심층/의미 메모리를
             # 더럽히지 않도록 메모리 정책을 진입점이 직접 관장한다(포식 브라우저는
             # assume_forage 포식 증류만 자체 수행 — api_system_ai 포식 스레드 참조).
+            # ★백그라운드 실행 — 증류가 스트림 종료·에피소드 END 를 붙잡지 않게
+            # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
-                self._after_response(
+                self._after_response_async(
                     message, final_content,
                     tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
                 )

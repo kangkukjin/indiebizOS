@@ -535,3 +535,56 @@ AI 답변: {ai_response[:1400]}
                 self._distill_forage_memory(user_message, response, assume_forage=assume_forage)
             except Exception as e:
                 log(f"[포식기억] 오류 (무시): {e}")
+
+    def _after_response_async(self, user_message: str, response: str, *,
+                              tool_calls=None, hippo_score: float = None, top_code: str = None):
+        """_after_response 를 백그라운드 스레드로 — 증류가 턴(스트림 종료·에피소드 END·
+        총 소요 측정)을 붙잡지 않게 한다(ep889: 실작업 4.6분에 증류 꼬리 6분).
+
+        컨텍스트 동반 3종:
+        - thread_context(threading.local — 스레드 자동 전파 안 됨): agent_id/project_id/
+          agent_name 을 메인에서 스냅샷해 스레드에서 재설정. goal_eval_outcome 은 메인에서
+          읽고 *메인에서 소비(clear)* 후 스레드에 값으로 전달 — 안 그러면 NOT_ACHIEVED
+          게이트가 스레드에서 안 보여 실패 실행이 해마에 증류된다(복리 출혈 방어 무력화).
+        - 에피소드 버퍼(contextvars): copy_context 로 같은 _Episode 를 공유 — 증류 print 가
+          버퍼에 계속 쌓이고, 완료 시 refresh_episode 가 저장된 행에 꼬리를 재합류시킨다.
+        - 경량 프로바이더 동시성: lightweight_ai_call 의 _oneshot_call_lock 이 직렬화.
+        """
+        import threading
+        import contextvars
+        from thread_context import (
+            get_current_agent_id, set_current_agent_id,
+            get_current_project_id, set_current_project_id,
+            get_current_agent_name, set_current_agent_name,
+            get_goal_eval_outcome, clear_goal_eval_outcome, set_goal_eval_outcome,
+        )
+        from episode_logger import EpisodeLogger
+
+        agent_id = get_current_agent_id()
+        project_id = get_current_project_id()
+        agent_name = get_current_agent_name()
+        _ge = get_goal_eval_outcome()
+        clear_goal_eval_outcome()  # 소비는 메인 컨텍스트에서 — 다음 메시지로 안 새게(기존 계약 유지)
+        ctx = contextvars.copy_context()
+        ep = EpisodeLogger.current()
+
+        def _run():
+            try:
+                if agent_id:
+                    set_current_agent_id(agent_id)
+                if project_id:
+                    set_current_project_id(project_id)
+                if agent_name:
+                    set_current_agent_name(agent_name)
+                if _ge is not None:
+                    set_goal_eval_outcome(_ge.get("achieved", True), _ge.get("severity", 0) or 0)
+                ctx.run(
+                    self._after_response, user_message, response,
+                    tool_calls=tool_calls, hippo_score=hippo_score, top_code=top_code,
+                )
+            except Exception as e:
+                print(f"[증류] 백그라운드 오류 (무시): {e}")
+            finally:
+                EpisodeLogger.refresh_episode(ep)
+
+        threading.Thread(target=_run, daemon=True, name="distill-after-response").start()

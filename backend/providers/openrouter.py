@@ -21,6 +21,12 @@ class OpenRouterProvider(OpenAIProvider):
     그대로 사용하며, base_url만 OpenRouter로 변경합니다.
     """
 
+    def _thinking_off_params(self):
+        """원샷 계약용 추론 차단 — OpenRouter 통합 reasoning 파라미터.
+        게이트웨이가 모델별로 정규화하고 미지원 모델에선 무시하므로 안전.
+        (deepseek._thinking_off_params 와 같은 목적 — ep889 부류 방지)"""
+        return {"reasoning": {"enabled": False}}
+
     def init_client(self) -> bool:
         """OpenRouter 클라이언트 초기화"""
         if not self.api_key:

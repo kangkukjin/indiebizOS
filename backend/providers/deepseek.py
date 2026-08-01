@@ -25,6 +25,13 @@ class DeepSeekProvider(OpenAIProvider):
     그대로 사용하며, base_url만 DeepSeek로 변경합니다.
     """
 
+    def _thinking_off_params(self):
+        """v4 하이브리드 thinking 차단 — 2026-08-01 라이브 실측: 이 파라미터로
+        reasoning_tokens가 0이 됨(enable_thinking/chat_template_kwargs는 무시됨).
+        미지정 시 서버가 자체 판단으로 thinking에 빠져 원샷 호출(증류·분류)이
+        max_tokens를 추론으로 전부 태울 수 있다(ep889: 증류 1건에 7콜 4.5분)."""
+        return {"thinking": {"type": "disabled"}}
+
     def init_client(self) -> bool:
         """DeepSeek 클라이언트 초기화"""
         if not self.api_key:

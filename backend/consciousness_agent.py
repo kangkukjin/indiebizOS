@@ -472,6 +472,12 @@ def get_world_pulse_text() -> str:
 _consciousness_instance: Optional[ConsciousnessAgent] = None
 _lightweight_provider = None  # 경량 AI 전용 프로바이더 (싱글톤)
 _lightweight_provider_initialized = False
+
+# 원샷 호출 직렬화 — lightweight_ai_call 이 공유 프로바이더의 system_prompt 를 임시 교체하는
+# 방식이라, 백그라운드 증류(_after_response_async)와 다음 턴 분류가 겹치면 프롬프트가 교차
+# 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 호출은 수 초라 직렬화 비용은 미미.
+import threading as _threading
+_oneshot_call_lock = _threading.Lock()
 _midtier_provider = None  # 중급 AI 전용 프로바이더 (싱글톤)
 _midtier_provider_initialized = False
 _system_oneshot_provider = None  # 본격(system_ai) 원샷 프로바이더 (싱글톤, 도구·세션 없음)
@@ -530,6 +536,8 @@ def _get_lightweight_provider():
         # 분류·평가·증류용 — 메인 에이전트와 session_key 충돌 방지를 위해 세션 비활성
         if hasattr(_lightweight_provider, "disable_session_persistence"):
             _lightweight_provider.disable_session_persistence = True
+        # 원샷 계약 — 하이브리드 thinking 차단(model_resolver oneshot 버킷과 대칭)
+        _lightweight_provider.disable_thinking = True
         print(f"[LightweightAI] 초기화 완료 ({provider_name}/{model_name})")
         return _lightweight_provider
     except Exception as e:
@@ -700,25 +708,28 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
             return None
         provider = agent._provider
 
-    # 시스템 프롬프트 임시 교체
-    original_system_prompt = None
-    if system_prompt is not None:
-        original_system_prompt = provider.system_prompt
-        provider.system_prompt = system_prompt
+    # ★직렬화: system_prompt 임시 교체가 공유 싱글턴 변이라 동시 호출 시 프롬프트 교차 오염
+    # (백그라운드 증류 스레드 + 메인 턴 분류가 같은 provider 를 만짐). 락으로 스왑~복원을 원자화.
+    with _oneshot_call_lock:
+        # 시스템 프롬프트 임시 교체
+        original_system_prompt = None
+        if system_prompt is not None:
+            original_system_prompt = provider.system_prompt
+            provider.system_prompt = system_prompt
 
-    try:
-        return provider.process_message(
-            message=prompt,
-            history=[],
-            images=images,
-            execute_tool=None
-        )
-    except Exception as e:
-        logger.warning(f"[lightweight_ai_call] 실패: {e}")
-        return None
-    finally:
-        if original_system_prompt is not None:
-            provider.system_prompt = original_system_prompt
+        try:
+            return provider.process_message(
+                message=prompt,
+                history=[],
+                images=images,
+                execute_tool=None
+            )
+        except Exception as e:
+            logger.warning(f"[lightweight_ai_call] 실패: {e}")
+            return None
+        finally:
+            if original_system_prompt is not None:
+                provider.system_prompt = original_system_prompt
 
 
 def _get_system_oneshot_provider():

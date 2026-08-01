@@ -337,6 +337,10 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
             # 원샷은 메인 에이전트와 session_key 충돌 방지(no-op on providers without the attr)
             if oneshot and hasattr(prov, "disable_session_persistence"):
                 prov.disable_session_persistence = True
+            # 원샷 계약(분류·평가·증류·번역)=짧은 JSON 응답 — 하이브리드 thinking 차단.
+            # 지원 프로바이더(DeepSeek 등)만 해석, 나머진 무시(base 기본 False 속성).
+            if oneshot:
+                prov.disable_thinking = True
             _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")

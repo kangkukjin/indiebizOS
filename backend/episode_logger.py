@@ -62,7 +62,7 @@ def _denoise_for_buffer(text: str) -> str:
 
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
-    __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id")
+    __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id")
 
     def __init__(self, agent: str, user_message: str, project_id: str = ""):
         self.agent = agent
@@ -70,6 +70,7 @@ class _Episode:
         self.started_at = datetime.now()
         self.buffer = []
         self.project_id = project_id or ""
+        self.episode_id = None  # END 저장 후 DB row id — 백그라운드 증류 로그 재합류(refresh)용
 
 
 class EpisodeLogger:
@@ -153,12 +154,42 @@ class EpisodeLogger:
             total_ms = int((datetime.now() - ep.started_at).total_seconds() * 1000)
             episode_id = _save_episode(ep.started_at, ep.agent, ep.user_message, log_text, total_ms)
             if episode_id:
+                ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
                 _extract_and_save_summary(episode_id, ep.started_at, ep.agent, ep.user_message, log_text, total_ms)
                 _cleanup_old_episodes()
         except Exception as e:
             # 에피소드 기록 실패가 시스템에 영향 주면 안 됨
             if cls._original_stdout:
                 cls._original_stdout.write(f"[EpisodeLogger] 저장 실패: {e}\n")
+
+
+    @classmethod
+    def current(cls):
+        """현재 실행 컨텍스트의 에피소드 객체(없으면 None) — 백그라운드 증류가 참조를 쥐고
+        완료 후 refresh_episode 로 자기 로그를 에피소드에 재합류시키는 용도."""
+        return _current_episode.get(None)
+
+    @classmethod
+    def refresh_episode(cls, ep):
+        """이미 저장된 에피소드 행의 log 를 버퍼 현재 상태로 재저장.
+
+        _after_response 백그라운드화로 증류 로그가 [Episode END] *이후*에 버퍼에 쌓인다
+        (copy_context 로 같은 _Episode 를 공유). END 시점 저장본엔 그 꼬리가 없으므로,
+        증류 완료 시 이 메서드가 행을 갱신해 진단 가시성을 보존한다(ep889 부류 분석이
+        이 로그에 의존). total_ms·ended_at 은 턴 기준 측정이라 건드리지 않는다.
+        아직 END 전이면(episode_id 없음) 버퍼가 END 저장에 통째로 실리므로 no-op."""
+        if ep is None or getattr(ep, "episode_id", None) is None:
+            return
+        try:
+            conn = _get_db()
+            conn.execute(
+                "UPDATE episode_log SET log = ? WHERE id = ?",
+                ("".join(ep.buffer), ep.episode_id),
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass  # 로그 재합류 실패가 시스템에 영향 주면 안 됨
 
 
 class _TeeWriter:

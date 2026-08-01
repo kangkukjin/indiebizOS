@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-07-25
+last_updated: 2026-08-01
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -18,7 +18,7 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)�
 
 | 신체 시스템 | IndieBiz OS 구현 | 역할 |
 |------------|------------------|------|
-| 신경계 | IBL (6노드, 162 액션) | 감각/행동의 상시 연결 |
+| 신경계 | IBL (6노드, 163 액션) | 감각/행동의 상시 연결 |
 | 감각기관 전처리 | 감각 전처리 (postprocess) | 원시 정보를 압축하여 뇌에 전달 |
 | 선택적 주의력 | 의식 에이전트 | 매 턴 메타 판단 — 문제 정의, 초점, 달성 기준 |
 | 반사 신경 | 경량 AI (분류) | EXECUTE/THINK 분류, 단순 요청은 의식 건너뜀 |
@@ -145,7 +145,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 ### IBL (IndieBiz Logic) 시스템
 - 노드 기반 추상화: `[node:action]{params}` 문법
 - execute_ibl + 범용 언어 + 인지 도구 (총 9개 최상위 도구)
-- **6개 노드, 162 액션** (sense 48·self 51·limbs 18·others 18·engines 14·table 13. engines 변환자/emitter를 table 노드로 분리 + 라운드 2 통합 + op 어휘화 + 사용성 재감사 + 어휘 정리 + 메신저/비즈니스 IBL화 + neighbor 통합 + 폰 온디맨드 감각 삼각 + 통화 대수/문서 IR emitter + 국회도서관 국가학술정보 인물/학위논문 + 공개 표면 가족[포털/공개파일/가족신문/게시판/발행/팔로우] + 숙박/개체해소/중고/공급망게이트/아이콘 + **몸 부탁[others:ask]** + **USB 손발[self:limb·limbs:guestpc]** + **신문 발행 결정화[engines:newspaper]** + **내 음악[self:music]** 후)
+- **6개 노드, 163 액션** (sense 48·self 52·limbs 18·others 18·engines 14·table 13. engines 변환자/emitter를 table 노드로 분리 + 라운드 2 통합 + op 어휘화 + 사용성 재감사 + 어휘 정리 + 메신저/비즈니스 IBL화 + neighbor 통합 + 폰 온디맨드 감각 삼각 + 통화 대수/문서 IR emitter + 국회도서관 국가학술정보 인물/학위논문 + 공개 표면 가족[포털/공개파일/가족신문/게시판/발행/팔로우] + 숙박/개체해소/중고/공급망게이트/아이콘 + **몸 부탁[others:ask]** + **USB 손발[self:limb·limbs:guestpc]** + **신문 발행 결정화[engines:newspaper]** + **내 음악[self:music]** + **웹앱 등기부[self:webapp]** 후)
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅 8종 체계**:
@@ -198,7 +198,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - 상세 (단계별 흐름·증류 조건·DB 스키마·학습 절차): **memory.md**
 
 ### 도구 패키지 시스템 (노드 구현체)
-42개 패키지가 IBL 노드의 실제 구현체로 동작. 폴더 기반 탐지 + 동적 로딩. op-bearing 10 패키지는 `_OP_DISPATCHERS` 표준 채택(2026-05-28, android 합류 2026-06-05) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
+42개 패키지가 IBL 노드의 실제 구현체로 동작. 폴더 기반 탐지 + 동적 로딩. op 분기 27개 패키지가 `_OP_DISPATCHERS` 표준 채택(2026-05-28~) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
 
 ### 자동응답 서비스 V3
 - Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
@@ -277,6 +277,8 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **기계 얼굴**: `GET /manifest`(제목·파일·크기·mtime·URL·`about`·`login` 블록) + `GET /f?path=` + 쿠키 로그인. **이게 계약의 전부** — IBL도 인지 파이프라인도 계약에 없다.
 - **읽는 쪽(이웃 피드)**: `warehouse_feed.py` 폴러가 등록된 이웃 창고의 매니페스트를 30분마다 가져와 경로·mtime diff → `seed`/`new`/`changed` 타임라인. **AI·토큰 0의 순수 기계층**. 보존 스냅샷은 곧 동네 전체 파일명 색인(검색). 이웃이 indiebizOS 가 아니어도 된다 — `warehouse_adapters.py` 가 nginx/Apache 색인·RSS/Atom(HTML 자동발견)·Nextcloud 공개공유·일반 웹페이지를 같은 통화로 정규화(콜드 스타트 우회).
 - **창고 주소 = 연락 방법**: 이웃의 `contacts`에 `contact_type='warehouse'` 행으로 저장(이메일·Nostr 키 옆). 리트윗은 내 창고에 떨어뜨린 `.url` 포인터 파일 — 구독자 클릭이 원본 창고로 직행(FOAF 발견이 프로토콜 아니라 파일).
+- **둘러보기(2026-07-29)**: 어댑터가 생긴 뒤로 세상엔 이미 창고가 많은데 볼 방법이 없었다 → 이웃찾기가 두 갈래 — *소개글*(나를 알린 사람이 오는 수신면)과 *둘러보기*(`warehouse_directory.py`: Neocities 태그 브라우즈를 요청 1회로 파싱 + 사용자가 고칠 수 있는 시드 목록). 이웃 카드의 📣 **공개 추천**은 기계가 사실만 채운 초안을 사용자가 고쳐 발행하고(공개 발행이라 2단 확인), 본문이 `공유창고 Warehouse : <url>` 계약을 지켜 받는 쪽 이웃찾기에 '＋ 등록' 버튼이 그 자리에 붙는다. 방언에 **neocities** 어댑터가 합류(프로필의 update 이벤트=변화 피드, 루트 링크=파일 목록. 커스텀 도메인은 `api/info` 대조로만 채택 — 남의 사이트를 잘못 물지 않게).
+- **AI 가 채우는 진열**: 비즈니스 아이템(나눔·판매·가능)이 창고 폴더로 물질화될 때 사람이 여는 표지 한 장(`<비즈니스> 카탈로그.html`, `warehouse_catalog.py`)이 함께 발행된다 — 사진을 data URI 로 실은 **자족 문서**(받아가서 열어도 그대로 산다)에 연락처 꼬리는 비즈니스 문서와 같은 소스(`api_portal._contact_pairs`). 매 공개 요청마다 도는 자리라 **지문 게이트**(첫 줄 `<!-- catalog:<sha1> -->`)로 내용이 같으면 재생성 0 — 괜히 다시 쓰면 mtime 이 흔들려 이웃 폴러가 `changed` 로 오독한다.
 - **자격·평가 두 축**: 상대가 준 접근 **레벨**(가입/로그인 자격을 폴러가 그대로 사용, 만료 시 자가치유·실패 시 익명 폴백)과 내가 매기는 **창고 점수 0~3**(피드·검색 필터)은 독립.
 - **주소는 파생**: 몸의 공개 주소는 흩어진 설정이 아니라 창고가 실제로 서빙하는 얼굴에서 파생(`origin_host()`, 권위=`public_face.provider`). Cloudflare 발급이 터널·Worker·R2 캐시까지 만들고(`cdn_provision.py`), 인증 게이트는 fail-closed(미등록 호스트=외부 취급, 프록시 신호를 `Host`보다 먼저).
 → 상세: [communication.md](communication.md)
@@ -298,12 +300,25 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - 연결=헬퍼(Go 단일파일)가 그 PC 에서 허브로 **아웃바운드** 접속 → 폰 푸시 큐(`phone_jobs`)를 재사용해 셸 봉투를 당겨가 실행·회신. 그 PC 방화벽 설정 불필요.
 - 눈 없음(셸·파일만). 발급은 이름 명시가 원칙이고(오배송 방어), 폐기(revoke)는 그 키만 죽인다.
 
+### 웹앱 등기부 (몸이 낳은 웹앱들, 2026-08-01)
+
+이 시스템은 공개면·계기·외부 배포로 웹앱을 계속 낳는데, 정작 그것들의 목록을 갖고 있지 않았다. `[self:webapp]{op: list/status/register/remove}`(system_essentials, `webapp_registry.py`)가 그 등기부다.
+
+- **파생 우선**(수동 원장은 드리프트한다): 진실 소스 7곳 — 포털(`portal_state`)·게시판·가족신문·공개파일 바스켓·정기보고 발행면·web-builder `sites.json`·`outputs/web-projects/*/wrangler.toml`(야생 Worker) — 에서 **매 호출 재계산** + 고정 2면(런처·NAS PWA). 파생 밖 예외만 `data/webapps.json` 에 수동 보충.
+- `status`=전 함대 **병렬 HTTP 생존 실측**(🟢/🔴·응답코드·지연). 🕸️ 계기 3탭(함대/생존/등록)이라 전 표면에 자동 등장.
+- 판단 기준은 가이드 `webapp.md`: 웹앱 4부류 결정 트리(몸 공개면 / 포털 계기 대여 / 외부 서버리스 / 자족 단일 HTML)·몸 공개면 5조각 레시피·PWA 함정(★같은 origin 다중 PWA 는 알림 권한이 한쪽 WebAPK 로 위임된다 — 알림 권한은 앱이 아니라 **origin 단위**).
+
+### 알림 도달 경로 (2026-07-28)
+
+수신한 메시지(Nostr/Gmail)가 DB 에 저장만 되고 사용자에게 닿는 경로가 0이던 것을 봉합. 수신 단일 관문(`channel_poller._save_message_to_db`) 직후 `notify_dispatch.notify_user()` 하나로 모인다 — ①알림함 기록 ②**A: 런처 연결 시** WebSocket `show_notification` → Electron OS 네이티브 알림+배지+클릭=메신저 창 ③**B: 미연결 폴백** `desktop_notify.py`(의존성 0 — osascript / PowerShell WinRT 토스트 / notify-send). win·linux 트레이 상주로 창을 다 닫아도 수신·알림이 계속된다.
+★**경로 C(웹 푸시)는 은퇴**: RFC 8291 구현까지 마쳤으나 실기기 도달 실패 — 같은 origin 의 PWA 둘 중 하나에만 알림 권한이 위임되는 안드로이드 동작이 진범이었다. 재활 조건(런처 서브도메인 분리로 origin 독점)만 주석에 남기고 코드는 전부 제거했다.
+
 ### 원격 접근 시스템
 Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 
 - **원격 Finder** (`api_nas.py`): 파일 탐색, 동영상 스트리밍, 다운로드 — 개인 NAS처럼 활용. 홈 화면 설치 시 별도 앱(**IBFind**).
 - **원격 런처** (`api_launcher_web.py` + `launcher_surface_remote.py`): 자율주행·조종실·앱·공유창고·포식 5탭 — 브라우저면 어디서나 같은 표면. 웹앱 매니페스트로 홈 화면 설치 가능(서비스워커는 캐시하지 않음 = 항상 라이브).
-- **표면이 곧 착지점**: 결과가 어디로 떨어지는지는 *어느 표면이 물었나*로 정해진다(폰 브라우저에서 누른 재생은 폰에서 난다). 클립보드는 반대 방향으로 같은 축을 탄다(clipbox).
+- **표면이 곧 착지점**: 결과가 어디로 떨어지는지는 *어느 표면이 물었나*로 정해진다(폰 브라우저에서 누른 재생은 폰에서 난다). ★클립보드 수신면(clipbox)은 2026-07-28 철회 — '폰으로'는 종전 푸시 큐를 그대로 쓴다.
 - 세션 기반 인증 (기능별 별도 비밀번호)
 - 모바일 반응형 다크 테마 UI
 → 상세 문서: [remote_access.md](remote_access.md)
@@ -354,12 +369,23 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 헌법적으로 이건 하부/상부 이음매(substrate/superstructure)와 표준-코어(기능어 self/others/table=표준 vs 내용어=사전) 원칙을 **패키지·앱·설치·업데이트 층까지 밀어낸 것**이다. 상세: technical.md '설정 파일 위치'.
 
+## 이음매 시민권 (커밋·부팅 게이트, 2026-07-25~26)
+
+액션(어휘)은 `--check` 삼각 검증이라는 시민권을 오래 가졌지만, **액션이 아닌 것**(이음매 = 인증 게이트·이벤트 루프 규율·공개 라우트·파생물·부팅)은 주석과 관습으로만 지켜졌다. 같은 부류의 검사를 이음매에도 준다 — 전부 AST/실측 기반, 의존성 0, pre-commit + CI(`.github/workflows/`).
+
+- **인증 게이트 fail-closed**: `remote_access_guard` 가 블록 전체를 `except: pass` 로 감싸 "보수적"이라 불렀지만 실제로는 fail-open 이었다(판정자 `is_external_request` 는 "로컬임이 증명될 때만 로컬"인데 래퍼 한 줄이 그 규율을 무효화). 판정 불능 → **503**(조용히 열리는 대신 시끄럽게 멈춘다), 인증 실패 → 401.
+- **공개 노출 ↔ 인증 대조 가드**(`check_public_routes.py`): "자체 시크릿 게이트 보유"라는 주석을 검사로 승격. 오라클은 코드가 아니라 **살아있는 라우트 테이블**(실제 `app.routes` 를 훑고 실제 `is_public_remote_path` 에 묻는다 — 등록 목록을 재파싱하면 그 파서가 또 드리프트한다). 헬퍼 안에서 검사하는 간접 호출까지 추적하고, **공허한 통과를 금지**(거짓 초록은 붉은 것보다 나쁘다).
+- **이벤트 루프 규율 가드**(`check_event_loop.py`): async 본문의 동기 블로킹 호출은 단일 프로세스 백엔드를 세우고, 이 서버는 자기 자신을 부르는 경로가 잦아(창고 폴러→공개 얼굴→터널→자기) 자기교착이 된다 — 같은 부류가 세 번 재발했다. ★정확도가 전부라 중첩 sync 함수·람다·클래스 메서드를 허용 규칙으로 두고 **음성 픽스처를 미탐 픽스처보다 중히** 본다(오탐 한 번이면 가드가 꺼지고 미탐도 같이 사라진다).
+- **신선 clone 게이트**: main 이 개발 기계에서만 통과하고 clone 에서는 `--check` 실패였다(원인 둘 다 *커밋되지 않은 로컬 상태*) → 커밋된 것만 보는 눈을 CI 에 붙이고, 파생물 3종을 추적으로 돌리고, 파생 결정성(auth 레지스트리를 import 아닌 AST 로)까지 고쳤다.
+- **부팅 관측**(`boot_status.py`): lifespan 의 `except: print(...실패 무시)` 블록 10개를 성패 양쪽 계측(제어 흐름 무변경). `/world-pulse/health` 가 `boot` 절을 함께 내보내고 부팅 실패가 하나라도 있으면 overall 을 degraded 로 올린다 — 사흘 뒤 "왜 스케줄이 안 도나"의 답이 터미널 스크롤 저편에 있지 않게.
+- **윈도우 이식성 게이트**(`check_win_portability.py`): 유닉스 전용 stdlib 의 무가드 톱레벨 import 탐지. ★위험지대는 규율 잡힌 `backend/` 가 아니라 **데이터 취급되는 실행 코드** `data/packages/`.
+
 ## 시스템 통계
 
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개
-- 도구 패키지: 42개 (+ 백엔드 extensions 8개), IBL: 6노드 162 액션 (sense 48·self 51·limbs 18·others 18·engines 14·table 13. op 어휘화 + 안드로이드 통합 + 메신저/비즈니스 IBL화 + 통화 대수 table 노드 분리 + 폰 온디맨드 감각 삼각 + 국회도서관 국가학술정보 + 공개 표면 가족[포털/공개파일/가족신문/게시판] + 숙박/개체해소/중고/공급망게이트/아이콘 + 몸 부탁/USB 손발/신문 발행/내 음악)
-- backend 192 파일 (api_*.py 38개)
-- op-bearing 액션 24개, 모두 `_OP_DISPATCHERS` 표준 채택, AST 정확 비교 검증
+- 도구 패키지: 42개 (+ 백엔드 extensions 8개), IBL: 6노드 163 액션 (sense 48·self 52·limbs 18·others 18·engines 14·table 13. op 어휘화 + 안드로이드 통합 + 메신저/비즈니스 IBL화 + 통화 대수 table 노드 분리 + 폰 온디맨드 감각 삼각 + 국회도서관 국가학술정보 + 공개 표면 가족[포털/공개파일/가족신문/게시판] + 숙박/개체해소/중고/공급망게이트/아이콘 + 몸 부탁/USB 손발/신문 발행/내 음악/웹앱 등기부)
+- backend 197 파일 (api_*.py 38개), 가이드 58개
+- op 분기 액션 68개 — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(27개 패키지), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 37·false 16)
 
 ## 참조
 
@@ -369,4 +395,4 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*마지막 업데이트: 2026-07-25 — **몸이 주소를 갖고, 몸끼리 말을 트다**: ①**공유창고**(2026-07-18~21, 위 "공유창고" 절): 발행=폴더에 파일 놓기, 레벨 0~4=이웃 CRM과 같은 자(위 레벨은 404), 기계 얼굴 `/manifest`, 이웃 창고 폴러(30분 diff·AI 0)와 **방언 어댑터**(nginx 색인·RSS/Atom·Nextcloud·일반 웹페이지)로 "설치 안 한 이웃"까지 편입, 리트윗=`.url` 파일, 창고 주소=이웃의 contact_type, 창고 점수 0~3(접근 레벨과 독립인 내 평가 축). 몸의 공개 주소는 **파생**(`origin_host`, 권위=public_face.provider)이고 CF 발급이 터널·Worker·R2 캐시까지 만든다. 인증 게이트 fail-closed. ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card` + `POST /nodes/ask`(`[others:ask]`) — 공유 사전 RPC 은퇴, 사전 물리 분리(설치=자기 어휘만·해마 소유-필터), 신뢰=이웃 등급(`body_trust`), **몸 사이 특권 배관 없음**. 표면 분리(원격 런처 5탭=PC의 일부 / 폰 네이티브 3탭=독립 시스템), 클립보드는 원격 런처 clipbox 로 재배치. ③**USB 손발**(2026-07-23): `[self:limb]`·`[limbs:guestpc]` + Go 헬퍼(아웃바운드·푸시 큐 재사용). `runs_on mac_only`→**`pc_only`** 전역 개명(맥 중심 이름 제거). ④신문 발행 결정화(`[engines:newspaper]`)·에피소드 로깅 전 경로(HTTP·위임·외부채널)·손발 프레즌스 상시 주입. ⑤**내 음악 라이브러리**(`[self:music]`)+관련곡 그래프(가중 간선·랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). **현 상태: 6노드 162 액션**(sense 48·self 51·limbs 18·others 18·engines 14·table 13), 도구 패키지 42개 + extensions 8개. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리 정합화**: `others` 노드에 공개 웹 표면이 자라 남이 브라우저로 닿는 표면 완성 — `[others:portal]`(개인 포털 `/h/<주소>/`, 다중 포털·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`)·`[others:publish]`(관점 발행)·`[others:follow]`(팔로우 피드) + 정기보고 발행 면(`/r/`, 어휘 없음). 그 외 신규: `[sense:stay]`(숙박/한달살기 3소스)·`[sense:entity]`(Wikidata 개체 해소)·`[sense:used]`(중고)·`[self:install_lib]`(공급망 승인 게이트)·`[engines:icon]`(폰-로컬 아이콘)·크롤 에스컬레이션 사다리. **table 노드 분리**(2026-06-30): engines 변환자/emitter 13종을 신규 `table` 노드로 이관(engines=순수 미디어 생성). **현 상태: 6노드 157 액션**(sense 48·self 49·limbs 17·others 17·engines 13·table 13), 도구 패키지 40개. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 단일 리졸버(`model_resolver.py`, 역할→축→기어→티어)로 통합. 계기판 레버(절약/균형/최대) + 프리셋 편집기 + 에이전트 핀, 전부 핫리로드(`/model-gear` REST). per-agent 모델 설정 폐지(에이전트 yaml의 provider/model/apiKey 무시, 모델·키는 실행 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 프로파일에서 파생(`build_body_bundle.py`, 3겹 게이트). 142 액션 불변·38 도구 패키지. 이전(2026-06-29) — 앱 인터랙티브 렌더 프리미티브 종결: 인터랙티브 `map`(leaflet) + `on:` 뷰-이벤트(moveend 재조회·marker_click IBL 액션 또는 `{stream:true}` HLS 영상) + 결과-필드 동적 필터 `filter:{from_field}`(클라이언트 측 거르기). bespoke CommercialInstrument 은퇴(선언형 흡수)·directions 은퇴 보류·lightbox 불요. 버그수정: 원격 동적필터+카드드릴 인덱스(applyCatFilter 후 인덱싱)·tsc 베이스라인 에러 3개. 단일통화(items) records producer=0 종합확인. 142 액션 불변(렌더링 레이어 변경)·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보 API 흡수: `sense:researcher`(연구자 동명이인 분리)·`sense:paper source:nanet`(학위논문) 신설 → 인물·학위논문 찾기. 5노드 142 액션(sense 44, self 44, limbs 17, others 11, engines 26)·도구 패키지 38개. 기억 7종(2026-06-20 포식 기억 forager가 7번째로 추가 — 디스크/코드/웹 공간을 뒤져 배운 것을 세션 너머로 누적). 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — **폰이 두 번째 독립 자아로**: 폰 두뇌를 claude_code 원격 렌트 → 폰-로컬 in-process Gemini(경량 3.1-flash-lite/본격 3.5-flash)로 전환(away-case 역방향 장치 은퇴, outbound만 유지) + `detect_body()` 하드웨어 자기감지(자신을 맥 아닌 "폰"으로 인식, 두 HW=두 정체성) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(validate_phone_reachability self-check 합류) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입(읽기 조회 0번) + channel 트리거 맥 발화 경로. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지(해마 게이트 capability化) → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(옛 BusinessManager·NeighborManager·IndieNet 창 은퇴, api_indienet REST 제거) + 자동응답 IBL화 + NIP-17 멀티릴레이 실시간 수신 + 폰↔PC business.db 합집합 동기화(LWW+tombstone CRDT, self:phone_sync) + neighbor 통합 + 해마 로컬 재학습(M4 Pro) → 122 액션. 이전(2026-06-11): 폰 네이티브 정착(Chaquopy 온디바이스 백엔드 + 실제 IBL 엔진 + runs_on + phone_manifest) + 앱 표면 선언 단일소스화 + 라디오 스트림 URL 수정. 이전(2026-06-10): 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*
+*마지막 업데이트: 2026-08-01 — **낳은 것을 세고, 받은 것을 알리고, 이음매에 시민권을 주다**: ①**웹앱 등기부 `[self:webapp]`**(2026-08-01, 162→**163 액션**) — 이 시스템이 계속 낳는 웹앱들의 목록이 없던 것을 **파생 우선 등기부**로(진실 소스 7곳 매 호출 재계산 + `status`=전 함대 병렬 생존 실측). 가이드 `webapp.md` 가 4부류 결정 트리와 PWA 함정(★알림 권한은 앱이 아니라 **origin 단위**)을 붙든다. ②**알림 도달 경로 A+B**(2026-07-28): 수신이 DB 에 저장만 되고 사용자에게 닿지 않던 것을 `notify_dispatch` 단일 관문으로(런처 연결 시 OS 네이티브 알림+배지, 미연결이면 의존성 0 데스크탑 폴백, win·linux 트레이 상주). 경로 C(웹 푸시)는 구현 후 실기기 불발로 **은퇴**(재활 조건만 주석에 기록). ③**이음매 시민권**(2026-07-25~26, 위 절): 인증 게이트 fail-closed·공개 노출↔인증 대조·이벤트 루프 규율·신선 clone·부팅 관측 — 액션만 갖던 검사 시민권을 이음매로 확장. 부수로 uvicorn 리로드가 새 터널을 죽여 공개 얼굴이 이틀간 1033 이던 것을 **소유권 있는 종료 정리**로 봉합. ④**창고가 바깥을 보다**(2026-07-29): 이웃찾기 두 갈래(소개글/둘러보기)+📣 공개 추천, neocities 어댑터로 169만 개인 홈페이지 편입, 비즈니스 아이템이 **자족 카탈로그**로 창고에 자동 진열(지문 게이트). ⑤**축의 분리 두 건**: 부작용을 통화(`returns`)에서 뽑아 `side_effect:` 선언으로(조종실 dry-run 이 삭제를 '부작용 없음'으로 통과시키던 것), 목록을 내면서 `effect` 를 선언해 파이프가 끊겨 있던 액션 부류 종결. **현 상태: 6노드 163 액션**(sense 48·self 52·limbs 18·others 18·engines 14·table 13), 도구 패키지 42개 + extensions 8개. 이전(2026-07-25) — **몸이 주소를 갖고, 몸끼리 말을 트다**: ①**공유창고**(2026-07-18~21, 위 "공유창고" 절): 발행=폴더에 파일 놓기, 레벨 0~4=이웃 CRM과 같은 자(위 레벨은 404), 기계 얼굴 `/manifest`, 이웃 창고 폴러(30분 diff·AI 0)와 **방언 어댑터**(nginx 색인·RSS/Atom·Nextcloud·일반 웹페이지)로 "설치 안 한 이웃"까지 편입, 리트윗=`.url` 파일, 창고 주소=이웃의 contact_type, 창고 점수 0~3(접근 레벨과 독립인 내 평가 축). 몸의 공개 주소는 **파생**(`origin_host`, 권위=public_face.provider)이고 CF 발급이 터널·Worker·R2 캐시까지 만든다. 인증 게이트 fail-closed. ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card` + `POST /nodes/ask`(`[others:ask]`) — 공유 사전 RPC 은퇴, 사전 물리 분리(설치=자기 어휘만·해마 소유-필터), 신뢰=이웃 등급(`body_trust`), **몸 사이 특권 배관 없음**. 표면 분리(원격 런처 5탭=PC의 일부 / 폰 네이티브 3탭=독립 시스템), 클립보드는 원격 런처 clipbox 로 재배치. ③**USB 손발**(2026-07-23): `[self:limb]`·`[limbs:guestpc]` + Go 헬퍼(아웃바운드·푸시 큐 재사용). `runs_on mac_only`→**`pc_only`** 전역 개명(맥 중심 이름 제거). ④신문 발행 결정화(`[engines:newspaper]`)·에피소드 로깅 전 경로(HTTP·위임·외부채널)·손발 프레즌스 상시 주입. ⑤**내 음악 라이브러리**(`[self:music]`)+관련곡 그래프(가중 간선·랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). 당시: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13), 도구 패키지 42개 + extensions 8개. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리 정합화**: `others` 노드에 공개 웹 표면이 자라 남이 브라우저로 닿는 표면 완성 — `[others:portal]`(개인 포털 `/h/<주소>/`, 다중 포털·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`)·`[others:publish]`(관점 발행)·`[others:follow]`(팔로우 피드) + 정기보고 발행 면(`/r/`, 어휘 없음). 그 외 신규: `[sense:stay]`(숙박/한달살기 3소스)·`[sense:entity]`(Wikidata 개체 해소)·`[sense:used]`(중고)·`[self:install_lib]`(공급망 승인 게이트)·`[engines:icon]`(폰-로컬 아이콘)·크롤 에스컬레이션 사다리. **table 노드 분리**(2026-06-30): engines 변환자/emitter 13종을 신규 `table` 노드로 이관(engines=순수 미디어 생성). **현 상태: 6노드 157 액션**(sense 48·self 49·limbs 17·others 17·engines 13·table 13), 도구 패키지 40개. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 단일 리졸버(`model_resolver.py`, 역할→축→기어→티어)로 통합. 계기판 레버(절약/균형/최대) + 프리셋 편집기 + 에이전트 핀, 전부 핫리로드(`/model-gear` REST). per-agent 모델 설정 폐지(에이전트 yaml의 provider/model/apiKey 무시, 모델·키는 실행 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 프로파일에서 파생(`build_body_bundle.py`, 3겹 게이트). 142 액션 불변·38 도구 패키지. 이전(2026-06-29) — 앱 인터랙티브 렌더 프리미티브 종결: 인터랙티브 `map`(leaflet) + `on:` 뷰-이벤트(moveend 재조회·marker_click IBL 액션 또는 `{stream:true}` HLS 영상) + 결과-필드 동적 필터 `filter:{from_field}`(클라이언트 측 거르기). bespoke CommercialInstrument 은퇴(선언형 흡수)·directions 은퇴 보류·lightbox 불요. 버그수정: 원격 동적필터+카드드릴 인덱스(applyCatFilter 후 인덱싱)·tsc 베이스라인 에러 3개. 단일통화(items) records producer=0 종합확인. 142 액션 불변(렌더링 레이어 변경)·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보 API 흡수: `sense:researcher`(연구자 동명이인 분리)·`sense:paper source:nanet`(학위논문) 신설 → 인물·학위논문 찾기. 5노드 142 액션(sense 44, self 44, limbs 17, others 11, engines 26)·도구 패키지 38개. 기억 7종(2026-06-20 포식 기억 forager가 7번째로 추가 — 디스크/코드/웹 공간을 뒤져 배운 것을 세션 너머로 누적). 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — **폰이 두 번째 독립 자아로**: 폰 두뇌를 claude_code 원격 렌트 → 폰-로컬 in-process Gemini(경량 3.1-flash-lite/본격 3.5-flash)로 전환(away-case 역방향 장치 은퇴, outbound만 유지) + `detect_body()` 하드웨어 자기감지(자신을 맥 아닌 "폰"으로 인식, 두 HW=두 정체성) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(validate_phone_reachability self-check 합류) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입(읽기 조회 0번) + channel 트리거 맥 발화 경로. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지(해마 게이트 capability化) → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화(옛 BusinessManager·NeighborManager·IndieNet 창 은퇴, api_indienet REST 제거) + 자동응답 IBL화 + NIP-17 멀티릴레이 실시간 수신 + 폰↔PC business.db 합집합 동기화(LWW+tombstone CRDT, self:phone_sync) + neighbor 통합 + 해마 로컬 재학습(M4 Pro) → 122 액션. 이전(2026-06-11): 폰 네이티브 정착(Chaquopy 온디바이스 백엔드 + 실제 IBL 엔진 + runs_on + phone_manifest) + 앱 표면 선언 단일소스화 + 라디오 스트림 URL 수정. 이전(2026-06-10): 인지 경로 개편: 중급 모델을 Reflex 전용으로 좁히고 무의식 EXECUTE는 본격 모델 유지(오분류 품질 방어) + 무의식 분류기 재조정(THINK 과잉 축소) + 의식 프롬프트에 "좋은 문제 규정"(메타-메타)·"IBL과 코딩의 우선순위" 섹션. 이전(2026-06-05~06): 안드로이드 얇은 부활([limbs:android]{op}) + 폰 컴패니언 앱(NIP-17 한방향 피드 + [sense:phone]) + Nostr DM NIP-17 전환 + 음악 작곡 은퇴 → 111 액션. 이전(2026-06-04): IBL 사용성 재감사 종결 + ACTION_PARAM_ALIASES 중앙 적용. 이전(2026-05-31): THINK 경로 framing 재사용 게이트. 이전(2026-05-28): 라운드 2 정리 + op 어휘 단일화 + 삼각 검증 인프라.*

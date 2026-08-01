@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py
-last_updated: 2026-07-25
+last_updated: 2026-08-01
 see_also: [architecture.md, scheduler_guide.md]
 ---
 
@@ -53,6 +53,7 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **발송**: **NIP-17 gift-wrap DM 단일** (2026-06-05 전환 → 2026-06-13 NIP-04 완전 은퇴). 모든 발신(메신저 작성·자동응답·REST·폰)이 `send_dm_nip17`. 구 `send_dm`(NIP-04 kind:4)은 최신 앱이 복호 못 해 DM이 깨져 삭제. 수신은 NIP-17(kind:1059) 우선 + NIP-04(kind:4) 레거시 읽기(폰=NIP-17 전용, pynostr 부재)
 - **모듈**: `backend/nip44.py` (NIP-44 암호화, 공식 테스트 벡터 150/150 통과) + `backend/nip17.py` (gift-wrap). DM inbox relay 선언(kind:10050) 자동 발행
 - **기본 릴레이**: wss://relay.damus.io, wss://relay.nostr.band, wss://nos.lol, wss://relay.primal.net, wss://nostr.wine
+- **기본 켜짐(2026-07-28)**: nostr 채널 스위치의 기본값이 꺼짐이라 설정할 게 없는데도 DM **수신만** 조용히 멈춰 있었다 → 기본 켜짐으로. 스위치가 여닫는 것이 *수신*임을 UI 문구에도 명시(발신은 스위치와 무관).
 
 ### 폰 컴패니언 피드 (한방향 센서, 대화 채널과 분리)
 폰의 네이티브 컴패니언 앱(`phone-companion/`, NotificationListenerService)이 알림을 전송:
@@ -148,7 +149,17 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **자격과 평가는 다른 축**: 상대가 준 접근 **레벨**(가입/로그인 자격을 폴러가 그대로 사용, 쿠키 만료·회수 시
   자가치유 재로그인, 실패해도 익명 폴백이라 피드는 안 멈춤)과 내가 매기는 **창고 점수 0~3**(피드·검색 필터)은 독립.
 - **AI 가 채운다**: 스케줄 파이프라인이 아침 신문·AI 동향 보고서·최신 블로그 글을 창고에 떨어뜨리고, 비즈니스
-  아이템(나눔·판매·가능)은 DB 에서 창고 선반으로 자동 진열된다 — **생산이 곧 발행**.
+  아이템(나눔·판매·가능)은 DB 에서 창고 선반으로 자동 진열된다 — **생산이 곧 발행**. 진열에는 사람이 여는
+  표지 한 장(`<비즈니스> 카탈로그.html`)이 함께 나가는데, 사진을 data URI 로 실은 **자족 문서**라 받아가서
+  열어도 그대로 산다(2026-07-29, `warehouse_catalog.py`. 내용이 같으면 지문 게이트가 재생성을 막는다 —
+  괜히 다시 쓰면 mtime 이 흔들려 이웃 폴러가 `changed` 로 오독한다).
+- **둘러보기와 추천(2026-07-29)**: 어댑터가 생긴 뒤로 세상엔 이미 창고가 많은데 볼 방법이 없었다 → 이웃찾기가
+  두 갈래다. *소개글*(나를 알린 사람이 오는 수신면)과 *둘러보기*(`warehouse_directory.py` — 장르별 후보를
+  훑는 면, live 파싱 + 사용자가 고칠 수 있는 시드). 방언에 **neocities** 어댑터가 합류해 개인 홈페이지
+  169만 개가 창고 후보가 됐다(커스텀 도메인은 `api/info` 대조로만 채택 — 남의 사이트를 잘못 물지 않게).
+  이웃 카드의 📣 **공개 추천**은 기계가 사실만 채운 초안을 사람이 고쳐 발행하고(공개 발행이라 2단 확인),
+  본문이 `공유창고 Warehouse : <url>` 계약을 지켜 받는 쪽 이웃찾기에 '＋ 등록' 버튼이 그 자리에 붙는다.
+  ★미러의 루트는 대개 안내 페이지라 창고가 못 된다 — 시드는 실제 색인 폴더를 가리킨다.
 
 ### 몸 사이 소통 — 명함과 부탁 (2026-07-22)
 
@@ -167,7 +178,7 @@ Nostr 키는 IndieNet identity와 연동 가능:
 - **`delegate` 와의 구별**: `[others:delegate]`=**인격**(에이전트)에게 일을 맡김 / `[others:ask]`=**몸**에게 능력을 부탁함.
 - **표면 분리**: 원격 런처(=PC 의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 갈랐다
   (`launcher_surface_remote.py` / `launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate·validate·distill·catalog).
-- **클립보드는 표면 축으로**: 몸 사이 특권 배관 대신 원격 런처 **clipbox**(`/launcher/clipbox`)에 담아 조종실에서 꺼낸다.
+- **클립보드**: 몸 사이 특권 배관 대신 표면 축을 태우려 원격 런처 수신면(clipbox)을 뒀다가 2026-07-28 **철회** — '폰으로'는 종전 푸시 큐를 그대로 쓴다.
 
 ### USB 손발 — 낯선 PC 에 꽂는 얇은 몸 (2026-07-23)
 
@@ -214,6 +225,22 @@ Nostr 키는 IndieNet identity와 연동 가능:
                 ▼                             ▼
            응답 → 채널로 전송           판단 → 검색 → 응답 생성
 ```
+
+**알림 도달(2026-07-28)**: 위 그림에서 `_save_message_to_db()` 는 오래도록 *저장까지*였다 — 새 메시지가 DB 에 앉아 있어도 사용자에게 닿는 경로가 0이라, 메신저 창을 열어봐야만 알 수 있었다. 저장 직후 **`notify_dispatch.notify_user()`** 단일 관문을 태운다:
+
+```
+_save_message_to_db()  →  notify_dispatch.notify_user()
+                              ├ ① 알림함 기록 (notification_manager)
+                              ├ ② A: 런처 연결 시 → /ws/launcher `show_notification`
+                              │     → Electron OS 네이티브 알림 + 배지 + 클릭=메신저 창
+                              └ ③ B: 미연결 폴백 → desktop_notify.py
+                                    (의존성 0 — osascript / PowerShell WinRT / notify-send)
+```
+
+- 워커 스레드에서 부르므로 WS 송신은 `send_launcher_command_sync`(루프 위면 예약만 — 자기교착 방지)를 쓴다.
+- win·linux 는 **트레이 상주**라 창을 다 닫아도 수신·알림이 계속된다(macOS 는 독 상주).
+- `[self:notify_user]` 도 같은 관문을 지난다 — AI 가 보내는 알림이 진짜 데스크탑에 뜬다.
+- ★**경로 C(웹 푸시)는 은퇴**(2026-08-01): 구현·서버 검증까지 마쳤으나 실기기에서 도달 실패. 진범은 같은 origin 에 PWA 가 둘이라 안드로이드가 알림 권한을 그중 한 WebAPK 에만 위임한 것 — **알림 권한은 앱이 아니라 origin 단위**다. 재활 조건(런처 서브도메인 분리)만 주석에 남기고 코드는 전부 제거했다.
 
 ### 2. 사용자 식별
 
@@ -1145,4 +1172,4 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 시스템 AI용: `delegation_system_ai.md`
 > - 작업계획서 작성: `work_plan_writing.md`
 
-*마지막 업데이트: 2026-07-25 — **몸이 주소를 갖고, 몸끼리 말을 트다**: ①**공유창고**(2026-07-18~21, 위 '공유창고' 절): 발행=폴더에 파일 놓기 → 노드 맨 주소에서 그대로 서빙(색인·변환 없음), 레벨 0~4=이웃 CRM 과 같은 자(위 레벨은 403 아닌 404·`has_restricted` 냄새 한 비트), 기계 얼굴 `GET /manifest`+`GET /f?path=`+쿠키 로그인이 계약의 전부. 읽는 쪽=30분 폴러(seed/new/changed, 모델 호출 0)와 **방언 어댑터**(nginx 색인·RSS/Atom·Nextcloud·일반 웹페이지)로 설치 안 한 이웃까지 편입, 리트윗=`.url` 포인터 파일, 창고 주소=이웃의 `contact_type='warehouse'`, 회원 자격 폴링(자가치유·익명 폴백)과 창고 점수 0~3(접근 레벨과 독립인 내 평가 축). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card` + `POST /nodes/ask`(어휘 `[others:ask]`) — 상대 액션 이름을 흉내 내는 대신 자연어로 부탁하고 받는 몸이 자기 사전으로 컴파일·실행. 사전 물리 분리(설치=자기 어휘만·소유-필터), 신뢰=이웃 등급(`body_trust`), **몸 사이 특권 배관 없음**. 표면 분리(원격 런처 5탭 / 폰 네이티브 3탭), 클립보드는 clipbox 로 재배치. **채널 어휘 `gmail`→`email` 단일화**(별칭만 잔존 — 번역 테이블 3사본 소멸). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 + `[limbs:guestpc]` 조작, 헬퍼가 허브로 아웃바운드(푸시 큐 재사용·셸 봉투 JSON). 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나)**: 메시지 왕복 채널(Gmail·Nostr·메신저)과 별개로, 내 시스템을 공개 웹 주소로 노출하는 표면이 `others` 노드에 자람 — `[others:portal]`(개인 포털 `/h/`, 다중·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`). 공개 서빙=브라우저→Cloudflare Worker→터널→맥 3층(공유 `X-Showcase-Secret`). 포털 붙임=`[others:portal]{op:display}` 색인 다이얼(min_level 손님~가족). 위 "공개 표면" 절 참조. 이전(2026-06-17) — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*
+*마지막 업데이트: 2026-08-01 — **받은 것이 사용자에게 닿고, 창고가 바깥을 보다**: ①**알림 도달 경로 A+B**(2026-07-28, 위 '메시지 수신' 절): 수신이 DB 에 저장만 되고 사용자 도달 경로가 0이던 것을 `notify_dispatch` 단일 관문으로 봉합 — 런처 연결 시 OS 네이티브 알림+배지+클릭 이동, 미연결이면 의존성 0 데스크탑 폴백, win·linux 트레이 상주. 경로 C(웹 푸시)는 실기기 불발로 은퇴(★알림 권한은 **origin 단위**). 부수 수선: `websocket_manager.broadcast_message` 부재로 `[out:gui]` WS 푸시가 조용히 전멸하던 것, `[self:notify_user]` 설명의 거짓("텔레그램"). ②**nostr 채널 기본 켜짐**(2026-07-28): 설정할 게 없는데 기본값이 꺼짐이라 DM **수신만** 조용히 멈춰 있었다. 스위치가 여닫는 것이 수신뿐임을 문구에도 명시. ③**창고가 바깥을 보다**(2026-07-29): 이웃찾기 두 갈래(소개글 수신면 / 둘러보기)·📣 공개 추천(사실만 채운 초안 → 사람이 고쳐 발행)·**neocities 어댑터**(개인 홈페이지 169만)·비즈니스 아이템의 자족 카탈로그 자동 진열. 이전(2026-07-25) — **몸이 주소를 갖고, 몸끼리 말을 트다**: ①**공유창고**(2026-07-18~21, 위 '공유창고' 절): 발행=폴더에 파일 놓기 → 노드 맨 주소에서 그대로 서빙(색인·변환 없음), 레벨 0~4=이웃 CRM 과 같은 자(위 레벨은 403 아닌 404·`has_restricted` 냄새 한 비트), 기계 얼굴 `GET /manifest`+`GET /f?path=`+쿠키 로그인이 계약의 전부. 읽는 쪽=30분 폴러(seed/new/changed, 모델 호출 0)와 **방언 어댑터**(nginx 색인·RSS/Atom·Nextcloud·일반 웹페이지)로 설치 안 한 이웃까지 편입, 리트윗=`.url` 포인터 파일, 창고 주소=이웃의 `contact_type='warehouse'`, 회원 자격 폴링(자가치유·익명 폴백)과 창고 점수 0~3(접근 레벨과 독립인 내 평가 축). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card` + `POST /nodes/ask`(어휘 `[others:ask]`) — 상대 액션 이름을 흉내 내는 대신 자연어로 부탁하고 받는 몸이 자기 사전으로 컴파일·실행. 사전 물리 분리(설치=자기 어휘만·소유-필터), 신뢰=이웃 등급(`body_trust`), **몸 사이 특권 배관 없음**. 표면 분리(원격 런처 5탭 / 폰 네이티브 3탭), 클립보드는 clipbox 로 재배치. **채널 어휘 `gmail`→`email` 단일화**(별칭만 잔존 — 번역 테이블 3사본 소멸). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 + `[limbs:guestpc]` 조작, 헬퍼가 허브로 아웃바운드(푸시 큐 재사용·셸 봉투 JSON). 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나)**: 메시지 왕복 채널(Gmail·Nostr·메신저)과 별개로, 내 시스템을 공개 웹 주소로 노출하는 표면이 `others` 노드에 자람 — `[others:portal]`(개인 포털 `/h/`, 다중·아이디/비번 또는 열쇠 로그인·회원=이웃 CRM 레벨 0~4·오디오 프록시)·`[others:showcase]`(공개 파일 `/s/`)·`[others:family_news]`(가족신문 `/n/`)·`[others:bulletin]`(로그인 없는 게시판 `/b/`) + 정기보고 발행 면(`/r/`). 공개 서빙=브라우저→Cloudflare Worker→터널→맥 3층(공유 `X-Showcase-Secret`). 포털 붙임=`[others:portal]{op:display}` 색인 다이얼(min_level 손님~가족). 위 "공개 표면" 절 참조. 이전(2026-06-17) — **맥↔폰 양방향 연합 라이브·인증화**: 폰 백엔드가 앱 UI 없이 상주(`AgentForegroundService` START_STICKY·부팅), 맥→폰 `X-Phone-Token` 인증(폰 phone_api 미들웨어, 토큰 있을 때만 `0.0.0.0` 바인드), `provision_phone_keys.py`가 토큰 푸시 — 인증 전자동. 보안=양방향 게이트·인터넷 비노출·caveat는 LAN 평문 HTTP. 이전(2026-06-14) — channel 트리거("Y 메시지 오면 X 실행") 맥 발화 경로 신설: channel_poller `_save_message_to_db`(Gmail/Nostr 3수신 경로 공통 깔때기)에 `_check_channel_triggers` 훅 → 매칭 시 데몬 스레드로 파이프라인 발화(메시지를 _prev_result 주입). **폰은 메시지 폴링 안 함**(사용자 결정 2026-06-14) — 메시지 수신/폴링은 PC 담당, 폰=리모컨/두 번째 자아. 이전(2026-06-12): IndieNet 전용 REST(api_indienet) 제거 → 커뮤니티/메신저 IBL 계기화(others:feed/board/messages/nostr) + NIP-17 멀티릴레이 실시간 수신 + 자동응답 PC 전용 영속화 + 연락처 email→gmail. 이전(2026-06-10): Nostr DM NIP-17 전환(nip44/nip17 모듈) + 폰 컴패니언 피드. 이전: 2026-04-05*

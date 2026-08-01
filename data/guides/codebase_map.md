@@ -6,7 +6,7 @@
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — 192개 파일
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — 197개 파일
 │   ├── api.py           # 메인 서버 엔트리포인트
 │   ├── api_*.py         # 각 모듈 라우터 (38개)
 │   │   ├── api_agents.py        # 에이전트 관리
@@ -83,6 +83,7 @@ indiebizOS/
 │   ├── world_pulse_health.py # Self-Check 엔진 + 정적 정합성 합류 (run_static_ibl_check, build_ibl_nodes --check 통합)
 │   ├── ibl_description_audit.py # IBL 설명 의미 드리프트 점검 (결정적 교차참조 + 경량 LLM, 주 1회 self-check 합류)
 │   ├── goal_evaluator.py # 목표 평가 시스템
+│   ├── boot_status.py   # 부팅 서브시스템 성패 계측 (/world-pulse/health 의 boot 절)
 │   │
 │   │   # === 코어 모듈 ===
 │   ├── ai_agent.py      # AI 에이전트 코어
@@ -100,6 +101,8 @@ indiebizOS/
 │   ├── multi_chat_manager.py # 멀티채팅 매니저
 │   ├── node_registry.py # 노드 탐색/등록
 │   ├── notification_manager.py # 알림 매니저
+│   ├── notify_dispatch.py # 알림 도달 단일 관문(알림함→런처 WS→데스크탑 폴백)
+│   ├── desktop_notify.py # OS 네이티브 알림 폴백(의존성 0 — osascript/PowerShell/notify-send)
 │   ├── package_manager.py # 패키지 매니저
 │   ├── project_manager.py # 프로젝트 매니저
 │   ├── prompt_builder.py # 프롬프트 빌더
@@ -127,6 +130,8 @@ indiebizOS/
 │   ├── warehouse_adapters.py # 방언 어댑터(native/autoindex/RSS·Atom/Nextcloud/Neocities/page)
 │   ├── warehouse_items.py # 비즈니스 아이템 → 창고 진열(파생 존)
 │   ├── warehouse_likes.py # 좋아요·창고 점수(0~3)
+│   ├── warehouse_catalog.py # 비즈니스 아이템 → 자족 카탈로그 HTML(data URI·지문 게이트)
+│   ├── warehouse_directory.py # 이웃 창고 둘러보기(장르별 후보 — live 파싱 + 시드 목록)
 │   ├── r2_client.py     # R2 캐시 클라이언트
 │   ├── thumbnails.py    # 썸네일 + 공개 동영상 스트리밍 트랜스코드(fMP4·자막·오프셋)
 │   ├── report_html.py   # 정기보고 md→HTML(볼 때 렌더)
@@ -164,7 +169,7 @@ indiebizOS/
 │   └── src/             # React 컴포넌트
 │   #   - Launcher.tsx / ManualMode.tsx(조종실) / ActionDesktop.tsx(앱)
 │   #   - GenericInstrument.tsx(매니페스트 해석 제네릭 렌더러) + escape 2층(OVERRIDES / STATIC_DOMAINS)
-│   #   - WarehouseView.tsx(공유창고 파인더 + 이웃 탭) · MusicGraphInstrument.tsx(음악 그래프)
+│   #   - WarehouseView.tsx(공유창고 파인더 + 이웃 탭[소개글/둘러보기·📣 공개 추천])
 │   #   - useRetryingLoad(콜드스타트 첫 조회 재시도 — 새 화면의 규약)
 │   # 주요 의존성: React 19, Electron 39, Vite 7, Tailwind CSS 4
 │   # 추가: leaflet (지도), recharts (차트), zustand (상태관리)
@@ -172,7 +177,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (42개 — op-bearing 10개는 _OP_DISPATCHERS 표준)
+│   │   │   ├── tools/       # 도구 패키지 (42개 — op 분기 27개 패키지는 _OP_DISPATCHERS 표준)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (8개, ai-agent 폐기)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
@@ -188,15 +193,16 @@ indiebizOS/
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
-│   ├── guides/          # 가이드 파일 (64개, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── guides/          # 가이드 파일 (65개 / guide_db 등록 58, 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
 │   ├── instruments/     # standalone 앱 매니페스트 (어휘 없는 계기, 예: report.yaml)
 │   ├── warehouse.json / warehouse_feed.db  # 내 창고 설정 · 이웃 창고 스냅샷·피드
 │   ├── portal_state.json / showcase_state.json / bulletin/ / family_news/  # 공개 표면 상태
 │   ├── limb_keys.json / device_registry.json / peer_cards/  # 손발 자격 · 몸 등록부 · 이웃 몸 명함
 │   ├── public_face.json / tunnel_config.json  # 공개 얼굴(프로바이더=권위) · 터널
-│   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·관련곡 간선)
-│   ├── clipbox.json     # 원격 런처 클립박스(PC↔브라우저 메시지 함)
+│   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·폴더. 관련곡 간선 edges 는 2026-07-28 폐기)
+│   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
+│   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
 │   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   └── my_profile.txt   # 사용자 프로필

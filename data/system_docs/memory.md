@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-07-25
+last_updated: 2026-08-01
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -75,7 +75,7 @@ see_also: [architecture.md, ibl.md]
 세 겹으로 구성된다.
 
 **(a) 액션 정의** — 가장 안정된 절차 지식
-`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 162개 액션이 곧 어휘화된 방법 지식.
+`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 163개 액션이 곧 어휘화된 방법 지식.
 
 **(b) 해마(실행기억)** — 가장 살아있는 자기 학습 루프 ⭐
 - `ibl_usage.db:ibl_examples`에 `(자연어 의도 → IBL 코드)` 쌍 + 768차원 임베딩 저장
@@ -283,7 +283,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ---
 
-*마지막 업데이트: 2026-07-25 — 7종 메모리 지도 불변. 현 상태 정합화: 절차기억(#4a) 어휘 = **6노드 162 액션**(sense 48·self 51·limbs 18·others 18·engines 14·table 13 — 몸 부탁 `[others:ask]`·USB 손발·신문 발행·내 음악 추가), 해마 코퍼스 **2,916건**. **해마 소유-필터**(2026-07-22): 회상 4경로 + 입구에 게이트를 둬 *자기 어휘의 용례만* 배우고 떠올린다(미지 어휘=남의 것으로 판정) — 사전 물리 분리의 기억 쪽 짝. 시딩 경로도 `add_examples_batch` 하나로 수렴(정적 시드 스크립트 부류 폐기). **손발 프레즌스 상시 주입**: 살아있는 게스트 PC 손발의 이름·의미를 0단계 연상에 노출(런타임 상태라 어휘·해마가 원리적으로 모르는 것). 이전(2026-07-17) — 7종 메모리 지도 불변. 현 상태 정합화: 절차기억(#4a) 어휘 = **6노드 157 액션**(engines 변환자/emitter를 table 노드로 분리, others에 공개 표면 가족 추가). 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 포식 기억(forager)을 7번째 메모리로 정합화(제목·"한눈에" 표·흐름도 6종→7종, 다중 몸·`[self:residual]` 음성-단언 측정 반영). 절차기억(#4a) 액션수 111→141. 국회도서관 국가학술정보 인물/학위논문 액션 추가로 코퍼스 갱신.*
+*마지막 업데이트: 2026-08-01 — 7종 메모리 지도 불변. 현 상태 정합화: 절차기억(#4a) 어휘 = **6노드 163 액션**(sense 48·self 52·limbs 18·others 18·engines 14·table 13 — 웹앱 등기부 `[self:webapp]` 추가), 해마 코퍼스 **2,925건**·증류 누적 808건. ①**증류 꼬리 6분→4초**(2026-08-01, 위 절): 원샷 호출의 하이브리드 thinking 차단 + 0자 응답 가드 + `_after_response` 백그라운드화 — 증류는 응답 뒤 꼬리이므로 사용자가 기다리는 시간이 되어선 안 된다. ②**포식기억 owner 빈도 게이트**(2026-07-29, #7 절): 주인모델은 상시 노출이라 1회 추론이 영구 주입되던 구멍 → 첫 관측은 임시(query 필터), 서로 다른 포식에서 재확인되면 상시 냄새로 결정화. '빈도가 결정화한다' 모티프의 기억 쪽 사례이고, 잃는 정보는 0이다. ③**어휘 축소의 대칭**: 음악앱 5기능 은퇴 때 `--check` 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 해마 용례 15건 삭제를 강제 — 어휘를 지우면 코퍼스도 따라온다. 이전(2026-07-25) — 7종 메모리 지도 불변. 당시 정합화: 절차기억(#4a) 어휘 = 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13 — 몸 부탁 `[others:ask]`·USB 손발·신문 발행·내 음악 추가), 해마 코퍼스 **2,916건**. **해마 소유-필터**(2026-07-22): 회상 4경로 + 입구에 게이트를 둬 *자기 어휘의 용례만* 배우고 떠올린다(미지 어휘=남의 것으로 판정) — 사전 물리 분리의 기억 쪽 짝. 시딩 경로도 `add_examples_batch` 하나로 수렴(정적 시드 스크립트 부류 폐기). **손발 프레즌스 상시 주입**: 살아있는 게스트 PC 손발의 이름·의미를 0단계 연상에 노출(런타임 상태라 어휘·해마가 원리적으로 모르는 것). 이전(2026-07-17) — 7종 메모리 지도 불변. 현 상태 정합화: 절차기억(#4a) 어휘 = **6노드 157 액션**(engines 변환자/emitter를 table 노드로 분리, others에 공개 표면 가족 추가). 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 포식 기억(forager)을 7번째 메모리로 정합화(제목·"한눈에" 표·흐름도 6종→7종, 다중 몸·`[self:residual]` 음성-단언 측정 반영). 절차기억(#4a) 액션수 111→141. 국회도서관 국가학술정보 인물/학위논문 액션 추가로 코퍼스 갱신.*
 
 *이 문서는 7종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
 
@@ -409,7 +409,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 - **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
 - **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
-- **어휘 정합**: neighbor 통합 후 `[others:neighbors]`→`[others:neighbor]{op}` relabel + phone_sync·neighbor save/favorite 용례 보강. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(**2,916건**, 증류 누적 `ibl_distilled.json` 800건 — 통화 대수·비즈니스·공개 표면·창고·음악 용례 누적. 현 6노드 **162 액션** 어휘. 신규 액션(몸 부탁·USB 손발·신문 발행·내 음악 등)은 시딩 후 capability 게이트로 보강, 다음 임베더 재학습 때 흡수).
+- **어휘 정합**: neighbor 통합 후 `[others:neighbors]`→`[others:neighbor]{op}` relabel + phone_sync·neighbor save/favorite 용례 보강. 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(**2,925건**, 증류 누적 `ibl_distilled.json` 808건 — 통화 대수·비즈니스·공개 표면·창고·음악·웹앱 용례 누적. 현 6노드 **163 액션** 어휘. ★어휘를 지우면 코퍼스도 따라온다 — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했다. 신규 액션(몸 부탁·USB 손발·신문 발행·내 음악 등)은 시딩 후 capability 게이트로 보강, 다음 임베더 재학습 때 흡수).
 - 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
 
 > **결론(2026-06-04): 모델은 런타임 천장(99.3%)이라 재학습은 거의 무차별.** batch 스윕(b4~b64)·트레이너 변수 조정 모두 런타임 검색을 의미 있게 못 올림 — 해마는 IBL *어휘*가 아니라 query↔저장 intent *의미*를 매칭해 vocab 변경에 본질적으로 강건하기 때문. 검색 품질을 더 올리려면 임베딩이 아니라 **하이브리드 alpha/FTS5**가 레버. (관찰된 오랭킹 사례는 FTS5 키워드 artifact였지 임베딩 실패가 아님.)
@@ -454,7 +454,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 |---|---|
 | **DB 위치** | 시스템 AI: `data/system_ai_state/memory_system_ai.db`<br>프로젝트 에이전트: `projects/{id}/memory_{agent}.db` |
 | **격리** | 에이전트별 분리 (설계 의도 — 각 에이전트가 자기 도메인 지식만 유지) |
-| **현재 규모** | 21개 DB / 162건 |
+| **현재 규모** | 28개 DB / 622건 |
 | **검색** | **시맨틱 우선 + LIKE 폴백** (해마와 동일 패턴) |
 | **인덱스** | vec0 가상 테이블 (`memories_vec`) — fine-tuned 모델 임베딩 768d |
 | **자동 동기** | save / update / delete 시 vec 인덱스 자동 갱신 |
@@ -494,6 +494,14 @@ LIKE만 있던 시절(2026-05-16 이전)에는 0건 반환 → "방금 저장한
 ```
 
 해마가 성숙할수록 증류 빈도는 줄어든다.
+
+### 증류 꼬리의 비용 (2026-08-01)
+
+증류는 응답 *뒤에* 붙는 꼬리라 사용자가 기다리는 시간이 아니어야 하는데, 실측 6분이 걸린 턴이 있었다(에피소드 889 — 증류 7콜 4.5분). 원인과 처방 셋:
+
+- **하이브리드 추론 모델의 thinking**: 증류·분류 같은 **원샷 호출**에서 모델이 추론에 `max_tokens` 를 전부 쓰고 본문 0자를 냈다 → 프로바이더 층에서 원샷 경로의 thinking 차단 파라미터를 명시(DeepSeek 계열 실측).
+- **0자 응답 가드**: 길이 초과로 빈 응답이 오면 그 자리에서 판정(조용한 재시도 루프 방지).
+- **`_after_response` 백그라운드화**: 응답 전송 후 처리를 에피소드 refresh 와 함께 백그라운드로 — 꼬리 6분 → **4초**.
 
 ### 증류 파이프라인
 

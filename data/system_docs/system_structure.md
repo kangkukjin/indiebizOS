@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-07-25
+last_updated: 2026-08-01
 see_also: [architecture.md, memory.md]
 ---
 
@@ -55,7 +55,7 @@ see_also: [architecture.md, memory.md]
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — 192개 파일
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — 197개 파일
 │   ├── api.py           # 메인 서버 엔트리포인트
 │   ├── api_*.py         # 각 모듈 라우터 (38개)
 │   │   ├── api_agents.py        # 에이전트 관리
@@ -132,6 +132,7 @@ indiebizOS/
 │   ├── world_pulse_health.py # Self-Check 엔진 + 정적 정합성 합류 (run_static_ibl_check, build_ibl_nodes --check 통합)
 │   ├── ibl_description_audit.py # IBL 설명 의미 드리프트 점검 (결정적 교차참조 + 경량 LLM, 주 1회 self-check 합류)
 │   ├── goal_evaluator.py # 목표 평가 시스템
+│   ├── boot_status.py   # 부팅 서브시스템 성패 계측 (/world-pulse/health 의 boot 절)
 │   │
 │   │   # === 코어 모듈 ===
 │   ├── ai_agent.py      # AI 에이전트 코어
@@ -149,6 +150,8 @@ indiebizOS/
 │   ├── multi_chat_manager.py # 멀티채팅 매니저
 │   ├── node_registry.py # 노드 탐색/등록
 │   ├── notification_manager.py # 알림 매니저
+│   ├── notify_dispatch.py # 알림 도달 단일 관문(알림함→런처 WS→데스크탑 폴백)
+│   ├── desktop_notify.py # OS 네이티브 알림 폴백(의존성 0 — osascript/PowerShell/notify-send)
 │   ├── package_manager.py # 패키지 매니저
 │   ├── project_manager.py # 프로젝트 매니저
 │   ├── prompt_builder.py # 프롬프트 빌더
@@ -176,6 +179,8 @@ indiebizOS/
 │   ├── warehouse_adapters.py # 방언 어댑터(native/autoindex/RSS·Atom/Nextcloud/Neocities/page)
 │   ├── warehouse_items.py # 비즈니스 아이템 → 창고 진열(파생 존)
 │   ├── warehouse_likes.py # 좋아요·창고 점수(0~3)
+│   ├── warehouse_catalog.py # 비즈니스 아이템 → 자족 카탈로그 HTML(data URI·지문 게이트)
+│   ├── warehouse_directory.py # 이웃 창고 둘러보기(장르별 후보 — live 파싱 + 시드 목록)
 │   ├── r2_client.py     # R2 캐시 클라이언트
 │   ├── thumbnails.py    # 썸네일 + 공개 동영상 스트리밍 트랜스코드(fMP4·자막·오프셋)
 │   ├── report_html.py   # 정기보고 md→HTML(볼 때 렌더)
@@ -213,7 +218,7 @@ indiebizOS/
 │   └── src/             # React 컴포넌트
 │   #   - Launcher.tsx / ManualMode.tsx(조종실) / ActionDesktop.tsx(앱)
 │   #   - GenericInstrument.tsx(매니페스트 해석 제네릭 렌더러) + escape 2층(OVERRIDES / STATIC_DOMAINS)
-│   #   - WarehouseView.tsx(공유창고 파인더 + 이웃 탭) · MusicGraphInstrument.tsx(음악 그래프)
+│   #   - WarehouseView.tsx(공유창고 파인더 + 이웃 탭[소개글/둘러보기·📣 공개 추천])
 │   #   - useRetryingLoad(콜드스타트 첫 조회 재시도 — 새 화면의 규약)
 │   # 주요 의존성: React 19, Electron 39, Vite 7, Tailwind CSS 4
 │   # 추가: leaflet (지도), recharts (차트), zustand (상태관리)
@@ -221,7 +226,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (42개 — op-bearing 10개는 _OP_DISPATCHERS 표준)
+│   │   │   ├── tools/       # 도구 패키지 (42개 — op 분기 27개 패키지는 _OP_DISPATCHERS 표준)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (8개, ai-agent 폐기)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
@@ -237,15 +242,16 @@ indiebizOS/
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
-│   ├── guides/          # 가이드 파일 (64개, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── guides/          # 가이드 파일 (65개 / guide_db 등록 58, 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
 │   ├── instruments/     # standalone 앱 매니페스트 (어휘 없는 계기, 예: report.yaml)
 │   ├── warehouse.json / warehouse_feed.db  # 내 창고 설정 · 이웃 창고 스냅샷·피드
 │   ├── portal_state.json / showcase_state.json / bulletin/ / family_news/  # 공개 표면 상태
 │   ├── limb_keys.json / device_registry.json / peer_cards/  # 손발 자격 · 몸 등록부 · 이웃 몸 명함
 │   ├── public_face.json / tunnel_config.json  # 공개 얼굴(프로바이더=권위) · 터널
-│   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·관련곡 간선)
-│   ├── clipbox.json     # 원격 런처 클립박스(PC↔브라우저 메시지 함)
+│   ├── music/           # 내 음악 라이브러리 (library.db — 트랙·앨범아트·폴더. 관련곡 간선 edges 는 2026-07-28 폐기)
+│   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
+│   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
 │   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
 │   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │   └── my_profile.txt   # 사용자 프로필
@@ -330,4 +336,4 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-*마지막 업데이트: 2026-07-25 — **몸의 주소·몸 사이 소통·손발·음악**: ①**공유창고**(2026-07-18~21)가 몸의 공개 얼굴로 자람 — `공유창고/0..4/` 폴더 그대로 서빙 + `/manifest` 기계 얼굴 + 이웃 창고 폴러(30분, 방언 어댑터 native/autoindex/RSS/Nextcloud/page) + 리트윗(`.url`) + 회원 자격 폴링 + 창고 점수(0~3). 몸의 주소는 이제 **파생**(`origin_host`, 권위=`public_face.provider`) 이고 Cloudflare 발급이 터널·Worker·R2 캐시까지 만든다(`cdn_provision.py`). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card`(명함) + `POST /nodes/ask`(자연어 부탁, 어휘 `[others:ask]`) — 공유 사전 RPC 은퇴, **사전 물리 분리**(설치=자기 어휘만·해마 소유-필터) + 신뢰=이웃 등급(`body_trust`). **표면 분리**: 원격 런처(PC의 일부, 5탭)와 폰 네이티브(독립 시스템, 3탭)를 조립 모듈로 가름. **특권 소멸**: 몸 간 특권 배관 철거 방향 확정(클립보드는 원격 런처 clipbox 로 재배치). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 / `[limbs:guestpc]` 조작 — 낯선 PC 에 꽂는 얇은 몸(Go 헬퍼, 허브로 아웃바운드). `runs_on mac_only`→**`pc_only`** 전역 개명. ④**신문 발행 결정화**(`[engines:newspaper]`) + 에피소드 로깅 전 경로 배선. ⑤**내 음악 라이브러리**(`[self:music]`, 2026-07-24) + 관련곡 그래프(랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). **현 상태: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13)·42 도구 패키지 + 8 extensions·backend 192 파일**. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리**: `others` 노드에 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`) 자람 — 신규 패키지 community-portal·public-files·family-news·bulletin. 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`·`[sense:used]`·`[self:install_lib]`·`[engines:icon]`. **table 노드 분리**(2026-06-30, engines 변환자/emitter 13종→신규 table 노드). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지 + 8 extensions**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합. 레버(절약/균형/최대)·프리셋 편집기·에이전트 핀, 핫리로드(`/model-gear` REST). 4축=분류·평가·실행·의식. per-agent 모델 폐지(모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 키=`.env` `NANET_API_KEY` + auth_manager 'nanet' 레지스트리. 포식기억(forager) 추가로 기억 7종. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지 / backend 134 파일. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰이 두 번째 독립 자아로: 폰-로컬 in-process Gemini 두뇌(경량+본격 티어) + 하드웨어 자기감지(detect_body — 자신을 맥 아닌 "폰"으로 인식) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지 → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화 + 자동응답 IBL화 + 폰↔PC business.db 동기화 + neighbor 통합 + 해마 로컬 재학습(M4 Pro, code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 인지 경로 개편. 이전(2026-06-02): 런처 3표면.*
+*마지막 업데이트: 2026-08-01 — **코드베이스 지도 정합화 + 새 기관 다섯**(backend 192→**197 파일**, 6노드 **163 액션**): `notify_dispatch.py`·`desktop_notify.py`(알림이 사용자에게 닿는 단일 관문 — 런처 연결 시 OS 네이티브 알림, 미연결이면 의존성 0 폴백), `boot_status.py`(lifespan 의 '실패(무시)' 블록 계측 → `/world-pulse/health` `boot` 절), `warehouse_catalog.py`(비즈니스 아이템 → 자족 카탈로그 HTML, 지문 게이트), `warehouse_directory.py`(이웃 창고 둘러보기 — 장르별 후보). 어휘는 `[self:webapp]` 하나 늘었다(system_essentials, 웹앱 등기부=파생 우선). 축소도 있었다 — 음악 관련곡 그래프 계기(`MusicGraphInstrument.tsx`)와 `library.db` 의 `edges` 테이블, 클립박스(`clipbox.json`), 웹 푸시가 전부 은퇴. 이전(2026-07-25) — **몸의 주소·몸 사이 소통·손발·음악**: ①**공유창고**(2026-07-18~21)가 몸의 공개 얼굴로 자람 — `공유창고/0..4/` 폴더 그대로 서빙 + `/manifest` 기계 얼굴 + 이웃 창고 폴러(30분, 방언 어댑터 native/autoindex/RSS/Nextcloud/page) + 리트윗(`.url`) + 회원 자격 폴링 + 창고 점수(0~3). 몸의 주소는 이제 **파생**(`origin_host`, 권위=`public_face.provider`) 이고 Cloudflare 발급이 터널·Worker·R2 캐시까지 만든다(`cdn_provision.py`). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card`(명함) + `POST /nodes/ask`(자연어 부탁, 어휘 `[others:ask]`) — 공유 사전 RPC 은퇴, **사전 물리 분리**(설치=자기 어휘만·해마 소유-필터) + 신뢰=이웃 등급(`body_trust`). **표면 분리**: 원격 런처(PC의 일부, 5탭)와 폰 네이티브(독립 시스템, 3탭)를 조립 모듈로 가름. **특권 소멸**: 몸 간 특권 배관 철거 방향 확정(클립보드는 원격 런처 clipbox 로 재배치). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 / `[limbs:guestpc]` 조작 — 낯선 PC 에 꽂는 얇은 몸(Go 헬퍼, 허브로 아웃바운드). `runs_on mac_only`→**`pc_only`** 전역 개명. ④**신문 발행 결정화**(`[engines:newspaper]`) + 에피소드 로깅 전 경로 배선. ⑤**내 음악 라이브러리**(`[self:music]`, 2026-07-24) + 관련곡 그래프(랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). **현 상태: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13)·42 도구 패키지 + 8 extensions·backend 192 파일**. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리**: `others` 노드에 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`) 자람 — 신규 패키지 community-portal·public-files·family-news·bulletin. 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`·`[sense:used]`·`[self:install_lib]`·`[engines:icon]`. **table 노드 분리**(2026-06-30, engines 변환자/emitter 13종→신규 table 노드). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지 + 8 extensions**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합. 레버(절약/균형/최대)·프리셋 편집기·에이전트 핀, 핫리로드(`/model-gear` REST). 4축=분류·평가·실행·의식. per-agent 모델 폐지(모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 키=`.env` `NANET_API_KEY` + auth_manager 'nanet' 레지스트리. 포식기억(forager) 추가로 기억 7종. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지 / backend 134 파일. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰이 두 번째 독립 자아로: 폰-로컬 in-process Gemini 두뇌(경량+본격 티어) + 하드웨어 자기감지(detect_body — 자신을 맥 아닌 "폰"으로 인식) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지 → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화 + 자동응답 IBL화 + 폰↔PC business.db 동기화 + neighbor 통합 + 해마 로컬 재학습(M4 Pro, code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 인지 경로 개편. 이전(2026-06-02): 런처 3표면.*

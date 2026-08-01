@@ -19,7 +19,7 @@
 
 | op | 설명 | 소스 | 주요 파라미터 |
 |----|------|------|--------------|
-| `quote` (기본) | 현재 시세 빠른 조회 | Yahoo | `ticker`, `period`, `interval` |
+| `quote` (기본) | 현재 시세 빠른 조회 | 한국 종목·코스피/코스닥 지수=**네이버 실시간**(폴백 Yahoo) / 그외 Yahoo(~20분 지연) | `ticker`, `period`, `interval` |
 | `history` | 기간별 주가 이력 | 한국 KRX / 미국 FMP | `ticker`, `start_date`, `end_date`, `max_points` |
 | `info` | 종목 메타 (시총·52주·PER·배당) | Yahoo | `ticker` |
 | `search` | 회사명으로 심볼 검색 | Yahoo | `query` |
@@ -40,6 +40,8 @@
 ```
 
 **investors의 `market`** 은 kr/us가 아니라 시장 구분이다: `STK`(코스피, 기본)·`KSQ`(코스닥)·`ALL`(전체). 한국 전용이라 시장 자동판별은 적용 안 됨.
+
+**quote 실시간 오버레이(2026-08-01)**: 한국 종목(6자리)·코스피/코스닥 지수는 현재가·전일대비·고저·거래량을 네이버 폴링 API(무키, delayTime=0)가 덮는다 — 응답에 `source: "naver_realtime"`, `quote_time`(체결시각), `market_status`(OPEN/CLOSE)가 추가로 실림. 차트용 `prices` 일봉 시계열은 Yahoo 그대로. 네이버 실패 시 자동으로 Yahoo(~20분 지연) 값 — 이때 `source` 필드 없음. 미국·원자재·환율은 종전과 동일(Yahoo).
 
 ### period / interval (quote 전용)
 - period: `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`

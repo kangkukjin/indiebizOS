@@ -2,6 +2,7 @@
 Yahoo Finance & CoinGecko 기반 주식/암호화폐 도구
 """
 import os
+import re
 import sys
 import json
 import requests
@@ -253,9 +254,67 @@ def _resolve_currency(symbol: str, meta: dict = None) -> str:
     return "USD"
 
 
+# ── 네이버 실시간 오버레이 (2026-08-01) ──────────────────────────────
+# Yahoo의 KRX 시세는 ~20분 지연 → 한국 종목/지수의 *현재가 스냅샷*만 네이버 폴링
+# API(delayTime=0, 무키)로 덮는다. 차트용 일봉 시계열은 Yahoo 유지. 실패 시 조용히
+# None → Yahoo 값 그대로(자연 폴백, kospi-board Worker와 같은 설계).
+_NAVER_POLL = "https://polling.finance.naver.com/api/realtime/domestic/"
+_NAVER_INDEX = {"^KS11": "index/KOSPI", "^KQ11": "index/KOSDAQ"}
+
+
+def _naver_num(v):
+    """숫자|콤마 문자열 관용 파서 — *Raw 필드가 호출 경로에 따라 숫자/문자열로 오는 것 실측."""
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        try:
+            return float(v.replace(",", ""))
+        except ValueError:
+            return None
+    return None
+
+
+def _naver_realtime(symbol: str):
+    """한국 종목(6자리.KS/.KQ)·코스피/코스닥 지수의 네이버 실시간 스냅샷. 비대상/실패=None."""
+    s = (symbol or "").upper()
+    path = _NAVER_INDEX.get(s)
+    if path is None:
+        m = re.match(r"^(\d{6})\.(KS|KQ)$", s)
+        if not m:
+            return None
+        path = f"stock/{m.group(1)}"
+    try:
+        r = requests.get(_NAVER_POLL + path,
+                         headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"},
+                         timeout=5)
+        if r.status_code != 200:
+            return None
+        d = (r.json().get("datas") or [{}])[0]
+        price = _naver_num(d.get("closePriceRaw")) or _naver_num(d.get("closePrice"))
+        change = _naver_num(d.get("compareToPreviousClosePriceRaw"))
+        if change is None:
+            change = _naver_num(d.get("compareToPreviousClosePrice"))  # 하락=음수 직접 옴(실측)
+        if price is None or change is None:
+            return None
+        return {
+            "price": price,
+            "change": change,
+            "change_percent": _naver_num(d.get("fluctuationsRatioRaw")) or _naver_num(d.get("fluctuationsRatio")),
+            "open": _naver_num(d.get("openPriceRaw")) or _naver_num(d.get("openPrice")),
+            "high": _naver_num(d.get("highPriceRaw")) or _naver_num(d.get("highPrice")),
+            "low": _naver_num(d.get("lowPriceRaw")) or _naver_num(d.get("lowPrice")),
+            "volume": _naver_num(d.get("accumulatedTradingVolumeRaw")),
+            "quote_time": d.get("localTradedAt"),
+            "market_status": d.get("marketStatus"),
+        }
+    except Exception:
+        return None
+
+
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
     """
     Yahoo Finance를 통해 주식/ETF/원자재(선물) 가격 조회
+    (한국 종목·지수의 현재가 스냅샷은 네이버 실시간이 덮는다 — _naver_realtime)
     """
     if not symbol:
         return {"success": False, "error": "symbol 파라미터가 필요합니다."}
@@ -283,6 +342,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         latest = all_history[-1]
         current_price = latest["close"]
         prev_close = all_history[-2]["close"] if len(all_history) >= 2 else current_price
+        snap_open, snap_high, snap_low, snap_volume = latest["open"], latest["high"], latest["low"], latest["volume"]
 
         if prev_close and prev_close > 0:
             change = current_price - prev_close
@@ -290,6 +350,22 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         else:
             change = 0
             change_percent = 0
+
+        # ★한국 종목·지수: 현재가 스냅샷을 네이버 실시간으로 덮음(Yahoo KRX ~20분 지연).
+        #   시계열(prices)은 Yahoo 일봉 유지 — 차트 계약 불변. 실패 시 Yahoo 값 그대로.
+        realtime = _naver_realtime(symbol)
+        if realtime:
+            current_price = realtime["price"]
+            change = realtime["change"]
+            prev_close = current_price - change
+            if realtime["change_percent"] is not None:
+                change_percent = realtime["change_percent"]
+            elif prev_close > 0:
+                change_percent = (change / prev_close) * 100
+            snap_open = realtime["open"] if realtime["open"] is not None else snap_open
+            snap_high = realtime["high"] if realtime["high"] is not None else snap_high
+            snap_low = realtime["low"] if realtime["low"] is not None else snap_low
+            snap_volume = realtime["volume"] if realtime["volume"] is not None else snap_volume
 
         direction = "▲" if change >= 0 else "▼"
         currency = _resolve_currency(symbol, chart_meta)
@@ -302,14 +378,20 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             "change": round(change, 2),
             "change_percent": round(change_percent, 2),
             "previous_close": round(prev_close, 2),
-            "open": latest["open"],
-            "high": latest["high"],
-            "low": latest["low"],
-            "volume": latest["volume"],
+            "open": snap_open,
+            "high": snap_high,
+            "low": snap_low,
+            "volume": snap_volume,
             "period": period,
             "total_days": total_days,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+        if realtime:
+            base_data["source"] = "naver_realtime"      # 한국 시세=실시간(delayTime 0)
+            if realtime["quote_time"]:
+                base_data["quote_time"] = realtime["quote_time"]
+            if realtime["market_status"]:
+                base_data["market_status"] = realtime["market_status"]
 
         msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
 
@@ -328,6 +410,8 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         else:
             # 짧은 현재가 조회(기본 5일) → 현재가 중심 요약 (차트 안내 생략, prices는 최근 맥락일 뿐)
             summary = f"현재가 {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%), 전일 {round(prev_close, 2)}. 최근 {total_days}거래일 시세 포함."
+        if realtime:
+            summary += " (네이버 실시간)"
         return {"success": True, "data": base_data, "summary": summary}
 
     except Exception as e:

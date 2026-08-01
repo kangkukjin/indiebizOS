@@ -20,7 +20,7 @@ actions:
         investors: 투자자별 매매동향 (한국 전용)
         news: 종목 관련 뉴스 (Finnhub→Yahoo)
         earnings: 실적발표 일정 (예상 vs 실적)
-    implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)/info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
+    implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
     keywords:
     - 주가
     - 주식

@@ -143,12 +143,6 @@ ENV_CATALOG: Dict[str, Dict[str, list]] = {
     "world": {
         "label": "해외 · 기타 API",
         "entries": [
-            {"name": "AMADEUS_API_KEY", "label": "Amadeus API 키",
-             "desc": "해외 호텔·항공 (Amadeus for Developers).",
-             "signup_url": "https://developers.amadeus.com/"},
-            {"name": "AMADEUS_API_SECRET", "label": "Amadeus 시크릿",
-             "desc": "Amadeus API 키와 짝.",
-             "signup_url": "https://developers.amadeus.com/"},
             {"name": "NINJAS_API_KEY", "label": "API Ninjas 키",
              "desc": "잡다한 유틸 API 모음.",
              "signup_url": "https://api-ninjas.com/",

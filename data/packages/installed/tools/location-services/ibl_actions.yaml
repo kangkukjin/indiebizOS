@@ -137,68 +137,6 @@ nodes:
         router: handler
         tool: reverse_geocode
         implementation: Kakao Map API로 GPS 좌표→주소 변환
-      travel:
-        returns: items
-        side_effect: false    # 전 op 읽기 전용
-        fixture: '[sense:travel]{op: "flight", to: "도쿄"}'
-        description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
-        group: travel
-        target_description: flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. 도시명은 IATA/도시코드 자동 해소.
-        router: handler
-        tool: amadeus_travel_search
-        target_key: op
-        ops:
-          default: flight
-          values:
-            flight: 항공권 검색 (from→to·date). 도시명→IATA·상대날짜 자동 해소
-            hotel: 도시 호텔 목록 (city→도시코드 자동)
-        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능). 두 op 모두 items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제). (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
-        app:
-          instrument: travel
-          icon: ✈️
-          name: 여행
-          order: 16
-          modes:
-          - name: 항공권
-            inputs:
-            - key: to
-              type: text
-              label: 도착
-              placeholder: '도착 도시 (예: 도쿄)'
-              required: true
-            - key: from
-              type: text
-              label: 출발
-              placeholder: 출발 (비우면 서울)
-            - key: date
-              type: text
-              label: 날짜
-              placeholder: '예: 내일·다음주 금요일·2026-07-15 (비우면 1주 후)'
-            action: '[sense:travel]{op: "flight", to: "$to", from: "$from", date: "$date"}'
-            view:
-            - type: card_list
-              from: items
-              empty: 항공편을 찾지 못했습니다
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-          - name: 호텔
-            inputs:
-            - key: city
-              type: text
-              label: 도시
-              placeholder: '도시 (예: 파리)'
-              required: true
-            action: '[sense:travel]{op: "hotel", city: "$city"}'
-            view:
-            - type: card_list
-              from: items
-              empty: 호텔을 찾지 못했습니다
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
       stay:
         aliases:
           region: [query, city, keyword, location]
@@ -213,7 +151,6 @@ nodes:
           - source=goodchoice(기본): 여기어때 실시간 할인가·평점·좌표. region=지역(예 "제주", "강남"). type=hotel(기본)/motel/pension/camping/guesthouse. checkin/checkout(YYYY-MM-DD, 날짜별 요금 반영)·personal(인원, 기본2). max_price=1박 상한(원). limit(기본20, 페이지 자동추적 최대100).
           - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
           - source=tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록·연락처·좌표. region=광역명(서울/제주 등 → 지역목록) 또는 키워드(예 "경주 한옥" → 키워드검색). limit(기본20).
-          해외 호텔은 [sense:travel]{op: "hotel"} (Amadeus).
         router: handler
         tool: search_stay
         implementation: tool_stay.py — goodchoice=yeogi.com __NEXT_DATA__ SSR 추출(curl_cffi 크롬위장, 레거시 goodchoice.kr은 keyword 드랍이라 yeogi 직접) / 33m2=api.33m2.co.kr/v1/rooms 공개 JSON(키불요) / tourapi=KorService2 searchKeyword2·areaBasedList2(contentTypeId=32, DATA_GO_KR_API_KEY). 세 소스 모두 items+map_data 통화.
@@ -353,39 +290,6 @@ tool_json:
         days:
           type: integer
           description: 예보 일수 (기본 3, 최대 7)
-  - name: amadeus_travel_search
-    description: '[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city). 도시명·상대날짜 자동 해소. endpoint+params
-      직접 지정도 가능.'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: 검색 종류
-        to:
-          type: string
-          description: '도착 도시명 (flight). 예: 도쿄'
-        from:
-          type: string
-          description: 출발 도시명 (flight, 기본 서울)
-        date:
-          type: string
-          description: 출발일 (flight). "내일"/"다음주 금요일"/YYYY-MM-DD. 기본 +7일
-        return_date:
-          type: string
-          description: 귀국일 (flight, 옵션)
-        adults:
-          type: integer
-          description: 성인 수 (flight, 기본 1)
-        city:
-          type: string
-          description: 도시명 (hotel)
-        endpoint:
-          type: string
-          description: (파워유저) Amadeus 원본 endpoint 직접 지정
-        params:
-          type: object
-          description: (파워유저) endpoint별 원본 파라미터
   - name: search_restaurants
     description: '한국 맛집/음식점을 검색합니다 (카카오+네이버 통합, 블로그 후기 추천 근거 포함).
 

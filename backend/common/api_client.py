@@ -26,7 +26,6 @@ _BASE_URLS: Dict[str, str] = {
     "naver": "https://openapi.naver.com",
     "ninjas": "https://api.api-ninjas.com/v1",
     "law": "http://www.law.go.kr/DRF",
-    "amadeus": "https://test.api.amadeus.com",
     "kosis": "https://kosis.kr/openapi",
     "fmp": "https://financialmodelingprep.com/api",
     "finnhub": "https://finnhub.io/api/v1",

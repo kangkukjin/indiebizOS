@@ -31,56 +31,6 @@
       }
     },
     {
-      "name": "amadeus_travel_search",
-      "description": "[sense:travel]{op} — 여행 정보 검색(Amadeus). op=flight(from→to, date)/hotel(city). 도시명·상대날짜 자동 해소. endpoint+params 직접 지정도 가능.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "검색 종류",
-            "enum": [
-              "flight",
-              "hotel"
-            ],
-            "default": "flight"
-          },
-          "to": {
-            "type": "string",
-            "description": "도착 도시명 (flight). 예: 도쿄"
-          },
-          "from": {
-            "type": "string",
-            "description": "출발 도시명 (flight, 기본 서울)"
-          },
-          "date": {
-            "type": "string",
-            "description": "출발일 (flight). \"내일\"/\"다음주 금요일\"/YYYY-MM-DD. 기본 +7일"
-          },
-          "return_date": {
-            "type": "string",
-            "description": "귀국일 (flight, 옵션)"
-          },
-          "adults": {
-            "type": "integer",
-            "description": "성인 수 (flight, 기본 1)"
-          },
-          "city": {
-            "type": "string",
-            "description": "도시명 (hotel)"
-          },
-          "endpoint": {
-            "type": "string",
-            "description": "(파워유저) Amadeus 원본 endpoint 직접 지정"
-          },
-          "params": {
-            "type": "object",
-            "description": "(파워유저) endpoint별 원본 파라미터"
-          }
-        }
-      }
-    },
-    {
       "name": "search_restaurants",
       "description": "한국 맛집/음식점을 검색합니다 (카카오+네이버 통합, 블로그 후기 추천 근거 포함).\n\n## 반환 정보\n- 카카오(페이지네이션, 기본 30·최대 45) + 네이버 5개, 가게명 정규화로 중복 병합\n- 가게명, 주소, 전화번호, 카테고리, 좌표, place 링크(카카오맵=평점/리뷰 페이지)\n- 상위 12곳: blog_count(네이버 블로그 언급 수) + reason(후기 제목) — 언급 많은 순 정렬\n\n## 사용법\n- query에 '지역 + 음식종류' 조합 권장\n- 예: '강남 파스타', '홍대 맛집', '대전 유성구 삼겹살'\n\n## 주의사항\n- 한 번 호출로 충분한 결과 반환 - 중복 호출 불필요\n- 별점 숫자는 공개 API 미제공 — blog_count가 인기 신호\n- 일반 웹 검색은 ddgs_search 사용",
       "input_schema": {

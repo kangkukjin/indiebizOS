@@ -601,7 +601,7 @@ def _build_form_data(tool_config: dict, tool_input: dict) -> Any:
     YAML 예시:
         form_body:
           grant_type: client_credentials
-          client_id: {env: AMADEUS_API_KEY}
+          client_id: {env: SOME_API_KEY}
     """
     form_config = tool_config.get("form_body")
     if not form_config or not isinstance(form_config, dict):

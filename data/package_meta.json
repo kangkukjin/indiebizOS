@@ -154,8 +154,6 @@
     },
     "location-services": {
       "needs_key": [
-        "AMADEUS_API_KEY",
-        "AMADEUS_API_SECRET",
         "DATA_GO_KR_API_KEY",
         "KAKAO_REST_API_KEY",
         "NAVER_CLIENT_ID",
@@ -424,7 +422,6 @@
     "sense:startup": "startup",
     "sense:stay": "location-services",
     "sense:stock": "investment",
-    "sense:travel": "location-services",
     "sense:used": "shopping-assistant",
     "sense:video": "youtube",
     "sense:weather": "location-services",

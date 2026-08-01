@@ -79,7 +79,6 @@
     "sense:startup": "[sense:startup]{query: \"AI\"}",
     "sense:stay": "[sense:stay]{region: \"제주\", source: \"goodchoice\"}",
     "sense:stock": "[sense:stock]{query: \"삼성전자\"}",
-    "sense:travel": "[sense:travel]{op: \"flight\", to: \"도쿄\"}",
     "sense:used": "[sense:used]{source: \"bunjang\", query: \"맥미니 m4 pro\"}",
     "sense:video": "[sense:video]{op: \"meta\", query: \"jazz\"}",
     "sense:weather": "[sense:weather]{city: \"서울\"}",

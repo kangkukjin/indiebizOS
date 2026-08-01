@@ -51,13 +51,6 @@ _AUTH_REGISTRY: Dict[str, dict] = {
         "key_name": "OC",
         "env_var": "LAW_API_KEY",
     },
-    "amadeus": {
-        "type": "oauth2",
-        "env_vars": {
-            "client_id": "AMADEUS_API_KEY",
-            "client_secret": "AMADEUS_API_SECRET",
-        },
-    },
     "dart": {
         "type": "query_param",
         "key_name": "crtfc_key",

@@ -393,8 +393,9 @@ def is_external_request(request: Request) -> bool:
 
 def is_public_remote_path(method: str, path: str) -> bool:
     """원격에서 인증 없이 허용되는 경로 (로그인 셸 + 자체 인증 보유 경로)"""
-    # 런처 앱 셸 + 로그인 흐름
-    if path == "/launcher/app":
+    # 런처 앱 셸 + 로그인 흐름 (lite = 구형 기기용 경량 셸 — 셸 자체는 정적,
+    # 데이터 API 는 여전히 세션 게이트 뒤)
+    if path in ("/launcher/app", "/launcher/lite"):
         return True
     # 홈 화면 설치 3종(매니페스트·서비스워커·아이콘) — 설치 판단은 로그인보다 먼저 일어난다.
     # 셋 다 정적 자산이라 노출해도 새는 정보가 없다(아이콘·앱 이름뿐).
@@ -711,6 +712,17 @@ async def logout(request: Request, response: Response):
 async def get_webapp():
     """원격 런처 웹앱"""
     return get_launcher_webapp_html()
+
+
+@router.get("/lite", response_class=HTMLResponse)
+async def get_webapp_lite():
+    """구형 기기 호환 경량 런처 (NAS /nas/lite·lite2 의 런처판) — 순수 ES5+XHR.
+
+    iOS 10.3 Safari 는 물론 아이패드 1세대(iOS 5.1.1)까지 한 페이지로 덮는다.
+    단 터널 HTTPS 는 초구형 기기의 TLS/인증서 한계로 막힐 수 있어, 그 경우
+    LAN 평문 HTTP(http://<맥IP>:8765/launcher/lite) 사용을 권장한다."""
+    from launcher_lite import LAUNCHER_LITE_HTML
+    return LAUNCHER_LITE_HTML
 
 
 # ── 홈 화면 설치 (웹 앱 매니페스트 + 아이콘 + 서비스워커) ──────────────────

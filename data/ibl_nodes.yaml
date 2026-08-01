@@ -928,68 +928,6 @@ nodes:
         router: handler
         tool: reverse_geocode
         implementation: Kakao Map API로 GPS 좌표→주소 변환
-      travel:
-        returns: items
-        side_effect: false
-        fixture: '[sense:travel]{op: "flight", to: "도쿄"}'
-        description: 여행 정보 검색 (Amadeus, op 분기) — 항공권·호텔. 도시명·상대날짜 내부 해소.
-        group: travel
-        target_description: flight — to(도착도시) 필수, from(기본 서울)·date(기본 +7일, "내일"/"다음주 금요일" 등 자연어)·adults 옵션. hotel — city 필수. 도시명은 IATA/도시코드 자동 해소.
-        router: handler
-        tool: amadeus_travel_search
-        target_key: op
-        ops:
-          default: flight
-          values:
-            flight: 항공권 검색 (from→to·date). 도시명→IATA·상대날짜 자동 해소
-            hotel: 도시 호텔 목록 (city→도시코드 자동)
-        implementation: Amadeus API(OAuth2). op→endpoint 매핑 + 도시명/날짜 내부 해소 (endpoint+params 직접 지정도 가능). 두 op 모두 items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 없이 깨끗(weather/restaurant 형제). (poi=관광지는 Amadeus가 2026 영구 폐기(HTTP 410)해 제거.)
-        app:
-          instrument: travel
-          icon: ✈️
-          name: 여행
-          order: 16
-          modes:
-          - name: 항공권
-            inputs:
-            - key: to
-              type: text
-              label: 도착
-              placeholder: '도착 도시 (예: 도쿄)'
-              required: true
-            - key: from
-              type: text
-              label: 출발
-              placeholder: 출발 (비우면 서울)
-            - key: date
-              type: text
-              label: 날짜
-              placeholder: '예: 내일·다음주 금요일·2026-07-15 (비우면 1주 후)'
-            action: '[sense:travel]{op: "flight", to: "$to", from: "$from", date: "$date"}'
-            view:
-            - type: card_list
-              from: items
-              empty: 항공편을 찾지 못했습니다
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-          - name: 호텔
-            inputs:
-            - key: city
-              type: text
-              label: 도시
-              placeholder: '도시 (예: 파리)'
-              required: true
-            action: '[sense:travel]{op: "hotel", city: "$city"}'
-            view:
-            - type: card_list
-              from: items
-              empty: 호텔을 찾지 못했습니다
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
       stay:
         aliases:
           region:
@@ -1016,8 +954,6 @@ nodes:
           - source=33m2: 삼삼엠투 한 달 살기 — 주 단위 임대(usingFee)·관리비·평수. region=지역(예 "평택"). max_week_fee/min_week_fee=주간요금 서버필터(원). checkin/checkout=입주 기간. limit(기본20).
 
           - source=tourapi: 한국관광공사 공식 숙박 디렉토리 — 가격 없음, 권위 목록·연락처·좌표. region=광역명(서울/제주 등 → 지역목록) 또는 키워드(예 "경주 한옥" → 키워드검색). limit(기본20).
-
-          해외 호텔은 [sense:travel]{op: "hotel"} (Amadeus).
 
           '
         router: handler
@@ -4941,7 +4877,7 @@ nodes:
         fixture: '[others:family_news]{op: "status"}'
         runs_on: pc_only
         description: 가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
-        target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음. 사진 EXIF GPS→행정동 장소명 표기, 웹판 사진 자체는 EXIF 제거) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
+        target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음. 사진 EXIF GPS→행정동 장소명 표기, 웹판 사진 자체는 EXIF 제거) / photos(초안 사진 목록 — 편집용, 각 사진의 날짜·시간·장소·썸네일과 남은 후보 수) / remove_photo(초안에서 file 사진 1장 빼기 — 안 뽑혔던 후보에서 자동 보충[폰 USB 연결 시], 발행 전에만) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
         target_key: op
         group: family_news
         router: handler
@@ -4951,6 +4887,8 @@ nodes:
           values:
             status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
             create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인
+            photos: 초안 사진 목록 (편집용 — 날짜·시간·장소·썸네일 + 남은 후보 수)
+            remove_photo: 초안에서 file 사진 빼기 — 후보에서 자동 보충(폰 USB 연결 시), 발행 전에만
             publish: 초안 판을 공개 주소로 발행 (첫 발행 때 /n/<5자 코드> 주소 생성)
             detail: 판 하나 상세 (앱 드릴용 — 기간·사진수·장소·미리보기/공개 주소)
             delete: 판 삭제 (발행된 판은 force:true 필요, 실렸던 가족 사진은 후보로 복귀)
@@ -5038,6 +4976,28 @@ nodes:
                 placeholder: 비우면 지난 발행 이후 (첫 판은 7일)
               action: '[others:family_news]{op: "create", photo_limit: "$photo_limit", days: "$days"}'
               button: 🗞️ 신문 만들기
+          - name: 편집
+            auto_run: true
+            note: 초안에서 마음에 안 드는 사진을 빼면, 신문에 안 실렸던 후보 사진에서 자동으로 채워 넣습니다(폰 USB 연결 시). 발행 전에만 편집할 수 있습니다.
+            action: '[others:family_news]{op: "photos"}'
+            view:
+            - type: kv
+              title: 편집 안내
+              rows:
+              - k: 상태
+                v: '{message}'
+            - type: image_grid
+              from: items
+              empty_from: message
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+              button:
+                label: ✕ 빼기
+                confirm: 이 사진을 신문에서 뺄까요? 남은 후보가 있으면 다른 사진으로 채웁니다.
+                action: '[others:family_news]{op: "remove_photo", edition_id: "{edition_id}", file: "{file}"}'
+                refresh: true
           - name: 방명록
             auto_run: true
             note: 가족들이 공개 신문에 남긴 글입니다.

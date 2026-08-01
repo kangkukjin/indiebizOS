@@ -176,6 +176,94 @@ nodes:
         - propose
         - patch
         - backend수정
+      webapp:
+        returns: items
+        # register/remove 가 data/webapps.json 을 쓴다 — op 하나라도 쓰기면 true (빌드 가드).
+        side_effect: true
+        fixture: '[self:webapp]{}'
+        description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register.
+        group: system
+        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url. 파생 항목은 각자의 진실 소스에서 지운다).'
+        target_key: op
+        router: handler
+        tool: webapp_op
+        implementation: system_essentials/webapp_registry.py — portal_state·bulletin·family_news·showcase·report_publish·sites.json·outputs/web-projects 7곳 파생 + data/webapps.json 수동 보충. status 는 병렬 HTTP GET.
+        ops:
+          default: list
+          values:
+            list: 전체 웹앱 목록 — 파생 + 수동 (부류·주소·출처)
+            status: 전 웹앱 생존 실측 — HTTP 응답코드·지연 (🟢/🔴)
+            register: 수동 등록 (name + url 필수) — 파생 밖 웹앱만
+            remove: 수동 등록 제거 (url)
+        keywords:
+        - 웹앱
+        - webapp
+        - 등기부
+        - 웹앱 목록
+        - 사이트 살아있
+        - 배포 현황
+        - PWA
+        guides:
+        - webapp.md
+        app:
+          instrument: webapp
+          icon: 🕸️
+          name: 웹앱
+          order: 40
+          modes:
+          - name: 함대
+            auto_run: true
+            action: '[self:webapp]{op: "list"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary|opt:}'
+                link:
+                  href: '{url}'
+                  label: 열기 →
+          - name: 생존
+            auto_run: true
+            note: 등록된 모든 웹앱에 실제 접속해 생존을 확인합니다 (수 초 걸립니다).
+            action: '[self:webapp]{op: "status"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{status_line}'
+                - '{meta}'
+                link:
+                  href: '{url}'
+                  label: 열기 →
+          - name: 등록
+            note: 몸 공개면(포털·게시판·신문·공개파일·보고서)과 web-builder 사이트는 자동으로 잡힙니다 — 그 밖의 수제 배포(Worker 등)만 여기서 등록하세요.
+            inputs:
+            - key: name
+              type: text
+              placeholder: 이름 (예 kospi-board)
+            - key: url
+              type: text
+              placeholder: https://…
+            - key: memo
+              type: text
+              placeholder: 메모 (선택)
+            action: '[self:webapp]{op: "register", name: "$name", url: "$url", memo: "$memo"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary|opt:}'
   table:
     actions:
       spreadsheet:
@@ -926,3 +1014,26 @@ tool_json:
           description: '다중 시트 {시트명: rows}. 주면 rows보다 우선.'
       required:
       - path
+  - name: webapp_op
+    description: 내 웹앱 등기부 — 목록(파생+수동)·생존 실측·수동 등록/제거. 몸 공개면과 web-builder 사이트는 자동 파생.
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: list(기본)/status/register/remove
+        name:
+          type: string
+          description: register 전용 — 웹앱 이름
+        url:
+          type: string
+          description: register/remove — 웹앱 주소
+        kind:
+          type: string
+          description: register 선택 — 부류 메모 (예 외부(Worker))
+        memo:
+          type: string
+          description: register 선택 — 자유 메모
+        timeout:
+          type: number
+          description: status 선택 — 프로브 타임아웃 초 (기본 5)

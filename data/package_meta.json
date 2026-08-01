@@ -380,6 +380,7 @@
     "self:slide": "lecture_workspace",
     "self:storage": "pc-manager",
     "self:time": "system_essentials",
+    "self:webapp": "system_essentials",
     "self:work_guideline": "business",
     "self:write": "system_essentials",
     "sense:book": "culture",

@@ -39,6 +39,7 @@
     "self:switch": "[self:switch]{op: \"list\"}",
     "self:time": "[self:time]{}",
     "self:trigger": "[self:trigger]{op: \"list\"}",
+    "self:webapp": "[self:webapp]{}",
     "self:work_guideline": "[self:work_guideline]{op: \"list\"}",
     "self:workflow": "[self:workflow]{op: \"list\"}",
     "sense:book": "[sense:book]{query: \"역사\"}",

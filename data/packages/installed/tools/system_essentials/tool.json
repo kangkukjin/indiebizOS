@@ -497,6 +497,46 @@
           "path"
         ]
       }
+    },
+    {
+      "name": "webapp_op",
+      "description": "내 웹앱 등기부 — 목록(파생+수동)·생존 실측·수동 등록/제거. 몸 공개면과 web-builder 사이트는 자동 파생.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "list(기본)/status/register/remove",
+            "enum": [
+              "list",
+              "status",
+              "register",
+              "remove"
+            ],
+            "default": "list"
+          },
+          "name": {
+            "type": "string",
+            "description": "register 전용 — 웹앱 이름"
+          },
+          "url": {
+            "type": "string",
+            "description": "register/remove — 웹앱 주소"
+          },
+          "kind": {
+            "type": "string",
+            "description": "register 선택 — 부류 메모 (예 외부(Worker))"
+          },
+          "memo": {
+            "type": "string",
+            "description": "register 선택 — 자유 메모"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "status 선택 — 프로브 타임아웃 초 (기본 5)"
+          }
+        }
+      }
     }
   ]
 }

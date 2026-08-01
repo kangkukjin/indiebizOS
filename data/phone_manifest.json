@@ -95,6 +95,7 @@
     "self:switch",
     "self:time",
     "self:trigger",
+    "self:webapp",
     "self:work_guideline",
     "self:workflow",
     "self:write",

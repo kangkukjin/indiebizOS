@@ -9,6 +9,11 @@ notify_dispatch.py - 사용자 알림 전달 단일 관문 (A+B 조합, 2026-07-
      → Electron 이 OS 네이티브 알림 + 배지 표시, 클릭하면 해당 창 열림 (크로스플랫폼)
   3) B. 런처 미연결 시 — desktop_notify 로 백엔드가 직접 OS 알림 (표시만, 클릭 연동 없음)
 
+※C(웹푸시, 다른 기기 도달)는 2026-08-01 시도 후 같은 날 은퇴 — 같은 origin 다중 PWA
+(런처·IBFind)의 안드로이드 알림 위임 얽힘으로 실기기 도달 실패(사용자 결정: 반복 안 함).
+재활 조건 = 런처 서브도메인 분리. 당시 코드는 커밋 이력 없이 제거(RFC 8291 직접 구현은
+CLAUDE.md 2026-08-01 항목에 기록).
+
 호출부: channel_poller(새 메시지), system_tools.execute_send_notification([self:notify_user]) 등.
 워커 스레드에서 호출해도 안전하다 (send_launcher_command_sync 가 threadsafe 처리).
 """

@@ -477,11 +477,64 @@ _office = _load_sibling("office_ops")
 _get_path = _office._get_path
 
 
+# ── [self:webapp] 웹앱 등기부 — op 디스패처 (--check 가 AST 로 키 정확 비교) ──
+# 로직은 형제 모듈 webapp_registry.py (파생 우선 — 진실 소스 7곳 + 수동 보충).
+
+_WEBAPP_MOD = None
+
+
+def _webapp_mod():
+    global _WEBAPP_MOD
+    if _WEBAPP_MOD is None:
+        _WEBAPP_MOD = _load_sibling("webapp_registry")
+    return _WEBAPP_MOD
+
+
+def _webapp_list(tool_input):
+    return _webapp_mod().op_list(tool_input)
+
+
+def _webapp_status(tool_input):
+    return _webapp_mod().op_status(tool_input)
+
+
+def _webapp_register(tool_input):
+    return _webapp_mod().op_register(tool_input)
+
+
+def _webapp_remove(tool_input):
+    return _webapp_mod().op_remove(tool_input)
+
+
+_OP_DISPATCHERS = {
+    "webapp_op": {
+        "list": _webapp_list,
+        "status": _webapp_status,
+        "register": _webapp_register,
+        "remove": _webapp_remove,
+    }
+}
+_OP_DEFAULTS = {"webapp_op": "list"}
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
     project_path = context.project_path
     agent_id = context.agent_id
+
+    # op 디스패처 액션 ([self:webapp] — music-player execute 규약)
+    if tool_name in _OP_DISPATCHERS:
+        op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return json.dumps({"success": False,
+                               "message": f"알 수 없는 op: {op} (가능: {', '.join(_OP_DISPATCHERS[tool_name])})"},
+                              ensure_ascii=False)
+        try:
+            return json.dumps(fn(tool_input), ensure_ascii=False)
+        except Exception as e:
+            return json.dumps({"success": False, "message": f"webapp 오류: {e}"}, ensure_ascii=False)
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":

@@ -755,6 +755,11 @@ async def launcher_service_worker():
     그 조건만 만족시키고 요청은 전부 네트워크로 흘려보낸다(respondWith 없음 = 기본 동작).
     원격런처는 세션 쿠키로 개인화되고 실시간 상태를 그리는 표면이라 **캐싱이 곧 버그**다
     (포털 /h/ 를 no-store 로 두는 것과 같은 이유).
+
+    ※웹푸시(push 핸들러)는 2026-08-01 시도 후 같은 날 은퇴 — 같은 origin 에 PWA 가
+    둘(런처 /launcher/·파인더 /nas/)이라 안드로이드가 알림 권한을 WebAPK 하나(IBFind)에
+    위임, 설정을 다 켜도 실기기 도달 실패(사용자 결정: 반복 시도 안 함). 재활 조건 =
+    런처를 별도 서브도메인으로 분리해 origin 을 독점할 때.
     """
     js = (
         "self.addEventListener('install', function(e){ self.skipWaiting(); });\n"

@@ -52,6 +52,8 @@ body { background:var(--paper); color:var(--ink); -webkit-text-size-adjust:100%;
 .cap { position:absolute; left:0; right:0; bottom:0; padding:14px 10px 6px; font-size:.72rem; color:#fff;
   background:linear-gradient(transparent,rgba(0,0,0,.55)); opacity:0; transition:opacity .15s; }
 .ph:hover .cap, .ph:active .cap { opacity:1; }
+.cap2 { font-size:.72rem; color:var(--dim); padding:5px 8px 6px; background:#fff;
+  border-top:1px solid var(--line); }
 .section-head { border-left:5px solid var(--accent); padding-left:12px; margin:44px 0 14px;
   font-size:1.15rem; font-weight:800; }
 .fam-note { color:var(--dim); font-size:.85rem; margin:-8px 0 14px 17px; }
@@ -242,10 +244,14 @@ def render_edition(edition: dict, paper_title: str) -> str:
             cap = " · ".join(cap_bits)
             lead = " lead" if (i == 0 and len(day.get("photos", [])) >= 3) else ""
             src = f"media/{_esc(ph.get('file',''))}?v={_ver(edition)}"
+            # 장소가 있으면 항상 보이는 캡션(cap2)으로 — 호버 캡션은 폰에선 사실상 안 보인다.
+            place = ph.get("place")
+            capline = (f'<figcaption class="cap2">📍 {_esc(place)}</figcaption>' if place
+                       else f'<figcaption class="cap">{_esc(cap)}</figcaption>')
             parts.append(
                 f'<figure class="ph{lead}" data-cap="{_esc(cap)}">'
                 f'<img src="{src}" loading="lazy" alt="{_esc(cap)}">'
-                f'<figcaption class="cap">{_esc(cap)}</figcaption></figure>'
+                f'{capline}</figure>'
             )
         parts.append("</div></div>")
 

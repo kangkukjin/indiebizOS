@@ -12,9 +12,15 @@
    EXIF/GPS 제거) → 날짜별 섹션 정적 HTML. **백그라운드 조판** — create 는 즉시 반환,
    진행은 `{op:"status"}` 의 building 으로 확인. 미발행 초안이 있으면 갈아엎는다(호수 재사용).
 2. **미리보기** — `http://localhost:8765/family-news/preview/<eid>/` (맥 로컬 전용, 터널 차단).
-3. **발행** `{op:"publish", edition_id}` — 첫 발행 때 5자 코드 주소(`<public_base>/n/<코드>/`)
+3. **편집** `{op:"photos"}` / `{op:"remove_photo", file}` — 발행 전 초안에서 사진을 뺀다.
+   create 때 안 뽑힌 후보(pool: [폰경로, datetaken])가 edition.json 에 동봉돼 있어,
+   빼면 촬영 시각이 가까운 후보를 adb 로 당겨 그 날짜 자리에 자동 보충(파일명 `e%03d.jpg`).
+   뺀 사진 원본 경로는 excluded 에 기록(재등장 방지). 가족 업로드 사진은 보충 없이
+   uploads.json 에 `rejected` 표시(다음 판 후보에서도 제외). 앱 '편집' 탭 = 이 두 op
+   (image_grid 행 버튼). 발행판은 편집 불가(공개 캐시 불변 원칙).
+4. **발행** `{op:"publish", edition_id}` — 첫 발행 때 5자 코드 주소(`<public_base>/n/<코드>/`)
    생성. 아카이브 홈에 발행판이 누적된다(최신 먼저). 발행 전 판은 절대 공개되지 않는다.
-4. **방명록/사진 보내기** — 공개 페이지 하단. 가족 업로드는 공개되지 않고
+5. **방명록/사진 보내기** — 공개 페이지 하단. 가족 업로드는 공개되지 않고
    `data/family_news/uploads/` 에 쌓였다가 **다음 create 때 "가족이 보내온 사진" 섹션으로
    합류**(발행 전 검수를 거치는 구조). `{op:"uploads"}`/`{op:"comments"}` 로 앱에서 조회.
 

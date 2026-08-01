@@ -281,12 +281,14 @@ function renderPrim(p,vi,data){
   if(p.type==='image_grid'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
-    return '<div class="posters">'+arr.map(it=>{
+    return '<div class="posters">'+arr.map((it,ri)=>{
       const img=p.image?tpl(p.image,it):'';
       // 클릭=원본/동영상 라이트박스. URL 은 클릭 시 <img src>에서 파생(따옴표 이스케이프 회피, CCTV playStream 선례).
       const click=img?' onclick="openMediaFromEl(this)" style="cursor:pointer"':'';
+      // 행 버튼(사진 빼기 등) — list_action button 과 같은 어휘(rowBtn 공유), 라이트박스 클릭과 분리.
+      const btn=(p.button&&p.button.action)?'<button class="btn2" style="margin-top:4px" onclick="event.stopPropagation();rowBtn('+vi+','+ri+',this)">'+esc(p.button.label||'실행')+'</button>':'';
       return '<div class="poster"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<div style="aspect-ratio:3/4;background:var(--bg3);border-radius:8px"></div>')+
-        '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div></div>';
+        '<div class="t">'+tpl(p.title,it)+'</div><div class="m">'+(p.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>'+btn+'</div>';
     }).join('')+'</div>';
   }
   if(p.type==='media_player'){
@@ -642,6 +644,7 @@ async function rowBtn(vi,ri,btn,key){
   const r=rowItem(vi,ri); if(!r||!r.prim[key]) return;
   // stream:true 버튼 = 클라이언트 스트림 재생(CCTV '보기'). IBL 실행 없이 행 url 을 playStream(hls.js) 오버레이로.
   if(r.prim[key].stream){ if(r.item&&r.item.url){ const i=_streamUrls.push(r.item.url)-1; playStream(i); } return; }
+  if(r.prim[key].confirm && !confirm(r.prim[key].confirm)) return;  // 파괴적 행 버튼(사진 빼기 등) 확인
   const action=rowAction(r.prim[key].action,r.item);
   btn.disabled=true; const old=btn.textContent; btn.textContent='…';
   try{

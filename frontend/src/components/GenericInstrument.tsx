@@ -171,10 +171,12 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   if (p.type === 'image_grid') {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    const btn = p.button as AppButton | undefined;  // 행 버튼(사진 빼기 등) — list_action button 과 같은 어휘
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {arr.map((it, i) => {
           const img = p.image ? tpl(p.image, it) : '';
+          const rowKey = `${p.type}-${i}`;
           return (
             <div key={i}>
               {img ? <img src={mediaSrc(img)} loading="lazy" className="w-full aspect-[3/4] object-cover rounded-lg bg-stone-100" />
@@ -183,6 +185,16 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
               <div className="text-[11px] text-stone-500">
                 {((p.lines as string[]) || []).map((l, j) => <div key={j}>{linkify(tpl(l, it))}</div>)}
               </div>
+              {btn?.action && (
+                <button disabled={busyRow === rowKey}
+                  onClick={() => {
+                    if (btn.confirm && !window.confirm(btn.confirm)) return;
+                    onRowAction(btn.action!, it, rowKey, btn.refresh);
+                  }}
+                  className="mt-1 px-2.5 py-1 rounded-lg border border-stone-200 text-xs text-stone-700 hover:border-stone-400 disabled:opacity-40">
+                  {busyRow === rowKey ? '…' : btn.label || '실행'}
+                </button>
+              )}
             </div>
           );
         })}

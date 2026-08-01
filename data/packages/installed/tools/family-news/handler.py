@@ -311,6 +311,11 @@ def _save_uploads(entries: list) -> None:
     tmp.replace(_UPLOADS_META)
 
 
+def _pending_uploads(entries: list) -> list:
+    """다음 판 후보 업로드 — 이미 실렸거나(used_in) 편집에서 뺀(rejected) 사진 제외."""
+    return [u for u in entries if not u.get("used_in") and not u.get("rejected")]
+
+
 # ── 신문 렌더 ────────────────────────────────────────────────────────────
 
 _NEWS_HTML = None
@@ -393,7 +398,7 @@ def _fn_status(params: dict) -> str:
     drafts = [r for r in rows if r["is_draft"]]
     published = [r for r in rows if not r["is_draft"]]
     pub_url = _public_url(state)
-    uploads_new = len([u for u in _load_uploads() if not u.get("used_in")])
+    uploads_new = len(_pending_uploads(_load_uploads()))
     paper = {
         "title": state.get("title", ""),
         "url": pub_url or "(아직 발행 전 — 첫 발행 때 주소가 만들어집니다)",
@@ -446,7 +451,7 @@ def _fn_create(params: dict) -> str:
         candidates = _adb_photos_since(since_ms, until_ms)
     except RuntimeError as e:
         return _fail(str(e))
-    uploads = [u for u in _load_uploads() if not u.get("used_in")]
+    uploads = _pending_uploads(_load_uploads())
 
     # 미발행 초안이 있으면 갈아엎고 다시 만든다(호수 재사용, 실렸던 가족 사진은 후보로 복귀).
     old_draft = next((e for e in state["editions"] if not e.get("published_at")), None)
@@ -458,7 +463,7 @@ def _fn_create(params: dict) -> str:
             if u.get("used_in") == old_draft["id"]:
                 u["used_in"] = None
         _save_uploads(ups)
-        uploads = [u for u in ups if not u.get("used_in")]
+        uploads = _pending_uploads(ups)
 
         def _drop(st):
             st["editions"] = [e for e in st["editions"] if e.get("published_at")]
@@ -470,6 +475,9 @@ def _fn_create(params: dict) -> str:
         f = datetime.fromtimestamp(since_ms / 1000).strftime("%m/%d")
         return _fail(f"{f} 이후 폰에 새 사진이 없습니다 (가족이 보낸 사진도 없음).")
     picked = _sample_photos(candidates, cap)
+    # 안 뽑힌 후보는 pool 로 판에 동봉 — 편집(remove_photo)에서 빈 자리를 채우는 재료.
+    picked_set = {p[0] for p in picked}
+    pool = [[src, ms] for src, ms in candidates if src not in picked_set]
 
     base_id = datetime.now().strftime("%Y-%m-%d")
     existing = {e["id"] for e in state["editions"]}
@@ -484,7 +492,7 @@ def _fn_create(params: dict) -> str:
     _set_building({"eid": eid, "no": no, "stage": f"사진 {len(picked)}장 가져오는 중"})
     t = threading.Thread(
         target=_build_edition,
-        args=(eid, no, picked, uploads, since_ms, until_ms, len(candidates)),
+        args=(eid, no, picked, uploads, since_ms, until_ms, pool),
         daemon=True,
     )
     t.start()
@@ -495,7 +503,7 @@ def _fn_create(params: dict) -> str:
 
 
 def _build_edition(eid: str, no: int, picked: list, uploads: list,
-                   since_ms: int, until_ms: int, candidate_count: int) -> None:
+                   since_ms: int, until_ms: int, pool: list) -> None:
     """백그라운드 조판 — pull → GPS·장소 → 웹판 → 섹션 → HTML → state 반영."""
     try:
         ed_dir = _EDITIONS / eid
@@ -534,7 +542,8 @@ def _build_edition(eid: str, no: int, picked: list, uploads: list,
             if not _make_web_photo(tmp, photos_dir / fname):
                 return None
             dt = datetime.fromtimestamp(ms / 1000)
-            return {"file": fname, "ms": ms, "date": dt.strftime("%Y-%m-%d"),
+            # src(폰 경로)·ms 는 편집(remove_photo)의 제외 목록·자리 계산용 — 렌더러는 무시.
+            return {"file": fname, "src": src, "ms": ms, "date": dt.strftime("%Y-%m-%d"),
                     "time": dt.strftime("%H:%M"), "place": place}
 
         with ThreadPoolExecutor(max_workers=4) as ex:
@@ -551,7 +560,8 @@ def _build_edition(eid: str, no: int, picked: list, uploads: list,
             label = f"{dt.month}월 {dt.day}일 ({_WEEKDAYS_KO[dt.weekday()]})"
             places = list(dict.fromkeys(p["place"] for p in by_day[d] if p["place"]))
             days.append({"date": d, "label": label, "places": places,
-                         "photos": [{"file": p["file"], "time": p["time"], "place": p["place"]}
+                         "photos": [{"file": p["file"], "src": p["src"], "ms": p["ms"],
+                                     "time": p["time"], "place": p["place"]}
                                     for p in by_day[d]]})
 
         # 가족이 보내온 사진(미사용 업로드) 합류
@@ -562,7 +572,9 @@ def _build_edition(eid: str, no: int, picked: list, uploads: list,
                 continue
             fname = f"f_{j:03d}.jpg"
             if _make_web_photo(src, photos_dir / fname):
-                family.append({"file": fname, "name": u.get("name", ""), "at": u.get("at", "")})
+                # src_upload=업로드 원본 파일명 — 편집에서 빼면 그 업로드를 후보에서도 제외하는 열쇠.
+                family.append({"file": fname, "name": u.get("name", ""), "at": u.get("at", ""),
+                               "src_upload": u.get("file", "")})
                 used_files.append(u.get("file"))
 
         total = len(processed) + len(family)
@@ -578,6 +590,8 @@ def _build_edition(eid: str, no: int, picked: list, uploads: list,
             "range_from": datetime.fromtimestamp(since_ms / 1000).strftime("%Y-%m-%d"),
             "range_to": datetime.fromtimestamp(until_ms / 1000).strftime("%Y-%m-%d"),
             "days": days, "family": family, "photo_count": total,
+            # 편집 재료 — pool: 안 뽑힌 후보(폰 경로+datetaken), excluded: 사용자가 뺀 사진의 원본.
+            "pool": pool, "excluded": [],
         }
         (ed_dir / "edition.json").write_text(json.dumps(edition, ensure_ascii=False, indent=1),
                                              encoding="utf-8")
@@ -608,6 +622,226 @@ def _build_edition(eid: str, no: int, picked: list, uploads: list,
             st.pop("building", None)
             st["last_build_error"] = str(e)
         _mutate_state(_err)
+
+
+# ── 편집 (초안 사진 빼기·보충) ──────────────────────────────────────────
+
+def _resolve_draft(state: dict, params: dict):
+    """편집 대상 초안 판 — edition_id 생략 시 초안이 하나면 그 판. (판 dict, 실패응답)"""
+    eid = (params.get("edition_id") or "").strip()
+    drafts = [e for e in state["editions"] if not e.get("published_at")]
+    if not eid:
+        if len(drafts) == 1:
+            return drafts[0], None
+        if not drafts:
+            return None, _fail("편집할 초안이 없습니다 — '제작' 탭에서 먼저 신문을 만드세요.")
+        return None, _fail("초안이 여럿입니다 — edition_id 를 지정해 주세요.")
+    ed = next((e for e in state["editions"] if e["id"] == eid), None)
+    if not ed:
+        return None, _fail(f"판을 찾을 수 없습니다: {eid}")
+    if ed.get("published_at"):
+        return None, _fail(f"제 {ed.get('no')} 호는 이미 발행되어 편집할 수 없습니다 — 편집은 발행 전(초안)에만 됩니다.")
+    return ed, None
+
+
+def _load_edition(eid: str):
+    try:
+        return json.loads((_EDITIONS / eid / "edition.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _save_edition(edition: dict) -> None:
+    p = _EDITIONS / edition["id"] / "edition.json"
+    p.write_text(json.dumps(edition, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def _recount_edition(edition: dict) -> None:
+    """빼기·보충 후 photo_count·day places 재계산 + 빈 날 제거."""
+    edition["days"] = [d for d in edition.get("days", []) if d.get("photos")]
+    for d in edition["days"]:
+        d["places"] = list(dict.fromkeys(p.get("place") for p in d["photos"] if p.get("place")))
+    edition["photo_count"] = (sum(len(d["photos"]) for d in edition["days"])
+                              + len(edition.get("family") or []))
+
+
+def _sync_summary(edition: dict) -> dict:
+    """edition.json → state 요약(사진 수·장소·표지) 동기화 후 최신 state 반환."""
+    day_photos = [p for d in edition.get("days", []) for p in d.get("photos", [])]
+    fam = edition.get("family") or []
+    places = list(dict.fromkeys(p.get("place") for p in day_photos if p.get("place")))
+    cover = day_photos[0]["file"] if day_photos else (fam[0]["file"] if fam else "")
+
+    def _f(st):
+        for e in st["editions"]:
+            if e["id"] == edition["id"]:
+                e["photo_count"] = edition.get("photo_count", 0)
+                e["places"] = places
+                e["cover"] = cover
+    return _mutate_state(_f)
+
+
+def _pool_candidates(edition: dict) -> list:
+    excluded = set(edition.get("excluded") or [])
+    return [c for c in (edition.get("pool") or []) if c[0] not in excluded]
+
+
+def _next_edit_name(photos_dir: Path) -> str:
+    n = 0
+    while (photos_dir / f"e{n:03d}.jpg").exists():
+        n += 1
+    return f"e{n:03d}.jpg"
+
+
+def _insert_day_photo(edition: dict, photo: dict) -> None:
+    """보충 사진을 날짜 자리에 끼움 — 없는 날이면 섹션 신설, 시간순 유지."""
+    days = edition.setdefault("days", [])
+    day = next((d for d in days if d.get("date") == photo["date"]), None)
+    if day is None:
+        dt = datetime.strptime(photo["date"], "%Y-%m-%d")
+        day = {"date": photo["date"],
+               "label": f"{dt.month}월 {dt.day}일 ({_WEEKDAYS_KO[dt.weekday()]})",
+               "places": [], "photos": []}
+        days.append(day)
+        days.sort(key=lambda d: d.get("date", ""))
+    day["photos"].append(photo)
+    day["photos"].sort(key=lambda p: p.get("ms") or 0)
+
+
+def _refill_from_pool(edition: dict, photos_dir: Path, ref_ms: int):
+    """뺀 자리 보충 — 뺀 사진과 촬영 시각이 가까운 후보부터 폰에서 당겨 채운다.
+    (보충 사진, 실패 사유) 반환. 폰 미연결이면 pull 이 전부 실패한다."""
+    cands = sorted(_pool_candidates(edition), key=lambda c: abs(int(c[1]) - ref_ms))
+    if not cands:
+        return None, "남은 후보 사진이 없어 그대로 둡니다"
+    excluded = edition.setdefault("excluded", [])
+    _TMP_PULL.mkdir(parents=True, exist_ok=True)
+    for src, ms in cands[:6]:
+        ext = os.path.splitext(src)[1].lower() or ".jpg"
+        tmp = _TMP_PULL / f"refill{ext}"
+        tmp.unlink(missing_ok=True)
+        if not _adb_pull(src, tmp):
+            continue   # 폰 미연결·파일 소실 — 다음 후보
+        gps = _gps_from_exif(tmp)
+        place = _reverse_geocode(*gps) if gps else ""
+        fname = _next_edit_name(photos_dir)
+        ok = _make_web_photo(tmp, photos_dir / fname)
+        tmp.unlink(missing_ok=True)
+        if not ok:
+            excluded.append(src)   # 변환 불가 후보는 다시 시도하지 않는다
+            continue
+        dt = datetime.fromtimestamp(int(ms) / 1000)
+        photo = {"file": fname, "src": src, "ms": int(ms), "date": dt.strftime("%Y-%m-%d"),
+                 "time": dt.strftime("%H:%M"), "place": place}
+        _insert_day_photo(edition, photo)
+        edition["pool"] = [c for c in edition.get("pool") or [] if c[0] != src]
+        return photo, ""
+    return None, "폰에서 후보 사진을 가져오지 못했습니다 — USB 연결 후 다시 빼면 채워집니다"
+
+
+def _fn_photos(params: dict) -> str:
+    """초안 사진 목록(편집용) — 각 사진의 날짜·시간·장소·썸네일 + 남은 후보 수."""
+    state = _load_state()
+    ed, err = _resolve_draft(state, params)
+    if err:
+        return err
+    edition = _load_edition(ed["id"])
+    if edition is None:
+        return _fail("판 데이터를 읽지 못했습니다 — '제작'을 다시 실행해 주세요.")
+    photos_dir = _EDITIONS / ed["id"] / "photos"
+    rows = []
+    for day in edition.get("days", []):
+        for p in day.get("photos", []):
+            rows.append({
+                "edition_id": ed["id"], "file": p.get("file", ""),
+                "title": f"{day.get('label', day.get('date', ''))} {p.get('time', '')}".strip(),
+                "meta": f"📍 {p['place']}" if p.get("place") else "장소 정보 없음",
+                "place": p.get("place", ""),
+                "image": f"/photo/thumbnail?path={photos_dir / p.get('file', '')}",
+            })
+    for f in edition.get("family") or []:
+        rows.append({
+            "edition_id": ed["id"], "file": f.get("file", ""),
+            "title": f"가족이 보낸 사진 · {f.get('name', '')}",
+            "meta": f.get("at", "") or "가족 업로드",
+            "place": "",
+            "image": f"/photo/thumbnail?path={photos_dir / f.get('file', '')}",
+        })
+    pool_left = len(_pool_candidates(edition))
+    if edition.get("pool") is None:
+        hint = "이 초안은 후보 정보가 없어 빼기만 됩니다 (새로 만든 초안부터 자동 보충)."
+    elif pool_left:
+        hint = f"사진을 빼면 남은 후보 {pool_left}장에서 자동으로 채웁니다 (폰 USB 연결 시)."
+    else:
+        hint = "남은 후보 사진이 없어, 빼면 그 자리는 비웁니다."
+    return _ok(rows, edition_id=ed["id"], pool_left=pool_left,
+               message=f"제 {ed.get('no')} 호 초안 · 사진 {len(rows)}장. {hint}")
+
+
+def _fn_remove_photo(params: dict) -> str:
+    """초안에서 사진 1장 빼기 — 남은 후보가 있으면 자동으로 채우고 신문을 다시 조판."""
+    state = _load_state()
+    if _building_status(state):
+        return _fail("제작이 진행 중입니다 — 끝난 뒤 편집해 주세요.")
+    ed, err = _resolve_draft(state, params)
+    if err:
+        return err
+    fname = (params.get("file") or "").strip()
+    if not fname:
+        return _fail("뺄 사진의 file 을 지정해 주세요.")
+    edition = _load_edition(ed["id"])
+    if edition is None:
+        return _fail("판 데이터를 읽지 못했습니다 — '제작'을 다시 실행해 주세요.")
+    photos_dir = _EDITIONS / ed["id"] / "photos"
+
+    removed, is_family = None, False
+    for day in edition.get("days", []):
+        hit = next((p for p in day.get("photos", []) if p.get("file") == fname), None)
+        if hit:
+            removed = hit
+            day["photos"].remove(hit)
+            break
+    if removed is None:
+        hit = next((f for f in edition.get("family") or [] if f.get("file") == fname), None)
+        if hit:
+            removed, is_family = hit, True
+            edition["family"].remove(hit)
+    if removed is None:
+        return _fail(f"사진을 찾을 수 없습니다: {fname}")
+
+    (photos_dir / fname).unlink(missing_ok=True)
+    filled, why_not = None, ""
+    if is_family:
+        # 뺀 가족 사진은 업로드 후보에서도 제외 — 다음 판에 되살아나지 않게.
+        srcu = removed.get("src_upload")
+        if srcu:
+            ups = _load_uploads()
+            for u in ups:
+                if u.get("file") == srcu:
+                    u["rejected"] = True
+                    u["used_in"] = None
+            _save_uploads(ups)
+    else:
+        if removed.get("src"):
+            edition.setdefault("excluded", []).append(removed["src"])
+        if edition.get("pool") is not None:
+            ref_ms = int(removed.get("ms") or 0)
+            filled, why_not = _refill_from_pool(edition, photos_dir, ref_ms)
+
+    _recount_edition(edition)
+    _save_edition(edition)
+    state = _sync_summary(edition)
+    _render_edition_html(ed["id"], state)
+
+    if filled:
+        where = f"{filled['date']} {filled['time']}" + (f" · {filled['place']}" if filled.get("place") else "")
+        msg = f"사진을 뺐습니다 — 후보에서 1장을 새로 채웠습니다 ({where})."
+    elif is_family:
+        msg = "가족이 보낸 사진을 뺐습니다 — 이 사진은 다음 신문에도 실리지 않습니다."
+    else:
+        msg = "사진을 뺐습니다." + (f" {why_not}." if why_not else "")
+    return _ok([], success=True, filled=bool(filled),
+               photo_count=edition.get("photo_count", 0), message=msg)
 
 
 def _fn_publish(params: dict) -> str:
@@ -699,9 +933,12 @@ def _fn_uploads(params: dict) -> str:
         p = _UPLOADS / u.get("file", "")
         if not p.exists():
             continue
+        status = (f"제 {u.get('used_in')} 판에 실림" if u.get("used_in")
+                  else "편집에서 뺌 — 다시 실리지 않습니다" if u.get("rejected")
+                  else "다음 신문 후보")
         rows.append({
             "title": u.get("name", ""),
-            "meta": f"{u.get('at', '')} · " + (f"제 {u.get('used_in')} 판에 실림" if u.get("used_in") else "다음 신문 후보"),
+            "meta": f"{u.get('at', '')} · {status}",
             "image": f"/photo/thumbnail?path={p}",
             "path": str(p),
         })
@@ -735,6 +972,8 @@ _OP_DISPATCHERS = {
     "family_news_op": {
         "status": _fn_status,
         "create": _fn_create,
+        "photos": _fn_photos,
+        "remove_photo": _fn_remove_photo,
         "publish": _fn_publish,
         "detail": _fn_detail,
         "delete": _fn_delete,

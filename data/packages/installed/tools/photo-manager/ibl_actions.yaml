@@ -7,8 +7,8 @@ nodes:
         returns: items
         fixture: '[self:photo]{op: "stats"}'
         runs_on: anywhere
-        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(실행되는 몸의 미디어). 타임라인·통계·중복은 >> table 변환자.
-        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50). 결과 items에 lat/lng/taken_at/month/kind/camera/size 구조 필드 포함 → groupby·지도와 직결.'
+        description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
+        target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
         target_key: q
         router: handler
@@ -61,6 +61,23 @@ nodes:
             auto_run: true
             note: 위치(GPS) 정보가 있는 사진.
             action: '[self:photo]{has_gps: true, limit: 40}'
+            view:
+            - type: image_grid
+              from: items
+              image: '{image}'
+              title: '{title}'
+              lines:
+              - '{meta}'
+          - name: 폰(USB)
+            # 폰이 자기 자신을 USB 로 볼 수는 없다 — 폰 네이티브 표면에선 감춘다.
+            phone_render: false
+            auto_run: true
+            note: USB로 연결된 안드로이드 폰 안의 사진. 파일은 폰에 그대로 두고 볼 때만 가져옵니다.
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명 검색 (비우면 최신순)
+            action: '[self:photo]{source: "usb", q: "$q", limit: 40}'
             view:
             - type: image_grid
               from: items
@@ -161,4 +178,10 @@ tool_json:
         limit:
           type: integer
           description: 반환 개수 (기본 50)
+        source:
+          type: string
+          enum:
+          - self
+          - usb
+          description: 어느 몸의 사진인가 — self(기본)=실행되는 몸, usb=USB로 연결된 안드로이드 폰(PC에서만, GPS 필터 미지원)
       additionalProperties: true

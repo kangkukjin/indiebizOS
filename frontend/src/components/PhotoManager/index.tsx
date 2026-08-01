@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Camera, Video, Copy, Grid3x3, Calendar, BarChart2,
-  Folder, RefreshCw, Image, Trash2, MapPin
+  Folder, RefreshCw, Image, Trash2, MapPin, Smartphone, Download
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
@@ -35,6 +35,15 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
   const [sortBy, setSortBy] = useState<string>('taken_date');
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState<string>('');
+  // USB 로 붙은 폰 보기 — 스캔 폴더와 나란히 선택하는 '손님' 소스(인덱싱하지 않는다).
+  const [usbMode, setUsbMode] = useState(false);
+  const [usbError, setUsbError] = useState<string>('');
+  const [usbTick, setUsbTick] = useState(0);   // 새로고침 방아쇠(폰 목록은 캐시가 없다)
+
+  // 저장하려고 고른 것들 — 경로가 곧 신원(폰 사진엔 DB id 가 없다).
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [pickAnchor, setPickAnchor] = useState<number | null>(null);  // shift 범위의 기준점
+  const [saveMsg, setSaveMsg] = useState<string>('');
 
   // Gallery data
   const [galleryItems, setGalleryItems] = useState<MediaItem[]>([]);
@@ -90,23 +99,32 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
 
   // 갤러리 로드
   const loadGallery = useCallback(async () => {
-    if (!selectedPath) return;
+    if (!usbMode && !selectedPath) return;
 
     const url = await getApiUrl();
     try {
       const typeParam = mediaType !== 'all' ? `&media_type=${mediaType}` : '';
-      const res = await fetch(`${url}/photo/gallery?path=${encodeURIComponent(selectedPath)}&page=${currentPage}&limit=50&sort_by=${sortBy}${typeParam}`);
+      const endpoint = usbMode
+        ? `${url}/photo/usb-gallery?page=${currentPage}&limit=50${typeParam}`
+        : `${url}/photo/gallery?path=${encodeURIComponent(selectedPath!)}&page=${currentPage}&limit=50&sort_by=${sortBy}${typeParam}`;
+      const res = await fetch(endpoint);
       const data = await res.json();
 
       if (data.success) {
         setGalleryItems(data.items || []);
         setTotalItems(data.total || 0);
+        setUsbError('');
+      } else if (usbMode) {
+        // 폰 미연결·승인 대기 등 — 사람이 할 일을 그대로 보여준다(재시도 대상 아님).
+        setGalleryItems([]);
+        setTotalItems(0);
+        setUsbError(data.error || '폰을 조회하지 못했습니다');
       }
     } catch (error) {
       console.error('Failed to load gallery:', error);
       throw error;                    // 실패를 굳히지 않는다 — 훅이 백오프 재시도
     }
-  }, [selectedPath, currentPage, sortBy, mediaType, getApiUrl]);
+  }, [usbMode, usbTick, selectedPath, currentPage, sortBy, mediaType, getApiUrl]);
 
   // 중복 파일 로드
   const loadDuplicates = useCallback(async () => {
@@ -150,7 +168,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
   }, [selectedPath, getApiUrl]);
 
   // 뷰 모드별 데이터 로드 — 조회 조건(페이지·정렬·타입)은 각 로더의 deps 가 표현한다
-  useRetryingLoad(loadGallery, { enabled: viewMode === 'gallery' && !!selectedPath });
+  useRetryingLoad(loadGallery, { enabled: viewMode === 'gallery' && (usbMode || !!selectedPath) });
   useRetryingLoad(loadDuplicates, { enabled: viewMode === 'duplicates' && !!selectedPath });
   useRetryingLoad(loadStats, { enabled: viewMode === 'stats' && !!selectedPath });
 
@@ -204,9 +222,24 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
 
   // 스캔 선택
   const handleSelectScan = (scan: Scan) => {
+    setUsbMode(false);
+    setPicked(new Set());
+    setSaveMsg('');
     setSelectedPath(scan.root_path);
     setCurrentPage(1);
     setViewMode('gallery');
+  };
+
+  // USB 폰 선택 — 스캔이 아니라 라이브 조회라 선택 즉시 갤러리로 간다.
+  const handleSelectUsb = () => {
+    setUsbMode(true);
+    setPicked(new Set());
+    setSaveMsg('');
+    setSelectedPath(null);
+    setCurrentPage(1);
+    setViewMode('gallery');
+    setGalleryItems([]);
+    setUsbError('');
   };
 
   // 스캔 삭제
@@ -241,6 +274,64 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
     } catch (error) {
       console.error('Failed to delete scan:', error);
       alert('스캔 삭제에 실패했습니다.');
+    }
+  };
+
+  // 저장 대상 고르기 — shift 면 기준점부터 여기까지 한꺼번에("몇 번부터 몇 번까지").
+  const handlePick = (item: MediaItem, index: number, shift: boolean) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (shift && pickAnchor !== null) {
+        const [a, b] = pickAnchor <= index ? [pickAnchor, index] : [index, pickAnchor];
+        for (let i = a; i <= b; i++) {
+          const p = galleryItems[i]?.path;
+          if (p) next.add(p);
+        }
+      } else if (next.has(item.path)) {
+        next.delete(item.path);
+      } else {
+        next.add(item.path);
+      }
+      return next;
+    });
+    setPickAnchor(index);
+    setSaveMsg('');
+  };
+
+  // 고른 것들을 폴더로 저장 — 실제 복사는 백엔드(IBL [self:copy] 와 같은 코드).
+  const handleSavePicked = async () => {
+    const items = galleryItems.filter((it) => picked.has(it.path));
+    if (items.length === 0) return;
+
+    let dest: string | null = null;
+    if (window.electron?.selectFolder) {
+      dest = await window.electron.selectFolder();
+    } else {
+      dest = window.prompt('저장할 폴더 경로', '~/Desktop');   // 웹에서 열었을 때의 폴백
+    }
+    if (!dest) return;
+
+    setSaveMsg(`${items.length}장 저장 중...`);
+    const url = await getApiUrl();
+    try {
+      const res = await fetch(`${url}/photo/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dest,
+          items: items.map((it) => ({ path: it.path, source: it.source })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || '저장 실패');
+      const failed = (data.failed || []).length;
+      setSaveMsg(
+        `${(data.saved || []).length}장을 저장했습니다 → ${data.dest}` +
+        (failed ? ` (실패 ${failed}장)` : '')
+      );
+      setPicked(new Set());
+    } catch (e: any) {
+      setSaveMsg(`저장 실패: ${e?.message || e}`);
     }
   };
 
@@ -300,6 +391,21 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
         {/* 사이드바 */}
         <div className="w-64 border-r border-[#E8E4DC] bg-[#FAF9F7] overflow-y-auto">
           <div className="p-3">
+            {/* USB 로 붙은 폰 — 스캔하지 않는 라이브 소스라 폴더 목록과 나란히 둔다. */}
+            <h3 className="text-xs font-semibold text-[#8B7355] mb-2 px-2">연결된 기기</h3>
+            <div
+              onClick={handleSelectUsb}
+              className={`w-full text-left p-2 mb-3 rounded-lg transition-colors cursor-pointer ${
+                usbMode ? 'bg-[#E8E4DC] text-[#5C5347]' : 'hover:bg-[#F0EDE8] text-[#6B5D4D]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Smartphone size={14} className="flex-shrink-0 text-[#8B7355]" />
+                <span className="text-sm font-medium truncate flex-1">폰 (USB)</span>
+              </div>
+              <div className="mt-1 ml-6 text-xs text-[#9B8B7A]">USB 연결 시 폰 안의 사진</div>
+            </div>
+
             <h3 className="text-xs font-semibold text-[#8B7355] mb-2 px-2">스캔된 폴더</h3>
 
             {scans.length === 0 ? (
@@ -346,7 +452,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
 
         {/* 메인 영역 */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {selectedPath && selectedScan ? (
+          {usbMode || (selectedPath && selectedScan) ? (
             <>
               {/* 뷰 모드 탭 */}
               <div className="flex items-center gap-1 px-4 py-2 bg-[#FAF9F7] border-b border-[#E8E4DC]">
@@ -359,6 +465,8 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   <Grid3x3 size={14} />
                   갤러리
                 </button>
+                {/* 아래 뷰들은 스캔 DB(인덱스) 위에서 도는 것 — 폰은 인덱싱하지 않으므로 감춘다. */}
+                {!usbMode && (<>
                 <button
                   onClick={() => setViewMode('timeline')}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
@@ -404,8 +512,29 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   <Calendar size={14} />
                   타임지도
                 </button>
+                </>)}
 
                 <div className="flex-1" />
+
+                {/* 고른 게 있을 때만 나타나는 저장 막대 — 평소엔 화면을 안 먹는다 */}
+                {viewMode === 'gallery' && picked.size > 0 && (
+                  <>
+                    <span className="text-sm text-[#6B5D4D]">{picked.size}장 선택</span>
+                    <button
+                      onClick={handleSavePicked}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349]"
+                    >
+                      <Download size={14} />
+                      폴더에 저장
+                    </button>
+                    <button
+                      onClick={() => { setPicked(new Set()); setSaveMsg(''); }}
+                      className="px-2 py-1.5 text-sm text-[#6B5D4D] hover:bg-[#E8E4DC] rounded-lg"
+                    >
+                      선택 해제
+                    </button>
+                  </>
+                )}
 
                 {viewMode === 'gallery' && (
                   <>
@@ -418,26 +547,28 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                       <option value="photo">사진만</option>
                       <option value="video">동영상만</option>
                     </select>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="text-sm px-2 py-1 border border-[#E8E4DC] rounded-lg bg-white text-[#5C5347]"
-                    >
-                      <option value="taken_date">촬영일</option>
-                      <option value="mtime">수정일</option>
-                      <option value="size">크기</option>
-                      <option value="filename">이름</option>
-                    </select>
+                    {!usbMode && (
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="text-sm px-2 py-1 border border-[#E8E4DC] rounded-lg bg-white text-[#5C5347]"
+                      >
+                        <option value="taken_date">촬영일</option>
+                        <option value="mtime">수정일</option>
+                        <option value="size">크기</option>
+                        <option value="filename">이름</option>
+                      </select>
+                    )}
                   </>
                 )}
 
                 <button
-                  onClick={() => handleScan(selectedPath)}
+                  onClick={() => (usbMode ? setUsbTick((t) => t + 1) : handleScan(selectedPath!))}
                   disabled={isScanning}
                   className="flex items-center gap-1 px-2 py-1.5 text-sm text-[#6B5D4D] hover:bg-[#E8E4DC] rounded-lg"
                 >
                   <RefreshCw size={14} className={isScanning ? 'animate-spin' : ''} />
-                  재스캔
+                  {usbMode ? '새로고침' : '재스캔'}
                 </button>
               </div>
 
@@ -448,6 +579,20 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                 </div>
               )}
 
+              {/* 저장 결과 — 어디에 몇 장이 갔는지 */}
+              {saveMsg && (
+                <div className="px-4 py-2 bg-[#F0F7F0] border-b border-[#CBE3CB] text-sm text-[#3F6B3F]">
+                  {saveMsg}
+                </div>
+              )}
+
+              {/* 폰 조회 실패 — 사람이 할 일(연결·승인)이라 그대로 보여준다 */}
+              {usbMode && usbError && (
+                <div className="px-4 py-2 bg-[#FDECEA] border-b border-[#F5C6C0] text-sm text-[#8B3A2F]">
+                  {usbError}
+                </div>
+              )}
+
               {/* 콘텐츠 영역 */}
               <div className="flex-1 overflow-auto p-4">
                 {viewMode === 'gallery' && (
@@ -455,12 +600,15 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                     items={galleryItems}
                     totalItems={totalItems}
                     currentPage={currentPage}
-                    onPageChange={setCurrentPage}
+                    // 페이지를 넘기면 선택은 접는다 — 화면에 없는 것을 저장했다고 믿게 두지 않는다
+                    onPageChange={(p) => { setCurrentPage(p); setPicked(new Set()); setSaveMsg(''); }}
                     onSelectItem={handleSelectItem}
+                    picked={picked}
+                    onPick={handlePick}
                   />
                 )}
 
-                {viewMode === 'timeline' && (
+                {viewMode === 'timeline' && selectedPath && (
                   <TimelineView
                     apiUrl={apiUrl}
                     selectedPath={selectedPath}
@@ -479,7 +627,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   <StatsView data={stats} />
                 )}
 
-                {viewMode === 'map' && (
+                {viewMode === 'map' && selectedPath && (
                   <MapView
                     apiUrl={apiUrl}
                     selectedPath={selectedPath}
@@ -487,7 +635,7 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
                   />
                 )}
 
-                {viewMode === 'timemap' && (
+                {viewMode === 'timemap' && selectedPath && (
                   <TimeMapView
                     apiUrl={apiUrl}
                     selectedPath={selectedPath}

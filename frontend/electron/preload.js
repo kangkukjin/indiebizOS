@@ -146,10 +146,11 @@ contextBridge.exposeInMainWorld('electron', {
   // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
   getPathForFile: (file) => webUtils.getPathForFile(file),
 
-  // 창고 드래그 아웃 — dragstart 에서 preventDefault 후 호출하면 메인이 파일을
-  // (포식 세션 쿠키로) 내려받아 네이티브 OS 드래그로 전환한다. cancel=버튼 놓음.
-  warehouseDragOut: (payload) => ipcRenderer.send('warehouse-drag-out', payload),
-  warehouseDragCancel: () => ipcRenderer.send('warehouse-drag-cancel'),
+  // 파일 드래그 아웃(창 밖 파인더·바탕화면으로 끌어 저장) — dragstart 에서 preventDefault
+  // 후 호출하면 메인이 네이티브 OS 드래그로 전환한다. path=로컬 파일이면 즉시,
+  // url=원격/폰 파일이면 (포식 세션 쿠키로) 받아서. cancel=받는 중 버튼 놓음.
+  dragOutFile: (payload) => ipcRenderer.send('drag-out-file', payload),
+  dragOutCancel: () => ipcRenderer.send('drag-out-cancel'),
 
   // === 포식 브라우저 비밀번호 금고 (크롬 비번 채우기) ===
   foragePwListHost: (url) => ipcRenderer.invoke('forage-pw-list-host', url),

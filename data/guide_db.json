@@ -861,20 +861,25 @@
     {
       "id": "photo",
       "name": "사진·동영상 라이브러리",
-      "description": "[self:photo]{op} 8 op 통합 — scan(인덱싱) + list_scans/gallery/search/detail/stats/timeline/duplicates. 워크플로우, 자연어 매핑, 깊은 쿼리 진입점.",
+      "description": "[self:photo] 라이브 질의(op 없음·선스캔 없음) — OS 미디어 색인 직접. 파라미터·조합(타임라인/통계/지도) + source:usb 로 USB 연결 안드로이드 폰 사진 조회.",
       "keywords": [
         "사진",
         "동영상",
         "미디어",
         "갤러리",
-        "스캔",
         "EXIF",
         "GPS",
         "중복사진",
         "사진검색",
         "타임라인",
         "photo",
-        "video"
+        "video",
+        "폰 사진",
+        "휴대폰 사진",
+        "안드로이드 사진",
+        "USB",
+        "usb",
+        "폰 연결"
       ],
       "file": "photo.md"
     },

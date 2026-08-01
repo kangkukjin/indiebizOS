@@ -126,12 +126,12 @@ nodes:
         target_key: path
       copy:
         returns: effect
-        description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사.
+        description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
-        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용)
+        target_description: 'src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다.'
         router: handler
         tool: copy_path
-        implementation: shutil.copy/copytree로 파일/폴더 복사
+        implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull)
         target_key: source
       move:
         returns: effect
@@ -814,9 +814,15 @@ tool_json:
       - 폴더 통째로 복사: source=''/data/project'', destination=''/backup/project''
 
 
+      - 여러 개 한꺼번에: source 를 생략하고 앞 액션 결과를 >> 로 넘기면, 그 items 의 파일 전부를
+      destination *폴더* 에 저장합니다. 몇 개를 고를지는 [table:take]/[table:filter] 가 정합니다.
+      예: [self:photo]{source:"usb"} >> [table:take]{n:10} >> [self:copy]{dest:"~/Desktop/폰사진"}
+      (items 의 source 가 usb 면 USB 로 연결된 폰에서 파일을 당겨 옵니다)
+
+
       주의사항:
 
-      - 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다
+      - 단일 복사에서 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다 (파이프 저장은 "(2)" 를 붙여 보존)
 
       - 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다'
     input_schema:
@@ -824,12 +830,11 @@ tool_json:
       properties:
         source:
           type: string
-          description: 원본 파일 또는 폴더 경로
+          description: 원본 파일 또는 폴더 경로 (생략 시 파이프로 받은 items 를 복사)
         destination:
           type: string
-          description: 복사 대상 경로
+          description: 복사 대상 경로 (파이프 저장이면 대상 폴더)
       required:
-      - source
       - destination
   - name: move_path
     description: '파일 또는 폴더를 이동합니다 (이름 변경 포함).

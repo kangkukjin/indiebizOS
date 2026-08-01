@@ -2,8 +2,9 @@
  * GalleryView - 갤러리 뷰 컴포넌트
  */
 
-import { Video } from 'lucide-react';
+import { Check, Video } from 'lucide-react';
 import type { MediaItem } from './types';
+import { dragOutMedia, thumbUrl } from './utils';
 
 interface GalleryViewProps {
   items: MediaItem[];
@@ -11,6 +12,10 @@ interface GalleryViewProps {
   currentPage: number;
   onPageChange: (page: number) => void;
   onSelectItem: (item: MediaItem, index: number, items: MediaItem[]) => void;
+  /** 저장하려고 고른 것들(경로 집합). 없으면 선택 UI 자체를 안 그린다. */
+  picked?: Set<string>;
+  /** 체크 클릭 — shift 면 직전 클릭부터 여기까지 범위 선택. */
+  onPick?: (item: MediaItem, index: number, shift: boolean) => void;
 }
 
 export function GalleryView({
@@ -18,7 +23,9 @@ export function GalleryView({
   totalItems,
   currentPage,
   onPageChange,
-  onSelectItem
+  onSelectItem,
+  picked,
+  onPick
 }: GalleryViewProps) {
   const totalPages = Math.ceil(totalItems / 50);
 
@@ -33,15 +40,22 @@ export function GalleryView({
   return (
     <div>
       <div className="grid grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-        {items.map((item, index) => (
+        {items.map((item, index) => {
+          const isPicked = !!picked?.has(item.path);
+          return (
           <div
             key={item.id}
             onClick={() => onSelectItem(item, index, items)}
-            className="aspect-square bg-[#F0EDE8] rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#8B7355] transition-all relative group"
+            draggable
+            onDragStart={(e) => dragOutMedia(e, item)}
+            title="끌어서 바탕화면·폴더에 저장"
+            className={`aspect-square bg-[#F0EDE8] rounded-lg overflow-hidden cursor-pointer transition-all relative group ${
+              isPicked ? 'ring-2 ring-[#8B7355]' : 'hover:ring-2 hover:ring-[#8B7355]'
+            }`}
           >
             {item.media_type === 'photo' ? (
               <img
-                src={`http://127.0.0.1:8765/photo/thumbnail?path=${encodeURIComponent(item.path)}&size=200`}
+                src={thumbUrl(item, 200)}
                 alt={item.filename}
                 className="w-full h-full object-cover"
                 loading="lazy"
@@ -52,7 +66,7 @@ export function GalleryView({
             ) : (
               <div className="w-full h-full relative bg-[#2D2D2D]">
                 <img
-                  src={`http://127.0.0.1:8765/photo/video-thumbnail?path=${encodeURIComponent(item.path)}&size=200`}
+                  src={thumbUrl(item, 200)}
                   alt={item.filename}
                   className="w-full h-full object-cover"
                   loading="lazy"
@@ -70,8 +84,25 @@ export function GalleryView({
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <p className="text-white text-xs truncate">{item.filename}</p>
             </div>
+
+            {/* 고르기 — 클릭은 상세 보기라, 선택은 별도 과녁(좌상단 체크)으로 가른다.
+                shift 클릭이 "몇 번부터 몇 번까지"에 해당한다. */}
+            {onPick && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onPick(item, index, e.shiftKey); }}
+                title={isPicked ? '선택 해제' : '선택 (shift = 여기까지 한꺼번에)'}
+                className={`absolute top-1.5 left-1.5 w-6 h-6 rounded-md flex items-center justify-center border transition-all ${
+                  isPicked
+                    ? 'bg-[#8B7355] border-[#8B7355] text-white'
+                    : 'bg-black/30 border-white/70 text-transparent opacity-0 group-hover:opacity-100'
+                }`}
+              >
+                <Check size={14} />
+              </button>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* 페이지네이션 */}

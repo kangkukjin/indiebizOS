@@ -308,21 +308,20 @@
     },
     {
       "name": "copy_path",
-      "description": "파일 또는 폴더를 복사합니다.\n\n사용법:\n- 파일 복사: 단일 파일을 다른 위치로 복사\n- 폴더 복사: 폴더 전체를 하위 내용 포함하여 복사\n- 대상 경로의 상위 디렉토리가 없으면 자동 생성\n\n사용 예시:\n- 사진 파일 복사: source='/Photos/IMG_001.jpg', destination='~/Desktop/backup/IMG_001.jpg'\n- 폴더 통째로 복사: source='/data/project', destination='/backup/project'\n\n주의사항:\n- 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다\n- 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다",
+      "description": "파일 또는 폴더를 복사합니다.\n\n사용법:\n- 파일 복사: 단일 파일을 다른 위치로 복사\n- 폴더 복사: 폴더 전체를 하위 내용 포함하여 복사\n- 대상 경로의 상위 디렉토리가 없으면 자동 생성\n\n사용 예시:\n- 사진 파일 복사: source='/Photos/IMG_001.jpg', destination='~/Desktop/backup/IMG_001.jpg'\n- 폴더 통째로 복사: source='/data/project', destination='/backup/project'\n\n- 여러 개 한꺼번에: source 를 생략하고 앞 액션 결과를 >> 로 넘기면, 그 items 의 파일 전부를 destination *폴더* 에 저장합니다. 몇 개를 고를지는 [table:take]/[table:filter] 가 정합니다. 예: [self:photo]{source:\"usb\"} >> [table:take]{n:10} >> [self:copy]{dest:\"~/Desktop/폰사진\"} (items 의 source 가 usb 면 USB 로 연결된 폰에서 파일을 당겨 옵니다)\n\n주의사항:\n- 단일 복사에서 대상 경로에 이미 파일/폴더가 있으면 덮어씁니다 (파이프 저장은 \"(2)\" 를 붙여 보존)\n- 매우 큰 폴더 복사는 시간이 걸릴 수 있습니다",
       "input_schema": {
         "type": "object",
         "properties": {
           "source": {
             "type": "string",
-            "description": "원본 파일 또는 폴더 경로"
+            "description": "원본 파일 또는 폴더 경로 (생략 시 파이프로 받은 items 를 복사)"
           },
           "destination": {
             "type": "string",
-            "description": "복사 대상 경로"
+            "description": "복사 대상 경로 (파이프 저장이면 대상 폴더)"
           }
         },
         "required": [
-          "source",
           "destination"
         ]
       }

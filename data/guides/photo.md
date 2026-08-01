@@ -1,129 +1,130 @@
-# 사진·동영상 관리 가이드
+# 사진·동영상 가이드
 
-`[self:photo]` 단일 액션으로 로컬 사진/동영상 라이브러리를 스캔·조회·검색·분석한다. **op 8종**이 핵심 분기.
+`[self:photo]` 하나로 사진·동영상을 **라이브 질의**한다. op 도, 선스캔도 없다 — OS 미디어 색인
+(맥 Spotlight / 폰 MediaStore)을 그때그때 읽으므로 결과는 항상 최신이다.
 
-전제: **사용 전 한 번은 `op:"scan"`이 필요하다.** 모든 조회는 스캔 인덱스(SQLite) 위에서 동작.
-
-기술 깊이(직접 SQL 쿼리, DB 스키마)는 패키지 [`photo-manager/guide.md`](../packages/installed/tools/photo-manager/guide.md) 참조. 이 가이드는 **IBL 액션 사용 워크플로우**에 집중.
-
----
-
-## 8 op 사양
-
-| op | 필수 | 옵션 | 결과 |
-|---|---|---|---|
-| `scan` | `path` (폴더 절대경로) | — | 폴더 재귀 스캔 + EXIF/메타 추출 + SQLite 인덱싱 |
-| `list_scans` | (없음) | — | 지금까지 스캔한 폴더 목록 + 통계 요약 |
-| `gallery` | `path` | `page`, `limit`, `media_type`(photo\|video), `sort_by`(taken_date\|mtime\|size\|filename), `start_date`, `end_date` | 페이지네이션 + 필터 갤러리 |
-| `search` | `query` | `media_type`, `start_date`, `end_date`, `limit`, `path` | 파일명·카메라 모델 키워드 검색 |
-| `detail` | `media_id` | `path` (정확한 스캔 지정 시) | 단일 미디어 전체 메타(EXIF/GPS/해상도/MD5) |
-| `stats` | `path` | — | 사진/동영상 수·용량·카메라 분포 |
-| `timeline` | `path` | `year` (특정 연도만) | 월별 촬영 통계 (활동 패턴) |
-| `duplicates` | `path` | — | MD5 해시 기반 중복 탐지 |
-
-### `path` 자동 해석
-
-`scan`을 제외한 op는 `path`를 생략하면 **가장 많이 스캔된 폴더가 자동 선택**된다. 한 스캔만 있는 경우 그걸 자동 사용.
-
-`path`를 줬는데 그게 스캔된 적이 없으면 디렉토리 존재 여부만 검증하고 자동 선택으로 fallback.
-
-### `media_id`
-
-`gallery`/`search`/`duplicates` 결과의 각 항목에 들어 있는 `id` 필드. 정수.
+기술 깊이(스캔 DB 스키마·직접 SQL)는 패키지 [`photo-manager/guide.md`](../packages/installed/tools/photo-manager/guide.md).
+스캔 DB 는 데스크탑 풍부창(중복·타임라인·지도)이 쓰는 별개 층이고, `[self:photo]` 는 거기 안 기댄다.
 
 ---
 
-## 표준 워크플로우
+## 파라미터
 
-### 1) 첫 사용 — 인덱싱부터
-```
-[self:photo]{op:"scan", path:"/Users/k/Pictures"}
-→ 스캔 완료. 사진·동영상 수, 총 용량, 오류 건수 반환
-[self:photo]{op:"list_scans"}                    # 무엇이 스캔됐는지 확인
-```
-
-### 2) 갤러리 보기
-```
-[self:photo]{op:"gallery", path:"/Users/k/Pictures", limit:30}
-[self:photo]{op:"gallery", path:"/Users/k/Pictures", media_type:"video"}
-[self:photo]{op:"gallery", path:"/Users/k/Pictures",
-             start_date:"2024-01-01", end_date:"2024-12-31"}
-```
-
-### 3) 키워드/메타 검색
-```
-[self:photo]{op:"search", query:"sunset"}
-[self:photo]{op:"search", query:"iPhone 14"}              # 카메라 모델
-[self:photo]{op:"search", query:"", media_type:"video",
-             start_date:"2025-03-01", end_date:"2025-03-31"}
-→ 검색 결과의 id로 detail 호출
-[self:photo]{op:"detail", media_id:42}
-```
-
-### 4) 활동 패턴 보기
-```
-[self:photo]{op:"timeline", path:"/Users/k/Pictures"}
-→ 월별 사진/동영상 건수 (활동 시기 시각화)
-[self:photo]{op:"timeline", path:"/Users/k/Pictures", year:2024}
-```
-
-### 5) 통계 + 차트로 연결
-```
-[self:photo]{op:"stats", path:"/Users/k/Pictures"}
-[self:photo]{op:"timeline", path:"/Users/k/Pictures"}
-  >> [table:chart_bar]{x:"month", y:"count"}
-```
-
-### 6) 정리 — 중복 찾기
-```
-[self:photo]{op:"duplicates", path:"/Users/k/Pictures"}
-→ MD5 같은 파일 그룹 목록. 용량 절감 정리용
-```
-
-### 7) 깊은 쿼리 — Python 직접 사용
-IBL 도구로 부족할 때 (예: GPS 좌표 범위로 장소별 필터, 사진→비디오 대비 비율 등):
-```
-[self:photo]{op:"list_scans"}
-→ 결과에서 DB 경로 확보
-[engines:python]{code:"
-  import sqlite3
-  conn = sqlite3.connect('<DB 경로>')
-  rows = conn.execute('SELECT path FROM media_files WHERE gps_lat BETWEEN ? AND ?', (...)).fetchall()
-  ..."}
-```
-스키마는 패키지 `guide.md` 참조.
-
----
-
-## 자연어 의도 매핑
-
-| 사용자 말 | op |
+| 키 | 뜻 |
 |---|---|
-| "사진 정리해야 해 / 폴더 스캔" | `scan` |
-| "사진 통계 보여줘 / 카메라별로" | `stats` |
-| "월별로 어떻게 찍었어 / 활동 패턴" | `timeline` |
-| "사진 좀 보여줘 / 갤러리" | `gallery` |
-| "비디오만 보고 싶어" | `gallery` + `media_type:"video"` |
-| "이 키워드 사진 찾아줘 / iPhone으로 찍은 거" | `search` |
-| "이 사진 상세 정보 / EXIF" | `detail` |
-| "중복 파일 찾아 / 용량 줄이기" | `duplicates` |
-| "어떤 폴더 스캔했어" | `list_scans` |
+| `q` | 파일명·기종 키워드 부분일치 |
+| `kind` | `photo` / `video` / `all`(기본) |
+| `start`·`end` | 촬영일 범위 — `YYYY-MM` 또는 `YYYY-MM-DD` |
+| `has_gps` | true 면 위치 정보를 가진 것만 |
+| `path` | 검색 루트 (생략 시 홈 전체) |
+| `file` | 단일 파일 절대경로 상세 |
+| `limit` | 개수 (기본 50) |
+| `source` | `self`(기본)=실행되는 몸 / `usb`=USB 로 연결된 안드로이드 폰 |
+
+결과 items 에 표시 필드(`title`/`meta`/`image`/`url`)와 구조 필드(`path`/`taken_at`/`month`/`kind`/
+`size`/`camera`/`lat`/`lng`/`source`)가 함께 실린다 → 타임라인·통계·지도는 **table 변환자로 조합**한다.
+
+---
+
+## 기본 사용
+
+```
+[self:photo]{limit:40}                                  # 최근 사진·동영상
+[self:photo]{q:"iPhone"}                                # 기종·파일명 검색
+[self:photo]{kind:"video", start:"2026-03", end:"2026-03"}
+[self:photo]{has_gps:true, limit:100}                   # 위치 가진 사진
+[self:photo]{path:"/Volumes/Extreme SSD/사진", limit:50} # 특정 폴더만
+```
+
+파생 조회는 별도 op 가 아니라 조합이다:
+
+```
+[self:photo]{limit:500} >> [table:groupby]{by:"month"}   # 타임라인
+[self:photo]{limit:500} >> [table:groupby]{by:"kind"}    # 통계
+[self:photo]{has_gps:true} >> [limbs:show_map]{}         # 지도
+```
+
+---
+
+## USB 로 연결된 폰 사진 — `source:"usb"`
+
+PC 는 안드로이드 저장소를 **볼륨으로 마운트하지 않는다**(MTP). 그래서 Spotlight·파일 순회로는
+폰 사진을 원리적으로 못 본다. `source:"usb"` 는 대신 adb 로 폰의 MediaStore 를 그 자리에서 읽는다.
+
+```
+[self:photo]{source:"usb", limit:40}                     # 폰 안의 최신 사진
+[self:photo]{source:"usb", q:"20260731"}                 # 파일명 검색
+[self:photo]{source:"usb", start:"2026-07", end:"2026-07"}
+[self:photo]{source:"usb", path:"DCIM/Camera"}           # 폰 안의 경로 부분일치
+```
+
+### 파일은 안 옮긴다
+
+목록은 **경로와 메타만** 가져온다(복사 0). 실제 바이트는 볼 때만 넘어온다 —
+썸네일 `/photo/usb-thumbnail?path=`, 원본 `/photo/usb-image?path=`, 동영상 `/photo/usb-video?path=`.
+한 번 당긴 파일은 `data/usb_media_cache/` 에 남아 다시 볼 때 즉시 뜨고, 1GB 를 넘으면 오래된 것부터
+버린다(원본은 폰에 있으니 언제든 다시 당긴다).
+
+items 의 `path` 는 **폰 안의 경로**(`/storage/emulated/0/…`)라 PC 의 파일 도구로는 못 연다 —
+`source` 필드가 `usb` 인 항목은 위 엔드포인트로만 열린다.
+
+### 전제와 한계
+
+- **PC 에서만.** 폰 자신에서 `source:"usb"` 를 부르면 거절된다(폰 사진은 `source` 없이 조회).
+- **adb 필요.** Android platform-tools 가 있어야 하고, USB 연결 + 폰에서 USB 디버깅 승인이 필요하다.
+  못 하면 "연결된 폰이 없습니다" 같은 **할 일이 적힌 문장**이 돌아온다 — 빈 결과가 아니다.
+- **`has_gps` 미지원.** 안드로이드 10+ 는 MediaStore 의 위치를 가린다(전부 NULL). 위치는 파일을
+  직접 열어 EXIF 를 봐야 나오는데 그러려면 후보 전부를 당겨야 하므로 필터로 쓸 수 없다 — 그렇다고 말하고 거절한다.
+- **기종(`camera`) 없음.** MediaStore 에 그 컬럼이 없다.
+- 사진·동영상 둘 다 본다(`kind`). 시스템 썸네일 캐시(`.thumbnails`)는 제외된다.
+
+---
+
+## 고른 사진을 저장하기
+
+저장은 새 동사가 아니라 **조합**이다 — 고르는 일은 앞 액션과 table 변환자가 하고,
+`[self:copy]` 는 받은 것을 그대로 옮긴다(`src` 를 생략하면 파이프로 온 items 를 저장한다).
+
+```
+[self:photo]{source:"usb", limit:10} >> [self:copy]{dest:"~/Desktop/폰사진"}
+[self:photo]{source:"usb", limit:50} >> [table:take]{n:10} >> [self:copy]{dest:"~/Desktop"}
+[self:photo]{source:"usb", start:"2026-07"} >> [self:copy]{dest:"~/Pictures/7월"}
+[self:photo]{has_gps:true} >> [table:take]{n:20} >> [self:copy]{dest:"~/Desktop/위치사진"}
+```
+
+- 대상은 **폴더**다. 없으면 만든다.
+- 원본 파일명을 유지하고, 겹치면 `이름 (2).jpg` — **덮어쓰지 않는다**.
+- usb 항목은 폰에서 당겨 오고, 내 사진은 로컬 복사다(호출자는 구분할 필요 없다).
+
+표면에서는 두 가지로 같은 일을 한다:
+
+- **끌어 저장** — 썸네일을 창 밖(바탕화면·파인더 폴더)으로 끌면 원본이 거기 저장된다.
+  데스크탑 앱(Electron)에서만 가능하다 — 브라우저는 창 밖으로 파일을 못 내보낸다.
+- **골라 저장** — 썸네일 좌상단 체크로 고르고(**shift 클릭 = 여기까지 한꺼번에**) "폴더에 저장".
+  실제 복사는 `[self:copy]` 와 **같은 코드**(`file_index.save_media_files`)를 쓴다.
+
+---
+
+## 표면
+
+- **앱 계기 📷 사진** 4탭: 갤러리 / 검색 / 위치 / **폰(USB)**. 폰 네이티브 표면에선 폰(USB) 탭이 숨는다
+  (자기 자신을 USB 로 볼 수는 없다).
+- **데스크탑 풍부창**(사진 아이콘 → 별도 창): 사이드바 "연결된 기기 → 폰 (USB)". 폰은 인덱싱하지
+  않는 라이브 소스라 갤러리 탭만 뜬다(타임라인·중복·통계·지도는 스캔 DB 위에서 도는 뷰).
 
 ---
 
 ## 자주 하는 실수
 
-- **scan 없이 다른 op 호출**: "스캔 데이터 없음" 에러. 첫 단계 필수.
-- **path 형식**: 절대경로 권장. `~/Pictures` 같은 홈 디렉토리 표기는 자동 expanduser되지만, 상대 경로(`./Pictures`)는 위험.
-- **start_date/end_date 형식**: `YYYY-MM-DD` 또는 ISO8601. `2024/01/01` 안 됨.
-- **search 결과의 path**: 검색 결과 항목은 *파일 경로* 포함. `[limbs:os_open]`이나 `[self:copy]` 등으로 바로 엮어 쓸 수 있음.
-- **media_id 자릿수**: 검색/갤러리 결과의 `id` 그대로. URL 디코딩 같은 처리 필요 없음.
-- **외장 드라이브 스캔 후 분리**: 스캔 DB는 남아 있지만 실제 파일 경로 접근은 외장 드라이브 마운트 시에만. detail/gallery는 DB만 봐서 OK.
-- **여러 스캔 폴더 혼동**: `list_scans`로 어떤 스캔이 있는지 확인 후 path 지정.
+- **`source:"usb"` 를 폰에서 호출** — 폰 자신의 사진은 `source` 없이 조회한다(몸이 곧 소스).
+- **`has_gps` 를 usb 와 같이** — 미지원. 위치로 거르려면 사진을 PC 로 가져온 뒤 조회한다.
+- **usb 항목의 `path` 를 파일 도구에 넘김** — 폰 안의 경로다. `[self:read]`·`[limbs:os_open]` 으로 못 연다.
+- **`start`/`end` 형식** — `YYYY-MM` 또는 `YYYY-MM-DD`. `2026/07/01` 은 안 된다.
+- **첫 조회가 느리다** — 폰 사진 썸네일은 그때 당겨 오므로 첫 화면만 몇 초 걸리고, 이후엔 캐시로 즉시 뜬다.
 
 ## 관련
 
-- [`photo-manager/guide.md`](../packages/installed/tools/photo-manager/guide.md) — DB 스키마 + 직접 SQL 쿼리 예제
-- `[table:chart_bar]`, `[table:chart_line]` — 통계/타임라인 시각화
-- `[limbs:show_map]` — GPS 좌표 사진을 지도에 점으로 표시 (gallery 결과의 gps_lat/gps_lon 활용)
-- `[engines:python]` — 깊은 쿼리/정리 자동화
+- [`photo-manager/guide.md`](../packages/installed/tools/photo-manager/guide.md) — 스캔 DB 스키마·직접 SQL
+- `[table:groupby]`·`[table:chart]` — 타임라인·통계 조합
+- `[limbs:show_map]` — GPS 사진 지도 표시
+- `[others:family_news]` — USB 폰 사진으로 가족신문 조판(같은 adb 경로를 쓰는 이웃 어휘)

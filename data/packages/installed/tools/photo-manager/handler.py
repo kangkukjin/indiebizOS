@@ -113,16 +113,24 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
     lat, lng = it.get("lat"), it.get("lng")
     camera = it.get("camera") or ""
 
+    is_usb = it.get("source") == "usb"
+
     bits = []
     if taken_at:
         bits.append(str(taken_at)[:16].replace("T", " "))
     if camera:
         bits.append(str(camera))
     bits.append("동영상" if is_video else "사진")
+    if is_usb:
+        bits.append("📱폰")  # 이 파일은 PC 가 아니라 USB 로 붙은 폰 안에 있다
     if lat is not None and lng is not None:
         bits.append(f"📍{round(float(lat), 4)},{round(float(lng), 4)}")
 
-    ep = "video-thumbnail" if is_video else "thumbnail"
+    # USB 항목의 path 는 폰 안의 경로 — 로컬 파일을 읽는 엔드포인트로는 못 연다.
+    if is_usb:
+        ep = "usb-thumbnail"
+    else:
+        ep = "video-thumbnail" if is_video else "thumbnail"
     rec = {
         "title": it.get("name") or os.path.basename(path),
         "meta": " · ".join(b for b in bits if b),
@@ -137,6 +145,7 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
         "kind": it.get("kind"),
         "size": it.get("size") or 0,
         "camera": str(camera) if camera else "",
+        "source": "usb" if is_usb else "self",
     }
     if lat is not None and lng is not None:
         rec["lat"] = float(lat)
@@ -146,9 +155,11 @@ def _photo_record(it: Dict[str, Any]) -> Dict[str, Any]:
 
 def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     """[self:photo] — 미디어 라이브 질의 (file_index 위임). 선스캔 불필요·항상 최신."""
+    source = str(params.get("source") or "self").strip().lower()
+
     # 단일 파일 상세 (옛 detail 대체 — id 대신 경로가 곧 신원).
     one = params.get("file") or params.get("media_path")
-    if one:
+    if one and source not in ("usb", "phone_usb", "android"):
         one = os.path.abspath(os.path.expanduser(one))
         if not os.path.isfile(one):
             return {"success": False, "error": f"파일이 없습니다: {one}"}
@@ -159,16 +170,22 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     if kind in ("all", ""):
         kind = "media"  # 사진+동영상
 
+    # USB 폰엔 mdls 같은 단일 파일 조회가 없다 — 경로를 그대로 색인 필터로 넘긴다.
+    path = params.get("path")
+    if one and not path:
+        path = one
+
     res = file_index.query(
         kind=kind,
         q=params.get("q") or params.get("query"),
         start=params.get("start") or params.get("start_date"),
         end=params.get("end") or params.get("end_date"),
         has_gps=params.get("has_gps"),
-        path=params.get("path"),
+        path=path,
         limit=params.get("limit") or 50,
         sort="date",  # 촬영일 내림차순
         facets=_PHOTO_FACETS,
+        source=source,
     )
     if not res.get("success"):
         return res

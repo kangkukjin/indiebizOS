@@ -6,6 +6,8 @@
 
   맥  : Spotlight (mdfind 로 필터, mdls 로 색인 메타). 선스캔 불필요·항상 최신.
   폰  : MediaStore (Chaquopy, Phase 3). detect_body 능력게이트로 분기.
+  USB : 연결된 안드로이드의 MediaStore (adb). 위 둘은 *내 몸*이지만 이건 붙어 있는
+        남의 몸 — 그래서 몸 감지가 아니라 호출자의 source="usb" 로만 열린다.
 
 이 모듈은 '데이터'만 돌려준다(표시/렌더링 결정 없음). title/meta/image 같은
 records 통화 포장은 각 preset 의 몫 — 그래서 보편 질의는 중복되지 않는다.
@@ -17,6 +19,8 @@ from __future__ import annotations
 
 import os
 import json
+import re
+import shutil
 import time
 import calendar
 import plistlib
@@ -45,6 +49,9 @@ _NOISE_SUBSTR = (
     "/Library/Group Containers/", "/node_modules/", "/.Trash", ".app/",
     "/__pycache__/", "/site-packages/", "/.venv/", "/venv/",
     "/.git/", "/DerivedData/", "/.gradle/", "/.cargo/", "/.npm/",
+    # 우리가 만든 파생 캐시 — 사용자의 사진이 아니라 *사진의 그림자*다. 최근 생성돼
+    # mtime 이 늘 최신이라, 안 거르면 갤러리 최상단을 통째로 차지한다(실측).
+    "/thumbnail_cache/", "/usb_media_cache/",
 )
 # 공개 별칭 — file_find(system_essentials) 가 import 해 같은 목록으로 walk 가지치기.
 ABSOLUTE_DEAD_SUBSTR = _NOISE_SUBSTR
@@ -167,6 +174,19 @@ def _build_mdfind_query(kind: str, q: Optional[str], start: Optional[str],
     return " && ".join(clauses) if clauses else "kMDItemFSName == '*'"
 
 
+# Spotlight 는 .ts 를 MPEG transport stream(public.movie)으로 태깅한다 — 하지만 사용자
+# 디스크에서 .ts 는 거의 전부 TypeScript 소스다(실측: 사진 질의 최상단이 utils.ts·types.ts).
+# 확장자만 보고 미디어에서 뺀다. 진짜 방송 스트림 .ts 는 path 를 지정해 찾으면 된다.
+_MEDIA_EXT_DENY = frozenset((".ts",))
+
+
+def _drop_pseudo_media(paths: List[str], kind: str) -> List[str]:
+    """미디어 질의 결과에서 '확장자만 미디어인' 파일 제거."""
+    if (kind or "").lower() not in ("video", "media"):
+        return paths
+    return [p for p in paths if os.path.splitext(p)[1].lower() not in _MEDIA_EXT_DENY]
+
+
 def _run_mdfind(query: str, onlyin: Optional[str]) -> List[str]:
     cmd = ["mdfind"]
     if onlyin:
@@ -237,7 +257,7 @@ def _item_from_meta(path: str, facets: Sequence[str]) -> Dict[str, Any]:
 def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None):
     onlyin = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
     query = _build_mdfind_query(kind, q, start, end, has_gps, ext, min_size)
-    paths = _run_mdfind(query, onlyin)
+    paths = _drop_pseudo_media(_run_mdfind(query, onlyin), kind)
 
     if not paths and path and os.path.isdir(onlyin):
         return _walk_fallback(onlyin, kind, limit, sort, facets)
@@ -340,6 +360,270 @@ def _mediastore_query(*, kind, q, start, end, has_gps, ext, path, limit, sort, f
 
 
 # ----------------------------------------------------------------------------
+# USB 연결 폰 (adb → MediaStore) — 내 몸이 아니라 *붙어 있는 남의 몸*
+# ----------------------------------------------------------------------------
+# PC 는 안드로이드 저장소를 볼륨으로 마운트하지 않는다(MTP) → Spotlight·walk 로는
+# 원리적으로 못 본다. 대신 adb 로 폰의 MediaStore 를 *그 자리에서* 질의한다.
+# 파일은 폰에 그대로 두고 목록만 가져온다(선복사 0) — 바이트는 볼 때만 usb_pull.
+
+_ADB_URI = {
+    "image": "content://media/external/images/media",
+    "photo": "content://media/external/images/media",
+    "video": "content://media/external/video/media",
+}
+_ADB_COLS = ("_data", "datetaken", "date_modified", "_size", "_display_name", "mime_type")
+# adb 가 PATH 에 없을 수 있다(백엔드 PATH 는 로그인 셸보다 좁다) — 흔한 설치 경로 후보.
+_ADB_CANDIDATES = (
+    "/opt/homebrew/bin/adb", "/usr/local/bin/adb",
+    os.path.expanduser("~/Library/Android/sdk/platform-tools/adb"),
+)
+
+
+def _adb_bin() -> Optional[str]:
+    """adb 실행파일 경로 (PATH 우선, 없으면 흔한 설치 경로). 없으면 None."""
+    found = shutil.which("adb")
+    if found:
+        return found
+    for c in _ADB_CANDIDATES:
+        if os.path.isfile(c) and os.access(c, os.X_OK):
+            return c
+    return None
+
+
+def _adb_run(args: Sequence[str], timeout: int = 30):
+    """adb 서브프로세스 → (ok, stdout, 사용자에게 보일 오류문).
+
+    실패는 예외가 아니라 *행동을 지시하는 문장*으로 돌려준다 — USB 연결·승인·잠금해제는
+    사람이 해야 하는 일이라, 스택트레이스보다 "무엇을 하라"가 유일하게 쓸모 있다.
+    """
+    exe = _adb_bin()
+    if not exe:
+        return False, "", "adb 를 찾을 수 없습니다 (Android platform-tools 설치 필요)"
+    try:
+        r = subprocess.run([exe] + list(args), capture_output=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False, "", "폰이 응답하지 않습니다 — USB 연결과 화면 잠금 해제를 확인해 주세요"
+    except OSError as e:
+        return False, "", f"adb 실행 실패: {e}"
+    err = r.stderr.decode("utf-8", "ignore")
+    low = err.lower()
+    if "no devices" in low or "device not found" in low or "device offline" in low:
+        return False, "", "연결된 폰이 없습니다 — USB 연결을 확인해 주세요"
+    if "unauthorized" in low:
+        return False, "", "폰에서 USB 디버깅을 허용해 주세요 (폰 화면의 승인 팝업)"
+    if r.returncode != 0:
+        return False, "", (err.strip() or "adb 명령 실패")
+    return True, r.stdout.decode("utf-8", "ignore"), ""
+
+
+_USB_SERIAL_CACHE: Dict[str, Any] = {"value": "", "at": 0.0}
+_USB_SERIAL_TTL = 30.0  # 폰을 바꿔 꽂으면 이 안에 반영된다
+
+
+def usb_device_id() -> str:
+    """연결된 폰의 시리얼 (없으면 ""). 캐시 키에 섞는 용도.
+
+    ★ 안드로이드 파일명은 기기 무관 규칙(20260731_133501.jpg·Screenshot_….jpg)이라
+    경로만으로는 폰을 가를 수 없다 — 폰을 바꾸면 *같은 경로가 다른 사진*을 가리킨다.
+    그래서 캐시 키에 이 시리얼을 넣어야 옛 폰 사진이 새 폰 자리에 뜨지 않는다.
+    """
+    now = time.time()
+    if _USB_SERIAL_CACHE["value"] and now - _USB_SERIAL_CACHE["at"] < _USB_SERIAL_TTL:
+        return _USB_SERIAL_CACHE["value"]
+    ok, out, _err = _adb_run(["get-serialno"], timeout=10)
+    sid = (out or "").strip()
+    if not ok or sid.startswith(("unknown", "error")):
+        # 폰이 빠졌다 — *마지막으로 알던 폰*을 계속 쓴다. 안 그러면 케이블을 뽑는 순간
+        # 캐시 키가 바뀌어, 이미 받아둔 썸네일까지 안 보인다. 다른 폰을 꽂으면 그때
+        # 새 시리얼로 갱신되므로 옛 폰 사진이 새 폰 자리에 뜰 일은 없다.
+        return _USB_SERIAL_CACHE["value"]
+    _USB_SERIAL_CACHE.update(value=sid, at=now)
+    return sid
+
+
+def _parse_content_rows(out: str, cols: Sequence[str]) -> List[Dict[str, Optional[str]]]:
+    """`content query` 출력(`Row: N k=v, k=v …`) → dict 목록.
+
+    값 자체에 ", " 가 들어갈 수 있으므로(파일명) *다음 컬럼 이름*을 lookahead 앵커로
+    쓰는 non-greedy 파싱 — 마지막 컬럼만 줄 끝까지. NULL 은 None.
+    """
+    segs = []
+    for i, c in enumerate(cols):
+        if i + 1 < len(cols):
+            segs.append(re.escape(c) + r"=(.*?), (?=" + re.escape(cols[i + 1]) + "=)")
+        else:
+            segs.append(re.escape(c) + r"=(.*)$")
+    pat = re.compile("".join(segs))
+    rows: List[Dict[str, Optional[str]]] = []
+    for line in out.splitlines():
+        m = pat.search(line)
+        if m:
+            rows.append({c: (None if v == "NULL" else v)
+                         for c, v in zip(cols, m.groups())})
+    return rows
+
+
+def _sql_lit(v: Any) -> str:
+    """where 절에 박히는 리터럴 조각 — 인용부호를 걷어내 절을 못 깨게."""
+    return str(v).replace("'", "").replace('"', "").replace("\\", "")
+
+
+def _adb_where(q, start, end, ext, path, min_size) -> str:
+    """MediaStore where 절 — 맥 Spotlight 와 같은 필터 의미를 SQL 로."""
+    cl = ["_data NOT LIKE '%/.thumbnails/%'"]  # 시스템 썸네일 캐시는 사용자 사진이 아님
+    s = _epoch_ms(start, end=False)
+    if s:
+        cl.append(f"datetaken>{s}")
+    e = _epoch_ms(end, end=True)
+    if e:
+        cl.append(f"datetaken<={e}")
+    if min_size and int(min_size) > 0:
+        cl.append(f"_size>={int(min_size)}")
+    if ext:
+        cl.append(f"_display_name LIKE '%.{_sql_lit(str(ext).lstrip('.'))}'")
+    if path:
+        cl.append(f"_data LIKE '%{_sql_lit(path)}%'")
+    if q:
+        cl.append(f"_display_name LIKE '%{_sql_lit(q)}%'")
+    return " AND ".join(cl)
+
+
+def _adb_item(row: Dict[str, Optional[str]], kind: str,
+              facets: Sequence[str]) -> Dict[str, Any]:
+    """MediaStore 행 → 맥과 *같은 모양*의 보편 item (path 는 폰 안의 절대경로)."""
+    path = row.get("_data") or ""
+    dt = row.get("datetaken") or ""
+    dm = row.get("date_modified") or ""
+    taken_ms = int(dt) if dt.isdigit() else 0
+    mtime = int(dm) if dm.isdigit() else (taken_ms // 1000)
+    size = row.get("_size") or ""
+    item: Dict[str, Any] = {
+        "path": path,
+        "name": row.get("_display_name") or os.path.basename(path),
+        "ext": os.path.splitext(path)[1].lower().lstrip("."),
+        "size": int(size) if size.isdigit() else 0,
+        "mtime": mtime,
+        "kind": kind,
+        # 포장(썸네일 URL)이 갈리는 지점 — 이 경로는 로컬 디스크에 *없다*.
+        "source": "usb",
+    }
+    if "taken_at" in facets:
+        ts = (taken_ms / 1000) if taken_ms else mtime
+        if ts:
+            iso = datetime.fromtimestamp(ts).isoformat()
+            item["taken_at"] = iso
+            item["month"] = iso[:7]
+    return item
+
+
+def _adb_query(*, kind, q, start, end, has_gps, ext, path, limit, sort, facets,
+               min_size=None):
+    """USB 로 연결된 안드로이드 폰의 MediaStore 라이브 질의 (파일 복사 0)."""
+    if (detect_body().get("profile") or "mac") == "phone":
+        return {"success": False, "items": [],
+                "error": "source:usb 는 폰을 USB 로 연결한 PC 에서만 동작합니다"
+                         " (폰 자신의 사진은 source 없이 조회하세요)"}
+    if _truthy(has_gps):
+        # 안드로이드 10+ 는 MediaStore 의 latitude/longitude 를 가린다(전부 NULL, 실측).
+        # 위치는 파일을 직접 열어 EXIF 를 봐야만 나오는데, 그러려면 후보 전부를 USB 로
+        # 끌어와야 한다 — 필터로 쓸 수 없다. 조용히 빈 결과를 주는 대신 그렇다고 말한다.
+        return {"success": False, "items": [],
+                "error": "USB 폰 질의는 위치(GPS) 필터를 지원하지 않습니다"
+                         " — 안드로이드가 색인의 위치를 가려서, 파일을 직접 열어야만"
+                         " 알 수 있습니다. has_gps 없이 조회해 주세요."}
+    k = (kind or "media").lower()
+    keys = ["image", "video"] if k in ("media", "any", "all", "") else [k]
+    where = _adb_where(q, start, end, ext, path, min_size)
+
+    items: List[Dict[str, Any]] = []
+    total = 0
+    errors: List[str] = []
+    for key in keys:
+        uri = _ADB_URI.get(key)
+        if not uri:
+            continue
+        # content query 는 LIMIT 토큰을 거부한다(실측) → 정렬만 폰에 맡기고 상한은 여기서.
+        cmd = (f"content query --uri {uri}"
+               f" --projection {':'.join(_ADB_COLS)}"
+               f' --where "{where}" --sort "datetaken DESC"')
+        ok, out, err = _adb_run(["shell", cmd])
+        if not ok:
+            errors.append(err)
+            continue
+        rows = _parse_content_rows(out, _ADB_COLS)[:_MAX_CANDIDATES]
+        total += len(rows)
+        kind_of_table = "video" if key == "video" else "image"
+        items.extend(_adb_item(r, kind_of_table, facets) for r in rows)
+
+    if errors and not items:
+        return {"success": False, "items": [], "error": errors[0]}
+    _sort_items(items, sort)
+    return {"success": True, "count": total, "shown": min(len(items), limit),
+            "scope": "usb:MediaStore", "items": items[:limit]}
+
+
+def save_media_files(items: Sequence[Dict[str, Any]], dest_dir: str) -> Dict[str, Any]:
+    """items 의 파일들을 dest_dir 폴더로 복사 — 몸이 어디든 같은 한 가지 일.
+
+    `source == "usb"` 면 파일이 폰에 있으므로 adb 로 당겨 오고, 아니면 로컬 복사.
+    "고르는 일"은 호출자 몫(IBL 은 table 변환자로, UI 는 사용자 선택으로) — 여기선
+    받은 것을 옮기기만 한다. 그래서 IBL `[self:copy]` 와 앱 저장 버튼이 같은 코드를 쓴다.
+    이름이 겹치면 "(2)" 를 붙인다 — 덮어쓰기는 사용자가 원한 적 없는 삭제다.
+    """
+    import shutil
+
+    dest_dir = os.path.abspath(os.path.expanduser(dest_dir))
+    if os.path.isfile(dest_dir):
+        return {"success": False, "error": f"대상이 폴더가 아닙니다: {dest_dir}",
+                "saved": [], "failed": []}
+    os.makedirs(dest_dir, exist_ok=True)
+
+    saved: List[str] = []
+    failed: List[str] = []
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        src = it.get("path") or it.get("file") or it.get("url") or ""
+        if not isinstance(src, str) or not src or src.startswith(("http://", "https://")):
+            continue
+        target = os.path.join(dest_dir, os.path.basename(src))
+        if os.path.exists(target):
+            stem, ext = os.path.splitext(target)
+            target = next((f"{stem} ({n}){ext}" for n in range(2, 1000)
+                           if not os.path.exists(f"{stem} ({n}){ext}")), f"{stem} (new){ext}")
+        try:
+            if it.get("source") == "usb":
+                ok, err = usb_pull(src, target)
+                if not ok:
+                    failed.append(f"{os.path.basename(src)}: {err}")
+                    continue
+            elif os.path.isfile(src):
+                shutil.copy2(src, target)
+            else:
+                failed.append(f"{os.path.basename(src)}: 원본이 없습니다")
+                continue
+            saved.append(os.path.basename(target))
+        except OSError as e:
+            failed.append(f"{os.path.basename(src)}: {e}")
+
+    return {"success": bool(saved) or not failed, "dest": dest_dir,
+            "saved": saved, "failed": failed}
+
+
+def usb_pull(phone_path: str, dst: str, *, timeout: int = 120):
+    """USB 폰의 파일 하나를 로컬 dst 로 복사 → (ok, 오류문).
+
+    목록(_adb_query)은 파일을 안 옮긴다 — 실제 바이트는 *볼 때* 이 함수로만 넘어온다.
+    """
+    ok, _out, err = _adb_run(["pull", phone_path, dst], timeout=timeout)
+    if not ok:
+        return False, err
+    if not os.path.isfile(dst) or os.path.getsize(dst) == 0:
+        return False, "파일을 가져오지 못했습니다 (폰에서 삭제됐거나 접근 불가)"
+    return True, ""
+
+
+# ----------------------------------------------------------------------------
 # 공개 진입점
 # ----------------------------------------------------------------------------
 def describe(path: str, facets: Sequence[str] = ()) -> Dict[str, Any]:
@@ -361,7 +645,7 @@ def candidate_paths(*, kind: str = "any", q: Optional[str] = None,
     """
     onlyin = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
     query_str = _build_mdfind_query(kind, q, start, end, False, ext, min_size)
-    paths = _run_mdfind(query_str, onlyin)
+    paths = _drop_pseudo_media(_run_mdfind(query_str, onlyin), kind)
     if not paths and path and os.path.isdir(onlyin):
         want = None
         if kind and kind.lower() not in ("any", "media"):
@@ -539,11 +823,15 @@ def query(*, kind: str = "any", q: Optional[str] = None,
           has_gps: bool = False, ext: Optional[str] = None,
           path: Optional[str] = None, limit: int = 50,
           sort: str = "mtime", facets: Sequence[str] = (),
-          min_size: Optional[int] = None) -> Dict[str, Any]:
+          min_size: Optional[int] = None,
+          source: str = "self") -> Dict[str, Any]:
     """OS 파일/미디어 색인 라이브 질의 (선스캔 불필요).
 
     보편 필드(path/name/ext/size/mtime/kind) + 요청 facet 만 담은 순수 데이터.
     표시/렌더링(썸네일·meta 라인)은 호출자가 얹는다.
+
+    source="self"(기본)는 *실행되는 몸*의 색인, "usb"는 USB 로 연결된 안드로이드 폰의
+    색인 — 몸 감지가 가르는 건 전자뿐이라, 남의 몸은 호출자가 명시해야 열린다.
     """
     try:
         limit = max(1, int(limit))
@@ -553,6 +841,8 @@ def query(*, kind: str = "any", q: Optional[str] = None,
     args = dict(kind=kind, q=q, start=start, end=end, has_gps=_truthy(has_gps),
                 ext=ext, path=path, limit=limit, sort=sort, facets=tuple(facets),
                 min_size=min_size)
+    if (source or "self").strip().lower() in ("usb", "phone_usb", "android"):
+        return _adb_query(**args)
     if body == "phone":
         return _mediastore_query(**args)
     if _IS_MAC:

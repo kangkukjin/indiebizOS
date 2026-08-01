@@ -117,12 +117,12 @@ export function openNeighborFile(url: string) {
     큰 파일도 두 번째 끌기는 즉시. 비 Electron(웹)에선 아무것도 안 한다. */
 export function dragOutNeighborFile(e: ReactDragEvent, f: Pick<WfFeedItem, 'url' | 'path' | 'mtime'>) {
   const el = (window as any).electron;
-  if (!el?.warehouseDragOut) return;
+  if (!el?.dragOutFile) return;
   e.preventDefault();
-  el.warehouseDragOut({
+  el.dragOutFile({
     url: f.url,
     name: f.path.split('/').pop() || f.path,
     mtime: f.mtime || '',
   });
-  window.addEventListener('mouseup', () => el.warehouseDragCancel?.(), { once: true });
+  window.addEventListener('mouseup', () => el.dragOutCancel?.(), { once: true });
 }

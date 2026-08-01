@@ -61,6 +61,14 @@
           "limit": {
             "type": "integer",
             "description": "반환 개수 (기본 50)"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "self",
+              "usb"
+            ],
+            "description": "어느 몸의 사진인가 — self(기본)=실행되는 몸, usb=USB로 연결된 안드로이드 폰(PC에서만, GPS 필터 미지원)"
           }
         },
         "additionalProperties": true

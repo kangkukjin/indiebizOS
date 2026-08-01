@@ -1276,27 +1276,40 @@ function setupIPC() {
     }
   });
 
-  // ── 창고 드래그 아웃: 이웃 창고 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 ──
+  // ── 파일 드래그 아웃: 창 안의 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 ──
   // HTML5 dnd 는 브라우저 밖으로 파일을 못 내보낸다 → 네이티브 startDrag 로 전환하는데,
-  // startDrag 는 *로컬 파일*이 필요해 먼저 내려받는다. 회원 레벨 파일은 익명 요청이면
-  // 404("no such file")라 포식 세션(persist:forage — 창고 로그인 pk 쿠키가 산다)으로 받는다.
+  // startDrag 는 *로컬 파일*이 필요하다. 그래서 두 갈래다:
+  //   path = 이미 이 컴퓨터에 있는 파일(내 사진 등) → 받지 않고 그대로 집는다.
+  //   url  = 여기 없는 파일(이웃 창고·USB 폰 사진) → 받아서 임시폴더에 놓고 집는다.
+  // 창고의 회원 레벨 파일은 익명 요청이면 404("no such file")라 포식 세션
+  // (persist:forage — 창고 로그인 pk 쿠키가 산다)으로 받는다.
   // 캐시 키=url+mtime: 다운로드 중 버튼을 놓으면(렌더러가 cancel) 드래그는 접되 받은
   // 파일은 남겨 — 큰 파일도 두 번째 끌기는 즉시 집힌다.
-  const whDragDir = path.join(app.getPath('temp'), 'indiebiz-wh-drag');
-  let whDragSeq = 0;          // 드래그 시도 일련번호
-  let whDragCancelledUpTo = 0; // 이 번호 이하의 시도는 취소됨(버튼을 놓았다 = 드래그 종료)
+  const dragOutDir = path.join(app.getPath('temp'), 'indiebiz-drag-out');
+  let dragSeq = 0;          // 드래그 시도 일련번호
+  let dragCancelledUpTo = 0; // 이 번호 이하의 시도는 취소됨(버튼을 놓았다 = 드래그 종료)
   app.on('will-quit', () => {  // 캐시는 세션 한정 — 종료 때 비워 임시폴더가 안 쌓이게
-    try { fs.rmSync(whDragDir, { recursive: true, force: true }); } catch { /* 무시 */ }
+    try { fs.rmSync(dragOutDir, { recursive: true, force: true }); } catch { /* 무시 */ }
   });
 
-  ipcMain.on('warehouse-drag-out', async (event, payload) => {
-    const token = ++whDragSeq;
+  ipcMain.on('drag-out-file', async (event, payload) => {
+    const token = ++dragSeq;
     try {
-      const { url, name, mtime } = payload || {};
+      const { url, path: localPath, name, mtime } = payload || {};
+
+      // 갈래 1 — 이미 이 컴퓨터에 있는 파일: 복사도 다운로드도 없이 원본을 집는다.
+      if (localPath && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+        let icon0 = null;
+        try { icon0 = await app.getFileIcon(localPath); } catch { /* 아이콘 실패는 드래그를 안 막는다 */ }
+        event.sender.startDrag({ file: localPath, icon: icon0 || nativeImage.createEmpty() });
+        return;
+      }
+
+      // 갈래 2 — 여기 없는 파일: 받아서 임시폴더에 놓고 집는다.
       if (!/^https?:\/\//.test(String(url || ''))) return;
       const safeName = String(name || '파일').replace(/[\\/:*?"<>|\x00-\x1f]/g, '_') || '파일';
       const key = crypto.createHash('md5').update(`${url}|${mtime || ''}`).digest('hex').slice(0, 16);
-      const dest = path.join(whDragDir, key, safeName);
+      const dest = path.join(dragOutDir, key, safeName);
       if (!(fs.existsSync(dest) && fs.statSync(dest).size > 0)) {
         fs.mkdirSync(path.dirname(dest), { recursive: true });
         const ses = session.fromPartition('persist:forage');
@@ -1306,17 +1319,17 @@ function setupIPC() {
         await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(tmp));
         fs.renameSync(tmp, dest); // 원자 교체 — 반쪽 파일이 캐시로 남지 않게
       }
-      if (token <= whDragCancelledUpTo) return; // 받는 동안 버튼을 놓았다 — 캐시만 남긴다
+      if (token <= dragCancelledUpTo) return; // 받는 동안 버튼을 놓았다 — 캐시만 남긴다
       let icon = null;
       try { icon = await app.getFileIcon(dest); } catch { /* 아이콘 실패는 드래그를 안 막는다 */ }
       event.sender.startDrag({ file: dest, icon: icon || nativeImage.createEmpty() });
     } catch (e) {
-      console.error('[Electron] 창고 드래그 아웃 실패:', e?.message || e);
+      console.error('[Electron] 드래그 아웃 실패:', e?.message || e);
     }
   });
 
   // 버튼을 놓았다 = 아직 안 시작한 드래그는 전부 접는다(시작된 건 OS 가 이미 가져감).
-  ipcMain.on('warehouse-drag-cancel', () => { whDragCancelledUpTo = whDragSeq; });
+  ipcMain.on('drag-out-cancel', () => { dragCancelledUpTo = dragSeq; });
 
   // 앱 정보
   ipcMain.handle('get-app-info', () => ({

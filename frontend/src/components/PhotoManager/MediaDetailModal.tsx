@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { Image, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BROWSER_PLAYABLE_VIDEO } from './types';
+import { originUrl, thumbUrl } from './utils';
 
 interface MediaDetailModalProps {
   item: any;
@@ -126,7 +127,7 @@ export function MediaDetailModal({
       >
         {item.media_type === 'photo' ? (
           <img
-            src={`http://127.0.0.1:8765/photo/image?path=${encodeURIComponent(item.path)}`}
+            src={originUrl(item)}
             alt={item.filename}
             className="max-h-full max-w-full object-contain"
             style={{ maxHeight: 'calc(100vh - 80px)' }}
@@ -134,7 +135,7 @@ export function MediaDetailModal({
         ) : canPlayInBrowser ? (
           <video
             key={item.path}
-            src={`http://127.0.0.1:8765/photo/video?path=${encodeURIComponent(item.path)}`}
+            src={originUrl(item)}
             controls
             autoPlay
             className="max-h-full max-w-full"
@@ -145,17 +146,20 @@ export function MediaDetailModal({
         ) : (
           <div className="text-center text-white">
             <img
-              src={`http://127.0.0.1:8765/photo/video-thumbnail?path=${encodeURIComponent(item.path)}&size=600`}
+              src={thumbUrl(item, 600)}
               alt={item.filename}
               className="max-h-[60vh] max-w-full object-contain mb-4 rounded"
             />
             <p className="text-gray-400 mb-4">이 형식(.{item.extension})은 브라우저에서 재생할 수 없습니다</p>
-            <button
-              onClick={openInExternalPlayer}
-              className="px-6 py-2 bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349] transition-colors"
-            >
-              외부 플레이어로 열기
-            </button>
+            {/* 폰 안의 파일은 PC 의 외부 플레이어가 열 경로가 없다 — 버튼을 감춘다. */}
+            {item.source !== 'usb' && (
+              <button
+                onClick={openInExternalPlayer}
+                className="px-6 py-2 bg-[#8B7355] text-white rounded-lg hover:bg-[#7A6349] transition-colors"
+              >
+                외부 플레이어로 열기
+              </button>
+            )}
           </div>
         )}
       </div>

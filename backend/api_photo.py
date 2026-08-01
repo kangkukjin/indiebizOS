@@ -6,6 +6,7 @@ api_photo.py - Photo Manager API
 import os
 import sys
 import hashlib
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException, Request
 from fastapi.responses import FileResponse, Response
@@ -288,6 +289,178 @@ async def get_video_thumbnail(path: str = Query(...), size: int = Query(200)):
     if generate_video_thumbnail(path, cache_path, size, timeout=10):
         return FileResponse(cache_path, media_type="image/jpeg")
     raise HTTPException(status_code=500, detail="동영상 썸네일 생성 실패 (ffmpeg 미설치 또는 시간 초과)")
+
+
+# ============ USB 연결 폰 (adb) ============
+# [self:photo]{source:"usb"} 가 돌려준 path 는 *폰 안의* 절대경로라 로컬 디스크에 없다.
+# 목록은 파일을 안 옮기고(선복사 0), 실제 바이트는 여기서 볼 때만 USB 로 넘어온다.
+
+USB_CACHE_DIR = os.path.join(str(_get_base_path()), "data", "usb_media_cache")
+_USB_CACHE_CAP = 1024 * 1024 * 1024  # 1GB — 넘으면 오래된 것부터 버린다
+
+
+def _usb_cache_sweep() -> None:
+    """캐시 총량 상한 초과분 정리 — 원본은 폰에 있으니 버려도 언제든 다시 당긴다."""
+    try:
+        entries = []
+        total = 0
+        for name in os.listdir(USB_CACHE_DIR):
+            fp = os.path.join(USB_CACHE_DIR, name)
+            try:
+                st = os.stat(fp)
+            except OSError:
+                continue
+            entries.append((st.st_mtime, st.st_size, fp))
+            total += st.st_size
+        if total <= _USB_CACHE_CAP:
+            return
+        for _mtime, size, fp in sorted(entries):  # 오래된 것부터
+            try:
+                os.remove(fp)
+                total -= size
+            except OSError:
+                pass
+            if total <= _USB_CACHE_CAP * 0.8:
+                break
+    except OSError:
+        pass
+
+
+def _usb_fetch(phone_path: str) -> str:
+    """폰 경로 → 로컬 캐시 파일 경로 (없으면 USB 로 당김). 블로킹 — 스레드풀에서 호출."""
+    import file_index
+
+    os.makedirs(USB_CACHE_DIR, exist_ok=True)
+    # 키에 기기 시리얼을 섞는다 — 폰마다 파일명 규칙이 같아서, 경로만으로 캐시하면
+    # 폰을 바꿨을 때 옛 폰 사진이 새 폰 자리에 뜬다.
+    h = hashlib.md5(f"{file_index.usb_device_id()}|{phone_path}".encode()).hexdigest()
+    ext = os.path.splitext(phone_path)[1].lower() or ".bin"
+    dst = os.path.join(USB_CACHE_DIR, f"{h}{ext}")
+    if os.path.isfile(dst) and os.path.getsize(dst) > 0:
+        return dst
+    tmp = dst + ".part"  # 중단된 전송이 캐시로 굳지 않게 원자 교체
+    ok, err = file_index.usb_pull(phone_path, tmp)
+    if not ok:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise HTTPException(status_code=502, detail=err or "폰에서 파일을 가져오지 못했습니다")
+    os.replace(tmp, dst)
+    _usb_cache_sweep()
+    return dst
+
+
+_USB_VIDEO_EXTS = (".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp")
+
+
+@router.post("/save")
+async def save_selected(payload: dict):
+    """고른 사진들을 폴더로 저장 — `{items:[{path,source?}], dest}`.
+
+    IBL `[self:copy]` 의 파이프 저장과 **같은 코드**(file_index.save_media_files)를 쓴다 —
+    고르는 주체만 다르다(거긴 table 변환자, 여긴 사람이 그리드에서 고른 것).
+    """
+    import file_index
+    from starlette.concurrency import run_in_threadpool
+
+    items = payload.get("items") or []
+    dest = (payload.get("dest") or "").strip()
+    if not dest:
+        raise HTTPException(status_code=400, detail="저장할 폴더가 필요합니다")
+    if not items:
+        raise HTTPException(status_code=400, detail="선택된 항목이 없습니다")
+    res = await run_in_threadpool(file_index.save_media_files, items, dest)
+    return res
+
+
+@router.get("/usb-gallery")
+async def get_usb_gallery(page: int = Query(1), limit: int = Query(50),
+                          media_type: str = Query("all"), q: Optional[str] = Query(None)):
+    """USB 폰 갤러리 — 풍부창(PhotoManager)용 MediaItem 통화.
+
+    스캔 DB 를 안 거친다(폰은 인덱싱 대상이 아니라 그때그때 보는 손님) — MediaStore 를
+    매번 라이브로 읽어 항상 최신이다.
+    """
+    import file_index
+    from starlette.concurrency import run_in_threadpool
+
+    page = max(1, page)
+    limit = max(1, min(limit, 200))
+    kind = {"photo": "image", "video": "video"}.get(media_type, "media")
+    res = await run_in_threadpool(
+        lambda: file_index.query(kind=kind, q=q, limit=page * limit, sort="date",
+                                 facets=("taken_at",), source="usb"))
+    if not res.get("success"):
+        return {"success": False, "error": res.get("error") or "폰 조회 실패",
+                "items": [], "total": 0}
+
+    window = res.get("items", [])[(page - 1) * limit:]
+    items = []
+    for i, it in enumerate(window):
+        mtime = it.get("mtime") or 0
+        items.append({
+            "id": (page - 1) * limit + i,     # 폰 파일엔 DB id 가 없다 — 목록 내 순번이 곧 key
+            "path": it.get("path") or "",
+            "filename": it.get("name") or "",
+            "extension": it.get("ext") or "",
+            "size_mb": round((it.get("size") or 0) / (1024 * 1024), 2),
+            "mtime": datetime.fromtimestamp(mtime).isoformat() if mtime else "",
+            "media_type": "video" if it.get("kind") == "video" else "photo",
+            "width": None, "height": None,
+            "taken_date": it.get("taken_at") or None,
+            "camera": None,
+            "source": "usb",
+        })
+    return {"success": True, "items": items, "total": res.get("count", len(items))}
+
+
+@router.get("/usb-thumbnail")
+async def get_usb_thumbnail(path: str = Query(...), size: int = Query(200)):
+    """USB 폰 사진·동영상 썸네일. 폰 경로는 불변이라 썸네일 캐시는 mtime 비교가 불필요."""
+    import file_index
+    from starlette.concurrency import run_in_threadpool
+
+    # 원본 캐시와 같은 이유로 기기 시리얼을 키에 섞는다(폰 교체 시 옛 썸네일 오표시 방지).
+    path_hash = hashlib.md5(
+        f"usb:{file_index.usb_device_id()}:{path}:{size}".encode()).hexdigest()
+    os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
+    cache_path = os.path.join(THUMBNAIL_CACHE_DIR, f"{path_hash}.jpg")
+    if os.path.exists(cache_path) and os.path.getsize(cache_path) > 0:
+        return FileResponse(cache_path, media_type="image/jpeg")
+
+    src = await run_in_threadpool(_usb_fetch, path)
+    from thumbnails import generate_image_thumbnail, generate_video_thumbnail
+    if os.path.splitext(path)[1].lower() in _USB_VIDEO_EXTS:
+        ok = await run_in_threadpool(generate_video_thumbnail, src, cache_path, size, 15)
+    else:
+        ok = await run_in_threadpool(generate_image_thumbnail, src, cache_path, size)
+    if ok:
+        return FileResponse(cache_path, media_type="image/jpeg")
+    raise HTTPException(status_code=500, detail="썸네일 생성 실패")
+
+
+@router.get("/usb-image")
+async def get_usb_image(path: str = Query(...)):
+    """USB 폰 사진 원본."""
+    import mimetypes
+    from starlette.concurrency import run_in_threadpool
+
+    src = await run_in_threadpool(_usb_fetch, path)
+    guessed = mimetypes.guess_type(path)[0]
+    if not guessed:
+        ext = os.path.splitext(path)[1].lower()
+        guessed = {".heic": "image/heic", ".heif": "image/heif"}.get(ext, "application/octet-stream")
+    return FileResponse(src, media_type=guessed)
+
+
+@router.get("/usb-video")
+async def get_usb_video(path: str = Query(...), request: Request = None):
+    """USB 폰 동영상 — 로컬로 당긴 뒤 기존 Range 서빙에 그대로 넘긴다."""
+    from starlette.concurrency import run_in_threadpool
+
+    src = await run_in_threadpool(_usb_fetch, path)
+    return await get_video(path=src, request=request)
 
 
 # ============ 중복 탐지 ============

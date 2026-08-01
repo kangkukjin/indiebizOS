@@ -32,6 +32,9 @@ export interface MediaItem {
   gps_lon?: number;
   camera_make?: string;
   camera_model?: string;
+  // 'usb' = 파일이 PC 가 아니라 USB 로 붙은 폰 안에 있다 — path 는 폰 안의 경로라
+  // 로컬 파일을 읽는 엔드포인트로는 못 연다(썸네일·원본 URL 이 갈린다).
+  source?: string;
 }
 
 export interface DuplicateGroup {

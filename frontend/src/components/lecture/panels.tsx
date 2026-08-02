@@ -521,8 +521,109 @@ export function DeckPanel(props: {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImg, setUploadingImg] = useState(false);
+  // 다중 선택: ⌘/Ctrl 클릭=토글, Shift 클릭=범위. 선택된 카드를 드래그하면 묶음 전체가 함께 이동.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [lastPickIdx, setLastPickIdx] = useState<number | null>(null);
 
   const slideIds = deck.slide_order;
+
+  // Esc = 선택 해제
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedIds(new Set());
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const handleCardClick = (e: React.MouseEvent, sid: string, idx: number) => {
+    if (e.metaKey || e.ctrlKey) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(sid)) next.delete(sid);
+        else next.add(sid);
+        return next;
+      });
+      setLastPickIdx(idx);
+      return;
+    }
+    if (e.shiftKey && lastPickIdx !== null) {
+      const [a, b] = lastPickIdx < idx ? [lastPickIdx, idx] : [idx, lastPickIdx];
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (let i = a; i <= b; i++) next.add(slideIds[i]);
+        return next;
+      });
+      return;
+    }
+    // 일반 클릭: 선택 해제 + 기존 편집 모드 토글
+    setSelectedIds(new Set());
+    setLastPickIdx(idx);
+    onFocus(focusSlideId === sid ? null : sid);
+  };
+
+  // ── 고무줄 선택 (marquee): 카드 밖 빈 바탕에서 드래그하면 선택 박스 ──
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const marqueeRef = useRef<{ x0: number; y0: number; base: Set<string>; additive: boolean; moved: boolean } | null>(null);
+
+  const onBgMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const t = e.target as HTMLElement;
+    // 카드(draggable)·버튼(거터/끝에추가/해제) 위에서는 시작하지 않음 — 카드 드래그=이동 유지
+    if (t.closest('[draggable]') || t.closest('button')) return;
+    const box = scrollBoxRef.current;
+    if (!box) return;
+    e.preventDefault();
+    const r = box.getBoundingClientRect();
+    const x = e.clientX - r.left + box.scrollLeft;
+    const y = e.clientY - r.top + box.scrollTop;
+    const additive = e.metaKey || e.ctrlKey || e.shiftKey;
+    marqueeRef.current = {
+      x0: x,
+      y0: y,
+      base: additive ? new Set(selectedIds) : new Set(),
+      additive,
+      moved: false,
+    };
+
+    const onMove = (ev: MouseEvent) => {
+      const m = marqueeRef.current;
+      const b = scrollBoxRef.current;
+      if (!m || !b) return;
+      const br = b.getBoundingClientRect();
+      const cx = ev.clientX - br.left + b.scrollLeft;
+      const cy = ev.clientY - br.top + b.scrollTop;
+      if (!m.moved && Math.abs(cx - m.x0) < 4 && Math.abs(cy - m.y0) < 4) return;
+      m.moved = true;
+      setMarquee({ x0: m.x0, y0: m.y0, x1: cx, y1: cy });
+      const L = Math.min(m.x0, cx), R = Math.max(m.x0, cx);
+      const T = Math.min(m.y0, cy), B = Math.max(m.y0, cy);
+      const next = new Set(m.base);
+      b.querySelectorAll('[data-sid]').forEach((w) => {
+        const card = w.querySelector('[draggable]') ?? w;
+        const cr = card.getBoundingClientRect();
+        const cl = cr.left - br.left + b.scrollLeft;
+        const ct = cr.top - br.top + b.scrollTop;
+        if (cl < R && cl + cr.width > L && ct < B && ct + cr.height > T) {
+          const sid = w.getAttribute('data-sid');
+          if (sid) next.add(sid);
+        }
+      });
+      setSelectedIds(next);
+    };
+    const onUp = () => {
+      const m = marqueeRef.current;
+      marqueeRef.current = null;
+      setMarquee(null);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      // 움직임 없는 빈 바탕 클릭 = 선택 해제
+      if (m && !m.moved && !m.additive) setSelectedIds(new Set());
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -560,11 +661,23 @@ export function DeckPanel(props: {
       setHoverIdx(null);
       return;
     }
-    const newOrder = [...slideIds];
-    const [moved] = newOrder.splice(dragIdx, 1);
-    newOrder.splice(targetIdx, 0, moved);
+    // 선택된 카드를 잡아 끌면 선택 묶음 전체가 (원래 순서를 유지한 채) 함께 이동.
+    const draggedId = slideIds[dragIdx];
+    const moving = selectedIds.has(draggedId)
+      ? slideIds.filter((id) => selectedIds.has(id))
+      : [draggedId];
+    const targetId = slideIds[targetIdx];
     setDragIdx(null);
     setHoverIdx(null);
+    if (moving.includes(targetId)) return; // 묶음 내부로의 드롭은 무의미
+    const remaining = slideIds.filter((id) => !moving.includes(id));
+    let insertPos = remaining.indexOf(targetId);
+    if (dragIdx < targetIdx) insertPos += 1; // 아래로 끌면 타깃 뒤에 (단일 드래그와 같은 감각)
+    const newOrder = [
+      ...remaining.slice(0, insertPos),
+      ...moving,
+      ...remaining.slice(insertPos),
+    ];
     try {
       await api.reorderDeck(lectureId, newOrder);
       onChange();
@@ -622,15 +735,45 @@ export function DeckPanel(props: {
             className="hidden"
           />
         </div>
-        <div className="text-xs text-stone-400">
-          {focusSlideId
-            ? `편집 모드: ${focusSlideId} (다시 클릭하면 해제)`
-            : insertBeforeIndex !== null
-              ? `삽입 모드: 위치 ${insertBeforeIndex + 1} (해제: 같은 + 다시 클릭)`
-              : '드래그=순서 · 클릭=편집 · 더블클릭=확대 · 카드 사이 +=삽입'}
+        <div className="text-xs text-stone-400 flex items-center gap-2">
+          {selectedIds.size > 0 ? (
+            <>
+              <span className="text-sky-600 font-medium">
+                ☑ {selectedIds.size}장 선택 — 선택 카드를 드래그하면 함께 이동
+              </span>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-stone-600"
+                title="선택 해제 (Esc)"
+              >
+                해제
+              </button>
+            </>
+          ) : focusSlideId ? (
+            `편집 모드: ${focusSlideId} (다시 클릭하면 해제)`
+          ) : insertBeforeIndex !== null ? (
+            `삽입 모드: 위치 ${insertBeforeIndex + 1} (해제: 같은 + 다시 클릭)`
+          ) : (
+            '드래그=순서 · ⌘/Ctrl클릭=다중선택 · 클릭=편집 · 더블클릭=확대 · 카드 사이 +=삽입'
+          )}
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        ref={scrollBoxRef}
+        onMouseDown={onBgMouseDown}
+        className={`flex-1 overflow-y-auto p-6 relative ${marquee ? 'select-none cursor-crosshair' : ''}`}
+      >
+        {marquee && (
+          <div
+            className="absolute border border-sky-500 bg-sky-400/10 rounded-sm pointer-events-none z-30"
+            style={{
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
+            }}
+          />
+        )}
         {slideIds.length === 0 ? (
           <div className="text-center text-stone-400 mt-12">
             <div className="text-lg">아직 슬라이드가 없습니다</div>
@@ -674,7 +817,7 @@ export function DeckPanel(props: {
               const toggleInsert = () =>
                 onInsertBefore(insertBeforeIndex === idx ? null : idx);
               return (
-                <div key={sid} className="relative pt-9">
+                <div key={sid} data-sid={sid} className="relative pt-9">
                   <InsertGutter
                     active={insertBeforeIndex === idx}
                     label={`위치 ${idx + 1} 앞`}
@@ -684,10 +827,15 @@ export function DeckPanel(props: {
                     lectureId={lectureId}
                     slide={slide}
                     index={idx}
-                    isDragging={dragIdx === idx}
+                    isDragging={
+                      dragIdx !== null &&
+                      (dragIdx === idx ||
+                        (selectedIds.has(slideIds[dragIdx]) && selectedIds.has(sid)))
+                    }
                     isHover={hoverIdx === idx}
                     isFocus={focusSlideId === sid}
-                    onClick={() => onFocus(focusSlideId === sid ? null : sid)}
+                    isSelected={selectedIds.has(sid)}
+                    onClick={(e) => handleCardClick(e, sid, idx)}
                     onDoubleClick={() => onPreview(sid)}
                     onPreview={() => onPreview(sid)}
                     onSpecEdit={() => onSpecEdit(sid)}
@@ -695,6 +843,11 @@ export function DeckPanel(props: {
                     onDragStart={() => onDragStart(idx)}
                     onDragOver={(e) => onDragOver(e, idx)}
                     onDrop={(e) => onDrop(e, idx)}
+                    onDragEnd={() => {
+                      // 드롭 없이 끝난 드래그(취소·바깥 드롭)에서도 흐림 상태 정리
+                      setDragIdx(null);
+                      setHoverIdx(null);
+                    }}
                     onDelete={() => handleDelete(sid)}
                   />
                 </div>

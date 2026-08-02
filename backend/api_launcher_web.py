@@ -428,7 +428,10 @@ def is_public_remote_path(method: str, path: str) -> bool:
         return True
     # 개인 포털 공개 서빙(/portal/*)도 자체 X-Showcase-Secret 게이트 보유.
     # join(가입)·tool(회원 실행 게이트)은 POST. 그 외 /portal/ 경로는 없음(전부 등록).
+    # pwa/ = 홈 화면 설치 자산(manifest·sw·아이콘) — /launcher/ PWA 3종과 같은 원칙
+    # (설치 판단은 로그인보다 먼저, 새는 정보는 앱 이름·아이콘뿐).
     if method == "GET" and (path.startswith("/portal/page/") or path.startswith("/portal/key/")
+                            or path.startswith("/portal/pwa/")
                             or path.startswith("/portal/inst/") or path.startswith("/portal/tune/")
                             or path == "/portal/manifest" or path == "/portal/home"
                             or path == "/portal/file" or path == "/portal/gb"):

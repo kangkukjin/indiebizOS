@@ -62,10 +62,16 @@ def _derived() -> list:
         out.append({"title": title, "url": url, "kind": kind, "source": source,
                     "memo": memo, "meta": f"{kind} · {source}", "summary": url or memo})
 
-    # 1) 고정 2면 — 몸의 얼굴
+    # 1) 고정 5면 — 몸의 얼굴 (본판 PWA 2 + 구형 기기 라이트 3)
     if base:
         add("원격런처 (PWA)", f"{base}/launcher/app", "몸 공개면", "고정")
         add("원격NAS · IBFind (PWA)", f"{base}/nas/app", "몸 공개면", "고정")
+        add("원격런처 · 라이트 (구형 기기)", f"{base}/launcher/lite", "몸 공개면", "고정",
+            "순수 ES5 경량판 — iOS 10.3~5.1.1 구형 Safari 용")
+        add("원격NAS · 라이트 (구형 기기)", f"{base}/nas/lite", "몸 공개면", "고정",
+            "경량 Finder — iOS 10.3 급 낡은 WebKit 용")
+        add("원격NAS · 라이트2 (초구형 기기)", f"{base}/nas/lite2", "몸 공개면", "고정",
+            "순수 ES5 — iOS 5.1.1 아이패드 1세대 급. TLS 한계 시 LAN http://<맥IP>:8765/nas/lite2")
     # 2) 포털
     for p in _read_json(_DATA / "portal_state.json").get("portals") or []:
         slug = p.get("slug")

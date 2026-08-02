@@ -304,6 +304,17 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         set_current_agent_name(agent_name)
         set_current_project_id(project_id)
 
+        # 에피소드 로깅 — 이 엔드포인트는 원격 런처 자율주행 탭이 프로젝트 에이전트에게
+        # 보내는 HTTP 경로인데, start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼
+        # 있어 주행기록 사각지대였다(/system-ai/chat 의 _process() 봉합과 같은 한 쌍).
+        # 동기·백그라운드 모두 이 함수 한 덩어리를 한 스레드에서 지나므로 여기 한 곳이면
+        # 두 경우를 다 덮는다.
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.start_episode(agent_name, command, project_id=project_id)
+        except Exception:
+            pass
+
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
 
@@ -330,6 +341,11 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         return response
     finally:
         clear_all_context()
+        try:
+            from episode_logger import EpisodeLogger
+            EpisodeLogger.end_episode()
+        except Exception:
+            pass
 
 
 @router.post("/projects/{project_id}/agents/{agent_id}/command")

@@ -201,6 +201,15 @@ def _map(method: str, path: str, query: dict, raw_query: str):
             return {"target": f"/portal/tune/{_enc(slug)}/{_enc(rest[1])}", "cache": "no-store"}
         if op == "tool" and len(rest) > 1 and rest[1] and method == "POST":
             return {"target": f"/portal/tool/{_enc(slug)}/{_enc(rest[1])}", "cache": "no-store"}
+        # PWA(홈 화면 설치) 자산 — Worker 얼굴(worker.js /h/ 분기)과 동형.
+        # 정적 자산이지만 포털 존재 여부가 실리므로 no-store 유지(다른 /h/ 경로와 동일).
+        if op == "manifest.webmanifest":
+            return {"target": f"/portal/pwa/{_enc(slug)}/manifest.webmanifest", "cache": "no-store"}
+        if op == "sw.js":
+            return {"target": f"/portal/pwa/{_enc(slug)}/sw.js", "cache": "no-store"}
+        if op in ("icon-192.png", "icon-512.png"):
+            isz = "512" if op == "icon-512.png" else "192"
+            return {"target": f"/portal/pwa/{_enc(slug)}/icon/{isz}", "cache": "no-store"}
         return {"status": 404}
 
     # ── 자유게시판 /b/<slug>/... ──
@@ -358,8 +367,11 @@ async def handle(request: Request):
     if "redirect" in m:
         return RedirectResponse(m["redirect"], status_code=301)
     if "status" in m:
+        # ★no-store 필수 — 캐시헤더 없는 404는 CF 엣지가 확장자(.js/.png) 기본 캐시로
+        # 4시간 박제한다(2026-08-03 실측: 어휘 추가 전 404가 HIT로 남아 새 200을 가림).
         return PlainTextResponse("not found" if m["status"] == 404 else "bad request",
-                                 status_code=m["status"])
+                                 status_code=m["status"],
+                                 headers={"Cache-Control": "no-store"})
     if m.get("spa"):
         if _SPA_INDEX.exists():
             return FileResponse(str(_SPA_INDEX), media_type="text/html",

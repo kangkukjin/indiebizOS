@@ -214,10 +214,24 @@ async function doChangePw(ev){ ev.preventDefault();
 
     # PC(≥900px): 손님이면 본문+로그인 사이드바 2단(.cols), 회원이면 넓은 1단. 폰은 늘 1단.
     aside = f"<aside>{auth_html}</aside>" if auth_html else ""
+    # PWA(홈 화면 설치). 상대 URL 이라 /h/<slug>/ 아래로 자동 해소된다 — 포털마다 별개 앱.
+    # ★알림은 일부러 없다: 같은 origin 다중 PWA 는 안드로이드가 알림 권한을 WebAPK
+    #   하나에 위임해 버린다(2026-08-01 웹푸시 은퇴의 진범). 알림을 원하면 origin 분리부터.
+    _slug = portal.get("slug") or ""
+    pwa = ('<link rel="manifest" href="manifest.webmanifest">'
+           '<meta name="theme-color" content="#8a5a2b">'
+           '<meta name="apple-mobile-web-app-capable" content="yes">'
+           '<meta name="apple-mobile-web-app-status-bar-style" content="default">'
+           f'<meta name="apple-mobile-web-app-title" content="{_esc(title)}">'
+           '<link rel="apple-touch-icon" href="icon-192.png">') if _slug else ""
+    sw = ("<script>if('serviceWorker' in navigator){window.addEventListener('load',"
+          "function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}"
+          "</script>") if _slug else ""
     return f"""<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
+{pwa}
 <title>{_esc(title)}</title><style>{_CSS}</style></head>
 <body><div class="wrap{' cols' if aside else ''}">
 <header><h1>🏘️ {_esc(title)}</h1>
@@ -231,7 +245,7 @@ async function doChangePw(ev){ ev.preventDefault();
 {aside}
 {logout_js}
 <footer>비밀번호를 잊으면 로그인 화면의 '비밀번호를 잊으셨나요?'에서 이메일로 임시 비밀번호를 받으세요<br>powered by IndieBiz OS</footer>
-</div></body></html>"""
+</div>{sw}</body></html>"""
 
 
 def render_notice(title: str, msg: str, home: str = "") -> str:

@@ -36,18 +36,7 @@ export function AIChatPanel(props: {
   onChange: () => void;
 }) {
   const { deck, focusSlideId, insertBeforeIndex, clearModes, onChange } = props;
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'ai',
-      text:
-        `안녕하세요. "${deck.title}" 강의를 같이 만들어 갑니다.\n\n` +
-        `현재 슬라이드 ${deck.slide_order.length}장.\n\n` +
-        `• 새 슬라이드 (끝에 추가): 그냥 자연어로 요청\n` +
-        `• 사이에 삽입: 가운데 패널의 카드 사이 호버 → "+ 삽입" 클릭 → 입력\n` +
-        `• 편집: 슬라이드 클릭 → 노란 테두리 보이면 편집 모드 → 코멘트 입력\n` +
-        `• Layout 강제: 입력란 위 드롭다운에서 선택 (미선택 시 AI 자동)`,
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [layoutChoice, setLayoutChoice] = useState<string>(''); // '' = AI 자동
   const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 통짜 이미지 품질
@@ -195,7 +184,7 @@ export function AIChatPanel(props: {
           )}
         </div>
       </div>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 bg-stone-50">
+      <div ref={scrollRef} className="flex-none max-h-[45%] overflow-y-auto p-3 space-y-3 bg-stone-50">
         {messages.map((m, i) => (
           <ChatBubble key={i} msg={m} />
         ))}
@@ -206,7 +195,7 @@ export function AIChatPanel(props: {
           </div>
         )}
       </div>
-      <div className="p-3 border-t border-stone-100 space-y-2">
+      <div className="p-3 border-t border-stone-100 space-y-2 flex-1 min-h-0 flex flex-col">
         {mode === 'edit' && focusSlideId && (
           <button
             type="button"
@@ -310,28 +299,26 @@ export function AIChatPanel(props: {
           onChange={setLayoutChoice}
           disabled={busy}
         />
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                send();
-              }
-            }}
-            placeholder={placeholder}
-            disabled={busy}
-            className="flex-1 px-3 py-2 text-sm border border-stone-300 rounded focus:outline-none focus:border-stone-500 disabled:bg-stone-100 text-stone-900 placeholder:text-stone-400"
-          />
-          <button
-            onClick={send}
-            disabled={busy || !input.trim()}
-            className="px-3 py-2 text-sm bg-stone-800 text-white rounded hover:bg-stone-700 disabled:opacity-50"
-          >
-            보내기
-          </button>
-        </div>
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          placeholder={`${placeholder}\n\n슬라이드 설명을 자유롭게 길게 적으세요. (Enter=보내기, Shift+Enter=줄바꿈)`}
+          disabled={busy}
+          className="flex-1 min-h-0 w-full px-3 py-2 text-sm border border-stone-300 rounded resize-none focus:outline-none focus:border-stone-500 disabled:bg-stone-100 text-stone-900 placeholder:text-stone-400"
+        />
+        <button
+          onClick={send}
+          disabled={busy || !input.trim()}
+          className="w-full px-3 py-2 text-sm bg-stone-800 text-white rounded hover:bg-stone-700 disabled:opacity-50"
+        >
+          보내기
+        </button>
       </div>
     </aside>
   );

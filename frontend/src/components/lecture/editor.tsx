@@ -484,7 +484,8 @@ export function SlideCard(props: {
   isDragging: boolean;
   isHover: boolean;
   isFocus: boolean;
-  onClick: () => void;
+  isSelected: boolean;
+  onClick: (e: React.MouseEvent) => void;
   onDoubleClick: () => void;
   onPreview: () => void;
   onSpecEdit: () => void;
@@ -492,9 +493,10 @@ export function SlideCard(props: {
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
   onDelete: () => void;
 }) {
-  const { lectureId, slide, index, isDragging, isHover, isFocus, onClick, onDoubleClick, onPreview, onSpecEdit, onDuplicate, onDragStart, onDragOver, onDrop, onDelete } = props;
+  const { lectureId, slide, index, isDragging, isHover, isFocus, isSelected, onClick, onDoubleClick, onPreview, onSpecEdit, onDuplicate, onDragStart, onDragOver, onDrop, onDragEnd, onDelete } = props;
   // PNG는 백엔드 HTTP 엔드포인트로 (file://은 Electron 보안 정책에 막힘).
   // updated_at을 쿼리에 붙여서 편집 후 캐시 무효화.
   const pngUrl = `${api.slidePngUrl(lectureId, slide.id)}?v=${encodeURIComponent(slide.updated_at)}`;
@@ -507,12 +509,15 @@ export function SlideCard(props: {
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onDragEnd={onDragEnd}
       className={`
         group bg-white rounded-lg border-2 shadow-sm overflow-hidden cursor-pointer transition-all
         ${isDragging ? 'opacity-40' : ''}
-        ${isFocus
-          ? 'border-amber-500 ring-2 ring-amber-200 shadow-md'
-          : isHover ? 'border-stone-700 shadow-md' : 'border-stone-200'}
+        ${isSelected
+          ? 'border-sky-500 ring-2 ring-sky-200 shadow-md'
+          : isFocus
+            ? 'border-amber-500 ring-2 ring-amber-200 shadow-md'
+            : isHover ? 'border-stone-700 shadow-md' : 'border-stone-200'}
       `}
     >
       <div className="aspect-video bg-stone-100 relative">
@@ -524,8 +529,15 @@ export function SlideCard(props: {
             (e.target as HTMLImageElement).style.display = 'none';
           }}
         />
-        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 text-white text-xs rounded">
-          #{index + 1}
+        <div className="absolute top-2 left-2 flex items-center gap-1">
+          <div className="px-2 py-0.5 bg-black/60 text-white text-xs rounded">
+            #{index + 1}
+          </div>
+          {isSelected && (
+            <div className="w-5 h-5 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center shadow">
+              ✓
+            </div>
+          )}
         </div>
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
           {!isBakedImageSlide(slide.layout) && (

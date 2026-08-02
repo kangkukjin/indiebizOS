@@ -326,6 +326,18 @@ export default {
       if (hrest[0] === "tool" && hrest[1] && request.method === "POST") {
         return proxyPortal(env, request, `tool/${encodeURIComponent(hslug)}/${encodeURIComponent(hrest[1])}`);
       }
+      // PWA(홈 화면 설치) 자산 — manifest·서비스워커·아이콘. 알림 없음(origin 얽힘 회피).
+      // ★서비스워커는 반드시 scope 안(/h/<slug>/sw.js)에서 서빙돼야 그 경로를 제어한다.
+      if (hrest[0] === "manifest.webmanifest") {
+        return proxyPortal(env, request, `pwa/${encodeURIComponent(hslug)}/manifest.webmanifest`);
+      }
+      if (hrest[0] === "sw.js") {
+        return proxyPortal(env, request, `pwa/${encodeURIComponent(hslug)}/sw.js`);
+      }
+      if (hrest[0] === "icon-192.png" || hrest[0] === "icon-512.png") {
+        const isz = hrest[0] === "icon-512.png" ? "512" : "192";
+        return proxyPortal(env, request, `pwa/${encodeURIComponent(hslug)}/icon/${isz}`);
+      }
       return new Response("not found", { status: 404 });
     }
 

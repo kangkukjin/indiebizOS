@@ -23,6 +23,7 @@ data/calendar_events.json
 data/browser_cookies/
 data/outputs/
 data/health/
+data/portal_icons/
 data/gomoku_board.png
 data/system_ai_prompts/
 data/system_ai_role.txt

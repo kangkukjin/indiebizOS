@@ -4,12 +4,18 @@
 # 아이패드 1세대(lite2급)까지. 그래서 fetch/Promise/화살표/템플릿리터럴/현대 flexbox 를
 # 전혀 안 쓰고 순수 ES5 + XMLHttpRequest + 구식 블록 레이아웃만 쓴다.
 #
-# 기능 2탭 (본판 5탭의 핵심만):
+# 기능 3탭 (본판 5탭의 핵심만):
 #   자율주행 — 시스템 AI 대화. POST /system-ai/chat {background:true} 로 즉시 반환받고
 #              (터널 524 타임아웃 회피, 본판 자율주행 탭과 동일 경로) 대화 로그를
 #              폴링해 응답을 받는다.
 #   조종실   — 자연어 → /ibl/translate 번역 → /ibl/validate dry-run 검수 → /ibl/execute
 #              실행 (project_id='수동모드', 본판 조종실과 동일 계약).
+#   창고     — ★읽기 전용. 내 창고 = /portal/warehouse-admin/list?level=N 목록 + /file 로 열기,
+#              이웃 = /warehouse-feed/feed 변화 타임라인. 본판 창고 탭의 쓰기 기능
+#              (업로드·리트윗·좋아요·이웃 편집·소개발행)은 의도적으로 뺐다 — 구형 기기에서
+#              필요한 건 '보는 것'이고, 쓰기를 넣으면 ES5 로 옮길 코드가 몇 배가 된다.
+#              파일 열기는 <a href> 앵커라 XHR 헤더가 안 붙는다: LAN(사설망)은 인증 게이트가
+#              통과시키고(is_external_request ③), 터널은 secure 쿠키가 붙어 양쪽 다 열린다.
 #
 # 인증: 기존 /launcher/auth/login 재사용. 쿠키(launcher_session)는 secure 전용이라
 # LAN 평문 HTTP(아이패드 1세대는 터널 TLS 가 막힐 수 있어 http://<맥IP>:8765 권장)에선
@@ -71,6 +77,14 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   pre.result { background:#1a1a1c; border:1px solid #333; border-radius:8px; padding:10px; font-size:13px; white-space:pre-wrap; word-wrap:break-word; margin:8px 0; max-height:340px; overflow:auto; }
   .item { border-bottom:1px solid #262628; padding:9px 4px; font-size:15px; }
   .item .m { font-size:12px; color:#888; margin-top:2px; }
+  /* 창고 (읽기 전용) */
+  #wh { padding-bottom:40px; }
+  #wh .sub, #wh .lv { padding:8px 8px 4px; }
+  #wh .sub button, #wh .lv button { margin-right:6px; }
+  #wh .lv button { padding:6px 10px; font-size:14px; }
+  #wh .sub .tab.on, #wh .lv .tab.on { background:#0a5fbd; border-color:#0a5fbd; color:#fff; }
+  #wh .item { padding:9px 10px; }
+  #wh .item a { color:#8ec6ff; text-decoration:none; word-wrap:break-word; }
 </style>
 </head>
 <body>
@@ -87,6 +101,7 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   <div class="bar">
     <button id="tabChat" class="tab on">자율주행</button>
     <button id="tabCp" class="tab">조종실</button>
+    <button id="tabWh" class="tab">창고</button>
     <span class="right"><button id="refresh">&#8635;</button><button id="logout">나가기</button></span>
   </div>
 
@@ -107,6 +122,11 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
     <div id="steps"></div>
     <div class="lbl" id="resLbl" style="display:none;">결과</div>
     <div id="result"></div>
+  </div>
+
+  <div id="wh" class="page hide">
+    <div class="sub"><button id="whMine" class="tab on">내 창고</button><button id="whNb" class="tab">이웃</button></div>
+    <div id="whBody"></div>
   </div>
 </div>
 
@@ -160,16 +180,24 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
   });
 
   // ── 탭 ────────────────────────────────────────────────
+  var TAB = "chat";
   $("tabChat").addEventListener("click", function(){ setTab("chat"); });
   $("tabCp").addEventListener("click", function(){ setTab("cp"); });
+  $("tabWh").addEventListener("click", function(){ setTab("wh"); });
   function setTab(t){
-    var chat = (t === "chat");
-    $("chat").className = chat ? "page" : "page hide";
-    $("cockpit").className = chat ? "page hide" : "page";
-    $("tabChat").className = chat ? "tab on" : "tab";
-    $("tabCp").className = chat ? "tab" : "tab on";
+    TAB = t;
+    $("chat").className    = (t === "chat") ? "page" : "page hide";
+    $("cockpit").className = (t === "cp")   ? "page" : "page hide";
+    $("wh").className      = (t === "wh")   ? "page" : "page hide";
+    $("tabChat").className = (t === "chat") ? "tab on" : "tab";
+    $("tabCp").className   = (t === "cp")   ? "tab on" : "tab";
+    $("tabWh").className   = (t === "wh")   ? "tab on" : "tab";
+    if (t === "wh") whEnter();
   }
-  $("refresh").addEventListener("click", function(){ loadChat(); });
+  $("refresh").addEventListener("click", function(){
+    if (TAB === "wh") whRefresh();
+    else if (TAB === "chat") loadChat();
+  });
 
   // ── 자율주행 (시스템 AI 대화) ──────────────────────────
   var lastId = 0, pollTimer = null, pollUntil = 0;
@@ -321,6 +349,100 @@ LAUNCHER_LITE_HTML = r'''<!DOCTYPE html>
       }
     });
   });
+
+  // ── 창고 (읽기 전용) ──────────────────────────────────
+  // 내 창고 = /portal/warehouse-admin/list?level=N, 이웃 = /warehouse-feed/feed.
+  // 쓰기(업로드·리트윗·좋아요·이웃 편집)는 본판 몫 — 여기는 보기만 한다.
+  var WH_SUB = "mine", WH_LV = 0, WH_LOADED = false;
+
+  function whBytes(n){
+    if (n == null) return "";
+    if (n < 1024) return n + "B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + "KB";
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + "MB";
+    return (n / 1073741824).toFixed(2) + "GB";
+  }
+  function whWhen(t){ return t ? String(t).replace("T", " ").slice(0, 16) : ""; }
+  function whMsg(m){ $("whBody").innerHTML = '<div class="wait">' + esc(m) + '</div>'; }
+
+  $("whMine").addEventListener("click", function(){ whSub("mine"); });
+  $("whNb").addEventListener("click", function(){ whSub("nb"); });
+  function whSub(t){
+    WH_SUB = t;
+    $("whMine").className = (t === "mine") ? "tab on" : "tab";
+    $("whNb").className   = (t === "nb")   ? "tab on" : "tab";
+    whRefresh();
+  }
+  function whEnter(){ if (!WH_LOADED){ WH_LOADED = true; whRefresh(); } }
+  function whRefresh(){ if (WH_SUB === "mine") whLoadMine(); else whLoadFeed(); }
+
+  // 내 창고 — 레벨 0~4 칩 + 파일 목록(최근 수정순). 클릭 = 소유자 열람 URL 로 새 창.
+  function whLoadMine(){
+    whMsg("불러오는 중…");
+    api("GET", "/portal/warehouse-admin/list?level=" + WH_LV, null, function(st, d){
+      if (st === 401){ showLogin(); return; }
+      if (st !== 200 || !d){ whMsg("불러오기 실패 (" + st + ")"); return; }
+      // ★응답 키는 counts 가 아니라 levels/level_labels 다 (2026-08-02 실측)
+      var lv = d.levels || {}, lab = d.level_labels || {}, h = "", l, c, nm;
+      if (d.title) h += '<div class="lv" style="color:#9a9a9e;font-size:13px;">' + esc(d.title) + '</div>';
+      h += '<div class="lv">';
+      for (l = 0; l <= 4; l++){
+        c = (lv[String(l)] == null) ? 0 : lv[String(l)];
+        nm = lab[String(l)] || String(l);
+        h += '<button class="tab' + (l === WH_LV ? " on" : "") + '" data-lv="' + l + '">'
+           + esc(nm) + ' <span style="color:#9a9a9e">' + c + '</span></button>';
+      }
+      h += '</div>';
+      var files = d.files || [], i, f, href, cap = 300;
+      if (!files.length){
+        h += '<div class="wait">이 레벨 창고는 비어 있습니다.</div>';
+      } else {
+        for (i = 0; i < files.length && i < cap; i++){
+          f = files[i];
+          // .url 리트윗 포인터는 목적지로, 일반 파일은 소유자 열람 엔드포인트로
+          href = f.link ? f.link
+               : ("/portal/warehouse-admin/file?level=" + WH_LV + "&name=" + encodeURIComponent(f.name));
+          h += '<div class="item"><a href="' + esc(href) + '" target="_blank">' + esc(f.name) + '</a>'
+             + '<div class="m">' + esc(whWhen(f.mtime))
+             + (f.bytes == null ? "" : " · " + whBytes(f.bytes))
+             + (f.link ? " · 리트윗" : "") + '</div></div>';
+        }
+        if (files.length > cap) h += '<div class="wait">외 ' + (files.length - cap) + '건 (본판에서 보세요)</div>';
+      }
+      $("whBody").innerHTML = h;
+      var btns = $("whBody").getElementsByTagName("button"), k;
+      for (k = 0; k < btns.length; k++){
+        btns[k].onclick = function(){
+          WH_LV = parseInt(this.getAttribute("data-lv"), 10) || 0;
+          whLoadMine();
+        };
+      }
+    });
+  }
+
+  // 이웃 — 창고 폴러가 쌓은 변화 타임라인(seed/new/changed). 클릭 = 그 파일·글로 새 창.
+  function whLoadFeed(){
+    whMsg("불러오는 중…");
+    api("GET", "/warehouse-feed/feed?limit=60", null, function(st, d){
+      if (st === 401){ showLogin(); return; }
+      if (st !== 200 || !d){ whMsg("불러오기 실패 (" + st + ")"); return; }
+      var items = d.items || [];
+      if (!items.length){ whMsg("아직 이웃 창고 소식이 없습니다."); return; }
+      var h = "", i, it, who, kind, href, title;
+      for (i = 0; i < items.length; i++){
+        it = items[i];
+        who = it.neighbor_title || it.neighbor_name || it.wh_url || "";
+        kind = (it.kind === "new") ? "새 파일" : ((it.kind === "changed") ? "바뀜" : "기존");
+        href = it.url || it.neighbor_home || "";
+        title = it.path || "(제목 없음)";
+        h += '<div class="item">'
+           + (href ? ('<a href="' + esc(href) + '" target="_blank">' + esc(title) + '</a>') : esc(title))
+           + '<div class="m">' + esc(who) + ' · ' + kind
+           + (it.mtime ? " · " + esc(whWhen(it.mtime)) : "") + '</div></div>';
+      }
+      $("whBody").innerHTML = h;
+    });
+  }
 
   // ── 부팅: 기존 세션(쿠키 또는 저장된 SID)이 살아 있으면 바로 앱 ──
   api("GET", "/system-ai/conversations?limit=1", null, function(st){

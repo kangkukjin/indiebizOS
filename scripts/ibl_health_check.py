@@ -242,7 +242,8 @@ for name, code, kind in PIPES:
     elif kind == "chart":
         ok = isinstance(fr, dict) and fr.get("success") is True
     else:  # doc
-        ok = isinstance(fr, dict) and (fr.get("success") is True or fr.get("path") or fr.get("file"))
+        # bool() 필수 — or 체인이 None(실패)이나 경로 문자열(성공)을 그대로 반환해 += 가 터진다
+        ok = bool(isinstance(fr, dict) and (fr.get("success") is True or fr.get("path") or fr.get("file")))
     pipe_pass += ok
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
 
@@ -331,6 +332,7 @@ for name, code, assertion in OPERATORS:
         ok, detail = assertion(execute(code))
     except Exception as e:
         ok, detail = False, f"단언 예외: {e}"
+    ok = bool(ok)
     op_pass += ok
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:22} {detail}")
 

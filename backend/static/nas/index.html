@@ -582,9 +582,17 @@ async function viewText(p) {
     const url = `${API}/file?path=${encodeURIComponent(p)}`;
     const name = p.split('/').pop();
     try {
-        const r = await fetch(url, {credentials:'include'});
+        // /file 을 fetch().text() 로 읽으면 스펙상 헤더 charset 이 무시되고 항상 UTF-8 로
+        // 풀려, 옛 한글 문서(cp949/euc-kr)가 뷰어에서만 깨졌다(테슬라처럼 뷰어가 유일한
+        // 열람 경로인 기기에서 발견). /text 는 서버가 인코딩을 자동 감지해 UTF-8(JSON)로
+        // 주므로 어떤 브라우저에서도 안전 — 클라이언트 레거시 인코딩 지원에 안 기댐.
+        const r = await fetch(`${API}/text?path=${encodeURIComponent(p)}`, {credentials:'include'});
         if (r.status === 401) { showLogin(); return; }
-        const text = await r.text();
+        if (!r.ok) {
+            const d = await r.json().catch(() => null);
+            throw new Error((d && d.detail) || ('HTTP ' + r.status));
+        }
+        const text = (await r.json()).content;
         const w = window.open('','_blank');
         w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a2e;color:#e0e0e0;font:14px/1.6 'Courier New',monospace;padding:50px 38px 40px 16px}

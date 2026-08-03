@@ -41,6 +41,28 @@ def _public_base() -> str:
     return (_read_json(_DATA / "portal_state.json").get("public_base") or "").rstrip("/")
 
 
+def _origin_base() -> str:
+    """런처·NAS(8765 직결 면)의 베이스 — ★public_base(Worker CDN)와 다른 축.
+
+    Worker 는 /s/·/n/·/h/·/b/·/r/ 만 라우팅하고 /launcher/*·/nas/* 분기가 없어
+    미매칭은 공개파일 index 로 떨어진다 — 고정 5면에 public_base 를 붙이면
+    존재하지 않는 주소가 된다(2026-08-03 실사용 신고). 진실 소스는
+    api_tunnel.origin_host()(오리진 호스트, docstring 에 이 구분이 명시돼 있다)."""
+    try:
+        import api_tunnel
+        host = (api_tunnel.origin_host() or "").strip()
+        if host:
+            return f"https://{host}"
+    except Exception:
+        pass
+    # 폴백: direct_hosts 중 터널(비 ts.net) 호스트 — origin_host 와 같은 선호 순서
+    hosts = [h for h in (_read_json(_DATA / "public_face.json").get("direct_hosts") or []) if h]
+    for h in hosts:
+        if not h.endswith(".ts.net"):
+            return f"https://{h}"
+    return f"https://{hosts[0]}" if hosts else ""
+
+
 def _wrangler_name(toml_path) -> str:
     """wrangler.toml 의 name = "..." 한 줄만 — toml 파서 의존성 없이."""
     try:
@@ -63,14 +85,16 @@ def _derived() -> list:
                     "memo": memo, "meta": f"{kind} · {source}", "summary": url or memo})
 
     # 1) 고정 5면 — 몸의 얼굴 (본판 PWA 2 + 구형 기기 라이트 3)
-    if base:
-        add("원격런처 (PWA)", f"{base}/launcher/app", "몸 공개면", "고정")
-        add("원격NAS · IBFind (PWA)", f"{base}/nas/app", "몸 공개면", "고정")
-        add("원격런처 · 라이트 (구형 기기)", f"{base}/launcher/lite", "몸 공개면", "고정",
+    #    ★베이스는 오리진 호스트(터널 직결)다 — Worker(public_base)는 이 경로들을 라우팅하지 않는다
+    origin = _origin_base()
+    if origin:
+        add("원격런처 (PWA)", f"{origin}/launcher/app", "몸 공개면", "고정")
+        add("원격NAS · IBFind (PWA)", f"{origin}/nas/app", "몸 공개면", "고정")
+        add("원격런처 · 라이트 (구형 기기)", f"{origin}/launcher/lite", "몸 공개면", "고정",
             "순수 ES5 경량판 — iOS 10.3~5.1.1 구형 Safari 용")
-        add("원격NAS · 라이트 (구형 기기)", f"{base}/nas/lite", "몸 공개면", "고정",
+        add("원격NAS · 라이트 (구형 기기)", f"{origin}/nas/lite", "몸 공개면", "고정",
             "경량 Finder — iOS 10.3 급 낡은 WebKit 용")
-        add("원격NAS · 라이트2 (초구형 기기)", f"{base}/nas/lite2", "몸 공개면", "고정",
+        add("원격NAS · 라이트2 (초구형 기기)", f"{origin}/nas/lite2", "몸 공개면", "고정",
             "순수 ES5 — iOS 5.1.1 아이패드 1세대 급. TLS 한계 시 LAN http://<맥IP>:8765/nas/lite2")
     # 2) 포털
     for p in _read_json(_DATA / "portal_state.json").get("portals") or []:

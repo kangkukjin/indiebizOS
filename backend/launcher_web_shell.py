@@ -209,6 +209,11 @@ input,textarea,select{ font-family:inherit; }
 .fileov{ position:fixed; inset:0; z-index:1000; background:var(--bg); display:flex; flex-direction:column; }
 .fileov-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--bg2); border-bottom:1px solid var(--line); color:var(--txt); font-size:13px; flex-shrink:0; }
 .fileov iframe{ flex:1; border:none; width:100%; background:#fff; }
+/* 인앱 웹 뷰어(openWebOverlay) — 긴 제목이 버튼을 밀어내지 않게, 삽입 거부 사이트는 폴백 판. */
+.fileov-nm{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.fileov-acts{ display:flex; gap:6px; flex-shrink:0; }
+.fileov-blocked{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:28px 20px; text-align:center; color:var(--txt); font-size:14px; line-height:1.6; }
+.fileov-blocked .muted{ font-size:12px; word-break:break-all; }
 .inst-head{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .back{ background:var(--bg3); border:1px solid transparent; color:var(--txt); width:34px; height:34px; border-radius:10px; font-size:16px; }
 .back:hover{ border-color:var(--acc); color:var(--acc2); }
@@ -389,6 +394,41 @@ a{ color:var(--info); }
 .wf-row input,.wf-row select{ background:var(--bg); border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:12px; padding:7px 9px; }
 .wf-row input.grow{ flex:1; min-width:180px; }
 .wf-kind{ font-size:10px; padding:1px 5px; border-radius:5px; background:var(--bg3); color:var(--acc); margin-right:5px; }
+
+/* === 데스크탑(PC 브라우저) 레이어 — 좁은 폰 컬럼을 넓은 화면에 맞게 확장.
+      1000px 미만(폰·좁은 창)은 기존 그대로 — min-width 게이트만 얹는 순수 추가층.
+      calc(50% - Npx) 좌우 패딩 = 내용은 중앙 컬럼, 스크롤바는 창 가장자리 유지
+      (음수가 되는 폭에서는 CSS 스펙이 0 으로 클램프). === */
+@media(min-width:1000px){
+  /* 본문 폭 720 → 1080 */
+  .wrap{ max-width:1080px; padding:24px 28px; }
+  .top{ padding-left:28px; padding-right:28px; }
+  /* 표면 탭: 화면 전체로 늘어나지 않게 가운데 응집 */
+  .surfaces{ justify-content:center; }
+  .surf-tab{ flex:0 1 150px; }
+  /* 자율주행: 대상 목록은 2열 카드(제목·추가 버튼은 전폭), 대화는 가독 폭 중앙 */
+  .ap-browse{ padding:24px; }
+  .ap-browse>div{ max-width:1080px; }
+  .ap-browse>div:not(.ap-bhead){ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 14px; align-content:start; }
+  .ap-browse>div:not(.ap-bhead)>*{ grid-column:1/-1; min-width:0; }
+  .ap-browse>div:not(.ap-bhead)>.ap-card{ grid-column:auto; }
+  .ap-head{ padding-left:calc(50% - 530px); padding-right:calc(50% - 530px); }
+  .msgs{ padding:24px calc(50% - 470px); }
+  .composer{ padding-left:calc(50% - 470px); padding-right:calc(50% - 470px); }
+  .bub{ max-width:72%; }
+  /* 앱: 타일 3열 고정 → 폭 따라 증식, 이미지 그리드도 증식 */
+  .grid{ grid-template-columns:repeat(auto-fill,minmax(108px,1fr)); gap:12px; }
+  .posters{ grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); }
+  /* 메신저 마스터-디테일: 목록 폭 소폭 확대 */
+  .mdlist{ width:320px; }
+  /* 조종실: 결과창 여유 */
+  .result{ max-height:480px; }
+  /* 공유창고: 헤더·목록을 중앙 컬럼으로 */
+  .wh-head,.wh-levels,.wh-nb-bar,.wf-row{ padding-left:calc(50% - 530px); padding-right:calc(50% - 530px); }
+  .wh-list{ padding:16px calc(50% - 530px); }
+  /* 포식 브라우저: 중앙 컬럼 */
+  .fg-wrap{ max-width:840px; width:100%; margin:0 auto; }
+}
 </style>
 </head>
 <body>

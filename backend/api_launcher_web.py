@@ -48,6 +48,78 @@ async def serve_artifact_file(path: str):
     mime, _ = mimetypes.guess_type(real)
     return FileResponse(real, media_type=mime or "application/octet-stream")
 
+
+# ── 인앱 웹 뷰어(내부 브라우저) 판정 ──────────────────────────────────────────
+# 원격 런처가 외부 링크를 새 탭 대신 앱 안 오버레이(iframe)로 띄운다 — 탭 전환이 비싼
+# 화면(차 브라우저·태블릿)에서 런처를 잃지 않기 위해서.
+# ★그런데 상당수 사이트가 X-Frame-Options / CSP frame-ancestors 로 삽입을 거부한다.
+#   거부는 브라우저가 강제하고 **JS 로는 성공/거부를 구분할 수 없다**(둘 다 교차출처라
+#   contentDocument 가 null 이고 load 이벤트도 똑같이 뜬다). 그래서 서버가 헤더를 대신
+#   보고 알려준다 — 거부면 클라이언트가 새 탭 폴백으로 바꾼다.
+# 판정은 메모리 캐시(TTL) — 같은 즐겨찾기를 반복해 여는 게 주 동선이라 두 번째부터는
+# 왕복이 캐시에서 즉답된다(회선 느린 차 브라우저에서 특히 값싸다).
+_FRAMABLE_CACHE: dict = {}          # url → (판정 dict, 저장 시각 epoch)
+_FRAMABLE_TTL = 6 * 3600
+_FRAMABLE_UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+
+
+def _framable_verdict(url: str) -> dict:
+    """헤더만 보고 iframe 삽입 가능 여부 판정 (동기 — 스레드풀에서 호출).
+
+    ★HEAD 로 물으면 안 된다: news.ycombinator.com·x.com 은 HEAD 응답엔 XFO 를 안 붙이고
+    GET 에만 붙인다(실측). stream=True 로 GET 해서 헤더만 받고 본문 전에 끊는다.
+    """
+    import requests
+    r = requests.get(url, headers={"User-Agent": _FRAMABLE_UA,
+                                   "Accept": "text/html,application/xhtml+xml,*/*"},
+                     timeout=8, stream=True, allow_redirects=True)
+    try:
+        headers = dict(r.headers)
+    finally:
+        r.close()   # 본문은 받지 않는다 — 헤더만 필요
+    xfo = (headers.get("X-Frame-Options") or headers.get("x-frame-options") or "").strip()
+    if xfo:
+        # 값 불문 차단 — SAMEORIGIN 도 우리 오리진과 다르므로 우리에겐 DENY 와 같다.
+        return {"framable": False, "reason": "X-Frame-Options: " + xfo[:40]}
+    csp = (headers.get("Content-Security-Policy")
+           or headers.get("content-security-policy") or "")
+    for part in csp.split(";"):
+        p = part.strip()
+        if p.lower().startswith("frame-ancestors"):
+            toks = p.split()[1:]
+            if not any(t in ("*", "https:") for t in toks):
+                return {"framable": False, "reason": p[:60]}
+            break
+    return {"framable": True, "reason": ""}
+
+
+@router.get("/framable")
+async def check_framable(url: str):
+    """이 URL 을 인앱 오버레이(iframe)로 띄울 수 있나 — 원격 런처 웹 뷰어용.
+
+    세션 게이트 뒤(is_public_remote_path 미등록)라 익명 SSRF 프로버가 되지 않는다.
+    판정 불가(타임아웃·DNS·TLS)는 framable:true 로 낙관 처리 — 클라이언트가 이미 프레임을
+    띄워 둔 상태라 '모르면 그대로 두고, 새 탭 버튼은 항상 있다'가 맞다.
+    """
+    import time as _t
+    if not re.match(r"^https?://", url or "", re.I):
+        return {"framable": False, "reason": "http(s) 주소가 아닙니다"}
+    hit = _FRAMABLE_CACHE.get(url)
+    if hit and (_t.time() - hit[1]) < _FRAMABLE_TTL:
+        return dict(hit[0], cached=True)
+    import anyio
+    try:
+        verdict = await anyio.to_thread.run_sync(_framable_verdict, url)
+    except Exception as e:
+        return {"framable": True, "reason": "", "probe_error": str(e)[:80]}
+    _FRAMABLE_CACHE[url] = (verdict, _t.time())
+    if len(_FRAMABLE_CACHE) > 500:      # 무한 증식 방지 — 오래된 절반 버림
+        for k in sorted(_FRAMABLE_CACHE, key=lambda x: _FRAMABLE_CACHE[x][1])[:250]:
+            _FRAMABLE_CACHE.pop(k, None)
+    return verdict
+
+
 # 앱 표면 계기 — ibl_nodes.yaml 의 app: 블록에서 자동 파생 (2단계, 단일 진실 소스).
 # app: 블록을 단 액션은 빌드(--check) 시 정합성 검증을 통과해야 하며, 여기서 계기로 합성된다.
 IBL_NODES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ibl_nodes.yaml")

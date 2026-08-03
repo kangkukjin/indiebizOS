@@ -272,7 +272,9 @@ function renderPrim(p,vi,data){
       let body='<div class="t">'+tpl(c.title,it)+'</div><div class="m">'+(c.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>';
       if(c.link&&c.link.href){
         const href=tpl(c.link.href,it);
-        if(href) body+='<a href="'+href+'" target="_blank" style="font-size:12px" onclick="event.stopPropagation()">'+esc(c.link.label||'상세 →')+'</a>';
+        // 인앱 뷰어로 — href 는 남긴다(길게 누르기/가운데 클릭으로 새 탭도 그대로).
+        // 제목은 this.href 에서 파생(속성 이스케이프 회피 — esc() 는 따옴표를 안 막는다).
+        if(href) body+='<a href="'+href+'" target="_blank" style="font-size:12px" onclick="event.stopPropagation();return openWebOverlay(this.href)">'+esc(c.link.label||'상세 →')+'</a>';
       }
       if(c.image){ const img=tpl(c.image,it); return '<div class="card bookcard"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<img>')+'<div>'+body+'</div></div>'; }
       return '<div class="card"'+click+'>'+body+'</div>';
@@ -678,6 +680,58 @@ async function rowSel(vi,ri,sel){
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ sel.disabled=false; }
 }
+/* ----- 인앱 웹 뷰어(내부 브라우저) -----
+   외부 링크를 새 탭 대신 앱 안 오버레이로 띄운다 — 탭 전환이 비싼 화면(차 브라우저·
+   태블릿)에서 런처를 잃지 않게. .fileov 오버레이 + popstate 뒤로가기 배관을 그대로 재사용
+   (openFileOverlay 의 웹 판 — 저쪽은 로컬 산출물, 이쪽은 외부 URL).
+   ★ 사이트 절반쯤은 X-Frame-Options / CSP frame-ancestors 로 삽입을 거부한다. 거부는
+   브라우저가 강제하고 JS 로는 성공/거부를 구분할 수 없어(둘 다 교차출처) 서버
+   (/launcher/framable)가 헤더를 대신 보고 알려준다 → 거부면 새 탭 폴백으로 바꾼다.
+   프레임은 판정을 기다리지 않고 먼저 띄운다(느린 회선에서 체감 지연 0). */
+function _hostOf(u){ try{ return new URL(u).hostname.replace(/^www\\./,''); }catch(e){ return u; } }
+function openWebOverlay(url,title){
+  if(!url) return false;
+  /* 폰 네이티브는 shouldOverrideUrlLoading 으로 시스템 브라우저에 넘긴다(기존 동작 유지) */
+  if(IS_PHONE){ window.location.href=url; return false; }
+  const ov=document.createElement('div'); ov.className='fileov';
+  const bar=document.createElement('div'); bar.className='fileov-bar';
+  const nm=document.createElement('span'); nm.className='fileov-nm';
+  nm.textContent=title||_hostOf(url);
+  const acts=document.createElement('span'); acts.className='fileov-acts';
+  const ext=document.createElement('button'); ext.className='iconbtn'; ext.textContent='↗';
+  ext.title='새 탭에서 열기';
+  ext.onclick=function(){ window.open(url,'_blank','noopener'); };
+  const cls=document.createElement('button'); cls.className='iconbtn'; cls.textContent='✕';
+  cls.onclick=function(){ history.back(); };
+  acts.appendChild(ext); acts.appendChild(cls);
+  bar.appendChild(nm); bar.appendChild(acts); ov.appendChild(bar);
+  const ifr=document.createElement('iframe');
+  /* allow-top-navigation 을 주지 않는다 = 프레임버스팅(top.location 탈취) 차단.
+     교차출처라 allow-same-origin 을 줘도 우리 문서엔 손 못 댄다. */
+  ifr.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads');
+  ifr.src=url;
+  ov.appendChild(ifr);
+  document.body.appendChild(ov);
+  /* 뒤로가기 한 단계로 닫히게 — popstate 핸들러가 .fileov 를 먼저 걷는다 */
+  try{ history.pushState({fileov:1}, ''); }catch(e){}
+  jfetch('/launcher/framable?url='+encodeURIComponent(url))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d || d.framable!==false || !document.body.contains(ov)) return;
+      ifr.remove();
+      const box=document.createElement('div'); box.className='fileov-blocked';
+      const t=document.createElement('p');
+      t.textContent=(title||_hostOf(url))+' 은(는) 다른 화면 안에 표시되는 것을 거부합니다.';
+      const s=document.createElement('p'); s.className='muted'; s.textContent=d.reason||'';
+      const b=document.createElement('button'); b.className='go';
+      b.textContent='새 탭에서 열기 ↗';
+      b.onclick=function(){ window.open(url,'_blank','noopener'); history.back(); };
+      box.appendChild(t); box.appendChild(s); box.appendChild(b);
+      ov.appendChild(box);
+    })
+    .catch(function(){});   /* 판정 실패 = 낙관(프레임 그대로, ↗ 버튼이 탈출구) */
+  return false;
+}
 function openFileOverlay(path, html){
   const name=path.split('/').pop().split('\\\\').pop();
   const ov=document.createElement('div'); ov.className='fileov';
@@ -882,12 +936,12 @@ async function fgOpen(id){
   it.visited=true;
   try{ await jfetch('/forage/history',{method:'POST',body:JSON.stringify({url:it.url,title:it.title||'',hunt_query:fgBoard.query||''})}); }catch(e){}
   fgRenderBoard();
-  fgVisit(it.url);
+  fgVisit(it.url, it.title||'');
 }
-function fgVisit(url){
+function fgVisit(url,title){
   if(!url) return;
   if(IS_PHONE){ window.location.href=url; }   /* shouldOverrideUrlLoading → 시스템 브라우저, 런처는 판을 든 채 유지 */
-  else { window.open(url,'_blank','noopener'); }  /* 원격 = 새 탭 */
+  else { openWebOverlay(url,title); }  /* 원격 = 인앱 뷰어(판을 든 채 읽는다) — 거부 사이트면 새 탭 폴백 */
 }
 function fgTogglePin(id){ const it=fgBoard&&fgBoard.items.find(x=>x.id===id); if(!it)return; it.pinned=!it.pinned; if(it.pinned)it.excluded=false; fgRenderBoard(); }
 function fgToggleExclude(id){ const it=fgBoard&&fgBoard.items.find(x=>x.id===id); if(!it)return; it.excluded=!it.excluded; if(it.excluded)it.pinned=false; fgRenderBoard(); }
@@ -974,7 +1028,7 @@ async function fgHistory(){
     list.innerHTML=h;
   }catch(e){ list.innerHTML='<div class="fg-empty">오류: '+esc(e.message)+'</div>'; }
 }
-function fgHistOpen(idx){ const it=fgHist[idx]; if(it) fgVisit(it.url); }
+function fgHistOpen(idx){ const it=fgHist[idx]; if(it) fgVisit(it.url, it.title||''); }
 async function fgHistDelete(id){ try{ await jfetch('/forage/history/'+id,{method:'DELETE'}); fgHistory(); }catch(e){} }
 
 /* ===== 홈 화면 설치: 서비스워커 등록 =====

@@ -16,7 +16,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -44,13 +43,37 @@ type Job struct {
 }
 
 type Command struct {
-	Op      string `json:"op"`             // shell | read | write | list | info | note
+	Op      string `json:"op"`             // shell | read | write | list | info | screen | note
 	Cmd     string `json:"cmd,omitempty"`  // shell
 	Path    string `json:"path,omitempty"` // read | write | list
 	Content string `json:"content,omitempty"`
-	Cwd     string `json:"cwd,omitempty"` // shell 작업 디렉토리
+	Cwd     string `json:"cwd,omitempty"`   // shell 작업 디렉토리(생략 시 직전 명령이 끝난 자리)
+	Shell   string `json:"shell,omitempty"` // 윈도우 전용: cmd(기본) | powershell
+	Stdin   string `json:"stdin,omitempty"` // shell 표준입력 — 프롬프트를 기다리는 명령용
+	Reset   bool   `json:"reset,omitempty"` // shell 실행 전 세션(디렉토리·환경) 초기화
 	Timeout int    `json:"timeout,omitempty"`
+	JobID   string `json:"-"` // 봉투엔 없다 — 진행 중계용으로 runJob 이 채운다
 	Text    string `json:"text,omitempty"` // note — 허브(AI)가 이 창에 찍는 서사 한 줄
+
+	// screen — 화면 캡처(눈). 전부 선택.
+	MaxWidth int    `json:"max_width,omitempty"` // 가로 상한(기본 1280)
+	Format   string `json:"format,omitempty"`    // png | jpeg | auto(기본)
+	Quality  int    `json:"quality,omitempty"`   // JPEG 품질(기본 82)
+	Display  int    `json:"display,omitempty"`   // 다중 모니터 인덱스(1부터)
+
+	// click/move/type/key/scroll/drag — 입력 주입(손).
+	// ★x,y 는 **직전 screen 이 보낸 이미지 위의 좌표**다(mapPoint 가 실제 좌표로 환산).
+	X         int    `json:"x,omitempty"`
+	Y         int    `json:"y,omitempty"`
+	X2        int    `json:"x2,omitempty"` // drag 도착점
+	Y2        int    `json:"y2,omitempty"`
+	Button    string `json:"button,omitempty"`    // left(기본)/right/middle
+	Clicks    int    `json:"clicks,omitempty"`    // 1(기본)/2=더블클릭
+	Key       string `json:"key,omitempty"`       // return, escape, cmd+s …
+	Direction string `json:"direction,omitempty"` // scroll: up/down/left/right
+	Amount    int    `json:"amount,omitempty"`    // scroll 양(기본 5)
+	Shot      *bool  `json:"shot,omitempty"`      // 조작 후 재캡처(기본 true)
+	SettleMs  int    `json:"settle_ms,omitempty"` // 재캡처 전 대기(기본 700ms)
 }
 
 const (
@@ -71,6 +94,7 @@ func main() {
 		os.Exit(1)
 	}
 	cfg.Base = strings.TrimRight(cfg.Base, "/")
+	hubCfg = cfg
 
 	host := hostLabel()
 	fmt.Printf("indiebiz 손발 — %s 로서 %s 에 붙는 중…\n", cfg.Alias, cfg.Base)
@@ -127,13 +151,20 @@ func loadConfig() (*Config, error) {
 	return nil, lastErr
 }
 
+// hubCfg — 허브 주소·키. 진행 중계(progress.go)가 결과 회신 밖에서 따로 POST 하려면
+// 필요하다. main 이 접속 직전에 한 번 채운다.
+var hubCfg *Config
+
 func connect(cfg *Config, host string) error {
-	body := map[string]string{"key": cfg.Key, "host": host}
+	// ★환경 프로브를 **접속 때 함께** 올린다 — 허브가 왕복 없이 그 PC 신상을 갖게 해서,
+	// AI 가 낯선 PC 에서 명령 문법·패키지매니저를 추측하다 실패하는 왕복을 없앤다.
+	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": doInfo()}
 	var resp struct {
 		Success  bool   `json:"success"`
 		Error    string `json:"error"`
 		Alias    string `json:"alias"`
 		Approved bool   `json:"approved"`
+		Session  string `json:"session"`
 	}
 	if err := postJSON(cfg.Base+"/limb/connect", body, &resp); err != nil {
 		return err
@@ -144,13 +175,23 @@ func connect(cfg *Config, host string) error {
 	if !resp.Approved {
 		fmt.Println("아직 승인 대기 중입니다 — 허브에서 이 손발을 승인하면 명령이 시작됩니다.")
 	}
+	sessionID = resp.Session
 	return nil
 }
+
+// sessionID — 이 접속의 세션 id(허브 발급). 같은 키로 헬퍼가 새로 붙으면 허브가 세션을
+// 갈아치우고, 낡은 쪽인 우리는 poll 에서 stale 통보를 받아 스스로 물러난다.
+// 이게 없으면 두 헬퍼가 큐를 나눠 가져 명령이 어느 PC 에서 도는지 알 수 없게 된다.
+var sessionID string
 
 func loop(cfg *Config) {
 	backoff := time.Second
 	for {
 		jobs, approved, err := poll(cfg)
+		if err == errStale {
+			fmt.Printf("[%s] 이 손발이 다른 곳에서 다시 연결되어, 이 창은 물러납니다.\n", ts())
+			return
+		}
 		if err != nil {
 			// 네트워크 흔들림 — 백오프 후 재시도(허브가 잠깐 꺼져도 되살아나면 재개).
 			time.Sleep(backoff)
@@ -194,11 +235,15 @@ func loop(cfg *Config) {
 	}
 }
 
+// errStale — 같은 손발이 다른 곳에서 다시 연결됨. 이 창은 물러난다.
+var errStale = fmt.Errorf("stale")
+
 func poll(cfg *Config) ([]Job, bool, error) {
-	body := map[string]interface{}{"key": cfg.Key, "wait": pollWait}
+	body := map[string]interface{}{"key": cfg.Key, "wait": pollWait, "session": sessionID}
 	var resp struct {
 		Success  bool  `json:"success"`
 		Approved bool  `json:"approved"`
+		Stale    bool  `json:"stale"`
 		Jobs     []Job `json:"jobs"`
 	}
 	if err := postJSON(cfg.Base+"/limb/poll", body, &resp); err != nil {
@@ -206,6 +251,9 @@ func poll(cfg *Config) ([]Job, bool, error) {
 	}
 	if !resp.Success {
 		return nil, false, fmt.Errorf("poll 거부")
+	}
+	if resp.Stale {
+		return nil, false, errStale
 	}
 	return resp.Jobs, resp.Approved, nil
 }
@@ -223,6 +271,7 @@ func runJob(j Job) map[string]interface{} {
 	if err := json.Unmarshal([]byte(j.Code), &c); err != nil {
 		return errResult("bad_command", err.Error())
 	}
+	c.JobID = j.ID // 진행 중계가 어느 작업인지 허브에 알리려면 필요
 	start := time.Now()
 	var res map[string]interface{}
 	switch c.Op {
@@ -245,6 +294,12 @@ func runJob(j Job) map[string]interface{} {
 	case "info":
 		fmt.Printf("[%s] ◀ 기기 정보 조회\n", ts())
 		res = doInfo()
+	case "screen":
+		fmt.Printf("[%s] ◀ 화면 캡처\n", ts())
+		res = doScreen(c)
+	case "click", "move", "type", "key", "scroll", "drag":
+		fmt.Printf("[%s] ◀ 입력(%s): %s\n", ts(), c.Op, inputEcho(c))
+		res = doInput(c)
 	case "exit":
 		// 허브의 원격 해제 — 결과 회신 후 loop 가 이 op 를 보고 종료한다.
 		fmt.Printf("[%s] ◀ 허브의 해제 명령\n", ts())
@@ -257,6 +312,23 @@ func runJob(j Job) map[string]interface{} {
 }
 
 func ts() string { return time.Now().Format("15:04:05") }
+
+// inputEcho — 입력 op 를 이 창에 사람이 읽을 한 줄로. 그 PC 앞의 사람이 "지금 내 PC 에
+// 뭐가 입력되고 있는지"를 콘솔만 보고 알 수 있어야 한다(손은 셸보다 강한 권한이다).
+func inputEcho(c Command) string {
+	switch c.Op {
+	case "type":
+		return `"` + oneLine(c.Text, 60) + `"`
+	case "key":
+		return c.Key
+	case "scroll":
+		return fmt.Sprintf("%s %d", orDefault(c.Direction, "down"), c.Amount)
+	case "drag":
+		return fmt.Sprintf("(%d,%d)→(%d,%d)", c.X, c.Y, c.X2, c.Y2)
+	default:
+		return fmt.Sprintf("(%d,%d) %s", c.X, c.Y, orDefault(c.Button, "left"))
+	}
+}
 
 // oneLine — 개행·연속 공백을 한 줄로 접고 n 자에서 자른다(콘솔 에코용).
 func oneLine(s string, n int) string {
@@ -292,48 +364,16 @@ func statusLine(res map[string]interface{}, took time.Duration) string {
 		return fmt.Sprintf("완료 (%s)", dur)
 	case "info":
 		return fmt.Sprintf("완료 %v (%s)", res["hostname"], dur)
+	case "screen":
+		return fmt.Sprintf("완료 %vx%v %v바이트 (%s)", res["width"], res["height"], res["bytes"], dur)
+	case "click", "move", "type", "key", "scroll", "drag":
+		line := fmt.Sprintf("완료 %v (%s)", res["did"], dur)
+		if s, _ := res["shot"].(bool); s {
+			line += " + 화면 재확인"
+		}
+		return line
 	}
 	return fmt.Sprintf("완료 (%s)", dur)
-}
-
-func doShell(c Command) map[string]interface{} {
-	if strings.TrimSpace(c.Cmd) == "" {
-		return errResult("empty_cmd", "cmd 가 비었습니다")
-	}
-	to := c.Timeout
-	if to <= 0 {
-		to = cmdTimeout
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(to)*time.Second)
-	defer cancel()
-
-	var cmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		// 한국어 윈도우 cmd 는 CP949 로 출력해 JSON(UTF-8) 통화에서 한글이 전부
-		// U+FFFD 로 뭉개진다 — 이 cmd 인스턴스만 UTF-8 코드페이지로 전환(best-effort:
-		// 내부 명령·코드페이지를 따르는 프로그램에 유효).
-		cmd = exec.CommandContext(ctx, "cmd", "/c", "chcp 65001>nul & "+c.Cmd)
-	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", c.Cmd)
-	}
-	if c.Cwd != "" {
-		cmd.Dir = c.Cwd
-	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-
-	res := map[string]interface{}{
-		"op":     "shell",
-		"stdout": clip(stdout.String()),
-		"stderr": clip(stderr.String()),
-		"exit":   exitCode(err),
-	}
-	if ctx.Err() == context.DeadlineExceeded {
-		res["timeout"] = true
-	}
-	return res
 }
 
 func doRead(c Command) map[string]interface{} {
@@ -388,15 +428,6 @@ func doList(c Command) map[string]interface{} {
 		})
 	}
 	return map[string]interface{}{"op": "list", "path": dir, "files": files}
-}
-
-func doInfo() map[string]interface{} {
-	cwd, _ := os.Getwd()
-	host, _ := os.Hostname()
-	return map[string]interface{}{
-		"op": "info", "os": runtime.GOOS, "arch": runtime.GOARCH,
-		"hostname": host, "cwd": cwd,
-	}
 }
 
 // === 유틸 ===

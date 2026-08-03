@@ -104,6 +104,9 @@ def _public(rec: Dict, now: Optional[float] = None) -> Dict:
         "approved": bool(rec.get("approved")),
         "last_used": rec.get("last_used"),
         "last_host": rec.get("last_host"),
+        # 접속 때 헬퍼가 올린 환경 프로브 — 그 PC 가 어떤 기계인지 왕복 없이 보이게.
+        # (키 원문과 달리 민감하지 않고, 이게 없으면 프로브를 저장해둔 뜻이 없다.)
+        "env": rec.get("env"),
     }
 
 
@@ -155,8 +158,15 @@ def validate(key: str) -> Optional[Dict]:
         return dict(rec)
 
 
-def touch(key: str, host: str = "", approve_if_pending: bool = False) -> Optional[Dict]:
-    """접속 시 last_used/last_host 갱신. approve_if_pending=True 면 최초 접속 자동승인(자동승인 키)."""
+def touch(key: str, host: str = "", approve_if_pending: bool = False,
+          new_session: bool = False, env: Optional[Dict] = None) -> Optional[Dict]:
+    """접속 시 last_used/last_host 갱신. approve_if_pending=True 면 최초 접속 자동승인(자동승인 키).
+
+    new_session=True(=/limb/connect)면 **세션 id 를 새로 발급**한다. 이게 '최신 헬퍼가
+    이긴다' 규칙의 근거다 — 같은 키로 헬퍼가 둘 이상 붙으면 큐를 나눠 가져 명령이 어느
+    PC 에서 도는지 비결정적이 되고(실측), 세션 cwd 같은 상태까지 갈라진다. 낡은 세션은
+    poll 에서 stale 통보를 받고 스스로 물러난다. USB 를 다른 PC 로 옮기는 정상 로밍도
+    이 규칙으로 깔끔히 정리된다(옛 PC 의 창이 저절로 닫힌다)."""
     with _lock:
         data = _load()
         rec = data["keys"].get(key)
@@ -167,6 +177,12 @@ def touch(key: str, host: str = "", approve_if_pending: bool = False) -> Optiona
             rec["last_host"] = host
         if approve_if_pending and not rec.get("approved"):
             rec["approved"] = True
+        if new_session:
+            rec["session"] = secrets.token_hex(8)
+        if env:
+            # 접속 시 환경 프로브 — 허브가 그 PC 신상(os·권한·셸·패키지매니저·GUI)을
+            # 왕복 없이 갖는다. AI 가 낯선 PC 에서 문법을 추측하다 실패하는 걸 막는 밑천.
+            rec["env"] = env
         data["keys"][key] = rec
         _save()
         return dict(rec)

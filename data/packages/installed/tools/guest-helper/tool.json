@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "guestpc_op",
-      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/result/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. 긴 셸 명령은 background:true→op=result 회수. detach=헬퍼 종료+승인 해제.",
+      "description": "게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/screen/click/move/type/key/scroll/drag/result/detach 분기 (기본 shell). screen=그 PC 화면을 봄, click·type 등=GUI 조작(좌표는 직전 screen 이미지 기준, 조작 후 자동 재캡처). 긴 셸 명령은 background:true→op=result 회수.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -20,6 +20,13 @@
               "write",
               "list",
               "info",
+              "screen",
+              "click",
+              "move",
+              "type",
+              "key",
+              "scroll",
+              "drag",
               "result",
               "detach"
             ],
@@ -41,6 +48,18 @@
             "type": "integer",
             "description": "셸 타임아웃 초 (op=shell, 기본 120 — background 면 기본 1800)"
           },
+          "shell": {
+            "type": "string",
+            "description": "윈도우 셸 선택 cmd/powershell (op=shell, 기본 cmd — mac·linux 는 항상 sh)"
+          },
+          "stdin": {
+            "type": "string",
+            "description": "명령의 표준입력 (op=shell — 비밀번호·y/n 프롬프트를 기다리는 명령에 미리 물림)"
+          },
+          "reset": {
+            "type": "boolean",
+            "description": "실행 전 세션(기억한 디렉토리·환경) 초기화 (op=shell — venv 벗기·환경 꼬였을 때)"
+          },
           "background": {
             "type": "boolean",
             "description": "true 면 즉시 job_id 반환, 결과는 op=result 로 회수 (op=shell — 설치·빌드 등 오래 걸리는 명령)"
@@ -56,6 +75,70 @@
           "content": {
             "type": "string",
             "description": "쓸 내용 (op=write)"
+          },
+          "max_width": {
+            "type": "integer",
+            "description": "캡처 이미지 가로 상한 픽셀 (op=screen, 기본 1280 — 글자가 작으면 1600~1920)"
+          },
+          "format": {
+            "type": "string",
+            "description": "캡처 형식 png/jpeg/auto (op=screen, 기본 auto — 작으면 PNG, 크면 JPEG)"
+          },
+          "quality": {
+            "type": "integer",
+            "description": "JPEG 품질 1-100 (op=screen, 기본 82)"
+          },
+          "display": {
+            "type": "integer",
+            "description": "다중 모니터 인덱스 1부터 (op=screen, 생략 시 전체/주화면)"
+          },
+          "x": {
+            "type": "integer",
+            "description": "가로 좌표 — ★직전 screen 이 보낸 이미지 위의 좌표 (op=click/move/drag, scroll 은 선택)"
+          },
+          "y": {
+            "type": "integer",
+            "description": "세로 좌표 — ★직전 screen 이 보낸 이미지 위의 좌표 (op=click/move/drag, scroll 은 선택)"
+          },
+          "x2": {
+            "type": "integer",
+            "description": "드래그 도착 가로 좌표 (op=drag)"
+          },
+          "y2": {
+            "type": "integer",
+            "description": "드래그 도착 세로 좌표 (op=drag)"
+          },
+          "button": {
+            "type": "string",
+            "description": "마우스 버튼 left/right/middle (op=click, 기본 left)"
+          },
+          "clicks": {
+            "type": "integer",
+            "description": "클릭 횟수 1-3 (op=click, 2=더블클릭)"
+          },
+          "text": {
+            "type": "string",
+            "description": "입력할 텍스트 — 현재 포커스된 곳에 들어간다 (op=type)"
+          },
+          "key": {
+            "type": "string",
+            "description": "키 이름·단축키 (op=key — return/escape/tab/space/delete/방향키/cmd+s/ctrl+c)"
+          },
+          "direction": {
+            "type": "string",
+            "description": "스크롤 방향 up/down/left/right (op=scroll, 기본 down)"
+          },
+          "amount": {
+            "type": "integer",
+            "description": "스크롤 양 1-50 (op=scroll, 기본 5)"
+          },
+          "shot": {
+            "type": "boolean",
+            "description": "조작 후 화면 재캡처 (입력 op, 기본 true — 결과를 눈으로 확인)"
+          },
+          "settle_ms": {
+            "type": "integer",
+            "description": "재캡처 전 대기 밀리초 (입력 op, 기본 700 — 화면이 그려질 짬)"
           }
         }
       }

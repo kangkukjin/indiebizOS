@@ -38,11 +38,21 @@ MAX_POLL_WAIT = 50.0
 class ConnectRequest(BaseModel):
     key: str
     host: str = ""            # 헬퍼가 자기소개하는 호스트명/OS (표시·감사용)
+    env: Optional[dict] = None  # 접속 시 환경 프로브(os·권한·셸·패키지매니저·GUI 가능여부)
+
+
+class ProgressRequest(BaseModel):
+    key: str
+    job_id: str
+    tail: str = ""            # 지금까지 출력의 꼬리
+    bytes: int = 0            # 누적 출력 바이트
+    running: bool = True
 
 
 class PollRequest(BaseModel):
     key: str
     wait: float = 25.0        # 롱폴 hold 초
+    session: str = ""         # connect 때 받은 세션 id — 낡은 헬퍼 판별용
 
 
 class ResultRequest(BaseModel):
@@ -92,7 +102,8 @@ async def limb_connect(req: ConnectRequest):
     prev_host = rec.get("last_host")
     host_changed = bool(req.host and prev_host and req.host != prev_host)
     was_pending = not rec.get("approved")
-    rec = limb_keys.touch(req.key, host=req.host, approve_if_pending=True) or rec
+    rec = limb_keys.touch(req.key, host=req.host, approve_if_pending=True,
+                          new_session=True, env=req.env) or rec
 
     # 손발을 프레즌스 레지스트리에 등록 — url="" (인바운드 주소 없음, 폰 푸시 모델과 동일).
     # auth="limb_key" 로 표식해 ibl_engine 이 이 노드에 인바운드 포워드를 시도하지 않게 한다.
@@ -109,6 +120,7 @@ async def limb_connect(req: ConnectRequest):
         "device_id": rec["device_id"],
         "alias": rec["alias"],
         "approved": bool(rec.get("approved")),
+        "session": rec.get("session", ""),
         "poll_wait": MAX_POLL_WAIT,
     }
 
@@ -124,6 +136,16 @@ async def limb_poll(req: PollRequest):
         return {"success": False, "error": "invalid_or_expired_key"}
 
     device_id = rec["device_id"]
+
+    # ★최신 헬퍼가 이긴다 — 같은 키로 새 헬퍼가 붙으면 세션 id 가 갈리고, 낡은 쪽은
+    # 여기서 물러나라는 통보를 받는다. 이게 없으면 두 헬퍼가 큐를 나눠 가져 명령이
+    # 어느 PC 에서 도는지 비결정적이 된다(실측: 헬퍼 4개가 명령을 번갈아 집어감).
+    # heartbeat 도 찍지 않는다 — 낡은 세션이 프레즌스를 살려두면 안 된다.
+    current = rec.get("session") or ""
+    if current and req.session and req.session != current:
+        return {"success": True, "approved": True, "jobs": [], "stale": True,
+                "message": "이 손발이 다른 곳에서 다시 연결됐습니다."}
+
     dr.heartbeat(device_id)
 
     if not rec.get("approved"):
@@ -134,6 +156,20 @@ async def limb_poll(req: PollRequest):
     jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait)
     dr.heartbeat(device_id)
     return {"success": True, "approved": True, "jobs": jobs}
+
+
+@router.post("/limb/progress")
+async def limb_progress(req: ProgressRequest):
+    """실행 중인 명령의 중간 경과 — 긴 설치·빌드가 도는 동안 허브가 깜깜하지 않게.
+
+    결과(/limb/result)와 달리 여러 번 덮어쓰이고, 결과가 도착하면 버려진다.
+    헬퍼는 best-effort 로 보내므로 여기서 실패해도 명령 자체엔 영향이 없다."""
+    rec = limb_keys.validate(req.key)
+    if not rec:
+        return {"success": False, "error": "invalid_or_expired_key"}
+    phone_jobs.set_partial(req.job_id, {
+        "tail": req.tail, "bytes": req.bytes, "running": req.running})
+    return {"success": True}
 
 
 @router.post("/limb/result")

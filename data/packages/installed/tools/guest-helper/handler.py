@@ -24,6 +24,13 @@ _OP_DISPATCHERS = {
         "write": None,
         "list": None,
         "info": None,
+        "screen": None,
+        "click": None,
+        "move": None,
+        "type": None,
+        "key": None,
+        "scroll": None,
+        "drag": None,
         "result": None,
         "detach": None,
     },
@@ -134,6 +141,162 @@ def _detach(tool_input: dict) -> dict:
                        f"손발 '{alias}' 에 해제 명령을 보냈지만 응답이 없습니다(이미 닫혔을 수 있음)."}
 
 
+# === 화면 캡처(눈) — 결과 후처리 ===
+
+_SCREEN_KEEP = 20   # 손발당 보관할 캡처 장수(디스크 무한 증식 방지)
+
+
+def _screens_dir(alias: str, device_id: str) -> str:
+    safe = _SAFE.sub("_", alias or "") or device_id or "unknown"
+    return os.path.join(_issue_root(), "outputs", "limb_screens", safe)
+
+
+def _prune_screens(folder: str):
+    """오래된 캡처 정리 — 최근 _SCREEN_KEEP 장만 남긴다."""
+    try:
+        shots = sorted(
+            (os.path.join(folder, n) for n in os.listdir(folder)
+             if n.startswith("screen_")),
+            key=os.path.getmtime, reverse=True)
+        for p in shots[_SCREEN_KEEP:]:
+            os.remove(p)
+    except Exception:
+        pass
+
+
+def _finish_visual(result: dict, device_id: str, alias: str, op: str) -> dict:
+    """그림이 실린 결과(screen, 그리고 재캡처를 동반한 입력 op)를 마무리한다:
+    (1) 허브 파일로 저장하고 (2) image_data 봉투로 싣는다.
+
+    두 갈래인 이유: 봉투는 execute_tool 의 이미지 관문이 수확해 **모델의 눈**으로 가고
+    (base64 는 본문에서 제거된다), 파일은 이미지를 못 보는 경로(claude_code 등)와 사람이
+    나중에 확인할 감사 흔적으로 남는다. 봉투만 있으면 흔적이 안 남고, 파일만 있으면
+    모델이 못 본다."""
+    b64 = result.get("b64") or ""
+    meta = {k: result.get(k) for k in
+            ("width", "height", "orig_width", "orig_height", "bytes", "tool", "did")
+            if result.get(k) is not None}
+
+    if not b64:
+        if op == "screen":
+            return {"success": False, "op": op, "limb": device_id, "limb_name": alias,
+                    "error": result.get("message") or result.get("error") or "캡처 결과가 비었습니다.",
+                    "hint": "그 PC 에 화면 접근 권한이 없거나(맥=화면 기록) 그래픽 세션이 아닐 수 있습니다."}
+        # 입력 op 는 조작 자체가 본론이고 그림은 덤 — 실패했어도 조작 성공은 성공이다.
+        if result.get("error"):
+            return {"success": False, "op": op, "limb": device_id, "limb_name": alias,
+                    "error": result.get("message") or result["error"]}
+        return {"success": True, "op": op, "limb": device_id, "limb_name": alias,
+                **meta, "shot": False,
+                "note": result.get("shot_error") or "조작은 됐지만 화면 재확인은 없습니다(shot:false 이거나 캡처 실패).",
+                "next": "결과를 눈으로 확인하려면 [limbs:guestpc]{op:\"screen\"} 을 부르세요."}
+
+    media = result.get("media_type") or "image/png"
+    ext = "jpg" if "jpeg" in media else "png"
+    path = ""
+    try:
+        import base64 as _b64
+        folder = _screens_dir(alias, device_id)
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f"screen_{time.strftime('%Y%m%d_%H%M%S')}.{ext}")
+        with open(path, "wb") as f:
+            f.write(_b64.b64decode(b64))
+        _prune_screens(folder)
+    except Exception as e:
+        path = f"(저장 실패: {e})"
+
+    img_meta = {k: v for k, v in meta.items() if k != "did"}
+    return {
+        "success": True, "op": op, "limb": device_id, "limb_name": alias,
+        "path": path, **meta,
+        # ★이 키가 이미지 관문(system_tools._pluck_image_envelopes)의 계약이다.
+        "image_data": {"b64": b64, "media_type": media, "path": path, **img_meta},
+    }
+
+
+# === 입력 주입(손) — 봉투 구성 ===
+
+_INPUT_OPS = ("click", "move", "type", "key", "scroll", "drag")
+
+
+def _copy_shot_keys(tool_input: dict, envelope: dict) -> None:
+    """캡처 화질·재캡처 옵션 전달 — screen 과 입력 op 가 공유한다.
+
+    ★키를 하나씩 `tool_input.get("리터럴")` 로 적는 이유: 빌드의 코퍼스-param 가드가
+    핸들러를 AST 로 읽어 '선언한 파라미터를 핸들러가 정말 읽는지' 대조한다. 키 목록을
+    상수 튜플로 접고 루프를 돌면 코드는 짧아지지만 그 검증이 통과가 아니라 **무력화**된다
+    (실제로 max_width 가 조용히 미검증으로 빠져 가드에 걸렸다)."""
+    for k, v in (
+        ("max_width", tool_input.get("max_width")),
+        ("format", tool_input.get("format")),
+        ("quality", tool_input.get("quality")),
+        ("display", tool_input.get("display")),
+        ("shot", tool_input.get("shot")),
+        ("settle_ms", tool_input.get("settle_ms")),
+    ):
+        if v is not None:
+            envelope[k] = v
+
+
+def _as_int(v):
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return None
+
+
+def _fill_input_envelope(op: str, tool_input: dict, envelope: dict):
+    """입력 봉투를 채운다. 반환 = 오류 메시지(정상이면 None).
+
+    ★좌표를 여기서 **엄격히 검증**하는 이유: 좌표가 빠지거나 문자열이면 헬퍼는 (0,0)으로
+    해석해 화면 왼쪽 위 구석을 누른다 — 조용히 엉뚱한 것을 클릭하는 게 가장 나쁜 실패다.
+    빠졌으면 실행하지 않고 되묻는다."""
+    if op in ("click", "move", "drag"):
+        x, y = _as_int(tool_input.get("x")), _as_int(tool_input.get("y"))
+        if x is None or y is None:
+            return (f"{op} 엔 x·y 가 필요합니다 — 좌표는 **직전 screen 이 보낸 이미지 위의 좌표**입니다. "
+                    "먼저 [limbs:guestpc]{op:\"screen\"} 으로 화면을 보고 누를 지점을 정하세요.")
+        envelope["x"], envelope["y"] = x, y
+
+    if op == "drag":
+        x2, y2 = _as_int(tool_input.get("x2")), _as_int(tool_input.get("y2"))
+        if x2 is None or y2 is None:
+            return "drag 엔 도착점 x2·y2 가 필요합니다(출발점은 x·y)."
+        envelope["x2"], envelope["y2"] = x2, y2
+
+    if op == "click":
+        btn = (tool_input.get("button") or "left").strip().lower()
+        if btn not in ("left", "right", "middle"):
+            return f"button 은 left/right/middle 중 하나여야 합니다(받은 값: {btn})."
+        envelope["button"] = btn
+        clicks = _as_int(tool_input.get("clicks")) or 1
+        envelope["clicks"] = max(1, min(3, clicks))
+
+    if op == "type":
+        text = tool_input.get("text")
+        if not text:
+            return "type 엔 text 가 필요합니다."
+        envelope["text"] = str(text)
+
+    if op == "key":
+        key = (tool_input.get("key") or "").strip()
+        if not key:
+            return "key 가 필요합니다(예: return, escape, tab, cmd+s, ctrl+c)."
+        envelope["key"] = key
+
+    if op == "scroll":
+        direction = (tool_input.get("direction") or "down").strip().lower()
+        if direction not in ("up", "down", "left", "right"):
+            return f"direction 은 up/down/left/right 중 하나여야 합니다(받은 값: {direction})."
+        envelope["direction"] = direction
+        envelope["amount"] = max(1, min(50, _as_int(tool_input.get("amount")) or 5))
+        for k in ("x", "y"):   # 스크롤 위치 지정은 선택
+            v = _as_int(tool_input.get(k))
+            if v is not None:
+                envelope[k] = v
+    return None
+
+
 # 동기 대기 상한(초) — MCP 층(/ibl/execute urllib timeout 120s)보다 확실히 아래.
 # 이걸 넘기면 호출자는 불투명한 {"error":"timed out"} 을 받는다(에피소드 852 실측) —
 # 그보다 일찍 우리가 job_id 를 실어 정직하게 돌려주는 게 낫다.
@@ -151,10 +314,19 @@ def _job_result(tool_input: dict) -> dict:
         return {"success": False, "error": "result 엔 job(작업 ID)이 필요합니다 — shell 응답의 job_id 를 넣으세요."}
     result = phone_jobs.wait_result(job_id, timeout=float(tool_input.get("wait") or 5.0))
     if result is None:
-        return {"success": False, "op": "result", "job_id": job_id, "pending": True,
-                "message": ("아직 결과가 없습니다 — 명령이 그 PC 에서 실행 중이면 잠시 후 같은 op 로 "
-                            "다시 확인하세요. (완료 후 5분이 지났거나 백엔드가 재시작됐으면 결과가 유실된 것 — "
-                            "상태 확인 명령을 새로 보내세요.)")}
+        # 중간 경과가 있으면 함께 준다 — '돌고 있음'과 '멎었음'을 구별하게 하는 유일한 단서다.
+        # 이게 없으면 AI 가 판단 못 해 같은 명령을 재전송(이중 실행)하기 쉽다.
+        partial = phone_jobs.get_partial(job_id)
+        out = {"success": False, "op": "result", "job_id": job_id, "pending": True,
+               "message": ("아직 결과가 없습니다 — 명령이 그 PC 에서 실행 중이면 잠시 후 같은 op 로 "
+                           "다시 확인하세요. (완료 후 5분이 지났거나 백엔드가 재시작됐으면 결과가 유실된 것 — "
+                           "상태 확인 명령을 새로 보내세요.)")}
+        if partial:
+            out["progress"] = partial          # {tail, bytes, running}
+            out["message"] = (f"실행 중입니다(출력 {partial.get('bytes', 0)}바이트까지 나옴). "
+                              "아래 progress.tail 이 지금까지의 출력 꼬리입니다. "
+                              "진행이 멈춘 것 같으면 잠시 후 다시 확인하세요.")
+        return out
     return {"success": True, "op": "result", "job_id": job_id, "result": result}
 
 
@@ -180,6 +352,17 @@ def _guestpc(tool_input: dict) -> dict:
         envelope["cmd"] = cmd
         if tool_input.get("cwd"):
             envelope["cwd"] = tool_input["cwd"]
+        if tool_input.get("stdin"):
+            envelope["stdin"] = str(tool_input["stdin"])
+        if tool_input.get("reset"):
+            envelope["reset"] = True
+        shell_kind = (tool_input.get("shell") or "").strip().lower()
+        if shell_kind:
+            if shell_kind not in ("cmd", "powershell", "pwsh", "ps", "sh"):
+                return {"success": False,
+                        "error": f"shell 은 cmd/powershell 중 하나여야 합니다(받은 값: {shell_kind}). "
+                                 "윈도우에서만 의미가 있습니다."}
+            envelope["shell"] = shell_kind
         # 헬퍼가 이 시간에 명령을 죽인다. 백그라운드 모드의 기본은 넉넉히(30분) —
         # 명시 120s 기본을 그대로 두면 설치·빌드가 헬퍼 쪽에서 잘린다.
         to = tool_input.get("timeout")
@@ -196,8 +379,20 @@ def _guestpc(tool_input: dict) -> dict:
         envelope["content"] = tool_input.get("content") or ""
     elif op == "info":
         pass
+    elif op == "screen":
+        # 캡처는 인코딩·전송이 있어 파일 op 보다 굼뜨다 — 넉넉히 준다.
+        _copy_shot_keys(tool_input, envelope)
+        wait = 60.0
+    elif op in _INPUT_OPS:
+        err = _fill_input_envelope(op, tool_input, envelope)
+        if err:
+            return {"success": False, "error": err}
+        _copy_shot_keys(tool_input, envelope)   # 재캡처 화질 옵션도 함께
+        wait = 60.0
     else:
-        return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: shell/read/write/list/info/result"}
+        return {"success": False, "error": (
+            f"알 수 없는 op '{op}'. 사용 가능: shell/read/write/list/info/screen/"
+            "click/move/type/key/scroll/drag/result/detach")}
 
     job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
 
@@ -217,6 +412,8 @@ def _guestpc(tool_input: dict) -> dict:
                             f"중이거나(설치·빌드 등) 손발이 오프라인입니다. ★같은 명령을 다시 보내지 말고 "
                             f'[limbs:guestpc]{{op: "result", job: "{job_id}"}} 로 결과를 확인하세요. '
                             f'오래 걸릴 명령은 처음부터 background: true 로 보내는 게 좋습니다.')}
+    if op == "screen" or op in _INPUT_OPS:
+        return _finish_visual(result, device_id, alias, op)
     # limb_name 을 항상 실어 어느 PC 에서 돌았는지 결과에 명시(오배송 사후 인지).
     return {"success": True, "limb": device_id, "limb_name": alias, "result": result}
 
@@ -401,6 +598,13 @@ def _limb(tool_input: dict) -> dict:
         rows = limb_keys.list_keys()
         for r in rows:
             r["connected"] = r["device_id"] in live_ids
+            # 접속 때 수확한 환경 프로브 요약 — 어떤 PC 인지 왕복 없이 알아보게.
+            # 전체(PATH·도구 목록까지)는 [limbs:guestpc]{op:"info"} 로 다시 물으면 된다.
+            env = r.get("env") or {}
+            if env:
+                r["env"] = {k: env.get(k) for k in
+                            ("os", "os_version", "hostname", "user", "admin", "gui")
+                            if env.get(k) is not None}
         # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
         # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
         return {"success": True, "op": "list", "limbs": rows, "items": rows,

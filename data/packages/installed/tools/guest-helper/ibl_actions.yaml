@@ -3,8 +3,8 @@ nodes:
     actions:
       guestpc:
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
-        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 실행 (op 분기) — 허브에서 명령을 내려보낸다. 눈 없음(화면·GUI 미지원, 셸/파일만). 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
-        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초) 선택. ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending(잠시 후 재확인). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC os/hostname/cwd. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
+        description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
+        target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
         group: device
         target_key: op
         router: handler
@@ -14,14 +14,21 @@ nodes:
         ops:
           default: shell
           values:
-            shell: 게스트 PC 셸 명령 실행 (cmd — win=cmd/c, mac·linux=sh -c. 긴 명령은 background:true)
+            shell: 셸 명령 실행 (cmd. cd·환경변수 유지. 긴 명령은 background:true)
             read: 게스트 PC 파일 읽기 (path, 200KB 상한)
             write: 게스트 PC 파일 쓰기 (path + content)
             list: 게스트 PC 디렉토리 목록 (path, 생략 시 현재)
-            info: 게스트 PC 정보 (os/arch/hostname/cwd)
-            result: 백그라운드/시간초과 셸 명령의 결과 회수 (job=작업 ID, 아직이면 pending)
+            info: 그 PC 신상 — os·버전·권한·PATH·셸·패키지매니저·GUI·해상도
+            screen: 게스트 PC 화면 캡처 — AI 가 그 화면을 직접 본다 (max_width/format/display)
+            click: 마우스 클릭 (x, y = 직전 screen 이미지 위 좌표 / button left·right·middle / clicks 2=더블)
+            move: 마우스 커서 이동만 (x, y — 호버 확인용. 맥은 cliclick 필요)
+            type: 키보드로 텍스트 입력 (text — 현재 포커스된 곳에 들어간다)
+            key: 특수키·단축키 (key — return/escape/tab/cmd+s/ctrl+c 등)
+            scroll: 스크롤 (direction up·down·left·right, amount, x·y 로 위치 지정 선택)
+            drag: 드래그 (x·y 출발 → x2·y2 도착. 맥은 cliclick 필요)
+            result: 백그라운드 명령의 결과 회수 (job=작업 ID, 아직이면 중간 출력 progress)
             detach: 손발 해제 — 헬퍼 종료 (그 PC 무잔류, 재실행 시 자동 재연결)
-        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기(상한 100s — MCP 층 120s 아래). 시간 초과·background:true 면 job_id 를 돌려주고 op=result 가 phone_jobs 결과(RESULT_TTL 5분, 1회 pop)를 회수. background 기본 timeout=1800s(동기 기본 120s). 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 고루틴으로 병렬 실행(긴 명령 중에도 폴링=heartbeat 지속) 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True+job_id. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제.
+        implementation: 허브 handler(guestpc_op)가 셸 봉투 JSON 을 phone_jobs 큐에 넣고(대상 손발 device_id) wait_result 로 결과를 동기 대기(상한 100s — MCP 층 120s 아래). screen 은 헬퍼가 OS 기본 캡처 도구(mac=screencapture, win=PowerShell System.Drawing, linux=grim/scrot/import)로 PNG 를 얻어 stdlib 만으로 축소(박스 평균)·인코딩(auto=PNG 우선, 420KB 초과 시 JPEG)해 base64 로 회신 → 허브가 outputs/limb_screens/<별칭>/ 에 저장(최근 20장)하고 image_data 봉투로 싣는다. 그 봉투는 system_tools.execute_tool 의 이미지 관문(_pluck_image_envelopes)이 수확해 프로바이더의 진짜 이미지 블록으로 바꾸고 본문에서 base64 를 제거한다. 시간 초과·background:true 면 job_id 를 돌려주고 op=result 가 phone_jobs 결과(RESULT_TTL 5분, 1회 pop)를 회수. background 기본 timeout=1800s(동기 기본 120s). 손발(Go 헬퍼)이 /limb/poll 롱폴로 당겨가 고루틴으로 병렬 실행(긴 명령 중에도 폴링=heartbeat 지속) 후 /limb/result 회신. 손발 미연결/오프라인이면 queued=True+job_id. detach 는 exit 봉투 하달로 헬퍼 종료(자동승인 체제라 승인 상태는 안 건드림 — 재실행 시 자동 재연결). 접속=자동승인은 api_limb.limb_connect(approve_if_pending), 오배송 방어는 _resolve_limb 이름 강제. shell 은 헬퍼가 명령을 감싸(wrapScript) 끝난 자리의 PWD 를 표식과 함께 받아 다음 명령에 물려준다(상주 셸이 아닌 이유=명령이 고루틴 병렬 실행이라 셸 하나를 공유하면 출력이 섞인다). 종료 코드는 표식 출력에 덮이지 않게 보존한다. 입력 op 는 헬퍼가 mac=osascript(System Events)/cliclick, win=PowerShell user32, linux=xdotool/ydotool 로 주입하고 기본으로 재캡처해 조작 결과를 함께 돌려준다. 좌표는 직전 캡처의 배율(shotFrame)로 이미지 좌표→입력 좌표 환산.
         keywords:
         - 게스트PC
         - 남의PC
@@ -32,6 +39,9 @@ nodes:
         - 파일처리
         - 손발해제
         - 연결해제
+        - 원격화면
+        - 화면보기
+        - 그PC화면
   self:
     actions:
       limb:
@@ -75,7 +85,7 @@ tool_json:
     version: 1.0.0
   tools:
   - name: guestpc_op
-    description: 게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/result/detach 분기 (기본 shell). 셸/파일만 — 눈 없음. 긴 셸 명령은 background:true→op=result 회수. detach=헬퍼 종료+승인 해제.
+    description: 게스트 PC 손발 조작 단일 디스패처. op으로 shell/read/write/list/info/screen/click/move/type/key/scroll/drag/result/detach 분기 (기본 shell). screen=그 PC 화면을 봄, click·type 등=GUI 조작(좌표는 직전 screen 이미지 기준, 조작 후 자동 재캡처). 긴 셸 명령은 background:true→op=result 회수.
     input_schema:
       type: object
       properties:
@@ -94,6 +104,15 @@ tool_json:
         timeout:
           type: integer
           description: 셸 타임아웃 초 (op=shell, 기본 120 — background 면 기본 1800)
+        shell:
+          type: string
+          description: 윈도우 셸 선택 cmd/powershell (op=shell, 기본 cmd — mac·linux 는 항상 sh)
+        stdin:
+          type: string
+          description: 명령의 표준입력 (op=shell — 비밀번호·y/n 프롬프트를 기다리는 명령에 미리 물림)
+        reset:
+          type: boolean
+          description: 실행 전 세션(기억한 디렉토리·환경) 초기화 (op=shell — venv 벗기·환경 꼬였을 때)
         background:
           type: boolean
           description: true 면 즉시 job_id 반환, 결과는 op=result 로 회수 (op=shell — 설치·빌드 등 오래 걸리는 명령)
@@ -106,6 +125,54 @@ tool_json:
         content:
           type: string
           description: 쓸 내용 (op=write)
+        max_width:
+          type: integer
+          description: 캡처 이미지 가로 상한 픽셀 (op=screen, 기본 1280 — 글자가 작으면 1600~1920)
+        format:
+          type: string
+          description: 캡처 형식 png/jpeg/auto (op=screen, 기본 auto — 작으면 PNG, 크면 JPEG)
+        quality:
+          type: integer
+          description: JPEG 품질 1-100 (op=screen, 기본 82)
+        display:
+          type: integer
+          description: 다중 모니터 인덱스 1부터 (op=screen, 생략 시 전체/주화면)
+        x:
+          type: integer
+          description: 가로 좌표 — ★직전 screen 이 보낸 이미지 위의 좌표 (op=click/move/drag, scroll 은 선택)
+        y:
+          type: integer
+          description: 세로 좌표 — ★직전 screen 이 보낸 이미지 위의 좌표 (op=click/move/drag, scroll 은 선택)
+        x2:
+          type: integer
+          description: 드래그 도착 가로 좌표 (op=drag)
+        y2:
+          type: integer
+          description: 드래그 도착 세로 좌표 (op=drag)
+        button:
+          type: string
+          description: 마우스 버튼 left/right/middle (op=click, 기본 left)
+        clicks:
+          type: integer
+          description: 클릭 횟수 1-3 (op=click, 2=더블클릭)
+        text:
+          type: string
+          description: 입력할 텍스트 — 현재 포커스된 곳에 들어간다 (op=type)
+        key:
+          type: string
+          description: 키 이름·단축키 (op=key — return/escape/tab/space/delete/방향키/cmd+s/ctrl+c)
+        direction:
+          type: string
+          description: 스크롤 방향 up/down/left/right (op=scroll, 기본 down)
+        amount:
+          type: integer
+          description: 스크롤 양 1-50 (op=scroll, 기본 5)
+        shot:
+          type: boolean
+          description: 조작 후 화면 재캡처 (입력 op, 기본 true — 결과를 눈으로 확인)
+        settle_ms:
+          type: integer
+          description: 재캡처 전 대기 밀리초 (입력 op, 기본 700 — 화면이 그려질 짬)
   - name: limb_op
     description: USB 손발 자격 원장 디스패처. op으로 issue/list/revoke/approve 분기 (기본 issue).
     input_schema:

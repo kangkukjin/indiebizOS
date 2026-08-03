@@ -20,6 +20,7 @@ _QUEUES: Dict[str, List[dict]] = {}          # device_id -> 대기 작업
 _JOB_EVENTS: Dict[str, threading.Event] = {}  # device_id -> 작업 도착 신호
 _RESULTS: Dict[str, dict] = {}                # job_id -> {result, ts}
 _RESULT_EVENTS: Dict[str, threading.Event] = {}
+_PARTIALS: Dict[str, dict] = {}               # job_id -> {partial, ts} — 실행 중 경과
 
 JOB_TTL = 600.0     # 폰이 이 시간 안에 안 당겨가면 작업 폐기(낡은 클립보드 밀어넣기 방지)
 RESULT_TTL = 300.0  # 대기자가 이미 떠난 결과의 보존 시간
@@ -79,10 +80,31 @@ def set_result(job_id: str, result: Any) -> None:
     """폰의 실행 결과 회신 — 대기 중인 wait_result 를 깨운다."""
     with _LOCK:
         _RESULTS[job_id] = {"result": result, "ts": time.time()}
+        _PARTIALS.pop(job_id, None)   # 끝났으니 경과는 버린다
         ev = _RESULT_EVENTS.get(job_id)
         _gc_locked(time.time())
     if ev:
         ev.set()
+
+
+def set_partial(job_id: str, partial: dict) -> None:
+    """실행 **중인** 작업의 중간 경과 저장(손발의 진행 중계).
+
+    최종 결과(_RESULTS)와 별도 보관이다: 결과는 1회 pop 이지만 경과는 여러 번 읽히고,
+    끝나면 버려진다. 이게 없으면 긴 설치·빌드가 도는 동안 허브는 깜깜해서 '돌고 있음'과
+    '멎었음'을 구별할 수 없다(그 구별 실패가 같은 명령 재전송=이중 실행으로 이어졌다)."""
+    with _LOCK:
+        _PARTIALS[job_id] = {"partial": partial, "ts": time.time()}
+        stale = [k for k, v in _PARTIALS.items() if time.time() - v.get("ts", 0) > RESULT_TTL]
+        for k in stale:
+            _PARTIALS.pop(k, None)
+
+
+def get_partial(job_id: str) -> Optional[dict]:
+    """중간 경과 조회(비파괴 — 여러 번 물어볼 수 있다)."""
+    with _LOCK:
+        entry = _PARTIALS.get(job_id)
+        return dict(entry["partial"]) if entry else None
 
 
 def wait_result(job_id: str, timeout: float = 20.0) -> Any:

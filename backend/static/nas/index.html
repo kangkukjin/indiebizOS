@@ -218,6 +218,24 @@
             border-radius:50%; animation:spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* ===== 데스크탑(PC 브라우저) 레이어 — 폰 전면 레이아웃을 넓은 화면에서 중앙 컬럼으로.
+               1000px 미만은 기존 그대로(min-width 게이트만 얹는 순수 추가층).
+               calc(50% - 540px) 좌우 패딩 = 내용 1080px 중앙, 스크롤바는 창 가장자리 유지
+               (음수 폭은 CSS 스펙이 0 으로 클램프). ===== */
+        @media (min-width:1000px) {
+            .tab-bar { justify-content:center; }
+            .tab-btn { flex:0 1 220px; }
+            .files-header {
+                padding-left:calc(50% - 540px + 16px);
+                padding-right:calc(50% - 540px + 16px);
+            }
+            .file-scroll { padding:0 calc(50% - 540px); }
+            .file-item:hover { background:var(--card-hover); }
+            .music-search, .music-scroll { padding-left:calc(50% - 540px + 14px); padding-right:calc(50% - 540px + 14px); }
+            .result-item:hover, .queue-item:hover { background:var(--card-hover); }
+            .prog-bar, .player-info { max-width:1080px; margin:0 auto; }
+        }
     </style>
 </head>
 <body>

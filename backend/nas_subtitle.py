@@ -71,7 +71,8 @@ def ass_to_vtt(ass_content: str) -> str:
                 # 텍스트에서 ASS 태그 제거 {\tag} 및 \N → 줄바꿈
                 text = parts[9]
                 text = re.sub(r'\{[^}]*\}', '', text)
-                text = text.replace('\\N', '\n').replace('\\n', '\n').strip()
+                text = text.replace('\\N', '\n').replace('\\n', '\n')
+                text = _clean_cue_text(text)
 
                 if text:
                     vtt_lines.append(str(counter))
@@ -81,6 +82,13 @@ def ass_to_vtt(ass_content: str) -> str:
                     counter += 1
 
     return '\n'.join(vtt_lines)
+
+
+def _clean_cue_text(text: str) -> str:
+    """큐 본문 정규화 — 줄별 strip + 빈 줄 제거.
+    큐 안에 빈 줄이 남으면(예: CRLF SMI 의 <br>\r\n → \n\r\n) WebVTT 파서가
+    거기서 큐를 끝내 둘째 줄이 잘리고, 남은 줄이 다음 큐 파싱까지 오염시킨다."""
+    return '\n'.join(ln for ln in (l.strip() for l in text.splitlines()) if ln)
 
 
 def smi_to_vtt(smi_content: str, lang_class: str = "KRCC") -> str:
@@ -111,14 +119,12 @@ def smi_to_vtt(smi_content: str, lang_class: str = "KRCC") -> str:
         if cls.upper() != lang_class.upper():
             continue
         ms = int(ms_str)
-        # HTML 태그 제거
-        text = re.sub(r'<[^>]+>', '', raw_text)
         # <br> → 줄바꿈 (태그 제거 전에 처리)
         raw_text_br = re.sub(r'<br\s*/?\s*>', '\n', raw_text, flags=re.IGNORECASE)
         text = re.sub(r'<[^>]+>', '', raw_text_br)
         # HTML 엔티티 변환
         text = text.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
-        text = text.strip()
+        text = _clean_cue_text(text)
         if not text or text == ' ':
             cues.append((ms, ''))
         else:

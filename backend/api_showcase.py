@@ -311,32 +311,47 @@ async def _read_init_segment(proc) -> bytes:
 
 @router.get("/media/{slug}/{fid}")
 async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(default=0),
+                q: str = Query(default=""),
                 x_showcase_secret: str = Header(default="")):
     """원본 서빙 — EXIF 제거·동영상 H.264 변환(스트리밍)·Range(FileResponse 자동).
-    t>0 = 그 지점부터의 오프셋 스트림(첫 시청 중 멀리 seek — SPA 가 스왑해 요청)."""
+    t>0 = 그 지점부터의 오프셋 스트림(첫 시청 중 멀리 seek — SPA 가 스왑해 요청).
+    q=low = 저대역 렌디션(720p·1.2Mbps 상한, h264) — 느린 회선(차 브라우저 등)용.
+    q=lowh = 같은 저대역의 HEVC 판(~0.75Mbps) — SPA 가 mediaCapabilities 로 하드웨어
+    디코드를 확인한 기기만 요청한다(안 되는 기기는 low 로 폴백). SPA 가
+    navigator.connection 으로 자동 선택하거나 사용자가 토글한다.
+
+    ★저대역은 캐시 슬롯이 갈린다(`<key>.low.mp4` / `<key>.lowh.mp4`). 같은 슬롯을
+    쓰면 한 번 저대역으로 본 영상이 데스크탑에도 720p 로 나가고 그 반대도 생긴다
+    (오프셋 스트림 t= 가 캐시 키를 갈라야 했던 것과 같은 부류)."""
     folder, abspath = _resolve(slug, fid, rel, x_showcase_secret)
     settings = _load_state().get("settings") or {}
     kind = thumbnails.classify(abspath)
+    low = q in ("low", "lowh")
+    qual = q if low else ""
 
     # ⓪ 오프셋 스트림 — 항상 0 기준 fMP4 로 결정론 응답(SPA 스왑 계약).
     #    소스는 완성 캐시가 있으면 캐시(-c copy, 즉시)·없으면 원본(재인코딩).
     if kind == "video" and t > 0:
         key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
-        cache = _WEB_MEDIA / fid / (key + ".mp4")
+        cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         use_cache = cache.exists() and cache.stat().st_size > 0
         src = str(cache) if use_cache else abspath
-        # 원본 소스면 비디오 copy 가능 여부(웹 코덱인데 오디오만 DTS/AC3) 판정.
-        vcopy = (False if use_cache
+        # 캐시가 소스면 그 캐시가 이미 요청된 화질이므로 그냥 -c copy(재인코딩 0).
+        # 원본이 소스일 때만: 저대역이면 저대역 재인코딩 / 아니면 웹 코덱 여부로 v-copy 판정.
+        vcopy = (False if (use_cache or low)
                  else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
         total = await run_in_threadpool(thumbnails.probe_video_duration, src)
-        proc = thumbnails.start_offset_stream(src, t, copy=use_cache, video_copy=vcopy)
+        proc = thumbnails.start_offset_stream(src, t, copy=use_cache, video_copy=vcopy,
+                                              quality=("" if use_cache else qual))
         head = await _read_init_segment(proc)
         if not head and use_cache:
             # 캐시 스트림 복사 실패(드묾) — 원본 재인코딩 재시도.
             thumbnails.kill_stream(proc)
             total = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
-            vcopy = await run_in_threadpool(thumbnails.video_codec_web_playable, abspath)
-            proc = thumbnails.start_offset_stream(abspath, t, copy=False, video_copy=vcopy)
+            vcopy = (False if low
+                     else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
+            proc = thumbnails.start_offset_stream(abspath, t, copy=False, video_copy=vcopy,
+                                                  quality=qual)
             head = await _read_init_segment(proc)
         if not head:
             thumbnails.kill_stream(proc)
@@ -358,15 +373,19 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
     #    faststart 캐시도 만들어(인코딩 1회) 다음 재생부터는 캐시 직행.
     if kind == "video" and settings.get("transcode_video", True):
         key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
-        cache = _WEB_MEDIA / fid / (key + ".mp4")
+        cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         if cache.exists() and cache.stat().st_size > 0:
             return FileResponse(str(cache), media_type="video/mp4")
-        if await run_in_threadpool(thumbnails.needs_video_transcode, abspath):
+        # ★저대역은 코덱과 무관하게 항상 변환한다 — h264 원본이라도 해상도·비트레이트를
+        #   내리는 게 목적이라 '이미 재생 가능'은 이유가 되지 못한다(원본 경로와 갈리는 곳).
+        if low or await run_in_threadpool(thumbnails.needs_video_transcode, abspath):
             duration = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
             # 비디오가 이미 웹 코덱(h264 등, 오디오만 DTS/AC3)이면 -c:v copy —
-            # 1080p 재인코딩 없이 리먹스 속도로 흘린다.
-            vcopy = await run_in_threadpool(thumbnails.video_codec_web_playable, abspath)
-            proc, tmp = thumbnails.start_stream_transcode(abspath, str(cache), video_copy=vcopy)
+            # 1080p 재인코딩 없이 리먹스 속도로 흘린다. 저대역은 해당 없음.
+            vcopy = (False if low
+                     else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
+            proc, tmp = thumbnails.start_stream_transcode(abspath, str(cache), video_copy=vcopy,
+                                                          quality=qual)
             # init 세그먼트(ftyp+moov)가 통째로 잡힐 때까지 모아 duration 패치 —
             # 안 하면 empty_moov 생방송이 '버퍼된 만큼'을 총 길이로 표시(몇 초짜리로 보임).
             head = await _read_init_segment(proc)

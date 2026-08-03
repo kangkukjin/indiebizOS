@@ -67,6 +67,11 @@
   .lb .seek { position:absolute; bottom:36px; left:8%; right:8%; display:none; align-items:center;
     gap:10px; color:#ddd; font-size:12px; }
   .lb .seek input { flex:1; accent-color:var(--accent); cursor:pointer; }
+  /* 화질 토글 — 저대역(720p) ↔ 원본. 동영상 재생 중에만 뜬다. */
+  .lb .qbtn { position:absolute; top:16px; left:20px; z-index:2; background:rgba(0,0,0,.55);
+    color:#eee; border:1px solid rgba(255,255,255,.28); border-radius:999px; cursor:pointer;
+    font-size:12px; padding:6px 12px; line-height:1; display:none; }
+  .lb .qbtn:hover { border-color:var(--accent); color:#fff; }
 </style>
 </head>
 <body>
@@ -78,6 +83,7 @@
 
 <div class="lb" id="lb">
   <span class="close" onclick="closeLb()">✕</span>
+  <button class="qbtn" id="lbQ" onclick="toggleQuality()"></button>
   <span class="nav prev" onclick="step(-1)">‹</span>
   <span class="nav next" onclick="step(1)">›</span>
   <div id="lbBody"></div>
@@ -102,7 +108,70 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
   ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
 
 function thumbUrl(it) { return api(`thumb/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
-function mediaUrl(it) { return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
+// ── 화질(대역폭) ──────────────────────────────────────────────────────────
+// 기본 렌디션은 원본 해상도·비트레이트 상한 없음 — 1080p 면 3~5Mbps 다. 느린 회선
+// (차 브라우저 등)에선 계속 멈추므로 저대역(&q=low, 720p·1.2Mbps 상한)을 받는다.
+// 자동 판정 1회 → 이후 사용자 토글이 이기고 localStorage 에 남는다.
+// navigator.connection 이 없는 브라우저(사파리·파이어폭스)는 원본 = 기존 동작 그대로.
+let LOWQ = null;
+function lowq() {
+  if (LOWQ !== null) return LOWQ;
+  let saved = null;
+  try { saved = localStorage.getItem("lowq"); } catch (e) {}
+  if (saved !== null) { LOWQ = saved === "1"; return LOWQ; }
+  const c = navigator.connection || {};
+  LOWQ = (typeof c.downlink === "number" && c.downlink > 0 && c.downlink < 3)
+      || /^(slow-2g|2g|3g)$/.test(c.effectiveType || "")
+      || c.saveData === true;
+  return LOWQ;
+}
+function setLowq(on) {
+  LOWQ = !!on;
+  try { localStorage.setItem("lowq", LOWQ ? "1" : "0"); } catch (e) {}
+}
+// ── HEVC 능력 감지 ────────────────────────────────────────────────────────
+// 저대역엔 h264(&q=low)와 HEVC(&q=lowh, 같은 화질에 절반 대역) 두 판이 있다.
+// canPlayType 은 선언일 뿐이라(테슬라도 av1 에 probably 를 준다) mediaCapabilities 로
+// smooth(하드웨어/실시간 디코드)까지 확인된 기기만 lowh 를 요청한다. API 가 없거나
+// 감지 전이면 false → h264 저대역(안전한 기존 동작). 결과는 localStorage 캐시.
+let HEVCOK = false;
+function hevcok() { return HEVCOK === true; }
+(async function detectHevc() {
+  try {
+    const saved = localStorage.getItem("hevcok");
+    if (saved !== null) { HEVCOK = saved === "1"; return; }
+  } catch (e) {}
+  let ok = false;
+  try {
+    if (navigator.mediaCapabilities && navigator.mediaCapabilities.decodingInfo) {
+      const r = await navigator.mediaCapabilities.decodingInfo({
+        type: "file",
+        video: { contentType: 'video/mp4; codecs="hvc1.1.6.L120.B0"',
+                 width: 1280, height: 720, bitrate: 800000, framerate: 24 },
+        audio: { contentType: 'audio/mp4; codecs="mp4a.40.2"',
+                 channels: "2", bitrate: 96000, samplerate: 48000 },
+      });
+      ok = !!(r && r.supported && r.smooth);
+    }
+  } catch (e) { ok = false; }
+  HEVCOK = ok;
+  try { localStorage.setItem("hevcok", ok ? "1" : "0"); } catch (e) {}
+})();
+function syncQBtn(show) {
+  const b = document.getElementById("lbQ");
+  b.style.display = show ? "block" : "none";
+  b.textContent = lowq() ? (hevcok() ? "🐢 저용량 720p·HEVC" : "🐢 저용량 720p") : "🎞 원본 화질";
+  b.title = lowq() ? "느린 회선용 — 누르면 원본 화질로" : "누르면 저용량(720p)으로 — 회선이 느릴 때";
+}
+function toggleQuality() {
+  setLowq(!lowq());
+  syncQBtn(true);
+  if (lbIndex >= 0) openLb(lbIndex);   // 같은 항목을 새 화질로 다시 연다
+}
+function mediaUrl(it) {
+  const q = (it.kind === "video" && lowq()) ? (hevcok() ? "&q=lowh" : "&q=low") : "";
+  return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}${q}`);
+}
 function subUrl(it, s, shift) {
   return api(`sub/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(s.rel)}&v=${s.mtime || it.mtime}`
     + (s.cls ? `&cls=${encodeURIComponent(s.cls)}` : "")
@@ -252,6 +321,7 @@ function openLb(idx) {
   const it = curItems[idx]; if (!it) return;
   lbIndex = idx;
   document.getElementById("lbSeek").style.display = "none";
+  syncQBtn(it.kind === "video");
   const body = document.getElementById("lbBody");
   if (it.kind === "video") {
     // 형제 자막(subs — 백엔드가 목록에서 붙여줌)을 <track> 으로. 첫 번째(한국어 우선)가 기본 표시.
@@ -279,6 +349,7 @@ function closeLb() {
   document.getElementById("lb").classList.remove("open");
   document.getElementById("lbBody").innerHTML = "";
   document.getElementById("lbSeek").style.display = "none";
+  document.getElementById("lbQ").style.display = "none";
   lbIndex = -1;
 }
 function step(d) {

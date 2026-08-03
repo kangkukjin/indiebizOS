@@ -48,6 +48,7 @@ function r2Serve(obj, ctype, rangeHeader) {
   headers.set("content-type", ctype);
   headers.set("cache-control", "public, max-age=86400");
   headers.set("accept-ranges", "bytes");
+  headers.set("x-cache", "r2");   // 진단용 — 엣지 직행인지 맥 왕복인지 밖에서 구분
   if (rangeHeader && obj.range) {
     const start = obj.range.offset || 0;
     const len = obj.range.length || (obj.size - start);
@@ -195,6 +196,53 @@ async function proxyList(env, slug, path) {
   });
 }
 
+// ── R2 워밍 ──────────────────────────────────────────────────────────────
+// 브라우저 <audio>/<video> 는 미디어를 거의 항상 Range(bytes=0-)로 요청하고, 맥은
+// 206 으로 답한다. 206 은 부분이라 그대로는 캐시할 수 없어 — 워밍이 없으면 음악·
+// 동영상은 몇 번을 재생해도 매번 차→엣지→터널→맥 풀 왕복이고 R2 는 영영 안 쌓인다
+// (엣지 덕을 보는 건 Range 없이 오는 썸네일·이미지뿐이었다, 2026-08-03 실측).
+// 그래서 206 중계와 병행으로 **배경에서 전체를 한 번 당겨 R2 를 데운다** —
+// 두 번째 재생부터 엣지 직행(x-cache: r2).
+const WARMING = new Set();   // isolate-로컬 중복 가드 — 같은 시청자의 Range 연발 흡수
+
+// 스트림 → R2 저장 (★64MB 이하 전용). FixedLengthStream 으로 길이를 선언해 스트리밍
+// put — 길이 미상 tee 가지는 put() 이 메모리 스풀링해 대형이 조용히 죽는다(실측).
+// ★64MB 초과는 이 자리(waitUntil)에서 어떤 변형으로도 못 올린다 — 스트리밍 중엔
+// 백그라운드 업로드가 밀리고, 응답 종료 후 짧은 유예 안에 하드 캔슬된다(2026-08-03
+// tail 실측 "waitUntil() tasks did not complete within the allowed time", FLS put·
+// 32MB·8MB 멀티파트 전부 동일). 영화급 렌디션의 R2 적재는 맥이 직접 미는 경로가
+// 담당해야 한다(후속 예정) — 그때까지 대형은 맥 직행 스트리밍(재생엔 지장 없음).
+async function r2PutStream(env, cacheKey, readable, ct, total) {
+  const fls = new FixedLengthStream(total);
+  await Promise.all([
+    readable.pipeTo(fls.writable),
+    env.BUCKET.put(cacheKey, fls.readable, { httpMetadata: { contentType: ct } }),
+  ]);
+}
+
+async function warmCache(env, cacheKey, macAbsUrl, ctype) {
+  if (WARMING.has(cacheKey)) return;
+  WARMING.add(cacheKey);
+  try {
+    if (await env.BUCKET.head(cacheKey)) return;          // 딴 경로로 이미 채워짐
+    const r = await fetch(macAbsUrl, { headers: { "X-Showcase-Secret": env.SHOWCASE_SECRET } });
+    if (!r.ok || !r.body || r.status !== 200) return;
+    // 생방송(맥 캐시 미완성) — 반쪽 위험이라 캐시 금지. 맥이 완주하면 다음 재생이 기회.
+    if (r.headers.get("x-transcode-live")) { try { await r.body.cancel(); } catch (e) {} return; }
+    const cl = parseInt(r.headers.get("content-length") || "0", 10);
+    // 길이 미상=R2 스트림 put 불가. 64MB 초과=터널 ~1MB/s × waitUntil ~30s 상한으로
+    // 어차피 완주 못 하고 죽는다(부분 put 은 R2 에 안 남음) — 시도 자체가 터널 낭비라
+    // 건너뛴다. 큰 파일(영화)은 bytes=0- 시청 tee(아래 206 분기)가 캐시를 만든다.
+    if (!cl || cl > 67108864) { try { await r.body.cancel(); } catch (e) {} return; }
+    const ct = r.headers.get("content-type") || ctype;
+    await r2PutStream(env, cacheKey, r.body, ct, cl);
+  } catch (e) {
+    // 워밍 실패는 무해 — 다음 재생이 또 기회다.
+  } finally {
+    WARMING.delete(cacheKey);
+  }
+}
+
 async function serveCached(env, ctx, cacheKey, ctype, request, macAbsUrl, cacheable) {
   // R2 캐시 우선 → 없으면 맥에서 pull. cacheable=true 면 전체 응답을 R2 에 캐시.
   const rangeHeader = request.headers.get("range");
@@ -213,13 +261,31 @@ async function serveCached(env, ctx, cacheKey, ctype, request, macAbsUrl, cachea
   if (!orig.ok || !orig.body) return new Response("원본 없음(맥 꺼짐/비공개)", { status: orig.status === 404 ? 404 : 503 });
   const ct = orig.headers.get("content-type") || ctype;
 
-  // Range 응답(206): 부분이라 캐시 안 함 — 그대로 중계(긴 영상 seek).
+  // Range 응답(206): 206 = 맥에 완성 파일이 실재한다는 뜻(생방송은 200). 두 갈래로 캐시:
+  //  · bytes=0- (브라우저 <audio>/<video> 재생의 기본형) = 사실상 전체 스트림 —
+  //    뷰어에게 흘리는 그 바이트를 tee 로 R2 에도 쓴다(200 경로와 동형). 재생 완주 =
+  //    캐시 완성. 클라이언트가 연결을 쥐고 있는 동안은 waitUntil 30s 상한과 무관해
+  //    영화급 대용량도 이 길로 캐시된다. 중도 이탈이면 put 실패 = R2 무변화(무해).
+  //  · 중간 seek(0 이 아닌 시작) = 진짜 부분 — 중계만 하고, 소형 파일(음악 등 ≤64MB)만
+  //    배경 워밍(warmCache)으로 전체를 당겨 둔다.
   if (rangeHeader && orig.status === 206) {
+    const cr = orig.headers.get("content-range");
     const h = new Headers();
     h.set("content-type", ct); h.set("accept-ranges", "bytes");
-    const cr = orig.headers.get("content-range"); if (cr) h.set("content-range", cr);
+    if (cr) h.set("content-range", cr);
     const cl = orig.headers.get("content-length"); if (cl) h.set("content-length", cl);
     h.set("cache-control", "public, max-age=86400");
+    const m = cr && /^bytes 0-(\d+)\/(\d+)$/.exec(cr);
+    // ≤64MB 만 — 초과분은 waitUntil 하드 캔슬로 어차피 완주 불가(r2PutStream 주석).
+    const full = m && (parseInt(m[1], 10) + 1 === parseInt(m[2], 10))
+      && parseInt(m[2], 10) <= 67108864;
+    if (cacheable && full) {
+      const [toClient, toCache] = orig.body.tee();
+      ctx.waitUntil(r2PutStream(env, cacheKey, toCache, ct, parseInt(m[2], 10))
+        .catch(() => {}));   // 중도 이탈 = 길이 불일치로 put 실패 = R2 무변화(무해)
+      return new Response(toClient, { status: 206, headers: h });
+    }
+    if (cacheable) ctx.waitUntil(warmCache(env, cacheKey, macAbsUrl, ctype));
     return new Response(orig.body, { status: 206, headers: h });
   }
   // 전체 응답: 캐시 대상이면 스트림 분기(뷰어 + R2), 아니면 그냥 중계.
@@ -228,7 +294,14 @@ async function serveCached(env, ctx, cacheKey, ctype, request, macAbsUrl, cachea
   const live = orig.headers.get("x-transcode-live");
   if (cacheable && !live) {
     const [toClient, toCache] = orig.body.tee();
-    ctx.waitUntil(env.BUCKET.put(cacheKey, toCache, { httpMetadata: { contentType: ct } }));
+    // 길이를 알고 ≤64MB 면 r2PutStream(길이 선언 = 메모리 안전), 대형(>64MB)은 tee 와
+    // 같은 이유로 시도 안 함(뷰어 중계는 무사), 길이 미상은 종전 그대로(소형 위주).
+    const cl0 = parseInt(orig.headers.get("content-length") || "0", 10);
+    if (cl0 && cl0 <= 67108864) {
+      ctx.waitUntil(r2PutStream(env, cacheKey, toCache, ct, cl0).catch(() => {}));
+    } else {
+      ctx.waitUntil(env.BUCKET.put(cacheKey, toCache, { httpMetadata: { contentType: ct } }));
+    }
     return new Response(toClient, { headers: { "content-type": ct, "accept-ranges": "bytes", "cache-control": "public, max-age=86400" } });
   }
   const passHeaders = { "content-type": ct, "cache-control": live ? "no-store" : "public, max-age=86400" };
@@ -451,8 +524,14 @@ export default {
       // t = 오프셋 스트림(첫 시청 중 seek) — 키를 갈라 R2 의 전체판 캐시가 잘못 응답하지
       // 않게 하고, 생방송(X-Transcode-Live)이라 저장도 안 된다.
       const t = url.searchParams.get("t") || "";
-      const key = `cache/media/${fid}/${h}_${v}${t ? "_t" + t : ""}`;
+      // q=low(h264)/lowh(HEVC) = 저대역 렌디션(720p). t 와 같은 이유로 **캐시 키를
+      // 가른다** — 안 가르면 저대역으로 한 번 본 영상이 R2 에서 데스크탑에도 720p 로
+      // 나가고, HEVC 판이 h264 만 되는 기기에 나간다.
+      const qp = url.searchParams.get("q");
+      const q = (qp === "low" || qp === "lowh") ? qp : "";
+      const key = `cache/media/${fid}/${h}_${v}${q ? "_q" + q : ""}${t ? "_t" + t : ""}`;
       const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`
+        + (q ? "&q=" + q : "")
         + (t ? "&t=" + encodeURIComponent(t) : "");
       return serveCached(env, ctx, key, ctypeOf(rel), request, macUrl(env, macSub), true);
     }

@@ -327,7 +327,79 @@ def patch_fmp4_duration(head: bytes, duration_s: float) -> bytes:
     except Exception:
         return head
 
-def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False):
+# ── 저대역 렌디션(quality="low") ────────────────────────────────────────────
+# 기본 인코딩은 CRF 24 · 원본 해상도 · 비트레이트 상한 없음 — 1080p 에서 평균 3~5Mbps 가
+# 나오고 복잡한 장면은 더 치솟는다. video_copy 경로는 원본 비트레이트를 그대로 통과시켜
+# BDRip 이면 8~15Mbps 다. 느린 회선에선 그대로 멈춘다(실측: 테슬라 MCU2 브라우저
+# downlink 1.4Mbps · rtt 350ms).
+# 이 프로필이 회선 안에 들어오게 만드는 두 가지:
+#   · maxrate/bufsize = **천장**. CRF 만으로는 천장이 없어 장면이 복잡해지면 무한정 솟는다.
+#   · 720p 상한. ★원본이 그보다 작으면 확대하지 않는다(min(720,ih)) — 키우면 손해다.
+# 세로 영상은 긴 변이 720 이 되어 폭이 많이 준다(데이터 절약 모드의 의도된 거동).
+LOW_MAXRATE_K = 1200
+_LOW_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
+              "-maxrate", "%dk" % LOW_MAXRATE_K, "-bufsize", "%dk" % (LOW_MAXRATE_K * 2),
+              "-vf", "scale=-2:'min(720,ih)'", "-pix_fmt", "yuv420p"]
+_LOW_AUDIO = ["-c:a", "aac", "-b:a", "96k", "-ac", "2"]
+
+# ── HEVC 저대역(quality="lowh") ──────────────────────────────────────────────
+# 같은 체감 화질이 H.264 의 절반 비트레이트에 담긴다 — 비디오 ~650k + 오디오 96k
+# ≈ 750k 로, 실측 1.4Mbps 회선(테슬라 MCU2)에서 마진이 7%→2배로 벌어진다.
+# 재생 가능 여부는 기기별이라 서버는 코덱을 강요하지 않는다 — SPA 가
+# mediaCapabilities 로 하드웨어 디코드를 감지해 &q=lowh 를 고르고, 안 되는 기기는
+# &q=low(h264)로 온다. ★-tag:v hvc1 필수 — 기본 hev1 태그는 사파리·일부
+# 크로미움이 못 연다.
+LOW_HEVC_RATE_K = 650
+LOW_HEVC_MAXRATE_K = 800
+
+_HEVC_ENC = None   # 감지 결과 캐시("hevc_videotoolbox"|"libx265"|"" — None=미감지)
+
+
+def _hevc_encoder() -> str:
+    """가용한 HEVC 인코더 이름. 맥=hevc_videotoolbox(하드웨어, 리먹스급 속도),
+    그 외 OS=libx265(소프트웨어, 느리지만 이식). 없으면 ""."""
+    global _HEVC_ENC
+    if _HEVC_ENC is None:
+        found = ""
+        try:
+            r = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"],
+                               capture_output=True, timeout=20)
+            out = r.stdout.decode("utf-8", "ignore")
+            for name in ("hevc_videotoolbox", "libx265"):
+                if name in out:
+                    found = name
+                    break
+        except Exception:
+            pass
+        _HEVC_ENC = found
+    return _HEVC_ENC
+
+
+def _low_hevc_video() -> list:
+    """HEVC 저대역 비디오 인자. 인코더가 없으면 h264 저대역(_LOW_VIDEO)으로 조용히
+    폴백 — 화질 계약(720p·저비트레이트)은 지켜지고 코덱만 h264 가 된다."""
+    enc = _hevc_encoder()
+    if not enc:
+        return list(_LOW_VIDEO)
+    base = ["-c:v", enc]
+    if enc == "libx265":
+        base += ["-preset", "fast", "-crf", "28", "-x265-params", "log-level=error"]
+    else:
+        base += ["-b:v", "%dk" % LOW_HEVC_RATE_K]
+    base += ["-maxrate", "%dk" % LOW_HEVC_MAXRATE_K,
+             "-bufsize", "%dk" % (LOW_HEVC_MAXRATE_K * 2),
+             "-tag:v", "hvc1", "-g", "240",
+             "-vf", "scale=-2:'min(720,ih)'", "-pix_fmt", "yuv420p"]
+    return base
+
+
+def low_profile_note() -> str:
+    """저대역 프로필 요약 — 로그·진단용(설정이 코드 안에만 살지 않게)."""
+    return "720p / h264<=%dk·hevc~%dk / aac 96k stereo" % (LOW_MAXRATE_K, LOW_HEVC_RATE_K)
+
+
+def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
+                           quality: str = ""):
     """스트리밍 트랜스코드 시작. (proc, tmp경로) 반환 — 호출자가 proc.stdout 을 읽어
     흘리면서 같은 바이트를 tmp(.part)에 쓰고, 끝나면 finish_/중단하면
     detach_stream_transcode 를 불러야 한다(완주 시 faststart 리먹스로 캐시 완성).
@@ -343,13 +415,19 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False):
     cache_dir = os.path.dirname(cache_dst) or "."
     os.makedirs(cache_dir, exist_ok=True)
     tmp = os.path.join(cache_dir, f".{uuid.uuid4().hex[:12]}.part.mp4")
-    vcodec = (["-c:v", "copy"] if video_copy else
-              ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
-               "-pix_fmt", "yuv420p"])
+    # ★quality="low"/"lowh" 는 video_copy 를 이긴다 — 저대역의 목적이 해상도·
+    #   비트레이트를 *내리는* 것이라, 원본이 웹 코덱이어도 반드시 재인코딩해야 한다.
+    low = quality in ("low", "lowh")
+    vcodec = ((_low_hevc_video() if quality == "lowh" else _LOW_VIDEO) if low else
+              (["-c:v", "copy"] if video_copy else
+               ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+                "-pix_fmt", "yuv420p"]))
+    acodec = _LOW_AUDIO if low else ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     cmd = (
         ["ffmpeg", "-v", "error", "-i", os.path.abspath(src)]
         + vcodec
-        + ["-c:a", "aac", "-b:a", "128k", "-ac", "2",
+        + acodec
+        + [
            "-map", "0:v:0", "-map", "0:a:0?",
            "-f", "mp4",
            "-movflags", "frag_keyframe+empty_moov+default_base_moof",
@@ -359,12 +437,18 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False):
     return proc, tmp
 
 
-def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool = False):
+def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool = False,
+                        quality: str = ""):
     """t초 지점부터의 fMP4 오프셋 스트림(캐시 tee 없음 — 부분이라 캐시 부적격).
     copy=True 면 재인코딩 없이 스트림 복사(이미 H.264 캐시가 소스일 때, 즉시 시작).
     video_copy=True 면 비디오만 copy·오디오는 AAC(원본 비디오가 웹 코덱, 오디오만 DTS/AC3).
     타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
-    if copy:
+    # quality="low"/"lowh" = 저대역 재인코딩(copy 계열을 이긴다). 단 소스가 *이미*
+    # 저대역 캐시면 호출자가 copy=True 로 부르므로 여기 오지 않는다(재인코딩 낭비 없음).
+    if quality in ("low", "lowh"):
+        codec = ((_low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
+                 + list(_LOW_AUDIO))
+    elif copy:
         codec = ["-c", "copy"]
     elif video_copy:
         codec = ["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]

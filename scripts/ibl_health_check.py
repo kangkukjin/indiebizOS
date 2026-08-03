@@ -6,7 +6,11 @@ BASE = "http://localhost:8765"
 PID = "하드웨어"
 
 def execute(code, pid=PID):
-    body = json.dumps({"code": code, "project_id": pid}).encode()
+    # agent_id=__self_check__ — 이 점검의 실행이 action_health 에 source='self_check' 로
+    # 기록되게 한다(없으면 'usage' 로 실려 §1D 실사용 통계를 자가 점검 실패로 오염 —
+    # channel_read 97% 거짓 시그널의 진범). postprocess(AI 압축)도 함께 스킵돼 점검 AI 0.
+    body = json.dumps({"code": code, "project_id": pid,
+                       "agent_id": "__self_check__"}).encode()
     req = urllib.request.Request(BASE + "/ibl/execute", data=body,
                                  headers={"Content-Type": "application/json"})
     try:

@@ -572,12 +572,16 @@ class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
             self._log(f"알 수 없는 작업: {action_name}")
             return
 
+        # last_run 은 발화 *시작* 시점에 찍는다 — 완료 시점에 찍으면 긴 작업(건강검사 ~5분)
+        # 도중 60초 틱이 계속 due 로 보고 재발화해 같은 작업이 하루 3~8회 겹쳤다(실측).
+        # 시작 기준이라 interval 기준점이 소요시간만큼 매일 밀리는 드리프트(+4분/일)도 함께 소멸.
+        task["last_run"] = datetime.now().isoformat()
+        self._save_config()
+
         self._log(f"작업 시작: {task.get('title', task.get('name', 'unknown'))}")
 
         try:
             result = action_func(task)
-
-            task["last_run"] = datetime.now().isoformat()
 
             if task.get("repeat") == "none":
                 task["enabled"] = False

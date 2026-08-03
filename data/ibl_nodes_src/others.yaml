@@ -88,7 +88,7 @@
         - 링크공유
       channel_read:
         returns: items
-        fixture: '[others:channel_read]{channel_type: "email"}'
+        exempt: 발신 신원(agent identity) 게이트 의존 — 신원 없는 헤드리스 점검이 항상 거부돼 거짓 실패만 쌓임 (실사용은 에이전트 신원으로 정상)
         description: 채널 수신함 원시 조회/검색 (Gmail/Nostr). query 있으면 검색, 없으면 최근 수신. nostr는 릴레이를 당겨 DM 캐시도 갱신(새로고침) — 이웃별 대화 뷰는 [others:messages]가 정본.
         target_description: 채널 타입 (email/nostr — gmail은 email의 옛 별칭). query 옵션으로 검색어 (email은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
         group: channel

@@ -346,3 +346,6 @@ data/*.log.1
 # 템플릿은 wrangler.toml.example 이 추적된다.
 data/packages/installed/tools/public-files/site/wrangler.toml
 data/music/
+
+# Claude Code 로컬 설정·워크트리 (세션 로컬 — 커밋 금지)
+.claude/

@@ -49,8 +49,10 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
   }, []);
 
   // 강의 데이터 로드
-  const loadLecture = useCallback(async (id: string) => {
-    setLoading(true);
+  // silent: 이미 열린 강의의 재조회(재배열·삭제·복제 등)는 로딩 화면을 띄우지 않는다 —
+  // 로딩 화면이 3패널을 통째로 언마운트해 데크 스크롤이 맨 위(첫 슬라이드)로 튀기 때문.
+  const loadLecture = useCallback(async (id: string, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const data = await api.loadLecture(id);
@@ -59,7 +61,7 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
       setError(e instanceof Error ? e.message : String(e));
       setLoaded(null);
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
@@ -168,11 +170,11 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
       <LectureHeader
         deck={loaded.deck}
         onBack={handleBackToList}
-        onChange={() => loadLecture(loaded.deck.lecture_id)}
+        onChange={() => loadLecture(loaded.deck.lecture_id, { silent: true })}
       />
       <WorkspaceBody
         loaded={loaded}
-        onChange={() => loadLecture(loaded.deck.lecture_id)}
+        onChange={() => loadLecture(loaded.deck.lecture_id, { silent: true })}
         onPatchDeck={patchDeckLocal}
       />
     </div>

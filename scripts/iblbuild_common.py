@@ -68,7 +68,7 @@ PHONE_VERIFIED_PACKAGES = {
     "legal",            # 법령/판례 검색(HTTP)
     "startup",          # 창업 정보(HTTP + stdlib xml)
     "local-info",       # 지역 정보 검색(HTTP)
-    "shopping-assistant",  # 네이버 쇼핑 검색(API). 다나와·중고(playwright)는 지연 import→폰선 graceful 미지원. arxiv 선례.
+    "shopping-assistant",  # 다나와 가격비교(tool_danawa 순수 HTTP — stdlib urllib 폴백이라 curl_cffi 없는 폰서도 로컬 실행) + sense:used 번개장터/당근 내부 API + sense:freelance 크몽. 중고 스크래핑(playwright)만 지연 import→폰선 graceful 미지원(arxiv 선례). ★옛 근거였던 네이버 쇼핑 API 는 2026-08 은퇴(공식 SE05 + 내부 API 418 봇차단) → 폰 쇼핑 축을 다나와로 옮겨 이 등재를 회복.
     "memory",   # 심층기억(self:memory). 자아별 사적 로컬 DB(동기화 안 함). 모듈레벨 stdlib만(numpy/sqlite_vec 지연) → 폰서 import 안전, 시맨틱 미가용 시 LIKE/FTS 키워드 폴백(기존 graceful 강등). 시맨틱-온-폰(/embed 렌트+brute-force)은 후속.
     # self 노드 = AI 자신 → file 액션은 자기 몸의 fs 에 작용(각 몸 자기 파일·시계). 둘 다 모듈레벨 stdlib,
     # 무거운 것(fitz/docx/openpyxl·api_pcmanager)은 지연 import → 폰 import 안전. read 의 PDF/docx 포맷만

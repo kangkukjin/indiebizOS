@@ -88,6 +88,14 @@ def _book_op(ti: dict):
         keyword = ti.get("keyword") or ti.get("query")
         detail = ti.get("detail", False)
         rows = ti.get("rows", 10)
+        # source=nl → 국립중앙도서관 납본 소장 검색 (정보나루=공공도서관 대출 렌즈와 코퍼스가 다름
+        # — 도서관들이 안 산 신간·소부수 출판은 나루엔 없어도 납본으로 여기엔 있다)
+        source = str(ti.get("source") or "").strip().lower()
+        if source in ("nl", "national", "국립", "국립중앙도서관"):
+            from tool_nl import search_nl
+            kw = keyword or " ".join(x for x in [title, author, publisher] if x) or (isbn or "")
+            return search_nl(keyword=kw, category=ti.get("category", "도서"),
+                             page=ti.get("page", 1), page_size=rows)
         result = None
         if isbn:
             if detail:

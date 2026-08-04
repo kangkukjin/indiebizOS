@@ -2,12 +2,12 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "shopping-assistant",
   "name": "Shopping Assistant",
-  "description": "네이버 쇼핑, 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
-  "version": "1.1.0",
+  "description": "다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
+  "version": "1.2.0",
   "tools": [
     {
       "name": "search_shopping",
-      "description": "상품 검색을 수행합니다. 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다. ★네이버 쇼핑 API는 2026-08 네이버가 은퇴시킴 — site:naver 는 대체 안내만 반환.\n\n지원 사이트: danawa, used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
+      "description": "새 상품 가격비교 검색을 수행합니다. 다나와(순수 HTTP — 폰서도 동작), 중고 거래 사이트(중고나라, 번개장터 — 브라우저 자동화라 PC 전용)를 지원합니다. 중고는 [sense:used] 가 더 낫습니다. ★네이버 축은 2026-08 은퇴 — 공식 API 404 SE05, 내부 API 418 봇차단, site:naver 는 안내만 반환.\n\n지원 사이트: danawa(기본), used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site, spec}], total}",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,14 +17,14 @@
           },
           "site": {
             "type": "string",
-            "description": "검색할 사이트 (naver, danawa, used, all)",
+            "description": "검색할 사이트 — danawa(기본, 가격비교·폰서도 동작), used(중고, PC 전용), all(합침), naver(은퇴, 안내만 반환)",
             "enum": [
               "naver",
               "danawa",
               "used",
               "all"
             ],
-            "default": "all"
+            "default": "danawa"
           },
           "display": {
             "type": "integer",

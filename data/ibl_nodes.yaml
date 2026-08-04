@@ -356,9 +356,9 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:book]{query: "역사"}'
-        description: 한국 도서 조회 (op 분기, 도서관정보나루). 고전 원문은 classic, 글로벌 도서는 search_books.
+        description: 한국 도서 조회 (op 분기, 도서관정보나루+국립중앙도서관). 고전 원문은 classic, 글로벌 도서는 search_books.
         group: culture
-        target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계). "제목이 X인 책"은 title:"X". recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
+        target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). "제목이 X인 책"은 title:"X". recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
         target_key: op
         router: handler
         tool: book_op
@@ -416,6 +416,25 @@ nodes:
                 link:
                   href: '{bookDtlUrl}'
                   label: 상세 →
+          - name: 국립도서관
+            inputs:
+            - key: q
+              type: text
+              placeholder: 납본 전수 — 신간·소부수도  예) 하네스
+              required: true
+            action: '[sense:book]{keyword: "$q", source: "nl"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 국립중앙도서관 →
           - name: 글로벌
             inputs:
             - key: q
@@ -1427,12 +1446,31 @@ nodes:
       search_shopping:
         returns: items
         fixture: '[sense:search_shopping]{query: "노트북"}'
-        description: 상품 검색 및 가격 비교 (다나와·중고 — 브라우저 스크래핑이라 PC 전용. ★네이버 쇼핑 API는 2026-08 네이버 은퇴)
+        description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). site=danawa(기본)/used(중고, PC 전용)/all. ★네이버 축은 2026-08 은퇴(공식 API SE05 + 내부 API 봇차단) — 중고는 [sense:used]가 더 낫다.
         group: research
-        target_description: 상품명
+        target_description: '새 상품 가격비교 검색. query=상품명(필수).
+
+          - site=danawa(기본): 다나와 가격비교 — 상품명·최저가·스펙 요약·상품 링크. 순수 HTTP 라 폰에서도 동작.
+
+          - site=used: 중고나라·번개장터 스크래핑(브라우저 자동화 — PC 전용). ★중고는 [sense:used] 가 소스도 많고 통화도 깨끗하다(이쪽 우선).
+
+          - site=all: 다나와+중고 합침.
+
+          display=개수(기본 5).
+
+          ★site=naver 는 죽었다(네이버가 2026-08 쇼핑 검색을 은퇴 + 내부 API 봇차단) — 안내만 반환.'
         router: handler
         tool: search_shopping
-        implementation: Naver Shopping API + Playwright로 다나와/중고마켓 비공식 스크래핑 병렬 실행
+        implementation: 'tool_danawa.py — 다나와 검색 HTML(search.danawa.com/dsearch.php) SSR 파싱. 봇차단·TLS 지문 검사 없어 stdlib urllib 만으로 200(curl_cffi 위장 불요) → 폰서도 로컬 실행. Playwright 는 폴백. 중고(site=used)만 Playwright PC 전용. ★site=naver 은퇴: 공식 /v1/search/shop.json=404 SE05, 내부 API(api/search/all·ns/v1/paged-composite-cards)=418 WAF, headed 브라우저조차 ncpt 캡차(sus_val·X-Wtm-Cpt-Tk), robots Disallow /.'
+        keywords:
+        - 쇼핑
+        - 상품
+        - 가격비교
+        - 최저가
+        - 다나와
+        - 신제품
+        - 구매
+        - 물건값
         target_key: query
       used:
         returns: items
@@ -1910,6 +1948,9 @@ nodes:
     - 지원사업
     - 프리랜서
     - 외주
+    - 쇼핑
+    - 가격비교
+    - 최저가
     guides:
     - investment.md
     - local_info.md
@@ -1922,6 +1963,7 @@ nodes:
     - kosis.md
     - startup.md
     - freelance.md
+    - shopping.md
   self:
     actions:
       recent_chats:

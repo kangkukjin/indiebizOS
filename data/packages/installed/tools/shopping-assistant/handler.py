@@ -51,19 +51,56 @@ def _products_to_records(items):
 
 
 def search_naver_shopping(query: str, display: int = 5):
-    """네이버 쇼핑 검색 API — ★2026-08-04 실측: 네이버가 /v1/search/shop.json 을 은퇴시킴
-    (404 SE05 "존재하지 않는 검색 api"). 재활하려면 쇼핑 내부 API 발굴 필요(직방 선례).
+    """네이버 쇼핑 검색 — ★은퇴. 공식 API 도 내부 API 도 막혔다(2026-08-04 실측 종결).
+
+    ① 공식 오픈API `/v1/search/shop.json` = 404 SE05 "존재하지 않는 검색 api"(네이버가 은퇴).
+    ② 내부 API 발굴 시도(직방 tool_zigbang·크몽 tool_freelance 선례) — **전부 차단**:
+       · `search.shopping.naver.com/api/search/all` → **418**(I'm a teapot = WAF 봇 차단).
+         ★없는 경로는 404 text/plain 9바이트로 답한다 → 418 은 "경로는 살아있고 WAF 가 막는다"는 뜻.
+         `/ns/v1/search/paged-composite-cards` 도 동일하게 418(존재+차단).
+       · 검색 페이지 HTML(웹·모바일·msearch) 전부 418 — SSR 데이터 추출 경로도 없음.
+       · 쿠키 부트스트랩(naver.com→shopping.naver.com 방문 후 재시도)도 418 그대로.
+       · curl_cffi impersonate="chrome" 무효 — TLS 지문 위장으로 뚫리는 층이 아니다.
+       · **실제 창을 띄운 Chromium(headed, non-headless)조차 캡차**로 착지:
+         `ncpt.naver.com/v1/wcpt/*` 영수증 이미지 문제 + 쿠키 `sus_val`·`X-Wtm-Cpt-Tk`
+         (네이버 WTM 봇탐지 플랫폼). 즉 headless 탐지가 아니라 **자동화 전면 게이트**.
+       · robots.txt = `User-agent: * / Disallow: /` (정책상으로도 금지).
+       → 캡차를 푸는 것 외에 경로가 없고, 그건 하지 않는다(우회 금지 + 애초에 불안정한 토대).
+    ③ 대체 후보 실측: 통합검색(search.naver.com)은 200 이지만 고유 상품 **3개**뿐이고
+       대부분 광고 블록이라 상품 검색 소스로 부적합(robots 도 Disallow: /).
+    → 결론: **네이버 축은 죽었다.** 쇼핑 검색의 몸은 다나와(순수 HTTP, 폰 포함)로 옮겼다
+      (tool_danawa.py). 되살릴 여지가 생기면 418→200 전환 여부부터 재실측할 것.
+
     호출부(search_all_async·site:naver)가 items 부재를 우아하게 건너뛰도록 즉시 반환."""
-    return {"error": "네이버 쇼핑 검색 API 은퇴(2026-08, SE05) — 다나와·중고 검색을 사용하세요(PC 전용).",
+    return {"error": "네이버 쇼핑 검색 은퇴(2026-08) — 공식 API SE05 + 내부 API 418/캡차. 다나와 검색을 사용하세요.",
             "items": []}
 
 
 async def search_danawa_shopping_async(query: str, display: int = 5):
-    """다나와 검색 (Playwright 사용)"""
+    """다나와 검색 — **순수 HTTP 우선**(2026-08-04), Playwright 는 폴백.
+
+    네이버 축이 죽어(search_naver_shopping 주석) 폰 쇼핑 검색이 완전히 비었던 것을,
+    다나와가 봇 차단·TLS 지문 검사 없이 stdlib urllib 만으로 상품을 준다는 실측으로 메움.
+    → tool_danawa.py 가 폰(curl_cffi 없는 Chaquopy)에서도 그대로 동작한다.
+    HTTP 가 실패할 때만 옛 Playwright 경로(PC 전용)로 내려간다."""
+    try:
+        # tool_used/tool_freelance 와 동일 — /packages/reload 는 handler 만 갈고
+        # 서브모듈은 sys.modules 캐시에 남으므로 파일에서 매번 fresh 로드.
+        import importlib.util as _ilu
+        _path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tool_danawa.py")
+        _spec = _ilu.spec_from_file_location("tool_danawa", _path)
+        _td = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_td)
+        res = _td.search_danawa(query, display)
+        if res.get("items"):
+            return res
+    except Exception:
+        pass  # 아래 Playwright 폴백으로
+
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        return {"total": 0, "items": [], "error": "다나와 검색은 이 기기에서 미지원(브라우저 자동화 — 맥 전용)"}
+        return {"total": 0, "items": [], "error": "다나와 검색 실패(HTTP 파싱 결과 없음, 이 기기엔 브라우저 폴백 미지원)"}
     async with async_playwright() as p:
         try:
             browser = await p.chromium.launch(headless=True)
@@ -278,7 +315,9 @@ def execute(tool_input: dict, context) -> str:
         return _handle_used(tool_input)
     if tool_name == "search_shopping":
         query = tool_input.get("query")
-        site = tool_input.get("site", "all")
+        # 기본 danawa (2026-08-04): 옛 기본 all 은 죽은 네이버 + 느린 Playwright 중고를
+        # 매번 끌고 왔다. 중고는 [sense:used] 가 정본이라 여기 기본은 가격비교로.
+        site = tool_input.get("site", "danawa")
         display = tool_input.get("display", 5)
 
         if not query:

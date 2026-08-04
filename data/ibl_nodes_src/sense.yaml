@@ -76,6 +76,9 @@
     - 지원사업
     - 프리랜서
     - 외주
+    - 쇼핑
+    - 가격비교
+    - 최저가
     guides:
     - investment.md
     - local_info.md
@@ -88,3 +91,4 @@
     - kosis.md
     - startup.md
     - freelance.md
+    - shopping.md

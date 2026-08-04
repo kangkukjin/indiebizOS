@@ -504,30 +504,15 @@ def _load_node_groups() -> dict:
       - "info:*", "store:*" 등 그룹 접두어 → resolve_allowed_nodes에서 처리
       - 6-노드 체계: sense, self, limbs, others, engines, table
     """
+    # 2026-08-05 정리: 어떤 노드도 type: 을 선언하지 않아 옛 ntype 루프(store/exec/output
+    # 매핑)는 한 번도 실행되지 않는 죽은 가지였고, exec→fs·output→output 은 존재하지
+    # 않는 노드를 가리켰다. 오늘의 실제 산출( info:* → sense 하나 )을 정적으로 고정.
+    # store:/info: 접두 개별 항목은 resolve_allowed_nodes 의 startswith 분기가 처리.
     global _node_groups_cache
     if _node_groups_cache is not None:
         return _node_groups_cache
-
-    data = _load_nodes_data()
-    groups = {}
-    nodes = data.get("nodes", {})
-
-    for node_name, node_config in nodes.items():
-        ntype = node_config.get("type")
-        if ntype == "store":
-            # 하위 호환: store:* → self (Phase 25: librarian → self로 통합됨)
-            groups["store:*"] = ["self"]
-        elif ntype == "exec":
-            groups["exec:*"] = ["fs"]
-        elif ntype == "output":
-            groups["output:*"] = ["output"]
-
-    # 하위 호환: info 그룹 → sense 노드로 매핑
-    # (info 타입 노드 → informant → sense로 통합됨, Phase 25)
-    groups["info:*"] = ["sense"]
-
-    _node_groups_cache = groups
-    return groups
+    _node_groups_cache = {"info:*": ["sense"]}
+    return _node_groups_cache
 
 
 def _resolve_db_path(project_path: Optional[str]) -> Optional[str]:
@@ -543,9 +528,6 @@ def _resolve_db_path(project_path: Optional[str]) -> Optional[str]:
         return str(default_db)
     return None
 
-
-def invalidate_cache():
-    """모든 캐시 무효화"""
-    global _node_groups_cache, _nodes_data_cache
-    _node_groups_cache = None
-    _nodes_data_cache = None
+# (2026-08-05) 옛 invalidate_cache() 는 삭제 — invalidate_nodes_cache() 와 중복이면서
+# _package_meta_cache 를 빠뜨린 불완전판이었고 호출처도 0이었다(감사 D19).
+# 캐시 무효화의 단일 진입점은 invalidate_nodes_cache().

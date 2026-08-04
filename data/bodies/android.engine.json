@@ -206,11 +206,12 @@
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
+    "test_ibl_silent_failures": "force_exclude_glob",
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 203,
+    "total": 204,
     "engine": 184,
-    "blocklist": 19
+    "blocklist": 20
   }
 }

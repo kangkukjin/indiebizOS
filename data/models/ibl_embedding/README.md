@@ -5,35 +5,39 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4682
+- dataset_size:4923
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 시간 좀 알려줘
+- source_sentence: 컴퓨터 화면 캡처해
   sentences:
-  - '[self:schedule]"}'
-  - '[sense:abc_search]'
-  - '[self:time]'
-- source_sentence: 커뮤니티 보드 목록이랑 활성 보드 글 같이 보여줄래
+  - '[limbs:screen]'
+  - 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini
+    STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
+  - 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
+- source_sentence: 발표 슬라이드 만들어줘
   sentences:
-  - '[sense:host]'
-  - '[others:family_news]'
-  - '[others:feed]'
-- source_sentence: 분기 실적 슬라이드 홍보팀이 만들어줘
+  - '[engines:slide]'
+  - '[limbs:browser]'
+  - '[self:photo] >> [table:groupby]'
+- source_sentence: 뉴스수집-요약-저장 순서로 시작해줘해
   sentences:
-  - '[sense:used]'
-  - '[others:delegate]'
-  - '[sense:researcher]'
-- source_sentence: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+  - '[limbs:screen]'
+  - '[sense:search_gnews] >> [self:output]'
+  - '[self:run_pipeline]'
+- source_sentence: 맥북프로 14인치 최저가 좀
   sentences:
-  - '[sense:performance]'
-  - 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-  - '[sense:stock] & [sense:stock] >> [table:join] >> [table:chart]'
-- source_sentence: 포털 이름을 우리 마을로 바꿔줘
+  - '[sense:paper]'
+  - 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). site=danawa(기본)/used(중고, PC 전용)/all. ★네이버
+    축은 2026-08 은퇴(공식 API SE05 + 내부 API 봇차단) — 중고는 [sense:used]가 더 낫다.
+  - '[sense:search_ddg] & [sense:search_ddg] >> [table:merge] >> [table:dedup] >>
+    [table:take] >> [table:document]'
+- source_sentence: 사진 찍어서 메모에 저장해
   sentences:
-  - '[others:bulletin]'
-  - '[sense:realty]'
-  - '[others:portal]'
+  - 이 몸의 카메라로 사진 1장 촬영 (지표어 — 폰=Camera2 back/front, 데스크탑=ffmpeg 웹캠). 카메라 없는 몸(예 맥미니)이면
+    작동불능(정직 거절). 호출 시 1회, jpg 경로 반환.
+  - '[sense:company]'
+  - 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -87,9 +91,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '포털 이름을 우리 마을로 바꿔줘',
-    '[others:portal]',
-    '[others:bulletin]',
+    '사진 찍어서 메모에 저장해',
+    '이 몸의 카메라로 사진 1장 촬영 (지표어 — 폰=Camera2 back/front, 데스크탑=ffmpeg 웹캠). 카메라 없는 몸(예 맥미니)이면 작동불능(정직 거절). 호출 시 1회, jpg 경로 반환.',
+    '[sense:company]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -98,9 +102,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.6738, 0.3596],
-#         [0.6738, 1.0000, 0.5619],
-#         [0.3596, 0.5619, 1.0000]])
+# tensor([[1.0000, 0.7103, 0.0099],
+#         [0.7103, 1.0000, 0.0267],
+#         [0.0099, 0.0267, 1.0000]])
 ```
 
 <!--
@@ -145,19 +149,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,682 training samples
+* Size: 4,923 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 4 tokens</li><li>mean: 13.59 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 22.63 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 3 tokens</li><li>mean: 13.51 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 23.12 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                             | sentence_1                                                                       |
-  |:---------------------------------------|:---------------------------------------------------------------------------------|
-  | <code>오만과 편견 원문 텍스트 어디서 볼 수 있어?</code> | <code>고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).</code> |
-  | <code>지역 데이터에서 찾아봐</code>              | <code>[sense:local_query]</code>                                                 |
-  | <code>고전 철학 텍스트 찾아줘</code>             | <code>[sense:classic]</code>                                                     |
+  | sentence_0                     | sentence_1                                                                                                                                         |
+  |:-------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>마이크로 녹음해줄래</code>        | <code>이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.</code> |
+  | <code>자주 가는 사이트 목록</code>      | <code>라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.</code>                                                                     |
+  | <code>폰에서 최근 사진 5장만 남겨줘</code> | <code>[self:photo] >> [self:copy]</code>                                                                                                           |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -279,7 +283,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.8532 | 500  | 0.0205        |
+| 0.8117 | 500  | 0.0112        |
 
 
 ### Framework Versions

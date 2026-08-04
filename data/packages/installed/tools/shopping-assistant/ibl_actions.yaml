@@ -3,12 +3,12 @@ actions:
   search_shopping:
     returns: items
     fixture: '[sense:search_shopping]{query: "노트북"}'
-    description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). site=danawa(기본)/used(중고, PC 전용)/all. ★네이버 축은 2026-08 은퇴(공식 API SE05 + 내부 API 봇차단) — 중고는 [sense:used]가 더 낫다.
+    description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). 순수 HTTP 라 PC·폰 모두 동작. ★중고 매물은 [sense:used] 가 정본(2026-08 site=used/all 은퇴). ★site=naver 도 은퇴(공식 API SE05 + 내부 API 봇차단).
     group: research
-    target_description: "새 상품 가격비교 검색. query=상품명(필수).\n- site=danawa(기본): 다나와 가격비교 — 상품명·최저가·스펙 요약·상품 링크. 순수 HTTP 라 폰에서도 동작.\n- site=used: 중고나라·번개장터 스크래핑(브라우저 자동화 — PC 전용). ★중고는 [sense:used] 가 소스도 많고 통화도 깨끗하다(이쪽 우선).\n- site=all: 다나와+중고 합침.\ndisplay=개수(기본 5).\n★site=naver 는 죽었다(네이버가 2026-08 쇼핑 검색을 은퇴 + 내부 API 봇차단) — 안내만 반환."
+    target_description: "새 상품 가격비교 검색. query=상품명(필수). display=개수(기본 5).\n다나와 가격비교 — 상품명·최저가·스펙 요약·상품 링크. 순수 HTTP 라 폰에서도 동작.\n★중고 매물은 이 어휘가 아니라 [sense:used] — 소스 넷(번개장터·당근·중고나라·네이버카페)에 동네 스코프까지 된다.\n★site 는 danawa(기본) 하나뿐이다. 옛 used/all 축은 2026-08 은퇴(두 사이트 개편으로 스크래핑이 0건, [sense:used] 가 같은 소스를 내부 API 로 더 잘 준다) — 넣으면 다나와 결과 + 안내 note 를 준다. site=naver 도 죽었다(안내만 반환)."
     router: handler
     tool: search_shopping
-    implementation: 'tool_danawa.py — 다나와 검색 HTML(search.danawa.com/dsearch.php) SSR 파싱. 봇차단·TLS 지문 검사 없어 stdlib urllib 만으로 200(curl_cffi 위장 불요) → 폰서도 로컬 실행. Playwright 는 폴백. 중고(site=used)만 Playwright PC 전용. ★site=naver 은퇴: 공식 /v1/search/shop.json=404 SE05, 내부 API(api/search/all·ns/v1/paged-composite-cards)=418 WAF, headed 브라우저조차 ncpt 캡차(sus_val·X-Wtm-Cpt-Tk), robots Disallow /.'
+    implementation: 'tool_danawa.py — 다나와 검색 HTML(search.danawa.com/dsearch.php) SSR 파싱. 봇차단·TLS 지문 검사 없어 stdlib urllib 만으로 200(curl_cffi 위장 불요) → 폰서도 로컬 실행. Playwright 는 폴백(PC 전용, 실측 정상 동작). ★site=used/all 은퇴(2026-08-04): 중고나라·번개장터 Playwright 스크래핑이 사이트 개편으로 라이브 0건 + except:pass 로 침묵 — 같은 두 소스를 [sense:used] 가 내부 API 로 준다. ★site=naver 은퇴: 공식 /v1/search/shop.json=404 SE05, 내부 API(api/search/all·ns/v1/paged-composite-cards)=418 WAF, headed 브라우저조차 ncpt 캡차(sus_val·X-Wtm-Cpt-Tk), robots Disallow /.'
     keywords:
     - 쇼핑
     - 상품
@@ -133,12 +133,13 @@ tool_json:
     version: 1.2.0
   tools:
   - name: search_shopping
-    description: '새 상품 가격비교 검색을 수행합니다. 다나와(순수 HTTP — 폰서도 동작), 중고 거래
-      사이트(중고나라, 번개장터 — 브라우저 자동화라 PC 전용)를 지원합니다. 중고는 [sense:used] 가 더 낫습니다.
-      ★네이버 축은 2026-08 은퇴 — 공식 API 404 SE05, 내부 API 418 봇차단, site:naver 는 안내만 반환.
+    description: '새 상품 가격비교 검색을 수행합니다. 다나와 가격비교(순수 HTTP — PC·폰 모두 동작).
+      ★중고 매물은 이 도구가 아니라 [sense:used] 를 쓰십시오 — 중고 축(site=used/all)은 2026-08 은퇴했습니다
+      (사이트 개편으로 스크래핑 0건, 같은 소스를 [sense:used] 가 내부 API 로 제공).
+      ★네이버 축도 2026-08 은퇴 — 공식 API 404 SE05, 내부 API 418 봇차단, site:naver 는 안내만 반환.
 
 
-      지원 사이트: danawa(기본), used, all
+      지원 사이트: danawa(기본)
 
 
       데이터 형식: {items: [{name, price, mall, link, image, category, site, spec}], total}'
@@ -150,12 +151,10 @@ tool_json:
           description: 검색할 상품명
         site:
           type: string
-          description: 검색할 사이트 — danawa(기본, 가격비교·폰서도 동작), used(중고, PC 전용), all(합침), naver(은퇴, 안내만 반환)
+          description: 검색할 사이트 — danawa(기본이자 유일한 실동작 축, 가격비교·폰서도 동작). naver 는 은퇴(안내만 반환)
           enum:
-          - naver
           - danawa
-          - used
-          - all
+          - naver
           default: danawa
         display:
           type: integer

@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "search_shopping",
-      "description": "새 상품 가격비교 검색을 수행합니다. 다나와(순수 HTTP — 폰서도 동작), 중고 거래 사이트(중고나라, 번개장터 — 브라우저 자동화라 PC 전용)를 지원합니다. 중고는 [sense:used] 가 더 낫습니다. ★네이버 축은 2026-08 은퇴 — 공식 API 404 SE05, 내부 API 418 봇차단, site:naver 는 안내만 반환.\n\n지원 사이트: danawa(기본), used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site, spec}], total}",
+      "description": "새 상품 가격비교 검색을 수행합니다. 다나와 가격비교(순수 HTTP — PC·폰 모두 동작). ★중고 매물은 이 도구가 아니라 [sense:used] 를 쓰십시오 — 중고 축(site=used/all)은 2026-08 은퇴했습니다 (사이트 개편으로 스크래핑 0건, 같은 소스를 [sense:used] 가 내부 API 로 제공). ★네이버 축도 2026-08 은퇴 — 공식 API 404 SE05, 내부 API 418 봇차단, site:naver 는 안내만 반환.\n\n지원 사이트: danawa(기본)\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site, spec}], total}",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,12 +17,10 @@
           },
           "site": {
             "type": "string",
-            "description": "검색할 사이트 — danawa(기본, 가격비교·폰서도 동작), used(중고, PC 전용), all(합침), naver(은퇴, 안내만 반환)",
+            "description": "검색할 사이트 — danawa(기본이자 유일한 실동작 축, 가격비교·폰서도 동작). naver 는 은퇴(안내만 반환)",
             "enum": [
-              "naver",
               "danawa",
-              "used",
-              "all"
+              "naver"
             ],
             "default": "danawa"
           },

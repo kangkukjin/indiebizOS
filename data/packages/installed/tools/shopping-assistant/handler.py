@@ -1,5 +1,8 @@
 """
-쇼핑 비교 검색 도구 (네이버 쇼핑 + 다나와 + 중고)
+쇼핑 검색 도구 — 새 상품 가격비교(다나와) + 중고 C2C([sense:used]) + 외주([sense:freelance])
+
+★2026-08-04: [sense:search_shopping] 의 중고 축(site=used/all)은 은퇴했다.
+  중고 매물은 [sense:used](tool_used.py — 내부 API, 소스 4종, 폰 동작)가 정본.
 
 Phase 0 마이그레이션: common 유틸리티 사용
 """
@@ -7,9 +10,9 @@ import sys
 import os
 import json
 import asyncio
-# playwright 는 다나와·중고 스크래핑(브라우저 자동화)에만 필요 — 모듈 레벨이면 폰서 import 실패해
-# 순수 API 인 네이버 쇼핑 검색(search_naver_shopping)까지 막힌다(study:arxiv 와 동일 함정).
-# → 지연 import 로 내려, 폰선 네이버 검색이 로컬 작동하고 다나와/중고만 graceful 미지원.
+# playwright 는 다나와 스크래핑(브라우저 자동화) 폴백에만 필요 — 모듈 레벨이면 폰서 import 실패해
+# 순수 HTTP 인 다나와·중고·외주 검색까지 통째로 막힌다(study:arxiv 와 동일 함정).
+# → 지연 import 로 내려, 폰선 HTTP 경로가 로컬 작동하고 폴백만 graceful 미지원.
 
 # backend/common 모듈 경로 추가
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -149,99 +152,19 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
             return {"error": f"다나와 검색 중 오류: {str(e)}"}
 
 
-async def search_used_items_async(query: str, display: int = 5):
-    """중고 거래 사이트 검색 (중고나라, 번개장터) — ★2026-08-04 실측 **0건**.
-
-    두 사이트가 개편되면서 아래 셀렉터(`ul.grid > li`, `div[class*='ProductItem']`)가
-    낡았고, 예외를 조용히 삼켜(`except: pass`) 빈 목록으로 나온다.
-    고칠 가치 없음: 같은 두 소스를 `[sense:used]`(tool_used.py)가 **내부 API** 로
-    이미 깨끗하게 준다(폰서도 동작). 이 축은 은퇴 후보 — 중고는 [sense:used] 로 보낼 것."""
-    try:
-        from playwright.async_api import async_playwright
-    except ImportError:
-        return {"total": 0, "items": [], "error": "중고 검색은 이 기기에서 미지원(브라우저 자동화 — 맥 전용)"}
-    async with async_playwright() as p:
-        try:
-            browser = await p.chromium.launch(headless=True)
-            context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-            )
-
-            items = []
-
-            # 1. 중고나라
-            try:
-                page = await context.new_page()
-                await page.goto(f"https://web.joongna.com/search?keyword={query}", wait_until="domcontentloaded", timeout=10000)
-                await page.wait_for_selector("ul.grid", timeout=5000)
-                jn_items = await page.query_selector_all("ul.grid > li")
-                for el in jn_items[:display]:
-                    name_el = await el.query_selector("span.title")
-                    price_el = await el.query_selector("span.price")
-                    link_el = await el.query_selector("a")
-                    img_el = await el.query_selector("img")
-
-                    if name_el and price_el:
-                        items.append({
-                            "name": (await name_el.inner_text()).strip(),
-                            "price": (await price_el.inner_text()).replace("원", "").replace(",", "").strip(),
-                            "mall": "중고나라",
-                            "link": "https://web.joongna.com" + (await link_el.get_attribute("href") if link_el else ""),
-                            "image": await img_el.get_attribute("src") if img_el else "",
-                            "category": "중고",
-                            "site": "joongna"
-                        })
-                await page.close()
-            except:
-                pass
-
-            # 2. 번개장터
-            try:
-                page = await context.new_page()
-                await page.goto(f"https://m.bunjang.co.kr/search/products?q={query}", wait_until="domcontentloaded", timeout=10000)
-                await page.wait_for_selector("div[class*='sc-']", timeout=5000)
-                bj_items = await page.query_selector_all("div[class*='ProductItem']")
-                for el in bj_items[:display]:
-                    name_el = await el.query_selector("div[class*='Name']")
-                    price_el = await el.query_selector("div[class*='Price']")
-                    link_el = await el.query_selector("a")
-                    img_el = await el.query_selector("img")
-
-                    if name_el and price_el:
-                        items.append({
-                            "name": (await name_el.inner_text()).strip(),
-                            "price": (await price_el.inner_text()).replace(",", "").strip(),
-                            "mall": "번개장터",
-                            "link": "https://m.bunjang.co.kr" + (await link_el.get_attribute("href") if link_el else ""),
-                            "image": await img_el.get_attribute("src") if img_el else "",
-                            "category": "중고",
-                            "site": "bunjang"
-                        })
-                await page.close()
-            except:
-                pass
-
-            await browser.close()
-            return {"total": len(items), "items": items[:display * 2]}
-        except Exception as e:
-            return {"error": f"중고 검색 중 오류: {str(e)}"}
-
-
-async def search_all_async(query: str, display: int = 5):
-    """모든 사이트 검색 (네이버 + 다나와 + 중고)"""
-    naver_res = search_naver_shopping(query, display)
-    danawa_res = await search_danawa_shopping_async(query, display)
-    used_res = await search_used_items_async(query, display)
-
-    combined_items = []
-    if "items" in naver_res:
-        combined_items.extend(naver_res["items"])
-    if "items" in danawa_res:
-        combined_items.extend(danawa_res["items"])
-    if "items" in used_res:
-        combined_items.extend(used_res["items"])
-
-    return {"total": len(combined_items), "items": combined_items}
+# ★중고 축(site=used/all)은 2026-08-04 은퇴 — `search_used_items_async`·`search_all_async` 삭제.
+#
+# 있던 것: 중고나라(web.joongna.com)·번개장터(m.bunjang.co.kr)를 Playwright 로 긁던 함수.
+# 죽은 이유: 두 사이트 개편으로 셀렉터(`ul.grid > li`, `div[class*='ProductItem']`)가 낡아
+#   **라이브 0건**(실측 2026-08-04, 11.6초 걸려 빈 목록). 게다가 두 블록 다 `except: pass`
+#   라 실패가 침묵했다 — "중고가 없다"와 "긁기가 깨졌다"를 호출자가 구별할 수 없었다.
+# 고치지 않은 이유: **같은 두 소스를 [sense:used] 가 이미 내부 API 로 준다**(tool_used.py —
+#   실측 번개장터 0.1초·중고나라 0.3초에 각 5건, 제목·가격·위치·링크). 소스도 넷
+#   (bunjang/danggeun/joongna/naver)이고 동네 스코프까지 되며, 브라우저 자동화가 아니라
+#   폰에서도 돈다. 스크래퍼를 고쳐 봐야 더 느리고 더 약한 두 번째 창구가 될 뿐이다.
+# → 중고는 [sense:used]. 되살리지 말 것.
+#
+# `site=all`(다나와+중고 합침)도 함께 은퇴 — 중고가 빠지면 다나와 하나라 별칭일 뿐이다.
 
 
 def _search_naver_used(query: str, limit: int = 15):
@@ -320,8 +243,7 @@ def execute(tool_input: dict, context) -> str:
         return _handle_used(tool_input)
     if tool_name == "search_shopping":
         query = tool_input.get("query")
-        # 기본 danawa (2026-08-04): 옛 기본 all 은 죽은 네이버 + 느린 Playwright 중고를
-        # 매번 끌고 왔다. 중고는 [sense:used] 가 정본이라 여기 기본은 가격비교로.
+        # site 는 이제 danawa(실동작) + naver(은퇴 안내) 둘뿐이다 — 중고 축은 2026-08-04 은퇴.
         site = tool_input.get("site", "danawa")
         display = tool_input.get("display", 5)
 
@@ -331,12 +253,18 @@ def execute(tool_input: dict, context) -> str:
         try:
             if site == "naver":
                 result = search_naver_shopping(query, display)
-            elif site == "danawa":
-                result = asyncio.run(search_danawa_shopping_async(query, display))
-            elif site == "used":
-                result = asyncio.run(search_used_items_async(query, display))
             else:
-                result = asyncio.run(search_all_async(query, display))
+                result = asyncio.run(search_danawa_shopping_async(query, display))
+                if site not in ("danawa", "naver"):
+                    # 어휘 밖 값(옛 used/all 포함) — 빈손으로 돌려보내는 대신 가격비교 결과를
+                    # 주고 중고 정본으로 안내한다(옛 스크래퍼는 조용히 0건이라 이보다 나빴다).
+                    # ★enum 리터럴로만 분기한다 — 은퇴한 값을 코드에 박으면 enum-가드가
+                    #   어휘 드리프트로 잡는다(그게 맞다: 죽은 축은 코드에도 남기지 않는다).
+                    result["note"] = (
+                        f"알 수 없는 site='{site}' — 다나와 가격비교 결과를 반환했습니다. "
+                        "중고 매물은 [sense:used]{source: \"bunjang\"|\"danggeun\"|\"joongna\"|\"naver\"} 를 "
+                        "쓰세요(옛 site=used/all 축은 2026-08-04 은퇴)."
+                    )
 
             return format_json(result)
         except Exception as e:

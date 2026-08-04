@@ -1260,7 +1260,7 @@
     {
       "id": "shopping",
       "name": "새 상품 가격비교 검색 가이드 ([sense:search_shopping])",
-      "description": "다나와 가격비교 검색 사용법(site 축·통화·폰 동작 조건)과 ★네이버 쇼핑 축 은퇴 실측 기록(공식 API 404 SE05 + 내부 API 418 WAF + headed 브라우저 캡차 + robots Disallow). 되살리기 전 재실측 지점.",
+      "description": "다나와 가격비교 검색 사용법(통화·폰 동작 조건)과 은퇴 축 2건의 실측 기록 — ★중고 축(site=used/all) 2026-08-04 은퇴(사이트 개편으로 스크래핑 라이브 0건, 같은 두 소스를 [sense:used] 가 내부 API 로 40배 빠르게 제공 → 중고는 [sense:used] 가 정본) + ★네이버 쇼핑 축 은퇴(공식 API 404 SE05 + 내부 API 418 WAF + headed 브라우저 캡차 + robots Disallow). 되살리기 전 읽을 것.",
       "keywords": [
         "쇼핑",
         "상품검색",

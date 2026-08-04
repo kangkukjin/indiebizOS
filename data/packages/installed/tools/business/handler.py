@@ -1055,7 +1055,7 @@ def execute(tool_input: dict, context) -> str:
                 return json.dumps({"success": False, "message": f"알 수 없는 op: {op}"}, ensure_ascii=False)
             return fn(bm, tool_input)
 
-        return f"Unknown tool: {tool_name}"
+        return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)

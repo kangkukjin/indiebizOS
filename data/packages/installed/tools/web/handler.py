@@ -389,7 +389,7 @@ _DEFAULT_SITES = [
 ]
 
 
-def launch_sites(action: str = "open_ui", name: str = None, url: str = None, project_path: str = ".") -> str:
+def launch_sites(action: str = "open_ui", name: str = None, url: str = None, project_path: str = ".") -> dict:
     """자주 가는 사이트 런처 및 관리"""
     sites_path = current_dir / "sites.json"
 
@@ -403,7 +403,7 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
         else:
             sites = [dict(s) for s in _DEFAULT_SITES]
     except Exception as e:
-        return f"사이트 목록을 읽는 중 오류 발생: {str(e)}"
+        return {"success": False, "error": f"사이트 목록을 읽는 중 오류 발생: {e}"}
 
     if action == "list":
         # 구조화 반환 — 앱 계기(즐겨찾기)가 items[] 를 직접 렌더. message 는 에이전트/사람용.
@@ -416,31 +416,31 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
 
     elif action == "add":
         if not name or not url:
-            return "사이트 이름(name)과 URL(url)이 필요합니다."
+            return {"success": False, "error": "사이트 이름(name)과 URL(url)이 필요합니다."}
         sites.append({"name": name, "url": url})
         try:
             with open(sites_path, "w", encoding="utf-8") as f:
                 json.dump(sites, f, ensure_ascii=False, indent=2)
-            return f"사이트가 추가되었습니다: {name} ({url})"
+            return {"success": True, "message": f"사이트가 추가되었습니다: {name} ({url})"}
         except Exception as e:
             return f"저장 중 오류 발생: {str(e)}"
 
     elif action == "remove":
         if not name:
-            return "삭제할 사이트 이름(name)이 필요합니다."
+            return {"success": False, "error": "삭제할 사이트 이름(name)이 필요합니다."}
         new_sites = [s for s in sites if s["name"] != name]
         if len(new_sites) == len(sites):
-            return f"'{name}' 이름의 사이트를 찾을 수 없습니다."
+            return {"success": False, "error": f"'{name}' 이름의 사이트를 찾을 수 없습니다."}
         try:
             with open(sites_path, "w", encoding="utf-8") as f:
                 json.dump(new_sites, f, ensure_ascii=False, indent=2)
-            return f"사이트가 삭제되었습니다: {name}"
+            return {"success": True, "message": f"사이트가 삭제되었습니다: {name}"}
         except Exception as e:
             return f"저장 중 오류 발생: {str(e)}"
 
     elif action == "open_ui":
         if not sites:
-            return "등록된 사이트가 없습니다. 먼저 사이트를 추가해 주세요."
+            return {"success": False, "error": "등록된 사이트가 없습니다. 먼저 사이트를 추가해 주세요."}
 
         buttons_html = ""
         for site in sites:
@@ -506,9 +506,9 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
             f.write(html_content)
 
         webbrowser.open(f"file://{os.path.abspath(ui_path)}")
-        return f"런치패드 UI를 생성하고 브라우저에서 열었습니다: {os.path.abspath(ui_path)}"
+        return {"success": True, "message": f"런치패드 UI를 생성하고 브라우저에서 열었습니다: {os.path.abspath(ui_path)}"}
 
-    return "알 수 없는 작업입니다."
+    return {"success": False, "error": f"알 수 없는 작업입니다: {action} (list/add/remove/open_ui)"}
 
 
 # ============== 메인 핸들러 ==============

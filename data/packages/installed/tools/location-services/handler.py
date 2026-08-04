@@ -959,4 +959,4 @@ def execute(tool_input: dict, context) -> str:
         result = reverse_geocode_kakao(x=float(lon), y=float(lat))
         return json.dumps(result, ensure_ascii=False, indent=2)
 
-    return f"Unknown tool: {tool_name}"
+    return error_response(f"Unknown tool: {tool_name}")

@@ -248,7 +248,7 @@ def execute(tool_input: dict, context) -> str:
         display = tool_input.get("display", 5)
 
         if not query:
-            return "검색어를 입력해주세요."
+            return format_json({"success": False, "error": "검색어를 입력해주세요.", "items": []})
 
         try:
             if site == "naver":
@@ -268,6 +268,6 @@ def execute(tool_input: dict, context) -> str:
 
             return format_json(result)
         except Exception as e:
-            return f"오류 발생: {str(e)}"
+            return format_json({"success": False, "error": f"오류 발생: {e}", "items": []})
 
-    return f"알 수 없는 도구: {tool_name}"
+    return format_json({"success": False, "error": f"알 수 없는 도구: {tool_name}"})

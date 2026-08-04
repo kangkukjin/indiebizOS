@@ -90,6 +90,8 @@
             "description": "search=도서검색(기본), recommended=추천도서, codes=분류코드목록",
             "enum": [
               "search",
+              "popular",
+              "trending",
               "recommended",
               "codes"
             ],
@@ -121,6 +123,34 @@
           "category": {
             "type": "string",
             "description": "[search, source=nl] 자료 구분 (기본 도서. 학위논문/기사 등, 빈 문자열=전체)"
+          },
+          "region": {
+            "type": "string",
+            "description": "[search detail·popular] 지역명 또는 코드 (예 \"충북\", \"11\"=서울) — detail 의 소장 도서관 조회는 필수"
+          },
+          "gender": {
+            "type": "string",
+            "description": "[popular] 성별 필터 (\"남성\"/\"여성\")"
+          },
+          "age": {
+            "type": "string",
+            "description": "[popular] 연령대 (예 \"40\" 또는 \"40대\" → 40~49세)"
+          },
+          "kdc": {
+            "type": "string",
+            "description": "[popular] KDC 주제분류 (예 8=문학)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "[popular] 시작일 YYYY-MM-DD (기본 7일 전)"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "[popular] 종료일 YYYY-MM-DD (기본 어제)"
+          },
+          "base_date": {
+            "type": "string",
+            "description": "[trending] 기준일 YYYY-MM-DD (기본 어제)"
           },
           "isbn": {
             "type": "string",

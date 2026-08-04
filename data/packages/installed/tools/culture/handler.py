@@ -137,6 +137,40 @@ def _book_op(ti: dict):
         if isinstance(result, dict) and isinstance(result.get("data"), list):
             result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
         return result
+    if op in ("popular", "trending"):
+        # 2026-08-04 노출 — 구현은 처음부터 있었는데 어휘 밖이던 것(loanItemSrch·hotTrend)
+        from tool_library import get_popular_books, get_trending_books, get_region_code
+        if op == "trending":
+            result = get_trending_books(base_date=ti.get("base_date") or ti.get("date"))
+        else:
+            g = ti.get("gender")
+            if isinstance(g, str):
+                gs = g.strip()
+                g = int(gs) if gs.isdigit() else {"남": 0, "남성": 0, "여": 1, "여성": 1}.get(gs)
+            fa, ta = ti.get("from_age"), ti.get("to_age")
+            age = str(ti.get("age") or "").strip()
+            if age and not fa:
+                try:
+                    a = int(age.rstrip("대"))
+                    fa, ta = a, a + 9
+                except ValueError:
+                    pass
+            result = get_popular_books(
+                start_date=ti.get("start_date"), end_date=ti.get("end_date"),
+                gender=g if g in (0, 1) else None,
+                from_age=fa, to_age=ta,
+                region=get_region_code(str(ti.get("region") or "").strip()) or None,
+                kdc=ti.get("kdc"), page=ti.get("page", 1),
+                page_size=ti.get("rows", 20))
+        if isinstance(result, dict) and isinstance(result.get("data"), list):
+            result["items"] = result.pop("data")  # 단일 통화 items (search 와 동형)
+        # ★실측(2026-08-04): region 집계는 일부 지역만 실림(서울·부산 5000 vs 경기·충북·대전 0)
+        # — libSrchByBook 과 같은 지역 커버리지 공백 부류. 빈 결과를 버그로 오독하지 않게 안내.
+        if (op == "popular" and isinstance(result, dict)
+                and not result.get("items") and str(ti.get("region") or "").strip()):
+            result["message"] = ("이 지역 집계가 비어 있습니다 — 정보나루 지역 필터는 "
+                                 "일부 지역(서울·부산 등)만 집계됩니다. '전국'으로 조회해 보세요.")
+        return result
     if op == "recommended":
         from tool_library import get_recommended_books
         return get_recommended_books(isbn13=ti.get("isbn13") or ti.get("isbn"), rec_type=ti.get("rec_type", "mania"))
@@ -181,7 +215,7 @@ def _classic_op(ti: dict):
 # 값 None — 분기 로직은 위 함수 안에 유지. --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "performance_op": {"search": None, "venue": None, "genres": None, "regions": None},
-    "book_op": {"search": None, "recommended": None, "codes": None},
+    "book_op": {"search": None, "popular": None, "trending": None, "recommended": None, "codes": None},
     "classic_op": {"western": None, "korean": None},
 }
 _OP_DEFAULTS = {"performance_op": "search", "book_op": "search", "classic_op": "western"}

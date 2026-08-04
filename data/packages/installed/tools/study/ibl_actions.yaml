@@ -15,7 +15,7 @@ actions:
       values:
         search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
         download: 논문 PDF 다운로드 (source arxiv/pubmed)
-    implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
+    implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(searchTotal — 페이지당 5건 고정·pageNo 추적, type/year=후필터), download=arxiv/pubmed_pdf.
     keywords:
     - 논문
     - 학술
@@ -28,7 +28,7 @@ actions:
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
     description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
-    target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
+    target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
     target_key: op
     group: research
     router: handler
@@ -37,8 +37,8 @@ actions:
       default: find
       values:
         find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
-        coauthor: 공저자망 (lodID→공저자, 신원 재확인)
-    implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+        coauthor: 연관연구자망 (이름→함께 연구한 학자들, 신원 재확인)
+    implementation: study 패키지. find=authorView, coauthor=relAuthor(searchTerm=이름 — ID 스코핑·페이지네이션 없음) (국회도서관 LOSI OpenAPI, NANET_API_KEY).
     keywords:
     - 연구자
     - 학자

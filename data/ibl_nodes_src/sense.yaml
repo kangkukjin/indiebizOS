@@ -74,6 +74,8 @@
     - 통계
     - 창업
     - 지원사업
+    - 프리랜서
+    - 외주
     guides:
     - investment.md
     - local_info.md
@@ -85,3 +87,4 @@
     - legal.md
     - kosis.md
     - startup.md
+    - freelance.md

@@ -1484,6 +1484,96 @@ nodes:
         - 당근마켓
         - 중고물건
         - 세컨핸드
+      freelance:
+        aliases:
+          query:
+          - q
+          - keyword
+        returns: items
+        fixture: '[sense:freelance]{query: "로고디자인"}'
+        description: 프리랜서·외주 서비스 검색 (source 분기, 현재 kmong=크몽). type=gigs(기본)=서비스 상품(제목·가격·평점·판매자) / type=experts=전문가 프로필(등급·경력·응답시간·주문수·전문분야). 통화 items.
+        group: research
+        target_description: '프리랜서·외주 서비스 검색. query=검색어 필수(예 "로고디자인", "번역", "영상편집").
+
+          - type=gigs(기본): 서비스 상품 검색 — 제목·가격·평점·리뷰수·판매자·카테고리. max_price=가격 상한(원, 후필터).
+
+          - type=experts: 전문가(프리랜서) 검색 — 닉네임·등급(MASTER 등)·자기소개·경력·평균 응답시간·누적 주문수·전문분야·만족도. 사람을 찾을 땐 이쪽.
+
+          sort=ranking(인기, 기본)/score(연관도). limit=개수(기본 20, 페이지 자동추적 최대 100). source=kmong(기본, 현재 유일).'
+        target_key: query
+        router: handler
+        tool: freelance_search
+        scope: workspace
+        implementation: tool_freelance.py — 크몽 비공식 내부 API(api.kmong.com/gig-app — gigs=/gig/v2/gigs/search, experts=/seller-profile/v2/seller-profiles/search). curl_cffi 크롬위장(직방 선례), 인증 불요. ★HTML 크롤링 불가(클라이언트 fetch 구조, 첫 HTML 에 데이터 없음 실측). sortType 은 RANKING/SCORE 만 유효(그 외 400). 서비스 URL=kmong.com/gig/{id}, 전문가 URL=kmong.com/@{닉네임}.
+        keywords:
+        - 프리랜서
+        - 외주
+        - 크몽
+        - 전문가
+        - 의뢰
+        - 용역
+        - 로고제작
+        - 디자인외주
+        - 번역
+        - 영상편집
+        - 개발외주
+        - 재능마켓
+        app:
+          instrument: freelance
+          icon: 💼
+          name: 외주
+          order: 19
+          modes:
+          - name: 서비스
+            inputs:
+            - key: query
+              type: text
+              label: 검색어
+              placeholder: '예: 로고디자인, 번역, 영상편집'
+              required: true
+            - key: sort
+              type: select
+              label: 정렬
+              options:
+              - value: ranking
+                label: 인기순
+              - value: score
+                label: 연관도순
+            action: '[sense:freelance]{type: "gigs", query: "$query", sort: "$sort"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 서비스를 찾지 못했습니다
+              card:
+                title: '{title}'
+                image: '{image}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 크몽에서 보기 →
+          - name: 전문가
+            inputs:
+            - key: query
+              type: text
+              label: 검색어
+              placeholder: '예: 로고디자인, 웹개발'
+              required: true
+            action: '[sense:freelance]{type: "experts", query: "$query"}'
+            view:
+            - type: card_list
+              from: items
+              empty: 전문가를 찾지 못했습니다
+              card:
+                title: '{title}'
+                image: '{image}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+                link:
+                  href: '{url}'
+                  label: 프로필 보기 →
       startup:
         returns: items
         fixture: '[sense:startup]{query: "AI"}'
@@ -1549,7 +1639,7 @@ nodes:
           values:
             search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
             download: 논문 PDF 다운로드 (source arxiv/pubmed)
-        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(researchTotal), download=arxiv/pubmed_pdf.
+        implementation: study 패키지 op/source 분기. search=openalex/arxiv/pubmed/semantic_scholar/nanet(searchTotal — 페이지당 5건 고정·pageNo 추적, type/year=후필터), download=arxiv/pubmed_pdf.
         keywords:
         - 논문
         - 학술
@@ -1562,7 +1652,7 @@ nodes:
         side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
         description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
-        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망. 공저자 소속·협업으로 신원 재확인.\n"
+        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
         target_key: op
         group: research
         router: handler
@@ -1571,8 +1661,8 @@ nodes:
           default: find
           values:
             find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
-            coauthor: 공저자망 (lodID→공저자, 신원 재확인)
-        implementation: study 패키지. find=authorView, coauthor=coAuthor (국회도서관 LOSI OpenAPI, NANET_API_KEY).
+            coauthor: 연관연구자망 (이름→함께 연구한 학자들, 신원 재확인)
+        implementation: study 패키지. find=authorView, coauthor=relAuthor(searchTerm=이름 — ID 스코핑·페이지네이션 없음) (국회도서관 LOSI OpenAPI, NANET_API_KEY).
         keywords:
         - 연구자
         - 학자
@@ -1837,6 +1927,8 @@ nodes:
     - 통계
     - 창업
     - 지원사업
+    - 프리랜서
+    - 외주
     guides:
     - investment.md
     - local_info.md
@@ -1848,6 +1940,7 @@ nodes:
     - legal.md
     - kosis.md
     - startup.md
+    - freelance.md
   self:
     actions:
       recent_chats:

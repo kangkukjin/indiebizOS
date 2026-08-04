@@ -31,6 +31,88 @@ actions:
     - 당근마켓
     - 중고물건
     - 세컨핸드
+  freelance:
+    aliases:
+      query: [q, keyword]
+    returns: items
+    fixture: '[sense:freelance]{query: "로고디자인"}'
+    description: 프리랜서·외주 서비스 검색 (source 분기, 현재 kmong=크몽). type=gigs(기본)=서비스 상품(제목·가격·평점·판매자) / type=experts=전문가 프로필(등급·경력·응답시간·주문수·전문분야). 통화 items.
+    group: research
+    target_description: "프리랜서·외주 서비스 검색. query=검색어 필수(예 \"로고디자인\", \"번역\", \"영상편집\").\n- type=gigs(기본): 서비스 상품 검색 — 제목·가격·평점·리뷰수·판매자·카테고리. max_price=가격 상한(원, 후필터).\n- type=experts: 전문가(프리랜서) 검색 — 닉네임·등급(MASTER 등)·자기소개·경력·평균 응답시간·누적 주문수·전문분야·만족도. 사람을 찾을 땐 이쪽.\nsort=ranking(인기, 기본)/score(연관도). limit=개수(기본 20, 페이지 자동추적 최대 100). source=kmong(기본, 현재 유일)."
+    target_key: query
+    router: handler
+    tool: freelance_search
+    scope: workspace
+    implementation: tool_freelance.py — 크몽 비공식 내부 API(api.kmong.com/gig-app — gigs=/gig/v2/gigs/search, experts=/seller-profile/v2/seller-profiles/search). curl_cffi 크롬위장(직방 선례), 인증 불요. ★HTML 크롤링 불가(클라이언트 fetch 구조, 첫 HTML 에 데이터 없음 실측). sortType 은 RANKING/SCORE 만 유효(그 외 400). 서비스 URL=kmong.com/gig/{id}, 전문가 URL=kmong.com/@{닉네임}.
+    keywords:
+    - 프리랜서
+    - 외주
+    - 크몽
+    - 전문가
+    - 의뢰
+    - 용역
+    - 로고제작
+    - 디자인외주
+    - 번역
+    - 영상편집
+    - 개발외주
+    - 재능마켓
+    app:
+      instrument: freelance
+      icon: 💼
+      name: 외주
+      order: 19
+      modes:
+      - name: 서비스
+        inputs:
+        - key: query
+          type: text
+          label: 검색어
+          placeholder: '예: 로고디자인, 번역, 영상편집'
+          required: true
+        - key: sort
+          type: select
+          label: 정렬
+          options:
+          - value: ranking
+            label: 인기순
+          - value: score
+            label: 연관도순
+        action: '[sense:freelance]{type: "gigs", query: "$query", sort: "$sort"}'
+        view:
+        - type: card_list
+          from: items
+          empty: 서비스를 찾지 못했습니다
+          card:
+            title: '{title}'
+            image: '{image}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+            link:
+              href: '{url}'
+              label: 크몽에서 보기 →
+      - name: 전문가
+        inputs:
+        - key: query
+          type: text
+          label: 검색어
+          placeholder: '예: 로고디자인, 웹개발'
+          required: true
+        action: '[sense:freelance]{type: "experts", query: "$query"}'
+        view:
+        - type: card_list
+          from: items
+          empty: 전문가를 찾지 못했습니다
+          card:
+            title: '{title}'
+            image: '{image}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+            link:
+              href: '{url}'
+              label: 프로필 보기 →
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
@@ -97,5 +179,44 @@ tool_json:
           type: integer
           description: 결과 개수 (기본 15)
           default: 15
+      required:
+      - query
+  - name: freelance_search
+    description: '프리랜서·외주 서비스 검색 (크몽 내부 API). type=gigs(서비스 상품 —
+      제목·가격·평점·판매자) / type=experts(전문가 프로필 — 등급·경력·응답시간·주문수·전문분야).
+      통화: {items: [{title, meta, summary, url, image, price}], total, source, type}.'
+    input_schema:
+      type: object
+      properties:
+        query:
+          type: string
+          description: 검색어 (예 "로고디자인", "번역", "영상편집")
+        type:
+          type: string
+          description: gigs=서비스 상품(기본) / experts=전문가(프리랜서 사람 찾기)
+          enum:
+          - gigs
+          - experts
+          default: gigs
+        source:
+          type: string
+          description: 플랫폼 (현재 kmong 만)
+          enum:
+          - kmong
+          default: kmong
+        sort:
+          type: string
+          description: ranking=인기순(기본) / score=연관도순
+          enum:
+          - ranking
+          - score
+          default: ranking
+        max_price:
+          type: integer
+          description: 가격 상한 (원, gigs 전용 후필터)
+        limit:
+          type: integer
+          description: 결과 개수 (기본 20)
+          default: 20
       required:
       - query

@@ -363,6 +363,100 @@ function SlidePreviewModal(props: {
 
 
 // ─────────────────────────────────────────────────────────
+// 풀화면 슬라이드쇼 — 실제 발표용. 화면엔 슬라이드만(메타·버튼·페이지 표시 없음).
+// ←→(+↑↓·PageUp/Down·Space — 발표 리모컨은 PageUp/Down을 보냄)로 이동, Esc=종료.
+// ─────────────────────────────────────────────────────────
+
+function SlideShow(props: { lectureId: string; deck: Deck; onClose: () => void }) {
+  const { lectureId, deck, onClose } = props;
+  const order = deck.slide_order;
+  const [idx, setIdx] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // ★부모(WorkspaceBody)는 발표 중에도 재렌더된다(메모·노트 자동저장의 setLoaded,
+  // AI 생성 완료의 onChange 등). 그때마다 effect가 재실행되면 cleanup의 exitFullscreen이
+  // 풀스크린을 해제해 쇼가 통째로 닫힌다 — 바뀌는 값은 전부 ref로 들고 effect는
+  // 마운트에 한 번만 건다.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const orderRef = useRef(order);
+  orderRef.current = order;
+
+  const urlOf = useCallback(
+    (i: number) => {
+      const s = deck.slides[order[i]];
+      return `${api.slidePngUrl(lectureId, order[i])}?v=${encodeURIComponent(s?.updated_at ?? '')}`;
+    },
+    [lectureId, deck.slides, order]
+  );
+
+  // 진짜 풀스크린 진입 — 우리가 연 풀스크린이 해제되면(브라우저 Esc) 쇼도 함께 종료.
+  useEffect(() => {
+    const rootEl = rootRef.current;
+    let entered = false;
+    rootEl?.requestFullscreen?.().then(() => {
+      entered = true;
+    }).catch(() => {});
+    const onFsChange = () => {
+      if (document.fullscreenElement === rootEl) entered = true;
+      else if (entered && !document.fullscreenElement) onCloseRef.current();
+    };
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      // 우리가 연 풀스크린일 때만 닫는다 (다른 풀스크린 오폭 방지)
+      if (document.fullscreenElement === rootEl) document.exitFullscreen().catch(() => {});
+    };
+  }, []);
+
+  // 키보드 내비게이션 — 마운트에 한 번만 (deps 변화로 리스너가 사라지는 순간 방지)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const len = orderRef.current.length;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        setIdx((i) => Math.min(i + 1, len - 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+        setIdx((i) => Math.max(i - 1, 0));
+      } else if (e.key === 'Escape') {
+        onCloseRef.current();
+      } else {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    // capture: 데크의 Esc(선택 해제) 등 다른 리스너보다 먼저 먹는다
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
+  // 옆 슬라이드 미리 로드 — 발표 중 넘김 지연 방지
+  useEffect(() => {
+    [idx + 1, idx - 1].forEach((i) => {
+      if (i >= 0 && i < order.length) {
+        const im = new Image();
+        im.src = urlOf(i);
+      }
+    });
+  }, [idx, order.length, urlOf]);
+
+  if (order.length === 0) return null;
+  // 발표 중 데크가 줄어든 경우(슬라이드 삭제 반영) 안전 클램프
+  const safeIdx = Math.min(idx, order.length - 1);
+  return (
+    <div
+      ref={rootRef}
+      className="fixed inset-0 z-[100] bg-black flex items-center justify-center cursor-none"
+    >
+      {/* w/h-full + object-contain: 화면보다 작은 PNG(1280×720 등)도 비율 유지한 채 확대해 화면을 채움
+          — max-w/max-h는 축소만 해서 작은 슬라이드가 검정 여백에 둘러싸였다 */}
+      <img src={urlOf(safeIdx)} alt="" className="w-full h-full object-contain" />
+    </div>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────
 // 워크스페이스 본문 — focus 상태는 여기서 공유
 // ─────────────────────────────────────────────────────────
 
@@ -375,6 +469,7 @@ function WorkspaceBody(props: {
   const [focusSlideId, setFocusSlideId] = useState<string | null>(null);
   const [insertBeforeIndex, setInsertBeforeIndex] = useState<number | null>(null);
   const [previewSlideId, setPreviewSlideId] = useState<string | null>(null);
+  const [slideshow, setSlideshow] = useState(false);
 
   // 데크가 바뀌면 사라진 slide_id를 focus/preview에서 해제
   useEffect(() => {
@@ -432,6 +527,8 @@ function WorkspaceBody(props: {
           materialsDir={loaded.materials_dir}
           lectureMemo={loaded.deck.lecture_memo ?? ''}
           focusedSlide={focusSlideId ? loaded.deck.slides[focusSlideId] ?? null : null}
+          slideCount={loaded.deck.slide_order.length}
+          onSlideshow={() => setSlideshow(true)}
           onChange={onChange}
           onPatchDeck={onPatchDeck}
         />
@@ -454,6 +551,13 @@ function WorkspaceBody(props: {
           onChange={onChange}
         />
       </div>
+      {slideshow && (
+        <SlideShow
+          lectureId={loaded.deck.lecture_id}
+          deck={loaded.deck}
+          onClose={() => setSlideshow(false)}
+        />
+      )}
       {previewSlideId && loaded.deck.slides[previewSlideId] && (
         <SlidePreviewModal
           lectureId={loaded.deck.lecture_id}

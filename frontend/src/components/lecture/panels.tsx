@@ -19,10 +19,12 @@ export function MaterialsPanel(props: {
   materialsDir: string;
   lectureMemo: string;
   focusedSlide: SlideMeta | null;
+  slideCount: number;
+  onSlideshow: () => void;
   onChange: () => void;
   onPatchDeck: (mutate: (deck: Deck) => Deck) => void;
 }) {
-  const { lectureId, materials, lectureMemo, focusedSlide, onChange, onPatchDeck } = props;
+  const { lectureId, materials, lectureMemo, focusedSlide, slideCount, onSlideshow, onChange, onPatchDeck } = props;
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +57,17 @@ export function MaterialsPanel(props: {
 
   return (
     <aside className="w-72 flex-shrink-0 flex flex-col bg-white border-r border-stone-200">
+      {/* 풀화면 슬라이드쇼 — 발표 시작 버튼 (컬럼 맨 위) */}
+      <div className="px-4 pt-3 pb-2 border-b border-stone-100 shrink-0">
+        <button
+          onClick={onSlideshow}
+          disabled={slideCount === 0}
+          title={slideCount === 0 ? '슬라이드가 없습니다' : '슬라이드만 풀화면으로 표시 · ←→ 이동 · Esc 종료'}
+          className="w-full px-3 py-2 text-sm font-medium bg-stone-800 text-white rounded hover:bg-stone-700 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          ▶ 풀화면 슬라이드
+        </button>
+      </div>
       {/* 자료 (일괄생성용) — 보통 1개라 상단에 컴팩트하게 */}
       <div className="px-4 pt-3 pb-2 border-b border-stone-100 shrink-0">
         <div className="flex items-center justify-between gap-2">

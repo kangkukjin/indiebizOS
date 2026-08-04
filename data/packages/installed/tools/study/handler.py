@@ -54,7 +54,7 @@ def _search_arxiv(tool_input: dict) -> str:
             "link_label": "논문 보기",
         })
     if not items:
-        return "No papers found for the given query."
+        return {"items": [], "message": "No papers found for the given query."}
     # ★string-반환 변형: 포맷 문자열은 message로, 구조는 records 통화로 둘 다 노출(비파괴 + 조합 가능).
     return {"success": True, "message": "\n".join(lines), "items": items, "count": len(items)}
 
@@ -64,7 +64,7 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     import urllib.parse
     arxiv_id = tool_input.get("arxiv_id") or tool_input.get("id")
     if not arxiv_id:
-        return "arxiv_id가 필요합니다."
+        return {"error": "arxiv_id가 필요합니다."}
     filename = tool_input.get("filename")
     download_dir = context.resolve_path("papers")
     os.makedirs(download_dir, exist_ok=True)
@@ -73,7 +73,7 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     r.raise_for_status()
     feed = feedparser.parse(r.text)
     if not feed.entries:
-        return f"Could not find paper with ID: {arxiv_id}"
+        return {"error": f"Could not find paper with ID: {arxiv_id}"}
     entry = feed.entries[0]
     title = (entry.get("title", arxiv_id) or arxiv_id).strip()
     pdf_url = None
@@ -90,7 +90,7 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     pr.raise_for_status()
     with open(path, "wb") as f:
         f.write(pr.content)
-    return f"Paper '{title}' downloaded successfully to: {path}"
+    return {"success": True, "message": f"Paper '{title}' downloaded successfully to: {path}", "path": path}
 
 
 def _paper_op(tool_input: dict, context) -> str:
@@ -112,13 +112,15 @@ def _paper_op(tool_input: dict, context) -> str:
             return _download_pubmed_pdf(tool_input, context)
         if source == "arxiv":
             return _download_arxiv_pdf(tool_input, context)
-        return "download op은 source=arxiv 또는 pubmed가 필요합니다."
-    return f"알 수 없는 op '{op}'. 사용: search|download"
+        return {"error": "download op은 source=arxiv 또는 pubmed가 필요합니다."}
+    return {"error": f"알 수 없는 op '{op}'. 사용: search|download"}
 
 
 # ─── 국회도서관 국가학술정보(LOSI) OpenAPI ──────────────────────────────
-# losi-api.nanet.go.kr — 연구자(authorView)·공저자(coAuthor)·통합검색(researchTotal).
+# losi-api.nanet.go.kr — 연구자(authorView)·공저자(coAuthor)·통합검색(searchTotal).
 # 인증키는 .env NANET_API_KEY(auth_manager 'nanet' 레지스트리). POST + authKey.
+# ★실측(2026-08-04): 통합검색 엔드포인트는 searchTotal(researchTotal 은 별개 미승인 API).
+#   [300] 에러는 "키 만료"뿐 아니라 "해당 API 권한 없음"에도 같은 코드(미존재 엔드포인트=HTTP 404).
 _NANET_BASE = "http://losi-api.nanet.go.kr"
 
 
@@ -167,14 +169,14 @@ def _researcher_op(tool_input: dict, context) -> str:
         return _nanet_author_find(tool_input)
     if op == "coauthor":
         return _nanet_coauthor(tool_input)
-    return f"알 수 없는 op '{op}'. 사용: find|coauthor"
+    return {"error": f"알 수 없는 op '{op}'. 사용: find|coauthor"}
 
 
 def _nanet_author_find(tool_input: dict) -> str:
     """연구자 검색(authorView) — 동명이인을 소속·출생연도·lodID로 분리."""
     name = tool_input.get("name") or tool_input.get("name_ko") or tool_input.get("query")
     if not name:
-        return "연구자명(name)이 필요합니다. 예: [sense:researcher]{name: \"정은정\", org: \"서울대\"}"
+        return {"error": "연구자명(name)이 필요합니다. 예: [sense:researcher]{name: \"정은정\", org: \"서울대\"}", "items": []}
     org = tool_input.get("org") or tool_input.get("orgName_ko")
     params = {
         "name_ko": name,
@@ -184,19 +186,19 @@ def _nanet_author_find(tool_input: dict) -> str:
     }
     rows, err = _nanet_rows(_nanet_call("authorView", params))
     if err:
-        return f"국가학술정보 연구자 검색 실패: {err}"
+        return {"error": f"국가학술정보 연구자 검색 실패: {err}", "items": []}
     # org 필터가 빈 결과면(authorView는 부분일치 안 함) 이름만으로 재조회 후 소속 부분일치로 거름.
     # — 침묵 빈결과 함정 방지.
     org_filtered = False
     if not rows and org:
         all_rows, err2 = _nanet_rows(_nanet_call("authorView", {**params, "orgName_ko": None}))
         if err2:
-            return f"국가학술정보 연구자 검색 실패: {err2}"
+            return {"error": f"국가학술정보 연구자 검색 실패: {err2}", "items": []}
         rows = [r for r in (all_rows or []) if isinstance(r, dict) and org in (r.get("orgName_ko") or "")]
         org_filtered = True
     if not rows:
         hint = f"(소속 '{org}' 부분일치 0건 — 소속 빼고 재시도 권장) " if org else ""
-        return f"'{name}' 연구자를 국가학술정보에서 찾지 못했습니다 {hint}(국내 학술 출판 이력 기준 — 산업/비출판 인물은 없을 수 있음)."
+        return {"items": [], "message": f"'{name}' 연구자를 국가학술정보에서 찾지 못했습니다 {hint}(국내 학술 출판 이력 기준 — 산업/비출판 인물은 없을 수 있음)."}
     lines = [f"국가학술정보 연구자 '{name}' — {len(rows)}명 (소속·출생연도로 동명이인 분리):"]
     records = []
     for a in rows:
@@ -220,38 +222,50 @@ def _nanet_author_find(tool_input: dict) -> str:
             "summary": (f"lodID:{lid}" if lid else "") + (f" / {en}" if en else ""),
             "url": None,
         })
-    lines.append("→ 후보 좁힌 뒤 [sense:researcher]{op:coauthor, id:\"<lodID>\"}로 공저자망 교차검증 가능.")
+    lines.append("→ [sense:researcher]{op:coauthor, name:\"<이름>\"}으로 연관연구자망 교차검증 가능(이름 기반 — 동명이인 합산 주의).")
     return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
 
 
 def _nanet_coauthor(tool_input: dict) -> str:
-    """공저자망(coAuthor) — lodID로 협업 네트워크를 떠 신원 재확인."""
-    aid = tool_input.get("id") or tool_input.get("authorID") or tool_input.get("lodID")
-    if not aid:
-        return "coauthor op은 id(연구자 lodID)가 필요합니다. 먼저 [sense:researcher]{op:find, name:...}로 lodID를 얻으세요."
-    params = {
-        "authorID": aid,
-        "name": tool_input.get("name"),
-        "display": tool_input.get("max_results") or tool_input.get("display") or 30,
-    }
-    rows, err = _nanet_rows(_nanet_call("coAuthor", params))
-    if err:
-        return f"공저자 조회 실패: {err}"
+    """연관연구자망(relAuthor) — 이름으로 함께 연구한 학자들을 떠 신원 재확인.
+
+    ★실측 계약(2026-08-04): 엔드포인트는 coAuthor 아니라 relAuthor. searchTerm=이름(필수),
+    lodID 스코핑·페이지네이션 없음(한 번에 최대 ~80명, 동명이인의 연관연구자가 합쳐져 옴).
+    inst/birth 는 대부분 null → 소속 검증은 find(authorView)와 교차."""
+    name = (tool_input.get("name") or tool_input.get("query")
+            or tool_input.get("searchTerm") or "")
+    if not name:
+        hint = " (연관연구자 API는 이름 기반 — lodID 스코핑 미지원)" if (
+            tool_input.get("id") or tool_input.get("lodID") or tool_input.get("authorID")) else ""
+        return {"error": f"coauthor op은 name(연구자 이름)이 필요합니다{hint}. "
+                         "예: [sense:researcher]{op:\"coauthor\", name:\"정은정\"}", "items": []}
+    j = _nanet_call("relAuthor", {"searchTerm": name})
+    if j.get("_err"):
+        return {"error": f"연관연구자 조회 실패: {j['_err']}", "items": []}
+    res = j.get("result")
+    r0 = res[0] if isinstance(res, list) and res else {}
+    if not isinstance(r0, dict):
+        r0 = {}
+    if r0.get("error"):
+        e = (r0["error"] or [{}])[0]
+        return {"error": f"연관연구자 조회 실패: [{e.get('code')}] {e.get('message')}", "items": []}
+    rows = r0.get("authorList") or []
     if not rows:
-        return f"lodID {aid}의 공저자 정보가 없습니다."
-    lines = [f"lodID {aid} 공저자 — {len(rows)}명:"]
+        return {"items": [], "message": f"'{name}'의 연관연구자 정보가 없습니다."}
+    limit = int(tool_input.get("max_results") or tool_input.get("display") or 30)
+    lines = [f"'{name}' 연관연구자 — {min(len(rows), limit)}명 (전체 {len(rows)}명, 동명이인 합산 주의):"]
     records = []
-    for a in rows:
+    for a in rows[:limit]:
         if not isinstance(a, dict):
-            lines.append(f"- {a}")
             continue
-        org = a.get("orgName_ko") or a.get("orgId") or "?"
-        lid = a.get("lodID") or a.get("authorID") or a.get("coAuthorID") or ""
-        nm = a.get("name_ko") or a.get("name") or "?"
-        lines.append(f"- {nm} | 소속:{org} | lodID:{lid}")
-        records.append({  # 레코드 통화 — 공저자 신원
+        nm = a.get("name") or "?"
+        lid = a.get("lodAuthorID") or ""
+        inst = a.get("inst") or ""
+        birth = a.get("birth") or ""
+        lines.append(f"- {nm}" + (f" | 소속:{inst}" if inst else "") + (f" | lodID:{lid}" if lid else ""))
+        records.append({  # 레코드 통화 — 연관연구자 신원
             "title": nm,
-            "meta": (org if org != "?" else None),
+            "meta": " · ".join(x for x in [inst, (f"출생 {birth}" if birth else "")] if x),
             "summary": (f"lodID:{lid}" if lid else ""),
             "url": None,
         })
@@ -259,38 +273,76 @@ def _nanet_coauthor(tool_input: dict) -> str:
 
 
 def _search_nanet(tool_input: dict) -> str:
-    """통합검색(researchTotal) — 국내 학술논문·학위논문. 학위논문=인물 신원의 결정적 닻."""
+    """통합검색(searchTotal) — 국내 학술논문·학위논문. 학위논문=인물 신원의 결정적 닻.
+
+    ★실측 계약(2026-08-04): 검색어 파라미터=searchTerm(query 아님), 페이지당 5건 고정
+    (건수 파라미터 없음), 페이지네이션=pageNo, divFlag/pubYear 서버 필터 없음.
+    → max_results 는 pageNo 추적으로, type·year 는 클라이언트 후필터로 이행."""
     query = tool_input.get("query") or tool_input.get("q") or tool_input.get("keyword")
     if not query:
-        return "검색어(query)가 필요합니다."
-    params = {
-        "query": query,
-        "display": tool_input.get("max_results") or tool_input.get("display") or 10,
-        "page": tool_input.get("page") or 1,
-    }
-    if tool_input.get("type"):
-        params["type"] = tool_input["type"]      # 자료유형 필터(예: 학위논문)
-    if tool_input.get("year"):
-        params["year"] = tool_input["year"]
-    rows, err = _nanet_rows(_nanet_call("researchTotal", params))
-    if err:
-        return f"국가학술정보 통합검색 실패: {err}"
-    if not rows:
-        return f"'{query}'에 대한 국가학술정보 결과가 없습니다."
-    lines = [f"국가학술정보 통합검색 '{query}' — {len(rows)}건:"]
-    for it in rows:
-        if not isinstance(it, dict):
-            lines.append(f"- {it}")
-            continue
-        title = it.get("title") or it.get("title_ko") or it.get("articleTitle") or "(제목없음)"
-        author = it.get("author") or it.get("author_ko") or it.get("authorName") or ""
-        org = it.get("publisher") or it.get("orgName_ko") or it.get("degreeOrg") or ""
-        yr = it.get("year") or it.get("pubYear") or it.get("issueYear") or ""
-        typ = it.get("type") or it.get("dataType") or it.get("materialType") or ""
-        meta = " · ".join(x for x in [typ, author, org, str(yr)] if x)
-        url = it.get("url") or it.get("link") or it.get("detailUrl") or ""
-        lines.append(f"- {title}" + (f" [{meta}]" if meta else "") + (f"\n  {url}" if url else ""))
-    return "\n".join(lines)
+        return {"error": "검색어(query)가 필요합니다.", "items": []}
+    want = int(tool_input.get("max_results") or tool_input.get("display") or 10)
+    year_f = str(tool_input.get("year") or "").strip()
+    type_f = str(tool_input.get("type") or "").strip()
+    # 자료유형 후필터 — divFlag 값으로 정규화(모르는 값은 대문자 부분일치)
+    # divFlag 실측 분포(2026-08-04): ARTICLE(학술논문)·THESIS(학위논문)·BOOK(단행본)
+    _type_map = {"학위논문": "THESIS", "학술논문": "ARTICLE", "논문": "ARTICLE", "기사": "ARTICLE",
+                 "단행본": "BOOK", "도서": "BOOK", "책": "BOOK"}
+    div_want = (_type_map.get(type_f) or type_f).upper() if type_f else ""
+
+    lines_body, records = [], []
+    total = None
+    page = int(tool_input.get("page") or 1)
+    last_page = page + 19          # 후필터가 걸러도 왕복 상한 20페이지(100행)
+    while len(records) < want and page <= last_page:
+        j = _nanet_call("searchTotal", {"searchTerm": query, "pageNo": page})
+        if j.get("_err"):
+            return {"error": f"국가학술정보 통합검색 실패: {j['_err']}", "items": []}
+        res = j.get("result")
+        r0 = res[0] if isinstance(res, list) and res else {}
+        if not isinstance(r0, dict):
+            r0 = {}
+        if r0.get("error"):
+            e = (r0["error"] or [{}])[0]
+            return {"error": f"국가학술정보 통합검색 실패: [{e.get('code')}] {e.get('message')}", "items": []}
+        if total is None:
+            total = r0.get("totalCount")
+        rows = r0.get("searchList") or []
+        if not rows:
+            break
+        for it in rows:
+            if not isinstance(it, dict):
+                continue
+            div = str(it.get("divFlag") or "")
+            yr = str(it.get("pubYear") or "")
+            if div_want and div_want not in div.upper():
+                continue
+            if year_f and yr != year_f:
+                continue
+            title = it.get("title") or "(제목없음)"
+            authors = ", ".join(a.get("name", "") for a in (it.get("authorList") or [])
+                                if isinstance(a, dict) and a.get("name"))
+            journal = ((it.get("journal") or {}).get("title")) or ""
+            publisher = it.get("publisher") or ""
+            meta = " · ".join(x for x in [div, authors, journal or publisher, yr] if x)
+            url = it.get("url") or ""
+            summary = (it.get("abstractCont") or "").strip()
+            lines_body.append(f"- {title}" + (f" [{meta}]" if meta else "") + (f"\n  {url}" if url else ""))
+            records.append({  # 레코드 통화 — 국내 학술논문·학위논문
+                "title": title,
+                "meta": meta,
+                "summary": summary,
+                "url": url,
+            })
+            if len(records) >= want:
+                break
+        page += 1
+    if not records:
+        filt = " (type/year 후필터 적용)" if (div_want or year_f) else ""
+        return {"items": [], "message": f"'{query}'에 대한 국가학술정보 결과가 없습니다{filt}."}
+    head = f"국가학술정보 통합검색 '{query}' — {len(records)}건" + (f" (전체 {total:,}건)" if isinstance(total, int) else "") + ":"
+    return {"success": True, "message": "\n".join([head] + lines_body),
+            "items": records, "count": len(records), "total": total}
 
 
 # ─── Wikidata 개체 해소(entity resolution) — 지식 그래프 ────────────────
@@ -370,15 +422,15 @@ def _wikidata_resolve(tool_input: dict) -> str:
     """개체 후보 검색 — 동명이인/동음이의를 QID·설명으로 분리."""
     query = tool_input.get("query") or tool_input.get("q") or tool_input.get("name")
     if not query:
-        return "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"강국진\"}"
+        return {"error": "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"강국진\"}", "items": []}
     lang = (tool_input.get("lang") or "ko").strip()
     limit = int(tool_input.get("max_results") or tool_input.get("limit") or 7)
     try:
         hits = _wd_search(query, lang, limit)
     except Exception as e:
-        return f"Wikidata 검색 오류: {e}"
+        return {"error": f"Wikidata 검색 오류: {e}", "items": []}
     if not hits:
-        return f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."
+        return {"items": [], "message": f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."}
     lines = [f"Wikidata 개체 후보 '{query}' — {len(hits)}건 (QID로 동명이인/동음이의 해소):"]
     records = []
     for h in hits:
@@ -404,25 +456,25 @@ def _wikidata_detail(tool_input: dict) -> str:
     if not qid:
         query = tool_input.get("query") or tool_input.get("q") or tool_input.get("name")
         if not query:
-            return "id(QID) 또는 query가 필요합니다. 예: [sense:entity]{op:\"detail\", id:\"Q42\"}"
+            return {"error": "id(QID) 또는 query가 필요합니다. 예: [sense:entity]{op:\"detail\", id:\"Q42\"}", "items": []}
         try:
             hits = _wd_search(query, lang, 1)
         except Exception as e:
-            return f"Wikidata 조회 오류: {e}"
+            return {"error": f"Wikidata 조회 오류: {e}", "items": []}
         if not hits:
-            return f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."
+            return {"items": [], "message": f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."}
         qid = hits[0].get("id")
     qid = str(qid).strip().upper()
     if not re.match(r"^Q\d+$", qid):
-        return f"올바른 QID가 아닙니다: {qid} (예: Q42). 이름으로 찾으려면 op:resolve 사용."
+        return {"error": f"올바른 QID가 아닙니다: {qid} (예: Q42). 이름으로 찾으려면 op:resolve 사용.", "items": []}
     try:
         data = _wd_get({"action": "wbgetentities", "ids": qid,
                         "props": "labels|descriptions|claims", "languages": f"{lang}|en"})
     except Exception as e:
-        return f"Wikidata 상세 오류: {e}"
+        return {"error": f"Wikidata 상세 오류: {e}", "items": []}
     ent = (data.get("entities") or {}).get(qid)
     if not ent or ent.get("missing") is not None and "missing" in ent:
-        return f"{qid} 개체 정보가 없습니다."
+        return {"items": [], "message": f"{qid} 개체 정보가 없습니다."}
 
     def _pick(obj):    # labels/descriptions dict → lang→en 폴백
         d = obj or {}
@@ -476,12 +528,12 @@ def _entity_op(tool_input: dict, context) -> str:
     op = (tool_input.get("op") or _OP_DEFAULTS["entity_op"]).strip()
     source = (tool_input.get("source") or "wikidata").strip().lower()
     if source not in ("wikidata", "wd", "wikimedia"):
-        return f"현재 source는 wikidata만 지원합니다 (요청: {source})."
+        return {"error": f"현재 source는 wikidata만 지원합니다 (요청: {source})."}
     if op == "resolve":
         return _wikidata_resolve(tool_input)
     if op == "detail":
         return _wikidata_detail(tool_input)
-    return f"알 수 없는 op '{op}'. 사용: resolve|detail"
+    return {"error": f"알 수 없는 op '{op}'. 사용: resolve|detail"}
 
 
 def execute(tool_input: dict, context) -> str:
@@ -550,14 +602,14 @@ def _search_semantic_scholar(tool_input: dict) -> str:
                     time.sleep(retry_delay * (attempt + 1))  # 점진적 대기
                     continue
                 else:
-                    return "Semantic Scholar API 요청 한도 초과. 잠시 후 다시 시도하거나, OpenAlex 또는 arXiv를 사용해주세요."
+                    return {"error": "Semantic Scholar API 요청 한도 초과. 잠시 후 다시 시도하거나, OpenAlex 또는 arXiv를 사용해주세요.", "items": []}
 
             response.raise_for_status()
             data = response.json()
 
             papers = data.get("data", [])
             if not papers:
-                return f"'{query}' 검색 결과가 없습니다."
+                return {"items": [], "message": f"'{query}' 검색 결과가 없습니다."}
 
             total = data.get("total", len(papers))
             results = []
@@ -610,9 +662,9 @@ def _search_semantic_scholar(tool_input: dict) -> str:
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 continue
-            return f"Semantic Scholar 검색 오류: {str(e)}"
+            return {"error": f"Semantic Scholar 검색 오류: {str(e)}", "items": []}
 
-    return "Semantic Scholar 검색 실패. 다른 검색 도구를 사용해주세요."
+    return {"error": "Semantic Scholar 검색 실패. 다른 검색 도구를 사용해주세요.", "items": []}
 
 
 def _search_pubmed(tool_input: dict) -> str:
@@ -637,7 +689,7 @@ def _search_pubmed(tool_input: dict) -> str:
         id_list = search_data.get("esearchresult", {}).get("idlist", [])
 
         if not id_list:
-            return "No papers found for the given query."
+            return {"items": [], "message": "No papers found for the given query."}
 
         # Step 2: Fetch paper details with PMC links
         fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
@@ -702,12 +754,12 @@ def _search_pubmed(tool_input: dict) -> str:
             })
 
         if not results:
-            return "No papers found for the given query."
+            return {"items": [], "message": "No papers found for the given query."}
 
         return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
 
     except requests.RequestException as e:
-        return f"Error searching PubMed: {str(e)}"
+        return {"error": f"Error searching PubMed: {str(e)}", "items": []}
 
 
 def _get_pmc_ids(pmid_list: list) -> dict:
@@ -760,7 +812,7 @@ def _download_pubmed_pdf(tool_input: dict, context) -> str:
     filename = tool_input.get("filename")
 
     if not pmcid:
-        return "Error: PMC ID is required"
+        return {"error": "PMC ID is required"}
 
     # PMC 접두사 정규화
     if not pmcid.upper().startswith("PMC"):
@@ -780,17 +832,17 @@ def _download_pubmed_pdf(tool_input: dict, context) -> str:
         root = ET.fromstring(oa_response.text)
         error = root.find(".//error")
         if error is not None:
-            return f"Error: {error.text}"
+            return {"error": f"{error.text}"}
 
         link = root.find(".//link")
         if link is None:
-            return f"Error: No download link available for {pmcid}. This paper may not be open access."
+            return {"error": f"No download link available for {pmcid}. This paper may not be open access."}
 
         href = link.get("href")
         file_format = link.get("format", "")
 
         if not href:
-            return f"Error: Could not find download URL for {pmcid}"
+            return {"error": f"Could not find download URL for {pmcid}"}
 
         # 2. 파일 다운로드 (FTP 및 HTTP 지원)
         if href.startswith("ftp://"):
@@ -831,22 +883,22 @@ def _download_pubmed_pdf(tool_input: dict, context) -> str:
                     tar_path = os.path.join(download_dir, f"{pmcid}.tar.gz")
                     with open(tar_path, "wb") as f:
                         f.write(download_content)
-                    return f"Paper archive downloaded to: {tar_path} (PDF not found in archive, may contain other formats)"
+                    return {"success": True, "message": f"Paper archive downloaded to: {tar_path} (PDF not found in archive, may contain other formats)", "path": tar_path}
         else:
             # 직접 PDF인 경우
             with open(file_path, "wb") as f:
                 f.write(download_content)
 
-        return f"Paper downloaded successfully to: {file_path}"
+        return {"success": True, "message": f"Paper downloaded successfully to: {file_path}", "path": file_path}
 
     except requests.RequestException as e:
-        return f"Error downloading PDF: {str(e)}"
+        return {"error": f"Error downloading PDF: {str(e)}"}
     except urllib.error.URLError as e:
-        return f"Error downloading from FTP: {str(e)}"
+        return {"error": f"Error downloading from FTP: {str(e)}"}
     except ET.ParseError as e:
-        return f"Error parsing OA API response: {str(e)}"
+        return {"error": f"Error parsing OA API response: {str(e)}"}
     except tarfile.TarError as e:
-        return f"Error extracting archive: {str(e)}"
+        return {"error": f"Error extracting archive: {str(e)}"}
 
 
 def _search_openalex(tool_input: dict) -> str:
@@ -911,7 +963,7 @@ def _search_openalex(tool_input: dict) -> str:
         total_count = data.get("meta", {}).get("count", 0)
 
         if not works:
-            return f"'{query}' 검색 결과가 없습니다."
+            return {"items": [], "message": f"'{query}' 검색 결과가 없습니다."}
 
         results = []
         results.append(f"OpenAlex 검색 결과: '{query}' (총 {total_count:,}건 중 {len(works)}건 표시)\n")
@@ -988,9 +1040,9 @@ def _search_openalex(tool_input: dict) -> str:
         return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
 
     except requests.RequestException as e:
-        return f"OpenAlex 검색 오류: {str(e)}"
+        return {"error": f"OpenAlex 검색 오류: {str(e)}", "items": []}
     except Exception as e:
-        return f"검색 처리 오류: {str(e)}"
+        return {"error": f"검색 처리 오류: {str(e)}", "items": []}
 
 
 def _reconstruct_abstract(inverted_index: dict) -> str:
@@ -1024,7 +1076,7 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
         feed = feedparser.parse(url)
         
         if not feed.entries:
-            return f"{source_name}에서 기사를 찾을 수 없습니다."
+            return {"items": [], "message": f"{source_name}에서 기사를 찾을 수 없습니다."}
             
         results = [f"### {source_name} 최신 소식 (최대 {limit}건)\n"]
         records = []
@@ -1057,15 +1109,15 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
             })
 
         return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
-        
+
     except Exception as e:
-        return f"{source_name} RSS 가져오기 오류: {str(e)}"
+        return {"error": f"{source_name} RSS 가져오기 오류: {str(e)}", "items": []}
 
 def _search_guardian(tool_input: dict) -> str:
     """The Guardian API를 사용하여 기사를 검색합니다."""
     api_key = os.getenv("GUARDIAN_API_KEY")
     if not api_key:
-        return "오류: GUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다."
+        return {"error": "GUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.", "items": []}
         
     query = tool_input.get("query")
     page_size = tool_input.get("page_size", 10)
@@ -1092,7 +1144,7 @@ def _search_guardian(tool_input: dict) -> str:
         
         results_list = data.get("results", [])
         if not results_list:
-            return f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."
+            return {"items": [], "message": f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."}
             
         total = data.get("total", 0)
         output = [f"### The Guardian 검색 결과: '{query}' (총 {total:,}건 중 {len(results_list)}건 표시)\n"]
@@ -1127,9 +1179,9 @@ def _search_guardian(tool_input: dict) -> str:
             })
 
         return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
-        
+
     except Exception as e:
-        return f"The Guardian API 검색 오류: {str(e)}"
+        return {"error": f"The Guardian API 검색 오류: {str(e)}", "items": []}
 
 
 # ── 내부 해소 테이블 (자연어 지표·국가명 → World Bank 코드) ────────────
@@ -1334,5 +1386,5 @@ def _search_books(tool_input: dict) -> str:
         }
 
     except Exception as e:
-        return f"Google Books API 요청 오류: {str(e)}"
+        return {"error": f"Google Books API 요청 오류: {str(e)}", "items": []}
 

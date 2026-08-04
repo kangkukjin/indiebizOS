@@ -52,6 +52,7 @@
     "sense:devdocs": "[sense:devdocs]{op: \"resolve\", library_name: \"react\"}",
     "sense:entity": "[sense:entity]{query: \"강국진\"}",
     "sense:exhibit": "[sense:exhibit]{query: \"미술\"}",
+    "sense:freelance": "[sense:freelance]{query: \"로고디자인\"}",
     "sense:host": "[sense:host]{op: \"status\"}",
     "sense:kosis": "[sense:kosis]{query: \"인구\"}",
     "sense:legal": "[sense:legal]{query: \"개인정보\"}",

@@ -135,6 +135,9 @@ def _get_author_ai():
         system_prompt=_build_system_prompt(),
         tools=[],
     )
+    # 저작 계약=긴 JSON 한 방 — 하이브리드 thinking 모델(deepseek-v4-flash 등)이 thinking에
+    # 빠지면 max_tokens를 추론에 다 태우고 본문 0자("AI 응답이 비어 있습니다") — 원샷 버킷과 동일 차단.
+    provider.disable_thinking = True
     provider.init_client()
     return provider
 

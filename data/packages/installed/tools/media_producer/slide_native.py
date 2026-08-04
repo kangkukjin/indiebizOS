@@ -238,6 +238,9 @@ def _get_author_ai():
     from providers import get_provider
     prov = get_provider(provider_name, api_key=api_key,
                         model=(cfg.get("model") or "").strip(), system_prompt=_AUTHOR_PROMPT, tools=[])
+    # 저작 계약=긴 JSON 한 방 — 하이브리드 thinking 모델(deepseek-v4-flash 등)이 thinking에
+    # 빠지면 max_tokens를 추론에 다 태우고 본문 0자("AI 응답이 비어 있습니다") — 원샷 버킷과 동일 차단.
+    prov.disable_thinking = True
     prov.init_client()
     return prov
 

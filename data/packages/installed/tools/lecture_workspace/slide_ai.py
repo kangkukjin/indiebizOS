@@ -36,9 +36,16 @@ if str(_BACKEND_PATH) not in sys.path:
 _slide_ai_provider = None
 _slide_ai_config_sig = None
 
+# 자체 인증 프로바이더(키 불요) — slide_native/_get_author_ai 와 동일 목록.
+_NO_KEY_PROVIDERS = {"claude_code", "claude-code", "claudecode", "ollama"}
+
 
 def _load_system_ai_config() -> dict:
-    """시스템 AI 설정 로드 (system_ai_core 우회 — 가볍게)."""
+    """고급 티어 설정 파일 직접 로드.
+
+    ★이름 주의: system_ai_config.json 은 '시스템 AI 가 쓰는 모델'이 아니라 **고급 티어의 설정
+    파일**이다(model_gear.json tiers 매핑). 시스템 AI 자신도 기어를 거쳐 모델을 정한다.
+    여기선 Gemini 컨텍스트 캐시(키·모델명) 용도로만 남는다 — 텍스트 저작은 _resolve_content_text()."""
     from runtime_utils import get_base_path
     cfg_path = get_base_path() / "data" / "system_ai_config.json"
     if cfg_path.exists():
@@ -47,20 +54,36 @@ def _load_system_ai_config() -> dict:
     return {"provider": "anthropic", "model": "claude-sonnet-4-20250514", "apiKey": ""}
 
 
+def _resolve_content_text() -> dict:
+    """콘텐츠 생성 모델 = 모델 기어 'content_text' 역할(실행 축).
+
+    정책(2026-08-04): 콘텐츠를 만드는 AI 는 실행 AI 와 같은 모델을 쓴다 — 사용자가 기어로 조정한다.
+    (이전엔 고급 티어 파일을 직접 읽어 기어를 우회했다.) 해소 실패 시 옛 경로 폴백."""
+    try:
+        from model_resolver import resolve
+        d = resolve("content_text")
+        if d.get("model"):
+            return {"provider": d.get("provider", "anthropic"),
+                    "model": d["model"], "apiKey": d.get("api_key", "")}
+    except Exception as e:
+        print(f"[SlideAI] 기어 해소 실패(옛 config 폴백): {e}")
+    return _load_system_ai_config()
+
+
 def _get_slide_ai():
-    """슬라이드 생성 전용 provider 반환. 시스템 AI 설정 변경 시 자동 재생성."""
+    """슬라이드 생성 전용 provider 반환. 모델 기어(실행 축) 변경 시 자동 재생성."""
     global _slide_ai_provider, _slide_ai_config_sig
 
-    cfg = _load_system_ai_config()
-    api_key = cfg.get("apiKey", "").strip()
-    if not api_key:
+    cfg = _resolve_content_text()
+    api_key = (cfg.get("apiKey") or "").strip()
+    provider_name = (cfg.get("provider") or "anthropic").strip()
+    model_name = (cfg.get("model") or "").strip()
+    # claude_code/ollama 는 자체 인증이라 키 불요.
+    if not api_key and provider_name.lower() not in _NO_KEY_PROVIDERS:
         raise RuntimeError(
-            "시스템 AI API 키가 설정되지 않았습니다. "
-            "설정 → 시스템 AI에서 API 키를 입력하세요."
+            "텍스트 생성 모델 키가 설정되지 않았습니다. "
+            "모델 기어(실행 축) 또는 시스템 AI 설정을 확인하세요."
         )
-
-    provider_name = cfg.get("provider", "anthropic").strip()
-    model_name = cfg.get("model", "").strip()
     sig = (provider_name, model_name, api_key[-8:])  # 키 변경 감지용
 
     if _slide_ai_provider is not None and _slide_ai_config_sig == sig:
@@ -74,6 +97,8 @@ def _get_slide_ai():
         system_prompt=_SYSTEM_PROMPT,
         tools=[],
     )
+    # 계약=JSON 한 방 — 하이브리드 thinking 모델이면 추론이 max_tokens를 다 태워 본문 0자가 된다.
+    provider.disable_thinking = True
     provider.init_client()
     _slide_ai_provider = provider
     _slide_ai_config_sig = sig
@@ -1146,10 +1171,12 @@ def outline_from_materials(
     if not materials_text.strip():
         raise ValueError("강의 자료가 없습니다. 먼저 자료(파일/메모)를 추가하세요.")
 
-    cfg = _load_system_ai_config()
+    cfg = _resolve_content_text()
     api_key = (cfg.get("apiKey") or "").strip()
-    if not api_key:
-        raise RuntimeError("시스템 AI API 키가 설정되지 않았습니다. (설정 → 시스템 AI)")
+    if not api_key and (cfg.get("provider") or "").strip().lower() not in _NO_KEY_PROVIDERS:
+        raise RuntimeError(
+            "텍스트 생성 모델 키가 설정되지 않았습니다. (모델 기어 실행 축 / 시스템 AI 설정)"
+        )
 
     if count is not None:
         try:
@@ -1184,6 +1211,8 @@ def outline_from_materials(
         system_prompt=_OUTLINE_SYSTEM_PROMPT,
         tools=[],
     )
+    # 계약=긴 강의자료 → JSON 목록 한 방. 하이브리드 thinking 차단(0자 응답 방지).
+    provider.disable_thinking = True
     provider.init_client()
     response_text = provider.process_message(user_prompt, history=[], images=[], execute_tool=None)
 

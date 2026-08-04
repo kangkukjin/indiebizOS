@@ -378,7 +378,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 | `stock` | 주가·시세 (op 분기) | `[sense:stock]{op: "quote", ticker: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `company` | 기업 펀더멘털 (op 분기) | `[sense:company]{op: "profile", ticker: "삼성전자"}` |
-| `travel` | 여행 정보 (op 분기, 도시명→IATA·상대날짜 내부해소) | `[sense:travel]{op: "flight", to: "도쿄"}` / `{op: "hotel", city: "파리"}` |
+| `stay` | 숙박·단기임대 (source 분기 goodchoice/33m2/tourapi) | `[sense:stay]{region: "제주", type: "hotel"}` |
 | `world_bank` | 세계은행 지표 (지표명·국가명 자연어 내부해소) | `[sense:world_bank]{indicator: "인구", country: "한국"}` |
 | `researcher` | 연구자 검색 (op: find/coauthor) — 국회도서관 국가학술정보(LOSI). 동명이인을 소속·생년으로 분리, 공저자 추적. 인물 찾기 | `[sense:researcher]{op: "find", name: "홍길동"}` |
 | `paper` | 학술·학위논문 검색/다운로드 (op: search/download, source 분기 openalex/arxiv/pubmed/semantic + `nanet`=국회도서관 학위논문·국내학술) | `[sense:paper]{op: "search", query: "베이지안", source: "nanet"}` |
@@ -726,7 +726,7 @@ _OP_DISPATCHERS = {
 }
 _OP_DEFAULTS = {tool_name: default_op, ...}  # 기본값 있을 때만
 ```
-op 분기 27 패키지 모두 이 패턴 채택(액션 기준 68개 — 목록은 packages.md).
+op 분기 26 패키지 모두 이 패턴 채택(액션 기준 67개 — 목록은 packages.md).
 
 **이중 게이트**:
 - `pre-commit` 훅: commit 시점, 정적 검증

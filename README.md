@@ -155,7 +155,7 @@ The closest existing thing — Apple Shortcuts, Tasker — proves the demand is 
 Every capability — a web search, a file write, a phone notification, a chart — is one line in a single language, **IBL (IndieBiz Logic)**:
 
 ```
-[sense:search_ddg]{query: "AI news"} >> [self:file]{path: "result.md"}
+[sense:search_ddg]{query: "AI news"} >> [self:write]{path: "result.md"}
 ```
 
 Six nodes (`sense`, `self`, `limbs`, `others`, `engines`, `table`), one composable vocabulary. The point is *not* that there are 163 actions — it's that there are *only* 163, down from 332, because related tools were folded into single actions with parameter/`op` branching (45 bespoke Android actions became one `[limbs:android]{op}`). **The language got smaller as it got stronger:** fewer, more composable verbs that a human *or a small model* can write one line of and have work. Because everything speaks one vocabulary, your accumulated experience forms a single coherent corpus instead of a pile of incompatible tool calls.
@@ -263,7 +263,7 @@ Three model tiers serve this cheaply — **lightweight**, **midtier**, **full** 
 
 Several memories learn from you automatically and keep themselves clean:
 
-- **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (~88.9% code / 91.2% description Top-5; retrained locally on Apple Silicon, ~2,900-example corpus). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
+- **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (~92.2% code / 94.2% description Top-5; retrained locally on Apple Silicon, ~3,000-example corpus). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
 - **Deep memory (relational)** — after each conversation a lightweight pass extracts durable facts about you (preferences, decisions, key dates) and recalls them, with their last-seen date, when relevant.
 - **Forager memory (spatial)** — every time the AI *forages* the disk, web, or codebase, it accumulates what it learned about that space across sessions: folder identities, search conventions, dead ends, and an owner-model of whose files live where. A model built foraging the disk disambiguates a web search, and vice versa — a compounding loop. It borrows the vocabulary of Information Foraging Theory; what's new is treating it as the *persistent* faculty a stateless model lacks, and adding only that memory — no controller, no stopping-formula. (`[self:forage]`, the Mac self.)
 

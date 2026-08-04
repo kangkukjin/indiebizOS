@@ -25,8 +25,8 @@
  * 더 풍부한 데스크탑 전용 계기(도서·투자·라디오 등)는 ActionDesktop의
  * OVERRIDES(escape hatch)로 이 렌더러 대신 자기 컴포넌트를 쓴다.
  */
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { StreamPlayer } from './StreamPlayer';
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { StreamPlayer, loadHls } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
 import {
   type AppInput, type AppButton, type AppCompose, type AppViewPrim, type AppMode,
@@ -43,6 +43,35 @@ export type {
   AppInput, AppButton, AppCompose, AppComposeChannels, AppViewPrim, AppFormField,
   FormAction, AppFilter, AppMode, AppInstrument, Json, Dispatch, ViewEvent,
 } from './generic/manifest';
+
+/* 적응형(HLS) 비디오 — hls.js 가 조각마다 화질을 자동 전환(유튜브 시청 앱, 넷플릭스식).
+   autoStartLoad:false + play 시 startLoad = lazy 계약 유지(목록에 떠도 안 받음).
+   hls.js 로드 실패·미지원이면 프로그레시브 fallback src 로 조용히 강등. */
+const VIDEO_CLS = 'w-full max-w-[880px] mx-auto block rounded-lg bg-black aspect-video';
+function HlsVideo({ hlsUrl, fallback, poster, preload }: {
+  hlsUrl: string; fallback: string; poster?: string; preload: 'none' | 'metadata';
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<{ destroy?: () => void } | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let dead = false;
+    const v = ref.current;
+    if (!v) return;
+    if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = hlsUrl; return; }  // 사파리 네이티브
+    loadHls().then((Hls) => {
+      if (dead || !Hls || !Hls.isSupported()) { setFailed(true); return; }
+      const h = new Hls({ autoStartLoad: false });
+      hlsRef.current = h;
+      h.loadSource(hlsUrl);
+      h.attachMedia(v);
+      v.addEventListener('play', () => h.startLoad(), { once: true });
+    }).catch(() => setFailed(true));
+    return () => { dead = true; hlsRef.current?.destroy?.(); hlsRef.current = null; };
+  }, [hlsUrl]);
+  if (failed) return <video controls preload={preload} src={fallback} poster={poster} playsInline className={VIDEO_CLS} />;
+  return <video ref={ref} controls preload={preload} poster={poster} playsInline className={VIDEO_CLS} />;
+}
 
 function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, onViewEvent }: {
   p: AppViewPrim; data: unknown;
@@ -134,8 +163,13 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
     const c = (p.card as Json) || {};
     const link = c.link as { href?: string; label?: string } | undefined;
+    // wide 카드는 화면 폭에 반응하는 그리드 — 폰=1열, 넓으면 2~4열(유튜브 홈처럼).
+    // 전폭 1열 고정이면 데스크탑에서 썸네일이 과하게 커진다.
+    const Wrap = ({ children }: { children: ReactNode }) => c.wide
+      ? <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>{children}</div>
+      : <>{children}</>;
     return (
-      <>
+      <Wrap>
         {arr.map((it, i) => {
           const img = c.image ? tpl(c.image, it) : '';
           const body = (
@@ -155,16 +189,25 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           return (
             <Card key={i} onClick={p.item_click ? () => onDrill(p, it) : undefined}>
               {c.image ? (
+                // wide: 16:9 가로 썸네일을 위에 크게(유튜브 모바일 홈 카드) — 기본은 세로 썸네일 좌측
+                c.wide ? (
+                  <div>
+                    {img ? <img src={mediaSrc(img)} loading="lazy" className="w-full aspect-video object-cover rounded-lg bg-stone-100" />
+                         : <div className="w-full aspect-video rounded-lg bg-stone-100" />}
+                    <div className="mt-2">{body}</div>
+                  </div>
+                ) : (
                 <div className="flex gap-3">
                   {img ? <img src={mediaSrc(img)} loading="lazy" className="w-14 h-20 object-cover rounded-md bg-stone-100 shrink-0" />
                        : <div className="w-14 h-20 rounded-md bg-stone-100 shrink-0" />}
                   {body}
                 </div>
+                )
               ) : body}
             </Card>
           );
         })}
-      </>
+      </Wrap>
     );
   }
 
@@ -251,15 +294,33 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
       const next = all[all.indexOf(e.currentTarget) + 1];
       if (next) { next.play().catch(() => {}); next.scrollIntoView({ block: 'nearest' }); }
     } : undefined;
+    // lazy: preload="none" — 목록의 항목마다 스트림을 미리 물지 않는다(유튜브 릴레이처럼
+    // 요청 자체가 서버 작업(해소+ffmpeg)을 시작하는 src 는 재생 버튼을 눌러야만 받게).
+    // video: '{is_video}' 템플릿(또는 true) — 참이면 <audio> 대신 <video>(poster 지원).
+    const preload = p.lazy ? 'none' : 'metadata';
+    const isVideo = (it: Json) => p.video === true ||
+      (typeof p.video === 'string' && /^(true|1)$/i.test(tpl(p.video, it)));
+    // src_low: 느린 회선(테슬라 실측 1.4Mbps — 원본 1080p 는 화면만 정지)이면 저대역 판 자동 선택.
+    // navigator.connection 은 크로미움 계열에 존재(테슬라 브라우저 실측 값 나옴).
+    const conn = (navigator as unknown as { connection?: { downlink?: number; rtt?: number } }).connection;
+    const slowNet = !!conn && ((!!conn.downlink && conn.downlink < 3) || (!!conn.rtt && conn.rtt > 250));
     return (
       <div className="flex flex-col gap-3" data-mp-group={p.continuous ? '1' : undefined}>
         {arr.map((it, i) => {
-          const src = audioUrl(p.src ? tpl(p.src, it) : '');
+          const lowRaw = typeof p.src_low === 'string' ? tpl(p.src_low, it) : '';
+          const src = audioUrl(slowNet && lowRaw ? lowRaw : (p.src ? tpl(p.src, it) : ''));
           const title = p.title ? tpl(p.title, it) : '';
+          const poster = p.poster ? mediaSrc(tpl(p.poster, it)) : undefined;
+          const hlsUrl = typeof p.src_hls === 'string' ? tpl(p.src_hls, it) : '';
           return (
             <div key={i} className="bg-white border border-stone-200 rounded-xl px-4 py-3">
               {title && <div className="text-sm font-semibold text-stone-800 mb-2">{title}</div>}
-              {src ? <audio controls preload="metadata" src={src} className="w-full" onEnded={onEnded} />
+              {src || (isVideo(it) && hlsUrl) ? (isVideo(it)
+                       // 적응형(HLS) 우선 — 폴백=프로그레시브. max-w 캡(전폭 확대 금지)은 VIDEO_CLS.
+                       ? (hlsUrl
+                           ? <HlsVideo hlsUrl={audioUrl(hlsUrl)} fallback={src} poster={poster} preload={preload} />
+                           : <video controls preload={preload} src={src} poster={poster} playsInline className={VIDEO_CLS} />)
+                       : <audio controls preload={preload} src={src} className="w-full" onEnded={onEnded} />)
                    : <div className="text-xs text-stone-400">재생할 오디오가 없습니다.</div>}
             </div>
           );

@@ -921,6 +921,7 @@ def search_youtube(query: str, count: int = 5) -> dict:
                 'channel': e.get('channel', e.get('uploader', '')),
                 'duration': _format_duration(e.get('duration')),
                 'url': f"https://www.youtube.com/watch?v={vid}",
+                'thumb': f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",   # 앱 카드용
             })
 
         return {
@@ -932,6 +933,64 @@ def search_youtube(query: str, count: int = 5) -> dict:
 
     except Exception as e:
         return {'success': False, 'message': f'검색 실패: {str(e)}'}
+
+
+def relay_youtube(query: str, media: str = "audio", count: int = 6) -> dict:
+    """유튜브 검색 → 맥 경유 릴레이 스트림 목록 (원격·폰 표면 '전송' 재생용).
+
+    브라우저가 유튜브에 직접 접속하지 않는다 — 각 항목의 stream(/yt/relay/…)을
+    표면의 <audio>/<video> 가 물면, 그때 백엔드(api_ytrelay)가 yt-dlp resolve →
+    ffmpeg -c copy 리먹스 생방송 + 캐시 tee 로 중계한다. 여기서는 검색만 하므로
+    즉시 반환(대기 0) — 해소·전송은 재생 버튼을 누른 항목만 일어난다.
+
+    mode:client(googlevideo URL 직접)와 다른 점: client 는 맥과 같은 공인 IP 에서만
+    재생되지만(IP 잠금) 릴레이는 어디서든 된다. 캐시 후엔 재다운로드도 없다.
+
+    Args:
+        query: 검색어 또는 유튜브 URL
+        media: audio(기본) | video — 소리만 / 영상+소리
+        count: 검색 결과 수 (1-10, URL 이면 무시)
+
+    Returns:
+        dict: {success, items: [{title, channel, duration, video_id, stream, thumb, is_video}]}
+    """
+    media = "video" if media == "video" else "audio"
+    # URL 냄새가 날 때만 ID 추출 — extract_video_id 는 맨 11자 영숫자도 ID 로 보므로
+    # 짧은 영어 검색어가 영상 ID 로 오인되지 않게 게이트를 건다.
+    q = (query or "").strip()
+    vid = extract_video_id(q) if ("youtu" in q or "://" in q) else None
+    if vid:
+        info = get_youtube_info(f"https://www.youtube.com/watch?v={vid}")
+        entries = [{"video_id": vid,
+                    "title": info.get("title", vid),
+                    "channel": info.get("uploader", ""),
+                    "duration": _format_duration(info.get("duration", 0))}]
+    else:
+        found = search_youtube(query, count=count)
+        if not found.get("success"):
+            return found
+        entries = found.get("results", [])
+    items = []
+    for e in entries:
+        v = e.get("video_id", "")
+        items.append({
+            "video_id": v,
+            "title": e.get("title", ""),
+            "channel": e.get("channel", ""),
+            "duration": e.get("duration", ""),
+            "stream": f"/yt/relay/{v}?kind={media}",
+            # 저대역 판 — 느린 회선 표면이 자동 선택(영상만, 오디오는 이미 가볍다)
+            "stream_low": (f"/yt/relay/{v}?kind=video&q=low" if media == "video" else ""),
+            "thumb": f"https://i.ytimg.com/vi/{v}/mqdefault.jpg",
+            "is_video": media == "video",
+        })
+    label = "영상" if media == "video" else "음악"
+    return {
+        "success": True,
+        "media": media,
+        "items": items,
+        "message": f"{label} {len(items)}건 — 재생을 누르면 맥이 받으면서 바로 중계합니다 (유튜브 직접 접속 없음).",
+    }
 
 
 def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:

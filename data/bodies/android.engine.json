@@ -37,7 +37,6 @@
     "api_projects",
     "api_report",
     "api_scheduler",
-    "api_showcase",
     "api_switches",
     "api_system_ai",
     "api_transforms",
@@ -192,8 +191,12 @@
     "api_config": "force_exclude (프로파일 명시)",
     "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
+    "api_nas_hls": "force_exclude (프로파일 명시)",
+    "api_showcase": "via hls_ladder",
+    "api_ytrelay": "force_exclude (프로파일 명시)",
     "cdn_provision": "force_exclude (프로파일 명시)",
     "ffmpeg_provision": "force_exclude (프로파일 명시)",
+    "hls_ladder": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
     "ibl_synthetic_generator": "top-level import: google",
     "nip17": "top-level import: pynostr",
@@ -204,8 +207,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 198,
-    "engine": 183,
-    "blocklist": 15
+    "total": 201,
+    "engine": 182,
+    "blocklist": 19
   }
 }

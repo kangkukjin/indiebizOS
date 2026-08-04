@@ -349,3 +349,6 @@ data/music/
 
 # Claude Code 로컬 설정·워크트리 (세션 로컬 — 커밋 금지)
 .claude/
+
+# 유튜브 릴레이 캐시 (파생물 — 5GB LRU)
+data/youtube_cache/

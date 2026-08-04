@@ -26,6 +26,19 @@ def load_tool_youtube():
     spec.loader.exec_module(module)
     return module
 
+_WATCH_KEY = "tool_watch_singleton"
+
+def load_tool_watch():
+    """시청 앱 면(피드·시청·기록) — tool_youtube 와 같은 싱글턴 로딩 패턴."""
+    if _WATCH_KEY in sys.modules:
+        return sys.modules[_WATCH_KEY]
+    module_path = current_dir / "tool_watch.py"
+    spec = importlib.util.spec_from_file_location(_WATCH_KEY, module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[_WATCH_KEY] = module
+    spec.loader.exec_module(module)
+    return module
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 SETTINGS_PATH = os.path.join(BASE_DIR, "tool_settings.json")
@@ -120,6 +133,36 @@ def _op_seek(tool_input, yt):
     return yt.seek_youtube(pos)
 
 
+def _op_feed(tool_input, yt):
+    return load_tool_watch().feed(limit=tool_input.get('limit', 24))
+
+
+def _op_watch(tool_input, yt):
+    vid = tool_input.get('video_id')
+    if not vid and tool_input.get('url'):
+        vid = yt.extract_video_id(tool_input.get('url', ''))
+    if not vid:
+        return {"error": "video_id 또는 url 파라미터가 필요합니다."}
+    return load_tool_watch().watch(vid)
+
+
+def _op_history(tool_input, yt):
+    return load_tool_watch().history(limit=tool_input.get('limit', 40))
+
+
+def _op_relay(tool_input, yt):
+    # 검색어/URL → 맥 경유 릴레이 스트림 목록(items.stream=/yt/relay/…).
+    # 재생 축은 mode(audio|video) 재사용 — client 값이 오면 릴레이의 취지(직접 접속 없음)와
+    # 어긋나므로 audio 로 접는다.
+    media = tool_input.get('media') or tool_input.get('mode', 'audio')
+    if media not in ('audio', 'video'):
+        media = 'audio'
+    return yt.relay_youtube(
+        query=tool_input.get('query') or tool_input.get('url', ''),
+        media=media,
+        count=tool_input.get('count', 6))
+
+
 def _op_queue(tool_input, yt):
     return yt.get_queue()
 
@@ -151,6 +194,7 @@ _OP_DISPATCHERS = {
         "queue": _op_queue,
         "stop": _op_stop,
         "download": _op_download,
+        "relay": _op_relay,
     },
     # [sense:video]{op} — 유튜브 동영상 조회
     "video_op": {
@@ -158,6 +202,9 @@ _OP_DISPATCHERS = {
         "transcript": _op_transcript,
         "languages": _op_languages,
         "summarize": _op_summarize,
+        "feed": _op_feed,
+        "watch": _op_watch,
+        "history": _op_history,
     },
 }
 _OP_DEFAULTS = {"music_op": "play", "video_op": "info"}

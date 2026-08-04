@@ -14,10 +14,10 @@ interface StreamPlayerProps {
   variant?: 'warm' | 'neutral';
 }
 
-/* ── hls.js 동적 로드 (CDN, 한 번만) ─────────────── */
+/* ── hls.js 동적 로드 (CDN, 한 번만) — 유튜브 시청 앱(GenericInstrument 적응형 재생)도 공유 ── */
 let hlsPromise: Promise<any> | null = null;
 
-function loadHls(): Promise<any> {
+export function loadHls(): Promise<any> {
   if (hlsPromise) return hlsPromise;
   hlsPromise = new Promise((resolve, reject) => {
     // 이미 로드됐으면 바로 반환

@@ -36,7 +36,10 @@
     "api_lecture_workspace",
     "ibl_opus_bulk_gen",
     "ffmpeg_provision",
-    "cdn_provision"
+    "cdn_provision",
+    "api_ytrelay",
+    "api_nas_hls",
+    "hls_ladder"
   ],
   "_force_exclude_reasons": {
     "api": "맥 백엔드 진입점(dotenv) — 폰은 phone_api.serve()",
@@ -44,7 +47,10 @@
     "api_lecture_workspace": "python-multipart 부재(FastAPI Form/Upload)",
     "ibl_opus_bulk_gen": "학습데이터 생성 스크립트 — 모듈 import 시 /tmp 파일 읽음(부작용)",
     "ffmpeg_provision": "데스크탑 전용 ffmpeg 자동공급 — 폰은 라디오를 클라이언트(WebView, hls.js)에서 재생해 ffmpeg 불필요",
-    "cdn_provision": "CF CDN(Worker+R2) 발급기 — 얼굴 발급은 몸의 주인 PC 전용(폰은 face_provision 자체가 없는 위임 몸). CF API 토큰도 폰에 프로비저닝 안 됨"
+    "cdn_provision": "CF CDN(Worker+R2) 발급기 — 얼굴 발급은 몸의 주인 PC 전용(폰은 face_provision 자체가 없는 위임 몸). CF API 토큰도 폰에 프로비저닝 안 됨",
+    "api_ytrelay": "유튜브 릴레이 서빙 면(yt-dlp+ffmpeg 리먹스·5GB 캐시) — 릴레이는 PC 몸이 받고 표면은 URL 만 문다(폰 표면도 @hub 주소로 시청)",
+    "api_nas_hls": "NAS HLS 서빙 면 — NAS 파인더 서빙 자체가 PC 몸 전용(폰은 브라우저로 시청)",
+    "hls_ladder": "HLS 렌디션 사다리 빌더(ffmpeg 인코딩 워커) — 서빙 면(showcase·NAS)과 한 몸, PC 전용"
   },
   "_force_exclude_glob": [
     "test_*"

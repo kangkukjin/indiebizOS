@@ -267,7 +267,9 @@ function renderPrim(p,vi,data){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
     const c=p.card||{};
-    return arr.map((it,ri)=>{
+    // wide 카드=화면 폭 반응형 그리드(폰 1열·넓으면 2~4열, 유튜브 홈) — 전폭 1열 고정이면 데스크탑서 썸네일 과대
+    const wideOpen=c.wide?'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;align-items:start">':'';
+    return wideOpen+arr.map((it,ri)=>{
       const click=p.item_click?' onclick="rowDrill('+vi+','+ri+')" style="cursor:pointer"':'';
       let body='<div class="t">'+tpl(c.title,it)+'</div><div class="m">'+(c.lines||[]).map(l=>tpl(l,it)).join('<br>')+'</div>';
       if(c.link&&c.link.href){
@@ -276,9 +278,14 @@ function renderPrim(p,vi,data){
         // 제목은 this.href 에서 파생(속성 이스케이프 회피 — esc() 는 따옴표를 안 막는다).
         if(href) body+='<a href="'+href+'" target="_blank" style="font-size:12px" onclick="event.stopPropagation();return openWebOverlay(this.href)">'+esc(c.link.label||'상세 →')+'</a>';
       }
-      if(c.image){ const img=tpl(c.image,it); return '<div class="card bookcard"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<img>')+'<div>'+body+'</div></div>'; }
+      if(c.image){
+        const img=tpl(c.image,it);
+        // wide: 16:9 가로 썸네일을 위에 크게(유튜브 모바일 홈 카드) — 데스크탑 파리티
+        if(c.wide) return '<div class="card" style="margin:0"'+click+'>'+(img?'<img src="'+img+'" loading="lazy" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;background:var(--bg3)">':'<div style="width:100%;aspect-ratio:16/9;border-radius:10px;background:var(--bg3)"></div>')+'<div style="margin-top:8px">'+body+'</div></div>';
+        return '<div class="card bookcard"'+click+'>'+(img?'<img src="'+img+'" loading="lazy">':'<img>')+'<div>'+body+'</div></div>';
+      }
       return '<div class="card"'+click+'>'+body+'</div>';
-    }).join('');
+    }).join('')+(c.wide?'</div>':'');
   }
   if(p.type==='image_grid'){
     const arr=viewList(data,p.from);
@@ -298,12 +305,46 @@ function renderPrim(p,vi,data){
     if(!arr.length) return emptyMsg(p,data);
     // continuous: 한 곡이 끝나면 다음 곡 자동 재생(앨범·플레이리스트 연속 듣기) — 데스크탑 파리티
     const cont=p.continuous?' data-mp="1" onended="mpNext(this)"':'';
+    // lazy: preload="none" — 항목마다 스트림을 미리 물지 않는다(유튜브 릴레이처럼 요청이
+    // 곧 서버 작업(해소+ffmpeg)인 src 는 재생을 눌러야만 받게). video: '{is_video}'(또는
+    // true) 참이면 <audio> 대신 <video>(poster 지원) — 데스크탑 파리티.
+    const pre=p.lazy?'none':'metadata';
+    // src_low: 느린 회선(테슬라 실측 1.4Mbps — 원본 1080p 는 소리만 나오고 화면 정지)이면
+    // 저대역 판 자동 선택 — 데스크탑 파리티. navigator.connection=크로미움 계열 존재.
+    const conn=navigator.connection;
+    const slowNet=!!conn&&((conn.downlink&&conn.downlink<3)||(conn.rtt&&conn.rtt>250));
+    // 적응형(HLS) 하이드레이션 — innerHTML 로 붙는 video[data-hls] 를 관찰해 hls.js 를
+    // 문다(조각마다 화질 자동 전환). autoStartLoad:false + play 시 startLoad = lazy 유지.
+    if(!window.__mpHlsObs&&window.Hls&&Hls.isSupported()){
+      const arm=()=>{document.querySelectorAll('video[data-hls]:not([data-hls-on])').forEach(v=>{
+        v.setAttribute('data-hls-on','1');
+        const h=new Hls({autoStartLoad:false});
+        h.loadSource(v.getAttribute('data-hls')); h.attachMedia(v);
+        v.addEventListener('play',()=>h.startLoad(),{once:true});
+      });};
+      window.__mpHlsObs=new MutationObserver(arm);
+      window.__mpHlsObs.observe(document.body,{childList:true,subtree:true});
+      arm();
+    }
     return arr.map(it=>{
-      const raw=p.src?tpl(p.src,it):'';
+      const lowRaw=(typeof p.src_low==='string')?tpl(p.src_low,it):'';
+      const raw=(slowNet&&lowRaw)?lowRaw:(p.src?tpl(p.src,it):'');
       // 절대 URL 은 그대로, 백엔드 상대경로(/music/stream?…)는 동일오리진이라 그대로, 파일 절대경로는 /launcher/file 로 서빙.
       const src=raw?(/^(https?:|data:)/.test(raw)?raw:(raw.startsWith('/')?raw:'/launcher/file?path='+encodeURIComponent(raw))):'';
       const title=p.title?tpl(p.title,it):'';
-      return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+(src?'<audio controls preload="metadata" src="'+src+'" style="width:100%"'+cont+'></audio>':'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
+      const isVid=p.video===true||(typeof p.video==='string'&&/^(true|1)$/i.test(tpl(p.video,it)));
+      const poster=p.poster?tpl(p.poster,it):'';
+      // 소스 우선순위: HLS(hls.js — 적응형) > 네이티브 HLS(사파리) > 프로그레시브(+저대역 자동)
+      const hlsRaw=(typeof p.src_hls==='string')?tpl(p.src_hls,it):'';
+      const canHlsJs=isVid&&hlsRaw&&window.Hls&&Hls.isSupported();
+      const canNative=isVid&&hlsRaw&&!canHlsJs&&document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+      const vSrc=canHlsJs?'':(canNative?hlsRaw:src);
+      const vAttr=canHlsJs?' data-hls="'+hlsRaw+'"':(vSrc?' src="'+vSrc+'"':'');
+      // max-width 캡 — 넓은 화면에서 전폭 확대는 과하다(유튜브 데스크탑 플레이어 상한)
+      const media=isVid
+        ?'<video controls playsinline preload="'+pre+'"'+vAttr+(poster?' poster="'+poster+'"':'')+' style="width:100%;max-width:880px;display:block;margin:0 auto;border-radius:10px;background:#000;aspect-ratio:16/9"></video>'
+        :'<audio controls preload="'+pre+'" src="'+src+'" style="width:100%"'+cont+'></audio>';
+      return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+((src||canHlsJs)?media:'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
     }).join('');
   }
   if(p.type==='thread'){

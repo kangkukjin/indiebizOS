@@ -430,6 +430,7 @@ from api_multi_chat import router as multi_chat_router, init_manager as init_mul
 from api_pcmanager import router as pcmanager_router
 from api_photo import router as photo_router
 from api_music import router as music_router
+from api_ytrelay import router as ytrelay_router
 from api_android import router as android_router
 from api_nas import router as nas_router
 from api_showcase import router as showcase_router
@@ -485,6 +486,7 @@ app.include_router(multi_chat_router, tags=["multi-chat"])
 app.include_router(pcmanager_router, tags=["pcmanager"])
 app.include_router(photo_router, tags=["photo"])
 app.include_router(music_router, tags=["music"])  # 로컬 전용 — is_public_remote_path 등록 금지 (외부=런처 세션)
+app.include_router(ytrelay_router, tags=["yt-relay"])  # 로컬 전용 — is_public_remote_path 등록 금지 (외부=런처 세션)
 app.include_router(android_router, tags=["android"])
 app.include_router(nas_router, tags=["nas"])
 app.include_router(showcase_router, tags=["showcase"])

@@ -150,7 +150,12 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
 
 
 async def search_used_items_async(query: str, display: int = 5):
-    """중고 거래 사이트 검색 (중고나라, 번개장터)"""
+    """중고 거래 사이트 검색 (중고나라, 번개장터) — ★2026-08-04 실측 **0건**.
+
+    두 사이트가 개편되면서 아래 셀렉터(`ul.grid > li`, `div[class*='ProductItem']`)가
+    낡았고, 예외를 조용히 삼켜(`except: pass`) 빈 목록으로 나온다.
+    고칠 가치 없음: 같은 두 소스를 `[sense:used]`(tool_used.py)가 **내부 API** 로
+    이미 깨끗하게 준다(폰서도 동작). 이 축은 은퇴 후보 — 중고는 [sense:used] 로 보낼 것."""
     try:
         from playwright.async_api import async_playwright
     except ImportError:

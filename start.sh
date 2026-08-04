@@ -33,6 +33,9 @@ if [ -x ".venv/bin/python3" ]; then
     echo "✅ 가상환경 파이썬 사용 (.venv)"
 fi
 
+# 의도적 종료 표식 제거 — 시스템 재가동 (수리 워치독·keeper 정상 작동 재개)
+rm -f data/.intentional_shutdown
+
 # 백엔드 시작
 cd backend
 "$PY" api.py &
@@ -67,6 +70,16 @@ fi
 cleanup() {
     echo ""
     echo "🛑 IndieBiz OS 종료 중..."
+
+    # 0. 의도적 종료 표식 + keeper 정리 — 표식이 없으면 수리 워치독이 죽은 /health 를
+    # 수리 탓으로 오판해 정상 수리를 롤백하고, keeper 를 안 죽이면 1분 내 백엔드를
+    # 되살린다("다 정리하고 죽는다" 위반). 다음 시작이 표식을 지운다. (충돌 봉합 08-05)
+    touch data/.intentional_shutdown 2>/dev/null
+    if [ -f data/backend_keeper.pid ]; then
+        kill -9 "$(cat data/backend_keeper.pid)" 2>/dev/null
+        rm -f data/backend_keeper.pid
+    fi
+    pkill -f "scripts/backend_keeper.sh" 2>/dev/null
 
     # 1. 백엔드 프로세스 트리 전체 종료 (uvicorn reload worker 포함)
     if [ -n "$BACKEND_PID" ]; then

@@ -90,6 +90,17 @@ def _notify(title: str, body: str):
         pass
 
 
+def _intentional_shutdown(manifest: dict) -> bool:
+    """시스템이 *의도적으로* 꺼졌는가 — Electron 종료 정리·start.sh trap 이 남기는
+    표식(data/.intentional_shutdown). 이때 죽은 /health 는 수리 탓이 아니므로
+    롤백하면 안 된다(정상 수리를 오판 되돌림 — 수명주기 개편과의 충돌 봉합 08-05).
+    다음 시작이 표식을 지우므로, 표식이 있는 동안만 대기/퇴근 판단에 쓴다."""
+    try:
+        return os.path.exists(os.path.join(manifest.get("repo", ""), "data", ".intentional_shutdown"))
+    except Exception:
+        return False
+
+
 def _rollback(manifest: dict) -> list:
     """백업 복원. 신규 파일(backup=null)은 삭제. 복원 목록 반환."""
     restored = []
@@ -175,7 +186,14 @@ def main():
             _write_result({"outcome": "healthy", "files": list((manifest.get("files") or {}).keys())})
             return
 
-        # 3. 죽었다 — 자동 롤백
+        # 3. 죽었다 — 단, 의도된 종료(창 닫기·start.sh 종료)면 수리 탓이 아니다: 롤백 금지
+        if _intentional_shutdown(manifest):
+            _write_result({"outcome": "intentional_shutdown",
+                           "note": "시스템이 의도적으로 종료됨 — 수리 보존, 롤백 안 함. "
+                                   "다음 부팅이 실패하면 red_backups 백업으로 수동 복원."})
+            return
+
+        # 자동 롤백
         restored = _rollback(manifest)
         recovered = _poll_health(url)
         _write_result({

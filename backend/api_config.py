@@ -1272,6 +1272,53 @@ async def get_self_checks(limit: int = 20):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/system-logs")
+async def get_system_logs(file: str = "runtime", lines: int = 300, errors_only: bool = False):
+    """시스템 로그 꼬리 — 조종실 '시스템 로그' 뷰어용 (2026-08-05 시작방식 개편).
+
+    아이콘 실행(터미널 없음)에서 에피소드 메모리가 못 담는 로그 — 부팅 에러·
+    백그라운드 서비스(폴러·펄스)·비에이전트 표면 500 traceback — 를 보는 창구.
+    화이트리스트 파일만, 끝에서 최대 512KB 만 읽는다(대용량 안전).
+    """
+    from runtime_utils import get_base_path
+    base = get_base_path() / "data"
+    whitelist = {
+        "runtime": base / "backend_runtime.log",   # Electron 이 스폰한 백엔드 stdout
+        "keeper": base / "backend_keeper.log",     # 감독 데몬 + keeper 가 스폰한 백엔드
+        "tunnel": base / "cloudflared.log",        # 터널
+        "electron": base / "electron_dev.log",     # Electron 재시작 스크립트 로그
+    }
+    p = whitelist.get(file)
+    if p is None:
+        raise HTTPException(status_code=400, detail=f"file 은 {sorted(whitelist)} 중 하나")
+    if not p.exists():
+        return {"file": file, "path": str(p), "lines": [],
+                "note": "로그 파일이 아직 없습니다 (해당 경로로 기동된 적 없음)"}
+    lines = max(10, min(int(lines or 300), 2000))
+    try:
+        size = p.stat().st_size
+        with open(p, "rb") as f:
+            if size > 512 * 1024:
+                f.seek(-512 * 1024, 2)
+            raw = f.read().decode("utf-8", errors="replace")
+        rows = raw.splitlines()
+        if errors_only:
+            import re as _re
+            pat = _re.compile(r"error|traceback|exception|failed|critical|실패|오류|에러", _re.I)
+            keep, ctx = [], 0
+            for ln in rows:
+                if pat.search(ln):
+                    keep.append(ln)
+                    ctx = 3  # 에러 뒤 3줄 맥락 동반 (traceback 몸통)
+                elif ctx > 0:
+                    keep.append(ln)
+                    ctx -= 1
+            rows = keep
+        return {"file": file, "path": str(p), "size": size, "lines": rows[-lines:]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/world-pulse/episodes")
 async def get_episodes(limit: int = 30):
     """주행기록계 — 최근 자율주행/시스템AI 에피소드 목록(요약 지표 포함)."""

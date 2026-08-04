@@ -63,6 +63,13 @@ revive() {
 
 while true; do
     sleep 60
+    # 의도적 종료 표식(창 닫기·start.sh 종료) — 시스템이 일부러 꺼졌으니 keeper 도 퇴근
+    # (되살리면 "다 정리하고 죽는다" 위반). 다음 시작이 표식을 지우고 keeper 를 다시 띄운다.
+    if [ -f "$REPO/data/.intentional_shutdown" ]; then
+        echo "[$(date '+%F %T')] 의도적 종료 표식 감지 — keeper 퇴근" >> "$LOG"
+        rm -f "$PIDFILE"
+        exit 0
+    fi
     [ -f "$PAUSE" ] && continue
     /usr/bin/curl -s -m 4 "$HEALTH" >/dev/null 2>&1 && continue
     sleep 5

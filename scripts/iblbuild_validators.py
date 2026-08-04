@@ -61,6 +61,21 @@ def _extract_op_dispatchers(handler_text: str) -> dict[str, tuple[set[str], obje
     return None
 
 
+def _stub_ops(table_node) -> list[str]:
+    """_OP_DISPATCHERS 테이블(ast.Dict)에서 값이 None 상수인 op 키 목록.
+
+    장식 스텁 탐지용 (감사 ① 재발 봉쇄) — 함수 참조(ast.Name/Attribute)나
+    문자열 디스패치 키(browser-action/computer-use 변형)는 통과."""
+    if not isinstance(table_node, ast.Dict):
+        return []
+    return sorted(
+        k.value
+        for k, v in zip(table_node.keys, table_node.values)
+        if isinstance(k, ast.Constant) and isinstance(k.value, str)
+        and isinstance(v, ast.Constant) and v.value is None
+    )
+
+
 def _extract_op_defaults(handler_text: str) -> dict[str, str] | None:
     """handler.py 본문에서 _OP_DEFAULTS dict 를 AST 로 파싱.
 
@@ -218,7 +233,19 @@ def _check_action(
 
                 if dispatchers is not None and tool_name in dispatchers:
                     # AST 정확 비교 — _OP_DISPATCHERS[tool_name] 키 ↔ src.ops.values 키
-                    handler_keys, _ = dispatchers[tool_name]
+                    handler_keys, table_node = dispatchers[tool_name]
+
+                    # 장식 스텁 금지 (2026-08-05 감사 ① — 15개 스텁 전환 후 재발 봉쇄):
+                    # 값이 None 인 테이블은 "준수처럼 보이는 부재" — 키만 맞고 분기는
+                    # if/elif 체인에 살아 있으면, 체인에서 분기 하나가 사라져도 이 가드가
+                    # 못 본다. 값은 함수 참조(또는 browser-action/computer-use 식 문자열
+                    # 디스패치 키)여야 한다.
+                    stub_ops = _stub_ops(table_node)
+                    if stub_ops:
+                        issues.append(
+                            f"{qualified}: _OP_DISPATCHERS[{tool_name!r}] 값이 None "
+                            f"({pkg_name}) — 장식 스텁 금지, 진짜 함수 참조로: {stub_ops}"
+                        )
                     if handler_keys != src_op_keys:
                         only_src = sorted(src_op_keys - handler_keys)
                         only_handler = sorted(handler_keys - src_op_keys)

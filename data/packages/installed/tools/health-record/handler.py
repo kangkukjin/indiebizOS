@@ -17,29 +17,17 @@ if _package_dir not in sys.path:
 import storage
 
 
-# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 execute 안에 그대로 유지.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
-_OP_DISPATCHERS = {
-    "health_op": {"save": None, "query": None, "delete": None},
-}
-# health_op는 op 필수 — _OP_DEFAULTS 항목 없음.
-
-
 def execute(tool_input: dict, context) -> str:
     """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
 
-    # 통합 도구 — IBL 어휘에 노출
-    if tool_name == "health_op":
+    # 통합 도구 — IBL 어휘에 노출 (_OP_DISPATCHERS 는 함수 정의 뒤, 파일 하단)
+    if tool_name in _OP_DISPATCHERS:
         op = (tool_input.get("op") or "").strip()
-        if op == "save":
-            return save_health_info(tool_input)
-        if op == "query":
-            return get_health_context(tool_input)
-        if op == "delete":
-            return delete_health_record(tool_input)
-        return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query|delete)"}, ensure_ascii=False)
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query|delete)"}, ensure_ascii=False)
+        return fn(tool_input)
     return f"알 수 없는 도구: {tool_name}"
 
 
@@ -451,6 +439,15 @@ def delete_health_record(input_data: dict) -> str:
                'medication': '투약', 'document': '문서'}.get(record_type, record_type)
     person_str = f"[{person}] " if person and person != "나" else ""
     return f"🗑 {person_str}{type_ko} 기록 #{record_id} 삭제됨"
+
+
+# 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 함수 참조 테이블로 전환.
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "health_op": {"save": save_health_info, "query": get_health_context,
+                  "delete": delete_health_record},
+}
+# health_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
 
 # ===== 유틸리티 함수들 =====

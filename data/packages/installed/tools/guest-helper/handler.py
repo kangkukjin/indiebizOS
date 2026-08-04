@@ -17,31 +17,7 @@ import re
 import shutil
 import time
 
-_OP_DISPATCHERS = {
-    "guestpc_op": {
-        "shell": None,
-        "read": None,
-        "write": None,
-        "list": None,
-        "info": None,
-        "screen": None,
-        "click": None,
-        "move": None,
-        "type": None,
-        "key": None,
-        "scroll": None,
-        "drag": None,
-        "result": None,
-        "detach": None,
-    },
-    "limb_op": {
-        "issue": None,
-        "list": None,
-        "revoke": None,
-        "approve": None,
-    },
-}
-_OP_DEFAULTS = {"guestpc_op": "shell", "limb_op": "issue"}
+# _OP_DISPATCHERS(진짜 함수 참조 테이블)·_OP_DEFAULTS 는 함수 정의 뒤, 파일 하단.
 
 
 # === [limbs:guestpc] — 손발 조작 ===
@@ -330,74 +306,25 @@ def _job_result(tool_input: dict) -> dict:
     return {"success": True, "op": "result", "job_id": job_id, "result": result}
 
 
-def _guestpc(tool_input: dict) -> dict:
-    import phone_jobs
-    op = (tool_input.get("op") or _OP_DEFAULTS["guestpc_op"]).strip()
-    if op == "detach":
-        return _detach(tool_input)
-    if op == "result":
-        return _job_result(tool_input)   # job_id 전역 조회 — 손발 해소·liveness 불요
+def _guestpc_begin(tool_input: dict):
+    """공용 전처리 — 대상 손발 해소 + 작업 시작 서사. 반환 (device_id, alias, 오류dict|None).
+
+    (detach/result 를 제외한 모든 guestpc op 가 공유. 오류면 그 dict 를 그대로 반환하면 된다.)"""
     device_id, alias, err = _resolve_limb(tool_input.get("limb") or tool_input.get("target"))
     if err:
-        return {"success": False, "error": err}
-
+        return None, None, {"success": False, "error": err}
     _task_start_note(device_id)   # 작업 시작 서사(원 요청)를 그 손발 창에 — 한 번만
-    envelope = {"op": op}
-    wait = 30.0
-    background = bool(tool_input.get("background"))
-    if op == "shell":
-        cmd = tool_input.get("cmd") or ""
-        if not cmd.strip():
-            return {"success": False, "error": "shell 엔 cmd 가 필요합니다."}
-        envelope["cmd"] = cmd
-        if tool_input.get("cwd"):
-            envelope["cwd"] = tool_input["cwd"]
-        if tool_input.get("stdin"):
-            envelope["stdin"] = str(tool_input["stdin"])
-        if tool_input.get("reset"):
-            envelope["reset"] = True
-        shell_kind = (tool_input.get("shell") or "").strip().lower()
-        if shell_kind:
-            if shell_kind not in ("cmd", "powershell", "pwsh", "ps", "sh"):
-                return {"success": False,
-                        "error": f"shell 은 cmd/powershell 중 하나여야 합니다(받은 값: {shell_kind}). "
-                                 "윈도우에서만 의미가 있습니다."}
-            envelope["shell"] = shell_kind
-        # 헬퍼가 이 시간에 명령을 죽인다. 백그라운드 모드의 기본은 넉넉히(30분) —
-        # 명시 120s 기본을 그대로 두면 설치·빌드가 헬퍼 쪽에서 잘린다.
-        to = tool_input.get("timeout")
-        to = int(to) if to else (1800 if background else 120)
-        envelope["timeout"] = to
-        # 명령 실행시간 + 왕복 여유 — 단, MCP 층이 120s 에 먼저 끊으므로 상한을 둔다.
-        wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
-    elif op in ("read", "list"):
-        envelope["path"] = tool_input.get("path") or ""
-    elif op == "write":
-        if not tool_input.get("path"):
-            return {"success": False, "error": "write 엔 path 가 필요합니다."}
-        envelope["path"] = tool_input["path"]
-        envelope["content"] = tool_input.get("content") or ""
-    elif op == "info":
-        pass
-    elif op == "screen":
-        # 캡처는 인코딩·전송이 있어 파일 op 보다 굼뜨다 — 넉넉히 준다.
-        _copy_shot_keys(tool_input, envelope)
-        wait = 60.0
-    elif op in _INPUT_OPS:
-        err = _fill_input_envelope(op, tool_input, envelope)
-        if err:
-            return {"success": False, "error": err}
-        _copy_shot_keys(tool_input, envelope)   # 재캡처 화질 옵션도 함께
-        wait = 60.0
-    else:
-        return {"success": False, "error": (
-            f"알 수 없는 op '{op}'. 사용 가능: shell/read/write/list/info/screen/"
-            "click/move/type/key/scroll/drag/result/detach")}
+    return device_id, alias, None
 
+
+def _send_wait(tool_input: dict, device_id: str, alias: str, op: str,
+               envelope: dict, wait: float) -> dict:
+    """공용 후처리 — 봉투 enqueue → (셸 백그라운드 단락) → 동기 대기 → 결과 마무리."""
+    import phone_jobs
     job_id = phone_jobs.enqueue(device_id, json.dumps(envelope, ensure_ascii=False))
 
     # 백그라운드 모드(설치·빌드 등 오래 걸리는 셸) — 즉시 job_id 반환, 결과는 op=result 로.
-    if background and op == "shell":
+    if bool(tool_input.get("background")) and op == "shell":
         return {"success": True, "op": "shell", "background": True,
                 "limb": device_id, "limb_name": alias, "job_id": job_id,
                 "message": (f"손발 '{alias}' 에서 백그라운드로 실행 중입니다. 결과는 "
@@ -416,6 +343,120 @@ def _guestpc(tool_input: dict) -> dict:
         return _finish_visual(result, device_id, alias, op)
     # limb_name 을 항상 실어 어느 PC 에서 돌았는지 결과에 명시(오배송 사후 인지).
     return {"success": True, "limb": device_id, "limb_name": alias, "result": result}
+
+
+def _op_shell(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    envelope = {"op": "shell"}
+    cmd = tool_input.get("cmd") or ""
+    if not cmd.strip():
+        return {"success": False, "error": "shell 엔 cmd 가 필요합니다."}
+    envelope["cmd"] = cmd
+    if tool_input.get("cwd"):
+        envelope["cwd"] = tool_input["cwd"]
+    if tool_input.get("stdin"):
+        envelope["stdin"] = str(tool_input["stdin"])
+    if tool_input.get("reset"):
+        envelope["reset"] = True
+    shell_kind = (tool_input.get("shell") or "").strip().lower()
+    if shell_kind:
+        if shell_kind not in ("cmd", "powershell", "pwsh", "ps", "sh"):
+            return {"success": False,
+                    "error": f"shell 은 cmd/powershell 중 하나여야 합니다(받은 값: {shell_kind}). "
+                             "윈도우에서만 의미가 있습니다."}
+        envelope["shell"] = shell_kind
+    # 헬퍼가 이 시간에 명령을 죽인다. 백그라운드 모드의 기본은 넉넉히(30분) —
+    # 명시 120s 기본을 그대로 두면 설치·빌드가 헬퍼 쪽에서 잘린다.
+    background = bool(tool_input.get("background"))
+    to = tool_input.get("timeout")
+    to = int(to) if to else (1800 if background else 120)
+    envelope["timeout"] = to
+    # 명령 실행시간 + 왕복 여유 — 단, MCP 층이 120s 에 먼저 끊으므로 상한을 둔다.
+    wait = min(float(to) + 25.0, _SYNC_WAIT_CAP)
+    return _send_wait(tool_input, device_id, alias, "shell", envelope, wait)
+
+
+def _op_read(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    envelope = {"op": "read", "path": tool_input.get("path") or ""}
+    return _send_wait(tool_input, device_id, alias, "read", envelope, 30.0)
+
+
+def _op_list(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    envelope = {"op": "list", "path": tool_input.get("path") or ""}
+    return _send_wait(tool_input, device_id, alias, "list", envelope, 30.0)
+
+
+def _op_write(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    if not tool_input.get("path"):
+        return {"success": False, "error": "write 엔 path 가 필요합니다."}
+    envelope = {"op": "write", "path": tool_input["path"],
+                "content": tool_input.get("content") or ""}
+    return _send_wait(tool_input, device_id, alias, "write", envelope, 30.0)
+
+
+def _op_info(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    return _send_wait(tool_input, device_id, alias, "info", {"op": "info"}, 30.0)
+
+
+def _op_screen(tool_input: dict) -> dict:
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    # 캡처는 인코딩·전송이 있어 파일 op 보다 굼뜨다 — 넉넉히 준다.
+    envelope = {"op": "screen"}
+    _copy_shot_keys(tool_input, envelope)
+    return _send_wait(tool_input, device_id, alias, "screen", envelope, 60.0)
+
+
+def _op_input(op: str, tool_input: dict) -> dict:
+    """입력 op(click/move/type/key/scroll/drag) 공통 흐름 — 좌표 검증 + 재캡처 옵션."""
+    device_id, alias, err = _guestpc_begin(tool_input)
+    if err:
+        return err
+    envelope = {"op": op}
+    msg = _fill_input_envelope(op, tool_input, envelope)
+    if msg:
+        return {"success": False, "error": msg}
+    _copy_shot_keys(tool_input, envelope)   # 재캡처 화질 옵션도 함께
+    return _send_wait(tool_input, device_id, alias, op, envelope, 60.0)
+
+
+def _op_click(tool_input: dict) -> dict:
+    return _op_input("click", tool_input)
+
+
+def _op_move(tool_input: dict) -> dict:
+    return _op_input("move", tool_input)
+
+
+def _op_type(tool_input: dict) -> dict:
+    return _op_input("type", tool_input)
+
+
+def _op_key(tool_input: dict) -> dict:
+    return _op_input("key", tool_input)
+
+
+def _op_scroll(tool_input: dict) -> dict:
+    return _op_input("scroll", tool_input)
+
+
+def _op_drag(tool_input: dict) -> dict:
+    return _op_input("drag", tool_input)
 
 
 # === [self:limb] — 손발 자격 원장 ===
@@ -587,48 +628,78 @@ def _issue_readme(minted: dict, base: str, copied) -> str:
     )
 
 
-def _limb(tool_input: dict) -> dict:
+def _limb_list(tool_input: dict) -> dict:
     import limb_keys
-    op = (tool_input.get("op") or _OP_DEFAULTS["limb_op"]).strip()
-    if op == "issue":
-        return _issue(tool_input)
-    if op == "list":
-        import device_registry as dr
-        live_ids = {e.get("device_id") for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)}
-        rows = limb_keys.list_keys()
-        for r in rows:
-            r["connected"] = r["device_id"] in live_ids
-            # 접속 때 수확한 환경 프로브 요약 — 어떤 PC 인지 왕복 없이 알아보게.
-            # 전체(PATH·도구 목록까지)는 [limbs:guestpc]{op:"info"} 로 다시 물으면 된다.
-            env = r.get("env") or {}
-            if env:
-                r["env"] = {k: env.get(k) for k in
-                            ("os", "os_version", "hostname", "user", "admin", "gui")
-                            if env.get(k) is not None}
-        # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
-        # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
-        return {"success": True, "op": "list", "limbs": rows, "items": rows,
-                "connected_count": len(live_ids)}
-    if op == "revoke":
-        target = tool_input.get("target") or tool_input.get("key") or tool_input.get("device_id")
-        if not target:
-            return {"success": False, "error": "revoke 엔 target(키·device_id·별칭)이 필요합니다."}
-        r = limb_keys.revoke(target)
-        if not r:
-            return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
-        removed = _remove_payload(r)   # 폐기 시 USB 페이로드 폴더도 삭제(누적 방지)
-        return {"success": True, "op": "revoke", "limb": r, "payload_removed": removed}
-    if op == "approve":
-        target = tool_input.get("target") or tool_input.get("device_id") or tool_input.get("alias")
-        if not target:
-            return {"success": False, "error": "approve 엔 target(키·device_id·별칭)이 필요합니다."}
-        approved = tool_input.get("approved")
-        approved = True if approved is None else bool(approved)
-        r = limb_keys.approve(target, approved=approved)
-        if not r:
-            return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
-        return {"success": True, "op": "approve", "limb": r}
-    return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: issue/list/revoke/approve"}
+    import device_registry as dr
+    live_ids = {e.get("device_id") for e in dr.live_with_capability(limb_keys.GUEST_PC_CLASS)}
+    rows = limb_keys.list_keys()
+    for r in rows:
+        r["connected"] = r["device_id"] in live_ids
+        # 접속 때 수확한 환경 프로브 요약 — 어떤 PC 인지 왕복 없이 알아보게.
+        # 전체(PATH·도구 목록까지)는 [limbs:guestpc]{op:"info"} 로 다시 물으면 된다.
+        env = r.get("env") or {}
+        if env:
+            r["env"] = {k: env.get(k) for k in
+                        ("os", "os_version", "hostname", "user", "admin", "gui")
+                        if env.get(k) is not None}
+    # items 병행 방출 — self:agents(d74461b)·self:switch(8a6aacd)와 같은 이유·같은 방식.
+    # `limbs` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
+    return {"success": True, "op": "list", "limbs": rows, "items": rows,
+            "connected_count": len(live_ids)}
+
+
+def _limb_revoke(tool_input: dict) -> dict:
+    import limb_keys
+    target = tool_input.get("target") or tool_input.get("key") or tool_input.get("device_id")
+    if not target:
+        return {"success": False, "error": "revoke 엔 target(키·device_id·별칭)이 필요합니다."}
+    r = limb_keys.revoke(target)
+    if not r:
+        return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
+    removed = _remove_payload(r)   # 폐기 시 USB 페이로드 폴더도 삭제(누적 방지)
+    return {"success": True, "op": "revoke", "limb": r, "payload_removed": removed}
+
+
+def _limb_approve(tool_input: dict) -> dict:
+    import limb_keys
+    target = tool_input.get("target") or tool_input.get("device_id") or tool_input.get("alias")
+    if not target:
+        return {"success": False, "error": "approve 엔 target(키·device_id·별칭)이 필요합니다."}
+    approved = tool_input.get("approved")
+    approved = True if approved is None else bool(approved)
+    r = limb_keys.approve(target, approved=approved)
+    if not r:
+        return {"success": False, "error": f"'{target}' 손발을 찾을 수 없습니다."}
+    return {"success": True, "op": "approve", "limb": r}
+
+
+# === 디스패처 (진짜 함수 참조 — --check 가 이 dict 키로 src.ops.values 와 정확 비교) ===
+
+_OP_DISPATCHERS = {
+    "guestpc_op": {
+        "shell": _op_shell,
+        "read": _op_read,
+        "write": _op_write,
+        "list": _op_list,
+        "info": _op_info,
+        "screen": _op_screen,
+        "click": _op_click,
+        "move": _op_move,
+        "type": _op_type,
+        "key": _op_key,
+        "scroll": _op_scroll,
+        "drag": _op_drag,
+        "result": _job_result,   # job_id 전역 조회 — 손발 해소·liveness 불요
+        "detach": _detach,
+    },
+    "limb_op": {
+        "issue": _issue,
+        "list": _limb_list,
+        "revoke": _limb_revoke,
+        "approve": _limb_approve,
+    },
+}
+_OP_DEFAULTS = {"guestpc_op": "shell", "limb_op": "issue"}
 
 
 # === 엔트리포인트 ===
@@ -636,8 +707,11 @@ def _limb(tool_input: dict) -> dict:
 def execute(tool_input: dict, context) -> dict:
     """ToolContext 표준 시그니처. guestpc_op(손발 조작) + limb_op(자격 원장) 디스패처."""
     tool_name = context.tool_name
-    if tool_name == "guestpc_op":
-        return _guestpc(tool_input)
-    if tool_name == "limb_op":
-        return _limb(tool_input)
+    if tool_name in _OP_DISPATCHERS:
+        op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return {"success": False,
+                    "error": f"알 수 없는 op '{op}'. 사용 가능: {'/'.join(_OP_DISPATCHERS[tool_name])}"}
+        return fn(tool_input)
     raise ValueError(f"Unknown tool: {tool_name}")

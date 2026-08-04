@@ -13,11 +13,7 @@ from typing import Optional
 # 2026-06-22 국회도서관 국가학술정보(nanet) — paper source:nanet(학위논문·국내학술) + researcher(연구자·공저자)
 # 2026-07-11 Wikidata 개체 해소 — [sense:entity]{op: resolve|detail, source: wikidata}.
 #   resolve=동명이인/동음이의를 QID로 못박음, detail=QID→구조화된 사실(records). source는 파라미터.
-_OP_DISPATCHERS = {
-    "paper_op": {"search": None, "download": None},
-    "researcher_op": {"find": None, "coauthor": None},
-    "entity_op": {"resolve": None, "detail": None},
-}
+# op 분기 = 파일 끝 _OP_DISPATCHERS 진짜 함수 테이블 (--check 가 AST 로 키 정확 비교).
 _OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find", "entity_op": "resolve"}
 
 
@@ -93,27 +89,28 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     return {"success": True, "message": f"Paper '{title}' downloaded successfully to: {path}", "path": path}
 
 
-def _paper_op(tool_input: dict, context) -> str:
-    """[sense:paper]{op, source} — 학술 논문 검색·다운로드."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["paper_op"]).strip()
+def _paper_search(tool_input: dict, context) -> str:
+    """[sense:paper]{op:search, source} — 학술 논문 검색."""
     source = (tool_input.get("source") or "openalex").strip().lower()
-    if op == "search":
-        if source == "arxiv":
-            return _search_arxiv(tool_input)
-        if source in ("pubmed", "pmc"):
-            return _search_pubmed(tool_input)
-        if source in ("semantic", "semantic_scholar", "s2"):
-            return _search_semantic_scholar(tool_input)
-        if source in ("nanet", "kr", "dissertation", "국회도서관"):
-            return _search_nanet(tool_input)  # 국내 학술논문·학위논문(국회도서관)
-        return _search_openalex(tool_input)  # openalex = 기본(범용)
-    if op == "download":
-        if source in ("pubmed", "pmc"):
-            return _download_pubmed_pdf(tool_input, context)
-        if source == "arxiv":
-            return _download_arxiv_pdf(tool_input, context)
-        return {"error": "download op은 source=arxiv 또는 pubmed가 필요합니다."}
-    return {"error": f"알 수 없는 op '{op}'. 사용: search|download"}
+    if source == "arxiv":
+        return _search_arxiv(tool_input)
+    if source in ("pubmed", "pmc"):
+        return _search_pubmed(tool_input)
+    if source in ("semantic", "semantic_scholar", "s2"):
+        return _search_semantic_scholar(tool_input)
+    if source in ("nanet", "kr", "dissertation", "국회도서관"):
+        return _search_nanet(tool_input)  # 국내 학술논문·학위논문(국회도서관)
+    return _search_openalex(tool_input)  # openalex = 기본(범용)
+
+
+def _paper_download(tool_input: dict, context) -> str:
+    """[sense:paper]{op:download, source} — 논문 PDF 다운로드."""
+    source = (tool_input.get("source") or "openalex").strip().lower()
+    if source in ("pubmed", "pmc"):
+        return _download_pubmed_pdf(tool_input, context)
+    if source == "arxiv":
+        return _download_arxiv_pdf(tool_input, context)
+    return {"error": "download op은 source=arxiv 또는 pubmed가 필요합니다."}
 
 
 # ─── 국회도서관 국가학술정보(LOSI) OpenAPI ──────────────────────────────
@@ -162,17 +159,7 @@ def _nanet_rows(j: dict):
     return [], None
 
 
-def _researcher_op(tool_input: dict, context) -> str:
-    """[sense:researcher]{op, ...} — 국회도서관 국가학술정보 연구자·공저자."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["researcher_op"]).strip()
-    if op == "find":
-        return _nanet_author_find(tool_input)
-    if op == "coauthor":
-        return _nanet_coauthor(tool_input)
-    return {"error": f"알 수 없는 op '{op}'. 사용: find|coauthor"}
-
-
-def _nanet_author_find(tool_input: dict) -> str:
+def _nanet_author_find(tool_input: dict, context=None) -> str:
     """연구자 검색(authorView) — 동명이인을 소속·출생연도·lodID로 분리."""
     name = tool_input.get("name") or tool_input.get("name_ko") or tool_input.get("query")
     if not name:
@@ -226,7 +213,7 @@ def _nanet_author_find(tool_input: dict) -> str:
     return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
 
 
-def _nanet_coauthor(tool_input: dict) -> str:
+def _nanet_coauthor(tool_input: dict, context=None) -> str:
     """연관연구자망(relAuthor) — 이름으로 함께 연구한 학자들을 떠 신원 재확인.
 
     ★실측 계약(2026-08-04): 엔드포인트는 coAuthor 아니라 relAuthor. searchTerm=이름(필수),
@@ -523,31 +510,34 @@ def _wikidata_detail(tool_input: dict) -> str:
             "count": len(records), "qid": qid, "label": label}
 
 
-def _entity_op(tool_input: dict, context) -> str:
-    """[sense:entity]{op, source} — 개체 해소·구조화된 사실 (Wikidata)."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["entity_op"]).strip()
+def _entity_source_err(tool_input: dict):
+    """[sense:entity] 공용 source 게이트 — 지원 밖 source 면 에러 dict, 아니면 None."""
     source = (tool_input.get("source") or "wikidata").strip().lower()
     if source not in ("wikidata", "wd", "wikimedia"):
         return {"error": f"현재 source는 wikidata만 지원합니다 (요청: {source})."}
-    if op == "resolve":
-        return _wikidata_resolve(tool_input)
-    if op == "detail":
-        return _wikidata_detail(tool_input)
-    return {"error": f"알 수 없는 op '{op}'. 사용: resolve|detail"}
+    return None
+
+
+def _entity_resolve(tool_input: dict, context) -> str:
+    """[sense:entity]{op:resolve} — 개체 후보 검색 (Wikidata)."""
+    return _entity_source_err(tool_input) or _wikidata_resolve(tool_input)
+
+
+def _entity_detail(tool_input: dict, context) -> str:
+    """[sense:entity]{op:detail} — QID → 구조화된 사실 (Wikidata)."""
+    return _entity_source_err(tool_input) or _wikidata_detail(tool_input)
 
 
 def execute(tool_input: dict, context) -> str:
-    """ToolContext 기반 신규 시그니처."""
+    """ToolContext 기반 신규 시그니처. op 도구 분기 = 파일 끝 _OP_DISPATCHERS 함수 테이블."""
     tool_name = context.tool_name
 
-    if tool_name == "paper_op":
-        return _paper_op(tool_input, context)
-
-    elif tool_name == "researcher_op":
-        return _researcher_op(tool_input, context)
-
-    elif tool_name == "entity_op":
-        return _entity_op(tool_input, context)
+    if tool_name in _OP_DISPATCHERS:
+        op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return {"error": f"알 수 없는 op '{op}'. 사용: {'|'.join(_OP_DISPATCHERS[tool_name])}"}
+        return fn(tool_input, context)
 
     elif tool_name == "fetch_pew_research":
         return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
@@ -1387,4 +1377,13 @@ def _search_books(tool_input: dict) -> str:
 
     except Exception as e:
         return {"error": f"Google Books API 요청 오류: {str(e)}", "items": []}
+
+
+# ── 디스패치 테이블 — 진짜 함수 참조 (--check 가 AST 로 키 정확 비교) ──
+
+_OP_DISPATCHERS = {
+    "paper_op": {"search": _paper_search, "download": _paper_download},
+    "researcher_op": {"find": _nanet_author_find, "coauthor": _nanet_coauthor},
+    "entity_op": {"resolve": _entity_resolve, "detail": _entity_detail},
+}
 

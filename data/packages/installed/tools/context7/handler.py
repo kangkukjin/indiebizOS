@@ -66,8 +66,7 @@ def _get_docs(library_id: str, query: str) -> str:
 
 
 # 2026-06-03 어휘 정리 — resolve_library/search_library_docs → [sense:devdocs]{op}.
-_OP_DISPATCHERS = {"devdocs_op": {"resolve": None, "search": None}}
-_OP_DEFAULTS = {"devdocs_op": "resolve"}
+# 디스패처 테이블은 op 함수 정의 뒤(파일 하단)에 있다 — music-player 동형.
 
 
 def _resolve(library_name: str) -> str:
@@ -124,18 +123,32 @@ def _search(query: str, library_id: str, library_name: str) -> str:
                        "message": docs, "items": blocks}, ensure_ascii=False)
 
 
+# ── op 분기 함수 (진짜 디스패처 — tool_input 에서 인자 추출 후 기존 구현 호출) ──
+
+def _op_resolve(tool_input: dict, context) -> str:
+    return _resolve(tool_input.get("library_name") or tool_input.get("query", ""))
+
+
+def _op_search(tool_input: dict, context) -> str:
+    return _search(tool_input.get("query", ""),
+                   tool_input.get("library_id", ""),
+                   tool_input.get("library_name", ""))
+
+
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교 — 키 집합 변경 금지.
+_OP_DISPATCHERS = {"devdocs_op": {"resolve": _op_resolve, "search": _op_search}}
+_OP_DEFAULTS = {"devdocs_op": "resolve"}
+
+
 def execute(tool_input: dict, context) -> str:
     """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
 
-    if tool_name == "devdocs_op":
-        op = (tool_input.get("op") or _OP_DEFAULTS["devdocs_op"]).strip()
-        if op == "resolve":
-            return _resolve(tool_input.get("library_name") or tool_input.get("query", ""))
-        if op == "search":
-            return _search(tool_input.get("query", ""),
-                           tool_input.get("library_id", ""),
-                           tool_input.get("library_name", ""))
-        return json.dumps({"error": f"알 수 없는 op '{op}'. 사용: resolve|search"}, ensure_ascii=False)
+    if tool_name in _OP_DISPATCHERS:
+        op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return json.dumps({"error": f"알 수 없는 op '{op}'. 사용: resolve|search"}, ensure_ascii=False)
+        return fn(tool_input, context)
 
     return json.dumps({"error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

@@ -84,108 +84,37 @@ def _err(message: str, **extra) -> str:
     return json.dumps({"success": False, "error": message, **extra}, ensure_ascii=False, indent=2)
 
 
-# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 _dispatch_*_op 함수 안에 그대로 유지.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
-_OP_DISPATCHERS = {
-    "lecture_op": {"list": None, "create": None, "load": None, "delete": None, "open": None},
-    "slide_op": {"create": None, "edit": None, "delete": None, "patch": None, "rerender": None, "image_edit": None},
-    "material_op": {"add": None, "remove": None},
-    "deck_op": {"reorder": None, "export": None},
-}
-# 모두 op 필수 — _OP_DEFAULTS 항목 없음.
-
-
 def execute(tool_input: dict, context) -> str:
-    """도구 실행 entry point (ToolContext 기반)."""
+    """도구 실행 entry point (ToolContext 기반).
+
+    통합 도구 (op 분기) — IBL 어휘에 노출되는 4개. REST(api_lecture_workspace.py)도
+    2026-07-02부터 이 정본 이름(slide_op 등 + op)으로만 호출 → 옛 내부 tool명 직접
+    분기(slide_create·lecture_list 등)는 전부 사망해 제거. 분기는 파일 끝
+    _OP_DISPATCHERS 진짜 함수 테이블(--check 가 AST 로 키 정확 비교).
+    """
     tool_name = context.tool_name
 
     # 호출 컨텍스트(프로젝트 에이전트 vs 앱모드)에 따라 강의 저장/검색 루트 결정.
     _apply_roots(context)
 
     try:
-        # 통합 도구 (op 분기) — IBL 어휘에 노출되는 4개. REST(api_lecture_workspace.py)도
-        # 2026-07-02부터 이 정본 이름(slide_op 등 + op)으로만 호출 → 옛 내부 tool명 직접
-        # 분기(slide_create·lecture_list 등)는 전부 사망해 제거. 내부 _slide_*/_lecture_* 함수는
-        # 각 _dispatch_*_op 가 op로 호출.
-        if tool_name == "lecture_op":
-            return _dispatch_lecture_op(tool_input)
-        elif tool_name == "slide_op":
-            return _dispatch_slide_op(tool_input)
-        elif tool_name == "material_op":
-            return _dispatch_material_op(tool_input)
-        elif tool_name == "deck_op":
-            return _dispatch_deck_op(tool_input)
-        else:
+        table = _OP_DISPATCHERS.get(tool_name)
+        if table is None:
             return _err(f"알 수 없는 도구: {tool_name}")
+        ops = "|".join(table)
+        op = (tool_input.get("op") or "").strip()
+        if not op:  # 모두 op 필수 — _OP_DEFAULTS 없음.
+            return _err(f"op는 필수입니다. ({ops})")
+        fn = table.get(op)
+        if fn is None:
+            return _err(f"알 수 없는 op: {op}. ({ops} 중 하나)")
+        return fn(tool_input)
     except FileNotFoundError as e:
         return _err(str(e), error_type="not_found")
     except ValueError as e:
         return _err(str(e), error_type="validation")
     except Exception as e:
         return _err(f"실행 중 예외: {e}", error_type=type(e).__name__)
-
-
-# ─────────────────────────────────────────────────────────────────────
-# 통합 도구 op 디스패처 (lecture_op / slide_op / material_op / deck_op)
-# ─────────────────────────────────────────────────────────────────────
-
-def _dispatch_lecture_op(tool_input: dict) -> str:
-    op = (tool_input.get("op") or "").strip()
-    if not op:
-        return _err("op는 필수입니다. (list|create|load|delete|open)")
-    if op == "list":
-        return _lecture_list(tool_input)
-    if op == "create":
-        return _lecture_create(tool_input)
-    if op == "load":
-        return _lecture_load(tool_input)
-    if op == "delete":
-        return _lecture_delete(tool_input)
-    if op == "open":
-        return _lecture_open(tool_input)
-    return _err(f"알 수 없는 op: {op}. (list|create|load|delete|open 중 하나)")
-
-
-def _dispatch_slide_op(tool_input: dict) -> str:
-    op = (tool_input.get("op") or "").strip()
-    if not op:
-        return _err("op는 필수입니다. (create|edit|delete|patch|rerender|image_edit)")
-    if op == "create":
-        return _slide_create(tool_input)
-    if op == "edit":
-        return _slide_edit(tool_input)
-    if op == "delete":
-        return _slide_delete(tool_input)
-    if op == "patch":
-        return _slide_patch_spec(tool_input)
-    if op == "rerender":
-        return _slide_rerender(tool_input)
-    if op == "image_edit":
-        return _slide_image_edit(tool_input)
-    return _err(f"알 수 없는 op: {op}. (create|edit|delete|patch|rerender|image_edit 중 하나)")
-
-
-def _dispatch_material_op(tool_input: dict) -> str:
-    op = (tool_input.get("op") or "").strip()
-    if not op:
-        return _err("op는 필수입니다. (add|remove)")
-    if op == "add":
-        return _material_add(tool_input)
-    if op == "remove":
-        return _material_remove(tool_input)
-    return _err(f"알 수 없는 op: {op}. (add|remove 중 하나)")
-
-
-def _dispatch_deck_op(tool_input: dict) -> str:
-    op = (tool_input.get("op") or "").strip()
-    if not op:
-        return _err("op는 필수입니다. (reorder|export)")
-    if op == "reorder":
-        return _deck_reorder(tool_input)
-    if op == "export":
-        return _deck_export(tool_input)
-    return _err(f"알 수 없는 op: {op}. (reorder|export 중 하나)")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -970,3 +899,19 @@ def _deck_export(tool_input: dict) -> str:
         return _err(f"강의 없음: {lecture_id}", error_type="not_found")
     result = lecture_export.export_deck(lecture_id, fmt)
     return _ok(result)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# 디스패치 테이블 — 진짜 함수 참조 (--check 가 AST 로 키 정확 비교)
+# ─────────────────────────────────────────────────────────────────────
+
+_OP_DISPATCHERS = {
+    "lecture_op": {"list": _lecture_list, "create": _lecture_create, "load": _lecture_load,
+                   "delete": _lecture_delete, "open": _lecture_open},
+    "slide_op": {"create": _slide_create, "edit": _slide_edit, "delete": _slide_delete,
+                 "patch": _slide_patch_spec, "rerender": _slide_rerender,
+                 "image_edit": _slide_image_edit},
+    "material_op": {"add": _material_add, "remove": _material_remove},
+    "deck_op": {"reorder": _deck_reorder, "export": _deck_export},
+}
+# 모두 op 필수 — _OP_DEFAULTS 항목 없음.

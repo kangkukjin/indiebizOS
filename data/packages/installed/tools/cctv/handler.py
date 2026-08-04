@@ -483,13 +483,13 @@ def webcam(lat: float, lng: float = None, lon: float = None,
 # 어떤 IBL 액션도 가리키지 않아 2026-06-03 제거(잔존 도구 정리).
 
 
-# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 _cctv_op/_cctv_query 함수 안에 유지.
+# 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처 전환 (장식 스텁 폐기).
+# 값=실행 함수 참조 — _cctv_op/_cctv_query/_cctv_admin 이 이 테이블로 조회·디스패치.
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
-    "cctv_op": {"open": None, "capture": None},
-    "cctv_query": {"search": None, "nearby": None, "webcam": None},
-    "cctv_admin": {"stats": None, "refresh": None},
+    "cctv_op": {"open": cctv_open, "capture": cctv_capture},
+    "cctv_query": {"search": cctv_search, "nearby": nearby, "webcam": webcam},
+    "cctv_admin": {"stats": cctv_sources, "refresh": cctv_refresh},
 }
 _OP_DEFAULTS = {"cctv_op": "open", "cctv_query": "search", "cctv_admin": "stats"}
 
@@ -498,12 +498,10 @@ def _cctv_op(op: str = None, **kwargs) -> str:
     """[limbs:cctv]{op} 단일 디스패처 (2026-05-27 limbs 라운드 2)."""
     op = (op or _OP_DEFAULTS.get("cctv_op", "")).strip()
     mapping = _OP_DISPATCHERS["cctv_op"]
-    if op == "open":
-        return cctv_open(**kwargs)
-    elif op == "capture":
-        return cctv_capture(**kwargs)
-    else:
+    func = mapping.get(op)
+    if func is None:
         return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(mapping.keys())}"}, ensure_ascii=False)
+    return func(**kwargs)
 
 
 def _cctv_query(op: str = None, **kwargs) -> str:
@@ -514,7 +512,7 @@ def _cctv_query(op: str = None, **kwargs) -> str:
     """
     import inspect
     op = (op or _OP_DEFAULTS.get("cctv_query", "")).strip()
-    func = {"search": cctv_search, "nearby": nearby, "webcam": webcam}.get(op)
+    func = _OP_DISPATCHERS["cctv_query"].get(op)
     if func is None:
         return json.dumps({"success": False,
                            "error": f"알 수 없는 op '{op}'. 사용 가능: ['search', 'nearby', 'webcam']"},
@@ -529,13 +527,12 @@ def _cctv_admin(op: str = None, **kwargs) -> str:
     기본 op=stats(읽기 전용). refresh는 유지보수용 부작용 op.
     """
     op = (op or _OP_DEFAULTS.get("cctv_admin", "stats")).strip()
-    if op == "stats":
-        return cctv_sources()
-    elif op == "refresh":
-        return cctv_refresh()
-    return json.dumps({"success": False,
-                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['stats', 'refresh']"},
-                      ensure_ascii=False)
+    func = _OP_DISPATCHERS["cctv_admin"].get(op)
+    if func is None:
+        return json.dumps({"success": False,
+                           "error": f"알 수 없는 op '{op}'. 사용 가능: ['stats', 'refresh']"},
+                          ensure_ascii=False)
+    return func()
 
 
 _TOOL_MAP["cctv_op"] = _cctv_op

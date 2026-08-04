@@ -12,11 +12,32 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 
-# 2026-05-28 dispatcher 표준화 — 단일 액션 op 키 메타데이터 (browser-action 패턴).
-# 값은 None — 분기 로직은 execute 안에 그대로 유지.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+# ── op 분기 함수 (진짜 디스패처 — memory_db 는 sys.modules 캐시라 재임포트 비용 0) ──
+
+def _op_save(tool_input: dict, context) -> str:
+    import memory_db
+    return _memory_save(memory_db, tool_input, context.project_path, context.agent_id)
+
+
+def _op_search(tool_input: dict, context) -> str:
+    import memory_db
+    return _memory_search(memory_db, tool_input, context.project_path, context.agent_id)
+
+
+def _op_read(tool_input: dict, context) -> str:
+    import memory_db
+    return _memory_read(memory_db, tool_input, context.project_path, context.agent_id)
+
+
+def _op_delete(tool_input: dict, context) -> str:
+    import memory_db
+    return _memory_delete(memory_db, tool_input, context.project_path, context.agent_id)
+
+
+# 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처로 전환 (music-player 동형).
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교 — 키 집합 변경 금지.
 _OP_DISPATCHERS = {
-    "memory_op": {"save": None, "search": None, "read": None, "delete": None},
+    "memory_op": {"save": _op_save, "search": _op_search, "read": _op_read, "delete": _op_delete},
 }
 # memory_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
@@ -24,23 +45,16 @@ _OP_DISPATCHERS = {
 def execute(tool_input: dict, context) -> str:
     """메모리 & 스킬 도구 실행 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
-    project_path = context.project_path
-    agent_id = context.agent_id
 
     try:
         # 통합 도구 (op 분기) — IBL 어휘에 노출
-        if tool_name == "memory_op":
-            import memory_db
+        if tool_name in _OP_DISPATCHERS:
+            import memory_db  # 옛 체인의 op 파싱 전 임포트 위치 보존 (unknown op 여도 로드)
             op = (tool_input.get("op") or "").strip()
-            if op == "save":
-                return _memory_save(memory_db, tool_input, project_path, agent_id)
-            if op == "search":
-                return _memory_search(memory_db, tool_input, project_path, agent_id)
-            if op == "read":
-                return _memory_read(memory_db, tool_input, project_path, agent_id)
-            if op == "delete":
-                return _memory_delete(memory_db, tool_input, project_path, agent_id)
-            return json.dumps({"error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
+            fn = _OP_DISPATCHERS[tool_name].get(op)
+            if fn is None:
+                return json.dumps({"error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
+            return fn(tool_input, context)
 
         return json.dumps({"error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:

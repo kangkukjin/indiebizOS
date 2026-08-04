@@ -263,9 +263,8 @@ def _attach_company_table(result):
         return result
 
 
-def _stock_op(ti: dict):
-    """[sense:stock]{op} — 주식 시세·거래 데이터."""
-    op = (ti.get("op") or _OP_DEFAULTS["stock_op"]).strip()
+def _stock_common(ti: dict, op: str):
+    """[sense:stock] 공용 전처리 (옛 _stock_op 앞부분 그대로) — (ticker, market) 반환."""
     ticker = _arg(ti, "ticker", "symbol", "query", "corp_name")
     # 이름→코드 내부 해소 (search는 이름 그대로 받으므로 제외). 코드면 그대로.
     if op != "search":
@@ -274,123 +273,161 @@ def _stock_op(ti: dict):
     # 상대기간 period → start/end_date 내부 해소 (quote=현재가는 yfinance period native라 제외)
     if op in ("history", "news", "earnings", "investors"):
         _resolve_period(ti)
+    return ticker, market
 
-    if op == "quote":  # 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)
-        tool = load_module("tool_yfinance")
-        return tool.get_stock_price(
+
+def _stock_quote(ti: dict):
+    """[sense:stock]{op:quote} — 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)."""
+    ticker, market = _stock_common(ti, "quote")
+    tool = load_module("tool_yfinance")
+    return tool.get_stock_price(
+        symbol=ticker,
+        period=ti.get("period", "5d"),
+        interval=ti.get("interval", "1d"),
+        max_points=ti.get("max_points", 10),
+    )
+
+
+def _stock_history(ti: dict):
+    """[sense:stock]{op:history} — 기간별 주가 이력/차트 (2026-06-04 개명: 옛 price)."""
+    ticker, market = _stock_common(ti, "history")
+    if market == "kr":
+        tool = load_module("tool_krx")
+        price_symbol = re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)  # krx는 bare 6자리 코드
+    else:
+        tool = load_module("tool_fmp")
+        price_symbol = ticker
+    _res = tool.get_stock_price(
+        symbol=price_symbol,
+        start_date=ti.get("start_date"),
+        end_date=ti.get("end_date"),
+        max_points=ti.get("max_points", 10),
+    )
+    return _attach_price_table(_res)
+
+
+def _stock_info(ti: dict):
+    """[sense:stock]{op:info} — 종목 기본 정보."""
+    ticker, market = _stock_common(ti, "info")
+    tool = load_module("tool_yfinance")
+    return tool.get_stock_info(symbol=ticker)
+
+
+def _stock_search(ti: dict):
+    """[sense:stock]{op:search} — 종목 검색 (이름 그대로, 해소 없음)."""
+    ticker, market = _stock_common(ti, "search")
+    tool = load_module("tool_yfinance")
+    return tool.search_stock(query=ticker, search_type=ti.get("search_type", "quotes"))
+
+
+def _stock_investors(ti: dict):
+    """[sense:stock]{op:investors} — KRX 투자자별 매매동향."""
+    ticker, market = _stock_common(ti, "investors")
+    tool = load_module("tool_krx_investor")
+    if ticker:  # 개별종목 매매동향
+        return tool.get_stock_investor_trading(
             symbol=ticker,
-            period=ti.get("period", "5d"),
-            interval=ti.get("interval", "1d"),
-            max_points=ti.get("max_points", 10),
-        )
-    if op == "history":  # 기간별 주가 이력/차트 (2026-06-04 개명: 옛 price)
-        if market == "kr":
-            tool = load_module("tool_krx")
-            price_symbol = re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)  # krx는 bare 6자리 코드
-        else:
-            tool = load_module("tool_fmp")
-            price_symbol = ticker
-        _res = tool.get_stock_price(
-            symbol=price_symbol,
-            start_date=ti.get("start_date"),
-            end_date=ti.get("end_date"),
-            max_points=ti.get("max_points", 10),
-        )
-        return _attach_price_table(_res)
-    if op == "info":
-        tool = load_module("tool_yfinance")
-        return tool.get_stock_info(symbol=ticker)
-    if op == "search":
-        tool = load_module("tool_yfinance")
-        return tool.search_stock(query=ticker, search_type=ti.get("search_type", "quotes"))
-    if op == "investors":
-        tool = load_module("tool_krx_investor")
-        if ticker:  # 개별종목 매매동향
-            return tool.get_stock_investor_trading(
-                symbol=ticker,
-                start_date=ti.get("start_date"),
-                end_date=ti.get("end_date"),
-            )
-        # 전체시장 매매동향 — market은 STK/KSQ/ALL 의미 (kr/us 아님)
-        mkt = ti.get("market")
-        if mkt not in ("STK", "KSQ", "ALL"):
-            mkt = "STK"
-        return tool.get_market_investor_trading(
-            market=mkt,
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
         )
-    if op == "news":
-        return _company_news(ticker, ti)
-    if op == "earnings":
-        tool = load_module("tool_finnhub")
-        return tool.get_earnings_calendar(
-            symbol=ticker,
-            start_date=ti.get("start_date"),
-            end_date=ti.get("end_date"),
-        )
-    return error_response(f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['stock_op'])}")
+    # 전체시장 매매동향 — market은 STK/KSQ/ALL 의미 (kr/us 아님)
+    mkt = ti.get("market")
+    if mkt not in ("STK", "KSQ", "ALL"):
+        mkt = "STK"
+    return tool.get_market_investor_trading(
+        market=mkt,
+        start_date=ti.get("start_date"),
+        end_date=ti.get("end_date"),
+    )
 
 
-def _company_op(ti: dict):
-    """[sense:company]{op} — 기업 펀더멘털 (정보·재무·공시)."""
-    op = (ti.get("op") or _OP_DEFAULTS["company_op"]).strip()
+def _stock_news(ti: dict):
+    """[sense:stock]{op:news} — 종목 뉴스 (Finnhub→Yahoo 폴백)."""
+    ticker, market = _stock_common(ti, "news")
+    return _company_news(ticker, ti)
+
+
+def _stock_earnings(ti: dict):
+    """[sense:stock]{op:earnings} — 실적 캘린더 (Finnhub)."""
+    ticker, market = _stock_common(ti, "earnings")
+    tool = load_module("tool_finnhub")
+    return tool.get_earnings_calendar(
+        symbol=ticker,
+        start_date=ti.get("start_date"),
+        end_date=ti.get("end_date"),
+    )
+
+
+def _company_common(ti: dict):
+    """[sense:company] 공용 전처리 (옛 _company_op 앞부분 그대로) — (ticker, market) 반환."""
     ticker = _arg(ti, "ticker", "corp_name", "symbol", "query", "company")  # query/company 추가(코퍼스가 기업명에 사용)
     market = _detect_market(ticker, ti.get("market"))
+    return ticker, market
 
-    if op == "profile":
-        if market == "kr":
-            tool = load_module("tool_dart")
-            return _attach_company_table(
-                tool.get_company_info(corp_code=ti.get("corp_code"), corp_name=ticker)
-            )
-        tool = load_module("tool_fmp")
-        return _attach_company_table(tool.get_company_profile(symbol=ticker))
-    if op == "financials":
-        if market == "kr":
-            tool = load_module("tool_dart")
-            return tool.get_financial_statements(
-                corp_code=ti.get("corp_code"),
-                corp_name=ticker,
-                year=ti.get("year"),
-                report_type=ti.get("report_type", "11011"),
-            )
-        tool = load_module("tool_fmp")
+
+def _company_profile(ti: dict):
+    """[sense:company]{op:profile} — 기업 개요 (kr=DART, us=FMP)."""
+    ticker, market = _company_common(ti)
+    if market == "kr":
+        tool = load_module("tool_dart")
+        return _attach_company_table(
+            tool.get_company_info(corp_code=ti.get("corp_code"), corp_name=ticker)
+        )
+    tool = load_module("tool_fmp")
+    return _attach_company_table(tool.get_company_profile(symbol=ticker))
+
+
+def _company_financials(ti: dict):
+    """[sense:company]{op:financials} — 재무제표 (kr=DART, us=FMP)."""
+    ticker, market = _company_common(ti)
+    if market == "kr":
+        tool = load_module("tool_dart")
         return tool.get_financial_statements(
-            symbol=ticker,
-            statement_type=ti.get("statement_type", "income"),
-            period=ti.get("period", "annual"),
-            limit=ti.get("limit", 5),
+            corp_code=ti.get("corp_code"),
+            corp_name=ticker,
+            year=ti.get("year"),
+            report_type=ti.get("report_type", "11011"),
         )
-    if op == "disclosures":
-        if market == "kr":
-            tool = load_module("tool_dart")
-            return tool.get_disclosures(
-                corp_code=ti.get("corp_code"),
-                corp_name=ticker,
-                start_date=ti.get("start_date"),
-                end_date=ti.get("end_date"),
-                pblntf_ty=ti.get("pblntf_ty"),
-                count=ti.get("count", 20),
-            )
-        tool = load_module("tool_sec_edgar")
-        return tool.get_filings(
-            symbol=ticker,
-            filing_type=ti.get("filing_type"),
-            count=ti.get("count", 10),
-        )
-    return error_response(f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS['company_op'])}")
+    tool = load_module("tool_fmp")
+    return tool.get_financial_statements(
+        symbol=ticker,
+        statement_type=ti.get("statement_type", "income"),
+        period=ti.get("period", "annual"),
+        limit=ti.get("limit", 5),
+    )
 
 
-# 2026-06-03 dispatcher 표준화 — 단일 액션 op 키 메타데이터.
-# 값은 None — 분기 로직은 _stock_op/_company_op 함수 안에 유지.
-# build_ibl_nodes.py --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+def _company_disclosures(ti: dict):
+    """[sense:company]{op:disclosures} — 공시 (kr=DART, us=SEC EDGAR)."""
+    ticker, market = _company_common(ti)
+    if market == "kr":
+        tool = load_module("tool_dart")
+        return tool.get_disclosures(
+            corp_code=ti.get("corp_code"),
+            corp_name=ticker,
+            start_date=ti.get("start_date"),
+            end_date=ti.get("end_date"),
+            pblntf_ty=ti.get("pblntf_ty"),
+            count=ti.get("count", 20),
+        )
+    tool = load_module("tool_sec_edgar")
+    return tool.get_filings(
+        symbol=ticker,
+        filing_type=ti.get("filing_type"),
+        count=ti.get("count", 10),
+    )
+
+
+# 2026-06-03 dispatcher 표준화 → 2026-08-05 진짜 디스패처 전환.
+# 값=실행 함수 참조. build_ibl_nodes.py --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "stock_op": {
-        "quote": None, "history": None, "info": None, "search": None,
-        "investors": None, "news": None, "earnings": None,
+        "quote": _stock_quote, "history": _stock_history, "info": _stock_info,
+        "search": _stock_search, "investors": _stock_investors,
+        "news": _stock_news, "earnings": _stock_earnings,
     },
-    "company_op": {"profile": None, "financials": None, "disclosures": None},
+    "company_op": {"profile": _company_profile, "financials": _company_financials,
+                   "disclosures": _company_disclosures},
 }
 _OP_DEFAULTS = {"stock_op": "quote", "company_op": "profile"}
 
@@ -399,11 +436,12 @@ def execute(tool_input: dict, context):
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
     try:
-        if tool_name == "stock_op":
-            return _stock_op(tool_input)
-
-        elif tool_name == "company_op":
-            return _company_op(tool_input)
+        if tool_name in _OP_DISPATCHERS:
+            op = (tool_input.get("op") or _OP_DEFAULTS[tool_name]).strip()
+            fn = _OP_DISPATCHERS[tool_name].get(op)
+            if fn is None:
+                return error_response(f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS[tool_name])}")
+            return fn(tool_input)
 
         elif tool_name == "crypto_price":
             tool = load_module("tool_yfinance")

@@ -31,30 +31,28 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "query_storage":
             return _query_storage(tool_input)
 
-        # 저장소 인덱스 조작 ([self:storage]{op: scan|summary|volumes})
-        elif tool_name == "storage_op":
-            return _storage_op(tool_input)
-
-        # 폴더 주석 관리 ([self:folder_note]{op: set|get})
-        elif tool_name == "folder_note_op":
-            return _folder_note_op(tool_input)
-
-        # 포식 기억 — 냄새지도 ([self:forage]{op: recall|note|forget})
-        elif tool_name == "forage_op":
-            return _forage_op(tool_input)
-
-        # 음성-단언 측정 — 탐색 잔여 ([self:residual]{op: sample|estimate})
-        elif tool_name == "residual_op":
-            return _residual_op(tool_input)
-
-        # 호스트(자기 기계) 자기수용감각 ([sense:host]{op: status|apps|resources})
-        elif tool_name == "host_op":
-            return _host_op(tool_input)
+        # op 보유 도구 — storage/folder_note/forage/residual/host
+        # (_OP_DISPATCHERS 는 함수 정의 뒤, 파일 하단)
+        elif tool_name in _OP_DISPATCHERS:
+            op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
+            fn = _OP_DISPATCHERS[tool_name].get(op)
+            if fn is None:
+                return _unknown_op(tool_name, op)
+            return fn(tool_input)
 
         return f"알 수 없는 도구: {tool_name}"
 
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+
+def _unknown_op(tool_name: str, op: str) -> str:
+    """옛 if/elif 체인의 도구별 '알 수 없는 op' 응답 문구 그대로."""
+    if tool_name in ("forage_op", "residual_op"):
+        return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
+    return json.dumps({"success": False,
+                       "error": f"알 수 없는 op '{op}'. 사용 가능: {list(_OP_DISPATCHERS[tool_name])}"},
+                      ensure_ascii=False)
 
 
 def _open_file_explorer(tool_input: dict) -> str:
@@ -255,20 +253,6 @@ def _get_folder_annotations(tool_input: dict) -> str:
     return json.dumps(result, ensure_ascii=False)
 
 
-# ── op 디스패처 (2026-06-03 #29 storage/folder 통합) ──────────────
-# 값은 None — 분기 로직은 _storage_op/_folder_note_op 함수 안에 유지.
-# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
-_OP_DISPATCHERS = {
-    "storage_op": {"scan": None, "summary": None, "volumes": None},
-    "folder_note_op": {"set": None, "get": None},
-    "host_op": {"status": None, "apps": None, "resources": None},
-    "forage_op": {"recall": None, "note": None, "forget": None},
-    "residual_op": {"sample": None, "estimate": None},
-}
-_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get", "host_op": "status",
-                "forage_op": "recall", "residual_op": "sample"}
-
-
 # ── [self:residual] 음성-단언 측정 — 탐색 잔여(elusion 디스크판) ────────────
 #   "거기 없음" vs "덜 봤음"을 *측정*으로 가른다(apparatus 아닌 측정 행위).
 #   sample=미관측 더미 균일 무작위 표본 → AI가 열어 판단 / estimate=이항 추정(Wilson).
@@ -285,81 +269,78 @@ def _wilson(r: int, n: int, z: float = 1.96):
     return (p, max(0.0, center - half), min(1.0, center + half))
 
 
-def _residual_op(tool_input: dict) -> str:
+def _residual_sample(tool_input: dict) -> str:
+    """op=sample — 모집단(질의 매칭 전체) − 이미 본 것 = 미관측 → 균일 무작위 N개."""
     import file_index
-    op = (tool_input.get("op") or _OP_DEFAULTS["residual_op"]).strip()
+    seen = tool_input.get("seen") or []
+    if isinstance(seen, str):
+        seen = [seen]
+    seen_set = {os.path.abspath(os.path.expanduser(str(p))) for p in seen}
+    try:
+        n = max(1, int(tool_input.get("n") or tool_input.get("sample") or 20))
+    except (TypeError, ValueError):
+        n = 20
+    # 포식 공간 분기(FORAGER_MULTIBODY_DESIGN §4): code:<repo> 면 코드판 candidate provider,
+    # 아니면 디스크판(mdfind/walk). body 또는 space 로 명시.
+    space = str(tool_input.get("space") or tool_input.get("body") or "").lower()
+    repo = tool_input.get("repo") or tool_input.get("path")
+    if space.startswith("code") and repo:
+        exts = tool_input.get("exts") or tool_input.get("ext") or tool_input.get("extension")
+        if isinstance(exts, str):
+            exts = [e for e in exts.replace(",", " ").split() if e]
+        pool = file_index.code_candidate_paths(
+            repo, q=tool_input.get("q") or tool_input.get("query"), exts=exts)
+        facets = ()
+    else:
+        pool = file_index.candidate_paths(
+            kind=tool_input.get("kind") or "any",
+            q=tool_input.get("q") or tool_input.get("query"),
+            start=tool_input.get("start"), end=tool_input.get("end"),
+            ext=tool_input.get("extension") or tool_input.get("ext"),
+            path=tool_input.get("path"),
+            min_size=_parse_min_size_mb(tool_input.get("min_size_mb")))
+        facets = ("taken_at",)
+    total = len(pool)
+    unseen = [p for p in pool if os.path.abspath(p) not in seen_set]
+    import random
+    k = min(n, len(unseen))
+    picked = random.sample(unseen, k) if k > 0 else []
+    sample = [file_index.describe(p, facets=facets) for p in picked]
+    return json.dumps({
+        "success": True, "op": "sample",
+        "pool_total": total, "seen": len(seen_set), "unseen": len(unseen),
+        "sample_size": k, "sample": sample,
+        "note": ("이 표본을 열어 관련성을 판단한 뒤 [self:residual]{op:estimate, "
+                 "relevant:<관련 수>, sampled:%d, unseen:%d} 로 미관측 누락을 추정하세요. "
+                 "0건이면 '거기 없음' 단언이 강해집니다." % (k, len(unseen))),
+    }, ensure_ascii=False)
 
-    if op == "sample":
-        # 모집단(질의 매칭 전체) − 이미 본 것 = 미관측 → 균일 무작위 N개.
-        seen = tool_input.get("seen") or []
-        if isinstance(seen, str):
-            seen = [seen]
-        seen_set = {os.path.abspath(os.path.expanduser(str(p))) for p in seen}
-        try:
-            n = max(1, int(tool_input.get("n") or tool_input.get("sample") or 20))
-        except (TypeError, ValueError):
-            n = 20
-        # 포식 공간 분기(FORAGER_MULTIBODY_DESIGN §4): code:<repo> 면 코드판 candidate provider,
-        # 아니면 디스크판(mdfind/walk). body 또는 space 로 명시.
-        space = str(tool_input.get("space") or tool_input.get("body") or "").lower()
-        repo = tool_input.get("repo") or tool_input.get("path")
-        if space.startswith("code") and repo:
-            exts = tool_input.get("exts") or tool_input.get("ext") or tool_input.get("extension")
-            if isinstance(exts, str):
-                exts = [e for e in exts.replace(",", " ").split() if e]
-            pool = file_index.code_candidate_paths(
-                repo, q=tool_input.get("q") or tool_input.get("query"), exts=exts)
-            facets = ()
-        else:
-            pool = file_index.candidate_paths(
-                kind=tool_input.get("kind") or "any",
-                q=tool_input.get("q") or tool_input.get("query"),
-                start=tool_input.get("start"), end=tool_input.get("end"),
-                ext=tool_input.get("extension") or tool_input.get("ext"),
-                path=tool_input.get("path"),
-                min_size=_parse_min_size_mb(tool_input.get("min_size_mb")))
-            facets = ("taken_at",)
-        total = len(pool)
-        unseen = [p for p in pool if os.path.abspath(p) not in seen_set]
-        import random
-        k = min(n, len(unseen))
-        picked = random.sample(unseen, k) if k > 0 else []
-        sample = [file_index.describe(p, facets=facets) for p in picked]
-        return json.dumps({
-            "success": True, "op": "sample",
-            "pool_total": total, "seen": len(seen_set), "unseen": len(unseen),
-            "sample_size": k, "sample": sample,
-            "note": ("이 표본을 열어 관련성을 판단한 뒤 [self:residual]{op:estimate, "
-                     "relevant:<관련 수>, sampled:%d, unseen:%d} 로 미관측 누락을 추정하세요. "
-                     "0건이면 '거기 없음' 단언이 강해집니다." % (k, len(unseen))),
-        }, ensure_ascii=False)
 
-    if op == "estimate":
-        # (표본 중 관련 r, 표본 n, 미관측 M) → 누락 추정 + 신뢰구간.
-        try:
-            r = int(tool_input.get("relevant", 0))
-            n = int(tool_input.get("sampled") or tool_input.get("n") or 0)
-            M = int(tool_input.get("unseen") or tool_input.get("pool") or 0)
-        except (TypeError, ValueError):
-            return json.dumps({"success": False, "error": "relevant/sampled/unseen 는 정수"}, ensure_ascii=False)
-        if n <= 0:
-            return json.dumps({"success": False, "error": "sampled(n)는 1 이상"}, ensure_ascii=False)
-        p, lo, hi = _wilson(r, n)
-        hi_missed = round(hi * M, 1)
-        # ★측정만 반환 — "없음 vs 덜봄" 판단은 AI 몫(목표 recall 대비). 도구는 숫자+해석만.
-        interp = (f"미관측 {M}개 중 관련 항목이 점추정 {round(p*M,1)}개, 95% 상한 {hi_missed}개로 추정됩니다. "
-                  f"상한 {hi_missed}개가 이 작업의 목표(예: '전부' 찾기/'없음' 단언)에 비해 "
-                  f"작으면 사실상 커버된 것, 크면 더 봐야 합니다 — 판단은 목표에 달렸습니다.")
-        return json.dumps({
-            "success": True, "op": "estimate",
-            "relevant_in_sample": r, "sampled": n, "unseen": M,
-            "rate": round(p, 4), "rate_ci95": [round(lo, 4), round(hi, 4)],
-            "missed_estimate": round(p * M, 1),
-            "missed_ci95": [round(lo * M, 1), hi_missed],
-            "interpretation": interp,
-        }, ensure_ascii=False)
-
-    return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
+def _residual_estimate(tool_input: dict) -> str:
+    """op=estimate — (표본 중 관련 r, 표본 n, 미관측 M) → 누락 추정 + 신뢰구간."""
+    import file_index  # 옛 체인의 공용 선행 임포트 유지(임포트 실패 시 동작 동일)
+    try:
+        r = int(tool_input.get("relevant", 0))
+        n = int(tool_input.get("sampled") or tool_input.get("n") or 0)
+        M = int(tool_input.get("unseen") or tool_input.get("pool") or 0)
+    except (TypeError, ValueError):
+        return json.dumps({"success": False, "error": "relevant/sampled/unseen 는 정수"}, ensure_ascii=False)
+    if n <= 0:
+        return json.dumps({"success": False, "error": "sampled(n)는 1 이상"}, ensure_ascii=False)
+    p, lo, hi = _wilson(r, n)
+    hi_missed = round(hi * M, 1)
+    # ★측정만 반환 — "없음 vs 덜봄" 판단은 AI 몫(목표 recall 대비). 도구는 숫자+해석만.
+    interp = (f"미관측 {M}개 중 관련 항목이 점추정 {round(p*M,1)}개, 95% 상한 {hi_missed}개로 추정됩니다. "
+              f"상한 {hi_missed}개가 이 작업의 목표(예: '전부' 찾기/'없음' 단언)에 비해 "
+              f"작으면 사실상 커버된 것, 크면 더 봐야 합니다 — 판단은 목표에 달렸습니다.")
+    return json.dumps({
+        "success": True, "op": "estimate",
+        "relevant_in_sample": r, "sampled": n, "unseen": M,
+        "rate": round(p, 4), "rate_ci95": [round(lo, 4), round(hi, 4)],
+        "missed_estimate": round(p * M, 1),
+        "missed_ci95": [round(lo * M, 1), hi_missed],
+        "interpretation": interp,
+    }, ensure_ascii=False)
 
 
 # ── [self:forage] 포식 기억 — 냄새지도 (backend/forage_memory 위임) ──────────
@@ -371,71 +352,72 @@ def _detect_body() -> str:
         return "mac"
 
 
-def _forage_op(tool_input: dict) -> str:
-    """[self:forage]{op} — recall(회상)/note(누적)/forget(폐기) 단일 디스패처."""
+def _forage_recall(tool_input: dict) -> str:
+    """[self:forage]{op:recall} — 냄새지도 회상."""
     import forage_memory as FM
-    op = (tool_input.get("op") or _OP_DEFAULTS["forage_op"]).strip()
+    body = tool_input.get("body") or _detect_body()
+    query = tool_input.get("query") or tool_input.get("q")
+    try:
+        limit = int(tool_input.get("limit") or 20)
+    except (TypeError, ValueError):
+        limit = 20
+    res = FM.recall(body=body, query=query, limit=limit)
+    res["xml"] = FM.recall_xml(body=body, query=query, limit=limit)
+    return json.dumps(res, ensure_ascii=False)
 
-    if op == "recall":
-        body = tool_input.get("body") or _detect_body()
-        query = tool_input.get("query") or tool_input.get("q")
+
+def _forage_note(tool_input: dict) -> str:
+    """[self:forage]{op:note} — 지도(map)/주인모델(owner) 항목 누적."""
+    import forage_memory as FM
+    layer = (tool_input.get("layer") or "map").strip().lower()
+    prior = tool_input.get("prior_class")
+    conf = tool_input.get("confidence")
+    prov = tool_input.get("provenance")
+    if isinstance(prov, str):
         try:
-            limit = int(tool_input.get("limit") or 20)
-        except (TypeError, ValueError):
-            limit = 20
-        res = FM.recall(body=body, query=query, limit=limit)
-        res["xml"] = FM.recall_xml(body=body, query=query, limit=limit)
-        return json.dumps(res, ensure_ascii=False)
-
-    if op == "note":
-        layer = (tool_input.get("layer") or "map").strip().lower()
-        prior = tool_input.get("prior_class")
-        conf = tool_input.get("confidence")
-        prov = tool_input.get("provenance")
-        if isinstance(prov, str):
-            try:
-                prov = json.loads(prov)
-            except (ValueError, TypeError):
-                prov = {"observed": [prov]}
-        if layer == "owner":
-            facet = tool_input.get("facet")
-            value = tool_input.get("value") or tool_input.get("claim")
-            if not facet or not value:
-                return json.dumps({"success": False,
-                                   "error": "owner note 는 facet + value 필요"}, ensure_ascii=False)
-            r = FM.note_owner(facet=facet, value=value,
-                              prior_class=prior or "semantic",
-                              confidence=conf if conf is not None else 0.6,
-                              provenance=prov)
-            return json.dumps(r, ensure_ascii=False)
-        # layer == map
-        locus = tool_input.get("locus") or tool_input.get("folder_path")
-        kind = tool_input.get("kind")
-        claim = tool_input.get("claim") or tool_input.get("note")
-        if not locus or not kind or not claim:
+            prov = json.loads(prov)
+        except (ValueError, TypeError):
+            prov = {"observed": [prov]}
+    if layer == "owner":
+        facet = tool_input.get("facet")
+        value = tool_input.get("value") or tool_input.get("claim")
+        if not facet or not value:
             return json.dumps({"success": False,
-                               "error": "map note 는 locus + kind + claim 필요"}, ensure_ascii=False)
-        r = FM.note_map(body=tool_input.get("body") or _detect_body(),
-                        locus=locus, kind=kind, claim=claim,
-                        prior_class=prior or "structural",
-                        confidence=conf if conf is not None else 0.7,
-                        provenance=prov,
-                        prune_reason=tool_input.get("prune_reason"),
-                        generalizes=bool(tool_input.get("generalizes")),
-                        surface_flag=bool(tool_input.get("surface_flag")))
+                               "error": "owner note 는 facet + value 필요"}, ensure_ascii=False)
+        r = FM.note_owner(facet=facet, value=value,
+                          prior_class=prior or "semantic",
+                          confidence=conf if conf is not None else 0.6,
+                          provenance=prov)
         return json.dumps(r, ensure_ascii=False)
+    # layer == map
+    locus = tool_input.get("locus") or tool_input.get("folder_path")
+    kind = tool_input.get("kind")
+    claim = tool_input.get("claim") or tool_input.get("note")
+    if not locus or not kind or not claim:
+        return json.dumps({"success": False,
+                           "error": "map note 는 locus + kind + claim 필요"}, ensure_ascii=False)
+    r = FM.note_map(body=tool_input.get("body") or _detect_body(),
+                    locus=locus, kind=kind, claim=claim,
+                    prior_class=prior or "structural",
+                    confidence=conf if conf is not None else 0.7,
+                    provenance=prov,
+                    prune_reason=tool_input.get("prune_reason"),
+                    generalizes=bool(tool_input.get("generalizes")),
+                    surface_flag=bool(tool_input.get("surface_flag")))
+    return json.dumps(r, ensure_ascii=False)
 
-    if op == "forget":
-        entry_id = tool_input.get("id")
-        if entry_id is None:
-            return json.dumps({"success": False, "error": "forget 은 id 필요"}, ensure_ascii=False)
-        table = tool_input.get("table") or "forage_map"
-        try:
-            return json.dumps(FM.forget(entry_id=int(entry_id), table=table), ensure_ascii=False)
-        except (TypeError, ValueError):
-            return json.dumps({"success": False, "error": "id 는 정수"}, ensure_ascii=False)
 
-    return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
+def _forage_forget(tool_input: dict) -> str:
+    """[self:forage]{op:forget} — 항목 폐기."""
+    import forage_memory as FM
+    entry_id = tool_input.get("id")
+    if entry_id is None:
+        return json.dumps({"success": False, "error": "forget 은 id 필요"}, ensure_ascii=False)
+    table = tool_input.get("table") or "forage_map"
+    try:
+        return json.dumps(FM.forget(entry_id=int(entry_id), table=table), ensure_ascii=False)
+    except (TypeError, ValueError):
+        return json.dumps({"success": False, "error": "id 는 정수"}, ensure_ascii=False)
 
 
 # ── [sense:host] 호스트 자기수용감각 (이 기계 자신의 운영 상태) ───────────
@@ -572,41 +554,17 @@ def _host_resources(tool_input: dict) -> str:
         return json.dumps({"success": False, "error": f"host resources 실패: {e}"}, ensure_ascii=False)
 
 
-def _host_op(tool_input: dict) -> str:
-    """[sense:host]{op} — status(기본)/apps/resources 단일 디스패처."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["host_op"]).strip()
-    if op == "status":
-        return _host_status(tool_input)
-    elif op == "apps":
-        return _host_apps(tool_input)
-    elif op == "resources":
-        return _host_resources(tool_input)
-    return json.dumps({"success": False,
-                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['status', 'apps', 'resources']"},
-                      ensure_ascii=False)
-
-
-def _storage_op(tool_input: dict) -> str:
-    """[self:storage]{op} — scan/summary/volumes 단일 디스패처."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["storage_op"]).strip()
-    if op == "scan":
-        return _scan_storage(tool_input)
-    elif op == "summary":
-        return _get_storage_summary(tool_input)
-    elif op == "volumes":
-        return _list_volumes(tool_input)
-    return json.dumps({"success": False,
-                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['scan', 'summary', 'volumes']"},
-                      ensure_ascii=False)
-
-
-def _folder_note_op(tool_input: dict) -> str:
-    """[self:folder_note]{op} — set(주석 추가)/get(주석 조회) 단일 디스패처."""
-    op = (tool_input.get("op") or _OP_DEFAULTS["folder_note_op"]).strip()
-    if op == "set":
-        return _annotate_folder(tool_input)
-    elif op == "get":
-        return _get_folder_annotations(tool_input)
-    return json.dumps({"success": False,
-                       "error": f"알 수 없는 op '{op}'. 사용 가능: ['set', 'get']"},
-                      ensure_ascii=False)
+# ── op 디스패처 (2026-06-03 #29 storage/folder 통합 → 2026-08-05 진짜 함수 참조) ──
+# --check 가 이 dict 키로 src.ops.values 와 정확 비교.
+_OP_DISPATCHERS = {
+    "storage_op": {"scan": _scan_storage, "summary": _get_storage_summary,
+                   "volumes": _list_volumes},
+    "folder_note_op": {"set": _annotate_folder, "get": _get_folder_annotations},
+    "host_op": {"status": _host_status, "apps": _host_apps,
+                "resources": _host_resources},
+    "forage_op": {"recall": _forage_recall, "note": _forage_note,
+                  "forget": _forage_forget},
+    "residual_op": {"sample": _residual_sample, "estimate": _residual_estimate},
+}
+_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get", "host_op": "status",
+                "forage_op": "recall", "residual_op": "sample"}

@@ -1277,6 +1277,30 @@
         "가격"
       ],
       "file": "shopping.md"
+    },
+    {
+      "id": "hippocampus_retraining",
+      "name": "해마 임베딩 재학습 가이드",
+      "description": "해마(ibl_embedding) fine-tuned 임베딩 모델을 다시 학습시키는 절차 — 맥미니 로컬 레시피(batch8·seq64·seed42·epoch10 patience3, ~15분), compare_models.py 사과 대 사과 A/B 채택 판정, 프로브 갱신 규칙. ★함정 2: 학습기가 라이브 모델 폴더를 직접 덮어쓰므로 백업 필수(없으면 비교 대상 소멸) / 재색인 없이 재시작하면 새 모델 질의를 옛 벡터와 비교해 조용히 망가진다. 순서=백업→학습→A/B→epoch_* 삭제→rebuild_index→재시작. 용례 시딩 시 _load_model_sync() 선행(안 하면 벡터 누락).",
+      "keywords": [
+        "해마",
+        "재학습",
+        "임베딩",
+        "파인튜닝",
+        "fine-tune",
+        "ibl_embedding",
+        "모델학습",
+        "retrain",
+        "rebuild_index",
+        "재색인",
+        "연상",
+        "회상",
+        "용례",
+        "시딩",
+        "compare_models",
+        "벡터"
+      ],
+      "file": "hippocampus_retraining.md"
     }
   ]
 }

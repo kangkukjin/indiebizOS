@@ -121,6 +121,37 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 윈도우 이식성 OK ✓"
 fi
 
+# 모듈 그림자 — 패키지 최상위 모듈명이 backend/stdlib 이름과 겹치면 sys.modules 오염
+# (cctv 옛 common.py 가 backend/common 을 덮어 공유 유틸 불능→복붙 확산 부류, 2026-08-05 가드화).
+if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*|backend/[^/]+\.py|scripts/check_module_shadowing\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 모듈 그림자 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_module_shadowing.py"; then
+    echo "" >&2
+    echo "[pre-commit] 모듈 그림자 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 패키지 모듈을 '<패키지>_<이름>.py' 로 개명 (예: common.py → cctv_common.py)" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 모듈 그림자 OK ✓"
+fi
+
+# 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
+# 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
+if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 파일 크기 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_file_size.py"; then
+    echo "" >&2
+    echo "[pre-commit] 파일 크기 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 1500줄 초과분을 형제 모듈로 분리 (CLAUDE.md 파일 크기 규칙)" >&2
+    echo "[pre-commit]   • 부채 파일(BASELINE)은 더 자랄 수 없음 — 변경분을 새 모듈로" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 파일 크기 OK ✓"
+fi
+
 # 이벤트 루프 규율 — async 함수 본문의 동기 블로킹 호출은 단일 프로세스 서버 전체를
 # 세우고, 이 서버는 자기 자신을 부르는 경로가 많아 자기교착까지 간다(같은 부류 3회
 # 재발: 창고 폴러 · public_face 인프로세스 프록시 · /ibl/execute). 이식성 검사와 같은

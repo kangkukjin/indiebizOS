@@ -2,6 +2,16 @@
 
 > 정본. 다음 세션은 이 문서만으로 이어받는다. 메모리 `ibl-audit-repair-2026-08` 이 여기를 가리킨다.
 
+## 진행 현황 (2026-08-05 2차 세션 — 전부 push)
+
+| 항 | 상태 | 커밋 |
+|---|---|---|
+| ⑥ 복붙 정리 | ✅ 완료 | `882c38b` — common/http_fetch·geocode·pkg_utils 신설, curl_cffi 5벌·Nominatim 3벌 수렴, 단순 load_module 7곳 위임 (특수 변형 유지 — cache·체인프리로드는 의도된 차이) |
+| ⑧ pytest 도입 | ✅ 완료 | `731c5f1` — pytest.ini + 고아 5 편입(nip44 최우선) + seam-guards CI 잡. `-m "not local"` 28 passed |
+| ① 스텁 디스패처 | ✅ 완료 | `7ecf9a8` — 15개 전환(4 병렬 에이전트, 행동 변화 0) + 가드 `_stub_ops`(값 None=빌드 차단) + self-test. 부수: web-collector 죽은 records 블록 삭제 `05d5e0b` |
+| ② 에러 관례 | 🔶 1단계만 | `0dd1050` — 맨 문자열 반환 소탕(web launch_sites 10곳·shopping-assistant·business·location-services). 잔여: {success:False,error} 수렴 + 맨 문자열 AST 가드(①의 테이블 덕에 op 함수 return 추적 가능해짐) |
+| ③④⑤⑦⑨ | ⬜ 미착수 | ③은 ① 선행조건 충족됨. ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
 2026-08-05 다섯 감사(언어 코어 / 어휘 사전 / 검증계 / 핸들러 통화 규율 / 백엔드 구조)로

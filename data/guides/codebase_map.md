@@ -6,7 +6,7 @@
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — 197개 파일
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — 198개 파일
 │   ├── api.py           # 메인 서버 엔트리포인트
 │   ├── api_*.py         # 각 모듈 라우터 (38개)
 │   │   ├── api_agents.py        # 에이전트 관리
@@ -177,7 +177,7 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (42개 — op 분기 27개 패키지는 _OP_DISPATCHERS 표준)
+│   │   │   ├── tools/       # 도구 패키지 (42개 — op 분기 26개 패키지는 _OP_DISPATCHERS 표준)
 │   │   │   └── extensions/  # 백엔드 코어 모듈 (8개, ai-agent 폐기)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중

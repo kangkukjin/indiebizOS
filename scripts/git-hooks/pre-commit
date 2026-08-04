@@ -136,6 +136,22 @@ if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*|backend/[^/]+\.
   echo "[pre-commit] 모듈 그림자 OK ✓"
 fi
 
+# 파라미터·op 정본 — 같은 개념의 새 이름(검색어 7이름·상한 7이름 사태) 재발 차단.
+# 기존 위반은 스크립트 내 BASELINE 동결, 신규 어휘만 게이트 (2026-08-05 어휘 감사).
+if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*/(ibl_actions\.yaml|tool\.json)|data/ibl_nodes_src/.*\.yaml|data/ibl_nodes\.yaml|scripts/check_param_canon\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 파라미터/op 정본 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_param_canon.py"; then
+    echo "" >&2
+    echo "[pre-commit] 파라미터/op 정본 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 정본으로 개명: q/keyword→query, count/max_results/display→limit, lon→lng, op get→detail" >&2
+    echo "[pre-commit]   • 관습어 수용은 aliases: 블록으로 (예: aliases: {query: [q]})" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 파라미터/op 정본 OK ✓"
+fi
+
 # 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
 # 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
 if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$'; then

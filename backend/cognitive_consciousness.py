@@ -302,13 +302,33 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
 
     def _tag_override(self, message: str) -> Optional[str]:
         """명령에 박힌 명시 태그로 판정을 강제한다 — 사용자 결정이므로 Reflex·분류를 모두 이긴다.
-        #think → THINK, #execute → EXECUTE (대소문자 무시). 둘 다면 #think 우선(보수적)."""
+        #repair → REPAIR(시스템 수리 경로), #think → THINK, #execute → EXECUTE (대소문자 무시).
+        여럿이면 #repair > #think > #execute (보수적)."""
         low = (message or "").lower()
+        if "#repair" in low:
+            return "REPAIR"
         if "#think" in low:
             return "THINK"
         if "#execute" in low:
             return "EXECUTE"
         return None
+
+    # 시스템 수리(REPAIR) 결정론 단서 — 구역어와 수리동사가 *함께* 나타날 때만
+    # (한쪽만으로는 "백엔드가 뭐야?"·"사진 고쳐줘" 같은 무관 요청을 오폭한다).
+    # 분류기(경량 LLM)보다 먼저 돌아 의식 OFF 경로에서도 REPAIR 를 잡는다.
+    _REPAIR_ZONE_WORDS = (
+        "시스템", "백엔드", "backend", "프론트엔드", "frontend",
+        "코어", "런처", "api.py", "인지 파이프라인", "스케줄러 코드",
+    )
+    _REPAIR_VERB_WORDS = (
+        "수리", "수정", "고쳐", "고치", "패치", "버그", "fix",
+    )
+
+    def _is_repair_cue(self, message: str) -> bool:
+        """비-LLM 결정론 REPAIR 탐지(토큰 0) — 구역어+수리동사 동시 출현."""
+        low = (message or "").lower()
+        return (any(z in low for z in self._REPAIR_ZONE_WORDS)
+                and any(v in low for v in self._REPAIR_VERB_WORDS))
 
     def _decide_request_type(self, message: str, hippocampus_score: float,
                              top_code: str) -> tuple:
@@ -325,6 +345,12 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             # 태그 강제 — episode 추출이 잡도록 "[무의식] 분류: X" 형식 유지(+강제 표기)
             print(f"[무의식] 분류: {tag} (태그 #{tag.lower()} 강제 — Reflex·분류 무시)")
             return tag, None
+        # 시스템 수리 단서 — Reflex 보다 먼저: 수리 명령이 해마 고확신 매칭으로
+        # 경량 반사에 흘러가면 안 된다(수리=고급 모델+의식 각성 전용, 헌법 2026-08-05).
+        # 의식 OFF 경로(분류기 스킵)에서도 이 결정론 검사가 REPAIR 를 잡는다.
+        if self._is_repair_cue(message):
+            print("[무의식] 분류: REPAIR (결정론 단서 — 구역어+수리동사)")
+            return "REPAIR", None
         if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
             print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
             return "EXECUTE", top_code
@@ -373,6 +399,8 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             # SESSION_RESET 우선 검사 (EXECUTE 키워드가 들어있는 경우와 충돌 방지)
             if "SESSION_RESET" in result or "RESET" == result:
                 return "SESSION_RESET"
+            if "REPAIR" in result:
+                return "REPAIR"
             return "EXECUTE" if "EXECUTE" in result else "THINK"
 
         except Exception as e:

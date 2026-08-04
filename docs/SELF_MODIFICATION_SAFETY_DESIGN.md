@@ -2,6 +2,38 @@
 
 *작성: 2026-07-02 (Claude Code, 외부 개발 하네스). 근거: 에피소드 548~552 실측 + 코드베이스 조사 2건.*
 
+> **★헌법 개정 (2026-08-05, 사용자 확정) — Floor #4(사람 승인) 폐기, REPAIR 경로 신설:**
+>
+> "어차피 AI가 하는 걸 사람이 일일이 승인할 거라면 사람이 하는 것과 다름없다" — 사람 승인
+> 게이트를 폐기하고, RED 직접 쓰기를 아래 3조건 + 기계 안전판으로 허용한다:
+>
+> 1. **사람 명령 한도**: 사용자가 직접 명령한 태스크에서만 (`thread_context.task_origin == 'user'`
+>    — WS 채팅×2·`/system-ai/chat`·에이전트 명령 HTTP 4곳만 세팅. 스케줄러·자가점검·위임
+>    사슬·외부 채널 = 미세팅 = fail-closed). 자율 태스크는 종전대로 `propose_patch` 제안만.
+> 2. **최고 모델 전용**: 기어가 절약이어도 REPAIR 태스크의 실행 모델은 고급으로 승격
+>    (`model_resolver` `system_repair→고급 고정` — reflex→경량 고정의 역방향).
+> 3. **의식 각성**: 의식 토글 OFF 여도 REPAIR 는 THINK(의식 framing) 경로를 강제.
+>    의식 프롬프트에 수리 안전수칙 2조(사용자 명령 한도·실측 검증 달성기준) 추가.
+>
+> **감지**: `#repair` 태그(무조건) → 결정론 단서(구역어+수리동사, 의식 OFF 에서도 작동,
+> Reflex 보다 먼저) → 무의식 분류기 REPAIR 범주. 미탐 시 게이트 거부 메시지가 재명령 안내.
+>
+> **기계 안전판 (Floor #3+#5, 오히려 강화)**: 그랜트된 RED 쓰기는 ①사전 구문검증
+> (compile — 깨진 .py 는 라이브에 닿기 전 거부) ②원본 백업(파일당 최초 1회,
+> `data/system_ai_state/red_backups/<task>/`) ③backend .py 면 분리 워치독
+> (`backend/red_watchdog.py`, start_new_session — 서버가 죽어도 생존)이 리로드 후
+> `/health` 를 확인, 죽어 있으면 백업 복원+touch 재기동+OS 알림 자동 롤백.
+>
+> **배선**: 그랜트 원장 `backend/red_grant.py`(프로세스 전역 — claude_code 의 MCP→HTTP
+> 재진입 심을 task_id 매칭으로 건넘), 발급/회수는 `agent_pipeline` REPAIR 분기/finally 만.
+> 게이트 `system_essentials/handler.py` `_red_zone_violation` + `_red_write_prepare/finalize`.
+> **구역 재구획**: `backend/static/` 비-py 정적 자산은 RED 제외(프로세스가 import 하지
+> 않아 reload 절단 원리적 불가 — 2026-08-04 자막 수리 하루 지연의 교훈).
+> **디렉토리 단위 RED 복사·이동·삭제는 그랜트가 있어도 금지**(파급 과대).
+> 승인 원장(`install_approvals.json`)은 그랜트로도 못 쓴다(공급망 게이트는 별개 헌법).
+>
+> 아래 본문의 Floor #4 절은 역사 기록으로 보존한다.
+
 > **구현 상태 (2026-07-12 갱신):**
 > - **Floor #1 ✅ 구현·커밋** (`30a4116`): RED 구역 직접 쓰기 차단. `system_essentials/handler.py` `_validate_path_in_scope` 에 `_red_zone_violation`(realpath 정규화, repo 루트 backend+frontend 독립 탐지) 게이트. 쓰기 계열 단일 초크포인트 전부 커버, 읽기는 유지. 에피소드 551 구멍 폐쇄.
 > - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:propose_patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록. 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).

@@ -213,6 +213,29 @@ def is_web_surface() -> bool:
     return get_current_surface() == 'web'
 
 
+# ============ Task Origin (자기수정 헌법 2026-08-05) ============
+# 이 태스크가 *사람의 직접 명령*에서 왔는가. RED(살아있는 기질) 수정 그랜트는
+# origin == 'user' 일 때만 발급된다 — 스케줄러·자가점검·위임 사슬·외부 채널 등
+# 자율 경로는 origin 을 안 세팅하므로(None) fail-closed.
+# 세팅 지점 = 사용자 대면 transport 4곳(WS 채팅×2·/system-ai/chat·에이전트 명령 HTTP).
+# 해제 = 인지 파이프라인 finally(소비 1회) + clear_all_context(백스톱) — 풀 스레드 재사용
+# 으로 다음 런에 새는 것을 막는다.
+
+def set_task_origin(origin: str):
+    """현재 스레드 태스크의 출처 설정 ('user' = 사람의 직접 명령)."""
+    _thread_local.task_origin = origin
+
+
+def get_task_origin() -> str:
+    """현재 스레드 태스크의 출처 ('user' 또는 None)."""
+    return getattr(_thread_local, 'task_origin', None)
+
+
+def clear_task_origin():
+    """태스크 출처 해제 — 파이프라인이 소비 후 호출(풀 스레드 누수 방지)."""
+    _thread_local.task_origin = None
+
+
 def get_current_registry_key() -> str:
     """현재 스레드의 레지스트리 키 가져오기 (project_id:agent_id 형식)"""
     project_id = get_current_project_id()
@@ -399,6 +422,7 @@ def clear_all_context():
     _thread_local.agent_name = None
     _thread_local.project_id = None
     _thread_local.surface = None
+    _thread_local.task_origin = None
     _thread_local.task_id = None
     _thread_local.called_agent = False
     _thread_local.allowed_nodes = None

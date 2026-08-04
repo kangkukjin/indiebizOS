@@ -152,6 +152,14 @@ def resolve(role: str, agent_id: Optional[str] = None) -> dict:
         d.update(axis="(reflex)", source="reflex→경량(고정)")
         return d
 
+    # 시스템 수리(system_repair)는 기어와 무관하게 *언제나 고급* — 자기 몸(RED) 수정은
+    # 최고 모델만 한다(헌법 2026-08-05, reflex→경량 고정의 역방향). 기어가 절약이어도
+    # REPAIR 태스크의 실행 모델은 여기서 고급으로 승격된다.
+    if role == "system_repair":
+        d = _load_tier_config("고급", gear)
+        d.update(axis="(system_repair)", source="system_repair→고급(고정)")
+        return d
+
     # 포식(forage) 에이전트는 기본 *경량* — 빈도 높은 가벼운 검색이라 최저 티어로 충분.
     # 계기판 설정의 overrides["forage"] 핀으로 변경(위 override 루프가 먼저 처리하므로 핀이 이긴다).
     if role == "forage":

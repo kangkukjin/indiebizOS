@@ -200,6 +200,9 @@ def chat_with_system_ai(chat: ChatMessage):
         )
         set_current_task_id(task_id)
         clear_called_agent()
+        # 원격 런처 자율주행 탭 채팅 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
+        from thread_context import set_task_origin
+        set_task_origin("user")
         # 에피소드 로깅 — /system-ai/chat 는 원격 런처 자율주행 탭이 타는 HTTP 경로인데,
         # 그동안 start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼 있어 주행기록
         # 사각지대였다(forage_chat 선례와 같은 한 쌍). 동기·백그라운드 모두 _process()

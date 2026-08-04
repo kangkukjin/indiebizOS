@@ -1,4 +1,5 @@
 import os
+import sys
 import glob
 import re
 import time
@@ -349,9 +350,38 @@ _RED_ZONE_DIRS = ("backend", "frontend", "scripts")
 _PROTECTED_STATE_FILES = ("data/system_ai_state/install_approvals.json",)
 
 
+def _red_grant_active():
+    """현재 호출 컨텍스트에 유효한 RED 쓰기 그랜트(헌법 2026-08-05).
+
+    그랜트는 인지 파이프라인의 REPAIR 경로만 발급한다(사람 명령 + 고급 모델 + 의식 각성).
+    red_grant 모듈 부재(폰 몸 등)·컨텍스트 부재 시 None = fail-closed."""
+    try:
+        from red_grant import active_grant
+        from thread_context import get_current_task_id, get_current_agent_id
+        return active_grant(task_id=get_current_task_id(), agent_id=get_current_agent_id())
+    except Exception:
+        return None
+
+
+def _is_static_asset(real: str) -> bool:
+    """backend/static/ 아래 비-파이썬 정적 자산인가 — RED 면제 대상.
+    프로세스가 import 하지 않고 요청마다 디스크에서 읽어 서빙하므로 reload 절단이
+    원리적으로 불가능하다(2026-08-05 구역 재구획 — 자막 수리 하루 지연의 교훈)."""
+    if _REPO_ROOT is None:
+        return False
+    static_root = str(_REPO_ROOT / "backend" / "static")
+    return ((real == static_root or real.startswith(static_root + os.sep))
+            and not real.endswith(".py"))
+
+
 def _red_zone_violation(abs_path: str) -> str | None:
     """쓰기 대상 실경로가 RED 구역이면 거부 메시지, 아니면 None.
-    realpath 로 정규화 → 심볼릭·../ 우회(data/../backend/…)까지 잡는다."""
+    realpath 로 정규화 → 심볼릭·../ 우회(data/../backend/…)까지 잡는다.
+
+    헌법 개정(2026-08-05): 사람 승인 게이트(Floor #4) 폐기. 대신
+    ①사람 명령 태스크 ②고급 모델 ③의식 각성으로 발급된 그랜트(red_grant)가 있으면
+    RED 직접 쓰기를 허용한다 — 쓰기 지점의 기계 안전판(사전 구문검증·백업·워치독
+    자동 롤백)이 함께 작동한다. backend/static/ 비-py 정적 자산은 RED 가 아니다."""
     if _REPO_ROOT is None:
         return None
     real = os.path.realpath(abs_path)
@@ -365,15 +395,129 @@ def _red_zone_violation(abs_path: str) -> str | None:
     for d in _RED_ZONE_DIRS:
         red_root = str(_REPO_ROOT / d)
         if real == red_root or real.startswith(red_root + os.sep):
+            if _is_static_asset(real):
+                return None  # 정적 자산 — 살아있는 기질이 아님
+            if _red_grant_active():
+                return None  # 수리 그랜트 — 쓰기 지점 안전판이 이어받는다
             rel = os.path.relpath(real, str(_REPO_ROOT))
             return (
-                f"Error: RED 구역(살아있는 기질) 직접 쓰기는 금지됩니다: {rel}\n"
-                f"이 코드는 지금 시스템이 돌고 있는 기질이라, IBL 이 직접 덮어쓰면 "
-                f"reload 절단(자해)·자기채점 오염이 납니다.\n"
-                f"→ data/ 차원(어휘·yaml·상태)에서 끝낼 수 있는지 먼저 보고, "
-                f"코어 코드 변경이 정말 필요하면 사람에게 제안하세요."
+                f"Error: RED 구역(살아있는 기질) 쓰기가 허가되지 않았습니다: {rel}\n"
+                f"시스템 자기수정은 ①사용자가 직접 명령한 태스크에서 ②고급 모델+의식 각성"
+                f"(REPAIR 경로)으로만 허용됩니다(헌법 2026-08-05). 지금 태스크는 그 조건 밖입니다.\n"
+                f"→ 자율 태스크(스케줄러·자가점검 등)가 발견한 문제면 [self:propose_patch]로 "
+                f"제안만 남기세요 — 적용은 사용자가 명령할 때 수리 경로가 수행합니다.\n"
+                f"→ 사용자 명령을 수행 중인데 이 게이트에 막혔다면, 사용자에게 '#repair' 태그나 "
+                f"'시스템 수리' 명시로 재명령해 달라고 답하세요(수리 경로로 재실행됩니다)."
             )
     return None
+
+
+# ── RED 쓰기 안전판 (헌법 2026-08-05 기계 안전판, Floor #3+#5) ──────────
+# 그랜트된 RED 쓰기의 사전 구문검증(브릭 예방) + 원본 백업 + 분리 워치독(자동 롤백).
+# 워치독(backend/red_watchdog.py)은 start_new_session 분리 프로세스라 uvicorn 이
+# 깨진 import 로 죽어도 살아남아 백업을 복원하고 touch 로 재기동을 유발한다.
+
+def _red_is_live_path(abs_path: str) -> bool:
+    """RED 구역 실경로인가(정적 자산 면제 반영). 안전판 적용 대상 판정."""
+    if _REPO_ROOT is None:
+        return False
+    real = os.path.realpath(abs_path)
+    if _is_static_asset(real):
+        return False
+    for d in _RED_ZONE_DIRS:
+        red_root = str(_REPO_ROOT / d)
+        if real == red_root or real.startswith(red_root + os.sep):
+            return True
+    return False
+
+
+def _red_backup_dir(grant: dict) -> str:
+    key = re.sub(r"[^A-Za-z0-9_-]", "_", (grant.get("task_id") or "notask"))[:48] or "notask"
+    bdir = os.path.join(str(_REPO_ROOT), "data", "system_ai_state", "red_backups", key)
+    os.makedirs(bdir, exist_ok=True)
+    return bdir
+
+
+def _red_write_prepare(path: str, new_content=None) -> str | None:
+    """그랜트된 RED 쓰기 직전 안전판: (py면) 사전 구문검증 + 원본 백업/매니페스트.
+    RED 대상이 아니거나 그랜트가 없으면 no-op(None). 오류 시 거부 메시지 반환."""
+    abs_path = os.path.realpath(path)
+    if not _red_is_live_path(abs_path):
+        return None
+    grant = _red_grant_active()
+    if not grant:
+        return None  # 게이트가 이미 막았을 것 — 방어적 no-op
+    # 사전 구문검증 — 깨진 .py 가 라이브에 닿기 전에 거른다(브릭의 대부분 = import 시 SyntaxError)
+    if abs_path.endswith(".py") and isinstance(new_content, str):
+        try:
+            compile(new_content, abs_path, "exec")
+        except SyntaxError as e:
+            return (f"Error: RED 쓰기 거부 — 새 내용에 파이썬 구문 오류가 있습니다: "
+                    f"line {e.lineno}: {e.msg}\n수정 후 다시 시도하세요(라이브 파일은 무변경).")
+    # 원본 백업 (파일당 최초 1회 = 진짜 원본 보존) + 매니페스트 갱신
+    try:
+        bdir = _red_backup_dir(grant)
+        manifest_path = os.path.join(bdir, "manifest.json")
+        manifest = {}
+        if os.path.exists(manifest_path):
+            try:
+                with open(manifest_path, encoding="utf-8") as f:
+                    manifest = json.load(f)
+            except Exception:
+                manifest = {}
+        if not manifest:
+            _port = os.environ.get("INDIEBIZ_API_PORT", "8765")
+            manifest = {"repo": str(_REPO_ROOT), "task_key": grant.get("task_id") or "notask",
+                        "health_url": f"http://127.0.0.1:{_port}/health", "files": {}}
+        files = manifest.setdefault("files", {})
+        if abs_path not in files:
+            if os.path.exists(abs_path):
+                backup = os.path.join(bdir, f"f{len(files):03d}_{os.path.basename(abs_path)}")
+                shutil.copy2(abs_path, backup)
+                files[abs_path] = backup
+            else:
+                files[abs_path] = None  # 신규 파일 — 롤백 = 삭제
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, ensure_ascii=False, indent=2)
+        # 매니페스트 mtime 갱신 = 워치독 조용 타이머 리셋(연쇄 편집을 한 검사로 묶음)
+    except Exception as e:
+        return f"Error: RED 백업 실패로 쓰기를 중단합니다(안전판 없이는 안 쓴다): {e}"
+    return None
+
+
+def _red_write_finalize(path: str):
+    """그랜트된 RED 쓰기 직후: backend .py 면 워치독 보장(리로드 후 헬스체크·자동 롤백).
+    frontend/scripts 는 라이브 프로세스가 import 하지 않으므로 백업만으로 충분."""
+    abs_path = os.path.realpath(path)
+    if not (abs_path.endswith(".py") and _red_is_live_path(abs_path)):
+        return
+    backend_root = str(_REPO_ROOT / "backend")
+    if not (abs_path == backend_root or abs_path.startswith(backend_root + os.sep)):
+        return
+    grant = _red_grant_active()
+    if not grant:
+        return
+    try:
+        bdir = _red_backup_dir(grant)
+        manifest_path = os.path.join(bdir, "manifest.json")
+        pid_path = os.path.join(bdir, "watchdog.pid")
+        if os.path.exists(pid_path):
+            try:
+                with open(pid_path) as f:
+                    os.kill(int(f.read().strip()), 0)
+                return  # 워치독 생존 — 매니페스트 mtime 변경이 곧 신호
+            except Exception:
+                pass
+        wd_script = str(_REPO_ROOT / "backend" / "red_watchdog.py")
+        log = open(os.path.join(bdir, "watchdog.log"), "ab")
+        p = subprocess.Popen([sys.executable, wd_script, manifest_path],
+                             stdout=log, stderr=log, start_new_session=True,
+                             cwd=str(_REPO_ROOT))
+        with open(pid_path, "w") as f:
+            f.write(str(p.pid))
+        print(f"[RED 안전판] 워치독 기동 (pid={p.pid}) — 헬스체크·자동 롤백 대기")
+    except Exception as e:
+        print(f"[RED 안전판] 워치독 기동 실패 (백업은 확보됨): {e}")
 
 
 def _validate_path_in_scope(path: str, project_path: str) -> str | None:
@@ -505,8 +649,8 @@ def _propose_red_patch(raw_path: str, content, old_string, new_string, reason: s
             "worktree": wt_rel,
             "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
             "note": ("이 변경은 격리 사본(worktree)에만 있고 라이브는 무변경입니다. "
-                     "적용은 사람이 검토 후 수행합니다(자기가 자기 몸에 자가 적용하지 않음). "
-                     f"채택: cd {wt_rel} 확인 후 사람이 머지·리로드. "
+                     "적용은 사용자가 명령할 때 수리 경로(REPAIR: 고급 모델+의식 각성, "
+                     "헌법 2026-08-05)가 수행하거나 사람이 직접 머지합니다. "
                      f"폐기: git worktree remove {wt_rel}."),
         }
     except Exception as e:
@@ -712,10 +856,14 @@ def execute(tool_input: dict, context) -> str:
             scope_err = _validate_path_in_scope(path, project_path)
             if scope_err:
                 return scope_err
-            os.makedirs(os.path.dirname(path), exist_ok=True)
             content = tool_input["content"]
+            _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
+            if _red_err:
+                return _red_err
+            os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(content)
+            _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
             abs_path = os.path.abspath(path)
             result = {"success": True, "path": abs_path, "size": len(content)}
             if redirected:
@@ -982,8 +1130,14 @@ def execute(tool_input: dict, context) -> str:
             # 교체 수행
             new_content = content.replace(old_string, new_string, 1)
 
+            _red_err = _red_write_prepare(file_path, new_content)  # RED 안전판(구문검증+백업)
+            if _red_err:
+                return _red_err
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(new_content)
+
+            _red_write_finalize(file_path)  # backend .py 면 워치독 보장
 
             # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
             return f"Successfully edited {os.path.abspath(file_path)}"
@@ -1044,6 +1198,22 @@ def execute(tool_input: dict, context) -> str:
             if not os.path.exists(src):
                 return f"Error: 원본이 존재하지 않습니다: {src}"
 
+            # RED 안전판 — 디렉토리 단위 RED 복사는 그랜트가 있어도 금지(파급 과대)
+            if _red_is_live_path(dst):
+                if os.path.isdir(src):
+                    return ("Error: RED 구역에는 디렉토리 단위 복사가 금지됩니다"
+                            "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
+                _src_content = None
+                if dst.endswith(".py"):
+                    try:
+                        with open(src, encoding="utf-8") as _f:
+                            _src_content = _f.read()
+                    except Exception:
+                        pass
+                _red_err = _red_write_prepare(dst, _src_content)
+                if _red_err:
+                    return _red_err
+
             # 대상 상위 디렉토리 생성
             os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
 
@@ -1057,6 +1227,7 @@ def execute(tool_input: dict, context) -> str:
             else:
                 # 파일 복사
                 shutil.copy2(src, dst)
+                _red_write_finalize(dst)
                 return f"파일을 복사했습니다: {os.path.abspath(dst)}"
 
         elif tool_name == "move_path":
@@ -1073,6 +1244,31 @@ def execute(tool_input: dict, context) -> str:
             if not os.path.exists(src):
                 return f"Error: 원본이 존재하지 않습니다: {src}"
 
+            # RED 안전판 — RED 를 향하거나 RED 에서 빠져나가는 이동은 파일 단위만 + 백업
+            if _red_is_live_path(dst) or _red_is_live_path(src):
+                # 반출(src=RED)도 게이트 대상 — dst 만 검사하던 구멍을 닫는다
+                _rv = _red_zone_violation(os.path.realpath(src)) if _red_is_live_path(src) else None
+                if _rv:
+                    return _rv
+                if os.path.isdir(src):
+                    return ("Error: RED 구역이 걸린 디렉토리 단위 이동은 금지됩니다"
+                            "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
+                if _red_is_live_path(src):
+                    _red_err = _red_write_prepare(src)  # 사라질 원본 백업
+                    if _red_err:
+                        return _red_err
+                if _red_is_live_path(dst):
+                    _src_content = None
+                    if dst.endswith(".py"):
+                        try:
+                            with open(src, encoding="utf-8") as _f:
+                                _src_content = _f.read()
+                        except Exception:
+                            pass
+                    _red_err = _red_write_prepare(dst, _src_content)
+                    if _red_err:
+                        return _red_err
+
             # 대상 상위 디렉토리 생성
             os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
 
@@ -1084,6 +1280,7 @@ def execute(tool_input: dict, context) -> str:
                     os.remove(dst)
 
             shutil.move(src, dst)
+            _red_write_finalize(dst)
             return f"이동 완료: {os.path.abspath(dst)}"
 
         elif tool_name == "delete_path":
@@ -1100,6 +1297,15 @@ def execute(tool_input: dict, context) -> str:
                 return f"Error: 경로가 존재하지 않습니다: {target}"
 
             abs_target = os.path.abspath(target)
+
+            # RED 안전판 — 디렉토리 단위 RED 삭제는 그랜트가 있어도 금지, 파일은 백업 후 삭제
+            if _red_is_live_path(abs_target):
+                if os.path.isdir(target):
+                    return ("Error: RED 구역 디렉토리 삭제는 금지됩니다(수리 그랜트가 있어도). "
+                            "정말 필요하면 파일 단위로 지우세요.")
+                _red_err = _red_write_prepare(abs_target)
+                if _red_err:
+                    return _red_err
 
             if os.path.isdir(target):
                 count = sum(len(files) for _, _, files in os.walk(target))

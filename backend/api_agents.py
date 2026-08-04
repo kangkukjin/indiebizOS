@@ -293,7 +293,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
     백그라운드 경로에서는 자체 스레드에서 돌므로 스레드 컨텍스트를 여기서 설정/정리한다.
     """
     from conversation_db import ConversationDB
-    from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, clear_all_context
+    from thread_context import (set_current_agent_id, set_current_agent_name,
+                                set_current_project_id, set_task_origin, clear_all_context)
 
     try:
         project_path = project_manager.get_project_path(project_id)
@@ -303,6 +304,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         set_current_agent_id(agent_id)
         set_current_agent_name(agent_name)
         set_current_project_id(project_id)
+        set_task_origin("user")  # 원격 런처 에이전트 명령 HTTP = 사람의 직접 명령
 
         # 에피소드 로깅 — 이 엔드포인트는 원격 런처 자율주행 탭이 프로젝트 에이전트에게
         # 보내는 HTTP 경로인데, start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼

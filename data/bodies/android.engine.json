@@ -149,6 +149,8 @@
     "prompt_builder",
     "public_face",
     "r2_client",
+    "red_grant",
+    "red_watchdog",
     "report_html",
     "runtime_utils",
     "safe_store",
@@ -207,8 +209,8 @@
     "test_nip44_vectors": "top-level import: pynostr"
   },
   "counts": {
-    "total": 201,
-    "engine": 182,
+    "total": 203,
+    "engine": 184,
     "blocklist": 19
   }
 }

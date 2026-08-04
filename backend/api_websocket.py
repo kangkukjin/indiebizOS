@@ -423,9 +423,11 @@ async def handle_chat_message(client_id: str, data: dict):
             """
             from thread_context import (set_current_agent_id as _sa, set_current_agent_name as _sn,
                                         set_current_project_id as _sp, set_current_task_id as _st,
-                                        set_user_input as _su, clear_all_context as _clear)
+                                        set_user_input as _su, set_task_origin as _so,
+                                        clear_all_context as _clear)
             from agent_pipeline import drain_stream
             _sa(agent_id); _sn(agent_name); _sp(project_id); _st(task_id); _su(message)
+            _so("user")  # 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
             try:
                 result = drain_stream(runner.cognitive_stream(
                     message, history,
@@ -615,12 +617,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             """
             nonlocal final_content
             # 별도 스레드이므로 컨텍스트 재설정 필요
-            from thread_context import set_user_input as _set_user_input
+            from thread_context import set_user_input as _set_user_input, set_task_origin as _set_origin
             set_current_agent_id(agent_id)
             set_current_agent_name(agent_name)
             set_current_project_id(project_id)
             set_current_task_id(task_id)
             _set_user_input(message)
+            _set_origin("user")  # 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
 
             try:
                 for event in runner.cognitive_stream(
@@ -974,6 +977,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             nonlocal final_content
             # 스레드별로 컨텍스트를 다시 설정해야 함 (thread-local storage)
             set_current_task_id(task_id)
+            from thread_context import set_task_origin as _set_origin
+            _set_origin("user")  # 시스템 AI 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
             from system_ai_core import get_system_ai_runner
             runner = get_system_ai_runner()
             gen = runner.cognitive_stream(

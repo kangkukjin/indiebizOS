@@ -148,9 +148,30 @@ class CognitivePipelineMixin:
         from system_ai_core import _switch_to_midtier, _switch_to_role, _restore_provider
         consciousness_output = None
         original_provider = None
+        _repair_granted_task = None  # 이 런이 발급한 RED 그랜트의 task_id (finally 회수용)
         if force_role:
             # 표면별 전용 에이전트: 의식 건너뛰고 지정 모델(기본 경량)로 바로 실행.
             original_provider = _switch_to_role(self, force_role)
+        elif request_type == "REPAIR":
+            # 시스템 자기수정 경로 (헌법 2026-08-05): 사람 승인 게이트(Floor #4) 폐기 대신
+            # ①사람 명령 태스크 ②고급 모델 승격 ③의식 각성(토글 OFF 여도 강제) + 기계 안전판.
+            # 의식은 토글과 무관하게 깨운다 — _run_consciousness_or_reuse 는 토글을 안 본다.
+            consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
+            from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
+            _origin = get_task_origin()
+            if is_system_ai and _origin == "user":
+                original_provider = _switch_to_role(self, "system_repair")
+                from red_grant import issue_grant
+                _g_task = get_current_task_id() or ""
+                issue_grant(agent_id=get_current_agent_id() or "system_ai",
+                            task_id=_g_task, reason=message)
+                _repair_granted_task = _g_task or "__untasked__"
+                print(f"[수리] RED 그랜트 발급 (task={_g_task or '없음'}) — 고급 모델·의식 각성 경로")
+            else:
+                # 자율 태스크/프로젝트 에이전트 — 승격·그랜트 없음. 의식 framing 은 하되
+                # RED 쓰기는 게이트가 막고 propose_patch 경로를 안내한다.
+                print(f"[수리] REPAIR 분류지만 출처={_origin or '자율'}"
+                      f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
         elif request_type == "THINK":
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
         elif reflex_hint:
@@ -169,7 +190,7 @@ class CognitivePipelineMixin:
 
         # 작업전 공개(계기판) — 실행 직전 "무슨 판단·얼마나 확신·무슨 연상"을 노출
         try:
-            _decision = "reflex" if reflex_hint else ("think" if request_type == "THINK" else "execute")
+            _decision = "reflex" if reflex_hint else ("think" if request_type in ("THINK", "REPAIR") else "execute")
             _criteria = ""
             if consciousness_output:
                 _criteria = self._extract_achievement_criteria(consciousness_output) or ""
@@ -374,6 +395,21 @@ class CognitivePipelineMixin:
             print(f"[인지 파이프라인] 예외: {e}")
             _error_text = str(e)
         finally:
+            # RED 그랜트 회수 — 이 런이 발급한 것만(동시 런의 그랜트 오소거 방지).
+            # task origin 도 여기서 해제(풀 스레드 재사용 누수 방지 — 소비는 1회).
+            if _repair_granted_task is not None:
+                try:
+                    from red_grant import revoke_grant
+                    revoke_grant(None if _repair_granted_task == "__untasked__"
+                                 else _repair_granted_task)
+                    print("[수리] RED 그랜트 회수")
+                except Exception:
+                    pass
+            try:
+                from thread_context import clear_task_origin
+                clear_task_origin()
+            except Exception:
+                pass
             # 중급/역할 모델 사용 후 원래 provider 복원
             _restore_provider(self, original_provider)
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)

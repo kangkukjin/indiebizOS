@@ -271,10 +271,21 @@ def _map(method: str, path: str, query: dict, raw_query: str):
                 return {"status": 400}
             t = query.get("t", "")
             tail = f"&t={_enc(t)}" if t else ""       # 오프셋 스트림(첫 시청 중 seek)
-            if query.get("q") in ("low", "lowh"):     # 저대역 렌디션(느린 회선, lowh=HEVC)
+            if query.get("q") in ("low", "lowh", "tiny"):   # 저대역 렌디션(tiny=HLS 바닥 렁)
                 tail += "&q=" + query["q"]
             return {"target": f"/showcase/{kind}/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
                     "cache": "public, max-age=86400"}
+        if kind == "hls" and len(rest) > 1 and rest[1]:
+            # HLS 적응형 플레이리스트 — worker.js 의 hls 라우트와 동형(no-store).
+            # 세그먼트는 별도 매핑이 아니다(변형이 위 media URL 의 byterange 를 가리킴).
+            fid = rest[1]
+            rel = query.get("rel", "")
+            if not rel:
+                return {"status": 400}
+            hr = query.get("r", "")
+            tail = f"&r={_enc(hr)}" if hr else ""
+            return {"target": f"/showcase/hls/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
+                    "cache": "no-store"}
         if kind == "sub" and len(rest) > 1 and rest[1]:
             # 자막 — srt/ass/smi 를 WebVTT 로 변환해 서빙(worker.js 의 sub 라우트와 동형).
             fid = rest[1]

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <base href="/">
 <title>공개파일</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <style>
   :root {
     --bg: #0d0f12; --card: #171a1f; --text: #e8eaed; --muted: #9aa0a6;
@@ -109,10 +110,24 @@ function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
 
 function thumbUrl(it) { return api(`thumb/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`); }
 // ── 화질(대역폭) ──────────────────────────────────────────────────────────
-// 기본 렌디션은 원본 해상도·비트레이트 상한 없음 — 1080p 면 3~5Mbps 다. 느린 회선
-// (차 브라우저 등)에선 계속 멈추므로 저대역(&q=low, 720p·1.2Mbps 상한)을 받는다.
-// 자동 판정 1회 → 이후 사용자 토글이 이기고 localStorage 에 남는다.
-// navigator.connection 이 없는 브라우저(사파리·파이어폭스)는 원본 = 기존 동작 그대로.
+// 기본 = "자동"(HLS 적응형): 맥이 렌디션 사다리(tiny 480p/low 720p/원본)를 byterange
+// HLS 로 묶어 주면 hls.js 가 조각마다 회선을 재서 화질을 갈아탄다(느린 회선=안 멈추고
+// 강등, 빠른 회선=원본). 사다리가 아직 없으면(첫 시청) 아래 프로그레시브 폴백 —
+// 그 시청이 만든 캐시가 렁이 되어 다음부터 적응형. 수동 모드(저용량/원본)는 탈출구.
+// qmode: "auto" | "low" | "orig" — localStorage. lowq()는 폴백 경로의 자동 판정용.
+const QMODES = ["auto", "low", "orig"];
+let QMODE = null;
+function qmode() {
+  if (QMODE !== null) return QMODE;
+  let saved = null;
+  try { saved = localStorage.getItem("qmode"); } catch (e) {}
+  QMODE = QMODES.includes(saved) ? saved : "auto";
+  return QMODE;
+}
+function setQmode(m) {
+  QMODE = m;
+  try { localStorage.setItem("qmode", m); } catch (e) {}
+}
 let LOWQ = null;
 function lowq() {
   if (LOWQ !== null) return LOWQ;
@@ -124,10 +139,6 @@ function lowq() {
       || /^(slow-2g|2g|3g)$/.test(c.effectiveType || "")
       || c.saveData === true;
   return LOWQ;
-}
-function setLowq(on) {
-  LOWQ = !!on;
-  try { localStorage.setItem("lowq", LOWQ ? "1" : "0"); } catch (e) {}
 }
 // ── HEVC 능력 감지 ────────────────────────────────────────────────────────
 // 저대역엔 h264(&q=low)와 HEVC(&q=lowh, 같은 화질에 절반 대역) 두 판이 있다.
@@ -160,17 +171,35 @@ function hevcok() { return HEVCOK === true; }
 function syncQBtn(show) {
   const b = document.getElementById("lbQ");
   b.style.display = show ? "block" : "none";
-  b.textContent = lowq() ? (hevcok() ? "🐢 저용량 720p·HEVC" : "🐢 저용량 720p") : "🎞 원본 화질";
-  b.title = lowq() ? "느린 회선용 — 누르면 원본 화질로" : "누르면 저용량(720p)으로 — 회선이 느릴 때";
+  const m = qmode();
+  if (m === "auto") {
+    b.textContent = "⚡ 자동 화질";
+    b.title = "회선에 맞춰 화질 자동 전환(HLS) — 누르면 저용량 고정";
+  } else if (m === "low") {
+    b.textContent = hevcok() ? "🐢 저용량 720p·HEVC" : "🐢 저용량 720p";
+    b.title = "느린 회선용 고정 — 누르면 원본 화질로";
+  } else {
+    b.textContent = "🎞 원본 화질";
+    b.title = "원본 고정 — 누르면 자동(적응형)으로";
+  }
 }
 function toggleQuality() {
-  setLowq(!lowq());
+  setQmode(QMODES[(QMODES.indexOf(qmode()) + 1) % QMODES.length]);   // auto→low→orig→auto
   syncQBtn(true);
   if (lbIndex >= 0) openLb(lbIndex);   // 같은 항목을 새 화질로 다시 연다
 }
 function mediaUrl(it) {
-  const q = (it.kind === "video" && lowq()) ? (hevcok() ? "&q=lowh" : "&q=low") : "";
+  // 프로그레시브 경로의 화질: 수동 low=고정 저용량 / 수동 orig=고정 원본 /
+  // auto(HLS 폴백 도착)=기존 자동 판정(lowq — 저장된 토글·navigator.connection).
+  let q = "";
+  if (it.kind === "video") {
+    const m = qmode();
+    if (m === "low" || (m === "auto" && lowq())) q = hevcok() ? "&q=lowh" : "&q=low";
+  }
   return api(`media/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}${q}`);
+}
+function hlsUrl(it) {
+  return api(`hls/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(it.rel)}&v=${it.mtime}`);
 }
 function subUrl(it, s, shift) {
   return api(`sub/${encodeURIComponent(it.fid)}?rel=${encodeURIComponent(s.rel)}&v=${s.mtime || it.mtime}`
@@ -227,6 +256,44 @@ function attachSeekRescue(v, it) {
       if (rel >= v.buffered.start(i) && rel <= v.buffered.end(i) + 1) { v.currentTime = rel; return; }
     swap(target);   // 버퍼 밖 — 그 지점부터의 오프셋 스트림으로 즉시 이동
   });
+}
+
+// ── 동영상 열기 — HLS(적응형) 우선, 안 되면 프로그레시브 폴백 ──────────────
+let curHls = null;
+function destroyHls() {
+  if (curHls) { try { curHls.destroy(); } catch (e) {} curHls = null; }
+}
+function progressiveVideo(v, it) {
+  // 기존 경로 그대로 — 생방송 트랜스코드면 커스텀 시크바(attachSeekRescue)가 구출.
+  v.src = mediaUrl(it);
+  v.load();
+  v.play().catch(() => {});
+}
+function openVideo(body, it) {
+  body.innerHTML = `<video controls autoplay playsinline>${trackHtml(it, 0)}</video>`;
+  const v = body.querySelector("video");
+  attachSeekRescue(v, it);   // HLS 는 seekable 전체라 바가 안 뜬다 — 폴백 때만 발동
+  if (qmode() === "auto" && window.Hls && Hls.isSupported()) {
+    // hls.js — 마스터 404(사다리 준비 전)·치명 오류면 프로그레시브로 즉시 폴백.
+    // 마스터 요청 자체가 맥의 결핍 렁 빌드를 방아쇠하므로 실패해도 헛걸음이 아니다.
+    const h = new Hls();
+    curHls = h;
+    let fell = false;
+    h.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal && !fell) { fell = true; destroyHls(); progressiveVideo(v, it); }
+    });
+    h.loadSource(hlsUrl(it));
+    h.attachMedia(v);
+    return;
+  }
+  if (qmode() === "auto" && v.canPlayType("application/vnd.apple.mpegurl")) {
+    // 사파리 네이티브 HLS — 404 를 <video> 가 늦게 알리므로 마스터 유무를 먼저 묻는다.
+    fetch(hlsUrl(it), { cache: "no-store" })
+      .then(r => { if (r.ok) { v.src = hlsUrl(it); v.play().catch(() => {}); } else progressiveVideo(v, it); })
+      .catch(() => progressiveVideo(v, it));
+    return;
+  }
+  progressiveVideo(v, it);
 }
 
 function boot() {
@@ -320,13 +387,13 @@ function nextAudioIndex(from) {
 function openLb(idx) {
   const it = curItems[idx]; if (!it) return;
   lbIndex = idx;
+  destroyHls();
   document.getElementById("lbSeek").style.display = "none";
   syncQBtn(it.kind === "video");
   const body = document.getElementById("lbBody");
   if (it.kind === "video") {
-    // 형제 자막(subs — 백엔드가 목록에서 붙여줌)을 <track> 으로. 첫 번째(한국어 우선)가 기본 표시.
-    body.innerHTML = `<video controls autoplay playsinline src="${mediaUrl(it)}">${trackHtml(it, 0)}</video>`;
-    attachSeekRescue(body.querySelector("video"), it);
+    // 형제 자막(subs)을 <track> 으로 얹고, HLS(적응형) 우선·프로그레시브 폴백.
+    openVideo(body, it);
   } else if (it.kind === "audio") {
     // 트랜스코드 층이 없다(브라우저가 무는 포맷만 audio 로 분류) — 원본 그대로 <audio>.
     body.innerHTML = `<div class="audiobox"><div class="ico">🎵</div>`
@@ -346,6 +413,7 @@ function openLb(idx) {
   document.getElementById("lb").classList.add("open");
 }
 function closeLb() {
+  destroyHls();
   document.getElementById("lb").classList.remove("open");
   document.getElementById("lbBody").innerHTML = "";
   document.getElementById("lbSeek").style.display = "none";

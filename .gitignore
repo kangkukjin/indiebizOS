@@ -352,3 +352,6 @@ data/music/
 
 # 유튜브 릴레이 캐시 (파생물 — 5GB LRU)
 data/youtube_cache/
+
+# NAS HLS 렌디션 캐시 (파생물 — 20GB LRU)
+data/nas_stream_cache/

@@ -433,6 +433,7 @@ from api_music import router as music_router
 from api_ytrelay import router as ytrelay_router
 from api_android import router as android_router
 from api_nas import router as nas_router
+from api_nas_hls import router as nas_hls_router
 from api_showcase import router as showcase_router
 from api_family_news import router as family_news_router
 from api_portal import router as portal_router
@@ -489,6 +490,7 @@ app.include_router(music_router, tags=["music"])  # 로컬 전용 — is_public_
 app.include_router(ytrelay_router, tags=["yt-relay"])  # 로컬 전용 — is_public_remote_path 등록 금지 (외부=런처 세션)
 app.include_router(android_router, tags=["android"])
 app.include_router(nas_router, tags=["nas"])
+app.include_router(nas_hls_router, tags=["nas-hls"])   # /nas/* 는 이미 자체 세션 인증 공개 경로
 app.include_router(showcase_router, tags=["showcase"])
 app.include_router(family_news_router, tags=["family-news"])
 app.include_router(portal_router, tags=["portal"])

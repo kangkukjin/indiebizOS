@@ -62,3 +62,27 @@
 - **맥이 켜져 있어야 갤러리가 열린다**(원본은 이미 그랬음). 맥이 꺼지면 SPA 가 안내.
 - 게이트: 맥이 slug→바스켓→folder 소속 + 경로 이탈을 검증. raw 절대경로 안 받음(folder_id + rel).
 - R2 는 SPA 호스팅 + 썸네일/원본 지연 캐시로만. 옛 manifest·thumbs·spaces 는 고아(무해).
+
+## 동영상 HLS 적응형 (2026-08-04 — 넷플릭스식 화질 자동 전환)
+
+유튜브 릴레이의 sidx→byterange HLS 를 로컬 파일에 이식하되, 사다리는 우리가 만든다
+(단일 소스 `backend/hls_ladder.py`, NAS 파인더 `/nas/hls/*`(api_nas_hls.py)와 공유).
+
+- **렌디션 = 전역 sidx fMP4 한 파일**(ftyp+moov+sidx+moof…, 유튜브 DASH 구조).
+  같은 캐시 파일이 프로그레시브(Range)와 HLS 세그먼트(EXT-X-BYTERANGE)를 동시 서빙 —
+  조각 파일 스프레이 없음, LRU·R2 키가 '파일 하나' 그대로. 스트리밍 트랜스코드의
+  완주 리먹스(thumbnails.finish_stream_transcode)도 이 포맷으로 바뀌었다(faststart 은퇴).
+  ★empty_moov 는 duration=0 → patch_file_duration 이 moov 세 박스를 박는다(스캔 범위는
+  moov 끝까지 — moof 까지 훑으면 sidx 바이너리 우연 일치가 색인을 오염시킬 수 있다).
+- **렁 = tiny(480p ≤0.6M 신설)/low(720p)/orig, h264 만.** lowh(HEVC)는 변형 간 코덱
+  혼합 전환이 기기별 리스크라 사다리 밖(프로그레시브 토글 전용 유지).
+- **빌드 = 요청 기반**: `/showcase/hls/<slug>/<fid>?rel=` 마스터 요청이 결핍 렁을
+  전역 단일 워커에 enqueue(tiny·low=인코딩, orig=원본이 웹 코덱일 때만 -c copy 리먹스,
+  옛 faststart 캐시=reindex 승격). 사다리 없으면 404 → SPA 가 기존 프로그레시브로
+  폴백(그 시청의 tee 캐시가 첫 렁) → 볼수록 사다리가 자란다.
+- **Worker**: m3u8 만 새 no-store 프록시(`/s/<slug>/hls/…`) — 세그먼트는 기존 media
+  URL 의 Range 그대로(R2 캐시 재사용). `rv=`(렌디션 파일 **크기**)가 캐시 키에 합류 —
+  재인코딩으로 바이트가 바뀌면 키가 갈린다(★mtime 은 LRU touch 로 매 시청 변해 못 쓴다).
+- **SPA 화질 버튼 3상**: ⚡자동(HLS)→🐢저용량(프로그레시브 low/lowh)→🎞원본→자동.
+  자동이 기본 — 느린 회선은 hls.js 가 조각마다 강등(테슬라 '소리만 나오고 정지'의 근본 해소).
+- **LRU**: showcase 30GB(`media_web/`)·NAS 20GB(`nas_stream_cache/`), 서빙마다 mtime 터치.

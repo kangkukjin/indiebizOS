@@ -327,6 +327,39 @@ def patch_fmp4_duration(head: bytes, duration_s: float) -> bytes:
     except Exception:
         return head
 
+
+def patch_file_duration(path: str) -> None:
+    """완성된 fMP4 파일의 moov duration 을 제자리 패치(파일판 patch_fmp4_duration).
+
+    empty_moov 산출물은 mvhd/tkhd/mdhd 가 전부 0 — sidx 만으로도 대부분의 데무서가
+    길이를 알지만, 프로그레시브 <video> 총 길이 표시를 어느 브라우저에서도 보장하려면
+    박아 두는 게 안전하다. ★스캔 범위를 moov 박스 끝까지로 자른다 — moof 까지 훑으면
+    sidx 바이너리에서 우연한 태그 일치가 색인을 8바이트 오염시킬 수 있다."""
+    import struct as _struct
+    try:
+        dur = probe_video_duration(path)
+        if dur <= 0:
+            return
+        with open(path, "r+b") as f:
+            head = f.read(1 << 20)
+            pos, moov_end = 0, 0
+            while pos + 8 <= len(head):
+                size = _struct.unpack(">I", head[pos:pos + 4])[0]
+                if size < 8:
+                    break
+                if head[pos + 4:pos + 8] == b"moov":
+                    moov_end = pos + size
+                    break
+                pos += size
+            if not moov_end or moov_end > len(head):
+                return
+            patched = patch_fmp4_duration(head[:moov_end], dur)
+            if patched != head[:moov_end] and len(patched) == moov_end:
+                f.seek(0)
+                f.write(patched)
+    except Exception:
+        pass
+
 # ── 저대역 렌디션(quality="low") ────────────────────────────────────────────
 # 기본 인코딩은 CRF 24 · 원본 해상도 · 비트레이트 상한 없음 — 1080p 에서 평균 3~5Mbps 가
 # 나오고 복잡한 장면은 더 치솟는다. video_copy 경로는 원본 비트레이트를 그대로 통과시켜
@@ -341,6 +374,16 @@ _LOW_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28",
               "-maxrate", "%dk" % LOW_MAXRATE_K, "-bufsize", "%dk" % (LOW_MAXRATE_K * 2),
               "-vf", "scale=-2:'min(720,ih)'", "-pix_fmt", "yuv420p"]
 _LOW_AUDIO = ["-c:a", "aac", "-b:a", "96k", "-ac", "2"]
+
+# ── 최저 렌디션(quality="tiny", 480p) ────────────────────────────────────────
+# HLS 사다리(hls_ladder)의 바닥 렁. low(1.2M+96k≈1.3Mbps)는 실측 1.4Mbps 회선
+# (테슬라 MCU2)에서 마진이 7%뿐이라 적응형의 '안 멈추는 바닥'이 못 된다 —
+# 480p ~600k+96k≈0.7Mbps 가 그 바닥(회선의 절반). 사다리 밖 프로그레시브로도
+# 유효한 q 값(캐시 슬롯 <key>.tiny.mp4).
+TINY_MAXRATE_K = 600
+_TINY_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
+               "-maxrate", "%dk" % TINY_MAXRATE_K, "-bufsize", "%dk" % (TINY_MAXRATE_K * 2),
+               "-vf", "scale=-2:'min(480,ih)'", "-pix_fmt", "yuv420p"]
 
 # ── HEVC 저대역(quality="lowh") ──────────────────────────────────────────────
 # 같은 체감 화질이 H.264 의 절반 비트레이트에 담긴다 — 비디오 ~650k + 오디오 96k
@@ -395,7 +438,8 @@ def _low_hevc_video() -> list:
 
 def low_profile_note() -> str:
     """저대역 프로필 요약 — 로그·진단용(설정이 코드 안에만 살지 않게)."""
-    return "720p / h264<=%dk·hevc~%dk / aac 96k stereo" % (LOW_MAXRATE_K, LOW_HEVC_RATE_K)
+    return ("720p / h264<=%dk·hevc~%dk / aac 96k stereo (+tiny 480p<=%dk)"
+            % (LOW_MAXRATE_K, LOW_HEVC_RATE_K, TINY_MAXRATE_K))
 
 
 def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
@@ -417,8 +461,9 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
     tmp = os.path.join(cache_dir, f".{uuid.uuid4().hex[:12]}.part.mp4")
     # ★quality="low"/"lowh" 는 video_copy 를 이긴다 — 저대역의 목적이 해상도·
     #   비트레이트를 *내리는* 것이라, 원본이 웹 코덱이어도 반드시 재인코딩해야 한다.
-    low = quality in ("low", "lowh")
-    vcodec = ((_low_hevc_video() if quality == "lowh" else _LOW_VIDEO) if low else
+    low = quality in ("low", "lowh", "tiny")
+    vcodec = ((_TINY_VIDEO if quality == "tiny" else
+               _low_hevc_video() if quality == "lowh" else _LOW_VIDEO) if low else
               (["-c:v", "copy"] if video_copy else
                ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
                 "-pix_fmt", "yuv420p"]))
@@ -445,8 +490,9 @@ def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool
     타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
     # quality="low"/"lowh" = 저대역 재인코딩(copy 계열을 이긴다). 단 소스가 *이미*
     # 저대역 캐시면 호출자가 copy=True 로 부르므로 여기 오지 않는다(재인코딩 낭비 없음).
-    if quality in ("low", "lowh"):
-        codec = ((_low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
+    if quality in ("low", "lowh", "tiny"):
+        codec = ((list(_TINY_VIDEO) if quality == "tiny" else
+                  _low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
                  + list(_LOW_AUDIO))
     elif copy:
         codec = ["-c", "copy"]
@@ -470,21 +516,28 @@ def kill_stream(proc) -> None:
 
 
 def finish_stream_transcode(proc, tmp: str, cache_dst: str) -> None:
-    """ffmpeg 종료 대기 후 성공이면 tmp(fMP4)를 faststart 로 리먹스해 캐시 완성
-    (-c copy, 초 단위), 실패면 tmp 폐기. 동시 시청으로 변환이 겹치면 tmp 가
-    제각각이라 마지막 완주가 캐시가 된다(무해)."""
+    """ffmpeg 종료 대기 후 성공이면 tmp(fMP4)를 **전역 sidx fMP4** 로 리먹스해 캐시
+    완성(-c copy, 초 단위), 실패면 tmp 폐기. 동시 시청으로 변환이 겹치면 tmp 가
+    제각각이라 마지막 완주가 캐시가 된다(무해).
+
+    ★리먹스 산출물이 옛 faststart 아니라 ftyp+moov+sidx+moof…(유튜브 DASH 구조)인
+    이유: 같은 캐시 파일이 프로그레시브(Range)와 HLS byterange 세그먼트(hls_ladder)를
+    동시에 서빙한다. 브라우저 프로그레시브 seek 은 sidx 가 색인 역할(실브라우저 검증).
+    empty_moov 는 duration=0 이라 patch_file_duration 으로 세 박스를 마저 박는다."""
     try:
         rc = proc.wait()
         if rc == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 0:
             r = subprocess.run(
-                ["ffmpeg", "-v", "error", "-y", "-i", tmp,
-                 "-c", "copy", "-movflags", "+faststart", cache_dst],
+                ["ffmpeg", "-v", "error", "-y", "-i", tmp, "-c", "copy",
+                 "-movflags", "frag_keyframe+empty_moov+default_base_moof+global_sidx",
+                 cache_dst],
                 capture_output=True, timeout=600)
             if not (r.returncode == 0 and os.path.exists(cache_dst)
                     and os.path.getsize(cache_dst) > 0):
                 os.replace(tmp, cache_dst)   # 리먹스 실패 — fMP4 그대로도 재생 가능
             else:
                 os.unlink(tmp)
+            patch_file_duration(cache_dst)
             return
     except Exception:
         pass

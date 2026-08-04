@@ -499,6 +499,29 @@ export default {
     if (kind === "list") {
       return proxyList(env, slug, url.searchParams.get("path") || "");
     }
+    // HLS 적응형 플레이리스트(m3u8) — no-store 프록시. 렁(렌디션) 가용성이 빌드에
+    // 따라 변하는 데다 마스터 요청이 결핍 렁 빌드를 방아쇠하므로 엣지 캐시 금지.
+    // 세그먼트는 별도 라우트가 아니다 — 변형 플레이리스트가 기존 media URL 의
+    // byterange 를 가리켜, 아래 media 분기(R2 Range 서빙)가 그대로 받는다.
+    if (kind === "hls") {
+      const fid = rest[1] || "";
+      const rel = url.searchParams.get("rel") || "";
+      if (!fid || !rel) return new Response("bad request", { status: 400 });
+      if (!env.ORIGIN_BASE || !env.SHOWCASE_SECRET) return new Response("origin 미설정", { status: 500 });
+      const hr = url.searchParams.get("r") || "";
+      const macSub = `hls/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}`
+        + `?rel=${encodeURIComponent(rel)}${hr ? "&r=" + encodeURIComponent(hr) : ""}`;
+      let hresp;
+      try {
+        hresp = await fetch(macUrl(env, macSub), { headers: { "X-Showcase-Secret": env.SHOWCASE_SECRET } });
+      } catch (e) {
+        return new Response("맥 접근 불가", { status: 503 });
+      }
+      return new Response(hresp.body, {
+        status: hresp.status,
+        headers: { "content-type": "application/vnd.apple.mpegurl", "cache-control": "no-store" },
+      });
+    }
     if (kind === "thumb" || kind === "media" || kind === "sub") {
       const fid = rest[1] || "";
       const rel = url.searchParams.get("rel") || "";
@@ -528,8 +551,12 @@ export default {
       // 가른다** — 안 가르면 저대역으로 한 번 본 영상이 R2 에서 데스크탑에도 720p 로
       // 나가고, HEVC 판이 h264 만 되는 기기에 나간다.
       const qp = url.searchParams.get("q");
-      const q = (qp === "low" || qp === "lowh") ? qp : "";
-      const key = `cache/media/${fid}/${h}_${v}${q ? "_q" + q : ""}${t ? "_t" + t : ""}`;
+      const q = (qp === "low" || qp === "lowh" || qp === "tiny") ? qp : "";
+      // rv = 렌디션 파일 크기(HLS 변형 플레이리스트가 심음) — 재인코딩·재인덱스로
+      // 바이트가 바뀌면 키가 갈린다. 낡은 R2 바이트에 새 색인의 byterange 를 대면
+      // 재생이 깨지므로 필수. 맥으로는 전달 안 함(키 전용).
+      const rv = url.searchParams.get("rv") || "";
+      const key = `cache/media/${fid}/${h}_${v}${q ? "_q" + q : ""}${t ? "_t" + t : ""}${rv ? "_r" + rv : ""}`;
       const macSub = `media/${encodeURIComponent(slug)}/${encodeURIComponent(fid)}?rel=${encodeURIComponent(rel)}`
         + (q ? "&q=" + q : "")
         + (t ? "&t=" + encodeURIComponent(t) : "");

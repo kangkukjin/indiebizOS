@@ -559,10 +559,26 @@ async function playVideo(p) {
     } catch(e) {}
 
     const srcUrl = needsTranscode ? `${API}/transcode?path=${encodeURIComponent(p)}` : url;
-    const srcType = needsTranscode ? ' type="video/mp4"' : '';
+    const srcType = needsTranscode ? 'video/mp4' : '';
+    // HLS 적응형(화질 자동 전환) 우선 — 사다리(렌디션 캐시)가 준비돼 있으면 hls.js 가
+    // 조각마다 회선에 맞춰 갈아탄다. 404(사다리 준비 전)·치명 오류면 기존 프로그레시브
+    // (/file 또는 /transcode)로 폴백. 마스터 요청 자체가 백그라운드 렁 빌드를 방아쇠
+    // 하므로 첫 시청의 404 도 헛걸음이 아니다(다음 시청부터 적응형).
+    const masterUrl = `${API}/hls/master.m3u8?path=${encodeURIComponent(p)}`;
 
     const w = window.open('','_blank');
-    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh}video{max-width:100%;max-height:100vh}video::cue{background:rgba(0,0,0,0.7);color:#fff;font-size:1.1em}</style></head><body><video controls autoplay crossorigin="anonymous"><source src="${srcUrl}"${srcType}>${trackTags}</video></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;justify-content:center;align-items:center;height:100vh}video{max-width:100%;max-height:100vh}video::cue{background:rgba(0,0,0,0.7);color:#fff;font-size:1.1em}</style><script src="https://cdn.jsdelivr.net/npm/hls.js@1"><\/script></head><body><video controls autoplay crossorigin="anonymous">${trackTags}</video><script>
+var v=document.querySelector('video');
+var MASTER=${JSON.stringify(masterUrl)},FB=${JSON.stringify(srcUrl)},FBT=${JSON.stringify(srcType)};
+var fell=false;
+function prog(){if(fell)return;fell=true;var s=document.createElement('source');s.src=FB;if(FBT)s.type=FBT;v.appendChild(s);v.load();if(v.play)v.play().catch(function(){});}
+fetch(MASTER,{credentials:'same-origin'}).then(function(r){
+  if(!r.ok)throw 0;
+  if(window.Hls&&Hls.isSupported()){var h=new Hls();h.on(Hls.Events.ERROR,function(e,d){if(d.fatal){try{h.destroy();}catch(x){}prog();}});h.loadSource(MASTER);h.attachMedia(v);}
+  else if(v.canPlayType('application/vnd.apple.mpegurl')){v.src=MASTER;}
+  else throw 0;
+}).catch(prog);
+<\/script></body></html>`);
 }
 
 function viewImage(p) {

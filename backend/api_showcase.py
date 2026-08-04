@@ -26,12 +26,14 @@ from starlette.concurrency import run_in_threadpool
 
 import thumbnails
 import nas_subtitle
+import hls_ladder
 
 router = APIRouter(prefix="/showcase", tags=["showcase"])
 
 _ROOT = Path(__file__).resolve().parent.parent
 _STATE = _ROOT / "data" / "showcase_state.json"
 _WEB_MEDIA = _ROOT / "data" / "showcase_stage" / "media_web"   # 트랜스코드 로컬 캐시
+_WEB_MEDIA_CAP = 30 * 1024 * 1024 * 1024   # 렌디션 캐시 LRU 상한(전부 파생물 — 재생성 가능)
 _EXCLUDE_DIRS = {"node_modules", ".git", "__pycache__", ".venv", "venv", ".Trash", "thumbnail_cache"}
 _THUMB_SIZE = 512
 
@@ -326,7 +328,7 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
     folder, abspath = _resolve(slug, fid, rel, x_showcase_secret)
     settings = _load_state().get("settings") or {}
     kind = thumbnails.classify(abspath)
-    low = q in ("low", "lowh")
+    low = q in ("low", "lowh", "tiny")   # tiny=HLS 사다리 바닥 렁(480p) — hls_ladder 참조
     qual = q if low else ""
 
     # ⓪ 오프셋 스트림 — 항상 0 기준 fMP4 로 결정론 응답(SPA 스왑 계약).
@@ -375,6 +377,7 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
         key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
         cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         if cache.exists() and cache.stat().st_size > 0:
+            hls_ladder.touch(str(cache))   # LRU 근거 — 재생(HLS 세그먼트 포함)마다 젊어진다
             return FileResponse(str(cache), media_type="video/mp4")
         # ★저대역은 코덱과 무관하게 항상 변환한다 — h264 원본이라도 해상도·비트레이트를
         #   내리는 게 목적이라 '이미 재생 가능'은 이유가 되지 못한다(원본 경로와 갈리는 곳).
@@ -406,6 +409,55 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
 
     # 그 외(또는 폴백) — FileResponse 가 content-type + Range 자동 처리.
     return FileResponse(abspath, filename=os.path.basename(abspath))
+
+
+@router.get("/hls/{slug}/{fid}")
+async def hls_playlist(slug: str, fid: str, rel: str = Query(...), r: str = Query(default=""),
+                       x_showcase_secret: str = Header(default="")):
+    """HLS 적응형 플레이리스트 — r 없음=마스터, r=렁(tiny|low|orig)=변형.
+
+    로컬 파일 사다리(hls_ladder): 렌디션 = 기존 캐시 슬롯 그대로(전역 sidx fMP4 한
+    파일), 세그먼트 = 기존 media URL 의 byterange — 새 저장 구조가 없다. 사다리가
+    아직 없으면 404(표면이 기존 프로그레시브로 폴백)하되 결핍 렁 빌드를 enqueue —
+    첫 시청이 tee 로 만든 캐시가 첫 렁이 되어, 볼수록 사다리가 자란다.
+    ★플레이리스트는 no-store — 렁 가용성이 빌드에 따라 변한다(Worker·엣지 동형)."""
+    from urllib.parse import quote
+    folder, abspath = _resolve(slug, fid, rel, x_showcase_secret)
+    if thumbnails.classify(abspath) != "video":
+        raise HTTPException(status_code=404, detail="not a video")
+    key = hashlib.md5(f"{fid}/{rel}".encode("utf-8")).hexdigest()[:16]
+    orig_cache = str(_WEB_MEDIA / fid / (key + ".mp4"))
+    v = int(os.stat(abspath).st_mtime)
+    base = f"/s/{quote(slug, safe='')}"
+    qs = f"rel={quote(rel, safe='')}&v={v}"
+
+    if not r:
+        rungs = await run_in_threadpool(hls_ladder.available_rungs, orig_cache)
+        # 결핍 렁 빌드 enqueue(중복 dedupe·전역 단일 워커) + 10분 주기 LRU 정리
+        hls_ladder.ensure_ladder(abspath, orig_cache,
+                                 prune_root=str(_WEB_MEDIA), prune_cap=_WEB_MEDIA_CAP)
+        if not rungs:
+            raise HTTPException(status_code=404, detail="사다리 준비 전 — 프로그레시브로 폴백")
+        body = hls_ladder.master_m3u8(
+            rungs, lambda rung: f"{base}/hls/{quote(fid, safe='')}?{qs}&r={rung}")
+    else:
+        if r not in hls_ladder.RUNG_ORDER:
+            raise HTTPException(status_code=404, detail="없는 렁")
+        path = hls_ladder.rung_path(orig_cache, r)
+        idx = await run_in_threadpool(hls_ladder.parse_sidx_file, path)
+        if not idx:
+            raise HTTPException(status_code=404, detail="렁 캐시 없음")
+        # rv=렌디션 파일 크기 — 재인코딩·재인덱스로 바이트가 바뀌면 Worker R2 캐시
+        # 키가 갈리게(낡은 R2 바이트에 새 색인의 byterange 를 대면 재생이 깨진다).
+        # mtime 은 LRU touch 로 매 시청 변해 캐시 재사용을 죽이므로 크기를 쓴다.
+        rv = os.stat(path).st_size
+        q = {"orig": "", "low": "low", "tiny": "tiny"}[r]
+        seg = (f"{base}/media/{quote(fid, safe='')}?{qs}"
+               + (f"&q={q}" if q else "") + f"&rv={rv}")
+        hls_ladder.touch(path)
+        body = hls_ladder.variant_m3u8(idx, seg)
+    return Response(body, media_type="application/vnd.apple.mpegurl",
+                    headers={"Cache-Control": "no-store"})
 
 
 def _subtitle_vtt(abspath: str, cls: str) -> str:

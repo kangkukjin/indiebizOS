@@ -74,8 +74,11 @@
   완주 리먹스(thumbnails.finish_stream_transcode)도 이 포맷으로 바뀌었다(faststart 은퇴).
   ★empty_moov 는 duration=0 → patch_file_duration 이 moov 세 박스를 박는다(스캔 범위는
   moov 끝까지 — moof 까지 훑으면 sidx 바이너리 우연 일치가 색인을 오염시킬 수 있다).
-- **렁 = tiny(480p ≤0.6M 신설)/low(720p)/orig, h264 만.** lowh(HEVC)는 변형 간 코덱
-  혼합 전환이 기기별 리스크라 사다리 밖(프로그레시브 토글 전용 유지).
+- **렁 = nano(360p ≤0.35M)/tiny(480p ≤0.6M)/low(720p)/orig, h264 만.** lowh(HEVC)는
+  변형 간 코덱 혼합 전환이 기기별 리스크라 사다리 밖(프로그레시브 토글 전용 유지).
+  nano=비상 바닥 — 테슬라는 시동을 걸면 와이파이→LTE 로 갈아타고 그 LTE 를 차 자체
+  (지도·텔레메트리)와 나눠 쓴다: tiny(~0.7Mbps)조차 순간 굶는 상황의 마지노선.
+  ★오디오는 전 렁 동일(aac 96k 스테레오) — 변형 전환 시 오디오 설정이 갈리면 딸꾹질.
 - **빌드 = 요청 기반**: `/showcase/hls/<slug>/<fid>?rel=` 마스터 요청이 결핍 렁을
   전역 단일 워커에 enqueue(tiny·low=인코딩, orig=원본이 웹 코덱일 때만 -c copy 리먹스,
   옛 faststart 캐시=reindex 승격). 사다리 없으면 404 → SPA 가 기존 프로그레시브로

@@ -29,9 +29,11 @@ import time
 
 import thumbnails
 
-# 렁 이름 → 캐시 파일 접미(<key>.mp4 / <key>.low.mp4 / <key>.tiny.mp4 — 기존 명명 그대로)
-_SUFFIX = {"orig": "", "low": ".low", "tiny": ".tiny"}
-RUNG_ORDER = ["tiny", "low", "orig"]          # 마스터 나열 순서(대역 오름차순)
+# 렁 이름 → 캐시 파일 접미(<key>.mp4 / <key>.low.mp4 / … — 기존 명명 그대로)
+# nano(360p ~0.45Mbps)=비상 바닥: 테슬라 시동=와이파이→LTE 전환 + 차 자체 트래픽과
+# 회선 공유 — tiny(~0.7Mbps)조차 순간 굶는 상황의 마지노선.
+_SUFFIX = {"orig": "", "low": ".low", "tiny": ".tiny", "nano": ".nano"}
+RUNG_ORDER = ["nano", "tiny", "low", "orig"]  # 마스터 나열 순서(대역 오름차순)
 
 _FRAG_SIDX_FLAGS = "frag_keyframe+empty_moov+default_base_moof+global_sidx"
 
@@ -254,7 +256,8 @@ def _job_encode(dst: str, src: str, rung: str) -> None:
         codec = ["-c:v", "copy"] + (["-c:a", "copy"] if acopy
                                     else ["-c:a", "aac", "-b:a", "128k", "-ac", "2"])
     else:
-        video = thumbnails._TINY_VIDEO if rung == "tiny" else thumbnails._LOW_VIDEO
+        video = {"nano": thumbnails._NANO_VIDEO, "tiny": thumbnails._TINY_VIDEO,
+                 "low": thumbnails._LOW_VIDEO}[rung]
         codec = (list(video) + ["-force_key_frames", "expr:gte(t,n_forced*4)"]
                  + list(thumbnails._LOW_AUDIO))
     cmd = (["ffmpeg", "-v", "error", "-y", "-i", os.path.abspath(src)] + codec

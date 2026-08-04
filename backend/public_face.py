@@ -271,7 +271,7 @@ def _map(method: str, path: str, query: dict, raw_query: str):
                 return {"status": 400}
             t = query.get("t", "")
             tail = f"&t={_enc(t)}" if t else ""       # 오프셋 스트림(첫 시청 중 seek)
-            if query.get("q") in ("low", "lowh", "tiny"):   # 저대역 렌디션(tiny=HLS 바닥 렁)
+            if query.get("q") in ("low", "lowh", "tiny", "nano"):   # 저대역 렌디션(tiny/nano=HLS 하부 렁)
                 tail += "&q=" + query["q"]
             return {"target": f"/showcase/{kind}/{_enc(slug)}/{_enc(fid)}?rel={_enc(rel)}{tail}",
                     "cache": "public, max-age=86400"}

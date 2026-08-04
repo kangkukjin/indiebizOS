@@ -385,6 +385,17 @@ _TINY_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
                "-maxrate", "%dk" % TINY_MAXRATE_K, "-bufsize", "%dk" % (TINY_MAXRATE_K * 2),
                "-vf", "scale=-2:'min(480,ih)'", "-pix_fmt", "yuv420p"]
 
+# ── 비상 렌디션(quality="nano", 360p) ────────────────────────────────────────
+# 사다리의 진짜 바닥. 테슬라는 시동을 걸면 와이파이→LTE 로 갈아타는데(실측
+# 1.4Mbps·rtt 350ms), 그 LTE 를 차 자체(지도·텔레메트리)와 나눠 쓴다 — tiny
+# (~0.7Mbps)조차 순간적으로 굶을 수 있다. 360p ~350k+오디오 96k ≈ 0.45Mbps 는
+# 그 회선의 1/3. ★오디오 파라미터는 전 렁 동일(_LOW_AUDIO) — 변형 간 전환 시
+# 오디오 설정이 갈리면 기기별 딸꾹질 리스크.
+NANO_MAXRATE_K = 350
+_NANO_VIDEO = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "32",
+               "-maxrate", "%dk" % NANO_MAXRATE_K, "-bufsize", "%dk" % (NANO_MAXRATE_K * 2),
+               "-vf", "scale=-2:'min(360,ih)'", "-pix_fmt", "yuv420p"]
+
 # ── HEVC 저대역(quality="lowh") ──────────────────────────────────────────────
 # 같은 체감 화질이 H.264 의 절반 비트레이트에 담긴다 — 비디오 ~650k + 오디오 96k
 # ≈ 750k 로, 실측 1.4Mbps 회선(테슬라 MCU2)에서 마진이 7%→2배로 벌어진다.
@@ -438,8 +449,8 @@ def _low_hevc_video() -> list:
 
 def low_profile_note() -> str:
     """저대역 프로필 요약 — 로그·진단용(설정이 코드 안에만 살지 않게)."""
-    return ("720p / h264<=%dk·hevc~%dk / aac 96k stereo (+tiny 480p<=%dk)"
-            % (LOW_MAXRATE_K, LOW_HEVC_RATE_K, TINY_MAXRATE_K))
+    return ("720p / h264<=%dk·hevc~%dk / aac 96k stereo (+tiny 480p<=%dk·nano 360p<=%dk)"
+            % (LOW_MAXRATE_K, LOW_HEVC_RATE_K, TINY_MAXRATE_K, NANO_MAXRATE_K))
 
 
 def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
@@ -461,8 +472,9 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
     tmp = os.path.join(cache_dir, f".{uuid.uuid4().hex[:12]}.part.mp4")
     # ★quality="low"/"lowh" 는 video_copy 를 이긴다 — 저대역의 목적이 해상도·
     #   비트레이트를 *내리는* 것이라, 원본이 웹 코덱이어도 반드시 재인코딩해야 한다.
-    low = quality in ("low", "lowh", "tiny")
-    vcodec = ((_TINY_VIDEO if quality == "tiny" else
+    low = quality in ("low", "lowh", "tiny", "nano")
+    vcodec = ((_NANO_VIDEO if quality == "nano" else
+               _TINY_VIDEO if quality == "tiny" else
                _low_hevc_video() if quality == "lowh" else _LOW_VIDEO) if low else
               (["-c:v", "copy"] if video_copy else
                ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
@@ -490,8 +502,9 @@ def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool
     타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
     # quality="low"/"lowh" = 저대역 재인코딩(copy 계열을 이긴다). 단 소스가 *이미*
     # 저대역 캐시면 호출자가 copy=True 로 부르므로 여기 오지 않는다(재인코딩 낭비 없음).
-    if quality in ("low", "lowh", "tiny"):
-        codec = ((list(_TINY_VIDEO) if quality == "tiny" else
+    if quality in ("low", "lowh", "tiny", "nano"):
+        codec = ((list(_NANO_VIDEO) if quality == "nano" else
+                  list(_TINY_VIDEO) if quality == "tiny" else
                   _low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
                  + list(_LOW_AUDIO))
     elif copy:

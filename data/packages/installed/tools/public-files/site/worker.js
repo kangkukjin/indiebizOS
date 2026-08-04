@@ -551,7 +551,7 @@ export default {
       // 가른다** — 안 가르면 저대역으로 한 번 본 영상이 R2 에서 데스크탑에도 720p 로
       // 나가고, HEVC 판이 h264 만 되는 기기에 나간다.
       const qp = url.searchParams.get("q");
-      const q = (qp === "low" || qp === "lowh" || qp === "tiny") ? qp : "";
+      const q = (qp === "low" || qp === "lowh" || qp === "tiny" || qp === "nano") ? qp : "";
       // rv = 렌디션 파일 크기(HLS 변형 플레이리스트가 심음) — 재인코딩·재인덱스로
       // 바이트가 바뀌면 키가 갈린다. 낡은 R2 바이트에 새 색인의 byterange 를 대면
       // 재생이 깨지므로 필수. 맥으로는 전달 안 함(키 전용).

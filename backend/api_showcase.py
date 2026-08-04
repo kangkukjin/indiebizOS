@@ -328,7 +328,7 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
     folder, abspath = _resolve(slug, fid, rel, x_showcase_secret)
     settings = _load_state().get("settings") or {}
     kind = thumbnails.classify(abspath)
-    low = q in ("low", "lowh", "tiny")   # tiny=HLS 사다리 바닥 렁(480p) — hls_ladder 참조
+    low = q in ("low", "lowh", "tiny", "nano")   # tiny/nano=HLS 사다리 하부 렁 — hls_ladder 참조
     qual = q if low else ""
 
     # ⓪ 오프셋 스트림 — 항상 0 기준 fMP4 로 결정론 응답(SPA 스왑 계약).
@@ -451,7 +451,7 @@ async def hls_playlist(slug: str, fid: str, rel: str = Query(...), r: str = Quer
         # 키가 갈리게(낡은 R2 바이트에 새 색인의 byterange 를 대면 재생이 깨진다).
         # mtime 은 LRU touch 로 매 시청 변해 캐시 재사용을 죽이므로 크기를 쓴다.
         rv = os.stat(path).st_size
-        q = {"orig": "", "low": "low", "tiny": "tiny"}[r]
+        q = "" if r == "orig" else r
         seg = (f"{base}/media/{quote(fid, safe='')}?{qs}"
                + (f"&q={q}" if q else "") + f"&rv={rv}")
         hls_ladder.touch(path)

@@ -1,19 +1,23 @@
-import importlib.util
+import os
+import sys
 from pathlib import Path
 
 current_dir = Path(__file__).parent
+
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
 
 # 2026-06-03 어휘 정리: [sense:realty]{op} — district_codes 흡수.
 _OP_DISPATCHERS = {"realty_op": {"query": None, "codes": None}}
 _OP_DEFAULTS = {"realty_op": "query"}
 
 
+from common.pkg_utils import load_sibling
+
 def load_module(module_name):
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """같은 디렉토리의 형제 모듈 로드 — 정본은 common.pkg_utils.load_sibling (감사 ⑥)"""
+    return load_sibling(__file__, module_name)
 
 
 # 상권 검색용 키리스 지오코딩(Nominatim). 자연어 지명(+업종)을 좌표로 내부 해소한다 —
@@ -23,7 +27,7 @@ _PLACE_NOISE_WORDS = ["카페", "커피", "음식점", "식당", "맛집", "술�
 
 
 def _geocode_query_to_latlng(query):
-    import urllib.request, urllib.parse, json as _json
+    from common.geocode import nominatim_search  # 지오코딩 단일 소스 (감사 ⑥)
     q = str(query).strip()
     if not q:
         return None
@@ -36,17 +40,9 @@ def _geocode_query_to_latlng(query):
         candidates.append(stripped)  # 지명만 (예 "강남 카페"→"강남") 우선
     candidates.append(q)
     for cand in candidates:
-        try:
-            url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
-                {"q": cand, "format": "json", "limit": 1, "countrycodes": "kr"})
-            req = urllib.request.Request(url, headers={"User-Agent": "indiebizOS/1.0"})
-            with urllib.request.urlopen(req, timeout=10) as r:
-                data = _json.loads(r.read().decode("utf-8"))
-            if data:
-                return {"lat": float(data[0]["lat"]), "lng": float(data[0]["lon"]),
-                        "matched": data[0].get("display_name", cand)}
-        except Exception:
-            continue
+        hit = nominatim_search(cand)
+        if hit:
+            return hit
     return None
 
 def execute(tool_input: dict, context):

@@ -14,16 +14,20 @@ fetch 구조가 아니다 — 실측).
 통화 = {total, items:[{name, price, mall, link, image, category, site, spec}]}
 (handler 의 기존 다나와 통화와 동일 — 호출부 무변경.)
 """
-import gzip
+import os
 import re
-import urllib.parse
-import urllib.request
+import sys
+
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+# 크롬 위장 GET 단일 소스 (감사 ⑥) — fallback="urllib" 이 폰(curl_cffi 없음) 경로
+from common.http_fetch import CHROME_UA, chrome_get
 
 _SEARCH = "https://search.danawa.com/dsearch.php"
-_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 _HEADERS = {
-    "User-Agent": _UA,
+    "User-Agent": CHROME_UA,
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
     "Referer": "https://www.danawa.com/",
@@ -32,25 +36,11 @@ _HEADERS = {
 
 def _fetch(params: dict) -> str:
     """다나와 검색 HTML. curl_cffi 우선(있으면), 없으면 stdlib urllib(폰 경로)."""
-    try:
-        from curl_cffi import requests as _creq
-    except ImportError:
-        _creq = None
-
-    if _creq is not None:
-        r = _creq.get(_SEARCH, params=params, impersonate="chrome",
-                      timeout=25, headers=_HEADERS)
-        if r.status_code != 200:
-            raise RuntimeError(f"다나와 HTTP {r.status_code}")
-        return r.text
-
-    url = _SEARCH + "?" + urllib.parse.urlencode(params)
-    req = urllib.request.Request(url, headers=_HEADERS)
-    with urllib.request.urlopen(req, timeout=25) as resp:
-        raw = resp.read()
-        if resp.headers.get("Content-Encoding") == "gzip":
-            raw = gzip.decompress(raw)
-        return raw.decode("utf-8", "replace")
+    r = chrome_get(_SEARCH, params=params, timeout=25, headers=_HEADERS,
+                   fallback="urllib")
+    if r.status_code != 200:
+        raise RuntimeError(f"다나와 HTTP {r.status_code}")
+    return r.text
 
 
 def _strip(s: str) -> str:

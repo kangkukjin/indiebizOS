@@ -15,13 +15,16 @@ TLS 지문 봇탐지 대비 curl_cffi impersonate=chrome (naver부동산 선례)
 """
 import os
 import re
+import sys
 import json
 from urllib.parse import quote as _q
 
-try:
-    from curl_cffi import requests as _creq
-except ImportError:
-    _creq = None
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+# 크롬 TLS 위장 단일 소스 (감사 ⑥ — 옛 curl_cffi 가드 복붙을 수렴)
+from common.http_fetch import chrome_get, has_curl_cffi
 import requests as _plain_requests
 
 
@@ -76,7 +79,7 @@ _YEOGI_CATEGORY = {
 
 
 def _search_goodchoice(tool_input: dict) -> dict:
-    if _creq is None:
+    if not has_curl_cffi():
         return {"success": False, "error": "curl_cffi 미설치 — 여기어때 소스는 curl_cffi가 필요합니다."}
     region = (tool_input.get("region") or tool_input.get("query") or "").strip()
     if not region:
@@ -101,7 +104,7 @@ def _search_goodchoice(tool_input: dict) -> dict:
     page = 1
     while len(items_out) < limit and page <= 5:  # 최대 5페이지(100건) 안전상한
         params["page"] = page
-        r = _creq.get(_YEOGI_URL, params=params, impersonate="chrome", timeout=20)
+        r = chrome_get(_YEOGI_URL, params=params, timeout=20)
         if r.status_code != 200:
             return {"success": False, "error": f"여기어때 응답 {r.status_code}"}
         m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text, re.S)
@@ -167,7 +170,7 @@ _33M2_CDN = "https://d1pviohoskiraj.cloudfront.net/"
 
 
 def _search_33m2(tool_input: dict) -> dict:
-    if _creq is None:
+    if not has_curl_cffi():
         return {"success": False, "error": "curl_cffi 미설치 — 삼삼엠투 소스는 curl_cffi가 필요합니다."}
     region = (tool_input.get("region") or tool_input.get("query") or "").strip()
     if not region:
@@ -185,7 +188,7 @@ def _search_33m2(tool_input: dict) -> dict:
         params["endDate"] = tool_input["checkout"]
 
     headers = {"Referer": "https://33m2.co.kr/", "Origin": "https://33m2.co.kr"}
-    r = _creq.get(_33M2_API, params=params, impersonate="chrome", timeout=20, headers=headers)
+    r = chrome_get(_33M2_API, params=params, timeout=20, headers=headers)
     if r.status_code != 200:
         return {"success": False, "error": f"삼삼엠투 응답 {r.status_code}: {r.text[:200]}"}
     rooms = (r.json().get("data") or {}).get("rooms", {})
@@ -216,7 +219,7 @@ def _search_33m2(tool_input: dict) -> dict:
     # 전체 건수 (별도 count 엔드포인트)
     total = None
     try:
-        rc = _creq.get(_33M2_API + "/count", params={"keyword": region}, impersonate="chrome",
+        rc = chrome_get(_33M2_API + "/count", params={"keyword": region},
                        timeout=10, headers=headers)
         total = (rc.json().get("data") or {}).get("roomCount")
     except Exception:

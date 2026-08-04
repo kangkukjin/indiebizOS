@@ -12,9 +12,18 @@
 """
 import base64
 import json
+import os
 import re
+import sys
 import time
 import urllib.parse
+
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+# 크롬 TLS 위장 세션 단일 소스 (감사 ⑥ — 옛 curl_cffi 주문 복붙을 수렴)
+from common.http_fetch import chrome_session, has_curl_cffi
 
 _BASE = "https://new.land.naver.com"
 _BOOTSTRAP = _BASE + "/houses?ms=37.5,127.0,15"
@@ -38,8 +47,7 @@ _token_exp = 0
 def _get_session():
     global _session
     if _session is None:
-        from curl_cffi import requests as cr  # 지연 임포트 — 미설치 시 조회 시점에 안내
-        _session = cr.Session(impersonate="chrome")
+        _session = chrome_session()  # 미설치면 RuntimeError — 진입부 has_curl_cffi() 가 먼저 안내
     return _session
 
 
@@ -186,9 +194,7 @@ def get_naver_listings(tool_input: dict):
     if not region:
         return {"success": False,
                 "error": "네이버부동산 조회에는 region(동·지명 또는 단지명, 예: '평택 비전동', '우미린센트럴파크')이 필요합니다."}
-    try:
-        import curl_cffi  # noqa: F401
-    except ImportError:
+    if not has_curl_cffi():
         return {"success": False,
                 "error": "curl_cffi 미설치 — 네이버부동산은 TLS 위장이 필요합니다. pip install curl_cffi 후 재시도하세요."}
 

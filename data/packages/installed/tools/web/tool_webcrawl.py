@@ -29,15 +29,12 @@ if _backend_dir not in sys.path:
 import requests
 from bs4 import BeautifulSoup
 
-# TLS 지문 위장 (naver부동산·여기어때와 같은 패턴). 미설치 환경이면 requests로 폴백.
-try:
-    from curl_cffi import requests as cffi_requests
-except ImportError:
-    cffi_requests = None
+# TLS 지문 위장 단일 소스 (감사 ⑥) — 미설치 환경이면 requests 로 폴백.
+from common.http_fetch import CHROME_UA, chrome_get, has_curl_cffi
 
 # User-Agent 설정 (requests 폴백용 — curl_cffi는 impersonate가 헤더 일체를 관리)
 HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    'User-Agent': CHROME_UA,
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
     'Accept-Encoding': 'gzip, deflate, br',
@@ -244,9 +241,9 @@ def _decode_body(response) -> str:
 def _crawl_static(url: str, max_length: int) -> dict:
     """정적 크롤링. curl_cffi(TLS 크롬 위장)가 있으면 그것으로, 없으면 requests."""
     try:
-        if cffi_requests is not None:
-            response = cffi_requests.get(
-                url, impersonate="chrome", timeout=15, allow_redirects=True,
+        if has_curl_cffi():
+            response = chrome_get(
+                url, timeout=15, allow_redirects=True,
                 headers={'Accept-Language': HEADERS['Accept-Language']},
             )
             method = "curl_cffi"
@@ -288,7 +285,7 @@ def _crawl_static(url: str, max_length: int) -> dict:
             msg = "연결 실패 - URL을 확인하세요"
         else:
             msg = str(e)
-        return {"success": False, "error": msg, "url": url, "method": "curl_cffi" if cffi_requests else "requests"}
+        return {"success": False, "error": msg, "url": url, "method": "curl_cffi" if has_curl_cffi() else "requests"}
 
 
 # ─── 2단계: Chrome MCP 폴백 ───

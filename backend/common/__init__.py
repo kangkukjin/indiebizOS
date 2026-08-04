@@ -9,6 +9,11 @@ Phase 0 (IBL 기반 정리)의 핵심 모듈.
     - auth_manager: API 키 중앙 관리
     - html_utils: HTML 파싱 유틸리티
     - response_formatter: 응답 포맷 표준화
+    - http_fetch: 크롬 TLS 위장 GET/세션 단일 소스 (curl_cffi, 폰=urllib 폴백)
+    - geocode: 키리스 지오코딩(Nominatim) 단일 소스
+    - pkg_utils: 패키지 형제 모듈 로드(load_sibling) 정본
+
+(http_fetch/geocode/pkg_utils 는 지연 의존 — 여기서 eager import 하지 않는다)
 """
 
 from .api_client import api_call, api_call_raw

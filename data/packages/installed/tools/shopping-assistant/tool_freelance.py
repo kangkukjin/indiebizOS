@@ -19,11 +19,15 @@
 통화 = items[{title, meta, summary, url, image, price}] (단일 통화 {items:[...]}. used/stay/realty 와 동일).
 """
 import json
+import os
+import sys
 
-try:
-    from curl_cffi import requests as _creq
-except ImportError:
-    _creq = None
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
+# 크롬 TLS 위장 단일 소스 (감사 ⑥ — 옛 curl_cffi 가드 복붙을 수렴)
+from common.http_fetch import chrome_get, has_curl_cffi
 
 _API = "https://api.kmong.com/gig-app"
 _HEADERS = {"Origin": "https://kmong.com", "Referer": "https://kmong.com/"}
@@ -42,8 +46,7 @@ def _fmt_won(n):
 
 
 def _get_json(path: str, params: dict):
-    r = _creq.get(_API + path, params=params, impersonate="chrome",
-                  timeout=20, headers=_HEADERS)
+    r = chrome_get(_API + path, params=params, timeout=20, headers=_HEADERS)
     if r.status_code != 200:
         raise RuntimeError(f"크몽 API HTTP {r.status_code} ({path})")
     return json.loads(r.text)
@@ -171,7 +174,7 @@ def _search_experts(query: str, limit: int, sort: str):
 # ── 엔트리 ───────────────────────────────────────────────────
 
 def search_freelance(tool_input: dict) -> dict:
-    if _creq is None:
+    if not has_curl_cffi():
         return {"error": "curl_cffi 미설치 — 크몽 소스는 curl_cffi 가 필요합니다.", "items": []}
     query = (tool_input.get("query") or tool_input.get("q") or "").strip()
     if not query:

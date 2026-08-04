@@ -4,22 +4,21 @@ Visualization Tools Handler
 """
 import json
 import os
-import importlib.util
 from pathlib import Path
 
 current_dir = Path(__file__).parent
 
 
-def load_module(module_name: str):
-    """동적 모듈 로드"""
-    module_path = current_dir / f"{module_name}.py"
-    if not module_path.exists():
-        raise FileNotFoundError(f"모듈을 찾을 수 없습니다: {module_name}")
+import sys
 
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend"))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+from common.pkg_utils import load_sibling
+
+def load_module(module_name):
+    """같은 디렉토리의 형제 모듈 로드 — 정본은 common.pkg_utils.load_sibling (감사 ⑥)"""
+    return load_sibling(__file__, module_name)
 
 
 def get_definitions():

@@ -83,19 +83,9 @@ def _geocode(region):
                     "matched": pick.get("description") or pick.get("name") or q}
     except Exception:
         pass
-    # 2) Nominatim 폴백 (도서관·건물 등 POI는 직방 검색에 없을 수 있음)
-    try:
-        url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
-            {"q": q, "format": "json", "limit": 1, "countrycodes": "kr"})
-        req = urllib.request.Request(url, headers={"User-Agent": "indiebizOS/1.0"})
-        with urllib.request.urlopen(req, timeout=10) as r:
-            data = json.loads(r.read().decode("utf-8"))
-        if data:
-            return {"lat": float(data[0]["lat"]), "lng": float(data[0]["lon"]),
-                    "matched": data[0].get("display_name", q)}
-    except Exception:
-        pass
-    return None
+    # 2) Nominatim 폴백 (도서관·건물 등 POI는 직방 검색에 없을 수 있음) — 단일 소스 (감사 ⑥)
+    from common.geocode import nominatim_search
+    return nominatim_search(q)
 
 
 def _sales_types(deal, lease):

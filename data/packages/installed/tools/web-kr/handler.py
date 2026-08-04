@@ -10,7 +10,6 @@ web, 한국 전용 네이버 검색은 web-kr. 이렇게 나눠야 universal 로
 
 import os
 import sys
-import importlib.util
 from pathlib import Path
 
 # common 유틸리티 사용 (backend/common — 저장소 루트 기준 5단계 상위)
@@ -23,13 +22,11 @@ from common.response_formatter import format_json
 current_dir = Path(__file__).parent
 
 
+from common.pkg_utils import load_sibling
+
 def load_module(module_name):
-    """같은 디렉토리의 모듈을 동적으로 로드"""
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """같은 디렉토리의 형제 모듈 로드 — 정본은 common.pkg_utils.load_sibling (감사 ⑥)"""
+    return load_sibling(__file__, module_name)
 
 
 def execute(tool_input: dict, context):

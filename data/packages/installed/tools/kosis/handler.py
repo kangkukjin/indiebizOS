@@ -3,7 +3,6 @@ KOSIS (국가통계포털) API 도구 패키지 핸들러
 """
 import os
 import sys
-import importlib.util
 from pathlib import Path
 
 # common 유틸리티 사용
@@ -13,12 +12,11 @@ if _backend_dir not in sys.path:
 
 current_dir = Path(__file__).parent
 
+from common.pkg_utils import load_sibling
+
 def load_module(module_name):
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """같은 디렉토리의 형제 모듈 로드 — 정본은 common.pkg_utils.load_sibling (감사 ⑥)"""
+    return load_sibling(__file__, module_name)
 
 def execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""

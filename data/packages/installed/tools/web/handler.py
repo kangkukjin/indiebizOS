@@ -33,13 +33,11 @@ current_dir = Path(__file__).parent
 OUTPUTS_DIR = 'outputs'
 
 
+from common.pkg_utils import load_sibling
+
 def load_module(module_name):
-    """같은 디렉토리의 모듈을 동적으로 로드"""
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    """같은 디렉토리의 형제 모듈 로드 — 정본은 common.pkg_utils.load_sibling (감사 ⑥)"""
+    return load_sibling(__file__, module_name)
 
 
 # ============== 뉴스 검색 관련 함수 ==============

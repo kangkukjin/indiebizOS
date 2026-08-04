@@ -727,24 +727,12 @@ def _geocode_nominatim(city: str) -> tuple:
     """OpenStreetMap Nominatim (무키). 전세계 폴백 — 한글 외국 도시까지 처리.
 
     한글 도시의 주 해소기라 일시 장애(rate-limit/타임아웃)가 곧 날씨 조회 전체 실패로
-    이어진다(이전 '수원 success=False'의 실제 원인). 일시 장애에 한 번 재시도해 견고화."""
-    for attempt in range(2):
-        try:
-            resp = requests.get(
-                "https://nominatim.openstreetmap.org/search",
-                params={"q": city, "format": "json", "limit": 1, "accept-language": "ko"},
-                headers={"User-Agent": "indiebizOS/1.0 (weather)"},
-                timeout=8
-            )
-            if resp.ok:
-                arr = resp.json()
-                if arr:
-                    return (float(arr[0]["lat"]), float(arr[0]["lon"]))
-                return None  # 정상 응답인데 결과 없음 — 재시도 무의미
-        except Exception:
-            if attempt == 0:
-                time.sleep(0.6)  # 일시 장애 — 짧은 백오프 후 1회 재시도
-    return None
+    이어진다(이전 '수원 success=False'의 실제 원인). 일시 장애에 한 번 재시도해 견고화.
+    호출은 common.geocode 단일 소스 (감사 ⑥) — 전세계(countrycodes=None)·ko 라벨."""
+    from common.geocode import nominatim_search
+    hit = nominatim_search(city, countrycodes=None, accept_language="ko",
+                           timeout=8, retries=1, user_agent="indiebizOS/1.0 (weather)")
+    return (hit["lat"], hit["lng"]) if hit else None
 
 
 def _has_hangul(s: str) -> bool:

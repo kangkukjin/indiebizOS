@@ -65,10 +65,22 @@ def execute(tool_input: dict, context):
         # source 분기 (op=query): molit=국토부 실거래가(체결, 기본) / zigbang=직방 현재 매물(호가·링크·사진)
         # / naver=네이버부동산 현재 매물(아파트 최다·단지 검색).
         _source = (tool_input.get("source") or "molit").strip().lower()
-        if _source in ("zigbang", "직방"):
-            return load_module("tool_zigbang").get_zigbang_listings(tool_input)
-        if _source in ("naver", "네이버", "네이버부동산"):
-            return load_module("tool_naver").get_naver_listings(tool_input)
+        if _source in ("zigbang", "직방", "naver", "네이버", "네이버부동산"):
+            if _source in ("zigbang", "직방"):
+                result = load_module("tool_zigbang").get_zigbang_listings(tool_input)
+            else:
+                result = load_module("tool_naver").get_naver_listings(tool_input)
+            # 침묵 무시 방지: 기간·동 필터는 실거래(molit) 전용 개념이라 호가 소스에선
+            # 적용되지 않는다. 조용히 버리면 "필터된 결과"로 오독됨(2026-08-05 감사 부류).
+            _ignored = [k for k in ("start_month", "end_month", "months", "year_month",
+                                    "month", "count_per_month", "dong")
+                        if tool_input.get(k) not in (None, "")]
+            if _ignored and isinstance(result, dict):
+                result["무시된_파라미터"] = {
+                    "keys": _ignored,
+                    "이유": f"source={_source} 는 현재 매물(호가)이라 기간·동 필터 미적용. "
+                           "기간별 체결 이력은 source 생략(molit)으로."}
+            return result
         tool_name = "realty_price"  # op=query, source=molit (기본)
 
     if tool_name in ("realty_price", "apt_trade_price", "apt_rent_price", "house_trade_price", "house_rent_price"):
@@ -164,6 +176,15 @@ def execute(tool_input: dict, context):
         # 이름→시군구 자동 해소가 일어났으면 어떤 지역으로 조회했는지 결과에 표기 (투명성)
         if isinstance(result, dict) and _resolved_region:
             result["조회지역"] = _resolved_region
+        # 침묵 무시 방지(대칭): 호가 필터·좌표는 zigbang/naver 전용 — molit 경로에선 미적용.
+        _ignored = [k for k in ("lease", "deposit_min", "deposit_max", "rent_max",
+                                "lat", "lng", "radius", "limit")
+                    if tool_input.get(k) not in (None, "")]
+        if _ignored and isinstance(result, dict):
+            result["무시된_파라미터"] = {
+                "keys": _ignored,
+                "이유": "실거래가(molit)엔 호가·좌표 필터 미적용. 현재 매물 필터는 "
+                       "source: zigbang(빌라·원룸) / naver(아파트·단지) 로."}
         # 레코드 통화 부착(비파괴) — data 목록 → records. 앱은 data, >> 파이프는 records.
         if isinstance(result, dict) and isinstance(result.get("data"), list):
             result["items"] = result.pop("data")  # 단일 통화 = native 실거래 dict(명칭/법정동/면적/거래금액…)

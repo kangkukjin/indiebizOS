@@ -3286,6 +3286,9 @@ nodes:
         target_key: op
         router: handler
         tool: memory_op
+        aliases:
+          top_k:
+          - limit
         ops:
           values:
             save: 메모리 저장 (content 필수, category/keywords 자동 추출)

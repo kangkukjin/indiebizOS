@@ -74,7 +74,9 @@ def _memory_search(db, tool_input, project_path, agent_id):
     if not query.strip():
         return json.dumps({"error": "query가 필요합니다."}, ensure_ascii=False)
 
-    limit = tool_input.get("limit", 10)
+    # 정본 파라미터=top_k (스키마·문서). limit 은 yaml aliases 로 정규화되지만,
+    # 직접 호출(reload 밖 경로) 방어로 여기서도 둘 다 읽는다.
+    limit = tool_input.get("top_k", tool_input.get("limit", 10))
     results = []
 
     # 1) 심층 메모리 검색

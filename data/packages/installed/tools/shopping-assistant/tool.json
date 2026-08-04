@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "search_shopping",
-      "description": "상품 검색을 수행합니다. 네이버 쇼핑(API), 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다.\n\n지원 사이트: naver, danawa, used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
+      "description": "상품 검색을 수행합니다. 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다. ★네이버 쇼핑 API는 2026-08 네이버가 은퇴시킴 — site:naver 는 대체 안내만 반환.\n\n지원 사이트: danawa, used, all\n\n데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}",
       "input_schema": {
         "type": "object",
         "properties": {

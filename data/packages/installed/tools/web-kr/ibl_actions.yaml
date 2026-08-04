@@ -3,12 +3,12 @@ actions:
   search_naver:
     returns: items
     fixture: '[sense:search_naver]{query: "인공지능"}'
-    description: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책 등)에 압도적. type 으로 도메인 선택(기본 webkr). 한국 출처 뉴스는 이쪽(type='news'), 글로벌 뉴스는 search_gnews.
+    description: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/백과)에 압도적. type 으로 도메인 선택(기본 webkr). 한국 출처 뉴스는 이쪽(type='news'), 글로벌 뉴스는 search_gnews. 도서는 book/search_books.
     group: research
-    target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/book/encyc/doc/shop, 기본 webkr).
+    target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/encyc, 기본 webkr).
     router: handler
     tool: naver_search
-    implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 9개 도메인(webkr/news/blog/cafe/kin/book/encyc/doc/shop) 모두 호출. 무료 일 25k 쿼리.
+    implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 6개 도메인(webkr/news/blog/cafe/kin/encyc) 호출. 무료 일 25k 쿼리. ★book/doc/shop 은 2026-08 네이버 은퇴(SE05) — 핸들러가 대체 안내 반환.
     target_key: query
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.

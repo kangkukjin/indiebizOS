@@ -3,7 +3,7 @@ actions:
   search_shopping:
     returns: items
     fixture: '[sense:search_shopping]{query: "노트북"}'
-    description: 상품 검색 및 가격 비교 (네이버 API=어디서나; 다나와·중고는 브라우저 스크래핑이라 맥 전용, 폰선 네이버만)
+    description: 상품 검색 및 가격 비교 (다나와·중고 — 브라우저 스크래핑이라 PC 전용. ★네이버 쇼핑 API는 2026-08 네이버 은퇴)
     group: research
     target_description: 상품명
     router: handler
@@ -124,10 +124,11 @@ tool_json:
     version: 1.1.0
   tools:
   - name: search_shopping
-    description: '상품 검색을 수행합니다. 네이버 쇼핑(API), 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다.
+    description: '상품 검색을 수행합니다. 다나와(크롤링), 중고 거래 사이트(중고나라, 번개장터 등)를 지원합니다.
+      ★네이버 쇼핑 API는 2026-08 네이버가 은퇴시킴 — site:naver 는 대체 안내만 반환.
 
 
-      지원 사이트: naver, danawa, used, all
+      지원 사이트: danawa, used, all
 
 
       데이터 형식: {items: [{name, price, mall, link, image, category, site}], total}'

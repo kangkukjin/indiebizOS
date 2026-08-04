@@ -1,9 +1,10 @@
 """
 네이버 검색 API 도구
 
-단일 도구로 네이버의 모든 검색 도메인을 호출합니다. (웹 문서/뉴스/블로그/카페/지식인/책/백과)
+단일 도구로 네이버의 검색 도메인을 호출합니다. (웹 문서/뉴스/블로그/카페/지식인/백과)
 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 모든 엔드포인트가 작동합니다.
 한국어 검색에서 DuckDuckGo/Google보다 압도적으로 강합니다.
+★book/doc/shop 도메인은 2026-08 네이버가 은퇴시킴(_RETIRED_TYPES 참조).
 """
 import os
 import sys
@@ -25,10 +26,18 @@ _TYPE_ENDPOINTS = {
     "blog": "/v1/search/blog.json",           # 블로그
     "cafe": "/v1/search/cafearticle.json",    # 카페 글
     "kin": "/v1/search/kin.json",             # 지식인
-    "book": "/v1/search/book.json",           # 책
     "encyc": "/v1/search/encyc.json",         # 백과사전
-    "doc": "/v1/search/doc.json",             # 전문자료
-    "shop": "/v1/search/shop.json",           # 쇼핑
+}
+
+# ★2026-08-04 실측: 네이버가 book/doc/shop 검색 API 를 은퇴시킴 — 404 SE05
+# "존재하지 않는 검색 api". 같은 키로 나머지 6개 도메인은 정상(전수 실측).
+# 별칭("책"/"쇼핑" 등)은 그대로 두어 여기로 흘러와 명확한 대체 안내를 받게 한다.
+_RETIRED_TYPES = {
+    "book": "네이버 책 검색 API는 은퇴했습니다(2026-08 실측, SE05). "
+            "국내 도서·대출은 [sense:book](도서관정보나루), 서지·표지는 [sense:search_books](Google Books) 사용.",
+    "doc": "네이버 전문자료 검색 API는 은퇴했습니다(2026-08 실측, SE05). 논문·학술자료는 [sense:paper] 사용.",
+    "shop": "네이버 쇼핑 검색 API는 은퇴했습니다(2026-08 실측, SE05). "
+            "상품 검색은 [sense:search_shopping](다나와·중고, PC 전용) 사용.",
 }
 
 # 자연어 별칭 — 사용자/AI가 자주 쓰는 표현을 정식 type으로 정규화
@@ -80,20 +89,8 @@ def _format_item(item: dict, type_: str) -> dict:
     elif type_ == "cafe":
         base["cafe_name"] = item.get("cafename", "")
         base["cafe_url"] = item.get("cafeurl", "")
-    elif type_ == "book":
-        base["author"] = item.get("author", "")
-        base["publisher"] = item.get("publisher", "")
-        base["pub_date"] = item.get("pubdate", "")
-        base["isbn"] = item.get("isbn", "")
-        base["price"] = item.get("price", "")
-        base["image"] = item.get("image", "")
     elif type_ == "encyc":
         base["thumbnail"] = item.get("thumbnail", "")
-    elif type_ == "shop":
-        base["price"] = item.get("lprice", "")
-        base["mall"] = item.get("mallName", "")
-        base["image"] = item.get("image", "")
-        base["category"] = f"{item.get('category1', '')} > {item.get('category2', '')}"
 
     return base
 
@@ -108,7 +105,8 @@ def search_naver(
 
     Args:
         query: 검색어 (한국어/영어 모두 가능)
-        type: 검색 도메인 (webkr/news/blog/cafe/kin/book/encyc/doc/shop). 자연어 별칭("웹"/"뉴스" 등)도 허용
+        type: 검색 도메인 (webkr/news/blog/cafe/kin/encyc). 자연어 별칭("웹"/"뉴스" 등)도 허용.
+              book/doc/shop 은 네이버가 은퇴시킴(2026-08) — 명확한 대체 안내 반환
         display: 결과 수 (1~100, 기본 5)
         sort: 정렬 — "sim"(정확도, 기본) 또는 "date"(최신순)
 
@@ -125,6 +123,8 @@ def search_naver(
         return {"success": False, "error": "검색어(query)가 필요합니다."}
 
     normalized_type = _normalize_type(type)
+    if normalized_type in _RETIRED_TYPES:
+        return {"success": False, "error": _RETIRED_TYPES[normalized_type], "items": []}
     endpoint = _TYPE_ENDPOINTS.get(normalized_type)
     if not endpoint:
         return {

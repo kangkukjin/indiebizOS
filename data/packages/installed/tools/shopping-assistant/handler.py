@@ -51,33 +51,11 @@ def _products_to_records(items):
 
 
 def search_naver_shopping(query: str, display: int = 5):
-    """네이버 쇼핑 검색 API 호출"""
-    ok, err = check_api_key("naver")
-    if not ok:
-        return {"error": err}
-
-    data = api_call(
-        "naver", "/v1/search/shop.json",
-        params={"query": query, "display": min(display, 10), "sort": "sim"},
-    )
-
-    if isinstance(data, dict) and "error" in data:
-        return data
-
-    raw_items = data.get("items", [])
-    items = []
-    for item in raw_items:
-        items.append({
-            "name": clean_html(item.get("title", "")),
-            "price": item.get("lprice", "0"),
-            "mall": item.get("mallName", "네이버"),
-            "link": item.get("link", ""),
-            "image": item.get("image", ""),
-            "category": f"{item.get('category1', '')} > {item.get('category2', '')}",
-            "site": "naver"
-        })
-
-    return {"total": data.get("total", 0), "items": items}
+    """네이버 쇼핑 검색 API — ★2026-08-04 실측: 네이버가 /v1/search/shop.json 을 은퇴시킴
+    (404 SE05 "존재하지 않는 검색 api"). 재활하려면 쇼핑 내부 API 발굴 필요(직방 선례).
+    호출부(search_all_async·site:naver)가 items 부재를 우아하게 건너뛰도록 즉시 반환."""
+    return {"error": "네이버 쇼핑 검색 API 은퇴(2026-08, SE05) — 다나와·중고 검색을 사용하세요(PC 전용).",
+            "items": []}
 
 
 async def search_danawa_shopping_async(query: str, display: int = 5):

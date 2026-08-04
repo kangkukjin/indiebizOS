@@ -341,14 +341,20 @@ for name, code, assertion in OPERATORS:
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:22} {detail}")
 
 # ── §1D 런타임 건강 ──
-print("\n" + "="*72); print("§1D 런타임 건강 (world_pulse.db action_health, 실패율 상위)"); print("="*72)
+# 최근 7일 + 실사용(usage)만 — 백엔드 대시보드(get_action_health_summary)와 같은 창.
+# 필터가 없던 동안 전 역사를 무기한 합산해 화석이 영원히 상위에 남았다(run_pipeline 86%
+# = 은퇴한 옛 12h sweep 의 5~6월 잔재, 6주간 호출 0건인데 계속 표시 — 2026-08-04 실측).
+print("\n" + "="*72); print("§1D 런타임 건강 (최근 7일 실사용, 실패율 상위)"); print("="*72)
 try:
     import sqlite3
     c = sqlite3.connect("data/world_pulse.db")
     rows = c.execute("""SELECT node||':'||action AS a,
                                SUM(CASE WHEN success IN (1,'1','true','True') THEN 1 ELSE 0 END) AS ok,
                                COUNT(*) AS tot
-                        FROM action_health GROUP BY a
+                        FROM action_health
+                        WHERE source = 'usage'
+                          AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
+                        GROUP BY a
                         HAVING tot-ok > 0
                         ORDER BY CAST(tot-ok AS FLOAT)/tot DESC LIMIT 10""").fetchall()
     if not rows: print("  (실패 기록 없음)")

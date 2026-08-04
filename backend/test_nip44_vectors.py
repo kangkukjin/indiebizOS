@@ -110,6 +110,12 @@ def run(vectors_path):
     return failed == 0
 
 
+def test_nip44_official_vectors():
+    """NIP-44 공식 테스트 벡터 전체 — 암호 구현의 유일한 검증 (pytest 편입, 감사 ⑧)."""
+    default = os.path.join(os.path.dirname(__file__), "testdata", "nip44_vectors.json")
+    assert run(default), "NIP-44 공식 벡터 불일치 — nip44.py 구현 회귀"
+
+
 if __name__ == "__main__":
     default = os.path.join(os.path.dirname(__file__), "testdata", "nip44_vectors.json")
     path = sys.argv[1] if len(sys.argv) > 1 else default

@@ -22,6 +22,7 @@ on:
       - 'data/packages/installed/**'
       - 'scripts/check_event_loop*.py'
       - 'scripts/check_public_routes.py'
+      - 'pytest.ini'
       - '.github/workflows/seam-guards.yml'
   pull_request:
   workflow_dispatch:
@@ -65,3 +66,20 @@ jobs:
 
       - name: 공개 라우트 ↔ 인증 대조
         run: python scripts/check_public_routes.py
+
+  # pytest 스위트 (2026-08-05 감사 부채 ⑧): 고아 테스트 5개를 CI 시민으로.
+  # -m "not local" — 해마 DB·임베딩 모델이 필요한 측정성 테스트는 로컬 전용
+  # (해당 테스트는 데이터 부재 시 스킵도 하므로 이중 안전).
+  # 의존성은 public-routes 와 같은 requirements-core.txt — `import api` 스모크가
+  # 이미 이 조합으로 초록이므로 테스트의 import 체인(그 부분집합)도 돈다.
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 코어 의존성 + pytest 설치
+        run: pip install -r backend/requirements-core.txt pytest
+      - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
+        run: python -m pytest -m "not local"

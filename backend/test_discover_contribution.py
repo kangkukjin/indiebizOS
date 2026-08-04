@@ -116,6 +116,31 @@ def run_test():
     print(f"  절감:                  {prev_avg - total_chars/n:,.0f}자/명령 ({(1 - total_chars/n/prev_avg)*100:.1f}%)")
     print()
 
+    return {"n": n, "empty_count": empty_count,
+            "total_chars": total_chars, "total_actions": total_actions}
+
+
+def _hippo_data_ready() -> bool:
+    """해마 DB 존재 여부 — 없는 환경(CI·신선 설치)에선 스킵."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.exists(os.path.join(root, "data", "ibl_usage.db"))
+
+
+try:
+    import pytest
+
+    @pytest.mark.local
+    @pytest.mark.skipif(not _hippo_data_ready(), reason="해마 DB 없음 (data/ibl_usage.db)")
+    def test_hippocampus_recall_quality():
+        """해마 회상이 대다수 명령에 실행기억을 내놓는지 (측정 스크립트의 pytest 편입, 감사 ⑧)."""
+        stats = run_test()
+        # 30개 일상 명령 중 빈 회상이 다수면 해마 인덱스/모델 회귀
+        assert stats["empty_count"] <= stats["n"] // 3, \
+            f"빈 실행기억 {stats['empty_count']}/{stats['n']} — 해마 인덱스·임베딩 모델 확인"
+        assert stats["total_actions"] > 0
+except ImportError:  # pytest 없는 환경(폰 등)에서도 스크립트 직접 실행은 가능해야 함
+    pass
+
 
 if __name__ == "__main__":
     run_test()

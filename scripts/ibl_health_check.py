@@ -97,7 +97,7 @@ RETURNS = {f"{n}:{a}": (ad.get("returns") or "?")
 # 저술 직후 "이 앱의 액션을 1회 실제로 실행해 view 가 통화를 받는가"를 한 방으로 단언.
 # 에피소드 656 에서 GoalEval 이 앱을 렌더하지 않고 편집 원장만으로 ACHIEVED 판정하던
 # 약한 검증자 공백을, *선언형(Path A) 계기 범위 안에서* 닫는다.
-#   · read-only 게이팅: /ibl/validate 와 같은 self_check_plan.json 안전분류(safe=True만 실행)
+#   · read-only 게이팅: /ibl/validate 와 같은 ibl_safety 파생 안전분류(safe=True만 실행)
 #     → business_document regenerate·auto_response start/stop 같은 부작용 op 는 실행 없이 SKIP.
 #   · 앱모드 PID: self:* 경로 해소를 실제 앱 컨텍스트(project_id='앱모드')와 일치.
 #   · Path B(app: 블록 없는 커스텀 React)는 N/A — currency 개념 부재, tsc 로만 검증(GREEN 사칭 금지).
@@ -201,24 +201,48 @@ if "--instrument" in sys.argv:
 print("="*72); print("§1A 정적 정합성 (build --check)"); print("="*72)
 r = subprocess.run([sys.executable, "scripts/build_ibl_nodes.py", "--check"],
                    capture_output=True, text=True, cwd=os.getcwd())
-static_ok = "검증 통과" in r.stdout and "불일치" not in r.stdout
+# ★판정=returncode 단일 소스. 옛 문구 스크레이핑("검증 통과" in stdout and "불일치" not in
+# stdout)은 --check 의 실패 출력이 전부 stderr 로 가므로 "불일치" 검사가 공허하게 항상 참 —
+# 게이트 1(validate 롤업)의 성공 문구 유무만 봤고, 나머지 가드(코퍼스 param·fixture 완전성·
+# enum·포크/OS·launcher·교재·뷰·앱-템플릿·파생물 바이트 비교)가 실패해도 GREEN 이 샜다.
+# world_pulse_health.run_ibl_health_check 의 검증자 튼튼화(2026-07-03, 스크레이핑→계약)와 동류.
+static_ok = (r.returncode == 0)
 for line in r.stdout.splitlines():
     if any(w in line for w in ("통과","불일치","실패","✗","액션")): print("  " + line.strip())
+if not static_ok:  # 실패 사유는 stderr 에 있다 — RED 인데 이유가 안 보이는 로그 방지
+    _err = [l for l in (r.stderr or "").splitlines() if any(w in l for w in ("불일치","실패","✗"))]
+    for line in _err[:40]: print("  " + line.strip())
 print("  → 정적:", "GREEN ✅" if static_ok else "RED ❌")
 
 # ── §1B 통화 무결성 (fixture 전수 probe) ──
 # fixture(액션별 '올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
 # build_ibl_nodes.py --check 가 items/scalar 액션의 fixture 완전성을 강제하므로(신규 액션이
 # 빠질 수 없음), 여기서 그 목록을 그대로 실행하면 행동 건강 커버리지가 구성에 의해 완전하다.
+# ★read-only 게이트(2026-08-05): 이 절은 일일 무인 루프(world_pulse self-check)에서 돌므로
+# side_effect 액션의 fixture 는 실행하지 않는다(--instrument 경로와 같은 ibl_safety 게이트).
+# 현행 32개는 전부 읽기 op(list/status/search…)로 실측 확인됐지만 그건 저술 관습일 뿐 코드가
+# 보증하지 않는다 — 무인 실행은 관습이 아니라 구조가 막는다(자가점검 계약 "부작용 없는 액션").
+# 그 32개의 행동 검사는 수동 전수 실행 --all-fixtures 로(어휘 저술·커밋 전 점검용).
 _FIX = json.load(open("data/ibl_fixtures.json", encoding="utf-8"))
 PRODUCERS = sorted(_FIX["fixtures"].items())   # [(name, code), ...]
 EXEMPT = _FIX.get("exempt", {})
 print("\n" + "="*72); print("§1B 통화 무결성 (returns 선언 대비 단언)"); print("="*72)
 from collections import defaultdict
 buckets = defaultdict(list)
+_ALL_FIXTURES = "--all-fixtures" in sys.argv
+_safety = _load_safety_map()
+if not _safety and not _ALL_FIXTURES:
+    # 안전 지도 적재 실패 = 전 fixture 생략 — 침묵하면 §1B 가 아무것도 안 재고도 '건강'으로 보인다
+    buckets["YELLOW"].append(("__safety_map__", "ibl_safety 적재 실패 — read-only 게이트 판정 불가(전 fixture 생략)"))
+gated = 0
 for name, code in PRODUCERS:
     declared = RETURNS.get(name, "?")
-    verdict, reason = classify_currency(execute(code), declared)
+    fa = tuple(name.split(":", 1))
+    if not _ALL_FIXTURES and _safety.get(fa) is not True:
+        gated += 1
+        verdict, reason = "SKIP", "side_effect 액션 — read-only 게이트로 실행 생략(수동: --all-fixtures)"
+    else:
+        verdict, reason = classify_currency(execute(code), declared)
     buckets[verdict].append((name, reason))
     print(f"  [{verdict:6}] {name:24} returns:{declared:9} {reason}")
 # 커버리지 — fixture 완전성(--check 강제)을 그대로 반영. 면제는 사유와 함께 명시.
@@ -226,6 +250,8 @@ exec_actions = sorted(k for k, v in RETURNS.items() if v in ("items", "scalar"))
 covered = len(PRODUCERS) + len(EXEMPT)
 print(f"\n  실행대상(items/scalar) {len(exec_actions)}개 = fixture {len(PRODUCERS)}개 + 면제 {len(EXEMPT)}개"
       f" {'✅ 완전' if covered == len(exec_actions) else '❌ 누락 ' + str(len(exec_actions) - covered)}")
+if gated:
+    print(f"  read-only 게이트 생략 {gated}개 (side_effect 액션 — 행동 검사는 --all-fixtures 수동 실행)")
 if EXEMPT:
     print("  면제(실행 인자 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
 

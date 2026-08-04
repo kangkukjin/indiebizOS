@@ -156,4 +156,19 @@ if echo "$staged" | grep -qE '^(backend/api_.*\.py|backend/public_face\.py|scrip
   fi
 fi
 
+# 자기수정 안전장치 기능 스모크 (③검증자 없는 영역 보강, 2026-08-05) —
+# 게이트·그랜트·백업·워치독 파일이 스테이징되면 red_safety_selftest 통과를 강제.
+# 안전장치를 고치다 안전장치를 죽인 커밋(침묵 결함)이 저장소에 들어오는 걸 막는다.
+if echo "$staged" | grep -qE '^(backend/red_grant\.py|backend/red_watchdog\.py|data/packages/installed/tools/system_essentials/handler\.py|scripts/red_safety_selftest\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 자기수정 안전장치 기능 스모크 실행..."
+  if ! python3 "$repo_root/scripts/red_safety_selftest.py"; then
+    echo "" >&2
+    echo "[pre-commit] 안전장치 기능 스모크 실패 — 커밋 차단." >&2
+    echo "[pre-commit]   • 실패 항목은 위 ✗ 목록 참조 (scripts/red_safety_selftest.py)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 안전장치 기능 스모크 OK ✓"
+fi
+
 exit 0

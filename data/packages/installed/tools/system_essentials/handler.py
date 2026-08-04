@@ -350,6 +350,21 @@ _RED_ZONE_DIRS = ("backend", "frontend", "scripts")
 _PROTECTED_STATE_FILES = ("data/system_ai_state/install_approvals.json",)
 
 
+# 게이트 자신 — RED 밖(data/)에 살지만 안전장치의 집이라 그랜트 없이는 못 쓴다
+# (③검증자 없는 영역 보강, 2026-08-05: 게이트를 지키는 게이트).
+_SELF_FILE = os.path.realpath(__file__)
+
+
+def _safety_watch_files():
+    """수정 시 워치독이 기능 스모크(red_safety_selftest)까지 돌려야 하는 안전장치 파일들."""
+    out = {_SELF_FILE}
+    if _REPO_ROOT is not None:
+        for rel in ("backend/red_grant.py", "backend/red_watchdog.py",
+                    "scripts/red_safety_selftest.py"):
+            out.add(os.path.realpath(str(_REPO_ROOT / rel)))
+    return out
+
+
 def _red_grant_active():
     """현재 호출 컨텍스트에 유효한 RED 쓰기 그랜트(헌법 2026-08-05).
 
@@ -392,6 +407,15 @@ def _red_zone_violation(abs_path: str) -> str | None:
                 f"이 파일은 [self:install_lib] 공급망 방어 게이트의 승인 원장입니다. "
                 f"승인·거부는 사용자가 HTTP 채널(/install-approvals/*)로만 합니다."
             )
+    # 게이트 자신 변조 보호 — data/ 구역이지만 안전장치의 집이라 그랜트 필요
+    if real == _SELF_FILE:
+        if _red_grant_active():
+            return None
+        return (
+            "Error: 이 파일은 RED 쓰기 게이트 자신입니다 — 그랜트 없는 수정이 금지됩니다.\n"
+            "수정하려면 사용자가 수리 경로('#repair' 또는 '시스템 수리' 명시)로 명령해야 하며, "
+            "적용 후 안전장치 기능 스모크(red_safety_selftest)를 통과하지 못하면 자동 롤백됩니다."
+        )
     for d in _RED_ZONE_DIRS:
         red_root = str(_REPO_ROOT / d)
         if real == red_root or real.startswith(red_root + os.sep):
@@ -418,10 +442,12 @@ def _red_zone_violation(abs_path: str) -> str | None:
 # 깨진 import 로 죽어도 살아남아 백업을 복원하고 touch 로 재기동을 유발한다.
 
 def _red_is_live_path(abs_path: str) -> bool:
-    """RED 구역 실경로인가(정적 자산 면제 반영). 안전판 적용 대상 판정."""
+    """RED 구역 실경로인가(정적 자산 면제·안전장치 파일 승격 반영). 안전판 적용 대상 판정."""
     if _REPO_ROOT is None:
         return False
     real = os.path.realpath(abs_path)
+    if real == _SELF_FILE:
+        return True  # 게이트 자신 — data/ 구역이지만 RED 대우(백업·워치독)
     if _is_static_asset(real):
         return False
     for d in _RED_ZONE_DIRS:
@@ -486,13 +512,15 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
 
 
 def _red_write_finalize(path: str):
-    """그랜트된 RED 쓰기 직후: backend .py 면 워치독 보장(리로드 후 헬스체크·자동 롤백).
-    frontend/scripts 는 라이브 프로세스가 import 하지 않으므로 백업만으로 충분."""
+    """그랜트된 RED 쓰기 직후: backend .py 와 안전장치 파일은 워치독 보장
+    (리로드 후 헬스체크 + 안전장치 파일이면 기능 스모크까지 — 실패 시 자동 롤백).
+    그 밖의 frontend/scripts 는 라이브 프로세스가 import 하지 않으므로 백업만으로 충분."""
     abs_path = os.path.realpath(path)
     if not (abs_path.endswith(".py") and _red_is_live_path(abs_path)):
         return
     backend_root = str(_REPO_ROOT / "backend")
-    if not (abs_path == backend_root or abs_path.startswith(backend_root + os.sep)):
+    is_backend_py = abs_path == backend_root or abs_path.startswith(backend_root + os.sep)
+    if not (is_backend_py or abs_path in _safety_watch_files()):
         return
     grant = _red_grant_active()
     if not grant:

@@ -34,6 +34,36 @@ HEALTH_TRIES = 20      # 2초 간격 → 최대 40초 대기
 HEALTH_INTERVAL = 2.0
 MAX_LIFETIME_S = 30 * 60  # 감시견 최장 수명 (매니페스트가 계속 갱신돼도 언젠가 끝냄)
 
+# 안전장치 파일 — 이 파일들이 수정된 태스크는 /health 만으로 부족하다(게이트를 고치다
+# 게이트를 죽여도 서버는 멀쩡히 뜬다 = 침묵 결함). 기능 스모크까지 통과해야 한다.
+# (③검증자 없는 영역 보강, 2026-08-05)
+SAFETY_SUFFIXES = (
+    "backend/red_grant.py",
+    "backend/red_watchdog.py",
+    "tools/system_essentials/handler.py",
+    "scripts/red_safety_selftest.py",
+)
+
+
+def _touches_safety(manifest: dict) -> bool:
+    files = manifest.get("files") or {}
+    return any(p.endswith(s) for p in files for s in SAFETY_SUFFIXES)
+
+
+def _run_safety_selftest(repo: str):
+    """기능 스모크 실행. (통과 여부, 상세) — 스크립트 부재는 통과 취급(구판 호환)."""
+    import subprocess
+    script = os.path.join(repo, "scripts", "red_safety_selftest.py")
+    if not os.path.exists(script):
+        return True, "selftest 스크립트 없음(스킵)"
+    try:
+        p = subprocess.run([sys.executable, script], cwd=repo,
+                           capture_output=True, text=True, timeout=120)
+        tail = ((p.stdout or "") + (p.stderr or "")).strip()[-400:]
+        return p.returncode == 0, tail
+    except Exception as e:
+        return False, f"selftest 실행 실패: {e}"
+
 
 def _healthy(url: str) -> bool:
     try:
@@ -126,6 +156,22 @@ def main():
                     continue
             except OSError:
                 return
+            # 2b. 안전장치 파일이 수정된 태스크 — 기능 스모크까지 통과해야 healthy
+            if _touches_safety(manifest):
+                ok, detail = _run_safety_selftest(manifest.get("repo", ""))
+                if not ok:
+                    restored = _rollback(manifest)
+                    recovered = _poll_health(url)
+                    _write_result({
+                        "outcome": "rolled_back",
+                        "reason": "safety_selftest_failed",
+                        "detail": detail,
+                        "restored": restored,
+                        "recovered": recovered,
+                    })
+                    _notify("IndieBiz 안전장치 자가검사 실패",
+                            f"안전장치 수정이 기능 스모크를 통과하지 못해 자동 롤백했습니다 (복원 {len(restored)}건).")
+                    return
             _write_result({"outcome": "healthy", "files": list((manifest.get("files") or {}).keys())})
             return
 

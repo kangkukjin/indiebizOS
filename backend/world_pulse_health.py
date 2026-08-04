@@ -167,6 +167,29 @@ def run_ibl_health_check() -> List[Dict]:
                     "success": op_ok, "response_ms": 0,
                     "data_quality": "ok" if op_ok else "error",
                     "error_message": None if op_ok else f"{op_passed}/{op_total} PASS"})
+    # §1D 자기수정 안전장치 기능 스모크 (③검증자 없는 영역 보강, 2026-08-05) —
+    # 게이트·그랜트·백업·워치독의 *기능*을 임시 저장소에서 실측(AI 0, 라이브 무접촉).
+    # ★반드시 subprocess — 인프로세스로 돌리면 selftest 의 그랜트 발급/회수가
+    # 라이브 프로세스의 red_grant 전역을 건드려 순간적으로 게이트가 열린다.
+    _rs_script = _root / "scripts" / "red_safety_selftest.py"
+    if _rs_script.exists():
+        try:
+            rp = subprocess.run([sys.executable, str(_rs_script)], cwd=str(_root),
+                                capture_output=True, text=True, timeout=120)
+            rs_ok = rp.returncode == 0
+            rs_note = None
+            if not rs_ok:
+                for line in reversed((rp.stdout or "").splitlines()):
+                    if line.startswith("@@RED_SAFETY@@"):
+                        rs_note = line[len("@@RED_SAFETY@@"):].strip()[:220]
+                        break
+                rs_note = rs_note or ((rp.stderr or rp.stdout or "").strip()[-220:])
+        except Exception as e:
+            rs_ok, rs_note = False, f"selftest 실행 실패: {str(e)[:150]}"
+        out.append({"node": "__static__", "action": "red_safety",
+                    "success": rs_ok, "response_ms": 0,
+                    "data_quality": "ok" if rs_ok else "error",
+                    "error_message": None if rs_ok else rs_note})
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})
@@ -719,6 +742,7 @@ def get_ibl_health_status() -> Dict:
 
     KEYS = [
         ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
+        ("__static__", "red_safety", "자기수정 안전장치 — 게이트·그랜트·롤백 기능"),
         ("__ibl_health__", "currency", "통화 규약 — 실행 결과 형태"),
         ("__ibl_health__", "golden_pipes", "파이프 흐름 — 액션 조합(>>)"),
         ("__ibl_health__", "description_drift", "설명 정합 — 어휘 설명 최신성"),

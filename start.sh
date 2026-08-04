@@ -43,6 +43,12 @@ sleep 2
 
 echo "✅ 백엔드 PID: $BACKEND_PID"
 
+# 감독 데몬(keeper) 보장 — 백엔드가 죽으면(마스터 사망·유령 워커 포함) 1분 내 재기동.
+# 멱등(pid 파일)이라 중복 기동 없음. nohup 분리라 이 터미널을 닫아도 생존.
+# launchd 를 안 쓰는 이유는 scripts/backend_keeper.sh 머리말 참조(TCC).
+nohup bash scripts/backend_keeper.sh >/dev/null 2>&1 &
+echo "✅ 백엔드 감독 데몬(keeper) 보장"
+
 # 프론트엔드 시작 (electron:dev) — 선택 사항: Node/npm과 node_modules가 있을 때만.
 # 없으면 백엔드 전용(헤드리스)으로 계속 실행 — 원격 런처/REST로 사용 가능.
 FRONTEND_PID=""

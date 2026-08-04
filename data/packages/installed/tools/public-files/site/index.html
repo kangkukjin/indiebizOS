@@ -269,6 +269,20 @@ function progressiveVideo(v, it) {
   v.load();
   v.play().catch(() => {});
 }
+// hls.js 는 미디어 요소의 텍스트 트랙을 제 매니페스트 기준으로 정리한다. 우리 마스터는
+// 화질 렁만 선언하므로(자막 그룹 0) 곁다리로 붙인 <track> 이 disabled 로 꺼진다 —
+// 형제 자막이 있는 영화가 "사다리가 자란 순간부터" 자막을 잃는다(2026-08-04 회귀).
+// → 붙은 직후 기본 트랙을 다시 켜고, 큐가 실리면 손을 뗀다(사용자의 수동 끄기 보존).
+// 이벤트 이름에 기대지 않고 짧은 폴링으로 — hls.js 가 언제 모드를 건드리든 덮는다.
+function keepSubsOn(v) {
+  if (!v.textTracks || !v.textTracks.length) return;
+  let n = 0;
+  const t = setInterval(() => {
+    const k = v.textTracks[0];
+    if (!k || (k.cues && k.cues.length) || ++n > 20) { clearInterval(t); return; }
+    if (k.mode !== "showing") k.mode = "showing";
+  }, 250);   // 최대 5초
+}
 function openVideo(body, it) {
   body.innerHTML = `<video controls autoplay playsinline>${trackHtml(it, 0)}</video>`;
   const v = body.querySelector("video");
@@ -284,12 +298,13 @@ function openVideo(body, it) {
     });
     h.loadSource(hlsUrl(it));
     h.attachMedia(v);
+    keepSubsOn(v);   // hls.js 가 꺼버린 사이드로드 <track> 을 되살린다
     return;
   }
   if (qmode() === "auto" && v.canPlayType("application/vnd.apple.mpegurl")) {
     // 사파리 네이티브 HLS — 404 를 <video> 가 늦게 알리므로 마스터 유무를 먼저 묻는다.
     fetch(hlsUrl(it), { cache: "no-store" })
-      .then(r => { if (r.ok) { v.src = hlsUrl(it); v.play().catch(() => {}); } else progressiveVideo(v, it); })
+      .then(r => { if (r.ok) { v.src = hlsUrl(it); keepSubsOn(v); v.play().catch(() => {}); } else progressiveVideo(v, it); })
       .catch(() => progressiveVideo(v, it));
     return;
   }

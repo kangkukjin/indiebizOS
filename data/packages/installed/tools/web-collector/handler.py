@@ -59,21 +59,9 @@ def _op_query(tool_input: dict, context) -> str:
     else:
         result = db.search_items(query=tool_input.get("query"), site_id=tool_input.get("site_id"),
                                  limit=tool_input.get("limit", 20), offset=tool_input.get("offset", 0))
-    # 레코드 통화(비파괴) — 수집 아이템 목록 >> 파이프. data 스키마가 사이트마다 달라 best-effort.
-    if isinstance(result, dict) and isinstance(result.get("items"), list):
-        recs = []
-        for it in result["items"]:
-            if not isinstance(it, dict):
-                continue
-            dat = it.get("data") if isinstance(it.get("data"), dict) else {}
-            title = dat.get("title") or dat.get("name") or dat.get("location") or it.get("item_key") or ""
-            summary = " · ".join(f"{k}:{v}" for k, v in list(dat.items())[:4]) if dat else ""
-            recs.append({
-                "title": str(title),
-                "meta": " · ".join(x for x in [it.get("site_id"), it.get("collected_at")] if x),
-                "summary": summary[:200],
-                "url": dat.get("url") or dat.get("link") or "",
-            })
+    # 통화: db 결과의 raw items 가 이미 단일 통화 {items:[...]} — 항목 내부는 열림(관습).
+    # (옛 코드에 records 뷰(recs)를 만들고 부착하지 않던 죽은 블록이 있었음 — 2026-08-05
+    #  감사 ① 전환 중 발견·삭제. records 키는 컷오버로 은퇴(common/currency.py)라 부착도 부적절.)
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 

@@ -6,9 +6,13 @@
 #
 # 두 층:
 #   static-scan   — AST 정적 검사(의존성 0, 우분투). 유닉스 전용 stdlib 의
-#                   무가드 톱레벨 import. pre-commit 훅과 같은 스크립트.
-#   import-smoke  — 실제 윈도우에서 `import api`(= 부팅 등가). 배포 번들과
-#                   같은 requirements-core.txt 로 설치.
+#                   무가드 톱레벨 import + 진입점(api.py)의 sys.path 부트스트랩
+#                   전 backend 로컬 import. pre-commit 훅과 같은 스크립트.
+#   import-smoke  — 실제 윈도우에서 api.py 톱레벨 exec(= 부팅 등가). 배포 번들과
+#                   같은 requirements-core.txt 로 설치. ★python -I(isolated)로
+#                   실행해 임베디드 파이썬(_pth isolated)의 "스크립트 폴더가
+#                   sys.path 에 없음" 조건을 재현 — 표준 python -c 는 이 조건이
+#                   재현되지 않아 v1.3.6 mime_compat 조기 import 를 못 잡았다.
 name: Windows Portability
 
 on:
@@ -42,7 +46,7 @@ jobs:
   import-smoke:
     runs-on: windows-latest
     env:
-      PYTHONUTF8: "1"   # 윈도우 러너 기본 cp1252/cp949 로그 인코딩 함정 회피
+      PYTHONUTF8: "1"   # pip 단계용 — 스모크 자체는 -I(-E 포함)가 env 를 무시해 -X utf8 로 지정
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -50,5 +54,5 @@ jobs:
           python-version: '3.11'   # 배포 임베디드 파이썬(build.yml)과 동일 계열
       - name: 코어 의존성 설치 (배포 번들과 동일)
         run: pip install -r backend/requirements-core.txt
-      - name: 백엔드 모듈 그래프 import 스모크
-        run: python scripts/ci_import_smoke.py
+      - name: 백엔드 모듈 그래프 import 스모크 (임베디드 등가 -I)
+        run: python -I -X utf8 scripts/ci_import_smoke.py

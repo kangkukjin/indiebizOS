@@ -15,6 +15,50 @@ from typing import Any, Dict, Optional
 # 도구 실행 타임아웃 (초) — 이 시간을 초과하면 강제로 에러 반환
 TOOL_EXECUTION_TIMEOUT = 60
 
+# 동기 handler.execute 타임아웃 (초, D6 2026-08-05) — 예전엔 async 경로에만 타임아웃이 있어
+# router:handler 동기 핸들러 전체가 무제한 행 가능했다. async(60초)보다 길게 두는 이유:
+# 목적이 '무한 행 방지'지 지연 정책이 아니고, 정상 동작으로 문서화된 느린 동기 핸들러가
+# 있다(예: music-player compose 실측 58~104초 — CLAUDE.md/가이드에 명기). 타임아웃 시
+# 스레드는 강제 종료할 수 없어 고아로 완주하지만(compose 가 타임아웃 후에도 저장되는 기존
+# 관찰과 동일 의미), 호출자는 행 대신 명확한 에러를 받는다.
+SYNC_TOOL_EXECUTION_TIMEOUT = 300
+
+
+class _SyncHandlerTimeout(Exception):
+    """동기 핸들러 타임아웃 내부 신호 (핸들러 자신이 던진 TimeoutError 와 구분)."""
+
+
+def _run_sync_with_timeout(fn, args: tuple, timeout: float, tool_name: str):
+    """동기 함수를 워커 스레드에서 실행해 타임아웃을 부여한다 (D6).
+
+    thread_context(threading.local)는 snapshot/restore 로 워커 스레드에 승계한다
+    (패키지 핸들러들은 get_current_task_id 등 *읽기*만 한다 — 전수 확인 2026-08-05).
+    풀 대신 호출마다 새 스레드를 쓰는 이유: 핸들러가 execute_ibl 을 재귀 호출하는
+    구조라 고정 풀은 자기교착 위험이 있다. 타임아웃 시 스레드는 데몬으로 남아 완주한다.
+    """
+    import threading
+    import thread_context as _tc
+    snap = _tc.snapshot()
+    box: dict = {}
+
+    def _worker():
+        _tc.restore(snap)
+        try:
+            box["result"] = fn(*args)
+        except BaseException as e:  # 원 예외를 호출 스레드로 그대로 재전파
+            box["exc"] = e
+
+    t = threading.Thread(target=_worker, daemon=True,
+                         name=f"ibl-handler-{tool_name}")
+    t.start()
+    t.join(timeout)
+    if t.is_alive():
+        raise _SyncHandlerTimeout(
+            f"도구 실행 시간 초과 ({int(timeout)}초): {tool_name}")
+    if "exc" in box:
+        raise box["exc"]
+    return box.get("result")
+
 
 # === 파라미터 alias 정규화 ===
 # AI(특히 실행기억/해마 RAG)가 자연스러운 이름으로 호출했을 때 핸들러의 정규 키로 자동 매핑.
@@ -252,7 +296,21 @@ def _route_handler(mapped_tool: str, params: dict,
     #   라이브러리(ddgs)를 top-level import 하다 예외가 조용히 전파돼 빈 응답으로 뭉개졌다
     #   (browser-action 은 자기 핸들러에서 감싸 명확했지만 나머지는 아니었다 — 불일관 해소).
     try:
-        result = handler.execute(merged_params, context)
+        # ★동기 경로 타임아웃(D6): router:handler 동기 핸들러도 무제한 행하지 않게
+        #   워커 스레드 오프로드 + join(timeout). async 핸들러는 코루틴을 즉시 반환하므로
+        #   여기서는 빠르게 통과하고 아래 async 경로에서 기존 타임아웃이 걸린다.
+        result = _run_sync_with_timeout(
+            handler.execute, (merged_params, context),
+            SYNC_TOOL_EXECUTION_TIMEOUT, mapped_tool)
+    except _SyncHandlerTimeout as _to_err:
+        print(f"[IBL] 동기 도구 실행 타임아웃 ({SYNC_TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}")
+        return {
+            "success": False,
+            "error": (
+                f"도구 실행 시간 초과 ({SYNC_TOOL_EXECUTION_TIMEOUT}초): {mapped_tool}. "
+                "작업이 백그라운드에서 계속될 수 있으니 잠시 후 상태를 확인하거나 다른 방법을 시도하세요."
+            ),
+        }
     except (ModuleNotFoundError, ImportError) as _dep_err:
         _missing = getattr(_dep_err, "name", None) or str(_dep_err)
         print(f"[IBL] 도구 의존성 누락 ({mapped_tool}): {_missing}")

@@ -213,6 +213,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
     results = []
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)
+    # $var 바인딩 저장소: step 인덱스 → 결과 문자열. 파서가 $var 를 {{_step_N_result}} 로
+    # 치환해 두므로, 여기 저장된 값으로 실행 시점에 실제 결과가 주입된다 (문장 경계와 무관).
+    step_results: Dict[int, str] = {}
 
     # ── 문장 경계(`;` · 개행) ──────────────────────────────────────────────
     # 여러 문장이 한 리스트로 평탄화돼 들어오므로, 파서가 각 문장 첫 step 에 `_seq_boundary` 를
@@ -246,6 +249,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # 실패 경로는 각 _handle_failure 뒤에서 리셋하지만, 성공 경로는 여기가 유일한 관문
             # (없으면 _auto_inject_prev 가 앞 문장 결과를 다음 문장 첫 step 에 무조건 주입한다).
             prev_result = ""
+        # $var 바인딩 치환 — {{_step_N_result}} 를 저장된 step 결과로 (branches/체인 포함).
+        # 문장 경계의 prev_result 리셋과 독립이라, 앞 문장 결과를 명시 참조로 가져올 수 있다.
+        if step_results and isinstance(step, dict):
+            step = _inject_step_results(step, step_results)
         step_start = time.time()
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
@@ -279,6 +286,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "result": result_str,
                 "duration_ms": duration_ms,
             })
+            step_results[i] = result_str
             prev_result = result_str
 
             continue
@@ -317,6 +325,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "result": result_str,
                 "duration_ms": duration_ms,
             })
+            step_results[i] = result_str
 
             if is_err:
                 _abort = _handle_failure(i, {
@@ -393,6 +402,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             "result": result_str,
             "duration_ms": duration_ms,
         })
+        step_results[i] = result_str
 
         if is_err:
             err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
@@ -598,6 +608,27 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         last_result = {"error": str(last_result)}
     last_result["_all_failed"] = True
     return last_result, log
+
+
+# $var 바인딩 참조 패턴 — 파서(_resolve_variables)가 $var 를 {{_step_N_result}} 로 치환한다.
+_STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result\}\}")
+
+
+def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
+    """{{_step_N_result}} 참조를 저장된 step 별 결과로 치환 (재귀 — branches/체인 포함).
+
+    변수 바인딩($var)의 실제 구현(D4, 2026-08-05): 예전엔 $var 가 전부 {{_prev_result}} 로
+    뭉개졌고, 문장 경계(_seq_boundary)가 prev_result 를 비워 문서화된 예제가 빈 문자열을
+    치환받았다. 아직 실행되지 않았거나 예외로 결과가 없는 인덱스는 빈 문자열로 치환한다.
+    """
+    if isinstance(obj, str):
+        return _STEP_RESULT_RE.sub(
+            lambda m: step_results.get(int(m.group(1)), ""), obj)
+    if isinstance(obj, dict):
+        return {k: _inject_step_results(v, step_results) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_inject_step_results(v, step_results) for v in obj]
+    return obj
 
 
 def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:

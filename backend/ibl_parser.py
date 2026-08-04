@@ -110,9 +110,13 @@ def parse(code: str) -> List[Dict]:
         raise IBLSyntaxError("파싱 가능한 코드가 없습니다.")
 
     # 변수 바인딩과 명령문 분리
-    statements, variables = _extract_statements(lines)
+    statements, assign_names = _extract_statements(lines)
 
     all_steps = []
+    # 변수명 → 그 변수가 할당된 문장의 *최종* step 인덱스 (파이프라인이면 마지막 step).
+    # 문장이 step 으로 펼쳐진 *뒤* 채워지므로, 뒤 문장의 $var 참조가 정확한 인덱스로
+    # 치환된다({{_step_N_result}} — 실행기가 step 별 결과를 저장해 치환. D4).
+    variables: Dict[str, int] = {}
     for _stmt_idx, stmt in enumerate(statements):
         # 파이프 문법 설탕(| where:/sort:/take:/select:/dedup:)을 >> [table:동사] 로 desugar.
         # 의미는 engines 변환자에 이미 있고, 이건 빈도 높은 단항 변환자의 짧은 문법 표면.
@@ -124,7 +128,7 @@ def parse(code: str) -> List[Dict]:
             parsed = _parse_group(seg_text.strip())
             if parsed is None:
                 raise IBLSyntaxError(f"파싱 실패: {seg_text.strip()}")
-            # 변수 참조 치환
+            # 변수 참조 치환 — 앞 문장들에서 할당된 변수만 보인다(자기/앞선 참조 방지)
             parsed = _resolve_variables(parsed, variables)
             # 문장 경계 표식 — 문장들은 한 리스트로 평탄화되므로, 실행기가 "여기부터 새 문장"을
             # 알 방법이 이 표식뿐이다. 경계에서는 앞 문장의 실패가 전파되지 않고
@@ -132,6 +136,8 @@ def parse(code: str) -> List[Dict]:
             if _stmt_idx > 0 and idx == 0:
                 parsed["_seq_boundary"] = True
             all_steps.append(parsed)
+        if assign_names[_stmt_idx] and all_steps:
+            variables[assign_names[_stmt_idx]] = len(all_steps) - 1
 
     if not all_steps:
         raise IBLSyntaxError("실행 가능한 명령이 없습니다.")
@@ -194,54 +200,76 @@ _VAR_REF_PATTERN = re.compile(r'\$(\w+)')
 
 
 def _preprocess(code: str) -> List[str]:
-    """전처리: 주석 제거, 빈 줄 제거, 연속 줄 합치기, 멀티라인 블록 병합"""
-    lines = []
-    for line in code.split('\n'):
-        # # 주석 제거 (문자열 내부가 아닌 경우)
-        stripped = line.strip()
-        if stripped.startswith('#'):
-            continue
-        if not stripped:
-            continue
-        lines.append(stripped)
+    """전처리: 주석 제거, 빈 줄 제거, 연속 줄 합치기, 멀티라인 블록 병합
 
-    if not lines:
+    ★문자열 보호(D3, 2026-08-05): 주석 판정을 줄 단위가 아니라 *문자열 상태를 줄 경계
+    너머로 승계*하며 한다. 예전엔 `#` 로 시작하는 줄을 무조건 버려, multi-line string
+    파라미터(content: "...") 안의 마크다운 헤딩(`# 제목`)·빈 줄이 조용히 삭제됐다
+    (self:write 본문 손상 실측). 열린 문자열 안의 줄은 전부 내용이므로 보존한다.
+    주석 줄은 스캔하지 않고 버린다 — 주석 속 따옴표(예: # don't)가 상태를 오염시키지 않게.
+    """
+    entries = []  # (line, 줄 시작 시점의 in_string 여부)
+    in_string = False
+    string_char = None
+    for line in code.split('\n'):
+        stripped = line.strip()
+        if not in_string:
+            if not stripped or stripped.startswith('#'):
+                continue
+        entries.append((stripped, in_string))
+        _d, in_string, string_char = _scan_line_state(stripped, in_string, string_char)
+
+    if not entries:
         return []
 
-    # 1단계: >> 로 시작하는 줄을 이전 줄에 합치기 (멀티라인 파이프라인)
-    merged = [lines[0]]
-    for line in lines[1:]:
-        if line.startswith('>>'):
+    # 1단계: 이어지는 줄을 이전 줄에 합치기.
+    #   - 열린 문자열 안에서 시작하는 줄 = 앞 줄 문자열의 내용 → '\n' 으로 병합(내용 보존)
+    #   - >> 로 시작하는 줄 = 멀티라인 파이프라인 → ' ' 로 병합
+    merged = []
+    for line, was_in_string in entries:
+        if merged and was_in_string:
+            merged[-1] = merged[-1] + '\n' + line
+        elif merged and line.startswith('>>'):
             merged[-1] = merged[-1] + ' ' + line
         else:
             merged.append(line)
 
     # 2단계: 멀티라인 { } 블록 병합
-    #   이전 줄의 { } 균형이 맞지 않으면 다음 줄을 합침
+    #   이전 줄의 { } 균형이 맞지 않으면 다음 줄을 합침 (문자열 상태 승계 —
+    #   문자열 안의 중괄호가 깊이를 오염시키지 않게)
     result = []
     i = 0
     while i < len(merged):
         current = merged[i]
-        depth = _count_brace_depth(current)
-        while depth > 0 and i + 1 < len(merged):
+        depth, s_in, s_ch = _scan_line_state(current, False, None)
+        while (depth > 0 or s_in) and i + 1 < len(merged):
             i += 1
             current = current + '\n' + merged[i]
-            depth += _count_brace_depth(merged[i])
+            d2, s_in, s_ch = _scan_line_state(merged[i], s_in, s_ch)
+            depth += d2
         result.append(current)
         i += 1
 
     return result
 
 
-def _count_brace_depth(text: str) -> int:
-    """텍스트 내 { } 균형 계산 (문자열 내부 무시)"""
+def _scan_line_state(text: str, in_string: bool, string_char: Optional[str]):
+    """한 줄을 스캔해 (중괄호 깊이 변화량, 끝 시점 문자열 상태)를 반환.
+
+    문자열 리터럴 내부의 중괄호는 세지 않고, 문자열 열림/닫힘 상태를 줄 경계
+    너머로 승계할 수 있게 시작 상태를 인자로 받는다. (D3 — _preprocess 전용)
+    """
     depth = 0
-    in_string = False
-    string_char = None
     i = 0
     while i < len(text):
         ch = text[i]
-        if not in_string:
+        if in_string:
+            if ch == '\\':
+                i += 1  # 이스케이프 건너뛰기
+            elif ch == string_char:
+                in_string = False
+                string_char = None
+        else:
             if ch == '"' or ch == "'":
                 in_string = True
                 string_char = ch
@@ -249,47 +277,39 @@ def _count_brace_depth(text: str) -> int:
                 depth += 1
             elif ch == '}':
                 depth -= 1
-        else:
-            if ch == '\\' and i + 1 < len(text):
-                i += 1  # 이스케이프 건너뛰기
-            elif ch == string_char:
-                in_string = False
         i += 1
-    return depth
+    return depth, in_string, string_char
 
 
-def _extract_statements(lines: List[str]) -> Tuple[List[str], Dict[str, str]]:
+def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]]]:
     """
     변수 할당과 명령문을 분리
 
     Returns:
-        (statements, variables)
+        (statements, assign_names)
         - statements: 실행할 명령문 리스트
-        - variables: {변수명: 값} (나중에 순차 실행 결과로 채워짐)
+        - assign_names: statements 와 정렬된 리스트. 그 문장이 `$name = ...` 할당이면
+          변수명, 아니면 None. 실제 step 인덱스 바인딩은 parse() 가 문장을 step 으로
+          펼친 뒤에 계산한다 (desugar 로 step 수가 변할 수 있어 여기서 세면 어긋난다).
     """
     statements = []
-    variables = {}  # 변수명 → 위치 정보 (몇 번째 step의 결과인지)
+    assign_names: List[Optional[str]] = []
 
     # `;` = 한 줄 안의 줄바꿈. 독립 문장을 한 줄에 늘어놓는 순차 연산자로,
     # 여기서 개행과 **같은 것**으로 접는다(실행기는 둘을 구분하지 않는다).
     # 문자열·중괄호 안의 `;` 는 _split_by_operator 가 알아서 무시한다.
     lines = [s for line in lines for s in (_split_by_operator(line, ';') or [line])]
 
-    step_index = 0
     for line in lines:
         m = _VAR_ASSIGN_PATTERN.match(line)
         if m:
-            var_name = m.group(1)
-            expr = m.group(2).strip()
-            variables[var_name] = step_index
-            statements.append(expr)
-            # 파이프라인 내 step 수 세기
-            step_index += len(_split_pipeline(expr))
+            assign_names.append(m.group(1))
+            statements.append(m.group(2).strip())
         else:
+            assign_names.append(None)
             statements.append(line)
-            step_index += len(_split_pipeline(line))
 
-    return statements, variables
+    return statements, assign_names
 
 
 def _split_pipeline(text: str) -> List[tuple]:
@@ -367,8 +387,18 @@ def _parse_group(text: str) -> Optional[Dict]:
     if not text:
         return None
 
-    # & 연산자 확인 (병렬)
+    # ★혼용 거부(D1, 2026-08-05): 한 세그먼트에 & 와 ?? 가 섞이면 명시 파스 에러.
+    #   예전엔 & 를 먼저 무조건 분할하고 각 조각을 _parse_step(첫 매치만)이 먹어,
+    #   '[a:b]{} ?? [c:d]{} & [e:f]{}' 에서 c:d 가 조용히 사라졌다(액션 침묵 소실).
+    #   두 연산자는 우선순위가 정의돼 있지 않다 — >> 로 단계를 나누거나 문장(줄/;)을 분리할 것.
     parallel_parts = _split_by_operator(text, '&')
+    fallback_parts = _split_by_operator(text, '??')
+    if len(parallel_parts) > 1 and len(fallback_parts) > 1:
+        raise IBLSyntaxError(
+            "한 세그먼트 안에서 & (병렬)와 ?? (폴백)를 섞을 수 없습니다 — 우선순위가 "
+            "정의되지 않아 액션이 유실됩니다. >> 로 단계를 나누거나 문장을 분리하세요.\n"
+            f"  문제 구간: {text[:120]}"
+        )
     if len(parallel_parts) > 1:
         branches = []
         for part in parallel_parts:
@@ -379,7 +409,6 @@ def _parse_group(text: str) -> Optional[Dict]:
         return {"_parallel": True, "branches": branches}
 
     # ?? 연산자 확인 (fallback)
-    fallback_parts = _split_by_operator(text, '??')
     if len(fallback_parts) > 1:
         chain = []
         for part in fallback_parts:
@@ -591,6 +620,15 @@ def _parse_step(text: str) -> Optional[Dict]:
     if not m:
         return None
 
+    # ★침묵 흡수 방지(D2, 2026-08-05): [node:action] 앞에 해석 안 되는 텍스트가 있으면
+    #   명시 에러. 예전엔 search() 가 중간 매치를 잡아 앞부분을 조용히 버렸다.
+    lead = text[:m.start()].strip()
+    if lead:
+        raise IBLSyntaxError(
+            f"스텝 앞에 해석되지 않은 텍스트가 있습니다: '{lead[:80]}'\n"
+            f"  전체: {text[:160]}"
+        )
+
     node = m.group(1)
     action = m.group(2)
     target_raw = m.group(3)
@@ -630,10 +668,25 @@ def _parse_step(text: str) -> Optional[Dict]:
     # 노드 주소지정 @별칭 (다중 노드): [node:action]{...}@폰2 → target_node="폰2".
     # params 블록 밖(tail)에서만 찾아 파라미터 값 내 @(이메일 등)와 충돌 없음. 한글 별칭 허용.
     target_node = None
+    leftover = tail
     if tail.startswith('@'):
         mt = re.match(r'@([^\s\(\)\{\}\[\]&|>?@]+)', tail)
         if mt:
             target_node = mt.group(1)
+            leftover = tail[mt.end():].strip()
+
+    # ★침묵 흡수 방지(D2, 2026-08-05): 스텝 문법이 소비하지 않은 잔여 텍스트가 있으면
+    #   명시 에러. 예전엔 '[a:b]{} [c:d]{}' (>> 누락 오타)가 한 스텝으로 조용히 흡수돼
+    #   c:d 가 실행되지 않았다. 단, `#` 로 시작하는 잔여는 인라인 주석으로 무해 폐기
+    #   (기존 관대함 유지 — 코드가 아니라 실행 유실이 없다).
+    if leftover and not leftover.startswith('#'):
+        hint = ""
+        if _STEP_PATTERN.search(leftover):
+            hint = " 여러 스텝을 이으려면 >> (순차), & (병렬), ?? (폴백) 연산자를 쓰세요."
+        raise IBLSyntaxError(
+            f"스텝 뒤에 해석되지 않은 텍스트가 있습니다: '{leftover[:80]}'.{hint}\n"
+            f"  전체: {text[:160]}"
+        )
 
     # 별칭 정규화로 주입된 파라미터를 병합 (사용자 명시값 우선)
     if injected_params:
@@ -653,15 +706,15 @@ def _parse_step(text: str) -> Optional[Dict]:
 
 
 
-def _resolve_variables(step: dict, variables: dict) -> dict:
+def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
     """
-    step 내의 변수 참조($name)를 {{_prev_result}} 패턴으로 변환
+    step 내의 변수 참조($name)를 {{_step_N_result}} 패턴으로 변환
 
-    현재는 간단한 구현: $var → {{_step_N_result}} (N = 변수가 할당된 step 인덱스)
-    파이프라인에서 순차 실행 시 이전 결과가 자동 전달되므로,
-    직전 step 결과는 {{_prev_result}}로 자동 사용됨.
+    N = 그 변수가 할당된 문장의 최종 step 인덱스. workflow_engine 이 step 별 결과를
+    저장해 실행 시점에 실제 값으로 치환한다 (D4 — 예전엔 전부 {{_prev_result}} 로
+    뭉개지고 문장 경계가 prev_result 를 비워 빈 문자열이 주입됐다).
 
-    독립 변수(비직전 참조)는 향후 확장.
+    이름 경계 매칭 — $a 가 $abc 안에 부분 매칭되지 않게 (?!\\w) 로 막는다.
     """
     if not variables:
         return step
@@ -669,8 +722,9 @@ def _resolve_variables(step: dict, variables: dict) -> dict:
     resolved = {}
     for key, val in step.items():
         if isinstance(val, str):
-            for var_name in variables:
-                val = val.replace(f"${var_name}", "{{_prev_result}}")
+            for var_name, step_idx in variables.items():
+                val = re.sub(r'\$%s(?!\w)' % re.escape(var_name),
+                             "{{_step_%d_result}}" % step_idx, val)
             resolved[key] = val
         elif isinstance(val, dict):
             resolved[key] = _resolve_variables(val, variables)
@@ -892,13 +946,84 @@ if __name__ == "__main__":
     assert s22["params"]["start_date"] == "2026-02-01"
     assert s22["params"]["end_date"] == "2026-02-26"
 
-    # 23. 변수 바인딩
+    # 23. 변수 바인딩 — $var 가 할당 문장의 최종 step 인덱스로 치환돼야 함 (D4)
     code23 = """
     $result = [sense:web_search]{query: "AI 뉴스"}
     [others:channel_send]{channel_type: "telegram", body: "$result"}
     """
     p23 = parse(code23)
-    print(f"23. 변수 바인딩: {len(p23)} steps")
+    print(f"23. 변수 바인딩: {len(p23)} steps, body={p23[1]['params']['body']}")
     assert len(p23) == 2
+    assert p23[1]["params"]["body"] == "{{_step_0_result}}"
+
+    # 23b. 파이프라인 할당 — 변수는 그 문장의 *마지막* step 결과를 가리킴 (D4)
+    code23b = """
+    $r = [sense:web_search]{query: "A"} >> [table:take]{n: 3}
+    [others:channel_send]{channel_type: "telegram", body: "$r"}
+    """
+    p23b = parse(code23b)
+    print(f"23b. 파이프 할당: body={p23b[2]['params']['body']}")
+    assert len(p23b) == 3
+    assert p23b[2]["params"]["body"] == "{{_step_1_result}}"
+
+    # 23c. 이름 경계 — $r 이 $result 안에 부분 매칭되지 않아야 함 (D4)
+    code23c = """
+    $r = [sense:web_search]{query: "A"}
+    $result = [sense:web_search]{query: "B"}
+    [others:channel_send]{channel_type: "telegram", body: "$result / $r"}
+    """
+    p23c = parse(code23c)
+    print(f"23c. 이름 경계: body={p23c[2]['params']['body']}")
+    assert p23c[2]["params"]["body"] == "{{_step_1_result}} / {{_step_0_result}}"
+
+    # === 침묵 실패 수리 회귀 테스트 (2026-08-05) ===
+    print("\n--- 침묵 실패 수리 Tests (D1~D4) ---")
+
+    # 24. D1: & 와 ?? 혼용 → 명시 파스 에러 (예전엔 c:d 가 조용히 소실)
+    try:
+        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search_gnews]{query: "c"}')
+        assert False, "혼용은 IBLSyntaxError 여야 함"
+    except IBLSyntaxError as e:
+        print(f"24. D1 혼용 거부: {str(e).splitlines()[0]}")
+        assert "섞을 수 없습니다" in str(e)
+
+    # 25. D2: >> 누락 오타 → 명시 파스 에러 (예전엔 둘째 스텝이 조용히 흡수·유실)
+    try:
+        parse('[sense:web_search]{query: "a"} [self:file]{path: "b.md"}')
+        assert False, ">> 누락은 IBLSyntaxError 여야 함"
+    except IBLSyntaxError as e:
+        print(f"25. D2 잔여 텍스트 거부: {str(e).splitlines()[0]}")
+        assert "해석되지 않은" in str(e)
+
+    # 25b. D2: @별칭 뒤 잔여도 거부, @별칭 자체는 정상
+    s25 = parse_step('[self:read]{path: "a.md"}@폰2')
+    assert s25["target_node"] == "폰2"
+    try:
+        parse_step('[self:read]{path: "a.md"}@폰2 [self:open]{}')
+        assert False
+    except IBLSyntaxError:
+        print("25b. D2 @별칭 뒤 잔여 거부 OK")
+
+    # 25c. D2: 인라인 주석은 무해 폐기 (기존 관대함 유지)
+    s25c = parse('[sense:web_search]{query: "a"} # 검색')
+    assert len(s25c) == 1 and s25c[0]["action"] == "web_search"
+    print("25c. D2 인라인 주석 허용 OK")
+
+    # 26. D3: multi-line string 파라미터 안의 # 헤딩·빈 줄 보존 (예전엔 삭제돼 본문 손상)
+    code26 = '''[self:write]{path: "t.md", content: "제목
+# 헤딩입니다
+
+본문"}'''
+    p26 = parse(code26)
+    c26 = p26[0]["params"]["content"]
+    print(f"26. D3 문자열 내 헤딩 보존: {c26!r}")
+    assert "# 헤딩입니다" in c26
+    assert "\n\n" in c26  # 빈 줄도 내용
+    assert p26[0]["params"]["path"] == "t.md"
+
+    # 26b. D3: 문자열 밖 주석은 여전히 제거
+    p26b = parse('# 주석\n[sense:web_search]{query: "a"}\n# 주석2')
+    assert len(p26b) == 1
+    print("26b. D3 문자열 밖 주석 제거 OK")
 
     print("\n=== 모든 테스트 통과 ===")

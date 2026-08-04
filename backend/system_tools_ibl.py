@@ -5,6 +5,7 @@ system_tools.py 에서 verbatim 이동: execute_ibl 단일도구의 실행 본�
 system_tools 가 재수출하므로 기존 `from system_tools import _execute_ibl_unified` 불변.
 """
 import json
+import re
 import time
 from typing import Dict, Optional
 
@@ -109,6 +110,37 @@ def _replace_file_refs_in_list(lst: list, files: list):
             _replace_file_refs_in_dict(val, files)
         elif isinstance(val, list):
             _replace_file_refs_in_list(val, files)
+
+
+def _collect_step_nodes(obj, out: set):
+    """스텝 트리에서 실행될 모든 노드명을 재귀 수집 (D5, 2026-08-05).
+
+    예전엔 노드 ACL 이 step 의 최상위 `_node` 키만 봐서, 병렬(branches)·폴백(_fallback_chain)·
+    [goal:](strategy)·[if:]/[case:](branches[].action, default) 복합 스텝이 무검사 통과했다
+    — 제한 에이전트가 금지 노드에 도달 가능. 구조 키만 재귀해 params 값의 우연한 키와
+    충돌하지 않는다. [if:]/[case:] 의 조건·source 평가도 노드 실행이므로 함께 수집한다.
+    """
+    if isinstance(obj, list):
+        for item in obj:
+            _collect_step_nodes(item, out)
+        return
+    if not isinstance(obj, dict):
+        return
+    d = obj.get("_node") or obj.get("node")
+    if isinstance(d, str) and d:
+        out.add(d)
+    # [case:] 의 source ("node:action") / [if:] 브랜치의 condition ("node:action < 값")
+    for key in ("source", "condition"):
+        v = obj.get(key)
+        if isinstance(v, str):
+            m = re.match(r"\s*(\w+):\w+", v)
+            if m:
+                out.add(m.group(1))
+    # 구조 키 재귀 — 일반 step 의 action 은 문자열이라 여기 안 걸린다
+    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps"):
+        v = obj.get(key)
+        if isinstance(v, (list, dict)):
+            _collect_step_nodes(v, out)
 
 
 # ============ 통합 도구 실행 함수 ============
@@ -245,11 +277,12 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
         if files and isinstance(files, list):
             _replace_file_refs_in_steps(parsed, files)
 
-        # 노드 접근 체크
+        # 노드 접근 체크 — 복합 스텝(&/??/[goal:]/[if:]/[case:]) 내부까지 재귀 수집 (D5)
         if allowed is not None:
-            for step in parsed:
-                d = step.get("_node", step.get("node", ""))
-                if d and not check_node_access(d, allowed):
+            _nodes_in_code: set = set()
+            _collect_step_nodes(parsed, _nodes_in_code)
+            for d in sorted(_nodes_in_code):
+                if not check_node_access(d, allowed):
                     return json.dumps(get_denied_message(d, allowed), ensure_ascii=False)
 
         # 실행 분기 결정

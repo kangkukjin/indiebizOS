@@ -112,6 +112,15 @@
 - 실측 계약: 결과 항목의 `data-refWorks` 속성(quote_plus 인코딩 JSON)이 정본 —
   HTML 태그 파싱 아님. 봇차단 없음(맨 requests 200).
 
+## 상세(detail:true)가 싣는 것 — 2026-08-04 풍부화
+
+`[sense:book]{isbn: "...", detail: true, region: "43"}` 한 방에:
+- `book` — 서지+책소개(description)+`loan_stats`(누적·지역·연령·성별)
+- `usage` — usageAnalysisList: `monthly`(월별 대출+전국 랭킹)·`keywords`(대출자 키워드)·
+  `co_loan`(함께 빌린 책)·`mania_rec`/`reader_rec`(마니아·다독자 추천)·`loan_groups`(연령×성별)
+- `libraries` — 소장 도서관(region **필수** — 없으면 regionCodeErr, 이름("충북")도 코드로 정규화됨).
+  ★실측: 실시간 연계 참여관만 반환 — 같은 책이 서울 293·세종 50인데 경기·충북 0(지역 편차 큼).
+
 ## 자주 하는 실수
 
 - **ISBN 하이픈**: `978-89-364-3426-7` 같이 하이픈 포함은 일부 케이스에서 실패. 숫자만 권장.

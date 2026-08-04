@@ -385,28 +385,123 @@ nodes:
               type: text
               placeholder: 제목·저자·키워드
               required: true
+            - key: region
+              type: select
+              label: 지역 (소장 도서관 조회용)
+              options:
+              - value: ''
+                label: 지역 선택 안 함
+              - value: '11'
+                label: 서울
+              - value: '26'
+                label: 부산
+              - value: '27'
+                label: 대구
+              - value: '28'
+                label: 인천
+              - value: '29'
+                label: 광주
+              - value: '30'
+                label: 대전
+              - value: '31'
+                label: 울산
+              - value: '36'
+                label: 세종
+              - value: '41'
+                label: 경기
+              - value: '42'
+                label: 강원
+              - value: '43'
+                label: 충북
+              - value: '44'
+                label: 충남
+              - value: '45'
+                label: 전북
+              - value: '46'
+                label: 전남
+              - value: '47'
+                label: 경북
+              - value: '48'
+                label: 경남
+              - value: '50'
+                label: 제주
             action: '[sense:book]{keyword: "$q"}'
             view:
             - type: card_list
               from: items
               empty_from: message
               item_click:
-                action: '[sense:book]{isbn: "{isbn13}", detail: true}'
-                view:
-                - type: metric
-                  label: 전국 누적 대출
-                  big: '{book.loan_stats.total|num}'
-                  unit: 회
-                - type: kv_list
-                  title: 연령별 대출
-                  from: book.loan_stats.by_age
-                  k: '{name}'
-                  v: '{loanCnt|num}'
-                - type: kv_list
-                  title: 성별 대출
-                  from: book.loan_stats.by_gender
-                  k: '{name}'
-                  v: '{loanCnt|num}'
+                action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+                tabs:
+                - name: 개요
+                  view:
+                  - type: kv
+                    title: 서지
+                    rows:
+                    - k: 저자
+                      v: '{book.authors}'
+                    - k: 출판
+                      v: '{book.publisher} · {book.publication_year}'
+                    - k: 분류
+                      v: '{book.class_nm|opt:}'
+                    - k: ISBN
+                      v: '{book.isbn13}'
+                    - k: 책소개
+                      v: '{book.description|opt:}'
+                  - type: metric
+                    label: 전국 누적 대출
+                    big: '{book.loan_stats.total|num}'
+                    unit: 회
+                  - type: kv_list
+                    title: 연령별 대출
+                    from: book.loan_stats.by_age
+                    k: '{name}'
+                    v: '{loanCnt|num}'
+                  - type: kv_list
+                    title: 성별 대출
+                    from: book.loan_stats.by_gender
+                    k: '{name}'
+                    v: '{loanCnt|num}'
+                - name: 추이·키워드
+                  view:
+                  - type: kv_list
+                    title: 월별 대출 (전국 랭킹)
+                    from: usage.monthly
+                    k: '{month}'
+                    v: '{loanCnt|num}회 · {ranking}위'
+                  - type: kv_list
+                    title: 대출자 키워드
+                    from: usage.keywords
+                    k: '{word}'
+                    v: '{weight}'
+                - name: 함께 빌린 책
+                  view:
+                  - type: card_list
+                    title: 함께 빌린 책
+                    from: usage.co_loan
+                    card:
+                      title: '{bookname}'
+                      lines:
+                      - '{authors}'
+                      - '{publisher} · {publication_year}'
+                  - type: kv_list
+                    title: 마니아 추천
+                    from: usage.mania_rec
+                    k: '{bookname}'
+                    v: '{authors}'
+                  - type: kv_list
+                    title: 다독자 추천
+                    from: usage.reader_rec
+                    k: '{bookname}'
+                    v: '{authors}'
+                - name: 소장 도서관
+                  view:
+                  - type: kv_list
+                    title: 이 책을 소장한 도서관 (상위 30)
+                    from: libraries
+                    empty_from: libraries_note
+                    k: '{libName}'
+                    v: '{address|opt:}'
               card:
                 image: '{bookImageURL}'
                 title: '{bookname}'

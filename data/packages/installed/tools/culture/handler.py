@@ -99,8 +99,30 @@ def _book_op(ti: dict):
         result = None
         if isbn:
             if detail:
-                from tool_library import get_book_detail
-                return get_book_detail(isbn13=isbn, loan_info=ti.get("loan_info", True))
+                # 드릴 풍부화(2026-08-04): 상세+이용분석+소장도서관을 한 응답에 —
+                # 앱 드릴 tabs 는 단일 액션 결과를 탭별로 슬라이스한다(렌더러 계약).
+                from tool_library import (get_book_detail, get_usage_analysis,
+                                          search_libraries_by_book, get_region_code)
+                out = get_book_detail(isbn13=isbn, loan_info=ti.get("loan_info", True))
+                if not (isinstance(out, dict) and "error" in out):
+                    ua = get_usage_analysis(isbn)
+                    if isinstance(ua, dict) and "error" not in ua:
+                        out["usage"] = ua
+                    # ★libSrchByBook 은 region 필수(regionCodeErr 실측) — 이름("충북")도 코드로 정규화
+                    region = get_region_code(str(ti.get("region") or "").strip())
+                    if region:
+                        libs = search_libraries_by_book(isbn13=isbn, region=region, page_size=30)
+                        if isinstance(libs, dict) and "error" not in libs:
+                            out["libraries"] = libs.get("data") or []
+                            out["libraries_total"] = libs.get("count")
+                            if not out["libraries"]:
+                                # ★실측(2026-08-04): libSrchByBook 은 실시간 연계 참여관만 반환 —
+                                # 같은 책이 서울 293·세종 50인데 경기·충북 0 (지역별 편차 큼)
+                                out["libraries_note"] = "이 지역에서 조회되는 소장 도서관이 없습니다 — 정보나루 실시간 연계 도서관만 잡혀 지역별 편차가 큽니다."
+                    if "libraries" not in out:
+                        out["libraries"] = []
+                        out["libraries_note"] = "지역을 선택하고 다시 열면 그 지역 소장 도서관이 표시됩니다 (정보나루 API 는 지역 필수)."
+                return out
             from tool_library import get_book_by_isbn
             result = get_book_by_isbn(isbn=isbn)
         elif title or author or publisher:

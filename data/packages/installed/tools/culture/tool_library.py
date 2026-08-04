@@ -269,6 +269,35 @@ def get_book_detail(isbn13, loan_info=True):
     }
 
 
+def get_usage_analysis(isbn13):
+    """이용 분석(usageAnalysisList) — 월별 대출 추이·랭킹, 키워드, 함께 빌린 책,
+    마니아/다독자 추천, 연령×성별 대출 그룹. srchDtlList(상세·대출통계)와 별개 API.
+    2026-08-04 드릴 풍부화로 랩핑 — 정보나루의 가장 풍부한 엔드포인트."""
+    if not isbn13:
+        return {"error": "ISBN을 입력해주세요."}
+    clean_isbn = isbn13.replace("-", "").replace(" ", "")
+    result = call_library_api("usageAnalysisList", {"isbn13": clean_isbn})
+    if isinstance(result, dict) and "error" in result:
+        return result
+
+    def _entries(path):
+        out = []
+        for el in result.findall(path):
+            entry = {c.tag: c.text.strip() for c in el if c.text}
+            if entry:
+                out.append(entry)
+        return out
+
+    return {
+        "monthly": _entries('.//loanHistory/loan'),          # month/loanCnt/ranking
+        "keywords": _entries('.//keywords/keyword'),         # word/weight
+        "co_loan": _entries('.//coLoanBooks/book'),          # 함께 빌린 책
+        "mania_rec": _entries('.//maniaRecBooks/book'),      # 마니아 추천
+        "reader_rec": _entries('.//readerRecBooks/book'),    # 다독자 추천
+        "loan_groups": _entries('.//loanGrps/loanGrp'),      # age/gender/loanCnt/ranking
+    }
+
+
 # ==================== 인기대출도서 API ====================
 
 def get_popular_books(start_date=None, end_date=None, gender=None,

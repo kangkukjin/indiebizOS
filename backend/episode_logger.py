@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from runtime_utils import get_base_path
+from logging_utils import mask_secrets
 
 MAX_EPISODES = 1000
 
@@ -150,12 +151,16 @@ class EpisodeLogger:
             except Exception:
                 pass
         try:
-            log_text = "".join(ep.buffer)
+            # ★비밀 마스킹은 반드시 여기(합쳐진 전체 텍스트)에서 — _TeeWriter.write 의 청크
+            # 단위로 하면 키가 청크 경계에서 쪼개져 패턴을 비껴간다. 도구 결과로 설정 파일
+            # (apiKey 등)을 읽어도 자격증명이 DB에 평문 영속되지 않는다.
+            log_text = mask_secrets("".join(ep.buffer))
+            user_message = mask_secrets(ep.user_message)
             total_ms = int((datetime.now() - ep.started_at).total_seconds() * 1000)
-            episode_id = _save_episode(ep.started_at, ep.agent, ep.user_message, log_text, total_ms)
+            episode_id = _save_episode(ep.started_at, ep.agent, user_message, log_text, total_ms)
             if episode_id:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
-                _extract_and_save_summary(episode_id, ep.started_at, ep.agent, ep.user_message, log_text, total_ms)
+                _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message, log_text, total_ms)
                 _cleanup_old_episodes()
         except Exception as e:
             # 에피소드 기록 실패가 시스템에 영향 주면 안 됨
@@ -184,7 +189,9 @@ class EpisodeLogger:
             conn = _get_db()
             conn.execute(
                 "UPDATE episode_log SET log = ? WHERE id = ?",
-                ("".join(ep.buffer), ep.episode_id),
+                # ★_finalize 와 같은 마스킹 필수 — 이 경로가 END 저장본을 통째로 덮으므로,
+                #   여기서 빠지면 증류를 거친 에피소드마다 마스킹이 조용히 무효가 된다.
+                (mask_secrets("".join(ep.buffer)), ep.episode_id),
             )
             conn.commit()
             conn.close()

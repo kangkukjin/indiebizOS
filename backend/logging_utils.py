@@ -85,6 +85,47 @@ def mask_sensitive(text: str) -> str:
     return text
 
 
+# ============ 비밀(secret) 마스킹 — 영속 로그용, 항상 적용 ============
+# mask_sensitive 와 별개: 저건 PRODUCTION_MODE 게이트 + PII(이메일·전화)까지 가리는
+# 콘솔 로그용이고, 이건 DB 등 디스크에 영속되는 로그에서 자격증명만 무조건 가린다.
+# (에피소드 로그에 [self:read]로 읽은 설정 파일의 apiKey 가 평문 박제된 사고의 재발 방지)
+
+# 필드명 기반: "apiKey": "...", api_key=..., authKey: ... 등 — 값 전체를 가림
+_SECRET_FIELD_RE = re.compile(
+    r'("?(?:api[_-]?key|auth[_-]?key|access[_-]?token|refresh[_-]?token|'
+    r'client[_-]?secret|private[_-]?key|token|secret|password|passwd)"?\s*[:=]\s*)'
+    r'(["\']?)([^"\'\s,}{\]\[]{8,})\2',
+    re.IGNORECASE,
+)
+
+# 값 형식 기반: 필드명 없이도 형태만으로 자격증명임이 확실한 토큰들
+_SECRET_TOKEN_RES = [re.compile(p) for p in (
+    r'AIza[0-9A-Za-z_-]{35}',                       # Google API 키
+    r'sk-[A-Za-z0-9_-]{20,}',                       # OpenAI/Anthropic 류
+    r'(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}',    # GitHub 토큰
+    r'github_pat_[A-Za-z0-9_]{20,}',
+    r'xox[baprs]-[A-Za-z0-9-]{10,}',                # Slack
+    r'ya29\.[0-9A-Za-z_-]{20,}',                    # Google OAuth
+    r'AKIA[0-9A-Z]{16}',                            # AWS Access Key ID
+    r'nsec1[a-z0-9]{58}',                           # Nostr 개인키
+    r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}',  # JWT
+)]
+
+
+def mask_secrets(text: str) -> str:
+    """디스크에 영속될 텍스트에서 자격증명을 마스킹한다. PRODUCTION_MODE 무관 항상 적용.
+
+    필드명 매칭은 값 전체를 ****로, 형식 매칭은 식별용 접두 4자만 남기고 가린다."""
+    if not text:
+        return text
+    if not isinstance(text, str):
+        text = str(text)
+    text = _SECRET_FIELD_RE.sub(r'\1\2****\2', text)
+    for token_re in _SECRET_TOKEN_RES:
+        text = token_re.sub(lambda m: m.group(0)[:4] + '****', text)
+    return text
+
+
 def truncate_content(content: str, max_length: int = 100) -> str:
     """
     긴 내용 자르기 (로그용)

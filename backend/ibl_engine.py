@@ -607,15 +607,13 @@ def get_node_actions(node_name: str) -> set:
 from ibl_routing import (
     _route_api_engine, _route_handler, _route_system,
     _execute_launcher_command, _discover_nodes, _search_guide,
-    _delegate_workflow, _agent_ask, _agent_ask_sync,
-    _agent_list, _agent_info, _route_driver, _route_by_config,
+    _delegate_workflow, _agent_ask_sync,
+    _agent_info, _route_driver,
 )
 from ibl_executors import (
-    _load_nodes, _execute_node,
-    _execute_info_node, _execute_store_node, _execute_exec_node,
+    _load_nodes,
     _output_gui, _output_file, _extract_path_from_prev,
     _output_open, _output_clipboard, _output_download,
-    _execute_output_node,
     _goal_list, _goal_status, _goal_kill,
     _log_attempt, _get_attempts, _summarize_attempts,
     _execute_goal_block, _execute_condition, _execute_case,
@@ -757,10 +755,8 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if tool_input.get("_case"):
         return _execute_case(tool_input, project_path, agent_id)
 
-    # Phase 12: 노드 타입 모드
-    node_type = tool_input.get("_node_type")
-    if node_type:
-        return _execute_node(node_type, tool_input, project_path, agent_id)
+    # (2026-08-05 감사 D11) 옛 노드타입 모드(_node_type: info/store/exec/output) 디스패치 삭제 —
+    # 그 노드들은 레지스트리에 없어 정상 경로의 "알 수 없는 노드" 오류로 수렴한다.
 
     action = tool_input.get("action")
     if not action:
@@ -861,9 +857,9 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         elif router == "channel_engine":
             from channel_engine import execute_channel_action
             result = execute_channel_action(action, params, project_path, agent_id=agent_id)
-        elif router == "web_collector":
-            from web_collector import execute_web_collect_action
-            result = execute_web_collect_action(action, params, project_path)
+        # (2026-08-05 감사 D12) router == "web_collector"/"stub" 분기 삭제 — 어떤 액션도
+        # 이 라우터를 선언하지 않는다(선언 라우터: handler/system/driver/channel_engine/
+        # workflow_engine/trigger_engine). 미지 라우터는 아래 else 가 명시 오류로 처리.
         elif router in ("event_engine", "trigger_engine"):
             from trigger_engine import execute_trigger
             result = execute_trigger(action, params, project_path)
@@ -871,12 +867,6 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             driver_type = action_config.get("driver", "sqlite")
             dn = action_config.get("driver_node")
             result = _run_router_safely(_route_driver, driver_type, node, action, params, project_path, driver_node=dn)
-        elif router == "stub":
-            phase = action_config.get("phase", "?")
-            return {
-                "error": f"[{node}:{action}]은 Phase {phase}에서 구현 예정입니다.",
-                "node": node, "action": action, "status": "not_implemented",
-            }
         else:
             return {"error": f"알 수 없는 라우터: {router}"}
 

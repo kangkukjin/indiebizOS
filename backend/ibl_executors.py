@@ -28,130 +28,9 @@ def _load_nodes() -> Dict:
     return _nodes_cache
 
 
-def _execute_node(node_type: str, tool_input: dict, project_path: str, agent_id: str) -> Any:
-    """노드 타입별 실행 분기"""
-    nodes = _load_nodes()
-    node_config = nodes.get(node_type)
-    if not node_config:
-        return {"error": f"알 수 없는 노드: {node_type}", "available": list(nodes.keys())}
-
-    config_type = node_config.get("type")
-    if config_type == "info":
-        return _execute_info_node(node_config, tool_input, project_path, agent_id)
-    elif config_type == "store":
-        return _execute_store_node(node_config, tool_input, project_path, agent_id)
-    elif config_type == "exec":
-        return _execute_exec_node(node_config, tool_input, project_path, agent_id)
-    elif config_type == "output":
-        return _execute_output_node(node_config, tool_input, project_path)
-    return {"error": f"알 수 없는 노드 타입: {config_type}"}
-
-
-def _execute_info_node(node_config, tool_input, project_path, agent_id):
-    """info 타입 노드 실행 (레거시, 현재 미사용 - 7개 정보 노드가 informant로 통합됨)"""
-    from ibl_engine import _route_by_config
-
-    source = tool_input.get("source")
-    if not source:
-        sources = node_config.get("sources", {})
-        return {
-            "error": "source 파라미터가 필요합니다.",
-            "sources": {k: v.get("description", "") for k, v in sources.items()},
-        }
-
-    source_config = node_config.get("sources", {}).get(source)
-    if not source_config:
-        return {
-            "error": f"알 수 없는 source: {source}",
-            "sources": list(node_config.get("sources", {}).keys()),
-        }
-
-    action = tool_input.get("action")
-    actions = source_config.get("actions", {})
-    action_config = actions.get(action)
-    if not action_config:
-        return {
-            "error": f"source '{source}'에 '{action}' 액션이 없습니다.",
-            "actions": list(actions.keys()),
-        }
-
-    params = tool_input.get("params", {})
-    return _route_by_config(action_config, params, source, action,
-                            project_path, agent_id)
-
-
-def _execute_store_node(node_config, tool_input, project_path, agent_id):
-    """store 노드 실행: ibl_store(store='health', action='summary')"""
-    from ibl_engine import _route_by_config, _route_driver
-
-    store = tool_input.get("store")
-    if not store:
-        stores = node_config.get("stores", {})
-        return {
-            "error": "store 파라미터가 필요합니다.",
-            "stores": {k: v.get("description", "") for k, v in stores.items()},
-        }
-
-    store_config = node_config.get("stores", {}).get(store)
-    if not store_config:
-        return {
-            "error": f"알 수 없는 store: {store}",
-            "stores": list(node_config.get("stores", {}).keys()),
-        }
-
-    action = tool_input.get("action")
-    actions = store_config.get("actions", {})
-    action_config = actions.get(action)
-    if not action_config:
-        return {
-            "error": f"store '{store}'에 '{action}' 액션이 없습니다.",
-            "actions": list(actions.keys()),
-        }
-
-    params = tool_input.get("params", {})
-    router = action_config.get("router")
-    if router == "driver":
-        driver_type = action_config.get("driver", "sqlite")
-        dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정
-        return _route_driver(driver_type, store, action, params, project_path, driver_node=dn)
-
-    return _route_by_config(action_config, params, store, action,
-                            project_path, agent_id)
-
-
-def _execute_exec_node(node_config, tool_input, project_path, agent_id):
-    """exec 노드 실행: ibl_exec(action='python')"""
-    from ibl_engine import _route_by_config
-
-    action = tool_input.get("action")
-    if not action:
-        executors = list(node_config.get("executors", {}).keys())
-        programs = list(node_config.get("programs", {}).keys())
-        return {
-            "error": "action 파라미터가 필요합니다.",
-            "executors": executors,
-            "programs": programs,
-        }
-
-    params = tool_input.get("params", {})
-
-    # executors (python, node, shell)
-    executors = node_config.get("executors", {})
-    if action in executors:
-        config = executors[action]
-        return _route_by_config(config, params, "exec", action,
-                                project_path, agent_id)
-
-    # programs (remotion, video, slides, image, music)
-    programs = node_config.get("programs", {})
-    if action in programs:
-        config = programs[action]
-        return _route_by_config(config, params, "exec", action,
-                                project_path, agent_id)
-
-    available = list(executors.keys()) + list(programs.keys())
-    return {"error": f"알 수 없는 exec 액션: {action}", "available": available}
-
+# (2026-08-05 감사 D11) 옛 노드타입 디스패치(_execute_node/_execute_info_node/
+# _execute_store_node/_execute_exec_node)는 삭제 — 트리거 노드명 info/store/exec/output 이
+# 레지스트리에 존재하지 않아 도달 불가였고, 도달해도 config type 부재로 오류만 반환했다.
 
 # ============================================================
 # Phase 13: 출력 노드 함수들
@@ -361,28 +240,9 @@ def _output_download(url: str, params: dict, project_path: str) -> Any:
         return {"error": f"다운로드 실패: {str(e)}"}
 
 
-def _execute_output_node(node_config, tool_input, project_path):
-    """output 노드 실행: ibl_output(action='gui', params={...})
-    Phase 19: output → orchestrator로 통합됨. 라우터 내부 구현은 유지."""
-    from ibl_engine import _route_system
+# (2026-08-05) _execute_output_node 삭제 — 유일 호출자가 위의 죽은 _execute_node 였다.
+# 출력 동작의 정본은 func:output_op(_output_gui/_output_file/_output_clipboard).
 
-    action = tool_input.get("action")
-    actions = node_config.get("actions", {})
-    action_config = actions.get(action)
-    if not action_config:
-        return {
-            "error": f"알 수 없는 output 액션: {action}",
-            "available": list(actions.keys()),
-        }
-
-    func_name = action_config.get("func")
-    params = tool_input.get("params", {})
-    return _route_system(func_name, params, project_path)
-
-
-# ===========================================================================
-# Phase 26: Goal 프로세스 관리 함수
-# ===========================================================================
 
 def _goal_list(params: dict, project_path: str = "") -> dict:
     """등록된 목표 목록 조회 (상태별 필터 가능)"""

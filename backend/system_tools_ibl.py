@@ -305,21 +305,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 # 없으면 `[self:read]{...}@맥` 이 폰서 로컬 실행돼 맥 파일을 못 읽는다(다중노드 버그).
                 "target_node": step.get("target_node"),
             }
-            # 노드 타입 처리 (info, store, exec, output)
-            node = step.get("_node", step.get("node", ""))
-            if node in ("info", "store", "exec", "output"):
-                ibl_input["_node_type"] = node
-                if node == "info":
-                    ibl_input["source"] = step.get("action", "")
-                    sub_action = step.get("params", {}).get("action", "")
-                    if sub_action:
-                        ibl_input["action"] = sub_action
-                elif node == "store":
-                    ibl_input["store"] = step.get("action", "")
-                    sub_action = step.get("params", {}).get("action", "")
-                    if sub_action:
-                        ibl_input["action"] = sub_action
-
+            # (2026-08-05 감사 D11) 옛 노드타입 특례(info/store/exec/output → _node_type 주입)
+            # 삭제 — 그 노드들은 레지스트리에 없어, 이제 정상 경로의 명시 오류로 수렴한다.
             result = execute_ibl(ibl_input, project_path, agent_id)
         else:
             # 파이프라인 / 병렬 / fallback → workflow_engine

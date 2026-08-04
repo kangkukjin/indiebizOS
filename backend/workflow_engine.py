@@ -287,7 +287,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "duration_ms": duration_ms,
             })
             step_results[i] = result_str
-            prev_result = result_str
+            prev_result = _to_prev_currency(result)  # 파이프 이음매 통화 파생(D13) — results[]는 원형
 
             continue
 
@@ -338,7 +338,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 prev_result = ""
                 continue
 
-            prev_result = result_str
+            prev_result = _to_prev_currency(result)  # 파이프 이음매 통화 파생(D13) — results[]는 원형
             continue
 
         # 일반 step (기존 로직)
@@ -420,7 +420,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             continue
 
         # 다음 step으로 전달
-        prev_result = result_str
+        prev_result = _to_prev_currency(result)  # 파이프 이음매 통화 파생(D13) — results[]는 원형
 
     # 문장 경계를 넘어 계속 실행했더라도 실패는 숨기지 않는다 — 실패한 문장이 있으면 success=False.
     # (건너뛰기는 "계속 실행"이지 "없던 일"이 아니다. 스케줄러·평가자가 조용히 성공으로 읽으면 안 된다.)
@@ -679,6 +679,33 @@ def _auto_inject_prev(tool_input: dict, prev_result: str) -> dict:
         tool_input["params"]["_prev_result"] = prev_result
 
     return tool_input
+
+
+def _to_prev_currency(result: Any) -> str:
+    """다음 step 주입용 문자열 — **파이프 이음매에서만** 단일 통화(items)를 파생한다.
+
+    감사 D13(2026-08-05): currency.py 문서는 파생 관문을 _route_handler 로 적었지만 실제
+    호출처는 렌더러 경계(api_ibl)와 body_ask 뿐이라, table/blocks 만 내는 생산자가
+    `>> [table:sort]` 파이프 안에서 items 를 못 찾고 깨졌다. 관문을 _route_handler 로 옮기면
+    에이전트 최종 tool-result 에도 파생본이 실려 토큰이 중복된다(api_ibl 주석의 의도된 회피).
+    → 진짜 갭은 파이프 이음매: prev_result 로 다음 step 에 물릴 때만 파생한다.
+    results[]/step_results(모델·호출자에게 보이는 쪽)는 원형 유지 = 토큰 중복 0.
+
+    JSON 문자열 결과(대다수 핸들러)도 파싱→파생→재직렬화로 커버. 파싱 불가면 원형 그대로.
+    """
+    from common.currency import derive_items
+    r = result
+    if isinstance(r, str):
+        s = r.strip()
+        if not (s.startswith("{") and s.endswith("}")):
+            return _to_string(result)
+        try:
+            r = json.loads(s)
+        except Exception:
+            return _to_string(result)
+    if isinstance(r, dict):
+        return _to_string(derive_items(r))
+    return _to_string(result)
 
 
 def _to_string(result: Any) -> str:

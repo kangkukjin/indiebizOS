@@ -384,25 +384,13 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         from system_ai_tools import _execute_list_project_agents
         return _execute_list_project_agents(dict(params))
 
-    elif func_name == "call_agent":
-        from system_tools import execute_call_agent
-        return execute_call_agent(dict(params), project_path)
-
-    elif func_name == "delegate_workflow":
-        return _delegate_workflow(params.get("workflow", ""), params, project_path)
-
     elif func_name == "discover":
         return _discover_nodes(params.get("query", ""), params)
 
-    # Phase 11: 에이전트 노드
-    elif func_name == "agent_ask":
-        return _agent_ask(params.get("agent_id", ""), params, project_path)
-    elif func_name == "agent_ask_sync":
-        return _agent_ask_sync(params.get("agent_id", ""), params, project_path)
-    elif func_name == "agent_list":
-        return _agent_list(params)
-    elif func_name == "agent_info":
-        return _agent_info(params.get("agent_id", ""))
+    # (2026-08-05 감사 D12) 죽은 elif 6개 삭제 — call_agent/delegate_workflow/agent_ask/
+    # agent_ask_sync/agent_list/agent_info 는 어떤 액션도 func: 로 선언하지 않았다.
+    # 위임의 정본은 func:delegate(_delegate_unified) — mode 로 sync/workflow 를 분기하며
+    # _agent_ask_sync/_delegate_workflow/_agent_info 는 그 경로가 직접 호출한다.
 
     # 출력 싱크 — 단일 액션 패턴: output {op: gui|file|clipboard} (2026-06-04 통합)
     # download는 획득 동작이라 별도 액션 유지.
@@ -1009,31 +997,8 @@ execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}
     )
 
 
-def _agent_ask(agent_id: str, params: dict, project_path: str) -> Any:
-    """에이전트에게 질문/위임 [others:delegate]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
-    if not agent_id:
-        return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}
-
-    if isinstance(agent_id, (int, float)):
-        agent_id = str(int(agent_id))
-
-    # "프로젝트/에이전트이름" 파싱
-    parts = agent_id.split("/", 1)
-    if len(parts) == 2:
-        project_id, agent_name = parts
-    else:
-        agent_name = parts[0]
-        project_id = Path(project_path).name
-
-    message = params.get("message", params.get("query", ""))
-    if not message:
-        return {"error": "message 파라미터가 필요합니다. 예: {agent_id: \"대장장이\", message: \"이것 좀 해줘\"}"}
-
-    from system_tools import execute_call_agent
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    base = Path(env_path) if env_path else Path(__file__).parent.parent
-    target_project_path = str(base / "projects" / project_id)
-    return execute_call_agent({"agent_id": agent_name, "message": message}, target_project_path)
+# (2026-08-05 감사 D12) _agent_ask 삭제 — 죽은 elif 전용이었고 호출처 0.
+# 동기 위임 정본은 _agent_ask_sync(_delegate_unified mode:sync 가 호출).
 
 
 def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
@@ -1151,28 +1116,8 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
         return {"error": f"동기 에이전트 호출 실패: {e}"}
 
 
-def _agent_list(params: dict) -> Any:
-    """에이전트 노드 목록 [agent:list] (Phase 11)"""
-    from node_registry import list_nodes
-    nodes = list_nodes(include_agents=True)
-    agent_nodes = [n for n in nodes if n["type"] == "agent"]
-
-    # 프로젝트 필터
-    project_filter = params.get("project")
-    if project_filter:
-        agent_nodes = [n for n in agent_nodes if n["project_id"] == project_filter]
-
-    return {
-        "agents": [{
-            "id": n["id"],
-            "name": n["agent_name"],
-            "project": n["project_id"],
-            "description": n["description"],
-            "capabilities": n.get("capabilities", []),
-            "running": n.get("running", False),
-        } for n in agent_nodes],
-        "count": len(agent_nodes),
-    }
+# (2026-08-05 감사 D12) _agent_list 삭제 — 죽은 elif 전용, 호출처 0.
+# 에이전트 목록 정본은 func:agents(_execute_list_project_agents).
 
 
 def _agent_info(agent_id: str) -> Any:
@@ -1237,21 +1182,5 @@ def _route_driver(driver_type: str, node: str, action: str,
     return driver.execute(action, params)
 
 
-def _route_by_config(action_config, params, node, action,
-                     project_path, agent_id):
-    """YAML 액션 설정 기반 통합 라우팅"""
-    # 자연스러운 파라미터 이름(district_code, name 등)을 핸들러 정규 키로 자동 매핑
-    params = _normalize_param_aliases(node, action, params, action_config)
-
-    router = action_config.get("router")
-    # Phase 30: scope 선언 (workspace/system/project). 미지정 시 project.
-    scope = action_config.get("scope", "project")
-
-    if router == "handler":
-        mapped_tool = action_config.get("tool")
-        return _route_handler(mapped_tool, params, project_path, agent_id, scope=scope)
-    elif router == "driver":
-        driver_type = action_config.get("driver", "sqlite")
-        dn = action_config.get("driver_node")  # Phase 22: 하위 핸들러 지정
-        return _route_driver(driver_type, node, action, params, project_path, driver_node=dn)
-    return {"error": f"지원하지 않는 라우터: {router}"}
+# (2026-08-05 감사 D11) _route_by_config 삭제 — 유일 소비자가 죽은 노드타입
+# 디스패치(ibl_executors._execute_node 가족)였다. 라우팅 정본은 execute_ibl 의 라우터 스위치.

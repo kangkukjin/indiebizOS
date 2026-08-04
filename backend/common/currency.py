@@ -48,10 +48,14 @@ def items(rows: Iterable[Any] = (), **wrapper) -> dict:
 def derive_items(result: Any) -> Any:
     """옛 통화 형태에서 단일 통화 `items`를 파생한다 (전환기 choke-point 정규화).
 
-    모든 패키지 핸들러 결과가 거치는 한 곳(ibl_routing._route_handler)에서 호출되어,
-    ~22개 records 생산자 + table/blocks 생산자가 *생산자를 건드리지 않고* items를 함께
-    노출하게 한다(핸드오프 §8.1 "일괄 dual-emit"을 choke point 한 곳에서 = §2 거버넌스:
-    동기화 지점 N→0; 생산자는 옛 키만, items는 파생; 컷오버 후 무동작→제거).
+    ★호출처 3곳 (2026-08-05 감사 D13에서 문서 정정 — 옛 문서는 _route_handler 한 곳이라
+    적었으나 실제로 그곳엔 없었고, 일부러 안 둔다):
+      1) api_ibl /ibl/execute — 렌더러 경계(앱/수동/원격/폰 표면)
+      2) body_ask — 몸 간 부탁 통화
+      3) workflow_engine._to_prev_currency — **파이프 이음매**(prev_result 로 다음 step 에
+         물릴 때만). table/blocks 생산자가 `>> [table:*]` 소비자에 바로 물리게 한다.
+    _route_handler(에이전트 최종 tool-result 포함 전체)에 두지 않는 이유: 파생본이 모델에게
+    가는 결과에도 실려 토큰이 중복된다 — 에이전트 경로의 의도된 회피(api_ibl 주석 참조).
 
     이미 items(list)면 보존(생산자 직접 방출 우선). 그 외엔 아래 순서로 *단방향* 파생:
       1) table(columns+rows / table봉투) → items = 행 dict들 (소비자가 열로도 봄)

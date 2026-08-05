@@ -190,6 +190,12 @@ nodes:
         implementation: system_essentials/webapp_registry.py — portal_state·bulletin·family_news·showcase·report_publish·sites.json·outputs/web-projects 7곳 파생 + data/webapps.json 수동 보충. status 는 병렬 HTTP GET.
         ops:
           default: list
+          returns:
+            register: effect
+            remove: effect
+          side_effect:
+            list: false
+            status: false
           values:
             list: 전체 웹앱 목록 — 파생 + 수동 (부류·주소·출처)
             status: 전 웹앱 생존 실측 — HTTP 응답코드·지연 (🟢/🔴)

@@ -10,7 +10,8 @@
 | ⑧ pytest 도입 | ✅ 완료 | `731c5f1` — pytest.ini + 고아 5 편입(nip44 최우선) + seam-guards CI 잡. `-m "not local"` 28 passed |
 | ① 스텁 디스패처 | ✅ 완료 | `7ecf9a8` — 15개 전환(4 병렬 에이전트, 행동 변화 0) + 가드 `_stub_ops`(값 None=빌드 차단) + self-test. 부수: web-collector 죽은 records 블록 삭제 `05d5e0b` |
 | ② 에러 관례 | ✅ 완료 | `0dd1050`(1단계) + `38df771`(완결, 2026-08-05 3차) — health-record 20곳(returns:items 위반 최악 부류) dict 전환 · Unknown tool 폴백 12곳 소탕 · {success:False,message}→error 80곳 · error-only→+success:False 156곳(렌더러 양쪽 d.error‖d.message 폴백이라 표시 무손상 실측) · `scripts/check_string_returns.py` 가드(execute+디스패처 op 함수 AST, 중첩 def 헬퍼 제외=오탐 0, system_essentials 텍스트 계약 31건만 BASELINE 래칫) + pre-commit + seam-guards CI |
-| ③④⑤⑦⑨ | ⬜ 미착수 | ③은 ①② 선행조건 충족됨(op 함수 단위 반환 추적 + 에러 모양 단일). ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ③ per-op returns | ✅ 완료 | (2026-08-05 4차) `ops.returns`/`ops.side_effect` 형제 맵 신설 + `backend/ibl_ops.py`(해소 단일 소스) + 43액션 선언 마이그레이션. **성과: 자동 건강검진 read-only 게이트에 걸려 실행조차 안 되던 fixture 32개 → 2개**(§1B GREEN 33→63, RED 0). 상세는 아래 §1-③ |
+| ④⑤⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고). ⑤는 ③ 위에서 하면 값이 크다(아래) |
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -59,7 +60,29 @@ computer-use), 부재 16개.
   ②`{success:False, error}` 로 수렴 ③가드: 핸들러 return 문자열 리터럴 AST 검사(맨 문자열
   반환 금지)를 build --check에 추가.
 
-### ③ per-op returns 축 (구조 개정·설계 필요)
+### ③ per-op returns 축 (✅ 완료 — 아래는 이력과 이월 사항)
+
+**설계는 핸드오프 스케치와 다르게 갔다.** `ops.values` 를 `{op: {desc, returns}}` 중첩형으로
+바꾸는 대신 **형제 맵**(`ops.returns` / `ops.side_effect`)을 신설했다. 이유: `values` 는 8곳이
+`{op: str}` 로 읽고 그 중 하나가 *모든 에이전트 턴의 프롬프트 카탈로그*다 — 모양을 바꾸면
+놓친 소비자 하나가 조용히 `[object Object]` 를 뿜는다. 형제 맵은 순수 가산이라 기존 독자를
+못 깨고, 키 드리프트는 빌드 가드가 막는다. 카탈로그 바이트 수 불변(40,426자) 확인.
+
+- 해소 규칙 = **조이는 건 자동, 푸는 건 명시**(`backend/ibl_ops.py` 단일 소스, `ibl.md` "op 축" 절).
+  액션의 보수적 `side_effect: true` 는 **끈적하다** — op 가 직접 `false` 라고 말해야 풀린다.
+- 소비자 3: 조종실 dry-run(`api_ibl._safety` 가 op 로 판정) · 건강검진 read-only 게이트와
+  통화 판정(`ibl_health_check._first_op`/`_is_safe`/`_op_returns_of`) · `ibl_safety.build_op_safety_map`.
+- 부수 수확: **fixture 가 부르는 op 의 실존을 강제**하는 가드 신설 → `[self:blog]{op:"list"}` 가
+  선언에 없는 op 였고 핸들러 폴백(`.get(op) or _op_posts`)이 삼켜 '통과'해 온 것이 드러났다.
+- ★**분류는 코드를 열어서** 했다. 이름만 보고 풀었으면 틀렸을 것 5건 실측:
+  `sense:world` snapshot(수집+DB 적재) · `sense:collect` query(`action: delete` 가지를 품음 —
+  **op 아래 또 다른 축**) · `self:blog` latest(vault .md 지연 물질화) · `limbs:browser` screenshot
+  (PNG 파일 생성) · `limbs:guestpc` screen(허브가 outputs/limb_screens/ 에 적재).
+- 이월: ①효과 op 의 **통화**는 선언했지만 effect 액션 안 읽기 op 의 통화(items/scalar)는
+  **측정 전이라 미선언**(안전만 선언) — ⑤ 에서 fixture 로 재면서 붙일 것. ②`sense:collect` 처럼
+  op 아래 또 축이 있는 액션은 op 단위로 안전을 말할 수 없다(그 축의 어휘화가 남은 부채).
+
+<details><summary>원래 진단 (이력)</summary>
 `returns`는 액션 단위인데 op가 통화를 가른다 — business_item_op은 list(items)와
 delete(effect)를 한 이름에 담을 수 없어, 전 패키지가 둘 중 하나를 택했다:
 **정직**(music-player: 모든 op가 `items([])` 래핑) vs **거짓말**(business/guest-helper/memory:
@@ -68,6 +91,7 @@ items 선언 후 대다수 op는 effect 반환 — `guest-helper/ibl_actions.yam
   빌드가 fixture 요구·안전 분류·건강검진 통화 판정을 op 단위로 내림. 이건 **언어 개정**이라
   `ibl.md` 갱신 + `iblbuild_*` 3파일 + `ibl_safety`/`ibl_health_check` 소비처 동반.
 - 선행 조건: ①(스텁 전환)을 먼저 하면 op별 반환 지점이 함수 단위로 잡혀 이행이 쉬워진다.
+</details>
 
 ### ④ 이중 렌더러 단일화 (대규모·최대 세금)
 같은 15 프리미티브를 TS 2,025줄(`GenericInstrument.tsx`+generic/)과 파이썬 문자열 속 JS
@@ -81,8 +105,12 @@ buildAction/rowAction/…). 패리티 가드는 15개 문자열 존재만 보고
   메모리) — 추출 자체가 이 부류를 근절한다. TS 타입 유니언(`generic/manifest.ts:60`)이
   4번째 독립 선언인 것도 함께 수렴.
 
-### ⑤ 행위 검증 층 (검증계의 진짜 갭)
+### ⑤ 행위 검증 층 (검증계의 진짜 갭) — ★③ 완료로 길이 열렸다
 effect 57액션 실행 검증 0% · op 12%만 · desc 진실성은 주 1회 LLM 산문 대조뿐.
+> **③ 이후 갱신**: op 안전지도(329 표면 중 읽기 133)가 이미 있으므로, "어느 op 에 fixture 를
+> 달아도 되는가"를 **선언에서 파생**할 수 있다(`build_op_safety_map` 이 True 인 op). ①은
+> 이제 손-큐레이션이 아니라 목록 파생 + 저술이다. 또 effect 액션 안 읽기 op 들은 **통화가
+> 아직 미선언**이라(안전만 선언) fixture 를 달면서 `ops.returns` 를 같이 채우면 된다.
 - 접근(값/노력 순): ①fixture에 op 지정 확대(read-safe op 위주로 40→100+)
   ②`side_effect: true` 액션용 **드라이런 fixture 규약** 신설(임시 리소스 생성→검증→원상복구
   패턴 — bulletin/portal 검증 스크립트들이 선례) ③파이프 골든 5개를 오프라인 스텁化

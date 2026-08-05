@@ -14,6 +14,18 @@ nodes:
         tool: showcase_op
         ops:
           default: status
+          returns:
+            add: effect
+            remove: effect
+            config: effect
+            basket_save: effect
+            basket_toggle: effect
+            basket_delete: effect
+          side_effect:
+            status: false
+            detail: false
+            basket_list: false
+            basket_detail: false
           values:
             status: 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 조회
             add: 폴더를 목록에 추가 (바스켓에 담아야 공개; 인덱싱 없음)

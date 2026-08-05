@@ -110,6 +110,10 @@
         router: channel_engine
         ops:
           default: read
+          returns:
+            post: effect
+          side_effect:
+            read: false
           values:
             read: 커뮤니티 피드 조회
             post: 커뮤니티에 글 게시
@@ -194,6 +198,8 @@
         router: channel_engine
         ops:
           default: profile
+          side_effect:
+            profile: false
           values:
             profile: 내 Nostr 신원·릴레이 조회
             rename: 표시 이름 변경
@@ -217,6 +223,12 @@
         router: channel_engine
         ops:
           default: list
+          returns:
+            create: effect
+            switch: effect
+            delete: effect
+          side_effect:
+            list: false
           values:
             list: 보드 목록 조회
             create: 새 보드 생성
@@ -238,6 +250,11 @@
         router: channel_engine
         ops:
           default: list
+          returns:
+            add: effect
+            remove: effect
+          side_effect:
+            list: false
           values:
             list: 팔로우 목록 조회
             add: 팔로우 추가

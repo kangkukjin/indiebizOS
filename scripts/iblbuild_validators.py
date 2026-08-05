@@ -104,6 +104,48 @@ def _extract_op_defaults(handler_text: str) -> dict[str, str] | None:
     return None
 
 
+def _check_op_axis(qualified: str, action: dict, ops: dict, values: dict) -> list[str]:
+    """op 축 형제 맵(`ops.returns` / `ops.side_effect`) 스키마 검증 — 감사 부채 ③.
+
+    해소 의미론은 `backend/ibl_ops.py` 가 단일 소스. 여기선 **드리프트만** 막는다:
+    유령 op 키(values 에 없는 이름)는 조용히 무시돼 "선언했는데 안 먹는" 부류가 되고,
+    그건 이 감사가 잡아낸 침묵 실패 가족과 같은 병이다.
+    """
+    issues: list[str] = []
+    from ibl_ops import OP_RETURNS_ENUM
+
+    for field, checker, expect in (
+        ("returns", lambda v: isinstance(v, str) and v in OP_RETURNS_ENUM,
+         "|".join(sorted(OP_RETURNS_ENUM))),
+        ("side_effect", lambda v: isinstance(v, bool), "true|false"),
+    ):
+        block = ops.get(field)
+        if block is None:
+            continue
+        if not isinstance(block, dict) or not block:
+            issues.append(f"{qualified}: ops.{field} 는 비어있지 않은 매핑이어야 함 ({{op: {expect}}})")
+            continue
+        for op_name, val in block.items():
+            if op_name not in values:
+                issues.append(
+                    f"{qualified}: ops.{field}.{op_name} — ops.values 에 없는 유령 op "
+                    f"(선언해도 아무 효과 없음)"
+                )
+            if not checker(val):
+                issues.append(f"{qualified}: ops.{field}.{op_name}={val!r} — {expect} 여야 함")
+
+    # 모순 차단: 세계를 바꾸는 통화(effect)를 선언해놓고 '안전하다'고 말할 수는 없다.
+    # 이걸 허용하면 무인 자가점검 루프가 부작용 op 를 매일 실행한다.
+    op_ret = ops.get("returns") if isinstance(ops.get("returns"), dict) else {}
+    op_se = ops.get("side_effect") if isinstance(ops.get("side_effect"), dict) else {}
+    for op_name, se in op_se.items():
+        if se is False and op_ret.get(op_name) == "effect":
+            issues.append(
+                f"{qualified}: op '{op_name}' 가 returns:effect 인데 side_effect:false — 모순"
+            )
+    return issues
+
+
 def _check_action(
     qualified: str,
     action: dict,
@@ -130,6 +172,16 @@ def _check_action(
         if not isinstance(values, dict) or not values:
             issues.append(f"{qualified}: ops.values 가 비어있거나 매핑이 아님")
             return issues
+        for op_name, op_desc in values.items():
+            if not isinstance(op_desc, str):
+                # values 는 {op: 설명 문자열} 로 고정 — 프롬프트 카탈로그·조종실 UI·
+                # capability card 등 8곳이 이 모양을 읽는다. op 별 메타는 형제 맵
+                # (ops.returns / ops.side_effect)으로 붙일 것 (backend/ibl_ops.py 참조).
+                issues.append(
+                    f"{qualified}: ops.values.{op_name} 는 설명 문자열이어야 함 "
+                    f"(op 별 통화·부작용은 ops.returns / ops.side_effect 형제 맵으로)"
+                )
+        issues += _check_op_axis(qualified, action, ops, values)
 
     # --- aliases(파라미터 별칭) 스키마 검증 — 어휘 데이터화(2026-07-03) ---
     # 형식: aliases: {<정규 키>: [<별칭>, ...]} — 런타임 _normalize_param_aliases 가 읽는다.
@@ -632,6 +684,21 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
         for action_name, action in (node.get("actions", {}) or {}).items():
             if not isinstance(action, dict):
                 continue
+            # fixture 가 부르는 op 가 실재하는가 (2026-08-05 감사 ③).
+            # 실측: `[self:blog]{op:"list"}` 는 선언에 없는 op 였고, 핸들러의
+            # `.get(op) or _op_posts` 폴백이 조용히 삼켜 fixture 가 '통과'해 왔다 —
+            # op 축을 도입한 이상 이 침묵은 구조로 막는다.
+            fixture_code = action.get("fixture")
+            declared_ops = ((action.get("ops") or {}).get("values")) or {}
+            if isinstance(fixture_code, str) and declared_ops:
+                m = re.search(r'op\s*:\s*["\']([^"\']+)["\']', fixture_code)
+                if m and m.group(1) not in declared_ops:
+                    issues.append(
+                        f"{node_name}:{action_name}: fixture 가 선언에 없는 op "
+                        f"'{m.group(1)}' 를 호출 (선언된 op: {sorted(declared_ops)}) — "
+                        f"핸들러 폴백이 삼켜 '통과'처럼 보인다"
+                    )
+
             if action.get("returns") in ("items", "scalar"):
                 if not action.get("fixture") and not action.get("exempt"):
                     issues.append(
@@ -731,6 +798,8 @@ def validate_side_effect_declaration(data: dict) -> list[str]:
     `[others:portal]{op:"revoke"}` 등 18개가 '부작용 없음'으로 판정돼 확인 없이 실행됐다.
 
     규칙: op 분기가 있고 `returns` 가 effect 가 아니면 `side_effect:` 를 명시하라.
+    2026-08-05(감사 ③): op 축 도입 후, **모든 op 가 `ops.side_effect` 에서 자기 몫을
+    말했으면** 액션 단위 요약은 잉여다(더 정확한 선언이 이미 있다) — 그 경우도 통과.
 
     ★op *이름*으로 추측하지 않는 것이 요점. 처음엔 읽기 전용 op 허용목록으로 짜봤는데
       quote·inbox·nearby·hotel·transcript 처럼 도메인마다 새 낱말이 끝없이 나와
@@ -743,10 +812,14 @@ def validate_side_effect_declaration(data: dict) -> list[str]:
         for action_name, adef in ((node_def or {}).get("actions") or {}).items():
             if not isinstance(adef, dict):
                 continue
-            if not (((adef.get("ops") or {}).get("values")) or {}):
+            op_values = ((adef.get("ops") or {}).get("values")) or {}
+            if not op_values:
                 continue
             if adef.get("returns") == "effect" or isinstance(adef.get("side_effect"), bool):
                 continue
+            per_op = ((adef.get("ops") or {}).get("side_effect")) or {}
+            if isinstance(per_op, dict) and set(op_values) <= set(per_op):
+                continue  # 전 op 가 자기 몫을 말했다 — 액션 요약 불필요
             issues.append(
                 f"안전-가드: [{node_name}:{action_name}] 는 op 분기 액션인데 "
                 f"returns:{adef.get('returns')} 이고 side_effect: 선언이 없음 — "

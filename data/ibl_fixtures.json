@@ -12,7 +12,7 @@
     "others:portal": "[others:portal]{op: \"status\"}",
     "others:showcase": "[others:showcase]{op: \"status\"}",
     "self:agents": "[self:agents]{}",
-    "self:blog": "[self:blog]{op: \"list\"}",
+    "self:blog": "[self:blog]{op: \"posts\"}",
     "self:business": "[self:business]{op: \"list\"}",
     "self:business_document": "[self:business_document]{op: \"list\"}",
     "self:business_item": "[self:business_item]{op: \"list\"}",

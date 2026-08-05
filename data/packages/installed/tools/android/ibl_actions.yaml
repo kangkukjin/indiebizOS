@@ -100,6 +100,8 @@ nodes:
         runs_on: anywhere
         ops:
           default: snapshot
+          side_effect:
+            snapshot: false
           values:
             snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
             tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)

@@ -13,6 +13,12 @@ nodes:
         tool: business_op
         ops:
           default: list
+          returns:
+            save: effect
+            delete: effect
+          side_effect:
+            list: false
+            detail: false
           values:
             list: 비즈니스 목록 (level/search 필터)
             detail: 비즈니스 상세 + 소속 아이템 (id 필수)
@@ -262,6 +268,14 @@ nodes:
         tool: business_item_op
         ops:
           default: list
+          returns:
+            save: effect
+            delete: effect
+            add_image: effect
+            remove_image: effect
+          side_effect:
+            list: false
+            detail: false
           values:
             list: 아이템 목록 (business_id 없으면 전체, search 필터)
             detail: 아이템 상세 (item_id 필수)
@@ -288,6 +302,13 @@ nodes:
         tool: business_document_op
         ops:
           default: list
+          returns:
+            update: effect
+            regenerate: effect
+            publish: effect
+          side_effect:
+            list: false
+            detail: false
           values:
             list: 레벨 0-4 공개 문서 전체
             detail: 특정 레벨 문서 (level 필수)
@@ -312,6 +333,11 @@ nodes:
         tool: work_guideline_op
         ops:
           default: list
+          returns:
+            update: effect
+          side_effect:
+            list: false
+            detail: false
           values:
             list: 레벨 0-4 근무 지침 전체
             detail: 특정 레벨 지침 (level 필수)
@@ -557,6 +583,14 @@ nodes:
         tool: neighbor_op
         ops:
           default: list
+          returns:
+            save: effect
+            delete: effect
+            favorite: effect
+            merge: effect
+          side_effect:
+            list: false
+            detail: false
           values:
             list: 이웃 목록 (search/info_level 필터)
             detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
@@ -601,6 +635,8 @@ nodes:
         tool: auto_response_op
         ops:
           default: status
+          side_effect:
+            status: false
           values:
             status: 자동응답 가동 상태 조회
             start: 자동응답 켜기 (재시작에도 유지)

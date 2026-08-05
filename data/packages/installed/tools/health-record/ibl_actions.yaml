@@ -11,6 +11,11 @@ actions:
     router: handler
     tool: health_op
     ops:
+      returns:
+        save: effect
+        delete: effect
+      side_effect:
+        query: false
       values:
         save: 건강 정보 저장 (info_type + data)
         query: 조회 (query_type + keyword 옵션)

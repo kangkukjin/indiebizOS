@@ -14,6 +14,15 @@ nodes:
         tool: bulletin_op
         ops:
           default: status
+          returns:
+            create: effect
+            config: effect
+            delete: effect
+            post_delete: effect
+          side_effect:
+            status: false
+            detail: false
+            portals: false
           values:
             status: 게시판 목록(각 게시판 주소·글 수) + 전역 설정 조회
             create: 새 게시판 생성 — 공개 주소(/b/5자) 발급

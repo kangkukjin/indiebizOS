@@ -20,28 +20,36 @@
 카메라·마이크는 데이터를 *반환*하지만(scalar) 실제로 셔터를 누르고 녹음을 시작한다.
 그런 액션은 src yaml 에 `side_effect: true` 로 **선언**한다 — 코드에 이름을 박지 않는다
 (헌법: 어휘는 데이터로. `architecture_ibl_standard_core`).
+
+## op 축 (2026-08-05, 감사 부채 ③)
+액션 단위 분류는 `[self:music]{op:"library"}` 같은 **읽기 op 를 쓰기 액션 안에 가둔다**.
+op 별 해소는 `ibl_ops` 가 단일 소스이고, 이 파일은 그 위의 지도 빌더다:
+`build_safety_map`(액션 롤업 — op 를 모르는 자리) / `build_op_safety_map`(op 단위).
 """
 
 from typing import Dict, Tuple
 
+from ibl_ops import any_op_side_effect, op_names, op_side_effect
 
-def is_side_effect(action_def: dict) -> bool:
-    """액션 정의 하나 → 부작용이 있는가.
 
-    ① 선언적 override(`side_effect`)가 있으면 그것이 최우선 — 통화 모양과 부작용이
-       어긋나는 액션(카메라·마이크 등)을 위한 자리.
-    ② 없으면 `returns: effect` 여부로 파생.
+def is_side_effect(action_def: dict, op: str = None) -> bool:
+    """액션(또는 그 안의 op 하나) → 부작용이 있는가.
+
+    ① op 를 주면 op 단위 해소(`ibl_ops.op_side_effect` — 조이기=자동, 풀기=명시).
+    ② op 없이 부르면 **롤업**: op 중 하나라도 부작용이면 부작용(보수적).
+       op 가 없는 액션은 선언적 override → `returns: effect` 파생 순.
     """
-    if not isinstance(action_def, dict):
-        return True  # 알 수 없으면 보수적으로 '부작용 있음'
-    declared = action_def.get("side_effect")
-    if isinstance(declared, bool):
-        return declared
-    return action_def.get("returns") == "effect"
+    if op is not None:
+        return op_side_effect(action_def, op)
+    return any_op_side_effect(action_def)
 
 
 def build_safety_map(nodes: dict) -> Dict[Tuple[str, str], bool]:
-    """레지스트리 nodes → {(node, action): safe(bool)}. safe=True 는 '부작용 없음'."""
+    """레지스트리 nodes → {(node, action): safe(bool)}. safe=True 는 '부작용 없음'.
+
+    액션 롤업이라 보수적이다 — op 하나만 쓰기여도 액션은 unsafe.
+    op 를 아는 자리(dry-run·fixture)는 `build_op_safety_map` 을 쓸 것.
+    """
     out: Dict[Tuple[str, str], bool] = {}
     for node_name, node_def in (nodes or {}).items():
         for action_name, action_def in ((node_def or {}).get("actions") or {}).items():
@@ -49,10 +57,32 @@ def build_safety_map(nodes: dict) -> Dict[Tuple[str, str], bool]:
     return out
 
 
+def build_op_safety_map(nodes: dict) -> Dict[Tuple[str, str, str], bool]:
+    """레지스트리 nodes → {(node, action, op): safe(bool)}. op 없는 액션은 미등재."""
+    out: Dict[Tuple[str, str, str], bool] = {}
+    for node_name, node_def in (nodes or {}).items():
+        for action_name, action_def in ((node_def or {}).get("actions") or {}).items():
+            for op in op_names(action_def):
+                out[(node_name, action_name, op)] = not op_side_effect(action_def, op)
+    return out
+
+
+def _live_nodes() -> dict:
+    from ibl_engine import _load_nodes_config
+    return (_load_nodes_config() or {}).get("nodes") or {}
+
+
 def load_safety_map() -> Dict[Tuple[str, str], bool]:
     """라이브 레지스트리에서 안전 분류를 파생(백엔드 프로세스용)."""
     try:
-        from ibl_engine import _load_nodes_config
-        return build_safety_map((_load_nodes_config() or {}).get("nodes") or {})
+        return build_safety_map(_live_nodes())
+    except Exception:
+        return {}
+
+
+def load_op_safety_map() -> Dict[Tuple[str, str, str], bool]:
+    """라이브 레지스트리에서 op 단위 안전 분류를 파생."""
+    try:
+        return build_op_safety_map(_live_nodes())
     except Exception:
         return {}

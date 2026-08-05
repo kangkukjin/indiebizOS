@@ -135,11 +135,21 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         # op 분기 액션이면:
         ops:
           default: list
+          returns:            # (선택) op 별 통화 — 액션 returns 와 다른 op 만.
+            close: effect     #   items 액션 안의 쓰기 op 는 여기서 정직하게 말한다
+          side_effect:        # (선택) op 별 부작용 — 읽기 op 를 액션 플래그에서 푼다
+            list: false       #   ★푸는 건 명시만 가능(조이는 건 returns 로 자동)
           values:
             list: 목록 조회
             new: 새로 만들기
             close: 닫기
 ```
+
+> **op 축**(2026-08-05): `side_effect: true` 를 액션에 달면 그 안의 **읽기 op 까지 통째로**
+> 자동 건강검진에서 빠진다. 읽기 op 가 있으면 `ops.side_effect: {<op>: false}` 로 풀어줄 것 —
+> 단, **코드를 열어보고** 풀 것(실측: `sense:world` snapshot 은 이름과 달리 수집·저장을 하고,
+> `sense:collect` query 는 `action: delete` 가지를 품고 있어 둘 다 풀면 안 됐다).
+> 상세 규칙은 `ibl.md` "op 축" 절.
 
 ### 빌드
 ```bash

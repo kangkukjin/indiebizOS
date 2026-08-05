@@ -79,6 +79,10 @@ nodes:
         tool: cctv_admin
         ops:
           default: stats
+          returns:
+            refresh: effect
+          side_effect:
+            stats: false
           values:
             stats: 전체 소스 CCTV 현황 통계
             refresh: UTIC 캐시 갱신 (유지보수)

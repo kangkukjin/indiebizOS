@@ -14,6 +14,20 @@ nodes:
         tool: portal_op
         ops:
           default: status
+          returns:
+            create: effect
+            remove: effect
+            join: effect
+            promote: effect
+            issue: effect
+            revoke: effect
+            display: effect
+            config: effect
+          side_effect:
+            status: false
+            portals: false
+            members: false
+            audit: false
           values:
             status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
             portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)

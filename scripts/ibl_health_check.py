@@ -116,10 +116,61 @@ def _load_safety_map():
         return {}
 
 
+def _load_op_safety_map():
+    """(node, action, op) → safe(bool) — 감사 부채 ③ (2026-08-05).
+
+    액션 롤업만 쓰면 `[self:music]{op:"library"}` 처럼 **쓰기 액션 안의 읽기 op** 가
+    통째로 생략된다(실측: fixture 82개 중 32개가 그렇게 게이트에 걸려 있었다 —
+    무인 루프의 행동 커버리지가 그만큼 비어 있었다는 뜻)."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        from ibl_safety import build_op_safety_map
+        return build_op_safety_map(_nodes.get("nodes") or {})
+    except Exception:
+        return {}
+
+
 def _first_action(tmpl):
     import re
     m = re.search(r"\[(\w+):(\w+)\]", tmpl or "")
     return (m.group(1), m.group(2)) if m else None
+
+
+def _first_op(tmpl, fa):
+    """템플릿 첫 액션의 op (미지정이면 기본 op, op 축 없으면 None). ibl_ops 단일 소스."""
+    if not fa:
+        return None
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        from ibl_parser import parse
+        from ibl_ops import resolve_op
+        adef = ((_nodes.get("nodes") or {}).get(fa[0], {}).get("actions") or {}).get(fa[1]) or {}
+        st = (parse(tmpl) or [{}])[0]
+        return resolve_op(adef, st.get("params") or {})
+    except Exception:
+        return None
+
+
+def _op_returns_of(fa, op):
+    """이 호출의 통화 선언 — op 별 선언이 있으면 그것, 없으면 액션 returns (ibl_ops 규칙)."""
+    if op:
+        try:
+            adef = ((_nodes.get("nodes") or {}).get(fa[0], {}).get("actions") or {}).get(fa[1]) or {}
+            r = ((adef.get("ops") or {}).get("returns") or {}).get(op)
+            if isinstance(r, str):
+                return r
+        except Exception:
+            pass
+    return RETURNS.get(f"{fa[0]}:{fa[1]}", "?")
+
+
+def _is_safe(fa, op, action_map, op_map):
+    """op 를 알면 op 판정, 못 짚으면 보수적인 액션 롤업. True/False/None(미분류)."""
+    if op:
+        s = op_map.get((fa[0], fa[1], op))
+        if s is not None:
+            return s
+    return action_map.get(fa)
 
 
 def _resolve_instrument_blocks(inst_id):
@@ -159,6 +210,7 @@ def verify_instrument(inst_id):
                         "선언형 app: 블록 없음 — Path B(커스텀 React)이거나 미존재. "
                         "이 게이트 범위 밖(tsc 로만 검증).")]
     safety = _load_safety_map()
+    op_safety = _load_op_safety_map()
     order = {"RED": 4, "YELLOW": 3, "N_A": 2, "SKIP": 1, "GREEN": 0}
     results = []
     for label, tmpl in blocks:
@@ -167,12 +219,14 @@ def verify_instrument(inst_id):
             results.append((label, "SKIP", "실행 액션 없음")); continue
         if "$" in tmpl:
             results.append((label, "SKIP", "런타임 입력($var) 필요 — 자동 실행 불가")); continue
-        safe = safety.get(fa)
+        op = _first_op(tmpl, fa)
+        safe = _is_safe(fa, op, safety, op_safety)
         if safe is not True:
             tag = "부작용 가능" if safe is False else "안전 미분류"
+            _t = f"[{fa[0]}:{fa[1]}]" + (f"{{op:{op}}}" if op else "")
             results.append((label, "SKIP",
-                            f"{tag} 액션 [{fa[0]}:{fa[1]}] — read-only 게이트로 실행 생략")); continue
-        declared = RETURNS.get(f"{fa[0]}:{fa[1]}", "?")
+                            f"{tag} {_t} — read-only 게이트로 실행 생략")); continue
+        declared = _op_returns_of(fa, op)
         d = execute(tmpl, pid="앱모드")
         verdict, reason = classify_currency(d, declared if declared != "?" else "items")
         results.append((label, verdict, f"returns:{declared} {reason}"))
@@ -231,16 +285,20 @@ from collections import defaultdict
 buckets = defaultdict(list)
 _ALL_FIXTURES = "--all-fixtures" in sys.argv
 _safety = _load_safety_map()
+_op_safety = _load_op_safety_map()
 if not _safety and not _ALL_FIXTURES:
     # 안전 지도 적재 실패 = 전 fixture 생략 — 침묵하면 §1B 가 아무것도 안 재고도 '건강'으로 보인다
     buckets["YELLOW"].append(("__safety_map__", "ibl_safety 적재 실패 — read-only 게이트 판정 불가(전 fixture 생략)"))
 gated = 0
 for name, code in PRODUCERS:
-    declared = RETURNS.get(name, "?")
     fa = tuple(name.split(":", 1))
-    if not _ALL_FIXTURES and _safety.get(fa) is not True:
+    # ★op 단위 게이트(2026-08-05 감사 ③): fixture 코드가 고른 op 로 판정한다.
+    # 액션 롤업으로 재면 읽기 op fixture 가 쓰기 액션에 갇혀 통째로 생략됐다.
+    _op = _first_op(code, fa)
+    declared = _op_returns_of(fa, _op)
+    if not _ALL_FIXTURES and _is_safe(fa, _op, _safety, _op_safety) is not True:
         gated += 1
-        verdict, reason = "SKIP", "side_effect 액션 — read-only 게이트로 실행 생략(수동: --all-fixtures)"
+        verdict, reason = "SKIP", "부작용 op — read-only 게이트로 실행 생략(수동: --all-fixtures)"
     else:
         verdict, reason = classify_currency(execute(code), declared)
     buckets[verdict].append((name, reason))

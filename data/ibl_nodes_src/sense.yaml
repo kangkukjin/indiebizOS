@@ -16,6 +16,12 @@
         func: world_op
         ops:
           default: snapshot
+          returns:
+            refresh: effect
+          side_effect:
+            # snapshot 은 읽기가 아니다 — collect_snapshot() 으로 외부 API 를 즉석 수집하고
+            # save_snapshot() 으로 DB 에 적재한다(정기 수집 폐지 후 on-demand 로 옮겨온 것).
+            trend: false
           values:
             snapshot: 오늘의 세계 상태 스냅샷 (경제·주요뉴스·기술동향·날씨)
             trend: 최근 N일 추이 (days 옵션, 기본 7)

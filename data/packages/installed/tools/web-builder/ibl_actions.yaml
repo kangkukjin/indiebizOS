@@ -86,6 +86,8 @@ actions:
     tool: web_component_op
     ops:
       default: fetch
+      side_effect:
+        catalog: false
       values:
         catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
         fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)

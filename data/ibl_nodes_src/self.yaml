@@ -58,6 +58,14 @@
         func: manage_events
         runs_on: pc_only   # event_engine→api_system_ai 무거운 의존(폰 미번들). 폰은 맥 라우팅으로 접근.
         ops:
+          returns:
+            create: effect
+            update: effect
+            delete: effect
+            toggle: effect
+            run_now: effect
+          side_effect:
+            list: false
           values:
             list: 이벤트·스케줄 목록 (year/month 필터 가능)
             create: 이벤트 추가 (title 필수. event_action 있으면 지정 시각 자동 실행)
@@ -106,6 +114,10 @@
         router: system
         func: switch_op
         ops:
+          returns:
+            run: effect
+          side_effect:
+            list: false
           values:
             list: 등록된 스위치 목록
             run: 스위치 즉시 실행 (switch_id 필수)
@@ -140,6 +152,13 @@
         router: system
         func: goal_op
         ops:
+          returns:
+            kill: effect
+            log: effect
+          side_effect:
+            list: false
+            status: false
+            attempts: false
           values:
             list: 활성/대기 중 목표 전체
             status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
@@ -178,6 +197,13 @@
         target_key: op
         router: workflow_engine
         ops:
+          returns:
+            save: effect
+            delete: effect
+            run: effect
+          side_effect:
+            list: false
+            get: false
           values:
             list: 저장된 워크플로우 목록
             get: 워크플로우 조회 (workflow_id)
@@ -218,6 +244,17 @@
         target_key: op
         router: trigger_engine
         ops:
+          returns:
+            create: effect
+            update: effect
+            delete: effect
+            enable: effect
+            disable: effect
+          side_effect:
+            list: false
+            get: false
+            status: false
+            history: false
           values:
             list: 등록된 트리거 목록
             get: 단일 트리거 조회 (id)
@@ -288,6 +325,12 @@
         func: package_op
         ops:
           default: list
+          returns:
+            install: effect
+            remove: effect
+          side_effect:
+            list: false
+            info: false
           values:
             list: 설치됨/설치가능 패키지 목록 (package_id, 어휘 액션 수 포함)
             info: 패키지 상세 정보 (package_id)

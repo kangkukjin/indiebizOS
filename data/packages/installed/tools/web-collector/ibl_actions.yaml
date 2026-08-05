@@ -24,6 +24,10 @@ actions:
     tool: collect_op
     ops:
       default: run
+      returns:
+        run: effect
+      # query 는 읽기로 보이지만 안 푼다 — 그 안에 `action: delete`(항목 삭제) 가지가 있다.
+      # op 아래 또 하나의 축(action)이 숨어 있는 부류라 op 단위 선언으로는 안전을 말할 수 없다.
       values:
         run: 사이트/URL 크롤링 (구조화 수집)
         sites: 수집 사이트 프로필 관리 (CRUD)

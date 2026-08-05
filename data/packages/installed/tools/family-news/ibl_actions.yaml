@@ -14,6 +14,18 @@ nodes:
         tool: family_news_op
         ops:
           default: status
+          returns:
+            create: effect
+            remove_photo: effect
+            publish: effect
+            delete: effect
+            config: effect
+          side_effect:
+            status: false
+            photos: false
+            detail: false
+            comments: false
+            uploads: false
           values:
             status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
             create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인

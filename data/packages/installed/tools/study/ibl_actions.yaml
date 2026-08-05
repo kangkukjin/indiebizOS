@@ -12,6 +12,10 @@ actions:
     tool: paper_op
     ops:
       default: search
+      returns:
+        download: effect
+      side_effect:
+        search: false
       values:
         search: 논문·학위논문 검색 (source openalex/arxiv/pubmed/semantic/nanet)
         download: 논문 PDF 다운로드 (source arxiv/pubmed)

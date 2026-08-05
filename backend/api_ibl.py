@@ -372,6 +372,27 @@ def _load_safety_map() -> dict:
     return load_safety_map()
 
 
+def _load_op_safety_map() -> dict:
+    """op 단위 분류 (node, action, op) → safe(bool). 감사 부채 ③ (2026-08-05).
+
+    액션 롤업만 쓰면 읽기 op 가 쓰기 액션 안에 갇혀 조종실이 실행 자물쇠를 헛 건다.
+    해소 규칙은 `backend/ibl_ops.py` 단일 소스."""
+    from ibl_safety import load_op_safety_map
+    return load_op_safety_map()
+
+
+def _resolve_op(node: str, action: str, params: dict = None) -> str:
+    """이 호출에서 실제 실행될 op (없거나 유령이면 None) — ibl_ops 단일 소스."""
+    try:
+        from ibl_access import _load_nodes_data
+        from ibl_ops import resolve_op
+        data = _load_nodes_data() or {}
+        ac = (data.get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})) or {}
+        return resolve_op(ac, params)
+    except Exception:
+        return None
+
+
 @router.post("/validate")
 async def validate_ibl(req: ValidateRequest):
     """dry-run: IBL 코드를 파싱·검증만 하고 실행하지 않는다.
@@ -397,10 +418,17 @@ async def validate_ibl(req: ValidateRequest):
     # 2) step별 노드/액션 유효성 + 효과 설명 + 안전성(부작용)
     from ibl_engine import get_node_actions
     safety_map = _load_safety_map()
+    op_safety_map = _load_op_safety_map()
 
-    def _safety(node: str, action: str) -> str:
+    def _safety(node: str, action: str, params: dict = None) -> str:
         # 'read' = 부작용 없음(되돌릴 필요 없음), 'write' = 부작용 있음, 'unknown' = 미분류
-        s = safety_map.get((node, action))
+        # ★op 단위 우선(2026-08-05 감사 ③): [self:music]{op:"library"} 를 액션 롤업으로
+        #   판정하면 읽기 명령에 실행 자물쇠가 걸린다. op 를 알면 op 로 판정하고,
+        #   op 를 못 짚으면(유령 op·미선언) 보수적인 액션 롤업으로 떨어진다.
+        op = _resolve_op(node, action, params)
+        s = op_safety_map.get((node, action, op)) if op else None
+        if s is None:
+            s = safety_map.get((node, action))
         return "read" if s is True else "write" if s is False else "unknown"
 
     steps = []
@@ -438,7 +466,7 @@ async def validate_ibl(req: ValidateRequest):
         if not ok:
             all_valid = False
 
-        safety = _safety(node, action)
+        safety = _safety(node, action, params)
         if safety != "read":
             has_side_effect = True
 

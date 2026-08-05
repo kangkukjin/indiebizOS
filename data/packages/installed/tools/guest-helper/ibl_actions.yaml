@@ -13,6 +13,12 @@ nodes:
         runs_on: pc_only   # 허브(데스크톱)에서 실행 → 손발로 하달. 폰/손발 자신은 이 액션의 주체가 아니다.
         ops:
           default: shell
+          side_effect:
+            read: false
+            list: false
+            info: false
+            # screen 은 안 푼다 — 허브가 캡처를 outputs/limb_screens/ 에 적재한다(파일 생성).
+            result: false
           values:
             shell: 셸 명령 실행 (cmd. cd·환경변수 유지. 긴 명령은 background:true)
             read: 게스트 PC 파일 읽기 (path, 200KB 상한)
@@ -63,6 +69,12 @@ nodes:
         runs_on: pc_only   # 자격 원장·USB 페이로드는 허브(데스크톱)에서 발급.
         ops:
           default: issue
+          returns:
+            issue: effect
+            revoke: effect
+            approve: effect
+          side_effect:
+            list: false
           values:
             issue: 새 손발 키 발급 + USB 페이로드 생성 (alias 만 필수, 기본=전 OS·무기한 휴대용)
             list: 발급한 손발 자격과 지금 연결 상태

@@ -720,6 +720,48 @@ click:
 3. **default**: src.ops.default ↔ tool.json input_schema.properties.op.default
 4. **handler**: src.ops.values 키 ↔ handler.py 모듈 레벨 `_OP_DISPATCHERS[tool_name]` dict 키 (AST 파싱, exact set)
 
+### op 축 — 통화·부작용을 op 단위로 (2026-08-05, 언어 개정)
+
+`returns:`/`side_effect:` 는 **액션** 단위인데, 실제로 통화와 부작용을 가르는 건 **op** 다.
+`self:business_item` 하나에 `list`(items)와 `delete`(effect)가 같이 살아, 전 패키지가
+"정직하게 전부 items 로 래핑" 아니면 "items 라 선언하고 대다수 op 는 effect 반환" 중
+하나를 택해 왔다. `side_effect: true` 도 액션 통째에 걸려 **읽기 op 가 쓰기 액션 안에
+갇혔다**(자동 건강검진 fixture 82개 중 32개가 그 이유로 실행조차 안 됐다).
+
+`ops` 블록에 **형제 맵 둘**을 둔다 (둘 다 선택, 선언한 op 만 적으면 된다):
+
+```yaml
+  ops:
+    default: list
+    returns:            # op 별 통화. 선언 없는 op 는 액션 returns 를 상속.
+      delete: effect
+    side_effect:        # op 별 부작용. 해소 규칙은 아래.
+      list: false
+      detail: false
+    values:             # {op: 설명 문자열} — 모양 고정(프롬프트 카탈로그가 읽는 유일한 맵)
+      list: 아이템 목록
+      detail: 아이템 상세 (item_id 필수)
+      delete: 아이템 삭제 (item_id 필수)
+```
+
+**부작용 해소 규칙 — 조이는 건 자동, 푸는 건 명시** (`backend/ibl_ops.py` 단일 소스):
+1. `ops.side_effect[op]` 가 bool 이면 그것
+2. 액션이 `side_effect:` 를 선언했으면 그것 — **끈적하다**. op 가 `false` 를 직접 말하기
+   전엔 안 풀린다(카메라·마이크처럼 "통화는 읽기, 행위는 셔터"인 액션을 지키는 자리)
+3. 없으면 해소된 op returns 가 effect 인지로 파생
+
+즉 items 액션 안의 op 가 `returns: effect` 를 선언하면 **자동으로** 위험 판정되고(마찰 0),
+안전 판정은 사람이 op 이름을 대고 `false` 라고 적어야만 난다. `returns: effect` +
+`side_effect: false` 동시 선언은 모순이라 빌드가 거부한다.
+
+**소비자**: 조종실 dry-run 라벨(`api_ibl._safety`) · 건강검진 read-only 게이트와 통화 판정
+(`ibl_health_check`) · 부작용 지도(`ibl_safety.build_op_safety_map`).
+
+**함정**: `values` 를 `{op: {desc, returns}}` 중첩형으로 바꾸지 **말 것**. `values` 는 8곳이
+`{op: str}` 로 읽고 그 중 하나가 모든 에이전트 턴의 프롬프트 카탈로그다 — 모양을 바꾸면
+놓친 소비자 하나가 조용히 `[object Object]` 를 뿜는다. 형제 맵은 순수 가산이라 못 깬다.
+키 드리프트(유령 op)는 빌드 가드가 막는다.
+
 **dispatcher 표준** (handler.py 측 규약):
 ```python
 _OP_DISPATCHERS = {

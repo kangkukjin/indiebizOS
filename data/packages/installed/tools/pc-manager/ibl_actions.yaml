@@ -102,6 +102,11 @@ nodes:
         tool: storage_op
         ops:
           default: volumes
+          returns:
+            scan: effect
+          side_effect:
+            summary: false
+            volumes: false
           values:
             scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
             summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
@@ -180,6 +185,10 @@ nodes:
         tool: folder_note_op
         ops:
           default: get
+          returns:
+            set: effect
+          side_effect:
+            get: false
           values:
             set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
             get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
@@ -197,6 +206,11 @@ nodes:
         scope: workspace
         ops:
           default: recall
+          returns:
+            note: effect
+            forget: effect
+          side_effect:
+            recall: false
           values:
             recall: 누적된 냄새지도 회상 (query·body 필터, 기본)
             note: 지도/주인모델에 단언 누적 (layer=map/owner)

@@ -14,6 +14,14 @@ actions:
     tool: browser_op
     ops:
       default: snapshot
+      side_effect:
+        snapshot: false
+        content: false
+        # screenshot 은 안 푼다 — path 에 PNG 파일을 만든다(vision 은 base64 반환만이라 읽기).
+        vision: false
+        find: false
+        logs: false
+        dialog_info: false
       values:
         snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
         navigate: 페이지 이동 (mode goto|back|forward; goto는 url)

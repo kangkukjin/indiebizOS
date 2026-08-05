@@ -30,6 +30,14 @@ nodes:
         tool: video_op
         ops:
           default: info
+          returns:
+            summarize: effect
+          side_effect:
+            info: false
+            transcript: false
+            languages: false
+            history: false
+            feed: false
           values:
             info: 동영상 메타데이터 (제목·조회수·채널)
             transcript: 자막/스크립트 추출
@@ -255,6 +263,9 @@ nodes:
         tool: music_op
         ops:
           default: play
+          side_effect:
+            queue: false
+            relay: false
           values:
             play: 즉시 재생 (query 검색어/URL, 기본)
             add: 큐에 추가 (query 검색어/URL)

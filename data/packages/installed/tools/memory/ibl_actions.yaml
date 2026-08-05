@@ -13,6 +13,12 @@ actions:
     aliases:
       top_k: [limit]   # 정본=top_k(문서·스키마). 관습어 limit 도 수용 — 옛 핸들러가 limit만 읽어 문서된 top_k가 침묵 무시되던 버그(2026-08-05)의 봉합.
     ops:
+      returns:
+        save: effect
+        delete: effect
+      side_effect:
+        search: false
+        read: false
       values:
         save: 메모리 저장 (content 필수, category/keywords 자동 추출)
         search: 키워드·자연어 검색 (FTS+시맨틱 통합)

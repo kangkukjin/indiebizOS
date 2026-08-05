@@ -17,6 +17,22 @@ nodes:
           path: [file]
         ops:
           default: library
+          returns:
+            playlist_create: effect
+            playlist_delete: effect
+            playlist_add: effect
+            playlist_remove: effect
+            add_source: effect
+            remove_source: effect
+            scan: effect
+            stop: effect
+          side_effect:
+            library: false
+            track: false
+            folders: false
+            playlists: false
+            playlist: false
+            sources: false
           values:
             library: 곡 검색·목록 (q 검색어 / folder 폴더 단위 / path 단일 곡, 기본 op)
             track: 곡 하나 상세 — 태그 + 담을 플레이리스트 목록

@@ -17,6 +17,7 @@
    import 하면 안 된다)
 
 같은 층 안의 순환은 이 가드의 대상이 아니다(디렉토리화 뒤 같은 디렉토리 안 문제).
+층을 *가로지르는* 순환은 차단한다(cross_layer_cycles — 2026-08-05 ⑦ 후반부에 0 달성).
 검사는 톱레벨+함수-안 import 전부 — 함수 안으로 숨겨도 의존은 의존이다.
 
 사용: python3 scripts/check_backend_layers.py
@@ -83,9 +84,11 @@ LAYERS = {
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
         "nas_webapp", "nostr_phone_bridge", "phone_notifications",
         "report_html", "scheduler", "warehouse_adapters", "warehouse_feed",
-        "warehouse_likes", "web_collector",
+        "web_collector",
     },
-    "surface": {"public_face", "face_provision"},
+    # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
+    # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
+    "surface": {"public_face", "face_provision", "warehouse_likes"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}
@@ -93,8 +96,9 @@ EXEMPT_PREFIX = ("test_", "migrate_")
 EXEMPT = {"prompt_benchmark", "ibl_opus_bulk_gen", "ibl_synthetic_generator",
           "ibl_synthetic_opus", "ibl_embedding_trainer", "_slide_proto"}
 
-# 2026-08-05 동결 부채 47간선 — ⑦ 절단이 진행되며 줄어든다. 신규 추가 금지.
+# 동결 부채 — 시작 47간선(⑦ 전반부) → 7간선(⑦ 후반부, 2026-08-05). 신규 추가 금지.
 # 절단 완료 시 항목 삭제(남아 있는데 위반이 사라졌으면 이 가드가 삭제를 요구한다).
+# 잔여 7건은 전부 한 방향 상향 읽기 — 교차층 *순환*은 0 (cross_layer_cycles 가 지킨다).
 BASELINE = {
     "auto_response -> portal_base",
     "auto_response -> portal_warehouse",
@@ -103,8 +107,6 @@ BASELINE = {
     "ibl_engine -> consciousness_agent",
     "ibl_executors -> goal_evaluator",
     "package_manager -> ibl_usage_generator",
-    "warehouse_likes -> portal_base",
-    "warehouse_likes -> portal_warehouse",
 }
 
 
@@ -173,10 +175,60 @@ def find_violations(graph):
     return viol, unassigned, into_assembly
 
 
+def cross_layer_cycles(graph):
+    """층을 가로지르는 순환(SCC) 목록 — 2026-08-05 ⑦ 후반부에 0 이 됐다. 재발=차단.
+
+    같은 층 안의 순환(인지 클러스터·파서 쌍 부류)은 같은 미래 디렉토리 안 문제라
+    허용한다. 층을 *가로지르는* 순환만 이 검사의 대상 — 그것이 '한 덩어리 매듭'의
+    재료였고, 디렉토리 이동의 전제(층=이동 단위)를 깬다.
+    """
+    import sys as _sys
+    _sys.setrecursionlimit(10000)
+    idx, low, on, st, out, c = {}, {}, set(), [], [], [0]
+
+    def walk(v):
+        idx[v] = low[v] = c[0]; c[0] += 1
+        st.append(v); on.add(v)
+        for w in graph.get(v, ()):
+            if w not in graph:
+                continue
+            if w not in idx:
+                walk(w); low[v] = min(low[v], low[w])
+            elif w in on:
+                low[v] = min(low[v], idx[w])
+        if low[v] == idx[v]:
+            comp = []
+            while True:
+                w = st.pop(); on.discard(w); comp.append(w)
+                if w == v:
+                    break
+            if len(comp) > 1:
+                out.append(comp)
+
+    for v in list(graph):
+        if v not in idx:
+            walk(v)
+    bad = []
+    for comp in out:
+        layers = {layer_of(m) for m in comp}
+        layers.discard(None)
+        if len(layers) > 1:
+            bad.append((sorted(layers, key=lambda x: (x is None, str(x))), sorted(comp)))
+    return bad
+
+
 def main() -> int:
     graph = build_graph(BACKEND)
     viol, unassigned, into_assembly = find_violations(graph)
     errors = []
+
+    spanning = cross_layer_cycles(graph)
+    if spanning:
+        errors.append(
+            "층을 가로지르는 순환 — 매듭의 재발. 등록(의존 역전)이나 데이터 하향으로\n"
+            "끊을 것 (2026-08-05 ⑦ 후반부에 0 달성, 후퇴 금지):\n"
+            + "\n".join(f"  [{' + '.join(map(str, ls))}] {', '.join(ms[:8])}"
+                        f"{' …' if len(ms) > 8 else ''}" for ls, ms in spanning))
 
     if unassigned:
         errors.append(
@@ -230,6 +282,16 @@ def self_test() -> int:
     assert layer_of("migrate_bar") is None
     assert layer_of("api") == "ASSEMBLY"
     assert layer_of("ibl_parser") == "ibl"
+    # 교차층 순환 검출: data ↔ surface 인공 순환
+    fake_cyc = {"conversation_db": {"api_xray"}, "api_xray": {"conversation_db"}}
+    bad = cross_layer_cycles(fake_cyc)
+    assert len(bad) == 1 and set(bad[0][1]) == {"conversation_db", "api_xray"}, bad
+    # 같은 층 안 순환은 허용 (파서 쌍 부류)
+    fake_ok = {"ibl_parser": {"ibl_parser_blocks"}, "ibl_parser_blocks": {"ibl_parser"}}
+    assert cross_layer_cycles(fake_ok) == [], "같은 층 순환이 오탐"
+    # 실그래프: 교차층 순환 0 이어야 한다 (2026-08-05 달성 불변식)
+    graph0 = build_graph(BACKEND)
+    assert cross_layer_cycles(graph0) == [], "실그래프에 교차층 순환 존재"
     # 실그래프에서 BASELINE 정합(신규 0 · 부실 0)이어야 자기모순이 없다
     graph = build_graph(BACKEND)
     viol, unassigned, into_asm = find_violations(graph)

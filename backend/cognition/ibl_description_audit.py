@@ -104,6 +104,12 @@ def check_broken_crossrefs(actions: List[Dict]) -> List[Dict]:
             node, act = m.group(1), m.group(2)
             if node not in valid_nodes:
                 continue  # node:action 패턴이 아닌 우연한 콜론(예: "op: ...") 제외
+            # "구 [node:action]"/"옛 node:action" = 은퇴 어휘의 역사 인용(흡수·개명 각주).
+            # 살아있는 참조가 아니므로 끊김 판정 면제 — 어휘 병합마다 이런 각주가 남고,
+            # 옛 이름을 설명에 남겨야 옛 어휘로 검색해도 후계 액션에 닿는다.
+            # ★단어 경계 필수: "도구 "처럼 구로 끝나는 낱말의 오면제 방지(앞 글자가 한글이면 불인정).
+            if re.search(r"(?:^|[^가-힣])[구옛]\s+$", desc[:m.start()]):
+                continue
             full = f"{node}:{act}"
             if full not in valid and full != a["fullname"]:
                 flags.append({

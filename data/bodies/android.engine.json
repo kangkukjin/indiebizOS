@@ -206,7 +206,6 @@
     "surface/warehouse_likes"
   ],
   "blocklist": {
-    "_slide_proto": "force_exclude (프로파일 명시)",
     "api": "top-level import: dotenv",
     "api_config": "force_exclude (프로파일 명시)",
     "api_env": "via api_config",
@@ -234,8 +233,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 228,
+    "total": 227,
     "engine": 202,
-    "blocklist": 26
+    "blocklist": 25
   }
 }

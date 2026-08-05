@@ -1,8 +1,23 @@
-# IBL 전면 감사·보수 핸드오프 (2026-08-05) — 잔여 부채 9항
+# IBL 전면 감사·보수 핸드오프 (2026-08-05) — **잔여 ⑦ 하나**
 
 > 정본. 다음 세션은 이 문서만으로 이어받는다. 메모리 `ibl-audit-repair-2026-08` 이 여기를 가리킨다.
 
-## 진행 현황 (2026-08-05 2차 세션 — 전부 push)
+## ▶ 다음 세션 START HERE
+
+**9항 중 8항 완료(①②③④⑤⑥⑧⑨), 남은 것은 ⑦ backend 디렉토리화 하나.** 전부 main 직접
+커밋·push 됐고 워킹트리·워크트리 모두 깨끗하다(2026-08-05 6차 종료 시점 HEAD `68c4540`).
+
+⑦은 **단독 세션**으로 잡을 것 — diff 가 backend 전체라 다른 작업과 겹치면 서로를 못 읽는다.
+들어가기 전에 §1-⑦ 을 먼저 읽어라: 감사 당시 진단("순환 86개를 하나씩 푼다")이 **오늘
+실측과 다르다**. 지금 상태는 *한 개의 67모듈 매듭*이고, 단일 간선으로는 안 풀린다.
+
+가져다 쓸 수 있는 것(⑨에서 만듦):
+- **AST 대조 안전망** — 분할 전/후의 함수·상수 `ast.dump` 전량 비교 + 라우트 표 비교.
+  "로직 무변경 이동"을 주장이 아니라 증명으로 만든다. ⑨ 커밋(`d486aba`)의 검증 절차 참조.
+- **pre-commit 이 이미 잡아주는 것**: 몸-번들 드리프트(새 backend 모듈이 폰 zip 에 안 실리면
+  차단), 모듈 그림자, 파일 크기, 이식성, 이벤트 루프, 공개 라우트 인증.
+
+## 진행 현황 (2026-08-05 6차 세션까지 — 전부 push)
 
 | 항 | 상태 | 커밋 |
 |---|---|---|
@@ -15,6 +30,25 @@
 | ④ 렌더러 단일화 | ✅ 완료(로직) | (2026-08-05 6차) `backend/static/app_render_core.js` 신설 — 두 렌더러가 글자 그대로 번역해 갖고 있던 **순수 로직 26개**를 단일 소스로. 마크업 층은 의도적으로 두 벌 유지(아래 §1-④). 가드 `check_render_core.py` + 실행 회귀 `test_render_core.js`/`backend/test_render_core.py` |
 | ⑨ api_portal 분할 | ✅ 완료 | (2026-08-05 6차) 1903줄 → 조립 41줄 + 5모듈(base/face/warehouse/admin/auth/gate). **로직 무변경 이동을 AST 로 증명**(함수 71·상수 24 완전 일치) + 라우트 표 33개 동일. BASELINE 에서 삭제(재진입 봉인) |
 | ⑦ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+
+## 세션 로그 (무엇이 언제 들어갔나)
+
+| 세션 | 항 | 커밋 |
+|---|---|---|
+| 1차 | 긴급 결함 + 가드 3종 | `f294f94`~`711fca0` |
+| 2차 | ⑥ ⑧ ① · ② 1단계 | `882c38b` `731c5f1` `7ecf9a8` `0dd1050` |
+| 3차 | ② 완결 | `38df771` |
+| 4차 | ③ op 축 | `6a4758e` |
+| 5차 | ⑤ 행위 검증 | `3982705` |
+| 6차 | ④ 렌더 로직 단일화 · ⑨ api_portal 분할 · (부수) media_player 404 수리 | `4470deb` `d486aba` `68c4540` |
+
+**6차 부수 산출** — ④가 만든 공용 코어 위에서 고쳐진 첫 버그(`68c4540`): 통화의 미디어 src 가
+파일시스템 절대경로인데 두 렌더러가 "'/' 로 시작하면 site-relative" 규칙으로 그대로 박아
+404 였다(오디오 브리핑 재생 불가). 해소를 `resolveMediaUrl`/`isBackendRoute` 로 코어에 올려
+**한 번 고쳐 두 표면이 같이** 나았다 — ④의 값어치가 바로 이것. ★방향 선택: 파일시스템
+루트(/Users·/Volumes…)를 세지 않고 **백엔드 라우트를 센다**(마운트 지점은 사용자가 늘리지만
+라우트는 우리가 만들 때만 는다 = 닫히는 쪽). 목록을 손으로 안 지키게, 통화를 만드는 .py 의
+미디어 필드 리터럴을 훑어 목록 밖이면 차단하는 가드를 `check_render_core` 에 합류.
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -176,15 +210,54 @@ items 선언 후 대다수 op는 effect 반환 — `guest-helper/ibl_actions.yam
 - 함정: 패키지는 backend를 sys.path로 import하므로 순환 없음. 단 **폰 몸**에서 backend
   common이 번들에 포함되는지(`build_body_bundle`) 확인 후 이동.
 
-### ⑦ backend/ 디렉토리화 — 숨은 순환 86개 가시화 (중규모·기계적)
-모듈 수준 순환 0은 착시 — intra-backend import의 70%(454/644)가 함수 안으로 밀려 있고
-진짜 순환 86개(`agent_runner↔agent_communication`, `api_portal↔public_face` 등).
-`ibl_routing.py`는 최상위 내부 import 0 / 함수 내 28.
-- 접근: 로직 무변경 이동만으로 `core/ ibl/ agents/ routers/ launcher/` 디렉토리화 →
-  순환이 import 오류로 드러남 → 그때 하나씩 푼다. 이동은 `ci_import_smoke` + 침묵실패
-  테스트 + 이식성 CI가 안전망.
-- 함정: `sys.path.insert` 훅 23곳, 폰 번들 경로 산식, Electron 스폰 경로가 평면 구조를
-  가정 — 이동 전 `runtime_utils.get_base_path` 소비처 훑을 것.
+### ⑦ backend/ 디렉토리화 (⬜ 유일한 잔여 — 단독 세션)
+
+**★2026-08-05 6차에 다시 재서 진단이 바뀌었다. 옛 계획대로 하면 안 된다.**
+
+> 아래 숫자는 스냅샷이다. **들어가기 전에 다시 재라**:
+> ```bash
+> python3 scripts/analyze_backend_cycles.py
+> ```
+> (의존성 0·AST 만. ①착시 순환 ②진짜 SCC ③간선 하나를 끊었을 때의 매듭 감소폭까지 뽑는다)
+
+| | 감사 당시 기록 | 오늘 실측(6차) |
+|---|---|---|
+| 모듈 수 | — | `backend/*.py` **216개** |
+| 함수-안 import 비율 | 70% (454/644) | **79%** (톱레벨 207 / 함수 안 802) |
+| 톱레벨 상호참조 | "0은 착시" | **0쌍** (여전히 착시) |
+| 진짜 순환 | "86개" | **SCC 2개 — 67모듈 매듭 하나 + `ibl_parser ↔ ibl_parser_blocks` 쌍 하나** |
+
+즉 "순환 86개를 하나씩 푼다"가 아니라 **한 덩어리 매듭**이다(67모듈·내부 간선 235).
+디렉토리로 옮겨 import 오류가 나게 하면 작은 실패가 줄줄이 나오는 게 아니라 **한 번에
+거대하게 터진다** — 옛 접근의 전제가 깨진다.
+
+**끊을 자리 실측** (간선 하나를 끊었을 때 매듭이 줄어드는 폭. 45개 간선이 유효하지만
+최대가 -5 — 단일 간선으로는 안 쪼개진다는 뜻):
+
+```
+ -5  public_face      → api_launcher_web
+ -5  portal_warehouse → public_face
+ -5  auto_response    → portal_warehouse
+ -3  tool_loader      → ibl_access
+ -3  calendar_manager → calendar_actions
+ -2  ibl_safety → ibl_engine · ibl_routing → package_manager · api_engine → tool_loader …
+```
+
+- **제안 접근(바뀐 것)**: 먼저 **층을 선언하고**(예: `core < ibl < agents < routers < launcher`)
+  그 층을 거스르는 간선만 골라 **집합으로** 끊은 뒤에 디렉토리를 만든다. 위 표가 그
+  후보의 출발점 — 상위 3개가 전부 `public_face ↔ launcher ↔ portal/warehouse` 삼각이므로
+  거기가 가장 굵은 매듭이다(⑨에서 portal 을 갈랐어도 *모듈 간 방향*은 그대로 남았다).
+- **함수-안 import 802개를 그대로 두면 안 된다**: 그게 매듭을 보이지 않게 만드는 장치다.
+  다만 전부 올리는 건 목표가 아니다 — **방향이 층을 거스르는 것만** 올려서 터지게 하고,
+  진짜 상호 의존이면 그때 경계를 다시 긋는다(⑨의 방명록 판단과 같은 성질).
+- **함정**(감사 당시 기록 유효): `sys.path.insert` 훅 23곳, 폰 번들 경로 산식
+  (`build_body_bundle.py` 가 `backend/*.py` 를 glob 한다 — 디렉토리로 내리면 이 도구부터
+  고쳐야 하고, 안 고치면 pre-commit 이 드리프트로 차단한다), Electron 스폰 경로가 평면
+  구조를 가정 — 이동 전 `runtime_utils.get_base_path` 소비처를 훑을 것.
+- **안전망**: ⑨의 AST 대조(함수·상수 전량 `ast.dump` 비교) + `ci_import_smoke` +
+  `backend/test_ibl_silent_failures.py` + 이식성 CI + pytest 55.
+- **작게 시작할 수 있는 곳**: `ibl_parser ↔ ibl_parser_blocks` 2모듈 쌍은 매듭과 무관하게
+  독립이라, 큰 작업 전 연습·검증용으로 먼저 풀어 볼 수 있다.
 
 ### ⑧ 테스트 스위트 도입 (소규모 시작·복리)
 pytest 부재. 고아 테스트 5개가 시작점: `backend/test_ibl_silent_failures.py`(46423ee 신설,

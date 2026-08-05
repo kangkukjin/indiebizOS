@@ -143,6 +143,49 @@ def _collect_step_nodes(obj, out: set):
             _collect_step_nodes(v, out)
 
 
+def _collect_step_actions(obj, out: list):
+    """스텝 트리에서 코드에 등장한 (node, action) 쌍을 재귀 수집 — 사용 계수용 (2026-08-05).
+
+    의미=어휘 수요(코드에 쓰였는가)이지 실행 완료가 아니다 — 폴백(??)의 뒷가지는
+    앞이 성공하면 실행되지 않지만, 어휘가 요구된 사실은 계수한다.
+    _collect_step_nodes 와 같은 구조 키만 재귀(병렬 branches·폴백 체인·[goal:] strategy·
+    [if:]/[case:] 하위 action) — 일반 step 의 action 은 문자열이라 재귀에 안 걸린다."""
+    if isinstance(obj, list):
+        for item in obj:
+            _collect_step_actions(item, out)
+        return
+    if not isinstance(obj, dict):
+        return
+    n = obj.get("_node") or obj.get("node")
+    a = obj.get("action")
+    if isinstance(n, str) and n and isinstance(a, str) and a:
+        out.append((n, a))
+    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps"):
+        v = obj.get(key)
+        if isinstance(v, (list, dict)):
+            _collect_step_actions(v, out)
+
+
+def _usage_origin(agent_id) -> str:
+    """실행 출처 분류 — 계수의 origin 축.
+
+    앱/조종실 표면은 시스템 프로젝트 컨텍스트로 식별(직접조작 표면이 자기 project_id 를
+    thread_context 에 명시하는 관습 재사용). 포털 게이트도 project_id=앱모드로 오므로 app.
+    자가점검(ibl_health_check)은 이 관문을 안 지나므로 계수 오염 없음."""
+    try:
+        from thread_context import get_current_project_id, get_current_surface
+        pid = get_current_project_id()
+        if pid == "앱모드":
+            return "app"
+        if pid == "수동모드":
+            return "manual"
+        if get_current_surface() == "web":
+            return "web"
+    except Exception:
+        pass
+    return "agent" if agent_id else "internal"
+
+
 # ============ 통합 도구 실행 함수 ============
 
 def _enrich_error_with_param_hint(result, code: str):
@@ -316,6 +359,18 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
         # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
         #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)
+
+        # --- 액션 사용 계수 (표면 사각지대 해소, 2026-08-05) ---
+        # episode_log 는 자율주행만 기록: 앱/조종실/원격의 /ibl/execute 직행이 안 보였다.
+        # 어휘 은퇴·압축 판단은 ibl_usage.db action_usage_daily 를 본다. 실패는 무해 삼킴.
+        try:
+            _pairs: list = []
+            _collect_step_actions(parsed, _pairs)
+            if _pairs:
+                from ibl_usage_db import bump_action_usage
+                bump_action_usage(_pairs, _usage_origin(agent_id))
+        except Exception:
+            pass
 
         # --- 서킷 브레이커 상태 업데이트 ---
         # 실패: fails 증가, 한도 도달 시 open_until 설정(open/재-open). 성공: 항목 제거(reset → closed).

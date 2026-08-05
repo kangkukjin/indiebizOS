@@ -1159,3 +1159,68 @@ class IBLUsageDB:
         """캐시 저장"""
         self._search_cache[key] = results
         self._cache_time[key] = time.time()
+
+
+# =============================================================================
+# 액션 사용 계수 (전 표면 포함) — 어휘 은퇴·압축 판단의 눈 (2026-08-05)
+# =============================================================================
+# episode_log(world_pulse.db)는 자율주행(에이전트 채팅) 경로만 기록해, 앱/조종실/
+# 원격 표면의 /ibl/execute 직행이 측정 사각지대였다 — "에피소드에 없음"이 "미사용"이
+# 아니었다(family_news·icon 등 실사용 반례). 이 계수는 _execute_ibl_unified(전 경로
+# 단일 관문, system_tools_ibl.py)에서 매 실행마다 증가한다.
+# 집계형(일×노드×액션×origin)이라 크기 유계 — 원문·파라미터는 저장하지 않는다.
+# 싱글턴(IBLUsageDB)과 무관한 독립 함수: 임베딩 모델 기계를 안 건드리고, 호출마다
+# 짧은 연결(WAL이라 회상 읽기와 경합 없음).
+
+def bump_action_usage(pairs, origin: str):
+    """실행된 (node, action) 쌍 목록의 오늘 계수를 각 +1.
+
+    origin: app(앱 표면)/manual(조종실)/web(원격 기타)/agent(인지 파이프라인)/internal.
+    관측일 뿐이므로 어떤 실패도 삼킨다 — 실행 경로에 전파 금지."""
+    if not pairs:
+        return
+    try:
+        day = datetime.now().strftime("%Y-%m-%d")
+        conn = sqlite3.connect(DB_PATH, timeout=2.0)
+        try:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS action_usage_daily (
+                    day TEXT NOT NULL,
+                    node TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    origin TEXT NOT NULL,
+                    count INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (day, node, action, origin)
+                )""")
+            conn.executemany(
+                """INSERT INTO action_usage_daily (day, node, action, origin, count)
+                   VALUES (?, ?, ?, ?, 1)
+                   ON CONFLICT(day, node, action, origin)
+                   DO UPDATE SET count = count + 1""",
+                [(day, str(n), str(a), origin or "internal") for n, a in pairs])
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.debug(f"[IBL Usage] 사용 계수 실패(무해): {e}")
+
+
+def action_usage_summary(days: int = 30) -> List[Dict]:
+    """최근 N일 액션별·origin별 사용 합계 (은퇴/압축 감사용 조회)."""
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    try:
+        conn = sqlite3.connect(DB_PATH, timeout=2.0)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                """SELECT node, action, origin, SUM(count) AS uses,
+                          MIN(day) AS first_day, MAX(day) AS last_day
+                   FROM action_usage_daily WHERE day >= ?
+                   GROUP BY node, action, origin
+                   ORDER BY uses DESC""", (cutoff,)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+    except Exception:
+        return []

@@ -248,7 +248,7 @@ def build_environment(
                 ungrouped.append((action_name, action_config))
                 continue
             # prompt_hidden: 에이전트 카탈로그에서만 숨김(실행은 ibl_engine이 별도 yaml 로드라 유지).
-            # 배관 액션(예: slide_shadcn — native가 사용자 경로, slide_shadcn은 내부 렌더/내보내기)에 사용.
+            # 배관 액션(예: engines:icon — 앱 전용 호출, AI 어휘 밖)에 사용.
             if action_config.get("prompt_hidden"):
                 continue
             # 몸 소유-필터(몸 독립, 2026-07-22): 이 몸이 실행 못 하는 남의 어휘는

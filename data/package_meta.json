@@ -307,8 +307,6 @@
     "engines:newspaper": "web",
     "engines:remotion": "remotion-video",
     "engines:render_html": "media_producer",
-    "engines:slide": "media_producer",
-    "engines:slide_shadcn": "media_producer",
     "engines:tts": "media_producer",
     "engines:web": "web-builder",
     "engines:web_component": "web-builder",

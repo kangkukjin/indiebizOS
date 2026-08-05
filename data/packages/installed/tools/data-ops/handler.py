@@ -1002,7 +1002,7 @@ def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
 def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
     """문서 IR → .pptx (python-pptx). ★종류 경계 주의: 슬라이드 IR이 아니라 *문서 IR을 슬라이드로 투영*.
     문서 IR이 정본, pptx는 emitter일 뿐 — heading(level≤2)이 새 슬라이드, 그 아래 내용이 글머리표.
-    슬라이드 전용 시각 레이아웃이 필요하면 engines:slide(슬라이드 IR)를 써야지 이걸 쓰면 안 됨."""
+    슬라이드 전용 시각 레이아웃이 필요하면 self:slide{op:create} 를 써야지 이걸 쓰면 안 됨."""
     from pptx import Presentation
     from pptx.util import Inches, Pt
 

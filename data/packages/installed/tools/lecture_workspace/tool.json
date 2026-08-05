@@ -59,7 +59,7 @@
     },
     {
       "name": "slide_op",
-      "description": "슬라이드 한 장 관리 통합 도구. op 파라미터로 분기:\n- create: AI로 슬라이드 한 장 생성 (lecture_id, instruction, +insert_at)\n- edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction)\n- delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)\n- patch: spec 일부 필드만 직접 patch (AI 호출 없음) (lecture_id, slide_id, patch)\n- rerender: spec 변경 없이 PNG만 재렌더 (AI 호출 없음) (lecture_id, slide_id)",
+      "description": "슬라이드 한 장의 유일한 어휘 — op 파라미터로 분기:\n- create: AI로 슬라이드 한 장 생성 (instruction, +insert_at. lecture_id 미지정 시 스크래치 덱에 자동 등록 — 구 engines:slide 단발 생성 흡수)\n- edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction)\n- delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)\n- patch: spec 일부 필드만 직접 patch (AI 호출 없음) (lecture_id, slide_id, patch)\n- rerender: spec 변경 없이 PNG만 재렌더 (AI 호출 없음) (lecture_id, slide_id)",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -77,7 +77,7 @@
           },
           "lecture_id": {
             "type": "string",
-            "description": "강의 ID (모든 op 필수)"
+            "description": "강의 ID (create 만 선택 — 미지정 시 스크래치 덱. 나머지 op 는 필수)"
           },
           "slide_id": {
             "type": "string",
@@ -91,14 +91,17 @@
             "type": "integer",
             "description": "create 옵션 — 삽입 위치 (0-based)"
           },
+          "aesthetic": {
+            "type": "string",
+            "description": "create+스크래치 덱 전용 — 톤 (vintage_book 기본/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint). 같은 톤은 같은 스크래치 덱에 모임. 강의 소속 create 는 덱 design_system 이 우선."
+          },
           "patch": {
             "type": "object",
             "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."
           }
         },
         "required": [
-          "op",
-          "lecture_id"
+          "op"
         ]
       }
     },

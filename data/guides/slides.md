@@ -1,6 +1,6 @@
 # 슬라이드 제작 가이드 (통합)
 
-슬라이드 만드는 법은 **하나**다: `[engines:slide]`. 이미지 모델이 한글 글자·다이어그램·일러스트를 **한 장에 통째로 저작**한다(native, NotebookLM과 같은 방식 — 시각과 의미가 한 컴포지션에서 융합). 글자 레이어와 그림을 따로 만들어 합치던 옛 방식(2층)은 은퇴했다.
+슬라이드 만드는 법은 **하나**다: `[self:slide]{op: "create"}`. 이미지 모델이 한글 글자·다이어그램·일러스트를 **한 장에 통째로 저작**한다(native, NotebookLM과 같은 방식 — 시각과 의미가 한 컴포지션에서 융합). 글자 레이어와 그림을 따로 만들어 합치던 옛 방식(2층)은 은퇴했다.
 
 이 한 문서가 슬라이드의 전부다 — 원칙, 만드는 법, 강의 협업, 덱·내보내기까지.
 
@@ -40,25 +40,25 @@
 
 ---
 
-## 2. 만드는 법 — `[engines:slide]`
+## 2. 만드는 법 — `[self:slide]{op: "create"}`
 
-### 한 장
+**슬라이드는 항상 덱에 산다.** `lecture_id`를 주면 그 강의 덱에, 안 주면 **스크래치 덱**(자동 생성·재사용)에 등록된다 — 만든 뒤 편집(`op:"edit"`)·순서(`[self:deck]{op:"reorder"}`)·내보내기(`export`)·나레이션→영상까지 같은 어휘로 이어진다. (구 `[engines:slide]` 단발 생성은 2026-08-05 여기로 흡수.)
+
+### 한 장 (단발 — 스크래치 덱)
 ```
-[engines:slide]{
+[self:slide]{
+  op: "create",
   instruction: "AI를 마법으로 오해하는 통념을 깨고 'AI = AI 모델 + 하네스' 공식을 한 장으로 각인",
   content: "<해당 대목 원문 — 사실·표현·고유명사를 여기서>",
   aesthetic: "vintage_book"
 }
 ```
-- `style`은 미지정이면 **native**(기본). 따로 줄 필요 없다.
-- **aesthetic(톤, 한 덱 고정 = 일관된 책)**: `vintage_book`(빈티지 교과서) / `academic_paper`(학술) / `tech_minimal`(테크 미니멀) / `magazine_modern`(모던 매거진) / `dark_keynote`(다크 키노트·시네마틱) / `blueprint`(청사진 다이어그램).
-- 옵션: `image_size`(1K/2K(기본)/4K), `quality`(pro 기본/fast), `verify`(기본 true — 렌더된 한글을 OCR로 검증, 깨지면 자동 재생성).
+- 렌더는 **native**(통짜 이미지)가 기본 — 따로 지정할 것 없다.
+- **aesthetic(톤, 한 덱 고정 = 일관된 책)**: `vintage_book`(빈티지 교과서) / `academic_paper`(학술) / `tech_minimal`(테크 미니멀) / `magazine_modern`(모던 매거진) / `dark_keynote`(다크 키노트·시네마틱) / `blueprint`(청사진 다이어그램). 같은 톤의 단발 생성은 같은 스크래치 덱에 모인다.
+- 옵션: `image_quality`(pro 기본/fast).
 
 ### 여러 장
-슬라이드마다 같은 `aesthetic`으로 `[engines:slide]`를 호출한다(병렬은 `&`). 한 장 한 명제 원칙은 장마다 적용. 덱을 관리·편집·내보내기 하려면 §4의 강의 워크스페이스를 쓴다.
-
-### 빠른 텍스트형 (옵트아웃)
-발표용이 아닌 **카드·리포트 타일·빠른 초안**처럼 이미지 생성이 과한 경우만 `style:"text"`를 명시한다(자유형 HTML, 이미지 API 안 씀·무료). 이때 톤은 `design_system`(vintage_book/academic_paper/tech_minimal/magazine_modern).
+슬라이드마다 같은 `aesthetic`으로 `op:"create"`를 호출한다(병렬은 `&` — 같은 스크래치 덱에 순서대로 쌓인다). 한 장 한 명제 원칙은 장마다 적용. 제대로 된 강의 덱(제목·논지·청중 컨텍스트)은 §4처럼 `[self:lecture]{op:"create"}`로 먼저 덱을 만들고 `lecture_id`를 지정한다.
 
 ---
 
@@ -91,7 +91,7 @@
 
 ## 5. 원칙 요약
 
-- 슬라이드 만드는 길은 `[engines:slide]` 하나. 덱은 `[self:lecture]` 워크스페이스(같은 native).
-- native가 기본. 텍스트형은 경량·비발표용에만 `style:"text"`.
+- 슬라이드 만드는 길은 `[self:slide]{op:"create"}` 하나 — lecture_id 없으면 스크래치 덱. 덱 관리는 `[self:lecture]`/`[self:deck]`.
+- native(통짜 이미지)가 기본.
 - 품질은 도구가 아니라 **메시지 큐레이션**(§1)에서 나온다. 책 본문을 옮기지 말고 명제를 추출하라.
 - 강의는 한 장씩 협업(§3).

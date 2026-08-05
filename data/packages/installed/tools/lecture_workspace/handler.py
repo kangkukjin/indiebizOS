@@ -411,7 +411,7 @@ def _neighbor_context(deck: dict, lecture_dir_path, focus_slide_id, insert_at):
 
 def _generate_native_slide(
     lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design,
-    reference_images=None, image_quality="pro",
+    reference_images=None, image_quality="pro", content=None,
 ) -> dict:
     """네이티브 통짜 이미지 슬라이드 — slide_native 위임 후 deck에 등록(NotebookLM식)."""
     slide_id = focus_slide_id or lecture_store.next_slide_id(deck)
@@ -425,8 +425,10 @@ def _generate_native_slide(
     if deck.get("audience"):
         ctx.append(f"청중: {deck['audience']}")
     tool_input = {"instruction": instruction, "aesthetic": _native_aesthetic(design)}
-    if ctx:
-        tool_input["content"] = " / ".join(ctx)
+    # content = 호출자가 준 근거 원문(환각 방지) + 덱 컨텍스트 — 구 engines:slide 의 content 계약 승계
+    parts = ([" / ".join(ctx)] if ctx else []) + ([content] if content else [])
+    if parts:
+        tool_input["content"] = "\n".join(parts)
     if reference_images:
         tool_input["style_reference_images"] = reference_images
     # 이미지 품질/모델: fast=Nano Banana 2(Gemini 3.1 Flash, 저가·1K) / pro=Nano Banana Pro(Gemini 3 Pro, 고품질·2K)
@@ -476,6 +478,7 @@ def _generate_and_register_slide(
     insert_at: int = None,
     forced_layout: str = None,
     image_quality: str = "pro",
+    content: str = None,
 ) -> dict:
     """AI 호출 → 렌더 → deck 등록의 공통 흐름. dict 반환.
 
@@ -502,8 +505,11 @@ def _generate_and_register_slide(
     if native_deck and not force_text_on_native:
         return _generate_native_slide(
             lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design,
-            reference_images=ref_png_paths, image_quality=image_quality,
+            reference_images=ref_png_paths, image_quality=image_quality, content=content,
         )
+    # HTML(텍스트) 경로 — content 는 instruction 에 근거 블록으로 접합(전용 필드 없음)
+    if content:
+        instruction = f"{instruction}\n\n[근거 원문 — 사실·표현·고유명사는 여기서, 지어내지 말 것]\n{content}"
 
     # HTML 경로가 쓸 design_system — native 덱을 슬라이드 단위로 덮는 경우 native_ 접두를 떼어
     # HTML 렌더러가 아는 톤으로 매핑(native_vintage_book → vintage_book). 비-native 덱은 그대로.
@@ -614,15 +620,39 @@ _VALID_LAYOUTS = {
 }
 
 
+_SCRATCH_TITLE = "스크래치"
+
+
+def _resolve_scratch_lecture(aesthetic: str = None) -> str:
+    """lecture_id 미지정 단발 생성의 거처 — 스크래치 덱 (aesthetic별 1개, 자동 생성·재사용).
+
+    구 [engines:slide](단발 PNG) 흡수 경로(2026-08-05 어휘 압축): 슬라이드는 항상 덱에
+    산다 — 만든 뒤 편집(slide)·순서(deck reorder)·내보내기(deck export)·나레이션→영상이
+    기존 어휘로 그대로 이어진다. aesthetic 은 덱의 design_system(native_<톤>)으로 관통 —
+    같은 톤 N장 병렬 생성이 같은 스크래치 덱에 모인다."""
+    tone = (aesthetic or "").strip()
+    title = f"{_SCRATCH_TITLE} ({tone})" if tone else _SCRATCH_TITLE
+    for lec in lecture_store.list_lectures():
+        if (lec.get("title") or "") == title:
+            return lec["lecture_id"]
+    deck = lecture_store.create_lecture(
+        title=title,
+        design_system=(f"native_{tone}" if tone else "native_vintage_book"),
+    )
+    return deck["lecture_id"]
+
+
 def _slide_create(tool_input: dict) -> str:
     lecture_id = (tool_input.get("lecture_id") or "").strip()
     instruction = (tool_input.get("instruction") or "").strip()
     insert_at = tool_input.get("insert_at")
     forced_layout = (tool_input.get("layout") or "").strip() or None
-    if not lecture_id:
-        return _err("lecture_id는 필수입니다.")
     if not instruction:
         return _err("instruction(강의자의 자연어 요청)은 필수입니다.")
+    scratch = False
+    if not lecture_id:
+        lecture_id = _resolve_scratch_lecture(tool_input.get("aesthetic"))
+        scratch = True
     if insert_at is not None:
         try:
             insert_at = int(insert_at)
@@ -637,7 +667,12 @@ def _slide_create(tool_input: dict) -> str:
         insert_at=insert_at,
         forced_layout=forced_layout,
         image_quality=(tool_input.get("image_quality") or "pro"),
+        content=(tool_input.get("content") or "").strip() or None,
     )
+    if scratch:
+        result["lecture_id"] = lecture_id
+        result["scratch_deck"] = True
+        result["note"] = "lecture_id 미지정 — 스크래치 덱에 등록됨(이후 편집·순서·내보내기 가능)"
     return _ok(result)
 
 

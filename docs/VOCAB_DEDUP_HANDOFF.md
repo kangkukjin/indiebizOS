@@ -10,7 +10,7 @@
 
 ## ▶ START HERE — 현재 상태와 다음 단계
 
-**완료 (0)(1)(2)(3)(4)(5)+2b(book) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제, +슬라이드 가족 후보) + 계수 숙성 후 D급 은퇴 판단.**
+**완료 (0)(1)(2)(3)(4)(5)+2b(book)+슬라이드 일원화(152 액션) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제) + 계수 숙성 후 D급 은퇴 판단.**
 
 | 단계 | 상태 | 커밋 |
 |---|---|---|
@@ -267,6 +267,15 @@ ibl.md·프롬프트 fragment·계기 app 블록(검색 액션에 app 블록이 
     동의 모델). no-privileged-rails 재설계와 얽힘.
   - 스케줄 3형제(manage_events/schedule/trigger) — 캘린더/지연실행/트리거엔진
     3 서브시스템 경계 문제.
+  - **슬라이드 어휘 일원화 (2026-08-05, 사용자 결정으로 확장 실행 — 154→152)**:
+    engines:slide·engines:slide_shadcn 은퇴 → `[self:slide]{op:"create"}` 가 슬라이드
+    생성의 유일한 어휘. **lecture_id 미지정 = 스크래치 덱 자동 등록**(aesthetic 별 1개,
+    design_system=native_<톤> 으로 관통 — 코어 무수정) → 단발 생성도 편집·순서·내보내기·
+    영상화 어휘가 그대로 이어짐. content(근거 원문) 파라미터를 create 에 승계(native=전용
+    필드, HTML 경로=instruction 접합). 렌더러(slide_native·shadcn_slides)는 잔류,
+    저작 전용층(slide_author·slide_patterns)은 고아화로 삭제. slides.md 재작성.
+    style:"text" 단발 축은 은퇴(스크래치=native 고정 — 의식적 단순화, 텍스트형은 강의
+    덱 layout 강제로 잔존). 코퍼스 8행+distilled 4건 이관, probe 0.943 직행.
   - **슬라이드 가족 판정 (2026-08-05, 사용자 결정)**: self 3형제(lecture/slide/deck)는
     **병합 금지 — 개체 축 존치**. 워크스페이스/장/덱은 다른 개체라 business 가족(개체마다
     한 단어) 선례 그대로이며, 합치면 13-op 메가 액션(압축 목적과 반대). overlap 감사의

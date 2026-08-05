@@ -85,7 +85,7 @@ indiebizOS/outputs/lectures/
 
 - ✅ **Step 1** — 백엔드 데이터 레이어 + IBL 액션 9개
 - ⏳ **Step 2** — Electron BrowserWindow + 3패널 React UI (재료 / 데크 / AI 채팅) + IPC 연동
-- ⏳ **Step 3** — 슬라이드 생성 AI (시스템 AI 설정 빌린 가벼운 인스턴스) + slide_shadcn 연동: `slide_create`, `slide_edit` 액션 추가
+- ✅ **Step 3** — 슬라이드 생성 AI + 렌더 연동 완료. 2026-08-05: [self:slide]{op:"create"} 가 슬라이드 생성의 유일한 어휘(lecture_id 미지정=스크래치 덱, 구 engines:slide 흡수)
 
 ## 모듈 구조
 

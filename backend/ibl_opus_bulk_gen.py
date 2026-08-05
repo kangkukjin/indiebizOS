@@ -276,8 +276,8 @@ def gen(code, intents):
         else:
             results += ["차트 그려줘", "그래프 만들어", "시각화해줘"]
 
-    # ---- engines:slide / slide_shadcn ----
-    elif a in ("engines:slide", "engines:slide_shadcn"):
+    # ---- self:slide (구 engines:slide 흡수 — 스크래치 덱 단발 생성 포함) ----
+    elif a == "self:slide":
         topic = p(code, "topic")
         if topic:
             results += [f"{topic} 발표자료 만들어", f"{topic} PPT 좀", f"{topic} 슬라이드 제작해"]

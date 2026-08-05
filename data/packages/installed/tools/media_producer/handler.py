@@ -57,28 +57,11 @@ def execute(tool_input: dict, context) -> str:
         return fn(tool_input, output_base)
     elif tool_name == "create_tts":
         return create_tts(tool_input, output_base)
-    elif tool_name == "create_shadcn_slides":
-        # shadcn 스타일 슬라이드 생성 (별도 모듈)
-        import importlib.util
-        import sys
-        module_path = os.path.join(os.path.dirname(__file__), "shadcn_slides.py")
-        spec = importlib.util.spec_from_file_location("shadcn_slides", module_path)
-        shadcn_slides = importlib.util.module_from_spec(spec)
-        sys.modules["shadcn_slides"] = shadcn_slides
-        spec.loader.exec_module(shadcn_slides)
-        return shadcn_slides.create_shadcn_slides(tool_input, output_base)
-    elif tool_name == "create_slide":
-        # [engines:slide] 저작 기층 — 명령 → 슬라이드 1장 (별도 모듈, 호출마다 재로드)
-        import importlib.util
-        import sys
-        module_path = os.path.join(os.path.dirname(__file__), "slide_author.py")
-        spec = importlib.util.spec_from_file_location("slide_author", module_path)
-        slide_author = importlib.util.module_from_spec(spec)
-        sys.modules["slide_author"] = slide_author
-        spec.loader.exec_module(slide_author)
-        return slide_author.create_slide(tool_input, output_base)
+    # create_shadcn_slides/create_slide 도구 갈래는 2026-08-05 어휘 압축에서 은퇴 —
+    # 슬라이드 생성은 [self:slide]{op:"create"}(lecture_workspace, 스크래치 덱)로 일원화.
+    # 렌더러 모듈(shadcn_slides.py·slide_native.py)은 lecture_workspace·REST 표면이 함수층에서 계속 쓴다.
     # (2026-06-04 은퇴) create_lecture_plan/write/illustrate/compose 4단계 파이프라인 제거.
-    # 강의 = AI가 lecture_slide_principles.md 가이드로 계획 → [engines:slide] × N(같은 style, & 병렬).
+    # 강의 = [self:lecture] 워크스페이스 + [self:slide]{op:"create"} × N (2026-08-05 슬라이드 어휘 일원화).
     # 계획은 인지(가이드+추론)지 액션 아님 (ibl_design_philosophy Mode C).
 
     return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
@@ -316,7 +299,7 @@ def create_html_video(tool_input, output_base):
             return (
                 "오류: topic만으로는 영상을 만들 수 없습니다. 이 액션은 완성된 HTML 씬을 합성합니다 — "
                 "scenes(각 {html, duration} 배열) 또는 scene_dir(저장된 씬 디렉토리)을 주세요. "
-                "주제→슬라이드 자동 생성은 [engines:slide] 또는 [engines:lecture_*] 파이프라인을 사용하세요."
+                "주제→슬라이드 자동 생성은 [self:slide]{op:\"create\"} 또는 [self:lecture] 워크스페이스를 사용하세요."
             )
         return "오류: scenes 리스트가 비어 있습니다 (scenes 배열 또는 scene_dir 필요)."
 

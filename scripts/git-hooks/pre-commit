@@ -187,6 +187,22 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|backend/static/app_render_core\.j
   echo "[pre-commit] 공용 렌더 코어 OK ✓"
 fi
 
+# backend 층 가드 — 아래층이 위층을 import 하는 새 간선 차단 (2026-08-05 감사 ⑦:
+# 67모듈 매듭의 재료가 이 방향의 간선. 기존 47간선은 스크립트 내 BASELINE 동결).
+if echo "$staged" | grep -qE '^(backend/[^/]+\.py|scripts/check_backend_layers\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] backend 층 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_backend_layers.py"; then
+    echo "" >&2
+    echo "[pre-commit] backend 층 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 로직을 아래층 모듈로 내리거나 등록(의존 역전)으로 끊기" >&2
+    echo "[pre-commit]   • 새 모듈은 check_backend_layers.py LAYERS 에 층 배정" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] backend 층 OK ✓"
+fi
+
 # 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
 # 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
 if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$'; then

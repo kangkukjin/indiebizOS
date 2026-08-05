@@ -24,6 +24,7 @@ on:
       - 'scripts/check_public_routes.py'
       - 'scripts/check_string_returns.py'
       - 'scripts/check_render_core.py'
+      - 'scripts/check_backend_layers.py'
       - 'scripts/test_render_core.js'
       - 'frontend/src/components/**'
       - 'pytest.ini'
@@ -98,6 +99,20 @@ jobs:
         run: python scripts/check_render_core.py --self-test
       - name: 렌더 코어 단일 소스 검사
         run: python scripts/check_render_core.py
+
+  # backend 층 가드 (2026-08-05 감사 부채 ⑦): 아래층→위층 import 신규 차단.
+  # 기존 47간선은 스크립트 내 BASELINE 동결 — 절단이 진행되며 줄어든다. 의존성 0.
+  backend-layers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 가드 자체 회귀 (판정 로직 + BASELINE 정합)
+        run: python scripts/check_backend_layers.py --self-test
+      - name: backend 층 검사
+        run: python scripts/check_backend_layers.py
 
   # pytest 스위트 (2026-08-05 감사 부채 ⑧): 고아 테스트 5개를 CI 시민으로.
   # -m "not local" — 해마 DB·임베딩 모델이 필요한 측정성 테스트는 로컬 전용

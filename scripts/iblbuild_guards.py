@@ -18,6 +18,8 @@ from pathlib import Path
 PROFILE_BRANCH_ALLOWLIST = {
     "backend/runtime_utils.py",       # detect_body — capability 감지 본체(정당한 거처)
     "backend/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/_forward_to_phone)
+    "backend/ibl_registry.py",        # 몸-사전 설치 필터(_phone_runnable — ibl_engine 에서
+                                      # 이동, 2026-08-05 ⑦. 로드=설치라 프로파일이 곧 사전)
     "backend/api_launcher_web.py",    # phone_manifest runnable 필터(라우팅/렌더 substrate)
     "backend/channel_engine.py",      # nostr 채널 프로토콜 바인딩(드라이버)
     "backend/indienet_common.py",     # nostr 통합 바인딩 — _ON_PHONE(프로파일 감지) 정의처

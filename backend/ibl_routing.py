@@ -79,7 +79,7 @@ def _normalize_param_aliases(node: str, action: str, params: dict,
     if not isinstance(params, dict):
         return params
     if action_config is None:
-        from ibl_engine import _load_nodes_config
+        from ibl_registry import _load_nodes_config
         action_config = (_load_nodes_config().get("nodes", {})
                          .get(node, {}).get("actions", {}).get(action)) or {}
     aliases = action_config.get("aliases") if isinstance(action_config, dict) else None

@@ -91,6 +91,7 @@
     "ibl_parser",
     "ibl_parser_blocks",
     "ibl_parser_values",
+    "ibl_registry",
     "ibl_routing",
     "ibl_safety",
     "ibl_synthetic_opus",
@@ -225,8 +226,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 219,
-    "engine": 195,
+    "total": 220,
+    "engine": 196,
     "blocklist": 24
   }
 }

@@ -29,45 +29,9 @@ from common.auth_manager import get_api_key, get_api_headers, get_auth_query_par
 
 
 # === 레지스트리 로딩 ===
-
-_registry: Optional[Dict] = None
-_registry_path: Optional[Path] = None
-
-
-def _get_registry_path() -> Path:
-    """api_registry.yaml 경로"""
-    global _registry_path
-    if _registry_path:
-        return _registry_path
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    if env_path:
-        _registry_path = Path(env_path) / "data" / "api_registry.yaml"
-    else:
-        _registry_path = Path(__file__).parent.parent / "data" / "api_registry.yaml"
-    return _registry_path
-
-
-def _load_registry() -> Dict:
-    """레지스트리 로드 (캐싱)"""
-    global _registry
-    if _registry is not None:
-        return _registry
-
-    path = _get_registry_path()
-    if not path.exists():
-        _registry = {"services": {}, "tools": {}}
-        return _registry
-
-    with open(path, "r", encoding="utf-8") as f:
-        _registry = yaml.safe_load(f) or {"services": {}, "tools": {}}
-    return _registry
-
-
-def reload_registry():
-    """레지스트리 강제 리로드"""
-    global _registry
-    _registry = None
-    _load_registry()
+# api_registry.yaml 로더는 ibl_registry(사전층)로 이동 — 사전 병합(_merge_api_registry_actions)
+# 이 실행 엔진을 import 하지 않게 (2026-08-05 감사 ⑦). 이 모듈은 실행만 담당한다.
+from ibl_registry import _load_registry, reload_registry  # noqa: F401
 
 
 # === 공개 API ===

@@ -322,7 +322,7 @@ def _effect_description(node: str, action: str, params: dict) -> str:
 def _known_nodes() -> list:
     """등록된 노드 이름 목록(정렬) — 에러 문구가 레지스트리를 따라가게."""
     try:
-        from ibl_engine import _load_nodes_config
+        from ibl_registry import _load_nodes_config
         return sorted((_load_nodes_config().get("nodes") or {}).keys())
     except Exception:
         return []

@@ -68,7 +68,7 @@ def build_op_safety_map(nodes: dict) -> Dict[Tuple[str, str, str], bool]:
 
 
 def _live_nodes() -> dict:
-    from ibl_engine import _load_nodes_config
+    from ibl_registry import _load_nodes_config
     return (_load_nodes_config() or {}).get("nodes") or {}
 
 

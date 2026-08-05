@@ -199,7 +199,7 @@ def check_params(node: str, action: str, params: Any,
         return None
     if action_config is None:
         try:
-            from ibl_engine import _load_nodes_config
+            from ibl_registry import _load_nodes_config
             action_config = (_load_nodes_config().get("nodes", {})
                              .get(node, {}).get("actions", {}).get(action)) or {}
         except Exception:

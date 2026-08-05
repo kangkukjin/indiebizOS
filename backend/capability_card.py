@@ -24,7 +24,7 @@ from typing import Any, Dict, List
 
 
 def _registry() -> Dict:
-    from ibl_engine import _load_nodes_config
+    from ibl_registry import _load_nodes_config
     return _load_nodes_config() or {"nodes": {}}
 
 
@@ -41,7 +41,7 @@ def _self_can_run(node: str, action: str, cfg: dict) -> bool:
     except Exception:
         profile = ""
     if profile == "phone":
-        from ibl_engine import _phone_runnable
+        from ibl_registry import _phone_runnable
         return _phone_runnable(node, action)
     return cfg.get("runs_on") != "phone_only"
 

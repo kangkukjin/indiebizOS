@@ -58,7 +58,7 @@ LAYERS = {
         "capability_card", "channel_engine", "event_engine", "ibl_access",
         "ibl_engine", "ibl_executors", "ibl_ops", "ibl_param_vocab",
         "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing",
-        "ibl_safety", "ibl_translate", "package_manager", "tool_context",
+        "ibl_registry", "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
     },
     "cognition": {

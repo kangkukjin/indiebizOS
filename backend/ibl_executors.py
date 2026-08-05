@@ -22,7 +22,7 @@ def _load_nodes() -> Dict:
     global _nodes_cache
     if _nodes_cache is not None:
         return _nodes_cache
-    from ibl_engine import _load_nodes_config
+    from ibl_registry import _load_nodes_config
     data = _load_nodes_config()
     _nodes_cache = data.get("nodes", {})
     return _nodes_cache

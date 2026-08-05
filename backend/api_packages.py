@@ -167,7 +167,7 @@ async def reload_package_cache():
         # api_registry.yaml 편집 반영 — 안 비우면 reload_nodes가 낡은 레지스트리를 재병합해
         # 삭제된 registry 액션이 실행기에 유령으로 남는다 (2026-07-03 발견).
         try:
-            from api_engine import reload_registry
+            from ibl_registry import reload_registry
             reload_registry()
         except Exception:
             pass

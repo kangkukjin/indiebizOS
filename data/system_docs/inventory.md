@@ -74,7 +74,7 @@
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
 | shopping-assistant | Shopping Assistant | 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가  | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
-| study | Academic Research | 학술 논문 검색, 여론 조사, 뉴스 아카이브 및 글로벌 경제 지표 접근  | 설치됨 |
+| study | Academic Research | 학술 논문·연구자 검색, 여론 조사, 글로벌 경제 지표 접근 도구 (Op | 설치됨 |
 | system_essentials | System Essentials Kit | 에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo)  | 설치됨 |
 | visualization | Visualization Tools | 데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵,  | 설치됨 |
 | web | Web Tools | 웹 검색 및 크롤링 도구. 통합 검색(DuckDuckGo/네이버/Goog | 설치됨 |
@@ -83,4 +83,4 @@
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ---
-*마지막 업데이트: 2026-08-05 16:08*
+*마지막 업데이트: 2026-08-05 17:39*

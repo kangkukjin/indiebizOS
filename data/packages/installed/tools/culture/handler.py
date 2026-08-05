@@ -108,6 +108,13 @@ def _book_search(ti: dict):
     # source=nl → 국립중앙도서관 납본 소장 검색 (정보나루=공공도서관 대출 렌즈와 코퍼스가 다름
     # — 도서관들이 안 산 신간·소부수 출판은 나루엔 없어도 납본으로 여기엔 있다)
     source = str(ti.get("source") or "").strip().lower()
+    # source=google → Google Books 글로벌 도서 (구 sense:search_books 흡수, 2026-08-05).
+    # search op 전용 — popular/trending 등 대출 통계 op 는 정보나루 코퍼스에만 있다.
+    if source in ("google", "gbooks", "구글"):
+        from tool_gbooks import search_google_books
+        kw = keyword or " ".join(x for x in [title, author, publisher] if x) or (isbn or "")
+        return search_google_books(query=kw, max_results=ti.get("max_results") or rows,
+                                   order_by=ti.get("order_by", "relevance"))
     if source in ("nl", "national", "국립", "국립중앙도서관"):
         from tool_nl import search_nl
         kw = keyword or " ".join(x for x in [title, author, publisher] if x) or (isbn or "")

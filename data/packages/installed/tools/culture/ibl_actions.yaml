@@ -67,9 +67,9 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:book]{query: "역사"}'
-    description: 한국 도서 조회 (op 분기, 도서관정보나루+국립중앙도서관). 고전 원문은 classic, 글로벌 도서는 search_books.
+    description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic.
     group: culture
-    target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
+    target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
     target_key: op
     router: handler
     tool: book_op
@@ -88,7 +88,7 @@ actions:
         trending: 대출 급상승 도서 (기준일)
         recommended: 추천도서 (마니아·다독자 패턴)
         codes: 분류 코드 목록 (kdc/지역)
-    implementation: 도서관정보나루 API op 분기. search=library_book 필드분기(search_books/quick_search/get_book_by_isbn/get_book_detail), recommended=get_recommended_books, codes=get_kdc_list|get_region_list(code_type).
+    implementation: 도서관정보나루 API op 분기(+source 축 — nl=tool_nl, google=tool_gbooks[구 study search_books 흡수]). search=library_book 필드분기, recommended=get_recommended_books, codes=get_kdc_list|get_region_list(code_type).
     keywords:
     - 도서
     - 책
@@ -395,7 +395,7 @@ actions:
           type: text
           placeholder: 국내외 도서·원서  예) sapiens, 한강
           required: true
-        action: '[sense:search_books]{query: "$q"}'
+        action: '[sense:book]{source: "google", keyword: "$q"}'
         view:
         - type: card_list
           from: items
@@ -552,7 +552,7 @@ tool_json:
           description: 페이지
       required: []
   - name: book_op
-    description: '한국 도서 조회 (op 분기) — [sense:book], 도서관정보나루+국립중앙도서관. 고전 원문은 classic_op, 글로벌 도서는 study:search_books.
+    description: '도서 조회 (op 분기) — [sense:book]. 기본=도서관정보나루, source="nl"=국립중앙도서관, source="google"=글로벌·원서(Google Books). 고전 원문은 classic_op.
 
       - op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계). source="nl"이면 국립중앙도서관 납본 소장 검색(정보나루에 없는 신간·소부수 출판까지 — "이 책이 존재하나"의 정본).
 

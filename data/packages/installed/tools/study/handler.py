@@ -545,9 +545,6 @@ def execute(tool_input: dict, context) -> str:
     elif tool_name == "fetch_world_bank_data":
         return _fetch_world_bank_data(tool_input)
 
-    elif tool_name == "search_books":
-        return _search_books(tool_input)
-
     else:
         return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
@@ -1242,70 +1239,7 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
         return json.dumps({"success": False, "error": f"World Bank API 요청 오류: {str(e)}"}, ensure_ascii=False)
 
 
-def _search_books(tool_input: dict) -> str:
-    """Google Books API를 사용한 도서 검색"""
-    query = tool_input.get("query")
-    max_results = tool_input.get("max_results", 5)
-    order_by = tool_input.get("order_by", "relevance")
-
-    url = "https://www.googleapis.com/books/v1/volumes"
-    params = {
-        "q": query,
-        "maxResults": min(max_results, 40),
-        "orderBy": order_by,
-        "printType": "books"
-    }
-    # API 키가 있으면 사용 — 익명 호출은 IP당 할당량이 작아 429가 잦다 (.env: GOOGLE_BOOKS_API_KEY)
-    _gbooks_key = os.environ.get("GOOGLE_BOOKS_API_KEY", "").strip()
-    if _gbooks_key:
-        params["key"] = _gbooks_key
-
-    try:
-        # 429(Too Many Requests) 시 짧게 백오프 후 재시도 (최대 3회)
-        response = None
-        for _attempt in range(3):
-            response = requests.get(url, params=params, timeout=15)
-            if response.status_code == 429 and _attempt < 2:
-                time.sleep(1.5 * (_attempt + 1))
-                continue
-            break
-        response.raise_for_status()
-        data = response.json()
-
-        items = data.get("items", [])
-
-        # 구조화 반환 — 앱(도서검색)이 그대로 렌더할 수 있게 도서관정보나루(book)와 같은 필드명을 쓴다.
-        books = []
-        for item in items:
-            info = item.get("volumeInfo", {})
-            isbn13 = ""
-            for idf in info.get("industryIdentifiers", []):
-                if idf.get("type") == "ISBN_13":
-                    isbn13 = idf.get("identifier", "")
-                    break
-            img = info.get("imageLinks") or {}
-            image_url = img.get("thumbnail") or img.get("smallThumbnail") or ""
-            books.append({
-                "bookname": info.get("title", ""),
-                "authors": ", ".join(info.get("authors", [])),
-                "publisher": info.get("publisher", ""),
-                "publication_year": (info.get("publishedDate", "") or "")[:4],
-                "isbn13": isbn13,
-                "bookImageURL": image_url,
-                "description": info.get("description", ""),
-                "categories": ", ".join(info.get("categories", [])),
-                "page_count": info.get("pageCount"),
-                "infoLink": info.get("infoLink", ""),
-            })
-
-        return {
-            "count": data.get("totalItems", len(books)),
-            "items": books,  # 단일 통화: native 도서 dict(bookname/authors/description/image 등 풍부). 옛 records 은퇴.
-            "message": f"'{query}' Google Books 검색 {len(books)}건",
-        }
-
-    except Exception as e:
-        return {"success": False, "error": f"Google Books API 요청 오류: {str(e)}", "items": []}
+# _search_books 는 2026-08-05 어휘 압축 (6)-2b 에서 culture 패키지 [sense:book]{source:"google"} 로 이주(tool_gbooks.py).
 
 
 # ── 디스패치 테이블 — 진짜 함수 참조 (--check 가 AST 로 키 정확 비교) ──

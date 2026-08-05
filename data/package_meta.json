@@ -78,6 +78,7 @@
       "needs_key": [
         "DATA4LIBRARY_API_KEY",
         "DATA_GO_KR_API_KEY",
+        "GOOGLE_BOOKS_API_KEY",
         "KOPIS_API_KEY"
       ],
       "weight": "light",
@@ -243,9 +244,7 @@
       "locale": "kr"
     },
     "study": {
-      "needs_key": [
-        "GOOGLE_BOOKS_API_KEY"
-      ],
+      "needs_key": [],
       "weight": "light",
       "locale": "universal"
     },
@@ -404,7 +403,6 @@
     "sense:restaurant": "location-services",
     "sense:reverse_geocode": "location-services",
     "sense:search": "web",
-    "sense:search_books": "study",
     "sense:search_local": "local-info",
     "sense:search_shopping": "shopping-assistant",
     "sense:search_youtube": "youtube",

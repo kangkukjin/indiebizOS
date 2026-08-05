@@ -81,7 +81,7 @@
     },
     {
       "name": "book_op",
-      "description": "한국 도서 조회 (op 분기) — [sense:book], 도서관정보나루+국립중앙도서관. 고전 원문은 classic_op, 글로벌 도서는 study:search_books.\n- op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계). source=\"nl\"이면 국립중앙도서관 납본 소장 검색(정보나루에 없는 신간·소부수 출판까지 — \"이 책이 존재하나\"의 정본).\n- op=recommended: 추천도서 (마니아·다독자 패턴). isbn13·rec_type.\n- op=codes: 분류 코드 목록. code_type=kdc(주제분류) 또는 region(도서관 지역).",
+      "description": "도서 조회 (op 분기) — [sense:book]. 기본=도서관정보나루, source=\"nl\"=국립중앙도서관, source=\"google\"=글로벌·원서(Google Books). 고전 원문은 classic_op.\n- op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계). source=\"nl\"이면 국립중앙도서관 납본 소장 검색(정보나루에 없는 신간·소부수 출판까지 — \"이 책이 존재하나\"의 정본).\n- op=recommended: 추천도서 (마니아·다독자 패턴). isbn13·rec_type.\n- op=codes: 분류 코드 목록. code_type=kdc(주제분류) 또는 region(도서관 지역).",
       "input_schema": {
         "type": "object",
         "properties": {

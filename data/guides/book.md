@@ -10,7 +10,7 @@
 
 다른 도서 액션과 구분:
 - **이 액션(book)**: 한국 출판 도서 (메타 + 대출 통계 + 추천)
-- `sense:search_books` — 글로벌 도서 (Google Books, 영어권·원서)
+- `sense:book` + `source: "google"` — 글로벌 도서 (Google Books, 영어권·원서. 구 search_books 흡수)
 - `sense:classic`{op:"western"} — 서양 고전 원문 (Project Gutenberg)
 - `sense:classic`{op:"korean"} — 한국 고전 원문 (한국고전종합DB)
 
@@ -94,7 +94,7 @@
 신간이라면 발행 후 6~12개월 대출 통계로 대중 반응을 가늠. detail 모드의 월별 추이가 핵심.
 
 ### 한국 vs 해외 도서 구분
-영어권 도서는 이 액션으로 안 잡힌다. 글로벌 검색은 `sense:search_books`(있으면)나 외부 채널.
+영어권 도서는 정보나루로 안 잡힌다. 글로벌 검색은 `[sense:book]{source: "google"}`.
 
 ---
 
@@ -134,4 +134,4 @@
 
 - `sense:classic`{op:"western"} — Project Gutenberg 영문 고전 원문
 - `culture` 패키지 한국고전종합DB — 한문 고전
-- `sense:search_books` (있다면) — 글로벌 도서 일반 검색
+- `[sense:book]{source: "google"}` — 글로벌 도서 일반 검색

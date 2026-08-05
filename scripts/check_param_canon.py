@@ -46,7 +46,7 @@ BASELINE_PARAMS = {
     "sense:search_local": {"display"}, "sense:weather": {"lon"},
     "sense:reverse_geocode": {"lon"}, "sense:search_shopping": {"display"},
     "sense:paper": {"max_results"}, "sense:researcher": {"max_results"},
-    "sense:entity": {"max_results"}, "sense:search_books": {"max_results"},
+    "sense:entity": {"max_results"},   # (search_books 면제는 2026-08-05 book{source:google} 흡수로 소멸 — max_results 는 핸들러 내부 수용)
     "sense:search": {"count"},   # 2026-08-05 검색 통합 — 구 5액션(count/display/page_size)의 면제 이주(display/page_size 는 aliases 로 흡수)
     "sense:search_youtube": {"count"}, "self:blog": {"count"}, "self:music": {"q"},
     "self:residual": {"q"}, "self:photo": {"q"},

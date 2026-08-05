@@ -55,7 +55,7 @@ PubMed Central(PMC) 논문 PDF 다운로드
 - 시계열 데이터(연도별) 분석 및 국가 간 비교에 최적화
 - 주요 지표 코드: GDP(`NY.GDP.MKTP.CD`), 인구(`SP.POP.TOTL`), 실업률(`SL.UEM.TOTL.ZS`)
 
-### search_books (NEW)
+### ~~search_books~~ (2026-08-05 culture [sense:book]{source:"google"} 로 이주)
 **Google Books API를 사용한 도서 정보 검색**
 - 책을 인용하거나 상세 참고 문헌 정보가 필요할 때 사용
 - 제목, 저자, 출판사, 발행일, ISBN, 도서 요약 정보 제공

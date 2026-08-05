@@ -78,5 +78,5 @@
 ## 관련 액션
 
 - `sense:classic`{op:"korean"} — 한국고전종합DB (한문 원전)
-- `sense:search_books` — 글로벌 도서 일반 검색
+- `[sense:book]{source: "google"}` — 글로벌 도서 일반 검색
 - `sense:book` — 한국 도서 (도서관정보나루)

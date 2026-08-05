@@ -888,7 +888,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         except Exception:
             pass
         try:
-            from api_xray import push_xray_event
+            from xray_stream import push_xray_event
             push_xray_event("tool", {
                 "node": node, "action": action,
                 "success": _action_success, "ms": _action_ms,

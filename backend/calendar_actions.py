@@ -246,7 +246,7 @@ class CalendarActionsMixin:
         """
         import time as _t
         from websocket_manager import manager as ws_manager
-        from api_websocket import send_launcher_command
+        from websocket_manager import send_launcher_command
 
         # 1) 이미 WS 연결이 있으면 바로 반환
         if is_system_ai:
@@ -316,7 +316,7 @@ class CalendarActionsMixin:
         프론트엔드가 에이전트를 시작할 때까지 대기하거나 직접 시작.
         """
         import time as _t
-        from api_agents import get_agent_runners
+        from agent_registry import get_agent_runners
 
         # 프론트엔드가 autoActivateAgent로 시작할 시간 기다림
         for i in range(20):
@@ -400,8 +400,15 @@ class CalendarActionsMixin:
         import asyncio
 
         try:
+            # 스트림 핸들러는 websocket_manager 주입 슬롯으로 — 라우터(api_websocket)
+            # 를 직접 import 하지 않는다 (2026-08-05 감사 ⑦, 의존 역전).
+            from websocket_manager import (
+                get_chat_stream_entry, get_system_ai_stream_entry,
+            )
             if is_system_ai:
-                from api_websocket import handle_system_ai_chat_stream
+                handle_system_ai_chat_stream = get_system_ai_stream_entry()
+                if handle_system_ai_chat_stream is None:
+                    raise RuntimeError("채팅 스트림 미등록 — api_websocket 미로드")
                 data = {
                     "type": "system_ai_stream",
                     "message": message,
@@ -409,7 +416,9 @@ class CalendarActionsMixin:
                 self._log(f"시스템 AI WS 메시지 주입: {message[:60]}...")
                 coro = handle_system_ai_chat_stream(client_id, data)
             else:
-                from api_websocket import handle_chat_message_stream
+                handle_chat_message_stream = get_chat_stream_entry()
+                if handle_chat_message_stream is None:
+                    raise RuntimeError("채팅 스트림 미등록 — api_websocket 미로드")
                 data = {
                     "type": "chat_stream",
                     "message": message,

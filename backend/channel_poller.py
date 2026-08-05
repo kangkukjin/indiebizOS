@@ -1001,7 +1001,7 @@ class ChannelPoller:
         """시스템 AI로 명령 실행 - 실제 시스템 AI 호출 (모든 도구 포함)"""
         try:
             import uuid
-            from api_system_ai import process_system_ai_message
+            from system_ai_core import process_system_ai_message
             from thread_context import set_current_task_id, clear_current_task_id, clear_called_agent
             from system_ai_memory import create_task as create_system_ai_task, complete_task as complete_system_ai_task
 

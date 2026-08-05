@@ -425,19 +425,19 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
     # Phase 17: 시스템 AI 전용 함수
     elif func_name == "list_project_agents":
-        from api_system_ai import _execute_list_project_agents
+        from system_ai_tools import _execute_list_project_agents
         return _execute_list_project_agents(params)
 
     elif func_name == "call_project_agent":
-        from api_system_ai import _execute_call_project_agent
+        from system_ai_tools import _execute_call_project_agent
         return _execute_call_project_agent(dict(params))
 
     elif func_name == "schedule":
-        from api_system_ai import _execute_schedule
+        from system_ai_plans import _execute_schedule
         return _execute_schedule(params, agent_id=agent_id, project_path=project_path)
 
     elif func_name == "manage_events":
-        from api_system_ai import _execute_manage_events
+        from system_ai_tools import _execute_manage_events
         return _execute_manage_events(params)
 
     elif func_name == "launcher_command":
@@ -451,7 +451,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _execute_launcher_command(launcher_action, params)
 
     elif func_name == "list_switches":
-        from api_system_ai import _execute_list_switches
+        from system_ai_tools import _execute_list_switches
         return _execute_list_switches(params)
 
     elif func_name == "run_switch":
@@ -723,7 +723,7 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
         return {"success": False, "error": f"알 수 없는 launcher 액션: {action}"}
 
     try:
-        from api_websocket import send_launcher_command, get_launcher_ws
+        from websocket_manager import send_launcher_command, get_launcher_ws
 
         if not get_launcher_ws():
             return {"success": False, "error": "Launcher WS 미연결"}

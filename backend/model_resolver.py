@@ -68,6 +68,15 @@ def _data_path():
     return get_base_path() / "data"
 
 
+# AI 티어 설정 파일 경로 정본 — api_config 에서 이동 (2026-08-05 감사 ⑦).
+# 인지층(consciousness_agent)이 라우터를 import 하지 않도록 여기(기저층)가 정본.
+SYSTEM_AI_CONFIG_PATH = _data_path() / "system_ai_config.json"
+LIGHTWEIGHT_AI_CONFIG_PATH = _data_path() / "lightweight_ai_config.json"
+MIDTIER_AI_CONFIG_PATH = _data_path() / "midtier_ai_config.json"
+# 하위호환: 기존 unconscious_ai_config.json 경로
+UNCONSCIOUS_AI_CONFIG_PATH = _data_path() / "unconscious_ai_config.json"
+
+
 def _gear_path():
     return _data_path() / "model_gear.json"
 

@@ -201,7 +201,7 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
         except Exception:
             pass
         try:
-            from api_xray import push_xray_event
+            from xray_stream import push_xray_event
             push_xray_event("tool", {
                 "node": node, "action": action, "hint": hint or "",
                 "success": success, "ms": round(duration_ms),

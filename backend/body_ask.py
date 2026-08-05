@@ -115,7 +115,7 @@ def _compile(message: str, correction: str = "", payload=None) -> Dict[str, Any]
 def _compile_cockpit(message: str, correction: str, references: str,
                      payload=None) -> Dict[str, Any]:
     """조종실 번역기(해마 용례 + translate 기어) — 해마 있는 몸의 컴파일러."""
-    from api_ibl import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
+    from ibl_translate import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
     from consciousness_agent import system_ai_call
     prompt = f'사용자 명령: "{message}"\n\n'
     prompt += _payload_note(payload)
@@ -214,7 +214,7 @@ def _compile_gemini(message: str, correction: str = "", payload=None) -> Dict[st
     if "CANNOT" in raw and "[" not in raw:
         return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
                 "compiler": "gemini"}
-    from api_ibl import _strip_code_fence
+    from ibl_translate import _strip_code_fence
     code = _strip_code_fence(raw)
     if not code.startswith("["):
         return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],

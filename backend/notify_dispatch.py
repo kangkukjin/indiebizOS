@@ -37,7 +37,7 @@ def notify_user(title: str, body: str, kind: str = "info", source: str = "system
     # 2) A. Electron 런처 (연결돼 있으면 네이티브 알림 + 배지 + 클릭 연동)
     delivered = False
     try:
-        from api_websocket import send_launcher_command_sync
+        from websocket_manager import send_launcher_command_sync
         delivered = send_launcher_command_sync("show_notification", {
             "title": title,
             "body": body,

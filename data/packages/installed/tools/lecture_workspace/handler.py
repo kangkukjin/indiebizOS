@@ -206,7 +206,7 @@ def _lecture_open(tool_input: dict) -> str:
     ws_error = None
     try:
         import asyncio
-        from api_websocket import send_launcher_command, get_launcher_ws
+        from websocket_manager import send_launcher_command, get_launcher_ws
 
         if not get_launcher_ws():
             ws_error = "Launcher WS 미연결 (Electron 메인 창이 실행 중인지 확인하세요)"

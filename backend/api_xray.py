@@ -27,29 +27,9 @@ router = APIRouter(prefix="/xray")
 # ============================================================
 # WebSocket 실시간 연결 관리
 # ============================================================
-
-class _XRayWS:
-    """X-Ray WebSocket 상태를 클래스로 캡슐화 (Python 3.14 scoping 호환)"""
-    def __init__(self):
-        self.clients: Set[WebSocket] = set()
-        self.queue: asyncio.Queue = asyncio.Queue(maxsize=100)
-
-_ws = _XRayWS()
-
-
-def push_xray_event(event_type: str, data: dict):
-    """동기 코드에서 X-Ray 이벤트 푸시 (system_tools 등에서 호출)"""
-    if not _ws.clients:
-        return
-    event = {"type": event_type, "ts": datetime.now().strftime("%H:%M:%S"), **data}
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.call_soon_threadsafe(_ws.queue.put_nowait, event)
-        else:
-            _ws.queue.put_nowait(event)
-    except Exception:
-        pass
+# 상태(_ws)·푸시(push_xray_event)는 xray_stream(데이터층)으로 이동 —
+# 아래층(conversation_db·ibl_engine·system_tools)이 라우터를 import 하지 않게.
+from xray_stream import _ws  # noqa: E402
 
 BASE_PATH = get_base_path()
 DATA_PATH = BASE_PATH / "data"

@@ -206,7 +206,7 @@ class AndroidAgent:
                 "api_key": d.get("api_key", ""),
             }
         else:
-            from api_system_ai import load_system_ai_config
+            from system_ai_core import load_system_ai_config
             config = load_system_ai_config()
             ai_config = {
                 "provider": config.get("provider", "anthropic"),

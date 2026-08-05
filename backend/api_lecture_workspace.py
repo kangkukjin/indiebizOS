@@ -818,7 +818,7 @@ class OpenWorkspaceRequest(BaseModel):
 async def open_workspace(req: OpenWorkspaceRequest):
     """강의 만들기 창 열기 신호를 Launcher WS로 Electron에 전송."""
     try:
-        from api_websocket import send_launcher_command, get_launcher_ws
+        from websocket_manager import send_launcher_command, get_launcher_ws
     except ImportError:
         raise HTTPException(status_code=500, detail="WebSocket 모듈 로드 실패")
 

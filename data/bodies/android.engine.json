@@ -6,6 +6,7 @@
     "agent_communication",
     "agent_goals",
     "agent_pipeline",
+    "agent_registry",
     "agent_runner",
     "ai_agent",
     "android_agent",
@@ -93,6 +94,7 @@
     "ibl_routing",
     "ibl_safety",
     "ibl_synthetic_opus",
+    "ibl_translate",
     "ibl_usage_db",
     "ibl_usage_generator",
     "ibl_usage_rag",
@@ -193,7 +195,8 @@
     "workflow_engine",
     "world_pulse",
     "world_pulse_collectors",
-    "world_pulse_health"
+    "world_pulse_health",
+    "xray_stream"
   ],
   "blocklist": {
     "_slide_proto": "force_exclude (프로파일 명시)",
@@ -222,8 +225,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 216,
-    "engine": 192,
+    "total": 219,
+    "engine": 195,
     "blocklist": 24
   }
 }

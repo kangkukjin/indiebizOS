@@ -44,8 +44,9 @@ router = APIRouter()
 # 매니저 인스턴스
 project_manager = None
 
-# 에이전트 런너 관리 (프로젝트별)
-agent_runners: Dict[str, Dict[str, Any]] = {}
+# 에이전트 런너 등기부는 agent_registry(데이터층)가 정본 — 여기서는 같은 dict 를
+# 공유해 조작만 한다 (2026-08-05 감사 ⑦. 재바인딩 금지 — 항목 조작만).
+from agent_registry import agent_runners, get_agent_runners  # noqa: F401
 
 
 class AgentCommand(BaseModel):
@@ -81,11 +82,6 @@ def init_manager(pm):
     """매니저 인스턴스 초기화"""
     global project_manager
     project_manager = pm
-
-
-def get_agent_runners():
-    """agent_runners 반환"""
-    return agent_runners
 
 
 # ============ 에이전트 조회 ============

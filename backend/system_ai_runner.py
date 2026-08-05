@@ -107,7 +107,7 @@ class SystemAIRunner:
         WebSocket 경로 전용: execute_ibl 단일 도구로 초기화.
         HTTP API 경로(system_ai_core.py)는 get_all_system_ai_tools()로 전체 도구 로딩.
         """
-        from api_system_ai import load_system_ai_config
+        from system_ai_core import load_system_ai_config
         from tool_loader import load_tool_schema
 
         config = load_system_ai_config()

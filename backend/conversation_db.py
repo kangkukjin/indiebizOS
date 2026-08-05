@@ -572,7 +572,7 @@ class ConversationDB:
             # X-Ray 실시간 이벤트
             if updated:
                 try:
-                    from api_xray import push_xray_event
+                    from xray_stream import push_xray_event
                     tools = json.loads(tool_history_json) if tool_history_json else []
                     push_xray_event("task_complete", {
                         "task_id": task_id,

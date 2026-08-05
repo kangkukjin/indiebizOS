@@ -27,11 +27,11 @@ DATA_PATH = _get_data_path()
 ENV_PATH = _get_base_path() / ".env"
 
 SYSTEM_MEMO_PATH = DATA_PATH / "system_ai_memo.txt"
-SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
-LIGHTWEIGHT_AI_CONFIG_PATH = DATA_PATH / "lightweight_ai_config.json"
-MIDTIER_AI_CONFIG_PATH = DATA_PATH / "midtier_ai_config.json"
-# 하위호환: 기존 unconscious_ai_config.json 경로
-UNCONSCIOUS_AI_CONFIG_PATH = DATA_PATH / "unconscious_ai_config.json"
+# AI 티어 설정 경로 정본은 model_resolver(기저층) — 여기는 라우터가 소비만 (2026-08-05 ⑦)
+from model_resolver import (  # noqa: E402
+    SYSTEM_AI_CONFIG_PATH, LIGHTWEIGHT_AI_CONFIG_PATH,
+    MIDTIER_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH,
+)
 
 # 매니저 인스턴스
 project_manager = None

@@ -87,7 +87,7 @@ def set_cancel(client_id: str, value: bool):
 
 
 def get_agent_runners():
-    from api_agents import get_agent_runners as _get
+    from agent_registry import get_agent_runners as _get
     return _get()
 
 
@@ -97,17 +97,18 @@ def init_manager(pm):
 
 
 # ============ Launcher WebSocket ============
+# 상태·송신(send_launcher_command 등)은 websocket_manager(데이터층 허브)로 이동 —
+# 아래층(ibl_routing·notify_dispatch 등)이 라우터를 import 하지 않게 (2026-08-05 ⑦).
+from websocket_manager import (  # noqa: E402
+    set_launcher_ws, clear_launcher_ws,
+)
 
-_launcher_ws = None  # Launcher 전용 WS 연결 (1개)
-_launcher_loop = None  # 런처 WS가 붙은 이벤트 루프 (워커 스레드 발신용)
 
 @router.websocket("/ws/launcher")
 async def websocket_launcher(websocket: WebSocket):
     """런처 전용 WebSocket — 백엔드→런처 명령 전달 채널"""
-    global _launcher_ws, _launcher_loop
     await websocket.accept()
-    _launcher_ws = websocket
-    _launcher_loop = asyncio.get_running_loop()
+    set_launcher_ws(websocket, asyncio.get_running_loop())
     print("[WS] Launcher 연결됨")
 
     try:
@@ -117,56 +118,8 @@ async def websocket_launcher(websocket: WebSocket):
             if data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
     except (WebSocketDisconnect, Exception):
-        _launcher_ws = None
+        clear_launcher_ws()
         print("[WS] Launcher 연결 해제")
-
-
-async def send_launcher_command(command: str, params: dict = None) -> bool:
-    """백엔드에서 Launcher로 명령 전송 (예: 프로젝트 창 열기)"""
-    global _launcher_ws
-    if not _launcher_ws:
-        print(f"[WS] Launcher 미연결, 명령 전달 불가: {command}")
-        return False
-    try:
-        await _launcher_ws.send_json({
-            "type": "launcher_command",
-            "command": command,
-            "params": params or {}
-        })
-        return True
-    except Exception as e:
-        print(f"[WS] Launcher 명령 전달 실패: {e}")
-        _launcher_ws = None
-        return False
-
-
-def get_launcher_ws():
-    """Launcher WS 연결 상태 확인 (동기 호출용)"""
-    return _launcher_ws
-
-
-def send_launcher_command_sync(command: str, params: dict = None, timeout: float = 3.0) -> bool:
-    """워커 스레드(채널 폴러·IBL 실행 등)에서 런처 명령 전송 — 동기 래퍼.
-
-    런처 미연결이면 False (호출부가 OS 알림 등으로 폴백 판단).
-    루프 스레드에서 불리면 결과를 기다리지 않고 예약만 한다(자기교착 방지).
-    """
-    if not _launcher_ws or not _launcher_loop or _launcher_loop.is_closed():
-        return False
-    coro = send_launcher_command(command, params)
-    try:
-        running = asyncio.get_running_loop()
-    except RuntimeError:
-        running = None
-    try:
-        if running is _launcher_loop:
-            asyncio.ensure_future(coro)
-            return True  # 전송 예약됨 — 결과 확인 불가 지점이라 낙관 반환
-        fut = asyncio.run_coroutine_threadsafe(coro, _launcher_loop)
-        return bool(fut.result(timeout=timeout))
-    except Exception as e:
-        print(f"[WS] Launcher 동기 명령 전달 실패: {e}")
-        return False
 
 
 # ============ WebSocket 채팅 ============
@@ -822,7 +775,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     conn.commit()
                 # X-Ray 실시간 이벤트
                 try:
-                    from api_xray import push_xray_event
+                    from xray_stream import push_xray_event
                     push_xray_event("task_complete", {
                         "task_id": task_id,
                         "request": (message or "")[:100],
@@ -1253,3 +1206,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             "type": "error",
             "message": str(e)
         })
+
+
+# 채팅 스트림 진입점 등록 — calendar_actions 등 아래층이 라우터를 import 하지 않고
+# websocket_manager 슬롯을 통해 같은 경로로 주입하게 한다 (2026-08-05 감사 ⑦).
+from websocket_manager import register_chat_streams as _register_chat_streams  # noqa: E402
+
+_register_chat_streams(handle_chat_message_stream, handle_system_ai_chat_stream)

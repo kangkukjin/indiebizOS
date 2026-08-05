@@ -506,7 +506,7 @@ def _get_lightweight_provider():
 
     _lightweight_provider_initialized = True
     try:
-        from api_config import LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH
+        from model_resolver import LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH
         import json as _json
 
         # 하위호환: lightweight 없으면 unconscious 폴백
@@ -575,7 +575,7 @@ def _get_midtier_provider_legacy():
 
     _midtier_provider_initialized = True
     try:
-        from api_config import MIDTIER_AI_CONFIG_PATH
+        from model_resolver import MIDTIER_AI_CONFIG_PATH
         import json as _json
 
         if not MIDTIER_AI_CONFIG_PATH.exists():
@@ -595,7 +595,7 @@ def _get_midtier_provider_legacy():
         api_key = config.get("apiKey", "").strip()
         providers_without_api_key = {"claude_code", "claude-code", "claudecode", "ollama"}
         if not api_key and provider_name.lower() not in providers_without_api_key:
-            from api_config import SYSTEM_AI_CONFIG_PATH
+            from model_resolver import SYSTEM_AI_CONFIG_PATH
             if SYSTEM_AI_CONFIG_PATH.exists():
                 with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
                     sys_config = _json.load(f)
@@ -743,7 +743,7 @@ def _get_system_oneshot_provider():
 
     _system_oneshot_provider_initialized = True
     try:
-        from api_config import SYSTEM_AI_CONFIG_PATH
+        from model_resolver import SYSTEM_AI_CONFIG_PATH
         import json as _json
         if not SYSTEM_AI_CONFIG_PATH.exists():
             return None

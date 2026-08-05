@@ -161,3 +161,99 @@ def broadcast_message(message: dict) -> bool:
     except Exception as e:
         print(f"[WS] broadcast_message 실패: {e}")
         return False
+
+
+# ============ Launcher 전용 WS 허브 ============
+# api_websocket 에서 이동 (2026-08-05 감사 ⑦): 상태(연결·루프)와 송신 함수는 연결
+# 허브(데이터층)의 것 — 아래층(ibl_routing·notify_dispatch·핸들러)이 라우터를
+# import 하지 않게 한다. /ws/launcher 엔드포인트(수락·수신 루프)는 api_websocket 에
+# 남고, 연결·해제 시 set_launcher_ws()/clear_launcher_ws() 로 여기 등록만 한다.
+
+_launcher_ws = None  # Launcher 전용 WS 연결 (1개)
+_launcher_loop = None  # 런처 WS가 붙은 이벤트 루프 (워커 스레드 발신용)
+
+
+def set_launcher_ws(websocket, loop) -> None:
+    """런처 WS 연결 등록 (api_websocket 엔드포인트가 수락 직후 호출)"""
+    global _launcher_ws, _launcher_loop
+    _launcher_ws = websocket
+    _launcher_loop = loop
+
+
+def clear_launcher_ws() -> None:
+    """런처 WS 연결 해제"""
+    global _launcher_ws
+    _launcher_ws = None
+
+
+async def send_launcher_command(command: str, params: dict = None) -> bool:
+    """백엔드에서 Launcher로 명령 전송 (예: 프로젝트 창 열기)"""
+    global _launcher_ws
+    if not _launcher_ws:
+        print(f"[WS] Launcher 미연결, 명령 전달 불가: {command}")
+        return False
+    try:
+        await _launcher_ws.send_json({
+            "type": "launcher_command",
+            "command": command,
+            "params": params or {}
+        })
+        return True
+    except Exception as e:
+        print(f"[WS] Launcher 명령 전달 실패: {e}")
+        _launcher_ws = None
+        return False
+
+
+def get_launcher_ws():
+    """Launcher WS 연결 상태 확인 (동기 호출용)"""
+    return _launcher_ws
+
+
+def send_launcher_command_sync(command: str, params: dict = None, timeout: float = 3.0) -> bool:
+    """워커 스레드(채널 폴러·IBL 실행 등)에서 런처 명령 전송 — 동기 래퍼.
+
+    런처 미연결이면 False (호출부가 OS 알림 등으로 폴백 판단).
+    루프 스레드에서 불리면 결과를 기다리지 않고 예약만 한다(자기교착 방지).
+    """
+    if not _launcher_ws or not _launcher_loop or _launcher_loop.is_closed():
+        return False
+    coro = send_launcher_command(command, params)
+    try:
+        running = asyncio.get_running_loop()
+    except RuntimeError:
+        running = None
+    try:
+        if running is _launcher_loop:
+            asyncio.ensure_future(coro)
+            return True  # 전송 예약됨 — 결과 확인 불가 지점이라 낙관 반환
+        fut = asyncio.run_coroutine_threadsafe(coro, _launcher_loop)
+        return bool(fut.result(timeout=timeout))
+    except Exception as e:
+        print(f"[WS] Launcher 동기 명령 전달 실패: {e}")
+        return False
+
+
+# ============ 채팅 스트림 진입점 주입 슬롯 ============
+# calendar_actions(서비스층)가 예약 작업을 "프론트가 보낸 것과 동일한 경로"로
+# 주입하는데, 그 핸들러(handle_chat_message_stream 등)는 라우터 모듈(api_websocket)에
+# 산다. 핸들러를 옮기는 대신 진입점만 주입(의존 역전) — api_websocket 이 로드
+# 말미에 등록한다 (ibl_parser ↔ ibl_parser_blocks 와 같은 패턴, 2026-08-05 ⑦).
+
+_chat_stream_entry = None        # async (client_id, data) — 프로젝트 에이전트 채팅
+_system_ai_stream_entry = None   # async (client_id, data) — 시스템 AI 채팅
+
+
+def register_chat_streams(chat_entry, system_ai_entry) -> None:
+    """채팅 스트림 핸들러 주입 (api_websocket 로드 말미에 1회)"""
+    global _chat_stream_entry, _system_ai_stream_entry
+    _chat_stream_entry = chat_entry
+    _system_ai_stream_entry = system_ai_entry
+
+
+def get_chat_stream_entry():
+    return _chat_stream_entry
+
+
+def get_system_ai_stream_entry():
+    return _system_ai_stream_entry

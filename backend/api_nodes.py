@@ -262,7 +262,7 @@ def active_work():
 
     # 러너 레지스트리는 칩의 '에이전트 이름' 소스로만 참조 (창 열림 판단은 하트비트가 담당)
     try:
-        from api_agents import get_agent_runners
+        from agent_registry import get_agent_runners
         runners = get_agent_runners() or {}
     except Exception:
         runners = {}

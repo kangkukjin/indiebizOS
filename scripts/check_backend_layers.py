@@ -41,21 +41,25 @@ LAYERS = {
         "thread_context", "thumbnails",
     },
     "data": {
-        "body_trust", "boot_status", "business_manager", "calendar_manager",
-        "conversation_db", "file_index", "focus_map", "forage_memory",
-        "health_sync", "ibl_usage_db", "install_approvals", "multi_chat_db",
-        "node_registry", "notification_manager", "notify_dispatch",
-        "peer_cards", "project_manager", "red_grant", "red_watchdog",
-        "switch_manager", "system_ai_memory", "system_docs",
+        "agent_registry", "body_trust", "boot_status", "business_manager",
+        "calendar_manager", "conversation_db", "file_index", "focus_map",
+        "forage_memory", "health_sync", "ibl_usage_db", "install_approvals",
+        "multi_chat_db", "node_registry", "notification_manager",
+        "notify_dispatch", "peer_cards", "project_manager", "red_grant",
+        "red_watchdog", "switch_manager", "system_ai_memory", "system_docs",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
-        "websocket_manager",
+        "websocket_manager", "xray_stream",
     },
     "ibl": {
+        # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
+        # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
+        # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.
+        "api_engine", "api_pipeline", "api_transforms",
         "capability_card", "channel_engine", "event_engine", "ibl_access",
         "ibl_engine", "ibl_executors", "ibl_ops", "ibl_param_vocab",
         "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing",
-        "ibl_safety", "package_manager", "tool_context", "tool_loader",
-        "tool_selector", "trigger_engine", "workflow_engine",
+        "ibl_safety", "ibl_translate", "package_manager", "tool_context",
+        "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
     },
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals",
@@ -92,34 +96,23 @@ EXEMPT = {"prompt_benchmark", "ibl_opus_bulk_gen", "ibl_synthetic_generator",
 # 2026-08-05 동결 부채 47간선 — ⑦ 절단이 진행되며 줄어든다. 신규 추가 금지.
 # 절단 완료 시 항목 삭제(남아 있는데 위반이 사라졌으면 이 가드가 삭제를 요구한다).
 BASELINE = {
-    "android_agent -> api_system_ai",
     "auto_response -> portal_base",
     "auto_response -> portal_warehouse",
-    "body_ask -> api_ibl",
-    "calendar_actions -> api_agents",
-    "calendar_actions -> api_websocket",
     "calendar_manager -> calendar_actions",
     "calendar_manager -> calendar_html",
     "channel_engine -> api_gmail",
     "channel_engine -> channel_poller",
     "channel_engine -> indienet",
-    "channel_poller -> api_system_ai",
-    "consciousness_agent -> api_config",
-    "conversation_db -> api_xray",
-    "ibl_engine -> api_engine",
-    "ibl_engine -> api_xray",
     "ibl_engine -> consciousness_agent",
     "ibl_engine -> world_pulse_health",
     "ibl_executors -> agent_runner",
     "ibl_executors -> goal_evaluator",
     "ibl_routing -> ai_agent",
-    "ibl_routing -> api_engine",
-    "ibl_routing -> api_system_ai",
-    "ibl_routing -> api_websocket",
     "ibl_routing -> body_ask",
     "ibl_routing -> consciousness_agent",
     "ibl_routing -> prompt_builder",
     "ibl_routing -> switch_runner",
+    "ibl_routing -> system_ai_plans",
     "ibl_routing -> system_ai_runner",
     "ibl_routing -> system_ai_tools",
     "ibl_routing -> system_tools",
@@ -128,12 +121,8 @@ BASELINE = {
     "ibl_usage_db -> capability_card",
     "ibl_usage_db -> ibl_engine",
     "node_registry -> agent_runner",
-    "notify_dispatch -> api_websocket",
     "package_manager -> ibl_usage_generator",
     "package_manager -> world_pulse_health",
-    "system_ai_runner -> api_system_ai",
-    "system_tools -> api_engine",
-    "system_tools -> api_xray",
     "trigger_engine -> auto_response",
     "trigger_engine -> channel_poller",
     "warehouse_likes -> portal_base",
@@ -148,11 +137,11 @@ def layer_of(m: str):
         return "ASSEMBLY"
     if m.startswith(EXEMPT_PREFIX) or m in EXEMPT:
         return None
-    if m.startswith(SURFACE_PREFIX):
-        return "surface"
     for name in ORDER:
         if m in LAYERS[name]:
-            return name
+            return name          # 명시 배정이 프리픽스 규칙보다 우선 (api_engine 부류)
+    if m.startswith(SURFACE_PREFIX):
+        return "surface"
     return "UNASSIGNED"
 
 

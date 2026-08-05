@@ -71,6 +71,19 @@ def wire_local_subsystems(profile: str = None) -> dict:
         print(f"{tag} 시스템 프로젝트 보장 실패 (무시): {e}")
         results["system_projects"] = False
 
+    # 시스템 라우터 인지 능력 등록: ibl_routing(언어층)은 delegate/agents/world 같은
+    # 시스템 기능의 이름만 알고, 구현(인지층 routing_system)은 여기서 주입한다(의존 역전 —
+    # 2026-08-05 감사 ⑦ 후반부). 몸 독립 — 어느 몸이든 IBL 시스템 라우터를 쓰려면 필요.
+    # 실패 시 부팅은 계속되지만 위임·자가점검 계열이 "능력 미등록" 에러를 낸다(침묵 아님).
+    try:
+        from routing_system import register_all
+        register_all()
+        results["system_capabilities"] = True
+        print(f"{tag} 시스템 라우터 능력 등록")
+    except Exception as e:
+        print(f"{tag} 시스템 라우터 능력 등록 실패: {e}")
+        results["system_capabilities"] = False
+
     return results
 
 

@@ -24,6 +24,26 @@ TOOL_EXECUTION_TIMEOUT = 60
 SYNC_TOOL_EXECUTION_TIMEOUT = 300
 
 
+# === 시스템 라우터 인지 능력 테이블 (2026-08-05 감사 ⑦ 후반부) ===
+# 라우터는 이름만 안다 — 구현(인지층)은 routing_system.register_all() 이 부팅 시 주입.
+# (파서 register_parse·채팅 스트림 슬롯과 같은 의존 역전. 라우팅층은 인지층을 모른다.)
+_SYSTEM_CAPS: Dict[str, Any] = {}
+
+
+def register_system_capabilities(mapping: Dict[str, Any]) -> None:
+    """인지 능력 주입 — 조립 루트(boot_common.wire_local_subsystems)가 부팅 시 1회."""
+    _SYSTEM_CAPS.update(mapping)
+
+
+def _cap(name: str):
+    fn = _SYSTEM_CAPS.get(name)
+    if fn is None:
+        raise RuntimeError(
+            f"시스템 능력 미등록: {name} — 조립 루트가 routing_system.register_all() 을 "
+            "불러야 한다 (boot_common.wire_local_subsystems 경유)")
+    return fn
+
+
 class _SyncHandlerTimeout(Exception):
     """동기 핸들러 타임아웃 내부 신호 (핸들러 자신이 던진 TimeoutError 와 구분)."""
 
@@ -366,23 +386,20 @@ def _route_handler(mapped_tool: str, params: dict,
 def _route_system(func_name: str, params: dict, project_path: str, agent_id: str = None) -> Any:
     """system_tools 내장 함수 직접 호출"""
     if func_name == "send_notification":
-        from system_tools import execute_send_notification
-        return execute_send_notification(dict(params), project_path)
+        return _cap("send_notification")(dict(params), project_path)
 
     elif func_name == "delegate":
-        return _delegate_unified(params, project_path)
+        return _cap("delegate")(params, project_path)
 
     elif func_name == "ask_body":
         # [others:ask] — 이웃 몸(다른 indiebizOS 기기)에 자연어 부탁 (몸 독립 소통).
-        from body_ask import ask_peer
-        return ask_peer(dict(params))
+        return _cap("ask_body")(dict(params))
 
     elif func_name == "agents":
         agent_id = params.get("agent_id", "")
         if agent_id:
-            return _agent_info(agent_id)
-        from system_ai_tools import _execute_list_project_agents
-        return _execute_list_project_agents(dict(params))
+            return _cap("agent_info")(agent_id)
+        return _cap("list_project_agents")(dict(params))
 
     elif func_name == "discover":
         return _discover_nodes(params.get("query", ""), params)
@@ -425,20 +442,16 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
     # Phase 17: 시스템 AI 전용 함수
     elif func_name == "list_project_agents":
-        from system_ai_tools import _execute_list_project_agents
-        return _execute_list_project_agents(params)
+        return _cap("list_project_agents")(params)
 
     elif func_name == "call_project_agent":
-        from system_ai_tools import _execute_call_project_agent
-        return _execute_call_project_agent(dict(params))
+        return _cap("call_project_agent")(dict(params))
 
     elif func_name == "schedule":
-        from system_ai_plans import _execute_schedule
-        return _execute_schedule(params, agent_id=agent_id, project_path=project_path)
+        return _cap("schedule")(params, agent_id=agent_id, project_path=project_path)
 
     elif func_name == "manage_events":
-        from system_ai_tools import _execute_manage_events
-        return _execute_manage_events(params)
+        return _cap("manage_events")(params)
 
     elif func_name == "launcher_command":
         # 신규: params.app ("project" 등) → "open_<app>" 합성
@@ -451,22 +464,10 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _execute_launcher_command(launcher_action, params)
 
     elif func_name == "list_switches":
-        from system_ai_tools import _execute_list_switches
-        return _execute_list_switches(params)
+        return _cap("list_switches")(params)
 
     elif func_name == "run_switch":
-        from switch_manager import SwitchManager
-        from switch_runner import SwitchRunner
-        switch_id = params.get("switch_id", "")
-        if not switch_id:
-            return {"success": False, "error": "switch_id가 필요합니다."}
-        sm = SwitchManager()
-        switch = sm.get_switch(switch_id)
-        if not switch:
-            return {"success": False, "error": f"스위치 없음: {switch_id}"}
-        runner = SwitchRunner(sm)
-        result = runner.run_switch(switch_id)
-        return {"success": True, "switch_id": switch_id, "result": result}
+        return _cap("run_switch")(params)
 
     elif func_name == "switch_op":
         # 단일 액션 패턴: switch {op: list|run}
@@ -494,7 +495,6 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
 
     # World Pulse: 세계 상태 감각 — 단일 액션 패턴: world {op: snapshot|trend|refresh}
     elif func_name == "world_op":
-        from world_pulse import execute_world_pulse
         op = (params.get("op") or "snapshot").strip()  # 기본 snapshot
         op_map = {
             "snapshot": "world_pulse",
@@ -504,12 +504,11 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         action_name = op_map.get(op)
         if not action_name:
             return {"success": False, "error": "op 파라미터가 필요합니다. (snapshot|trend|refresh)"}
-        return execute_world_pulse(action_name, dict(params))
+        return _cap("world_pulse")(action_name, dict(params))
 
     # 자가점검: IBL 건강 점검 (정적+fixture+골든, AI 0)
     elif func_name == "self_check":
-        from world_pulse_health import run_daily_health_check
-        return run_daily_health_check()
+        return _cap("self_check")()
 
     # Phase 26: Goal 프로세스 관리
     elif func_name == "list_goals":
@@ -629,8 +628,7 @@ def _rebuild_ibl_vocab() -> Optional[str]:
     except Exception:
         pass
     try:
-        from consciousness_agent import reset_consciousness_agent
-        reset_consciousness_agent()
+        _cap("reset_consciousness")()
     except Exception:
         pass
     return None
@@ -912,222 +910,9 @@ def _search_guide(query: str, params: dict) -> Any:
     return response
 
 
-def _delegate_unified(params: dict, project_path: str) -> Any:
-    """위임 통합 디스패처 — mode(async/sync/workflow) × scope(same/cross/system)."""
-    mode = (params.get("mode") or "async").lower()
-    scope = (params.get("scope") or "same").lower()
-
-    if scope == "system":
-        # 시스템 AI(자율주행 top-level)에게 자연어 의도를 fire-and-forget 위임.
-        # 프로젝트 에이전트 레지스트리 밖의 자율주행이 대상 — 앱 "생성" 버튼처럼
-        # "이거 알아서 해줘"를 넘길 때. report-viewer 가 파이썬 send_message 를 직접
-        # 때렸던 그 능력의 일반 어휘화(scope 차원 확장, 새 액션 아님).
-        message = params.get("message", params.get("query", ""))
-        if not message:
-            return {"error": "message 파라미터가 필요합니다. 예: {scope: \"system\", message: \"AI 동향 보고서 써줘\"}"}
-        try:
-            from system_ai_runner import SystemAIRunner
-            SystemAIRunner.send_message(content=message,
-                                        from_agent=params.get("from_agent") or "앱")
-        except Exception as e:  # noqa: BLE001 — 큐잉 실패는 그대로 보고
-            return {"error": f"시스템 AI 위임 실패: {e}"}
-        return {"success": True, "queued": True, "target": "시스템 AI",
-                "message": "시스템 AI에 요청을 전달했습니다. 완료되면 결과를 확인하세요."}
-
-    if scope == "cross":
-        from system_ai_tools import _execute_call_project_agent
-        agent_id_raw = params.get("agent_id", "")
-        if not agent_id_raw:
-            return {"error": "agent_id가 필요합니다. 예: '의료/내과'"}
-        # '프로젝트/에이전트' 자동 분리 (call_project_agent는 둘을 분리해서 받음)
-        if "project_id" not in params and "/" in str(agent_id_raw):
-            project_id, agent_id = str(agent_id_raw).split("/", 1)
-            call_input = {**params, "project_id": project_id, "agent_id": agent_id}
-        else:
-            call_input = dict(params)
-        return _execute_call_project_agent(call_input)
-
-    if mode == "sync":
-        return _agent_ask_sync(params.get("agent_id", ""), params, project_path)
-
-    if mode == "workflow":
-        return _delegate_workflow(params.get("agent_id", "") or params.get("workflow", ""),
-                                   params, project_path)
-
-    # 기본: async (같은 프로젝트 비동기 위임)
-    from system_tools import execute_call_agent
-    return execute_call_agent(dict(params), project_path)
-
-
-def _delegate_workflow(agent_id: str, params: dict, project_path: str) -> Any:
-    """다른 에이전트에게 IBL 파이프라인을 위임
-
-    Args:
-        agent_id: 대상 에이전트 이름 또는 ID
-        params: {"steps": [...], "message": "..."} 파이프라인 정의
-    """
-    if not agent_id:
-        return {"error": "agent_id가 필요합니다."}
-
-    steps = params.get("steps", [])
-    if not steps:
-        return {"error": "params.steps가 필요합니다. 파이프라인 단계를 정의해주세요."}
-
-    # 파이프라인 steps를 JSON으로 직렬화
-    steps_json = json.dumps(steps, ensure_ascii=False)
-    user_message = params.get("message", "")
-
-    # 위임 메시지 구성
-    delegation_msg = f"""다음 IBL 파이프라인을 실행해주세요.
-
-```json
-{steps_json}
-```
-
-execute_ibl(node="system", action="run_pipeline", params={{"steps": {steps_json}}}) 로 실행하세요."""
-
-    if user_message:
-        delegation_msg = f"{user_message}\n\n{delegation_msg}"
-
-    # call_agent으로 위임
-    from system_tools import execute_call_agent
-    return execute_call_agent(
-        {"agent_id": agent_id, "message": delegation_msg},
-        project_path
-    )
-
-
-# (2026-08-05 감사 D12) _agent_ask 삭제 — 죽은 elif 전용이었고 호출처 0.
-# 동기 위임 정본은 _agent_ask_sync(_delegate_unified mode:sync 가 호출).
-
-
-def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
-    """에이전트에게 동기 질문 — 응답을 기다려서 반환 (파이프라인용)
-
-    비동기 agent_ask와 달리, 임시 AI 에이전트를 생성하여
-    메시지를 처리하고 결과 텍스트를 직접 반환합니다.
-
-    사용: [others:delegate]{mode: "sync", agent_id: "프로젝트/에이전트", message: "분석해줘"}
-    파이프라인: [self:blog]{op: "search", query: "AI"} >> [others:delegate]{mode: "sync", agent_id: "컨텐츠/컨텐츠", message: "요약해줘"}
-    """
-    if not agent_id:
-        return {"error": "agent_id(문자열)가 필요합니다. 예: \"대장장이\" 또는 \"컨텐츠/대장장이\" 형식"}
-
-    # agent_id가 숫자로 들어온 경우 문자열로 변환
-    if isinstance(agent_id, (int, float)):
-        agent_id = str(int(agent_id))
-
-    # "프로젝트/에이전트이름" 파싱
-    parts_split = agent_id.split("/", 1)
-    if len(parts_split) == 2:
-        project_id, agent_name = parts_split
-    else:
-        agent_name = parts_split[0]
-        project_id = Path(project_path).name
-
-    message = params.get("message", params.get("query", ""))
-    if not message:
-        return {"error": "message 파라미터가 필요합니다. 예: {agent_id: \"대장장이\", message: \"이것 좀 분석해줘\"}"}
-
-    # _prev_result가 있으면 message에 첨부
-    prev = params.get("_prev_result", "")
-    if prev and prev not in message:
-        message = f"{message}\n\n--- 이전 단계 결과 ---\n{prev}"
-
-    # agents.yaml에서 대상 에이전트 설정 로드
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    base = Path(env_path) if env_path else Path(__file__).parent.parent
-    target_project_path = base / "projects" / project_id
-    agents_yaml = target_project_path / "agents.yaml"
-
-    if not agents_yaml.exists():
-        return {"error": f"프로젝트 '{project_id}'를 찾을 수 없습니다."}
-
-    try:
-        import yaml as _yaml
-        data = _yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
-    except Exception as e:
-        return {"error": f"agents.yaml 로드 실패: {e}"}
-
-    # 에이전트 찾기
-    agents = data.get("agents", [])
-    agent_config = None
-    for ag in agents:
-        if ag.get("name") == agent_name or ag.get("id") == agent_name:
-            agent_config = ag
-            break
-
-    if not agent_config:
-        available = [ag.get("name", ag.get("id", "?")) for ag in agents]
-        return {"error": f"에이전트 '{agent_name}'을 찾을 수 없습니다.", "available": available}
-
-    ai_config = agent_config.get("ai", {})
-    if not ai_config.get("api_key"):
-        return {"error": f"에이전트 '{agent_name}'의 API 키가 설정되지 않았습니다."}
-
-    # 임시 AI 에이전트 생성 + 동기 호출
-    try:
-        from ai_agent import AIAgent
-        from prompt_builder import build_agent_prompt
-        from ibl_access import build_environment
-        from tool_loader import load_tool_schema
-
-        # IBL 도구 로드
-        ibl_schema = load_tool_schema("execute_ibl")
-        tools = [ibl_schema] if ibl_schema else []
-
-        # 프롬프트 구성
-        allowed_nodes = agent_config.get("allowed_nodes")
-        system_prompt = build_agent_prompt(
-            agent_name=agent_name,
-            role=agent_config.get("role_description", ""),
-            agent_count=1,
-            ibl_only=True,
-            allowed_nodes=allowed_nodes,
-            project_path=str(target_project_path),
-            agent_id=agent_config.get("id", ""),
-        )
-
-        agent = AIAgent(
-            ai_config=ai_config,
-            system_prompt=system_prompt,
-            agent_name=agent_name,
-            tools=tools,
-        )
-
-        # 동기 호출 — AI가 응답할 때까지 대기
-        response = agent.process_message_with_history(
-            message_content=message,
-            from_email="pipeline@system",
-            history=[],
-        )
-
-        return {
-            "success": True,
-            "agent": agent_name,
-            "project": project_id,
-            "response": response,
-            "sync": True,
-        }
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"error": f"동기 에이전트 호출 실패: {e}"}
-
-
-# (2026-08-05 감사 D12) _agent_list 삭제 — 죽은 elif 전용, 호출처 0.
-# 에이전트 목록 정본은 func:agents(_execute_list_project_agents).
-
-
-def _agent_info(agent_id: str) -> Any:
-    """에이전트 상세 정보 [others:info]{agent_id: "투자/투자컨설팅"} (Phase 11)"""
-    from node_registry import list_nodes
-    nodes = list_nodes(include_agents=True)
-    for n in nodes:
-        if n["type"] == "agent" and n["id"] == agent_id:
-            return n
-    return {"error": f"에이전트 '{agent_id}'을 찾을 수 없습니다."}
+# 위임 기계(_delegate_unified·_delegate_workflow·_agent_ask_sync·_agent_info)는
+# routing_system(인지층)으로 이동 — 능력 테이블(register_system_capabilities) 경유
+# (2026-08-05 감사 ⑦ 후반부. delegate/agent_info 이름으로 등록된다).
 
 
 def _route_driver(driver_type: str, node: str, action: str,

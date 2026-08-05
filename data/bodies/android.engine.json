@@ -164,6 +164,7 @@
     "red_grant",
     "red_watchdog",
     "report_html",
+    "routing_system",
     "runtime_utils",
     "safe_store",
     "scheduler",
@@ -227,8 +228,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 221,
-    "engine": 197,
+    "total": 222,
+    "engine": 198,
     "blocklist": 24
   }
 }

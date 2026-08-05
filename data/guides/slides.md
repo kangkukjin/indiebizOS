@@ -57,6 +57,12 @@
 - **aesthetic(톤, 한 덱 고정 = 일관된 책)**: `vintage_book`(빈티지 교과서) / `academic_paper`(학술) / `tech_minimal`(테크 미니멀) / `magazine_modern`(모던 매거진) / `dark_keynote`(다크 키노트·시네마틱) / `blueprint`(청사진 다이어그램). 같은 톤의 단발 생성은 같은 스크래치 덱에 모인다.
 - 옵션: `image_quality`(pro 기본/fast).
 
+### 빠른 텍스트형 (옵트아웃 — 무료·빠름)
+발표용이 아닌 **카드·리포트 타일·빠른 초안**처럼 이미지 생성이 과한 경우만 `layout`을 명시한다 — 비-native 레이아웃(`lecture_body`/`quote`/`comparison_table` 등)을 주면 그 한 장은 HTML 경로(이미지 API 안 씀)로 그려진다. 톤은 aesthetic 이 그대로 적용.
+```
+[self:slide]{op: "create", instruction: "핵심 요약 카드 한 장", layout: "lecture_body", aesthetic: "tech_minimal"}
+```
+
 ### 여러 장
 슬라이드마다 같은 `aesthetic`으로 `op:"create"`를 호출한다(병렬은 `&` — 같은 스크래치 덱에 순서대로 쌓인다). 한 장 한 명제 원칙은 장마다 적용. 제대로 된 강의 덱(제목·논지·청중 컨텍스트)은 §4처럼 `[self:lecture]{op:"create"}`로 먼저 덱을 만들고 `lecture_id`를 지정한다.
 

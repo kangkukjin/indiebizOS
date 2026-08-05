@@ -95,6 +95,10 @@
             "type": "string",
             "description": "create+스크래치 덱 전용 — 톤 (vintage_book 기본/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint). 같은 톤은 같은 스크래치 덱에 모임. 강의 소속 create 는 덱 design_system 이 우선."
           },
+          "layout": {
+            "type": "string",
+            "description": "create 옵션 — 비-native 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote 등) 강제 시 그 한 장만 HTML(무료·빠름·이미지 API 안 씀) 경로로. 미지정=native(통짜 이미지, 기본). 카드·리포트 타일 등 경량 용도에."
+          },
           "patch": {
             "type": "object",
             "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."

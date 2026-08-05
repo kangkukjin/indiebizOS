@@ -388,54 +388,46 @@
       }
     },
     {
-      "name": "critique_gemini_image",
-      "description": "Gemini Vision으로 이미지가 의도와 정합하는지 평가. 일러스트 자가 점검용. 반환은 JSON({passed, score, issues, notes}) + 사람 가독 요약.",
+      "name": "read_gemini_image",
+      "description": "Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes} + 사람 가독 요약).",
       "input_schema": {
         "type": "object",
         "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — read(기본) | critic",
+            "enum": [
+              "read",
+              "critic"
+            ],
+            "default": "read"
+          },
           "image_path": {
             "type": "string",
-            "description": "평가할 이미지 절대 경로 또는 base64 data URI (필수)"
+            "description": "이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)"
+          },
+          "question": {
+            "type": "string",
+            "description": "(read) 무엇을 읽거나 답할지. 생략 시 전체 묘사"
           },
           "intent": {
             "type": "string",
-            "description": "이 일러스트가 무엇을 표현해야 하는가 — 자연어 설명 (필수)"
+            "description": "(critic 필수) 이 이미지가 무엇을 표현해야 하는가 — 자연어 설명"
+          },
+          "preset": {
+            "type": "string",
+            "description": "(critic) 평가 프리셋 — slide_illustration(기본) | general"
           },
           "checks": {
             "type": "array",
-            "description": "추가 체크 항목 (예: ['다이어그램형인가', '오른쪽 1/3이 비어있는가'])",
+            "description": "(critic) 추가 체크 항목 (예: ['다이어그램형인가', '오른쪽 1/3이 비어있는가'])",
             "items": {
               "type": "string"
             }
           },
           "style_preset": {
             "type": "string",
-            "description": "디자인 시스템 톤 평가 기준 (예: sf_blueprint)"
-          },
-          "api_key": {
-            "type": "string",
-            "description": "선택. 미지정 시 GEMINI_API_KEY 환경변수 사용"
-          }
-        },
-        "required": [
-          "image_path",
-          "intent"
-        ]
-      }
-    },
-    {
-      "name": "read_gemini_image",
-      "description": "Gemini Vision으로 이미지를 읽어 질문에 자유서술로 답한다(시각 QA·OCR·검증). 스크린샷의 숫자/텍스트 읽기, 그림 내용 확인 등. 합격/점수 채점이 아님(그건 critique_gemini_image).",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "image_path": {
-            "type": "string",
-            "description": "읽을 이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)"
-          },
-          "question": {
-            "type": "string",
-            "description": "무엇을 읽거나 답할지 (query/intent/prompt 로도 받음). 생략 시 전체 묘사"
+            "description": "(critic) 디자인 시스템 톤 평가 기준 (예: sf_blueprint)"
           },
           "api_key": {
             "type": "string",

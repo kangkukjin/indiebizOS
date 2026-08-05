@@ -11,19 +11,19 @@
 ## 2. 도구 선택 — 무엇으로 찾나
 | 찾는 것 | 액션 | 비고 |
 |---|---|---|
-| **파일명·확장자·크기·종류** | `[self:fs_query]{search_term·extension·kind·min_size_mb·path}` | **1순위.** OS 색인(맥 Spotlight) 직접 — 선스캔 불요·항상 최신 |
-| **glob 패턴** (`*.md`, `**/*.tsx`) | `[self:file_find]{pattern·path}` | 이름 패턴·재귀. path로 검색 루트(절대/`~`/상대) |
+| **파일명·확장자·크기·종류** | `[self:file_find]{search_term·extension·kind·min_size_mb·path}` | **1순위.** OS 색인(맥 Spotlight) 직접 — 선스캔 불요·항상 최신 (메타 모드, 구 fs_query 흡수) |
+| **glob 패턴** (`*.md`, `**/*.tsx`) | `[self:file_find]{pattern·path}` | 같은 액션의 glob 모드 — 이름 패턴·재귀. path로 검색 루트(절대/`~`/상대) |
 | **파일 *내용*** (텍스트·코드) | `[self:grep]{pattern·path·include}` | 기본 정규식(`a\|b` OR 됨), `regex:false`면 리터럴 |
 | **파일 읽기** | `[self:read]{path·format·pages·offset·limit}` | 텍스트/PDF/DOCX/XLSX 통합 |
 | **디스크 용량** | `[self:storage]{op: scan→summary}` · 여유공간=`[sense:host]` | 폴더·확장자별 롤업은 scan 선행 |
 
-- **이름/메타는 `fs_query`, 내용은 `grep`, 패턴은 `file_find`.** 헷갈리면: "무슨 파일인지"는 fs_query, "그 안에 무슨 말이 있는지"는 grep.
+- **파일 찾기는 `file_find` 하나** — 메타(search_term/kind/크기)든 glob 패턴이든. 내용은 `grep`. 헷갈리면: "무슨 파일인지"는 file_find, "그 안에 무슨 말이 있는지"는 grep.
 - 비색인 경로(외장·특수 위치)는 라이브 walk 폴백이 돈다 — 되지만 느리다.
 
 ## 3. 디스크 랜드마크 = 집중 폴더 루트 (안정) — 내용은 라이브로
 - **"어디가 중요한가"의 안정 지도 = 집중 폴더 루트**다. 웹 랜드마크(URL 목록)의 디스크판 — 다만 여기선 포인터가 *폴더 루트*다. 단일 소스 = 사용자 선언 `data/focus_folders.json`(없으면 기본값: mac은 `~/Desktop`, + forager territory "자주 되돌아온 곳"). 편집하면 즉시 반영 — 중요 폴더가 늘면 여기에 선언하라.
-- **그 아래 *현재 내용*은 미리 구운 트리를 기대하지 말고 `fs_query`로 신선하게 조회하라.** OS 색인이라 항상 최신·선스캔 불요. (디스크가 자꾸 바뀌므로 정적 스냅샷은 즉시 stale — 웹 페이지 본문을 매번 크롤로 가져오듯, 폴더 내용도 매번 조회하는 게 맞다.)
-- 순서: 집중 폴더 루트를 검색 루트(`path`)로 좁혀 → 넓게(fs_query) → 좁게(file_find/grep).
+- **그 아래 *현재 내용*은 미리 구운 트리를 기대하지 말고 `file_find`(메타 모드)로 신선하게 조회하라.** OS 색인이라 항상 최신·선스캔 불요. (디스크가 자꾸 바뀌므로 정적 스냅샷은 즉시 stale — 웹 페이지 본문을 매번 크롤로 가져오듯, 폴더 내용도 매번 조회하는 게 맞다.)
+- 순서: 집중 폴더 루트를 검색 루트(`path`)로 좁혀 → 넓게(file_find 메타) → 좁게(file_find 패턴/grep).
 
 ## 4. "정말 없나"는 단정하지 말고 측정하라
 - 디스크는 열거 가능하므로 음성-단언을 **측정**할 수 있다.

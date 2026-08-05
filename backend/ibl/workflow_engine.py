@@ -888,8 +888,13 @@ def execute_workflow_action(action: str, params: dict,
         return wf
 
     elif action == "run":
+        # 즉석 실행 (2026-08-05, 구 [self:run_pipeline] 흡수 — 변형=op 명명 헌법):
+        # workflow_id 없이 steps/pipeline 이 오면 저장 없이 바로 실행.
+        if not workflow_id and (params.get("steps") or params.get("pipeline")):
+            return _run_inline(params, project_path)
         if not workflow_id:
-            return {"error": "workflow_id가 필요합니다.", "available": [w["id"] for w in list_workflows()]}
+            return {"error": "workflow_id(저장본) 또는 steps/pipeline(즉석 실행)이 필요합니다.",
+                    "available": [w["id"] for w in list_workflows()]}
         return execute_workflow(workflow_id, project_path)
 
     elif action in ("save", "save_workflow"):
@@ -910,22 +915,29 @@ def execute_workflow_action(action: str, params: dict,
         return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
 
     elif action == "run_pipeline":
-        # IBL 파이프라인 모드: pipeline 파라미터가 있으면 파서로 파싱
-        pipeline = params.get("pipeline", "")
-        if pipeline:
-            from ibl_parser import parse as ibl_parse, IBLSyntaxError
-            try:
-                steps = ibl_parse(pipeline)
-            except IBLSyntaxError as e:
-                return {"error": f"IBL 문법 오류: {str(e)}"}
-        else:
-            steps = params.get("steps", [])
-
-        if not steps:
-            return {"error": "params.steps 또는 params.code가 필요합니다."}
-        return execute_pipeline(steps, project_path)
+        # 내부 배관 진입점 (trigger_engine·calendar_actions·system_ai_plans 가 action 이름으로
+        # 직접 호출 + 스케줄 event_action 어휘). IBL 표면 어휘 [self:run_pipeline] 은
+        # 2026-08-05 [self:workflow]{op:"run", steps} 로 흡수 — 실행 본체는 _run_inline 공유.
+        return _run_inline(params, project_path)
 
     return {"error": f"알 수 없는 워크플로우 액션: {action}", "available_actions": ["run", "list", "get", "save", "delete", "run_pipeline"]}
+
+
+def _run_inline(params: dict, project_path: str) -> Any:
+    """즉석 파이프라인 실행 — pipeline(IBL 코드 문자열) 또는 steps(파싱된/코드 배열)."""
+    pipeline = params.get("pipeline", "")
+    if pipeline:
+        from ibl_parser import parse as ibl_parse, IBLSyntaxError
+        try:
+            steps = ibl_parse(pipeline)
+        except IBLSyntaxError as e:
+            return {"error": f"IBL 문법 오류: {str(e)}"}
+    else:
+        steps = params.get("steps", [])
+
+    if not steps:
+        return {"error": "params.steps 또는 params.pipeline이 필요합니다."}
+    return execute_pipeline(steps, project_path)
 
 
 # === 유틸리티 ===

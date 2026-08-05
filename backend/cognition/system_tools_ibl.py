@@ -253,10 +253,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
         return json.dumps({
             "error": "code 파라미터가 필요합니다.",
             "usage": {
-                "단일": '[sense:web_search]{query: "AI 뉴스"}',
-                "파이프라인": '[sense:web_search]{query: "AI 뉴스"} >> [self:output]{op: "file", path: "result.md"}',
-                "병렬": '[sense:web_search]{query: "AI"} & [sense:search_gnews]{query: "tech"}',
-                "폴백": '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:web_search]{query: "AAPL stock"}'
+                "단일": '[sense:search_ddg]{query: "AI 뉴스"}',
+                "파이프라인": '[sense:search_ddg]{query: "AI 뉴스"} >> [self:write]{path: "result.md"}',
+                "병렬": '[sense:search_ddg]{query: "AI"} & [sense:search_gnews]{query: "tech"}',
+                "폴백": '[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL stock"}'
             }
         }, ensure_ascii=False)
 

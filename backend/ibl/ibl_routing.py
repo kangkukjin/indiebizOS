@@ -409,27 +409,28 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     # 위임의 정본은 func:delegate(_delegate_unified) — mode 로 sync/workflow 를 분기하며
     # _agent_ask_sync/_delegate_workflow/_agent_info 는 그 경로가 직접 호출한다.
 
-    # 출력 싱크 — 단일 액션 패턴: output {op: gui|file|clipboard} (2026-06-04 통합)
+    # 출력 싱크 — 단일 액션 패턴: output {op: gui|clipboard} (2026-06-04 통합)
     # download는 획득 동작이라 별도 액션 유지.
+    # (op:file 은 2026-08-05 어휘 압축으로 [self:write]에 흡수 — write 는 RED 쓰기
+    #  안전판을 경유하는 정본이고, 파이프 싱크(_prev_result 폴백)도 write 가 맡는다.)
     elif func_name == "output_op":
         op = (params.get("op") or "gui").strip()  # 기본 gui (부작용 없는 표시)
         op_map = {
             "gui": "output_gui",
-            "file": "output_file",
             "clipboard": "output_clipboard",
         }
         target_func = op_map.get(op)
         if not target_func:
-            return {"success": False, "error": "op 파라미터가 필요합니다. (gui|file|clipboard)"}
+            if op == "file":
+                return {"success": False,
+                        "error": "op:file 은 [self:write]{path, content}로 이동했습니다 (파이프에서는 content 생략 시 직전 결과 자동 저장)."}
+            return {"success": False, "error": "op 파라미터가 필요합니다. (gui|clipboard)"}
         return _route_system(target_func, params, project_path, agent_id=agent_id)
 
     # Phase 13: 출력 노드 (순환 import 방지를 위해 lazy import)
     elif func_name == "output_gui":
         from ibl_executors import _output_gui
         return _output_gui(params.get("content", ""), params, project_path)
-    elif func_name == "output_file":
-        from ibl_executors import _output_file
-        return _output_file(params.get("path", ""), params, project_path)
     elif func_name == "output_open":
         from ibl_executors import _output_open
         return _output_open(params.get("path", ""), params, project_path)

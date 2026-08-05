@@ -89,7 +89,7 @@ action_params:
 파이프라인 연산자도 지원:
 ```json
 {
-  "pipeline": "[sense:search_ddg]{query: 'AI 뉴스'} >> [self:output]{op: 'file', path: 'news.md'}"
+  "pipeline": "[sense:search_ddg]{query: 'AI 뉴스'} >> [self:write]{path: 'news.md'}"
 }
 ```
 

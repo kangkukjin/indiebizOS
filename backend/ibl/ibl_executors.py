@@ -59,31 +59,9 @@ def _output_gui(content: str, params: dict, project_path: str) -> Any:
     return {"ok": True, "output": result}
 
 
-def _output_file(path: str, params: dict, project_path: str) -> Any:
-    """결과를 파일로 저장"""
-    if not path:
-        return {"error": "path(파일 경로)가 필요합니다."}
-
-    content = params.get("content", "")
-    encoding = params.get("encoding", "utf-8")
-
-    # 상대경로면 outputs/ 폴더 기준
-    file_path = path
-    if not os.path.isabs(file_path):
-        base = os.environ.get("INDIEBIZ_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        outputs_dir = os.path.join(base, "outputs")
-        os.makedirs(outputs_dir, exist_ok=True)
-        file_path = os.path.join(outputs_dir, file_path)
-
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-    with open(file_path, "w", encoding=encoding) as f:
-        if isinstance(content, (dict, list)):
-            json.dump(content, f, ensure_ascii=False, indent=2)
-        else:
-            f.write(str(content))
-
-    return {"ok": True, "path": file_path, "size": os.path.getsize(file_path)}
+# (_output_file 은 2026-08-05 어휘 압축으로 삭제 — 파일 저장 정본은 [self:write]
+#  (system_essentials write_file): RED 쓰기 안전판 경유 + 파이프 _prev_result 폴백.
+#  이 함수는 안전판을 우회했고 파이프 입력도 무시해 빈 파일을 쓰던 반쪽 싱크였다.)
 
 
 def _extract_path_from_prev(prev_result: str) -> Optional[str]:
@@ -241,7 +219,7 @@ def _output_download(url: str, params: dict, project_path: str) -> Any:
 
 
 # (2026-08-05) _execute_output_node 삭제 — 유일 호출자가 위의 죽은 _execute_node 였다.
-# 출력 동작의 정본은 func:output_op(_output_gui/_output_file/_output_clipboard).
+# 출력 동작의 정본은 func:output_op(_output_gui/_output_clipboard). 파일 저장은 [self:write].
 
 
 def _goal_list(params: dict, project_path: str = "") -> dict:

@@ -97,7 +97,7 @@ nodes:
         returns: scalar
         side_effect: true    # scan 이 용량 인덱스를 구축한다
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -117,64 +117,6 @@ nodes:
             summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
             volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
-      fs_query:
-        aliases:
-          min_size_mb: [min_size]
-        returns: items
-        fixture: '[self:fs_query]{kind: "pdf"}'
-        description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
-        group: file
-        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 items(보편 파일 필드) + 표형 table={columns,rows} 키.
-        router: handler
-        tool: query_storage
-        implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
-        target_key: search_term
-        app:
-          instrument: files
-          icon: 🗂️
-          name: 파일
-          order: 16
-          modes:
-          - name: 검색
-            auto_run: true
-            inputs:
-            - key: q
-              type: text
-              placeholder: 파일명·확장자 검색 (예 report, pdf)
-            action: '[self:fs_query]{search_term: "$q", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 문서
-            auto_run: true
-            phone_render: false
-            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
-            action: '[self:fs_query]{kind: "pdf", sort: "mtime", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 큰 파일
-            auto_run: true
-            note: 100MB 이상 — 용량 정리 대상 (큰 순).
-            action: '[self:fs_query]{min_size_mb: 100, sort: "size", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
       folder_note:
         aliases:
           folder_path: [path]
@@ -294,49 +236,6 @@ tool_json:
         path:
           type: string
           description: 초기 경로 (생략시 홈 디렉토리)
-  - name: query_storage
-    description: '스캔된 파일 메타데이터를 검색합니다.
-
-
-      ## 전제조건
-
-      - scan_storage로 먼저 스캔되어 있어야 함
-
-
-      ## 검색 옵션
-
-      - search_term: 파일명 검색
-
-      - extension: 확장자 필터 (pdf, jpg 등)
-
-      - min_size_mb: 최소 크기 필터
-
-
-      ## 사용 예시
-
-      - 대용량 파일 찾기: min_size_mb=100
-
-      - PDF 파일 검색: extension=''pdf''
-
-      - 특정 이름 검색: search_term=''프로젝트'''
-    input_schema:
-      type: object
-      properties:
-        volume_name:
-          type: string
-          description: 볼륨 이름 (생략시 전체)
-        search_term:
-          type: string
-          description: 파일명 검색어
-        extension:
-          type: string
-          description: 확장자 필터
-        min_size_mb:
-          type: number
-          description: 최소 크기 (MB)
-        limit:
-          type: integer
-          description: 결과 개수 (기본 100)
   - name: storage_op
     description: '저장소 인덱스 조작 (op 분기) — [self:storage].
 

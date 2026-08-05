@@ -94,7 +94,7 @@ Chain multiple steps with operators:
 
 | Operator | Name | Example |
 |----------|------|---------|
-| `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}` |
+| `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:write]{path: "result.md"}` |
 | `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
 | `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
 
@@ -158,7 +158,7 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 
 ## ⚠️ 파이프라인 vs 에이전틱 사고 — 가장 중요한 원칙
 
-IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고, `[self:output]{op: "file"}`은 "저장하라"는 행위다.
+IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고, `[self:write]{path: ...}`는 "저장하라"는 행위다.
 하지만 **분석, 판단, 요약, 비교, 종합**은 행위가 아니라 **사고**다. IBL에는 사고 액션이 없다.
 
 **파이프라인(`>>`)은 기계적 전달이다.** 데이터가 생각 없이 다음 스텝으로 넘어간다.
@@ -176,7 +176,7 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 
 **WRONG — 파이프라인으로 한번에 보내기:**
 ```
-execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_gnews]{query: "반도체"} >> [self:output]{op: "file", path: "분석.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_gnews]{query: "반도체"} >> [self:write]{path: "분석.md"}')
 ```
 → 검색 결과 JSON이 분석 없이 그대로 파일에 저장됨. 쓸모없다.
 
@@ -186,7 +186,7 @@ execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_gnews]{
 2. (결과를 보고 네가 분석 — 핵심 트렌드, 주요 기업 동향 파악)
 3. execute_ibl(code='[sense:search_gnews]{query: "반도체 투자"}')
 4. (추가 결과와 함께 종합 분석)
-5. execute_ibl(code='[self:output]{op: "file", path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
+5. execute_ibl(code='[self:write]{path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
 ```
 → 너의 사고가 중간에 들어가서 의미 있는 결과가 나온다.
 

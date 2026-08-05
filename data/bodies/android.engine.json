@@ -219,6 +219,7 @@
     "hls_ladder": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
     "ibl_synthetic_generator": "top-level import: google",
+    "migrate_vocab_cheap_merges": "force_exclude (프로파일 명시)",
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "test_consciousness_json_relax": "force_exclude_glob",
@@ -232,8 +233,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 226,
+    "total": 227,
     "engine": 201,
-    "blocklist": 25
+    "blocklist": 26
   }
 }

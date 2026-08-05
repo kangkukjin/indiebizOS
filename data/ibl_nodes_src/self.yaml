@@ -14,21 +14,6 @@
         - 최근대화
         - 대화이력
         - 이전
-      agents:
-        returns: items
-        fixture: '[self:agents]{}'
-        description: 현재 프로젝트에 등록된 에이전트 목록 조회 (사용자·AI 구분). 프로젝트 conversations.db 기준이라
-          프로젝트 밖(시스템 AI 컨텍스트)에서는 비어 있는 것이 정상. 프로젝트 단위 트리·상세는 [others:agents].
-        target_description: '(파라미터 없음 — 현재 프로젝트의 에이전트 목록)'
-        group: conversation
-        router: driver
-        driver: sqlite
-        driver_node: memory
-        implementation: SQLite conversations.db에서 대화/에이전트 데이터 쿼리
-        keywords:
-        - 에이전트
-        - 목록
-        - 팀
       discover:
         returns: scalar
         fixture: '[self:discover]{query: "주가"}'
@@ -194,8 +179,8 @@
         returns: scalar
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
-        description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
-        target_description: 'get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.'
+        description: 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 steps 배열 실행(저장 안 함).
+        target_description: 'get/delete — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — workflow_id(저장본) 또는 steps/pipeline(즉석 실행, 저장 안 함) 중 하나 + params 옵션.'
         group: workflow
         target_key: op
         router: workflow_engine
@@ -214,7 +199,7 @@
             get: 워크플로우 조회 (workflow_id)
             save: 워크플로우 저장 (name + steps IBL 코드 배열)
             delete: 워크플로우 삭제 (workflow_id)
-            run: 저장된 워크플로우 실행 (workflow_id + params 옵션)
+            run: 워크플로우 실행 — workflow_id(저장본) 또는 steps/pipeline(즉석, 저장 안 함)
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우
@@ -223,17 +208,6 @@
         - 워크플로우 실행
         - 워크플로우 삭제
         - 파이프라인 저장
-      run_pipeline:
-        returns: effect
-        description: IBL 파이프라인 즉시 실행 (steps를 params로 직접 전달, 저장 안 됨).
-        target_description: steps 배열 (각 step은 IBL 코드). 저장하려면 save_workflow.
-        group: workflow
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 파이프라인
-        - 실행
-        - 단계
       trigger:
         aliases:
           trigger_id: [id]
@@ -290,8 +264,8 @@
           content: [data]
           format: [type]
         returns: effect
-        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
-        target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).'
+        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, clipboard=클립보드 복사. 파일 저장은 write(파이프 싱크 겸용 — 어휘 중복 흡수 2026-08-05).
+        target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). clipboard — content(텍스트).'
         group: output
         target_key: op
         router: system
@@ -300,13 +274,11 @@
           default: gui
           values:
             gui: UI에 HTML/카드/테이블로 표시 (WebSocket)
-            file: 파일로 저장 (확장자로 형식 자동 인식)
             clipboard: OS 클립보드에 복사
-        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_file/output_clipboard에 위임.
+        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_clipboard에 위임.
         keywords:
         - 출력
         - 표시
-        - 파일저장
         - 클립보드
         - 복사
         - UI

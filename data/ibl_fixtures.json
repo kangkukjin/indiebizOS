@@ -23,7 +23,6 @@
     "others:portal#portals": "[others:portal]{op: \"portals\"}",
     "others:showcase": "[others:showcase]{op: \"status\"}",
     "others:showcase#basket_list": "[others:showcase]{op: \"basket_list\"}",
-    "self:agents": "[self:agents]{}",
     "self:blog": "[self:blog]{op: \"posts\"}",
     "self:blog#search": "[self:blog]{op: \"search\", query: \"인공지능\"}",
     "self:blog#stats": "[self:blog]{op: \"stats\"}",
@@ -35,7 +34,6 @@
     "self:file_find": "[self:file_find]{pattern: \"*.md\", path: \".\"}",
     "self:folder_note": "[self:folder_note]{op: \"get\"}",
     "self:forage": "[self:forage]{op: \"recall\", query: \"test\"}",
-    "self:fs_query": "[self:fs_query]{kind: \"pdf\"}",
     "self:goal": "[self:goal]{op: \"list\"}",
     "self:grep": "[self:grep]{pattern: \"provider\", path: \".\"}",
     "self:health": "[self:health]{op: \"query\", query_type: \"medications\"}",
@@ -138,7 +136,6 @@
     "sense:world_bank": "[sense:world_bank]{indicator: \"GDP\", country: \"한국\"}"
   },
   "exempt": {
-    "engines:image_critic": "Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합",
     "engines:image_read": "Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합",
     "limbs:android#snapshot": "폰 연결(USB/네이티브) 의존 — 폰 꺼진 날마다 거짓 실패",
     "limbs:browser#content": "라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패",

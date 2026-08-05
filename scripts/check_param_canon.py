@@ -50,8 +50,9 @@ BASELINE_PARAMS = {
     "sense:search_ddg": {"count"}, "sense:search_gnews": {"count"},
     "sense:search_hn": {"count"}, "sense:search_naver": {"display"},
     "sense:search_youtube": {"count"}, "self:blog": {"count"}, "self:music": {"q"},
-    "self:fs_query": {"search_term"}, "self:residual": {"q"}, "self:photo": {"q"},
-    "self:file_find": {"max_results"}, "limbs:guestpc": {"display"},
+    "self:residual": {"q"}, "self:photo": {"q"},
+    # search_term 은 구 fs_query 의 면제를 흡수 이주 (2026-08-05 어휘 압축 — 신규 아님)
+    "self:file_find": {"max_results", "search_term"}, "limbs:guestpc": {"display"},
     "limbs:music": {"count"},
 }
 BASELINE_OPS = {

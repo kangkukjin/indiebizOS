@@ -188,7 +188,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 예시:
 ```
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"}')
-execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:output]{op: "file", path: "result.md"}')
+execute_ibl(code='[sense:search_ddg]{query: "AI"} >> [self:write]{path: "result.md"}')
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')
 ```
 

@@ -156,44 +156,29 @@ nodes:
         - HTML
         - 이미지
         - 렌더링
-      image_critic:
-        # 세계를 바꾸지 않는 순수 읽기(Gemini Vision 조회) — effect 는 '행동·종착'이라
-        # 오선언이었다. effect 였을 때 ibl_safety.is_side_effect 가 부작용으로 파생해
-        # 조종실 dry-run 이 write 로 표시하고 계기 read-only 게이트가 실행을 건너뛰었다.
-        # 반환은 verdict 한 건(passed/score/issues/notes) = 단일값 → scalar.
-        returns: scalar
-        # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
-        exempt: Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합
-        runs_on: anywhere
-        scope: workspace
-        description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
-        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
-        group: media_produce
-        router: handler
-        tool: critique_gemini_image
-        implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이 들어갔는가, (3) 빈 공간이 의도된 위치에 있는가, (4) 주요 객체가 명확히 배치됐는가, (5) 디자인 시스템 톤 일관성. checks 파라미터로 추가 체크 가능. 한글이 일러스트 안에 있으면 무조건 passed=false. 반환: 사람용 요약 + verdict_json (passed/score/issues/notes).'
-        achievement_criteria: 평가 자체의 신뢰성 — JSON 파싱 성공, issues가 구체적 이유를 담음, 한글 검출 시 무조건 passed=false.
-        keywords:
-        - 일러스트 평가
-        - VLM
-        - vision
-        - critic
-        - image evaluation
       image_read:
-        # image_critic 과 같은 이유 — 이미지를 *읽을* 뿐 세계를 바꾸지 않는다.
-        # 반환은 자유서술 답변 하나 = 단일값 → scalar.
+        # 세계를 바꾸지 않는 순수 읽기(Gemini Vision 조회) — 반환은 단일값 → scalar.
+        # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 —
+        # 같은 Gemini Vision, 프레이밍만 달랐다. 변형=op 명명 헌법).
         returns: scalar
+        side_effect: false   # 두 op 모두 순수 읽기(Gemini Vision 조회) — 세계를 바꾸지 않는다
+        # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
         exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
-        description: Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).
-        target_description: image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.
+        description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes).
+        target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열) 옵션.'
         group: media_produce
         router: handler
         tool: read_gemini_image
-        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro)으로 이미지를 읽어 자유서술 답변을 반환. temperature=0. critique_gemini_image(합격/점수 채점)와 달리 OCR·시각 QA·시각 검증 용도. 보이는 텍스트/숫자는 그대로 옮기고 불확실하면 추측 금지.
-        target_key: image_path
-        achievement_criteria: 이미지에 실제로 보이는 내용을 정확히 옮김 — 텍스트/숫자를 환각 없이 읽고, 안 보이면 안 보인다고 답함.
+        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro). read=자유서술(temperature=0, 보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(다이어그램형·한글 검출 시 passed=false·빈 공간·객체 명확성·톤 일관성, 반환 verdict_json).
+        target_key: op
+        ops:
+          default: read
+          values:
+            read: 시각 QA·OCR — 질문에 자유서술로 답함 (question)
+            critic: 의도 정합 채점 — passed/score/issues/notes (intent 필수)
+        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 한글 검출 시 passed=false.
         keywords:
         - 이미지 읽기
         - 스크린샷 읽기
@@ -202,6 +187,10 @@ nodes:
         - 그림 보기
         - vision read
         - image ocr
+        - 일러스트 평가
+        - VLM
+        - critic
+        - image evaluation
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
 tool_json:
@@ -529,42 +518,34 @@ tool_json:
           description: 'native 생성 품질: pro(기본, Nano Banana Pro)/fast. (선택)'
       required:
       - instruction
-  - name: critique_gemini_image
-    description: Gemini Vision으로 이미지가 의도와 정합하는지 평가. 일러스트 자가 점검용. 반환은 JSON({passed, score, issues, notes}) + 사람 가독 요약.
+  - name: read_gemini_image
+    description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes} + 사람 가독 요약).
     input_schema:
       type: object
       properties:
+        op:
+          type: string
+          description: 동작 분기 — read(기본) | critic
         image_path:
           type: string
-          description: 평가할 이미지 절대 경로 또는 base64 data URI (필수)
+          description: 이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)
+        question:
+          type: string
+          description: (read) 무엇을 읽거나 답할지. 생략 시 전체 묘사
         intent:
           type: string
-          description: 이 일러스트가 무엇을 표현해야 하는가 — 자연어 설명 (필수)
+          description: (critic 필수) 이 이미지가 무엇을 표현해야 하는가 — 자연어 설명
+        preset:
+          type: string
+          description: '(critic) 평가 프리셋 — slide_illustration(기본) | general'
         checks:
           type: array
-          description: '추가 체크 항목 (예: [''다이어그램형인가'', ''오른쪽 1/3이 비어있는가''])'
+          description: '(critic) 추가 체크 항목 (예: [''다이어그램형인가'', ''오른쪽 1/3이 비어있는가''])'
           items:
             type: string
         style_preset:
           type: string
-          description: '디자인 시스템 톤 평가 기준 (예: sf_blueprint)'
-        api_key:
-          type: string
-          description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용
-      required:
-      - image_path
-      - intent
-  - name: read_gemini_image
-    description: Gemini Vision으로 이미지를 읽어 질문에 자유서술로 답한다(시각 QA·OCR·검증). 스크린샷의 숫자/텍스트 읽기, 그림 내용 확인 등. 합격/점수 채점이 아님(그건 critique_gemini_image).
-    input_schema:
-      type: object
-      properties:
-        image_path:
-          type: string
-          description: 읽을 이미지 절대 경로 또는 base64 data URI (path 로도 받음, 필수)
-        question:
-          type: string
-          description: 무엇을 읽거나 답할지 (query/intent/prompt 로도 받음). 생략 시 전체 묘사
+          description: '(critic) 디자인 시스템 톤 평가 기준 (예: sf_blueprint)'
         api_key:
           type: string
           description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용

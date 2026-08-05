@@ -19,7 +19,7 @@
 
 이 작업은 web 액션만의 일이 아니다. **indiebizOS의 IBL 전체가 네 재료 창고다.** 텍스트만 채우거나, 누가 미리 넣어둔 파일만 쓰지 말고, 필요한 걸 *만들어서* 쓴다. 막히면 먼저 떠올린다 — *"이 일에 indiebizOS의 어떤 능력이 도움이 되나?"*
 
-- **이미지가 빈약하면 만든다**: `[engines:image_gemini]`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `[engines:image_critic]`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
+- **이미지가 빈약하면 만든다**: `[engines:image_gemini]`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `[engines:image_read]{op: "critic"}`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
 - **도식·목업이 필요하면**: `[engines:slide]` / `[engines:render_html]`로 다이어그램을 PNG로 렌더해 임베드.
 - **데이터를 보여줘야 하면**: `[table:chart]`로 차트를. 그리고 *진짜 수치*는 추측하지 말고 소스(README·레지스트리·실제 데이터)에서 길어온다.
 - **결과를 눈으로 본다**: `[engines:image_read]`로 스크린샷을 실제로 읽어 확인한다(아래 [배포 후 시각 검증]).
@@ -395,16 +395,16 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 |---|---|
 | `[engines:image_gemini]` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
 | `[engines:slide]` / `[engines:render_html]` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG) |
-| `[engines:image_critic]` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes) |
+| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes) |
 
 ### 절차
 ```
 1. [engines:image_gemini]{prompt: "...히어로 배경, 미니멀, 사이트 톤과 일관", style_preset: "<사이트 톤과 동일하게 통일>", output_path: "{project_path}/public/hero.png"}
-2. [engines:image_critic]{path: "{project_path}/public/hero.png", intent: "히어로 배경으로 적합한가 / 톤 일관 / 텍스트 가독 방해 없음"}   # passed=false면 프롬프트 보정 후 재생성
+2. [engines:image_read]{op: "critic", path: "{project_path}/public/hero.png", intent: "히어로 배경으로 적합한가 / 톤 일관 / 텍스트 가독 방해 없음"}   # passed=false면 프롬프트 보정 후 재생성
 3. 코드에서 /hero.png 로 참조 (Next.js는 public/ 루트가 / 경로)
 ```
 - **style_preset은 사이트 전체에서 하나로 통일**한다 — 히어로·아이콘·배경이 제각각 톤이면 아마추어처럼 보인다.
-- 생성물은 반드시 `image_critic`로 1차 채점하고 통과한 것만 임베드한다.
+- 생성물은 반드시 `image_read`(op:critic)로 1차 채점하고 통과한 것만 임베드한다.
 
 ## 디자인 품질 체크리스트
 

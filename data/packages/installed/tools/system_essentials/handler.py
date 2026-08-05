@@ -884,7 +884,11 @@ def execute(tool_input: dict, context) -> str:
             scope_err = _validate_path_in_scope(path, project_path)
             if scope_err:
                 return scope_err
-            content = tool_input["content"]
+            content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
+            if content is None and (content := tool_input.get("_prev_result")) is None:
+                return json.dumps({"success": False, "error": "content가 필요합니다 (파이프에서는 직전 step 결과가 자동 저장됨)."}, ensure_ascii=False)
+            if not isinstance(content, str):
+                content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)
             _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
             if _red_err:
                 return _red_err
@@ -1053,7 +1057,9 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps({"result": answer, "text": answer}, ensure_ascii=False)
 
         elif tool_name == "glob_files":
-            pattern = tool_input["pattern"]
+            pattern = tool_input.get("pattern")
+            if not pattern:  # 메타 검색 모드(구 fs_query 흡수 2026-08-05) — fs_meta.py 분리
+                return _load_sibling("fs_meta").meta_query_or_error(tool_input)
 
             # 검색 루트 결정 (우선순위: path > root_path > project_path)
             # - 절대경로(/...): 그대로 사용 → 컴퓨터 어디든 검색 가능
@@ -1094,7 +1100,7 @@ def execute(tool_input: dict, context) -> str:
             if absolute_paths:
                 header_parts = [f"{total}개 매칭"]
                 if partial:
-                    header_parts.append(f"(시간예산 {int(_FIND_DEADLINE_S)}초/상한 도달 — 부분 결과. 더 좁은 path 로 재검색하거나 fs_query(OS색인) 사용 권장)")
+                    header_parts.append(f"(시간예산 {int(_FIND_DEADLINE_S)}초/상한 도달 — 부분 결과. 더 좁은 path 로 재검색하거나 메타 검색(search_term, OS색인) 사용 권장)")
                 elif truncated:
                     header_parts.append(f"(상위 {max_results}개만 반환 — 더 많으면 max_results 또는 더 좁은 path 사용)")
                 header_parts.append(f"root: {root}")

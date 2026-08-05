@@ -45,7 +45,7 @@
       agents:
         returns: scalar
         fixture: '[others:agents]{}'
-        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세. 단순 에이전트 명부는 [self:agents].
+        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
         target_key: agent_id

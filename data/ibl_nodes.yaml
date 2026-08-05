@@ -2480,20 +2480,6 @@ nodes:
         - 최근대화
         - 대화이력
         - 이전
-      agents:
-        returns: items
-        fixture: '[self:agents]{}'
-        description: 현재 프로젝트에 등록된 에이전트 목록 조회 (사용자·AI 구분). 프로젝트 conversations.db 기준이라 프로젝트 밖(시스템 AI 컨텍스트)에서는 비어 있는 것이 정상. 프로젝트 단위 트리·상세는 [others:agents].
-        target_description: (파라미터 없음 — 현재 프로젝트의 에이전트 목록)
-        group: conversation
-        router: driver
-        driver: sqlite
-        driver_node: memory
-        implementation: SQLite conversations.db에서 대화/에이전트 데이터 쿼리
-        keywords:
-        - 에이전트
-        - 목록
-        - 팀
       discover:
         returns: scalar
         fixture: '[self:discover]{query: "주가"}'
@@ -2675,8 +2661,8 @@ nodes:
         returns: scalar
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
-        description: 저장된 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. 즉시 실행은 run_pipeline 별도.
-        target_description: get/delete/run — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — params 옵션으로 워크플로 변수 전달.
+        description: 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 steps 배열 실행(저장 안 함).
+        target_description: get/delete — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — workflow_id(저장본) 또는 steps/pipeline(즉석 실행, 저장 안 함) 중 하나 + params 옵션.
         group: workflow
         target_key: op
         router: workflow_engine
@@ -2695,7 +2681,7 @@ nodes:
             get: 워크플로우 조회 (workflow_id)
             save: 워크플로우 저장 (name + steps IBL 코드 배열)
             delete: 워크플로우 삭제 (workflow_id)
-            run: 저장된 워크플로우 실행 (workflow_id + params 옵션)
+            run: 워크플로우 실행 — workflow_id(저장본) 또는 steps/pipeline(즉석, 저장 안 함)
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우
@@ -2704,17 +2690,6 @@ nodes:
         - 워크플로우 실행
         - 워크플로우 삭제
         - 파이프라인 저장
-      run_pipeline:
-        returns: effect
-        description: IBL 파이프라인 즉시 실행 (steps를 params로 직접 전달, 저장 안 됨).
-        target_description: steps 배열 (각 step은 IBL 코드). 저장하려면 save_workflow.
-        group: workflow
-        router: workflow_engine
-        implementation: workflow_engine으로 IBL 파이프라인 단계별 실행 (SQLite 상태 관리)
-        keywords:
-        - 파이프라인
-        - 실행
-        - 단계
       trigger:
         aliases:
           trigger_id:
@@ -2771,8 +2746,8 @@ nodes:
           format:
           - type
         returns: effect
-        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, file=파일 저장, clipboard=클립보드 복사. 파일 *조작*은 write/read 별도.
-        target_description: gui — content(HTML/데이터) + format(카드/테이블/HTML). file — path(확장자로 형식 자동) + content. clipboard — content(텍스트).
+        description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, clipboard=클립보드 복사. 파일 저장은 write(파이프 싱크 겸용 — 어휘 중복 흡수 2026-08-05).
+        target_description: gui — content(HTML/데이터) + format(카드/테이블/HTML). clipboard — content(텍스트).
         group: output
         target_key: op
         router: system
@@ -2781,13 +2756,11 @@ nodes:
           default: gui
           values:
             gui: UI에 HTML/카드/테이블로 표시 (WebSocket)
-            file: 파일로 저장 (확장자로 형식 자동 인식)
             clipboard: OS 클립보드에 복사
-        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_file/output_clipboard에 위임.
+        implementation: ibl_routing._route_system이 op로 분기 — output_gui/output_clipboard에 위임.
         keywords:
         - 출력
         - 표시
-        - 파일저장
         - 클립보드
         - 복사
         - UI
@@ -3761,7 +3734,7 @@ nodes:
         returns: scalar
         side_effect: true
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 fs_query·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -3781,65 +3754,6 @@ nodes:
             summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
             volumes: 용량 분석된 볼륨 목록 (이름·경로·용량, 기본)
         implementation: scan_storage/get_storage_summary/list_volumes op 분기 (pc-manager)
-      fs_query:
-        aliases:
-          min_size_mb:
-          - min_size
-        returns: items
-        fixture: '[self:fs_query]{kind: "pdf"}'
-        description: 파일 메타 검색 (이름·확장자·크기·종류) — OS 색인(맥 Spotlight) 직접. 선스캔 불필요·항상 최신. 내용 검색은 grep, 패턴은 find. self:photo 와 같은 file_index 보편 질의 위의 종류-무관 preset.
-        group: file
-        target_description: search_term(이름 부분일치) · extension(확장자) · kind(image/video/audio/pdf/any) · min_size_mb · path(검색 루트, 생략 시 홈) · limit(기본 100). 결과 items(보편 파일 필드) + 표형 table={columns,rows} 키.
-        router: handler
-        tool: query_storage
-        implementation: pc-manager _query_storage — backend/file_index.query 위임(mdfind 무상태). 비색인 경로는 라이브 walk 폴백.
-        target_key: search_term
-        app:
-          instrument: files
-          icon: 🗂️
-          name: 파일
-          order: 16
-          modes:
-          - name: 검색
-            auto_run: true
-            inputs:
-            - key: q
-              type: text
-              placeholder: 파일명·확장자 검색 (예 report, pdf)
-            action: '[self:fs_query]{search_term: "$q", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 문서
-            auto_run: true
-            phone_render: false
-            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
-            action: '[self:fs_query]{kind: "pdf", sort: "mtime", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
-          - name: 큰 파일
-            auto_run: true
-            note: 100MB 이상 — 용량 정리 대상 (큰 순).
-            action: '[self:fs_query]{min_size_mb: 100, sort: "size", limit: 50}'
-            view:
-            - type: card_list
-              from: items
-              card:
-                title: '{title}'
-                lines:
-                - '{meta}'
-                - '{path}'
       folder_note:
         aliases:
           folder_path:
@@ -4064,12 +3978,12 @@ nodes:
         - form
       write:
         returns: effect
-        description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
+        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05).
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
+        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다.
         router: handler
         tool: write_file
-        implementation: Python 파일 I/O로 로컬 파일 쓰기
+        implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).
         target_key: path
       list:
         returns: items
@@ -4082,11 +3996,14 @@ nodes:
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
         target_key: path
       file_find:
+        aliases:
+          min_size_mb:
+          - min_size
         returns: items
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
-        description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
+        description: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
         group: file
-        target_description: 검색 패턴 (glob, 예 '*.md', '**/*.tsx'). path 옵션으로 검색 루트 지정.
+        target_description: 'pattern(glob, 예 ''*.md'', ''**/*.tsx'' — **나 / 없으면 자동 재귀) 또는 메타 검색: search_term(이름 부분일치)·extension(확장자)·kind(image/video/audio/pdf/any)·min_size_mb·sort(mtime/size)·limit(기본 100). path 옵션으로 검색 루트. 메타 결과 items + 표형 table={columns,rows} 키.'
         keywords:
         - 파일
         - 찾기
@@ -4094,10 +4011,58 @@ nodes:
         - find
         - search
         - 파일찾기
+        - 파일메타
+        - 큰파일
         router: handler
         tool: glob_files
-        implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
+        implementation: pattern 있으면 pathlib.glob(max_results 상한, 기본 200). 메타 파라미터만 있으면 backend/file_index.query 위임(mdfind 무상태, 비색인 경로는 라이브 walk 폴백 — 구 pc-manager _query_storage 이식).
         target_key: pattern
+        app:
+          instrument: files
+          icon: 🗂️
+          name: 파일
+          order: 16
+          modes:
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·확장자 검색 (예 report, pdf)
+            action: '[self:file_find]{search_term: "$q", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 문서
+            auto_run: true
+            phone_render: false
+            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
+            action: '[self:file_find]{kind: "pdf", sort: "mtime", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 큰 파일
+            auto_run: true
+            note: 100MB 이상 — 용량 정리 대상 (큰 순).
+            action: '[self:file_find]{min_size_mb: 100, sort: "size", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
       grep:
         aliases:
           root_path:
@@ -4870,7 +4835,7 @@ nodes:
       agents:
         returns: scalar
         fixture: '[others:agents]{}'
-        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 트리, 있으면 단건 상세. 단순 에이전트 명부는 [self:agents].
+        description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).
         group: delegation
         target_key: agent_id
@@ -6359,37 +6324,25 @@ nodes:
         - HTML
         - 이미지
         - 렌더링
-      image_critic:
-        returns: scalar
-        exempt: Gemini Vision 유료 호출 + 이미지 경로·intent 인자 의존 — 정기 실행 부적합
-        runs_on: anywhere
-        scope: workspace
-        description: 'Gemini Vision으로 산출물(일러스트/차트/이미지 등)이 의도와 정합하는지 평가. 반환: passed/score/issues/notes.'
-        target_description: 'image_path(절대 경로) + intent(자연어 설명) 필수. preset 옵션 — slide_illustration(기본: 다이어그램형/한글 미포함/빈 공간/객체 명확성, 한글 검출 시 passed=false) | general(임의 산출물 범용: intent 충족·시각 결함 없음). style_preset/checks(추가 체크 배열) 옵션.'
-        group: media_produce
-        router: handler
-        tool: critique_gemini_image
-        implementation: 'Gemini 3 Pro Vision으로 이미지를 평가. 기본 체크: (1) 다이어그램형인가, (2) 한글이 들어갔는가, (3) 빈 공간이 의도된 위치에 있는가, (4) 주요 객체가 명확히 배치됐는가, (5) 디자인 시스템 톤 일관성. checks 파라미터로 추가 체크 가능. 한글이 일러스트 안에 있으면 무조건 passed=false. 반환: 사람용 요약 + verdict_json (passed/score/issues/notes).'
-        achievement_criteria: 평가 자체의 신뢰성 — JSON 파싱 성공, issues가 구체적 이유를 담음, 한글 검출 시 무조건 passed=false.
-        keywords:
-        - 일러스트 평가
-        - VLM
-        - vision
-        - critic
-        - image evaluation
       image_read:
         returns: scalar
+        side_effect: false
         exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
-        description: Gemini Vision으로 이미지를 읽어 질문에 답한다(시각 QA·OCR·검증). 스크린샷 숫자/텍스트 읽기, 그림 내용 확인. 합격 채점 아님(그건 image_critic).
-        target_description: image_path(절대 경로 또는 data URI, path 로도 받음) 필수 + question(무엇을 읽거나 답할지, 생략 시 전체 묘사). query/intent/prompt 로도 받음.
+        description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes).
+        target_description: image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열) 옵션.
         group: media_produce
         router: handler
         tool: read_gemini_image
-        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro)으로 이미지를 읽어 자유서술 답변을 반환. temperature=0. critique_gemini_image(합격/점수 채점)와 달리 OCR·시각 QA·시각 검증 용도. 보이는 텍스트/숫자는 그대로 옮기고 불확실하면 추측 금지.
-        target_key: image_path
-        achievement_criteria: 이미지에 실제로 보이는 내용을 정확히 옮김 — 텍스트/숫자를 환각 없이 읽고, 안 보이면 안 보인다고 답함.
+        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro). read=자유서술(temperature=0, 보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(다이어그램형·한글 검출 시 passed=false·빈 공간·객체 명확성·톤 일관성, 반환 verdict_json).
+        target_key: op
+        ops:
+          default: read
+          values:
+            read: 시각 QA·OCR — 질문에 자유서술로 답함 (question)
+            critic: 의도 정합 채점 — passed/score/issues/notes (intent 필수)
+        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 한글 검출 시 passed=false.
         keywords:
         - 이미지 읽기
         - 스크린샷 읽기
@@ -6398,6 +6351,10 @@ nodes:
         - 그림 보기
         - vision read
         - image ocr
+        - 일러스트 평가
+        - VLM
+        - critic
+        - image evaluation
       remotion:
         returns: effect
         runs_on: pc_only

@@ -117,7 +117,7 @@ see_also: [architecture.md, ibl.md]
 
 - **문제**: AI는 stateless라 디스크를 한 시간 뒤져 알아낸 것(폴더 정체·죽은 가지·주인 관습)을 세션이 끝나면 잊고 매번 콜드 스타트한다. 그 "어떻게 뒤지나"는 *나만의 것*이라 가중치에도 없다.
 - **저장소** (`backend/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
-- **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`fs_query`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
+- **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`file_find`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
 - **★owner 빈도 게이트**(2026-07-29): 주인모델은 상시 노출이라 **1회 추론이 영구 주입**되는 구멍이 있었다(실측: 66건 전부 obs=1, 질문 *대상*이 주인의 "소속"이 되는 오염). → 첫 관측은 **임시**(`scent=0`, map처럼 query 필터), **서로 다른 포식에서 재확인**되면 상시 냄새로 결정화(`_OWNER_SCENT_PROMOTE_AT=2`, 상한 8). territory 승격과 같은 '빈도가 결정화한다' 모티프. 임시 항목도 지워지지 않아 **잃는 정보 0**, 모델에는 `provisional="1"`로 노출. 상세=`docs/FORAGER_MULTIBODY_DESIGN.md` §10-1.
 - **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).

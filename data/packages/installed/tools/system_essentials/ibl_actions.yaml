@@ -63,12 +63,12 @@ nodes:
         - form
       write:
         returns: effect
-        description: 텍스트 파일 새로 쓰기·덮어쓰기. write→run 패턴의 한 축, append 아님.
+        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05).
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대). 기존 파일은 묻지 않고 덮어쓴다.
+        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다.
         router: handler
         tool: write_file
-        implementation: Python 파일 I/O로 로컬 파일 쓰기
+        implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).
         target_key: path
       list:
         returns: items
@@ -81,11 +81,16 @@ nodes:
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
         target_key: path
       file_find:
+        # 구 self:fs_query(파일 메타 검색, pc-manager) 흡수 (2026-08-05 어휘 중복 압축):
+        # "파일 찾기"는 한 개념 — glob(패턴)이냐 OS 색인 메타(이름·확장자·크기·종류)냐는
+        # 기제이지 어휘가 아니다. pattern 있으면 glob, 메타 파라미터만 있으면 Spotlight.
+        aliases:
+          min_size_mb: [min_size]
         returns: items
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
-        description: 파일 검색 (glob 패턴). 프로젝트 안뿐 아니라 컴퓨터 어디든 검색 가능. path 파라미터로 검색 루트 지정 (절대경로, ~/, 상대경로 모두 지원). 미지정 시 프로젝트 디렉토리. 패턴에 **나 /가 없으면 자동 재귀
+        description: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
         group: file
-        target_description: 검색 패턴 (glob, 예 '*.md', '**/*.tsx'). path 옵션으로 검색 루트 지정.
+        target_description: 'pattern(glob, 예 ''*.md'', ''**/*.tsx'' — **나 / 없으면 자동 재귀) 또는 메타 검색: search_term(이름 부분일치)·extension(확장자)·kind(image/video/audio/pdf/any)·min_size_mb·sort(mtime/size)·limit(기본 100). path 옵션으로 검색 루트. 메타 결과 items + 표형 table={columns,rows} 키.'
         keywords:
         - 파일
         - 찾기
@@ -93,10 +98,58 @@ nodes:
         - find
         - search
         - 파일찾기
+        - 파일메타
+        - 큰파일
         router: handler
         tool: glob_files
-        implementation: pathlib.glob 패턴 검색. path 파라미터로 검색 루트 지정 (절대경로/~/상대경로). max_results로 결과 상한 (기본 200). 매칭 없으면 path 옵션 안내
+        implementation: pattern 있으면 pathlib.glob(max_results 상한, 기본 200). 메타 파라미터만 있으면 backend/file_index.query 위임(mdfind 무상태, 비색인 경로는 라이브 walk 폴백 — 구 pc-manager _query_storage 이식).
         target_key: pattern
+        app:
+          instrument: files
+          icon: 🗂️
+          name: 파일
+          order: 16
+          modes:
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·확장자 검색 (예 report, pdf)
+            action: '[self:file_find]{search_term: "$q", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 문서
+            auto_run: true
+            phone_render: false
+            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
+            action: '[self:file_find]{kind: "pdf", sort: "mtime", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 큰 파일
+            auto_run: true
+            note: 100MB 이상 — 용량 정리 대상 (큰 순).
+            action: '[self:file_find]{min_size_mb: 100, sort: "size", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
       grep:
         aliases:
           root_path: [path]
@@ -331,10 +384,9 @@ tool_json:
           description: 파일 경로
         content:
           type: string
-          description: 기록할 전체 내용
+          description: 기록할 전체 내용. 생략 시 파이프의 직전 step 결과(_prev_result)를 저장
       required:
       - file_path
-      - content
   - name: list_directory
     description: '디렉토리의 파일/폴더 목록을 조회합니다.
 
@@ -511,18 +563,34 @@ tool_json:
       properties:
         pattern:
           type: string
-          description: 'glob 패턴 (예: ''*.docx'', ''**/*.py''). ''**''나 ''/''가 없으면 자동 재귀'
+          description: 'glob 패턴 (예: ''*.docx'', ''**/*.py''). ''**''나 ''/''가 없으면 자동 재귀. 생략 시 메타 검색 모드(search_term 등)'
         path:
           type: string
-          description: 검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 프로젝트 디렉토리
+          description: 검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 glob=프로젝트 디렉토리, 메타=홈
         root_path:
           type: string
           description: (deprecated) path와 동일. path 사용 권장
         max_results:
           type: integer
           description: 반환할 최대 파일 수 (기본 200). 0이면 무제한 (큰 검색 시 컨텍스트 폭주 위험)
-      required:
-      - pattern
+        search_term:
+          type: string
+          description: (메타 검색) 파일명 부분일치 검색어 — OS 색인(Spotlight) 직접, 선스캔 불요
+        extension:
+          type: string
+          description: (메타 검색) 확장자 필터 (pdf, jpg 등)
+        kind:
+          type: string
+          description: (메타 검색) 종류 필터 — image/video/audio/pdf/any
+        min_size_mb:
+          type: number
+          description: (메타 검색) 최소 크기 (MB)
+        sort:
+          type: string
+          description: (메타 검색) 정렬 — mtime(최신순, 기본) | size(큰 순)
+        limit:
+          type: integer
+          description: (메타 검색) 결과 개수 (기본 100)
   - name: edit_file
     description: '파일의 특정 부분을 수정합니다 (문자열 교체).
 

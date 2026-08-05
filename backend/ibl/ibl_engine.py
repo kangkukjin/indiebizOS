@@ -492,7 +492,7 @@ from ibl_routing import (
 )
 from ibl_executors import (
     _load_nodes,
-    _output_gui, _output_file, _extract_path_from_prev,
+    _output_gui, _extract_path_from_prev,
     _output_open, _output_clipboard, _output_download,
     _goal_list, _goal_status, _goal_kill,
     _log_attempt, _get_attempts, _summarize_attempts,

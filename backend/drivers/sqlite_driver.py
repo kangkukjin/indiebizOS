@@ -527,9 +527,8 @@ class SqliteDriver(Driver):
         try:
             if action == "recent_chats":
                 return self._memory_recent(conn, params)
-            elif action == "agents":
-                return self._memory_agents(conn)
             else:
+                # (구 self:agents 는 2026-08-05 [others:agents]로 흡수 — 트리 조회가 상위집합)
                 return self._err(f"memory 노드에 '{action}' 액션이 없습니다")
         finally:
             conn.close()
@@ -592,19 +591,6 @@ class SqliteDriver(Driver):
                 "url": "",
             } for r in items]
         return result
-
-    def _memory_agents(self, conn) -> dict:
-        rows = conn.execute("SELECT id, name, type FROM agents ORDER BY name").fetchall()
-        items = [dict(r) for r in rows]
-        result = self._ok(items, f"에이전트 {len(items)}명")
-        # 단일 통화 items — 바로 위 _memory_recent 와 같은 이유·같은 방식. 드라이버 계층이
-        # 단일통화 마이그레이션 스윕(핸들러·tool_*.py 대상)에서 빠져 이 함수만 낙오해 있었다:
-        # `data` 만 내면 `>> [table:*]` 가 "items 통화를 찾지 못했습니다"로 끊긴다.
-        # 카드 투영 없이 native 행을 그대로 실는다(id/name/type — 소비 렌더러 0, 필드 손실 없음).
-        if isinstance(result, dict):
-            result["items"] = items
-        return result
-
 
 # ─────────────────────────────────────────
 # 노드 → 핸들러 매핑

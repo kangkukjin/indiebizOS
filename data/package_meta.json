@@ -308,7 +308,6 @@
   "action_owner": {
     "engines:html_video": "media_producer",
     "engines:icon": "media_producer",
-    "engines:image_critic": "media_producer",
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",
@@ -358,7 +357,6 @@
     "self:fill": "system_essentials",
     "self:folder_note": "pc-manager",
     "self:forage": "pc-manager",
-    "self:fs_query": "pc-manager",
     "self:grep": "system_essentials",
     "self:health": "health-record",
     "self:lecture": "lecture_workspace",

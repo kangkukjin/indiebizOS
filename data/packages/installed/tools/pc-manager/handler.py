@@ -4,9 +4,10 @@ AI 에이전트가 PC Manager 창을 열고, 스토리지를 스캔/검색할 �
 
 기능:
 - open_file_explorer: PC Manager 파일 탐색기 창 열기
-- query_storage: 파일 검색 ([self:fs_query])
 - storage_op: 저장소 인덱스 조작 — scan/summary/volumes op 분기 ([self:storage])
 - folder_note_op: 폴더 주석 관리 — set/get op 분기 ([self:folder_note])
+(구 query_storage([self:fs_query])는 2026-08-05 어휘 압축으로 system_essentials 의
+ [self:file_find] 메타 검색 모드에 흡수 — 파일 찾기는 한 개념, 기제는 어휘가 아니다.)
 """
 
 import os
@@ -26,10 +27,6 @@ def execute(tool_input: dict, context) -> str:
         # PC Manager 창 열기
         if tool_name == "open_file_explorer":
             return _open_file_explorer(tool_input)
-
-        # 파일 검색 ([self:fs_query])
-        elif tool_name == "query_storage":
-            return _query_storage(tool_input)
 
         # op 보유 도구 — storage/folder_note/forage/residual/host
         # (_OP_DISPATCHERS 는 함수 정의 뒤, 파일 하단)
@@ -141,78 +138,6 @@ def _parse_min_size_mb(raw) -> "float | None":
                "gb": 1024, "g": 1024, "tb": 1024*1024, "t": 1024*1024,
                "b": 1/(1024*1024), "": 1}.get((m.group(2) or "mb").lower(), 1)
     return float(m.group(1)) * _factor
-
-
-def _query_storage(tool_input: dict) -> str:
-    """[self:fs_query] 파일 메타 검색 — OS 색인(file_index) 직접. 선스캔 불필요·항상 최신.
-
-    self:photo 와 같은 backend/file_index 보편 질의 위의 얇은 preset(종류 무관).
-    mdfind 어댑터를 재구현하지 않는다 — 보편 질의는 단일 출처에서 한 번만.
-    """
-    import file_index  # pc-manager 핸들러는 이미 runtime_utils 등 backend 모듈 import(경로 확보됨)
-
-    min_size_mb = _parse_min_size_mb(tool_input.get("min_size_mb"))
-    min_size_bytes = int(min_size_mb * 1024 * 1024) if min_size_mb else None
-    try:
-        limit = max(1, int(tool_input.get("limit") or 100))
-    except (TypeError, ValueError):
-        limit = 100
-
-    # search_term 동의어 흡수 — LLM 이 query/name/pattern 등으로 자연스레 부른다.
-    #   (param명 불일치는 q=None → mdfind 전체매칭 → 타임아웃 → 거짓 '0'을 낳던 침묵실패. project_ibl_param_name_mismatch)
-    search_term = (tool_input.get("search_term") or tool_input.get("q")
-                   or tool_input.get("query") or tool_input.get("name")
-                   or tool_input.get("pattern"))
-    res = file_index.query(
-        kind=tool_input.get("kind") or "any",
-        q=search_term,
-        ext=tool_input.get("extension"),
-        path=tool_input.get("root_path") or tool_input.get("path") or tool_input.get("volume_name"),
-        min_size=min_size_bytes,
-        limit=limit,
-        sort=tool_input.get("sort") or "mtime",
-    )
-    if not res.get("success"):
-        return json.dumps(res, ensure_ascii=False)
-
-    items = res.get("items", [])
-    records, rows = [], []
-    for it in items:
-        path = it.get("path") or ""
-        size = it.get("size") or 0
-        size_mb = round(size / 1048576, 2)
-        mtime = _epoch_to_iso(it.get("mtime"))
-        meta_bits = [f"{size_mb} MB", it.get("kind") or "", mtime]
-        records.append({
-            "title": it.get("name") or os.path.basename(path),
-            "meta": " · ".join(b for b in meta_bits if b),
-            "summary": "", "url": path,
-            "path": path, "size": size, "size_mb": size_mb,
-            "mtime": mtime, "kind": it.get("kind"), "ext": it.get("ext"),
-        })
-        rows.append([it.get("name") or "", size_mb, path, mtime])
-
-    out = {
-        "success": True,
-        "count": res.get("count"),
-        "shown": len(records),
-        "scope": res.get("scope"),
-        "items": records,
-        # table 통화(비파괴) — fs_query >> [table:spreadsheet/document] 호환 유지.
-        "table": {"columns": ["이름", "크기(MB)", "경로", "수정일"], "rows": rows},
-    }
-    if res.get("fallback"):
-        out["fallback"] = res["fallback"]
-    return json.dumps(out, ensure_ascii=False)
-
-
-def _epoch_to_iso(mtime) -> str:
-    """epoch(float/int) → 'YYYY-MM-DD HH:MM' (file_index mtime 표시용)."""
-    try:
-        from datetime import datetime as _dt
-        return _dt.fromtimestamp(float(mtime)).strftime("%Y-%m-%d %H:%M") if mtime else ""
-    except (TypeError, ValueError, OSError):
-        return ""
 
 
 def _get_storage_summary(tool_input: dict) -> str:

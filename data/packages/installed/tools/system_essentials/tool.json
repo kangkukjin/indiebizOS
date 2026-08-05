@@ -18,12 +18,11 @@
           },
           "content": {
             "type": "string",
-            "description": "기록할 전체 내용"
+            "description": "기록할 전체 내용. 생략 시 파이프의 직전 step 결과(_prev_result)를 저장"
           }
         },
         "required": [
-          "file_path",
-          "content"
+          "file_path"
         ]
       }
     },
@@ -142,11 +141,11 @@
         "properties": {
           "pattern": {
             "type": "string",
-            "description": "glob 패턴 (예: '*.docx', '**/*.py'). '**'나 '/'가 없으면 자동 재귀"
+            "description": "glob 패턴 (예: '*.docx', '**/*.py'). '**'나 '/'가 없으면 자동 재귀. 생략 시 메타 검색 모드(search_term 등)"
           },
           "path": {
             "type": "string",
-            "description": "검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 프로젝트 디렉토리"
+            "description": "검색 루트. 절대경로(/Users/...), ~ 확장(~/Desktop), 상대경로(./src) 모두 가능. 미지정 시 glob=프로젝트 디렉토리, 메타=홈"
           },
           "root_path": {
             "type": "string",
@@ -155,11 +154,32 @@
           "max_results": {
             "type": "integer",
             "description": "반환할 최대 파일 수 (기본 200). 0이면 무제한 (큰 검색 시 컨텍스트 폭주 위험)"
+          },
+          "search_term": {
+            "type": "string",
+            "description": "(메타 검색) 파일명 부분일치 검색어 — OS 색인(Spotlight) 직접, 선스캔 불요"
+          },
+          "extension": {
+            "type": "string",
+            "description": "(메타 검색) 확장자 필터 (pdf, jpg 등)"
+          },
+          "kind": {
+            "type": "string",
+            "description": "(메타 검색) 종류 필터 — image/video/audio/pdf/any"
+          },
+          "min_size_mb": {
+            "type": "number",
+            "description": "(메타 검색) 최소 크기 (MB)"
+          },
+          "sort": {
+            "type": "string",
+            "description": "(메타 검색) 정렬 — mtime(최신순, 기본) | size(큰 순)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "(메타 검색) 결과 개수 (기본 100)"
           }
-        },
-        "required": [
-          "pattern"
-        ]
+        }
       }
     },
     {

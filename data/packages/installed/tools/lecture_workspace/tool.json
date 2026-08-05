@@ -97,7 +97,7 @@
           },
           "layout": {
             "type": "string",
-            "description": "create 옵션 — 비-native 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote 등) 강제 시 그 한 장만 HTML(무료·빠름·이미지 API 안 씀) 경로로. 미지정=native(통짜 이미지, 기본). 카드·리포트 타일 등 경량 용도에."
+            "description": "create 옵션 — 렌더 3단 사다리의 스위치. 미지정=native(AI 통짜 이미지 — 가장 예쁨, 기본). layout 지정 시 그 한 장만 shadcn HTML(무료·빠름) — 구조 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote/일러스트형)·마케팅(hero_image/features/stats/testimonial/pricing/cta/content_image/steps)은 shadcn 컴포넌트(예쁨), custom 은 자유 Tailwind HTML(가장 일반·자유)."
           },
           "patch": {
             "type": "object",

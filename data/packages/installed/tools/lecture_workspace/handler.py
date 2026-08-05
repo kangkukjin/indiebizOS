@@ -617,6 +617,9 @@ _VALID_LAYOUTS = {
     "hero_illustration", "illustration_anchor", "split_concept",
     "illustration_background", "illustration_overlay", "comparison_iconic",
     "custom",  # 자유형 — AI가 슬라이드 HTML을 직접 작성 (고정 틀 없음)
+    # 마케팅·제품 레이아웃 (shadcn) — 2026-08-05 슬라이드 일원화 때 어휘 사정권으로 복원.
+    # 렌더러(media_producer/shadcn_slides.py)가 원래 갖고 있던 메뉴 — 구 slide_shadcn 전용이었다.
+    "hero_image", "features", "stats", "testimonial", "pricing", "cta", "content_image", "steps",
 }
 
 

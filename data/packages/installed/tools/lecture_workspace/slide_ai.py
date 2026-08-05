@@ -279,6 +279,16 @@ custom은 `title`(데크 목록 표시용)과 `custom_html` 두 필드만 있으
 - **illustration_overlay**: eyebrow, title + illustrations.image_prompt (자유 좌표 라벨 박스는 별도 — 본 MVP에서는 단순 오버레이만)
 - **comparison_iconic**: eyebrow, title, label_header, columns[{title,subtitle,icon,highlighted}], rows[{label, cells:[...]}] (icon은 이모지 권장, illustrations 필요 없음)
 
+## 마케팅·제품 layout (피치덱·랜딩·소개 자료 — shadcn 컴포넌트, illustrations 없음)
+- **hero_image**: title, subtitle, image_path (좌 텍스트 + 우 이미지)
+- **features**: title, subtitle, features[{title, description}] (3열 카드)
+- **stats**: title, stats[{value, label}] (4열 숫자)
+- **testimonial**: quote, author, role (인용 카드)
+- **pricing**: title, plans[{name, price, features[], highlighted}] (가격표)
+- **cta**: title, subtitle, cta_text (행동 유도 풀스크린)
+- **content_image**: title, content, image_path (좌 본문 + 우 이미지)
+- **steps**: title, steps[{title, description}] (가로 단계)
+
 ## 자유형 layout (틀에서 벗어날 때)
 - **custom**: title(데크 표시용) + custom_html(슬라이드 전체 HTML). 디자인 시스템 CSS 변수 필수, illustrations 없음. 위 "자유형 레이아웃" 섹션 참조.
 

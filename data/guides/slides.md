@@ -57,10 +57,14 @@
 - **aesthetic(톤, 한 덱 고정 = 일관된 책)**: `vintage_book`(빈티지 교과서) / `academic_paper`(학술) / `tech_minimal`(테크 미니멀) / `magazine_modern`(모던 매거진) / `dark_keynote`(다크 키노트·시네마틱) / `blueprint`(청사진 다이어그램). 같은 톤의 단발 생성은 같은 스크래치 덱에 모인다.
 - 옵션: `image_quality`(pro 기본/fast).
 
-### 빠른 텍스트형 (옵트아웃 — 무료·빠름)
-발표용이 아닌 **카드·리포트 타일·빠른 초안**처럼 이미지 생성이 과한 경우만 `layout`을 명시한다 — 비-native 레이아웃(`lecture_body`/`quote`/`comparison_table` 등)을 주면 그 한 장은 HTML 경로(이미지 API 안 씀)로 그려진다. 톤은 aesthetic 이 그대로 적용.
+### 렌더 3단 사다리 — layout 스위치
+품질·비용 사다리가 셋이다. **미지정 = native(AI 통짜 이미지)가 기본 — 가장 예쁘다(유료·느림).** `layout`을 명시하면 그 한 장만 HTML 경로(무료·빠름)로 내려간다:
+- **shadcn 구조 레이아웃(예쁨·무료)**: 강의형 `lecture_body`/`quote`/`comparison_table`/`factbox` 등 + **마케팅형** `features`(3열 카드)/`stats`(숫자)/`pricing`(가격표)/`cta`/`testimonial`/`hero_image`/`content_image`/`steps` — 피치덱·랜딩 자료는 이쪽.
+- **custom(가장 일반·자유)**: `layout:"custom"` — AI가 Tailwind HTML을 자유 작성. 틀 밖 구성이 필요할 때.
+톤(aesthetic/design_system)은 세 층 모두에 적용된다.
 ```
 [self:slide]{op: "create", instruction: "핵심 요약 카드 한 장", layout: "lecture_body", aesthetic: "tech_minimal"}
+[self:slide]{op: "create", instruction: "요금제 3단 가격표", layout: "pricing"}
 ```
 
 ### 여러 장

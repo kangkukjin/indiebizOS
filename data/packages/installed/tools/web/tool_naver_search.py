@@ -34,7 +34,7 @@ _TYPE_ENDPOINTS = {
 # 별칭("책"/"쇼핑" 등)은 그대로 두어 여기로 흘러와 명확한 대체 안내를 받게 한다.
 _RETIRED_TYPES = {
     "book": "네이버 책 검색 API는 은퇴했습니다(2026-08 실측, SE05). "
-            "국내 도서·대출은 [sense:book](도서관정보나루), 서지·표지는 [sense:book]{source: "google"}(Google Books) 사용.",
+            "국내 도서·대출은 [sense:book](도서관정보나루), 서지·표지는 [sense:book]{source: \"google\"}(Google Books) 사용.",
     "doc": "네이버 전문자료 검색 API는 은퇴했습니다(2026-08 실측, SE05). 논문·학술자료는 [sense:paper] 사용.",
     "shop": "네이버 쇼핑 검색 API는 은퇴했습니다(2026-08 실측, SE05). "
             "상품 검색은 [sense:search_shopping](다나와·중고, PC 전용) 사용.",

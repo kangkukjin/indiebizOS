@@ -1,13 +1,23 @@
 """IBL 파서 제어 블록 층 (2026-07-18 모듈화 — 1500줄 규칙)
 
 ibl_parser.py 에서 verbatim 이동: goal/if·else/case 블록 파서 + 범위 표현식.
-★유일한 편차: _parse_block_body 의 재귀 parse 호출을 지연 import 로(순환 차단).
+★재귀 하강의 본체 parse 는 import 하지 않는다 — ibl_parser 가 로드 끝에
+register_parse() 로 주입(의존 역전). 이 모듈은 ibl_parser 를 모른다.
 ★파이프 설탕(_pipe_block)은 본체 잔류 — 표준-코어 가드가 ibl_parser.py 경로를 스캔.
 """
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from ibl_parser_values import IBLSyntaxError, _parse_params
+
+# 본체 parse 주입 슬롯 — ibl_parser 가 자기 정의 직후 등록한다.
+_PARSE: Optional[Callable[[str], List[Dict]]] = None
+
+
+def register_parse(fn: Callable[[str], List[Dict]]) -> None:
+    """재귀 하강용 본체 parse 를 주입 (ibl_parser 로드 말미에 1회)."""
+    global _PARSE
+    _PARSE = fn
 
 
 # === Phase 26: Goal/Condition/Case 파서 ===
@@ -340,10 +350,12 @@ def _parse_block_body(body: str) -> Optional[Dict]:
     if case is not None:
         return case
 
-    # 일반 step 시도 (parse 는 지연 import — 본체와의 재귀 순환을 로드 시점에서 차단)
+    # 일반 step 시도 (parse 는 주입 슬롯 — register_parse 로 의존 역전)
+    if _PARSE is None:
+        raise RuntimeError(
+            "ibl_parser_blocks: parse 미주입 — ibl_parser 를 먼저 import 해야 한다")
     try:
-        from ibl_parser import parse
-        steps = parse(body)
+        steps = _PARSE(body)
         if len(steps) == 1:
             return steps[0]
         return steps

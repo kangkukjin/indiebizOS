@@ -180,7 +180,11 @@ from ibl_parser_blocks import (  # noqa: E402,F401
     _parse_block_body,
     _extract_bracket_raw,
     parse_range_expression,
+    register_parse as _register_parse,
 )
+
+# 재귀 하강 주입 — 블록 파서는 본체를 모른다(의존 역전, 순환 간선 제거).
+_register_parse(parse)
 
 
 _STEP_PATTERN = re.compile(

@@ -267,6 +267,12 @@ ibl.md·프롬프트 fragment·계기 app 블록(검색 액션에 app 블록이 
     동의 모델). no-privileged-rails 재설계와 얽힘.
   - 스케줄 3형제(manage_events/schedule/trigger) — 캘린더/지연실행/트리거엔진
     3 서브시스템 경계 문제.
+  - **슬라이드 가족 판정 (2026-08-05, 사용자 결정)**: self 3형제(lecture/slide/deck)는
+    **병합 금지 — 개체 축 존치**. 워크스페이스/장/덱은 다른 개체라 business 가족(개체마다
+    한 단어) 선례 그대로이며, 합치면 13-op 메가 액션(압축 목적과 반대). overlap 감사의
+    deck↔slide 깃발은 오라벨이 아니라 정확히 라벨된 자연 근접("옮겨" vs "만들어") — 관리
+    대상이지 수술 대상 아님. 가족의 잔여 검토 후보는 engines:slide_shadcn →
+    engines:slide{style:"shadcn"} 흡수 하나(계수 숙성 후).
   - ~~book 군~~ → **2b 완료 (2026-08-05)**: search_books→`book{source:"google"}` 흡수
     (155→**154**. 계기 배선 비용은 과대평가였다 — 도서 계기·source 축이 이미 book 쪽에
     있어 글로벌 검색 탭의 액션 문자열 교체 하나로 끝. 구현=culture/tool_gbooks.py,

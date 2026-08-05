@@ -371,7 +371,7 @@ def cctv_open(url: str = None, name: str = None, lat: float = None, lng: float =
         if target:
             return cctv_open(url=target)
 
-    return json.dumps({"success": False, "message": "CCTV를 찾을 수 없습니다."})
+    return json.dumps({"success": False, "error": "CCTV를 찾을 수 없습니다."})
 
 
 def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) -> str:
@@ -545,7 +545,7 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     func = _TOOL_MAP.get(tool_name)
     if func is None:
-        return json.dumps({"error": f"미구현 도구: {tool_name}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"미구현 도구: {tool_name}"}, ensure_ascii=False)
 
     try:
         return func(**tool_input)
@@ -556,4 +556,4 @@ def execute(tool_input: dict, context) -> str:
         valid_args = {k: v for k, v in tool_input.items() if k in sig.parameters}
         return func(**valid_args)
     except Exception as e:
-        return json.dumps({"error": f"{tool_name} 실행 실패: {str(e)}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"{tool_name} 실행 실패: {str(e)}"}, ensure_ascii=False)

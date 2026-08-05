@@ -17,6 +17,19 @@ if _package_dir not in sys.path:
 import storage
 
 
+# 통화 규율(2026-08-05 감사 ②): returns:items 액션이라 맨 문자열 반환 금지 —
+# 에러=_err, 효과·빈 결과=_ok(빈 결과는 items:[] 동봉해 파이프가 안 깨지게).
+def _err(msg: str) -> str:
+    return json.dumps({"success": False, "error": msg}, ensure_ascii=False)
+
+
+def _ok(msg: str, items: list = None) -> str:
+    out = {"success": True, "message": msg}
+    if items is not None:
+        out["items"] = items
+    return json.dumps(out, ensure_ascii=False)
+
+
 def execute(tool_input: dict, context) -> str:
     """도구 실행 엔트리포인트 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -28,7 +41,7 @@ def execute(tool_input: dict, context) -> str:
         if fn is None:
             return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|query|delete)"}, ensure_ascii=False)
         return fn(tool_input)
-    return f"알 수 없는 도구: {tool_name}"
+    return _err(f"알 수 없는 도구: {tool_name}")
 
 
 def save_health_info(input_data: dict) -> str:
@@ -131,7 +144,7 @@ def save_health_info(input_data: dict) -> str:
             # 빈 value 방어 — 조용한 손실 방지
             _meaningful = {k: v for k, v in value.items() if v not in (None, '')}
             if not _meaningful:
-                return (
+                return _err(
                     "저장 실패: 측정값이 비어 있습니다. "
                     "data.value에 수치를 넣어주세요 "
                     "(예: {info_type: measurement, data: {category: blood_sugar, value: {value: 128, unit: 'mg/dL', type: fasting}}})"
@@ -148,7 +161,7 @@ def save_health_info(input_data: dict) -> str:
             # 사용자 친화적 응답 생성
             value_str = format_measurement_value(category, value)
             person_str = f"[{person}] " if person and person != "나" else ""
-            return f"✓ {person_str}{category_to_korean(category)} 기록 저장됨 (#{record_id}): {value_str}"
+            return _ok(f"✓ {person_str}{category_to_korean(category)} 기록 저장됨 (#{record_id}): {value_str}")
 
         elif info_type == 'symptom':
             # 증상/이벤트 저장
@@ -170,7 +183,7 @@ def save_health_info(input_data: dict) -> str:
 
             severity_str = f" ({severity_to_korean(severity)})" if severity else ""
             person_str = f"[{person}] " if person and person != "나" else ""
-            return f"✓ {person_str}증상 기록 저장됨 (#{record_id}): {category_to_korean(category)}{severity_str}"
+            return _ok(f"✓ {person_str}증상 기록 저장됨 (#{record_id}): {category_to_korean(category)}{severity_str}")
 
         elif info_type == 'medication':
             # 투약 기록 저장
@@ -194,7 +207,7 @@ def save_health_info(input_data: dict) -> str:
 
             freq_str = f", {frequency}" if frequency else ""
             person_str = f"[{person}] " if person and person != "나" else ""
-            return f"✓ {person_str}투약 기록 저장됨 (#{record_id}): {name} {dosage or ''}{freq_str}"
+            return _ok(f"✓ {person_str}투약 기록 저장됨 (#{record_id}): {name} {dosage or ''}{freq_str}")
 
         elif info_type == 'document':
             # 문서/이미지 저장
@@ -223,13 +236,13 @@ def save_health_info(input_data: dict) -> str:
             result = f"✓ {person_str}문서 기록 저장됨 (#{record_id}): {doc_type_to_korean(doc_type)}"
             if extracted_data:
                 result += f"\n  추출된 데이터: {len(extracted_data)}개 항목"
-            return result
+            return _ok(result)
 
         else:
-            return f"알 수 없는 정보 유형: {info_type}"
+            return _err(f"알 수 없는 정보 유형: {info_type}")
 
     except Exception as e:
-        return f"저장 실패: {str(e)}"
+        return _err(f"저장 실패: {str(e)}")
 
 
 def get_health_context(input_data: dict) -> str:
@@ -306,7 +319,7 @@ def get_health_context(input_data: dict) -> str:
             # 등록된 사람 목록
             persons = storage.list_persons()
             if not persons:
-                return "등록된 사람이 없습니다."
+                return _ok("등록된 사람이 없습니다.", items=[])
             lines = ["👥 등록된 사람 목록:", ""]
             for p in persons:
                 note = f" - {p['note']}" if p.get('note') else ""
@@ -324,7 +337,7 @@ def get_health_context(input_data: dict) -> str:
             if not measurements:
                 cat_str = category_to_korean(category) if category else "측정"
                 person_str = f"{person}의 " if person and person != "나" else ""
-                return f"{person_str}최근 {days}일간 {cat_str} 기록이 없습니다."
+                return _ok(f"{person_str}최근 {days}일간 {cat_str} 기록이 없습니다.", items=[])
             text = format_measurements(measurements, category, person)
             # 표준 테이블 통화 — 시계열 측정값을 table로 (>> chart/spreadsheet/document)
             # 사람용 텍스트는 text 키로 보존하고 table만 ADD (world_bank 선례).
@@ -338,7 +351,7 @@ def get_health_context(input_data: dict) -> str:
             symptoms = storage.get_symptoms(category=category, days=days, person=person)
             if not symptoms:
                 person_str = f"{person}의 " if person and person != "나" else ""
-                return f"{person_str}최근 {days}일간 증상 기록이 없습니다."
+                return _ok(f"{person_str}최근 {days}일간 증상 기록이 없습니다.", items=[])
             text = format_symptoms(symptoms, person)
             # 레코드 통화(비파괴) — 증상 목록 >> [table:filter/document]. 사람용은 text(measurements 선례).
             records = [{
@@ -355,7 +368,7 @@ def get_health_context(input_data: dict) -> str:
             medications = storage.get_medications(days=days, active_only=active_only, person=person)
             if not medications:
                 person_str = f"{person}의 " if person and person != "나" else ""
-                return f"{person_str}투약 기록이 없습니다."
+                return _ok(f"{person_str}투약 기록이 없습니다.", items=[])
             text = format_medications(medications, person)
             records = [{
                 "title": m.get("name", ""),
@@ -370,7 +383,7 @@ def get_health_context(input_data: dict) -> str:
             documents = storage.get_documents(doc_type=category, days=days, person=person)
             if not documents:
                 person_str = f"{person}의 " if person and person != "나" else ""
-                return f"{person_str}최근 {days}일간 문서 기록이 없습니다."
+                return _ok(f"{person_str}최근 {days}일간 문서 기록이 없습니다.", items=[])
             text = format_documents(documents, include_images, person)
             records = [{
                 "title": d.get("doc_type", "") or "문서",
@@ -383,15 +396,15 @@ def get_health_context(input_data: dict) -> str:
         elif query_type == 'search':
             # 키워드 검색
             if not keyword:
-                return "검색 키워드를 입력해주세요."
+                return _err("검색 키워드를 입력해주세요.")
             results = storage.search_records(keyword, person=person)
             return format_search_results(results, keyword, person)
 
         else:
-            return f"알 수 없는 조회 유형: {query_type}"
+            return _err(f"알 수 없는 조회 유형: {query_type}")
 
     except Exception as e:
-        return f"조회 실패: {str(e)}"
+        return _err(f"조회 실패: {str(e)}")
 
 
 def delete_health_record(input_data: dict) -> str:
@@ -416,29 +429,29 @@ def delete_health_record(input_data: dict) -> str:
 
     _VALID = {'measurement', 'symptom', 'medication', 'document'}
     if record_type not in _VALID:
-        return ("삭제 실패: record_type 을 지정하세요 "
-                "(measurement|symptom|medication|document). "
-                "예: {op: delete, record_type: measurement, record_id: 5}")
+        return _err("삭제 실패: record_type 을 지정하세요 "
+                    "(measurement|symptom|medication|document). "
+                    "예: {op: delete, record_type: measurement, record_id: 5}")
     if raw_id in (None, ''):
-        return "삭제 실패: record_id(삭제할 기록 번호)를 지정하세요. 조회 결과의 (#번호)를 사용하세요."
+        return _err("삭제 실패: record_id(삭제할 기록 번호)를 지정하세요. 조회 결과의 (#번호)를 사용하세요.")
     try:
         record_id = int(raw_id)
     except (TypeError, ValueError):
-        return f"삭제 실패: record_id '{raw_id}' 가 정수가 아닙니다."
+        return _err(f"삭제 실패: record_id '{raw_id}' 가 정수가 아닙니다.")
 
     try:
         ok = storage.soft_delete_record(record_type, record_id, person=person)
     except Exception as e:
-        return f"삭제 실패: {str(e)}"
+        return _err(f"삭제 실패: {str(e)}")
 
     if not ok:
         person_str = f"[{person}] " if person and person != "나" else ""
-        return f"삭제할 기록을 찾지 못했습니다: {person_str}{record_type} #{record_id}"
+        return _err(f"삭제할 기록을 찾지 못했습니다: {person_str}{record_type} #{record_id}")
 
     type_ko = {'measurement': '측정', 'symptom': '증상',
                'medication': '투약', 'document': '문서'}.get(record_type, record_type)
     person_str = f"[{person}] " if person and person != "나" else ""
-    return f"🗑 {person_str}{type_ko} 기록 #{record_id} 삭제됨"
+    return _ok(f"🗑 {person_str}{type_ko} 기록 #{record_id} 삭제됨")
 
 
 # 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 함수 참조 테이블로 전환.

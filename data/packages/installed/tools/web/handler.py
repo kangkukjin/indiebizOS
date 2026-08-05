@@ -423,7 +423,7 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
                 json.dump(sites, f, ensure_ascii=False, indent=2)
             return {"success": True, "message": f"사이트가 추가되었습니다: {name} ({url})"}
         except Exception as e:
-            return f"저장 중 오류 발생: {str(e)}"
+            return {"success": False, "error": f"저장 중 오류 발생: {e}"}
 
     elif action == "remove":
         if not name:
@@ -436,7 +436,7 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
                 json.dump(new_sites, f, ensure_ascii=False, indent=2)
             return {"success": True, "message": f"사이트가 삭제되었습니다: {name}"}
         except Exception as e:
-            return f"저장 중 오류 발생: {str(e)}"
+            return {"success": False, "error": f"저장 중 오류 발생: {e}"}
 
     elif action == "open_ui":
         if not sites:

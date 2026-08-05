@@ -54,4 +54,4 @@ def search_gutenberg(query: str = None, author_year_start: int = None, author_ye
         }
     except Exception as e:
         logger.error(f"Gutendex API 호출 오류: {str(e)}")
-        return {"error": f"Gutenberg 검색 실패: {str(e)}"}
+        return {"success": False, "error": f"Gutenberg 검색 실패: {str(e)}"}

@@ -204,7 +204,7 @@ def _msg_thread(bm, tool_input: dict) -> str:
     pubkey = tool_input.get("pubkey") or ""
     has_neighbor = bool(neighbor_id) and str(neighbor_id) not in ("0", "")
     if not has_neighbor and not pubkey:
-        return json.dumps({"success": False, "message": "neighbor_id 또는 pubkey가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "neighbor_id 또는 pubkey가 필요합니다."}, ensure_ascii=False)
 
     items, seen_eids = [], set()
     name, channel, to = "", "nostr", ""
@@ -393,7 +393,7 @@ def _ok(payload: dict, message: str = "") -> str:
 
 
 def _err(message: str) -> str:
-    return json.dumps({"success": False, "message": message}, ensure_ascii=False)
+    return json.dumps({"success": False, "error": message}, ensure_ascii=False)
 
 
 def _int_or(v, default=None):
@@ -963,10 +963,10 @@ def _phone_sync(bm, ti: dict) -> str:
 
     dev = _adb("devices")
     if dev is None:
-        return json.dumps({"success": False, "message": "adb 실행 실패 — Android 플랫폼툴이 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "adb 실행 실패 — Android 플랫폼툴이 필요합니다."}, ensure_ascii=False)
     connected = [l for l in dev.stdout.splitlines()[1:] if l.strip() and l.strip().endswith("device")]
     if not connected:
-        return json.dumps({"success": False, "message": "폰이 USB로 연결돼 있지 않습니다. 케이블을 연결한 뒤 다시 시도하세요."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "폰이 USB로 연결돼 있지 않습니다. 케이블을 연결한 뒤 다시 시도하세요."}, ensure_ascii=False)
 
     _adb("forward", f"tcp:{PORT}", "tcp:8765")
     try:
@@ -984,12 +984,12 @@ def _phone_sync(bm, ti: dict) -> str:
                 if _up():
                     break
             if not _up():
-                return json.dumps({"success": False, "message": "폰 앱 백엔드가 기동되지 않았습니다. 폰 잠금을 풀고 IndieBiz 앱을 한 번 열어주세요."}, ensure_ascii=False)
+                return json.dumps({"success": False, "error": "폰 앱 백엔드가 기동되지 않았습니다. 폰 잠금을 풀고 IndieBiz 앱을 한 번 열어주세요."}, ensure_ascii=False)
 
         # 폰 export → 맥 머지
         pe = _hx.get(f"{BASE}/business/sync/export", timeout=30).json()
         if not pe.get("success"):
-            return json.dumps({"success": False, "message": f"폰 export 실패: {pe.get('error')}"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"폰 export 실패: {pe.get('error')}"}, ensure_ascii=False)
         from_phone = merge_business_db(bm, pe.get("data") or {})
 
         # 맥 export → 폰 머지
@@ -1003,7 +1003,7 @@ def _phone_sync(bm, ti: dict) -> str:
                f"폰이 맥에서 추가 {_s(to_phone,'added')}·갱신 {_s(to_phone,'updated')}건.")
         return json.dumps({"success": True, "message": msg, "from_phone": from_phone, "to_phone": to_phone}, ensure_ascii=False)
     except Exception as e:
-        return json.dumps({"success": False, "message": f"폰 동기화 오류: {e}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"폰 동기화 오류: {e}"}, ensure_ascii=False)
     finally:
         _adb("forward", "--remove", f"tcp:{PORT}")
 
@@ -1052,7 +1052,7 @@ def execute(tool_input: dict, context) -> str:
             op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if not fn:
-                return json.dumps({"success": False, "message": f"알 수 없는 op: {op}"}, ensure_ascii=False)
+                return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
             return fn(bm, tool_input)
 
         return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)

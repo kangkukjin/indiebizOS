@@ -136,9 +136,9 @@ def execute(tool_input: dict, context) -> str:
             return render_remotion_video(tool_input, output_base)
         elif op == "status":
             return check_remotion_status(tool_input)
-        return f"알 수 없는 op: {op} (render_inline/render_file/status)"
+        return json.dumps({"success": False, "error": f"알 수 없는 op: {op} (render_inline/render_file/status)"}, ensure_ascii=False)
 
-    return f"알 수 없는 도구: {tool_name}"
+    return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
 
 # ============================================================

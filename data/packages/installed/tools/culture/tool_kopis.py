@@ -68,6 +68,7 @@ def _check_api_key():
     ok, err = check_api_key("kopis")
     if not ok:
         return {
+            "success": False,
             "error": err,
             "help": "https://www.kopis.or.kr/por/cs/openapi/openApiInfo.do 에서 API 키를 발급받으세요."
         }
@@ -166,9 +167,9 @@ def call_kopis_api(endpoint, params):
         return xml_to_dict(root)
 
     except ET.ParseError as e:
-        return {"error": f"XML 파싱 오류: {str(e)}", "raw": response_text[:200]}
+        return {"success": False, "error": f"XML 파싱 오류: {str(e)}", "raw": response_text[:200]}
     except Exception as e:
-        return {"error": f"조회 실패: {str(e)}"}
+        return {"success": False, "error": f"조회 실패: {str(e)}"}
 
 
 def get_performances(stdate, eddate, shcate=None, signgucode=None, prfstate="02",
@@ -229,7 +230,7 @@ def get_performances(stdate, eddate, shcate=None, signgucode=None, prfstate="02"
 def get_performance_detail(performance_id):
     """공연 상세 정보 조회"""
     if not performance_id:
-        return {"error": "공연 ID가 필요합니다."}
+        return {"success": False, "error": "공연 ID가 필요합니다."}
     return call_kopis_api(f"pblprfr/{performance_id}", {})
 
 

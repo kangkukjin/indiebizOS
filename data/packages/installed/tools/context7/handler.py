@@ -42,7 +42,7 @@ def _search_library_id(library_name: str, query: str = "") -> dict:
             results = []
         return results if results else []
     except Exception as e:
-        return {"error": str(e)}
+        return {"success": False, "error": str(e)}
 
 
 def _get_docs(library_id: str, query: str) -> str:
@@ -72,12 +72,12 @@ def _get_docs(library_id: str, query: str) -> str:
 def _resolve(library_name: str) -> str:
     """라이브러리 이름 → Context7 ID 후보 (상위 5)."""
     if not library_name:
-        return json.dumps({"error": "library_name이 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "library_name이 필요합니다."}, ensure_ascii=False)
     libs = _search_library_id(library_name)
     if isinstance(libs, dict) and "error" in libs:
         return json.dumps(libs, ensure_ascii=False)
     if not libs:
-        return json.dumps({"error": f"'{library_name}'을 찾을 수 없습니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"'{library_name}'을 찾을 수 없습니다."}, ensure_ascii=False)
     results = [{"id": l.get("id", ""), "name": l.get("name", ""),
                 "description": l.get("description", "")[:100]} for l in libs[:5]]
     # 레코드 통화(비파괴) — 라이브러리 목록 >> [table:document/spreadsheet]
@@ -95,23 +95,23 @@ def _resolve(library_name: str) -> str:
 def _search(query: str, library_id: str, library_name: str) -> str:
     """문서 검색. library_id 직접 사용, 없으면 library_name으로 자동 해소."""
     if not query:
-        return json.dumps({"error": "query가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "query가 필요합니다."}, ensure_ascii=False)
     lib_name = library_name
     if not library_id:
         if not library_name:
-            return json.dumps({"error": "library_id 또는 library_name이 필요합니다."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": "library_id 또는 library_name이 필요합니다."}, ensure_ascii=False)
         libs = _search_library_id(library_name, query)
         if isinstance(libs, dict) and "error" in libs:
             return json.dumps(libs, ensure_ascii=False)
         if not libs:
-            return json.dumps({"error": f"'{library_name}' 라이브러리를 찾을 수 없습니다."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"'{library_name}' 라이브러리를 찾을 수 없습니다."}, ensure_ascii=False)
         library_id = libs[0].get("id", "")
         lib_name = libs[0].get("name", library_name)
         if not library_id:
-            return json.dumps({"error": "라이브러리 ID를 얻지 못했습니다.", "results": libs[:3]}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": "라이브러리 ID를 얻지 못했습니다.", "results": libs[:3]}, ensure_ascii=False)
     docs = _get_docs(library_id, query)
     if not docs or docs.startswith("문서 조회 실패"):
-        return json.dumps({"library": lib_name, "library_id": library_id, "error": docs}, ensure_ascii=False)
+        return json.dumps({"success": False, "library": lib_name, "library_id": library_id, "error": docs}, ensure_ascii=False)
     # 문서 IR blocks(비파괴) — 문서 텍스트를 문단 블록으로. devdocs:search >> document. message=원문 보존.
     blocks = [{"type": "heading", "level": 1, "text": f"{lib_name} — {query}"}]
     for para in docs.split("\n\n"):
@@ -148,7 +148,7 @@ def execute(tool_input: dict, context) -> str:
         op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
-            return json.dumps({"error": f"알 수 없는 op '{op}'. 사용: resolve|search"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. 사용: resolve|search"}, ensure_ascii=False)
         return fn(tool_input, context)
 
-    return json.dumps({"error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
+    return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

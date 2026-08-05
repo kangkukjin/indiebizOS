@@ -27,7 +27,7 @@ def _deplus(s: str) -> str:
 def search_nl(keyword, category="도서", page=1, page_size=20):
     """국립중앙도서관 통합검색. category=도서(기본)/학위논문/기사 등, 빈 값=전체."""
     if not keyword:
-        return {"error": "검색어(keyword)가 필요합니다.", "items": []}
+        return {"success": False, "error": "검색어(keyword)가 필요합니다.", "items": []}
     params = {
         "pageNum": max(1, int(page or 1)),
         "pageSize": min(max(1, int(page_size or 20)), 50),
@@ -40,7 +40,7 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
         r = requests.get(_BASE, params=params, headers=_HEADERS, timeout=25)
         r.raise_for_status()
     except requests.RequestException as e:
-        return {"error": f"국립중앙도서관 검색 실패: {e}", "items": []}
+        return {"success": False, "error": f"국립중앙도서관 검색 실패: {e}", "items": []}
     h = r.text
 
     # 총건수는 "총 <em>N</em>건"처럼 태그가 끼므로 숫자 뒤 태그 허용

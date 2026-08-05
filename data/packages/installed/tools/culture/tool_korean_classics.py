@@ -8,7 +8,7 @@ def search_korean_classics(query: str, rows: int = 10) -> dict:
     try:
         response = requests.get(url, timeout=15)
         if response.status_code != 200:
-            return {"error": f"HTTP 상태 코드 {response.status_code}"}
+            return {"success": False, "error": f"HTTP 상태 코드 {response.status_code}"}
             
         root = ET.fromstring(response.content)
         
@@ -46,4 +46,4 @@ def search_korean_classics(query: str, rows: int = 10) -> dict:
         }
         
     except Exception as e:
-        return {"error": f"한국고전종합DB 검색 중 오류 발생: {str(e)}"}
+        return {"success": False, "error": f"한국고전종합DB 검색 중 오류 발생: {str(e)}"}

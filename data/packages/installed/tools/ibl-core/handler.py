@@ -8,8 +8,9 @@ execute_ibl 의 실제 실행은 backend/system_tools._execute_ibl_unified 가 �
 2026-06-03 정리: 옛 노드 기반 ibl_* 개별 도구(40개)는 현재 시스템(에이전트는 execute_ibl
 단일 도구만 사용, 5노드 액션은 ibl_access 가 별도 XML로 노출)에서 호출되지 않아 제거했다.
 """
+import json
 
 
 def execute(tool_input: dict, context) -> str:
     """레거시 ibl_* 도구는 제거됨. execute_ibl 은 system_tools 가 직접 실행한다."""
-    return f"미지원 도구: {context.tool_name} (ibl_* 레거시 도구는 제거됨; execute_ibl 사용)"
+    return json.dumps({"success": False, "error": f"미지원 도구: {context.tool_name} (ibl_* 레거시 도구는 제거됨; execute_ibl 사용)"}, ensure_ascii=False)

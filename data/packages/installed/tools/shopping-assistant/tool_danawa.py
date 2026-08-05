@@ -55,7 +55,7 @@ def _first(pattern: str, text: str, group: int = 1):
 def search_danawa(query: str, limit: int = 5) -> dict:
     """다나와 상품 검색. 인기(저장)순 상위 limit 개."""
     if not query:
-        return {"total": 0, "items": [], "error": "검색어(query)를 입력해주세요."}
+        return {"success": False, "total": 0, "items": [], "error": "검색어(query)를 입력해주세요."}
 
     # limit 는 다나와가 30/60/90 만 받는다 — 넉넉히 받아 클라이언트에서 자름.
     html = _fetch({

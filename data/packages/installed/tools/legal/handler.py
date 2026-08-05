@@ -291,7 +291,7 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     api_key = get_api_key("LAW_API_KEY", package_dir=_PACKAGE_DIR)
     if not api_key:
-        return "에러: Law API 키가 설정되지 않았습니다. 패키지 폴더의 config.json에 'api_key'를 입력하거나 LAW_API_KEY 환경 변수를 설정해주세요."
+        return json.dumps({"success": False, "error": "Law API 키가 설정되지 않았습니다. 패키지 폴더의 config.json에 'api_key'를 입력하거나 LAW_API_KEY 환경 변수를 설정해주세요."}, ensure_ascii=False)
 
     if tool_name == "legal_lookup":
         query = tool_input.get("query")
@@ -314,7 +314,7 @@ def execute(tool_input: dict, context) -> str:
             )
             return _wrap_search_result(result, target)
         else:
-            return "에러: query 또는 id 중 하나가 필요합니다."
+            return json.dumps({"success": False, "error": "query 또는 id 중 하나가 필요합니다."}, ensure_ascii=False)
 
     if tool_name in ("search_legal_info", "search_laws", "search_precedents"):
         target = _TARGET_MAP.get(tool_name) or tool_input.get("target", "law")
@@ -345,4 +345,4 @@ def execute(tool_input: dict, context) -> str:
         )
         return result if isinstance(result, str) else str(result)
 
-    return f"알 수 없는 도구: {tool_name}"
+    return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

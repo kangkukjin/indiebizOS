@@ -85,21 +85,21 @@ def _op_download(tool_input, yt):
 def _op_info(tool_input, yt):
     url = _resolve_video_url(tool_input)
     if not url:
-        return {"error": "url 또는 video_id 파라미터가 필요합니다."}
+        return {"success": False, "error": "url 또는 video_id 파라미터가 필요합니다."}
     return yt.get_youtube_info(url=url)
 
 
 def _op_transcript(tool_input, yt):
     url = _resolve_video_url(tool_input)
     if not url:
-        return {"error": "url 또는 video_id 파라미터가 필요합니다."}
+        return {"success": False, "error": "url 또는 video_id 파라미터가 필요합니다."}
     return yt.get_youtube_transcript(url=url, languages=_resolve_languages(tool_input, ['ko', 'en']))
 
 
 def _op_languages(tool_input, yt):
     url = _resolve_video_url(tool_input)
     if not url:
-        return {"error": "url 또는 video_id 파라미터가 필요합니다."}
+        return {"success": False, "error": "url 또는 video_id 파라미터가 필요합니다."}
     return yt.list_available_transcripts(url=url)
 
 
@@ -142,7 +142,7 @@ def _op_watch(tool_input, yt):
     if not vid and tool_input.get('url'):
         vid = yt.extract_video_id(tool_input.get('url', ''))
     if not vid:
-        return {"error": "video_id 또는 url 파라미터가 필요합니다."}
+        return {"success": False, "error": "video_id 또는 url 파라미터가 필요합니다."}
     return load_tool_watch().watch(vid)
 
 
@@ -221,7 +221,7 @@ def execute(tool_input: dict, context):
         op = (tool_input.pop('op', '') or '').strip() or _OP_DEFAULTS.get(tool_name, '')
         mapping = _OP_DISPATCHERS[tool_name]
         if op not in mapping:
-            return {"error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"}
+            return {"success": False, "error": f"알 수 없는 op '{op}' ({tool_name}). 사용 가능: {sorted(mapping.keys())}"}
         return mapping[op](tool_input, tool_youtube)
 
     if tool_name in _DIRECT_ACTIONS:

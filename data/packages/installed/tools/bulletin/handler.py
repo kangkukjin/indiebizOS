@@ -207,8 +207,8 @@ def execute(tool_input: dict, context) -> str:
             op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if not fn:
-                return json.dumps({"success": False, "message": f"알 수 없는 op: {op}"}, ensure_ascii=False)
+                return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
             return fn(tool_input)
-        return f"Unknown tool: {tool_name}"
+        return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:
-        return json.dumps({"success": False, "message": f"오류: {e}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"오류: {e}"}, ensure_ascii=False)

@@ -324,7 +324,7 @@ def resolve_region_code(name: str):
         {"error": "..."}                                            — 못 찾음
     """
     if not name or not str(name).strip():
-        return {"error": "지역명이 비었습니다."}
+        return {"success": False, "error": "지역명이 비었습니다."}
     raw = str(name).strip()
     norm = (raw.replace("특별시", "").replace("광역시", "")
                .replace("특별자치시", "").replace("특별자치도", "")
@@ -346,6 +346,7 @@ def resolve_region_code(name: str):
         return {"code": code, "matched": matched[code]}
     if len(matched) > 1:
         return {
+            "success": False,
             "candidates": [{"name": n, "code": c} for c, n in matched.items()][:12],
             "error": f"'{raw}'가 여러 시군구와 일치합니다. region_code로 지정하거나 시/도를 함께 적으세요 (예: '서울 중구').",
         }
@@ -356,6 +357,7 @@ def resolve_region_code(name: str):
         return via
 
     return {
+        "success": False,
         "error": (f"'{raw}'에 해당하는 시군구를 찾지 못했습니다. 실거래가는 시군구 단위입니다 "
                   f"(예: 강남구, 청주시흥덕구). 시군구 이름으로 다시 시도하세요. "
                   f"district_codes로 목록을 확인할 수 있습니다.")

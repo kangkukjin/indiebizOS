@@ -76,7 +76,7 @@ def execute(tool_input: dict, context) -> str:
     # 강의 = AI가 lecture_slide_principles.md 가이드로 계획 → [engines:slide] × N(같은 style, & 병렬).
     # 계획은 인지(가이드+추론)지 액션 아님 (ibl_design_philosophy Mode C).
 
-    return f"알 수 없는 도구: {tool_name}"
+    return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
 def _normalize_tts_text(text):
     """TTS 낭독 품질용 보수적 텍스트 정규화.
@@ -938,7 +938,7 @@ def generate_icon(tool_input, output_base):
 
     user_prompt = (tool_input.get("prompt") or tool_input.get("q") or "").strip()
     if not user_prompt:
-        return {"success": False, "message": "무엇을 그릴지 한 줄로 알려주세요.", "blocks": []}
+        return {"success": False, "error": "무엇을 그릴지 한 줄로 알려주세요.", "blocks": []}
 
     try:
         size = int(tool_input.get("size") or 384)
@@ -977,7 +977,7 @@ def generate_icon(tool_input, output_base):
                 img_bytes = r.content
             engine = "flux"
         except Exception as e:
-            return {"success": False, "message": f"아이콘 생성 실패: {e}",
+            return {"success": False, "error": f"아이콘 생성 실패: {e}",
                     "prompt": expanded, "blocks": []}
 
     # 공통 다운스케일 — 두 엔진 다 요청 size 보다 크게 생성됨. PNG 재인코딩으로 mime 확정.
@@ -1000,7 +1000,7 @@ def generate_icon(tool_input, output_base):
         with open(out_path, "wb") as f:
             f.write(img_bytes)
     except Exception as e:
-        return {"success": False, "message": f"아이콘 저장 실패: {e}",
+        return {"success": False, "error": f"아이콘 저장 실패: {e}",
                 "prompt": expanded, "blocks": []}
 
     data_uri = f"data:{mime};base64," + base64.b64encode(img_bytes).decode("utf-8")

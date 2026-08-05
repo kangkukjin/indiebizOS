@@ -70,10 +70,10 @@ def search_bunjang(query, limit=20, region=None):
     try:
         text, code = _get(url, params=params)
         if code != 200:
-            return {"error": f"번개장터 API HTTP {code}", "items": []}
+            return {"success": False, "error": f"번개장터 API HTTP {code}", "items": []}
         data = json.loads(text)
     except Exception as e:
-        return {"error": f"번개장터 조회 실패: {e}", "items": []}
+        return {"success": False, "error": f"번개장터 조회 실패: {e}", "items": []}
 
     records = []
     for it in data.get("list", []):
@@ -107,9 +107,9 @@ def search_joongna(query, limit=20):
     try:
         text, code = _get(url)
         if code != 200:
-            return {"error": f"중고나라 HTTP {code}", "items": []}
+            return {"success": False, "error": f"중고나라 HTTP {code}", "items": []}
     except Exception as e:
-        return {"error": f"중고나라 조회 실패: {e}", "items": []}
+        return {"success": False, "error": f"중고나라 조회 실패: {e}", "items": []}
 
     # RSC 스트림은 키가 이스케이프돼 있다(\\"seq\\"). 언이스케이프 후 근접 파싱.
     text = text.replace('\\"', '"')
@@ -174,7 +174,7 @@ def search_danggeun(query, limit=20, region=None):
     if region:
         region_id, resolved = _resolve_danggeun_region(region)
         if region_id is None:
-            return {"error": resolved, "items": []}
+            return {"success": False, "error": resolved, "items": []}
         region_full = resolved
 
     url = "https://www.daangn.com/kr/buy-sell/"
@@ -184,9 +184,9 @@ def search_danggeun(query, limit=20, region=None):
     try:
         text, code = _get(url, params=params, timeout=20)
         if code != 200:
-            return {"error": f"당근 검색 HTTP {code}", "items": []}
+            return {"success": False, "error": f"당근 검색 HTTP {code}", "items": []}
     except Exception as e:
-        return {"error": f"당근 검색 실패: {e}", "items": []}
+        return {"success": False, "error": f"당근 검색 실패: {e}", "items": []}
 
     # JSON-LD ItemList 추출 (스크립트가 여럿일 수 있어 ItemList인 것만)
     products = []

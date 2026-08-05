@@ -753,7 +753,7 @@ def execute(tool_input: dict, context) -> str:
         try:
             return json.dumps(fn(tool_input), ensure_ascii=False)
         except Exception as e:
-            return json.dumps({"success": False, "message": f"webapp 오류: {e}"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"webapp 오류: {e}"}, ensure_ascii=False)
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":
@@ -1488,7 +1488,7 @@ def execute(tool_input: dict, context) -> str:
             return f"[[PLAN_APPROVAL_REQUESTED]]계획 수립이 완료되었습니다. 사용자 승인을 기다리는 중...\n\n---\n{plan_content}"
 
         else:
-            return f"Unknown tool: {tool_name}"
+            return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
         return f"Error: {str(e)}"

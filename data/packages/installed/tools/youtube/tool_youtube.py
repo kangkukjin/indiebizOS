@@ -232,7 +232,7 @@ def get_youtube_info(url: str) -> dict:
     try:
         import yt_dlp
     except ImportError:
-        return {'success': False, 'message': 'yt_dlp 패키지 없음'}
+        return {'success': False, 'error': 'yt_dlp 패키지 없음'}
 
     try:
         with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
@@ -245,7 +245,7 @@ def get_youtube_info(url: str) -> dict:
                 'view_count': info.get('view_count', 0),
             }
     except Exception as e:
-        return {'success': False, 'message': f'실패: {str(e)}'}
+        return {'success': False, 'error': f'실패: {str(e)}'}
 
 
 def extract_video_id(url: str) -> str:
@@ -904,12 +904,12 @@ def search_youtube(query: str, count: int = 5) -> dict:
             entries = result.get('entries', [])
 
         if not entries:
-            return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+            return {'success': False, 'error': f'"{query}" 검색 결과가 없습니다.'}
 
         # 채널/플레이리스트 ID 필터링 (video ID만 남김)
         entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
         if not entries:
-            return {'success': False, 'message': f'"{query}" 검색 결과에서 영상을 찾지 못했습니다.'}
+            return {'success': False, 'error': f'"{query}" 검색 결과에서 영상을 찾지 못했습니다.'}
 
         results = []
         for i, e in enumerate(entries):
@@ -932,7 +932,7 @@ def search_youtube(query: str, count: int = 5) -> dict:
         }
 
     except Exception as e:
-        return {'success': False, 'message': f'검색 실패: {str(e)}'}
+        return {'success': False, 'error': f'검색 실패: {str(e)}'}
 
 
 def relay_youtube(query: str, media: str = "audio", count: int = 6) -> dict:
@@ -1029,7 +1029,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                 channel = info.get('channel', info.get('uploader', ''))
                 duration = info.get('duration', 0)
         except Exception as e:
-            return {'success': False, 'message': f'영상 정보 조회 실패: {str(e)}'}
+            return {'success': False, 'error': f'영상 정보 조회 실패: {str(e)}'}
     else:
         # 검색
         try:
@@ -1042,12 +1042,12 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                 entries = result.get('entries', [])
 
             if not entries:
-                return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+                return {'success': False, 'error': f'"{query}" 검색 결과가 없습니다.'}
 
             # 채널/플레이리스트 ID 필터링 (video ID만 남김: 11자, UC로 시작하지 않음)
             entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
             if not entries:
-                return {'success': False, 'message': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
+                return {'success': False, 'error': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
 
             # 검색 결과 목록 생성
             search_results = []
@@ -1082,7 +1082,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                     })
 
         except Exception as e:
-            return {'success': False, 'message': f'검색 실패: {str(e)}'}
+            return {'success': False, 'error': f'검색 실패: {str(e)}'}
 
     global _player_video_id, _player_mode, _player_title, _player_process, _player_duration
 
@@ -1124,9 +1124,9 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         try:
             audio_url = _get_audio_url(video_id)
         except Exception as e:
-            return {'success': False, 'message': f'오디오 URL resolve 실패: {str(e)}'}
+            return {'success': False, 'error': f'오디오 URL resolve 실패: {str(e)}'}
         if not audio_url:
-            return {'success': False, 'message': '오디오 스트림 URL을 가져올 수 없습니다.'}
+            return {'success': False, 'error': '오디오 스트림 URL을 가져올 수 없습니다.'}
         result = {
             'success': True,
             'play_in_client': True,
@@ -1153,7 +1153,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         # video 모드: 기본 브라우저로 열기 (큰 화면)
         watch_url = f"https://www.youtube.com/watch?v={video_id}"
         if not open_url(watch_url):  # 전 OS 기본 브라우저 (맥 전용 'open' 대체)
-            return {'success': False, 'message': '브라우저 열기 실패'}
+            return {'success': False, 'error': '브라우저 열기 실패'}
         _player_video_id = video_id
         _player_title = title
         result = {
@@ -1170,7 +1170,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         try:
             audio_url = _get_audio_url(video_id)
             if not audio_url:
-                return {'success': False, 'message': '오디오 스트림 URL을 가져올 수 없습니다.'}
+                return {'success': False, 'error': '오디오 스트림 URL을 가져올 수 없습니다.'}
             _player_duration = int(duration or 0)  # seek 진행바용 곡 길이(초)
             _start_ffplay(audio_url)
             _player_video_id = video_id
@@ -1263,7 +1263,7 @@ def add_to_queue(query: str, count: int = 3) -> dict:
     try:
         import yt_dlp
     except ImportError:
-        return {'success': False, 'message': 'yt-dlp 패키지가 없습니다.'}
+        return {'success': False, 'error': 'yt-dlp 패키지가 없습니다.'}
 
     count = max(1, min(5, int(count or 3)))
     is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
@@ -1277,7 +1277,7 @@ def add_to_queue(query: str, count: int = 3) -> dict:
                 channel = info.get('channel', info.get('uploader', ''))
                 duration = info.get('duration', 0)
         except Exception as e:
-            return {'success': False, 'message': f'영상 정보 조회 실패: {str(e)}'}
+            return {'success': False, 'error': f'영상 정보 조회 실패: {str(e)}'}
     else:
         try:
             search_query = f"ytsearch{count}:{query}"
@@ -1288,18 +1288,18 @@ def add_to_queue(query: str, count: int = 3) -> dict:
                 result = ydl.extract_info(search_query, download=False)
                 entries = result.get('entries', [])
             if not entries:
-                return {'success': False, 'message': f'"{query}" 검색 결과가 없습니다.'}
+                return {'success': False, 'error': f'"{query}" 검색 결과가 없습니다.'}
             # 채널/플레이리스트 ID 필터링
             entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
             if not entries:
-                return {'success': False, 'message': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
+                return {'success': False, 'error': f'"{query}" 검색 결과에서 재생 가능한 영상을 찾지 못했습니다.'}
             selected = entries[0]
             video_id = selected.get('id', '')
             title = selected.get('title', '')
             channel = selected.get('channel', selected.get('uploader', ''))
             duration = selected.get('duration', 0)
         except Exception as e:
-            return {'success': False, 'message': f'검색 실패: {str(e)}'}
+            return {'success': False, 'error': f'검색 실패: {str(e)}'}
 
     # 큐에 추가
     with _player_lock:
@@ -1392,16 +1392,16 @@ def seek_youtube(position) -> dict:
     try:
         pos = float(position)
     except (TypeError, ValueError):
-        return {'success': False, 'message': 'position(초)이 올바르지 않습니다.'}
+        return {'success': False, 'error': 'position(초)이 올바르지 않습니다.'}
     if pos < 0:
         pos = 0.0
 
     with _player_lock:
         if not _player_video_id or not _player_audio_url:
-            return {'success': False, 'message': '재생 중인 곡이 없습니다.'}
+            return {'success': False, 'error': '재생 중인 곡이 없습니다.'}
         # 오디오 모드(서버측 ffplay)만 seek 가능 — video/client 모드는 대상 아님
         if _player_mode != 'audio':
-            return {'success': False, 'message': '이 재생 모드에서는 위치 이동을 지원하지 않습니다.'}
+            return {'success': False, 'error': '이 재생 모드에서는 위치 이동을 지원하지 않습니다.'}
 
         dur = _player_duration or 0
         if dur and pos > dur - 1:
@@ -1427,7 +1427,7 @@ def seek_youtube(position) -> dict:
             _start_ffplay(audio_url, seek=pos)
         except Exception as e:
             _player_started_at = None
-            return {'success': False, 'message': f'위치 이동 실패: {str(e)}'}
+            return {'success': False, 'error': f'위치 이동 실패: {str(e)}'}
 
         # 새 모니터 스레드(곡 끝나면 큐 진행)
         t = threading.Thread(target=_queue_monitor, daemon=True)

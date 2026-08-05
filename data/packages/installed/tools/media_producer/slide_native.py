@@ -447,9 +447,9 @@ def edit_native_slide(tool_input: dict, base_image_path: str, output_base: str, 
     """
     instruction = (tool_input.get("instruction") or "").strip()
     if not instruction:
-        return json.dumps({"success": False, "message": "instruction은 필수입니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "instruction은 필수입니다."}, ensure_ascii=False)
     if not os.path.exists(base_image_path):
-        return json.dumps({"success": False, "message": f"원본 이미지 없음: {base_image_path}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"원본 이미지 없음: {base_image_path}"}, ensure_ascii=False)
     quality = (tool_input.get("quality") or "pro").strip()
     image_size = (tool_input.get("image_size") or "2K").strip()
 
@@ -470,7 +470,7 @@ def edit_native_slide(tool_input: dict, base_image_path: str, output_base: str, 
         _gen_image(edit_prompt, out_path, quality=quality, image_size=image_size,
                    reference_images=[base_image_path])
     except Exception as e:
-        return json.dumps({"success": False, "message": f"이미지 편집 실패: {e}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"이미지 편집 실패: {e}"}, ensure_ascii=False)
 
     return json.dumps({
         "success": True, "image_path": out_path,
@@ -485,7 +485,7 @@ def create_native_slide(tool_input: dict, output_base: str, slide_id: str = None
     """
     instruction = (tool_input.get("instruction") or "").strip()
     if not instruction:
-        return json.dumps({"success": False, "message": "instruction은 필수입니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "instruction은 필수입니다."}, ensure_ascii=False)
     content = (tool_input.get("content") or "").strip()
     quality = (tool_input.get("quality") or "pro").strip()
     image_size = (tool_input.get("image_size") or "2K").strip()
@@ -508,10 +508,10 @@ def create_native_slide(tool_input: dict, output_base: str, slide_id: str = None
         resp = ai.process_message(user, history=[], images=[], execute_tool=None)
         spec = _sanitize_spec(_extract_json(resp))
     except Exception as e:
-        return json.dumps({"success": False, "message": f"저작 실패: {e}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"저작 실패: {e}"}, ensure_ascii=False)
 
     if not (spec.get("scene_en") or "").strip():
-        return json.dumps({"success": False, "message": "scene_en 누락", "spec": spec}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "scene_en 누락", "spec": spec}, ensure_ascii=False)
 
     # 2) 이미지 생성 (+ 검증 루프)
     os.makedirs(output_base, exist_ok=True)
@@ -531,7 +531,7 @@ def create_native_slide(tool_input: dict, output_base: str, slide_id: str = None
                        img_path, quality=quality, image_size=image_size,
                        reference_images=reference_images)
     except Exception as e:
-        return json.dumps({"success": False, "message": f"이미지 생성 실패: {e}", "spec": spec},
+        return json.dumps({"success": False, "error": f"이미지 생성 실패: {e}", "spec": spec},
                           ensure_ascii=False)
 
     result = {

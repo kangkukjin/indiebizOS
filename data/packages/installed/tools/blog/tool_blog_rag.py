@@ -722,7 +722,7 @@ def get_post_content(post_id: str) -> dict:
         conn.close()
 
         if not row:
-            return {'success': False, 'message': f'포스트를 찾을 수 없습니다: {post_id}'}
+            return {'success': False, 'error': f'포스트를 찾을 수 없습니다: {post_id}'}
 
         return {
             'success': True,
@@ -734,7 +734,7 @@ def get_post_content(post_id: str) -> dict:
             'link': f"{BLOG_URL}/{row['post_id']}"
         }
     except Exception as e:
-        return {'success': False, 'message': f'실패: {str(e)}'}
+        return {'success': False, 'error': f'실패: {str(e)}'}
 
 
 def rebuild_search_index() -> dict:

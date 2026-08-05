@@ -229,7 +229,7 @@ def _op_filter(prev, params):
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "filter: 입력에서 items 통화를 찾지 못했습니다."}
+    return {"success": False, "error": "filter: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_sort(prev, params):
@@ -237,7 +237,7 @@ def _op_sort(prev, params):
     by = params.get("by")
     desc = bool(params.get("desc", False))
     if not by:
-        return {"error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
+        return {"success": False, "error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
     recs, env = _get_items(prev)
     if recs is not None:
         srt = sorted([r for r in recs if isinstance(r, dict)], key=_sort_key(by), reverse=desc)
@@ -249,7 +249,7 @@ def _op_sort(prev, params):
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in dicts]
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "sort: 입력에서 items 통화를 찾지 못했습니다."}
+    return {"success": False, "error": "sort: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_take(prev, params):
@@ -268,14 +268,14 @@ def _op_take(prev, params):
         rows = table.get("rows") or []
         sliced = rows[n:] if n < 0 else rows[:n]
         return _emit_table(env, {"columns": table.get("columns") or [], "rows": sliced})
-    return {"error": "take: 입력에서 items 통화를 찾지 못했습니다."}
+    return {"success": False, "error": "take: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _op_select(prev, params):
     """table → 열 투영. params.columns(남길 열 이름 배열). items는 필드 추림."""
     cols_keep = params.get("columns") or params.get("cols") or params.get("fields")
     if not cols_keep:
-        return {"error": "select: columns(남길 열/필드 이름 배열)가 필요합니다."}
+        return {"success": False, "error": "select: columns(남길 열/필드 이름 배열)가 필요합니다."}
     cols_keep = [str(c) for c in cols_keep]
     table, env = _get_table(prev)
     if table is not None:
@@ -288,7 +288,7 @@ def _op_select(prev, params):
     if recs is not None:
         out = [{k: r.get(k) for k in cols_keep if k in r} for r in recs if isinstance(r, dict)]
         return _emit_items(env, out)
-    return {"error": "select: 입력에서 items 통화를 찾지 못했습니다."}
+    return {"success": False, "error": "select: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 def _norm(s):
@@ -328,7 +328,7 @@ def _op_dedup(prev, params):
             seen.add(k)
             rows.append(r)
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"error": "dedup: 입력에서 items 통화를 찾지 못했습니다."}
+    return {"success": False, "error": "dedup: 입력에서 items 통화를 찾지 못했습니다."}
 
 
 _AGG = {
@@ -384,11 +384,11 @@ def _op_groupby(prev, params):
     """
     by = params.get("by") or params.get("key") or params.get("group_by")
     if not by:
-        return {"error": "groupby: by(그룹 키 열)가 필요합니다."}
+        return {"success": False, "error": "groupby: by(그룹 키 열)가 필요합니다."}
     by = str(by)
     dicts = _rows_for_field(prev, by)
     if not dicts:
-        return {"error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
+        return {"success": False, "error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
     _, env = _get_table(prev)
     env = env or {}
     agg = params.get("agg")
@@ -453,7 +453,7 @@ def _op_union(prev, params):
     """
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
+        return {"success": False, "error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is not None and tb is not None:
@@ -475,7 +475,7 @@ def _op_union(prev, params):
     rb, _ = _get_items(b)
     if ra is not None and rb is not None:
         return _emit_items({}, list(ra) + list(rb))
-    return {"error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 items)."}
+    return {"success": False, "error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 items)."}
 
 
 def _op_merge(prev, params):
@@ -485,11 +485,11 @@ def _op_merge(prev, params):
     """
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "merge: & 병렬로 두 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
+        return {"success": False, "error": "merge: & 병렬로 두 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
     ra, _ = _get_items(a)
     rb, _ = _get_items(b)
     if ra is None or rb is None:
-        return {"error": "merge: 두 입력 모두 items 통화여야 합니다(표형 결합은 table:union)."}
+        return {"success": False, "error": "merge: 두 입력 모두 items 통화여야 합니다(표형 결합은 table:union)."}
     out = list(ra) + list(rb)
     by = params.get("by")
     if by or params.get("dedup"):
@@ -533,11 +533,11 @@ def _op_join(prev, params):
     """
     on = params.get("on") or params.get("key")
     if not on:
-        return {"error": "join: on(조인 키 열 이름)이 필요합니다."}
+        return {"success": False, "error": "join: on(조인 키 열 이름)이 필요합니다."}
     on = str(on)
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
+        return {"success": False, "error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is None or tb is None:
@@ -546,7 +546,7 @@ def _op_join(prev, params):
         ra, _ = _get_items(a)
         rb, _ = _get_items(b)
         if ra is None or rb is None:
-            return {"error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
+            return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
         index = {}
         for r in rb:
             if isinstance(r, dict) and r.get(on) is not None:
@@ -567,7 +567,7 @@ def _op_join(prev, params):
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
-        return {"error": f"join: 키 '{on}'이 양쪽 table 열에 모두 있어야 합니다(좌:{ca} 우:{cb})."}
+        return {"success": False, "error": f"join: 키 '{on}'이 양쪽 table 열에 모두 있어야 합니다(좌:{ca} 우:{cb})."}
     lki, rki = ca.index(on), cb.index(on)
     # 우측을 키로 인덱싱
     index = {}
@@ -1153,7 +1153,7 @@ def structure_document(tool_input, output_base="."):
         elif isinstance(pr, dict):
             content = str(pr.get("summary") or pr.get("content") or pr.get("text") or "").strip()
     if not content:
-        return _json.dumps({"success": False, "message": "content(구조화할 원본 내용)가 필요합니다."},
+        return _json.dumps({"success": False, "error": "content(구조화할 원본 내용)가 필요합니다."},
                            ensure_ascii=False)
 
     instruction = (tool_input.get("instruction") or "").strip()
@@ -1166,9 +1166,9 @@ def structure_document(tool_input, output_base="."):
         from consciousness_agent import lightweight_ai_call
         resp = lightweight_ai_call(user, system_prompt=_STRUCTURE_PROMPT)
     except Exception as e:
-        return _json.dumps({"success": False, "message": f"구조화 AI 호출 실패: {e}"}, ensure_ascii=False)
+        return _json.dumps({"success": False, "error": f"구조화 AI 호출 실패: {e}"}, ensure_ascii=False)
     if not resp or not resp.strip():
-        return _json.dumps({"success": False, "message": "구조화 AI 응답 없음"}, ensure_ascii=False)
+        return _json.dumps({"success": False, "error": "구조화 AI 응답 없음"}, ensure_ascii=False)
 
     txt = resp.strip()
     if txt.startswith("```"):
@@ -1180,11 +1180,11 @@ def structure_document(tool_input, output_base="."):
         a, b = txt.find("{"), txt.rfind("}")
         ir = _json.loads(txt[a:b + 1])
     except Exception as e:
-        return _json.dumps({"success": False, "message": f"IR JSON 파싱 실패: {e}", "raw": resp[:300]},
+        return _json.dumps({"success": False, "error": f"IR JSON 파싱 실패: {e}", "raw": resp[:300]},
                            ensure_ascii=False)
     blocks = ir.get("blocks")
     if not isinstance(blocks, list) or not blocks:
-        return _json.dumps({"success": False, "message": "blocks가 없습니다.", "raw": resp[:300]},
+        return _json.dumps({"success": False, "error": "blocks가 없습니다.", "raw": resp[:300]},
                            ensure_ascii=False)
     return _json.dumps({"success": True, "title": ir.get("title", ""), "blocks": blocks,
                         "block_count": len(blocks),
@@ -1545,7 +1545,7 @@ def render_document(tool_input, output_base="."):
         except Exception:
             blocks = None
     if not isinstance(blocks, list) or not blocks:
-        return _json.dumps({"success": False, "message": "blocks(문서 IR 블록 배열)가 필요합니다."},
+        return _json.dumps({"success": False, "error": "blocks(문서 IR 블록 배열)가 필요합니다."},
                            ensure_ascii=False)
 
     title = tool_input.get("title") or ""
@@ -1684,7 +1684,7 @@ def execute(tool_input: dict, context):
         return render_document(tool_input, context.output_dir())
     fn = _DISPATCH.get(tool_name)
     if not fn:
-        return {"error": f"data-ops: 알 수 없는 변환자 '{tool_name}'."}
+        return {"success": False, "error": f"data-ops: 알 수 없는 변환자 '{tool_name}'."}
     params = dict(tool_input or {})
     prev = _parse_prev(params.get("_prev_result"))
     if prev is None:
@@ -1704,7 +1704,7 @@ def execute(tool_input: dict, context):
             elif params.get("table") is not None:
                 prev = {"table": params["table"]}
     if prev is None:
-        return {"error": (
+        return {"success": False, "error": (
             f"{tool_name}: 입력 통화가 없습니다. 변환자는 >> 파이프로 앞 액션의 "
             "items 통화(표형은 table)를 받습니다. 예: [sense:search]{...} >> [table:filter]{where:...}"
         )}

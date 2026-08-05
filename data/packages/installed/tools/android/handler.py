@@ -100,7 +100,7 @@ def _swipe(tool_input: dict) -> dict:
             "right": (cx - dx, cy, cx + dx, cy),
         }
         if direction not in moves:
-            return {"success": False, "message": f"알 수 없는 direction '{direction}'. up/down/left/right."}
+            return {"success": False, "error": f"알 수 없는 direction '{direction}'. up/down/left/right."}
         x1, y1, x2, y2 = moves[direction]
         return _ui.swipe(x1, y1, x2, y2, tool_input.get("duration_ms", 300), device_id)
 
@@ -109,7 +109,7 @@ def _swipe(tool_input: dict) -> dict:
         x1 = int(tool_input["x1"]); y1 = int(tool_input["y1"])
         x2 = int(tool_input["x2"]); y2 = int(tool_input["y2"])
     except (KeyError, TypeError, ValueError):
-        return {"success": False, "message": "swipe엔 direction(up/down/left/right) 또는 x1,y1,x2,y2 필요."}
+        return {"success": False, "error": "swipe엔 direction(up/down/left/right) 또는 x1,y1,x2,y2 필요."}
     return _ui.swipe(x1, y1, x2, y2, tool_input.get("duration_ms", 300), device_id)
 
 
@@ -628,7 +628,7 @@ def _android_native(tool_input: dict) -> dict:
         else:
             x, y = tool_input.get("x"), tool_input.get("y")
             if x is None or y is None:
-                return {"success": False, "message": "tap엔 query(요소 라벨) 또는 x,y 좌표가 필요합니다."}
+                return {"success": False, "error": "tap엔 query(요소 라벨) 또는 x,y 좌표가 필요합니다."}
             raw = SVC.tap(int(x), int(y))
     elif op == "type":
         raw = SVC.typeText(str(tool_input.get("text", "")))
@@ -642,13 +642,13 @@ def _android_native(tool_input: dict) -> dict:
                                 int(tool_input["x2"]), int(tool_input["y2"]),
                                 int(tool_input.get("duration_ms", 300)))
             except (KeyError, TypeError, ValueError):
-                return {"success": False, "message": "swipe엔 direction(up/down/left/right) 또는 x1,y1,x2,y2 가 필요합니다."}
+                return {"success": False, "error": "swipe엔 direction(up/down/left/right) 또는 x1,y1,x2,y2 가 필요합니다."}
     elif op == "key":
         raw = SVC.pressKey(str(tool_input.get("key") or tool_input.get("keycode", "")))
     elif op == "long_press":
         x, y = tool_input.get("x"), tool_input.get("y")
         if x is None or y is None:
-            return {"success": False, "message": "long_press엔 x,y 좌표가 필요합니다."}
+            return {"success": False, "error": "long_press엔 x,y 좌표가 필요합니다."}
         raw = SVC.longPress(int(x), int(y), int(tool_input.get("duration_ms", 1000)))
     elif op == "open_app":
         pkg = tool_input.get("package_name") or tool_input.get("package")
@@ -685,7 +685,7 @@ def _and_tap(tool_input: dict) -> dict:
         return _ui.find_and_tap(query, tool_input.get("index", 0), device_id)
     x, y = tool_input.get("x"), tool_input.get("y")
     if x is None or y is None:
-        return {"success": False, "message": "tap엔 query(요소 라벨/id 일부) 또는 x,y 좌표가 필요합니다."}
+        return {"success": False, "error": "tap엔 query(요소 라벨/id 일부) 또는 x,y 좌표가 필요합니다."}
     return _ui.tap(int(x), int(y), device_id)
 
 
@@ -695,7 +695,7 @@ def _and_long_press(tool_input: dict) -> dict:
     device_id = tool_input.get("device_id")
     x, y = tool_input.get("x"), tool_input.get("y")
     if x is None or y is None:
-        return {"success": False, "message": "long_press엔 x,y 좌표가 필요합니다."}
+        return {"success": False, "error": "long_press엔 x,y 좌표가 필요합니다."}
     return _ui.long_press(int(x), int(y), tool_input.get("duration_ms", 1000), device_id)
 
 

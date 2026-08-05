@@ -269,11 +269,11 @@ def execute(tool_input: dict, context) -> str:
                 result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
 
         else:
-            return json.dumps({"error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
         return json.dumps(_normalize(result), ensure_ascii=False, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"모듈 임포트 오류: {str(e)}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"모듈 임포트 오류: {str(e)}"}, ensure_ascii=False)
     except Exception as e:
-        return json.dumps({"error": f"도구 실행 중 오류 발생: {str(e)}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"도구 실행 중 오류 발생: {str(e)}"}, ensure_ascii=False)

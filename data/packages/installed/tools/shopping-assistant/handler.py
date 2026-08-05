@@ -75,7 +75,7 @@ def search_naver_shopping(query: str, display: int = 5):
       (tool_danawa.py). 되살릴 여지가 생기면 418→200 전환 여부부터 재실측할 것.
 
     호출부(search_all_async·site:naver)가 items 부재를 우아하게 건너뛰도록 즉시 반환."""
-    return {"error": "네이버 쇼핑 검색 은퇴(2026-08) — 공식 API SE05 + 내부 API 418/캡차. 다나와 검색을 사용하세요.",
+    return {"success": False, "error": "네이버 쇼핑 검색 은퇴(2026-08) — 공식 API SE05 + 내부 API 418/캡차. 다나와 검색을 사용하세요.",
             "items": []}
 
 
@@ -103,7 +103,7 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
     try:
         from playwright.async_api import async_playwright
     except ImportError:
-        return {"total": 0, "items": [], "error": "다나와 검색 실패(HTTP 파싱 결과 없음, 이 기기엔 브라우저 폴백 미지원)"}
+        return {"success": False, "total": 0, "items": [], "error": "다나와 검색 실패(HTTP 파싱 결과 없음, 이 기기엔 브라우저 폴백 미지원)"}
     async with async_playwright() as p:
         try:
             browser = await p.chromium.launch(headless=True)
@@ -149,7 +149,7 @@ async def search_danawa_shopping_async(query: str, display: int = 5):
             await browser.close()
             return {"total": len(items), "items": items}
         except Exception as e:
-            return {"error": f"다나와 검색 중 오류: {str(e)}"}
+            return {"success": False, "error": f"다나와 검색 중 오류: {str(e)}"}
 
 
 # ★중고 축(site=used/all)은 2026-08-04 은퇴 — `search_used_items_async`·`search_all_async` 삭제.
@@ -171,11 +171,11 @@ def _search_naver_used(query: str, limit: int = 15):
     """[sense:used] source=naver — 네이버 카페 통합검색(중고나라 카페 등 게시글)."""
     ok, err = check_api_key("naver")
     if not ok:
-        return {"source": "naver", "error": err, "items": []}
+        return {"success": False, "source": "naver", "error": err, "items": []}
     data = api_call("naver", "/v1/search/cafearticle.json",
                     params={"query": query, "display": min(limit, 20), "sort": "date"})
     if isinstance(data, dict) and "error" in data:
-        return {"source": "naver", "error": data["error"], "items": []}
+        return {"success": False, "source": "naver", "error": data["error"], "items": []}
     records = []
     for it in data.get("items", []):
         records.append({
@@ -201,7 +201,7 @@ def _handle_used(tool_input: dict) -> str:
 
     query = tool_input.get("query") or tool_input.get("q")
     if not query:
-        return format_json({"error": "검색어(query)를 입력해주세요.", "items": []})
+        return format_json({"success": False, "error": "검색어(query)를 입력해주세요.", "items": []})
     source = (tool_input.get("source") or "bunjang").lower()
     limit = int(tool_input.get("limit", 15))
     region = tool_input.get("region")
@@ -216,6 +216,7 @@ def _handle_used(tool_input: dict) -> str:
         res = _tu.search_danggeun(query, limit=limit, region=region)
     else:
         return format_json({
+            "success": False,
             "error": f"알 수 없는 source: {source} (bunjang/joongna/naver/danggeun)",
             "items": [],
         })

@@ -53,12 +53,12 @@ def execute(tool_input: dict, context) -> str:
             op = (tool_input.get("op") or "").strip()
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
-                return json.dumps({"error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
+                return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
             return fn(tool_input, context)
 
-        return json.dumps({"error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:
-        return json.dumps({"error": str(e)}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
 
 
 # ============ 에이전트 메모리 도구 ============
@@ -66,7 +66,7 @@ def execute(tool_input: dict, context) -> str:
 def _memory_save(db, tool_input, project_path, agent_id):
     content = tool_input.get("content", "")
     if not content.strip():
-        return json.dumps({"error": "content가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "content가 필요합니다."}, ensure_ascii=False)
 
     memory_id = db.save(
         project_path=project_path,
@@ -86,7 +86,7 @@ def _memory_search(db, tool_input, project_path, agent_id):
     """통합 검색: 심층 메모리 + 대화 이력"""
     query = tool_input.get("query", "")
     if not query.strip():
-        return json.dumps({"error": "query가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "query가 필요합니다."}, ensure_ascii=False)
 
     # 정본 파라미터=top_k (스키마·문서). limit 은 yaml aliases 로 정규화되지만,
     # 직접 호출(reload 밖 경로) 방어로 여기서도 둘 다 읽는다.
@@ -185,11 +185,11 @@ def _search_conversations(project_path, query, limit=5):
 def _memory_read(db, tool_input, project_path, agent_id):
     memory_id = tool_input.get("memory_id")
     if not memory_id:
-        return json.dumps({"error": "memory_id가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
 
     memory = db.read(project_path, agent_id, memory_id)
     if not memory:
-        return json.dumps({"error": f"ID {memory_id} 메모리 없음"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"ID {memory_id} 메모리 없음"}, ensure_ascii=False)
 
     parts = [memory['content']]
     meta = []
@@ -210,7 +210,7 @@ def _memory_read(db, tool_input, project_path, agent_id):
 def _memory_delete(db, tool_input, project_path, agent_id):
     memory_id = tool_input.get("memory_id")
     if not memory_id:
-        return json.dumps({"error": "memory_id가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
 
     deleted = db.delete(project_path, agent_id, memory_id)
     return json.dumps({

@@ -175,13 +175,13 @@ def _search_experts(query: str, limit: int, sort: str):
 
 def search_freelance(tool_input: dict) -> dict:
     if not has_curl_cffi():
-        return {"error": "curl_cffi 미설치 — 크몽 소스는 curl_cffi 가 필요합니다.", "items": []}
+        return {"success": False, "error": "curl_cffi 미설치 — 크몽 소스는 curl_cffi 가 필요합니다.", "items": []}
     query = (tool_input.get("query") or tool_input.get("q") or "").strip()
     if not query:
-        return {"error": "검색어(query)를 입력해주세요. 예: {query: \"로고디자인\"}", "items": []}
+        return {"success": False, "error": "검색어(query)를 입력해주세요. 예: {query: \"로고디자인\"}", "items": []}
     source = (tool_input.get("source") or "kmong").lower()
     if source != "kmong":
-        return {"error": f"알 수 없는 source: {source} (현재 kmong 만 지원)", "items": []}
+        return {"success": False, "error": f"알 수 없는 source: {source} (현재 kmong 만 지원)", "items": []}
     search_type = (tool_input.get("type") or "gigs").lower()
     limit = _to_int(tool_input.get("limit"), 20)
     sort = (tool_input.get("sort") or "ranking").lower()
@@ -192,7 +192,7 @@ def search_freelance(tool_input: dict) -> dict:
             return _search_experts(query, limit, sort)
         if search_type in ("gigs", "gig", "services", "service", "서비스"):
             return _search_gigs(query, limit, sort, max_price)
-        return {"error": f"type '{search_type}' 미지원 — gigs(서비스)/experts(전문가) 중 선택.",
+        return {"success": False, "error": f"type '{search_type}' 미지원 — gigs(서비스)/experts(전문가) 중 선택.",
                 "items": []}
     except Exception as e:
-        return {"error": f"크몽 조회 실패: {e}", "items": []}
+        return {"success": False, "error": f"크몽 조회 실패: {e}", "items": []}

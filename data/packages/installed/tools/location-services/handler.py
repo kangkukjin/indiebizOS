@@ -59,7 +59,7 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
     """
     key_ok, key_error = check_api_key("kakao")
     if not key_ok:
-        return {"error": f"{key_error} https://developers.kakao.com 에서 발급받으세요."}
+        return {"success": False, "error": f"{key_error} https://developers.kakao.com 에서 발급받으세요."}
 
     size = min(size, 45)
     restaurants = []
@@ -124,7 +124,7 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
     """
     key_ok, key_error = check_api_key("naver")
     if not key_ok:
-        return {"error": f"{key_error} https://developers.naver.com 에서 발급받으세요."}
+        return {"success": False, "error": f"{key_error} https://developers.naver.com 에서 발급받으세요."}
 
     params = {
         "query": query,
@@ -324,7 +324,7 @@ def reverse_geocode_kakao(x: float, y: float):
     """
     key_ok, key_error = check_api_key("kakao")
     if not key_ok:
-        return {"error": key_error}
+        return {"success": False, "error": key_error}
 
     params = {
         "x": x,
@@ -358,7 +358,7 @@ def reverse_geocode_kakao(x: float, y: float):
             "region_4depth": doc.get("region_4depth_name", "")
         }
 
-    return {"error": "결과가 없습니다."}
+    return {"success": False, "error": "결과가 없습니다."}
 
 
 def generate_route_map_data(origin_coord: tuple, dest_coord: tuple,
@@ -453,16 +453,16 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
     """
     key_ok, key_error = check_api_key("kakao")
     if not key_ok:
-        return {"error": key_error}
+        return {"success": False, "error": key_error}
 
     # 장소명 → 좌표 자동 변환
     origin_info = _geocode_place(origin)
     if not origin_info:
-        return {"error": f"출발지를 찾을 수 없습니다: {origin}"}
+        return {"success": False, "error": f"출발지를 찾을 수 없습니다: {origin}"}
 
     dest_info = _geocode_place(destination)
     if not dest_info:
-        return {"error": f"목적지를 찾을 수 없습니다: {destination}"}
+        return {"success": False, "error": f"목적지를 찾을 수 없습니다: {destination}"}
 
     origin_coord_str = f"{origin_info[0]},{origin_info[1]}"
     dest_coord_str = f"{dest_info[0]},{dest_info[1]}"
@@ -491,7 +491,7 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         routes = data.get("routes", [])
 
         if not routes:
-            return {"error": "경로를 찾을 수 없습니다.", "raw": data}
+            return {"success": False, "error": "경로를 찾을 수 없습니다.", "raw": data}
 
         result = {
             "trans_id": data.get("trans_id"),
@@ -590,7 +590,7 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         return result
 
     except Exception as e:
-        return {"error": f"길찾기 실패: {str(e)}"}
+        return {"success": False, "error": f"길찾기 실패: {str(e)}"}
 
 
 def show_location_map(query: str = None, lat: float = None, lng: float = None,
@@ -616,7 +616,7 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
     if query and (lat is None or lng is None):
         key_ok, key_error = check_api_key("kakao")
         if not key_ok:
-            return {"error": key_error}
+            return {"success": False, "error": key_error}
 
         data = api_call("kakao", "/v2/local/search/keyword.json",
                         params={"query": query, "size": 1}, timeout=10)
@@ -629,10 +629,10 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
             center_lat = float(place["y"])
             center_name = place.get("place_name", query)
         else:
-            return {"error": f"'{query}' 장소를 찾을 수 없습니다."}
+            return {"success": False, "error": f"'{query}' 장소를 찾을 수 없습니다."}
 
     if center_lat is None or center_lng is None:
-        return {"error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
+        return {"success": False, "error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
 
     # 마커 목록 생성
     all_markers = [{"name": center_name, "lat": center_lat, "lng": center_lng}]
@@ -774,11 +774,11 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
     elif city:
         coords = _resolve_city_coords(city)
         if not coords:
-            return {"error": f"'{city}' 도시를 찾을 수 없습니다."}
+            return {"success": False, "error": f"'{city}' 도시를 찾을 수 없습니다."}
         lat, lon = coords
         resolved_city = city
     else:
-        return {"error": "city(도시명) 또는 lat/lon(좌표)이 필요합니다."}
+        return {"success": False, "error": "city(도시명) 또는 lat/lon(좌표)이 필요합니다."}
 
     try:
         resp = requests.get(
@@ -793,7 +793,7 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
             timeout=10
         )
         if not resp.ok:
-            return {"error": f"Open-Meteo API 오류: HTTP {resp.status_code}"}
+            return {"success": False, "error": f"Open-Meteo API 오류: HTTP {resp.status_code}"}
 
         data = resp.json()
         current = data.get("current", {})
@@ -826,9 +826,9 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
         return result
 
     except requests.Timeout:
-        return {"error": "날씨 API 타임아웃"}
+        return {"success": False, "error": "날씨 API 타임아웃"}
     except Exception as e:
-        return {"error": f"날씨 조회 실패: {str(e)}"}
+        return {"success": False, "error": f"날씨 조회 실패: {str(e)}"}
 
 
 def execute(tool_input: dict, context) -> str:
@@ -858,7 +858,7 @@ def execute(tool_input: dict, context) -> str:
     elif tool_name == "search_restaurants":
         query = tool_input.get("query", "")
         if not query:
-            return json.dumps({"error": "검색 키워드(query)가 필요합니다."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": "검색 키워드(query)가 필요합니다."}, ensure_ascii=False)
 
         # 쿼리 전처리: 장문 자연어 → 짧은 API 검색어
         # "전주 맛집 분위기 좋고 정갈한 곳" → "전주 맛집"
@@ -906,7 +906,7 @@ def execute(tool_input: dict, context) -> str:
                 destination = route_match.group(2).strip()
 
         if not origin or not destination:
-            return json.dumps({"error": "출발지(origin)와 목적지(destination)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": "출발지(origin)와 목적지(destination)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
 
         result = kakao_navigation(
             origin=origin,
@@ -954,7 +954,7 @@ def execute(tool_input: dict, context) -> str:
         lat = tool_input.get("lat")
         lon = tool_input.get("lon") or tool_input.get("lng")
         if lat is None or lon is None:
-            return json.dumps({"error": "lat(위도)과 lon(경도)이 필요합니다."}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": "lat(위도)과 lon(경도)이 필요합니다."}, ensure_ascii=False)
         # 카카오 API는 x=경도, y=위도
         result = reverse_geocode_kakao(x=float(lon), y=float(lat))
         return json.dumps(result, ensure_ascii=False, indent=2)

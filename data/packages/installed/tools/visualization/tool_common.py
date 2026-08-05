@@ -180,7 +180,7 @@ def save_figure(fig, output_path: str = None, output_format: str = "png"):
 
     else:
         plt.close(fig)
-        return {"format": output_format, "error": f"지원하지 않는 형식: {output_format}"}
+        return {"success": False, "format": output_format, "error": f"지원하지 않는 형식: {output_format}"}
 
 
 def save_plotly_figure(fig, output_path: str = None, output_format: str = "png"):
@@ -218,7 +218,7 @@ def save_plotly_figure(fig, output_path: str = None, output_format: str = "png")
         return {"format": "png", "path": abs_path, "image_tag": f"[IMAGE:{abs_path}]"}
 
     else:
-        return {"format": output_format, "error": f"지원하지 않는 형식: {output_format}"}
+        return {"success": False, "format": output_format, "error": f"지원하지 않는 형식: {output_format}"}
 
 
 # 기본 색상 팔레트

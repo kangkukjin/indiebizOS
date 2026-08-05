@@ -42,6 +42,7 @@ def parse_xml_response(xml_text):
             # JSON 에러 응답 처리
             if "response" in data and "error" in data["response"]:
                 return {
+                    "success": False,
                     "error": f"API 오류: {data['response']['error']}",
                     "help": "도서관 정보나루에서 API 활성화 상태를 확인하세요. (https://www.data4library.kr)"
                 }
@@ -58,13 +59,14 @@ def parse_xml_response(xml_text):
 
         if err_code is not None and err_code.text:
             return {
+                "success": False,
                 "error": f"API 오류: {err_msg.text if err_msg is not None else '알 수 없는 오류'}",
                 "code": err_code.text
             }
 
         return root
     except ET.ParseError as e:
-        return {"error": f"XML 파싱 실패: {str(e)}", "raw": xml_text[:500]}
+        return {"success": False, "error": f"XML 파싱 실패: {str(e)}", "raw": xml_text[:500]}
 
 
 def call_library_api(endpoint, params):
@@ -82,6 +84,7 @@ def call_library_api(endpoint, params):
     ok, err = check_api_key("data4library")
     if not ok:
         return {
+            "success": False,
             "error": err,
             "help": "DATA4LIBRARY_API_KEY 환경변수를 설정하거나 도서관 정보나루에서 API 키를 발급받으세요."
         }
@@ -169,7 +172,7 @@ def search_books(keyword=None, title=None, author=None, publisher=None, page=1, 
 
     label = title or author or publisher or keyword
     if not label:
-        return {"error": "검색어를 입력해주세요 (keyword / title / author / publisher 중 하나)."}
+        return {"success": False, "error": "검색어를 입력해주세요 (keyword / title / author / publisher 중 하나)."}
 
     result = call_library_api("srchBooks", params)
 
@@ -206,13 +209,14 @@ def get_book_detail(isbn13, loan_info=True):
         도서 상세 정보 (책소개, 대출 통계 등)
     """
     if not isbn13:
-        return {"error": "ISBN을 입력해주세요."}
+        return {"success": False, "error": "ISBN을 입력해주세요."}
 
     # ISBN 정규화 (하이픈 제거)
     clean_isbn = isbn13.replace("-", "").replace(" ", "")
 
     if len(clean_isbn) != 13:
         return {
+            "success": False,
             "error": "ISBN 13자리를 입력해주세요.",
             "input": isbn13,
             "help": "ISBN-13 형식 (예: 9788937460494)"
@@ -232,6 +236,7 @@ def get_book_detail(isbn13, loan_info=True):
     book_el = result.find('.//detail/book')
     if book_el is None:
         return {
+            "success": False,
             "error": f"ISBN '{isbn13}'에 해당하는 도서를 찾을 수 없습니다.",
             "suggestion": "ISBN을 확인하거나 키워드로 검색해보세요."
         }
@@ -274,7 +279,7 @@ def get_usage_analysis(isbn13):
     마니아/다독자 추천, 연령×성별 대출 그룹. srchDtlList(상세·대출통계)와 별개 API.
     2026-08-04 드릴 풍부화로 랩핑 — 정보나루의 가장 풍부한 엔드포인트."""
     if not isbn13:
-        return {"error": "ISBN을 입력해주세요."}
+        return {"success": False, "error": "ISBN을 입력해주세요."}
     clean_isbn = isbn13.replace("-", "").replace(" ", "")
     result = call_library_api("usageAnalysisList", {"isbn13": clean_isbn})
     if isinstance(result, dict) and "error" in result:
@@ -432,7 +437,7 @@ def get_recommended_books(isbn13, rec_type="mania"):
         추천도서 목록
     """
     if not isbn13:
-        return {"error": "기준 도서의 ISBN을 입력해주세요."}
+        return {"success": False, "error": "기준 도서의 ISBN을 입력해주세요."}
 
     clean_isbn = isbn13.replace("-", "").replace(" ", "")
 
@@ -524,7 +529,7 @@ def search_libraries_by_book(isbn13, region=None, page=1, page_size=10):
         소장 도서관 목록
     """
     if not isbn13:
-        return {"error": "ISBN을 입력해주세요."}
+        return {"success": False, "error": "ISBN을 입력해주세요."}
 
     clean_isbn = isbn13.replace("-", "").replace(" ", "")
 

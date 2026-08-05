@@ -203,7 +203,7 @@ def create_slide(tool_input: dict, output_base: str) -> str:
     instruction = (tool_input.get("instruction") or "").strip()
     if not instruction:
         return json.dumps(
-            {"success": False, "message": "instruction(만들 슬라이드 설명)은 필수입니다."},
+            {"success": False, "error": "instruction(만들 슬라이드 설명)은 필수입니다."},
             ensure_ascii=False,
         )
 
@@ -216,7 +216,7 @@ def create_slide(tool_input: dict, output_base: str) -> str:
             return slide_native.create_native_slide(tool_input, output_base)
         except Exception as e:
             return json.dumps(
-                {"success": False, "message": f"네이티브 슬라이드 처리 실패: {e}"}, ensure_ascii=False
+                {"success": False, "error": f"네이티브 슬라이드 처리 실패: {e}"}, ensure_ascii=False
             )
 
     # style == "text": 아래 텍스트형(custom HTML) 경로
@@ -244,14 +244,14 @@ def create_slide(tool_input: dict, output_base: str) -> str:
         response_text = ai.process_message(user_prompt, history=[], images=[], execute_tool=None)
     except Exception as e:
         return json.dumps(
-            {"success": False, "message": f"슬라이드 저작 실패: {e}"}, ensure_ascii=False
+            {"success": False, "error": f"슬라이드 저작 실패: {e}"}, ensure_ascii=False
         )
 
     try:
         parsed = _extract_json(response_text)
     except Exception as e:
         return json.dumps(
-            {"success": False, "message": f"AI 응답 JSON 파싱 실패: {e}",
+            {"success": False, "error": f"AI 응답 JSON 파싱 실패: {e}",
              "raw": response_text[:500]},
             ensure_ascii=False,
         )
@@ -259,7 +259,7 @@ def create_slide(tool_input: dict, output_base: str) -> str:
     slide_spec = parsed.get("slide")
     if not isinstance(slide_spec, dict):
         return json.dumps(
-            {"success": False, "message": "AI 응답에 'slide' 객체가 없습니다.",
+            {"success": False, "error": "AI 응답에 'slide' 객체가 없습니다.",
              "raw": response_text[:500]},
             ensure_ascii=False,
         )
@@ -284,14 +284,14 @@ def create_slide(tool_input: dict, output_base: str) -> str:
         )
     except Exception as e:
         return json.dumps(
-            {"success": False, "message": f"슬라이드 렌더 실패: {e}",
+            {"success": False, "error": f"슬라이드 렌더 실패: {e}",
              "spec": slide_spec},
             ensure_ascii=False,
         )
 
     if not render.get("success"):
         return json.dumps(
-            {"success": False, "message": f"렌더러 오류: {render.get('message') or render}",
+            {"success": False, "error": f"렌더러 오류: {render.get('message') or render}",
              "spec": slide_spec},
             ensure_ascii=False,
         )

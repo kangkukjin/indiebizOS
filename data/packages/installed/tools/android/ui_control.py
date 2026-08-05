@@ -177,7 +177,7 @@ def type_text(text: str, device_id: Optional[str] = None) -> dict:
     한글 등 비-ASCII는 IndieBiz IME의 commitText()로 직접 주입합니다.
     """
     if not text:
-        return {"success": False, "message": "입력할 텍스트가 없습니다."}
+        return {"success": False, "error": "입력할 텍스트가 없습니다."}
 
     # ASCII-only text: 직접 입력 (가장 빠름, IME 전환 불필요)
     if text.isascii():
@@ -472,7 +472,7 @@ def find_element(query: str, device_id: Optional[str] = None) -> dict:
     부분 일치로 검색하며, 일치하는 모든 요소의 좌표 정보를 반환합니다.
     """
     if not query:
-        return {"success": False, "message": "검색어가 필요합니다."}
+        return {"success": False, "error": "검색어가 필요합니다."}
 
     elements = _parse_ui_elements(device_id)
     if not elements:
@@ -572,7 +572,7 @@ def screenshot_with_grid(rows: int = 10, cols: int = 5, device_id: Optional[str]
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
-        return {"success": False, "message": "Pillow 라이브러리가 필요합니다. pip install Pillow"}
+        return {"success": False, "error": "Pillow 라이브러리가 필요합니다. pip install Pillow"}
 
     # 스크린샷 캡처
     phone_path = "/sdcard/screenshot_grid_temp.png"
@@ -684,18 +684,18 @@ def tap_grid(cell: str, rows: int = 10, cols: int = 5, device_id: Optional[str] 
 
     col_labels = "ABCDEFGHIJ"
     if not cell or len(cell) < 2:
-        return {"success": False, "message": "셀 ID 형식: 열문자+행숫자 (예: B3)"}
+        return {"success": False, "error": "셀 ID 형식: 열문자+행숫자 (예: B3)"}
 
     col_char = cell[0].upper()
     try:
         row_num = int(cell[1:])
     except ValueError:
-        return {"success": False, "message": f"잘못된 셀 ID: {cell}"}
+        return {"success": False, "error": f"잘못된 셀 ID: {cell}"}
 
     if col_char not in col_labels[:cols]:
-        return {"success": False, "message": f"열 '{col_char}'는 범위 밖 (A-{col_labels[cols-1]})"}
+        return {"success": False, "error": f"열 '{col_char}'는 범위 밖 (A-{col_labels[cols-1]})"}
     if row_num < 0 or row_num >= rows:
-        return {"success": False, "message": f"행 {row_num}은 범위 밖 (0-{rows-1})"}
+        return {"success": False, "error": f"행 {row_num}은 범위 밖 (0-{rows-1})"}
 
     c = col_labels.index(col_char)
     cx = c * cell_w + cell_w // 2
@@ -709,7 +709,7 @@ def tap_grid(cell: str, rows: int = 10, cols: int = 5, device_id: Optional[str] 
 def open_app(package_name: str, device_id: Optional[str] = None) -> dict:
     """앱을 실행합니다."""
     if not package_name:
-        return {"success": False, "message": "패키지명이 필요합니다."}
+        return {"success": False, "error": "패키지명이 필요합니다."}
 
     res = run_adb([
         "shell", "monkey", "-p", package_name,

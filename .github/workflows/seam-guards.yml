@@ -22,6 +22,7 @@ on:
       - 'data/packages/installed/**'
       - 'scripts/check_event_loop*.py'
       - 'scripts/check_public_routes.py'
+      - 'scripts/check_string_returns.py'
       - 'pytest.ini'
       - '.github/workflows/seam-guards.yml'
   pull_request:
@@ -66,6 +67,20 @@ jobs:
 
       - name: 공개 라우트 ↔ 인증 대조
         run: python scripts/check_public_routes.py
+
+  # 맨 문자열 반환 (2026-08-05 감사 부채 ② 수렴 후 재발 봉쇄) — 도구 결과 경로
+  # (execute/디스패처 op 함수)의 문자열 리터럴 return 차단. 의존성 0 (AST 파싱만).
+  string-returns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 가드 자체 회귀 (탐지/중첩 def 제외)
+        run: python scripts/check_string_returns.py --self-test
+      - name: 도구 결과 경로 맨 문자열 반환 검사
+        run: python scripts/check_string_returns.py
 
   # pytest 스위트 (2026-08-05 감사 부채 ⑧): 고아 테스트 5개를 CI 시민으로.
   # -m "not local" — 해마 DB·임베딩 모델이 필요한 측정성 테스트는 로컬 전용

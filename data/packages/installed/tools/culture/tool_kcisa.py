@@ -55,6 +55,7 @@ def call_kcisa_api(endpoint, params):
     ok, err = check_api_key("data_go_kr")
     if not ok:
         return {
+            "success": False,
             "error": err,
             "help": "공공데이터포털(data.go.kr)에서 API 키를 발급받으세요."
         }
@@ -88,6 +89,7 @@ def call_kcisa_api(endpoint, params):
             result_code = header.findtext("resultCode")
             if result_code != "00":
                 return {
+                    "success": False,
                     "error": f"API 오류: {header.findtext('resultMsg')}",
                     "code": result_code
                 }
@@ -116,10 +118,10 @@ def call_kcisa_api(endpoint, params):
     except ET.ParseError:
         # 가끔 에러 메시지가 평문으로 올 때가 있음
         if "SERVICE KEY IS INVALID" in response_text:
-            return {"error": "유효하지 않은 API 키입니다."}
-        return {"error": "응답 파싱 실패", "raw": response_text[:200]}
+            return {"success": False, "error": "유효하지 않은 API 키입니다."}
+        return {"success": False, "error": "응답 파싱 실패", "raw": response_text[:200]}
     except Exception as e:
-        return {"error": f"조회 실패: {str(e)}"}
+        return {"success": False, "error": f"조회 실패: {str(e)}"}
 
 
 def search_culture_events(keyword=None, start_date=None, end_date=None, area=None, rows=10, page=1):
@@ -181,7 +183,7 @@ def get_culture_event_detail(seq):
         seq: 행사 일련번호 (UCI 또는 ID)
     """
     if not seq:
-        return {"error": "행사 일련번호(seq)가 필요합니다."}
+        return {"success": False, "error": "행사 일련번호(seq)가 필요합니다."}
 
     params = {
         "seq": seq,

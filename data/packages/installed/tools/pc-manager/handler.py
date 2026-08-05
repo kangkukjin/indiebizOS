@@ -40,7 +40,7 @@ def execute(tool_input: dict, context) -> str:
                 return _unknown_op(tool_name, op)
             return fn(tool_input)
 
-        return f"알 수 없는 도구: {tool_name}"
+        return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
         return json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)

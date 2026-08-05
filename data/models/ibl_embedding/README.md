@@ -5,39 +5,38 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:4923
+- dataset_size:4883
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 컴퓨터 화면 캡처해
+- source_sentence: 혈압 128 90 입력해
   sentences:
-  - '[limbs:screen]'
-  - 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini
-    STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
-  - 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
-- source_sentence: 발표 슬라이드 만들어줘
+  - '[limbs:open_window]'
+  - '[sense:travel]'
+  - '[self:health]}'
+- source_sentence: 워크플로우 실행을 다른 팀에 맡겨
   sentences:
-  - '[engines:slide]'
-  - '[limbs:browser]'
-  - '[self:photo] >> [table:groupby]'
-- source_sentence: 뉴스수집-요약-저장 순서로 시작해줘해
+  - 빈 폴더 생성 (mkdir -p 동등, 중간 경로 자동 생성·이미 있으면 조용히 통과). 삭제는 delete, 이동·이름변경은 move.
+  - 에이전트에게 작업 위임 (mode 분기 · scope 분기). 기본 같은 프로젝트 비동기.
+  - '[self:photo]'
+- source_sentence: 지난번 피 뽑은 거 결과
   sentences:
-  - '[limbs:screen]'
-  - '[sense:search_gnews] >> [self:output]'
-  - '[self:run_pipeline]'
-- source_sentence: 맥북프로 14인치 최저가 좀
+  - '[self:health]'
+  - '[sense:used]'
+  - 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은
+    web_site.
+- source_sentence: 달력 화면에 표시
   sentences:
-  - '[sense:paper]'
-  - 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). site=danawa(기본)/used(중고, PC 전용)/all. ★네이버
-    축은 2026-08 은퇴(공식 API SE05 + 내부 API 봇차단) — 중고는 [sense:used]가 더 낫다.
-  - '[sense:search_ddg] & [sense:search_ddg] >> [table:merge] >> [table:dedup] >>
-    [table:take] >> [table:document]'
-- source_sentence: 사진 찍어서 메모에 저장해
+  - '[self:manage_events]'
+  - 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히
+    read_guide(query="통계").
+  - blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown
+    emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
+- source_sentence: 심장 전문의한테 물어봐줘
   sentences:
-  - 이 몸의 카메라로 사진 1장 촬영 (지표어 — 폰=Camera2 back/front, 데스크탑=ffmpeg 웹캠). 카메라 없는 몸(예 맥미니)이면
-    작동불능(정직 거절). 호출 시 1회, jpg 경로 반환.
-  - '[sense:company]'
-  - 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
+  - '[table:document]'
+  - '[others:delegate]'
+  - '[self:business_item]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -91,9 +90,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '사진 찍어서 메모에 저장해',
-    '이 몸의 카메라로 사진 1장 촬영 (지표어 — 폰=Camera2 back/front, 데스크탑=ffmpeg 웹캠). 카메라 없는 몸(예 맥미니)이면 작동불능(정직 거절). 호출 시 1회, jpg 경로 반환.',
-    '[sense:company]',
+    '심장 전문의한테 물어봐줘',
+    '[others:delegate]',
+    '[table:document]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -102,9 +101,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.7103, 0.0099],
-#         [0.7103, 1.0000, 0.0267],
-#         [0.0099, 0.0267, 1.0000]])
+# tensor([[ 1.0000,  0.6120, -0.0356],
+#         [ 0.6120,  1.0000,  0.0775],
+#         [-0.0356,  0.0775,  1.0000]])
 ```
 
 <!--
@@ -149,19 +148,19 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 4,923 training samples
+* Size: 4,883 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 1000 samples:
   |         | sentence_0                                                                        | sentence_1                                                                        |
   |:--------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type    | string                                                                            | string                                                                            |
-  | details | <ul><li>min: 3 tokens</li><li>mean: 13.51 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 23.12 tokens</li><li>max: 64 tokens</li></ul> |
+  | details | <ul><li>min: 4 tokens</li><li>mean: 13.76 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 21.99 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                     | sentence_1                                                                                                                                         |
-  |:-------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>마이크로 녹음해줄래</code>        | <code>이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.</code> |
-  | <code>자주 가는 사이트 목록</code>      | <code>라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.</code>                                                                     |
-  | <code>폰에서 최근 사진 5장만 남겨줘</code> | <code>[self:photo] >> [self:copy]</code>                                                                                                           |
+  | sentence_0                   | sentence_1                       |
+  |:-----------------------------|:---------------------------------|
+  | <code>음악 프로젝트 띄워</code>      | <code>[limbs:open_window]</code> |
+  | <code>스위치 실행 — backup</code> | <code>[self:switch]</code>       |
+  | <code>폰이랑 동기화해</code>        | <code>[self:phone_sync]</code>   |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -283,7 +282,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.8117 | 500  | 0.0112        |
+| 0.8183 | 500  | 0.0158        |
 
 
 ### Framework Versions

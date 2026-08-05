@@ -102,6 +102,10 @@
           "patch": {
             "type": "object",
             "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."
+          },
+          "user_image_path": {
+            "type": "string",
+            "description": "create/edit 옵션 — 이 이미지 파일이 들어간 슬라이드를 조판. 렌더러가 base64 임베드, vision 으로 내용을 보고 텍스트를 맞춤. 첨부 시 HTML(shadcn) 경로 강제(통짜 이미지는 파일을 못 담음)."
           }
         },
         "required": [

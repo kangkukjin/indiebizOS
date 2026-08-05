@@ -192,11 +192,13 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       insertAt?: number,
       layout?: string,
       imageQuality?: string,  // 통짜 이미지: 'pro'(고품질) / 'fast'(저가)
+      image?: { base64: string; name: string },  // 채팅 첨부 — 이 이미지가 '들어간' 슬라이드 조판
     ) {
       const body: Record<string, unknown> = { instruction };
       if (insertAt !== undefined) body.insert_at = insertAt;
       if (layout) body.layout = layout;
       if (imageQuality) body.image_quality = imageQuality;
+      if (image) { body.image_base64 = image.base64; body.image_name = image.name; }
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides`,
         { method: 'POST', body: JSON.stringify(body) }
@@ -321,10 +323,12 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       instruction: string,
       layout?: string,
       imageQuality?: string,
+      image?: { base64: string; name: string },
     ) {
       const body: Record<string, unknown> = { instruction };
       if (layout) body.layout = layout;
       if (imageQuality) body.image_quality = imageQuality;
+      if (image) { body.image_base64 = image.base64; body.image_name = image.name; }
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/edit`,
         { method: 'POST', body: JSON.stringify(body) }

@@ -42,7 +42,17 @@ export function AIChatPanel(props: {
   const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 통짜 이미지 품질
   const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
   const [busy, setBusy] = useState(false);
+  // 채팅 첨부 이미지 — "이 이미지가 들어간 슬라이드"를 조판 (shadcn hero_image/content_image/custom)
+  const [attachedImage, setAttachedImage] = useState<{ name: string; dataUrl: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const attachImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = () => setAttachedImage({ name: file.name || 'pasted.png', dataUrl: String(reader.result) });
+    reader.readAsDataURL(file);
+  };
 
   // 통짜 이미지(native) 덱일 때만 이미지 품질 선택이 의미 있음
   const isNativeDeck = (deck.design_system || '').startsWith('native');
@@ -71,8 +81,12 @@ export function AIChatPanel(props: {
     const text = input.trim();
     if (!text || busy) return;
     setInput('');
+    const img = attachedImage
+      ? { base64: attachedImage.dataUrl.split(',')[1] ?? attachedImage.dataUrl, name: attachedImage.name }
+      : undefined;
+    setAttachedImage(null);
 
-    const userMsg: ChatMessage = { role: 'user', text };
+    const userMsg: ChatMessage = { role: 'user', text: img ? `🖼 ${img.name}\n${text}` : text };
     setMessages((m) => [...m, userMsg]);
     setBusy(true);
 
@@ -115,11 +129,11 @@ export function AIChatPanel(props: {
 
       let result: SlideCreateResponse;
       if (mode === 'edit' && focusSlideId) {
-        result = await api.editSlide(deck.lecture_id, focusSlideId, text, chosenLayout, q);
+        result = await api.editSlide(deck.lecture_id, focusSlideId, text, chosenLayout, q, img);
       } else if (mode === 'insert' && insertBeforeIndex !== null) {
-        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, chosenLayout, q);
+        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, chosenLayout, q, img);
       } else {
-        result = await api.createSlide(deck.lecture_id, text, undefined, chosenLayout, q);
+        result = await api.createSlide(deck.lecture_id, text, undefined, chosenLayout, q, img);
       }
 
       const slideTitle = (result.slide?.title as string) || result.slide_id;
@@ -299,9 +313,53 @@ export function AIChatPanel(props: {
           onChange={setLayoutChoice}
           disabled={busy}
         />
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) attachImageFile(f);
+              e.target.value = '';
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            title="이미지 첨부 — 이 이미지가 들어간 슬라이드를 만듭니다 (붙여넣기 Ctrl+V 도 가능)"
+            className="px-2 py-1 text-xs rounded border border-stone-300 bg-white text-stone-600 hover:border-stone-500 disabled:opacity-50"
+          >
+            🖼 이미지
+          </button>
+          {attachedImage && (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 text-xs bg-amber-50 border border-amber-300 rounded text-amber-900 min-w-0">
+              <img src={attachedImage.dataUrl} alt="" className="w-5 h-5 object-cover rounded-sm shrink-0" />
+              <span className="truncate max-w-[130px]">{attachedImage.name}</span>
+              <button
+                type="button"
+                onClick={() => setAttachedImage(null)}
+                className="text-amber-500 hover:text-amber-800 shrink-0"
+                title="첨부 해제"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+        </div>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onPaste={(e) => {
+            const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'));
+            const f = item?.getAsFile();
+            if (f) {
+              e.preventDefault();
+              attachImageFile(f);
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();

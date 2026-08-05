@@ -479,6 +479,7 @@ def _generate_and_register_slide(
     forced_layout: str = None,
     image_quality: str = "pro",
     content: str = None,
+    user_image_path: str = None,
 ) -> dict:
     """AI 호출 → 렌더 → deck 등록의 공통 흐름. dict 반환.
 
@@ -502,6 +503,10 @@ def _generate_and_register_slide(
     design = (deck.get("design_system") or "native_vintage_book").strip()
     native_deck = _is_native_design(design)
     force_text_on_native = native_deck and bool(forced_layout) and forced_layout != "native"
+    # 강의자 첨부 이미지 = "이 파일을 배치하라" — 통짜 이미지(native)는 파일을 그대로 못 담으므로
+    # 첨부가 있으면 HTML(shadcn) 경로로 내려간다 (hero_image/content_image/custom 이 임베드).
+    if user_image_path:
+        force_text_on_native = native_deck
     if native_deck and not force_text_on_native:
         return _generate_native_slide(
             lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design,
@@ -532,6 +537,7 @@ def _generate_and_register_slide(
     # 'native_vintage_book'이 메타에 박혀 AI가 통짜 이미지 스펙을 내려는 오정렬 방지).
     prompt_deck = {**deck, "design_system": html_design} if html_design != design else deck
     ai_response = slide_ai.generate_slide_response(
+        user_image_path=user_image_path,
         deck=prompt_deck,
         lecture_dir=lecture_dir_path,
         user_instruction=instruction,
@@ -652,6 +658,9 @@ def _slide_create(tool_input: dict) -> str:
     forced_layout = (tool_input.get("layout") or "").strip() or None
     if not instruction:
         return _err("instruction(강의자의 자연어 요청)은 필수입니다.")
+    user_image_path = (tool_input.get("user_image_path") or "").strip() or None
+    if user_image_path and not os.path.exists(user_image_path):
+        return _err(f"첨부 이미지 파일이 없습니다: {user_image_path}")
     scratch = False
     if not lecture_id:
         lecture_id = _resolve_scratch_lecture(tool_input.get("aesthetic"))
@@ -671,6 +680,7 @@ def _slide_create(tool_input: dict) -> str:
         forced_layout=forced_layout,
         image_quality=(tool_input.get("image_quality") or "pro"),
         content=(tool_input.get("content") or "").strip() or None,
+        user_image_path=user_image_path,
     )
     if scratch:
         result["lecture_id"] = lecture_id
@@ -853,12 +863,16 @@ def _slide_edit(tool_input: dict) -> str:
         return _err("instruction(편집 요청)은 필수입니다.")
     if forced_layout and forced_layout not in _VALID_LAYOUTS:
         return _err(f"알 수 없는 layout: {forced_layout!r}. 사용 가능: {sorted(_VALID_LAYOUTS)}")
+    user_image_path = (tool_input.get("user_image_path") or "").strip() or None
+    if user_image_path and not os.path.exists(user_image_path):
+        return _err(f"첨부 이미지 파일이 없습니다: {user_image_path}")
     result = _generate_and_register_slide(
         lecture_id=lecture_id,
         instruction=instruction,
         focus_slide_id=slide_id,
         forced_layout=forced_layout,
         image_quality=(tool_input.get("image_quality") or "pro"),
+        user_image_path=user_image_path,
     )
     return _ok(result)
 

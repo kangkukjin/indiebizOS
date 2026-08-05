@@ -223,12 +223,44 @@ class SlideCreateRequest(BaseModel):
     insert_at: Optional[int] = None
     layout: Optional[str] = None  # 강의자가 명시적으로 선택한 layout (없으면 AI 자동)
     image_quality: Optional[str] = None  # 통짜 이미지 품질: 'pro'(고품질·비쌈) / 'fast'(저가·빠름)
+    image_base64: Optional[str] = None  # 채팅 첨부 이미지 — 이 파일이 '들어간' 슬라이드를 조판 (2026-08-05)
+    image_name: Optional[str] = None
 
 
 class SlideEditRequest(BaseModel):
     instruction: str
     layout: Optional[str] = None
     image_quality: Optional[str] = None
+    image_base64: Optional[str] = None
+    image_name: Optional[str] = None
+
+
+def _save_chat_image(ls, lecture_id: str, image_base64: str, image_name: Optional[str]) -> str:
+    """채팅 첨부 이미지를 강의 materials/ 에 저장하고 절대경로 반환.
+
+    이름은 시각+원본명으로 유일화(덮어쓰기 방지), 확장자 화이트리스트 밖은 png 로 강제.
+    렌더러(shadcn_slides)가 image_path 를 base64 임베드하므로 파일은 강의 폴더에 영속 —
+    재렌더·내보내기 때도 살아 있어야 한다."""
+    import base64 as _b64
+    import re as _re
+    from datetime import datetime as _dt
+    raw = image_base64.split(",", 1)[-1]  # data URL 프리픽스 허용
+    data = _b64.b64decode(raw)
+    if len(data) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="첨부 이미지가 너무 큽니다 (15MB 초과)")
+    # 매직바이트 검사 — 이미지만 (family-news 업로드 선례)
+    if not (data[:8].startswith(b"\x89PNG") or data[:3] == b"\xff\xd8\xff"
+            or data[:6] in (b"GIF87a", b"GIF89a") or data[8:12] == b"WEBP"):
+        raise HTTPException(status_code=400, detail="이미지 파일이 아닙니다 (png/jpg/gif/webp)")
+    stem = _re.sub(r"[^\w가-힣.-]", "_", (image_name or "chat_image"))[:60]
+    ext = Path(stem).suffix.lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".gif", ".webp"):
+        stem, ext = stem + ".png", ".png"
+    mdir = ls.materials_dir(lecture_id)
+    mdir.mkdir(parents=True, exist_ok=True)
+    path = mdir / f"{_dt.now().strftime('%H%M%S')}_{stem}"
+    path.write_bytes(data)
+    return str(path.resolve())
 
 
 def _load_handler():
@@ -283,6 +315,8 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
         tool_input["layout"] = req.layout
     if req.image_quality:
         tool_input["image_quality"] = req.image_quality
+    if req.image_base64:
+        tool_input["user_image_path"] = _save_chat_image(ls, lecture_id, req.image_base64, req.image_name)
 
     import json as _json
     # Playwright sync API + AI 동기 호출 → 스레드풀에서 실행
@@ -615,6 +649,8 @@ async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
         edit_input["layout"] = req.layout
     if req.image_quality:
         edit_input["image_quality"] = req.image_quality
+    if req.image_base64:
+        edit_input["user_image_path"] = _save_chat_image(ls, lecture_id, req.image_base64, req.image_name)
     result_str = await run_in_threadpool(
         handler_mod.execute,
         edit_input,

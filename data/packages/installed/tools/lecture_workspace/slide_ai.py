@@ -445,6 +445,45 @@ def _build_meta_block(deck: dict) -> str:
     )
 
 
+_VISION_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".gif": "image/gif", ".webp": "image/webp"}
+
+
+def _load_vision_image(path: Optional[str]) -> list:
+    """첨부 이미지 → provider images 계약([{base64, media_type}]). 실패·미지원 확장자는 빈 목록(무해)."""
+    if not path:
+        return []
+    try:
+        import base64 as _b64
+        ext = Path(path).suffix.lower()
+        mime = _VISION_MIME.get(ext)
+        if not mime:
+            return []
+        with open(path, "rb") as f:
+            return [{"base64": _b64.b64encode(f.read()).decode("ascii"), "media_type": mime}]
+    except Exception as e:
+        print(f"[slide_ai] 첨부 이미지 vision 로드 실패(텍스트만 진행): {e}")
+        return []
+
+
+def _build_user_image_block(user_image_path: Optional[str]) -> str:
+    """강의자가 채팅에 첨부한 이미지 — 슬라이드에 '그 파일 그대로' 포함시키는 계약.
+
+    첨부 이미지는 vision 입력으로도 전달되므로 AI 는 내용을 보고 어울리는 텍스트를 쓴다.
+    illustrations(AI 이미지 생성)와 다른 축: 이건 생성이 아니라 **주어진 파일의 배치**다."""
+    if not user_image_path:
+        return ""
+    return f"""# 강의자 첨부 이미지 (필수 포함)
+강의자가 이미지를 첨부했다 — 이 슬라이드에 **반드시** 포함하라. 방법:
+- `hero_image`(좌 텍스트 + 우 이미지) 또는 `content_image`(좌 본문 + 우 이미지) layout 을 쓰고,
+  `image_path` 필드에 아래 경로를 **글자 그대로** 넣어라 (렌더러가 자동 임베드).
+- 자유 구성이 필요하면 `custom` layout 의 `custom_html` 에 `<img src="{user_image_path}">` 로.
+- illustrations(이미지 생성) 레이아웃은 쓰지 마라 — 새로 그리는 게 아니라 이 파일을 배치하는 것.
+image_path: "{user_image_path}"
+첨부 이미지가 vision 으로 함께 전달되니, 내용을 보고 제목·본문·배치를 어울리게 써라.
+"""
+
+
 def build_prompt(
     deck: dict,
     lecture_dir: Path,
@@ -452,6 +491,7 @@ def build_prompt(
     focus_slide: Optional[dict] = None,
     forced_layout: Optional[str] = None,
     neighbor_briefs: Optional[list] = None,
+    user_image_path: Optional[str] = None,
 ) -> str:
     """전체 사용자 프롬프트 조립.
 
@@ -465,6 +505,7 @@ def build_prompt(
     """
     blocks = [
         _build_instruction_block(user_instruction, focus_slide, forced_layout),
+        _build_user_image_block(user_image_path),
         _build_meta_block(deck),
         _build_deck_overview(deck),
         f"## 강의자의 호흡 (누적 메모)\n{_build_memo_block(deck)}",
@@ -1112,6 +1153,7 @@ def generate_slide_response(
     focus_slide: Optional[dict] = None,
     forced_layout: Optional[str] = None,
     neighbor_briefs: Optional[list] = None,
+    user_image_path: Optional[str] = None,
 ) -> dict:
     """AI 호출 → JSON 응답 파싱.
 
@@ -1127,9 +1169,10 @@ def generate_slide_response(
         raise ValueError("user_instruction이 비어 있습니다.")
 
     prompt = build_prompt(deck, lecture_dir, user_instruction, focus_slide, forced_layout,
-                          neighbor_briefs)
+                          neighbor_briefs, user_image_path=user_image_path)
     ai = _get_slide_ai()
-    response_text = ai.process_message(prompt, history=[], images=[], execute_tool=None)
+    images = _load_vision_image(user_image_path)
+    response_text = ai.process_message(prompt, history=[], images=images, execute_tool=None)
 
     parsed = extract_json(response_text)
     if "slide" not in parsed:

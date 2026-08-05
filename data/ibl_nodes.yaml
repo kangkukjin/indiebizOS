@@ -3322,7 +3322,7 @@ nodes:
         runs_on: pc_only
         description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
         group: lecture
-        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint, 같은 톤은 같은 스크래치 덱에 모임). layout(선택)=렌더 사다리 스위치 — 미지정=AI 이미지(가장 예쁨) / shadcn 레이아웃(무료·예쁨 — lecture_body·quote·features·pricing 등) / custom(자유 HTML). "가볍게/무료로/가격표로" 같은 요청에 사용. 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
+        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint, 같은 톤은 같은 스크래치 덱에 모임). layout(선택)=렌더 사다리 스위치 — 미지정=AI 이미지(가장 예쁨) / shadcn 레이아웃(무료·예쁨 — lecture_body·quote·features·pricing 등) / custom(자유 HTML). "가볍게/무료로/가격표로" 같은 요청에 사용. user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
         target_key: op
         router: handler
         tool: slide_op

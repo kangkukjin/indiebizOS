@@ -169,6 +169,22 @@ if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*/handler\.py|scr
   echo "[pre-commit] 맨 문자열 반환 OK ✓"
 fi
 
+# 공용 렌더 코어 — 앱 표면 렌더 로직이 다시 데스크탑/원격 두 벌로 갈라지는 것 차단.
+# (2026-08-05 감사 ④: 로직 정본=backend/static/app_render_core.js, 마크업만 표면별)
+if echo "$staged" | grep -qE '^(backend/static/app_render_core\.js|backend/launcher_.*\.py|frontend/src/components/GenericInstrument\.tsx|frontend/src/components/generic/.*|scripts/check_render_core\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 공용 렌더 코어 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_render_core.py"; then
+    echo "" >&2
+    echo "[pre-commit] 공용 렌더 코어 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 로직은 backend/static/app_render_core.js 하나가 정본(표면은 마크업만)" >&2
+    echo "[pre-commit]   • export 는 그 파일 맨 끝 블록 하나로만 (원격은 고전 <script> 로 인라인)" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 공용 렌더 코어 OK ✓"
+fi
+
 # 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
 # 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
 if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$'; then

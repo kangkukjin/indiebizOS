@@ -10,18 +10,16 @@ function renderView(view,data){
   if(data&&data.success===false) return '<p class="muted">'+esc(data.message||'실패')+'</p>';
   return (view||[]).map((p,vi)=>renderPrim(p,vi,data)).join('');
 }
-/* ----- 동적 필터(filter.from_field): 결과-필드 distinct 칩 + 클라이언트 측 거르기(재조회 없음) ----- */
+/* ----- 동적 필터(filter.from_field): 결과-필드 distinct 칩 + 클라이언트 측 거르기(재조회 없음).
+       distinct 수집·거르기 자체는 공용 렌더 코어(dynFilterCats/applyDynFilter)가 정본. ----- */
 function dynFilterOf(mode){ return (mode&&mode.filter&&mode.filter.from_field)?mode.filter:null; }
 function applyCatFilter(mode,data){  /* CUR.catFilter 적용된 데이터(map 마커·card_list 동시 거름) */
   const f=dynFilterOf(mode); if(!f||CUR.catFilter==null||!data) return data;
-  const from=f.from||'items';
-  const arr=viewList(data,from).filter(it=>String(jget(it,f.from_field))===String(CUR.catFilter));
-  const nd={}; for(const k in data) nd[k]=data[k]; nd[from]=arr; return nd;
+  return applyDynFilter(data,f.from,f.from_field,CUR.catFilter);
 }
 function renderDynFilter(mode,data){
   const f=dynFilterOf(mode); if(!f||!data) return '';
-  const from=f.from||'items'; const seen={}; const cats=[];
-  viewList(data,from).forEach(it=>{ const v=jget(it,f.from_field); if(v&&!seen[v]){ seen[v]=1; cats.push(String(v)); } });
+  const cats=dynFilterCats(data,f.from,f.from_field);
   if(!cats.length) return '';
   // 칩 값은 data-c 속성에 담고(esc), 클릭은 그 속성을 읽는다 — onclick 인라인 따옴표 이스케이프 회피.
   let h='<div class="filters" style="margin-bottom:10px">';
@@ -43,10 +41,10 @@ function setCatFilter(v){
   const out=document.getElementById('instOut'); if(!out) return;
   out.innerHTML=renderModeBody(CUR.mode,VIEW_CTX.data); initMaps();
 }
-function trendColor(p,data){ if(!p.trend) return null; return (Number(jget(data,p.trend))||0)>=0?'var(--up)':'var(--down)'; }
+/* 추세 방향(trendUp)·빈 결과 문구(emptyText)는 공용 렌더 코어가 정본 — 여기선 색·마크업만 */
+function trendColor(p,data){ const up=trendUp(p,data); return up==null?null:(up?'var(--up)':'var(--down)'); }
 function emptyMsg(p,data){
-  const m=(p.empty_from?jget(data,p.empty_from):null)||p.empty||'결과가 없습니다';
-  return '<p class="muted" style="margin-top:10px">'+esc(m)+'</p>';
+  return '<p class="muted" style="margin-top:10px">'+esc(emptyText(p,data))+'</p>';
 }
 /* media_player continuous — 끝난 곡의 다음 audio(data-mp)를 자동 재생 (데스크탑 onEnded 파리티) */
 function mpNext(el){
@@ -151,14 +149,13 @@ function initMaps(){
    그리드=none(연월)·monthly(항상)·yearly(월-일); daily/weekly/interval=정기목록. 타입색=color_field.
    add.fields=form 필드 어휘(date 자동 주입). 데스크탑 CalendarPrim 과 동일 어휘. 전역 _calCur 로 단순화. */
 var _calCur=null, _calState={y:null,m:null,sel:null};
-function _pad2(n){ return (n<10?'0':'')+n; }
 var _CAL_COLOR={birthday:'#f472b6',anniversary:'#fb7185',holiday:'#f87171',meeting:'#60a5fa',task:'#fbbf24',report:'#a78bfa',schedule:'#2dd4bf'};
 var _CAL_REPEAT={daily:'매일',weekly:'매주',monthly:'매월',yearly:'매년',interval:'주기'};
 function _calColor(e,field){ return _CAL_COLOR[String((e||{})[field||'type']||'')]||'#a8a29e'; }
 function _calAddField(f){ const id='calAdd_'+f.key;
   if(f.type==='select') return '<select class="field" id="'+id+'" style="min-width:0"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>';
   if(f.type==='recurrence') return _recurSelect(id,'');
-  if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+_dateInputType(f.type)+'" class="field" style="min-width:0" id="'+id+'">';
+  if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+dateInputType(f.type)+'" class="field" style="min-width:0" id="'+id+'">';
   return '<input class="field" style="min-width:0" id="'+id+'" placeholder="'+esc(f.placeholder||'')+'">';
 }
 function _calSetup(p,data){
@@ -171,14 +168,10 @@ function _calSetup(p,data){
 }
 function _calDraw(){
   const host=document.getElementById('calHost'); if(!host||!_calCur) return;
-  const c=_calCur, y=c.y, m=c.m, byDay={}, cf=c.prim.color_field||'type';
-  c.events.forEach(e=>{ const rep=e.repeat||'none';
-    if(rep==='daily'||rep==='weekly'||rep==='interval') return;  // 정기는 그리드 제외(아래 정기목록)
-    const ps=String(e.date||'').split('-'); if(ps.length<3) return;
-    const ey=+ps[0], em=+ps[1]-1, ed=+ps[2];
-    const show=(rep==='yearly')?(em===m):(rep==='monthly')?true:(ey===y&&em===m);
-    if(show){ (byDay[ed]=byDay[ed]||[]).push(e); } });
-  const first=new Date(y,m,1).getDay(), days=new Date(y,m+1,0).getDate();
+  const c=_calCur, y=c.y, m=c.m, cf=c.prim.color_field||'type';
+  // 월 산식(일자 매핑·정기 분리·말일)은 공용 렌더 코어가 정본. 코어는 month 를 1-12 로 센다.
+  const _cm=calendarModel(c.events,y,m+1);
+  const byDay=_cm.byDay, first=_cm.firstWeekday, days=_cm.daysInMonth;
   let h='<div class="card"><div class="row" style="align-items:center;justify-content:space-between">'
     +'<button class="iconbtn" onclick="_calNav(-1)">◀</button><b>'+y+'년 '+(m+1)+'월</b>'
     +'<button class="iconbtn" onclick="_calNav(1)">▶</button></div><div class="calgrid">';
@@ -188,7 +181,7 @@ function _calDraw(){
     h+='<div class="calday'+hs+sl+'" onclick="_calPick('+d+')">'+d+(byDay[d]?'<span class="caldot" style="background:'+_calColor(byDay[d][0],cf)+'"></span>':'')+'</div>'; }
   h+='</div>';
   if(c.sel){ const list=byDay[c.sel]||[]; c._dayList=list;
-    h+='<div class="calpanel"><div class="step-label">'+y+'-'+_pad2(m+1)+'-'+_pad2(c.sel)+'</div>';
+    h+='<div class="calpanel"><div class="step-label">'+y+'-'+pad2(m+1)+'-'+pad2(c.sel)+'</div>';
     if(list.length) list.forEach((e,i)=>{ const tm=e.time?' <span class="muted" style="font-size:11px">'+esc(e.time)+'</span>':'';
       const rl=(e.repeat&&e.repeat!=='none')?' <span class="muted" style="font-size:11px">'+(_CAL_REPEAT[e.repeat]||e.repeat)+'</span>':'';
       h+='<div class="kv"><span class="k"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:'+_calColor(e,cf)+'"></span>'+esc(e.title||'')+tm+rl+'</span>'
@@ -197,21 +190,23 @@ function _calDraw(){
     if(c.prim.add){ const fields=c.prim.add.fields||[{key:'title',type:'text',placeholder:'일정 제목'}];
       h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+fields.map(_calAddField).join('')+'<button class="go" onclick="_calAdd()">'+esc(c.prim.add.button||'추가')+'</button></div>'; }
     h+='</div>'; }
-  const periodic=c.events.filter(e=>['daily','weekly','interval'].includes(e.repeat||''));
+  const periodic=_cm.recurring;
   if(periodic.length){ h+='<div style="margin-top:12px"><div class="muted" style="font-size:11px;margin-bottom:6px">정기 일정</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
     periodic.forEach(e=>{ h+='<span style="padding:4px 10px;border-radius:999px;border:1px solid var(--line);font-size:12px"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;background:'+_calColor(e,cf)+'"></span>'+esc(e.title||'')+' <span class="muted">'+(_CAL_REPEAT[e.repeat]||e.repeat)+(e.time?' '+esc(e.time):'')+'</span></span>'; });
     h+='</div></div>'; }
   h+='</div>'; host.innerHTML=h;
 }
-function _calNav(delta){ if(!_calCur) return; let m=_calCur.m+delta, y=_calCur.y;
-  if(m<0){m=11;y--;} if(m>11){m=0;y++;} _calCur.m=m; _calCur.y=y; _calCur.sel=null;
+function _calNav(delta){ if(!_calCur) return;
+  // 월 이동은 공용 코어(calShift, 1-12) — 여기 상태는 0-11 이라 앞뒤로 환산
+  const nx=calShift(_calCur.y,_calCur.m+1,delta), y=nx.year, m=nx.month-1;
+  _calCur.m=m; _calCur.y=y; _calCur.sel=null;
   _calState.y=y; _calState.m=m; _calState.sel=null; _calDraw(); }
 function _calPick(d){ if(!_calCur) return; _calCur.sel=(_calCur.sel===d?null:d); _calState.sel=_calCur.sel; _calDraw(); }
 async function _calAdd(){ if(!_calCur||!_calCur.prim.add||!_calCur.sel) return;
   const add=_calCur.prim.add, fields=add.fields||[{key:'title',type:'text'}];
   const vals={}; fields.forEach(f=>{ const el=document.getElementById('calAdd_'+f.key); if(el) vals[f.key]=el.value; });
   if(!String(vals.title||'').trim()){ alert('일정 제목을 입력하세요'); return; }
-  vals.date=_calCur.y+'-'+_pad2(_calCur.m+1)+'-'+_pad2(_calCur.sel);  // 선택일 자동 주입
+  vals.date=_calCur.y+'-'+pad2(_calCur.m+1)+'-'+pad2(_calCur.sel);  // 선택일 자동 주입
   try{ await dispatchAction(add.action,vals); }catch(e){ alert('추가 실패: '+e.message); } }
 async function _calDel(i){ if(!_calCur||!_calCur._dayList) return; const item=_calCur._dayList[i]; if(!item) return;
   try{ await dispatchAction(_calCur.prim.delete_action,{},item); }catch(e){ alert('삭제 실패: '+e.message); } }
@@ -235,13 +230,12 @@ function renderPrim(p,vi,data){
     // ★내부 view 의 item_click 은 검증기가 금지(원격 rowDrill 이 최상위 view[vi] 로만 찾음) — 링크/버튼만.
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
-    const order=[], groups={};
-    arr.forEach(it=>{ const key=tpl(p.by,it); if(!(key in groups)){ groups[key]=[]; order.push(key); } groups[key].push(it); });
-    const keys=(p.max_groups?order.slice(0,p.max_groups):order);
+    // 파티션은 공용 코어(groupPartition). ★키는 esc 안 한 원문으로 나눈다 — 아래서 헤더를
+    //   esc() 하므로 여기서 또 tpl(=esc 포함)을 쓰면 '&' 가 두 번 이스케이프된다(옛 버그).
     const inner=p.view||[];
-    return keys.map((key,gi)=>{
-      const members=groups[key];
-      const header=p.label?tpl(p.label,members[0]):key;
+    return groupPartition(arr,it=>tplWith(p.by,it),p.max_groups).map((g,gi)=>{
+      const members=g.members;
+      const header=p.label?tplWith(p.label,members[0]):g.key;
       const gdata={items:members};
       return '<div style="margin-bottom:22px"><h3 style="font-size:17px;font-weight:700;color:var(--fg);'
         +'border-bottom:2px solid var(--bd);padding-bottom:6px;margin:0 0 12px">'+esc(header)+'</h3>'
@@ -254,14 +248,17 @@ function renderPrim(p,vi,data){
       '<div class="big"'+(col?' style="color:'+col+'"':'')+'>'+tpl(p.big,data)+(p.unit?' <span style="font-size:14px">'+tpl(p.unit,data)+'</span>':'')+'</div>'+
       (p.sub?'<div'+(col?' style="color:'+col+'; font-weight:600"':' class="muted"')+'>'+tpl(p.sub,data)+'</div>':'')+'</div>';
   }
+  /* ★kv 값은 tplWith(=이스케이프 없는 원문)로 만들어 kvVal 에 넘긴다 — kvVal 이 esc 를 하므로
+     tpl(esc 포함)을 넘기면 이중 이스케이프('<'가 &lt; 로 보임)가 되고, URL 판정도 &amp; 로
+     망가진 주소를 href 에 넣는다. 키(k)는 kvVal 을 안 거치므로 tpl 그대로. */
   if(p.type==='kv')
     return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
-      (p.rows||[]).map(r=>'<div class="kv"><span class="k">'+tpl(r.k,data)+'</span>'+kvVal(tpl(r.v,data))+'</div>').join('')+'</div>';
+      (p.rows||[]).map(r=>'<div class="kv"><span class="k">'+tpl(r.k,data)+'</span>'+kvVal(tplWith(r.v,data))+'</div>').join('')+'</div>';
   if(p.type==='kv_list'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
     return '<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'')+
-      arr.map(it=>'<div class="kv"><span class="k">'+tpl(p.k,it)+'</span>'+kvVal(tpl(p.v,it))+'</div>').join('')+'</div>';
+      arr.map(it=>'<div class="kv"><span class="k">'+tpl(p.k,it)+'</span>'+kvVal(tplWith(p.v,it))+'</div>').join('')+'</div>';
   }
   if(p.type==='card_list'){
     const arr=viewList(data,p.from);
@@ -308,11 +305,10 @@ function renderPrim(p,vi,data){
     // lazy: preload="none" — 항목마다 스트림을 미리 물지 않는다(유튜브 릴레이처럼 요청이
     // 곧 서버 작업(해소+ffmpeg)인 src 는 재생을 눌러야만 받게). video: '{is_video}'(또는
     // true) 참이면 <audio> 대신 <video>(poster 지원) — 데스크탑 파리티.
-    const pre=p.lazy?'none':'metadata';
+    const pre=preloadOf(p);
     // src_low: 느린 회선(테슬라 실측 1.4Mbps — 원본 1080p 는 소리만 나오고 화면 정지)이면
-    // 저대역 판 자동 선택 — 데스크탑 파리티. navigator.connection=크로미움 계열 존재.
-    const conn=navigator.connection;
-    const slowNet=!!conn&&((conn.downlink&&conn.downlink<3)||(conn.rtt&&conn.rtt>250));
+    // 저대역 판 자동 선택. 판정·소스 선택은 공용 코어(isSlowNet/mediaModel)가 정본.
+    const slowNet=isSlowNet(navigator.connection);
     // 적응형(HLS) 하이드레이션 — innerHTML 로 붙는 video[data-hls] 를 관찰해 hls.js 를
     // 문다(조각마다 화질 자동 전환). autoStartLoad:false + play 시 startLoad = lazy 유지.
     if(!window.__mpHlsObs&&window.Hls&&Hls.isSupported()){
@@ -327,15 +323,13 @@ function renderPrim(p,vi,data){
       arm();
     }
     return arr.map(it=>{
-      const lowRaw=(typeof p.src_low==='string')?tpl(p.src_low,it):'';
-      const raw=(slowNet&&lowRaw)?lowRaw:(p.src?tpl(p.src,it):'');
+      const mm=mediaModel(p,it,tpl,slowNet);   // tpl=원격판(값 esc) — 속성 안에 들어가므로 그대로
+      const raw=mm.src;
       // 절대 URL 은 그대로, 백엔드 상대경로(/music/stream?…)는 동일오리진이라 그대로, 파일 절대경로는 /launcher/file 로 서빙.
       const src=raw?(/^(https?:|data:)/.test(raw)?raw:(raw.startsWith('/')?raw:'/launcher/file?path='+encodeURIComponent(raw))):'';
-      const title=p.title?tpl(p.title,it):'';
-      const isVid=p.video===true||(typeof p.video==='string'&&/^(true|1)$/i.test(tpl(p.video,it)));
-      const poster=p.poster?tpl(p.poster,it):'';
+      const title=mm.title, isVid=mm.isVideo, poster=mm.poster;
       // 소스 우선순위: HLS(hls.js — 적응형) > 네이티브 HLS(사파리) > 프로그레시브(+저대역 자동)
-      const hlsRaw=(typeof p.src_hls==='string')?tpl(p.src_hls,it):'';
+      const hlsRaw=mm.hls;
       const canHlsJs=isVid&&hlsRaw&&window.Hls&&Hls.isSupported();
       const canNative=isVid&&hlsRaw&&!canHlsJs&&document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
       const vSrc=canHlsJs?'':(canNative?hlsRaw:src);
@@ -378,7 +372,7 @@ function renderPrim(p,vi,data){
       else if(f.type==='toggle') h+='<select class="field" id="'+id+'"><option value="0"'+(String(val)!=='1'?' selected':'')+'>꺼짐</option><option value="1"'+(String(val)==='1'?' selected':'')+'>켜짐</option></select>';
       else if(f.type==='images'){
         // 썸네일(전 표면 /image?path=) + 제거. 추가(파일선택)는 데스크탑 전용이라 원격엔 없음.
-        let arr=[]; try{ const j=JSON.parse(val); arr=Array.isArray(j)?j:(val?[val]:[]); }catch(e){ arr=val?[val]:[]; }
+        const arr=parseImagePaths(val);   // 공용 코어 — attachment_path(JSON 배열 또는 레거시 단일)
         h+='<div style="display:flex;flex-wrap:wrap;gap:8px">';
         arr.forEach(pth=>{ h+='<div style="position:relative">'
           +'<img src="'+API+'/image?path='+encodeURIComponent(pth)+'" style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">'
@@ -388,7 +382,7 @@ function renderPrim(p,vi,data){
         h+='</div>';
       }
       else if(f.type==='recurrence') h+=_recurSelect(id,val);
-      else if(f.type==='date'||f.type==='time'||f.type==='datetime') h+='<input type="'+_dateInputType(f.type)+'" class="field" id="'+id+'" value="'+esc(val)+'">';
+      else if(f.type==='date'||f.type==='time'||f.type==='datetime') h+='<input type="'+dateInputType(f.type)+'" class="field" id="'+id+'" value="'+esc(val)+'">';
       else if(f.type==='folder') h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'폴더 경로 (선택은 데스크탑에서)')+'">';
       else h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'">';
       h+='</div>';
@@ -412,28 +406,24 @@ function renderPrim(p,vi,data){
       h+='<div class="row" style="flex-wrap:wrap;margin-top:8px">'+(p.add.fields||[]).map(f=>{ const eid='ea_'+vi+'_'+f.key;
           if(f.type==='select') return '<select class="field" id="'+eid+'" style="flex:0 1 110px"><option value="">'+esc(f.placeholder||'')+'</option>'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'">'+esc(o.label)+'</option>').join('')+'</select>';
           if(f.type==='recurrence') return _recurSelect(eid,'');
-          if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+_dateInputType(f.type)+'" class="field" style="min-width:0" id="'+eid+'">';
+          if(f.type==='date'||f.type==='time'||f.type==='datetime') return '<input type="'+dateInputType(f.type)+'" class="field" style="min-width:0" id="'+eid+'">';
           return '<input class="field" style="min-width:0" id="'+eid+'" placeholder="'+esc(f.placeholder||'')+'">'; }).join('')
         +'<button class="go" onclick="elAdd('+vi+',this)">'+esc((p.add.button)||'추가')+'</button></div>';
     }
     h+='</div>'; return h;
   }
   if(p.type==='sparkline'){
-    const arr=viewList(data,p.from);
-    const xkey=p.x||(arr[0]&&typeof arr[0]==='object'?['date','time','label','x'].find(k=>arr[0][k]!=null):null);
-    const rows=arr.map(x=>({v:Number(p.y?x[p.y]:x),x:xkey?String(x[xkey]==null?'':x[xkey]):''})).filter(r=>!isNaN(r.v));
-    if(rows.length<2) return '';
-    const vals=rows.map(r=>r.v);
+    // 좌표·스케일·라벨 포맷은 공용 코어(sparkModel/fmtSpark) — 여기선 SVG 마크업만
+    const sm=sparkModel(p,data);
+    if(!sm) return '';
+    const rows=sm.rows, w=sm.w, hh=sm.h, pts=sm.pts, fmt=fmtSpark;
     const col=trendColor(p,data)||'var(--acc)';
-    const w=280,hh=50,mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals),rg=(mx-mn)||1;
-    const fmt=n=>{ const a=Math.abs(n); const d=a>=1000?0:a>=1?2:4; return Number(n).toLocaleString(undefined,{maximumFractionDigits:d}); };
-    const pts=rows.map((r,i)=>((i/(rows.length-1))*w).toFixed(1)+','+(hh-((r.v-mn)/rg*hh)).toFixed(1)).join(' ');
     const lbl='position:absolute;right:0;font-size:10px;color:var(--dim);background:var(--bg2);padding:0 2px;border-radius:3px';
     return '<div class="card"><div style="position:relative">'
       +'<div style="position:relative;height:64px">'
       +'<svg viewBox="0 0 '+w+' '+hh+'" style="width:100%;height:100%" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>'
-      +'<span style="'+lbl+';top:0">'+esc(fmt(mx))+'</span>'
-      +'<span style="'+lbl+';bottom:0">'+esc(fmt(mn))+'</span>'
+      +'<span style="'+lbl+';top:0">'+esc(fmt(sm.mx))+'</span>'
+      +'<span style="'+lbl+';bottom:0">'+esc(fmt(sm.mn))+'</span>'
       +'</div>'
       +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-top:4px"><span>'+esc(rows[0].x)+'</span><span>'+esc(rows[rows.length-1].x)+'</span></div>'
       +'</div></div>';
@@ -485,7 +475,7 @@ async function runMode(){
   out.innerHTML='<div class="center"><div class="spin"></div></div>';
   try{
     const d=await ibl(buildAction(mode.action,vals));
-    SPLIT=(mode.view||[]).some(p=>p&&p.type==='card_list'&&p.master_detail);
+    SPLIT=hasMasterDetail(mode.view);   // 공용 코어 — 데스크탑 isSplit 과 같은 판정
     if(SPLIT){
       LIST={view:mode.view,data:d}; VIEW_CTX=null;
       out.innerHTML='<div class="mdsplit" id="mdSplit"><div class="mdlist" id="mdList">'+renderView(mode.view,d)+'</div>'
@@ -501,25 +491,11 @@ async function runMode(){
   }catch(e){ out.innerHTML='<p class="muted">오류: '+esc(e.message)+'</p>'; }
 }
 /* 작성바(compose) — $text=작성 내용, 드릴이면 {field}=대화 상대 행 필드. 전송 후 현재 뷰 새로고침. */
-/* compose 발신 채널 후보 — 드릴 데이터 연락처에서 발신 가능한 채널만, 없으면 기본(primary) 폴백 */
-function composeChannelOptions(cmp){
-  const ch=cmp&&cmp.channels; const data=VIEW_CTX&&VIEW_CTX.data;
-  if(!ch||!data||typeof data!=='object') return [];
-  const mk=(ct,to,label)=>({key:ct+'|'+to,channel_type:ct,to:to,label:label});
-  let opts=viewList(data,ch.from).map(c=>({ct:String(jget(c,ch.type)||''),to:String(jget(c,ch.value)||'')}))
-    .filter(o=>o.to&&(!ch.sendable||ch.sendable.indexOf(o.ct)>=0)).map(o=>mk(o.ct,o.to,o.ct+' · '+o.to));
-  if(!opts.length){ const ct=String(jget(data,'channel')||''),to=String(jget(data,'to')||''); if(to) opts=[mk(ct,to,ct||'기본')]; }
-  const seen={}; const uniq=opts.filter(o=>seen[o.key]?false:(seen[o.key]=1,true));
-  /* 백엔드가 정한 기본 채널(data.channel=_primary_channel, nostr 우선)을 맨 앞으로 —
-     작성바 기본 선택=opts[0] 이라 등록 순서와 무관하게 nostr 를 가진 이웃은 nostr 가 기본.
-     ★사용자가 드롭다운에서 다른 채널을 고르면 그 선택이 이긴다. (데스크탑 manifest.ts 와 파리티) */
-  const prefCt=String(jget(data,'channel')||'');
-  if(prefCt){ const i=uniq.findIndex(o=>o.channel_type===prefCt); if(i>0){ const pick=uniq.splice(i,1)[0]; uniq.unshift(pick); } }
-  return uniq;
-}
+/* compose 발신 채널 후보 — 선택 규칙은 공용 렌더 코어(composeChannelOptions)가 정본.
+   원격은 현재 렌더 컨텍스트(VIEW_CTX.data)가 곧 드릴 데이터라 그것만 넘긴다. */
 function renderComposeBar(cmp){
   if(!cmp) return '';
-  const opts=composeChannelOptions(cmp);
+  const opts=composeChannelOptions(cmp, VIEW_CTX&&VIEW_CTX.data);
   let sel='';
   /* 어디로 보내는지는 항상 보인다 — 후보가 하나뿐이어도 칩으로 표시(고를 게 없을 뿐 숨길 이유는 없음) */
   if(opts.length>=2) sel='<select id="composeChannel" class="field chan" style="border-radius:22px">'
@@ -593,7 +569,7 @@ async function composeSend(btn){
   const cmp=VIEW_CTX&&(VIEW_CTX._activeCompose||VIEW_CTX.compose); if(!cmp) return;
   const inp=document.getElementById('composeInput'); const text=inp?inp.value.trim():''; if(!text) return;
   const fields={text};
-  const opts=composeChannelOptions(cmp);
+  const opts=composeChannelOptions(cmp, VIEW_CTX&&VIEW_CTX.data);
   if(opts.length){ const selEl=document.getElementById('composeChannel'); const key=selEl?selEl.value:opts[0].key; const sel=opts.filter(o=>o.key===key)[0]||opts[0]; fields.channel_type=sel.channel_type; fields.to=sel.to; }
   btn.disabled=true;
   try{ await dispatchAction(cmp.action,fields); }

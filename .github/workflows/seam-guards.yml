@@ -23,6 +23,9 @@ on:
       - 'scripts/check_event_loop*.py'
       - 'scripts/check_public_routes.py'
       - 'scripts/check_string_returns.py'
+      - 'scripts/check_render_core.py'
+      - 'scripts/test_render_core.js'
+      - 'frontend/src/components/**'
       - 'pytest.ini'
       - '.github/workflows/seam-guards.yml'
   pull_request:
@@ -81,6 +84,20 @@ jobs:
         run: python scripts/check_string_returns.py --self-test
       - name: 도구 결과 경로 맨 문자열 반환 검사
         run: python scripts/check_string_returns.py
+
+  # 공용 렌더 코어 (2026-08-05 감사 부채 ④): 앱 표면 렌더 로직이 데스크탑/원격 두 벌로
+  # 다시 갈라지는 것 차단 + 코어 export 블록 규율. 의존성 0 (정규식·파일 스캔만).
+  render-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 가드 자체 회귀 (재정의/표면 누락/떠도는 export 탐지)
+        run: python scripts/check_render_core.py --self-test
+      - name: 렌더 코어 단일 소스 검사
+        run: python scripts/check_render_core.py
 
   # pytest 스위트 (2026-08-05 감사 부채 ⑧): 고아 테스트 5개를 CI 시민으로.
   # -m "not local" — 해마 DB·임베딩 모델이 필요한 측정성 테스트는 로컬 전용

@@ -33,6 +33,7 @@ import {
   type AppInstrument, type Json, type Dispatch, type ViewEvent,
   runIBL, jget, tpl, buildAction, rowAction, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph,
+  groupPartition, mediaModel, isSlowNet, hasMasterDetail, dynFilterCats, applyDynFilter,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
 import { FormPrim, EditableListPrim } from './generic/prims-edit';
@@ -90,20 +91,13 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   if (p.type === 'group') {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
-    const order: string[] = [];
-    const groups: Record<string, Json[]> = {};
-    for (const it of arr) {
-      const key = tpl(p.by, it);
-      if (!(key in groups)) { groups[key] = []; order.push(key); }
-      groups[key].push(it);
-    }
+    // 파티션은 공용 렌더 코어(groupPartition) — 원격 표면과 단일 소스
     const cap = typeof p.max_groups === 'number' ? p.max_groups : undefined;
-    const keys = cap ? order.slice(0, cap) : order;
+    const parts = groupPartition(arr, (it: Json) => tpl(p.by, it), cap) as { key: string; members: Json[] }[];
     const inner = (p.view as AppViewPrim[]) || [];
     return (
       <>
-        {keys.map((key) => {
-          const members = groups[key];
+        {parts.map(({ key, members }) => {
           const header = p.label ? tpl(p.label, members[0]) : key;
           const gdata = { items: members };
           return (
@@ -294,33 +288,26 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
       const next = all[all.indexOf(e.currentTarget) + 1];
       if (next) { next.play().catch(() => {}); next.scrollIntoView({ block: 'nearest' }); }
     } : undefined;
-    // lazy: preload="none" — 목록의 항목마다 스트림을 미리 물지 않는다(유튜브 릴레이처럼
-    // 요청 자체가 서버 작업(해소+ffmpeg)을 시작하는 src 는 재생 버튼을 눌러야만 받게).
-    // video: '{is_video}' 템플릿(또는 true) — 참이면 <audio> 대신 <video>(poster 지원).
-    const preload = p.lazy ? 'none' : 'metadata';
-    const isVideo = (it: Json) => p.video === true ||
-      (typeof p.video === 'string' && /^(true|1)$/i.test(tpl(p.video, it)));
-    // src_low: 느린 회선(테슬라 실측 1.4Mbps — 원본 1080p 는 화면만 정지)이면 저대역 판 자동 선택.
-    // navigator.connection 은 크로미움 계열에 존재(테슬라 브라우저 실측 값 나옴).
-    const conn = (navigator as unknown as { connection?: { downlink?: number; rtt?: number } }).connection;
-    const slowNet = !!conn && ((!!conn.downlink && conn.downlink < 3) || (!!conn.rtt && conn.rtt > 250));
+    // 소스 결정(lazy preload·src_low 저대역 선택·video 분기·HLS)은 공용 렌더 코어(mediaModel/
+    // isSlowNet) — 원격 표면과 단일 소스. 여기선 그 결정을 데스크탑 URL(백엔드 origin 부착)과
+    // 마크업으로 옮기기만 한다. navigator.connection 은 크로미움 계열에 존재(테슬라 실측).
+    const slowNet = isSlowNet((navigator as unknown as { connection?: { downlink?: number; rtt?: number } }).connection);
     return (
       <div className="flex flex-col gap-3" data-mp-group={p.continuous ? '1' : undefined}>
         {arr.map((it, i) => {
-          const lowRaw = typeof p.src_low === 'string' ? tpl(p.src_low, it) : '';
-          const src = audioUrl(slowNet && lowRaw ? lowRaw : (p.src ? tpl(p.src, it) : ''));
-          const title = p.title ? tpl(p.title, it) : '';
-          const poster = p.poster ? mediaSrc(tpl(p.poster, it)) : undefined;
-          const hlsUrl = typeof p.src_hls === 'string' ? tpl(p.src_hls, it) : '';
+          const m = mediaModel(p, it, tpl, slowNet) as
+            { src: string; hls: string; isVideo: boolean; poster: string; title: string; preload: 'none' | 'metadata' };
+          const src = audioUrl(m.src);
+          const poster = m.poster ? mediaSrc(m.poster) : undefined;
           return (
             <div key={i} className="bg-white border border-stone-200 rounded-xl px-4 py-3">
-              {title && <div className="text-sm font-semibold text-stone-800 mb-2">{title}</div>}
-              {src || (isVideo(it) && hlsUrl) ? (isVideo(it)
+              {m.title && <div className="text-sm font-semibold text-stone-800 mb-2">{m.title}</div>}
+              {src || (m.isVideo && m.hls) ? (m.isVideo
                        // 적응형(HLS) 우선 — 폴백=프로그레시브. max-w 캡(전폭 확대 금지)은 VIDEO_CLS.
-                       ? (hlsUrl
-                           ? <HlsVideo hlsUrl={audioUrl(hlsUrl)} fallback={src} poster={poster} preload={preload} />
-                           : <video controls preload={preload} src={src} poster={poster} playsInline className={VIDEO_CLS} />)
-                       : <audio controls preload={preload} src={src} className="w-full" onEnded={onEnded} />)
+                       ? (m.hls
+                           ? <HlsVideo hlsUrl={audioUrl(m.hls)} fallback={src} poster={poster} preload={m.preload} />
+                           : <video controls preload={m.preload} src={src} poster={poster} playsInline className={VIDEO_CLS} />)
+                       : <audio controls preload={m.preload} src={src} className="w-full" onEnded={onEnded} />)
                    : <div className="text-xs text-stone-400">재생할 오디오가 없습니다.</div>}
             </div>
           );
@@ -675,18 +662,17 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
 
   const inputs = mode.inputs || [];
   // master_detail card_list → 반응형 2분할(PC: 리스트 좌+상세 우 동시 / 폰: 리스트→선택→상세→뒤로)
-  const isSplit = !(mode as { modes?: AppMode[] }).modes && (mode.view || []).some((p) => p.type === 'card_list' && !!p.master_detail);
+  const isSplit = !(mode as { modes?: AppMode[] }).modes && hasMasterDetail(mode.view);
 
   // 동적 필터(filter.from_field): 결과 items 의 그 필드 distinct 값으로 칩 + 클라이언트 측 거르기(재조회 없음).
+  // distinct 수집·거르기는 공용 렌더 코어(dynFilterCats/applyDynFilter) — 원격 표면과 단일 소스.
   // viewData=필터 적용된 데이터(map 마커·card_list 동시 거름). 정적 필터(items)는 별개 경로(재조회).
   const dynField = mode.filter?.from_field;
   const dynFrom = (mode.filter?.from as string) || 'items';
-  const dynCats = (dynField && data)
-    ? Array.from(new Set(asList(data, dynFrom).map((it) => jget(it, dynField)).filter(Boolean).map(String)))
-    : [];
+  const dynCats: string[] = data ? dynFilterCats(data, dynFrom, dynField) : [];
   const activeCat = dynField && catFilter && dynCats.includes(catFilter) ? catFilter : null;
-  const viewData: Json | null = (dynField && activeCat && data)
-    ? ({ ...data, [dynFrom]: asList(data, dynFrom).filter((it) => String(jget(it, dynField)) === activeCat) })
+  const viewData: Json | null = (activeCat && data)
+    ? (applyDynFilter(data, dynFrom, dynField, activeCat) as Json)
     : data;
   const drillTabs = drill?.tabs;
   const activeCompose = drill

@@ -111,6 +111,8 @@ tasks.register('bundleIndiebizBase', Zip) {
         _ENGINE_MODULES.each { m -> if (!file("${_ROOT}/backend/${m}.py").exists()) missing << "backend/${m}.py" }
         if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
         if (!file("${_ROOT}/backend/providers").exists()) missing << "backend/providers"
+        // 앱 표면 렌더 어휘의 순수 로직(데스크탑과 단일 소스) — 없으면 폰 앱 탭이 통째로 죽는다
+        if (!file("${_ROOT}/backend/static/app_render_core.js").exists()) missing << "backend/static/app_render_core.js"
         if (!file("${_ROOT}/data/common_prompts").exists()) missing << "data/common_prompts"
         if (!file("${_ROOT}/data/ibl_hippo_index.json").exists()) missing << "data/ibl_hippo_index.json (scripts/export_hippo_index.py 실행)"
         if (!file("${_ROOT}/data/ibl_hippo_vecs.f32").exists()) missing << "data/ibl_hippo_vecs.f32 (scripts/export_hippo_index.py 실행)"
@@ -132,6 +134,12 @@ tasks.register('bundleIndiebizBase', Zip) {
     from("${_ROOT}/backend/providers") {
         into 'backend/providers'
         include '**/*.py'
+    }
+    // backend/static → zip 안 backend/static/ (앱 표면 공용 렌더 코어 .js — 엔진 모듈 glob 은
+    // *.py 만 보므로 여기서 따로 싣는다. launcher_render_core.py 가 부팅 때 이 파일을 읽는다)
+    from("${_ROOT}/backend/static") {
+        into 'backend/static'
+        include '**/*.js'
     }
     // 레지스트리 = 몸-사전 파생본 (전체 사전집이 아니라 이 몸의 어휘만 — 폰은 PC 전용
     // 어휘를 알 필요가 없다. build_body_bundle.py 가 runnable_actions 로 물리 필터)

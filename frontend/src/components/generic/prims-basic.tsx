@@ -8,7 +8,7 @@
 import { useState, useRef, type ReactNode } from 'react';
 import {
   type AppViewPrim, type Json,
-  jget, asList, trendClass, openUrlInApp,
+  emptyText, trendClass, openUrlInApp, sparkModel, fmtSpark,
 } from './manifest';
 
 export function linkify(text: string): React.ReactNode {
@@ -40,8 +40,7 @@ export function Card({ children, onClick }: { children: React.ReactNode; onClick
 }
 
 export function EmptyMsg({ p, data }: { p: AppViewPrim; data: unknown }) {
-  const m = (p.empty_from ? jget(data, p.empty_from as string) : null) || p.empty || '결과가 없습니다';
-  return <p className="text-sm text-stone-400 mt-2">{String(m)}</p>;
+  return <p className="text-sm text-stone-400 mt-2">{String(emptyText(p, data))}</p>;
 }
 
 export function KvRow({ k, v }: { k: string; v: string }) {
@@ -60,32 +59,19 @@ export function KvRow({ k, v }: { k: string; v: string }) {
   );
 }
 
-// 스파크라인 수치 포맷 — 큰 값(가격)은 천단위 콤마·정수, 작은 값(환율·코인)은 소수.
-function fmtSpark(n: number): string {
-  const a = Math.abs(n);
-  const d = a >= 1000 ? 0 : a >= 1 ? 2 : 4;
-  return n.toLocaleString(undefined, { maximumFractionDigits: d });
-}
+// 좌표·스케일·수치 포맷은 공용 렌더 코어(sparkModel/fmtSpark) — 원격 표면과 단일 소스.
+type SparkModel = {
+  rows: { v: number; x: string }[]; w: number; h: number; mn: number; mx: number;
+  pts: string; px: (i: number) => number; py: (v: number) => number;
+};
 
 export function Sparkline({ p, data }: { p: AppViewPrim; data: unknown }) {
-  const arr = asList(data, p.from);
-  // x축 라벨 필드: 매니페스트 p.x 우선, 없으면 흔한 시간 필드 자동 감지(date/time/label).
-  const first = arr[0] as Json | undefined;
-  const xkey = (p.x as string) || (first && typeof first === 'object'
-    ? ['date', 'time', 'label', 'x'].find((k) => (first as Json)[k] != null) : undefined);
-  const rows = arr
-    .map((x) => ({ v: Number(p.y ? (x as Json)[p.y as string] : x), x: xkey ? String((x as Json)[xkey] ?? '') : '' }))
-    .filter((r) => !isNaN(r.v));
+  const sm = sparkModel(p, data) as SparkModel | null;
   const [hi, setHi] = useState<number | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
-  if (rows.length < 2) return null;
-  const vals = rows.map((r) => r.v);
+  if (!sm) return null;   // 점 2개 미만 — 그리지 않음
+  const { rows, w, h, mn, mx, pts, px, py } = sm;
   const up = !trendClass(p, data) || trendClass(p, data) === 'text-red-500';
-  const w = 280, h = 50;
-  const mn = Math.min(...vals), mx = Math.max(...vals), rg = mx - mn || 1;
-  const px = (i: number) => (i / (rows.length - 1)) * w;
-  const py = (v: number) => h - ((v - mn) / rg) * h;
-  const pts = rows.map((r, i) => `${px(i).toFixed(1)},${py(r.v).toFixed(1)}`).join(' ');
   const stroke = up ? 'stroke-red-400' : 'stroke-blue-500';
   const dot = up ? 'bg-red-400' : 'bg-blue-500';
 

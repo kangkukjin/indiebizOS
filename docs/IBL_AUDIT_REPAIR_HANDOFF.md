@@ -12,7 +12,8 @@
 | ② 에러 관례 | ✅ 완료 | `0dd1050`(1단계) + `38df771`(완결, 2026-08-05 3차) — health-record 20곳(returns:items 위반 최악 부류) dict 전환 · Unknown tool 폴백 12곳 소탕 · {success:False,message}→error 80곳 · error-only→+success:False 156곳(렌더러 양쪽 d.error‖d.message 폴백이라 표시 무손상 실측) · `scripts/check_string_returns.py` 가드(execute+디스패처 op 함수 AST, 중첩 def 헬퍼 제외=오탐 0, system_essentials 텍스트 계약 31건만 BASELINE 래칫) + pre-commit + seam-guards CI |
 | ③ per-op returns | ✅ 완료 | (2026-08-05 4차) `ops.returns`/`ops.side_effect` 형제 맵 신설 + `backend/ibl_ops.py`(해소 단일 소스) + 43액션 선언 마이그레이션. **성과: 자동 건강검진 read-only 게이트에 걸려 실행조차 안 되던 fixture 32개 → 2개**(§1B GREEN 33→63, RED 0). 상세는 아래 §1-③ |
 | ⑤ 행위 검증 층 | ✅ 완료 | (2026-08-05 5차) `ops.fixture`/`ops.exempt` 형제 맵 + 읽기-op 전수 완전성 가드 + `#op` 키 파생·소비. **읽기 op 커버리지 37/133 → 122/133**(fixture 53 + 면제 32 신규), §1B **GREEN 63→89 / RED 0**. 상세는 아래 §1-⑤ |
-| ④⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ④ 렌더러 단일화 | ✅ 완료(로직) | (2026-08-05 6차) `backend/static/app_render_core.js` 신설 — 두 렌더러가 글자 그대로 번역해 갖고 있던 **순수 로직 26개**를 단일 소스로. 마크업 층은 의도적으로 두 벌 유지(아래 §1-④). 가드 `check_render_core.py` + 실행 회귀 `test_render_core.js`/`backend/test_render_core.py` |
+| ⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -94,17 +95,43 @@ items 선언 후 대다수 op는 effect 반환 — `guest-helper/ibl_actions.yam
 - 선행 조건: ①(스텁 전환)을 먼저 하면 op별 반환 지점이 함수 단위로 잡혀 이행이 쉬워진다.
 </details>
 
-### ④ 이중 렌더러 단일화 (대규모·최대 세금)
-같은 15 프리미티브를 TS 2,025줄(`GenericInstrument.tsx`+generic/)과 파이썬 문자열 속 JS
-~1,459줄(`launcher_web_render.py` 등)이 이중 구현. **데스크탑 렌더러 커밋의 85%(29/34)가
-원격 렌더러 동시 수정**, 헬퍼 14개가 글자 그대로 번역돼 있음(jget/tpl/applyFilter/
-buildAction/rowAction/…). 패리티 가드는 15개 문자열 존재만 보고, 추출률 70% 미만이면
-**조용히 꺼진다**(`iblbuild_appview.py:128-131`).
-- 해법 방향: 둘 다 JS를 실행하므로 **공유 .js 모듈 하나**(원격 셸에 서빙 + Vite import).
-  패리티 가드는 불필요해져 은퇴.
-- 함정: 원격판은 Python 문자열 안이라 `\\` 이스케이프 지뢰(remote-launcher-design-polish
-  메모리) — 추출 자체가 이 부류를 근절한다. TS 타입 유니언(`generic/manifest.ts:60`)이
-  4번째 독립 선언인 것도 함께 수렴.
+### ④ 이중 렌더러 단일화 (✅ 로직 완료 — 아래는 무엇을 합쳤고 무엇을 남겼나)
+
+**핵심 판단: 합칠 수 있는 것은 로직이고, 마크업이 아니다.** 핸드오프 스케치는 "공유 .js
+모듈 하나 → 패리티 가드 은퇴"였지만, 실제로 두 렌더러를 열어 보니 **마크업은 합치면 손해**다 —
+데스크탑은 React(제어 입력·ref·훅으로 form/editable_list/calendar/map 이 상태를 들고 있다)이고
+원격은 HTML 문자열+이벤트 위임이다. 데스크탑을 innerHTML 로 내리는 것은 통합이 아니라 강등이다.
+반면 *로직*(무엇을 그릴지 정하는 층)은 두 벌일 이유가 0이었고, 그것이 커밋 세금의 실체였다.
+
+- **정본**: `backend/static/app_render_core.js` — DOM·프레임워크 의존 0, 표면마다 다른 것
+  (HTML 이스케이프·URL 절대화·색 어휘)은 **인자로 받는다**. 옮긴 것 26개:
+  `jget` `applyFilter` `tplWith` `buildAction` `rowAction` `viewList` `emptyText` `trendUp`
+  `statusGlyph` `unwrapFinalResult` `groupPartition` `fmtSpark` `sparkModel` `calendarModel`
+  `calShift` `pad2` `composeChannelOptions` `isSlowNet` `preloadOf` `mediaModel`
+  `hasMasterDetail` `dynFilterCats` `applyDynFilter` `parseImagePaths` `RECURRENCE_OPTS`
+  `dateInputType`.
+- **두 소비자**: 데스크탑=Vite import(`vite.config` `server.fs.allow:['..']` + tsconfig `allowJs`)
+  / 원격·폰=`backend/launcher_render_core.py` 가 읽어 **맨 끝 ESM export 블록만 떼고** 런처
+  `<script>` 에 인라인(함수 선언 호이스팅이라 조립 순서 무관). 폰 zip 은 gradle 에 별도 `from`
+  (엔진 모듈 glob 이 `*.py` 만 보므로 — 빠지면 폰 앱 탭이 통째로 죽는다. 부재 시 빌드 실패로 승격).
+- **가드**: `scripts/check_render_core.py`(①export 블록이 마지막 하나 ②소비자가 코어 이름
+  재정의 금지 ③두 표면 조립이 코어를 실제로 싣는지) + pre-commit + CI `render-core` 잡.
+  **선언이 아니라 실행으로 재는 그물**도 같이: `scripts/test_render_core.js`(조립된 런처
+  스크립트를 최소 DOM 셰임 위에서 돌려 프리미티브 32종 렌더 검증) ← `backend/test_render_core.py`
+  가 pytest 로 구동. 이건 감사 ⑤가 IBL 액션에 세운 규율의 렌더러판이다.
+- **패리티 가드는 은퇴 안 함**(마크업 층이 여전히 둘이므로 `p.type` 케이스 누락은 계속 실재하는
+  사고). 다만 그 가드의 **조용한 skip**(추출률 70% 미만이면 무언 통과, `iblbuild_appview.py:128-131`)은
+  여전히 남은 결함 — 실행 회귀가 생겼으니 이제 hard-fail 로 바꿔도 안전하다(남은 일).
+- **합치면서 드러난 것**(사본이 하나가 되자 차이가 곧 버그로 보였다):
+  · 원격 `group` 헤더 **이중 이스케이프**(`tpl` 이 esc 한 키를 다시 `esc()`) → `A&amp;amp;B`.
+  · 원격 kv/kv_list **값 이중 이스케이프**(`tpl`+`kvVal` 둘 다 esc) → `<` 가 `&lt;` 로 보이고
+    `&` 낀 URL 의 href 가 망가짐. 값만 `tplWith`(원문)로 넘겨 수리.
+  · 원격 `fireButton`/`fireTop` 의 `final_result` 펼치기가 `ibl()` 본판과 달라 비-JSON 문자열을
+    삼켰다 → `unwrapFinalResult` 하나로 수렴.
+  · 달력 월 산식이 두 벌이라 **그 달에 없는 날**(monthly 반복 31일이 2월에) 처리가 갈렸다.
+- **남은 것**(로직 밖): 마크업 이중 구현 그 자체(의도) · 데스크탑 `Sparkline` 은 OVERRIDES(투자)에
+  가려 제네릭 경로로는 도달 불가라 브라우저 실검증 못 함(코어 모델은 node 회귀가 덮음) ·
+  TS 타입 유니언(`generic/manifest.ts` `AppViewPrim`)이 `APP_VIEW_TYPES` 의 4번째 독립 선언인 것.
 
 ### ⑤ 행위 검증 층 (✅ 완료 — 아래는 이력과 이월 사항)
 
@@ -184,8 +211,10 @@ pytest 부재. 고아 테스트 5개가 시작점: `backend/test_ibl_silent_fail
 ⑧ pytest 도입(독립·먼저 할수록 이득) → ⑤ 행위 검증 층 ✅ (⑧ 위에서)
 ⑦ 디렉토리화 (독립·큰 diff라 다른 작업과 겹치지 않게 단독 세션)
 ⑨ api_portal 분할 (독립)
-④ 렌더러 단일화 (최대 작업 — 단독 세션, 실브라우저 종단 검증 필수)
+④ 렌더러 단일화 ✅ (2026-08-05 6차 — 로직 단일화 + 실브라우저 종단)
 ```
+
+**남은 것은 ⑦⑨ 둘뿐**이고 서로 독립이다. 아무 순서로나.
 
 ## 3. 하우스 규약 리마인더 (이 작업들에 적용)
 

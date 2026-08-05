@@ -271,9 +271,7 @@ async function fireButton(bi,btn){
   const b=(CUR.mode.buttons||[])[bi]; if(!b) return;
   btn.disabled=true;
   /* $key=모드 입력값 치환(팔로우 $npub·보드 만들기 $name/$tag 등) — 데스크탑 fireButton 과 동일 의미 */
-  try{ let d=await ibl(buildAction(b.action,gatherInputs()));
-    /* 합성(>>) 결과는 final_result(마지막 단계)를 펼쳐 본다 — 발행 링크 등 */
-    if(d&&typeof d==='object'&&'final_result' in d){ let fr=d.final_result; if(typeof fr==='string'){try{fr=JSON.parse(fr)}catch(e){}} if(fr&&typeof fr==='object') d=fr; }
+  try{ let d=unwrapFinalResult(await ibl(buildAction(b.action,gatherInputs())));
     if(d&&d.stop_in_client){ stopRadioStream(); }
     else if(d&&d.error){ alert(d.error); }
     else if(d&&d.url){ try{await navigator.clipboard.writeText(d.url);}catch(e){} alert((d.message||'발행 완료')+'\\n\\n링크가 복사되었습니다 — 친구에게 붙여넣으세요:\\n'+d.url); }  // 발행 등 링크 반환 액션
@@ -286,48 +284,17 @@ async function fireButton(bi,btn){
 async function fireTop(i){
   const b=(CUR.inst.top_buttons||[])[i]; if(!b||!b.action) return;
   if(b.confirm && !confirm(b.confirm)) return;
-  try{ let d=await ibl(b.action);
-    if(d&&typeof d==='object'&&'final_result' in d){ let fr=d.final_result; if(typeof fr==='string'){try{fr=JSON.parse(fr)}catch(e){}} if(fr&&typeof fr==='object') d=fr; }
+  try{ const d=unwrapFinalResult(await ibl(b.action));
     if(d&&d.error){ alert(d.error); } else{ alert((d&&d.message)||'완료'); }
   }
   catch(e){ alert('실행 실패: '+e.message); }
 }
 
-/* ----- 액션 템플릿: $key=사용자 입력, {path}=데이터 행 필드 ----- */
-function jget(o,path){ if(!path) return o; return String(path).split('.').reduce((a,k)=>(a==null?undefined:a[k]),o); }
-function buildAction(template,values){
-  let code=template.replace(/\\$(\\w+)/g,(m,k)=>{
-    const v=values[k]; return v==null?'':String(v).replace(/\\\\/g,'\\\\\\\\').replace(/"/g,'\\\\"');
-  });
-  code=code.replace(/\\w+:\\s*"",?\\s*/g,'');  /* 빈 입력 파라미터 제거 */
-  code=code.replace(/,\\s*\\}/g,'}').replace(/\\{\\s*,/g,'{');
-  return code;
-}
-function viewList(data,from){ if(from==='.') return [data]; const a=jget(data,from); return Array.isArray(a)?a:[]; }
-function rowAction(template,item){
-  return template.replace(/\\{([\\w.]+)\\}/g,(m,path)=>{ const v=jget(item,path); return v==null?'':String(v).replace(/"/g,''); });
-}
-
-/* ----- 표시 템플릿: "{path|filter|...}" → 문자열 (HTML 이스케이프 포함) ----- */
-function applyFilter(v,f){
-  if(f==='round') return v==null?v:Math.round(Number(v));
-  if(f==='num') return v==null?null:Number(v).toLocaleString();
-  if(f==='abs') return v==null?v:Math.abs(Number(v));
-  if(f==='arrow') return (Number(v)||0)>=0?'▲':'▼';
-  if(f.indexOf('opt:')===0){ const a=f.slice(4).split(','); return (v==null||v===''||Number(v)===0)?'':(a[0]||'')+v+(a[1]||''); }
-  if(f.indexOf('trunc:')===0){ const n=parseInt(f.slice(6))||40; const s=String(v==null?'':v); return s.length>n?s.slice(0,n)+'…':s; }
-  return v;
-}
-function tpl(t,data){
-  if(t==null) return '';
-  return String(t).replace(/\\{([^{}]+)\\}/g,(m,expr)=>{
-    const parts=expr.split('|'); let v=jget(data,parts[0].trim());
-    for(let i=1;i<parts.length;i++) v=applyFilter(v,parts[i].trim());
-    return v==null?'':esc(v);
-  });
-}
-
-function statusGlyph(s){ return s==='sent'?'✓':s==='pending'?'⏳':s==='failed'?'⚠':''; }
+/* ----- 액션 템플릿·표시 템플릿 -----
+   jget/buildAction/viewList/rowAction/applyFilter/statusGlyph 의 정본은 공용 렌더 코어
+   (backend/static/app_render_core.js — 데스크탑과 단일 소스). 여기 남는 건 표면 차이 하나뿐:
+   원격은 HTML 문자열을 만들므로 치환된 값을 esc() 해야 한다(데스크탑은 React 가 한다). */
+function tpl(t,data){ return tplWith(t,data,esc); }
 // blocks — 문서 IR 렌더. 블록 구조는 IR이 정본, 여기선 인라인 마크다운(**·`·[링크](url))만 얇게 해석.
 function mdInline(t){
   return esc(t==null?'':String(t))
@@ -364,9 +331,7 @@ function docBlockHtml(b){
   return '<p class="dp">'+mdInline(b.text)+'</p>';
 }
 
-// 반복 주기 표준 어휘 — recurrence 필드 타입 baked 옵션(manage_events repeat 값과 일치, 데스크탑 RECURRENCE_OPTS 쌍).
-var _RECUR_OPTS=[['none','한 번'],['daily','매일'],['weekly','매주'],['monthly','매월'],['yearly','매년']];
-function _recurSelect(id,val){ const v=val||'none'; return '<select class="field" id="'+id+'">'+_RECUR_OPTS.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'; }
-function _dateInputType(t){ return t==='datetime'?'datetime-local':t; } // date/time 그대로, datetime→datetime-local
+// recurrence 옵션(RECURRENCE_OPTS)·dateInputType 은 공용 렌더 코어가 정본 — 여기선 마크업만.
+function _recurSelect(id,val){ const v=val||'none'; return '<select class="field" id="'+id+'">'+RECURRENCE_OPTS.map(o=>'<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>'; }
 
 """

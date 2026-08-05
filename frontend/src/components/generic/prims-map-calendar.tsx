@@ -10,7 +10,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   type AppViewPrim, type AppFormField, type Dispatch, type Json, type ViewEvent,
-  jget, asList, fieldCls, RECURRENCE_OPTS, dateInputType,
+  jget, asList, fieldCls, RECURRENCE_OPTS, dateInputType, calendarModel, calShift, pad2,
 } from './manifest';
 import { Card } from './prims-basic';
 
@@ -167,8 +167,8 @@ const CAL_TYPE_COLOR: Record<string, string> = {
   meeting: 'bg-blue-400', task: 'bg-amber-400', report: 'bg-violet-400', schedule: 'bg-teal-400',
 };
 const CAL_REPEAT_LABEL: Record<string, string> = { daily: '매일', weekly: '매주', monthly: '매월', yearly: '매년', interval: '주기' };
-const pad2 = (n: number) => String(n).padStart(2, '0');
 type CalEvt = { id?: string; date?: string; time?: string; title?: string; repeat?: string; type?: string; description?: string };
+type CalModel = { byDay: Record<number, CalEvt[]>; recurring: CalEvt[]; cells: (number | null)[]; daysInMonth: number };
 
 export function CalendarPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown; dispatch: Dispatch }) {
   const events = asList(data, p.from) as CalEvt[];
@@ -182,31 +182,10 @@ export function CalendarPrim({ p, data, dispatch }: { p: AppViewPrim; data: unkn
   const [busy, setBusy] = useState(false);
   const add = p.add as { fields?: AppFormField[]; action: string; button?: string } | undefined;
 
-  // 날짜 명확 이벤트(none/monthly/yearly)를 일자 → 이벤트[] 로 매핑 (bespoke 로직 그대로)
-  const eventsByDay = useMemo(() => {
-    const map: Record<number, CalEvt[]> = {};
-    const daysInMonth = new Date(year, month, 0).getDate();
-    for (const e of events) {
-      const rep = e.repeat || 'none';
-      const parsed = e.date ? e.date.split('-').map(Number) : null;
-      let day: number | null = null;
-      if (rep === 'none' && parsed && parsed[0] === year && parsed[1] === month) day = parsed[2];
-      else if (rep === 'monthly' && parsed) day = parsed[2];
-      else if (rep === 'yearly' && parsed && parsed[1] === month) day = parsed[2];
-      if (day && day >= 1 && day <= daysInMonth) (map[day] ||= []).push(e);
-    }
-    return map;
-  }, [events, year, month]);
-  const recurring = useMemo(() => events.filter((e) => ['daily', 'weekly', 'interval'].includes(e.repeat || '')), [events]);
-  const cells = useMemo(() => {
-    const firstWd = new Date(year, month - 1, 1).getDay();
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const arr: (number | null)[] = Array(firstWd).fill(null);
-    for (let d = 1; d <= daysInMonth; d++) arr.push(d);
-    while (arr.length % 7 !== 0) arr.push(null);
-    return arr;
-  }, [year, month]);
-  const go = (delta: number) => { let m = month + delta, y = year; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } setMonth(m); setYear(y); setSelDay(null); };
+  // 월 산식(일자 매핑·정기 분리·그리드 칸)은 공용 렌더 코어(calendarModel) — 원격 표면과 단일 소스
+  const { byDay: eventsByDay, recurring, cells } = useMemo(
+    () => calendarModel(events, year, month) as unknown as CalModel, [events, year, month]);
+  const go = (delta: number) => { const nx = calShift(year, month, delta); setMonth(nx.month); setYear(nx.year); setSelDay(null); };
   const isToday = (d: number) => today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() === d;
   const selEvents = selDay ? (eventsByDay[selDay] || []) : [];
 

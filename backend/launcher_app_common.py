@@ -46,14 +46,9 @@ async function ibl(code){
     ? await jfetch(window.__PORTAL.exec,{method:'POST',body:JSON.stringify({code:code})})
     : await jfetch('/ibl/execute',{method:'POST',body:JSON.stringify({code,project_id:'앱모드',project_path:'.',surface:'web'})});
   if(!r.ok){ let m='[HTTP '+r.status+']'; try{ const e=await r.json(); if(e&&(e.error||e.detail)) m=e.error||e.detail; }catch(_e){} throw new Error(m); }
-  const data=await r.json();
-  /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록 */
-  if(data && typeof data==='object' && 'final_result' in data){
-    const fr=data.final_result;
-    if(typeof fr==='string'){ try{ return JSON.parse(fr); }catch(e){ return {message:fr}; } }
-    if(fr && typeof fr==='object') return fr;
-  }
-  return data;
+  /* 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록.
+     펼치는 규칙은 공용 렌더 코어(unwrapFinalResult)가 정본 — 데스크탑 runIBL 과 같은 것. */
+  return unwrapFinalResult(await r.json());
 }
 
 /* ===== 로그인 ===== */

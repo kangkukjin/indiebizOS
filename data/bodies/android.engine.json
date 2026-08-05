@@ -110,6 +110,7 @@
     "launcher_app_warehouse",
     "launcher_layout",
     "launcher_lite",
+    "launcher_render_core",
     "launcher_surface_phone",
     "launcher_surface_remote",
     "launcher_web_app",
@@ -211,11 +212,12 @@
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_nip44_vectors": "top-level import: pynostr",
-    "test_pkg_singleton_race": "force_exclude_glob"
+    "test_pkg_singleton_race": "force_exclude_glob",
+    "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 208,
-    "engine": 185,
-    "blocklist": 23
+    "total": 210,
+    "engine": 186,
+    "blocklist": 24
   }
 }

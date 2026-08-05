@@ -8,18 +8,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   type AppViewPrim, type AppFormField, type FormAction, type Dispatch, type Json,
-  tpl, asList, buildAction, runIBL,
+  tpl, asList, buildAction, runIBL, parseImagePaths,
   fieldCls, imageUrl, RECURRENCE_OPTS, dateInputType,
 } from './manifest';
 import { Card } from './prims-basic';
 
-/** attachment_path(JSON 배열 또는 레거시 단일 문자열) → 경로 배열 */
-function parseImagePaths(v: unknown): string[] {
-  const s = String(v ?? '').trim();
-  if (!s) return [];
-  try { const a = JSON.parse(s); if (Array.isArray(a)) return a.map(String); } catch { /* 레거시 단일 */ }
-  return [s];
-}
+// attachment_path 파싱(parseImagePaths)은 공용 렌더 코어 — 원격 표면과 단일 소스.
 
 // 첨부 이미지 필드 — 썸네일(전 표면, /image?path=) + 제거(어디서나) + 추가(데스크탑 window.electron 만).
 // form save 와 무관: 업로드 즉시 add_image/remove_image 로 영속 후 새로고침.

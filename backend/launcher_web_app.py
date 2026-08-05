@@ -7,6 +7,7 @@
 """
 
 from launcher_app_common import LAUNCHER_COMMON_JS, LAUNCHER_SETSURFACE_JS
+from launcher_render_core import LAUNCHER_CORE_JS
 from launcher_app_warehouse import LAUNCHER_WAREHOUSE_JS
 from launcher_app_autopilot import LAUNCHER_AUTOPILOT_JS
 from launcher_app_manual import LAUNCHER_MANUAL_JS
@@ -18,6 +19,8 @@ from launcher_app_appmode import (
 
 LAUNCHER_APP_JS = (
     LAUNCHER_COMMON_JS
+    # 공용 렌더 코어(데스크탑과 단일 소스) — 여기 함수들은 선언 호이스팅으로 아래 조각 전부가 본다.
+    + LAUNCHER_CORE_JS
     + LAUNCHER_SETSURFACE_JS
     + LAUNCHER_WAREHOUSE_JS
     + LAUNCHER_AUTOPILOT_JS

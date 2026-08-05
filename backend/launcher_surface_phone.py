@@ -21,6 +21,7 @@ from launcher_web_shell import (
     SHELL_TAIL_HTML,
 )
 from launcher_app_common import LAUNCHER_COMMON_JS
+from launcher_render_core import LAUNCHER_CORE_JS
 from launcher_app_autopilot import LAUNCHER_AUTOPILOT_JS
 from launcher_app_manual import LAUNCHER_MANUAL_JS
 from launcher_app_appmode import LAUNCHER_APPMODE_HEAD_JS, LAUNCHER_APPMODE_REST_JS
@@ -77,6 +78,7 @@ def phone_html() -> str:
         + SHELL_PANEL_APP_HTML
         + SHELL_TAIL_HTML
         + LAUNCHER_COMMON_JS
+        + LAUNCHER_CORE_JS   # 공용 렌더 코어 — 원격런처와 같은 자리(LAUNCHER_COMMON_JS 바로 뒤)
         + PHONE_SETSURFACE_JS
         + LAUNCHER_AUTOPILOT_JS
         + LAUNCHER_MANUAL_JS

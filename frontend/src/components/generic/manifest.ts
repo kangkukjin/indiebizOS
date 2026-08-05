@@ -1,13 +1,38 @@
 /**
- * generic/manifest.ts — 매니페스트 타입 + IBL 실행 + 템플릿 엔진 (비-JSX 공용층)
+ * generic/manifest.ts — 매니페스트 타입 + IBL 실행 + 데스크탑 전용 헬퍼 (비-JSX 공용층)
  *
  * GenericInstrument.tsx 에서 분리(2026-07-18, 1500줄 규칙 모듈화).
  * 진실 소스: ibl_nodes_src 액션의 app: 블록 → GET /launcher/instruments 자동 파생.
- * 원격 런처(api_launcher_web.py 웹앱)와 동일한 렌더 어휘의 데스크탑판 해석기 —
- * 여기엔 타입·runIBL·"{path|filter}" 템플릿·$key 액션 빌드·URL 헬퍼만(비-JSX).
+ *
+ * ★렌더 어휘의 *순수 로직*(템플릿 엔진·액션 빌드·스파크라인 좌표·달력 월 산식·compose 채널·
+ *   미디어 소스 결정…)은 원격/폰 표면과 **단일 소스**다 — backend/static/app_render_core.js.
+ *   여기서는 그것을 import 해 재수출하고(기존 import 경로 보존), 데스크탑에만 있는 것
+ *   (runIBL 엔드포인트·Tailwind 색·백엔드 origin URL 헬퍼·타입)만 직접 갖는다.
+ *   로직을 여기 다시 적지 말 것 — scripts/check_render_core.py 가 재정의를 막는다.
+ *
  * JSX 프리미티브는 prims-basic/prims-edit/prims-map-calendar.tsx, 디스패처·본체는
  * GenericInstrument.tsx.
  */
+import {
+  jget, applyFilter, tplWith, buildAction, rowAction, viewList,
+  emptyText, trendUp, statusGlyph, unwrapFinalResult,
+  groupPartition, fmtSpark, sparkModel,
+  calendarModel, calShift, pad2,
+  composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
+  RECURRENCE_OPTS, dateInputType,
+} from '../../../../backend/static/app_render_core.js';
+
+// 공용 코어 재수출 — 소비자(프리미티브들)는 종전처럼 './generic/manifest' 에서 가져간다.
+export {
+  jget, applyFilter, tplWith, buildAction, rowAction,
+  emptyText, statusGlyph, unwrapFinalResult,
+  groupPartition, fmtSpark, sparkModel,
+  calendarModel, calShift, pad2,
+  composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
+  RECURRENCE_OPTS, dateInputType,
+};
 
 export const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
 
@@ -127,112 +152,29 @@ export async function runIBL(code: string): Promise<Json> {
     body: JSON.stringify({ code, project_id: '앱모드', project_path: '.' }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  // 합성(>>) 액션은 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 — view의 from/{필드}가 풀리도록
-  if (data && typeof data === 'object' && 'final_result' in data) {
-    const fr = (data as Record<string, unknown>).final_result;
-    if (typeof fr === 'string') {
-      try { return JSON.parse(fr) as Json; } catch { return { message: fr } as Json; }
-    }
-    if (fr && typeof fr === 'object') return fr as Json;
-  }
-  return data;
+  // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)
+  return unwrapFinalResult(await res.json()) as Json;
 }
 
-// ===== 템플릿 엔진 (원격 webapp과 동일 의미) =====
+// ===== 템플릿 (공용 코어 위의 데스크탑 얇은 층) =====
 
-export function jget(o: unknown, path?: string): unknown {
-  if (!path) return o;
-  return String(path).split('.').reduce<unknown>((a, k) => (a == null ? undefined : (a as Json)[k]), o);
-}
-
-export function applyFilter(v: unknown, f: string): unknown {
-  if (f === 'round') return v == null ? v : Math.round(Number(v));
-  if (f === 'num') return v == null ? null : Number(v).toLocaleString();
-  if (f === 'abs') return v == null ? v : Math.abs(Number(v));
-  if (f === 'arrow') return (Number(v) || 0) >= 0 ? '▲' : '▼';
-  if (f.startsWith('opt:')) {
-    const a = f.slice(4).split(',');
-    return v == null || v === '' || Number(v) === 0 ? '' : (a[0] || '') + String(v) + (a[1] || '');
-  }
-  if (f.startsWith('trunc:')) {
-    const n = parseInt(f.slice(6)) || 40;
-    const s = String(v ?? '');
-    return s.length > n ? s.slice(0, n) + '…' : s;
-  }
-  return v;
-}
-
-/** "{path|filter|...}" → 문자열 치환 (React가 이스케이프하므로 esc 불필요) */
+/** "{path|filter|...}" → 문자열 치환. 데스크탑은 React 가 이스케이프하므로 esc 를 안 넘긴다. */
 export function tpl(t: unknown, data: unknown): string {
-  if (t == null) return '';
-  return String(t).replace(/\{([^{}]+)\}/g, (_, expr: string) => {
-    const parts = expr.split('|');
-    let v = jget(data, parts[0].trim());
-    for (let i = 1; i < parts.length; i++) v = applyFilter(v, parts[i].trim());
-    return v == null ? '' : String(v);
-  });
+  return tplWith(t, data);
 }
 
-/** $key 치환 + 빈 입력 'param: ""' 쌍 자동 제거 */
-export function buildAction(template: string, values: Record<string, string>): string {
-  let code = template.replace(/\$(\w+)/g, (_, k: string) => {
-    const v = values[k];
-    // IBL 값은 JSON5 문자열 리터럴로 파싱됨 → 스트립이 아니라 이스케이프(백슬래시·따옴표).
-    // 스트립하면 Windows 경로(C:\Users\…)의 백슬래시가 사라져 깨짐. 이스케이프하면 파서가 복원.
-    return v == null ? '' : String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  });
-  code = code.replace(/\w+:\s*"",?\s*/g, '');
-  code = code.replace(/,\s*\}/g, '}').replace(/\{\s*,/g, '{');
-  return code;
-}
-
-/** 행 데이터 {path} 치환 (드릴·행 버튼용) */
-export function rowAction(template: string, item: unknown): string {
-  return template.replace(/\{([\w.]+)\}/g, (_, path: string) => {
-    const v = jget(item, path);
-    return v == null ? '' : String(v).replace(/"/g, '');
-  });
-}
-
-// 한국색: 상승=빨강, 하락=파랑
+// 한국색: 상승=빨강, 하락=파랑 (방향 판정은 공용 코어 trendUp)
 export function trendClass(p: AppViewPrim, data: unknown): string | null {
-  if (!p.trend) return null;
-  return (Number(jget(data, p.trend as string)) || 0) >= 0 ? 'text-red-500' : 'text-blue-600';
+  const up = trendUp(p, data);
+  return up == null ? null : up ? 'text-red-500' : 'text-blue-600';
 }
 
+/** view 통화 슬라이스 — 공용 코어 viewList 의 데스크탑 이름(타입만 좁힌다) */
 export function asList(data: unknown, from: unknown): Json[] {
-  if (from === '.') return [data as Json]; // 응답 자체를 1행으로 (단일 객체에 행 버튼 달기)
-  const arr = jget(data, from as string);
-  return Array.isArray(arr) ? (arr as Json[]) : [];
+  return viewList(data, from) as Json[];
 }
 
-// compose 채널 선택 후보 — 연락처 배열에서 발신 가능한 채널만, 없으면 기본(primary) 채널로 폴백.
 export type ChannelOpt = { key: string; channel_type: string; to: string; label: string };
-export function composeChannelOptions(cmp: AppCompose | undefined, data: unknown): ChannelOpt[] {
-  const ch = cmp?.channels;
-  if (!ch || !data || typeof data !== 'object') return [];
-  const mk = (channel_type: string, to: string, label: string): ChannelOpt => ({ key: channel_type + '|' + to, channel_type, to, label });
-  let opts = asList(data, ch.from)
-    .map((c) => ({ ct: String(jget(c, ch.type) ?? ''), to: String(jget(c, ch.value) ?? '') }))
-    .filter((o) => o.to && (!ch.sendable || ch.sendable.includes(o.ct)))
-    .map((o) => mk(o.ct, o.to, o.ct + ' · ' + o.to));
-  if (opts.length === 0) {
-    const ct = String(jget(data, 'channel') ?? ''); const to = String(jget(data, 'to') ?? '');
-    if (to) opts = [mk(ct, to, ct || '기본')];
-  }
-  const seen = new Set<string>();
-  const uniq = opts.filter((o) => (seen.has(o.key) ? false : (seen.add(o.key), true)));
-  // 백엔드가 정한 기본 채널(data.channel = _primary_channel, nostr 우선)을 맨 앞으로 옮긴다.
-  // 작성바 기본 선택 = opts[0] 이므로, 연락처 등록 순서와 무관하게 nostr 를 가진 이웃은
-  // nostr 가 기본이 된다. ★사용자가 드롭다운에서 다른 채널을 고르면 그 선택이 이긴다.
-  const prefCt = String(jget(data, 'channel') ?? '');
-  if (prefCt) {
-    const i = uniq.findIndex((o) => o.channel_type === prefCt);
-    if (i > 0) { const [pick] = uniq.splice(i, 1); uniq.unshift(pick); }
-  }
-  return uniq;
-}
 
 // 메시지 등 텍스트 속 URL 을 인앱 브라우저(런처의 포식 브라우저)로 여는 헬퍼.
 // Electron 이면 openInLauncherBrowser(런처 창의 ForageBrowser 탭)로, 아니면 새 탭 폴백.
@@ -247,10 +189,6 @@ export function openUrlInApp(url: string) {
 
 export const fieldCls = 'px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-400';
 
-export function statusGlyph(s: string): string {
-  return s === 'sent' ? '✓' : s === 'pending' ? '⏳' : s === 'failed' ? '⚠' : '';
-}
-
 // ===== URL 헬퍼 (백엔드 미디어 서빙) =====
 
 export const IMAGE_BASE = IBL_ENDPOINT.replace(/\/ibl\/execute$/, '');  // 'http://127.0.0.1:8765'
@@ -262,6 +200,4 @@ export const mediaSrc = (u: string) => (u && u.startsWith('/')) ? `${IMAGE_BASE}
 // 그 외(백엔드 파일 절대경로)는 /launcher/file 로 서빙.
 export const audioUrl = (u: string) => !u ? '' : (/^(https?:|data:)/.test(u) ? u : u.startsWith('/') ? `${IMAGE_BASE}${u}` : `${IMAGE_BASE}/launcher/file?path=${encodeURIComponent(u)}`);
 
-// 반복 주기 표준 어휘 — recurrence 필드 타입의 baked 옵션(manage_events repeat 값과 일치). date/time 은 네이티브 input.
-export const RECURRENCE_OPTS: [string, string][] = [['none', '한 번'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'], ['yearly', '매년']];
-export const dateInputType = (t: string) => (t === 'datetime' ? 'datetime-local' : t); // date/time 은 그대로, datetime → datetime-local
+// RECURRENCE_OPTS(반복 주기 어휘)·dateInputType 은 공용 코어에서 재수출 — 위 export 블록 참조.

@@ -1,6 +1,5 @@
 import os
 import sys
-import importlib.util
 from pathlib import Path
 
 # common 유틸리티 사용
@@ -10,18 +9,15 @@ if _backend_dir not in sys.path:
 
 current_dir = Path(__file__).parent
 
-# 싱글턴 패턴 - 재생 프로세스/상태가 유지되도록
+# 싱글턴 패턴 - 재생 프로세스/상태가 유지되도록.
+# 로드 주문은 common.pkg_utils.load_singleton 단일 소스(동시 호출 레이스 수리 — 그 모듈
+# 독스트링 참조). 옛 인라인 주문은 반쯤 실행된 모듈을 다른 스레드에 넘겼다.
+from common.pkg_utils import load_singleton
+
 _MODULE_KEY = "tool_radio_singleton"
 
 def load_tool_radio():
-    if _MODULE_KEY in sys.modules:
-        return sys.modules[_MODULE_KEY]
-    module_path = current_dir / "tool_radio.py"
-    spec = importlib.util.spec_from_file_location(_MODULE_KEY, module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_MODULE_KEY] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_singleton(__file__, "tool_radio", module_key=_MODULE_KEY)
 
 
 # ── op 분기 함수 (music-player 동형 — 진짜 디스패처) ─────────────────────

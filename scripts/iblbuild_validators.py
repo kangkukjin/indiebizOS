@@ -134,14 +134,72 @@ def _check_op_axis(qualified: str, action: dict, ops: dict, values: dict) -> lis
             if not checker(val):
                 issues.append(f"{qualified}: ops.{field}.{op_name}={val!r} — {expect} 여야 함")
 
+    # --- 행위 검증 형제 맵(`ops.fixture` / `ops.exempt`) — 감사 부채 ⑤ ---
+    from ibl_ops import op_returns, op_side_effect
+
+    for field in ("fixture", "exempt"):
+        block = ops.get(field)
+        if block is None:
+            continue
+        if not isinstance(block, dict) or not block:
+            issues.append(f"{qualified}: ops.{field} 는 비어있지 않은 매핑이어야 함")
+            continue
+        for op_name, val in block.items():
+            if op_name not in values:
+                issues.append(
+                    f"{qualified}: ops.{field}.{op_name} — ops.values 에 없는 유령 op "
+                    f"(선언해도 아무 효과 없음)"
+                )
+                continue
+            if not isinstance(val, str) or not val.strip():
+                issues.append(f"{qualified}: ops.{field}.{op_name} 는 비어있지 않은 문자열이어야 함")
+                continue
+            if field != "fixture":
+                continue
+            # ★쓰기 op 에 fixture 를 달면 무인 건강검진이 **매일 그 부작용을 실행**한다
+            # (2026-07-19 실측 부류: mkdir fixture 가 검진마다 폴더를 만들고 있었다).
+            if op_side_effect(action, op_name):
+                issues.append(
+                    f"{qualified}: ops.fixture.{op_name} — 부작용 op 에는 fixture 를 달 수 없다 "
+                    f"(건강검진이 매 실행마다 부작용을 낸다). 읽기 op 만."
+                )
+            if op_returns(action, op_name) == "effect":
+                issues.append(
+                    f"{qualified}: ops.fixture.{op_name} — returns:effect op 은 실행 대상 밖"
+                )
+            # fixture 코드가 정말 그 op 을 부르는가 (드리프트 차단 — 다른 op 을 부르면
+            # 그 op 은 영영 미검증인 채 '커버됨'으로 계산된다)
+            m = re.search(r'op\s*:\s*["\']([^"\']+)["\']', val)
+            called = m.group(1) if m else ops.get("default")
+            if called != op_name:
+                issues.append(
+                    f"{qualified}: ops.fixture.{op_name} 코드가 부르는 op 은 "
+                    f"'{called}' — 키와 불일치"
+                )
+
+    both = set((ops.get("fixture") or {})) & set((ops.get("exempt") or {}))
+    if both:
+        issues.append(
+            f"{qualified}: op {sorted(both)} 가 ops.fixture 와 ops.exempt 에 동시 선언 "
+            f"(둘 중 하나만)"
+        )
+
     # 모순 차단: 세계를 바꾸는 통화(effect)를 선언해놓고 '안전하다'고 말할 수는 없다.
     # 이걸 허용하면 무인 자가점검 루프가 부작용 op 를 매일 실행한다.
-    op_ret = ops.get("returns") if isinstance(ops.get("returns"), dict) else {}
+    #
+    # ★**해소된** 값으로 잰다(2026-08-05 감사 ⑤). op 가 명시적으로 `side_effect: false`
+    # 라고 말했는데 통화는 액션의 `returns: effect` 를 상속하는 경우가 같은 모순인데
+    # 옛 검사(선언된 op_ret 만 조회)는 못 봤다 — `limbs:browser` content/find/logs 처럼
+    # **읽기라고 선언해 놓고 통화는 미선언**인 op 들이 그렇게 24개 있었다. 그 상태는
+    # 행위 검증에서 조용히 빠진다(effect 는 실행 대상 밖이므로 fixture 를 요구받지 않는다).
+    from ibl_ops import op_returns as _op_returns
+
     op_se = ops.get("side_effect") if isinstance(ops.get("side_effect"), dict) else {}
     for op_name, se in op_se.items():
-        if se is False and op_ret.get(op_name) == "effect":
+        if se is False and _op_returns(action, op_name) == "effect":
             issues.append(
-                f"{qualified}: op '{op_name}' 가 returns:effect 인데 side_effect:false — 모순"
+                f"{qualified}: op '{op_name}' 가 side_effect:false 인데 통화는 effect — 모순. "
+                f"읽기 op 이면 자기 통화를 선언할 것 (`ops.returns: {{{op_name}: items|scalar}}`)"
             )
     return issues
 
@@ -717,7 +775,48 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
                     f"`{field}:` 필드 보유 — items/scalar 전용 필드다. 제거할 것"
                     + (" (부작용 액션 fixture 는 건강검진마다 부작용 실행)" if field == "fixture" else "")
                 )
+
+            issues += _check_op_fixture_coverage(f"{node_name}:{action_name}", action)
     return issues
+
+
+def _check_op_fixture_coverage(qualified: str, action: dict) -> list[str]:
+    """op 축 fixture 완전성 — 감사 부채 ⑤ (2026-08-05).
+
+    액션 레벨 `fixture:` 는 액션당 **한 op** 만 증명한다. ③이 op 단위 안전 분류를
+    선언에서 파생 가능하게 만든 이상, "안전하다고 선언한 읽기 op 이 실제로 도는가"는
+    물을 수 있는 질문이 됐다 — 실측으로 읽기 op 133개 중 fixture 가 닿는 건 37개였다.
+
+    규칙: 읽기(side_effect=false) + 통화 items|scalar 인 op 은 아래 중 하나로 덮인다.
+      ① `ops.fixture[op]`  ② `ops.exempt[op]`  ③ 액션 레벨 `fixture:` 가 그 op 을 호출
+      ④ 액션 레벨 `exempt:` (액션 통째가 자동 실행 불가 — 기기·인자 의존)
+    """
+    from ibl_ops import op_names, op_needs_fixture
+
+    ops = action.get("ops") if isinstance(action.get("ops"), dict) else {}
+    names = op_names(action)
+    if not names:
+        return []
+    if action.get("exempt"):
+        return []            # ④ 액션 통째 면제
+    op_fx = ops.get("fixture") or {}
+    op_ex = ops.get("exempt") or {}
+    # ③ 액션 레벨 fixture 가 고른 op
+    act_op = None
+    if isinstance(action.get("fixture"), str):
+        m = re.search(r'op\s*:\s*["\']([^"\']+)["\']', action["fixture"])
+        act_op = m.group(1) if m else ops.get("default")
+
+    missing = [o for o in names
+               if op_needs_fixture(action, o)
+               and o not in op_fx and o not in op_ex and o != act_op]
+    if not missing:
+        return []
+    return [
+        f"{qualified}: 읽기 op {missing} 이 fixture/exempt 없음 — "
+        f"`ops.fixture: {{{missing[0]}: '[…]{{op: \"{missing[0]}\"}}'}}` 한 줄 "
+        f"(실행 인자 의존이면 `ops.exempt: {{{missing[0]}: '<사유>'}}`)"
+    ]
 
 
 def validate_node_guides(data: dict, root: Path) -> list[str]:

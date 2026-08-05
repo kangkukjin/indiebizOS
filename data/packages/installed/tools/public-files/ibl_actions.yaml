@@ -26,6 +26,11 @@ nodes:
             detail: false
             basket_list: false
             basket_detail: false
+          fixture:
+            basket_list: '[others:showcase]{op: "basket_list"}'
+          exempt:
+            detail: '폴더 id 필요(status 결과) — 고정 fixture 부적합'
+            basket_detail: 'basket_id 필요(basket_list 결과) — 고정 fixture 부적합'
           values:
             status: 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 조회
             add: 폴더를 목록에 추가 (바스켓에 담아야 공개; 인덱싱 없음)

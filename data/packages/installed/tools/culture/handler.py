@@ -60,28 +60,40 @@ def _perf_search(ti: dict):
     return result
 
 
+def _as_items(result, key: str):
+    """native 목록 키를 단일 통화 items 로 승격 (search 가 하던 것과 같은 한 줄).
+
+    2026-08-05 감사 ⑤: op 단위 fixture 를 붙이자 `returns: items` 액션인데 venue/
+    genres/regions/recommended 만 통화를 안 달고 있던 것이 드러났다 — 액션 fixture 가
+    op 하나(search)만 돌던 탓에 몇 달간 아무도 안 봤다.
+    """
+    if isinstance(result, dict) and isinstance(result.get(key), list):
+        result["items"] = result.pop(key)
+    return result
+
+
 def _perf_venue(ti: dict):
     """[sense:performance]{op:venue} — KOPIS 공연장."""
     from tool_kopis import get_facilities
-    return get_facilities(
+    return _as_items(get_facilities(
         facility_name=ti.get("query") or ti.get("keyword"),  # query 우선, keyword 별칭
         facility_id=ti.get("facility_id"),
         signgucode=ti.get("region"),
         rows=ti.get("rows", 20),
         cpage=ti.get("page", 1),
-    )
+    ), "data")
 
 
 def _perf_genres(ti: dict):
     """[sense:performance]{op:genres} — KOPIS 장르 코드."""
     from tool_kopis import get_genre_list
-    return get_genre_list()
+    return _as_items(get_genre_list(), "genres")
 
 
 def _perf_regions(ti: dict):
     """[sense:performance]{op:regions} — KOPIS 지역 코드."""
     from tool_kopis import get_region_list
-    return get_region_list()
+    return _as_items(get_region_list(), "regions")
 
 
 def _book_search(ti: dict):
@@ -189,7 +201,9 @@ def _book_trending(ti: dict):
 def _book_recommended(ti: dict):
     """[sense:book]{op:recommended} — ISBN 기반 추천 도서."""
     from tool_library import get_recommended_books
-    return get_recommended_books(isbn13=ti.get("isbn13") or ti.get("isbn"), rec_type=ti.get("rec_type", "mania"))
+    return _as_items(get_recommended_books(
+        isbn13=ti.get("isbn13") or ti.get("isbn"),
+        rec_type=ti.get("rec_type", "mania")), "data")
 
 
 def _book_codes(ti: dict):

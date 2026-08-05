@@ -11,7 +11,8 @@
 | ① 스텁 디스패처 | ✅ 완료 | `7ecf9a8` — 15개 전환(4 병렬 에이전트, 행동 변화 0) + 가드 `_stub_ops`(값 None=빌드 차단) + self-test. 부수: web-collector 죽은 records 블록 삭제 `05d5e0b` |
 | ② 에러 관례 | ✅ 완료 | `0dd1050`(1단계) + `38df771`(완결, 2026-08-05 3차) — health-record 20곳(returns:items 위반 최악 부류) dict 전환 · Unknown tool 폴백 12곳 소탕 · {success:False,message}→error 80곳 · error-only→+success:False 156곳(렌더러 양쪽 d.error‖d.message 폴백이라 표시 무손상 실측) · `scripts/check_string_returns.py` 가드(execute+디스패처 op 함수 AST, 중첩 def 헬퍼 제외=오탐 0, system_essentials 텍스트 계약 31건만 BASELINE 래칫) + pre-commit + seam-guards CI |
 | ③ per-op returns | ✅ 완료 | (2026-08-05 4차) `ops.returns`/`ops.side_effect` 형제 맵 신설 + `backend/ibl_ops.py`(해소 단일 소스) + 43액션 선언 마이그레이션. **성과: 자동 건강검진 read-only 게이트에 걸려 실행조차 안 되던 fixture 32개 → 2개**(§1B GREEN 33→63, RED 0). 상세는 아래 §1-③ |
-| ④⑤⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고). ⑤는 ③ 위에서 하면 값이 크다(아래) |
+| ⑤ 행위 검증 층 | ✅ 완료 | (2026-08-05 5차) `ops.fixture`/`ops.exempt` 형제 맵 + 읽기-op 전수 완전성 가드 + `#op` 키 파생·소비. **읽기 op 커버리지 37/133 → 122/133**(fixture 53 + 면제 32 신규), §1B **GREEN 63→89 / RED 0**. 상세는 아래 §1-⑤ |
+| ④⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -105,17 +106,36 @@ buildAction/rowAction/…). 패리티 가드는 15개 문자열 존재만 보고
   메모리) — 추출 자체가 이 부류를 근절한다. TS 타입 유니언(`generic/manifest.ts:60`)이
   4번째 독립 선언인 것도 함께 수렴.
 
-### ⑤ 행위 검증 층 (검증계의 진짜 갭) — ★③ 완료로 길이 열렸다
-effect 57액션 실행 검증 0% · op 12%만 · desc 진실성은 주 1회 LLM 산문 대조뿐.
-> **③ 이후 갱신**: op 안전지도(329 표면 중 읽기 133)가 이미 있으므로, "어느 op 에 fixture 를
-> 달아도 되는가"를 **선언에서 파생**할 수 있다(`build_op_safety_map` 이 True 인 op). ①은
-> 이제 손-큐레이션이 아니라 목록 파생 + 저술이다. 또 effect 액션 안 읽기 op 들은 **통화가
-> 아직 미선언**이라(안전만 선언) fixture 를 달면서 `ops.returns` 를 같이 채우면 된다.
-- 접근(값/노력 순): ①fixture에 op 지정 확대(read-safe op 위주로 40→100+)
-  ②`side_effect: true` 액션용 **드라이런 fixture 규약** 신설(임시 리소스 생성→검증→원상복구
-  패턴 — bulletin/portal 검증 스크립트들이 선례) ③파이프 골든 5개를 오프라인 스텁化
-  (지금은 라이브 외부 API라 flaky).
-- §1C-2 연산자 스위트(7케이스)가 모범 — 시도 로그·분기 수를 단언. 이 스타일로 확장.
+### ⑤ 행위 검증 층 (✅ 완료 — 아래는 이력과 이월 사항)
+
+**한 일**: `ops` 블록에 형제 맵 `fixture`/`exempt` 신설(③의 `returns`/`side_effect` 와 동형,
+순수 가산). 파생물 `ibl_fixtures.json` 의 op 항목 키는 `node:action#op`. 빌드가 **읽기 op
+전수 완전성**을 강제하고(`_check_op_fixture_coverage`), 쓰기 op 에 fixture 를 달면 거부한다
+(무인 루프가 매일 부작용을 실행하게 되므로). 읽기 op 커버리지 **37/133 → 122/133**
+(fixture 53 + 사유 있는 면제 32 신규 저술), §1B **GREEN 63→89 · RED 0**.
+
+- ★**상속된 모순도 막게 넓혔다**: 옛 검사는 `ops.returns[op] == effect` 를 *직접 선언*한
+  경우만 봤다. `side_effect: false` 인데 통화는 액션의 `returns: effect` 를 **상속**하는 op
+  21개(`limbs:browser`·`limbs:guestpc`·`limbs:screen`·`limbs:music`…)는 "읽기라고 선언해
+  놓고 통화는 미선언"인 상태로 행위 검증에서 조용히 빠져 있었다. 이제 자기 통화를 말해야 한다.
+- ★**선언 전에 실행해 재는 규율이 결함을 냈다**(측정이 곧 산출물):
+  ①`sense:performance` venue/genres/regions·`sense:book` recommended — `returns: items`
+  액션인데 **통화를 안 달고** native 키(`data`/`genres`/`regions`)로만 뱉고 있었다
+  (액션 fixture 가 `search` 하나만 돌던 탓에 몇 달간 아무도 안 봄). 핸들러 수리.
+  ②`self:package#info` 는 통화가 없어 `ops.returns: scalar` 로 정직화.
+  ③**싱글턴 로더 import 레이스**(아래 별항).
+- ★**병렬 probe 가 잡은 진짜 동시성 결함**: `sys.modules[key]=module` 을 `exec_module`
+  **앞**에 두는 주문이 4개 핸들러에 복붙돼 있어, 동시 호출자가 **반쯤 만들어진 모듈**을
+  받았다(실측: `[sense:video]{op:"history"}` 가 `has no attribute 'history'` 로 죽고 같은
+  순간 `feed` 는 성공). IBL 은 `&` 병렬이 1급이라 이론적 레이스가 아니다.
+  → `common/pkg_utils.load_singleton`(잠금 + 완주 표식 + 실패 시 sys.modules 정리)로 수렴,
+  youtube·radio·cctv·browser-action 전환. 회귀 테스트에 **음성 대조**(옛 주문이 8중 7 실패)
+  동봉 — `backend/test_pkg_singleton_race.py`.
+- 이월(⑤의 나머지 두 갈래, 미착수): ①`side_effect: true` op 용 **드라이런 fixture 규약**
+  (임시 리소스 생성→검증→원상복구 — bulletin/portal 검증 스크립트가 선례). 쓰기 op 196개는
+  여전히 실행 검증 0. ②파이프 골든 5개 오프라인 스텁화(지금은 라이브 외부 API라 flaky).
+- 남은 YELLOW 3(`others:follow`·`others:portal`·`self:switch`)은 전부 "items 빈(데이터 없음)"
+  — 사용자 데이터가 실제로 비어 있는 것이라 구조 결함 아님.
 
 ### ⑥ 복붙 정리 — curl_cffi 6벌·지오코더 3벌 (소규모·즉효)
 그림자 버그(cctv 옛 common.py)는 치료됐고 가드도 섰으니, 이제 공유가 가능하다:
@@ -161,7 +181,7 @@ pytest 부재. 고아 테스트 5개가 시작점: `backend/test_ibl_silent_fail
 ⑥ 복붙 정리(즉효·독립) ──┐
 ① 스텁 디스패처 전환 ────┼→ ③ per-op returns (①이 선행이면 쉬움)
 ② 에러 관례 수렴 ────────┘
-⑧ pytest 도입(독립·먼저 할수록 이득) → ⑤ 행위 검증 층 (⑧ 위에서)
+⑧ pytest 도입(독립·먼저 할수록 이득) → ⑤ 행위 검증 층 ✅ (⑧ 위에서)
 ⑦ 디렉토리화 (독립·큰 diff라 다른 작업과 겹치지 않게 단독 세션)
 ⑨ api_portal 분할 (독립)
 ④ 렌더러 단일화 (최대 작업 — 단독 세션, 실브라우저 종단 검증 필수)

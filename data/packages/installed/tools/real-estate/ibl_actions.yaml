@@ -75,6 +75,10 @@ actions:
     tool: realty_op
     ops:
       default: query
+      returns:
+        codes: scalar
+      fixture:
+        codes: '[sense:realty]{op: "codes", region: "서울"}'
       values:
         query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물 / source=naver 네이버부동산 매물)
         codes: 법정동 지역코드 조회 (보조)

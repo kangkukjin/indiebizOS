@@ -12,8 +12,13 @@ CCTV 및 실시간 웹캠 통합 도구 패키지
 import json
 import os
 import sys
-import importlib.util
 from pathlib import Path
+
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.pkg_utils import load_sibling, load_singleton
 
 current_dir = Path(__file__).parent
 
@@ -22,19 +27,19 @@ _loaded_modules = {}
 
 
 def load_module(module_name):
-    """같은 디렉토리의 모듈을 동적으로 로드"""
+    """같은 디렉토리의 모듈을 동적으로 로드.
+
+    cctv_common 은 형제 모듈이 `import cctv_common` 으로 참조하므로 sys.modules 에
+    올라가야 한다 — 그 등록은 레이스 안전한 load_singleton 에 맡긴다(반쯤 실행된
+    모듈이 다른 스레드의 import 에 잡히던 부류. common/pkg_utils 독스트링 참조).
+    """
     if module_name in _loaded_modules:
         return _loaded_modules[module_name]
 
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-
-    # common 모듈을 sys.modules에 등록 (다른 모듈이 import할 수 있도록)
     if module_name == "cctv_common":
-        sys.modules["cctv_common"] = module
-
-    spec.loader.exec_module(module)
+        module = load_singleton(__file__, "cctv_common")
+    else:
+        module = load_sibling(__file__, module_name)
     _loaded_modules[module_name] = module
     return module
 

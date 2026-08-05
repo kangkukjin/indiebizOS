@@ -28,6 +28,10 @@ nodes:
             portals: false
             members: false
             audit: false
+          fixture:
+            portals: '[others:portal]{op: "portals"}'
+            members: '[others:portal]{op: "members"}'
+            audit: '[others:portal]{op: "audit"}'
           values:
             status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
             portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)

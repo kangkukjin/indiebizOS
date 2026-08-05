@@ -19,6 +19,8 @@ nodes:
         tool: radio_search_op
         ops:
           default: search
+          fixture:
+            korean: '[sense:radio]{op: "korean"}'
           values:
             search: 전세계 인터넷 라디오 검색 (Radio Browser)
             korean: 한국 주요 방송사 채널 (KBS/MBC/SBS 등)
@@ -158,6 +160,10 @@ nodes:
         ops:
           side_effect:
             list: false
+          returns:
+            list: items
+          fixture:
+            list: '[limbs:radio_favorite]{op: "list"}'
           values:
             list: 전체 즐겨찾기 목록 조회
             add: 즐겨찾기 등록 (station_id/stream_url 또는 현재 재생 채널 자동)

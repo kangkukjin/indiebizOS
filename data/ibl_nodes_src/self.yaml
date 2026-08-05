@@ -159,6 +159,9 @@
             list: false
             status: false
             attempts: false
+          exempt:
+            status: 'goal_id 필요(list 결과의 id) — 고정 fixture 부적합'
+            attempts: 'task_id 필요 — 고정 fixture 부적합'
           values:
             list: 활성/대기 중 목표 전체
             status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
@@ -204,6 +207,8 @@
           side_effect:
             list: false
             get: false
+          exempt:
+            get: 'workflow_id 필요(list 결과의 id) — 고정 fixture 부적합'
           values:
             list: 저장된 워크플로우 목록
             get: 워크플로우 조회 (workflow_id)
@@ -250,11 +255,17 @@
             delete: effect
             enable: effect
             disable: effect
+            status: scalar
           side_effect:
             list: false
             get: false
             status: false
             history: false
+          fixture:
+            status: '[self:trigger]{op: "status"}'
+          exempt:
+            get: '트리거 id 필요 — 고정 fixture 부적합'
+            history: '트리거 id 필요 — 고정 fixture 부적합'
           values:
             list: 등록된 트리거 목록
             get: 단일 트리거 조회 (id)
@@ -328,9 +339,12 @@
           returns:
             install: effect
             remove: effect
+            info: scalar
           side_effect:
             list: false
             info: false
+          fixture:
+            info: '[self:package]{op: "info", package_id: "web"}'
           values:
             list: 설치됨/설치가능 패키지 목록 (package_id, 어휘 액션 수 포함)
             info: 패키지 상세 정보 (package_id)

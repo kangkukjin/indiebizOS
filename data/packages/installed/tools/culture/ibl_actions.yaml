@@ -12,6 +12,10 @@ actions:
     tool: performance_op
     ops:
       default: search
+      fixture:
+        venue: '[sense:performance]{op: "venue", query: "예술의전당"}'
+        genres: '[sense:performance]{op: "genres"}'
+        regions: '[sense:performance]{op: "regions"}'
       values:
         search: 공연 검색 (연극·뮤지컬·음악회, 기본)
         venue: 공연장·문화시설 검색
@@ -71,6 +75,13 @@ actions:
     tool: book_op
     ops:
       default: search
+      returns:
+        codes: scalar
+      fixture:
+        popular: '[sense:book]{op: "popular"}'
+        trending: '[sense:book]{op: "trending"}'
+        recommended: '[sense:book]{op: "recommended", isbn13: "9788934972464"}'
+        codes: '[sense:book]{op: "codes", code_type: "kdc"}'
       values:
         search: 도서 검색·조회 (필드분기·ISBN·대출통계·이용분석, 기본)
         popular: 인기대출도서 (기간·성별·연령·지역·주제 필터)
@@ -429,6 +440,8 @@ actions:
     tool: classic_op
     ops:
       default: western
+      fixture:
+        korean: '[sense:classic]{op: "korean", query: "이황"}'
       values:
         western: 서양 고전 원문 (Project Gutenberg)
         korean: 한국 고전 (한국고전종합DB)

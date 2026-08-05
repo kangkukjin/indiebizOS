@@ -19,6 +19,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: '비즈니스 id 필요(list 결과의 id) — 고정 fixture 부적합'
           values:
             list: 비즈니스 목록 (level/search 필터)
             detail: 비즈니스 상세 + 소속 아이템 (id 필수)
@@ -276,6 +278,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: 'item_id 필요(list 결과의 id) — 고정 fixture 부적합'
           values:
             list: 아이템 목록 (business_id 없으면 전체, search 필터)
             detail: 아이템 상세 (item_id 필수)
@@ -306,9 +310,12 @@ nodes:
             update: effect
             regenerate: effect
             publish: effect
+            detail: scalar
           side_effect:
             list: false
             detail: false
+          fixture:
+            detail: '[self:business_document]{op: "detail", level: 0}'
           values:
             list: 레벨 0-4 공개 문서 전체
             detail: 특정 레벨 문서 (level 필수)
@@ -335,9 +342,12 @@ nodes:
           default: list
           returns:
             update: effect
+            detail: scalar
           side_effect:
             list: false
             detail: false
+          fixture:
+            detail: '[self:work_guideline]{op: "detail", level: 0}'
           values:
             list: 레벨 0-4 근무 지침 전체
             detail: 특정 레벨 지침 (level 필수)
@@ -378,6 +388,8 @@ nodes:
         tool: messages_op
         ops:
           default: thread
+          exempt:
+            thread: 'neighbor_id 필요(inbox 결과의 id) — 고정 fixture 부적합'
           values:
             thread: 한 이웃과 주고받은 메시지 스레드 (neighbor_id 필수)
             inbox: 대화 목록 (이웃별 최근 메시지·미응답, 최근순)
@@ -591,6 +603,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: '이웃 id/name 필요(list 결과) — 고정 fixture 부적합'
           values:
             list: 이웃 목록 (search/info_level 필터)
             detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
@@ -637,6 +651,10 @@ nodes:
           default: status
           side_effect:
             status: false
+          returns:
+            status: scalar
+          fixture:
+            status: '[others:auto_response]{op: "status"}'
           values:
             status: 자동응답 가동 상태 조회
             start: 자동응답 켜기 (재시작에도 유지)

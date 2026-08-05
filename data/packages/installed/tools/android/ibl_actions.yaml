@@ -102,6 +102,10 @@ nodes:
           default: snapshot
           side_effect:
             snapshot: false
+          returns:
+            snapshot: scalar
+          exempt:
+            snapshot: '폰 연결(USB/네이티브) 의존 — 폰 꺼진 날마다 거짓 실패'
           values:
             snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
             tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)

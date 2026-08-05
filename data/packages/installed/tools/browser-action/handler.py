@@ -6,9 +6,15 @@ Version: 6.0.0
 """
 
 import json
+import os
 import sys
-import importlib.util
 from pathlib import Path
+
+_backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
+if _backend_dir not in sys.path:
+    sys.path.insert(0, os.path.abspath(_backend_dir))
+
+from common.pkg_utils import load_singleton
 
 current_dir = Path(__file__).parent
 
@@ -17,7 +23,12 @@ _module_cache = {}
 
 
 def _load(module_name):
-    """같은 디렉토리의 모듈을 캐싱하여 로드"""
+    """같은 디렉토리의 모듈을 캐싱하여 로드.
+
+    형제 모듈들이 서로를 `import browser_session` 식으로 참조하므로 sys.modules 등록이
+    필요하다 — 그 등록의 레이스 안전은 common/pkg_utils.load_singleton 이 맡는다
+    (반쯤 실행된 모듈이 동시 호출자에게 넘어가던 부류의 수리).
+    """
     if module_name in _module_cache:
         return _module_cache[module_name]
 
@@ -25,13 +36,7 @@ def _load(module_name):
     if module_name != "browser_session" and "browser_session" not in _module_cache:
         _load("browser_session")
 
-    module_path = current_dir / f"{module_name}.py"
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-
+    module = load_singleton(__file__, module_name)
     _module_cache[module_name] = module
     return module
 

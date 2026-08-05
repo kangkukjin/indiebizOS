@@ -15,6 +15,17 @@ actions:
         screenshot: false
         cursor_position: false
         screen_info: false
+      returns:
+        snapshot: scalar
+        screenshot: scalar
+        cursor_position: scalar
+        screen_info: scalar
+      fixture:
+        cursor_position: '[limbs:screen]{op: "cursor_position"}'
+        screen_info: '[limbs:screen]{op: "screen_info"}'
+      exempt:
+        snapshot: '사용자 화면 OCR 독해 — 무인 점검이 매일 화면을 읽을 이유 없음'
+        screenshot: '사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음'
       values:
         snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
         screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)

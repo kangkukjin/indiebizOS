@@ -269,17 +269,27 @@ if not static_ok:  # 실패 사유는 stderr 에 있다 — RED 인데 이유가
 print("  → 정적:", "GREEN ✅" if static_ok else "RED ❌")
 
 # ── §1B 통화 무결성 (fixture 전수 probe) ──
-# fixture(액션별 '올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
+# fixture('올바른 파라미터 예 하나')는 data/ibl_fixtures.json 이 단일 진실 소스.
 # build_ibl_nodes.py --check 가 items/scalar 액션의 fixture 완전성을 강제하므로(신규 액션이
 # 빠질 수 없음), 여기서 그 목록을 그대로 실행하면 행동 건강 커버리지가 구성에 의해 완전하다.
+# ★op 축(2026-08-05 감사 ⑤): 키가 `node:action#op` 인 항목은 **한 액션 안의 다른 읽기 op**다.
+# 액션당 fixture 하나로는 op 하나만 증명된다 — `[self:music]` 의 fixture 가 sources 를 돌 때
+# library·track·folders·playlists·playlist 는 한 번도 안 돌았다. 읽기 op 전수 커버리지도
+# --check 가 강제하므로(fixture 또는 사유 있는 exempt) 여기 실행 목록이 곧 op 축 커버리지다.
 # ★read-only 게이트(2026-08-05): 이 절은 일일 무인 루프(world_pulse self-check)에서 돌므로
 # side_effect 액션의 fixture 는 실행하지 않는다(--instrument 경로와 같은 ibl_safety 게이트).
 # 현행 32개는 전부 읽기 op(list/status/search…)로 실측 확인됐지만 그건 저술 관습일 뿐 코드가
 # 보증하지 않는다 — 무인 실행은 관습이 아니라 구조가 막는다(자가점검 계약 "부작용 없는 액션").
 # 그 32개의 행동 검사는 수동 전수 실행 --all-fixtures 로(어휘 저술·커밋 전 점검용).
 _FIX = json.load(open("data/ibl_fixtures.json", encoding="utf-8"))
-PRODUCERS = sorted(_FIX["fixtures"].items())   # [(name, code), ...]
+PRODUCERS = sorted(_FIX["fixtures"].items())   # [(name, code), ...] — name = node:action[#op]
 EXEMPT = _FIX.get("exempt", {})
+
+
+def _qual_action(name):
+    """fixture 키 'node:action[#op]' → (node, action). op 축(감사 ⑤) 도입 후 필요."""
+    base = name.split("#", 1)[0]
+    return tuple(base.split(":", 1))
 print("\n" + "="*72); print("§1B 통화 무결성 (returns 선언 대비 단언)"); print("="*72)
 from collections import defaultdict
 buckets = defaultdict(list)
@@ -291,7 +301,7 @@ if not _safety and not _ALL_FIXTURES:
     buckets["YELLOW"].append(("__safety_map__", "ibl_safety 적재 실패 — read-only 게이트 판정 불가(전 fixture 생략)"))
 gated = 0
 for name, code in PRODUCERS:
-    fa = tuple(name.split(":", 1))
+    fa = _qual_action(name)
     # ★op 단위 게이트(2026-08-05 감사 ③): fixture 코드가 고른 op 로 판정한다.
     # 액션 롤업으로 재면 읽기 op fixture 가 쓰기 액션에 갇혀 통째로 생략됐다.
     _op = _first_op(code, fa)
@@ -304,14 +314,22 @@ for name, code in PRODUCERS:
     buckets[verdict].append((name, reason))
     print(f"  [{verdict:6}] {name:24} returns:{declared:9} {reason}")
 # 커버리지 — fixture 완전성(--check 강제)을 그대로 반영. 면제는 사유와 함께 명시.
+# 액션 축(returns:items|scalar 전수)과 op 축(읽기 op 전수)을 따로 센다 — 둘 다 --check 가
+# 강제하므로 여기 숫자는 "구성에 의해 완전"이고, 늘어나는 건 저술량뿐이다(감사 ⑤).
 exec_actions = sorted(k for k, v in RETURNS.items() if v in ("items", "scalar"))
-covered = len(PRODUCERS) + len(EXEMPT)
-print(f"\n  실행대상(items/scalar) {len(exec_actions)}개 = fixture {len(PRODUCERS)}개 + 면제 {len(EXEMPT)}개"
+act_fx = [k for k in _FIX["fixtures"] if "#" not in k]
+act_ex = [k for k in EXEMPT if "#" not in k]
+op_fx = [k for k in _FIX["fixtures"] if "#" in k]
+op_ex = [k for k in EXEMPT if "#" in k]
+covered = len(act_fx) + len(act_ex)
+print(f"\n  액션 축: 실행대상(items/scalar) {len(exec_actions)}개 = fixture {len(act_fx)}개 + 면제 {len(act_ex)}개"
       f" {'✅ 완전' if covered == len(exec_actions) else '❌ 누락 ' + str(len(exec_actions) - covered)}")
+print(f"  op 축: 읽기 op 추가 커버 {len(op_fx) + len(op_ex)}개 = fixture {len(op_fx)}개 + 면제 {len(op_ex)}개"
+      f" (--check 의 읽기-op 완전성 가드가 강제)")
 if gated:
-    print(f"  read-only 게이트 생략 {gated}개 (side_effect 액션 — 행동 검사는 --all-fixtures 수동 실행)")
+    print(f"  read-only 게이트 생략 {gated}개 (부작용 op — 행동 검사는 --all-fixtures 수동 실행)")
 if EXEMPT:
-    print("  면제(실행 인자 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
+    print("  면제(실행 인자·기기 의존):", ", ".join(f"{k}({v})" for k, v in sorted(EXEMPT.items())))
 
 # ── §1C 골든 파이프 (문법+통화 흐름) ──
 PIPES = [

@@ -200,6 +200,10 @@
           default: profile
           side_effect:
             profile: false
+          returns:
+            profile: scalar
+          fixture:
+            profile: '[others:nostr]{op: "profile"}'
           values:
             profile: 내 Nostr 신원·릴레이 조회
             rename: 표시 이름 변경

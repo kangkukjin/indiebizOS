@@ -38,6 +38,11 @@ nodes:
             languages: false
             history: false
             feed: false
+          fixture:
+            transcript: '[sense:video]{op: "transcript", video_id: "jNQXAC9IVRw"}'
+            languages: '[sense:video]{op: "languages", video_id: "jNQXAC9IVRw"}'
+            feed: '[sense:video]{op: "feed", limit: 5}'
+            history: '[sense:video]{op: "history", limit: 5}'
           values:
             info: 동영상 메타데이터 (제목·조회수·채널)
             transcript: 자막/스크립트 추출
@@ -266,6 +271,12 @@ nodes:
           side_effect:
             queue: false
             relay: false
+          returns:
+            queue: scalar
+            relay: items
+          fixture:
+            queue: '[limbs:music]{op: "queue"}'
+            relay: '[limbs:music]{op: "relay", query: "lofi", media: "audio", count: 2}'
           values:
             play: 즉시 재생 (query 검색어/URL, 기본)
             add: 큐에 추가 (query 검색어/URL)

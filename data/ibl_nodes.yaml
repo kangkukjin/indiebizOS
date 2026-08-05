@@ -32,6 +32,8 @@ nodes:
             refresh: effect
           side_effect:
             trend: false
+          fixture:
+            trend: '[sense:world]{op: "trend"}'
           values:
             snapshot: 오늘의 세계 상태 스냅샷 (경제·주요뉴스·기술동향·날씨)
             trend: 최근 N일 추이 (days 옵션, 기본 7)
@@ -170,6 +172,9 @@ nodes:
         tool: cctv_query
         ops:
           default: search
+          fixture:
+            nearby: '[sense:cctv]{op: "nearby", lat: 37.5665, lng: 126.978}'
+            webcam: '[sense:cctv]{op: "webcam", lat: 37.5665, lng: 126.978}'
           values:
             search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
             nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)
@@ -288,6 +293,8 @@ nodes:
         tool: devdocs_op
         ops:
           default: resolve
+          fixture:
+            search: '[sense:devdocs]{op: "search", library_id: "/reactjs/react.dev", query: "useState"}'
           values:
             resolve: 라이브러리 이름 → Context7 ID (첫 단계)
             search: 공식 문서 검색 (library_id + query)
@@ -309,6 +316,10 @@ nodes:
         tool: performance_op
         ops:
           default: search
+          fixture:
+            venue: '[sense:performance]{op: "venue", query: "예술의전당"}'
+            genres: '[sense:performance]{op: "genres"}'
+            regions: '[sense:performance]{op: "regions"}'
           values:
             search: 공연 검색 (연극·뮤지컬·음악회, 기본)
             venue: 공연장·문화시설 검색
@@ -368,6 +379,13 @@ nodes:
         tool: book_op
         ops:
           default: search
+          returns:
+            codes: scalar
+          fixture:
+            popular: '[sense:book]{op: "popular"}'
+            trending: '[sense:book]{op: "trending"}'
+            recommended: '[sense:book]{op: "recommended", isbn13: "9788934972464"}'
+            codes: '[sense:book]{op: "codes", code_type: "kdc"}'
           values:
             search: 도서 검색·조회 (필드분기·ISBN·대출통계·이용분석, 기본)
             popular: 인기대출도서 (기간·성별·연령·지역·주제 필터)
@@ -772,6 +790,8 @@ nodes:
         tool: classic_op
         ops:
           default: western
+          fixture:
+            korean: '[sense:classic]{op: "korean", query: "이황"}'
           values:
             western: 서양 고전 원문 (Project Gutenberg)
             korean: 한국 고전 (한국고전종합DB)
@@ -826,6 +846,13 @@ nodes:
         tool: stock_op
         ops:
           default: quote
+          fixture:
+            history: '[sense:stock]{op: "history", ticker: "삼성전자", period: "1mo"}'
+            info: '[sense:stock]{op: "info", ticker: "삼성전자"}'
+            search: '[sense:stock]{op: "search", query: "삼성"}'
+            investors: '[sense:stock]{op: "investors", ticker: "삼성전자"}'
+            news: '[sense:stock]{op: "news", ticker: "삼성전자"}'
+            earnings: '[sense:stock]{op: "earnings", ticker: "AAPL"}'
           values:
             quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
             history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
@@ -998,6 +1025,11 @@ nodes:
         tool: company_op
         ops:
           default: profile
+          returns:
+            financials: scalar
+          fixture:
+            profile: '[sense:company]{op: "profile", ticker: "삼성전자"}'
+            financials: '[sense:company]{op: "financials", ticker: "삼성전자"}'
           values:
             profile: 기업 기본정보 (대표·업종·시총·섹터)
             financials: 재무제표 (손익·재무상태·현금흐름)
@@ -1345,6 +1377,9 @@ nodes:
         runs_on: pc_only
         ops:
           default: status
+          fixture:
+            apps: '[sense:host]{op: "apps"}'
+            resources: '[sense:host]{op: "resources"}'
           values:
             status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
             apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
@@ -1437,6 +1472,8 @@ nodes:
         tool: radio_search_op
         ops:
           default: search
+          fixture:
+            korean: '[sense:radio]{op: "korean"}'
           values:
             search: 전세계 인터넷 라디오 검색 (Radio Browser)
             korean: 한국 주요 방송사 채널 (KBS/MBC/SBS 등)
@@ -1599,6 +1636,10 @@ nodes:
         tool: realty_op
         ops:
           default: query
+          returns:
+            codes: scalar
+          fixture:
+            codes: '[sense:realty]{op: "codes", region: "서울"}'
           values:
             query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물 / source=naver 네이버부동산 매물)
             codes: 법정동 지역코드 조회 (보조)
@@ -1964,6 +2005,8 @@ nodes:
         tool: researcher_op
         ops:
           default: find
+          fixture:
+            coauthor: '[sense:researcher]{op: "coauthor", name: "정은정"}'
           values:
             find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
             coauthor: 연관연구자망 (이름→함께 연구한 학자들, 신원 재확인)
@@ -1993,6 +2036,8 @@ nodes:
         tool: entity_op
         ops:
           default: resolve
+          fixture:
+            detail: '[sense:entity]{op: "detail", id: "Q42"}'
           values:
             resolve: 개체 후보 검색 (query→QID·라벨·설명, 동명이인/동음이의 분리)
             detail: 구조화된 사실 (QID→속성:값 records)
@@ -2170,6 +2215,11 @@ nodes:
             languages: false
             history: false
             feed: false
+          fixture:
+            transcript: '[sense:video]{op: "transcript", video_id: "jNQXAC9IVRw"}'
+            languages: '[sense:video]{op: "languages", video_id: "jNQXAC9IVRw"}'
+            feed: '[sense:video]{op: "feed", limit: 5}'
+            history: '[sense:video]{op: "history", limit: 5}'
           values:
             info: 동영상 메타데이터 (제목·조회수·채널)
             transcript: 자막/스크립트 추출
@@ -2590,6 +2640,9 @@ nodes:
             list: false
             status: false
             attempts: false
+          exempt:
+            status: goal_id 필요(list 결과의 id) — 고정 fixture 부적합
+            attempts: task_id 필요 — 고정 fixture 부적합
           values:
             list: 활성/대기 중 목표 전체
             status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
@@ -2635,6 +2688,8 @@ nodes:
           side_effect:
             list: false
             get: false
+          exempt:
+            get: workflow_id 필요(list 결과의 id) — 고정 fixture 부적합
           values:
             list: 저장된 워크플로우 목록
             get: 워크플로우 조회 (workflow_id)
@@ -2679,11 +2734,17 @@ nodes:
             delete: effect
             enable: effect
             disable: effect
+            status: scalar
           side_effect:
             list: false
             get: false
             status: false
             history: false
+          fixture:
+            status: '[self:trigger]{op: "status"}'
+          exempt:
+            get: 트리거 id 필요 — 고정 fixture 부적합
+            history: 트리거 id 필요 — 고정 fixture 부적합
           values:
             list: 등록된 트리거 목록
             get: 단일 트리거 조회 (id)
@@ -2757,9 +2818,12 @@ nodes:
           returns:
             install: effect
             remove: effect
+            info: scalar
           side_effect:
             list: false
             info: false
+          fixture:
+            info: '[self:package]{op: "info", package_id: "web"}'
           values:
             list: 설치됨/설치가능 패키지 목록 (package_id, 어휘 액션 수 포함)
             info: 패키지 상세 정보 (package_id)
@@ -2817,10 +2881,14 @@ nodes:
           default: posts
           returns:
             rebuild_index: effect
+            stats: scalar
           side_effect:
             posts: false
             search: false
             stats: false
+          fixture:
+            search: '[self:blog]{op: "search", query: "인공지능"}'
+            stats: '[self:blog]{op: "stats"}'
           values:
             posts: 글 목록 조회 (category/기간 필터)
             search: RAG 검색 (mode hybrid/semantic/content)
@@ -2855,6 +2923,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: 비즈니스 id 필요(list 결과의 id) — 고정 fixture 부적합
           values:
             list: 비즈니스 목록 (level/search 필터)
             detail: 비즈니스 상세 + 소속 아이템 (id 필수)
@@ -3105,6 +3175,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: item_id 필요(list 결과의 id) — 고정 fixture 부적합
           values:
             list: 아이템 목록 (business_id 없으면 전체, search 필터)
             detail: 아이템 상세 (item_id 필수)
@@ -3135,9 +3207,12 @@ nodes:
             update: effect
             regenerate: effect
             publish: effect
+            detail: scalar
           side_effect:
             list: false
             detail: false
+          fixture:
+            detail: '[self:business_document]{op: "detail", level: 0}'
           values:
             list: 레벨 0-4 공개 문서 전체
             detail: 특정 레벨 문서 (level 필수)
@@ -3164,9 +3239,12 @@ nodes:
           default: list
           returns:
             update: effect
+            detail: scalar
           side_effect:
             list: false
             detail: false
+          fixture:
+            detail: '[self:work_guideline]{op: "detail", level: 0}'
           values:
             list: 레벨 0-4 근무 지침 전체
             detail: 특정 레벨 지침 (level 필수)
@@ -3411,6 +3489,8 @@ nodes:
           side_effect:
             search: false
             read: false
+          exempt:
+            read: memory_id 필요(search 결과의 id) — 고정 fixture 부적합
           values:
             save: 메모리 저장 (content 필수, category/keywords 자동 추출)
             search: 키워드·자연어 검색 (FTS+시맨틱 통합)
@@ -3460,6 +3540,13 @@ nodes:
             playlists: false
             playlist: false
             sources: false
+          fixture:
+            library: '[self:music]{op: "library", limit: 5}'
+            folders: '[self:music]{op: "folders"}'
+            playlists: '[self:music]{op: "playlists"}'
+          exempt:
+            track: 곡 path 필요 — 고정 fixture 부적합
+            playlist: 플레이리스트 name 필요 — 고정 fixture 부적합
           values:
             library: 곡 검색·목록 (q 검색어 / folder 폴더 단위 / path 단일 곡, 기본 op)
             track: 곡 하나 상세 — 태그 + 담을 플레이리스트 목록
@@ -3687,6 +3774,8 @@ nodes:
           side_effect:
             summary: false
             volumes: false
+          fixture:
+            summary: '[self:storage]{op: "summary"}'
           values:
             scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
             summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)
@@ -4109,6 +4198,8 @@ nodes:
           side_effect:
             list: false
             status: false
+          fixture:
+            status: '[self:webapp]{op: "status"}'
           values:
             list: 전체 웹앱 목록 — 파생 + 수동 (부류·주소·출처)
             status: 전 웹앱 생존 실측 — HTTP 응답코드·지연 (🟢/🔴)
@@ -4256,6 +4347,10 @@ nodes:
           default: snapshot
           side_effect:
             snapshot: false
+          returns:
+            snapshot: scalar
+          exempt:
+            snapshot: 폰 연결(USB/네이티브) 의존 — 폰 꺼진 날마다 거짓 실패
           values:
             snapshot: 화면 독해 — 누를 수 있는 요소를 라벨+좌표로 반환 (탭 전 필수)
             tap: 요소 탭 (query 라벨/id 일부 권장, 또는 x,y)
@@ -4325,10 +4420,22 @@ nodes:
           side_effect:
             snapshot: false
             content: false
-            vision: false
+            vision: true
             find: false
             logs: false
             dialog_info: false
+          returns:
+            snapshot: scalar
+            content: scalar
+            find: scalar
+            logs: scalar
+            dialog_info: scalar
+          exempt:
+            snapshot: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
+            content: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
+            find: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
+            logs: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
+            dialog_info: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
           values:
             snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
             navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
@@ -4412,6 +4519,17 @@ nodes:
             screenshot: false
             cursor_position: false
             screen_info: false
+          returns:
+            snapshot: scalar
+            screenshot: scalar
+            cursor_position: scalar
+            screen_info: scalar
+          fixture:
+            cursor_position: '[limbs:screen]{op: "cursor_position"}'
+            screen_info: '[limbs:screen]{op: "screen_info"}'
+          exempt:
+            snapshot: 사용자 화면 OCR 독해 — 무인 점검이 매일 화면을 읽을 이유 없음
+            screenshot: 사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음
           values:
             snapshot: 화면 독해 — UI 요소(역할/이름)+글자(OCR)+클릭좌표. 클릭 전 화면 파악 (브라우저 snapshot의 데스크톱 판)
             screenshot: 화면 캡처 이미지 (x,y,width,height 옵션)
@@ -4457,6 +4575,16 @@ nodes:
             list: false
             info: false
             result: false
+          returns:
+            read: scalar
+            list: scalar
+            info: scalar
+            result: scalar
+          exempt:
+            read: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
+            list: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
+            info: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
+            result: USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)
           values:
             shell: 셸 명령 실행 (cmd. cd·환경변수 유지. 긴 명령은 background:true)
             read: 게스트 PC 파일 읽기 (path, 200KB 상한)
@@ -4578,6 +4706,10 @@ nodes:
         ops:
           side_effect:
             list: false
+          returns:
+            list: items
+          fixture:
+            list: '[limbs:radio_favorite]{op: "list"}'
           values:
             list: 전체 즐겨찾기 목록 조회
             add: 즐겨찾기 등록 (station_id/stream_url 또는 현재 재생 채널 자동)
@@ -4630,6 +4762,12 @@ nodes:
           side_effect:
             queue: false
             relay: false
+          returns:
+            queue: scalar
+            relay: items
+          fixture:
+            queue: '[limbs:music]{op: "queue"}'
+            relay: '[limbs:music]{op: "relay", query: "lofi", media: "audio", count: 2}'
           values:
             play: 즉시 재생 (query 검색어/URL, 기본)
             add: 큐에 추가 (query 검색어/URL)
@@ -4881,6 +5019,10 @@ nodes:
           default: profile
           side_effect:
             profile: false
+          returns:
+            profile: scalar
+          fixture:
+            profile: '[others:nostr]{op: "profile"}'
           values:
             profile: 내 Nostr 신원·릴레이 조회
             rename: 표시 이름 변경
@@ -4968,6 +5110,9 @@ nodes:
             status: false
             detail: false
             portals: false
+          exempt:
+            detail: board_id 필요(status 결과의 id) — 고정 fixture 부적합
+            portals: board_id 필요 — 고정 fixture 부적합
           values:
             status: 게시판 목록(각 게시판 주소·글 수) + 전역 설정 조회
             create: 새 게시판 생성 — 공개 주소(/b/5자) 발급
@@ -5138,6 +5283,8 @@ nodes:
         tool: messages_op
         ops:
           default: thread
+          exempt:
+            thread: neighbor_id 필요(inbox 결과의 id) — 고정 fixture 부적합
           values:
             thread: 한 이웃과 주고받은 메시지 스레드 (neighbor_id 필수)
             inbox: 대화 목록 (이웃별 최근 메시지·미응답, 최근순)
@@ -5347,6 +5494,8 @@ nodes:
           side_effect:
             list: false
             detail: false
+          exempt:
+            detail: 이웃 id/name 필요(list 결과) — 고정 fixture 부적합
           values:
             list: 이웃 목록 (search/info_level 필터)
             detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
@@ -5393,6 +5542,10 @@ nodes:
           default: status
           side_effect:
             status: false
+          returns:
+            status: scalar
+          fixture:
+            status: '[others:auto_response]{op: "status"}'
           values:
             status: 자동응답 가동 상태 조회
             start: 자동응답 켜기 (재시작에도 유지)
@@ -5430,6 +5583,10 @@ nodes:
             portals: false
             members: false
             audit: false
+          fixture:
+            portals: '[others:portal]{op: "portals"}'
+            members: '[others:portal]{op: "members"}'
+            audit: '[others:portal]{op: "audit"}'
           values:
             status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
             portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)
@@ -5670,6 +5827,11 @@ nodes:
             detail: false
             comments: false
             uploads: false
+          exempt:
+            photos: 미발행 초안이 있을 때만 성립 — 초안 유무는 런타임 상태(없는 것이 정상)
+            detail: edition_id 필요(status 결과의 id) — 고정 fixture 부적합
+            comments: 공개 페이지 방문자 활동에 의존 — 빈 것이 정상이라 결함과 구별 불가
+            uploads: 가족이 보낸 사진에 의존 — 빈 것이 정상이라 결함과 구별 불가
           values:
             status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
             create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인
@@ -5848,6 +6010,11 @@ nodes:
             detail: false
             basket_list: false
             basket_detail: false
+          fixture:
+            basket_list: '[others:showcase]{op: "basket_list"}'
+          exempt:
+            detail: 폴더 id 필요(status 결과) — 고정 fixture 부적합
+            basket_detail: basket_id 필요(basket_list 결과) — 고정 fixture 부적합
           values:
             status: 추가한 폴더 목록(각 폴더가 담긴 주소) + 전역 설정 조회
             add: 폴더를 목록에 추가 (바스켓에 담아야 공개; 인덱싱 없음)
@@ -6360,6 +6527,10 @@ nodes:
           default: fetch
           side_effect:
             catalog: false
+          returns:
+            catalog: scalar
+          fixture:
+            catalog: '[engines:web_component]{op: "catalog", kind: "components"}'
           values:
             catalog: 컴포넌트/섹션 카탈로그 조회 (kind)
             fetch: 외부 CDN/레지스트리에서 컴포넌트 다운로드 (기본)

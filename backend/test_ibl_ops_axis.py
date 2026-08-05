@@ -21,6 +21,7 @@ if _SCRIPTS not in sys.path:
 
 from ibl_ops import (  # noqa: E402
     any_op_side_effect,
+    op_needs_fixture,
     op_returns,
     op_side_effect,
     resolve_op,
@@ -133,6 +134,97 @@ def test_build_guard_catches_contradiction():
                            "side_effect": {"delete": False}})
     issues = "\n".join(_check_op_axis("n:a", a, a["ops"], a["ops"]["values"]))
     assert "모순" in issues
+
+
+# ── 행위 검증 축 (감사 ⑤) ──
+
+def test_needs_fixture_only_for_readable_ops():
+    a = _action(ops_extra={"returns": {"delete": "effect"}})
+    assert op_needs_fixture(a, "list") is True        # 읽기 + items
+    assert op_needs_fixture(a, "delete") is False     # 쓰기
+    # 읽기라고 선언했어도 통화가 effect 면 실행 대상이 아니다(측정할 계약이 없다)
+    b = _action(returns="effect", ops_extra={"side_effect": {"list": False}})
+    assert op_needs_fixture(b, "list") is False
+
+
+def test_coverage_gate_demands_fixture_or_exempt_for_read_ops():
+    from iblbuild_validators import _check_op_fixture_coverage
+    a = _action(ops_extra={"returns": {"delete": "effect"}})
+    assert "list" in "\n".join(_check_op_fixture_coverage("n:a", a))
+    # ① op fixture / ② op exempt / ③ 액션 fixture 가 그 op 을 호출 — 셋 다 커버로 친다
+    for extra_ops, extra in (({"fixture": {"list": '[n:a]{op: "list"}'}}, {}),
+                             ({"exempt": {"list": "id 필요"}}, {}),
+                             ({}, {"fixture": '[n:a]{op: "list"}'})):
+        b = _action(ops_extra={"returns": {"delete": "effect"}, **extra_ops}, **extra)
+        assert _check_op_fixture_coverage("n:a", b) == []
+    # 액션 통째 면제도 커버
+    c = _action(ops_extra={"returns": {"delete": "effect"}}, exempt="기기 의존")
+    assert _check_op_fixture_coverage("n:a", c) == []
+
+
+def test_fixture_on_write_op_is_rejected():
+    """★부작용 op 의 fixture 는 무인 건강검진이 매일 그 부작용을 실행한다는 뜻."""
+    from iblbuild_validators import _check_op_axis
+    a = _action(ops_extra={"returns": {"delete": "effect"},
+                           "fixture": {"delete": '[n:a]{op: "delete"}'}})
+    issues = "\n".join(_check_op_axis("n:a", a, a["ops"], a["ops"]["values"]))
+    assert "부작용 op 에는 fixture 를 달 수 없다" in issues
+
+
+def test_fixture_code_must_call_its_own_op():
+    from iblbuild_validators import _check_op_axis
+    a = _action(ops_extra={"fixture": {"list": '[n:a]{op: "delete"}'}})
+    issues = "\n".join(_check_op_axis("n:a", a, a["ops"], a["ops"]["values"]))
+    assert "키와 불일치" in issues        # 다른 op 을 돌면서 '커버됨'으로 세지 못하게
+
+
+def test_fixture_and_exempt_are_exclusive():
+    from iblbuild_validators import _check_op_axis
+    a = _action(ops_extra={"fixture": {"list": '[n:a]{op: "list"}'},
+                           "exempt": {"list": "사유"}})
+    issues = "\n".join(_check_op_axis("n:a", a, a["ops"], a["ops"]["values"]))
+    assert "동시 선언" in issues
+
+
+def test_inherited_contradiction_is_caught():
+    """읽기라고 선언했는데 통화는 액션의 effect 상속 — 옛 검사가 못 보던 부류."""
+    from iblbuild_validators import _check_op_axis
+    a = _action(returns="effect", ops_extra={"side_effect": {"list": False}})
+    issues = "\n".join(_check_op_axis("n:a", a, a["ops"], a["ops"]["values"]))
+    assert "모순" in issues and "자기 통화를 선언" in issues
+
+
+def test_live_registry_read_ops_are_all_covered():
+    """라이브 레지스트리 전수 — 읽기 op 이 fixture/exempt 없이 남아 있지 않은가.
+
+    빌드 --check 와 같은 판정을 CI 의 pytest 에서도 재확인한다(빌드를 안 돌리는
+    경로에서도 커버리지 후퇴가 드러나게).
+    """
+    import yaml
+    from iblbuild_validators import _check_op_fixture_coverage
+    root = os.path.dirname(_BACKEND)
+    data = yaml.safe_load(open(os.path.join(root, "data", "ibl_nodes.yaml"), encoding="utf-8"))
+    problems = []
+    for n, nd in (data.get("nodes") or {}).items():
+        for a, ad in ((nd or {}).get("actions") or {}).items():
+            problems += _check_op_fixture_coverage(f"{n}:{a}", ad)
+    assert problems == [], problems
+
+
+def test_derived_fixture_file_matches_declarations():
+    """ibl_fixtures.json 의 op 항목(`node:action#op`)이 선언과 일치하는가."""
+    import json
+    import yaml
+    root = os.path.dirname(_BACKEND)
+    data = yaml.safe_load(open(os.path.join(root, "data", "ibl_nodes.yaml"), encoding="utf-8"))
+    fx = json.load(open(os.path.join(root, "data", "ibl_fixtures.json"), encoding="utf-8"))
+    for key, code in fx["fixtures"].items():
+        if "#" not in key:
+            continue
+        qual, op = key.split("#", 1)
+        node, action = qual.split(":", 1)
+        declared = ((data["nodes"][node]["actions"][action].get("ops") or {}).get("fixture") or {})
+        assert declared.get(op) == code, key
 
 
 def test_live_registry_has_no_op_axis_drift():

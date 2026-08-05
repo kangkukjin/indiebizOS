@@ -186,6 +186,18 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 
 - **fixture**: 그 파라미터로 실행하면 GREEN(유효 통화/단일값)이 나오는 *대표 입력 하나*. 외부 키·데이터 의존이면 YELLOW 가능(구조 결함 아님).
 - **exempt**: 파일 경로·좌표 쌍·표본 인자처럼 고정 예시가 부적합하거나, 폰/기기 전용이라 맥서 못 도는 경우. **반드시 사유를 적는다.**
+- ★**op 이 여럿이면 액션 fixture 하나로는 부족하다**(2026-08-05 감사 ⑤). 액션 fixture 는 그 코드가 고른 op **하나**만 증명한다. 나머지 읽기 op 은 `ops` 블록의 형제 맵으로 각자 단다 — `--check` 가 **읽기 op 전수**를 강제하므로 빠뜨리면 커밋이 막힌다:
+
+```yaml
+        ops:
+          side_effect: {list: false, detail: false}
+          fixture:
+            list: '[self:my_action]{op: "list"}'      # 읽기 op 만 (쓰기 op 은 빌드가 거부)
+          exempt:
+            detail: id 필요(list 결과의 id) — 고정 fixture 부적합
+```
+
+  선언하기 전에 **한 번 실행해 보고** 통화를 확인할 것 — 실측하면 "items 라 선언했는데 통화를 안 다는" 경로가 드러난다(⑤에서 `sense:performance` venue/genres/regions·`sense:book` recommended 4곳이 그렇게 잡혔다). 통화가 없는 읽기 op 이면 `ops.returns: {<op>: scalar}` 로 정직하게 선언한다.
 - **effect(부작용)·transform(변환자)은 필드 없음** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
 - **파생**: `data/ibl_fixtures.json` 은 build 산출물이다(**직접 편집 금지** — 소스는 액션 필드). fixture 가 액션과 한 몸이라 **설치/제거를 자동으로 따라가고 고아 fixture 가 생기지 않는다**(2026-07-02 자기완결화). 패키지 능력이면 그 패키지 `ibl_actions.yaml`, 코어 노드면 `ibl_nodes_src` 에 필드를 둔다.
 - **검증**: `python scripts/ibl_health_check.py` 로 자기 액션이 **GREEN** 인지 확인. RED 면 통화 계약 위반 — 고치기 전엔 미완성. 자세히 `docs/IBL_MAINTENANCE_MANUAL.md`.

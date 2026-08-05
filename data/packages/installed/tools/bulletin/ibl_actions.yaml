@@ -23,6 +23,9 @@ nodes:
             status: false
             detail: false
             portals: false
+          exempt:
+            detail: 'board_id 필요(status 결과의 id) — 고정 fixture 부적합'
+            portals: 'board_id 필요 — 고정 fixture 부적합'
           values:
             status: 게시판 목록(각 게시판 주소·글 수) + 전역 설정 조회
             create: 새 게시판 생성 — 공개 주소(/b/5자) 발급

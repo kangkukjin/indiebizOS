@@ -210,11 +210,12 @@
     "test_evaluator_trace": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
-    "test_nip44_vectors": "top-level import: pynostr"
+    "test_nip44_vectors": "top-level import: pynostr",
+    "test_pkg_singleton_race": "force_exclude_glob"
   },
   "counts": {
-    "total": 207,
+    "total": 208,
     "engine": 185,
-    "blocklist": 22
+    "blocklist": 23
   }
 }

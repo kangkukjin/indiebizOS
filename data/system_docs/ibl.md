@@ -738,6 +738,10 @@ click:
     side_effect:        # op 별 부작용. 해소 규칙은 아래.
       list: false
       detail: false
+    fixture:            # op 별 '올바른 파라미터 예 하나' — 읽기 op 전용
+      list: '[self:business_item]{op: "list"}'
+    exempt:             # 자동 실행 불가한 읽기 op — 사유
+      detail: item_id 필요(list 결과의 id) — 고정 fixture 부적합
     values:             # {op: 설명 문자열} — 모양 고정(프롬프트 카탈로그가 읽는 유일한 맵)
       list: 아이템 목록
       detail: 아이템 상세 (item_id 필수)
@@ -753,6 +757,20 @@ click:
 즉 items 액션 안의 op 가 `returns: effect` 를 선언하면 **자동으로** 위험 판정되고(마찰 0),
 안전 판정은 사람이 op 이름을 대고 `false` 라고 적어야만 난다. `returns: effect` +
 `side_effect: false` 동시 선언은 모순이라 빌드가 거부한다.
+
+**행위 검증 — `fixture`/`exempt` 형제 맵** (2026-08-05 감사 ⑤): 액션 레벨 `fixture:` 는
+액션당 **op 하나**만 증명한다. `[self:music]` 의 fixture 가 `sources` 를 돌 때
+`library`·`track`·`folders`·`playlists`·`playlist` 는 한 번도 실행되지 않았다(읽기 op
+133개 중 fixture 가 닿는 것이 37개였다). 그래서 op 별 예제를 형제 맵으로 단다.
+
+빌드가 **완전성을 강제**한다 — 읽기(side_effect=false)이면서 통화가 items|scalar 인 op 은
+`ops.fixture` 또는 `ops.exempt`(사유), 또는 액션 레벨 `fixture:`/`exempt:` 로 반드시 덮인다.
+**쓰기 op 에는 fixture 를 달 수 없다**(무인 건강검진이 매일 그 부작용을 실행하게 된다).
+파생물 `data/ibl_fixtures.json` 의 op 항목 키는 `node:action#op`.
+
+★"읽기라고 선언했는데 통화는 액션의 `effect` 상속"도 모순으로 막는다 — 그 상태의 op 은
+실행 대상 밖으로 분류돼 행위 검증에서 조용히 빠진다(`limbs:browser`·`limbs:guestpc` 등
+21개가 그랬다). 읽기 op 은 자기 통화를 직접 말해야 한다.
 
 **소비자**: 조종실 dry-run 라벨(`api_ibl._safety`) · 건강검진 read-only 게이트와 통화 판정
 (`ibl_health_check`) · 부작용 지도(`ibl_safety.build_op_safety_map`).

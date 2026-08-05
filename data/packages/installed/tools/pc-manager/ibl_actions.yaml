@@ -14,6 +14,9 @@ nodes:
         runs_on: pc_only
         ops:
           default: status
+          fixture:
+            apps: '[sense:host]{op: "apps"}'
+            resources: '[sense:host]{op: "resources"}'
           values:
             status: 이 기계 상태 한 눈에 (전면앱·CPU·메모리·디스크·배터리·가동시간)
             apps: 자원(메모리)을 많이 쓰는 프로세스 상위 N (limit 옵션)
@@ -107,6 +110,8 @@ nodes:
           side_effect:
             summary: false
             volumes: false
+          fixture:
+            summary: '[self:storage]{op: "summary"}'
           values:
             scan: 용량 분석 인덱스 구축 (treemap·확장자별 집계의 선행 단계)
             summary: 폴더·확장자별 용량 집계 (scan 선행, 볼륨 생략 시 전체 통합)

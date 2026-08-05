@@ -33,6 +33,13 @@ nodes:
             playlists: false
             playlist: false
             sources: false
+          fixture:
+            library: '[self:music]{op: "library", limit: 5}'
+            folders: '[self:music]{op: "folders"}'
+            playlists: '[self:music]{op: "playlists"}'
+          exempt:
+            track: '곡 path 필요 — 고정 fixture 부적합'
+            playlist: '플레이리스트 name 필요 — 고정 fixture 부적합'
           values:
             library: 곡 검색·목록 (q 검색어 / folder 폴더 단위 / path 단일 곡, 기본 op)
             track: 곡 하나 상세 — 태그 + 담을 플레이리스트 목록

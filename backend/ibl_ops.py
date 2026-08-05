@@ -27,6 +27,10 @@ ops:
     delete: effect
   side_effect:       # op 별 부작용. 아래 해소 규칙 참조.
     list: false
+  fixture:           # op 별 '올바른 파라미터 예 하나' (읽기 op 전용)
+    list: '[self:business_item]{op: "list"}'
+  exempt:            # 실행 인자 의존이라 자동 실행 불가한 읽기 op — 사유
+    detail: 존재하는 item_id 필요(고정 fixture 부적합)
 ```
 
 ★`values` 를 `{op: {desc, returns}}` 중첩형으로 바꾸지 **않은** 이유: `values` 는
@@ -49,6 +53,22 @@ ops:
 
 소비자: `ibl_safety`(부작용 분류) · `api_ibl`(조종실 dry-run 라벨) ·
 `ibl_health_check`(read-only 게이트 + 통화 판정).
+
+## 행위 검증 축 (2026-08-05 감사 부채 ⑤)
+
+③이 "어느 op 이 안전한가"를 선언에서 파생 가능하게 만들자, "그 안전한 op 을 실제로
+실행해 봤는가"가 물을 수 있는 질문이 됐다. 액션 단위 `fixture:` 는 액션당 **한 op** 만
+증명한다 — `[self:music]` 의 fixture 가 `sources` 하나를 돌 때 `library`·`track`·
+`folders`·`playlists`·`playlist` 다섯 읽기 op 은 한 번도 실행되지 않았다(실측: 읽기 op
+133개 중 fixture 가 닿는 것은 37개).
+
+그래서 `ops.fixture` / `ops.exempt` 를 형제 맵으로 더한다 — `returns`/`side_effect` 와
+같은 모양, 같은 이유(순수 가산·`values` 불변). 액션 레벨 `fixture:` 는 그대로 남아
+"그 액션의 대표 예 하나"를 뜻하고, 형제 맵이 나머지 읽기 op 을 채운다.
+
+**완전성은 빌드가 강제한다**: 읽기(side_effect=false)이면서 통화가 items|scalar 인 op 은
+fixture 또는 exempt 를 반드시 갖는다(`validate_op_fixture_coverage`). 쓰기 op 에는
+fixture 를 달 수 없다 — 무인 건강검진이 매일 그 부작용을 실행하게 되기 때문이다.
 """
 from typing import Any, Dict, List, Optional
 
@@ -125,6 +145,37 @@ def op_side_effect(action_def: Any, op: Optional[str]) -> bool:
     if isinstance(action_flag, bool):
         return action_flag           # ② 끈적한 액션 플래그 — op 가 말해야 풀린다
     return op_returns(action_def, op) == "effect"
+
+
+def op_fixture(action_def: Any, op: str) -> Optional[str]:
+    """op 별 fixture 코드(없으면 None). 소스=`ops.fixture` 형제 맵."""
+    block = ops_block(action_def).get("fixture")
+    if isinstance(block, dict):
+        v = block.get(op)
+        if isinstance(v, str) and v:
+            return v
+    return None
+
+
+def op_exempt(action_def: Any, op: str) -> Optional[str]:
+    """op 별 면제 사유(없으면 None). 소스=`ops.exempt` 형제 맵."""
+    block = ops_block(action_def).get("exempt")
+    if isinstance(block, dict):
+        v = block.get(op)
+        if isinstance(v, str) and v:
+            return v
+    return None
+
+
+def op_needs_fixture(action_def: Any, op: str) -> bool:
+    """이 op 이 **행위 검증 대상**인가 — 읽기이고 통화가 items|scalar 인 op.
+
+    쓰기 op 은 실행 자체가 부작용이라 대상 밖(무인 루프가 매일 돌린다).
+    effect 통화 op 도 대상 밖(실행할 통화 계약이 없다).
+    """
+    if op_side_effect(action_def, op):
+        return False
+    return op_returns(action_def, op) in ("items", "scalar")
 
 
 def any_op_side_effect(action_def: Any) -> bool:

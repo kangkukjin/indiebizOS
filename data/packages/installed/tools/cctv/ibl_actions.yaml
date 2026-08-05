@@ -25,6 +25,9 @@ nodes:
         tool: cctv_query
         ops:
           default: search
+          fixture:
+            nearby: '[sense:cctv]{op: "nearby", lat: 37.5665, lng: 126.978}'
+            webcam: '[sense:cctv]{op: "webcam", lat: 37.5665, lng: 126.978}'
           values:
             search: 키워드로 전국 CCTV+해외 웹캠 통합 검색 (기본)
             nearby: 좌표 근처 CCTV (lat·lng 필수, radius_km km)

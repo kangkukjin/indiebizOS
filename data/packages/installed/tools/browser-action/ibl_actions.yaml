@@ -18,10 +18,22 @@ actions:
         snapshot: false
         content: false
         # screenshot 은 안 푼다 — path 에 PNG 파일을 만든다(vision 은 base64 반환만이라 읽기).
-        vision: false
+        vision: true
         find: false
         logs: false
         dialog_info: false
+      returns:
+        snapshot: scalar
+        content: scalar
+        find: scalar
+        logs: scalar
+        dialog_info: scalar
+      exempt:
+        snapshot: '라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패'
+        content: '라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패'
+        find: '라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패'
+        logs: '라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패'
+        dialog_info: '라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패'
       values:
         snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
         navigate: 페이지 이동 (mode goto|back|forward; goto는 url)

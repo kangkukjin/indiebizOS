@@ -26,6 +26,11 @@ nodes:
             detail: false
             comments: false
             uploads: false
+          exempt:
+            photos: '미발행 초안이 있을 때만 성립 — 초안 유무는 런타임 상태(없는 것이 정상)'
+            detail: 'edition_id 필요(status 결과의 id) — 고정 fixture 부적합'
+            comments: '공개 페이지 방문자 활동에 의존 — 빈 것이 정상이라 결함과 구별 불가'
+            uploads: '가족이 보낸 사진에 의존 — 빈 것이 정상이라 결함과 구별 불가'
           values:
             status: 판 목록(초안·발행)·공개 주소·가족이 보낸 새 사진 수·제작 진행 상황 조회
             create: 폰(USB) 사진으로 새 판 초안 제작 — 백그라운드 조판, status 로 진행 확인

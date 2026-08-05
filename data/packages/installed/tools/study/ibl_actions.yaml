@@ -39,6 +39,8 @@ actions:
     tool: researcher_op
     ops:
       default: find
+      fixture:
+        coauthor: '[sense:researcher]{op: "coauthor", name: "정은정"}'
       values:
         find: 연구자 검색 (이름→소속·출생연도·lodID, 동명이인 분리)
         coauthor: 연관연구자망 (이름→함께 연구한 학자들, 신원 재확인)
@@ -62,6 +64,8 @@ actions:
     tool: entity_op
     ops:
       default: resolve
+      fixture:
+        detail: '[sense:entity]{op: "detail", id: "Q42"}'
       values:
         resolve: 개체 후보 검색 (query→QID·라벨·설명, 동명이인/동음이의 분리)
         detail: 구조화된 사실 (QID→속성:값 records)

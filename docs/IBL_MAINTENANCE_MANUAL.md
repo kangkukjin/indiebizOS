@@ -35,7 +35,9 @@ python scripts/consciousness_schema_check.py   # 의식 출력 스키마 이름 
 `consciousness_schema_check.py`: 의식 에이전트 출력 dict 키의 생산자(프롬프트)↔소비처(코드) 정합 — 개명 드리프트로 `highlight_actions`·`hint` 같은 조언이 융합에서 무성음 누락되는 부류를 잡는다([NAME_DRIFT_AUDIT_2026-07-02.md](NAME_DRIFT_AUDIT_2026-07-02.md) 4번째 층). **의식 프롬프트 응답 형식을 개명하면 반드시 이걸 돌린다.** **한계: 정적·태그만. 통화 *모양*은 안 본다.**
 
 ### 1B. 통화 무결성 — ✅ fixture 기반 자동 단언
-`ibl_health_check.py`가 **`data/ibl_fixtures.json`**(액션별 "올바른 파라미터 예 하나" — 단일 진실 소스)을 읽어 items/scalar 액션을 라이브 호출하고 산출 스키마를 단언한다. fixture 완전성은 `--check`가 강제하므로(items/scalar 액션은 fixture 또는 exempt 필수) **신규 액션이 검사망을 빠져나갈 수 없다**(effect=실행 불가 면제, transform=§1C 골든). 판정:
+`ibl_health_check.py`가 **`data/ibl_fixtures.json`**("올바른 파라미터 예 하나" — 단일 진실 소스)을 읽어 items/scalar 액션을 라이브 호출하고 산출 스키마를 단언한다. fixture 완전성은 `--check`가 강제하므로(items/scalar 액션은 fixture 또는 exempt 필수) **신규 액션이 검사망을 빠져나갈 수 없다**(effect=실행 불가 면제, transform=§1C 골든).
+
+**두 축**(2026-08-05 감사 ⑤): 액션 축(액션당 대표 예 하나)에 더해 **op 축**이 있다 — 키가 `node:action#op` 인 항목은 같은 액션 안의 다른 읽기 op 이다. 액션 fixture 하나로는 op 하나만 증명되므로(실측: 읽기 op 133개 중 37개만 닿았다), 읽기 op 전수를 `ops.fixture`/`ops.exempt` 로 덮게 `--check` 가 강제한다. **쓰기 op 에는 fixture 를 달 수 없다** — 무인 일일 루프가 매일 그 부작용을 실행하게 되기 때문이다. 판정:
 - **GREEN**: 결과(또는 `final_result`)에 `items`가 비어있지 않은 dict 리스트(title 불요 — 열린 항목).
 - **YELLOW**: empty(데이터 의존)·전송오류·통화 없는 스칼라 응답·identity 등 환경 의존. *구조 결함 아님*.
 - **RED**: items 선언인데 문자열 반환(통화 파괴) 또는 목록은 있는데 items 미부착(계약 위반).

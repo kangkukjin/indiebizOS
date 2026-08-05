@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import importlib.util
 from pathlib import Path
 
 # common 유틸리티 사용
@@ -13,31 +12,22 @@ if _backend_dir not in sys.path:
 current_dir = Path(__file__).parent
 
 # sys.modules에 등록하여 tool_loader.py가 handler.py를 여러 번 exec_module해도
-# tool_youtube 모듈은 단 한 번만 로드되고 글로벌 상태(재생 프로세스, 큐 등)가 유지됨
+# tool_youtube 모듈은 단 한 번만 로드되고 글로벌 상태(재생 프로세스, 큐 등)가 유지됨.
+# ★로드는 common.pkg_utils.load_singleton 단일 소스 — 옛 인라인 주문은 exec_module 전에
+# sys.modules 에 등록해, 동시 호출자가 반쯤 만들어진 모듈을 받았다(2026-08-05 실측:
+# 병렬 fixture 에서 tool_watch 의 history 가 '없는 속성'으로 죽음).
+from common.pkg_utils import load_singleton
+
 _MODULE_KEY = "tool_youtube_singleton"
 
 def load_tool_youtube():
-    if _MODULE_KEY in sys.modules:
-        return sys.modules[_MODULE_KEY]
-    module_path = current_dir / "tool_youtube.py"
-    spec = importlib.util.spec_from_file_location(_MODULE_KEY, module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_MODULE_KEY] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_singleton(__file__, "tool_youtube", module_key=_MODULE_KEY)
 
 _WATCH_KEY = "tool_watch_singleton"
 
 def load_tool_watch():
     """시청 앱 면(피드·시청·기록) — tool_youtube 와 같은 싱글턴 로딩 패턴."""
-    if _WATCH_KEY in sys.modules:
-        return sys.modules[_WATCH_KEY]
-    module_path = current_dir / "tool_watch.py"
-    spec = importlib.util.spec_from_file_location(_WATCH_KEY, module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[_WATCH_KEY] = module
-    spec.loader.exec_module(module)
-    return module
+    return load_singleton(__file__, "tool_watch", module_key=_WATCH_KEY)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")

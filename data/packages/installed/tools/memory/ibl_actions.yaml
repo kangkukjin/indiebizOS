@@ -19,6 +19,8 @@ actions:
       side_effect:
         search: false
         read: false
+      exempt:
+        read: 'memory_id 필요(search 결과의 id) — 고정 fixture 부적합'
       values:
         save: 메모리 저장 (content 필수, category/keywords 자동 추출)
         search: 키워드·자연어 검색 (FTS+시맨틱 통합)

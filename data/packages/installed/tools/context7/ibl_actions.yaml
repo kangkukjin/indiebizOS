@@ -21,6 +21,8 @@ actions:
     tool: devdocs_op
     ops:
       default: resolve
+      fixture:
+        search: '[sense:devdocs]{op: "search", library_id: "/reactjs/react.dev", query: "useState"}'
       values:
         resolve: 라이브러리 이름 → Context7 ID (첫 단계)
         search: 공식 문서 검색 (library_id + query)

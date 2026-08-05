@@ -12,6 +12,13 @@ actions:
     tool: stock_op
     ops:
       default: quote
+      fixture:
+        history: '[sense:stock]{op: "history", ticker: "삼성전자", period: "1mo"}'
+        info: '[sense:stock]{op: "info", ticker: "삼성전자"}'
+        search: '[sense:stock]{op: "search", query: "삼성"}'
+        investors: '[sense:stock]{op: "investors", ticker: "삼성전자"}'
+        news: '[sense:stock]{op: "news", ticker: "삼성전자"}'
+        earnings: '[sense:stock]{op: "earnings", ticker: "AAPL"}'
       values:
         quote: 현재가·현재 시세 (기본, "얼마"·"주가"·"시세" — Yahoo)
         history: 기간별 주가 이력·차트용 (period 또는 날짜, 시장 자동판별)
@@ -184,6 +191,11 @@ actions:
     tool: company_op
     ops:
       default: profile
+      returns:
+        financials: scalar
+      fixture:
+        profile: '[sense:company]{op: "profile", ticker: "삼성전자"}'
+        financials: '[sense:company]{op: "financials", ticker: "삼성전자"}'
       values:
         profile: 기업 기본정보 (대표·업종·시총·섹터)
         financials: 재무제표 (손익·재무상태·현금흐름)

@@ -1,42 +1,44 @@
-# IBL 전면 감사·보수 핸드오프 (2026-08-05) — **잔여 ⑦ 후반부(인지 매듭 + 디렉토리화)**
+# IBL 전면 감사·보수 핸드오프 (2026-08-05) — **⑦ 아키텍처 완결 · 잔여=물리 이동 결정**
 
 > 정본. 다음 세션은 이 문서만으로 이어받는다. 메모리 `ibl-audit-repair-2026-08` 이 여기를 가리킨다.
 
 ## ▶ 다음 세션 START HERE
 
-**⑦ 전반부(층 선언 + 매듭 절단 4파) 완료 — 2026-08-05 7차 세션, 커밋 `6eca829`~`f759606`.**
-매듭 **67모듈·235간선 → 32모듈·92간선**, 층 위반 부채 47→30건. 남은 것은 두 덩어리:
+**⑦ 후반부(인지 매듭 해체) 완료 — 2026-08-05 8차 세션, 커밋 `95a2bf1`~`abcc964`.**
+최종 상태: **교차층 순환 0** (시작: 67모듈·235간선 한 덩어리 매듭). 층 위반 부채
+47→**7건**(전부 한 방향 상향 읽기 — 순환 재료 아님). 잔여 SCC는 인지 클러스터 14·
+ibl 실행부 4·2쌍 4개, **전부 같은 층 안**(=같은 미래 디렉토리 안 — 파서 쌍 부류).
+이 불변식은 가드가 지킨다: `check_backend_layers.py` 의 `cross_layer_cycles` 가
+층을 가로지르는 SCC 재발을 커밋 게이트에서 차단.
 
-1. **인지 매듭 절단(32모듈)** — 남은 주 매듭은 ibl(engine/routing/executors/트리거·채널·
-   워크플로 엔진) ↔ cognition(agent_*·system_ai_*·system_tools·world_pulse) ↔ services
-   (channel_poller·auto_response·calendar_actions) 의 위임 결합이다. 핵심은 **ibl_routing 의
-   cognition 직참조 14간선**(BASELINE 의 ibl_routing → ai_agent/system_ai_*/system_tools/
-   body_ask/consciousness_agent/switch_runner/world_pulse* — §1-⑦ 후반부 참조):
-   라우터가 구현을 직접 부르는 대신 **등록 테이블**(파서 쌍·chat stream 슬롯과 같은 패턴)로
-   역전하고, 등록은 조립 루트(api.py/boot_common)가 한다. 같은 부류: trigger_engine →
-   auto_response/channel_poller (ibl→services), ibl_engine → consciousness_agent/
-   world_pulse_health, node_registry → agent_runner.
-2. **디렉토리 물리 이동** — 층이 곧 디렉토리(base/data/ibl/cognition/services/surface).
-   주 매듭이 "같은 미래 디렉토리 안"으로 줄어들면 이동. 함정(그대로 유효): 폰 번들
-   `build_body_bundle.py` 가 `backend/*.py` glob · Electron 스폰 평면 가정 ·
-   `sys.path.insert` 훅 23곳 · **41개 패키지가 backend 모듈을 bare 이름으로 import**
-   (가장 큰 파급 — 평면 이름을 유지하는 sys.path 장치 또는 전면 개명 결정 필요).
-   api_engine·api_pipeline·api_transforms 는 라우터가 아니므로 이동 때 개명 후보.
+**잔여 하나 = 디렉토리 물리 이동 — 가치/비용 판단이 먼저다 (사용자 결정 권장):**
+- 8차에 파급 반경을 실측했다: `__file__` 상대경로 산식(**47개 파일** — 한 층 내려가면
+  전부 리포 루트 계산이 깨짐) · `sys.path.insert` 훅(**118개 파일**) · backend 를
+  listdir/glob 하는 스크립트 **14개**(가드·번들·빌드) · 41개 패키지의 bare import ·
+  Electron 스폰과 패키징은 무사(재귀 복사·api.py 루트 유지 시).
+- **아키텍처 집행은 이미 논리적으로 완결**됐다(층 선언+방향 래칫+교차층 순환 차단이
+  전부 커밋 게이트에 있음). 물리 이동이 더하는 것은 *브라우징 가독성*이고, 비용은
+  위 파급 전체 + 폰 재빌드 + 윈도우 설치본 검증 캠페인이다.
+- 이동을 결정하면: 평면 모듈명 유지(41 패키지·폰 번들 flatten 호환) + 층 디렉토리를
+  sys.path 에 올리는 boot_paths 부트스트랩 방식을 권장 — 전면 개명(backend.ibl.engine)은
+  41 패키지·Chaquopy·코퍼스 문서까지 파급이라 비권장. 단독 세션 + 위 4부류
+  (47/118/14/41)를 기계 sweep + `ci_import_smoke`·윈도우 CI·폰 실기로 종단 검증.
 
-**새 도구(이 세션 산출)**:
-- `scripts/check_backend_layers.py` — 층 지도(6층+조립 루트) 선언 + 아래층→위층 import
-  차단. **BASELINE 30건**이 남은 절단 목록 그 자체다(절단=항목 삭제, 가드가 부실 삭제 강제).
-  pre-commit + seam-guards CI `backend-layers` 잡. 새 모듈은 층 배정 필수.
-- 진행 측정: `python3 scripts/analyze_backend_cycles.py` (매듭 크기가 진행률).
+**새 도구(7·8차 산출)**:
+- `scripts/check_backend_layers.py` — 6층 지도 + 방향 래칫(BASELINE 7) +
+  **cross_layer_cycles**(교차층 SCC 차단). pre-commit + seam-guards CI. 새 모듈 배정 필수.
+- `backend/routing_system.py` — 시스템 라우터 인지 능력(위임 기계+래퍼 13종). 등록은
+  boot_common. / `pulse_db.py`·`service_status.py`·`agent_registry.runner_registry` —
+  데이터층 정본들. / 캘린더 합성은 calendar_actions 가 조립(데이터층엔 Base+슬롯).
+- 진행 측정: `python3 scripts/analyze_backend_cycles.py`.
 
-가져다 쓸 수 있는 것(⑨·⑦ 전반부에서 만듦):
-- **AST 대조 안전망** — 분할 전/후의 함수·상수 `ast.dump` 전량 비교. ⑨ 커밋(`d486aba`)과
-  ⑦ 절단 1~4파 커밋 메시지의 검증 절차 참조.
-- **의존 역전 선례 3벌**: ibl_parser↔blocks 의 register_parse(`6eca829`) ·
-  websocket_manager 의 chat stream 주입 슬롯(`2534938`) · 사전/명함/얼굴 상태 하향
-  (`dcb4d42` `a1e743e` `f759606`).
-- **pre-commit 이 이미 잡아주는 것**: 몸-번들 드리프트, 모듈 그림자, 파일 크기, 이식성,
-  이벤트 루프, 공개 라우트 인증, **층 위반**.
+가져다 쓸 수 있는 것:
+- **AST 대조 안전망**(⑨ `d486aba` + ⑦ 각 파 커밋 메시지의 검증 절차).
+- **의존 역전 선례 6벌**: register_parse · chat stream 슬롯 · 시스템 능력 테이블(_cap) ·
+  서비스 생존 프로브(service_status) · 캘린더 합성 역전(register_manager_class) ·
+  러너 등기부 별칭(runner_registry).
+- **pre-commit**: 몸-번들 드리프트, 모듈 그림자, 파일 크기, 이식성, 이벤트 루프,
+  공개 라우트 인증, **층 위반+교차층 순환**.
 
 ## 진행 현황 (2026-08-05 6차 세션까지 — 전부 push)
 
@@ -51,7 +53,8 @@
 | ④ 렌더러 단일화 | ✅ 완료(로직) | (2026-08-05 6차) `backend/static/app_render_core.js` 신설 — 두 렌더러가 글자 그대로 번역해 갖고 있던 **순수 로직 26개**를 단일 소스로. 마크업 층은 의도적으로 두 벌 유지(아래 §1-④). 가드 `check_render_core.py` + 실행 회귀 `test_render_core.js`/`backend/test_render_core.py` |
 | ⑨ api_portal 분할 | ✅ 완료 | (2026-08-05 6차) 1903줄 → 조립 41줄 + 5모듈(base/face/warehouse/admin/auth/gate). **로직 무변경 이동을 AST 로 증명**(함수 71·상수 24 완전 일치) + 라우트 표 33개 동일. BASELINE 에서 삭제(재진입 봉인) |
 | ⑦ 전반부 | ✅ 완료(7차) | `6eca829`(파서 쌍 역전) `4fa8741`(층 가드) `2534938`(라우터 얇게 16간선) `dcb4d42`(사전 ibl_registry 분리) `a1e743e`(얼굴 face_config 분리) `f759606`(소유판정·세션캐시 하향) — 매듭 67→32·부채 47→30. 상세 §1-⑦ |
-| ⑦ 후반부 | ⬜ 잔여 | 인지 매듭 32모듈(ibl_routing 등록-역전이 핵심) + 디렉토리 물리 이동. ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ⑦ 후반부 | ✅ 완료(8차) | `95a2bf1`(시스템 라우터 등록-역전, 매듭 32→30) `1파` · 2파(pulse_db·runner_registry·service_status·nip17 키변환·★캘린더 합성 역전 — **교차층 순환 0**, 부채 19→9) · `abcc964`(cross_layer_cycles 가드 불변식화+warehouse_likes 재분류, 부채 7). 상세 §1-⑦ |
+| 물리 이동 | ⬜ 결정 대기 | 파급 실측: __file__ 산식 47파일·sys.path 훅 118파일·글롭 스크립트 14·41패키지 bare import. 아키텍처 집행은 논리 완결 — 이동=가독성 vs 캠페인급 비용, START HERE 참조. ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 등) 별건 |
 
 ## 세션 로그 (무엇이 언제 들어갔나)
 
@@ -64,6 +67,7 @@
 | 5차 | ⑤ 행위 검증 | `3982705` |
 | 6차 | ④ 렌더 로직 단일화 · ⑨ api_portal 분할 · (부수) media_player 404 수리 | `4470deb` `d486aba` `68c4540` |
 | 7차 | ⑦ 전반부: 층 선언·가드 + 매듭 절단 4파 (67→32모듈) | `6eca829` `4fa8741` `2534938` `dcb4d42` `a1e743e` `f759606` |
+| 8차 | ⑦ 후반부: 등록-역전 3파 (32모듈 → 교차층 순환 0) + 가드 불변식화 | `95a2bf1` + 2파 + `abcc964` |
 
 **6차 부수 산출** — ④가 만든 공용 코어 위에서 고쳐진 첫 버그(`68c4540`): 통화의 미디어 src 가
 파일시스템 절대경로인데 두 렌더러가 "'/' 로 시작하면 site-relative" 규칙으로 그대로 박아

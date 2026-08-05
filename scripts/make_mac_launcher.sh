@@ -10,6 +10,8 @@
 # - 첫 실행 시 macOS 가 "데스크탑 폴더 접근" 권한을 한 번 물어본다 — 허용해야 한다
 #   (저장소가 ~/Desktop 아래라서. launchd 와 달리 GUI 앱은 프롬프트가 뜬다)
 # - 로그: 백엔드 stdout → data/backend_runtime.log (조종실 '시스템 로그' 뷰어로 열람)
+# - ★PATH 에 /usr/sbin 필수 — 없으면 종료 정리의 lsof 포트 소탕이 침묵 실패해
+#   "창을 닫아도 백엔드가 산다"(2026-08-05 실발. main.js 는 절대경로 폴백도 가짐)
 
 set -e
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -19,7 +21,7 @@ NPM_DIR="$(dirname "$NPM")"
 
 TMP=$(mktemp -d)
 cat > "$TMP/launcher.applescript" <<EOF
-do shell script "cd '$REPO/frontend' && PATH='$NPM_DIR:/usr/bin:/bin' nohup '$NPM' run electron:dev >> '$REPO/data/electron_dev.log' 2>&1 &"
+do shell script "cd '$REPO/frontend' && PATH='$NPM_DIR:/usr/bin:/bin:/usr/sbin:/sbin' nohup '$NPM' run electron:dev >> '$REPO/data/electron_dev.log' 2>&1 &"
 EOF
 
 rm -rf "$APP"

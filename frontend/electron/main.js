@@ -584,7 +584,7 @@ function fullSystemCleanup() {
     }
   } catch (e) { /* 무시 */ }
   if (process.platform !== 'win32') {
-    try { execSync('pkill -f "scripts/backend_keeper.sh" 2>/dev/null; true', { shell: '/bin/bash' }); } catch (e) { /* 무시 */ }
+    try { execSync('pkill -f "scripts/backend_keepe[r].sh" 2>/dev/null; true', { shell: '/bin/bash' }); } catch (e) { /* 무시 */ }
   }
   // 2) 내가 스폰한 백엔드 그룹
   stopPythonBackend();
@@ -595,11 +595,11 @@ function fullSystemCleanup() {
         `powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort ${API_PORT} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /F /T /PID $_ }"`,
         { timeout: 15000 });
     } else {
+      // ★진범 봉합(08-05): 아이콘 PATH 에 /usr/sbin 없음→lsof 폴백 / pkill -f 자기셸 매칭→브래킷 트릭.
       execSync(
-        `lsof -ti :${API_PORT} | xargs kill -9 2>/dev/null; ` +
-        'pkill -9 -f "python3 api.py" 2>/dev/null; ' +
-        'pkill -9 -f "Python api.py" 2>/dev/null; ' +
-        'pkill -f "cloudflared tunnel run" 2>/dev/null; true',
+        `$(command -v lsof || echo /usr/sbin/lsof) -ti :${API_PORT} -sTCP:LISTEN | xargs kill -9 2>/dev/null; ` +
+        'pkill -9 -f "(python3|Python) ap[i].py" 2>/dev/null; ' +
+        'pkill -f "cloudflared tunnel ru[n]" 2>/dev/null; true',
         { shell: '/bin/bash', timeout: 15000 });
     }
   } catch (e) { /* 무시 */ }

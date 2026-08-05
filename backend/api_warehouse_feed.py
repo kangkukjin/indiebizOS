@@ -541,9 +541,9 @@ async def retweet(request: Request):
         raise HTTPException(status_code=400, detail="레벨은 0~4")
     raw_path = (body.get("name") or "").strip()
 
-    import api_portal
-    api_portal._ensure_warehouses()
-    dest_dir = api_portal._warehouse_dir(level) / _RT_DIRNAME
+    import portal_warehouse
+    portal_warehouse._ensure_warehouses()
+    dest_dir = portal_warehouse._warehouse_dir(level) / _RT_DIRNAME
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     wh = _source_warehouse(target, body.get("warehouse") or "")

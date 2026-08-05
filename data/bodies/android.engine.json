@@ -146,6 +146,12 @@
     "peer_cards",
     "phone_jobs",
     "phone_notifications",
+    "portal_admin",
+    "portal_auth",
+    "portal_base",
+    "portal_face",
+    "portal_gate",
+    "portal_warehouse",
     "project_manager",
     "prompt_benchmark",
     "prompt_builder",
@@ -216,8 +222,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 210,
-    "engine": 186,
+    "total": 216,
+    "engine": 192,
     "blocklist": 24
   }
 }

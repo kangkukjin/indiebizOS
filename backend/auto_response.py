@@ -398,12 +398,13 @@ class AutoResponseService:
     def _collect_warehouse(self, info_level: int) -> Optional[dict]:
         """이웃 레벨에서 보이는 내 공유창고 요약. 조회 실패 = None(창고 없음으로 강등)."""
         try:
-            import api_portal
+            import portal_base
+            import portal_warehouse
             lv = max(0, min(4, int(info_level or 0)))
-            base = (api_portal._core().load_state().get("public_base") or "").rstrip("/")
-            files, total = api_portal._walk_accessible(lv, base)
+            base = (portal_base._core().load_state().get("public_base") or "").rstrip("/")
+            files, total = portal_warehouse._walk_accessible(lv, base)
             return {
-                'title': api_portal._warehouse_title(),
+                'title': portal_warehouse._warehouse_title(),
                 'public_url': (base + "/") if base else "",
                 'level': lv,
                 'names': [f['name'] for f in files[:self._WAREHOUSE_NAME_CAP]],

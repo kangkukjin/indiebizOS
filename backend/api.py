@@ -206,7 +206,7 @@ async def lifespan(app: FastAPI):
     # 파일 탐색기에서 바로 찾고 파일을 넣을 수 있다. (탭·매니페스트가 열릴 때도
     # _ensure_warehouses 가 다시 돌므로 여기 실패는 치명적이지 않다.)
     try:
-        from api_portal import _ensure_warehouses
+        from portal_warehouse import _ensure_warehouses
         _ensure_warehouses()
         boot_status.record("공유창고", True)
     except Exception as e:

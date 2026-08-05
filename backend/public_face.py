@@ -412,7 +412,7 @@ def apply_public_base(base: str) -> dict:
 
     # ② 포털 (portal_core 단일 소스 — flock 직렬화 경유)
     try:
-        from api_portal import _core
+        from portal_base import _core
         core = _core()
 
         def _set(st):

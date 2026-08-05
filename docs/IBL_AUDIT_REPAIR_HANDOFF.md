@@ -13,7 +13,8 @@
 | ③ per-op returns | ✅ 완료 | (2026-08-05 4차) `ops.returns`/`ops.side_effect` 형제 맵 신설 + `backend/ibl_ops.py`(해소 단일 소스) + 43액션 선언 마이그레이션. **성과: 자동 건강검진 read-only 게이트에 걸려 실행조차 안 되던 fixture 32개 → 2개**(§1B GREEN 33→63, RED 0). 상세는 아래 §1-③ |
 | ⑤ 행위 검증 층 | ✅ 완료 | (2026-08-05 5차) `ops.fixture`/`ops.exempt` 형제 맵 + 읽기-op 전수 완전성 가드 + `#op` 키 파생·소비. **읽기 op 커버리지 37/133 → 122/133**(fixture 53 + 면제 32 신규), §1B **GREEN 63→89 / RED 0**. 상세는 아래 §1-⑤ |
 | ④ 렌더러 단일화 | ✅ 완료(로직) | (2026-08-05 6차) `backend/static/app_render_core.js` 신설 — 두 렌더러가 글자 그대로 번역해 갖고 있던 **순수 로직 26개**를 단일 소스로. 마크업 층은 의도적으로 두 벌 유지(아래 §1-④). 가드 `check_render_core.py` + 실행 회귀 `test_render_core.js`/`backend/test_render_core.py` |
-| ⑦⑨ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ⑨ api_portal 분할 | ✅ 완료 | (2026-08-05 6차) 1903줄 → 조립 41줄 + 5모듈(base/face/warehouse/admin/auth/gate). **로직 무변경 이동을 AST 로 증명**(함수 71·상수 24 완전 일치) + 라우트 표 33개 동일. BASELINE 에서 삭제(재진입 봉인) |
+| ⑦ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -193,14 +194,41 @@ pytest 부재. 고아 테스트 5개가 시작점: `backend/test_ibl_silent_fail
 - 접근: `pytest.ini` + CI 잡 하나(seam-guards.yml에 스텝 추가) + 고아 5개 assert화.
   새 테스트 강요 없이 "있는 것부터 돌게"가 1단계.
 
-### ⑨ BASELINE 파일 분할 — api_portal 최우선 (중규모)
-`scripts/check_file_size.py` BASELINE 7건은 래칫 동결(더 못 자람) 상태. 분할 완료 시
-**BASELINE에서 항목 삭제**(재진입 봉인)를 잊지 말 것.
-- `backend/api_portal.py` 1903 최우선 — 16섹션에 **인증 시스템 통째**(로그인:1425,
-  가입:1529, 비번재설정:1610)+파일서빙+방명록+PWA+오디오프록시 = 5모듈 분할.
-- `data-ops/handler.py` 1711 — 통화 소비자 정본이라 둘째 우선.
-- 나머지: api_nas 1515, media_producer 2건(핸드오프 doc ⑥⑨), youtube/tool_youtube 1570,
-  frontend/electron/main.js 1990.
+### ⑨ BASELINE 파일 분할 — api_portal (✅ 완료 — 아래는 어떻게 갈랐나)
+
+1903줄 → 조립 41줄 + 5모듈. **경계는 내가 고른 게 아니라 의존 그래프가 정했다**: 톱레벨
+이름의 정의/참조를 AST 로 뽑아 섹션 간 참조를 세니 자연 경계가 그대로 드러났고, 순환은
+딱 하나(창고 홈이 방명록을 렌더 ↔ 방명록이 창고 파일 목록을 읽음)뿐이었다.
+
+| 모듈 | 줄 | 무엇 |
+|---|---|---|
+| `api_portal.py` | 41 | 조립만 — `include_router` ×5 |
+| `portal_base.py` | 96 | 시크릿 게이트·portal_core/html 로더·뷰어·세션 쿠키 |
+| `portal_face.py` | 140 | 포털 공개 면(/page) + PWA 자산 |
+| `portal_warehouse.py` | 805 | 창고 공개 서빙(/home ·/manifest ·/file) **+ 방명록** |
+| `portal_admin.py` | 441 | 창고 관리(/warehouse-admin/*) — ★공개 면 아님 |
+| `portal_auth.py` | 310 | 가입·로그인·개인 링크·비밀번호 |
+| `portal_gate.py` | 222 | 계기 페이지 + 회원 실행 게이트 + 오디오 프록시 |
+
+- **방명록을 창고와 같은 파일에 둔 이유**: 나누면 순환이 된다. 함수 안 지연 임포트로
+  숨기는 건 ⑦이 진단한 바로 그 부류(백엔드 intra-import 의 70%가 함수 안) — 여기서
+  그 부채를 새로 만들지 않았다.
+- **`_check_secret` 은 `portal_base` 로**: 공개 라우트가 세션 없이 통과하는 근거가 이 함수
+  하나이고 `check_public_routes.py` 가 **이름으로** 인정하므로, import 해서 직접 부르면
+  가드가 그대로 따라온다(헬퍼로 한 겹 감싸면 못 따라갈 수 있다 — 그 가드가 같은 모듈 안
+  호출만 깊이 3까지 추적한다). 분할 후 실측: 공개 80 · 무검사 **0**.
+- **재수출 안 함**: 옛 파일이 이름만 남은 채 중앙처럼 보이면 분할한 뜻이 없다 → 외부
+  소비자 5곳(`api.py` `public_face` `warehouse_likes` `auto_response` `api_warehouse_feed`)을
+  진짜 주인 모듈로 재배선. `warehouse_likes` 의 지연 임포트는 **유지**(portal_warehouse 가
+  그 모듈을 부르므로 방향상 진짜 순환 — 위치가 아니라 방향이 이유임을 주석에 명시).
+- **검증 방식이 산출물**: "로직 무변경 이동"을 말이 아니라 **AST 대조로 증명**했다 —
+  옛 파일과 새 6파일의 함수 71개·상수 24개가 `ast.dump` 완전 일치, 라우트 표(메서드·경로·
+  핸들러명) 33개 완전 일치. 이 대조는 다음 분할(⑦)에도 그대로 쓸 수 있다.
+- BASELINE 에서 항목 삭제 완료(재진입 봉인) — 남은 부채 6건.
+
+**남은 BASELINE 6건**(다음 후보): `data-ops/handler.py` 1711(통화 소비자 정본이라 둘째
+우선) · api_nas 1515 · media_producer 2건 · youtube/tool_youtube 1570 ·
+frontend/electron/main.js 1990.
 
 ## 2. 순서 제안 (의존 관계)
 
@@ -210,11 +238,13 @@ pytest 부재. 고아 테스트 5개가 시작점: `backend/test_ibl_silent_fail
 ② 에러 관례 수렴 ────────┘
 ⑧ pytest 도입(독립·먼저 할수록 이득) → ⑤ 행위 검증 층 ✅ (⑧ 위에서)
 ⑦ 디렉토리화 (독립·큰 diff라 다른 작업과 겹치지 않게 단독 세션)
-⑨ api_portal 분할 (독립)
+⑨ api_portal 분할 ✅ (2026-08-05 6차)
 ④ 렌더러 단일화 ✅ (2026-08-05 6차 — 로직 단일화 + 실브라우저 종단)
 ```
 
-**남은 것은 ⑦⑨ 둘뿐**이고 서로 독립이다. 아무 순서로나.
+**남은 것은 ⑦ 하나**다. ⑨에서 만든 AST 대조(함수·상수·라우트 표 완전 일치 검사)를
+그대로 안전망으로 쓸 수 있다 — ⑦은 같은 성질의 '로직 무변경 이동'이고, 다만 규모가
+backend 전체라 순환 86개가 import 오류로 드러나는 것을 하나씩 푸는 단계가 더 붙는다.
 
 ## 3. 하우스 규약 리마인더 (이 작업들에 적용)
 

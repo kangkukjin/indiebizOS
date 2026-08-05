@@ -2,7 +2,8 @@
 """파일 크기 규칙(1500줄) 가드 — 게이트 없는 규칙은 선호일 뿐이라는 실증에서 신설.
 
 배경(2026-08-05 감사): CLAUDE.md 의 1500줄 규칙은 2026-07 모듈화로 한 번 충족됐지만
-줄 수를 세는 가드가 없어 3주 만에 재위반했다(api_portal.py 1903 등). 17개 가드가
+줄 수를 세는 가드가 없어 3주 만에 재위반했다(api_portal.py 가 1903줄까지 자랐다 —
+2026-08-05 감사 ⑨ 에서 5모듈로 분할하고 여기 BASELINE 에서 삭제해 재진입을 봉인). 17개 가드가
 있는 저장소에서 이 규칙만 게이트가 없었다 — 이 스크립트가 그 게이트.
 
 정책:
@@ -36,7 +37,6 @@ EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/"
 # 기존 부채 동결(2026-08-05 실측). 값 = 그 시점 줄 수(래칫 상한).
 # 분할 완료 시 항목 삭제. 새 항목 추가는 금지 — 추가하고 싶다는 충동이 곧 분할 신호.
 BASELINE = {
-    "backend/api_portal.py": 1903,          # 분할 계획: 인증/서빙/방명록/PWA/오디오프록시 5분할
     "backend/api_nas.py": 1515,
     "data/packages/installed/tools/media_producer/shadcn_slides.py": 1955,  # 핸드오프 doc ⑥
     "data/packages/installed/tools/media_producer/handler.py": 1646,        # 핸드오프 doc ⑨

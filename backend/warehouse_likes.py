@@ -89,10 +89,13 @@ async def like(request: Request, x_showcase_secret: str = Header(default=""),
     """좋아요 토글 — 공개 주소 /like 가 여기 닿는다(Worker·직접 서빙 게이트웨이가 매핑).
     회원(pk 쿠키)=계정 단위, 손님=IP 단위 중복 방지. 내 절단면에 보이는 파일만
     (방명록 about 과 같은 규칙 — 안 보이는 파일 존재를 좋아요로 떠보는 것 차단)."""
-    import api_portal
-    api_portal._check_secret(x_showcase_secret)
-    core = api_portal._core()
-    viewer, level = api_portal._viewer_level(core, request)
+    # ★지연 임포트 유지 — portal_warehouse 가 이 모듈을 부르므로(annotate/count_map)
+    #   톱레벨로 올리면 순환이 된다. 임포트 위치가 아니라 방향이 이유다.
+    import portal_base
+    import portal_warehouse
+    portal_base._check_secret(x_showcase_secret)
+    core = portal_base._core()
+    viewer, level = portal_warehouse._viewer_level(core, request)
     try:
         body = json.loads((await request.body()).decode("utf-8"))
     except Exception:
@@ -107,8 +110,8 @@ async def like(request: Request, x_showcase_secret: str = Header(default=""),
         raise HTTPException(status_code=429, detail="너무 빠릅니다")
     _LAST_BY_IP[ip] = now
 
-    api_portal._ensure_warehouses()
-    mine = {f["name"] for f in api_portal._accessible_files(level)}
+    portal_warehouse._ensure_warehouses()
+    mine = {f["name"] for f in portal_warehouse._accessible_files(level)}
     if path not in mine:
         raise HTTPException(status_code=404, detail="no such file")
 

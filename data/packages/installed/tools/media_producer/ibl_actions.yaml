@@ -83,7 +83,7 @@ nodes:
       render_html:
         returns: effect
         runs_on: pc_only
-        description: HTML 페이지를 PNG 이미지로 렌더링. 슬라이드·차트 결과를 이미지화.
+        description: AI가 작성한 HTML 조각을 PNG로 렌더 — 미리보기·검증·도식/목업 임베드용(웹 개발 보조 원시 능력). 슬라이드는 self:slide, 동영상은 self:deck{op:video}.
         target_description: 렌더링할 HTML 문자열 또는 경로. 결과 PNG 경로 반환.
         group: media_produce
         router: handler

@@ -99,7 +99,7 @@ SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}
 EXEMPT_PREFIX = ("test_", "migrate_")
 EXEMPT = {"prompt_benchmark", "ibl_opus_bulk_gen", "ibl_synthetic_generator",
-          "ibl_synthetic_opus", "ibl_embedding_trainer", "_slide_proto",
+          "ibl_synthetic_opus", "ibl_embedding_trainer",
           "boot_paths", "conftest"}  # 부트스트랩 — backend 루트가 정위치
 
 # 동결 부채 — 시작 47간선(⑦ 전반부) → 7간선(⑦ 후반부, 2026-08-05). 신규 추가 금지.

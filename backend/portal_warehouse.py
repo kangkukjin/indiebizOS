@@ -274,8 +274,8 @@ def _manifest_payload(node_title: str, base: str, level: int, is_member: bool) -
     # 옛 주소가 살아 있는 동안만 전파되므로, 전환기엔 두 프로바이더를 함께 켜 둔다.
     moved_to = ""
     try:
-        import public_face
-        moved_to = public_face.get_moved_to()
+        import face_config
+        moved_to = face_config.get_moved_to()
     except Exception:
         pass
     payload_extra = {"moved_to": moved_to} if moved_to else {}

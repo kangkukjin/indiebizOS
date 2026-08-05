@@ -394,9 +394,10 @@ async def remote_access_guard(request: Request, call_next):
 @app.middleware("http")
 async def public_face_gateway(request: Request, call_next):
     try:
+        import face_config
         import public_face
         host = request.headers.get("host") or ""
-        if public_face.is_direct_host(host):
+        if face_config.is_direct_host(host):
             resp = await public_face.handle(request)
             if resp is not None:
                 return resp

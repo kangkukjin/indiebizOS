@@ -272,8 +272,8 @@ def _wire_cf_face(up: bool) -> None:
         host = (cfg.get("hostname") or "").strip().lower()
         if not (host and cfg.get("tunnel_token")):
             return
-        import public_face
-        face = public_face.load_config()
+        import face_config
+        face = face_config.load_config()
         hosts = [h for h in (face.get("direct_hosts") or []) if h]
         changed = False
         if up and host not in hosts:
@@ -284,7 +284,7 @@ def _wire_cf_face(up: bool) -> None:
             changed = True
         if changed:
             face["direct_hosts"] = sorted(hosts)
-            public_face.save_config(face)
+            face_config.save_config(face)
             from api_launcher_web import reload_external_hostnames
             reload_external_hostnames()
     except Exception:
@@ -475,8 +475,8 @@ def start_funnel(port: int = 8765) -> dict:
     # 직접 서빙 게이트웨이 배선 — ts.net 주소가 공개 얼굴이 된다
     wired = {}
     try:
-        import public_face
-        cfg = public_face.load_config()
+        import face_config
+        cfg = face_config.load_config()
         cfg["provider"] = "tailscale"
         # 합류(교체 아님) — cloudflare 직접서빙 호스트 등 다른 얼굴은 산 채로 둔다.
         # 두 얼굴 공존이 정상 상태(이사 공지 기간엔 양쪽이 함께 서빙해야 moved_to 전파).
@@ -486,7 +486,7 @@ def start_funnel(port: int = 8765) -> dict:
         cfg["direct_hosts"] = sorted(hosts)
         if base:
             cfg["public_base"] = base
-        public_face.save_config(cfg)
+        face_config.save_config(cfg)
         wired = {"direct_hosts": cfg["direct_hosts"], "public_base": cfg.get("public_base", "")}
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -506,12 +506,12 @@ def stop_funnel() -> dict:
     if r["rc"] != 0:
         return {"success": False, "error": (r["err"] or r["out"]).strip()[:300]}
     try:
-        import public_face
-        cfg = public_face.load_config()
+        import face_config
+        cfg = face_config.load_config()
         # ts.net 얼굴만 내린다 — cloudflare 직접서빙 호스트는 funnel 과 무관하게 유지.
         cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or [])
                                if not h.endswith(".ts.net")]
-        public_face.save_config(cfg)
+        face_config.save_config(cfg)
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
     except Exception:
@@ -590,8 +590,8 @@ class TunnelConfig(BaseModel):
 def _face_provider() -> str:
     """공식 얼굴의 provider (public_face.json) — 프로세스 축(tunnel_config)과 별개."""
     try:
-        import public_face
-        return (public_face.load_config().get("provider") or "").strip().lower()
+        import face_config
+        return (face_config.load_config().get("provider") or "").strip().lower()
     except Exception:
         return ""
 
@@ -622,8 +622,8 @@ def origin_host() -> str:
     try:
         cfg = load_config()
         try:
-            import public_face
-            face = public_face.load_config()
+            import face_config
+            face = face_config.load_config()
             hosts = [h for h in (face.get("direct_hosts") or []) if h]
             face_provider = (face.get("provider") or "").strip().lower()
         except Exception:
@@ -842,10 +842,10 @@ def set_tunnel_provider(update: TunnelConfig):
         # 않는다: 얼굴의 생사는 발급(합류)·중지(stop_funnel 이 ts.net 만 제거)가 관리하고,
         # 전환 기간엔 양쪽 얼굴이 함께 살아 있어야 moved_to 가 이웃에게 전파된다.
         try:
-            import public_face
-            cfg = public_face.load_config()
+            import face_config
+            cfg = face_config.load_config()
             cfg["provider"] = "cloudflare"
-            public_face.save_config(cfg)
+            face_config.save_config(cfg)
             from api_launcher_web import reload_external_hostnames
             reload_external_hostnames()
         except Exception:
@@ -871,8 +871,8 @@ def auto_start_if_enabled():
     if not config.get("auto_start"):
         return
     try:
-        import public_face
-        registry = {h for h in (public_face.load_config().get("direct_hosts") or []) if h}
+        import face_config
+        registry = {h for h in (face_config.load_config().get("direct_hosts") or []) if h}
     except Exception:
         registry = set()
     provider = config.get("provider", "cloudflare")

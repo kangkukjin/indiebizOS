@@ -71,6 +71,7 @@
     "document_converter",
     "episode_logger",
     "event_engine",
+    "face_config",
     "face_provision",
     "file_index",
     "focus_map",
@@ -226,8 +227,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 220,
-    "engine": 196,
+    "total": 221,
+    "engine": 197,
     "blocklist": 24
   }
 }

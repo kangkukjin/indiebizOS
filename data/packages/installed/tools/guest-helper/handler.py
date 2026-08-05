@@ -469,8 +469,8 @@ def _hub_address():
     /limb/* 는 **직접 서빙 호스트(direct_hosts)** 로 가야 한다 — public_base 가 Worker 도메인인
     배포에서도 깨지지 않도록 direct host 를 우선한다. 반환 (주소, 경고)."""
     try:
-        import public_face
-        cfg = public_face.load_config()
+        import face_config
+        cfg = face_config.load_config()
     except Exception:
         return "", "공개 주소 설정을 읽지 못했습니다."
     base = (cfg.get("public_base") or "").rstrip("/")

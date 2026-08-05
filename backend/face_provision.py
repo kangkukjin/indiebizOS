@@ -43,6 +43,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 import api_tunnel
+import face_config
 import public_face
 
 router = APIRouter(prefix="/tunnel/provision", tags=["tunnel-provision"])
@@ -171,7 +172,7 @@ def verify_public_face(delay: float = 8.0) -> dict:
     host = tcfg.get("hostname", "")
     if not (host and tcfg.get("tunnel_token")):
         return {"skipped": "발급된 원격관리 터널 없음"}
-    if host not in set(public_face.load_config().get("direct_hosts") or []):
+    if host not in set(face_config.load_config().get("direct_hosts") or []):
         return {"skipped": "이 얼굴은 닫혀 있음"}   # 사용자가 닫아둔 주소는 깨우지 않는다
     base = f"https://{host}"
     time.sleep(delay)                                # cloudflared 접속 완료 대기
@@ -245,7 +246,7 @@ def _effective_public_base(face: dict) -> str:
 @router.get("/status")
 async def provision_status():
     """양 갈래 준비 상태 + 현재 창고 신원(public_base). 설정 UI 의 첫 화면."""
-    face = public_face.load_config()
+    face = face_config.load_config()
     tcfg = api_tunnel.load_config()
     ts = api_tunnel.tailscale_info()
     creds = _cf_creds()
@@ -377,11 +378,11 @@ def provision_use(req: UseReq):
                                      "error": r.get("error", "터널 시작 실패")}, status_code=502)
 
     base = f"https://{host}"
-    fcfg = public_face.load_config()
+    fcfg = face_config.load_config()
     hosts = set(fcfg.get("direct_hosts") or [])
     hosts.add(host)
     fcfg.update({"provider": provider, "direct_hosts": sorted(hosts), "public_base": base})
-    public_face.save_config(fcfg)
+    face_config.save_config(fcfg)
     try:
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -421,9 +422,9 @@ def provision_close(req: UseReq):
         return JSONResponse({"success": False, "error": "발급된 Cloudflare 주소가 없습니다"},
                             status_code=400)
     api_tunnel.stop_tunnel()
-    cfg = public_face.load_config()
+    cfg = face_config.load_config()
     cfg["direct_hosts"] = [h for h in (cfg.get("direct_hosts") or []) if h != host]
-    public_face.save_config(cfg)
+    face_config.save_config(cfg)
     try:
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -445,7 +446,7 @@ def provision_open(req: UseReq):
     if provider == "tailscale":
         # start_funnel 은 정체(public_base·provider)까지 ts 로 배선하므로 — 열기 전
         # 값을 보존했다가 되돌린다(열기=서빙 재개일 뿐 정체 이동은 /use 의 일).
-        before = public_face.load_config()
+        before = face_config.load_config()
         keep_base = before.get("public_base", "")
         keep_provider = before.get("provider", "")
         tcfg = api_tunnel.load_config()
@@ -453,12 +454,12 @@ def provision_open(req: UseReq):
         if not r.get("success"):
             return JSONResponse({"success": False, "error": r.get("error", "funnel 시작 실패")},
                                 status_code=400)
-        cfg = public_face.load_config()
+        cfg = face_config.load_config()
         if keep_base:
             cfg["public_base"] = keep_base
         if keep_provider:
             cfg["provider"] = keep_provider
-        public_face.save_config(cfg)
+        face_config.save_config(cfg)
         try:
             from api_launcher_web import reload_external_hostnames
             reload_external_hostnames()
@@ -477,11 +478,11 @@ def provision_open(req: UseReq):
         if not r.get("success"):
             return JSONResponse({"success": False, "error": r.get("error", "터널 시작 실패")},
                                 status_code=502)
-    cfg = public_face.load_config()
+    cfg = face_config.load_config()
     hosts = set(cfg.get("direct_hosts") or [])
     hosts.add(host)
     cfg["direct_hosts"] = sorted(hosts)
-    public_face.save_config(cfg)
+    face_config.save_config(cfg)
     try:
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -637,12 +638,12 @@ def provision_cloudflare(req: CloudflareReq):
     # 8) 공개 얼굴 배선 — direct_hosts 에는 CDN 여부와 무관하게 터널 호스트가 들어간다:
     #    직접 서빙일 땐 그 자체가 정문, CDN 일 땐 Worker 의 오리진(ORIGIN_BASE)이자
     #    런처·파인더의 주소(origin_host)다.
-    fcfg = public_face.load_config()
+    fcfg = face_config.load_config()
     hosts = set(fcfg.get("direct_hosts") or [])
     hosts.add(hostname)
     fcfg.update({"provider": "cloudflare", "direct_hosts": sorted(hosts),
                  "public_base": base})
-    public_face.save_config(fcfg)
+    face_config.save_config(fcfg)
     try:
         from api_launcher_web import reload_external_hostnames
         reload_external_hostnames()
@@ -696,9 +697,9 @@ def provision_cdn_endpoint(req: CdnReq = CdnReq()):
                              "error": "CDN 발급 실패 — 스텝 로그 참조"}, status_code=502)
     tcfg.update({"cdn_worker": cdn["worker"], "cdn_url": cdn["url"]})
     api_tunnel.save_config(tcfg)
-    fcfg = public_face.load_config()
+    fcfg = face_config.load_config()
     fcfg["public_base"] = cdn["url"]
-    public_face.save_config(fcfg)
+    face_config.save_config(fcfg)
     applied = public_face.apply_public_base(cdn["url"])
     return {"success": True, "url": cdn["url"], "worker": cdn["worker"],
             "steps": cdn["steps"], "applied": applied,

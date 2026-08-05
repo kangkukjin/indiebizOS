@@ -19,6 +19,7 @@ import {
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
   composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
   RECURRENCE_OPTS, dateInputType,
 } from '../../../../backend/static/app_render_core.js';
@@ -30,6 +31,7 @@ export {
   groupPartition, fmtSpark, sparkModel,
   calendarModel, calShift, pad2,
   composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
   RECURRENCE_OPTS, dateInputType,
 };
@@ -193,11 +195,12 @@ export const fieldCls = 'px-3 py-2 rounded-lg border border-stone-200 bg-white t
 
 export const IMAGE_BASE = IBL_ENDPOINT.replace(/\/ibl\/execute$/, '');  // 'http://127.0.0.1:8765'
 export const imageUrl = (p: string) => `${IMAGE_BASE}/image?path=${encodeURIComponent(p)}`;
-// view 통화의 image 필드: 절대 URL(http…·data:)이면 그대로, 백엔드 상대경로(/photo/thumbnail?path=…)면 IMAGE_BASE 부착.
+// view 통화의 image 필드: 절대 URL(http…·data:)이면 그대로, 백엔드 라우트(/photo/thumbnail?path=…)면
+// IMAGE_BASE 부착, 파일 절대경로(/Users/…/x.jpg)면 /image 로 서빙.
 // 데스크탑(file://·dev 5173)은 origin이 백엔드와 달라 상대경로가 깨지므로 필수. book/invest 외부 http URL은 무영향.
-export const mediaSrc = (u: string) => (u && u.startsWith('/')) ? `${IMAGE_BASE}${u}` : u;
-// media_player 오디오 소스: 절대 URL(http/data)은 그대로, 백엔드 상대경로(/music/stream?…)는 IMAGE_BASE 부착(mediaSrc 와 동일),
-// 그 외(백엔드 파일 절대경로)는 /launcher/file 로 서빙.
-export const audioUrl = (u: string) => !u ? '' : (/^(https?:|data:)/.test(u) ? u : u.startsWith('/') ? `${IMAGE_BASE}${u}` : `${IMAGE_BASE}/launcher/file?path=${encodeURIComponent(u)}`);
+// ★'/' 로 시작한다고 라우트가 아니다 — 판정은 공용 코어 isBackendRoute 가 정본(원격 표면과 같은 규칙).
+export const mediaSrc = (u: string) => !u ? u : (u.startsWith('/') ? (isBackendRoute(u) ? `${IMAGE_BASE}${u}` : imageUrl(u)) : u);
+// media_player 소스: 해소 규칙 전부 공용 코어(resolveMediaUrl) — 표면 차이는 base 뿐이다.
+export const audioUrl = (u: string) => resolveMediaUrl(u, IMAGE_BASE);
 
 // RECURRENCE_OPTS(반복 주기 어휘)·dateInputType 은 공용 코어에서 재수출 — 위 export 블록 참조.

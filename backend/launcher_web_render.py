@@ -324,12 +324,12 @@ function renderPrim(p,vi,data){
     }
     return arr.map(it=>{
       const mm=mediaModel(p,it,tpl,slowNet);   // tpl=원격판(값 esc) — 속성 안에 들어가므로 그대로
-      const raw=mm.src;
-      // 절대 URL 은 그대로, 백엔드 상대경로(/music/stream?…)는 동일오리진이라 그대로, 파일 절대경로는 /launcher/file 로 서빙.
-      const src=raw?(/^(https?:|data:)/.test(raw)?raw:(raw.startsWith('/')?raw:'/launcher/file?path='+encodeURIComponent(raw))):'';
-      const title=mm.title, isVid=mm.isVideo, poster=mm.poster;
+      // 소스 해소(절대 URL / 백엔드 라우트 / 파일경로)는 공용 코어가 정본 — 원격은 동일오리진이라 base=''.
+      // ★'/' 로 시작한다고 site-relative 가 아니다: 파일시스템 절대경로도 '/' 로 시작한다(isBackendRoute).
+      const src=resolveMediaUrl(mm.src,'');
+      const title=mm.title, isVid=mm.isVideo, poster=resolveMediaUrl(mm.poster,'');
       // 소스 우선순위: HLS(hls.js — 적응형) > 네이티브 HLS(사파리) > 프로그레시브(+저대역 자동)
-      const hlsRaw=mm.hls;
+      const hlsRaw=resolveMediaUrl(mm.hls,'');
       const canHlsJs=isVid&&hlsRaw&&window.Hls&&Hls.isSupported();
       const canNative=isVid&&hlsRaw&&!canHlsJs&&document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
       const vSrc=canHlsJs?'':(canNative?hlsRaw:src);

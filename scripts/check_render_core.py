@@ -49,6 +49,32 @@ def core_export_names(text: str) -> list:
     return [n.strip() for n in m.group(1).split(",") if n.strip()]
 
 
+# media_player.src·card image·poster 로 통화에 실려 나가는 필드들. 이 필드에 '/'-시작
+# 리터럴을 넣는다는 건 "백엔드 라우트로 서빙한다"는 선언이고, 렌더러는 그 판정을
+# BACKEND_MEDIA_ROUTES 로 한다 — 목록에 없는 라우트를 내보내면 렌더러가 파일경로로 오인해
+# /launcher/file 로 보내고 404 가 된다. 그 어긋남을 커밋 시점에 잡는다.
+MEDIA_FIELD_RE = re.compile(
+    r'"(?:stream|stream_low|stream_hls|image|poster|thumb|cover)"\s*:\s*f?"(/[^"{}\s]*)'
+)
+MEDIA_SCAN_DIRS = [("backend",), ("data", "packages", "installed", "tools")]
+
+
+def core_media_routes(text: str) -> list:
+    """코어의 BACKEND_MEDIA_ROUTES 목록을 읽는다(가드가 코어를 따라가게)."""
+    m = re.search(r"var\s+BACKEND_MEDIA_ROUTES\s*=\s*\[([^\]]*)\]", text)
+    if not m:
+        return []
+    return [s.strip().strip("'\"") for s in m.group(1).split(",") if s.strip()]
+
+
+def _covered(route: str, prefixes: list) -> bool:
+    """isBackendRoute 의 파이썬 쌍둥이 — 세그먼트 경계까지 같은 규칙."""
+    for p in prefixes:
+        if route == p or (route.startswith(p) and route[len(p): len(p) + 1] in ("/", "?")):
+            return True
+    return False
+
+
 def check(root: str = ROOT) -> list:
     issues = []
     core_path = os.path.join(root, "backend", "static", "app_render_core.js")
@@ -104,6 +130,35 @@ def check(root: str = ROOT) -> list:
                 f"{rel}: 표면 조립에 LAUNCHER_CORE_JS 가 없습니다 — 그 표면의 앱 탭은 "
                 "jget/tpl 부터 전부 undefined 로 죽습니다."
             )
+
+    # ④ 통화에 실리는 백엔드 미디어 라우트가 BACKEND_MEDIA_ROUTES 안에 있다
+    prefixes = core_media_routes(text)
+    if not prefixes:
+        issues.append(
+            "app_render_core.js 에서 BACKEND_MEDIA_ROUTES 를 찾지 못했습니다 — "
+            "`var BACKEND_MEDIA_ROUTES = [...]` 형태를 유지하세요."
+        )
+    else:
+        for parts in MEDIA_SCAN_DIRS:
+            base = os.path.join(root, *parts)
+            for dirpath, _dirs, files in os.walk(base):
+                for fn in files:
+                    if not fn.endswith(".py"):
+                        continue
+                    path = os.path.join(dirpath, fn)
+                    try:
+                        with open(path, encoding="utf-8") as f:
+                            body = f.read()
+                    except (OSError, UnicodeDecodeError):
+                        continue
+                    for route in set(MEDIA_FIELD_RE.findall(body)):
+                        if not _covered(route, prefixes):
+                            issues.append(
+                                f"{os.path.relpath(path, root)}: 미디어 라우트 '{route}' 가 "
+                                "app_render_core.js 의 BACKEND_MEDIA_ROUTES 에 없습니다 — "
+                                "렌더러가 파일 절대경로로 오인해 /launcher/file 로 보내고 404 가 "
+                                "됩니다. 코어 목록에 프리픽스를 추가하세요."
+                            )
     return issues
 
 
@@ -142,6 +197,17 @@ def _self_test() -> int:
         expect("표면 누락 검출", any("LAUNCHER_CORE_JS" in i for i in check(td)))
         with open(os.path.join(td, SURFACES[1]), "w", encoding="utf-8") as f:
             f.write("LAUNCHER_CORE_JS\n")
+
+        # 목록에 없는 미디어 라우트 심기 (④)
+        hpath = os.path.join(td, "backend", "handler_fake.py")
+        with open(hpath, "w", encoding="utf-8") as f:
+            f.write('rec = {"stream": f"/podcast/play?id={x}"}\n')
+        expect("미목록 미디어 라우트 검출", any("/podcast/play" in i for i in check(td)))
+        # 목록에 있는 라우트는 통과 (거짓양성 없음)
+        with open(hpath, "w", encoding="utf-8") as f:
+            f.write('rec = {"stream": f"/music/stream?path={x}", "image": "/photo/thumbnail?path=a"}\n')
+        expect("목록에 있는 라우트는 통과", check(td) == [])
+        os.remove(hpath)
 
         # 떠도는 export 심기
         cj = os.path.join(td, "backend", "static", "app_render_core.js")

@@ -83,6 +83,35 @@ check('media_player lazy preload=none', media.includes('preload="none"') && medi
 const vid = R([{type:'media_player', from:'items', src:'{u}', video:'{isv}'}], {items:[{u:'/v.mp4', isv:'true'}]});
 check('media_player video 분기', vid.includes('<video'), vid);
 
+// --- 소스 해소: '/' 로 시작한다고 site-relative 가 아니다 (파일시스템 절대경로도 '/' 로 시작) ---
+// 회귀: 오디오 브리핑(self:file_find 의 url = /Users/…/x.mp3)이 <audio src="/Users/…"> 로 박혀 404.
+const FILE = '/Users/k/Desktop/AI/indiebizOS/projects/앱모드/outputs/audio_briefing_current.mp3';
+const fileMedia = R([{type:'media_player', from:'items', src:'{u}'}], {items:[{u:FILE}]});
+check('파일 절대경로 → /launcher/file 서빙',
+  fileMedia.includes('/launcher/file?path=' + encodeURIComponent(FILE)) && !fileMedia.includes('src="/Users/'),
+  fileMedia);
+check('백엔드 라우트는 그대로(음악 계기 회귀)',
+  sandbox.resolveMediaUrl('/music/stream?path=%2Fa%2Fb.mp3', '') === '/music/stream?path=%2Fa%2Fb.mp3',
+  sandbox.resolveMediaUrl('/music/stream?path=%2Fa%2Fb.mp3', ''));
+check('데스크탑 base 부착', sandbox.resolveMediaUrl('/yt/hls/abc/master.m3u8', 'http://127.0.0.1:8765')
+  === 'http://127.0.0.1:8765/yt/hls/abc/master.m3u8', sandbox.resolveMediaUrl('/yt/hls/abc/master.m3u8', 'http://127.0.0.1:8765'));
+check('절대 URL 은 손대지 않음', sandbox.resolveMediaUrl('https://cdn/x.mp4', 'http://b') === 'https://cdn/x.mp4',
+  sandbox.resolveMediaUrl('https://cdn/x.mp4', 'http://b'));
+check('빈 소스 → 빈 문자열', sandbox.resolveMediaUrl('', 'http://b') === '', sandbox.resolveMediaUrl('', 'http://b'));
+check('해소는 멱등(이미 푼 URL 재투입)',
+  sandbox.resolveMediaUrl(sandbox.resolveMediaUrl(FILE, ''), '') === sandbox.resolveMediaUrl(FILE, ''),
+  sandbox.resolveMediaUrl(sandbox.resolveMediaUrl(FILE, ''), ''));
+// 세그먼트 경계 — /music 은 /music/… 에만 맞고 /musicbox(있을 법한 폴더)엔 안 맞는다
+check('라우트 판정은 세그먼트 경계',
+  sandbox.isBackendRoute('/music/stream?p=1') && sandbox.isBackendRoute('/photo') &&
+  !sandbox.isBackendRoute('/musicbox/a.mp3') && !sandbox.isBackendRoute('/Users/k/photo/a.jpg') &&
+  !sandbox.isBackendRoute('rel/path.mp3'),
+  [sandbox.isBackendRoute('/musicbox/a.mp3'), sandbox.isBackendRoute('/Users/k/photo/a.jpg')].join(','));
+// poster·HLS 도 같은 규칙(플레이어 안에서 소스가 셋)
+const pv = R([{type:'media_player', from:'items', src:'{u}', poster:'{p}', video:true}],
+  {items:[{u:'/yt/relay/v1', p:'/Users/k/thumb.jpg'}]});
+check('poster 도 같은 해소', pv.includes('poster="/launcher/file?path=') && pv.includes('src="/yt/relay/v1"'), pv);
+
 const form = R([{type:'form', title:'정보', fields:[{key:'name', label:'이름', type:'text', value:'{name}'},
   {key:'when', label:'날짜', type:'datetime'}, {key:'rep', label:'반복', type:'recurrence'}], action:'[n:a]{}'}], {name:'홍길동'});
 check('form 값·datetime-local·recurrence', form.includes('홍길동') && form.includes('datetime-local') && form.includes('매주'), form.slice(0,300));

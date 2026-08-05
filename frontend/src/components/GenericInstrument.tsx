@@ -298,7 +298,8 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           const m = mediaModel(p, it, tpl, slowNet) as
             { src: string; hls: string; isVideo: boolean; poster: string; title: string; preload: 'none' | 'metadata' };
           const src = audioUrl(m.src);
-          const poster = m.poster ? mediaSrc(m.poster) : undefined;
+          // 플레이어의 세 소스(src·hls·poster)는 같은 규칙으로 푼다 — 원격 표면과 동형.
+          const poster = m.poster ? audioUrl(m.poster) : undefined;
           return (
             <div key={i} className="bg-white border border-stone-200 rounded-xl px-4 py-3">
               {m.title && <div className="text-sm font-semibold text-stone-800 mb-2">{m.title}</div>}

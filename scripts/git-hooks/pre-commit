@@ -171,7 +171,9 @@ fi
 
 # 공용 렌더 코어 — 앱 표면 렌더 로직이 다시 데스크탑/원격 두 벌로 갈라지는 것 차단.
 # (2026-08-05 감사 ④: 로직 정본=backend/static/app_render_core.js, 마크업만 표면별)
-if echo "$staged" | grep -qE '^(backend/static/app_render_core\.js|backend/launcher_.*\.py|frontend/src/components/GenericInstrument\.tsx|frontend/src/components/generic/.*|scripts/check_render_core\.py)$'; then
+# ★가드 ④(미디어 라우트 목록)의 입력은 통화를 만드는 backend/·핸들러 .py 다 — 그쪽도
+#   방아쇠에 넣는다("게이트가 자기 입력을 안 본다"를 여기서 반복하지 않기 위해. 0.2초).
+if echo "$staged" | grep -qE '^(backend/.*\.py|backend/static/app_render_core\.js|frontend/src/components/GenericInstrument\.tsx|frontend/src/components/generic/.*|data/packages/installed/.*\.py|scripts/check_render_core\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 공용 렌더 코어 검사 실행..."
   if ! python3 "$repo_root/scripts/check_render_core.py"; then

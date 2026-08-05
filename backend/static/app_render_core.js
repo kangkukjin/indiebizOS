@@ -246,8 +246,60 @@ function isSlowNet(conn) {
 function preloadOf(p) { return p.lazy ? 'none' : 'metadata'; }
 
 /**
+ * 백엔드가 서빙하는 라우트 프리픽스 — 통화의 src·image·poster 에 실려 오는
+ * *site-relative URL* 은 전부 이 중 하나로 시작한다(/music/stream?path=…, /yt/hls/…).
+ *
+ * ★왜 목록이 필요한가: 파일시스템 절대경로(/Users/…/brief.mp3 — self:file_find 의 url)도
+ *   '/' 로 시작한다. "'/' 로 시작하면 site-relative" 라는 옛 규칙은 그 둘을 한 가지에 넣어
+ *   절대경로를 그대로 <audio src> 에 박았고, 그건 백엔드에 없는 주소라 404 로 죽었다
+ *   (오디오 브리핑 재생 불가). 절대경로는 /launcher/file 로 서빙해야 한다.
+ *
+ * ★왜 반대로 파일시스템 루트(/Users·/home·/Volumes…) 목록을 세지 않는가: OS 루트는
+ *   사용자가 늘린다(마운트 지점은 아무 이름이나 된다) — 셀 수 없는 쪽이다. 백엔드 라우트는
+ *   우리가 만들 때만 는다. 아는 쪽을 세고 나머지를 파일로 보는 게 유일하게 닫히는 방향이다.
+ *
+ * 새 미디어 라우트를 낼 땐 여기 한 줄 — scripts/check_render_core.py 가 통화에 실리는
+ * 라우트 리터럴을 훑어 이 목록에 없는 것을 잡는다(손 유지보수에 기대지 않는다).
+ */
+var BACKEND_MEDIA_ROUTES = ['/music', '/photo', '/yt', '/nas', '/showcase', '/launcher', '/image'];
+
+/**
+ * raw 가 백엔드 라우트(site-relative URL)인가 — 아니면 파일시스템 절대경로다.
+ * 경계는 세그먼트 단위: '/music' 은 '/music/…'·'/music?…'·'/music' 에만 맞고
+ * '/musicbox/…'(있을 법한 딴 폴더)엔 안 맞는다.
+ */
+function isBackendRoute(raw) {
+  if (!raw || String(raw).charAt(0) !== '/') return false;
+  var s = String(raw);
+  for (var i = 0; i < BACKEND_MEDIA_ROUTES.length; i++) {
+    var p = BACKEND_MEDIA_ROUTES[i];
+    if (s === p) return true;
+    if (s.indexOf(p) === 0) {
+      var c = s.charAt(p.length);
+      if (c === '/' || c === '?') return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 미디어 소스 문자열 → 실제로 물릴 URL. base = 표면이 백엔드에 붙일 오리진
+ * (데스크탑 = 'http://127.0.0.1:8765' — file://·5173 이라 origin 이 다르다 / 원격·폰 = '' 동일오리진).
+ *
+ * 절대 URL은 그대로 · 백엔드 라우트는 base 부착 · 그 밖(파일 절대/상대경로)은 /launcher/file 서빙.
+ * 이미 해소된 URL 을 다시 넣어도 같은 값이 나온다(/launcher/file… 자체가 라우트라 멱등).
+ */
+function resolveMediaUrl(raw, base) {
+  if (!raw) return '';
+  var s = String(raw);
+  if (/^(https?:|data:|blob:)/.test(s)) return s;
+  var b = base || '';
+  return isBackendRoute(s) ? b + s : b + '/launcher/file?path=' + encodeURIComponent(s);
+}
+
+/**
  * media_player 한 항목의 소스 결정 — T 는 표면의 템플릿 함수(이스케이프 정책 포함).
- * URL 을 절대화하는 방식은 표면마다 달라(데스크탑=백엔드 origin 부착 / 원격=동일 origin)
+ * 고른 문자열을 URL 로 절대화하는 것은 resolveMediaUrl(표면이 base 를 넘긴다),
  * 여기선 *어떤 문자열을 고를지*만 정한다.
  */
 function mediaModel(p, it, T, slowNet) {
@@ -316,6 +368,7 @@ export {
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,
   composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  BACKEND_MEDIA_ROUTES, isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
   RECURRENCE_OPTS, dateInputType,
 };

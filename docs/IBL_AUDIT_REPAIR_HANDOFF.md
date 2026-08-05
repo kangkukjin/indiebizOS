@@ -1,21 +1,42 @@
-# IBL 전면 감사·보수 핸드오프 (2026-08-05) — **잔여 ⑦ 하나**
+# IBL 전면 감사·보수 핸드오프 (2026-08-05) — **잔여 ⑦ 후반부(인지 매듭 + 디렉토리화)**
 
 > 정본. 다음 세션은 이 문서만으로 이어받는다. 메모리 `ibl-audit-repair-2026-08` 이 여기를 가리킨다.
 
 ## ▶ 다음 세션 START HERE
 
-**9항 중 8항 완료(①②③④⑤⑥⑧⑨), 남은 것은 ⑦ backend 디렉토리화 하나.** 전부 main 직접
-커밋·push 됐고 워킹트리·워크트리 모두 깨끗하다(2026-08-05 6차 종료 시점 HEAD `68c4540`).
+**⑦ 전반부(층 선언 + 매듭 절단 4파) 완료 — 2026-08-05 7차 세션, 커밋 `6eca829`~`f759606`.**
+매듭 **67모듈·235간선 → 32모듈·92간선**, 층 위반 부채 47→30건. 남은 것은 두 덩어리:
 
-⑦은 **단독 세션**으로 잡을 것 — diff 가 backend 전체라 다른 작업과 겹치면 서로를 못 읽는다.
-들어가기 전에 §1-⑦ 을 먼저 읽어라: 감사 당시 진단("순환 86개를 하나씩 푼다")이 **오늘
-실측과 다르다**. 지금 상태는 *한 개의 67모듈 매듭*이고, 단일 간선으로는 안 풀린다.
+1. **인지 매듭 절단(32모듈)** — 남은 주 매듭은 ibl(engine/routing/executors/트리거·채널·
+   워크플로 엔진) ↔ cognition(agent_*·system_ai_*·system_tools·world_pulse) ↔ services
+   (channel_poller·auto_response·calendar_actions) 의 위임 결합이다. 핵심은 **ibl_routing 의
+   cognition 직참조 14간선**(BASELINE 의 ibl_routing → ai_agent/system_ai_*/system_tools/
+   body_ask/consciousness_agent/switch_runner/world_pulse* — §1-⑦ 후반부 참조):
+   라우터가 구현을 직접 부르는 대신 **등록 테이블**(파서 쌍·chat stream 슬롯과 같은 패턴)로
+   역전하고, 등록은 조립 루트(api.py/boot_common)가 한다. 같은 부류: trigger_engine →
+   auto_response/channel_poller (ibl→services), ibl_engine → consciousness_agent/
+   world_pulse_health, node_registry → agent_runner.
+2. **디렉토리 물리 이동** — 층이 곧 디렉토리(base/data/ibl/cognition/services/surface).
+   주 매듭이 "같은 미래 디렉토리 안"으로 줄어들면 이동. 함정(그대로 유효): 폰 번들
+   `build_body_bundle.py` 가 `backend/*.py` glob · Electron 스폰 평면 가정 ·
+   `sys.path.insert` 훅 23곳 · **41개 패키지가 backend 모듈을 bare 이름으로 import**
+   (가장 큰 파급 — 평면 이름을 유지하는 sys.path 장치 또는 전면 개명 결정 필요).
+   api_engine·api_pipeline·api_transforms 는 라우터가 아니므로 이동 때 개명 후보.
 
-가져다 쓸 수 있는 것(⑨에서 만듦):
-- **AST 대조 안전망** — 분할 전/후의 함수·상수 `ast.dump` 전량 비교 + 라우트 표 비교.
-  "로직 무변경 이동"을 주장이 아니라 증명으로 만든다. ⑨ 커밋(`d486aba`)의 검증 절차 참조.
-- **pre-commit 이 이미 잡아주는 것**: 몸-번들 드리프트(새 backend 모듈이 폰 zip 에 안 실리면
-  차단), 모듈 그림자, 파일 크기, 이식성, 이벤트 루프, 공개 라우트 인증.
+**새 도구(이 세션 산출)**:
+- `scripts/check_backend_layers.py` — 층 지도(6층+조립 루트) 선언 + 아래층→위층 import
+  차단. **BASELINE 30건**이 남은 절단 목록 그 자체다(절단=항목 삭제, 가드가 부실 삭제 강제).
+  pre-commit + seam-guards CI `backend-layers` 잡. 새 모듈은 층 배정 필수.
+- 진행 측정: `python3 scripts/analyze_backend_cycles.py` (매듭 크기가 진행률).
+
+가져다 쓸 수 있는 것(⑨·⑦ 전반부에서 만듦):
+- **AST 대조 안전망** — 분할 전/후의 함수·상수 `ast.dump` 전량 비교. ⑨ 커밋(`d486aba`)과
+  ⑦ 절단 1~4파 커밋 메시지의 검증 절차 참조.
+- **의존 역전 선례 3벌**: ibl_parser↔blocks 의 register_parse(`6eca829`) ·
+  websocket_manager 의 chat stream 주입 슬롯(`2534938`) · 사전/명함/얼굴 상태 하향
+  (`dcb4d42` `a1e743e` `f759606`).
+- **pre-commit 이 이미 잡아주는 것**: 몸-번들 드리프트, 모듈 그림자, 파일 크기, 이식성,
+  이벤트 루프, 공개 라우트 인증, **층 위반**.
 
 ## 진행 현황 (2026-08-05 6차 세션까지 — 전부 push)
 
@@ -29,7 +50,8 @@
 | ⑤ 행위 검증 층 | ✅ 완료 | (2026-08-05 5차) `ops.fixture`/`ops.exempt` 형제 맵 + 읽기-op 전수 완전성 가드 + `#op` 키 파생·소비. **읽기 op 커버리지 37/133 → 122/133**(fixture 53 + 면제 32 신규), §1B **GREEN 63→89 / RED 0**. 상세는 아래 §1-⑤ |
 | ④ 렌더러 단일화 | ✅ 완료(로직) | (2026-08-05 6차) `backend/static/app_render_core.js` 신설 — 두 렌더러가 글자 그대로 번역해 갖고 있던 **순수 로직 26개**를 단일 소스로. 마크업 층은 의도적으로 두 벌 유지(아래 §1-④). 가드 `check_render_core.py` + 실행 회귀 `test_render_core.js`/`backend/test_render_core.py` |
 | ⑨ api_portal 분할 | ✅ 완료 | (2026-08-05 6차) 1903줄 → 조립 41줄 + 5모듈(base/face/warehouse/admin/auth/gate). **로직 무변경 이동을 AST 로 증명**(함수 71·상수 24 완전 일치) + 라우트 표 33개 동일. BASELINE 에서 삭제(재진입 봉인) |
-| ⑦ | ⬜ 미착수 | ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ⑦ 전반부 | ✅ 완료(7차) | `6eca829`(파서 쌍 역전) `4fa8741`(층 가드) `2534938`(라우터 얇게 16간선) `dcb4d42`(사전 ibl_registry 분리) `a1e743e`(얼굴 face_config 분리) `f759606`(소유판정·세션캐시 하향) — 매듭 67→32·부채 47→30. 상세 §1-⑦ |
+| ⑦ 후반부 | ⬜ 잔여 | 인지 매듭 32모듈(ibl_routing 등록-역전이 핵심) + 디렉토리 물리 이동. ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
 
 ## 세션 로그 (무엇이 언제 들어갔나)
 
@@ -41,6 +63,7 @@
 | 4차 | ③ op 축 | `6a4758e` |
 | 5차 | ⑤ 행위 검증 | `3982705` |
 | 6차 | ④ 렌더 로직 단일화 · ⑨ api_portal 분할 · (부수) media_player 404 수리 | `4470deb` `d486aba` `68c4540` |
+| 7차 | ⑦ 전반부: 층 선언·가드 + 매듭 절단 4파 (67→32모듈) | `6eca829` `4fa8741` `2534938` `dcb4d42` `a1e743e` `f759606` |
 
 **6차 부수 산출** — ④가 만든 공용 코어 위에서 고쳐진 첫 버그(`68c4540`): 통화의 미디어 src 가
 파일시스템 절대경로인데 두 렌더러가 "'/' 로 시작하면 site-relative" 규칙으로 그대로 박아
@@ -210,9 +233,33 @@ items 선언 후 대다수 op는 effect 반환 — `guest-helper/ibl_actions.yam
 - 함정: 패키지는 backend를 sys.path로 import하므로 순환 없음. 단 **폰 몸**에서 backend
   common이 번들에 포함되는지(`build_body_bundle`) 확인 후 이동.
 
-### ⑦ backend/ 디렉토리화 (⬜ 유일한 잔여 — 단독 세션)
+### ⑦ backend/ 디렉토리화 (◐ 전반부 완료 — 후반부 = 인지 매듭 + 물리 이동)
 
-**★2026-08-05 6차에 다시 재서 진단이 바뀌었다. 옛 계획대로 하면 안 된다.**
+**7차(2026-08-05)에 한 일 — "층을 선언하고 거스르는 간선을 집합으로 끊는다"의 실행:**
+
+| 파 | 커밋 | 내용 | 매듭 |
+|---|---|---|---|
+| 연습 | `6eca829` | ibl_parser↔ibl_parser_blocks — register_parse 주입(의존 역전) | 소순환 -1 |
+| 층 가드 | `4fa8741` | `check_backend_layers.py` — 6층 선언 + BASELINE 47 동결 + pre-commit/CI | — |
+| 1파 | `2534938` | 라우터를 얇게: xray_stream·agent_registry·ibl_translate 신설, 런처 WS 허브→websocket_manager(+chat stream 주입 슬롯), AI 설정경로→model_resolver, api_system_ai 재수출 8곳 정본 재배선, api_engine 3형제=라우터 아님(ibl 재분류) | 67→57 |
+| 2파 | `dcb4d42` | 사전 로더 → `ibl_registry.py`(ibl_nodes.yaml+api_registry.yaml 로드·캐시·몸-사전 필터) — 사전만 필요한 7곳이 엔진을 import 하던 최굵 간선(-10) 절단 | 57→42 |
+| 3파 | `a1e743e` | 얼굴 설정 → `face_config.py` — 표면 삼각(public_face↔launcher↔portal) 해체, 독립 2쌍 셋으로 | 42→37 |
+| 4파 | `f759606` | 소유 판정(code_is_own 일가)→ibl_registry(data 재분류)·맥 세션 캐시→runtime_utils | 37→32 |
+
+**검증 방식(전 파 공통)**: 이동 정의 AST `ast.dump` 대조(HEAD) + import 스모크 + pytest 55
++ 이동 조각 기능 실검 + 층 가드/--check 전 가드. ★부수 발견: consciousness_agent 의 옛
+api_config import 는 폰 번들 blocklist 라 폰에서 잠재 실패 경로였다(기저층 이동이 봉합).
+
+**잔여 매듭 32모듈·92간선** = ibl 실행부(engine/routing/executors/workflow/trigger/channel)
+↔ cognition(agent_*·system_ai_*·system_tools*·world_pulse*) ↔ services(channel_poller·
+auto_response·calendar_*) 의 위임 결합. **다음 절단 지도 = 층 가드 BASELINE 30건 그 자체.**
+핵심 설계 과제 = ibl_routing 의 cognition 직참조 14간선을 등록 테이블로 역전(등록 주체=
+조립 루트). 소순환 3쌍(portal_warehouse↔warehouse_likes·api_engine↔api_pipeline·
+api_launcher_web↔launcher_layout)은 같은 미래 디렉토리 안이라 후순위.
+
+---
+
+**★아래는 6차 시점의 진단 기록(수치는 7차 이전) — 접근 원칙은 그대로 유효하다.**
 
 > 아래 숫자는 스냅샷이다. **들어가기 전에 다시 재라**:
 > ```bash

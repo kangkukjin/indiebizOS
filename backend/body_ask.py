@@ -44,7 +44,7 @@ def _foreign_actions(code: str) -> list:
     (가드가 부탁 자체를 깨서는 안 됨).
     """
     try:
-        from capability_card import foreign_actions
+        from ibl_registry import foreign_actions
         return foreign_actions(code)
     except Exception:
         return []
@@ -150,7 +150,8 @@ def _own_vocab_lines() -> str:
     명함(build_card)은 코어를 빼지만(공통어휘 전제) 컴파일러는 코어까지 알아야
     파이프(table)·자기관리(self)를 조립한다. 사전이 작은 몸일수록 이 프롬프트도 작다.
     """
-    from capability_card import _registry, _self_can_run, _action_entry
+    from capability_card import _registry, _action_entry
+    from ibl_registry import _self_can_run
     lines = []
     for node, ncfg in (_registry().get("nodes") or {}).items():
         for a, c in (ncfg.get("actions") or {}).items():

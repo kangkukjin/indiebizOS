@@ -399,7 +399,7 @@ class IBLUsageDB:
         회상 게이트(ibl_usage_rag._own_only)의 쓰기 쪽 짝. 판정 불가 시 열어둠.
         """
         try:
-            from capability_card import code_is_own
+            from ibl_registry import code_is_own
             return not code_is_own(ibl_code)
         except Exception:
             return False
@@ -847,9 +847,9 @@ class IBLUsageDB:
             return None
         import requests
         import numpy as np
-        # ibl_engine 의 맥 세션 캐시를 재사용(있으면) — 동일 프로세스 전역.
+        # 맥 세션 캐시 정본(runtime_utils)을 재사용 — 동일 프로세스 전역.
         try:
-            from ibl_engine import _mac_session_cache as _sess
+            from runtime_utils import mac_session_cache as _sess
         except Exception:
             _sess = {"session": None}
 

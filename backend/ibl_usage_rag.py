@@ -26,7 +26,7 @@ def _own_only(results: list) -> list:
     Reflex/증류 판정용 top-1(get_top_score·get_top·search_with_metadata)도
     남의 용례가 주도해선 안 된다(고점수 Reflex 는 top-1 코드를 그대로 실행)."""
     try:
-        from capability_card import code_is_own
+        from ibl_registry import code_is_own
         return [r for r in results if code_is_own(r.ibl_code)]
     except Exception:
         return results

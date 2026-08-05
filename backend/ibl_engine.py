@@ -221,8 +221,8 @@ def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     return result
 
 
-# 분산 IBL — 맥(연합 두뇌) 위임 세션 캐시(원격 런처 인증). 폰 프로세스 내 모듈 전역.
-_mac_session_cache = {"session": None}
+# 분산 IBL — 맥 위임 세션 캐시 정본은 runtime_utils.mac_session_cache (2026-08-05 ⑦).
+from runtime_utils import mac_session_cache as _mac_session_cache  # noqa: E402
 
 
 def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,

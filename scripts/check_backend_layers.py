@@ -43,7 +43,7 @@ LAYERS = {
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "face_config", "file_index", "focus_map",
-        "forage_memory", "health_sync", "ibl_usage_db", "install_approvals",
+        "forage_memory", "health_sync", "ibl_registry", "ibl_usage_db", "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager",
         "notify_dispatch", "peer_cards", "project_manager", "red_grant",
         "red_watchdog", "switch_manager", "system_ai_memory", "system_docs",
@@ -58,7 +58,7 @@ LAYERS = {
         "capability_card", "channel_engine", "event_engine", "ibl_access",
         "ibl_engine", "ibl_executors", "ibl_ops", "ibl_param_vocab",
         "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing",
-        "ibl_registry", "ibl_safety", "ibl_translate", "package_manager", "tool_context",
+        "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
     },
     "cognition": {
@@ -118,8 +118,6 @@ BASELINE = {
     "ibl_routing -> system_tools",
     "ibl_routing -> world_pulse",
     "ibl_routing -> world_pulse_health",
-    "ibl_usage_db -> capability_card",
-    "ibl_usage_db -> ibl_engine",
     "node_registry -> agent_runner",
     "package_manager -> ibl_usage_generator",
     "package_manager -> world_pulse_health",

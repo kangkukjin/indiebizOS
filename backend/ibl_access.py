@@ -256,7 +256,7 @@ def build_environment(
             # 상대 능력은 이웃 몸 명함(냄새)으로 알고 [others:ask]{to, message}로 부탁한다.
             # 실행 경로(ibl_engine)는 과도기 동안 유지 — 기존 계기·스케줄 호환.
             try:
-                from capability_card import _self_can_run
+                from ibl_registry import _self_can_run
                 if not _self_can_run(node_name, action_name, action_config):
                     continue
             except Exception:

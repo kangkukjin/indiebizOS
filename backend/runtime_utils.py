@@ -522,3 +522,8 @@ def parse_first_json(text: str):
             except _json.JSONDecodeError:
                 continue  # 다음 시작 후보에서 재시도 (앞머리 잡담 관통)
     return None
+
+
+# 분산 IBL — 맥(연합 두뇌) 위임 세션 캐시(원격 런처 인증). 폰 프로세스 내 모듈 전역.
+# ibl_engine 에서 이동(2026-08-05 ⑦) — 렌트해마(ibl_usage_db)가 엔진을 import 하지 않게.
+mac_session_cache = {"session": None}

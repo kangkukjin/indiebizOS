@@ -7,8 +7,9 @@
 """
 import json
 import os
+import re
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -183,3 +184,61 @@ def invalidate_nodes() -> None:
     (ibl_engine.reload_nodes 의 캐시 리셋 부분이 여기로 위임)"""
     global _nodes
     _nodes = None
+
+
+# === 사전 소유 판정 — capability_card 에서 이동 (2026-08-05 ⑦) ===
+# "이 코드가 내 사전인가"는 사전(여기)의 질문 — 해마(ibl_usage_db)·카탈로그(ibl_access)
+# 가 명함 모듈을 import 하지 않게 한다. 명함(카드 조립)은 capability_card 에 남는다.
+
+def _self_can_run(node: str, action: str, cfg: dict) -> bool:
+    """이 몸이 이 액션을 실제 실행할 수 있는가 (명함=자기 능력만)."""
+    if cfg.get("router") == "stub":
+        return False
+    if cfg.get("prompt_hidden"):
+        return False  # 내 AI 어휘 밖 — 부탁이 와도 컴파일 못 함
+    # 포크-가드: 프로파일 직접 분기 금지 — detect_body 경유(감지하되 적어주지 않음).
+    try:
+        from runtime_utils import detect_body
+        profile = (detect_body() or {}).get("profile", "")
+    except Exception:
+        profile = ""
+    if profile == "phone":
+        return _phone_runnable(node, action)
+    return cfg.get("runs_on") != "phone_only"
+
+
+_ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
+
+
+def foreign_actions(code: str) -> List[str]:
+    """코드에서 이 몸이 실행할 수 없는 액션 목록 — 소유 판정의 단일 구현.
+
+    ★미지 액션도 남의 어휘로 친다: 설치 필터(물리 분리, `_prune_foreign_vocabulary`)
+    후 남의 몸 어휘는 이 몸의 레지스트리에 아예 없어 '미지'로 나타난다(맥의
+    limbs:phone 실측). 사전에 없는 것 = 이 몸이 실행할 수 없는 것(폐어휘 포함).
+    예외는 삼키지 않는다 — fail-open 이 필요한 호출자는 code_is_own 을 쓸 것.
+    """
+    nodes = _load_nodes_config().get("nodes") or {}
+    bad: List[str] = []
+    for node, action in _ACT_RE.findall(code or ""):
+        cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
+        if cfg is None or not _self_can_run(node, action, cfg):
+            bad.append(f"{node}:{action}")
+    return bad
+
+
+def code_is_own(code: str) -> bool:
+    """IBL 코드가 이 몸의 사전으로만 구성돼 있는가 — 소유-필터(해마 회상·학습)용.
+
+    몸 독립 원칙: 남의 몸 어휘(맥의 phone_only, 폰의 비-runnable)는 학습·회상 대상이
+    아니다. 상대 능력은 명함(냄새)으로 알고 [others:ask]로 부탁한다.
+    ★미지=남의 것: 물리 분리 후 남의 어휘는 레지스트리에 없어 '미지'로만 보이므로,
+    옛 '미지=판정 밖(열어둠)' 방침은 남의 용례를 통째로 통과시켰다(실측: 맥 해마가
+    limbs:phone 용례를 회상 → 컴파일러가 남의 몸 어휘로 번역).
+    """
+    try:
+        return not foreign_actions(code)
+    except Exception:
+        return True  # 판정 불가(레지스트리 로드 실패 등) 시 열어둠 — 소유-필터가 회상을 깨서는 안 됨
+
+

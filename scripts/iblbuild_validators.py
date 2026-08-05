@@ -1028,3 +1028,78 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_standard_core(data, root))
     issues.extend(validate_desc_discipline(data))
     return issues
+
+
+# ───────── 압축 상설 기관 (5-A): 개념중복 *경고* — 차단 아님 ─────────
+# 배경(docs/VOCAB_DEDUP_HANDOFF.md): 정합성 가드는 존재 정합만 본다 — 같은 개념이
+# 두 액션이어도 각자 정합이면 통과한다. 아래 두 신호는 2026-08-05 감사의 "자백"(desc
+# 면책)과 "구조"(op 집합 닮음) 신호를 상설화한 것. 판단·병합은 사람 몫이라 경고만 낸다.
+# (셋째 신호 "실증"=코퍼스 최근접은 주간 감사 vocab_overlap_audit — 빌드는 코퍼스를 안 읽는다.)
+
+# 2026-08-05 동결 — 기존 다참조 desc 4건(정당한 교차 안내 포함). 새 진입만 경고.
+_COMPRESSION_DESC_BASELINE = {
+    "others:contact", "self:memory", "engines:slide", "engines:html_video",
+}
+_DESC_MENTION_WARN = 3     # desc 가 타 액션 ≥3개를 지목하면 개념 경계가 흐리다는 자백
+_OP_JACCARD_WARN = 0.8     # 같은 group 에서 op 집합이 이만큼 닮으면 병합 후보 (다른 group=정상 CRUD 관습이라 면제)
+
+
+def compression_warnings(data: dict) -> list[str]:
+    """개념중복 경고(비차단) — ①desc 다참조 면책 ②같은 group op Jaccard.
+
+    반환은 경고 문자열 목록. 호출측(build --check)은 출력만 하고 종료코드에 안 섞는다.
+    """
+    import itertools
+    import re as _re
+
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    acts: dict[str, dict] = {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if isinstance(action, dict):
+                ops = action.get("ops")
+                acts[f"{node_name}:{action_name}"] = {
+                    "desc": str(action.get("description") or ""),
+                    "group": str(action.get("group") or ""),
+                    "ops": set((ops or {}).get("values") or {}) if isinstance(ops, dict) else set(),
+                }
+
+    warnings: list[str] = []
+    short = {full: full.split(":", 1)[1] for full in acts}
+
+    # ① desc 면책 과다 — 타 액션을 3개 이상 지목하는 설명(동결분 제외)
+    for full, info in acts.items():
+        if full in _COMPRESSION_DESC_BASELINE:
+            continue
+        hits = set()
+        for other in acts:
+            if other == full:
+                continue
+            oshort = short[other]
+            if _re.search(rf"(?<![\w:]){_re.escape(other)}(?![\w])", info["desc"]) or (
+                len(oshort) >= 5
+                and _re.search(rf"(?<![\w:]){_re.escape(oshort)}(?![\w])", info["desc"])
+            ):
+                hits.add(other)
+        if len(hits) >= _DESC_MENTION_WARN:
+            warnings.append(
+                f"desc 면책 과다: {full} 이 타 액션 {len(hits)}개를 지목"
+                f"({', '.join(sorted(hits)[:4])}…) — 개념 경계 재점검 후보"
+            )
+
+    # ② 같은 group 안 op 집합 닮음 — 병합 후보 (group 다르면 정상 CRUD 관습이라 면제)
+    withops = [(f, i) for f, i in acts.items() if i["ops"]]
+    for (f1, i1), (f2, i2) in itertools.combinations(withops, 2):
+        if i1["group"] != i2["group"]:
+            continue
+        union = i1["ops"] | i2["ops"]
+        if not union:
+            continue
+        j = len(i1["ops"] & i2["ops"]) / len(union)
+        if j >= _OP_JACCARD_WARN:
+            warnings.append(
+                f"op 닮음: {f1} ↔ {f2} (group={i1['group']}, Jaccard {j:.2f}) — 병합 후보"
+            )
+    return warnings

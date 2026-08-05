@@ -10,7 +10,7 @@
 
 ## ▶ START HERE — 현재 상태와 다음 단계
 
-**완료 (0)(1)(2)(3)(4) · 다음 = (5) 압축 상설 기관 → (6) 설계 태스크 3건.**
+**완료 (0)(1)(2)(3)(4)(5) · 남은 것 = (6) 설계 태스크 3건 + 계수 숙성 후 D급 은퇴 판단.**
 
 | 단계 | 상태 | 커밋 |
 |---|---|---|
@@ -19,10 +19,29 @@
 | (2) 검색 통합 `[sense:search]{source}` (159→**155**) | ✅ 2026-08-05 | `dbf370d` + 아래 실행 기록 |
 | (3) 코퍼스 교정 (동음이의 충돌쌍) | ✅ 2026-08-05 | 아래 (3) 기록 |
 | (4) M4 로컬 재학습 1회 + 연상 probe | ✅ (2) 직후 같은 세션 | 아래 (4) 기록 |
-| (5) 압축 상설 기관 (--check 경고 + 주간 감사) | ⏳ | — |
+| (5) 압축 상설 기관 (--check 경고 + 주간 감사) | ✅ 2026-08-05 | 아래 (5) 기록 |
 | (6) 보류 3건 → 설계 태스크 | ⏳ | — |
 
 (2)는 백엔드 기동 중에 실행 — `/packages/reload` 로 라이브 반영·5 source 종단 검증 완료.
+
+### (5) 실행 기록 (2026-08-05)
+
+세 신호가 각자 맞는 기관에 상설화됐다:
+
+| 신호 | 기관 | 카덴스 | 형태 |
+|---|---|---|---|
+| 자백 (desc 면책 과다 ≥3) | `build --check` `compression_warnings`(iblbuild_validators) | 커밋마다 | **경고만**(비차단) |
+| 구조 (같은 group op Jaccard ≥0.8) | 〃 | 커밋마다 | 〃 |
+| 실증 (코퍼스 교차-액션 최근접 ≥0.95) | `vocab_overlap_audit.run_vocab_overlap_check` — run_maintenance_bundle 8번 항목 | **주간**(168h 자기 페이싱) | 깃발(`data/ibl_overlap_flags.json` + self_checks `__ibl_health__:vocab_overlap`) |
+
+- desc 면책 기존 4건(others:contact·self:memory·engines:slide·engines:html_video)은
+  `_COMPRESSION_DESC_BASELINE` 동결 — 새 진입만 경고(래칫 관례). op Jaccard 는 현행 0(최고 0.67).
+- 실증 감사는 **빌드가 코퍼스를 안 읽는 원칙**대로 유지보수 번들에 산다. ★vec 조인은
+  `IBLUsageDB._get_vec_connection()`(일반 `_get_connection` 은 vec0 미로드 — 실측 함정).
+  측정 실패는 audit_incomplete 로 정직 보고(침묵=눈먼 감사 금지). LLM 0·주간 ~수 초.
+- 첫 강제 실행 깃발 4쌍(전부 알려진 회색지대): search_shopping↔used(혼합 의도)·
+  limbs:music↔player_status·engines:slide↔self:slide·self:deck↔self:slide(슬라이드
+  가족 = (6) 설계 태스크 후보). 판단·병합은 사람 몫 — 감사는 깃발만 꽂는다.
 
 ### (3) 실행 기록 (2026-08-05, (4) 1차 직후 — 교정 후 재학습 1회 더 수행)
 

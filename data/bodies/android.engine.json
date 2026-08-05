@@ -52,6 +52,7 @@
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
     "cognition/vocab_crystallization",
+    "cognition/vocab_overlap_audit",
     "cognition/world_pulse",
     "cognition/world_pulse_collectors",
     "cognition/world_pulse_health",
@@ -233,8 +234,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 227,
-    "engine": 201,
+    "total": 228,
+    "engine": 202,
     "blocklist": 26
   }
 }

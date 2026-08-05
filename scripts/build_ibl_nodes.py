@@ -145,6 +145,7 @@ from iblbuild_validators import (  # noqa: E402,F401
     validate_standard_core,
     validate_always_on,
     validate,
+    compression_warnings,
 )
 
 
@@ -421,6 +422,18 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print(f"  ✗ {issue}", file=sys.stderr)
         else:
             print("[build_ibl_nodes] 앱-템플릿 param 가드 통과 ✓ (모든 app 템플릿 키가 액션 허용키)")
+
+    # --- 압축 경고 (--check/--validate 전용, ★비차단) ---
+    # 개념중복 상설 감시(핸드오프 (5)): desc 면책 과다 + 같은 group op 닮음.
+    # 경고만 출력하고 종료코드에 안 섞는다 — 병합 판단은 사람 몫.
+    if check or validate_only:
+        cwarns = compression_warnings(data) if data is not None else []
+        if cwarns:
+            print(f"[build_ibl_nodes] 압축 경고(비차단): {len(cwarns)}건 — 개념중복 후보, 병합 판단은 docs/VOCAB_DEDUP_HANDOFF.md")
+            for w in cwarns:
+                print(f"  ⚠ {w}")
+        else:
+            print("[build_ibl_nodes] 압축 경고 없음 ✓ (desc 면책·op 닮음 신호 0)")
 
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed

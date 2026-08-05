@@ -295,6 +295,23 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 좀비 건강기록 청소 실패 (무시): {e}")
 
+    # 8) 어휘 개념중복 감사 (주간 카덴스) — 압축 상설 기관의 *실증* 신호.
+    #    build --check 의 압축 경고(자백·구조)와 달리 코퍼스를 읽어야 해서 여기 산다
+    #    (빌드는 코퍼스를 안 읽는 원칙). 교차-액션 최근접 cos≥0.95 쌍을 깃발로.
+    try:
+        from vocab_overlap_audit import run_vocab_overlap_check
+        vo = run_vocab_overlap_check()
+        result["vocab_overlap"] = vo
+        if vo.get("flags"):
+            logger.warning(f"[Maintenance] 어휘 개념중복 후보 {len(vo['flags'])}쌍 — ibl_overlap_flags.json")
+        if vo.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
+            try:
+                save_self_check(vo)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 어휘 개념중복 감사 실패 (무시): {e}")
+
     return result
 
 

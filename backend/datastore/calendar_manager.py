@@ -608,7 +608,7 @@ class CalendarManagerBase:
 
 # ============ 싱글톤 ============
 
-_calendar_instance: Optional[CalendarManager] = None
+_calendar_instance: Optional["CalendarManagerBase"] = None  # 합성판이 담기지만 골격 타입으로 표기
 
 
 # 완성 클래스 슬롯 — calendar_actions(서비스층)가 합성 클래스를 등록한다.

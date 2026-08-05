@@ -31,6 +31,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
+try:
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
+except ImportError:
+    pass
+
 AUTH_PRIMITIVES = {
     "_check_secret",
     "require_auth",

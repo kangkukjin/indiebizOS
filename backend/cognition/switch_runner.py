@@ -1,0 +1,281 @@
+"""
+switch_runner.py - 스위치 실행 엔진
+IndieBiz OS Core
+
+스위치에 저장된 설정으로 에이전트를 실행합니다.
+Phase 17: execute_ibl 단일 도구 + IBL 환경 프롬프트 방식
+"""
+
+import threading
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any, Optional, Callable, List
+
+from ai_agent import AIAgent
+
+
+class SwitchRunner:
+    """스위치 실행기"""
+
+    def __init__(self, switch: Dict, on_status: Callable[[str], None] = None):
+        """
+        Args:
+            switch: 스위치 정보 (config 포함)
+            on_status: 상태 콜백 함수
+        """
+        self.switch = switch
+        self.config = switch.get("config", {})
+        self.on_status = on_status or print
+        self.running = False
+        self.result = None
+
+    def _status(self, message: str):
+        """상태 메시지 전달"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.on_status(f"[{timestamp}] {message}")
+
+    def _resolve_allowed_nodes(self) -> Optional[List[str]]:
+        """스위치의 allowed_nodes를 결정.
+
+        우선순위:
+        1. 스위치 config에 allowed_nodes가 있으면 사용
+        2. projectId로 프로젝트의 agents.yaml에서 가져옴
+        3. 둘 다 없으면 None (전체 노드)
+        """
+        # 1. 스위치 자체 설정
+        nodes = self.config.get("allowed_nodes")
+        if nodes:
+            return nodes
+
+        # 2. 프로젝트 에이전트에서 가져오기
+        project_id = self.config.get("projectId")
+        agent_name = self.config.get("agentName") or self.config.get("agent_name")
+
+        if project_id:
+            try:
+                from runtime_utils import get_base_path
+                import yaml
+
+                agents_yaml = get_base_path() / "projects" / project_id / "agents.yaml"
+                if agents_yaml.exists():
+                    data = yaml.safe_load(agents_yaml.read_text(encoding='utf-8'))
+                    agents = data.get("agents", [])
+
+                    # 이름이 일치하는 에이전트 찾기
+                    for agent in agents:
+                        if agent.get("name") == agent_name or agent.get("id") == agent_name:
+                            return agent.get("allowed_nodes")
+
+                    # 이름 매칭 실패 시 첫 번째 활성 에이전트
+                    for agent in agents:
+                        if agent.get("active", True) and agent.get("allowed_nodes"):
+                            return agent.get("allowed_nodes")
+            except Exception as e:
+                print(f"[SwitchRunner] allowed_nodes 조회 실패: {e}")
+
+        return None  # 전체 노드
+
+    def _get_project_path(self) -> str:
+        """스위치가 속한 프로젝트 경로 반환"""
+        project_id = self.config.get("projectId")
+        if project_id:
+            try:
+                from runtime_utils import get_base_path
+                project_path = get_base_path() / "projects" / project_id
+                if project_path.exists():
+                    return str(project_path)
+            except Exception:
+                pass
+        return "."
+
+    def run(self) -> Dict[str, Any]:
+        """
+        스위치 동기 실행 (Phase 17: execute_ibl 단일 도구)
+
+        Returns:
+            {"success": bool, "message": str, "result": Any}
+        """
+        self.running = True
+        self._status(f"스위치 '{self.switch.get('name', 'unknown')}' 실행 시작")
+
+        # thread_context에 스위치의 project_id를 미리 등록.
+        # ibl_routing의 4번 안전망(thread_context.project_id 폴백)이 첫 라운드부터
+        # 동작해서, LLM이 project_id 파라미터를 빼먹어 첫 호출이 ERR 나고 두 번째에
+        # 다시 호출되는 재시도 1회가 사라진다.
+        # 동기 run() 호출자(calendar/scheduler) 보호를 위해 이전 값 백업 후 finally에서 복원.
+        _ctx_modified = False
+        _prev_project_id = None
+        try:
+            from thread_context import get_current_project_id, set_current_project_id
+            _prev_project_id = get_current_project_id()
+            project_id = self.config.get("projectId")
+            if project_id:
+                set_current_project_id(project_id)
+                _ctx_modified = True
+        except Exception as _ctx_err:
+            self._status(f"thread_context 설정 실패 (무시): {_ctx_err}")
+
+        try:
+            # AI 설정
+            ai_config = self.config.get("ai", {})
+
+            if not ai_config.get("api_key"):
+                return {
+                    "success": False,
+                    "message": "API 키가 설정되지 않았습니다.",
+                    "result": None
+                }
+
+            # 에이전트 이름과 역할
+            agent_name = self.config.get("agent_name", "스위치 에이전트")
+            agent_role = self.config.get("agent_role", "")
+
+            # 프로젝트 에이전트와 동일한 도구 구성
+            import json as _json
+            from tool_loader import build_execute_ibl_tool
+            from ibl_access import build_environment
+
+            allowed_nodes = self._resolve_allowed_nodes()
+            project_path = self._get_project_path()
+
+            # 도구 목록: execute_ibl + 범용 도구 (프로젝트 에이전트와 동일)
+            tools = []
+            pkg_base = Path(__file__).parent.parent.parent / "data" / "packages" / "installed" / "tools"
+
+            # 1) IBL 도구
+            ibl_tool = build_execute_ibl_tool(allowed_nodes=allowed_nodes)
+            if ibl_tool:
+                tools.append(ibl_tool)
+
+            # 2) 쉘 도구 (Python/Node.js는 [self:write]+run_command의 write→run 패턴 사용)
+            for pkg_id, tool_name in [
+                ("system_essentials", "run_command"),
+            ]:
+                tool_json = pkg_base / pkg_id / "tool.json"
+                if tool_json.exists():
+                    try:
+                        with open(tool_json, 'r', encoding='utf-8') as f:
+                            pkg_data = _json.load(f)
+                        for tool_def in pkg_data.get("tools", []):
+                            if tool_def.get("name") == tool_name:
+                                tools.append(tool_def)
+                                break
+                    except Exception:
+                        pass
+
+            # 3) 가이드 검색 도구
+            tools.append({
+                "name": "read_guide",
+                "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "검색 키워드"},
+                        "read": {"type": "boolean", "description": "true: 내용 반환, false: 목록만"}
+                    },
+                    "required": ["query"]
+                }
+            })
+
+            self._status(f"도구 {len(tools)}개 로드됨")
+
+            # 실행기억(해마) — 과거 성공 사례를 참조
+            command = self.switch.get("command", "")
+            execution_memory = ""
+            try:
+                from ibl_usage_rag import build_execution_memory
+                from ibl_access import resolve_allowed_nodes
+                allowed_set = resolve_allowed_nodes(allowed_nodes) if allowed_nodes else None
+                execution_memory, _ts, _tc = build_execution_memory(command, allowed_set)
+                if execution_memory:
+                    self._status("실행기억 로드됨")
+            except Exception as e:
+                self._status(f"실행기억 생성 실패 (무시): {e}")
+
+            # 프롬프트 구성
+            from prompt_builder import build_agent_prompt
+
+            system_prompt = build_agent_prompt(
+                agent_name=agent_name,
+                role=agent_role or "",
+                agent_count=1,
+                agent_notes="",
+                git_enabled=False
+            )
+
+            # IBL 환경 + 실행기억 주입
+            ibl_env = build_environment(
+                allowed_nodes=allowed_nodes,
+                project_path=project_path
+            )
+            if ibl_env:
+                system_prompt = system_prompt + "\n\n" + ibl_env
+            if execution_memory:
+                system_prompt = system_prompt + "\n\n" + execution_memory
+
+            # AI 에이전트 생성
+            agent = AIAgent(
+                ai_config=ai_config,
+                system_prompt=system_prompt,
+                agent_name=agent_name,
+                tools=tools
+            )
+
+            # 명령 실행
+            self._status(f"명령 실행: {command}")
+
+            response = agent.process_message_with_history(
+                message_content=command,
+                from_email="switch@system",
+                history=[]
+            )
+
+            self._status("실행 완료")
+            self.result = {
+                "success": True,
+                "message": "스위치 실행 완료",
+                "result": response
+            }
+
+        except Exception as e:
+            import traceback
+            error_msg = f"스위치 실행 실패: {str(e)}"
+            self._status(error_msg)
+            traceback.print_exc()
+
+            self.result = {
+                "success": False,
+                "message": error_msg,
+                "result": None
+            }
+
+        finally:
+            self.running = False
+            # thread_context 복원 (동기 run() 호출자 보호)
+            if _ctx_modified:
+                try:
+                    from thread_context import set_current_project_id
+                    set_current_project_id(_prev_project_id)
+                except Exception:
+                    pass
+
+        return self.result
+
+    def run_async(self, callback: Callable[[Dict], None] = None):
+        """비동기 실행"""
+        def _run():
+            result = self.run()
+            if callback:
+                callback(result)
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+        return thread
+
+    def is_running(self) -> bool:
+        """실행 중 여부"""
+        return self.running
+
+    def get_result(self) -> Optional[Dict]:
+        """결과 반환"""
+        return self.result

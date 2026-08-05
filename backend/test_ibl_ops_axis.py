@@ -15,6 +15,7 @@ import sys
 _BACKEND = os.path.dirname(os.path.abspath(__file__))
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 _SCRIPTS = os.path.join(os.path.dirname(_BACKEND), "scripts")
 if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)

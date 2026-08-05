@@ -11,6 +11,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 from agent_cognitive import serialize_tool_trace, _brief_input, _normalize_tool_entry
 

@@ -20,6 +20,10 @@
 층을 *가로지르는* 순환은 차단한다(cross_layer_cycles — 2026-08-05 ⑦ 후반부에 0 달성).
 검사는 톱레벨+함수-안 import 전부 — 함수 안으로 숨겨도 의존은 의존이다.
 
+물리 이동(2026-08-05) 후: 층=디렉토리(backend/base·datastore·ibl·cognition·services·
+surface). 모듈 이름은 평면 유지(boot_paths 가 sys.path 에 층 디렉토리 등재) — 이 가드가
+위치=선언 일치까지 검사한다.
+
 사용: python3 scripts/check_backend_layers.py
       python3 scripts/check_backend_layers.py --self-test
 의존성: 없음(stdlib AST만). 실패 시 exit 1.
@@ -94,7 +98,8 @@ SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}
 EXEMPT_PREFIX = ("test_", "migrate_")
 EXEMPT = {"prompt_benchmark", "ibl_opus_bulk_gen", "ibl_synthetic_generator",
-          "ibl_synthetic_opus", "ibl_embedding_trainer", "_slide_proto"}
+          "ibl_synthetic_opus", "ibl_embedding_trainer", "_slide_proto",
+          "boot_paths", "conftest"}  # 부트스트랩 — backend 루트가 정위치
 
 # 동결 부채 — 시작 47간선(⑦ 전반부) → 7간선(⑦ 후반부, 2026-08-05). 신규 추가 금지.
 # 절단 완료 시 항목 삭제(남아 있는데 위반이 사라졌으면 이 가드가 삭제를 요구한다).
@@ -132,13 +137,33 @@ def _import_targets(node):
     return []
 
 
+# 물리 이동(2026-08-05 ⑦) 후 층 디렉토리. "data" 는 런타임 폴더와 충돌해 datastore.
+LAYER_DIR_OF = {"base": "base", "data": "datastore", "ibl": "ibl",
+                "cognition": "cognition", "services": "services", "surface": "surface"}
+_SKIP_DIRS = {"__pycache__", "common", "drivers", "providers", "static", "channels",
+              "assets", "checkpoints", "data", "outputs", "projects", "testdata", "tokens"}
+
+
+def module_paths(backend_dir):
+    """{모듈명: 상대경로} — 층 디렉토리까지 재귀 (모듈 이름은 평면 유일)."""
+    out = {}
+    for dirpath, dirs, files in os.walk(backend_dir):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+        for f in files:
+            if f.endswith(".py"):
+                rel = os.path.relpath(os.path.join(dirpath, f), backend_dir)
+                out[f[:-3]] = rel.replace(os.sep, "/")
+    return out
+
+
 def build_graph(backend_dir):
     """backend 평면 모듈 그래프 — 톱레벨+함수-안 import 전부."""
-    mods = {f[:-3] for f in os.listdir(backend_dir) if f.endswith(".py")}
+    paths = module_paths(backend_dir)
+    mods = set(paths)
     graph = {}
     for name in sorted(mods):
         try:
-            with open(os.path.join(backend_dir, name + ".py"),
+            with open(os.path.join(backend_dir, paths[name]),
                       encoding="utf-8") as f:
                 tree = ast.parse(f.read())
         except (OSError, SyntaxError, UnicodeDecodeError):
@@ -150,6 +175,25 @@ def build_graph(backend_dir):
                     deps.add(t)
         graph[name] = deps
     return graph
+
+
+def misplaced_modules(backend_dir):
+    """물리 위치 ≠ 층 선언 — 디렉토리가 곧 선언이 되도록 강제 (물리 이동 후)."""
+    bad = []
+    for name, rel in sorted(module_paths(backend_dir).items()):
+        lay = layer_of(name)
+        d = os.path.dirname(rel)
+        if lay in ("ASSEMBLY", "UNASSIGNED"):
+            expect = ""          # 조립 루트·미배정은 backend 루트
+        elif lay is None:
+            expect = ""          # 검사 밖(test_/migrate_/생성기)도 루트
+        else:
+            expect = LAYER_DIR_OF[lay]
+        if name in ("boot_paths", "conftest"):
+            expect = ""          # 부트스트랩은 루트가 정위치
+        if d != expect:
+            bad.append(f"{name}: {d or '(루트)'} 에 있으나 층 선언은 {expect or '(루트)'}")
+    return bad
 
 
 def find_violations(graph):
@@ -222,6 +266,12 @@ def main() -> int:
     viol, unassigned, into_assembly = find_violations(graph)
     errors = []
 
+    misplaced = misplaced_modules(BACKEND)
+    if misplaced:
+        errors.append(
+            "물리 위치 ≠ 층 선언 — 디렉토리가 곧 선언이다. git mv 또는 LAYERS 갱신:\n"
+            + "\n".join(f"  {m}" for m in misplaced))
+
     spanning = cross_layer_cycles(graph)
     if spanning:
         errors.append(
@@ -289,6 +339,8 @@ def self_test() -> int:
     # 같은 층 안 순환은 허용 (파서 쌍 부류)
     fake_ok = {"ibl_parser": {"ibl_parser_blocks"}, "ibl_parser_blocks": {"ibl_parser"}}
     assert cross_layer_cycles(fake_ok) == [], "같은 층 순환이 오탐"
+    # 물리 위치 = 층 선언 (물리 이동 후 불변식)
+    assert misplaced_modules(BACKEND) == [], misplaced_modules(BACKEND)[:5]
     # 실그래프: 교차층 순환 0 이어야 한다 (2026-08-05 달성 불변식)
     graph0 = build_graph(BACKEND)
     assert cross_layer_cycles(graph0) == [], "실그래프에 교차층 순환 존재"

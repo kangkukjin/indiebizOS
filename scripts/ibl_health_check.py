@@ -110,6 +110,8 @@ def _load_safety_map():
     낡은 목록으로 게이팅해 왔다 → 레지스트리 `returns:` 선언에서 파생으로 교체."""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        import boot_paths  # noqa: F401 — 층 디렉토리 등재
+
         from ibl_safety import build_safety_map
         return build_safety_map(_nodes.get("nodes") or {})
     except Exception:
@@ -124,6 +126,7 @@ def _load_op_safety_map():
     무인 루프의 행동 커버리지가 그만큼 비어 있었다는 뜻)."""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        import boot_paths  # noqa: F401 — 층 디렉토리 등재
         from ibl_safety import build_op_safety_map
         return build_op_safety_map(_nodes.get("nodes") or {})
     except Exception:
@@ -142,6 +145,7 @@ def _first_op(tmpl, fa):
         return None
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        import boot_paths  # noqa: F401 — 층 디렉토리 등재
         from ibl_parser import parse
         from ibl_ops import resolve_op
         adef = ((_nodes.get("nodes") or {}).get(fa[0], {}).get("actions") or {}).get(fa[1]) or {}

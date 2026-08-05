@@ -55,6 +55,9 @@ BASE_PATH = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(BACKEND_PATH.parent)))
 DATA_PATH = BASE_PATH / "data"
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(BACKEND_PATH))
+# 층 디렉토리(base/datastore/ibl/cognition/services/surface)를 sys.path 에 —
+# 모듈 이름은 평면 유지, 물리 위치만 층 (2026-08-05 ⑦ 물리 이동). backend 삽입 직후여야 한다.
+import boot_paths  # noqa: E402,F401 — import 자체가 설치
 
 # 윈도우 임베디드 파이썬의 mimetypes 구멍 보강 (.md 등 — 없으면 문서가 다운로드로 열림).
 # ★반드시 sys.path.insert 뒤에: 임베디드 파이썬(_pth isolated)은 스크립트 폴더를

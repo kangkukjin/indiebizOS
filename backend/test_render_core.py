@@ -25,6 +25,7 @@ def _assembled_script() -> str:
     """원격런처 표면 HTML 에서 <script> 본문을 뽑는다(코어 인라인 포함된 실물)."""
     if BACKEND not in sys.path:
         sys.path.insert(0, BACKEND)
+        import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
     from launcher_surface_remote import launcher_html
 
     blocks = re.findall(r"<script>(.*?)</script>", launcher_html(), re.S)

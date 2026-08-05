@@ -12,6 +12,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 from consciousness_agent import ConsciousnessAgent
 

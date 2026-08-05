@@ -22,6 +22,7 @@ from drivers.base import Driver
 _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 from runtime_utils import get_base_path
 

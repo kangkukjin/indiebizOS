@@ -106,7 +106,8 @@ def check_view_renderers(root: Path) -> list[str]:
     import re as _re
     issues: list[str] = []
     desktop = root / "frontend" / "src" / "components" / "GenericInstrument.tsx"
-    remote = root / "backend" / "launcher_web_render.py"
+    from iblbuild_common import backend_module_path
+    remote = backend_module_path(root, "launcher_web_render")
     if not desktop.is_file() or not remote.is_file():
         return issues  # 소스 부재(폰/헤드리스) — graceful skip
     try:
@@ -789,7 +790,7 @@ def validate_app_template_params(data: dict, root: Path) -> list[str]:
 
     aliases = _extract_action_param_aliases(data)
     tool_index = build_tool_index(root)
-    backend_keys = _dir_read_keys((root / "backend").glob("*.py"))
+    backend_keys = _dir_read_keys((root / "backend").rglob("*.py"))
     pkg_cache: dict[Path, set[str]] = {}
 
     # (label, template) 수집 — 노드 app: 블록 + standalone 매니페스트.

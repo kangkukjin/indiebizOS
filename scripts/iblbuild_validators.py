@@ -405,6 +405,8 @@ def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
     try:
         if str(backend) not in sys.path:
             sys.path.insert(0, str(backend))
+            import boot_paths  # noqa: F401 — 층 디렉토리 등재
+
         import ibl_parser  # type: ignore
     except Exception:
         return None
@@ -455,7 +457,7 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
         return None
     aliases = _extract_action_param_aliases(data)
     tool_index = build_tool_index(root)
-    backend_keys = _dir_read_keys((root / "backend").glob("*.py"))
+    backend_keys = _dir_read_keys((root / "backend").rglob("*.py"))
     pkg_cache: dict[Path, set[str]] = {}
 
     issues: list[str] = []
@@ -860,7 +862,8 @@ def validate_standard_core(data: dict, root: Path) -> list[str]:
             "(STANDARD_CORE_NODES). 기능어 코어 변경은 언어 개정 — ibl.md '언어의 경계' 조항과 "
             "이 선언을 함께 갱신할 것."
         )
-    parser_path = root / "backend" / "ibl_parser.py"
+    from iblbuild_common import backend_module_path
+    parser_path = backend_module_path(root, "ibl_parser")
     try:
         src = parser_path.read_text(encoding="utf-8")
     except OSError:

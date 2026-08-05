@@ -12,6 +12,7 @@ import os
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 from ibl_usage_rag import IBLUsageRAG, build_execution_memory
 

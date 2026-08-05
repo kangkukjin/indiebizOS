@@ -37,7 +37,7 @@ EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/"
 # 기존 부채 동결(2026-08-05 실측). 값 = 그 시점 줄 수(래칫 상한).
 # 분할 완료 시 항목 삭제. 새 항목 추가는 금지 — 추가하고 싶다는 충동이 곧 분할 신호.
 BASELINE = {
-    "backend/api_nas.py": 1515,
+    "backend/surface/api_nas.py": 1515,
     "data/packages/installed/tools/media_producer/shadcn_slides.py": 1955,  # 핸드오프 doc ⑥
     "data/packages/installed/tools/media_producer/handler.py": 1646,        # 핸드오프 doc ⑨
     "data/packages/installed/tools/data-ops/handler.py": 1711,   # 통화 소비자 정본 — 최우선 분할 대상

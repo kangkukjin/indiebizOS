@@ -32,11 +32,11 @@ PROMPT = ROOT / "data" / "common_prompts" / "consciousness_prompt.md"
 
 # 소비처로 스캔할 파일 — 의식 출력을 읽는 코드. 새 소비처 추가 시 여기에 등록.
 CONSUMER_FILES = [
-    ROOT / "backend" / "prompt_builder.py",
-    ROOT / "backend" / "agent_cognitive.py",
+    ROOT / "backend" / "cognition" / "prompt_builder.py",
+    ROOT / "backend" / "cognition" / "agent_cognitive.py",
     # 2026-07-17 모듈화: agent_cognitive 분할로 의식 출력 소비 코드가 이동한 파일들
-    ROOT / "backend" / "cognitive_consciousness.py",
-    ROOT / "backend" / "cognitive_eval.py",
+    ROOT / "backend" / "cognition" / "cognitive_consciousness.py",
+    ROOT / "backend" / "cognition" / "cognitive_eval.py",
 ]
 
 # capability_focus 하위 dict를 바인딩하는 .get 키(별칭 포함). 새 별칭은 여기 추가.

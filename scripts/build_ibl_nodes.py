@@ -642,6 +642,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             _pb_prev = sys.path[:]
             if str(root / "backend") not in sys.path:
                 sys.path.insert(0, str(root / "backend"))
+                import boot_paths  # noqa: F401 — 층 디렉토리 등재
+
             from ibl_access import build_environment as _be   # type: ignore
             _full = len(_be(allowed_nodes=None))
             _core = len(_be(allowed_set=set(STANDARD_CORE_NODES)))

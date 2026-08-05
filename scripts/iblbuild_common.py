@@ -13,6 +13,11 @@ from pathlib import Path
 _BACKEND_DIR = str(Path(__file__).resolve().parent.parent / "backend")
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
+
+try:
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
+except ImportError:
+    pass
 from ibl_param_vocab import (  # noqa: E402,F401 (형제 모듈·build_ibl_nodes 재수출용)
     UNIVERSAL_PARAM_KEYS,
     RUNTIME_META_KEYS,
@@ -182,3 +187,20 @@ def _extract_action_param_aliases(data: dict) -> dict[str, set[str]]:
                 ks.update(str(a) for a in (alts or []))
             out[f"{node_name}:{action_name}"] = ks
     return out
+
+
+def backend_module_path(root, name):
+    """평면 모듈명 → 실제 파일 경로 (물리 이동 2026-08-05: 층 디렉토리 탐색).
+
+    모듈 이름은 평면 유일이므로 첫 일치가 정답. 못 찾으면 옛 평면 경로를
+    돌려줘 호출측 exists() 검사가 종전 에러 문구를 내게 한다.
+    """
+    from pathlib import Path
+    base = Path(root) / "backend"
+    direct = base / f"{name}.py"
+    if direct.exists():
+        return direct
+    for p in base.rglob(f"{name}.py"):
+        if "__pycache__" not in p.parts:
+            return p
+    return direct

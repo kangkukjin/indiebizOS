@@ -76,7 +76,7 @@ ENTRYPOINTS = [ROOT / "backend" / "api.py"]
 def _backend_local_names() -> set:
     """backend/ 직속 모듈·패키지 이름 — 진입점이 path 부트스트랩 후에만 import 가능한 것들."""
     backend = ROOT / "backend"
-    names = {p.stem for p in backend.glob("*.py")}
+    names = {p.stem for p in backend.rglob("*.py")}
     names |= {p.name for p in backend.iterdir()
               if p.is_dir() and (p / "__init__.py").exists()}
     names.discard("api")

@@ -26,7 +26,17 @@ BACKEND = os.path.join(ROOT, "backend")
 
 def _module_graph():
     """(톱레벨 그래프, 전체 그래프, 함수-안 import 수) — 노드는 backend/*.py 의 stem."""
-    mods = {f[:-3] for f in os.listdir(BACKEND) if f.endswith(".py")}
+    # 층 디렉토리(물리 이동 후)까지 재귀 — 모듈 이름은 평면(파일명 유일)
+    paths = {}
+    for dirpath, dirs, files in os.walk(BACKEND):
+        dirs[:] = [d for d in dirs if d not in ("__pycache__", "common", "drivers",
+                                                "providers", "static", "channels",
+                                                "assets", "checkpoints", "data",
+                                                "outputs", "projects", "testdata", "tokens")]
+        for f in files:
+            if f.endswith(".py"):
+                paths[f[:-3]] = os.path.join(dirpath, f)
+    mods = set(paths)
     top = collections.defaultdict(set)
     allg = collections.defaultdict(set)
     infunc = collections.Counter()
@@ -40,7 +50,7 @@ def _module_graph():
         return []
 
     for name in sorted(mods):
-        path = os.path.join(BACKEND, name + ".py")
+        path = paths[name]
         try:
             with open(path, encoding="utf-8") as f:
                 tree = ast.parse(f.read())

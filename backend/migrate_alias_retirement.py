@@ -17,7 +17,7 @@ import json, re, ast, sys, sqlite3
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent.parent
-PARSER = BASE / "backend" / "ibl_parser.py"
+PARSER = BASE / "backend" / "ibl" / "ibl_parser.py"
 CATALOG = BASE / "data" / "ibl_nodes.yaml"
 TRAINING_FILES = [
     BASE / "data" / "training" / "ibl_training_balanced_20260516.json",
@@ -189,6 +189,7 @@ def migrate_file(path, resolve, dry):
 
 def migrate_usage_db(resolve, dry):
     sys.path.insert(0, str(BASE / "backend"))
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     with db._get_connection() as conn:

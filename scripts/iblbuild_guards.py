@@ -16,18 +16,18 @@ from pathlib import Path
 # 진짜 HW 바인딩이면 이 allowlist의 이음매-아래 파일에.
 # allowlist에 파일을 추가하려면 "이게 정말 이음매 아래인가?"를 의식적으로 답할 것 (추세 하향 못박기).
 PROFILE_BRANCH_ALLOWLIST = {
-    "backend/runtime_utils.py",       # detect_body — capability 감지 본체(정당한 거처)
-    "backend/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/_forward_to_phone)
-    "backend/ibl_registry.py",        # 몸-사전 설치 필터(_phone_runnable — ibl_engine 에서
+    "backend/base/runtime_utils.py",       # detect_body — capability 감지 본체(정당한 거처)
+    "backend/ibl/ibl_engine.py",          # chokepoint 라우팅(_forward_to_mac/_forward_to_phone)
+    "backend/datastore/ibl_registry.py",        # 몸-사전 설치 필터(_phone_runnable — ibl_engine 에서
                                       # 이동, 2026-08-05 ⑦. 로드=설치라 프로파일이 곧 사전)
-    "backend/api_launcher_web.py",    # phone_manifest runnable 필터(라우팅/렌더 substrate)
-    "backend/channel_engine.py",      # nostr 채널 프로토콜 바인딩(드라이버)
-    "backend/indienet_common.py",     # nostr 통합 바인딩 — _ON_PHONE(프로파일 감지) 정의처
+    "backend/surface/api_launcher_web.py",    # phone_manifest runnable 필터(라우팅/렌더 substrate)
+    "backend/ibl/channel_engine.py",      # nostr 채널 프로토콜 바인딩(드라이버)
+    "backend/services/indienet_common.py",     # nostr 통합 바인딩 — _ON_PHONE(프로파일 감지) 정의처
                                       # (2026-07-18 모듈화: indienet.py 의 분기가 여기로 이주,
                                       #  본체·믹스인은 _ON_PHONE 이름만 참조)
-    "backend/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
-    "backend/phone_notifications.py", # 폰 알림 센서 바인딩
-    "backend/calendar_actions.py",    # 스케줄 발화 실행 substrate — 맥=GUI창+WS '보이는 실행' /
+    "backend/services/nostr_phone_bridge.py",  # 폰 네이티브 nostr 브리지(HW 바인딩)
+    "backend/services/phone_notifications.py", # 폰 알림 센서 바인딩
+    "backend/services/calendar_actions.py",    # 스케줄 발화 실행 substrate — 맥=GUI창+WS '보이는 실행' /
                                       # 폰=창·WS 없어 헤드리스 폰-로컬 execute_pipeline. "무엇을 실행"(어휘)이
                                       # 아니라 "어떤 몸 메커니즘으로 실행"(바인딩)이라 이음매 아래.
     "data/packages/installed/tools/radio/tool_radio.py",     # 핸들러(이음매 아래)
@@ -99,19 +99,19 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
-    "backend/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)
-    "backend/ibl_executors.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
-    "backend/api_pcmanager.py",   # 드라이브/볼륨 열거·열기(3 OS)
-    "backend/file_index.py",      # 파일 검색(맥=Spotlight mdfind/mdls·폰=MediaStore)
-    "backend/api_nas.py",         # ffmpeg/ffprobe 경로 해석
+    "backend/base/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)
+    "backend/ibl/ibl_executors.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
+    "backend/surface/api_pcmanager.py",   # 드라이브/볼륨 열거·열기(3 OS)
+    "backend/datastore/file_index.py",      # 파일 검색(맥=Spotlight mdfind/mdls·폰=MediaStore)
+    "backend/surface/api_nas.py",         # ffmpeg/ffprobe 경로 해석
     "backend/api.py",             # 부팅: Windows stdout 인코딩 + PATH 보강
-    "backend/calendar_html.py",   # 브라우저 열기(open/start)
-    "backend/api_photo.py",       # 사진 파일 OS 열기(open/startfile/xdg-open) — tier-2: ibl_executors 열기와 통합 후보
-    "backend/api_tunnel.py",      # cloudflared 바이너리 위치 탐색(외부 바이너리 finder) — tier-2: 공유 find_binary 후보
+    "backend/services/calendar_html.py",   # 브라우저 열기(open/start)
+    "backend/surface/api_photo.py",       # 사진 파일 OS 열기(open/startfile/xdg-open) — tier-2: ibl_executors 열기와 통합 후보
+    "backend/surface/api_tunnel.py",      # cloudflared 바이너리 위치 탐색(외부 바이너리 finder) — tier-2: 공유 find_binary 후보
     "backend/providers/claude_code.py",  # claude CLI 바이너리 탐색(Win %APPDATA%\\...\\claude.exe vs 맥 .app 번들) — 외부 바이너리 finder, api_tunnel 과 동류
     "backend/common/platform_utils.py",  # 크로스플랫폼 이음매 그 자체(find_binary/spawn_detached/open_url/install_hint — os.name·sys.platform 분기가 존재 이유)
-    "backend/ffmpeg_provision.py",  # ffmpeg 자동 공급(윈도우 첫 실행 시 BtbN 정적 빌드 다운로드 — os.name 분기)
-    "backend/desktop_notify.py",  # OS 네이티브 데스크탑 알림(osascript/PowerShell 토스트/notify-send — 3 OS 분기가 존재 이유)
+    "backend/services/ffmpeg_provision.py",  # ffmpeg 자동 공급(윈도우 첫 실행 시 BtbN 정적 빌드 다운로드 — os.name 분기)
+    "backend/base/desktop_notify.py",  # OS 네이티브 데스크탑 알림(osascript/PowerShell 토스트/notify-send — 3 OS 분기가 존재 이유)
 }
 OS_SCAN_DIRS = ["backend"]
 # 강한 OS 신호만 — 일반 'open'/'start' 같은 건 오탐이라 제외.
@@ -167,7 +167,8 @@ def check_launcher_handlers(root: Path) -> list[str]:
     소스 일부 부재(폰/헤드리스 체크아웃)거나 패턴 불검출이면 graceful skip(거짓양성 방지)."""
     import re as _re
     issues: list[str] = []
-    routing = root / "backend" / "ibl_routing.py"
+    from iblbuild_common import backend_module_path
+    routing = backend_module_path(root, "ibl_routing")
     main_js = root / "frontend" / "electron" / "main.js"
     if not routing.is_file() or not main_js.is_file():
         return issues

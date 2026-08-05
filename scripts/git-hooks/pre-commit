@@ -64,7 +64,7 @@ fi
 
 # 의식 출력 스키마 이름 드리프트 — 프롬프트 응답 형식(생산자)이나 소비처 코드가 스테이징되면
 # 생산자↔소비처 키 정합을 검사(개명 시 highlight_actions/hint 무성음 누락 방지, 4번째 층).
-if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|backend/(prompt_builder|agent_cognitive|consciousness_agent)\.py|scripts/consciousness_schema_check\.py)$'; then
+if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|backend/cognition/(prompt_builder|agent_cognitive|consciousness_agent)\.py|scripts/consciousness_schema_check\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 의식 출력 스키마 정합 검사 실행..."
   if ! python3 "$repo_root/scripts/consciousness_schema_check.py"; then
@@ -123,7 +123,7 @@ fi
 
 # 모듈 그림자 — 패키지 최상위 모듈명이 backend/stdlib 이름과 겹치면 sys.modules 오염
 # (cctv 옛 common.py 가 backend/common 을 덮어 공유 유틸 불능→복붙 확산 부류, 2026-08-05 가드화).
-if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*|backend/[^/]+\.py|scripts/check_module_shadowing\.py)$'; then
+if echo "$staged" | grep -qE '^(data/packages/installed/tools/.*|backend/.*\.py|scripts/check_module_shadowing\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 모듈 그림자 검사 실행..."
   if ! python3 "$repo_root/scripts/check_module_shadowing.py"; then
@@ -189,7 +189,7 @@ fi
 
 # backend 층 가드 — 아래층이 위층을 import 하는 새 간선 차단 (2026-08-05 감사 ⑦:
 # 67모듈 매듭의 재료가 이 방향의 간선. 기존 47간선은 스크립트 내 BASELINE 동결).
-if echo "$staged" | grep -qE '^(backend/[^/]+\.py|scripts/check_backend_layers\.py)$'; then
+if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_backend_layers\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] backend 층 검사 실행..."
   if ! python3 "$repo_root/scripts/check_backend_layers.py"; then

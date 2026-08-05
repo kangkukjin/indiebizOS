@@ -31,8 +31,23 @@ BACKEND = ROOT / "backend"
 BODIES = ROOT / "data" / "bodies"
 
 
+_SKIP_DIRS = {"__pycache__", "common", "drivers", "providers", "static", "channels",
+              "assets", "checkpoints", "data", "outputs", "projects", "testdata", "tokens"}
+
+
+def _backend_module_paths():
+    """{모듈명: backend 상대경로(.py 제외)} — 층 디렉토리(물리 이동 후) 재귀."""
+    out = {}
+    for p in BACKEND.rglob("*.py"):
+        rel = p.relative_to(BACKEND)
+        if any(part in _SKIP_DIRS for part in rel.parts[:-1]):
+            continue
+        out[p.stem] = rel.with_suffix("").as_posix()
+    return out
+
+
 def _backend_modules():
-    return {p.stem for p in BACKEND.glob("*.py")}
+    return set(_backend_module_paths())
 
 
 def _toplevel_imports(pyfile):
@@ -72,10 +87,11 @@ def derive(body):
     force_exclude = set(profile.get("force_exclude", []))
     glob_exclude = profile.get("force_exclude_glob", []) or profile.get("_force_exclude_glob", [])
 
-    mods = _backend_modules()
+    paths = _backend_module_paths()
+    mods = set(paths)
     ext_imports, be_imports = {}, {}
     for m in mods:
-        e, b = _toplevel_imports(BACKEND / f"{m}.py")
+        e, b = _toplevel_imports(BACKEND / (paths[m] + ".py"))
         ext_imports[m], be_imports[m] = e, b
 
     reasons = {}
@@ -103,7 +119,9 @@ def derive(body):
                 changed = True
 
     blocklist = sorted(reasons)
-    engine = sorted(mods - set(blocklist))
+    # ★engine 항목 = backend 상대경로 — 폰 gradle 이 from("backend/${m}.py") 로 그대로
+    # 집는다(zip 안에서는 into 'backend' 로 평면화 → 폰 import 는 종전과 동일).
+    engine = sorted(paths[m] for m in (mods - set(blocklist)))
     return {
         "_doc": "scripts/build_body_bundle.py 가 data/bodies/%s.json 에서 파생. 직접 편집 금지 — 프로파일을 고치고 재생성하라." % body,
         "body": body,

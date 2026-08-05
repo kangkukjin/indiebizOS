@@ -359,7 +359,7 @@ def _safety_watch_files():
     """수정 시 워치독이 기능 스모크(red_safety_selftest)까지 돌려야 하는 안전장치 파일들."""
     out = {_SELF_FILE}
     if _REPO_ROOT is not None:
-        for rel in ("backend/red_grant.py", "backend/red_watchdog.py",
+        for rel in ("backend/datastore/red_grant.py", "backend/datastore/red_watchdog.py",
                     "scripts/red_safety_selftest.py"):
             out.add(os.path.realpath(str(_REPO_ROOT / rel)))
     return out
@@ -536,7 +536,7 @@ def _red_write_finalize(path: str):
                 return  # 워치독 생존 — 매니페스트 mtime 변경이 곧 신호
             except Exception:
                 pass
-        wd_script = str(_REPO_ROOT / "backend" / "red_watchdog.py")
+        wd_script = str(_REPO_ROOT / "backend" / "datastore" / "red_watchdog.py")
         log = open(os.path.join(bdir, "watchdog.log"), "ab")
         p = subprocess.Popen([sys.executable, wd_script, manifest_path],
                              stdout=log, stderr=log, start_new_session=True,

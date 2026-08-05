@@ -34,7 +34,7 @@ BACKEND_SUBPACKAGES = {"common", "channels", "drivers", "providers"}
 
 def backend_names(root: str) -> set:
     names = set(BACKEND_SUBPACKAGES)
-    for f in glob.glob(os.path.join(root, "backend", "*.py")):
+    for f in glob.glob(os.path.join(root, "backend", "**", "*.py"), recursive=True):
         names.add(os.path.splitext(os.path.basename(f))[0])
     return names
 

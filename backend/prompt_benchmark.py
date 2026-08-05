@@ -31,6 +31,7 @@ BENCHMARKS_DIR = DATA_DIR / "benchmarks"
 
 # providers 임포트를 위해 경로 추가
 sys.path.insert(0, str(BACKEND_DIR))
+import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 
 # ─── 설정 로더 ───

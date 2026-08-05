@@ -27,6 +27,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "backend"))
 
+try:
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
+except ImportError:
+    pass
+
 _passed = []
 _failed = []
 
@@ -93,7 +98,7 @@ def main():
               Path(manifest["files"][str(foo.resolve())]).read_text() == "x = 1\n")
 
         # ── 워치독 롤백 (상수 패치, 죽은 헬스포트) ──
-        wd_spec = importlib.util.spec_from_file_location("wd", str(REPO / "backend" / "red_watchdog.py"))
+        wd_spec = importlib.util.spec_from_file_location("wd", str(REPO / "backend" / "datastore" / "red_watchdog.py"))
         wd = importlib.util.module_from_spec(wd_spec)
         wd_spec.loader.exec_module(wd)
         wd.QUIET_S, wd.GRACE_S, wd.HEALTH_TRIES, wd.HEALTH_INTERVAL = 0.3, 0.1, 2, 0.1

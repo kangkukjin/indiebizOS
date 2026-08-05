@@ -5,6 +5,11 @@
 """
 import sys, json, os, collections
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
+
+try:
+    import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
+except ImportError:
+    pass
 import ibl_parser  # type: ignore
 
 node_filter = sys.argv[1] if len(sys.argv) > 1 else None

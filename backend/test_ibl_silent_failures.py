@@ -17,6 +17,7 @@ import sys
 import time
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
+import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
 from ibl_parser import parse, parse_step, IBLSyntaxError  # noqa: E402
 

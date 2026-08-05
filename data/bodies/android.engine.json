@@ -57,7 +57,6 @@
     "calendar_manager",
     "capability_card",
     "channel_engine",
-    "channel_poller",
     "cognitive_consciousness",
     "cognitive_distill",
     "cognitive_eval",
@@ -160,6 +159,7 @@
     "prompt_benchmark",
     "prompt_builder",
     "public_face",
+    "pulse_db",
     "r2_client",
     "red_grant",
     "red_watchdog",
@@ -168,6 +168,7 @@
     "runtime_utils",
     "safe_store",
     "scheduler",
+    "service_status",
     "switch_manager",
     "switch_runner",
     "system_ai_core",
@@ -211,6 +212,7 @@
     "api_showcase": "via hls_ladder",
     "api_ytrelay": "force_exclude (프로파일 명시)",
     "cdn_provision": "force_exclude (프로파일 명시)",
+    "channel_poller": "via nip17",
     "ffmpeg_provision": "force_exclude (프로파일 명시)",
     "hls_ladder": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
@@ -228,8 +230,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 222,
-    "engine": 198,
-    "blocklist": 24
+    "total": 224,
+    "engine": 199,
+    "blocklist": 25
   }
 }

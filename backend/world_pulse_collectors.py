@@ -632,12 +632,9 @@ def _collect_self_state() -> Dict:
     except Exception:
         services["scheduler"] = False
 
-    try:
-        from channel_poller import get_channel_poller
-        poller = get_channel_poller()
-        services["channel_poller"] = poller.running if hasattr(poller, "running") else False
-    except Exception:
-        services["channel_poller"] = False
+    # 프로브 조회 — 서비스 미로드 몸에선 미등록=False (옛 except 경로와 동일 의미)
+    from service_status import probe
+    services["channel_poller"] = bool((probe("channel_poller") or {}).get("running"))
 
     try:
         from system_ai_runner import SystemAIRunner

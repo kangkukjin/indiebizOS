@@ -870,3 +870,14 @@ def get_auto_response_service(log_callback: Callable[[str], None] = None) -> Aut
     if _auto_response_instance is None:
         _auto_response_instance = AutoResponseService(log_callback)
     return _auto_response_instance
+
+
+# 상태 프로브 등록 — trigger_engine 상태 보고가 이 모듈을 import 하지 않게 (2026-08-05 ⑦).
+from service_status import register_probe as _register_probe
+
+
+def _status_probe() -> dict:
+    return {"running": get_auto_response_service()._running}
+
+
+_register_probe("auto_response", _status_probe)

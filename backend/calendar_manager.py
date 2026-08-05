@@ -75,13 +75,13 @@ EVENT_TYPE_EMOJI = {
     "other": "\U0001f4cc",
 }
 
-# Mixin 모듈
-from calendar_actions import CalendarActionsMixin
-from calendar_html import CalendarHtmlMixin
+# ★합성(실행 믹스인 조립)은 calendar_actions(서비스층)가 한다 — 여기(데이터층)는
+# 저장·루프 골격만 알고, 완성 클래스는 register_manager_class 로 주입받는다
+# (2026-08-05 감사 ⑦ 후반부: 데이터층→서비스층 mixin import 가 매듭 -11 간선이었다).
 
 
-class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
-    """통합 캘린더/스케줄러 관리자"""
+class CalendarManagerBase:
+    """통합 캘린더/스케줄러 관리자 — 저장·루프 골격 (실행 액션은 서브클래스가 제공)"""
 
     def __init__(self, log_callback: Callable[[str], None] = None):
         self.log_callback = log_callback or print
@@ -89,15 +89,13 @@ class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
         self.running = False
         self.thread: Optional[threading.Thread] = None
 
-        # 실행 가능 액션 등록
-        self.actions: Dict[str, Callable] = {
-            "test": self._action_test,
-            "run_switch": self._action_run_switch,
-            "run_workflow": self._action_run_workflow,
-            "run_pipeline": self._action_run_pipeline,
-            "send_notification": self._action_send_notification,
-            "run_goal": self._action_run_goal,  # Phase 26: 목표 반복 실행
-        }
+        # 실행 가능 액션 등록 — 구체 목록은 서비스층 서브클래스의 _provide_actions()
+        self.actions: Dict[str, Callable] = {}
+        self.actions.update(self._provide_actions())
+
+    def _provide_actions(self) -> Dict[str, Callable]:
+        """실행 액션 사전 — 기본은 빈 사전(순수 저장소). 서비스층 합성이 override."""
+        return {}
 
     def _log(self, message: str):
         """로그 출력"""
@@ -613,9 +611,23 @@ class CalendarManager(CalendarActionsMixin, CalendarHtmlMixin):
 _calendar_instance: Optional[CalendarManager] = None
 
 
-def get_calendar_manager(log_callback: Callable[[str], None] = None) -> CalendarManager:
+# 완성 클래스 슬롯 — calendar_actions(서비스층)가 합성 클래스를 등록한다.
+_MANAGER_CLS = None
+
+
+def register_manager_class(cls) -> None:
+    """합성 CalendarManager 등록 (조립 루트 boot_common 경유, 부팅 시 1회)."""
+    global _MANAGER_CLS
+    _MANAGER_CLS = cls
+
+
+def get_calendar_manager(log_callback: Callable[[str], None] = None) -> "CalendarManagerBase":
     """CalendarManager 인스턴스 반환 (싱글톤)"""
     global _calendar_instance
     if _calendar_instance is None:
-        _calendar_instance = CalendarManager(log_callback)
+        if _MANAGER_CLS is None:
+            raise RuntimeError(
+                "CalendarManager 미조립 — 조립 루트가 calendar_actions 를 import "
+                "해야 한다 (boot_common.wire_local_subsystems 경유)")
+        _calendar_instance = _MANAGER_CLS(log_callback)
     return _calendar_instance

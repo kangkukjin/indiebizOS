@@ -15,3 +15,10 @@ agent_runners: Dict[str, Dict[str, Any]] = {}
 def get_agent_runners():
     """agent_runners 반환"""
     return agent_runners
+
+
+# 살아있는 AgentRunner 인스턴스 레지스트리 — AgentRunner.agent_registry 클래스 속성의
+# 정본(같은 dict 를 클래스가 별칭으로 가짐, 2026-08-05 ⑦ 후반부). ibl_executors(goal
+# 실행)·node_registry(상태 주입)가 러너 모듈을 import 하지 않고 여기서 읽는다.
+# 키 = "project_id:agent_id".
+runner_registry: Dict[str, Any] = {}

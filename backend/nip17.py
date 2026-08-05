@@ -112,3 +112,31 @@ def unwrap_dm(recipient_priv_hex: str, giftwrap: dict) -> dict:
         "created_at": rumor.get("created_at"),
         "rumor": rumor,
     }
+
+
+# === nostr 키 표기 변환 — channel_poller 에서 이동 (2026-08-05 감사 ⑦ 후반부) ===
+# channel_engine(IBL층)의 주소 정규화가 이 변환자 때문에 서비스층(channel_poller)을
+# import 했다 — 키 표기는 nostr 기저(여기)의 어휘. PublicKey 는 이 모듈이 이미
+# pynostr 를 소유하므로 자연 거처.
+from pynostr.key import PublicKey  # noqa: E402
+
+
+def hex_to_npub(hex_pubkey: str) -> str:
+    """hex 공개키를 npub(bech32) 형식으로 변환. 실패 시 원본 반환."""
+    if not hex_pubkey or hex_pubkey.startswith('npub'):
+        return hex_pubkey
+    try:
+        return PublicKey(bytes.fromhex(hex_pubkey)).bech32()
+    except Exception:
+        return hex_pubkey
+
+
+def npub_to_hex(npub: str) -> str:
+    """npub(bech32)를 hex로 변환. 실패 시 원본 반환."""
+    if not npub or not npub.startswith('npub'):
+        return npub
+    try:
+        return PublicKey.from_npub(npub).hex().lower()
+    except Exception:
+        return npub
+

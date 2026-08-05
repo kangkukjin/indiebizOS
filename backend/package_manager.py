@@ -659,7 +659,7 @@ class PackageManager:
             from ibl_usage_generator import remove_for_package
             hip = remove_for_package(package_id)
             bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
-            from world_pulse_health import purge_action_records
+            from pulse_db import purge_action_records
             health = purge_action_records(bare)
             cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
         except Exception as e:
@@ -1021,7 +1021,7 @@ README 존재: {basic_analysis['has_readme']}
             from ibl_usage_generator import remove_for_package
             hip = remove_for_package(package_id)
             bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
-            from world_pulse_health import purge_action_records
+            from pulse_db import purge_action_records
             health = purge_action_records(bare)
             cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
         except Exception as e:

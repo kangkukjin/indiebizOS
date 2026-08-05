@@ -307,7 +307,7 @@ def purge_zombie_health_records() -> Dict:
     __static__/__ibl_health__ 같은 시스템 네임스페이스(__ 접두)는 보존.
     """
     import yaml
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     nodes_path = Path(__file__).parent.parent / "data" / "ibl_nodes.yaml"
     try:
@@ -345,7 +345,7 @@ def purge_zombie_health_records() -> Dict:
 
 def save_self_check(result: Dict):
     """자가점검 결과 저장"""
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
@@ -368,40 +368,13 @@ def save_self_check(result: Dict):
         logger.warning(f"[SelfCheck] 저장 실패: {e}")
 
 
-def purge_action_records(actions: List[str]) -> Dict:
-    """제거된 액션의 건강기록을 world_pulse.db에서 삭제한다.
+# purge_action_records/record_action_health 는 pulse_db(데이터층)로 이동.
 
-    action_health / self_checks 두 테이블의 `action` 컬럼은 `node:` 없는 **맨
-    액션명**(예: 'chart', 'filter')이다. 액션을 제거하고도 이 기록을 남기면
-    X-Ray에 존재하지 않는 액션이 계속 비정상으로 표시된다(action_removal.md 5번).
-    패키지 제거 경로가 호출한다. 반환: {"action_health": n, "self_checks": n}.
-    """
-    result = {"action_health": 0, "self_checks": 0}
-    names = [a for a in (actions or []) if a]
-    if not names:
-        return result
-    from world_pulse import _get_pulse_db
-    ph = ",".join("?" * len(names))
-    try:
-        conn = _get_pulse_db()
-        for table in ("action_health", "self_checks"):
-            try:
-                cur = conn.execute(
-                    f"DELETE FROM {table} WHERE action IN ({ph})", names
-                )
-                result[table] = cur.rowcount
-            except Exception as e:
-                logger.warning(f"[SelfCheck] {table} 정리 실패: {e}")
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        logger.warning(f"[SelfCheck] 건강기록 정리 실패: {e}")
-    return result
 
 
 def _check_failure_alerts(threshold: int = 3):
     """연속 실패 액션 감지 및 알림"""
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
@@ -450,7 +423,7 @@ def analyze_failure_patterns() -> Dict:
         slowdowns: 응답 시간이 증가 추세인 액션
         recovered: 이전에 실패했다가 최근 복구된 액션
     """
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
@@ -575,7 +548,7 @@ def get_action_health_summary() -> Dict:
     - failed: 실사용(usage)에서 최근 실패 기록 있고 그 이후 성공 없음
     - assumed: 실사용 기록 없음 (건강 체크 전용 실패는 failed로 올리지 않음)
     """
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
@@ -639,26 +612,9 @@ def get_action_health_summary() -> Dict:
         return {}
 
 
-def record_action_health(node: str, action: str, success: bool, response_ms: int = None, source: str = "usage"):
-    """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
-    from world_pulse import _get_pulse_db
-
-    try:
-        conn = _get_pulse_db()
-        conn.execute(
-            "INSERT INTO action_health (node, action, success, response_ms, source, timestamp) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (node, action, 1 if success else 0, response_ms, source, datetime.now().isoformat())
-        )
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass  # 기록 실패가 액션 실행에 영향 주면 안 됨
-
-
 def get_recent_self_checks(limit: int = 20) -> List[Dict]:
     """최근 자가점검 결과 조회"""
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()
@@ -738,7 +694,7 @@ def get_ibl_health_status() -> Dict:
         옛 구조는 이때 옛 GREEN 이 말없이 유지되는 침묵 실패였다.
     stale: 마지막 점검이 STALE_HOURS(48h) 를 넘으면 True — 초록 배지를 바래게 할 근거.
     """
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     KEYS = [
         ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
@@ -906,7 +862,7 @@ def _calculate_action_coverage() -> Dict:
 
 def _get_recent_errors(days: int = 7, limit: int = 10) -> List[Dict]:
     """최근 N일간 실패 빈도 높은 액션 top N"""
-    from world_pulse import _get_pulse_db
+    from pulse_db import _get_pulse_db
 
     try:
         conn = _get_pulse_db()

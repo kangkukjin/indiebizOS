@@ -38,7 +38,9 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
 
     # 클래스 변수 (모든 인스턴스가 공유)
     internal_messages: Dict[str, List[dict]] = {}  # agent_id -> [메시지 dict]
-    agent_registry: Dict[str, 'AgentRunner'] = {}  # agent_id -> AgentRunner 인스턴스
+    # 정본은 agent_registry(데이터층).runner_registry — 같은 dict 의 별칭(재바인딩 금지).
+    # ibl_executors·node_registry 가 러너 모듈 없이 상태를 읽게 한다 (2026-08-05 ⑦ 후반부).
+    from agent_registry import runner_registry as agent_registry  # agent_id -> AgentRunner 인스턴스
     # RLock 사용: 같은 스레드에서 중첩 호출 시 데드락 방지
     # (예: 메시지 처리 중 call_agent 호출 시 다시 Lock 획득 필요한 경우)
     _lock = threading.RLock()

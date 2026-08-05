@@ -34,25 +34,8 @@ except ImportError:
     HAS_NOSTR = False
 
 
-def _hex_to_npub(hex_pubkey: str) -> str:
-    """hex 공개키를 npub(bech32) 형식으로 변환. 실패 시 원본 반환."""
-    if not hex_pubkey or hex_pubkey.startswith('npub'):
-        return hex_pubkey
-    try:
-        return PublicKey(bytes.fromhex(hex_pubkey)).bech32()
-    except Exception:
-        return hex_pubkey
-
-
-def _npub_to_hex(npub: str) -> str:
-    """npub(bech32)를 hex로 변환. 실패 시 원본 반환."""
-    if not npub or not npub.startswith('npub'):
-        return npub
-    try:
-        return PublicKey.from_npub(npub).hex().lower()
-    except Exception:
-        return npub
-
+# 키 표기 변환 정본은 nip17(기저층) — 여기 이름은 내부 소비 호환 별칭 (2026-08-05 ⑦).
+from nip17 import hex_to_npub as _hex_to_npub, npub_to_hex as _npub_to_hex
 
 def _load_owner_identities() -> Dict[str, set]:
     """환경변수에서 사용자 식별 정보 로드"""
@@ -1289,3 +1272,16 @@ def get_channel_poller(log_callback: Callable[[str], None] = None) -> ChannelPol
     if _poller_instance is None:
         _poller_instance = ChannelPoller(log_callback)
     return _poller_instance
+
+
+# 상태 프로브 등록 — 아래층(trigger_engine 상태 보고·world_pulse 자기수용감각)이
+# 이 모듈을 import 하지 않고 service_status(데이터층)로 묻는다 (2026-08-05 ⑦ 후반부).
+from service_status import register_probe as _register_probe
+
+
+def _status_probe() -> dict:
+    poller = get_channel_poller()
+    return {"running": poller.running, "channels": list(poller.threads.keys())}
+
+
+_register_probe("channel_poller", _status_probe)

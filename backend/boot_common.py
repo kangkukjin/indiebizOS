@@ -71,6 +71,15 @@ def wire_local_subsystems(profile: str = None) -> dict:
         print(f"{tag} 시스템 프로젝트 보장 실패 (무시): {e}")
         results["system_projects"] = False
 
+    # 캘린더 매니저 합성: 저장 골격(calendar_manager, 데이터층)에 실행·렌더 믹스인
+    # (calendar_actions/html, 서비스층)을 조립해 등록 — import 자체가 등록이다.
+    try:
+        import calendar_actions  # noqa: F401 — 로드 말미의 register_manager_class 가 등록
+        results["calendar_assembly"] = True
+    except Exception as e:
+        print(f"{tag} 캘린더 합성 실패: {e}")
+        results["calendar_assembly"] = False
+
     # 시스템 라우터 인지 능력 등록: ibl_routing(언어층)은 delegate/agents/world 같은
     # 시스템 기능의 이름만 알고, 구현(인지층 routing_system)은 여기서 주입한다(의존 역전 —
     # 2026-08-05 감사 ⑦ 후반부). 몸 독립 — 어느 몸이든 IBL 시스템 라우터를 쓰려면 필요.

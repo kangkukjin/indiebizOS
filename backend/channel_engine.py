@@ -196,8 +196,8 @@ def _norm_addr(channel_type: str, addr: str) -> str:
     if channel_type == "nostr" and len(a) == 64:
         try:
             int(a, 16)
-            from channel_poller import _hex_to_npub
-            return (_hex_to_npub(a) or a).lower()
+            from nip17 import hex_to_npub
+            return (hex_to_npub(a) or a).lower()
         except Exception:
             return a
     return a

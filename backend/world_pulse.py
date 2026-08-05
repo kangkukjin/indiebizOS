@@ -38,7 +38,9 @@ DATA_PATH = BASE_PATH / "data"
 PULSE_DB_PATH = DATA_PATH / "world_pulse_db.json"
 PULSE_CONFIG_PATH = DATA_PATH / "world_pulse_config.json"
 PULSE_GUIDE_PATH = DATA_PATH / "guides" / "world_pulse.md"
-CONSCIOUSNESS_DB_PATH = DATA_PATH / "world_pulse.db"
+from pulse_db import (  # noqa: E402,F401
+    CONSCIOUSNESS_DB_PATH, _init_pulse_db, _get_pulse_db,
+)
 
 # 설정 캐시
 _config_cache: Optional[Dict] = None
@@ -48,74 +50,7 @@ _config_cache: Optional[Dict] = None
 # World Pulse DB (SQLite)
 # ============================================================
 
-def _init_pulse_db():
-    """의식 DB 초기화 — pulse_log + self_checks 테이블"""
-    conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS pulse_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            world TEXT,
-            user_state TEXT,
-            self_state TEXT,
-            status TEXT DEFAULT 'healthy'
-        );
-        CREATE TABLE IF NOT EXISTS self_checks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            node TEXT NOT NULL,
-            action TEXT NOT NULL,
-            success INTEGER DEFAULT 0,
-            response_ms INTEGER,
-            error_message TEXT,
-            data_quality TEXT
-        );
-        CREATE TABLE IF NOT EXISTS action_health (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            node TEXT NOT NULL,
-            action TEXT NOT NULL,
-            success INTEGER NOT NULL,
-            response_ms INTEGER,
-            source TEXT NOT NULL DEFAULT 'usage',
-            timestamp TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_action_health_na ON action_health(node, action);
-        CREATE INDEX IF NOT EXISTS idx_action_health_ts ON action_health(timestamp);
-        CREATE TABLE IF NOT EXISTS episode_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            started_at TEXT NOT NULL,
-            ended_at TEXT,
-            agent TEXT,
-            user_message TEXT,
-            log TEXT,
-            total_ms INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS episode_summary (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            episode_id INTEGER,
-            started_at TEXT NOT NULL,
-            agent TEXT,
-            user_message TEXT,
-            hippocampus_score REAL,
-            unconscious_decision TEXT,
-            consciousness_ms INTEGER,
-            execution_rounds INTEGER,
-            total_ms INTEGER,
-            evaluation_result TEXT
-        );
-    """)
-    conn.close()
-
-
-def _get_pulse_db():
-    """의식 DB 연결 반환"""
-    if not CONSCIOUSNESS_DB_PATH.exists():
-        _init_pulse_db()
-    conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.row_factory = sqlite3.Row
-    return conn
+# _init_pulse_db/_get_pulse_db 는 pulse_db(데이터층)로 이동 (2026-08-05 ⑦ 후반부).
 
 
 def _cleanup_old_data():

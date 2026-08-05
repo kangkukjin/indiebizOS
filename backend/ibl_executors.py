@@ -527,13 +527,13 @@ def _execute_goal_block(tool_input: dict, project_path: str, agent_id: str) -> d
     파서가 생성한 _goal dict를 받아 agent_runner에 전달한다.
     활성 에이전트가 없으면 DB에 Goal만 생성한다.
     """
-    from agent_runner import AgentRunner
+    from agent_registry import runner_registry
 
     goal_name = tool_input.get("name", "unnamed")
 
     # 활성 에이전트 찾기
     agent = None
-    for aid, a in AgentRunner.agent_registry.items():
+    for aid, a in runner_registry.items():
         if a.running and (
             str(a.project_path) in str(project_path) or
             (agent_id and aid == agent_id)

@@ -548,12 +548,12 @@ class CalendarActionsMixin:
                 self._save_config()
                 return {"success": True, "skipped": True, "reason": goal["status"]}
 
-            # agent_runner를 통해 판단 루프 실행
-            from agent_runner import AgentRunner
+            # 살아있는 러너 등기부(데이터층)에서 판단 루프 실행자 찾기 (⑦ 후반부)
+            from agent_registry import runner_registry
 
             # 활성 에이전트 찾기 (registry에서 running 상태인 에이전트)
             runner = None
-            for aid, agent in AgentRunner.agent_registry.items():
+            for aid, agent in runner_registry.items():
                 if agent.running:
                     runner = agent
                     break
@@ -588,3 +588,30 @@ class CalendarActionsMixin:
         except Exception as e:
             self._log(f"목표 실행 실패: {goal_id} - {str(e)}")
             return {"success": False, "error": str(e)}
+
+
+# === 합성 — 저장 골격(데이터층) 위에 실행·렌더 믹스인을 조립 (2026-08-05 ⑦ 후반부) ===
+# 옛날엔 calendar_manager(데이터층)가 이 모듈을 mixin 으로 import 했다(역방향).
+# 이제 합성은 여기(서비스층)서 하고, 완성 클래스를 데이터층 슬롯에 등록한다.
+from calendar_html import CalendarHtmlMixin as _HtmlMixin
+from calendar_manager import (
+    CalendarManagerBase as _ManagerBase,
+    register_manager_class as _register_manager_class,
+)
+
+
+class CalendarManager(CalendarActionsMixin, _HtmlMixin, _ManagerBase):
+    """통합 캘린더/스케줄러 관리자 (합성 완성판)"""
+
+    def _provide_actions(self):
+        return {
+            "test": self._action_test,
+            "run_switch": self._action_run_switch,
+            "run_workflow": self._action_run_workflow,
+            "run_pipeline": self._action_run_pipeline,
+            "send_notification": self._action_send_notification,
+            "run_goal": self._action_run_goal,  # Phase 26: 목표 반복 실행
+        }
+
+
+_register_manager_class(CalendarManager)

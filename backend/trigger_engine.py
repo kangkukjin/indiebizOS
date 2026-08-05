@@ -421,17 +421,9 @@ def _trigger_status() -> dict:
         typ = t.get("type", "unknown")
         stats["by_type"][typ] = stats["by_type"].get(typ, 0) + 1
 
-    # channel_poller 상태
-    poller_status = {"running": False, "channels": []}
-    try:
-        from channel_poller import get_channel_poller
-        poller = get_channel_poller()
-        poller_status = {
-            "running": poller.running,
-            "channels": list(poller.threads.keys())
-        }
-    except Exception:
-        pass
+    # channel_poller 상태 — 서비스가 등록한 프로브로 조회(직접 import 금지, ⑦ 후반부)
+    from service_status import probe
+    poller_status = probe("channel_poller", {"running": False, "channels": []})
 
     # calendar_manager 상태
     scheduler_status = {"running": False, "tasks": 0}
@@ -446,14 +438,8 @@ def _trigger_status() -> dict:
     except Exception:
         pass
 
-    # auto_response 상태
-    auto_response_status = {"running": False}
-    try:
-        from auto_response import get_auto_response_service
-        ar = get_auto_response_service()
-        auto_response_status = {"running": ar._running}
-    except Exception:
-        pass
+    # auto_response 상태 — 프로브 조회
+    auto_response_status = probe("auto_response", {"running": False})
 
     return {
         "triggers": stats,

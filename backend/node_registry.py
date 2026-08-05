@@ -271,10 +271,10 @@ def _load_agent_nodes() -> List[Dict]:
 def _enrich_agent_status(agent_nodes: List[Dict]):
     """실행 중인 에이전트 레지스트리에서 상태 주입"""
     try:
-        from agent_runner import AgentRunner
+        from agent_registry import runner_registry
         for node in agent_nodes:
             registry_key = f"{node['project_id']}:{node['agent_id']}"
-            runner = AgentRunner.agent_registry.get(registry_key)
+            runner = runner_registry.get(registry_key)
             node["running"] = runner is not None and runner.running
     except ImportError:
         for node in agent_nodes:

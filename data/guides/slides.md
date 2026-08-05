@@ -93,6 +93,7 @@
 - `[self:slide]{op:"create", lecture_id, instruction, content?}` — 덱에 한 장 추가(native 저작). `op:"edit"`로 특정 장 재생성, `op:"delete"`/순서 조정.
 - `[self:slide]{op:"image_edit", lecture_id, slide_id, instruction}` — **통짜 이미지/이미지 슬라이드 부분수정**: 다시 그리지 않고 현재 PNG를 편집(제목 한 줄만 바꾸기 등). 전체 재생성보다 싸고 구도가 유지된다. layout이 native/image인 장에만(텍스트 슬라이드는 `op:"patch"` 필드 편집).
 - 덱은 폴더 단위로 영속(슬라이드 PNG + deck.json).
+- **동영상**: `[self:deck]{op:"video", lecture_id}` — 슬라이드+스피커 노트를 TTS 나레이션 MP4 로(백그라운드, video_workflow.md 참조).
 - **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존됨). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다.
 
 > native 덱은 톤만 다시 입히는 rerender가 아니라 **재생성**(edit/create)이 맞다 — 통짜 이미지라 그렇다.

@@ -71,7 +71,7 @@
 | python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JS | 미설치 |
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
-| remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 설치됨 |
+| remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 미설치 |
 | shopping-assistant | Shopping Assistant | 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가  | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
 | study | Academic Research | 학술 논문·연구자 검색, 여론 조사, 글로벌 경제 지표 접근 도구 (Op | 설치됨 |
@@ -83,4 +83,4 @@
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ---
-*마지막 업데이트: 2026-08-05 18:02*
+*마지막 업데이트: 2026-08-05 18:43*

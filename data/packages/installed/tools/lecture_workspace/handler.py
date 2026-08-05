@@ -954,6 +954,160 @@ def _deck_export(tool_input: dict) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────
+# 덱 → 나레이션 동영상 (2026-08-05 결정화 — "동영상 만들어줘" 한 마디의 결정론 경로)
+# 부품은 전부 있었다: 슬라이드 PNG(덱) + 장별 speaker_note(생성 때 자동 시드) +
+# media_producer create_html_video(TTS→씬 길이 자동 맞춤→FFmpeg 합성). 여기는 그 다리 —
+# 덱을 scenes/narration_texts 로 조립해 파이프라인에 넣는다. 렌더는 수 분이라 기본
+# 백그라운드(즉시 반환 + video_state.json, 신문 발행·family-news 선례), wait:true=동기.
+# ─────────────────────────────────────────────────────────────────────
+
+def _load_media_handler():
+    """media_producer/handler.py 차용 — create_html_video 파이프라인 (slide_native 차용과 같은 패턴)."""
+    import importlib.util
+    path = Path(__file__).resolve().parent.parent / "media_producer" / "handler.py"
+    key = "_media_handler_for_lecture"
+    if key in sys.modules:
+        return sys.modules[key]
+    spec = importlib.util.spec_from_file_location(key, str(path))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[key] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _video_state_path(lecture_id: str) -> Path:
+    return lecture_store.lecture_dir(lecture_id) / "video_state.json"
+
+
+def _write_video_state(lecture_id: str, state: dict) -> None:
+    try:
+        from datetime import datetime
+        state = {**state, "updated_at": datetime.now().isoformat(timespec="seconds")}
+        _video_state_path(lecture_id).write_text(
+            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception as e:
+        print(f"[deck_video] 상태 저장 실패(무시): {e}")
+
+
+def _scene_html_from_png(png_path: Path, width: int, height: int) -> str:
+    """슬라이드 PNG 한 장 → 풀블리드 HTML 씬. base64 임베드 — 파일 경로 의존 없음."""
+    import base64 as _b64
+    b64 = _b64.b64encode(png_path.read_bytes()).decode("ascii")
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
+        '<body style="margin:0;background:#000">'
+        f'<img src="data:image/png;base64,{b64}" '
+        f'style="width:{width}px;height:{height}px;object-fit:contain;display:block">'
+        "</body></html>"
+    )
+
+
+def _deck_video_build(lecture_id: str, opts: dict) -> dict:
+    """조립 + 렌더 본체 (동기). 스레드/동기 양쪽에서 호출 — 상태 파일에 결과를 남긴다."""
+    width, height = int(opts.get("width") or 1280), int(opts.get("height") or 720)
+    deck = lecture_store.read_deck(lecture_id)
+    lecture_dir_path = lecture_store.lecture_dir(lecture_id)
+    order = deck.get("slide_order") or []
+    slides = deck.get("slides") or {}
+
+    scenes, narrations, missing_notes, skipped = [], [], [], []
+    for sid in order:
+        meta = slides.get(sid) or {}
+        png = lecture_dir_path / (meta.get("png_file") or "")
+        if not meta.get("png_file") or not png.exists():
+            skipped.append(sid)
+            continue
+        scenes.append({"html": _scene_html_from_png(png, width, height),
+                       "duration": float(opts.get("duration_per_scene") or 5)})
+        note = (meta.get("speaker_note") or "").strip()
+        narrations.append(note)          # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
+        if not note:
+            missing_notes.append(sid)
+
+    if not scenes:
+        raise RuntimeError("렌더할 슬라이드가 없습니다 (PNG 미존재).")
+
+    mh = _load_media_handler()
+    video_dir = lecture_dir_path / "video"
+    video_dir.mkdir(exist_ok=True)
+    tool_input = {
+        "scenes": scenes,
+        "narration_texts": narrations,
+        "voice": opts.get("voice") or "ko-KR-SunHiNeural",
+        "rate": opts.get("rate") or "+0%",
+        "transition": opts.get("transition") or "fade",
+        "output_filename": opts.get("output_filename") or "lecture_video.mp4",
+        "width": width, "height": height,
+    }
+    if opts.get("bgm_path"):
+        tool_input["bgm_path"] = opts["bgm_path"]
+    result_msg = mh.create_html_video(tool_input, str(video_dir))
+    if not str(result_msg).startswith("HTML 동영상 제작 완료"):
+        raise RuntimeError(str(result_msg)[:500])
+    output = str(result_msg).split(":", 1)[1].strip().split(" (")[0]
+    return {
+        "output": output, "slides": len(scenes),
+        "narrated": len(scenes) - len(missing_notes),
+        "missing_notes": missing_notes, "skipped": skipped,
+    }
+
+
+def _deck_video(tool_input: dict) -> str:
+    lecture_id = (tool_input.get("lecture_id") or "").strip()
+    if not lecture_id:
+        return _err("lecture_id는 필수입니다.")
+    if not lecture_store.lecture_exists(lecture_id):
+        return _err(f"강의 없음: {lecture_id}", error_type="not_found")
+
+    # 중복 기동 방지 — 상태 파일이 building 이고 10분 미경과면 진행 중으로 응답
+    sp = _video_state_path(lecture_id)
+    if sp.exists():
+        try:
+            st = json.loads(sp.read_text(encoding="utf-8"))
+            if st.get("status") == "building":
+                from datetime import datetime
+                age = (datetime.now() - datetime.fromisoformat(st.get("updated_at"))).total_seconds()
+                if age < 600:
+                    return _ok({"status": "building", "note": "이미 렌더 중 — video_state.json 으로 진행 확인",
+                                "state_file": str(sp)})
+        except Exception:
+            pass
+
+    opts = {k: tool_input.get(k) for k in
+            ("voice", "rate", "transition", "output_filename", "bgm_path",
+             "duration_per_scene", "width", "height")}
+
+    if tool_input.get("wait") in (True, "true", "True", 1, "1"):
+        _write_video_state(lecture_id, {"status": "building"})
+        try:
+            result = _deck_video_build(lecture_id, opts)
+        except Exception as e:
+            _write_video_state(lecture_id, {"status": "error", "error": str(e)})
+            return _err(f"동영상 렌더 실패: {e}")
+        _write_video_state(lecture_id, {"status": "done", **result})
+        return _ok(result)
+
+    # 기본: 백그라운드 — 즉시 반환, 진행·결과는 상태 파일
+    import threading
+
+    def _bg():
+        try:
+            result = _deck_video_build(lecture_id, opts)
+            _write_video_state(lecture_id, {"status": "done", **result})
+        except Exception as e:
+            _write_video_state(lecture_id, {"status": "error", "error": str(e)})
+
+    _write_video_state(lecture_id, {"status": "building"})
+    threading.Thread(target=_bg, daemon=True).start()
+    return _ok({
+        "status": "queued",
+        "note": "백그라운드 렌더 시작 (슬라이드 수·나레이션 길이에 따라 수 분). "
+                "완료·결과는 video_state.json — 같은 op 재호출로도 진행 확인.",
+        "state_file": str(sp),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────
 # 디스패치 테이블 — 진짜 함수 참조 (--check 가 AST 로 키 정확 비교)
 # ─────────────────────────────────────────────────────────────────────
 
@@ -964,6 +1118,6 @@ _OP_DISPATCHERS = {
                  "patch": _slide_patch_spec, "rerender": _slide_rerender,
                  "image_edit": _slide_image_edit},
     "material_op": {"add": _material_add, "remove": _material_remove},
-    "deck_op": {"reorder": _deck_reorder, "export": _deck_export},
+    "deck_op": {"reorder": _deck_reorder, "export": _deck_export, "video": _deck_video},
 }
 # 모두 op 필수 — _OP_DEFAULTS 항목 없음.

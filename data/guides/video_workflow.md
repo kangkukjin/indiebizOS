@@ -1,165 +1,25 @@
-# 동영상 제작 워크플로우 가이드
+# 동영상 제작 가이드 — 강의 덱이 영상의 원본이다
 
-동영상 제작은 여러 단계의 원자적 액션을 조합하여 수행합니다.
-한 번의 복합 액션으로 동영상을 만들지 마세요. 단계별로 작업하면 오류 수정과 품질 향상이 가능합니다.
+**동영상을 만드는 길은 하나다: 강의 덱 → `[self:deck]{op: "video"}`.**
+(2026-08-05 정리 — 옛 engines:html_video(HTML 씬 합성)·engines:remotion(React/TSX 렌더)은 은퇴.
+슬라이드가 HTML 이던 시절의 어휘였고, 지금 슬라이드의 정본은 강의 워크스페이스다.
+합성 파이프라인(TTS→씬 길이 맞춤→FFmpeg)은 deck video 의 엔진으로 잔류한다.)
 
-## 필수 원칙: 단계별 검증 (Step Verification)
+## 흐름 — "동영상 만들어줘" 의 결정론 경로
 
-**각 단계를 완료한 후 반드시 결과를 확인하고, 실패한 단계는 해결한 뒤에 다음 단계로 진행하세요.**
+1. **덱 준비** — 이미 있는 강의를 쓰거나, 원고에서 새로 만든다:
+   - `[self:lecture]{op: "create", title, thesis, audience}` → `[self:material]{op: "add"}`(원고·자료)
+   - `[self:slide]{op: "create", instruction, content}` × N — 장마다 **스피커 노트(나레이션 초안)가 자동 시드**된다.
+   - 나레이션을 다듬으려면 강의 창에서 노트를 편집(사용자 편집은 보존됨).
+2. **렌더** — `[self:deck]{op: "video", lecture_id}`:
+   - 슬라이드 PNG + 장별 스피커 노트 → TTS(edge-tts) → **나레이션 길이에 씬 길이 자동 맞춤** → FFmpeg 합성.
+   - 기본 **백그라운드**(즉시 반환, 수 분 소요) — 진행·결과는 `video_state.json`, 같은 op 재호출로도 확인. `wait: true` = 동기.
+   - 옵션: `voice`(기본 ko-KR-SunHiNeural, 남성 ko-KR-InJoonNeural 등) / `rate` / `transition`(fade 기본) / `bgm_path` / `output_filename`.
+   - 노트 없는 장 = 무나레이션 씬(기본 길이). 결과의 `missing_notes` 로 확인.
+3. **산출물** — `outputs/lectures/<id>/video/lecture_video.mp4` (h264+aac).
 
-- 이미지 생성 실패 → Gemini 이미지 생성 재시도 (`engines:image_gemini`)
-- TTS 생성 실패 → 음성 없이 진행할지 사용자에게 확인
-- HTML/TSX 렌더링 실패 → 에러 메시지를 분석하고 코드 수정 후 재시도
-- **절대 실패한 단계를 무시하고 다음 단계로 넘어가지 마세요.** 예를 들어 이미지 생성에 실패했는데 이미지 없이 동영상을 렌더링하면 안 됩니다.
+## 원칙
 
-## 제작 방식 선택
-
-| 방식 | 특징 | 적합한 경우 |
-|------|------|-------------|
-| **HTML 영상** | HTML/CSS/GSAP 기반, Playwright 캡처 | 슬라이드형, 인포그래픽, 빠른 제작 |
-| **Remotion 영상** | React/TSX 기반, 프레임 단위 애니메이션 | 복잡한 모션, 프로그래밍적 애니메이션 |
-
----
-
-## HTML 영상 제작 워크플로우
-
-### Step 1: 계획
-사용자 요청을 분석하고 씬 구성을 계획합니다.
-- 몇 개의 씬이 필요한지
-- 각 씬의 내용과 duration
-- 나레이션 필요 여부
-- 이미지/BGM 필요 여부
-
-### Step 2: 이미지 생성 (필요 시)
-```
-[engines:image_gemini]{prompt: "프롬프트"}
-```
-AI 이미지가 필요하면 먼저 생성합니다. 생성된 이미지 경로를 기록해 둡니다.
-
-**검증**: 이미지 파일이 정상적으로 생성되었는지 확인합니다.
-**실패 시 대안**:
-1. `[engines:image_gemini]{prompt: "프롬프트"}`로 재시도
-2. Gemini도 실패 → 사용자에게 보고하고 지시를 기다림. **이미지 없이 다음 단계로 넘어가지 마세요.**
-
-### Step 3: 씬 HTML 코드 작성
-각 씬을 별도 HTML 파일로 작성합니다. `self:write`로 파일에 저장합니다.
-```
-[self:write]{path: "outputs/video_project/scene_01.html", content: "<!DOCTYPE html>..."}
-[self:write]{path: "outputs/video_project/scene_02.html", content: "<!DOCTYPE html>..."}
-```
-
-**HTML 작성 시 html_video_guide.md 참조 필수:**
-- body 크기 1280x720px 고정
-- 텍스트 넘침 방지 (한글 제목 18자, 본문 35자)
-- 그라데이션 배경, GSAP 애니메이션 활용
-
-### Step 4: 미리보기 (선택)
-HTML을 이미지로 렌더링하여 레이아웃을 확인합니다.
-```
-[engines:render_html]{html: "<씬 HTML 코드>"}
-```
-결과 이미지를 보고 문제가 있으면 Step 3으로 돌아가 `self:edit`로 수정합니다.
-
-### Step 5: 오류 수정 (필요 시)
-텍스트 넘침, 레이아웃 깨짐 등을 발견하면 파일을 수정합니다.
-```
-[self:edit]{path: "outputs/video_project/scene_01.html", old_string: "...", new_string: "..."}
-```
-수정 후 다시 render_html로 미리보기하여 확인합니다.
-
-### Step 6: TTS 나레이션 생성 (필요 시)
-각 씬의 나레이션 텍스트를 음성 파일로 변환합니다.
-```
-[engines:tts]{text: "첫 번째 씬의 나레이션 텍스트", output_filename: "narration_01.mp3"}
-[engines:tts]{text: "두 번째 씬의 나레이션 텍스트", output_filename: "narration_02.mp3"}
-```
-
-**검증**: 각 나레이션 MP3 파일이 생성되었는지 확인합니다.
-**실패 시**: TTS가 실패하면 해당 씬의 나레이션을 다시 시도하거나, 나레이션 없이 진행할지 사용자에게 확인합니다.
-
-### Step 7: 최종 렌더링 (모든 에셋 확인 후)
-**사전 점검**: 렌더링 전에 모든 필수 에셋이 준비되었는지 확인합니다:
-- [ ] 계획한 이미지가 모두 생성되었는가?
-- [ ] 씬 HTML 파일들이 모두 작성되었는가?
-- [ ] 나레이션 파일이 모두 생성되었는가? (필요한 경우)
-- 하나라도 누락되었으면 해당 단계로 돌아가 해결한 후 렌더링합니다.
-
-모든 파일이 준비되면 html_video에 scene_dir을 전달해 MP4를 생성합니다 (scene_dir이 있으면 자동으로 렌더링 단계만 실행).
-```
-[engines:html_video]{scene_dir: "outputs/video_project/", scene_files: [{"path": "outputs/video_project/scene_01.html", "duration": 5}, {"path": "outputs/video_project/scene_02.html", "duration": 7}], narration_files: ["outputs/video_project/narration_01.mp3", "outputs/video_project/narration_02.mp3"], bgm_path: "경로/bgm.mp3", output_filename: "final_video.mp4"}
-```
-
-또는 scene_dir로 폴더 전체를 지정할 수도 있습니다:
-```
-[engines:html_video]{scene_dir: "outputs/video_project/", default_duration: 5, output_filename: "final_video.mp4"}
-```
-
----
-
-## Remotion 영상 제작 워크플로우
-
-### Step 1: 계획
-HTML 영상과 동일하게 씬 구성을 계획합니다.
-
-### Step 2: 이미지/에셋 준비 (필요 시)
-```
-[engines:image_gemini]{prompt: "프롬프트"}
-```
-**검증**: 이미지가 정상 생성되었는지 확인합니다.
-**실패 시**: 프롬프트를 다듬어 재시도하고, 계속 실패하면 사용자에게 보고. **이미지 없이 TSX 작성으로 넘어가지 마세요.**
-
-### Step 3: TSX 컴포지션 코드 작성
-React/TSX 코드를 파일로 작성합니다.
-```
-[self:write]{path: "outputs/video_project/composition.tsx", content: "import {AbsoluteFill, useCurrentFrame}..."}
-```
-
-**TSX 작성 시 remotion_guide.md, visual_guide.md 참조 필수:**
-- `useCurrentFrame()`, `interpolate()` 활용
-- Tailwind className으로 정적 스타일
-- Google Fonts 로드
-- spring 애니메이션 등
-
-### Step 4: 렌더링 (모든 에셋 확인 후)
-**사전 점검**: 계획한 이미지/에셋이 모두 준비되었는지 확인합니다. 누락 시 Step 2로 돌아갑니다.
-
-TSX 파일 경로를 지정하여 렌더링합니다.
-```
-[engines:remotion]{op: "render_file", composition_file: "outputs/video_project/composition.tsx", duration_in_frames: 300, fps: 30, width: 1280, height: 720, asset_paths: ["이미지경로1.png", "이미지경로2.png"], output_filename: "remotion_video.mp4"}
-```
-
-### Step 5: 오류 수정 (필요 시)
-렌더링 실패 시 에러 메시지를 확인하고 TSX 코드를 수정합니다.
-```
-[self:edit]{path: "outputs/video_project/composition.tsx", old_string: "...", new_string: "..."}
-```
-수정 후 다시 [engines:remotion]{op: "render_file", ...}을 실행합니다.
-
----
-
-## 빠른 제작 (기존 복합 액션)
-
-간단한 영상이라면 기존 복합 액션도 사용 가능합니다:
-```
-# HTML 영상 - 코드를 직접 전달
-[engines:html_video]{topic: "주제", scenes: [...], narration_texts: [...]}
-
-# Remotion 영상 - 코드를 직접 전달 (op 생략 시 composition_code 유무로 자동 render_inline)
-[engines:remotion]{composition_code: "<TSX 코드>"}
-```
-단, 이 방식은 코드 오류 수정이 어렵습니다. 품질이 중요한 영상은 위의 단계별 워크플로우를 사용하세요.
-
----
-
-## 액션 요약
-
-| 액션 | 용도 | 핵심 파라미터 |
-|------|------|---------------|
-| `engines:image_gemini` | Gemini AI 이미지 생성 | prompt |
-| `engines:tts` | 텍스트 → MP3 | text, voice, output_filename |
-| `engines:render_html` | HTML → 이미지 (미리보기) | html |
-| `engines:html_video` | HTML 파일들 → MP4 (scene_dir이 있으면 자동으로 렌더 단계만, 없으면 풀 파이프라인) | topic 또는 scene_files/scene_dir, narration_files |
-| `engines:remotion` | TSX → MP4 (op=render_inline: composition_code / op=render_file: composition_file / op=status) | composition_code 또는 composition_file |
-| `self:write` | 코드를 파일로 저장 | path, content |
-| `self:edit` | 파일 부분 수정 | path, old_string, new_string |
-| `self:read` | 파일 내용 확인 | path |
+- **품질은 덱에서 나온다** — 슬라이드 큐레이션(slides.md §1)과 스피커 노트 퇴고가 영상 품질의 전부다. 렌더는 결정론.
+- 실패한 렌더는 `video_state.json` 의 error 를 읽고 원인(TTS 실패·PNG 누락 등)을 고친 뒤 재호출.
+- BGM·음성 톤 변경 = 같은 op 재호출(덱 불변, 렌더만 다시).

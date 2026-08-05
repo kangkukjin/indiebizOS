@@ -1,22 +1,6 @@
 nodes:
   engines:
     actions:
-      html_video:
-        returns: effect
-        runs_on: pc_only
-        description: 완성된 HTML/CSS 씬을 MP4 영상으로 합성. scenes(HTML 배열) 또는 scene_dir(저장된 씬)로 호출. 주제→슬라이드 자동생성은 [self:slide]/[self:lecture] 사용. (가이드 html_video.md)
-        target_description: scenes(완전한 HTML 문서 배열, 각 {html, duration})을 직접 전달하거나 scene_dir(저장된 씬 디렉토리)을 지정. scene_dir이 있으면 렌더링 단계만 실행. narration_texts로 씬별 나레이션 추가.
-        group: media_produce
-        router: handler
-        tool: html_video
-        implementation: scene_dir이 있으면 render 단계(저장된 HTML 씬 → Playwright + FFmpeg MP4)로, scenes가 있으면 풀 렌더(Playwright 프레임 캡처 → FFmpeg MP4 인코딩)로 분기. topic→씬 자동생성은 미구현(self:slide/lecture 파이프라인 사용).
-        target_key: scenes
-        keywords:
-        - 영상
-        - 동영상
-        - MP4
-        - 렌더링
-        - HTML영상
       tts:
         returns: effect
         runs_on: pc_only
@@ -289,15 +273,3 @@ tool_json:
           description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용
       required:
       - image_path
-  - name: html_video
-    description: 'HTML/CSS 씬을 MP4 영상으로 합성. topic 있으면 풀 파이프라인, scene_dir 있으면 마지막 렌더링만. (가이드 html_video.md)
-
-
-      파라미터: topic(주제) 또는 scene_dir(이미 만든 씬 디렉토리) 중 하나. scene_dir이 있으면 자동으로 렌더링 단계만 실행. scenes 파라미터로 씬 배열 직접 전달도 가능.'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: 동작 분기 — target_description 참조
-      additionalProperties: true

@@ -271,7 +271,6 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | public-files | Public Files | 공개 파일 `[others:showcase]` — `/s/<5자>/` 로 디스크의 폴더를 그대로 공개(EXIF 제거·동영상 스트리밍 트랜스코드·자막) |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`) |
-| remotion-video | Remotion Video | React/Remotion 기반 프로그래밍 방식 동영상 생성 (TSX → MP4) |
 | shopping-assistant | Shopping Assistant | 네이버 쇼핑, 다나와 가격 비교 + 중고 매물 (`sense:used`) |
 | startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
 | study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
@@ -282,7 +281,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
-**미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).
+**미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec · remotion-video(2026-08-05 은퇴 — 영상 정본=[self:deck]{op:"video"}) — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).
 
 
 **참고**: cloudflare 패키지의 `cf_tunnel` 도구는 원격 Finder 시스템의 Cloudflare Tunnel 설정을 자동화합니다. → [remote_access.md](remote_access.md)

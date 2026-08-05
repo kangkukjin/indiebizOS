@@ -1038,7 +1038,7 @@ def validate(data: dict, root: Path) -> list[str]:
 
 # 2026-08-05 동결 — 기존 다참조 desc 4건(정당한 교차 안내 포함). 새 진입만 경고.
 _COMPRESSION_DESC_BASELINE = {
-    "others:contact", "self:memory", "engines:html_video",   # engines:slide 는 2026-08-05 은퇴로 제거
+    "others:contact", "self:memory",   # engines:slide·html_video 는 2026-08-05 은퇴로 제거
 }
 _DESC_MENTION_WARN = 3     # desc 가 타 액션 ≥3개를 지목하면 개념 경계가 흐리다는 자백
 _OP_JACCARD_WARN = 0.8     # 같은 group 에서 op 집합이 이만큼 닮으면 병합 후보 (다른 group=정상 CRUD 관습이라 면제)

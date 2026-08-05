@@ -83,9 +83,9 @@ actions:
   deck:
     returns: effect
     runs_on: pc_only
-    description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기.
+    description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.
     group: lecture
-    target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx).
+    target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(즉시 반환, 진행=video_state.json·같은 op 재호출로 확인), wait:true=동기. 옵션 voice/rate/transition/bgm_path/output_filename. 노트 없는 장은 무나레이션 씬.
     target_key: op
     router: handler
     tool: deck_op
@@ -93,12 +93,15 @@ actions:
       values:
         reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
         export: 파일 내보내기 (format=pdf|pptx, PIL/python-pptx 합본)
-    implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본.
+        video: 나레이션 동영상 렌더 (슬라이드 PNG+스피커 노트→TTS→MP4, 기본 백그라운드·wait=동기)
+    implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본. video는 덱을 scenes/narration_texts 로 조립해 media_producer create_html_video 차용(TTS→씬 길이 자동 맞춤→FFmpeg 합성), lecture_dir/video/ 저장+video_state.json.
     keywords:
     - 슬라이드 순서 변경
     - 강의 내보내기
     - PDF 내보내기
     - PPTX 내보내기
+    - 강의 동영상
+    - 나레이션 동영상
     scope: workspace
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
@@ -243,7 +246,9 @@ tool_json:
 
       - reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.
 
-      - export: PDF/PPTX 파일로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.'
+      - export: PDF/PPTX 파일로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.
+
+      - video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. 기본 백그라운드(즉시 반환, 진행=video_state.json·같은 op 재호출), wait:true=동기. lecture_dir/video/ 저장.'
     input_schema:
       type: object
       properties:
@@ -265,6 +270,21 @@ tool_json:
           - pptx
           - pptx_editable
           description: export 필수 — 출력 형식 (pptx=이미지 슬라이드, pptx_editable=텍스트 편집 가능)
+        wait:
+          type: boolean
+          description: video 옵션 — true=동기(완료까지 블로킹, 수 분). 기본 false=백그라운드.
+        voice:
+          type: string
+          description: video 옵션 — TTS 음성 (기본 ko-KR-SunHiNeural)
+        transition:
+          type: string
+          description: video 옵션 — 씬 전환 (fade 기본/wipeleft/slidedown/dissolve/none 등)
+        bgm_path:
+          type: string
+          description: video 옵션 — 배경음악 파일 경로
+        output_filename:
+          type: string
+          description: video 옵션 — 결과 파일명 (기본 lecture_video.mp4)
       required:
       - op
       - lecture_id

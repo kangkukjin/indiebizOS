@@ -284,11 +284,6 @@ def gen(code, intents):
         else:
             results += ["발표자료 만들어", "PPT 좀", "프레젠테이션 만들어줘"]
 
-    # ---- engines:video / remotion ----
-    elif a in ("engines:video", "engines:remotion"):
-        topic = p(code, "topic") or p(code, "composition")
-        results += ["영상 만들어줘", "동영상 제작해", "비디오 좀 만들어"]
-
     # ---- engines:tts ----
     elif a == "engines:tts":
         results += ["음성으로 바꿔줘", "읽어주는 거 만들어", "TTS로 변환해"]

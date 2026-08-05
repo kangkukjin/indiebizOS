@@ -24,34 +24,18 @@
     },
     {
       "id": "video_workflow",
-      "name": "동영상 제작 워크플로우",
-      "description": "HTML 기반 영상 또는 Remotion 영상을 만드는 단계별 워크플로우. 이미지 생성, 코드 작성, 미리보기, TTS, 최종 렌더링까지.",
+      "name": "동영상 제작 (강의 덱 → 나레이션 MP4)",
+      "description": "동영상을 만드는 길은 하나 — [self:deck]{op:\"video\"}. 슬라이드 PNG+스피커 노트를 TTS 나레이션 영상으로. 백그라운드 렌더·voice/bgm 옵션.",
       "keywords": [
         "동영상",
-        "영상",
+        "영상 제작",
+        "강의 영상",
+        "나레이션",
+        "MP4",
         "비디오",
-        "video",
-        "mp4",
-        "렌더링",
-        "TTS",
-        "나레이션"
+        "deck video"
       ],
       "file": "video_workflow.md"
-    },
-    {
-      "id": "html_video",
-      "name": "HTML 영상 제작 기술 가이드",
-      "description": "Playwright 프레임 캡처 기반 MP4 영상 제작의 기술적 상세. HTML 씬 구조, 애니메이션, 오디오 합성.",
-      "keywords": [
-        "html",
-        "영상",
-        "playwright",
-        "프레임",
-        "씬",
-        "scene",
-        "애니메이션"
-      ],
-      "file": "html_video.md"
     },
     {
       "id": "slides",
@@ -100,25 +84,6 @@
         "pptx"
       ],
       "file": "slides.md"
-    },
-    {
-      "id": "remotion",
-      "name": "Remotion 영상 제작 가이드",
-      "description": "React/TSX 기반 Remotion으로 프로그래밍 방식 MP4 영상 제작. 컴포지션 구조, 애니메이션, Tailwind CSS, Google Fonts, Lottie, 시각 기법 포함.",
-      "keywords": [
-        "remotion",
-        "react",
-        "tsx",
-        "프로그래밍",
-        "컴포지션",
-        "composition",
-        "tailwind",
-        "lottie",
-        "폰트",
-        "시각",
-        "디자인"
-      ],
-      "file": "remotion.md"
     },
     {
       "id": "web_builder",

@@ -216,11 +216,6 @@
       "weight": "light",
       "locale": "kr"
     },
-    "remotion-video": {
-      "needs_key": [],
-      "weight": "heavy",
-      "locale": "universal"
-    },
     "scheduler": {
       "needs_key": [
         "GEMINI_API_KEY"
@@ -300,12 +295,10 @@
     }
   },
   "action_owner": {
-    "engines:html_video": "media_producer",
     "engines:icon": "media_producer",
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",
-    "engines:remotion": "remotion-video",
     "engines:render_html": "media_producer",
     "engines:tts": "media_producer",
     "engines:web": "web-builder",

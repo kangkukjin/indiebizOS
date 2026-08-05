@@ -10,7 +10,7 @@
 
 ## ▶ START HERE — 현재 상태와 다음 단계
 
-**완료 (0)(1)(2)(3)(4)(5)+2b(book)+슬라이드 일원화(152 액션) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제) + 계수 숙성 후 D급 은퇴 판단.**
+**완료 (0)(1)(2)(3)(4)(5)+2b(book)+슬라이드/영상 일원화(**150 액션**) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제) + 계수 숙성 후 D급 은퇴 판단.**
 
 | 단계 | 상태 | 커밋 |
 |---|---|---|
@@ -276,6 +276,14 @@ ibl.md·프롬프트 fragment·계기 app 블록(검색 액션에 app 블록이 
     저작 전용층(slide_author·slide_patterns)은 고아화로 삭제. slides.md 재작성.
     style:"text" 단발 축은 은퇴(스크래치=native 고정 — 의식적 단순화, 텍스트형은 강의
     덱 layout 강제로 잔존). 코퍼스 8행+distilled 4건 이관, probe 0.943 직행.
+  - **영상 어휘 일원화 (2026-08-05, 사용자 결정 — 152→150)**: "영상을 만드는 길은 강의 덱
+    하나" — `[self:deck]{op:"video"}` 결정화(슬라이드 PNG+장별 speaker_note[생성 때 자동
+    시드]→TTS→씬 길이 자동 맞춤→FFmpeg MP4, 기본 백그라운드+video_state.json[신문 선례],
+    wait:true=동기. 라이브 실증: 2장 덱→h264+aac 49초 나레이션 영상). 동시에
+    **engines:html_video·engines:remotion 은퇴** — html_video 는 슬라이드가 HTML 이던
+    시절의 어휘(create_html_video 함수는 deck video 의 엔진으로 잔류), remotion 은
+    실사용 저조 판정(remotion-video 패키지 → not_installed). 코퍼스 22행 삭제+deck video
+    시드 4(직행 0.895), video_workflow.md 재작성·remotion.md 은퇴 포인터·guide_db 정리.
   - **슬라이드 가족 판정 (2026-08-05, 사용자 결정)**: self 3형제(lecture/slide/deck)는
     **병합 금지 — 개체 축 존치**. 워크스페이스/장/덱은 다른 개체라 business 가족(개체마다
     한 단어) 선례 그대로이며, 합치면 13-op 메가 액션(압축 목적과 반대). overlap 감사의

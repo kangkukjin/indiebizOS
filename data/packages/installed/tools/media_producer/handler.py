@@ -34,12 +34,9 @@ def execute(tool_input: dict, context) -> str:
     tool_name = context.tool_name
     output_base = context.output_dir()
 
-    # 통합 액션: tool_name=="html_video" + scene_dir 유무로 분기
-    if tool_name == "html_video":
-        if tool_input.get("scene_dir"):
-            return render_html_video(tool_input, output_base)
-        return create_html_video(tool_input, output_base)
-
+    # html_video 도구 갈래는 2026-08-05 은퇴 — 슬라이드가 HTML 이던 시절의 어휘. 지금 영상은
+    # [self:deck]{op:"video"}(덱→나레이션 MP4) 하나. create_html_video/render_html_video 함수는
+    # 그 파이프라인의 엔진으로 잔류(lecture_workspace 가 함수층에서 차용).
     if tool_name == "render_html_to_image":
         return render_html_to_image(tool_input, output_base)
     elif tool_name == "generate_gemini_image":

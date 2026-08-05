@@ -16,13 +16,29 @@
 |---|---|---|
 | (0) 사용 계수 배선 (은퇴 판단의 눈) | ✅ | `09cd5b8` |
 | (1) 싼 병합 5건 (163→**159 액션**) | ✅ | `80a3392` |
-| (2) 검색 통합 `[sense:search]{source}` (159→**155**) | ✅ 2026-08-05 | 아래 §3 실행 기록 |
+| (2) 검색 통합 `[sense:search]{source}` (159→**155**) | ✅ 2026-08-05 | `dbf370d` + 아래 실행 기록 |
 | (3) 코퍼스 교정 (동음이의 충돌쌍) | ⏳ | — |
-| (4) M4 로컬 재학습 1회 + 연상 probe | (2)와 같은 세션에서 실행 | — |
+| (4) M4 로컬 재학습 1회 + 연상 probe | ✅ (2) 직후 같은 세션 | 아래 (4) 기록 |
 | (5) 압축 상설 기관 (--check 경고 + 주간 감사) | ⏳ | — |
 | (6) 보류 3건 → 설계 태스크 | ⏳ | — |
 
 (2)는 백엔드 기동 중에 실행 — `/packages/reload` 로 라이브 반영·5 source 종단 검증 완료.
+
+### (4) 실행 기록 (2026-08-05, (2) 직후)
+
+- 07-21 정본 레시피 그대로(맥미니 M4, `backend/ibl_embedding_trainer.py` batch8·seq64·seed42):
+  백업 `ibl_embedding.bak.20260805_search_merge` → 학습(코퍼스 3,020·155 desc·4,871쌍,
+  epoch당 ~100초, **epoch 6 최적 0.890** 조기종료) → `compare_models.py` 사과대사과 →
+  **채택**(code T5 90.7→92.3 +1.6p·desc T5 93.3→93.7·프로브 26→**27/27**) → epoch_* 정리
+  → rebuild_index(3,020) → **touch reload**(keeper 가 유령·사망 자동수습하는 08-05 체제라
+  명시적 kill 대신 uvicorn reload 채택, 워커 교체·유령 0 확인).
+- compare_models.py 에 검색 통합 프로브 5개 추가(웹/네이버 블로그/가디언/HN/구글뉴스 → sense:search).
+- 라이브 번역 실증: "가디언에서 기후변화 기사"→`{source:"guardian"}` / "네이버 블로그 제주 맛집 후기"
+  →`{source:"naver", type:"blog"}` / "해커뉴스 프론트페이지"→`{source:"hn"}` 전부 직행.
+- 잔여 회색지대(→ (3) 대상): "네이버 블로그 후기"류가 self:blog(내 블로그)와 경쟁, "웹 검색해줘"
+  단독은 limbs:os_open 과 경쟁 — 원래 있던 경계 모호(코퍼스 교정 84쌍에 합류).
+- 롤백: `rm -rf data/models/ibl_embedding && mv data/models/ibl_embedding.bak.20260805_search_merge
+  data/models/ibl_embedding` → rebuild_index → 백엔드 reload.
 
 ### (2) 실행 기록 (2026-08-05)
 

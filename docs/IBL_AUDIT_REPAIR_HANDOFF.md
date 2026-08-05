@@ -9,8 +9,8 @@
 | ⑥ 복붙 정리 | ✅ 완료 | `882c38b` — common/http_fetch·geocode·pkg_utils 신설, curl_cffi 5벌·Nominatim 3벌 수렴, 단순 load_module 7곳 위임 (특수 변형 유지 — cache·체인프리로드는 의도된 차이) |
 | ⑧ pytest 도입 | ✅ 완료 | `731c5f1` — pytest.ini + 고아 5 편입(nip44 최우선) + seam-guards CI 잡. `-m "not local"` 28 passed |
 | ① 스텁 디스패처 | ✅ 완료 | `7ecf9a8` — 15개 전환(4 병렬 에이전트, 행동 변화 0) + 가드 `_stub_ops`(값 None=빌드 차단) + self-test. 부수: web-collector 죽은 records 블록 삭제 `05d5e0b` |
-| ② 에러 관례 | 🔶 1단계만 | `0dd1050` — 맨 문자열 반환 소탕(web launch_sites 10곳·shopping-assistant·business·location-services). 잔여: {success:False,error} 수렴 + 맨 문자열 AST 가드(①의 테이블 덕에 op 함수 return 추적 가능해짐) |
-| ③④⑤⑦⑨ | ⬜ 미착수 | ③은 ① 선행조건 충족됨. ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
+| ② 에러 관례 | ✅ 완료 | `0dd1050`(1단계) + `38df771`(완결, 2026-08-05 3차) — health-record 20곳(returns:items 위반 최악 부류) dict 전환 · Unknown tool 폴백 12곳 소탕 · {success:False,message}→error 80곳 · error-only→+success:False 156곳(렌더러 양쪽 d.error‖d.message 폴백이라 표시 무손상 실측) · `scripts/check_string_returns.py` 가드(execute+디스패처 op 함수 AST, 중첩 def 헬퍼 제외=오탐 0, system_essentials 텍스트 계약 31건만 BASELINE 래칫) + pre-commit + seam-guards CI |
+| ③④⑤⑦⑨ | ⬜ 미착수 | ③은 ①② 선행조건 충족됨(op 함수 단위 반환 추적 + 에러 모양 단일). ①에서 안 특이점: 에러 우선순위 미세 역전 3건(phone_listen 무효 op 침묵 실행→정직 거부 등, C 에이전트 보고) |
 
 ## 0. 배경 — 무엇을 했고 무엇이 남았나
 
@@ -48,7 +48,7 @@ computer-use), 부재 16개.
   전환 지점 표식). 전환 후 가드에 "값이 None인 테이블 금지" 조항 추가하면 재발 봉쇄.
 - 함정: real-estate는 진짜 2축(op + source) — source 축은 가드 밖이니 전환 시 문서화.
 
-### ② 에러 관례 5종 → 단일 관례 (중규모·전 패키지 횡단)
+### ② 에러 관례 5종 → 단일 관례 (✅ 완료 — 아래는 이력)
 공존 중: 예외 전파 / `{success:False, error}` / `{success:False, message}` /
 `{error}`(success 없음: location-services 전역, memory) / **맨 문자열**(shopping-assistant
 :251·:271, business :1061, web launch_sites, location-services :974).

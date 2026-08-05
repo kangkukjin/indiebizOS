@@ -45,7 +45,7 @@
 
 **살아있는 선례 (표현은 커스텀, 능력은 기존 어휘):**
 - 빈노트(문서) = `[self:write]` · `[self:read]` · `[self:file_find]` · `[self:delete]` (파일 어휘 그대로)
-- 신문 = `[sense:search_gnews]` 를 키워드마다 팬아웃
+- 신문 = `[sense:search]{source: "gnews"}` 를 키워드마다 팬아웃
 - 길찾기 = `[sense:navigate_route]` · `[sense:cctv]`
 - 정기보고 = `[self:file_find]`→`[self:read]` + 작성은 `[others:delegate]{scope:system}`
 

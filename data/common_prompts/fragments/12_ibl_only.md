@@ -49,7 +49,7 @@ execute_ibl(code='[node:action]{params}')
 execute_ibl(code='[node:action]{param: "value"}')
 ```
 
-공통 파라미터 `_raw: true` — 일부 검색 액션은 결과를 AI로 자동 요약(postprocess:compress)해서 돌려준다. 원본 구조화 데이터(JSON)가 필요하면 `{_raw: true}`를 더해 요약을 건너뛴다. 예: `[sense:search_naver]{query: "한강", type: "book", _raw: true}`. (앱·파이프라인용. 평소 읽기엔 요약본이 더 편하다.)
+공통 파라미터 `_raw: true` — 일부 검색 액션은 결과를 AI로 자동 요약(postprocess:compress)해서 돌려준다. 원본 구조화 데이터(JSON)가 필요하면 `{_raw: true}`를 더해 요약을 건너뛴다. 예: `[sense:search]{source: "naver", query: "한강", _raw: true}`. (앱·파이프라인용. 평소 읽기엔 요약본이 더 편하다.)
 
 ## Common Mistakes — NEVER do these
 
@@ -94,9 +94,9 @@ Chain multiple steps with operators:
 
 | Operator | Name | Example |
 |----------|------|---------|
-| `>>` | Sequential | `[sense:search_ddg]{query: "AI"} >> [self:write]{path: "result.md"}` |
+| `>>` | Sequential | `[sense:search]{query: "AI"} >> [self:write]{path: "result.md"}` |
 | `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
-| `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL price"}` |
+| `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL price"}` |
 
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
 
@@ -122,7 +122,7 @@ Chain multiple steps with operators:
 
 **단일 검색:**
 ```
-execute_ibl(code='[sense:search_ddg]{query: "AI trends"}')
+execute_ibl(code='[sense:search]{query: "AI trends"}')
 ```
 
 **병렬 데이터 수집:**
@@ -158,7 +158,7 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 
 ## ⚠️ 파이프라인 vs 에이전틱 사고 — 가장 중요한 원칙
 
-IBL은 몸의 언어다. `[sense:search_ddg]`는 "검색하라"는 행위이고, `[self:write]{path: ...}`는 "저장하라"는 행위다.
+IBL은 몸의 언어다. `[sense:search]`는 "검색하라"는 행위이고, `[self:write]{path: ...}`는 "저장하라"는 행위다.
 하지만 **분석, 판단, 요약, 비교, 종합**은 행위가 아니라 **사고**다. IBL에는 사고 액션이 없다.
 
 **파이프라인(`>>`)은 기계적 전달이다.** 데이터가 생각 없이 다음 스텝으로 넘어간다.
@@ -176,15 +176,15 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 
 **WRONG — 파이프라인으로 한번에 보내기:**
 ```
-execute_ibl(code='[sense:search_ddg]{query: "반도체"} & [sense:search_gnews]{query: "반도체"} >> [self:write]{path: "분석.md"}')
+execute_ibl(code='[sense:search]{query: "반도체"} & [sense:search]{source: "gnews", query: "반도체"} >> [self:write]{path: "분석.md"}')
 ```
 → 검색 결과 JSON이 분석 없이 그대로 파일에 저장됨. 쓸모없다.
 
 **RIGHT — 하나씩 호출하고 네가 생각하기:**
 ```
-1. execute_ibl(code='[sense:search_ddg]{query: "반도체 시장 동향"}')
+1. execute_ibl(code='[sense:search]{query: "반도체 시장 동향"}')
 2. (결과를 보고 네가 분석 — 핵심 트렌드, 주요 기업 동향 파악)
-3. execute_ibl(code='[sense:search_gnews]{query: "반도체 투자"}')
+3. execute_ibl(code='[sense:search]{source: "gnews", query: "반도체 투자"}')
 4. (추가 결과와 함께 종합 분석)
 5. execute_ibl(code='[self:write]{path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
 ```

@@ -803,7 +803,7 @@ def _format_hunt_block(hunt: Dict[str, Any]) -> str:
 def forage_chat(chat: ForageMessage):
     """포식 브라우저 검색 — 실행 에이전트와 *동일한* 인지 파이프라인에 '포식 역할'만 덧댄다.
 
-    에이전트가 사용자 의도를 듣고 스스로 IBL 검색(sense:search_naver/ddg/realty 등)을 골라
+    에이전트가 사용자 의도를 듣고 스스로 IBL 검색(sense:search{source: naver/ddg}·sense:realty 등)을 골라
     '가볼 만한 곳'의 링크 목록을 낸다. 무엇을·어떻게 찾을지는 전부 에이전트(프롬프트+IBL) 몫 —
     여기엔 검색 오케스트레이션 코드가 없다(forager는 AI다, 짓지 않는다).
     상태 없는 검색이라 대화 로그에 저장하지 않는다.

@@ -288,7 +288,7 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 
 **제안 형식 예시**:
 ```
-[발견] `[sense:paper]{op:"search", source:"pubmed", q:X} & [sense:search_ddg]{q:X}` 조합이
+[발견] `[sense:paper]{op:"search", source:"pubmed", q:X} & [sense:search]{q:X}` 조합이
        의료 에이전트 최근 7일 12회 반복
 [해석] 의학 정보 다각도 검색을 매번 모델이 재구성. 토큰·시간 비용 누적.
 [제안] `[engines:medical_research]{query: ...}` 등록.
@@ -361,7 +361,7 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 [발견] `real_estate.md` 가이드 highlight 후에도 다가구 주택 영역에서 NOT_ACHIEVED 4회
 [해석] 가이드가 아파트(apt_*) 위주, 다가구 주인세대 같은 비-아파트 시나리오 미흡
 [제안] 가이드에 "다가구·단독주택 시세 조회" 섹션 추가.
-       핵심: apt_* 액션은 아파트 한정 → house_rent + search_ddg 조합 사용.
+       핵심: apt_* 액션은 아파트 한정 → house_rent + search(웹 검색) 조합 사용.
        시·군별 행정구역 매핑 표 포함
 [검증] 1주일 — 다가구·단독 관련 질문의 ACHIEVED 비율 측정
 [위험] 가이드가 길어짐 → 의식 에이전트의 컨텍스트 부담 약간 ↑

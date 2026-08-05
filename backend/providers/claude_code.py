@@ -926,7 +926,7 @@ class ClaudeCodeProvider(BaseProvider):
         "AskUserQuestion",          # → IBL [user:ask] / [self:ask_user]
         "Read",                     # → [self:read]
         "Grep", "Glob",             # → [self:grep]
-        "WebSearch",                # → [sense:search_ddg/news/scholar/naver]
+        "WebSearch",                # → [sense:search]{source: ddg/naver/gnews/...}
         "WebFetch",                 # → [sense:crawl]
     ]
 
@@ -958,7 +958,7 @@ class ClaudeCodeProvider(BaseProvider):
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
         "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
         "`mcp__indiebizos__execute_ibl` 로 "
-        "`[self:read]`(파일)·`[sense:search_ddg/news/scholar/naver]`(웹검색)·`[sense:crawl]`(웹페이지)·"
+        "`[self:read]`(파일)·`[sense:search]`(웹검색 — source: ddg/naver/gnews)·`[sense:crawl]`(웹페이지)·"
         "`[self:grep]`(코드검색) 을 호출하라. "
         "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다."
     )

@@ -143,7 +143,7 @@ def _collect_economy() -> Dict:
 def _collect_news() -> List[str]:
     """주요 뉴스 헤드라인 수집 — 구글 뉴스 검색
 
-    search_gnews 핸들러 반환 형태:
+    search(source:gnews) 핸들러 반환 형태:
     {"success": True, "query": "...", "count": 10, "results": [{"title": "...", "source": "...", ...}]}
     """
     from world_pulse import _load_config
@@ -157,7 +157,7 @@ def _collect_news() -> List[str]:
     headlines = []
 
     try:
-        raw = _exec_tool("search_gnews", {"query": query, "count": count})
+        raw = _exec_tool("search", {"source": "gnews", "query": query, "count": count})
         if raw is not None:
             parsed = _parse_handler_result(raw)
             results = parsed.get("results", [])
@@ -177,7 +177,7 @@ def _collect_news() -> List[str]:
 def _collect_tech_news() -> List[str]:
     """기술 뉴스 수집
 
-    ddgs_search 핸들러 반환 형태:
+    search(기본 ddg) 핸들러 반환 형태:
     {"success": True, "query": "...", "count": 5, "results": [{"title": "...", "snippet": "...", "url": "..."}]}
     """
     from world_pulse import _load_config
@@ -191,7 +191,7 @@ def _collect_tech_news() -> List[str]:
     headlines = []
 
     try:
-        raw = _exec_tool("ddgs_search", {"query": query, "count": count})
+        raw = _exec_tool("search", {"query": query, "count": count})
         if raw is not None:
             parsed = _parse_handler_result(raw)
             results = parsed.get("results", [])

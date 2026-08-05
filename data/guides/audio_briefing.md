@@ -18,7 +18,7 @@
 [sense:weather]{city: "청주"}
 [sense:stock]{op: "quote", ticker: "^KS11"}          # 코스피 종합지수
 [sense:stock]{op: "quote", ticker: "102110"}          # TIGER 200 ETF
-[sense:search_gnews]{headlines: true, curate: 6}      # 오늘의 핫뉴스
+[sense:search]{source: "gnews", headlines: true, curate: 6}      # 오늘의 핫뉴스
 ```
 (도시는 사용자 프로필 지역, 없으면 청주. 증시는 등락률 위주 — 절대값은 참고.)
 

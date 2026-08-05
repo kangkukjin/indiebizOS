@@ -323,7 +323,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
             </p>
             <div className="bg-white p-2 rounded mt-2 font-mono text-sm text-gray-700">
               [node:action]{'{'}params{'}'} &nbsp;예){' '}
-              [sense:search_ddg]{'{'}query: "AI 뉴스"{'}'}
+              [sense:search]{'{'}query: "AI 뉴스"{'}'}
             </div>
           </div>
 

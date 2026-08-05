@@ -47,7 +47,7 @@ see_also: [vision.md, architecture.md, ibl.md, memory.md, packages.md]
 세 표면이 무엇을 하든, 밑바닥에서는 전부 **하나의 문법**으로 번역된다:
 
 ```
-[node:action]{params}      예) [sense:search_ddg]{query: "AI 뉴스"}
+[node:action]{params}      예) [sense:search]{query: "AI 뉴스"}
 ```
 
 - **6개 노드** = 에이전트가 세계와 맺는 관계: `sense`(지각) · `self`(내 자원) · `limbs`(장치·신체) · `others`(소통) · `engines`(생성) · `table`(통화 변환 문법)

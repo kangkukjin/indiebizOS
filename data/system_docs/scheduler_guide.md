@@ -89,7 +89,7 @@ action_params:
 파이프라인 연산자도 지원:
 ```json
 {
-  "pipeline": "[sense:search_ddg]{query: 'AI 뉴스'} >> [self:write]{path: 'news.md'}"
+  "pipeline": "[sense:search]{query: 'AI 뉴스'} >> [self:write]{path: 'news.md'}"
 }
 ```
 
@@ -346,7 +346,7 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 ```
 [self:schedule]{at: "09:00",
   target_project_id: "투자", target_agent_id: "analyst",
-  pipeline: "[sense:search_ddg]{query: '오늘 뉴스'}"}
+  pipeline: "[sense:search]{query: '오늘 뉴스'}"}
 ```
 
 - `target_project_id`/`target_agent_id` 지정 시 해당 에이전트가 owner

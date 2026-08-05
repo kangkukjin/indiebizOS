@@ -337,7 +337,7 @@ if EXEMPT:
 
 # ── §1C 골든 파이프 (문법+통화 흐름) ──
 PIPES = [
-  ("naver>>filter>>take", '[sense:search_naver]{query: "AI"} >> [table:filter]{where: "title != "} >> [table:take]{n: 3}', "items"),
+  ("naver>>filter>>take", '[sense:search]{source: "naver", query: "AI"} >> [table:filter]{where: "title != "} >> [table:take]{n: 3}', "items"),
   ("world_bank>>chart",   '[sense:world_bank]{indicator: "인구", country: "한국"} >> [table:chart]{chart_type: "line"}', "chart"),
   ("paper>>take>>document",'[sense:paper]{query: "transformer"} >> [table:take]{n: 5} >> [table:document]{format: "html"}', "doc"),
   ("legal>>dedup>>take",  '[sense:legal]{query: "도로교통법"} >> [table:dedup]{} >> [table:take]{n: 3}', "items"),
@@ -428,12 +428,12 @@ def _op_json_string_failure(d):
 
 OPERATORS = [
   ("JSON문자열 실패감지", '[table:document]{} >> [table:take]{n: 1}', _op_json_string_failure),
-  ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search_naver]{query: "AI"}', _op_seq_continues),
-  ("; 경계=prev 단절",    '[sense:search_naver]{query: "AI"} ; [table:take]{n: 3}', _op_seq_boundary_isolates),
+  ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search]{source: "naver", query: "AI"}', _op_seq_continues),
+  ("; 경계=prev 단절",    '[sense:search]{source: "naver", query: "AI"} ; [table:take]{n: 3}', _op_seq_boundary_isolates),
   (">> 실패시 중단(회귀)", '[self:read]{path: "__없는파일__.md"} >> [table:take]{n: 1}', _op_pipe_still_stops),
-  ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search_naver]{query: "AI"}', _op_fallback_string_err),
-  ("?? 성공→단축평가",   '[sense:search_naver]{query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),
-  ("& 병렬 합류",        '[sense:search_naver]{query: "AI"} & [sense:search_ddg]{query: "AI"} >> [table:merge]{by: "title"}', _op_parallel_merge),
+  ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search]{source: "naver", query: "AI"}', _op_fallback_string_err),
+  ("?? 성공→단축평가",   '[sense:search]{source: "naver", query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),
+  ("& 병렬 합류",        '[sense:search]{source: "naver", query: "AI"} & [sense:search]{query: "AI"} >> [table:merge]{by: "title"}', _op_parallel_merge),
 ]
 print("\n" + "="*72); print("§1C-2 연산자 (?? · & — 동작 단언)"); print("="*72)
 op_pass = 0

@@ -56,8 +56,8 @@ def gen(code, intents):
                 f"{q} 어떻게 해?", f"나 {q} 하고 싶은데", f"{q} 되나?"
             ]
 
-    # ---- sense:search / search_gnews ----
-    elif a in ("sense:search", "sense:search_gnews"):
+    # ---- sense:search ----
+    elif a == "sense:search":
         q = p(code, "query")
         if q:
             results += [

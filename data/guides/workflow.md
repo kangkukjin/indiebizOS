@@ -74,14 +74,14 @@ WRONG: [engines:newspaper]{keywords: "AI"} >> [limbs:os_open]{path: $prev.file}
 각 브랜치에 **90초 타임아웃**이 적용됨 — 한 브랜치가 멈춰도 나머지 결과는 정상 수집됨.
 
 ```
-[sense:search_gnews]{query: "AI", count: 7} & [sense:search_gnews]{query: "경제", count: 7}
+[sense:search]{source: "gnews", query: "AI", count: 7} & [sense:search]{source: "gnews", query: "경제", count: 7}
 ```
 
 ### ?? (폴백)
 앞의 step이 실패하면 뒤의 step을 실행.
 
 ```
-[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL stock price"}
+[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL stock price"}
 ```
 
 ### 타임아웃

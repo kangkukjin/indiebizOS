@@ -11,7 +11,7 @@ IBL 코드 텍스트를 파싱하여 실행 가능한 step 리스트로 변환�
     [sense:web_search]{query: "AI 뉴스"} >> [self:file]{path: "결과.md"}
 
     # 병렬 실행 (& 로 연결, 동시 실행)
-    [sense:web_search]{query: "AI"} & [sense:search_gnews]{query: "부동산"}
+    [sense:web_search]{query: "AI"} & [sense:search]{source: "gnews", query: "부동산"}
 
     # Fallback (?? 로 연결, 실패 시 대체)
     [sense:web_search]{query: "main"} ?? [sense:crawl]{url: "backup"}
@@ -590,7 +590,7 @@ def _desugar_pipe_sugar(text: str) -> str:
         if not verb:
             raise IBLSyntaxError(
                 f"알 수 없는 파이프 연산자 '| {kw}'. 지원: where/sort/take/select/dedup. "
-                "예: [sense:search_ddg]{query: \"X\"} | where: \"전세\" | sort: price desc | take: 5"
+                "예: [sense:search]{query: \"X\"} | where: \"전세\" | sort: price desc | take: 5"
             )
         out.append(">> " + _pipe_block(verb, val) + tail)
     return " ".join(out)
@@ -869,14 +869,14 @@ if __name__ == "__main__":
     print("\n--- 병렬 & Fallback Tests ---")
 
     # 11. 병렬 실행 (&)
-    p11 = parse('[sense:web_search]{query: "AI"} & [sense:search_gnews]{query: "부동산"}')
+    p11 = parse('[sense:web_search]{query: "AI"} & [sense:search]{source: "gnews", query: "부동산"}')
     print(f"11. 병렬: {p11}")
     assert len(p11) == 1
     assert p11[0]["_parallel"] == True
     assert len(p11[0]["branches"]) == 2
     assert p11[0]["branches"][0]["_node"] == "sense"
     assert p11[0]["branches"][0]["action"] == "web_search"
-    assert p11[0]["branches"][1]["action"] == "search_gnews"
+    assert p11[0]["branches"][1]["action"] == "search"
 
     # 12. 3개 병렬
     p12 = parse('[sense:web_search]{query: "A"} & [sense:web_search]{query: "B"} & [sense:web_search]{query: "C"}')
@@ -897,7 +897,7 @@ if __name__ == "__main__":
     assert len(p14[0]["_fallback_chain"]) == 3
 
     # 15. 병렬 >> 순차 혼합
-    p15 = parse('[sense:web_search]{query: "AI"} & [sense:search_gnews]{query: "부동산"} >> [self:file]{path: "결과.md"}')
+    p15 = parse('[sense:web_search]{query: "AI"} & [sense:search]{source: "gnews", query: "부동산"} >> [self:file]{path: "결과.md"}')
     print(f"15. 병렬+순차: {len(p15)} steps")
     assert len(p15) == 2
     assert p15[0]["_parallel"] == True
@@ -985,7 +985,7 @@ if __name__ == "__main__":
 
     # 24. D1: & 와 ?? 혼용 → 명시 파스 에러 (예전엔 c:d 가 조용히 소실)
     try:
-        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search_gnews]{query: "c"}')
+        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search]{source: "gnews", query: "c"}')
         assert False, "혼용은 IBLSyntaxError 여야 함"
     except IBLSyntaxError as e:
         print(f"24. D1 혼용 거부: {str(e).splitlines()[0]}")

@@ -47,8 +47,7 @@ BASELINE_PARAMS = {
     "sense:reverse_geocode": {"lon"}, "sense:search_shopping": {"display"},
     "sense:paper": {"max_results"}, "sense:researcher": {"max_results"},
     "sense:entity": {"max_results"}, "sense:search_books": {"max_results"},
-    "sense:search_ddg": {"count"}, "sense:search_gnews": {"count"},
-    "sense:search_hn": {"count"}, "sense:search_naver": {"display"},
+    "sense:search": {"count"},   # 2026-08-05 검색 통합 — 구 5액션(count/display/page_size)의 면제 이주(display/page_size 는 aliases 로 흡수)
     "sense:search_youtube": {"count"}, "self:blog": {"count"}, "self:music": {"q"},
     "self:residual": {"q"}, "self:photo": {"q"},
     # search_term 은 구 fs_query 의 면제를 흡수 이주 (2026-08-05 어휘 압축 — 신규 아님)

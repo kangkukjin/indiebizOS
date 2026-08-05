@@ -65,10 +65,10 @@
 ### 2-1. 투자·경제 섹션 조사
 
 사용할 IBL 검색 액션:
-- `[sense:search_gnews]{query: "AI 투자"}` — 한국어 뉴스 (Google News)
-- `[sense:search_gnews]{query: "AI investment funding"}` — 영어 뉴스
-- `[sense:search_naver]{query: "AI 반도체 투자", type: "news"}` — 한국 출처 강화
-- `[sense:search_ddg]{query: "AI chip market Nvidia earnings"}` — 글로벌 웹
+- `[sense:search]{source: "gnews", query: "AI 투자"}` — 한국어 뉴스 (Google News)
+- `[sense:search]{source: "gnews", query: "AI investment funding"}` — 영어 뉴스
+- `[sense:search]{source: "naver", query: "AI 반도체 투자", type: "news"}` — 한국 출처 강화
+- `[sense:search]{query: "AI chip market Nvidia earnings"}` — 글로벌 웹
 - 필요 시 종목 수치 확인: `[sense:stock]{op: "quote", ticker: "NVDA"}`, `[sense:stock]{op: "news", ...}`
 - 핵심 기사는 스니펫에 그치지 말고 `[sense:crawl]{url: "..."}`로 원문을 확인한다.
 
@@ -79,8 +79,8 @@
 ### 2-2. 기술·연구 동향 섹션 조사
 
 사용할 IBL 검색 액션:
-- `[sense:search_gnews]{query: "AI 신모델 출시"}` / `[sense:search_gnews]{query: "AI model release"}`
-- `[sense:search_ddg]{query: "new LLM benchmark state of the art"}` — 영어 웹
+- `[sense:search]{source: "gnews", query: "AI 신모델 출시"}` / `[sense:search]{source: "gnews", query: "AI model release"}`
+- `[sense:search]{query: "new LLM benchmark state of the art"}` — 영어 웹
 - `[sense:paper]{op: "search", query: "large language model", source: "arxiv"}` — 최신 논문
 - 중요한 논문/발표는 `[sense:crawl]{url: "..."}`로 원문 확인.
 
@@ -91,9 +91,9 @@
 사람들이 AI를 **실제로 써서** 새로운 일을 해낸 사례를 찾는다. 모델·자금 뉴스가 아니라, AI가 현실에서 무엇을 가능하게 했는가에 초점을 둔다.
 
 사용할 IBL 검색 액션:
-- `[sense:search_gnews]{query: "AI 활용 사례"}` / `[sense:search_gnews]{query: "how people use AI 2026"}`
-- `[sense:search_ddg]{query: "impressive AI use case real world 2026"}` — 영어 웹
-- `[sense:search_naver]{query: "AI로 만든", type: "blog"}` — 개인·현장의 실사용담
+- `[sense:search]{source: "gnews", query: "AI 활용 사례"}` / `[sense:search]{source: "gnews", query: "how people use AI 2026"}`
+- `[sense:search]{query: "impressive AI use case real world 2026"}` — 영어 웹
+- `[sense:search]{source: "naver", query: "AI로 만든", type: "blog"}` — 개인·현장의 실사용담
 - 인상적인 사례는 스니펫에 그치지 말고 `[sense:crawl]{url: "..."}`로 원문을 확인한다.
 
 조사 대상 예: 과학·의료(신약·진단·발견), 창작(영상·음악·코드·디자인), 산업·업무 자동화, 교육, 행정·공공 서비스, 개인의 기발한 활용 — 분야는 가리지 않는다.
@@ -113,9 +113,9 @@
 
 **(A) Reddit — 수요 측 tail (반드시 본문까지 크롤)**
 
-`[sense:search_ddg]`로 `site:reddit.com`을 걸어 여러 각도로 병렬 검색한다:
+`[sense:search]`로 `site:reddit.com`을 걸어 여러 각도로 병렬 검색한다:
 ```
-[sense:search_ddg]{query: "site:reddit.com unexpected ways I use ChatGPT"} & [sense:search_ddg]{query: "site:reddit.com what do you actually use AI for daily"} & [sense:search_ddg]{query: "site:reddit.com r/LocalLLaMA what are you actually using local models for"}
+[sense:search]{query: "site:reddit.com unexpected ways I use ChatGPT"} & [sense:search]{query: "site:reddit.com what do you actually use AI for daily"} & [sense:search]{query: "site:reddit.com r/LocalLLaMA what are you actually using local models for"}
 ```
 - ⚠️ **스니펫에서 멈추지 말 것.** 검색 결과 제목·스니펫 층은 압도적으로 뻔하다(요약·코딩·글쓰기 + "17 ways…" 낚시성 리스티클). **진짜 tail은 댓글 본문에만 있다** — 유망한 스레드 1~2개를 반드시 `[sense:crawl]{url: "..."}`로 열어 개별 댓글을 읽는다. (실측: 한 스레드 본문에서 희귀 이명 진단·수술 소견서 실시간 해독·회의용 대화 결정트리·PC 진단 집사 등 뉴스엔 안 나오는 사례가 나왔다.)
 - 레딧은 크롤러 차단이 있어 결과가 성기고, 걸리는 스레드가 **1년 전 아카이브**인 경우가 많다 → §2-5 신선도 규칙대로 오래된 스레드는 NEW로 올리지 않는다(배경/맥락으로만).
@@ -145,7 +145,7 @@ run_command(cmd: 'curl -s "https://api.github.com/search/repositories?q=topic:ai
 
 ### 2-5. 자료 신선도(시점) 검증 (필수)
 
-이 보고서의 생명은 **최신성**이다. 그런데 `search_gnews`·`search_ddg`는 발행일과 무관하게 **몇 달~몇 년 전 기사도 섞어** 반환한다. 시점을 검증하지 않으면 낡은 사건이 "오늘의 동향(NEW)"으로 둔갑한다(실제로 첫 보고서에서 6개월 전 'Dec 2025 AI주 급락'이 NEW 항목으로 들어가는 사고가 있었다).
+이 보고서의 생명은 **최신성**이다. 그런데 `search`(gnews/ddg)는 발행일과 무관하게 **몇 달~몇 년 전 기사도 섞어** 반환한다. 시점을 검증하지 않으면 낡은 사건이 "오늘의 동향(NEW)"으로 둔갑한다(실제로 첫 보고서에서 6개월 전 'Dec 2025 AI주 급락'이 NEW 항목으로 들어가는 사고가 있었다).
 
 - **각 자료의 발행 시점을 반드시 확인한다.** 검색 결과 제목/스니펫에 날짜가 없으면 `[sense:crawl]`로 원문 발행일을 확인하고, 끝내 확인 불가하면 "시점 미상"으로 표시하거나 제외한다.
 - **"NEW"·"현재 동향"으로 올릴 자료는 보고 시점(오늘) 기준 대략 최근 1~2주 이내 사건으로 제한**한다. 그보다 오래된 자료는 (a) 최신 흐름을 설명하는 배경 맥락으로만 한두 줄 쓰거나 (b) 제외한다 — 결코 NEW 라벨을 붙이지 않는다.
@@ -154,7 +154,7 @@ run_command(cmd: 'curl -s "https://api.github.com/search/repositories?q=topic:ai
 
 > ⚠️ **NEW 라벨 하드룰 (재량 없음).** 위 자가 점검이 AI의 눈에만 의존하면 시점 오염이 재발한다(첫 보고서 사고). 따라서 **`NEW`·`현재 동향` 라벨은 발행일이 `[sense:crawl]` 원문 또는 구조화 필드로 "오늘 기준 2주 이내"임이 확인된 항목에만 붙인다.** 날짜를 끝내 확인하지 못한 항목은 NEW가 아니라 `ONGOING`/배경 맥락으로 강등한다("시점 미상"을 NEW로 올리지 않는다).
 >
-> **시점이 생명인 항목은 구조화 날짜 소스를 1차 채널로.** 실적·논문·모델 릴리스처럼 발행일·발표일이 필드로 들어오는 액션 — `[sense:stock]{op: "news"}` / `[sense:stock]{op: "earnings"}` / `[sense:paper]{op: "search", source: "arxiv"}` — 을 먼저 써서 시점을 확정하고, 자유형 뉴스 검색(`search_gnews`·`search_ddg`, 발행일 불명확)은 살을 붙이는 보조로 쓴다. 이러면 날짜 미상 자료가 NEW로 새는 통로가 원천 차단된다.
+> **시점이 생명인 항목은 구조화 날짜 소스를 1차 채널로.** 실적·논문·모델 릴리스처럼 발행일·발표일이 필드로 들어오는 액션 — `[sense:stock]{op: "news"}` / `[sense:stock]{op: "earnings"}` / `[sense:paper]{op: "search", source: "arxiv"}` — 을 먼저 써서 시점을 확정하고, 자유형 뉴스 검색(`search` gnews/ddg, 발행일 불명확)은 살을 붙이는 보조로 쓴다. 이러면 날짜 미상 자료가 NEW로 새는 통로가 원천 차단된다.
 
 ---
 
@@ -258,7 +258,7 @@ run_command(cmd: 'curl -s "https://api.github.com/search/repositories?q=topic:ai
 
 §3-0 게이트는 **풀 리서치(투자·기술 각 3회+)를 마친 뒤** "쓸 날 아님"을 판정한다 — 한산한 날에도 매일 10여 회 검색을 태우고 대부분 한 줄 로그로 끝나, "변화 있는 날만 보고"라는 철학과 비용이 어긋난다. 이를 사후 판정에서 **사전 라우팅**으로 바꾼다:
 
-1. **1단(매일·저비용 스캔)**: `[sense:search_gnews]` 2~3회로 *직전 지켜볼 점 + 대표 키워드*만 훑어 **에스컬레이션 신호**(직전에 없던 새 줄거리/실질 진전의 낌새)가 있는지만 본다. 없으면 즉시 `_scan_log.md` 한 줄(§4-1)을 남기고 종료 — 풀 절차로 내려가지 않는다.
+1. **1단(매일·저비용 스캔)**: `[sense:search]{source: "gnews"}` 2~3회로 *직전 지켜볼 점 + 대표 키워드*만 훑어 **에스컬레이션 신호**(직전에 없던 새 줄거리/실질 진전의 낌새)가 있는지만 본다. 없으면 즉시 `_scan_log.md` 한 줄(§4-1)을 남기고 종료 — 풀 절차로 내려가지 않는다.
 2. **2단(신호 있는 날만)**: 그날에 한해 §2 전체 절차를 발동하고, 완료 시 `[self:notify_user]` 알림. 알림은 *전체 보고서를 쓴 날에만* 가므로(빈 날은 조용히 로그) 사용자 피로를 줄인다.
 
 이러면 '매일 점검'은 유지하되, 실제 리서치 비용은 변화가 있는 날에만 지불한다.

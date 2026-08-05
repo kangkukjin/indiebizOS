@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 6-Node 구조, 159 액션, 파서/엔진/라우팅
+scope: IBL 명세, 6-Node 구조, 155 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -106,8 +106,8 @@ IBL(실행 언어) 위에 표현을 맡는 언어가 두 부류 더 있고, 셋�
 - 잘 고른 소수 프리미티브 + 풍부한 조합 = **생성 문법**(무한). → 언어
 - 많은 프리미티브 + 빈약한 조합 = **납작한 룩업 테이블**(크지만 유한). → 사전
 
-IBL의 진짜 엔진은 159개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장) + 접근 + 가이드다.
-**159 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
+IBL의 진짜 엔진은 155개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장) + 접근 + 가이드다.
+**155 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
 
 ## 2. 그러나 파이썬(보편 언어)만으론 부족하다 — 최적점은 *움직인다*
 
@@ -219,12 +219,12 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 - **무절제한 단어 주조 = 언어 안의 도구 폭증.** 어휘는 작업보다 *느리게(sublinear)* 자라야 자산으로 남는다.
 - 규율은 *안 만드는 절제*만이 아니라 **조합/op-통합이 단어를 불필요하게 만들면 합치고 쳐내는 리팩토링.**
-- **증거: 332 → 199 → 144 → 111(→ 이후 141 → 157 → 162 → 163 → 159[2026-08-05 개념중복 압축 1단계: fs_query·self:agents·run_pipeline·image_critic·output op:file 흡수]).** op 어휘화 + 사용성 재감사 + 안드로이드 45액션→1액션 통합으로 *더 적은 단어 + 파라미터 분기*가 *더 많은 행동*을 표현했다. 언어가 작아지며 더 강해졌다. 111에서 163으로의 재증가는 폭증이 아니라 §3의 *접근 차원* 추가(비즈니스 도메인·메신저/커뮤니티·통화 변환자·국회도서관 인물/학위논문·공개 표면 가족[포털/공개파일/가족신문/게시판]·숙박/개체해소/중고·몸 부탁·USB 손발·내 음악 등 — 갖지 못한 키·하드웨어·몸·청중을 여는 어휘)다 — 규율은 단어 수의 단조 감소가 아니라 *작업보다 느린(sublinear)* 성장이다. ([architecture_ibl_op_vocabulary], [architecture_ibl_single_action_pattern])
+- **증거: 332 → 199 → 144 → 111(→ 이후 141 → 157 → 162 → 163 → 159[2026-08-05 개념중복 압축 1단계: fs_query·self:agents·run_pipeline·image_critic·output op:file 흡수] → 155[같은 날 2단계: 검색 5액션(ddg/naver/gnews/hn/guardian)→search{source} — web-kr 패키지 은퇴·guardian 은 study→web 이주]).** op 어휘화 + 사용성 재감사 + 안드로이드 45액션→1액션 통합으로 *더 적은 단어 + 파라미터 분기*가 *더 많은 행동*을 표현했다. 언어가 작아지며 더 강해졌다. 111에서 163으로의 재증가는 폭증이 아니라 §3의 *접근 차원* 추가(비즈니스 도메인·메신저/커뮤니티·통화 변환자·국회도서관 인물/학위논문·공개 표면 가족[포털/공개파일/가족신문/게시판]·숙박/개체해소/중고·몸 부탁·USB 손발·내 음악 등 — 갖지 못한 키·하드웨어·몸·청중을 여는 어휘)다 — 규율은 단어 수의 단조 감소가 아니라 *작업보다 느린(sublinear)* 성장이다. ([architecture_ibl_op_vocabulary], [architecture_ibl_single_action_pattern])
 
 ## 9. 왜 이게 indiebizOS에게만 가능한가 (해자)
 
 강력한 *최소* 어휘는 *하나의 작업 분포*에 최적화돼야 한다. 플랫폼 벤더는 못 한다:
-- **일반성**이 큐레이션(narrowing)을 금지 — 누구의 159개?
+- **일반성**이 큐레이션(narrowing)을 금지 — 누구의 155개?
 - **개방 세계**(MCP)가 닫힌 문법과 양립 불가 — 안 고르려고 만든 것.
 - **멀티테넌트**라 어휘와 짝지을 *단일 누적 기억*이 없음.
 - **락인 유인**이 깨끗한 *이식 가능* 언어와 반대.
@@ -248,11 +248,11 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ## 액션 카테고리
 
-총 159개 액션(sense 48, self 49, limbs 18, others 18, engines 13, table 13)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 155개 액션(sense 44, self 49, limbs 18, others 18, engines 13, table 13)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
-| `search` | 찾기 | `[sense:search_ddg]{query: "AI 뉴스"}` |
+| `search` | 찾기 | `[sense:search]{query: "AI 뉴스"}` |
 | `get` | 가져오기 | `[sense:stock]{op: "quote", ticker: "AAPL"}` |
 | `list` | 나열하기 | `[self:blog]{op: "posts"}` |
 | `create` | 만들기 | `[engines:slide_shadcn]{slides: [{layout: "hero", title: "발표자료"}]}` |
@@ -297,13 +297,13 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ### 핵심 노드 분류
 
-총 **159 액션** (2026-08-05 개념중복 압축 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).
+총 **155 액션** (2026-08-05 개념중복 압축 2단계: 검색 5액션[search_ddg/naver/gnews/hn/guardian]→`search{source}` 하나 — web-kr 패키지 은퇴[naver 흡수]·guardian 은 study→web 이주 → 159에서 155. 같은 날 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
 | `self` | 49 | 개인 도메인: 시스템 관리, 파일(읽기/쓰기/채우기), 트리거/스케줄, 목표/메모리/포식기억, 비즈니스(사업·아이템·문서·지침), 폰 동기화, 내 음악 라이브러리, USB 손발 발급, 웹앱 등기부, 워크플로우, 패키지·라이브러리 생애주기 | read, write, fill, file_find, storage, trigger, workflow, goal, memory, forage, residual, business, phone_sync, music, limb, webapp, package, install_lib |
 | `limbs` | 18 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 게스트 PC(USB 손발) + 미디어 재생 | browser, screen, android, phone, guestpc, music, radio, cctv, launch, os_open |
-| `sense` | 48 | 감각 확장: 외부 정보 수집(연구자·학술·부동산·숙박·중고·개체해소 포함) + 내부 데이터 관리 + 몸별 지표어 감각(알림·위치·마이크·카메라 — 몸마다 프로브, 없으면 정직하게 no_hardware) | search_naver, stock, travel, crawl, realty, stay, used, entity, weather, researcher, paper, phone, here, listen, see |
+| `sense` | 44 | 감각 확장: 외부 정보 수집(연구자·학술·부동산·숙박·중고·개체해소 포함) + 내부 데이터 관리 + 몸별 지표어 감각(알림·위치·마이크·카메라 — 몸마다 프로브, 없으면 정직하게 no_hardware) | search, stock, travel, crawl, realty, stay, used, entity, weather, researcher, paper, phone, here, listen, see |
 | `others` | 18 | 협업·통신·공개 표면: 에이전트 위임 + **이웃 몸에 자연어 부탁(ask)** + 메시지/커뮤니티 + 이웃 CRM + 남이 브라우저로 닿는 공개 웹 표면(포털·공개파일·가족신문·게시판·발행·팔로우) | delegate, ask, channel_send, channel_read, messages, feed, board, nostr, follow, auto_response, neighbor, contact, portal, showcase, family_news, bulletin, publish, agents |
 | `engines` | 13 | 순수 미디어 생성: 슬라이드·영상·이미지(생성 image_gemini·읽기/평가 image_read[op: read/critic])·아이콘·신문 발행·웹·웹컴포넌트·TTS. 통화 변환 문법은 `table` 노드로 분리(2026-06-30). | slide_shadcn, slide, image_gemini, icon, newspaper, image_read, html_video, remotion, web, web_site, web_component, tts, render_html |
 | `table` | 13 | 표·통화 변환 문법(관계대수 9 + emitter 4). engines에서 분리(2026-06-30) — 무거운 engines를 꺼도(노드 on/off) 가벼운 문법은 생존. | filter, sort, take, select, dedup, groupby, join, union, merge, chart, spreadsheet, document, structure |
@@ -366,15 +366,13 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `sense` | 43 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search_naver, search_gnews, stock, company, crawl, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
+| `sense` | 44 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
 
 구성: 외부 정보 수집(웹 API, 크롤링) 중심. 사진/블로그/건강 등 로컬 DB 조회는 self 노드로 이동(`[self:photo]`/`[self:blog]`/`[self:health]`).
 
 | 주요 액션 | 설명 | 예시 |
 |----------|------|------|
-| `search_ddg` | 웹 검색 (DuckDuckGo, 영어/글로벌에 적합) | `[sense:search_ddg]{query: "AI 뉴스"}` |
-| `search_naver` | 네이버 검색 (한국어 콘텐츠 압도적, 9개 도메인: webkr/news/blog/cafe/kin/book/encyc/doc/shop) | `[sense:search_naver]{query: "청주 맛집", type: "blog"}` |
-| `search_gnews` | 뉴스 검색 (Google News RSS) | `[sense:search_gnews]{keyword: "부동산"}` |
+| `search` | 통합 검색 — source: ddg(기본)/naver(한국어, type 도메인)/gnews(뉴스)/hn(Hacker News)/guardian(가디언) | `[sense:search]{source: "naver", query: "청주 맛집", type: "blog"}` |
 | `stock` | 주가·시세 (op 분기) | `[sense:stock]{op: "quote", ticker: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `company` | 기업 펀더멘털 (op 분기) | `[sense:company]{op: "profile", ticker: "삼성전자"}` |
@@ -424,16 +422,16 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 
 ```
 # 순차: 검색 → 저장 (검색 실패 시 저장 단계는 실행되지 않음)
-[sense:search_ddg]{query: "AI 뉴스"} >> [self:write]{path: "news.md"}
+[sense:search]{query: "AI 뉴스"} >> [self:write]{path: "news.md"}
 
 # 병렬: 두 검색 동시 실행
-[sense:search_ddg]{query: "AI"} & [sense:search_ddg]{query: "부동산"}
+[sense:search]{query: "AI"} & [sense:search]{query: "부동산"}
 
 # Fallback: 첫째 실패 시 둘째 시도
 [sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:stock]{op: "info", ticker: "AAPL"}
 
 # 혼합
-[sense:search_ddg]{query: "AI"} & [sense:search_ddg]{query: "부동산"} >> [self:write]{path: "briefing.md"}
+[sense:search]{query: "AI"} & [sense:search]{query: "부동산"} >> [self:write]{path: "briefing.md"}
 ```
 
 ### 통화와 변환자 (Currency & Transformers)
@@ -515,7 +513,7 @@ IBL 코드 내에서 액션의 실행 결과를 변수에 저장하고 이후 �
 
 ```
 # 검색 결과를 변수에 저장
-$result = [sense:search_ddg]{query: "AI 뉴스"}
+$result = [sense:search]{query: "AI 뉴스"}
 
 # 변수를 다음 액션에서 참조
 [self:write]{path: "news.md", content: $result}
@@ -555,7 +553,7 @@ $result = [sense:search_ddg]{query: "AI 뉴스"}
 ```yaml
 # data/workflows/news_briefing.yaml
 name: "뉴스 브리핑"
-pipeline: '[sense:search_ddg]{query: "AI 뉴스"} & [sense:search_ddg]{query: "부동산 뉴스"}'
+pipeline: '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"}'
 ```
 
 실행: `[self:workflow]{op: "run", name: "news_briefing"}`
@@ -661,7 +659,7 @@ self:
 
 ## 해석 순서
 
-에이전트가 `[sense:search_ddg]{query: "AI"}`을 호출하면:
+에이전트가 `[sense:search]{query: "AI"}`을 호출하면:
 
 1. **액션 매칭**: `sense.actions.web_search`가 있는가? → 있으면 실행
 2. **에러**: 없으면 사용 가능한 액션 목록 반환
@@ -1014,7 +1012,7 @@ Phase 19-22에서 점진적으로 노드를 통합했으며, Phase 25에서 최�
 
 ### IBL 진화 요약
 
-IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프로토콜 추상화(Phase 5-10), 노드 통합(Phase 17-25), verb 시스템 도입과 폐지(Phase 22-24), Goal/Time/Condition(Phase 26)을 거쳐 5-Node 체계로 발전했고, 이후 op 어휘화·사용성 재감사·어휘 정리·메신저/비즈니스 IBL화·neighbor 통합·폰 온디맨드 감각 삼각·통화 대수(engines 변환자→2026-06-30 table 노드 분리로 6-Node)·포식 기억(self:forage/residual)·국가학술정보(sense:researcher/paper)·능력 자기완결화(self:package)·공개 표면 가족(others: portal/showcase/family_news/bulletin)·몸 부탁(others:ask)·USB 손발(self:limb·limbs:guestpc)·신문 발행 결정화(engines:newspaper)·내 음악(self:music)·웹앱 등기부(self:webapp)·개념중복 압축 1단계(2026-08-05)로 현재 159 액션이 됐다. 핵심 설계 철학은 "AI가 작성하는 언어"이며, 문법 복잡도보다 표현력을 우선한다.
+IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프로토콜 추상화(Phase 5-10), 노드 통합(Phase 17-25), verb 시스템 도입과 폐지(Phase 22-24), Goal/Time/Condition(Phase 26)을 거쳐 5-Node 체계로 발전했고, 이후 op 어휘화·사용성 재감사·어휘 정리·메신저/비즈니스 IBL화·neighbor 통합·폰 온디맨드 감각 삼각·통화 대수(engines 변환자→2026-06-30 table 노드 분리로 6-Node)·포식 기억(self:forage/residual)·국가학술정보(sense:researcher/paper)·능력 자기완결화(self:package)·공개 표면 가족(others: portal/showcase/family_news/bulletin)·몸 부탁(others:ask)·USB 손발(self:limb·limbs:guestpc)·신문 발행 결정화(engines:newspaper)·내 음악(self:music)·웹앱 등기부(self:webapp)·개념중복 압축 1·2단계(2026-08-05 — 2단계=검색 통합 search{source})로 현재 155 액션이 됐다. 핵심 설계 철학은 "AI가 작성하는 언어"이며, 문법 복잡도보다 표현력을 우선한다.
 
 *Phase 20: filesystem→orchestrator, webdev+design→creator, photo+blog+memory+health→librarian 통합.*
 *Phase 21: finance+culture+study+legal+statistics+commerce+location+web(search/crawl/news)→informant 통합.*

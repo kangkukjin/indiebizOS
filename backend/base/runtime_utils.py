@@ -165,7 +165,7 @@ def get_node_cmd() -> str:
 def install_python_dependency(package: str, timeout: int = 300) -> dict:
     """런타임에 파이썬 라이브러리를 쓰기가능한 userData(pylibs)에 설치한다.
 
-    도구 의존성 누락([sense:search_ddg]의 ddgs 등)을 사용자 승낙 후 그 자리에서 채우기 위함.
+    도구 의존성 누락([sense:search]의 ddgs 등)을 사용자 승낙 후 그 자리에서 채우기 위함.
     - 번들 site-packages 는 읽기전용일 수 있어 --target userData/pylibs 로 설치(항상 쓰기가능).
       pylibs 는 setup_bundled_runtime_paths 가 sys.path 에 올려 두므로 설치 즉시 import 가능.
     - package 가 'playwright' 계열이면 chromium 브라우저 바이너리(playwright install chromium)도

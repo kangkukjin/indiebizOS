@@ -312,7 +312,7 @@ def _route_handler(mapped_tool: str, params: dict,
     except ToolContextError as e:
         return {"error": f"ToolContext 생성 실패: {e}"}
     # ★침묵 실패 방지: 핸들러 실행 예외(특히 의존성 미설치 ModuleNotFoundError)를 여기서
-    #   잡아 사용자에게 보이는 명확한 에러로 바꾼다. 예전엔 [sense:search_ddg] 등이 없는
+    #   잡아 사용자에게 보이는 명확한 에러로 바꾼다. 예전엔 [sense:search] 등이 없는
     #   라이브러리(ddgs)를 top-level import 하다 예외가 조용히 전파돼 빈 응답으로 뭉개졌다
     #   (browser-action 은 자기 핸들러에서 감싸 명확했지만 나머지는 아니었다 — 불일관 해소).
     try:

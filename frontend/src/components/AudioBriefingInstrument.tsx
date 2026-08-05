@@ -3,7 +3,7 @@
  *
  * 신문 계기(NewspaperInstrument)와 같은 급 — 디자인은 이 컴포넌트에 있고, 내용은
  * 기존 어휘 조합으로 채운다: 날씨([sense:weather]) + 코스피·TIGER200 시세([sense:stock])
- * + 오늘의 핫뉴스([sense:search_gnews], 신문과 동일한 curate 방식) → 뉴스는 경량 AI([self:ask])가
+ * + 오늘의 핫뉴스([sense:search]{source: "gnews"}, 신문과 동일한 curate 방식) → 뉴스는 경량 AI([self:ask])가
  * 하나의 자연스러운 소개 멘트로 엮고 → 전체 스크립트를 TTS([engines:tts])로 mp3화.
  * 앱 = 어휘 조합 + 약간의 코딩.
  *
@@ -139,7 +139,7 @@ export function AudioBriefingInstrument() {
         iblExecuteApp(`[sense:weather]{city: ${JSON.stringify(city)}}`).catch(() => null),
         iblExecuteApp(`[sense:stock]{op: "quote", ticker: "^KS11"}`).catch(() => null),
         iblExecuteApp(`[sense:stock]{op: "quote", ticker: "102110"}`).catch(() => null),
-        iblExecuteApp(`[sense:search_gnews]{headlines: true, curate: 6}`).catch(() => null),
+        iblExecuteApp(`[sense:search]{source: "gnews", headlines: true, curate: 6}`).catch(() => null),
       ]);
 
       const weather = (weatherRes as WeatherResp | null)?.current;

@@ -1970,7 +1970,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
-        description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+        description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
         target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
         target_key: op
         group: research
@@ -1997,7 +1997,7 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
-        description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
+        description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search(웹 검색).
         target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
         target_key: op
         group: research
@@ -2022,7 +2022,7 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:entity]{query: "강국진"}'
-        description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search_ddg, 국내 연구자는 researcher.
+        description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search(웹 검색), 국내 연구자는 researcher.
         target_description: 'op로 분기 (기본 resolve).
 
           - resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 ''강국진''=여러 인물). QID는 개체를 못박는 신원자.
@@ -2060,16 +2060,6 @@ nodes:
         router: handler
         tool: fetch_pew_research
         implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
-      search_guardian:
-        returns: items
-        fixture: '[sense:search_guardian]{query: "climate"}'
-        description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
-        group: research
-        target_description: 검색어 또는 키워드 (영어).
-        router: handler
-        tool: search_guardian
-        implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(목록을 문자열로 파괴하던 결함 제거).
-        target_key: query
       world_bank:
         returns: items
         fixture: '[sense:world_bank]{indicator: "GDP", country: "한국"}'
@@ -2090,15 +2080,19 @@ nodes:
         tool: search_books
         implementation: Google Books API로 글로벌 도서 검색 (영어/다국어). 한국 도서는 sense:book 사용.
         target_key: query
-      search_ddg:
+      search:
+        aliases:
+          count:
+          - display
+          - page_size
         returns: items
-        fixture: '[sense:search_ddg]{query: "climate policy"}'
-        description: 웹 검색 (DuckDuckGo). 영어/글로벌 쿼리에 적합. 한국어 검색은 search_naver 우선. 뉴스는 search_gnews, 유튜브는 search_youtube, 논문은 search_openalex를 각각 사용.
+        fixture: '[sense:search]{query: "climate policy"}'
+        description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어 (영어 권장). region/safesearch 옵션 가능.
+        target_description: 검색어. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·queries(배치 팬아웃)·curate(경량 편집장) 지원.
         router: handler
-        tool: ddgs_search
-        implementation: DuckDuckGo ddgs 라이브러리로 웹 검색. 쿼리 언어 자동 감지(영어→글로벌, 한국어→한국).
+        tool: search
+        implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
         returns: items
@@ -2110,26 +2104,6 @@ nodes:
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
         target_key: url
-      search_gnews:
-        returns: items
-        fixture: '[sense:search_gnews]{query: "경제"}'
-        description: 뉴스만 검색 (Google News). 신문 생성, 뉴스 모니터링 등 뉴스 전용 작업에 사용.
-        group: research
-        target_description: 뉴스 검색어. 언어 자동 감지 — 한국어는 한국 뉴스, 영어는 글로벌 뉴스.
-        router: handler
-        tool: search_gnews
-        implementation: Google News RSS 피드를 feedparser로 파싱. 쿼리 언어 자동 감지.
-        target_key: query
-      search_hn:
-        returns: items
-        fixture: '[sense:search_hn]{query: "AI"}'
-        description: Hacker News(Algolia) 기술·스타트업 포스팅 검색. gnews 형제 소스 — HN 전용 신문 판용. curate 시 편집장·관점 필터 공유, points(▲)=hot 신호.
-        group: research
-        target_description: 검색어(영어 권장). headlines:true 면 HN 프론트페이지.
-        router: handler
-        tool: search_hn
-        implementation: Hacker News Algolia API(hn.algolia.com). story 태그 검색 + front_page. 키 불요. items 통화(points/num_comments 포함).
-        target_key: query
       collect:
         aliases:
           site_id:
@@ -2140,7 +2114,7 @@ nodes:
         side_effect: true
         fixture: '[sense:collect]{op: "query", action: "recent"}'
         runs_on: pc_only
-        description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search_ddg.
+        description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search.
         target_description: 'op로 분기 (기본 run).
 
           - run: source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 등록된 프로필 목록.
@@ -2168,16 +2142,6 @@ nodes:
         - 크롤링
         - 사이트프로필
         - 축적데이터
-      search_naver:
-        returns: items
-        fixture: '[sense:search_naver]{query: "인공지능"}'
-        description: 네이버 검색 API — 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/백과)에 압도적. type 으로 도메인 선택(기본 webkr). 한국 출처 뉴스는 이쪽(type='news'), 글로벌 뉴스는 search_gnews. 도서는 book/search_books.
-        group: research
-        target_description: 검색어. type 옵션으로 도메인 선택 (webkr/news/blog/cafe/kin/encyc, 기본 webkr).
-        router: handler
-        tool: naver_search
-        implementation: 네이버 개발자센터 검색 API. 같은 NAVER_CLIENT_ID/SECRET 한 쌍으로 6개 도메인(webkr/news/blog/cafe/kin/encyc) 호출. 무료 일 25k 쿼리. ★book/doc/shop 은 2026-08 네이버 은퇴(SE05) — 핸들러가 대체 안내 반환.
-        target_key: query
       video:
         returns: scalar
         side_effect: true
@@ -6389,7 +6353,7 @@ nodes:
         target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.
         router: handler
         tool: publish_newspaper
-        implementation: tool_newspaper.py — handler 의 search_gnews 배치 경로(RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
+        implementation: tool_newspaper.py — handler 의 gnews 배치 경로([sense:search]{source:"gnews"} 의 queries 팬아웃 — RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
         keywords:
         - 신문
         - 신문 발행
@@ -6652,7 +6616,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)
-        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 table:union. 예: [sense:search_gnews]{...} & [sense:search_ddg]{...} >> [table:merge]{by: title}.'
+        target_description: 'by(선택, 중복 제거 키 필드; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 표형 결합은 table:union. 예: [sense:search]{source: "gnews", ...} & [sense:search]{...} >> [table:merge]{by: title}.'
         group: transform
         router: handler
         tool: data_merge

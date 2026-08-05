@@ -191,11 +191,11 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                     "type": "string",
                     "description": (
                         "IBL 코드. "
-                        '단일: [sense:search_ddg]{query: "AI 뉴스"} / '
+                        '단일: [sense:search]{query: "AI 뉴스"} / '
                         '파라미터: [sense:stock]{op: "investors", market: "STK", start_date: "2026-01"} / '
-                        '파이프라인: [sense:search_ddg]{query: "AI"} >> [self:write]{path: "result.md"} / '
-                        '병렬: [sense:search_ddg]{query: "AI"} & [sense:search_gnews]{query: "tech"} / '
-                        '폴백: [sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search_ddg]{query: "AAPL stock"}'
+                        '파이프라인: [sense:search]{query: "AI"} >> [self:write]{path: "result.md"} / '
+                        '병렬: [sense:search]{query: "AI"} & [sense:search]{source: "gnews", query: "tech"} / '
+                        '폴백: [sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL stock"}'
                     )
                 },
                 "files": {

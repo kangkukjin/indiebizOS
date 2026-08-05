@@ -244,8 +244,7 @@
     },
     "study": {
       "needs_key": [
-        "GOOGLE_BOOKS_API_KEY",
-        "GUARDIAN_API_KEY"
+        "GOOGLE_BOOKS_API_KEY"
       ],
       "weight": "light",
       "locale": "universal"
@@ -270,9 +269,13 @@
       "locale": "universal"
     },
     "web": {
-      "needs_key": [],
+      "needs_key": [
+        "GUARDIAN_API_KEY",
+        "NAVER_CLIENT_ID",
+        "NAVER_CLIENT_SECRET"
+      ],
       "weight": "heavy",
-      "locale": "universal"
+      "locale": "kr"
     },
     "web-builder": {
       "needs_key": [
@@ -285,14 +288,6 @@
       "needs_key": [],
       "weight": "light",
       "locale": "universal"
-    },
-    "web-kr": {
-      "needs_key": [
-        "NAVER_CLIENT_ID",
-        "NAVER_CLIENT_SECRET"
-      ],
-      "weight": "light",
-      "locale": "kr"
     },
     "websocket-chat": {
       "needs_key": [],
@@ -408,13 +403,9 @@
     "sense:researcher": "study",
     "sense:restaurant": "location-services",
     "sense:reverse_geocode": "location-services",
+    "sense:search": "web",
     "sense:search_books": "study",
-    "sense:search_ddg": "web",
-    "sense:search_gnews": "web",
-    "sense:search_guardian": "study",
-    "sense:search_hn": "web",
     "sense:search_local": "local-info",
-    "sense:search_naver": "web-kr",
     "sense:search_shopping": "shopping-assistant",
     "sense:search_youtube": "youtube",
     "sense:see": "android",

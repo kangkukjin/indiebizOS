@@ -10,20 +10,47 @@
 
 ## ▶ START HERE — 현재 상태와 다음 단계
 
-**완료 (0)(1) · 다음 = (2) 검색 통합.**
+**완료 (0)(1)(2)(4) · 다음 = (3) 코퍼스 교정(84 충돌쌍) 또는 (5) 압축 상설 기관.**
 
 | 단계 | 상태 | 커밋 |
 |---|---|---|
 | (0) 사용 계수 배선 (은퇴 판단의 눈) | ✅ | `09cd5b8` |
 | (1) 싼 병합 5건 (163→**159 액션**) | ✅ | `80a3392` |
-| (2) 검색 통합 `[sense:search]{source}` | ⏳ 다음 세션 | — |
+| (2) 검색 통합 `[sense:search]{source}` (159→**155**) | ✅ 2026-08-05 | 아래 §3 실행 기록 |
 | (3) 코퍼스 교정 (동음이의 충돌쌍) | ⏳ | — |
-| (4) M4 로컬 재학습 1회 + 연상 probe | ⏳ (2) 직후 권장 | — |
+| (4) M4 로컬 재학습 1회 + 연상 probe | (2)와 같은 세션에서 실행 | — |
 | (5) 압축 상설 기관 (--check 경고 + 주간 감사) | ⏳ | — |
 | (6) 보류 3건 → 설계 태스크 | ⏳ | — |
 
-백엔드 미기동 상태에서 작업했다 — **다음 Electron/backend 기동 때 새 어휘가 실린다**
-(별도 재시작 절차 불요, 이미 커밋된 상태가 곧 라이브 코드).
+(2)는 백엔드 기동 중에 실행 — `/packages/reload` 로 라이브 반영·5 source 종단 검증 완료.
+
+### (2) 실행 기록 (2026-08-05)
+
+- **소속 실측이 핸드오프 가정과 달랐다**: ddg/gnews/hn=web, naver=**web-kr**, guardian=**study**.
+  → 전부 **web 으로 흡수**: `tool_naver_search.py` 이동+**web-kr 패키지 은퇴**(폴더 삭제,
+  core_manifest·PHONE_VERIFIED 에서 제거), `_search_guardian` 구현을 study→web 이주
+  (web 의 `_guardian_items` importlib 차용도 로컬 호출로 단순화 — 교차 패키지 import 소멸).
+- **★설계 번복 기록 (web/web-kr 로케일 분리)**: web-kr 분리 사유였던 "universal 로케일에서
+  네이버(kr·키 필요)만 분리 관리"는 source 축과 양립 불가 → realty 선례(한 패키지 안에
+  키 필요/불요 소스 혼재, 키 없으면 안내 오류)로 흡수를 택했다. 키 없는 설치에서
+  `source:naver` 는 명시 오류("NAVER_CLIENT_ID 미설정")로 정직하게 떨어진다.
+- **구현 형태**: 액션 `search`(tool: `search`), source 디스패치는 handler 의 `search` 갈래가
+  내부 tool 이름(ddgs_search/naver_search/search_gnews/search_hn/search_guardian)으로
+  재귀 위임 — 검증된 gnews/hn 배치 경로(신문 발행 shim 포함)는 무이동. `aliases:
+  count: [display, page_size]` 로 구 파라미터 흡수, param-canon 면제도 `sense:search`
+  로 이주.
+- **★load_tool_handler 는 tool.json 레지스트리 기반** — world_pulse_collectors 가
+  `_exec_tool("search_gnews")` 로 뉴스를 수집하고 있었고 병합으로 **조용히 죽을 뻔**
+  (None 반환·빈 헤드라인). `_exec_tool("search", {source:...})` 로 이관. 교훈: 어휘 병합 시
+  IBL 코드 문자열뿐 아니라 **tool 이름 직접 호출**(`_exec_tool`/`load_tool_handler`)도 grep.
+- **ibl_health_check 픽스처 6건**·NewspaperInstrument(gnews|hn source 축)·
+  AudioBriefing·12_ibl_only·가이드/시스템문서/프롬프트 전부 이관. inventory.md 재생성.
+- **코퍼스**: `scripts/migrate_vocab_search_merge.py`(★backend/ 아닌 scripts/ — 폰 번들
+  스캔 밖이라 force_exclude 불요) 150행+distilled 89건 이관, hn(0행)·guardian(5행) 빈약해
+  **수동 시드 10용례**(_load_model_sync 선행) → 3,020 용례·벡터 누락 0. probe: hn/naver/
+  gnews 직행, "가디언 기사"·"웹 검색해줘"는 재학습 대기(구모델이 search 어휘 미학습).
+- 검증: build --check 전 가드·param_canon·층 가드·tsc·parser 자기시험·라이브 5 source
+  +배치+alias+파이프(&·>>·merge)+구이름 명시오류.
 
 ---
 

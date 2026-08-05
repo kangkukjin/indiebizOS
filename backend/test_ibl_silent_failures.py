@@ -25,7 +25,7 @@ from ibl_parser import parse, parse_step, IBLSyntaxError  # noqa: E402
 def test_d1_mixed_operators_rejected():
     """D1: '[a]{} ?? [b]{} & [c]{}' 는 예전에 b 가 조용히 사라졌다 → 이제 파스 에러."""
     try:
-        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search_gnews]{query: "c"}')
+        parse('[sense:web_search]{query: "a"} ?? [sense:crawl]{url: "b"} & [sense:search]{source: "gnews", query: "c"}')
         raise AssertionError("혼용은 IBLSyntaxError 여야 함")
     except IBLSyntaxError as e:
         assert "섞을 수 없습니다" in str(e)

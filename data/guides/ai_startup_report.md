@@ -71,10 +71,10 @@ AI를 써서 **출품·지원할 수 있는 대회·공모전·그랜트**를 �
 
 사용할 IBL 검색 액션:
 - `[sense:contest]{query: "AI"}` — Kaggle 국제 AI/데이터 경진대회(상금·마감일·주최 포함). 키워드 없이 호출하면 최신 대회 목록.
-- `[sense:search_gnews]{query: "AI 공모전"}` / `[sense:search_gnews]{query: "인공지능 경진대회"}` — 국내 공모전·대회 뉴스
-- `[sense:search_naver]{query: "AI 공모전 2026", type: "webkr"}` — 국내 공모/접수 페이지 강화
-- `[sense:search_ddg]{query: "AI hackathon grant call for proposals 2026"}` — 글로벌 해커톤·그랜트
-- `[sense:search_ddg]{query: "AI startup accelerator application 2026"}` — 국제 액셀러레이터 모집
+- `[sense:search]{source: "gnews", query: "AI 공모전"}` / `[sense:search]{source: "gnews", query: "인공지능 경진대회"}` — 국내 공모전·대회 뉴스
+- `[sense:search]{source: "naver", query: "AI 공모전 2026", type: "webkr"}` — 국내 공모/접수 페이지 강화
+- `[sense:search]{query: "AI hackathon grant call for proposals 2026"}` — 글로벌 해커톤·그랜트
+- `[sense:search]{query: "AI startup accelerator application 2026"}` — 국제 액셀러레이터 모집
 - 인상적인 기회는 `[sense:crawl]{url: "..."}`로 원문을 확인해 **마감일·자격·상금/혜택·제출물**을 파악한다.
 
 조사 대상 예: AI 경진대회(Kaggle·DACON·정부 주최), 공모전(아이디어·논문·작품), 해커톤, 연구 그랜트·펠로우십, 스타트업 액셀러레이터/데모데이 모집, 기업 AI 챌린지.
@@ -88,7 +88,7 @@ AI를 써서 **출품·지원할 수 있는 대회·공모전·그랜트**를 �
 
 ### 2-3. 마감일·시점 검증 (이 보고서의 생명)
 
-이 보고서의 가치는 **유효한 마감일**에 달려 있다. `search_gnews`·`search_ddg`는 발행일과 무관하게 **지난 공고·끝난 대회**도 섞어 반환한다. 마감일을 검증하지 않으면 이미 끝난 기회가 "지원 가능"으로 둔갑한다.
+이 보고서의 가치는 **유효한 마감일**에 달려 있다. `search`(gnews/ddg)는 발행일과 무관하게 **지난 공고·끝난 대회**도 섞어 반환한다. 마감일을 검증하지 않으면 이미 끝난 기회가 "지원 가능"으로 둔갑한다.
 
 - **각 항목의 마감일을 반드시 확인한다.** 검색 스니펫에 마감일이 없으면 `[sense:crawl]`로 원문 마감일을 확인하고, 끝내 확인 불가하면 "마감일 미상"으로 표시한다.
 - **오늘 날짜(`[self:time]`) 기준으로 마감일이 이미 지난 항목은 현재 기회 목록에서 제외**한다. 직전 보고서에 있었다면 "마감됨(CLOSED)"으로 한 줄 처리하고 떨어낸다.

@@ -2,7 +2,7 @@
  * NewspaperInstrument — 신문 "계기(instrument)" (앱 모드)
  *
  * 디자인(제호·섹션·카드 그리드)은 이 컴포넌트에 있고, 내용은 어휘로 채운다:
- * 키워드마다 [sense:search_gnews] 를 불러 섹션으로 배치한다. 앱 = 어휘 조합 + 약간의 코딩.
+ * 키워드마다 [sense:search]{source: "gnews"} 를 불러 섹션으로 배치한다. 앱 = 어휘 조합 + 약간의 코딩.
  * (구 방식: [engines:newspaper] 가 수집+조립+디자인을 한 어휘에 박제 → HTML 파일 생성 후 외부
  *  브라우저로 열기. 그 어휘는 은퇴했고, 디자인은 여기로, 팬아웃(키워드별)은 이 컴포넌트 코드로.)
  *
@@ -18,21 +18,21 @@ import { iblExecuteApp } from '../lib/instrument';  // 앱모드 IBL 호출 공�
 // ── 소스별 판(edition) ─────────────────────────────────────────
 // 신문은 소스마다 독립된 판을 갖는다: 종합(gnews+guardian)·HN 등. 각 판은 자기 키워드·제호·저장
 // 파일(버전)을 따로 유지한다. 소스 선택 = 어느 판을 보고/발행하나. "다 똑같이 하되 소스만" — 팬아웃·
-// 편집장·관점 필터는 공유하고, 바뀌는 건 fetch 액션(search_gnews vs search_hn)과 저장 경로뿐.
+// 편집장·관점 필터는 공유하고, 바뀌는 건 [sense:search] 의 source(gnews vs hn)와 저장 경로뿐.
 interface EditionDef {
   key: string;
   label: string;         // 소스 선택 탭 라벨
-  action: string;        // IBL 뉴스 액션 (search_gnews | search_hn)
+  action: string;        // [sense:search] 의 source (gnews | hn)
   hotLabel: string;      // 핫토픽/프론트페이지 섹션 이름
   defaultKw: string[];
   defaultTitle: string;
 }
 const EDITIONS: EditionDef[] = [
-  { key: 'default', label: '종합', action: 'search_gnews', hotLabel: '🔥 오늘의 핫토픽',
+  { key: 'default', label: '종합', action: 'gnews', hotLabel: '🔥 오늘의 핫토픽',
     // 부동산·AI 에이전트·중국 경제: 2026-07-14 발아 대조 파일럿 — 활발한 실타래(임대차·하네스 생태계·중국 보고서)가
     // 풀에 진입 불가한 구조적 공백 발견으로 추가. 키워드=취재의 prior, 실타래 따라 갱신.
     defaultKw: ['청주', 'AI', '문화', '드라마', '영화', '만화', '세종', '경제', '주식', '부동산', 'AI 에이전트', '중국 경제'], defaultTitle: '청주 데일리' },
-  { key: 'hn', label: 'Hacker News', action: 'search_hn', hotLabel: '🔥 HN 프론트페이지',
+  { key: 'hn', label: 'Hacker News', action: 'hn', hotLabel: '🔥 HN 프론트페이지',
     defaultKw: ['AI', 'LLM', 'startup', 'programming', 'security', 'open source'], defaultTitle: 'Hacker News 데일리' },
 ];
 const editionOf = (key: string): EditionDef => EDITIONS.find((e) => e.key === key) || EDITIONS[0];
@@ -191,10 +191,10 @@ const WebView = 'webview' as unknown as FC<Record<string, unknown>>;
 // 데스크탑 Electron(메인 창)에서만 내부 브라우저(webview) 사용 가능. 원격/폰 웹런처엔 window.electron 없음.
 const canInternalBrowse = () => typeof window !== 'undefined' && !!window.electron?.openExternal;
 
-// [sense:<action>] 한 키워드 → items. action=소스별(search_gnews|search_hn). /ibl/execute 응답 견고 파싱.
+// [sense:search]{source} 한 키워드 → items. action=source 값(gnews|hn). /ibl/execute 응답 견고 파싱.
 // curate: 경량 AI 편집장이 오버페치 pool에서 중복을 묶고 hot/delta/surface 로 7개 편성.
 async function fetchNews(action: string, keyword: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:${action}]{query: ${JSON.stringify(keyword)}, curate: 7}`);
+  const result = await iblExecuteApp(`[sense:search]{source: ${JSON.stringify(action)}, query: ${JSON.stringify(keyword)}, curate: 7}`);
   notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
@@ -202,7 +202,7 @@ async function fetchNews(action: string, keyword: string): Promise<NewsItem[]> {
 
 // 핫토픽/프론트페이지 — 검색어 없는 톱(가장 널리 주목받은 것)을 편집장이 편성.
 async function fetchHotTopics(action: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:${action}]{headlines: true, curate: 7}`);
+  const result = await iblExecuteApp(`[sense:search]{source: ${JSON.stringify(action)}, headlines: true, curate: 7}`);
   notePerspective(result);
   const items = (result as { items?: NewsItem[] } | null)?.items;
   return Array.isArray(items) ? items : [];
@@ -226,11 +226,11 @@ function mergePicksAndPool(result: unknown): NewsItem[] {
   return [...picks, ...rest];
 }
 async function fetchNewsPool(action: string, keyword: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:${action}]{query: ${JSON.stringify(keyword)}, curate: ${SECTION_SIZE}}`);
+  const result = await iblExecuteApp(`[sense:search]{source: ${JSON.stringify(action)}, query: ${JSON.stringify(keyword)}, curate: ${SECTION_SIZE}}`);
   return mergePicksAndPool(result);
 }
 async function fetchHotTopicsPool(action: string): Promise<NewsItem[]> {
-  const result = await iblExecuteApp(`[sense:${action}]{headlines: true, curate: ${SECTION_SIZE}}`);
+  const result = await iblExecuteApp(`[sense:search]{source: ${JSON.stringify(action)}, headlines: true, curate: ${SECTION_SIZE}}`);
   return mergePicksAndPool(result);
 }
 

@@ -25,8 +25,7 @@
     "startup",
     "study",
     "system_essentials",
-    "web",
-    "web-kr"
+    "web"
   ],
   "runnable_actions": [
     "engines:icon",
@@ -122,13 +121,9 @@
     "sense:researcher",
     "sense:restaurant",
     "sense:reverse_geocode",
+    "sense:search",
     "sense:search_books",
-    "sense:search_ddg",
-    "sense:search_gnews",
-    "sense:search_guardian",
-    "sense:search_hn",
     "sense:search_local",
-    "sense:search_naver",
     "sense:search_shopping",
     "sense:see",
     "sense:self_check",

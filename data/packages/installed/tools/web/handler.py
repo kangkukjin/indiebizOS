@@ -163,23 +163,81 @@ def _heuristic_dedup(items: list, threshold: float = 0.86) -> list:
     return kept
 
 
-_STUDY_HANDLER = None
+def _search_guardian(tool_input: dict) -> dict:
+    """The Guardian Open Platform 검색 — [sense:search]{source:"guardian"}.
+    구 study 패키지 search_guardian 을 2026-08-05 어휘 압축 (2)에서 흡수(능력·구현 동거)."""
+    import html as _html
+    import requests
+    api_key = os.getenv("GUARDIAN_API_KEY")
+    if not api_key:
+        return {"success": False, "error": "GUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.", "items": []}
+
+    query = tool_input.get("query")
+    page_size = tool_input.get("count") or tool_input.get("page_size") or 10
+    from_date = tool_input.get("from_date")
+    to_date = tool_input.get("to_date")
+
+    url = "https://content.guardianapis.com/search"
+    params = {
+        "q": query,
+        "api-key": api_key,
+        "page-size": page_size,
+        "show-fields": "trailText,headline,shortUrl"
+    }
+    if from_date:
+        params["from-date"] = from_date
+    if to_date:
+        params["to-date"] = to_date
+
+    try:
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json().get("response", {})
+
+        results_list = data.get("results", [])
+        if not results_list:
+            return {"items": [], "message": f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."}
+
+        total = data.get("total", 0)
+        output = [f"### The Guardian 검색 결과: '{query}' (총 {total:,}건 중 {len(results_list)}건 표시)\n"]
+        records = []
+
+        for i, article in enumerate(results_list, 1):
+            fields = article.get("fields", {})
+            headline = fields.get("headline", article.get("webTitle", "제목 없음"))
+            trail_text = fields.get("trailText", "요약 없음")
+            trail_text = re.sub('<[^<]+?>', '', trail_text)
+            trail_text = _html.unescape(trail_text).strip()
+
+            a_url = article.get("webUrl", "")
+            date = article.get("webPublicationDate", "")[:10]
+            section = article.get("sectionName", "")
+
+            output.append(
+                f"[{i}] {headline}\n"
+                f"날짜: {date} | 섹션: {section}\n"
+                f"링크: {a_url}\n"
+                f"요약: {trail_text}\n"
+                "--------------------------------------"
+            )
+            records.append({  # 레코드 통화
+                "title": headline,
+                "meta": " · ".join(x for x in [date, section] if x),
+                "summary": trail_text if trail_text != "요약 없음" else "",
+                "url": a_url,
+            })
+
+        return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
+
+    except Exception as e:
+        return {"success": False, "error": f"The Guardian API 검색 오류: {str(e)}", "items": []}
 
 
 def _guardian_items(query: str, count: int = 30) -> list:
-    """가디언 기사 → 신문 items 통화. **정본 구현=study 패키지 [sense:search_guardian]**
-    (능력1·구현1 — web은 importlib로 빌려 쓴다, 고유 모듈명으로 충돌 회피).
-    study 미설치·GUARDIAN_API_KEY 부재·무결과 시 [] 반환 — 신문은 gnews만으로 진행."""
-    global _STUDY_HANDLER
+    """가디언 기사 → 신문 items 통화(_search_guardian 의 신문용 투영).
+    GUARDIAN_API_KEY 부재·무결과 시 [] 반환 — 신문은 gnews만으로 진행."""
     try:
-        if _STUDY_HANDLER is None:
-            import importlib.util
-            p = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "study", "handler.py"))
-            spec = importlib.util.spec_from_file_location("_study_handler_for_web", p)
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            _STUDY_HANDLER = mod
-        res = _STUDY_HANDLER._search_guardian({"query": query, "page_size": min(count, 50)})
+        res = _search_guardian({"query": query, "count": min(count, 50)})
         if isinstance(res, dict) and res.get("items"):
             return [{
                 "title": r.get("title", ""),
@@ -518,13 +576,43 @@ def execute(tool_input: dict, context):
     tool_name = context.tool_name
     project_path = context.project_path
 
-    # DuckDuckGo 웹 검색
-    if tool_name == "ddgs_search":
+    # 통합 검색 [sense:search]{source} — 2026-08-05 어휘 압축 (2): 검색 5액션(search_ddg/
+    # search_naver/search_gnews/search_hn/search_guardian) → source 축 하나. 아래 소스별
+    # 갈래(ddgs_search 등)는 내부 구현 — tool.json 에는 search 하나만 노출된다.
+    if tool_name == "search":
+        _SOURCE_TOOLS = {"ddg": "ddgs_search", "naver": "naver_search",
+                         "gnews": "search_gnews", "hn": "search_hn",
+                         "guardian": "search_guardian"}
+        source = str(tool_input.get("source") or "ddg").strip().lower()
+        inner = _SOURCE_TOOLS.get(source)
+        if not inner:
+            return format_json({"success": False,
+                                "error": f"알 수 없는 source: {source} (가능: ddg/naver/gnews/hn/guardian)"})
+        from types import SimpleNamespace
+        return execute(tool_input, SimpleNamespace(tool_name=inner, project_path=project_path))
+
+    # DuckDuckGo 웹 검색 (search source:ddg 내부 갈래)
+    elif tool_name == "ddgs_search":
         tool_ddgs = load_module("tool_ddgs_search")
         query = tool_input.get("query")
         count = tool_input.get("count", 5)
         country = tool_input.get("country", "kr-kr")
         return tool_ddgs.search_web(query, count, country)
+
+    # 네이버 검색 (search source:naver 내부 갈래 — 구 web-kr 패키지 흡수)
+    elif tool_name == "naver_search":
+        tool_naver = load_module("tool_naver_search")
+        result = tool_naver.search_naver(
+            query=tool_input.get("query", ""),
+            type=tool_input.get("type", "webkr"),
+            display=tool_input.get("count") or tool_input.get("display") or 5,
+            sort=tool_input.get("sort", "sim"),
+        )
+        return format_json(result)
+
+    # 가디언 아카이브 (search source:guardian 내부 갈래 — 구 study search_guardian 흡수)
+    elif tool_name == "search_guardian":
+        return format_json(_search_guardian(tool_input))
 
     # 웹페이지 크롤링
     elif tool_name == "crawl_website":
@@ -552,7 +640,7 @@ def execute(tool_input: dict, context):
         _shim = SimpleNamespace(tool_name="search_gnews", project_path=project_path)
         return format_json(tool_np.publish_newspaper(tool_input, lambda ti: execute(ti, _shim)))
 
-    # Google News 검색
+    # Google News 검색 (search source:gnews 내부 갈래 — 신문 발행 shim 도 이 갈래를 탄다)
     elif tool_name == "search_gnews":
         # 배치 팬아웃(queries: 리스트/콤마·개행) — 각 검색어를 돌려 query 태그된 항목을 한 목록으로.
         # group 뷰(신문 섹션)·table:groupby 에 바로 먹인다. N-way 팬아웃을 액션 하나로(신문 계기용).
@@ -679,7 +767,7 @@ def execute(tool_input: dict, context):
                 result["perspective"] = bool(_load_perspective_core())
         return format_json(result)
 
-    # Hacker News 신문 소스 — gnews 와 형제. 별도 판(HN 전용)용. 편집장·관점 필터 공유.
+    # Hacker News (search source:hn 내부 갈래) — gnews 와 형제. HN 전용 신문 판용. 편집장·관점 필터 공유.
     elif tool_name == "search_hn":
         _curate = _parse_curate(tool_input)
         _fetch = 100 if _curate else tool_input.get("count", 15)

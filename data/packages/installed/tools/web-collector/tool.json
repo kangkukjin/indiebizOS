@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "collect_op",
-      "description": "웹 데이터 수집 (op 분기) — [sense:collect]. 실시간 웹 검색은 search_ddg.\n- op=run(기본): source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 프로필 목록.\n- op=sites: 사이트 프로필 CRUD. action(list 기본/register/delete)+site_id+guide_code.\n- op=query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete)+query/site_id/item_id/limit.",
+      "description": "웹 데이터 수집 (op 분기) — [sense:collect]. 실시간 웹 검색은 search.\n- op=run(기본): source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 프로필 목록.\n- op=sites: 사이트 프로필 CRUD. action(list 기본/register/delete)+site_id+guide_code.\n- op=query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete)+query/site_id/item_id/limit.",
       "input_schema": {
         "type": "object",
         "properties": {

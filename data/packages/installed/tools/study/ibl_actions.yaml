@@ -4,7 +4,7 @@ actions:
     returns: items
     side_effect: true    # download 가 PDF 를 로컬에 저장한다
     fixture: '[sense:paper]{query: "attention"}'
-    description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search_ddg, 라이브러리 문서는 devdocs.
+    description: 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
     target_description: "op로 분기 (기본 search).\n- search: query(필수) + source(기본 openalex) + max_results.\n  · openalex=범용 학술(분야무관, 기본), arxiv=AI/CS/물리/수학 프리프린트, pubmed=생의학/의학, semantic=AI/ML 심층(인용그래프·관련논문).\n  · nanet=국내 학술논문·학위논문(국회도서관 국가학술정보). 한국 인물·국내 학위 추적의 핵심 — 서울대 박사논문 등 신원의 결정적 닻. type(예 학위논문)·year로 좁힘.\n- download: source(arxiv|pubmed) + id(arxiv_id 예 2301.07041 / PMC ID 예 PMC1234567) + filename(선택).\n"
     target_key: op
     group: research
@@ -31,7 +31,7 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
-    description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search_ddg.
+    description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search(웹 검색).
     target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
     target_key: op
     group: research
@@ -56,7 +56,7 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:entity]{query: "강국진"}'
-    description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search_ddg, 국내 연구자는 researcher.
+    description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search(웹 검색), 국내 연구자는 researcher.
     target_description: "op로 분기 (기본 resolve).\n- resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 '강국진'=여러 인물). QID는 개체를 못박는 신원자.\n- detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등, 속성:값 records). query만 주면 최상위 후보로 자동 해소.\n"
     target_key: op
     group: research
@@ -88,16 +88,6 @@ actions:
     router: handler
     tool: fetch_pew_research
     implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
-  search_guardian:
-    returns: items
-    fixture: '[sense:search_guardian]{query: "climate"}'
-    description: Guardian 신문 아카이브 검색. 영국·국제 기사 위주, 영어 검색.
-    group: research
-    target_description: 검색어 또는 키워드 (영어).
-    router: handler
-    tool: search_guardian
-    implementation: Guardian Open Platform API로 뉴스 아카이브 검색 (API키 필요). items[{title,meta,summary,url}] 통화 + 사람용 message 반환 — compress 폐지(목록을 문자열로 파괴하던 결함 제거).
-    target_key: query
   world_bank:
     returns: items
     fixture: '[sense:world_bank]{indicator: "GDP", country: "한국"}'
@@ -153,42 +143,6 @@ tool_json:
           type: integer
           description: 가져올 항목 수 (기본 10)
           default: 10
-  - name: search_guardian
-    description: 'The Guardian의 기사를 검색합니다.
-
-
-      ## The Guardian API란?
-
-      - 가디언지의 방대한 기사 아카이브 접근
-
-      - 섹션, 태그, 날짜별 정교한 검색 지원
-
-
-      ## 사용 시점
-
-      - 특정 이슈에 대한 언론의 시각 파악
-
-      - 과거 기사 아카이브 검색
-
-      - 글로벌 뉴스 트렌드 분석'
-    input_schema:
-      type: object
-      properties:
-        query:
-          type: string
-          description: '검색어 (예: ''South Korea education'')'
-        page_size:
-          type: integer
-          description: 결과 수 (기본 10)
-          default: 10
-        from_date:
-          type: string
-          description: 시작 날짜 (YYYY-MM-DD)
-        to_date:
-          type: string
-          description: 종료 날짜 (YYYY-MM-DD)
-      required:
-      - query
   - name: fetch_world_bank_data
     description: 'World Bank API를 사용하여 국가별 경제 및 사회 지표 데이터를 가져옵니다.
 
@@ -281,7 +235,7 @@ tool_json:
       required:
       - query
   - name: paper_op
-    description: '학술 논문 검색·다운로드 (op 분기) — [sense:paper]. source로 DB 선택. 웹검색은 search_ddg, 라이브러리 문서는 devdocs.
+    description: '학술 논문 검색·다운로드 (op 분기) — [sense:paper]. source로 DB 선택. 웹검색은 search, 라이브러리 문서는 devdocs.
 
       - op=search(기본): query + source(openalex 기본/arxiv/pubmed/semantic/nanet) + max_results. openalex=범용, arxiv=AI/CS/물리/수학
       프리프린트, pubmed=생의학, semantic=AI/ML 심층(인용그래프), nanet=국내 학술논문·학위논문(국회도서관, 한국 인물·국내 학위 추적). nanet은 type(예 학위논문)·year로 좁힘.
@@ -317,7 +271,7 @@ tool_json:
           description: '[download] 저장 파일명(선택)'
       required: []
   - name: researcher_op
-    description: '연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search_ddg.
+    description: '연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search(웹 검색).
 
       - op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → 후보별 소속·출생연도·직위·lodID.
 
@@ -345,7 +299,7 @@ tool_json:
           description: 최대 결과 수(기본 30)
       required: []
   - name: entity_op
-    description: '개체 해소·구조화된 사실 (op 분기) — [sense:entity]. Wikidata 지식 그래프. 동명이인·동음이의를 QID로 못박음. 일반 인물 OSINT는 search_ddg, 국내 연구자는 researcher_op.
+    description: '개체 해소·구조화된 사실 (op 분기) — [sense:entity]. Wikidata 지식 그래프. 동명이인·동음이의를 QID로 못박음. 일반 인물 OSINT는 search(웹 검색), 국내 연구자는 researcher_op.
 
       - op=resolve(기본): query(필수) + lang(기본 ko) + max_results → 후보별 QID·라벨·설명. 동명이인/동음이의 분리.
 

@@ -137,7 +137,7 @@ available_guides에서 이 문제에 필요한 가이드를 고른다(없으면 
   "history_summary": "이전 대화에서 삼성전자 2024년 실적을 분석함. 매출 증가 추세 확인. 사용자가 최신 상황 비교를 요청한 상태",
   "capability_focus": {
     "primary_nodes": ["sense", "self"],
-    "highlight_actions": ["sense:search_ddg", "self:write"],
+    "highlight_actions": ["sense:search", "self:write"],
     "tools": ["run_command"],
     "hint": "최신 실적 데이터를 검색으로 확보하고, 수치 비교가 필요하면 [self:write]로 분석 스크립트를 /tmp에 떨군 뒤 run_command 'python3 /tmp/x.py'로 실행하는 write→run 패턴"
   },

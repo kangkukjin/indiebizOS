@@ -154,9 +154,9 @@ python3 scripts/build_ibl_nodes.py --check  # 일치 확인
 정보성 액션의 출력이 길 때 경량 AI로 압축하여 에이전틱 루프의 컨텍스트 폭발을 방지한다. 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리. `ibl_nodes_src/<node>.yaml`의 액션 정의 안에 `postprocess` 블록으로 선언.
 
 ```yaml
-search_ddg:
+search:
   router: handler
-  tool: ddgs_search
+  tool: search
   postprocess:                # 후처리 설정 (선택)
     type: compress            # 전처리 유형 (현재: compress)
     threshold: 1500           # 이 글자 수 이상일 때만 압축 (기본: 1500)
@@ -277,10 +277,9 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
 | system_essentials | System Essentials | 파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회, 웹앱 등기부 `[self:webapp]{op}`(파생 우선 — 진실 소스 7곳 재계산 + 전 함대 생존 실측) |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
-| web | Web Tools | 웹 검색, 크롤링, 뉴스, **신문 발행 `[engines:newspaper]`**, 즐겨찾기 |
+| web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, **신문 발행 `[engines:newspaper]`**, 즐겨찾기 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
-| web-kr | Web Search (Korea) | 네이버 검색 API 한국어 콘텐츠(웹문서/뉴스/블로그/카페/지식인/책) |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 **미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).

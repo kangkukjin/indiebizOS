@@ -1088,7 +1088,7 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
   "id": "evt_abc123",
   "title": "매일 뉴스 수집",
   "action": "run_pipeline",
-  "action_params": {"pipeline": "[sense:search_ddg]{query: 'AI 뉴스'}"},
+  "action_params": {"pipeline": "[sense:search]{query: 'AI 뉴스'}"},
   "owner_project_id": "투자",
   "owner_agent_id": "researcher"
 }
@@ -1103,13 +1103,13 @@ IBL 경로를 통한 위임을 감지하기 위해 **3-레이어 감지** 사용
 
 **셀프 스케줄** — 자기 자신의 스케줄 등록:
 ```
-[self:schedule]{at: "09:00", pipeline: "[sense:search_ddg]{query: '오늘 뉴스'}"}
+[self:schedule]{at: "09:00", pipeline: "[sense:search]{query: '오늘 뉴스'}"}
 ```
 
 **크로스 위임** — 다른 에이전트의 스케줄에 등록:
 ```
 [self:schedule]{at: "09:00", target_project_id: "투자", target_agent_id: "analyst",
-  pipeline: "[sense:search_ddg]{query: '오늘 주요 뉴스'}"}
+  pipeline: "[sense:search]{query: '오늘 주요 뉴스'}"}
 ```
 
 `target_project_id`/`target_agent_id`를 지정하면 해당 에이전트가 owner가 되어, 그 에이전트의 컨텍스트에서 실행되고 결과도 그쪽 대화창에 전달됨.

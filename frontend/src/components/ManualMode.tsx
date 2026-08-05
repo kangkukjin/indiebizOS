@@ -647,7 +647,7 @@ export default function ManualMode() {
                 <div className="mt-1.5"><span className="font-semibold">items</span> — 열린 항목들의 목록 <code className="font-mono">{'[{ … }]'}</code>. 가장 흔한 모양은 카드 <code className="font-mono">{'{title, meta, summary, url}'}</code>(검색·매물·뉴스)지만, <span className="font-semibold">같은 items</span>가 통계·시세는 수치 칸을 담은 행(연도·값)으로, 문서는 문단 항목(type·text)으로 흐릅니다.</div>
                 <div className="mt-1.5 text-stone-500">통화가 하나라서 어떤 액션의 결과든 어떤 변환자로든 이어집니다 — 받는 쪽이 필요한 모양(표·차트·문서)으로 <span className="font-semibold">알아서</span> 봅니다.</div>
                 <div className="mt-1.5"><span className="font-semibold">변환자</span> — 통화를 받아 통화를 내는 특수 액션(거르고 잇고 모음): <span className="font-mono text-[12px]">filter · sort · take · select · dedup · groupby · join · union · merge</span></div>
-                <div className="mt-1 text-stone-500">예: <code className="font-mono">{'[sense:search_naver]{query:"AI"} >> filter >> take{n:3}'}</code></div>
+                <div className="mt-1 text-stone-500">예: <code className="font-mono">{'[sense:search]{source: "naver", query:"AI"} >> filter >> take{n:3}'}</code></div>
               </div>
             </div>
           </div>

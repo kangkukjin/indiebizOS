@@ -542,9 +542,6 @@ def execute(tool_input: dict, context) -> str:
     elif tool_name == "fetch_pew_research":
         return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
 
-    elif tool_name == "search_guardian":
-        return _search_guardian(tool_input)
-
     elif tool_name == "fetch_world_bank_data":
         return _fetch_world_bank_data(tool_input)
 
@@ -1103,75 +1100,7 @@ def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
     except Exception as e:
         return {"success": False, "error": f"{source_name} RSS 가져오기 오류: {str(e)}", "items": []}
 
-def _search_guardian(tool_input: dict) -> str:
-    """The Guardian API를 사용하여 기사를 검색합니다."""
-    api_key = os.getenv("GUARDIAN_API_KEY")
-    if not api_key:
-        return {"success": False, "error": "GUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.", "items": []}
-        
-    query = tool_input.get("query")
-    page_size = tool_input.get("page_size", 10)
-    from_date = tool_input.get("from_date")
-    to_date = tool_input.get("to_date")
-    
-    url = "https://content.guardianapis.com/search"
-    params = {
-        "q": query,
-        "api-key": api_key,
-        "page-size": page_size,
-        "show-fields": "trailText,headline,shortUrl"
-    }
-    
-    if from_date:
-        params["from-date"] = from_date
-    if to_date:
-        params["to-date"] = to_date
-        
-    try:
-        response = requests.get(url, params=params, timeout=15)
-        response.raise_for_status()
-        data = response.json().get("response", {})
-        
-        results_list = data.get("results", [])
-        if not results_list:
-            return {"items": [], "message": f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."}
-            
-        total = data.get("total", 0)
-        output = [f"### The Guardian 검색 결과: '{query}' (총 {total:,}건 중 {len(results_list)}건 표시)\n"]
-        records = []
-
-        for i, article in enumerate(results_list, 1):
-            fields = article.get("fields", {})
-            headline = fields.get("headline", article.get("webTitle", "제목 없음"))
-            trail_text = fields.get("trailText", "요약 없음")
-            # HTML 태그 제거
-            import re
-            trail_text = re.sub('<[^<]+?>', '', trail_text)
-            trail_text = html.unescape(trail_text).strip()
-
-            url = article.get("webUrl", "")
-            date = article.get("webPublicationDate", "")[:10]
-            section = article.get("sectionName", "")
-
-            article_info = (
-                f"[{i}] {headline}\n"
-                f"날짜: {date} | 섹션: {section}\n"
-                f"링크: {url}\n"
-                f"요약: {trail_text}\n"
-                "--------------------------------------"
-            )
-            output.append(article_info)
-            records.append({  # 레코드 통화
-                "title": headline,
-                "meta": " · ".join(x for x in [date, section] if x),
-                "summary": trail_text if trail_text != "요약 없음" else "",
-                "url": url,
-            })
-
-        return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
-
-    except Exception as e:
-        return {"success": False, "error": f"The Guardian API 검색 오류: {str(e)}", "items": []}
+# _search_guardian 은 2026-08-05 어휘 압축 (2)에서 web 패키지 [sense:search]{source:"guardian"} 로 이주.
 
 
 # ── 내부 해소 테이블 (자연어 지표·국가명 → World Bank 코드) ────────────

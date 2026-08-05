@@ -27,8 +27,8 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
 
 ## 발행 레시피 (= `[engines:newspaper]`가 하는 일 — 수동으로 따라할 필요 없음, 참조용)
 
-1. **핫토픽**: `[sense:search_gnews]{headlines: true, curate: 7}` — 오늘 가장 많이 다뤄진 사건. 섹션 이름은 `🔥 오늘의 핫토픽`, 맨 위에.
-2. **섹션별 기사**: 사용자 관심 키워드마다 `[sense:search_gnews]{query: "<키워드>", curate: 7}` 로 섹션 하나씩. (계기 기본 키워드 12개: 청주·AI·문화·드라마·영화·만화·세종·경제·주식·부동산·AI 에이전트·중국 경제. 제호 기본값 `청주 데일리`. 뒤 3개=2026-07-14 발아 대조가 찾은 실타래 공백 반영 — 키워드는 정적이 아니라 실타래 따라 갱신하는 취재 prior.)
+1. **핫토픽**: `[sense:search]{source: "gnews", headlines: true, curate: 7}` — 오늘 가장 많이 다뤄진 사건. 섹션 이름은 `🔥 오늘의 핫토픽`, 맨 위에.
+2. **섹션별 기사**: 사용자 관심 키워드마다 `[sense:search]{source: "gnews", query: "<키워드>", curate: 7}` 로 섹션 하나씩. (계기 기본 키워드 12개: 청주·AI·문화·드라마·영화·만화·세종·경제·주식·부동산·AI 에이전트·중국 경제. 제호 기본값 `청주 데일리`. 뒤 3개=2026-07-14 발아 대조가 찾은 실타래 공백 반영 — 키워드는 정적이 아니라 실타래 따라 갱신하는 취재 prior.)
 3. **조립·저장(판 3파일, 전부 `project_id: "앱모드"`)**:
    - JSON: `[self:write]{path: "outputs/newspaper_current.json", content: "<위 구조 JSON 문자열>", project_id: "앱모드"}` — **데스크탑 반영 필수**.
    - MD: 섹션 items를 `[table:document]{format: "markdown", title: ..., meta: "<날짜>", group_by: "section", items: [...]}` 로 직렬화 → `[self:write]{path: "outputs/newspaper_current.md", project_id: "앱모드"}`.
@@ -43,7 +43,7 @@ JSON 판 구조(`loadEdition`이 기대하는 형태):
 
 뽑히지 않은 나머지는 응답의 `pool` 필드로 반환되어, 편집신문(사용자 큐레이션)에서 대체 후보로 쓰입니다. 응답의 `perspective` 필드(true/false)가 관점 코어 반영 여부이며, 판 JSON에도 저장되어 데스크탑 상단바에 "💡 관점 반영/일반 판"으로 표시됩니다.
 
-**소스**: 영어 키워드 섹션에는 **가디언(The Guardian)**이 자동 합류합니다 — `sources` 파라미터(기본 `"gnews,guardian"`, `"gnews"`로 끔). 정본 구현은 study 패키지 `search_guardian`(+`GUARDIAN_API_KEY`), web이 빌려 씀. 한국어 키워드는 가디언 코퍼스에 없어 자동 생략.
+**소스**: 영어 키워드 섹션에는 **가디언(The Guardian)**이 자동 합류합니다 — `sources` 파라미터(기본 `"gnews,guardian"`, `"gnews"`로 끔). 구현은 web 패키지 `[sense:search]{source: "guardian"}`(+`GUARDIAN_API_KEY`, 2026-08-05 어휘 압축으로 study 에서 흡수). 한국어 키워드는 가디언 코퍼스에 없어 자동 생략.
 
 ## 핵심 원칙
 

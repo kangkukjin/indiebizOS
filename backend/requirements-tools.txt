@@ -40,3 +40,6 @@ python-pptx
 
 # music-player 패키지 — 음악 태그(ID3/FLAC/MP4) 추출
 mutagen
+
+# android 패키지 [sense:here] — macOS OS 위치서비스(WiFi 지문, 랩탑용). 다른 OS 무해(마커).
+pyobjc-framework-CoreLocation; sys_platform == "darwin"

@@ -391,13 +391,13 @@ def _act_share(tool_input: dict) -> dict:
 def _phone_locate(tool_input: dict) -> dict:
     """지금 이 몸이 있는 곳 ([sense:here]) — 지표어(deixis): 몸마다 자기 방식으로 측정.
 
-    어휘는 하나, 값은 몸이 정한다: 폰=fused GPS(±수십 m) / 데스크탑=IP 지오(도시 수준)
-    + 움직임-증거 캐시(네트워크 지문 불변이면 재측정 안 함 = 0원. 데스크탑은 사실상
-    평생 1회). 상시 추적 없이 물을 때만(augmentation-over-autonomy) — 캐시는 수집이
-    아니라 읽기 시점의 신선도 검사다.
-    통화 정직성: {success, lat, lng, source(gps|ip), accuracy_m, measured_at,
-    address?, cached?} — 소비자가 정밀도를 보고 판단한다(도시 수준이면 날씨엔 충분,
-    길찾기 출발점이면 폰 몸에 [others:ask]).
+    어휘는 하나, 값은 몸이 정한다: 폰=fused GPS(±수십 m) / 데스크탑=선언 위치 >
+    OS 위치서비스(WiFi 수십~수백 m) > IP 지오(도시 수준) + 움직임-증거 캐시(네트워크
+    지문 불변이면 재측정 안 함 = 0원). 상시 추적 없이 물을 때만
+    (augmentation-over-autonomy) — 캐시는 수집이 아니라 읽기 시점의 신선도 검사다.
+    통화 정직성: {success, lat, lng, source(gps|declared|wifi|ip), accuracy_m,
+    measured_at, address?, cached?} — 소비자가 정밀도를 보고 판단한다(도시 수준이면
+    날씨엔 충분, 길찾기 출발점이면 폰 몸에 [others:ask]).
     """
     try:
         from java import jclass  # Chaquopy 브리지 — 능력 감지(폰 네이티브 런타임에만 존재)
@@ -448,14 +448,192 @@ def _here_net_fingerprint() -> str:
         s.close()
 
 
+def _here_os_location() -> dict | None:
+    """OS 위치서비스 프로브 — GPS 없이 주변 WiFi AP 지문으로 수십~수백 m(랩탑의 정답).
+
+    macOS=CoreLocation(pyobjc, 폴백 CoreLocationCLI) / Windows=GeoCoordinateWatcher
+    (PowerShell) / Linux=GeoClue(where-am-i 데모). 권한 거부·미지원·타임아웃은 전부
+    조용히 None → 호출측이 IP 폴백(현행 유지). 반환={"lat","lng","accuracy_m"}.
+    ★TCC 권한(macOS): 백엔드가 Electron 스폰이라 팝업 귀속 주체가 Python/Electron —
+    1회 허용 필요, 거부돼도 None 이라 무해.
+    """
+    import platform
+    try:
+        sysname = platform.system()
+        if sysname == "Darwin":
+            return _here_os_macos()
+        if sysname == "Windows":
+            return _here_os_windows()
+        if sysname == "Linux":
+            return _here_os_linux()
+    except Exception:
+        pass
+    return None
+
+
+def _here_os_macos() -> dict | None:
+    """CoreLocation — pyobjc 바인딩 우선, 없으면 CoreLocationCLI(brew) 폴백."""
+    try:
+        import CoreLocation  # pyobjc-framework-CoreLocation (requirements-tools.txt)
+        from Foundation import NSDate, NSRunLoop
+        if not CoreLocation.CLLocationManager.locationServicesEnabled():
+            return None
+        mgr = CoreLocation.CLLocationManager.alloc().init()
+        # 권한: 0=미결정 1=제한 2=거부 3/4=허용. 미결정이면 start 가 TCC 팝업 유발.
+        try:
+            auth = mgr.authorizationStatus()  # macOS 11+ 인스턴스 속성
+        except Exception:
+            auth = CoreLocation.CLLocationManager.authorizationStatus()
+        if auth in (1, 2):
+            return None
+        if auth == 0:  # 미결정 → TCC 팝업 명시 요청(헤드리스에선 안 뜰 수 있음 — 폴백 무해)
+            try:
+                mgr.requestWhenInUseAuthorization()
+            except Exception:
+                pass
+        mgr.startUpdatingLocation()
+        try:
+            loc = None
+            for _ in range(24):  # 최대 ~6초 — 워커 스레드에서 런루프 수동 스핀
+                NSRunLoop.currentRunLoop().runUntilDate_(
+                    NSDate.dateWithTimeIntervalSinceNow_(0.25))
+                loc = mgr.location()
+                if loc is not None:
+                    break
+                try:
+                    if mgr.authorizationStatus() in (1, 2):  # 스핀 중 거부 → 조기 탈출
+                        return None
+                except Exception:
+                    pass
+        finally:
+            mgr.stopUpdatingLocation()
+        if loc is None:
+            return None
+        coord = loc.coordinate()
+        acc = float(loc.horizontalAccuracy())
+        if acc < 0:  # CoreLocation 관례: 음수=무효 fix
+            return None
+        return {"lat": float(coord.latitude), "lng": float(coord.longitude),
+                "accuracy_m": round(acc)}
+    except ImportError:
+        pass
+    except Exception:
+        return None
+    # 폴백: CoreLocationCLI (brew install corelocationcli)
+    import re
+    import shutil
+    import subprocess
+    cli = shutil.which("CoreLocationCLI")
+    if not cli:
+        return None
+    try:
+        p = subprocess.run([cli, "-once", "-json"], capture_output=True,
+                           text=True, timeout=15)
+        if p.returncode == 0:
+            try:
+                import json as _json
+                d = _json.loads(p.stdout)
+                lat = d.get("latitude") or d.get("lat")
+                lng = d.get("longitude") or d.get("lng") or d.get("lon")
+                if lat is not None and lng is not None:
+                    return {"lat": float(lat), "lng": float(lng),
+                            "accuracy_m": round(float(d.get("h_accuracy")
+                                                      or d.get("accuracy") or 200))}
+            except Exception:
+                pass
+        # 구판 폴백: 기본 출력 "위도 경도" 두 실수
+        p = subprocess.run([cli, "-once"], capture_output=True, text=True, timeout=15)
+        nums = re.findall(r"-?\d+\.\d+", p.stdout)
+        if len(nums) >= 2:
+            return {"lat": float(nums[0]), "lng": float(nums[1]), "accuracy_m": 200}
+    except Exception:
+        pass
+    return None
+
+
+def _here_os_windows() -> dict | None:
+    """Windows 위치 서비스 — System.Device.Location.GeoCoordinateWatcher (PowerShell).
+
+    ★숫자는 InvariantCulture 로 강제 출력(로케일 소수점 콤마 방어). 권한 거부·미측정
+    =exit 2 → None. subprocess 만 사용(check_win_portability 게이트 무관).
+    """
+    import subprocess
+    script = (
+        "Add-Type -AssemblyName System.Device;"
+        "$w = New-Object System.Device.Location.GeoCoordinateWatcher('High');"
+        "$w.Start();"
+        "$i = 0;"
+        "while ($i -lt 100 -and $w.Permission -ne 'Denied' -and "
+        "$w.Position.Location.IsUnknown) { Start-Sleep -Milliseconds 100; $i++ };"
+        "$L = $w.Position.Location; $w.Stop();"
+        "if ($w.Permission -eq 'Denied' -or $L.IsUnknown) { exit 2 };"
+        "$ci = [System.Globalization.CultureInfo]::InvariantCulture;"
+        "Write-Output ($L.Latitude.ToString($ci) + ',' + $L.Longitude.ToString($ci)"
+        " + ',' + $L.HorizontalAccuracy.ToString($ci))"
+    )
+    try:
+        p = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            capture_output=True, text=True, timeout=25,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        if p.returncode != 0:
+            return None
+        parts = p.stdout.strip().splitlines()[-1].split(",")
+        lat, lng = float(parts[0]), float(parts[1])
+        acc = float(parts[2]) if len(parts) > 2 else 200.0
+        if not (acc == acc) or acc <= 0:  # NaN(정확도 미제공) 또는 무효
+            acc = 200.0
+        return {"lat": lat, "lng": lng, "accuracy_m": round(acc)}
+    except Exception:
+        return None
+
+
+def _here_os_linux() -> dict | None:
+    """GeoClue — where-am-i 데모 바이너리가 있으면 사용(없으면 None)."""
+    import os
+    import re
+    import shutil
+    import subprocess
+    cands = [shutil.which("where-am-i"),
+             "/usr/lib/geoclue-2.0/demos/where-am-i",
+             "/usr/libexec/geoclue-2.0/demos/where-am-i"]
+    cli = next((c for c in cands if c and os.path.exists(c)), None)
+    if not cli:
+        return None
+    try:
+        p = subprocess.run([cli, "-t", "10"], capture_output=True, text=True, timeout=15)
+        lat = re.search(r"Latitude:\s*(-?\d+\.\d+)", p.stdout)
+        lng = re.search(r"Longitude:\s*(-?\d+\.\d+)", p.stdout)
+        if not (lat and lng):
+            return None
+        acc = re.search(r"Accuracy:\s*(-?\d+\.?\d*)", p.stdout)
+        return {"lat": float(lat.group(1)), "lng": float(lng.group(1)),
+                "accuracy_m": round(float(acc.group(1))) if acc else 200}
+    except Exception:
+        return None
+
+
+def _here_cache_put(cache_path: str, fp: str, out: dict) -> None:
+    """움직임-증거 캐시 기록 — 실패는 조용히(캐시는 최적화일 뿐)."""
+    import json as _json
+    import os as _os
+    try:
+        _os.makedirs(_os.path.dirname(cache_path), exist_ok=True)
+        with open(cache_path, "w", encoding="utf-8") as f:
+            _json.dump({"fingerprint": fp, "result": out}, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+
 def _here_desktop(tool_input: dict) -> dict:
-    """데스크탑 프로브 — 선언 위치(1순위) > IP 지오(도시 수준) + 움직임-증거 캐시.
+    """데스크탑 프로브 — 선언 위치 > OS 위치서비스(WiFi) > IP 지오 + 움직임-증거 캐시.
 
     ★선언 위치(data/body_location.json): 고정 몸(데스크탑)의 정답 소스. IP 지오는
     ISP 등록지 기준이라 도시가 통째로 틀릴 수 있다(오송 거주인데 '제천' 실측,
     2026-08-06) — 안 움직이는 몸은 사용자가 한 번 선언하는 쪽이 유일하게 정확하다.
-    파일이 있으면 IP 를 아예 안 잰다. 이동하는 몸(랩탑)은 이 파일을 만들지 말 것
-    (후속: OS 위치서비스[CoreLocation/Windows Geolocation] 층이 랩탑의 정답).
+    파일이 있으면 아무것도 안 잰다. 이동하는 몸(랩탑)은 이 파일을 만들지 말 것 —
+    OS 위치서비스 층(CoreLocation/Windows 위치서비스/GeoClue, WiFi AP 지문 수십~
+    수백 m)이 랩탑의 정답이고, 권한 거부·미지원이면 조용히 IP 폴백.
 
     정책(보편): 움직였다는 증거(지문 변경)가 없으면 캐시를 내놓는다 — 안 바뀌는 걸
     시간·돈 들여 재확인하지 않는다. refresh=true 로 강제 재측정(선언 위치는 불변).
@@ -508,7 +686,19 @@ def _here_desktop(tool_input: dict) -> dict:
         return {"success": False, "error": "오프라인 — 네트워크 없이 이 몸의 위치를 측정할 수 없습니다.",
                 "source": "ip"}
 
-    # 측정: 공인 IP 지오 (1차 https ipapi.co, 2차 ip-api.com lang=ko)
+    # 1) OS 위치서비스 — 이동하는 몸(랩탑)의 정답: WiFi AP 지문 수십~수백 m.
+    #    권한 거부·미지원·타임아웃은 None → IP 폴백(조용히, 현행 유지).
+    osloc = _here_os_location()
+    if osloc is not None:
+        out = {"success": True, "lat": osloc["lat"], "lng": osloc["lng"],
+               "source": "wifi", "accuracy_m": osloc.get("accuracy_m", 200),
+               "measured_at": _time.strftime("%Y-%m-%dT%H:%M:%S"), "cached": False,
+               "note": "OS 위치서비스(WiFi 기반) — 수십~수백 m 정밀도. "
+                       "이동했으면 refresh: true 로 재측정."}
+        _here_cache_put(cache_path, fp, out)
+        return out
+
+    # 2) 측정: 공인 IP 지오 (1차 https ipapi.co, 2차 ip-api.com lang=ko)
     import requests
     result = None
     try:
@@ -541,12 +731,7 @@ def _here_desktop(tool_input: dict) -> dict:
            "note": "IP 기반 — 도시 수준 정밀도이며 ISP 등록지라 도시가 틀릴 수 있음. "
                    "고정 몸(데스크탑)이면 data/body_location.json 에 위치를 선언하면 "
                    "정확해짐. 정밀 위치는 폰 몸에 부탁: [others:ask]{message: \"지금 위치 알려줘\"}"}
-    try:
-        _os.makedirs(_os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, "w", encoding="utf-8") as f:
-            _json.dump({"fingerprint": fp, "result": out}, f, ensure_ascii=False)
-    except Exception:
-        pass
+    _here_cache_put(cache_path, fp, out)
     return out
 
 

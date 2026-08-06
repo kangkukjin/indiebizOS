@@ -719,6 +719,7 @@ def _generate_and_register_slide(
                 design_system=html_design,
                 slides_dir=slides_dir_path,
                 slide_id=slide_id,
+                image_quality=image_quality,
             )
             # 절대경로를 slide_spec에 주입 (slide_shadcn이 자동 base64 변환)
             slide_spec.update(injected)

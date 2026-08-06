@@ -6,7 +6,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type React from 'react';
 import { api } from '../../lib/api';
-import { parseDesignSystem } from '../../lib/api-lecture-workspace';
 import type {
   Deck,
   MaterialEntry,
@@ -293,11 +292,10 @@ function MaterialIcon(props: { type: string }) {
 function BatchFromMaterials(props: {
   lectureId: string;
   hasMaterials: boolean;
-  usesImageModel: boolean;   // 이미지 모델을 쓰는 렌더 방식인가(native·image) — 품질 토글 노출 여부
   variant?: 'button' | 'cta';
   onChange: () => void;
 }) {
-  const { lectureId, hasMaterials, usesImageModel, variant = 'button', onChange } = props;
+  const { lectureId, hasMaterials, variant = 'button', onChange } = props;
   const [open, setOpen] = useState(false);
   const [countMode, setCountMode] = useState<'auto' | 'fixed'>('auto');
   const [count, setCount] = useState('10');
@@ -328,7 +326,8 @@ function BatchFromMaterials(props: {
           // insert_at 없이 끝에 추가 → 순서대로 쌓이고, 각 장은 직전 장 스타일을 자동 참고.
           // 렌더 방식은 덱 기본을 따른다(일괄생성은 한 덱을 한 톤·한 방식으로 채우는 일).
           await api.createSlide(lectureId, slides[i].instruction, undefined, {
-            imageQuality: usesImageModel ? imageQuality : undefined,
+            // 품질은 항상 전달 — HTML 덱도 일러스트 layout 이면 이미지 모델을 부른다.
+            imageQuality,
           });
           onChange();
         } catch (e) {
@@ -428,7 +427,6 @@ function BatchFromMaterials(props: {
                 )}
               </div>
 
-              {usesImageModel && (
                 <div>
                   <label className="block text-sm text-stone-600 mb-1.5">이미지 품질 (전체 장 공통)</label>
                   <div className="flex gap-2">
@@ -460,7 +458,6 @@ function BatchFromMaterials(props: {
                     </button>
                   </div>
                 </div>
-              )}
 
               <div className="text-[11px] text-stone-400 leading-relaxed">
                 디자인 톤은 <b>강의 헤더의 “디자인”</b>(덱 전체 공통)을 따르고, 레이아웃은 장마다 <b>AI 자동</b>입니다.
@@ -728,7 +725,6 @@ export function DeckPanel(props: {
           <BatchFromMaterials
             lectureId={lectureId}
             hasMaterials={deck.materials.length > 0}
-            usesImageModel={parseDesignSystem(deck.design_system || '').render !== 'html'}
             onChange={onChange}
           />
           <button
@@ -799,8 +795,7 @@ export function DeckPanel(props: {
                   <BatchFromMaterials
                     lectureId={lectureId}
                     hasMaterials
-                    usesImageModel={parseDesignSystem(deck.design_system || '').render !== 'html'}
-                    variant="cta"
+                            variant="cta"
                     onChange={onChange}
                   />
                 </div>

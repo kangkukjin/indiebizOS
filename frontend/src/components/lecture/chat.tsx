@@ -3,18 +3,17 @@
  * LectureWorkspace.tsx 에서 verbatim 이동: AIChatPanel(대화·재렌더 의도 감지)·
  * ChatBubble + formatDate(본체 LectureSelectScreen 도 사용 — export).
  *
- * 2026-08-06: layout 드롭다운 은퇴 → **렌더 방식** 셀렉터로 교체. 구조는 AI가 고르고,
- * 사람은 톤(강의 설정)과 렌더 방식(여기)만 고른다. 구조를 바꾸고 싶으면 자연어로.
+ * 2026-08-06: layout 드롭다운 은퇴 — 구조는 AI가 내용을 보고 고른다(바꾸려면 자연어로).
+ * 렌더 방식·톤 선택은 **헤더의 DesignSystemPicker 하나**가 담당(채팅엔 중복 두지 않음).
+ * 이미지 품질(Pro/Fast) 토글은 항상 노출 — HTML 렌더도 일러스트 layout 이 이미지 모델을
+ * 부르므로 품질이 의미 있다.
  */
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
-import { parseDesignSystem } from '../../lib/api-lecture-workspace';
 import type {
   Deck,
-  RenderMode,
   SlideCreateResponse,
 } from '../../lib/api-lecture-workspace';
-import { RenderSelect, useDesignMatrix } from './design-axes';
 
 interface ChatMessage {
   role: 'user' | 'ai' | 'system';
@@ -46,14 +45,6 @@ export function AIChatPanel(props: {
   const [input, setInput] = useState('');
   const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 이미지 품질
   const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
-
-  // 렌더 방식 — 덱 기본을 이 슬라이드만 덮는 override. 덱이 바뀌면 덱 기본으로 되돌린다.
-  const { matrix } = useDesignMatrix();
-  const deckAxes = parseDesignSystem(deck.design_system || '');
-  const [renderChoice, setRenderChoice] = useState<RenderMode>(deckAxes.render);
-  useEffect(() => {
-    setRenderChoice(parseDesignSystem(deck.design_system || '').render);
-  }, [deck.design_system]);
   const [busy, setBusy] = useState(false);
   // 채팅 첨부 이미지 — "이 이미지가 들어간 슬라이드"를 조판 (shadcn hero_image/content_image/custom)
   const [attachedImage, setAttachedImage] = useState<{ name: string; dataUrl: string } | null>(null);
@@ -66,9 +57,6 @@ export function AIChatPanel(props: {
     reader.onload = () => setAttachedImage({ name: file.name || 'pasted.png', dataUrl: String(reader.result) });
     reader.readAsDataURL(file);
   };
-
-  // 이미지 모델을 쓰는 렌더 방식일 때만 품질 선택이 의미 있음(native·image 둘 다 씀)
-  const usesImageModel = renderChoice === 'native' || renderChoice === 'image';
 
   // 편집 대상 슬라이드의 종류 — 글자가 PNG에 구워진 슬라이드는 '이미지 편집' 경로 가능
   const focusedSlide = focusSlideId ? deck.slides[focusSlideId] : null;
@@ -103,8 +91,6 @@ export function AIChatPanel(props: {
     setMessages((m) => [...m, userMsg]);
     setBusy(true);
 
-    // 덱 기본과 다른 방식을 골랐을 때만 override 를 보낸다(같으면 서버가 덱 값을 쓴다).
-    const chosenRender = renderChoice !== deckAxes.render ? renderChoice : undefined;
     // 휴리스틱: focus 모드 + 짧은 instruction이 "재생성/재렌더/다시 그려"류로만 끝나면
     // editSlide(AI 재생성)가 아니라 rerenderSlide(spec 보존, PNG만 재렌더)로 분기.
     // 디자인 변경 후 같은 내용을 새 톤으로 다시 그리고 싶을 때 자연스러운 명령.
@@ -112,7 +98,6 @@ export function AIChatPanel(props: {
       mode === 'edit' &&
       focusSlideId !== null &&
       !focusBaked &&    // 글자가 구워진 슬라이드는 spec 재렌더가 불가 — 아래 경로로 보냄
-      !chosenRender &&  // 렌더 방식을 바꿨다면 다시 그리려는 명백한 의도
       RERENDER_INTENT_RE.test(text);
 
     try {
@@ -125,7 +110,8 @@ export function AIChatPanel(props: {
         return;
       }
 
-      const q = usesImageModel ? imageQuality : undefined;
+      // 품질은 항상 보낸다 — HTML 렌더도 일러스트 layout 이면 이미지 모델을 부른다.
+      const q = imageQuality;
 
       // 통짜/이미지 슬라이드 편집: '부분수정'(이미지 편집) 또는 image 슬라이드는 무조건 이미지 편집.
       // → 다시 그리지 않고 현재 이미지에서 시키는 부분만 수정 (구도 보존).
@@ -141,7 +127,7 @@ export function AIChatPanel(props: {
         return;
       }
 
-      const genOpts = { render: chosenRender, imageQuality: q, image: img };
+      const genOpts = { imageQuality: q, image: img };
       let result: SlideCreateResponse;
       if (mode === 'edit' && focusSlideId) {
         result = await api.editSlide(deck.lecture_id, focusSlideId, text, genOpts);
@@ -290,62 +276,37 @@ export function AIChatPanel(props: {
             </div>
           </div>
         )}
-        {usesImageModel && (
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-stone-500 shrink-0">이미지</label>
-            <div className="flex gap-1 flex-1">
-              <button
-                type="button"
-                onClick={() => setImageQuality('pro')}
-                disabled={busy}
-                title="Nano Banana Pro (Gemini 3 Pro Image) · 2K · 약 $0.134/장 — 고품질"
-                className={`flex-1 px-2 py-1 text-xs rounded border ${
-                  imageQuality === 'pro'
-                    ? 'bg-stone-800 text-white border-stone-800'
-                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
-                } disabled:opacity-50`}
-              >
-                고품질 (Pro)
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageQuality('fast')}
-                disabled={busy}
-                title="Nano Banana 2 (Gemini 3.1 Flash Image) · 1K · 약 $0.067/장 — 저가·빠름"
-                className={`flex-1 px-2 py-1 text-xs rounded border ${
-                  imageQuality === 'fast'
-                    ? 'bg-amber-600 text-white border-amber-600'
-                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
-                } disabled:opacity-50`}
-              >
-                저가 (Fast)
-              </button>
-            </div>
-          </div>
-        )}
+        {/* 이미지 품질 — 항상 노출. HTML 렌더도 일러스트 layout 이면 이미지 모델을 부른다. */}
         <div className="flex items-center gap-2">
-          <label className="text-[11px] text-stone-500 shrink-0">렌더</label>
-          <div className="flex-1">
-            <RenderSelect
-              matrix={matrix}
-              tone={deckAxes.tone}
-              value={renderChoice}
-              onChange={setRenderChoice}
-              disabled={busy}
-              compact
-            />
-          </div>
-          {renderChoice !== deckAxes.render && (
+          <label className="text-[11px] text-stone-500 shrink-0">이미지</label>
+          <div className="flex gap-1 flex-1">
             <button
               type="button"
-              onClick={() => setRenderChoice(deckAxes.render)}
+              onClick={() => setImageQuality('pro')}
               disabled={busy}
-              className="text-[11px] text-stone-400 hover:text-stone-700 shrink-0"
-              title="덱 기본 렌더 방식으로 되돌리기"
+              title="Nano Banana Pro (Gemini 3 Pro Image) · 고품질 — 이미지가 든 슬라이드에 적용"
+              className={`flex-1 px-2 py-1 text-xs rounded border ${
+                imageQuality === 'pro'
+                  ? 'bg-stone-800 text-white border-stone-800'
+                  : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+              } disabled:opacity-50`}
             >
-              ✕
+              고품질 (Pro)
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setImageQuality('fast')}
+              disabled={busy}
+              title="Nano Banana 2 (Gemini 3.1 Flash Image) · 저가·빠름 — 이미지가 든 슬라이드에 적용"
+              className={`flex-1 px-2 py-1 text-xs rounded border ${
+                imageQuality === 'fast'
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+              } disabled:opacity-50`}
+            >
+              저가 (Fast)
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <input

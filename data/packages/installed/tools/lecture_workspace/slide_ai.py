@@ -986,6 +986,7 @@ def _generate_one_illustration(
     prompt: str,
     design_system: str,
     output_path: Path,
+    image_quality: str = "pro",
 ) -> str:
     """단일 이미지 생성. 성공 시 output_path의 절대경로 반환, 실패 시 예외.
 
@@ -995,6 +996,9 @@ def _generate_one_illustration(
     """
     handler = _load_media_handler()
 
+    # 다른 두 렌더 경로(native·composite)와 같은 품질 어휘: pro=Nano Banana Pro / fast=Nano Banana 2
+    quality = "fast" if (image_quality or "pro").strip() == "fast" else "pro"
+
     from tool_context import ToolContext
     with tempfile.TemporaryDirectory() as tmp:
         ctx = ToolContext(project_path=tmp, tool_name="generate_gemini_image")
@@ -1003,6 +1007,7 @@ def _generate_one_illustration(
             "style_preset": design_system,
             "aspect_ratio": "16:9",
             "image_size": "1K",
+            "quality": quality,
             "output_path": output_path.name,  # 파일명만 — ToolContext.output_dir()/{name}에 저장됨
         }
         result = handler.execute(tool_input, ctx)
@@ -1033,6 +1038,7 @@ def generate_slide_illustrations(
     design_system: str,
     slides_dir: Path,
     slide_id: str,
+    image_quality: str = "pro",
 ) -> dict:
     """illustrations dict의 각 prompt를 이미지로 생성. slide_spec에 주입할 키들 반환.
 
@@ -1066,13 +1072,13 @@ def generate_slide_illustrations(
     injected = {}
     if len(jobs) == 1:
         target_key, prompt_text, output_path = jobs[0]
-        abs_path = _generate_one_illustration(prompt_text, design_system, output_path)
+        abs_path = _generate_one_illustration(prompt_text, design_system, output_path, image_quality)
         injected[target_key] = abs_path
     else:
         from concurrent.futures import ThreadPoolExecutor, as_completed
         with ThreadPoolExecutor(max_workers=len(jobs)) as ex:
             futures = {
-                ex.submit(_generate_one_illustration, prompt_text, design_system, output_path): target_key
+                ex.submit(_generate_one_illustration, prompt_text, design_system, output_path, image_quality): target_key
                 for target_key, prompt_text, output_path in jobs
             }
             for fut in as_completed(futures):

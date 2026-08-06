@@ -291,6 +291,17 @@ def _stock_quote(ti: dict):
 def _stock_history(ti: dict):
     """[sense:stock]{op:history} — 기간별 주가 이력/차트 (2026-06-04 개명: 옛 price)."""
     ticker, market = _stock_common(ti, "history")
+    if str(ticker or "").startswith("^"):
+        # 지수(^GSPC·^IXIC·^SOX…)는 FMP 무료 티어가 402(프리미엄 전용) → quote 와 같은
+        # Yahoo chart 경로로 우회. 통화는 동일하게 data.prices 라 _attach_price_table 호환.
+        tool = load_module("tool_yfinance")
+        _res = tool.get_stock_price(
+            symbol=ticker,
+            period=ti.get("period", "1mo"),
+            interval=ti.get("interval", "1d"),
+            max_points=ti.get("max_points", 10),
+        )
+        return _attach_price_table(_res)
     if market == "kr":
         tool = load_module("tool_krx")
         price_symbol = re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)  # krx는 bare 6자리 코드

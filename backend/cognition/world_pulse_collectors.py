@@ -707,7 +707,13 @@ def _collect_self_state() -> Dict:
         for proj in projects:
             try:
                 pid = proj.get("id", "")
-                db = ConversationDB(pid)
+                # ★실경로 필수 — 옛 ConversationDB(pid)는 프로젝트 *이름*을 상대경로로 열어
+                # cwd 에 빈 껍데기 DB(backend/CCTV 등)를 만들고 태스크 수를 항상 0으로 읽었다
+                # (2026-08-06 발견 — 조용히 수년치 껍데기 축적).
+                db_path = pm.projects_path / pid / "conversations.db"
+                if not db_path.exists():
+                    continue
+                db = ConversationDB(str(db_path))
                 pending = db.get_pending_tasks()
                 pending_tasks += len(pending)
                 # in_progress 태스크

@@ -283,10 +283,10 @@ CLAUDE.md 개발 규칙에 원래 "각 파일 1500줄 이하로 모듈화"가 �
 | ~~③~~ | ~~`frontend/src/components/ForageBrowser.tsx`~~ | ~~1569~~ | ✅완료(§2-5, 2026-07-18) |
 | ~~④~~ | ~~`backend/api_launcher_web.py`~~ | ~~2928~~ | ✅완료(§2-6, 2026-07-18) |
 | ~~⑤~~ | ~~`frontend/src/components/LectureWorkspace.tsx`~~ | ~~2706~~ | ✅완료(§2-10, 2026-07-18) |
-| ⑥ | `data/packages/installed/tools/media_producer/shadcn_slides.py` | 1955 | |
+| ~~⑥~~ | ~~`data/packages/installed/tools/media_producer/shadcn_slides.py`~~ | ~~1955~~ | ✅완료(2026-08-06, `d587a40` — 상수 2모듈 분리: shadcn_design.py 728 + shadcn_layouts.py 843 + 본체 416) |
 | ~~⑦~~ | ~~`backend/indienet.py`~~ | ~~1781~~ | ✅완료(§2-11, 2026-07-18) |
 | ~~⑧~~ | ~~`system_essentials/handler.py`~~ | ~~1659~~ | ✅완료(§2-7, 2026-07-18) |
-| ⑨ | `media_producer/handler.py` | 1643 | 위와 동일 주의 |
+| ~~⑨~~ | ~~`media_producer/handler.py`~~ | ~~1643~~ | ✅졸업(2026-08-06 — gemini_vision.py 분리 등으로 1416줄, BASELINE 제거 `60bc40c`) |
 | ~~⑩~~ | ~~`backend/system_tools.py`~~ | ~~1526~~ | ✅완료(§2-8, 2026-07-18) |
 | ~~⑪~~ | ~~`backend/ibl_parser.py`~~ | ~~1522~~ | ✅완료(§2-9, 2026-07-18) |
 

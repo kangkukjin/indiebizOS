@@ -152,10 +152,14 @@ def run_ibl_health_check() -> List[Dict]:
     gp = s.get("golden_pipes") or {}
     passed, total = int(gp.get("passed", 0)), int(gp.get("total", 0))
     gp_ok = total > 0 and passed == total
+    # 실패 파이프 이름 동반 — "4/5 PASS" 만으로는 어느 파이프인지 action_health 를
+    # 뒤져야 알 수 있었다(2026-08-06 진단). 옛 요약(fails 키 없음)은 빈 목록으로 폴백.
+    gp_fails = [str(f) for f in (gp.get("fails") or [])][:3]
+    gp_msg = f"{passed}/{total} PASS" + (f" — FAIL: {', '.join(gp_fails)}" if gp_fails else "")
     out.append({"node": "__ibl_health__", "action": "golden_pipes",
                 "success": gp_ok, "response_ms": 0,
                 "data_quality": "ok" if gp_ok else "error",
-                "error_message": None if gp_ok else f"{passed}/{total} PASS"})
+                "error_message": None if gp_ok else gp_msg})
     # §1C-2 연산자(?? · &) — 골든파이프가 못 보는 문법층. 이 항목이 없던 동안 `??` 가
     # NameError 로 죽은 채 몇 달을 버텼다(문서·프롬프트는 가르치는데 아무도 검사 안 함).
     # 옛 요약(operators 키 없음)은 total=0 → 스킵하고 항목을 남기지 않는다.

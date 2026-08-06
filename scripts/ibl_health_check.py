@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """IBL 건강 점검 — 매뉴얼 §1 절차를 그대로 실행(외부 도구 의존 없이 /ibl/execute + 레지스트리만)."""
-import json, urllib.request, subprocess, sys, os
+import json, time, urllib.request, subprocess, sys, os
 
 BASE = "http://localhost:8765"
 PID = "하드웨어"
@@ -344,17 +344,33 @@ PIPES = [
   ("kosis>>take",         '[sense:kosis]{query: "인구"} >> [table:take]{n: 5}', "items"),
 ]
 print("\n" + "="*72); print("§1C 골든 파이프 (문법+통화 흐름)"); print("="*72)
+
+def _pipe_ok(fr, kind):
+    if kind == "items":
+        return isinstance(fr, dict) and isinstance(fr.get("items"), list) and len(fr["items"]) > 0
+    if kind == "chart":
+        return isinstance(fr, dict) and fr.get("success") is True
+    # doc — bool() 필수: or 체인이 None(실패)이나 경로 문자열(성공)을 그대로 반환해 += 가 터진다
+    return bool(isinstance(fr, dict) and (fr.get("success") is True or fr.get("path") or fr.get("file")))
+
 pipe_pass = 0
+pipe_fails = []
 for name, code, kind in PIPES:
     fr = final_of(execute(code))
-    if kind == "items":
-        ok = isinstance(fr, dict) and isinstance(fr.get("items"), list) and len(fr["items"]) > 0
-    elif kind == "chart":
-        ok = isinstance(fr, dict) and fr.get("success") is True
-    else:  # doc
-        # bool() 필수 — or 체인이 None(실패)이나 경로 문자열(성공)을 그대로 반환해 += 가 터진다
-        ok = bool(isinstance(fr, dict) and (fr.get("success") is True or fr.get("path") or fr.get("file")))
+    ok = _pipe_ok(fr, kind)
+    if not ok:
+        # 외부 API 일시 블립 흡수 — 1회 재시도. 이 절의 목적은 문법·통화 흐름 회귀지
+        # 외부 API liveness 가 아니다(arXiv 가 00:05 UTC 인덱스 갱신 창에서 상습 블립
+        # → 아침 09:05 KST 점검마다 4/5 거짓 경보, 2026-08-06 진단). 진짜 회귀는
+        # 결정론적이라 재시도로 안 사라진다.
+        time.sleep(3)
+        fr = final_of(execute(code))
+        ok = _pipe_ok(fr, kind)
+        if ok:
+            print(f"  [RETRY] {name} — 1차 블립, 재시도로 통과")
     pipe_pass += ok
+    if not ok:
+        pipe_fails.append(name)
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
 
 # ── §1C-2 연산자 (문법 자체 — 최종 통화가 아니라 *동작*을 본다) ──
@@ -491,7 +507,7 @@ _summary = {
         "green": len(buckets["GREEN"]), "yellow": len(buckets["YELLOW"]), "red": len(buckets["RED"]),
         "reds": [{"name": n, "reason": r} for n, r in buckets["RED"]],
     },
-    "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES)},
+    "golden_pipes": {"passed": int(pipe_pass), "total": len(PIPES), "fails": pipe_fails},
     "operators": {"passed": int(op_pass), "total": len(OPERATORS)},
 }
 print("\n@@HEALTH_JSON@@ " + json.dumps(_summary, ensure_ascii=False))

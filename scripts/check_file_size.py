@@ -39,7 +39,6 @@ EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/"
 BASELINE = {
     "backend/surface/api_nas.py": 1515,
     "data/packages/installed/tools/media_producer/shadcn_slides.py": 1955,  # 핸드오프 doc ⑥
-    "data/packages/installed/tools/media_producer/handler.py": 1646,        # 핸드오프 doc ⑨
     "data/packages/installed/tools/data-ops/handler.py": 1711,   # 통화 소비자 정본 — 최우선 분할 대상
     "data/packages/installed/tools/youtube/tool_youtube.py": 1570,
     "frontend/electron/main.js": 1990,

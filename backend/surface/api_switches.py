@@ -66,8 +66,12 @@ async def create_switch(switch: SwitchCreate):
                 # 에이전트 설정 복사
                 if agent:
                     config["agent_name"] = agent.get("name", agent_name)
-                    config["agent_role"] = agent.get("role_description", "")
-                    config["tools"] = agent.get("allowed_tools", [])
+                    # 현행 agents.yaml 필드는 role, 옛 프로젝트는 role_description
+                    config["agent_role"] = agent.get("role", "") or agent.get("role_description", "")
+                    # 노드 스코프 복사 — 프로젝트 삭제 후에도 스위치 독립 유지
+                    # (SwitchRunner._resolve_allowed_nodes 1순위)
+                    if agent.get("allowed_nodes") and not config.get("allowed_nodes"):
+                        config["allowed_nodes"] = agent["allowed_nodes"]
 
                     # AI 설정: 에이전트 내부 설정 우선, 없으면 common에서
                     agent_ai = agent.get("ai", {})

@@ -495,6 +495,11 @@ def _collect_location() -> str:
         data = _parse_handler_result(raw)
         if not data or not data.get("success"):
             return ""
+        # ★IP 추정(source:"ip")은 채택 안 함 — PC here 의 IP 폴백은 ISP 등록지 기준이라
+        # 도시가 통째로 틀린다(오송 거주인데 '제천' 실측, 2026-08-06). 이 가이드는 의식
+        # 프롬프트에 사실로 주입되므로 틀린 도시보다 빈 값이 낫다(원 계약: 폰 GPS 또는 생략).
+        if (data.get("source") or "").lower() == "ip":
+            return ""
         addr = (data.get("address") or "").strip()
         if addr:
             return addr

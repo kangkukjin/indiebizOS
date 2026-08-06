@@ -44,7 +44,10 @@ revive() {
     {
         echo "[$(date '+%F %T')] /health 2회 무응답 — 백엔드 재기동 (유령 워커 포함 정리)"
         # 기록된 처방: 유령만 죽이면 복구 안 됨 — 마스터까지 전부 정리 후 재기동
-        /usr/sbin/lsof -ti :8765 | xargs kill -9 2>/dev/null
+        # ★-sTCP:LISTEN 필수(2026-08-06 사건): 무스코프 lsof -i 는 원격 포트가 8765인
+        #   클라이언트 소켓(Electron WS·cloudflared 터널·에이전트 MCP)까지 매칭해
+        #   kill -9 가 앱을 통째로 죽였다. 리스너만 겨냥한다.
+        /usr/sbin/lsof -ti :8765 -sTCP:LISTEN | xargs kill -9 2>/dev/null
         pkill -9 -f "python3 api.py" 2>/dev/null
         pkill -9 -f "Python api.py" 2>/dev/null
         sleep 1
@@ -72,8 +75,11 @@ while true; do
     fi
     [ -f "$PAUSE" ] && continue
     /usr/bin/curl -s -m 4 "$HEALTH" >/dev/null 2>&1 && continue
-    sleep 5
-    # 이중 확인 — start.sh 의 kill→start 순간 틈새·리로드 순간 오발 방지
+    sleep 20
+    # 이중 확인 — start.sh 의 kill→start 순간 틈새·리로드 순간 오발 방지.
+    # ★20초(2026-08-06 사건): uvicorn --reload 재기동은 /health 가 11~15초 죽는다
+    #   (임베딩 모델 등 무거운 콜드 스타트) — 5초 재확인은 정상 리로드를 죽음으로
+    #   오판해 revive 를 오발했다. 재확인 대기는 리로드 소요보다 길어야 한다.
     /usr/bin/curl -s -m 4 "$HEALTH" >/dev/null 2>&1 && continue
     revive
     sleep 30   # 부팅 여유 — 연속 재기동 폭주 방지

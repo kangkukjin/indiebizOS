@@ -34,14 +34,11 @@ SCAN_PATTERNS = [
 EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/",
                   "backend/static/")
 
-# 기존 부채 동결(2026-08-05 실측). 값 = 그 시점 줄 수(래칫 상한).
+# 기존 부채 동결. 값 = 그 시점 줄 수(래칫 상한).
 # 분할 완료 시 항목 삭제. 새 항목 추가는 금지 — 추가하고 싶다는 충동이 곧 분할 신호.
-BASELINE = {
-    "backend/surface/api_nas.py": 1515,
-    "data/packages/installed/tools/data-ops/handler.py": 1711,   # 통화 소비자 정본 — 최우선 분할 대상
-    "data/packages/installed/tools/youtube/tool_youtube.py": 1570,
-    "frontend/electron/main.js": 1990,
-}
+# **2026-08-06 전액 상환**: 마지막 4건(api_nas·data-ops·tool_youtube·main.js)까지 분할해
+# 부채 0. 이제 이 가드는 예외 없는 한도다 — 1500줄을 넘기려면 먼저 쪼개야 한다.
+BASELINE = {}
 
 
 def count_lines(path: str) -> int:

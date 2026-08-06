@@ -166,6 +166,7 @@
     "surface/api_multi_chat",
     "surface/api_music",
     "surface/api_nas",
+    "surface/api_nas_lite",
     "surface/api_nodes",
     "surface/api_notifications",
     "surface/api_packages",
@@ -233,8 +234,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 227,
-    "engine": 202,
+    "total": 228,
+    "engine": 203,
     "blocklist": 25
   }
 }

@@ -38,7 +38,6 @@ EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/"
 # 분할 완료 시 항목 삭제. 새 항목 추가는 금지 — 추가하고 싶다는 충동이 곧 분할 신호.
 BASELINE = {
     "backend/surface/api_nas.py": 1515,
-    "data/packages/installed/tools/media_producer/shadcn_slides.py": 1955,  # 핸드오프 doc ⑥
     "data/packages/installed/tools/data-ops/handler.py": 1711,   # 통화 소비자 정본 — 최우선 분할 대상
     "data/packages/installed/tools/youtube/tool_youtube.py": 1570,
     "frontend/electron/main.js": 1990,

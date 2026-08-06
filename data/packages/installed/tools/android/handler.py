@@ -449,17 +449,45 @@ def _here_net_fingerprint() -> str:
 
 
 def _here_desktop(tool_input: dict) -> dict:
-    """데스크탑 프로브 — IP 지오(도시 수준) + 움직임-증거 캐시.
+    """데스크탑 프로브 — 선언 위치(1순위) > IP 지오(도시 수준) + 움직임-증거 캐시.
+
+    ★선언 위치(data/body_location.json): 고정 몸(데스크탑)의 정답 소스. IP 지오는
+    ISP 등록지 기준이라 도시가 통째로 틀릴 수 있다(오송 거주인데 '제천' 실측,
+    2026-08-06) — 안 움직이는 몸은 사용자가 한 번 선언하는 쪽이 유일하게 정확하다.
+    파일이 있으면 IP 를 아예 안 잰다. 이동하는 몸(랩탑)은 이 파일을 만들지 말 것
+    (후속: OS 위치서비스[CoreLocation/Windows Geolocation] 층이 랩탑의 정답).
 
     정책(보편): 움직였다는 증거(지문 변경)가 없으면 캐시를 내놓는다 — 안 바뀌는 걸
-    시간·돈 들여 재확인하지 않는다. refresh=true 로 강제 재측정.
+    시간·돈 들여 재확인하지 않는다. refresh=true 로 강제 재측정(선언 위치는 불변).
     """
     import json as _json
     import os as _os
     import time as _time
 
-    base = _os.environ.get("INDIEBIZ_BASE_PATH") or _os.path.join(
-        _os.path.dirname(__file__), "..", "..", "..", "..")
+    # ★base 폴백 = 레포 루트 — 핸들러 위치(data/packages/installed/tools/android)에서
+    # 5단계 위. 옛 4단계 폴백은 data/ 로 풀려 라이브(INDIEBIZ_BASE_PATH 미설정)가
+    # data/data/here_cache.json 을 읽고 쓰던 잠복 버그(2026-08-06 발견 — data/data/ 잔재의 진범).
+    base = _os.environ.get("INDIEBIZ_BASE_PATH") or _os.path.abspath(_os.path.join(
+        _os.path.dirname(__file__), "..", "..", "..", "..", ".."))
+
+    # 0) 선언 위치 — 고정 몸의 정답 (있으면 IP 측정·캐시 모두 생략)
+    declared_path = _os.path.join(base, "data", "body_location.json")
+    try:
+        with open(declared_path, "r", encoding="utf-8") as f:
+            decl = _json.load(f)
+        if decl.get("lat") is not None and decl.get("lng") is not None:
+            return {"success": True, "lat": decl["lat"], "lng": decl["lng"],
+                    "city": decl.get("city"), "address": decl.get("address"),
+                    "source": "declared", "accuracy_m": decl.get("accuracy_m", 3000),
+                    "measured_at": decl.get("declared_at"), "cached": False,
+                    "note": "사용자 선언 위치(고정 몸 — data/body_location.json). "
+                            "이사했으면 그 파일을 수정하세요. 정밀 위치(길찾기 출발점)는 "
+                            "폰 몸에 부탁: [others:ask]{message: \"지금 위치 알려줘\"}"}
+    except FileNotFoundError:
+        pass
+    except Exception:
+        pass  # 파일 손상 → IP 폴백으로 진행(조용히)
+
     cache_path = _os.path.join(base, "data", "here_cache.json")
     fp = _here_net_fingerprint()
 
@@ -510,8 +538,9 @@ def _here_desktop(tool_input: dict) -> dict:
 
     out = {"success": True, **result, "source": "ip", "accuracy_m": 10000,
            "measured_at": _time.strftime("%Y-%m-%dT%H:%M:%S"), "cached": False,
-           "note": "IP 기반 — 도시 수준 정밀도. 사용자의 정밀 위치(길찾기 출발점 등)가 "
-                   "필요하면 폰 몸에 부탁: [others:ask]{message: \"지금 위치 알려줘\"}"}
+           "note": "IP 기반 — 도시 수준 정밀도이며 ISP 등록지라 도시가 틀릴 수 있음. "
+                   "고정 몸(데스크탑)이면 data/body_location.json 에 위치를 선언하면 "
+                   "정확해짐. 정밀 위치는 폰 몸에 부탁: [others:ask]{message: \"지금 위치 알려줘\"}"}
     try:
         _os.makedirs(_os.path.dirname(cache_path), exist_ok=True)
         with open(cache_path, "w", encoding="utf-8") as f:

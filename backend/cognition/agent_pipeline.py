@@ -119,6 +119,10 @@ class CognitivePipelineMixin:
         history = history or []
         agent_name = agent_name or self.config.get("name", "")
 
+        # 0. 실행 축 기어 동기화 — 기어 변경을 상주 러너에 전파(불변이면 무비용).
+        # reflex/force_role 스왑보다 먼저여야 복원(original_provider)도 새 기어로 돌아온다.
+        self._sync_execution_gear()
+
         # 1. 연상 — 해마+심층+포식+디스크골격 (검색 1회로 점수/코드까지 확보)
         # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
         execution_memory, hippo_score, top_code = self._build_execution_memory(

@@ -141,6 +141,50 @@ class AgentCognitiveMixin(
             print(f"[AgentRunner] {pin_key}: 모델 기어({src}) → {ai_config['provider']}/{ai_config['model']} ({d.get('source')})")
         return ai_config
 
+    def _sync_execution_gear(self):
+        """메시지 시작 시 실행 축을 재해소해 기어 변경을 상주 러너에 전파.
+
+        실행 모델은 AIAgent 생성 시점에 한 번 해소되는데(_resolve_execution_config),
+        프로젝트 에이전트 러너는 agent_registry 에 상주하므로 기어를 바꿔도 실행 축만
+        옛 모델로 박제된다(분류·의식·평가는 매 호출 resolve() = 이미 핫리로드).
+        시스템 AI 는 get_system_ai_runner() 가 같은 검사로 러너를 재생성하므로 제외.
+        기어 불변이면 작은 JSON 읽기로 끝(무비용). provider 재초기화 실패 시 기존
+        provider 로 원복한다 — 기어 전파가 메시지를 죽여선 안 된다."""
+        if self.config.get("_is_system_ai") or not getattr(self, "ai", None):
+            return
+        agent_id = self.config.get("id")
+        project_id = self.config.get("_project_id") or getattr(self, "project_id", "") or ""
+        pin_key = f"{project_id}:{agent_id}" if (project_id and agent_id) else agent_id
+        try:
+            from model_resolver import resolve
+            d = resolve("execution", agent_id=pin_key)
+        except Exception as e:
+            print(f"[AgentRunner] 실행 축 재해소 실패(기존 모델 유지): {e}")
+            return
+        if not d.get("model"):
+            return
+        new_provider = (d.get("provider") or "anthropic").strip()
+        new_model = d["model"]
+        if new_provider == self.ai.provider_name and new_model == self.ai.model:
+            return
+        old = (self.ai.provider_name, self.ai.model, self.ai.api_key, self.ai._provider)
+        self.ai.provider_name = new_provider
+        self.ai.model = new_model
+        self.ai.api_key = d.get("api_key", "")
+        self.ai._init_provider()
+        if self.ai._provider is None:
+            self.ai.provider_name, self.ai.model, self.ai.api_key, self.ai._provider = old
+            print(f"[AgentRunner] {pin_key}: 기어 전파 실패 → 기존 {old[0]}/{old[1]} 유지")
+            return
+        # 러너/에이전트 config 도 새 모델로 동기 (다음 _init_ai·계기판 표시 일관성)
+        for cfg in (self.ai.config, self.config.get("ai")):
+            if isinstance(cfg, dict):
+                cfg["provider"] = new_provider
+                cfg["model"] = new_model
+                cfg["api_key"] = self.ai.api_key
+        print(f"[AgentRunner] {pin_key}: 모델 기어 전파 {old[0]}/{old[1]} → "
+              f"{new_provider}/{new_model} ({d.get('source')})")
+
     def _load_role(self) -> str:
         """에이전트 역할 텍스트 로드"""
         if self.config.get("_is_system_ai"):

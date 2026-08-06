@@ -532,6 +532,8 @@ class AgentCommunicationMixin:
 - 추가 작업이 필요하면 다른 에이전트에게 위임하세요.
 - 모든 작업이 완료되었으면 요청자에게 결과를 보고하세요."""
 
+                    # cognitive_stream 우회 경로라 기어 동기화를 직접 호출
+                    self._sync_execution_gear()
                     response = self.ai.process_message_with_history(
                         message_content=ai_message,
                         from_email=f"{from_agent}@internal",

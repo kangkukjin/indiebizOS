@@ -326,7 +326,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         # 사용자 메시지 저장
         db.save_message(user_id, target_agent_id, command)
 
-        # AI 응답 생성
+        # AI 응답 생성 (cognitive_stream 우회 경로라 기어 동기화를 직접 호출)
+        runner._sync_execution_gear()
         response = runner.ai.process_message_with_history(
             message_content=command,
             from_email="user@gui",

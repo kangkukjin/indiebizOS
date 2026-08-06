@@ -1,7 +1,9 @@
 # 파일 크기 모듈화 핸드오프 (1500줄 규칙)
 
-> 2026-07-17~18 세션. **11개 완료**(①~⑤·⑦·⑧·⑩·⑪ + 인지·제네릭), 잔여 2개
-> (⑥ shadcn_slides 1955 / ⑨ media_producer/handler 1643 — 전부 AI 저빈도).
+> 2026-07-17~18 세션에서 **11개 완료**(①~⑤·⑦·⑧·⑩·⑪ + 인지·제네릭),
+> **2026-08-06 에 나머지 전부 상환** — ⑥ shadcn_slides(`d587a40`)·⑨ media_producer/handler
+> (`60bc40c`) + `check_file_size.py` 의 동결 부채 4건(api_nas·data-ops·tool_youtube·main.js,
+> `98c0a77`)까지. **BASELINE = {} — 1500줄은 이제 예외 없는 한도다**(§7).
 > §3 방법론(+§3-6 AST 미해소 검사, ★frontend 는 §2-10 tsc 함정 참조) 그대로.
 
 ## 1. 왜 (동기 — 측정 근거)
@@ -299,3 +301,40 @@ CLAUDE.md 개발 규칙에 원래 "각 파일 1500줄 이하로 모듈화"가 �
 - **기존 tsc 오류 2건**(이번 작업과 무관, pre-existing): `NewspaperInstrument.tsx:459`
   `openArticle` 미정의 / `src/types/index.ts` `copyToClipboard` 중복 선언.
 - 메모리 정본: `~/.claude/.../memory/project_file_size_modularization.md`.
+
+## 7. 부채 전액 상환 (2026-08-06, `98c0a77`)
+
+`scripts/check_file_size.py` 의 `BASELINE` 이 **비었다**. 1500줄은 이제 동결 예외가 없는
+한도다 — 넘기려면 먼저 쪼개야 한다.
+
+| 파일 | 전 | 후 | 분리 |
+|---|---|---|---|
+| `backend/surface/api_nas.py` | 1515 | 1120 | `api_nas_lite.py` 405 (lite·lite2 HTML 두 벌) |
+| `data-ops/handler.py` | 1711 | 648 | `doc_formats.py` 607 + `doc_build.py` 496 |
+| `youtube/tool_youtube.py` | 1570 | 908 | `tool_transcript.py` 707 |
+| `frontend/electron/main.js` | 1990 | 751 | `bootstrap.js` 260 + `backend-process.js` 352 + `windows.js` 700 + `badge.js` 31 |
+
+**이번에 얻은 규칙 셋(§3 방법론 보강)**
+
+1. **상태 전역이 있는 모듈은 상태를 옮기지 않는다.** `tool_youtube` 는 handler 가
+   `load_singleton` 으로 잡는 재생 상태 기계(ffplay 프로세스·큐·락)다. 상태를 새 모듈로
+   옮기면 싱글턴 계약이 깨지므로 **상태 없는 쪽(자막·요약)만** 뗐다. `main.js` 도 같은
+   이유로 창 참조 Map 들을 창 생성기와 *함께* 옮겼다(소유자는 하나).
+2. **순환이 보이면 그건 상태의 주인이 애매하다는 신호.** `windows.js` 가 `clearBadge` 를
+   부르는데 배지가 `main.js` 에 있으면 main→windows→main 이 된다 → 배지 카운트를
+   `badge.js` 로 독립시켜(트레이는 `setTray` 주입) 방향을 폈다.
+3. **가드가 스캔하는 코드는 그 파일에 남긴다.** `handleLauncherCommand` 의
+   `case 'open_*_window'` 는 build `--check` launcher-가드가 `main.js` 를 정규식으로 읽는다.
+4. **JS 분할 검증 = eslint `no-undef`.** 파이썬의 AST 미해소 검사(§3-6)에 대응하는 도구.
+   실제로 실결함 3건을 잡았다(bootstrap 의 `app` 미임포트 / setupIPC 가 쓰는
+   `folderWindows` 미공개 / 둘째 인스턴스의 `_systemCleaned` 잠금). 원본 기준선과 같은
+   경고 수(15 warning 0 error)인지까지 대조할 것. 임시 설정으로 돌린다:
+   ```
+   cd frontend && npx eslint --no-config-lookup -c <(printf "import globals from 'globals'\nexport default [{files:['electron/*.js'],languageOptions:{ecmaVersion:2022,sourceType:'module',globals:{...globals.node}},rules:{'no-undef':'error'}}]\n") electron/*.js
+   ```
+5. **Electron ESM 그래프는 스텁으로 실로드해 본다.** `node --check` 는 구문만 본다.
+   `module.register` 훅으로 `electron` 을 스텁에 물려 `main.js` 를 import 하면 임포트
+   해소·순환까지 실제로 검증된다(`app.whenReady` 는 영원히 pending 인 Promise 로 두어
+   부팅 부작용 차단).
+6. **backend 에 새 모듈을 만들면 폰 번들이 뒤처진다.** pre-commit 이 잡아준다 —
+   `python3 scripts/build_body_bundle.py android` 재실행(이번엔 `api_nas_lite` 합류).

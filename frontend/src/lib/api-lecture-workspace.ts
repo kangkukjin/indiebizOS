@@ -85,26 +85,64 @@ export interface DeckMetaUpdate {
 /** 디자인 옵션 — 3그룹:
  *  css = slide_shadcn(CSS, 빠름·무료) / image = slide_image(개념 일러스트, 느림·비용) / auto = AI 자율
  *  값은 백엔드 shadcn_slides.DESIGN_SYSTEMS · slide_styles.STYLES · _IMAGE_DESIGNS와 일치 */
-export const DESIGN_SYSTEM_OPTIONS: Array<{
-  value: string;
-  label: string;
-  description: string;
-  group: 'css' | 'image' | 'auto';
-}> = [
-  // CSS 디자인 (빠름·무료 — 텍스트/도형 렌더)
-  { value: 'vintage_book',    label: '빈티지북',         description: '베이지 종이 + 청·적갈 잉크 · 책 강의·인문', group: 'css' },
-  { value: 'academic_paper',  label: '학술 논문',        description: '미색 + 진남 + 진홍 강조 · 연구·논문', group: 'css' },
-  { value: 'sf_blueprint',    label: 'SF 블루프린트',    description: '다크 네이비 + 시안 HUD · NotebookLM 양식', group: 'css' },
-  { value: 'tech_minimal',    label: '테크 미니멀',      description: '프리미엄 다크 + 글래스 · 개발자·테크', group: 'css' },
-  { value: 'magazine_modern', label: '잡지 모던',        description: '흰·검·적색 · 편집·홍보', group: 'css' },
-  // 프리미엄 일러스트 (느림·비용 — AI 개념 일러스트 + 타이포 합성)
-  { value: 'ink_blueprint',   label: '잉크+청사진 ✦',    description: '손그림 잉크 + 청사진 · 인문·개념', group: 'image' },
-  { value: 'cinematic_3d',    label: '시네마틱 3D ✦',    description: '빛·유리·볼륨 · 표지·임팩트', group: 'image' },
-  { value: 'isometric',       label: '아이소메트릭 ✦',   description: '30도 도면 · 시스템·구조', group: 'image' },
-  { value: 'lineart_duotone', label: '라인아트 듀오톤 ✦', description: '미니멀 선화 + 두 색 · 모던·고급', group: 'image' },
-  // AI 자율
-  { value: 'auto',            label: 'AI 자율 ✨',        description: '슬라이드마다 AI가 스타일·구성을 직접 선택', group: 'auto' },
-];
+/**
+ * 강의 창의 선택은 두 축뿐이다 — **톤**(design tone)과 **렌더 방식**(render).
+ * 구조(layout/composition)는 AI가 내용을 보고 고른다.
+ *
+ * ★목록을 여기 하드코딩하지 않는다. `GET /lectures/design-systems` 가 진실 소스
+ *   (media_producer/slide_tones.py)를 그대로 내려준다 — 예전엔 프론트엔드 상수가
+ *   백엔드보다 오래 살아남아, 은퇴한 톤을 계속 보여주고 고르면 생성이 실패했다.
+ */
+export type RenderMode = 'native' | 'image' | 'html';
+
+export interface ToneOption {
+  key: string;
+  ko: string;
+  desc: string;
+  renders: RenderMode[];   // 이 톤이 지원하는 렌더 방식
+}
+
+export interface RenderOption {
+  key: RenderMode;
+  ko: string;
+  desc: string;
+}
+
+export interface DesignMatrix {
+  tones: ToneOption[];
+  renders: RenderOption[];
+  default_tone: string;
+  default_render: RenderMode;
+}
+
+/** design_system 문자열 ↔ (톤, 렌더). 백엔드 slide_tones.py 와 같은 문법. */
+export function buildDesignSystem(tone: string, render: RenderMode): string {
+  return render === 'html' ? tone : `${render}_${tone}`;
+}
+
+export function parseDesignSystem(design: string): { tone: string; render: RenderMode } {
+  const d = (design || '').trim();
+  for (const render of ['native', 'image'] as const) {
+    for (const sep of ['_', ':']) {
+      if (d.startsWith(render + sep)) {
+        return { tone: d.slice(render.length + sep.length) || 'vintage_book', render };
+      }
+    }
+    if (d === render) return { tone: 'vintage_book', render };
+  }
+  return { tone: d || 'vintage_book', render: 'html' };
+}
+
+export interface SlideGenOptions {
+  /** 이 한 장만 덱 기본과 다른 렌더 방식으로 (혼합 덱). */
+  render?: RenderMode;
+  /** HTML 구조 강제 — UI 에는 노출하지 않는다(프로그래매틱 전용). */
+  layout?: string;
+  /** 이미지 품질: 'pro'(고품질·비쌈) / 'fast'(저가·빠름). */
+  imageQuality?: string;
+  /** 채팅 첨부 — 이 이미지가 '들어간' 슬라이드를 조판. */
+  image?: { base64: string; name: string };
+}
 
 export interface SlideCreateResponse {
   success: boolean;
@@ -120,6 +158,13 @@ export interface SlideCreateResponse {
 
 export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
+
+    // ============ 선택지 매트릭스 (톤 × 렌더 방식) ============
+
+    /** 드롭다운 두 개의 선택지. 진실 소스는 백엔드 톤 레지스트리 — 캐시하지 말 것. */
+    async designMatrix() {
+      return client.request<DesignMatrix>('/lectures/design-systems');
+    },
 
     // ============ 강의 CRUD ============
 
@@ -190,15 +235,14 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       lectureId: string,
       instruction: string,
       insertAt?: number,
-      layout?: string,
-      imageQuality?: string,  // 통짜 이미지: 'pro'(고품질) / 'fast'(저가)
-      image?: { base64: string; name: string },  // 채팅 첨부 — 이 이미지가 '들어간' 슬라이드 조판
+      opts?: SlideGenOptions,
     ) {
       const body: Record<string, unknown> = { instruction };
       if (insertAt !== undefined) body.insert_at = insertAt;
-      if (layout) body.layout = layout;
-      if (imageQuality) body.image_quality = imageQuality;
-      if (image) { body.image_base64 = image.base64; body.image_name = image.name; }
+      if (opts?.render) body.render = opts.render;
+      if (opts?.layout) body.layout = opts.layout;
+      if (opts?.imageQuality) body.image_quality = opts.imageQuality;
+      if (opts?.image) { body.image_base64 = opts.image.base64; body.image_name = opts.image.name; }
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides`,
         { method: 'POST', body: JSON.stringify(body) }
@@ -321,14 +365,13 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       lectureId: string,
       slideId: string,
       instruction: string,
-      layout?: string,
-      imageQuality?: string,
-      image?: { base64: string; name: string },
+      opts?: SlideGenOptions,
     ) {
       const body: Record<string, unknown> = { instruction };
-      if (layout) body.layout = layout;
-      if (imageQuality) body.image_quality = imageQuality;
-      if (image) { body.image_base64 = image.base64; body.image_name = image.name; }
+      if (opts?.render) body.render = opts.render;
+      if (opts?.layout) body.layout = opts.layout;
+      if (opts?.imageQuality) body.image_quality = opts.imageQuality;
+      if (opts?.image) { body.image_base64 = opts.image.base64; body.image_name = opts.image.name; }
       return client.request<SlideCreateResponse>(
         `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/edit`,
         { method: 'POST', body: JSON.stringify(body) }

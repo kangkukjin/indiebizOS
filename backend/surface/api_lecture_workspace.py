@@ -102,6 +102,24 @@ class CumulativeMemoPatch(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────
+# 선택지 매트릭스 (톤 × 렌더 방식)
+# ★`/{lecture_id}` 보다 **먼저** 선언해야 한다 — FastAPI 는 선언 순서로 매칭하므로
+#   뒤에 두면 "design-systems"가 lecture_id 로 먹힌다.
+# ─────────────────────────────────────────────────────────────────────
+
+@router.get("/design-systems")
+async def design_systems():
+    """강의 창 드롭다운 2축의 선택지 — 톤 목록 + 렌더 방식 + 톤별 지원 매트릭스.
+
+    프론트엔드에 톤 목록을 하드코딩하지 않기 위한 엔드포인트다(그 드리프트 때문에
+    은퇴한 톤이 드롭다운에 계속 남아 고르면 생성이 실패했다 — 2026-08-06 개편).
+    진실 소스 = media_producer/slide_tones.py.
+    """
+    ls = _load_lecture_store()
+    return ls._load_tone_registry().matrix()
+
+
+# ─────────────────────────────────────────────────────────────────────
 # 강의 CRUD
 # ─────────────────────────────────────────────────────────────────────
 
@@ -221,14 +239,18 @@ async def duplicate_slide(lecture_id: str, slide_id: str):
 class SlideCreateRequest(BaseModel):
     instruction: str
     insert_at: Optional[int] = None
-    layout: Optional[str] = None  # 강의자가 명시적으로 선택한 layout (없으면 AI 자동)
-    image_quality: Optional[str] = None  # 통짜 이미지 품질: 'pro'(고품질·비쌈) / 'fast'(저가·빠름)
+    # 렌더 방식 — 이 한 장만 덱 기본과 다르게 (native|image|html). 강의 창의 '렌더 방식' 셀렉터.
+    render: Optional[str] = None
+    # layout = HTML 구조 강제(프로그래매틱·IBL 용). UI 에는 노출하지 않는다 — 구조는 AI 몫.
+    layout: Optional[str] = None
+    image_quality: Optional[str] = None  # 이미지 품질: 'pro'(고품질·비쌈) / 'fast'(저가·빠름)
     image_base64: Optional[str] = None  # 채팅 첨부 이미지 — 이 파일이 '들어간' 슬라이드를 조판 (2026-08-05)
     image_name: Optional[str] = None
 
 
 class SlideEditRequest(BaseModel):
     instruction: str
+    render: Optional[str] = None
     layout: Optional[str] = None
     image_quality: Optional[str] = None
     image_base64: Optional[str] = None
@@ -311,6 +333,8 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
     }
     if req.insert_at is not None:
         tool_input["insert_at"] = req.insert_at
+    if req.render:
+        tool_input["render"] = req.render
     if req.layout:
         tool_input["layout"] = req.layout
     if req.image_quality:
@@ -325,11 +349,10 @@ async def create_slide(lecture_id: str, req: SlideCreateRequest):
     )
     result = _json.loads(result_str)
     if not result.get("success"):
-        # AI/렌더 실패 → 500
-        raise HTTPException(
-            status_code=500,
-            detail=result.get("error", "슬라이드 생성 실패"),
-        )
+        # 잘못된 요청(미지원 톤×렌더 조합 등)은 400, AI/렌더 실패는 500 — edit 엔드포인트와 동형.
+        err_type = result.get("error_type", "")
+        status = 400 if err_type in ("validation", "not_found") else 500
+        raise HTTPException(status_code=status, detail=result.get("error", "슬라이드 생성 실패"))
     return result
 
 
@@ -645,6 +668,8 @@ async def edit_slide(lecture_id: str, slide_id: str, req: SlideEditRequest):
     handler_mod = _load_handler()
     import json as _json
     edit_input = {"op": "edit", "lecture_id": lecture_id, "slide_id": slide_id, "instruction": req.instruction}
+    if req.render:
+        edit_input["render"] = req.render
     if req.layout:
         edit_input["layout"] = req.layout
     if req.image_quality:

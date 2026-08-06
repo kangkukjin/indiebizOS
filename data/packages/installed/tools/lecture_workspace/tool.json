@@ -95,9 +95,13 @@
             "type": "string",
             "description": "create+스크래치 덱 전용 — 톤 (vintage_book 기본/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint). 같은 톤은 같은 스크래치 덱에 모임. 강의 소속 create 는 덱 design_system 이 우선."
           },
+          "render": {
+            "type": "string",
+            "description": "create/edit 옵션 — 이 한 장만 덱 기본과 다른 **렌더 방식**으로. native(이미지 only — 이미지 모델이 글자까지 통째로, 기본)/image(이미지+글자 — 글자 없는 그림 위에 타이포 합성)/html(글자도 그림도 HTML — 빠르고 무료, 나중에 필드 편집 가능). 톤이 그 방식을 지원해야 한다."
+          },
           "layout": {
             "type": "string",
-            "description": "create 옵션 — 렌더 3단 사다리의 스위치. 미지정=native(AI 통짜 이미지 — 가장 예쁨, 기본). layout 지정 시 그 한 장만 shadcn HTML(무료·빠름) — 구조 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote/일러스트형)·마케팅(hero_image/features/stats/testimonial/pricing/cta/content_image/steps)은 shadcn 컴포넌트(예쁨), custom 은 자유 Tailwind HTML(가장 일반·자유)."
+            "description": "create/edit 옵션 — HTML 렌더의 구조 강제. 보통은 **지정하지 말 것**(AI가 내용을 보고 고른다). 지정하면 그 한 장은 HTML 경로로 그려진다 — 구조 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote/일러스트형)·마케팅(hero_image/features/stats/testimonial/pricing/cta/content_image/steps)은 shadcn 컴포넌트, custom 은 자유 Tailwind HTML."
           },
           "patch": {
             "type": "object",

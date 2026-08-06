@@ -16,11 +16,13 @@ import type {
   LectureLoadResponse,
   SlideMeta,
 } from '../lib/api-lecture-workspace';
-import { DESIGN_SYSTEM_OPTIONS } from '../lib/api-lecture-workspace';
+import { buildDesignSystem, parseDesignSystem } from '../lib/api-lecture-workspace';
+import type { RenderMode } from '../lib/api-lecture-workspace';
 // 서브컴포넌트 층 분리 (2026-07-18 모듈화 — 1500줄 규칙): lecture/ 참조.
 import { SlideSpecEditor, isBakedImageSlide } from './lecture/editor';
 import { MaterialsPanel, DeckPanel } from './lecture/panels';
 import { AIChatPanel, formatDate } from './lecture/chat';
+import { RenderSelect, ToneSelect, reconcileRender, useDesignMatrix } from './lecture/design-axes';
 
 interface LectureWorkspaceProps {
   initialLectureId: string | null;
@@ -706,7 +708,10 @@ function CreateLectureForm(props: {
   const [audience, setAudience] = useState('');
   const [thesis, setThesis] = useState('');
   const [duration, setDuration] = useState('60');
-  const [designSystem, setDesignSystem] = useState('vintage_book');
+  // 2축 — 톤과 렌더 방식. design_system 문자열은 제출 직전에 조립한다.
+  const { matrix } = useDesignMatrix();
+  const [tone, setTone] = useState('vintage_book');
+  const [render, setRender] = useState<RenderMode>('native');
   const [files, setFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
@@ -726,7 +731,7 @@ function CreateLectureForm(props: {
         audience: audience.trim() || undefined,
         thesis: thesis.trim() || undefined,
         duration_minutes: parseInt(duration) || undefined,
-        design_system: designSystem,
+        design_system: buildDesignSystem(tone, render),
       });
       // 업로드한 파일을 강의 자료로 등록 (강의 생성 직후). 자료가 있으면 워크스페이스에서
       // "슬라이드 일괄생성"으로 여러 장을 한 번에 만들어 강의 끝에 덧붙일 수 있다.
@@ -787,28 +792,28 @@ function CreateLectureForm(props: {
             className="w-32 px-3 py-2 border border-stone-300 rounded focus:outline-none focus:border-stone-500 text-stone-900 placeholder:text-stone-400"
           />
         </Field>
-        <Field label="디자인 시스템 (전체 톤)">
-          <select
-            value={designSystem}
-            onChange={(e) => setDesignSystem(e.target.value)}
-            className="w-full px-3 py-2 border border-stone-300 rounded focus:outline-none focus:border-stone-500 text-stone-900 bg-white"
-          >
-            <optgroup label="CSS 디자인 (빠름·무료)">
-              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'css').map((o) => (
-                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
-              ))}
-            </optgroup>
-            <optgroup label="프리미엄 일러스트 (이미지 생성 — 느림·비용)">
-              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'image').map((o) => (
-                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
-              ))}
-            </optgroup>
-            <optgroup label="자동">
-              {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'auto').map((o) => (
-                <option key={o.value} value={o.value}>{o.label} — {o.description}</option>
-              ))}
-            </optgroup>
-          </select>
+        <Field label="디자인 (전체 톤)">
+          <ToneSelect
+            matrix={matrix}
+            value={tone}
+            onChange={(t) => {
+              setTone(t);
+              // 새 톤이 현재 렌더 방식을 지원 안 하면 그 톤이 되는 방식으로 옮긴다
+              setRender(reconcileRender(matrix, t, render));
+            }}
+          />
+        </Field>
+        <Field label="렌더 방식">
+          <RenderSelect
+            matrix={matrix}
+            tone={tone}
+            value={render}
+            onChange={setRender}
+          />
+          <p className="mt-1 text-[11px] text-stone-400">
+            슬라이드의 구조(배치)는 AI가 내용을 보고 고릅니다. 바꾸고 싶으면 채팅에서
+            말하세요 — “좌우로 대비해서”, “표로 정리해줘”, “자유롭게 배치해줘”.
+          </p>
         </Field>
         <Field label="강의 자료 (선택 — 일괄생성용 원고·파일)">
           <div className="space-y-1.5">
@@ -957,12 +962,13 @@ function DesignSystemPicker(props: {
   const { lectureId, current, onChanged } = props;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { matrix } = useDesignMatrix();
 
-  const currentLabel =
-    DESIGN_SYSTEM_OPTIONS.find((o) => o.value === current)?.label || current;
+  // 덱의 design_system 문자열을 2축으로 풀어 두 셀렉터에 태운다.
+  const axes = parseDesignSystem(current);
 
-  const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value;
+  const save = async (tone: string, render: RenderMode) => {
+    const next = buildDesignSystem(tone, render);
     if (next === current) return;
     setBusy(true);
     setError(null);
@@ -977,31 +983,30 @@ function DesignSystemPicker(props: {
   };
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div
+      className="flex items-center gap-1.5"
+      title="변경 시 새 슬라이드부터 적용 (기존 슬라이드는 옛 톤 유지)."
+    >
       <span className="text-[11px] text-stone-500 shrink-0">디자인</span>
-      <select
-        value={current}
-        onChange={handleChange}
-        disabled={busy}
-        title={`현재: ${currentLabel}. 변경 시 새 슬라이드부터 적용 (기존 슬라이드는 옛 톤 유지).`}
-        className="px-2 py-1 text-xs border border-stone-300 rounded bg-white text-stone-700 hover:border-stone-500 focus:outline-none focus:border-stone-500 disabled:opacity-50"
-      >
-        <optgroup label="CSS (빠름)">
-          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'css').map((o) => (
-            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
-          ))}
-        </optgroup>
-        <optgroup label="프리미엄 일러스트 (이미지·느림)">
-          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'image').map((o) => (
-            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
-          ))}
-        </optgroup>
-        <optgroup label="자동">
-          {DESIGN_SYSTEM_OPTIONS.filter((o) => o.group === 'auto').map((o) => (
-            <option key={o.value} value={o.value} title={o.description}>{o.label}</option>
-          ))}
-        </optgroup>
-      </select>
+      <div className="w-28">
+        <ToneSelect
+          matrix={matrix}
+          value={axes.tone}
+          disabled={busy}
+          compact
+          onChange={(t) => save(t, reconcileRender(matrix, t, axes.render))}
+        />
+      </div>
+      <div className="w-28">
+        <RenderSelect
+          matrix={matrix}
+          tone={axes.tone}
+          value={axes.render}
+          disabled={busy}
+          compact
+          onChange={(r) => save(axes.tone, r)}
+        />
+      </div>
       {error && (
         <span className="text-[11px] text-red-600">{error}</span>
       )}

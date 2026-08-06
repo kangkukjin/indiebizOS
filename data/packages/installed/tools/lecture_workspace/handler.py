@@ -329,19 +329,85 @@ def _material_remove(tool_input: dict) -> str:
 # 슬라이드 생성/편집 (AI)
 # ─────────────────────────────────────────────────────────────────────
 
+# 글자가 PNG에 구워진 슬라이드 = spec→HTML 재렌더/필드 편집 불가, 재생성만 가능.
+#   native    통짜 이미지(이미지 모델이 글자까지 그림)
+#   composite 이미지+글자 합성(타이포 레이어가 PNG로 구워짐)
+#   image     강의자가 업로드한 원본 이미지
+_BAKED_LAYOUTS = ("native", "composite", "image")
+
+
+def _load_slide_tones():
+    """톤 레지스트리 (media_producer/slide_tones.py) — 톤 × 렌더 방식 매트릭스의 단일 소스."""
+    import importlib.util
+    import sys as _sys
+    if "slide_tones" in _sys.modules:
+        return _sys.modules["slide_tones"]
+    path = Path(__file__).resolve().parent.parent / "media_producer" / "slide_tones.py"
+    spec = importlib.util.spec_from_file_location("slide_tones", str(path))
+    mod = importlib.util.module_from_spec(spec)
+    _sys.modules["slide_tones"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def _deck_axes(design: str) -> tuple:
+    """`design_system` → (톤, 렌더 방식). 렌더 = native | image | html.
+
+    2026-08-06 2축 개편: 문자열 하나가 두 축을 인코딩한다(`<렌더 접두>_<톤>`, 접두 없음=html).
+    파싱 정본은 레지스트리 — 여기선 임포트 실패 시의 보수적 폴백만 갖는다.
+    """
+    try:
+        return _load_slide_tones().parse_design_system(design)
+    except Exception:
+        d = (design or "").strip()
+        for render in ("native", "image"):
+            for sep in ("_", ":"):
+                if d.startswith(render + sep):
+                    return (d.split(sep, 1)[1] or "vintage_book"), render
+            if d == render:
+                return "vintage_book", render
+        return (d or "vintage_book"), "html"
+
+
 def _is_native_design(design: str) -> bool:
-    """덱 design_system이 네이티브 통짜 경로인가 — "native" 또는 "native_<톤>"/"native:<톤>"."""
-    d = (design or "").strip()
-    return d == "native" or d.startswith("native_") or d.startswith("native:")
+    """덱 design_system이 통짜 이미지(이미지 only) 경로인가."""
+    return _deck_axes(design)[1] == "native"
+
+
+def _is_image_design(design: str) -> bool:
+    """덱 design_system이 이미지+글자(합성) 경로인가."""
+    return _deck_axes(design)[1] == "image"
 
 
 def _native_aesthetic(design: str) -> str:
-    """native 또는 native_tech_minimal / native:blueprint 에서 톤 추출(기본 vintage_book)."""
-    d = (design or "").strip()
-    for sep in ("_", ":"):
-        if d.startswith("native" + sep):
-            return d.split(sep, 1)[1] or "vintage_book"
-    return "vintage_book"
+    """design_system 에서 톤만 추출(기본 vintage_book)."""
+    return _deck_axes(design)[0]
+
+
+def _html_design_of(design: str) -> str:
+    """이 덱의 톤을 **HTML 렌더러가 아는 키**로 변환(청사진 톤 blueprint → sf_blueprint).
+
+    톤이 HTML 을 지원하지 않으면 톤 이름을 그대로 넘긴다 — shadcn_slides.render_slide 가
+    모르는 키를 default 로 접으므로(치명 실패 아님), 첨부 이미지처럼 HTML 경로가 강제되는
+    상황에서도 슬라이드는 나온다.
+    """
+    tone = _deck_axes(design)[0]
+    try:
+        return _load_slide_tones().style_key(tone, "html") or tone
+    except Exception:
+        return tone
+
+
+def _load_slide_image():
+    """이미지+글자 합성기 (media_producer/slide_image.py)."""
+    import importlib.util
+    import sys as _sys
+    path = Path(__file__).resolve().parent.parent / "media_producer" / "slide_image.py"
+    spec = importlib.util.spec_from_file_location("slide_image", str(path))
+    mod = importlib.util.module_from_spec(spec)
+    _sys.modules["slide_image"] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _load_slide_native():
@@ -471,6 +537,68 @@ def _generate_native_slide(
     }
 
 
+def _generate_image_slide(
+    lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, tone,
+    image_quality="pro", content=None,
+) -> dict:
+    """이미지+글자 슬라이드 — 글자 없는 일러스트 + HTML 타이포 합성(slide_image 위임).
+
+    구성(diptych/hero/side_panel/center_anchor/annotated/process)은 저작 AI가 내용을 보고
+    고른다 — 사람이 고르는 축이 아니다.
+    """
+    slide_id = focus_slide_id or lecture_store.next_slide_id(deck)
+    si = _load_slide_image()
+    style = _load_slide_tones().style_key(tone, "image")
+    if not style:
+        raise ValueError(f"'{tone}' 톤은 이미지+글자 렌더를 지원하지 않습니다.")
+
+    # 강의 맥락을 가볍게 곁들여 그라운딩 (주제·핵심·청중) + 호출자가 준 근거 원문
+    ctx = []
+    if deck.get("title"):
+        ctx.append(f"강의: {deck['title']}")
+    if deck.get("thesis"):
+        ctx.append(f"핵심 논지: {deck['thesis']}")
+    if deck.get("audience"):
+        ctx.append(f"청중: {deck['audience']}")
+    tool_input = {"instruction": instruction}
+    parts = ([" / ".join(ctx)] if ctx else []) + ([content] if content else [])
+    if parts:
+        tool_input["content"] = "\n".join(parts)
+    # 일러스트 품질 — 통짜 경로와 같은 어휘(pro=Nano Banana Pro / fast=Nano Banana 2)
+    tool_input["quality"] = "fast" if (image_quality or "pro").strip() == "fast" else "pro"
+
+    result = json.loads(
+        si.create_image_slide(tool_input, str(slides_dir_path), style, slide_id=slide_id)
+    )
+    if not result.get("success"):
+        raise RuntimeError(result.get("message") or "이미지+글자 슬라이드 생성 실패")
+
+    # spec json 저장 (layout="image"라 필드 직접 편집이 아니라 재생성 경로로 안내된다)
+    spec = result.get("spec") or {}
+    spec_meta = {
+        "layout": "composite", "style": result.get("style"), "composition": result.get("composition"),
+        "title": result.get("title"), "kicker": result.get("kicker"), **spec,
+    }
+    with open(slides_dir_path / f"{slide_id}.json", "w", encoding="utf-8") as f:
+        json.dump(spec_meta, f, ensure_ascii=False, indent=2)
+
+    png_rel = f"slides/{slide_id}.png"
+    spec_rel = f"slides/{slide_id}.json"
+    lecture_store.register_slide(
+        lecture_id=lecture_id, slide_id=slide_id,
+        title=result.get("title") or "(제목 없음)",
+        layout="composite", spec_file=spec_rel, png_file=png_rel, insert_at=insert_at,
+    )
+    return {
+        "slide_id": slide_id, "slide": spec_meta, "png_file": png_rel, "spec_file": spec_rel,
+        # 절대 경로 — 통짜 경로와 같은 의도(평가 루프가 픽셀을 직접 보는 통로)
+        "png_path": str((slides_dir_path / f"{slide_id}.png").resolve()),
+        "reasoning": result.get("reasoning"), "style": result.get("style"),
+        "composition": result.get("composition"), "critique": result.get("critique"),
+        "mode": "edit" if focus_slide_id else "create",
+    }
+
+
 def _generate_and_register_slide(
     lecture_id: str,
     instruction: str,
@@ -480,10 +608,15 @@ def _generate_and_register_slide(
     image_quality: str = "pro",
     content: str = None,
     user_image_path: str = None,
+    render: str = None,
 ) -> dict:
     """AI 호출 → 렌더 → deck 등록의 공통 흐름. dict 반환.
 
-    forced_layout: UI에서 명시적으로 layout을 선택한 경우. AI가 그 layout으로 강제 생성.
+    render: 이 한 장만 덱 기본과 다른 렌더 방식으로 그린다(native|image|html). 강의 창의
+        '렌더 방식' 셀렉터가 쓰는 슬라이드 단위 override — 혼합 덱을 허용한다.
+    forced_layout: HTML 경로의 layout 강제(프로그래매틱·IBL 용). 2026-08-06부터 UI 에는
+        노출하지 않는다 — 구조는 AI가 내용을 보고 고르는 축이고, 사람이 고르는 건 톤과
+        렌더 방식 둘뿐이다. 자연어("좌우로 대비해서", "자유롭게 배치해줘")가 그 자리를 대신한다.
     """
     deck = lecture_store.read_deck(lecture_id)
     lecture_dir_path = lecture_store.lecture_dir(lecture_id)
@@ -495,30 +628,51 @@ def _generate_and_register_slide(
         deck, lecture_dir_path, focus_slide_id, insert_at
     )
 
-    # 네이티브 통짜 이미지(NotebookLM식, 기본)면 별도 경로 — media_producer/slide_native 위임.
-    # 그 외(명시적 텍스트 톤)는 아래 custom HTML 경로.
-    # 단, 강의자가 UI 레이아웃 드롭다운에서 명시적으로 비-native 레이아웃(텍스트/일러스트/custom)을
-    # 강제하면 그 한 장만 통짜 이미지가 아니라 HTML 경로로 그린다(혼합 덱 허용). 레이아웃 강제는
-    # 본디 슬라이드별 컨트롤이므로 덱 기본(native)을 슬라이드 단위로 덮는 것이 least-surprise.
+    # ── 이 슬라이드의 (톤, 렌더 방식) 확정 ─────────────────────────────
     design = (deck.get("design_system") or "native_vintage_book").strip()
-    native_deck = _is_native_design(design)
-    force_text_on_native = native_deck and bool(forced_layout) and forced_layout != "native"
-    # 강의자 첨부 이미지 = "이 파일을 배치하라" — 통짜 이미지(native)는 파일을 그대로 못 담으므로
-    # 첨부가 있으면 HTML(shadcn) 경로로 내려간다 (hero_image/content_image/custom 이 임베드).
+    tone, deck_render = _deck_axes(design)
+    slide_render = (render or "").strip() or deck_render
+    if slide_render not in ("native", "image", "html"):
+        slide_render = deck_render
+    # 톤이 그 렌더 방식을 지원하지 않으면 **조용히 다른 걸 그리지 않는다** — 명시 오류.
+    # (UI 는 지원 조합만 고르게 하므로 이 가드는 API·IBL 직접 호출용.)
+    if slide_render != deck_render:
+        try:
+            _tones = _load_slide_tones()
+            if not _tones.supports(tone, slide_render) and slide_render != "html":
+                raise ValueError(
+                    f"'{_tones.TONES.get(tone, {}).get('ko', tone)}' 톤은 "
+                    f"'{slide_render}' 렌더 방식을 지원하지 않습니다. "
+                    f"가능: {_tones.renders_for(tone)}"
+                )
+        except ValueError:
+            raise
+        except Exception:
+            pass  # 레지스트리 로드 실패는 렌더를 막지 않는다
+
+    # 강의자 첨부 이미지 = "이 파일을 배치하라" — 이미지 경로(native/composite)는 파일을 그대로
+    # 못 담으므로 첨부가 있으면 HTML(shadcn) 경로로 내려간다 (hero_image/content_image/custom 임베드).
     if user_image_path:
-        force_text_on_native = native_deck
-    if native_deck and not force_text_on_native:
+        slide_render = "html"
+
+    if slide_render == "native":
         return _generate_native_slide(
-            lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, design,
+            lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at,
+            f"native_{tone}",
             reference_images=ref_png_paths, image_quality=image_quality, content=content,
         )
+    if slide_render == "image":
+        return _generate_image_slide(
+            lecture_id, deck, slides_dir_path, instruction, focus_slide_id, insert_at, tone,
+            image_quality=image_quality, content=content,
+        )
+
     # HTML(텍스트) 경로 — content 는 instruction 에 근거 블록으로 접합(전용 필드 없음)
     if content:
         instruction = f"{instruction}\n\n[근거 원문 — 사실·표현·고유명사는 여기서, 지어내지 말 것]\n{content}"
 
-    # HTML 경로가 쓸 design_system — native 덱을 슬라이드 단위로 덮는 경우 native_ 접두를 떼어
-    # HTML 렌더러가 아는 톤으로 매핑(native_vintage_book → vintage_book). 비-native 덱은 그대로.
-    html_design = _native_aesthetic(design) if native_deck else design
+    # HTML 렌더러가 아는 톤 키로 변환(blueprint → sf_blueprint 등).
+    html_design = _html_design_of(design)
 
     # focus slide의 현재 spec 로드 (편집 모드)
     focus_spec = None
@@ -681,6 +835,7 @@ def _slide_create(tool_input: dict) -> str:
         image_quality=(tool_input.get("image_quality") or "pro"),
         content=(tool_input.get("content") or "").strip() or None,
         user_image_path=user_image_path,
+        render=(tool_input.get("render") or "").strip() or None,
     )
     if scratch:
         result["lecture_id"] = lecture_id
@@ -709,9 +864,9 @@ def _slide_rerender(tool_input: dict) -> str:
     # *재생성*이라야 톤이 바뀐다(HTML 재렌더기는 native/image spec을 못 그림). 재생성 경로로 안내.
     # ★판단은 덱이 아니라 *이 슬라이드의 layout*으로 — native 덱에 끼운 텍스트형(HTML) 슬라이드는
     #  재렌더 가능하다(혼합 덱). native 슬라이드는 등록 layout이 "native"라 그대로 걸린다.
-    if slide_meta.get("layout") in ("native", "image"):
+    if slide_meta.get("layout") in _BAKED_LAYOUTS:
         return _err(
-            "통짜 이미지/업로드 이미지 슬라이드는 rerender 대신 슬라이드를 다시 생성하세요 "
+            "글자가 이미지에 구워진 슬라이드는 rerender 대신 슬라이드를 다시 생성하세요 "
             "([self:slide]{op:\"edit\", slide_id, instruction} 또는 op:\"create\"). "
             "통짜 이미지는 재렌더가 아니라 재생성이 맞습니다.",
             error_type="unsupported",
@@ -731,9 +886,9 @@ def _slide_rerender(tool_input: dict) -> str:
         return _err(f"spec 파일 읽기 실패: {e}")
 
     # 재렌더 (현재 design_system 적용, 일러스트는 기존 파일 재사용)
-    # 덱이 native여도 이 슬라이드는 HTML이므로 native_ 접두를 떼어 렌더러가 아는 톤으로 매핑.
+    # 덱 렌더 방식이 무엇이든 이 슬라이드는 HTML이므로 톤만 뽑아 렌더러가 아는 키로 매핑.
     _deck_design = (deck.get("design_system") or "vintage_book").strip()
-    html_design = _native_aesthetic(_deck_design) if _is_native_design(_deck_design) else _deck_design
+    html_design = _html_design_of(_deck_design)
     try:
         rendered = slide_ai.render_slide_to_files(
             spec=spec,
@@ -804,9 +959,9 @@ def _slide_patch_spec(tool_input: dict) -> str:
     # ★판단 기준은 덱이 아니라 *이 슬라이드의 layout*이다 — 덱이 native여도 그 안에 끼운 텍스트형(HTML)
     #  슬라이드는 필드 직접 편집이 가능하다(혼합 덱). native 슬라이드는 spec에 layout:"native"를 가져
     #  아래 조건에 그대로 걸리므로, 덱 단위 _is_native_design 검사는 텍스트 슬라이드를 과잉 차단한다.
-    if spec.get("layout") in ("native", "image"):
+    if spec.get("layout") in _BAKED_LAYOUTS:
         return _err(
-            "통짜 이미지/업로드 이미지 슬라이드는 필드 직접 편집을 지원하지 않습니다. "
+            "글자가 이미지에 구워진 슬라이드는 필드 직접 편집을 지원하지 않습니다. "
             "제목·내용을 바꾸려면 슬라이드를 선택한 뒤 AI 채팅으로 다시 생성하세요(예: \"제목을 '...'로 바꿔줘\").",
             error_type="validation",
         )
@@ -819,10 +974,10 @@ def _slide_patch_spec(tool_input: dict) -> str:
         else:
             spec[key] = value
 
-    # 재렌더 — 덱이 native여도 이 슬라이드는 HTML이므로 native_ 접두를 떼어 렌더러가 아는 톤으로 매핑
-    # (native_vintage_book → vintage_book). 비-native 덱은 그대로.
+    # 재렌더 — 덱 렌더 방식이 무엇이든 이 슬라이드는 HTML이므로 톤만 뽑아 렌더러가 아는 키로 매핑
+    # (native_vintage_book / image_ink_blueprint → 톤 → html 키). 접두 없는 덱은 그대로.
     _deck_design = (deck.get("design_system") or "vintage_book").strip()
-    html_design = _native_aesthetic(_deck_design) if _is_native_design(_deck_design) else _deck_design
+    html_design = _html_design_of(_deck_design)
     try:
         rendered = slide_ai.render_slide_to_files(
             spec=spec,
@@ -873,6 +1028,7 @@ def _slide_edit(tool_input: dict) -> str:
         forced_layout=forced_layout,
         image_quality=(tool_input.get("image_quality") or "pro"),
         user_image_path=user_image_path,
+        render=(tool_input.get("render") or "").strip() or None,
     )
     return _ok(result)
 
@@ -895,9 +1051,9 @@ def _slide_image_edit(tool_input: dict) -> str:
     meta = deck.get("slides", {}).get(slide_id)
     if not meta:
         return _err(f"슬라이드 없음: {slide_id}", error_type="not_found")
-    if meta.get("layout") not in ("native", "image"):
+    if meta.get("layout") not in _BAKED_LAYOUTS:
         return _err(
-            "이미지 부분 수정은 통짜 이미지/이미지 슬라이드에서만 됩니다. "
+            "이미지 부분 수정은 글자가 이미지에 구워진 슬라이드에서만 됩니다. "
             "텍스트 슬라이드는 필드 편집(✏️)을 쓰세요.",
             error_type="validation",
         )

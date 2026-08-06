@@ -58,27 +58,46 @@ from typing import Optional
 
 DECK_SCHEMA_VERSION = 1
 
-# 유효한 design_system 값.
-#  - native(통짜 이미지, 기본): slide_native.AESTHETICS 톤. design_system="native" 또는 "native_<톤>".
-#  - CSS 텍스트 디자인(style:"text" 경로): media_producer/shadcn_slides.py의 DESIGN_SYSTEMS와 일치.
-# (2026-06-23 통합) 프리미엄 일러스트(ink_blueprint 등)·auto 은퇴 — slide_image 경로 제거됨.
-VALID_DESIGN_SYSTEMS = {
-    # native 통짜 이미지 (기본)
-    "native",
-    "native_vintage_book",
-    "native_academic_paper",
-    "native_tech_minimal",
-    "native_magazine_modern",
-    "native_dark_keynote",
-    "native_blueprint",
-    # CSS 텍스트 디자인 (style:"text")
-    "default",
-    "vintage_book",
-    "academic_paper",
-    "tech_minimal",
-    "magazine_modern",
-    "sf_blueprint",
+# 유효한 design_system 값 = `<렌더 접두>_<톤>` (접두 없음 = HTML).
+# 진실 소스는 media_producer/slide_tones.py 의 톤 레지스트리다 — 여기선 그걸 파생해 받는다.
+# (2026-08-06) 톤·렌더 2축 개편: 프리미엄 일러스트가 `image_<톤>` 으로 복귀, auto 폐지.
+#   ★아래 상수는 임포트 실패 시의 폴백일 뿐 — 톤을 늘릴 땐 slide_tones.TONES 만 고치면 된다.
+_FALLBACK_DESIGN_SYSTEMS = {
+    "native", "default",
+    "native_vintage_book", "native_academic_paper", "native_tech_minimal",
+    "native_magazine_modern", "native_dark_keynote", "native_blueprint",
+    "image_ink_blueprint", "image_cinematic_3d", "image_isometric", "image_lineart_duotone",
+    "vintage_book", "academic_paper", "tech_minimal", "magazine_modern", "blueprint",
 }
+
+# 옛 덱이 들고 있을 수 있는 표기 — 렌더러가 아는 키라 그대로 통과시킨다(마이그레이션 불요).
+_LEGACY_DESIGN_SYSTEMS = {"sf_blueprint"}
+
+
+def _load_tone_registry():
+    """media_producer/slide_tones.py 로드 (형제 패키지 — handler 의 slide_native 차용과 같은 패턴)."""
+    import importlib.util
+    import sys as _sys
+    if "slide_tones" in _sys.modules:
+        return _sys.modules["slide_tones"]
+    path = Path(__file__).resolve().parent.parent / "media_producer" / "slide_tones.py"
+    spec = importlib.util.spec_from_file_location("slide_tones", str(path))
+    mod = importlib.util.module_from_spec(spec)
+    _sys.modules["slide_tones"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def valid_design_systems() -> set:
+    try:
+        derived = _load_tone_registry().valid_design_systems()
+    except Exception:
+        derived = set(_FALLBACK_DESIGN_SYSTEMS)
+    return derived | {"native"} | _LEGACY_DESIGN_SYSTEMS
+
+
+# 하위호환 별칭 — 옛 호출자가 상수처럼 읽던 이름(이제는 파생값 스냅샷).
+VALID_DESIGN_SYSTEMS = valid_design_systems()
 
 # indiebizOS 루트 경로 — 이 파일은 data/packages/installed/tools/lecture_workspace/lecture_store.py 에 있음
 # parents[5] = indiebizOS 루트 (lecture_workspace/ → tools/ → installed/ → packages/ → data/ → indiebizOS/)
@@ -300,10 +319,10 @@ def create_lecture(
     design_system: str = "native_vintage_book",
 ) -> dict:
     """새 강의 생성. 폴더 + 빈 deck.json + materials/ + slides/ 생성. 새 deck 반환."""
-    if design_system not in VALID_DESIGN_SYSTEMS:
+    _valid = valid_design_systems()
+    if design_system not in _valid:
         raise ValueError(
-            f"알 수 없는 design_system: {design_system!r}. "
-            f"사용 가능: {sorted(VALID_DESIGN_SYSTEMS)}"
+            f"알 수 없는 design_system: {design_system!r}. 사용 가능: {sorted(_valid)}"
         )
     lecture_id = generate_unique_lecture_id(title)
     ld = lecture_dir(lecture_id)
@@ -402,15 +421,15 @@ def update_deck_meta(lecture_id: str, patch: dict) -> dict:
     """deck.json의 메타 필드를 부분 갱신.
 
     허용 필드: title, audience, thesis, duration_minutes, design_system.
-    design_system은 VALID_DESIGN_SYSTEMS 안에 있어야 함.
+    design_system은 valid_design_systems() 안에 있어야 함.
     slide_order, slides, materials, cumulative_memo 등은 별도 함수로 갱신 (의도 분리).
     """
     deck = read_deck(lecture_id)
     if "design_system" in patch and patch["design_system"] is not None:
-        if patch["design_system"] not in VALID_DESIGN_SYSTEMS:
+        _valid = valid_design_systems()
+        if patch["design_system"] not in _valid:
             raise ValueError(
-                f"알 수 없는 design_system: {patch['design_system']!r}. "
-                f"사용 가능: {sorted(VALID_DESIGN_SYSTEMS)}"
+                f"알 수 없는 design_system: {patch['design_system']!r}. 사용 가능: {sorted(_valid)}"
             )
     for key, value in patch.items():
         if key in _MUTABLE_META_FIELDS and value is not None:

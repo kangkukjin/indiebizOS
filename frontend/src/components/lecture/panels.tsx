@@ -6,6 +6,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type React from 'react';
 import { api } from '../../lib/api';
+import { parseDesignSystem } from '../../lib/api-lecture-workspace';
 import type {
   Deck,
   MaterialEntry,
@@ -292,11 +293,11 @@ function MaterialIcon(props: { type: string }) {
 function BatchFromMaterials(props: {
   lectureId: string;
   hasMaterials: boolean;
-  isNativeDeck: boolean;
+  usesImageModel: boolean;   // 이미지 모델을 쓰는 렌더 방식인가(native·image) — 품질 토글 노출 여부
   variant?: 'button' | 'cta';
   onChange: () => void;
 }) {
-  const { lectureId, hasMaterials, isNativeDeck, variant = 'button', onChange } = props;
+  const { lectureId, hasMaterials, usesImageModel, variant = 'button', onChange } = props;
   const [open, setOpen] = useState(false);
   const [countMode, setCountMode] = useState<'auto' | 'fixed'>('auto');
   const [count, setCount] = useState('10');
@@ -325,11 +326,10 @@ function BatchFromMaterials(props: {
         setStatus(`슬라이드 생성 중… (${i + 1}/${slides.length})\n${slides[i].instruction.slice(0, 40)}`);
         try {
           // insert_at 없이 끝에 추가 → 순서대로 쌓이고, 각 장은 직전 장 스타일을 자동 참고.
-          // 통짜 이미지 덱이면 선택한 이미지 품질(pro/fast)로 생성.
-          await api.createSlide(
-            lectureId, slides[i].instruction, undefined, undefined,
-            isNativeDeck ? imageQuality : undefined,
-          );
+          // 렌더 방식은 덱 기본을 따른다(일괄생성은 한 덱을 한 톤·한 방식으로 채우는 일).
+          await api.createSlide(lectureId, slides[i].instruction, undefined, {
+            imageQuality: usesImageModel ? imageQuality : undefined,
+          });
           onChange();
         } catch (e) {
           console.warn('슬라이드 생성 실패 (건너뜀):', slides[i].instruction, e);
@@ -428,7 +428,7 @@ function BatchFromMaterials(props: {
                 )}
               </div>
 
-              {isNativeDeck && (
+              {usesImageModel && (
                 <div>
                   <label className="block text-sm text-stone-600 mb-1.5">이미지 품질 (전체 장 공통)</label>
                   <div className="flex gap-2">
@@ -728,7 +728,7 @@ export function DeckPanel(props: {
           <BatchFromMaterials
             lectureId={lectureId}
             hasMaterials={deck.materials.length > 0}
-            isNativeDeck={(deck.design_system || '').startsWith('native')}
+            usesImageModel={parseDesignSystem(deck.design_system || '').render !== 'html'}
             onChange={onChange}
           />
           <button
@@ -799,7 +799,7 @@ export function DeckPanel(props: {
                   <BatchFromMaterials
                     lectureId={lectureId}
                     hasMaterials
-                    isNativeDeck={(deck.design_system || '').startsWith('native')}
+                    usesImageModel={parseDesignSystem(deck.design_system || '').render !== 'html'}
                     variant="cta"
                     onChange={onChange}
                   />

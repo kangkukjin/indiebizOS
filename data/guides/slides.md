@@ -57,13 +57,29 @@
 - **aesthetic(톤, 한 덱 고정 = 일관된 책)**: `vintage_book`(빈티지 교과서) / `academic_paper`(학술) / `tech_minimal`(테크 미니멀) / `magazine_modern`(모던 매거진) / `dark_keynote`(다크 키노트·시네마틱) / `blueprint`(청사진 다이어그램). 같은 톤의 단발 생성은 같은 스크래치 덱에 모인다.
 - 옵션: `image_quality`(pro 기본/fast).
 
-### 렌더 3단 사다리 — layout 스위치
-품질·비용 사다리가 셋이다. **미지정 = native(AI 통짜 이미지)가 기본 — 가장 예쁘다(유료·느림).** `layout`을 명시하면 그 한 장만 HTML 경로(무료·빠름)로 내려간다:
-- **shadcn 구조 레이아웃(예쁨·무료)**: 강의형 `lecture_body`/`quote`/`comparison_table`/`factbox` 등 + **마케팅형** `features`(3열 카드)/`stats`(숫자)/`pricing`(가격표)/`cta`/`testimonial`/`hero_image`/`content_image`/`steps` — 피치덱·랜딩 자료는 이쪽.
-- **custom(가장 일반·자유)**: `layout:"custom"` — AI가 Tailwind HTML을 자유 작성. 틀 밖 구성이 필요할 때.
-톤(aesthetic/design_system)은 세 층 모두에 적용된다.
+### 렌더 3단 사다리 — render 스위치 (2026-08-06 개편)
+선택은 **두 축뿐**이다: **톤**(무엇처럼 보이나)과 **렌더 방식**(무엇으로 만드나). 구조(layout)는
+**AI가 내용을 보고 고른다** — 사람이 고르는 축이 아니다.
+
+| `render` | 뜻 | 비용·속도 | 나중에 편집 |
+|---|---|---|---|
+| `native` (기본) | 이미지 모델이 글자까지 한 장에 통째로 | 유료·느림 | 재생성만 |
+| `image` | 글자 없는 그림 + HTML 타이포 합성 | 유료·느림 | 재생성만 |
+| `html` | 글자도 그림도 HTML | 무료·빠름 | 필드 직접 편집 ✅ |
+
+`render`를 명시하면 그 한 장만 덱 기본과 다른 방식으로 그린다(혼합 덱). **톤이 그 방식을
+지원해야 한다** — 지원 안 하면 조용히 다른 걸 그리지 않고 명시 오류를 낸다.
+- `native` 지원 톤: `vintage_book`·`academic_paper`·`tech_minimal`·`magazine_modern`·`dark_keynote`·`blueprint`
+- `image` 지원 톤: `vintage_book`·`academic_paper`·`tech_minimal`·`ink_blueprint`·`cinematic_3d`·`isometric`·`lineart_duotone`
+- `html` 지원 톤: `vintage_book`·`academic_paper`·`tech_minimal`·`magazine_modern`·`blueprint`
+(정본은 `media_producer/slide_tones.py` — 톤이 늘면 이 목록보다 레지스트리를 믿을 것.)
+
+`layout`은 HTML 구조 강제용으로 남아 있지만 **보통 쓰지 말 것**(자연어로 "표로 정리해줘",
+"좌우로 대비해서", "자유롭게 배치해줘"가 같은 일을 한다). 쓰면 그 장은 HTML 경로로 간다:
+- **shadcn 구조 레이아웃**: 강의형 `lecture_body`/`quote`/`comparison_table`/`factbox` 등 + **마케팅형** `features`(3열 카드)/`stats`(숫자)/`pricing`(가격표)/`cta`/`testimonial`/`hero_image`/`content_image`/`steps` — 피치덱·랜딩 자료는 이쪽.
+- **custom(가장 일반·자유)**: `layout:"custom"` — AI가 Tailwind HTML을 자유 작성.
 ```
-[self:slide]{op: "create", instruction: "핵심 요약 카드 한 장", layout: "lecture_body", aesthetic: "tech_minimal"}
+[self:slide]{op: "create", instruction: "핵심 요약 카드 한 장", render: "html", aesthetic: "tech_minimal"}
 [self:slide]{op: "create", instruction: "요금제 3단 가격표", layout: "pricing"}
 ```
 
@@ -89,9 +105,9 @@
 
 여러 장을 **하나의 덱으로 묶어 관리**(순서·편집·재생성·내보내기)하려면 `[self:lecture]` 워크스페이스를 쓴다. 렌더는 동일하게 native다.
 
-- `[self:lecture]{op:"create", title, audience?, thesis?}` — 덱 생성. `design_system` 미지정이면 **native_vintage_book**(통짜 이미지). 톤을 바꾸려면 `native_dark_keynote` 등 `native_<톤>` 지정.
+- `[self:lecture]{op:"create", title, audience?, thesis?}` — 덱 생성. `design_system` 은 **`<렌더 접두>_<톤>`** 문법(접두 없음 = html): `native_vintage_book`(기본·통짜 이미지) / `image_ink_blueprint`(이미지+글자 합성) / `tech_minimal`(HTML). 두 축이 문자열 하나에 인코딩된다.
 - `[self:slide]{op:"create", lecture_id, instruction, content?}` — 덱에 한 장 추가(native 저작). `op:"edit"`로 특정 장 재생성, `op:"delete"`/순서 조정.
-- `[self:slide]{op:"image_edit", lecture_id, slide_id, instruction}` — **통짜 이미지/이미지 슬라이드 부분수정**: 다시 그리지 않고 현재 PNG를 편집(제목 한 줄만 바꾸기 등). 전체 재생성보다 싸고 구도가 유지된다. layout이 native/image인 장에만(텍스트 슬라이드는 `op:"patch"` 필드 편집).
+- `[self:slide]{op:"image_edit", lecture_id, slide_id, instruction}` — **통짜 이미지/이미지 슬라이드 부분수정**: 다시 그리지 않고 현재 PNG를 편집(제목 한 줄만 바꾸기 등). 전체 재생성보다 싸고 구도가 유지된다. 글자가 PNG에 구워진 장(layout이 `native`/`composite`/`image`)에만 — HTML 슬라이드는 `op:"patch"` 필드 편집.
 - 덱은 폴더 단위로 영속(슬라이드 PNG + deck.json).
 - **동영상**: `[self:deck]{op:"video", lecture_id}` — 슬라이드+스피커 노트를 TTS 나레이션 MP4 로(백그라운드, video_workflow.md 참조).
 - **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존됨). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다.

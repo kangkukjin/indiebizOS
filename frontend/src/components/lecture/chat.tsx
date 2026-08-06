@@ -1,14 +1,20 @@
 /**
  * 강의 워크스페이스 — AI 채팅 층 (2026-07-18 모듈화 — 1500줄 규칙)
  * LectureWorkspace.tsx 에서 verbatim 이동: AIChatPanel(대화·재렌더 의도 감지)·
- * LayoutSelect·ChatBubble + formatDate(본체 LectureSelectScreen 도 사용 — export).
+ * ChatBubble + formatDate(본체 LectureSelectScreen 도 사용 — export).
+ *
+ * 2026-08-06: layout 드롭다운 은퇴 → **렌더 방식** 셀렉터로 교체. 구조는 AI가 고르고,
+ * 사람은 톤(강의 설정)과 렌더 방식(여기)만 고른다. 구조를 바꾸고 싶으면 자연어로.
  */
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api';
+import { parseDesignSystem } from '../../lib/api-lecture-workspace';
 import type {
   Deck,
+  RenderMode,
   SlideCreateResponse,
 } from '../../lib/api-lecture-workspace';
+import { RenderSelect, useDesignMatrix } from './design-axes';
 
 interface ChatMessage {
   role: 'user' | 'ai' | 'system';
@@ -38,9 +44,16 @@ export function AIChatPanel(props: {
   const { deck, focusSlideId, insertBeforeIndex, clearModes, onChange } = props;
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [layoutChoice, setLayoutChoice] = useState<string>(''); // '' = AI 자동
-  const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 통짜 이미지 품질
+  const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 이미지 품질
   const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
+
+  // 렌더 방식 — 덱 기본을 이 슬라이드만 덮는 override. 덱이 바뀌면 덱 기본으로 되돌린다.
+  const { matrix } = useDesignMatrix();
+  const deckAxes = parseDesignSystem(deck.design_system || '');
+  const [renderChoice, setRenderChoice] = useState<RenderMode>(deckAxes.render);
+  useEffect(() => {
+    setRenderChoice(parseDesignSystem(deck.design_system || '').render);
+  }, [deck.design_system]);
   const [busy, setBusy] = useState(false);
   // 채팅 첨부 이미지 — "이 이미지가 들어간 슬라이드"를 조판 (shadcn hero_image/content_image/custom)
   const [attachedImage, setAttachedImage] = useState<{ name: string; dataUrl: string } | null>(null);
@@ -54,12 +67,12 @@ export function AIChatPanel(props: {
     reader.readAsDataURL(file);
   };
 
-  // 통짜 이미지(native) 덱일 때만 이미지 품질 선택이 의미 있음
-  const isNativeDeck = (deck.design_system || '').startsWith('native');
+  // 이미지 모델을 쓰는 렌더 방식일 때만 품질 선택이 의미 있음(native·image 둘 다 씀)
+  const usesImageModel = renderChoice === 'native' || renderChoice === 'image';
 
-  // 편집 대상 슬라이드의 종류 — 통짜 이미지(native)/업로드 이미지(image)면 '이미지 편집' 경로 가능
+  // 편집 대상 슬라이드의 종류 — 글자가 PNG에 구워진 슬라이드는 '이미지 편집' 경로 가능
   const focusedSlide = focusSlideId ? deck.slides[focusSlideId] : null;
-  const focusNative = focusedSlide?.layout === 'native';
+  const focusNative = focusedSlide?.layout === 'native' || focusedSlide?.layout === 'composite';
   const focusImage = focusedSlide?.layout === 'image';
   const focusBaked = focusNative || focusImage;
 
@@ -90,15 +103,16 @@ export function AIChatPanel(props: {
     setMessages((m) => [...m, userMsg]);
     setBusy(true);
 
-    const chosenLayout = layoutChoice || undefined;
+    // 덱 기본과 다른 방식을 골랐을 때만 override 를 보낸다(같으면 서버가 덱 값을 쓴다).
+    const chosenRender = renderChoice !== deckAxes.render ? renderChoice : undefined;
     // 휴리스틱: focus 모드 + 짧은 instruction이 "재생성/재렌더/다시 그려"류로만 끝나면
     // editSlide(AI 재생성)가 아니라 rerenderSlide(spec 보존, PNG만 재렌더)로 분기.
     // 디자인 변경 후 같은 내용을 새 톤으로 다시 그리고 싶을 때 자연스러운 명령.
     const isRerenderIntent =
       mode === 'edit' &&
       focusSlideId !== null &&
-      !focusBaked &&    // 통짜/이미지 슬라이드는 spec 재렌더가 불가 — 아래 경로로 보냄
-      !chosenLayout &&  // layout 강제하면 spec을 바꾸려는 명백한 의도
+      !focusBaked &&    // 글자가 구워진 슬라이드는 spec 재렌더가 불가 — 아래 경로로 보냄
+      !chosenRender &&  // 렌더 방식을 바꿨다면 다시 그리려는 명백한 의도
       RERENDER_INTENT_RE.test(text);
 
     try {
@@ -111,7 +125,7 @@ export function AIChatPanel(props: {
         return;
       }
 
-      const q = isNativeDeck ? imageQuality : undefined;
+      const q = usesImageModel ? imageQuality : undefined;
 
       // 통짜/이미지 슬라이드 편집: '부분수정'(이미지 편집) 또는 image 슬라이드는 무조건 이미지 편집.
       // → 다시 그리지 않고 현재 이미지에서 시키는 부분만 수정 (구도 보존).
@@ -127,13 +141,14 @@ export function AIChatPanel(props: {
         return;
       }
 
+      const genOpts = { render: chosenRender, imageQuality: q, image: img };
       let result: SlideCreateResponse;
       if (mode === 'edit' && focusSlideId) {
-        result = await api.editSlide(deck.lecture_id, focusSlideId, text, chosenLayout, q, img);
+        result = await api.editSlide(deck.lecture_id, focusSlideId, text, genOpts);
       } else if (mode === 'insert' && insertBeforeIndex !== null) {
-        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, chosenLayout, q, img);
+        result = await api.createSlide(deck.lecture_id, text, insertBeforeIndex, genOpts);
       } else {
-        result = await api.createSlide(deck.lecture_id, text, undefined, chosenLayout, q, img);
+        result = await api.createSlide(deck.lecture_id, text, undefined, genOpts);
       }
 
       const slideTitle = (result.slide?.title as string) || result.slide_id;
@@ -275,7 +290,7 @@ export function AIChatPanel(props: {
             </div>
           </div>
         )}
-        {isNativeDeck && (
+        {usesImageModel && (
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-stone-500 shrink-0">이미지</label>
             <div className="flex gap-1 flex-1">
@@ -308,11 +323,30 @@ export function AIChatPanel(props: {
             </div>
           </div>
         )}
-        <LayoutSelect
-          value={layoutChoice}
-          onChange={setLayoutChoice}
-          disabled={busy}
-        />
+        <div className="flex items-center gap-2">
+          <label className="text-[11px] text-stone-500 shrink-0">렌더</label>
+          <div className="flex-1">
+            <RenderSelect
+              matrix={matrix}
+              tone={deckAxes.tone}
+              value={renderChoice}
+              onChange={setRenderChoice}
+              disabled={busy}
+              compact
+            />
+          </div>
+          {renderChoice !== deckAxes.render && (
+            <button
+              type="button"
+              onClick={() => setRenderChoice(deckAxes.render)}
+              disabled={busy}
+              className="text-[11px] text-stone-400 hover:text-stone-700 shrink-0"
+              title="덱 기본 렌더 방식으로 되돌리기"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
@@ -381,84 +415,6 @@ export function AIChatPanel(props: {
     </aside>
   );
 }
-
-// ─────────────────────────────────────────────────────────
-// Layout 선택 드롭다운 — 슬라이드 생성/편집 시 강제 layout
-// ─────────────────────────────────────────────────────────
-
-const LAYOUT_OPTIONS: Array<{ value: string; label: string; group: '텍스트' | '일러스트' | '자유형' }> = [
-  // 텍스트형 — 이미지 생성 없음, 빠름
-  { value: 'hero',              label: '표지 (hero)',                  group: '텍스트' },
-  { value: 'lecture_body',      label: '본문 (lecture_body)',          group: '텍스트' },
-  { value: 'metaphor_story',    label: '메타포 (metaphor_story)',      group: '텍스트' },
-  { value: 'comparison_table',  label: '비교표 (comparison_table)',    group: '텍스트' },
-  { value: 'factbox',           label: '팩트박스 (factbox)',           group: '텍스트' },
-  { value: 'quote',             label: '인용 (quote)',                 group: '텍스트' },
-  // 일러스트형 — image_gemini 호출, 느림/비용
-  { value: 'hero_illustration',     label: '표지+일러스트 (hero_illustration)',         group: '일러스트' },
-  { value: 'illustration_anchor',   label: '상단 일러스트+본문 (illustration_anchor)',   group: '일러스트' },
-  { value: 'split_concept',         label: '좌우 대비 (split_concept) — 좌+우 2장',      group: '일러스트' },
-  { value: 'illustration_background', label: '배경 일러스트+텍스트 (illustration_background)', group: '일러스트' },
-  { value: 'illustration_overlay',  label: '전면 다이어그램 (illustration_overlay)',    group: '일러스트' },
-  { value: 'comparison_iconic',     label: '아이콘 비교표 (comparison_iconic)',         group: '일러스트' },
-  // 자유형 — AI가 슬라이드 HTML을 직접 작성 (고정 틀 없음, 이미지 생성 안 함)
-  { value: 'custom',                label: '자유형 (틀 없이 AI가 직접 디자인)',         group: '자유형' },
-];
-
-function LayoutSelect(props: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
-  const { value, onChange, disabled } = props;
-  const isForced = value !== '';
-  return (
-    <div className="flex items-center gap-2">
-      <label className="text-[11px] text-stone-500 shrink-0">Layout</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className={`
-          flex-1 px-2 py-1 text-xs rounded border focus:outline-none
-          ${isForced
-            ? 'border-amber-400 bg-amber-50 text-amber-900'
-            : 'border-stone-300 bg-white text-stone-700'}
-          disabled:opacity-50
-        `}
-      >
-        <option value="">AI 자동 선택</option>
-        <optgroup label="텍스트형 (빠름)">
-          {LAYOUT_OPTIONS.filter((o) => o.group === '텍스트').map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </optgroup>
-        <optgroup label="일러스트형 (이미지 생성 — 느림)">
-          {LAYOUT_OPTIONS.filter((o) => o.group === '일러스트').map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </optgroup>
-        <optgroup label="자유형 (틀 없음 — AI 직접 디자인)">
-          {LAYOUT_OPTIONS.filter((o) => o.group === '자유형').map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </optgroup>
-      </select>
-      {isForced && (
-        <button
-          type="button"
-          onClick={() => onChange('')}
-          disabled={disabled}
-          className="text-[11px] text-stone-400 hover:text-stone-700"
-          title="layout 강제 해제"
-        >
-          ✕
-        </button>
-      )}
-    </div>
-  );
-}
-
 
 function ChatBubble(props: { msg: ChatMessage }) {
   const { msg } = props;

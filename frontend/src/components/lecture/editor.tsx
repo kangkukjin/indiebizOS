@@ -10,7 +10,10 @@ import type {
   SlideMeta,
 } from '../../lib/api-lecture-workspace';
 
-export const isBakedImageSlide = (layout: string) => layout === 'native' || layout === 'image';
+/** 글자가 PNG에 구워진 슬라이드 — 필드 직접 편집(spec patch → 재렌더) 불가, 재생성만 가능.
+ *  native=통짜 이미지 / composite=이미지+글자 합성 / image=업로드한 원본 이미지. */
+export const isBakedImageSlide = (layout: string) =>
+  layout === 'native' || layout === 'composite' || layout === 'image';
 
 const STRING_FIELD_DEFS: Array<{ key: string; label: string; multiline?: boolean }> = [
   { key: 'eyebrow',       label: 'eyebrow (부·장·라벨)' },

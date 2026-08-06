@@ -120,6 +120,8 @@ IndieBiz OS is not software you install and use as-is. It's a **living system** 
 
 **No two installations are the same.** A freelancer's system looks nothing like a small-business owner's; hand yours to someone else and it wouldn't fit. It starts minimal — only the core (IBL engine, cognitive pipeline, hippocampus) — and grows on demand: say "track my investments" and the investment package appears. No app store, no mandatory update, no one-size-fits-all. Your AI agent is the blacksmith who keeps forging it as you grow.
 
+**Only the body is hardcoded; the world is held provisionally.** The only nouns this system fixes are the body's vocabulary (sense, self, limbs, others). Knowledge *about* the world — people, places, things, relations — lives not in a schema but in memory, as sediment that carries confidence scores and staleness marks and *is allowed to be wrong*. This is the opposite of enterprise ontologies, which model the world up front and then pay forever to keep the model current — here, use itself keeps rewriting the world-picture. (Constitutional clause: "The Place of Nouns" in `data/system_docs/ibl.md`.)
+
 And one day these individually raised systems find each other — connecting over decentralized networks, each unique but speaking the same language. That is the vision.
 
 ---

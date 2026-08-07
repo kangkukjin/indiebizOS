@@ -85,6 +85,13 @@ def _emit_items(envelope, new_items):
     """
     out = dict(envelope) if isinstance(envelope, dict) else {}
     out.pop("message", None)            # 변환 후 stale·O(items) 산문 제거 (파이프 블로업·정합성)
+    out.pop("text", None)               # 동류 — 원본 전체를 서술하는 text 가 take(5) 뒤에도 15줄이면 거짓말(2026-08-08 실측)
+    # stale 파생 뷰 제거 — message 와 같은 원리. items 만 갱신하고 낡은 table 을 남기면
+    # 하류 소비자(spreadsheet/chart 는 table 우선)가 변환 전 데이터를 집는다(2026-08-07 실측).
+    out.pop("table", None)
+    if isinstance(out.get("columns"), list) and isinstance(out.get("rows"), list):
+        out.pop("columns", None)
+        out.pop("rows", None)
     out["items"] = new_items          # 단일 통화
     out["count"] = len(new_items)
     out.setdefault("success", True)
@@ -94,6 +101,10 @@ def _emit_items(envelope, new_items):
 def _emit_table(envelope, new_table):
     out = dict(envelope) if isinstance(envelope, dict) else {}
     out.pop("message", None)            # 변환 후 stale 산문 제거
+    out.pop("text", None)               # 동류(2026-08-08)
+    # 대칭: table 만 갱신하고 낡은 items 를 남기면 같은 stale 부류 (2026-08-07).
+    out.pop("items", None)
+    out.pop("count", None)
     if "table" in out:
         out["table"] = new_table
     else:
@@ -101,6 +112,58 @@ def _emit_table(envelope, new_table):
         out["rows"] = new_table.get("rows", [])
     out.setdefault("success", True)
     return out
+
+
+def _field_missing_error(verb, missing, rows):
+    """명시 파라미터가 가리키는 필드가 어느 행에도 없을 때의 정직한 에러.
+
+    침묵-삼킴 금지 계약(2026-08-08, 3방식 실험 ⑧′): 잘못된 필드/형식을 조용히
+    기본값으로 위장하면 '그럴듯하게 틀린' 결과가 나가고, 진짜 비용은 틀린 답이
+    아니라 틀린 진단이다(실험자가 '기능이 없다'고 오진). sort 의 가드를 계열 전체로.
+    """
+    avail = []
+    for r in rows or []:
+        if isinstance(r, dict):
+            avail = list(r.keys())
+            break
+    miss = "', '".join(str(m) for m in missing) if isinstance(missing, (list, tuple)) else str(missing)
+    hint = f" 사용 가능한 필드: {avail}" if avail else ""
+    return {"success": False, "error": f"{verb}: '{miss}' 필드가 어느 행에도 없습니다.{hint}"}
+
+
+def _no_currency_error(verb, prev):
+    """입력에 통화(items/table)가 없을 때 — 받은 봉투의 실제 모양을 보여주는 진단 에러.
+
+    ⑬(실험 4): scalar/effect 액션을 >> 로 변환자에 물리면 여기서 멈춘다. 무엇이
+    왔는지(키 목록)를 보여줘야 '기능이 없다'가 아니라 '이 생산자는 통화를 안 낸다
+    (returns 선언 확인)'로 진단이 간다.
+    """
+    keys = sorted(prev.keys()) if isinstance(prev, dict) else type(prev).__name__
+    return {"success": False,
+            "error": f"{verb}: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투의 키: {keys} — "
+                     f"앞 액션이 통화(items/table)를 내지 않는 생산자(returns: scalar/effect)일 수 "
+                     f"있습니다. 통화를 내는 액션·op 으로 바꾸거나 선언(returns)을 확인하세요."}
+
+
+def _where_fields(where):
+    """where 조건이 명시적으로 가리키는 필드 이름들(존재 검증용).
+
+    전-필드 substring 형태(연산자 없는 문자열)는 필드를 지목하지 않으므로 [].
+    """
+    if isinstance(where, str):
+        m = _CMP_RE.match(where)
+        return [m.group(1).strip()] if m else []
+    if isinstance(where, list):
+        out = []
+        for w in where:
+            out.extend(_where_fields(w))
+        return out
+    if isinstance(where, dict):
+        f = where.get("field") or where.get("col") or where.get("column")
+        if f:
+            return [str(f)]
+        return [str(k) for k in where.keys() if k not in ("op", "value")]
+    return []
 
 
 def _row_dicts(table):
@@ -218,38 +281,79 @@ def _sort_key(field):
 # ───────────────────────── 단항 동사 ─────────────────────────
 
 def _op_filter(prev, params):
-    """items|table → 부분집합. params.where (미니 DSL). condition 별칭 수용."""
+    """items|table → 부분집합. params.where (미니 DSL). condition 별칭 수용.
+
+    where 가 지목한 필드가 어느 행에도 없으면 빈 결과 대신 에러(⑧′ — 빈 결과와
+    '필드 오타'는 구별돼야 한다).
+    """
     where = params.get("where") or params.get("condition")
     recs, env = _get_items(prev)
     if recs is not None:
-        return _emit_items(env, [r for r in recs if isinstance(r, dict) and _match(r, where)])
+        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if dict_recs:
+            missing = [f for f in _where_fields(where) if not any(f in r for r in dict_recs)]
+            if missing:
+                return _field_missing_error("filter", missing, dict_recs)
+        return _emit_items(env, [r for r in dict_recs if _match(r, where)])
     table, env = _get_table(prev)
     if table is not None:
-        kept = [d for d in _row_dicts(table) if _match(d, where)]
+        dicts = _row_dicts(table)
+        if dicts:
+            missing = [f for f in _where_fields(where) if not any(f in d for d in dicts)]
+            if missing:
+                return _field_missing_error("filter", missing, dicts)
+        kept = [d for d in dicts if _match(d, where)]
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"success": False, "error": "filter: 입력에서 items 통화를 찾지 못했습니다."}
+    return _no_currency_error("filter", prev)
 
 
 def _op_sort(prev, params):
-    """items|table → 정렬. params.by(필드/열명), params.desc(bool)."""
+    """items|table → 정렬. params.by(필드/열명), params.desc(bool).
+
+    by 가 items/table 에 없으면 원천 행(data/results — groupby 의 _rows_for_field 선례)까지
+    거슬러 찾고, 그래도 없으면 에러(2026-08-07 — 옛 침묵 no-op 은 원순서를 success 로
+    돌려줘 하류 전체가 조용히 틀렸다. filter 의 '침묵 부분일치 금지' 원칙과 동일).
+    """
     by = params.get("by")
     desc = bool(params.get("desc", False))
     if not by:
         return {"success": False, "error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
+    by = str(by)
     recs, env = _get_items(prev)
     if recs is not None:
-        srt = sorted([r for r in recs if isinstance(r, dict)], key=_sort_key(by), reverse=desc)
-        return _emit_items(env, srt)
-    table, env = _get_table(prev)
-    if table is not None:
+        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if not dict_recs or any(by in r for r in dict_recs):
+            srt = sorted(dict_recs, key=_sort_key(by), reverse=desc)
+            return _emit_items(env, srt)
+    table, tenv = _get_table(prev)
+    if table is not None and by in [str(c) for c in (table.get("columns") or [])]:
         dicts = _row_dicts(table)
         dicts.sort(key=_sort_key(by), reverse=desc)
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in dicts]
-        return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"success": False, "error": "sort: 입력에서 items 통화를 찾지 못했습니다."}
+        return _emit_table(tenv, {"columns": cols, "rows": rows})
+    # 손실 투영(예: 주가 table=날짜·종가)이 정렬 키를 접은 경우 — 원천 행까지 거슬러 찾기
+    dug = _rows_for_field(prev, by)
+    if dug and any(by in r for r in dug):
+        srt = sorted(dug, key=_sort_key(by), reverse=desc)
+        base_env = env if env is not None else (tenv if tenv is not None else (prev if isinstance(prev, dict) else {}))
+        return _emit_items(base_env, srt)
+    if recs is None and table is None and not dug:
+        return _no_currency_error("sort", prev)
+    # 어디에도 없는 필드 → 침묵 no-op 대신 정직한 실패 + 실제 필드 안내
+    avail = []
+    if recs:
+        first = next((r for r in recs if isinstance(r, dict)), None)
+        if first:
+            avail = list(first.keys())
+    if not avail and table is not None:
+        avail = [str(c) for c in (table.get("columns") or [])]
+    if not avail and dug:
+        avail = list(dug[0].keys())
+    hint = f" 사용 가능한 필드: {avail}" if avail else ""
+    return {"success": False, "error": f"sort: '{by}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
 def _op_take(prev, params):
@@ -258,7 +362,8 @@ def _op_take(prev, params):
     try:
         n = int(n)
     except Exception:
-        n = 10
+        # 비정수 n 을 조용히 10 으로 위장하지 않는다(⑧′)
+        return {"success": False, "error": f"take: n 이 정수가 아닙니다: {n!r}"}
     recs, env = _get_items(prev)
     if recs is not None:
         sliced = recs[n:] if n < 0 else recs[:n]
@@ -268,7 +373,7 @@ def _op_take(prev, params):
         rows = table.get("rows") or []
         sliced = rows[n:] if n < 0 else rows[:n]
         return _emit_table(env, {"columns": table.get("columns") or [], "rows": sliced})
-    return {"success": False, "error": "take: 입력에서 items 통화를 찾지 못했습니다."}
+    return _no_currency_error("take", prev)
 
 
 def _op_select(prev, params):
@@ -280,15 +385,25 @@ def _op_select(prev, params):
     table, env = _get_table(prev)
     if table is not None:
         src_cols = [str(c) for c in (table.get("columns") or [])]
-        idx = [src_cols.index(c) for c in cols_keep if c in src_cols]
+        missing = [c for c in cols_keep if c not in src_cols]
+        if missing:
+            # 없는 열을 조용히 떨구면 빈 표가 success 로 나간다(⑧′)
+            return {"success": False,
+                    "error": f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
+        idx = [src_cols.index(c) for c in cols_keep]
         new_cols = [src_cols[i] for i in idx]
         new_rows = [[(r[i] if i < len(r) else None) for i in idx] for r in (table.get("rows") or [])]
         return _emit_table(env, {"columns": new_cols, "rows": new_rows})
     recs, env = _get_items(prev)
     if recs is not None:
-        out = [{k: r.get(k) for k in cols_keep if k in r} for r in recs if isinstance(r, dict)]
+        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if dict_recs:
+            missing = [k for k in cols_keep if not any(k in r for r in dict_recs)]
+            if missing:
+                return _field_missing_error("select", missing, dict_recs)
+        out = [{k: r.get(k) for k in cols_keep if k in r} for r in dict_recs]
         return _emit_items(env, out)
-    return {"success": False, "error": "select: 입력에서 items 통화를 찾지 못했습니다."}
+    return _no_currency_error("select", prev)
 
 
 def _norm(s):
@@ -305,11 +420,13 @@ def _op_dedup(prev, params):
     by = params.get("by")
     recs, env = _get_items(prev)
     if recs is not None:
-        key = by or "title"
+        dict_recs = [r for r in recs if isinstance(r, dict)]
+        # 명시 by 가 어느 행에도 없으면 무동작이 success 로 위장된다(⑧′). 기본(title)은 관례라 관대.
+        if by and dict_recs and not any(str(by) in r for r in dict_recs):
+            return _field_missing_error("dedup", by, dict_recs)
+        key = str(by) if by else "title"
         seen, out = set(), []
-        for r in recs:
-            if not isinstance(r, dict):
-                continue
+        for r in dict_recs:
             k = _norm(r.get(key))
             if k and k in seen:
                 continue
@@ -319,7 +436,10 @@ def _op_dedup(prev, params):
     table, env = _get_table(prev)
     if table is not None:
         cols = [str(c) for c in (table.get("columns") or [])]
-        ki = cols.index(str(by)) if (by and str(by) in cols) else 0
+        if by and str(by) not in cols:
+            # 잘못된 by 를 조용히 첫 열로 폴백하면 엉뚱한 키로 중복 제거된다(⑧′)
+            return {"success": False, "error": f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"}
+        ki = cols.index(str(by)) if by else 0
         seen, rows = set(), []
         for r in table.get("rows") or []:
             k = _norm(r[ki] if ki < len(r) else None)
@@ -328,7 +448,7 @@ def _op_dedup(prev, params):
             seen.add(k)
             rows.append(r)
         return _emit_table(env, {"columns": cols, "rows": rows})
-    return {"success": False, "error": "dedup: 입력에서 items 통화를 찾지 못했습니다."}
+    return _no_currency_error("dedup", prev)
 
 
 _AGG = {
@@ -361,6 +481,12 @@ def _rows_for_field(obj, field):
             v = obj.get(k)
             if isinstance(v, list) and any(isinstance(x, dict) for x in v):
                 cands.append((k, [x for x in v if isinstance(x, dict)]))
+            elif isinstance(v, dict):
+                # 도메인 봉투가 행 목록을 한 겹 더 안에 담는 경우 (예: 주가 data.prices —
+                # 곡선 투영 table 이 접은 volume 등 원천 필드가 여기 산다, 2026-08-07)
+                for kk, vv in v.items():
+                    if isinstance(vv, list) and any(isinstance(x, dict) for x in vv):
+                        cands.append((f"{k}.{kk}", [x for x in vv if isinstance(x, dict)]))
     if not cands:
         return None
     if field:
@@ -389,6 +515,9 @@ def _op_groupby(prev, params):
     dicts = _rows_for_field(prev, by)
     if not dicts:
         return {"success": False, "error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
+    if not any(by in d for d in dicts):
+        # 없는 by 를 조용히 받으면 전 행이 null 한 그룹으로 뭉개진다(⑧′ 실측: [[null, 83]])
+        return _field_missing_error("groupby", by, dicts)
     _, env = _get_table(prev)
     env = env or {}
     agg = params.get("agg")
@@ -400,6 +529,16 @@ def _op_groupby(prev, params):
                 specs.append((str(k), str(v[0]).lower(), str(v[1])))
             else:  # {원본열: op}
                 specs.append((f"{v}_{k}", str(v).lower(), str(k)))
+    elif agg:
+        # dict 아닌 agg("sum:size" 등)를 조용히 버리면 count 로 위장된다(⑧′ 실측)
+        return {"success": False,
+                "error": f"groupby: agg 는 dict 여야 합니다 — {{원본열: op}} 또는 {{새열명: [op, 원본열]}}, "
+                         f"op={'/'.join(_AGG)}. 받은 값: {agg!r}"}
+    for out_col, op, src in specs:
+        if op not in _AGG:
+            return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(_AGG)})"}
+        if op != "count" and not any(src in d for d in dicts):
+            return _field_missing_error("groupby", src, dicts)
     if not specs:
         specs = [("count", "count", by)]
     # 그룹핑 (입력 순서 보존)
@@ -445,22 +584,41 @@ def _extract_two(prev):
     return _parse_elem(prev[0]), _parse_elem(prev[1])
 
 
+def _extract_many(prev):
+    """& 병렬 결과에서 **전 분기** 추출 — [obj, ...] (2026-08-08, 실험 4 후속).
+
+    옛 union/merge 는 _extract_two 로 prev[0]·prev[1]만 집어 **세 번째 분기를
+    조용히 버렸다** — 3종목 병렬 결합이 2행으로 나가며 success:true(⑧′ 부류).
+    """
+    if not isinstance(prev, list) or len(prev) < 2:
+        return None
+    out = []
+    for e in prev:
+        if isinstance(e, str):
+            try:
+                e = json.loads(e)
+            except Exception:
+                e = None
+        out.append(e)
+    return out
+
+
 def _op_union(prev, params):
-    """두 table(또는 두 items)을 행 결합. 같은 통화끼리. params 없음.
+    """병렬(&) 분기들의 table(또는 items)을 행 결합. 같은 통화끼리. params 없음.
 
     table: 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 다른쪽 None). items: 단순 concat.
-    중복 제거가 필요하면 뒤에 >> dedup.
+    중복 제거가 필요하면 뒤에 >> dedup. 분기 수 제한 없음(셋 이상 전부).
     """
-    a, b = _extract_two(prev)
-    if a is None or b is None:
-        return {"success": False, "error": "union: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
-    ta, _ = _get_table(a)
-    tb, _ = _get_table(b)
-    if ta is not None and tb is not None:
-        cols = [str(c) for c in (ta.get("columns") or [])]
-        for c in (tb.get("columns") or []):
-            if str(c) not in cols:
-                cols.append(str(c))
+    objs = _extract_many(prev)
+    if not objs or any(o is None for o in objs):
+        return {"success": False, "error": "union: & 병렬로 두 개 이상의 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
+    tables = [_get_table(o)[0] for o in objs]
+    if all(t is not None for t in tables):
+        cols = []
+        for t in tables:
+            for c in (t.get("columns") or []):
+                if str(c) not in cols:
+                    cols.append(str(c))
 
         def remap(t):
             tcols = [str(c) for c in (t.get("columns") or [])]
@@ -470,27 +628,33 @@ def _op_union(prev, params):
                 out.append([d.get(c) for c in cols])
             return out
 
-        return _emit_table({"table": {}}, {"columns": cols, "rows": remap(ta) + remap(tb)})
-    ra, _ = _get_items(a)
-    rb, _ = _get_items(b)
-    if ra is not None and rb is not None:
-        return _emit_items({}, list(ra) + list(rb))
-    return {"success": False, "error": "union: 두 입력의 통화 종류가 같아야 합니다(둘 다 table 또는 둘 다 items)."}
+        all_rows = []
+        for t in tables:
+            all_rows.extend(remap(t))
+        return _emit_table({"table": {}}, {"columns": cols, "rows": all_rows})
+    item_lists = [_get_items(o)[0] for o in objs]
+    if all(il is not None for il in item_lists):
+        out = []
+        for il in item_lists:
+            out.extend(il)
+        return _emit_items({}, out)
+    return {"success": False, "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items)."}
 
 
 def _op_merge(prev, params):
-    """두 items를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
+    """병렬(&) 분기들의 items를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
 
-    여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.)
+    여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.) 분기 수 제한 없음.
     """
-    a, b = _extract_two(prev)
-    if a is None or b is None:
-        return {"success": False, "error": "merge: & 병렬로 두 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
-    ra, _ = _get_items(a)
-    rb, _ = _get_items(b)
-    if ra is None or rb is None:
-        return {"success": False, "error": "merge: 두 입력 모두 items 통화여야 합니다(표형 결합은 table:union)."}
-    out = list(ra) + list(rb)
+    objs = _extract_many(prev)
+    if not objs or any(o is None for o in objs):
+        return {"success": False, "error": "merge: & 병렬로 두 개 이상의 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
+    item_lists = [_get_items(o)[0] for o in objs]
+    if any(il is None for il in item_lists):
+        return {"success": False, "error": "merge: 모든 입력이 items 통화여야 합니다(표형 결합은 table:union)."}
+    out = []
+    for il in item_lists:
+        out.extend(il)
     by = params.get("by")
     if by or params.get("dedup"):
         key = by or "title"
@@ -535,6 +699,10 @@ def _op_join(prev, params):
     if not on:
         return {"success": False, "error": "join: on(조인 키 열 이름)이 필요합니다."}
     on = str(on)
+    if isinstance(prev, list) and len(prev) > 2:
+        # 셋째 분기를 조용히 버리지 않는다(⑧′ 부류) — join 은 이항 연산
+        return {"success": False,
+                "error": f"join: 입력이 {len(prev)}개 — join 은 두 입력만 받습니다. 여러 개는 [table:union/merge]로 합치거나 둘씩 나눠 join 하세요."}
     a, b = _extract_two(prev)
     if a is None or b is None:
         return {"success": False, "error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}

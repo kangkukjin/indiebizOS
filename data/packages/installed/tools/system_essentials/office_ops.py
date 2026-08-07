@@ -624,9 +624,45 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
         return json.dumps({"success": False, "error": f"XLSX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
 
 
+# records-관습 카드의 표시용 키들 — 이 밖의 키가 하나라도 있으면 도메인 필드(size 등)가
+# 실린 풍부 items 로 보고 전 키를 투영한다.
+_RECORDS_ONLY_KEYS = {"title", "meta", "summary", "url", "image", "id", "wide", "link"}
+
+
+def _items_to_table(rows_src) -> dict | None:
+    """단일 통화 items(행 dict 목록) → table {columns, rows} 투영. 비-dict 행은 무시.
+
+    ★title 이 있다고 무조건 4열로 접으면 안 된다(2026-08-08) — 정렬 기준이던 size 같은
+    숫자 필드가 조용히 사라진다(침묵 실패 부류). 4열 투영은 키가 records 표시용
+    키뿐일 때만, 여분 키가 있으면 키 순서=열 generic 전 키 투영.
+    """
+    if not isinstance(rows_src, list):
+        return None
+    _it = [x for x in rows_src if isinstance(x, dict)]
+    if not _it:
+        return None
+    if "title" in _it[0] and set(_it[0].keys()) <= _RECORDS_ONLY_KEYS:
+        # 순수 records-관습 카드 → 사람친화 4열
+        return {
+            "columns": ["제목", "정보", "요약", "링크"],
+            "rows": [[x.get("title", ""), x.get("meta", ""),
+                      x.get("summary", ""), x.get("url", "")] for x in _it],
+        }
+    # 임의/풍부 items(world_bank 연도/지표, file_find size 등) → 키 순서=열 generic 재구성
+    _cols = list(_it[0].keys())
+    return {"columns": _cols, "rows": [[x.get(c) for c in _cols] for x in _it]}
+
+
 def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope) -> str:
     # [table:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
     import openpyxl
+
+    # 직접 호출: 인라인 items 수용 (2026-08-07 — 이전엔 _prev_result 만 읽어
+    # [table:spreadsheet]{items:[...]} 가 success:true + 빈 파일이 됐다).
+    if not tool_input.get("table") and not tool_input.get("rows") and not tool_input.get("sheets"):
+        _t = _items_to_table(tool_input.get("items"))
+        if _t:
+            tool_input["table"] = _t
 
     # >> 파이프: 이전 액션 결과(_prev_result)에 table 통화가 있으면 자동 수용
     if not tool_input.get("table") and not tool_input.get("rows") and not tool_input.get("sheets"):
@@ -634,24 +670,13 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope) -> 
         if _pr:
             try:
                 _po = json.loads(_pr) if isinstance(_pr, str) else _pr
-                _rows_src = _po.get("items") if isinstance(_po, dict) else None
                 if isinstance(_po, dict) and isinstance(_po.get("table"), dict) and _po["table"].get("rows"):
                     tool_input["table"] = _po["table"]
-                elif isinstance(_rows_src, list) and _rows_src:
+                elif isinstance(_po, dict):
                     # 단일 통화 items(행 dict) → table 투영: 목록형 생산자도 엑셀로.
-                    _it = [x for x in _rows_src if isinstance(x, dict)]
-                    if _it and "title" in _it[0]:
-                        # records-관습 카드 → 사람친화 4열
-                        tool_input["table"] = {
-                            "columns": ["제목", "정보", "요약", "링크"],
-                            "rows": [[x.get("title", ""), x.get("meta", ""),
-                                      x.get("summary", ""), x.get("url", "")] for x in _it],
-                        }
-                    elif _it:
-                        # 임의 items(world_bank 연도/지표 등) → 키 순서=열 generic 재구성
-                        _cols = list(_it[0].keys())
-                        tool_input["table"] = {"columns": _cols,
-                                               "rows": [[x.get(c) for c in _cols] for x in _it]}
+                    _t = _items_to_table(_po.get("items"))
+                    if _t:
+                        tool_input["table"] = _t
             except Exception:
                 pass
     # 표준 테이블 통화 수용: {columns, rows} → headers/rows (table:chart와 동일 통화).

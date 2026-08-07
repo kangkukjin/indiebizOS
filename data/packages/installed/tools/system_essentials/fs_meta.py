@@ -89,9 +89,13 @@ def _fs_meta_query(tool_input: dict) -> str:
             "meta": " · ".join(b for b in meta_bits if b),
             "summary": "", "url": path,
             "path": path, "size": size, "size_mb": size_mb,
+            # dir=부모 디렉토리(2026-08-08) — 파일의 자연 속성(ext·kind 동급). 이게 없으면
+            # "디렉토리별 합계" 같은 rollup 이 어휘로 표현 불가였다(실험 3 — 변환자에
+            # 문자열 자르기를 넣는 대신 생산자 명사를 풍부화하는 쪽이 헌법 정합).
+            "dir": os.path.dirname(path),
             "mtime": mtime, "kind": it.get("kind"), "ext": it.get("ext"),
         })
-        rows.append([it.get("name") or "", size_mb, path, mtime])
+        rows.append([it.get("name") or "", size, size_mb, path, mtime])
 
     out = {
         "success": True,
@@ -100,7 +104,9 @@ def _fs_meta_query(tool_input: dict) -> str:
         "scope": res.get("scope"),
         "items": records,
         # table 통화(비파괴) — file_find >> [table:spreadsheet/document] 호환 유지.
-        "table": {"columns": ["이름", "크기(MB)", "경로", "수정일"], "rows": rows},
+        # 크기(B)=정밀 바이트(2026-08-08 ⑫) — 완전한 목록(table)에 반올림 MB 만 실리면
+        # 합계·정렬용 정밀값이 절단되는 items 에만 남아 모델이 계산할 재료를 잃는다.
+        "table": {"columns": ["이름", "크기(B)", "크기(MB)", "경로", "수정일"], "rows": rows},
     }
     if res.get("fallback"):
         out["fallback"] = res["fallback"]

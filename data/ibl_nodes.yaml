@@ -840,12 +840,16 @@ nodes:
         fixture: '[sense:stock]{query: "삼성전자"}'
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
-        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). history는 표형 table={columns:[날짜,종가],rows:[...]} 키도 함께 반환 — 그대로 table:chart/spreadsheet로 흘리거나 >> 파이프.
+        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
         target_key: op
         router: handler
         tool: stock_op
         ops:
           default: quote
+          returns:
+            quote: items
+            history: items
+            info: items
           fixture:
             history: '[sense:stock]{op: "history", ticker: "삼성전자", period: "1mo"}'
             info: '[sense:stock]{op: "info", ticker: "삼성전자"}'
@@ -4028,9 +4032,9 @@ nodes:
           - query
         returns: items
         fixture: '[self:grep]{pattern: "provider", path: "."}'
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). content는 max_results(기본 100, 최대 2000)건 표본 + total(진짜 총 매칭 수)·truncated 봉투 키.
         keywords:
         - 검색
         - 내용검색

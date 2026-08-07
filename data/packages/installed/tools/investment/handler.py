@@ -191,9 +191,12 @@ def _company_news(symbol, ti: dict):
 # ── 단일 액션 op 디스패처 ───────────────────────────────
 
 def _attach_price_table(result):
-    """주가 이력 결과에 표준 table 통화(날짜·종가 시계열)를 덧붙인다.
+    """주가 이력 결과에 단일 통화 items(전 필드) + 표준 table(날짜·종가)을 덧붙인다.
 
-    table:chart{table:...}/spreadsheet{table:...}로 그대로 흘려보냄 + `>>` 자동 파이프 대상.
+    items = 원본 필드 그대로(date/open/high/low/close/volume — 파이프의 sort/filter 재료,
+    2026-08-08: 생산자 직접 방출로 컷오버. 이전엔 derive_items 가 2열 table 을 그림자
+    투영해 거래량이 표면·파이프에서 죽었다). table 은 날짜·종가 2열 유지 — chart 계약이
+    "첫 열=x, 나머지 전부 시리즈"라 거래량 열을 섞으면 주가 선이 눌린다.
     실패해도 원본 그대로 반환(비파괴).
     """
     try:
@@ -208,6 +211,8 @@ def _attach_price_table(result):
                 if isinstance(p, dict) and p.get("close") is not None]
         if rows:
             obj["table"] = {"columns": ["날짜", "종가"], "rows": rows}
+        if prices and not isinstance(obj.get("items"), list):
+            obj["items"] = [dict(p) for p in prices if isinstance(p, dict)]
         return obj
     except Exception:
         return result
@@ -280,12 +285,38 @@ def _stock_quote(ti: dict):
     """[sense:stock]{op:quote} — 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)."""
     ticker, market = _stock_common(ti, "quote")
     tool = load_module("tool_yfinance")
-    return tool.get_stock_price(
+    return _attach_quote_items(tool.get_stock_price(
         symbol=ticker,
         period=ti.get("period", "5d"),
         interval=ti.get("interval", "1d"),
         max_points=ti.get("max_points", 10),
-    )
+    ))
+
+
+# items 행에서 제외할 data 키 — 목록·파생 메타(스냅샷 스칼라만 1행으로).
+_QUOTE_ITEMS_SKIP = {"prices", "sample", "file_path", "truncated"}
+
+
+def _attach_quote_items(result):
+    """quote 스냅샷에 단일 통화 items(1행)를 덧붙인다 (2026-08-08, 실험 4).
+
+    통화가 없으면 [A]&[B] >> [table:union] 같은 병렬 결합이 "통화 종류가 같아야"
+    에러로 멈춘다(정직하지만 표현 불가). 스냅샷=1행 dict 는 자연스러운 items —
+    previous_close 등 도메인 지식이 담긴 필드가 파이프로 흐른다. 비파괴.
+    """
+    try:
+        obj = result
+        if isinstance(result, str):
+            obj = json.loads(result)
+        if not isinstance(obj, dict) or not obj.get("success"):
+            return result
+        data = obj.get("data") or {}
+        if isinstance(data, dict) and data.get("current_price") is not None \
+                and not isinstance(obj.get("items"), list):
+            obj["items"] = [{k: v for k, v in data.items() if k not in _QUOTE_ITEMS_SKIP}]
+        return obj
+    except Exception:
+        return result
 
 
 def _stock_history(ti: dict):

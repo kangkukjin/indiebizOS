@@ -230,12 +230,13 @@
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_nip44_vectors": "top-level import: pynostr",
+    "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 228,
+    "total": 229,
     "engine": 203,
-    "blocklist": 25
+    "blocklist": 26
   }
 }

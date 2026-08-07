@@ -156,9 +156,9 @@ nodes:
           pattern: [query]
         returns: items
         fixture: '[self:grep]{pattern: "provider", path: "."}'
-        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+        description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터.
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). content는 max_results(기본 100, 최대 2000)건 표본 + total(진짜 총 매칭 수)·truncated 봉투 키.
         keywords:
         - 검색
         - 내용검색

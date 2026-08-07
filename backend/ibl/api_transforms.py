@@ -408,6 +408,14 @@ def _apply_sort(data: list, sort_config: dict) -> list:
     if not sort_key:
         return data
 
+    dict_items = [d for d in data if isinstance(d, dict)]
+    if dict_items and not any(sort_key in d for d in dict_items):
+        # 침묵 no-op 금지(2026-08-08) — 없는 필드 정렬이 원순서를 success 로 돌려주면
+        # response: 블록 저작 시점의 오타가 영영 안 드러난다. data-ops _op_sort 와 동일 원칙.
+        # (현재 response.sort 사용처 0건 실측 — 미래 저작자를 위한 가드)
+        avail = list(dict_items[0].keys())
+        raise ValueError(f"response.sort: '{sort_key}' 필드가 어느 행에도 없습니다. 사용 가능한 필드: {avail}")
+
     reverse = sort_config.get("order", "asc") == "desc"
     sort_type = sort_config.get("type", "auto")
 

@@ -347,8 +347,37 @@ def test_p14_fallback_empty_predicate():
     print("P14 OK — ?? 빈손 술어·0건 통화 봉투·>> 순차 의미 불변")
 
 
+def test_p15_binary_transformers_carry_flags():
+    """P15(⑰ 실험 8): join/union/merge 가 빈 봉투를 내 절단 신고가 이항에서 소멸했다."""
+    trunc = json.dumps({"success": True, "items": [{"파일": "a.py", "n": 1}],
+                        "total": 351, "truncated": True}, ensure_ascii=False)
+    full = json.dumps({"success": True, "items": [{"파일": "a.py", "m": 2}],
+                       "total": 208}, ensure_ascii=False)
+    # join: truncated=OR 승계, total 은 지어내지 않음(결과 기수와 무관)
+    j = _run("data_join", {"_prev_result": [trunc, full], "on": "파일"})
+    assert j.get("success") and j.get("truncated") is True and "total" not in j, j
+    # union/merge: truncated=OR + total=모집단 합
+    u = _run("data_union", {"_prev_result": [trunc, full]})
+    assert u.get("truncated") is True and u.get("total") == 559, {k: u.get(k) for k in ("truncated", "total")}
+    m = _run("data_merge", {"_prev_result": [trunc, full]})
+    assert m.get("truncated") is True and m.get("total") == 559 and m.get("count") == 2, m
+    # 양쪽 다 전량이면 신고 없음(오탐 방지)
+    c1 = json.dumps({"success": True, "items": [{"파일": "a.py", "n": 1}]})
+    m2 = _run("data_merge", {"_prev_result": [c1, c1]})
+    assert "truncated" not in m2 and "total" not in m2, m2
+    # 종단: 절단 낀 join 결과가 문서 꼬리 신고까지 도달(⑭ 연동)
+    _doc = _load("_t_docbuild2", os.path.join(_PKG, "data-ops", "doc_build.py"))
+    with tempfile.TemporaryDirectory() as td:
+        r = _doc.render_document({"_prev_result": json.dumps(j, ensure_ascii=False),
+                                  "format": "markdown"}, td)
+        r = json.loads(r) if isinstance(r, str) else r
+        md = r.get("markdown") or open(r["path"]).read()
+        assert "절단" in md, md[-200:]
+    print("P15 OK — 이항 변환자 truncated OR·total 합 승계·join 무-total·문서 꼬리 종단")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P14) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P15) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -363,4 +392,5 @@ if __name__ == "__main__":
     test_p12_grep_truncation_honesty()
     test_p13_document_open_dict_and_table()
     test_p14_fallback_empty_predicate()
+    test_p15_binary_transformers_carry_flags()
     print("\n=== 전부 통과 ===")

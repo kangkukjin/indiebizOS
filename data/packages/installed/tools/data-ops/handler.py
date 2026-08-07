@@ -584,6 +584,29 @@ def _extract_two(prev):
     return _parse_elem(prev[0]), _parse_elem(prev[1])
 
 
+def _carry_flags(objs, with_total=True):
+    """이항+ 결합의 최소 승계 봉투 — 정직 신호만 (⑰, 2026-08-08 실험 8).
+
+    이항 변환자가 빈 봉투({})를 내면 ⑥′·⑭에서 봉한 절단 신고가 join/union/merge
+    한 번에 다시 침묵한다(351건 중 8건 표가 전량인 척 문서화 — 실측). 승계 규칙:
+      - truncated = OR — 한쪽이라도 잘렸으면 결과는 잘린 표본
+      - total = 전 입력이 명시한 total 의 합 (union/merge 의 모집단 합.
+        join 은 결과 기수가 입력 total 과 무관하므로 with_total=False 로 생략 —
+        지어낸 total 은 또 다른 거짓말)
+    그 외 도메인 필드는 승계하지 않는다 — 두 봉투를 합치는 규칙은 없고,
+    한쪽 것을 실으면 거짓 출처가 된다.
+    """
+    env = {}
+    dicts = [o for o in objs if isinstance(o, dict)]
+    if any(o.get("truncated") for o in dicts):
+        env["truncated"] = True
+    if with_total and dicts:
+        totals = [o.get("total") for o in dicts]
+        if all(isinstance(t, (int, float)) and not isinstance(t, bool) for t in totals):
+            env["total"] = sum(totals)
+    return env
+
+
 def _extract_many(prev):
     """& 병렬 결과에서 **전 분기** 추출 — [obj, ...] (2026-08-08, 실험 4 후속).
 
@@ -631,13 +654,13 @@ def _op_union(prev, params):
         all_rows = []
         for t in tables:
             all_rows.extend(remap(t))
-        return _emit_table({"table": {}}, {"columns": cols, "rows": all_rows})
+        return _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
     item_lists = [_get_items(o)[0] for o in objs]
     if all(il is not None for il in item_lists):
         out = []
         for il in item_lists:
             out.extend(il)
-        return _emit_items({}, out)
+        return _emit_items(_carry_flags(objs), out)
     return {"success": False, "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items)."}
 
 
@@ -668,7 +691,7 @@ def _op_merge(prev, params):
             seen.add(k)
             dd.append(r)
         out = dd
-    return _emit_items({}, out)
+    return _emit_items(_carry_flags(objs), out)
 
 
 def _suffix_collisions(base_cols, add_cols):
@@ -731,7 +754,7 @@ def _op_join(prev, params):
                 for orig, name in zip(add, disp):
                     merged[name] = r[orig]
                 out.append(merged)
-        return _emit_items({}, out)
+        return _emit_items(_carry_flags([a, b], with_total=False), out)
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
@@ -750,7 +773,7 @@ def _op_join(prev, params):
         for rb_row in index.get(k, []):
             rbd = {cb[i]: (rb_row[i] if i < len(rb_row) else None) for i in range(len(cb))}
             out_rows.append(list(r) + [rbd.get(c) for c in extra])
-    return _emit_table({"table": {}}, {"columns": out_cols, "rows": out_rows})
+    return _emit_table({**_carry_flags([a, b], with_total=False), "table": {}}, {"columns": out_cols, "rows": out_rows})
 
 
 # ── 문서 IR(공유 문서 모델) → 산출물 emitter ───────────────────────────

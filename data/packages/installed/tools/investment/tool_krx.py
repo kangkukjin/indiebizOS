@@ -5,6 +5,7 @@ FinanceDataReader 또는 KRX API를 통해 한국 주식 시세를 조회합니�
 의존성: pip install finance-datareader
 """
 import os
+import re
 import sys
 import urllib.request
 import urllib.parse
@@ -60,8 +61,9 @@ def _get_fallback_stocks():
 
 
 def _load_stock_codes():
-    """종목 코드 목록 로드 (캐시 → FinanceDataReader → KRX API → fallback)"""
+    """종목 코드 목록 로드 (캐시 → FinanceDataReader → KRX API → KIND → 스테일 캐시 → fallback)"""
     fallback = _get_fallback_stocks()
+    stale_stocks = {}
 
     # 1. 캐시 확인
     if STOCK_CODE_CACHE_PATH.exists():
@@ -73,10 +75,13 @@ def _load_stock_codes():
                 # 캐시가 유효하고 충분한 데이터가 있는 경우
                 if datetime.now() - cache_time < timedelta(days=1) and len(cached_stocks) > 100:
                     return {**fallback, **cached_stocks}
+                # 스테일이라도 갱신 전멸 시엔 fallback(30여 종목)보다 낫다 — 종목명→코드는 천천히 변함
+                if len(cached_stocks) > 100:
+                    stale_stocks = cached_stocks
         except Exception:
             pass
 
-    # 2. FinanceDataReader 시도 (가장 안정적)
+    # 2. FinanceDataReader 시도
     stocks = _fetch_stock_list_fdr()
 
     # 3. FDR 실패시 KRX API 시도
@@ -84,6 +89,10 @@ def _load_stock_codes():
         kospi_stocks = _fetch_krx_stock_list("STK")
         kosdaq_stocks = _fetch_krx_stock_list("KSQ")
         stocks = {**kospi_stocks, **kosdaq_stocks}
+
+    # 3b. KRX API 실패시 KIND 상장법인목록 다운로드 (2026-08 시점 FDR·KRX API 둘 다 사망 후 유일 생존 경로)
+    if len(stocks) < 100:
+        stocks = _fetch_kind_stock_list()
 
     # 4. 유효한 데이터가 있으면 캐시 저장
     if len(stocks) > 100:
@@ -98,8 +107,8 @@ def _load_stock_codes():
             pass
         return {**fallback, **stocks}
 
-    # 5. 모두 실패시 fallback 반환
-    return fallback
+    # 5. 전 소스 실패 — 스테일 캐시가 있으면 그것으로, 없으면 fallback
+    return {**fallback, **stale_stocks} if stale_stocks else fallback
 
 
 def _fetch_stock_list_fdr():
@@ -158,6 +167,36 @@ def _fetch_krx_stock_list(market: str):
             if name and code:
                 stocks[name] = code
 
+        return stocks
+
+    except Exception:
+        return {}
+
+
+def _fetch_kind_stock_list():
+    """KIND(kind.krx.co.kr) 상장법인목록 다운로드로 종목 목록 조회.
+
+    data.krx.co.kr JSON API가 세션 토큰을 요구하며 막힌 뒤(2026-08 실측 403/400 "LOGOUT",
+    FDR 0.9.x도 같은 원인으로 사망)의 대체 경로 — 인증 없는 공개 다운로드(EUC-KR HTML 표).
+    유가·코스닥만 수집(코넥스 제외 — 기존 FDR 경로와 동일 범위, Yahoo 시세도 코넥스 미지원).
+    """
+    url = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&searchType=13"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            html = response.read().decode("euc-kr", errors="replace")
+
+        stocks = {}
+        for row in re.findall(r"<tr>(.*?)</tr>", html, re.S):
+            tds = [re.sub(r"<[^>]+>", "", td).strip()
+                   for td in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+            if len(tds) < 3:
+                continue
+            name, market, code = tds[0], tds[1], tds[2]
+            if market not in ("유가", "코스닥"):
+                continue
+            if name and re.fullmatch(r"\d{6}", code):
+                stocks[name] = code
         return stocks
 
     except Exception:

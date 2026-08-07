@@ -14,6 +14,7 @@
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -63,9 +64,21 @@ def _entry_item(sid, e):
         status = f"마지막 실행 {str(lr.get('at', ''))[:16]} — {verdict}"
     else:
         status = "실행 이력 없음"
+    # ⑱(2026-08-08, 실험 9): 원장은 '마지막 실행'만 알고 '지금 돌 수 있는가'를 몰랐다 —
+    # 파일이 사라져도 목록엔 ✅ 로 남는다. 실행자는 대개 새벽의 스케줄러이고 list 가
+    # 유일한 점검 창구이므로, pre-flight(파일 실존·인터프리터 해석)를 여기서 한다.
+    problems = []
+    if not Path(e.get("path", "")).is_file():
+        problems.append("⚠️ 파일 없음")
+    interp = (e.get("interpreter") or "").split()[0]
+    if interp and not (shutil.which(interp) or Path(interp).is_file()):
+        problems.append("⚠️ 인터프리터 없음")
+    if problems:
+        status = " · ".join(problems) + f" — {status}"
     return {"title": sid, "meta": f"{e.get('interpreter', '')} · {e.get('path', '')}",
             "summary": f"{e.get('description', '')} — {status}".strip(" —"),
-            "registered_at": e.get("registered_at", "")}
+            "registered_at": e.get("registered_at", ""),
+            "runnable": not problems}
 
 
 def op_list(tool_input):
@@ -138,6 +151,11 @@ def op_run(tool_input):
                          f"등록: {', '.join(sorted(ledger)) or '없음'}"}
     p = Path(entry["path"])
     if not p.is_file():
+        # pre-flight 실패도 원장에 남긴다(⑱) — 안 남기면 list/이력이 이 실패를 영영 모른다
+        entry["last_error"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "exit_code": None,
+                               "preflight": "file_missing", "stderr_tail": f"등록된 파일이 사라짐: {p}"}
+        ledger[sid] = entry
+        _write_ledger(ledger)
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 

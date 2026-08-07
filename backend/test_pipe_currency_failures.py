@@ -422,8 +422,37 @@ def test_p16_fallback_matrix_and_mixed_grammar():
     print("P16 OK — (A??B)>>C 결합·3단 매트릭스(성공>첫 빈손>마지막 에러)·전부 빈손=정직 0건")
 
 
+def test_p17_script_list_preflight():
+    """P17(⑱ 실험 9): script list 가 실행 가능 여부를 안 봄 — 파일이 사라져도 ✅ 로 남았다."""
+    _script = _load("_t_script", os.path.join(_PKG, "system_essentials", "script_ops.py"))
+    import copy
+    orig = copy.deepcopy(_script._read_ledger())
+    sid = "_p17_시험용"
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            sp = os.path.join(td, "p17.py")
+            open(sp, "w").write("print('{}')")
+            r = _script.op_register({"id": sid, "path": sp})
+            assert r.get("success"), r
+            # 파일 실존 → runnable true, ⚠️ 없음
+            it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)
+            assert it["runnable"] is True and "⚠️" not in it["summary"], it
+        # TemporaryDirectory 종료 = 파일 소실 → list 가 지금 상태를 본다
+        it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)
+        assert it["runnable"] is False and "파일 없음" in it["summary"], it
+        # run 의 pre-flight 실패가 원장 last_error 에 남는다
+        rr = _script.op_run({"id": sid})
+        assert rr.get("success") is False and "사라졌습니다" in rr["error"], rr
+        led = _script._read_ledger()
+        assert (led.get(sid) or {}).get("last_error", {}).get("preflight") == "file_missing", led.get(sid)
+    finally:
+        _script._write_ledger(orig)  # 실원장 원상복구
+    assert _script._read_ledger() == orig
+    print("P17 OK — list pre-flight(파일·인터프리터)·runnable 신호·pre-flight 실패 원장 기록")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P16) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P17) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -440,4 +469,5 @@ if __name__ == "__main__":
     test_p14_fallback_empty_predicate()
     test_p15_binary_transformers_carry_flags()
     test_p16_fallback_matrix_and_mixed_grammar()
+    test_p17_script_list_preflight()
     print("\n=== 전부 통과 ===")

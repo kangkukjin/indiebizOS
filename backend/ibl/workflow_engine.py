@@ -92,6 +92,49 @@ def _is_error_result(result) -> bool:
     return False
 
 
+def _is_empty_result(result) -> bool:
+    """도구 결과가 **빈손**인지 판정한다 — `??` 전용 보조 술어 (2026-08-08, 실험 7 ⑯).
+
+    두 연산자의 술어는 원래 다르다:
+      - `>>` 순차: "앞이 죽었으면 멈춰라" → 고장(_is_error_result)만. 0건은 죽음이
+        아니고, 0건 위의 take/filter 가 0건을 내는 것이 정답이다.
+      - `??` 폴백: "원하는 걸 못 얻었으면 딴 데로" → **빈손도 못 얻은 것**.
+        폴백을 거는 대상은 대개 검색이고 목록형 검색의 흔한 실패 모드가 0건이라,
+        고장 판정만으로는 발동해야 할 자리의 다수를 통과시킨다(실측: [sense:used]
+        total:0 이 status ok 로 기록되고 뒤의 웹 검색이 손도 안 대진 채 남았다).
+    2026-07-18 의 판정 통일(_is_error_result 단일 소스)은 유지 — 이 술어는 or 로만 얹는다.
+
+    빈손 판정은 **구조 신호만** (산문 휴리스틱 없음):
+      - dict(또는 JSON 문자열)의 items == [] (빈 리스트)
+      - total == 0 / count == 0 (명시된 0 — 키 부재는 판정 밖)
+      - 표 통화의 rows == [] (columns 가 함께 있을 때만 — 우연한 rows 키 오판 방지)
+    """
+    if isinstance(result, str):
+        s = result.lstrip()
+        if not s.startswith("{"):
+            return False
+        try:
+            import json as _json
+            result = _json.loads(s)
+        except Exception:
+            return False
+    if not isinstance(result, dict):
+        return False
+    items = result.get("items")
+    if isinstance(items, list) and not items:
+        return True
+    for k in ("total", "count"):
+        v = result.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == 0:
+            return True
+    t = result.get("table")
+    holder = t if isinstance(t, dict) else result
+    rows = holder.get("rows")
+    if isinstance(rows, list) and not rows and isinstance(holder.get("columns"), list):
+        return True
+    return False
+
+
 # === 파이프라인 실행 ===
 
 def _first_step_project_id(steps: list):
@@ -557,6 +600,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
 
     log = []
     last_result = None
+    first_empty = None  # 첫 빈손 결과 — 뒤 시도가 고장나면 이것이 최선의 답(⑯)
 
     for idx, step in enumerate(chain):
         tool_input = dict(step)
@@ -584,24 +628,36 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         duration_ms = int((time.time() - start) * 1000)
 
         # 에러 확인 — `>>` 와 **같은 함수**를 쓴다(갈라지면 폴백이 문자열 에러를 성공으로 센다)
+        # + 빈손 확인 — `??` 전용 술어(⑯, 2026-08-08): 폴백의 의미는 "원하는 걸 못 얻으면
+        #   딴 데로"이므로 0건(items:[]·total:0)도 다음 시도로 넘어간다. `>>` 는 불변.
         is_err = _is_error_result(result)
+        is_empty = (not is_err) and _is_empty_result(result)
         log.append({
             "attempt": idx + 1,
             "node": tool_input.get("_node", "?"),
             "action": tool_input.get("action", "?"),
-            "status": "error" if is_err else "ok",
+            "status": "error" if is_err else ("empty" if is_empty else "ok"),
             "duration_ms": duration_ms,
         })
 
-        if not is_err:
-            # 성공! 즉시 반환
+        if not is_err and not is_empty:
+            # 성공(내용 있는 결과)! 즉시 반환
             return result, log
 
+        if is_empty and first_empty is None:
+            first_empty = result
         last_result = result
 
-    # 모든 체인 실패
+    # 모든 체인이 실패 또는 빈손
     if last_result is None:
-        last_result = {"error": "fallback 체인이 비어있습니다."}
+        last_result = {"error": "fallback 체인이 비어있습니다.", "_all_failed": True}
+        return last_result, log
+    if not _is_error_result(last_result):
+        # 마지막 시도가 빈손(에러 아님) — 정직한 0건이 답. 에러로 위장하지 않는다.
+        return last_result, log
+    if first_empty is not None:
+        # 뒤 시도가 고장났어도 앞의 정직한 빈손이 있으면 그것이 더 나은 답
+        return first_empty, log
     if not isinstance(last_result, dict):
         # 문자열 에러("Error: …")는 `_all_failed` 표식을 달 수 없어 호출부가 성공으로 세어 버린다
         # → 전체 실패 경로에서만 error dict 로 감싼다(성공 결과는 원형 그대로 반환되므로 무영향).

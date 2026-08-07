@@ -271,7 +271,12 @@ def run(tool_input: dict, project_path: str) -> str:
                       f"리터럴 문자열로 검색했습니다. 의도가 정규식이면 패턴을 고치세요.)")
 
     if not results and not full_counts:
-        return f"No matches found for: {pattern}{regex_note}"
+        # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어와
+        # 변환자가 구조로 인식할 수 없다. 사람용 안내는 text 에 그대로.
+        return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0,
+                           "truncated": False,
+                           "text": f"No matches found for: {pattern}{regex_note}"},
+                          ensure_ascii=False)
 
     # 진짜 총량 — 전수 계수가 있으면 그것, 없으면 관측치(+truncated 신호)
     grand_total = sum(full_counts.values()) if full_counts is not None else len(match_rows)

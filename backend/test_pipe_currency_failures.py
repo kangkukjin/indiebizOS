@@ -15,8 +15,11 @@
     P10. filter/dedup/take 침묵 삼킴                    → 명시 에러
     P11. quote 통화 부재로 병렬 결합 표현 불가 (실험 4)  → 1행 items 방출 + N항 union/merge
          (+ 옛 _extract_two 가 셋째 분기를 조용히 버림 → 전 분기 결합, join 은 명시 거부)
+    P12~P13 은 파일 아래쪽 참조 (grep ⑥′ · document ⑭)
 
 실행: python3 backend/test_pipe_currency_failures.py
+  ★백엔드가 쓰는 인터프리터(openpyxl 설치본, 예: brew python3.14)로 돌릴 것 —
+    시스템 기본 python3 엔 openpyxl 이 없어 P2 가 죽을 수 있다.
 """
 import importlib.util
 import json
@@ -283,8 +286,69 @@ def test_p12_grep_truncation_honesty():
     print("P12 OK — grep 전수 계수·결정적 표본·total/truncated 봉투·stale text 제거")
 
 
+def test_p13_document_open_dict_and_table():
+    """P13(⑭ 실험 6): document 가 records 모양만 렌더 — 열린 dict=빈 불릿·표 통화=통째 유실."""
+    _doc = _load("_t_docbuild", os.path.join(_PKG, "data-ops", "doc_build.py"))
+    with tempfile.TemporaryDirectory() as td:
+        def render(payload):
+            out = _doc.render_document({**payload, "format": "markdown"}, td)
+            return json.loads(out) if isinstance(out, str) else out
+        # 열린 dict(grep 모양 — 한국어 키) → 빈 불릿 대신 table 블록으로 실데이터 렌더
+        grep_env = {"success": True, "items": [{"파일": "a.py", "줄번호": 3, "내용": "except x"},
+                                               {"파일": "b.py", "줄번호": 7, "내용": "except y"}],
+                    "total": 351, "truncated": True}
+        r1 = render({"_prev_result": json.dumps(grep_env, ensure_ascii=False), "title": "t"})
+        md1 = r1.get("markdown") or open(r1["path"]).read()
+        assert r1.get("success") and "a.py" in md1 and "except x" in md1, md1[:200]
+        # 절단 신고가 문서 꼬리에 실림(⑥′ 연동)
+        assert "351" in md1 and "절단" in md1, md1[-200:]
+        # 표 통화(select 산출 — items 없이 columns/rows) → 입구 신설
+        sel_env = {"success": True, "columns": ["파일", "매칭 수"], "rows": [["c.py", 42]]}
+        r2 = render({"_prev_result": json.dumps(sel_env, ensure_ascii=False)})
+        md2 = r2.get("markdown") or open(r2["path"]).read()
+        assert r2.get("success") and "c.py" in md2 and "42" in md2, md2[:200]
+        # 인라인 표 통화도 대칭 수용
+        r3 = render({"table": {"columns": ["k"], "rows": [["v1"]]}})
+        md3 = r3.get("markdown") or open(r3["path"]).read()
+        assert r3.get("success") and "v1" in md3, md3[:200]
+        # 회귀: 순수 records 카드는 여전히 cards 렌더(제목 등장)
+        rec_env = {"success": True, "items": [{"title": "글제목", "meta": "m", "summary": "s", "url": "u"}]}
+        r4 = render({"_prev_result": json.dumps(rec_env, ensure_ascii=False)})
+        md4 = r4.get("markdown") or open(r4["path"]).read()
+        assert "글제목" in md4, md4[:200]
+    print("P13 OK — 열린 dict→table 블록·표 통화 입구·절단 꼬리 신고·records 카드 회귀 없음")
+
+
+def test_p14_fallback_empty_predicate():
+    """P14(⑯ 실험 7): ??가 빈 결과(total:0·items:[])를 성공으로 세어 폴백이 안 돌았다."""
+    from ibl.workflow_engine import _is_empty_result, _is_error_result
+    # 빈손 판정 — 구조 신호
+    assert _is_empty_result({"success": True, "items": [], "total": 0}) is True
+    assert _is_empty_result(json.dumps({"total": 0, "items": []})) is True
+    assert _is_empty_result({"success": True, "columns": ["a"], "rows": []}) is True
+    assert _is_empty_result({"success": True, "count": 0}) is True
+    # 빈손 아님 — 내용 있음·키 부재·비통화
+    assert _is_empty_result({"success": True, "items": [{"a": 1}]}) is False
+    assert _is_empty_result({"success": True, "message": "done"}) is False
+    assert _is_empty_result("자유 텍스트 응답") is False
+    assert _is_empty_result({"success": True, "truncated": False, "total": 5, "items": [{}]}) is False
+    # 에러와 빈손은 별개 축 (에러는 기존 술어가)
+    assert _is_error_result({"success": False, "error": "x"}) and not _is_empty_result({"a": 1})
+    # grep/file_find 0건 = 이제 맨 문자열이 아니라 통화 봉투(술어가 잡을 수 있게)
+    with tempfile.TemporaryDirectory() as td:
+        g0 = json.loads(_sysess.execute({"pattern": "없는패턴XYZ", "path": td}, _Ctx("grep_files", td)))
+        assert g0.get("success") and g0.get("items") == [] and g0.get("total") == 0, g0
+        assert _is_empty_result(g0) is True
+        f0 = json.loads(_sysess.execute({"pattern": "*.없는확장자", "path": td}, _Ctx("glob_files", td)))
+        assert f0.get("success") and f0.get("items") == [] and _is_empty_result(f0) is True, f0
+        # ★>> 는 불변: 0건 위의 take 는 0건을 내는 것이 정답(에러도 폴백도 아님)
+        t0 = _run("data_take", {"_prev_result": json.dumps(g0, ensure_ascii=False), "n": 5})
+        assert t0.get("success") and t0.get("items") == [] and t0.get("count") == 0, t0
+    print("P14 OK — ?? 빈손 술어·0건 통화 봉투·>> 순차 의미 불변")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 통화 층 침묵 실패 수리 회귀 테스트 (P1~P12) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P14) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -297,4 +361,6 @@ if __name__ == "__main__":
     test_p10_filter_dedup_take_loud_params()
     test_p11_quote_currency_and_nary_combine()
     test_p12_grep_truncation_honesty()
+    test_p13_document_open_dict_and_table()
+    test_p14_fallback_empty_predicate()
     print("\n=== 전부 통과 ===")

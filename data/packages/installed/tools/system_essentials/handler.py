@@ -919,7 +919,9 @@ def execute(tool_input: dict, context) -> str:
                 "힌트: 프로젝트 밖을 검색하려면 path 파라미터를 사용하세요. "
                 '예: {pattern: "*.docx", path: "~/Desktop"} 또는 {pattern: "*.docx", path: "/Users"}'
             )
-            return hint
+            # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어가 못 잡는다
+            return json.dumps({"success": True, "items": [], "total": 0,
+                               "truncated": False, "text": hint}, ensure_ascii=False)
 
         elif tool_name == "edit_file":
             file_path = os.path.join(project_path, _get_path(tool_input))

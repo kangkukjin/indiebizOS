@@ -96,7 +96,7 @@ Chain multiple steps with operators:
 |----------|------|---------|
 | `>>` | Sequential | `[sense:search]{query: "AI"} >> [self:write]{path: "result.md"}` |
 | `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
-| `??` | Fallback | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL price"}` |
+| `??` | Fallback (실패·0건이면 다음 시도) | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL price"}` |
 
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
 

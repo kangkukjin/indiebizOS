@@ -89,8 +89,30 @@ def structure_document(tool_input, output_base="."):
                         "message": f"{len(blocks)}블록 문서 IR로 구조화."}, ensure_ascii=False)
 
 
+# records-관습 카드의 표시용 키 — office_ops._RECORDS_ONLY_KEYS 와 동일 판별(2026-08-08 ⑭).
+_RECORDS_ONLY_KEYS = {"title", "meta", "summary", "url", "image", "id", "wide", "link", "link_label"}
+
+
+def _rows_block(rows: list) -> dict:
+    """행 dict 목록 → 렌더 가능한 블록 하나 (cards 또는 table).
+
+    ⑭(2026-08-08, 실험 6): cards 렌더러는 title/meta/summary 를 가정한다 — 열린 dict
+    (grep 의 파일/줄번호/내용, 도메인 필드 실린 items)를 cards 에 넣으면 **에러 없이
+    빈 불릿**이 된다. 통화 계약은 "열린 dict"이므로: 순수 records 카드만 cards,
+    그 외엔 전 키를 열로 하는 table 블록(다섯 emitter 전부 table 분기 보유).
+    """
+    dicts = [r for r in rows if isinstance(r, dict)]
+    if dicts and "title" in dicts[0] and set(dicts[0].keys()) <= _RECORDS_ONLY_KEYS:
+        return {"type": "cards", "columns": 2, "items": rows}
+    if dicts:
+        cols = list(dicts[0].keys())
+        return {"type": "table", "columns": cols,
+                "rows": [[r.get(c) for c in cols] for r in dicts]}
+    return {"type": "cards", "columns": 2, "items": rows}
+
+
 def _items_to_blocks(rows: list, group_by: str = None) -> list:
-    """단일 통화 items → 문서 IR 블록. group_by 있으면 그 필드로 섹션(heading+cards) 분할.
+    """단일 통화 items → 문서 IR 블록. group_by 있으면 그 필드로 섹션(heading+표/카드) 분할.
     이미 문서 IR(type+text) 이면 그대로 반환."""
     if not rows:
         return []
@@ -108,9 +130,9 @@ def _items_to_blocks(rows: list, group_by: str = None) -> list:
         for key in order:
             if key:
                 blocks.append({"type": "heading", "level": 2, "text": key})
-            blocks.append({"type": "cards", "columns": 2, "items": groups[key]})
+            blocks.append(_rows_block(groups[key]))
         return blocks
-    return [{"type": "cards", "columns": 2, "items": rows}]
+    return [_rows_block(rows)]
 
 
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)[^)]*\)")
@@ -333,11 +355,31 @@ def render_document(tool_input, output_base="."):
     import html as _html
     import json as _json
 
+    def _table_block_of(src):
+        """봉투/입력의 표 통화({table:{columns,rows}} 또는 최상위 columns/rows) → table 블록.
+
+        ⑭(2026-08-08): 이 입구가 없어 select 가 만든 표가 통째로 버려지고 빈 문서가
+        success 로 나갔다.
+        """
+        if not isinstance(src, dict):
+            return None
+        t = src.get("table") if isinstance(src.get("table"), dict) else None
+        holder = t if t is not None else src
+        cols, rows = holder.get("columns"), holder.get("rows")
+        if isinstance(cols, list) and isinstance(rows, list) and rows:
+            return {"type": "table", "columns": cols, "rows": rows}
+        return None
+
     group_by = (tool_input.get("group_by") or "").strip() or None
     blocks = tool_input.get("blocks")
     # 직접 items 파라미터 (조립된 단일 통화 items 전달 — >> 파이프 밖 호출, 예: 데스크탑 신문)
     if not blocks and isinstance(tool_input.get("items"), list) and tool_input["items"]:
         blocks = _items_to_blocks(tool_input["items"], group_by)
+    # 직접 표 통화 (인라인 table/columns+rows — spreadsheet 인라인 items 와 같은 부류)
+    if not blocks:
+        _tb = _table_block_of(tool_input)
+        if _tb:
+            blocks = [_tb]
     # 마크다운 텍스트 입구 — 이미 글로 존재하는 문서(보고서·신문·블로그)를 emitter 로.
     if not blocks and isinstance(tool_input.get("markdown"), str) and tool_input["markdown"].strip():
         _fm = {}
@@ -366,8 +408,19 @@ def render_document(tool_input, output_base="."):
                     if po.get("blocks"):
                         blocks = po["blocks"]
                     elif isinstance(po.get("items"), list) and po["items"]:
-                        # 단일 통화 items → cards(또는 group_by 섹션) 블록. IR(type+text)이면 그대로.
+                        # 단일 통화 items → 표/카드(또는 group_by 섹션) 블록. IR(type+text)이면 그대로.
                         blocks = _items_to_blocks(po["items"], group_by)
+                    else:
+                        # 표 통화(columns/rows) 입구 — select/groupby 산출이 items 없이 표만 나를 때(⑭)
+                        _tb = _table_block_of(po)
+                        if _tb:
+                            blocks = [_tb]
+                    # 원천 절단 신고(⑥′ 연동) — 절단된 표본을 문서가 전량인 척 싣지 않게
+                    if blocks and isinstance(blocks, list) and po.get("truncated"):
+                        tot = po.get("total")
+                        blocks = list(blocks) + [{"type": "paragraph", "text":
+                            "※ 원 데이터가 절단된 표본입니다"
+                            + (f" (총 {tot}건 중 일부만 수집됨)" if tot else "") + "."}]
                     for k in ("title", "meta", "theme"):
                         if not tool_input.get(k) and po.get(k):
                             tool_input[k] = po[k]

@@ -519,7 +519,7 @@ AI 답변: {ai_response[:1400]}
         if write_experience and tool_calls:
             try:
                 from ibl_usage_rag import distill_experience, record_recall_outcome
-                distill_experience(user_message, tool_calls, hippo_score)
+                distill_experience(user_message, tool_calls, hippo_score, top_code=top_code)
                 record_recall_outcome(top_code, hippo_score, tool_calls)
             except Exception as e:
                 log(f"[경험증류] 오류 (무시): {e}")

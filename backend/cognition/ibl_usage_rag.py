@@ -536,16 +536,37 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list) -> 
         return False
 
 
-def distill_experience(user_message: str, tool_calls: list, top_score: float) -> bool:
+def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
+    """회상 top-1 의 [node:action]이 실행 궤적에 실제로 등장했는지 판정.
+
+    고점수 회상이라도 실행이 그 액션을 전혀 안 썼다면 표면 어휘만 닮은 가짜
+    유사도다(ep949: "자동화 조사" 질의에 [self:read] 회상 0.717 → 실행은 전부
+    sense:freelance/search — 임계만 넘겨 학습이 통째로 스킵됨). 이 경우 경험은
+    새 패턴이므로 증류를 막으면 안 된다. 판정은 node:action 쌍 교집합."""
+    top_pairs = set(re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', top_code or ""))
+    if not top_pairs:
+        return False
+    for code in ibl_calls:
+        if top_pairs & set(re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', code or "")):
+            return True
+    return False
+
+
+def distill_experience(user_message: str, tool_calls: list, top_score: float,
+                       top_code: str = None) -> bool:
     """실행 경험을 증류하여 해마에 저장한다.
 
-    조건: 해마 점수가 DISTILL_THRESHOLD 미만이고, 도구 호출이 있었을 때만 실행.
+    조건: 도구 호출이 있었고, 해마 점수가 DISTILL_THRESHOLD 미만일 때 — 단
+    점수가 임계 이상이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면
+    (top_code 전달 경로 한정) 가짜 유사도로 보고 증류를 진행한다.
+    top_code 미전달 경로(조종실 /ibl/distill 등)는 기존 점수 게이트 그대로.
     무의식 에이전트와 같은 경량 AI로 경험을 반성하여 일반화된 용례로 변환한다.
 
     Args:
         user_message: 사용자 원본 메시지
         tool_calls: 도구 실행 이력 [{tool_name, input, success}, ...]
         top_score: 해마 최고 점수 (build_execution_memory 시점)
+        top_code: 해마 최고 점수 항목의 ibl_code (회상 사용 여부 판정용, 선택)
 
     Returns:
         증류 성공 여부
@@ -566,13 +587,10 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
     if IBLUsageDB.hippo_disabled():
         return False
 
-    if top_score >= DISTILL_THRESHOLD:
-        return False
-
     if not tool_calls:
         return False
 
-    # 성공한 IBL 호출만 필터
+    # 성공한 IBL 호출만 필터 (점수 게이트의 회상 사용 판정도 이 목록을 씀)
     ibl_calls = []
     for tc in tool_calls:
         if not isinstance(tc, dict):
@@ -588,6 +606,15 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float) ->
 
     if not ibl_calls:
         return False
+
+    # 점수 게이트: 임계 이상이면 원칙적으로 "이미 아는 패턴"이라 스킵. 단 그 판정은
+    # 회상이 실행에 실제 사용됐을 때만 신뢰한다 — 무관한 회상이 점수만 높은 경우
+    # (표면 어휘 유사)는 새 패턴이므로 증류를 진행한다. top_code 없는 경로(조종실)는
+    # 사용 여부를 알 수 없으므로 기존 점수 게이트 유지.
+    if (top_score or 0.0) >= DISTILL_THRESHOLD:
+        if not top_code or _recall_was_used(top_code, ibl_calls):
+            return False
+        print(f"[경험증류] 고점수 회상(top={top_score:.2f})이 실행에 미사용 — 새 패턴으로 증류 진행")
 
     # 증류: 실행 에이전트와 같은 모델로 반성
     try:

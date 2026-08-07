@@ -45,7 +45,7 @@
           },
           "design_system": {
             "type": "string",
-            "description": "create 옵션 — vintage_book/academic_paper/tech_minimal/magazine_modern"
+            "description": "create 옵션 — vintage_book/blueprint/architect/ink_orange"
           },
           "confirm": {
             "type": "boolean",
@@ -93,7 +93,7 @@
           },
           "aesthetic": {
             "type": "string",
-            "description": "create+스크래치 덱 전용 — 톤 (vintage_book 기본/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint). 같은 톤은 같은 스크래치 덱에 모임. 강의 소속 create 는 덱 design_system 이 우선."
+            "description": "create+스크래치 덱 전용 — 톤 (vintage_book 기본/blueprint/architect/ink_orange). 같은 톤은 같은 스크래치 덱에 모임. 강의 소속 create 는 덱 design_system 이 우선."
           },
           "render": {
             "type": "string",

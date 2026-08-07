@@ -385,17 +385,17 @@ def _native_aesthetic(design: str) -> str:
 
 
 def _html_design_of(design: str) -> str:
-    """이 덱의 톤을 **HTML 렌더러가 아는 키**로 변환(청사진 톤 blueprint → sf_blueprint).
+    """이 덱의 톤을 **HTML 렌더러가 아는 키**로 변환(현재 4톤은 이름 일치 — 역사적 어긋남 대비 유지).
 
-    톤이 HTML 을 지원하지 않으면 톤 이름을 그대로 넘긴다 — shadcn_slides.render_slide 가
-    모르는 키를 default 로 접으므로(치명 실패 아님), 첨부 이미지처럼 HTML 경로가 강제되는
-    상황에서도 슬라이드는 나온다.
+    톤이 HTML 렌더러에 없으면(은퇴 톤·미지원 톤) "default" 로 접는다 — create_shadcn_slides 는
+    모르는 design_system 을 명시 오류로 거부하므로, 옛 덱(예: magazine_modern)이 새 HTML 슬라이드를
+    뽑을 때 여기서 접어 줘야 조용히 계속 나온다(2026-08-07 톤 대압축 호환).
     """
     tone = _deck_axes(design)[0]
     try:
-        return _load_slide_tones().style_key(tone, "html") or tone
+        return _load_slide_tones().style_key(tone, "html") or "default"
     except Exception:
-        return tone
+        return "default"
 
 
 def _load_slide_image():
@@ -421,11 +421,71 @@ def _load_slide_native():
     return mod
 
 
+_ANCHOR_SCAN_LIMIT = 16  # 같은 톤 앵커를 찾아 훑을 최대 슬라이드 수(긴 덱 전수 탐색 방지)
+
+_NATIVE_TONE_BY_KO = None
+
+
+def _native_tone_by_ko() -> dict:
+    """통짜 아트디렉션의 한글 라벨 → 톤 키 역맵(1회 구축).
+
+    2026-08-07 이전 슬라이드는 사이드카에 톤 키가 아니라 `aesthetic`(한글 라벨)만 남겼다.
+    """
+    global _NATIVE_TONE_BY_KO
+    if _NATIVE_TONE_BY_KO is None:
+        try:
+            _NATIVE_TONE_BY_KO = {
+                v.get("ko"): k for k, v in _load_slide_native().AESTHETICS.items() if v.get("ko")
+            }
+        except Exception:
+            _NATIVE_TONE_BY_KO = {}
+    return _NATIVE_TONE_BY_KO
+
+
+def _slide_tone(slide_meta: dict, lecture_dir_path) -> str:
+    """이 슬라이드가 **어느 톤으로** 만들어졌는지 — 사이드카 spec 에서 읽는다(모르면 "").
+
+    우선순위: `tone`(정본, 2026-08-07~) → `style`(합성 경로는 톤 키가 그대로) →
+    `aesthetic`(통짜 경로의 옛 한글 라벨).
+    """
+    rel = slide_meta.get("spec_file")
+    if not rel:
+        return ""
+    try:
+        with open(lecture_dir_path / rel, "r", encoding="utf-8") as f:
+            spec = json.load(f)
+    except Exception:
+        return ""
+    if not isinstance(spec, dict):
+        return ""
+    for key in ("tone", "style"):
+        v = (spec.get(key) or "").strip()
+        if v:
+            return v
+    ko = (spec.get("aesthetic") or "").strip()
+    return _native_tone_by_ko().get(ko, "") if ko else ""
+
+
+def _anchor_scan(order: list, prev_idx, next_idx):
+    """앵커 후보를 가까운 순서로 — 앞으로 거슬러 올라간 뒤, 뒤로 내려간다."""
+    seen = 0
+    i = prev_idx
+    while i is not None and i >= 0 and seen < _ANCHOR_SCAN_LIMIT:
+        yield order[i]
+        i -= 1
+        seen += 1
+    j = next_idx
+    while j is not None and j < len(order) and seen < _ANCHOR_SCAN_LIMIT:
+        yield order[j]
+        j += 1
+        seen += 1
+
+
 def _neighbor_context(deck: dict, lecture_dir_path, focus_slide_id, insert_at):
     """새/편집 슬라이드의 앞뒤 이웃 슬라이드를 찾아 스타일 참고 자료를 모은다.
 
     Returns: (ref_png_paths, neighbor_briefs)
-      - ref_png_paths: 존재하는 이웃 슬라이드 PNG 절대경로 리스트(앞 우선, 최대 2장).
+      - ref_png_paths: 스타일 앵커 PNG 절대경로(최대 1장, 없으면 빈 리스트).
       - neighbor_briefs: [{position, title, layout}] — 텍스트 경로 프롬프트 힌트용.
     위치 결정:
       - 편집(focus): slide_order 상 focus 양옆.
@@ -433,46 +493,69 @@ def _neighbor_context(deck: dict, lecture_dir_path, focus_slide_id, insert_at):
     """
     order = deck.get("slide_order", [])
     slides = deck.get("slides", {})
-    prev_sid = next_sid = None
+    prev_idx = next_idx = None
     if focus_slide_id and focus_slide_id in order:
         idx = order.index(focus_slide_id)
         if idx > 0:
-            prev_sid = order[idx - 1]
+            prev_idx = idx - 1
         if idx + 1 < len(order):
-            next_sid = order[idx + 1]
+            next_idx = idx + 1
     else:
         if insert_at is None:
             if order:
-                prev_sid = order[-1]
+                prev_idx = len(order) - 1
         else:
             if 0 < insert_at <= len(order):
-                prev_sid = order[insert_at - 1]
+                prev_idx = insert_at - 1
             if 0 <= insert_at < len(order):
-                next_sid = order[insert_at]
+                next_idx = insert_at
+    prev_sid = order[prev_idx] if prev_idx is not None else None
+    next_sid = order[next_idx] if next_idx is not None else None
 
-    ref_paths, briefs = [], []
+    briefs = []
     for position, sid in (("앞", prev_sid), ("뒤", next_sid)):
         if not sid or sid not in slides:
             continue
         s = slides[sid]
         briefs.append({"position": position, "title": s.get("title"), "layout": s.get("layout")})
 
-    # 스타일 참고 이미지는 '하나'만 쓴다 — 앞뒤 스타일이 서로 다를 때 둘을 첨부하면
-    # 이미지 모델이 상충하는 단서를 섞어 결과가 흔들린다. 덱은 위→아래로 읽히므로
-    # **직전(앞) 슬라이드를 기준 앵커**로 삼고(앞이 없으면 뒤), 그 한 장에 맞춰 일관성을 준다.
-    # 업로드한 원본 이미지(layout=="image")는 슬라이드 디자인이 아니므로 앵커에서 제외.
-    for sid in (prev_sid, next_sid):
-        if not sid or sid not in slides:
+    # ── 스타일 앵커 ─────────────────────────────────────────────────────
+    # 앵커는 **통짜(native) 경로에서만** 쓰이고, 그 프롬프트(_STYLE_REF_CLAUSE)는 첨부 이미지에
+    # "이 표면 스타일(팔레트·종이질감·서체·마감)을 그대로 맞춰라"고 지시한다. 그래서 앵커는
+    # **반드시 같은 톤**이어야 한다 — 톤이 다르면 아트디렉션(새 톤)과 앵커(옛 톤)가 한 프롬프트
+    # 안에서 정면 충돌하고, 톤을 바꾼 첫 장이 늘 그 충돌을 뒤집어쓴다. 그래서 "덱에 이미 깔린
+    # 톤 말고는 품질이 떨어진다"로 보인다(2026-08-07 관측: 빈티지 36장 덱에서 다크 키노트를
+    # 뽑자 직전 빈티지 슬라이드가 앵커로 붙었다). 확인되는 후보가 없으면 **앵커 없이** 간다 —
+    # 앵커 없음이 상충하는 앵커보다 낫다.
+    #
+    # 같은 톤이어도 통짜(native)를 합성(composite)보다 앞세운다: 합성판은 HTML 타이포 레이어와
+    # 페이드가 얹힌 다른 마감이라 팔레트는 맞아도 표면이 덜 맞는다. 통짜가 없을 때의 차선.
+    # 업로드 원본(image)·HTML 렌더는 애초에 앵커가 아니다.
+    # 하나만 붙이는 이유는 종전과 같다: 둘을 첨부하면 모델이 상충하는 단서를 섞는다.
+    deck_tone = _deck_axes(deck.get("design_system") or "native_vintage_book")[0]
+    native_ref = composite_ref = None
+    for sid in _anchor_scan(order, prev_idx, next_idx):
+        s = slides.get(sid)
+        if not s:
             continue
-        if slides[sid].get("layout") == "image":
+        layout = s.get("layout")
+        if layout not in ("native", "composite"):
             continue
-        png_rel = slides[sid].get("png_file")
-        if png_rel:
-            p = (lecture_dir_path / png_rel).resolve()
-            if p.exists():
-                ref_paths.append(str(p))
-                break
-    return ref_paths, briefs
+        if _slide_tone(s, lecture_dir_path) != deck_tone:
+            continue
+        png_rel = s.get("png_file")
+        if not png_rel:
+            continue
+        p = (lecture_dir_path / png_rel).resolve()
+        if not p.exists():
+            continue
+        if layout == "native":
+            native_ref = str(p)
+            break  # 최선을 찾았다 — 더 볼 것 없다
+        if composite_ref is None:
+            composite_ref = str(p)
+    best = native_ref or composite_ref
+    return ([best] if best else []), briefs
 
 
 def _generate_native_slide(
@@ -515,6 +598,9 @@ def _generate_native_slide(
     spec_meta = {
         "layout": "native", "device": result.get("device"), "aesthetic": result.get("aesthetic"),
         "title": result.get("title"), **spec,
+        # 톤 키(정본) — 다음 슬라이드가 '같은 톤인가'를 이걸로 판정해 스타일 앵커를 고른다.
+        # (**spec 뒤에 둬서 저작 AI 응답이 덮어쓰지 못하게 한다.)
+        "tone": _native_aesthetic(design),
     }
     with open(slides_dir_path / f"{slide_id}.json", "w", encoding="utf-8") as f:
         json.dump(spec_meta, f, ensure_ascii=False, indent=2)
@@ -578,6 +664,7 @@ def _generate_image_slide(
     spec_meta = {
         "layout": "composite", "style": result.get("style"), "composition": result.get("composition"),
         "title": result.get("title"), "kicker": result.get("kicker"), **spec,
+        "tone": tone,  # 통짜 경로와 같은 정본 필드 (앵커 판정용)
     }
     with open(slides_dir_path / f"{slide_id}.json", "w", encoding="utf-8") as f:
         json.dump(spec_meta, f, ensure_ascii=False, indent=2)
@@ -671,7 +758,7 @@ def _generate_and_register_slide(
     if content:
         instruction = f"{instruction}\n\n[근거 원문 — 사실·표현·고유명사는 여기서, 지어내지 말 것]\n{content}"
 
-    # HTML 렌더러가 아는 톤 키로 변환(blueprint → sf_blueprint 등).
+    # HTML 렌더러가 아는 톤 키로 변환.
     html_design = _html_design_of(design)
 
     # focus slide의 현재 spec 로드 (편집 모드)

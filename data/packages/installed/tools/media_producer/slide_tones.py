@@ -17,8 +17,9 @@
     native_vintage_book   → 톤=vintage_book, 렌더=native
     image_ink_blueprint   → 톤=ink_blueprint, 렌더=image
 
-★세 렌더러가 각자 자기 스타일 테이블을 갖고 있고 키 이름도 어긋난다(청사진 톤이 native 에선
-`blueprint`, html 에선 `sf_blueprint`). 그 매핑을 여기 한 곳에 모아두는 것이 이 파일의 일이다.
+★세 렌더러가 각자 자기 스타일 테이블을 갖고 있어 키 이름이 어긋날 수 있다 — 그 매핑을 여기
+한 곳에 모아두는 것이 이 파일의 일이다. (2026-08-07 톤 대압축: 4톤만 존치, 은퇴 정의는
+data/packages/_archive/retired_tones_20260807.py.txt — '많고 밋밋한 톤'보다 '적고 완성된 톤'.)
 표면(강의 창)은 `/lectures/design-systems` 로 이 매트릭스를 받아 드롭다운을 그린다 —
 프론트엔드에 톤 목록을 하드코딩하지 말 것(그 드리프트가 은퇴한 톤을 계속 노출시킨 원인이었다).
 """
@@ -59,51 +60,22 @@ TONES = {
         "desc": "베이지 종이 + 청·적갈 잉크 · 책 강의·인문",
         "paths": {"native": "vintage_book", "image": "vintage_book", "html": "vintage_book"},
     },
-    "academic_paper": {
-        "ko": "학술 논문",
-        "desc": "미색 + 진남 + 진홍 강조 · 연구·논문",
-        "paths": {"native": "academic_paper", "image": "academic_paper", "html": "academic_paper"},
-    },
-    "tech_minimal": {
-        "ko": "테크 미니멀",
-        "desc": "프리미엄 다크 + 글래스 · 개발자·테크",
-        "paths": {"native": "tech_minimal", "image": "tech_minimal", "html": "tech_minimal"},
-    },
-    "magazine_modern": {
-        "ko": "잡지 모던",
-        "desc": "흰·검·적색 · 편집·홍보",
-        "paths": {"native": "magazine_modern", "image": None, "html": "magazine_modern"},
-    },
-    "dark_keynote": {
-        "ko": "다크 키노트",
-        "desc": "칠흑 배경 + 청록·호박 발광 · 극적·프리미엄",
-        "paths": {"native": "dark_keynote", "image": None, "html": None},
-    },
     "blueprint": {
         "ko": "청사진",
         "desc": "인디고 선화 + 산호 강조 · 도해·구조",
-        # ★native 는 "blueprint", html 은 "sf_blueprint" — 같은 톤의 서로 다른 이름.
-        "paths": {"native": "blueprint", "image": None, "html": "sf_blueprint"},
+        "paths": {"native": "blueprint", "image": None, "html": "blueprint"},
     },
-    "ink_blueprint": {
-        "ko": "잉크+청사진",
-        "desc": "손그림 잉크 + 청사진 격자 · 인문·개념",
-        "paths": {"native": None, "image": "ink_blueprint", "html": None},
+    # 2026-08-07 신설 — The_AI_Architect.pdf 실물 연구에서 증류(native+html 완전판, 빈티지북급).
+    "architect": {
+        "ko": "아키텍트",
+        "desc": "아이보리 + 벽돌·강청 아이소메트릭 도해 · 시스템·전략",
+        "paths": {"native": "architect", "image": None, "html": "architect"},
     },
-    "cinematic_3d": {
-        "ko": "시네마틱 3D",
-        "desc": "빛·유리·볼륨 렌더 · 표지·임팩트",
-        "paths": {"native": None, "image": "cinematic_3d", "html": None},
-    },
-    "isometric": {
-        "ko": "아이소메트릭",
-        "desc": "30도 도면 + 파스텔 · 시스템·구조",
-        "paths": {"native": None, "image": "isometric", "html": None},
-    },
-    "lineart_duotone": {
-        "ko": "라인아트 듀오톤",
-        "desc": "미니멀 선화 + 두 색 · 모던·고급",
-        "paths": {"native": None, "image": "lineart_duotone", "html": None},
+    # 2026-08-07 신설 — Reinventing_the_Internet_with_Personal_AI.pdf 실물 연구에서 증류(native+html).
+    "ink_orange": {
+        "ko": "먹과 주황",
+        "desc": "아이보리 + 먹 픽토그램 + 주황 흐름 · 대비·선언",
+        "paths": {"native": "ink_orange", "image": None, "html": "ink_orange"},
     },
 }
 

@@ -177,7 +177,7 @@
           },
           "style_preset": {
             "type": "string",
-            "description": "(critic) 디자인 시스템 톤 평가 기준 (예: sf_blueprint)"
+            "description": "(critic) 디자인 시스템 톤 평가 기준 (예: vintage_book)"
           },
           "api_key": {
             "type": "string",

@@ -102,35 +102,38 @@ AESTHETICS = {
                 "deep navy ink and warm terracotta accents, refined serif Korean typography, subtle "
                 "blueprint grid and fine hand-drawn ink diagrams. Elegant, scholarly, restrained."),
     },
-    "academic_paper": {
-        "ko": "학술 페이퍼",
-        "art": ("Clean academic paper aesthetic. Crisp white background, charcoal text, a single "
-                "scholarly blue accent, generous margins, precise thin-line diagrams and labeled "
-                "figures, neutral sans-serif Korean typography. Calm, rigorous, uncluttered."),
-    },
-    "tech_minimal": {
-        "ko": "테크 미니멀",
-        "art": ("Modern tech-minimal aesthetic. Near-white or soft cool-grey background, near-black "
-                "Korean type, one vivid accent (electric blue or orange), lots of negative space, "
-                "clean geometric infographic shapes and flow arrows. Confident, contemporary, sharp."),
-    },
-    "magazine_modern": {
-        "ko": "모던 매거진",
-        "art": ("Bold modern magazine editorial aesthetic. Strong typographic hierarchy with very large "
-                "Korean display headline, confident color blocking, one or two saturated accents, "
-                "dynamic asymmetric layout, high contrast. Striking and stylish."),
-    },
-    "dark_keynote": {
-        "ko": "다크 키노트",
-        "art": ("Cinematic dark keynote aesthetic. Deep near-black background, luminous white Korean "
-                "type, a glowing teal-and-amber accent, soft volumetric light, sleek glass and chrome "
-                "diagram elements, subtle particle depth. Dramatic, premium, focused."),
-    },
     "blueprint": {
         "ko": "청사진 다이어그램",
         "art": ("Technical blueprint diagram aesthetic. Warm off-white or pale blue ground, indigo "
                 "linework, coral highlight, faint grid and leader lines, precise schematic figures and "
                 "annotated parts, mono-style labels. Engineered, clear, intellectual."),
+    },
+    # 2026-08-07 신설 — Reinventing_the_Internet_with_Personal_AI.pdf 실물 13페이지 연구에서 증류.
+    "ink_orange": {
+        "ko": "먹과 주황",
+        "art": ("Bold editorial infographic-poster aesthetic. Bright ivory paper (#f2efe6), heavy "
+                "charcoal-black ink (#2b2e33) carrying very bold flat Korean sans headlines and flat "
+                "pictogram icons drawn with thick uniform strokes (computers, folders, houses, shields, "
+                "rail tracks); exactly one vivid orange (#ee5f1c) reserved for FLOW — thick connector "
+                "lines, arrows, radiating broadcast arcs, organic road networks, circular loops; the "
+                "composition stages a deliberate contrast between black geometric structure and orange "
+                "organic flow; solid charcoal info-cards with white Korean text and thin-ruled callout "
+                "boxes; at most one full-width orange banner with white serif Korean reserved for the "
+                "final declaration. Graphic, declarative, poster-like clarity."),
+    },
+    # 2026-08-07 신설 — The_AI_Architect.pdf(NotebookLM 계열 덱) 실물 12페이지 연구에서 증류.
+    "architect": {
+        "ko": "아키텍트",
+        "art": ("Systems-architect isometric diagram plate aesthetic (NotebookLM style). Warm ivory "
+                "paper (#efeae0) with a very faint drafting grid and small dot-grid patches near the "
+                "corners, deep slate-navy ink (#2e3947) for all Korean text in a clean geometric "
+                "sans-serif with tight kerning, flat low-rise isometric slabs and cubes in exactly two "
+                "block colours — muted brick terracotta (#ce6440) and desaturated steel blue (#33597f) "
+                "— plus a neutral slate grey, drawn with drafting dimension lines, leader lines with "
+                "round anchor dots, and measurement arrows over a faint blueprint grid floor; "
+                "occasional fine ink-line mechanical illustration in the same navy ink; at most one "
+                "full-width terracotta banner with bold white Korean text reserved for the single key "
+                "takeaway. Confident, systematic, explanatory — a systems architect's textbook plate."),
     },
 }
 
@@ -140,7 +143,9 @@ _DEFAULT_AESTHETIC = "vintage_book"
 def _resolve_aesthetic(tool_input: dict) -> dict:
     """aesthetic 또는 design_system 키로 톤을 고른다. 별칭/미지정은 기본값."""
     key = (tool_input.get("aesthetic") or tool_input.get("design_system") or "").strip()
-    alias = {"default": _DEFAULT_AESTHETIC, "sf_blueprint": "blueprint", "minimal": "tech_minimal"}
+    # 2026-08-07 톤 대압축: 은퇴 톤 이름(dark_keynote·sf_hud·swiss_grid 등)은 아래 .get 폴백이
+    # 기본(빈티지북)으로 접는다 — 복원용 정의는 data/packages/_archive/retired_tones_20260807.py.txt.
+    alias = {"default": _DEFAULT_AESTHETIC}
     key = alias.get(key, key)
     return AESTHETICS.get(key, AESTHETICS[_DEFAULT_AESTHETIC])
 

@@ -263,7 +263,7 @@ def _create_shadcn_slides_impl(tool_input: dict, output_base: str) -> str:
                 }
             ],
             "theme": "blue",          # default / blue / green / purple / orange / dark
-            "design_system": "vintage_book",  # default / vintage_book / academic_paper / tech_minimal / magazine_modern
+            "design_system": "vintage_book",  # default / vintage_book / blueprint / architect / ink_orange
             "output_dir": "경로",     # 선택. 미지정 시 output_base/shadcn_slides_<8자hex>/
             "width": 1280,            # 선택. 슬라이드 가로 픽셀 (기본 1280)
             "height": 720             # 선택. 슬라이드 세로 픽셀 (기본 720)

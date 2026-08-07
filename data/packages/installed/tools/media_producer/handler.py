@@ -1041,32 +1041,31 @@ STYLE_PRESETS = {
         "Do NOT include any Korean or Hangul characters. Do NOT add decorative Latin text, ciphers, or unreadable script. "
         "Only the subject illustration — minimal or no text inside the image."
     ),
-    "academic_paper": (
-        "Clean academic diagram on bright white paper, monochrome with deep navy (#161c2a) line art and crimson (#8b1a1a) accent, "
-        "thin precise pen lines, minimal shading, scholarly figure illustration style, generous white space. "
-        "Do NOT include Korean or Hangul characters. Only English labels if any text is needed."
+    "ink_orange": (
+        "Bold flat pictogram infographic on bright ivory paper (#f2efe6): thick uniform "
+        "charcoal-black (#2b2e33) stroke icons and geometric structures, exactly one vivid orange "
+        "(#ee5f1c) reserved for flow — thick connector lines, arrows, radiating broadcast arcs or "
+        "organic road networks — deliberate contrast of black structure versus orange flow, generous "
+        "margins, poster-like clarity. "
+        "Do NOT include any Korean or Hangul characters. Avoid decorative gibberish text — "
+        "only meaningful short English labels if any."
     ),
-    "tech_minimal": (
-        "Minimal vector-style illustration on dark navy background (#0d0f17), "
-        "neon cyan (#1ce0ff) accent lines, thin geometric strokes, subtle glow, "
-        "Linear/Vercel design aesthetic, isometric or flat composition, generous negative space. "
-        "Do NOT include Korean or Hangul characters."
+    "architect": (
+        "Flat isometric systems diagram on warm ivory paper (#efeae0), low-rise isometric slabs and "
+        "cubes in muted brick terracotta (#ce6440) and desaturated steel blue (#33597f) with subtle "
+        "face shading, deep slate-navy (#2e3947) drafting dimension lines, leader lines with round "
+        "anchor dots and measurement arrows, faint blueprint grid floor, NotebookLM systems-architecture "
+        "diagram aesthetic, generous empty space around the composition. "
+        "Do NOT include any Korean or Hangul characters. Avoid decorative gibberish text — "
+        "only meaningful short English labels if any."
     ),
-    "magazine_modern": (
-        "Bold editorial illustration in New Yorker / Wired magazine style, "
-        "high contrast black ink on pure white background with selective vivid red (#e6182b) accent, "
-        "confident brush strokes, modernist composition, ample white space. "
-        "Do NOT include Korean or Hangul characters."
-    ),
-    "sf_blueprint": (
-        "Sci-fi HUD blueprint infographic on a deep navy (#050d1a) background, "
-        "glowing cyan (#1ad3ff) and pale ice-blue (#6ee0ff) line art, thin precise pen strokes with subtle outer glow, "
-        "wireframe / x-ray rendering of the subject, surrounded by faint technical schematic grid lines and HUD frame brackets in the corners, "
-        "small English technical labels and arrow annotations allowed (e.g. 'EYE', 'MASS', 'F=ma', 'FAILURE STATE'), "
-        "NotebookLM diagram aesthetic, holographic / hologram feel, "
-        "composition deliberately leaves clear empty regions on the sides or bottom so Korean caption boxes can be overlaid later without occluding the subject. "
-        "Strictly NO Korean / Hangul characters anywhere in the image. "
-        "Avoid decorative gibberish Latin text — only meaningful English labels if any."
+    "blueprint": (
+        "Precise technical drafting illustration on pale blue-grey drafting paper, "
+        "thin indigo ink (#26305e) linework with a coral (#d86541) accent highlight, "
+        "schematic figure with faint grid, leader lines and annotated parts, "
+        "engineering-drawing aesthetic, exact and restrained, balanced empty space around the central subject. "
+        "Do NOT include any Korean or Hangul characters. Do NOT add decorative Latin text or unreadable script. "
+        "Only the subject illustration — minimal or no text inside the image."
     ),
 }
 

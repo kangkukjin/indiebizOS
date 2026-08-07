@@ -64,14 +64,23 @@ DECK_SCHEMA_VERSION = 1
 #   ★아래 상수는 임포트 실패 시의 폴백일 뿐 — 톤을 늘릴 땐 slide_tones.TONES 만 고치면 된다.
 _FALLBACK_DESIGN_SYSTEMS = {
     "native", "default",
-    "native_vintage_book", "native_academic_paper", "native_tech_minimal",
-    "native_magazine_modern", "native_dark_keynote", "native_blueprint",
-    "image_ink_blueprint", "image_cinematic_3d", "image_isometric", "image_lineart_duotone",
-    "vintage_book", "academic_paper", "tech_minimal", "magazine_modern", "blueprint",
+    "native_vintage_book", "image_vintage_book", "vintage_book",
+    "native_blueprint", "blueprint",
+    "native_architect", "architect",
+    "native_ink_orange", "ink_orange",
 }
 
-# 옛 덱이 들고 있을 수 있는 표기 — 렌더러가 아는 키라 그대로 통과시킨다(마이그레이션 불요).
-_LEGACY_DESIGN_SYSTEMS = {"sf_blueprint"}
+# 옛 덱이 들고 있을 수 있는 표기 — 검증만 통과시키고 렌더는 기본 톤으로 접힌다(마이그레이션 불요).
+# 2026-08-07 톤 대압축 은퇴분 포함(복원 백업: data/packages/_archive/retired_tones_20260807.py.txt).
+_LEGACY_DESIGN_SYSTEMS = {
+    "sf_blueprint", "sf_hud",
+    "academic_paper", "tech_minimal", "magazine_modern",
+    "native_academic_paper", "native_tech_minimal", "native_magazine_modern", "native_dark_keynote",
+    "native_swiss_grid", "native_riso_print", "native_botanical_plate", "native_bauhaus",
+    "native_ma_quiet", "native_midcentury_print",
+    "image_ink_blueprint", "image_cinematic_3d", "image_isometric", "image_lineart_duotone",
+    "image_academic_paper", "image_tech_minimal",
+}
 
 
 def _load_tone_registry():

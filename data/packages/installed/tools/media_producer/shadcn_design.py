@@ -110,69 +110,55 @@ THEMES = {
         "radius": "0.25rem"               # 빈티지하게 모서리 덜 둥글게
     },
 
-    # academic_paper — 학술 논문 / Beamer 스타일 (흰 종이 + 진남색 + 진홍색 강조)
-    "academic_paper": {
-        "background": "40 20% 99%",       # #fbfaf7 (살짝 미색)
-        "foreground": "222 30% 12%",      # #161c2a (잉크 블루블랙)
-        "primary": "222 30% 12%",
-        "primary-foreground": "40 20% 99%",
-        "secondary": "40 15% 95%",
-        "secondary-foreground": "222 30% 12%",
-        "muted": "40 12% 93%",
-        "muted-foreground": "222 8% 38%",
-        "accent": "0 60% 36%",            # #8b1a1a (진홍색 — 학술 강조)
-        "border": "222 12% 80%",
-        "ring": "0 60% 36%",
-        "radius": "0.125rem"
+    # blueprint — 제도 도면 청사진 (연청 제도용지 + 인디고 잉크 + 산호 강조)
+    # ★sf_blueprint(다크 네온 HUD)와 다른 톤 — native AESTHETICS["blueprint"]와 같은 정체성.
+    "blueprint": {
+        "background": "210 45% 94%",      # #e9eff7 (연청 제도용지)
+        "foreground": "230 42% 26%",      # #26305e (인디고 잉크)
+        "primary": "230 42% 26%",
+        "primary-foreground": "210 45% 96%",
+        "secondary": "212 38% 88%",       # 연청 카드
+        "secondary-foreground": "230 42% 26%",
+        "muted": "212 30% 86%",
+        "muted-foreground": "225 20% 40%",# #525d7a (슬레이트 인디고)
+        "accent": "11 66% 55%",           # #d86541 (산호 — 강조·치수선)
+        "border": "226 28% 64%",          # 인디고 옅은 선
+        "ring": "11 66% 55%",
+        "radius": "0.125rem"              # 도면 양식 — 모서리 거의 직각
     },
 
-    # tech_minimal — Linear/Vercel 스타일 (다크 남색 + 시안 강조)
-    "tech_minimal": {
-        "background": "230 20% 6%",       # #0d0f17 (다크)
-        "foreground": "220 15% 92%",      # #e6e8ee (오프화이트)
-        "primary": "220 15% 92%",
-        "primary-foreground": "230 20% 6%",
-        "secondary": "230 15% 12%",
-        "secondary-foreground": "220 15% 92%",
-        "muted": "230 12% 14%",
-        "muted-foreground": "220 8% 55%",
-        "accent": "190 95% 55%",          # #1ce0ff (시안 네온)
-        "border": "230 12% 18%",
-        "ring": "190 95% 55%",
-        "radius": "0.5rem"
+    # architect — 아키텍트 (아이보리 + 슬레이트 네이비 잉크 + 벽돌 테라코타·강청 블록)
+    # 2026-08-07 The_AI_Architect.pdf 실물 연구에서 증류. native AESTHETICS["architect"]와 동일 정체성.
+    "architect": {
+        "background": "42 31% 91%",       # #efeae0 (따뜻한 아이보리)
+        "foreground": "213 21% 23%",      # #2e3947 (슬레이트 네이비 잉크)
+        "primary": "213 43% 35%",         # #33597f (강청 — 블록 2색 중 하나)
+        "primary-foreground": "42 31% 95%",
+        "secondary": "42 24% 86%",        # 아이보리 어두운 카드
+        "secondary-foreground": "213 21% 23%",
+        "muted": "42 20% 84%",
+        "muted-foreground": "213 12% 40%",# 회슬레이트
+        "accent": "16 58% 53%",
+        "border": "213 18% 62%",
+        "ring": "16 58% 53%",
+        "radius": "0.25rem"
     },
 
-    # magazine_modern — New Yorker/Wired 편집 디자인 (흰+검+선명한 적)
-    "magazine_modern": {
-        "background": "0 0% 100%",        # 순백
-        "foreground": "0 0% 6%",          # 거의 검정
-        "primary": "0 0% 6%",
-        "primary-foreground": "0 0% 100%",
-        "secondary": "30 10% 96%",        # 살짝 따뜻한 회색
-        "secondary-foreground": "0 0% 6%",
-        "muted": "30 8% 92%",
-        "muted-foreground": "0 0% 30%",
-        "accent": "356 85% 50%",          # #e6182b (선명한 잡지 적색)
-        "border": "0 0% 85%",
-        "ring": "356 85% 50%",
-        "radius": "0rem"                  # 매거진 스타일 — 모서리 직각
-    },
-
-    # sf_blueprint — NotebookLM 양식 SF/블루프린트 (다크 네이비 + 시안 글로우 + HUD)
-    # 책 강의·인포그래픽·메타포 시각화에 최적, 매 슬라이드가 다이어그램이 되는 패러다임
-    "sf_blueprint": {
-        "background": "215 60% 5%",       # #050d1a (심해 네이비)
-        "foreground": "190 95% 92%",      # #d6f6ff (글로우 시안 화이트)
-        "primary": "190 95% 70%",         # #6ee0ff (밝은 시안)
-        "primary-foreground": "215 60% 5%",
-        "secondary": "215 50% 12%",       # #0d1a2e (어두운 네이비 카드)
-        "secondary-foreground": "190 95% 92%",
-        "muted": "215 35% 18%",
-        "muted-foreground": "200 30% 70%",
-        "accent": "188 100% 55%",         # #1ad3ff (네온 시안 강조)
-        "border": "190 70% 35%",          # 시안 라인
-        "ring": "188 100% 55%",
-        "radius": "0.125rem"              # SF HUD 양식 — 모서리 거의 직각
+    # ink_orange — 먹과 주황 (아이보리 + 먹 픽토그램 잉크 + 주황 흐름)
+    # 2026-08-07 Reinventing_the_Internet_with_Personal_AI.pdf 실물 연구에서 증류.
+    "ink_orange": {
+        "background": "45 27% 93%",       # #f2efe6 (밝은 아이보리)
+        "foreground": "220 8% 18%",       # #2a2d32 (먹 챠콜)
+        "primary": "220 8% 18%",          # 먹 — 구조의 색
+        "primary-foreground": "45 27% 95%",
+        "secondary": "45 20% 88%",
+        "secondary-foreground": "220 8% 18%",
+        "muted": "45 16% 86%",
+        "muted-foreground": "220 6% 38%",
+        "accent": "21 87% 52%",           # #ee5f1c (주황 — 흐름의 색, 유일한 강조)
+        "border": "220 8% 45%",
+        "ring": "21 87% 52%",
+        "radius": "0.125rem"              # 포스터 양식 — 모서리 거의 직각
     }
 }
 
@@ -319,302 +305,45 @@ body {
         "extra_html": "",
     },
 
-    # academic_paper — 학술 논문 / Beamer 양식 (흰 종이 + 진남색 + 진홍색, 격식)
-    "academic_paper": {
-        "theme_override": "academic_paper",
-        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">',
+    # blueprint — 제도 도면 청사진: 연청 제도용지 + 인디고 잉크 선화 + 산호 강조 + 도면 틀
+    # (2026-08-07 신설 — 청사진 톤의 HTML 판. sf_blueprint 다크 HUD와 별개 정체성.)
+    "blueprint": {
+        "theme_override": "blueprint",
+        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">',
         "extra_css": """
-/* === academic_paper === */
+/* === blueprint — 제도 도면 (연청 용지 + 인디고 선화 + 산호 강조) === */
 body {
-    font-family: 'Crimson Text', 'IBM Plex Sans KR', 'Noto Serif KR', serif !important;
+    font-family: 'IBM Plex Sans KR', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif !important;
+    /* 제도용지 이중 눈금(가는 8px · 굵은 40px) + 모서리 은은한 채색 */
+    background-image:
+        radial-gradient(ellipse at top right, rgba(216, 101, 65, 0.05), transparent 55%),
+        radial-gradient(ellipse at bottom left, rgba(38, 48, 94, 0.07), transparent 60%),
+        repeating-linear-gradient(0deg, transparent, transparent 7px, rgba(38, 48, 94, 0.05) 8px),
+        repeating-linear-gradient(90deg, transparent, transparent 7px, rgba(38, 48, 94, 0.05) 8px),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(38, 48, 94, 0.10) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(38, 48, 94, 0.10) 40px) !important;
 }
+
+/* 제목 — 인디고 잉크, 공학적 절제 (글로우 없음) */
 .slide-container h1,
 .slide-container h2,
 .slide-container h3 {
-    font-family: 'Crimson Text', 'IBM Plex Sans KR', serif !important;
+    font-family: 'IBM Plex Sans KR', 'Noto Sans KR', sans-serif !important;
     font-weight: 700 !important;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    color: hsl(var(--foreground));
 }
+.slide-container .badge {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-weight: 500 !important;
+}
+
+/* 본문 — 도면 주기(note) 밀도 */
 .slide-container p, .slide-container li, .slide-container td {
     line-height: 1.75 !important;
-    font-size: 1.08em !important;
 }
 
-/* 라벨 — 작은 caps, 진홍색 */
-.slide-container [class*="text-xs"][class*="uppercase"],
-.slide-container [class*="text-sm"][class*="uppercase"] {
-    font-family: 'IBM Plex Sans KR', sans-serif !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.18em !important;
-    color: hsl(var(--accent)) !important;
-}
-
-/* 인용 — 학술적 절제된 좌측 라인 */
-.slide-container blockquote {
-    border-color: hsl(var(--accent)) !important;
-    background: transparent !important;
-    font-style: italic;
-    font-family: 'Crimson Text', serif !important;
-}
-
-/* 표 — 단순한 가로선 (논문 표 양식) */
-.slide-container table thead { background: transparent !important; }
-.slide-container table thead th {
-    color: hsl(var(--foreground)) !important;
-    font-family: 'IBM Plex Sans KR', sans-serif !important;
-    border-bottom: 2px solid hsl(var(--foreground)) !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.9em !important;
-}
-.slide-container table tbody tr {
-    border-bottom: 1px solid hsl(var(--border)) !important;
-}
-
-/* 팩트박스 — 학술 노트 박스 */
-.slide-container [class*="rounded-xl"] {
-    background: hsl(var(--secondary)) !important;
-    border-color: hsl(var(--foreground)) !important;
-    border-width: 1px !important;
-    border-radius: 0 !important;
-}
-
-/* 시그니처 + 페이지 번호 (논문 푸터 양식) */
-.slide-container { position: relative; }
-.slide-container::after {
-    content: '— indieBizOS Lectures —';
-    position: absolute;
-    bottom: 18px; left: 50%;
-    transform: translateX(-50%);
-    font-family: 'Crimson Text', serif;
-    font-style: italic;
-    font-size: 11px;
-    color: hsl(var(--muted-foreground));
-    opacity: 0.7;
-    z-index: 10;
-}
-""",
-        "extra_html": "",
-    },
-
-    # tech_minimal — 프리미엄 다크 (Linear/Vercel/Stripe 양식): Pretendard + 레이어드 깊이 + 글래스
-    "tech_minimal": {
-        "theme_override": "tech_minimal",
-        "extra_head": '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" /><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">',
-        "extra_css": """
-/* === tech_minimal (premium dark) === */
-body {
-    font-family: 'Pretendard Variable','Pretendard','Inter','Apple SD Gothic Neo',sans-serif !important;
-    background-color: #070A12 !important;
-    /* 레이어드 깊이: 시안 글로우(상우) + 바이올렛 글로우(하좌) + 수직 그라데이션 */
-    background-image:
-        radial-gradient(1100px 720px at 82% -14%, rgba(56,189,248,0.22), transparent 56%),
-        radial-gradient(940px 660px at 4% 118%, rgba(124,99,255,0.20), transparent 60%),
-        linear-gradient(180deg, #0B1020 0%, #070A12 62%, #05070D 100%) !important;
-}
-/* 미세 그레인 + 비네트로 깊이 */
-body::after {
-    content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-    background-image:
-        radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%),
-        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='tn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23tn)'/%3E%3C/svg%3E");
-}
-.slide-container { position:relative; z-index:1; }
-
-/* 제목 — 크고 단단하게 */
-.slide-container h1 {
-    font-family:'Pretendard Variable','Inter',sans-serif !important;
-    font-weight:800 !important; letter-spacing:-0.035em !important; line-height:1.08 !important;
-}
-.slide-container h2, .slide-container h3 { font-weight:700 !important; letter-spacing:-0.02em !important; }
-.slide-container p, .slide-container li, .slide-container td { line-height:1.7 !important; font-weight:400; }
-
-/* eyebrow — 모노 시안 */
-.slide-container [class*="uppercase"][class*="tracking"],
-.slide-container [class*="text-xs"][class*="uppercase"],
-.slide-container [class*="text-sm"][class*="uppercase"] {
-    font-family:'JetBrains Mono',monospace !important; color:hsl(var(--accent)) !important; font-weight:500 !important;
-}
-
-/* 카드/박스 — 글래스모피즘 (납작한 면 금지) */
-.slide-container [class*="rounded-2xl"],
-.slide-container [class*="rounded-xl"] {
-    background: linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.015)) !important;
-    border:1px solid rgba(255,255,255,0.08) !important;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 24px 48px -28px rgba(0,0,0,0.85) !important;
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-}
-/* 강조 테두리 카드 — 시안 글로우 */
-.slide-container [class*="border-2"] {
-    border-color: hsl(var(--accent)) !important;
-    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.35), 0 0 48px -10px hsl(var(--accent) / 0.4) !important;
-}
-
-/* 인용 */
-.slide-container blockquote {
-    border-color:hsl(var(--accent)) !important; background:rgba(56,189,248,0.06) !important;
-    color:hsl(var(--foreground)) !important;
-}
-/* 표 — 미니멀 모노 헤더 */
-.slide-container table thead { background:rgba(56,189,248,0.08) !important; }
-.slide-container table thead th {
-    font-family:'JetBrains Mono',monospace !important; color:hsl(var(--accent)) !important;
-    text-transform:uppercase; font-size:0.8em !important;
-}
-
-/* 우하단 시그니처 */
-.slide-container::after {
-    content:'indiebiz \\00B7 os'; position:absolute; bottom:26px; right:34px;
-    font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.12em;
-    color:hsl(var(--muted-foreground)); opacity:0.7; z-index:10;
-}
-""",
-        "extra_html": "",
-    },
-
-    # magazine_modern — New Yorker/Wired 편집 디자인 (흰+검+적색 임팩트)
-    "magazine_modern": {
-        "theme_override": "magazine_modern",
-        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">',
-        "extra_css": """
-/* === magazine_modern === */
-body {
-    font-family: 'Playfair Display', 'Noto Serif KR', serif !important;
-}
-
-/* 큰 제목 — Bebas Neue (잡지 헤드라인) */
-.slide-container h1, .slide-container h2 {
-    font-family: 'Bebas Neue', 'Black Han Sans', sans-serif !important;
-    font-weight: 400 !important;
-    letter-spacing: 0.01em;
-    line-height: 1.05 !important;
-}
-.slide-container h3 {
-    font-family: 'Playfair Display', serif !important;
-    font-weight: 700 !important;
-}
-.slide-container p, .slide-container li, .slide-container td {
-    font-family: 'Playfair Display', 'Noto Serif KR', serif !important;
-    line-height: 1.7 !important;
-}
-
-/* 라벨 — 적색 두꺼운 가로선과 함께 */
-.slide-container [class*="text-xs"][class*="uppercase"],
-.slide-container [class*="text-sm"][class*="uppercase"] {
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 800 !important;
-    letter-spacing: 0.2em !important;
-    color: hsl(var(--accent)) !important;
-    position: relative;
-    padding-left: 36px;
-}
-.slide-container [class*="text-xs"][class*="uppercase"]::before,
-.slide-container [class*="text-sm"][class*="uppercase"]::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 50%;
-    width: 24px; height: 3px;
-    background: hsl(var(--accent));
-}
-
-/* 표 — 굵은 검정 헤더라인 */
-.slide-container table thead {
-    background: hsl(var(--foreground)) !important;
-}
-.slide-container table thead th {
-    color: hsl(var(--primary-foreground)) !important;
-    font-family: 'Inter', sans-serif !important;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 0.85em !important;
-    padding: 12px 16px !important;
-}
-
-/* 인용 — 큰 적색 좌측 막대 */
-.slide-container blockquote {
-    border-color: hsl(var(--accent)) !important;
-    border-left-width: 6px !important;
-    background: transparent !important;
-    font-family: 'Playfair Display', serif !important;
-    font-style: italic !important;
-    font-size: 1.2em !important;
-}
-
-/* 팩트박스 — 매거진 사이드바 */
-.slide-container [class*="rounded-xl"] {
-    background: hsl(var(--secondary)) !important;
-    border: none !important;
-    border-left: 8px solid hsl(var(--accent)) !important;
-    border-radius: 0 !important;
-}
-
-/* 좌상단 적색 사각형 + 우하단 검정 시그니처 */
-.slide-container { position: relative; }
-.slide-container::before {
-    content: '';
-    position: absolute;
-    top: 28px; left: 32px;
-    width: 36px; height: 8px;
-    background: hsl(var(--accent));
-    z-index: 10;
-}
-.slide-container::after {
-    content: 'INDIEBIZ.OS / LECTURES';
-    position: absolute;
-    bottom: 24px; right: 32px;
-    font-family: 'Inter', sans-serif;
-    font-weight: 800;
-    font-size: 10px;
-    color: hsl(var(--foreground));
-    letter-spacing: 0.2em;
-    z-index: 10;
-}
-""",
-        "extra_html": "",
-    },
-
-    # sf_blueprint — NotebookLM 양식: 다크 네이비 + 시안 글로우 + HUD 격자 + 코너 마크
-    # 매 슬라이드가 인포그래픽이 되는 패러다임 (모든 일러스트가 풀-블리드 다이어그램)
-    "sf_blueprint": {
-        "theme_override": "sf_blueprint",
-        "extra_head": '<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">',
-        "extra_css": """
-/* === sf_blueprint — NotebookLM SF HUD 양식 === */
-body {
-    font-family: 'Rajdhani', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif !important;
-    /* 심해 네이비 + HUD 격자 + 라디얼 글로우 */
-    background-image:
-        radial-gradient(ellipse at 30% 20%, rgba(26, 211, 255, 0.10), transparent 55%),
-        radial-gradient(ellipse at 70% 80%, rgba(110, 224, 255, 0.07), transparent 55%),
-        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(110, 224, 255, 0.05) 40px),
-        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(110, 224, 255, 0.05) 40px) !important;
-}
-
-/* 제목 — 와이드한 SF 헤드라인 */
-.slide-container h1,
-.slide-container h2,
-.slide-container h3 {
-    font-family: 'Noto Sans KR', 'Rajdhani', sans-serif !important;
-    font-weight: 900 !important;
-    letter-spacing: -0.01em !important;
-    text-shadow: 0 0 24px rgba(26, 211, 255, 0.35), 0 0 4px rgba(110, 224, 255, 0.6);
-}
-.slide-container h1 strong,
-.slide-container h2 strong,
-.slide-container h3 strong,
-.slide-container .accent-glow {
-    color: hsl(var(--accent)) !important;
-    text-shadow: 0 0 24px rgba(26, 211, 255, 0.7) !important;
-}
-
-/* 본문 */
-.slide-container p, .slide-container li, .slide-container td {
-    font-family: 'Noto Sans KR', 'Rajdhani', sans-serif !important;
-    line-height: 1.7 !important;
-    font-weight: 500;
-}
-
-/* 라벨 — JetBrains Mono + 시안 글로우 */
+/* 라벨 (eyebrow) — 도면 번호처럼: 모노 + 산호 */
 .slide-container [class*="text-xs"][class*="uppercase"],
 .slide-container [class*="text-sm"][class*="uppercase"] {
     font-family: 'JetBrains Mono', monospace !important;
@@ -623,103 +352,351 @@ body {
     color: hsl(var(--accent)) !important;
 }
 
-/* 표 — HUD 양식 */
-.slide-container table thead {
-    background: rgba(26, 211, 255, 0.08) !important;
-    border-bottom: 1px solid hsl(var(--accent)) !important;
-}
+/* 표 — 제도 괘선 (수평 룰 중심) */
+.slide-container table thead { background: rgba(38, 48, 94, 0.06); }
 .slide-container table thead th {
-    color: hsl(var(--accent)) !important;
+    color: hsl(var(--foreground)) !important;
     font-family: 'JetBrains Mono', monospace !important;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
     font-size: 0.85em !important;
-    text-shadow: 0 0 12px rgba(26, 211, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 2px solid hsl(var(--foreground)) !important;
 }
 .slide-container table tbody tr {
-    border-bottom: 1px solid rgba(110, 224, 255, 0.15) !important;
+    border-bottom: 1px solid rgba(38, 48, 94, 0.22) !important;
 }
 
-/* 인용 — 글로우 좌측 막대 */
+/* 인용 — 산호 치수선 느낌의 좌측 룰 */
 .slide-container blockquote {
     border-color: hsl(var(--accent)) !important;
-    background: rgba(26, 211, 255, 0.05) !important;
-    box-shadow: -2px 0 16px rgba(26, 211, 255, 0.25);
+    background: rgba(38, 48, 94, 0.05) !important;
 }
 
-/* 팩트박스 + HUD 패널 (사각형 코너 + 글로우 경계) */
-.slide-container [class*="rounded-xl"],
-.slide-container .hud-panel {
-    background: rgba(13, 26, 46, 0.7) !important;
+/* 팩트박스 — 도면 위 노트 카드 (반투명 종이 + 인디고 실선) */
+.slide-container [class*="rounded-xl"] {
+    background: rgba(255, 255, 255, 0.55) !important;
     border: 1px solid hsl(var(--border)) !important;
     border-radius: 0.125rem !important;
-    box-shadow: 0 0 24px rgba(26, 211, 255, 0.15), inset 0 0 0 1px rgba(110, 224, 255, 0.1);
-    position: relative;
-}
-/* HUD 코너 브래킷 — .hud-panel 명시 클래스에만 적용 */
-.slide-container .hud-panel::before,
-.slide-container .hud-panel::after {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    border: 2px solid hsl(var(--accent));
-    pointer-events: none;
-}
-.slide-container .hud-panel::before {
-    top: -1px; left: -1px;
-    border-right: none; border-bottom: none;
-}
-.slide-container .hud-panel::after {
-    bottom: -1px; right: -1px;
-    border-left: none; border-top: none;
 }
 
-/* 일러스트 통합 — 다크 배경에 자연스럽게 녹아들도록 (screen 블렌드) */
+/* 일러스트 통합 — 선화가 제도용지에 잉크처럼 스미도록 (multiply) */
 .slide-container .slide-illustration-bleed { position: relative; }
 .slide-container .slide-illustration-bleed::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: radial-gradient(ellipse at center, transparent 30%, rgba(5, 13, 26, 0.25) 100%);
+    background: radial-gradient(ellipse at center, rgba(233, 239, 247, 0) 35%, rgba(38, 48, 94, 0.05) 100%);
     pointer-events: none;
     z-index: 0;
 }
 .slide-container .slide-illustration-bleed > * { z-index: 1; }
 .slide-container .slide-illustration {
-    mix-blend-mode: screen;
-    filter: contrast(1.05) saturate(1.1);
+    mix-blend-mode: multiply;
+    filter: contrast(0.97) saturate(0.9);
 }
 .slide-container .slide-illustration-bg {
-    mix-blend-mode: screen;
-    opacity: 0.95;
-    filter: contrast(1.05);
+    mix-blend-mode: multiply;
+    opacity: 0.88;
+    filter: contrast(0.96);
 }
 
-/* 코너 마크 + SF 시그니처 */
+/* 코너 마크 — 제도 정합 표식(레지스트레이션 마크) + 시그니처 */
 .slide-container { position: relative; }
 .slide-container::before {
     content: '';
     position: absolute;
-    top: 24px; left: 28px;
-    width: 24px; height: 24px;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%231ad3ff' stroke-width='1.5'%3E%3Crect x='2' y='2' width='28' height='28'/%3E%3Cline x1='2' y1='16' x2='10' y2='16'/%3E%3Cline x1='22' y1='16' x2='30' y2='16'/%3E%3Cline x1='16' y1='2' x2='16' y2='10'/%3E%3Cline x1='16' y1='22' x2='16' y2='30'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%231ad3ff' stroke='none'/%3E%3C/svg%3E");
+    top: 30px; left: 36px;
+    width: 26px; height: 26px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%2326305e' stroke-width='1.5'%3E%3Ccircle cx='16' cy='16' r='13'/%3E%3Cline x1='16' y1='0' x2='16' y2='9'/%3E%3Cline x1='16' y1='23' x2='16' y2='32'/%3E%3Cline x1='0' y1='16' x2='9' y2='16'/%3E%3Cline x1='23' y1='16' x2='32' y2='16'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23d86541' stroke='none'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-size: contain;
-    filter: drop-shadow(0 0 6px rgba(26, 211, 255, 0.6));
-    opacity: 0.85;
+    opacity: 0.65;
     z-index: 10;
 }
 .slide-container::after {
-    content: 'indiebiz.os // lectures';
+    content: 'indiebiz.os — DWG';
     position: absolute;
-    bottom: 22px; right: 30px;
+    bottom: 26px; right: 34px;
     font-family: 'JetBrains Mono', monospace;
     font-weight: 500;
     font-size: 10px;
-    color: hsl(var(--accent));
-    letter-spacing: 0.15em;
-    opacity: 0.7;
-    text-shadow: 0 0 8px rgba(26, 211, 255, 0.5);
+    color: hsl(var(--muted-foreground));
+    letter-spacing: 0.18em;
+    opacity: 0.55;
+    z-index: 10;
+}
+""",
+        # 도면 시트 틀 — 이중 괘선. 텅 빈 중앙 메시지 한 장도 '설계 도면 위'로 보이게 하는 정체성.
+        "extra_html": (
+            "<div style=\"position:absolute; inset:16px; border:1.5px solid rgba(38,48,94,0.38); "
+            "border-radius:2px; pointer-events:none; z-index:9\"></div>"
+            "<div style=\"position:absolute; inset:22px; border:1px solid rgba(38,48,94,0.16); "
+            "border-radius:1px; pointer-events:none; z-index:9\"></div>"
+        ),
+    },
+
+    # architect — 아키텍트: 아이보리 제도용지 + 슬레이트 네이비 잉크 + 벽돌·강청 도해
+    # (2026-08-07 신설 — The_AI_Architect.pdf 12페이지 실물 연구에서 증류. 정체성 장치:
+    #  모눈+코너 도트 패치 / 테라코타 핵심문장 배너(blockquote) / 강청 솔리드 표 헤더 / 콜아웃 카드)
+    "architect": {
+        "theme_override": "architect",
+        "extra_head": '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">',
+        "extra_css": """
+/* === architect — 시스템 설계 도해 (아이보리 + 슬레이트 잉크 + 벽돌·강청) === */
+body {
+    font-family: 'Pretendard Variable', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif !important;
+    /* 아이보리 용지 + 아주 옅은 제도 모눈 + 모서리 음영 */
+    background-image:
+        radial-gradient(ellipse at top left, rgba(46, 57, 71, 0.05), transparent 55%),
+        radial-gradient(ellipse at bottom right, rgba(206, 100, 64, 0.05), transparent 55%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(46, 57, 71, 0.06) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(46, 57, 71, 0.06) 40px) !important;
+}
+
+/* 제목 — 슬레이트 잉크, 기하학적 산세리프 (PDF의 Inter 볼드 좌상단 헤드라인) */
+.slide-container h1,
+.slide-container h2,
+.slide-container h3 {
+    font-family: 'Pretendard Variable', 'Noto Sans KR', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
+    color: hsl(var(--foreground));
+}
+.slide-container .badge {
+    font-family: 'JetBrains Mono', 'Noto Sans KR', monospace !important;
+    font-weight: 500 !important;
+}
+
+/* 본문 — 큼직하고 여유로운 행간 (PDF 본문 톤) */
+.slide-container p, .slide-container li, .slide-container td {
+    line-height: 1.75 !important;
+    font-weight: 450;
+}
+
+/* 라벨 (eyebrow) — 도면 주기: 모노 + 강청 */
+.slide-container [class*="text-xs"][class*="uppercase"],
+.slide-container [class*="text-sm"][class*="uppercase"] {
+    font-family: 'JetBrains Mono', 'Noto Sans KR', monospace !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.16em !important;
+    color: hsl(var(--primary)) !important;
+}
+
+/* 표 — 강청 솔리드 헤더 밴드 + 교차 행 (PDF p.3 표 그대로) */
+.slide-container table thead { background: hsl(var(--primary)) !important; }
+.slide-container table thead th {
+    color: hsl(var(--primary-foreground)) !important;
+    font-weight: 700 !important;
+    border-bottom: none !important;
+}
+.slide-container table tbody tr { border-bottom: 1px solid rgba(46, 57, 71, 0.22) !important; }
+.slide-container table tbody tr:nth-child(odd) { background: rgba(46, 57, 71, 0.06); }
+
+/* 인용 — 테라코타 핵심문장 배너 (PDF의 풀폭 주황 배너: 흰 굵은 글자) */
+.slide-container blockquote {
+    background: hsl(var(--accent)) !important;
+    border: none !important;
+    border-left: none !important;
+    color: hsl(var(--primary-foreground)) !important;
+    font-weight: 700;
+    font-style: normal !important;
+    box-shadow: 0 2px 10px rgba(46, 57, 71, 0.18);
+}
+.slide-container blockquote p, .slide-container blockquote strong {
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+/* 팩트박스 — 콜아웃 카드 (밝은 카드 + 가는 잉크 테두리 + 낮은 그림자) */
+.slide-container [class*="rounded-xl"] {
+    background: rgba(250, 248, 242, 0.85) !important;
+    border: 1px solid rgba(46, 57, 71, 0.45) !important;
+    border-radius: 0.25rem !important;
+    box-shadow: 3px 3px 0 rgba(46, 57, 71, 0.12);
+}
+
+/* 일러스트 통합 — 도해가 용지에 잉크처럼 스미도록 (multiply) */
+.slide-container .slide-illustration-bleed { position: relative; }
+.slide-container .slide-illustration-bleed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(239, 234, 224, 0) 35%, rgba(46, 57, 71, 0.05) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+.slide-container .slide-illustration-bleed > * { z-index: 1; }
+.slide-container .slide-illustration {
+    mix-blend-mode: multiply;
+    filter: contrast(0.97) saturate(0.94);
+}
+.slide-container .slide-illustration-bg {
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+    filter: contrast(0.96);
+}
+
+/* 코너 마크 — 치수 십자 + 시그니처 */
+.slide-container { position: relative; }
+.slide-container::before {
+    content: '';
+    position: absolute;
+    top: 30px; left: 36px;
+    width: 24px; height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%232e3947' stroke-width='1.5'%3E%3Cline x1='16' y1='2' x2='16' y2='30'/%3E%3Cline x1='2' y1='16' x2='30' y2='16'/%3E%3Cpath d='M13 5 L16 2 L19 5'/%3E%3Cpath d='M27 13 L30 16 L27 19'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23ce6440' stroke='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0.55;
+    z-index: 10;
+}
+.slide-container::after {
+    content: 'indiebiz.os — ARCH';
+    position: absolute;
+    bottom: 26px; right: 34px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 10px;
+    color: hsl(var(--muted-foreground));
+    letter-spacing: 0.18em;
+    opacity: 0.55;
+    z-index: 10;
+}
+""",
+        # 코너 도트 패치 — PDF의 우상단·좌하단 도트 그리드 장식(정체성 표식).
+        "extra_html": (
+            "<div style=\"position:absolute; top:24px; right:24px; width:190px; height:110px; "
+            "background-image:radial-gradient(circle, rgba(46,57,71,0.22) 1.2px, transparent 1.2px); "
+            "background-size:13px 13px; pointer-events:none; z-index:9\"></div>"
+            "<div style=\"position:absolute; bottom:24px; left:24px; width:150px; height:90px; "
+            "background-image:radial-gradient(circle, rgba(46,57,71,0.18) 1.2px, transparent 1.2px); "
+            "background-size:13px 13px; pointer-events:none; z-index:9\"></div>"
+        ),
+    },
+
+    # ink_orange — 먹과 주황: 아이보리 포스터 + 먹 굵은 잉크 + 주황 흐름 강조
+    # (2026-08-07 신설 — Reinventing_the_Internet_with_Personal_AI.pdf 13페이지 실물 연구에서 증류.
+    #  정체성 장치: 극굵은 먹 헤드라인 / 주황 결론 배너(blockquote, 흰 명조) / 얇은 괘선 콜아웃 카드 /
+    #  먹 굵은 괘선 표(헤더 밴드 없음) / 옵트인 .ink-card(먹 카드+흰 글자). 배경은 깨끗한 종이 — 모눈 없음.)
+    "ink_orange": {
+        "theme_override": "ink_orange",
+        "extra_head": '<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"><link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">',
+        "extra_css": """
+/* === ink_orange — 먹과 주황 (인포그래픽 포스터: 먹 구조 vs 주황 흐름) === */
+body {
+    font-family: 'Pretendard Variable', 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif !important;
+    /* 깨끗한 아이보리 종이 — 미세한 그레인만, 격자 없음 (포스터 여백이 정체성) */
+    background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(42, 45, 50, 0.03), transparent 60%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.17 0 0 0 0 0.19 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") !important;
+}
+
+/* 제목 — 극굵은 먹 헤드라인 (이 톤의 서체 성격: 무겁고 단호하게) */
+.slide-container h1,
+.slide-container h2,
+.slide-container h3 {
+    font-family: 'Pretendard Variable', 'Noto Sans KR', sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.025em !important;
+    color: hsl(var(--foreground));
+}
+
+/* 본문 — 진하고 큼직하게 (포스터 가독) */
+.slide-container p, .slide-container li, .slide-container td {
+    line-height: 1.72 !important;
+    font-weight: 500;
+}
+
+/* 라벨 (eyebrow) — 주황 굵은 산세리프 (이 톤엔 모노 없음) */
+.slide-container [class*="text-xs"][class*="uppercase"],
+.slide-container [class*="text-sm"][class*="uppercase"] {
+    font-family: 'Pretendard Variable', 'Noto Sans KR', sans-serif !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.14em !important;
+    color: hsl(var(--accent)) !important;
+}
+
+/* 표 — 먹 굵은 괘선 (헤더 밴드 없음, PDF p.9 표 그대로) */
+.slide-container table thead { background: transparent !important; }
+.slide-container table thead th {
+    color: hsl(var(--foreground)) !important;
+    font-weight: 800 !important;
+    border-bottom: 3px solid hsl(var(--foreground)) !important;
+}
+.slide-container table tbody tr { border-bottom: 1.5px solid rgba(42, 45, 50, 0.55) !important; }
+
+/* 인용 — 주황 결론 배너 (풀폭 주황 + 흰 '명조' — PDF의 선언 장치) */
+.slide-container blockquote {
+    background: hsl(var(--accent)) !important;
+    border: none !important;
+    border-left: none !important;
+    font-family: 'Noto Serif KR', serif !important;
+    font-weight: 700;
+    font-style: normal !important;
+    color: #faf7f0 !important;
+}
+.slide-container blockquote p, .slide-container blockquote strong,
+.slide-container blockquote em {
+    color: #faf7f0 !important;
+    font-family: 'Noto Serif KR', serif !important;
+}
+
+/* 팩트박스 — 얇은 괘선 콜아웃 (밝은 카드 + 먹 실선, PDF '작동 원리' 박스) */
+.slide-container [class*="rounded-xl"] {
+    background: rgba(250, 247, 240, 0.8) !important;
+    border: 1.5px solid rgba(42, 45, 50, 0.75) !important;
+    border-radius: 0.125rem !important;
+}
+/* 옵트인 먹 카드 — custom_html 이 쓰는 다크 정보 카드 (.ink-card: 먹 배경 + 흰 글자) */
+.slide-container .ink-card {
+    background: hsl(var(--foreground)) !important;
+    border: none !important;
+    border-radius: 0.125rem !important;
+}
+.slide-container .ink-card, .slide-container .ink-card * { color: #f2efe6 !important; }
+
+/* 일러스트 통합 — 픽토그램이 종이에 잉크처럼 (multiply) */
+.slide-container .slide-illustration-bleed { position: relative; }
+.slide-container .slide-illustration-bleed::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(242, 239, 230, 0) 40%, rgba(42, 45, 50, 0.04) 100%);
+    pointer-events: none;
+    z-index: 0;
+}
+.slide-container .slide-illustration-bleed > * { z-index: 1; }
+.slide-container .slide-illustration {
+    mix-blend-mode: multiply;
+    filter: contrast(0.98) saturate(0.96);
+}
+.slide-container .slide-illustration-bg {
+    mix-blend-mode: multiply;
+    opacity: 0.9;
+    filter: contrast(0.97);
+}
+
+/* 코너 마크 — 주황 방사 호(브로드캐스트) + 시그니처 */
+.slide-container { position: relative; }
+.slide-container::before {
+    content: '';
+    position: absolute;
+    top: 28px; left: 34px;
+    width: 26px; height: 26px;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23ee5f1c' stroke-width='2.2'%3E%3Cpath d='M6 26 A20 20 0 0 1 26 6'/%3E%3Cpath d='M6 18 A12 12 0 0 1 18 6'/%3E%3Cpath d='M6 10 A4 4 0 0 1 10 6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
+    opacity: 0.8;
+    z-index: 10;
+}
+.slide-container::after {
+    content: 'indiebiz.os';
+    position: absolute;
+    bottom: 26px; right: 34px;
+    font-family: 'Pretendard Variable', sans-serif;
+    font-weight: 700;
+    font-size: 10px;
+    color: hsl(var(--foreground));
+    letter-spacing: 0.2em;
+    opacity: 0.45;
     z-index: 10;
 }
 """,

@@ -3322,7 +3322,7 @@ nodes:
         runs_on: pc_only
         description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
         group: lecture
-        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book/academic_paper/tech_minimal/magazine_modern/dark_keynote/blueprint, 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
+        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book(빈티지북 기본)/blueprint(청사진)/architect(아키텍트)/ink_orange(먹과 주황), 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
         target_key: op
         router: handler
         tool: slide_op
@@ -6155,7 +6155,7 @@ nodes:
         description: Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
         target_description: 'prompt (필수). 옵션:
 
-          - style_preset: vintage_book/academic_paper/tech_minimal/magazine_modern (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
+          - style_preset: vintage_book/blueprint/architect/ink_orange (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
 
           - aspect_ratio: 1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1
 
@@ -6169,7 +6169,7 @@ nodes:
         group: media_produce
         router: handler
         tool: generate_gemini_image
-        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/academic_paper/tech_minimal/magazine_modern — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
+        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/blueprint/architect/ink_orange — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
         target_key: prompt
         keywords:
         - image generation

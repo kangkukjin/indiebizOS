@@ -14,7 +14,7 @@ def critique_gemini_image(tool_input, output_base):
       - image_path (필수): 평가할 이미지 절대 경로 (또는 base64 data URI)
       - intent (필수): "이 일러스트가 무엇을 표현해야 하는가" — 자연어 설명
       - checks (선택): 추가 체크 리스트 (예: ["다이어그램형인가", "한글이 들어갔는가", "오른쪽 1/3이 비어있는가"])
-      - style_preset (선택): 디자인 시스템 톤 일관성 평가 기준 (sf_blueprint 등)
+      - style_preset (선택): 디자인 시스템 톤 일관성 평가 기준 (vintage_book 등)
       - api_key (선택)
 
     반환:

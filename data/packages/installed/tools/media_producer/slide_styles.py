@@ -17,55 +17,6 @@ COMMON_SUFFIX = (
 )
 
 STYLES = {
-    "ink_blueprint": {
-        "ko": "잉크+청사진",
-        "illus": ("Refined editorial concept illustration, hand-drawn fine ink linework plus subtle "
-            "blueprint grid and faint technical leader lines, strict two-tone palette of deep navy ink "
-            "and warm terracotta on warm cream paper with faint grain, premium vintage textbook-"
-            "illustration aesthetic, restrained and elegant."),
-        "dark": False,
-        "bg": "#F2ECDD", "fade": "242,236,221",
-        "title_color": "#1B2A47", "kicker_color": "#B0552F", "sub_color": "#54607A",
-        "title_font": "'Gowun Batang',serif", "title_weight": "700",
-        "font_links": ["https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap"],
-    },
-    "cinematic_3d": {
-        "ko": "시네마틱 3D",
-        "illus": ("Cinematic 3D render, dramatic volumetric lighting, premium octane quality, glossy "
-            "translucent glass and polished chrome forms, deep dark navy-to-black gradient background, "
-            "teal and amber rim light, fine particle bokeh, soft god rays, glossy reflective floor, "
-            "ultra-detailed, photoreal."),
-        "dark": True,
-        "bg": "#06080E", "fade": "6,8,14",
-        "title_color": "#F4F7FB", "kicker_color": "#34E0D0", "sub_color": "rgba(244,247,251,0.72)",
-        "title_font": "'Pretendard Variable',sans-serif", "title_weight": "800",
-        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
-                       "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"],
-    },
-    "isometric": {
-        "ko": "아이소메트릭",
-        "illus": ("Clean isometric 3D vector illustration, precise 30-degree axonometric projection, soft "
-            "pastel palette with one warm orange accent, subtle long shadows, flat-tech infographic "
-            "aesthetic on a light cool-grey background, crisp clean linework, modular and structural."),
-        "dark": False,
-        "bg": "#EAF0F7", "fade": "234,240,247",
-        "title_color": "#1E2A44", "kicker_color": "#E8722E", "sub_color": "#54607A",
-        "title_font": "'Pretendard Variable',sans-serif", "title_weight": "800",
-        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
-                       "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"],
-    },
-    "lineart_duotone": {
-        "ko": "라인아트 듀오톤",
-        "illus": ("Minimal elegant line-art illustration, single consistent thin stroke weight, strict "
-            "duotone of deep indigo and coral on warm off-white, lots of negative space, premium luxury "
-            "editorial feel, restrained and sophisticated, a few faint technical leader lines."),
-        "dark": False,
-        "bg": "#F6F3EC", "fade": "246,243,236",
-        "title_color": "#2B2D6B", "kicker_color": "#E0644C", "sub_color": "#54607A",
-        "title_font": "'Pretendard Variable',sans-serif", "title_weight": "800",
-        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
-                       "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"],
-    },
 
     # ── 2026-08-06 그리드 확장: 공용 톤 3종의 이미지+글자 자산 ──────────────
     # 팔레트·폰트는 HTML 판(shadcn_slides.DESIGN_SYSTEMS)과 동일 정체성 — 같은 톤이
@@ -81,31 +32,6 @@ STYLES = {
         "title_color": "#2C3E6F", "kicker_color": "#A55A3E", "sub_color": "#5E5236",
         "title_font": "'Gowun Batang',serif", "title_weight": "700",
         "font_links": ["https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap"],
-    },
-    "academic_paper": {
-        "ko": "학술 논문",
-        "illus": ("Clean scholarly journal figure illustration, precise thin-line technical diagram "
-            "drawing in restrained charcoal linework, one deep scholarly navy accent and a rare "
-            "crimson highlight on crisp off-white, generous margins, exact and uncluttered, "
-            "academic-paper figure aesthetic, calm and rigorous."),
-        "dark": False,
-        "bg": "#FBFAF7", "fade": "251,250,247",
-        "title_color": "#161C2A", "kicker_color": "#8B1A1A", "sub_color": "#4A5266",
-        "title_font": "'Noto Serif KR',serif", "title_weight": "700",
-        "font_links": ["https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;500;700;900&family=Gowun+Batang:wght@400;700&family=JetBrains+Mono:wght@500&display=swap"],
-    },
-    "tech_minimal": {
-        "ko": "테크 미니멀",
-        "illus": ("Premium dark tech-minimal 3D illustration, sleek matte-dark and frosted-glass "
-            "surfaces, clean geometric forms with generous negative space, luminous electric-cyan "
-            "accent lighting with subtle glow and soft reflections on a near-black background, "
-            "modern product-keynote aesthetic, sharp and confident."),
-        "dark": True,
-        "bg": "#0D0F17", "fade": "13,15,23",
-        "title_color": "#E6E8EE", "kicker_color": "#1CE0FF", "sub_color": "rgba(230,232,238,0.72)",
-        "title_font": "'Pretendard Variable',sans-serif", "title_weight": "800",
-        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
-                       "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"],
     },
 }
 

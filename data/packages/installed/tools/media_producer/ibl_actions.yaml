@@ -30,7 +30,7 @@ nodes:
         description: Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
         target_description: 'prompt (필수). 옵션:
 
-          - style_preset: vintage_book/academic_paper/tech_minimal/magazine_modern (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
+          - style_preset: vintage_book/blueprint/architect/ink_orange (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
 
           - aspect_ratio: 1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1
 
@@ -44,7 +44,7 @@ nodes:
         group: media_produce
         router: handler
         tool: generate_gemini_image
-        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/academic_paper/tech_minimal/magazine_modern — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
+        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/blueprint/architect/ink_orange — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
         target_key: prompt
         keywords:
         - image generation
@@ -267,7 +267,7 @@ tool_json:
             type: string
         style_preset:
           type: string
-          description: '(critic) 디자인 시스템 톤 평가 기준 (예: sf_blueprint)'
+          description: '(critic) 디자인 시스템 톤 평가 기준 (예: vintage_book)'
         api_key:
           type: string
           description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용

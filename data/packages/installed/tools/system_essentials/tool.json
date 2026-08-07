@@ -439,7 +439,7 @@
     },
     {
       "name": "read_op",
-      "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.",
+      "description": "파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).\n\n파라미터: 읽을 파일 경로. format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table 통화로 추출. docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션. 스캔 PDF는 별도 OCR 필요.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -553,6 +553,97 @@
           "timeout": {
             "type": "number",
             "description": "status 선택 — 프로브 타임아웃 초 (기본 5)"
+          }
+        }
+      }
+    },
+    {
+      "name": "sheet_op",
+      "description": "엑셀 장부 부분 편집 — 행 검색(find)/행 추가(append)/셀 수정(update). 기존 수식·서식·다른 시트 보존.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "find(기본)/append/update",
+            "enum": [
+              "find",
+              "append",
+              "update"
+            ],
+            "default": "find"
+          },
+          "path": {
+            "type": "string",
+            "description": "대상 xlsx/xlsm 파일 경로"
+          },
+          "sheet": {
+            "type": "string",
+            "description": "시트명 (생략 시 활성 시트)"
+          },
+          "header_row": {
+            "type": "number",
+            "description": "헤더 행 번호 (기본 1)"
+          },
+          "where": {
+            "type": "object",
+            "description": "find/update — {열이름: 값} 전부 일치하는 행"
+          },
+          "set": {
+            "type": "object",
+            "description": "update 전용 — {열이름: 새값}. \"=수식\" 문자열 지원"
+          },
+          "items": {
+            "type": "array",
+            "description": "append 전용 — [{열이름: 값}, …]. 생략 시 파이프 직전 step 의 items/table 자동 사용"
+          },
+          "limit": {
+            "type": "number",
+            "description": "find 결과 상한 (기본 50)"
+          }
+        }
+      }
+    },
+    {
+      "name": "script_op",
+      "description": "등록 스크립트 실행기 — list/register/run/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "list(기본)/register/run/remove",
+            "enum": [
+              "list",
+              "register",
+              "run",
+              "remove"
+            ],
+            "default": "list"
+          },
+          "id": {
+            "type": "string",
+            "description": "스크립트 id (register 생략 시 파일명에서 유도)"
+          },
+          "path": {
+            "type": "string",
+            "description": "register 전용 — 등록할 스크립트 파일 경로 (실존 필수)"
+          },
+          "interpreter": {
+            "type": "string",
+            "description": "register 선택 — 생략 시 확장자 추론 (.py/.sh/.js)"
+          },
+          "description": {
+            "type": "string",
+            "description": "register 선택 — 스크립트 설명 (목록에 표시)"
+          },
+          "args": {
+            "type": "object",
+            "description": "run 선택 — JSON 객체, 스크립트 stdin 으로 전달"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "실행 제한 초 (기본 300)"
           }
         }
       }

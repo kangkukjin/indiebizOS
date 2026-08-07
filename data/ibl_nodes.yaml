@@ -3905,7 +3905,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -4196,6 +4196,78 @@ nodes:
                 lines:
                 - '{meta}'
                 - '{summary|opt:}'
+      sheet:
+        returns: items
+        side_effect: true
+        exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
+        description: 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
+        group: file
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★차트·이미지는 저장 시 유실(openpyxl), .xlsm 매크로는 보존.'
+        router: handler
+        tool: sheet_op
+        implementation: system_essentials/sheet_ops.py — openpyxl 부분 편집 + 원자 교체 저장. 헤더 행→열 매핑, 숫자 동치 매칭(3500=="3,500").
+        target_key: op
+        runs_on: pc_only
+        ops:
+          default: find
+          returns:
+            append: effect
+            update: effect
+          side_effect:
+            find: false
+          values:
+            find: 조건으로 행 검색 — where 생략 시 전체, _row 포함
+            append: 행 추가 — 기존 수식·서식 보존, "=수식" 문자열 지원
+            update: where 로 찾은 행의 set 셀 수정 — where 필수
+        aliases:
+          path:
+          - file_path
+        keywords:
+        - 엑셀
+        - 시트
+        - 장부
+        - 재고
+        - 행 추가
+        - 셀 수정
+        - excel
+        - sheet
+        guides:
+        - sheet.md
+      script:
+        returns: items
+        side_effect: true
+        fixture: '[self:script]{}'
+        description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
+        group: system
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(생략 시 확장자 추론 .py/.sh/.js)·description·timeout(초, 기본 300) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 → 스크립트 stdin), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록) / remove: id (파일은 보존).'
+        router: handler
+        tool: script_op
+        implementation: system_essentials/script_ops.py — data/scripts.json 원장(원자쓰기) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단).
+        target_key: op
+        runs_on: pc_only
+        ops:
+          default: list
+          returns:
+            register: effect
+            run: effect
+            remove: effect
+          side_effect:
+            list: false
+          values:
+            list: 등록 목록 + 마지막 실행 상태
+            register: 스크립트 등록/갱신 — path 필수, 완성본만
+            run: 등록 id 결정론 실행 — stdout JSON 은 통화로, 실패는 정직하게
+            remove: 등록 해제 — 파일은 보존
+        keywords:
+        - 스크립트
+        - 등록
+        - 자동화 스크립트
+        - 굳히기
+        - script
+        - 파이썬 실행
+        - 정기 실행
+        guides:
+        - script.md
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     always_on: true
     tags:

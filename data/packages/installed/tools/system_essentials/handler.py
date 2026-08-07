@@ -696,44 +696,42 @@ _office = _load_sibling("office_ops")
 _get_path = _office._get_path
 
 
-# ── [self:webapp] 웹앱 등기부 — op 디스패처 (--check 가 AST 로 키 정확 비교) ──
-# 로직은 형제 모듈 webapp_registry.py (파생 우선 — 진실 소스 7곳 + 수동 보충).
+# ── op 디스패처 (--check 가 AST 로 키 정확 비교) ──
+# 로직은 형제 모듈(webapp_registry.py / sheet_ops.py) — 1500줄 규칙, 본체는 형제에.
 
-_WEBAPP_MOD = None
-
-
-def _webapp_mod():
-    global _WEBAPP_MOD
-    if _WEBAPP_MOD is None:
-        _WEBAPP_MOD = _load_sibling("webapp_registry")
-    return _WEBAPP_MOD
+_SIBLING_MODS = {}
 
 
-def _webapp_list(tool_input):
-    return _webapp_mod().op_list(tool_input)
-
-
-def _webapp_status(tool_input):
-    return _webapp_mod().op_status(tool_input)
-
-
-def _webapp_register(tool_input):
-    return _webapp_mod().op_register(tool_input)
-
-
-def _webapp_remove(tool_input):
-    return _webapp_mod().op_remove(tool_input)
+def _sib_op(module_name, fn_name):
+    """형제 모듈 lazy-load op 래퍼 — 첫 호출 때 로드해 캐시."""
+    def _call(tool_input):
+        mod = _SIBLING_MODS.get(module_name)
+        if mod is None:
+            mod = _SIBLING_MODS[module_name] = _load_sibling(module_name)
+        return getattr(mod, fn_name)(tool_input)
+    return _call
 
 
 _OP_DISPATCHERS = {
     "webapp_op": {
-        "list": _webapp_list,
-        "status": _webapp_status,
-        "register": _webapp_register,
-        "remove": _webapp_remove,
-    }
+        "list": _sib_op("webapp_registry", "op_list"),
+        "status": _sib_op("webapp_registry", "op_status"),
+        "register": _sib_op("webapp_registry", "op_register"),
+        "remove": _sib_op("webapp_registry", "op_remove"),
+    },
+    "sheet_op": {
+        "find": _sib_op("sheet_ops", "op_find"),
+        "append": _sib_op("sheet_ops", "op_append"),
+        "update": _sib_op("sheet_ops", "op_update"),
+    },
+    "script_op": {
+        "list": _sib_op("script_ops", "op_list"),
+        "register": _sib_op("script_ops", "op_register"),
+        "run": _sib_op("script_ops", "op_run"),
+        "remove": _sib_op("script_ops", "op_remove"),
+    },
 }
-_OP_DEFAULTS = {"webapp_op": "list"}
+_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list"}
 
 
 def execute(tool_input: dict, context) -> str:
@@ -742,7 +740,8 @@ def execute(tool_input: dict, context) -> str:
     project_path = context.project_path
     agent_id = context.agent_id
 
-    # op 디스패처 액션 ([self:webapp] — music-player execute 규약)
+    # op 디스패처 액션 ([self:webapp]·[self:sheet] — music-player execute 규약)
+    # _project_path(상대경로 해석)·_path_guard(쓰기 범위 검증)를 주입 — 형제 모듈이 소비.
     if tool_name in _OP_DISPATCHERS:
         op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
         fn = _OP_DISPATCHERS[tool_name].get(op)
@@ -751,9 +750,10 @@ def execute(tool_input: dict, context) -> str:
                                "message": f"알 수 없는 op: {op} (가능: {', '.join(_OP_DISPATCHERS[tool_name])})"},
                               ensure_ascii=False)
         try:
-            return json.dumps(fn(tool_input), ensure_ascii=False)
+            return json.dumps(fn({**tool_input, "_project_path": project_path,
+                                  "_path_guard": _validate_path_in_scope}), ensure_ascii=False)
         except Exception as e:
-            return json.dumps({"success": False, "error": f"webapp 오류: {e}"}, ensure_ascii=False)
+            return json.dumps({"success": False, "error": f"{tool_name} 오류: {e}"}, ensure_ascii=False)
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":

@@ -213,6 +213,25 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
             extracted_text += f"\n--- Page {pno + 1} ---\n"
             extracted_text += page.get_text()
 
+        # tables: true — 표 추출(ep951 실증: "PDF를 수기로 엑셀에 옮기는" 노동의 어휘화).
+        # PyMuPDF find_tables 로 전 대상 페이지의 표를 뽑아, 가장 큰 표를 table{columns,rows}
+        # 통화로(read_xlsx 계약과 동일 — >> spreadsheet/filter 로 흐름), 나머지는 tables 목록에.
+        # ★한계: 실선 표 기준. 선 없는 표·스캔 이미지 PDF(OCR 필요)는 못 잡을 수 있다(sheet.md).
+        pdf_tables = []
+        if _truthy(tool_input.get("tables")):
+            for pno in target_pages:
+                page = doc.load_page(pno)
+                try:
+                    found = page.find_tables()
+                except Exception:
+                    continue
+                for t in getattr(found, "tables", []) or []:
+                    rows = t.extract() or []
+                    rows = [["" if c is None else str(c).strip() for c in r] for r in rows]
+                    rows = [r for r in rows if any(r)]
+                    if rows:
+                        pdf_tables.append({"page": pno + 1, "columns": rows[0], "rows": rows[1:]})
+
         doc.close()
 
         # 문서 IR blocks(비파괴) — pdf 텍스트를 문단 블록으로. read(x.pdf) >> document.
@@ -229,6 +248,15 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
             "text": extracted_text,
             "blocks": pdf_blocks or [{"type": "paragraph", "text": extracted_text}],
         }
+        if _truthy(tool_input.get("tables")):
+            res["tables_found"] = len(pdf_tables)
+            if pdf_tables:
+                # 가장 큰 표 = 대표 table 통화 (read_xlsx 와 같은 계약 — 파이프로 흐름)
+                main = max(pdf_tables, key=lambda t: len(t["rows"]) * max(1, len(t["columns"])))
+                res["table"] = {"columns": main["columns"], "rows": main["rows"]}
+                res["tables"] = pdf_tables
+            else:
+                res["note"] = "표를 찾지 못했습니다 — 실선 없는 표나 스캔 이미지 PDF 일 수 있습니다(OCR 별도)."
         return json.dumps(res, ensure_ascii=False)
 
     except Exception as e:
@@ -479,6 +507,33 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
     try:
         # read_only=True(대용량 안전), data_only=True(수식 대신 계산값)
         wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        # 수식 보완 로드: data_only=True는 '엑셀이 계산해 캐시한 값'을 읽으므로, 프로그램이
+        # 만들어 엑셀이 연 적 없는 파일은 수식 셀이 None(빈칸)으로 조용히 나온다(ep951 실측
+        # — 금액·합계가 소리 없이 유실돼 파이프라인에 틀린 데이터가 흐름). 캐시가 없는
+        # 수식 셀만 수식 원문("=SUM(...)")으로 정직하게 표시한다. 캐시가 있으면 기존 그대로 값.
+        try:
+            _wb_raw = openpyxl.load_workbook(str(path), read_only=True, data_only=False)
+        except Exception:
+            _wb_raw = None
+
+        def _merged_rows(sn):
+            from itertools import zip_longest
+            ws = wb[sn]
+            raw_ws = _wb_raw[sn] if (_wb_raw is not None and sn in _wb_raw.sheetnames) else None
+            if raw_ws is None:
+                yield from ws.iter_rows(values_only=True)
+                return
+            raw_iter = raw_ws.iter_rows(values_only=True)
+            for vals in ws.iter_rows(values_only=True):
+                raws = next(raw_iter, None)
+                if raws is None:
+                    yield vals
+                    continue
+                yield tuple(
+                    (r if (v is None and isinstance(r, str) and r.startswith("=")) else v)
+                    for v, r in zip_longest(vals, raws)
+                )
+
         all_sheets = list(wb.sheetnames)
         targets = [sheet_name] if sheet_name else all_sheets
 
@@ -490,7 +545,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             ws = wb[sn]
             rows_text = []
             truncated = False
-            for i, row in enumerate(ws.iter_rows(values_only=True)):
+            for i, row in enumerate(_merged_rows(sn)):
                 if i >= max_rows:
                     truncated = True
                     break
@@ -534,7 +589,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             tsn = table_sheets[0]
             tws = wb[tsn]
             all_rows = []
-            for i, row in enumerate(tws.iter_rows(values_only=True)):
+            for i, row in enumerate(_merged_rows(tsn)):
                 if i >= max_rows:
                     break
                 all_rows.append(list(row))
@@ -552,6 +607,8 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
                 table = {"columns": columns, "rows": body}
 
         wb.close()
+        if _wb_raw is not None:
+            _wb_raw.close()
 
         res = {
             "success": True,

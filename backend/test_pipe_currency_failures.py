@@ -130,7 +130,12 @@ def test_p4_price_projection_keeps_fields():
     env = _invest._attach_price_table({"success": True, "data": {"prices": [dict(p) for p in _PRICES]}})
     assert isinstance(env.get("items"), list) and env["items"][0].get("volume") == 900
     assert env["table"]["columns"] == ["날짜", "종가"], "차트 계약(2열)은 유지"
-    print("P4 OK — 시세 전 필드 보존 + items 직접 방출 + 차트 2열 유지")
+    # 절단 신고 최상위 승격(⑥′ 정렬) — 다운샘플 표본이 표찰을 달고 파이프로
+    assert env.get("truncated") is False, env.get("truncated")  # 전량이면 False (오탐 방지)
+    env2 = _invest._attach_price_table({"success": True, "data": {
+        "prices": [dict(p) for p in _PRICES], "truncated": True, "total_days": 64}})
+    assert env2.get("truncated") is True and env2.get("total") == 64, (env2.get("truncated"), env2.get("total"))
+    print("P4 OK — 시세 전 필드 보존 + items 직접 방출 + 차트 2열 유지 + 절단 최상위 승격")
 
 
 def test_p5_rich_items_full_projection():
@@ -376,8 +381,49 @@ def test_p15_binary_transformers_carry_flags():
     print("P15 OK — 이항 변환자 truncated OR·total 합 승계·join 무-total·문서 꼬리 종단")
 
 
+def test_p16_fallback_matrix_and_mixed_grammar():
+    """P16(⑯ 후속 — 미측정 경계): ?? 3단 우선순위 매트릭스 + `A ?? B >> C` 결합 순위.
+
+    우선순위 규칙(7라운드 구현): 내용 있는 성공 > 첫 빈손 > 마지막 에러.
+    """
+    from ibl_parser import parse
+    # 결합 순위: A ?? B >> C = (A ?? B) >> C — 폴백 체인이 첫 step, C 는 둘째 step
+    steps = parse('[sense:a]{} ?? [sense:b]{} >> [table:take]{n: 2}')
+    assert len(steps) == 2 and len(steps[0].get("_fallback_chain") or []) == 2
+    assert steps[1].get("action") == "take"
+
+    import ibl_engine
+    from ibl.workflow_engine import _execute_fallback
+    EMPTY = {"success": True, "items": [], "total": 0}
+    OK = {"success": True, "items": [{"x": 1}]}
+    ERR = {"success": False, "error": "boom"}
+
+    def _matrix(scripted):
+        chain = [{"node": "sense", "action": f"a{i}"} for i in range(len(scripted))]
+        script = {f"a{i}": r for i, r in enumerate(scripted)}
+        orig = ibl_engine.execute_ibl
+        ibl_engine.execute_ibl = lambda ti, pp, agent_id=None: dict(script[ti.get("action")])
+        try:
+            result, log = _execute_fallback(chain, "/tmp", "")
+        finally:
+            ibl_engine.execute_ibl = orig
+        return result, [e["status"] for e in log]
+
+    r, st = _matrix([EMPTY, OK])                 # 빈손 → 다음이 내용 있으면 그것
+    assert r.get("items") == [{"x": 1}] and st == ["empty", "ok"], (r, st)
+    r, st = _matrix([EMPTY, ERR, OK])            # 3단: 중간 고장 넘어 성공까지
+    assert r.get("items") == [{"x": 1}] and st == ["empty", "error", "ok"], (r, st)
+    r, st = _matrix([EMPTY, ERR])                # 성공 없음: 첫 빈손 > 마지막 에러
+    assert r.get("success") and r.get("items") == [] and "_all_failed" not in r, r
+    r, st = _matrix([EMPTY, EMPTY])              # 전부 빈손: 정직한 0건 원형(에러 위장 금지)
+    assert r.get("success") and r.get("items") == [] and "_all_failed" not in r, r
+    r, st = _matrix([ERR, ERR])                  # 전부 고장: 에러 + _all_failed 표식
+    assert r.get("success") is False and r.get("_all_failed") is True, r
+    print("P16 OK — (A??B)>>C 결합·3단 매트릭스(성공>첫 빈손>마지막 에러)·전부 빈손=정직 0건")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P15) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P16) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -393,4 +439,5 @@ if __name__ == "__main__":
     test_p13_document_open_dict_and_table()
     test_p14_fallback_empty_predicate()
     test_p15_binary_transformers_carry_flags()
+    test_p16_fallback_matrix_and_mixed_grammar()
     print("\n=== 전부 통과 ===")

@@ -213,6 +213,14 @@ def _attach_price_table(result):
             obj["table"] = {"columns": ["날짜", "종가"], "rows": rows}
         if prices and not isinstance(obj.get("items"), list):
             obj["items"] = [dict(p) for p in prices if isinstance(p, dict)]
+        # 절단 신고 최상위 승격(2026-08-08 — ⑥′ 계약 정렬): data.truncated 는 정직 사슬
+        # (변환자 비파괴 승계·문서 꼬리·?? 빈손 술어)이 보는 **최상위 키**가 아니었다.
+        # items=다운샘플 표본이므로 표본 위 집계가 "총 N거래일 중 일부" 표찰을 달고 나가고,
+        # 에이전트는 표찰을 보고 max_points 를 올려 재호출할 수 있다(기본값은 채팅 경제 유지).
+        if prices and "truncated" not in obj:
+            obj["truncated"] = bool(data.get("truncated"))
+            if obj["truncated"] and isinstance(data.get("total_days"), int) and "total" not in obj:
+                obj["total"] = data["total_days"]
         return obj
     except Exception:
         return result

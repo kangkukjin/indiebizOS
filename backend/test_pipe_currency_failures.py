@@ -541,10 +541,39 @@ def test_p19_totals_detection_baseline():
     # F6 전각공백 라벨 + SUMPRODUCT → ⚠️ (목록 밖 함수 — 행 축이 잡음)
     assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
                      ["합\u3000계", None, None, "=SUMPRODUCT(B2:B3,C2:C3)"]])) is True, "F6 미탐"
-    # F7 교차 시트(실험 10 의 요약!COUNTA 부류 — 프로토타입의 한계를 구현이 넘음)
+    # 교차 시트(실험 10 의 요약!COUNTA 부류 — 프로토타입의 한계를 구현이 넘음)
     assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40]],
-                    extra_sheet=("요약", [["품목수", "=COUNTA(장부!A2:A3)"]]))) is True, "F7 교차시트 미탐"
-    print("P19 OK — 여섯 픽스처 기준선 오탐 0·미탐 0 + 교차 시트(F7)")
+                    extra_sheet=("요약", [["품목수", "=COUNTA(장부!A2:A3)"]]))) is True, "교차시트 미탐"
+    # F7 상수표 참조(견적서형 — 실험 12 보강⑤): =$B$1*$C$1 은 집계가 아니다 → 무경고
+    wb7 = mk([H, ["A", 10, "=$B$1*$C$1", None], ["B", 25, "=$B$1*$C$1", None]])
+    wb7.active.insert_rows(1)
+    wb7.active["B1"] = 1000
+    wb7.active["C1"] = 0.1
+    # (헤더가 2행이 되므로 header_row=2 로 별도 probe)
+    with tempfile.TemporaryDirectory() as td:
+        xp = os.path.join(td, "f7.xlsx")
+        wb7.save(xp)
+        r7 = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 2,
+                               "items": [{"품목": "Z", "수량": 1}]})
+        assert r7.get("success") and not r7.get("aggregates_missing_new_rows"), ("F7 오탐", r7.get("aggregates_missing_new_rows"))
+    # F10 절대범위 합계(=SUM($D$2:$D$3)) → 여전히 잡혀야 함 (⑤를 넓히면 미탐되는 자리)
+    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
+                     ["합계", None, None, "=SUM($D$2:$D$3)"]])) is True, "F10 미탐"
+    # F11 절대 단일 참조(=$D$2*1.1) → 집계 아님 → 무경고
+    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, "=$D$2*1.1"]])) is False, "F11 오탐"
+    # F9 대형 무라벨(실험 12 ⑳-1): 스캔 상한 밖 합계 — 침묵 대신 scan_truncated 신고
+    wb9 = mk([H])
+    for i in range(3050):
+        wb9.active.append([f"거래{i}", 1, 10, 10])
+    wb9.active.append([None, "=SUM(B2:B3051)", None, None])  # 라벨 없음
+    with tempfile.TemporaryDirectory() as td:
+        xp = os.path.join(td, "f9.xlsx")
+        wb9.save(xp)
+        r9 = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 1,
+                               "items": [{"품목": "Z", "수량": 1}]})
+        assert r9.get("success") and r9.get("scan_truncated") is True, r9.get("scan_truncated")
+        assert "상한" in r9.get("warning", ""), r9.get("warning")
+    print("P19 OK — 기준선 11픽스처: F1~F6 + 교차시트 + F7 상수참조 무오탐 + F10 절대범위 + F11 + F9 상한 신고")
 
 
 if __name__ == "__main__":

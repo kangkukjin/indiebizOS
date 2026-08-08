@@ -167,51 +167,73 @@ def _matched_rows(ctx):
 _TOTAL_LABELS = {"합계", "총계", "소계", "총합", "계", "누계", "총액", "합계액",
                  "total", "totals", "grandtotal", "sum", "subtotal"}
 # A1 참조 파서(단순) — 한계: 명명 범위·구조적 참조(Table[열])는 못 본다(실험 11 한계 명시).
-_A1_REF = r"\$?[A-Z]{1,3}\$?(\d{1,7})(?:\s*:\s*\$?[A-Z]{1,3}\$?(\d{1,7}))?"
+# 행 절대참조($숫자) 캡처(실험 12 보강⑤) — 상수표 참조(=$B$2*$C$2)와 집계를 가른다.
+_A1_REF = r"\$?[A-Z]{1,3}(\$?)(\d{1,7})(?:\s*:\s*\$?[A-Z]{1,3}(\$?)(\d{1,7}))?"
 _QUALIFIED_RE = _re.compile(r"(?:'[^']+'|[A-Za-z0-9_가-힣.]+)!\s*" + _A1_REF)
 _UNQUALIFIED_RE = _re.compile(r"(?<![A-Za-z0-9_$!])" + _A1_REF)
 
+# 스캔 상한(⑳-1 — 실험 12): 상한 자체는 두되, 걸렸으면 반드시 신고한다.
+_SCAN_MAX_SAME = 3000
+_SCAN_MAX_OTHER = 1000
+
 
 def _row_intervals(formula, sheet_name=None):
-    """수식이 참조하는 행 구간 [(lo, hi, is_range)].
+    """수식이 참조하는 행 구간 [(lo, hi, is_range, is_abs)].
 
     sheet_name=None → 무자격 참조만(같은 시트). sheet_name 지정 → 그 시트를
     자격 참조('시트'! 또는 시트!)하는 구간만 (교차 시트 — 실험 10 의 요약!COUNTA 부류).
+    is_abs = 참조의 행 부분이 전부 절대($) — 보강⑤의 재료.
     """
-    out = []
+    def _tup(m):
+        lo, hi = int(m.group(2)), int(m.group(4) or m.group(2))
+        is_range = m.group(4) is not None
+        is_abs = bool(m.group(1)) and (not is_range or bool(m.group(3)))
+        return (min(lo, hi), max(lo, hi), is_range, is_abs)
+
     if sheet_name:
         pat = _re.compile(r"(?:'" + _re.escape(sheet_name) + r"'|"
                           + _re.escape(sheet_name) + r")!\s*" + _A1_REF)
-        for m in pat.finditer(formula):
-            lo, hi = int(m.group(1)), int(m.group(2) or m.group(1))
-            out.append((min(lo, hi), max(lo, hi), m.group(2) is not None))
-        return out
+        return [_tup(m) for m in pat.finditer(formula)]
     s = _QUALIFIED_RE.sub(" ", formula)  # 자격 참조는 같은-시트 축에서 제외
-    for m in _UNQUALIFIED_RE.finditer(s):
-        lo, hi = int(m.group(1)), int(m.group(2) or m.group(1))
-        out.append((min(lo, hi), max(lo, hi), m.group(2) is not None))
-    return out
+    return [_tup(m) for m in _UNQUALIFIED_RE.finditer(s)]
 
 
 def _is_aggregate(ivs, own_row=None):
-    """세로 집계 판정(실험 11 후보 규칙): 자기 행을 참조하지 않고,
-    콜론 범위가 있거나 참조 행이 2행 이상."""
+    """세로 집계 판정(실험 11 후보 규칙 + 실험 12 보강⑤).
+
+    자기 행을 참조하면 가로 합계(F2 월계) — 집계 아님.
+    콜론 범위가 없고 전부 절대행이면 상수표 참조(=$B$2*$C$2 견적서형) — 집계 아님(⑤).
+    ★⑤를 "전부 절대행이면 제외"로 넓히면 =SUM($D$3:$D$5) 절대범위 합계가 미탐이
+    된다(실험 12 F10 실측) — 콜론 범위 부재 조건이 필수.
+    나머지: 콜론 범위가 있거나 참조 행 수가 2 이상이면 집계.
+    """
     if not ivs:
         return False
-    if own_row is not None and any(lo <= own_row <= hi for lo, hi, _ in ivs):
-        return False  # 자기 행 참조 = 가로 합계 열(F2 월계) — 실험 11 의 오탐 해소
-    span = sum(hi - lo + 1 for lo, hi, _ in ivs)
-    return any(rng for _, _, rng in ivs) or span >= 2
+    if own_row is not None and any(lo <= own_row <= hi for lo, hi, _, _ in ivs):
+        return False
+    has_range = any(rng for _, _, rng, _ in ivs)
+    if not has_range and all(abs_ for _, _, _, abs_ in ivs):
+        return False  # ⑤
+    span = sum(hi - lo + 1 for lo, hi, _, _ in ivs)
+    return has_range or span >= 2
 
 
 def _aggregates_missing_rows(wb, ws, header_row, new_lo, new_hi, cap=5):
-    """새 행(new_lo~new_hi)을 참조하지 않는 세로 집계 수식들 — 전 시트 스캔(보강④)."""
+    """새 행(new_lo~new_hi)을 참조하지 않는 세로 집계 수식들 — 전 시트 스캔(보강④).
+
+    반환: (flags, scan_truncated) — 상한(⑳-1)에 걸려 못 본 구간이 있으면 True.
+    상한 밖의 합계는 원리적으로 못 보므로, 그 사실을 침묵하지 않는 것이 계약이다
+    (⑥′·⑭·⑰과 같은 부류 — 이 수리 코드 안에서 같은 병이 재발했던 것을 실험 12 가 잡았다).
+    """
     flags = []
+    scan_truncated = False
 
     def _covered(ivs):
-        return any(lo <= new_hi and hi >= new_lo for lo, hi, _ in ivs)
+        return any(lo <= new_hi and hi >= new_lo for lo, hi, _, _ in ivs)
 
-    for row in ws.iter_rows(min_row=header_row + 1, max_row=min(ws.max_row, 3000)):
+    if ws.max_row > _SCAN_MAX_SAME:
+        scan_truncated = True
+    for row in ws.iter_rows(min_row=header_row + 1, max_row=min(ws.max_row, _SCAN_MAX_SAME)):
         for cell in row:
             v = cell.value
             if not (isinstance(v, str) and v.startswith("=")):
@@ -221,11 +243,13 @@ def _aggregates_missing_rows(wb, ws, header_row, new_lo, new_hi, cap=5):
                 flags.append({"sheet": ws.title, "cell": cell.coordinate,
                               "row": cell.row, "formula": v[:60]})
                 if len(flags) >= cap:
-                    return flags
+                    return flags, scan_truncated
     for other in wb.worksheets:
         if other is ws:
             continue
-        for row in other.iter_rows(max_row=min(other.max_row, 1000)):
+        if other.max_row > _SCAN_MAX_OTHER:
+            scan_truncated = True
+        for row in other.iter_rows(max_row=min(other.max_row, _SCAN_MAX_OTHER)):
             for cell in row:
                 v = cell.value
                 if not (isinstance(v, str) and v.startswith("=") and ws.title in v):
@@ -235,8 +259,8 @@ def _aggregates_missing_rows(wb, ws, header_row, new_lo, new_hi, cap=5):
                     flags.append({"sheet": other.title, "cell": cell.coordinate,
                                   "row": cell.row, "formula": v[:60]})
                     if len(flags) >= cap:
-                        return flags
-    return flags
+                        return flags, scan_truncated
+    return flags, scan_truncated
 
 
 def _totals_label_row(ws, hmap, last_row, header_row):
@@ -334,7 +358,7 @@ def op_append(tool_input):
     start = last + 1
     new_hi = start + len(items) - 1
     # 쓰기 전에 판정(새로 쓴 셀의 수식이 스캔에 섞이지 않게) — 보강④ + 라벨 보조 축
-    flags = _aggregates_missing_rows(wb, ws, ctx["header_row"], start, new_hi)
+    flags, scan_truncated = _aggregates_missing_rows(wb, ws, ctx["header_row"], start, new_hi)
     label_row = _totals_label_row(ws, hmap, last, ctx["header_row"])
     for i, it in enumerate(items):
         for k, v in it.items():
@@ -360,6 +384,13 @@ def op_append(tool_input):
             or f"{ws.title} {label_row}행 합계 라벨"
         res["warning"] = (f"⚠️ 새 행({res['rows']})을 참조하지 않는 집계가 있습니다: {shown} — "
                           f"합계/소계가 새 행을 세지 않습니다. 수식 범위를 갱신하거나 행 배치를 확인하세요.")
+    if scan_truncated:
+        # ⑳-1(실험 12): 상한에 걸려 못 본 구간의 침묵 금지 — 큰 장부에서 무경고 통과가
+        # "확인됨"으로 읽히면 안 된다(F9 실측: 3,100행 장부의 바닥 합계를 라벨 없이는 놓침)
+        res["scan_truncated"] = True
+        note = (f"⚠️ 수식 스캔이 상한(같은 시트 {_SCAN_MAX_SAME}행·교차 시트 {_SCAN_MAX_OTHER}행)에서 "
+                f"잘렸습니다 — 상한 밖의 합계·집계는 확인하지 못했습니다.")
+        res["warning"] = (res.get("warning", "") + " " + note).strip()
     return res
 
 

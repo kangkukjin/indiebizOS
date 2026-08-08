@@ -475,10 +475,9 @@ def test_p18_sheet_semantic_silence():
         # ⑲ 곁가지: 새 셀이 열 표시 형식을 승계 (위가 원 서식이면)
         wb2 = openpyxl.load_workbook(xp)
         assert wb2["재고장"]["C5"].number_format != "General" or True  # 승계 대상=바로 윗줄(합계, None)이라 관대
-        # 합계 없는 장부 → 오탐 없음
+        # 재-append: 전체 스캔(보강④)에서는 합계가 여전히 새 행을 배제하므로 경고가 다시 나는 것이 정탐
         r2 = _sheet.op_append({**base, "items": [{"품목": "C형", "수량": 1, "단가": 10}]})
-        # (마지막 행이 방금 넣은 일반 행이므로 신고 없음)
-        assert r2.get("success") and "totals_row_suspected" not in r2, r2
+        assert r2.get("success") and r2.get("aggregates_missing_new_rows"), r2
         # ⑳: 수식 셀 덮어쓰기 → replaced_formulas 에 원 수식 기록
         r3 = _sheet.op_update({**base, "where": {"품목": "합계"}, "set": {"수량": 999}})
         assert r3.get("success") and r3.get("replaced_formulas"), r3
@@ -493,8 +492,63 @@ def test_p18_sheet_semantic_silence():
     print("P18 OK — 합계 행 의심 신고·수식 덮어쓰기 기록·서식 승계·헤더 오인 힌트·오탐 없음")
 
 
+def test_p19_totals_detection_baseline():
+    """P19(실험 11 측정 라운드): 여섯 장부 모양 기준선 — 오탐 0·미탐 0.
+
+    규칙(실험 11 후보 채택): 세로 집계 = 자기 행을 참조하지 않는 수식(함수 이름 무관)
+    + 물음의 반전(보강④) = 전 시트에서 "새 행을 참조하지 않는 집계"를 찾는다.
+    """
+    _sheet = _load("_t_sheet19", os.path.join(_PKG, "system_essentials", "sheet_ops.py"))
+    import openpyxl
+
+    def mk(rows, extra_sheet=None):
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "장부"
+        for r in rows:
+            ws.append(r)
+        if extra_sheet:
+            w2 = wb.create_sheet(extra_sheet[0])
+            for r in extra_sheet[1]:
+                w2.append(r)
+        return wb
+
+    def probe(wb):
+        with tempfile.TemporaryDirectory() as td:
+            xp = os.path.join(td, "f.xlsx")
+            wb.save(xp)
+            r = _sheet.op_append({"path": xp, "sheet": "장부", "header_row": 1,
+                                  "items": [{"품목": "Z", "수량": 1}]})
+            assert r.get("success"), r
+            return bool(r.get("aggregates_missing_new_rows") or r.get("totals_row_suspected"))
+
+    H = ["품목", "수량", "단가", "금액"]
+    # F1 표준 바닥 합계 → ⚠️
+    assert probe(mk([H, ["A", 1, 10, "=B2*C2"], ["B", 2, 20, "=B3*C3"],
+                     ["합계", None, None, "=SUM(D2:D3)"]])) is True, "F1 미탐"
+    # F2 가로 합계 열(월계) — 합계 행 없음 → 무경고 (실험 11 의 오탐 해소)
+    assert probe(mk([H, ["김", 35, 40, "=SUM(B2:C2)"], ["이", 30, 42, "=SUM(B3:C3)"],
+                     ["박", 35, 40, "=SUM(B4:C4)"]])) is False, "F2 오탐"
+    # F3 수동 덧셈(=D2+D3) → ⚠️ (함수 이름 무관 — 축은 행)
+    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
+                     ["누계", None, None, "=D2+D3"]])) is True, "F3 미탐"
+    # F4 상단 합계(2행) → ⚠️ (마지막 행만 보던 옛 규칙의 미탐 — 전체 스캔이 잡음)
+    assert probe(mk([H, ["총계", None, None, "=SUM(D3:D5)"], ["A", 1, 10, "=B3*C3"],
+                     ["B", 2, 20, "=B4*C4"], ["C", 3, 30, "=B5*C5"]])) is True, "F4 미탐"
+    # F5 중간 소계(그룹) 뒤 데이터 계속 → ⚠️ (소계가 새 행을 못 셈 — 실험 11 의 별개 위험)
+    assert probe(mk([H, ["개발A", 1, 10, 10], ["개발B", 2, 20, 40],
+                     ["소계", None, None, "=SUM(D2:D3)"], ["영업A", 5, 5, 25]])) is True, "F5 미탐"
+    # F6 전각공백 라벨 + SUMPRODUCT → ⚠️ (목록 밖 함수 — 행 축이 잡음)
+    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40],
+                     ["합\u3000계", None, None, "=SUMPRODUCT(B2:B3,C2:C3)"]])) is True, "F6 미탐"
+    # F7 교차 시트(실험 10 의 요약!COUNTA 부류 — 프로토타입의 한계를 구현이 넘음)
+    assert probe(mk([H, ["A", 1, 10, 10], ["B", 2, 20, 40]],
+                    extra_sheet=("요약", [["품목수", "=COUNTA(장부!A2:A3)"]]))) is True, "F7 교차시트 미탐"
+    print("P19 OK — 여섯 픽스처 기준선 오탐 0·미탐 0 + 교차 시트(F7)")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P18) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P19) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -513,4 +567,5 @@ if __name__ == "__main__":
     test_p16_fallback_matrix_and_mixed_grammar()
     test_p17_script_list_preflight()
     test_p18_sheet_semantic_silence()
+    test_p19_totals_detection_baseline()
     print("\n=== 전부 통과 ===")

@@ -158,26 +158,96 @@ def _matched_rows(ctx):
 
 # ── op 구현 ───────────────────────────────────────────────────────
 
-# 합계 행 의심 신호(⑲ 정직층, 2026-08-08 실험 10) — 집계 수식 또는 합계 라벨.
-# ★배치 규칙(합계 위 삽입+수식 참조 재작성)은 픽스처 오탐·미탐 측정 후 별도 라운드:
-#   측정 없는 수식 재작성이야말로 조용한 손상의 새 공급원이다. 지금은 의심을 **신고**만 한다.
-_TOTAL_LABELS = {"합계", "총계", "소계", "총합", "계", "total", "totals", "sum", "subtotal"}
-_AGG_FORMULA_RE = _re.compile(r"^=\s*(SUM|SUBTOTAL|COUNTA?|AVERAGE)\s*\(", _re.I)
+# 집계 배제 의심 신호(⑲, 2026-08-08 실험 10 → 실험 11 측정 라운드로 규칙 교정).
+# 물음의 반전(보강④): "합계 행이 어디 있나"가 아니라 **"내가 넣을 행을 참조하지 않는
+# 집계 수식이 있나"** — 바닥 합계(F1)·수동 덧셈(F3)·상단 합계(F4)·중간 소계(F5)·
+# SUMPRODUCT(F6)를 한 물음으로 잡고, 가로 합계 열(F2 월계)은 자기-행 참조라 안 잡힌다.
+# 판정 축=함수 이름이 아니라 **행**(실험 11 — 세로 집계 = 자기 행을 참조하지 않는 수식).
+# ★배치 자동화(합계 위 삽입+참조 재작성)는 이 기준선(P19)에서 오탐0·미탐0 유지 후 별도 라운드.
+_TOTAL_LABELS = {"합계", "총계", "소계", "총합", "계", "누계", "총액", "합계액",
+                 "total", "totals", "grandtotal", "sum", "subtotal"}
+# A1 참조 파서(단순) — 한계: 명명 범위·구조적 참조(Table[열])는 못 본다(실험 11 한계 명시).
+_A1_REF = r"\$?[A-Z]{1,3}\$?(\d{1,7})(?:\s*:\s*\$?[A-Z]{1,3}\$?(\d{1,7}))?"
+_QUALIFIED_RE = _re.compile(r"(?:'[^']+'|[A-Za-z0-9_가-힣.]+)!\s*" + _A1_REF)
+_UNQUALIFIED_RE = _re.compile(r"(?<![A-Za-z0-9_$!])" + _A1_REF)
 
 
-def _detect_totals_row(ws, hmap, last_row, header_row):
-    """마지막 데이터 행이 합계 행으로 보이면 {row, reasons}, 아니면 None."""
+def _row_intervals(formula, sheet_name=None):
+    """수식이 참조하는 행 구간 [(lo, hi, is_range)].
+
+    sheet_name=None → 무자격 참조만(같은 시트). sheet_name 지정 → 그 시트를
+    자격 참조('시트'! 또는 시트!)하는 구간만 (교차 시트 — 실험 10 의 요약!COUNTA 부류).
+    """
+    out = []
+    if sheet_name:
+        pat = _re.compile(r"(?:'" + _re.escape(sheet_name) + r"'|"
+                          + _re.escape(sheet_name) + r")!\s*" + _A1_REF)
+        for m in pat.finditer(formula):
+            lo, hi = int(m.group(1)), int(m.group(2) or m.group(1))
+            out.append((min(lo, hi), max(lo, hi), m.group(2) is not None))
+        return out
+    s = _QUALIFIED_RE.sub(" ", formula)  # 자격 참조는 같은-시트 축에서 제외
+    for m in _UNQUALIFIED_RE.finditer(s):
+        lo, hi = int(m.group(1)), int(m.group(2) or m.group(1))
+        out.append((min(lo, hi), max(lo, hi), m.group(2) is not None))
+    return out
+
+
+def _is_aggregate(ivs, own_row=None):
+    """세로 집계 판정(실험 11 후보 규칙): 자기 행을 참조하지 않고,
+    콜론 범위가 있거나 참조 행이 2행 이상."""
+    if not ivs:
+        return False
+    if own_row is not None and any(lo <= own_row <= hi for lo, hi, _ in ivs):
+        return False  # 자기 행 참조 = 가로 합계 열(F2 월계) — 실험 11 의 오탐 해소
+    span = sum(hi - lo + 1 for lo, hi, _ in ivs)
+    return any(rng for _, _, rng in ivs) or span >= 2
+
+
+def _aggregates_missing_rows(wb, ws, header_row, new_lo, new_hi, cap=5):
+    """새 행(new_lo~new_hi)을 참조하지 않는 세로 집계 수식들 — 전 시트 스캔(보강④)."""
+    flags = []
+
+    def _covered(ivs):
+        return any(lo <= new_hi and hi >= new_lo for lo, hi, _ in ivs)
+
+    for row in ws.iter_rows(min_row=header_row + 1, max_row=min(ws.max_row, 3000)):
+        for cell in row:
+            v = cell.value
+            if not (isinstance(v, str) and v.startswith("=")):
+                continue
+            ivs = _row_intervals(v)
+            if _is_aggregate(ivs, own_row=cell.row) and not _covered(ivs):
+                flags.append({"sheet": ws.title, "cell": cell.coordinate,
+                              "row": cell.row, "formula": v[:60]})
+                if len(flags) >= cap:
+                    return flags
+    for other in wb.worksheets:
+        if other is ws:
+            continue
+        for row in other.iter_rows(max_row=min(other.max_row, 1000)):
+            for cell in row:
+                v = cell.value
+                if not (isinstance(v, str) and v.startswith("=") and ws.title in v):
+                    continue
+                ivs = _row_intervals(v, sheet_name=ws.title)
+                if _is_aggregate(ivs) and not _covered(ivs):
+                    flags.append({"sheet": other.title, "cell": cell.coordinate,
+                                  "row": cell.row, "formula": v[:60]})
+                    if len(flags) >= cap:
+                        return flags
+    return flags
+
+
+def _totals_label_row(ws, hmap, last_row, header_row):
+    """보조 근거(라벨 축) — 마지막 행 첫 열이 합계류 라벨이면 그 행 번호.
+    유니코드 공백(전각 U+3000 포함) 정규화 — 실험 11 F6 '합　계' 미탐 해소."""
     if last_row <= header_row:
         return None
-    reasons = []
-    for col in hmap.values():
-        cell = ws.cell(row=last_row, column=col)
-        if isinstance(cell.value, str) and _AGG_FORMULA_RE.match(cell.value):
-            reasons.append(f"{cell.coordinate}={cell.value[:40]}")
     first = ws.cell(row=last_row, column=min(hmap.values())).value
-    if isinstance(first, str) and first.strip().replace(" ", "").lower() in _TOTAL_LABELS:
-        reasons.append(f"첫 열 라벨 '{first.strip()}'")
-    return {"row": last_row, "reasons": reasons} if reasons else None
+    if isinstance(first, str) and "".join(first.split()).lower() in _TOTAL_LABELS:
+        return last_row
+    return None
 
 
 def op_find(tool_input):
@@ -261,8 +331,11 @@ def op_append(tool_input):
         return err
 
     last = _last_data_row(ws, hmap, ctx["header_row"])
-    totals = _detect_totals_row(ws, hmap, last, ctx["header_row"])
     start = last + 1
+    new_hi = start + len(items) - 1
+    # 쓰기 전에 판정(새로 쓴 셀의 수식이 스캔에 섞이지 않게) — 보강④ + 라벨 보조 축
+    flags = _aggregates_missing_rows(wb, ws, ctx["header_row"], start, new_hi)
+    label_row = _totals_label_row(ws, hmap, last, ctx["header_row"])
     for i, it in enumerate(items):
         for k, v in it.items():
             if str(k).startswith("_"):
@@ -275,13 +348,18 @@ def op_append(tool_input):
     _save(wb, p)
     wb.close()
     res = {"success": True, "sheet": ws.title, "appended": len(items),
-           "rows": f"{start}~{start + len(items) - 1}", "path": str(p)}
-    if totals:
+           "rows": f"{start}~{new_hi}", "path": str(p)}
+    if flags or label_row:
         # ⑲ 정직층: 파일은 멀쩡하고 숫자만 틀리는 부류 — 최소한 침묵하지 않는다
-        res["totals_row_suspected"] = totals["row"]
-        res["warning"] = (f"⚠️ {totals['row']}행이 합계 행으로 보입니다({'; '.join(totals['reasons'][:3])}) — "
-                          f"새 행({res['rows']})이 그 아래에 들어가 기존 SUM 범위·교차 시트 집계에 "
-                          f"포함되지 않습니다. 합계 수식 범위를 갱신하거나 행 배치를 확인하세요.")
+        res["totals_row_suspected"] = (flags[0]["row"] if flags and flags[0]["sheet"] == ws.title
+                                       else (label_row or (flags[0]["row"] if flags else None)))
+        if flags:
+            res["aggregates_missing_new_rows"] = [
+                {"cell": f"{f['sheet']}!{f['cell']}", "formula": f["formula"]} for f in flags]
+        shown = "; ".join(f"{f['sheet']}!{f['cell']}={f['formula']}" for f in flags[:3]) \
+            or f"{ws.title} {label_row}행 합계 라벨"
+        res["warning"] = (f"⚠️ 새 행({res['rows']})을 참조하지 않는 집계가 있습니다: {shown} — "
+                          f"합계/소계가 새 행을 세지 않습니다. 수식 범위를 갱신하거나 행 배치를 확인하세요.")
     return res
 
 

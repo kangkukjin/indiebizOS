@@ -5,7 +5,7 @@
  * layout과 chatTarget props로 동작을 구성합니다.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Bot, User, Loader2, X, RefreshCw, History, RotateCw, BookOpen, Zap, Brain, Gauge, Target, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -1173,7 +1173,8 @@ function MessageCopyButton({ text, tone }: { text: string; tone: 'onLight' | 'on
   );
 }
 
-function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; variant?: 'warm' | 'neutral' }) {
+// memo: 입력창 타이핑마다 ChatView 전체가 리렌더되어도 과거 메시지의 마크다운 재파싱을 막는다
+const MessageBubble = memo(function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; variant?: 'warm' | 'neutral' }) {
   const isUser = message.role === 'user';
 
   // 작업전 공개 — 일반 버블 대신 계기 칩으로 렌더
@@ -1234,4 +1235,4 @@ function MessageBubble({ message, variant = 'warm' }: { message: ChatMessage; va
       </div>
     </div>
   );
-}
+});

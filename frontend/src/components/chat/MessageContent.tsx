@@ -1,6 +1,7 @@
 /**
  * 메시지 콘텐츠 렌더링 (이미지, 지도, 도구 결과, 마크다운)
  */
+import { memo } from 'react';
 import { FileText, CheckCircle2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,7 +20,8 @@ interface MessageContentProps {
   variant?: 'warm' | 'neutral';
 }
 
-export function MessageContent({ content, role, images, textFiles, toolActivities, variant = 'warm' }: MessageContentProps) {
+// memo: 타이핑·스트리밍마다 부모가 리렌더되어도 내용이 같으면 마크다운 재파싱을 막는다
+export const MessageContent = memo(function MessageContent({ content, role, images, textFiles, toolActivities, variant = 'warm' }: MessageContentProps) {
   const isUser = role === 'user';
 
   // AI 응답에서 이미지, 지도, 스트림 데이터 파싱
@@ -165,4 +167,4 @@ export function MessageContent({ content, role, images, textFiles, toolActivitie
       )}
     </>
   );
-}
+});

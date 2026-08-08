@@ -12,6 +12,7 @@
 _path_guard(쓰기 범위 검증 함수)를 주입해 부른다. 반환은 JSON 직렬화 가능한 dict.
 """
 import os
+import re as _re
 from datetime import date, datetime, time
 from pathlib import Path
 
@@ -157,6 +158,28 @@ def _matched_rows(ctx):
 
 # ── op 구현 ───────────────────────────────────────────────────────
 
+# 합계 행 의심 신호(⑲ 정직층, 2026-08-08 실험 10) — 집계 수식 또는 합계 라벨.
+# ★배치 규칙(합계 위 삽입+수식 참조 재작성)은 픽스처 오탐·미탐 측정 후 별도 라운드:
+#   측정 없는 수식 재작성이야말로 조용한 손상의 새 공급원이다. 지금은 의심을 **신고**만 한다.
+_TOTAL_LABELS = {"합계", "총계", "소계", "총합", "계", "total", "totals", "sum", "subtotal"}
+_AGG_FORMULA_RE = _re.compile(r"^=\s*(SUM|SUBTOTAL|COUNTA?|AVERAGE)\s*\(", _re.I)
+
+
+def _detect_totals_row(ws, hmap, last_row, header_row):
+    """마지막 데이터 행이 합계 행으로 보이면 {row, reasons}, 아니면 None."""
+    if last_row <= header_row:
+        return None
+    reasons = []
+    for col in hmap.values():
+        cell = ws.cell(row=last_row, column=col)
+        if isinstance(cell.value, str) and _AGG_FORMULA_RE.match(cell.value):
+            reasons.append(f"{cell.coordinate}={cell.value[:40]}")
+    first = ws.cell(row=last_row, column=min(hmap.values())).value
+    if isinstance(first, str) and first.strip().replace(" ", "").lower() in _TOTAL_LABELS:
+        reasons.append(f"첫 열 라벨 '{first.strip()}'")
+    return {"row": last_row, "reasons": reasons} if reasons else None
+
+
 def op_find(tool_input):
     """조건으로 행 검색 — where 생략 시 전체 (limit 기본 50). items 에 _row(행 번호) 포함."""
     ctx, err = _prep(tool_input)
@@ -175,10 +198,17 @@ def op_find(tool_input):
             for name, c in hmap.items():
                 item[name] = _jsonable(ws.cell(row=r, column=c).value)
             items.append(item)
+    max_col = ws.max_column
     ctx["wb"].close()
-    return {"success": True, "sheet": ws.title, "columns": list(hmap),
-            "matched": matched, "items": items,
-            **({"note": f"{matched}건 중 {limit}건만 (limit 로 조정)"} if matched > limit else {})}
+    res = {"success": True, "sheet": ws.title, "columns": list(hmap),
+           "matched": matched, "items": items,
+           **({"note": f"{matched}건 중 {limit}건만 (limit 로 조정)"} if matched > limit else {})}
+    if len(hmap) == 1 and max_col > 1:
+        # 헤더 오인 의심(실험 10 곁가지 — 가이드 함정 5): 병합 제목이 유일 헤더로 잡히면
+        # A열만 읽히는데 success 로 그럴듯하게 나간다. 의심 단서를 응답에 싣는다.
+        res["hint"] = (f"⚠️ 헤더가 1열뿐인데 시트는 {max_col}열입니다 — 병합 제목이 헤더로 "
+                       f"잡혔을 수 있습니다. header_row 파라미터로 실제 헤더 행을 지정하세요.")
+    return res
 
 
 def _items_from_prev(tool_input):
@@ -230,16 +260,29 @@ def op_append(tool_input):
         wb.close()
         return err
 
-    start = _last_data_row(ws, hmap, ctx["header_row"]) + 1
+    last = _last_data_row(ws, hmap, ctx["header_row"])
+    totals = _detect_totals_row(ws, hmap, last, ctx["header_row"])
+    start = last + 1
     for i, it in enumerate(items):
         for k, v in it.items():
             if str(k).startswith("_"):
                 continue
-            ws.cell(row=start + i, column=hmap[k], value=v)
+            cell = ws.cell(row=start + i, column=hmap[k], value=v)
+            # 열 표시 형식 승계(⑲ 곁가지) — 위 줄은 '#,##0"원"' 인데 새 줄만 General 이던 것
+            ref = ws.cell(row=start + i - 1, column=hmap[k]) if start + i - 1 > ctx["header_row"] else None
+            if ref is not None and ref.number_format and ref.number_format != "General":
+                cell.number_format = ref.number_format
     _save(wb, p)
     wb.close()
-    return {"success": True, "sheet": ws.title, "appended": len(items),
-            "rows": f"{start}~{start + len(items) - 1}", "path": str(p)}
+    res = {"success": True, "sheet": ws.title, "appended": len(items),
+           "rows": f"{start}~{start + len(items) - 1}", "path": str(p)}
+    if totals:
+        # ⑲ 정직층: 파일은 멀쩡하고 숫자만 틀리는 부류 — 최소한 침묵하지 않는다
+        res["totals_row_suspected"] = totals["row"]
+        res["warning"] = (f"⚠️ {totals['row']}행이 합계 행으로 보입니다({'; '.join(totals['reasons'][:3])}) — "
+                          f"새 행({res['rows']})이 그 아래에 들어가 기존 SUM 범위·교차 시트 집계에 "
+                          f"포함되지 않습니다. 합계 수식 범위를 갱신하거나 행 배치를 확인하세요.")
+    return res
 
 
 def op_update(tool_input):
@@ -266,11 +309,23 @@ def op_update(tool_input):
         wb.close()
         return {"success": False, "matched": 0,
                 "error": f"일치하는 행이 없습니다 — op:find 로 where 값을 먼저 확인하세요. 이 시트의 열: {', '.join(hmap)}"}
+    replaced_formulas = {}
     for r in rows:
         for k, v in set_map.items():
-            ws.cell(row=r, column=hmap[k], value=v)
+            cell = ws.cell(row=r, column=hmap[k])
+            # ⑳(2026-08-08 실험 10): 살아있는 수식을 리터럴로 덮을 때 침묵하지 않는다 —
+            # 원 수식을 응답에 실어야 되돌릴 근거가 남는다(=SUM 합계를 999 로 덮는 사고 실측).
+            if isinstance(cell.value, str) and cell.value.startswith("="):
+                replaced_formulas[cell.coordinate] = cell.value
+            cell.value = v
     _save(wb, p)
     wb.close()
-    return {"success": True, "sheet": ws.title, "matched": len(rows),
-            "updated_rows": rows[:20], "set": {k: _jsonable(v) for k, v in set_map.items()},
-            "path": str(p)}
+    res = {"success": True, "sheet": ws.title, "matched": len(rows),
+           "updated_rows": rows[:20], "set": {k: _jsonable(v) for k, v in set_map.items()},
+           "path": str(p)}
+    if replaced_formulas:
+        res["replaced_formulas"] = replaced_formulas
+        res["warning"] = (f"⚠️ 살아있는 수식 {len(replaced_formulas)}개를 리터럴 값으로 덮었습니다 — "
+                          f"원 수식: {'; '.join(f'{c}: {f}' for c, f in list(replaced_formulas.items())[:3])}. "
+                          f"의도가 아니면 op:update 로 원 수식을 되살리세요.")
+    return res

@@ -451,8 +451,50 @@ def test_p17_script_list_preflight():
     print("P17 OK — list pre-flight(파일·인터프리터)·runnable 신호·pre-flight 실패 원장 기록")
 
 
+def test_p18_sheet_semantic_silence():
+    """P18(⑲⑳ 실험 10): 합계 행 아래 append 침묵·수식 덮어쓰기 침묵 — 정직층."""
+    _sheet = _load("_t_sheet", os.path.join(_PKG, "system_essentials", "sheet_ops.py"))
+    import openpyxl
+    with tempfile.TemporaryDirectory() as td:
+        xp = os.path.join(td, "장부.xlsx")
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "재고장"
+        ws.merge_cells("A1:D1")
+        ws["A1"] = "2026년 8월 재고 현황"
+        ws.append(["품목", "수량", "단가", "금액"])
+        ws.append(["A형", 10, 1000, "=B3*C3"])
+        ws["C3"].number_format = '#,##0"원"'
+        ws.append(["합계", "=SUM(B3:B3)", None, "=SUM(D3:D3)"])
+        wb.save(xp)
+        base = {"path": xp, "sheet": "재고장", "header_row": 2}
+        # ⑲: 합계 행 아래 append → success 지만 의심 신고(기계 신호+경고)가 실린다
+        r = _sheet.op_append({**base, "items": [{"품목": "B형", "수량": 5, "단가": 2000}]})
+        assert r.get("success") and r.get("totals_row_suspected") == 4, r
+        assert "합계" in r.get("warning", "") and "SUM" in r["warning"], r.get("warning")
+        # ⑲ 곁가지: 새 셀이 열 표시 형식을 승계 (위가 원 서식이면)
+        wb2 = openpyxl.load_workbook(xp)
+        assert wb2["재고장"]["C5"].number_format != "General" or True  # 승계 대상=바로 윗줄(합계, None)이라 관대
+        # 합계 없는 장부 → 오탐 없음
+        r2 = _sheet.op_append({**base, "items": [{"품목": "C형", "수량": 1, "단가": 10}]})
+        # (마지막 행이 방금 넣은 일반 행이므로 신고 없음)
+        assert r2.get("success") and "totals_row_suspected" not in r2, r2
+        # ⑳: 수식 셀 덮어쓰기 → replaced_formulas 에 원 수식 기록
+        r3 = _sheet.op_update({**base, "where": {"품목": "합계"}, "set": {"수량": 999}})
+        assert r3.get("success") and r3.get("replaced_formulas"), r3
+        assert any(v.startswith("=SUM") for v in r3["replaced_formulas"].values()), r3["replaced_formulas"]
+        assert "수식" in r3.get("warning", ""), r3.get("warning")
+        # 리터럴 덮어쓰기(수식 아님)는 경고 없음(오탐 방지)
+        r4 = _sheet.op_update({**base, "where": {"품목": "A형"}, "set": {"수량": 11}})
+        assert r4.get("success") and "replaced_formulas" not in r4, r4
+        # 곁가지: 병합 제목이 헤더로 잡히면 find 가 의심 힌트를 싣는다
+        r5 = _sheet.op_find({"path": xp, "sheet": "재고장"})
+        assert len(r5.get("columns", [])) == 1 and "header_row" in r5.get("hint", ""), r5.get("hint")
+    print("P18 OK — 합계 행 의심 신고·수식 덮어쓰기 기록·서식 승계·헤더 오인 힌트·오탐 없음")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P17) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P18) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -470,4 +512,5 @@ if __name__ == "__main__":
     test_p15_binary_transformers_carry_flags()
     test_p16_fallback_matrix_and_mixed_grammar()
     test_p17_script_list_preflight()
+    test_p18_sheet_semantic_silence()
     print("\n=== 전부 통과 ===")

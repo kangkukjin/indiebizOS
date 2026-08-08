@@ -48,6 +48,10 @@ class OpenAIProvider(BaseProvider):
     # GPT-4o: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~410,000자
     COMPACTION_CHAR_THRESHOLD = 410000
 
+    # 에이전틱 루프 기본 출력 예산. 하이브리드 thinking 모델(DeepSeek 등)은
+    # 추론+본문이 이 예산을 나눠 쓰므로 해당 프로바이더가 오버라이드로 키운다.
+    DEFAULT_MAX_TOKENS = 4096
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._compaction_summary = None  # Rolling Compaction 요약 저장
@@ -249,11 +253,12 @@ class OpenAIProvider(BaseProvider):
         openai_tools: List[Dict],
         execute_tool: Callable,
         depth: int = 0,
-        max_tokens: int = 4096,
+        max_tokens: int = None,
         empty_response_retries: int = 0,
         auto_continues: int = 0,
         accumulated_text: str = "",
         zero_output_retries: int = 0,
+        force_thinking_off: bool = False,
         cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
@@ -270,6 +275,9 @@ class OpenAIProvider(BaseProvider):
         - 빈 응답 복구 처리
         - Auto-Continue: length 초과 시 이어쓰기 (토큰 낭비 방지)
         """
+        if max_tokens is None:
+            max_tokens = self.DEFAULT_MAX_TOKENS
+
         if depth > MAX_TOOL_DEPTH:
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
             return
@@ -305,7 +313,9 @@ class OpenAIProvider(BaseProvider):
 
             # 원샷 계약(분류·증류 등): 하이브리드 thinking 모델의 추론 모드 차단.
             # 파라미터는 프로바이더별(_thinking_off_params 오버라이드) — 기본은 no-op.
-            if self.disable_thinking:
+            # force_thinking_off: 추론이 max_tokens를 전부 태워 본문 0자가 났을 때의
+            # 재시도 전용 — 이번 호출 한 번만 추론을 끄고 본문을 받아낸다.
+            if self.disable_thinking or force_thinking_off:
                 _off = self._thinking_off_params()
                 if _off:
                     create_params.setdefault("extra_body", {}).update(_off)
@@ -385,12 +395,13 @@ class OpenAIProvider(BaseProvider):
             # 유도(빈 응답 복구)도 무의미하다(이어쓸 본문이 없음). 1회만 재시도 후 포기.
             if finish_reason == "length" and not collected_text.strip() and not tool_calls:
                 if zero_output_retries < 1:
-                    print(f"[OpenAI] 출력 0자 length 감지 (추론 토큰 소진 추정) — 동일 요청 1회 재시도")
+                    print(f"[OpenAI] 출력 0자 length 감지 (추론 토큰 소진 추정) — thinking 끄고 1회 재시도")
                     yield from self._agentic_loop(
                         messages, openai_tools, execute_tool, depth, max_tokens,
                         empty_response_retries=empty_response_retries,
                         auto_continues=auto_continues, accumulated_text=accumulated_text,
                         zero_output_retries=zero_output_retries + 1,
+                        force_thinking_off=True,
                         cancel_check=cancel_check
                     )
                 else:
@@ -679,7 +690,7 @@ class OpenAIProvider(BaseProvider):
         # 재귀 호출로 후속 응답 처리 (도구 실행 후에는 auto-continue 리셋)
         yield from self._agentic_loop(
             messages, openai_tools, execute_tool, depth + 1,
-            max_tokens=4096, auto_continues=0, accumulated_text="",
+            auto_continues=0, accumulated_text="",
             cancel_check=cancel_check
         )
 

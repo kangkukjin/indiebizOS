@@ -25,6 +25,12 @@ class DeepSeekProvider(OpenAIProvider):
     그대로 사용하며, base_url만 DeepSeek로 변경합니다.
     """
 
+    # v4 하이브리드 thinking: 추론과 본문이 max_tokens 한 예산을 나눠 쓴다.
+    # 4096이면 무거운 프롬프트에서 추론이 예산을 전부 태워 본문 0자(length)가
+    # 난다(2026-08-09 실측: 입력 32.7K에 추론 4095/4096). 추론이 완주하고도
+    # 본문을 쓸 공간이 남게 넉넉히 잡는다(16384 수용 실측).
+    DEFAULT_MAX_TOKENS = 16384
+
     def _thinking_off_params(self):
         """v4 하이브리드 thinking 차단 — 2026-08-01 라이브 실측: 이 파라미터로
         reasoning_tokens가 0이 됨(enable_thinking/chat_template_kwargs는 무시됨).

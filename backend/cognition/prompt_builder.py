@@ -88,7 +88,7 @@ def get_system_structure_core() -> str:
 class PromptBuilder:
     """시스템 프롬프트 빌더
 
-    base_prompt_v5.md (항상 포함) + 조건부 프롬프트를 조합합니다.
+    base_prompt_v6.md (항상 포함) + 조건부 프롬프트를 조합합니다.
 
     사용 예시:
         builder = PromptBuilder()
@@ -281,7 +281,7 @@ class PromptBuilder:
         parts.append(date_info)
 
         # 1. 기본 프롬프트 (항상 포함)
-        base = self._load_file("base_prompt_v5.md")
+        base = self._load_file("base_prompt_v6.md")
         if base:
             parts.append(base)
 

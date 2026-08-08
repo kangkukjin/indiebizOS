@@ -88,7 +88,7 @@ def get_agent_definitions() -> Dict[str, dict]:
         "실행": {
             "config_name": "system_ai_config",
             "system_prompt": (
-                load_prompt_file(PROMPTS_DIR / "base_prompt_v5.md")
+                load_prompt_file(PROMPTS_DIR / "base_prompt_v6.md")
                 + "\n\n# 시스템 구조\n" + system_structure
             ),
             "description": "도구 사용 + 작업 실행",

@@ -285,7 +285,7 @@ def get_system_prompt(user_profile: str = "", git_enabled: bool = False) -> str:
     """시스템 AI의 시스템 프롬프트 (prompt_builder.py 사용)
 
     **통합**: 이제 공통 프롬프트 빌더를 사용합니다.
-    - base_prompt_v5.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
+    - base_prompt_v6.md + (조건부 git) + 위임 프롬프트 + 개별역할 + 시스템메모
     """
     return build_system_ai_prompt(user_profile=user_profile, git_enabled=git_enabled)
 

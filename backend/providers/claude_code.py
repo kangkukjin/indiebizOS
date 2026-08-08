@@ -931,7 +931,7 @@ class ClaudeCodeProvider(BaseProvider):
     ]
 
     # 도구 정책 — 시스템 프롬프트에 append. **Claude Code 프로바이더 전용**:
-    # 이 네이티브 도구들은 Claude Code 에만 존재하므로, 공용 프롬프트(base_prompt_v5)가 아니라
+    # 이 네이티브 도구들은 Claude Code 에만 존재하므로, 공용 프롬프트(base_prompt_v6)가 아니라
     # 여기서만 주입한다(Gemini 등 다른 프로바이더는 이런 도구가 없어 안내가 불필요·혼란).
     # 차단된 네이티브 대신 IBL 등가물을 첫 시도에 쓰게 해 헛걸음을 막는다.
     #

@@ -194,10 +194,48 @@ def run_ibl_health_check() -> List[Dict]:
                     "success": rs_ok, "response_ms": 0,
                     "data_quality": "ok" if rs_ok else "error",
                     "error_message": None if rs_ok else rs_note})
+    # §1E 침묵-실패 회귀 스위트 (2026-08-08 — 3방식 실험 12회의 상설 전환) —
+    # 문법층 D1~D6 + 통화층 P1~P19. 캠페인이 부류 단위로 닫은 침묵 실패들이
+    # 다시 열리면 12시간 내 여기서 깃발이 선다. subprocess=테스트가 패키지 모듈을
+    # 자체 로드하므로 라이브 프로세스 무접촉(red_safety 와 같은 이유).
+    out.append(_run_silent_failure_regression(_root))
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})
     return out
+
+
+def _run_silent_failure_regression(_root) -> Dict:
+    """침묵-실패 회귀 순찰(§1E) — 두 회귀 파일을 백엔드 인터프리터로 실행해 한 항목으로 기록.
+
+    성공=둘 다 rc 0. 실패 시 어느 파일의 어떤 케이스인지 출력 꼬리를 동반한다.
+    """
+    import subprocess
+    suites = ["backend/test_ibl_silent_failures.py", "backend/test_pipe_currency_failures.py"]
+    t0 = _time.time()
+    for rel in suites:
+        script = _root / rel
+        if not script.exists():
+            return {"node": "__static__", "action": "silent_failure_regression",
+                    "success": False, "response_ms": 0, "data_quality": "error",
+                    "error_message": f"{rel} 없음"}
+        try:
+            proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                                  capture_output=True, text=True, timeout=180)
+        except Exception as e:
+            return {"node": "__static__", "action": "silent_failure_regression",
+                    "success": False, "response_ms": int((_time.time() - t0) * 1000),
+                    "data_quality": "error",
+                    "error_message": f"{rel} 실행 실패: {str(e)[:150]}"}
+        if proc.returncode != 0:
+            tail = ((proc.stderr or "").strip() or (proc.stdout or "").strip())[-200:]
+            return {"node": "__static__", "action": "silent_failure_regression",
+                    "success": False, "response_ms": int((_time.time() - t0) * 1000),
+                    "data_quality": "regression_failure",
+                    "error_message": f"{Path(rel).name} rc={proc.returncode}: {tail}"}
+    return {"node": "__static__", "action": "silent_failure_regression",
+            "success": True, "response_ms": int((_time.time() - t0) * 1000),
+            "data_quality": "ok", "error_message": None}
 
 
 def run_maintenance_bundle() -> Dict:
@@ -720,6 +758,7 @@ def get_ibl_health_status() -> Dict:
     KEYS = [
         ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
         ("__static__", "red_safety", "자기수정 안전장치 — 게이트·그랜트·롤백 기능"),
+        ("__static__", "silent_failure_regression", "침묵-실패 회귀 — 문법 D1~D6 + 통화 P1~P19"),
         ("__ibl_health__", "currency", "통화 규약 — 실행 결과 형태"),
         ("__ibl_health__", "golden_pipes", "파이프 흐름 — 액션 조합(>>)"),
         ("__ibl_health__", "description_drift", "설명 정합 — 어휘 설명 최신성"),

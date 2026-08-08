@@ -304,6 +304,8 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 | 3. 해마 데이터 | 합성 용례 + 학습 JSON | 에이전트가 연상 못 함 |
 | 4. 임베딩 | `rebuild_index()` | 시맨틱 검색 불가 |
 | 5. 확인 | 등록 + 연상 + 실행 | 배포 후 장애 |
+| 5.5. **계약 프로브** | desc·가이드가 약속한 계약을 **하나씩 실측으로 두드린다** — 통화 승격, 절단 신고(total/truncated), 실패의 정직성(exit·에러), 파라미터 오용 거부. **파괴적 쓰기 어휘는 필수 + 반드시 사본으로.** | 침묵 실패가 출하됨 — "success:true 인데 그럴듯하게 틀림"은 사용자가 못 잡는다 (3방식 실험 12회의 교훈: 결함 20종 전부 이 부류. 실측 사례=실험 9 [self:script]·실험 10 [self:sheet]) |
 | (선택) 앱 표면 | src에 `app:` 블록 | 앱 모드 계기로 안 보임 (에이전트 사용엔 무관) |
 
 **1~4(+items/scalar이면 2.5)를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**
+계약 프로브(5.5)에서 잡은 결함은 수리 후 `backend/test_pipe_currency_failures.py`에 재현 케이스로 박제할 것 — 그 파일이 12시간 자가점검(`__static__:silent_failure_regression`)의 순찰 대상이다.

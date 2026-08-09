@@ -39,7 +39,7 @@ actions:
     runs_on: pc_only
     description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
     group: lecture
-    target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book(빈티지북 기본)/blueprint(청사진)/architect(아키텍트)/ink_orange(먹과 주황), 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+instruction(통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
+    target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book(빈티지북 기본)/blueprint(청사진)/architect(아키텍트)/ink_orange(먹과 주황), 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+(instruction=이미지 모델 최소 편집 | overlay_text=결정론 글자 얹기 — 재생성 없이 현재 그림 위 문구 합성, overlay_position(9방, 기본 bottom-right) 또는 overlay_x/overlay_y(자유 좌표 — 박스 좌상단 %, position 보다 우선)/overlay_size(small|medium|large) 또는 overlay_size_vw(자유 크기 — 폭 %)/overlay_font(sans|serif|gowun|jua|black|pen|brush)/overlay_shadow(그림자, 기본 없음)/overlay_color(white|black|#hex)/overlay_chip(반투명 배경칩)/overlay_clear(얹은 글자 전부 제거·원본 복원)/overlay_set(오버레이 객체 배열로 전체 교체 — 배치 편집기 저장, 빈 배열=원본 복원). 통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
     target_key: op
     router: handler
     tool: slide_op
@@ -48,9 +48,9 @@ actions:
         create: 슬라이드 생성 (instruction, AI 호출 — lecture_id 없으면 스크래치 덱에 등록)
         edit: 슬라이드 편집 (slide_id+instruction, AI 호출)
         delete: 슬라이드 삭제 (slide_id)
-        patch: 필드 직접 수정 (slide_id+patch, AI 우회)
+        patch: 필드 직접 수정 (slide_id+patch, AI 우회 — composite 는 글자만·그림 보존 재합성)
         rerender: 재렌더링 (slide_id, AI 우회)
-        image_edit: 이미지 부분수정 (slide_id+instruction, 통짜 이미지/이미지 슬라이드만 — 다시 그리지 않고 현재 PNG 편집)
+        image_edit: 이미지 부분수정 (slide_id + instruction=모델 편집 | overlay_text=결정론 글자 얹기)
     implementation: handler.py가 op로 분기. create/edit/image_edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
     keywords:
     - 슬라이드 만들기
@@ -211,10 +211,46 @@ tool_json:
           description: create/edit 옵션 — HTML 렌더의 구조 강제. 보통은 **지정하지 말 것**(AI가 내용을 보고 고른다). 지정하면 그 한 장은 HTML 경로로 그려진다 — 구조 레이아웃(hero/lecture_body/metaphor_story/comparison_table/factbox/quote/일러스트형)·마케팅(hero_image/features/stats/testimonial/pricing/cta/content_image/steps)은 shadcn 컴포넌트, custom 은 자유 Tailwind HTML.
         patch:
           type: object
-          description: patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부.
+          description: patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부. 이미지+글자(composite) 슬라이드는 텍스트 필드만(title/kicker/subtitle/body/bullets/captions/labels/steps) — 보존된 원료 일러스트로 재합성(그림 불변·AI 0). native/image 통짜는 patch 불가(재생성 경로).
         user_image_path:
           type: string
           description: create/edit 옵션 — 이 이미지 파일이 들어간 슬라이드를 조판. 렌더러가 base64 임베드, vision 으로 내용을 보고 텍스트를 맞춤. 첨부 시 HTML(shadcn) 경로 강제(통짜 이미지는 파일을 못 담음).
+        overlay_text:
+          type: string
+          description: image_edit — 결정론 '글자 얹기'. 이미지 모델 없이 현재 그림 위에 이 문구만 합성(그림 픽셀 보존). 원본은 자동 보존되어 다시 얹거나 지울 수 있음.
+        overlay_position:
+          type: string
+          description: image_edit+overlay_text 옵션 — 위치 9방 (top-left|top|top-right|left|center|right|bottom-left|bottom|bottom-right, 기본 bottom-right)
+        overlay_x:
+          type: number
+          description: image_edit+overlay_text 옵션 — 자유 좌표, 박스 좌상단의 슬라이드 폭 % (0~100). overlay_y 와 함께 주면 position 보다 우선
+        overlay_y:
+          type: number
+          description: image_edit+overlay_text 옵션 — 자유 좌표, 박스 좌상단의 슬라이드 높이 % (0~100)
+        overlay_size:
+          type: string
+          description: image_edit+overlay_text 옵션 — 글자 크기 (small 기본|medium|large)
+        overlay_size_vw:
+          type: number
+          description: image_edit+overlay_text 옵션 — 자유 글자 크기, 슬라이드 폭의 % (0.5~12, size 보다 우선)
+        overlay_font:
+          type: string
+          description: image_edit+overlay_text 옵션 — 서체 (sans 고딕 기본|serif 명조|gowun 고운바탕|jua 둥근 제목|black 헤드라인|pen 손글씨|brush 붓글씨)
+        overlay_shadow:
+          type: boolean
+          description: image_edit+overlay_text 옵션 — true면 글자 그림자 (기본 없음 — 배경과 색이 비슷해 안 보일 때만)
+        overlay_color:
+          type: string
+          description: image_edit+overlay_text 옵션 — 글자색 (white 기본|black|#hex)
+        overlay_chip:
+          type: boolean
+          description: image_edit+overlay_text 옵션 — true면 반투명 배경칩 위에 글자(밝은 그림에서 가독성)
+        overlay_clear:
+          type: boolean
+          description: image_edit — true면 얹은 글자 전부 제거하고 원본 복원 (overlay_text와 같이 주면 지우고 그 문구 하나만)
+        overlay_set:
+          type: array
+          description: image_edit — 오버레이 객체 배열({text, x, y, size_vw, font, color, chip})로 전체 교체. 배치 편집기의 저장 경로, 빈 배열=원본 복원
       required:
       - op
   - name: material_op

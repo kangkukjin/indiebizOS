@@ -19,7 +19,7 @@ import type {
 import { buildDesignSystem, parseDesignSystem } from '../lib/api-lecture-workspace';
 import type { RenderMode } from '../lib/api-lecture-workspace';
 // 서브컴포넌트 층 분리 (2026-07-18 모듈화 — 1500줄 규칙): lecture/ 참조.
-import { SlideSpecEditor, isBakedImageSlide } from './lecture/editor';
+import { SlideSpecEditor, canFieldEdit } from './lecture/editor';
 import { MaterialsPanel, DeckPanel } from './lecture/panels';
 import { AIChatPanel, formatDate } from './lecture/chat';
 import { RenderSelect, ToneSelect, reconcileRender, useDesignMatrix } from './lecture/design-axes';
@@ -572,12 +572,12 @@ function WorkspaceBody(props: {
           canPrev={previewIndex > 0}
           canNext={previewIndex < order.length - 1}
           onEdit={
-            isBakedImageSlide(loaded.deck.slides[previewSlideId].layout)
-              ? undefined
-              : () => {
+            canFieldEdit(loaded.deck.slides[previewSlideId].layout)
+              ? () => {
                   setSpecEditSlideId(previewSlideId);
                   setPreviewSlideId(null);
                 }
+              : undefined
           }
         />
       )}

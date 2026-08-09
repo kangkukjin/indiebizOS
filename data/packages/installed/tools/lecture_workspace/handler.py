@@ -25,6 +25,14 @@ if _BACKEND_DIR not in sys.path:
 import lecture_store  # noqa: E402
 import slide_ai  # noqa: E402
 import lecture_export  # noqa: E402
+import slide_edit_ops  # noqa: E402  (image_edit·글자 얹기 — 1500줄 규칙 분할 2026-08-10)
+
+# 분할 이전 이름으로 부르는 내부 호출·디스패처를 위한 별칭
+_BAKED_LAYOUTS = slide_edit_ops.BAKED_LAYOUTS
+_load_slide_native = slide_edit_ops.load_slide_native
+_load_slide_overlay = slide_edit_ops.load_slide_overlay
+_discard_overlay_state = slide_edit_ops.discard_overlay_state
+_slide_image_edit = slide_edit_ops.slide_image_edit
 
 
 # 앱/수동 모드가 쓰는 시스템 프로젝트 — 이들이 만든 강의는 전역에 둔다(현행 유지).
@@ -272,6 +280,7 @@ def _slide_delete(tool_input: dict) -> str:
     if not lecture_id or not slide_id:
         return _err("lecture_id와 slide_id 모두 필수입니다.")
     result = lecture_store.delete_slide(lecture_id, slide_id)
+    _discard_overlay_state(lecture_store.slides_dir(lecture_id), slide_id)
     return _ok(result)
 
 
@@ -333,7 +342,7 @@ def _material_remove(tool_input: dict) -> str:
 #   native    통짜 이미지(이미지 모델이 글자까지 그림)
 #   composite 이미지+글자 합성(타이포 레이어가 PNG로 구워짐)
 #   image     강의자가 업로드한 원본 이미지
-_BAKED_LAYOUTS = ("native", "composite", "image")
+#   (_BAKED_LAYOUTS 정의는 slide_edit_ops.BAKED_LAYOUTS — 상단 별칭)
 
 
 def _load_slide_tones():
@@ -406,17 +415,6 @@ def _load_slide_image():
     spec = importlib.util.spec_from_file_location("slide_image", str(path))
     mod = importlib.util.module_from_spec(spec)
     _sys.modules["slide_image"] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _load_slide_native():
-    import importlib.util
-    import sys as _sys
-    path = Path(__file__).resolve().parent.parent / "media_producer" / "slide_native.py"
-    spec = importlib.util.spec_from_file_location("slide_native", str(path))
-    mod = importlib.util.module_from_spec(spec)
-    _sys.modules["slide_native"] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -1042,6 +1040,12 @@ def _slide_patch_spec(tool_input: dict) -> str:
     except Exception as e:
         return _err(f"spec 파일 읽기 실패: {e}")
 
+    # 이미지+글자(composite) 슬라이드: 글자는 spec 에 구조화 데이터로, 원료 일러스트는
+    # {slide_id}_img.png 로 보존돼 있다 → 텍스트 필드만 patch 하고 그림 재사용 재합성(AI 0).
+    if spec.get("layout") == "composite":
+        return _patch_composite_slide(
+            lecture_id, slide_id, deck, spec, spec_file, patch, slides_dir_path)
+
     # 통짜 이미지(native)·업로드 이미지(image) **슬라이드**는 글자가 PNG에 구워져 있어 spec patch→HTML
     # 재렌더가 불가능하다(HTML 렌더기가 native/image spec을 못 그림). 그 슬라이드만 재생성 경로로 안내.
     # ★판단 기준은 덱이 아니라 *이 슬라이드의 layout*이다 — 덱이 native여도 그 안에 끼운 텍스트형(HTML)
@@ -1095,6 +1099,83 @@ def _slide_patch_spec(tool_input: dict) -> str:
     })
 
 
+# 이미지+글자(composite) 슬라이드에서 직접 patch 가능한 텍스트 필드 —
+# slide_image.COMPOSITIONS 템플릿이 소비하는 글자 어휘의 합집합. scene/composition/style 은
+# 그림·조판 정체라 재생성 경로로만(바꾸면 원료 일러스트와 안 맞음).
+_COMPOSITE_TEXT_KEYS = {"title", "kicker", "subtitle", "body", "bullets",
+                        "captions", "labels", "steps"}
+
+
+def _patch_composite_slide(
+    lecture_id: str, slide_id: str, deck: dict, spec: dict, spec_file,
+    patch: dict, slides_dir_path,
+) -> str:
+    """이미지+글자(composite) 슬라이드의 텍스트 필드만 patch — 보존된 원료 일러스트로 재합성.
+
+    이미지 모델 호출 0: 글자 얹기와 같은 원리(그림 불변, 글자만 다시 조판).
+    """
+    bad = sorted(k for k in patch if k not in _COMPOSITE_TEXT_KEYS)
+    if bad:
+        return _err(
+            f"이미지+글자 슬라이드는 텍스트 필드만 직접 수정할 수 있습니다: {sorted(_COMPOSITE_TEXT_KEYS)}. "
+            f"거부된 키: {bad}. 그림·구도를 바꾸려면 재생성(edit)을 쓰세요.",
+            error_type="validation",
+        )
+    img_path = slides_dir_path / f"{slide_id}_img.png"
+    if not img_path.exists():
+        return _err(
+            f"원료 일러스트가 없어 재합성할 수 없습니다: {img_path.name}. 슬라이드를 재생성하세요.",
+            error_type="not_found",
+        )
+
+    for key, value in patch.items():
+        if value is None:
+            spec.pop(key, None)
+        else:
+            spec[key] = value
+
+    style = (spec.get("style") or "").strip()
+    si = _load_slide_image()
+    png_path = slides_dir_path / f"{slide_id}.png"
+    result = json.loads(si.recompose_image_slide(spec, style, str(img_path), str(png_path)))
+    if not result.get("success"):
+        return _err(result.get("message") or "재합성 실패", error_type="render_error")
+
+    with open(spec_file, "w", encoding="utf-8") as f:
+        json.dump(spec, f, ensure_ascii=False, indent=2)
+
+    # 얹은 글자(text_overlays)가 있으면: 새 합성판이 새 '원본' — base 교체 후 오버레이 재적용
+    meta = deck["slides"][slide_id]
+    overlays = list(meta.get("text_overlays") or [])
+    if overlays:
+        import shutil
+        orig = slides_dir_path / f"{slide_id}.base.png"
+        shutil.copy2(png_path, orig)
+        so = _load_slide_overlay()
+        r2 = json.loads(so.compose(str(orig), overlays, str(png_path)))
+        if not r2.get("success"):
+            print(f"[slide_patch] 얹은 글자 재적용 실패(글자 없이 진행): {r2.get('error')}")
+    else:
+        _discard_overlay_state(slides_dir_path, slide_id)
+
+    from datetime import datetime
+    if isinstance(patch.get("title"), str) and patch["title"].strip():
+        meta["title"] = patch["title"].strip()
+    meta["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    lecture_store.write_deck(lecture_id, deck)
+
+    return _ok({
+        "slide_id": slide_id,
+        "mode": "patch",
+        "layout": "composite",
+        "patched_keys": sorted(patch.keys()),
+        "composition": result.get("composition"),
+        "png_file": meta.get("png_file"),
+        "png_path": str(png_path.resolve()),
+        "message": "글자만 다시 조판했습니다 (그림·이미지 모델 호출 없음).",
+    })
+
+
 def _slide_edit(tool_input: dict) -> str:
     lecture_id = (tool_input.get("lecture_id") or "").strip()
     slide_id = (tool_input.get("slide_id") or "").strip()
@@ -1118,64 +1199,9 @@ def _slide_edit(tool_input: dict) -> str:
         user_image_path=user_image_path,
         render=(tool_input.get("render") or "").strip() or None,
     )
+    # 재생성으로 PNG가 새 픽셀이 됐다 — 얹은 글자 원본 백업은 폐기 (메타는 register가 교체)
+    _discard_overlay_state(lecture_store.slides_dir(lecture_id), slide_id)
     return _ok(result)
-
-
-def _slide_image_edit(tool_input: dict) -> str:
-    """통짜 이미지/업로드 이미지 슬라이드를 '부분 수정' — 다시 그리지 않고 현재 PNG를 편집.
-
-    제목 한 줄만 바꾸려고 전체 재생성하면 비싸고 구도가 달라지는 문제를 해결.
-    layout이 native/image인 슬라이드에만 적용(텍스트 슬라이드는 필드 편집 ✏️ 사용).
-    """
-    lecture_id = (tool_input.get("lecture_id") or "").strip()
-    slide_id = (tool_input.get("slide_id") or "").strip()
-    instruction = (tool_input.get("instruction") or "").strip()
-    if not lecture_id or not slide_id:
-        return _err("lecture_id와 slide_id 모두 필수입니다.")
-    if not instruction:
-        return _err("instruction(수정 요청)은 필수입니다.")
-
-    deck = lecture_store.read_deck(lecture_id)
-    meta = deck.get("slides", {}).get(slide_id)
-    if not meta:
-        return _err(f"슬라이드 없음: {slide_id}", error_type="not_found")
-    if meta.get("layout") not in _BAKED_LAYOUTS:
-        return _err(
-            "이미지 부분 수정은 글자가 이미지에 구워진 슬라이드에서만 됩니다. "
-            "텍스트 슬라이드는 필드 편집(✏️)을 쓰세요.",
-            error_type="validation",
-        )
-
-    lecture_dir_path = lecture_store.lecture_dir(lecture_id)
-    slides_dir_path = lecture_store.slides_dir(lecture_id)
-    base_png = lecture_dir_path / (meta.get("png_file") or "")
-    if not base_png.exists():
-        return _err(f"원본 이미지가 없습니다: {base_png}")
-
-    image_quality = (tool_input.get("image_quality") or "pro").strip()
-    ti = {"instruction": instruction}
-    if image_quality == "fast":
-        ti["quality"], ti["image_size"] = "fast", "1K"
-    else:
-        ti["quality"], ti["image_size"] = "pro", "2K"
-
-    sn = _load_slide_native()
-    result = json.loads(sn.edit_native_slide(ti, str(base_png), str(slides_dir_path), slide_id))
-    if not result.get("success"):
-        raise RuntimeError(result.get("message") or "이미지 편집 실패")
-
-    # 썸네일 캐시 버스트 (PNG는 같은 경로로 덮어씀)
-    from datetime import datetime
-    deck["slides"][slide_id]["updated_at"] = datetime.now().isoformat(timespec="seconds")
-    lecture_store.write_deck(lecture_id, deck)
-
-    return _ok({
-        "slide_id": slide_id,
-        "mode": "image_edit",
-        "png_file": meta.get("png_file"),
-        "png_path": str(base_png.resolve()),
-        "title": meta.get("title"),
-    })
 
 
 # ─────────────────────────────────────────────────────────────────────

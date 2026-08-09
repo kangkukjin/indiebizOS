@@ -10,13 +10,18 @@ import type {
   SlideMeta,
 } from '../../lib/api-lecture-workspace';
 
-/** 글자가 PNG에 구워진 슬라이드 — 필드 직접 편집(spec patch → 재렌더) 불가, 재생성만 가능.
- *  native=통짜 이미지 / composite=이미지+글자 합성 / image=업로드한 원본 이미지. */
+/** 글자가 PNG에 구워진 슬라이드 — native=통짜 이미지 / composite=이미지+글자 합성 / image=업로드 원본. */
 export const isBakedImageSlide = (layout: string) =>
   layout === 'native' || layout === 'composite' || layout === 'image';
 
+/** 필드 직접 편집(✏️ spec patch) 가능 여부 — HTML 슬라이드 + composite(글자만 patch,
+ *  보존된 원료 일러스트로 재합성·그림 불변). native/image 는 글자까지 통짜 픽셀이라 불가. */
+export const canFieldEdit = (layout: string) =>
+  layout !== 'native' && layout !== 'image';
+
 const STRING_FIELD_DEFS: Array<{ key: string; label: string; multiline?: boolean }> = [
   { key: 'eyebrow',       label: 'eyebrow (부·장·라벨)' },
+  { key: 'kicker',        label: '킥커 (kicker — 제목 위 짧은 라벨)' },
   { key: 'title',         label: '제목 (title)' },
   { key: 'subtitle',      label: '부제 (subtitle)' },
   { key: 'body',          label: '본문 (body)',           multiline: true },
@@ -41,7 +46,9 @@ const LIST_FIELDS: Array<{ key: string; label: string; hint: string }> = [
   { key: 'items',   label: 'items (factbox — 줄바꿈으로 구분)', hint: '한 줄 = 한 항목' },
 ];
 
-const COMPLEX_FIELDS = ['headers', 'rows', 'columns', 'text_align', 'image_path', 'left_image_path', 'right_image_path', 'image_data', 'left_image_data', 'right_image_data', 'avatar_path'];
+const COMPLEX_FIELDS = ['headers', 'rows', 'columns', 'text_align', 'image_path', 'left_image_path', 'right_image_path', 'image_data', 'left_image_data', 'right_image_data', 'avatar_path',
+  // composite(이미지+글자) 조판의 객체 배열 필드 — Advanced JSON 으로 편집
+  'captions', 'labels', 'steps'];
 
 interface StyleOverrides {
   font_scale?: number;
@@ -298,7 +305,9 @@ export function SlideSpecEditor(props: {
                 </div>
               ))}
 
-              {/* 스타일 조정 — font_scale, text_align, accent_color */}
+              {/* 스타일 조정 — font_scale, text_align, accent_color.
+                  composite(이미지+글자)는 조판 템플릿이 톤을 정하므로 미지원(텍스트 필드만 patch). */}
+              {slide.layout !== 'composite' && (
               <details className="border border-stone-200 rounded" open={Object.keys(styleOverrides).length > 0}>
                 <summary className="px-3 py-2 text-xs text-stone-600 cursor-pointer hover:bg-stone-50">
                   🎨 스타일 조정 (글자 크기·정렬·강조색)
@@ -410,6 +419,7 @@ export function SlideSpecEditor(props: {
                   </div>
                 </div>
               </details>
+              )}
 
               {advancedJson && (
                 <details className="border border-stone-200 rounded">
@@ -543,14 +553,16 @@ export function SlideCard(props: {
           )}
         </div>
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100">
-          {!isBakedImageSlide(slide.layout) && (
+          {canFieldEdit(slide.layout) && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onSpecEdit();
               }}
               className="px-2 py-0.5 bg-black/40 hover:bg-black/70 text-white text-xs rounded"
-              title="필드 직접 편집 (AI 없이 단어·줄 수정)"
+              title={slide.layout === 'composite'
+                ? '글자 직접 편집 (그림은 그대로, 글자만 다시 조판)'
+                : '필드 직접 편집 (AI 없이 단어·줄 수정)'}
             >
               ✏️
             </button>

@@ -63,19 +63,20 @@ TONES = {
     "blueprint": {
         "ko": "청사진",
         "desc": "인디고 선화 + 산호 강조 · 도해·구조",
-        "paths": {"native": "blueprint", "image": None, "html": "blueprint"},
+        "paths": {"native": "blueprint", "image": "blueprint", "html": "blueprint"},
     },
     # 2026-08-07 신설 — The_AI_Architect.pdf 실물 연구에서 증류(native+html 완전판, 빈티지북급).
     "architect": {
         "ko": "아키텍트",
         "desc": "아이보리 + 벽돌·강청 아이소메트릭 도해 · 시스템·전략",
-        "paths": {"native": "architect", "image": None, "html": "architect"},
+        "paths": {"native": "architect", "image": "architect", "html": "architect"},
     },
     # 2026-08-07 신설 — Reinventing_the_Internet_with_Personal_AI.pdf 실물 연구에서 증류(native+html).
+    # (image 자산 3톤 확장: 2026-08-09 — illus=native 화풍의 무글자 판, 팔레트·폰트=html 승계)
     "ink_orange": {
         "ko": "먹과 주황",
         "desc": "아이보리 + 먹 픽토그램 + 주황 흐름 · 대비·선언",
-        "paths": {"native": "ink_orange", "image": None, "html": "ink_orange"},
+        "paths": {"native": "ink_orange", "image": "ink_orange", "html": "ink_orange"},
     },
 }
 

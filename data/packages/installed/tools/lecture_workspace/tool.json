@@ -105,11 +105,59 @@
           },
           "patch": {
             "type": "object",
-            "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부."
+            "description": "patch 필수 — 변경할 필드 객체. None 값은 필드 삭제. layout 키는 거부. 이미지+글자(composite) 슬라이드는 텍스트 필드만(title/kicker/subtitle/body/bullets/captions/labels/steps) — 보존된 원료 일러스트로 재합성(그림 불변·AI 0). native/image 통짜는 patch 불가(재생성 경로)."
           },
           "user_image_path": {
             "type": "string",
             "description": "create/edit 옵션 — 이 이미지 파일이 들어간 슬라이드를 조판. 렌더러가 base64 임베드, vision 으로 내용을 보고 텍스트를 맞춤. 첨부 시 HTML(shadcn) 경로 강제(통짜 이미지는 파일을 못 담음)."
+          },
+          "overlay_text": {
+            "type": "string",
+            "description": "image_edit — 결정론 '글자 얹기'. 이미지 모델 없이 현재 그림 위에 이 문구만 합성(그림 픽셀 보존). 원본은 자동 보존되어 다시 얹거나 지울 수 있음."
+          },
+          "overlay_position": {
+            "type": "string",
+            "description": "image_edit+overlay_text 옵션 — 위치 9방 (top-left|top|top-right|left|center|right|bottom-left|bottom|bottom-right, 기본 bottom-right)"
+          },
+          "overlay_x": {
+            "type": "number",
+            "description": "image_edit+overlay_text 옵션 — 자유 좌표, 박스 좌상단의 슬라이드 폭 % (0~100). overlay_y 와 함께 주면 position 보다 우선"
+          },
+          "overlay_y": {
+            "type": "number",
+            "description": "image_edit+overlay_text 옵션 — 자유 좌표, 박스 좌상단의 슬라이드 높이 % (0~100)"
+          },
+          "overlay_size": {
+            "type": "string",
+            "description": "image_edit+overlay_text 옵션 — 글자 크기 (small 기본|medium|large)"
+          },
+          "overlay_size_vw": {
+            "type": "number",
+            "description": "image_edit+overlay_text 옵션 — 자유 글자 크기, 슬라이드 폭의 % (0.5~12, size 보다 우선)"
+          },
+          "overlay_font": {
+            "type": "string",
+            "description": "image_edit+overlay_text 옵션 — 서체 (sans 고딕 기본|serif 명조|gowun 고운바탕|jua 둥근 제목|black 헤드라인|pen 손글씨|brush 붓글씨)"
+          },
+          "overlay_shadow": {
+            "type": "boolean",
+            "description": "image_edit+overlay_text 옵션 — true면 글자 그림자 (기본 없음 — 배경과 색이 비슷해 안 보일 때만)"
+          },
+          "overlay_color": {
+            "type": "string",
+            "description": "image_edit+overlay_text 옵션 — 글자색 (white 기본|black|#hex)"
+          },
+          "overlay_chip": {
+            "type": "boolean",
+            "description": "image_edit+overlay_text 옵션 — true면 반투명 배경칩 위에 글자(밝은 그림에서 가독성)"
+          },
+          "overlay_clear": {
+            "type": "boolean",
+            "description": "image_edit — true면 얹은 글자 전부 제거하고 원본 복원 (overlay_text와 같이 주면 지우고 그 문구 하나만)"
+          },
+          "overlay_set": {
+            "type": "array",
+            "description": "image_edit — 오버레이 객체 배열({text, x, y, size_vw, font, color, chip})로 전체 교체. 배치 편집기의 저장 경로, 빈 배열=원본 복원"
           }
         },
         "required": [

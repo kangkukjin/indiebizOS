@@ -247,8 +247,10 @@ export interface ElectronAPI {
   // OS 드래그앤드롭 File 객체 → 절대경로 (Electron 32+ 에서 File.path 제거된 정식 대체)
   getPathForFile?: (file: File) => string;
 
-  // 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 — path=로컬 원본 즉시, url=받아서.
-  dragOutFile?: (payload: { url?: string; path?: string; name: string; mtime?: string }) => void;
+  // 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 — path/paths=로컬 원본 즉시, url=받아서.
+  dragOutFile?: (payload: {
+    url?: string; path?: string; paths?: string[]; name?: string; mtime?: string;
+  }) => void;
   dragOutCancel?: () => void;
 }
 

@@ -107,12 +107,14 @@
 
 여러 장을 **하나의 덱으로 묶어 관리**(순서·편집·재생성·내보내기)하려면 `[self:lecture]` 워크스페이스를 쓴다. 렌더는 동일하게 native다.
 
-- `[self:lecture]{op:"create", title, audience?, thesis?}` — 덱 생성. `design_system` 은 **`<렌더 접두>_<톤>`** 문법(접두 없음 = html): `native_vintage_book`(기본·통짜 이미지) / `image_vintage_book`(이미지+글자 합성) / `ink_orange`(HTML). 두 축이 문자열 하나에 인코딩된다.
+- `[self:lecture]{op:"create", title, audience?, thesis?}` — 덱 생성. `design_system` 은 **`<렌더 접두>_<톤>`** 문법(접두 없음 = html): `native_vintage_book`(기본·통짜 이미지) / `image_vintage_book`(이미지+글자 합성) / `ink_orange`(HTML). 두 축이 문자열 하나에 인코딩된다. **4톤(vintage_book·blueprint·architect·ink_orange) × 3렌더 전부 지원**(2026-08-09 이미지+글자 3톤 확장 — illus=native 화풍의 무글자 판, 팔레트·폰트=HTML 판 승계).
 - `[self:slide]{op:"create", lecture_id, instruction, content?}` — 덱에 한 장 추가(native 저작). `op:"edit"`로 특정 장 재생성, `op:"delete"`/순서 조정.
 - `[self:slide]{op:"image_edit", lecture_id, slide_id, instruction}` — **통짜 이미지/이미지 슬라이드 부분수정**: 다시 그리지 않고 현재 PNG를 편집(제목 한 줄만 바꾸기 등). 전체 재생성보다 싸고 구도가 유지된다. 글자가 PNG에 구워진 장(layout이 `native`/`composite`/`image`)에만 — HTML 슬라이드는 `op:"patch"` 필드 편집.
+- `[self:slide]{op:"image_edit", lecture_id, slide_id, overlay_text:"자료: 국토부 2026", overlay_position:"bottom-right"}` — **결정론 '글자 얹기'**: 이미지 모델을 부르지 않고 현재 그림 위에 문구만 합성(그림 픽셀 완전 보존·즉시·무료). "이미지 구석에 한 줄만 넣고 싶다"가 이 경로 — instruction(모델 편집)과 달리 그림이 절대 안 달라진다. 옵션 `overlay_position`(9방: top-left|top|top-right|left|center|right|bottom-left|bottom|bottom-right, 기본 bottom-right) 또는 **자유 좌표** `overlay_x`/`overlay_y`(박스 좌상단, 슬라이드 폭·높이의 % — position 보다 우선)·`overlay_size`(small|medium|large) 또는 `overlay_size_vw`(자유 크기, 폭의 % 0.5~12)·`overlay_font`(sans 고딕|serif 명조|gowun 고운바탕|jua 둥근 제목|black 헤드라인|pen 손글씨|brush 붓글씨 — 웹폰트는 Google Fonts, 오프라인=시스템 폴백)·`overlay_shadow`(글자 그림자, **기본 없음** — 배경과 색이 비슷해 안 보일 때만 true)·`overlay_color`(white|black|#hex)·`overlay_chip`(true=반투명 배경칩)·`overlay_set`(오버레이 객체 배열로 전체 교체 — 강의 창 🎯 배치 편집기의 저장 경로, 빈 배열=원본 복원). 강의 창에서는 **🎯 배치 편집**(글자 얹기 모드)으로 글자 박스를 마우스 드래그·크기 슬라이더·서체·색 피커로 PowerPoint식 직접 조작 가능. 원본은 `{slide_id}.base.png` 로 자동 보존되어 여러 번 얹어도 겹겹이 안 구워지고, `overlay_clear:true` 로 전부 지우고 원본 복원. 이후 모델 편집(instruction)·재생성을 하면 얹은 글자는 그 픽셀에 구워진 것으로 확정된다.
+- `[self:slide]{op:"patch", lecture_id, slide_id, patch:{title:"..."}}` — **이미지+글자(composite) 슬라이드의 글자 직접 수정**: 텍스트 필드(title/kicker/subtitle/body/bullets/captions/labels/steps)만 patch 하면 보존된 원료 일러스트(`{slide_id}_img.png`)로 **그림 그대로 재합성**(이미지 모델 호출 0, 글자 얹기와 같은 원리). 강의 창에서는 composite 카드의 ✏️(글자 직접 편집). scene·composition·style 변경은 재생성(edit) 경로. native/image 통짜는 여전히 patch 불가.
 - 덱은 폴더 단위로 영속(슬라이드 PNG + deck.json).
 - **동영상**: `[self:deck]{op:"video", lecture_id}` — 슬라이드+스피커 노트를 TTS 나레이션 MP4 로(백그라운드, video_workflow.md 참조).
-- **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존됨). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다.
+- **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존되지만, **'글자 얹기'로 올린 문구는 원본 그림 + 편집 가능한 진짜 텍스트박스**로 분해되어 PPT에서 수정·이동 가능). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다.
 
 > native 덱은 톤만 다시 입히는 rerender가 아니라 **재생성**(edit/create)이 맞다 — 통짜 이미지라 그렇다.
 

@@ -14,6 +14,7 @@ import type {
   Deck,
   SlideCreateResponse,
 } from '../../lib/api-lecture-workspace';
+import { OverlayEditor } from './overlay-editor';
 
 interface ChatMessage {
   role: 'user' | 'ai' | 'system';
@@ -45,6 +46,8 @@ export function AIChatPanel(props: {
   const [input, setInput] = useState('');
   const [imageQuality, setImageQuality] = useState<'pro' | 'fast'>('pro'); // 이미지 품질
   const [editMode, setEditMode] = useState<'image' | 'regen'>('image'); // 통짜 편집: 부분수정 vs 전체재생성
+  // 🅰 글자 얹기 = 곧장 드래그 배치 편집기 (박스별 위치·문구·서체·크기·색 전부 편집기 안에서)
+  const [showOverlayEditor, setShowOverlayEditor] = useState(false);
   const [busy, setBusy] = useState(false);
   // 채팅 첨부 이미지 — "이 이미지가 들어간 슬라이드"를 조판 (shadcn hero_image/content_image/custom)
   const [attachedImage, setAttachedImage] = useState<{ name: string; dataUrl: string } | null>(null);
@@ -243,7 +246,7 @@ export function AIChatPanel(props: {
             🔄 spec 그대로 재렌더 (현재 디자인 적용)
           </button>
         )}
-        {mode === 'edit' && focusNative && (
+        {mode === 'edit' && focusBaked && (
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-stone-500 shrink-0">수정</label>
             <div className="flex gap-1 flex-1">
@@ -262,17 +265,28 @@ export function AIChatPanel(props: {
               </button>
               <button
                 type="button"
-                onClick={() => setEditMode('regen')}
+                onClick={() => setShowOverlayEditor(true)}
                 disabled={busy}
-                title="처음부터 다시 그림 (구도·그림이 달라질 수 있음)"
-                className={`flex-1 px-2 py-1 text-xs rounded border ${
-                  editMode === 'regen'
-                    ? 'bg-stone-800 text-white border-stone-800'
-                    : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
-                } disabled:opacity-50`}
+                title="이미지 모델 없이 글자만 그림 위에 얹는 배치 편집기 — 박스를 드래그로 놓고 문구·서체·크기·색을 자유로 (그림 픽셀 완전 보존, 즉시·무료)"
+                className="flex-1 px-2 py-1 text-xs rounded border bg-white text-stone-700 border-stone-300 hover:border-stone-500 disabled:opacity-50"
               >
-                🔁 전체 재생성
+                🅰 글자 얹기
               </button>
+              {focusNative && (
+                <button
+                  type="button"
+                  onClick={() => setEditMode('regen')}
+                  disabled={busy}
+                  title="처음부터 다시 그림 (구도·그림이 달라질 수 있음)"
+                  className={`flex-1 px-2 py-1 text-xs rounded border ${
+                    editMode === 'regen'
+                      ? 'bg-stone-800 text-white border-stone-800'
+                      : 'bg-white text-stone-700 border-stone-300 hover:border-stone-500'
+                  } disabled:opacity-50`}
+                >
+                  🔁 재생성
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -373,6 +387,24 @@ export function AIChatPanel(props: {
           보내기
         </button>
       </div>
+      {showOverlayEditor && focusSlideId && (
+        <OverlayEditor
+          lectureId={deck.lecture_id}
+          slideId={focusSlideId}
+          initial={focusedSlide?.text_overlays || []}
+          onSaved={(count) => {
+            setMessages((m) => [...m, {
+              role: 'ai',
+              text: count > 0
+                ? `🎯 글자 배치 저장됨 (얹은 글자 ${count}개, 그림 픽셀 그대로) — ${focusSlideId}`
+                : `🧹 얹은 글자를 모두 지우고 원본을 복원했습니다 — ${focusSlideId}`,
+              slideId: focusSlideId, mode: 'edit',
+            }]);
+            onChange();
+          }}
+          onClose={() => setShowOverlayEditor(false)}
+        />
+      )}
     </aside>
   );
 }

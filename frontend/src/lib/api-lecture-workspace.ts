@@ -25,6 +25,22 @@ export interface SlideMeta {
   created_at: string;
   updated_at: string;
   speaker_note?: string;  // 강의 노트(말할 내용) — 선택 시 좌측 하단에 표시/편집
+  text_overlays?: TextOverlay[];  // '글자 얹기' — 원본(base.png) 위 합성 문구 목록
+}
+
+/** '글자 얹기' 한 건 — x/y(% 좌상단·자유 좌표)가 있으면 position(9방)보다 우선. */
+export interface TextOverlay {
+  text: string;
+  position?: string;   // 9방: top-left … bottom-right
+  x?: number;          // 자유 좌표 — 슬라이드 폭의 % (박스 좌상단)
+  y?: number;          // 자유 좌표 — 슬라이드 높이의 %
+  size?: string;       // small/medium/large
+  size_vw?: number;    // 자유 크기 — 슬라이드 폭의 %
+  font?: string;       // sans(기본)/serif/gowun/jua/black/pen/brush
+  color?: string;      // white/black/#hex
+  chip?: boolean;
+  shadow?: boolean;    // 글자 그림자 (기본 없음)
+  weight?: string;     // 'normal'만 저장 — 기본은 semi-bold(600)
 }
 
 export interface CumulativeMemo {
@@ -361,6 +377,42 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       );
     },
 
+    /**
+     * 결정론 '글자 얹기' — 이미지 모델 없이 현재 슬라이드 PNG 위에 문구만 합성.
+     * 그림 픽셀 보존(원본 자동 보존), clear=true 는 얹은 글자 제거·원본 복원.
+     */
+    async textOverlaySlide(
+      lectureId: string,
+      slideId: string,
+      opts: {
+        text?: string;
+        position?: string;
+        x?: number;
+        y?: number;
+        size?: string;
+        size_vw?: number;
+        font?: string;
+        color?: string;
+        chip?: boolean;
+        clear?: boolean;
+        overlays?: TextOverlay[];  // 전체 교체 (배치 편집기 저장)
+      },
+    ) {
+      return client.request<{
+        success: boolean;
+        slide_id: string;
+        mode: 'text_overlay';
+        overlays: number;
+        text_overlays?: TextOverlay[];
+        png_file: string;
+        title?: string;
+        message?: string;
+      }>(
+        `/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/text-overlay`,
+        { method: 'POST', body: JSON.stringify(opts) }
+      );
+    },
+
     async editSlide(
       lectureId: string,
       slideId: string,
@@ -409,6 +461,11 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
     /** 슬라이드 PNG의 HTTP URL — <img src>에 직접 사용. file://보다 안정. */
     slidePngUrl(lectureId: string, slideId: string): string {
       return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png`;
+    },
+
+    /** '글자 얹기' 이전 원본 PNG URL — 배치 편집기의 배경 (얹은 글자 없으면 현재 판). */
+    slideBasePngUrl(lectureId: string, slideId: string): string {
+      return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png?base=true`;
     },
 
     /** 재료 파일의 HTTP URL. */

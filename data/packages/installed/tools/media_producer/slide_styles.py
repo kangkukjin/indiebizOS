@@ -33,6 +33,54 @@ STYLES = {
         "title_font": "'Gowun Batang',serif", "title_weight": "700",
         "font_links": ["https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@500&display=swap"],
     },
+
+    # ── 2026-08-09 확장: 남은 3톤의 이미지+글자 자산 ──────────────────────
+    # illus = native AESTHETICS 의 화풍에서 **글자·라벨 요소를 걷어낸** 순수 일러스트 판
+    # (글자는 HTML 타이포 레이어 몫 — COMMON_SUFFIX 의 no-text 규칙과 한 몸).
+    # 팔레트·폰트 = HTML 판(shadcn_design)과 동일 정체성.
+    "blueprint": {
+        "ko": "청사진",
+        "illus": ("Technical blueprint diagram illustration, indigo ink linework on warm pale-blue "
+            "drafting paper, faint grid and precise leader lines with round anchor dots, exact "
+            "schematic figures drawn with fine even strokes, a single coral accent reserved for "
+            "the key part or flow, engineered and intellectual, clean drafting-table aesthetic."),
+        "dark": False,
+        "bg": "#E9EFF7", "fade": "233,239,247",
+        "title_color": "#26305E", "kicker_color": "#D86541", "sub_color": "#525D7A",
+        "title_font": "'IBM Plex Sans KR','Noto Sans KR',sans-serif", "title_weight": "700",
+        "font_links": ["https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500&display=swap"],
+    },
+    "architect": {
+        "ko": "아키텍트",
+        "illus": ("Systems-architect isometric diagram plate illustration (NotebookLM style), flat "
+            "low-rise isometric slabs and cubes in exactly two block colours — muted brick "
+            "terracotta and desaturated steel blue — plus neutral slate grey, deep slate-navy "
+            "drafting linework with dimension lines, leader lines with round anchor dots and "
+            "measurement arrows, warm ivory paper with a very faint drafting grid and small "
+            "dot-grid patches, occasional fine ink-line mechanical detail, confident systematic "
+            "textbook-plate aesthetic."),
+        "dark": False,
+        "bg": "#EFEAE0", "fade": "239,234,224",
+        "title_color": "#2E3947", "kicker_color": "#CE6440", "sub_color": "#5A6472",
+        "title_font": "'Pretendard Variable','Noto Sans KR',sans-serif", "title_weight": "800",
+        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
+                       "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"],
+    },
+    "ink_orange": {
+        "ko": "먹과 주황",
+        "illus": ("Bold editorial infographic-poster illustration, heavy charcoal-black flat pictogram "
+            "icons drawn with thick uniform ink strokes (objects, machines, houses, networks), "
+            "exactly one vivid orange reserved for FLOW — thick connector lines, arrows, radiating "
+            "arcs, organic road-like networks and circular loops — staging a deliberate contrast "
+            "between black geometric structure and orange organic movement, bright ivory paper, "
+            "graphic declarative poster-like clarity."),
+        "dark": False,
+        "bg": "#F2EFE6", "fade": "242,239,230",
+        "title_color": "#2A2D32", "kicker_color": "#EE5F1C", "sub_color": "#55524B",
+        "title_font": "'Pretendard Variable','Noto Sans KR',sans-serif", "title_weight": "900",
+        "font_links": ["https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css",
+                       "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap"],
+    },
 }
 
 

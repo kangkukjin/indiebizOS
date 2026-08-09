@@ -488,13 +488,22 @@ async def export_deck(lecture_id: str, format: str):
 # ─────────────────────────────────────────────────────────────────────
 
 @router.get("/{lecture_id}/slides/{slide_id}/png")
-async def slide_png(lecture_id: str, slide_id: str):
-    """슬라이드 PNG를 HTTP로 서빙. UI는 <img src> 또는 fetch로 접근."""
+async def slide_png(lecture_id: str, slide_id: str, base: bool = False):
+    """슬라이드 PNG를 HTTP로 서빙. UI는 <img src> 또는 fetch로 접근.
+
+    base=true 면 '글자 얹기' 이전의 원본({slide_id}.base.png)을 우선 서빙 —
+    배치 편집기가 글자 없는 배경 위에 라이브 글자 박스를 그릴 때 쓴다.
+    (원본 백업이 없으면 = 얹은 글자가 없는 슬라이드이므로 현재 PNG 그대로.)
+    """
     ls = _load_lecture_store()
     if not ls.lecture_exists(lecture_id):
         raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
     safe_id = Path(slide_id).name
     png_path = ls.slides_dir(lecture_id) / f"{safe_id}.png"
+    if base:
+        base_path = ls.slides_dir(lecture_id) / f"{safe_id}.base.png"
+        if base_path.exists():
+            png_path = base_path
     if not png_path.exists():
         raise HTTPException(status_code=404, detail=f"슬라이드 PNG 없음: {safe_id}")
     return FileResponse(str(png_path), media_type="image/png")
@@ -653,6 +662,71 @@ async def image_edit_slide(lecture_id: str, slide_id: str, req: SlideImageEditRe
         err_type = result.get("error_type", "")
         status = 400 if err_type in ("validation", "not_found") else 500
         raise HTTPException(status_code=status, detail=result.get("error", "이미지 편집 실패"))
+    return result
+
+
+class SlideTextOverlayRequest(BaseModel):
+    text: Optional[str] = None      # 얹을 문구 (없이 clear만 주면 원본 복원)
+    position: Optional[str] = None  # 9방 (top-left … bottom-right, 기본 bottom-right)
+    x: Optional[float] = None       # 자유 좌표 — 박스 좌상단, 슬라이드 폭의 % (position 보다 우선)
+    y: Optional[float] = None       # 자유 좌표 — 슬라이드 높이의 %
+    size: Optional[str] = None      # small(기본)/medium/large
+    size_vw: Optional[float] = None  # 자유 크기 — 슬라이드 폭의 % (size 보다 우선)
+    font: Optional[str] = None      # sans(기본)/serif
+    color: Optional[str] = None     # white(기본)/black/#hex
+    chip: bool = False              # 반투명 배경칩
+    clear: bool = False             # 얹은 글자 전부 제거·원본 복원
+    # 전체 교체 (드래그 배치 편집기의 저장) — 있으면 위 단건 필드 대신 이 목록이 통째로 적용
+    overlays: Optional[list] = None
+
+
+@router.post("/{lecture_id}/slides/{slide_id}/text-overlay")
+async def text_overlay_slide(lecture_id: str, slide_id: str, req: SlideTextOverlayRequest):
+    """결정론 '글자 얹기' — 이미지 모델 없이 현재 슬라이드 PNG 위에 문구만 합성.
+
+    그림 픽셀 보존(원본은 base.png 로 자동 보존, clear 로 복원). AI 호출 0.
+    overlays(배열)를 주면 전체 교체 — 배치 편집기의 저장 경로.
+    """
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    if req.overlays is None and not (req.text or "").strip() and not req.clear:
+        raise HTTPException(status_code=400, detail="text, overlays 또는 clear=true 가 필요합니다.")
+
+    handler_mod = _load_handler()
+    import json as _json
+    edit_input = {"op": "image_edit", "lecture_id": lecture_id, "slide_id": slide_id}
+    if req.overlays is not None:
+        edit_input["overlay_set"] = req.overlays
+    else:
+        if (req.text or "").strip():
+            edit_input["overlay_text"] = req.text.strip()
+        if req.position:
+            edit_input["overlay_position"] = req.position
+        if req.x is not None:
+            edit_input["overlay_x"] = req.x
+        if req.y is not None:
+            edit_input["overlay_y"] = req.y
+        if req.size:
+            edit_input["overlay_size"] = req.size
+        if req.size_vw is not None:
+            edit_input["overlay_size_vw"] = req.size_vw
+        if req.font:
+            edit_input["overlay_font"] = req.font
+        if req.color:
+            edit_input["overlay_color"] = req.color
+        if req.chip:
+            edit_input["overlay_chip"] = True
+        if req.clear:
+            edit_input["overlay_clear"] = True
+    result_str = await run_in_threadpool(
+        handler_mod.execute, edit_input, _MiniCtx("slide_op"),
+    )
+    result = _json.loads(result_str)
+    if not result.get("success"):
+        err_type = result.get("error_type", "")
+        status = 400 if err_type in ("validation", "not_found") else 500
+        raise HTTPException(status_code=status, detail=result.get("error", "글자 얹기 실패"))
     return result
 
 

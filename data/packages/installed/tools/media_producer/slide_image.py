@@ -392,6 +392,29 @@ def _gen_with_critique(illo_prompt, scene, style, base_img_path, output_base,
     return best_path, best_verdict, attempts
 
 
+def recompose_image_slide(spec: dict, style: str, illustration_path: str, out_path: str) -> str:
+    """저장된 spec + 보존된 원료 일러스트로 **합성만** 다시 — AI·이미지 생성 0.
+
+    글자 필드(title/kicker/subtitle/body/bullets/captions/labels/steps)를 고친 뒤
+    그림은 그대로 두고 조판만 다시 찍는 결정론 경로 (글자 얹기와 같은 원리).
+    """
+    styles_mod = _load_styles()
+    if not styles_mod.is_image_style(style):
+        return json.dumps({"success": False,
+            "message": f"이미지+글자 렌더 톤이 아닙니다: {style!r}"}, ensure_ascii=False)
+    if not os.path.exists(illustration_path):
+        return json.dumps({"success": False,
+            "message": f"원료 일러스트 없음: {illustration_path}"}, ensure_ascii=False)
+    st = styles_mod.STYLES[style]
+    comp = spec.get("composition") if spec.get("composition") in COMPOSITIONS else "diptych"
+    try:
+        _render(COMPOSITIONS[comp](spec, st, _b64(illustration_path)), out_path)
+    except Exception as e:
+        return json.dumps({"success": False, "message": f"재합성 실패: {e}"}, ensure_ascii=False)
+    return json.dumps({"success": True, "image_path": out_path, "composition": comp,
+                       "message": "글자만 다시 조판(그림 보존)."}, ensure_ascii=False)
+
+
 def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id: str = None) -> str:
     """이미지+글자 슬라이드 1장 저작·생성·합성. style = 톤 키(=slide_styles.STYLES).
 

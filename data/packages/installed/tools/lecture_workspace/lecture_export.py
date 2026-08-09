@@ -195,30 +195,44 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
 
     placed = 0
     fallback_image = 0  # spec 파싱 실패 시 이미지로 fallback한 수
+    overlay_boxes = 0  # '글자 얹기' 슬라이드 — 원본 그림 + 텍스트박스로 분해된 수
 
     for sid in slide_order:
         meta = deck.get("slides", {}).get(sid)
         if not meta:
             continue
-        spec_file = lecture_dir / meta.get("spec_file", "")
         slide = prs.slides.add_slide(blank_layout)
 
-        try:
-            if not spec_file.exists():
-                raise FileNotFoundError(f"spec 없음: {spec_file}")
-            import json
-            with open(spec_file, "r", encoding="utf-8") as f:
-                spec = json.load(f)
-            # 글자가 PNG에 구워진 슬라이드(native 통짜 / composite 합성 / image 업로드)는
-            # 분해 불가 — 편집모드 내보내기에서도 이미지 그대로 얹어 비주얼을 보존한다.
-            if spec.get("layout") in ("native", "composite", "image"):
+        # 글자가 PNG에 구워진 슬라이드(native 통짜 / composite 합성 / image 업로드)는
+        # 분해 불가 — 편집모드 내보내기에서도 이미지 그대로 얹어 비주얼을 보존한다.
+        # 단 '글자 얹기'(text_overlays)가 있으면 원본 그림 + 진짜 텍스트박스로 분해:
+        # 얹은 글자는 구조화된 데이터(문구·위치·크기·색)가 살아 있어 PPT에서 편집 가능하게 나간다.
+        if meta.get("layout") in ("native", "composite", "image"):
+            overlays = meta.get("text_overlays") or []
+            base_png = lecture_dir / "slides" / f"{sid}.base.png"
+            if overlays and base_png.exists():
+                slide.shapes.add_picture(
+                    str(base_png), 0, 0, width=prs.slide_width, height=prs.slide_height
+                )
+                for ov in overlays:
+                    _add_overlay_textbox(slide, ov, Emu, Pt)
+                overlay_boxes += 1
+            else:
                 png = lecture_dir / meta.get("png_file", "")
                 if png.exists():
                     slide.shapes.add_picture(
                         str(png), 0, 0, width=prs.slide_width, height=prs.slide_height
                     )
                     fallback_image += 1
-                continue
+            continue
+
+        spec_file = lecture_dir / meta.get("spec_file", "")
+        try:
+            if not spec_file.exists():
+                raise FileNotFoundError(f"spec 없음: {spec_file}")
+            import json
+            with open(spec_file, "r", encoding="utf-8") as f:
+                spec = json.load(f)
             _populate_editable_slide(slide, spec, lecture_dir, Emu, Pt)
             placed += 1
         except Exception as e:
@@ -240,9 +254,11 @@ def export_pptx_editable(lecture_id: str, output_path: Optional[Path] = None) ->
         "format": "pptx",
         "mode": "editable",
         "path": str(output_path.resolve()),
-        "slide_count": placed + fallback_image,
+        "slide_count": placed + fallback_image + overlay_boxes,
         "editable_count": placed,
         "fallback_image_count": fallback_image,
+        # '글자 얹기' 슬라이드 — 원본 그림 + 편집 가능 텍스트박스로 나간 수
+        "overlay_textbox_count": overlay_boxes,
         "filename": output_path.name,
     }
 
@@ -389,6 +405,104 @@ def _add_image_if_any(slide, spec, key, lecture_dir, x_px, y_px, w_px, h_px, Emu
         )
     except Exception as e:
         print(f"[pptx_editable] 이미지 삽입 실패 {key}: {e}")
+
+
+# '글자 얹기' 오버레이 → 텍스트박스 좌표 (slide_overlay.py CSS 어휘의 1280×720 사상)
+_OVERLAY_POSITIONS = {
+    "top-left": ("left", "top"), "top": ("center", "top"), "top-right": ("right", "top"),
+    "left": ("left", "middle"), "center": ("center", "middle"), "right": ("right", "middle"),
+    "bottom-left": ("left", "bottom"), "bottom": ("center", "bottom"),
+    "bottom-right": ("right", "bottom"),
+}
+_OVERLAY_SIZE_VW = {"small": 2.0, "medium": 2.9, "large": 4.0}
+# PPT 서체 사상 — sans/serif 는 Office 표준 한글 서체, 웹폰트 계열은 실제 이름
+# (설치돼 있으면 그대로, 없으면 PPT 가 기본 서체로 폴백)
+_OVERLAY_FONT_NAME = {
+    "sans": "맑은 고딕", "serif": "바탕", "gowun": "Gowun Batang",
+    "jua": "Jua", "black": "Black Han Sans",
+    "pen": "Nanum Pen Script", "brush": "Nanum Brush Script",
+}
+
+
+def _overlay_rgb(color: str):
+    """오버레이 color 어휘(white|black|#hex) → (RGBColor, 어두운 글자 여부)."""
+    from pptx.dml.color import RGBColor
+    c = (color or "white").strip()
+    if c == "black":
+        return RGBColor(0x11, 0x11, 0x11), True
+    if c.startswith("#") and len(c) in (4, 7, 9):
+        hexpart = c[1:7] if len(c) >= 7 else "".join(ch * 2 for ch in c[1:4])
+        try:
+            r, g, b = (int(hexpart[i:i + 2], 16) for i in (0, 2, 4))
+            return RGBColor(r, g, b), (0.299 * r + 0.587 * g + 0.114 * b) < 128
+        except ValueError:
+            pass
+    return RGBColor(0xFF, 0xFF, 0xFF), False
+
+
+def _add_overlay_textbox(slide, ov: dict, Emu, Pt):
+    """'글자 얹기' 1건을 편집 가능 텍스트박스로 — 합성판과 같은 위치·크기·색·서체.
+
+    자유 좌표(x/y% — 박스 좌상단)가 있으면 9방(position)보다 우선(합성기와 같은 규칙).
+    합성판의 그림자(text-shadow)는 PPTX 표현 밖이라 생략, 배경칩은 도형 채움으로 근사.
+    """
+    from pptx.enum.text import PP_ALIGN
+    text = str(ov.get("text") or "").strip()
+    if not text:
+        return
+    size_vw = _OVERLAY_SIZE_VW.get(ov.get("size") or "small", _OVERLAY_SIZE_VW["small"])
+    try:
+        v = float(ov.get("size_vw") or 0)
+        if 0.5 <= v <= 12:
+            size_vw = v
+    except (TypeError, ValueError):
+        pass
+    font_px = int(SLIDE_W_PX * size_vw / 100)
+    rgb, dark_text = _overlay_rgb(ov.get("color"))
+    chip = bool(ov.get("chip"))
+    font_name = _OVERLAY_FONT_NAME.get(ov.get("font") or "sans", _OVERLAY_FONT_NAME["sans"])
+
+    mx, my = 41, 32          # 3.2% / 4.5% 여백
+    w = 896                  # max-width 70%
+    lines = max(1, text.count("\n") + 1)
+    h = int(lines * font_px * 1.4) + (int(font_px * 0.9) if chip else 8)
+    free_xy = None
+    try:
+        fx, fy = float(ov.get("x")), float(ov.get("y"))
+        if -10 <= fx <= 110 and -10 <= fy <= 110:
+            free_xy = (fx, fy)
+    except (TypeError, ValueError):
+        pass
+    if free_xy is not None:
+        # 자유 배치 — 좌상단 % 그대로, 좌측 정렬 (합성기와 동일 규칙)
+        h_align = "left"
+        x = int(SLIDE_W_PX * free_xy[0] / 100)
+        y = int(SLIDE_H_PX * free_xy[1] / 100)
+        w = min(w, max(80, SLIDE_W_PX - x - 8))
+    else:
+        h_align, v_align = _OVERLAY_POSITIONS.get(
+            ov.get("position") or "bottom-right", _OVERLAY_POSITIONS["bottom-right"])
+        x = mx if h_align == "left" else (SLIDE_W_PX - w) // 2 if h_align == "center" else SLIDE_W_PX - mx - w
+        y = my if v_align == "top" else (SLIDE_H_PX - h) // 2 if v_align == "middle" else SLIDE_H_PX - my - h
+
+    tb = slide.shapes.add_textbox(
+        Emu(x * PX_TO_EMU), Emu(y * PX_TO_EMU), Emu(w * PX_TO_EMU), Emu(h * PX_TO_EMU))
+    if chip:
+        from pptx.dml.color import RGBColor
+        tb.fill.solid()
+        tb.fill.fore_color.rgb = RGBColor(0xF2, 0xF2, 0xF2) if dark_text else RGBColor(0x0C, 0x0C, 0x0E)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    for i, line in enumerate(text.split("\n")):
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+        run = p.add_run()
+        run.text = line
+        run.font.size = Pt(round(font_px * 0.75))
+        run.font.bold = ov.get("weight") != "normal"  # 합성판 기본 font-weight 600 대응
+        run.font.name = font_name
+        run.font.color.rgb = rgb
+        p.alignment = {"left": PP_ALIGN.LEFT, "center": PP_ALIGN.CENTER,
+                       "right": PP_ALIGN.RIGHT}[h_align]
 
 
 # ─────────────────────────────────────────────────────────────────────

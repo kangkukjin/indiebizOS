@@ -393,7 +393,7 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             response = lightweight_ai_call(user_message, system_prompt=system_prompt)
 
             if response is None:
-                return "THINK"  # AI 미준비 시 안전하게 판단형으로
+                return "EXECUTE"  # AI 미준비 시 기본값 — 과잉 각성이 더 흔한 오류(2026-08-10 기준 상향)
 
             result = response.strip().upper()
             # SESSION_RESET 우선 검사 (EXECUTE 키워드가 들어있는 경우와 충돌 방지)
@@ -405,4 +405,4 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
 
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")
-            return "THINK"  # 실패 시 안전하게 판단형으로
+            return "EXECUTE"  # 실패 시 기본값 — 실행 에이전트(본격 모델)가 감당, 의식은 장기·위험 전용

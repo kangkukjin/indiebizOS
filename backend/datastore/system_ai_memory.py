@@ -292,6 +292,16 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
             first_line = content.split('\n')[0][:100]
             content = f"[이전 대화: {first_line}... ({len(content)}자)]"
 
+        # user 메시지만 절대 시각 프리픽스 — 시간 접지 (conversation_db._time_prefix 와
+        # 같은 규약: 절대 시각=캐시 안정, assistant 미부착=모방 방지)
+        if role == "user":
+            try:
+                t = str(row[1]).replace("T", " ")[:16]
+                if len(t) == 16:
+                    content = f"[{t}] {content}"
+            except Exception:
+                pass
+
         msg = {"role": role, "content": content}
 
         # 최근 턴만 이미지 로드 (토큰 절약)

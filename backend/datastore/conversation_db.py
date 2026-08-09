@@ -438,11 +438,27 @@ class ConversationDB:
                 "timestamp": row[4]
             } for row in cursor.fetchall()]
 
+    @staticmethod
+    def _time_prefix(message_time) -> str:
+        """user 메시지 머리에 붙일 절대 시각 프리픽스 — 모델의 시간 접지용.
+
+        절대 시각만 쓴다: 상대 표기([3시간 전])는 매 턴 전체 히스토리 라벨이
+        바뀌어 캐시 prefix 를 깨뜨린다(분 단위 시각 캐시 thrash 사건과 같은 부류).
+        현재 시각은 동적 컨텍스트에 이미 있으므로 모델이 경과를 스스로 계산한다.
+        assistant 메시지에는 붙이지 않는다 — 과거 자기 응답의 [시각] 머리를
+        모방해 새 응답에 타임스탬프를 달기 시작하는 위험 방지."""
+        try:
+            t = str(message_time).replace("T", " ")[:16]
+            return f"[{t}] " if len(t) == 16 else ""
+        except Exception:
+            return ""
+
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:
         """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
 
         JetBrains Research 기반: 최근 N턴은 원본 유지, 오래된 턴은 긴 내용 마스킹
         최근 턴의 이미지는 파일에서 로드하여 포함
+        user 메시지에는 절대 시각 프리픽스([YYYY-MM-DD HH:MM])를 붙여 시간 접지
         """
         if limit is None:
             limit = HISTORY_LIMIT_USER
@@ -469,6 +485,10 @@ class ConversationDB:
                 # 최근 N턴은 원본 유지, 오래된 것은 마스킹
                 if idx >= RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
                     content = self._mask_long_content(content)
+
+                # user 메시지만 시각 프리픽스 (시간 접지 — _time_prefix 주석 참조)
+                if role == "user":
+                    content = self._time_prefix(row[2]) + content
 
                 msg = {
                     "role": role,

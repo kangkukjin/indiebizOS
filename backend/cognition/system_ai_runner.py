@@ -101,22 +101,70 @@ class SystemAIRunner:
 
         print("[SystemAIRunner] 시스템 AI 중지됨")
 
+    def _resolve_ai_config(self) -> dict:
+        """위임 경로 모델을 모델 기어 리졸버로 해소.
+
+        agent_id 'system_ai_delegation' 핀이 role 'system_ai'보다 우선 —
+        기본 배치는 overrides 핀=고급(무거운 위임 작업은 본격 유지, 2026-08-09
+        사용자 판정). 핀을 지우면 위임도 기어를 따른다(채팅 경로와 동형).
+        리졸버 실패/모델 미설정 시 옛 system_ai_config 폴백(동작 보존)."""
+        try:
+            from model_resolver import resolve
+            d = resolve("system_ai", agent_id="system_ai_delegation")
+            if d.get("model"):
+                return {
+                    "provider": (d.get("provider") or "anthropic").strip(),
+                    "model": d["model"],
+                    "api_key": d.get("api_key", ""),
+                    "_source": d.get("source", ""),
+                }
+        except Exception as e:
+            print(f"[SystemAIRunner] 기어 해소 실패(옛 config 폴백): {e}")
+        from system_ai_core import load_system_ai_config
+        config = load_system_ai_config()
+        return {
+            "provider": config.get("provider", "anthropic"),
+            "model": config.get("model", "claude-sonnet-4-20250514"),
+            "api_key": config.get("apiKey", ""),
+            "_source": "system_ai_config(fallback)",
+        }
+
+    def _sync_gear(self):
+        """메시지 처리 직전 기어 재해소 — 상주 러너 박제 방지.
+
+        agent_cognitive._sync_execution_gear · system_ai_core.get_system_ai_runner와
+        같은 부류: 상주 싱글턴은 생성 시점 모델로 박제되므로, 일할 때마다 재해소해
+        기어/핀 변경을 전파한다. 불변이면 작은 JSON 읽기로 끝(무비용)."""
+        if self.ai is None:
+            return
+        resolved = self._resolve_ai_config()
+        cur_provider = getattr(self.ai, "provider_name", None)
+        cur_model = getattr(self.ai, "model", None)
+        if resolved["provider"] == cur_provider and resolved["model"] == cur_model:
+            return
+        print(f"[SystemAIRunner] 모델 기어 전파: {cur_provider}/{cur_model} "
+              f"→ {resolved['provider']}/{resolved['model']} ({resolved.get('_source')})")
+        try:
+            self._init_ai()
+        except Exception as e:
+            print(f"[SystemAIRunner] 기어 전파 재초기화 실패(기존 모델 유지): {e}")
+
     def _init_ai(self):
         """AI 에이전트 초기화
 
         WebSocket 경로 전용: execute_ibl 단일 도구로 초기화.
         HTTP API 경로(system_ai_core.py)는 get_all_system_ai_tools()로 전체 도구 로딩.
         """
-        from system_ai_core import load_system_ai_config
         from tool_loader import load_tool_schema
 
-        config = load_system_ai_config()
         user_profile = load_user_profile()
 
+        resolved = self._resolve_ai_config()
+        print(f"[SystemAIRunner] 모델 해소: {resolved['provider']}/{resolved['model']} ({resolved.get('_source')})")
         ai_config = {
-            "provider": config.get("provider", "anthropic"),
-            "model": config.get("model", "claude-sonnet-4-20250514"),
-            "api_key": config.get("apiKey", "")
+            "provider": resolved["provider"],
+            "model": resolved["model"],
+            "api_key": resolved["api_key"],
         }
 
         # WebSocket 경로: execute_ibl만 로딩
@@ -173,6 +221,9 @@ class SystemAIRunner:
             if not SystemAIRunner.internal_messages:
                 return
             msg_dict = SystemAIRunner.internal_messages.pop(0)
+
+        # 일감이 있을 때만 기어 재해소 (박제 방지, 불변이면 무비용)
+        self._sync_gear()
 
         while msg_dict:
             if not isinstance(msg_dict, dict):

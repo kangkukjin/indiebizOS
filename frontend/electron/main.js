@@ -187,13 +187,22 @@ function setupIPC() {
   ipcMain.on('drag-out-file', async (event, payload) => {
     const token = ++dragSeq;
     try {
-      const { url, path: localPath, name, mtime } = payload || {};
+      const { url, path: localPath, paths, name, mtime } = payload || {};
 
-      // 갈래 1 — 이미 이 컴퓨터에 있는 파일: 복사도 다운로드도 없이 원본을 집는다.
-      if (localPath && fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
+      // 갈래 1 — 이미 이 컴퓨터에 있는 것: 복사도 다운로드도 없이 원본을 집는다.
+      // paths=여러 개(창고 다중 선택), path=한 개. 폴더도 집는다(창고 폴더 통째 꺼내기).
+      const wanted = Array.isArray(paths) && paths.length ? paths : (localPath ? [localPath] : []);
+      const local = wanted.filter((p) => {
+        try { return typeof p === 'string' && p && fs.existsSync(p); } catch { return false; }
+      });
+      if (local.length) {
         let icon0 = null;
-        try { icon0 = await app.getFileIcon(localPath); } catch { /* 아이콘 실패는 드래그를 안 막는다 */ }
-        event.sender.startDrag({ file: localPath, icon: icon0 || nativeImage.createEmpty() });
+        try { icon0 = await app.getFileIcon(local[0]); } catch { /* 아이콘 실패는 드래그를 안 막는다 */ }
+        event.sender.startDrag({
+          file: local[0],                                  // 구버전 호환 필드(둘 다 실어야 안전)
+          files: local,
+          icon: icon0 || nativeImage.createEmpty(),
+        });
         return;
       }
 

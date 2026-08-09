@@ -110,6 +110,21 @@ export function openNeighborFile(url: string) {
   else window.open(url, '_blank', 'noopener');
 }
 
+/** 내 창고 항목을 창 밖(파인더·바탕화면)으로 끌어 저장 — dragstart 에서 부른다.
+    창고는 그냥 디스크 폴더라 파일이 이미 여기 있다 → 다운로드 없이 원본 경로를
+    네이티브 드래그에 싣는다(복사 0, 폴더도 됨. 파인더 관례대로 밖에 떨어지면 복사).
+    HTML5 드래그는 창 밖으로 파일을 못 내보내므로 preventDefault 로 접는 대신,
+    창 안으로 되돌아온 드롭은 MinePane 이 절대경로를 보고 '옮기기'로 되받는다.
+    비 Electron(웹)에선 false — 부른 쪽이 HTML5 드래그를 그대로 쓴다. */
+export function dragOutLocalPaths(e: ReactDragEvent, paths: string[]): boolean {
+  const el = (window as any).electron;
+  if (!el?.dragOutFile || !paths.length) return false;
+  e.preventDefault();
+  // path/name 도 함께 — 아직 paths 를 모르는 옛 메인 프로세스(설치본)에서도 한 개는 나간다.
+  el.dragOutFile({ paths, path: paths[0], name: paths[0].split(/[\\/]/).pop() || '파일' });
+  return true;
+}
+
 /** 이웃 창고 파일을 창 밖(파인더·바탕화면)으로 끌어 저장 — dragstart 에서 부른다.
     HTML5 드래그는 브라우저 밖으로 파일을 못 내보내므로 preventDefault 로 접고,
     메인 프로세스가 파일을 (포식 세션 쿠키로 — 회원 레벨 파일도) 내려받아 네이티브

@@ -3,7 +3,8 @@
  *
  * 항해: 한 번에 한 폴더만 렌더(더블클릭 진입 + 경로 바) — 파일이 수백이어도 안 무너진다.
  * 표시: 아이콘 그리드/목록 토글. 동작: 우클릭 컨텍스트 메뉴(열기·내려받기·이름변경·빼기),
- * 다중 선택(⌘·⇧)+Delete, 드래그 이동(폴더·경로 바·레벨로). 바깥에서 끌어넣으면 복사.
+ * 다중 선택(⌘·⇧)+Delete, 드래그 이동(폴더·경로 바·레벨로). 바깥에서 끌어넣으면 복사,
+ * 바깥으로 끌어내면 그 폴더·바탕화면에 복사(네이티브 드래그 — beginDrag 주석 참고).
  * 왼쪽 사이드바 = 레벨 0~4 + 휴지통. 레벨에 드롭 = 공개 범위 변경(사용자 승인 의미론).
  *
  * 서버 배관은 /portal/warehouse-admin/* — IBL 어휘 아님(AI 는 self:move·mkdir 로 같은 일).
@@ -13,7 +14,7 @@ import {
   Package, RefreshCw, FilePlus, FolderPlus, Trash2, Download, Folder,
   ChevronRight, LayoutGrid, List, RotateCcw, ExternalLink,
 } from 'lucide-react';
-import { API, IMG_EXT, WH_DRAG, fmtBytes, fileIcon, openExternalUrl } from './shared';
+import { API, IMG_EXT, WH_DRAG, fmtBytes, fileIcon, openExternalUrl, dragOutLocalPaths } from './shared';
 import type { WhFile, WhData, TrashItem } from './shared';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
 
@@ -106,6 +107,9 @@ export function MinePane() {
   const [dragOver, setDragOver] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);  // 'dir:<path>' | 'level:<n>' | 'crumb:<path>'
   const [innerDrag, setInnerDrag] = useState(false);
+  /* 지금 창 밖으로 나간 네이티브 드래그가 이 창고에서 시작됐나 — 안내 문구 판정용
+     (실제 옮기기/넣기 판정은 떨어진 절대경로가 한다: toInner). */
+  const selfDrag = useRef(false);
   /* 새로 만든 폴더는 목록이 다시 온 뒤 이름변경 모드로 — 응답의 created 경로를 예약해 둔다 */
   const pendingRename = useRef<string | null>(null);
 
@@ -362,10 +366,35 @@ export function MinePane() {
     return () => document.removeEventListener('click', close);
   }, [ctx]);
 
-  /* ── 드래그 ── */
+  /* ── 드래그 ──
+     창 밖으로 나가려면 네이티브 드래그(startDrag)여야 한다 — HTML5 드래그는 창 안에
+     갇힌다. 그래서 끌기는 항상 네이티브로 넘기고(Electron), 창 안으로 되돌아온 드롭은
+     떨어진 절대경로가 이 레벨 폴더 밑이면 '넣기(복사)'가 아니라 '옮기기'로 되받는다.
+     이 되받기가 없으면 폴더·레벨로 끌어 옮기던 것이 자기 복사본을 만든다. */
   const dragPayload = useCallback((en: Entry): string[] => (
     sel.includes(en.path) ? sel : [en.path]
   ), [sel]);
+
+  /** 창고 상대경로 → 디스크 절대경로. 파일은 서버 목록이 실어 주고(files[].path),
+      폴더는 목록에 없으니 레벨 폴더(folder_path) 밑으로 조립한다. */
+  const absOf = useCallback((rel: string): string => {
+    const f = data?.files?.find((x) => x.name === rel);
+    if (f?.path) return f.path;
+    const base = data?.folder_path || '';
+    if (!base) return '';
+    const win = base.includes('\\');
+    return base + (win ? '\\' : '/') + (win ? rel.replace(/\//g, '\\') : rel);
+  }, [data]);
+
+  /** 디스크 절대경로 → 이 레벨 폴더 기준 상대경로(밖이면 null) — 되받기 판정. */
+  const toInner = useCallback((abs: string): string | null => {
+    const base = data?.folder_path;
+    if (!base) return null;
+    const norm = (s: string) => s.replace(/\\/g, '/').replace(/\/+$/, '');
+    const b = norm(base);
+    const a = norm(abs);
+    return a.startsWith(b + '/') ? a.slice(b.length + 1) : null;
+  }, [data]);
 
   const extractExternalPaths = useCallback((e: React.DragEvent): string[] => {
     const el = (window as any).electron;
@@ -388,13 +417,51 @@ export function MinePane() {
     e.preventDefault();
     e.stopPropagation();
     setDropTarget(null); setDragOver(false); setInnerDrag(false);
-    const inner = e.dataTransfer.getData(WH_DRAG);
+    const inner = e.dataTransfer.getData(WH_DRAG);   // 웹(비 Electron) 경로
     if (inner) {
       try { moveItems(JSON.parse(inner) as string[], dest, destLevel); } catch { /* 형식 불량 무시 */ }
       return;
     }
-    addPaths(extractExternalPaths(e), dest, destLevel);
-  }, [level, moveItems, addPaths, extractExternalPaths]);
+    // 네이티브 드롭 — 이 레벨 창고 안에서 온 것은 옮기기, 바깥에서 온 것만 넣기(복사).
+    const mine: string[] = [];
+    const outside: string[] = [];
+    for (const p of extractExternalPaths(e)) {
+      const rel = toInner(p);
+      if (rel) mine.push(rel); else outside.push(p);
+    }
+    if (mine.length) moveItems(mine, dest, destLevel);
+    if (outside.length) addPaths(outside, dest, destLevel);
+  }, [level, moveItems, addPaths, extractExternalPaths, toInner]);
+
+  /** 항목 끌기 시작 — 두 보기(그리드·목록)가 공유. */
+  const beginDrag = useCallback((e: React.DragEvent, en: Entry, idx: number) => {
+    e.stopPropagation();
+    if (!sel.includes(en.path)) { setSel([en.path]); anchor.current = idx; }
+    const paths = dragPayload(en);
+    e.dataTransfer.setData(WH_DRAG, JSON.stringify(paths));
+    e.dataTransfer.effectAllowed = 'copyMove';
+    // Electron 이면 네이티브로 넘긴다 — 창 밖(바탕화면·폴더)에 떨어뜨려 꺼낼 수 있게.
+    // ⌥ 를 누른 채 끌면 창 안 HTML5 드래그 그대로 — 네이티브 전환이 창 안 옮기기를
+    // 방해하는 환경에서도 옮기기가 살아 있게 남겨 둔 문(툴팁에 안내).
+    if (e.altKey) return;
+    const abs = paths.map(absOf).filter(Boolean);
+    if (abs.length && dragOutLocalPaths(e, abs)) {
+      selfDrag.current = true;   // 이 드래그는 창고에서 나갔다 = 되돌아오면 옮기기
+      setInnerDrag(true);
+    }
+  }, [sel, dragPayload, absOf]);
+
+  // 네이티브 드래그 중엔 mouseup·dragend 가 안 올 수 있다(OS 가 가져간다) → 다음 누름에
+  // 표식을 확실히 접는다. pointerdown 은 dragstart 보다 먼저라 새 드래그를 안 지운다.
+  useEffect(() => {
+    const off = () => {
+      selfDrag.current = false;
+      setInnerDrag(false); setDragOver(false); setDropTarget(null);
+    };
+    window.addEventListener('pointerdown', off);
+    window.addEventListener('dragend', off);
+    return () => { window.removeEventListener('pointerdown', off); window.removeEventListener('dragend', off); };
+  }, []);
 
   const acceptDrag = useCallback((e: React.DragEvent, key: string) => {
     const kinds = e.dataTransfer.types;
@@ -454,12 +521,7 @@ export function MinePane() {
       <li
         key={en.path}
         draggable={!renaming}
-        onDragStart={(e) => {
-          e.stopPropagation();
-          if (!sel.includes(en.path)) { setSel([en.path]); anchor.current = idx; }
-          e.dataTransfer.setData(WH_DRAG, JSON.stringify(dragPayload(en)));
-          e.dataTransfer.effectAllowed = 'move';
-        }}
+        onDragStart={(e) => beginDrag(e, en, idx)}
         onDragOver={en.kind === 'dir' ? (e) => acceptDrag(e, `dir:${en.path}`) : undefined}
         onDragLeave={en.kind === 'dir' ? () => setDropTarget((t) => (t === `dir:${en.path}` ? null : t)) : undefined}
         onDrop={en.kind === 'dir' ? (e) => dropInto(e, en.path) : undefined}
@@ -475,7 +537,7 @@ export function MinePane() {
             : selected ? 'bg-amber-100/80'
             : 'hover:bg-stone-100'
         }`}
-        title={`${en.label}\n${en.kind === 'dir' ? `${en.count}개 · ` : ''}${fmtBytes(en.bytes)} · ${en.mtime.replace('T', ' ')}`}
+        title={`${en.label}\n${en.kind === 'dir' ? `${en.count}개 · ` : ''}${fmtBytes(en.bytes)} · ${en.mtime.replace('T', ' ')}\n끌어서 바탕화면·폴더에 저장 (⌥ 누르고 끌면 창고 안에서 옮기기)`}
       >
         {isImg ? (
           <img
@@ -505,12 +567,7 @@ export function MinePane() {
       <li
         key={en.path}
         draggable={!renaming}
-        onDragStart={(e) => {
-          e.stopPropagation();
-          if (!sel.includes(en.path)) { setSel([en.path]); anchor.current = idx; }
-          e.dataTransfer.setData(WH_DRAG, JSON.stringify(dragPayload(en)));
-          e.dataTransfer.effectAllowed = 'move';
-        }}
+        onDragStart={(e) => beginDrag(e, en, idx)}
         onDragOver={en.kind === 'dir' ? (e) => acceptDrag(e, `dir:${en.path}`) : undefined}
         onDragLeave={en.kind === 'dir' ? () => setDropTarget((t) => (t === `dir:${en.path}` ? null : t)) : undefined}
         onDrop={en.kind === 'dir' ? (e) => dropInto(e, en.path) : undefined}
@@ -765,8 +822,10 @@ export function MinePane() {
             onClick={() => setSel([])}
             onContextMenu={(e) => { e.preventDefault(); setCtx({ x: e.clientX, y: e.clientY, kind: 'empty' }); }}
             onDragOver={(e) => {
+              // 네이티브 드래그(창고에서 시작)는 types 가 'Files' 뿐이라 selfDrag 로 가린다
+              // — 바깥(파인더)에서 끌어온 것은 그대로 '넣기'로 남는다.
+              setInnerDrag(e.dataTransfer.types.includes(WH_DRAG) || selfDrag.current);
               e.preventDefault();
-              setInnerDrag(e.dataTransfer.types.includes(WH_DRAG));
               setDragOver(true);
             }}
             onDragLeave={(e) => { if (e.currentTarget === e.target) { setDragOver(false); } }}

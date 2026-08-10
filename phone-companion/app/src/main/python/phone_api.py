@@ -44,6 +44,13 @@ def _init_base(base_path):
     backend_dir = os.path.join(base_path, "backend")
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
+    # 번들은 정본과 같은 층 디렉토리 모양(backend/base·ibl·surface…)이라, 평면 이름
+    # (`import ibl_engine`)을 쓰려면 맥과 똑같이 boot_paths 가 층을 sys.path 에 올려야 한다.
+    # (옛 평평한 번들에서 올라오는 경우를 위해 없으면 조용히 건너뜀 — 그 트리는 평면이라 불필요.)
+    try:
+        import boot_paths  # noqa: F401  (import 자체가 설치, 멱등)
+    except ImportError:
+        pass
     os.environ["INDIEBIZ_BASE_PATH"] = base_path
     os.environ["INDIEBIZ_PROFILE"] = "phone"  # #3: runs_on 필터/가드 활성
 
@@ -300,8 +307,15 @@ def selfcheck_engine_imports():
     from runtime_utils import get_base_path
     be = _os.path.join(str(get_base_path()), "backend")
     ok, failed = [], {}
+    # 번들 트리는 정본과 같은 층 디렉토리 모양이라 층까지 훑는다(평면 이름으로 import).
     try:
-        names = sorted(f[:-3] for f in _os.listdir(be) if f.endswith(".py") and not f.startswith("_"))
+        names = set(f[:-3] for f in _os.listdir(be) if f.endswith(".py") and not f.startswith("_"))
+        for _layer in ("base", "datastore", "ibl", "cognition", "services", "surface"):
+            _d = _os.path.join(be, _layer)
+            if _os.path.isdir(_d):
+                names |= set(f[:-3] for f in _os.listdir(_d)
+                             if f.endswith(".py") and not f.startswith("_"))
+        names = sorted(names - {"boot_paths"})
     except Exception as e:
         return JSONResponse({"error": f"backend 디렉토리 없음: {e}"}, status_code=500)
     for n in names:

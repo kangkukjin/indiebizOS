@@ -109,6 +109,7 @@ tasks.register('bundleIndiebizBase', Zip) {
     doFirst {
         def missing = []
         _ENGINE_MODULES.each { m -> if (!file("${_ROOT}/backend/${m}.py").exists()) missing << "backend/${m}.py" }
+        if (!file("${_ROOT}/backend/boot_paths.py").exists()) missing << "backend/boot_paths.py"
         if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
         if (!file("${_ROOT}/backend/providers").exists()) missing << "backend/providers"
         // 앱 표면 렌더 어휘의 순수 로직(데스크탑과 단일 소스) — 없으면 폰 앱 탭이 통째로 죽는다
@@ -121,10 +122,21 @@ tasks.register('bundleIndiebizBase', Zip) {
         if (missing) throw new GradleException("정본 누락: ${missing.join(', ')} — 폰 엔진 번들을 만들 수 없습니다(드리프트 방지).")
     }
 
-    // backend 엔진 모듈 → zip 안 backend/
+    // backend 엔진 모듈 → zip 안 backend/<층>/ (정본 트리와 **같은 모양**)
+    //
+    // ★평평하게 깔지 말 것 (2026-08-10 실측): 옛 코드는 층 디렉토리를 떼고 backend/ 에 모아
+    //   깔았다. 모듈 *이름*이 평면(`import ibl_engine`)이니 import 는 됐지만, 파일 위치가
+    //   정본과 달라져 **__file__ 기준 상대경로가 한 층씩 어긋났다** — launcher_render_core 가
+    //   backend/static/app_render_core.js 를 못 찾아 폰 백엔드가 통째로 안 떴다(FileNotFoundError).
+    //   같은 부류가 번들 모듈에 89곳 있다(parent.parent.parent / data ...). 모양을 맞추는 게
+    //   그 전부를 한 번에 고치는 유일한 수리다. 이름의 평면성은 boot_paths 가 유지한다.
     _ENGINE_MODULES.each { m ->
-        from("${_ROOT}/backend/${m}.py") { into 'backend' }
+        def sub = m.contains('/') ? m.substring(0, m.lastIndexOf('/')) : ''
+        from("${_ROOT}/backend/${m}.py") { into sub ? "backend/${sub}" : 'backend' }
     }
+    // (boot_paths.py 는 backend 최상위 모듈이라 _ENGINE_MODULES 에 이미 들어 있다 —
+    //  따로 실으면 Zip 중복 항목이 된다. phone_api._init_base 가 이걸 import 해
+    //  층 디렉토리를 sys.path 에 올린다 = 평면 이름(`import ibl_engine`) 유지.)
     // backend/common → zip 안 backend/common/
     from("${_ROOT}/backend/common") {
         into 'backend/common'

@@ -27,7 +27,8 @@ modes:
         options:
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-    action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{blocks: true}@hub'
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
+    action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{blocks: true}@hub'
     view:
       - type: blocks
         from: items
@@ -39,7 +40,7 @@ modes:
     buttons:
       - label: 📤 폰에 저장·공유
         phone_only: true
-        action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{}@hub >> [limbs:phone]{op: "share", filename: "report.md", mime: "text/markdown"}'
+        action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{}@hub >> [limbs:phone]{op: "share", filename: "report.md", mime: "text/markdown"}'
 
   # ── 목록: 선택 타입의 전체 보고서(최신순), 클릭하면 본문 ──
   - name: 목록
@@ -52,7 +53,8 @@ modes:
         options:
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-    action: '[self:file_find]{pattern: "*.md", path: "$folder"}@hub | sort: title desc'
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
+    action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc'
     view:
       - type: card_list
         from: items
@@ -79,6 +81,7 @@ modes:
         options:
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md",   label: AI 동향 보고서 가이드}
           - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
+          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/housing_report.md",   label: 부동산 발굴 보고서 가이드}
     action: '[self:read]{path: "$guide", blocks: true}@hub'
     view:
       - type: blocks
@@ -92,3 +95,5 @@ modes:
         action: '[others:delegate]{scope: "system", message: "AI 동향 보고서 써줘", from_agent: "정기보고앱"}'
       - label: ✍ 새 AI 창업·응모 정보 보고서 작성
         action: '[others:delegate]{scope: "system", message: "AI 창업·응모 정보 보고서 써줘", from_agent: "정기보고앱"}'
+      - label: ✍ 새 부동산 발굴 보고서 작성
+        action: '[others:delegate]{scope: "system", message: "부동산 발굴 보고서 써줘", from_agent: "정기보고앱"}'

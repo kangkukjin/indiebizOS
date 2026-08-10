@@ -153,7 +153,6 @@
     "services/web_collector",
     "surface/api_agents",
     "surface/api_android",
-    "surface/api_bulletin",
     "surface/api_business",
     "surface/api_conversations",
     "surface/api_family_news",
@@ -208,6 +207,7 @@
   ],
   "blocklist": {
     "api": "top-level import: dotenv",
+    "api_bulletin": "force_exclude (프로파일 명시)",
     "api_config": "force_exclude (프로파일 명시)",
     "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
@@ -236,7 +236,7 @@
   },
   "counts": {
     "total": 229,
-    "engine": 203,
-    "blocklist": 26
+    "engine": 202,
+    "blocklist": 27
   }
 }

@@ -1213,9 +1213,9 @@ def _deck_export(tool_input: dict) -> str:
     fmt = (tool_input.get("format") or "").strip().lower()
     if not lecture_id:
         return _err("lecture_id는 필수입니다.")
-    if fmt not in ("pdf", "pptx", "pptx_image", "pptx_editable"):
+    if fmt not in ("pdf", "pptx", "pptx_image", "pptx_editable", "images"):
         return _err(
-            f"format은 'pdf', 'pptx'(이미지), 'pptx_editable'(편집 가능) 중 하나여야 합니다. 받은 값: {fmt!r}"
+            f"format은 'pdf', 'pptx'(이미지), 'pptx_editable'(편집 가능), 'images'(이미지 폴더) 중 하나여야 합니다. 받은 값: {fmt!r}"
         )
     if not lecture_store.lecture_exists(lecture_id):
         return _err(f"강의 없음: {lecture_id}", error_type="not_found")
@@ -1303,12 +1303,17 @@ def _deck_video_build(lecture_id: str, opts: dict) -> dict:
     tool_input = {
         "scenes": scenes,
         "narration_texts": narrations,
-        "voice": opts.get("voice") or "ko-KR-SunHiNeural",
+        # 화자·엔진 기본값을 여기서 박지 않는다 — 미지정이면 media_producer 의 엔진 기본
+        # (2026-08-10부터 Gemini/Charon)이 이긴다. 옛날엔 Edge 화자가 박혀 있어서
+        # 기본 엔진을 바꿔도 강의 영상만 옛 목소리로 남았다.
         "rate": opts.get("rate") or "+0%",
         "transition": opts.get("transition") or "fade",
         "output_filename": opts.get("output_filename") or "lecture_video.mp4",
         "width": width, "height": height,
     }
+    for k in ("voice", "engine", "style"):   # 미지정이면 안 실어야 엔진 기본이 이긴다
+        if opts.get(k):
+            tool_input[k] = opts[k]
     if opts.get("bgm_path"):
         tool_input["bgm_path"] = opts["bgm_path"]
     result_msg = mh.create_html_video(tool_input, str(video_dir))
@@ -1343,9 +1348,21 @@ def _deck_video(tool_input: dict) -> str:
         except Exception:
             pass
 
-    opts = {k: tool_input.get(k) for k in
-            ("voice", "rate", "transition", "output_filename", "bgm_path",
-             "duration_per_scene", "width", "height")}
+    # ★키를 루프로 접지 말 것 — 빌드의 코퍼스-param 가드는 tool_input.get("리터럴") 을 읽어
+    #   "핸들러가 이 파라미터를 실제로 보는가"를 검증한다. 루프로 접으면 짧아지는 대신
+    #   그 검증이 통째로 무력화된다(2026-08-03 max_width 사건과 같은 부류).
+    opts = {
+        "voice": tool_input.get("voice"),
+        "engine": tool_input.get("engine"),
+        "style": tool_input.get("style"),
+        "rate": tool_input.get("rate"),
+        "transition": tool_input.get("transition"),
+        "output_filename": tool_input.get("output_filename"),
+        "bgm_path": tool_input.get("bgm_path"),
+        "duration_per_scene": tool_input.get("duration_per_scene"),
+        "width": tool_input.get("width"),
+        "height": tool_input.get("height"),
+    }
 
     if tool_input.get("wait") in (True, "true", "True", 1, "1"):
         _write_video_state(lecture_id, {"status": "building"})

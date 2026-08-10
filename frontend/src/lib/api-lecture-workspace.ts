@@ -434,14 +434,15 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
 
     async exportDeck(
       lectureId: string,
-      format: 'pdf' | 'pptx' | 'pptx_image' | 'pptx_editable',
+      format: 'pdf' | 'pptx' | 'pptx_image' | 'pptx_editable' | 'images',
     ) {
       // 파일 생성 후 메타 반환
       return client.request<{
         success: boolean;
-        format: 'pdf' | 'pptx';
+        format: 'pdf' | 'pptx' | 'images';
         mode?: 'image' | 'editable';
         path: string;
+        folder?: string; // images 전용 — ZIP 과 나란한 원본 폴더
         slide_count: number;
         skipped?: number;
         editable_count?: number;

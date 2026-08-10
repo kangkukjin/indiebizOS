@@ -509,6 +509,75 @@ def _add_overlay_textbox(slide, ov: dict, Emu, Pt):
 # 통합 진입점
 # ─────────────────────────────────────────────────────────────────────
 
+# ─────────────────────────────────────────────────────────────────────
+# 이미지 폴더 (슬라이드 각 장 = PNG 파일 하나)
+# ─────────────────────────────────────────────────────────────────────
+
+def export_images(lecture_id: str) -> dict:
+    """슬라이드 각 장을 PNG 파일로 폴더 하나에 담아 내보내기.
+
+    exports/{lecture_id}_{ts}_images/ 에 순번(+제목) 이름으로 복사하고,
+    같은 이름 .zip 도 만든다 — 브라우저/원격 다운로드는 단일 파일만 전달되므로
+    ZIP(풀면 그 폴더)이 전달체, 로컬(데스크탑)에선 폴더가 바로 산출물.
+
+    Returns: {success, path(zip), folder, filename(zip), slide_count, skipped, format: "images"}
+    """
+    import re
+    import shutil
+    import zipfile
+
+    deck = lecture_store.read_deck(lecture_id)
+    lecture_dir = lecture_store.lecture_dir(lecture_id)
+    order = deck.get("slide_order", [])
+    folder = _exports_dir(lecture_id) / f"{lecture_id}_{_timestamp()}_images"
+    folder.mkdir(parents=True, exist_ok=True)
+
+    width = max(2, len(str(len(order) or 1)))  # 01, 02 … (100장 넘으면 3자리)
+    count = skipped = 0
+    for i, sid in enumerate(order, 1):
+        meta = deck.get("slides", {}).get(sid, {})
+        rel = meta.get("png_file")
+        src = (lecture_dir / rel) if rel else None
+        if src is None or not src.exists():
+            skipped += 1
+            continue
+        # 파일명 = 순번 + 제목(파일시스템 금지문자 제거, 과장 방지 60자 캡)
+        title = re.sub(r'[\\/:*?"<>|\r\n\t]+', " ", str(meta.get("title") or "")).strip()
+        title = re.sub(r"\s+", " ", title)[:60].strip()
+        # 확장자는 실제 매직바이트로 — 이미지 모델이 .png 이름에 JPEG 바이트를 담는 일이 실재한다
+        with src.open("rb") as fh:
+            head = fh.read(8)
+        if head.startswith(b"\x89PNG"):
+            suffix = ".png"
+        elif head.startswith(b"\xff\xd8\xff"):
+            suffix = ".jpg"
+        else:
+            suffix = src.suffix or ".png"
+        name = f"{i:0{width}d}" + (f" {title}" if title else "") + suffix
+        shutil.copy2(src, folder / name)
+        count += 1
+
+    if count == 0:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise RuntimeError("내보낼 슬라이드 이미지가 없습니다.")
+
+    zip_path = folder.with_suffix(".zip")
+    # PNG는 이미 압축돼 있어 STORED(무압축)가 빠르고 크기도 거의 같다
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_STORED) as zf:
+        for p in sorted(folder.iterdir()):
+            zf.write(p, arcname=f"{folder.name}/{p.name}")
+
+    return {
+        "success": True,
+        "format": "images",
+        "path": str(zip_path.resolve()),
+        "folder": str(folder.resolve()),
+        "filename": zip_path.name,
+        "slide_count": count,
+        "skipped": skipped,
+    }
+
+
 def export_deck(lecture_id: str, format: str) -> dict:
     """format에 따라 분기.
 
@@ -516,6 +585,7 @@ def export_deck(lecture_id: str, format: str) -> dict:
       - "pdf": 다중 페이지 PDF (PIL)
       - "pptx" 또는 "pptx_image": 통째 이미지 PPTX (디자인 완벽 보존, 편집 불가)
       - "pptx_editable": 텍스트박스로 분해된 PPTX (PPT에서 자유 편집 가능, 디자인 단순화)
+      - "images": 슬라이드 각 장을 PNG 파일로 폴더 하나에 (+다운로드용 ZIP)
     """
     fmt = (format or "").lower().strip()
     if fmt == "pdf":
@@ -524,7 +594,9 @@ def export_deck(lecture_id: str, format: str) -> dict:
         return export_pptx(lecture_id)
     elif fmt == "pptx_editable":
         return export_pptx_editable(lecture_id)
+    elif fmt == "images":
+        return export_images(lecture_id)
     else:
         raise ValueError(
-            f"지원하지 않는 형식: {format} (pdf/pptx/pptx_editable)"
+            f"지원하지 않는 형식: {format} (pdf/pptx/pptx_editable/images)"
         )

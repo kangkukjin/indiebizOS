@@ -188,7 +188,7 @@ export function LectureWorkspace({ initialLectureId }: LectureWorkspaceProps) {
 // 내보내기 메뉴 (PDF/PPTX 드롭다운)
 // ─────────────────────────────────────────────────────────
 
-type ExportFormat = 'pdf' | 'pptx_image' | 'pptx_editable';
+type ExportFormat = 'pdf' | 'pptx_image' | 'pptx_editable' | 'images';
 
 function ExportMenu(props: { lectureId: string; slideCount: number }) {
   const { lectureId, slideCount } = props;
@@ -224,6 +224,7 @@ function ExportMenu(props: { lectureId: string; slideCount: number }) {
     pdf: 'PDF',
     pptx_image: 'PPTX(이미지)',
     pptx_editable: 'PPTX(편집)',
+    images: '이미지 폴더',
   };
 
   return (
@@ -261,6 +262,15 @@ function ExportMenu(props: { lectureId: string; slideCount: number }) {
           >
             ✏️ <span className="font-medium">PPTX (편집 가능)</span>
             <div className="text-[11px] text-stone-500 ml-6">텍스트박스 분해 · PPT에서 자유 편집 · 디자인 단순화</div>
+          </button>
+          <div className="border-t border-stone-100" />
+          <button
+            onClick={() => handleExport('images')}
+            className="block w-full text-left px-4 py-2 text-sm hover:bg-stone-50 text-stone-800"
+            title="슬라이드 각 장을 PNG 파일로 폴더 하나에 담아 ZIP으로 내려받습니다."
+          >
+            🗂️ <span className="font-medium">이미지 폴더</span>
+            <div className="text-[11px] text-stone-500 ml-6">장마다 PNG 한 장 · 폴더째 ZIP</div>
           </button>
         </div>
       )}

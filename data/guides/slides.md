@@ -114,7 +114,7 @@
 - `[self:slide]{op:"patch", lecture_id, slide_id, patch:{title:"..."}}` — **이미지+글자(composite) 슬라이드의 글자 직접 수정**: 텍스트 필드(title/kicker/subtitle/body/bullets/captions/labels/steps)만 patch 하면 보존된 원료 일러스트(`{slide_id}_img.png`)로 **그림 그대로 재합성**(이미지 모델 호출 0, 글자 얹기와 같은 원리). 강의 창에서는 composite 카드의 ✏️(글자 직접 편집). scene·composition·style 변경은 재생성(edit) 경로. native/image 통짜는 여전히 patch 불가.
 - 덱은 폴더 단위로 영속(슬라이드 PNG + deck.json).
 - **동영상**: `[self:deck]{op:"video", lecture_id}` — 슬라이드+스피커 노트를 TTS 나레이션 MP4 로(백그라운드, video_workflow.md 참조).
-- **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존되지만, **'글자 얹기'로 올린 문구는 원본 그림 + 편집 가능한 진짜 텍스트박스**로 분해되어 PPT에서 수정·이동 가능). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다.
+- **내보내기**: `[self:deck]{op:"export", lecture_id, format:"pptx"}` — 덱의 슬라이드를 순서대로 묶는다. format은 `pptx`(슬라이드당 풀블리드 이미지·디자인 완벽 보존) / `pdf`(다중 페이지) / `pptx_editable`(텍스트박스 분해 — native 슬라이드는 구운 이미지라 통짜로 보존되지만, **'글자 얹기'로 올린 문구는 원본 그림 + 편집 가능한 진짜 텍스트박스**로 분해되어 PPT에서 수정·이동 가능). NotebookLM처럼 .pptx로 받을 때 이걸 쓴다. / `images`(**이미지 폴더** — 슬라이드 각 장을 순번+제목 PNG 파일로 폴더 하나에 복사하고 같은 이름 ZIP 도 생성. 다운로드 전달체=ZIP, 로컬에선 exports/ 안 폴더가 바로 산출물. 통화에 `folder`/`path`(zip) 둘 다 온다).
 
 > native 덱은 톤만 다시 입히는 rerender가 아니라 **재생성**(edit/create)이 맞다 — 통짜 이미지라 그렇다.
 

@@ -4,12 +4,13 @@ nodes:
       tts:
         returns: effect
         runs_on: pc_only
-        description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
-        target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
+        description: 텍스트를 음성 MP3로 변환 (기본 Gemini TTS, 한국어 지원). 동영상 나레이션용.
+        target_description: '음성으로 만들 텍스트. engine: gemini(기본, 화자 Charon·style로 연기 지시)
+          | edge(무과금, ko-KR-SunHiNeural 등 한국어 3종). voice로 화자 선택.'
         group: media_produce
         router: handler
         tool: create_tts
-        implementation: edge-tts(Microsoft Azure TTS)로 텍스트→MP3 변환
+        implementation: Gemini TTS(기본, interactions API·raw PCM→ffmpeg) 또는 edge-tts(engine:"edge")로 텍스트→MP3 변환
         target_key: text
         keywords:
         - speech
@@ -216,24 +217,34 @@ tool_json:
       required:
       - prompt
   - name: create_tts
-    description: 텍스트를 음성 파일(MP3)로 변환합니다. Edge TTS 사용. 나레이션 생성용.
+    description: 텍스트를 음성 파일(MP3)로 변환합니다. 기본 Gemini TTS(engine:"edge"로 무과금 회귀). 나레이션 생성용.
     input_schema:
       type: object
       properties:
         text:
           type: string
           description: 음성으로 변환할 텍스트
+        engine:
+          type: string
+          enum:
+          - gemini
+          - edge
+          description: 'TTS 엔진 — gemini(기본): 화자 30종·자연어 연기 지시·문자 수 과금 / edge: 무과금·한국어 화자 3종'
+          default: gemini
         voice:
           type: string
-          description: '목소리 (ko-KR-SunHiNeural: 여성, ko-KR-InJoonNeural: 남성, ko-KR-HyunsuMultilingualNeural: 중성/멀티링구얼)'
-          default: ko-KR-SunHiNeural
+          description: '화자. gemini: Charon(기본, 정보전달)·Sulafat(따뜻함)·Achird(친근함) 등 / edge: ko-KR-SunHiNeural(여)·ko-KR-InJoonNeural(남)·ko-KR-HyunsuMultilingualNeural'
+          default: Charon
+        style:
+          type: string
+          description: 'gemini 전용 — 자연어 연기 지시 (예: "차분하고 신뢰감 있는 강의 나레이션 톤으로, 또박또박 읽어줘"). edge에는 없는 축.'
         rate:
           type: string
-          description: '말하기 속도 (예: +0%, -10%, +20%)'
+          description: 'edge 전용 — 말하기 속도 (예: +0%, -10%, +20%). gemini는 이 축이 없어 무시되고 그 사실을 알려줍니다.'
           default: +0%
         pitch:
           type: string
-          description: '목소리 톤/피치 (예: +0Hz, -5Hz, +10Hz)'
+          description: 'edge 전용 — 목소리 톤/피치 (예: +0Hz, -5Hz, +10Hz). gemini는 이 축이 없습니다.'
           default: +0Hz
         output_filename:
           type: string

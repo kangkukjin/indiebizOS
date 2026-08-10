@@ -25,7 +25,7 @@
     {
       "id": "video_workflow",
       "name": "동영상 제작 (강의 덱 → 나레이션 MP4)",
-      "description": "동영상을 만드는 길은 하나 — [self:deck]{op:\"video\"}. 슬라이드 PNG+스피커 노트를 TTS 나레이션 영상으로. 백그라운드 렌더·voice/bgm 옵션.",
+      "description": "동영상을 만드는 길은 하나 — [self:deck]{op:\"video\"}. 슬라이드 PNG+스피커 노트를 TTS 나레이션 영상으로. 백그라운드 렌더 · 나레이션 엔진/화자(기본 Gemini Charon, engine:\"edge\"=무과금)·bgm 옵션.",
       "keywords": [
         "동영상",
         "영상 제작",
@@ -33,7 +33,11 @@
         "나레이션",
         "MP4",
         "비디오",
-        "deck video"
+        "deck video",
+        "목소리",
+        "화자",
+        "TTS 엔진",
+        "voice"
       ],
       "file": "video_workflow.md"
     },
@@ -404,7 +408,10 @@
         "음성 뉴스",
         "오디오 뉴스",
         "듣는 뉴스",
-        "브리핑 만들"
+        "브리핑 만들",
+        "목소리",
+        "화자",
+        "TTS 엔진"
       ],
       "file": "audio_briefing.md"
     },

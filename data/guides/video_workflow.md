@@ -12,9 +12,10 @@
    - `[self:slide]{op: "create", instruction, content}` × N — 장마다 **스피커 노트(나레이션 초안)가 자동 시드**된다.
    - 나레이션을 다듬으려면 강의 창에서 노트를 편집(사용자 편집은 보존됨).
 2. **렌더** — `[self:deck]{op: "video", lecture_id}`:
-   - 슬라이드 PNG + 장별 스피커 노트 → TTS(edge-tts) → **나레이션 길이에 씬 길이 자동 맞춤** → FFmpeg 합성.
+   - 슬라이드 PNG + 장별 스피커 노트 → TTS → **나레이션 길이에 씬 길이 자동 맞춤** → FFmpeg 합성.
    - 기본 **백그라운드**(즉시 반환, 수 분 소요) — 진행·결과는 `video_state.json`, 같은 op 재호출로도 확인. `wait: true` = 동기.
-   - 옵션: `voice`(기본 ko-KR-SunHiNeural, 남성 ko-KR-InJoonNeural 등) / `rate` / `transition`(fade 기본) / `bgm_path` / `output_filename`.
+   - 옵션: `engine`(기본 **gemini** / `edge`=무과금) · `voice`(gemini 기본 **Charon**, `Sulafat`·`Achird` 등 / edge 는 `ko-KR-SunHiNeural` 등) · `style`(gemini 전용 자연어 연기 지시) · `rate`(edge 전용) / `transition`(fade 기본) / `bgm_path` / `output_filename`.
+   - **나레이션 비용**: 기본 gemini 는 문자 수 과금이라 장수가 많은 덱은 그만큼 든다. 시험 렌더는 `engine: "edge"` 로 돌리고 최종만 gemini 로 굽는 게 싸다.
    - 노트 없는 장 = 무나레이션 씬(기본 길이). 결과의 `missing_notes` 로 확인.
 3. **산출물** — `outputs/lectures/<id>/video/lecture_video.mp4` (h264+aac).
 

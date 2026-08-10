@@ -87,11 +87,42 @@ def _normalize_tts_text(text):
     return t.strip()
 
 
-async def generate_tts(text, output_path, voice="ko-KR-SunHiNeural", rate="+0%", pitch="+0Hz"):
-    import edge_tts  # 지연 import — 폰엔 없음(tts는 pc_only라 폰선 호출 안 됨)
+# TTS 엔진 층은 tts_engines.py (2026-08-10 분리 — 1500줄 규칙).
+# gemini_vision 과 같은 sys.modules 미등록 spec-load(싱글턴 임포트 레이스 없음).
+import importlib.util as _ilu_tts
+_tts_spec = _ilu_tts.spec_from_file_location(
+    "mp_tts_engines", os.path.join(os.path.dirname(__file__), "tts_engines.py"))
+tts_engines = _ilu_tts.module_from_spec(_tts_spec)
+_tts_spec.loader.exec_module(tts_engines)
+
+
+async def generate_tts(text, output_path, voice=None, rate="+0%", pitch="+0Hz",
+                       engine=None, style=None):
+    """텍스트 → 음성 파일. 엔진 분기는 tts_engines.resolve 가 단독 결정.
+
+    2026-08-10부터 기본은 Gemini(Charon). voice 만 `ko-KR-…` 로 주면 Edge 로 자동 회귀하고,
+    engine 을 명시하면 그게 이긴다. 반환값 = 엔진 메타(dict) — 호출측 보고용.
+    """
     text = _normalize_tts_text(text)  # 서식 잡음 제거 — 모든 tts 호출(브리핑·영상 나레이션) 공통
-    communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+    eng, resolved_voice = tts_engines.resolve(engine, voice)
+
+    if eng == "gemini":
+        # rate/pitch 는 Gemini 에 없는 축 — 조용히 먹지 않고 호출측에 알린다.
+        ignored = [k for k, v, d in (("rate", rate, "+0%"), ("pitch", pitch, "+0Hz")) if v and v != d]
+        meta = tts_engines.synthesize_gemini(text, output_path, voice=resolved_voice, style=style)
+        meta["engine"] = "gemini"
+        if ignored:
+            meta["ignored"] = ignored
+        return meta
+
+    import edge_tts  # 지연 import — 폰엔 없음(tts는 pc_only라 폰선 호출 안 됨)
+    if (style or "").strip():
+        # 연기 지시는 Gemini 전용 축 — Edge 에서 조용히 사라지면 "왜 반영이 안 되지"가 된다.
+        print(f"[tts] engine=edge 라 style 지시는 무시됩니다: {style[:60]}")
+    communicate = edge_tts.Communicate(text, resolved_voice, rate=rate, pitch=pitch)
     await communicate.save(output_path)
+    return {"engine": "edge", "voice": resolved_voice, "rate": rate, "pitch": pitch,
+            "styled": False, "ignored": (["style"] if (style or "").strip() else [])}
 
 def _prepare_scene_html(html, base_path, video_width, video_height):
     """씬 HTML을 렌더링 가능하도록 전처리 (이미지 Base64 변환, 뷰포트 설정)"""
@@ -279,7 +310,9 @@ def create_html_video(tool_input, output_base):
     scenes = tool_input.get("scenes", [])
     narration_texts = tool_input.get("narration_texts", [])
     bgm_path = tool_input.get("bgm_path")
-    voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    voice = tool_input.get("voice")          # 미지정 = 엔진 기본(gemini/Charon)
+    engine = tool_input.get("engine")
+    style = tool_input.get("style")
     rate = tool_input.get("rate", "+0%")
     pitch = tool_input.get("pitch", "+0Hz")
     output_filename = tool_input.get("output_filename", "html_video.mp4")
@@ -334,7 +367,8 @@ def create_html_video(tool_input, output_base):
         for i, scene in enumerate(scenes):
             if i < len(narration_texts) and narration_texts[i]:
                 tts_path = os.path.join(temp_dir, f"narration_{i}.mp3")
-                asyncio.run(generate_tts(narration_texts[i], tts_path, voice, rate, pitch))
+                asyncio.run(generate_tts(narration_texts[i], tts_path, voice, rate, pitch,
+                                         engine=engine, style=style))
                 narration_audio_paths.append(tts_path)
                 has_narration = True
 
@@ -1194,12 +1228,14 @@ def generate_gemini_image(tool_input, output_base):
 
 
 def create_tts(tool_input, output_base):
-    """텍스트를 음성 파일(MP3)로 변환합니다. (Edge TTS)"""
+    """텍스트를 음성 파일(MP3)로 변환합니다. (기본 Gemini TTS, engine:"edge" 로 무과금 회귀)"""
     text = tool_input.get("text")
     if not text:
         return "오류: text는 필수입니다."
 
-    voice = tool_input.get("voice", "ko-KR-SunHiNeural")
+    voice = tool_input.get("voice")
+    engine = tool_input.get("engine")
+    style = tool_input.get("style")
     rate = tool_input.get("rate", "+0%")
     pitch = tool_input.get("pitch", "+0Hz")
     output_filename = tool_input.get("output_filename")
@@ -1212,7 +1248,8 @@ def create_tts(tool_input, output_base):
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
 
     try:
-        asyncio.run(generate_tts(text, output_path, voice, rate, pitch))
+        meta = asyncio.run(generate_tts(text, output_path, voice, rate, pitch,
+                                        engine=engine, style=style)) or {}
 
         # 길이 측정
         from moviepy import AudioFileClip as MpAudioClip
@@ -1221,7 +1258,15 @@ def create_tts(tool_input, output_base):
         clip.close()
 
         abs_path = os.path.abspath(output_path)
-        return f"TTS 생성 완료: {abs_path}\n길이: {duration:.1f}초\n음성: {voice}"
+        lines = [f"TTS 생성 완료: {abs_path}",
+                 f"길이: {duration:.1f}초",
+                 f"엔진: {meta.get('engine', '?')} / 음성: {meta.get('voice', voice)}"]
+        if meta.get("styled"):
+            lines.append("연기 지시 반영됨")
+        if meta.get("ignored"):
+            # 이 엔진에 없는 축을 받았으면 조용히 먹지 않고 말한다.
+            lines.append(f"※ 이 엔진에 없는 축이라 무시됨: {', '.join(meta['ignored'])}")
+        return "\n".join(lines)
     except Exception as e:
         return f"TTS 생성 중 오류 발생: {str(e)}"
 

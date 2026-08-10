@@ -35,7 +35,9 @@
 [engines:tts]{text: "<완성 대본 전체>", output_filename: "audio_briefing_current.mp3", project_id: "앱모드"}
 ```
 (tts 는 `project_id` 로 지정한 프로젝트의 `outputs/` 에 곧장 굽는다 → move 불필요. 핵심원칙 2 참조.
- 화자 기본은 `ko-KR-SunHiNeural`(여성) — 바꾸려면 `voice` 지정: 남성 `ko-KR-InJoonNeural`, 멀티링구얼 `ko-KR-HyunsuMultilingualNeural`.)
+ 엔진 기본은 **Gemini TTS · 화자 `Charon`**(2026-08-10 전환). 다른 화자는 `voice`: `Sulafat`(따뜻함)·`Achird`(친근함) 등.
+ `style` 로 자연어 연기 지시가 된다 — 브리핑이면 `style: "차분한 라디오 진행자 톤으로, 또박또박"`.
+ **무과금이 필요하면** `engine: "edge"` — 한국어 화자 3종(`ko-KR-SunHiNeural` 여 / `ko-KR-InJoonNeural` 남 / `ko-KR-HyunsuMultilingualNeural`)이 천장이고 `rate`·`pitch` 는 이 엔진에서만 먹는다.)
 
 ### 4) 스크립트 저장 (폰/원격 뷰어용)
 ```

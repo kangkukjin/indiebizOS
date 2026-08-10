@@ -467,10 +467,10 @@ async def export_deck(lecture_id: str, format: str):
     if not ls.lecture_exists(lecture_id):
         raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
     fmt = (format or "").lower().strip()
-    if fmt not in ("pdf", "pptx", "pptx_image", "pptx_editable"):
+    if fmt not in ("pdf", "pptx", "pptx_image", "pptx_editable", "images"):
         raise HTTPException(
             status_code=400,
-            detail="format은 pdf / pptx (이미지) / pptx_editable (편집 가능) 중 하나여야 합니다.",
+            detail="format은 pdf / pptx (이미지) / pptx_editable (편집 가능) / images (이미지 폴더 ZIP) 중 하나여야 합니다.",
         )
 
     export_mod = _load_export_module()

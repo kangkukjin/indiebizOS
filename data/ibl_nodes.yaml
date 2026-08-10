@@ -3372,14 +3372,14 @@ nodes:
         runs_on: pc_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.
         group: lecture
-        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(즉시 반환, 진행=video_state.json·같은 op 재호출로 확인), wait:true=동기. 옵션 voice/rate/transition/bgm_path/output_filename. 노트 없는 장은 무나레이션 씬.
+        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx|images). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(즉시 반환, 진행=video_state.json·같은 op 재호출로 확인), wait:true=동기. 옵션 engine/voice/style/rate/transition/bgm_path/output_filename (나레이션 기본 = Gemini TTS Charon). 노트 없는 장은 무나레이션 씬.
         target_key: op
         router: handler
         tool: deck_op
         ops:
           values:
             reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
-            export: 파일 내보내기 (format=pdf|pptx, PIL/python-pptx 합본)
+            export: 파일 내보내기 (format=pdf|pptx=합본, images=슬라이드별 PNG 폴더+ZIP)
             video: 나레이션 동영상 렌더 (슬라이드 PNG+스피커 노트→TTS→MP4, 기본 백그라운드·wait=동기)
         implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본. video는 덱을 scenes/narration_texts 로 조립해 media_producer create_html_video 차용(TTS→씬 길이 자동 맞춤→FFmpeg 합성), lecture_dir/video/ 저장+video_state.json.
         keywords:
@@ -6204,12 +6204,12 @@ nodes:
       tts:
         returns: effect
         runs_on: pc_only
-        description: 텍스트를 음성 MP3로 변환 (Edge TTS, 한국어 지원). 동영상 나레이션용.
-        target_description: 음성으로 만들 텍스트. voice 옵션으로 화자 선택 (기본 한국어 여성).
+        description: 텍스트를 음성 MP3로 변환 (기본 Gemini TTS, 한국어 지원). 동영상 나레이션용.
+        target_description: '음성으로 만들 텍스트. engine: gemini(기본, 화자 Charon·style로 연기 지시) | edge(무과금, ko-KR-SunHiNeural 등 한국어 3종). voice로 화자 선택.'
         group: media_produce
         router: handler
         tool: create_tts
-        implementation: edge-tts(Microsoft Azure TTS)로 텍스트→MP3 변환
+        implementation: Gemini TTS(기본, interactions API·raw PCM→ffmpeg) 또는 edge-tts(engine:"edge")로 텍스트→MP3 변환
         target_key: text
         keywords:
         - speech

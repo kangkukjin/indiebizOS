@@ -4,8 +4,15 @@
 (호가·사진·링크)을 준다. 빌라/원룸/오피스텔 개별 호실에 강하다(아파트 단지·단독/다가구는 약함).
 
 비공식 내부 API(apis.zigbang.com). 키 불필요. 한국 IP에서 차단 약함.
-흐름: 지명→좌표(/v2/search, Nominatim 폴백) → geohash5 → 리스트(마커+itemId) →
+흐름: 지명→좌표(/v2/search, Nominatim 폴백) → geohash5 → 리스트(마커 id) →
 거리 선필터 → 상세(/v3/items/{id}) 병렬조회 → records 통화.
+
+리스트 개편(2026-08-10 실측): 옛 `/v2/items/{cat}` 이 404 로 은퇴 →
+`/house/property/v1/items/{villas|onerooms|officetels}` (경로가 복수형).
+★웹사이트는 geohash 를 암호화 blob 으로 보내지만 **평문 geohash5 도 그대로 통한다**.
+salesTypes[i] 서버필터 생존(실측 434→20건), 마커 필드 itemId→**id**.
+상세 /v3/items/{id}·검색 /v2/search 는 불변. (벌크 상세 POST
+/house/property/v1/items/list {itemIds, ≤15개} 도 존재 — 필요 시 왕복 절감 후보.)
 """
 import json
 import math
@@ -24,6 +31,8 @@ _TYPE_TO_CAT = {
     "officetel": "officetel", "오피스텔": "officetel", "op": "officetel",
 }
 _CAT_DEFAULT = "villa"
+# 리스트 엔드포인트(/house/property/v1/items/…)는 경로가 복수형 — 웹 URL·상세는 단수형 유지.
+_CAT_PLURAL = {"villa": "villas", "oneroom": "onerooms", "officetel": "officetels"}
 
 
 def _http_json(url, timeout=12):
@@ -231,14 +240,15 @@ def get_zigbang_listings(tool_input: dict):
         limit = 30
 
     # 리스트 호출 (geohash5 박스 — 약 4.9km). salesTypes 서버 필터.
+    # 2026-08-10: /v2/items/{cat} 404 은퇴 → /house/property/v1/items/{복수형}. 평문 geohash 통과.
     gh = _geohash(lat, lng, 5)
-    qs = {"geohash": gh, "depositMin": tool_input.get("deposit_min") or 0,
-          "rentMin": 0, "domain": "zigbang", "checkAnyItemWithoutFilter": "true"}
+    qs = {"geohash": gh, "salesPriceMin": 0,
+          "depositMin": tool_input.get("deposit_min") or 0, "rentMin": 0}
     params = urllib.parse.urlencode(qs)
     for i, st in enumerate(sales_types):
         params += f"&salesTypes[{i}]={urllib.parse.quote(st)}"
     try:
-        listing = _http_json(f"{_API}/v2/items/{cat}?{params}", timeout=12)
+        listing = _http_json(f"{_API}/house/property/v1/items/{_CAT_PLURAL[cat]}?{params}", timeout=12)
     except Exception as e:
         return {"success": False, "error": f"직방 리스트 조회 실패: {e}"}
     markers = listing.get("items") or []
@@ -255,7 +265,7 @@ def get_zigbang_listings(tool_input: dict):
             continue
         d = _haversine_m(lat, lng, float(mlat), float(mlng))
         if d <= radius:
-            scored.append((d, m.get("itemId")))
+            scored.append((d, m.get("id") or m.get("itemId")))  # 새 리스트=id, 옛=itemId
     scored.sort(key=lambda x: x[0])
     near = scored[:limit]
     if not near:

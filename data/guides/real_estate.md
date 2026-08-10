@@ -176,10 +176,11 @@
 
 1. **지오코딩**: `GET https://apis.zigbang.com/v2/search?q={지명}` → `items[].{lat,lng,type:"address",description}` (POI는 약함 → Nominatim 폴백)
 2. **geohash precision 5** 계산(좌표 → 약 4.9km 박스 식별자)
-3. **리스트(마커)**: `GET https://apis.zigbang.com/v2/items/{cat}?geohash={gh}&salesTypes[0]=전세&salesTypes[1]=월세&depositMin=0&rentMin=0&domain=zigbang&checkAnyItemWithoutFilter=true`
-   - `cat` ∈ `oneroom`·`villa`·`officetel` (`apartment`·`house` → 404)
-   - 반환 `{items:[{lat,lng,itemId,itemBmType}]}` — 마커만(가격 없음). **box가 넓으니 거리 후필터 필수.**
-   - ⚠️ `v3/items/villa`(옛 리스트 경로)는 **404 폐기** → 반드시 `v2/items/{cat}`.
+3. **리스트(마커)**: `GET https://apis.zigbang.com/house/property/v1/items/{cat복수형}?geohash={gh}&salesPriceMin=0&depositMin=0&rentMin=0&salesTypes[0]=전세&salesTypes[1]=월세`
+   - 경로가 **복수형**: `onerooms`·`villas`·`officetels` (2026-08-10 개편 실측 — 옛 `/v2/items/{cat}`·`v3/items/villa` 는 **404 폐기**)
+   - 반환 `{items:[{id,lat,lng,userNo}]}` — 마커만(가격 없음), 필드 `itemId`→**`id`**. **box가 넓으니 거리 후필터 필수.**
+   - ★웹사이트는 geohash 를 암호화 blob 으로 보내지만 **평문 geohash5 도 통과**한다. `salesTypes[i]` 서버필터 생존(실측 434→20건).
+   - 벌크 상세 `POST /house/property/v1/items/list` `{itemIds:[…]}`(**≤15개**)도 존재 — 왕복 절감 후보.
 4. **상세**: `GET https://apis.zigbang.com/v3/items/{itemId}` → `{item:{...}}`
    - `salesType`(전세/월세/매매), `serviceType`(빌라/원룸/오피스텔), `residenceType`(다세대주택 등)
    - `price:{deposit, rent}`(**만원**), `area:{전용면적M2, 대지권면적M2}`, `floor:{floor, allFloors}`

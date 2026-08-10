@@ -106,6 +106,11 @@ class EpisodeLogger:
         누수 방어 — sysai 청소와 대칭."""
         stale = _current_episode.get(None)
         if stale is not None:
+            # 아직 contextvar 가 stale 이라 이 print 는 stale 버퍼에 기록된다 —
+            # 원장에서 salvage(미종료 박제)를 정상 종료와 구분하는 표식 (2026-08-10:
+            # 최근 200건 중 12건이 START 만 있는 고아로 발견, 원인 추적용)
+            print(f"[Episode SALVAGE] 미종료 에피소드 박제 — 같은 컨텍스트에 새 시작 "
+                  f"(agent={agent}, 새 메시지 동일 여부는 원장 비교)")
             cls._finalize(stale)  # 같은 컨텍스트의 누락 에피소드 salvage (데이터 보존)
         ep = _Episode(agent, user_message, project_id)
         _current_episode.set(ep)

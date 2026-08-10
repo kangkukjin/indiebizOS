@@ -144,17 +144,35 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     return () => window.removeEventListener('storage', onGearChange);
   }, [currentProject, loadAgents]);
 
+  // 실행 상태 재동기화 — 백엔드 등기부가 진실 (GET /agents 의 running 필드).
+  // 이 Set 은 원래 시작/중지 버튼만 갱신하는 화면 로컬 상태라, 백엔드가 재기동해
+  // 등기부가 비워지면 '실행 중' 거짓 표시가 남았다 (2026-08-10 진단). 목록을 읽어올
+  // 때마다 서버 값으로 덮어써 드리프트를 없앤다.
+  useEffect(() => {
+    setRunningAgents(new Set(agents.filter((a) => a.running).map((a) => a.id)));
+  }, [agents]);
+
+  // 창 복귀 시 목록 재조회 — 자리 비운 사이의 백엔드 재기동을 화면이 알아채는 경로.
+  useEffect(() => {
+    if (!currentProject) return;
+    const onFocus = () => loadAgents(currentProject.id);
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [currentProject, loadAgents]);
+
   // 에이전트 자동 활성화 헬퍼: 선택 + 시작 + 연결
   const autoActivateAgent = async (target: Agent) => {
     setCurrentAgent(target);
-    // 에이전트가 아직 시작되지 않았으면 시작
-    if (!runningAgents.has(target.id) && currentProject) {
+    // ★화면 상태(runningAgents)를 믿지 않는다 — 백엔드 재기동 후 거짓 '실행 중'이
+    // 남을 수 있다(2026-08-10). startAgent 는 already_running 을 돌려주는 멱등
+    // 호출이라 무조건 부르는 게 안전하다.
+    if (currentProject) {
       try {
         await api.startAgent(currentProject.id, target.id);
         setRunningAgents(prev => new Set([...prev, target.id]));
         addLog(`[자동 시작] ${target.name} 에이전트 (스케줄 결과 전달)`);
       } catch {
-        // 이미 백엔드에서 시작된 경우 무시 (registry에 이미 있을 수 있음)
+        // 시작 실패해도 연결은 진행 — 백엔드 WS 쪽 자동 시작이 한 번 더 받쳐준다
         setRunningAgents(prev => new Set([...prev, target.id]));
       }
     }

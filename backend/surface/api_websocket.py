@@ -91,6 +91,63 @@ def get_agent_runners():
     return _get()
 
 
+def _ensure_agent_runner(project_id: str, agent_id: str, agent_config: dict, agents_data: dict):
+    """등기부에 살아있는 러너가 없으면 그 자리에서 시작해 등록한다 (멱등).
+
+    등기부(agent_runners)는 메모리뿐이라 uvicorn reload·keeper 재기동마다 통째로
+    비워진다 — 옛 동작은 그때 '실행 중이 아닙니다' 오류를 돌려줘, 화면이 낡은
+    '실행 중' 표시를 믿는 동안 대화가 막혔다(2026-08-10 진단: 유휴 후 복귀 증상의
+    진범). 스케줄러(calendar_actions._ensure_agent_running)·시스템 AI가 이미 같은
+    자동 시작을 하므로, 채팅 수신도 같은 계약으로 맞춘다. 반환: runner_info | None.
+    """
+    from datetime import datetime
+    from agent_runner import AgentRunner
+
+    agent_runners = get_agent_runners()
+    info = (agent_runners.get(project_id) or {}).get(agent_id)
+    runner = info.get("runner") if info else None
+    if runner and runner.running and runner.ai:
+        return info
+
+    try:
+        project_path = project_manager.get_project_path(project_id)
+        # 원본 config 를 오염시키지 않도록 사본에 경로를 심는다 (start 엔드포인트와 동일 계약)
+        cfg = dict(agent_config)
+        cfg["_project_path"] = str(project_path)
+        cfg["_project_id"] = project_id
+        new_runner = AgentRunner(cfg, agents_data.get("common", {}) or {})
+        new_runner.start()
+        agent_runners.setdefault(project_id, {})[agent_id] = {
+            "runner": new_runner,
+            "config": cfg,
+            "running": True,
+            "started_at": datetime.now().isoformat(),
+        }
+        print(f"[에이전트 자동 시작] {cfg.get('name', agent_id)} (채팅 수신 시 등기부 부재 — 재기동 후 복구)")
+        return agent_runners[project_id][agent_id]
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"[에이전트 자동 시작 실패] {project_id}/{agent_id}: {e}")
+        return None
+
+
+async def _bail_stream(client_id: str, msg: str):
+    """스트림 핸들러 이른-return 공통 마무리 (2026-08-10, 고아 에피소드 수리).
+
+    옛 이른-return 들은 end_episode 없이 빠져나가 에피소드가 원장에 START 만 있는
+    고아로 남았다(같은 컨텍스트의 다음 메시지가 salvage — 최근 200건 중 12건).
+    사유를 print(에피소드 버퍼에 기록)하고 에피소드를 닫은 뒤 오류를 보낸다.
+    """
+    print(f"[WS stream 중단] {msg}")
+    try:
+        from episode_logger import EpisodeLogger
+        EpisodeLogger.end_episode()
+    except Exception:
+        pass
+    await manager.send_message(client_id, {"type": "error", "message": msg})
+
+
 def init_manager(pm):
     global project_manager
     project_manager = pm
@@ -278,10 +335,7 @@ async def handle_chat_message(client_id: str, data: dict):
         # 에이전트 설정 로드
         agents_file = project_path / "agents.yaml"
         if not agents_file.exists():
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": "에이전트 설정을 찾을 수 없습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 설정을 찾을 수 없습니다. (project={project_id})")
             return
 
         with open(agents_file, 'r', encoding='utf-8') as f:
@@ -297,29 +351,19 @@ async def handle_chat_message(client_id: str, data: dict):
                 break
 
         if not agent_config:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다. (project={project_id})")
             return
 
-        # 실행 중인 AgentRunner 확인
-        agent_runners = get_agent_runners()
-        if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'이(가) 실행 중이 아닙니다. 먼저 시작해주세요."
-            })
+        # 실행 중인 AgentRunner 확인 — 등기부에 없으면 자동 시작 (재기동으로 비워진 등기부 복구)
+        runner_info = _ensure_agent_runner(project_id, agent_id, agent_config, agents_data)
+        if not runner_info:
+            await _bail_stream(client_id, f"에이전트 '{agent_name}' 시작에 실패했습니다. 백엔드 로그를 확인해주세요.")
             return
 
-        runner_info = agent_runners[project_id][agent_id]
         runner = runner_info.get("runner")
 
         if not runner or not runner.ai:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다.")
             return
 
         # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
@@ -473,10 +517,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 에이전트 설정 로드
         agents_file = project_path / "agents.yaml"
         if not agents_file.exists():
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": "에이전트 설정을 찾을 수 없습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 설정을 찾을 수 없습니다. (project={project_id})")
             return
 
         with open(agents_file, 'r', encoding='utf-8') as f:
@@ -494,29 +535,19 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 break
 
         if not agent_config:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다. (project={project_id})")
             return
 
-        # 실행 중인 AgentRunner 확인
-        agent_runners = get_agent_runners()
-        if project_id not in agent_runners or agent_id not in agent_runners[project_id]:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'이(가) 실행 중이 아닙니다. 먼저 시작해주세요."
-            })
+        # 실행 중인 AgentRunner 확인 — 등기부에 없으면 자동 시작 (재기동으로 비워진 등기부 복구)
+        runner_info = _ensure_agent_runner(project_id, agent_id, agent_config, agents_data)
+        if not runner_info:
+            await _bail_stream(client_id, f"에이전트 '{agent_name}' 시작에 실패했습니다. 백엔드 로그를 확인해주세요.")
             return
 
-        runner_info = agent_runners[project_id][agent_id]
         runner = runner_info.get("runner")
 
         if not runner or not runner.ai:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다."
-            })
+            await _bail_stream(client_id, f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다.")
             return
 
         # 스레드 컨텍스트 설정
@@ -897,10 +928,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         model = config.get("model", "claude-sonnet-4-20250514")
 
         if not api_key:
-            await manager.send_message(client_id, {
-                "type": "error",
-                "message": "API 키가 설정되지 않았습니다."
-            })
+            await _bail_stream(client_id, "API 키가 설정되지 않았습니다.")
             return
 
         # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)

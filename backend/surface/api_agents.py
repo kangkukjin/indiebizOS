@@ -124,6 +124,14 @@ async def get_project_agents(project_id: str, request: Request):
         except Exception as e:
             print(f"[api_agents] effective_model 해소 실패(무시): {e}")
 
+        # 실행 상태 부착 — 등기부(메모리)가 진실. 화면의 runningAgents 가 이걸로 재동기화
+        # 해야 백엔드 재기동 후 '실행 중' 거짓 표시 드리프트가 사라진다 (2026-08-10).
+        runners = agent_runners.get(project_id, {})
+        for a in agents:
+            info = runners.get(a.get("id"))
+            r = info.get("runner") if info else None
+            a["running"] = bool(r and getattr(r, "running", False))
+
         return {"agents": agents}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

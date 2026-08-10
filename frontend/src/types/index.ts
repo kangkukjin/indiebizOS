@@ -60,6 +60,8 @@ export interface Agent {
     api_key?: string;
     model: string;
   };
+  // 실행 상태 — 백엔드 등기부(agent_runners)가 진실. GET /agents 가 부착 (2026-08-10).
+  running?: boolean;
   // 표시용 — 기어가 해소한 실효 모델(per-agent 모델 폐지 후 ai 대신 이걸 표시). 백엔드 GET /agents 가 부착.
   effective_model?: {
     provider?: string;

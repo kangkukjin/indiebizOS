@@ -361,6 +361,23 @@ jobs:
       - name: List files
         run: ls -la dist/
 
+      # app-latest = "최신만 놓인" 공개 채널. softprops 는 파일을 *추가*만 하고 파일명에
+      # 버전이 박혀 덮어쓰지도 않아, 정리 단계가 없으면 옛 설치본이 무한 누적된다
+      # (2026-08-10 실측: 1.3.8~1.4.2 다섯 버전 ~2GB — 방문자가 옛 판을 받아갈 수 있었다).
+      # 게시 직전에 이번 빌드 파일명과 다른 자산을 전부 지운다 — 이력은 버전별
+      # 릴리스(v1.x.y 드래프트)가 각자 보관하므로 잃는 것 없음.
+      - name: Prune old assets from app-latest (최신만 유지)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          KEEP=$(ls dist | sort)
+          gh release view app-latest -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' 2>/dev/null | while read -r a; do
+            if ! echo "$KEEP" | grep -qxF "$a"; then
+              echo "삭제: $a"
+              gh release delete-asset app-latest "$a" -R "$GITHUB_REPOSITORY" -y || true
+            fi
+          done
+
       - name: Publish rolling release (app-latest)
         uses: softprops/action-gh-release@v2
         with:

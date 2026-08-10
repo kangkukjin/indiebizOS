@@ -35,7 +35,7 @@ TOOLS_DIR = os.path.join(ROOT, "data", "packages", "installed", "tools")
 # system_essentials 는 텍스트 계약 도구(파일 편집·run_command·계획모드 프로토콜 마커
 # [[QUESTION_PENDING]]/__REQUIRES_APPROVAL__ 등)라 문자열이 정당 — 단 더 늘리지는 말 것.
 BASELINE = {
-    "system_essentials": 31,
+    "system_essentials": 30,  # 2026-08-10 래칫 조임 (실측 30건, 재진입 불가)
 }
 
 

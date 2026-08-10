@@ -1,19 +1,27 @@
-# 윈도우 이식성 게이트 — 매 푸시마다 fcntl 부류를 커밋 시점에 잡는다.
+# 정본 설치 경로(소스 트리) 이식성 게이트 — 매 푸시마다, 3 OS 에서.
+#
+# 헌법(2026-08-10, canonical-install-path): 공식 설치 경로 = git clone 한 소스
+# 트리를 그대로 돌리는 것(맥·윈도우·리눅스), 설치본(.exe/.dmg)은 그 포장.
+# 검증 안 되는 몸은 조용히 썩는다(실증: 층 이동 후 폰 부팅 불능 — import 는
+# 초록, 부팅 첫 줄에서 사망) → 경로의 증명은 저자의 기억이 아니라 CI 가 한다.
 #
 # 왜 build.yml 과 별도인가: build.yml 은 태그 푸시 때만 도는 배포 빌드라
 # 평시 커밋의 이식성 회귀를 못 잡는다(2026-07-20 윈도우 첫 설치에서
 # data/packages/ 의 fcntl 이 설치 후에야 발견된 부류).
 #
-# 두 층:
+# 세 층 (얕은 것부터):
 #   static-scan   — AST 정적 검사(의존성 0, 우분투). 유닉스 전용 stdlib 의
 #                   무가드 톱레벨 import + 진입점(api.py)의 sys.path 부트스트랩
 #                   전 backend 로컬 import. pre-commit 훅과 같은 스크립트.
-#   import-smoke  — 실제 윈도우에서 api.py 톱레벨 exec(= 부팅 등가). 배포 번들과
+#   import-smoke  — 실제 윈도우에서 api.py 톱레벨 exec. 배포 번들과
 #                   같은 requirements-core.txt 로 설치. ★python -I(isolated)로
 #                   실행해 임베디드 파이썬(_pth isolated)의 "스크립트 폴더가
 #                   sys.path 에 없음" 조건을 재현 — 표준 python -c 는 이 조건이
 #                   재현되지 않아 v1.3.6 mime_compat 조기 import 를 못 잡았다.
-name: Windows Portability
+#   boot-smoke    — 3 OS 에서 서버를 실제로 띄워 /health 200 까지 (import 성공
+#                   ≠ 부팅 성공 — 부팅은 파일 배치·데이터 로드·라우터 조립까지
+#                   본다). scripts/ci_boot_smoke.py.
+name: Portability (3 OS)
 
 on:
   push:
@@ -22,6 +30,7 @@ on:
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
       - 'scripts/ci_import_smoke.py'
+      - 'scripts/ci_boot_smoke.py'
       - '.github/workflows/portability.yml'
   pull_request:
     paths:
@@ -29,6 +38,7 @@ on:
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
       - 'scripts/ci_import_smoke.py'
+      - 'scripts/ci_boot_smoke.py'
       - '.github/workflows/portability.yml'
   workflow_dispatch:
 
@@ -56,3 +66,23 @@ jobs:
         run: pip install -r backend/requirements-core.txt
       - name: 백엔드 모듈 그래프 import 스모크 (임베디드 등가 -I)
         run: python -I -X utf8 scripts/ci_import_smoke.py
+
+  boot-smoke:
+    # 정본 경로 부팅 증명 — clone → 코어 의존성 → 서버 실기동 → /health 200.
+    # 세 OS 대칭: 어떤 데스크탑 몸도 "아무도 부팅 안 해본 채 썩는" 상태로 두지 않는다.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 코어 의존성 설치 (배포 번들과 동일)
+        run: pip install -r backend/requirements-core.txt
+      - name: 서버 실기동 → /health 200 (scripts/ci_boot_smoke.py)
+        run: python scripts/ci_boot_smoke.py

@@ -25,6 +25,14 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 API_PY = os.path.join(ROOT, "backend", "api.py")
+
+
+def _python() -> str:
+    """bootstrap.py 가 만든 .venv 가 있으면 그걸로 — CI 가 README 레시피 그대로를 증명하게.
+    없으면 현재 인터프리터(로컬 편의)."""
+    cand = (os.path.join(ROOT, ".venv", "Scripts", "python.exe") if os.name == "nt"
+            else os.path.join(ROOT, ".venv", "bin", "python3"))
+    return cand if os.path.exists(cand) else sys.executable
 PORT = int(os.environ.get("INDIEBIZ_API_PORT", "8799"))  # 기본 8765 를 피해 로컬 실행과 충돌 없음
 HEALTH = f"http://127.0.0.1:{PORT}/health"
 DEADLINE_S = int(os.environ.get("BOOT_SMOKE_DEADLINE", "240"))  # 첫 부팅은 임포트가 무거움(윈도우 러너 여유)
@@ -44,11 +52,12 @@ def main() -> int:
     env["INDIEBIZ_API_PORT"] = str(PORT)
     env["PYTHONUTF8"] = "1"            # 윈도우 러너 cp1252 콘솔에서 한글 로그 죽지 않게
 
+    py = _python()
     log_fd, log_path = tempfile.mkstemp(prefix="boot_smoke_", suffix=".log")
-    print(f"[boot-smoke] spawn: {sys.executable} api.py (port {PORT}, log={log_path})", flush=True)
+    print(f"[boot-smoke] spawn: {py} api.py (port {PORT}, log={log_path})", flush=True)
     with os.fdopen(log_fd, "wb") as log_f:
         proc = subprocess.Popen(
-            [sys.executable, API_PY],
+            [py, API_PY],
             cwd=os.path.join(ROOT, "backend"),
             env=env,
             stdout=log_f,

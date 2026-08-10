@@ -351,15 +351,25 @@ Open the `.dmg` and drag IndieBiz into Applications (macOS), or run the installe
 </details>
 
 <details>
-<summary><strong>Alternative: manual setup</strong></summary>
+<summary><strong>The canonical path: source install (macOS · Windows · Linux)</strong></summary>
+
+This is the **canonical install path** — CI verifies this exact recipe on all three OSes on every push (clone → bootstrap → boot → `/health` 200). The Claude Desktop path and the desktop app are both wrappers around it.
 
 ```bash
 git clone https://github.com/kangkukjin/indiebizOS.git
 cd indiebizOS
-./start.sh
+python3 scripts/bootstrap.py     # Windows: py scripts\bootstrap.py
 ```
 
-This runs the system, but you configure agents, packages, and preferences yourself. The Claude Desktop path is recommended because the AI handles all of it for you.
+The bootstrap creates `.venv` (auto-selecting Python 3.10–3.13), installs backend dependencies (core strictly, tools best-effort), seeds `.env` from `.env.example` (put your LLM API key there), and installs the Electron desktop UI if `npm` is present — backend-only otherwise (remote launcher/REST still work).
+
+Run:
+```bash
+./start.sh                              # macOS/Linux (backend + desktop UI)
+```
+Windows: `.venv\Scripts\python.exe backend\api.py`
+
+You configure agents, packages, and preferences yourself on this path. The Claude Desktop path is more comfortable because the AI handles all of it for you.
 </details>
 
 ---

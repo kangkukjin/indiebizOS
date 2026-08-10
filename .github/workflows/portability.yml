@@ -31,6 +31,7 @@ on:
       - 'scripts/check_win_portability.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/bootstrap.py'
       - '.github/workflows/portability.yml'
   pull_request:
     paths:
@@ -39,6 +40,7 @@ on:
       - 'scripts/check_win_portability.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/bootstrap.py'
       - '.github/workflows/portability.yml'
   workflow_dispatch:
 
@@ -68,8 +70,10 @@ jobs:
         run: python -I -X utf8 scripts/ci_import_smoke.py
 
   boot-smoke:
-    # 정본 경로 부팅 증명 — clone → 코어 의존성 → 서버 실기동 → /health 200.
+    # 정본 경로 부팅 증명 — README 의 레시피 *그대로*: clone → bootstrap.py → 부팅 → /health 200.
     # 세 OS 대칭: 어떤 데스크탑 몸도 "아무도 부팅 안 해본 채 썩는" 상태로 두지 않는다.
+    # bootstrap.py 를 쓰는 이유: CI 가 별도 설치 절차를 가지면 그 순간 레시피가 둘이 된다 —
+    # 낯선 사람이 따라할 그 명령이 여기서 도는 그 명령이어야 증명이 성립한다.
     strategy:
       fail-fast: false
       matrix:
@@ -82,7 +86,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: 코어 의존성 설치 (배포 번들과 동일)
-        run: pip install -r backend/requirements-core.txt
+      - name: 부트스트랩 (README 정본 레시피 — venv+코어 의존성)
+        run: python scripts/bootstrap.py --core-only
       - name: 서버 실기동 → /health 200 (scripts/ci_boot_smoke.py)
         run: python scripts/ci_boot_smoke.py

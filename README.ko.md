@@ -343,15 +343,25 @@ Claude Desktop이 없다면 빌드된 데스크탑 앱을 받으세요. Python·
 </details>
 
 <details>
-<summary><strong>대안: 수동 설치</strong></summary>
+<summary><strong>정본 경로: 소스 설치 (맥 · 윈도우 · 리눅스)</strong></summary>
+
+이것이 **정본 설치 경로**입니다 — CI 가 매 푸시마다 세 OS 에서 이 레시피 그대로(clone → bootstrap → 부팅 → `/health` 200) 검증합니다. Claude Desktop 방식과 데스크탑 앱은 이 경로의 포장입니다.
 
 ```bash
 git clone https://github.com/kangkukjin/indiebizOS.git
 cd indiebizOS
-./start.sh
+python3 scripts/bootstrap.py     # 윈도우: py scripts\bootstrap.py
 ```
 
-시스템은 실행되지만 에이전트·패키지·설정을 직접 구성해야 합니다. AI가 전부 처리해 주는 Claude Desktop 방식을 권장합니다.
+bootstrap 이 `.venv`(Python 3.10~3.13 자동 선택)를 만들고, 백엔드 의존성(코어=엄격, 도구=최선)을 설치하고, `.env` 를 `.env.example` 에서 시드하고(LLM API 키를 채우세요), `npm` 이 있으면 데스크탑 UI 까지 설치합니다 — 없으면 백엔드 전용(원격 런처/REST 사용 가능).
+
+실행:
+```bash
+./start.sh                              # 맥/리눅스 (백엔드 + 데스크탑 UI)
+```
+윈도우: `.venv\Scripts\python.exe backend\api.py`
+
+에이전트·패키지·설정 구성은 직접 해야 합니다. AI가 전부 처리해 주는 Claude Desktop 방식이 편합니다.
 </details>
 
 ---

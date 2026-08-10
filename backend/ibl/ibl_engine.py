@@ -585,23 +585,27 @@ def _run_router_safely(fn, *args, **kwargs):
 def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
     """미인식-파라미터 경고를 결과에 부착 (인자 층 침묵 제거, 2026-07-03).
 
-    핸들러 반환형이 dict/JSON 문자열/평문으로 갈리므로 셋 다 처리:
-    dict 는 키 추가, JSON 문자열은 파싱→추가→재직렬화, 평문은 꼬리에 덧붙임.
+    핸들러 반환형이 dict/JSON 문자열/평문으로 갈리므로 셋 다 처리.
+    ★위치=머리 (2026-08-10, ep1014 실측): [self:read]{start_line,end_line} 미인식으로
+    전체 파일 59,872자가 반환됐을 때 꼬리 경고를 모델이 못 보고 잘못된 구간으로
+    추론을 이어갔다. 긴 본문 뒤 경고는 죽은 경고 — 평문은 머리에 prepend,
+    dict/JSON 도 param_warning 키를 첫 키로 넣어 직렬화 앞머리에 보이게 한다.
     """
     if not warning:
         return result
     msg = warning["message"]
     if isinstance(result, dict):
-        result.setdefault("param_warning", msg)
-        return result
+        if "param_warning" in result:
+            return result
+        return {"param_warning": msg, **result}
     if isinstance(result, str):
         import json as _json
         try:
             obj = _json.loads(result)
         except Exception:
-            return result + f"\n\n[param_warning] {msg}"
+            return f"[param_warning] {msg}\n\n" + result
         if isinstance(obj, dict) and "param_warning" not in obj:
-            obj["param_warning"] = msg
+            obj = {"param_warning": msg, **obj}
             return _json.dumps(obj, ensure_ascii=False)
         return result
     return result

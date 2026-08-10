@@ -605,6 +605,24 @@ def execute(tool_input: dict, context) -> str:
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":
+        # start_line/end_line (1-기반, 양끝 포함) → offset/limit 흡수 (2026-08-10, ep1014):
+        # 모델이 이 철자를 자연스럽게 쓴다. 별칭(이름변경)으로 못 푸는 이유 — offset 은
+        # 0-기반이라 start_line=280 은 offset=279 로 *계산*해야 한다 (end 흡수와 같은 부류).
+        if (tool_input.get("start_line") is not None
+                or tool_input.get("end_line") is not None):
+            try:
+                _sl = tool_input.get("start_line")
+                _el = tool_input.get("end_line")
+                _upd = {}
+                if _sl is not None and not tool_input.get("offset"):
+                    _upd["offset"] = max(0, int(_sl) - 1)
+                if _el is not None and tool_input.get("limit") is None:
+                    _first = int(_sl) if _sl is not None else int(tool_input.get("offset") or 0) + 1
+                    _upd["limit"] = max(1, int(_el) - _first + 1)
+                if _upd:
+                    tool_input = {**tool_input, **_upd}
+            except (TypeError, ValueError):
+                pass  # 숫자 아님 — 기존 흐름에 맡김, 런타임 param 경고층이 알림
         # end(끝 줄/블록) → limit 흡수: start 는 액션 aliases(레지스트리)가 offset 으로
         # 변환하지만, end 는 이름변경이 아니라 계산(limit = end − offset)이라 여기서 흡수.
         # (모델이 start/end 를 써 조용히 무시되고 통파일이 오던 silent-ignore 해소.)

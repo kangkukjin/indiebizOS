@@ -195,16 +195,20 @@ tool_json:
 
       ## 주의사항
 
-      - 정적 HTML만 지원 (JavaScript 렌더링 불가)
+      - JS 렌더링·iframe 자동 지원 (정적 실패 시 Playwright 로 자동 에스컬레이션 — 직접 curl 우회 불필요)
 
-      - 로그인 필요 페이지 불가 → browser_action 사용
+      - news.google.com 기사 링크는 실제 기사 URL 로 자동 해소 후 크롤
+
+      - 본문이 잘리면(truncated: true) max_length 를 늘려 재호출
+
+      - Cloudflare 급 완전 챌린지·로그인 벽은 reason(bot_blocked/login_required) 으로 정직 반환 → 다른 소스 시도
 
 
       ## 다른 도구와의 관계
 
       - URL 찾기: search
 
-      - 동적/로그인 페이지: browser_action'
+      - 로그인 세션이 필요한 조작: browser_action'
     input_schema:
       type: object
       properties:

@@ -66,6 +66,18 @@ _BLOCK_TEXT_SIGNS = [
     'unusual traffic', 'captcha', 'attention required', 'pardon our interruption',
     'verify you are', 'checking your browser',
     '비정상적인 접근', '자동 입력 방지', '자동입력 방지', '잠시 후 다시 시도',
+    # Cloudflare 챌린지 (2026-08-10, ep1008): Playwright 로 열어도 이 페이지가 나오면
+    # 본문 부족이 아니라 봇차단 — insufficient_content 오진이 모델에게 "빈 페이지"로 읽혔다.
+    'verifying you are', 'needs to review the security',
+    'enable javascript and cookies', '사람인지 확인',
+    '연결의 보안을 검토', '보안을 확인해야',
+]
+
+# 챌린지 페이지 제목 시그니처 — 본문이 0자여도 제목으로 판정 (hpcwire·anl.gov 실측:
+# CF 챌린지는 본문을 전부 script 에 두어 _parse_html 후 text='' 가 된다)
+_CHALLENGE_TITLE_SIGNS = [
+    'just a moment', '잠시만 기다리', 'attention required', 'access denied',
+    'security check', 'checking your browser',
 ]
 
 
@@ -77,14 +89,19 @@ def _needs_render(url: str) -> bool:
         return False
 
 
-def _diagnose(status: int, final_url: str, requested_url: str, text: str):
+def _diagnose(status: int, final_url: str, requested_url: str, text: str,
+              title: str = ""):
     """크롤 결과가 '진짜 본문'인지 판정. 문제면 사유 문자열, 정상이면 None.
 
     사유: bot_blocked / login_required / insufficient_content
     (모양이 아니라 사유를 반환 — 최종 실패 시 모델에게 그대로 전달돼 정확한 보고·우회를 돕는다)
+    title: 챌린지 페이지는 본문이 script 뿐이라 파싱 후 text='' — 제목이 유일한 단서.
     """
     text = text or ''
     low = text[:4000].lower()
+    title_low = (title or '').lower()
+    if title_low and any(s in title_low for s in _CHALLENGE_TITLE_SIGNS):
+        return "bot_blocked"
     if status in (403, 429, 503):
         return "bot_blocked"
     if status == 401:
@@ -257,7 +274,7 @@ def _crawl_static(url: str, max_length: int) -> dict:
 
         # 에러 페이지도 파싱한다 — 봇차단/로그인 벽 진단에 본문이 필요
         title, text = _parse_html(html, url)
-        reason = _diagnose(status, final_url, url, text)
+        reason = _diagnose(status, final_url, url, text, title)
         if reason is None and _needs_render(url):
             reason = "insufficient_content"  # iframe 전용 호스트 — 정적 텍스트는 본문이 아님
 
@@ -350,6 +367,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
     - 크롤 후 로그인 상태를 자동 저장(storage_state) — 세션 신선도 유지.
     """
     opened_tab = None
+    status = 200  # new_tab 경로는 응답 객체가 없음 — 200 가정, goto 경로는 실상태
     try:
         if session.is_active:
             opened_tab = await session.new_tab(url)
@@ -358,7 +376,9 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
             await session.ensure_browser(headless=True)
             page = session.raw_page
             if page is not None:
-                await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                resp = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+                if resp is not None:
+                    status = resp.status
         if page is None:
             return {"success": False, "error": "Playwright 페이지 생성 실패", "url": url, "method": "playwright"}
 
@@ -387,14 +407,14 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
 
         if not text or len(text) < _MIN_CONTENT_LENGTH:
             result = {"success": False, "error": "Playwright에서도 콘텐츠 부족", "url": url, "method": "playwright"}
-            reason = _diagnose(200, final_url, url, text)
+            reason = _diagnose(status, final_url, url, text, title)
             if reason:
                 result["reason"] = reason
             return result
 
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
         text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
-        reason = _diagnose(200, final_url, url, text)
+        reason = _diagnose(status, final_url, url, text, title)
         text, original_length, truncated = _truncate(text, max_length)
         result = {
             "success": True,
@@ -448,7 +468,7 @@ async def _crawl_chrome_async(driver, url: str, max_length: int) -> dict:
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         text = '\n'.join(lines)
         text = re.sub(r'\n{3,}', '\n\n', text)
-        reason = _diagnose(200, url, url, text)
+        reason = _diagnose(200, url, url, text, title)
         text, original_length, truncated = _truncate(text, max_length)
 
         result = {
@@ -477,6 +497,57 @@ def _run_async(coro):
     except ImportError:
         # system_tools를 임포트할 수 없으면 직접 실행
         return asyncio.run(coro)
+
+
+# ─── Google News 리다이렉트 래퍼 해소 (2026-08-10, ep1008) ───
+# [sense:search]{source:"gnews"} 가 주는 링크는 news.google.com/rss/articles/<id> 래퍼다.
+# 정적 크롤은 578KB 스텁(본문 없음)을 받고, 헤드리스 브라우저는 구글이 막는다 —
+# 그래서 gnews 발 크롤이 부류째 죽어 있었다(04시 동향보고서·신문의 일상 경로).
+# 해소법: 스텁 페이지의 c-wiz 서명(data-n-a-ts/sg)으로 batchexecute 를 불러
+# 실제 기사 URL 을 얻고, 그 URL 을 정상 사다리로 크롤한다. (googlenewsdecoder 와 동일 기법)
+
+_GNEWS_ARTICLE_RE = re.compile(
+    r'https?://news\.google\.com/(?:rss/)?articles/([^?/&#]+)', re.I)
+
+
+def _resolve_google_news(url: str) -> str | None:
+    """news.google.com 기사 래퍼 → 실제 기사 URL. 실패 시 None (원 URL로 계속)."""
+    m = _GNEWS_ARTICLE_RE.match(url or '')
+    if not m:
+        return None
+    art_id = m.group(1)
+    try:
+        stub = requests.get(url, timeout=10, headers={'User-Agent': CHROME_UA})
+        ts = re.search(r'data-n-a-ts="([^"]+)"', stub.text)
+        sg = re.search(r'data-n-a-sg="([^"]+)"', stub.text)
+        if not (ts and sg):
+            return None
+        payload = (
+            '[[["Fbv4je","[\\"garturlreq\\",[[\\"X\\",\\"X\\",[\\"X\\",\\"X\\"],'
+            'null,null,1,1,\\"KR:ko\\",null,180,null,null,null,null,null,0,null,'
+            'null,[1,8]],\\"X\\",\\"X\\",1,[1,1,1],1,1,null,0,0,null,0],'
+            f'\\"{art_id}\\",{ts.group(1)},\\"{sg.group(1)}\\"]",null,"generic"]]]'
+        )
+        r = requests.post(
+            "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+            headers={"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"},
+            data={"f.req": payload}, timeout=10)
+        if r.status_code != 200:
+            return None
+        # 응답은 JSON-in-JSON — 정밀 패턴 우선, 실패 시 비-구글 URL 스캔 폴백
+        m2 = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', r.text)
+        if m2:
+            return m2.group(1)
+        for line in r.text.split('\n'):
+            hits = re.findall(r'https?://[^\\"\s]+', line)
+            real = [h for h in hits
+                    if 'news.google' not in h and 'gstatic' not in h
+                    and 'google.com' not in h]
+            if real:
+                return real[0]
+    except Exception:
+        pass
+    return None
 
 
 # ─── 메인 함수 ───
@@ -508,6 +579,13 @@ def crawl_website(url: str, max_length: int = 10000) -> dict:
 
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
+
+    # gnews 래퍼면 실제 기사 URL 로 해소 후 정상 사다리 (해소 실패 시 원 URL 로 진행)
+    resolved = _resolve_google_news(url)
+    if resolved and not _GNEWS_ARTICLE_RE.match(resolved):  # 재귀 루프 가드
+        result = crawl_website(resolved, max_length)  # 해소 URL 은 래퍼가 아니라 재귀 1회로 끝
+        result["resolved_from"] = url
+        return result
 
     attempts = []
 

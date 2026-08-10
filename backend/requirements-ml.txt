@@ -1,0 +1,9 @@
+# IndieBiz OS - 시맨틱 메모리 (해마 벡터 회상)
+#
+# 이 티어가 없으면 시스템은 뜨지만 해마 회상이 FTS(키워드)로 조용히 저하된다 —
+# fine-tuned 임베딩(768차원)·벡터 검색이 이 두 패키지에 달려 있다.
+# 2026-08-10 실측: 지금까지 어느 requirements 에도 선언돼 있지 않아(개발 맥의 전역
+# 파이썬에만 존재) 낯선 설치가 전부 저하 모드로 시작하고 있었다. 무겁지만(torch 동반,
+# ~2GB) 연상 회상은 이 시스템의 핵심이라 bootstrap.py 가 최선-노력으로 설치한다.
+sentence-transformers   # → torch, transformers 를 끌고 온다
+sqlite-vec              # 해마 DB 벡터 테이블 (vec0)

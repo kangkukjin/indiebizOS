@@ -361,7 +361,7 @@ cd indiebizOS
 python3 scripts/bootstrap.py     # Windows: py scripts\bootstrap.py
 ```
 
-The bootstrap creates `.venv` (auto-selecting Python 3.10–3.13), installs backend dependencies (core strictly, tools best-effort), seeds `.env` from `.env.example` (put your LLM API key there), and installs the Electron desktop UI if `npm` is present — backend-only otherwise (remote launcher/REST still work).
+The bootstrap creates `.venv` (auto-selecting Python 3.10–3.13), installs backend dependencies (core strictly; tools and semantic-memory extras best-effort — without the latter, recall degrades to keyword search), seeds `.env` from `.env.example` (put your LLM API key there), and installs the Electron desktop UI if `npm` is present — backend-only otherwise (remote launcher/REST still work).
 
 Run:
 ```bash

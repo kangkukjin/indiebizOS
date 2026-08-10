@@ -127,6 +127,14 @@ def main() -> int:
         except subprocess.CalledProcessError:
             print("  ⚠ 일부 도구 의존성 설치 실패 — 해당 도구만 비활성, 나중에 재시도 가능", flush=True)
 
+        step("시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)")
+        try:
+            run([vpy, "-m", "pip", "install", "--quiet", "-r",
+                 os.path.join(ROOT, "backend", "requirements-ml.txt")])
+        except subprocess.CalledProcessError:
+            print("  ⚠ 시맨틱 메모리 설치 실패 — 해마가 키워드(FTS) 회상으로 동작. "
+                  "나중에 이 스크립트 재실행으로 재시도 가능", flush=True)
+
     step(".env — API 키 자리")
     env_path = os.path.join(ROOT, ".env")
     if not os.path.exists(env_path):

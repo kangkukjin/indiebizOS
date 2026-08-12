@@ -138,7 +138,9 @@ def _items_to_blocks(rows: list, group_by: str = None) -> list:
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)[^)]*\)")
 # 강조는 *짝*일 때만 떼어낸다 — 무조건 떼면 snake_case 이름(ai_trend_report_…)이 뭉개진다.
 _MD_EMPH = (
-    (re.compile(r"\*\*([^*]+)\*\*"), r"\1"),
+    # ★굵게 안에 기울임이 들어간 경우(**… *발행일* …**)도 떼어낸다 — `[^*]+` 는 안쪽 별표를
+    # 만나면 짝을 못 찾고 바깥 `**` 를 그대로 흘린다(2026-08-12 실측). 비탐욕이라 짝 규율은 유지.
+    (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
     (re.compile(r"__([^_]+)__"), r"\1"),
     (re.compile(r"(?<![\w*])\*([^*\n]+)\*(?![\w*])"), r"\1"),
     (re.compile(r"(?<![\w_])_([^_\n]+)_(?![\w_])"), r"\1"),
@@ -223,6 +225,7 @@ def _markdown_to_blocks(md: str, meta_out: dict = None) -> list:
     meta_out: 주면 frontmatter 파싱 결과가 담긴다(본문에서는 빠진다).
     """
     blocks, para, lst = [], [], None
+    indents: list = []          # 현재 목록 블록의 들여쓰기 스택 (항목 level 산출용)
 
     def flush():
         nonlocal para, lst
@@ -305,7 +308,10 @@ def _markdown_to_blocks(md: str, meta_out: dict = None) -> list:
         if line.startswith("|") and i + 1 < len(lines) and re.match(
                 r"^\|[\s:|-]+\|$", lines[i + 1].strip()):
             flush()
-            cells = lambda s: [c.strip() for c in s.strip().strip("|").split("|")]
+            # ★셀도 인라인 마크다운을 벗긴다 — 안 벗기면 `**6,345.53**` 이 별표째 렌더된다
+            # (2026-08-12 실측: AI 동향 보고서 시세표·추이표. 문단·목록·제목은 _md_inline 을
+            #  타는데 표만 날것이라 강조하려던 숫자가 오히려 지저분해졌다. IR 은 평문 계약이다.)
+            cells = lambda s: [_md_plain(c.strip()) for c in s.strip().strip("|").split("|")]
             cols = cells(line)
             i += 2
             rows = []
@@ -314,16 +320,30 @@ def _markdown_to_blocks(md: str, meta_out: dict = None) -> list:
                 i += 1
             blocks.append({"type": "table", "columns": cols, "rows": rows})
             continue
-        m = re.match(r"^\s*(?:[-*+]|(\d+)\.)\s+(.*)$", raw)
+        m = re.match(r"^(\s*)(?:[-*+]|(\d+)\.)\s+(.*)$", raw)
         if m:
             if para:
                 flush()
-            ordered = bool(m.group(1))
+            ordered = bool(m.group(2))
             if lst is None or bool(lst.get("ordered")) != ordered:
                 if lst:
                     blocks.append(lst)
                 lst = {"type": "list", "ordered": ordered, "items": []}
-            lst["items"].append(_md_list_item(m.group(2)))
+                indents = []
+            # 들여쓰기 → 항목 level(0=최상위). 안 재면 하위 불릿이 형제로 평평해져
+            # 종속 관계가 사라진다(2026-08-12 실측: "부수 발견 둘:" 아래 두 항목).
+            # 들여쓰기 폭은 문서마다 2·4칸이 섞이므로 절대 폭이 아니라 *등장 순서*로 센다.
+            ind = len(m.group(1).expandtabs(4))
+            while indents and ind < indents[-1]:
+                indents.pop()
+            if not indents or ind > indents[-1]:
+                indents.append(ind)
+            level = len(indents) - 1
+            item = _md_list_item(m.group(3))
+            if level:
+                item = {"text": item} if not isinstance(item, dict) else item
+                item["level"] = level
+            lst["items"].append(item)
             i += 1
             continue
         if lst:                                          # 목록 뒤 들여쓴 줄 = 앞 항목의 이어짐

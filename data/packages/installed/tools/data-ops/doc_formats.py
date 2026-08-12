@@ -30,19 +30,44 @@ def _doc_blocks_to_html(blocks: list) -> str:
             parts.append(f"<h{lvl}{id_attr}>{esc(txt)}</h{lvl}>")
         elif t == "list":
             tag = "ol" if b.get("ordered") else "ul"
-            li = []
-            for i in (b.get("items") or []):
+
+            def _li_inner(i):
                 # 항목은 문자열 또는 {text, url}(링크 — 목차·북마크 등)
-                if isinstance(i, dict):
-                    # note = 링크 뒤에 붙는 설명(평문). 링크는 제목에만 건다.
-                    note = f' <span class="li-note">{esc(i.get("note"))}</span>' if i.get("note") else ""
-                    if i.get("url"):
-                        li.append(f'<li><a href="{esc(i.get("url"))}">{esc(i.get("text"))}</a>{note}</li>')
-                    else:
-                        li.append(f"<li>{esc(i.get('text'))}{note}</li>")
-                else:
-                    li.append(f"<li>{esc(i)}</li>")
-            parts.append(f"<{tag}>{''.join(li)}</{tag}>")
+                if not isinstance(i, dict):
+                    return esc(i)
+                # note = 링크 뒤에 붙는 설명(평문). 링크는 제목에만 건다.
+                note = f' <span class="li-note">{esc(i.get("note"))}</span>' if i.get("note") else ""
+                if i.get("url"):
+                    return f'<a href="{esc(i.get("url"))}">{esc(i.get("text"))}</a>{note}'
+                return f"{esc(i.get('text'))}{note}"
+
+            # item 의 level(0=최상위)로 중첩 <ul>/<ol> 을 짓는다 — 하위 목록은 부모 <li> *안*에
+            # 들어가야 브라우저가 종속으로 그린다. level 없는 옛 IR 은 전부 0 = 기존 평면 출력.
+            frag, depth, li_open = [f"<{tag}>"], 0, False
+            for i in (b.get("items") or []):
+                lv = int(i.get("level") or 0) if isinstance(i, dict) else 0
+                lv = max(0, min(lv, depth + 1))     # 한 번에 두 단계 이상 못 내려간다
+                if lv > depth:
+                    frag.append(f"<{tag}>")          # 열려 있는 부모 <li> 안으로
+                    depth, li_open = lv, False
+                while lv < depth:
+                    if li_open:
+                        frag.append("</li>")
+                    frag.append(f"</{tag}>")
+                    depth, li_open = depth - 1, True  # 부모 <li> 는 아직 열려 있다
+                if li_open:
+                    frag.append("</li>")
+                frag.append(f"<li>{_li_inner(i)}")
+                li_open = True
+            while depth > 0:
+                if li_open:
+                    frag.append("</li>")
+                frag.append(f"</{tag}>")
+                depth, li_open = depth - 1, True
+            if li_open:
+                frag.append("</li>")
+            frag.append(f"</{tag}>")
+            parts.append("".join(frag))
         elif t == "image":
             src = b.get("src") or b.get("path") or ""
             cap = b.get("caption")
@@ -231,7 +256,8 @@ def _doc_blocks_to_typst(blocks: list, title: str, meta: str, out_path: str):
                 txt = it.get("text") if isinstance(it, dict) else it
                 if isinstance(it, dict) and it.get("note"):
                     txt = f"{txt} {it['note']}"
-                lines.append("- " + _typ_esc(txt))
+                lv = int(it.get("level") or 0) if isinstance(it, dict) else 0
+                lines.append("  " * max(0, lv) + "- " + _typ_esc(txt))  # typst 도 들여쓰기가 곧 중첩
         elif t == "table":
             cols = b.get("columns") or []
             rows = [r for r in (b.get("rows") or []) if isinstance(r, (list, tuple))]
@@ -333,7 +359,13 @@ def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
             style = "List Number" if ordered else "List Bullet"
             for it in (b.get("items") or []):
                 txt = it.get("text") if isinstance(it, dict) else it
-                doc.add_paragraph(str(txt), style=style)
+                lv = int(it.get("level") or 0) if isinstance(it, dict) else 0
+                # Word 기본 스타일은 "List Bullet 2/3"(최대 3단). 템플릿에 없으면 기본으로 폴백.
+                st = f"{style} {lv + 1}" if 1 <= lv <= 2 else style
+                try:
+                    doc.add_paragraph(str(txt), style=st)
+                except KeyError:
+                    doc.add_paragraph(str(txt), style=style)
         elif t == "image":
             stream = _resolve_image_bytes(b.get("src") or b.get("path") or "")
             if stream is not None:
@@ -486,7 +518,8 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
             add_bullet(b.get("text") or "", level=0)
         elif t == "list":
             for it in (b.get("items") or []):
-                add_bullet(_item_line(it), level=1)
+                lv = int(it.get("level") or 0) if isinstance(it, dict) else 0
+                add_bullet(_item_line(it), level=min(8, 1 + max(0, lv)))  # pptx 는 0~8단
         elif t == "quote":
             txt = str(b.get("text") or "")
             cite = b.get("cite")
@@ -560,16 +593,23 @@ def _doc_blocks_to_markdown(blocks: list, title: str = "", meta: str = "") -> st
             out += [f"{'#' * lvl} {b.get('text') or ''}", ""]
         elif t == "list":
             ordered = bool(b.get("ordered"))
-            for idx, i in enumerate(b.get("items") or [], 1):
-                mark = f"{idx}." if ordered else "-"
+            counters: dict = {}                      # level 별 번호 (깊이가 얕아지면 아래는 리셋)
+            for i in (b.get("items") or []):
+                lv = int(i.get("level") or 0) if isinstance(i, dict) else 0
+                lv = max(0, lv)
+                for deeper in [k for k in counters if k > lv]:
+                    del counters[deeper]
+                counters[lv] = counters.get(lv, 0) + 1
+                mark = f"{counters[lv]}." if ordered else "-"
+                pad = "  " * lv                      # 들여쓰기 = 중첩(md→IR→md 왕복 보존)
                 if isinstance(i, dict):
                     txt = i.get("text") or ""
-                    line = f"{mark} [{txt}]({i.get('url')})" if i.get("url") else f"{mark} {txt}"
+                    line = f"{pad}{mark} [{txt}]({i.get('url')})" if i.get("url") else f"{pad}{mark} {txt}"
                     if i.get("note"):
                         line += f" {i['note']}"
                     out.append(line)
                 else:
-                    out.append(f"{mark} {i}")
+                    out.append(f"{pad}{mark} {i}")
             out.append("")
         elif t == "cards":
             for it in (b.get("items") or []):

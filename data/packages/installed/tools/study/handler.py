@@ -16,6 +16,24 @@ from typing import Optional
 # op 분기 = 파일 끝 _OP_DISPATCHERS 진짜 함수 테이블 (--check 가 AST 로 키 정확 비교).
 _OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find", "entity_op": "resolve"}
 
+# arXiv 예의(politeness) 규약 — export API 는 과부하·과속 요청에 **503** 을 돌려준다.
+# 우리는 그동안 UA 도 안 밝히고(기본 python-requests) 재시도도 없이 단발 호출 후
+# raise_for_status() 로 즉사했다 → 503 한 번이면 그 호의 논문 채널이 통째로 죽고,
+# 보고서엔 "arXiv 장애, 우리 쪽 문제 아님"으로 적혔다(2026-08-12 호). 근거가 없던 단정이다.
+_ARXIV_UA = "indiebizOS/1.0 (personal research agent; mailto:kangkukjin@gmail.com)"
+
+
+def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
+    """arXiv 요청 — 설명형 UA + 503/429 백오프 재시도(3s·6s). 마지막 응답을 그대로 돌려준다."""
+    last = None
+    for attempt in range(tries):
+        last = requests.get(url, headers={"User-Agent": _ARXIV_UA}, timeout=timeout)
+        if last.status_code not in (429, 500, 502, 503, 504):
+            return last
+        if attempt < tries - 1:
+            time.sleep(3 * (attempt + 1))
+    return last
+
 
 def _search_arxiv(tool_input: dict) -> str:
     """arXiv 프리프린트 검색 — arxiv 라이브러리 대신 Atom API(https) 직접 호출.
@@ -27,7 +45,7 @@ def _search_arxiv(tool_input: dict) -> str:
     url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({
         "search_query": f"all:{query}", "start": 0, "max_results": max_results,
         "sortBy": "relevance", "sortOrder": "descending"})
-    r = requests.get(url, timeout=20)
+    r = _arxiv_get(url)
     r.raise_for_status()
     feed = feedparser.parse(r.text)
     lines, items = [], []
@@ -65,7 +83,7 @@ def _download_arxiv_pdf(tool_input: dict, context) -> str:
     download_dir = context.resolve_path("papers")
     os.makedirs(download_dir, exist_ok=True)
     meta_url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({"id_list": arxiv_id, "max_results": 1})
-    r = requests.get(meta_url, timeout=20)
+    r = _arxiv_get(meta_url)
     r.raise_for_status()
     feed = feedparser.parse(r.text)
     if not feed.entries:

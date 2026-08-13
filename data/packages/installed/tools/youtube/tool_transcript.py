@@ -234,6 +234,7 @@ def get_youtube_info(url: str) -> dict:
                 'duration': info.get('duration', 0),
                 'uploader': info.get('uploader', 'Unknown'),
                 'view_count': info.get('view_count', 0),
+                'upload_date': info.get('upload_date'),  # YYYYMMDD — 최신성 필터(AI 팁 보고서 6개월 규칙 등)에 필요
             }
     except Exception as e:
         return {'success': False, 'error': f'실패: {str(e)}'}

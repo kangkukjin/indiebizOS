@@ -1,0 +1,50 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "spending",
+  "name": "Spending",
+  "description": "지출내역 — 결제 앱(하나카드·청주페이)의 승인 푸시 알림을 폰 USB 연결 때 수거해 지출 원장으로 쌓는 도구.\n\n## 원리\n폰에서 결제 알림을 지우지 않고 모아두면, 활성 알림에는 가맹점·금액 텍스트가 남아 adb dumpsys 로 읽힌다. 상시 리스너·폰 앱 개조 없이 맥 쪽 코드만으로 완결. 지운 알림은 텍스트가 사라지므로(아카이브엔 메타데이터만) 수거 후에 지우는 것이 순서다.\n\n## 한계 (정직)\n폰 재부팅·수거 전 삭제·앱당 알림 상한(~24)으로 놓친 결제는 이 경로로 복구 불가 — 월간 명세서 대사로 메꾼다. 파싱 실패 알림은 버리지 않고 원문 보존 + 미분류(parsed=0).",
+  "version": "0.1.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "spend_op",
+      "description": "지출 원장 제어.\n\n## op 분기\n- list (기본): 지출 내역 조회. month(\"YYYY-MM\", 비우면 이번 달) / days(최근 N일 — month 보다 우선) / source(하나카드/청주페이) / query(가맹점·문구 검색) / limit(기본 100). 반환 items: {title(가맹점), amount(원, 숫자 — table 파이프 정렬·집계용), amount_label, date, source, type(approve/cancel/charge), summary(알림 원문), parsed}. 래퍼: total(순지출)·total_label·count·period·last_sync.\n- summary: 월간 통계(month, 비우면 이번 달). items=상위 가맹점 {merchant, count, amount, amount_label}. 래퍼: total(순지출=승인-취소)·spend_label·cancel_label·hana_label·cjpay_label·last_sync.\n- sync: 폰(USB 연결 필요) 결제 알림 수거 → 원장 병합. 활성 알림만 텍스트를 읽을 수 있으므로 사용자가 알림을 지우기 전에 실행해야 한다. 수거 후엔 지워도 됨. 반환: fetched/new/skipped_non_payment/unparsed/collected(새 내역 미리보기).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "list(기본)/summary/sync",
+            "enum": [
+              "list",
+              "summary",
+              "sync"
+            ],
+            "default": "list"
+          },
+          "month": {
+            "type": "string",
+            "description": "list/summary — 조회 월 \"YYYY-MM\" (비우면 이번 달)"
+          },
+          "days": {
+            "type": "integer",
+            "description": "list — 최근 N일 (지정 시 month 무시)"
+          },
+          "source": {
+            "type": "string",
+            "description": "list — 카드 필터 (하나카드/청주페이)"
+          },
+          "query": {
+            "type": "string",
+            "description": "list — 가맹점 이름·알림 문구 검색"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "list — 결과 상한 (기본 100)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

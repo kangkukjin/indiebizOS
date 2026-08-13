@@ -3873,6 +3873,125 @@ nodes:
               title: '{title}'
               lines:
               - '{meta}'
+      spend:
+        returns: items
+        side_effect: true
+        fixture: '[self:spend]{op: "list"}'
+        runs_on: pc_only
+        description: 내 지출내역 — 결제 앱(하나카드·청주페이) 승인 알림을 폰 USB 연결 때 수거해 쌓는 지출 원장. 조회·월간 통계.
+        target_description: op:list(기본 — 지출 내역 조회. month "YYYY-MM"[비우면 이번 달] / days 최근 N일 / source 하나카드·청주페이 / query 가맹점·문구 검색 / limit) / summary(월간 통계 — 합계·카드별·상위 가맹점, month) / sync(폰 USB 연결 상태에서 결제 알림 수거 → 원장 병합. 알림을 지우기 전에 수거해야 함).
+        target_key: op
+        group: spending
+        router: handler
+        tool: spend_op
+        aliases:
+          query:
+          - q
+        ops:
+          default: list
+          returns:
+            sync: effect
+          side_effect:
+            list: false
+            summary: false
+          fixture:
+            summary: '[self:spend]{op: "summary"}'
+          values:
+            list: 지출 내역 조회 (기본 이번 달 — month/days/source/query/limit 필터)
+            summary: 월간 통계 (합계·카드별 합계·상위 가맹점, month 지정 가능)
+            sync: 폰(USB) 결제 알림 수거 → 원장 병합 (지우기 전에 수거)
+        implementation: spending 패키지 spend_op — adb dumpsys notification --noredact 에서 결제 앱(하나카드 com.hanaskcard.paycla / 청주페이 gov.cheongju.cjpay) 활성 알림의 제목·본문을 추출, 금액·가맹점 파싱 후 data/spending.db 에 병합(중복 방지 해시). 지워진 알림은 텍스트가 없어 수거 불가 — 사용자 규약=수거 전 알림 안 지우기. 파싱 실패는 원문 보존 + 미분류.
+        keywords:
+        - 지출
+        - 지출내역
+        - 가계부
+        - 카드 사용내역
+        - 카드값
+        - 결제 내역
+        - 하나카드
+        - 청주페이
+        - spending
+        - expense
+        app:
+          instrument: spend
+          icon: 💳
+          name: 지출내역
+          order: 18
+          phone_render: false
+          modes:
+          - name: 내역
+            auto_run: true
+            note: 폰을 USB 로 연결하고 '지금 수거하기'를 누르면 결제 알림에서 내역을 가져옵니다. 폰에서 결제 알림을 지우기 전에 수거해야 내역이 남습니다.
+            action: '[self:spend]{op: "list"}'
+            view:
+            - type: kv
+              title: 이번 달
+              rows:
+              - k: 💰 합계
+                v: '{total_label}'
+              - k: 🧾 건수
+                v: '{count}건'
+              - k: 🔄 마지막 수거
+                v: '{last_sync}'
+            - type: list_action
+              from: sync_prompt
+              icon: 📥
+              title: 지금 수거하기 (폰 USB 연결 필요)
+              sub: '{hint}'
+              button:
+                label: 수거
+                action: '[self:spend]{op: "sync"}'
+                refresh: true
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title} · {amount_label}'
+                lines:
+                - '{date} · {source}'
+          - name: 통계
+            auto_run: true
+            note: 이번 달 카드 지출 통계입니다. 취소·환불은 합계에서 뺍니다.
+            action: '[self:spend]{op: "summary"}'
+            view:
+            - type: kv
+              title: '{period}'
+              rows:
+              - k: 💰 순지출
+                v: '{total_label}'
+              - k: 💳 하나카드
+                v: '{hana_label}'
+              - k: 🏙️ 청주페이
+                v: '{cjpay_label}'
+              - k: ↩️ 취소·환불
+                v: '{cancel_label}'
+              - k: 🔄 마지막 수거
+                v: '{last_sync}'
+            - type: kv_list
+              title: 상위 가맹점
+              from: items
+              k: '{merchant}'
+              v: '{amount_label} ({count}건)'
+          - name: 검색
+            auto_run: false
+            note: 가맹점 이름이나 알림 문구로 지난 지출을 찾습니다.
+            inputs:
+            - key: query
+              type: text
+              required: true
+            - key: days
+              type: text
+              default: '90'
+            action: '[self:spend]{op: "list", query: "$query", days: "$days"}'
+            view:
+            - type: card_list
+              from: items
+              empty_from: message
+              card:
+                title: '{title} · {amount_label}'
+                lines:
+                - '{date} · {source}'
+                - '{summary}'
       time:
         returns: scalar
         fixture: '[self:time]{}'
@@ -4288,11 +4407,13 @@ nodes:
     - 알림
     - 저장소
     - 수집
+    - 지출
     guides:
     - lecture_workspace.md
     - trigger.md
     - photo.md
     - music_player.md
+    - spend.md
   limbs:
     actions:
       os_open:

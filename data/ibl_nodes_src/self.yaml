@@ -361,8 +361,10 @@
     - 알림
     - 저장소
     - 수집
+    - 지출
     guides:
     - lecture_workspace.md
     - trigger.md
     - photo.md
     - music_player.md
+    - spend.md

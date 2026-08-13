@@ -1065,53 +1065,6 @@ def generate_icon(tool_input, output_base):
     }
 
 
-STYLE_PRESETS = {
-    "vintage_book": (
-        "Hand-drawn pen and ink illustration on aged beige parchment paper, "
-        "two-tone palette of deep navy blue (#2c3e6f) and rust brown (#a55a3e), "
-        "fine cross-hatching, geometric grid background lines, subtle paper texture and grain, "
-        "vintage scientific manuscript aesthetic, balanced empty space around the central subject, "
-        "centered composition with breathing room. "
-        "Do NOT include any Korean or Hangul characters. Do NOT add decorative Latin text, ciphers, or unreadable script. "
-        "Only the subject illustration — minimal or no text inside the image."
-    ),
-    "ink_orange": (
-        "Bold flat pictogram infographic on bright ivory paper (#f2efe6): thick uniform "
-        "charcoal-black (#2b2e33) stroke icons and geometric structures, exactly one vivid orange "
-        "(#ee5f1c) reserved for flow — thick connector lines, arrows, radiating broadcast arcs or "
-        "organic road networks — deliberate contrast of black structure versus orange flow, generous "
-        "margins, poster-like clarity. "
-        "Do NOT include any Korean or Hangul characters. Avoid decorative gibberish text — "
-        "only meaningful short English labels if any."
-    ),
-    "architect": (
-        "Flat isometric systems diagram on warm ivory paper (#efeae0), low-rise isometric slabs and "
-        "cubes in muted brick terracotta (#ce6440) and desaturated steel blue (#33597f) with subtle "
-        "face shading, deep slate-navy (#2e3947) drafting dimension lines, leader lines with round "
-        "anchor dots and measurement arrows, faint blueprint grid floor, NotebookLM systems-architecture "
-        "diagram aesthetic, generous empty space around the composition. "
-        "Do NOT include any Korean or Hangul characters. Avoid decorative gibberish text — "
-        "only meaningful short English labels if any."
-    ),
-    "blueprint": (
-        "Precise technical drafting illustration on pale blue-grey drafting paper, "
-        "thin indigo ink (#26305e) linework with a coral (#d86541) accent highlight, "
-        "schematic figure with faint grid, leader lines and annotated parts, "
-        "engineering-drawing aesthetic, exact and restrained, balanced empty space around the central subject. "
-        "Do NOT include any Korean or Hangul characters. Do NOT add decorative Latin text or unreadable script. "
-        "Only the subject illustration — minimal or no text inside the image."
-    ),
-}
-
-
-def _build_image_prompt(user_prompt: str, style_preset: str = None) -> str:
-    """스타일 프리셋을 사용자 프롬프트와 결합. 디자인 시스템과 어울리는 일러스트 생성용."""
-    if not style_preset or style_preset == "default":
-        return user_prompt
-    style = STYLE_PRESETS.get(style_preset)
-    if not style:
-        return user_prompt
-    return f"{user_prompt}\n\n--- STYLE GUIDELINES ---\n{style}"
 
 
 # Gemini Vision 구현은 gemini_vision.py (2026-08-05 분리 — 1500줄 규칙).
@@ -1124,107 +1077,13 @@ _gv_spec.loader.exec_module(_gv)
 critique_gemini_image = _gv.critique_gemini_image
 read_gemini_image = _gv.read_gemini_image
 
-
-def generate_gemini_image(tool_input, output_base):
-    """Gemini API를 사용하여 이미지를 생성합니다."""
-    import httpx
-    import base64
-
-    prompt = tool_input.get("prompt")
-    if not prompt:
-        return "오류: prompt는 필수입니다."
-
-    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return "오류: GEMINI_API_KEY 환경변수가 설정되지 않았거나 api_key 파라미터가 필요합니다."
-
-    output_path = tool_input.get("output_path")
-    aspect_ratio = tool_input.get("aspect_ratio", "1:1")
-    image_size = tool_input.get("image_size", "1K")  # 512/1K/2K/4K (3.x), 2.5는 무시
-    style_preset = tool_input.get("style_preset")
-    final_prompt = _build_image_prompt(prompt, style_preset)
-
-    # 모델 선택 — 기본은 Nano Banana 2 (Gemini 3.1 Flash, 2026-02 출시)
-    # quality 별칭으로 간편 선택, 또는 model로 직접 지정 가능
-    quality = tool_input.get("quality")  # "fast" | "pro" | "legacy"
-    quality_map = {
-        "fast": "gemini-3.1-flash-image-preview",  # Nano Banana 2 (기본)
-        "pro": "gemini-3-pro-image-preview",       # Nano Banana Pro — 4K, 더 정밀
-        "legacy": "gemini-2.5-flash-image",        # 구버전 폴백
-    }
-    model = tool_input.get("model") or quality_map.get(quality, "gemini-3.1-flash-image-preview")
-
-    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
-    if output_path:
-        filename = os.path.basename(output_path)
-        output_path = os.path.join(output_base, filename)
-    else:
-        output_path = os.path.join(output_base, f"gemini_image_{uuid.uuid4().hex[:8]}.png")
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-    # 페이로드 구조: 양쪽 모델 모두 generationConfig.imageConfig 사용.
-    #   - 2.5: aspectRatio만 지원
-    #   - 3.x: aspectRatio + imageSize (1K/2K/4K/512) 지원
-    is_legacy = model.startswith("gemini-2.5")
-    image_config = {"aspectRatio": aspect_ratio}
-    if not is_legacy:
-        image_config["imageSize"] = image_size
-    payload = {
-        "contents": [{"parts": [{"text": final_prompt}]}],
-        "generationConfig": {
-            "responseModalities": ["IMAGE", "TEXT"],
-            "imageConfig": image_config,
-        },
-    }
-
-    try:
-        with httpx.Client(timeout=180.0) as client:
-            response = client.post(
-                url,
-                params={"key": api_key},
-                json=payload,
-                headers={"Content-Type": "application/json"}
-            )
-            response.raise_for_status()
-            data = response.json()
-
-        # 응답에서 이미지 데이터 추출
-        candidates = data.get("candidates", [])
-        if not candidates:
-            return f"오류: Gemini API 응답에 결과가 없습니다. 응답: {data}"
-
-        parts = candidates[0].get("content", {}).get("parts", [])
-        image_saved = False
-        description = ""
-
-        for part in parts:
-            if "inlineData" in part:
-                img_data = base64.b64decode(part["inlineData"]["data"])
-                with open(output_path, "wb") as f:
-                    f.write(img_data)
-                image_saved = True
-            elif "text" in part:
-                description = part["text"]
-
-        if not image_saved:
-            return f"오류: 응답에 이미지 데이터가 없습니다. 텍스트 응답: {description or data}"
-
-        size_note = "" if is_legacy else f" / {image_size}"
-        result = (
-            f"Gemini 이미지 생성 완료: {os.path.abspath(output_path)}\n"
-            f"모델: {model}{size_note} (aspect {aspect_ratio})\n"
-            f"프롬프트: {prompt}"
-        )
-        if description:
-            result += f"\n설명: {description}"
-        return result
-
-    except httpx.HTTPStatusError as e:
-        return f"Gemini API 오류 ({e.response.status_code}): {e.response.text}"
-    except Exception as e:
-        return f"Gemini 이미지 생성 중 오류 발생: {str(e)}"
+# Gemini 이미지 생성/편집(STYLE_PRESETS·input_image 편집·image_data 봉투)은 gemini_image.py
+# (2026-08-13 분리 — 1500줄 규칙, gemini_vision 과 동일한 spec-load 패턴).
+_gi_spec = _ilu.spec_from_file_location(
+    "mp_gemini_image", os.path.join(os.path.dirname(__file__), "gemini_image.py"))
+_gi = _ilu.module_from_spec(_gi_spec)
+_gi_spec.loader.exec_module(_gi)
+generate_gemini_image = _gi.generate_gemini_image
 
 
 def create_tts(tool_input, output_base):

@@ -199,6 +199,33 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     return conversation_id
 
 
+def get_conversation_image_paths(conversation_id: int) -> List[str]:
+    """대화 한 건의 첨부 이미지 **절대 경로** 목록. 없으면 빈 목록.
+
+    용도: 채팅 첨부 사진을 편집 핸들러([engines:image_gemini] input_image 등)에 넘기려면
+    비전 blob 이 아니라 파일 경로가 필요하다 — save_conversation 이 떨군 파일의 경로를
+    진실 소스(DB images 컬럼)에서 읽는다(파일명 규칙 중복 구현 방지)."""
+    init_memory_db()
+    conn = _get_connection()
+    try:
+        row = conn.execute(
+            "SELECT images FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+    finally:
+        conn.close()
+    if not row or not row[0]:
+        return []
+    try:
+        rels = json.loads(row[0]) or []
+    except (json.JSONDecodeError, TypeError):
+        return []
+    out = []
+    for rel in rels:
+        p = DATA_PATH / rel
+        if p.exists():
+            out.append(str(p.resolve()))
+    return out
+
+
 def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List[Dict[str, Any]]:
     """최근 대화 조회.
 
@@ -214,7 +241,7 @@ def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List
     src_clause = "WHERE source = 'appmaker'" if thread == "appmaker" \
         else "WHERE (source IS NULL OR source != 'appmaker')"
     cursor.execute(f"""
-        SELECT id, timestamp, role, content, summary, importance
+        SELECT id, timestamp, role, content, summary, importance, images
         FROM conversations
         {src_clause}
         ORDER BY id DESC
@@ -226,13 +253,22 @@ def get_recent_conversations(limit: int = 10, thread: str = "system_ai") -> List
 
     conversations = []
     for row in reversed(rows):  # 시간순으로 정렬
+        # images = 상대 경로 목록(예: system_ai_images/conv_12_0.jpg) — base64 가 아니라
+        # 경로만 실어 가볍게. 표면은 GET /system-ai/image?path= 로 당겨 렌더한다.
+        images = None
+        if row[6]:
+            try:
+                images = json.loads(row[6]) or None
+            except (json.JSONDecodeError, TypeError):
+                images = None
         conversations.append({
             "id": row[0],
             "timestamp": row[1],
             "role": row[2],
             "content": row[3],
             "summary": row[4],
-            "importance": row[5]
+            "importance": row[5],
+            "images": images
         })
 
     return conversations

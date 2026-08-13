@@ -180,7 +180,10 @@ class CognitivePipelineMixin:
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
         elif reflex_hint:
             # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
-            original_provider = _switch_to_midtier(self)
+            # ★이미지 첨부 시 스왑 금지(2026-08-13 실측): 중급(딥시크)은 비전 미지원이라
+            # image_url 파트에 400 — 사진 딸린 메시지는 실행 축 모델(비전 가능)로 그대로 간다.
+            if not images:
+                original_provider = _switch_to_midtier(self)
 
         # Clarification fast-path — 의식이 정보 부족으로 확인을 요청하면 실행 스킵
         _clarify_text = self._consciousness_clarification(consciousness_output) if consciousness_output else None

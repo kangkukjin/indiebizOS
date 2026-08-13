@@ -16,6 +16,8 @@ IndieBiz OS Core
 
 import json
 import os
+import re
+import base64
 import threading
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -29,6 +31,7 @@ from system_ai_memory import (
     load_user_profile,
     save_conversation,
     get_recent_conversations,
+    get_conversation_image_paths,
     get_history_for_ai,
     get_memory_context,
     save_memory,
@@ -135,6 +138,36 @@ class RolePromptUpdate(BaseModel):
 # ============ 시스템 문서 초기화 플래그 ============
 _docs_initialized = False
 
+# 응답 본문 속 이미지 파일 경로 (claude_code 경로의 tool_images 폴백 수확용)
+_IMG_PATH_RE = re.compile(r"/[^\s`'\"()\[\]]+\.(?:png|jpe?g)", re.IGNORECASE)
+
+
+def _images_from_response_paths(text: str, since_ts: float, cap: int = 2) -> list:
+    """응답 텍스트에서 이 턴에 만들어진 이미지 파일을 수확 → [{base64, media_type}].
+
+    claude_code(아웃오브프로세스) 실행 경로는 도구 결과가 CLI 로 텍스트만 오가서
+    image_data 봉투 수확(get_last_tool_images)이 항상 빈다 — 대신 AI 가 응답에 적는
+    결과 경로(예: data/outputs/gemini_image_x.png)를 읽어 채팅에 그림으로 싣는다.
+    이 턴 시작 이후 mtime 인 실존 파일만(과거 산출물 재수확 방지), 5MB 상한."""
+    out = []
+    if not text:
+        return out
+    for p in dict.fromkeys(_IMG_PATH_RE.findall(text)):
+        if len(out) >= cap:
+            break
+        try:
+            f = Path(p)
+            if not f.is_file() or f.stat().st_mtime < since_ts - 5:
+                continue
+            raw = f.read_bytes()
+            if len(raw) > 5_000_000:
+                continue
+            media_type = "image/jpeg" if f.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+            out.append({"base64": base64.b64encode(raw).decode(), "media_type": media_type})
+        except Exception:
+            continue
+    return out
+
 
 # ============ 채팅 API ============
 
@@ -221,14 +254,35 @@ def chat_with_system_ai(chat: ChatMessage):
                 images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
             # 사용자 메시지 저장 (이미지 포함)
-            save_conversation("user", chat.message, images=images_data)
+            user_conv_id = save_conversation("user", chat.message, images=images_data)
+
+            # 첨부 사진의 파일 경로를 메시지에 동봉 — 비전(blob)으로는 '보이지만',
+            # 편집·변형 핸들러([engines:image_gemini] input_image 등)에 넘기려면 경로가
+            # 필요하다. save_conversation 이 방금 떨군 파일 경로를 진실 소스에서 읽는다
+            # (강의 창 materials/ 영속 저장 → user_image_path 선례).
+            ai_message = chat.message
+            if images_data:
+                try:
+                    saved_paths = get_conversation_image_paths(user_conv_id)
+                except Exception:
+                    saved_paths = []
+                if saved_paths:
+                    ai_message += (
+                        "\n\n[첨부 사진 파일: " + ", ".join(saved_paths)
+                        + " — 사진 편집·변형 요청이면 이 경로를 input_image 로 쓰세요]"
+                    )
 
             # AIAgent를 사용한 통합 처리 (모든 프로바이더 자동 지원)
+            import time as _time
+            _turn_start = _time.time()
             response_text, tool_images = process_system_ai_message(
-                message=chat.message,
+                message=ai_message,
                 history=history,
                 images=images_data
             )
+            if not tool_images:
+                # claude_code 경로 폴백 — 응답에 적힌 이 턴 산출 이미지 경로를 수확
+                tool_images = _images_from_response_paths(response_text, _turn_start)
 
             delegated = did_call_agent()
             if not delegated:
@@ -1191,6 +1245,28 @@ async def get_conversations(limit: int = 20, thread: str = "system_ai"):
     """시스템 AI 대화 이력 조회 (thread='appmaker'=앱메이커 전용, 기본=앱메이커 제외)"""
     conversations = get_recent_conversations(limit, thread=thread)
     return {"conversations": conversations}
+
+
+@router.get("/system-ai/image")
+async def get_system_ai_image(path: str, dl: int = 0):
+    """대화 첨부/생성 이미지 서빙 — get_recent_conversations 의 images 상대 경로를 렌더.
+
+    system_ai_images/ 하위만 허용(경로 이탈 방어). 원격에서는 런처 세션 게이트 뒤
+    (is_public_remote_path 미등록 = 익명 접근 불가). dl=1 이면 Content-Disposition
+    attachment — 폰 브라우저의 ⬇ 저장 버튼이 다운로드(=폰 저장)로 이어진다."""
+    from fastapi.responses import FileResponse
+    rel = (path or "").strip().lstrip("/")
+    base = (DATA_PATH / "system_ai_images").resolve()
+    target = (DATA_PATH / rel).resolve()
+    if not str(target).startswith(str(base) + os.sep):
+        raise HTTPException(status_code=403, detail="system_ai_images 하위만 허용됩니다.")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="이미지가 없습니다.")
+    media_type = "image/jpeg" if target.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+    headers = {"Cache-Control": "private, max-age=86400"}
+    if dl:
+        headers["Content-Disposition"] = f'attachment; filename="{target.name}"'
+    return FileResponse(str(target), media_type=media_type, headers=headers)
 
 
 @router.get("/system-ai/conversations/recent")

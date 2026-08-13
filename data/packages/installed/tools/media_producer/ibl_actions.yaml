@@ -28,8 +28,10 @@ nodes:
           output_path: [filename]
         returns: effect
         runs_on: anywhere
-        description: Gemini AI 이미지 (Nano Banana 2 기본). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
+        description: Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt 지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
         target_description: 'prompt (필수). 옵션:
+
+          - input_image: 편집할 원본 이미지의 절대 경로(문자열 또는 목록) — 주면 생성이 아니라 그 사진을 지시대로 편집(채팅 첨부 사진 경로 그대로 사용 가능, 원본 비율 보존)
 
           - style_preset: vintage_book/blueprint/architect/ink_orange (슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합)
 
@@ -45,7 +47,7 @@ nodes:
         group: media_produce
         router: handler
         tool: generate_gemini_image
-        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), style_preset(vintage_book/blueprint/architect/ink_orange — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본)'
+        implementation: 'Google Gemini API로 프롬프트 기반 AI 이미지 생성·편집. 기본 모델: gemini-3.1-flash-image-preview (Nano Banana 2, 2026-02 출시, 한국어 텍스트 렌더링 개선, 4K까지). 파라미터: prompt(필수), input_image(원본 이미지 절대 경로 — 주면 편집 모드: inlineData 로 원본 첨부+최소 편집 프레이밍, aspect_ratio 미지정 시 원본 비율 보존, 결과는 image_data 봉투로 채팅 표시), style_preset(vintage_book/blueprint/architect/ink_orange — 슬라이드 design_system과 매칭, 한글 금지+스타일 토큰 자동 결합), aspect_ratio(1:1/16:9/9:16/4:3/3:4/1:4/4:1/1:8/8:1), image_size(512/1K/2K/4K, 기본 1K — 가격 1K $0.045 / 2K 중간 / 4K $0.151), quality(fast=3.1 Flash 기본 / pro=gemini-3-pro-image-preview Pro / legacy=gemini-2.5-flash-image 폴백), model(직접 모델명 지정 시 quality 무시), output_path(선택), api_key(선택, 환경변수 GEMINI_API_KEY 기본). 구현: gemini_image.py (1500줄 규칙 분리)'
         target_key: prompt
         keywords:
         - image generation
@@ -57,6 +59,10 @@ nodes:
         - text to image
         - 이미지생성
         - AI이미지
+        - 사진 편집
+        - 사진 보정
+        - image edit
+        - 이미지 편집
       icon:
         returns: effect
         runs_on: anywhere

@@ -4,6 +4,8 @@
 
 LAUNCHER_AUTOPILOT_JS = """/* ================= 자율주행 (드릴다운) ================= */
 let apAgents=[]; let apAgProject=null;
+/* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI 채팅 전용. */
+let apImages=[];
 async function apLoad(){ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
 async function apLoadProjects(){
   try{ const r=await jfetch('/projects'); if(r.ok){ const d=await r.json(); apProjects=d.projects||[]; } }catch(e){}
@@ -194,9 +196,68 @@ function apOpenChat(title,sub){
   document.getElementById('apTitle').textContent=title;
   document.getElementById('apSub').textContent=sub||'';
   document.getElementById('apMsgs').innerHTML='<div class="empty">메시지를 입력해 시작하세요.</div>';
+  // 사진 첨부는 시스템 AI 채팅만 (에이전트 /command 는 이미지 미지원)
+  document.getElementById('apAttach').style.display=(apChat.type==='system')?'':'none';
+  apImages=[]; apRenderChips();
   apShowChat();
   apLoadHistory();  // 시스템 AI·에이전트 모두 과거 대화 자동 로드(연속성)
   setTimeout(()=>{ try{ document.getElementById('apInput').focus(); }catch(e){} },50);
+}
+/* ── 사진 첨부: 갤러리 선택(input file) → canvas 긴 변 1600px 다운스케일(JPEG q0.85 —
+   폰 원본 수 MB 를 그대로 보내면 업로드·비전 양쪽이 무겁다) → 미리보기 칩 → 전송 시 base64 동봉 */
+function apPickImage(){ document.getElementById('apFile').click(); }
+function apReadImage(file){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=()=>{ const img=new Image();
+      img.onload=()=>{
+        try{
+          const MAX=1600; let w=img.naturalWidth,h=img.naturalHeight;
+          const sc=Math.min(1,MAX/Math.max(w,h)); w=Math.round(w*sc)||1; h=Math.round(h*sc)||1;
+          const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+          cv.getContext('2d').drawImage(img,0,0,w,h);
+          const durl=cv.toDataURL('image/jpeg',0.85);
+          res({b64:durl.split(',')[1],media_type:'image/jpeg',dataUrl:durl});
+        }catch(err){ rej(err); }
+      };
+      img.onerror=()=>rej(new Error('이미지 해석 실패'));
+      img.src=rd.result;
+    };
+    rd.onerror=()=>rej(new Error('파일 읽기 실패'));
+    rd.readAsDataURL(file);
+  });
+}
+async function apFileChosen(e){
+  const files=Array.prototype.slice.call(e.target.files||[]); e.target.value='';
+  for(const f of files){
+    if(apImages.length>=4){ alert('사진은 한 번에 4장까지입니다.'); break; }
+    try{ apImages.push(await apReadImage(f)); }catch(err){ alert('사진 처리 실패: '+err.message); }
+  }
+  apRenderChips();
+}
+function apRenderChips(){
+  const box=document.getElementById('apChips'); if(!box) return;
+  if(!apImages.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='flex';
+  box.innerHTML=apImages.map((im,i)=>
+    '<div class="ap-chip"><img src="'+im.dataUrl+'"><button onclick="apRemoveChip('+i+')">✕</button></div>'
+  ).join('');
+}
+function apRemoveChip(i){ apImages.splice(i,1); apRenderChips(); }
+/* 대화 이력의 이미지 상대 경로 → 렌더/다운로드 URL (dl=1 = Content-Disposition attachment
+   → 폰 브라우저 다운로드 = 폰 저장) */
+function apImgObjs(paths){
+  return (paths||[]).map(p=>{
+    const u='/system-ai/image?path='+encodeURIComponent(p);
+    return {src:u, dl:u+'&dl=1'};
+  });
+}
+function apAppendImgs(bub,imgs){
+  (imgs||[]).forEach(im=>{
+    const img=document.createElement('img'); img.className='bimg'; img.loading='lazy'; img.src=im.src;
+    bub.appendChild(img);
+    if(im.dl){ const a=document.createElement('a'); a.className='bdl'; a.href=im.dl; a.textContent='⬇ 저장'; bub.appendChild(a); }
+  });
 }
 /* 과거 대화 로드 — 채팅 진입 시 이전 대화를 버블로 표시.
    시스템 AI=/system-ai/conversations / 에이전트=/conversations/{pid}/{aid}/messages (맥/폰 공통) */
@@ -205,7 +266,7 @@ async function apLoadHistory(){
     let convs=[];
     if(apChat.type==='system'){
       const r=await jfetch('/system-ai/conversations?limit=40'); if(!r.ok) return;
-      convs=((await r.json()).conversations||[]).map(m=>({role:(m.role==='user')?'user':'assistant', content:m.content||''}));
+      convs=((await r.json()).conversations||[]).map(m=>({role:(m.role==='user')?'user':'assistant', content:m.content||'', images:m.images||null}));
     }else if(apChat.type==='agent'){
       const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
       if(!r.ok) return;
@@ -214,7 +275,7 @@ async function apLoadHistory(){
     }else return;
     if(!convs.length) return;  // 이력 없으면 안내문 유지
     const c=document.getElementById('apMsgs'); c.innerHTML='';
-    convs.forEach(m=>{ apAddMsg(m.role, m.content); });
+    convs.forEach(m=>{ apAddMsg(m.role, m.content, apImgObjs(m.images)); });
     const sep=document.createElement('div'); sep.className='ap-hist-sep'; sep.textContent='― 여기부터 새 대화 ―';
     c.appendChild(sep); c.scrollTop=c.scrollHeight;
   }catch(e){}
@@ -226,11 +287,12 @@ async function apRunSwitch(id,btn){
   catch(e){ alert('오류: '+e.message); }
   finally{ btn.disabled=false; btn.textContent='실행'; }
 }
-function apAddMsg(role,text){
+function apAddMsg(role,text,imgs){
   const c=document.getElementById('apMsgs');
   const ph=c.querySelector('.empty'); if(ph) ph.remove();
   const el=document.createElement('div'); el.className='msg '+role;
   el.innerHTML='<div class="av">'+(role==='user'?'🧑':'🤖')+'</div><div class="bub">'+(role==='user'?esc(text):mdChat(text))+'</div>';
+  apAppendImgs(el.querySelector('.bub'),imgs);
   c.appendChild(el); c.scrollTop=c.scrollHeight;
 }
 function apKey(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); apSend(); } }
@@ -241,7 +303,7 @@ async function apAssistantMsgs(){
   if(apChat.type==='system'){
     const r=await jfetch('/system-ai/conversations?limit=40');
     if(!r.ok) return null;
-    return ((await r.json()).conversations||[]).filter(m=>m.role==='assistant').map(m=>({id:m.id,content:m.content||''}));
+    return ((await r.json()).conversations||[]).filter(m=>m.role==='assistant').map(m=>({id:m.id,content:m.content||'',images:m.images||null}));
   }else{
     const r=await jfetch('/conversations/'+encodeURIComponent(apChat.projectId)+'/'+encodeURIComponent(apChat.agentId)+'/messages?limit=40');
     if(!r.ok) return null;
@@ -252,7 +314,8 @@ async function apAssistantMsgs(){
 function apMaxId(arr){ let mx=0; (arr||[]).forEach(m=>{ if(m.id>mx) mx=m.id; }); return mx; }
 function apSleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
 /* 백그라운드 명령의 답을 대화 DB 폴링으로 회수. baselineId 보다 큰 id의 어시스턴트 메시지가
-   나타나면 그 내용 반환. 각 폴링은 짧은 요청이라 터널 100초 타임아웃에 안 걸린다. 최대 ~10분. */
+   나타나면 그 메시지({content, images}) 반환. 각 폴링은 짧은 요청이라 터널 100초 타임아웃에
+   안 걸린다. 최대 ~10분. */
 async function apPollAssistant(baselineId,bub){
   const dots=['작업 중…','작업 중… ·','작업 중… · ·','작업 중… · · ·'];
   for(let i=0;i<200;i++){
@@ -261,13 +324,15 @@ async function apPollAssistant(baselineId,bub){
     let a; try{ a=await apAssistantMsgs(); }catch(e){ continue; }  // 일시 오류는 넘김
     if(a==null) continue;
     const fresh=a.filter(m=>m.id>baselineId);
-    if(fresh.length) return fresh[fresh.length-1].content;
+    if(fresh.length) return fresh[fresh.length-1];
   }
-  return '⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.';
+  return {content:'⏳ 아직 처리 중입니다. 잠시 후 대화를 다시 열어 확인해 주세요.', images:null};
 }
 async function apSend(){
-  const inp=document.getElementById('apInput'); const msg=inp.value.trim(); if(!msg) return;
-  apAddMsg('user',msg); inp.value='';
+  const inp=document.getElementById('apInput'); const msg=inp.value.trim();
+  if(!msg&&!apImages.length) return;
+  const sendImgs=apImages.slice(); apImages=[]; apRenderChips();
+  apAddMsg('user',msg||'(사진)',sendImgs.map(im=>({src:im.dataUrl}))); inp.value='';
   const btn=document.getElementById('apSend'); btn.disabled=true;
   apAddMsg('assistant','…'); const last=document.getElementById('apMsgs').lastChild.querySelector('.bub');
   try{
@@ -276,14 +341,19 @@ async function apSend(){
     const baselineId=apMaxId(await apAssistantMsgs());
     let r;
     if(apChat.type==='system'){
-      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify({message:msg,background:true})});
+      const body={message:msg||'첨부한 사진을 봐줘.',background:true};
+      if(sendImgs.length) body.images=sendImgs.map(im=>({base64:im.b64,media_type:im.media_type}));
+      r=await jfetch('/system-ai/chat',{method:'POST',body:JSON.stringify(body)});
     }else{
       await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/start',{method:'POST'});
       r=await jfetch('/projects/'+encodeURIComponent(apChat.projectId)+'/agents/'+encodeURIComponent(apChat.agentId)+'/command',{method:'POST',body:JSON.stringify({command:msg,background:true})});
     }
     if(!r.ok){ const d=await r.json().catch(()=>({})); last.textContent='['+r.status+'] '+(d.detail||'오류'); return; }
     last.textContent='작업 중…';
-    last.innerHTML=mdChat(await apPollAssistant(baselineId,last));
+    const fin=await apPollAssistant(baselineId,last);
+    last.innerHTML=mdChat(fin.content||'');
+    apAppendImgs(last,apImgObjs(fin.images));  // AI 생성 이미지(tool_images) 렌더 + ⬇ 저장
+    const mc=document.getElementById('apMsgs'); mc.scrollTop=mc.scrollHeight;
   }catch(e){ last.textContent='연결 오류: '+e.message; }
   finally{ btn.disabled=false; }
 }

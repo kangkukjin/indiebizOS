@@ -131,6 +131,16 @@ input,textarea,select{ font-family:inherit; }
 .bub a{ color:var(--info); word-break:break-all; }
 .msg.user .bub a{ color:#FFF3D6; }
 .ap-hist-sep{ text-align:center; color:var(--dim); font-size:12px; margin:14px 0 4px; opacity:.7; }
+/* 버블 안 이미지(첨부·AI 생성) + ⬇ 저장 버튼 */
+.bub .bimg{ display:block; max-width:min(320px,100%); border-radius:10px; margin:6px 0 2px; border:1px solid var(--line); }
+.bub .bdl{ display:inline-block; font-size:12px; color:var(--info); text-decoration:none; background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:3px 10px; margin:2px 0 6px; }
+.msg.user .bub .bdl{ color:#FFF3D6; background:rgba(255,255,255,.15); border-color:transparent; }
+/* 전송 전 첨부 미리보기 칩 */
+.ap-chips{ display:flex; gap:8px; padding:8px 16px 0; background:var(--bg2); border-top:1px solid var(--line); flex-wrap:wrap; }
+.ap-chip{ position:relative; width:64px; height:64px; border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+.ap-chip img{ width:100%; height:100%; object-fit:cover; display:block; }
+.ap-chip button{ position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; border:none; background:rgba(0,0,0,.55); color:#fff; font-size:12px; line-height:1; cursor:pointer; }
+.ap-attach{ width:42px; height:42px; flex-shrink:0; border:1px solid var(--line); border-radius:14px; background:var(--bg); font-size:18px; cursor:pointer; align-self:flex-end; }
 .composer{ padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:var(--bg2); border-top:1px solid var(--line); display:flex; gap:8px; }
 .composer textarea{ flex:1; padding:11px 15px; border:1px solid var(--line); border-radius:18px; background:var(--bg); color:var(--txt); font-size:14px; resize:none; max-height:120px; transition:border-color .15s, box-shadow .15s; }
 .composer textarea:focus{ outline:none; border-color:var(--acc); box-shadow:0 0 0 3px var(--acc-soft); }
@@ -484,10 +494,14 @@ SHELL_PANEL_AUTOPILOT_HTML = """
         <div class="ap-head-t"><h2 id="apTitle">시스템 AI</h2><p id="apSub"></p></div>
       </div>
       <div class="msgs" id="apMsgs"></div>
+      <!-- 첨부 사진 미리보기 칩 (전송 전) -->
+      <div class="ap-chips" id="apChips" style="display:none"></div>
       <div class="composer" id="apComposer">
+        <button class="ap-attach" id="apAttach" onclick="apPickImage()" title="사진 첨부">📷</button>
         <textarea id="apInput" rows="1" placeholder="메시지..." onkeydown="apKey(event)"></textarea>
         <button class="go" id="apSend" onclick="apSend()">전송</button>
       </div>
+      <input type="file" id="apFile" accept="image/*" multiple style="display:none" onchange="apFileChosen(event)">
     </div>
   </div>
 """

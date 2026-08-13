@@ -43,7 +43,11 @@ PHONE_KEYS = [
     "MOLIT_API_KEY",
     # 폰-자아 호스팅 step7: 경량 티어 = gemini_http(폰이 구글 API 직접 호출). 추론 자아의
     # 분류·평가를 맥 안 거치고 폰서 직접 — 맥과 동일 모델(Gemini), 자급도↑.
+    # (이미지 생성 [engines:image_gemini] 도 이 키 — 두뇌를 딥시크로 바꿔도 유지)
     "GEMINI_API_KEY",
+    # 2026-08-13 폰 두뇌 = deepseek_http (사용자 결정: 경량·중급 flash / 고급 pro).
+    # 맥 .env 에 이 키가 있어야 신선 설치 시 config apiKey="" 의 env 폴백이 작동한다.
+    "DEEPSEEK_API_KEY",
 ]
 
 # 분산 IBL 위임 설정 — 폰 자율주행 표면이 맥 백엔드로 프록시할 대상.

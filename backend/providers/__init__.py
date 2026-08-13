@@ -21,6 +21,7 @@ from .deepseek import DeepSeekProvider
 from .ollama import OllamaProvider
 from .claude_code import ClaudeCodeProvider
 from .gemini_http import GeminiHTTPProvider  # SDK 없는 Gemini REST (폰 네이티브)
+from .deepseek_http import DeepSeekHTTPProvider  # SDK 없는 DeepSeek REST (폰 네이티브)
 
 __all__ = [
     'BaseProvider',
@@ -32,6 +33,7 @@ __all__ = [
     'OllamaProvider',
     'ClaudeCodeProvider',
     'GeminiHTTPProvider',
+    'DeepSeekHTTPProvider',
 ]
 
 
@@ -51,6 +53,8 @@ def get_provider(provider_name: str, **kwargs):
         'gemini_http': GeminiHTTPProvider,
         'gemini-http': GeminiHTTPProvider,
         'google_http': GeminiHTTPProvider,
+        'deepseek_http': DeepSeekHTTPProvider,
+        'deepseek-http': DeepSeekHTTPProvider,
     }
 
     provider_class = providers.get(provider_name.lower())

@@ -97,24 +97,26 @@ def _init_base(base_path):
 
 
 def _ensure_phone_ai_configs(base_path):
-    """폰 3티어 모델 config 생성(없거나 옛 claude_code_remote 면 마이그레이션).
+    """폰 3티어 모델 config 생성(없거나 은퇴 프로바이더면 마이그레이션).
 
-    폰-자아의 두뇌 = 폰 in-process Gemini(gemini_http, REST 직결). 추론 루프·도구 실행·jclass 가
-    전부 폰에서 일어나 손이 폰에 있다(맥 claude_code 렌트·역방향 WS 장치 불필요). GEMINI_API_KEY 는
-    keys.json 에서 env 주입 → apiKey="" 면 프로바이더가 env 폴백.
+    폰-자아의 두뇌 = 폰 in-process DeepSeek(deepseek_http, REST 직결 — 2026-08-13 사용자
+    결정: 경량·중급=v4-flash / 고급=v4-pro. 이전 두뇌 gemini_http 는 은퇴 마이그레이션).
+    추론 루프·도구 실행·jclass 가 전부 폰에서 일어나 손이 폰에 있다. DEEPSEEK_API_KEY 는
+    keys.json 에서 env 주입 → apiKey="" 면 프로바이더가 env 폴백. GEMINI_API_KEY 는
+    이미지 생성([engines:image_gemini])용으로 계속 주입된다.
     """
     import json as _json
     cfg_dir = os.path.join(base_path, "data")
     os.makedirs(cfg_dir, exist_ok=True)
     defaults = {
-        "system_ai_config.json": {"enabled": True, "provider": "gemini_http",
-                                   "model": "gemini-3.1-pro-preview", "apiKey": "", "role": ""},
-        "midtier_ai_config.json": {"enabled": True, "provider": "gemini_http",
-                                   "model": "gemini-3.5-flash", "apiKey": ""},
-        "lightweight_ai_config.json": {"enabled": True, "provider": "gemini_http",
-                                       "model": "gemini-3.1-flash-lite", "apiKey": ""},
+        "system_ai_config.json": {"enabled": True, "provider": "deepseek_http",
+                                   "model": "deepseek-v4-pro", "apiKey": "", "role": ""},
+        "midtier_ai_config.json": {"enabled": True, "provider": "deepseek_http",
+                                   "model": "deepseek-v4-flash", "apiKey": ""},
+        "lightweight_ai_config.json": {"enabled": True, "provider": "deepseek_http",
+                                       "model": "deepseek-v4-flash", "apiKey": ""},
     }
-    _RETIRED = {"claude_code_remote", "claude_code", "claude-code-remote"}
+    _RETIRED = {"claude_code_remote", "claude_code", "claude-code-remote", "gemini_http"}
     for name, cfg in defaults.items():
         path = os.path.join(cfg_dir, name)
         write = not os.path.exists(path)

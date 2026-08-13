@@ -155,6 +155,23 @@ def main() -> int:
         else:
             print("  npm 없음 — 백엔드 전용 설치(데스크탑 UI 는 Node ≥ 18 설치 후 재실행)", flush=True)
 
+    if not args.core_only:
+        step("의존성 커버리지 감사 — 코드가 import 하는 서드파티가 방금 만든 .venv 에 실재하는가")
+        # fresh 설치의 누락(requirements 선언 빠짐·설치 실패·ABI 파손)을 지금 잡는다 —
+        # 안 잡으면 그 코드가 도는 순간(며칠 뒤)에야 터진다(.venv 전환 잔재 부류, 2026-08-13).
+        # --core-only 는 tools/ml 이 의도적으로 빠져 있어 감사 대상이 아니다(CI 는
+        # portability.yml 의 import-coverage 잡이 core+tools 로 따로 검사한다).
+        # 실패해도 부트스트랩은 계속 — 코어 서버는 뜨고, 무엇이 빠졌는지는 위에 찍혔다.
+        try:
+            rc = subprocess.run([vpy, os.path.join(ROOT, "scripts", "check_import_coverage.py")],
+                                cwd=ROOT, timeout=600).returncode
+            if rc == 1:
+                print("  ⚠ 위 결손 의존성은 해당 기능이 돌 때 터집니다 — requirements 선언/설치 후 재실행 권장", flush=True)
+            elif rc != 0:
+                print("  ⚠ 감사 스크립트 자체 문제 (무시하고 계속)", flush=True)
+        except Exception as e:
+            print(f"  ⚠ 의존성 감사 실행 실패 (무시하고 계속): {e}", flush=True)
+
     step("완료")
     if os.name == "nt":
         print("  실행:  .venv\\Scripts\\python.exe backend\\api.py", flush=True)

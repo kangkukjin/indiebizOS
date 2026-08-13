@@ -199,10 +199,59 @@ def run_ibl_health_check() -> List[Dict]:
     # 다시 열리면 12시간 내 여기서 깃발이 선다. subprocess=테스트가 패키지 모듈을
     # 자체 로드하므로 라이브 프로세스 무접촉(red_safety 와 같은 이유).
     out.append(_run_silent_failure_regression(_root))
+    # §1F 의존성 커버리지 (2026-08-13 — .venv 전환 잔재 감사의 상설 전환) —
+    # 코드의 모든 서드파티 import 가 지금 이 .venv 에 실재하는가. 미선언 의존성은
+    # 부팅이 아니라 그 코드가 도는 순간 터지므로(mcp 마운트 실패·greenlet ABI →
+    # playwright 사망 부류) 부팅 성공이 증명이 못 된다 — 12시간 그물로 실 import 시험.
+    # subprocess=검사 스크립트가 .venv 인터프리터를 따로 띄워 repo 밖 cwd 에서 시험
+    # (라이브 프로세스 무접촉, red_safety 와 같은 이유).
+    out.append(_run_import_coverage(_root))
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})
     return out
+
+
+def _run_import_coverage(_root) -> Dict:
+    """의존성 커버리지 순찰(§1F) — scripts/check_import_coverage.py 를 1회 실행.
+
+    계약: 마지막 줄 '@@IMPORT_COVERAGE_JSON@@ {…}' (ibl_health_check 의
+    @@HEALTH_JSON@@ 과 동형). rc·마커 부재·파싱 실패는 전부 명시적 fail —
+    검사기가 죽었는데 옛 GREEN 이 남는 침묵 실패를 만들지 않는다.
+    """
+    import subprocess
+    import json as _json
+    key = {"node": "__static__", "action": "import_coverage", "response_ms": 0}
+    script = _root / "scripts" / "check_import_coverage.py"
+    if not script.exists():
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": "scripts/check_import_coverage.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=600)
+    except Exception as e:
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"실행 실패: {str(e)[:150]}"}
+    marker = None
+    for line in reversed((proc.stdout or "").splitlines()):
+        if line.startswith("@@IMPORT_COVERAGE_JSON@@"):
+            marker = line[len("@@IMPORT_COVERAGE_JSON@@"):].strip()
+            break
+    if marker is None:
+        tail = ((proc.stderr or "").strip() or (proc.stdout or "").strip())[-180:]
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"요약 마커 없음(rc={proc.returncode}): {tail}"}
+    try:
+        s = _json.loads(marker)
+    except Exception as e:
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"요약 JSON 파싱 실패: {str(e)[:120]}"}
+    ok = bool(s.get("ok"))
+    if ok:
+        return {**key, "success": True, "data_quality": "ok", "error_message": None}
+    names = ", ".join(f.get("name", "?") for f in (s.get("failures") or [])[:6])
+    return {**key, "success": False, "data_quality": "dependency_missing",
+            "error_message": f"미선언/파손 의존성 {len(s.get('failures') or [])}건: {names}"[:220]}
 
 
 def _run_silent_failure_regression(_root) -> Dict:
@@ -759,6 +808,7 @@ def get_ibl_health_status() -> Dict:
         ("__static__", "ibl_consistency", "어휘 정합 — 선언·구현·도구 일치"),
         ("__static__", "red_safety", "자기수정 안전장치 — 게이트·그랜트·롤백 기능"),
         ("__static__", "silent_failure_regression", "침묵-실패 회귀 — 문법 D1~D6 + 통화 P1~P19"),
+        ("__static__", "import_coverage", "의존성 커버리지 — 코드 import ↔ .venv 실재"),
         ("__ibl_health__", "currency", "통화 규약 — 실행 결과 형태"),
         ("__ibl_health__", "golden_pipes", "파이프 흐름 — 액션 조합(>>)"),
         ("__ibl_health__", "description_drift", "설명 정합 — 어휘 설명 최신성"),

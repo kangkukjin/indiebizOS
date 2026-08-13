@@ -29,6 +29,7 @@ on:
       - 'backend/**'
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
+      - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
       - 'scripts/bootstrap.py'
@@ -38,6 +39,7 @@ on:
       - 'backend/**'
       - 'data/packages/**'
       - 'scripts/check_win_portability.py'
+      - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
       - 'scripts/bootstrap.py'
@@ -68,6 +70,29 @@ jobs:
         run: pip install -r backend/requirements-core.txt
       - name: 백엔드 모듈 그래프 import 스모크 (임베디드 등가 -I)
         run: python -I -X utf8 scripts/ci_import_smoke.py
+
+  import-coverage:
+    # 의존성 선언 감사 — 코드의 모든 서드파티 import 가 requirements 에 선언돼 있는가.
+    # fresh venv 에선 "선언된 것만 설치돼 있다" 가 성립하므로, 실제 import 시험이 곧
+    # 선언 감사가 된다(pip 이름↔import 이름 사상표 불요). 배경: 2026-08-10 .venv 전환
+    # 때 homebrew 전역에만 있던 미선언 의존성들이 런타임에 하나씩 터진 부류(mcp →
+    # MCP 마운트 실패, greenlet ABI → playwright 사망 등)를 커밋 시점으로 당기는 그물.
+    # macos 인 이유: 정본 개발 몸과 같은 플랫폼이라 darwin 마커 의존성(pyobjc)까지
+    # 실검사되고, 헤드리스 리눅스의 DISPLAY 류 import 부작용 오탐이 없다.
+    # ML 티어(torch ~2GB)는 이 감사에 불필요해 미설치(--allow-ml-missing).
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'   # 정본 .venv 와 동일 계열
+      - name: fresh venv + core/tools 의존성 (선언분만 — 감사의 전제)
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python3 -m pip install --quiet --upgrade pip
+          .venv/bin/python3 -m pip install --quiet -r backend/requirements-core.txt -r backend/requirements-tools.txt
+      - name: import 커버리지 감사 (scripts/check_import_coverage.py)
+        run: python3 scripts/check_import_coverage.py --allow-ml-missing
 
   boot-smoke:
     # 정본 경로 부팅 증명 — README 의 레시피 *그대로*: clone → bootstrap.py → 부팅 → /health 200.

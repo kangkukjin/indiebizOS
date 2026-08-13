@@ -56,3 +56,10 @@ pyobjc-framework-ApplicationServices; sys_platform == "darwin"
 pyobjc-framework-Vision; sys_platform == "darwin"
 # 개발·회귀 테스트 (test_pipe_currency_failures.py 등)
 pytest
+# lecture_workspace 슬러그 로마자화 1순위 (없으면 내장 자모 로마자화 폴백) —
+# 의존성 커버리지 감사(scripts/check_import_coverage.py, 2026-08-13)에서 합류
+Unidecode
+# TLS 크롬위장 (real-estate 직방·네이버 / shopping-assistant 크몽·번개장터 /
+# location-services 여기어때 등이 직접 import) — 지금까지 yfinance 의 전이 의존으로만
+# 깔려 있었다(감사에서 발견). yfinance 가 떨구면 세 패키지가 같이 죽는 구조라 명시 선언.
+curl_cffi

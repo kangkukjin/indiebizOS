@@ -199,7 +199,6 @@
           "!**/tokens/**",
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
-          "!packages/installed/tools/spending/**",
           "!__GEN_END__"
         ]
       },

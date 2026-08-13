@@ -81,14 +81,12 @@ ML_TIER = {"sentence_transformers", "sqlite_vec", "torch", "transformers"}
 
 # ── 좀비 래칫 ───────────────────────────────────────────────────────────────
 # 은퇴한 로컬 모듈을 아직 참조하는 죽은 코드 — 의존성 결손이 아니라 코드 잔재다.
-# vocab 압축 경고의 래칫 동결 선례: 아래 *기존 건만* 비차단 경고로 동결하고,
+# vocab 압축 경고의 래칫 동결 선례: *기존 건만* 비차단 경고로 동결하고,
 # 새로 나타나는 미해소 이름은 전부 실패다. 잔재를 정리하면 여기서도 지울 것 —
 # 이 목록은 부채 원장이지 면죄부가 아니다.
-KNOWN_ZOMBIES = {
-    "ai": "은퇴 ai-agent 확장(2026-07-02 폐기) 잔재 — 휴면 extensions/prompt-generator·switch-runner 가 참조",
-    "tool_android": "은퇴 안드로이드 45액션 패키지(2026-06-05 _archive) 잔재 — android_agent.py·api_android.py 가드 참조",
-    "schedule": "휴면 extensions/scheduler/tool_scheduler.py(스탠다드 도구 시대) 전용 — 백엔드 무참조",
-}
+# (2026-08-13 완제: ai·tool_android·schedule 3건 — 참조하던 휴면 확장
+#  prompt-generator·switch-runner·scheduler 와 죽은 android_agent/api_android 자체를 은퇴)
+KNOWN_ZOMBIES: dict = {}
 
 
 def iter_py_files():

@@ -26,7 +26,7 @@ import {
   folderWindows,
   createProjectWindow, createFolderWindow, createSystemAIWindow,
   createBusinessWindow, createCommunityWindow, createMessengerWindow,
-  createPCManagerWindow, createPhotoManagerWindow, createAndroidManagerWindow,
+  createPCManagerWindow, createPhotoManagerWindow,
   createLectureWorkspaceWindow, createMultiChatWindow,
 } from './windows.js';
 import { setTray, bumpBadge } from './badge.js';
@@ -282,11 +282,6 @@ function setupIPC() {
   // Photo Manager 창 열기
   ipcMain.handle('open-photo-manager-window', (_, initialPath) => {
     createPhotoManagerWindow(initialPath);
-  });
-
-  // Android Manager 창 열기
-  ipcMain.handle('open-android-manager-window', (_, deviceId, projectId) => {
-    createAndroidManagerWindow(deviceId, projectId);
   });
 
   // 런처 새로고침 요청 (프로젝트 창에서 스위치 생성/수정/삭제 시)

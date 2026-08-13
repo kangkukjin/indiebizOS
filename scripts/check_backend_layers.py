@@ -68,7 +68,7 @@ LAYERS = {
     },
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals",
-        "agent_pipeline", "agent_runner", "ai_agent", "android_agent",
+        "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace",
         "consciousness_agent", "forage_consolidation", "goal_evaluator",

@@ -288,9 +288,10 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 백엔드 코어 모듈 (extensions/) — 8개
+## 백엔드 코어 모듈 (extensions/) — 5개
 
 `installed/extensions/`에 위치한 모듈들은 에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈입니다.
+(prompt-generator·scheduler·switch-runner 는 pre-IBL 휴면 사본이라 2026-08-13 은퇴 — 정본은 backend/ 의 prompt_builder·scheduler·switch_runner)
 
 | ID | 설명 |
 |----|------|
@@ -298,9 +299,6 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | gmail | Gmail 연동 |
 | indienet | 외부 메신저 연동 (Nostr 기반) |
 | notification-system | 알림 시스템 |
-| prompt-generator | 프롬프트 자동 생성 |
-| scheduler | 예약 작업 스케줄러 |
-| switch-runner | 스위치 실행기 |
 | websocket-chat | WebSocket 기반 실시간 채팅 |
 
 ---

@@ -351,28 +351,6 @@ export function Launcher() {
     return () => clearInterval(interval);
   }, []);
 
-  // Android Manager 창 열기 요청 폴링
-  useEffect(() => {
-    const pollAndroidWindows = async () => {
-      try {
-        const response = await fetch('http://127.0.0.1:8765/android/pending-windows');
-        if (response.ok) {
-          const data = await response.json();
-          for (const req of data.requests || []) {
-            if (window.electron?.openAndroidManagerWindow) {
-              window.electron.openAndroidManagerWindow(req.device_id || null, req.project_id || null);
-            }
-          }
-        }
-      } catch {
-        // 서버 연결 실패 무시
-      }
-    };
-
-    const interval = setInterval(pollAndroidWindows, 300);
-    return () => clearInterval(interval);
-  }, []);
-
   // ─── Launcher WS: Electron 메인 프로세스로 이전됨 (Phase 27) ───
   // 백엔드 → Electron 창 제어는 main.js의 startLauncherWS()에서 처리
   // 컴포넌트 lifecycle과 무관하게 항상 연결 유지

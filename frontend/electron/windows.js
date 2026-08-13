@@ -25,7 +25,6 @@ let communityWindow = null; // 커뮤니티 창 (옛 IndieNet — IBL 커뮤니�
 let messengerWindow = null; // 메신저 창 (옛 이웃관리·빠른 연락처 — IBL 메신저 계기)
 let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
-let androidManagerWindow = null; // Android Manager 창
 let systemAIWindow = null; // 시스템 AI 창
 let lectureWorkspaceWindow = null; // 강의 만들기 워크스페이스 창
 
@@ -505,69 +504,6 @@ function createPhotoManagerWindow(initialPath = null) {
 }
 
 /**
- * Android Manager 창 생성
- */
-function createAndroidManagerWindow(deviceId = null, projectId = null) {
-  // 이미 열려있으면 포커스
-  if (androidManagerWindow && !androidManagerWindow.isDestroyed()) {
-    androidManagerWindow.focus();
-    return;
-  }
-
-  androidManagerWindow = new BrowserWindow({
-    width: 450,
-    height: 700,
-    minWidth: 400,
-    minHeight: 600,
-    title: 'Android Manager',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: process.platform === 'darwin' ? { x: 15, y: 15 } : undefined,
-    frame: process.platform !== 'darwin',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
-    }
-  });
-
-  // URL에 device_id, project_id 파라미터 전달
-  const params = [];
-  if (deviceId) params.push(`device_id=${encodeURIComponent(deviceId)}`);
-  if (projectId) params.push(`project_id=${encodeURIComponent(projectId)}`);
-  const hashPath = params.length > 0 ? `/android?${params.join('&')}` : '/android';
-
-  if (isDev) {
-    androidManagerWindow.loadURL(`http://localhost:5173/#${hashPath}`);
-  } else {
-    androidManagerWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {
-      hash: hashPath
-    });
-  }
-
-  // 외부 링크는 기본 브라우저에서 열기
-  androidManagerWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  androidManagerWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
-  });
-
-  androidManagerWindow.on('closed', () => {
-    androidManagerWindow = null;
-  });
-
-  // 우클릭 컨텍스트 메뉴 설정
-  setupContextMenu(androidManagerWindow);
-
-  return androidManagerWindow;
-}
-
-/**
  * 강의 만들기 워크스페이스 창 생성
  * lectureId가 주어지면 해당 강의를 선택한 상태로, 미지정 시 강의 목록 화면.
  */
@@ -696,5 +632,5 @@ export { folderWindows };
 
 export { raiseWindow, createProjectWindow, createFolderWindow, createSystemAIWindow,
          createBusinessWindow, createCommunityWindow, createMessengerWindow,
-         createPCManagerWindow, createPhotoManagerWindow, createAndroidManagerWindow,
+         createPCManagerWindow, createPhotoManagerWindow,
          createLectureWorkspaceWindow, createMultiChatWindow };

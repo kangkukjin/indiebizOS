@@ -13,7 +13,6 @@ import { BusinessInstrumentView } from './components/BusinessInstrumentView';
 import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
-import { AndroidManager } from './components/AndroidManager';
 import { SystemAIView } from './components/SystemAIView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { api } from './lib/api';
@@ -34,9 +33,6 @@ interface HashRoute {
   pcManagerPath: string | null;
   isPhotoManager: boolean;
   photoManagerPath: string | null;
-  isAndroidManager: boolean;
-  androidDeviceId: string | null;
-  androidProjectId: string | null;
   isSystemAI: boolean;
   isLectureWorkspace: boolean;
   lectureId: string | null;
@@ -47,7 +43,6 @@ const EMPTY_ROUTE: HashRoute = {
   isCommunity: false, isMessenger: false, isBusiness: false,
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
-  isAndroidManager: false, androidDeviceId: null, androidProjectId: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
 };
 
@@ -74,10 +69,6 @@ function parseHash(hash: string): HashRoute {
   // Photo Manager
   if (hash.startsWith('#/photo'))
     return { ...EMPTY_ROUTE, isPhotoManager: true, photoManagerPath: param('path') };
-  // Android Manager
-  if (hash.startsWith('#/android'))
-    return { ...EMPTY_ROUTE, isAndroidManager: true, androidDeviceId: param('device_id'), androidProjectId: param('project_id') };
-
   // MultiChat (URL 인코딩된 ID 디코딩)
   const multiChatMatch = hash.match(/^#\/multichat\/(.+)$/);
   if (multiChatMatch) return { ...EMPTY_ROUTE, multiChatRoomId: decodeURIComponent(multiChatMatch[1]) };
@@ -107,7 +98,6 @@ function App() {
     projectId, initialAgent, folderId, multiChatRoomId,
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
-    isAndroidManager, androidDeviceId, androidProjectId,
     isSystemAI, isLectureWorkspace, lectureId,
   } = route;
 
@@ -251,17 +241,6 @@ function App() {
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
           <PhotoManager initialPath={photoManagerPath} />
-        </div>
-      </div>
-    );
-  }
-
-  // Android Manager 창인 경우
-  if (isAndroidManager) {
-    return (
-      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
-        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
-          <AndroidManager deviceId={androidDeviceId} projectId={androidProjectId} />
         </div>
       </div>
     );

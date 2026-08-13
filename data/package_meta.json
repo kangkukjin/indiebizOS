@@ -190,13 +190,6 @@
       "weight": "light",
       "locale": "universal"
     },
-    "prompt-generator": {
-      "needs_key": [
-        "GEMINI_API_KEY"
-      ],
-      "weight": "light",
-      "locale": "universal"
-    },
     "public-files": {
       "needs_key": [],
       "weight": "light",
@@ -216,13 +209,6 @@
       "weight": "light",
       "locale": "kr"
     },
-    "scheduler": {
-      "needs_key": [
-        "GEMINI_API_KEY"
-      ],
-      "weight": "light",
-      "locale": "universal"
-    },
     "shopping-assistant": {
       "needs_key": [
         "NAVER_CLIENT_ID",
@@ -240,15 +226,6 @@
     },
     "study": {
       "needs_key": [],
-      "weight": "light",
-      "locale": "universal"
-    },
-    "switch-runner": {
-      "needs_key": [
-        "ANTHROPIC_API_KEY",
-        "GEMINI_API_KEY",
-        "OPENAI_API_KEY"
-      ],
       "weight": "light",
       "locale": "universal"
     },

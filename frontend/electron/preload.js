@@ -72,10 +72,6 @@ contextBridge.exposeInMainWorld('electron', {
   openPhotoManagerWindow: (initialPath) =>
     ipcRenderer.invoke('open-photo-manager-window', initialPath),
 
-  // Android Manager 창 열기
-  openAndroidManagerWindow: (deviceId, projectId) =>
-    ipcRenderer.invoke('open-android-manager-window', deviceId, projectId),
-
   // 강의 만들기 워크스페이스 창 열기
   openLectureWorkspaceWindow: (lectureId) =>
     ipcRenderer.invoke('open-lecture-workspace-window', lectureId),

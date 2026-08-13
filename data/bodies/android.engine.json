@@ -26,7 +26,6 @@
     "cognition/agent_pipeline",
     "cognition/agent_runner",
     "cognition/ai_agent",
-    "cognition/android_agent",
     "cognition/body_ask",
     "cognition/cognitive_consciousness",
     "cognition/cognitive_distill",
@@ -152,7 +151,6 @@
     "services/warehouse_feed",
     "services/web_collector",
     "surface/api_agents",
-    "surface/api_android",
     "surface/api_business",
     "surface/api_conversations",
     "surface/api_family_news",
@@ -235,8 +233,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 229,
-    "engine": 202,
+    "total": 227,
+    "engine": 200,
     "blocklist": 27
   }
 }

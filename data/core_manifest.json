@@ -55,9 +55,6 @@
         "gmail",
         "indienet",
         "notification-system",
-        "prompt-generator",
-        "scheduler",
-        "switch-runner",
         "websocket-chat"
       ]
     },

@@ -199,12 +199,17 @@
           "!**/tokens/**",
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
+          "!packages/installed/tools/spending/**",
           "!__GEN_END__"
         ]
       },
       {
         "from": "../templates",
         "to": "templates"
+      },
+      {
+        "from": "../mcp_server.py",
+        "to": "mcp_server.py"
       }
     ],
     "extraFiles": [

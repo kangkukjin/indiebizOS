@@ -88,6 +88,12 @@ $backendDist = Join-Path $DIST_DIR "backend"
 New-Item -ItemType Directory -Force -Path $backendDist | Out-Null
 Copy-Item -Path (Join-Path $BACKEND_DIR "*") -Destination $backendDist -Recurse -Force -Exclude @("__pycache__", "*.pyc", "venv", ".DS_Store")
 
+# 루트 진입 파일 복사 — 저장소 루트의 런타임 .py(예: mcp_server.py)도 포장 대상.
+# api.py 가 backend 의 부모를 sys.path 에 넣고 임포트하므로 DIST 루트에 있어야 한다.
+# ★수기 목록 대신 글롭: 루트에 진입 파일이 늘어도 여기가 낡지 않게 (2026-08-13 — mcp_server.py 가
+#   2026-07-21 이래 어떤 설치본에도 실리지 않아 /mcp 가 침묵 부재하던 갭의 봉합).
+Copy-Item -Path (Join-Path $ROOT_DIR "*.py") -Destination $DIST_DIR -Force
+
 # data, templates 만 복사 (projects/tokens 는 개인 데이터·비밀 → 번들 안 함.
 # 새 설치의 앱모드/수동모드 폴더는 부팅 시 ensure_system_projects 가 자동 생성한다.)
 Write-Host "[3/6] 데이터 디렉토리 복사 중..." -ForegroundColor Yellow

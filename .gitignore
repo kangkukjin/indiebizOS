@@ -359,3 +359,9 @@ data/youtube_cache/
 # NAS HLS 렌디션 캐시 (파생물 — 20GB LRU)
 data/nas_stream_cache/
 data/script_runs/
+
+# 시스템 AI 채팅 첨부 이미지 (개인 데이터 — 원격런처 사진 왕복이 저장)
+data/system_ai_images/
+
+# .venv 전환 때 대피시킨 3.14 pylibs 잔재 백업 (2026-08-13)
+data/_pylibs_cp314_backup_*/

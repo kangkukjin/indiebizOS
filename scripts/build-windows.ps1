@@ -118,6 +118,7 @@ $sensitive = @(
     "data\conversations.db", "data\tokens", "data\packages\outputs",
     "data\switches.json", "data\event_triggers.json", "data\ai_desktop_map.json",
     "data\my_profile.txt", "data\device_id.txt", "data\business.db", "data\multi_chat.db",
+    "data\system_ai_images", "data\_pylibs_cp314_backup_2026-08-13",
     "data\calendar_events.json", "data\plan.md", "data\gomoku_board.png",
     "data\system_ai_role.txt", "data\system_ai_memo.txt",
     "data\launcher_web_config.json", "data\nas_config.json", "data\tunnel_config.json",

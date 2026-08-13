@@ -43,3 +43,16 @@ mutagen
 
 # android 패키지 [sense:here] — macOS OS 위치서비스(WiFi 지문, 랩탑용). 다른 OS 무해(마커).
 pyobjc-framework-CoreLocation; sys_platform == "darwin"
+
+# === 2026-08-13 .venv 전환 잔재 감사에서 합류 (3.14 홈브루에만 있던 미선언 의존성) ===
+# system_essentials [self:sheet]·office_ops — 엑셀 장부 부분 편집
+openpyxl
+# system_essentials office_ops·data-ops·lecture_workspace — 워드 문서
+python-docx
+# computer-use 패키지 — 마우스/키보드/화면(pyautogui) + macOS 캡처·OCR(Quartz/AS/Vision)
+pyautogui
+pyobjc-framework-Quartz; sys_platform == "darwin"
+pyobjc-framework-ApplicationServices; sys_platform == "darwin"
+pyobjc-framework-Vision; sys_platform == "darwin"
+# 개발·회귀 테스트 (test_pipe_currency_failures.py 등)
+pytest

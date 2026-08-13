@@ -127,6 +127,9 @@ jobs:
         with:
           python-version: '3.11'
       - name: 코어 의존성 + pytest 설치
-        run: pip install -r backend/requirements-core.txt pytest
+        # openpyxl: test_pipe_currency_failures P2·P18·P19([self:sheet] 정직층)의 실의존 —
+        # requirements-tools.txt 소속이라 core 만으로는 빠진다(v1.5.1 태그서 실측).
+        # tools 전체 설치는 CI 무게상 배제 — 테스트가 새 tool 의존을 얻으면 여기서 시끄럽게 죽는다(침묵 아님).
+        run: pip install -r backend/requirements-core.txt pytest openpyxl
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local"

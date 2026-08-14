@@ -173,8 +173,18 @@ class AgentCommunicationMixin:
 
         polling_interval = self.common_config.get('polling_interval', 10)
 
-        while self.running and not self.cancel_event.is_set():
+        # (2026-08-15 5라운드 감사 (B)) 루프 수명은 running 만이 결정한다. 옛 조건
+        # (`and not cancel_event.is_set()`)은 cancel_all 한 번에 폴링 스레드를 영구
+        # 종료시켰다 — running 은 True 로 남아 등기부·자동재시작(_ensure_agent_runner)이
+        # 정상으로 오판하는 좀비(위임 수신·채널 폴링이 조용히 멎음). cancel_all 의
+        # 독스트링("에이전트는 유지, 현재 작업만 취소")이 계약이고, 이 조건이 위반이었다.
+        # cancel_event 는 이제 대기를 깨우는 일회성 펄스 — 아래 wait 루프가 clear 한다.
+        while self.running:
             try:
+                # 폴링 하트비트 (2026-08-15, 5라운드 감사 제안) — 상주 루프는 실패가
+                # 조용한 쪽(위임이 그냥 안 옴)이라, 마지막 순회 시각 하나가 "이 에이전트
+                # 몇 시간째 안 돌았다"를 보이게 하는 유일한 창. api_agents 가 노출한다.
+                self.last_poll_at = time.time()
                 # 1. 내부 메시지 확인
                 self._check_internal_messages()
 
@@ -205,9 +215,12 @@ class AgentCommunicationMixin:
                 # 중간에 내부 메시지를 확인하기 위해 짧은 간격으로 나눔
                 wait_interval = min(polling_interval, 5)  # 최대 5초 단위로 대기
                 remaining = polling_interval
-                while remaining > 0 and self.running and not self.cancel_event.is_set():
+                while remaining > 0 and self.running:
                     self.cancel_event.wait(timeout=wait_interval)
                     if self.cancel_event.is_set():
+                        # 펄스 소비: 대기만 깨우고 폴링은 계속. 정지는 stop()(running=False)의
+                        # 몫 — stop 은 running 을 먼저 내리므로 이 clear 가 정지를 삼키지 않는다.
+                        self.cancel_event.clear()
                         break
                     self._check_internal_messages()
                     remaining -= wait_interval

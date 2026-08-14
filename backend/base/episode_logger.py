@@ -438,7 +438,13 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
             steps_json = None
     if round_steps:
         execution_rounds = max(int(s.get("round") or 0) for s in round_steps)
-    else:
+    elif not steps:
+        # 폴백 정규식은 **원장 자체가 없을 때만**(옛 에피소드·미계장 몸). 원장이 있는데
+        # 실행 라운드가 0이면 그 자체가 "관측 불가"라는 사실 = NULL 유지.
+        # ★4라운드 감사 실측: 원장 분기에서 걷어낸 원샷 사칭이, round_steps 가 빈
+        # claude_code 턴에서 폴백 정규식이 원샷 라운드 print([DeepSeek] 라운드 1/30
+        # 시작 (role=oneshot:...))를 잡아 되살아났다. 폴백을 정규식으로 더 조이는 건
+        # print 포맷 재결박이라 기각 — 원장 유무로 가른다.
         round_matches = re.findall(r'\[\w+\] 라운드 (\d+)/\d+ 시작', log_text)
         # 메인 실행의 라운드 (의식/무의식/평가 라운드는 별도이므로 최대값)
         if round_matches:

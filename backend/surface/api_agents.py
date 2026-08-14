@@ -131,6 +131,14 @@ async def get_project_agents(project_id: str, request: Request):
             info = runners.get(a.get("id"))
             r = info.get("runner") if info else None
             a["running"] = bool(r and getattr(r, "running", False))
+            # 폴링 스레드 실생존 (2026-08-15, 5라운드 감사의 관측 갭) — running 플래그는
+            # 스레드가 죽어도 True 로 남을 수 있다(cancel_all 좀비 부류). 죽은 스레드와
+            # 산 스레드를 구별하는 유일한 창.
+            _th = getattr(r, "thread", None) if r else None
+            a["thread_alive"] = bool(_th and _th.is_alive())
+            # 폴링 하트비트 — thread_alive 가 "살아 있나"라면 이건 "실제로 돌고 있나".
+            # 행이 걸린 스레드(alive 지만 순회 정지)까지 가르는 창.
+            a["last_poll_at"] = getattr(r, "last_poll_at", None) if r else None
 
         return {"agents": agents}
     except Exception as e:

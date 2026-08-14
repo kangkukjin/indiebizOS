@@ -80,6 +80,34 @@ def test_step_ledger_roundtrip():
         conn.close()
 
 
+def test_pure_oneshot_turn_is_null():
+    """★폴백 사칭 가드 (4라운드 감사 실측): 원장에 원샷 라운드만 있는 턴(claude_code
+    실행)은 execution_rounds=NULL 이어야 한다 — 로그에 원샷 라운드 print 가 있어도
+    폴백 정규식을 타면 안 된다(원장 분기에서 걷어낸 사칭이 폴백에서 되살아나던 구멍).
+    주 경로만 테스트하고 폴백은 안 하던 패턴의 재발 방지."""
+    import episode_logger as EL
+    from datetime import datetime
+    steps = [
+        {"event": "round", "provider": "DeepSeek", "model": "v4-flash", "round": 1,
+         "budget": 30, "role": "oneshot:classify"},
+        {"event": "switch", "role": "system_repair", "provider": "ClaudeCode", "model": "opus"},
+    ]
+    log = "…\n[DeepSeek] 라운드 1/30 시작 (role=oneshot:classify)\n…"
+    EL._extract_and_save_summary(None, datetime.now(), "test_oneshot_null", "m", log, 1,
+                                 steps=steps)
+    conn = EL._get_db()
+    try:
+        row = conn.execute(
+            "SELECT id, execution_rounds FROM episode_summary WHERE agent='test_oneshot_null' "
+            "ORDER BY id DESC LIMIT 1").fetchone()
+        assert row and row[1] is None, f"원샷-만 턴이 NULL 이 아님(사칭): {row}"
+        conn.execute("DELETE FROM episode_summary WHERE id = ?", (row[0],))
+        conn.commit()
+    finally:
+        conn.close()
+    print("OK 순수 원샷 턴 → NULL (폴백 사칭 가드)")
+
+
 def test_regex_fallback_provider_agnostic():
     """원장이 없을 때(claude_code 등)의 폴백 정규식 — 프로바이더 이름 무관."""
     import episode_logger as EL
@@ -130,6 +158,7 @@ def test_direct_adapter_via_execute_tool():
 if __name__ == '__main__':
     test_class_method_snapshot()
     test_step_ledger_roundtrip()
+    test_pure_oneshot_turn_is_null()
     test_regex_fallback_provider_agnostic()
     test_carry_context_atomic()
     test_direct_adapter_via_execute_tool()

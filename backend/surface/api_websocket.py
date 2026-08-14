@@ -505,6 +505,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 조향 키 등록 (2026-08-15) — provider.agent_id 와 같은 값(yaml id)이어야
         # execute_tool 의 drain 과 만난다. 수신 루프의 조향 분기가 이 등록을 읽는다.
         _stream_agent_keys[client_id] = (agent_id or agent_name, agent_name)
+        # 턴 취소 플래그 리셋 (sysai 핸들러와 동일 계약 — 직전 턴의 중단이 새 턴을 즉사시키지 않게)
+        set_cancel(client_id, False)
 
         # 실행 중인 AgentRunner 확인 — 등기부에 없으면 자동 시작 (재기동으로 비워진 등기부 복구)
         runner_info = _ensure_agent_runner(project_id, agent_id, agent_config, agents_data)
@@ -578,10 +580,22 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             _set_origin("user")  # 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
 
             try:
+                # (2026-08-15 4라운드 감사) cancel_check 배선 — 이전엔 이 경로만 None 이라
+                # 중단이 도는 턴의 도구 루프에 원리적으로 닿지 않았다(UI 만 멈춘 척).
+                # ★runner.cancel_event 재사용 금지: 그건 상주 폴링 루프 전체를 끝내는
+                # 신호(에이전트 정지)라 턴 취소로 쓰면 다음 턴 즉사+폴링 사망.
                 for event in runner.cognitive_stream(
                     message, history,
                     images=images, action_hint=action_hint, agent_name=agent_name,
+                    cancel_check=lambda: is_cancelled(client_id),
                 ):
+                    # 중단 즉시 탈출 (5라운드 감사 (A) — sysai 워커와 대칭): cancel_check 는
+                    # 도구 경계에서만 잡히므로, 긴 텍스트 스트리밍 중에도 여기서 끊는다.
+                    if is_cancelled(client_id):
+                        asyncio.run_coroutine_threadsafe(
+                            event_queue.put({"type": "cancelled", "content": "사용자가 중단했습니다."}),
+                            loop)
+                        break
                     event_type = event.get("type", "unknown")
                     if event_type == "_turn_meta":
                         # 내부 메타 — 클라이언트 미전달, 도구 이력만 회수
@@ -647,6 +661,14 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 break
 
             event_type = event.get("type")
+
+            if event_type == "cancelled":
+                # 중단 확인 전송 후 즉시 종료 (sysai 소비자와 대칭)
+                await manager.send_message(client_id, {
+                    "type": "cancelled",
+                    "message": event.get("content", "중단됨"),
+                })
+                break
 
             if event_type == "text":
                 # 텍스트 청크 전송
@@ -736,6 +758,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     "message": event.get("content", "알 수 없는 오류")
                 })
                 break
+
+        # 취소 플래그 턴-종료 리셋 (5라운드 감사 (D) — 남은 True 가 같은 client_id 의
+        # 다른 경로/다음 소비에 새지 않게. 시작 리셋과 양단 대칭.)
+        set_cancel(client_id, False)
 
         # AI 응답 저장 (final_content 사용)
         print(f"[WS] while 루프 종료, final_content 길이: {len(final_content)}")
@@ -1100,6 +1126,9 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     "message": event.get("content", "알 수 없는 오류")
                 })
                 break
+
+        # 취소 플래그 턴-종료 리셋 (5라운드 감사 (D) — 에이전트 경로와 양단 대칭)
+        set_cancel(client_id, False)
 
         # AI 응답 저장
         # final_content가 비어있으면 도구만 실행되고 텍스트 응답이 없는 경우

@@ -753,15 +753,17 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   // ── 취소 ──
 
   const handleCancel = async () => {
+    // (2026-08-15) WS cancel 은 두 경로 공통 — 도는 턴의 도구 루프를 실제로 끊는
+    // 유일한 신호(cancel_check). 이전엔 에이전트 경로가 HTTP cancel_all 만 불러
+    // 백엔드 턴은 계속 돌고 UI 만 멈춘 척했다(4라운드 감사 실측).
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'cancel' }));
+    }
     if (isAgent && projectId) {
       try {
         await cancelAllAgents(projectId);
       } catch (error) {
         console.error('Cancel failed:', error);
-      }
-    } else {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'cancel' }));
       }
     }
     setIsLoading(false);

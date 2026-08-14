@@ -53,6 +53,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.cancel_event = threading.Event()
+        self.last_poll_at = None  # 폴링 루프 하트비트(마지막 순회 epoch) — api_agents 노출
 
         # AI 에이전트
         self.ai: Optional[AIAgent] = None
@@ -144,7 +145,12 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
         print(f"[AgentRunner] {self.config.get('name')} 중지됨")
 
     def cancel(self):
-        """현재 작업 취소"""
+        """현재 대기를 깨우는 일회성 펄스 — 에이전트 정지가 아니다.
+
+        (2026-08-15) 폴링 루프가 이 이벤트를 종료 조건으로 읽던 시절엔 cancel_all 한 번에
+        상주 스레드가 조용히 죽는 좀비를 만들었다(5라운드 감사 (B)). 이제 루프 수명은
+        running 만이 결정하고, 이 이벤트는 대기 깨움 후 루프가 clear 한다. 도는 채팅 턴의
+        취소는 WS cancel_flags(cancel_check) 경로가 담당한다."""
         self.cancel_event.set()
 
     # ============ 클래스 메서드: 에이전트 검색 ============

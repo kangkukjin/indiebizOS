@@ -332,7 +332,7 @@ class GeminiProvider(BaseProvider):
                 yield {"type": "cancelled", "content": "사용자가 중단했습니다."}
                 return
 
-            print(f"[Gemini] 라운드 {iteration + 1}/{self.MAX_TOOL_ITERATIONS} 시작")
+            self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
 
             # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
             if iteration > 0 and self._should_compact(contents, iteration):

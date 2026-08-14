@@ -260,7 +260,7 @@ class AnthropicProvider(BaseProvider):
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
             return
 
-        print(f"[Anthropic] 라운드 {depth + 1}/{MAX_TOOL_DEPTH} 시작")
+        self._notify_round(depth + 1, MAX_TOOL_DEPTH)
 
         try:
             # 시스템 프롬프트 캐싱 적용

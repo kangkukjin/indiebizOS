@@ -344,6 +344,8 @@ class OllamaProvider(BaseProvider):
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
             return
 
+        self._notify_round(depth + 1, MAX_TOOL_DEPTH)
+
         try:
             # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
             if depth > 0:

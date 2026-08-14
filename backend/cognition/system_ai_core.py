@@ -153,6 +153,42 @@ def create_system_ai_agent(config: dict = None, user_profile: str = "") -> AIAge
 
 # ============ 중급 모델 전환 헬퍼 ============
 
+# 역할 전환 시 원자적으로 옮겨야 하는 실행 컨텍스트 필드 묶음 (2026-08-14 원자화).
+# 옛날엔 두 스왑 함수가 각자 필드를 개별 대입해 목록이 표류했다 — 과거 agent_id 누락이
+# "identity 없음"을 실제로 냈다(아래 주석 유래). 이제 이 튜플이 단일 진실이고,
+# 스왑 함수 둘 다 _carry_context 하나를 쓴다.
+_CONTEXT_FIELDS = ("system_prompt", "tools", "agent_id", "project_path", "agent_name")
+
+
+def _carry_context(target, source):
+    """실행 컨텍스트 묶음을 source provider → target provider 로 원자적으로 복사.
+
+    - agent_id: 발신 신원 — target 이 spawn 하는 subprocess(claude)가 시스템 AI
+      신원(agent_id="system_ai")을 갖고 가야 channel_send/read 게이트를 통과한다.
+      (agent_communication.py 프로젝트AI 전환과 동일. 빠지면 identity 유실.)
+    - Gemini 계열은 도구 캐시 재구축까지가 전환의 일부."""
+    for f in _CONTEXT_FIELDS:
+        setattr(target, f, getattr(source, f))
+    if hasattr(target, '_cached_gemini_tools') and target.tools:
+        try:
+            from google.genai import types
+            target._cached_gemini_tools = [types.Tool(function_declarations=target._convert_tools())]
+        except Exception:
+            pass
+
+
+def _record_switch(role: str, provider):
+    """역할 전환을 스텝 원장에 기록 + 역할 태그 설정 — 어느 프롬프트·모델로 돌았는지의
+    사후 추적이 로그 텍스트 grep 이 아니라 구조화 기록으로 남는다."""
+    try:
+        from episode_logger import record_role_switch, set_step_role
+        record_role_switch(role, type(provider).__name__.replace("Provider", ""),
+                           getattr(provider, "model", "?"))
+        set_step_role(role)
+    except Exception:
+        pass
+
+
 def _switch_to_midtier(runner):
     """reflex(해마 고확신) 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
     try:
@@ -162,25 +198,9 @@ def _switch_to_midtier(runner):
             return None  # 중급 설정 없으면 본격 모델 유지
 
         original_provider = runner.ai._provider
-        # 중급 provider에 현재 시스템 프롬프트와 도구 설정 복사
-        midtier.system_prompt = runner.ai._provider.system_prompt
-        midtier.tools = runner.ai._provider.tools
-        # 발신 신원·컨텍스트도 복사 — 중급 provider가 spawn하는 subprocess(claude)가
-        # 시스템 AI 신원(agent_id="system_ai")을 갖고 가야 channel_send/read 게이트를 통과한다.
-        # (agent_communication.py의 프로젝트AI 전환과 동일. 빠지면 EXECUTE 경로에서 identity 유실 → "identity 없음".)
-        midtier.agent_id = runner.ai._provider.agent_id
-        midtier.project_path = runner.ai._provider.project_path
-        midtier.agent_name = runner.ai._provider.agent_name
-
-        # Gemini provider의 경우 도구 캐시 재구축
-        if hasattr(midtier, '_cached_gemini_tools') and midtier.tools:
-            try:
-                from google.genai import types
-                midtier._cached_gemini_tools = [types.Tool(function_declarations=midtier._convert_tools())]
-            except Exception:
-                pass
-
+        _carry_context(midtier, original_provider)
         runner.ai._provider = midtier
+        _record_switch("reflex-midtier", midtier)
         print(f"[시스템AI] 중급 모델로 전환: {midtier.model}")
         return original_provider
     except Exception as e:
@@ -189,35 +209,31 @@ def _switch_to_midtier(runner):
 
 
 def _restore_provider(runner, original_provider):
-    """원래 provider로 복원"""
+    """원래 provider로 복원 (+역할 태그 원복)"""
     if original_provider is not None:
         runner.ai._provider = original_provider
+        try:
+            from episode_logger import set_step_role
+            set_step_role("")
+        except Exception:
+            pass
 
 
 def _switch_to_role(runner, role):
     """지정 역할(예: 'forage')로 해소된 provider 로 전환 — _switch_to_midtier 의 일반화.
 
     model_resolver 가 role → 티어 → 모델로 해소(forage 는 기본 경량, 계기판 override 로 변경).
-    현재 provider 의 시스템 프롬프트·도구·발신 신원을 복사해 IBL 도구를 그대로 쓰게 한다.
-    전환 성공 시 원래 provider 반환(호출 측이 finally 에서 복원)."""
+    현재 provider 의 실행 컨텍스트 묶음(_CONTEXT_FIELDS)을 원자적으로 옮겨
+    IBL 도구를 그대로 쓰게 한다. 전환 성공 시 원래 provider 반환(호출 측이 finally 에서 복원)."""
     try:
         from model_resolver import get_provider_for
         prov, d = get_provider_for(role, oneshot=False)
         if prov is None:
             return None  # 해당 티어 설정/키 없음 → 기존(본격) 모델 유지
         cur = runner.ai._provider
-        prov.system_prompt = cur.system_prompt
-        prov.tools = cur.tools
-        prov.agent_id = cur.agent_id
-        prov.project_path = cur.project_path
-        prov.agent_name = cur.agent_name
-        if hasattr(prov, '_cached_gemini_tools') and prov.tools:
-            try:
-                from google.genai import types
-                prov._cached_gemini_tools = [types.Tool(function_declarations=prov._convert_tools())]
-            except Exception:
-                pass
+        _carry_context(prov, cur)
         runner.ai._provider = prov
+        _record_switch(role, prov)
         print(f"[{role}] 모델 전환: {d.get('model')} ({d.get('source')})")
         return cur
     except Exception as e:

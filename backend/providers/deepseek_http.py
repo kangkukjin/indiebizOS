@@ -105,6 +105,7 @@ class DeepSeekHTTPProvider(BaseProvider):
         accumulated = ""
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
+            self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             if iteration > 0:
                 messages = self._prune_messages_openai(messages)
             try:

@@ -132,6 +132,19 @@ class BaseProvider(ABC):
         # 내부 상태
         self._pending_map_tags: List[str] = []
 
+    def _notify_round(self, round_no: int, budget: int):
+        """도구 루프 라운드 시작 1건 — 구조화 스텝 원장 기록 + 사람용 마커 print.
+
+        (2026-08-14) execution_rounds 관측이 `[Gemini] 라운드` 정규식에 결박돼 프로바이더
+        전환만으로 조용히 끊겼던 결함의 수리 — 모든 프로바이더 루프가 이 한 줄을 부른다.
+        episode_logger 부재(비정상 환경)면 print 폴백으로 강등(라운드 표시는 항상 남음)."""
+        name = type(self).__name__.replace("Provider", "")
+        try:
+            from episode_logger import notify_round
+            notify_round(name, getattr(self, "model", "?"), round_no, budget)
+        except Exception:
+            print(f"[{name}] 라운드 {round_no}/{budget} 시작")
+
     @abstractmethod
     def init_client(self) -> bool:
         """클라이언트 초기화. 성공 시 True 반환"""

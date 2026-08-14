@@ -42,8 +42,8 @@ LAYERS = {
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "hls_ladder", "korean_utils", "limb_keys",
         "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
-        "phone_jobs", "r2_client", "runtime_utils", "safe_store",
-        "thread_context", "thumbnails",
+        "phone_jobs", "r2_client", "repeat_guard", "runtime_utils", "safe_store",
+        "steer_inbox", "thread_context", "thumbnails",
     },
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",

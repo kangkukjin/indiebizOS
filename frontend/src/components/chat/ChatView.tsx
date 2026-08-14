@@ -368,6 +368,16 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           setIsLoading(false);
           break;
 
+        case 'steer_accepted':
+          // (2026-08-15 조향) 실행 중 보낸 메시지가 조향으로 접수됨 — 작은 확인 줄만.
+          setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: `*${data.message || '⤳ 조향 접수 — 다음 도구 완료 시 반영됩니다'}*`,
+            timestamp: new Date(),
+          }]);
+          break;
+
         case 'end':
           setIsLoading(false);
           resetStreamingState();
@@ -662,7 +672,9 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   const sendMessage = () => {
     const hasContent = input.trim() || fileAttachments.hasAttachments;
-    if (!hasContent || !ws || ws.readyState !== WebSocket.OPEN || isLoading) return;
+    // (2026-08-15 조향) 실행 중에도 전송 허용 — 백엔드 WS 가 실행 중 도착한 메시지를
+    // 새 턴이 아니라 조향(steer)으로 접수해 다음 도구 결과에 배달한다(시스템 AI·에이전트 공통).
+    if (!hasContent || !ws || ws.readyState !== WebSocket.OPEN) return;
 
     const imageData = fileAttachments.prepareImageData();
     const documentData = fileAttachments.prepareDocumentData();

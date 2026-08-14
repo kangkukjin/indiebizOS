@@ -127,6 +127,24 @@ class ChatResponse(BaseModel):
     model: str
 
 
+class SteerMessage(BaseModel):
+    """턴 중 조향 — 돌고 있는 작업에 멈추지 않고 지시를 밀어 넣는다 (steer_inbox 참조)."""
+    message: str
+    agent_id: str = "system_ai"
+
+
+@router.post("/system-ai/steer")
+async def steer(req: SteerMessage):
+    """조향 접수. 다음 도구 결과에 부록으로 배달된다 — 도구를 더 부르지 않는 턴이면
+    미배달 폐기(턴 종료 시). 접수 즉시 반환하므로 실행 중에도 호출 가능(HTTP 동시성)."""
+    from steer_inbox import post
+    pending = post(req.agent_id or "system_ai", req.message)
+    if pending == 0:
+        raise HTTPException(status_code=400, detail="빈 조향 메시지")
+    return {"accepted": True, "pending": pending,
+            "note": "다음 도구 호출 완료 시 반영됩니다. 도구 호출 없이 턴이 끝나면 폐기됩니다."}
+
+
 class PromptConfigUpdate(BaseModel):
     selected_template: Optional[str] = None
 

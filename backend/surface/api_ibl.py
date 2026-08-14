@@ -143,9 +143,28 @@ async def execute_ibl_code(req: IBLRequest):
         # 파싱 후라 문자열 반환 생산자(world_bank·pc-manager 등)도 함께 커버된다.
         # 규칙·예외(map_data 제외, items 과적 역방향 금지)는 common.currency.derive_items.
         from common.currency import derive_items
-        return derive_items(result)
+        # 조향(steer) 배달 — 클로드 코드 경로 어댑터 (2026-08-15): MCP 호출만
+        # (req.agent_id 명시 = 에이전트 신원이 실린 호출). 앱/수동 모드는 req.agent_id 가
+        # 비어 있어(위에서 system_ai 로 채워지기 *전* 값 기준) 결정론 결과가 오염되지 않는다.
+        return _attach_steer(derive_items(result), req.agent_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _attach_steer(envelope, explicit_agent_id: str):
+    """MCP(에이전트) 호출의 응답 봉투에 대기 조향을 부록 키로 동봉. 직결 경로의
+    execute_tool 부록과 같은 의미 — 이 경로는 execute_tool 미경유라 여기서 배달한다."""
+    if not explicit_agent_id or not isinstance(envelope, dict):
+        return envelope
+    try:
+        from steer_inbox import drain, render
+        text = render(drain(explicit_agent_id))
+        if text:
+            envelope["steer_notice"] = text.strip()
+            print(f"[조향] {explicit_agent_id}: MCP 응답에 조향 지시 배달")
+    except Exception:
+        pass
+    return envelope
 
 
 @router.post("/read_guide")

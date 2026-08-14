@@ -181,6 +181,12 @@ class ConsciousnessAgent:
             import time as _time
             response = ""
             max_retries = 2
+            # 스텝 원장 역할 태그 — 의식 호출도 프로바이더 루프를 지나 라운드가 찍힌다.
+            try:
+                from episode_logger import set_step_role
+                set_step_role("consciousness")
+            except Exception:
+                pass
             for attempt in range(max_retries + 1):
                 response = self._provider.process_message(
                     message=input_text,
@@ -195,6 +201,11 @@ class ConsciousnessAgent:
                     print(f"[ConsciousnessAgent] 빈 응답 (503 등), {wait_sec}초 후 재시도 ({attempt + 1}/{max_retries})")
                     _time.sleep(wait_sec)
 
+            try:
+                from episode_logger import set_step_role
+                set_step_role("")
+            except Exception:
+                pass
             print(f"[ConsciousnessAgent] AI 응답 수신 ({len(response)}자)")
             print(f"[ConsciousnessAgent] 원본 응답:\n{response}")
 
@@ -216,6 +227,11 @@ class ConsciousnessAgent:
             return result
 
         except Exception as e:
+            try:
+                from episode_logger import set_step_role
+                set_step_role("")  # 실패 경로에서도 역할 태그 원복 (이후 라운드 오염 방지)
+            except Exception:
+                pass
             print(f"[ConsciousnessAgent] 처리 실패: {e}")
             return None
 
@@ -718,6 +734,15 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
             provider.system_prompt = system_prompt
 
         try:
+            # 스텝 원장 역할 태그 (2026-08-15): 원샷도 프로바이더 루프를 지나 라운드가
+            # 찍히는데, 태그가 없으면 전부 role=execution 으로 뭉개져 원장의 해상도가
+            # 죽는다(에피소드 1083 실측 — indiebizOS 감사). 스왑 이음매가 아니라 호출
+            # 이음매에 태그를 건다.
+            try:
+                from episode_logger import set_step_role
+                set_step_role(f"oneshot:{role}")
+            except Exception:
+                pass
             return provider.process_message(
                 message=prompt,
                 history=[],
@@ -728,6 +753,11 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
             logger.warning(f"[lightweight_ai_call] 실패: {e}")
             return None
         finally:
+            try:
+                from episode_logger import set_step_role
+                set_step_role("")
+            except Exception:
+                pass
             if original_system_prompt is not None:
                 provider.system_prompt = original_system_prompt
 
@@ -807,6 +837,12 @@ def system_ai_call(prompt: str, system_prompt: str = None,
         original_system_prompt = provider.system_prompt
         provider.system_prompt = system_prompt
     try:
+        # 스텝 원장 역할 태그 — lightweight_ai_call 과 같은 이유(호출 이음매에 태그).
+        try:
+            from episode_logger import set_step_role
+            set_step_role(f"oneshot:{role}")
+        except Exception:
+            pass
         return provider.process_message(
             message=prompt, history=[], images=images, execute_tool=None
         )
@@ -814,5 +850,10 @@ def system_ai_call(prompt: str, system_prompt: str = None,
         logger.warning(f"[system_ai_call] 실패: {e}")
         return None
     finally:
+        try:
+            from episode_logger import set_step_role
+            set_step_role("")
+        except Exception:
+            pass
         if original_system_prompt is not None:
             provider.system_prompt = original_system_prompt

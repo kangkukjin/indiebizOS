@@ -23,6 +23,14 @@ project_manager = None
 # 스트리밍을 위한 스레드 풀
 executor = ThreadPoolExecutor(max_workers=4)
 
+# 스트림 태스크 레지스트리 (2026-08-15 조향) — client_id 별 실행 중 스트림(시스템AI·에이전트 공용).
+# 실행 중 같은 클라이언트의 새 메시지 = 조향 접수 판정에 쓴다. 연결 해제 시 정리.
+_stream_tasks: dict = {}
+# client_id → (조향 키, 에이전트 이름). 조향 키 = provider.agent_id 와 같은 값이어야
+# execute_tool 의 drain 과 만난다 — 에이전트 경로는 agents.yaml 의 id(핸들러가 해소 직후
+# 등록), 시스템 AI 는 "system_ai" 고정.
+_stream_agent_keys: dict = {}
+
 # 클라이언트별 중단 플래그 (client_id -> bool)
 cancel_flags: dict[str, bool] = {}
 
@@ -195,9 +203,52 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
             if message_type == "chat":
                 await handle_chat_message(client_id, data)
             elif message_type == "chat_stream":
-                await handle_chat_message_stream(client_id, data)
+                # (2026-08-15 조향 확장) 에이전트 스트림도 태스크로 — 시스템 AI 와 동일
+                # 원리. 실행 중 같은 에이전트로 온 메시지 = 조향, 다른 에이전트 = 정직
+                # 거절(같은 client 의 이벤트 스트림을 두 턴이 나눠 쓰는 혼선 방지).
+                # 신원 안전 근거: run_stream 이 워커 스레드 안에서 클로저 변수로 신원을
+                # 재설정하므로("별도 스레드이므로 컨텍스트 재설정") 태스크 교차와 무관.
+                _prev_task = _stream_tasks.get(client_id)
+                if _prev_task is not None and not _prev_task.done():
+                    _key, _running_name = _stream_agent_keys.get(client_id, (None, None))
+                    _target = data.get("agent_name", "")
+                    if _key and _target in (_running_name, _key):
+                        from steer_inbox import post as _steer_post
+                        _pending = _steer_post(_key, data.get("message", ""))
+                        await manager.send_message(client_id, {
+                            "type": "steer_accepted",
+                            "message": f"⤳ 조향 접수 — 다음 도구 완료 시 반영됩니다 (대기 {_pending}건)",
+                        })
+                    else:
+                        await manager.send_message(client_id, {
+                            "type": "steer_accepted",
+                            "message": f"⚠ '{_running_name or '다른 작업'}' 실행 중 — 끝난 뒤 보내주세요",
+                        })
+                else:
+                    _t = asyncio.create_task(handle_chat_message_stream(client_id, data))
+                    _stream_tasks[client_id] = _t
+                    _t.add_done_callback(lambda t: t.cancelled() or (
+                        t.exception() and print(f"[WS] 에이전트 스트림 태스크 예외: {t.exception()}")))
             elif message_type == "system_ai_stream":
-                await handle_system_ai_chat_stream(client_id, data)
+                # (2026-08-15 조향) 스트림을 태스크로 띄워 수신 루프를 비워 둔다 — 이전엔
+                # await 가 루프를 막아 스트림 중 cancel·추가 메시지가 턴 종료까지 WS 버퍼에
+                # 잠들었다(중단 버튼도 실은 스트림 중 무효였던 구조). 실행 중 도착한
+                # system_ai_stream 은 새 턴이 아니라 **조향(steer)** 으로 접수된다 —
+                # 같은 채팅창이 곧 조향 입력창(steer_inbox → 다음 도구 결과에 부록 배달).
+                _prev_task = _stream_tasks.get(client_id)
+                if _prev_task is not None and not _prev_task.done():
+                    from steer_inbox import post as _steer_post
+                    _pending = _steer_post("system_ai", data.get("message", ""))
+                    await manager.send_message(client_id, {
+                        "type": "steer_accepted",
+                        "message": f"⤳ 조향 접수 — 다음 도구 완료 시 반영됩니다 (대기 {_pending}건)",
+                    })
+                else:
+                    _t = asyncio.create_task(handle_system_ai_chat_stream(client_id, data))
+                    _stream_tasks[client_id] = _t
+                    _stream_agent_keys[client_id] = ("system_ai", None)
+                    _t.add_done_callback(lambda t: t.cancelled() or (
+                        t.exception() and print(f"[WS] 시스템AI 스트림 태스크 예외: {t.exception()}")))
             elif message_type == "cancel":
                 # 중단 요청 처리
                 set_cancel(client_id, True)
@@ -220,6 +271,11 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
             print(f"[WS 에러] {client_id}: {e} (연결 유지 시도)")
             # 하지만 여기서는 while 루프가 끝나므로 결국 연결 해제됨
             manager.disconnect(client_id)
+    finally:
+        # 조향 태스크 레지스트리 정리 — 스트림 태스크 자체는 계속 돌게 둔다(백그라운드
+        # 완주가 기존 계약: 타임아웃 후에도 작업은 완료되어 대화 저장·재접속 회수).
+        _stream_tasks.pop(client_id, None)
+        _stream_agent_keys.pop(client_id, None)
 
 
 async def handle_chat_message(client_id: str, data: dict):
@@ -445,6 +501,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         if not agent_config:
             await _bail_stream(client_id, f"에이전트 '{agent_name}'을(를) 찾을 수 없습니다. (project={project_id})")
             return
+
+        # 조향 키 등록 (2026-08-15) — provider.agent_id 와 같은 값(yaml id)이어야
+        # execute_tool 의 drain 과 만난다. 수신 루프의 조향 분기가 이 등록을 읽는다.
+        _stream_agent_keys[client_id] = (agent_id or agent_name, agent_name)
 
         # 실행 중인 AgentRunner 확인 — 등기부에 없으면 자동 시작 (재기동으로 비워진 등기부 복구)
         runner_info = _ensure_agent_runner(project_id, agent_id, agent_config, agents_data)

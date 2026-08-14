@@ -780,6 +780,17 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
     start = _time.time()
     success = True
 
+    # 반복 호출 가드 (직결 경로 어댑터, 2026-08-14 두-경로 대칭 2탄) — 공용 코어는
+    # repeat_guard(base), CC 경로 어댑터는 mcp_server.execute_ibl. 카운트는 결과와
+    # 무관하게 호출마다(오류 결과도 카운트 — 거부를 두들기는 게 바로 끊을 루프).
+    _advisory = ""
+    try:
+        from repeat_guard import advise as _repeat_advise
+        _sig = tool_name + "|" + json.dumps(tool_input or {}, sort_keys=True, ensure_ascii=False)
+        _advisory = _repeat_advise(agent_id or "anon", _sig)
+    except Exception:
+        pass
+
     try:
         # cancel_check가 있으면 별도 스레드에서 실행 (중단 가능)
         if cancel_check:
@@ -820,6 +831,28 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         elif isinstance(result, dict) and result.get("success") is False:
             success = False
 
+        # 조향(steer) 배달 — 직결 경로 어댑터 (2026-08-15): 사용자가 턴 중에 넣은 지시를
+        # 다음 도구 결과에 부록으로 실어 모델에 도달시킨다. 반복 조언과 같은 채널.
+        _steer_text = ""
+        if agent_id:
+            try:
+                from steer_inbox import drain as _steer_drain, render as _steer_render
+                _steer_text = _steer_render(_steer_drain(agent_id))
+                if _steer_text:
+                    print(f"[조향] {agent_id}: 도구 결과에 조향 지시 배달")
+            except Exception:
+                pass
+
+        # 반복 조언·조향은 AI 가 읽는 본문의 부록 — 결과 자체는 변조하지 않는다.
+        # ★dict 결과({content, images} 계약 등)에도 content 필드로 부록을 붙인다 —
+        #   isinstance(str) 게이트만 있으면 dict 반환 도구에서 조언이 조용히 빠진다
+        #   (2026-08-15 indiebizOS 감사 지적).
+        _appendix = _advisory + _steer_text
+        if _appendix:
+            if isinstance(result, str):
+                result += _appendix
+            elif isinstance(result, dict) and isinstance(result.get("content"), str):
+                result["content"] += _appendix
         if _harvested:
             # content=AI 가 읽을 본문(base64 제거됨) / images=진짜 그림 / details=UI 표시용.
             return {"content": result, "images": _harvested, "details": result}

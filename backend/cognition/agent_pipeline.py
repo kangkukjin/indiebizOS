@@ -419,6 +419,16 @@ class CognitivePipelineMixin:
                 pass
             # 중급/역할 모델 사용 후 원래 provider 복원
             _restore_provider(self, original_provider)
+            # 조향(steer) 미배달분 폐기 — 도구 호출 전에 턴이 끝난 조향이 다음 턴의
+            # 첫 도구 결과로 새는 것(stale 조향) 방지. 폐기는 로그로 정직하게 남긴다.
+            try:
+                from steer_inbox import clear as _steer_clear
+                _skey = getattr(self.ai._provider, "agent_id", "") or agent_name
+                _left = _steer_clear(_skey) if _skey else 0
+                if _left:
+                    print(f"[조향] 미배달 {_left}건 폐기 — 도구 호출 없이 턴 종료")
+            except Exception:
+                pass
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)
             self._collect_thread_tool_calls(tool_calls_log)
             # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(_after_response).

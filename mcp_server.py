@@ -133,6 +133,90 @@ def _budget_for_agent(raw: str, parsed=None) -> str:
     return head + f" …[{len(raw) - len(head)}자 생략 — 범위를 좁혀 다시 실행하세요]"
 
 
+# ── 이미지 봉투 승격 (2026-08-14, 클로드 코드 경로 대칭) ──────────────────────
+# 인프로세스 경로는 수확 관문(system_tools._harvest_images)이 image_data 봉투를
+# 진짜 이미지 블록으로 승격하지만, 이 MCP 경로는 /ibl/execute 직행이라 봉투가
+# 텍스트로 남는다 — base64 가 24k 예산 꼬리 절단에 걸리면 모델이 잘린 base64
+# 쓰레기를 본다(445,625자 사건의 CC판). 여기(에이전트 경계)서 같은 계약으로
+# 수확해 MCP ImageContent 로 승격한다. 봉투 계약·상한은 system_tools 와 동일
+# 유지 의무 — {"image_data": {"b64", "media_type", ...메타}}, 상한 4장, 본문엔
+# b64 뺀 메타를 `image` 키로 남김. ★예산(_budget_for_agent)보다 먼저 돌 것.
+# (공용 코어 추출은 직결 경로 정리 때 — 지금은 mcp_server 무의존성 유지가 우선.)
+
+_IMAGE_ENVELOPE_KEY = "image_data"
+_MAX_TOOL_IMAGES = 4
+
+
+def _pluck_image_envelopes(node, found, depth=0):
+    """이미지 두 계약을 수확하는 재귀 (변이). 실전엔 두 형태가 공존한다(라이브 실측):
+    ①수확 관문 봉투 {"image_data": {"b64", "media_type", ...}} (engines:image_gemini 등)
+    ②프로바이더 계약 {"images": [{"base64", "media_type", ...}, ...]} (limbs:screen 등 —
+      인프로세스 경로에선 프로바이더가 직접 소비하므로 관문이 안 다루지만, MCP 경계에선
+      텍스트로 새므로 여기서 번역해야 한다). 수확 항목은 {b64, media_type} 로 정규화."""
+    if depth > 16:
+        return node
+    if isinstance(node, dict):
+        env = node.pop(_IMAGE_ENVELOPE_KEY, None)
+        if isinstance(env, dict) and env.get("b64"):
+            found.append(env)
+            node["image"] = {k: v for k, v in env.items() if k != "b64"}
+        imgs = node.get("images")
+        if isinstance(imgs, list) and any(isinstance(i, dict) and i.get("base64") for i in imgs):
+            metas = []
+            for i in imgs:
+                if isinstance(i, dict) and i.get("base64"):
+                    found.append({"b64": i["base64"],
+                                  "media_type": i.get("media_type", "image/png")})
+                    meta = {k: v for k, v in i.items() if k != "base64"}
+                    metas.append(meta or {"note": "이미지 블록으로 첨부됨"})
+                else:
+                    metas.append(i)
+            node["images"] = metas
+        for k in list(node.keys()):
+            node[k] = _pluck_image_envelopes(node[k], found, depth + 1)
+        return node
+    if isinstance(node, list):
+        return [_pluck_image_envelopes(v, found, depth + 1) for v in node]
+    if isinstance(node, str) and (_IMAGE_ENVELOPE_KEY in node or '"base64"' in node):
+        try:
+            inner = json.loads(node)
+        except (json.JSONDecodeError, TypeError):
+            return node
+        n_before = len(found)
+        inner = _pluck_image_envelopes(inner, found, depth + 1)
+        if len(found) > n_before:
+            return json.dumps(inner, ensure_ascii=False)
+        return node
+    return node
+
+
+def _harvest_images_for_mcp(raw: str):
+    """(정리된 결과 문자열, [{b64, media_type}]) — 봉투 없으면 원본 그대로(비용 0)."""
+    if not isinstance(raw, str) or (_IMAGE_ENVELOPE_KEY not in raw and '"base64"' not in raw):
+        return raw, []
+    try:
+        tree = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return raw, []
+    found = []
+    tree = _pluck_image_envelopes(tree, found)
+    if not found:
+        return raw, []
+    return json.dumps(tree, ensure_ascii=False), found[:_MAX_TOOL_IMAGES]
+
+
+# ── 반복 호출 가드 (2026-08-14, 클로드 코드 경로 어댑터) ─────────────────────
+# 공용 코어 = backend/base/repeat_guard.py (직결 경로 어댑터 system_tools.execute_tool 과
+# 공유 — 정책 표류 방지, 렌더러 "공용 코어+두 어댑터" 선례). 이 서버는 stdio 모드에서
+# backend 층 밖에서 돌므로 base 경로만 좁게 삽입해 임포트한다(boot_paths 전체를 안
+# 끄는 것이 의도 — MCP 서버는 얇게 유지).
+# stdio = CC 세션당 프로세스라 프로세스-로컬 체인 / HTTP(/mcp) = 공유 인스턴스라
+# 신원(agent_id·task_id) 키로 분리. 인메모리 휴리스틱 — 재시작 시 리셋은 수용 비용.
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "base"))
+from repeat_guard import advise as _repeat_advisory  # noqa: E402  (key, signature) -> str
+
+
 def _post_backend(path: str, payload: dict, timeout: int) -> str:
     """백엔드 REST 로의 blocking HTTP POST. 반드시 워커 스레드에서 부를 것.
 
@@ -154,7 +238,9 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
 
 
 @mcp.tool()
-async def execute_ibl(code: str, project_path: str = "", ctx: Context = None) -> str:
+async def execute_ibl(code: str, project_path: str = "", ctx: Context = None):
+    # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
+    # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
     """IBL 코드를 실행합니다.
 
     예시:
@@ -178,7 +264,25 @@ async def execute_ibl(code: str, project_path: str = "", ctx: Context = None) ->
     raw = await anyio.to_thread.run_sync(
         lambda: _post_backend("/ibl/execute", payload, 120)
     )
-    return _trim_for_agent(raw)
+    # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
+    # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
+    cleaned, images = _harvest_images_for_mcp(raw)
+    text = _trim_for_agent(cleaned)
+    # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
+    guard_key = agent_id or task_id or "stdio"
+    text += _repeat_advisory(guard_key, f"{code.strip()}|{effective_path}")
+    if images:
+        import base64 as _b64
+        from mcp.server.fastmcp import Image as _McpImage
+        blocks = [text]
+        for env in images:
+            try:
+                fmt = (env.get("media_type") or "image/png").split("/")[-1]
+                blocks.append(_McpImage(data=_b64.b64decode(env["b64"]), format=fmt))
+            except Exception as e:
+                blocks.append(f"[이미지 블록 변환 실패: {e}]")
+        return blocks
+    return text
 
 
 @mcp.tool()

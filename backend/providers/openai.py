@@ -282,6 +282,8 @@ class OpenAIProvider(BaseProvider):
             yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
             return
 
+        self._notify_round(depth + 1, MAX_TOOL_DEPTH)
+
         try:
             # Rolling Compaction: 컨텍스트가 임계값을 넘으면 요약으로 압축
             if depth > 0 and self._should_compact(messages, depth):

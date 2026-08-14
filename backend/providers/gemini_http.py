@@ -142,6 +142,7 @@ class GeminiHTTPProvider(BaseProvider):
         accumulated = ""
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
+            self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             if iteration > 0:
                 contents = self._prune_messages_gemini(contents)
             try:

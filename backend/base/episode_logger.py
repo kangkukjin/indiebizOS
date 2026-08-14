@@ -16,6 +16,7 @@ executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `c
 - episode_summary: 요약 지표 (영구 보존)
 """
 
+import json
 import re
 import sys
 import sqlite3
@@ -63,7 +64,8 @@ def _denoise_for_buffer(text: str) -> str:
 
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
-    __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id")
+    __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id",
+                 "steps")
 
     def __init__(self, agent: str, user_message: str, project_id: str = ""):
         self.agent = agent
@@ -72,6 +74,7 @@ class _Episode:
         self.buffer = []
         self.project_id = project_id or ""
         self.episode_id = None  # END 저장 후 DB row id — 백그라운드 증류 로그 재합류(refresh)용
+        self.steps = []  # 구조화 스텝 원장 (notify_round/record_role_switch — 정규식 회수 대체)
 
 
 class EpisodeLogger:
@@ -165,7 +168,8 @@ class EpisodeLogger:
             episode_id = _save_episode(ep.started_at, ep.agent, user_message, log_text, total_ms)
             if episode_id:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
-                _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message, log_text, total_ms)
+                _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message,
+                                          log_text, total_ms, steps=ep.steps)
                 _cleanup_old_episodes()
         except Exception as e:
             # 에피소드 기록 실패가 시스템에 영향 주면 안 됨
@@ -202,6 +206,47 @@ class EpisodeLogger:
             conn.close()
         except Exception:
             pass  # 로그 재합류 실패가 시스템에 영향 주면 안 됨
+
+
+# ============ 구조화 스텝 원장 (2026-08-14 — 정규식 회수의 은퇴) ============
+# 배경: execution_rounds 를 `[Gemini] 라운드` 정규식으로 회수하다가, 프로바이더 전환
+# (gemini→anthropic/claude_code)만으로 관측이 조용히 끊겼다(최근 200 에피소드 스텝 0건
+# 실측 — 관측이 프로바이더 print 문구에 결박되는 구조 자체가 결함). 이제 프로바이더
+# 루프가 notify_round() 를 부르고(프로바이더 무관 단일 어휘), 역할 전환은
+# record_role_switch() 가 남긴다. 에피소드 저장이 이 원장을 1차 소스로 쓰고,
+# 정규식은 과거 호환 폴백으로만 남는다.
+# ★반드시 클래스 정의 *뒤*에 둘 것 — 클래스 본문 중간에 모듈 함수를 끼우면 뒤의
+#   메서드가 마지막 함수의 중첩 지역 함수로 삼켜진다(2026-08-15 refresh_episode 실측:
+#   py_compile 은 통과하고 메서드만 조용히 사라진다. 가드=test_step_ledger 의
+#   메서드 집합 스냅샷 단언).
+
+_current_role: contextvars.ContextVar = contextvars.ContextVar("indiebiz_step_role")
+
+
+def set_step_role(role: str):
+    """현재 컨텍스트의 스텝 역할 태그 설정 (역할 전환 헬퍼가 호출). None/""=기본 execution."""
+    _current_role.set(role or "")
+
+
+def notify_round(provider: str, model: str, round_no: int, budget: int):
+    """프로바이더 도구 루프의 라운드 시작 1건 — 사람용 마커 print + 구조화 기록.
+
+    print 는 기존 `[<프로바이더>] 라운드 N/M 시작` 포맷을 보존(사람 습관·기존 로그 연속성),
+    관측의 진실 소스는 steps 원장이다. 에피소드 컨텍스트 밖(테스트 등)이면 print 만."""
+    role = _current_role.get("") or "execution"
+    print(f"[{provider}] 라운드 {round_no}/{budget} 시작"
+          + (f" (role={role})" if role != "execution" else ""))
+    ep = _current_episode.get(None)
+    if ep is not None:
+        ep.steps.append({"event": "round", "provider": provider, "model": model,
+                         "round": round_no, "budget": budget, "role": role})
+
+
+def record_role_switch(role: str, provider: str, model: str):
+    """역할 전환(프로바이더 스왑) 1건 기록 — 어느 프롬프트·모델로 돌았는지의 사후 추적용."""
+    ep = _current_episode.get(None)
+    if ep is not None:
+        ep.steps.append({"event": "switch", "role": role, "provider": provider, "model": model})
 
 
 class _TeeWriter:
@@ -294,9 +339,15 @@ def _ensure_episode_tables():
                 consciousness_ms INTEGER,
                 execution_rounds INTEGER,
                 total_ms INTEGER,
-                evaluation_result TEXT
+                evaluation_result TEXT,
+                steps TEXT
             );
         """)
+        # 기존 DB 마이그레이션 — 구조화 스텝 원장 컬럼 (2026-08-14)
+        try:
+            conn.execute("ALTER TABLE episode_summary ADD COLUMN steps TEXT")
+        except sqlite3.OperationalError:
+            pass  # 이미 존재
         conn.commit()
         conn.close()
     except Exception as e:
@@ -336,8 +387,10 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms):
         return None
 
 
-def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_text, total_ms):
-    """로그 텍스트에서 요약 지표를 정규식으로 추출하여 episode_summary에 저장"""
+def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_text, total_ms,
+                              steps=None):
+    """요약 지표 추출·저장. 실행 라운드는 구조화 스텝 원장(steps)이 1차 소스 —
+    정규식 회수는 원장이 빈 경우(claude_code 아웃오브프로세스 등)의 폴백."""
 
     # 해마 최고 점수 추출
     hippocampus_score = None
@@ -366,12 +419,30 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         if latency_match:
             consciousness_ms = int(latency_match.group(1))
 
-    # 실행 라운드 수 추출
+    # 실행 라운드 수 — ①구조화 원장(프로바이더 무관) ②정규식 폴백(옛 로그·원장 없는 몸).
+    # 옛 정규식은 [Gemini] 하드코딩이라 프로바이더 전환만으로 관측이 끊겼었다(2026-08-14
+    # 실측: 최근 200 에피소드 0건). 폴백은 프로바이더 이름 무관 패턴으로 넓힌다.
     execution_rounds = None
-    round_matches = re.findall(r'\[Gemini\] 라운드 (\d+)/\d+ 시작', log_text)
-    # 메인 실행의 라운드 (의식/무의식/평가 라운드는 별도이므로 마지막 값)
-    if round_matches:
-        execution_rounds = max(int(r) for r in round_matches)
+    steps_json = None
+    # ★원샷(무의식·의식·평가 등 oneshot:*/consciousness) 라운드는 execution_rounds 에서
+    # 제외 — 항상 round 1 이라, 실행 루프가 원장 밖인 턴(claude_code)에서 이 값이
+    # "실행 1라운드"를 사칭한다(2026-08-15 라이브 실측). 그런 턴은 폴백 정규식도 못
+    # 잡아 NULL = 관측 불가의 정직한 표시가 된다. forage 등 표면 역할의 루프는 그
+    # 표면의 실행이므로 포함.
+    round_steps = [s for s in (steps or []) if s.get("event") == "round"
+                   and not str(s.get("role") or "").startswith(("oneshot:", "consciousness"))]
+    if steps:
+        try:
+            steps_json = json.dumps(steps, ensure_ascii=False)
+        except Exception:
+            steps_json = None
+    if round_steps:
+        execution_rounds = max(int(s.get("round") or 0) for s in round_steps)
+    else:
+        round_matches = re.findall(r'\[\w+\] 라운드 (\d+)/\d+ 시작', log_text)
+        # 메인 실행의 라운드 (의식/무의식/평가 라운드는 별도이므로 최대값)
+        if round_matches:
+            execution_rounds = max(int(r) for r in round_matches)
 
     # 평가 결과 추출 — 평가 루프가 여러 라운드면 마지막 라운드 결과가 최종 결과
     # (재실행 후 ACHIEVED로 통과한 경우 첫 NOT_ACHIEVED만 저장되는 버그 수정)
@@ -386,8 +457,8 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
             """INSERT INTO episode_summary
                (episode_id, started_at, agent, user_message,
                 hippocampus_score, unconscious_decision, consciousness_ms,
-                execution_rounds, total_ms, evaluation_result)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                execution_rounds, total_ms, evaluation_result, steps)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 episode_id,
                 started_at.isoformat() if started_at else None,
@@ -399,6 +470,7 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
                 execution_rounds,
                 total_ms,
                 evaluation_result,
+                steps_json,
             )
         )
         conn.commit()

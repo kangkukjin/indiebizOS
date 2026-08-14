@@ -505,8 +505,9 @@ def get_notebook(name: str) -> Optional[Dict[str, Any]]:
 def list_notebooks() -> List[Dict[str, Any]]:
     conn = _connect()
     try:
+        # ★두 LEFT JOIN을 한 쿼리에 두면 소스×청크 팬아웃으로 COUNT가 곱해진다(실측 89×901=80,189)
         rows = conn.execute("""
-            SELECT n.*, COUNT(DISTINCT s.id) AS source_count, COUNT(c.id) AS chunk_count
+            SELECT n.*, COUNT(DISTINCT s.id) AS source_count, COUNT(DISTINCT c.id) AS chunk_count
             FROM notebooks n
             LEFT JOIN sources s ON s.notebook_id = n.id
             LEFT JOIN chunks c ON c.notebook_id = n.id

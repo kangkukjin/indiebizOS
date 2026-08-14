@@ -103,7 +103,7 @@ nodes:
                       action: '[self:notebook]{op: "remove", name: "{notebook}", source_id: "{source_id}"}'
                       confirm: 이 소스를 노트북에서 뺄까요? 색인도 함께 삭제됩니다.
                       refresh: true
-                - name: 소스 추가
+                - name: 관리
                   view:
                   - type: form
                     title: 소스 추가 (파일 경로 · 웹 URL · 유튜브 URL 또는 본문 붙여넣기)
@@ -122,6 +122,12 @@ nodes:
                       value: ''
                     action: '[self:notebook]{op: "add", name: "{notebook}", path: "$src", title: "$title", text: "$text"}'
                     button: 넣기
+                    actions:
+                    - label: 이 노트북 삭제
+                      action: '[self:notebook]{op: "delete", name: "{notebook}"}'
+                      style: danger
+                      confirm: 이 노트북과 모든 소스·색인을 삭제할까요? (원본 파일·URL은 지우지 않습니다)
+                      back: true
               card:
                 title: '{title}'
                 lines:

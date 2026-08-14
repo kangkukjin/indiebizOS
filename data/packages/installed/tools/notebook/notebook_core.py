@@ -271,6 +271,152 @@ def _paragraphs_with_loc(text: str) -> List[Tuple[str, str]]:
     return paras
 
 
+# ── URL 소스 (Phase 2): 웹페이지 본문 · 유튜브 자막 ─────────────────────────
+
+_YT_ID_RE = re.compile(
+    r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|live/|embed/)|youtu\.be/)([A-Za-z0-9_-]{6,20})")
+
+
+def _youtube_id(url: str) -> str:
+    m = _YT_ID_RE.search(url or "")
+    return m.group(1) if m else ""
+
+
+def is_url(s: str) -> bool:
+    return bool(re.match(r"^https?://", (s or "").strip(), re.I))
+
+
+def _extract_web(url: str) -> Tuple[List[Tuple[str, str]], str, str]:
+    """웹페이지 → ([(loc, 문단)], 제목, error). 본문=태그 제거(리더 모드의 결정론 근사)."""
+    import requests
+    try:
+        resp = requests.get(url, timeout=25, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126 Safari/537.36"})
+        resp.raise_for_status()
+    except Exception as e:
+        return [], "", f"페이지를 가져올 수 없습니다: {e}"
+    if resp.encoding in (None, "ISO-8859-1"):
+        resp.encoding = resp.apparent_encoding or "utf-8"
+    html = resp.text
+    m = re.search(r"<title[^>]*>([\s\S]*?)</title>", html, re.I)
+    title = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
+    # 블록 태그를 문단 경계로 → 태그 제거
+    html = re.sub(r"</(p|div|li|h[1-6]|section|article|tr|blockquote)>", "\n\n", html, flags=re.I)
+    html = re.sub(r"<br\s*/?>", "\n", html, flags=re.I)
+    text = _strip_html(html)
+    text = re.sub(r"&nbsp;", " ", text)
+    text = re.sub(r"&amp;", "&", text)
+    paras = _paragraphs_with_loc(text)
+    if not paras:
+        return [], title, ("본문을 추출하지 못했습니다 — 클라이언트 렌더 페이지일 수 있습니다. "
+                           "브라우저 리더 모드에서 본문을 복사해 text 파라미터로 넣어 주세요.")
+    return paras, title, ""
+
+
+def _extract_youtube(url: str) -> Tuple[List[Tuple[str, str]], str, str]:
+    """유튜브 → 자막을 시간 단위 문단으로 ([(loc "[mm:ss]", 문단)], 영상제목, error).
+    yt-dlp 라이브러리 직접 사용(교차 패키지 차용 금지 — youtube 패키지 코드는 안 문다)."""
+    try:
+        import yt_dlp
+    except ImportError:
+        return [], "", "yt-dlp 미설치 — 유튜브 소스를 쓰려면 .venv에 yt-dlp를 설치하세요."
+    vid = _youtube_id(url)
+    target = f"https://www.youtube.com/watch?v={vid}" if vid else url
+    opts = {"skip_download": True, "quiet": True, "no_warnings": True,
+            "writesubtitles": True, "writeautomaticsub": True}
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(target, download=False)
+    except Exception as e:
+        return [], "", f"유튜브 정보를 가져올 수 없습니다: {e}"
+    title = (info or {}).get("title") or f"youtube {vid}"
+    subs = (info or {}).get("subtitles") or {}
+    autos = (info or {}).get("automatic_captions") or {}
+
+    def _pick(tracks: dict) -> Optional[dict]:
+        for lang in ("ko", "ko-KR", "en", "en-US", "en-orig"):
+            for t in tracks.get(lang, []):
+                if t.get("ext") in ("vtt", "srv3", "srv1", "json3"):
+                    return t
+        for lang in tracks:                     # 아무 언어라도
+            for t in tracks[lang]:
+                if t.get("ext") == "vtt":
+                    return t
+        return None
+
+    track = _pick(subs) or _pick(autos)        # 수동 자막 우선, 자동 자막 폴백
+    if not track or not track.get("url"):
+        return [], title, "이 영상에는 자막(자동 포함)이 없습니다 — 자막 있는 영상만 소스로 넣을 수 있습니다."
+    import requests
+    try:
+        raw = requests.get(track["url"], timeout=25).text
+    except Exception as e:
+        return [], title, f"자막을 받을 수 없습니다: {e}"
+    cues = _parse_vtt(raw) if track.get("ext") == "vtt" or raw.lstrip().startswith("WEBVTT") \
+        else _parse_srv(raw)
+    if not cues:
+        return [], title, "자막 파싱 결과가 비었습니다."
+    # 60초 창으로 문단화 — loc=[mm:ss] 창 시작 (인용 해상도)
+    paras: List[Tuple[str, str]] = []
+    win_start, buf, seen = None, [], set()
+    for sec, text in cues:
+        if win_start is None:
+            win_start = sec
+        if sec - win_start >= 60 and buf:
+            paras.append((_fmt_ts(win_start), " ".join(buf)))
+            win_start, buf, seen = sec, [], set()
+        t = text.strip()
+        if t and t not in seen:                 # 자동 자막의 롤링 중복 제거
+            buf.append(t)
+            seen.add(t)
+    if buf:
+        paras.append((_fmt_ts(win_start or 0), " ".join(buf)))
+    return [(loc, p) for loc, p in paras if len(p) >= 15], title, ""
+
+
+def _fmt_ts(sec: float) -> str:
+    s = int(sec)
+    return f"[{s // 3600}:{s % 3600 // 60:02d}:{s % 60:02d}]" if s >= 3600 else f"[{s // 60}:{s % 60:02d}]"
+
+
+_VTT_TS = re.compile(r"(?:(\d+):)?(\d{2}):(\d{2})[.,](\d{3})\s*-->")
+
+
+def _parse_vtt(raw: str) -> List[Tuple[float, str]]:
+    cues, cur = [], None
+    for line in raw.splitlines():
+        m = _VTT_TS.match(line.strip())
+        if m:
+            h = int(m.group(1) or 0)
+            cur = h * 3600 + int(m.group(2)) * 60 + int(m.group(3))
+            continue
+        text = re.sub(r"<[^>]+>", "", line).strip()
+        if cur is not None and text and "-->" not in text:
+            cues.append((float(cur), text))
+    return cues
+
+
+def _parse_srv(raw: str) -> List[Tuple[float, str]]:
+    """srv3/json3 최소 파서 — json3의 events[{tStartMs, segs[{utf8}]}]"""
+    try:
+        data = json.loads(raw)
+        cues = []
+        for ev in data.get("events", []):
+            text = "".join(s.get("utf8", "") for s in ev.get("segs", []) or []).strip()
+            if text and text != "\n":
+                cues.append((float(ev.get("tStartMs", 0)) / 1000.0, text))
+        return cues
+    except Exception:
+        # srv1/srv3 XML: <text start="12.3">…</text>
+        cues = []
+        for m in re.finditer(r'<text[^>]*start="([\d.]+)"[^>]*>([\s\S]*?)</text>', raw):
+            import html as _html
+            text = _html.unescape(re.sub(r"<[^>]+>", "", m.group(2))).strip()
+            if text:
+                cues.append((float(m.group(1)), text))
+        return cues
+
+
 # =============================================================================
 # 청크 (문단 누적, 페이지/loc 경계 보존)
 # =============================================================================
@@ -418,6 +564,19 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
             return {"success": False, "error": "text가 너무 짧습니다(문단 없음)."}
         src_title = (title or "").strip() or f"붙여넣기 {datetime.now().strftime('%m/%d %H:%M')}"
         kind, src_path, mtime = "text", "", 0.0
+    elif path and str(path).strip() and is_url(str(path)):
+        # URL 소스 (Phase 2) — 유튜브=자막(loc=타임스탬프) / 그 외=본문 추출
+        src_path = str(path).strip()
+        if _youtube_id(src_path):
+            paras, auto_title, err = _extract_youtube(src_path)
+            kind = "youtube"
+        else:
+            paras, auto_title, err = _extract_web(src_path)
+            kind = "url"
+        if err:
+            return {"success": False, "error": err}
+        src_title = (title or "").strip() or auto_title or src_path
+        mtime = 0.0
     elif path and str(path).strip():
         src_path = os.path.abspath(os.path.expanduser(str(path).strip()))
         if not os.path.isfile(src_path):
@@ -430,7 +589,7 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
         src_title = (title or "").strip() or os.path.basename(src_path)
         kind, mtime = "file", os.path.getmtime(src_path)
     else:
-        return {"success": False, "error": "path(파일) 또는 text(붙여넣기) 중 하나가 필요합니다."}
+        return {"success": False, "error": "path(파일 경로 또는 URL) 또는 text(붙여넣기) 중 하나가 필요합니다."}
 
     chunks = build_chunks(paras)
     char_count = sum(len(c) for _, c in chunks)
@@ -441,14 +600,14 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
         conn = _connect()
         try:
             dup = conn.execute(
-                "SELECT id FROM sources WHERE notebook_id=? AND kind='file' AND path=?",
-                (nb["id"], src_path if kind == "file" else "")).fetchone() if kind == "file" else None
+                "SELECT id FROM sources WHERE notebook_id=? AND path=? AND path<>''",
+                (nb["id"], src_path)).fetchone() if kind != "text" else None
             if dup:
-                _remove_source_rows(nb["id"], dup["id"])  # 같은 파일 재추가 = 재색인
+                _remove_source_rows(nb["id"], dup["id"])  # 같은 파일/URL 재추가 = 재색인
             cur = conn.execute(
                 "INSERT INTO sources(notebook_id,title,kind,path,mtime,char_count,chunk_count,status,added_at) "
                 "VALUES (?,?,?,?,?,?,?,?,?)",
-                (nb["id"], src_title, kind, src_path if kind == "file" else "", mtime,
+                (nb["id"], src_title, kind, src_path if kind != "text" else "", mtime,
                  char_count, len(chunks), "indexing", _now()))
             source_id = cur.lastrowid
             conn.execute("UPDATE notebooks SET updated_at=? WHERE id=?", (_now(), nb["id"]))

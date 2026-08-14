@@ -54,6 +54,7 @@ def _op_list(tool_input: dict, context) -> str:
     books = core.list_notebooks()
     items = [{
         "title": b["name"],
+        "name": b["name"],
         "meta": f"소스 {b['source_count']} · 청크 {b['chunk_count']} · {str(b.get('updated_at') or '')[:16]}",
         "summary": b.get("note") or "",
         "url": "",
@@ -73,6 +74,8 @@ def _op_sources(tool_input: dict, context) -> str:
                 f"#{s['id']}", s["kind"], f"청크 {s['chunk_count']}", s["status"],
                 s.get("stale") and f"⚠️{s['stale']}"] if x),
             "summary": s.get("error") or (s.get("path") or ""),
+            "source_id": s["id"],
+            "notebook": out.get("notebook", ""),
             "url": "",
         } for s in out.get("sources", [])]
     return _json(out)
@@ -126,10 +129,11 @@ def _op_ask(tool_input: dict, context) -> str:
         return _json(found)
     excerpts = found["results"]
     if not excerpts:
+        msg = ("소스에서 관련 발췌를 찾지 못했습니다 — 소스가 이 주제를 다루지 않거나, "
+               "op:sources로 색인 상태(indexing/error/stale)를 확인하세요.")
         return _json({"success": True, "notebook": found.get("notebook", name), "question": question,
                       "not_in_sources": True, "answer": "", "citations": [], "items": [],
-                      "message": "소스에서 관련 발췌를 찾지 못했습니다 — 소스가 이 주제를 다루지 않거나, "
-                                 "op:sources로 색인 상태(indexing/error/stale)를 확인하세요."})
+                      "blocks": [{"type": "paragraph", "text": msg}], "message": msg})
 
     answer_raw, model_err = _grounded_generate(found.get("note", ""), question, excerpts)
     if model_err:
@@ -140,14 +144,19 @@ def _op_ask(tool_input: dict, context) -> str:
                       "message": "생성은 실패했지만 검색된 발췌를 items로 반환합니다."})
 
     if NOT_IN_SOURCES_MARK in answer_raw:
+        msg = "소스 안에 이 질문의 답이 없습니다(모델 판정). 일반 지식 답이 필요하면 노트북 밖에서 물어보세요."
         return _json({"success": True, "notebook": found["notebook"], "question": question,
                       "not_in_sources": True, "answer": "", "citations": [], "items": [],
-                      "search_type": found["search_type"],
-                      "message": "소스 안에 이 질문의 답이 없습니다(모델 판정). 일반 지식 답이 필요하면 노트북 밖에서 물어보세요."})
+                      "blocks": [{"type": "paragraph", "text": msg}],
+                      "search_type": found["search_type"], "message": msg})
 
     answer, citations, dropped = _verify_citations(answer_raw, excerpts)
+    # blocks = 계기(질문 탭)의 답변 렌더 IR — 데스크탑·원격 blocks 뷰가 그대로 그린다
+    blocks = [{"type": "paragraph", "text": answer}]
+    if citations:
+        blocks.append({"type": "heading", "level": 4, "text": "인용"})
     return _json({"success": True, "notebook": found["notebook"], "question": question,
-                  "not_in_sources": False, "answer": answer,
+                  "not_in_sources": False, "answer": answer, "blocks": blocks,
                   "citations": citations, "items": _citation_items(citations),
                   "citation_dropped": dropped, "search_type": found["search_type"],
                   "excerpts_used": len(excerpts)})

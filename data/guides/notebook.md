@@ -18,9 +18,15 @@
 ```
 [self:notebook]{op: "create", name: "보험비교", note: "3사 치과보장 비교"}   # note=ask 답변의 렌즈
 [self:notebook]{op: "add", name: "보험비교", path: "/…/A사약관.pdf"}
+[self:notebook]{op: "add", name: "보험비교", path: "https://youtu.be/<id>"}   # 유튜브=자막, loc=[mm:ss]
+[self:notebook]{op: "add", name: "보험비교", url: "https://…"}                # 웹페이지 본문 (url=path 별칭)
 [self:notebook]{op: "add", name: "보험비교", text: "상담 메모…", title: "B사 상담"}
 [self:notebook]{op: "ask", name: "보험비교", query: "치과 보장 제일 나은 곳은?"}
 ```
+
+**소스 종류(Phase 2)**: path가 URL이면 자동 분기 — 유튜브 URL=자막(수동 우선·자동 폴백, **자막 없는 영상은 정직 거부**, 60초 창 문단화·loc=타임스탬프) / 그 외 URL=본문 추출(클라이언트 렌더 페이지는 실패 안내 → text 붙여넣기로). 같은 URL 재add=재색인.
+
+**계기(📚 노트북, 앱 표면)**: 질문(노트북 select+질문→답+인용 카드) / 노트북(카드→드릴: 소스 목록·빼기 / 소스 추가 폼) / 만들기. `phone_render: false`(pc_only — 원격 브라우저=맥 리모컨으로는 사용 가능).
 
 - **ask**(기본 op): 답 + `citations[{n, source, loc, quote}]` + `not_in_sources`. 인용은 결정론 후검증을 거친다 — quote는 모델이 아니라 코드가 청크 원문에서 뽑으므로 인용 환각이 원리적으로 없다. 무효 인용은 제거되고 `citation_dropped`로 집계.
 - **search**: 생성 없이 발췌만(LLM 0) — 싼 경로. items 통화라 `>> [table:take]` 등 파이프 직결.

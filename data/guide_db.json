@@ -1421,6 +1421,28 @@
     "expense"
    ],
    "file": "spend.md"
+  },
+  {
+   "id": "notebook",
+   "name": "노트북(근거 고정 질의)",
+   "description": "문서 더미(PDF·텍스트)에 이름을 붙여 두고 소스 안에서만 답하며 출처 인용을 다는 [self:notebook]. 결정 트리(grep=문자열/notebook=의미/search=웹)·워크플로(create→add→ask)·인용 후검증·함정(스캔 PDF 거부, 백그라운드 색인, FTS 강등, pc_only).",
+   "keywords": [
+    "노트북",
+    "근거",
+    "인용",
+    "출처",
+    "문서 질문",
+    "자료조사",
+    "문서 더미",
+    "grounded",
+    "notebooklm",
+    "소스",
+    "약관",
+    "계약서 질문",
+    "PDF 질문",
+    "발췌"
+   ],
+   "file": "notebook.md"
   }
  ]
 }

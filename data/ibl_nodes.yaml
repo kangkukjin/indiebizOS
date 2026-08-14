@@ -3691,6 +3691,65 @@ nodes:
                 action: '[self:music]{op: "add_source", path: "$path"}'
                 button: 폴더 등록
               delete_action: '[self:music]{op: "remove_source", path: "{path}"}'
+      notebook:
+        returns: items
+        side_effect: true
+        fixture: '[self:notebook]{op: "list"}'
+        runs_on: pc_only
+        description: 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
+        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 파일 또는 text 붙여넣기, title 옵션 — 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12) — 답+citations[{n,source,loc,quote}]+items / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        target_key: op
+        group: notebook
+        router: handler
+        tool: notebook_op
+        aliases:
+          query:
+          - q
+          - question
+          top_k:
+          - limit
+        ops:
+          default: ask
+          returns:
+            create: effect
+            add: effect
+            remove: effect
+            delete: effect
+          side_effect:
+            ask: false
+            search: false
+            sources: false
+            list: false
+          fixture:
+            list: '[self:notebook]{op: "list"}'
+          exempt:
+            ask: 노트북 name+질문 필요 — 고정 fixture 부적합
+            search: 노트북 name+검색어 필요 — 고정 fixture 부적합
+            sources: 노트북 name 필요 — 고정 fixture 부적합
+            create: 원장에 노트북을 만든다 — 부작용
+            add: 소스 색인을 만든다 — 부작용
+            remove: source_id 필요 + 부작용
+            delete: 노트북을 지운다 — 부작용
+          values:
+            create: 노트북 생성 (name + note 목적)
+            add: 소스 넣기 (path 파일 / text 붙여넣기 — PDF·md·txt, 재add=재색인)
+            ask: 근거 고정 질문 (기본 op) — 소스 안에서만 답 + [n] 인용, 없으면 not_in_sources
+            search: 발췌 검색만 (LLM 0 — 인용 확인·파이프용 싼 경로)
+            sources: 소스 목록 + 색인 상태 + stale 표시
+            remove: 소스 빼기 (source_id)
+            list: 노트북 목록
+            delete: 노트북 삭제 (소스·색인 포함)
+        implementation: notebook 패키지 notebook_op — 저장·색인·검색=notebook_core.py(data/notebook/notebooks.db sqlite WAL, 청크 650자 문단 경계, 하이브리드=ko-sroberta 768d+sqlite-vec+FTS5 BM25, 미설치 시 FTS 폴백 — ★해마 임베딩 모델 아님). ask=handler가 발췌 top-K를 경량 AI 제약 생성(발췌만·[n] 인용 의무·모름=NOT_IN_SOURCES)에 넣고, 인용을 결정론 후검증(무효 [n] 제거·quote는 청크 원문에서 코드가 추출=인용 환각 차단). 원본=경로 참조+mtime(사본 없음), 변경은 sources op가 stale로 노출. 스캔(이미지) PDF=OCR 없음 정직 거부. 설계 정본=docs/NOTEBOOK_GROUNDED_QUERY_DESIGN.md
+        keywords:
+        - 노트북
+        - 근거
+        - 인용
+        - 출처
+        - 문서 질문
+        - 자료조사
+        - 문서 더미
+        - grounded
+        - 소스
       storage:
         returns: scalar
         side_effect: true
@@ -4414,6 +4473,7 @@ nodes:
     - photo.md
     - music_player.md
     - spend.md
+    - notebook.md
   limbs:
     actions:
       os_open:

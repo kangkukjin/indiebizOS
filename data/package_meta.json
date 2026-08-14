@@ -180,6 +180,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "notebook": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "pc-manager": {
       "needs_key": [],
       "weight": "light",
@@ -335,6 +340,7 @@
     "self:mkdir": "system_essentials",
     "self:move": "system_essentials",
     "self:music": "music-player",
+    "self:notebook": "notebook",
     "self:phone_sync": "business",
     "self:photo": "photo-manager",
     "self:propose_patch": "system_essentials",

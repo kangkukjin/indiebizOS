@@ -1,0 +1,68 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "notebook",
+  "name": "Notebook",
+  "description": "근거 고정 질의 — 문서 더미(노트북)에 넣고, 소스 안에서만 답하며 인용을 다는 도구. NotebookLM의 로컬·파이프라인 판.\n\n## 이음매\n저장·색인·검색은 notebook_core.py(data/notebook/notebooks.db), 생성은 경량 AI 1회(consciousness_agent.lightweight_ai_call) + 결정론 인용 후검증. 임베딩=ko-sroberta(blog RAG와 동일 계보), 해마 모델 아님.\n\n## 한계\n스캔(이미지) PDF는 OCR 없음 — 정직 거부. 시맨틱 의존성 미로드 시 FTS5 키워드 검색으로 강등(응답에 명시).",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "notebook_op",
+      "description": "근거 고정 질의 통합 도구 (op 분기). create/add/ask/search/sources/remove/list/delete.\n\n- op=create: name 필수 (+note 노트북 목적 — ask 응답의 렌즈)\n- op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인\n- op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources\n- op=search: name + query — 생성 없이 발췌만 (LLM 0)\n- op=sources: name — 소스·색인 상태·stale / op=remove: name + source_id\n- op=list / op=delete: name\n\n워크플로: create → add 여러 번 → ask 반복. 웹 검색이 아니라 이미 가진 문서를 심문하는 도구다.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "수행할 작업",
+            "enum": [
+              "create",
+              "add",
+              "ask",
+              "search",
+              "sources",
+              "remove",
+              "list",
+              "delete"
+            ],
+            "default": "ask"
+          },
+          "name": {
+            "type": "string",
+            "description": "노트북 이름 (list 외 전 op 필수)"
+          },
+          "note": {
+            "type": "string",
+            "description": "create 옵션 — 노트북 목적 한 줄 (ask 답변의 렌즈로 쓰임)"
+          },
+          "path": {
+            "type": "string",
+            "description": "add — 소스 파일 절대경로 (PDF/md/txt 등)"
+          },
+          "text": {
+            "type": "string",
+            "description": "add — 본문 붙여넣기 (path 대신)"
+          },
+          "title": {
+            "type": "string",
+            "description": "add 옵션 — 소스 표시 이름 (생략 시 파일명)"
+          },
+          "query": {
+            "type": "string",
+            "description": "ask/search 필수 — 질문 또는 검색어"
+          },
+          "source_id": {
+            "type": "integer",
+            "description": "remove 필수 — sources op 가 보여주는 소스 번호"
+          },
+          "top_k": {
+            "type": "integer",
+            "description": "옵션 — ask 발췌 수(기본 12) / search 결과 수(기본 8)"
+          }
+        },
+        "required": [
+          "op"
+        ]
+      }
+    }
+  ]
+}

@@ -23,6 +23,41 @@ router = APIRouter(prefix="/launcher")
 # 설정 파일 경로
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "launcher_web_config.json")
 
+# ── 계기 file 입력 공용 업로드 (2026-08-14 ingest 층 분해 ①운반) ──
+# 원격=런처 세션 게이트 뒤(is_public_remote_path 미등록), 로컬=신뢰. raw body(멀티파트 아님 —
+# family-news 선례). 반환 path(절대경로)를 계기가 $key 로 액션에 실어 핸들러가 그대로 연다.
+_UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "..", "data", "launcher_uploads")
+_UPLOAD_EXTS = {'.txt', '.md', '.csv', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.pdf', '.xlsx', '.xls'}
+_UPLOAD_MAX = 25 * 1024 * 1024
+_IMG_MAGIC = {  # 이미지 확장자는 매직바이트까지 검사 (bulletin/family-news 선례)
+    '.png': (b'\x89PNG',), '.jpg': (b'\xff\xd8\xff',), '.jpeg': (b'\xff\xd8\xff',),
+    '.webp': (b'RIFF',), '.gif': (b'GIF8',),
+}
+
+
+@router.post("/upload")
+async def upload_instrument_file(request: Request, name: str = ""):
+    """계기 file 입력 프리미티브의 업로드 수신. ?name=원본파일명, body=파일 바이트."""
+    body = await request.body()
+    if not body:
+        return JSONResponse({"success": False, "error": "빈 파일"}, status_code=400)
+    if len(body) > _UPLOAD_MAX:
+        return JSONResponse({"success": False, "error": f"파일이 너무 큽니다 (최대 {_UPLOAD_MAX // (1024*1024)}MB)"}, status_code=413)
+    base = os.path.basename(name or "file")
+    ext = os.path.splitext(base)[1].lower()
+    if ext not in _UPLOAD_EXTS:
+        return JSONResponse({"success": False, "error": f"허용되지 않는 형식: {ext or '(확장자 없음)'} — {', '.join(sorted(_UPLOAD_EXTS))}"}, status_code=400)
+    magics = _IMG_MAGIC.get(ext)
+    if magics and not any(body.startswith(m) for m in magics):
+        return JSONResponse({"success": False, "error": "이미지 형식이 확장자와 다릅니다"}, status_code=400)
+    safe = re.sub(r'[^\w.\-가-힣]', '_', os.path.splitext(base)[0])[:60] or 'file'
+    folder = os.path.join(_UPLOAD_DIR, datetime.now().strftime('%Y%m'))
+    os.makedirs(folder, exist_ok=True)
+    dest = os.path.abspath(os.path.join(folder, f"{uuid.uuid4().hex[:8]}_{safe}{ext}"))
+    with open(dest, 'wb') as f:
+        f.write(body)
+    return {"success": True, "path": dest, "name": base, "bytes": len(body)}
+
 
 @router.get("/file")
 async def serve_artifact_file(path: str):

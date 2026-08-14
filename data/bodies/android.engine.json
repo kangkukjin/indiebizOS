@@ -139,6 +139,7 @@
     "services/indienet_publish",
     "services/indienet_relay",
     "services/indienet_social",
+    "services/ingest_engine",
     "services/multi_chat_manager",
     "services/nas_music",
     "services/nas_subtitle",
@@ -233,8 +234,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 227,
-    "engine": 200,
+    "total": 228,
+    "engine": 201,
     "blocklist": 27
   }
 }

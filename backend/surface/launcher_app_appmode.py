@@ -81,6 +81,12 @@ function setMode(i){
     h+='<div class="row" style="flex-wrap:wrap">'+inputs.map(inp=>{
       if(inp.type==='select')
         return '<select class="field" id="in_'+esc(inp.key)+'" style="flex:0 1 130px" onchange="selChanged(\\''+esc(inp.key)+'\\')"><option value="">'+esc(inp.label||'전체')+'</option></select>';
+      if(inp.type==='file')
+        /* file 프리미티브 — 선택 즉시 /launcher/upload, 값(서버 절대경로)은 hidden in_KEY 에 */
+        return '<input type="hidden" id="in_'+esc(inp.key)+'">'
+          +'<input type="file" id="inf_'+esc(inp.key)+'" style="display:none"'+(inp.accept?' accept="'+esc(inp.accept)+'"':'')+' onchange="upFile(\\''+esc(inp.key)+'\\',this)">'
+          +'<button class="btn2" type="button" id="infb_'+esc(inp.key)+'" data-label="\\ud83d\\udcce '+esc(inp.label||'파일')+'" onclick="document.getElementById(\\'inf_'+esc(inp.key)+'\\').click()">\\ud83d\\udcce '+esc(inp.label||'파일')+'</button>'
+          +'<span class="muted" id="infl_'+esc(inp.key)+'" style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:center"></span>';
       return '<input class="field" style="min-width:0" id="in_'+esc(inp.key)+'" value="'+esc(loadInpVal(inst.id,mode.id,inp.key,inp.default))+'" placeholder="'+esc(inp.placeholder||'')+'" onchange="saveInpVals()" onkeydown="if(event.key===\\'Enter\\')runMode()">';
     }).join('')+'<button class="go" onclick="runMode()">조회</button></div>';
   }
@@ -139,6 +145,42 @@ function selChanged(key){
   });
 }
 function chipRun(key,val){ const el=document.getElementById('in_'+key); if(el) el.value=val; runMode(); }
+/* file 프리미티브 업로드 — 성공 시 hidden in_KEY 에 서버 절대경로(핸들러가 그대로 연다) */
+async function _upFileObj(key,f,el){
+  if(!f) return;
+  const btn=document.getElementById('infb_'+key), lab=document.getElementById('infl_'+key), hid=document.getElementById('in_'+key);
+  if(btn){ btn.disabled=true; btn.textContent='올리는 중…'; }
+  try{
+    const r=await fetch('/launcher/upload?name='+encodeURIComponent(f.name),{method:'POST',body:f});
+    const d=await r.json();
+    if(d&&d.success&&d.path){ if(hid) hid.value=d.path; if(lab) lab.textContent=f.name; }
+    else{ if(hid) hid.value=''; if(lab) lab.textContent=''; if(el) el.value=''; alert((d&&d.error)||'업로드 실패'); }
+  }catch(e){ if(hid) hid.value=''; if(lab) lab.textContent=''; if(el) el.value=''; alert('업로드 실패 (네트워크)'); }
+  if(btn){ btn.disabled=false; btn.textContent=btn.getAttribute('data-label')||'파일'; }
+}
+function upFile(key,el){ _upFileObj(key, el.files&&el.files[0], el); }
+/* 드래그&드롭 — 현재 모드에 file 입력이 있으면 화면 어디에나 끌어다 놓으면 그 입력으로 업로드 */
+function _dropFileKey(){ const m=(typeof CUR!=='undefined')&&CUR&&CUR.mode; if(!m) return null; const inp=(m.inputs||[]).find(i=>i.type==='file'); return inp?inp.key:null; }
+let _dragDepth=0;
+function _dropOverlay(show){
+  let o=document.getElementById('dropOverlay');
+  if(!o&&show){
+    o=document.createElement('div'); o.id='dropOverlay';
+    o.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(74,64,53,.28);pointer-events:none';
+    o.innerHTML='<div style="padding:16px 26px;border-radius:16px;background:var(--bg2,#fff);border:2px dashed var(--line,#bbb);color:var(--txt,#333);font-size:17px">\\ud83d\\udcce 여기에 파일을 놓으세요</div>';
+    document.body.appendChild(o);
+  }
+  if(o) o.style.display=show?'flex':'none';
+}
+function _dragHasFiles(e){ return e.dataTransfer&&Array.prototype.slice.call(e.dataTransfer.types||[]).indexOf('Files')>=0; }
+document.addEventListener('dragover',e=>{ if(_dropFileKey()&&_dragHasFiles(e)) e.preventDefault(); });
+document.addEventListener('dragenter',e=>{ if(_dropFileKey()&&_dragHasFiles(e)){ _dragDepth++; _dropOverlay(true); } });
+document.addEventListener('dragleave',e=>{ if(_dragDepth>0){ _dragDepth--; if(!_dragDepth) _dropOverlay(false); } });
+document.addEventListener('drop',e=>{
+  const key=_dropFileKey(); _dragDepth=0; _dropOverlay(false);
+  if(!key) return;
+  if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length){ e.preventDefault(); _upFileObj(key, e.dataTransfer.files[0], null); }
+});
 /* 폰 라디오: 백엔드가 play_in_client+stream_url 반환 → WebView 가 직접 재생(소리=폰 스피커).
    한국 방송=HLS(.m3u8)라 hls.js, ICY/mp3 등은 네이티브 <audio>. */
 let _radioHls=null;

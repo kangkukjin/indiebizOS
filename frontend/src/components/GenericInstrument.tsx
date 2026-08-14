@@ -32,7 +32,7 @@ import {
   type AppInput, type AppButton, type AppCompose, type AppViewPrim, type AppMode,
   type AppInstrument, type Json, type Dispatch, type ViewEvent,
   runIBL, jget, tpl, buildAction, rowAction, trendClass, asList,
-  composeChannelOptions, mediaSrc, audioUrl, statusGlyph,
+  composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
   groupPartition, mediaModel, isSlowNet, hasMasterDetail, dynFilterCats, applyDynFilter,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
@@ -417,6 +417,71 @@ function normalizeOptions(raw: unknown, inp: AppInput): { value: string; label: 
   return [];
 }
 
+// file 입력 프리미티브 — 선택 즉시 /launcher/upload 에 raw body 로 올리고 값=서버 절대경로.
+// 핸들러는 그 경로를 그대로 연다(ingest 층 분해 ①운반 — 도메인 무관 공용).
+function FileInput({ inp, value, onChange }: { inp: AppInput; value: string; onChange: (v: string) => void }) {
+  const [label, setLabel] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [dragDepth, setDragDepth] = useState(0);
+  const ref = useRef<HTMLInputElement>(null);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    setBusy(true);
+    try {
+      const r = await fetch(`${IMAGE_BASE}/launcher/upload?name=${encodeURIComponent(f.name)}`, { method: 'POST', body: f });
+      const d = await r.json();
+      if (d?.success && d.path) { onChange(d.path); setLabel(f.name); }
+      else { onChange(''); setLabel(''); alert(d?.error || '업로드 실패'); }
+    } catch { onChange(''); setLabel(''); alert('업로드 실패 (네트워크)'); }
+    setBusy(false);
+  };
+  // 드래그&드롭 — 이 입력이 있는 탭이 열려 있는 동안 창 어디에나 파일을 끌어다 놓으면 업로드
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  useEffect(() => {
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+    const over = (e: DragEvent) => { if (hasFiles(e)) e.preventDefault(); };
+    const enter = (e: DragEvent) => { if (hasFiles(e)) setDragDepth((d) => d + 1); };
+    const leave = () => setDragDepth((d) => Math.max(0, d - 1));
+    const drop = (e: DragEvent) => {
+      setDragDepth(0);
+      if (e.dataTransfer?.files?.length) { e.preventDefault(); pickRef.current(e.dataTransfer.files[0]); }
+    };
+    window.addEventListener('dragover', over);
+    window.addEventListener('dragenter', enter);
+    window.addEventListener('dragleave', leave);
+    window.addEventListener('drop', drop);
+    return () => {
+      window.removeEventListener('dragover', over);
+      window.removeEventListener('dragenter', enter);
+      window.removeEventListener('dragleave', leave);
+      window.removeEventListener('drop', drop);
+    };
+  }, []);
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      {dragDepth > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-800/30 pointer-events-none">
+          <div className="px-6 py-4 rounded-2xl bg-white shadow-lg border-2 border-dashed border-stone-400 text-stone-700 text-base">
+            📎 여기에 파일을 놓으세요
+          </div>
+        </div>
+      )}
+      <input ref={ref} type="file" accept={inp.accept || ''} className="hidden"
+        onChange={(e) => pick(e.target.files?.[0])} />
+      <button onClick={() => ref.current?.click()} disabled={busy}
+        className="px-3 py-2 rounded-lg border border-stone-200 bg-white text-sm text-stone-700 hover:bg-stone-50 whitespace-nowrap">
+        {busy ? '올리는 중…' : `📎 ${inp.label || '파일'}`}
+      </button>
+      {value && label && (
+        <span className="text-xs text-stone-500 truncate max-w-[160px]" title={label}>
+          {label} <button className="text-stone-400 hover:text-stone-600" onClick={() => { onChange(''); setLabel(''); if (ref.current) ref.current.value = ''; }}>✕</button>
+        </span>
+      )}
+    </div>
+  );
+}
+
 function SelectInput({ inp, values, onChange }: { inp: AppInput; values: Record<string, string>; onChange: (v: string) => void }) {
   const staticOpts = inp.options ? inp.options.map((o) => ({ value: String(o.value), label: String(o.label) })) : null;
   const [options, setOptions] = useState<{ value: string; label: string }[]>(staticOpts || []);
@@ -747,6 +812,9 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
           {inputs.map((inp) =>
             inp.type === 'select' ? (
               <SelectInput key={inp.key} inp={inp} values={values}
+                onChange={(v) => setValues((s) => ({ ...s, [inp.key]: v }))} />
+            ) : inp.type === 'file' ? (
+              <FileInput key={inp.key} inp={inp} value={values[inp.key] || ''}
                 onChange={(v) => setValues((s) => ({ ...s, [inp.key]: v }))} />
             ) : (
               <input key={inp.key} value={values[inp.key] || ''} placeholder={inp.placeholder || ''}

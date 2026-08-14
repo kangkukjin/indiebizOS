@@ -85,6 +85,7 @@ LAYERS = {
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",
         "generate_newspaper", "hippocampus_provision", "indienet",
+        "ingest_engine",
         "indienet_common", "indienet_publish", "indienet_relay",
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
         "nas_webapp", "nostr_phone_bridge", "phone_notifications",

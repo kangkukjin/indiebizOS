@@ -42,7 +42,8 @@ export const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
 
 export interface AppInput {
   key: string;
-  type: 'text' | 'select';
+  type: 'text' | 'select' | 'file';   // file: 선택 즉시 /launcher/upload 로 올리고 값=서버 절대경로
+  accept?: string;                     // file 전용 — <input accept> 필터 (예 'image/*,.pdf')
   default?: string;
   placeholder?: string;
   required?: boolean;

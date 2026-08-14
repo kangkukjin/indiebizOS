@@ -461,6 +461,21 @@ class CalendarManagerBase:
                 break
         return raw[:5]
 
+    @staticmethod
+    def _time_to_minutes(hhmm: str):
+        """HH:MM(무패딩 'H:MM' 허용) → 자정 기준 분. 해석 불가면 None.
+
+        문자열 비교는 '4:00' > '09:00' 으로 뒤집혀서(무패딩) 숫자 비교로 간다.
+        """
+        try:
+            h, m = hhmm.split(":", 1)
+            h, m = int(h), int(m)
+            if 0 <= h <= 23 and 0 <= m <= 59:
+                return h * 60 + m
+        except (ValueError, AttributeError):
+            pass
+        return None
+
     def _should_run_task(self, task: dict, now: datetime) -> bool:
         """작업 실행 여부 판단"""
         if not task.get("enabled", True):
@@ -470,8 +485,17 @@ class CalendarManagerBase:
         repeat = task.get("repeat", "daily")
 
         task_time = self._normalize_time(task.get("time", ""))
-        if repeat != "interval" and task_time != current_time:
-            return False
+        if repeat != "interval":
+            # 따라잡기(latest-only catch-up, 2026-08-14): 옛 판정은 task_time ==
+            # current_time 정확한 분 일치라, 그 분에 백엔드가 죽어 있으면(창 닫힘=
+            # 백엔드 종료 생명주기) 그날 몫이 조용히 결번됐다(04시 신문·06시 AI팁 실측
+            # 부류). "예정 시각이 지났고 아래 repeat별 last_run 검사가 오늘 아직 안
+            # 돌았다고 하면" due — 재기동 후 첫 틱이 1회 만회한다. 밀린 회차 열거는
+            # 하지 않는다(어제 몫은 소멸, 오늘 몫만 — dsh latest-only 선례).
+            task_min = self._time_to_minutes(task_time)
+            now_min = self._time_to_minutes(current_time)
+            if task_min is None or now_min is None or now_min < task_min:
+                return False
 
         last_run = task.get("last_run")
 
@@ -549,7 +573,11 @@ class CalendarManagerBase:
         elif repeat == "interval":
             interval_hours = task.get("interval_hours", 1)
             if not last_run:
-                if task.get("time") == current_time:
+                # 첫 발화도 따라잡기: 정확한 분 일치 대신 "시작 시각이 지났으면" due.
+                # (그 분에 백엔드가 죽어 있었으면 interval 은 영영 시동이 안 걸렸다.)
+                start_min = self._time_to_minutes(self._normalize_time(task.get("time", "")))
+                now_min = self._time_to_minutes(current_time)
+                if start_min is not None and now_min is not None and now_min >= start_min:
                     return True
                 return False
             try:

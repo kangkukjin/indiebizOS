@@ -30,6 +30,19 @@ _connection_pools: Dict[str, List[sqlite3.Connection]] = {}  # db_path -> [conne
 _pool_lock = threading.Lock()
 _MAX_POOL_SIZE = 5  # DB당 최대 연결 수
 
+# ============ 하드캡 요약 체크포인트 훅 (의존 역전) ============
+# cognition/history_checkpoint 가 부팅 시 등록 — datastore 는 cognition 을 모른다.
+# 미등록(폰 등)이면 기능이 조용히 꺼진 안전 기본값.
+_ckpt_schedule = None   # fn(db_path, from_agent_id, to_agent_id)
+_ckpt_apply = None      # fn(db_path, agent_id, user_id, history) -> history
+
+
+def register_checkpoint_hooks(schedule_fn, apply_fn) -> None:
+    """history_checkpoint.install() 이 호출 (register_probe 선례)."""
+    global _ckpt_schedule, _ckpt_apply
+    _ckpt_schedule = schedule_fn
+    _ckpt_apply = apply_fn
+
 
 class ConversationDB:
     """대화 기록 및 태스크 데이터베이스"""
@@ -372,7 +385,15 @@ class ConversationDB:
                     )
                     conn.commit()
 
-            return message_id
+        # 하드캡 요약 체크포인트 갱신 예약 (fail-soft — 선판정 SQL 만이라 대부분 no-op,
+        # LLM 은 캡 밖에 새 턴이 쌓였을 때만 백그라운드 스레드로. history_checkpoint 참조)
+        if _ckpt_schedule:
+            try:
+                _ckpt_schedule(self.db_path, from_agent_id, to_agent_id)
+            except Exception:
+                pass  # 체크포인트는 부가 기능 — 저장 경로를 절대 실패시키지 않는다
+
+        return message_id
 
     def save_message_undelivered(self, from_agent_id: int, to_agent_id: int, content: str,
                                  contact_type: str = 'gui') -> int:
@@ -503,7 +524,16 @@ class ConversationDB:
 
                 messages.append(msg)
 
-            return list(reversed(messages))
+        history = list(reversed(messages))
+
+        # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
+        if _ckpt_apply:
+            try:
+                history = _ckpt_apply(self.db_path, agent_id, user_id, history)
+            except Exception:
+                pass
+
+        return history
 
     def _mask_long_content(self, content: str) -> str:
         """긴 콘텐츠를 플레이스홀더로 마스킹 (도구 결과 등)"""

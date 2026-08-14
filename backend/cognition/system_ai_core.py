@@ -27,6 +27,8 @@ from tool_loader import load_tool_schema
 from ai_agent import AIAgent
 # 통합: 프롬프트 빌더 사용
 from prompt_builder import build_system_ai_prompt
+# 하드캡 요약 체크포인트 — 임포트 부작용으로 datastore 훅 등록(install(), 의존 역전)
+import history_checkpoint  # noqa: F401
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent

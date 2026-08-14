@@ -70,7 +70,7 @@ LAYERS = {
         "agent_cognitive", "agent_communication", "agent_goals",
         "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
-        "cognitive_eval", "cognitive_recall", "cognitive_trace",
+        "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "forage_consolidation", "goal_evaluator",
         "ibl_description_audit", "ibl_usage_generator", "ibl_usage_rag",
         "memory_consolidation", "prompt_builder", "routing_system", "switch_runner",

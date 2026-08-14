@@ -35,6 +35,7 @@
     "cognition/consciousness_agent",
     "cognition/forage_consolidation",
     "cognition/goal_evaluator",
+    "cognition/history_checkpoint",
     "cognition/ibl_description_audit",
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
@@ -226,6 +227,7 @@
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
+    "test_history_checkpoint": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_nip44_vectors": "top-level import: pynostr",
@@ -234,8 +236,8 @@
     "test_render_core": "force_exclude_glob"
   },
   "counts": {
-    "total": 228,
-    "engine": 201,
-    "blocklist": 27
+    "total": 230,
+    "engine": 202,
+    "blocklist": 28
   }
 }

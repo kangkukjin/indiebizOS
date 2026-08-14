@@ -28,6 +28,18 @@ _USERDATA = (_os.environ.get("INDIEBIZ_USERDATA") or "").strip()
 _PERSIST_DIR = Path(_USERDATA) if _USERDATA else DATA_PATH
 _PERSIST_DIR.mkdir(parents=True, exist_ok=True)
 MEMORY_DB_PATH = _PERSIST_DIR / "system_ai_memory.db"
+
+# ============ 하드캡 요약 체크포인트 훅 (의존 역전) ============
+# cognition/history_checkpoint 가 부팅 시 등록 — datastore 는 cognition 을 모른다.
+_ckpt_schedule = None   # fn(thread)
+_ckpt_apply = None      # fn(thread, history) -> history
+
+
+def register_checkpoint_hooks(schedule_fn, apply_fn) -> None:
+    """history_checkpoint.install() 이 호출 (register_probe 선례)."""
+    global _ckpt_schedule, _ckpt_apply
+    _ckpt_schedule = schedule_fn
+    _ckpt_apply = apply_fn
 SYSTEM_MEMO_PATH = _PERSIST_DIR / "system_ai_memo.txt"
 
 
@@ -196,6 +208,14 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     conn.commit()
     conn.close()
 
+    # 하드캡 요약 체크포인트 갱신 예약 (턴 종료=assistant 저장 시점만, fail-soft).
+    # 선판정(SQL만)이 먼저라 대부분 no-op — LLM 은 캡 밖에 새 턴이 쌓였을 때만.
+    if role == "assistant" and _ckpt_schedule:
+        try:
+            _ckpt_schedule("appmaker" if source == "appmaker" else "system_ai")
+        except Exception:
+            pass  # 체크포인트는 부가 기능 — 저장 경로를 절대 실패시키지 않는다
+
     return conversation_id
 
 
@@ -347,6 +367,13 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
                 msg["images"] = loaded_images
 
         history.append(msg)
+
+    # 하드캡 요약 체크포인트를 머리에 주입 (history_checkpoint — 없으면 무변화, fail-soft)
+    if _ckpt_apply:
+        try:
+            history = _ckpt_apply(thread, history)
+        except Exception:
+            pass
 
     return history
 

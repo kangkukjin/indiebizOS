@@ -14,7 +14,9 @@ _package_dir = os.path.dirname(os.path.abspath(__file__))
 if _package_dir not in sys.path:
     sys.path.insert(0, _package_dir)
 
-import storage
+# ★모듈명은 패키지 고유로 (finance-record 와의 sys.modules 'storage' 충돌 실측, 2026-08-14 —
+#   패키지 서브모듈은 notebook_core/music_core 처럼 반드시 고유 이름)
+import health_storage as storage
 
 
 # 통화 규율(2026-08-05 감사 ②): returns:items 액션이라 맨 문자열 반환 금지 —
@@ -28,6 +30,39 @@ def _ok(msg: str, items: list = None) -> str:
     if items is not None:
         out["items"] = items
     return json.dumps(out, ensure_ascii=False)
+
+
+# ── 공용 정규화 지도 (save/query/delete 공용 — 함수 안 중복 정의 금지) ──
+_VALID_INFO_TYPES = {'measurement', 'symptom', 'medication', 'document'}
+_KO_INFO_TYPE_MAP = {
+    '측정': 'measurement', '측정값': 'measurement',
+    '증상': 'symptom',
+    '투약': 'medication', '약': 'medication', '약물': 'medication',
+    '문서': 'document', '검사': 'document',
+}
+# ★ _KO_CATEGORY_MAP 의 값은 전부 여기에도 있어야 한다 — 비대칭이면
+#   한국어(심박수)는 통하는데 영어(heart_rate)는 저장 실패하는 버그가 된다.
+_KNOWN_CATEGORIES = {
+    'blood_pressure', 'blood_sugar', 'blood_glucose', 'weight',
+    'blood_count', 'body_composition', 'kidney_function', 'liver_function',
+    'cholesterol', 'thyroid', 'hemoglobin',
+    'heart_rate', 'temperature', 'oxygen_saturation',
+}
+_KO_CATEGORY_MAP = {
+    '혈압': 'blood_pressure', '혈당': 'blood_sugar', '체중': 'weight',
+    '혈액검사': 'blood_count', '콜레스테롤': 'cholesterol',
+    '심박수': 'heart_rate', '체온': 'temperature', '산소포화도': 'oxygen_saturation',
+}
+_VALID_QUERY_TYPES = {'summary', 'measurements', 'symptoms', 'medications', 'documents', 'search', 'list_persons'}
+_KO_QUERY_TYPE_MAP = {
+    '요약': 'summary', '전체': 'summary',
+    '측정기록': 'measurements', '측정': 'measurements', '측정값': 'measurements',
+    '증상': 'symptoms',
+    '투약': 'medications', '약': 'medications', '약물': 'medications',
+    '문서': 'documents', '검사': 'documents',
+    '검색': 'search',
+    '목록': 'list_persons', '사람목록': 'list_persons',
+}
 
 
 def execute(tool_input: dict, context) -> str:
@@ -66,29 +101,7 @@ def save_health_info(input_data: dict) -> str:
         if _k in input_data and _k not in data:
             data[_k] = input_data[_k]
 
-    # AI가 info_type에 한국어나 카테고리명을 넣는 경우 자동 보정
-    _VALID_INFO_TYPES = {'measurement', 'symptom', 'medication', 'document'}
-
-    # 한국어 info_type → 영어 매핑
-    _KO_INFO_TYPE_MAP = {
-        '측정': 'measurement', '측정값': 'measurement',
-        '증상': 'symptom',
-        '투약': 'medication', '약': 'medication', '약물': 'medication',
-        '문서': 'document', '검사': 'document',
-    }
-
-    # 카테고리명 매핑 (영어/한국어)
-    _KNOWN_CATEGORIES = {
-        'blood_pressure', 'blood_sugar', 'blood_glucose', 'weight',
-        'blood_count', 'body_composition', 'kidney_function', 'liver_function',
-        'cholesterol', 'thyroid', 'hemoglobin',
-    }
-    _KO_CATEGORY_MAP = {
-        '혈압': 'blood_pressure', '혈당': 'blood_sugar', '체중': 'weight',
-        '혈액검사': 'blood_count', '콜레스테롤': 'cholesterol',
-        '심박수': 'heart_rate', '체온': 'temperature', '산소포화도': 'oxygen_saturation',
-    }
-
+    # AI가 info_type에 한국어나 카테고리명을 넣는 경우 자동 보정 (지도=모듈 상단 공용)
     if info_type and info_type not in _VALID_INFO_TYPES:
         if info_type in _KO_INFO_TYPE_MAP:
             info_type = _KO_INFO_TYPE_MAP[info_type]
@@ -140,6 +153,20 @@ def save_health_info(input_data: dict) -> str:
             for _aux in ('unit', 'type'):
                 if _aux in data and _aux not in value:
                     value[_aux] = data[_aux]
+
+            # 혈압 자유 입력 "128/85" → systolic/diastolic (계기 '기록' 탭 등)
+            _raw = value.get('value')
+            if category == 'blood_pressure' and isinstance(_raw, str) and '/' in _raw:
+                _parts = [p.strip() for p in _raw.split('/', 1)]
+                if all(_p.replace('.', '', 1).isdigit() for _p in _parts):
+                    value.setdefault('systolic', _parts[0])
+                    value.setdefault('diastolic', _parts[1])
+                    value.pop('value', None)
+
+            # 숫자 문자열은 숫자로 (표·points 통화가 수치를 기대)
+            for _num_k in ('value', 'systolic', 'diastolic'):
+                if _num_k in value:
+                    value[_num_k] = _to_number(value[_num_k])
 
             # 빈 value 방어 — 조용한 손실 방지
             _meaningful = {k: v for k, v in value.items() if v not in (None, '')}
@@ -256,32 +283,7 @@ def get_health_context(input_data: dict) -> str:
     include_images = input_data.get('include_images', False)
     person = input_data.get('person')  # 대상자
 
-    # AI가 query_type에 한국어나 카테고리명을 넣는 경우 자동 보정
-    _VALID_QUERY_TYPES = {'summary', 'measurements', 'symptoms', 'medications', 'documents', 'search', 'list_persons'}
-
-    # 한국어 query_type → 영어 query_type 매핑
-    _KO_QUERY_TYPE_MAP = {
-        '요약': 'summary', '전체': 'summary',
-        '측정기록': 'measurements', '측정': 'measurements', '측정값': 'measurements',
-        '증상': 'symptoms',
-        '투약': 'medications', '약': 'medications', '약물': 'medications',
-        '문서': 'documents', '검사': 'documents',
-        '검색': 'search',
-        '목록': 'list_persons', '사람목록': 'list_persons',
-    }
-
-    # 영어/한국어 카테고리명 매핑
-    _KNOWN_CATEGORIES = {
-        'blood_pressure', 'blood_sugar', 'blood_glucose', 'weight',
-        'blood_count', 'body_composition', 'kidney_function', 'liver_function',
-        'cholesterol', 'thyroid', 'hemoglobin',
-    }
-    _KO_CATEGORY_MAP = {
-        '혈압': 'blood_pressure', '혈당': 'blood_sugar', '체중': 'weight',
-        '혈액검사': 'blood_count', '콜레스테롤': 'cholesterol',
-        '심박수': 'heart_rate', '체온': 'temperature', '산소포화도': 'oxygen_saturation',
-    }
-
+    # AI가 query_type에 한국어나 카테고리명을 넣는 경우 자동 보정 (지도=모듈 상단 공용)
     if query_type not in _VALID_QUERY_TYPES:
         if query_type in _KO_QUERY_TYPE_MAP:
             # 한국어 query_type → 영어 변환
@@ -324,12 +326,17 @@ def get_health_context(input_data: dict) -> str:
             for p in persons:
                 note = f" - {p['note']}" if p.get('note') else ""
                 lines.append(f"  • {p['name']}{note}")
-            return "\n".join(lines)
+            # 통화 규율: 맨 문자열 금지 — records 동봉
+            records = [{"title": p['name'], "meta": "", "summary": p.get('note') or "", "url": ""}
+                       for p in persons]
+            return json.dumps({"text": "\n".join(lines), "items": records}, ensure_ascii=False)
 
         elif query_type == 'summary':
-            # 전체 요약
+            # 전체 요약 — text(사람용) + blocks(계기 렌더 IR)
             summary = storage.get_health_summary(days=days, person=person)
-            return format_health_summary(summary, include_images)
+            text = format_health_summary(summary, include_images)
+            return json.dumps({"text": text, "blocks": _summary_to_blocks(summary)},
+                              ensure_ascii=False)
 
         elif query_type == 'measurements':
             # 측정값 조회
@@ -341,10 +348,17 @@ def get_health_context(input_data: dict) -> str:
             text = format_measurements(measurements, category, person)
             # 표준 테이블 통화 — 시계열 측정값을 table로 (>> chart/spreadsheet/document)
             # 사람용 텍스트는 text 키로 보존하고 table만 ADD (world_bank 선례).
+            # blocks/points 는 🩺 계기 렌더용 (blocks=표 IR, points=첫 시리즈 sparkline).
             table = _measurements_to_table(measurements)
+            payload = {"text": text, "count": len(measurements)}
             if table:
-                return json.dumps({"text": text, "table": table}, ensure_ascii=False)
-            return text
+                payload["table"] = table
+                payload["blocks"] = [{"type": "table",
+                                      "columns": table["columns"], "rows": table["rows"]}]
+                payload["points"] = _table_to_points(table)
+                if payload["points"]:
+                    payload["series_label"] = table["columns"][1]
+            return json.dumps(payload, ensure_ascii=False)
 
         elif query_type == 'symptoms':
             # 증상 조회
@@ -398,7 +412,11 @@ def get_health_context(input_data: dict) -> str:
             if not keyword:
                 return _err("검색 키워드를 입력해주세요.")
             results = storage.search_records(keyword, person=person)
-            return format_search_results(results, keyword, person)
+            text = format_search_results(results, keyword, person)
+            records = _search_to_records(results)
+            if not records:
+                return _ok(text, items=[])
+            return json.dumps({"text": text, "items": records}, ensure_ascii=False)
 
         else:
             return _err(f"알 수 없는 조회 유형: {query_type}")
@@ -454,11 +472,157 @@ def delete_health_record(input_data: dict) -> str:
     return _ok(f"🗑 {person_str}{type_ko} 기록 #{record_id} 삭제됨")
 
 
+_INGEST_KIND_MAP = {
+    'measurement': 'measurement', '측정': 'measurement',
+    'symptom': 'symptom', '증상': 'symptom',
+    'medication': 'medication', '투약': 'medication',
+    'document': 'document', '문서': 'document',
+}
+_INGEST_KIND_KO = {'measurement': '측정', 'symptom': '증상',
+                   'medication': '투약', 'document': '문서'}
+_DATE_RE = None  # 지연 컴파일
+
+
+def ingest_health_info(input_data: dict) -> str:
+    """다형 입력(텍스트/파일 — 이미지·PDF·엑셀·텍스트)을 AI로 구조화해 일괄 저장.
+
+    공용 ingest_engine(backend/services) 첫 소비자 — 이 함수는 ④적재만 도메인 몫:
+    스키마 프롬프트 + 결정론 검증(수치·날짜·kind) + 기존 save 경로 재사용."""
+    global _DATE_RE
+    import re as _re
+    if _DATE_RE is None:
+        _DATE_RE = _re.compile(r'^\d{4}-\d{2}-\d{2}')
+
+    file_path = (input_data.get('file') or input_data.get('path') or '').strip()
+    free_text = (input_data.get('text') or input_data.get('content') or '').strip()
+    person = input_data.get('person')
+
+    try:
+        import ingest_engine
+    except ImportError as e:
+        return _err(f"ingest_engine 임포트 불가(백엔드 밖 실행?): {e}")
+
+    source = ingest_engine.extract_source(path=file_path or None, text=free_text or None)
+    if not source.get('ok'):
+        return _err(source.get('error') or '원문 추출 실패')
+
+    today = datetime.now().strftime('%Y-%m-%d')
+    schema = (
+        f"오늘 날짜: {today} (원문의 '오늘/어제' 같은 상대 날짜는 이것 기준으로 환산)\n"
+        "출력 스키마 — 배열의 각 원소는 다음 중 하나:\n"
+        '- 측정: {"kind":"measurement","category":"blood_pressure|blood_sugar|weight|heart_rate|'
+        'temperature|oxygen_saturation","value":수치,"systolic":수축기,"diastolic":이완기,'
+        '"unit":"단위","date":"YYYY-MM-DD","note":"짧은 메모"} — 혈압만 systolic/diastolic, 그 외 value 하나\n'
+        '- 증상: {"kind":"symptom","category":"두통 등 짧은 이름","severity":"mild|moderate|severe",'
+        '"description":"설명","date":"시작일"}\n'
+        '- 투약: {"kind":"medication","name":"약 이름","dosage":"용량","frequency":"복용 횟수",'
+        '"description":"사유","date":"시작일"}\n'
+        '- 문서: {"kind":"document","category":"blood_test|urine_test|health_checkup|prescription|'
+        'xray|ct|mri","description":"한 줄 요약","extracted_data":{"항목":"값"},"date":"검사일"}\n'
+        "검사지·건강검진처럼 수치가 여럿이면: 표준 카테고리(혈압·혈당·체중·심박수 등)는 측정으로 "
+        "낱개 추출하고, 나머지 세부 수치는 문서 하나의 extracted_data 에 모은다."
+    )
+
+    records, err = ingest_engine.extract_records(source, schema, domain_label="건강기록")
+    if err:
+        return _err(f"추출 실패: {err}")
+    if not records:
+        return _ok(f"{source.get('label', '입력')}: 저장할 건강 기록을 찾지 못했습니다.", items=[])
+
+    saved_items, skipped = [], []
+    doc_original_attached = bool(file_path) and (source.get('kind') == 'image' or file_path.lower().endswith('.pdf'))
+    first_doc_seen = False
+
+    for r in records:
+        kind = _INGEST_KIND_MAP.get(str(r.get('kind') or '').strip().lower())
+        if not kind:
+            skipped.append(f"kind 불명: {str(r)[:80]}")
+            continue
+        date = str(r.get('date') or '').strip()
+        measured_at = date if _DATE_RE.match(date) else None
+
+        data = {}
+        if kind == 'measurement':
+            cat = str(r.get('category') or '').strip()
+            cat = _KO_CATEGORY_MAP.get(cat, cat)
+            if not cat:
+                skipped.append(f"측정 카테고리 없음: {str(r)[:80]}")
+                continue
+            sys_v, dia_v = _to_number(r.get('systolic')), _to_number(r.get('diastolic'))
+            val = _to_number(r.get('value'))
+            if isinstance(sys_v, (int, float)) and isinstance(dia_v, (int, float)):
+                data.update({'category': cat, 'systolic': sys_v, 'diastolic': dia_v})
+            elif isinstance(val, (int, float)):
+                data.update({'category': cat, 'value': val})
+                if r.get('unit'):
+                    data['unit'] = str(r['unit'])
+            else:
+                skipped.append(f"{cat}: 수치 없음 — 지어내지 않고 건너뜀")
+                continue
+        elif kind == 'symptom':
+            if not (r.get('category') or r.get('description')):
+                skipped.append(f"증상 내용 없음: {str(r)[:80]}")
+                continue
+            data = {'category': str(r.get('category') or 'unknown'),
+                    'description': r.get('description'), 'started_at': measured_at}
+            if str(r.get('severity') or '') in ('mild', 'moderate', 'severe'):
+                data['severity'] = r['severity']
+        elif kind == 'medication':
+            if not r.get('name'):
+                skipped.append(f"약 이름 없음: {str(r)[:80]}")
+                continue
+            data = {'name': str(r['name']), 'dosage': r.get('dosage'),
+                    'frequency': r.get('frequency'), 'description': r.get('description'),
+                    'started_at': measured_at}
+        else:  # document
+            data = {'category': str(r.get('category') or 'health_checkup'),
+                    'description': r.get('description'),
+                    'extracted_data': r.get('extracted_data') if isinstance(r.get('extracted_data'), dict) else None,
+                    'started_at': measured_at}
+            # 원본 보존 — 이미지/PDF 업로드면 첫 문서 레코드에 원본 파일을 붙인다
+            if doc_original_attached and not first_doc_seen:
+                data['image_path'] = file_path
+                first_doc_seen = True
+
+        result_raw = save_health_info({'info_type': kind, 'data': data,
+                                       'measured_at': measured_at,
+                                       'note': r.get('note'), 'person': person})
+        try:
+            result = json.loads(result_raw)
+        except ValueError:
+            result = {'success': False, 'error': str(result_raw)[:120]}
+        if result.get('success'):
+            title = (category_to_korean(data.get('category', '')) if kind == 'measurement'
+                     else data.get('name') or category_to_korean(data.get('category', '')) or doc_type_to_korean(data.get('category', '')))
+            summary = result.get('message', '')
+            saved_items.append({'title': title or _INGEST_KIND_KO[kind],
+                                'meta': f"{_INGEST_KIND_KO[kind]} · {measured_at or today}",
+                                'summary': summary.split(': ', 1)[-1], 'url': ''})
+        else:
+            skipped.append(result.get('error', '저장 실패'))
+
+    # 문서 레코드 없이 이미지/PDF 가 온 경우 — 원본만이라도 문서로 보존
+    if doc_original_attached and not first_doc_seen and saved_items:
+        save_health_info({'info_type': 'document', 'person': person,
+                          'data': {'category': 'health_checkup', 'image_path': file_path,
+                                   'description': f"업로드 원본({source.get('label', '')})"}})
+
+    head = f"✓ {source.get('label', '입력')}에서 {len(saved_items)}건 저장"
+    if skipped:
+        head += f", {len(skipped)}건 건너뜀"
+    lines = [head] + [f"  • {it['title']} — {it['summary']}" for it in saved_items]
+    if skipped:
+        lines += ["  건너뜀:"] + [f"  ⚠ {s}" for s in skipped[:5]]
+    return json.dumps({"success": True, "message": head, "text": "\n".join(lines),
+                       "items": saved_items, "saved": len(saved_items),
+                       "skipped": len(skipped)}, ensure_ascii=False)
+
+
 # 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 함수 참조 테이블로 전환.
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교.
 _OP_DISPATCHERS = {
     "health_op": {"save": save_health_info, "query": get_health_context,
-                  "delete": delete_health_record},
+                  "delete": delete_health_record, "ingest": ingest_health_info},
 }
 # health_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
@@ -671,6 +835,83 @@ def _measurements_to_table(measurements: list):
         rows.append(r)
 
     return {"columns": columns, "rows": rows}
+
+
+def _table_to_points(table: dict) -> list:
+    """table 통화의 첫 수치 시리즈 → sparkline points [{date, value}] (시간 오름차순 유지)."""
+    rows = table.get("rows") or []
+    points = []
+    for r in rows:
+        if len(r) >= 2 and isinstance(r[1], (int, float)):
+            points.append({"date": r[0], "value": r[1]})
+    return points
+
+
+def _summary_to_blocks(summary: dict) -> list:
+    """건강 요약 dict → 계기 blocks IR (heading/list). 렌더는 표면 공용 blocks 프리미티브."""
+    blocks = []
+
+    def _section(title, items):
+        if items:
+            blocks.append({"type": "heading", "level": 3, "text": title})
+            blocks.append({"type": "list", "items": items})
+
+    meas = []
+    for cat, info in (summary.get('measurements') or {}).items():
+        latest = info['latest']
+        meas.append(f"{category_to_korean(cat)}: {format_measurement_value(cat, latest['value'])}"
+                    f" ({latest['measured_at'][:10]}, 총 {info['count']}회)")
+    _section("📊 최근 측정값", meas)
+
+    _section("🤒 현재 증상", [
+        f"{category_to_korean(s['category'])}"
+        f"{' (' + severity_to_korean(s['severity']) + ')' if s.get('severity') else ''}"
+        f" - {s['started_at']}부터"
+        for s in (summary.get('active_symptoms') or [])])
+
+    _section("💊 복용 중인 약물", [
+        f"{m['name']} {m.get('dosage') or ''}{', ' + m['frequency'] if m.get('frequency') else ''}"
+        for m in (summary.get('current_medications') or [])])
+
+    _section("📄 최근 검사/문서", [
+        f"{doc_type_to_korean(d['doc_type'])} ({d['recorded_at']})"
+        for d in (summary.get('recent_documents') or [])])
+
+    return blocks
+
+
+def _search_to_records(results: dict) -> list:
+    """검색 결과 dict → records 통화 (종류 라벨을 meta 앞에)."""
+    records = []
+    for m in results.get('measurements', []):
+        records.append({
+            "title": category_to_korean(m['category']),
+            "meta": f"측정 · {m['measured_at'][:10]}",
+            "summary": format_measurement_value(m['category'], m['value']),
+            "url": "",
+        })
+    for s in results.get('symptoms', []):
+        records.append({
+            "title": category_to_korean(s['category']),
+            "meta": f"증상 · {s['started_at']}",
+            "summary": s.get('description') or '',
+            "url": "",
+        })
+    for m in results.get('medications', []):
+        records.append({
+            "title": m['name'],
+            "meta": f"투약 · {m['started_at']}",
+            "summary": " ".join(x for x in [m.get('dosage') or '', m.get('frequency') or ''] if x),
+            "url": "",
+        })
+    for d in results.get('documents', []):
+        records.append({
+            "title": doc_type_to_korean(d['doc_type']),
+            "meta": f"문서 · {d['recorded_at']}",
+            "summary": d.get('description') or '',
+            "url": "",
+        })
+    return records
 
 
 def format_measurements(measurements: list, category: str = None, person: str = None) -> str:

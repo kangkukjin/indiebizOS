@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "health_op",
-      "description": "건강 기록 관리 (op 분기). save/query/delete 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.\n\n파라미터: op: save | query | delete. save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete).",
+      "description": "건강 기록 관리 (op 분기). save/query/delete/ingest 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.\n\n파라미터: op: save | query | delete | ingest. save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 최상위(혈압은 value:\"128/85\" 또는 systolic/diastolic). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete). ingest — file(이미지/PDF/엑셀/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장(검사지·검진 결과, 원본은 문서로 보존).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,7 +17,8 @@
             "enum": [
               "save",
               "query",
-              "delete"
+              "delete",
+              "ingest"
             ]
           },
           "record_type": {

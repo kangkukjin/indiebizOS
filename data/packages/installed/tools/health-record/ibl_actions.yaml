@@ -6,7 +6,7 @@ actions:
     fixture: '[self:health]{op: "query", query_type: "medications"}'
     description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
     group: health
-    target_description: 'save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호).'
+    target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" 또는 systolic/diastolic). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
     target_key: op
     router: handler
     tool: health_op
@@ -20,6 +20,7 @@ actions:
         save: 건강 정보 저장 (info_type + data)
         query: 조회 (query_type + keyword 옵션)
         delete: 기록 삭제 (record_type + record_id)
+        ingest: 다형 입력 일괄 적재 — 텍스트/파일(이미지·PDF·엑셀·txt)을 AI가 구조화해 저장 (file/text + person)
     implementation: handler.py가 op로 분기 — save는 save_health_info, query는 get_health_context, delete는 delete_health_record(soft-delete tombstone).
     keywords:
     - 건강
@@ -29,6 +30,111 @@ actions:
     - 혈당
     - 체중
     - 투약
+    app:
+      instrument: health
+      icon: 🩺
+      name: 건강기록
+      order: 19
+      modes:
+      - name: 요약
+        auto_run: true
+        note: 최근 측정값·증상·복용 약·검사 기록을 한눈에 봅니다.
+        action: '[self:health]{op: "query", query_type: "summary"}'
+        view:
+        - type: blocks
+          from: blocks
+          empty_from: text
+      - name: 측정
+        auto_run: true
+        note: 종류를 골라 추이를 봅니다. 그래프는 첫 수치(혈압은 수축기) 기준입니다.
+        inputs:
+        - key: category
+          type: select
+          default: 혈압
+          options:
+          - { label: 혈압, value: 혈압 }
+          - { label: 혈당, value: 혈당 }
+          - { label: 체중, value: 체중 }
+          - { label: 심박수, value: 심박수 }
+          - { label: 체온, value: 체온 }
+          - { label: 전체, value: 측정기록 }
+        - { key: days, type: text, default: '365' }
+        action: '[self:health]{op: "query", query_type: "$category", days: "$days"}'
+        view:
+        - type: sparkline
+          from: points
+          y: value
+        - type: blocks
+          from: blocks
+          empty_from: message
+      - name: 투약
+        auto_run: true
+        action: '[self:health]{op: "query", query_type: "medications"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+      - name: 기록
+        auto_run: false
+        note: 측정값을 저장합니다. 혈압은 128/85 처럼 수축기/이완기로 적으세요.
+        inputs:
+        - key: category
+          type: select
+          default: 혈압
+          options:
+          - { label: 혈압, value: 혈압 }
+          - { label: 혈당, value: 혈당 }
+          - { label: 체중, value: 체중 }
+          - { label: 심박수, value: 심박수 }
+          - { label: 체온, value: 체온 }
+          - { label: 산소포화도, value: 산소포화도 }
+        - { key: value, type: text, required: true, placeholder: '값 (예 128/85, 96.5, 72.3)' }
+        - { key: note, type: text, placeholder: '메모 (선택)' }
+        action: '[self:health]{op: "save", category: "$category", value: "$value", note: "$note"}'
+        view:
+        - type: kv
+          rows:
+          - k: 결과
+            v: '{message}'
+      - name: 올리기
+        auto_run: false
+        note: 검사지 사진·PDF·엑셀·텍스트 파일을 올리거나 메모만 적어도 됩니다 (예 "오늘 아침 혈압 128/85"). AI가 정리해 건강기록에 넣고, 원본 파일은 문서로 보존됩니다.
+        inputs:
+        - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }
+        - { key: text, type: text, placeholder: '메모 또는 붙여넣기 (선택)' }
+        action: '[self:health]{op: "ingest", file: "$file", text: "$text"}'
+        view:
+        - type: kv
+          rows:
+          - k: 결과
+            v: '{message}{error}'
+        - type: card_list
+          from: items
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+      - name: 검색
+        auto_run: false
+        note: 키워드로 측정·증상·투약·문서 기록을 찾습니다.
+        inputs:
+        - { key: keyword, type: text, required: true, placeholder: '예 혈액검사, 두통' }
+        action: '[self:health]{op: "query", query_type: "search", keyword: "$keyword"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
@@ -40,11 +146,13 @@ tool_json:
     version: 1.1.0
   tools:
   - name: health_op
-    description: '건강 기록 관리 (op 분기). save/query/delete 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
+    description: '건강 기록 관리 (op 분기). save/query/delete/ingest 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
 
 
-      파라미터: op: save | query | delete. save — info_type(혈압/혈당/체중/증상/투약/문서 등) + data(측정값/내용). query — query_type(summary/search/측정기록/증상/투약/문서
-      또는 혈압/혈당/체중) + keyword 옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete).'
+      파라미터: op: save | query | delete | ingest. save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 최상위(혈압은 value:"128/85" 또는 systolic/diastolic).
+      증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person
+      옵션. delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호, soft-delete). ingest — file(이미지/PDF/엑셀/텍스트 경로) 또는 text 를 AI가
+      구조화해 일괄 저장(검사지·검진 결과, 원본은 문서로 보존).'
     input_schema:
       type: object
       properties:

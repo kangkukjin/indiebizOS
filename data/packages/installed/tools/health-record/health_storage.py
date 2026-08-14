@@ -41,8 +41,20 @@ DATA_DIR = os.path.join(_USERDATA, 'health') if _USERDATA else os.path.join(_DAT
 DB_PATH = os.path.join(DATA_DIR, 'health_records.db')
 IMAGES_DIR = os.path.join(DATA_DIR, 'images')
 
-# 기본 사용자 (명시하지 않을 경우)
-DEFAULT_PERSON = "강국진"
+# 기본 사용자 (person 미지정 시) — 소스는 설치 데이터 data/health/config.json 의
+# default_person ('명사의 자리': 세계의 명사는 코드가 아니라 데이터에). 없으면 "나".
+# ★기존 설치는 config.json 이 기존 기본 인물을 그대로 가리켜야 데이터가 안 갈라진다.
+def _load_default_person() -> str:
+    try:
+        with open(os.path.join(DATA_DIR, 'config.json'), encoding='utf-8') as f:
+            name = (json.load(f).get('default_person') or '').strip()
+        if name:
+            return name
+    except (OSError, ValueError):
+        pass
+    return "나"
+
+DEFAULT_PERSON = _load_default_person()
 
 
 def get_db_connection():

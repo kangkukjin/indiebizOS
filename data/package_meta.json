@@ -94,6 +94,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "finance-record": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "gmail": {
       "needs_key": [],
       "weight": "light",
@@ -222,11 +227,6 @@
       "weight": "heavy",
       "locale": "kr"
     },
-    "spending": {
-      "needs_key": [],
-      "weight": "light",
-      "locale": "universal"
-    },
     "startup": {
       "needs_key": [
         "DATA_GO_KR_API_KEY"
@@ -327,6 +327,7 @@
     "self:edit": "system_essentials",
     "self:file_find": "system_essentials",
     "self:fill": "system_essentials",
+    "self:finance": "finance-record",
     "self:folder_note": "pc-manager",
     "self:forage": "pc-manager",
     "self:grep": "system_essentials",
@@ -349,7 +350,6 @@
     "self:script": "system_essentials",
     "self:sheet": "system_essentials",
     "self:slide": "lecture_workspace",
-    "self:spend": "spending",
     "self:storage": "pc-manager",
     "self:time": "system_essentials",
     "self:webapp": "system_essentials",

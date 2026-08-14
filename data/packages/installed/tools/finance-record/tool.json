@@ -1,0 +1,42 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "finance-record",
+  "name": "Finance Record",
+  "description": "재무 기록 및 조회 도구. 지출·수입 거래와 자산·부채 소유 현황을 저장하고 분석합니다. 주체(개인/회사)별 관리, 폰 결제 알림 수거(하나카드·청주페이), 월간 요약, 순자산 계산, 영수증·가계부 AI 적재.",
+  "version": "1.1.0",
+  "tools": [
+    {
+      "name": "finance_op",
+      "description": "재무 기록 관리 (op 분기). save/query/delete/ingest/sync 통합 — 지출·수입·자산·부채 모두 한 액션, 주체(owner)로 개인/회사 분리.\n\n파라미터: op: save | query | delete | ingest | sync. save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회 출력의 #번호, soft-delete). ingest — file(영수증/PDF/엑셀/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰(USB) 결제 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — target_description 참조",
+            "enum": [
+              "save",
+              "query",
+              "delete",
+              "ingest",
+              "sync"
+            ]
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "transaction",
+              "holding"
+            ],
+            "description": "delete 시 삭제할 기록 종류"
+          },
+          "record_id": {
+            "type": "integer",
+            "description": "delete 시 삭제할 기록 번호 (조회 출력의 #번호)"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  ]
+}

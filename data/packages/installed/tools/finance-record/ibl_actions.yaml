@@ -1,0 +1,237 @@
+node: self
+actions:
+  finance:
+    returns: items
+    side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
+    fixture: '[self:finance]{op: "query", query_type: "summary"}'
+    runs_on: pc_only
+    description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
+    group: finance
+    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회 출력의 #번호). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+    target_key: op
+    router: handler
+    tool: finance_op
+    aliases:
+      keyword: [query, q]
+    ops:
+      returns:
+        save: effect
+        delete: effect
+        sync: effect
+      side_effect:
+        query: false
+      values:
+        save: 재무 정보 저장 (kind + 금액/이름 평탄형)
+        query: 조회 (query_type + month/days/keyword/source/owner)
+        delete: 기록 삭제 (record_type + record_id)
+        ingest: 다형 입력 일괄 적재 — 영수증 사진·PDF·엑셀 가계부·텍스트를 AI가 구조화해 저장 (file/text + owner)
+        sync: 폰(USB) 결제 알림 수거 → 지출 병합 (하나카드·청주페이, 지우기 전에 수거)
+    implementation: handler.py가 op로 분기 — save/query/delete/ingest/sync. 저장=finance_storage.py(data/finance/finance_records.db, 주체·거래·소유 3테이블+sync_log, soft-delete·ext_id dedup). ingest=공용 backend/services/ingest_engine.py 재사용, sync=finance_sync.py(구 spending 패키지 수거기 이식 — adb dumpsys 활성 알림 파싱, 취소=음수 지출, 충전=원장 제외).
+    keywords:
+    - 재무
+    - 재무기록
+    - 지출
+    - 지출내역
+    - 가계부
+    - 카드값
+    - 결제 내역
+    - 하나카드
+    - 청주페이
+    - 수입
+    - 자산
+    - 부채
+    - 순자산
+    - 회사 재무
+    app:
+      instrument: finance
+      icon: 💰
+      name: 재무기록
+      order: 18
+      modes:
+      - name: 지출
+        auto_run: true
+        note: 이번 달 지출입니다. 폰을 USB 로 연결하고 '지금 수거하기'를 누르면 결제 알림에서 카드 내역을 가져옵니다. 알림을 지우기 전에 수거해야 내역이 남습니다.
+        action: '[self:finance]{op: "query", query_type: "지출"}'
+        view:
+        - type: kv
+          title: 이번 달
+          rows:
+          - k: 💰 지출 합계
+            v: '{total_label}'
+          - k: 🧾 건수
+            v: '{count}건'
+          - k: 🔄 마지막 수거
+            v: '{last_sync}'
+        - type: list_action
+          from: sync_prompt
+          icon: 📥
+          title: 지금 수거하기 (폰 USB 연결 필요)
+          sub: '{hint}'
+          button:
+            label: 수거
+            action: '[self:finance]{op: "sync"}'
+            refresh: true
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+      - name: 통계
+        auto_run: true
+        note: 이번 달 통계입니다. 취소·환불은 합계에서 뺍니다.
+        action: '[self:finance]{op: "query", query_type: "summary"}'
+        view:
+        - type: kv
+          title: '{month}'
+          rows:
+          - k: 💸 지출
+            v: '{expense_label}'
+          - k: 💵 수입
+            v: '{income_label}'
+          - k: 💳 하나카드
+            v: '{hana_label}'
+          - k: 🏙️ 청주페이
+            v: '{cjpay_label}'
+          - k: 🔄 마지막 수거
+            v: '{last_sync}'
+        - type: kv_list
+          title: 상위 가맹점·분류
+          from: items
+          k: '{merchant}'
+          v: '{amount_label} ({count}건)'
+        - type: blocks
+          from: blocks
+          empty_from: text
+      - name: 거래
+        auto_run: true
+        note: 그래프는 일자별 지출 합계입니다. 가맹점·메모 검색과 주체(개인/회사) 분리를 지원합니다.
+        inputs:
+        - key: owner
+          type: select
+          label: 주체
+          options_action: '[self:finance]{op: "query", query_type: "owners"}'
+          options_from: items
+          option_value: title
+          option_label: title
+        - key: tx
+          type: select
+          default: 거래
+          options:
+          - { label: 전체, value: 거래 }
+          - { label: 지출, value: 지출 }
+          - { label: 수입, value: 수입 }
+        - { key: days, type: text, default: '31' }
+        - { key: keyword, type: text, placeholder: '가맹점·메모 검색' }
+        action: '[self:finance]{op: "query", query_type: "$tx", days: "$days", keyword: "$keyword", owner: "$owner"}'
+        view:
+        - type: sparkline
+          from: points
+          y: value
+        - type: blocks
+          from: blocks
+          empty_from: message
+      - name: 자산
+        auto_run: true
+        note: 이름별 최신 평가액입니다. 같은 이름을 다시 기록하면 추이가 쌓입니다.
+        inputs:
+        - key: owner
+          type: select
+          label: 주체
+          options_action: '[self:finance]{op: "query", query_type: "owners"}'
+          options_from: items
+          option_value: title
+          option_label: title
+        action: '[self:finance]{op: "query", query_type: "자산", owner: "$owner"}'
+        view:
+        - type: kv
+          rows:
+          - k: 🏦 자산
+            v: '{asset_label}'
+          - k: 💳 부채
+            v: '{liability_label}'
+          - k: ∑ 순자산
+            v: '{networth_label}'
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+      - name: 기록
+        auto_run: false
+        note: 지출·수입을 바로 적습니다. 금액은 원 단위 (예 12000, 3.5만). 주체를 비우면 기본 주체입니다.
+        inputs:
+        - key: kind
+          type: select
+          default: 지출
+          options:
+          - { label: 지출, value: 지출 }
+          - { label: 수입, value: 수입 }
+        - { key: amount, type: text, required: true, placeholder: '금액 (원)' }
+        - { key: category, type: text, placeholder: '분류 (예 식비)' }
+        - { key: counterparty, type: text, placeholder: '가맹점/거래처' }
+        - { key: owner, type: text, placeholder: '주체 (비우면 기본)' }
+        action: '[self:finance]{op: "save", kind: "$kind", amount: "$amount", category: "$category", counterparty: "$counterparty", owner: "$owner"}'
+        view:
+        - type: kv
+          rows:
+          - k: 결과
+            v: '{message}{error}'
+      - name: 올리기
+        auto_run: false
+        note: 영수증 사진·엑셀 가계부·PDF·텍스트를 올리거나 메모만 적어도 됩니다 (예 "어제 점심 12,000원 김밥천국"). AI가 정리해 재무기록에 넣습니다.
+        inputs:
+        - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }
+        - { key: text, type: text, placeholder: '메모 또는 붙여넣기 (선택)' }
+        - { key: owner, type: text, placeholder: '주체 (비우면 기본)' }
+        action: '[self:finance]{op: "ingest", file: "$file", text: "$text", owner: "$owner"}'
+        view:
+        - type: kv
+          rows:
+          - k: 결과
+            v: '{message}{error}'
+        - type: card_list
+          from: items
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+
+# tool.json 파생 원본 — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+tool_json:
+  header:
+    id: finance-record
+    name: Finance Record
+    description: 재무 기록 및 조회 도구. 지출·수입 거래와 자산·부채 소유 현황을 저장하고 분석합니다. 주체(개인/회사)별 관리, 폰 결제 알림 수거(하나카드·청주페이), 월간 요약, 순자산 계산, 영수증·가계부 AI 적재.
+    version: 1.1.0
+  tools:
+  - name: finance_op
+    description: '재무 기록 관리 (op 분기). save/query/delete/ingest/sync 통합 — 지출·수입·자산·부채 모두 한 액션, 주체(owner)로 개인/회사 분리.
+
+
+      파라미터: op: save | query | delete | ingest | sync. save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type.
+      query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회
+      출력의 #번호, soft-delete). ingest — file(영수증/PDF/엑셀/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰(USB) 결제 알림 수거→지출 병합(알림을 지우기 전에 수거).
+      전 op 공통 owner(주체 — 미지정=기본).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: 동작 분기 — target_description 참조
+        record_type:
+          type: string
+          enum:
+          - transaction
+          - holding
+          description: delete 시 삭제할 기록 종류
+        record_id:
+          type: integer
+          description: 'delete 시 삭제할 기록 번호 (조회 출력의 #번호)'
+      additionalProperties: true

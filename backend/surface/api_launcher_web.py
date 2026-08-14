@@ -221,7 +221,7 @@ def _instruments_mtime() -> float:
 # app 블록에서 모드(탭) 레벨로 그대로 전달되는 필드
 # phone_render 포함: 포털(개인 커뮤니티 홈)이 매니페스트에서 "브라우저에 못 싣는 모드"
 # (맥 스피커·네이티브 창 등)를 걸러내는 데 쓴다 — 렌더러들은 미지 필드를 무시하므로 무해.
-_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter", "phone_render")
+_APP_MODE_FIELDS = ("note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter", "phone_render", "run_label")
 
 # 폰 프로파일(#3 runs_on): INDIEBIZ_PROFILE=phone 이면 phone_manifest.json 의 runnable_actions 에
 # 없는 계기(=폰서 못 도는 액션)를 홈 그리드에서 숨긴다. PC(프로파일 미설정)면 필터 없음.

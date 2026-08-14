@@ -164,6 +164,7 @@ actions:
             - '{summary}'
       - name: 기록
         auto_run: false
+        run_label: 저장
         note: 지출·수입을 바로 적습니다. 금액은 원 단위 (예 12000, 3.5만). 주체를 비우면 기본 주체입니다.
         inputs:
         - key: kind
@@ -184,6 +185,7 @@ actions:
             v: '{message}{error}'
       - name: 올리기
         auto_run: false
+        run_label: 올리기
         note: 영수증 사진·엑셀 가계부·PDF·텍스트를 올리거나 메모만 적어도 됩니다 (예 "어제 점심 12,000원 김밥천국"). AI가 정리해 재무기록에 넣습니다.
         inputs:
         - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }

@@ -3398,6 +3398,7 @@ nodes:
                 - '{summary}'
           - name: 기록
             auto_run: false
+            run_label: 저장
             note: 지출·수입을 바로 적습니다. 금액은 원 단위 (예 12000, 3.5만). 주체를 비우면 기본 주체입니다.
             inputs:
             - key: kind
@@ -3429,6 +3430,7 @@ nodes:
                 v: '{message}{error}'
           - name: 올리기
             auto_run: false
+            run_label: 올리기
             note: 영수증 사진·엑셀 가계부·PDF·텍스트를 올리거나 메모만 적어도 됩니다 (예 "어제 점심 12,000원 김밥천국"). AI가 정리해 재무기록에 넣습니다.
             inputs:
             - key: file
@@ -3576,6 +3578,7 @@ nodes:
                 - '{summary}'
           - name: 기록
             auto_run: false
+            run_label: 저장
             note: 측정값을 저장합니다. 혈압은 128/85 처럼 수축기/이완기로 적으세요.
             inputs:
             - key: category
@@ -3609,6 +3612,7 @@ nodes:
                 v: '{message}'
           - name: 올리기
             auto_run: false
+            run_label: 올리기
             note: 검사지 사진·PDF·엑셀·텍스트 파일을 올리거나 메모만 적어도 됩니다 (예 "오늘 아침 혈압 128/85"). AI가 정리해 건강기록에 넣고, 원본 파일은 문서로 보존됩니다.
             inputs:
             - key: file
@@ -3633,6 +3637,7 @@ nodes:
                 - '{summary}'
           - name: 검색
             auto_run: false
+            run_label: 검색
             note: 키워드로 측정·증상·투약·문서 기록을 찾습니다.
             inputs:
             - key: keyword

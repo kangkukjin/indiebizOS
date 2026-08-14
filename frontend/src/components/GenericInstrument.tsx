@@ -824,7 +824,7 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
             )
           )}
           <button onClick={() => run()}
-            className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700">조회</button>
+            className="px-4 py-2 rounded-lg bg-stone-800 text-white text-sm hover:bg-stone-700">{mode.run_label || '조회'}</button>
         </div>
       )}
 

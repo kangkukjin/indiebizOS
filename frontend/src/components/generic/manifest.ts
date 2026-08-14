@@ -132,6 +132,7 @@ export interface AppMode {
   view?: AppViewPrim[];
   filter?: AppFilter;  // 단일선택 필터 칩(기간·레벨 양용) — 클릭 즉시 그 값으로 재조회
   compose?: AppCompose;  // 하단 작성바 (커뮤니티 글 작성 등) — 전송 후 현재 뷰 자동 새로고침
+  run_label?: string;  // 입력줄 실행 버튼 라벨(기본 '조회') — 쓰기 모드는 '올리기'/'저장' 등
 }
 
 export interface AppInstrument extends AppMode {

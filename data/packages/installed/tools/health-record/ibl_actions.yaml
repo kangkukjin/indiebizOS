@@ -81,6 +81,7 @@ actions:
             - '{summary}'
       - name: 기록
         auto_run: false
+        run_label: 저장
         note: 측정값을 저장합니다. 혈압은 128/85 처럼 수축기/이완기로 적으세요.
         inputs:
         - key: category
@@ -103,6 +104,7 @@ actions:
             v: '{message}'
       - name: 올리기
         auto_run: false
+        run_label: 올리기
         note: 검사지 사진·PDF·엑셀·텍스트 파일을 올리거나 메모만 적어도 됩니다 (예 "오늘 아침 혈압 128/85"). AI가 정리해 건강기록에 넣고, 원본 파일은 문서로 보존됩니다.
         inputs:
         - { key: file, type: file, label: '파일', accept: 'image/*,.pdf,.txt,.md,.csv,.xlsx,.xls' }
@@ -122,6 +124,7 @@ actions:
             - '{summary}'
       - name: 검색
         auto_run: false
+        run_label: 검색
         note: 키워드로 측정·증상·투약·문서 기록을 찾습니다.
         inputs:
         - { key: keyword, type: text, required: true, placeholder: '예 혈액검사, 두통' }

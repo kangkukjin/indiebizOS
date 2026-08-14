@@ -88,7 +88,7 @@ function setMode(i){
           +'<button class="btn2" type="button" id="infb_'+esc(inp.key)+'" data-label="\\ud83d\\udcce '+esc(inp.label||'파일')+'" onclick="document.getElementById(\\'inf_'+esc(inp.key)+'\\').click()">\\ud83d\\udcce '+esc(inp.label||'파일')+'</button>'
           +'<span class="muted" id="infl_'+esc(inp.key)+'" style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;align-self:center"></span>';
       return '<input class="field" style="min-width:0" id="in_'+esc(inp.key)+'" value="'+esc(loadInpVal(inst.id,mode.id,inp.key,inp.default))+'" placeholder="'+esc(inp.placeholder||'')+'" onchange="saveInpVals()" onkeydown="if(event.key===\\'Enter\\')runMode()">';
-    }).join('')+'<button class="go" onclick="runMode()">조회</button></div>';
+    }).join('')+'<button class="go" onclick="runMode()">'+esc(mode.run_label||'조회')+'</button></div>';
   }
   inputs.forEach(inp=>{
     if(inp.chips&&inp.chips.length)

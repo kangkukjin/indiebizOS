@@ -35,6 +35,8 @@ APP_AIDOCK_MODES = {"replace", "append"}
 APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
             "phone_render",
+            # run_label: 입력줄 실행 버튼 라벨(기본 '조회') — 쓰기 모드(올리기·기록)에서 '올리기'/'저장' 등
+            "run_label",
             # top_buttons: 탭과 무관하게 계기 최상단에 항상 보이는 버튼(소개발행 등). 인스트루먼트 레벨.
             "top_buttons",
             # system: true = 런처 직속 시스템 표면(메신저·커뮤니티) — 데스크탑 앱 그리드에서 제외,

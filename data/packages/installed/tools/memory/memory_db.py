@@ -13,6 +13,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
+try:
+    # 영속 관문 마스킹 — 에피소드 로그와 같은 원칙(모든 ingest 에서 자격증명 마스킹).
+    # backend/base/logging_utils (boot_paths 로 bare import 가능).
+    from logging_utils import mask_secrets
+except ImportError:  # 백엔드 프로세스 밖 단독 사용 시 통과
+    def mask_secrets(text):
+        return text
+
 EMBEDDING_DIM = 768
 SEMANTIC_THRESHOLD = 0.4   # 시맨틱 유사도 컷오프 (이하 무시)
 # 검색 전략: 해마(ibl_usage_db)와 동일하게 시맨틱 100% 우선, LIKE는 폴백
@@ -228,7 +236,8 @@ def _ensure_schema(db_path: str):
                 keywords TEXT DEFAULT '',
                 content TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                used_at DATETIME DEFAULT NULL
+                used_at DATETIME DEFAULT NULL,
+                source_ref TEXT DEFAULT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_mem_keywords ON memories(keywords);
             CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(category);
@@ -251,17 +260,22 @@ def get_db(project_path: str, agent_id: str):
             keywords TEXT DEFAULT '',
             content TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            used_at DATETIME DEFAULT NULL
+            used_at DATETIME DEFAULT NULL,
+            source_ref TEXT DEFAULT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_mem_keywords ON memories(keywords);
         CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(category);
     ''')
 
-    # 기존 DB에 used_at 컬럼이 없으면 추가
+    # 기존 DB에 used_at / source_ref 컬럼이 없으면 추가
     try:
         conn.execute("SELECT used_at FROM memories LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE memories ADD COLUMN used_at DATETIME DEFAULT NULL")
+    try:
+        conn.execute("SELECT source_ref FROM memories LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE memories ADD COLUMN source_ref TEXT DEFAULT NULL")
 
     return conn
 
@@ -271,16 +285,25 @@ def get_db(project_path: str, agent_id: str):
 # =============================================================================
 
 def save(project_path: str, agent_id: str,
-         content: str, keywords: str = "", category: str = "") -> int:
-    """메모리 저장 (임베딩 자동 인덱싱)"""
+         content: str, keywords: str = "", category: str = "",
+         source_ref: str = None) -> int:
+    """메모리 저장 (임베딩 자동 인덱싱)
+
+    source_ref: 이 기억의 출처(발화 스팬·task id 등 JSON 문자열). 기억은 출처를 기억한다.
+    """
     category = normalize_category(category)
+    content = mask_secrets(content)
+    keywords = mask_secrets(keywords)
+    if source_ref:
+        source_ref = mask_secrets(source_ref)
     db_path = _get_db_path(project_path, agent_id)
     conn = get_db(project_path, agent_id)
     try:
         now = datetime.now().isoformat()
         conn.execute(
-            "INSERT INTO memories (category, keywords, content, created_at) VALUES (?, ?, ?, ?)",
-            (category, keywords, content, now)
+            "INSERT INTO memories (category, keywords, content, created_at, source_ref) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (category, keywords, content, now, source_ref)
         )
         conn.commit()
         mem_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -427,19 +450,23 @@ def read(project_path: str, agent_id: str, memory_id: int) -> Optional[Dict]:
 
 
 def update(project_path: str, agent_id: str, memory_id: int,
-           content: str = None, keywords: str = None, category: str = None) -> bool:
+           content: str = None, keywords: str = None, category: str = None,
+           source_ref: str = None) -> bool:
     """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성)"""
     db_path = _get_db_path(project_path, agent_id)
+    get_db(project_path, agent_id).close()  # source_ref 등 지연 마이그레이션 보장
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         sets, params = [], []
         if content is not None:
-            sets.append("content = ?"); params.append(content)
+            sets.append("content = ?"); params.append(mask_secrets(content))
         if keywords is not None:
-            sets.append("keywords = ?"); params.append(keywords)
+            sets.append("keywords = ?"); params.append(mask_secrets(keywords))
         if category is not None:
             sets.append("category = ?"); params.append(normalize_category(category))
+        if source_ref is not None:
+            sets.append("source_ref = ?"); params.append(mask_secrets(source_ref))
 
         if not sets:
             now = datetime.now().isoformat()

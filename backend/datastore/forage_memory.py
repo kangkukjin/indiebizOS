@@ -22,6 +22,8 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from logging_utils import mask_secrets  # 영속 관문 마스킹(에피소드 로그와 같은 원칙)
+
 _DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..", "data", "forage_memory.db")
 
 # 형성 시점 mtime 과 현재 mtime 차이가 이보다 크면 stale(디스크 변경). 초.
@@ -207,7 +209,12 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
         return {"success": False, "error": f"kind 는 {_MAP_KINDS} 중 하나여야 합니다 (받음: {kind})"}
     if prior_class not in _PRIOR_CLASSES:
         prior_class = "structural"
+    claim = mask_secrets(claim)
+    if prune_reason:
+        prune_reason = mask_secrets(prune_reason)
     prov = dict(provenance or {})
+    if prov.get("query"):
+        prov["query"] = mask_secrets(prov["query"])
     prov.setdefault("formed_at", _now())
     conf = _clamp_conf(confidence, 0.7)
     mtime = _locus_mtime(locus)
@@ -266,7 +273,10 @@ def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
         return {"success": False, "error": f"facet 은 {_OWNER_FACETS} 중 하나여야 합니다 (받음: {facet})"}
     if prior_class not in _PRIOR_CLASSES:
         prior_class = "semantic"
+    value = mask_secrets(value)  # upsert 키이기도 하므로 SELECT 이전에 마스킹
     prov = dict(provenance or {})
+    if prov.get("query"):
+        prov["query"] = mask_secrets(prov["query"])
     prov.setdefault("formed_at", _now())
     conf = _clamp_conf(confidence, 0.6)
     now = _now()

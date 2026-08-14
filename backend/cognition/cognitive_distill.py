@@ -184,11 +184,17 @@ class CognitiveDistillMixin:
                 sys.path.insert(0, mem_pkg)
             import memory_db
 
-            from thread_context import get_current_agent_id
+            from thread_context import get_current_agent_id, get_current_task_id
             from consciousness_agent import lightweight_ai_call
 
             agent_id = get_current_agent_id()
             project_path = str(self.project_path)
+
+            # 기억은 출처를 기억한다 — 추출된 사실(claim)과 별개로 원 발화 스팬을 동봉.
+            # 나중에 "이 기억이 어디서 왔나"를 대조할 수 있는 최소 단위(검증 기관 없이 기록만).
+            source_ref = json.dumps(
+                {"utterance": user_message[:200], "task": get_current_task_id() or ""},
+                ensure_ascii=False)
 
             # 1단계: 대화에서 기억할 정보 조각 추출
             extract_prompt = f"""다음 대화에서 나중에 기억해둘 만한 사실 정보를 추출하라.
@@ -249,7 +255,7 @@ AI: {ai_response[:500]}"""
                     memory_db.save(
                         project_path=project_path, agent_id=agent_id,
                         content=content, keywords=fact["keywords"],
-                        category=fact["category"],
+                        category=fact["category"], source_ref=source_ref,
                     )
                     saved_count += 1
                     print(f"[심층메모리] NEW [{fact['category']}]: \"{content[:50]}\"")
@@ -289,10 +295,11 @@ AI: {ai_response[:500]}"""
                     memory_db.update(project_path, agent_id, top["id"])
                     print(f"[심층메모리] SAME 스킵: \"{content[:50]}\"")
                 elif "REPLACE" in j:
-                    # 정정 → 기존을 새 정보로 덮어쓰기 (옛/틀린 정보 폐기)
+                    # 정정 → 기존을 새 정보로 덮어쓰기 (옛/틀린 정보 폐기, 출처도 새 발화로 교체)
                     merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
                     memory_db.update(project_path, agent_id, top["id"],
-                                     content=content, keywords=merged_kw)
+                                     content=content, keywords=merged_kw,
+                                     source_ref=source_ref)
                     updated_count += 1
                     print(f"[심층메모리] REPLACE: \"{content[:50]}\" → 기존 ID {top['id']} 덮어씀")
                 elif "UPDATE" in j:
@@ -305,7 +312,8 @@ AI: {ai_response[:500]}"""
                     print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
                 else:  # NEW (또는 불명)
                     memory_db.save(project_path=project_path, agent_id=agent_id,
-                                   content=content, keywords=keywords, category=category)
+                                   content=content, keywords=keywords, category=category,
+                                   source_ref=source_ref)
                     saved_count += 1
                     print(f"[심층메모리] NEW [{category}]: \"{content[:50]}\"")
 

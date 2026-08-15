@@ -70,6 +70,42 @@
       }
     },
     {
+      "name": "data_rename",
+      "description": "records|table → 열/필드 이름 바꾸기. map({옛이름: 새이름}, 필수). 없는 이름·충돌=명시 에러, 값 무변경. 소스가 다른 두 통화의 join 전 키 맞추기. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "map": {
+            "type": "object",
+            "description": "{옛이름: 새이름} 딕셔너리."
+          }
+        },
+        "required": [
+          "map"
+        ]
+      }
+    },
+    {
+      "name": "data_flatten",
+      "description": "records → 행 속 중첩 목록 펼치기(unnest). field(경로, 기본 \"_result\"), keep(각 행에 승계할 부모 필드 배열). each 출력의 _result 를 한 표로 모을 때. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "중첩 목록 경로(점 표기, 기본 \"_result\"). 값이 {items:[...]} 봉투면 items 자동 승격."
+          },
+          "keep": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "각 펼친 행에 승계할 부모 필드 이름들(충돌 시 _2 접미)."
+          }
+        }
+      }
+    },
+    {
       "name": "data_dedup",
       "description": "records|table → 중복 제거(첫 항목 유지). by(키 필드/열, records 기본 title·table 기본 첫 열). 정규화 후 비교. >> 앞 통화를 받음.",
       "input_schema": {
@@ -104,13 +140,19 @@
     },
     {
       "name": "data_join",
-      "description": "table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력. 예: [A] & [B] >> [table:join]{on:\"연도\"}.",
+      "description": "table×table → 키 열로 inner join. on(양쪽 공통 키 열, 필수). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력, 또는 left/right 에 직접(변수 참조 가능). 예: [A] & [B] >> [table:join]{on:\"연도\"}.",
       "input_schema": {
         "type": "object",
         "properties": {
           "on": {
             "type": "string",
             "description": "조인 키 열 이름(양쪽 table에 모두 존재)."
+          },
+          "left": {
+            "description": "좌측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
+          },
+          "right": {
+            "description": "우측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
           }
         },
         "required": [

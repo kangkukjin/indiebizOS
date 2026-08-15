@@ -6899,6 +6899,43 @@ nodes:
         - 투영
         - select
         - 골라
+      rename:
+        returns: transform
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기.
+        target_description: 'map({옛이름: 새이름} 딕셔너리, 필수). items·table 둘 다. 없는 이름·이름 충돌=명시 에러(값 무변경·비파괴). 예: [sense:realty]{source: "molit", region: "청주"} >> [table:rename]{map: {"아파트명": "단지명"}} — 이후 join{on: "단지명"} 이 성립.'
+        group: transform
+        router: handler
+        tool: data_rename
+        aliases:
+          map:
+          - columns
+        implementation: data-ops handler.py — table 열 이름/records dict 키 재명명. 교환(A↔B) 원자적 허용.
+        target_key: map
+        keywords:
+        - 이름바꾸기
+        - 열이름
+        - rename
+        - 개명
+        - 키맞추기
+      flatten:
+        returns: transform
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자 — 행 속 중첩 목록을 펼쳐(unnest) 행들로. each 결과를 한 표로 모으는 출구.
+        target_description: 'field(중첩 목록 경로, 기본 "_result" — each 가 행에 붙인 결과 자리. 점 표기 "_result.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. 예: ... >> [table:each]{do: "[sense:crawl]{url: \"$it.url\"}"} >> [table:flatten]{} >> [table:document]{}.'
+        group: transform
+        router: handler
+        tool: data_flatten
+        implementation: data-ops handler.py — 행별 field 경로에서 목록 추출·concat. items 전용.
+        target_key: field
+        keywords:
+        - 펼치기
+        - 중첩
+        - flatten
+        - unnest
+        - 풀기
       dedup:
         returns: transform
         runs_on: anywhere
@@ -6938,7 +6975,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
-        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). 표형 table 입력=열 기준, items=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
+        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수). 표형 table 입력=열 기준, items=필드 기준. 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: "$a", right: "$b", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
         group: transform
         router: handler
         tool: data_join

@@ -44,7 +44,7 @@ IBL 표현 계층:     [node:action]{params}
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
 1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), `$변수`·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar). 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다.
-2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 14 액션 중 **`each` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — 데이터가 아니라 *문장*을 인자로 받는 고차 어휘이고 실행이 `execute_ibl` 재귀라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 13 변환자는 data-ops 패키지 fragment.
+2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 16 액션 중 **`each` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — 데이터가 아니라 *문장*을 인자로 받는 고차 어휘이고 실행이 `execute_ibl` 재귀라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
 
 **개인 사전** — 그 외 모든 내용어(sense·limbs·engines의 액션들). 정의(`ibl_nodes_src/`·패키지 `ibl_actions.yaml`)·구현(패키지 핸들러)·파라미터 별칭(`aliases:`)·프롬프트 설명까지 전부 데이터가 소유한다.
 
@@ -186,12 +186,12 @@ IBL의 진짜 엔진은 142개 액션이 아니라 `>>`(순차) `&`(병렬) `??`
 
 5개 몸-노드(sense·self·limbs·others·engines)는 **에이전트가 세계와 맺는 관계(작용의 거처)**로 가른다 — 지각/내 자원/세계에 작용/소통/생산. 다섯 모두 *데이터 평면 바깥의 무언가*를 건드린다. 이건 **열린 계급**(내용어)의 분류다: 도메인마다 무한히 자라는 명사들(`sense:price`, `self:photo`…).
 
-그런데 **통화 변환자·emitter**(filter·sort·take·select·dedup·groupby·join·union·merge + chart·spreadsheet·document·structure)는 다르다. 통화→통화 순수·무상태 — 세계의 *어디도* 안 건드리고 통화 평면 *안*에서만 계산하거나 산출물로 방출한다. 이건 **닫힌 계급**(기능어)이다: 고정된 대수, 새 도메인이 생겨도 안 늘어남. 언어로 치면 몸-노드 액션=명사/동사, 변환자=전치사/접속사. 파이프 문법(`>>`·`&`·`??`)과 같은 *계급*이고, 인자를 들어야 해서(`filter where …`) 어휘화됐을 뿐 — **문법에 가깝다**(build script가 이미 "순수 superstructure, IBL 문법, 몸 무관"이라 부른다).
+그런데 **통화 변환자·emitter**(filter·sort·take·select·rename·flatten·dedup·groupby·join·union·merge + chart·spreadsheet·document·structure)는 다르다. 통화→통화 순수·무상태 — 세계의 *어디도* 안 건드리고 통화 평면 *안*에서만 계산하거나 산출물로 방출한다. 이건 **닫힌 계급**(기능어)이다: 고정된 대수, 새 도메인이 생겨도 안 늘어남. 언어로 치면 몸-노드 액션=명사/동사, 변환자=전치사/접속사. 파이프 문법(`>>`·`&`·`??`)과 같은 *계급*이고, 인자를 들어야 해서(`filter where …`) 어휘화됐을 뿐 — **문법에 가깝다**(build script가 이미 "순수 superstructure, IBL 문법, 몸 무관"이라 부른다).
 
 **원리**: 열린 계급을 담으려 만든 분류함(5 도메인)에 닫힌 계급은 구조적으로 안 들어간다. 초기엔 변환자를 engines에 *실용적 셋방*으로 얹어 두고 "이름 이전은 비싸니 `group: transform` 태그로만 계급을 드러내자"고 판단했으나(아래 옛 교훈), **2026-06-30 신규 `table` 노드로 분리**하며 태그-only 방침을 개정했다. 결정적 동기는 **노드 on/off**다: 무거운 engines(미디어 생성)를 꺼도 가벼운 통화 문법은 살아야 하는데, 태그만으론 그 켜고/끔 경계를 못 그린다. 그래서 닫힌 계급이 *자기 노드*를 갖고, engines는 **순수 미디어 생성**만 남았다.
 
 **그래서 어떻게 다루나** — 이제 `table` 노드가 계급의 거처다:
-- `table` 노드(13 액션: 변환자 9 + emitter 4)는 **기능어 코어**로 `always_on: true`다(`self`·`others`와 함께). 어떤 노드 선별에서도 꺼지지 않아 파이프라인이 항상 산다. (헌법: 위 "언어의 경계 — 표준과 사전" 조항)
+- `table` 노드(16 액션: 변환자 11 + emitter 4 + 고차 each 1)는 **기능어 코어**로 `always_on: true`다(`self`·`others`와 함께). 어떤 노드 선별에서도 꺼지지 않아 파이프라인이 항상 산다. (헌법: 위 "언어의 경계 — 표준과 사전" 조항)
 - 계약을 `--check`가 강제한다(`validate_transform_contract`): `scope: workspace`(무프로젝트 파이프서도 동작) + `runs_on: anywhere`(통화는 몸 무관). 새 변환자가 계약을 빠뜨리면 *침묵-실패 재발* 대신 빌드가 막는다.
 - 미래의 통화 연산자(`window`·`pivot`·`flatten`…)도 `table` 노드·같은 계약. 닫힌 계급은 *자기 노드로 드러나되* 5-몸 척추는 *열린 계급 전용*으로 깨끗이 유지된다.
 

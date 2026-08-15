@@ -35,7 +35,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `self` | 자기 — 나를 관리한다 | 목표, 일정, 기억, 승인, 알림, 파일, 워크플로우 등 개인 영역 |
 | `limbs` | 손발 — 장치를 조작한다 | 브라우저 클릭, 앱 제어, 미디어 재생, 기기 조작 |
 | `engines` | 엔진 — 생성한다 | 슬라이드·영상·이미지·신문·웹 등 미디어 산출물 제작 |
-| `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/dedup/groupby/join/union/merge)과 산출(chart/spreadsheet/document/structure) |
+| `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/rename/flatten/dedup/groupby/join/union/merge/each)과 산출(chart/spreadsheet/document/structure) |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
 **판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]`.
@@ -116,8 +116,8 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 액션은 `returns:`로 자기 역할을 선언한다: **items**(통화를 냄) · **transform**(통화→통화) · **scalar**(단일값·통화 아님) · **effect**(행동·종착).
 
 `table`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
-- **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}`
-- **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기)
+- **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `rename{map}`(열 이름 바꾸기) · `flatten{field}`(중첩 목록 펼치기) · `dedup{by}` · `groupby{by, agg}`
+- **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기) — 두 소스의 키 이름이 다르면 join 전에 `[table:rename]{map: {"아파트명": "단지명"}}` 으로 맞춘다(각 가지엔 파이프가 안 붙으므로 변수+`left`/`right` 파라미터로: `$a = [A] >> [table:rename]{...}` 후 `[table:join]{left: "$a", right: "$b", on: ...}`)
 - **고차** `each{do, as, limit}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다.
   ```
   [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}

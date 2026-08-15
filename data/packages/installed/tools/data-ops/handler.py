@@ -411,6 +411,58 @@ def _norm(s):
     return re.sub(r"\s+", " ", str(s or "").strip().lower())
 
 
+def _op_rename(prev, params):
+    """열/필드 이름 바꾸기(관계대수 ρ). map={옛이름: 새이름}. table·items 둘 다.
+
+    소스가 다른 두 통화를 join 으로 묶기 전 키 이름을 맞추는 용도(2026-08-16
+    molit '아파트명' vs naver 'title' 실측에서 어휘화). 없는 이름을 조용히 넘기거나
+    기존 열을 덮어쓰면 침묵 소실이라 전부 명시 에러. 교환(A↔B)은 원자적으로 허용.
+    """
+    m = params.get("map") or params.get("columns")
+    if not isinstance(m, dict) or not m:
+        return {"success": False, "error": (
+            'rename: map({옛이름: 새이름})이 필요합니다. '
+            '예: [table:rename]{map: {"아파트명": "단지명"}}')}
+    m = {str(k): str(v) for k, v in m.items()}
+    targets = list(m.values())
+    if len(set(targets)) != len(targets):
+        return {"success": False,
+                "error": f"rename: 새 이름이 서로 겹칩니다: {sorted(targets)} — 한 이름에 두 열을 접으면 값이 소실됩니다."}
+
+    table, env = _get_table(prev)
+    if table is not None:
+        src_cols = [str(c) for c in (table.get("columns") or [])]
+        missing = [k for k in m if k not in src_cols]
+        if missing:
+            return {"success": False,
+                    "error": f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
+        clash = [v for k, v in m.items() if v in src_cols and v not in m]
+        if clash:
+            return {"success": False,
+                    "error": f"rename: 새 이름 {clash} 이(가) 기존 열과 겹칩니다 — 덮어쓰면 그 열이 소실됩니다."}
+        new_cols = [m.get(c, c) for c in src_cols]
+        return _emit_table(env, {"columns": new_cols, "rows": table.get("rows") or []})
+
+    recs, env = _get_items(prev)
+    if recs is not None:
+        dict_recs = [r for r in recs if isinstance(r, dict)]
+        missing = [k for k in m if not any(k in r for r in dict_recs)]
+        if missing:
+            sample = sorted({kk for r in dict_recs[:20] for kk in r.keys()})[:12]
+            return {"success": False,
+                    "error": f"rename: 필드 {missing} 이(가) 없습니다. 행 필드 예: {sample}"}
+        clash = [v for k, v in m.items()
+                 if v not in m and any(v in r for r in dict_recs)]
+        if clash:
+            return {"success": False,
+                    "error": f"rename: 새 이름 {clash} 이(가) 기존 필드와 겹칩니다 — 덮어쓰면 그 값이 소실됩니다."}
+        out = []
+        for r in recs:
+            out.append({m.get(k, k): v for k, v in r.items()} if isinstance(r, dict) else r)
+        return _emit_items(env, out)
+    return {"success": False, "error": "rename: 입력에서 통화(items/table)를 찾지 못했습니다."}
+
+
 def _op_dedup(prev, params):
     """items|table → 중복 제거(첫 항목 유지). params.by(키 필드/열, 기본 title).
 
@@ -706,6 +758,76 @@ def _op_merge(prev, params):
     return _emit_items(_carry_flags(objs), out)
 
 
+def _op_flatten(prev, params):
+    """행 속 중첩 목록을 펼쳐(unnest) 행들로 — each 의 출구.
+
+    field(기본 "_result") 경로의 값이 목록이면 그 원소들이 새 행이 되고,
+    {items: [...]} 봉투면 items 로 자동 승격(each 가 do 결과를 _result 에 통째로
+    붙이는 계약의 짝). keep=[부모 필드]는 각 새 행에 승계(충돌 시 _2 접미 —
+    침묵 오선택 방지). 목록 아닌 행은 건너뛰되 skipped_rows 로 신고한다.
+    """
+    recs, env = _get_items(prev)
+    if recs is None:
+        t, _ = _get_table(prev)
+        if t is not None:
+            return {"success": False,
+                    "error": "flatten: items 통화 전용입니다(표형 table 셀엔 중첩 목록이 없습니다)."}
+        return {"success": False,
+                "error": "flatten: 입력에서 items 통화를 찾지 못했습니다. each 결과 뒤(>>)에 놓으세요."}
+    field = str(params.get("field") or "_result")
+    keep = params.get("keep") or []
+    if not isinstance(keep, list):
+        keep = [keep]
+    keep = [str(k) for k in keep]
+
+    def _dig(row, path):
+        cur = row
+        for part in path.split("."):
+            if not isinstance(cur, dict):
+                return None
+            cur = cur.get(part)
+        return cur
+
+    out = []
+    skipped = 0
+    for r in recs:
+        if not isinstance(r, dict):
+            skipped += 1
+            continue
+        v = _dig(r, field)
+        if isinstance(v, str):
+            # each 가 _result 를 JSON 문자열로 붙였을 수 있다 — 파싱 시도
+            try:
+                _p = json.loads(v)
+                if isinstance(_p, (dict, list)):
+                    v = _p
+            except Exception:
+                pass
+        if isinstance(v, dict) and isinstance(v.get("items"), list):
+            v = v["items"]
+        if not isinstance(v, list):
+            skipped += 1
+            continue
+        carry = {k: r.get(k) for k in keep if k in r}
+        for sub in v:
+            base = dict(sub) if isinstance(sub, dict) else {"value": sub}
+            if carry:
+                disp = _suffix_collisions(list(base.keys()), list(carry.keys()))
+                for (ck, cv), name in zip(carry.items(), disp):
+                    base[name] = cv
+            out.append(base)
+    if not out:
+        sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
+        return {"success": False,
+                "error": (f"flatten: field '{field}' 에서 목록을 가진 행이 없습니다"
+                          f"(행 {len(recs)}개 전부 건너뜀). 행 필드 예: {sample} — "
+                          f"each 뒤라면 field: \"_result\" 또는 \"_result.items\" 를 확인하세요.")}
+    res = _emit_items(env, out)
+    if skipped:
+        res["skipped_rows"] = skipped
+    return res
+
+
 def _suffix_collisions(base_cols, add_cols):
     """add_cols 이름이 base_cols(또는 서로)와 충돌하면 _2,_3.. 접미사 — *표시 이름만*.
     (읽기는 원본 이름으로 따로 한다. 동명 열이 겹치면 다운스트림 select/sort가 이름으로
@@ -734,6 +856,10 @@ def _op_join(prev, params):
     if not on:
         return {"success": False, "error": "join: on(조인 키 열 이름)이 필요합니다."}
     on = str(on)
+    # left/right 직접 공급(& 병렬 대신 — $변수 참조로 파이프 낀 가지를 먹일 때).
+    # 명시 파라미터가 파이프 입력보다 우선한다. (리터럴 get = 코퍼스-param 가드 가시성)
+    if params.get("left") is not None and params.get("right") is not None:
+        prev = [params.get("left"), params.get("right")]
     if isinstance(prev, list) and len(prev) > 2:
         # 셋째 분기를 조용히 버리지 않는다(⑧′ 부류) — join 은 이항 연산
         return {"success": False,
@@ -812,6 +938,8 @@ _DISPATCH = {
     "data_sort": _op_sort,
     "data_take": _op_take,
     "data_select": _op_select,
+    "data_rename": _op_rename,
+    "data_flatten": _op_flatten,
     "data_dedup": _op_dedup,
     "data_groupby": _op_groupby,
     "data_join": _op_join,

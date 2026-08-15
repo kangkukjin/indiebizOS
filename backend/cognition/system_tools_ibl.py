@@ -171,7 +171,13 @@ def _usage_origin(agent_id) -> str:
 
     앱/조종실 표면은 시스템 프로젝트 컨텍스트로 식별(직접조작 표면이 자기 project_id 를
     thread_context 에 명시하는 관습 재사용). 포털 게이트도 project_id=앱모드로 오므로 app.
-    자가점검(ibl_health_check)은 이 관문을 안 지나므로 계수 오염 없음."""
+
+    ★자가점검(ibl_health_check)은 /ibl/execute 에 agent_id="__self_check__" 로 POST 하므로
+    이 관문을 *지나간다* — 2026-08-15 이전에는 'agent' 로 오분류돼 실사용 계수를 오염시켰다
+    (11일 표본에서 agent 계수의 55%가 순찰분). 은퇴/압축 감사는 origin='selfcheck' 를
+    제외하고 읽을 것. 2026-08-15 이전의 origin='agent' 행에는 순찰분이 섞여 있다."""
+    if agent_id == "__self_check__":
+        return "selfcheck"
     try:
         from thread_context import get_current_project_id, get_current_surface
         pid = get_current_project_id()

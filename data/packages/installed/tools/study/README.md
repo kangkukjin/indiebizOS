@@ -39,10 +39,8 @@ AI 기반 학술 검색 (인용수, 영향력 분석 포함)
 ### download_pubmed_pdf
 PubMed Central(PMC) 논문 PDF 다운로드
 
-### fetch_pew_research (NEW)
-**Pew Research Center의 최신 연구 및 여론 조사 결과**
-- 사회적 이슈, 여론, 인구 통계 분야의 데이터 중심 분석
-- 최신 사회 트렌드 및 여론 조사 데이터 확인
+### ~~fetch_pew_research~~ (2026-08-15 은퇴)
+web 패키지 `[sense:feed]{url: "https://www.pewresearch.org/feed/"}` 로 일반화 — URL 하드코딩 복합어 제거.
 
 ### search_guardian (NEW)
 **The Guardian 기사 검색 및 아카이브 접근**

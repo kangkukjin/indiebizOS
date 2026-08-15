@@ -44,6 +44,43 @@ def load_module(module_name):
 # clean_html은 common.html_utils에서 임포트
 
 
+def _fetch_feed(tool_input: dict) -> dict:
+    """[sense:feed] — 범용 RSS/Atom 피드 읽기. 항목 구조(글별 제목/날짜/링크)를 보존해
+    레코드 통화 {title, meta, summary, url} 로 반환. source 이름은 피드 자신의 제목."""
+    if feedparser is None:
+        return {"success": False, "error": "feedparser 미설치 — pip install feedparser", "items": []}
+    url = (tool_input.get("url") or "").strip()
+    if not url.startswith(("http://", "https://")):
+        return {"success": False, "error": "url 파라미터에 피드 주소(http/https)가 필요합니다.", "items": []}
+    limit = int(tool_input.get("limit") or 10)
+    try:
+        feed = feedparser.parse(url)
+        source_name = (getattr(feed, "feed", {}) or {}).get("title") or url
+        if not feed.entries:
+            return {"success": True, "items": [], "count": 0,
+                    "message": f"{source_name}: 피드에 항목이 없습니다 (피드 URL 인지 확인 — HTML 페이지면 crawl 사용)."}
+        lines = [f"### {source_name} 최신 글 (최대 {limit}건)"]
+        records = []
+        for entry in feed.entries[:limit]:
+            title = entry.get("title", "제목 없음")
+            link = entry.get("link", "")
+            pub_date = entry.get("published", entry.get("updated", ""))
+            summary = re.sub(r"<[^<]+?>", "", entry.get("summary", entry.get("description", "")))
+            summary = clean_html(summary).strip() if summary else ""
+            if len(summary) > 200:
+                summary = summary[:200] + "..."
+            lines.append(f"- {title} ({pub_date})\n  {link}")
+            records.append({
+                "title": title,
+                "meta": " · ".join(x for x in [source_name, pub_date] if x),
+                "summary": summary,
+                "url": link,
+            })
+        return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
+    except Exception as e:
+        return {"success": False, "error": f"피드 읽기 오류 ({url}): {e}", "items": []}
+
+
 def _text_to_blocks(title, text):
     """비정형 텍스트 → 문서 IR blocks(heading + 문단들). 0-LLM. crawl·pdf 등 공용 패턴.
     빈 줄(\\n\\n)로 문단 분리, 너무 긴 문단은 그대로 둠(렌더가 처리)."""
@@ -631,6 +668,11 @@ def execute(tool_input: dict, context):
             return format_json(result)
         except Exception as e:
             return format_json({"success": False, "error": str(e)})
+
+    # RSS/Atom 피드 읽기 — [sense:feed]{url}. 구 sense:pew_research(URL 하드코딩 복합어)의
+    # 일반화(2026-08-15) — 어떤 사이트의 피드든 항목 구조를 보존해 레코드 통화로.
+    elif tool_name == "fetch_feed":
+        return format_json(_fetch_feed(tool_input))
 
     # 신문 발행 — 판 3파일 결정화([engines:newspaper]). 아래 search_gnews 배치 경로를
     # 그대로 재사용(shim 컨텍스트로 자기 재호출) — 취재·편성 로직 중복 없음.

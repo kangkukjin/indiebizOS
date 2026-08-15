@@ -703,6 +703,24 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
     """
     import asyncio
 
+    # 내장 도구 창 2종 — WS 런처 명령이 아니라 pending-queue 로 Electron 이 폴링해 연다.
+    # (구 limbs:explorer / limbs:photo_manager 의 흡수, 2026-08-15 — 창 여는 말은 open_window 하나.
+    #  큐는 base 층 window_requests 단일 저장소 — surface 모듈 직접 import 는 층 위반.)
+    if action in ("open_files", "open_explorer"):
+        try:
+            import window_requests
+            window_requests.request_window("files", params.get("path"))
+            return {"success": True, "message": f"PC Manager(파일) 창 열기 요청 — 경로: {params.get('path') or '홈'}"}
+        except Exception as e:
+            return {"success": False, "error": f"PC Manager 창 요청 실패: {e}"}
+    if action in ("open_photos", "open_photo_manager"):
+        try:
+            import window_requests
+            window_requests.request_window("photos", params.get("path"))
+            return {"success": True, "message": "Photo Manager(사진) 창 열기 요청"}
+        except Exception as e:
+            return {"success": False, "error": f"Photo Manager 창 요청 실패: {e}"}
+
     # action 이름 → Launcher 명령 매핑
     command_map = {
         "open_project": "open_project_window",

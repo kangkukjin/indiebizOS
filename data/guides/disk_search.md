@@ -27,7 +27,7 @@
 
 ## 4. "정말 없나"는 단정하지 말고 측정하라
 - 디스크는 열거 가능하므로 음성-단언을 **측정**할 수 있다.
-- **`[self:residual]{op: sample, kind·q·path, seen: [이미 본 경로]}`** → 미관측 더미의 균일 무작위 표본을 열어 보고, **`{op: estimate, relevant·sampled·unseen}`** 로 누락률+신뢰구간 추정.
+- **`[self:script]{op:"run", id:"잔여추정", args:{mode:"sample", q·path, seen:[이미 본 경로]}}`** → 미관측 더미의 균일 무작위 표본을 열어 보고, **`args:{relevant·sampled·unseen}`** (기본 mode=estimate) 로 누락률+Wilson 신뢰구간 추정. (구 [self:residual] 액션은 2026-08-15 스크립트로 은퇴 — 측정 산술은 어휘가 아니다.)
 - "다 찾았다 / 정말 없다"고 말하기 전에 residual로 근거를 만들어라. 목표 recall에 따른 판단은 AI 몫, 도구는 측정만.
 
 ## 5. 판단 원칙

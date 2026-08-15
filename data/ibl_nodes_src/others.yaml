@@ -103,7 +103,7 @@
         returns: items
         side_effect: true    # post 가 커뮤니티에 글을 게시한다
         fixture: '[others:feed]{op: "read"}'
-        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
+        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원. 웹 RSS/Atom 피드 읽기는 sense:feed.
         target_description: 'op:read(기본 — 활성 보드 글 조회. hashtag 옵션=특정 보드 / author 옵션=특정인(npub)의 글만 / following:true=팔로우한 사람 전체 타임라인 / with_boards:true=보드 목록(boards)·활성 보드명 동봉 — 게시판 화면용) / op:post(content 필수 — 활성 보드에 글 게시, hashtag 옵션=다른 보드).'
         group: channel
         target_key: op

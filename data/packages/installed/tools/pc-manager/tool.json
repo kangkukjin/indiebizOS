@@ -6,19 +6,6 @@
   "version": "1.1.0",
   "tools": [
     {
-      "name": "open_file_explorer",
-      "description": "PC Manager 파일 탐색기 GUI를 엽니다.\n\n## 사용 시점\n- 시각적으로 파일 탐색/관리\n- 폴더 구조 확인\n- 파일 정리 작업\n\n## 다른 도구와의 관계\n- CLI로 탐색: list_directory (system_essentials)\n- 파일 검색: glob_files, query_storage",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "path": {
-            "type": "string",
-            "description": "초기 경로 (생략시 홈 디렉토리)"
-          }
-        }
-      }
-    },
-    {
       "name": "storage_op",
       "description": "저장소 인덱스 조작 (op 분기) — [self:storage].\n- op=volumes (기본): 스캔된 볼륨 목록 (파라미터 없음).\n- op=scan: 디스크·볼륨 스캔 후 SQLite 인덱스 구축 (path 필수). 이후 query_storage로 검색.\n- op=summary: 저장소 사용량 요약 (volume_name 필수, 총 파일 수/용량/확장자별 통계).\n\n## 예시\n- storage_op()                                  # 기본 volumes\n- storage_op(op='scan', path='/Volumes/MyDrive')\n- storage_op(op='summary', volume_name='MyDrive')",
       "input_schema": {
@@ -180,67 +167,6 @@
               "owner_model"
             ],
             "description": "[forget] 대상 테이블"
-          }
-        }
-      }
-    },
-    {
-      "name": "residual_op",
-      "description": "탐색 잔여 측정 — [self:residual]. \"거기 없음\"인지 \"덜 봤음\"인지를 *측정*으로 가른다(음성-단언). 포식 후 '없다'·'전부 찾았다'를 단언하기 전에 안 본 더미를 표본조사해 확신을 정량화.\n- op=sample (기본): 질의 모집단(kind/q/path/extension) 중 이미 본 것(seen 경로 배열) 제외한 미관측 더미에서 균일 무작위 n개. 그 표본을 열어 관련성을 판단한다.\n- op=estimate: 표본 판단 결과(relevant=관련 수, sampled=표본 크기, unseen=미관측 모수)로 누락 추정 + Wilson 95% 신뢰구간. 표본 0건이면 '없음' 단언이 강해진다.\n\n## 예시\n- residual_op(op='sample', kind='image', path='/Volumes/SSD/photos', seen=['/a.jpg','/b.jpg'], n=30)\n- residual_op(op='estimate', relevant=0, sampled=30, unseen=1265)",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "sample=미관측 표본(기본), estimate=누락 추정",
-            "enum": [
-              "sample",
-              "estimate"
-            ],
-            "default": "sample"
-          },
-          "kind": {
-            "type": "string",
-            "description": "[sample] 모집단 종류 (image/video/audio/pdf/any)"
-          },
-          "q": {
-            "type": "string",
-            "description": "[sample] 이름/메타 부분일치 필터"
-          },
-          "path": {
-            "type": "string",
-            "description": "[sample] 검색 루트"
-          },
-          "extension": {
-            "type": "string",
-            "description": "[sample] 확장자 필터"
-          },
-          "min_size_mb": {
-            "type": "number",
-            "description": "[sample] 최소 크기"
-          },
-          "seen": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "[sample] 이미 본(판단한) 경로들 — 모집단에서 제외"
-          },
-          "n": {
-            "type": "integer",
-            "description": "[sample] 표본 크기 (기본 20)"
-          },
-          "relevant": {
-            "type": "integer",
-            "description": "[estimate] 표본 중 관련 항목 수"
-          },
-          "sampled": {
-            "type": "integer",
-            "description": "[estimate] 표본 크기"
-          },
-          "unseen": {
-            "type": "integer",
-            "description": "[estimate] 미관측 모수(sample이 돌려준 unseen)"
           }
         }
       }

@@ -49,7 +49,7 @@ BASELINE_PARAMS = {
     "sense:entity": {"max_results"},   # (search_books 면제는 2026-08-05 book{source:google} 흡수로 소멸 — max_results 는 핸들러 내부 수용)
     "sense:search": {"count"},   # 2026-08-05 검색 통합 — 구 5액션(count/display/page_size)의 면제 이주(display/page_size 는 aliases 로 흡수)
     "sense:search_youtube": {"count"}, "self:blog": {"count"}, "self:music": {"q"},
-    "self:residual": {"q"}, "self:photo": {"q"},
+    "self:photo": {"q"},
     # search_term 은 구 fs_query 의 면제를 흡수 이주 (2026-08-05 어휘 압축 — 신규 아님)
     "self:file_find": {"max_results", "search_term"}, "limbs:guestpc": {"display"},
     "limbs:music": {"count"},

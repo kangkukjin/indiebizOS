@@ -76,9 +76,9 @@ PHONE_VERIFIED_PACKAGES = {
     "memory",   # 심층기억(self:memory). 자아별 사적 로컬 DB(동기화 안 함). 모듈레벨 stdlib만(numpy/sqlite_vec 지연) → 폰서 import 안전, 시맨틱 미가용 시 LIKE/FTS 키워드 폴백(기존 graceful 강등). 시맨틱-온-폰(/embed 렌트+brute-force)은 후속.
     # self 노드 = AI 자신 → file 액션은 자기 몸의 fs 에 작용(각 몸 자기 파일·시계). 둘 다 모듈레벨 stdlib,
     # 무거운 것(fitz/docx/openpyxl·api_pcmanager)은 지연 import → 폰 import 안전. read 의 PDF/docx 포맷만
-    # 폰서 graceful 실패(텍스트는 됨). explorer(GUI)·spreadsheet(openpyxl write)는 액션별 pc_only 유지.
+    # 폰서 graceful 실패(텍스트는 됨). spreadsheet(openpyxl write)는 액션별 pc_only 유지.
     "system_essentials",  # self:time(자기 시계)·read/write/list/grep/copy/move/delete/file_find(glob+메타, 구 fs_query 흡수)/edit(자기 fs)
-    "pc-manager",         # self:storage/folder_note(자기 fs 인덱스·주석). limbs:explorer(GUI)는 pc_only 유지.
+    "pc-manager",         # self:storage/folder_note(자기 fs 인덱스·주석). (limbs:explorer 는 2026-08-15 open_window{app:files} 로 흡수)
     "photo-manager",      # self:photo 라이브 질의 — backend/file_index 가 몸 분기(맥 Spotlight↔폰 MediaStore via PhoneActions.queryMedia). 핸들러 얇은 preset, photo_db/scanner 는 guard import(폰선 질의 경로 미사용). A36 종단 검증.
 
     "contest",          # AI 경진대회 검색(sense:contest, Kaggle API HTTP + stdlib). KAGGLE_API_TOKEN 폰 프로비저닝 전제.

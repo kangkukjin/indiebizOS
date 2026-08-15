@@ -85,19 +85,6 @@ nodes:
               title: '{title}'
               lines:
               - '{meta}'
-  limbs:
-    actions:
-      photo_manager:
-        returns: effect
-        runs_on: pc_only
-        description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
-        group: open
-        target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
-        router: handler
-        tool: open_photo_manager
-        implementation: Electron 기반 Photo Manager GUI 실행
-        target_key: path
-
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
 tool_json:
@@ -122,21 +109,6 @@ tool_json:
     version: 1.2.0
     guide_file: guide.md
   tools:
-  - name: open_photo_manager
-    description: 'Photo Manager GUI를 엽니다.
-
-
-      ## 사용 시점
-
-      - 시각적으로 사진 관리
-
-      - 갤러리 브라우징'
-    input_schema:
-      type: object
-      properties:
-        path:
-          type: string
-          description: 초기 경로 (선택)
   - name: photo_op
     description: '사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접. 선스캔 불필요·항상 최신.
 

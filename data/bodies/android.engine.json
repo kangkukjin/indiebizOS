@@ -20,6 +20,7 @@
     "base/steer_inbox",
     "base/thread_context",
     "base/thumbnails",
+    "base/window_requests",
     "boot_common",
     "boot_paths",
     "cognition/agent_cognitive",
@@ -241,8 +242,8 @@
     "test_step_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 235,
-    "engine": 204,
+    "total": 236,
+    "engine": 205,
     "blocklist": 31
   }
 }

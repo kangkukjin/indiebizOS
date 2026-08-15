@@ -43,7 +43,7 @@ LAYERS = {
         "episode_logger", "hls_ladder", "korean_utils", "limb_keys",
         "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
         "phone_jobs", "r2_client", "repeat_guard", "runtime_utils", "safe_store",
-        "steer_inbox", "thread_context", "thumbnails",
+        "steer_inbox", "thread_context", "thumbnails", "window_requests",
     },
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",

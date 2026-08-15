@@ -3,7 +3,6 @@ PC Manager 도구 핸들러
 AI 에이전트가 PC Manager 창을 열고, 스토리지를 스캔/검색할 수 있게 한다
 
 기능:
-- open_file_explorer: PC Manager 파일 탐색기 창 열기
 - storage_op: 저장소 인덱스 조작 — scan/summary/volumes op 분기 ([self:storage])
 - folder_note_op: 폴더 주석 관리 — set/get op 분기 ([self:folder_note])
 (구 query_storage([self:fs_query])는 2026-08-05 어휘 압축으로 system_essentials 의
@@ -24,13 +23,10 @@ def execute(tool_input: dict, context) -> str:
     """도구 실행 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
     try:
-        # PC Manager 창 열기
-        if tool_name == "open_file_explorer":
-            return _open_file_explorer(tool_input)
-
-        # op 보유 도구 — storage/folder_note/forage/residual/host
+        # open_file_explorer([limbs:explorer])는 2026-08-15 은퇴 — [limbs:open_window]{app:"files"} 로 흡수.
+        # op 보유 도구 — storage/folder_note/forage/host
         # (_OP_DISPATCHERS 는 함수 정의 뒤, 파일 하단)
-        elif tool_name in _OP_DISPATCHERS:
+        if tool_name in _OP_DISPATCHERS:
             op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
@@ -45,32 +41,11 @@ def execute(tool_input: dict, context) -> str:
 
 def _unknown_op(tool_name: str, op: str) -> str:
     """옛 if/elif 체인의 도구별 '알 수 없는 op' 응답 문구 그대로."""
-    if tool_name in ("forage_op", "residual_op"):
+    if tool_name == "forage_op":
         return json.dumps({"success": False, "error": f"알 수 없는 op: {op}"}, ensure_ascii=False)
     return json.dumps({"success": False,
                        "error": f"알 수 없는 op '{op}'. 사용 가능: {list(_OP_DISPATCHERS[tool_name])}"},
                       ensure_ascii=False)
-
-
-def _open_file_explorer(tool_input: dict) -> str:
-    """PC Manager 창 열기"""
-    path = tool_input.get("path", None)
-
-    try:
-        from api_pcmanager import _pending_window_requests
-        request_id = os.urandom(8).hex()
-        _pending_window_requests.append({
-            "id": request_id,
-            "path": path,
-        })
-
-        if path:
-            return f"PC Manager 창 열기 요청을 전송했습니다. 경로: {path}"
-        else:
-            return "PC Manager 창 열기 요청을 전송했습니다. (홈 디렉토리)"
-
-    except ImportError as e:
-        return f"api_pcmanager 모듈을 불러올 수 없습니다: {e}"
 
 
 def _scan_storage(tool_input: dict) -> str:
@@ -178,94 +153,8 @@ def _get_folder_annotations(tool_input: dict) -> str:
     return json.dumps(result, ensure_ascii=False)
 
 
-# ── [self:residual] 음성-단언 측정 — 탐색 잔여(elusion 디스크판) ────────────
-#   "거기 없음" vs "덜 봤음"을 *측정*으로 가른다(apparatus 아닌 측정 행위).
-#   sample=미관측 더미 균일 무작위 표본 → AI가 열어 판단 / estimate=이항 추정(Wilson).
-def _wilson(r: int, n: int, z: float = 1.96):
-    """Wilson score 95% 신뢰구간 (r 성공/n 시행). r=0 도 정상 처리(rule-of-three 근사)."""
-    import math
-    if n <= 0:
-        return (0.0, 0.0, 1.0)
-    p = r / n
-    z2 = z * z
-    denom = 1 + z2 / n
-    center = (p + z2 / (2 * n)) / denom
-    half = (z / denom) * math.sqrt(p * (1 - p) / n + z2 / (4 * n * n))
-    return (p, max(0.0, center - half), min(1.0, center + half))
-
-
-def _residual_sample(tool_input: dict) -> str:
-    """op=sample — 모집단(질의 매칭 전체) − 이미 본 것 = 미관측 → 균일 무작위 N개."""
-    import file_index
-    seen = tool_input.get("seen") or []
-    if isinstance(seen, str):
-        seen = [seen]
-    seen_set = {os.path.abspath(os.path.expanduser(str(p))) for p in seen}
-    try:
-        n = max(1, int(tool_input.get("n") or tool_input.get("sample") or 20))
-    except (TypeError, ValueError):
-        n = 20
-    # 포식 공간 분기(FORAGER_MULTIBODY_DESIGN §4): code:<repo> 면 코드판 candidate provider,
-    # 아니면 디스크판(mdfind/walk). body 또는 space 로 명시.
-    space = str(tool_input.get("space") or tool_input.get("body") or "").lower()
-    repo = tool_input.get("repo") or tool_input.get("path")
-    if space.startswith("code") and repo:
-        exts = tool_input.get("exts") or tool_input.get("ext") or tool_input.get("extension")
-        if isinstance(exts, str):
-            exts = [e for e in exts.replace(",", " ").split() if e]
-        pool = file_index.code_candidate_paths(
-            repo, q=tool_input.get("q") or tool_input.get("query"), exts=exts)
-        facets = ()
-    else:
-        pool = file_index.candidate_paths(
-            kind=tool_input.get("kind") or "any",
-            q=tool_input.get("q") or tool_input.get("query"),
-            start=tool_input.get("start"), end=tool_input.get("end"),
-            ext=tool_input.get("extension") or tool_input.get("ext"),
-            path=tool_input.get("path"),
-            min_size=_parse_min_size_mb(tool_input.get("min_size_mb")))
-        facets = ("taken_at",)
-    total = len(pool)
-    unseen = [p for p in pool if os.path.abspath(p) not in seen_set]
-    import random
-    k = min(n, len(unseen))
-    picked = random.sample(unseen, k) if k > 0 else []
-    sample = [file_index.describe(p, facets=facets) for p in picked]
-    return json.dumps({
-        "success": True, "op": "sample",
-        "pool_total": total, "seen": len(seen_set), "unseen": len(unseen),
-        "sample_size": k, "sample": sample,
-        "note": ("이 표본을 열어 관련성을 판단한 뒤 [self:residual]{op:estimate, "
-                 "relevant:<관련 수>, sampled:%d, unseen:%d} 로 미관측 누락을 추정하세요. "
-                 "0건이면 '거기 없음' 단언이 강해집니다." % (k, len(unseen))),
-    }, ensure_ascii=False)
-
-
-def _residual_estimate(tool_input: dict) -> str:
-    """op=estimate — (표본 중 관련 r, 표본 n, 미관측 M) → 누락 추정 + 신뢰구간."""
-    import file_index  # 옛 체인의 공용 선행 임포트 유지(임포트 실패 시 동작 동일)
-    try:
-        r = int(tool_input.get("relevant", 0))
-        n = int(tool_input.get("sampled") or tool_input.get("n") or 0)
-        M = int(tool_input.get("unseen") or tool_input.get("pool") or 0)
-    except (TypeError, ValueError):
-        return json.dumps({"success": False, "error": "relevant/sampled/unseen 는 정수"}, ensure_ascii=False)
-    if n <= 0:
-        return json.dumps({"success": False, "error": "sampled(n)는 1 이상"}, ensure_ascii=False)
-    p, lo, hi = _wilson(r, n)
-    hi_missed = round(hi * M, 1)
-    # ★측정만 반환 — "없음 vs 덜봄" 판단은 AI 몫(목표 recall 대비). 도구는 숫자+해석만.
-    interp = (f"미관측 {M}개 중 관련 항목이 점추정 {round(p*M,1)}개, 95% 상한 {hi_missed}개로 추정됩니다. "
-              f"상한 {hi_missed}개가 이 작업의 목표(예: '전부' 찾기/'없음' 단언)에 비해 "
-              f"작으면 사실상 커버된 것, 크면 더 봐야 합니다 — 판단은 목표에 달렸습니다.")
-    return json.dumps({
-        "success": True, "op": "estimate",
-        "relevant_in_sample": r, "sampled": n, "unseen": M,
-        "rate": round(p, 4), "rate_ci95": [round(lo, 4), round(hi, 4)],
-        "missed_estimate": round(p * M, 1),
-        "missed_ci95": [round(lo * M, 1), hi_missed],
-        "interpretation": interp,
-    }, ensure_ascii=False)
+# [self:residual] 은 2026-08-15 은퇴 — 등록 스크립트 "잔여추정"([self:script]{op:run, id:"잔여추정"})으로 대체.
+# (순수 측정 산술이라 어휘 자격 없음 — 결정화 사다리의 스크립트 가로대가 정위치.)
 
 
 # ── [self:forage] 포식 기억 — 냄새지도 (backend/forage_memory 위임) ──────────
@@ -489,7 +378,6 @@ _OP_DISPATCHERS = {
                 "resources": _host_resources},
     "forage_op": {"recall": _forage_recall, "note": _forage_note,
                   "forget": _forage_forget},
-    "residual_op": {"sample": _residual_sample, "estimate": _residual_estimate},
 }
 _OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get", "host_op": "status",
-                "forage_op": "recall", "residual_op": "sample"}
+                "forage_op": "recall"}

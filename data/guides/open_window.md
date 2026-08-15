@@ -1,8 +1,8 @@
 # 런처 창 열기 가이드
 
-`[limbs:open_window]` 단일 액션으로 IndieBiz OS Electron 런처의 7개 메인 작업창을 연다. **app 분기**가 핵심.
+`[limbs:open_window]` 단일 액션으로 IndieBiz OS 의 작업창을 연다(런처 7창 + files/photos 내장 도구창). **app 분기**가 핵심.
 
-`[limbs:os_open]`(OS 기본 앱) · `[limbs:show_map]`(지도) · `[limbs:explorer]`(파일 탐색기)와 다름. 이 액션은 **IndieBiz OS 자체의 작업공간**만 다룬다.
+`[limbs:os_open]`(OS 기본 앱) · `[limbs:show_map]`(지도)와 다름. 이 액션은 **IndieBiz OS 자체의 창**만 다룬다. ★OS 파일 탐색기(Finder/Explorer)를 여는 게 아니다 — 그건 [limbs:os_open].
 
 ---
 
@@ -117,4 +117,5 @@ agent_name까지 주면 바로 그 에이전트로:
 
 - `[self:lecture]{op:"open"}` — 강의 워크스페이스 (별도 윈도우)
 - `[limbs:os_open]` — OS 기본 앱(브라우저/Finder)으로 URL/파일 열기. IndieBiz 작업창 아님.
-- `[limbs:explorer]` — 파일 탐색기 열기
+- `files` / `photos` — 내장 PC Manager(파일)·Photo Manager(사진) 창. path(옵션)로 시작 폴더 지정.
+  (구 [limbs:explorer]·[limbs:photo_manager] 액션의 흡수, 2026-08-15 — 창 여는 말은 open_window 하나.)

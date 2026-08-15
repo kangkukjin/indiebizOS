@@ -5,7 +5,8 @@ GUI 기반 파일 탐색 도구. AI 에이전트가 창을 열어주고, 사용�
 
 ## 도구
 
-### `open_file_explorer`
+### ~~`open_file_explorer`~~ (2026-08-15 은퇴)
+`[limbs:open_window]{app:"files"}` 로 흡수 — 창 여는 어휘는 open_window 하나. (아래는 옛 기록)
 PC Manager GUI 창을 연다.
 - 파라미터: `path` (선택) - 초기 경로
 - 동작: Electron 윈도우 실행

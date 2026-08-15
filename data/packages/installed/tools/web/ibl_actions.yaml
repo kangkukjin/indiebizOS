@@ -26,6 +26,21 @@ nodes:
         # 뉴스(구 search_gnews)·HN(구 search_hn)·네이버(구 web-kr search_naver)·가디언(구 study
         # search_guardian)은 2026-08-05 어휘 압축 (2)에서 source 축으로 흡수 — 검색 5액션 → search 하나.
         # 신문 계기(NewspaperInstrument.tsx)는 [sense:search]{source: gnews|hn} 배치 경로를 쓴다.
+      feed:
+        returns: items
+        fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'
+        description: RSS/Atom 피드 읽기 — 어떤 사이트든 피드 URL 하나로 최신 글 목록을 items(제목·날짜·링크·요약)로. 블로그·뉴스·연구기관 새 글 확인용. crawl 은 피드 항목 구조를 뭉개므로 피드 URL 은 이쪽. 이웃·커뮤니티 타임라인은 others:feed.
+        group: research
+        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10). 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
+        router: handler
+        tool: fetch_feed
+        implementation: feedparser 로 RSS/Atom 파싱 — 제목·게시일·링크·요약(HTML 제거)을 레코드 통화 {title, meta, summary, url} 로. 피드 제목을 source 로 자동 사용.
+        target_key: url
+        keywords:
+        - 피드
+        - RSS
+        - 구독
+        - 새 글
   engines:
     actions:
       # 신문 발행 — 옛 engines:newspaper(수집+조립+브라우저 열기 박제, 은퇴)와 다른 개념:
@@ -87,6 +102,34 @@ tool_json:
       모니터링, 웹 리서치에 활용.
     version: 1.3.0
   tools:
+  - name: fetch_feed
+    description: 'RSS/Atom 피드를 읽어 최신 글 목록을 반환합니다.
+
+
+      ## 사용 시점
+
+      - 특정 사이트(블로그·뉴스·연구기관)의 새 글 목록이 필요할 때
+
+      - 피드 URL(…/feed/, rss.xml, atom.xml)을 알거나 추정할 수 있을 때
+
+
+      ## 다른 도구와의 관계
+
+      - crawl_website 는 피드의 글별 제목/날짜/링크 구조를 뭉갬 — 피드 URL 은 이 도구로
+
+      - 키워드 검색은 search (이 도구는 "이 사이트의 최신 글" 열거)'
+    input_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          description: 피드 URL (RSS 2.0 / Atom)
+        limit:
+          type: integer
+          description: 가져올 항목 수 (기본 10)
+          default: 10
+      required:
+      - url
   - name: search
     description: '웹·뉴스 통합 검색 — source 로 검색 엔진을 선택합니다.
 

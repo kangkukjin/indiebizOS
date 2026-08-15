@@ -167,41 +167,6 @@ nodes:
         - 냄새지도
         - 주인모델
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
-      residual:
-        returns: scalar
-        side_effect: false    # 전 op 읽기 전용
-        exempt: '모집단 표본 인자 필요(sample/estimate)'
-        description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
-        group: file
-        target_description: sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개. 디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단. 그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간. "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).
-        target_key: op
-        router: handler
-        tool: residual_op
-        scope: workspace
-        ops:
-          default: sample
-          values:
-            sample: 미관측 더미의 균일 무작위 표본 (모집단−seen, n개)
-            estimate: 표본 결과로 누락 추정 (relevant/sampled/unseen → Wilson CI)
-        keywords:
-        - 잔여
-        - 누락
-        - 전부 찾았나
-        - 정말 없나
-        implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
-  limbs:
-    actions:
-      explorer:
-        returns: effect
-        runs_on: pc_only
-        description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
-        group: open
-        target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
-        router: handler
-        tool: open_file_explorer
-        implementation: subprocess로 macOS Finder/Windows Explorer 실행
-        target_key: path
-
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
 tool_json:
@@ -212,30 +177,6 @@ tool_json:
       활용.
     version: 1.1.0
   tools:
-  - name: open_file_explorer
-    description: 'PC Manager 파일 탐색기 GUI를 엽니다.
-
-
-      ## 사용 시점
-
-      - 시각적으로 파일 탐색/관리
-
-      - 폴더 구조 확인
-
-      - 파일 정리 작업
-
-
-      ## 다른 도구와의 관계
-
-      - CLI로 탐색: list_directory (system_essentials)
-
-      - 파일 검색: glob_files, query_storage'
-    input_schema:
-      type: object
-      properties:
-        path:
-          type: string
-          description: 초기 경로 (생략시 홈 디렉토리)
   - name: storage_op
     description: '저장소 인덱스 조작 (op 분기) — [self:storage].
 
@@ -392,58 +333,6 @@ tool_json:
           - forage_map
           - owner_model
           description: '[forget] 대상 테이블'
-  - name: residual_op
-    description: '탐색 잔여 측정 — [self:residual]. "거기 없음"인지 "덜 봤음"인지를 *측정*으로 가른다(음성-단언). 포식 후 ''없다''·''전부 찾았다''를 단언하기 전에 안 본 더미를
-      표본조사해 확신을 정량화.
-
-      - op=sample (기본): 질의 모집단(kind/q/path/extension) 중 이미 본 것(seen 경로 배열) 제외한 미관측 더미에서 균일 무작위 n개. 그 표본을 열어 관련성을 판단한다.
-
-      - op=estimate: 표본 판단 결과(relevant=관련 수, sampled=표본 크기, unseen=미관측 모수)로 누락 추정 + Wilson 95% 신뢰구간. 표본 0건이면 ''없음'' 단언이 강해진다.
-
-
-      ## 예시
-
-      - residual_op(op=''sample'', kind=''image'', path=''/Volumes/SSD/photos'', seen=[''/a.jpg'',''/b.jpg''], n=30)
-
-      - residual_op(op=''estimate'', relevant=0, sampled=30, unseen=1265)'
-    input_schema:
-      type: object
-      properties:
-        op:
-          type: string
-          description: sample=미관측 표본(기본), estimate=누락 추정
-        kind:
-          type: string
-          description: '[sample] 모집단 종류 (image/video/audio/pdf/any)'
-        q:
-          type: string
-          description: '[sample] 이름/메타 부분일치 필터'
-        path:
-          type: string
-          description: '[sample] 검색 루트'
-        extension:
-          type: string
-          description: '[sample] 확장자 필터'
-        min_size_mb:
-          type: number
-          description: '[sample] 최소 크기'
-        seen:
-          type: array
-          items:
-            type: string
-          description: '[sample] 이미 본(판단한) 경로들 — 모집단에서 제외'
-        n:
-          type: integer
-          description: '[sample] 표본 크기 (기본 20)'
-        relevant:
-          type: integer
-          description: '[estimate] 표본 중 관련 항목 수'
-        sampled:
-          type: integer
-          description: '[estimate] 표본 크기'
-        unseen:
-          type: integer
-          description: '[estimate] 미관측 모수(sample이 돌려준 unseen)'
   - name: host_op
     description: '이 기계(호스트) 자신의 운영 상태를 구조화 데이터로 조회 (op 분기) — [sense:host]. 화면을 보는 게 아니라 기계를 직접 내성하는 자기수용감각.
 

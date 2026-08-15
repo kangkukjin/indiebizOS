@@ -2055,15 +2055,6 @@ nodes:
         - 신원
         - 개체해소
         - QID
-      pew_research:
-        returns: items
-        fixture: '[sense:pew_research]{}'
-        description: Pew Research 최신 여론조사/리서치 보고서 목록. 미국 사회·정치·기술 트렌드 조사. 파라미터 없이 호출하면 최신 리서치 목록 반환.
-        group: research
-        target_description: (파라미터 없음 — 최신 리서치 목록 반환). topic 옵션으로 주제 필터링 가능.
-        router: handler
-        tool: fetch_pew_research
-        implementation: Pew Research RSS 피드 파싱 (feedparser). 입력 파라미터 없이 최신 리서치 목록 반환.
       world_bank:
         returns: items
         fixture: '[sense:world_bank]{indicator: "GDP", country: "한국"}'
@@ -2098,6 +2089,21 @@ nodes:
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
         target_key: url
+      feed:
+        returns: items
+        fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'
+        description: RSS/Atom 피드 읽기 — 어떤 사이트든 피드 URL 하나로 최신 글 목록을 items(제목·날짜·링크·요약)로. 블로그·뉴스·연구기관 새 글 확인용. crawl 은 피드 항목 구조를 뭉개므로 피드 URL 은 이쪽. 이웃·커뮤니티 타임라인은 others:feed.
+        group: research
+        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10). 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
+        router: handler
+        tool: fetch_feed
+        implementation: feedparser 로 RSS/Atom 파싱 — 제목·게시일·링크·요약(HTML 제거)을 레코드 통화 {title, meta, summary, url} 로. 피드 제목을 source 로 자동 사용.
+        target_key: url
+        keywords:
+        - 피드
+        - RSS
+        - 구독
+        - 새 글
       collect:
         aliases:
           site_id:
@@ -4299,28 +4305,6 @@ nodes:
         - 냄새지도
         - 주인모델
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
-      residual:
-        returns: scalar
-        side_effect: false
-        exempt: 모집단 표본 인자 필요(sample/estimate)
-        description: 탐색 잔여 측정 — "거기 없음 vs 덜 봤음"을 표본조사로 가른다(음성-단언). op 분기.
-        group: file
-        target_description: sample(기본) — 질의 모집단에서 이미 본 것(seen 경로 배열) 제외한 미관측 더미의 균일 무작위 표본 n개. 디스크 공간=kind/q/path/extension 으로 모집단, 코드 공간=space:"code:<repo>"+repo(레포 루트)+exts 로 소스파일 모집단. 그 표본을 열어 관련성 판단 후 → estimate(relevant=관련 수, sampled=표본 n, unseen=미관측 M)로 누락 추정+Wilson 신뢰구간. "전부 찾았나"·"정말 없나" 단언의 측정 근거. ★열거 가능 공간(디스크·코드) 전용 — 웹은 모집단 무한·비열거라 미지원(웹 "충분함"은 AI의 berrypicking 포화 판단).
-        target_key: op
-        router: handler
-        tool: residual_op
-        scope: workspace
-        ops:
-          default: sample
-          values:
-            sample: 미관측 더미의 균일 무작위 표본 (모집단−seen, n개)
-            estimate: 표본 결과로 누락 추정 (relevant/sampled/unseen → Wilson CI)
-        keywords:
-        - 잔여
-        - 누락
-        - 전부 찾았나
-        - 정말 없나
-        implementation: file_index.candidate_paths(디스크)·code_candidate_paths(코드) + 균일표본 / Wilson 이항추정 (pc-manager _residual_op)
       photo:
         aliases:
           media_type:
@@ -4847,8 +4831,8 @@ nodes:
         - 브라우저
       open_window:
         returns: effect
-        description: Electron 런처의 7개 메인 작업창 열기 (project/system_ai/messenger/community/business/multichat/folder). 자세한 진입 시나리오는 가이드(open_window.md) 참조.
-        target_description: 'app 종류: project | system_ai | messenger | community | business | multichat | folder. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). system_ai/messenger/community/business는 파라미터 없음. (indienet=community 레거시 별칭 — 옛 IndieNet 창의 후신은 커뮤니티 창)'
+        description: indiebizOS 작업창 열기 — app 분기 project/system_ai/messenger/community/business/multichat/folder/files(파일 탐색)/photos(사진). ★OS Finder 아님(그건 os_open). 진입 시나리오는 가이드(open_window.md).
+        target_description: 'app 종류: project | system_ai | messenger | community | business | multichat | folder | files | photos. project 추가 — project_id, project_name(옵션), agent_name(옵션). multichat 추가 — room_id, room_name(옵션). folder 추가 — folder_id, folder_name(옵션). files/photos 추가 — path(옵션, 열 폴더). system_ai/messenger/community/business는 파라미터 없음. (indienet=community 레거시 별칭. files/photos 는 구 limbs:explorer·limbs:photo_manager 의 흡수 — 2026-08-15)'
         group: open
         target_key: app
         router: system
@@ -4866,6 +4850,8 @@ nodes:
         - 인디넷
         - 비즈니스
         - 멀티채팅
+        - 파일탐색
+        - 사진창
         - 폴더
       android:
         returns: effect
@@ -5160,26 +5146,6 @@ nodes:
         tool: show_location_map
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
-      explorer:
-        returns: effect
-        runs_on: pc_only
-        description: 파일 탐색기로 폴더 열기 (macOS Finder, Windows 탐색기). 파일 자체 열기는 os_open.
-        group: open
-        target_description: 폴더 경로 (절대 또는 상대). 파일이면 파일 위치 폴더가 열림.
-        router: handler
-        tool: open_file_explorer
-        implementation: subprocess로 macOS Finder/Windows Explorer 실행
-        target_key: path
-      photo_manager:
-        returns: effect
-        runs_on: pc_only
-        description: indiebizOS 내장 Photo Manager GUI 실행 (Electron). 사진 분류·검색·인덱싱.
-        group: open
-        target_description: 폴더 경로 (선택, 미지정 시 기본 라이브러리 폴더).
-        router: handler
-        tool: open_photo_manager
-        implementation: Electron 기반 Photo Manager GUI 실행
-        target_key: path
       radio:
         returns: effect
         description: 인터넷 라디오 재생·중지 (op 분기). play/stop. 방송국 검색은 [sense:radio].
@@ -5463,7 +5429,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[others:feed]{op: "read"}'
-        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원.
+        description: 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원. 웹 RSS/Atom 피드 읽기는 sense:feed.
         target_description: op:read(기본 — 활성 보드 글 조회. hashtag 옵션=특정 보드 / author 옵션=특정인(npub)의 글만 / following:true=팔로우한 사람 전체 타임라인 / with_boards:true=보드 목록(boards)·활성 보드명 동봉 — 게시판 화면용) / op:post(content 필수 — 활성 보드에 글 게시, hashtag 옵션=다른 보드).
         group: channel
         target_key: op

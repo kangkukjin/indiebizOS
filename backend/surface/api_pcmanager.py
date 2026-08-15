@@ -161,29 +161,21 @@ async def get_path_info(path: str = Query(...)):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
 
 
-# 창 열기 요청 저장소 (프론트엔드가 폴링)
-_pending_window_requests = []
+# 창 열기 요청 큐 — base 층 window_requests 단일 저장소 (ibl_routing open_window 와 공유)
+import window_requests
 
 
 @router.post("/open-window")
 async def request_open_window(path: Optional[str] = None):
     """PC Manager 창 열기 요청 (도구에서 호출)"""
-    request_id = os.urandom(8).hex()
-    _pending_window_requests.append({
-        "id": request_id,
-        "path": path,
-        "timestamp": platform.system()  # 임시로 시스템 정보 활용
-    })
-    return {"status": "requested", "request_id": request_id, "path": path}
+    req = window_requests.request_window("files", path)
+    return {"status": "requested", "request_id": req["id"], "path": path}
 
 
 @router.get("/pending-windows")
 async def get_pending_windows():
     """대기 중인 창 열기 요청 조회 (프론트엔드 폴링용)"""
-    global _pending_window_requests
-    requests = _pending_window_requests.copy()
-    _pending_window_requests = []  # 조회 후 비움
-    return {"requests": requests}
+    return {"requests": window_requests.drain("files")}
 
 
 @router.get("/open")

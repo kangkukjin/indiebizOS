@@ -10,7 +10,15 @@
 
 ## ▶ START HERE — 현재 상태와 다음 단계
 
-**완료 (0)(1)(2)(3)(4)(5)+2b(book)+슬라이드/영상 일원화(**150 액션**) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제) + 계수 숙성 후 D급 은퇴 판단.**
+**완료 (0)(1)(2)(3)(4)(5)+2b(book)+슬라이드/영상 일원화 + (7)조합성 재점검 1차(2026-08-15, **151 액션**) · 남은 것 = (6) 설계 태스크 2건(몸축·스케줄 3형제) + (7) 2차 후보(newspaper→스크립트·collect→crawl·blog→notebook — 구현 심사 필요) + 계수 숙성(2026-08-15 이후 데이터만) 후 D급 은퇴 판단.**
+
+### (7) 조합성 재점검 1차 실행 기록 (2026-08-15) — ★후속 정본 = `VOCAB_COMPOSABILITY_HANDOFF.md`
+판정 원칙: **낱말 자격 = 새 차원(감각·프로토콜·원장·미디어), 오케스트레이션·산술·URL 하드코딩 = 문장/스크립트로.**
+- 계수 수리: `_usage_origin()` 에 `__self_check__` → origin `'selfcheck'` 분리 (위 (0) 절 정정 참조).
+- `sense:pew_research` 은퇴 → **`sense:feed`{url, limit} 신설**(web 패키지, 범용 RSS/Atom — URL 하드코딩 복합어를 보편어로 대체). 코퍼스 5행 이관.
+- `limbs:explorer`·`limbs:photo_manager` 은퇴 → **`open_window`{app: files|photos}** 흡수(ibl_routing pending-queue 직결). explorer 의 desc 거짓말("Finder") 해소 — 코퍼스 22행 이관(파인더 명시 intent 4행은 os_open 으로 정직 재배선).
+- `self:residual` 은퇴 → 등록 스크립트 **"잔여추정"**(outputs/scripts/잔여추정.py — Wilson CI estimate + file_index sample, [self:script] 라이브 검증).
+- 검증: build --check 전 가드 통과(151) · 라이브 종단(feed 실 RSS 3건 · open_window files/photos 큐잉 · 은퇴어 validate 반려) · 해마 시드 9 + 이관 27 + rebuild_index 3,175(벡터 누락 0) · 연상 직행 4/5. ⏳재학습 대기열: feed·open_window 흡수, "블로그 RSS"↔self:blog 경계.
 
 | 단계 | 상태 | 커밋 |
 |---|---|---|
@@ -148,7 +156,12 @@
 - origin: `app`(앱 표면·포털 게이트) / `manual`(조종실) / `web`(원격 기타) /
   `agent` / `internal`. 분류 = `_usage_origin()` (시스템 프로젝트 컨텍스트 관습 재사용).
 - 계수 의미 = **어휘 수요**(코드에 쓰였는가), 실행 완료 아님 — `??` 뒷가지도 계수.
-- 자가점검(ibl_health_check)은 이 관문 밖 → 12시간 전수 순찰이 계수를 오염하지 않는다.
+- ~~자가점검(ibl_health_check)은 이 관문 밖 → 계수를 오염하지 않는다.~~ **← 거짓으로 판명(2026-08-15 감사).**
+  순찰은 `/ibl/execute` + `agent_id="__self_check__"` 로 이 관문을 지나며, `_usage_origin()` 이
+  이를 'agent' 로 분류해 **2026-08-15 이전 agent 계수의 ~55%가 순찰분**이었다(지문: fixture 수 × 순찰 횟수와
+  정확 동기 — exhibit 1/일, entity 2/일). 수리: `__self_check__` → origin `'selfcheck'` 분리(2026-08-15).
+  **은퇴/압축 감사는 2026-08-15 이후의 origin='agent' 만 신뢰할 것.** 이전 구간이 필요하면
+  fixture 수 × 순찰 횟수(12h 주기)를 빼서 디컨볼루션.
 
 ### (1) 싼 병합 5건 — `80a3392` (163→159)
 

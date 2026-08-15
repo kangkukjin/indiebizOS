@@ -86,8 +86,7 @@ def execute(tool_input: Dict[str, Any], context) -> Dict[str, Any]:
             return get_stats(tool_input)
         elif command == "get_timeline":
             return get_timeline(tool_input)
-        elif command == "open_photo_manager":
-            return open_photo_manager(tool_input)
+        # open_photo_manager([limbs:photo_manager])는 2026-08-15 은퇴 — [limbs:open_window]{app:"photos"} 로 흡수.
         else:
             return {"success": False, "error": f"알 수 없는 명령어: {command}"}
     except Exception as e:
@@ -520,43 +519,3 @@ def get_timeline(params: Dict[str, Any]) -> Dict[str, Any]:
         return result
 
 
-def open_photo_manager(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Photo Manager 창 열기"""
-    path = params.get("path")
-
-    try:
-        # API를 통해 창 열기 요청
-        url = f"{API_BASE_URL}/photo/open-window"
-        if path:
-            url += f"?path={path}"
-
-        response = requests.post(url, timeout=5)
-        data = response.json()
-
-        if data.get("status") == "requested":
-            return {
-                "success": True,
-                "message": "Photo Manager 창 열기 요청을 보냈습니다.",
-                "tip": "잠시 후 Photo Manager 창이 열립니다."
-            }
-        else:
-            return {
-                "success": False,
-                "error": "창 열기 요청 실패"
-            }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": f"Photo Manager 창을 열 수 없습니다: {str(e)}"
-        }
-
-
-# 직접 실행 시 테스트
-if __name__ == "__main__":
-    # 테스트 명령
-    print("Photo Manager Handler 테스트")
-    print("-" * 40)
-
-    # 스캔 목록
-    result = execute("list_scans", {})
-    print("스캔 목록:", json.dumps(result, ensure_ascii=False, indent=2))

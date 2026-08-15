@@ -557,8 +557,7 @@ def execute(tool_input: dict, context) -> str:
             return {"success": False, "error": f"알 수 없는 op '{op}'. 사용: {'|'.join(_OP_DISPATCHERS[tool_name])}"}
         return fn(tool_input, context)
 
-    elif tool_name == "fetch_pew_research":
-        return _fetch_rss("https://www.pewresearch.org/feed/", "Pew Research Center", tool_input.get("limit", 10))
+    # fetch_pew_research 는 2026-08-15 은퇴 — web 패키지 [sense:feed]{url:"https://www.pewresearch.org/feed/"} 로 일반화.
 
     elif tool_name == "fetch_world_bank_data":
         return _fetch_world_bank_data(tool_input)
@@ -1071,49 +1070,6 @@ def _reconstruct_abstract(inverted_index: dict) -> str:
         return abstract
     except Exception:
         return ""
-
-def _fetch_rss(url: str, source_name: str, limit: int = 10) -> str:
-    """RSS 피드를 가져와서 파싱합니다 (feedparser 사용)."""
-    try:
-        feed = feedparser.parse(url)
-        
-        if not feed.entries:
-            return {"items": [], "message": f"{source_name}에서 기사를 찾을 수 없습니다."}
-            
-        results = [f"### {source_name} 최신 소식 (최대 {limit}건)\n"]
-        records = []
-
-        for i, entry in enumerate(feed.entries[:limit], 1):
-            title = entry.get("title", "제목 없음")
-            link = entry.get("link", "")
-            pub_date = entry.get("published", entry.get("updated", ""))
-            description = entry.get("summary", entry.get("description", ""))
-
-            # HTML 태그 제거 및 언이스케이프
-            description = re.sub('<[^<]+?>', '', description)
-            description = html.unescape(description).strip()
-            if len(description) > 200:
-                description = description[:200] + "..."
-
-            item_info = (
-                f"[{i}] {title}\n"
-                f"날짜: {pub_date}\n"
-                f"링크: {link}\n"
-                f"요약: {description}\n"
-                "--------------------------------------"
-            )
-            results.append(item_info)
-            records.append({  # 레코드 통화
-                "title": title,
-                "meta": " · ".join(x for x in [source_name, pub_date] if x),
-                "summary": description,
-                "url": link,
-            })
-
-        return {"success": True, "message": "\n".join(results), "items": records, "count": len(records)}
-
-    except Exception as e:
-        return {"success": False, "error": f"{source_name} RSS 가져오기 오류: {str(e)}", "items": []}
 
 # _search_guardian 은 2026-08-05 어휘 압축 (2)에서 web 패키지 [sense:search]{source:"guardian"} 로 이주.
 

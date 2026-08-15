@@ -70,6 +70,44 @@ _GOAL_SAFETY_KEYS = {'max_rounds', 'max_cost'}
 _GOAL_META_KEYS = {'success_condition', 'resources', 'report_to', 'strategy'}
 
 
+def _find_top_level_key(body: str, key: str) -> Optional[Tuple[int, int]]:
+    """중괄호/대괄호/문자열 *밖*(깊이 0)에서 `key :` 를 찾아 (키 시작, 값 시작) 반환.
+
+    정규식으로 찾으면 문자열 값 속 같은 글자(예: success_condition: "strategy: [x]")에
+    오탐한다 — 파라미터 경계는 깊이·문자열 상태를 알아야 정확하다."""
+    depth = 0
+    in_s = False
+    q = ''
+    i, n = 0, len(body)
+    while i < n:
+        c = body[i]
+        if in_s:
+            if c == '\\':
+                i += 2
+                continue
+            if c == q:
+                in_s = False
+        elif c in '"\'':
+            in_s = True
+            q = c
+        elif c in '{[':
+            depth += 1
+        elif c in '}]':
+            depth -= 1
+        elif depth == 0 and body.startswith(key, i) and (
+                i == 0 or not (body[i - 1].isalnum() or body[i - 1] == '_')):
+            j = i + len(key)
+            while j < n and body[j] in ' \t\n\r':
+                j += 1
+            if j < n and body[j] == ':':
+                j += 1
+                while j < n and body[j] in ' \t\n\r':
+                    j += 1
+                return (i, j)
+        i += 1
+    return None
+
+
 def _parse_goal_block(code: str) -> Optional[Dict]:
     """
     Goal Block 파싱
@@ -106,8 +144,48 @@ def _parse_goal_block(code: str) -> Optional[Dict]:
             f"Goal 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{leftover[:60]}' — "
             "블록과 다른 문장은 줄(또는 ;)로 분리하세요.")
 
+    # strategy 값이 인라인 블록([if:]/[case:]/액션)이면 param 파서에 넣기 *전에*
+    # 통째로 도려낸다 — 값 파서는 [ ] 대괄호에서 멈춰 '[if: ...]' 헤더만 남기고
+    # {본문}을 침묵 소실시킨다(2026-08-16 실측: goal 속 strategy 는 이 경로로
+    # 한 번도 온전히 파싱된 적이 없었다).
+    strategy_block = None
+    _found = _find_top_level_key(body, 'strategy')
+    if _found and _found[1] < len(body) and body[_found[1]] == '[':
+        _key_start, _val_start = _found
+        action_text, _pos = _extract_action_at(body, _val_start)
+        if action_text:
+            # if/else 체인은 괄호 그룹 여러 개 — [else...]가 이어지는 동안 계속 삼킨다
+            while True:
+                _j = _pos
+                while _j < len(body) and body[_j] in ' \t\n\r':
+                    _j += 1
+                if body.startswith('[else', _j):
+                    _nxt, _pos2 = _extract_action_at(body, _j)
+                    if not _nxt or _pos2 <= _j:
+                        break
+                    _pos = _pos2
+                else:
+                    break
+            strategy_block = body[_val_start:_pos].strip()
+            _before = body[:_key_start].rstrip()
+            _after = body[_pos:].lstrip()
+            if _before.endswith(','):
+                _before = _before[:-1].rstrip()
+            elif _after.startswith(','):
+                _after = _after[1:].lstrip()
+            body = (_before + (', ' if _before and _after else ' ') + _after).strip()
+
     # params 파싱
     params = _parse_params('{' + body + '}')
+
+    if strategy_block is not None:
+        parsed_strategy = _parse_block_body(strategy_block)
+        if parsed_strategy is None:
+            # str 로 조용히 남기면 소실이 재발한다 — 정직 거절.
+            raise IBLSyntaxError(
+                f"Goal '{goal_name}' 의 strategy 블록을 해석할 수 없습니다: "
+                f"{strategy_block[:80]}")
+        params['strategy'] = parsed_strategy
 
     # 필수 필드 검증
     has_max_rounds = 'max_rounds' in params

@@ -490,6 +490,40 @@ async def validate_ibl(req: ValidateRequest):
             st.get("_parallel") or "_fallback_chain" in st
             or st.get("_condition") or st.get("_case") or st.get("_goal"))
 
+    def _walk_each_do(st: dict, depth: int):
+        """[table:each] 의 do 문자열 속 문장을 펼쳐 검증한다.
+
+        do 는 이 언어가 코드를 *문자열로* 나르는 유일한 자리 — 여기만 안 펼치면
+        do 안의 부작용·무효 액션이 'each 한 줄'(블랭킷 write) 뒤에 숨어
+        조종실의 번역→dry-run→실행 계약이 반쪽이 된다."""
+        nonlocal all_valid
+        params = st.get("params", {}) or {}
+        do = params.get("do")
+        if isinstance(do, list):
+            do = "\n".join(str(x) for x in do if str(x).strip())
+        if not do or not str(do).strip():
+            return
+        do = str(do)
+        from ibl_parser import parse as _parse_do, IBLSyntaxError as _DoSynErr
+        try:
+            try:
+                inner = _parse_do(do)
+            except _DoSynErr:
+                # $it 치환 자리가 따옴표 밖(예: {n: $it.n})이면 실행 시엔 합법 —
+                # 자리만 더미(1)로 메워 재시도한다. 이걸로도 안 되면 진짜 문법 오류.
+                inner = _parse_do(re.sub(r"\$\w+(?:\.\w+)*", "1", do))
+        except _DoSynErr as e:
+            all_valid = False
+            steps.append({
+                "node": "table", "action": "each", "params": {}, "kind": "block",
+                "effect": f"each do 문장 문법 오류 — 모든 행이 실패합니다: {str(e)[:160]}",
+                "safety": "unknown", "valid": False, "error": str(e)[:200],
+                "group": "each",
+            })
+            return
+        for ist in inner:
+            _walk(ist, depth + 1, label="[each 속]", group="each")
+
     def _condition_syntax_warning(cond: str):
         """조건 좌변이 node:action 소스 참조로 파싱되는지 미리 검사.
 
@@ -519,6 +553,8 @@ async def validate_ibl(req: ValidateRequest):
             return
         if _is_plain(st):
             _emit_action(st, label=label, group=group, warn=warn)
+            if st.get("_node") == "table" and st.get("action") == "each":
+                _walk_each_do(st, depth)
             return
         if st.get("_parallel"):
             branches = st.get("branches") or []

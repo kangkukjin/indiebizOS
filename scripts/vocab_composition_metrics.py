@@ -35,6 +35,27 @@ REG = os.path.join(ROOT, "data", "ibl_nodes.yaml")
 
 ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
 
+# ★행동 vs 교재 (2026-08-15 수리) — 이 둘을 한 숫자에 섞으면 둘 다 못 본다.
+#
+# 실측 사례: 전체 코퍼스는 파이프 7%·길이 중앙값 2 인데, 실사용 증류만 보면 22%·중앙값 3
+# 이었다. 차이의 정체는 balanced_20260516(옛 합성 대량 1,781행, 파이프 2%)이다 —
+# 그건 *가르친 것*이지 *한 것*이 아닌데 전체 평균을 끌어내려 "이 언어는 2단에서 멈춘다"는
+# 잘못된 진단을 만들었다.
+#
+# 판정의 근거는 **행동**이다. 교재는 맥락으로만 본다(시딩으로 올릴 수 있는 숫자는 지표가
+# 아니라는 원칙의 연장 — 시드는 교재에만 들어가고 행동은 못 건드린다).
+BEHAVIOR_SOURCES = {"distilled"}   # 실행 경험 증류 = AI 가 실제로 쓴 문장
+
+# ★조합은 파이프만이 아니다 (2026-08-15 2차 수리) — `do:` 안에 문장을 싣는 것이
+# 고차 조합이다. 이걸 못 보면 [table:each]{items:…, do:"[sense:weather]…"} 가 "단발"로
+# 세어져, 고차 문장을 만들어 놓고 그게 쓰인 걸 지표가 부정하게 된다(실측 사례 1건).
+NESTED_RE = re.compile(r"\bdo\s*:\s*[\"'\[]")
+
+
+def is_composed(code: str) -> bool:
+    """조합된 문장인가 — 파이프(>>) 또는 고차(do: 에 문장 적재)."""
+    return ">>" in code or bool(NESTED_RE.search(code))
+
 # 문형 분류 — 문장이 *무엇을 하는 모양인가*. 한 문장이 여러 문형에 속할 수 있다(발신+적용 등).
 # 판정은 등장 액션의 노드/이름으로 한다(의미가 아니라 구조 — 재현 가능해야 하므로).
 SINK_NODES = {"others", "limbs"}
@@ -85,10 +106,18 @@ def sentence_forms(names, code):
 
 def measure():
     con = sqlite3.connect(DB)
-    codes = [r[0] for r in con.execute("select ibl_code from ibl_examples") if r[0]]
+    rows = [(r[0] or "", r[1] or "") for r in
+            con.execute("select source, ibl_code from ibl_examples") if r[1]]
     con.close()
     allacts = load_registry_actions()
+    return {
+        "행동": _measure_codes([c for s, c in rows if s in BEHAVIOR_SOURCES], allacts),
+        "교재": _measure_codes([c for _, c in rows], allacts),
+        "출처별": {s: n for s, n in Counter(s for s, _ in rows).most_common(8)},
+    }
 
+
+def _measure_codes(codes, allacts):
     pipe_lengths = []
     in_pipe = set()
     partners = defaultdict(set)
@@ -96,6 +125,7 @@ def measure():
     grammar = Counter()
 
     solo_form_counter = Counter()
+    nested = 0
     for code in codes:
         names_all = [f"{m.group(1)}:{m.group(2)}" for m in ACT_RE.finditer(code)]
         for label, pat in (("&", r"&"), ("$변수", r"\$[a-z_]"), (";", r";"),
@@ -105,12 +135,22 @@ def measure():
         # ★문형은 *조합된 문장* 기준으로만 센다. 단발 명령("메시지 보내줘" 한 줄)까지 세면
         #   "발신 973" 같은 숫자가 나와 조합이 되고 있다는 착시를 준다 — 이 지표가 묻는 것은
         #   "싱크가 파이프 안으로 들어왔는가"이지 "싱크 어휘를 쓰는가"가 아니다.
-        if ">>" not in code:
+        if not is_composed(code):
             for form in sentence_forms(names_all, code):
                 solo_form_counter[form] += 1
             continue
         for form in sentence_forms(names_all, code):
             form_counter[form] += 1
+        if NESTED_RE.search(code):
+            nested += 1
+            # 고차 문장은 do: 안의 낱말도 조합 파트너다 — 파이프가 아니어도 함께 쓰였다.
+            for a1 in names_all:
+                for a2 in names_all:
+                    if a1 != a2:
+                        partners[a1].add(a2)
+                in_pipe.add(a1)
+        if ">>" not in code:
+            continue
         seq = []
         for seg in code.split(">>"):
             m = ACT_RE.search(seg)
@@ -134,8 +174,10 @@ def measure():
 
     return {
         "총_문장": total,
+        "조합_문장": len(pipe_lengths) + nested,
         "파이프_문장": len(pipe_lengths),
-        "파이프_비율%": round(len(pipe_lengths) * 100 / total, 1) if total else 0,
+        "고차_문장": nested,          # do: 에 문장을 실은 것 (파이프 없이도 조합)
+        "파이프_비율%": round((len(pipe_lengths) + nested) * 100 / total, 1) if total else 0,
         "파이프_길이_중앙값": statistics.median(pipe_lengths) if pipe_lengths else 0,
         "파이프_길이_평균": round(statistics.mean(pipe_lengths), 2) if pipe_lengths else 0,
         "레지스트리_액션": len(allacts),
@@ -152,7 +194,25 @@ def measure():
     }
 
 
-def render(m, before=None):
+def render(full, before=None):
+    print("=" * 62)
+    print(" 언어 조합성 4지표")
+    print("=" * 62)
+    print(" ★판정 근거는 [행동] 이다 — [교재] 는 맥락. 시드는 교재만 올리고")
+    print("   행동은 못 건드린다(그래서 시딩으로 못 속이는 지표다).")
+    src = full.get("출처별") or {}
+    if src:
+        print("   출처: " + " · ".join(f"{k} {v:,}" for k, v in list(src.items())[:5]))
+    for label, key in (("행동 (실사용 증류)", "행동"), ("교재 (전 코퍼스)", "교재")):
+        print()
+        print("─" * 62)
+        print(f" [{label}]")
+        print("─" * 62)
+        _render_one(full[key], (before or {}).get(key))
+    print("=" * 62)
+
+
+def _render_one(m, before=None):
     def delta(key):
         if not before or key not in before:
             return ""
@@ -164,11 +224,9 @@ def render(m, before=None):
             return "  (변화 없음)"
         return f"  ({'+' if d > 0 else ''}{round(d, 2)})"
 
-    print("=" * 62)
-    print(" 언어 조합성 4지표")
-    print("=" * 62)
-    print(f"코퍼스 문장            {m['총_문장']:,}")
-    print(f"파이프 문장            {m['파이프_문장']:,} ({m['파이프_비율%']}%)")
+    print(f"문장                   {m['총_문장']:,}")
+    print(f"조합 문장              {m.get('조합_문장', m['파이프_문장']):,} ({m['파이프_비율%']}%)"
+          f"   [파이프 {m['파이프_문장']:,} · 고차 {m.get('고차_문장', 0):,}]")
     print()
     print(f"① 파이프 길이 중앙값   {m['파이프_길이_중앙값']}{delta('파이프_길이_중앙값')}"
           f"   [평균 {m['파이프_길이_평균']}]")
@@ -189,7 +247,6 @@ def render(m, before=None):
     print("문법 사용률")
     for k, v in m["문법_사용"].items():
         print(f"     {k:8s} {v}")
-    print("=" * 62)
 
 
 def main():
@@ -209,9 +266,10 @@ def main():
             before = json.load(f)
     render(m, before)
     if args.list_never:
-        print("\n미조합 액션 전체:")
-        for a in m["미조합_목록"]:
-            print("  ", a)
+        print("\n미조합 액션 전체 (행동 기준 — 실사용 파이프에 한 번도 안 나온 것):")
+        for a in m["행동"]["미조합_목록"]:
+            mark = "" if a in m["교재"]["미조합_목록"] else "   (교재에는 조합 있음 = 가르쳤으나 안 씀)"
+            print("  ", a + mark)
 
 
 if __name__ == "__main__":

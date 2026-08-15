@@ -1008,68 +1008,25 @@ def _phone_sync(bm, ti: dict) -> str:
         _adb("forward", "--remove", f"tcp:{PORT}")
 
 
-# ── [self:ledger]{store, op} — 사업 원장 4형제 통합 (2026-08-15) ────────────────
-# 헌법 "명사의 자리" 집행: 비즈니스·아이템·문서·지침은 세계의 명사라 어휘 이름이 아니라
-# 데이터(store 라벨)가 나른다. ★저장 구조는 그대로 — 기존 store 별 함수로 라우팅만 한다.
-# op 로 먼저 분기하고(레지스트리 ops 와 1:1 — --check 가 AST 로 키를 정확 비교) store 로
-# 갈래를 고른다. 그 store 에 없는 op 는 조용히 무시하지 않고 명시 거절한다.
-_LEDGER_STORES = ("business", "item", "document", "guideline")
-_LEDGER_ROUTES = {
-    "list":    {"business": _biz_list, "item": _item_list, "document": _doc_list, "guideline": _guide_list},
-    "detail":  {"business": _biz_detail, "item": _item_detail, "document": _doc_detail, "guideline": _guide_detail},
-    # save = 옛 business/item 의 save + document/guideline 의 update (같은 연산이었다)
-    "save":    {"business": _biz_save, "item": _item_save, "document": _doc_update, "guideline": _guide_update},
-    "delete":  {"business": _biz_delete, "item": _item_delete},
-    "regenerate": {"document": _doc_regenerate},
-    "publish":    {"document": _doc_publish},
-    "add_image":    {"item": _item_add_image},
-    "remove_image": {"item": _item_remove_image},
-}
-
-
-def _ledger_route(op: str, bm, ti: dict) -> str:
-    """★시그니처는 이 패키지의 디스패처 계약 `fn(bm, tool_input)` 을 따른다."""
-    store = (ti.get("store") or "business").strip().lower()
-    routes = _LEDGER_ROUTES.get(op) or {}
-    fn = routes.get(store)
-    if fn is None:
-        if store not in _LEDGER_STORES:
-            return json.dumps({
-                "success": False,
-                "error": f"알 수 없는 store '{store}' — business|item|document|guideline 중 하나입니다.",
-            }, ensure_ascii=False)
-        return json.dumps({
-            "success": False,
-            "error": f"store '{store}' 에는 op '{op}' 가 없습니다. 가능한 op: "
-                     f"{'/'.join(sorted(o for o, r in _LEDGER_ROUTES.items() if store in r))}",
-        }, ensure_ascii=False)
-    return fn(bm, ti)
-
-
-def _lg_list(bm, ti):         return _ledger_route("list", bm, ti)
-def _lg_detail(bm, ti):       return _ledger_route("detail", bm, ti)
-def _lg_save(bm, ti):         return _ledger_route("save", bm, ti)
-def _lg_delete(bm, ti):       return _ledger_route("delete", bm, ti)
-def _lg_regenerate(bm, ti):   return _ledger_route("regenerate", bm, ti)
-def _lg_publish(bm, ti):      return _ledger_route("publish", bm, ti)
-def _lg_add_image(bm, ti):    return _ledger_route("add_image", bm, ti)
-def _lg_remove_image(bm, ti): return _ledger_route("remove_image", bm, ti)
-
-
 _OP_DISPATCHERS = {
     "messages_op": {"thread": _msg_thread, "inbox": _msg_inbox},
     "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete, "favorite": _nb_favorite, "merge": _nb_merge},
     "contact_op": {"add": _ct_add, "update": _ct_update, "delete": _ct_delete},
-    "ledger_op": {"list": _lg_list, "detail": _lg_detail, "save": _lg_save, "delete": _lg_delete,
-                  "regenerate": _lg_regenerate, "publish": _lg_publish,
-                  "add_image": _lg_add_image, "remove_image": _lg_remove_image},
+    "business_op": {"list": _biz_list, "detail": _biz_detail, "save": _biz_save, "delete": _biz_delete},
+    "business_item_op": {"list": _item_list, "detail": _item_detail, "save": _item_save, "delete": _item_delete,
+                          "add_image": _item_add_image, "remove_image": _item_remove_image},
+    "business_document_op": {"list": _doc_list, "detail": _doc_detail, "update": _doc_update, "regenerate": _doc_regenerate, "publish": _doc_publish},
+    "work_guideline_op": {"list": _guide_list, "detail": _guide_detail, "update": _guide_update},
     "auto_response_op": {"status": _ar_status, "start": _ar_start, "stop": _ar_stop},
 }
 _OP_DEFAULTS = {
     "messages_op": "thread",
     "neighbor_op": "list",
     "contact_op": "add",
-    "ledger_op": "list",
+    "business_op": "list",
+    "business_item_op": "list",
+    "business_document_op": "list",
+    "work_guideline_op": "list",
     "auto_response_op": "status",
 }
 

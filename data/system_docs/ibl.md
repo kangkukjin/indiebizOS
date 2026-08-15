@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 6-Node 구조, 149 액션, 파서/엔진/라우팅
+scope: IBL 명세, 6-Node 구조, 146 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -114,10 +114,10 @@ IBL(실행 언어) 위에 표현을 맡는 언어가 두 부류 더 있고, 셋�
 - 잘 고른 소수 프리미티브 + 풍부한 조합 = **생성 문법**(무한). → 언어
 - 많은 프리미티브 + 빈약한 조합 = **납작한 룩업 테이블**(크지만 유한). → 사전
 
-IBL의 진짜 엔진은 149개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장)
+IBL의 진짜 엔진은 146개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장)
 `$변수`(바인딩) `[if:]`/`[case:]`(분기) **`[table:each]`(적용 — 문장을 값으로 받는 고차 변환자)**
 + 접근 + 가이드다.
-**149 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
+**146 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
 
 > **조합의 병목은 낱말 수가 아니라 문형 수다** (2026-08-15 코퍼스 전수 실측): 파이프 포함 문장
 > 7%·평균 길이 2.45·150 중 68개는 한 번도 조합된 적 없음. 미조합의 다수가 `others:`(발신)와
@@ -264,7 +264,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ## 액션 카테고리
 
-총 149개 액션(sense 42, self 52, limbs 14, others 18, engines 9, table 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 146개 액션(sense 42, self 49, limbs 14, others 18, engines 9, table 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -313,7 +313,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ### 핵심 노드 분류
 
-총 **149 액션** (2026-08-15 **라디오 재생 제어 흡수**: `[limbs:player_status]`·`[limbs:volume]` 은퇴 → `[limbs:radio]{op:"status"|"volume"}`. 둘 다 desc 는 "음악·라디오"라고 선언하면서 구현은 라디오 모듈 전역만 만졌다(`limbs:explorer` 의 "Finder" 거짓말과 같은 부류 — 그건 이미 은퇴 사유였다). volume 의 "mpv IPC" 도 거짓(구현 docstring 이 "mpv 재시작 방식"). ★`limbs:radio_favorite` 는 **접지 않았다** — 즐겨찾기는 원장 CRUD 라 재생 제어와 `op` 축의 의미가 다르다(섞으면 한 축이 두 개념을 나른다). 코퍼스 11행 이관 시 곡/노래 의도 3행은 라디오가 아니라 `[limbs:music]{op:"queue"}` 로 정직 재배선(거짓 desc 를 보고 쓰인 행들 — 08-15 1차 "파인더→os_open" 선례). ⏳잔여 갭: 로컬 음악 재생 상태는 표면 `<audio>` 가 쥐고 있어 보고할 액션이 없다 → 151에서 149. 이전: 2026-08-15 **고차 문장**: `[table:each]{do, as, limit, on_error}` 신설 — 문장을
+총 **146 액션** (2026-08-15 **사업 원장 통합**: `self:business`·`business_item`·`business_document`·`work_guideline` → **`[self:ledger]{store, op}`**. 헌법 "명사의 자리" 집행 — 비즈니스·아이템·문서·지침은 *세계의 명사*라 어휘 이름이 아니라 데이터(store 라벨)가 나른다. 조항은 2026-08-06 선포인데 이 어휘들은 06-12 부터 있어 소급된 적이 없었다. ★store 는 Object Type 선언이 아닌 자유 라벨이라 "선행 명사 스키마 금지"와 충돌하지 않는다. ★저장 구조 무변경(사용자 판정): 기존 테이블로 라우팅만, 데이터 이관 0. ★부수 이득: `save`(business·item)와 `update`(document·guideline)가 같은 연산인데 이름만 달랐다 → `save` 통일. store 에 없는 op 는 가능한 op 를 알려주며 명시 거절. 코퍼스 41행 이관 → 149에서 146. 이전: **라디오 재생 제어 흡수**: `[limbs:player_status]`·`[limbs:volume]` 은퇴 → `[limbs:radio]{op:"status"|"volume"}`. 둘 다 desc 는 "음악·라디오"라고 선언하면서 구현은 라디오 모듈 전역만 만졌다(`limbs:explorer` 의 "Finder" 거짓말과 같은 부류 — 그건 이미 은퇴 사유였다). volume 의 "mpv IPC" 도 거짓(구현 docstring 이 "mpv 재시작 방식"). ★`limbs:radio_favorite` 는 **접지 않았다** — 즐겨찾기는 원장 CRUD 라 재생 제어와 `op` 축의 의미가 다르다(섞으면 한 축이 두 개념을 나른다). 코퍼스 11행 이관 시 곡/노래 의도 3행은 라디오가 아니라 `[limbs:music]{op:"queue"}` 로 정직 재배선(거짓 desc 를 보고 쓰인 행들 — 08-15 1차 "파인더→os_open" 선례). ⏳잔여 갭: 로컬 음악 재생 상태는 표면 `<audio>` 가 쥐고 있어 보고할 액션이 없다 → 151에서 149. 이전: 2026-08-15 **고차 문장**: `[table:each]{do, as, limit, on_error}` 신설 — 문장을
 값으로 받는 유일한 변환자. 같은 날 M1 로 문장 자리의 이름을 `do` 하나로 통일[trigger.pipeline·
 workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps 를 `do` 별칭으로 흡수 —
 핸들러 읽기키는 불변]. 정본 docs/HIGHER_ORDER_SENTENCE_DESIGN.md → 150에서 151. 이전: 2026-08-05 영상 어휘 정리: engines:html_video·engines:remotion 은퇴[영상의 정본 경로=`[self:deck]{op:"video"}` 덱→나레이션 MP4 결정화, 합성 파이프라인은 함수층 잔류·remotion-video 패키지 not_installed] → 152에서 150. 같은 날 슬라이드 어휘 일원화: engines:slide·slide_shadcn→`[self:slide]{op:"create"}`[lecture_id 미지정=스크래치 덱, aesthetic 관통] → 154에서 152. 같은 날 2b: search_books→`book{source:"google"}` 흡수[classic 은 서지↔원문 동음이의로 병합 금지 판정] → 155에서 154. 같은 날 2단계: 검색 5액션[search_ddg/naver/gnews/hn/guardian]→`search{source}` 하나 — web-kr 패키지 은퇴[naver 흡수]·guardian 은 study→web 이주 → 159에서 155. 같은 날 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).

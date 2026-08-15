@@ -2814,37 +2814,68 @@ nodes:
         - 블로그 통계
         - 인덱스
         - vault
-      business:
+      ledger:
+        aliases:
+          op:
+          - action
         returns: items
         side_effect: true
-        fixture: '[self:business]{op: "list"}'
-        description: 나의 비즈니스(사업) 조회·관리 — op:list(기본, items 통화)/detail/save/delete(단건 op는 해당 객체 응답).
+        fixture: '[self:ledger]{store: "business", op: "list"}'
+        description: 사업 원장 조회·관리 (store × op). store=business(사업)/item(상품·서비스)/document(레벨별 공개문서)/guideline(근무지침). op:list 기본.
         group: business
-        target_description: op:list(level 0-4·search 필터) / detail(id 필수, +소속 아이템) / save(id 없으면 생성·name 필수, 있으면 수정 — name/level(0-4 공개수준)/description) / delete(id 필수, 아이템도 함께).
+        target_description: 'store 로 원장을 고르고 op 로 연산을 고른다(기본 store=business, op=list).
+
+          - business: list(level 0-4·search 필터) / detail(id, +소속 아이템) / save(id 없으면 생성·name 필수) / delete(id, 아이템도 함께)
+
+          - item: list(business_id 없으면 전체·search) / detail(id) / save(business_id·title 필수) / delete(id) / add_image·remove_image(id + path)
+
+          - document: list(레벨 0-4 전체) / detail(level) / save(level + title/content) / regenerate(비즈니스·아이템 기반 자동 재생성) / publish(Nostr 발행)
+
+          - guideline: list / detail(level) / save(level + title/content)
+
+          ★op 이 그 store 에 없으면 거절한다(조용히 무시하지 않는다).'
         target_key: op
         router: handler
-        tool: business_op
+        tool: ledger_op
         ops:
           default: list
           returns:
             save: effect
             delete: effect
+            regenerate: effect
+            publish: effect
+            add_image: effect
+            remove_image: effect
           side_effect:
             list: false
             detail: false
           exempt:
-            detail: 비즈니스 id 필요(list 결과의 id) — 고정 fixture 부적합
+            detail: store 별 id/level 필요(list 결과) — 고정 fixture 부적합
+            save: 생성/수정 대상 필요 — 고정 fixture 부적합
+            delete: 삭제 대상 필요 — 고정 fixture 부적합
+            regenerate: 비즈니스 데이터 의존 — 고정 fixture 부적합
+            publish: 외부 발행(Nostr) — 부작용 fixture 부적합
+            add_image: item_id + 실파일 경로 필요 — 고정 fixture 부적합
+            remove_image: item_id + 경로 필요 — 고정 fixture 부적합
           values:
-            list: 비즈니스 목록 (level/search 필터)
-            detail: 비즈니스 상세 + 소속 아이템 (id 필수)
-            save: 생성(id 없음·name 필수)/수정(id 있음)
-            delete: 비즈니스 삭제 (id 필수)
-        implementation: business 패키지 business_op — business_manager.get_businesses/get_business/create_business/update_business/delete_business.
+            list: 원장 목록 (store 별 필터 — 기본 op)
+            detail: 단건 상세 (business/item=id · document/guideline=level)
+            save: 생성·수정 (옛 business/item 의 save 와 document/guideline 의 update 통합)
+            delete: 삭제 (business=소속 아이템 동반 · item=단건)
+            regenerate: 공개문서 자동 재생성 (store=document 전용)
+            publish: 공개 프로필·발견 노트 Nostr 발행 (store=document 전용)
+            add_image: 아이템 첨부 이미지 추가 (store=item 전용, id·path)
+            remove_image: 아이템 첨부 이미지 제거 (store=item 전용, id·path)
+        implementation: business 패키지 ledger_op — op 로 먼저 분기하고 store 로 기존 store 별 함수(_biz_*/_item_*/_doc_*/_guide_*)에 라우팅. 테이블·매니저 무변경.
         keywords:
         - 비즈니스
         - 사업
+        - 원장
+        - 상품
+        - 아이템
+        - 공개문서
+        - 근무지침
         - 비즈니스 목록
-        - 비즈니스 추가
         - 사업 등록
         app:
           instrument: business
@@ -2879,15 +2910,15 @@ nodes:
                 value: -1
             buttons:
             - label: ＋ 비즈니스 추가
-              action: '[self:business]{op: "save", name: "$q"}'
+              action: '[self:ledger]{store: "business", op: "save", name: "$q"}'
               refresh: true
-            action: '[self:business]{op: "list", level: "$level", search: "$q"}'
+            action: '[self:ledger]{store: "business", op: "list", level: "$level", search: "$q"}'
             view:
             - type: card_list
               from: items
               master_detail: true
               item_click:
-                action: '[self:business]{op: "detail", id: "{id}"}'
+                action: '[self:ledger]{store: "business", op: "detail", id: "{id}"}'
                 view:
                 - type: form
                   title: 비즈니스 정보
@@ -2917,11 +2948,11 @@ nodes:
                     label: 설명
                     type: textarea
                     value: '{business.description}'
-                  action: '[self:business]{op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  action: '[self:ledger]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
                   button: 저장
                   actions:
                   - label: 비즈니스 삭제
-                    action: '[self:business]{op: "delete", id: "{business.id}"}'
+                    action: '[self:ledger]{store: "business", op: "delete", id: "{business.id}"}'
                     style: danger
                     confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
                     back: true
@@ -2937,7 +2968,7 @@ nodes:
             - key: biz
               type: select
               placeholder: 전체 비즈니스
-              options_action: '[self:business]{op: "list"}'
+              options_action: '[self:ledger]{store: "business", op: "list"}'
               options_from: items
               option_value: id
               option_label: name
@@ -2946,16 +2977,16 @@ nodes:
               placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:business_item]{op: "save", business_id: "$biz", title: "$q"}'
+              action: '[self:ledger]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
               refresh: true
-            action: '[self:business_item]{op: "list", business_id: "$biz", search: "$q"}'
+            action: '[self:ledger]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
             view:
             - type: card_list
               from: items
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:business_item]{op: "detail", item_id: "{id}"}'
+                action: '[self:ledger]{store: "item", op: "detail", item_id: "{id}"}'
                 view:
                 - type: form
                   title: 아이템
@@ -2972,13 +3003,13 @@ nodes:
                     label: 사진
                     type: images
                     value: '{item.attachment_path}'
-                    add_action: '[self:business_item]{op: "add_image", item_id: "{item.id}", path: "$path"}'
-                    remove_action: '[self:business_item]{op: "remove_image", item_id: "{item.id}", path: "$path"}'
-                  action: '[self:business_item]{op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                    add_action: '[self:ledger]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
+                    remove_action: '[self:ledger]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
+                  action: '[self:ledger]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
                   button: 저장
                   actions:
                   - label: 아이템 삭제
-                    action: '[self:business_item]{op: "delete", item_id: "{item.id}"}'
+                    action: '[self:ledger]{store: "item", op: "delete", item_id: "{item.id}"}'
                     style: danger
                     confirm: 이 아이템을 삭제할까요?
                     back: true
@@ -2992,14 +3023,14 @@ nodes:
             auto_run: true
             buttons:
             - label: ↻ 비즈니스 기반 재생성
-              action: '[self:business_document]{op: "regenerate"}'
+              action: '[self:ledger]{store: "document", op: "regenerate"}'
               refresh: true
-            action: '[self:business_document]{op: "list"}'
+            action: '[self:ledger]{store: "document", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:business_document]{op: "detail", level: "{level}"}'
+                action: '[self:ledger]{store: "document", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 공개 비즈니스 문서
@@ -3012,7 +3043,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{document.content}'
-                  action: '[self:business_document]{op: "update", level: "{document.level}", title: "$title", content: "$content"}'
+                  action: '[self:ledger]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: '{title}'
@@ -3020,12 +3051,12 @@ nodes:
                 - '{content|trunc:60}'
           - name: 근무지침
             auto_run: true
-            action: '[self:work_guideline]{op: "list"}'
+            action: '[self:ledger]{store: "guideline", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:work_guideline]{op: "detail", level: "{level}"}'
+                action: '[self:ledger]{store: "guideline", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 근무 지침
@@ -3038,7 +3069,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{guideline.content}'
-                  action: '[self:work_guideline]{op: "update", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  action: '[self:ledger]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: 레벨 {level} · {title}
@@ -3064,106 +3095,6 @@ nodes:
                 v: '{summary}'
               - k: 점검
                 v: '{interval_label}'
-      business_item:
-        returns: items
-        side_effect: true
-        fixture: '[self:business_item]{op: "list"}'
-        description: 비즈니스 아이템(상품/항목) 조회·관리 — op:list(기본, items 통화)/detail/save/delete/add_image/remove_image(단건 op는 해당 객체 응답).
-        group: business
-        target_description: op:list(business_id 없으면 전체 비즈니스·search 제목/설명 필터) / detail(item_id 필수) / save(id 없으면 생성·business_id+title 필수, 있으면 수정 — title/details/attachment_path) / delete(item_id 필수).
-        target_key: op
-        router: handler
-        tool: business_item_op
-        ops:
-          default: list
-          returns:
-            save: effect
-            delete: effect
-            add_image: effect
-            remove_image: effect
-          side_effect:
-            list: false
-            detail: false
-          exempt:
-            detail: item_id 필요(list 결과의 id) — 고정 fixture 부적합
-          values:
-            list: 아이템 목록 (business_id 없으면 전체, search 필터)
-            detail: 아이템 상세 (item_id 필수)
-            save: 생성(business_id·title 필수)/수정(id 있음)
-            delete: 아이템 삭제 (item_id 필수)
-            add_image: 첨부 이미지 추가 (item_id·path — 로컬 파일을 business_images 로 복사)
-            remove_image: 첨부 이미지 제거 (item_id·path)
-        implementation: business 패키지 business_item_op — business_manager.get_business_items/get_business_item/create_business_item/update_business_item/delete_business_item. add_image/remove_image 는 attachment_path(JSON 배열) 갱신 + business_images 복사·삭제.
-        keywords:
-        - 비즈니스 아이템
-        - 상품 추가
-        - 상품 목록
-        - 품목
-        - 사업 항목
-      business_document:
-        returns: items
-        side_effect: true
-        fixture: '[self:business_document]{op: "list"}'
-        description: 레벨별 공개 비즈니스 문서(이웃 공개 수준별) 조회·관리 — op:list(기본, items 통화)/detail/update/regenerate/publish(공개인사프로필+공개창고 주소를 Nostr 발행 — 명함+발견 메시지, 내용은 창고가 쥠).
-        group: business
-        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content) / regenerate(비즈니스·아이템 기반 레벨별 자동 재생성, 파라미터 없음) / publish(공개인사프로필 kind:0[website=공개창고 주소] + 발견 노트 kind:1
-        target_key: op
-        router: handler
-        tool: business_document_op
-        ops:
-          default: list
-          returns:
-            update: effect
-            regenerate: effect
-            publish: effect
-            detail: scalar
-          side_effect:
-            list: false
-            detail: false
-          fixture:
-            detail: '[self:business_document]{op: "detail", level: 0}'
-          values:
-            list: 레벨 0-4 공개 문서 전체
-            detail: 특정 레벨 문서 (level 필수)
-            update: 문서 수정 (level + title/content)
-            regenerate: 비즈니스·아이템 기반 레벨별 자동 재생성
-            publish: 공개인사프로필+발견 노트를 Nostr 발행(kind:0 프로필[website=공개창고 주소] + kind:1
-        implementation: business 패키지 business_document_op — business_manager.get_all_business_documents/get_business_document/update_business_document/regenerate_business_documents.
-        keywords:
-        - 비즈니스 문서
-        - 공개 문서
-        - 문서 재생성
-        - 레벨별 문서
-      work_guideline:
-        returns: items
-        side_effect: true
-        fixture: '[self:work_guideline]{op: "list"}'
-        description: 레벨별 근무 지침(업무 가이드라인) 조회·관리 — op:list(기본, items 통화)/detail/update(단건 op는 해당 지침 응답).
-        group: business
-        target_description: op:list(레벨 0-4 전체) / detail(level 필수) / update(level 필수 + title·content).
-        target_key: op
-        router: handler
-        tool: work_guideline_op
-        ops:
-          default: list
-          returns:
-            update: effect
-            detail: scalar
-          side_effect:
-            list: false
-            detail: false
-          fixture:
-            detail: '[self:work_guideline]{op: "detail", level: 0}'
-          values:
-            list: 레벨 0-4 근무 지침 전체
-            detail: 특정 레벨 지침 (level 필수)
-            update: 지침 수정 (level + title/content)
-        implementation: business 패키지 work_guideline_op — business_manager.get_all_work_guidelines/get_work_guideline/update_work_guideline.
-        keywords:
-        - 근무 지침
-        - 업무 가이드
-        - 작업 지침
-        - 가이드라인
       phone_sync:
         returns: effect
         description: 폰과 PC의 주소록(이웃·연락처·사업) USB 합집합 동기화 — "폰 동기화/싱크" 명령 시.

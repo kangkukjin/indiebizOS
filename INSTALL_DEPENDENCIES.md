@@ -44,8 +44,11 @@ pip install -r backend/requirements-tools.txt
 **browser-action** (브라우저 자동화)
 ```bash
 pip install playwright
-playwright install chromium
+python scripts/check_playwright_browsers.py --install
 ```
+> ★맨손 `playwright install chromium` 을 쓰지 말 것 — 브라우저가 기본 캐시로 가는데
+> 백엔드는 `<base_path>/ms-playwright` 를 본다(설치본 이식성). 위 스크립트가 그 주소로
+> 받는다. 정본 설치(`scripts/bootstrap.py`)는 이미 이 단계를 포함한다.
 
 **web** (웹 검색/크롤링) — ★검색은 `ddgs`(신규 패키지). 구 `duckduckgo-search`는 `ddgs` 모듈을 제공하지 않으니 주의.
 ```bash
@@ -56,7 +59,7 @@ pip install browser-use langchain-google-genai
 **shopping-assistant** (쇼핑 도우미)
 ```bash
 pip install playwright requests
-playwright install chromium
+python scripts/check_playwright_browsers.py --install
 ```
 
 ---
@@ -177,7 +180,7 @@ pip install fastapi "uvicorn[standard]" pydantic python-dotenv python-multipart 
 ### Playwright (브라우저 자동화 필요시)
 ```bash
 pip install playwright
-playwright install chromium
+python scripts/check_playwright_browsers.py --install
 ```
 
 ### 투자 도구 (필요시)
@@ -207,11 +210,16 @@ python -m pip install <패키지명>
 pip install --user <패키지명>
 ```
 
-### Playwright 브라우저 설치 실패
+### Playwright 브라우저 설치 실패 / "Executable doesn't exist at …"
 ```bash
-# 관리자 권한으로 실행
-playwright install --with-deps chromium
+# 먼저 어디를 보고 있고 무엇이 없는지 확인 (받는 곳과 보는 곳이 갈렸는지)
+python scripts/check_playwright_browsers.py
+# 받기 (리눅스는 OS 의존성까지: --with-deps, 관리자 권한 필요)
+python scripts/check_playwright_browsers.py --install
 ```
+> playwright 를 올리면 브라우저 빌드 번호가 바뀐다(예 1228→1234). 그때 맨손
+> `playwright install` 로 받으면 기본 캐시에 떨어져 백엔드가 못 찾고, 슬라이드·강의영상·
+> 글자 얹기·browser-action 이 한꺼번에 조용히 죽는다. 위 스크립트가 주소를 맞춰 받는다.
 
 ---
 

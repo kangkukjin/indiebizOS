@@ -31,6 +31,131 @@ def get_data_path() -> Path:
     return p
 
 
+# ============================================================
+# Playwright 브라우저 주소 — 단일 소스
+# ============================================================
+# 이 저장소는 브라우저 바이너리를 기본 캐시(~/Library/Caches/ms-playwright 등)가
+# 아니라 base_path/ms-playwright 에 둔다. 이유=설치본 이식성: 프로덕션에서
+# get_base_path() 는 userData(항상 쓰기가능)라, 읽기전용일 수 있는 앱 번들과
+# 무관하게 런타임 자동설치(install_python_dependency)와 실행이 같은 곳을 본다.
+#
+# ★단일 소스인 이유(2026-08-15 실측): 주소가 두 군데서 계산되면 반드시 갈라진다.
+#   ① 받는 곳: `playwright install` 을 PLAYWRIGHT_BROWSERS_PATH 없이 돌리면 기본 캐시로 간다.
+#   ② 보는 곳: 아래 setup 이 base_path/ms-playwright 를 본다.
+#   playwright 를 올리면 빌드 번호가 바뀌므로(1228→1234) 그 순간 어긋나고,
+#   증상은 조용하다 — 슬라이드·영상·글자얹기·browser-action 이 *쓸 때* 처음 터진다.
+#   그래서 주소 계산은 여기 한 곳, 설치는 조리법(scripts/bootstrap.py)의 일부,
+#   어긋남은 12시간 자가점검이 신고한다(scripts/check_playwright_browsers.py).
+
+# `playwright install chromium` 이 실제로 내려놓는 것들(브라우저+녹화용 ffmpeg).
+_PLAYWRIGHT_REQUIRED_BROWSERS = ("chromium", "chromium-headless-shell", "ffmpeg")
+
+
+def get_playwright_browsers_path() -> Path:
+    """브라우저 바이너리가 사는 곳 — 받는 쪽·보는 쪽 공통 주소.
+
+    이미 환경변수가 있으면 그것이 진실(사용자·상위 런처가 정한 것을 뒤집지 않는다).
+    """
+    env = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+    if env:
+        return Path(env)
+    return get_base_path() / "ms-playwright"
+
+
+def setup_playwright_browsers_path() -> str:
+    """PLAYWRIGHT_BROWSERS_PATH 를 이 프로세스와 자식 프로세스에 고정하고 그 값을 반환.
+
+    ★부팅 경로와 무관하게 항상 같은 값이어야 한다 — 이 호출이
+    setup_bundled_runtime_paths() 의 '번들 파이썬 아니면 조기 return' 안쪽에 있던 탓에
+    Electron 기동(INDIEBIZ_PYTHON_PATH 있음)은 저장소 안을, start.sh 기동은 기본 캐시를
+    보고 있었다. 같은 설치가 기동 방법에 따라 다른 곳을 보는 것이 드리프트의 뿌리다.
+    """
+    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(get_base_path() / "ms-playwright"))
+    return os.environ["PLAYWRIGHT_BROWSERS_PATH"]
+
+
+def check_playwright_browsers() -> dict:
+    """설치된 playwright 가 기대하는 브라우저 빌드가 그 주소에 실재하는가.
+
+    파일 읽기만 한다(playwright 를 import 하지 않음 — greenlet ABI 파손 같은
+    import 사고를 이 점검이 대신 겪지 않도록). 기대 빌드 번호는 playwright 패키지가
+    동봉한 driver/package/browsers.json 이 진실 소스.
+
+    반환: {status, ok, browsers_path, playwright_version, expected[], missing[], stale[], note}
+      status: ok | missing | playwright_missing | error
+      stale: 같은 브라우저의 다른(옛) 빌드 폴더 — 정리 후보(삭제는 사용자 결정)
+    """
+    import json as _json
+
+    out = {"status": "error", "ok": False, "browsers_path": None,
+           "playwright_version": None, "expected": [], "missing": [], "stale": [], "note": ""}
+    try:
+        browsers_path = get_playwright_browsers_path()
+        out["browsers_path"] = str(browsers_path)
+
+        try:
+            import importlib.util
+            spec = importlib.util.find_spec("playwright")
+        except Exception:
+            spec = None
+        if spec is None or not spec.origin:
+            out.update(status="playwright_missing", ok=True,
+                       note="playwright 미설치 — 브라우저 점검 대상 아님(의존성 감사 소관)")
+            return out
+
+        try:
+            import importlib.metadata as _md
+            out["playwright_version"] = _md.version("playwright")
+        except Exception:
+            pass
+
+        manifest = Path(spec.origin).parent / "driver" / "package" / "browsers.json"
+        if not manifest.exists():
+            out["note"] = f"browsers.json 없음: {manifest}"
+            return out
+        entries = _json.loads(manifest.read_text(encoding="utf-8")).get("browsers") or []
+
+        wanted = {}
+        for e in entries:
+            name = e.get("name")
+            if name in _PLAYWRIGHT_REQUIRED_BROWSERS and e.get("revision"):
+                wanted[name] = str(e["revision"])
+        if not wanted:
+            out["note"] = f"browsers.json 에서 기대 빌드를 못 찾음: {manifest}"
+            return out
+
+        for name, rev in sorted(wanted.items()):
+            # playwright 폴더 관례: 이름의 '-' 는 '_' (chromium-headless-shell → chromium_headless_shell)
+            d = browsers_path / f"{name.replace('-', '_')}-{rev}"
+            # INSTALLATION_COMPLETE = playwright 가 다운로드 완주 때만 남기는 표식
+            # (폴더만 있고 반쯤 받아진 상태를 '있음' 으로 오독하지 않기 위해)
+            present = d.is_dir() and (d / "INSTALLATION_COMPLETE").exists()
+            out["expected"].append({"name": name, "revision": rev, "dir": str(d), "present": present})
+            if not present:
+                out["missing"].append(f"{name}-{rev}")
+
+        if browsers_path.is_dir():
+            for name, rev in sorted(wanted.items()):
+                prefix = f"{name.replace('-', '_')}-"
+                for d in sorted(browsers_path.glob(prefix + "*")):
+                    # 'chromium-' 글롭이 'chromium_headless_shell-' 까지 먹지 않게 정확 분해
+                    if not d.is_dir() or d.name[len(prefix):].strip("0123456789") != "":
+                        continue
+                    if d.name != f"{prefix}{rev}":
+                        out["stale"].append(str(d))
+
+        out["ok"] = not out["missing"]
+        out["status"] = "ok" if out["ok"] else "missing"
+        if out["missing"]:
+            out["note"] = (f"playwright {out['playwright_version'] or '?'} 가 기대하는 빌드가 "
+                           f"{browsers_path} 에 없음: {', '.join(out['missing'])} — "
+                           f"`python scripts/check_playwright_browsers.py --install` 로 받으세요")
+        return out
+    except Exception as e:
+        out["note"] = f"점검 실패: {e}"
+        return out
+
+
 def get_runtime_paths() -> dict:
     """
     번들된 런타임 경로 또는 시스템 런타임 반환
@@ -200,7 +325,8 @@ def install_python_dependency(package: str, timeout: int = 300) -> dict:
             sys.path.insert(0, target_str)  # 설치 즉시 import 가능하게
 
         if package.lower().split("==")[0].split(">")[0].strip() in ("playwright",):
-            browsers = str(get_base_path() / "ms-playwright")
+            # 주소는 단일 소스에서 (bootstrap·자가점검·실행이 보는 그 곳)
+            browsers = str(get_playwright_browsers_path())
             env = dict(os.environ)
             env["PLAYWRIGHT_BROWSERS_PATH"] = browsers
             env["PYTHONPATH"] = target_str + os.pathsep + env.get("PYTHONPATH", "")
@@ -231,6 +357,14 @@ def setup_bundled_runtime_paths():
 
     개발 환경(시스템 Python)에서는 해당 경로가 존재하지 않으므로 안전하게 무시됨.
     """
+    # --- 0. playwright 브라우저 주소 (번들 여부와 무관 — 아래 조기 return 보다 위) ---
+    # 이 줄이 조기 return 아래 있던 탓에 같은 설치가 기동 방법에 따라 다른 곳을 봤다:
+    # Electron 기동(INDIEBIZ_PYTHON_PATH 있음)=저장소 안 / start.sh 기동=기본 캐시.
+    try:
+        setup_playwright_browsers_path()
+    except Exception as e:
+        print(f"[Runtime] playwright 브라우저 경로 설정 실패(무시): {e}")
+
     is_windows = platform.system() == "Windows"
     python_cmd = get_python_cmd()
     python_path = Path(python_cmd)
@@ -288,8 +422,7 @@ def setup_bundled_runtime_paths():
         if ul_str not in sys.path:
             sys.path.insert(0, ul_str)
             print(f"[Runtime] sys.path에 추가(userData libs): {ul_str}")
-        # playwright 브라우저(chromium)도 userData 에 두고 런타임에 찾게 한다(설치·실행 공통 경로).
-        os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(get_base_path() / "ms-playwright"))
+        # (playwright 브라우저 주소는 이 함수 맨 위 0단계에서 이미 고정됐다)
     except Exception as e:
         print(f"[Runtime] userData libs 설정 실패(무시): {e}")
 

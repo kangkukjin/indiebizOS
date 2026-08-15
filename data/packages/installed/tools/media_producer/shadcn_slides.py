@@ -362,7 +362,9 @@ def _create_shadcn_slides_impl(tool_input: dict, output_base: str) -> str:
     except ImportError:
         return json.dumps({
             "success": False,
-            "error": "Playwright가 설치되어 있지 않습니다. 'pip install playwright && playwright install chromium' 실행 필요"
+            "error": "Playwright가 설치되어 있지 않습니다. 'pip install playwright' 후 "
+                     "'python scripts/check_playwright_browsers.py --install' 실행 필요 "
+                     "(맨손 playwright install 은 기본 캐시로 받아 백엔드가 보는 주소와 어긋난다)"
         }, ensure_ascii=False)
     except Exception as e:
         return json.dumps({

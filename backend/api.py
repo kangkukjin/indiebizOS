@@ -113,6 +113,18 @@ async def lifespan(app: FastAPI):
     from runtime_utils import setup_bundled_runtime_paths
     setup_bundled_runtime_paths()
 
+    # playwright 브라우저 정합 — 어긋날 때만 한 줄 말한다(정상이면 침묵).
+    # 파일 읽기뿐이라 부팅 비용 ~0. 이게 없으면 슬라이드·강의영상·글자얹기·
+    # browser-action 의 죽음이 '쓸 때'까지 안 보인다(2026-08-15 실측: 빌드 1228↔1234).
+    # 12시간 순찰(__static__/playwright_browsers)이 같은 검사기로 기록까지 남긴다.
+    try:
+        from runtime_utils import check_playwright_browsers
+        _pw = check_playwright_browsers()
+        if not _pw.get("ok"):
+            print(f"[Runtime] ⚠ playwright 브라우저 불일치 — {_pw.get('note')}")
+    except Exception as _e:
+        print(f"[Runtime] playwright 브라우저 점검 생략: {_e}")
+
     # 몸 독립 부팅 배선 — 에피소드 로거 등(맥·폰·미래 몸 공통). boot_common 한 곳에서
     # 켜므로 새 몸의 진입점을 만들 때 베끼다 빠뜨릴 수 없다(헌법1조: 몸 독립은 공유 배선,
     # 몸 종속만 각 진입점이 profile 게이트로 명시 분기). 폰은 phone_api.serve() 가 같이 호출.

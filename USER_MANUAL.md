@@ -783,11 +783,17 @@ python -m pip install <패키지명>
 pip install --user <패키지명>
 ```
 
-### 7.4 Playwright 브라우저 설치 실패
+### 7.4 Playwright 브라우저 설치 실패 / "Executable doesn't exist at …"
+
+슬라이드·강의 영상·글자 얹기·browser-action 이 한꺼번에 안 되면 대개 이것이다
+(playwright 를 올리면 브라우저 빌드 번호가 바뀌는데, 맨손 `playwright install` 은
+기본 캐시로 받아 백엔드가 보는 곳과 어긋난다).
 
 ```bash
-# 관리자 권한으로 실행
-playwright install --with-deps chromium
+# 어디를 보고 있고 무엇이 없는지 확인
+python scripts/check_playwright_browsers.py
+# 올바른 주소로 받기 (리눅스는 --with-deps 추가, 관리자 권한)
+python scripts/check_playwright_browsers.py --install
 ```
 
 ### 7.5 API 키 관련 에러

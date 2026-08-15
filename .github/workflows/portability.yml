@@ -32,7 +32,10 @@ on:
       - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/ci_playwright_smoke.py'
+      - 'scripts/check_playwright_browsers.py'
       - 'scripts/bootstrap.py'
+      - 'backend/requirements-tools.txt'
       - '.github/workflows/portability.yml'
   pull_request:
     paths:
@@ -42,7 +45,10 @@ on:
       - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/ci_playwright_smoke.py'
+      - 'scripts/check_playwright_browsers.py'
       - 'scripts/bootstrap.py'
+      - 'backend/requirements-tools.txt'
       - '.github/workflows/portability.yml'
   workflow_dispatch:
 
@@ -115,3 +121,28 @@ jobs:
         run: python scripts/bootstrap.py --core-only
       - name: 서버 실기동 → /health 200 (scripts/ci_boot_smoke.py)
         run: python scripts/ci_boot_smoke.py
+
+  playwright-render:
+    # 브라우저 주소 드리프트 그물 (2026-08-15) — 부팅 스모크가 원리적으로 못 잡는 층.
+    # playwright 를 올리면 브라우저 빌드 번호가 바뀌는데(1228→1234), 받는 곳(기본 캐시)과
+    # 보는 곳(base_path/ms-playwright)이 갈려도 import·부팅·/health 는 전부 초록이다.
+    # 실제로 한 번 구워야만 드러난다 → 슬라이드·강의영상·글자얹기·browser-action 이
+    # 한꺼번에 죽는 부류를 커밋 시점으로 당긴다.
+    # 우분투인 이유: 리눅스만 OS 의존성이 필요해(--with-deps) 가장 까다로운 몸이고,
+    # 맥·윈도우는 같은 스크립트가 로컬에서 도는 몸이다(비용 대비 그물이 가장 촘촘).
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 부트스트랩 (정본 레시피 — venv+코어)
+        run: python scripts/bootstrap.py --core-only
+      - name: 도구 의존성 (playwright 가 사는 티어)
+        run: .venv/bin/python3 -m pip install --quiet -r backend/requirements-tools.txt
+      - name: 브라우저 다운로드 — bootstrap 이 부르는 그 스크립트 그대로
+        run: .venv/bin/python3 scripts/check_playwright_browsers.py --install --with-deps
+      - name: 실제 렌더 스모크 (받은 곳 == 보는 곳)
+        run: .venv/bin/python3 scripts/ci_playwright_smoke.py

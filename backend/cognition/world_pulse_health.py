@@ -206,6 +206,11 @@ def run_ibl_health_check() -> List[Dict]:
     # subprocess=검사 스크립트가 .venv 인터프리터를 따로 띄워 repo 밖 cwd 에서 시험
     # (라이브 프로세스 무접촉, red_safety 와 같은 이유).
     out.append(_run_import_coverage(_root))
+    # §1G playwright 브라우저 주소 정합 (2026-08-15 — 빌드 드리프트의 상설 그물) —
+    # playwright 를 올리면 브라우저 빌드 번호가 바뀌는데, 받는 곳(기본 캐시)과 보는 곳
+    # (base_path/ms-playwright)이 갈리면 슬라이드·강의영상·글자얹기·browser-action 이
+    # 한꺼번에 죽는다. 그것도 *쓸 때* 처음 — 부팅도 import 도 초록이라 못 잡는 부류.
+    out.append(_run_playwright_browsers(_root))
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})
@@ -252,6 +257,51 @@ def _run_import_coverage(_root) -> Dict:
     names = ", ".join(f.get("name", "?") for f in (s.get("failures") or [])[:6])
     return {**key, "success": False, "data_quality": "dependency_missing",
             "error_message": f"미선언/파손 의존성 {len(s.get('failures') or [])}건: {names}"[:220]}
+
+
+def _run_playwright_browsers(_root) -> Dict:
+    """playwright 브라우저 주소 순찰(§1G) — scripts/check_playwright_browsers.py 1회 실행.
+
+    계약: 마지막 줄 '@@PLAYWRIGHT_BROWSERS_JSON@@ {…}' (§1F 와 동형). rc 는 보지 않고
+    요약 JSON 의 ok 를 본다 — 마커 부재·파싱 실패는 명시적 fail(검사기가 죽었는데 옛
+    GREEN 이 남는 침묵 실패를 만들지 않는다). playwright 미설치는 이 점검의 소관이
+    아니므로(§1F 의존성 감사가 본다) 통과시킨다.
+
+    ★sys.executable 로 도는 것이 핵심: '어느 playwright 가 어느 빌드를 기대하는가' 는
+    백엔드가 실제로 쓰는 그 인터프리터에서만 참이다.
+    """
+    import subprocess
+    import json as _json
+    key = {"node": "__static__", "action": "playwright_browsers", "response_ms": 0}
+    script = _root / "scripts" / "check_playwright_browsers.py"
+    if not script.exists():
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": "scripts/check_playwright_browsers.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script), "--json"], cwd=str(_root),
+                              capture_output=True, text=True, timeout=120)
+    except Exception as e:
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"실행 실패: {str(e)[:150]}"}
+    marker = None
+    for line in reversed((proc.stdout or "").splitlines()):
+        if line.startswith("@@PLAYWRIGHT_BROWSERS_JSON@@"):
+            marker = line[len("@@PLAYWRIGHT_BROWSERS_JSON@@"):].strip()
+            break
+    if marker is None:
+        tail = ((proc.stderr or "").strip() or (proc.stdout or "").strip())[-180:]
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"요약 마커 없음(rc={proc.returncode}): {tail}"}
+    try:
+        s = _json.loads(marker)
+    except Exception as e:
+        return {**key, "success": False, "data_quality": "error",
+                "error_message": f"요약 JSON 파싱 실패: {str(e)[:120]}"}
+    if s.get("ok"):
+        return {**key, "success": True, "data_quality": "ok", "error_message": None}
+    return {**key, "success": False, "data_quality": "browser_missing",
+            "error_message": (s.get("note") or
+                              f"기대 빌드 없음: {', '.join(s.get('missing') or [])}")[:220]}
 
 
 def _run_silent_failure_regression(_root) -> Dict:

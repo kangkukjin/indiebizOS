@@ -127,6 +127,18 @@ def main() -> int:
         except subprocess.CalledProcessError:
             print("  ⚠ 일부 도구 의존성 설치 실패 — 해당 도구만 비활성, 나중에 재시도 가능", flush=True)
 
+        step("브라우저 바이너리 — playwright chromium (~550MB, 슬라이드·영상 렌더의 손)")
+        # 왜 조리법 안에 있나(2026-08-15): pip 로 playwright 를 올려도 브라우저 바이너리는
+        # 따로 받아야 하고, 그때 PLAYWRIGHT_BROWSERS_PATH 를 안 주면 기본 캐시로 가는데
+        # 백엔드는 base_path/ms-playwright 를 본다 → 어긋난 채로 조용히 있다가 렌더할 때
+        # 터진다. 설치가 레시피의 일부가 아니면 이 어긋남은 playwright 를 올릴 때마다 난다.
+        # 주소는 check_playwright_browsers.py 가 runtime_utils(단일 소스)에서 가져온다.
+        try:
+            run([vpy, os.path.join(ROOT, "scripts", "check_playwright_browsers.py"), "--install"])
+        except subprocess.CalledProcessError:
+            print("  ⚠ 브라우저 다운로드 실패 — 슬라이드/영상 렌더·browser-action 만 비활성. "
+                  "나중에 `python scripts/check_playwright_browsers.py --install` 로 재시도", flush=True)
+
         step("시맨틱 메모리 — requirements-ml.txt (해마 벡터 회상, ~2GB — 실패 시 키워드 회상으로 저하)")
         try:
             run([vpy, "-m", "pip", "install", "--quiet", "-r",

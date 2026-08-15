@@ -1,7 +1,0 @@
-name: "논문 검색"
-description: "학술 논문 통합 검색 (OpenAlex, arXiv)"
-steps:
-  - node: sense
-    action: search_papers
-    target: "{{query}}"
-created: "2026-02-17"

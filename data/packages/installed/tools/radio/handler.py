@@ -62,6 +62,22 @@ def _op_stop(tool_input: dict, context):
     return radio.stop_radio()
 
 
+def _op_status(tool_input: dict, context):
+    # 2026-08-15: 옛 [limbs:player_status] 흡수. 그 낱말의 desc 는 "음악·라디오"라고
+    # 했지만 구현(tool_radio.radio_status)은 라디오 모듈 전역(_player_process·
+    # _current_station)만 만진다 — limbs:explorer 의 "Finder" 거짓말과 같은 부류였다.
+    radio = load_tool_radio()
+    return radio.radio_status()
+
+
+def _op_volume(tool_input: dict, context):
+    # 2026-08-15: 옛 [limbs:volume] 흡수. 마찬가지로 라디오 전용이고, desc 가 주장하던
+    # "mpv IPC" 도 사실이 아니다 — 구현 docstring 이 "mpv 재시작 방식"이라 적고 있으며
+    # 재생 중이 아니면 "재생 중인 라디오가 없습니다"로 거절한다.
+    radio = load_tool_radio()
+    return radio.set_radio_volume(tool_input.get("volume", 70))
+
+
 def _op_favorite_list(tool_input: dict, context):
     # 2026-05-27 단일 액션 통합: [limbs:radio_favorite]{op} → 내부 op 분기
     radio = load_tool_radio()
@@ -88,7 +104,8 @@ def _op_favorite_remove(tool_input: dict, context):
 # 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처로 전환 (music-player 동형).
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교 — 키 집합 변경 금지.
 _OP_DISPATCHERS = {
-    "radio_op": {"play": _op_play, "stop": _op_stop},
+    "radio_op": {"play": _op_play, "stop": _op_stop,
+                 "status": _op_status, "volume": _op_volume},
     "radio_favorite_op": {"list": _op_favorite_list, "add": _op_favorite_add, "remove": _op_favorite_remove},
     # 2026-06-03 [sense:radio]{op} — 방송국 검색/탐색 (재생은 limbs:radio).
     "radio_search_op": {"search": _op_search, "korean": _op_korean},
@@ -99,7 +116,7 @@ _OP_DEFAULTS = {"radio_op": "play", "radio_search_op": "search"}
 #  - radio_search_op 는 korean 외 전부 search 로 흘렀다(fallthrough) → search 폴백 유지.
 #  - radio_op / radio_favorite_op 는 기존 오류 메시지 그대로.
 _OP_FALLBACKS = {"radio_search_op": "search"}
-_OP_USAGE = {"radio_op": "play/stop", "radio_favorite_op": "list/add/remove"}
+_OP_USAGE = {"radio_op": "play/stop/status/volume", "radio_favorite_op": "list/add/remove"}
 
 
 def execute(tool_input: dict, context):

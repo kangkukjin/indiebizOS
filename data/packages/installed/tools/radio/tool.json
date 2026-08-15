@@ -73,7 +73,9 @@
             "description": "재생 동작",
             "enum": [
               "play",
-              "stop"
+              "stop",
+              "status",
+              "volume"
             ],
             "default": "play"
           },

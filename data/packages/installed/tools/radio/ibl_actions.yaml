@@ -101,51 +101,45 @@ nodes:
     actions:
       radio:
         returns: effect
-        description: 인터넷 라디오 재생·중지 (op 분기). play/stop. 방송국 검색은 [sense:radio].
+        description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: 'play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio
           결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서)
           / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC).
-          stop — 파라미터 없음.'
+          stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간.
+          volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).'
         group: media
         target_key: op
         router: handler
         tool: radio_op
         ops:
           default: play
+          returns:
+            status: scalar
+          side_effect:
+            status: false
+          exempt:
+            status: 재생 기기 상태 — 상시 가용 아님
           values:
             play: 라디오 재생 (station_id 또는 stream_url, 기본)
             stop: 라디오 중지
-        implementation: mpv/ffplay HLS/ICY 라디오 스트림 재생·중지 op 분기
+            status: 재생 상태 확인 (재생 중 채널·경과 시간)
+            volume: 볼륨 조절 0~100 (스트림 재시작 방식 — 재생 중이 아니면 거절)
+        implementation: mpv/ffplay HLS/ICY 라디오 스트림 재생·중지·상태·볼륨 op 분기.
+          2026-08-15 [limbs:player_status]·[limbs:volume] 흡수 — 둘 다 구현이 라디오
+          모듈 전역만 만지는데 desc 는 "음악·라디오"라고 했다(limbs:explorer 의 "Finder"
+          거짓말과 같은 부류). volume 의 "mpv IPC" 도 사실이 아니다(스트림 재시작).
         keywords:
         - 라디오
         - 라디오재생
         - 라디오듣기
         - 라디오중지
-      player_status:
-        returns: scalar
-        exempt: '재생 기기 상태 — 상시 가용 아님'
-        description: 현재 음악·라디오 재생 상태 확인 (재생 중/정지/곡명 등).
-        target_description: (파라미터 없음)
-        group: media
-        router: handler
-        tool: radio_status
-        implementation: mpv/ffplay 프로세스 상태 확인
-        keywords:
         - 재생상태
-        - 플레이어
-      volume:
-        returns: effect
-        description: 음악·라디오 재생 볼륨 조절 (mpv IPC). 0-100 범위.
-        target_description: 볼륨 값 (0=무음, 100=최대).
-        group: media
-        router: handler
-        tool: set_radio_volume
-        implementation: mpv IPC 소켓으로 볼륨 조절
-        target_key: volume
-        keywords:
         - 볼륨
-        - 소리
         - 음량
+      # 2026-08-15 은퇴: player_status·volume → [limbs:radio]{op:"status"|"volume"}
+      # 되살리지 말 것 — 둘 다 "음악·라디오"라고 선언하면서 구현은 라디오 모듈 전역
+      # (_player_process·_current_station)만 만졌다. 음악 재생 상태·볼륨은 이 낱말이
+      # 한 적이 없다(내 음악=[self:music], 유튜브=[limbs:music] 각자 자기 표면이 관장).
       radio_favorite:
         aliases:
           stream_url: [url]

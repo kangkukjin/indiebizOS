@@ -404,6 +404,12 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "discover":
         return _discover_nodes(params.get("query", ""), params)
 
+    # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
+    # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
+    elif func_name == "table_each":
+        from ibl_executors import _execute_table_each
+        return _execute_table_each(dict(params), project_path, agent_id=agent_id)
+
     # (2026-08-05 감사 D12) 죽은 elif 6개 삭제 — call_agent/delegate_workflow/agent_ask/
     # agent_ask_sync/agent_list/agent_info 는 어떤 액션도 func: 로 선언하지 않았다.
     # 위임의 정본은 func:delegate(_delegate_unified) — mode 로 sync/workflow 를 분기하며

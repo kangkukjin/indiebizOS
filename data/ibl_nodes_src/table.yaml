@@ -1,6 +1,30 @@
   table:
     actions:
-    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure). 도메인·몸 무관 IBL 문법 계층.'
+      # ★each 만 코어 src 에 산다 — 나머지 13 변환자는 data-ops 패키지 fragment 다.
+      #   each 는 데이터가 아니라 *문장*을 인자로 받는 유일한 변환자(고차)라 표준 기능어이고,
+      #   실행이 execute_ibl 재귀라 엔진 층에 구현이 있어야 한다(패키지가 엔진을 import 하면
+      #   층 역전). 2026-08-15 언어 개정 — docs/HIGHER_ORDER_SENTENCE_DESIGN.md
+      each:
+        returns: transform
+        side_effect: true   # do 안에 무엇이든 올 수 있다 — dry-run 이 초록불을 켜면 안 된다
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘.
+        target_description: 'do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop). 결과는 원 행 + _ok + _error/_result 의 items. 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
+        group: transform
+        router: system
+        func: table_each
+        target_key: do
+        implementation: ibl_executors._execute_table_each — 행마다 $it 치환 후 ibl_parse →
+          execute_pipeline(깊이 +1). 부분 실패는 행 단위로 정직 반환(침묵 금지).
+        keywords:
+        - 각각
+        - 하나씩
+        - 반복
+        - 항목마다
+        - 모두에게
+        - each
+    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure) + 고차 변환자(each). 도메인·몸 무관 IBL 문법 계층.'
     # 문법 계층 — 노드 on/off 선별에서 engines 가 꺼져도 파이프가 살도록 항상 허용
     always_on: true
     tags:

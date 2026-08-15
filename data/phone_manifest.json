@@ -134,6 +134,7 @@
     "sense:world_bank",
     "table:dedup",
     "table:document",
+    "table:each",
     "table:filter",
     "table:groupby",
     "table:join",

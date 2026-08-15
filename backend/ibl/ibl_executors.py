@@ -9,6 +9,7 @@ execute_ibl 등은 함수 내부에서 지연 임포트합니다.
 """
 
 import os
+import re
 import json
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
@@ -543,6 +544,17 @@ def _execute_goal_block(tool_input: dict, project_path: str, agent_id: str) -> d
         return {"error": f"Goal 생성 실패: {str(e)}"}
 
 
+def _nest(step: Any, tool_input: dict) -> Any:
+    """중첩 실행할 step 에 깊이를 +1 해서 실어 보낸다 (2026-08-15 고차 문장).
+
+    문장을 값으로 받는 자리(if/case/[table:each])가 공통으로 쓰는 한 줄.
+    step 이 dict 가 아니면(문자열 IBL 코드 등) 그대로 돌려준다 — 호출자가 파싱한다.
+    """
+    if not isinstance(step, dict):
+        return step
+    return {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
+
+
 def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:
     """
     if/else 조건문 실행
@@ -550,6 +562,10 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
     각 분기의 조건을 평가하고, 매칭되는 분기의 action을 실행한다.
     """
     branches = tool_input.get("branches", [])
+    # ★2026-08-15: 조건 평가 실패를 삼키지 않는다. 옛 코드는 `except: continue` 로 다음
+    # 분기에 넘어가 "모든 조건 불일치"라는 *정상 메시지*로 끝났다 — 조건이 거짓이어서
+    # 안 걸린 건지 평가가 터진 건지 호출자가 구별할 수 없었다(침묵 실패 계열).
+    cond_errors = []
 
     for branch in branches:
         condition = branch.get("condition")
@@ -559,20 +575,29 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
             # else 분기
             if action:
                 from ibl_engine import execute_ibl
-                return execute_ibl(action, project_path, agent_id)
+                return execute_ibl(_nest(action, tool_input), project_path, agent_id)
             return {"message": "else 분기 실행 (action 없음)"}
 
         # 조건 평가: sense 노드 실행
         try:
             sense_result = _evaluate_sense_condition(condition, project_path, agent_id)
-            if sense_result:
-                if action:
-                    from ibl_engine import execute_ibl
-                    return execute_ibl(action, project_path, agent_id)
-                return {"message": f"조건 충족: {condition}"}
         except Exception as e:
-            continue  # 조건 평가 실패 시 다음 분기로
+            cond_errors.append({"condition": condition, "error": str(e)})
+            continue  # 이 분기는 판정 불능 — 다음 분기로 가되 위에 기록해 둔다
 
+        if sense_result:
+            if action:
+                from ibl_engine import execute_ibl
+                return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+            return {"message": f"조건 충족: {condition}"}
+
+    if cond_errors:
+        # 어느 분기도 안 걸렸는데 평가 실패가 있었다면 그건 성공이 아니다.
+        return {
+            "success": False,
+            "error": f"조건 평가 실패 {len(cond_errors)}건 — 어느 분기도 실행하지 못했습니다.",
+            "condition_errors": cond_errors,
+        }
     return {"message": "모든 조건 불일치, 실행할 분기 없음"}
 
 
@@ -598,9 +623,225 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
 
     if action:
         from ibl_engine import execute_ibl
-        return execute_ibl(action, project_path, agent_id)
+        return execute_ibl(_nest(action, tool_input), project_path, agent_id)
 
     return {"message": f"case문 실행 완료 (source={source}, value={sense_value})"}
+
+
+# ── [table:each] — 문장을 값으로 받는 유일한 변환자 (2026-08-15 고차 문장 M2) ──────────
+# 왜 이 낱말이 필요했나: table 의 다른 13 변환자는 전부 데이터→데이터라, "찾은 것 *각각에*
+# 대해 ~해라"를 이 언어로 쓸 방법이 없었다. 그래서 문장이 늘 "가져와서 정리해 사람에게"
+# 2단에서 끝났고(코퍼스 실측: 파이프 평균 길이 2.45·2단이 72%), 항목 단위 싱크
+# (notify_user·channel_send·delegate·publish)는 파이프에 한 번도 들어오지 못했다
+# (미조합 액션 68/150 의 다수가 이 부류). 설계 정본: docs/HIGHER_ORDER_SENTENCE_DESIGN.md
+_EACH_DEFAULT_LIMIT = 20
+_EACH_MAX_SUBSTEPS = 200
+
+
+def _each_escape(value: Any) -> str:
+    """치환 값을 IBL 문자열 리터럴 안에 안전하게 넣을 형태로 만든다.
+
+    파서(`ibl_parser_values._extract_string`)는 따옴표 안에서 `\\` 다음 글자를 리터럴로
+    받으므로, 백슬래시와 양쪽 따옴표만 이스케이프하면 '…' / "…" 어느 쪽에 놓여도 문자열이
+    조기 종료되지 않는다(제목에 따옴표가 든 행이 문장을 깨뜨리던 부류의 차단).
+    """
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        s = json.dumps(value, ensure_ascii=False)
+    else:
+        s = str(value)
+    return s.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+
+
+def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
+    """문장 안의 `$it.필드` / `$it` 를 행 값으로 치환. 반환: (치환된 문장, 없는 필드 목록).
+
+    ★없는 필드는 조용히 빈 값으로 만들지 않고 목록으로 돌려준다 — 호출자가 그 행을
+    실패로 표시한다(빈 문자열로 밀어 넣으면 "성공처럼 보이는 오동작"이 된다).
+    """
+    missing: list = []
+
+    def _sub(m):
+        field = (m.group(1) or "").lstrip(".")
+        if not field:
+            return _each_escape(row)
+        if isinstance(row, dict):
+            if field not in row:
+                missing.append(field)
+                return m.group(0)
+            return _each_escape(row.get(field))
+        missing.append(field)
+        return m.group(0)
+
+    pattern = re.compile(r"\$" + re.escape(var) + r"((?:\.[A-Za-z_][A-Za-z0-9_]*)?)")
+    return pattern.sub(_sub, sentence), missing
+
+
+def _stamp_depth(steps: Any, depth: int) -> None:
+    """파싱된 step 들에 중첩 깊이를 찍는다(병렬 branches·폴백 체인 포함)."""
+    if not isinstance(steps, list):
+        return
+    for st in steps:
+        if not isinstance(st, dict):
+            continue
+        st["_depth"] = depth
+        for key in ("branches", "_fallback_chain"):
+            _stamp_depth(st.get(key), depth)
+
+
+def _each_input_rows(prev: Any) -> Tuple[Optional[list], Any]:
+    """_prev_result 에서 items 통화를 꺼낸다. 반환: (행 목록 또는 None, 파싱된 봉투)."""
+    obj = prev
+    if isinstance(prev, str):
+        s = prev.strip()
+        if s.startswith("{") or s.startswith("["):
+            try:
+                obj = json.loads(s)
+            except Exception:
+                obj = prev
+    if isinstance(obj, dict):
+        from common.currency import derive_items
+        obj = derive_items(obj)
+        rows = obj.get("items")
+        return (rows if isinstance(rows, list) else None), obj
+    if isinstance(obj, list):
+        return obj, obj
+    return None, obj
+
+
+def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -> Any:
+    """[table:each]{do, as, limit, on_error} — items 의 각 행에 IBL 문장을 적용.
+
+    통화 계약: items → items. 각 출력 행 = 원 행 + `_ok` + (`_error` | `_result`).
+    원 행을 보존하므로 `>> [table:filter]{where: {_ok: false}}` 로 실패만 추릴 수 있다.
+    """
+    from ibl_parser import parse as ibl_parse, IBLSyntaxError
+    from workflow_engine import execute_pipeline
+
+    do = params.get("do")
+    if isinstance(do, list):
+        do = "\n".join(str(x) for x in do if str(x).strip())
+    if not do or not str(do).strip():
+        return {"success": False, "items": [], "count": 0,
+                "error": "each: do(각 행에 적용할 IBL 문장)가 필요합니다. "
+                         "예) [table:each]{do: \"[self:notify_user]{message: '$it.title'}\"}"}
+    do = str(do)
+    var = (str(params.get("as") or "it").lstrip("$").strip()) or "it"
+
+    rows, envelope = _each_input_rows(params.get("_prev_result", ""))
+    if rows is None:
+        shape = (list(envelope.keys())[:8] if isinstance(envelope, dict)
+                 else type(envelope).__name__)
+        return {"success": False, "items": [], "count": 0,
+                "error": f"each: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape} — "
+                         f"each 는 앞 단계가 낸 목록의 각 행에 문장을 적용합니다. "
+                         f"파이프(>>) 뒤에 놓였는지, 앞 액션이 목록을 내는지 확인하세요."}
+
+    try:
+        limit = int(params.get("limit") if params.get("limit") is not None else _EACH_DEFAULT_LIMIT)
+    except (TypeError, ValueError):
+        limit = _EACH_DEFAULT_LIMIT
+    if limit < 0:
+        limit = _EACH_DEFAULT_LIMIT
+    on_error = str(params.get("on_error") or "continue").strip().lower()
+    depth = int(params.get("_depth") or 0)
+
+    target = rows[:limit]
+    skipped = max(0, len(rows) - len(target))
+    out_items: list = []
+    ok_n = err_n = substeps = 0
+    halted: Optional[str] = None
+
+    for idx, row in enumerate(target):
+        base = dict(row) if isinstance(row, dict) else {"value": row}
+
+        sentence, missing = _each_substitute(do, row, var)
+        if missing:
+            err_n += 1
+            out_items.append({**base, "_ok": False,
+                              "_error": f"행에 없는 필드: {', '.join(sorted(set(missing)))}"})
+            if on_error == "stop":
+                halted = "on_error"
+                break
+            continue
+
+        try:
+            steps = ibl_parse(sentence)
+        except IBLSyntaxError as e:
+            err_n += 1
+            out_items.append({**base, "_ok": False, "_error": f"IBL 문법 오류: {e}"})
+            if on_error == "stop":
+                halted = "on_error"
+                break
+            continue
+
+        substeps += len(steps)
+        if substeps > _EACH_MAX_SUBSTEPS:
+            halted = "budget"
+            break
+
+        _stamp_depth(steps, depth + 1)
+        try:
+            res = execute_pipeline(steps, project_path, agent_id=agent_id)
+        except Exception as e:  # 실행기 자체가 터진 경우도 행 단위로 정직하게
+            res = {"success": False, "error": f"{type(e).__name__}: {e}"}
+
+        final = res.get("final_result") if isinstance(res, dict) else res
+        if isinstance(final, str):
+            s2 = final.strip()
+            if s2.startswith("{") or s2.startswith("["):
+                try:
+                    final = json.loads(s2)
+                except Exception:
+                    pass
+
+        if isinstance(res, dict) and not res.get("success", True):
+            err_n += 1
+            out_items.append({**base, "_ok": False,
+                              "_error": res.get("error") or "실행 실패",
+                              "_result": final})
+            if on_error == "stop":
+                halted = "on_error"
+                break
+        else:
+            ok_n += 1
+            out_items.append({**base, "_ok": True, "_result": final})
+
+    # 중단 시 남은 행은 '처리 안 함'으로 정직하게 집계 (조용히 사라지지 않게)
+    if halted:
+        skipped += len(target) - len(out_items)
+
+    out: Dict[str, Any] = {
+        "items": out_items,
+        "count": len(out_items),
+        "ok_count": ok_n,
+        "error_count": err_n,
+    }
+    notes = []
+    if skipped:
+        if halted == "budget":
+            notes.append(f"하위 스텝 예산({_EACH_MAX_SUBSTEPS}) 초과로 중단 — {skipped}건 미처리")
+        elif halted == "on_error":
+            notes.append(f"on_error=stop 으로 중단 — {skipped}건 미처리")
+        else:
+            notes.append(f"limit={limit} 로 앞에서 잘랐습니다 — {skipped}건 미처리")
+        out["skipped"] = skipped
+    # 전 행 실패만 상위로 전파한다. 부분 실패는 파이프를 끊지 않되 반드시 보이게 한다.
+    if out_items and ok_n == 0:
+        out["success"] = False
+        out["error"] = (f"each: {err_n}건 전부 실패 — 첫 오류: "
+                        f"{out_items[0].get('_error')}")
+    elif not out_items:
+        out["success"] = False
+        out["error"] = "each: 처리한 행이 없습니다 (입력 목록이 비었거나 limit=0)."
+    else:
+        out["success"] = True
+        if err_n:
+            notes.append(f"{err_n}/{len(out_items)}건 실패 (성공 {ok_n}) — _ok:false 행의 _error 참조")
+    if notes:
+        out["message"] = " / ".join(notes)
+    return out
 
 
 def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:

@@ -1,6 +1,6 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 6-Node 구조, 150 액션, 파서/엔진/라우팅
+scope: IBL 명세, 6-Node 구조, 151 액션, 파서/엔진/라우팅
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
@@ -44,7 +44,7 @@ IBL 표현 계층:     [node:action]{params}
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
 1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), `$변수`·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar). 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다.
-2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다.
+2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 14 액션 중 **`each` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — 데이터가 아니라 *문장*을 인자로 받는 고차 어휘이고 실행이 `execute_ibl` 재귀라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 13 변환자는 data-ops 패키지 fragment.
 
 **개인 사전** — 그 외 모든 내용어(sense·limbs·engines의 액션들). 정의(`ibl_nodes_src/`·패키지 `ibl_actions.yaml`)·구현(패키지 핸들러)·파라미터 별칭(`aliases:`)·프롬프트 설명까지 전부 데이터가 소유한다.
 
@@ -114,8 +114,16 @@ IBL(실행 언어) 위에 표현을 맡는 언어가 두 부류 더 있고, 셋�
 - 잘 고른 소수 프리미티브 + 풍부한 조합 = **생성 문법**(무한). → 언어
 - 많은 프리미티브 + 빈약한 조합 = **납작한 룩업 테이블**(크지만 유한). → 사전
 
-IBL의 진짜 엔진은 150개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장) + 접근 + 가이드다.
-**150 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
+IBL의 진짜 엔진은 151개 액션이 아니라 `>>`(순차) `&`(병렬) `??`(폴백) `;`(독립 문장)
+`$변수`(바인딩) `[if:]`/`[case:]`(분기) **`[table:each]`(적용 — 문장을 값으로 받는 고차 변환자)**
++ 접근 + 가이드다.
+**151 × 조합 × 외부 어휘 = 사실상 무한.** 더 많은 단어 ≠ 더 강한 언어.
+
+> **조합의 병목은 낱말 수가 아니라 문형 수다** (2026-08-15 코퍼스 전수 실측): 파이프 포함 문장
+> 7%·평균 길이 2.45·150 중 68개는 한 번도 조합된 적 없음. 미조합의 다수가 `others:`(발신)와
+> `self:` 원장·시간·기억이었는데, 원인은 **항목 단위 적용이 없어서**였다 — 목록을 통째로 싱크에
+> 넘기는 문장은 말이 안 되니 AI 가 아예 싱크를 못 붙이고 "가져와서 정리해 사람에게" 2단에서
+> 멈췄다. `[table:each]` 는 그 한 조각이다. 정본: `docs/HIGHER_ORDER_SENTENCE_DESIGN.md`
 
 ## 2. 그러나 파이썬(보편 언어)만으론 부족하다 — 최적점은 *움직인다*
 
@@ -256,7 +264,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ## 액션 카테고리
 
-총 150개 액션(sense 43, self 49, limbs 18, others 18, engines 9, table 13)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+총 151개 액션(sense 42, self 52, limbs 16, others 18, engines 9, table 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -305,7 +313,10 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ### 핵심 노드 분류
 
-총 **150 액션** (2026-08-05 영상 어휘 정리: engines:html_video·engines:remotion 은퇴[영상의 정본 경로=`[self:deck]{op:"video"}` 덱→나레이션 MP4 결정화, 합성 파이프라인은 함수층 잔류·remotion-video 패키지 not_installed] → 152에서 150. 같은 날 슬라이드 어휘 일원화: engines:slide·slide_shadcn→`[self:slide]{op:"create"}`[lecture_id 미지정=스크래치 덱, aesthetic 관통] → 154에서 152. 같은 날 2b: search_books→`book{source:"google"}` 흡수[classic 은 서지↔원문 동음이의로 병합 금지 판정] → 155에서 154. 같은 날 2단계: 검색 5액션[search_ddg/naver/gnews/hn/guardian]→`search{source}` 하나 — web-kr 패키지 은퇴[naver 흡수]·guardian 은 study→web 이주 → 159에서 155. 같은 날 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).
+총 **151 액션** (2026-08-15 **고차 문장**: `[table:each]{do, as, limit, on_error}` 신설 — 문장을
+값으로 받는 유일한 변환자. 같은 날 M1 로 문장 자리의 이름을 `do` 하나로 통일[trigger.pipeline·
+workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps 를 `do` 별칭으로 흡수 —
+핸들러 읽기키는 불변]. 정본 docs/HIGHER_ORDER_SENTENCE_DESIGN.md → 150에서 151. 이전: 2026-08-05 영상 어휘 정리: engines:html_video·engines:remotion 은퇴[영상의 정본 경로=`[self:deck]{op:"video"}` 덱→나레이션 MP4 결정화, 합성 파이프라인은 함수층 잔류·remotion-video 패키지 not_installed] → 152에서 150. 같은 날 슬라이드 어휘 일원화: engines:slide·slide_shadcn→`[self:slide]{op:"create"}`[lecture_id 미지정=스크래치 덱, aesthetic 관통] → 154에서 152. 같은 날 2b: search_books→`book{source:"google"}` 흡수[classic 은 서지↔원문 동음이의로 병합 금지 판정] → 155에서 154. 같은 날 2단계: 검색 5액션[search_ddg/naver/gnews/hn/guardian]→`search{source}` 하나 — web-kr 패키지 은퇴[naver 흡수]·guardian 은 study→web 이주 → 159에서 155. 같은 날 1단계: fs_query→file_find 메타 모드·self:agents→others:agents·run_pipeline→workflow{op:run}·image_critic→image_read{op:critic}·output op:file→write[파이프 싱크 겸용] 흡수 → 163에서 159. 이전: 웹앱 등기부[self:webapp] 추가 → 162에서 163. 이전: 몸 부탁[others:ask]·USB 손발[self:limb·limbs:guestpc]·신문 발행 결정화[engines:newspaper]·내 음악[self:music] 추가 → 157에서 162. 이전: 공개 표면 가족[others: portal/showcase/family_news/bulletin/publish/follow]·숙박/개체해소/중고[sense: stay/entity/used]·공급망 게이트[self:install_lib]·아이콘[engines:icon] → 157. 이전: engines 변환자/emitter 13종을 신규 `table` 노드로 분리(2026-06-30, 노드 5→6). 이전: `self:package` 생애주기 어휘 → 143).
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|

@@ -611,6 +611,14 @@ def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
     return result
 
 
+# ── 중첩 실행 깊이 상한 (2026-08-15 고차 문장) ────────────────────────────────
+# 문장을 값으로 받는 자리 — if/case 블록, [table:each], 트리거·워크플로의 do — 는 여기
+# execute_ibl 을 재귀 호출한다. 상한이 없으면 do 안에 자기 자신을 넣은 문장 하나로 무한
+# 재귀에 빠진다(실측: 상한 도입 전까지 어떤 경로에도 제한이 없었다).
+# 깊이는 tool_input 의 밑줄 메타 키로 실려 내려간다(_node·_parallel·_seq_boundary 관습).
+MAX_NEST_DEPTH = 3
+
+
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
@@ -619,6 +627,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         tool_input: {
             "action": "search",      # 필수: 액션 이름
             "params": {...},         # 파라미터
+            "_depth": 0,             # 중첩 실행 깊이 (문장을 값으로 받는 자리가 +1 해서 전달)
             ...기타 노드별 파라미터
         }
         project_path: 프로젝트 경로 (필수, 호출자가 명시 전달)
@@ -627,6 +636,17 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     Returns:
         실행 결과
     """
+    # 중첩 깊이 초과 — 조용히 멈추지 않고 명시 오류로 반환한다(침묵 금지 계약).
+    _depth = tool_input.get("_depth") or 0
+    if _depth > MAX_NEST_DEPTH:
+        return {
+            "success": False,
+            "_nest_depth_exceeded": True,
+            "error": f"중첩 실행 깊이 상한({MAX_NEST_DEPTH})을 넘었습니다 (현재 {_depth}). "
+                     f"문장 안에 문장을 넣는 깊이를 줄이거나, 긴 절차는 "
+                     f"[self:workflow]에 저장해 id 로 참조하세요.",
+        }
+
     # Phase 26: Goal Block 실행
     if tool_input.get("_goal"):
         return _execute_goal_block(tool_input, project_path, agent_id)
@@ -677,6 +697,12 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
 
     router = action_config.get("router")
     params = tool_input.get("params", {})
+
+    # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —
+    # '_' 접두 키는 파라미터 어휘 가드에서 제외된다). [table:each] 가 하위 문장에 깊이를
+    # 이어 붙이는 데 쓴다.
+    if _depth and isinstance(params, dict):
+        params["_depth"] = _depth
 
     # 중앙 파라미터 별칭 정규화 — 비-handler 라우터(system/workflow_engine/channel_engine/
     # trigger_engine 등)도 액션의 aliases 선언(레지스트리) 적용받게. handler/driver는

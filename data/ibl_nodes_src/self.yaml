@@ -32,11 +32,13 @@
       manage_events:
         aliases:
           op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)
+          # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 event_action 유지.
+          event_action: [do]
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:manage_events]{op: "list"}'
         description: 이벤트·스케줄 통합 관리 (op 분기). 캘린더 이벤트 + 정기 발행·자동화 스케줄 인터페이스 (트리거는 [self:trigger] 별도).
-        target_description: 'create는 title 필수(date/time/repeat/type/description, event_action 있으면 실행 이벤트). update/delete/toggle/run_now는 event_id 필요. list는 year/month 필터 가능.'
+        target_description: 'create는 title 필수(date/time/repeat/type/description, do=실행할 IBL 문장 있으면 실행 이벤트). update/delete/toggle/run_now는 event_id 필요. list는 year/month 필터 가능.'
         group: schedule
         target_key: op
         router: system
@@ -112,9 +114,15 @@
         - 스위치 목록
         - 스위치 실행
       schedule:
+        aliases:
+          # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 pipeline 유지.
+          pipeline: [do]
         returns: effect
         description: 스케줄 실행 (지연 실행, 특정 시간, 반복 등)
-        target_description: 실행 시점 (delay/at/cron) + action. 한 번 실행 또는 반복 가능.
+        # ★2026-08-15 설명 드리프트 수정: 실제 읽기키는 action 이 아니라 pipeline 이다
+        #   (system_ai_plans._execute_schedule). 이제 do 로 적는다.
+        target_description: 실행 시점(minutes/seconds 지연 · date+time 1회 · repeat 반복) + do(실행할 IBL 문장).
+          한 번 실행 또는 반복 가능.
         group: schedule
         router: system
         func: schedule
@@ -176,11 +184,14 @@
         - 통지
         - 메시지
       workflow:
+        aliases:
+          # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 steps 유지.
+          steps: [do]
         returns: scalar
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
-        description: 워크플로우 CRUD + 실행 (op 분기). list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 steps 배열 실행(저장 안 함).
-        target_description: 'get/delete — workflow_id 필수. save — name + steps(IBL 코드 배열) 필수. run — workflow_id(저장본) 또는 steps/pipeline(즉석 실행, 저장 안 함) 중 하나 + params 옵션.'
+        description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
+        target_description: 'get/delete — workflow_id 필수. save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id(저장본) 또는 do(즉석 실행, 저장 안 함) 중 하나 + params 옵션(문장 안 $변수에 주입).'
         group: workflow
         target_key: op
         router: workflow_engine
@@ -211,6 +222,8 @@
       trigger:
         aliases:
           trigger_id: [id]
+          # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 pipeline 유지.
+          pipeline: [do]
         # list·history op 가 목록을 낸다 — self:switch 와 같은 부류(실측: `>> [table:take]` 끊김).
         returns: items
         # ★create/update/delete/enable/disable 은 실제 부작용 — 통화가 items 라고
@@ -218,7 +231,7 @@
         side_effect: true
         fixture: '[self:trigger]{op: "list"}'
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-        target_description: 'create는 name + pipeline(실행할 IBL) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
+        target_description: 'create는 name + do(실행할 IBL 문장) 필수, schedule이면 cron("0 9 * * *" 등 표준 cron, 내부에서 일정으로 해소) 또는 config. 긴 절차는 [self:workflow]에 저장해 두고 do에 그 실행 문장만 참조. get/update/delete/enable/disable/history는 id 필요. list/status는 파라미터 없음.'
         group: schedule
         target_key: op
         router: trigger_engine

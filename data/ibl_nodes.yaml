@@ -5793,7 +5793,7 @@ nodes:
                   title: 연락처
                   display: '{contact_type} · {contact_value}'
                   empty: 연락처 없음
-                  delete_action: '[others:contact]{op: "delete", contact_id: "{id}"}'
+                  delete_action: '[others:neighbor]{op: "contact_delete", contact_id: "{id}"}'
                   add:
                     fields:
                     - key: contact_type
@@ -5815,7 +5815,7 @@ nodes:
                     - key: contact_value
                       type: text
                       placeholder: 연락처 값
-                    action: '[others:contact]{op: "add", neighbor_id: "{neighbor_id}", contact_type: "$contact_type", contact_value: "$contact_value"}'
+                    action: '[others:neighbor]{op: "contact_add", neighbor_id: "{neighbor_id}", contact_type: "$contact_type", contact_value: "$contact_value"}'
                     button: 추가
             card:
               title: '{favorite|opt:⭐ ,}{name}'
@@ -5833,7 +5833,7 @@ nodes:
         side_effect: true
         fixture: '[others:neighbor]{op: "list"}'
         description: 이웃(비즈니스 파트너) 조회·관리 — op:list(기본)/detail/save/delete/favorite/merge.
-        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글) / merge(id=남길 이웃, from=합칠 이웃의 이름 또는 id — 같은 사람이 창고 등록·창고 가입 두 경로로 중복 등록됐을 때 연락처·대화·가입 자격·메모를 한 레코드로 합류, 합쳐진 쪽은 은퇴).
+        target_description: op:list(search 부분일치·info_level 0-4 필터, 기본) / detail(neighbor_id 또는 name — 연락처·최근메시지 포함) / save(id 없으면 생성·name 필수, 있으면 수정 — name/info_level(0-4)/rating(0-5)/info_share/additional_info/business_doc. warehouse_score(0-3) 옵션=이웃의 창고에 주는 창고점수(창고 연락처 있는 이웃만 유효). npub 옵션=nostr 연락처 동시 연결, IndieNet 팔로우→이웃 승격용 — 같은 npub이 이미 이웃이면 멱등) / delete(id — 이웃 삭제, nostr 대화도 숨김. id 없이 pubkey(npub)면 비이웃 쪽지 상대의 대화 숨김 — 새 메시지가 오면 다시 보임) / favorite(id 필수, 토글) / merge(id=남길 이웃, from=합칠 이웃의 이름 또는 id — 같은 사람이 창고 등록·창고 가입 두 경로로 중복 등록됐을 때 연락처·대화·가입 자격·메모를 한 레코드로 합류, 합쳐진 쪽은 은퇴) / contact_add(neighbor_id·contact_type(email/phone/kakao/telegram/line/nostr/other)·contact_value 필수) / contact_update(contact_id 필수) / contact_delete(contact_id 필수).
         group: neighbor
         target_key: op
         router: handler
@@ -5845,11 +5845,17 @@ nodes:
             delete: effect
             favorite: effect
             merge: effect
+            contact_add: effect
+            contact_update: effect
+            contact_delete: effect
           side_effect:
             list: false
             detail: false
           exempt:
             detail: 이웃 id/name 필요(list 결과) — 고정 fixture 부적합
+            contact_add: 이웃 id + 연락처 값 필요 — 고정 fixture 부적합
+            contact_update: contact_id 필요(detail 결과) — 고정 fixture 부적합
+            contact_delete: contact_id 필요(detail 결과) — 고정 fixture 부적합
           values:
             list: 이웃 목록 (search/info_level 필터)
             detail: 이웃 상세 (neighbor_id 또는 name, +연락처·최근메시지)
@@ -5857,29 +5863,16 @@ nodes:
             delete: 이웃 삭제 (비이웃 쪽지 상대는 대화 숨김)
             favorite: 즐겨찾기 토글
             merge: 이웃 병합 (중복 등록된 같은 사람을 하나로 — 합쳐진 쪽 은퇴)
-        implementation: business 패키지 neighbor_op — business_manager.get_neighbors/get_neighbor/create_neighbor/update_neighbor/delete_neighbor.
+            contact_add: 연락처 추가 (neighbor_id·contact_type·contact_value)
+            contact_update: 연락처 수정 (contact_id)
+            contact_delete: 연락처 삭제 (contact_id)
+        implementation: business 패키지 neighbor_op — business_manager.get_neighbors/get_neighbor/create_neighbor/update_neighbor/delete_neighbor + 연락처 CRUD(add_contact/update_contact/delete_contact).
         keywords:
         - 이웃
         - 이웃조회
         - 이웃추가
         - 이웃수정
         - 즐겨찾기
-      contact:
-        returns: effect
-        description: 이웃 연락처 CRUD — op:add/update/delete. (email/phone/kakao/telegram/line/nostr/other)
-        target_description: op:add(neighbor_id·contact_type·contact_value 필수) / update(contact_id 필수) / delete(contact_id 필수).
-        group: neighbor
-        target_key: op
-        router: handler
-        tool: contact_op
-        ops:
-          default: add
-          values:
-            add: 연락처 추가
-            update: 연락처 수정
-            delete: 연락처 삭제
-        implementation: business 패키지 contact_op — business_manager.add_contact/update_contact/delete_contact.
-        keywords:
         - 연락처추가
         - 연락처수정
         - 연락처삭제

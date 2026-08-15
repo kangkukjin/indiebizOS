@@ -47,7 +47,10 @@
               "save",
               "delete",
               "favorite",
-              "merge"
+              "merge",
+              "contact_add",
+              "contact_update",
+              "contact_delete"
             ],
             "default": "list"
           },
@@ -86,41 +89,18 @@
           "neighbor_id": {
             "type": "integer",
             "description": "이웃 ID (detail 모드 — id 대신 사용 가능)"
-          }
-        }
-      }
-    },
-    {
-      "name": "contact_op",
-      "description": "이웃 연락처 CRUD.\n\n## op 분기\n- add (기본): neighbor_id·contact_type·contact_value 필수\n- update: contact_id 필수\n- delete: contact_id 필수\n\ncontact_type: email/phone/kakao/telegram/line/nostr/other",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "op": {
-            "type": "string",
-            "description": "add=추가 / update=수정 / delete=삭제",
-            "enum": [
-              "add",
-              "update",
-              "delete"
-            ],
-            "default": "add"
-          },
-          "neighbor_id": {
-            "type": "integer",
-            "description": "이웃 ID (add 시 필수)"
           },
           "contact_id": {
             "type": "integer",
-            "description": "연락처 ID (update/delete 시 필수)"
+            "description": "연락처 ID (contact_update/contact_delete 시 필수)"
           },
           "contact_type": {
             "type": "string",
-            "description": "email/phone/kakao/telegram/line/nostr/other"
+            "description": "email/phone/kakao/telegram/line/nostr/other (contact_add)"
           },
           "contact_value": {
             "type": "string",
-            "description": "연락처 값"
+            "description": "연락처 값 (contact_add)"
           }
         }
       }

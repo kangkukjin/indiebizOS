@@ -1058,8 +1058,11 @@ def _lg_remove_image(bm, ti): return _ledger_route("remove_image", bm, ti)
 
 _OP_DISPATCHERS = {
     "messages_op": {"thread": _msg_thread, "inbox": _msg_inbox},
-    "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete, "favorite": _nb_favorite, "merge": _nb_merge},
-    "contact_op": {"add": _ct_add, "update": _ct_update, "delete": _ct_delete},
+    # 2026-08-15: 연락처 CRUD 를 neighbor 의 op 로 흡수(옛 contact_op). 연락처는 대등한
+    # 원장이 아니라 이웃의 자식 컬렉션이다(list op 이 없었고 전 op 가 부모/자식 id 를 요구).
+    "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete,
+                    "favorite": _nb_favorite, "merge": _nb_merge,
+                    "contact_add": _ct_add, "contact_update": _ct_update, "contact_delete": _ct_delete},
     "ledger_op": {"list": _lg_list, "detail": _lg_detail, "save": _lg_save, "delete": _lg_delete,
                   "regenerate": _lg_regenerate, "publish": _lg_publish,
                   "add_image": _lg_add_image, "remove_image": _lg_remove_image},
@@ -1068,7 +1071,6 @@ _OP_DISPATCHERS = {
 _OP_DEFAULTS = {
     "messages_op": "thread",
     "neighbor_op": "list",
-    "contact_op": "add",
     "ledger_op": "list",
     "auto_response_op": "status",
 }

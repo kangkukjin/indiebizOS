@@ -44,7 +44,6 @@
     "others:board",
     "others:channel_read",
     "others:channel_send",
-    "others:contact",
     "others:delegate",
     "others:feed",
     "others:follow",

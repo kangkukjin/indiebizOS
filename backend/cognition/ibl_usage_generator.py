@@ -495,8 +495,8 @@ _PIPELINE_TEMPLATES = [
         "self", "single"
     ),
     (
-        "뉴스 브리핑 워크플로우 실행해줘",
-        '[self:workflow]{op: "run", name: "news_briefing"}',
+        "블로그 인사이트 워크플로우 실행해줘",
+        '[self:workflow]{op: "run", name: "kinsight"}',
         "self", "single"
     ),
     # 통계 (KOSIS)

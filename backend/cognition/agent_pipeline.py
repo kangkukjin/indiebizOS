@@ -274,22 +274,62 @@ class CognitivePipelineMixin:
         tool_calls_log: List[Dict] = []    # 경험 증류·X-Ray용 구조화 이력
         _error_text = None
 
+        _pair_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (n번째 결과 = n번째 호출)
+
         def _collect(ev: dict):
-            """tool_start/tool_result 이벤트를 궤적으로 페어링 수집 (MCP prefix 정규화)"""
+            """tool_start/tool_result 이벤트를 궤적으로 페어링 수집 (MCP prefix 정규화)
+
+            페어링은 프로바이더가 실은 도구 id 우선 — 병렬 호출 시 옛 [-1] 페어링은
+            A의 결과를 B에 붙이고 B의 결과(실패 포함)를 유실했고, 빈 결과가 된 A가
+            반성 게이트 "빈 껍데기" 트리거를 오발동시켰다(라이브 3회, 2026-08-15 수리).
+            id가 비면 도착 순서 커서로 폴백 (결과는 tool_start 순서대로 도착한다).
+
+            ★두 궤적은 tool_start 마다 **나란히** append 되므로 같은 인덱스가 같은 호출이다
+            (tool_calls_log 의 다른 소스인 _collect_thread_tool_calls 는 스트림이 끝난 뒤에
+            extend 하므로 이 함수가 도는 동안에는 정렬이 유지된다). 결과가 도착하면 그
+            인덱스로 두 궤적을 함께 갱신한다 — eval 은 result/is_error, 증류용은 success.
+
+            success 판정 (2026-08-15 수리): 예전엔 tool_start 에서 True 로 박아 두고 끝이라
+            ibl_usage_rag.distill_experience 의 "성공한 IBL 호출만 필터"가 **죽은 코드**였다.
+            목표평가 게이트를 통과한 턴 안에서 실패한 호출의 코드까지 좋은 용례로 해마에
+            증류됐다. 판정은 손으로 다시 적지 않고 실패 표현 단일 소스를 쓴다 —
+            프로바이더 층 오류(is_error)와 IBL 층 실패(결과 JSON 의 success:false·"Error:"
+            접두)는 다른 갈래이고, 후자가 IBL 실패의 주된 모양이다.
+            """
+            nonlocal _pair_cursor
             et = ev.get("type")
             if et == "tool_start":
                 _raw = ev.get("name", "")
                 _name = _raw[len("mcp__indiebizos__"):] if _raw.startswith("mcp__indiebizos__") else _raw
+                # success 는 결과 도착 시 확정된다 — 여기서는 미확정 표시로 True 를 둔다
+                # (결과가 끝내 안 오는 취소·중단 턴에서는 옛 동작 그대로).
                 tool_calls_log.append({"tool_name": _name, "input": ev.get("input", {}), "success": True})
-                eval_tool_calls.append({"name": _name, "input": ev.get("input", {}),
+                eval_tool_calls.append({"id": ev.get("id", ""), "name": _name,
+                                        "input": ev.get("input", {}),
                                         "result": "", "is_error": False})
             elif et == "tool_result":
                 _rt = ev.get("result", "")
                 tool_results_log.append(_rt)
-                # 가장 최근 trace 항목에 결과 페어링 (도구 순차 실행)
-                if eval_tool_calls and not eval_tool_calls[-1]["result"]:
-                    eval_tool_calls[-1]["result"] = _rt
-                    eval_tool_calls[-1]["is_error"] = bool(ev.get("is_error", False))
+                _is_err = bool(ev.get("is_error", False))
+                _rid = ev.get("id", "")
+                _idx = None
+                if _rid:
+                    _idx = next((i for i, tc in enumerate(eval_tool_calls)
+                                 if tc.get("id") == _rid), None)
+                if _idx is None and _pair_cursor < len(eval_tool_calls):
+                    _idx = _pair_cursor
+                _pair_cursor += 1
+                if _idx is not None:
+                    eval_tool_calls[_idx]["result"] = _rt
+                    eval_tool_calls[_idx]["is_error"] = _is_err
+                    if _idx < len(tool_calls_log):
+                        if not _is_err:
+                            try:
+                                from workflow_engine import _is_error_result
+                                _is_err = _is_error_result(_rt)
+                            except Exception:
+                                pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
+                        tool_calls_log[_idx]["success"] = not _is_err
 
         try:
             from thread_context import clear_tool_calls as _clear_tc
@@ -308,12 +348,14 @@ class CognitivePipelineMixin:
                 yield event
 
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
+            _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
             if consciousness_output and final_content:
                 criteria = self._extract_achievement_criteria(consciousness_output)
                 if criteria:
                     from world_pulse import _load_config as _load_wp_config
                     _goal_cfg = _load_wp_config().get("goal_eval", {})
                     if _goal_cfg.get("enabled", True):
+                        _eval_ran = True
                         print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
                         evaluated = self._run_goal_evaluation_loop(
                             user_message=message,
@@ -333,11 +375,14 @@ class CognitivePipelineMixin:
                             yield {"type": "final", "content": evaluated}
                             print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
 
-            # 8. 자기반성 턴 (EXECUTE 경로) — 의식이 없으면 평가가 안 돌아 실패 인식이
-            # 통째로 빠진다(에피소드 727/728). 실행 에이전트 *자신*이 같은 세션(resume)을
-            # 이어받아 자기 궤적을 입력으로 받고 스스로 반성·재행동한다(판정자 아님).
+            # 8. 자기반성 턴 — 평가가 안 돈 턴의 바닥. 의식이 없으면 평가가 안 돌아
+            # 실패 인식이 통째로 빠진다(에피소드 727/728). 의식이 돌았어도 달성 기준이
+            # 비면(조회성 THINK) 마찬가지다 — 옛 elif는 이 경우 두 그물 사이로 빠져
+            # 8~10분짜리 THINK 턴이 평가도 반성도 못 받았다(2026-08-15 독립 조건화).
+            # 실행 에이전트 *자신*이 같은 세션(resume)을 이어받아 자기 궤적을 입력으로
+            # 받고 스스로 반성·재행동한다(판정자 아님).
             # 도구를 실제로 부른 턴만 · reflex/force_role 제외 · 1회(반성의 반성 없음).
-            elif final_content and eval_tool_calls and not reflex_hint and not force_role:
+            if not _eval_ran and final_content and eval_tool_calls and not reflex_hint and not force_role:
                 try:
                     from world_pulse import _load_config as _load_wp_config
                     _refl_cfg = _load_wp_config().get("execution_reflection", {})

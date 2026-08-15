@@ -382,6 +382,7 @@ class ClaudeCodeProvider(BaseProvider):
         final_text = ""
         self._last_tool_results = []  # 턴 시작 시 초기화
         self._last_tool_calls = []  # 턴 시작 시 초기화
+        _pair_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (n번째 결과 = n번째 호출)
         for event in self.process_message_stream(message, history, images, execute_tool):
             etype = event.get("type")
             if etype == "text":
@@ -389,6 +390,7 @@ class ClaudeCodeProvider(BaseProvider):
             elif etype == "tool_start":
                 # 호출 헤더(이름·인풋) 우선 적재 — 결과는 다음 tool_result 이벤트에서 채운다.
                 self._last_tool_calls.append({
+                    "id": event.get("id", ""),
                     "name": event.get("name", ""),
                     "input": event.get("input", {}),
                     "result": "",
@@ -399,12 +401,22 @@ class ClaudeCodeProvider(BaseProvider):
                 _result = event.get("result", "")
                 if _result:
                     self._last_tool_results.append(_result)
-                # 가장 최근 tool_start 항목에 결과를 페어링.
-                # stream-json은 tool_result에 name이 없으므로(_translate_stream_event 참조)
-                # 인덱스 기반 페어링이 정확하다 (Claude Code는 도구를 순차 실행).
-                if self._last_tool_calls and not self._last_tool_calls[-1]["result"]:
-                    self._last_tool_calls[-1]["result"] = _result
-                    self._last_tool_calls[-1]["is_error"] = bool(event.get("is_error", False))
+                # tool_use_id로 페어링 — 병렬 호출 시 옛 [-1] 페어링은 A의 결과를 B에
+                # 붙이고 B의 결과(실패 포함)를 유실했다(2026-08-15 수리). id가 비면
+                # 도착 순서 커서로 폴백 (결과는 tool_start 순서대로 도착한다).
+                _rid = event.get("id", "")
+                _slot = None
+                if _rid:
+                    _slot = next(
+                        (tc for tc in self._last_tool_calls if tc.get("id") == _rid),
+                        None,
+                    )
+                if _slot is None and _pair_cursor < len(self._last_tool_calls):
+                    _slot = self._last_tool_calls[_pair_cursor]
+                _pair_cursor += 1
+                if _slot is not None:
+                    _slot["result"] = _result
+                    _slot["is_error"] = bool(event.get("is_error", False))
             elif etype == "final":
                 final_text = event.get("content", final_text)
             elif etype == "error":
@@ -762,6 +774,7 @@ class ClaudeCodeProvider(BaseProvider):
                     out.append((
                         {
                             "type": "tool_start",
+                            "id": block.get("id", ""),
                             "name": tool_name,
                             "input": tool_input,
                         },
@@ -829,6 +842,7 @@ class ClaudeCodeProvider(BaseProvider):
                 out.append((
                     {
                         "type": "tool_result",
+                        "id": block.get("tool_use_id", ""),  # start↔result 페어링 키
                         "name": "",  # stream-json의 tool_result에는 name 없음
                         "result": result_text,
                         "is_error": is_error,

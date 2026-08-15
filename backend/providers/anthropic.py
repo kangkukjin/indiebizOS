@@ -103,8 +103,9 @@ class AnthropicProvider(BaseProvider):
 
         Yields:
             {"type": "text", "content": "..."} - 텍스트 청크
-            {"type": "tool_start", "name": "...", "input": {...}} - 도구 시작
-            {"type": "tool_result", "name": "...", "result": "...", "is_error": bool} - 도구 결과
+            {"type": "tool_start", "id": "...", "name": "...", "input": {...}} - 도구 시작
+            {"type": "tool_result", "id": "...", "name": "...", "result": "...", "is_error": bool} - 도구 결과
+            (id = Anthropic tool_use id — 병렬 호출 시 start↔result 페어링의 유일한 정답)
             {"type": "thinking", "content": "..."} - AI 사고 과정
             {"type": "final", "content": "..."} - 최종 응답
             {"type": "error", "content": "..."} - 에러
@@ -319,6 +320,7 @@ class AnthropicProvider(BaseProvider):
                             current_tool_input = ""
                             yield {
                                 "type": "tool_start",
+                                "id": block.id,
                                 "name": block.name,
                                 "input": {}
                             }
@@ -592,6 +594,7 @@ class AnthropicProvider(BaseProvider):
             # 클라이언트에 도구 결과 전달
             tool_result_event = {
                 "type": "tool_result",
+                "id": tool["id"],
                 "name": tool["name"],
                 "input": tool["input"],
                 "result": ui_result_preview,

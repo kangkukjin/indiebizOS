@@ -214,7 +214,13 @@ class AIAgent:
                 self._provider._last_tool_calls = []
 
             # 미완료 약속 감지 → 실행 유도 (1회)
-            if _is_unfulfilled_promise(response):
+            # had_tool_calls 미전달이면 기본값 False가 먹어 도구를 실제로 쓴 정상 응답도
+            # "도구 안 씀"으로 취급됐다(2026-08-15 수리). 판정 근거는 바로 위에서
+            # 프로바이더로부터 회수한 이 턴의 도구 이력(턴 시작 시 리셋됨).
+            # 이력 속성이 없는 프로바이더(anthropic 등 in-process 계열)는 빈 리스트
+            # 그대로라 옛 동작(False)과 동일 — 회귀 없음, 가드 실효는 claude_code 경로.
+            _had_tools = bool(self._last_tool_calls or self._last_tool_results)
+            if _is_unfulfilled_promise(response, _had_tools):
                 print(f"[AIAgent] ⚡ 미완료 약속 감지, 실행 유도")
                 retry_history = list(history) + [
                     {"role": "user", "content": message_content},
@@ -335,7 +341,13 @@ class AIAgent:
                 )
 
                 # 미완료 약속 감지 → 실행 유도 (1회)
-                if _is_unfulfilled_promise(response):
+                # 도구 사용 여부는 프로바이더 수집 이력으로 판정 (기본값 False 함정 수리,
+                # 2026-08-15 — 이력 속성이 없는 프로바이더만 옛 동작대로 False).
+                _had_tools = bool(
+                    getattr(self._provider, '_last_tool_calls', None)
+                    or getattr(self._provider, '_last_tool_results', None)
+                )
+                if _is_unfulfilled_promise(response, _had_tools):
                     print(f"[AIAgent] ⚡ 미완료 약속 감지 (일괄), 실행 유도")
                     retry_history = list(history) + [
                         {"role": "user", "content": message_content},

@@ -1281,6 +1281,10 @@ def _deck_video_build(lecture_id: str, opts: dict) -> dict:
     slides = deck.get("slides") or {}
 
     scenes, narrations, missing_notes, skipped = [], [], [], []
+    # narration/<slide_id>.wav 가 있으면 그 파일이 TTS 를 이긴다 — 목소리 복제로 구운
+    # 내 목소리 나레이션을 넣는 자리(가이드 voice_narration.md, 스크립트 '나레이션생성').
+    narration_dir = lecture_dir_path / "narration"
+    preset_audio = []
     for sid in order:
         meta = slides.get(sid) or {}
         png = lecture_dir_path / (meta.get("png_file") or "")
@@ -1291,7 +1295,9 @@ def _deck_video_build(lecture_id: str, opts: dict) -> dict:
                        "duration": float(opts.get("duration_per_scene") or 5)})
         note = (meta.get("speaker_note") or "").strip()
         narrations.append(note)          # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
-        if not note:
+        ready = narration_dir / f"{sid}.wav"
+        preset_audio.append(str(ready) if ready.exists() else None)
+        if not note and not ready.exists():
             missing_notes.append(sid)
 
     if not scenes:
@@ -1303,6 +1309,7 @@ def _deck_video_build(lecture_id: str, opts: dict) -> dict:
     tool_input = {
         "scenes": scenes,
         "narration_texts": narrations,
+        "narration_audio_paths": preset_audio,
         # 화자·엔진 기본값을 여기서 박지 않는다 — 미지정이면 media_producer 의 엔진 기본
         # (2026-08-10부터 Gemini/Charon)이 이긴다. 옛날엔 Edge 화자가 박혀 있어서
         # 기본 엔진을 바꿔도 강의 영상만 옛 목소리로 남았다.
@@ -1323,6 +1330,7 @@ def _deck_video_build(lecture_id: str, opts: dict) -> dict:
     return {
         "output": output, "slides": len(scenes),
         "narrated": len(scenes) - len(missing_notes),
+        "preset_narration": sum(1 for p in preset_audio if p),   # 미리 구운 오디오를 쓴 장 수
         "missing_notes": missing_notes, "skipped": skipped,
     }
 

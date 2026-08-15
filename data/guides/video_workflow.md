@@ -17,6 +17,12 @@
    - 옵션: `engine`(기본 **gemini** / `edge`=무과금) · `voice`(gemini 기본 **Charon**, `Sulafat`·`Achird` 등 / edge 는 `ko-KR-SunHiNeural` 등) · `style`(gemini 전용 자연어 연기 지시) · `rate`(edge 전용) / `transition`(fade 기본) / `bgm_path` / `output_filename`.
    - **나레이션 비용**: 기본 gemini 는 문자 수 과금이라 장수가 많은 덱은 그만큼 든다. 시험 렌더는 `engine: "edge"` 로 돌리고 최종만 gemini 로 굽는 게 싸다.
    - 노트 없는 장 = 무나레이션 씬(기본 길이). 결과의 `missing_notes` 로 확인.
+   - **★내 목소리로 굽기**: 렌더 전에 `[self:script]{op:"run", id:"나레이션생성", args:{lecture_id}}` 를
+     한 번 돌리면 장별 스피커 노트가 사용자 본인 목소리로 구워져 `narration/<slide_id>.wav` 에 쌓인다.
+     그다음 이 op 를 평소대로 부르면 된다 — **그 장에 wav 가 있으면 TTS 대신 그 파일을 쓴다**(engine·voice 무관).
+     장별로 섞여도 된다(어떤 장은 내 목소리, 나머지는 TTS). 결과의 `preset_narration` 이 쓰인 장 수.
+     시험 렌더는 `engine:"edge"` 로 싸게 돌리고 **최종만 내 목소리**로 굽는 게 시간·과금 모두 유리하다
+     (목소리 복제는 문장당 40~60초). 상세·함정·레퍼런스 교체 = `voice_narration.md`.
 3. **산출물** — `outputs/lectures/<id>/video/lecture_video.mp4` (h264+aac).
 
 ## 원칙

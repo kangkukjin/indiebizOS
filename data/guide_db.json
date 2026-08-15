@@ -1482,6 +1482,53 @@
     "promotion"
    ],
    "file": "marketing.md"
+  },
+  {
+   "id": "colab",
+   "name": "Google Colab CLI 가이드 (클라우드 GPU/TPU)",
+   "description": "콜랩 CLI로 클라우드 GPU/TPU VM을 빌려 파이썬 실행. 로컬로 벅찬 연산(대형 모델 학습·추론, CUDA 작업)을 넘기는 손. colab run 일회성 잡, 세션 방식, 타임아웃·과금 함정, Modal과의 분업 기준.",
+   "keywords": [
+    "colab",
+    "콜랩",
+    "GPU",
+    "TPU",
+    "CUDA",
+    "클라우드 GPU",
+    "클라우드 학습",
+    "모델 학습",
+    "학습 돌려",
+    "A100",
+    "T4",
+    "H100",
+    "가속기",
+    "컴퓨트",
+    "노트북 실행",
+    "ipynb",
+    "무거운 연산",
+    "대형 모델"
+   ],
+   "file": "colab.md"
+  },
+  {
+   "id": "voice_narration",
+   "name": "내 목소리 나레이션 가이드",
+   "description": "사용자 본인 목소리로 나레이션을 굽고(Qwen3-TTS 목소리 복제·콜랩 GPU) 강의 동영상에 넣을 때. 레퍼런스 교체·비용·함정 포함.",
+   "keywords": [
+    "내 목소리",
+    "목소리",
+    "성우",
+    "나레이션",
+    "내레이션",
+    "목소리 복제",
+    "음성 복제",
+    "voice clone",
+    "qwen3-tts",
+    "더빙",
+    "내 목소리로 읽어",
+    "강의 영상 목소리",
+    "나레이션 만들어"
+   ],
+   "file": "voice_narration.md"
   }
  ]
 }

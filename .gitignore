@@ -152,6 +152,9 @@ data/**/*.json
 data/ibl_hippo_vecs.f32
 # 공개파일 런타임 스테이징(썸네일 캐시·비공개 실경로 색인 = PII) — 절대 커밋 금지
 data/showcase_stage/
+# 목소리 복제 레퍼런스(생체정보) — ★이 저장소는 public 이다. 8초짜리 깨끗한 샘플 하나면
+# 누구나 목소리를 복제할 수 있다(voice_narration.md). 절대 커밋 금지 — 로컬에만 둔다.
+data/voice/
 # 공유창고 동영상 트랜스코드 캐시(파생물 — 원본은 공유창고/에)
 data/warehouse_media_web/
 !data/guide_db.json

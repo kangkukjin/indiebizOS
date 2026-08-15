@@ -309,6 +309,10 @@ def create_html_video(tool_input, output_base):
 
     scenes = tool_input.get("scenes", [])
     narration_texts = tool_input.get("narration_texts", [])
+    # 미리 구워둔 나레이션 오디오(씬 순서와 같은 길이의 경로 배열, 없는 칸은 None).
+    # 해당 칸에 실제 파일이 있으면 TTS 를 건너뛰고 그 파일을 쓴다 — 목소리 복제로
+    # 만든 내 목소리 나레이션을 넣는 자리(가이드 voice_narration.md).
+    preset_audio = tool_input.get("narration_audio_paths") or []
     bgm_path = tool_input.get("bgm_path")
     voice = tool_input.get("voice")          # 미지정 = 엔진 기본(gemini/Charon)
     engine = tool_input.get("engine")
@@ -365,21 +369,28 @@ def create_html_video(tool_input, output_base):
         has_narration = False
 
         for i, scene in enumerate(scenes):
-            if i < len(narration_texts) and narration_texts[i]:
+            ready = preset_audio[i] if i < len(preset_audio) else None
+            if ready and os.path.exists(ready):
+                # 이미 구워진 나레이션 — TTS 호출도 과금도 없다.
+                tts_path = ready
+            elif i < len(narration_texts) and narration_texts[i]:
                 tts_path = os.path.join(temp_dir, f"narration_{i}.mp3")
                 asyncio.run(generate_tts(narration_texts[i], tts_path, voice, rate, pitch,
                                          engine=engine, style=style))
-                narration_audio_paths.append(tts_path)
-                has_narration = True
-
-                # 나레이션 길이 측정
-                from moviepy import AudioFileClip as MpAudioClip
-                narr_clip = MpAudioClip(tts_path)
-                narration_durations.append(narr_clip.duration)
-                narr_clip.close()
             else:
                 narration_audio_paths.append(None)
                 narration_durations.append(0)
+                continue
+
+            # ★두 경로(미리 구운 오디오·TTS)가 반드시 여기를 지난다 — 분기마다 append 를
+            #   흩뿌리면 한쪽에서 길이 측정을 빠뜨려 씬이 기본 길이에 머물고 나레이션이
+            #   잘린다(2026-08-15 실측: 260초 나레이션이 69초 영상으로 잘림).
+            narration_audio_paths.append(tts_path)
+            has_narration = True
+            from moviepy import AudioFileClip as MpAudioClip
+            narr_clip = MpAudioClip(tts_path)
+            narration_durations.append(narr_clip.duration)
+            narr_clip.close()
 
         # ============================================================
         # 2단계: 나레이션 길이에 맞게 씬 duration 자동 조정

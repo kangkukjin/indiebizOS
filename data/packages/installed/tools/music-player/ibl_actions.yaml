@@ -7,7 +7,7 @@ nodes:
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결.'
+        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/year/genre/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프(연대·장르 filter, groupby+chart 분포)·media_player 직결.'
         target_key: op
         group: music
         router: handler

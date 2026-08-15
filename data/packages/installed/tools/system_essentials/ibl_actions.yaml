@@ -234,7 +234,7 @@ nodes:
         # register/remove 가 data/webapps.json 을 쓴다 — op 하나라도 쓰기면 true (빌드 가드).
         side_effect: true
         fixture: '[self:webapp]{}'
-        description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register.
+        description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
         target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url. 파생 항목은 각자의 진실 소스에서 지운다).'
         target_key: op

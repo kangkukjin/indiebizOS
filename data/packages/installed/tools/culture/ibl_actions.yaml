@@ -4,7 +4,7 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:performance]{}'
-    description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
+    description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take/document 파이프로 추리고 문서화.
     group: culture
     target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
     target_key: op
@@ -67,7 +67,7 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:book]{query: "역사"}'
-    description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic.
+    description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.
     group: culture
     target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
     target_key: op
@@ -456,7 +456,7 @@ actions:
       keyword: [query]
     returns: items
     fixture: '[sense:exhibit]{query: "미술"}'
-    description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
+    description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
     group: culture
     target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
     router: handler

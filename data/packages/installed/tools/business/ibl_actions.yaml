@@ -380,7 +380,7 @@ nodes:
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[others:messages]{op: "inbox"}'
-        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read).
+        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite 필드) — table:filter 로 미독·즐겨찾기만 선별.
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
         group: channel
         target_key: op

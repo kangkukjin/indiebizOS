@@ -308,7 +308,7 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:performance]{}'
-        description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book.
+        description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take/document 파이프로 추리고 문서화.
         group: culture
         target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
         target_key: op
@@ -371,7 +371,7 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:book]{query: "역사"}'
-        description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic.
+        description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.
         group: culture
         target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
         target_key: op
@@ -807,7 +807,7 @@ nodes:
           - query
         returns: items
         fixture: '[sense:exhibit]{query: "미술"}'
-        description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance.
+        description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
         group: culture
         target_description: 검색어 또는 키워드 (예 '국립중앙박물관', '미디어아트').
         router: handler
@@ -3461,7 +3461,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:health]{op: "query", query_type: "medications"}'
-        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션.
+        description: 건강 기록 관리 (op 분기). save/query 통합 — 혈압·혈당·체중·증상·투약·검사·문서 모두 한 액션. query 결과는 items — table:chart(추이 그래프)/spreadsheet(엑셀) 파이프로.
         group: health
         target_description: 'save — 평탄형 권장: category(혈압/혈당/체중/심박수/체온/산소포화도 등)+value 를 최상위에(혈압은 value:"128/85" 또는 systolic/diastolic). 증상·투약·문서는 info_type(symptom/medication/document)+data. query — query_type(summary/search/측정기록/증상/투약/문서 또는 혈압/혈당 같은 카테고리명) + keyword/days/person 옵션(category 파라미터로 넘겨도 수용). delete — record_type(measurement/symptom/medication/document) + record_id(조회 출력의 #번호). ingest — file(이미지/PDF/엑셀/텍스트 파일 경로) 또는 text(자유 텍스트)를 AI가 구조화해 일괄 저장(검사지 사진·검진 결과 등, 원본은 문서로 보존).'
         target_key: op
@@ -3780,7 +3780,7 @@ nodes:
         fixture: '[self:music]{op: "sources"}'
         runs_on: pc_only
         description: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프·media_player 직결.'
+        target_description: 'op 별 입력: library(q 검색어, folder 폴더 절대경로, path 단일 곡, limit 기본 300) / folders(folder 절대경로 — 생략하면 최상위. 결과 items=바로 아래 폴더[맨 앞은 ⬆️ 상위 행], tracks=그 폴더 아래 전체 곡[상한 500]) / track(path) / playlist·playlist_create·playlist_delete(name) / playlist_add·playlist_remove(name+path) / add_source·remove_source(path 폴더) / playlists·sources·scan 은 입력 없음. 결과 items 에 title/artist/album/year/genre/duration_str/stream(재생 URL)/image(앨범아트) 구조 필드 → table 파이프(연대·장르 filter, groupby+chart 분포)·media_player 직결.'
         target_key: op
         group: music
         router: handler
@@ -4587,7 +4587,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:webapp]{}'
-        description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register.
+        description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
         target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url. 파생 항목은 각자의 진실 소스에서 지운다).'
         target_key: op
@@ -5737,7 +5737,7 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[others:messages]{op: "inbox"}'
-        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read).
+        description: 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와 Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite 필드) — table:filter 로 미독·즐겨찾기만 선별.
         target_description: op:thread(기본, neighbor_id 필수 — 한 이웃과 주고받은 전체 메시지) / op:inbox(대화 목록 — 이웃별 최근 메시지·미응답, 파라미터 없음·최근순).
         group: channel
         target_key: op

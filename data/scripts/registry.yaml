@@ -1,0 +1,18 @@
+나레이션생성:
+  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts'
+  file: 나레이션생성.py
+  interpreter: .venv/bin/python3
+  registered_at: '2026-08-15T23:08:41'
+  timeout: 2400
+잔여추정:
+  description: 탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체
+  file: 잔여추정.py
+  interpreter: .venv/bin/python3
+  registered_at: '2026-08-15T14:02:43'
+  timeout: 300
+폴더용량:
+  description: outputs 폴더 용량 요약 (items)
+  file: 샘플_폴더용량.py
+  interpreter: /opt/homebrew/opt/python@3.14/bin/python3.14
+  registered_at: '2026-08-07T17:04:15'
+  timeout: 300

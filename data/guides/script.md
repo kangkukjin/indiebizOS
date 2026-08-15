@@ -17,15 +17,33 @@
 
 ```
 [self:script]{}                                                          ← list: 목록+마지막 실행 상태
-[self:script]{op: "register", path: "outputs/scripts/정산.py", description: "월간 정산"}
+[self:script]{op: "register", path: "data/scripts/정산.py", description: "월간 정산"}
 [self:script]{op: "run", id: "정산", args: {"month": "2026-08"}}
 [self:script]{op: "remove", id: "정산"}                                  ← 파일은 보존
 ```
 
-- **register**: 실존 파일만. id 생략 시 파일명. interpreter 생략 시 확장자 추론(.py/.sh/.js).
+- **register**: 실존 파일만, **`data/scripts/` 안에 있어야 한다**(밖이면 거절+안내).
+  id 생략 시 파일명. interpreter 생략 시 확장자 추론(.py/.sh/.js).
   같은 id 재등록 = 갱신(수리 후 재등록이 유지보수 루프). timeout 기본 300초.
 - **run**: **등록된 id 만** — 임의 경로·코드 문자열 실행 불가. cwd = 스크립트의 폴더.
-- 원장 `data/scripts.json`, 실행 로그 `data/script_runs/<id>.log`(매 실행 덮어씀).
+
+### 왜 `data/scripts/` 인가 (2026-08-16 개정)
+
+등록 스크립트는 **어휘처럼 다룬다** — 결정화 사다리에서 IBL 어휘 바로 아래 가로대이기 때문이다.
+
+| | 파일 | 추적 |
+|---|---|---|
+| 본문 | `data/scripts/<파일>` | ✅ |
+| 정의(파일·인터프리터·설명·타임아웃) | `data/scripts/registry.yaml` | ✅ |
+| 실행 상태(last_run·last_error) | `data/scripts.json` | ✗ (무시) |
+| 실행 로그 | `data/script_runs/<id>.log` (매 실행 덮어씀) | ✗ |
+
+- 옛날엔 본문이 `outputs/` 아래라 **.gitignore 에 걸려 버전 관리 밖**이었다 — 백업도 없고 다른
+  기기에 따라가지도 않았다. 어휘는 `ibl_nodes_src/*.yaml` 로 추적되는데 그 아래 칸만 방치돼 있었다.
+- **정의와 상태를 가르는 이유**: 안 가르면 실행할 때마다 원장이 바뀌어 git 이 시끄럽다.
+  어휘의 src ↔ 파생 분리와 같은 원리.
+- **경로는 저장소 상대**로 적힌다(본문=파일명, 저장소 안 인터프리터=`.venv/bin/python3`).
+  옛 절대경로(`/Users/…`)는 클론한 다른 기기에서 원리적으로 못 돌았다.
 
 ## 통화 계약 — 스크립트가 파이프에 흐르게 하려면
 

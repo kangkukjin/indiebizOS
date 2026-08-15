@@ -17,7 +17,7 @@
 - 계수 수리: `_usage_origin()` 에 `__self_check__` → origin `'selfcheck'` 분리 (위 (0) 절 정정 참조).
 - `sense:pew_research` 은퇴 → **`sense:feed`{url, limit} 신설**(web 패키지, 범용 RSS/Atom — URL 하드코딩 복합어를 보편어로 대체). 코퍼스 5행 이관.
 - `limbs:explorer`·`limbs:photo_manager` 은퇴 → **`open_window`{app: files|photos}** 흡수(ibl_routing pending-queue 직결). explorer 의 desc 거짓말("Finder") 해소 — 코퍼스 22행 이관(파인더 명시 intent 4행은 os_open 으로 정직 재배선).
-- `self:residual` 은퇴 → 등록 스크립트 **"잔여추정"**(outputs/scripts/잔여추정.py — Wilson CI estimate + file_index sample, [self:script] 라이브 검증).
+- `self:residual` 은퇴 → 등록 스크립트 **"잔여추정"**(data/scripts/잔여추정.py — Wilson CI estimate + file_index sample, [self:script] 라이브 검증).
 - 검증: build --check 전 가드 통과(151) · 라이브 종단(feed 실 RSS 3건 · open_window files/photos 큐잉 · 은퇴어 validate 반려) · 해마 시드 9 + 이관 27 + rebuild_index 3,175(벡터 누락 0) · 연상 직행 4/5. ⏳재학습 대기열: feed·open_window 흡수, "블로그 RSS"↔self:blog 경계.
 
 | 단계 | 상태 | 커밋 |

@@ -5,36 +5,42 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:5414
+- dataset_size:5335
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 큰 파일 검색해
+- source_sentence: 화면 이 위치 눌러
   sentences:
-  - '[self:script]'
-  - '[sense:classic]'
-  - '[self:fs_query]'
-- source_sentence: KBS Cool FM 틀어
+  - '[self:mkdir]'
+  - '[limbs:screen]'
+  - 유튜브 동영상 조회·시청 (op 분기). 메타·자막·요약 + 시청 앱(추천 피드·시청 페이지·시청 기록 — 재생은 맥 경유 릴레이, 유튜브
+    직접 접속 없음). 검색은 search_youtube.
+- source_sentence: 내용을 3섹션 요약 보고서 구조로 정리
   sentences:
-  - 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.
-  - '[limbs:radio]'
-  - '[engines:web_component]'
-- source_sentence: 뒤로 가기 눌러줘
+  - '[self:ledger]'
+  - 원본 콘텐츠를 문서 IR 한 건(title·blocks 필드를 가진 단일 응답)으로 정리하는 편집자 원자 — 획득→구조화→렌더 파이프라인의
+    중간. >> [table:document]로 이어 렌더.
+  - 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini
+    STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
+- source_sentence: 날씨랑 소식 한번에
   sentences:
-  - '[sense:search_shopping] 추천"}'
-  - '[sense:startup]'
-  - '[limbs:android]'
-- source_sentence: 웹사이트 개발 외주 맡길 만한 서비스 검색해줘
+  - '[sense:weather] & [sense:search]'
+  - '[self:music] >> [table:groupby] >> [table:chart]'
+  - Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt
+    지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은
+    read_guide(query="Gemini 이미지").
+- source_sentence: 두 리스트 이어붙여줘
   sentences:
-  - '[others:auto_response]'
-  - '[table:chart]'
-  - '[sense:freelance]'
-- source_sentence: 오늘 며칠이야
+  - '[sense:realty] & [sense:realty] >> [table:union]'
+  - USB 손발 자격 원장 관리 (op 분기) — 발급·목록·폐기·승인. USB 에 담아 낯선 PC 에 꽂는 헬퍼의 인가는 허브 로그인 비밀번호가
+    아니라 여기서 발급하는 limb key. 발급하면 USB 페이로드(헬퍼 설정+안내)를 만들어 경로를 돌려준다.
+  - 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔
+    불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
+- source_sentence: 폰 사진 10장 바탕화면에 저장해줘해
   sentences:
-  - '[table:document]'
-  - '[self:time]'
-  - 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산
-    현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
+  - '[engines:image_gemini]'
+  - '[engines:image_gemini] >> [limbs:os_open]'
+  - '[self:photo] >> [self:copy]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +94,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '오늘 며칠이야',
-    '[self:time]',
-    '부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.',
+    '폰 사진 10장 바탕화면에 저장해줘해',
+    '[self:photo] >> [self:copy]',
+    '[engines:image_gemini]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +105,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.5784, 0.0101],
-#         [0.5784, 1.0000, 0.0017],
-#         [0.0101, 0.0017, 1.0000]])
+# tensor([[1.0000, 0.8289, 0.1028],
+#         [0.8289, 1.0000, 0.1586],
+#         [0.1028, 0.1586, 1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -145,20 +151,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 5,414 training samples
+* Size: 5,335 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
-  |          | sentence_0                                                                        | sentence_1                                                                        |
-  |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
-  | type     | string                                                                            | string                                                                            |
-  | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 4 tokens</li><li>mean: 14.21 tokens</li><li>max: 62 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 24.91 tokens</li><li>max: 64 tokens</li></ul> |
+  |          | sentence_0                                                                       | sentence_1                                                                        |
+  |:---------|:---------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type     | string                                                                           | string                                                                            |
+  | modality | text                                                                             | text                                                                              |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 16.2 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 23.19 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                                                                | sentence_1                                                                                                                                                     |
-  |:--------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>사진전이랑 재즈 공연 한 번에 찾아</code>                                          | <code>[sense:exhibit] & [sense:performance]</code>                                                                                                             |
-  | <code>코드 구조 검증을 위해 소스 코드에서 정의, 예외 처리, 클래스, 임포트를 조회하고 결과를 요약·문서화한다.</code> | <code>파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a\|b' 동작), regex=false면 리터럴. 파일명 검색은 find.</code> |
-  | <code>머신러닝 도서 검색</code>                                                   | <code>[sense:search_books]</code>                                                                                                                              |
+  | sentence_0                                                                                                                                   | sentence_1                                                                                                                                                                                                      |
+  |:---------------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>텍스트의 철학적 주제나 상징적 비유를 시각화하여 미니멀한 흑백 라인 아트 삽화 만들어</code>                                                                                 | <code>Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt 지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").</code> |
+  | <code>안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.</code> | <code>[limbs:android]</code>                                                                                                                                                                                    |
+  | <code>날씨 볼 수 있어?</code>                                                                                                                      | <code>[self:discover]</code>                                                                                                                                                                                    |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -288,11 +294,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.7386 | 500  | 0.0125        |
+| 0.7496 | 500  | 0.0177        |
 
 
 ### Training Time
-- **Training**: 3.6 minutes
+- **Training**: 3.5 minutes
 
 ### Framework Versions
 - Python: 3.13.5

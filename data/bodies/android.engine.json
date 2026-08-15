@@ -233,6 +233,7 @@
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
+    "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
     "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
@@ -241,8 +242,8 @@
     "test_step_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 235,
+    "total": 236,
     "engine": 204,
-    "blocklist": 31
+    "blocklist": 32
   }
 }

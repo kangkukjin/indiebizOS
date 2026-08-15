@@ -200,8 +200,8 @@ def gen(code, intents):
         name = agent.split("/")[-1] if "/" in agent else agent
         results += [f"{name} 뭐 할 수 있어?", f"{name} 정보 좀", f"{name} 에이전트 알려줘"]
 
-    # ---- self:local_save / write / file ----
-    elif a in ("self:local_save", "self:write", "self:file"):
+    # ---- self:write / file ----
+    elif a in ("self:write", "self:file"):
         results += ["파일로 저장해", "이거 저장해줘", "문서로 남겨", "파일에 써줘", "저장 좀"]
 
     # ---- self:read / read_pdf ----

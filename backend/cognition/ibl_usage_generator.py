@@ -314,17 +314,17 @@ _PIPELINE_TEMPLATES = [
     # 검색 → 저장
     (
         "AI 뉴스를 검색해서 파일로 저장해줘",
-        '[sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "ai_news.md"}',
+        '[sense:search]{query: "AI 뉴스"} >> [self:write]{path: "ai_news.md"}',
         "sense,self", "pipeline"
     ),
     (
         "부동산 뉴스 검색해서 마크다운으로 저장",
-        '[sense:search]{source: "gnews", query: "부동산"} >> [self:local_save]{path: "부동산뉴스.md"}',
+        '[sense:search]{source: "gnews", query: "부동산"} >> [self:write]{path: "부동산뉴스.md"}',
         "sense,self", "pipeline"
     ),
     (
         "반도체 관련 뉴스 찾아서 저장해줘",
-        '[sense:search]{source: "gnews", query: "반도체"} >> [self:local_save]{path: "반도체뉴스.md"}',
+        '[sense:search]{source: "gnews", query: "반도체"} >> [self:write]{path: "반도체뉴스.md"}',
         "sense,self", "pipeline"
     ),
     # 병렬 검색
@@ -369,7 +369,7 @@ _PIPELINE_TEMPLATES = [
     # 크롤링 → 저장
     (
         "이 웹페이지 내용 크롤링해서 파일로 저장해줘",
-        '[sense:crawl]{url: "https://example.com/article"} >> [self:local_save]{path: "crawled.md"}',
+        '[sense:crawl]{url: "https://example.com/article"} >> [self:write]{path: "crawled.md"}',
         "sense,self", "pipeline"
     ),
     # 검색 → 시각화
@@ -381,25 +381,25 @@ _PIPELINE_TEMPLATES = [
     # 유튜브 → 저장
     (
         "유튜브 영상 자막 추출해서 파일로 저장해줘",
-        '[sense:video]{op: "transcript", url: "https://youtube.com/watch?v=example"} >> [self:local_save]{path: "transcript.md"}',
+        '[sense:video]{op: "transcript", url: "https://youtube.com/watch?v=example"} >> [self:write]{path: "transcript.md"}',
         "sense,self", "pipeline"
     ),
     # 복합 병렬 → 저장
     (
         "AI 뉴스랑 부동산 뉴스 동시에 찾아서 브리핑 파일로 만들어줘",
-        '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"} >> [self:local_save]{path: "briefing.md"}',
+        '[sense:search]{query: "AI 뉴스"} & [sense:search]{query: "부동산 뉴스"} >> [self:write]{path: "briefing.md"}',
         "sense,self", "pipeline"
     ),
     # 3단 파이프라인
     (
         "삼성전자 뉴스 검색 후 분석 에이전트에게 보내고 결과 저장해줘",
-        '[sense:search]{source: "gnews", query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:local_save]{path: "분석결과.md"}',
+        '[sense:search]{source: "gnews", query: "삼성전자"} >> [others:delegate]{mode: "sync", agent_id: "투자/투자컨설팅", message: "분석해줘"} >> [self:write]{path: "분석결과.md"}',
         "sense,others,self", "complex"
     ),
     # 블로그 검색 → 저장
     (
         "블로그에서 AI 관련 글 찾아서 정리해줘",
-        '[self:rag_search]{query: "AI 인공지능"} >> [self:local_save]{path: "blog_ai.md"}',
+        '[self:rag_search]{query: "AI 인공지능"} >> [self:write]{path: "blog_ai.md"}',
         "self", "pipeline"
     ),
     # 법률 검색
@@ -485,7 +485,7 @@ _PIPELINE_TEMPLATES = [
     # 검색 + Fallback + 저장
     (
         "뉴스 검색 시도하고, 안 되면 종합 검색하고, 결과 저장",
-        '[sense:search]{source: "gnews", query: "AI"} ?? [sense:search]{query: "AI 뉴스"} >> [self:local_save]{path: "news.md"}',
+        '[sense:search]{source: "gnews", query: "AI"} ?? [sense:search]{query: "AI 뉴스"} >> [self:write]{path: "news.md"}',
         "sense,self", "complex"
     ),
     # 워크플로우 관련
@@ -531,7 +531,7 @@ _PIPELINE_TEMPLATES = [
     # 파일 관리
     (
         "데스크탑 파일 목록 보여줘",
-        '[self:local_save]{path: "~/Desktop", action: "list"}',
+        '[self:write]{path: "~/Desktop", action: "list"}',
         "self", "single"
     ),
 ]

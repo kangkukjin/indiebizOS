@@ -150,14 +150,6 @@
       "weight": "light",
       "locale": "kr"
     },
-    "local-info": {
-      "needs_key": [
-        "NAVER_CLIENT_ID",
-        "NAVER_CLIENT_SECRET"
-      ],
-      "weight": "heavy",
-      "locale": "kr"
-    },
     "location-services": {
       "needs_key": [
         "DATA_GO_KR_API_KEY",
@@ -324,7 +316,6 @@
     "self:ledger": "business",
     "self:limb": "guest-helper",
     "self:list": "system_essentials",
-    "self:local_save": "local-info",
     "self:material": "lecture_workspace",
     "self:memory": "memory",
     "self:mkdir": "system_essentials",
@@ -360,7 +351,6 @@
     "sense:kosis": "kosis",
     "sense:legal": "legal",
     "sense:listen": "android",
-    "sense:local_query": "local-info",
     "sense:navigate_route": "location-services",
     "sense:paper": "study",
     "sense:performance": "culture",
@@ -371,7 +361,6 @@
     "sense:restaurant": "location-services",
     "sense:reverse_geocode": "location-services",
     "sense:search": "web",
-    "sense:search_local": "local-info",
     "sense:search_shopping": "shopping-assistant",
     "sense:search_youtube": "youtube",
     "sense:see": "android",

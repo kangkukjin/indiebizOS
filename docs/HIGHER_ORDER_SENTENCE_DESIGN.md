@@ -270,3 +270,54 @@ python3 -m pytest tests/test_pipe_currency_failures.py                          
 | `each` 기본 limit | 20 / 50 / 무제한+경고 | **20** |
 | M3 착수 여부 | 지금 / M2 측정 후 / 보류 | **M2 측정 후** |
 | 재귀 깊이 상한 | 2 / 3 / 5 | **3** |
+
+---
+
+## 9. M3 심사 결과 (2026-08-15 — 원칙 2 절차로 핸들러를 열었다)
+
+### 9-1. 설계 전제가 바뀌었다 — 문장 원장은 이미 한 번 전멸했다
+
+같은 날 다른 세션이 `워크플로 원장 전량 정리`(`df93ad6`)를 커밋했다. **남아 있던 6건이
+전부 죽은 참조**였다 — `self:file` · `search_papers` · `search_stock` · `video_info` ·
+`limbs:transcript`, 전부 은퇴 어휘. 현재 원장은 **0건**이다.
+
+즉 §2 의 M3("workflow 를 문장 원장의 정본으로 승격")를 그대로 집행하면 **사망률 100% 가
+실증된 그릇으로 통합**하는 셈이 된다. 통합이 문제가 아니라 **저장된 문장이 썩는다는 것**이
+문제였다. 이것은 온톨로지 부패가 시스템 *안에서* 나타난 사례다.
+
+### 9-2. 결정적 비대칭 — 읽을 때 검증하는가
+
+| 원장 | 나르는 것 | 읽을 때 검증 | 결과 |
+|---|---|---|---|
+| `self:script` | 파일 **참조**(id) | **있음** — 파일 실존·인터프리터 해석 → `runnable:false`+사유, 실패를 원장에 기록 | 살아 있음(계수 internal 3·manual 3) |
+| `self:workflow` | **문장** | 없음 | 전 항목 사망 → 전량 폐기 |
+| `self:trigger` | **문장** + 시간 | 없음 | 현재 3건은 건강(최근 생성) — 같은 병에 노출 |
+
+선례가 이미 기록돼 있다: 04시 정기보고 트리거가 은퇴한 `[self:report]{op:new}` 를 부르며
+**매일 조용히 실패**하고 있었다(CLAUDE.md). 트리거는 새벽에 혼자 도니 아무도 모른다.
+
+### 9-3. 그래서 M3 는 두 단계로 갈린다
+
+**M3-0 — 저장된 문장에 pre-flight (✅ 집행함, 판정 불요)**
+`workflow_engine.preflight_sentence(code)` 신설 — `ibl_parse` + `get_node_actions` 로
+어휘 생존만 검사해 `{runnable, problem, dead_vocab}` 반환. `list_workflows()` 와
+`_list_triggers()` 가 항목마다 동반한다. `self:script` 의 선례를 문장 원장에 복제한 것이라
+새 개념이 아니다. 부수로 `list_workflows` 의 `except: pass`(깨진 yaml 이 목록에서 조용히
+사라지던 것) 제거.
+- 한계(실측): 파서가 관대해 `[sense:search]{query: ` 같은 미종료 문자열도 통과한다.
+  이 검사가 보장하는 것은 **어휘 생존**이지 문장의 의도가 아니다.
+- 다음 결합점: 12시간 자가점검 순찰이 이 신호를 읽으면 "어휘 은퇴가 저장 문장을 깨뜨린
+  순간"이 자동 검출된다(현재는 사람이 볼 때만 보인다).
+
+**M3-1 — 원장 단일화 (미집행 — 사용자 판정 필요)**
+pre-flight 가 붙은 *뒤에야* 의미가 있다. 판정 사안:
+
+| 항목 | 실측 | 질문 |
+|---|---|---|
+| `self:manage_events` | **📅 calendar 계기 보유**(6형제 중 유일) · 계수 agent 1 | 흡수하면 계기 개편 동반 — 지금 할 것인가 |
+| `self:switch` | 별도 `switch_runner` 시스템 · 계수 agent 1 | trigger 로 접히는가, 별개 정체인가 |
+| `self:schedule` vs `self:trigger` | 둘 다 읽기키가 `pipeline`(=`do`) · 지연/1회 vs cron | schedule 을 trigger 의 op 로 접는가 |
+| `self:workflow` | 원장 0건 · 계수 agent 1·internal 1 | 빈 그릇을 정본으로 승격할 근거가 지금 있는가 |
+
+★참고: 08-15 이후 보정 계수는 6형제 전부 1~2건이라 **아직 판정 근거가 얇다**.
+`self:script` 만 internal 3·manual 3 으로 실제 배관 사용이 있다.

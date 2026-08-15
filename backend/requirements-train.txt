@@ -1,0 +1,19 @@
+# IndieBiz OS — 해마 임베딩 *재학습* 티어 (개발 몸 전용, bootstrap 미설치)
+#
+# requirements-ml.txt 는 **추론**(회상)에 필요한 것만 담는다 — 낯선 설치가 매번
+# 학습 전용 의존성까지 끌고 오지 않게. 이 파일은 코퍼스가 자란 뒤 fine-tune 을
+# 다시 돌리는 유지보수 작업에서만 필요하다.
+#
+# 2026-08-15 실측: `datasets` 가 어느 requirements 에도 선언돼 있지 않아
+# `backend/ibl_embedding_trainer.py` 가 ImportError 로 즉사했다. requirements-ml.txt 가
+# 자기 주석에서 경고하던 바로 그 부류(선언 없이 개발 맥의 전역 파이썬에만 존재)가
+# 학습 티어에 남아 있었던 것. sentence-transformers 5.x 의 .fit() 이 datasets 기반
+# 트레이너로 바뀌면서 드러났다.
+#
+# 사용:
+#   .venv/bin/pip install -r backend/requirements-train.txt
+#   PYTHONPATH=backend .venv/bin/python backend/ibl_embedding_trainer.py
+# 절차(백업→학습→compare_models→epoch_* 삭제→rebuild_index→백엔드 재시작)는
+# cloud_training/README.md 를 따를 것 — 학습기는 라이브 모델 폴더에 직접 덮어쓴다.
+datasets            # sentence-transformers 5.x .fit() 이 요구
+accelerate>=1.1.0   # 그 .fit() 이 쓰는 transformers Trainer 가 요구 (둘 다 같은 부류로 누락돼 있었다)

@@ -214,6 +214,19 @@ def _list_triggers(params: dict) -> dict:
     if enabled_only:
         triggers = [t for t in triggers if t.get("enabled", True)]
 
+    # 문장 pre-flight — 저장된 pipeline 이 *지금의 어휘로* 실행 가능한가 (2026-08-15).
+    # 트리거는 새벽에 혼자 돌기 때문에 어휘 은퇴로 죽어도 아무도 모른다(04시 정기보고가
+    # 은퇴한 [self:report]{op:new} 를 부르며 매일 실패하던 선례). 목록이 곧 점검 창구다.
+    from workflow_engine import preflight_sentence
+    triggers = [dict(t) for t in triggers]
+    for t in triggers:
+        pf = preflight_sentence(t.get("pipeline") or t.get("steps") or "")
+        t["runnable"] = pf["runnable"]
+        if pf["problem"]:
+            t["problem"] = pf["problem"]
+            if pf["dead_vocab"]:
+                t["dead_vocab"] = pf["dead_vocab"]
+
     # calendar_manager의 schedule 이벤트도 수집 (IBL 트리거가 아닌 기존 이벤트)
     existing_events = _get_existing_schedule_events()
 

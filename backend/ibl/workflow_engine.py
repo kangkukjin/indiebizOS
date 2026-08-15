@@ -787,22 +787,88 @@ def _to_string(result: Any) -> str:
 
 # === 워크플로우 CRUD ===
 
+def preflight_sentence(code: Any) -> Dict:
+    """저장된 IBL 문장이 **지금의 어휘로** 실행 가능한지 검사 (2026-08-15).
+
+    왜 필요한가 — 저장된 문장은 어휘가 진화하면 썩는다. 08-15 실측: 워크플로 원장에
+    살아 있던 6건이 *전부* 죽은 참조였고(self:file·search_papers·search_stock·video_info·
+    limbs:transcript = 은퇴 어휘) 전량 폐기됐다. 그런데 목록은 그동안 아무 신호도 주지
+    않았다 — 04시 정기보고 트리거가 은퇴한 `[self:report]{op:new}` 를 부르며 매일 조용히
+    실패하던 선례와 같은 부류다.
+
+    `self:script`(참조 원장)는 이미 list 에서 pre-flight(파일 실존·인터프리터 해석)를 하고
+    `runnable:false` + 사유를 붙인다. 문장 원장(workflow·trigger)에도 같은 창구를 단다.
+
+    반환: {"runnable": bool, "problem": str|None, "dead_vocab": [..]}
+
+    ★한계(실측): 파서가 관대하다 — `[sense:search]{query: ` 같은 미종료 문자열도 예외 없이
+    파싱된다(params 만 빈 채로). 그러므로 이 검사는 **어휘 생존**을 보장하지 지 문장이
+    의도대로 쓰였는지는 보장하지 않는다. 잡는 것은 "은퇴한 낱말을 부르는 문장"이다.
+    """
+    from ibl_parser import parse as _parse, IBLSyntaxError
+    from ibl_engine import get_node_actions
+
+    if isinstance(code, (list, tuple)):
+        parts = [c for c in code if isinstance(c, str) and c.strip()]
+        if not parts:                      # dict step 배열이면 문법 검사 대상이 아니다
+            return {"runnable": True, "problem": None, "dead_vocab": []}
+        code = "\n".join(parts)
+    if not isinstance(code, str) or not code.strip():
+        return {"runnable": False, "problem": "실행할 문장이 비어 있습니다.", "dead_vocab": []}
+
+    try:
+        steps = _parse(code)
+    except IBLSyntaxError as e:
+        return {"runnable": False, "problem": f"IBL 문법 오류: {e}", "dead_vocab": []}
+
+    dead = []
+    for st in steps:
+        if not isinstance(st, dict) or st.get("_goal") or st.get("_condition") or st.get("_case"):
+            continue                        # 복합 블록은 내부 분기를 정적으로 못 본다
+        node, action = st.get("_node"), st.get("action")
+        if not node or not action:
+            continue
+        if action not in (get_node_actions(node) or set()):
+            q = f"{node}:{action}"
+            if q not in dead:
+                dead.append(q)
+    if dead:
+        return {"runnable": False,
+                "problem": f"지금 사전에 없는 어휘: {', '.join(dead)} — 은퇴했거나 이름이 바뀌었습니다.",
+                "dead_vocab": dead}
+    return {"runnable": True, "problem": None, "dead_vocab": []}
+
+
 def list_workflows() -> List[Dict]:
-    """저장된 워크플로우 목록"""
+    """저장된 워크플로우 목록 (문장 pre-flight 동반 — preflight_sentence 참조)"""
     wf_path = _get_workflows_path()
     workflows = []
     for f in sorted(wf_path.glob("*.yaml")):
         try:
-            data = yaml.safe_load(f.read_text(encoding="utf-8"))
+            data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+        except Exception as e:
+            # ★깨진 원장 항목을 조용히 감추지 않는다 — 목록에서 사라지면 "없는 것"이 된다.
             workflows.append({
-                "id": f.stem,
-                "name": data.get("name", f.stem),
-                "description": data.get("description", ""),
-                "steps_count": len(data.get("steps", [])),
-                "file": str(f),
+                "id": f.stem, "name": f.stem, "description": "", "steps_count": 0,
+                "file": str(f), "runnable": False,
+                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}",
             })
-        except Exception:
-            pass
+            continue
+        steps = data.get("steps", []) or data.get("pipeline") or []
+        pf = preflight_sentence(steps)
+        entry = {
+            "id": f.stem,
+            "name": data.get("name", f.stem),
+            "description": data.get("description", ""),
+            "steps_count": len(data.get("steps", []) or []),
+            "file": str(f),
+            "runnable": pf["runnable"],
+        }
+        if pf["problem"]:
+            entry["problem"] = pf["problem"]
+            if pf["dead_vocab"]:
+                entry["dead_vocab"] = pf["dead_vocab"]
+        workflows.append(entry)
     return workflows
 
 

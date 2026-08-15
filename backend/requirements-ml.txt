@@ -7,3 +7,6 @@
 # ~2GB) 연상 회상은 이 시스템의 핵심이라 bootstrap.py 가 최선-노력으로 설치한다.
 sentence-transformers   # → torch, transformers 를 끌고 온다
 sqlite-vec              # 해마 DB 벡터 테이블 (vec0)
+
+# ★이 파일은 *추론*(회상) 전용이다. 모델을 **재학습**하려면 별도 티어가 더 필요하다:
+#   backend/requirements-train.txt (개발 몸 전용 — bootstrap 이 설치하지 않는다)

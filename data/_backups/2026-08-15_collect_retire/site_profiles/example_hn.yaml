@@ -1,0 +1,17 @@
+# Hacker News - 사이트 프로필 예시
+name: "Hacker News"
+url: "https://news.ycombinator.com"
+strategy: html
+description: "Hacker News 메인 페이지에서 최신 글 수집"
+
+selectors:
+  items: ".athing"
+  title: ".titleline > a"
+  link: ".titleline > a"
+
+transform:
+  max_items: 15
+  include_fields: ["title", "link"]
+
+category: "tech"
+language: "en"

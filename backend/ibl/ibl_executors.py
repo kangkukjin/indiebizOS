@@ -690,16 +690,33 @@ def _stamp_depth(steps: Any, depth: int) -> None:
             _stamp_depth(st.get(key), depth)
 
 
-def _each_input_rows(prev: Any) -> Tuple[Optional[list], Any]:
-    """_prev_result 에서 items 통화를 꺼낸다. 반환: (행 목록 또는 None, 파싱된 봉투)."""
+def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
+    """입력 통화(items)를 꺼낸다. 반환: (행 목록 또는 None, 파싱된 봉투).
+
+    규약은 data-ops 변환자와 **같다**(2026-08-15 대칭 수리): 파이프 입력(`_prev_result`)이
+    먼저이고, 그게 없을 때만 params 에서 통화를 직접 받는다 — 단독 호출·자가점검·
+    리터럴 씨앗 지원. 옛 each 는 `_prev_result` 만 읽어, 다른 13 변환자가 전부 받는
+    `items: [...]` 리터럴을 혼자 거부했다("받은 봉투: str"). 하필 문형을 곱셈으로 바꾸는
+    유일한 고차 변환자가 항상 앞에 생산자를 요구하던 셈이다.
+    """
+    prev = params.get("_prev_result")
     obj = prev
     if isinstance(prev, str):
         s = prev.strip()
+        obj = None
         if s.startswith("{") or s.startswith("["):
             try:
                 obj = json.loads(s)
             except Exception:
-                obj = prev
+                obj = prev          # JSON 아닌 문자열 — 아래에서 통화 없음으로 진단된다
+        elif s:
+            obj = prev
+    if obj is None:                  # 파이프 입력 없음 → params 에서 통화 수용
+        if params.get("items") is not None:
+            obj = {"items": params["items"]}
+        elif params.get("table") is not None:
+            obj = {"table": params["table"]}
+
     if isinstance(obj, dict):
         from common.currency import derive_items
         obj = derive_items(obj)
@@ -729,14 +746,15 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     do = str(do)
     var = (str(params.get("as") or "it").lstrip("$").strip()) or "it"
 
-    rows, envelope = _each_input_rows(params.get("_prev_result", ""))
+    rows, envelope = _each_input_rows(params)
     if rows is None:
         shape = (list(envelope.keys())[:8] if isinstance(envelope, dict)
                  else type(envelope).__name__)
         return {"success": False, "items": [], "count": 0,
                 "error": f"each: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape} — "
-                         f"each 는 앞 단계가 낸 목록의 각 행에 문장을 적용합니다. "
-                         f"파이프(>>) 뒤에 놓였는지, 앞 액션이 목록을 내는지 확인하세요."}
+                         f"each 는 목록의 각 행에 문장을 적용합니다. 파이프(>>) 뒤에 놓거나, "
+                         f"단독으로 쓰려면 items 를 직접 주세요. "
+                         f'예: [table:each]{{items: [{{"city": "서울"}}], do: "[sense:weather]{{city: \'$it.city\'}}"}}'}
 
     try:
         limit = int(params.get("limit") if params.get("limit") is not None else _EACH_DEFAULT_LIMIT)

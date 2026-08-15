@@ -240,3 +240,79 @@ def check_textbook(root: Path, data: dict | None) -> list[str]:
             issues.append(f"교재 제목의 노드 수({count}) ≠ 카탈로그({len(catalog)})")
 
     return list(dict.fromkeys(issues))
+
+
+# === 자기상 가드: system_structure.md 의 액션 수 ↔ 레지스트리 (2026-08-15) ===
+# 왜 필요한가: 이 파일의 '현 상태' 줄은 prompt_builder.get_system_structure_core() 를 타고
+# 실행·의식·평가 세 에이전트에 **항상 주입**된다. 즉 시스템이 자기 몸 크기를 아는 유일한
+# 창구인데, 어휘를 바꿔도 아무도 이 줄을 안 고쳐서 조용히 낡는다.
+#
+# ★두 번 재발했다: 2026-08-06 에 "시스템이 자기 액션 수를 163+ 로 잘못 말함(에피소드 935)"
+#   을 손으로 고쳤는데, 9일 만에 다시 6개 노드 수가 전부 틀어졌다(150 vs 실제 142).
+#   손으로 고치는 것은 답이 아니다 — 뷰-어휘 문서-동기 가드와 같은 수로 빌드가 대조한다.
+#
+# 마커로 감싼 한 줄만 본다(<!-- SELF_IMAGE:START/END -->). 문서 꼬리에는 옛 "현 상태: …"
+# 기록이 여럿 남아 있는데 그건 *그때의 기록*이라 건드리면 안 되기 때문이다.
+_SELF_IMAGE_DOC = "data/system_docs/system_structure.md"
+_SELF_IMAGE_START = "<!-- SELF_IMAGE:START -->"
+_SELF_IMAGE_END = "<!-- SELF_IMAGE:END -->"
+
+
+def check_self_image(root: Path, data: dict | None) -> list[str]:
+    """'현 상태 = N노드 M 액션(노드별…)·P 도구 패키지 + Q extensions' ↔ 실측 대조."""
+    import re as _re
+
+    if not isinstance(data, dict):
+        return []
+    nodes = data.get("nodes") or {}
+    if not nodes:
+        return []
+
+    fp = root / _SELF_IMAGE_DOC
+    if not fp.is_file():
+        return [f"{_SELF_IMAGE_DOC}: 문서 부재"]
+    text = fp.read_text(encoding="utf-8")
+    if _SELF_IMAGE_START not in text or _SELF_IMAGE_END not in text:
+        return [f"{_SELF_IMAGE_DOC}: SELF_IMAGE 마커 부재 — 자기상 줄을 "
+                f"{_SELF_IMAGE_START}…{_SELF_IMAGE_END} 로 감쌀 것"]
+    seg = text.split(_SELF_IMAGE_START, 1)[1].split(_SELF_IMAGE_END, 1)[0]
+
+    issues: list[str] = []
+    m = _re.search(r"(\d+)\s*노드\s*(\d+)\s*액션\(([^)]*)\)", seg)
+    if not m:
+        return [f"{_SELF_IMAGE_DOC}: 마커 안에 'N노드 M 액션(…)' 정형 줄 없음 — 받은 것: {seg[:80]!r}"]
+
+    doc_nodes, doc_total, per = int(m.group(1)), int(m.group(2)), m.group(3)
+    real_per = {n: len(b.get("actions") or {}) for n, b in nodes.items() if isinstance(b, dict)}
+    real_total = sum(real_per.values())
+
+    if doc_nodes != len(real_per):
+        issues.append(f"{_SELF_IMAGE_DOC}: 노드 수 {doc_nodes} ≠ 실제 {len(real_per)}")
+    if doc_total != real_total:
+        issues.append(f"{_SELF_IMAGE_DOC}: 총 액션 {doc_total} ≠ 실제 {real_total}")
+
+    doc_per = {}
+    for part in _re.split(r"[·,]", per):
+        pm = _re.match(r"\s*([a-z_]+)\s*(\d+)\s*$", part)
+        if pm:
+            doc_per[pm.group(1)] = int(pm.group(2))
+    for node, real_n in sorted(real_per.items()):
+        if node not in doc_per:
+            issues.append(f"{_SELF_IMAGE_DOC}: 노드 '{node}' 가 자기상 줄에 없음(실제 {real_n})")
+        elif doc_per[node] != real_n:
+            issues.append(f"{_SELF_IMAGE_DOC}: {node} {doc_per[node]} ≠ 실제 {real_n}")
+    for node in sorted(set(doc_per) - set(real_per)):
+        issues.append(f"{_SELF_IMAGE_DOC}: 자기상 줄의 노드 '{node}' 는 레지스트리에 없음")
+
+    # 패키지·extensions 수 (설치 디렉토리 실측)
+    pm = _re.search(r"(\d+)\s*도구 패키지\s*\+\s*(\d+)\s*extensions", seg)
+    if pm:
+        for label, rel, doc_n in (("도구 패키지", "data/packages/installed/tools", int(pm.group(1))),
+                                  ("extensions", "data/packages/installed/extensions", int(pm.group(2)))):
+            d = root / rel
+            if not d.is_dir():
+                continue
+            real_n = len([p for p in d.iterdir() if p.is_dir() and not p.name.startswith("__")])
+            if doc_n != real_n:
+                issues.append(f"{_SELF_IMAGE_DOC}: {label} {doc_n} ≠ 실제 {real_n}")
+    return issues

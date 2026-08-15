@@ -82,6 +82,7 @@ from iblbuild_guards import (  # noqa: E402,F401
     check_os_branches,
     check_launcher_handlers,
     check_textbook,
+    check_self_image,
 )
 from iblbuild_derive import (  # noqa: E402,F401
     build_tool_index,
@@ -366,6 +367,25 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 교재-가드 통과 ✓ (스니펫 실존 + 노드 선택표 집합 일치)")
 
+    # --- 자기상 가드: system_structure.md '현 상태' 줄 ↔ 레지스트리 (--check/--validate 전용) ---
+    # 그 줄은 세 에이전트에 항상 주입되는 정체성 코어라, 낡으면 시스템이 자기 몸 크기를
+    # 틀리게 안다(2026-08-06 수리 후 9일 만에 재발 — 손 수정으론 안 잡힌다).
+    selfimg_failed = False
+    if check or validate_only:
+        siissues = check_self_image(root, data)
+        if siissues:
+            selfimg_failed = True
+            print(
+                f"[build_ibl_nodes] 자기상 가드 실패: {len(siissues)}건 "
+                f"(system_structure.md 의 '현 상태' 줄이 레지스트리와 불일치 — "
+                f"이 줄은 실행·의식·평가 에이전트에 항상 주입된다)",
+                file=sys.stderr,
+            )
+            for issue in siissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 자기상 가드 통과 ✓ (system_structure.md 현 상태 줄 = 레지스트리)")
+
     # --- 뷰-어휘 문서-동기 가드: APP_* 선언 ↔ 교육 문서 어휘 줄 (--check/--validate 전용) ---
     appvocab_failed = False
     if check or validate_only:
@@ -439,7 +459,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         return 1 if (validation_failed or corpus_failed or fixture_failed
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
-                     or textbook_failed or appvocab_failed
+                     or textbook_failed or appvocab_failed or selfimg_failed
                      or renderer_failed or appparam_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
@@ -675,7 +695,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not enum_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed
-                     and not appvocab_failed
+                     and not appvocab_failed and not selfimg_failed
                      and not renderer_failed and not appparam_failed) else 1
 
     if validation_failed:

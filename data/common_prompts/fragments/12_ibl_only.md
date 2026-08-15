@@ -98,6 +98,17 @@ Chain multiple steps with operators:
 | `&` | Parallel | `[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "MSFT"}` |
 | `??` | Fallback (실패·0건이면 다음 시도) | `[sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL price"}` |
 
+**조합 규칙 (파서가 강제한다):**
+- 한 세그먼트에 `&`와 `??` 혼용 금지(명시 에러) — `>>`로 단계를 나누거나 문장을 분리.
+- `&`/`??`의 가지는 **단일 액션**만. 괄호 묶기는 없다 — `(A >> B) & C` 불가. 가지에 파이프가 필요하면 문장을 나누거나 `[table:each]`로 항목별 문장을 돌린다.
+- `&` 병렬을 `>> [table:join/union/merge]`로 받으려면 **각 가지가 통화(items)를 내야** 한다. 스칼라 가지(예: `[self:time]`)는 결합 불가.
+
+**여러 문장과 변수** — 줄바꿈(또는 `;`)으로 나뉜 문장은 서로 **독립**이다(앞 결과가 자동으로 안 넘어감). 앞 결과를 뒤에서 쓰려면 변수에 담아 뒤 문장의 param 값 안에서 참조한다:
+```
+$뉴스 = [sense:search]{source: "gnews", query: "반도체"}
+[self:write]{path: "뉴스.md", content: "$뉴스"}
+```
+
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
 
 검색·조회(`sense:*` 등)는 **통화**를 낸다. 통화는 **하나** — `items` = `[{…열린 dict…}]` (목록형). 같은 items가 시세·통계는 수치 칸을 담은 행 dict(첫 키=x축)로, 문서는 문단 항목으로 흐른다 — *받는 쪽(소비자)이 필요한 view로 재구성*한다.
@@ -107,6 +118,10 @@ Chain multiple steps with operators:
 `table`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
 - **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}`
 - **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기)
+- **고차** `each{do, as, limit}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다.
+  ```
+  [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}
+  ```
 
 통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
 
@@ -149,9 +164,23 @@ execute_ibl(code='[self:discover]{query: "stock prices"}')
 6. 모든 파라미터는 `{key: "value"}` 형태
 7. 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 `execute_ibl`로 실행까지 완료할 것.
 
-## Goal — 반복·예약·조건부 실행 (주문형 문법)
+## 블록 문장 — 조건 분기(if/case)와 목적 선언(goal)
 
-일회성 명령을 넘어 **목적 선언**이 필요할 때 — "매일 아침 확인해줘", "조건 충족까지 반복", "기한 내 완료" — IBL의 `[goal: "..."]{...}` 블록을 쓴다 (if/case 분기, every/until/deadline 시간 표현 포함).
+블록은 **문장 위치에 통째로** 쓴다 — 여러 문장 코드 안에 다른 문장과 줄로 나뉘어 섞일 수 있고, 파이프(`>>`) *속*에는 넣을 수 없다. 블록 뒤에 같은 줄로 다른 문장을 붙이면 명시 에러.
+
+**조건 언어 (if/case 공통)** — 좌변은 반드시 IBL 소스 참조 `node:action{params}[.field]`:
+```
+[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}
+[else]{[self:time]}
+```
+- `.field`는 결과에서 점 표기로 값 추출(`memory.percent` 중첩 가능). 비교 연산자 `== != > >= < <=`, 연산자 없으면 불리언 평가.
+- **자연어 조건은 평가되지 않는다** — `[if: 디스크가 부족하면]`은 조용히 거짓이 되어 else로 간다(dry-run 검수가 경고해 준다).
+- case는 값·범위 매칭: `[case: 소스]{"값": 문장, "10~20": 문장, default: 문장}`
+
+**goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:
+```
+[goal: "CPU 감시"]{every: "5m", max_rounds: 100, success_condition: "과부하 시 알림 전송", strategy: [if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}}
+```
 
 - **문법은 외워서 쓰지 말 것**: goal 블록을 작성하기 전에 반드시 `read_guide`로 **goal 가이드**("목표 선언", "반복 실행")를 읽어라. 필수 안전장치(`max_rounds`/`max_cost`) 등 규약이 있다.
 - 진행 중인 목표의 관리(조회·중단·기록)는 카탈로그의 `[self:goal]{op: "list"|"status"|"kill"|"log"|"attempts"}` 로 한다.

@@ -18,7 +18,7 @@ _IBL_TRANSLATE_TASK = """너는 IBL(IndieBiz Logic) 컴파일러다. 사용자�
 
 규칙:
 1. 아래 '참고 용례'에 나온 실제 액션 이름만 사용하라. 지어내지 마라.
-2. IBL 원문만 출력하라 — execute_ibl('...') 같은 호출 래퍼, 따옴표, 코드블록 표시(```), 설명·인사 모두 금지. [node:action]{...} 으로 시작해서 끝나야 한다.
+2. IBL 원문만 출력하라 — execute_ibl('...') 같은 호출 래퍼, 따옴표, 코드블록 표시(```), 설명·인사 모두 금지. [node:action]{...}, 블록([goal:]/[if:]/[case:]) 또는 변수 할당($이름 = ...)으로 시작해서 끝나야 한다.
 3. 의도가 모호하면 가장 단순하고 되돌릴 수 있는 해석을 택하라."""
 
 
@@ -41,8 +41,11 @@ def _strip_code_fence(text: str) -> str:
     fence = re.search(r"```[a-zA-Z]*\s*(.+?)\s*```", t, re.DOTALL)
     if fence:
         t = fence.group(1).strip()
-    # 첫 [node:action] 부터 채택 (앞에 execute_ibl(' 같은 래퍼·설명이 붙은 경우)
-    m = re.search(r"\[[a-z_]+:[a-z_]+\]", t)
+    # 첫 IBL 시작점부터 채택 (앞에 execute_ibl(' 같은 래퍼·설명이 붙은 경우).
+    # 시작점은 세 모양 — [node:action] 토큰 · 블록 개시([goal:]/[if:]/[case:]) ·
+    # 변수 할당($이름 =). 액션 토큰만 찾으면 블록/할당 접두가 잘려 코드가 훼손된다
+    # (예: "[if: ...]{[self:notify_user]..." 에서 [if: 가 소실 — 2026-08-16 실측).
+    m = re.search(r"\[[a-z_]+:[a-z_]+\]|\[(?:goal|if|case)\s*:|\$\w+\s*=", t)
     if m:
         t = t[m.start():].strip()
     # 마지막 } 또는 ] 이후는 잘라낸다 (execute_ibl('...') 흉내의 ') 꼬리, 후행 설명 제거)

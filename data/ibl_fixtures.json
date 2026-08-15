@@ -145,7 +145,7 @@
     "limbs:guestpc#list": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",
     "limbs:guestpc#read": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",
     "limbs:guestpc#result": "USB 손발(게스트 PC) 연결 의존 — 안 꽂힌 날마다 거짓 실패 (others:ask 동류)",
-    "limbs:player_status": "재생 기기 상태 — 상시 가용 아님",
+    "limbs:radio#status": "재생 기기 상태 — 상시 가용 아님",
     "limbs:screen#screenshot": "사용자 화면 캡처 — 무인 점검이 매일 화면을 찍을 이유 없음",
     "limbs:screen#snapshot": "사용자 화면 OCR 독해 — 무인 점검이 매일 화면을 읽을 이유 없음",
     "others:ask": "상대 몸 프레즌스 의존(폰 꺼짐=일상, dry_run 도 상대가 컴파일) + 런타임 등록 별칭 하드코딩 부적합 — 헤드리스 점검이 폰 꺼진 날마다 거짓 실패 (limbs:player_status 동류)",

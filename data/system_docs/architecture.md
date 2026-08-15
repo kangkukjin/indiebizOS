@@ -156,7 +156,6 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
   - workflow_engine(6): 워크플로우 오케스트레이션
   - driver(5): 드라이버 프로토콜 추상화
   - channel_engine(3): 채널 추상화 계층
-  - web_collector(1): 웹 콘텐츠 수집
 - `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
 - 에이전트별 접근 제어: `allowed_nodes`로 노드 필터링
 - 인프라 노드(`self`, `others`, `table`)는 모든 에이전트에 자동 허용 — 노드 yaml의 `always_on: true` 플래그가 단일 소스 (`ibl_access._always_allowed()`가 레지스트리에서 읽음)

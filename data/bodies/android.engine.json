@@ -154,7 +154,6 @@
     "services/scheduler",
     "services/warehouse_adapters",
     "services/warehouse_feed",
-    "services/web_collector",
     "surface/api_agents",
     "surface/api_business",
     "surface/api_conversations",
@@ -242,8 +241,8 @@
     "test_step_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 236,
-    "engine": 205,
+    "total": 235,
+    "engine": 204,
     "blocklist": 31
   }
 }

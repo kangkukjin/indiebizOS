@@ -168,7 +168,6 @@ indiebizOS/
 │   ├── thread_context.py # 스레드 컨텍스트
 │   ├── tool_selector.py # 도구 선택/실행
 │   ├── tool_loader.py   # 도구 로더
-│   ├── web_collector.py # 웹 콘텐츠 수집
 │   ├── websocket_manager.py # WebSocket 매니저
 │   │
 │   │   # === 공유창고 · 공개 얼굴 (몸의 주소) ===

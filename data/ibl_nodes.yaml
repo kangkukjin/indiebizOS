@@ -2104,44 +2104,6 @@ nodes:
         - RSS
         - 구독
         - 새 글
-      collect:
-        aliases:
-          site_id:
-          - site
-          query:
-          - keyword
-        returns: items
-        side_effect: true
-        fixture: '[sense:collect]{op: "query", action: "recent"}'
-        runs_on: pc_only
-        description: 웹 데이터 수집 시스템 (op 분기). 크롤링·사이트 프로필·축적 데이터 검색. 실시간 웹 검색은 search.
-        target_description: 'op로 분기 (기본 run).
-
-          - run: source(프로필 ID 또는 URL) 크롤링. URL이면 selectors/max_items, 없으면 등록된 프로필 목록.
-
-          - sites: 수집 사이트 프로필 CRUD. action(list 기본/register/delete) + site_id + guide_code.
-
-          - query: 축적 데이터 검색. action(search 기본/stats/recent/detail/delete) + query/site_id/item_id/limit.
-
-          '
-        target_key: op
-        group: places
-        router: handler
-        tool: collect_op
-        ops:
-          default: run
-          returns:
-            run: effect
-          values:
-            run: 사이트/URL 크롤링 (구조화 수집)
-            sites: 수집 사이트 프로필 관리 (CRUD)
-            query: 축적된 수집 데이터 검색 (로컬 DB)
-        implementation: web-collector 패키지 op 분기. run=backend web_collector 크롤 위임, sites=manage_sites, query=collector_db.
-        keywords:
-        - 수집
-        - 크롤링
-        - 사이트프로필
-        - 축적데이터
       video:
         returns: scalar
         side_effect: true
@@ -6837,6 +6799,7 @@ nodes:
       newspaper:
         returns: effect
         runs_on: pc_only
+        prompt_hidden: true
         description: 신문 발행 — 서버 설정(제호·키워드)의 키워드로 gnews 팬아웃+경량 편집장 편성 후 판(json/md/html)+날짜 아카이브를 저장. 파라미터 없이 호출 가능, 기본 백그라운드(즉시 반환, ~1분) — wait:true=동기. 신문 계기·뷰어가 저장된 판을 읽어 표시.
         group: media_produce
         target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.

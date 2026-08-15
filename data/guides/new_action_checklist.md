@@ -148,7 +148,7 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
 > **op 축**(2026-08-05): `side_effect: true` 를 액션에 달면 그 안의 **읽기 op 까지 통째로**
 > 자동 건강검진에서 빠진다. 읽기 op 가 있으면 `ops.side_effect: {<op>: false}` 로 풀어줄 것 —
 > 단, **코드를 열어보고** 풀 것(실측: `sense:world` snapshot 은 이름과 달리 수집·저장을 하고,
-> `sense:collect` query 는 `action: delete` 가지를 품고 있어 둘 다 풀면 안 됐다).
+> 구 `sense:collect`(2026-08-15 은퇴) query 는 `action: delete` 가지를 품고 있어 둘 다 풀면 안 됐다).
 > 상세 규칙은 `ibl.md` "op 축" 절.
 
 ### 빌드

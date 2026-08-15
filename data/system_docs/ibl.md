@@ -953,7 +953,6 @@ IBL 액션은 라우터 타입에 따라 여러 경로로 실행된다. 현재 9
 | `trigger_engine` | 이벤트/트리거 기반 실행 |
 | `workflow_engine` | 워크플로우/파이프라인 실행 |
 | `channel_engine` | 채널 추상화 (메시지 송수신) |
-| `web_collector` | 웹 콘텐츠 수집/집계 |
 | `driver` | 드라이버 기반 프로토콜 직접 접근 |
 | `stub` | 미구현 예약 액션 (Phase 표시) |
 

@@ -50,6 +50,11 @@ nodes:
       newspaper:
         returns: effect
         runs_on: pc_only
+        # 2026-08-15 조합성 재점검 2차: 스위치화(사전 퇴거) — 실체는 gnews 팬아웃 오케스트레이션
+        # +조판 템플릿(낱말 아닌 문장). 신문 계기 발행 버튼([engines:newspaper]{}@hub)이 유일한
+        # 살아있는 호출자라 레지스트리·핸들러는 유지, 에이전트 카탈로그에서만 숨김.
+        # 코퍼스 8행은 보존(해마 회상=부활 방아쇠 — 자연어 "신문 발행"도 회상 경유로 실행 가능).
+        prompt_hidden: true
         description: 신문 발행 — 서버 설정(제호·키워드)의 키워드로 gnews 팬아웃+경량 편집장 편성 후 판(json/md/html)+날짜 아카이브를 저장. 파라미터 없이 호출 가능, 기본 백그라운드(즉시 반환, ~1분) — wait:true=동기. 신문 계기·뷰어가 저장된 판을 읽어 표시.
         group: media_produce
         target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.

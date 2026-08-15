@@ -265,11 +265,6 @@
       "weight": "light",
       "locale": "universal"
     },
-    "web-collector": {
-      "needs_key": [],
-      "weight": "light",
-      "locale": "universal"
-    },
     "websocket-chat": {
       "needs_key": [],
       "weight": "light",
@@ -355,7 +350,6 @@
     "sense:book": "culture",
     "sense:cctv": "cctv",
     "sense:classic": "culture",
-    "sense:collect": "web-collector",
     "sense:commercial": "real-estate",
     "sense:company": "investment",
     "sense:contest": "contest",

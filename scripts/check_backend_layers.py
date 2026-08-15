@@ -90,7 +90,6 @@ LAYERS = {
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
         "nas_webapp", "nostr_phone_bridge", "phone_notifications",
         "report_html", "scheduler", "warehouse_adapters", "warehouse_feed",
-        "web_collector",
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
     # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)

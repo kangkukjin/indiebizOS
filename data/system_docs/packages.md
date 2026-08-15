@@ -232,9 +232,9 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (40개)
+## 현재 설치된 도구 패키지 (41개 — 2026-08-15 실측 정정: 구 헤더 40은 드리프트, web-collector 은퇴 후 디렉토리 실수 41)
 
-**op 분기 26 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · guest-helper · health-record · investment · lecture_workspace · memory · music-player · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · web-collector · youtube. (전체 op 분기 액션은 67개 — 그중 12개는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 25 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · guest-helper · health-record · investment · lecture_workspace · memory · music-player · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 67개 — 그중 12개는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > location-services 는 op 분기 목록에서 빠졌다 — 유일한 op 액션이던 `sense:travel`(항공·호텔)이 은퇴하면서(국내 숙박은 `sense:stay` 가 source 분기로 승계) op 보유 액션이 0이 됐다.
 
@@ -276,9 +276,8 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
 | system_essentials | System Essentials | 파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회, 웹앱 등기부 `[self:webapp]{op}`(파생 우선 — 진실 소스 7곳 재계산 + 전 함대 생존 실측) |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
-| web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, **신문 발행 `[engines:newspaper]`**, 즐겨찾기 |
+| web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용) |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
-| web-collector | Web Collector | 웹 데이터 수집/스크래핑 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 
 **미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec · remotion-video(2026-08-05 은퇴 — 영상 정본=[self:deck]{op:"video"}) — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).

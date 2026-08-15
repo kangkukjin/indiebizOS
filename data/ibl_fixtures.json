@@ -75,7 +75,6 @@
     "sense:cctv#webcam": "[sense:cctv]{op: \"webcam\", lat: 37.5665, lng: 126.978}",
     "sense:classic": "[sense:classic]{op: \"western\", query: \"plato\"}",
     "sense:classic#korean": "[sense:classic]{op: \"korean\", query: \"이황\"}",
-    "sense:collect": "[sense:collect]{op: \"query\", action: \"recent\"}",
     "sense:commercial": "[sense:commercial]{lat: 37.5, lng: 127.0}",
     "sense:company": "[sense:company]{op: \"disclosures\", query: \"삼성전자\"}",
     "sense:company#financials": "[sense:company]{op: \"financials\", ticker: \"삼성전자\"}",

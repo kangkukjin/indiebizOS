@@ -262,20 +262,6 @@
    "file": "house_designer.md"
   },
   {
-   "id": "web_collector",
-   "name": "웹 정보 수집 가이드",
-   "description": "웹 정보 수집 후 DB에 축적하는 워크플로우.",
-   "keywords": [
-    "수집",
-    "스크래핑",
-    "DB",
-    "축적",
-    "정보수집",
-    "데이터"
-   ],
-   "file": "web_collector.md"
-  },
-  {
    "id": "cctv",
    "name": "CCTV 영상 가이드",
    "description": "한국 교통 CCTV 등 실시간 영상 조회.",

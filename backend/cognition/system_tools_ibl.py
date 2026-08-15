@@ -346,17 +346,23 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
         if len(parsed) == 1 and not has_special:
             # 단일 step 직접 실행
             step = parsed[0]
-            ibl_input = {
-                "_node": step.get("_node", step.get("node", "")),
-                "action": step.get("action", ""),
-                "params": step.get("params", {}),
-                # 노드 주소지정(@별칭) 전달 — 단일 액션도 특정 노드로 라우팅(파이프 경로는 이미 전달됨).
-                # 없으면 `[self:read]{...}@맥` 이 폰서 로컬 실행돼 맥 파일을 못 읽는다(다중노드 버그).
-                "target_node": step.get("target_node"),
-            }
-            # (2026-08-05 감사 D11) 옛 노드타입 특례(info/store/exec/output → _node_type 주입)
-            # 삭제 — 그 노드들은 레지스트리에 없어, 이제 정상 경로의 명시 오류로 수렴한다.
-            result = execute_ibl(ibl_input, project_path, agent_id)
+            if step.get("_goal") or step.get("_condition") or step.get("_case"):
+                # 복합 블록([goal:]/[if:]/[case:])은 step 통짜 전달 — 아래처럼 키를 골라
+                # 담으면 _goal/_condition/_case 가 유실돼 엔진의 블록 디스패치에 못 닿고
+                # "action 파라미터가 필요합니다"로 죽는다(전 표면 블록 실행 봉쇄 부류).
+                result = execute_ibl(dict(step), project_path, agent_id)
+            else:
+                ibl_input = {
+                    "_node": step.get("_node", step.get("node", "")),
+                    "action": step.get("action", ""),
+                    "params": step.get("params", {}),
+                    # 노드 주소지정(@별칭) 전달 — 단일 액션도 특정 노드로 라우팅(파이프 경로는 이미 전달됨).
+                    # 없으면 `[self:read]{...}@맥` 이 폰서 로컬 실행돼 맥 파일을 못 읽는다(다중노드 버그).
+                    "target_node": step.get("target_node"),
+                }
+                # (2026-08-05 감사 D11) 옛 노드타입 특례(info/store/exec/output → _node_type 주입)
+                # 삭제 — 그 노드들은 레지스트리에 없어, 이제 정상 경로의 명시 오류로 수렴한다.
+                result = execute_ibl(ibl_input, project_path, agent_id)
         else:
             # 파이프라인 / 병렬 / fallback → workflow_engine
             # 이미 파싱 + $file:N 치환된 steps를 직접 전달 (재파싱 방지)

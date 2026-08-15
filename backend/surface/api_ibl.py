@@ -419,22 +419,14 @@ async def validate_ibl(req: ValidateRequest):
     steps = []
     all_valid = True
     has_side_effect = False
-    for st in parsed:
+
+    def _emit_action(st: dict, label: str = None, group: str = None, warn: str = None):
+        """평범한 액션 한 개를 검증해 steps 에 싣는다. label=구조 안 위치 표시(effect 앞),
+        group=기계용 표식(parallel/fallback/condition/case/goal), warn=구조 층 경고(조건 문법 등)."""
+        nonlocal all_valid, has_side_effect
         node = st.get("_node", "")
         action = st.get("action", "")
         params = st.get("params", {}) or {}
-
-        # goal/조건/케이스 같은 복합 블록은 단순 검증을 건너뛴다
-        if st.get("_goal") or st.get("_condition") or st.get("_case"):
-            has_side_effect = True  # 내부 분기를 정적으로 알 수 없으므로 보수적으로 부작용 취급
-            steps.append({
-                "node": node, "action": action, "params": params,
-                "kind": "block",
-                "effect": "복합 블록(목표/조건/케이스) — 실행 시 내부에서 분기합니다.",
-                "safety": "unknown",
-                "valid": True, "error": None,
-            })
-            continue
 
         valid_actions = get_node_actions(node) if node else set()
         if not node:
@@ -467,14 +459,119 @@ async def validate_ibl(req: ValidateRequest):
             except Exception:
                 param_warning = None
 
-        steps.append({
+        if warn:
+            param_warning = f"{param_warning} / {warn}" if param_warning else warn
+
+        effect = _effect_description(node, action, params) or "(설명 없음)"
+        entry = {
             "node": node, "action": action, "params": params,
             "kind": "action",
-            "effect": _effect_description(node, action, params) or "(설명 없음)",
+            "effect": f"{label} {effect}" if label else effect,
             "safety": safety,
             "valid": ok, "error": err,
             "param_warning": param_warning,
+        }
+        if group:
+            entry["group"] = group
+        steps.append(entry)
+
+    def _opaque_block(effect: str, group: str):
+        """속을 읽지 못한 블록 — 종전의 보수 처리(부작용 취급) 유지."""
+        nonlocal has_side_effect
+        has_side_effect = True
+        steps.append({
+            "node": "", "action": "", "params": {}, "kind": "block",
+            "effect": effect, "safety": "unknown",
+            "valid": True, "error": None, "group": group,
         })
+
+    def _is_plain(st) -> bool:
+        return isinstance(st, dict) and not (
+            st.get("_parallel") or "_fallback_chain" in st
+            or st.get("_condition") or st.get("_case") or st.get("_goal"))
+
+    def _condition_syntax_warning(cond: str):
+        """조건 좌변이 node:action 소스 참조로 파싱되는지 미리 검사.
+
+        실행기(_evaluate_sense_condition)는 좌변이 소스 참조가 아니면 값 None → 조용히
+        거짓 판정이라, 자연어 조건('[if: 디스크가 부족하면]')이 침묵으로 else 에 떨어진다.
+        dry-run 이 유일하게 미리 소리 낼 수 있는 자리다."""
+        try:
+            from ibl_executors import _find_top_level_comparison_op, _parse_source_ref
+            op_info = _find_top_level_comparison_op(cond)
+            src = cond[:op_info[0]].strip() if op_info else cond.strip()
+            if _parse_source_ref(src) is None:
+                return (f"조건 좌변 '{src}' 이(가) node:action 소스 참조가 아닙니다 — "
+                        "실행 시 이 조건은 조용히 거짓이 되어 다음 분기/else 로 넘어갑니다. "
+                        '예: [if: sense:host{op: "status"}.cpu_percent > 80]')
+            return None
+        except Exception:
+            return None
+
+    def _walk(st, depth: int = 0, label: str = None, group: str = None, warn: str = None):
+        """구조 step(병렬/폴백/블록)을 가지 단위로 펼쳐 전부 검증한다.
+
+        검수기가 자기 엔진보다 좁으면 안 된다 — 실행기는 이 모양들을 전부 지원하는데
+        (_execute_parallel/_execute_fallback/블록 디스패치) 여기서 못 읽으면 조종실이
+        멀쩡한 문장을 반려하거나, 반대로 속을 안 본 채 초록불을 켠다."""
+        nonlocal has_side_effect
+        if not isinstance(st, dict) or depth > 6:
+            return
+        if _is_plain(st):
+            _emit_action(st, label=label, group=group, warn=warn)
+            return
+        if st.get("_parallel"):
+            branches = st.get("branches") or []
+            n = len(branches)
+            for i, br in enumerate(branches):
+                _walk(br, depth + 1, label=f"[병렬 {i + 1}/{n}]", group="parallel")
+            return
+        if "_fallback_chain" in st:
+            chain = st.get("_fallback_chain") or []
+            for i, br in enumerate(chain):
+                lb = "[폴백 1차(기본)]" if i == 0 else f"[폴백 {i + 1}차(대안)]"
+                _walk(br, depth + 1, label=lb, group="fallback")
+            return
+        if st.get("_condition"):
+            shown = False
+            for br in (st.get("branches") or []):
+                act = br.get("action")
+                if isinstance(act, dict):
+                    shown = True
+                    cond = br.get("condition")
+                    lb = f"[조건: {cond}]" if cond is not None else "[else]"
+                    cw = _condition_syntax_warning(cond) if cond is not None else None
+                    _walk(act, depth + 1, label=lb, group="condition", warn=cw)
+            if not shown:
+                _opaque_block("조건 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "condition")
+            return
+        if st.get("_case"):
+            source = st.get("source") or ""
+            shown = False
+            for br in (st.get("branches") or []):
+                act = br.get("action")
+                if isinstance(act, dict):
+                    shown = True
+                    pat = br.get("pattern", "")
+                    _walk(act, depth + 1, label=f'[case {source} = "{pat}"]', group="case")
+            if isinstance(st.get("default"), dict):
+                shown = True
+                _walk(st["default"], depth + 1, label=f"[case {source} default]", group="case")
+            if not shown:
+                _opaque_block("case 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "case")
+            return
+        if st.get("_goal"):
+            # 목표 블록 = 에이전트 반복 루프. 내부 실행이 정적으로 결정되지 않으므로
+            # 컨테이너는 보수적 부작용 취급을 유지하고, strategy 속만 펼쳐 보인다.
+            _opaque_block(
+                f"목표 블록 '{st.get('name') or ''}' — 달성 기준까지 반복 실행합니다(내부는 실행 시 결정).",
+                "goal")
+            if isinstance(st.get("strategy"), dict):
+                _walk(st["strategy"], depth + 1, group="goal")
+            return
+
+    for st in parsed:
+        _walk(st)
 
     return {
         "valid": all_valid,

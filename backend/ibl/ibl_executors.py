@@ -937,6 +937,16 @@ def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
     except Exception:
         return None
 
+    # 핸들러 다수가 JSON *문자열* 봉투를 반환한다 — 파싱 없이 점 추출하면 문자열에
+    # 막혀 None → 조건이 조용히 거짓이 된다(센서 필드 조건 전멸 부류).
+    if isinstance(result, str):
+        try:
+            _p = json.loads(result)
+            if isinstance(_p, (dict, list)):
+                result = _p
+        except Exception:
+            pass
+
     if field is not None:
         return _extract_dotted_field(result, field)
 

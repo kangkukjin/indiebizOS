@@ -633,8 +633,14 @@ def _op_union(prev, params):
     중복 제거가 필요하면 뒤에 >> dedup. 분기 수 제한 없음(셋 이상 전부).
     """
     objs = _extract_many(prev)
-    if not objs or any(o is None for o in objs):
+    if not objs:
         return {"success": False, "error": "union: & 병렬로 두 개 이상의 입력이 필요합니다. 예: [A] & [B] >> [table:union]"}
+    _bad = sum(1 for o in objs if o is None)
+    if _bad:
+        # 입력 개수 탓으로 돌리면 자가교정 단서가 틀린다 — 진짜 원인은 분기 출력이 통화가 아님.
+        return {"success": False,
+                "error": f"union: 분기 {len(objs)}개 중 {_bad}개의 출력이 통화(items/table)로 파싱되지 않습니다"
+                         f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
     tables = [_get_table(o)[0] for o in objs]
     if all(t is not None for t in tables):
         cols = []
@@ -670,8 +676,14 @@ def _op_merge(prev, params):
     여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.) 분기 수 제한 없음.
     """
     objs = _extract_many(prev)
-    if not objs or any(o is None for o in objs):
+    if not objs:
         return {"success": False, "error": "merge: & 병렬로 두 개 이상의 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]"}
+    _bad = sum(1 for o in objs if o is None)
+    if _bad:
+        # 입력 개수 탓으로 돌리면 자가교정 단서가 틀린다 — 진짜 원인은 분기 출력이 통화가 아님.
+        return {"success": False,
+                "error": f"merge: 분기 {len(objs)}개 중 {_bad}개의 출력이 통화(items)로 파싱되지 않습니다"
+                         f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
     item_lists = [_get_items(o)[0] for o in objs]
     if any(il is None for il in item_lists):
         return {"success": False, "error": "merge: 모든 입력이 items 통화여야 합니다(표형 결합은 table:union)."}
@@ -726,9 +738,15 @@ def _op_join(prev, params):
         # 셋째 분기를 조용히 버리지 않는다(⑧′ 부류) — join 은 이항 연산
         return {"success": False,
                 "error": f"join: 입력이 {len(prev)}개 — join 은 두 입력만 받습니다. 여러 개는 [table:union/merge]로 합치거나 둘씩 나눠 join 하세요."}
+    if not isinstance(prev, list) or len(prev) < 2:
+        return {"success": False, "error": "join: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
     a, b = _extract_two(prev)
     if a is None or b is None:
-        return {"success": False, "error": "join: & 병렬로 두 table 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
+        # 입력 개수 탓으로 돌리면 자가교정 단서가 틀린다 — 진짜 원인은 분기 출력이 통화가 아님.
+        _sides = "·".join(s for s, o in (("첫째", a), ("둘째", b)) if o is None)
+        return {"success": False,
+                "error": f"join: {_sides} 분기의 출력이 통화(items/table)로 파싱되지 않습니다"
+                         f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
     ta, _ = _get_table(a)
     tb, _ = _get_table(b)
     if ta is None or tb is None:

@@ -23,8 +23,10 @@ def register_parse(fn: Callable[[str], List[Dict]]) -> None:
 # === Phase 26: Goal/Condition/Case 파서 ===
 
 # Goal Block 패턴: [goal: "이름"]{...}
+# 이름은 따옴표 유무 모두 허용 — [if:]/[case:] 의 조건·소스가 무따옴표라, goal 만
+# 따옴표를 강제하면 무따옴표 goal 이 블록 감지를 그냥 지나쳐 무의미한 '파싱 실패'가 된다.
 _GOAL_PATTERN = re.compile(
-    r'^\s*\[goal:\s*"([^"]+)"\]\s*\{',
+    r'^\s*\[goal:\s*(?:"([^"]+)"|([^\]"]+?))\s*\]\s*\{',
     re.DOTALL
 )
 
@@ -89,13 +91,20 @@ def _parse_goal_block(code: str) -> Optional[Dict]:
     if not m:
         return None
 
-    goal_name = m.group(1)
+    goal_name = m.group(1) or (m.group(2) or "").strip()
 
     # 정규식이 매칭한 '{' 위치 사용 (goal_name 안의 '{'에 속지 않도록)
     brace_start = m.end() - 1
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"Goal block 중괄호가 닫히지 않았습니다: {goal_name}")
+
+    leftover = code[end_pos + 1:].strip()
+    if leftover:
+        # 조용히 버리면 블록 뒤 문장이 침묵 소실된다 — 문장 분리를 명시 요구.
+        raise IBLSyntaxError(
+            f"Goal 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{leftover[:60]}' — "
+            "블록과 다른 문장은 줄(또는 ;)로 분리하세요.")
 
     # params 파싱
     params = _parse_params('{' + body + '}')
@@ -184,6 +193,12 @@ def _parse_if_else(code: str) -> Optional[Dict]:
 
         break  # if/else 체인 끝
 
+    if remaining:
+        # 조용히 버리면 체인 뒤 문장이 침묵 소실된다 — 문장 분리를 명시 요구.
+        raise IBLSyntaxError(
+            f"if/else 체인 뒤에 해석되지 않은 텍스트가 있습니다: '{remaining[:60]}' — "
+            "블록과 다른 문장은 줄(또는 ;)로 분리하세요.")
+
     return {"_condition": True, "branches": branches}
 
 
@@ -212,6 +227,13 @@ def _parse_case(code: str) -> Optional[Dict]:
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError("case 블록 중괄호가 닫히지 않았습니다.")
+
+    leftover = code[end_pos + 1:].strip()
+    if leftover:
+        # 조용히 버리면 블록 뒤 문장이 침묵 소실된다 — 문장 분리를 명시 요구.
+        raise IBLSyntaxError(
+            f"case 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{leftover[:60]}' — "
+            "블록과 다른 문장은 줄(또는 ;)로 분리하세요.")
 
     # body 내의 각 분기를 파싱
     branches = []

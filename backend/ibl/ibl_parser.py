@@ -86,25 +86,13 @@ def parse(code: str) -> List[Dict]:
     if not code or not code.strip():
         raise IBLSyntaxError("빈 코드입니다.")
 
-    stripped = code.strip()
+    # 블록([goal:]/[if:]/[case:]) 감지는 *문장 단위* — 아래 statement 루프에서 한다.
+    # 옛 전체-코드 전용 감지는 두 가지로 절름발이였다: 다단 문장 속 블록은 아예 파싱
+    # 불가('해석되지 않은 텍스트'), 코드가 블록으로 *시작*하면 뒤따르는 문장을 조용히
+    # 버렸다(침묵 액션 소실 부류). 블록 뒤 잉여 텍스트는 이제 각 블록 파서가 명시 거절.
 
-    # Phase 26: Goal Block 감지
-    goal = _parse_goal_block(stripped)
-    if goal is not None:
-        return [goal]
-
-    # Phase 26: if/else 조건문 감지
-    condition = _parse_if_else(stripped)
-    if condition is not None:
-        return [condition]
-
-    # Phase 26: case문 감지
-    case = _parse_case(stripped)
-    if case is not None:
-        return [case]
-
-    # 기존 파이프라인 파싱
-    # 전처리: 주석 제거, 줄 정규화
+    # 파이프라인 파싱
+    # 전처리: 주석 제거, 줄 정규화 (멀티라인 { } 블록은 한 문장으로 병합됨)
     lines = _preprocess(code)
     if not lines:
         raise IBLSyntaxError("파싱 가능한 코드가 없습니다.")
@@ -112,12 +100,34 @@ def parse(code: str) -> List[Dict]:
     # 변수 바인딩과 명령문 분리
     statements, assign_names = _extract_statements(lines)
 
+    # [else]/[else if:] 로 시작하는 문장 = 앞 문장 if 체인의 연속.
+    # 물리 줄이 갈라져 있어도 잇는다 ([if: c]{...} 줄 다음의 [else]{...} 줄).
+    _m_stmts: List[str] = []
+    _m_names: List[Optional[str]] = []
+    for _s, _n in zip(statements, assign_names):
+        if _m_stmts and _s.lstrip().startswith('[else'):
+            _m_stmts[-1] = _m_stmts[-1] + ' ' + _s
+        else:
+            _m_stmts.append(_s)
+            _m_names.append(_n)
+    statements, assign_names = _m_stmts, _m_names
+
     all_steps = []
     # 변수명 → 그 변수가 할당된 문장의 *최종* step 인덱스 (파이프라인이면 마지막 step).
     # 문장이 step 으로 펼쳐진 *뒤* 채워지므로, 뒤 문장의 $var 참조가 정확한 인덱스로
     # 치환된다({{_step_N_result}} — 실행기가 step 별 결과를 저장해 치환. D4).
     variables: Dict[str, int] = {}
     for _stmt_idx, stmt in enumerate(statements):
+        # 문장 전체가 블록([goal:]/[if:]/[case:])이면 블록 step 하나로 —
+        # desugar·파이프 분리에 넣으면 블록 내부 문장이 난도질당한다.
+        blk = _parse_statement_block(stmt)
+        if blk is not None:
+            if _stmt_idx > 0:
+                blk["_seq_boundary"] = True
+            all_steps.append(blk)
+            if assign_names[_stmt_idx]:
+                variables[assign_names[_stmt_idx]] = len(all_steps) - 1
+            continue
         # 파이프 문법 설탕(| where:/sort:/take:/select:/dedup:)을 >> [table:동사] 로 desugar.
         # 의미는 engines 변환자에 이미 있고, 이건 빈도 높은 단항 변환자의 짧은 문법 표면.
         stmt = _desugar_pipe_sugar(stmt)
@@ -143,6 +153,22 @@ def parse(code: str) -> List[Dict]:
         raise IBLSyntaxError("실행 가능한 명령이 없습니다.")
 
     return all_steps
+
+
+def _parse_statement_block(stmt: str) -> Optional[Dict]:
+    """문장 하나가 통째로 블록([goal:]/[if:]/[case:])이면 그 블록 step, 아니면 None.
+
+    접두 검사로 일반 문장은 블록 정규식에 안 태운다. 블록 패턴이 접두만 맞고
+    본문이 어긋나면 각 블록 파서가 IBLSyntaxError 를 던진다(조용한 통과 금지).
+    """
+    s = stmt.strip()
+    if s.startswith('[goal:'):
+        return _parse_goal_block(s)
+    if s.startswith('[if:'):
+        return _parse_if_else(s)
+    if s.startswith('[case:'):
+        return _parse_case(s)
+    return None
 
 
 def parse_step(text: str) -> Optional[Dict]:

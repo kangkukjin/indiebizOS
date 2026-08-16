@@ -632,16 +632,29 @@ async def validate_ibl(req: ValidateRequest):
                 lb = "[폴백 1차(기본)]" if i == 0 else f"[폴백 {i + 1}차(대안)]"
                 _walk(br, depth + 1, label=lb, group="fallback")
             return
+        def _walk_branch(act, lb, gname, cw=None):
+            """분기 몸 펼침 — 단일 액션(dict)과 파이프(steps 리스트) 둘 다 (9회차:
+            파서가 분기 속 파이프를 리스트로 담는데 dict 만 펼쳐 opaque 로 새고 있었다)."""
+            if isinstance(act, dict):
+                _walk(act, depth + 1, label=lb, group=gname, warn=cw)
+                return True
+            if isinstance(act, list):
+                for j, sub in enumerate(act):
+                    _walk(sub, depth + 1,
+                          label=(lb if j == 0 else None), group=gname,
+                          warn=(cw if j == 0 else None))
+                return bool(act)
+            return False
+
         if st.get("_condition"):
             shown = False
             for br in (st.get("branches") or []):
                 act = br.get("action")
-                if isinstance(act, dict):
+                cond = br.get("condition")
+                lb = f"[조건: {cond}]" if cond is not None else "[else]"
+                cw = _condition_syntax_warning(cond) if cond is not None else None
+                if _walk_branch(act, lb, "condition", cw):
                     shown = True
-                    cond = br.get("condition")
-                    lb = f"[조건: {cond}]" if cond is not None else "[else]"
-                    cw = _condition_syntax_warning(cond) if cond is not None else None
-                    _walk(act, depth + 1, label=lb, group="condition", warn=cw)
             if not shown:
                 _opaque_block("조건 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "condition")
             return
@@ -650,13 +663,11 @@ async def validate_ibl(req: ValidateRequest):
             shown = False
             for br in (st.get("branches") or []):
                 act = br.get("action")
-                if isinstance(act, dict):
+                pat = br.get("pattern", "")
+                if _walk_branch(act, f'[case {source} = "{pat}"]', "case"):
                     shown = True
-                    pat = br.get("pattern", "")
-                    _walk(act, depth + 1, label=f'[case {source} = "{pat}"]', group="case")
-            if isinstance(st.get("default"), dict):
+            if _walk_branch(st.get("default"), f"[case {source} default]", "case"):
                 shown = True
-                _walk(st["default"], depth + 1, label=f"[case {source} default]", group="case")
             if not shown:
                 _opaque_block("case 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "case")
             return

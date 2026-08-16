@@ -60,11 +60,18 @@ def _cron_to_config(cron: str) -> dict:
         return {"error": f"cron은 5필드(분 시 일 월 요일)여야 합니다: '{cron}'"}
     minute, hour, dom, mon, dow = fields
 
+    # ★B9 (2026-08-17 상상훈련 10회차): 분 필드가 '*'/'*/N' 인데 매시간으로 조용히
+    # 해소하면 "매분"(* * * * *) 요청이 60배 성긴 스케줄로 위장된다 — docstring 의
+    # "분 단위 미지원=명확한 에러" 의도대로 여기서 거절한다.
+    if minute == "*" or minute.startswith("*/"):
+        return {"error": f"분 단위 반복('{cron}')은 트리거가 지원하지 않습니다(최소 해상도=시간). "
+                         "짧은 지연·반복은 [self:schedule]{seconds|minutes}를 쓰세요."}
+
     # N시간 간격: 시 = */N (일·월·요일 모두 *)
     m_interval = re.match(r"^\*/(\d+)$", hour)
     if m_interval and dom == "*" and mon == "*" and dow == "*":
         return {"repeat": "interval", "interval_hours": int(m_interval.group(1))}
-    # 매시간
+    # 매시간 (m * * * * — 매시 m분)
     if hour == "*" and dom == "*" and mon == "*" and dow == "*":
         return {"repeat": "interval", "interval_hours": 1}
 

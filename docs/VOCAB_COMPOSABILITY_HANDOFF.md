@@ -268,3 +268,27 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 - 커밋 게이트 실증: 코퍼스-param 가드가 증류 오염(`_raw` 배관 키)을 커밋 직전 검출 → 증류기 스크럽+오염 1행 정정(커밋에 포함).
 - 관찰(판정 후보): contest=Kaggle 단일 소스라 한국어 질의 0건(소스 추가 or desc 정직화) · forage 3층 통화=규약 밖(의도 여부).
 - 시드 후보 5건 — 다음 배치.
+
+### 8회차 (2026-08-16 심야 — 보고서 `outputs/imagination_training/2026-08-16_8회차.md`, 커밋 `ba7b10a` 직후)
+- **★몸 축 개통 2**: **몸간 자연어 부탁(ask) 첫 완주** — `[others:ask]{to:"폰-9f2b", message:"지금 몇 시야?"}` → 폰 gemini 가 `[self:time]` 컴파일·실행·회신(1.3초). 못하는 부탁(배터리)=**"내 어휘로 수행 불가" 정직 거절** — 명함-부탁 프로토콜 두 얼굴 실측. / **시간 문형 실발화 첫 실측** — schedule 15초 지연이 실제 알림으로 도달(등록 검증만 있던 축이 발화까지 닫힘).
+- 편입 6: screen(스크린샷 이미지 봉투)·icon(hidden 도 실행 계약 열림)·board·video 짝(youtube→each info)·channel_read(identity 거절 실측)·folder_note.
+- **F11 수리**: folder_note "스캔 데이터가 없습니다" → 행동지시화("먼저 [self:storage]{op:scan}…"). ★서브모듈=backend touch 재기동 필요(함정 재확인).
+- 관찰(판정 후보 +3): ①폰 사전에 상태 감각(battery) 부재 — 폰 자기수용감각 판정 ②hidden 액션 실행 계약=의도 확인 ③앱 경로 채널 identity 미배선(channel_read email 거절).
+- @몸 감각(here@폰)=라우팅 완주·값은 폰 위치서비스 제약(정직 실패·코드 밖). 시드 후보 5건.
+
+### 9회차 (2026-08-16 심야 — 보고서 `outputs/imagination_training/2026-08-16_9회차.md`)
+- **★X1(if 속 파이프) 격리 사슬이 결함 4개를 차례로 벗김 — 전부 같은 세션 수리·라이브 검증**:
+  **D1** goal.md 조건 예시 3곳이 낡은 경로(`.current_price` — 실봉투는 `.data.current_price`) → 교정. ★5회차 "조건 평가 정확" 판정은 **오판**(else 실행=거짓의 증거일 뿐 — 낡은 경로가 항상-거짓이었다) /
+  **B8** 좌변 읽기 실패=조용한 거짓(`None→False`) — 낡은 경로가 몇 달 산 이유. 비교 연산 시 cond_errors 정직 채널로 예외+경로 힌트(불리언 평가는 None=falsy 유지) /
+  **B7** 분기 몸이 파이프면 실행기 크래시(`'list' has no get`) — `_run_branch` 신설(if 참/else/case 공용·깊이 전파) /
+  **F12** 검수기도 분기 파이프 미펼침(opaque·steps 1) — `_walk_branch`(조건·case·default 공용, steps 1→2).
+  재검: if 참 분기 파이프 완주(뉴스 2)·else 파이프 완주·옛 경로=정직 에러·P1~P19 통과.
+- **문형 개통**: case 문자열 값 매칭("Mac" 적중) · `;` 독립 문장(사용률 2.8% 축 실측). 편입 5: blog(시맨틱)·package·cctv·cloudflare·self:ask.
+- 관찰(판정 후보): **ask 결과 비통화**(`ask >> take` 정직 거절 — 자연어 응답이라 원리적일 수 있으나 상대 items 승계는 설계 판단) · cctv sources/cloudflare result 목록 items 미방출(경미).
+- 시드 후보 5건 — 다음 배치.
+
+### ★10회차 (2026-08-17 — 보고서 `outputs/imagination_training/2026-08-17_10회차.md`) — **문법 축 한 바퀴 완주 선언**
+- 남은 미실측 소진: **3항 병렬**(코인 2+지수 1 한 표) · **중첩 each 깊이 2**(검수 7스텝 펼침·실행 내층 결과) · **if 속 goal**(가이드 문형 첫 실측 — 조건 참→등록→kill·delete) · **병렬 가지 @몸**(`[self:time] & [self:time]@폰` — 맥·폰 동시 실행 295ms).
+- **B9 수리**: cron `* * * * *`(매분)→`interval_hours: 1`(매시간) **침묵 60배 성김** — 매시간 분기가 minute `*` 미검사. minute `*`/`*/N`=정직 거절+schedule 안내. 회귀(매시 m분·매일) 무손상. trigger 분 단위 실발화=원리적 불가(최소 해상도 시간) — schedule 실발화(8회차)로 레일 간접 검증 수용.
+- 의도적 보류: goal 실라운드(활성 에이전트 전제=실사용 영역)·폰 카메라/마이크(사용 맥락 필요).
+- **다음 모드**: 회차 반복 종료 → ①6~10회차 시드 일괄(~30건)+재학습 ②실사용 증류 관찰(수 주)→행동 지표 재측정 ③분기별 재점검 회차. (가이드 §6 "같은 갭 재발견=제자리 뛰기" 기준.)

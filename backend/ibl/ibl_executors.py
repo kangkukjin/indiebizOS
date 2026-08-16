@@ -604,6 +604,22 @@ def _nest(step: Any, tool_input: dict) -> Any:
     return {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
 
 
+def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """if/case 분기 몸 실행 — 단일 액션(dict)과 **파이프(steps 리스트)** 둘 다.
+
+    ★2026-08-16 상상훈련 9회차: 파서는 분기 몸의 파이프를 steps 리스트로 담는데
+    실행기가 dict 만 가정해 `'list' object has no attribute 'get'` 으로 죽었다 —
+    문법이 허용하는 모양(블록 속 파이프)을 실행기가 전부 받아야 한다.
+    """
+    if isinstance(action, list):
+        from workflow_engine import execute_pipeline
+        depth = (tool_input.get("_depth") or 0) + 1
+        steps = [({**s, "_depth": depth} if isinstance(s, dict) else s) for s in action]
+        return execute_pipeline(steps, project_path, agent_id=agent_id)
+    from ibl_engine import execute_ibl
+    return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+
+
 def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:
     """
     if/else 조건문 실행
@@ -623,8 +639,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
         if condition is None:
             # else 분기
             if action:
-                from ibl_engine import execute_ibl
-                return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+                return _run_branch(action, tool_input, project_path, agent_id)
             return {"message": "else 분기 실행 (action 없음)"}
 
         # 조건 평가: sense 노드 실행
@@ -636,8 +651,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
 
         if sense_result:
             if action:
-                from ibl_engine import execute_ibl
-                return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+                return _run_branch(action, tool_input, project_path, agent_id)
             return {"message": f"조건 충족: {condition}"}
 
     if cond_errors:
@@ -671,8 +685,7 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
         action = default
 
     if action:
-        from ibl_engine import execute_ibl
-        return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+        return _run_branch(action, tool_input, project_path, agent_id)
 
     return {"message": f"case문 실행 완료 (source={source}, value={sense_value})"}
 
@@ -938,6 +951,15 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
     value = _get_sense_value(source_expr, project_path, agent_id)
 
     if value is None:
+        # ★2026-08-16 상상훈련 9회차: 비교 연산이 있는데 좌변 값을 못 읽었다면(경로 오타·
+        # 필드 부재) "조건 거짓"과 "읽기 실패"는 다른 상태다 — 조용한 거짓으로 접으면
+        # goal.md 의 낡은 경로(.current_price)가 항상-거짓으로 몇 달을 살았듯 오독이
+        # 영속한다. 예외로 던져 _execute_condition 의 cond_errors 정직 채널을 태운다.
+        # 연산자 없는 불리언 평가는 None=falsy 유지(부재의 거짓은 정당한 의미).
+        if op is not None:
+            raise ValueError(
+                f"조건 좌변 '{source_expr}' 에서 값을 읽지 못했습니다 — 필드 경로를 확인하세요"
+                f"(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).")
         return False
 
     if op is None:

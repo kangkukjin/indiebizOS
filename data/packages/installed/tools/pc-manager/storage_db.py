@@ -422,7 +422,11 @@ def get_summary(root_path: str) -> Dict:
             break
 
     if not scan:
-        return {"success": False, "error": "스캔 데이터가 없습니다."}
+        # 오류문 행동지시화 (2026-08-16 8회차): folder_note 는 스캔된 볼륨 안 경로에만
+        # 붙는다 — 전제를 안 밝히면 "고장"으로 오독된다.
+        return {"success": False,
+                "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 "
+                         "상위 폴더를 스캔한 뒤 folder_note 를 쓰세요."}
 
     scan_id = scan['id']
     db_path = _get_db_path(scan_id)
@@ -474,7 +478,11 @@ def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
             break
 
     if not scan:
-        return {"success": False, "error": "스캔 데이터가 없습니다."}
+        # 오류문 행동지시화 (2026-08-16 8회차): folder_note 는 스캔된 볼륨 안 경로에만
+        # 붙는다 — 전제를 안 밝히면 "고장"으로 오독된다.
+        return {"success": False,
+                "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 "
+                         "상위 폴더를 스캔한 뒤 folder_note 를 쓰세요."}
 
     conn = _get_connection(scan['id'])
     cursor = conn.cursor()

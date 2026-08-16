@@ -56,7 +56,7 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 상황에 따라 다른 Goal을 활성화한다:
 
 ```
-[if: sense:stock{op: "quote", ticker: "^KS11"}.current_price < 2400]{
+[if: sense:stock{op: "quote", ticker: "^KS11"}.data.current_price < 2400]{
   [goal: "방어적 포트폴리오 재편"]{deadline: "즉시", max_rounds: 10}
 } [else]{
   [goal: "성장주 모니터링 유지"]{every: "매일 09:00", max_rounds: 30}
@@ -72,7 +72,7 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 여러 경우를 분기할 때:
 
 ```
-[case: sense:stock{op: "quote", ticker: "^KS11"}.current_price]{
+[case: sense:stock{op: "quote", ticker: "^KS11"}.data.current_price]{
   "> 3000": [goal: "공격적 매수"]{max_rounds: 20},
   "2400~3000": [goal: "추가 비교"]{max_rounds: 15},
   "< 2400": [goal: "손절 점검"]{max_rounds: 10},
@@ -110,7 +110,7 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
   until: "매수 결정",
   max_rounds: 200,
   max_cost: 50000,
-  strategy: [case: sense:stock{op: "quote", ticker: "^IRX"}.current_price]{
+  strategy: [case: sense:stock{op: "quote", ticker: "^IRX"}.data.current_price]{
     "< 4": [sense:realty]{type: "apt", deal: "trade", region: "청주"},
     "> 5": [goal: "관망"]{max_rounds: 1},
     default: [sense:realty]{type: "apt", deal: "trade", region: "청주"}

@@ -638,6 +638,16 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
 
         if condition is None:
             # else 분기
+            # ★B10 (2026-08-17 상상훈련 11회차): 앞선 조건 평가가 실패했다면(cond_errors)
+            # else 실행은 "그 조건이 거짓이었다"는 단정이 된다 — B8(읽기 실패=조용한 거짓)이
+            # 한 층 위에서 재발한 모양. 판정 불능 상태에선 else 를 보류하고 정직 실패로.
+            if cond_errors:
+                return {
+                    "success": False,
+                    "error": f"조건 평가 실패 {len(cond_errors)}건 — 판정 불능이라 else 분기를 보류했습니다"
+                             "(else 실행=조건 거짓의 단정).",
+                    "condition_errors": cond_errors,
+                }
             if action:
                 return _run_branch(action, tool_input, project_path, agent_id)
             return {"message": "else 분기 실행 (action 없음)"}

@@ -292,3 +292,10 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 - **B9 수리**: cron `* * * * *`(매분)→`interval_hours: 1`(매시간) **침묵 60배 성김** — 매시간 분기가 minute `*` 미검사. minute `*`/`*/N`=정직 거절+schedule 안내. 회귀(매시 m분·매일) 무손상. trigger 분 단위 실발화=원리적 불가(최소 해상도 시간) — schedule 실발화(8회차)로 레일 간접 검증 수용.
 - 의도적 보류: goal 실라운드(활성 에이전트 전제=실사용 영역)·폰 카메라/마이크(사용 맥락 필요).
 - **다음 모드**: 회차 반복 종료 → ①6~10회차 시드 일괄(~30건)+재학습 ②실사용 증류 관찰(수 주)→행동 지표 재측정 ③분기별 재점검 회차. (가이드 §6 "같은 갭 재발견=제자리 뛰기" 기준.)
+
+### 11회차 (2026-08-17 — 보고서 `outputs/imagination_training/2026-08-17_11회차.md`) — 미조합 어휘 축 (사용자 지시로 수리 동세션)
+- **편입 11**: company(병렬 union 31행)·entity(2항 union canonical)·search_shopping(**문자열 price 수치 강제 filter 정확**)·devdocs(→write 축적)·host(if 조건 좌변)·storage(에러 경로)·switch·manage_events·trigger(**시간 문형 조합 첫 실측** — cron do 파이프 등록→삭제, B9 회귀 무손상)·feed(read)·agents(project 열 평탄 items). 검수 12/12·실측 11·스크래치 전량 원상복구.
+- **★B10 수리**: 조건 평가 실패(cond_errors)가 **else 로 위장** — B8이 한 층 위에서 재발(정직 채널이 "분기 미실행"일 때만 발화, else 있으면 영원히 침묵). else 도달 시 cond_errors 있으면 보류·정직 실패. 야생 회귀 I6b가 검출.
+- **F14 수리**: 8회차 F11이 get_summary 오류문에 folder_note 지시를 복붙 이식(문맥 불일치) → 중립화. 교훈=오류문 행동지시화는 호출 문맥별로.
+- 판정 후보: **B10-case 짝**(None→default 단정 — 단 battery null 등 정당한 널 실존이라 3안 판정) · F1 증거 추가(company kv형+records형 혼합 union) · message형 통화의 write 싱크=봉투째(통화 조건 판정에 병합).
+- 시드 후보 9건 — 6~10회차 일괄 배치에 합류.

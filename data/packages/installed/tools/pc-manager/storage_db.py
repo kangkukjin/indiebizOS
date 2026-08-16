@@ -422,11 +422,11 @@ def get_summary(root_path: str) -> Dict:
             break
 
     if not scan:
-        # 오류문 행동지시화 (2026-08-16 8회차): folder_note 는 스캔된 볼륨 안 경로에만
-        # 붙는다 — 전제를 안 밝히면 "고장"으로 오독된다.
+        # 오류문 행동지시화 (2026-08-16 8회차 · 11회차 F14: folder_note 문구가 summary 호출자에게
+        # 이식돼 있던 것을 문맥 중립으로 교정 — get_summary 는 일반 요약 조회다).
         return {"success": False,
                 "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 "
-                         "상위 폴더를 스캔한 뒤 folder_note 를 쓰세요."}
+                         "상위 폴더를 스캔한 뒤 다시 조회하세요."}
 
     scan_id = scan['id']
     db_path = _get_db_path(scan_id)

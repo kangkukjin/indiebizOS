@@ -423,32 +423,45 @@ def test_p16_fallback_matrix_and_mixed_grammar():
 
 
 def test_p17_script_list_preflight():
-    """P17(⑱ 실험 9): script list 가 실행 가능 여부를 안 봄 — 파일이 사라져도 ✅ 로 남았다."""
+    """P17(⑱ 실험 9): script list 가 실행 가능 여부를 안 봄 — 파일이 사라져도 ✅ 로 남았다.
+
+    d6a6fb1 개정 반영: 원장이 정의(data/scripts/registry.yaml, 추적)/상태(data/scripts.json,
+    무시)로 갈라졌고, 본문은 data/scripts/ 안에만 산다(밖이면 register 거절)."""
     _script = _load("_t_script", os.path.join(_PKG, "system_essentials", "script_ops.py"))
     import copy
-    orig = copy.deepcopy(_script._read_ledger())
+    orig_reg = copy.deepcopy(_script._read_registry())
+    orig_state = copy.deepcopy(_script._read_state())
     sid = "_p17_시험용"
+    sp = _script._SCRIPT_DIR / f"{sid}.py"
     try:
+        # data/scripts/ 밖은 register 가 명시 거절한다 (본문=추적 대상 계약)
         with tempfile.TemporaryDirectory() as td:
-            sp = os.path.join(td, "p17.py")
-            open(sp, "w").write("print('{}')")
-            r = _script.op_register({"id": sid, "path": sp})
-            assert r.get("success"), r
-            # 파일 실존 → runnable true, ⚠️ 없음
-            it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)
-            assert it["runnable"] is True and "⚠️" not in it["summary"], it
-        # TemporaryDirectory 종료 = 파일 소실 → list 가 지금 상태를 본다
+            outside = os.path.join(td, "p17.py")
+            open(outside, "w").write("print('{}')")
+            r0 = _script.op_register({"id": sid, "path": outside})
+            assert r0.get("success") is False and "data/scripts" in r0.get("error", ""), r0
+        # data/scripts/ 안이면 등록된다
+        sp.write_text("print('{}')", encoding="utf-8")
+        r = _script.op_register({"id": sid, "path": str(sp)})
+        assert r.get("success"), r
+        # 파일 실존 → runnable true, ⚠️ 없음
+        it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)
+        assert it["runnable"] is True and "⚠️" not in it["summary"], it
+        # 파일 소실 → list 가 지금 상태를 본다
+        sp.unlink()
         it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)
         assert it["runnable"] is False and "파일 없음" in it["summary"], it
-        # run 의 pre-flight 실패가 원장 last_error 에 남는다
+        # run 의 pre-flight 실패가 상태 원장 last_error 에 남는다
         rr = _script.op_run({"id": sid})
         assert rr.get("success") is False and "사라졌습니다" in rr["error"], rr
-        led = _script._read_ledger()
-        assert (led.get(sid) or {}).get("last_error", {}).get("preflight") == "file_missing", led.get(sid)
+        st = _script._read_state()
+        assert (st.get(sid) or {}).get("last_error", {}).get("preflight") == "file_missing", st.get(sid)
     finally:
-        _script._write_ledger(orig)  # 실원장 원상복구
-    assert _script._read_ledger() == orig
-    print("P17 OK — list pre-flight(파일·인터프리터)·runnable 신호·pre-flight 실패 원장 기록")
+        sp.unlink(missing_ok=True)
+        _script._write_registry(orig_reg)  # 정의 원장 원상복구
+        _script._write_state(orig_state)   # 상태 원장 원상복구
+    assert _script._read_registry() == orig_reg and _script._read_state() == orig_state
+    print("P17 OK — data/scripts/ 강제·list pre-flight(파일·인터프리터)·pre-flight 실패 상태 기록")
 
 
 def test_p18_sheet_semantic_silence():

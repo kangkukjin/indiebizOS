@@ -38,7 +38,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/rename/flatten/dedup/groupby/join/union/merge/each)과 산출(chart/spreadsheet/document/structure) |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
-**판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]`.
+**판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]{query: "..."}`.
 
 ## How to Use
 
@@ -117,13 +117,13 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 
 `table`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
 - **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `rename{map}`(열 이름 바꾸기) · `flatten{field}`(중첩 목록 펼치기) · `dedup{by}` · `groupby{by, agg}`
-- **이항**(`&` 두 입력): `join{on}` · `union`(행 결합) · `merge`(두 목록 합치기) — 두 소스의 키 이름이 다르면 join 전에 `[table:rename]{map: {"아파트명": "단지명"}}` 으로 맞춘다(각 가지엔 파이프가 안 붙으므로 변수+`left`/`right` 파라미터로: `$a = [A] >> [table:rename]{...}` 후 `[table:join]{left: "$a", right: "$b", on: ...}`)
-- **고차** `each{do, as, limit}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다.
+- **이항**(`&` 두 입력): `join{on}` · `union`(행 이어붙이기) · `merge{by}`(합치되 by 키로 중복 제거) — 두 소스의 키 이름이 다르면 join 전에 `[table:rename]{map: {"아파트명": "단지명"}}` 으로 맞춘다(각 가지엔 파이프가 안 붙으므로 변수+`left`/`right` 파라미터로: `$a = [A] >> [table:rename]{...}` 후 `[table:join]{left: "$a", right: "$b", on: ...}`)
+- **고차** `each{do, as, limit, on_error}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다. 검색 결과의 각 행으로 후속 조회·행동을 돌릴 때 id·제목을 손으로 옮겨 적어 `&`를 늘어놓지 말고 each 로 잇는다.
   ```
   [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}
   ```
 
-통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`.
+통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet` · `structure`(원본 콘텐츠→문서 IR 정리, 렌더 전 중간 단계).
 
 → 핵심 패턴: **[검색/조회] → [변환자 체인] → [산출물]**
 ```
@@ -132,28 +132,6 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 [sense:stock]{op: "history", symbol: "005930"} & [sense:world_bank]{country: "KR"} >> [table:join]{on: "연도"} >> [table:chart]{}
 ```
 정렬·필터·상위N·중복제거가 필요하면 Python을 짜지 말고 이 변환자로 조합한다 — 데이터를 가공하는 일은 거의 다 이 어휘로 표현된다.
-
-## Common Patterns
-
-**단일 검색:**
-```
-execute_ibl(code='[sense:search]{query: "AI trends"}')
-```
-
-**병렬 데이터 수집:**
-```
-execute_ibl(code='[sense:stock]{op: "info", ticker: "AAPL"} & [sense:stock]{op: "info", ticker: "GOOGL"}')
-```
-
-**기계적 전달 (파이프라인):**
-```
-execute_ibl(code='[self:slide]{op: "create", instruction: "분기 실적 핵심을 한 장으로"} >> [limbs:os_open]')  # 슬라이드 생성(스크래치 덱) → 열기
-```
-
-**액션 찾기:**
-```
-execute_ibl(code='[self:discover]{query: "stock prices"}')
-```
 
 ## Key Principles
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.

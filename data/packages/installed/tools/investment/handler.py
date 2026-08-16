@@ -319,9 +319,27 @@ def _attach_quote_items(result):
         if not isinstance(obj, dict) or not obj.get("success"):
             return result
         data = obj.get("data") or {}
-        if isinstance(data, dict) and data.get("current_price") is not None \
-                and not isinstance(obj.get("items"), list):
-            obj["items"] = [{k: v for k, v in data.items() if k not in _QUOTE_ITEMS_SKIP}]
+        # current_price(주식) 외 current_price_usd/krw(코인)도 스냅샷 — F8(2026-08-16 상상훈련
+        # 4회차): crypto 만 items 미방출이라 같은 "시세"인데 stock 과 조합 가능성이 갈렸다.
+        _has_price = isinstance(data, dict) and any(
+            data.get(k) is not None
+            for k in ("current_price", "current_price_usd", "current_price_krw"))
+        if _has_price and not isinstance(obj.get("items"), list):
+            row = {k: v for k, v in data.items() if k not in _QUOTE_ITEMS_SKIP}
+            # F1-스냅샷 canonical 병기 (2026-08-16 5회차): 같은 개념이 소스마다 다른 칸이면
+            # union 행이 반쪽이 된다(crypto=krw/24h vs stock=current_price/change_percent 실측).
+            # 원명 보존 + canonical 추가(제거 아님·병기).
+            if row.get("current_price") is None:
+                _cp = row.get("current_price_krw") or row.get("current_price_usd")
+                if _cp is not None:
+                    row["current_price"] = _cp
+            if row.get("change_percent") is None and row.get("change_24h_percent") is not None:
+                row["change_percent"] = row["change_24h_percent"]
+            _nm = row.get("name") or row.get("symbol")
+            if _nm:
+                row.setdefault("name", _nm)
+                row.setdefault("title", _nm)   # 칸 규약 1 (제목 칸)
+            obj["items"] = [row]
         return obj
     except Exception:
         return result
@@ -495,11 +513,12 @@ def execute(tool_input: dict, context):
 
         elif tool_name == "crypto_price":
             tool = load_module("tool_yfinance")
-            return tool.get_crypto_price(
+            # F8: 스냅샷 1행 items 병기(stock quote 선례 동형) — 없으면 & 병렬 결합이 막힌다.
+            return _attach_quote_items(tool.get_crypto_price(
                 coin_id=tool_input.get("coin") or tool_input.get("coin_id") or "bitcoin",  # coin 우선(코퍼스/자연어), coin_id 별칭
                 days=tool_input.get("days", 0),
                 max_points=tool_input.get("max_points", 400),
-            )
+            ))
 
         else:
             return error_response(f"알 수 없는 도구입니다: {tool_name}")

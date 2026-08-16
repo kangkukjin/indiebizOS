@@ -212,23 +212,101 @@ def check_params(node: str, action: str, params: Any,
     user_keys = {k for k in params.keys()
                  if isinstance(k, str) and not k.startswith(("_", "$"))}
     unknown = sorted(user_keys - allowed)
-    if not unknown:
-        return None
 
     vocab = _documented_vocab(action_config, action_config.get("tool", ""))
+
+    # 소프트 층 (2026-08-16 상상훈련 F2): 패키지 AST 합집합(allowed)은 내부 파이썬
+    # 식별자까지 품는 과대 허용이라, [self:notebook]{notebook: ...} 같은 오타가 침묵
+    # 통과했다. 문서화 어휘 밖 + 코퍼스 용례에도 없는 키 + 문서화 키 근접(제안 키가
+    # params 에 없음)일 때만 조용히 무시될 가능성을 경고한다 — 코퍼스=관용 사전이라
+    # 기존 정상 용법(측정: 94키/599히트)은 구조적으로 오탐하지 않는다.
+    soft: Dict[str, str] = {}
+    _soft_cands = sorted((user_keys & allowed) - vocab)
+    if _soft_cands:
+        attested = _corpus_action_keys(node, action)
+        if attested is not None:
+            for k in _soft_cands:
+                if k in attested:
+                    continue
+                close = difflib.get_close_matches(k, sorted(vocab), n=1, cutoff=0.55)
+                if close and close[0] not in user_keys:
+                    soft[k] = close[0]
+
+    if not unknown and not soft:
+        return None
+
     suggest: Dict[str, str] = {}
     for k in unknown:
         close = difflib.get_close_matches(k, sorted(vocab), n=1, cutoff=0.55)
         if close:
             suggest[k] = close[0]
 
-    parts = [f"미인식 파라미터 {unknown} — [{node}:{action}] 핸들러가 읽지 않는 키라 "
-             f"조용히 무시됐을 수 있습니다."]
-    if suggest:
-        parts.append("비슷한 키: " + ", ".join(f"{k}→{v}" for k, v in suggest.items()) + ".")
+    parts = []
+    if unknown:
+        parts.append(f"미인식 파라미터 {unknown} — [{node}:{action}] 핸들러가 읽지 않는 키라 "
+                     f"조용히 무시됐을 수 있습니다.")
+        if suggest:
+            parts.append("비슷한 키: " + ", ".join(f"{k}→{v}" for k, v in suggest.items()) + ".")
+    for k, v in soft.items():
+        parts.append(f"'{k}' 는 이 액션의 문서화된 파라미터가 아니고 용례에도 없습니다 — "
+                     f"'{v}' 를 의도했나요? (핸들러가 읽지 않는 키는 조용히 무시됩니다.)")
     if vocab:
         parts.append(f"이 액션의 주요 키: {sorted(vocab)}.")
-    return {"unknown": unknown, "suggest": suggest, "message": " ".join(parts)}
+    return {"unknown": unknown, "suggest": suggest, "soft": soft,
+            "message": " ".join(parts)}
+
+
+# === 코퍼스 관용 사전 (soft 층의 오탐 방지 장치) ===
+
+_corpus_keys_cache: Dict[str, tuple] = {}  # "node:action" -> (computed_at, keys|None)
+_CORPUS_KEYS_TTL = 600
+
+
+def _corpus_action_keys(node: str, action: str) -> Optional[Set[str]]:
+    """해마 코퍼스에서 이 액션의 실사용 파라미터 키 집합. 실패 시 None(=soft 층 스킵 — 안전측)."""
+    qualified = f"{node}:{action}"
+    hit = _corpus_keys_cache.get(qualified)
+    now = time.time()
+    if hit and now - hit[0] < _CORPUS_KEYS_TTL:
+        return hit[1]
+    keys: Optional[Set[str]] = None
+    try:
+        import sqlite3
+        from runtime_utils import get_base_path
+        db_path = Path(get_base_path()) / "data" / "ibl_usage.db"
+        if db_path.is_file():
+            conn = sqlite3.connect(str(db_path))
+            try:
+                rows = conn.execute(
+                    "SELECT ibl_code FROM ibl_examples WHERE ibl_code LIKE ? LIMIT 400",
+                    (f"%[{qualified}]%",)).fetchall()
+            finally:
+                conn.close()
+            from ibl_parser import parse as _parse
+            found: Set[str] = set()
+
+            def _walk(o):
+                if isinstance(o, dict):
+                    if o.get("_node") == node and o.get("action") == action:
+                        for k in (o.get("params") or {}):
+                            if isinstance(k, str):
+                                found.add(k)
+                    for v in o.values():
+                        _walk(v)
+                elif isinstance(o, list):
+                    for v in o:
+                        _walk(v)
+
+            for (code,) in rows:
+                try:
+                    _walk(_parse(code))
+                except Exception:
+                    continue
+            keys = found
+    except Exception:
+        keys = None
+    _corpus_keys_cache[qualified] = (now, keys)
+    return keys
 
 
 def check_code_params(code: str) -> List[dict]:

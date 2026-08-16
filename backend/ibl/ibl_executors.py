@@ -213,7 +213,17 @@ def _output_download(url: str, params: dict, project_path: str) -> Any:
     save_path = os.path.join(save_dir, filename)
 
     try:
-        urllib.request.urlretrieve(url, save_path)
+        # UA 없는 urlretrieve 는 다수 사이트(한겨레 등)가 403 (2026-08-16 6회차 실측) —
+        # crawl 과 같은 부류의 평범한 브라우저 UA 로 요청한다.
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"})
+        with urllib.request.urlopen(req, timeout=60) as resp, open(save_path, "wb") as f:
+            while True:
+                chunk = resp.read(1 << 16)
+                if not chunk:
+                    break
+                f.write(chunk)
         return {"ok": True, "path": save_path, "size": os.path.getsize(save_path)}
     except Exception as e:
         return {"error": f"다운로드 실패: {str(e)}"}
@@ -355,6 +365,45 @@ def _goal_kill(goal_id: str, params: dict, project_path: str = "") -> dict:
         }
     except Exception as e:
         return {"error": f"목표 취소 실패: {str(e)}"}
+
+
+def _goal_delete(goal_id: str, params: dict, project_path: str = "") -> dict:
+    """종결된 목표를 원장에서 삭제 (F9-② 2026-08-16 상상훈련 4회차).
+
+    kill(취소=상태 전환)과 다르다 — delete 는 행 자체를 지운다. **종결 상태만**
+    (achieved/expired/limit_reached/cancelled) 허용: 살아있는 목표는 kill 먼저 —
+    실행 중인 것을 조용히 증발시키면 스케줄·평가 루프가 유령을 쫓는다.
+    """
+    if not goal_id:
+        return {"error": "goal_id가 필요합니다."}
+
+    try:
+        from conversation_db import ConversationDB
+        db_path = str(Path(project_path) / "conversations.db")
+        db = ConversationDB(db_path)
+        goal = db.get_goal(goal_id)
+
+        if not goal:
+            return {"error": f"목표를 찾을 수 없습니다: {goal_id}"}
+
+        _terminal = ("achieved", "expired", "limit_reached", "cancelled")
+        if goal["status"] not in _terminal:
+            return {"success": False,
+                    "error": f"살아있는 목표는 삭제할 수 없습니다 (상태: {goal['status']}). "
+                             f"먼저 [self:goal]{{op: \"kill\", goal_id: \"{goal_id}\"}} 로 종료하세요."}
+
+        ok = db.delete_goal(goal_id)
+        if not ok:
+            return {"error": f"목표 삭제 실패: {goal_id}"}
+        return {
+            "success": True,
+            "goal_id": goal_id,
+            "name": goal["name"],
+            "deleted_status": goal["status"],
+            "message": f"목표 '{goal['name']}' 원장에서 삭제 완료",
+        }
+    except Exception as e:
+        return {"error": f"목표 삭제 실패: {str(e)}"}
 
 
 # ============ Phase 26b: 시도 기록 (전략 전환 + 라운드 메모리) ============

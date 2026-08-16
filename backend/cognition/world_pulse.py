@@ -215,10 +215,29 @@ def execute_world_pulse(action: str, params: dict) -> Any:
         days = params.get("days", 7)
         trend = get_pulse_trend(int(days))
         if trend:
+            # 칸 규약/items 병기 (2026-08-16 5회차 후 판정): snapshot 은 브리핑 한 장이라
+            # 접지 않되(거짓 통화 금지), trend=일별 시계열은 자연 행 — 날짜+경제 지표를
+            # 평평한 수치 칸으로 펴서 "지난 일주일 흐름을 표/차트로"가 파이프에 선다.
+            # news(목록)·중첩은 원형 trend 에 그대로 산다(비파괴 병기).
+            items = []
+            for snap in trend:
+                row = {"date": snap.get("date")}
+                econ = snap.get("economy") or {}
+                for label, d in econ.items():
+                    if isinstance(d, dict):
+                        if d.get("price") is not None:
+                            row[str(label)] = d.get("price")
+                        if d.get("change_pct") is not None:
+                            row[f"{label}_change_pct"] = d.get("change_pct")
+                if snap.get("weather"):
+                    row["weather"] = snap.get("weather")
+                items.append(row)
             return {
                 "days_requested": days,
                 "days_available": len(trend),
                 "trend": trend,
+                "items": items,
+                "count": len(items),
                 "summary": get_pulse_summary(int(days)),
             }
         return {"message": "축적된 데이터가 없습니다."}

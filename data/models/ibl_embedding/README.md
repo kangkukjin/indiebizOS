@@ -5,36 +5,39 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:5427
+- dataset_size:5588
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 홈페이지를 빌드, 배포, 상태 확인까지 한번에
+- source_sentence: 이더리움 코인 가격
   sentences:
-  - '[self:storage]'
-  - '[engines:web] >> [engines:web] >> [engines:web]'
-  - '[others:board]'
-- source_sentence: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.
-  sentences:
-  - '[sense:realty]'
-  - '[others:showcase]'
-  - '[self:blog] >> [self:read] >> [table:document] >> [self:copy]'
-- source_sentence: 가족신문 방명록에 새 글 있어?
-  sentences:
-  - '[self:file_find]'
-  - '[self:trigger]'
-  - '[others:family_news]'
-- source_sentence: 팔란티어식 기업 워크플로우 자동화에 대한 이해를 위해 관련 정보를 검색하고 참고 자료를 탐색한다
-  sentences:
-  - '[sense:used]'
-  - 커뮤니티 피드 (IndieNet) — op:read(조회)/post(글 게시). Nostr 릴레이가 진실원. 웹 RSS/Atom 피드 읽기는
-    sense:feed.
   - '[sense:search]'
-- source_sentence: 김철수 정보 좀 봐
+  - 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와
+    Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite
+    필드) — table:filter 로 미독·즐겨찾기만 선별.
+  - '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
+- source_sentence: 바탕화면에서 신청서 PDF를 찾아 정보를 채워줘
   sentences:
-  - '[others:messages]'
-  - '[self:list] & [sense:search]'
-  - '[others:neighbor]'
+  - '[others:delegate]'
+  - '[self:script]'
+  - '[self:file_find] >> [self:fill]}'
+- source_sentence: 이 음성 받아쓰고 메모에 저장해
+  sentences:
+  - '[sense:performance]'
+  - 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드
+    지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
+  - 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini
+    STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
+- source_sentence: 수집한 데이터에서 AI 검색해
+  sentences:
+  - '[self:cctv]'
+  - '[sense:collect]'
+  - '[self:health]'
+- source_sentence: K-Startup 공고 좀
+  sentences:
+  - '[sense:feed]'
+  - '[self:schedule]"}'
+  - '[sense:startup]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +91,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '김철수 정보 좀 봐',
-    '[others:neighbor]',
-    '[self:list] & [sense:search]',
+    'K-Startup 공고 좀',
+    '[sense:startup]',
+    '[self:schedule]"}',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +102,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.5422, -0.1824],
-#         [ 0.5422,  1.0000, -0.2310],
-#         [-0.1824, -0.2310,  1.0000]])
+# tensor([[ 1.0000,  0.9189, -0.0679],
+#         [ 0.9189,  1.0000, -0.0661],
+#         [-0.0679, -0.0661,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -145,20 +148,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 5,427 training samples
+* Size: 5,588 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
-  |          | sentence_0                                                                        | sentence_1                                                                       |
-  |:---------|:----------------------------------------------------------------------------------|:---------------------------------------------------------------------------------|
-  | type     | string                                                                            | string                                                                           |
-  | modality | text                                                                              | text                                                                             |
-  | details  | <ul><li>min: 4 tokens</li><li>mean: 15.27 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.3 tokens</li><li>max: 64 tokens</li></ul> |
+  |          | sentence_0                                                                        | sentence_1                                                                        |
+  |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
+  | type     | string                                                                            | string                                                                            |
+  | modality | text                                                                              | text                                                                              |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.44 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 24.33 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                    | sentence_1                                                                                                      |
-  |:------------------------------|:----------------------------------------------------------------------------------------------------------------|
-  | <code>통계청에서 청년 실업률 찾아줘</code> | <code>[sense:kosis]</code>                                                                                      |
-  | <code>에어팟 할인 중인 데 있나</code>   | <code>[sense:search_shopping]</code>                                                                            |
-  | <code>서울 오늘 비 올까</code>       | <code>날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능</code> |
+  | sentence_0                                       | sentence_1                                                                                                                                   |
+  |:-------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>{lecture_id}를 {format} 형식의 문서로 내보내줘</code> | <code>강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.</code>                                                                           |
+  | <code>이 메뉴 위에 마우스 올려봐</code>                     | <code>[limbs:browser]</code>                                                                                                                 |
+  | <code>폰 카카오톡에 메시지 써서 전송해줘</code>                 | <code>안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -288,11 +291,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.7364 | 500  | 0.0076        |
+| 0.7153 | 500  | 0.0134        |
 
 
 ### Training Time
-- **Training**: 3.6 minutes
+- **Training**: 3.7 minutes
 
 ### Framework Versions
 - Python: 3.13.5

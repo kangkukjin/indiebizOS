@@ -72,6 +72,7 @@ def _format_webcam(webcam: dict, ref_lat: float = None, ref_lon: float = None) -
         "status": webcam.get("status", ""),
         "lat": lat,
         "lon": lon,
+        "lng": lon,   # 칸 규약 4(위치=lat/lng, 2026-08-16 6회차): lon 원명 보존 + lng 병기 — show_map markers 직결
         "city": location.get("city", ""),
         "region": location.get("region", ""),
         "country": location.get("country", ""),

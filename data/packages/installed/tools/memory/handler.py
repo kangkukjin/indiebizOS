@@ -134,12 +134,17 @@ def _memories_to_records(memories: list) -> list:
             # deep_memory: 별도 제목 없음 → preview 첫 줄을 제목으로.
             title = (preview.split("\n", 1)[0][:60]).strip() or "메모"
             meta = [m.get("created_at"), m.get("category"), m.get("keywords")]
-        records.append({
+        rec = {
             "title": title,
             "meta": " · ".join(str(x) for x in meta if x),
             "summary": "" if preview == title else preview,
             "url": "",
-        })
+        }
+        # memory_id 병기 (2026-08-16 상상훈련 6회차 B2): desc 계약이 "read/delete —
+        # memory_id (search 결과의 id)"인데 카드 투영이 id 를 접어 사슬이 끊겨 있었다.
+        if m.get("id") is not None:
+            rec["memory_id"] = m["id"]
+        records.append(rec)
     return records
 
 

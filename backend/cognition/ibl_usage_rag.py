@@ -552,6 +552,48 @@ def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
     return False
 
 
+# ── 합성 접지 게이트 (2026-08-16) ─────────────────────────────────────────
+# 프롬프트 규칙 3("데이터가 흐를 때만 합성")을 경량 반성기가 어기고, 모델이
+# 매개한 별개 호출들을 >> 로 이어 붙인 실사례가 나왔다(구 용례 3805·3806 —
+# 다섯 >> 전부 통화가 흐르지 않는 죽은 파이프였고, 3805 는 old_string 앵커를
+# new_string 이 삼킨 edit 라 재생 시 규칙 원장을 파괴한다). 프롬프트는 권고일
+# 뿐이므로 기계로 막는다: **증류는 실행된 문장을 압축할 뿐, 새 문장을 창작하지
+# 않는다** — 증류 코드의 합성(>>·&·;·??)은 실행 이력의 *단일 호출* 안에 그
+# 액션들이 함께 합성돼 있던 경우에만 통과한다(압축=부분집합 허용, 별개 호출
+# 봉합=차단). 거짓 파이프는 조합성 지표(파이프 비율·문형 수)까지 오염시킨다.
+
+_QUOTED_STR_RE = re.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
+_COMPOSE_OP_RE = re.compile(r'>>|\?\?|&|;')
+_NODE_ACTION_RE = re.compile(r'\[([a-z_-]+:[a-z_0-9]+)\]')
+
+
+def _strip_strings(code: str) -> str:
+    """따옴표 문자열을 비운다 — 파라미터에 실려 가는 문장([self:trigger] pipeline,
+    [table:each] do 등) 속 연산자를 최상위 합성으로 오인하지 않기 위해."""
+    return _QUOTED_STR_RE.sub('""', code or "")
+
+
+def _composed(code: str) -> bool:
+    """따옴표 밖에 합성 연산자(>>·&·;·??)가 있는가."""
+    return bool(_COMPOSE_OP_RE.search(_strip_strings(code)))
+
+
+def _actions_of(code: str) -> set:
+    """따옴표 밖 [node:action] 집합."""
+    return set(_NODE_ACTION_RE.findall(_strip_strings(code)))
+
+
+def _composition_grounded(code: str, ibl_calls: list) -> bool:
+    """증류 코드가 합성문이면, 실행된 어느 *한* 호출이 그 액션들을 합성문으로
+    담고 있었는지 판정. 단문 증류는 무조건 통과."""
+    if not _composed(code):
+        return True
+    acts = _actions_of(code)
+    if not acts:
+        return False
+    return any(_composed(call) and acts <= _actions_of(call) for call in ibl_calls)
+
+
 def distill_experience(user_message: str, tool_calls: list, top_score: float,
                        top_code: str = None) -> bool:
     """실행 경험을 증류하여 해마에 저장한다.
@@ -673,6 +715,20 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             if intent and not code:
                 print(f"[경험증류] 재사용 IBL 패턴 없음 — 증류 스킵: \"{user_message[:40]}\"")
             return False
+
+        # 합성 접지 게이트: 실행에 없던 >>·&·; 합성(거짓 관용구)은 코퍼스에 못 들어온다.
+        # 규칙 3 의 기계판 — 반성기가 별개 호출들을 파이프로 봉합한 경우 여기서 잡힌다.
+        if not _composition_grounded(code, ibl_calls):
+            print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
+            return False
+
+        # 배관 키 스크럽 (2026-08-16): `_raw`(파이프 중간 압축 억제)는 workflow_engine 이
+        # 주입하는 내부 배관이지 어휘가 아니다 — 파이프 안 실행이 증류될 때 코드에 박혀
+        # 코퍼스를 오염시킨 실측(빌드의 코퍼스-param 가드가 검출). 언어 표면에 없는 키는
+        # 여기서 벗긴다.
+        code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
+        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
+        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
 
         # 검증 게이트: 환각된(미존재) 액션이 코퍼스에 진입하지 못하도록 정적 검증
         if not _validate_ibl_actions(code):

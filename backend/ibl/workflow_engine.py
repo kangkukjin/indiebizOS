@@ -213,6 +213,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
     """
     from ibl_engine import execute_ibl
 
+    # ★B1 (2026-08-16 상상훈련): steps 가 IBL 코드 *문자열 하나*로 오면 그대로 두면 안 된다 —
+    # str 도 iterable 이라 아래 any(isinstance(s, str)) 관문을 "글자들의 리스트"로 통과해
+    # 한 글자씩 파싱을 시도한다(steps_total=글자 수, 'IBL 문법 오류: ['). do/steps 별칭이
+    # 저장 원문(문자열)을 그대로 나르므로(target_description 도 문자열을 명시 허용), 관문이
+    # 아니라 계약 입구에서 감싼다 — run/run_pipeline/execute_workflow/트리거 전 호출처 공통.
+    if isinstance(steps, str):
+        steps = [steps] if steps.strip() else []
+
     if not steps:
         return {"success": False, "error": "steps가 비어있습니다.", "steps_completed": 0, "steps_total": 0}
 
@@ -292,10 +300,29 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # 실패 경로는 각 _handle_failure 뒤에서 리셋하지만, 성공 경로는 여기가 유일한 관문
             # (없으면 _auto_inject_prev 가 앞 문장 결과를 다음 문장 첫 step 에 무조건 주입한다).
             prev_result = ""
-        # $var 바인딩 치환 — {{_step_N_result}} 를 저장된 step 결과로 (branches/체인 포함).
+        # $var 바인딩 치환 — {{_step_N_result[.path]}} 를 저장된 step 결과로 (branches/체인 포함).
         # 문장 경계의 prev_result 리셋과 독립이라, 앞 문장 결과를 명시 참조로 가져올 수 있다.
+        # 필드 경로(.path) 추출 실패는 정직한 step 실패로 — 침묵 "" 치환 금지 (G1, 2026-08-16).
         if step_results and isinstance(step, dict):
-            step = _inject_step_results(step, step_results)
+            try:
+                step = _inject_step_results(step, step_results)
+            except ValueError as e:
+                results.append({
+                    "step": i + 1,
+                    "node": step.get("_node", step.get("node", "?")),
+                    "action": step.get("action", "?"),
+                    "error": str(e),
+                    "duration_ms": 0,
+                })
+                _abort = _handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": total,
+                    "results": results, "final_result": None,
+                    "error": f"Step {i+1} 변수 치환 실패: {str(e)}",
+                })
+                if _abort is not None:
+                    return _abort
+                prev_result = ""
+                continue
         step_start = time.time()
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
@@ -391,6 +418,26 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
         # {{_prev_result}} 템플릿 치환
         tool_input = _inject_prev_result(tool_input, prev_result)
+
+        # ★$items 집합 바인딩 (G1-③) — 값 바인딩, 텍스트 치환 아님. 실패는 정직한 step 실패.
+        tool_input, _bind_err = _bind_items_params(tool_input, prev_result)
+        if _bind_err:
+            results.append({
+                "step": i + 1,
+                "node": tool_input.get("_node", "?"),
+                "action": tool_input.get("action", "?"),
+                "error": _bind_err,
+                "duration_ms": 0,
+            })
+            _abort = _handle_failure(i, {
+                "success": False, "steps_completed": i, "steps_total": total,
+                "results": results, "final_result": None,
+                "error": f"Step {i+1} {_bind_err}",
+            })
+            if _abort is not None:
+                return _abort
+            prev_result = ""
+            continue
 
         # 파이프라인 자동 데이터 전달 (명시적 참조 없으면 params에 주입)
         tool_input = _auto_inject_prev(tool_input, prev_result)
@@ -666,25 +713,128 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
     return last_result, log
 
 
-# $var 바인딩 참조 패턴 — 파서(_resolve_variables)가 $var 를 {{_step_N_result}} 로 치환한다.
-_STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result\}\}")
+# $var 바인딩 참조 패턴 — 파서(_resolve_variables)가 $var 를 {{_step_N_result}} 로,
+# $var.field.path 를 {{_step_N_result.field.path}} 로 치환한다 (G1, 2026-08-16).
+_STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result((?:\.\w+)*)\}\}")
+
+
+def _extract_result_field(raw: str, path: str) -> str:
+    """저장된 step 결과 문자열에서 .field.path 를 추출해 스칼라 문자열로.
+
+    실패는 조용한 빈 문자열이 아니라 ValueError — 없는 필드가 침묵히 "" 로 치환되면
+    하류가 빈 param 으로 "성공"하는 침묵 실패 부류가 된다(P 시리즈 원칙)."""
+    obj: Any = raw
+    if isinstance(obj, str):
+        s = obj.strip()
+        if s.startswith("{") or s.startswith("["):
+            try:
+                obj = json.loads(s)
+            except (json.JSONDecodeError, ValueError):
+                raise ValueError(
+                    f"$변수 필드 추출 실패: 결과가 JSON 이 아니라 '{path}' 경로를 풀 수 없습니다.")
+        else:
+            raise ValueError(
+                f"$변수 필드 추출 실패: 결과가 구조화 데이터가 아니라 '{path}' 경로를 풀 수 없습니다.")
+    for key in path.lstrip(".").split("."):
+        if isinstance(obj, dict) and key in obj:
+            obj = obj[key]
+        elif isinstance(obj, list) and key.isdigit() and int(key) < len(obj):
+            obj = obj[int(key)]
+        else:
+            avail = list(obj.keys())[:12] if isinstance(obj, dict) else f"목록(길이 {len(obj)})" if isinstance(obj, list) else type(obj).__name__
+            raise ValueError(
+                f"$변수 필드 추출 실패: '{key}' 필드가 없습니다 (경로 {path}, 사용 가능: {avail}).")
+    if isinstance(obj, (dict, list)):
+        return json.dumps(obj, ensure_ascii=False)
+    return "" if obj is None else str(obj)
 
 
 def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
-    """{{_step_N_result}} 참조를 저장된 step 별 결과로 치환 (재귀 — branches/체인 포함).
+    """{{_step_N_result[.path]}} 참조를 저장된 step 별 결과로 치환 (재귀 — branches/체인 포함).
 
     변수 바인딩($var)의 실제 구현(D4, 2026-08-05): 예전엔 $var 가 전부 {{_prev_result}} 로
     뭉개졌고, 문장 경계(_seq_boundary)가 prev_result 를 비워 문서화된 예제가 빈 문자열을
     치환받았다. 아직 실행되지 않았거나 예외로 결과가 없는 인덱스는 빈 문자열로 치환한다.
+    .path 가 붙으면 결과(JSON)에서 그 필드를 추출한다 — 실패는 ValueError(정직 실패).
     """
     if isinstance(obj, str):
-        return _STEP_RESULT_RE.sub(
-            lambda m: step_results.get(int(m.group(1)), ""), obj)
+        def _sub(m):
+            base = step_results.get(int(m.group(1)), "")
+            p = m.group(2)
+            if p:
+                return _extract_result_field(base, p)
+            return base
+        return _STEP_RESULT_RE.sub(_sub, obj)
     if isinstance(obj, dict):
         return {k: _inject_step_results(v, step_results) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_inject_step_results(v, step_results) for v in obj]
     return obj
+
+
+# $items 집합 바인딩 행 수 상한 — 초과는 침묵 절단 대신 정직 거절(take 로 줄이라고 안내).
+ITEMS_BIND_CAP = 500
+
+_ITEMS_REF = re.compile(r'^\$items(?:\.(\w+))?$')
+
+
+def _bind_items_params(tool_input: dict, prev_result: str):
+    """★$items 집합 바인딩 (2026-08-16 상상훈련 G1-③ 판정).
+
+    step 파라미터 *값*이 정확히 "$items"(전체 행) 또는 "$items.필드"(각 행에서 그 필드만)
+    이면, 이전 step 결과의 items 리스트를 **실행 시점에 값으로** 바인딩한다.
+
+    - 텍스트 치환이 아니다 — 데이터가 문장 텍스트를 통과하면 이스케이프·페이로드가
+      깨진다(옛 shell-IBL 은퇴 사유와 동류). $it(each, 행 단위)의 짝인 집합 단위 규약.
+    - 행동 액션(show_map 등)이 **핸들러 수정 없이** 파이프 하류에 서는 길:
+        [sense:restaurant]{query:"청주 맛집"} >> [table:take]{n:3} >> [limbs:show_map]{markers: "$items"}
+      (verb 마다 _prev_result 소비를 붙이면 F6 비대칭이 재생산된다 — 규약은 언어에 한 번.)
+    - 상한 ITEMS_BIND_CAP 초과는 침묵 절단 대신 정직 거절: 앞에 take 를 끼우라고 안내.
+    - ★파서의 $var 할당과 공존: `$items = ...` 로 직접 할당하면 파서 치환이 먼저라
+      여기 도달하지 않는다 — $items 는 예약어로 쓰지 않기를 권장(가이드 명기).
+
+    반환: (tool_input, error_str|None) — 참조가 없으면 원본 그대로, 바인딩 실패는 정직 에러.
+    """
+    params = tool_input.get("params")
+    if not isinstance(params, dict):
+        return tool_input, None
+    refs = {k: m for k, v in params.items()
+            if isinstance(v, str) and (m := _ITEMS_REF.match(v.strip()))}
+    if not refs:
+        return tool_input, None
+
+    # 이전 결과에서 items 통화 추출 (prev_result 는 _to_prev_currency 가 이미 items 파생을 마친 JSON)
+    items = None
+    s = (prev_result or "").strip()
+    if s:
+        try:
+            obj = json.loads(s)
+        except Exception:
+            obj = None
+        if isinstance(obj, list):
+            items = obj
+        elif isinstance(obj, dict) and isinstance(obj.get("items"), list):
+            items = obj["items"]
+    if items is None:
+        return tool_input, ("$items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. "
+                            "앞 액션이 통화를 내는 생산자/변환자인지 확인하세요.")
+    if len(items) > ITEMS_BIND_CAP:
+        return tool_input, (f"$items 바인딩 거절: 행 {len(items)}개 — 상한 {ITEMS_BIND_CAP}. "
+                            f"앞에 [table:take]{{n: ...}} 또는 filter 로 줄여 주세요(침묵 절단 금지).")
+
+    out = dict(tool_input)
+    out["params"] = dict(params)
+    for key, m in refs.items():
+        field = m.group(1)
+        if field:
+            missing = [1 for r in items if not (isinstance(r, dict) and field in r)]
+            if items and len(missing) == len(items):
+                return tool_input, (f"$items.{field} 바인딩 실패: '{field}' 필드가 어느 행에도 없습니다. "
+                                    f"실제 필드: {sorted(items[0].keys()) if isinstance(items[0], dict) else '비-dict 행'}")
+            out["params"][key] = [r.get(field) for r in items if isinstance(r, dict)]
+        else:
+            out["params"][key] = items
+    return out, None
 
 
 def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:
@@ -855,12 +1005,19 @@ def list_workflows() -> List[Dict]:
             })
             continue
         steps = data.get("steps", []) or data.get("pipeline") or []
+        # ★B1 동형: steps 가 문자열(저장 원문)이면 len()이 글자 수가 된다 — 목록에서
+        # "스텝 121개"로 보이는 오표시 방지. 문장 하나 = 스텝 하나로 센다.
+        if isinstance(steps, str):
+            steps = [steps] if steps.strip() else []
+        raw_steps = data.get("steps", []) or []
+        if isinstance(raw_steps, str):
+            raw_steps = [raw_steps] if raw_steps.strip() else []
         pf = preflight_sentence(steps)
         entry = {
             "id": f.stem,
             "name": data.get("name", f.stem),
             "description": data.get("description", ""),
-            "steps_count": len(data.get("steps", []) or []),
+            "steps_count": len(raw_steps),
             "file": str(f),
             "runnable": pf["runnable"],
         }

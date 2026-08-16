@@ -690,7 +690,10 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope) -> 
 
     raw_path = _get_path(tool_input)
     if not raw_path:
-        return json.dumps({"success": False, "error": "출력 파일 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
+        # path 생략 = 기본 경로 생성 (chart·document 와 같은 규약 — F4, 2026-08-16 상상훈련.
+        # emitter 셋 중 spreadsheet 만 path 필수 거절이라 파이프 종착이 비대칭이었다).
+        from datetime import datetime as _dt
+        raw_path = f"spreadsheet_{_dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
     if not raw_path.lower().endswith((".xlsx", ".xlsm")):
         raw_path += ".xlsx"
     path = os.path.join(project_path, raw_path)

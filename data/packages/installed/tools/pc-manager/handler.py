@@ -297,6 +297,20 @@ def _host_status(tool_input: dict) -> str:
             "load_avg": [round(x, 2) for x in la] if la else None,
             "process_count": len(psutil.pids()),
         }
+        # F8-host (2026-08-16 5회차): 스냅샷 1행 items 병기(quote 선례 동형) — 없으면
+        # `[sense:host] & [sense:stock]…>> union` 류 병렬 결합이 통화 층에서 막힌다.
+        # 중첩(memory/disk)은 평평한 수치 칸으로 펴서 행에 담는다(파이프가 물 수 있게).
+        result["items"] = [{
+            "title": result["body"],                      # 칸 규약 1
+            "cpu_percent": result["cpu_percent"],
+            "memory_percent": vm.percent,
+            "memory_used_gb": round(vm.used / 1e9, 1),
+            "disk_percent": du.percent,
+            "disk_free_gb": round(du.free / 1e9, 1),
+            "battery_percent": (bat or {}).get("percent"),
+            "uptime_hours": uptime_h,
+            "process_count": result["process_count"],
+        }]
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"success": False, "error": f"host status 실패: {e}"}, ensure_ascii=False)

@@ -123,9 +123,16 @@ def _execute_list_project_agents(tool_input: dict) -> str:
                 print(f"[list_project_agents] {project_dir.name} 파싱 오류: {e}")
                 continue
 
+        # F8-agents (2026-08-16 6회차): 중첩 projects[{agents:[...]}] 만 있으면 take/filter 가
+        # 못 문다 — 평평한 에이전트 행을 items 로 병기(원형 projects 보존).
+        flat = [{"project": p["project_id"], "id": a.get("id"),
+                 "name": a.get("name"), "role_description": a.get("role_description", "")}
+                for p in result for a in p["agents"]]
         return json.dumps({
             "success": True,
             "projects": result,
+            "items": flat,
+            "count": len(flat),
             "total_projects": len(result),
             "total_agents": sum(len(p["agents"]) for p in result)
         }, ensure_ascii=False, indent=2)

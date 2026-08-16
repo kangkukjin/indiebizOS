@@ -160,6 +160,7 @@
     "self:cctv": "기기 의존(카메라 연결)",
     "self:fill": "템플릿 문서 경로 인자 필요(고정 fixture 부적합)",
     "self:goal#attempts": "task_id 필요 — 고정 fixture 부적합",
+    "self:goal#delete": "goal_id 필요 + 종결 상태 전제 — 고정 fixture 부적합",
     "self:goal#status": "goal_id 필요(list 결과의 id) — 고정 fixture 부적합",
     "self:ledger#add_image": "item_id + 실파일 경로 필요 — 고정 fixture 부적합",
     "self:ledger#delete": "삭제 대상 필요 — 고정 fixture 부적합",

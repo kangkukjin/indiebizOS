@@ -169,18 +169,28 @@ def _article_to_item(a):
     img = a.get("representativeImgUrl")
     if img and img.startswith("/"):
         img = "https://landthumb-phinf.pstatic.net" + img
-    return {
+    # F1-naver (2026-08-16 5회차): 단지명·가격이 title/meta 텍스트에만 접혀
+    # join(단지명)·가격 정렬이 원리적으로 불가였다 — 파이프가 무는 칸을 병기(원명 보존).
+    deposit_man = _prc_to_man(a.get("dealOrWarrantPrc"))
+    rent_man = _prc_to_man(a.get("rentPrc"))
+    out = {
         "title": title,
+        "name": name,                       # 단지/건물명 (동·표기 없는 순수명 — join 축)
         "meta": " · ".join(p for p in meta_parts if p),
         "summary": summary[:120],
         "url": f"https://m.land.naver.com/article/info/{a.get('articleNo')}",
         "image": img,
         "lat": a.get("latitude"),
         "lng": a.get("longitude"),
-        "_deposit_man": _prc_to_man(a.get("dealOrWarrantPrc")),
-        "_rent_man": _prc_to_man(a.get("rentPrc")),
+        "_deposit_man": deposit_man,
+        "_rent_man": rent_man,
         "_trade": a.get("tradeTypeName"),
     }
+    if deposit_man is not None:
+        out["price"] = deposit_man * 10000  # 칸 규약 2: 원 단위 정수 (매매가·보증금)
+    if rent_man is not None:
+        out["rent"] = rent_man * 10000      # 월세 (원 단위)
+    return out
 
 
 def get_naver_listings(tool_input: dict):

@@ -1,7 +1,8 @@
 # 어휘 조합성 재점검 핸드오프 (2026-08-15)
 
 > **다음 세션 START HERE.** 1차 집행 완료(154→**151**, 커밋 `a38c2d8`) + 2차 집행 완료(151→**150** — §1b, 같은 날 후반).
-> 남은 것: **2c(blog→notebook)는 사용자 판정 대기**(§2c), 스위치화·휴면 후보는 계수 숙성(§3), 판정 대기 표(§4).
+> 남은 것: **2c(blog→notebook)는 기각 확정**(§2c), 스위치화·휴면 후보는 계수 숙성(§3), 판정 대기 표(§4).
+> **★08-16 상상 훈련 신설·1회차 완료(§7)** — 미조합 목록=메뉴로 조합 훈련. 발견: G1 통화→param 바인딩 규약 부재(최대)·G2 schedule.do 검수 사각·F1 records/표형 칸 규격·F2 validate param 이름 미검사. **G1·G2·F1=사용자 판정 대기.**
 > 자매 문서: `VOCAB_DEDUP_HANDOFF.md`(압축 전사·계수 인프라 — §(7)에 1차 실행 기록), 감사 원본 보고서는 에피소드 로그(2026-08-15, 전수 감사 세션).
 
 ---
@@ -159,3 +160,103 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 # 라이브: /packages/reload → /ibl/execute 신어 실측 → /ibl/validate 은퇴어 반려 확인
 # 코퍼스: 이관 + 시드(.venv) + rebuild_index + 연상 실측 / 배포 후 grep: 액션명 + tool 이름 둘 다
 ```
+
+## 7. 상상 훈련 (2026-08-16 신설 — 1회차 실행 기록)
+
+> **취지**(vision.md 언어 철학 §상상 훈련): 실제 명령의 분포는 현 표현력에 검열되어 있다 — 관찰만 따라가면 닫힌 고리.
+> 운동선수의 심상 훈련처럼 **복잡한 과제를 상상 → IBL 문장을 실제 조합 → dry-run/실행으로 검증 → 갭의 원장이 산출물**.
+> 관문 2: ①문법은 상상으로 벼리고, 어휘는 현실이 인준(상상 갭=후보일 뿐) ②해마 시드는 **실행 검증 통과 문장만**.
+
+### 절차 — **정본 = `data/guides/imagination_training.md`** (2026-08-16 가이드화, guide_db 등록 `id: imagination_training`)
+> 요약: `--list-never` 메뉴 → 도메인 접지 과제 상상(6문형 커버) → 조합 → validate 전수 → 부작용 없는 것만 실측(스크래치 원상복구) → 3분류(깨끗/꼬임/불가) → **결과보고서 의무**(`outputs/imagination_training/YYYY-MM-DD_N회차.md` — 갭 원장에 최소 재현·실측 증거·수리성/판정성 구분) → §7에 갭 요약 누적. 훈련 세션은 수리·어휘 신설을 직접 하지 않는다(보고서→대장장이).
+> 1회차 보고서: `outputs/imagination_training/2026-08-16_1회차.md`
+
+### 1회차 원장 (과제 10건 — validate 10/10 통과, 실행 프로브 4건)
+
+**갭 (언어 개정 후보 — 사용자 판정 대상):**
+- **G1. 통화→파라미터 바인딩 규약 부재** (2건 실측으로 수렴, 이번 훈련 최대 발견):
+  - `$변수.field` 필드 추출 없음 — `$위치 = [sense:here]` 후 `{lat: "$위치.lat"}` 는 **전체 JSON 통짜 치환 + `.lat` 리터럴 잔존**(실측). 필드 추출은 each 의 `$it.field` 뿐.
+  - 산출물→축적 미개통 — `[table:document]` 가 `{path:...}` 를 정직하게 내는데(실측), 파이프 후속 `[self:notebook]{op:"add"}` 는 그 path 를 안 받고 "path 또는 text 필요" 거절(실측). items→items 변환자 체인만 흐르고, **통화→param 주입은 규약이 없어 핸들러 재량**.
+  - 기존 "남은 판정: 통화 조건(언어 개정급)"과 같은 계열 — 함께 판정할 것.
+- **G2. 시간 문형의 검수 사각**: validate 가 `each.do` 는 펼쳐 `[each 속]` 으로 보여주는데(08-16 수리), `schedule.do`(pipeline) 는 **안 펼침**(step 1개, 실측). 시간 문형 조합 0회와 정합 — 고유수용감각 없는 곳은 훈련이 안 된다. → 검수기 재귀를 M1 `do` 통일 자리 전부(schedule/trigger/workflow/manage_events/delegate)로 확장.
+
+**마찰 (통화 규격):**
+- **F1. records형 vs 표형 칸 규격 불일치**: 다나와(name/price 수치) & 번개장터(title/meta — 가격이 "80만원 · 지역" **텍스트**) union 은 기계적으로 성공하나 sort/비교가 반쪽(실측). rename 으로 못 고침 — **파생 열(derive) 판정에 구체 증거 1건 추가** 또는 sense:used 계열 수치 필드 정비.
+- **F2. validate 가 param 이름을 검사 안 함**: `notebook:` (정답 `name:`) 오타 문장을 validate 가 ✓ 통과, 실행 오류도 `"'' 노트북이 없습니다"` (틀린 param 명 지목 없음, _param_hint 는 사용법 전문 재인쇄뿐). **틀린 근육 명령이 조용히 무시되는 팔** — validate 에 스키마 기반 param 대조 경고 후보. (★이 발견 자체가 교훈: 처음엔 "파이프 속 param 소실 결함"으로 오진 → 단독 호출 격리로 반증. 결함 단정 전 격리 필수.)
+
+**깨끗한 조합 (실행까지 통과):** union 5단 체인(T2a — F1 제약부), rename→변수→join(T2b, validate). **시드는 보류** — F1/G1 판정 후 (관문 ②).
+
+**미실측 (validate 만 통과 — 부작용이라 실행 보류):** 이웃 팬아웃 each+channel_send / crypto 조건 알림 / schedule 속 파이프+each(따옴표 2중 중첩 — 시간 문형 실전 시 마찰 예상) / cctv each capture / freelance→spreadsheet / finance groupby→chart.
+
+### 2회차 (2026-08-16 — 보고서 `outputs/imagination_training/2026-08-16_2회차.md`)
+- 승격 실측 P1~P3 + 새 과제 7 + 격리 9. 성공 2(N6 변수+union{left,right} 라이브 / N10 ?? 폴백 라이브) — 시드 후보.
+- **신규**: F3 파이프에 요약 통화가 흐름(비-_raw 기본 — 수치 칸 소실, 자동 _raw 후보) · F4 emitter 기본 path 비대칭(spreadsheet만 필수) · F5 코퍼스 param 드리프트(navigate_route `to:` 죽은 이름 — 가드 구멍 조사 동반).
+- **갱신**: G1 증거 ③(show_map 파이프 items 미소비) · G2 정밀화(goal.strategy는 펼쳐짐 — 사각은 do-나르는 액션들만) · F1 증거 추가(freelance 평점=meta 텍스트 · 제목 칸 name/title 계열 비통일).
+- 긍정: filter/sort 오류문이 "사용 가능한 필드 목록" 동반(침묵 실패 수리의 열매), each $it 치환·폴백·이항 문법 3종 라이브 실증.
+
+### ✅ 통합 수리 집행 완료 (2026-08-16 같은 날 — 사용자 판정 7건 전부 승인 → 7/7 라이브 검증)
+> 상세=2회차 보고서 부록. **R6** $변수.field 치환(파서+실행기, 정직 실패) / **R1** 검수 재귀 do-액션 5종 확장 / **R2** param 소프트 경고(코퍼스=관용 사전 — 스키마 단독은 94키 오탐 측정으로 기각) / **R5** filter 원천 행 파고들기(★F3 재진단: 자동 _raw 는 이미 있었음 — 기전=카드 투영 vs 원천 행) / **R3** spreadsheet 기본 path / **R4** navigate_route origin 기본값=몸 위치(★F5 재진단: to 는 읽히고 있었음 — 코퍼스 수술 불요) / **R7** 칸 규약 병기(price·rating·title + ibl.md 명문화). build --check·P1~P19 전부 통과. 막혔던 T4·T6·T8·N9·N4·P2·T2a 전부 개통 재검.
+
+### 3회차 (2026-08-16 — 보고서 `outputs/imagination_training/2026-08-16_3회차.md`)
+- **중점=시간 문형**(행동 조합 0). 과제 11 · validate **11/11** · 실행 프로브 13(격리 6). 스크래치 전량 원상복구(사용자 트리거 3건 무손상).
+- **★B1 신규·최중대(결함)**: `[self:workflow]` 의 `do` 가 **문자열이면 글자 단위로 쪼개져** run 실패 — `steps_total` 이 글자 수와 정확히 일치(11/27/73 세 케이스), **배열이면 정상**. 저장은 멀쩡(get 이 원문 보존), 깨진 곳은 읽는 쪽. `target_description` 은 문자열을 명시 허용 = **문서가 약속한 입력이 코드에서 깨짐**. 아무도 못 밟은 이유=저장본 0건(닫힌 고리의 실례). → 수리성(str 이면 `[do]` 로 감싸기).
+- **★F6 신규(마찰)**: 변환자가 보는 층이 갈림 — **filter·sort=원천 행 / select·dedup=카드 투영**. 기전=응답이 `data`(원천)+`items`(카드) 2층 동시 운반, 2회차 R5 가 filter·sort 에만 적용. filter 를 먼저 걸면 items 가 원천 기준 재구성되어 뒤의 select 통과(격리 C·F). → 수리성(R5 동형 확장) + **판정성(정본 층 단일화 = 언어 개정급)**.
+- **F7 신규(경미)**: `/ibl/execute` 봉투 비대칭 — 단일 액션=핸들러 원문, 파이프=`final_result` 래퍼. 이번 회차에 훈련자가 2회 오독(격리로 반증) = §3-5 오진 격리 의무의 3회차 실증.
+- **G1-③ 재현**: `restaurant >> take >> show_map` 이 "위치 정보가 필요합니다" 로 거절 — 판정 후보에 증거 1건 추가.
+- **F1 확장(증거 3)**: legal 시행일이 `meta` 텍스트에 묻힘(정렬 불가) · kosis 원천 열이 카드로 뭉개짐 · performance/exhibit union 은 21열 패딩이나 같은 개념이 다른 이름(`prfpdfrom/prfpdto` vs `startDate/endDate`). → R7 칸 규약 확장 대상=**날짜(시작/종료)·기관/지역**.
+- **긍정(이전 수리 검증)**: G2 해소 실증 — trigger `do` 재귀 검수가 **파이프 3단+`each.do` 중첩까지 펼침**(T2 steps 5). cron 해소 정확(`0 7 * * 1`→weekly/월/07:00). pipeline 원문이 중첩 따옴표까지 무손상(1회차 우려 마찰 미발생). select/dedup 오류문이 실제 열 목록 동반 → F6 을 한 번에 격리시킴.
+
+### ✅ 3회차 판정·수리 집행 완료 (2026-08-16 같은 날 — 사용자 판정 4건 승인 → 전부 라이브 검증)
+> 원칙 하나로 수렴: **구제를 개별 자리가 아니라 계약 입구에** (B1·F6·G1 셋 다 이 부류).
+- **B1 수리**: `run` 진입이 아니라 **`execute_pipeline` 입구**에서 `steps` 문자열을 `[steps]` 로 정규화(관문 `any(isinstance(s,str))` 을 str 자체가 iterable 로 통과하던 것 — "관문<언어" 부류) + `list_workflows` `steps_count` 동형(글자 수 오표시). 라이브: save(문자열 do)→run `steps_total` 11→**1**·결과 정상.
+- **F6 수리=(c) 입구 접기**: (a)R5 복사도 (b)정본 층 단일화도 아닌 **`_get_items_for_fields(prev, field_hint)` 신설** — 파고들기를 계약 입구로 접어 filter·sort·select·dedup 이 상속, 새 verb 는 자동 상속(비대칭 생산기 제거). "필드가 items 에 없을 때만" 규약 유지. 라이브: `kosis >> select{org_id}` 통과·순서 무관. (b)정본 층 단일화는 불채택 — 병존 유지.
+- **F1 판정: 날짜+위치 채택 / ★기관 기각**(발행기관·소관부처·회신기관=다른 명사, 표준 칸 강제="명사의 자리" 위반. 위치는 시간과 같은 **몸의 축**이라 채택 — here/show_map 정합). 규약: 단일 시점=`date`, 기간=`start_date`/`end_date`(전부 YYYY-MM-DD 병기·원명 보존), 좌표=`lat`/`lng`. 집행: legal `date_keys`(시행일자 우선)+culture 공연/전시 `_attach_period` — 라이브: legal 시행일 정렬·performance start_date 정렬 개통. ibl.md 칸 규약 3·4·5항 명문화.
+- **G1-③ 판정=`$items` 집합 참조**(핸들러별 파이프 수용 규약 대신 **언어에 한 번**): param 값 `"$items"`/`"$items.필드"` 를 실행 시점에 **값으로** 바인딩(텍스트 치환 금지=shell-IBL 은퇴 사유 회피), 상한 500행(초과=take 안내 거절), items 부재·없는 필드=정직 에러. `$it`(행)의 짝=집합. + show_map 자기 계약 완결(markers-only 시 첫 마커=중심·마커 정규화·좌표 없는 행 수 정직 신고). 라이브: `restaurant >> take{3} >> show_map{markers:"$items"}` = 마커 3개 지도 1장. 문법 등재: 12_ibl_only.md·ibl.md($items 는 변수 할당 예약).
+- 검증: build --check 전 가드·P1~P19 전부 통과·라이브 5종(B1 왕복·kosis select·legal date 정렬·performance 기간·$items 지도)·스크래치 원상복구.
+
+### 4회차 (2026-08-16 저녁 — 보고서 `outputs/imagination_training/2026-08-16_4회차.md`)
+- **중점=오후 수리 4건 개통 재검**. 과제 13 · validate **13/13** · 실행 프로브 12+격리 6. 6문형 전부 커버. 스크래치 전량 원상복구(사용자 트리거 3·워크플로 1 무손상).
+- **★갭 원장의 이동 실측(수리됨 확인)**: B1→**T4 축적 종단 완결**(save 병렬 합성 문자열→run 실데이터→트리거가 저장본 참조) / F6→kosis dedup+select 개통(3회차 꼬임→깨끗) / F1→공연·전시 **교차 계열 start_date 정렬**(N5 꼬임→깨끗) / $items→둘째 도메인(직방 지도)+`.title` 필드 추출. **goal 이월 프로브**: 등록 즉시 라운드 시작 우려=반증(pending 대기), max_rounds:1·kill 왕복 정상.
+- **F8 신규(수리성)**: crypto 가 items 미방출(`data` 단일 dict) — `crypto & crypto >> union` 정직 거절. stock quote 는 1행 items 병기(P4/P11) = 같은 "시세"의 비대칭. 수리=stock 선례 동형 병기.
+- **F1-title 증거 2 추가**: performance `prfnm`·commercial `name` — R7 title 병기 미적용 소스. union 후 교차 dedup 불가 실증.
+- **F9 신규(경미)**: goal list 기본=cancelled 포함(desc "활성/대기 중"과 드리프트, status:"active" 필터는 정상) + goal 정리 op 부재(스크래치 복구=DB 직접 삭제뿐) — ①desc/기본필터=수리성 ②정리 op=판정성.
+- **F10 신규(개선)**: `each` side_effect:true 고정(의도된 보수 — src 주석 실존)인데 검수기가 do 를 펼치는 지금은 "펼친 속 실제 부작용의 OR"로 정밀화 가능. 조회-only each 가 dry-run 초록을 받게.
+- **F7 증거 추가**: 블록(if/else)·workflow run 봉투=핸들러 원문 — 훈련자 오독 1회(W3), 격리로 반증(조건 평가는 정확).
+- 관찰(기록만): `$items.field`→문자열 param=JSON 배열 직렬화 착지(정직). "줄바꿈 텍스트" 조판 변환자 부재 — 어휘 후보 아님, 반복 관찰 대상.
+- 시드 후보 10건(표는 보고서) — 3회차 대기분과 **판정 후 일괄**.
+
+### ✅ 4회차 수리 집행 완료 (2026-08-16 같은 날 — 사용자 승인 → 전부 라이브 검증)
+- **F8**: `_attach_quote_items` 가격 게이트를 current_price_usd/krw 로 확장 + crypto_price 경로에 부착(선례 함수 재사용) — 라이브: `crypto & crypto >> union` 2행 + **`crypto & stock >> union` 교차 자산 한 표** 개통.
+- **F1-title**: performance(prfnm)·commercial(name)에 title 병기(exhibit 는 이미 보유·수리 불요 실측) — 라이브: `union >> dedup{by:"title"}` 교차 계열 개통. ★잔여 한계(기록): "죽여주는 이야기 [청주]" vs "[청주] 죽여주는 이야기"처럼 **어순이 다른 표기 변형**은 기계 dedup 밖(의미 동일성 판단 필요 — 갭 아님·관찰).
+- **F9**: ①list desc 정직화("전체 — 종결 포함, status 필터") ②**delete op 신설**(`[self:goal]{op:"delete"}` — 종결 상태만, 살아있으면 "kill 먼저" 명시 거절. conversation_db.delete_goal + _goal_delete + goal_op 라우팅 + yaml ops + goal.md·교재) — 라이브: 거절→kill→delete→원장 깨끗 왕복. ★가드 실증: op 설명 80자 제한이 빌드에서 잡음.
+- **F10**: 검수기 each 라벨 정밀화 — do 를 펼쳐 **속이 전부 read·유효하면 컨테이너도 read**(속을 못 읽으면 보수 유지·trigger/schedule/workflow 는 등록 자체가 부작용이라 제외) — 라이브 5케이스: 순수 sense each=False·notify each=True·빈 do=True·trigger=True·조회 파이프=False. 조회-only each 가 이제 dry-run 초록.
+- 검증: build+--check 전 가드·P1~P19·라이브 종단 전부. 스크래치 goal 2건(셸 오류로 이중 등록된 것 포함) delete op 로 정리 — **새 op 가 자기 검증의 청소 도구가 됐다**.
+
+### 5회차 (2026-08-16 밤 — 보고서 `outputs/imagination_training/2026-08-16_5회차.md`, 훈련+수리 통합 세션·사용자 지시)
+- **중점=4회차 수리 재검 + table 미조합 편입**. 과제 13 · validate 13/13 · 실행 프로브 15+격리 5. 스크래치 0(전 과제 읽기 전용). **미조합 편입 9종**: merge·flatten·structure(table 5종 중 4 개통)+feed·startup·ledger·classic·radio·neighbor.
+- **개통 실증**: F1-title(T2 — union→dedup{title}→sort 7스텝 완주) / F8(T1 통화 층) / F10(T5 — each+crawl 이 dry-run **read 초록**) / **flatten↔structure 합성**(T13 — feed→each crawl→flatten→structure 5단, 문서 IR↔행 통화 왕복 = closure 실증).
+- **★같은 세션 수리 6건 전부 라이브 검증**: ①**F1-스냅샷** `_attach_quote_items` canonical 병기(current_price·change_percent·name/title) → 비트코인·코스피가 한 표 같은 칸 ②**F1-naver** `_article_to_item` 에 name(단지명)·price(원)·rent 병기 → **실거래-호가 join 개통**(가경자이: 체결 6.5억 vs 호가 7억/6.3억 — 교재의 rename+변수+join 예문이 처음 실전 완주) ③**F1-molit** 거래금액(콤마 문자열·만원)에 price(원) 병기 → 수치 정렬 ④**F1-date** startup end_date 병기 → 마감순 정렬 ⑤**F8-host** status 1행 items 병기(중첩→평평 수치 칸) ⑥**F2-op** 검수기 op 값 소프트 경고(`ops.values` 대조 — radio search 오호출이 dry-run 에서 미리 소리남).
+- **판정성 잔존**: world 통화 층(중첩 복합을 어느 층에서 행으로 볼지) · 발신 문형 실측 방법.
+- 관찰: T4 의 0행 join=결함 아닌 데이터 현실(molit 최근 체결 단지와 naver 현재 매물 단지의 표본 교집합 없음 — 격리로 확정, 단지 직조회로 양성 증명) / 훈련자 오진 1(sense:radio vs limbs:radio 노드 축 — 실행 오류문의 op 목록이 격리를 도움).
+- ★함정 재확인: 패키지 서브모듈(tool_naver·tool_apt_trade_range)은 /packages/reload 밖 — backend touch 재기동 필요(이번에도 실측).
+
+### ✅ 잔여 판정 2건 확정 (2026-08-16 — 사용자가 장기 관점 선택을 위임)
+- **world 통화 층**: snapshot=**접지 않음**(정체=브리핑 한 장 — 목록 질의는 전용 감각이 이미 있고 억지 1행은 거짓 통화) / **trend=items 병기**(일별 시계열=자연 행 — date+경제 지표 평평한 수치 칸, news·중첩은 원형 trend 에 비파괴 보존). 라이브 검증(행은 서나 오늘 스냅샷 데이터 얇음 — Pulse DB 현실, 기전은 정상). "지난 일주일 경제 흐름 차트로"가 파이프에 섬.
+- **발신 문형 실측**: **어휘 신설 없음**(훈련 도구를 위해 언어를 늘리지 않는다) — `[self:notify_user]` 자기 수신 1건까지 실측 허용+알림함 REST 정리, `others:channel_send` 등 외부 발신=항상 검수만(이웃에게 닿는 되돌릴 수 없는 행동). 규약=imagination_training.md §3-5 명시.
+
+### 시드·재학습 집행 (2026-08-16 밤 — 사용자 승인)
+- **시드 31건 입고**(3·4·5회차 누적 — add_examples_batch 단일 경로·`_load_model_sync` 선행·source=manual_seed·category=imagination_training_r345). 코퍼스 3,243→**3,274**. ★3회차 시드 표의 `[sense:realty]{op:'query'}` 오류는 입고 시 교정(realty 에 op 없음).
+- 입고 직후 프로브: 조합 시드 2/5 직행(트리거 참조·ledger), 3/5 는 옛 단발이 이김 → 재학습 흡수 대상(예상 상태).
+- ★새벽(05:09) 재학습의 epoch_1~9 잔재(9×423MB≈3.8GB)가 라이브 모델 폴더에 남아 있던 것 발견·정리(절차의 "epoch_* 정리" 단계 누락 — 다음 재학습 시 주의).
+- **재학습 완료·채택**(로컬 M4, epoch 5 최적·검증 0.884·조기종료): 사과대사과 게이트 — aggregate 동급(desc-T5 +0.4p·code-T5 +0.0·desc-T1 -1.1p) + **신어휘 프로브 33→35/36(+2: "웹에서 검색해줘"·"해커뉴스" — 잃은 프로브 0)** → 채택. rebuild_index 3,275·명시 재기동·워밍업·keeper 재개·P1~P19 통과. 라이브 translate: "저장한 브리핑 매일 아침"→schedule+workflow run 참조 / "비트코인·코스피 비교"→`&`+table 조합 / "공연·전시 시작일 순"→union+sort — **조합 문형이 번역기에 흡수됨**(세부 param 드리프트는 조종실 dry-run 자가교정 자리). 백업=`ibl_embedding.bak.20260816_223052`(롤백 경로).
+- ★재기동 함정 실측 2: ①구 리스너 해제 전 재바인딩=Address already in use(2초 대기 부족 — 죽음 확인 후 기동) ②감시 스크립트의 `pgrep -f`가 패턴 문자열을 품은 자기 자신을 매칭해 종료 오탐(모니터 행).
+- **다음**: 지표 재측정은 **실사용 축적 후**(행동 지표=증류만 먹으므로 시드로는 안 움직임 — 새 번역기가 조합을 생산하기 시작했으니 몇 주 관찰) · 6회차는 F8/F1-title 재검 과제 + world trend 차트(Pulse 데이터 두터워진 뒤).
+
+### 6회차 (2026-08-16 밤 — 보고서 `outputs/imagination_training/2026-08-16_6회차.md`, 훈련+수리 통합)
+- **중점=미실측 문형 2 + 발신 규약 첫 적용 + 편입 9**. 과제 12 · 실행 14+격리 3 · 스크래치 전량 원상복구(memory 2·알림 1·파일 1).
+- **문형 개통**: `??` 폴백 첫 실측(1차 성공 경로) · **case 범위 매칭**("0~50" 적중 분기) · **발신 실측 왕복**(조건+notify 실발사→알림함 REST 정리 — 판정 규약이 실제로 작동, 어휘 신설 0).
+- **편입 9**: photo($items 지도 셋째 소비자)·memory·entity(qid)·devdocs·youtube·storage·cctv·agents·download.
+- **★같은 세션 수리 5건 전부 라이브 검증**: **B2** memory search 카드에 memory_id 병기(desc 계약 "search 결과의 id"가 끊겨 있었음 — read/delete 사슬 복원) / **F1-위치** cctv `lon`→`lng` 병기(규약 첫 위반 실측, show_map 직결 개통) / **F8-agents** 평평한 행 items 병기(중첩 projects만이었음) / **F8-storage** volumes=items 병기(볼륨별 정렬 개통) / **B3** download UA 부재 403(한겨레 실측)→브라우저 UA+스트리밍 저장.
+- 검수기가 두 번 값을 함(유령 액션·오호출 dry-run 차단 — F2-op 수리의 열매). P1~P19 통과·keeper 규약 준수.
+- 시드 후보 10건 — 다음 배치(어젯밤 31건 직후라 숙성 후 일괄).
+- 잔여 관찰: `??` **1차 실패 유도 실측**(폴백 발동 경로) · world trend 차트(Pulse 축적 후).

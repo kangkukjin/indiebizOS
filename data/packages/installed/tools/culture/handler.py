@@ -44,6 +44,30 @@ def _normalize(obj):
 
 # ── 단일 액션 op 함수 (2026-08-05 진짜 디스패처 전환 — 본문은 옛 체인 그대로) ──
 
+def _norm_date(v) -> str:
+    """'2026.08.01' / '20260801' / '2026-08-01' → 'YYYY-MM-DD'. 못 알아보면 빈 문자열.
+    ★칸 규약 F1(ibl.md, 2026-08-16 상상훈련): 기간은 start_date/end_date 로 병기 —
+    공연(prfpdfrom/prfpdto)과 전시(startDate/endDate)가 같은 개념을 다른 이름으로 내
+    union 이 의미 정합을 잃던 것(15건 21열 패딩)의 해소. native 원명은 그대로 둔다(병기)."""
+    s = str(v or "").strip().replace(".", "").replace("-", "").replace("/", "")
+    if len(s) == 8 and s.isdigit():
+        return f"{s[:4]}-{s[4:6]}-{s[6:]}"
+    return ""
+
+
+def _attach_period(items, from_key: str, to_key: str):
+    """items 행에 start_date/end_date 칸 병기 (원명 보존·비파괴)."""
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        sd = _norm_date(it.get(from_key))
+        ed = _norm_date(it.get(to_key))
+        if sd and "start_date" not in it:
+            it["start_date"] = sd
+        if ed and "end_date" not in it:
+            it["end_date"] = ed
+
+
 def _perf_search(ti: dict):
     """[sense:performance]{op:search} — KOPIS 공연 검색."""
     from tool_kopis import search_by_keyword
@@ -57,6 +81,12 @@ def _perf_search(ti: dict):
     # 단일 통화 — native data 목록을 items로 노출.
     if isinstance(result, dict) and isinstance(result.get("data"), list):
         result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
+        _attach_period(result["items"], "prfpdfrom", "prfpdto")   # 칸 규약 F1
+        # 칸 규약 1(title 병기, F1-title 4회차): prfnm 원명 보존 + title 추가 — 전시(title)와
+        # union 후 dedup{by:"title"} 이 서게(4회차 W7 에서 같은 공연이 교차 중복돼도 못 접었다).
+        for _it in result["items"]:
+            if isinstance(_it, dict) and _it.get("prfnm") and "title" not in _it:
+                _it["title"] = _it["prfnm"]
     return result
 
 
@@ -288,6 +318,7 @@ def execute(tool_input: dict, context) -> str:
             # 레코드 통화 부착(비파괴) — data 전시/행사목록을 records로.
             if isinstance(result, dict) and isinstance(result.get("data"), list):
                 result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)
+                _attach_period(result["items"], "startDate", "endDate")   # 칸 규약 F1 — 공연과 같은 칸
 
         else:
             return json.dumps({"success": False, "error": f"알 수 없는 도구: {tool_name}"}, ensure_ascii=False)

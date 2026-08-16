@@ -402,6 +402,10 @@ def get_summary_all() -> Dict:
         "total_file_count": total_files,
         "total_size_mb": round(total_size / (1024 * 1024), 2),
         "volumes": volumes,
+        # F8-storage (2026-08-16 6회차): 볼륨 행=자연 items — "볼륨별 용량 표로/정렬"이
+        # 파이프에 서게 병기(원형 volumes 보존).
+        "items": volumes,
+        "count": len(volumes),
     }
 
 

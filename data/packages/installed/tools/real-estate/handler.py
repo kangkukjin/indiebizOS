@@ -251,6 +251,11 @@ def execute(tool_input: dict, context):
         # 단일 통화 items = native 점포 dict(name/category/address/lat/lng — markers가 좌표 직독).
         if isinstance(result, dict) and isinstance(result.get("data"), list):
             result["items"] = result.pop("data")
+            # 칸 규약 1(title 병기, F1-title 2026-08-16 4회차): name 원명 보존 + title 추가 —
+            # 교차 계열 dedup/join 이 제목 한 축을 잡게(restaurant R7 선례 동형).
+            for _it in result["items"]:
+                if isinstance(_it, dict) and _it.get("name") and "title" not in _it:
+                    _it["title"] = _it["name"]
         return result
 
     else:

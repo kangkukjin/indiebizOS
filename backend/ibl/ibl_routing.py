@@ -492,12 +492,13 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             "list": "list_goals",
             "status": "get_goal_status",
             "kill": "kill_goal",
+            "delete": "delete_goal",   # F9-② (2026-08-16): 종결 목표 원장 정리
             "log": "log_attempt",
             "attempts": "get_attempts",
         }
         target_func = op_map.get(op)
         if not target_func:
-            return {"success": False, "error": "op 파라미터가 필요합니다. (list|status|kill|log|attempts)"}
+            return {"success": False, "error": "op 파라미터가 필요합니다. (list|status|kill|delete|log|attempts)"}
         return _route_system(target_func, params, project_path, agent_id=agent_id)
 
     # World Pulse: 세계 상태 감각 — 단일 액션 패턴: world {op: snapshot|trend|refresh}
@@ -527,6 +528,9 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "kill_goal":
         from ibl_engine import _goal_kill
         return _goal_kill(params.get("goal_id", ""), params, project_path)
+    elif func_name == "delete_goal":
+        from ibl_executors import _goal_delete
+        return _goal_delete(params.get("goal_id", ""), params, project_path)
 
     # Phase 26b: 시도 기록 (전략 전환 + 라운드 메모리)
     elif func_name == "log_attempt":

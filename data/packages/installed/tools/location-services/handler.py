@@ -309,6 +309,10 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
 
     # 단일 통화 — native 맛집 dict(name/category/address/phone/url/distance 등 풍부)를 items로.
     # (옛 records 5칸 변환은 distance/phone 등을 납작하게 버려 손실적이라 은퇴.) map_data는 별도 유지.
+    # 제목 칸 규약(F1, 2026-08-16 상상훈련): 계열 간 제목 칸이 name/title 로 갈리면
+    # 교차 each/join 이 매번 필드명 실측을 요구한다 — 표준 title 을 병기(native name 보존).
+    for r in results["combined"]:
+        r.setdefault("title", r.get("name", ""))
     results["items"] = results.pop("combined")
     results["count"] = len(results["items"])
     return results
@@ -631,21 +635,53 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
         else:
             return {"success": False, "error": f"'{query}' 장소를 찾을 수 없습니다."}
 
+    # markers 만으로도 지도가 서게 — 중심 미지정이면 첫 유효 마커를 중심으로 (2026-08-16 G1-③:
+    # 파이프 하류 `{markers: "$items"}` 호출의 자기 계약 완결. 좌표 없는 마커는 건너뛴다).
+    center_from_markers = False
+    if (center_lat is None or center_lng is None) and markers:
+        for mk in markers:
+            if isinstance(mk, dict) and mk.get("lat") is not None and mk.get("lng") is not None:
+                try:
+                    center_lat = float(mk["lat"])
+                    center_lng = float(mk["lng"])
+                    center_name = str(mk.get("name") or mk.get("title") or center_name)
+                    center_from_markers = True
+                    break
+                except (TypeError, ValueError):
+                    continue
+
     if center_lat is None or center_lng is None:
         return {"success": False, "error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
 
-    # 마커 목록 생성
-    all_markers = [{"name": center_name, "lat": center_lat, "lng": center_lng}]
-    if markers:
-        all_markers.extend(markers)
+    # 마커 정규화 — $items 통행(여분 필드·title 제목·문자열 좌표) 표준화. 좌표 없는 행은
+    # 지도에 설 수 없어 제외하되, 몇 개를 못 실었는지 정직하게 신고한다(침묵 탈락 금지).
+    norm_markers, dropped = [], 0
+    for mk in markers or []:
+        if not isinstance(mk, dict):
+            dropped += 1
+            continue
+        try:
+            norm_markers.append({
+                "name": str(mk.get("name") or mk.get("title") or ""),
+                "lat": float(mk["lat"]), "lng": float(mk["lng"]),
+            })
+        except (KeyError, TypeError, ValueError):
+            dropped += 1
+
+    # 마커 목록 생성 (중심이 마커에서 나왔으면 같은 점을 이중 표기하지 않는다)
+    all_markers = [] if center_from_markers else [{"name": center_name, "lat": center_lat, "lng": center_lng}]
+    all_markers.extend(norm_markers)
 
     # 지도 데이터 생성 (표시 봉투 단일 빌더, #4)
     map_data = build_location_map(
         center={"lat": center_lat, "lng": center_lng, "name": center_name},
         markers=all_markers, zoom=zoom)
 
+    msg = f"'{center_name}' 위치 지도"
+    if dropped:
+        msg += f" (좌표 없는 항목 {dropped}개는 지도에 싣지 못함)"
     return {
-        "message": f"'{center_name}' 위치 지도",
+        "message": msg,
         "center": {"lat": center_lat, "lng": center_lng, "name": center_name},
         "map_data": map_data
     }
@@ -905,8 +941,29 @@ def execute(tool_input: dict, context) -> str:
                 origin = route_match.group(1).strip()
                 destination = route_match.group(2).strip()
 
-        if not origin or not destination:
-            return json.dumps({"success": False, "error": "출발지(origin)와 목적지(destination)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
+        # origin 기본값 = 이 몸의 선언 위치 (2026-08-16 상상훈련 F5 — "강남역까지"라는
+        # 의도는 출발지=지금 여기를 함의하는데 기본값이 없어 {to: ...} 단독 호출이
+        # 항상 실패했고, 코퍼스가 그 형태를 가르치고 있었다).
+        if destination and not origin:
+            try:
+                _bl_path = os.path.join(os.environ.get("INDIEBIZ_BASE", os.getcwd()), "data", "body_location.json")
+                if not os.path.exists(_bl_path):
+                    from runtime_utils import get_base_path
+                    _bl_path = os.path.join(str(get_base_path()), "data", "body_location.json")
+                with open(_bl_path, encoding="utf-8") as _f:
+                    _bl = json.load(_f)
+                if _bl.get("lng") is not None and _bl.get("lat") is not None:
+                    origin = f"{_bl['lng']},{_bl['lat']}"  # '경도,위도' 형식
+            except Exception:
+                pass
+
+        # 없는 것만 정확히 짚는다 — "둘 다 필요합니다"는 destination 만 준 호출에 거짓말이었다.
+        if not origin and not destination:
+            return json.dumps({"success": False, "error": "출발지(origin)와 목적지(destination 또는 to)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
+        if not destination:
+            return json.dumps({"success": False, "error": "목적지(destination 또는 to)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
+        if not origin:
+            return json.dumps({"success": False, "error": "출발지(origin)가 필요합니다 — 이 몸의 선언 위치(data/body_location.json)도 없어 기본값을 만들 수 없었습니다."}, ensure_ascii=False)
 
         result = kakao_navigation(
             origin=origin,

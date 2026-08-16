@@ -122,6 +122,10 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
   ```
   [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}
   ```
+- **집합 참조 `$items`** — `$it`(행 하나)의 짝. 파이프 다음 step 의 param **값**에 `"$items"`(전체 행 리스트) 또는 `"$items.필드"`(각 행의 그 필드만 모은 리스트)를 적으면 이전 결과의 items 가 통째로 그 param 에 바인딩된다 — "각각"이 아니라 **"한 번에 전부"**(each 로 돌리면 지도가 3장, $items 면 마커 3개 달린 지도 1장). 상한 500행(넘으면 앞에 take 로 줄이라는 거절). ★`$items` 를 변수 이름으로 할당하지 말 것(예약).
+  ```
+  [sense:restaurant]{query: "청주 맛집"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}
+  ```
 
 통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet` · `structure`(원본 콘텐츠→문서 IR 정리, 렌더 전 중간 단계).
 
@@ -161,7 +165,7 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 ```
 
 - **문법은 외워서 쓰지 말 것**: goal 블록을 작성하기 전에 반드시 `read_guide`로 **goal 가이드**("목표 선언", "반복 실행")를 읽어라. 필수 안전장치(`max_rounds`/`max_cost`) 등 규약이 있다.
-- 진행 중인 목표의 관리(조회·중단·기록)는 카탈로그의 `[self:goal]{op: "list"|"status"|"kill"|"log"|"attempts"}` 로 한다.
+- 진행 중인 목표의 관리(조회·중단·정리·기록)는 카탈로그의 `[self:goal]{op: "list"|"status"|"kill"|"delete"|"log"|"attempts"}` 로 한다(delete=종결 상태만, 살아있으면 kill 먼저).
 
 ## ⚠️ 파이프라인 vs 에이전틱 사고 — 가장 중요한 원칙
 

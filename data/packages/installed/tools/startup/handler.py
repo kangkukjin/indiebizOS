@@ -33,12 +33,18 @@ def _biz_to_records(data: list) -> list:
         status = it.get("공고상태")
         if status:
             meta_parts.append(status)
-        records.append({
+        rec = {
             "title": title,
             "meta": " · ".join(x for x in meta_parts if x),
             "summary": "",
             "url": it.get("상세URL") or "",
-        })
+        }
+        # 칸 규약 3(날짜, F1-date 2026-08-16 5회차): 마감일이 meta 텍스트에만 있으면
+        # "마감 임박순" 정렬 불가(legal 시행일 동형) — end_date 병기(YYYY-MM-DD).
+        _d = str(deadline or "").strip().replace(".", "").replace("-", "").replace("/", "")
+        if len(_d) == 8 and _d.isdigit():
+            rec["end_date"] = f"{_d[:4]}-{_d[4:6]}-{_d[6:]}"
+        records.append(rec)
     return records
 
 

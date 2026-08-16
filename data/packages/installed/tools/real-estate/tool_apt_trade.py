@@ -107,6 +107,12 @@ def get_apt_trade(region_code: str, year_month: str, count: int = 10):
                 "동": _get_text(item, 'aptDong'),
                 "등기일자": _get_text(item, 'rgstDate'),
             }
+            # 칸 규약 2(price 병기, F1 2026-08-16 5회차): 거래금액은 콤마 문자열·만원
+            # 단위라 수치 정렬·호가(naver price, 원)와의 비교가 안 됐다 — 원 단위 정수 병기.
+            try:
+                trade["price"] = int(trade["거래금액"].replace(",", "").strip()) * 10000
+            except (ValueError, AttributeError):
+                pass
             trades.append(trade)
 
         # 요약 통계

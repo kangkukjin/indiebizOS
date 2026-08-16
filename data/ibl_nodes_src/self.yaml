@@ -138,8 +138,8 @@
         returns: scalar
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:goal]{op: "list"}'
-        description: 목표 프로세스 관리 (op 분기). list/status/kill/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
-        target_description: 'list — 활성/대기 중 전체. status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
+        description: 목표 프로세스 관리 (op 분기). list/status/kill/delete/log/attempts. 의식 에이전트가 평가 루프 라운드를 누적·종료하는 메타 인지 도구.
+        target_description: 'list — 전체 목록(종결 포함, status 필터로 좁힘: active/pending/achieved/cancelled…). status — goal_id 필수, 진행률·라운드 이력·누적 결과. kill — goal_id 필수, terminated 전환 + 스케줄 제거. delete — goal_id 필수, 종결 상태만 원장에서 삭제(살아있으면 kill 먼저). log — task_id + approach_category + description 필수(result/lesson 옵션), 시도 1건 기록. attempts — task_id 필수 + limit 옵션, 과거 시도 이력 + 실패 카테고리 요약.'
         group: goal
         target_key: op
         router: system
@@ -147,6 +147,7 @@
         ops:
           returns:
             kill: effect
+            delete: effect
             log: effect
           side_effect:
             list: false
@@ -155,13 +156,15 @@
           exempt:
             status: 'goal_id 필요(list 결과의 id) — 고정 fixture 부적합'
             attempts: 'task_id 필요 — 고정 fixture 부적합'
+            delete: 'goal_id 필요 + 종결 상태 전제 — 고정 fixture 부적합'
           values:
-            list: 활성/대기 중 목표 전체
+            list: 전체 목록 — 종결 포함, status 필터 지원 (2026-08-16 F9-① desc 정직화)
             status: 진행률·라운드 이력·누적 결과 (goal_id 필수)
             kill: 목표 종료 + 스케줄 제거 (goal_id 필수)
+            delete: 종결 목표 원장 삭제 (goal_id 필수, 종결 상태만 — 살아있으면 kill 먼저)
             log: 시도 1건 기록 (task_id + approach_category + description, 연속 실패 추적)
             attempts: 과거 시도 이력 + 실패 카테고리 요약 (task_id + limit)
-        implementation: _route_system이 op로 분기 — list_goals/get_goal_status/kill_goal/log_attempt/get_attempts에 위임.
+        implementation: _route_system이 op로 분기 — list_goals/get_goal_status/kill_goal/delete_goal/log_attempt/get_attempts에 위임.
         keywords:
         - 목표
         - 목표 목록

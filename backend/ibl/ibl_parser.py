@@ -753,8 +753,11 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
     for key, val in step.items():
         if isinstance(val, str):
             for var_name, step_idx in variables.items():
-                val = re.sub(r'\$%s(?!\w)' % re.escape(var_name),
-                             "{{_step_%d_result}}" % step_idx, val)
+                # $var.field.path — 필드 경로를 템플릿에 실어 실행기가 추출하게 한다
+                # (2026-08-16 상상훈련 G1: 경로 없이 통짜 치환하면 `.lat` 이 리터럴로 남았다).
+                val = re.sub(r'\$%s((?:\.\w+)+)?(?!\w)' % re.escape(var_name),
+                             lambda m, _i=step_idx: "{{_step_%d_result%s}}" % (_i, m.group(1) or ""),
+                             val)
             resolved[key] = val
         elif isinstance(val, dict):
             resolved[key] = _resolve_variables(val, variables)

@@ -923,6 +923,15 @@ class ConversationDB:
             conn.commit()
             return cursor.rowcount > 0
 
+    def delete_goal(self, goal_id: str) -> bool:
+        """목표 행 삭제 — 종결 상태 정리용 (F9-② 2026-08-16: cancelled 가 원장에 영구 잔존,
+        지울 어휘가 없어 DB 직접 삭제만 가능했다). 상태 가드는 호출측(_goal_delete)이 담당."""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM goals WHERE goal_id = ?", (goal_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+
     def add_goal_round(self, goal_id: str, round_num: int,
                        cost: float, result: str) -> bool:
         """

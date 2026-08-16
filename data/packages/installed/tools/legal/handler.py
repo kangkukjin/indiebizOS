@@ -40,6 +40,9 @@ _TARGET_MAP = {
 # 최상위 래퍼 키와 결과 배열 키, 항목 필드명이 다르다. 아래는 공식 문서 기준 매핑.
 #   - title_keys: 제목 후보 (법령명/사건명 등) — 첫 매칭 사용
 #   - meta_keys : meta 줄에 " · " join 할 필드들 (존재분만)
+#   - date_keys : 정렬 가능한 대표 날짜 후보 (첫 매칭 → 통화 `date` 칸 병기, YYYY-MM-DD)
+#                 ★칸 규약(ibl.md, 2026-08-16 상상훈련 F1): 시행일이 meta 텍스트에만
+#                 접히면 "시행일순 정렬"이 원리적으로 불가 — 수치/날짜는 칸으로 병기한다.
 #   - id_key    : 상세 링크 구성용 일련번호/ID (있으면 사용)
 #   - link_keys : 응답에 상세 링크가 직접 있으면 우선 사용
 # 래퍼/배열 키는 generic 탐색으로도 잡히지만, 정확도를 위해 target별로 명시.
@@ -48,6 +51,7 @@ _TARGET_FIELDS = {
     "law": {
         "title_keys": ["법령명한글", "법령명", "법령명약칭"],
         "meta_keys": ["법령구분명", "소관부처명", "공포일자", "시행일자", "제개정구분명"],
+        "date_keys": ["시행일자", "공포일자"],
         "id_key": "법령일련번호",
         "link_keys": ["법령상세링크"],
     },
@@ -55,6 +59,7 @@ _TARGET_FIELDS = {
     "eng_law": {
         "title_keys": ["법령명영문", "법령명한글", "법령명"],
         "meta_keys": ["법령구분명", "소관부처명", "공포일자", "시행일자"],
+        "date_keys": ["시행일자", "공포일자"],
         "id_key": "법령일련번호",
         "link_keys": ["법령상세링크"],
     },
@@ -62,6 +67,7 @@ _TARGET_FIELDS = {
     "prec": {
         "title_keys": ["사건명"],
         "meta_keys": ["법원명", "사건번호", "선고일자", "판결유형", "선고"],
+        "date_keys": ["선고일자"],
         "id_key": "판례일련번호",
         "link_keys": ["판례상세링크"],
     },
@@ -69,6 +75,7 @@ _TARGET_FIELDS = {
     "detc": {
         "title_keys": ["사건명", "헌재결정례명"],
         "meta_keys": ["헌재결정구분명", "종국일자", "사건번호"],
+        "date_keys": ["종국일자"],
         "id_key": "헌재결정례일련번호",
         "link_keys": ["헌재결정례상세링크"],
     },
@@ -76,6 +83,7 @@ _TARGET_FIELDS = {
     "admrul": {
         "title_keys": ["행정규칙명"],
         "meta_keys": ["행정규칙종류", "소관부처명", "발령일자", "시행일자", "발령번호"],
+        "date_keys": ["시행일자", "발령일자"],
         "id_key": "행정규칙일련번호",
         "link_keys": ["행정규칙상세링크"],
     },
@@ -83,6 +91,7 @@ _TARGET_FIELDS = {
     "ordin": {
         "title_keys": ["자치법규명", "자치법규명한글"],
         "meta_keys": ["지자체기관명", "자치법규종류", "공포일자", "시행일자"],
+        "date_keys": ["시행일자", "공포일자"],
         "id_key": "자치법규일련번호",
         "link_keys": ["자치법규상세링크"],
     },
@@ -90,6 +99,7 @@ _TARGET_FIELDS = {
     "exp": {
         "title_keys": ["안건명", "법령해석례명"],
         "meta_keys": ["질의기관명", "회신기관명", "회신일자", "안건번호"],
+        "date_keys": ["회신일자"],
         "id_key": "법령해석례일련번호",
         "link_keys": ["법령해석례상세링크"],
     },
@@ -97,6 +107,7 @@ _TARGET_FIELDS = {
     "trty": {
         "title_keys": ["조약명", "조약명한글"],
         "meta_keys": ["조약구분명", "발효일자", "체결일자", "관보게재일자"],
+        "date_keys": ["발효일자", "체결일자"],
         "id_key": "조약일련번호",
         "link_keys": ["조약상세링크"],
     },
@@ -174,8 +185,21 @@ def _pick(row: dict, keys):
     return ""
 
 
+def _norm_date(v) -> str:
+    """법제처 날짜(예: '20251001' / '2025.10.01')를 정렬 가능한 'YYYY-MM-DD'로.
+    형식을 못 알아보면 빈 문자열 — 어중간한 값을 date 칸에 넣지 않는다."""
+    s = str(v or "").strip().replace(".", "").replace("-", "").replace("/", "")
+    if len(s) == 8 and s.isdigit():
+        return f"{s[:4]}-{s[4:6]}-{s[6:]}"
+    return ""
+
+
 def _row_to_record(row: dict, fields: dict, target: str) -> dict:
-    """단일 결과 행 → record{title,meta,summary,url}."""
+    """단일 결과 행 → record{title,meta,summary,url,date?}.
+
+    date = 대표 날짜 칸 병기(칸 규약 F1, YYYY-MM-DD) — meta 표시 문자열은 그대로 두고
+    파이프(sort/filter)가 물 수 있는 칸을 *추가*한다(제거 아님·병기).
+    """
     title = _pick(row, fields.get("title_keys", []))
     meta_parts = []
     for mk in fields.get("meta_keys", []):
@@ -191,12 +215,16 @@ def _row_to_record(row: dict, fields: dict, target: str) -> dict:
         item_id = row.get(id_key) if id_key else None
         if item_id not in (None, "", "null"):
             url = f"{_LINK_BASE}/DRF/lawService.do?OC=&target={target}&type=HTML&ID={item_id}"
-    return {
+    rec = {
         "title": title,
         "meta": " · ".join(meta_parts),
         "summary": "",
         "url": url,
     }
+    d = _norm_date(_pick(row, fields.get("date_keys", [])))
+    if d:
+        rec["date"] = d                 # 칸 규약 F1: 대표 날짜 병기 (시행일순 정렬 가능)
+    return rec
 
 
 def _generic_record(row: dict) -> dict:

@@ -466,6 +466,23 @@ async def validate_ibl(req: ValidateRequest):
                     param_warning = pw["message"]
             except Exception:
                 param_warning = None
+            # F2-op (2026-08-16 상상훈련 5회차): op *값*도 dry-run 이 미리 검사한다 —
+            # `[limbs:radio]{op:"search"}` 가 검수 초록 후 실행에서 "알 수 없는 op" 로
+            # 죽었다(검색=sense:radio). enum 은 레지스트리 ops.values 에 이미 있다.
+            # 소프트 경고(R2 param 경고와 같은 층) — 실행기의 정직 거절이 최종 심판.
+            try:
+                _op_val = str(params.get("op") or "").strip()
+                if _op_val:
+                    from ibl_access import _load_nodes_data
+                    _ac = ((_load_nodes_data() or {}).get("nodes", {})
+                           .get(node, {}).get("actions", {}).get(action, {})) or {}
+                    _vals = ((_ac.get("ops") or {}).get("values") or {})
+                    if _vals and _op_val not in _vals:
+                        _ow = (f"op '{_op_val}' 은(는) 이 액션에 없습니다 — 실행 시 거절됩니다. "
+                               f"사용 가능: {sorted(_vals)}")
+                        param_warning = f"{param_warning} / {_ow}" if param_warning else _ow
+            except Exception:
+                pass
 
         if warn:
             param_warning = f"{param_warning} / {warn}" if param_warning else warn
@@ -498,39 +515,61 @@ async def validate_ibl(req: ValidateRequest):
             st.get("_parallel") or "_fallback_chain" in st
             or st.get("_condition") or st.get("_case") or st.get("_goal"))
 
-    def _walk_each_do(st: dict, depth: int):
-        """[table:each] 의 do 문자열 속 문장을 펼쳐 검증한다.
+    # do(문장을 param 문자열로 나르는 자리)를 가진 액션들 — each 외에 M1 `do` 통일 자리 전부.
+    # (2026-08-16 상상훈련 G2: each·goal.strategy 는 펼치는데 schedule.do 는 안 펼쳐,
+    #  시간 문형이 검수 사각 = 고유수용감각 없는 팔이었다. 값=읽을 param 키 후보 순서.)
+    _DO_CARRYING = {
+        ("table", "each"): ("do",),
+        ("self", "schedule"): ("do", "pipeline"),
+        ("self", "trigger"): ("do", "pipeline"),
+        ("self", "workflow"): ("do", "steps", "pipeline"),
+        ("self", "manage_events"): ("do", "event_action"),
+        ("others", "delegate"): ("do", "steps"),
+    }
 
-        do 는 이 언어가 코드를 *문자열로* 나르는 유일한 자리 — 여기만 안 펼치면
-        do 안의 부작용·무효 액션이 'each 한 줄'(블랭킷 write) 뒤에 숨어
+    def _walk_do_param(st: dict, depth: int, keys: tuple, gname: str):
+        """액션의 do 성 param 문자열 속 문장을 펼쳐 검증한다.
+
+        do 는 이 언어가 코드를 *문자열로* 나르는 자리 — 여기를 안 펼치면
+        do 안의 부작용·무효 액션이 컨테이너 한 줄 뒤에 숨어
         조종실의 번역→dry-run→실행 계약이 반쪽이 된다."""
         nonlocal all_valid
         params = st.get("params", {}) or {}
-        do = params.get("do")
+        do = None
+        for k in keys:
+            do = params.get(k)
+            if do:
+                break
         if isinstance(do, list):
             do = "\n".join(str(x) for x in do if str(x).strip())
         if not do or not str(do).strip():
             return
         do = str(do)
+        strict = (gname == "each")  # each 의 do 는 반드시 IBL. 다른 컨테이너는 경고까지만.
+        if not strict and "[" not in do:
+            return  # 자유 텍스트로 보임 — 컨테이너 재량(예: 위임 지시문)이라 침묵 통과
         from ibl_parser import parse as _parse_do, IBLSyntaxError as _DoSynErr
         try:
             try:
                 inner = _parse_do(do)
             except _DoSynErr:
-                # $it 치환 자리가 따옴표 밖(예: {n: $it.n})이면 실행 시엔 합법 —
+                # $it/$변수 치환 자리가 따옴표 밖(예: {n: $it.n})이면 실행 시엔 합법 —
                 # 자리만 더미(1)로 메워 재시도한다. 이걸로도 안 되면 진짜 문법 오류.
                 inner = _parse_do(re.sub(r"\$\w+(?:\.\w+)*", "1", do))
         except _DoSynErr as e:
-            all_valid = False
-            steps.append({
-                "node": "table", "action": "each", "params": {}, "kind": "block",
-                "effect": f"each do 문장 문법 오류 — 모든 행이 실패합니다: {str(e)[:160]}",
-                "safety": "unknown", "valid": False, "error": str(e)[:200],
-                "group": "each",
-            })
+            entry = {
+                "node": st.get("_node", ""), "action": st.get("action", ""),
+                "params": {}, "kind": "block",
+                "effect": f"{gname} do 문장 문법 오류 — 실행 시 실패합니다: {str(e)[:160]}",
+                "safety": "unknown", "valid": (not strict), "error": str(e)[:200],
+                "group": gname,
+            }
+            if strict:
+                all_valid = False
+            steps.append(entry)
             return
         for ist in inner:
-            _walk(ist, depth + 1, label="[each 속]", group="each")
+            _walk(ist, depth + 1, label=f"[{gname} 속]", group=gname)
 
     def _condition_syntax_warning(cond: str):
         """조건 좌변이 node:action 소스 참조로 파싱되는지 미리 검사.
@@ -561,8 +600,25 @@ async def validate_ibl(req: ValidateRequest):
             return
         if _is_plain(st):
             _emit_action(st, label=label, group=group, warn=warn)
-            if st.get("_node") == "table" and st.get("action") == "each":
-                _walk_each_do(st, depth)
+            _key = (st.get("_node"), st.get("action"))
+            _dk = _DO_CARRYING.get(_key)
+            if _dk:
+                _gname = "each" if st.get("action") == "each" else st.get("action")
+                _container_idx = len(steps) - 1
+                _n_before = len(steps)
+                _walk_do_param(st, depth, _dk, _gname)
+                # F10 (2026-08-16 상상훈련 4회차): each 자체는 순수 적용자 — 부작용은 do 속
+                # 문장의 것이다. 선언 side_effect:true 는 "속을 못 볼 때 초록불 금지"의 보수
+                # 기본인데(그 의도의 src 주석 실존), 검수기가 do 를 펼치는 지금은 근거가 있다:
+                # 속을 실제로 읽었고 전부 read·유효하면 컨테이너 라벨을 속의 OR 로 정밀화한다.
+                # 속을 못 읽었으면(빈 do·파싱 실패) 선언 그대로 보수 유지. trigger/schedule/
+                # workflow 등 다른 do-컨테이너는 등록·저장 자체가 부작용이라 제외.
+                if _key == ("table", "each"):
+                    _inner = steps[_n_before:]
+                    if _inner and all(e.get("safety") == "read" and e.get("valid")
+                                      for e in _inner):
+                        steps[_container_idx]["safety"] = "read"
+                        has_side_effect = any(e.get("safety") != "read" for e in steps)
             return
         if st.get("_parallel"):
             branches = st.get("branches") or []

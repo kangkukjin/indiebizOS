@@ -105,6 +105,12 @@ def _fetch_month_data(region_code: str, year_month: str, count: int) -> list:
                 "거래일": _get_text(item, 'dealDay'),
                 "조회년월": year_month,
             }
+            # 칸 규약 2(price 병기, F1 2026-08-16 5회차): 거래금액=콤마 문자열·만원이라
+            # 수치 정렬·호가(naver price, 원)와 비교 불가 — 원 단위 정수 병기.
+            try:
+                trade["price"] = int(trade["거래금액"].replace(",", "").strip()) * 10000
+            except (ValueError, AttributeError):
+                pass
             trades.append(trade)
 
         return trades

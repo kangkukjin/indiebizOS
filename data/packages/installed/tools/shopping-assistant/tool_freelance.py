@@ -96,6 +96,10 @@ def _search_gigs(query: str, limit: int, sort: str, max_price):
                                                   cat.get("subCategoryName")] if c),
                 "url": f"https://kmong.com/gig/{g.get('gigId')}",
                 "price": price,
+                # 수치 칸 병기 (F1, 2026-08-16): 평점이 meta 텍스트에만 있으면
+                # "평점순" sort 파이프가 원리적으로 막힌다.
+                "rating": review.get("reviewAverage"),
+                "reviews": review.get("reviewCount"),
             }
             images = g.get("images") or []
             if images:
@@ -155,6 +159,9 @@ def _search_experts(query: str, limit: int, sort: str):
                 "summary": " — ".join(p for p in summary_parts if p),
                 "url": f"https://kmong.com/@{s.get('nickname', '')}",
                 "price": gig.get("price"),
+                "rating": (round(review["reviewAverage"], 2)
+                           if review.get("reviewAverage") else None),
+                "reviews": review.get("reviewCount"),
             }
             if s.get("thumbnail"):
                 item["image"] = s["thumbnail"]

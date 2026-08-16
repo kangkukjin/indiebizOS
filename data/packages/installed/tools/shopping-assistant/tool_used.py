@@ -60,6 +60,14 @@ def _man(won):
     return f"{w:,}원"
 
 
+def _num_or_none(v):
+    """수치 칸 병기용 — 정수 원 단위, 실패 시 None (F1 규약: 표시=meta, 수치=price)."""
+    try:
+        return int(float(v))
+    except (ValueError, TypeError):
+        return None
+
+
 # ============ bunjang — 내부 API (★깨끗) ============
 
 def search_bunjang(query, limit=20, region=None):
@@ -93,6 +101,9 @@ def search_bunjang(query, limit=20, region=None):
             "summary": "",
             "url": f"https://m.bunjang.co.kr/products/{pid}" if pid else "",
             "image": it.get("product_image") or "",
+            # 수치 칸 병기 (F1, 2026-08-16 상상훈련): 가격이 meta 텍스트("80만원")에만 있으면
+            # sort/filter/비교 파이프가 원리적으로 막힌다 — 표시용 meta 와 별개로 수치를 나른다.
+            "price": _num_or_none(it.get("price")),
         })
         if len(records) >= limit:
             break
@@ -136,6 +147,7 @@ def search_joongna(query, limit=20):
             "summary": "",
             "url": f"https://web.joongna.com/product/{seq}",
             "image": "",
+            "price": _num_or_none(pm.group(1)) if pm else None,
         })
         if len(records) >= limit:
             break
@@ -223,6 +235,7 @@ def search_danggeun(query, limit=20, region=None):
             "summary": (it.get("description") or "").strip()[:200],
             "url": it.get("url") or "",
             "image": it.get("image") or "",
+            "price": _num_or_none(price),
         })
         if len(records) >= limit:
             break

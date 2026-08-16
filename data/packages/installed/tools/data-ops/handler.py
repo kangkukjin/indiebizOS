@@ -59,6 +59,37 @@ def _get_items(obj):
     return None, None
 
 
+def _get_items_for_fields(prev, fields):
+    """★계약 입구의 원천 행 파고들기 (2026-08-16 상상훈련 F6).
+
+    items(카드 투영)가 verb 가 요구하는 필드를 접었으면 원천 행(data/results —
+    `_rows_for_field`)까지 거슬러 찾는다. 이 구제가 filter·sort 에만 개별로 붙어 있어
+    같은 파이프 자리에서 select·dedup 만 죽는 비대칭이 생겼다(kosis org_id 실측) —
+    verb 마다 붙이면 새 verb 에서 비대칭이 재생산되므로 입구 하나로 접는다.
+    새 변환자는 _get_items 대신 이 함수를 쓰면 파고들기를 자동 상속한다.
+
+    조건: **필드가 items 에 없을 때만** 파고든다 — 무조건 파고들면 카드 투영
+    (title/meta)을 기대하는 표면·하류가 깨진다(filter 의 기존 규약 그대로).
+
+    반환: (rows, envelope) — rows 는 items 이거나(필드가 이미 있으면) 원천 행.
+    items 통화 자체가 없으면 (None, None) — 각 verb 의 table 분기·최종 폴백은 그대로 산다.
+    """
+    fields = [str(f) for f in (fields or []) if f]
+    recs, env = _get_items(prev)
+    if recs is None:
+        return None, None
+    dict_recs = [r for r in recs if isinstance(r, dict)]
+    if not fields or not dict_recs:
+        return recs, env
+    missing = [f for f in fields if not any(f in r for r in dict_recs)]
+    if not missing:
+        return recs, env
+    dug = _rows_for_field(prev, missing[0])
+    if dug and all(any(f in r for r in dug) for f in fields):
+        return dug, env
+    return recs, env            # 파고들어도 없음 — 원래 items 로 정직한 필드 에러가 나게
+
+
 def _get_table(obj):
     """객체에서 표준 table 통화를 꺼낸다. ({table:{columns,rows}} 또는 최상위 columns/rows)
 
@@ -287,7 +318,8 @@ def _op_filter(prev, params):
     '필드 오타'는 구별돼야 한다).
     """
     where = params.get("where") or params.get("condition")
-    recs, env = _get_items(prev)
+    # 파고들기는 입구(_get_items_for_fields)가 담당 — R5 개별 구현을 F6 에서 입구로 접음.
+    recs, env = _get_items_for_fields(prev, _where_fields(where))
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         if dict_recs:
@@ -306,6 +338,14 @@ def _op_filter(prev, params):
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
         return _emit_table(env, {"columns": cols, "rows": rows})
+    # items/table 이 없어도 도메인 봉투의 원천 행(data/results)이 있으면 거기서 (sort 와 대칭)
+    _wf = _where_fields(where)
+    dug = _rows_for_field(prev, _wf[0] if _wf else None)
+    if dug:
+        missing = [f for f in _wf if not any(f in r for r in dug)]
+        if missing:
+            return _field_missing_error("filter", missing, dug)
+        return _emit_items({}, [r for r in dug if _match(r, where)])
     return _no_currency_error("filter", prev)
 
 
@@ -321,7 +361,8 @@ def _op_sort(prev, params):
     if not by:
         return {"success": False, "error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
     by = str(by)
-    recs, env = _get_items(prev)
+    # 파고들기는 입구가 담당 (F6) — by 가 카드 투영에 접혔으면 원천 행이 돌아온다.
+    recs, env = _get_items_for_fields(prev, [by])
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         if not dict_recs or any(by in r for r in dict_recs):
@@ -387,6 +428,15 @@ def _op_select(prev, params):
         src_cols = [str(c) for c in (table.get("columns") or [])]
         missing = [c for c in cols_keep if c not in src_cols]
         if missing:
+            # 열이 접혔으면 입구 파고들기 (F6) — _get_table 이 카드 items 에서 표를
+            # *재구성*한 경우(kosis 실측) 원천 행(data)에는 그 열이 살아 있다.
+            dug, denv = _get_items_for_fields(prev, cols_keep)
+            if dug:
+                dug_dicts = [r for r in dug if isinstance(r, dict)]
+                if dug_dicts and not any(
+                        c for c in cols_keep if not any(c in r for r in dug_dicts)):
+                    out = [{k: r.get(k) for k in cols_keep if k in r} for r in dug_dicts]
+                    return _emit_items(denv if denv is not None else env, out)
             # 없는 열을 조용히 떨구면 빈 표가 success 로 나간다(⑧′)
             return {"success": False,
                     "error": f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
@@ -394,7 +444,7 @@ def _op_select(prev, params):
         new_cols = [src_cols[i] for i in idx]
         new_rows = [[(r[i] if i < len(r) else None) for i in idx] for r in (table.get("rows") or [])]
         return _emit_table(env, {"columns": new_cols, "rows": new_rows})
-    recs, env = _get_items(prev)
+    recs, env = _get_items_for_fields(prev, cols_keep)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         if dict_recs:
@@ -470,7 +520,8 @@ def _op_dedup(prev, params):
     (newspaper 내부에 묻혀있던 _dedup_rank를 통화 동사로 끌어올림 — 전 생산자 공용화.)
     """
     by = params.get("by")
-    recs, env = _get_items(prev)
+    # 파고들기는 입구가 담당 (F6). 기본(title)은 관례라 파고들지 않는다.
+    recs, env = _get_items_for_fields(prev, [by] if by else None)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         # 명시 by 가 어느 행에도 없으면 무동작이 success 로 위장된다(⑧′). 기본(title)은 관례라 관대.

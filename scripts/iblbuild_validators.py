@@ -1070,12 +1070,16 @@ def compression_warnings(data: dict) -> list[str]:
     short = {full: full.split(":", 1)[1] for full in acts}
 
     # ① desc 면책 과다 — 타 액션을 3개 이상 지목하는 설명(동결분 제외)
+    # ★table:* 언급은 안 센다: table=통화 변환 문법(기능어 코어)이라 desc 의 table 파이프
+    #   언급은 조합 초대(통화 대수 — 어휘 조합성 프로젝트가 장려)이지 경계 면책이 아니다.
+    #   2026-08-16 sense:performance 오발(초대 2 + 면책 1 = 3 판정)로 확정. 내용어 지목만
+    #   자백 신호로 남긴다.
     for full, info in acts.items():
         if full in _COMPRESSION_DESC_BASELINE:
             continue
         hits = set()
         for other in acts:
-            if other == full:
+            if other == full or other.startswith("table:"):
                 continue
             oshort = short[other]
             if _re.search(rf"(?<![\w:]){_re.escape(other)}(?![\w])", info["desc"]) or (

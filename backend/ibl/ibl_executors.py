@@ -199,18 +199,29 @@ def _output_download(url: str, params: dict, project_path: str) -> Any:
     import urllib.request
     from urllib.parse import urlparse
 
-    filename = params.get("filename")
-    if not filename:
-        parsed = urlparse(url)
-        filename = os.path.basename(parsed.path) or "download"
+    # ★B11 (2026-08-17 상상훈련 12회차): 코퍼스 교본이 가르치는 `path`(전체 저장 경로)를
+    # 핸들러가 안 읽어 침묵 무시 — "outputs/파일.html" 지정이 저장소 outputs/download 로
+    # 뭉개졌다(파일명 상실+프로젝트 스코핑 미적용). path 를 1순위로 받는다:
+    # 절대/~ 는 그대로, 상대 경로는 프로젝트 기준(write 와 동일 규약).
+    raw_path = params.get("path")
+    if raw_path:
+        save_path = os.path.expanduser(str(raw_path))
+        if not os.path.isabs(save_path):
+            save_path = os.path.join(project_path or ".", save_path)
+        os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+    else:
+        filename = params.get("filename")
+        if not filename:
+            parsed = urlparse(url)
+            filename = os.path.basename(parsed.path) or "download"
 
-    save_dir = params.get("save_dir")
-    if not save_dir:
-        base = os.environ.get("INDIEBIZ_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        save_dir = os.path.join(base, "outputs")
-    os.makedirs(save_dir, exist_ok=True)
+        save_dir = params.get("save_dir")
+        if not save_dir:
+            base = os.environ.get("INDIEBIZ_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            save_dir = os.path.join(base, "outputs")
+        os.makedirs(save_dir, exist_ok=True)
 
-    save_path = os.path.join(save_dir, filename)
+        save_path = os.path.join(save_dir, filename)
 
     try:
         # UA 없는 urlretrieve 는 다수 사이트(한겨레 등)가 403 (2026-08-16 6회차 실측) —
@@ -934,8 +945,16 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         out["error"] = (f"each: {err_n}건 전부 실패 — 첫 오류: "
                         f"{out_items[0].get('_error')}")
     elif not out_items:
-        out["success"] = False
-        out["error"] = "each: 처리한 행이 없습니다 (입력 목록이 비었거나 limit=0)."
+        if not rows:
+            # ★F17 (2026-08-17 상상훈련 12회차): 입력 0행은 실수가 아니라 정당한 빈손 —
+            # 0회 실행=성공(공허 참)으로 0건 통화를 내려 파이프가 완주하게 한다.
+            # take/filter 는 빈손을 통과시키는데 each 만 실패로 파이프를 끊던 비대칭
+            # (검색 0건 >> each >> flatten 이 step 3 에서 죽던 실측, P14 빈손 계약 정합).
+            out["success"] = True
+            out["message"] = "each: 입력 0행 — 실행 0회 (빈 목록)"
+        else:
+            out["success"] = False
+            out["error"] = f"each: limit={limit} 로 처리한 행이 없습니다 — limit 을 확인하세요."
     else:
         out["success"] = True
         if err_n:

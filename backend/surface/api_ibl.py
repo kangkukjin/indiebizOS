@@ -444,7 +444,14 @@ async def validate_ibl(req: ValidateRequest):
             # (2026-06-30 table 노드 분리 후 이 문구가 5노드로 남아 있었다)
             ok, err = False, f"'{node}'는 알 수 없는 노드입니다. ({'/'.join(_known_nodes())})"
         elif action not in valid_actions:
-            ok, err = False, f"'{node}' 노드에 '{action}' 액션이 없습니다."
+            # ★F15 (2026-08-17 상상훈련 12회차): 다른 몸의 어휘는 "없다" 대신 정직하게.
+            from ibl_registry import pruned_reason
+            _why = pruned_reason(node, action)
+            if _why:
+                ok, err = False, (f"[{node}:{action}] 은 {_why} 어휘라 이 몸의 사전에 없습니다 — "
+                                  f"[others:ask] 로 그 몸에 부탁하세요.")
+            else:
+                ok, err = False, f"'{node}' 노드에 '{action}' 액션이 없습니다."
         else:
             ok, err = True, None
 

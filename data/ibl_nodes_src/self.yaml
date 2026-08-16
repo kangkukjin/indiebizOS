@@ -34,6 +34,10 @@
           op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 event_action 유지.
           event_action: [do]
+          # F18 (2026-08-17 12회차): create 가 event.id 로 돌려주는데 delete/update/toggle 은
+          # event_id 만 받던 비대칭 — trigger 의 trigger_id: [id] 선례 그대로 흡수.
+          # (id 별칭 금지 함정은 business_item 부류 — id 유무로 생성/수정을 가르는 액션에만 해당.)
+          event_id: [id]
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:manage_events]{op: "list"}'

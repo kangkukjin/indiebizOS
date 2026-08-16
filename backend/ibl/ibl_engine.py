@@ -692,6 +692,14 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     action_config = node_config.get("actions", {}).get(action)
     if not action_config:
         available = list(node_config.get("actions", {}).keys())
+        # ★F15 (2026-08-17 상상훈련 12회차): 다른 몸의 어휘(phone_only 등)를 "없다"고
+        # 하면 거짓말 — 실존하되 이 몸의 사전에 설치되지 않은 것이다. 부탁 경로를 안내.
+        from ibl_registry import pruned_reason
+        why = pruned_reason(node, action)
+        if why:
+            return {"error": f"[{node}:{action}] 은 {why} 어휘라 이 몸의 사전에 없습니다 — "
+                             f"그 몸에 자연어로 부탁하세요: [others:ask]{{to: \"<몸 이름>\", message: \"...\"}}",
+                    "available_actions": available}
         return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
                 "available_actions": available}
 

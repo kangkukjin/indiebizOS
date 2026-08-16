@@ -893,6 +893,13 @@ def _op_flatten(prev, params):
                     base[name] = cv
             out.append(base)
     if not out:
+        # ★F17 확장 (2026-08-17 12회차): 입력 0행은 실수가 아니라 정당한 빈손 — 0건 통화로
+        # 파이프를 완주시킨다(each 와 같은 수리 — "목록 필드가 없다" 오류의 전제는
+        # "행이 있는데"라 행 0개엔 성립하지 않는다).
+        if not recs:
+            res = _emit_items(env, [])
+            res["message"] = "flatten: 입력 0행 — 펼칠 것 없음 (빈 목록)"
+            return res
         sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
         return {"success": False,
                 "error": (f"flatten: field '{field}' 에서 목록을 가진 행이 없습니다"

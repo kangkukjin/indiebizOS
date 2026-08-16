@@ -2404,6 +2404,8 @@ nodes:
           - action
           event_action:
           - do
+          event_id:
+          - id
         returns: items
         side_effect: true
         fixture: '[self:manage_events]{op: "list"}'

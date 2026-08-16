@@ -204,7 +204,12 @@ def _msg_thread(bm, tool_input: dict) -> str:
     pubkey = tool_input.get("pubkey") or ""
     has_neighbor = bool(neighbor_id) and str(neighbor_id) not in ("0", "")
     if not has_neighbor and not pubkey:
-        return json.dumps({"success": False, "error": "neighbor_id 또는 pubkey가 필요합니다."}, ensure_ascii=False)
+        # 오류문 행동지시화 (2026-08-17 12회차 F16): 인자 없이 부르면 대개 "받은 메시지
+        # 전체"가 의도 — 그 길(op:"inbox")을 알려준다.
+        return json.dumps({"success": False,
+                           "error": "neighbor_id 또는 pubkey가 필요합니다. "
+                                    "특정 상대가 아니라 받은 메시지 전체를 보려면 [others:messages]{op: \"inbox\"} 를 쓰세요."},
+                          ensure_ascii=False)
 
     items, seen_eids = [], set()
     name, channel, to = "", "nostr", ""

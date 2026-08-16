@@ -161,6 +161,9 @@ def _load_nodes_config() -> Dict:
     return _nodes
 
 
+_pruned_foreign: Dict[str, str] = {}  # "node:action" → 사유 — 오류문 정직화용 (★F15)
+
+
 def _prune_foreign_vocabulary(nodes_cfg: Dict) -> None:
     """카탈로그·해마 소유-필터의 실행층 완결판 — 로드가 곧 설치다."""
     try:
@@ -168,15 +171,28 @@ def _prune_foreign_vocabulary(nodes_cfg: Dict) -> None:
         profile = (detect_body() or {}).get("profile", "")
     except Exception:
         profile = ""
+    _pruned_foreign.clear()
     for node_name, node_cfg in (nodes_cfg.get("nodes") or {}).items():
         actions = (node_cfg or {}).get("actions") or {}
         if profile == "phone":
             drop = [a for a in actions if not _phone_runnable(node_name, a)]
+            reason = "이 폰 몸에서 실행 불가"
         else:
             drop = [a for a, c in actions.items()
                     if isinstance(c, dict) and c.get("runs_on") == "phone_only"]
+            reason = "폰 전용(phone_only)"
         for a in drop:
+            _pruned_foreign[f"{node_name}:{a}"] = reason
             del actions[a]
+
+
+def pruned_reason(node: str, action: str) -> Optional[str]:
+    """★F15 (2026-08-17 상상훈련 12회차): 이 액션이 사전집(yaml)에는 실존하지만 이 몸의
+    설치에서 걷혔다면 그 사유. "액션이 없습니다"(유령)와 "이 몸의 사전에 없습니다"
+    (다른 몸의 어휘)는 다른 상태다 — 전자로 접으면 오류문이 거짓말이 된다.
+    """
+    _load_nodes_config()  # prune 이 아직 안 돌았으면 채운다
+    return _pruned_foreign.get(f"{node}:{action}")
 
 
 def invalidate_nodes() -> None:

@@ -775,10 +775,19 @@ def execute(tool_input: dict, context) -> str:
                         probe = None
                 if (isinstance(probe, dict) and isinstance(probe.get("message"), str)
                         and probe["message"].strip()):
-                    if isinstance(probe.get("items"), list) and probe["items"]:
-                        items_alongside = len(probe["items"])
-                    content = probe["message"]
-                    extracted = "message"
+                    # ★12회차 정련: items 밖의 비어있지 않은 dict/list 페이로드(예: book 의
+                    # `book` dict)가 있으면 message 는 스텁 안내문일 수 있다("도서 상세 정보를
+                    # 조회했습니다." 한 줄을 추출하고 실데이터를 버린 실측) — 그 경우 봉투
+                    # JSON 유지(구조 보존이 안전 방향). 문자열 메타만 동반한 산문 봉투
+                    # (devdocs 등)만 message 를 정본으로 추출.
+                    _other_payload = any(
+                        isinstance(v, (dict, list)) and v
+                        for k, v in probe.items() if k != "items")
+                    if not _other_payload:
+                        if isinstance(probe.get("items"), list) and probe["items"]:
+                            items_alongside = len(probe["items"])
+                        content = probe["message"]
+                        extracted = "message"
             if not isinstance(content, str):
                 content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)
             _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)

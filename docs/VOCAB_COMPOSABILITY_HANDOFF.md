@@ -299,3 +299,12 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 - **F14 수리**: 8회차 F11이 get_summary 오류문에 folder_note 지시를 복붙 이식(문맥 불일치) → 중립화. 교훈=오류문 행동지시화는 호출 문맥별로.
 - **★판정 3건 같은 날 집행 완료**(사용자 위임 "장기적으로 바람직한 쪽" — 상세=11회차 보고서 판정 절): ①B10-case=`_get_sense_value_checked` 검침판(`_FIELD_MISSING` 표지 — 판정 불능=정직 에러 / 값 null=default 유지, battery 용법 보존) ②union=공유 *유효* 칸 0 → 비차단 경고 앞머리(null-패딩 칸 제외, table·items 공용) ③write 싱크=message(str) 실존 시 산문 정본 추출+`extracted`·동반 items 신고(집안 계약: _emit_items 의 message pop=산문 정본 규약. 변환 뒤·명시 content 회귀 무손상). 라이브 전 경로 검증+P1~P19 통과. ★오진 자백: "핸들러 캐시 스테일"로 오진했다가 dual-emit(devdocs message+items) 가드 정상 차단으로 반증 — /packages/reload 는 handler.py 에 문서대로 작동.
 - 시드 후보 9건 — 6~10회차 일괄 배치에 합류.
+
+### ★12회차 (2026-08-17 — 보고서 `outputs/imagination_training/2026-08-17_12회차.md`) — 2배 회차(사용자 지시), 발견 7건 동세션 수리
+- 과제 24(11회차의 2배)·검수 24/24·실측 21·스크래치 전량 복구(+8회차 잔재 스케줄 이벤트 1건 추가 청소). 편입 ~20(kosis·exhibit·performance·classic·book·world·messages·neighbor·finance·download·forage·render_html·follow·nostr·sense:phone·cctv·auto_response·limb + table:dedup·flatten).
+- **B11 수리**: download 가 코퍼스 교본의 `path` 를 침묵 무시(repo outputs/download 로 뭉개짐 — 교재-실행 드리프트) → path 1순위(상대=프로젝트 기준, write 규약).
+- **F15 수리**: 다른 몸 어휘(limbs:phone)를 검수·실행이 "액션이 없습니다"로 거짓 보고 → prune 기록(`_pruned_foreign`)+`pruned_reason()` 로 "폰 전용 어휘 — [others:ask] 로 부탁" 정직화. @몸 반출은 판정 안 함(no-privileged-rails 정합).
+- **F17 수리**: 빈손 적대 연쇄 — 0건 입력에 each 실패→고치니 flatten 이 같은 모양으로 또 실패. 둘 다 공허 성공(0건 통화)으로, limit=0·"행 있는데 목록 아님"은 명시 에러 유지. ★교훈: 빈손 계약은 verb 마다 심사 — 하나 고치면 다음 verb 가 기다린다.
+- **W-정련(11회차 판정 보정)**: book 의 message="조회했습니다" 스텁을 추출해 실데이터 유실 실측 → v3: items 외 비어있지 않은 dict/list 페이로드 동반 시 추출 안 함(구조 보존). devdocs 추출 유지.
+- **F16·F18 소품**: messages 오류문에 op:"inbox" 안내 / manage_events `aliases: event_id: [id]`(trigger 선례).
+- 판정 후보: **message 스텁 생산자 전수 감사**(book 부류 — "message=산문 정본" 계약 위반 순찰) 여부. 시드 후보 15건.

@@ -686,8 +686,19 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
     branches = tool_input.get("branches", [])
     default = tool_input.get("default")
 
-    # source에서 sense 값 가져오기
-    sense_value = _get_sense_value(source, project_path, agent_id)
+    # source에서 sense 값 가져오기 — ★B10-case (2026-08-17 상상훈련 11회차 판정):
+    # "값을 읽지 못함"(오타 경로·실행 실패=판정 불능)과 "필드는 실존하되 값이 null"
+    # (정당한 부재 — 예: 데스크탑의 battery)을 구별한다. 전자에 default 를 실행하면
+    # "어느 패턴과도 불일치"라는 단정이 된다(B10 else 위장의 case 짝). 후자는 default 가
+    # 부재의 의미를 받는 정당한 용법이라 보존.
+    sense_value, read_error = _get_sense_value_checked(source, project_path, agent_id)
+
+    if read_error is not None:
+        return {
+            "success": False,
+            "error": f"case source '{source}' 판정 불능 — {read_error} "
+                     "default 실행을 보류했습니다(default 실행=값 불일치의 단정).",
+        }
 
     if sense_value is not None:
         action = select_case_branch(sense_value, branches, default)
@@ -992,6 +1003,9 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
     return False
 
 
+_FIELD_MISSING = object()  # 경로 부재 표지 — "값이 null"(정당한 부재)과 구별 (★B10-case)
+
+
 def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
     """
     case/if의 source 표현을 평가하여 실제 값 반환.
@@ -1005,18 +1019,30 @@ def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
     sense뿐 아니라 self/limbs/others/engines 모두 허용한다.
     field가 지정된 경우 결과 dict에서 점 표기법으로 추출하고,
     없으면 기존 동작(`value` → `result` → str)을 유지한다.
+    판정 불능 사유가 필요한 호출자는 _get_sense_value_checked 를 쓴다.
+    """
+    value, _err = _get_sense_value_checked(source, project_path, agent_id)
+    return value
+
+
+def _get_sense_value_checked(source: str, project_path: str, agent_id: str) -> Tuple[Any, Optional[str]]:
+    """_get_sense_value 의 검침판 — (값, 판정불능 사유)를 돌려준다.
+
+    ★B10-case (2026-08-17 상상훈련 11회차): 판정 불능(파싱 실패·실행 예외·필드 경로
+    부재)과 "필드는 실존하되 값이 null"(정당한 부재)을 구별한다 — 후자는 (None, None).
+    옛 코드는 셋 다 None 으로 접어 case 의 default 가 판정 불능을 "불일치"로 단정했다.
     """
     parsed = _parse_source_ref(source)
     if parsed is None:
-        return None
+        return None, f"source 표현을 해석하지 못했습니다: '{source}'."
     node, action, params, field = parsed
 
     try:
         from ibl_engine import execute_ibl
         step = {"_node": node, "action": action, "params": params}
         result = execute_ibl(step, project_path, agent_id)
-    except Exception:
-        return None
+    except Exception as e:
+        return None, f"'{node}:{action}' 실행 실패: {e}."
 
     # 핸들러 다수가 JSON *문자열* 봉투를 반환한다 — 파싱 없이 점 추출하면 문자열에
     # 막혀 None → 조건이 조용히 거짓이 된다(센서 필드 조건 전멸 부류).
@@ -1029,11 +1055,15 @@ def _get_sense_value(source: str, project_path: str, agent_id: str) -> Any:
             pass
 
     if field is not None:
-        return _extract_dotted_field(result, field)
+        value = _extract_dotted_field_checked(result, field)
+        if value is _FIELD_MISSING:
+            return None, (f"필드 경로 '.{field}' 가 결과에 없습니다 — 경로를 확인하세요"
+                          "(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).")
+        return value, None
 
     if isinstance(result, dict):
-        return result.get("value", result.get("result", str(result)))
-    return result
+        return result.get("value", result.get("result", str(result))), None
+    return result, None
 
 
 def _parse_source_ref(source: str) -> Optional[Tuple[str, str, Dict, Optional[str]]]:
@@ -1075,16 +1105,20 @@ def _parse_source_ref(source: str) -> Optional[Tuple[str, str, Dict, Optional[st
 
 def _extract_dotted_field(result: Any, field_path: str) -> Any:
     """중첩 dict에서 점 표기법으로 필드 추출 ('close', 'data.price')."""
-    if result is None:
-        return None
+    value = _extract_dotted_field_checked(result, field_path)
+    return None if value is _FIELD_MISSING else value
+
+
+def _extract_dotted_field_checked(result: Any, field_path: str) -> Any:
+    """점 표기 추출의 검침판 — 경로 부재는 _FIELD_MISSING, 값이 진짜 null 이면 None.
+
+    중간 노드가 null 이거나 dict 가 아니면 그 아래 경로는 "부재"다(★B10-case).
+    """
     current = result
     for key in field_path.split('.'):
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            return None
-        if current is None:
-            return None
+        if not isinstance(current, dict) or key not in current:
+            return _FIELD_MISSING
+        current = current[key]
     return current
 
 

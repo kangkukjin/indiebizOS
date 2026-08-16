@@ -751,8 +751,34 @@ def execute(tool_input: dict, context) -> str:
             if scope_err:
                 return scope_err
             content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
-            if content is None and (content := tool_input.get("_prev_result")) is None:
+            piped = False
+            if content is None:
+                content = tool_input.get("_prev_result")
+                piped = content is not None
+            if content is None:
                 return json.dumps({"success": False, "error": "content가 필요합니다 (파이프에서는 직전 step 결과가 자동 저장됨)."}, ensure_ascii=False)
+            extracted = None
+            items_alongside = None
+            if piped:
+                # ★2026-08-17 상상훈련 11회차 판정: 파이프 통화에 message(str)가 실존하면
+                # 그것이 산문 정본이다 — _emit_items 가 변환 때 message 를 pop 하는 이유가
+                # 바로 "message=현재 내용의 산문판" 계약이라, message 를 두고 봉투 JSON 을
+                # 쓰면 원시 배관이 파일이 된다(devdocs 검색 저장이 {"success": true, ...}
+                # 8.5KB 봉투가 되던 꼬임 실측). 변환 뒤 봉투(message 없음)·items 만 내는
+                # 생산자는 현행(JSON=구조가 내용) 유지. 명시 content 는 건드리지 않고,
+                # 추출·동반 items 는 결과에 신고(침묵 변형 금지).
+                probe = content
+                if isinstance(probe, str):
+                    try:
+                        probe = json.loads(probe)
+                    except Exception:
+                        probe = None
+                if (isinstance(probe, dict) and isinstance(probe.get("message"), str)
+                        and probe["message"].strip()):
+                    if isinstance(probe.get("items"), list) and probe["items"]:
+                        items_alongside = len(probe["items"])
+                    content = probe["message"]
+                    extracted = "message"
             if not isinstance(content, str):
                 content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)
             _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
@@ -764,6 +790,11 @@ def execute(tool_input: dict, context) -> str:
             _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
             abs_path = os.path.abspath(path)
             result = {"success": True, "path": abs_path, "size": len(content)}
+            if extracted:
+                result["extracted"] = extracted  # message 본문만 저장했음을 신고
+                if items_alongside:
+                    result["note"] = (f"동반 items {items_alongside}건은 저장하지 않았습니다 — "
+                                      "구조 보존이 필요하면 table:spreadsheet/structure 로 저장하세요.")
             if redirected:
                 result["redirected_to"] = "outputs/"
             return json.dumps(result, ensure_ascii=False)

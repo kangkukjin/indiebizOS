@@ -763,14 +763,39 @@ def _op_union(prev, params):
         all_rows = []
         for t in tables:
             all_rows.extend(remap(t))
-        return _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
+        env = _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
+        col_sets = [{str(c) for c in (t.get("columns") or [])} for t in tables if t.get("columns")]
+        return _attach_shape_warning(env, col_sets)
     item_lists = [_get_items(o)[0] for o in objs]
     if all(il is not None for il in item_lists):
         out = []
         for il in item_lists:
             out.extend(il)
-        return _emit_items(_carry_flags(objs), out)
+        env = _emit_items(_carry_flags(objs), out)
+        # 분기별 *유효 칸*(null 아닌 값이 실제로 채워지는 키) — canonical null-패딩(title:null
+        # 등)은 유효 칸이 아니다. 패딩 키로 재면 혼합 결합이 경고를 영원히 피해간다.
+        key_sets = []
+        for il in item_lists:
+            ks = set()
+            for it in il:
+                if isinstance(it, dict):
+                    ks |= {k for k, v in it.items() if v is not None}
+            if ks:
+                key_sets.append(ks)
+        return _attach_shape_warning(env, key_sets)
     return {"success": False, "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items)."}
+
+
+def _attach_shape_warning(env, key_sets):
+    """★2026-08-17 상상훈련 11회차 판정(F1 증거 후속): union 분기 간 공유 유효 칸이
+    0이면 이어붙인 표가 반쪽 열로 갈라진다(kv형 profile + records형 disclosures 혼합
+    31행 실측). 결합은 정직하게 하되 조용히 넘기지 않는다 — 비차단 경고를 직렬화
+    앞머리에 (param_warning 첫 키 선례)."""
+    if len(key_sets) >= 2 and not set.intersection(*key_sets):
+        return {"warning": "union: 분기 간 공유 칸(값이 채워지는 열)이 하나도 없습니다 — "
+                           "서로 다른 모양의 목록을 이어붙였습니다. 후속 filter/sort/select 가 "
+                           "반쪽 표에서 돌 수 있으니 분기 통화의 칸을 확인하세요.", **env}
+    return env
 
 
 def _op_merge(prev, params):

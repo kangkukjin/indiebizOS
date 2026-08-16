@@ -4,7 +4,7 @@ actions:
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:performance]{}'
-    description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take/document 파이프로 추리고 문서화.
+    description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
     group: culture
     target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
     target_key: op

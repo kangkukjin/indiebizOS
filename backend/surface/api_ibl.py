@@ -269,26 +269,34 @@ async def translate_to_ibl(req: TranslateRequest):
 
     allowed = set(req.allowed_nodes) if req.allowed_nodes else None
 
-    # 1) 해마: 자연어 → 과거 IBL 용례 연상
-    try:
-        from ibl_usage_rag import IBLUsageRAG
-        references = IBLUsageRAG().get_references(intent, allowed_nodes=allowed)
-    except Exception:
-        references = ""
+    # ★워커 스레드에서(asyncio.to_thread) — 해마 회상 + system_ai_call(블로킹 LLM HTTP)을
+    #   이벤트 루프 위에서 돌리면 호출 내내 /health 까지 굶는다(2026-08-16 keeper 오발
+    #   사건: 모델 교체 후 워밍업 translate 중 /health 무응답 → keeper 가 죽음으로 오판).
+    #   /ibl/execute 의 to_thread 선례와 같은 부류.
+    def _do_translate():
+        # 1) 해마: 자연어 → 과거 IBL 용례 연상
+        try:
+            from ibl_usage_rag import IBLUsageRAG
+            references = IBLUsageRAG().get_references(intent, allowed_nodes=allowed)
+        except Exception:
+            references = ""
 
-    # 2) 본격 system_ai 모델: 용례를 근거로 IBL 코드 번역
-    from consciousness_agent import system_ai_call
-    prompt = f'사용자 명령: "{intent}"\n\n'
-    if references:
-        prompt += f"참고 용례 (이 액션 이름들만 사용하라):\n{references}\n\n"
-    else:
-        prompt += "(관련 과거 용례 없음 — 위 6개 노드 지식으로 직접 번역하라.)\n\n"
-    prompt += "위 명령을 IBL 코드로 번역하라. IBL 코드만 출력."
+        # 2) 본격 system_ai 모델: 용례를 근거로 IBL 코드 번역
+        from consciousness_agent import system_ai_call
+        prompt = f'사용자 명령: "{intent}"\n\n'
+        if references:
+            prompt += f"참고 용례 (이 액션 이름들만 사용하라):\n{references}\n\n"
+        else:
+            prompt += "(관련 과거 용례 없음 — 위 6개 노드 지식으로 직접 번역하라.)\n\n"
+        prompt += "위 명령을 IBL 코드로 번역하라. IBL 코드만 출력."
 
-    spec = _load_ibl_spec()
-    system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
-    # 수동 모드 번역 = 모델 기어 '실행' 축(role=translate)으로 해소.
-    raw = system_ai_call(prompt, system_prompt=system_prompt, role="translate")
+        spec = _load_ibl_spec()
+        system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
+        # 수동 모드 번역 = 모델 기어 '실행' 축(role=translate)으로 해소.
+        return references, system_ai_call(prompt, system_prompt=system_prompt, role="translate")
+
+    import asyncio
+    references, raw = await asyncio.to_thread(_do_translate)
     if not raw:
         raise HTTPException(status_code=503, detail="번역 모델이 응답하지 않았습니다. 모델 기어(실행 축) 설정을 확인하세요.")
 
@@ -636,7 +644,10 @@ async def distill_ibl(req: DistillRequest):
         from ibl_usage_rag import distill_experience
         # 수동 모드 성공 = execute_ibl 성공 1건으로 모델링
         tool_calls = [{"tool_name": "execute_ibl", "input": {"code": code}, "success": True}]
-        ok = distill_experience(intent, tool_calls, req.top_score)
+        # ★워커 스레드에서 — 증류는 내부에서 경량 LLM(반성)을 블로킹 호출한다.
+        #   translate 와 같은 부류(이벤트 루프 기아 → /health 무응답 → keeper 오발).
+        import asyncio
+        ok = await asyncio.to_thread(distill_experience, intent, tool_calls, req.top_score)
         return {"distilled": bool(ok)}
     except Exception as e:
         return {"distilled": False, "reason": str(e)}

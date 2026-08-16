@@ -25,6 +25,7 @@ PAUSE="$REPO/data/backend_keeper_off"
 LOG="$REPO/data/backend_keeper.log"
 PIDFILE="$REPO/data/backend_keeper.pid"
 HEALTH="http://127.0.0.1:8765/health"
+BOOT_GRACE=300   # 초 — 리스너가 이보다 젊으면 콜드 스타트로 간주, revive 보류
 
 # 멱등 — 이미 도는 keeper 가 있으면 조용히 물러난다
 if [ -f "$PIDFILE" ]; then
@@ -36,13 +37,40 @@ fi
 echo $$ > "$PIDFILE"
 echo "[$(date '+%F %T')] keeper 시작 (pid=$$)" >> "$LOG"
 
+# ★타임아웃 10초(2026-08-16 사건): 해마 임베딩 모델(442MB) 콜드 로드 중엔 로더
+#   스레드의 GIL 점유로 /health 응답이 수 초씩 늘어진다 — 4초는 "느림"을 "죽음"으로
+#   오판했다. 진짜 죽음(연결 거부)은 타임아웃과 무관하게 즉시 실패하므로 넉넉해도
+#   탐지 지연이 없다.
+health_ok() {
+    /usr/bin/curl -s -m 10 "$HEALTH" >/dev/null 2>&1
+}
+
+# 8765 리스너들 중 *가장 젊은* 프로세스의 경과 초를 출력. 리스너 없으면 실패(비어 있음).
+# ★min 인 이유: uvicorn --reload 는 마스터+워커 둘 다 리스너로 잡힌다 — backend .py
+#   편집 리로드는 워커만 새로 태어나므로(마스터는 늙음), 젊은 쪽이 "지금 부팅 중"의 신호다.
+listener_age() {
+    local pid etime days s min=""
+    for pid in $(/usr/sbin/lsof -ti :8765 -sTCP:LISTEN 2>/dev/null); do
+        etime=$(ps -p "$pid" -o etime= 2>/dev/null | tr -d ' ')
+        [ -z "$etime" ] && continue
+        days=0
+        case "$etime" in *-*) days=${etime%%-*}; etime=${etime#*-};; esac
+        # etime 꼬리 = [HH:]MM:SS — awk 숫자 강제변환이 선행 0 도 안전하게 처리
+        s=$(echo "$etime" | awk -F: '{ if (NF==3) print $1*3600+$2*60+$3; else if (NF==2) print $1*60+$2; else print $1+0 }')
+        s=$((days*86400 + s))
+        if [ -z "$min" ] || [ "$s" -lt "$min" ]; then min=$s; fi
+    done
+    [ -z "$min" ] && return 1
+    echo "$min"
+}
+
 revive() {
     # keeper 가 띄운 백엔드의 stdout 이 이 로그로 흐르므로 비대화 방지(50MB 회전)
     if [ -f "$LOG" ] && [ "$(stat -f%z "$LOG" 2>/dev/null || echo 0)" -gt 52428800 ]; then
         mv "$LOG" "$LOG.old"
     fi
     {
-        echo "[$(date '+%F %T')] /health 2회 무응답 — 백엔드 재기동 (유령 워커 포함 정리)"
+        echo "[$(date '+%F %T')] /health 3회 무응답 — 백엔드 재기동 (유령 워커 포함 정리)"
         # 기록된 처방: 유령만 죽이면 복구 안 됨 — 마스터까지 전부 정리 후 재기동
         # ★-sTCP:LISTEN 필수(2026-08-06 사건): 무스코프 lsof -i 는 원격 포트가 8765인
         #   클라이언트 소켓(Electron WS·cloudflared 터널·에이전트 MCP)까지 매칭해
@@ -74,13 +102,27 @@ while true; do
         exit 0
     fi
     [ -f "$PAUSE" ] && continue
-    /usr/bin/curl -s -m 4 "$HEALTH" >/dev/null 2>&1 && continue
-    sleep 20
-    # 이중 확인 — start.sh 의 kill→start 순간 틈새·리로드 순간 오발 방지.
-    # ★20초(2026-08-06 사건): uvicorn --reload 재기동은 /health 가 11~15초 죽는다
-    #   (임베딩 모델 등 무거운 콜드 스타트) — 5초 재확인은 정상 리로드를 죽음으로
-    #   오판해 revive 를 오발했다. 재확인 대기는 리로드 소요보다 길어야 한다.
-    /usr/bin/curl -s -m 4 "$HEALTH" >/dev/null 2>&1 && continue
+    health_ok && continue
+    # 재확인 스트라이크 — start.sh 의 kill→start 순간 틈새·리로드 순간 오발 방지.
+    # ★20초 간격(2026-08-06 사건): uvicorn --reload 재기동은 /health 가 11~15초 죽는다
+    #   — 재확인 대기는 리로드 소요보다 길어야 한다.
+    # ★3회화(2026-08-16 사건): 2회(총 ~24초 창)는 모델 콜드 로드의 긴 기아를 못 넘겼다.
+    STRIKE_OUT=1
+    for _ in 1 2; do
+        sleep 20
+        if health_ok; then STRIKE_OUT=0; break; fi
+    done
+    [ "$STRIKE_OUT" -eq 0 ] && continue
+    # ★부팅 유예(2026-08-16 사건, 킬 루프의 구조적 차단): 해마 모델 교체 직후 재기동은
+    #   콜드 로드가 2분+ 걸려 /health 가 굶는다 — keeper 의 revive→재확인 주기(~110초)가
+    #   그보다 짧아 "kill→콜드 로드→kill" 루프가 실측됨(05:46/05:48/05:50 3연타).
+    #   리스너 프로세스가 살아 있고 아직 젊으면(부팅 중) 죽음이 아니라 콜드 스타트다.
+    #   진짜 유령 워커(포트 점유+영구 무응답)는 나이를 먹으므로 다음 주기에 revive 된다.
+    AGE=$(listener_age)
+    if [ -n "$AGE" ] && [ "$AGE" -lt "$BOOT_GRACE" ]; then
+        echo "[$(date '+%F %T')] /health 무응답이나 리스너 나이 ${AGE}초(<${BOOT_GRACE}) — 콜드 스타트 유예" >> "$LOG"
+        continue
+    fi
     revive
     sleep 30   # 부팅 여유 — 연속 재기동 폭주 방지
 done

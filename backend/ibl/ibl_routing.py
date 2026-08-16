@@ -792,21 +792,29 @@ def _discover_nodes(query: str, params: dict) -> Any:
         return node_summary()
 
     # 해마로 관련 IBL 코드 사례 검색
+    _search_error = None
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         limit = params.get("limit", 10)
         search_results = db.search_hybrid(query=query, top_k=limit)
-    except Exception:
+    except Exception as e:
+        # ★침묵 금지 (2026-08-16 7회차 B5): 검색층 예외를 삼키고 "매칭 없음"으로 위장하면
+        # 사용자는 어휘가 없다고 오독한다 — 빈 결과와 고장은 다른 상태다.
         search_results = []
+        _search_error = f"{type(e).__name__}: {e}"
 
     if not search_results:
-        return {
+        out = {
             "query": query,
             "results": [],
-            "message": f"'{query}'에 매칭되는 노드를 찾을 수 없습니다.",
+            "message": (f"'{query}' 탐색 실패 — 검색층 오류: {_search_error}" if _search_error
+                        else f"'{query}'에 매칭되는 노드를 찾을 수 없습니다."),
             "total_nodes": len(list_nodes()),
         }
+        if _search_error:
+            out["error"] = _search_error
+        return out
 
     # 해마 결과에서 [node:action] 추출 → ibl_nodes.yaml에서 상세 조회
     nodes_data = _load_nodes_data() or {}

@@ -260,3 +260,11 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 - 검수기가 두 번 값을 함(유령 액션·오호출 dry-run 차단 — F2-op 수리의 열매). P1~P19 통과·keeper 규약 준수.
 - 시드 후보 10건 — 다음 배치(어젯밤 31건 직후라 숙성 후 일괄).
 - 잔여 관찰: `??` **1차 실패 유도 실측**(폴백 발동 경로) · world trend 차트(Pulse 축적 후).
+
+### 7회차 (2026-08-16 심야 — 보고서 `outputs/imagination_training/2026-08-16_7회차.md`, 커밋 `d59a478` 직후)
+- **문형 개통 2**: `??` **폴백 발동 경로**(1차 DNS 고장→2차 완주 — 6회차는 성공 경로만) · **@몸 라우팅 첫 실측**(`[self:time]@폰-9f2b` → 폰 실행 `_forwarded_to: phone`, 유령 별칭=정직 에러+라이브 노드 목록). bulletin 쓰기 왕복(create 공개주소→delete)·switch·discover·showcase·forage·world-trend 재검 편입.
+- **★수리 3+근본 1 (같은 세션)**: **B4** feed가 네트워크 죽음을 "빈 피드 success"로 위장(feedparser bozo 미검사 — 오류/빈 피드/있음 세 상태가 둘로 접힘)→bozo+status 부재=정직 실패 / **B5** discover 전멸의 진범=**재기동 인터프리터**(재학습 채택 후 맨 `python3` 재기동→시맨틱 판정 갈려 **해마 렌트 강등** — search_hybrid 설계상 빈손. start.sh 정본=`.venv` 우선)→침묵 except 정직화+정본 재기동 / **B6** render_html chromium 1208 부재=**B5와 같은 뿌리**(homebrew playwright rev 불일치)→재기동으로 자동 해소.
+- ★★교훈(재기동 표준 절차 개정): 모델 교체 재기동은 keeper_off→재기동→워밍업→keeper_on 에 **"인터프리터=start.sh 정본(.venv/bin/python3)"** 을 추가 — 어제 밤~오늘 라이브 해마가 렌트로 강등된 채 돌았다(번역은 렌트 인덱스로 작동해 증상이 숨었음).
+- 커밋 게이트 실증: 코퍼스-param 가드가 증류 오염(`_raw` 배관 키)을 커밋 직전 검출 → 증류기 스크럽+오염 1행 정정(커밋에 포함).
+- 관찰(판정 후보): contest=Kaggle 단일 소스라 한국어 질의 0건(소스 추가 or desc 정직화) · forage 3층 통화=규약 밖(의도 여부).
+- 시드 후보 5건 — 다음 배치.

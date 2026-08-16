@@ -57,6 +57,17 @@ def _fetch_feed(tool_input: dict) -> dict:
         feed = feedparser.parse(url)
         source_name = (getattr(feed, "feed", {}) or {}).get("title") or url
         if not feed.entries:
+            # ★B4 (2026-08-16 상상훈련 7회차): feedparser 는 DNS 죽음·네트워크 오류에도
+            # 예외 없이 빈 entries 를 준다(bozo 플래그만 셈) — 이를 "항목 없는 피드 success"로
+            # 위장하면 사용자가 "그 피드에 글이 없구나"로 오독한다. 오류/빈 피드/항목 있음은
+            # 다른 세 상태다. HTTP 응답조차 못 받았으면(status 부재+bozo) 정직한 실패로.
+            _bozo = bool(getattr(feed, "bozo", 0))
+            _status = feed.get("status") if hasattr(feed, "get") else getattr(feed, "status", None)
+            if _bozo and _status is None:
+                _exc = getattr(feed, "bozo_exception", None)
+                return {"success": False, "items": [], "count": 0,
+                        "error": f"피드를 가져오지 못했습니다({url}): "
+                                 f"{type(_exc).__name__ if _exc else '네트워크 오류'}: {_exc}"}
             return {"success": True, "items": [], "count": 0,
                     "message": f"{source_name}: 피드에 항목이 없습니다 (피드 URL 인지 확인 — HTML 페이지면 crawl 사용)."}
         lines = [f"### {source_name} 최신 글 (최대 {limit}건)"]

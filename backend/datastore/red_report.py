@@ -79,14 +79,58 @@ def mark_announced(items: list):
             continue
 
 
-def pending_scent(repo: str) -> str:
-    """미보고 판정을 연상 블록용 XML 로. 없으면 빈 문자열(0토큰).
+def collect_unapplied(repo: str, min_age_s: float = 60.0) -> list:
+    """적용되지 않은 채 남은 격리 스테이징 세션 (2026-08-17).
 
-    ★부작용 있음: 반환과 동시에 보고 표식을 남긴다(한 번만 말하기 위해).
+    ★왜 여기냐: 격리 스테이징은 라이브를 안 건드리는 게 장점인데, 바로 그래서 **적용을
+    빠뜨린 수리가 아무 흔적도 남기지 않는다** — 사용자 자리에서는 '고쳤다더니 그대로'가
+    된다. 판정 회수(위)가 죽음을 넘은 결말을 닫는 것과 같은 이유로, 이건 *일어나지 않은*
+    적용을 닫는다. 세션은 apply/discard 로 스스로 사라지므로 해소되면 조용해진다.
+
+    부작용 없음. min_age_s 는 지금 돌고 있는 턴의 세션을 오보하지 않기 위한 유예."""
+    root = os.path.join(repo, "data", "system_ai_state", "repair_sessions")
+    now = time.time()
+    out = []
+    try:
+        names = os.listdir(root)
+    except OSError:
+        return out
+    for name in names:
+        if not name.endswith(".json"):
+            continue
+        path = os.path.join(root, name)
+        try:
+            with open(path, encoding="utf-8") as f:
+                s = json.load(f)
+        except Exception:
+            continue
+        if s.get("status") != "staging" or not (s.get("files") or {}):
+            continue
+        try:
+            age = now - os.path.getmtime(path)
+        except OSError:
+            continue
+        if age < min_age_s or age > MAX_AGE_S:
+            continue
+        out.append({"key": s.get("key"),
+                    "files": [r.get("rel") for r in (s.get("files") or {}).values()],
+                    "age_s": int(age)})
+    return out[:MAX_ITEMS]
+
+
+def pending_scent(repo: str) -> str:
+    """미보고 판정 + 미적용 스테이징을 연상 블록용 XML 로. 없으면 빈 문자열(0토큰).
+
+    ★부작용 있음: 반환과 동시에 판정에 보고 표식을 남긴다(한 번만 말하기 위해).
+    스테이징 쪽은 표식을 남기지 않는다 — 그건 지나간 사건이 아니라 *지금도 참인 상태*라,
+    해소(apply/discard)될 때까지 계속 보여야 한다.
     """
     items = collect_pending(repo)
-    if not items:
+    staged = collect_unapplied(repo)
+    if not items and not staged:
         return ""
+    if not items:
+        return _staged_block(staged)
     rows = []
     for d in items:
         outcome = d.get("outcome") or "unknown"
@@ -103,4 +147,18 @@ def pending_scent(repo: str) -> str:
             "원상 복구됐는지 말한 뒤 다음 행동을 제안하라. 이미 지난 일이니 다시 수리하지 "
             "말고, 사용자가 새로 요청한 일이 있으면 그것을 이어서 하라.")
     mark_announced(items)
-    return f"<repair_outcome note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_outcome>"
+    return (f"<repair_outcome note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_outcome>"
+            + _staged_block(staged))
+
+
+def _staged_block(staged: list) -> str:
+    """미적용 스테이징 블록. 없으면 빈 문자열."""
+    if not staged:
+        return ""
+    rows = [f'  <staged key="{s["key"]}" files="{len(s["files"])}">'
+            + ", ".join(s["files"][:6]) + "</staged>" for s in staged]
+    note = ("지난 수리가 격리 사본에만 쌓인 채 **라이브에 적용되지 않았다** — 그 수정은 "
+            "지금 시스템에 없다. 이어서 마무리하려면 [self:patch]{op:\"apply\"} 로 "
+            "검증·적용하고, 더 필요 없으면 {op:\"discard\"} 로 정리하라. 어느 쪽이든 "
+            "사용자에게 '아직 반영되지 않았다'는 사실을 먼저 알려라.")
+    return f"\n<repair_staged note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_staged>"

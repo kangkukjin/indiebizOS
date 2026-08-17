@@ -444,7 +444,7 @@ RAG 재인덱싱 3,702편. 발행물 재생성 → **12문단 + 이미지 1**, f
    실패 경로만 봐서 이 사각을 못 봤다.
    → 실행기 루프 초입에 `_seq_boundary` 리셋 추가(성공 경로 유일 관문) +
    §1C-2 에 `; 경계=prev 단절` 케이스 추가(성공 검색 ; 빈 take → **실패가 정답**인 단언).
-2. **fixture 회계 -3** — `self:mkdir`(fixture)·`self:fill`·`self:propose_patch`(exempt)가
+2. **fixture 회계 -3** — `self:mkdir`(fixture)·`self:fill`·`self:patch`(exempt)가
    `returns: effect` 인데 items/scalar 전용 필드를 갖고 있었다. 특히 **mkdir fixture 는
    건강검진마다 실제 폴더를 만들고 있었다**(부작용 없는 점검 취지 위반). 세 필드 제거 +
    `validate_fixture_coverage` 에 **역방향 가드**(비확률대상 액션의 fixture/exempt = 빌드 거부)

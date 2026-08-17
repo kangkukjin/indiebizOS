@@ -405,36 +405,47 @@
       }
     },
     {
-      "name": "propose_patch",
-      "description": "자기개조 안전장치(Floor #2) — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안합니다. 라이브 트리는 절대 손대지 않습니다.\n\n## 언제\n- write/edit 가 막힌 RED 코어 파일을 고쳐야 할 때 (직접 쓰기는 자해 위험이라 금지됨)\n- 그 외 파일(data/·프로젝트)은 그냥 [self:write]/[self:edit] 를 쓰세요 — propose_patch 는 RED 전용\n\n## 동작\n1. HEAD 기준 git worktree 격리 사본 생성 (라이브 무변경)\n2. 변경을 사본에만 기록 (content 전체 또는 old_string→new_string)\n3. 사본에서 py_compile + build --check 기계 검증 (자기채점 아님)\n4. diff·검증결과를 patch_proposals/ 에 기록\n5. 채택(머지)·폐기는 사람이 검토 후 수행\n\n## 파라미터\n- path: 대상 RED 파일 경로\n- content: 새 전체 내용 (신규 파일·전체 교체) — 또는 old_string+new_string 부분 교체\n- reason: 변경 근거 (필수, 사람 검토용)",
+      "name": "patch_op",
+      "description": "자기개조 패치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에서 다룹니다.\n\n## 수리 경로에서 (사용자 명령 수리 = 그랜트 있음)\nRED 파일을 [self:write]/[self:edit] 로 그냥 고치세요 — **자동으로 격리 사본에 쌓입니다** (라이브 무변경 = 리로드 없음 = 당신의 턴이 안 끊깁니다). 다 고쳤으면 반드시:\n\n  [self:patch]{op:\"apply\"}\n\n가 기계 검증(구문·import 스모크·IBL 삼각·안전장치 스모크)을 돌리고 **통과분만** 라이브로 한 번에 옮깁니다. 검증 실패면 라이브는 무변경이고 실패 상세가 돌아오니 격리 사본에서 고쳐 쓰고 다시 apply 하세요.\n★apply 를 부르지 않으면 그 수정은 라이브에 없습니다 — 고쳤다고 보고하지 마세요.\n\n## 자율 태스크에서 (그랜트 없음)\nop:\"propose\" (기본) — 격리 사본에 제안+검증만 남깁니다. 적용 경로는 없습니다.\n\n## op\n- propose(기본): path + content(전체) 또는 old_string+new_string(부분), reason 필수\n- apply: 이 세션의 격리 변경을 검증 후 라이브 적용\n- status: 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)",
       "input_schema": {
         "type": "object",
         "properties": {
+          "op": {
+            "type": "string",
+            "description": "수행할 동작.",
+            "enum": [
+              "propose",
+              "apply",
+              "status",
+              "discard"
+            ],
+            "default": "propose"
+          },
           "path": {
             "type": "string",
-            "description": "대상 RED 파일 경로 (backend/·frontend/·scripts/ 하위). RED 밖이면 거부됨."
+            "description": "(propose) 대상 RED 파일 경로 (backend/·frontend/·scripts/ 하위). RED 밖이면 거부됨."
           },
           "content": {
             "type": "string",
-            "description": "새 전체 파일 내용 (신규 생성 또는 전체 교체). old_string/new_string 과 택일."
+            "description": "(propose) 새 전체 파일 내용 (신규 생성 또는 전체 교체). old_string/new_string 과 택일."
           },
           "old_string": {
             "type": "string",
-            "description": "부분 교체 — 교체할 기존 문자열 (HEAD 기준 파일 내 유일해야 함). new_string 과 함께."
+            "description": "(propose) 부분 교체 — 교체할 기존 문자열 (HEAD 기준 파일 내 유일해야 함). new_string 과 함께."
           },
           "new_string": {
             "type": "string",
-            "description": "부분 교체 — 새 문자열."
+            "description": "(propose) 부분 교체 — 새 문자열."
           },
           "reason": {
             "type": "string",
-            "description": "변경 근거 (필수). 사람이 제안을 검토할 때 읽는다."
+            "description": "(propose) 변경 근거 (필수). 사람이 제안을 검토할 때 읽는다."
+          },
+          "key": {
+            "type": "string",
+            "description": "(discard) 폐기할 스테이징 세션 키. 생략 시 현재 수리 세션."
           }
-        },
-        "required": [
-          "path",
-          "reason"
-        ]
+        }
       }
     },
     {

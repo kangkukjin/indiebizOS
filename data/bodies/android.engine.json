@@ -242,13 +242,14 @@
     "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
+    "test_repair_staging": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 241,
+    "total": 242,
     "engine": 208,
-    "blocklist": 33
+    "blocklist": 34
   }
 }

@@ -48,6 +48,7 @@
     "self:notebook#list": "[self:notebook]{op: \"list\"}",
     "self:package": "[self:package]{op: \"list\"}",
     "self:package#info": "[self:package]{op: \"info\", package_id: \"web\"}",
+    "self:patch#status": "[self:patch]{op: \"status\"}",
     "self:photo": "[self:photo]{op: \"stats\"}",
     "self:recent_chats": "[self:recent_chats]{}",
     "self:script": "[self:script]{}",

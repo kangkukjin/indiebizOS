@@ -9,7 +9,7 @@
 >
 > 1. **사람 명령 한도**: 사용자가 직접 명령한 태스크에서만 (`thread_context.task_origin == 'user'`
 >    — WS 채팅×2·`/system-ai/chat`·에이전트 명령 HTTP 4곳만 세팅. 스케줄러·자가점검·위임
->    사슬·외부 채널 = 미세팅 = fail-closed). 자율 태스크는 종전대로 `propose_patch` 제안만.
+>    사슬·외부 채널 = 미세팅 = fail-closed). 자율 태스크는 종전대로 `patch` 제안만.
 > 2. **최고 모델 전용**: 기어가 절약이어도 REPAIR 태스크의 실행 모델은 고급으로 승격
 >    (`model_resolver` `system_repair→고급 고정` — reflex→경량 고정의 역방향).
 > 3. **의식 각성**: 의식 토글 OFF 여도 REPAIR 는 THINK(의식 framing) 경로를 강제.
@@ -61,13 +61,77 @@
 > 또한 게이트 파일(handler.py) 자체는 data/ 구역인데도 그랜트 필요로 승격(`_SELF_FILE`
 > — 게이트를 지키는 게이트) + 수정 시 백업·워치독 대상.
 >
+> **★격리 스테이징 (2026-08-17) — 수술 순서를 뒤집는다:**
+>
+> 위 헌법(08-05)은 RED 를 **라이브에 직접** 쓰고 사후에 맥을 짚는 구조였다. 그래서
+> 검증이 둘 다 사후적이었다 — 사전은 `compile()`(구문)뿐이고 사후는 `/health 200`
+> (= "프로세스가 살아는 있다")뿐. keeper 일시정지·분리 워치독·다음 턴 판정 회수는
+> 전부 *편집자가 자기 편집에 죽는다*는 전제 위의 수습 장치였다.
+>
+> ```
+> (구) 쓴다 → 리로드 → 죽는다 → 워치독이 맥을 짚는다 → 다음 턴이 판정을 읽는다
+> (신) 격리 사본에 쓴다 → 거기서 검증한다 → 통과분만 한 번에 옮긴다 → 리로드 1회
+> ```
+>
+> - **스테이징**: 그랜트된 RED write/edit 은 `_red_stage` 가 세션 worktree
+>   (`.worktrees/repair-<task>`)로 돌린다. 라이브 무변경 = **리로드 없음 = 편집자가
+>   자기 턴 안에서 살아 있다** — 검증 결과를 읽고 고쳐 쓸 수 있다. 되읽기(read)도
+>   *자기가 건드린 파일만* 격리본을 본다(안 건드린 파일은 라이브 그대로).
+> - **★베이스는 라이브 작업 트리(HEAD 아님)**: 세션 생성 시 `git diff HEAD` 를
+>   best-effort 로 얹고, 파일을 처음 건드릴 때 **라이브 원본에서 씨를 뿌린다**(권위).
+>   HEAD 를 베이스로 쓰면 적용이 미커밋 라이브 작업을 조용히 되돌린다 = 데이터 손실.
+> - **검증 배터리**(`repair_staging.verify`, 실측 2.5초): py_compile → **import 스모크**
+>   → IBL 삼각(plain build) → 안전장치 파일이면 `red_safety_selftest`.
+>   ★import 스모크가 새 축이다 — 사전 `compile()` 이 원리적으로 못 잡는 부류
+>   (ImportError·모듈 최상위 NameError·순환 import)를 잡는다. **브릭 원인 대부분이
+>   거기 산다.** 스모크는 `INDIEBIZ_BASE_PATH` 를 worktree 로 박아 격리한다(라이브
+>   `data/` 를 물려받으면 격리가 깨진다).
+> - **적용** `[self:patch]{op:"apply"}`: 검증 전량 통과 → 준비 전량 통과 →
+>   쓰기 → 워치독. **부분 적용 없음** — 한 파일이라도 막히면 아무것도 안 나간다.
+>   적용은 기존 `_red_write_prepare/_red_write_finalize` 를 그대로 통과하므로
+>   **백업·keeper 일시정지·분리 워치독·자동 롤백이 전부 그대로 이어받는다.**
+>   스테이징은 그 *앞에* 층을 하나 더 놓을 뿐 무엇도 대체하지 않는다.
+> - **적용 안 함이 기본 실패 모드**: 격리의 장점(라이브 무변경)이 곧 약점이라 apply 를
+>   빠뜨린 수리는 아무 흔적이 없다. → `red_report.collect_unapplied` 가 미적용 세션을
+>   다음 턴 연상에 `<repair_staged>` 로 얹는다(판정 회수와 같은 원리, 다만 표식을
+>   남기지 않는다 — 지나간 사건이 아니라 *지금도 참인 상태*라 해소될 때까지 보인다).
+>   **자동 적용은 하지 않는다** — 응답이 이미 나간 뒤 적용하면 검증 결말을 못 본 채
+>   "고쳤다"가 되어 거짓 보고가 된다.
+> - **폴백**: git 이 없는 몸(설치본·폰)이나 그랜트 없는 경로에서는 세션이 안 열리고
+>   종전 라이브 직행으로 떨어진다(안전판은 그대로).
+> - **이동·복사·삭제도 같은 층**(같은 날 후속): 세션 기록이 `op: write|delete` 두 종을
+>   나른다. 삭제는 라이브를 놔둔 채 **격리 사본에서만** 지운다(그래야 검증이 *그 파일이
+>   없는 세계*를 본다). 이동은 '대상 쓰기 + 원본 삭제' 한 쌍이라 **양쪽이 다 적재
+>   가능할 때만** 격리로 간다(`can_stage` 선판정 — 한쪽만 가면 라이브가 반쪽 상태가
+>   된다). 적용 순서는 **쓰기 먼저, 삭제 나중**(대상에 생긴 뒤 원본이 사라진다).
+>   삭제도 apply 가 백업을 뜬 뒤 지우므로 워치독 롤백이 되돌릴 수 있다.
+> - **★삭제 전용 게이트 `delete_no_orphan_imports`**: 쓰기의 위험은 *그 파일이 깨지는*
+>   것이라 그 모듈을 import 해보면 잡힌다. 삭제의 위험은 반대다 — **남의 import 가
+>   깨진다.** 지워진 모듈은 import 해볼 수조차 없으니(없는 게 정상) 스모크로는 원리적
+>   으로 안 잡힌다. 그래서 격리 사본의 추적 .py 를 훑어 아직 그 모듈을 import 하는
+>   파일을 찾아 이름을 대고 막는다.
+> - **남은 갭(정직하게)**: **행동 검증은 여전히 적용 이후**다 — 격리 사본에서 잡는 것은
+>   구조적 브릭이고, 라이브 프로세스의 실제 동작은 워치독·다음 턴이 판정한다. 디렉토리
+>   단위 RED 복사·이동·삭제는 종전대로 **금지**(그랜트가 있어도 — 파급 과대).
+>
+> **배선**: `data/packages/installed/tools/system_essentials/repair_staging.py`(본체) +
+> handler 의 `_red_stage`/`_patch_op`(이음매 — RED 구역 정의의 단일 출처는 계속
+> `_red_zone_violation` 하나) + `red_report.collect_unapplied` + `agent_pipeline` finally
+> 경고. 배터리: `backend/test_repair_staging.py`(38검사, 임시 git 저장소·라이브 무접촉).
+>
 > 아래 본문의 Floor #4 절은 역사 기록으로 보존한다.
 
 > **구현 상태 (2026-07-12 갱신):**
 > - **Floor #1 ✅ 구현·커밋** (`30a4116`): RED 구역 직접 쓰기 차단. `system_essentials/handler.py` `_validate_path_in_scope` 에 `_red_zone_violation`(realpath 정규화, repo 루트 backend+frontend 독립 탐지) 게이트. 쓰기 계열 단일 초크포인트 전부 커버, 읽기는 유지. 에피소드 551 구멍 폐쇄.
-> - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:propose_patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록. 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
-> - **미구현**: Phase 1(run_command 리다이렉션 게이트) · Floor #3 완전판(import smoke + health_check + 표적 스모크 — 격리 한계로 부분만) · Floor #4(승인 배선: 제안 diff→plan_mode UI→사람 머지) · Floor #5(스냅샷+자동 롤백+개조직후 self-check).
-> - **미이관**: `[self:propose_patch]` 해마 시드 용례 없음 → 다음 임베더 재학습 시 흡수.
+> - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록. 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
+> - **Floor #2·#3 ✅ 사용자 경로까지 확장** (2026-08-17, 위 '격리 스테이징' 절): 격리가
+>   `patch`(자율 태스크 전용)에만 있고 실제로 도는 수리 경로는 라이브 직행이던
+>   비대칭을 해소. Floor #3 에 **import 스모크**가 합류(사전 compile 이 못 잡던 축).
+>   액션은 늘지 않았다 — `patch` 에 op 축(propose/apply/status/discard) 추가.
+> - **미구현**: Phase 1(run_command 리다이렉션 게이트) · Floor #3 의 표적 스모크(변경
+>   동작의 실제 1회 실행 — 라이브 프로세스가 필요해 원리적으로 적용 이후로 남는다).
+> - **미이관**: `[self:patch]` 해마 시드 용례 없음 → 다음 임베더 재학습 시 흡수.
+>   (그때까지는 tool description 과 의식 프롬프트 수리 안전수칙 3조가 apply 를 이끈다.)
 
 ## 0. 왜 이 문서인가 — 실측된 실패
 
@@ -127,7 +191,7 @@ DENY = [f"{REPO}/backend", f"{REPO}/frontend", f"{REPO}/scripts", f"{REPO}/.git"
 abs_path = os.path.realpath(path)        # 심링크·../ 정규화 (우회 차단)
 for zone in DENY:
     if abs_path == zone or abs_path.startswith(zone + os.sep):
-        return f"보호된 실행 영역입니다(자기수정 안전 바닥): {abs_path}. RED 구역은 propose_patch 경로로만."
+        return f"보호된 실행 영역입니다(자기수정 안전 바닥): {abs_path}. RED 구역은 patch 경로로만."
 ```
 
 - **읽기는 무제한 유지** — `read_op`/`list_directory`는 이 함수를 안 거친다. opus의 조사 행동(backend 읽기)은 살린다. 읽기는 브릭 못 시킨다.
@@ -140,7 +204,7 @@ for zone in DENY:
 
 RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에만 쓴다. Floor #1로 시스템은 이제 RED를 직접 못 쓰므로, RED를 건드리는 **유일한 정규 통로**는 새 통제 채널이다:
 
-**신규 어휘 `[self:propose_patch]`** (scope: workspace, RED 전용):
+**신규 어휘 `[self:patch]`** (scope: workspace, RED 전용):
 - 입력: 대상 파일(RED), 새 내용 또는 diff, 근거
 - 동작: `git worktree add .worktrees/selfpatch-<ts>` → 그 사본에만 기록 → **라이브 트리 무변경**
 - 산출: worktree 경로 + diff. 유기체는 자기 몸이 아니라 사본에만 손댄다.
@@ -166,7 +230,7 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 **재사용:** `enter_plan_mode`/`exit_plan_mode` → `data/system_ai_state/plan_mode_state.json`(`phase=awaiting_approval`) → `SystemAIView`가 폴링해 승인 UI 표시 → 사용자 승인/거부.
 
 **배선(추가):**
-1. `propose_patch` 산출 diff + Floor #3 검증 결과를 `plan_mode_state.json`에 실어 승인 화면에 노출.
+1. `patch` 산출 diff + Floor #3 검증 결과를 `plan_mode_state.json`에 실어 승인 화면에 노출.
 2. **적용은 시스템이 아니라 외부 단계가** 수행 — 사용자가 "승인"하면 별도 apply 스텝(git merge worktree → 라이브 → 리로드)이 돈다. 유기체는 자기 몸에 substrate 변경을 **자가 적용하지 않는다.**
 3. 거부 시 worktree 폐기.
 
@@ -185,7 +249,7 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 | 안전판 | 이미 있는 것 | 새로 짓는 것 |
 |--------|--------------|--------------|
 | #1 구역 게이트 | `_validate_path_in_scope` 뼈대, `is_dangerous_command` | 절대경로 DENY 블록(~10줄), run_command 리다이렉션 확장 |
-| #2 격리 | git repo, worktree | `[self:propose_patch]` 어휘 + worktree 배선 |
+| #2 격리 | git repo, worktree | `[self:patch]` 어휘 + worktree 배선 |
 | #3 검증 | `build --check`, `ibl_health_check`, self-check | 세 게이트를 apply 전에 묶는 러너 |
 | #4 승인 | plan_mode + SystemAIView 폴링 | diff/검증결과를 승인 화면에 배선 |
 | #5 롤백 | self-check + RED 알림 + git | "최근 자가패치" 롤백 방아쇠 배선 |
@@ -196,7 +260,7 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 
 - **Phase 0 (최소·즉효, ~1시간):** Floor #1 절대경로 DENY 블록만. **551을 원천 차단.** `build --check` 통과 확인 + 스모크(backend 절대경로 쓰기 거부 / data·outputs 쓰기 정상 / backend 읽기 정상). handler.py 편집이라 `/packages/reload`로 라이브.
 - **Phase 1:** run_command 리다이렉션 게이트 확장 → 승인 경로.
-- **Phase 2:** `[self:propose_patch]` + worktree 격리(Floor #2) + 검증 러너(Floor #3).
+- **Phase 2:** `[self:patch]` + worktree 격리(Floor #2) + 검증 러너(Floor #3).
 - **Phase 3:** 승인 배선(Floor #4) — plan_mode에 diff/검증 노출.
 - **Phase 4:** 자동 롤백(Floor #5).
 

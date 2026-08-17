@@ -259,7 +259,7 @@ CLAUDE.md "신규 IBL 어휘 없음"). 같은 3층 인프라 위의 다섯 번�
 | **파일 원자** | read · write · edit · list · grep · file_find · copy · move · delete | 이것들이 조합의 **재료**다 |
 | **AI 호출 3축** | `self:ask`(원샷) · `others:delegate`(위임) · `others:ask`(이웃 몸) | 셋이 서로 다른 실행 주체·비용·동기성. 하나로 접으면 축이 사라진다 |
 | **문법(table 14)** | filter · sort · take · select · dedup · groupby · join · union · merge · **each** · chart · spreadsheet · document · structure | **조합자 자체.** 분해 대상이 아니다 |
-| **헌법 장치** | `self:propose_patch`(REPAIR) · `self:package` · `sense:self_check` · `self:script{run}` | 시스템이 자기를 고치는 통로. 빈도와 무관하게 가용해야 함 |
+| **헌법 장치** | `self:patch`(REPAIR) · `self:package` · `sense:self_check` · `self:script{run}` | 시스템이 자기를 고치는 통로. 빈도와 무관하게 가용해야 함 |
 
 **특히 방어해야 할 것**: `self:script{run}` 과 `table:each`. 전자는 어휘 증식의 대안이고,
 후자는 문형을 곱셈으로 바꾸는 유일한 고차 변환자다.

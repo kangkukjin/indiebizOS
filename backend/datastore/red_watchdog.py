@@ -43,6 +43,10 @@ SAFETY_SUFFIXES = (
     "backend/datastore/red_grant.py",
     "backend/datastore/red_watchdog.py",
     "tools/system_essentials/handler.py",
+    # 격리 스테이징(2026-08-17) — 여기가 망가지면 수리가 조용히 라이브 직행으로
+    # 폴백하거나(격리 상실) 적용이 안 되고도 됐다고 보고될 수 있다. /health 로는
+    # 둘 다 안 잡히는 침묵 결함이라 기능 스모크 대상이다.
+    "tools/system_essentials/repair_staging.py",
     "scripts/red_safety_selftest.py",
 )
 

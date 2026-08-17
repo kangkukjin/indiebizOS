@@ -323,7 +323,7 @@ data/common_prompts/OLD/
 **/.edition_parked
 data/packages/installed/tools/blog/data/
 
-# 자기개조 Floor #2: propose_patch 격리 사본 + 제안 기록
+# 자기개조 Floor #2: patch 격리 사본 + 제안 기록
 .worktrees/
 data/system_ai_state/patch_proposals/
 

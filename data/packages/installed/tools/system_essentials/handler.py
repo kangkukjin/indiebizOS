@@ -276,7 +276,7 @@ def _red_zone_violation(abs_path: str) -> str | None:
                 f"Error: RED 구역(살아있는 기질) 쓰기가 허가되지 않았습니다: {rel}\n"
                 f"시스템 자기수정은 ①사용자가 직접 명령한 태스크에서 ②고급 모델+의식 각성"
                 f"(REPAIR 경로)으로만 허용됩니다(헌법 2026-08-05). 지금 태스크는 그 조건 밖입니다.\n"
-                f"→ 자율 태스크(스케줄러·자가점검 등)가 발견한 문제면 [self:propose_patch]로 "
+                f"→ 자율 태스크(스케줄러·자가점검 등)가 발견한 문제면 [self:patch]로 "
                 f"제안만 남기세요 — 적용은 사용자가 명령할 때 수리 경로가 수행합니다.\n"
                 f"→ 사용자 명령을 수행 중인데 이 게이트에 막혔다면, 사용자에게 '#repair' 태그나 "
                 f"'시스템 수리' 명시로 재명령해 달라고 답하세요(수리 경로로 재실행됩니다)."
@@ -420,6 +420,80 @@ def _red_write_finalize(path: str):
         print(f"[RED 안전판] 워치독 기동 실패 (백업은 확보됨): {e}")
 
 
+# ── 수리 격리 스테이징 (2026-08-17) ────────────────────────────────────────
+# 그랜트된 RED 쓰기는 라이브가 아니라 **격리 사본(worktree)** 으로 간다 — 스테이징
+# 중에는 리로드가 없어 편집자가 자기 턴 안에서 살아 있고, 라이브는 검증을 통과한
+# 내용만 [self:patch]{op:"apply"} 로 한 번에 받는다. 로직=repair_staging.py.
+# git 이 없는 몸(설치본·폰)에서는 세션이 안 열리고 종전 라이브 직행으로 폴백한다.
+
+def _staging_key():
+    """현재 그랜트의 세션 키 — 그랜트가 없으면 None(스테이징 대상 아님)."""
+    grant = _red_grant_active()
+    if not grant or _REPO_ROOT is None:
+        return None
+    try:
+        return _staging_mod().task_key(grant.get("task_id") or "notask")
+    except Exception:
+        return None
+
+
+def _staging_mod():
+    mod = _SIBLING_MODS.get("repair_staging")
+    if mod is None:
+        mod = _SIBLING_MODS["repair_staging"] = _load_sibling("repair_staging")
+    return mod
+
+
+def _red_stage(path: str, for_write: bool) -> str:
+    """RED 경로를 격리 사본 경로로 바꾼다(해당될 때만). 아니면 원 경로 그대로.
+
+    for_write=True  : 처음 건드리는 파일이면 라이브 원본에서 씨를 뿌리고 스테이징.
+    for_write=False : **이미 스테이징된 파일만** 리다이렉트 — 안 건드린 파일을 읽을 때는
+                      라이브를 보여준다(격리 사본이 조사 대상을 왜곡하지 않게)."""
+    try:
+        if not _red_is_live_path(path):
+            return path
+        key = _staging_key()
+        if not key:
+            return path
+        repo = str(_REPO_ROOT)
+        live_abs = os.path.realpath(path)
+        st = _staging_mod()
+        if for_write:
+            return st.stage_file(repo, key, live_abs) or path
+        return st.staged_path(repo, key, live_abs) or path
+    except Exception as e:
+        print(f"[수리 스테이징] 리다이렉션 실패 — 종전 경로로 진행: {e}")
+        return path
+
+
+def _red_can_stage(path: str) -> bool:
+    """세션에 적재 가능한 경로인가 — 이동처럼 **양쪽이 다 되어야** 하는 연산의 선판정.
+    한쪽만 적재되면 '원본은 라이브에서 사라졌는데 대상은 격리에만 있는' 반쪽 상태가 된다."""
+    try:
+        key = _staging_key()
+        return bool(key) and _staging_mod().can_stage(str(_REPO_ROOT), key, os.path.realpath(path))
+    except Exception:
+        return False
+
+
+def _red_stage_delete(path: str) -> bool:
+    """RED 파일 삭제를 세션에 적재(라이브 무변경). False 면 호출자가 종전 라이브 경로로."""
+    try:
+        key = _staging_key()
+        if not key:
+            return False
+        return _staging_mod().stage_delete(str(_REPO_ROOT), key, os.path.realpath(path))
+    except Exception as e:
+        print(f"[수리 스테이징] 삭제 적재 실패 — 종전 경로로 진행: {e}")
+        return False
+
+
+_STAGED_NOTE = ("라이브는 무변경입니다(리로드 없음). 검증 후 실제로 반영하려면 "
+                "[self:patch]{op:\"apply\"} 를 호출하세요 — 부르지 않으면 이 변경은 "
+                "라이브에 없습니다.")
+
+
 def _validate_path_in_scope(path: str, project_path: str) -> str | None:
     """쓰기 대상 경로가 허용 범위인지 검증. 벗어나면 에러 메시지 반환, 정상이면 None
 
@@ -446,116 +520,10 @@ def _validate_path_in_scope(path: str, project_path: str) -> str | None:
     return None
 
 
-# ── 자기개조 안전장치 Floor #2: RED 개조를 격리 사본(worktree)에만 제안 ──
-# docs/SELF_MODIFICATION_SAFETY_DESIGN.md. Floor #1 이 RED 직접 쓰기를 막았으니,
-# RED(backend/·frontend/·scripts/)를 건드리는 유일한 정규 통로는 이 제안 채널이다.
-# 라이브 트리는 절대 손대지 않는다 — git worktree(HEAD 격리 사본)에만 기록하고,
-# 그 사본에서 py_compile + build --check 로 기계 검증한 뒤, diff·검증결과를
-# data/system_ai_state/patch_proposals/ 에 남긴다. 채택(머지)·폐기는 사람 몫(Floor #4).
-def _git(args, cwd):
-    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True, timeout=120)
-
-
-def _propose_red_patch(raw_path: str, content, old_string, new_string, reason: str) -> dict:
-    """RED 파일 변경을 worktree 격리 사본에 제안 + 검증. 라이브 무변경. dict 반환."""
-    repo = _REPO_ROOT
-    if repo is None:
-        return {"success": False, "error": "repo 루트를 찾지 못해 propose_patch 를 실행할 수 없습니다."}
-    repo = str(repo)
-
-    if not raw_path:
-        return {"success": False, "error": "대상 파일 경로(path)가 필요합니다."}
-    if not (reason or "").strip():
-        return {"success": False, "error": "reason(변경 근거)이 필요합니다 — 사람 검토용."}
-    has_content = content is not None
-    has_edit = old_string is not None and new_string is not None
-    if not has_content and not has_edit:
-        return {"success": False, "error": "변경 내용이 필요합니다: content(전체 내용) 또는 old_string+new_string(부분 교체)."}
-
-    # 대상 실경로 — RED 전용 게이트(밖이면 그냥 write/edit 쓰라고 안내)
-    abs_target = os.path.realpath(raw_path if os.path.isabs(raw_path) else os.path.join(repo, raw_path))
-    if _red_zone_violation(abs_target) is None:
-        return {"success": False, "error": "propose_patch 는 RED 구역(backend/·frontend/·scripts/) 전용입니다. 그 밖의 파일은 [self:write]/[self:edit]로 직접 쓰세요."}
-    rel_target = os.path.relpath(abs_target, repo)
-    if rel_target.startswith(".."):
-        return {"success": False, "error": f"repo 밖 경로는 propose_patch 대상이 아닙니다: {abs_target}"}
-
-    if _git(["rev-parse", "--git-dir"], repo).returncode != 0:
-        return {"success": False, "error": "git 저장소가 아니라 격리(worktree)를 만들 수 없습니다."}
-
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    wt_rel = os.path.join(".worktrees", f"selfpatch-{ts}")
-    wt_abs = os.path.join(repo, wt_rel)
-    add = _git(["worktree", "add", "--detach", wt_abs, "HEAD"], repo)
-    if add.returncode != 0:
-        return {"success": False, "error": f"worktree 생성 실패: {add.stderr.strip()}"}
-
-    try:
-        wt_file = os.path.join(wt_abs, rel_target)
-        # 변경은 격리 사본에만 적용 (HEAD 기준 — 라이브 미커밋 변경과 무관하게 깨끗한 베이스)
-        if has_content:
-            os.makedirs(os.path.dirname(wt_file), exist_ok=True)
-            with open(wt_file, "w", encoding="utf-8") as f:
-                f.write(content)
-        else:
-            if not os.path.exists(wt_file):
-                raise FileNotFoundError(f"대상 파일이 HEAD에 없어 old_string 교체 불가: {rel_target} (신규 파일은 content 로 제안)")
-            with open(wt_file, "r", encoding="utf-8") as f:
-                orig = f.read()
-            n = orig.count(old_string)
-            if n == 0:
-                raise ValueError("old_string 이 대상 파일에 없습니다.")
-            if n > 1:
-                raise ValueError(f"old_string 이 {n}번 나와 모호합니다 — 주변 맥락을 더 포함하세요.")
-            with open(wt_file, "w", encoding="utf-8") as f:
-                f.write(orig.replace(old_string, new_string, 1))
-
-        diff = _git(["diff", "--", rel_target], wt_abs).stdout
-
-        # 기계 검증 — 격리 사본에서만 (라이브 무오염). 자기채점 아님, pass/fail 기계값.
-        # gate: py_compile(구문) + plain build(삼각 검증 handler↔src↔tool.json, 실패 시 exit 1).
-        # --check 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물에
-        # 의존해 바레 worktree 에서 못 돈다 → 사람이 머지할 때(라이브·pre-commit) 완전 검증.
-        checks = []
-        if wt_file.endswith(".py"):
-            pc = subprocess.run(["python3", "-m", "py_compile", wt_file],
-                                capture_output=True, text=True, timeout=60)
-            checks.append({"gate": "py_compile", "passed": pc.returncode == 0,
-                           "detail": (pc.stderr or "").strip()[-500:]})
-        bc = subprocess.run(["python3", "scripts/build_ibl_nodes.py"],
-                            cwd=wt_abs, capture_output=True, text=True, timeout=240)
-        checks.append({"gate": "ibl_triangle", "passed": bc.returncode == 0,
-                       "detail": ((bc.stdout or "") + (bc.stderr or "")).strip()[-800:]})
-        verified = all(c["passed"] for c in checks)
-
-        prop_dir = os.path.join(repo, "data", "system_ai_state", "patch_proposals")
-        os.makedirs(prop_dir, exist_ok=True)
-        proposal = {
-            "id": ts, "target": rel_target, "reason": reason,
-            "diff": diff, "checks": checks, "verified": verified,
-            "worktree": wt_rel, "status": "proposed",
-            "created_at": datetime.now().isoformat(),
-        }
-        with open(os.path.join(prop_dir, f"{ts}.json"), "w", encoding="utf-8") as f:
-            json.dump(proposal, f, ensure_ascii=False, indent=2)
-
-        return {
-            "success": True,
-            "proposal_id": ts,
-            "target": rel_target,
-            "verified": verified,
-            "verdict": ("기계 검증 통과 ✓" if verified else "기계 검증 실패 ✗ — checks 확인"),
-            "checks": checks,
-            "worktree": wt_rel,
-            "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
-            "note": ("이 변경은 격리 사본(worktree)에만 있고 라이브는 무변경입니다. "
-                     "적용은 사용자가 명령할 때 수리 경로(REPAIR: 고급 모델+의식 각성, "
-                     "헌법 2026-08-05)가 수행하거나 사람이 직접 머지합니다. "
-                     f"폐기: git worktree remove {wt_rel}."),
-        }
-    except Exception as e:
-        _git(["worktree", "remove", "--force", wt_abs], repo)
-        return {"success": False, "error": f"propose_patch 실패: {e}"}
+# ── 자기개조 Floor #2: RED 개조의 격리 사본 채널 ──
+# docs/SELF_MODIFICATION_SAFETY_DESIGN.md. 로직 본체는 형제 모듈 repair_staging.py
+# (1500줄 규칙). 자율 태스크는 op:propose 로 제안만 남기고, 사용자 명령 수리(REPAIR)는
+# 스테이징에 쌓인 변경을 op:apply 로 검증 후 라이브에 옮긴다.
 
 
 def is_dangerous_command(command: str) -> bool:
@@ -584,6 +552,27 @@ def _sib_op(module_name, fn_name):
     return _call
 
 
+def _patch_op(fn_name):
+    """repair_staging op 래퍼 — 게이트만 아는 것(repo 루트·RED 판정·쓰기 안전판·
+    현재 그랜트 키)을 주입해 넘긴다. 형제 모듈이 RED 구역 정의를 복제하지 않게 하는
+    이음매다(구역의 단일 출처는 이 파일의 _red_zone_violation 하나)."""
+    def _call(tool_input):
+        return getattr(_staging_mod(), fn_name)({
+            **tool_input,
+            # 별칭 흡수(종전 propose_patch 분기가 하던 것) — 형제 모듈은 정규키만 본다
+            "path": _get_path(tool_input),
+            "old_string": tool_input.get("old_string") or tool_input.get("old"),
+            "new_string": tool_input.get("new_string") or tool_input.get("new"),
+            "reason": tool_input.get("reason") or tool_input.get("rationale") or "",
+            "_repo_root": str(_REPO_ROOT) if _REPO_ROOT is not None else None,
+            "_grant_key": _staging_key(),
+            "_red_check": _red_zone_violation,
+            "_red_prepare": _red_write_prepare,
+            "_red_finalize": _red_write_finalize,
+        })
+    return _call
+
+
 _OP_DISPATCHERS = {
     "webapp_op": {
         "list": _sib_op("webapp_registry", "op_list"),
@@ -602,8 +591,17 @@ _OP_DISPATCHERS = {
         "run": _sib_op("script_ops", "op_run"),
         "remove": _sib_op("script_ops", "op_remove"),
     },
+    # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).
+    # 안전판 콜백(_red_prepare/_red_finalize)은 게이트가 쥔 채 넘긴다(_patch_op).
+    "patch_op": {
+        "propose": _patch_op("op_propose"),
+        "apply": _patch_op("op_apply"),
+        "status": _patch_op("op_status"),
+        "discard": _patch_op("op_discard"),
+    },
 }
-_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list"}
+_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list",
+                "patch_op": "propose"}
 
 
 def execute(tool_input: dict, context) -> str:
@@ -699,6 +697,9 @@ def execute(tool_input: dict, context) -> str:
                 path = str(get_base_path() / "data" / raw_path)
             else:
                 path = os.path.join(project_path, raw_path)
+            # 이 수리 세션이 이미 고친 RED 파일이면 격리 사본을 보여준다 — 자기가 쓴 것을
+            # 되읽을 때 라이브(옛 내용)가 오면 편집이 어긋난다. 안 건드린 파일은 라이브 그대로.
+            path = _red_stage(path, for_write=False)
             # client:true — 파일을 바이너리로 읽어 호출한 몸(폰)이 네이티브 저장하도록 b64 봉투로 반환.
             # 폰 /ibl/execute 프록시(phone_api)가 download_in_client+b64 를 가로채 MediaStore(Music)에
             # 네이티브 저장 → 음악앱이 인식(오프라인·백그라운드·잠금화면 재생). 텍스트 read 와 달리
@@ -774,6 +775,8 @@ def execute(tool_input: dict, context) -> str:
             scope_err = _validate_path_in_scope(path, project_path)
             if scope_err:
                 return scope_err
+            _live_target = path                 # 신고용 — 실제 쓰기는 격리 사본에 갈 수 있다
+            path = _red_stage(path, for_write=True)
             content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
             piped = False
             if content is None:
@@ -825,6 +828,13 @@ def execute(tool_input: dict, context) -> str:
             _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
             abs_path = os.path.abspath(path)
             result = {"success": True, "path": abs_path, "size": len(content)}
+            if path != _live_target:   # 격리 사본에 쌓였다 — 라이브는 아직 무변경
+                result.update({
+                    "staged": True, "live_path": os.path.abspath(_live_target),
+                    "note": ("격리 사본에 기록했습니다 — 라이브는 무변경입니다(리로드 없음). "
+                             "검증 후 실제로 반영하려면 [self:patch]{op:\"apply\"} 를 "
+                             "호출하세요. 적용하지 않으면 이 수정은 라이브에 없습니다."),
+                })
             if extracted:
                 result["extracted"] = extracted  # message 본문만 저장했음을 신고
                 if items_alongside:
@@ -1012,6 +1022,10 @@ def execute(tool_input: dict, context) -> str:
             scope_err = _validate_path_in_scope(file_path, project_path)
             if scope_err:
                 return scope_err
+            # 격리 스테이징 — 읽기·쓰기가 같은 사본을 보게 여기서 한 번만 바꾼다
+            # (old_string 대조가 라이브가 아니라 이 세션이 쌓아온 내용 위에서 이뤄진다).
+            _live_target = file_path
+            file_path = _red_stage(file_path, for_write=True)
             old_string = tool_input["old_string"]
             new_string = tool_input["new_string"]
 
@@ -1042,6 +1056,12 @@ def execute(tool_input: dict, context) -> str:
             _red_write_finalize(file_path)  # backend .py 면 워치독 보장
 
             # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
+            if file_path != _live_target:
+                return json.dumps({
+                    "success": True, "staged": True,
+                    "path": os.path.abspath(file_path),
+                    "live_path": os.path.abspath(_live_target),
+                    "message": f"격리 사본을 수정했습니다. {_STAGED_NOTE}"}, ensure_ascii=False)
             return f"Successfully edited {os.path.abspath(file_path)}"
 
         elif tool_name == "run_command":
@@ -1105,6 +1125,18 @@ def execute(tool_input: dict, context) -> str:
                 if os.path.isdir(src):
                     return ("Error: RED 구역에는 디렉토리 단위 복사가 금지됩니다"
                             "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
+                # 격리 스테이징 — 쓰기와 같은 층. 라이브 dst 는 apply 때 생긴다.
+                _staged_dst = _red_stage(dst, for_write=True)
+                if _staged_dst != dst:
+                    os.makedirs(os.path.dirname(os.path.abspath(_staged_dst)), exist_ok=True)
+                    shutil.copy2(src, _staged_dst)
+                    return json.dumps({
+                        "success": True, "staged": True,
+                        "path": os.path.abspath(_staged_dst),
+                        "live_path": os.path.abspath(dst),
+                        "message": ("복사를 격리 사본에 적재했습니다: "
+                                    f"{os.path.relpath(os.path.abspath(dst), str(_REPO_ROOT))}. "
+                                    + _STAGED_NOTE)}, ensure_ascii=False)
                 _src_content = None
                 if dst.endswith(".py"):
                     try:
@@ -1155,6 +1187,22 @@ def execute(tool_input: dict, context) -> str:
                 if os.path.isdir(src):
                     return ("Error: RED 구역이 걸린 디렉토리 단위 이동은 금지됩니다"
                             "(수리 그랜트가 있어도). 파일 단위로 나눠서 하세요.")
+                # 격리 스테이징 — 이동은 '대상 쓰기 + 원본 삭제' 한 쌍이라 **둘 다 적재
+                # 가능할 때만** 격리로 간다(한쪽만 가면 라이브가 반쪽 상태가 된다).
+                # 색깔과 무관하게 양쪽을 적재한다: dst 가 GREEN 이어도 원본 삭제를 미룬 채
+                # dst 만 라이브에 만들면 apply 없이 '복사'가 되어 이동이 아니게 된다.
+                if _red_can_stage(src) and _red_can_stage(dst):
+                    _staged_dst = _red_stage(dst, for_write=True)
+                    if _staged_dst != dst and _red_stage_delete(src):
+                        os.makedirs(os.path.dirname(os.path.abspath(_staged_dst)), exist_ok=True)
+                        shutil.copy2(src, _staged_dst)
+                        return json.dumps({
+                            "success": True, "staged": True,
+                            "live_path": os.path.abspath(dst),
+                            "message": ("이동을 격리 사본에 적재했습니다: "
+                                        f"{os.path.relpath(os.path.abspath(src), str(_REPO_ROOT))} → "
+                                        f"{os.path.relpath(os.path.abspath(dst), str(_REPO_ROOT))}. "
+                                        + _STAGED_NOTE)}, ensure_ascii=False)
                 if _red_is_live_path(src):
                     _red_err = _red_write_prepare(src)  # 사라질 원본 백업
                     if _red_err:
@@ -1205,6 +1253,15 @@ def execute(tool_input: dict, context) -> str:
                 if os.path.isdir(target):
                     return ("Error: RED 구역 디렉토리 삭제는 금지됩니다(수리 그랜트가 있어도). "
                             "정말 필요하면 파일 단위로 지우세요.")
+                # 격리 스테이징 — 삭제도 쓰기와 같은 층. 검증(고아 import 검사)을 통과한
+                # 뒤 apply 가 백업을 뜨고 라이브에서 지운다.
+                if _red_stage_delete(abs_target):
+                    return json.dumps({
+                        "success": True, "staged": True,
+                        "live_path": abs_target,
+                        "message": ("삭제를 격리 사본에 적재했습니다: "
+                                    f"{os.path.relpath(abs_target, str(_REPO_ROOT))}. "
+                                    + _STAGED_NOTE)}, ensure_ascii=False)
                 _red_err = _red_write_prepare(abs_target)
                 if _red_err:
                     return _red_err
@@ -1231,17 +1288,6 @@ def execute(tool_input: dict, context) -> str:
             existed = os.path.isdir(abs_target)
             os.makedirs(abs_target, exist_ok=True)
             return json.dumps({"success": True, "path": abs_target, "existed": existed}, ensure_ascii=False)
-
-        elif tool_name == "propose_patch":
-            # 자기개조 Floor #2: RED 개조를 worktree 격리 사본에만 제안 + 기계검증. 라이브 무변경.
-            result = _propose_red_patch(
-                raw_path=_get_path(tool_input),
-                content=tool_input.get("content"),
-                old_string=tool_input.get("old_string") or tool_input.get("old"),
-                new_string=tool_input.get("new_string") or tool_input.get("new"),
-                reason=tool_input.get("reason") or tool_input.get("rationale") or "",
-            )
-            return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "read_pdf":
             return _office.read_pdf(tool_input, project_path)

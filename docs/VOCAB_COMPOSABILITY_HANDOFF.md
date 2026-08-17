@@ -118,7 +118,7 @@ android(792)·limbs:phone(998)·screen(779)·self:limb(674)·폰 감각(listen/s
 상황(USB·브라우저 자동화·폰)이 와야 쓰는 어휘 — 11일 미사용은 신호가 아님.
 
 **C군 — 시스템 배관·기능어 (스위치화 부적절)**: delegate·schedule·workflow·goal·switch·trigger·
-manage_events(§4 스케줄 6형제 설계 태스크로)·agents·self_check·propose_patch(REPAIR 헌법)·forage·
+manage_events(§4 스케줄 6형제 설계 태스크로)·agents·self_check·patch(REPAIR 헌법)·forage·
 folder_note·storage·output·package·auto_response·table:*(표준 코어).
 
 **D군 — 앱 없는 저사용 감각·콘텐츠 어휘 (9월 계수 숙성 후 개별 판정)**: researcher·entity·classic·

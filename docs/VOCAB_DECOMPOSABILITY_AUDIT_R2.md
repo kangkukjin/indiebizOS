@@ -194,7 +194,7 @@ $ python3 scripts/build_ibl_nodes.py --check
 | 파일 원자 (read·write·edit·list·grep·file_find·copy·move·delete) | 조합의 **재료** |
 | AI 호출 3축 (`self:ask`·`others:delegate`·`others:ask`) | 실행 주체·비용·동기성이 서로 다름. 접으면 축이 사라진다 |
 | table 14 | **조합자 자체** — 분해 대상이 아니라 분해의 도구 |
-| 헌법 장치 (`propose_patch`·`package`·`self_check`·`script{run}`) | 시스템이 자기를 고치는 통로 |
+| 헌법 장치 (`patch`·`package`·`self_check`·`script{run}`) | 시스템이 자기를 고치는 통로 |
 
 ---
 

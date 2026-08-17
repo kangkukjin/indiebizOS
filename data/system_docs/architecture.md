@@ -376,7 +376,7 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 
 시스템이 **자기 코드(RED 구역: `backend/`·`data/packages/`)를 직접 고치는** 경로. 옛 설계의 '사람 승인 게이트'는 폐기됐다 — *"어차피 AI가 하는 걸 사람이 일일이 승인할 거라면 사람이 하는 것과 다름없다"*. 대신 **한도 3 + 기계 안전판**:
 
-- **한도 ①사람 명령**: `thread_context.task_origin == 'user'` 인 태스크에서만(WS 채팅·`/system-ai/chat`·에이전트 명령 HTTP 4곳만 세팅). 스케줄러·자가점검·위임 사슬·외부 채널은 **미세팅 = fail-closed** → 자율 태스크는 종전대로 `[self:propose_patch]` 제안만. **새 진입점을 만들면 `set_task_origin("user")` 를 붙일 것.**
+- **한도 ①사람 명령**: `thread_context.task_origin == 'user'` 인 태스크에서만(WS 채팅·`/system-ai/chat`·에이전트 명령 HTTP 4곳만 세팅). 스케줄러·자가점검·위임 사슬·외부 채널은 **미세팅 = fail-closed** → 자율 태스크는 종전대로 `[self:patch]` 제안만. **새 진입점을 만들면 `set_task_origin("user")` 를 붙일 것.**
 - **한도 ②최고 모델 고정**: 기어가 절약이어도 REPAIR 실행 모델은 고급으로 승격(`model_resolver`, reflex→경량 고정의 역방향).
 - **한도 ③의식 각성**: 의식 토글 OFF 여도 REPAIR 는 THINK(의식 framing) 경로를 강제.
 - **기계 안전판**: 사전 구문검증(`compile` — 깨진 `.py` 는 라이브에 닿기 전 거부) → 원본 백업(파일당 최초 1회) → backend `.py` 면 **분리 워치독**(`red_watchdog.py`, `start_new_session` — 서버가 죽어도 생존)이 리로드 후 `/health` 확인, 죽어 있으면 백업 복원 + 재기동 + OS 알림으로 **자동 롤백**.

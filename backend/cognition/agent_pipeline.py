@@ -173,7 +173,7 @@ class CognitivePipelineMixin:
                 print(f"[수리] RED 그랜트 발급 (task={_g_task or '없음'}) — 고급 모델·의식 각성 경로")
             else:
                 # 자율 태스크/프로젝트 에이전트 — 승격·그랜트 없음. 의식 framing 은 하되
-                # RED 쓰기는 게이트가 막고 propose_patch 경로를 안내한다.
+                # RED 쓰기는 게이트가 막고 [self:patch]{op:"propose"} 경로를 안내한다.
                 print(f"[수리] REPAIR 분류지만 출처={_origin or '자율'}"
                       f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
         elif request_type == "THINK":
@@ -450,6 +450,19 @@ class CognitivePipelineMixin:
             # RED 그랜트 회수 — 이 런이 발급한 것만(동시 런의 그랜트 오소거 방지).
             # task origin 도 여기서 해제(풀 스레드 재사용 누수 방지 — 소비는 1회).
             if _repair_granted_task is not None:
+                # 적용되지 않은 격리 스테이징 경고 — 격리의 장점(라이브 무변경)이 곧
+                # 약점이라 apply 를 빠뜨리면 아무 흔적이 없다. 여기서 자동 적용하지는
+                # 않는다(검증 결말을 못 본 채 응답이 이미 나갔으므로 = 거짓 보고).
+                # 다음 턴의 연상이 <repair_staged> 로 물고 온다(red_report).
+                try:
+                    from runtime_utils import get_base_path
+                    from red_report import collect_unapplied
+                    for _s in collect_unapplied(str(get_base_path()), min_age_s=0.0):
+                        print(f"[수리] ⚠ 격리 스테이징 미적용 — {_s['key']}: "
+                              f"{len(_s['files'])}건이 라이브에 반영되지 않았습니다 "
+                              f"(apply 미호출). 다음 턴에 보고됩니다.")
+                except Exception:
+                    pass
                 try:
                     from red_grant import revoke_grant
                     revoke_grant(None if _repair_granted_task == "__untasked__"

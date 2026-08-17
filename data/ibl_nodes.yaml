@@ -4477,15 +4477,28 @@ nodes:
         tool: make_directory
         implementation: os.makedirs(exist_ok=True)로 빈 디렉토리 생성
         target_key: path
-      propose_patch:
+      patch:
         returns: effect
-        description: 자기개조 안전장치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에만 제안한다. 라이브 트리는 무변경, write/edit 이 막힌 RED 파일을 고치는 유일한 정규 통로. 기계검증 후 diff 를 남기고 채택·폐기는 사람이 한다.
+        description: 자기개조 패치 — RED 코어 코드(backend/·frontend/·scripts/) 변경을 격리 사본(worktree)에서 다룬다. 수리 경로의 RED write/edit 은 자동으로 격리에 쌓이고(라이브 무변경), apply 가 기계검증 후 통과분만 라이브로 옮긴다.
         group: file
-        target_description: path — 대상 RED 파일(backend/·frontend/·scripts/ 하위). content — 새 전체 내용(신규/전체 교체) 또는 old_string+new_string — 부분 교체(HEAD 기준 유일해야). reason — 변경 근거(필수, 사람 검토용). RED 밖 파일은 그냥 write/edit 을 쓰라고 거부한다.
+        ops:
+          default: propose
+          returns:
+            status: items
+          side_effect:
+            status: false
+          fixture:
+            status: '[self:patch]{op: "status"}'
+          values:
+            propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용 경로 없음)
+            apply: 이 수리 세션의 격리 변경을 검증 후 통과분만 라이브 일괄 적용 (리로드는 이때 한 번)
+            status: 스테이징 세션 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
+            discard: 격리 사본 폐기 (라이브는 원래 무변경이라 되돌릴 것이 없다)
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수) / apply: 이 수리 세션에 쌓인 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경 / status: 스테이징 세션 현황(무엇이 아직 라이브에 안 갔나) / discard: 격리 사본 폐기(라이브는 원래 무변경).'
         router: handler
-        tool: propose_patch
-        implementation: handler.py _propose_red_patch — git worktree add --detach HEAD 로 격리 사본 생성, 그 사본에만 기록, py_compile+build --check 검증, data/system_ai_state/patch_proposals/에 제안 기록. 라이브 무변경.
-        target_key: path
+        tool: patch_op
+        implementation: repair_staging.py (system_essentials 형제 모듈) — 세션별 worktree(.worktrees/repair-<task>)에 라이브 원본을 씨로 스테이징, verify() 배터리, apply 가 _red_write_prepare/_red_write_finalize(백업·keeper·워치독)를 통과해 라이브 반영.
+        target_key: op
         keywords:
         - 자기수정
         - 자기개조

@@ -143,6 +143,26 @@ def main():
         dsc = mr.resolve("system_repair")
         check("model_pin_top_tier", dsc.get("tier") == "고급")
 
+        # ── 격리 스테이징 이음매 (2026-08-17) ──
+        # 무거운 생애주기 배터리는 backend/test_repair_staging.py. 여기서는 워치독이
+        # 되돌릴 수 있게 **이음매가 살아 있는지**만 싸게 본다(git 조작 없음).
+        stg = h._staging_mod()
+        check("staging_contract_present",
+              all(callable(getattr(stg, n, None))
+                  for n in ("stage_file", "stage_delete", "can_stage", "staged_path",
+                            "verify", "op_apply", "op_status", "op_discard", "op_propose")))
+        # 그랜트가 없으면 스테이징도 없다 — 게이트가 막는 자리와 같은 조건
+        red_grant.revoke_grant()
+        thread_context.clear_all_context()
+        check("staging_off_without_grant", h._red_stage(str(foo), for_write=True) == str(foo))
+        # RED 밖 경로는 스테이징 대상이 아니다(일상 data/ 쓰기가 격리로 새면 안 됨)
+        check("staging_ignores_green",
+              h._red_stage(str(tmp / "data" / "x.json"), for_write=True) == str(tmp / "data" / "x.json"))
+        # 워치독이 이 파일의 수정을 안전장치로 취급하는가 (침묵 결함 방어의 연결고리)
+        import red_watchdog as _rw
+        check("staging_in_watchdog_safety_list",
+              any(s.endswith("repair_staging.py") for s in _rw.SAFETY_SUFFIXES))
+
         # ── 프롬프트 기계 계약 (분류기·파서가 스위치하는 토큰) ──
         up = (REPO / "data/common_prompts/unconscious_prompt.md").read_text(encoding="utf-8")
         check("prompt_contract_categories",

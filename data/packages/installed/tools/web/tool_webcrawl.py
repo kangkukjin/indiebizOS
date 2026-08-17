@@ -109,10 +109,21 @@ def _diagnose(status: int, final_url: str, requested_url: str, text: str,
     # 로그인 페이지로 리다이렉트됨 (요청 자체가 로그인 URL이었던 경우 제외)
     if final_url and _LOGIN_URL_RE.search(final_url) and not _LOGIN_URL_RE.search(requested_url or ''):
         return "login_required"
-    if any(s in low for s in _BLOCK_TEXT_SIGNS):
-        return "bot_blocked"
-    if any(s in low for s in _LOGIN_TEXT_SIGNS):
-        return "login_required"
+    # ★문구 매칭은 '본문이 사실상 그 문구뿐'일 때만 신뢰한다 (2026-08-17 수리).
+    #   진짜 챌린지·로그인 벽은 본문이 거의 없다(위 docstring 대로 script 뿐). 반면 정상
+    #   페이지는 그 문구를 *언급*할 수 있다 — 실측: 자기 홈페이지 본문 11,841자의 1,807자
+    #   지점에 "그래서 CAPTCHA도 없습니다"가 있어 bot_blocked 로 거부됐다. CAPTCHA 가
+    #   없다고 자랑하는 페이지를 CAPTCHA 챌린지로 판정한 것 = 언급을 존재로 착각.
+    #   대가는 셋이었다: 오진 후 불필요한 렌더로 30초 · 거짓 사유("가져오지 못했습니다"인데
+    #   실은 200·254KB 정상 수신) · 멀쩡한 페이지를 영구히 못 읽음.
+    #   ※본문이 긴 차단 페이지는 상태코드(403/429/503)와 제목 신호가 잡는다 — 그 둘은
+    #     위에서 길이 조건 없이 검사하므로 커버리지가 남는다. 여기에 "앞 N자" 같은 조건을
+    #     더하지 않는 이유 = CAPTCHA 를 *주제로* 다루는 글이 첫 문단부터 그 단어를 쓴다.
+    if len(text) < _SUSPICIOUS_CONTENT_LENGTH:
+        if any(s in low for s in _BLOCK_TEXT_SIGNS):
+            return "bot_blocked"
+        if any(s in low for s in _LOGIN_TEXT_SIGNS):
+            return "login_required"
     if len(text) < _MIN_CONTENT_LENGTH:
         return "insufficient_content"
     # 본문이 짧은데 로그인 유도가 있으면 "메뉴만 나온" 로그인 벽 의심

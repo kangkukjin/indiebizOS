@@ -39,7 +39,7 @@ IBL을 **산출물 생산의 척추 A~G**로 본다:
 ### G 비평 루프 ✅ (세부: G_LOOP_CLOSURE_HANDOFF.md)
 - 플래그십 일러스트 슬라이드 inner loop: `media_producer/slide_image.py` `_critique`·`_gen_with_critique`
   (합성 전 원시 일러스트 자평→교정 재생성 기본2R→최고점채택, fail-open).
-- **보편 백스톱**(평가자가 픽셀을 봄): `consciousness_agent.lightweight_ai_call(images=)` +
+- **보편 백스톱**(평가자가 픽셀을 봄): `consciousness_agent.oneshot_ai_call(images=)` +
   `agent_cognitive._collect_visual_artifacts` + `_evaluate_achievement(visual_artifacts=)` 멀티모달화 +
   `evaluator_prompt.md` 지침. **추가형·기본값보존·fail-safe.**
 - critic 일반화: `engines:image_critic` `preset`(slide_illustration 기본/general). verdict `{passed,score,issues,notes}` 공유통화.

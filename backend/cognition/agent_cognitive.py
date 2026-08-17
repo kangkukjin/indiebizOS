@@ -120,26 +120,17 @@ class AgentCognitiveMixin(
         ★핀 키 = registry_key 형식 `{project_id}:{agent_id}` — agent_id 는 프로젝트 간 중복
         (예: 여러 프로젝트가 'agent_001')이라 프로젝트로 한정해야 특정 에이전트만 고정된다.
         (thinkingBudget 등 비-모델 필드는 보존.)"""
-        ai_config = dict(ai_config or {})
-        # 레거시 per-agent 모델 설정 제거 — 기어가 전적으로 채운다.
-        for k in ("provider", "model", "api_key", "apiKey"):
-            ai_config.pop(k, None)
+        # 해소 본체는 model_resolver.resolve_agent_ai — 이 규칙을 쓰는 자리가 넷이라
+        # (러너·동기위임·스위치·멀티채팅) 한 곳에 둔다. 예전엔 여기에만 있어서
+        # 나머지 셋이 폐지된 yaml 을 계속 읽는 드리프트가 났다.
         project_id = self.config.get("_project_id") or getattr(self, "project_id", "") or ""
-        pin_key = f"{project_id}:{agent_id}" if (project_id and agent_id) else agent_id
-        try:
-            from model_resolver import resolve
-            d = resolve("execution", agent_id=pin_key)
-        except Exception as e:
-            print(f"[AgentRunner] 실행 축 해소 실패: {e}")
-            return ai_config
-
-        if d.get("model"):
-            ai_config["provider"] = d.get("provider") or "anthropic"
-            ai_config["model"] = d["model"]
-            ai_config["api_key"] = d.get("api_key", "")
-            src = "중앙 핀" if str(d.get("source", "")).startswith("override:") else "실행 축 티어"
-            print(f"[AgentRunner] {pin_key}: 모델 기어({src}) → {ai_config['provider']}/{ai_config['model']} ({d.get('source')})")
-        return ai_config
+        from model_resolver import resolve_agent_ai
+        out = resolve_agent_ai(ai_config, project_id, agent_id)
+        if out.get("model"):
+            src = "중앙 핀" if str(out.get("_gear_source", "")).startswith("override:") else "실행 축 티어"
+            pin_key = f"{project_id}:{agent_id}" if (project_id and agent_id) else agent_id
+            print(f"[AgentRunner] {pin_key}: 모델 기어({src}) → {out['provider']}/{out['model']} ({out.get('_gear_source')})")
+        return out
 
     def _sync_execution_gear(self):
         """메시지 시작 시 실행 축을 재해소해 기어 변경을 상주 러너에 전파.

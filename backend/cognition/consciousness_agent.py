@@ -489,7 +489,7 @@ _consciousness_instance: Optional[ConsciousnessAgent] = None
 _lightweight_provider = None  # 경량 AI 전용 프로바이더 (싱글톤)
 _lightweight_provider_initialized = False
 
-# 원샷 호출 직렬화 — lightweight_ai_call 이 공유 프로바이더의 system_prompt 를 임시 교체하는
+# 원샷 호출 직렬화 — oneshot_ai_call 이 공유 프로바이더의 system_prompt 를 임시 교체하는
 # 방식이라, 백그라운드 증류(_after_response_async)와 다음 턴 분류가 겹치면 프롬프트가 교차
 # 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 호출은 수 초라 직렬화 비용은 미미.
 import threading as _threading
@@ -693,7 +693,7 @@ def _resolve_oneshot_provider(role: str):
     return provider
 
 
-def lightweight_ai_call(prompt: str, system_prompt: str = None,
+def oneshot_ai_call(prompt: str, system_prompt: str = None,
                         images: list = None, role: str = "classify") -> Optional[str]:
     """경량 원샷 AI 호출 — 모델은 기어 리졸버가 role 로 해소한다.
 
@@ -750,7 +750,7 @@ def lightweight_ai_call(prompt: str, system_prompt: str = None,
                 execute_tool=None
             )
         except Exception as e:
-            logger.warning(f"[lightweight_ai_call] 실패: {e}")
+            logger.warning(f"[oneshot_ai_call] 실패: {e}")
             return None
         finally:
             try:
@@ -816,7 +816,7 @@ def reset_system_oneshot_provider():
 
 def system_ai_call(prompt: str, system_prompt: str = None,
                    images: list = None, role: str = "translate") -> Optional[str]:
-    """원샷 호출 — 모델은 기어 리졸버가 role 로 해소한다(lightweight_ai_call 과 같은 계약).
+    """원샷 호출 — 모델은 기어 리졸버가 role 로 해소한다(oneshot_ai_call 과 같은 계약).
 
     과거엔 무조건 system_ai(본격) 모델이었으나, 이제 role 로 티어가 갈린다:
       - translate(수동 번역) → 실행 축
@@ -837,7 +837,7 @@ def system_ai_call(prompt: str, system_prompt: str = None,
         original_system_prompt = provider.system_prompt
         provider.system_prompt = system_prompt
     try:
-        # 스텝 원장 역할 태그 — lightweight_ai_call 과 같은 이유(호출 이음매에 태그).
+        # 스텝 원장 역할 태그 — oneshot_ai_call 과 같은 이유(호출 이음매에 태그).
         try:
             from episode_logger import set_step_role
             set_step_role(f"oneshot:{role}")

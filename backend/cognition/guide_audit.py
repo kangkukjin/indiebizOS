@@ -98,7 +98,7 @@ def _pick(limit: int) -> List[Dict]:
 def _audit_one(entry: Dict, live: Dict[str, str], catalog: List[Dict]) -> List[Dict]:
     """가이드 하나를 감사. 플래그된 것만 반환. 응답 못 읽으면 _AuditUnreadable."""
     import re
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
 
     name = entry["guide"]
     try:
@@ -134,7 +134,7 @@ def _audit_one(entry: Dict, live: Dict[str, str], catalog: List[Dict]) -> List[D
         '출력: [{"kind":"premise|superseded","issue":"한 줄 근거"}] · 문제 없으면 []. JSON만.'
     )
 
-    resp = lightweight_ai_call(prompt, system_prompt=_SYS, role="guide_audit")
+    resp = oneshot_ai_call(prompt, system_prompt=_SYS, role="guide_audit")
     if not resp:
         raise _AuditUnreadable("빈 응답")
     m = re.search(r"\[.*\]", resp, re.S)

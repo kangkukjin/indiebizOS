@@ -61,8 +61,8 @@ def structure_document(tool_input, output_base="."):
     user += "\n\n위 내용을 문서 IR(JSON 한 객체)로 출력하라."
 
     try:
-        from consciousness_agent import lightweight_ai_call
-        resp = lightweight_ai_call(user, system_prompt=_STRUCTURE_PROMPT)
+        from consciousness_agent import oneshot_ai_call
+        resp = oneshot_ai_call(user, system_prompt=_STRUCTURE_PROMPT)
     except Exception as e:
         return _json.dumps({"success": False, "error": f"구조화 AI 호출 실패: {e}"}, ensure_ascii=False)
     if not resp or not resp.strip():

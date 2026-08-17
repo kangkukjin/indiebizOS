@@ -693,8 +693,8 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         system_prompt = _prompt_path.read_text(encoding="utf-8").strip() if _prompt_path.exists() else ""
 
         # 반성 에이전트: 무의식 에이전트와 같은 경량 AI 사용 (도구 없음, 단순 텍스트)
-        from consciousness_agent import lightweight_ai_call
-        result = lightweight_ai_call(prompt=prompt, system_prompt=system_prompt, role="background")
+        from consciousness_agent import oneshot_ai_call
+        result = oneshot_ai_call(prompt=prompt, system_prompt=system_prompt, role="background")
 
         if not result:
             return False

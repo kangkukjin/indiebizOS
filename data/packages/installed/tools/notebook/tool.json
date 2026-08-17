@@ -2,7 +2,7 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "notebook",
   "name": "Notebook",
-  "description": "근거 고정 질의 — 문서 더미(노트북)에 넣고, 소스 안에서만 답하며 인용을 다는 도구. NotebookLM의 로컬·파이프라인 판.\n\n## 이음매\n저장·색인·검색은 notebook_core.py(data/notebook/notebooks.db), 생성은 경량 AI 1회(consciousness_agent.lightweight_ai_call) + 결정론 인용 후검증. 임베딩=ko-sroberta(blog RAG와 동일 계보), 해마 모델 아님.\n\n## 한계\n스캔(이미지) PDF는 OCR 없음 — 정직 거부. 시맨틱 의존성 미로드 시 FTS5 키워드 검색으로 강등(응답에 명시).",
+  "description": "근거 고정 질의 — 문서 더미(노트북)에 넣고, 소스 안에서만 답하며 인용을 다는 도구. NotebookLM의 로컬·파이프라인 판.\n\n## 이음매\n저장·색인·검색은 notebook_core.py(data/notebook/notebooks.db), 생성은 경량 AI 1회(consciousness_agent.oneshot_ai_call) + 결정론 인용 후검증. 임베딩=ko-sroberta(blog RAG와 동일 계보), 해마 모델 아님.\n\n## 한계\n스캔(이미지) PDF는 OCR 없음 — 정직 거부. 시맨틱 의존성 미로드 시 FTS5 키워드 검색으로 강등(응답에 명시).",
   "version": "1.0.0",
   "tools": [
     {

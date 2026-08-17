@@ -59,7 +59,7 @@ def _parse_merges(resp: str, valid_ids: set) -> List[Dict]:
 
 def _merge_map_llm(body: str, items: List[Dict], today: str) -> List[Dict]:
     """이 포식 공간(디스크/코드레포) 지도 항목 중 근접중복 묶음을 경량 AI로 판정."""
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
     # 공간 종류에 맞춘 명칭(code:<repo> 면 코드, 아니면 디스크).
     space_word = "코드레포" if str(body).startswith("code") else "디스크"
     locus_word = "디렉토리·모듈" if str(body).startswith("code") else "폴더"
@@ -81,7 +81,7 @@ def _merge_map_llm(body: str, items: List[Dict], today: str) -> List[Dict]:
 JSON으로만 응답:
 {{"merges":[{{"keep_id":<남길 id>,"drop_ids":[<삭제 id들>],"claim":"<정규본>","prior_class":"structural|semantic","prune_reason":"(dead_branch면)"}}]}}
 병합할 게 없으면 {{"merges":[]}}."""
-    resp = lightweight_ai_call(
+    resp = oneshot_ai_call(
         prompt=prompt,
         system_prompt="포식 지도 병합 판정기. 같은 공간 지식만 병합. JSON으로만.",
         role="background")
@@ -90,7 +90,7 @@ JSON으로만 응답:
 
 def _merge_owner_llm(items: List[Dict], today: str) -> List[Dict]:
     """주인모델 항목 중 근접중복(같은 facet의 같은 사실)을 병합 판정."""
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
     listing = "\n".join(
         f'- id={it["id"]} [{it["facet"]}]: {(it.get("value") or "")[:200]}'
         for it in items
@@ -106,7 +106,7 @@ def _merge_owner_llm(items: List[Dict], today: str) -> List[Dict]:
 JSON으로만 응답:
 {{"merges":[{{"keep_id":<id>,"drop_ids":[<id들>],"value":"<정규본>","prior_class":"semantic|structural"}}]}}
 없으면 {{"merges":[]}}."""
-    resp = lightweight_ai_call(
+    resp = oneshot_ai_call(
         prompt=prompt,
         system_prompt="주인모델 병합 판정기. 같은 사실만 병합. JSON으로만.",
         role="background")

@@ -200,16 +200,12 @@ class MultiChatManager:
 
             agent_source = f"{project_id}/{agent_name}"
 
-            # AI 설정 추출
-            ai_config = agent_info.get("ai", {})
-            ai_provider = ai_config.get("provider", "")
-            ai_model = ai_config.get("model", "")
-            ai_api_key = ai_config.get("api_key", "")
-
-            print(f"[MultiChatManager] 에이전트 추가: {agent_name}")
-            print(f"  - provider: {ai_provider}")
-            print(f"  - model: {ai_model}")
-            print(f"  - api_key: {ai_api_key[:20]}..." if ai_api_key else "  - api_key: (없음)")
+            # ★모델·키는 참여자에 저장하지 않는다 — 초대가 가져오는 것은 에이전트의
+            # *설정*(성격·신원)이고, 모델은 말할 때마다 기어가 정한다(_get_agent_response).
+            # (옛 코드는 폐지된 per-agent yaml 의 provider/model/api_key 를 여기서 읽어
+            #  참여자 행에 박아두었다 — 죽은 키가 방에 눌러앉고 기어와도 어긋났다.)
+            ai_provider = ai_model = ai_api_key = ""
+            print(f"[MultiChatManager] 에이전트 추가: {agent_name} (모델=기어 해소)")
 
             return self.db.add_participant(
                 room_id=room_id,
@@ -305,19 +301,11 @@ class MultiChatManager:
             # 히스토리 로드
             history = self.db.get_history_for_ai(room_id)
 
-            # 참여자의 AI 설정 사용 (없으면 기본 설정 사용)
-            ai_provider = participant.get('ai_provider', '')
-            ai_model = participant.get('ai_model', '')
-            ai_api_key = participant.get('ai_api_key', '')
-
-            # 에이전트별 AI 설정 구성
+            # 에이전트별 AI 설정 — 모델은 **말할 때마다 모델 기어에서** 해소한다.
+            # 초대 때 얼려두면 기어를 바꿔도 옛 참여자만 옛 모델로 남고, 무엇보다
+            # 참여자 행에 자격증명이 눌러앉는다. 참여자가 나르는 건 신원(agent_source)과
+            # 성격(system_prompt)뿐이고, 모델은 방이 아니라 몸의 설정이다.
             agent_ai_config = dict(self.ai_config) if self.ai_config else {}
-            if ai_provider:
-                agent_ai_config['provider'] = ai_provider
-            if ai_model:
-                agent_ai_config['model'] = ai_model
-            if ai_api_key:
-                agent_ai_config['api_key'] = ai_api_key
 
             # agent_source에서 project_id 추출, agents.yaml에서 agent_id 조회
             agent_source = participant.get('agent_source', '')
@@ -339,6 +327,13 @@ class MultiChatManager:
                                 break
                     except Exception:
                         pass
+
+            # 모델 기어 해소 (project_id·agent_id 가 위에서 구해진 뒤라야 핀이 걸린다)
+            from model_resolver import resolve_agent_ai
+            agent_ai_config = resolve_agent_ai(agent_ai_config, project_id, agent_id or "")
+            if not agent_ai_config.get("model"):
+                return ("[실행 모델이 해소되지 않았습니다 — 런처의 모델 티어"
+                        "(경량/중급/고급) 설정을 확인하세요.]")
 
             # AI 에이전트 생성 (프로젝트 도구 자동 로드: tools=None)
             agent = AIAgent(

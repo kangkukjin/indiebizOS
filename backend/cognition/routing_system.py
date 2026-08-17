@@ -163,9 +163,19 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
         available = [ag.get("name", ag.get("id", "?")) for ag in agents]
         return {"error": f"에이전트 '{agent_name}'을 찾을 수 없습니다.", "available": available}
 
-    ai_config = agent_config.get("ai", {})
-    if not ai_config.get("api_key"):
-        return {"error": f"에이전트 '{agent_name}'의 API 키가 설정되지 않았습니다."}
+    # 모델은 **모델 기어가 단독 결정**한다 — per-agent yaml(ai.provider/model/apiKey)은
+    # 폐지된 설정이다(agent_cognitive._resolve_execution_config 와 같은 규칙).
+    # ★왜 여기가 따로 필요한가: 비동기 위임은 상주 러너(AgentRunner)로 가서 기어 해소를
+    #   이미 거치지만, 동기 위임은 이 자리에서 임시 에이전트를 만든다. 그래서 여기가
+    #   해소를 안 하면 **같은 어휘의 두 mode 가 서로 다른 모델로 돈다** — 기어를 '최대'로
+    #   놔도 sync 만 폐지된 옛 설정(죽은 키)으로 붙어 빈 응답을 돌려주던 원인.
+    from model_resolver import resolve_agent_ai
+    ai_config = resolve_agent_ai(agent_config.get("ai"), project_id, agent_config.get("id") or "")
+    if not ai_config.get("model"):
+        return {"error": ("실행 모델이 해소되지 않았습니다 — 런처의 모델 티어"
+                          "(경량/중급/고급) 설정을 확인하세요. 에이전트는 키를 들고 다니지 않습니다.")}
+    print(f"[동기위임] {project_id}:{agent_config.get('id')}: 모델 기어 → "
+          f"{ai_config['provider']}/{ai_config['model']} ({ai_config.get('_gear_source')})")
 
     # 임시 AI 에이전트 생성 + 동기 호출
     try:
@@ -204,6 +214,20 @@ def _agent_ask_sync(agent_id: str, params: dict, project_path: str) -> Any:
             history=[],
         )
 
+        # ★빈 응답을 성공으로 포장하지 않는다 — 프로바이더가 오류(인증·모델 부재)를
+        #   빈 문자열로 삼키면 부르는 쪽은 "저쪽이 할 말이 없었다"와 "저쪽이 고장났다"를
+        #   구별할 수 없다. 동기 위임의 계약은 '답을 돌려준다'이므로 답이 없으면 실패다.
+        if not (response or "").strip():
+            return {
+                "success": False,
+                "agent": agent_name,
+                "project": project_id,
+                "error": (f"'{agent_name}'이(가) 빈 응답을 반환했습니다 "
+                          f"(모델 {ai_config.get('provider')}/{ai_config.get('model')}). "
+                          f"프로바이더 인증·모델 설정 실패일 수 있습니다 — 백엔드 로그의 "
+                          f"해당 프로바이더 오류를 확인하세요."),
+                "sync": True,
+            }
         return {
             "success": True,
             "agent": agent_name,

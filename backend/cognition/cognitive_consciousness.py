@@ -128,7 +128,7 @@ class CognitiveConsciousnessMixin:
             {"fits": bool, "criteria": str} 또는 None(실패 → 호출 측은 풀 의식 폴백)
         """
         try:
-            from consciousness_agent import lightweight_ai_call
+            from consciousness_agent import oneshot_ai_call
 
             task_framing = (prev_framing or {}).get("task_framing", "")
             if not task_framing:
@@ -149,7 +149,7 @@ class CognitiveConsciousnessMixin:
 
 JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
 
-            resp = lightweight_ai_call(
+            resp = oneshot_ai_call(
                 prompt,
                 system_prompt="진행 중 태스크 framing의 적합성 판정기. JSON으로만 응답.",
                 role="background",
@@ -433,10 +433,10 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             "SESSION_RESET" / "EXECUTE" / "THINK"
         """
         try:
-            from consciousness_agent import lightweight_ai_call, get_unconscious_prompt
+            from consciousness_agent import oneshot_ai_call, get_unconscious_prompt
 
             system_prompt = get_unconscious_prompt()
-            response = lightweight_ai_call(user_message, system_prompt=system_prompt)
+            response = oneshot_ai_call(user_message, system_prompt=system_prompt)
 
             if response is None:
                 return "EXECUTE"  # AI 미준비 시 기본값 — 과잉 각성이 더 흔한 오류(2026-08-10 기준 상향)

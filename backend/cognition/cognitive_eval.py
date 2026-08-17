@@ -367,7 +367,7 @@ class CognitiveEvalMixin:
             # 교차검증·열린문제 노력선·표면 vs 실질)을 경량 flash-lite 가 실행하지 못해 거짓합격을
             # 달성 기준 평가는 모델 기어 '평가' 축(role=evaluate)으로 해소된다 —
             # 기어 프리셋상 평가 축은 경량 티어(과거 opus 고정 → 경량 개선). system_ai_call 은
-            # role 만 다를 뿐 lightweight_ai_call 과 같은 계약(prompt/system_prompt/images).
+            # role 만 다를 뿐 oneshot_ai_call 과 같은 계약(prompt/system_prompt/images).
             from consciousness_agent import system_ai_call
 
             eval_images = None

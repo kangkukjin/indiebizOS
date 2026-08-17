@@ -185,7 +185,7 @@ class CognitiveDistillMixin:
             import memory_db
 
             from thread_context import get_current_agent_id, get_current_task_id
-            from consciousness_agent import lightweight_ai_call
+            from consciousness_agent import oneshot_ai_call
 
             agent_id = get_current_agent_id()
             project_path = str(self.project_path)
@@ -214,7 +214,7 @@ JSON 배열로만 응답.
 사용자: {user_message[:500]}
 AI: {ai_response[:500]}"""
 
-            result = lightweight_ai_call(
+            result = oneshot_ai_call(
                 prompt=extract_prompt,
                 system_prompt="사실 정보만 추출하라. JSON 배열로만 응답.",
                 role="background",
@@ -275,7 +275,7 @@ AI: {ai_response[:500]}"""
                     f"{pairs_text}\n\n"
                     '쌍 순서대로 JSON으로만 응답: {"verdicts": ["SAME"|"UPDATE"|"REPLACE"|"NEW", ...]}'
                 )
-                resp = lightweight_ai_call(
+                resp = oneshot_ai_call(
                     prompt=batch_prompt,
                     system_prompt="기억 관계 판정기. 쌍 순서대로 verdict 배열만 JSON으로 응답.",
                     role="background",
@@ -368,7 +368,7 @@ AI: {ai_response[:500]}"""
                     or any(w in ar_l for w in self._FORAGE_EVIDENCE_WORDS)):
                 return  # 포식 흔적 없음 — 증류 스킵(LLM 호출 안 함)
             import forage_memory
-            from consciousness_agent import lightweight_ai_call
+            from consciousness_agent import oneshot_ai_call
 
             # 1) 기존 지도(전 공간) 요약 → "이미 아는 것"으로 (델타만 추출하도록). body 표기로 공간 구분.
             known = forage_memory.recall(body=None, query=None, limit=40)
@@ -416,7 +416,7 @@ AI 답변: {ai_response[:1400]}
  "owner":[{{"facet":"domain|identity|...","value":"...","prior_class":"semantic"}}],
  "surface":[{{"locus":"(있으면)","value":"(owner면)","why":"..."}}]}}"""
 
-            resp = lightweight_ai_call(
+            resp = oneshot_ai_call(
                 prompt=extract_prompt,
                 system_prompt="포식 지도 증류기. 포식한 공간을 명명하고 일반화 가능한 공간 지식 델타만 JSON으로. 특정 항목·날 내용 금지.",
                 role="background",
@@ -574,7 +574,7 @@ AI 답변: {ai_response[:1400]}
           게이트가 스레드에서 안 보여 실패 실행이 해마에 증류된다(복리 출혈 방어 무력화).
         - 에피소드 버퍼(contextvars): copy_context 로 같은 _Episode 를 공유 — 증류 print 가
           버퍼에 계속 쌓이고, 완료 시 refresh_episode 가 저장된 행에 꼬리를 재합류시킨다.
-        - 경량 프로바이더 동시성: lightweight_ai_call 의 _oneshot_call_lock 이 직렬화.
+        - 경량 프로바이더 동시성: oneshot_ai_call 의 _oneshot_call_lock 이 직렬화.
         """
         import threading
         import contextvars

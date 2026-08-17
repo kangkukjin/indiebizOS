@@ -140,7 +140,7 @@ def _audit_batch_llm(batch: List[Dict], valid_names: List[str]) -> List[Dict]:
     무결을 같은 값으로 뭉개면 이 점검은 조용할수록 안심되는 게 아니라
     판단이 불가능해진다(2026-07-28).
     """
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
 
     lines = []
     for a in batch:
@@ -162,7 +162,7 @@ def _audit_batch_llm(batch: List[Dict], valid_names: List[str]) -> List[Dict]:
         "문제 없으면 빈 배열 []. JSON만 출력."
     )
 
-    resp = lightweight_ai_call(prompt, system_prompt=_SYS_PROMPT, role="background")
+    resp = oneshot_ai_call(prompt, system_prompt=_SYS_PROMPT, role="background")
     if not resp:
         raise _AuditUnreadable("빈 응답")
     return _parse_flags(resp)

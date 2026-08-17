@@ -175,9 +175,9 @@ def _as_int(v, default: int) -> int:
 def _grounded_generate(note: str, question: str, excerpts: list):
     """경량 AI 1회 — 발췌만 근거로 [n] 인용 달린 답. 반환 (answer, error)."""
     try:
-        from consciousness_agent import lightweight_ai_call
+        from consciousness_agent import oneshot_ai_call
     except ImportError as e:
-        return "", f"lightweight_ai_call 임포트 불가(백엔드 밖 실행?): {e}"
+        return "", f"oneshot_ai_call 임포트 불가(백엔드 밖 실행?): {e}"
 
     lines = []
     for i, r in enumerate(excerpts, 1):
@@ -196,7 +196,7 @@ def _grounded_generate(note: str, question: str, excerpts: list):
     prompt = f"질문: {question}{goal}\n\n발췌:\n" + "\n\n".join(lines)
 
     try:
-        answer = lightweight_ai_call(prompt, system_prompt=system_prompt, role="classify")
+        answer = oneshot_ai_call(prompt, system_prompt=system_prompt, role="classify")
     except Exception as e:
         return "", str(e)
     if not (answer or "").strip():

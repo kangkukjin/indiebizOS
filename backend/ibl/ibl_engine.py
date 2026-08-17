@@ -859,8 +859,8 @@ def _compress_text(text: str, action: str, config: dict) -> Any:
     """경량 AI로 텍스트 한 덩이의 노이즈를 제거한다. 실패 시 None."""
     prompt_instruction = config.get("prompt", _DEFAULT_COMPRESS_PROMPT)
     try:
-        from consciousness_agent import lightweight_ai_call
-        compressed = lightweight_ai_call(
+        from consciousness_agent import oneshot_ai_call
+        compressed = oneshot_ai_call(
             prompt=f"다음은 [{action}] 액션의 실행 결과이다. {prompt_instruction}\n\n{text}",
             system_prompt=_COMPRESS_SYSTEM_PROMPT,
             role="background"

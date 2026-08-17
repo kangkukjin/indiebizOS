@@ -160,6 +160,7 @@
     "services/warehouse_feed",
     "surface/api_agents",
     "surface/api_business",
+    "surface/api_config_tiers",
     "surface/api_conversations",
     "surface/api_family_news",
     "surface/api_gmail",
@@ -248,8 +249,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 242,
-    "engine": 208,
+    "total": 243,
+    "engine": 209,
     "blocklist": 34
   }
 }

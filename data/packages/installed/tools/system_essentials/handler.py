@@ -911,8 +911,8 @@ def execute(tool_input: dict, context) -> str:
                           "당신은 앱에 내장된 유능한 조수입니다. 사용자의 지시에 간결하고 정확하게 답하세요. "
                           "불필요한 서론·맺음말 없이 요청한 결과만 반환하세요.")
             try:
-                from consciousness_agent import lightweight_ai_call
-                answer = lightweight_ai_call(message, system_prompt=sys_prompt, role="background")
+                from consciousness_agent import oneshot_ai_call
+                answer = oneshot_ai_call(message, system_prompt=sys_prompt, role="background")
             except Exception as e:
                 return json.dumps({"success": False, "error": f"AI 호출 실패: {e}"}, ensure_ascii=False)
             if not answer:

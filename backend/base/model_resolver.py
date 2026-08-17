@@ -2,7 +2,7 @@
 model_resolver.py - 모델 기어 단일 진실원
 IndieBiz OS Core
 
-흩어져 있던 모델 선택(lightweight_ai_call / _get_midtier_provider / load_system_ai_config)을
+흩어져 있던 모델 선택(oneshot_ai_call / _get_midtier_provider / load_system_ai_config)을
 한 곳으로 모은다. 텍스트 역할은 4축 → 현재 기어 → 티어 → 모델로 해소한다:
 
     resolve(role) →
@@ -20,7 +20,10 @@ provider 객체는 (provider,model,key) 키로 캐시 — 기어가 바뀌면 �
 import json
 import hashlib
 import logging
+import os
+import re
 import unicodedata
+from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 
 from runtime_utils import get_base_path
@@ -80,6 +83,75 @@ MIDTIER_AI_CONFIG_PATH = _data_path() / "midtier_ai_config.json"
 UNCONSCIOUS_AI_CONFIG_PATH = _data_path() / "unconscious_ai_config.json"
 
 
+# ── 모델 프로바이더 자격증명 = `.env` 단일 보관소 (2026-08-17) ──────────────
+# ★원칙: **API 키는 `.env` 말고 어디에도 있으면 안 된다.** 이 시스템의 도구·데이터 키
+# (KAKAO/NAVER/DART/GEMINI…)는 이미 전부 `.env` 한 곳에 사는데, *모델* 키만 티어 설정
+# json 에 따로 살아 보관소가 둘로 갈려 있었다. 그 결과 ①같은 키가 여러 파일에 복사되고
+# ②티어의 provider 를 바꿔도 옛 프로바이더의 키가 남아 엉뚱한 벤더로 실려 가고
+# ③키가 늘어난 파일 수만큼 유출면이 넓어졌다(실측: claude_code 티어가 Gemini 키를 나름).
+# `.env` 는 gitignore 되어 있고 부팅 시 load_dotenv 로 올라온다.
+_PROVIDER_ENV = {
+    "google": "GEMINI_API_KEY", "gemini": "GEMINI_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+}
+
+
+def env_var_for_provider(provider: str) -> str:
+    """프로바이더 → `.env` 변수 이름. 키가 필요 없는 프로바이더는 빈 문자열."""
+    p = (provider or "").strip().lower()
+    if p in _NO_KEY_PROVIDERS:
+        return ""
+    return _PROVIDER_ENV.get(p, "")
+
+
+def env_key_for_provider(provider: str) -> str:
+    """프로바이더의 키를 `.env`(환경)에서 읽는다. 없으면 빈 문자열."""
+    name = env_var_for_provider(provider)
+    return (os.environ.get(name, "") or "").strip() if name else ""
+
+
+def _env_file() -> Path:
+    return get_base_path() / ".env"
+
+
+def set_env_key(provider: str, api_key: str) -> bool:
+    """프로바이더 키를 `.env` 에 upsert (설정 UI 저장 경로용).
+
+    키가 티어 json 이 아니라 여기로 가야 보관소가 하나로 유지된다. 기존 줄은 값만
+    교체하고(주석·순서 보존), 없으면 끝에 덧붙인다. 현재 프로세스 환경에도 즉시 반영."""
+    name = env_var_for_provider(provider)
+    if not name:
+        return False
+    key = (api_key or "").strip()
+    if not key:
+        return False
+    p = _env_file()
+    try:
+        lines = p.read_text(encoding="utf-8").splitlines(keepends=True) if p.exists() else []
+        hit = False
+        for i, ln in enumerate(lines):
+            if re.match(rf"^\s*{re.escape(name)}\s*=", ln):
+                lines[i] = f"{name}={key}\n"
+                hit = True
+                break
+        if not hit:
+            if lines and not lines[-1].endswith("\n"):
+                lines.append("\n")
+            lines.append(f"{name}={key}\n")
+        tmp = p.with_suffix(p.suffix + ".tmp")
+        tmp.write_text("".join(lines), encoding="utf-8")
+        os.replace(tmp, p)
+        os.environ[name] = key          # 재부팅 없이 즉시 유효
+        logger.info(f"[model_resolver] {name} 을(를) .env 에 저장했습니다.")
+        return True
+    except Exception as e:
+        logger.warning(f"[model_resolver] .env 저장 실패 ({name}): {e}")
+        return False
+
+
 def _gear_path():
     return _data_path() / "model_gear.json"
 
@@ -102,8 +174,7 @@ def _tier_file_map(gear: dict) -> dict:
 def _load_tier_config(tier: str, gear: dict) -> dict:
     """티어(경량/중급/고급) → {provider, model, api_key, tier}.
 
-    api_key 가 비고 provider 가 키-필요 계열이면 고급(system_ai) 키로 폴백
-    (기존 _get_midtier_provider 동작 보존)."""
+    키는 `.env` 의 프로바이더별 변수에서 온다(티어 json 은 provider/model 만 나른다)."""
     tiers = _tier_file_map(gear)
     fname = tiers.get(tier) or tiers.get("고급", "system_ai_config.json")
     cfg = {}
@@ -115,16 +186,20 @@ def _load_tier_config(tier: str, gear: dict) -> dict:
             logger.warning(f"[model_resolver] 티어 설정 로드 실패 ({fname}): {e}")
     provider = (cfg.get("provider") or "anthropic").strip()
     model = (cfg.get("model") or "").strip()
-    api_key = (cfg.get("apiKey") or cfg.get("api_key") or "").strip()
 
+    # ★키는 `.env` 가 정본 — 프로바이더별 변수에서 읽는다(위 _PROVIDER_ENV 절 참조).
+    # 티어 json 에 남은 apiKey 는 이관 전 레거시일 뿐이라 폴백으로만 본다.
+    # ★옛 폴백("키 없으면 고급 티어 키를 빌려온다")은 제거했다 — 그게 claude_code
+    #   티어의 Gemini 키가 엉뚱한 프로바이더로 실려 나가던 경로다. 프로바이더가 다르면
+    #   키도 다르다. 빌려주지 않는다.
+    api_key = env_key_for_provider(provider)
     if not api_key and provider.lower() not in _NO_KEY_PROVIDERS:
-        sp = _data_path() / tiers.get("고급", "system_ai_config.json")
-        if sp.exists():
-            try:
-                sc = json.loads(sp.read_text(encoding="utf-8"))
-                api_key = (sc.get("apiKey") or sc.get("api_key") or "").strip()
-            except Exception:
-                pass
+        legacy = (cfg.get("apiKey") or cfg.get("api_key") or "").strip()
+        if legacy:
+            logger.warning(
+                f"[model_resolver] {fname} 에 남은 레거시 키를 사용합니다 — "
+                f"{env_var_for_provider(provider) or 'ENV'} 로 옮기세요(.env 가 정본).")
+            api_key = legacy
     return {"provider": provider, "model": model, "api_key": api_key, "tier": tier}
 
 
@@ -366,3 +441,35 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")
             return None, d
     return prov, d
+
+
+def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) -> dict:
+    """에이전트 실행 ai_config = **모델 기어가 단독 결정**한다 (공용 단일 출처).
+
+    ★per-agent 모델 설정(agents.yaml `ai.provider/model/api_key/apiKey`)은 폐지됐다 —
+    런처의 모델 티어(경량/중급/고급)가 유일한 모델 설정이다. 그런데 그 폐지가 러너
+    한 곳에만 적용돼, 에이전트를 *자기 자리에서 직접 세우는* 경로들(동기 위임·스위치·
+    멀티채팅)은 계속 옛 yaml 을 읽고 있었다 — 같은 에이전트가 부르는 길에 따라 다른
+    모델로 도는 드리프트. 이 함수가 그 해소를 한 곳으로 모은다.
+
+    ★`api_key` 유무로 게이트하지 말 것 — 현재 기어의 고급 티어(claude_code)처럼 키가
+    **원래 없는** 프로바이더가 있다(_NO_KEY_PROVIDERS). 키 없음은 오류가 아니다.
+
+    base_ai 의 비-모델 필드(thinkingBudget 등)는 보존한다.
+    Returns: ai_config(dict). 해소 실패 시 model 키가 없는 dict → 호출자가 정직하게 거절.
+    """
+    out = dict(base_ai or {})
+    for k in ("provider", "model", "api_key", "apiKey"):
+        out.pop(k, None)                     # 레거시 제거 — 기어가 전적으로 채운다
+    pin = f"{project_id}:{agent_id}" if (project_id and agent_id) else (agent_id or "")
+    try:
+        d = resolve("execution", agent_id=pin)
+    except Exception as e:
+        logger.warning(f"[model_resolver] 에이전트 실행 축 해소 실패 ({pin}): {e}")
+        return out
+    if d.get("model"):
+        out["provider"] = d.get("provider") or "anthropic"
+        out["model"] = d["model"]
+        out["api_key"] = d.get("api_key", "")
+        out["_gear_source"] = d.get("source", "")
+    return out

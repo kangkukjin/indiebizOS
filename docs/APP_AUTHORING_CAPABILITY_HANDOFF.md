@@ -35,7 +35,7 @@
 
 ### 4. `[self:ask]` — AI 호출도 어휘 (철칙0을 AI에)
 동기 원샷 AI 호출이 어휘에 **없던** 공백(있던 건 `[others:delegate]` 비동기 effect뿐 → 빈노트가 raw fetch 재발명)을 메움.
-- system_essentials 액션 `ai_ask`, 핸들러가 `consciousness_agent.lightweight_ai_call(role="background")` 로 경량 원샷(도구·다단계 없음).
+- system_essentials 액션 `ai_ask`, 핸들러가 `consciousness_agent.oneshot_ai_call(role="background")` 로 경량 원샷(도구·다단계 없음).
 - `returns: scalar` `{result,text}`, `exempt`(LLM=fixture 부적합). **조합 가능**: `context` 없으면 `_prev_result`를 맥락으로.
 - 액션 142→**143**. build --check 통과(pre-commit 삼각검증).
 - 해마: `add_examples_batch` +8 · `rebuild_index`(2642) · `ibl_distilled` +12.

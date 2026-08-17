@@ -386,7 +386,7 @@ def _curate_sections_batch(secs: list, keep: int) -> list:
         return _fallback()
 
     try:
-        from consciousness_agent import lightweight_ai_call
+        from consciousness_agent import oneshot_ai_call
         core = _load_perspective_core()
         blocks = []
         for i in need_ai:
@@ -429,7 +429,7 @@ def _curate_sections_batch(secs: list, keep: int) -> list:
             "— 키=섹션 번호, n=기사 번호, r=hot|delta|surface, w=고른 이유(25자 이내). 다른 말 금지."
         )
         prompt = f"섹션당 목표 기사 수: {keep}\n\n" + "\n\n".join(blocks)
-        resp = lightweight_ai_call(prompt, system_prompt=sys_prompt, role="classify")
+        resp = oneshot_ai_call(prompt, system_prompt=sys_prompt, role="classify")
         m = re.search(r"\{[\s\S]*\}", resp or "")
         if not m:
             return _fallback()

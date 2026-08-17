@@ -173,7 +173,7 @@ tool_json:
 
       ## 이음매
 
-      저장·색인·검색은 notebook_core.py(data/notebook/notebooks.db), 생성은 경량 AI 1회(consciousness_agent.lightweight_ai_call) + 결정론 인용 후검증. 임베딩=ko-sroberta(blog RAG와 동일 계보), 해마 모델 아님.
+      저장·색인·검색은 notebook_core.py(data/notebook/notebooks.db), 생성은 경량 AI 1회(consciousness_agent.oneshot_ai_call) + 결정론 인용 후검증. 임베딩=ko-sroberta(blog RAG와 동일 계보), 해마 모델 아님.
 
 
       ## 한계

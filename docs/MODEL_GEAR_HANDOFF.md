@@ -28,7 +28,7 @@
 - **2단계 (부분) — 원샷 호출 이관** (2026-06-29, 동작 변화 0, 라이브 검증 완료)
   - `consciousness_agent.py`: 새 헬퍼 `_resolve_oneshot_provider(role)` — `model_resolver.get_provider_for(role)`
     로 원샷 provider 획득 + `disable_session_persistence` 강제(원샷 계약, hasattr 가드=google엔 무영향).
-    `lightweight_ai_call`·`system_ai_call` 에 `role` 인자 추가(기본 classify / translate),
+    `oneshot_ai_call`·`system_ai_call` 에 `role` 인자 추가(기본 classify / translate),
     폴백 순서=리졸버→옛 getter→의식 에이전트.
   - **이관 완료된 표 항목**: #1 classify(기본값) · #3~8 background(consciousness_fit_gate / distill_deep×2 /
     distill_forage / forage_consolidation×2 / ibl_usage_rag reflection / ibl_engine recall 압축) +
@@ -111,14 +111,14 @@
 
 | # | 위치 | 현재 | 목표 role(축) |
 |---|---|---|---|
-| 1 | `agent_cognitive.py:1673` `_classify_request` | lightweight_ai_call | classify(분류) |
+| 1 | `agent_cognitive.py:1673` `_classify_request` | oneshot_ai_call | classify(분류) |
 | 2 | `agent_cognitive.py:2003` evaluator | **system_ai_call** | evaluate(평가) ← opus→경량 개선 |
-| 3 | `agent_cognitive.py:1049` `_consciousness_fit_gate` | lightweight_ai_call | background(분류) |
-| 4 | `agent_cognitive.py:1175,1241` `_distill_deep_memory` | lightweight_ai_call | background(분류) |
-| 5 | `agent_cognitive.py:1379` `_distill_forage_memory` | lightweight_ai_call | background(분류) |
-| 6 | `ibl_usage_rag.py:595` 경험증류 reflection | lightweight_ai_call | background(분류) |
-| 7 | `forage_consolidation.py:84,108` 포식정리 | lightweight_ai_call | background(분류) |
-| 8 | `ibl_engine.py:763` recall 압축 | lightweight_ai_call | background(분류) |
+| 3 | `agent_cognitive.py:1049` `_consciousness_fit_gate` | oneshot_ai_call | background(분류) |
+| 4 | `agent_cognitive.py:1175,1241` `_distill_deep_memory` | oneshot_ai_call | background(분류) |
+| 5 | `agent_cognitive.py:1379` `_distill_forage_memory` | oneshot_ai_call | background(분류) |
+| 6 | `ibl_usage_rag.py:595` 경험증류 reflection | oneshot_ai_call | background(분류) |
+| 7 | `forage_consolidation.py:84,108` 포식정리 | oneshot_ai_call | background(분류) |
+| 8 | `ibl_engine.py:763` recall 압축 | oneshot_ai_call | background(분류) |
 | 9 | `consciousness_agent.py:_init_provider(44)` 의식 | load_system_ai_config | **consciousness(의식)** ← 시스템AI서 분리 |
 | 10 | `system_ai_core.py:get_system_ai_runner(88)` 시스템AI 실행 | load_system_ai_config | system_ai(실행) |
 | 11 | `agent_runner.py:_init_ai(94)` 프로젝트 에이전트 | agent_config.ai (각자 yaml) | **execution(실행), agent_id 핀 지원** ← 개별설정 불요 |
@@ -131,10 +131,10 @@
 
 ## 4. 권장 리팩터 방식
 
-**원샷 호출(lightweight_ai_call / system_ai_call)**: 시그니처에 `role` 인자 추가하고 내부에서
+**원샷 호출(oneshot_ai_call / system_ai_call)**: 시그니처에 `role` 인자 추가하고 내부에서
 `model_resolver.get_provider_for(role)` 로 provider 획득. 기본 role 유지 시 현 동작 보존.
-호출 사이트는 자기 role만 넘기면 됨(예: `lightweight_ai_call(prompt, role="classify")`).
-→ `consciousness_agent.py`의 `lightweight_ai_call`(589)·`system_ai_call`(672)이 1차 수술 지점.
+호출 사이트는 자기 role만 넘기면 됨(예: `oneshot_ai_call(prompt, role="classify")`).
+→ `consciousness_agent.py`의 `oneshot_ai_call`(589)·`system_ai_call`(672)이 1차 수술 지점.
 
 **에이전트 init(전체 루프)**: init 시점에 `resolve(role[, agent_id])`로 provider 구성.
 - 의식: `consciousness_agent._init_provider` → `resolve('consciousness')`

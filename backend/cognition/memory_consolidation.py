@@ -79,7 +79,7 @@ def _merge_cluster_llm(items: List[Dict], today: str) -> List[Dict]:
     반환: [{"keep_id", "drop_ids", "content", "keywords", "category"}, ...]
           병합할 그룹만 포함. 서로 다른 사실은 언급하지 않음(= 그대로 둠).
     """
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
 
     listing = "\n".join(
         f'- id={it["id"]} (생성 {str(it.get("created_at",""))[:10]}, '
@@ -100,7 +100,7 @@ JSON으로만 응답:
 {{"merges": [{{"keep_id": <남길 id>, "drop_ids": [<삭제할 id들>], "content": "<정규 병합본>", "keywords": "k1,k2", "category": "<분류>"}}]}}
 병합할 그룹이 없으면 {{"merges": []}}."""
 
-    resp = lightweight_ai_call(
+    resp = oneshot_ai_call(
         prompt=prompt,
         system_prompt="기억 병합 판정기. 같은 사실만 병합. JSON으로만 응답.",
         role="background",
@@ -143,7 +143,7 @@ def _compact_record_llm(item: Dict, today: str) -> Optional[Dict]:
     부푼 것을 푼다 — 자주 회상돼 used_at 최신이라 LRU 가지치기에도 안 걸리는 '회상 자석'을
     줄이는 사각지대 패스. 구별되는 사실은 보존하고 중복·옛 정보만 버린다.
     반환 {content, keywords} 또는 None(실패/압축 효과 없음 → 스킵)."""
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
 
     content = item.get("content", "") or ""
     prompt = f"""아래는 같은 주제로 여러 번 [보충]되며 비대해진 하나의 기억이다. 오늘 날짜는 {today}.
@@ -158,7 +158,7 @@ def _compact_record_llm(item: Dict, today: str) -> Optional[Dict]:
 {content}
 
 JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
-    resp = lightweight_ai_call(
+    resp = oneshot_ai_call(
         prompt=prompt,
         system_prompt="기억 압축기. 구별되는 사실은 보존하고 중복만 제거. JSON으로만 응답.",
         role="background",

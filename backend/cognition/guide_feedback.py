@@ -237,7 +237,7 @@ def edit_churn(days: int = 30) -> List[Dict]:
 
 def _review_one(guide: str, user_message: str, response: str,
                 tool_summary: str, live: set) -> Dict:
-    from consciousness_agent import lightweight_ai_call
+    from consciousness_agent import oneshot_ai_call
 
     path = GUIDES_DIR / guide
     try:
@@ -268,7 +268,7 @@ def _review_one(guide: str, user_message: str, response: str,
         '출력: {"observations":[],"factual_fixes":[],"proposals":[]} JSON만.'
     )
 
-    resp = lightweight_ai_call(prompt, system_prompt=_SYS, role="guide_audit")
+    resp = oneshot_ai_call(prompt, system_prompt=_SYS, role="guide_audit")
     if not resp:
         return {}
     m = re.search(r"\{.*\}", resp, re.S)

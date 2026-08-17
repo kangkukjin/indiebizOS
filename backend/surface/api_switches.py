@@ -73,23 +73,20 @@ async def create_switch(switch: SwitchCreate):
                     if agent.get("allowed_nodes") and not config.get("allowed_nodes"):
                         config["allowed_nodes"] = agent["allowed_nodes"]
 
-                    # AI 설정: 에이전트 내부 설정 우선, 없으면 common에서
-                    agent_ai = agent.get("ai", {})
-                    if agent_ai.get("api_key"):
-                        config["ai"] = {
-                            "provider": agent_ai.get("provider", "anthropic"),
-                            "api_key": agent_ai.get("api_key", ""),
-                            "model": agent_ai.get("model", "claude-sonnet-4-20250514")
-                        }
-                    else:
-                        # common에서 AI 설정 가져오기
-                        ai_provider = project_config.get("common", {}).get("default_ai", "anthropic")
-                        ai_settings = project_config.get("ai", {}).get(ai_provider, {})
-                        config["ai"] = {
-                            "provider": ai_provider,
-                            "api_key": ai_settings.get("api_key", ""),
-                            "model": ai_settings.get("model", "claude-sonnet-4-20250514")
-                        }
+                    # ★모델은 얼리지 않는다 — 스위치가 얼리는 것은 *그 프로젝트의 설정*
+                    # (역할·노드·프롬프트)이고, 모델은 프로젝트 설정이 아니라 런처의
+                    # 모델 기어가 런타임에 단독 결정한다. 옛 코드는 per-agent provider/
+                    # model/api_key 를 여기서 복사해 얼렸는데, 그 설정은 폐지됐으므로
+                    # 얼린 값은 곧 죽은 키가 된다(기어를 바꿔도 스위치만 옛 모델로 남는다).
+                    # 대신 에이전트 **신원**만 얼린다 — 기어의 중앙 핀(`{project}:{id}`)이
+                    # 이 스위치에도 그대로 걸리게.
+                    if agent.get("id"):
+                        config["agent_id"] = agent["id"]
+                    # 비-모델 ai 필드(thinkingBudget 등)가 있으면 보존
+                    _non_model = {k: v for k, v in (agent.get("ai") or {}).items()
+                                  if k not in ("provider", "model", "api_key", "apiKey")}
+                    if _non_model:
+                        config["ai"] = _non_model
 
                 # 공통 프롬프트 복사
                 config["common_prompt"] = project_config.get("common", {}).get("common_prompt", "")
@@ -175,12 +172,9 @@ async def execute_switch(switch_id: str, background_tasks: BackgroundTasks):
     # 스위치에 저장된 설정 그대로 사용 (이미 생성 시 복사됨)
     config = switch.get("config", {})
 
-    # AI 설정이 없으면 에러
-    if not config.get("ai", {}).get("api_key"):
-        raise HTTPException(
-            status_code=400,
-            detail="스위치에 AI 설정이 없습니다. 스위치를 다시 생성해주세요."
-        )
+    # ★api_key 유무로 막지 않는다 — 모델은 실행 시점에 기어가 정하고, 현재 고급 티어
+    # (claude_code)처럼 **키가 원래 없는** 프로바이더가 있다. 키 없음은 오류가 아니다.
+    # 해소 실패는 SwitchRunner 가 실행 시점에 정직하게 보고한다.
 
     # 스위치 실행 (백그라운드)
     runner = SwitchRunner(switch)

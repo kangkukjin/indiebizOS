@@ -63,7 +63,7 @@ provider 객체는 `provider|model|key` 로 캐시 → 기어 바뀌면 키가 �
 ## 빌드 단계
 
 1. ✅ **리졸버 + 스키마** (이 문서 + 위 2파일) — 동작 변화 없이 중앙화·검증 완료
-2. ⏳ **15개 호출처 이관** — tier-named 접근자(lightweight_ai_call/_get_midtier_provider/
+2. ⏳ **15개 호출처 이관** — tier-named 접근자(oneshot_ai_call/_get_midtier_provider/
    system_ai_call/ConsciousnessAgent/_init_ai)를 role 기반으로. 핵심=의식·시스템AI 분리,
    프로젝트 에이전트가 실행 축 상속(개별설정 불요).
 3. ⏳ **핫리로드 마무리** — 옛 캐시(`_midtier_provider_initialized` 등) 제거, 리졸버 캐시로.

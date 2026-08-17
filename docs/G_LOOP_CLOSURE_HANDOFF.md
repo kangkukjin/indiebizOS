@@ -17,9 +17,9 @@
 - ⚠️ 텍스트-HTML 슬라이드 경로(`slide_author.create_slide`)는 전용 inner loop 미적용 — 단 **Option B 보편 백스톱이 덮음**(평가자가 렌더된 슬라이드 PNG를 직접 봄). 향후 더 타이트한 루프가 필요하면 slide_image 선례대로 추가.
 
 **Phase 3 (Option B — 인지 평가자가 픽셀을 봄, 보편 백스톱) 완료·종단검증.** ★G의 핵심 — 슬라이드뿐 아니라 차트·신문·이미지·웹 등 *모든* 산출 작업이 기존 achievement_criteria 기계를 통해 자동으로 시각 판단을 얻음.
-- `consciousness_agent.lightweight_ai_call`에 `images` 파라미터 추가 → `provider.process_message(images=...)`로 전달. 경량 프로바이더(google gemini-3.1-flash-lite)가 비전 가능. None이면 기존 텍스트 동작 그대로.
+- `consciousness_agent.oneshot_ai_call`에 `images` 파라미터 추가 → `provider.process_message(images=...)`로 전달. 경량 프로바이더(google gemini-3.1-flash-lite)가 비전 가능. None이면 기존 텍스트 동작 그대로.
 - `agent_cognitive.py` 신설 `_collect_visual_artifacts(response, tool_calls, max_images=3)` — tool_calls의 input/**result(예 image_path)**/응답텍스트에서 raster 이미지 경로를 모아 `{base64,media_type,_path}`로 인코딩. **`_collect_created_files`가 이미지를 텍스트로 읽어 버리던 물리적 원인을 우회.** 6MB/3장 상한.
-- `_evaluate_achievement(... visual_artifacts=None)` — 시각 산출물 있으면 "## 시각 산출물 검수" 프롬프트 + `lightweight_ai_call(images=...)`로 평가자가 직접 봄. `_run_goal_evaluation_loop`가 수집·주입. **전부 추가형·기본값 보존**(이미지 없으면 기존과 동일), 멀티모달 실패 시 기존 except가 통과 처리(fail-safe).
+- `_evaluate_achievement(... visual_artifacts=None)` — 시각 산출물 있으면 "## 시각 산출물 검수" 프롬프트 + `oneshot_ai_call(images=...)`로 평가자가 직접 봄. `_run_goal_evaluation_loop`가 수집·주입. **전부 추가형·기본값 보존**(이미지 없으면 기존과 동일), 멀티모달 실패 시 기존 except가 통과 처리(fail-safe).
 - `data/common_prompts/evaluator_prompt.md`에 시각 검수 지침 추가.
 - 검증: T1 수집기 결정적(이미지만 골라 base64, txt 제외, result의 image_path 추출) ✓ · T2 멀티모달 종단(경량모델이 테스트 이미지의 "42"를 실제로 읽음) ✓.
 
@@ -57,7 +57,7 @@ G가 닫히면: 생성한 슬라이드/이미지/문서를 *직접 보고* 의�
   - 피드백 주입 재시도 루프. `max_rounds` 기본 2. severity(1~3)별 재시도 디렉티브.
   - **이게 "revise" 패턴의 선례다** — 새로 만들지 말고 이 구조를 그대로 따라라.
 - **`_evaluate_achievement`** — `agent_cognitive.py:1317`
-  - `lightweight_ai_call(prompt, system_prompt)` 호출 = **텍스트 전용 모델.** 이미지 입력 경로 없음.
+  - `oneshot_ai_call(prompt, system_prompt)` 호출 = **텍스트 전용 모델.** 이미지 입력 경로 없음.
 - **`_collect_created_files`** — `agent_cognitive.py:1225`
   - 파일 경로를 수집한 뒤 **`open(path, 'r', encoding='utf-8')`로 텍스트 읽기.**
   - → **PNG/이미지는 바이너리라 읽기 실패 → `except: pass`로 조용히 스킵.**

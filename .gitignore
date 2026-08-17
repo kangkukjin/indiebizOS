@@ -368,3 +368,9 @@ data/system_ai_images/
 
 # .venv 전환 때 대피시킨 3.14 pylibs 잔재 백업 (2026-08-13)
 data/_pylibs_cp314_backup_*/
+
+# 일회성 백업 보관소 (규약: data/_backups/YYYY-MM-DD_이름/ — 2026-08-14 제정)
+# ★반드시 무시할 것: 이관·정리 전에 뜨는 백업이라 자격증명(.env·티어 config·
+#   agents.yaml)이 그대로 들어 있다. 규약이 모두에게 이 폴더를 쓰라고 하므로
+#   무시하지 않으면 `git add -A` 한 번에 키가 히스토리로 들어간다.
+data/_backups/

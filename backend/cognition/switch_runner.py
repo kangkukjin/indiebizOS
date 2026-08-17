@@ -116,13 +116,21 @@ class SwitchRunner:
             self._status(f"thread_context 설정 실패 (무시): {_ctx_err}")
 
         try:
-            # AI 설정
-            ai_config = self.config.get("ai", {})
-
-            if not ai_config.get("api_key"):
+            # AI 설정 — 스위치는 *프로젝트 설정*(역할·노드·프롬프트)을 얼리지만
+            # **모델은 얼리지 않는다**: 런처의 모델 기어가 실행 시점에 단독 결정한다.
+            # (옛 코드는 생성 시 복사해둔 per-agent provider/model/api_key 를 썼는데,
+            #  그 설정은 폐지돼 죽은 키만 남았고 기어를 바꿔도 스위치만 안 따라왔다.)
+            from model_resolver import resolve_agent_ai
+            ai_config = resolve_agent_ai(
+                self.config.get("ai"),
+                self.config.get("projectId") or "",
+                self.config.get("agent_id") or self.config.get("agentId") or "",
+            )
+            if not ai_config.get("model"):
                 return {
                     "success": False,
-                    "message": "API 키가 설정되지 않았습니다.",
+                    "message": ("실행 모델이 해소되지 않았습니다 — 런처의 모델 티어"
+                                "(경량/중급/고급) 설정을 확인하세요."),
                     "result": None
                 }
 

@@ -111,7 +111,7 @@ def test_role_tags_oneshot():
         CA._resolve_oneshot_provider = lambda role: FakeProvider()
         try:
             CA.system_ai_call("p", system_prompt="s", role="evaluate")
-            CA.lightweight_ai_call("p", system_prompt="s", role="classify")
+            CA.oneshot_ai_call("p", system_prompt="s", role="classify")
         finally:
             CA._resolve_oneshot_provider = orig
         # 태그 원복 후의 일반 라운드는 execution

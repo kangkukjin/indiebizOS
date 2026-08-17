@@ -97,8 +97,8 @@ def _store_error(conn: sqlite3.Connection, key: str, error: str):
 
 def _call_llm(prompt: str, system_prompt: str) -> Optional[str]:
     """경량 원샷 호출 — 테스트가 이 함수를 monkeypatch 한다."""
-    from consciousness_agent import lightweight_ai_call
-    return lightweight_ai_call(prompt, system_prompt=system_prompt, role="background")
+    from consciousness_agent import oneshot_ai_call
+    return oneshot_ai_call(prompt, system_prompt=system_prompt, role="background")
 
 
 _SYSTEM_PROMPT = (

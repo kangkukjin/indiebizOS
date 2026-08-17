@@ -13,13 +13,13 @@ nodes:
       ask:
         returns: scalar
         exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
-        description: 시스템 AI에게 원샷으로 물어 답을 즉시 받는다(도구 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 다단계 작업은 [others:delegate], 이웃 몸에 부탁은 [others:ask].
+        description: 내 몸의 경량 모델에게 원샷으로 물어 답을 즉시 받는다(도구·다단계 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 앱·워크플로우처럼 AI 없는 표면이 AI를 한 줄로 부를 때. 다단계는 [others:delegate], 이웃 몸은 [others:ask].
         group: system
         target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
         target_key: prompt
         router: handler
         tool: ai_ask
-        implementation: consciousness_agent.lightweight_ai_call 로 경량 원샷 LLM 호출 (도구·다단계 없음)
+        implementation: consciousness_agent.oneshot_ai_call(role="background") — 모델은 기어가 분류 축으로 해소(세 프리셋 모두 경량 티어). 도구·다단계·대화맥락 없음.
         keywords: [질문, 물어봐, 요약, 개선, 설명, 변환, 답변, ask, ai, summarize, rewrite]
       read:
         returns: scalar

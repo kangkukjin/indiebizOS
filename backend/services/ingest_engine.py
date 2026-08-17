@@ -10,7 +10,7 @@
 하나와 op 한 줄로 이 엔진에 얹는다.
 
 모델 선택 원칙:
-  텍스트 = 경량 AI(consciousness_agent.lightweight_ai_call — 기어 리졸버 존중).
+  텍스트 = 경량 AI(consciousness_agent.oneshot_ai_call — 기어 리졸버 존중).
   이미지 = Gemini 비전 직접 호출 — 모달리티는 기어 무관 패스스루(model_gear _doc)이고,
            현 경량(딥시크)은 비전이 없다(2026-08-13 전환). ★모델명은 gemini-2.5-flash 명시
            (flash-latest+thinkingBudget:0=400 함정, 2026-07-22 실측).
@@ -218,10 +218,10 @@ def _gemini_vision_json(prompt: str, images: list):
 def _lightweight_json(prompt: str, system_prompt: str):
     """텍스트 → 경량 AI (기어 리졸버 존중). returns (raw_text, err)."""
     try:
-        from consciousness_agent import lightweight_ai_call
+        from consciousness_agent import oneshot_ai_call
     except ImportError as e:
-        return None, f"lightweight_ai_call 임포트 불가(백엔드 밖 실행?): {e}"
-    raw = lightweight_ai_call(prompt, system_prompt=system_prompt, role="classify")
+        return None, f"oneshot_ai_call 임포트 불가(백엔드 밖 실행?): {e}"
+    raw = oneshot_ai_call(prompt, system_prompt=system_prompt, role="classify")
     if not raw:
         return None, "경량 AI 응답 없음"
     return raw, None

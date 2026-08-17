@@ -204,7 +204,7 @@
     },
     {
       "name": "deck_op",
-      "description": "강의 데크 조작 통합 도구. op 파라미터로 분기:\n- reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.\n- export: PDF/PPTX/이미지 폴더로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.\n- video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. 기본 백그라운드(즉시 반환, 진행=video_state.json·같은 op 재호출), wait:true=동기. lecture_dir/video/ 저장.",
+      "description": "강의 데크 조작 통합 도구. op 파라미터로 분기:\n- reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.\n- export: PDF/PPTX/이미지 폴더로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.\n- video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. 기본 백그라운드(별도 프로세스라 백엔드 리로드에 안 죽음, 즉시 반환), 진행=check:true 또는 video_state.json, wait:true=동기. lecture_dir/video/ 저장.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -240,7 +240,11 @@
           },
           "wait": {
             "type": "boolean",
-            "description": "video 옵션 — true=동기(완료까지 블로킹, 수 분). 기본 false=백그라운드."
+            "description": "video 옵션 — true=동기(완료까지 블로킹). 기본 false=별도 프로세스 백그라운드."
+          },
+          "check": {
+            "type": "boolean",
+            "description": "video 옵션 — true=렌더를 새로 걸지 않고 진행 상태만 조회(building/done/error/interrupted, 죽은 렌더는 interrupted 로 확정). 폴링은 이걸로."
           },
           "voice": {
             "type": "string",

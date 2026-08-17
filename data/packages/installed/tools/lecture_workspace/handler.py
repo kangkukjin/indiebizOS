@@ -26,6 +26,7 @@ import lecture_store  # noqa: E402
 import slide_ai  # noqa: E402
 import lecture_export  # noqa: E402
 import slide_edit_ops  # noqa: E402  (image_edit·글자 얹기 — 1500줄 규칙 분할 2026-08-10)
+import deck_video  # noqa: E402  (덱→MP4 렌더·상태·별도 프로세스 — 2026-08-17 분할)
 
 # 분할 이전 이름으로 부르는 내부 호출·디스패처를 위한 별칭
 _BAKED_LAYOUTS = slide_edit_ops.BAKED_LAYOUTS
@@ -1231,110 +1232,6 @@ def _deck_export(tool_input: dict) -> str:
 # 백그라운드(즉시 반환 + video_state.json, 신문 발행·family-news 선례), wait:true=동기.
 # ─────────────────────────────────────────────────────────────────────
 
-def _load_media_handler():
-    """media_producer/handler.py 차용 — create_html_video 파이프라인 (slide_native 차용과 같은 패턴)."""
-    import importlib.util
-    path = Path(__file__).resolve().parent.parent / "media_producer" / "handler.py"
-    key = "_media_handler_for_lecture"
-    if key in sys.modules:
-        return sys.modules[key]
-    spec = importlib.util.spec_from_file_location(key, str(path))
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[key] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def _video_state_path(lecture_id: str) -> Path:
-    return lecture_store.lecture_dir(lecture_id) / "video_state.json"
-
-
-def _write_video_state(lecture_id: str, state: dict) -> None:
-    try:
-        from datetime import datetime
-        state = {**state, "updated_at": datetime.now().isoformat(timespec="seconds")}
-        _video_state_path(lecture_id).write_text(
-            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
-    except Exception as e:
-        print(f"[deck_video] 상태 저장 실패(무시): {e}")
-
-
-def _scene_html_from_png(png_path: Path, width: int, height: int) -> str:
-    """슬라이드 PNG 한 장 → 풀블리드 HTML 씬. base64 임베드 — 파일 경로 의존 없음."""
-    import base64 as _b64
-    b64 = _b64.b64encode(png_path.read_bytes()).decode("ascii")
-    return (
-        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>'
-        '<body style="margin:0;background:#000">'
-        f'<img src="data:image/png;base64,{b64}" '
-        f'style="width:{width}px;height:{height}px;object-fit:contain;display:block">'
-        "</body></html>"
-    )
-
-
-def _deck_video_build(lecture_id: str, opts: dict) -> dict:
-    """조립 + 렌더 본체 (동기). 스레드/동기 양쪽에서 호출 — 상태 파일에 결과를 남긴다."""
-    width, height = int(opts.get("width") or 1280), int(opts.get("height") or 720)
-    deck = lecture_store.read_deck(lecture_id)
-    lecture_dir_path = lecture_store.lecture_dir(lecture_id)
-    order = deck.get("slide_order") or []
-    slides = deck.get("slides") or {}
-
-    scenes, narrations, missing_notes, skipped = [], [], [], []
-    # narration/<slide_id>.wav 가 있으면 그 파일이 TTS 를 이긴다 — 목소리 복제로 구운
-    # 내 목소리 나레이션을 넣는 자리(가이드 voice_narration.md, 스크립트 '나레이션생성').
-    narration_dir = lecture_dir_path / "narration"
-    preset_audio = []
-    for sid in order:
-        meta = slides.get(sid) or {}
-        png = lecture_dir_path / (meta.get("png_file") or "")
-        if not meta.get("png_file") or not png.exists():
-            skipped.append(sid)
-            continue
-        scenes.append({"html": _scene_html_from_png(png, width, height),
-                       "duration": float(opts.get("duration_per_scene") or 5)})
-        note = (meta.get("speaker_note") or "").strip()
-        narrations.append(note)          # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
-        ready = narration_dir / f"{sid}.wav"
-        preset_audio.append(str(ready) if ready.exists() else None)
-        if not note and not ready.exists():
-            missing_notes.append(sid)
-
-    if not scenes:
-        raise RuntimeError("렌더할 슬라이드가 없습니다 (PNG 미존재).")
-
-    mh = _load_media_handler()
-    video_dir = lecture_dir_path / "video"
-    video_dir.mkdir(exist_ok=True)
-    tool_input = {
-        "scenes": scenes,
-        "narration_texts": narrations,
-        "narration_audio_paths": preset_audio,
-        # 화자·엔진 기본값을 여기서 박지 않는다 — 미지정이면 media_producer 의 엔진 기본
-        # (2026-08-10부터 Gemini/Charon)이 이긴다. 옛날엔 Edge 화자가 박혀 있어서
-        # 기본 엔진을 바꿔도 강의 영상만 옛 목소리로 남았다.
-        "rate": opts.get("rate") or "+0%",
-        "transition": opts.get("transition") or "fade",
-        "output_filename": opts.get("output_filename") or "lecture_video.mp4",
-        "width": width, "height": height,
-    }
-    for k in ("voice", "engine", "style"):   # 미지정이면 안 실어야 엔진 기본이 이긴다
-        if opts.get(k):
-            tool_input[k] = opts[k]
-    if opts.get("bgm_path"):
-        tool_input["bgm_path"] = opts["bgm_path"]
-    result_msg = mh.create_html_video(tool_input, str(video_dir))
-    if not str(result_msg).startswith("HTML 동영상 제작 완료"):
-        raise RuntimeError(str(result_msg)[:500])
-    output = str(result_msg).split(":", 1)[1].strip().split(" (")[0]
-    return {
-        "output": output, "slides": len(scenes),
-        "narrated": len(scenes) - len(missing_notes),
-        "preset_narration": sum(1 for p in preset_audio if p),   # 미리 구운 오디오를 쓴 장 수
-        "missing_notes": missing_notes, "skipped": skipped,
-    }
-
-
 def _deck_video(tool_input: dict) -> str:
     lecture_id = (tool_input.get("lecture_id") or "").strip()
     if not lecture_id:
@@ -1342,19 +1239,17 @@ def _deck_video(tool_input: dict) -> str:
     if not lecture_store.lecture_exists(lecture_id):
         return _err(f"강의 없음: {lecture_id}", error_type="not_found")
 
-    # 중복 기동 방지 — 상태 파일이 building 이고 10분 미경과면 진행 중으로 응답
-    sp = _video_state_path(lecture_id)
-    if sp.exists():
-        try:
-            st = json.loads(sp.read_text(encoding="utf-8"))
-            if st.get("status") == "building":
-                from datetime import datetime
-                age = (datetime.now() - datetime.fromisoformat(st.get("updated_at"))).total_seconds()
-                if age < 600:
-                    return _ok({"status": "building", "note": "이미 렌더 중 — video_state.json 으로 진행 확인",
-                                "state_file": str(sp)})
-        except Exception:
-            pass
+    sp = deck_video.state_path(lecture_id)
+
+    # 진행 조회 — 렌더를 새로 걸지 않고 상태만 묻는 길. 폴링은 이걸로 한다.
+    if tool_input.get("check") in (True, "true", "True", 1, "1"):
+        return _ok({**deck_video.status(lecture_id), "state_file": str(sp)})
+
+    # 중복 기동 방지 — 단, '살아있는' 렌더에만 양보한다. 죽은 렌더는 status() 가
+    # interrupted 로 확정하므로 여기서 막히지 않고 새로 기동된다.
+    st = deck_video.status(lecture_id)
+    if st.get("status") == "building":
+        return _ok({**st, "note": "이미 렌더 중 — check:true 로 진행 확인", "state_file": str(sp)})
 
     # ★키를 루프로 접지 말 것 — 빌드의 코퍼스-param 가드는 tool_input.get("리터럴") 을 읽어
     #   "핸들러가 이 파라미터를 실제로 보는가"를 검증한다. 루프로 접으면 짧아지는 대신
@@ -1373,32 +1268,28 @@ def _deck_video(tool_input: dict) -> str:
     }
 
     if tool_input.get("wait") in (True, "true", "True", 1, "1"):
-        _write_video_state(lecture_id, {"status": "building"})
+        deck_video.write_state(lecture_id, {"status": "building", "pid": os.getpid(),
+                                            "stage": "start", "inprocess": True})
         try:
-            result = _deck_video_build(lecture_id, opts)
+            result = deck_video.build(lecture_id, opts)
         except Exception as e:
-            _write_video_state(lecture_id, {"status": "error", "error": str(e)})
+            deck_video.write_state(lecture_id, {"status": "error", "error": str(e)})
             return _err(f"동영상 렌더 실패: {e}")
-        _write_video_state(lecture_id, {"status": "done", **result})
+        deck_video.write_state(lecture_id, {"status": "done", **result})
         return _ok(result)
 
-    # 기본: 백그라운드 — 즉시 반환, 진행·결과는 상태 파일
-    import threading
-
-    def _bg():
-        try:
-            result = _deck_video_build(lecture_id, opts)
-            _write_video_state(lecture_id, {"status": "done", **result})
-        except Exception as e:
-            _write_video_state(lecture_id, {"status": "error", "error": str(e)})
-
-    _write_video_state(lecture_id, {"status": "building"})
-    threading.Thread(target=_bg, daemon=True).start()
+    # 기본: 별도 프로세스 — 즉시 반환, 진행·결과는 상태 파일.
+    # ★스레드가 아니다: 워커 안 데몬 스레드는 uvicorn 리로드에 통째로 죽는다(deck_video 주석).
+    try:
+        spawned = deck_video.spawn(lecture_id, opts)
+    except Exception as e:
+        deck_video.write_state(lecture_id, {"status": "error", "error": str(e)})
+        return _err(f"렌더 프로세스 기동 실패: {e}")
     return _ok({
         "status": "queued",
-        "note": "백그라운드 렌더 시작 (슬라이드 수·나레이션 길이에 따라 수 분). "
-                "완료·결과는 video_state.json — 같은 op 재호출로도 진행 확인.",
-        "state_file": str(sp),
+        "note": "별도 프로세스로 렌더 시작 — 백엔드가 리로드돼도 계속됩니다. "
+                "진행·결과는 check:true 또는 video_state.json.",
+        "state_file": str(sp), **spawned,
     })
 
 

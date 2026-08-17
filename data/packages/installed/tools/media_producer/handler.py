@@ -3,6 +3,11 @@ import uuid
 import json
 import asyncio
 import base64
+from pathlib import Path
+
+# 정지 씬 판정용 프로브 간격(ms). 첫 프레임과 이 시점들의 화면이 전부 같으면 정지로 본다.
+# 등장 애니메이션(첫 1초 내)과 느린 루프를 둘 다 잡으려고 간격을 벌려 세 번 본다.
+STATIC_PROBE_GAPS_MS = (150, 500, 1500)
 # ★무거운 미디어 의존성(edge_tts·moviepy)은 모듈레벨에서 import하지 않는다 — 폰엔 이 라이브러리가
 # 없어 모듈 전체 import가 실패하고, 그러면 같은 파일의 *순수* 연산(image_critic·image_gemini =
 # 문자열/HTTP뿐)까지 mac에 갇혔다. 무거운 건 쓰는 함수 안에서 지연 import.
@@ -327,6 +332,20 @@ def create_html_video(tool_input, output_base):
     # 씬 전환 효과 설정
     transition_type = tool_input.get("transition", "fade")  # fade, wipeleft, wiperight, slidedown, slideup, circleopen, dissolve, none
     transition_duration = tool_input.get("transition_duration", 0.5)  # 전환 시간(초)
+    # "auto"(기본)=정지 씬을 감지해 한 장으로 늘임 / "full"=옛 동작(전 프레임 캡처)
+    capture_mode = tool_input.get("capture_mode", "auto")
+
+    # 진행 보고 — 인프로세스 호출자만 쓰는 선택 콜백(JSON 경로에선 그냥 없다).
+    # ★이게 없으면 렌더가 죽어도 밖에서는 '도는 중'과 구별되지 않는다(2026-08-17 사고).
+    _on_progress = tool_input.get("on_progress")
+
+    def _progress(stage, index=0, total=0, detail=""):
+        if not callable(_on_progress):
+            return
+        try:
+            _on_progress(stage, index, total, detail)
+        except Exception as e:      # 보고가 렌더를 죽이면 안 된다
+            print(f"[create_html_video] 진행 보고 실패(무시): {e}")
 
     if not scenes:
         if tool_input.get("topic"):
@@ -374,6 +393,7 @@ def create_html_video(tool_input, output_base):
                 # 이미 구워진 나레이션 — TTS 호출도 과금도 없다.
                 tts_path = ready
             elif i < len(narration_texts) and narration_texts[i]:
+                _progress("tts", i, len(scenes), f"나레이션 {i+1}/{len(scenes)} 생성")
                 tts_path = os.path.join(temp_dir, f"narration_{i}.mp3")
                 asyncio.run(generate_tts(narration_texts[i], tts_path, voice, rate, pitch,
                                          engine=engine, style=style))
@@ -427,30 +447,32 @@ def create_html_video(tool_input, output_base):
                 if not html:
                     continue
 
+                _progress("capture", i, len(scenes), f"씬 {i+1}/{len(scenes)} 캡처")
+
                 html_ready = _prepare_scene_html(html, base_path_opt, video_width, video_height)
 
                 scene_html_dir = base_path_opt if base_path_opt and os.path.isdir(base_path_opt) else temp_dir
                 scene_html_path = os.path.join(scene_html_dir, f"_scene_{i}_{uuid.uuid4().hex[:6]}.html")
                 with open(scene_html_path, "w", encoding="utf-8") as sf:
                     sf.write(html_ready)
-                page.goto(f"file://{scene_html_path}")
 
-                # 모든 애니메이션을 즉시 일시정지
-                page.evaluate("""() => {
-                    const style = document.createElement('style');
-                    style.id = '__anim_pause__';
-                    style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
-                    document.head.appendChild(style);
-                }""")
+                def _open_scene():
+                    """씬을 열고 애니메이션 시작 시점을 캡처 시작에 맞춘다(로딩 중엔 정지)."""
+                    page.goto(f"file://{scene_html_path}")
+                    page.evaluate("""() => {
+                        const style = document.createElement('style');
+                        style.id = '__anim_pause__';
+                        style.textContent = '*, *::before, *::after { animation-play-state: paused !important; }';
+                        document.head.appendChild(style);
+                    }""")
+                    page.wait_for_load_state("networkidle")
+                    page.wait_for_timeout(1500 if i == 0 else 500)
+                    page.evaluate("""() => {
+                        const pauseStyle = document.getElementById('__anim_pause__');
+                        if (pauseStyle) pauseStyle.remove();
+                    }""")
 
-                page.wait_for_load_state("networkidle")
-                page.wait_for_timeout(1500 if i == 0 else 500)
-
-                # 리소스 로딩 완료 후 애니메이션 재개
-                page.evaluate("""() => {
-                    const pauseStyle = document.getElementById('__anim_pause__');
-                    if (pauseStyle) pauseStyle.remove();
-                }""")
+                _open_scene()
 
                 # 씬별 프레임 디렉토리
                 scene_frames_dir = os.path.join(temp_dir, f"frames_scene_{i}")
@@ -459,24 +481,65 @@ def create_html_video(tool_input, output_base):
                 total_frames = int(duration * fps)
                 frame_interval_ms = 1000.0 / fps
 
-                for f in range(total_frames):
-                    frame_path = os.path.join(scene_frames_dir, f"frame_{f:06d}.png")
-                    page.screenshot(path=frame_path)
-                    page.wait_for_timeout(int(frame_interval_ms))
-
                 if total_frames == 0:
                     continue
 
-                # 씬별 MP4 인코딩
+                # ── 정지 씬 빠른 경로 ──────────────────────────────────
+                # 움직이지 않는 씬을 duration×fps 장 찍는 건 같은 그림을 수백 번 굽는 것이다
+                # (실측 2026-08-17: 25초 씬 = 스크린샷 602장 ≈ 2분, 12장 덱이면 24분).
+                # 한 장을 ffmpeg -loop 로 늘이면 결과 프레임은 동일하고 시간은 초 단위가 된다.
+                # 그 24분짜리 창이 있었기에 평범한 백엔드 리로드가 렌더 한복판에 떨어졌다.
+                first_frame = os.path.join(scene_frames_dir, "frame_000000.png")
+                page.screenshot(path=first_frame)
+
+                is_static = bool(scene.get("static"))   # 호출자가 아는 경우(덱 슬라이드=정지 PNG)
+                if not is_static and capture_mode != "full":
+                    # 모르면 재본다: 간격을 벌려 여러 번 찍어 전부 같으면 정지로 본다.
+                    # 등장 애니메이션은 첫 장과 달라지므로 여기서 걸린다.
+                    base_png = Path(first_frame).read_bytes()
+                    probe_png = os.path.join(temp_dir, f"_probe_{i}.png")
+                    is_static = True
+                    for gap_ms in STATIC_PROBE_GAPS_MS:
+                        page.wait_for_timeout(gap_ms)
+                        page.screenshot(path=probe_png)
+                        if Path(probe_png).read_bytes() != base_png:
+                            is_static = False
+                            break
+                    try:
+                        os.remove(probe_png)
+                    except OSError:
+                        pass
+                    if not is_static:
+                        # 움직이는 씬 — 프로브에 흘려보낸 시간만큼 어긋났으니 처음부터 다시 연다.
+                        _open_scene()
+
                 scene_mp4 = os.path.join(temp_dir, f"scene_{i}.mp4")
-                enc_result = subprocess.run([
-                    "ffmpeg", "-y",
-                    "-framerate", str(fps),
-                    "-i", os.path.join(scene_frames_dir, "frame_%06d.png"),
-                    "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-                    "-pix_fmt", "yuv420p",
-                    scene_mp4
-                ], capture_output=True)
+                if is_static:
+                    print(f"[create_html_video] 씬 {i+1}: 정지 — 1장 캡처 후 {duration:.1f}s 로 늘임 "
+                          f"(프레임 캡처 {total_frames}장 생략)")
+                    enc_cmd = [
+                        "ffmpeg", "-y",
+                        "-loop", "1", "-i", first_frame,
+                        "-t", f"{duration:.3f}", "-r", str(fps),
+                        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                        "-pix_fmt", "yuv420p",
+                        scene_mp4,
+                    ]
+                else:
+                    for f in range(total_frames):
+                        frame_path = os.path.join(scene_frames_dir, f"frame_{f:06d}.png")
+                        page.screenshot(path=frame_path)
+                        page.wait_for_timeout(int(frame_interval_ms))
+                    enc_cmd = [
+                        "ffmpeg", "-y",
+                        "-framerate", str(fps),
+                        "-i", os.path.join(scene_frames_dir, "frame_%06d.png"),
+                        "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                        "-pix_fmt", "yuv420p",
+                        scene_mp4,
+                    ]
+
+                enc_result = subprocess.run(enc_cmd, capture_output=True)
 
                 if enc_result.returncode != 0:
                     print(f"[create_html_video] 씬 {i} 인코딩 실패: {enc_result.stderr.decode()}")
@@ -494,6 +557,7 @@ def create_html_video(tool_input, output_base):
         # ============================================================
         # 4단계: 씬 전환 효과 적용 및 병합
         # ============================================================
+        _progress("merge", len(scene_videos), len(scenes), "씬 병합")
         merged_video = os.path.join(temp_dir, "merged.mp4")
         use_transition = transition_type != "none" and len(scene_videos) > 1 and transition_duration > 0
 
@@ -589,6 +653,7 @@ def create_html_video(tool_input, output_base):
         # ============================================================
         # 5단계: 나레이션과 BGM 합성
         # ============================================================
+        _progress("audio", len(scene_videos), len(scenes), "나레이션·BGM 합성")
         if bgm_path:
             bgm_path = os.path.abspath(bgm_path)
         has_bgm = bgm_path and os.path.exists(bgm_path)

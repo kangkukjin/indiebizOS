@@ -216,7 +216,7 @@ nodes:
       contest:
         returns: items
         fixture: '[sense:contest]{}'
-        description: Kaggle 국제 AI/데이터 경진대회 검색. 상금·마감일·주최로 출품 기회 탐색.
+        description: Kaggle 국제 AI/데이터 경진대회 검색(현재 소스=Kaggle 하나, 영문 대회). 상금·마감일·주최로 출품 기회 탐색. 국내 공모전·대회는 [sense:search] 웹 검색이 정직한 경로.
         group: research
         target_description: 'query(검색 키워드, 예: AI·LLM·vision·NLP). sort 옵션 — recentlyCreated(기본, 최근 개설)/latestDeadline(마감 늦은 순=진행 중 위주)/prize(상금 큰 순)/numberOfTeams(참가팀 많은 순). category(featured/research/playground 등, 선택). count(기본 10, 최대 50). 반환=items 통화(상금·마감일 meta 필드) → 앱 card_list 직결.'
         router: handler
@@ -4154,7 +4154,7 @@ nodes:
         returns: scalar
         side_effect: true
         fixture: '[self:forage]{op: "recall", query: "test"}'
-        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기.
+        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기. ★응답=3층(map/owner/territory) 인지 기억 — items 통화 밖이라 table 파이프 대상 아님(판정 2026-08-17).
         group: file
         target_description: 'recall(기본) — query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
         target_key: op

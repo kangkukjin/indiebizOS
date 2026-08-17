@@ -775,18 +775,20 @@ def execute(tool_input: dict, context) -> str:
                         probe = None
                 if (isinstance(probe, dict) and isinstance(probe.get("message"), str)
                         and probe["message"].strip()):
-                    # ★12회차 정련: items 밖의 비어있지 않은 dict/list 페이로드(예: book 의
-                    # `book` dict)가 있으면 message 는 스텁 안내문일 수 있다("도서 상세 정보를
-                    # 조회했습니다." 한 줄을 추출하고 실데이터를 버린 실측) — 그 경우 봉투
-                    # JSON 유지(구조 보존이 안전 방향). 문자열 메타만 동반한 산문 봉투
-                    # (devdocs 등)만 message 를 정본으로 추출.
+                    # ★12회차 정련 v4 (스텁 감사 판정 2026-08-17): 짧은 한 줄 message+items 는
+                    # 계약 위반이 아니라 생산자 요약 관례("총 20건" — 내용=items)라 봉투 JSON
+                    # 유지가 정답. message 추출은 message 가 *문서 모양*(다행 또는 장문)이고
+                    # items 밖 dict/list 페이로드가 없을 때만(devdocs 문서·entity 산문 목록 부류).
+                    # 오분류는 항상 안전 방향(JSON=구조 보존)으로 떨어진다.
+                    _msg = probe["message"]
                     _other_payload = any(
                         isinstance(v, (dict, list)) and v
                         for k, v in probe.items() if k != "items")
-                    if not _other_payload:
+                    _doc_shaped = ("\n" in _msg.strip()) or (len(_msg) >= 200)
+                    if not _other_payload and _doc_shaped:
                         if isinstance(probe.get("items"), list) and probe["items"]:
                             items_alongside = len(probe["items"])
-                        content = probe["message"]
+                        content = _msg
                         extracted = "message"
             if not isinstance(content, str):
                 content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)

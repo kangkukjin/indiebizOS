@@ -71,7 +71,9 @@ PHONE_VERIFIED_PACKAGES = {
     "kosis",            # 통계청 KOSIS API(HTTP)
     "legal",            # 법령/판례 검색(HTTP)
     "startup",          # 창업 정보(HTTP + stdlib xml)
-    "local-info",       # 지역 정보 검색(HTTP)
+    # (local-info 는 2026-08-15 지역정보 3형제 은퇴와 함께 패키지째 삭제됐는데 이 목록에만
+    #  남아 있었다 → 폰 번들 빌드가 "정본 누락: tools/local-info" 로 그날부터 깨져 있었다.
+    #  2026-08-17 제거. 어휘를 지우면 그 어휘의 배선도 따라와야 한다.)
     "shopping-assistant",  # 다나와 가격비교(tool_danawa 순수 HTTP — stdlib urllib 폴백이라 curl_cffi 없는 폰서도 로컬 실행) + sense:used 번개장터/당근 내부 API + sense:freelance 크몽. 중고 스크래핑(playwright)만 지연 import→폰선 graceful 미지원(arxiv 선례). ★옛 근거였던 네이버 쇼핑 API 는 2026-08 은퇴(공식 SE05 + 내부 API 418 봇차단) → 폰 쇼핑 축을 다나와로 옮겨 이 등재를 회복.
     "memory",   # 심층기억(self:memory). 자아별 사적 로컬 DB(동기화 안 함). 모듈레벨 stdlib만(numpy/sqlite_vec 지연) → 폰서 import 안전, 시맨틱 미가용 시 LIKE/FTS 키워드 폴백(기존 graceful 강등). 시맨틱-온-폰(/embed 렌트+brute-force)은 후속.
     # self 노드 = AI 자신 → file 액션은 자기 몸의 fs 에 작용(각 몸 자기 파일·시계). 둘 다 모듈레벨 stdlib,

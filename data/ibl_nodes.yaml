@@ -6957,6 +6957,27 @@ nodes:
         - 유니크
         - dedup
         - 고유
+      since:
+        returns: transform
+        side_effect: true
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자("새 것 있으면 알려줘"), 트리거와 조합하면 정기 감시가 한 문장.
+        target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
+        group: transform
+        router: handler
+        tool: data_since
+        implementation: data-ops handler.py — 스트림(key)별 last-seen 원장(data/table_since.db, 누적·스트림당 5000키 상한) 대조로 new/changed 주석. warehouse_feed seed/new/changed diff 의 통화 변환자 일반화.
+        target_key: key
+        keywords:
+        - 새로운
+        - 새 것
+        - 새 글
+        - 새 매물
+        - 변동
+        - 지난번 이후
+        - since
+        - 감시
       groupby:
         returns: transform
         runs_on: anywhere

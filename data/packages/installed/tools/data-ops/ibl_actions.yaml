@@ -122,6 +122,29 @@ actions:
     - 유니크
     - dedup
     - 고유
+  since:
+    returns: transform
+    # 검침 원장(data/table_since.db) 갱신 — 자가점검 순찰·dry-run 이 기준선을 올리면
+    # 다음 실사용의 '새 것'이 침묵 소실된다(통화와 안전은 다른 축 — trigger 선례).
+    side_effect: true
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자("새 것 있으면 알려줘"), 트리거와 조합하면 정기 감시가 한 문장.
+    target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
+    group: transform
+    router: handler
+    tool: data_since
+    implementation: data-ops handler.py — 스트림(key)별 last-seen 원장(data/table_since.db, 누적·스트림당 5000키 상한) 대조로 new/changed 주석. warehouse_feed seed/new/changed diff 의 통화 변환자 일반화.
+    target_key: key
+    keywords:
+    - 새로운
+    - 새 것
+    - 새 글
+    - 새 매물
+    - 변동
+    - 지난번 이후
+    - since
+    - 감시
   groupby:
     returns: transform
     runs_on: anywhere
@@ -327,6 +350,25 @@ tool_json:
         by:
           type: string
           description: 중복 판정 키 필드/열(미지정 시 records=title, table=첫 열).
+  - name: data_since
+    description: 'records → 지난 호출 이후 새 행만(검침). 첫 호출=기준선 저장+빈 결과(note). 새 행=_since:"new", watch 필드 변화 행=_since:"changed"(+_since_prev). >> 앞 통화를 받음.'
+    input_schema:
+      type: object
+      properties:
+        key:
+          type: string
+          description: 검침 스트림 이름(감시 파이프마다 고유, 필수).
+        by:
+          type: string
+          description: 행 식별 필드(생략=url/id/link/title 자동 선택).
+        watch:
+          type: array
+          description: 값 변화도 보고할 필드 이름 배열(예 ["price"]).
+        peek:
+          type: boolean
+          description: true=기준선 안 올리고 미리보기.
+      required:
+      - key
   - name: data_groupby
     description: table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count).
       >> 앞 table 통화를 받음.

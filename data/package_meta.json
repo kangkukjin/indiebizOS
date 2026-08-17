@@ -380,6 +380,7 @@
     "table:merge": "data-ops",
     "table:rename": "data-ops",
     "table:select": "data-ops",
+    "table:since": "data-ops",
     "table:sort": "data-ops",
     "table:spreadsheet": "system_essentials",
     "table:structure": "data-ops",

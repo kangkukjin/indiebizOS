@@ -119,6 +119,34 @@
       }
     },
     {
+      "name": "data_since",
+      "description": "records → 지난 호출 이후 새 행만(검침). 첫 호출=기준선 저장+빈 결과(note). 새 행=_since:\"new\", watch 필드 변화 행=_since:\"changed\"(+_since_prev). >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "검침 스트림 이름(감시 파이프마다 고유, 필수)."
+          },
+          "by": {
+            "type": "string",
+            "description": "행 식별 필드(생략=url/id/link/title 자동 선택)."
+          },
+          "watch": {
+            "type": "array",
+            "description": "값 변화도 보고할 필드 이름 배열(예 [\"price\"])."
+          },
+          "peek": {
+            "type": "boolean",
+            "description": "true=기준선 안 올리고 미리보기."
+          }
+        },
+        "required": [
+          "key"
+        ]
+      }
+    },
+    {
       "name": "data_groupby",
       "description": "table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). >> 앞 table 통화를 받음.",
       "input_schema": {

@@ -31,8 +31,10 @@
 | 수동모드 | 수동모드 | (시스템) 조종실 표면의 IBL 실행 컨텍스트 |
 | 앱모드 | 앱모드 | (시스템) 앱 표면의 IBL 실행 컨텍스트 |
 
-## 도구 패키지 (Tools) - 45개
+## 도구 패키지 (Tools) - 45개 (설치 40 · 미설치 5)
 에이전트가 사용할 수 있는 유틸리티
+
+> 자동 갱신되는 것은 **상태 칸(설치됨/미설치)뿐**이다(`system_docs.update_inventory_packages`) — 행 추가·삭제는 안 된다. 은퇴한 패키지가 목록에 남아 있으면 손으로 지울 것.
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
@@ -50,6 +52,7 @@
 | culture | Culture & Arts | 공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로  | 설치됨 |
 | data-ops | Data Ops (통화 변환자) | 통화→통화 변환 동사(currency algebra). 생산자가 내는 공 | 설치됨 |
 | family-news | Family News | 가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발 | 설치됨 |
+| finance-record | Finance Record | 재무 기록·조회. 지출·수입 거래와 자산·부채를 주체(개인/회사)별로 | 설치됨 |
 | guest-helper | Guest PC Helper (USB 손발) | USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령 | 설치됨 |
 | health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
 | house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 미설치 |
@@ -58,12 +61,12 @@
 | kosis | KOSIS Statistics | 통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물 | 설치됨 |
 | lecture_workspace | 강의 만들기 워크스페이스 | 강의 슬라이드를 한 장씩 협업으로 만드는 도구. indiebizOS/ou | 설치됨 |
 | legal | Legal | 대한민국 법률 정보 검색 도구. 국가법령정보센터(law.go.kr) AP | 설치됨 |
-| local-info | Local Info | 동네 가게/상점 정보 검색 및 관리 도구. 네이버 카페(아이러브오송 등) | 설치됨 |
 | location-services | Location Services | 위치 기반 서비스 도구. 날씨/대기질 조회, 맛집 검색, 자동차 길찾기, | 설치됨 |
 | media_producer | Media Producer | 홍보용 슬라이드 이미지, HTML 기반 MP4 동영상, AI 이미지 생성 | 설치됨 |
 | memory | Memory | 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [s | 설치됨 |
 | music-player | Music Player | 내 음악 라이브러리 — 소스 폴더의 음악 파일을 스캔해 정리하고(태그·앨 | 설치됨 |
 | nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 미설치 |
+| notebook | Notebook | 근거 고정 질의 — 문서 더미(노트북)에 넣고 소스 안에서만 답하며 인용 | 설치됨 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 도구. 파일 탐색기 GUI | 설치됨 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.  ## 스캔 D | 설치됨 |
 | public-files | Public Files | 선택한 폴더를 외부 공개 사이트(Cloudflare)로 라이브 서빙하는  | 설치됨 |
@@ -79,8 +82,23 @@
 | visualization | Visualization Tools | 데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵,  | 설치됨 |
 | web | Web Tools | 웹 검색 및 크롤링 도구. 통합 검색(DuckDuckGo/네이버/Goog | 설치됨 |
 | web-builder | Web Builder & Homepage Manager | 홈페이지 제작과 관리를 위한 통합 도구 패키지.  ## 두 가지 시나리오 | 설치됨 |
-| web-collector | Web Collector | 웹 정보 수집 가이드 + DB 프레임워크. 사이트별 가이드(어디서 뭘 어 | 설치됨 |
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
+## 백엔드 코어 모듈 (Extensions) - 5개
+에이전트 도구가 아니라 백엔드가 직접 import 하는 코어 모듈 (`tool.json`/`handler.py` 없음)
+
+| ID | 설명 |
+|----|------|
+| conversation | 대화 DB 관리 |
+| gmail | Gmail 연동 |
+| indienet | 외부 메신저 연동 (Nostr) |
+| notification-system | 알림 시스템 |
+| websocket-chat | WebSocket 채팅 |
+
+## IBL 어휘 현황
+
+**6노드 144 액션** — sense 40 · self 48 · limbs 14 · others 17 · engines 9 · **table 16**
+(op 분기 액션 66개 / op 분기 패키지 28개, 나머지 op 액션은 backend-native 라우팅)
+
 ---
-*마지막 업데이트: 2026-08-05 18:43*
+*마지막 업데이트: 2026-08-17 — 손 갱신(자동 갱신은 상태 칸만 바꾼다): 은퇴 패키지 2행 삭제(`local-info`·`web-collector` — 2026-08-15 어휘 압축에서 디렉토리째 삭제됨), 누락 2행 추가(`finance-record`·`notebook`), extensions 절·IBL 어휘 현황 신설. 프로젝트 절은 실측 일치(22 + 시스템 2 / 에이전트 33). 이전: 2026-08-05 18:43*

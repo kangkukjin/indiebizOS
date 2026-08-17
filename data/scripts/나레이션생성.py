@@ -12,6 +12,7 @@ args (stdin JSON):
   voice      : data/voice/voices.json 의 키 (기본 kkj)
   gpu        : T4(기본)/L4/A100 — 계정 티어에 따라 가용성 다름
   force      : true 면 이미 있는 wav 도 다시 굽는다 (기본 false)
+  speed      : 낭독 속도 배율 (기본 0.9 = 10% 느리게 — 표준). 1.0 이면 원속도.
 
 산출: {"items":[{"title","meta","summary","url"}], "message": ...}
 
@@ -20,6 +21,9 @@ args (stdin JSON):
   · 함정 3종(아래 PIN/UPLOAD/BF16 주석)이 코드에 박혀 있다. 가이드로만 두면
     매번 다시 밟는다 — 특히 BF16 은 에러 없이 느려지기만 해서 알아채기 어렵다.
   · 레퍼런스 목소리는 코드가 아니라 data/voice/ 의 데이터다.
+  · 속도는 모델에게 시키지 않고 **구운 뒤 타임스트레치**한다(ffmpeg atempo).
+    Qwen3-TTS 에 속도 파라미터가 없고 "천천히 읽어" 같은 지시는 재현되지 않는다.
+    atempo 는 피치를 보존한다 — 실측 스펙트럼 무게중심 비 0.98(리샘플이면 0.90).
 """
 import json
 import os
@@ -33,6 +37,10 @@ from pathlib import Path
 ROOT = Path("/Users/kangkukjin/Desktop/AI/indiebizOS")
 VOICE_DIR = ROOT / "data" / "voice"
 SESSION = f"narr{os.getpid()}"
+
+# 표준 낭독 속도 (2026-08-17 사용자 판정: 기본이 빠르다 → 10% 느리게를 표준으로)
+# 값의 뜻 = 재생 배율. 0.9 면 길이가 1/0.9 = 약 1.11 배가 된다.
+DEFAULT_SPEED = 0.9
 
 # 함정 6(colab.md): 세션 상태 파일을 공유하면 다른 콜랩 작업과 얽힌다 → 전용 config
 CFG = Path(tempfile.gettempdir()) / f"colab_{SESSION}.json"
@@ -123,6 +131,34 @@ print("[gen] 완료", flush=True)
 '''
 
 
+def retime(path, speed):
+    """구운 wav 를 speed 배율로 타임스트레치 (피치 보존, 제자리 교체).
+
+    ffmpeg atempo 는 0.5~100 만 받으므로 그 밖은 체인으로 나눈다.
+    실패하면 원본을 그대로 두고 False — 속도 때문에 나레이션을 잃지 않는다.
+    """
+    if abs(speed - 1.0) < 0.001:
+        return True
+    chain, s = [], float(speed)
+    while s < 0.5:
+        chain.append(0.5)
+        s /= 0.5
+    while s > 100.0:
+        chain.append(100.0)
+        s /= 100.0
+    chain.append(s)
+    af = ",".join(f"atempo={c:.6f}" for c in chain)
+    tmp = path.with_suffix(".retime.wav")
+    p = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(path), "-filter:a", af,
+                        "-ar", "24000", "-ac", "1", "-c:a", "pcm_s16le", str(tmp)],
+                       capture_output=True, text=True)
+    if p.returncode != 0 or not tmp.exists():
+        tmp.unlink(missing_ok=True)
+        return False
+    tmp.replace(path)
+    return True
+
+
 def load_voice(key):
     meta_path = VOICE_DIR / "voices.json"
     if not meta_path.exists():
@@ -189,6 +225,7 @@ def main():
 
     out_dir.mkdir(parents=True, exist_ok=True)
     gpu = args.get("gpu") or "T4"
+    speed = float(args.get("speed") or DEFAULT_SPEED)
     t0 = time.time()
     started = False
 
@@ -225,6 +262,10 @@ def main():
         if not saved:
             raise RuntimeError("생성물을 회수하지 못했습니다.\n" + (p.stdout or "")[-1000:])
 
+        # 표준 낭독 속도 적용 — 회수 직후 제자리 타임스트레치(피치 보존).
+        # 재실행 때 이미 있는 wav 는 건너뛰므로 두 번 늘어나지 않는다.
+        retimed = sum(1 for it in saved if retime(it["target"], speed))
+
         elapsed = round(time.time() - t0)
         print(json.dumps({
             "items": [{
@@ -233,7 +274,10 @@ def main():
                 "summary": it["text"][:60],
                 "url": str(it["target"]),
             } for it in saved],
-            "message": f"{len(saved)}개 나레이션 생성 완료 ({elapsed}초, {gpu}) → {out_dir}",
+            "speed": speed,
+            "message": (f"{len(saved)}개 나레이션 생성 완료 ({elapsed}초, {gpu}, "
+                        f"속도 {speed}x{'' if retimed == len(saved) else f' — 재타이밍 {retimed}/{len(saved)}'}) "
+                        f"→ {out_dir}"),
         }, ensure_ascii=False))
 
     except Exception as e:

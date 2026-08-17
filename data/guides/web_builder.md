@@ -77,8 +77,11 @@ web_create(site) → web_component(add) → web_create(page) → web(styles) →
 web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞게 수정 → 빌드 → 배포 → 시각 검증
 ```
 
-1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보.
+1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보. ★**registry의 `site_id`는 폴더명과 다를 수 있다** — 폴더가 `indiebiz-homepage`여도 id는 `indiebiz-os-홈페이지`다. 폴더명을 site_id로 추측해 넣지 말고 list가 준 id를 그대로 쓴다(2026-08-17 실측: 추측해서 ERR 1라운드 낭비).
 2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:snapshot}` 또는 `[limbs:browser]{op:screenshot}`.)
+
+   ★**"많이 바뀌었으니 반영해줘" 류 요청의 진실 소스는 정해져 있다** — 무엇이 바뀌었는지를 찾아 헤매지 말고 이 둘을 먼저 읽는다:
+   `README.ko.md`(또는 `README.md`)와 `data/system_docs/system_structure.md`. 이 둘과 현재 페이지의 *메시지*를 대조하면 고칠 것이 나온다. (2026-08-17 실측: 이 지점에서 4분 30초를 배회했다 — 첫 쓰기까지 41회 호출 중 38회가 읽기였다.)
 3. **목적에 맞게 수정**: `[self:edit]`로 코드를 고친다 — 단순 문자열 교체가 아니라, 위 [목적] 절 기준으로 페이지가 그 목적에 더 잘 복무하도록.
 4. **빌드**: `[engines:web]{op:build}` — 빌드 성공 전엔 배포하지 않는다.
 5. **배포**: 이 사이트가 *어떻게* 배포되는지부터 확인한다(아래 [빌드 및 배포]). git 연동 자동배포일 수도, vercel CLI 토큰 방식일 수도 있다.
@@ -426,11 +429,15 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 ```
 1. (배포 전) [self:grep]{pattern: "<바뀌어야 할 옛 수치/카피>", path: "{project_path}/src"}
    # 옛 숫자·문구가 코드 어딘가에 남아있지 않은지 전수 색출. 남아있으면 먼저 고친다.
-2. (배포 후) [engines:web]{op: "check", site_id: "my-site", checks: ["screenshot"]}
-   # 또는 [engines:web]{op: "snapshot", site_id: "my-site"} 로 실제 배포 화면 캡처
+2. (배포 후) [engines:web]{op: "check", site_id: "<web_site list가 준 id>", checks: ["screenshot"]}
+   # 또는 [engines:web]{op: "snapshot", site_id: "<web_site list가 준 id>"} 로 실제 배포 화면 캡처
+   # ★site_id 를 폴더명으로 추측하지 말 것 — list 가 준 값을 그대로 쓴다
 3. [engines:image_read]{path: "<캡처된 스크린샷 경로>", question: "표시된 수치/핵심 카피/이미지/레이아웃이 의도대로인가? 옛 값이 남아있지 않은가?"}
    # Gemini Vision으로 스크린샷을 실제로 '읽어' 눈으로 확인 (시각 QA·OCR)
 ```
 - 스크린샷은 **반드시 `image_read`로 판독**한다. 캡처만 하고 넘어가지 않는다.
 - 수치·날짜·가격처럼 자주 바뀌는 값은 배포 전 `self:grep` 색출 + 배포 후 `image_read` 판독, 이중으로 확인한다.
 - 위 1~3을 통과해야 "개선 완료"라고 보고한다.
+- ★**판독 예산: 전체 화면 1~2장 + 이번에 바꾼 섹션 1장.** `image_read` 는 1회에 9~28초가 든다 —
+  2026-08-17 실측에서 8회를 불러 검증에만 2분 30초를 썼다. 안 바꾼 섹션까지 훑는 건 과잉이다.
+  바꾼 곳을 확인하는 게 목적이지, 페이지 전체를 감사하는 게 아니다.

@@ -30,13 +30,18 @@ import json
 import re
 import time
 from typing import List, Dict, Callable, Generator, Any
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS
 
 # 도구 결과 최대 길이 (컨텍스트 관리) — 파이프라인 시 액션 수 × 배수 적용
 MAX_TOOL_RESULT_LENGTH = 16000
 
 # 최대 도구 호출 깊이
-MAX_TOOL_DEPTH = 30
+MAX_TOOL_DEPTH = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
+
+# 로컬 모델은 컨텍스트가 제각각(흔히 8K~32K)이라 base 기본값(Claude 200K 기준)을 물려받으면
+# 위험하다 — 32K × 80% × 2자/토큰 ≈ 51,200자로 보수적으로 잡는다. ★쓰는 로컬 모델의 컨텍스트가
+# 더 크면 이 값을 올릴 것(여기서 과하게 요약하는 건 손해일 뿐이지만, 모자라면 호출이 깨진다).
+OLLAMA_COMPACTION_CHAR_THRESHOLD = 51200
 
 # Tool calling 지원 모델 패턴
 TOOL_SUPPORTED_MODELS = [
@@ -58,6 +63,8 @@ class OllamaProvider(BaseProvider):
        - 있음: 도구 실행 후 결과와 함께 재요청
     3. 도구 결과는 role="tool"로 전달
     """
+
+    COMPACTION_CHAR_THRESHOLD = OLLAMA_COMPACTION_CHAR_THRESHOLD
 
     def __init__(self, **kwargs):
         # Ollama는 API 키 불필요
@@ -341,14 +348,15 @@ class OllamaProvider(BaseProvider):
         - accumulated_text: auto-continue 호환 (Ollama는 length 미지원이지만 향후 호환)
         """
         if depth > MAX_TOOL_DEPTH:
-            yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
+            # 에러로 폐기하지 않는다 — 도구를 뗀 마지막 턴으로 성과·잔여를 받아 착지.
+            yield from self._final_turn(messages, 2048, MAX_TOOL_DEPTH)
             return
 
         self._notify_round(depth + 1, MAX_TOOL_DEPTH)
 
         try:
-            # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
-            if depth > 0:
+            # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단)
+            if depth > 0 and self._should_prune(messages, depth):
                 messages = self._prune_messages_openai(messages)
 
             # API 호출 파라미터 구성
@@ -470,6 +478,15 @@ class OllamaProvider(BaseProvider):
             import traceback
             traceback.print_exc()
             yield {"type": "error", "content": f"Ollama 응답 오류: {str(e)}"}
+
+    def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
+        """마지막 턴 1회 호출 — ★tools를 넘기지 않는다(도구 없이 보고만)."""
+        response = self._client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            stream=False,
+        )
+        return (response.choices[0].message.content or "") if response.choices else ""
 
     def _execute_tools_and_continue(
         self,

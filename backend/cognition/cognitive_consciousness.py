@@ -10,6 +10,7 @@ agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인
 """
 
 import json
+import re
 from typing import Optional, Dict, Any
 
 
@@ -330,6 +331,45 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
         return (any(z in low for z in self._REPAIR_ZONE_WORDS)
                 and any(v in low for v in self._REPAIR_VERB_WORDS))
 
+    # 되돌리기 어렵거나 오래 걸리는 op — 회상된 코드 자체에서 읽는다(세계의 명사 아님).
+    _LONGRUN_OPS = ('op: "deploy"', "op: 'deploy'", 'op: "build"', "op: 'build'",
+                    'op: "publish"', "op: 'publish'")
+    # 요구가 몇 개인지 문장 구조로 센다(주제어가 아니라 문형).
+    # 부탁 종결: 보조용언 '주다' 계열이 대부분을 덮는다(해줘·찍어줘·띄워줘·보내주세요…).
+    _DEMAND_RE = re.compile(r"줘|주세요|줄래|주라|해라|하라|해봐|해다오")
+    # 순차 접속: 뒤에 또 하나의 요구가 온다는 표지("완성되면 …띄워줘" 처럼 종결이 하나여도).
+    _SEQUENCE_RE = re.compile(
+        r"그리고|그다음|그 다음|다음에|이어서|완성되면|끝나면|되면\s|한 뒤|한 후|하고 나서|하고나서")
+
+    def _reflex_veto(self, message: str, top_code: str):
+        """반사 금지 사유 — 없으면 None.
+
+        반사의 정의는 "이미 찾은 답을 그대로 내보냄"이다. 아래 셋은 그 정의에 안 맞는데도
+        해마 점수만으로 반사가 걸려 의식(달성 기준·진실 소스 정의)을 건너뛰던 자리다
+        (ep1173/1176/1177: '홈페이지 업데이트'가 폰트 변경 용례 0.891 로 반사 → 12분 주행,
+        앞의 두 번은 파일 한 글자도 못 고치고 종료). 2026-08-10 판정 '장기간 또는 위험'의 집행.
+
+        ★주제어(홈페이지·배포 같은 세계의 명사)로 판정하지 않는다 — 요청과 회상의 *모양*으로
+          판정한다. 그래야 새 도메인이 생겨도 목록을 늘릴 필요가 없다.
+        """
+        code = top_code or ""
+        # ① 회상 자체가 다단계 — 한 방에 내보낼 답이 아니다
+        if ">>" in code:
+            return "회상이 다단계 파이프라인"
+        # ② 되돌리기 어려운 작업(빌드·배포·발행) — 위험 축
+        if any(op in code for op in self._LONGRUN_OPS):
+            return "빌드·배포 등 되돌리기 어려운 작업"
+        # ③ 요구는 여럿인데 회상은 단발 — 회상이 요청을 못 덮는다
+        msg = message or ""
+        demands = len(self._DEMAND_RE.findall(msg))
+        if demands >= 2:
+            return f"요구 {demands}개인데 회상은 단발"
+        # 종결이 하나여도 순차 접속이 있으면 뒤에 또 하나의 요구가 있다
+        # ("…업데이트해줘. 완성되면 브라우저에 띄워죠." — ep1173 실제 문장)
+        if demands >= 1 and self._SEQUENCE_RE.search(msg):
+            return "순차 요구(…한 다음 …)인데 회상은 단발"
+        return None
+
     def _decide_request_type(self, message: str, hippocampus_score: float,
                              top_code: str) -> tuple:
         """요청 판정 단일 진입점 — 명시 태그(무조건) → Reflex(해마 고확신) → 무의식 분류.
@@ -352,8 +392,14 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             print("[무의식] 분류: REPAIR (결정론 단서 — 구역어+수리동사)")
             return "REPAIR", None
         if (hippocampus_score or 0) >= self.REFLEX_SCORE_THRESHOLD and top_code:
-            print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
-            return "EXECUTE", top_code
+            # 안전핀 — 점수가 높아도 '한 방에 내보낼 답'이 아니면 반사를 포기하고
+            # 무의식 분류로 내려보낸다(THINK 로 갈 기회를 준다). REPAIR 핀과 대칭.
+            veto = self._reflex_veto(message, top_code)
+            if veto:
+                print(f"[연상→실행] Reflex 보류 (score={hippocampus_score:.3f} — {veto})")
+            else:
+                print(f"[연상→실행] Reflex EXECUTE (score={hippocampus_score:.3f})")
+                return "EXECUTE", top_code
         # 의식 토글 OFF → 무의식 분류(THINK 판정)를 건너뛰고 바로 EXECUTE. 반사는 위에서 이미 처리됨.
         # SESSION_RESET 만 비-LLM 키워드로 살림(분류기가 잡던 걸 OFF 에서 대체). 확정 2026-06-30.
         try:

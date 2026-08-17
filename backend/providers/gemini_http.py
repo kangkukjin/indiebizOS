@@ -18,7 +18,7 @@ from typing import List, Dict, Any, Callable, Optional
 
 import requests
 
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS, FINAL_TURN_INSTRUCTION
 
 
 _DEFAULT_BASE = "https://generativelanguage.googleapis.com/v1beta"
@@ -33,7 +33,11 @@ _SCHEMA_DROP = {"additionalProperties", "$schema", "default", "title", "examples
 class GeminiHTTPProvider(BaseProvider):
     """Gemini REST(generateContent) 동기 프로바이더 — SDK 미사용. 폰 네이티브 LLM 경로."""
 
-    MAX_TOOL_ITERATIONS = 70
+    MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
+
+    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~1,600,000자 (2자=1토큰 실측).
+    # ★base 기본값(Claude 200K 기준)을 물려받아 자기 컨텍스트의 1/5 에서 요약하고 있었다.
+    COMPACTION_CHAR_THRESHOLD = 1600000
 
     def __init__(self, **kwargs):
         # base_url: 직접 google REST(기본) 또는 맥 게이트웨이 프록시
@@ -143,7 +147,8 @@ class GeminiHTTPProvider(BaseProvider):
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
-            if iteration > 0:
+            # ★압력이 있을 때만 지운다(최후 수단)
+            if iteration > 0 and self._should_prune(contents, iteration):
                 contents = self._prune_messages_gemini(contents)
             try:
                 data = self._execute_with_retry(self._generate, contents, tools)
@@ -186,4 +191,34 @@ class GeminiHTTPProvider(BaseProvider):
             contents.append({"role": "user", "parts": resp_parts})
             iteration += 1
 
+        if iteration >= self.MAX_TOOL_ITERATIONS:
+            # 조용한 절단 금지 — 도구를 뗀 마지막 턴으로 성과·잔여를 받아 착지.
+            return self._final_turn_report(contents, accumulated)
+
         return accumulated.strip() or "(응답 없음)"
+
+    def _final_turn_report(self, contents: list, accumulated: str) -> str:
+        """도구 루프 상한 착지 — ★tools 없이 1회 호출해 성과·잔여 보고를 받는다."""
+        limit = self.MAX_TOOL_ITERATIONS
+        print(f"[GeminiHTTP] 도구 라운드 상한({limit}회) 도달 — 마무리 보고 턴 실행")
+        # 마지막 턴은 functionResponse(user 역할)이므로 새 턴을 열지 않고 그 안에 이어 쓴다.
+        final_contents = list(contents)
+        instruction = {"text": FINAL_TURN_INSTRUCTION.format(limit=limit)}
+        if final_contents and final_contents[-1].get("role") == "user":
+            last = dict(final_contents[-1])
+            last["parts"] = list(last.get("parts") or []) + [instruction]
+            final_contents[-1] = last
+        else:
+            final_contents.append({"role": "user", "parts": [instruction]})
+
+        text = ""
+        try:
+            data = self._generate(final_contents, None)
+            cands = data.get("candidates") or []
+            if cands:
+                parts = (cands[0].get("content") or {}).get("parts") or []
+                text = "".join(p["text"] for p in parts
+                               if isinstance(p, dict) and "text" in p)
+        except Exception as e:
+            print(f"[GeminiHTTP] 마무리 보고 턴 실패: {str(e)[:200]}")
+        return f"{accumulated}\n\n{self._final_turn_wrap(text, limit)}".strip()

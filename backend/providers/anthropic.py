@@ -22,7 +22,7 @@ import json
 import re
 import time
 from typing import List, Dict, Callable, Generator, Any, Optional
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS
 
 # 프롬프트 캐싱 최소 토큰 수 (Anthropic 제한: Sonnet/Opus는 1024)
 MIN_CACHE_TOKENS = 1024
@@ -30,8 +30,8 @@ MIN_CACHE_TOKENS = 1024
 # 도구 결과 최대 길이 (컨텍스트 관리) — 파이프라인 시 액션 수 × 배수 적용
 MAX_TOOL_RESULT_LENGTH = 16000
 
-# 최대 도구 호출 깊이
-MAX_TOOL_DEPTH = 30
+# 최대 도구 호출 깊이 — 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
+MAX_TOOL_DEPTH = MAX_TOOL_ROUNDS
 
 
 class AnthropicProvider(BaseProvider):
@@ -258,7 +258,8 @@ class AnthropicProvider(BaseProvider):
         - Auto-Continue: max_tokens 초과 시 이어쓰기 (토큰 낭비 방지)
         """
         if depth > MAX_TOOL_DEPTH:
-            yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
+            # 에러로 폐기하지 않는다 — 도구를 뗀 마지막 턴으로 성과·잔여를 받아 착지.
+            yield from self._final_turn(messages, max_tokens, MAX_TOOL_DEPTH)
             return
 
         self._notify_round(depth + 1, MAX_TOOL_DEPTH)
@@ -271,8 +272,9 @@ class AnthropicProvider(BaseProvider):
             if depth > 0 and self._should_compact(messages, depth):
                 messages = self._compact_anthropic(messages)
 
-            # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
-            if depth > 0:
+            # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단).
+            # 위 compaction 이 이미 요약으로 크기를 낮췄다면 여기는 통과한다.
+            if depth > 0 and self._should_prune(messages, depth):
                 messages = self._prune_messages_anthropic(messages)
 
             create_params = {
@@ -683,6 +685,16 @@ class AnthropicProvider(BaseProvider):
             auto_continues=0, accumulated_text="",
             cancel_check=cancel_check
         )
+
+    def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
+        """마지막 턴 1회 호출 — ★tools를 넘기지 않는다(도구 없이 보고만)."""
+        response = self._client.messages.create(
+            model=self.model,
+            max_tokens=min(max_tokens or 2048, 4096),
+            system=self._build_system_with_cache(),
+            messages=messages,
+        )
+        return "".join(b.text for b in response.content if hasattr(b, "text"))
 
     def _compact_anthropic(self, messages: List[Dict]) -> List[Dict]:
         """Rolling Compaction: 오래된 대화를 AI 요약으로 압축 (Anthropic)

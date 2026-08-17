@@ -20,7 +20,7 @@ import time
 import threading
 import base64 as b64
 from typing import List, Dict, Callable, Any, Generator
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS, FINAL_TURN_INSTRUCTION
 
 
 class GeminiProvider(BaseProvider):
@@ -33,11 +33,11 @@ class GeminiProvider(BaseProvider):
     """
 
     # 도구 호출 제한
-    MAX_TOOL_ITERATIONS = 70  # 최대 도구 호출 라운드
+    MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 최대 도구 호출 라운드 (전 프로바이더 공통값)
     MAX_CONSECUTIVE_TOOL_ONLY = 70  # 텍스트 없이 도구만 연속 호출 허용 횟수
 
-    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~3,200,000자
-    COMPACTION_CHAR_THRESHOLD = 3200000
+    # Gemini 2.5: 1M 토큰 컨텍스트 → 80% = 800K 토큰 → ~1,600,000자 (2자=1토큰 실측)
+    COMPACTION_CHAR_THRESHOLD = 1600000
 
     # IBL 텍스트 출력 감지 패턴
     # 강제 프롬프트 (설정 가능)
@@ -338,8 +338,8 @@ class GeminiProvider(BaseProvider):
             if iteration > 0 and self._should_compact(contents, iteration):
                 contents = self._compact_gemini(contents, config)
 
-            # Session Pruning: 오래된 도구 결과 마스킹 (iteration > 0일 때만)
-            if iteration > 0:
+            # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단)
+            if iteration > 0 and self._should_prune(contents, iteration):
                 contents = self._prune_messages_gemini(contents)
 
             # API 호출 및 스트리밍
@@ -504,14 +504,15 @@ class GeminiProvider(BaseProvider):
             final_result += "\n\n" + "\n".join(self._pending_map_tags)
             self._pending_map_tags = []
 
+        # 도구 라운드 상한 착지 — 안내문 한 줄이 아니라 도구 없는 마무리 보고 턴.
+        # (빈 응답 처리보다 먼저: 보고 턴이 본문을 만들면 빈 응답이 아니다)
+        if iteration >= self.MAX_TOOL_ITERATIONS:
+            final_result = self._final_turn_report(contents, final_result)
+
         # 빈 응답 처리
         if not final_result.strip():
             print(f"[Gemini] 경고: 빈 응답")
             final_result = "(AI가 응답을 생성하지 않았습니다. 요청을 다시 시도하거나 더 구체적으로 질문해주세요.)"
-
-        if iteration >= self.MAX_TOOL_ITERATIONS:
-            print(f"[Gemini] 도구 호출 횟수 제한 도달 ({self.MAX_TOOL_ITERATIONS}회)")
-            final_result += f"\n\n(도구 호출 횟수 제한({self.MAX_TOOL_ITERATIONS}회)에 도달하여 응답을 종료합니다.)"
 
         # 전체 루프 지연시간 기록
         total_latency_ms = (time.time() - loop_start_time) * 1000
@@ -805,6 +806,35 @@ class GeminiProvider(BaseProvider):
 
         return gemini_functions
 
+    def _final_turn_report(self, contents: List, accumulated: str) -> str:
+        """도구 루프 상한 착지 — ★tools 없는 config 로 1회 호출해 성과·잔여 보고를 받는다.
+
+        config 를 재사용하지 않고 새로 만드는 이유 = 그 안에 도구·캐시가 들어 있다
+        (_compact_gemini 가 같은 이유로 자기 config 를 따로 만든다)."""
+        types = self._genai_types
+        limit = self.MAX_TOOL_ITERATIONS
+        print(f"[Gemini] 도구 라운드 상한({limit}회) 도달 — 마무리 보고 턴 실행")
+
+        text = ""
+        try:
+            final_contents = list(contents) + [types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=FINAL_TURN_INSTRUCTION.format(limit=limit))]
+            )]
+            response = self._genai_client.models.generate_content(
+                model=self.model,
+                contents=final_contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.system_prompt,
+                    temperature=0.3,
+                ),
+            )
+            text = response.text or ""
+        except Exception as e:
+            print(f"[Gemini] 마무리 보고 턴 실패: {str(e)[:200]}")
+
+        return f"{accumulated}\n\n{self._final_turn_wrap(text, limit)}".strip()
+
     def _compact_gemini(self, contents: List, config) -> List:
         """Rolling Compaction: 오래된 대화를 AI 요약으로 압축
 
@@ -830,21 +860,47 @@ class GeminiProvider(BaseProvider):
 
         # 요약 요청 (비스트리밍, 도구 없음)
         try:
-            summary_config = types.GenerateContentConfig(
-                system_instruction=self.COMPACTION_PROMPT,
-                temperature=0.3  # 사실적 요약을 위해 낮은 temperature
-            )
+            # ★요약은 원샷 계약 — 추론을 끈다 (2026-08-17, openai 판과 대칭).
+            #   2.5 flash 계열은 config 미지정 시 기본 thinking ON 이라, 추론이 출력 예산을
+            #   태우면 본문이 비고 → 요약 실패 → *삭제(프루닝)로 폴백* 하여 보존 층이 무너진다.
+            #   일부 모델(flash-latest 별칭)은 budget 0 을 400 으로 거부하므로,
+            #   이미 거부가 확인된 뒤(_thinking_off_unsupported)에는 붙이지 않는다.
+            _summary_kwargs = {
+                "system_instruction": self.COMPACTION_PROMPT,
+                "temperature": 0.3,  # 사실적 요약을 위해 낮은 temperature
+            }
+            if not self._thinking_off_unsupported:
+                try:
+                    _summary_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+                except Exception as e:
+                    print(f"[Compaction][Gemini] ThinkingConfig(0) 생성 실패 (무시): {e}")
+            summary_config = types.GenerateContentConfig(**_summary_kwargs)
 
             summary_request = f"{prev_summary}[작업 기록]\n{summary_text}"
             # 요약 입력도 너무 길면 자르기
             if len(summary_request) > 100000:
                 summary_request = summary_request[:50000] + "\n\n... (중략) ...\n\n" + summary_request[-50000:]
 
-            response = self._genai_client.models.generate_content(
-                model=self.model,
-                contents=summary_request,
-                config=summary_config
-            )
+            try:
+                response = self._genai_client.models.generate_content(
+                    model=self.model,
+                    contents=summary_request,
+                    config=summary_config
+                )
+            except Exception as e:
+                # budget 0 거부 모델(flash-latest 부류) → 표식 후 1회만 추론 차단 없이 재시도.
+                # 여기서 포기하면 삭제로 폴백해 보존 층이 무너지므로 한 번은 더 시도한다.
+                if "thinking_config" in _summary_kwargs and "400" in str(e):
+                    print("[Compaction][Gemini] thinkingBudget:0 거부 추정 — 차단 없이 1회 재시도")
+                    self._thinking_off_unsupported = True
+                    _summary_kwargs.pop("thinking_config", None)
+                    response = self._genai_client.models.generate_content(
+                        model=self.model,
+                        contents=summary_request,
+                        config=types.GenerateContentConfig(**_summary_kwargs)
+                    )
+                else:
+                    raise
 
             summary = response.text if response.text else ""
 

@@ -24,13 +24,13 @@ import json
 import re
 import time
 from typing import List, Dict, Callable, Generator, Any
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS
 
 # 도구 결과 최대 길이 (컨텍스트 관리) — 파이프라인 시 액션 수 × 배수 적용
 MAX_TOOL_RESULT_LENGTH = 16000
 
-# 최대 도구 호출 깊이
-MAX_TOOL_DEPTH = 30
+# 최대 도구 호출 깊이 — 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
+MAX_TOOL_DEPTH = MAX_TOOL_ROUNDS
 
 
 class OpenAIProvider(BaseProvider):
@@ -45,8 +45,8 @@ class OpenAIProvider(BaseProvider):
     3. 도구 결과는 role="tool"로 전달
     """
 
-    # GPT-4o: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~410,000자
-    COMPACTION_CHAR_THRESHOLD = 410000
+    # GPT-4o/DeepSeek: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~205,000자 (2자=1토큰 실측)
+    COMPACTION_CHAR_THRESHOLD = 205000
 
     # 에이전틱 루프 기본 출력 예산. 하이브리드 thinking 모델(DeepSeek 등)은
     # 추론+본문이 이 예산을 나눠 쓰므로 해당 프로바이더가 오버라이드로 키운다.
@@ -279,7 +279,8 @@ class OpenAIProvider(BaseProvider):
             max_tokens = self.DEFAULT_MAX_TOKENS
 
         if depth > MAX_TOOL_DEPTH:
-            yield {"type": "error", "content": f"도구 사용 깊이 제한({MAX_TOOL_DEPTH})에 도달했습니다."}
+            # 에러로 폐기하지 않는다 — 도구를 뗀 마지막 턴으로 성과·잔여를 받아 착지.
+            yield from self._final_turn(messages, max_tokens, MAX_TOOL_DEPTH)
             return
 
         self._notify_round(depth + 1, MAX_TOOL_DEPTH)
@@ -289,8 +290,9 @@ class OpenAIProvider(BaseProvider):
             if depth > 0 and self._should_compact(messages, depth):
                 messages = self._compact_openai(messages)
 
-            # Session Pruning: 오래된 도구 결과 마스킹 (depth > 0일 때만)
-            if depth > 0:
+            # Session Pruning: 오래된 도구 결과 마스킹 — ★압력이 있을 때만(최후 수단).
+            # 위 compaction 이 이미 요약으로 크기를 낮췄다면 여기는 통과한다.
+            if depth > 0 and self._should_prune(messages, depth):
                 messages = self._prune_messages_openai(messages)
 
             # API 호출 파라미터 구성
@@ -696,6 +698,24 @@ class OpenAIProvider(BaseProvider):
             cancel_check=cancel_check
         )
 
+    def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
+        """마지막 턴 1회 호출 — ★tools를 넘기지 않는다(도구 없이 보고만).
+
+        추론은 끈다: 보고는 원샷 계약이라 thinking이 max_tokens를 태우면 본문이 빈다
+        (하이브리드 모델에서 실제로 나던 부류 — ep889)."""
+        params = {
+            "model": self.model,
+            "messages": messages,
+            "max_tokens": min(max_tokens or 2048, 4096),
+            "stream": False,
+        }
+        _off = self._thinking_off_params()
+        if _off:
+            params["extra_body"] = dict(_off)
+
+        response = self._client.chat.completions.create(**params)
+        return (response.choices[0].message.content or "") if response.choices else ""
+
     def _compact_openai(self, messages: List[Dict]) -> List[Dict]:
         """Rolling Compaction: 오래된 대화를 AI 요약으로 압축 (OpenAI)
 
@@ -726,15 +746,25 @@ class OpenAIProvider(BaseProvider):
             if len(summary_input) > 100000:
                 summary_input = summary_input[:50000] + "\n\n... (중략) ...\n\n" + summary_input[-50000:]
 
-            response = self._client.chat.completions.create(
-                model=self.model,
-                max_tokens=2048,
-                messages=[
+            # ★요약은 원샷 계약 — 추론을 반드시 끈다 (2026-08-17).
+            #   하이브리드 thinking 모델(DeepSeek v4 등)은 추론이 max_tokens 를 전부 태워
+            #   본문 0자를 돌려준다(ep889 부류). 그러면 요약이 실패하고 *삭제(프루닝)로 폴백*
+            #   하므로, 보존 층이 무너지고 러닝머신이 되살아난다 — ep1177 실측: 요약 3회 중
+            #   2회 실패 → 라운드 30·76 에서 삭제 → 직후 구간 중복 호출 급등(14회).
+            summary_params = {
+                "model": self.model,
+                "max_tokens": 2048,
+                "messages": [
                     {"role": "system", "content": self.COMPACTION_PROMPT},
                     {"role": "user", "content": summary_input}
                 ],
-                temperature=0.3
-            )
+                "temperature": 0.3,
+            }
+            _off = self._thinking_off_params()
+            if _off:
+                summary_params["extra_body"] = dict(_off)
+
+            response = self._client.chat.completions.create(**summary_params)
 
             summary = response.choices[0].message.content if response.choices else ""
 
@@ -766,8 +796,9 @@ class OpenAIProvider(BaseProvider):
                 "content": "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
             })
 
-            # 최근 메시지 추가
+            # 최근 메시지 추가 (+ 고아 tool 메시지 최후 방어선 — 남으면 400 으로 작업이 죽는다)
             compacted.extend(recent_messages)
+            compacted = self._drop_orphan_tool_messages(compacted)
 
             before_size = self._estimate_content_size(messages)
             after_size = self._estimate_content_size(compacted)

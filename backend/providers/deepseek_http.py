@@ -22,7 +22,7 @@ from typing import List, Dict, Any, Callable, Optional
 
 import requests
 
-from .base import BaseProvider
+from .base import BaseProvider, MAX_TOOL_ROUNDS, build_final_turn_messages
 
 
 _DEFAULT_BASE = "https://api.deepseek.com"
@@ -31,7 +31,11 @@ _DEFAULT_BASE = "https://api.deepseek.com"
 class DeepSeekHTTPProvider(BaseProvider):
     """DeepSeek REST(chat/completions) 동기 프로바이더 — SDK 미사용. 폰 네이티브 LLM 경로."""
 
-    MAX_TOOL_ITERATIONS = 70
+    MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
+
+    # DeepSeek: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~205,000자 (2자=1토큰 실측).
+    # ★base 기본값(Claude 200K 기준)을 물려받고 있었다 — 자기 모델보다 헐거운 방어선.
+    COMPACTION_CHAR_THRESHOLD = 205000
     DEFAULT_MAX_TOKENS = 16384  # v4 하이브리드 thinking 예산 (deepseek.py 와 동일 근거)
 
     def __init__(self, **kwargs):
@@ -106,7 +110,8 @@ class DeepSeekHTTPProvider(BaseProvider):
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
-            if iteration > 0:
+            # ★압력이 있을 때만 지운다(최후 수단)
+            if iteration > 0 and self._should_prune(messages, iteration):
                 messages = self._prune_messages_openai(messages)
             try:
                 data = self._execute_with_retry(self._chat, messages, tools)
@@ -155,4 +160,22 @@ class DeepSeekHTTPProvider(BaseProvider):
                                  "content": out})
             iteration += 1
 
+        if iteration >= self.MAX_TOOL_ITERATIONS:
+            # 조용한 절단 금지 — 도구를 뗀 마지막 턴으로 성과·잔여를 받아 착지.
+            return self._final_turn_report(messages, accumulated)
+
         return accumulated.strip() or "(응답 없음)"
+
+    def _final_turn_report(self, messages: list, accumulated: str) -> str:
+        """도구 루프 상한 착지 — ★tools 없이 1회 호출해 성과·잔여 보고를 받는다."""
+        limit = self.MAX_TOOL_ITERATIONS
+        print(f"[DeepSeekHTTP] 도구 라운드 상한({limit}회) 도달 — 마무리 보고 턴 실행")
+        text = ""
+        try:
+            data = self._chat(build_final_turn_messages(messages, limit), None)
+            choices = data.get("choices") or []
+            if choices:
+                text = (choices[0].get("message") or {}).get("content") or ""
+        except Exception as e:
+            print(f"[DeepSeekHTTP] 마무리 보고 턴 실패: {str(e)[:200]}")
+        return f"{accumulated}\n\n{self._final_turn_wrap(text, limit)}".strip()

@@ -65,6 +65,56 @@ class ProviderMetrics:
         }
 
 
+# ============ 도구 루프 상한 (전 프로바이더 공통) ============
+#
+# 프로바이더마다 따로 자란 상수(anthropic·openai·ollama=30 / gemini 계열=70)를
+# 2026-08-17 하나로 통일. 같은 시스템에서 어느 모델을 타느냐로 상한이 두 배 갈리던
+# 것은 설계가 아니라 드리프트였다.
+MAX_TOOL_ROUNDS = 100
+
+# 상한 도달 시 '마지막 턴'에 주입하는 지시.
+# ★상한 도달을 에러로 처리하지 않는다 — 하드 에러는 그때까지의 작업을 통째로 버린다.
+#   대신 도구 없이 한 번 더 불러 "여기까지 했고 남은 건 이것"을 받아낸다.
+FINAL_TURN_INSTRUCTION = """[시스템] 도구 사용 라운드 상한({limit}회)에 도달했다. 이번 턴에는 도구를 쓸 수 없다.
+
+지금까지 실제로 한 일만 가지고 사용자에게 보고하라:
+1. 완료한 것 — 파일 경로·변경 내용·산출물을 구체적으로
+2. 착수했으나 끝내지 못한 것
+3. 남은 일과, 이어서 하려면 무엇부터 하면 되는지
+
+확인하지 못한 것을 완료했다고 쓰지 마라. 도구로 검증하지 못한 부분은 검증하지 못했다고 적어라."""
+
+# 마지막 턴 호출마저 실패했을 때의 폴백 — 그래도 에러보다는 낫다.
+FINAL_TURN_FALLBACK = (
+    "(도구 사용 라운드 상한({limit}회)에 도달해 작업을 중단했습니다. "
+    "마무리 보고 생성에도 실패해 진행 상황을 요약하지 못했습니다. "
+    "직전까지의 도구 호출 기록을 확인해 주세요.)"
+)
+
+
+def build_final_turn_messages(messages: List[Dict], limit: int) -> List[Dict]:
+    """마지막 턴용 메시지 = 지금까지의 대화 + 보고 지시 (OpenAI/Ollama/Anthropic 공용 형식)
+
+    ★마지막이 이미 user면 새 메시지를 덧붙이지 않고 그 안에 이어 쓴다 — 상한에 걸리는
+    시점의 마지막 메시지는 보통 tool_result(user 역할)이고, Anthropic은 연속 user
+    메시지를 거절한다."""
+    instruction = FINAL_TURN_INSTRUCTION.format(limit=limit)
+    out = list(messages)
+
+    if out and out[-1].get("role") == "user":
+        last = dict(out[-1])
+        content = last.get("content")
+        if isinstance(content, list):
+            last["content"] = list(content) + [{"type": "text", "text": instruction}]
+        else:
+            last["content"] = f"{content}\n\n{instruction}"
+        out[-1] = last
+        return out
+
+    out.append({"role": "user", "content": instruction})
+    return out
+
+
 @dataclass
 class RetryConfig:
     """재시도 설정"""
@@ -144,6 +194,46 @@ class BaseProvider(ABC):
             notify_round(name, getattr(self, "model", "?"), round_no, budget)
         except Exception:
             print(f"[{name}] 라운드 {round_no}/{budget} 시작")
+
+    def _final_turn(self, messages: List[Dict], max_tokens: int = 2048,
+                    limit: int = MAX_TOOL_ROUNDS):
+        """도구 루프 상한 착지 — 도구 없이 한 번 더 불러 성과·잔여를 받아낸다.
+
+        상한 도달을 에러로 끝내면 그때까지의 라운드가 통째로 버려진다(사용자에게는
+        "제한에 도달했습니다" 한 줄만 남는다). 여기서는 도구를 뗀 채 한 번 더 불러
+        보고를 받아 정상 응답(final)으로 착지시킨다.
+
+        프로바이더는 `_final_turn_text`만 구현하면 된다."""
+        name = type(self).__name__.replace("Provider", "")
+        print(f"[{name}] 도구 라운드 상한({limit}회) 도달 — 마무리 보고 턴 실행")
+
+        text = ""
+        try:
+            text = (self._final_turn_text(
+                build_final_turn_messages(messages, limit), max_tokens
+            ) or "").strip()
+        except Exception as e:
+            print(f"[{name}] 마무리 보고 턴 실패: {str(e)[:200]}")
+
+        if text:
+            text += f"\n\n(도구 사용 라운드 상한 {limit}회에 도달해 여기서 중단했습니다.)"
+        else:
+            text = FINAL_TURN_FALLBACK.format(limit=limit)
+
+        yield {"type": "final", "content": text}
+
+    def _final_turn_wrap(self, text: str, limit: int) -> str:
+        """마지막 턴 결과 → 사용자 응답 (문자열 반환 프로바이더용 공통 마무리)"""
+        text = (text or "").strip()
+        if text:
+            return f"{text}\n\n(도구 사용 라운드 상한 {limit}회에 도달해 여기서 중단했습니다.)"
+        return FINAL_TURN_FALLBACK.format(limit=limit)
+
+    def _final_turn_text(self, messages: List[Dict], max_tokens: int) -> str:
+        """마지막 턴 1회 비스트리밍 호출(★도구 없이). 프로바이더가 오버라이드한다.
+
+        미구현 프로바이더는 빈 문자열 → `_final_turn`이 폴백 문구로 착지."""
+        return ""
 
     @abstractmethod
     def init_client(self) -> bool:
@@ -225,6 +315,16 @@ class BaseProvider(ABC):
 
     # ========== Session Pruning (Atomic Message Grouping) ==========
     # 컨텍스트 관리를 위한 설정
+    #
+    # ★프루닝은 '컨텍스트 압력이 있을 때만' 돈다 (2026-08-17).
+    #   그 전까지는 매 라운드 무조건 돌면서 최근 3라운드 밖의 도구 결과를 통째로 지웠다.
+    #   컨텍스트가 35K/200K 로 텅 비어 있어도 지웠고, 지운 결과를 다음 라운드로 그대로
+    #   넘기므로 소실은 영구적이었다 → 에이전트가 읽은 파일을 3라운드마다 잃고 다시 읽는
+    #   러닝머신(ep1173: 30라운드 중 마지막 10라운드가 같은 파일 재-cat, 쓰기 0건).
+    #   게다가 프루닝이 먼저 크기를 깎아버려 *요약해서 보존하는* compaction 이 임계값에
+    #   영원히 못 닿았다(864,612자 → 9,591자, compaction 임계 410,000자 = 발동 0회).
+    #   두 층의 목적은 같다("컨텍스트 초과 방지") — 그렇다면 조건도 같아야 하고,
+    #   순서는 '보존(요약)이 먼저, 삭제는 최후'여야 한다.
     TOOL_RESULT_SOFT_LIMIT = 4000  # 이 이상이면 soft-trim
     TOOL_RESULT_HEAD = 1500  # head 유지 길이
     TOOL_RESULT_TAIL = 1500  # tail 유지 길이
@@ -233,10 +333,20 @@ class BaseProvider(ABC):
 
     # ========== Rolling Compaction 설정 ==========
     # Claude Code 참고: 컨텍스트의 80%에서 compaction 트리거
-    # 글자 수 기반 임계값 (토큰 추정: 한글 2자≈1토큰, 영문 4자≈1토큰)
-    # 각 프로바이더에서 모델의 컨텍스트 윈도우에 맞게 오버라이드 가능
-    COMPACTION_CHAR_THRESHOLD = 640000  # 기본값: ~160K 토큰 (Claude 200K의 80%)
+    #
+    # ★자↔토큰 환산은 **2자 = 1토큰** (2026-08-17 실측으로 교정).
+    #   옛 임계값들은 영문 기준 4자=1토큰으로 잡혀 있었으나, 이 시스템이 실제로 나르는
+    #   내용(한국어 문서·한글 주석 섞인 코드)을 재보니 한국어 1.97자/토큰·파이썬 2.63자/토큰
+    #   이었다 = 임계값이 약 2배 헐거웠다. 프루닝이 매 라운드 무조건 돌던 시절엔 페이로드가
+    #   임계값 근처에도 못 가서 이 오차가 드러나지 않았지만, 프루닝을 압력 게이트 뒤로
+    #   옮긴 지금은 이 숫자가 곧 컨텍스트 초과 방어선이다 → 전 프로바이더 절반으로 교정.
+    COMPACTION_CHAR_THRESHOLD = 320000  # 기본값: ~160K 토큰 (Claude 200K의 80%)
     COMPACTION_MIN_ROUNDS = 5  # 최소 이 라운드 이후에만 compaction 수행
+
+    # 프루닝(삭제) 임계값 — None 이면 COMPACTION_CHAR_THRESHOLD 를 따른다.
+    # 같은 값을 쓰므로 순서가 곧 정책이 된다: 압력이 오면 compaction 이 먼저 요약해
+    # 크기를 낮추고, 그래도 임계값 위면(요약 실패 등) 그때 프루닝이 최후 수단으로 지운다.
+    PRUNE_CHAR_THRESHOLD = None
 
     COMPACTION_PROMPT = """아래는 사용자의 요청을 처리하기 위해 지금까지 진행한 작업 기록입니다.
 이 기록을 요약해주세요. 요약의 목적은 이후 작업을 이어갈 때 핵심 정보를 유지하는 것입니다.
@@ -631,6 +741,87 @@ class BaseProvider(ABC):
             print(f"[Compaction] 임계값 도달: {content_size:,}자 >= {self.COMPACTION_CHAR_THRESHOLD:,}자 (iteration={iteration})")
         return should
 
+    def _should_prune(self, messages_or_contents, iteration: int = None) -> bool:
+        """프루닝(삭제)이 필요한지 판단 — 컨텍스트 압력이 있을 때만 True.
+
+        압력이 없으면 지우지 않는다. 도구 결과는 이미 실행 시점에
+        MAX_TOOL_RESULT_LENGTH 로 한 번 잘려 들어오므로, 압력 전까지는
+        '읽은 것을 그대로 들고 있는' 편이 항상 낫다.
+
+        ★COMPACTION_MIN_ROUNDS 전에는 지우지 않는다: 그 구간은 compaction 이
+        자격 미달이라, 여기서 지우면 '보존(요약)이 먼저'라는 순서가 깨진다
+        (ep1176 실측 — 라운드 5 에서 프루닝이 먼저 삭제했고 요약은 9라운드에야 돌았다)."""
+        if iteration is not None and iteration < self.COMPACTION_MIN_ROUNDS:
+            return False
+        threshold = self.PRUNE_CHAR_THRESHOLD or self.COMPACTION_CHAR_THRESHOLD
+        content_size = self._estimate_content_size(messages_or_contents)
+        should = content_size >= threshold
+        if should:
+            print(f"[Pruning] 압력 도달: {content_size:,}자 >= {threshold:,}자 → 오래된 도구 결과 마스킹")
+        return should
+
+    @staticmethod
+    def _is_dependent_continuation(msg) -> bool:
+        """앞 메시지(도구 호출)에 딸린 '응답' 메시지인가 — 여기서 잘리면 고아가 된다.
+
+        세 형식을 모두 본다:
+        - OpenAI/Ollama: role == "tool"
+        - Anthropic: role == "user" + content 안에 tool_result 블록
+        - Gemini: parts 안에 functionResponse (dict) / function_response (Content 객체)
+        """
+        if isinstance(msg, dict):
+            if msg.get("role") == "tool":
+                return True
+            content = msg.get("content")
+            if msg.get("role") == "user" and isinstance(content, list):
+                if any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+                    return True
+            parts = msg.get("parts")
+            if isinstance(parts, list):
+                if any(isinstance(p, dict) and "functionResponse" in p for p in parts):
+                    return True
+            return False
+
+        # Gemini types.Content 객체
+        parts = getattr(msg, "parts", None)
+        if isinstance(parts, list):
+            return any(getattr(p, "function_response", None) is not None for p in parts)
+        return False
+
+    def _drop_orphan_tool_messages(self, messages: List[Dict]) -> List[Dict]:
+        """앞선 tool_calls 를 잃은 고아 tool 메시지 제거 (OpenAI/Ollama 형식, 최후 방어선).
+
+        경계 스냅이 제대로 되면 여기서 걸릴 게 없다. 그래도 두는 이유 = 이 부류의 실패가
+        400 으로 *작업 전체*를 죽이기 때문. 조용히 버리지 않고 무엇을 버렸는지 남긴다."""
+        pending = set()
+        out = []
+        for msg in messages:
+            role = msg.get("role")
+            if role == "assistant" and msg.get("tool_calls"):
+                pending = {tc.get("id") for tc in msg["tool_calls"] if isinstance(tc, dict)}
+                out.append(msg)
+                continue
+            if role == "tool":
+                if msg.get("tool_call_id") in pending:
+                    out.append(msg)
+                else:
+                    print(f"[Compaction] 고아 tool 메시지 제거: id={msg.get('tool_call_id')}")
+                continue
+            if role in ("user", "assistant", "system"):
+                pending = set()
+            out.append(msg)
+        return out
+
+    def _snap_cut_to_group_boundary(self, messages_or_contents, cut: int) -> int:
+        """자를 위치를 원자적 그룹의 시작으로 당긴다(앞으로 민다).
+
+        cut 위치의 메시지가 '앞선 도구 호출에 딸린 응답'이면 그 호출까지 최근 쪽에
+        포함되도록 cut 을 하나씩 줄인다. 짝을 깨는 것보다 덜 요약하는 편이 항상 낫다."""
+        cut = max(0, min(cut, len(messages_or_contents) - 1))
+        while cut > 0 and self._is_dependent_continuation(messages_or_contents[cut]):
+            cut -= 1
+        return cut
+
     def _extract_text_for_summary(self, messages_or_contents, keep_recent: int = 3) -> tuple:
         """요약 대상 텍스트 추출 및 최근 메시지 분리
 
@@ -645,8 +836,18 @@ class BaseProvider(ABC):
         if total <= keep_recent:
             return "", messages_or_contents
 
-        old_messages = messages_or_contents[:-keep_recent]
-        recent_messages = messages_or_contents[-keep_recent:]
+        # ★자를 위치를 '원자적 그룹 경계'로 스냅한다 (2026-08-17).
+        #   그냥 인덱스로 자르면 assistant(tool_calls) + tool(결과) 쌍이 한가운데서 끊겨
+        #   앞선 호출을 잃은 고아 tool 메시지가 남고, API 가 400 으로 거절한다
+        #   ("Messages with role 'tool' must be a response to a preceding message with
+        #   'tool_calls'" — ep1176 실측으로 작업 전체가 죽었다).
+        #   경계는 항상 *앞으로* 민다 = 최근 쪽에 더 담는다(짝을 깨느니 덜 요약한다).
+        cut = self._snap_cut_to_group_boundary(messages_or_contents, total - keep_recent)
+        if cut <= 0:
+            return "", messages_or_contents
+
+        old_messages = messages_or_contents[:cut]
+        recent_messages = messages_or_contents[cut:]
 
         # 오래된 메시지를 텍스트로 변환
         lines = []

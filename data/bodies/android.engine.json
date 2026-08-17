@@ -82,6 +82,7 @@
     "datastore/project_manager",
     "datastore/pulse_db",
     "datastore/red_grant",
+    "datastore/red_report",
     "datastore/red_watchdog",
     "datastore/service_status",
     "datastore/switch_manager",
@@ -242,8 +243,8 @@
     "test_step_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 236,
-    "engine": 204,
+    "total": 237,
+    "engine": 205,
     "blocklist": 32
   }
 }

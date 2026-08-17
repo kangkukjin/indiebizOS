@@ -24,6 +24,65 @@ LANG_NAMES = {
 }
 
 
+# ============ 인코딩 ============
+
+# 엄격 해독 순서 — latin-1 은 여기 없다(무엇이든 성공하므로 폴백 자리 전용).
+_STRICT_ENCODINGS = ('utf-8-sig', 'utf-8', 'cp949', 'euc-kr', 'shift_jis')
+# 관용 해독 후보 — 바이트 몇 개가 깨진 멀티바이트 파일 구제용.
+_TOLERANT_ENCODINGS = ('cp949', 'euc-kr', 'utf-8', 'shift_jis')
+# 관용 해독을 채택하는 상한 — 이보다 많이 깨지면 그 인코딩이 아니다.
+_TOLERANT_BAD_RATIO = 0.01
+
+
+def decode_subtitle_bytes(raw: bytes) -> str | None:
+    """자막 바이트 → 텍스트. 인코딩 자동 감지(한국어 cp949 흔함).
+
+    ★ 옛 SMI/SRT 는 파일 중간에 깨진 바이트가 한둘 섞인 경우가 흔하다.
+    엄격 해독만 늘어놓으면 그 한 바이트 때문에 cp949 가 탈락하고, 무엇이든
+    성공하는 latin-1 이 받아서 **파일 전체가 모지바케**가 된다(1408 CD1 실측:
+    67KB 중 깨진 바이트 1개). 그래서 엄격 해독이 전부 실패하면 관용 해독
+    (errors='replace')으로 재시도해 *가장 덜 깨지는* 인코딩을 고르고, 그마저
+    많이 깨질 때만(=정말 그 계열이 아닐 때, 예: 서구어 자막) latin-1 로 간다.
+    """
+    # UTF-16 은 BOM 이 확정 증거다(널 바이트투성이라 다른 인코딩은 전부 쓰레기를 낸다).
+    # 꼬리가 홀수 바이트로 잘린 파일이 흔하므로(Avatar smi 실측) 잘라내고 재시도하고,
+    # 그래도 안 되면 관용 해독 — BOM 이 있는 한 UTF-16 이 아닐 리는 없다.
+    if raw[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        for candidate in (raw, raw[:len(raw) - 1] if len(raw) % 2 else raw):
+            try:
+                return candidate.decode('utf-16')
+            except (UnicodeDecodeError, LookupError):
+                continue
+        try:
+            return raw.decode('utf-16', errors='replace')
+        except LookupError:
+            pass
+
+    for enc in _STRICT_ENCODINGS:
+        try:
+            return raw.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    best, best_bad = None, None
+    for enc in _TOLERANT_ENCODINGS:
+        try:
+            text = raw.decode(enc, errors='replace')
+        except LookupError:
+            continue
+        bad = text.count('�')
+        if best_bad is None or bad < best_bad:
+            best, best_bad = text, bad
+
+    if best is not None and best_bad <= max(1, len(best) * _TOLERANT_BAD_RATIO):
+        return best
+
+    try:
+        return raw.decode('latin-1')
+    except (UnicodeDecodeError, LookupError):
+        return None
+
+
 # ============ 자막 변환 함수 ============
 
 def srt_to_vtt(srt_content: str) -> str:
@@ -162,14 +221,8 @@ def smi_to_vtt(smi_content: str, lang_class: str = "KRCC") -> str:
 def _detect_smi_languages(file_path: Path) -> list:
     """SMI 파일에서 사용 가능한 언어 클래스를 감지"""
     try:
-        raw = file_path.read_bytes()
-        for enc in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr', 'latin-1']:
-            try:
-                text = raw.decode(enc)
-                break
-            except UnicodeDecodeError:
-                continue
-        else:
+        text = decode_subtitle_bytes(file_path.read_bytes())
+        if text is None:
             return [('KRCC', 'ko', '한국어')]
 
         # .KRCC {Name:Korean; lang:ko-KR; ...} 패턴
@@ -289,14 +342,7 @@ async def api_get_subtitle_file(request, path, smi_class, load_config, verify_se
         raise HTTPException(status_code=400, detail="지원하지 않는 자막 형식입니다")
 
     # 파일 읽기 (바이트를 한 번만 읽고 여러 인코딩 시도 — 디스크 I/O 1회)
-    raw_bytes = safe_path.read_bytes()
-    content = None
-    for encoding in ['utf-8', 'utf-8-sig', 'cp949', 'euc-kr', 'shift_jis', 'latin-1']:
-        try:
-            content = raw_bytes.decode(encoding)
-            break
-        except (UnicodeDecodeError, LookupError):
-            continue
+    content = decode_subtitle_bytes(safe_path.read_bytes())
 
     if content is None:
         raise HTTPException(status_code=400, detail="자막 파일 인코딩을 인식할 수 없습니다")

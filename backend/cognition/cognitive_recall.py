@@ -77,6 +77,14 @@ class CognitiveRecallMixin:
             if limbs_scent:
                 result = (result + "\n" + limbs_scent) if result else limbs_scent
 
+            # 직전 자기수리의 결말 — ★강제주입(질의 무관, 미보고분이 있을 때만).
+            #   backend 수리는 자기 턴이 죽은 뒤 워치독이 판정한다 → 그 판정을 말할 입이
+            #   없어 성공과 멎음이 구별되지 않았다. 미보고 판정을 주워 다음 턴이 닫는다.
+            #   파일 읽기뿐(LLM 0)·없으면 빈 문자열(0토큰)·한 번만 말한다(보고 표식).
+            repair = self._pending_repair_scent()
+            if repair:
+                result = (result + "\n" + repair) if result else repair
+
             # 거친 디스크 골격(어디에) — ★포식 의도일 때만(상시-on 폐기, 웹랜드마크와 같은 게이트).
             #   집중 관심 폴더 아래 거친 디렉토리 트리(맥/윈도우/리눅스 각자 자기 루트). ~5천 자라
             #   파일·디스크 질의에만 값을 하고 그 외엔 무관 → _FORAGE_CUES 없으면 빈 결과(메서드 내 게이트).
@@ -144,6 +152,24 @@ class CognitiveRecallMixin:
                     "그 PC의 셸·파일·시스템 상태 조회는 [limbs:guestpc]{limb: \"이름\", op: shell/read/write/list/info}. "
                     "이름 언급 없는 시스템 상태는 본체([sense:host]).")
             return f"<connected_limbs note='{note}'>\n" + "\n".join(rows) + "\n</connected_limbs>"
+        except Exception:
+            return ""
+
+    def _pending_repair_scent(self) -> str:
+        """아직 보고되지 않은 자기수리 판정 — ★강제주입 냄새.
+
+        RED 수리(backend/*.py)는 편집이 부른 리로드가 그 턴을 죽인 **뒤에** 결말이 난다
+        (분리 워치독이 헬스체크·롤백 후 result.json 에 판정 기록). 그 판정을 사용자에게
+        말할 입이 없어, 성공한 수리와 그냥 멎어버린 수리가 구별되지 않았다 — 자기수리가
+        '멈춘 것처럼' 보이던 증상의 나머지 절반. 여기서 미보고 판정을 주워 다음 턴이
+        말로 닫는다. 시스템 AI 만 — 수리의 주체이자 보고 책임자다(프로젝트 에이전트에게는
+        남의 일이라 잡음)."""
+        try:
+            if not self.config.get("_is_system_ai"):
+                return ""
+            from runtime_utils import get_base_path
+            import red_report
+            return red_report.pending_scent(str(get_base_path()))
         except Exception:
             return ""
 

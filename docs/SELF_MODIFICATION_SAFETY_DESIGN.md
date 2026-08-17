@@ -24,6 +24,23 @@
 > (`backend/red_watchdog.py`, start_new_session — 서버가 죽어도 생존)이 리로드 후
 > `/health` 를 확인, 죽어 있으면 백업 복원+touch 재기동+OS 알림 자동 롤백.
 >
+> **★keeper 표식 = 기계 소유 (2026-08-17 개정)**: backend/*.py 쓰기 직전 `_keeper_pause`
+> 가 `data/backend_keeper_off` 를 세우고(내용 `auto <task>` = 소유자 표시, 매 쓰기마다
+> 갱신 = 심장박동), 회수는 워치독이 어느 결말에서든(`__main__` 의 finally) 한다.
+> 놓쳐도 keeper 가 `PAUSE_TTL`(900초) 만료로 감시를 재개한다. **왜**: 옛 규약("작업 전
+> touch, 작업 후 rm")은 자기수리에서 원리적으로 완주 불가 — 편집이 부른 리로드가
+> 회수 단계를 실행할 턴을 죽인다(실측: 표식이 남아 감시가 몇 시간 멎음). 일반 원칙 =
+> **자기 죽음 이후에 실행돼야 하는 단계는 죽음을 넘는 프로세스가 소유한다.**
+> 사람이 손으로 세운 빈 표식은 워치독이 건드리지 않는다(의도적 정비 창).
+>
+> **★결말의 회수 (2026-08-17)**: 수리의 판정은 **자기 턴이 죽은 뒤에** 난다 — 워치독이
+> `result.json` 에 적지만 그 파일을 읽는 쪽이 없어서, 사용자 자리에서는 성공한 수리와
+> 그냥 멎은 수리가 구별되지 않았다. ①워치독이 **성공·판정미완에도** OS 알림(종전엔
+> 실패만) ②`backend/datastore/red_report.py` 가 미보고 판정을 회수해 다음 턴의 0단계
+> 연상에 `<repair_outcome>` 으로 얹는다(`cognitive_recall._pending_repair_scent` —
+> 시스템 AI 한정·파일 읽기뿐·없으면 0토큰·`announced_at` 표식으로 한 번만).
+> 원칙: **죽음을 넘긴 판정은 다음 턴의 입이 닫는다.**
+>
 > **배선**: 그랜트 원장 `backend/red_grant.py`(프로세스 전역 — claude_code 의 MCP→HTTP
 > 재진입 심을 task_id 매칭으로 건넘), 발급/회수는 `agent_pipeline` REPAIR 분기/finally 만.
 > 게이트 `system_essentials/handler.py` `_red_zone_violation` + `_red_write_prepare/finalize`.

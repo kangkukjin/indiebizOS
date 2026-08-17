@@ -150,7 +150,7 @@ web_component·mkdir·volume·show_map·player_status 등. 신설 관찰 중(not
 2. **시딩 = `.venv` 파이썬 + `_load_model_sync()` 선행 + `add_examples_batch`** (시스템 python3 = sqlite_vec 없음, 모델 백그라운드 로딩 중 벡터 미부착). 이관 후 `rebuild_index()`. 검증은 db 자신의 API 로(`search_hybrid` — 반환은 UsageExample 객체).
 3. **코퍼스 param 가드**: 증류가 엔진 내부 플래그(`_raw` 등)를 코퍼스에 흘리면 빌드가 막힌다 — 코퍼스 정정이 정답(allowlist 아님).
 4. handler 분기 제거 시 **첫 `elif` 고아** 주의(py_compile 로 4개 핸들러 전수 확인).
-5. keeper 규약(backend .py 편집 전 `touch data/backend_keeper_off`), tool.json = 파생(직접 편집 금지), `/packages/reload` 는 handler.py 만(tool_*.py 는 backend touch).
+5. keeper 표식은 **손대지 않는다**(2026-08-17 개정 — 기계가 세우고 워치독이 회수, 놓쳐도 만료. 상세=CLAUDE.md '라이브 백엔드 편집 규약'), tool.json = 파생(직접 편집 금지), `/packages/reload` 는 handler.py 만(tool_*.py 는 backend touch).
 6. 커밋은 **pathspec** — 동시 세션 변경이 섞여 있다.
 
 ## 6. 검증 체크리스트 (각 은퇴/신설마다)

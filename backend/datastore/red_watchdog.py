@@ -93,6 +93,26 @@ def _notify(title: str, body: str):
         pass
 
 
+def _keeper_release(repo: str):
+    """keeper 일시정지 표식 회수 — 기계가 세운 것(내용 'auto ...')만 지운다.
+
+    ★이 회수가 여기 있는 이유(2026-08-17): 표식을 세운 쪽(RED 쓰기 경로)은 자기가 부른
+    리로드에 죽는다 — 회수 단계를 실행할 손이 원리적으로 없다. 감시견은 분리 프로세스라
+    그 죽음을 넘어 살아남는 유일한 손이고, 어느 결말(정상·롤백·타임아웃)로 끝나든 여기를
+    지난다. 사람이 손으로 세운 표식(빈 파일)은 의도적 정비이므로 건드리지 않는다
+    (그쪽은 keeper 의 PAUSE_TTL 만료가 바닥을 받친다)."""
+    try:
+        flag = os.path.join(repo or "", "data", "backend_keeper_off")
+        if not os.path.exists(flag):
+            return
+        with open(flag, encoding="utf-8") as f:
+            if not f.read(4).startswith("auto"):
+                return  # 사람이 세운 표식 — 남의 정비 창을 닫지 않는다
+        os.remove(flag)
+    except Exception:
+        pass
+
+
 def _intentional_shutdown(manifest: dict) -> bool:
     """시스템이 *의도적으로* 꺼졌는가 — Electron 종료 정리·start.sh trap 이 남기는
     표식(data/.intentional_shutdown). 이때 죽은 /health 는 수리 탓이 아니므로
@@ -144,6 +164,8 @@ def main():
     while True:
         if time.time() - started > MAX_LIFETIME_S:
             _write_result({"outcome": "timeout", "note": "감시견 수명 초과 — 검사 미완"})
+            _notify("IndieBiz 자가수정 판정 미완",
+                    "감시견 수명이 초과돼 수리 결과를 확정하지 못했습니다. 수동 확인이 필요합니다.")
             return
         # 1. 조용해질 때까지 대기
         try:
@@ -186,7 +208,12 @@ def main():
                     _notify("IndieBiz 안전장치 자가검사 실패",
                             f"안전장치 수정이 기능 스모크를 통과하지 못해 자동 롤백했습니다 (복원 {len(restored)}건).")
                     return
-            _write_result({"outcome": "healthy", "files": list((manifest.get("files") or {}).keys())})
+            files = list((manifest.get("files") or {}).keys())
+            _write_result({"outcome": "healthy", "files": files})
+            # ★성공에도 알린다(2026-08-17): 실패만 알리고 성공은 침묵하면, 리로드로 턴이
+            #   끊긴 사용자 자리에서 **성공한 수리와 그냥 멎은 수리가 구별되지 않는다**.
+            _notify("IndieBiz 자가수정 완료",
+                    f"수정 후 서버 정상 확인 (수정 {len(files)}건).")
             return
 
         # 3. 죽었다 — 단, 의도된 종료(창 닫기·start.sh 종료)면 수리 탓이 아니다: 롤백 금지
@@ -215,4 +242,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # 어떤 결말이든(정상 퇴근·롤백·타임아웃·예외) 표식은 반드시 회수한다 — 회수를
+    # 놓치면 keeper 가 통째로 멎어 감시가 사라진다(그 자리를 PAUSE_TTL 이 받치지만
+    # 15분을 그냥 흘려보낼 이유가 없다).
+    _repo = ""
+    try:
+        with open(sys.argv[1], encoding="utf-8") as _f:
+            _repo = (json.load(_f) or {}).get("repo", "")
+    except Exception:
+        pass
+    try:
+        main()
+    finally:
+        _keeper_release(_repo)

@@ -16,7 +16,7 @@
 #   줘야 해서(보안 하향) 채택하지 않았다.
 #
 # 기동(멱등 — start.sh 가 자동 보장):  nohup bash scripts/backend_keeper.sh >/dev/null 2>&1 &
-# 일시 정지: touch data/backend_keeper_off   (지우면 재개)
+# 일시 정지: touch data/backend_keeper_off   (지우면 재개 / 안 지워도 PAUSE_TTL 후 자동 만료)
 # 종료:      kill $(cat data/backend_keeper.pid)
 # 로그:      data/backend_keeper.log
 
@@ -26,6 +26,15 @@ LOG="$REPO/data/backend_keeper.log"
 PIDFILE="$REPO/data/backend_keeper.pid"
 HEALTH="http://127.0.0.1:8765/health"
 BOOT_GRACE=300   # 초 — 리스너가 이보다 젊으면 콜드 스타트로 간주, revive 보류
+# ★일시정지 표식의 유효기간(2026-08-17): 표식은 "작업 전 touch, 작업 후 rm" 의 두
+#   단계인데 **그 사이에서 편집자가 죽는다** — backend .py 를 고치는 주체가 그 backend
+#   안에서 살면(시스템 AI 자기수리) 리로드가 자기 턴을 끊어 rm 이 영원히 실행되지 않는다.
+#   실제로 표식이 몇 시간씩 남아 감시가 통째로 멎어 있었다. 그래서 표식에 나이를 주고,
+#   회수를 잊어도 시스템이 스스로 깨어나게 한다. 표식의 mtime = 심장박동(연쇄 편집은
+#   매 쓰기마다 touch 되어 살아 있고, 편집이 끝나면 늙어서 만료된다).
+#   조기 회수는 워치독(red_watchdog)이 하고, 이 만료는 그마저 죽었을 때의 바닥이다.
+PAUSE_TTL=900    # 초 — 표식이 이보다 늙으면 만료로 보고 감시 재개
+
 
 # 멱등 — 이미 도는 keeper 가 있으면 조용히 물러난다
 if [ -f "$PIDFILE" ]; then
@@ -43,6 +52,14 @@ echo "[$(date '+%F %T')] keeper 시작 (pid=$$)" >> "$LOG"
 #   탐지 지연이 없다.
 health_ok() {
     /usr/bin/curl -s -m 10 "$HEALTH" >/dev/null 2>&1
+}
+
+# 파일이 마지막으로 수정된 뒤 흐른 초. 파일이 없으면 실패(비어 있음).
+file_age() {
+    local m
+    m=$(stat -f%m "$1" 2>/dev/null || stat -c%Y "$1" 2>/dev/null) || return 1
+    [ -z "$m" ] && return 1
+    echo $(( $(date +%s) - m ))
 }
 
 # 8765 리스너들 중 *가장 젊은* 프로세스의 경과 초를 출력. 리스너 없으면 실패(비어 있음).
@@ -101,7 +118,15 @@ while true; do
         rm -f "$PIDFILE"
         exit 0
     fi
-    [ -f "$PAUSE" ] && continue
+    # 일시정지 표식 — 단, 나이를 본다(위 PAUSE_TTL 주석: 회수 단계는 자주 실행되지 못한다)
+    if [ -f "$PAUSE" ]; then
+        PAGE=$(file_age "$PAUSE")
+        if [ -z "$PAGE" ] || [ "$PAGE" -lt "$PAUSE_TTL" ]; then
+            continue
+        fi
+        echo "[$(date '+%F %T')] 일시정지 표식이 ${PAGE}초째(>${PAUSE_TTL}) — 만료로 보고 감시 재개" >> "$LOG"
+        rm -f "$PAUSE"
+    fi
     health_ok && continue
     # 재확인 스트라이크 — start.sh 의 kill→start 순간 틈새·리로드 순간 오발 방지.
     # ★20초 간격(2026-08-06 사건): uvicorn --reload 재기동은 /health 가 11~15초 죽는다

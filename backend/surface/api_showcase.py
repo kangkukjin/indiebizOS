@@ -173,12 +173,9 @@ async def list_dir(slug: str, path: str = Query(default=""), x_showcase_secret: 
 
 
 def _decode_text(raw: bytes) -> str | None:
-    for enc in ("utf-8", "utf-8-sig", "cp949", "euc-kr", "shift_jis", "latin-1"):
-        try:
-            return raw.decode(enc)
-        except (UnicodeDecodeError, LookupError):
-            continue
-    return None
+    # 정본=nas_subtitle.decode_subtitle_bytes (깨진 바이트 한둘 때문에 latin-1 로
+    # 떨어져 파일 전체가 모지바케가 되던 것을 관용 해독으로 구제).
+    return nas_subtitle.decode_subtitle_bytes(raw)
 
 
 def _smi_lang_entries(spath: str):

@@ -305,6 +305,26 @@ def _red_is_live_path(abs_path: str) -> bool:
     return False
 
 
+def _keeper_pause(task_key: str):
+    """backend/*.py 쓰기 직전 keeper 일시정지 — **표식을 사람이 아니라 기계가 소유한다**.
+
+    ★왜(2026-08-17): 종전 규약은 "작업 전 touch, 작업 후 rm" 이었는데, backend 를
+    고치는 주체가 그 backend 안에서 산다(자기수리) — 편집이 부른 리로드가 자기 턴을
+    끊어 rm 이 실행되지 못한다. 그래서 규약을 지키려던 수리가 표식만 남기고 멎었다.
+    이제 세우는 건 여기가, 회수는 리로드 뒤에도 살아 있는 유일한 손인 워치독이,
+    그마저 죽으면 keeper 의 만료(PAUSE_TTL)가 한다 — 사람이 기억할 단계가 없다.
+    파일 내용의 'auto' 표시는 소유자 구분용(사람이 손으로 세운 빈 표식은 건드리지 않는다).
+    """
+    if _REPO_ROOT is None:
+        return
+    try:
+        flag = os.path.join(str(_REPO_ROOT), "data", "backend_keeper_off")
+        with open(flag, "w", encoding="utf-8") as f:   # 매 쓰기마다 갱신 = 심장박동
+            f.write(f"auto {task_key} {int(time.time())}\n")
+    except Exception as e:
+        print(f"[RED 안전판] keeper 일시정지 표식 실패(계속 진행): {e}")
+
+
 def _red_backup_dir(grant: dict) -> str:
     key = re.sub(r"[^A-Za-z0-9_-]", "_", (grant.get("task_id") or "notask"))[:48] or "notask"
     bdir = os.path.join(str(_REPO_ROOT), "data", "system_ai_state", "red_backups", key)
@@ -356,6 +376,10 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
         # 매니페스트 mtime 갱신 = 워치독 조용 타이머 리셋(연쇄 편집을 한 검사로 묶음)
     except Exception as e:
         return f"Error: RED 백업 실패로 쓰기를 중단합니다(안전판 없이는 안 쓴다): {e}"
+    # 쓰기가 확정된 시점에만 keeper 를 재운다 — backend/*.py 만 리로드를 부른다.
+    backend_root = str(_REPO_ROOT / "backend")
+    if abs_path.endswith(".py") and abs_path.startswith(backend_root + os.sep):
+        _keeper_pause(grant.get("task_id") or "notask")
     return None
 
 

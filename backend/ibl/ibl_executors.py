@@ -729,6 +729,12 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
 # (notify_user·channel_send·delegate·publish)는 파이프에 한 번도 들어오지 못했다
 # (미조합 액션 68/150 의 다수가 이 부류). 설계 정본: docs/HIGHER_ORDER_SENTENCE_DESIGN.md
 _EACH_DEFAULT_LIMIT = 20
+
+# 스칼라 행(문자열·숫자)을 dict 로 감쌀 때 쓰는 필드 이름.
+# ★출력 감싸기와 $it 치환이 *같은* 이름을 봐야 한다 — 두 자리가 어긋나면
+#   결과 행이 `{"value": "가", "_error": "행에 없는 필드: value"}` 처럼
+#   필드를 보여주면서 없다고 말하는 자기모순이 난다(2026-08-17 실측 버그).
+_EACH_SCALAR_FIELD = "value"
 _EACH_MAX_SUBSTEPS = 200
 
 
@@ -765,6 +771,10 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
                 missing.append(field)
                 return m.group(0)
             return _each_escape(row.get(field))
+        # 스칼라 행: 호출자가 출력에서 {_EACH_SCALAR_FIELD: row} 로 감싸므로
+        # `$it.value` 도 그 값 자체로 푼다(`$it` 와 같은 뜻). 그 밖의 필드는 정직하게 없음.
+        if field == _EACH_SCALAR_FIELD:
+            return _each_escape(row)
         missing.append(field)
         return m.group(0)
 
@@ -866,7 +876,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     halted: Optional[str] = None
 
     for idx, row in enumerate(target):
-        base = dict(row) if isinstance(row, dict) else {"value": row}
+        base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
 
         sentence, missing = _each_substitute(do, row, var)
         if missing:

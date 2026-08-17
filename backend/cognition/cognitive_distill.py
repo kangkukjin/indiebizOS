@@ -508,7 +508,8 @@ AI 답변: {ai_response[:1400]}
     def _after_response(self, user_message: str, response: str, *,
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
-                        write_forage: bool = True, assume_forage: bool = False):
+                        write_forage: bool = True, assume_forage: bool = False,
+                        guides_used=None):
         """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
 
         WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
@@ -543,6 +544,23 @@ AI 답변: {ai_response[:1400]}
                 self._distill_forage_memory(user_message, response, assume_forage=assume_forage)
             except Exception as e:
                 log(f"[포식기억] 오류 (무시): {e}")
+        # 4) 가이드 되먹임 — 쓴 놈이 고친다. 가이드는 7종 기억 중 유일하게 *쓰는 쪽*이
+        #    없던 기억이라(해마=실행에서·심층=대화에서·포식=포식에서 증류되는데 가이드만
+        #    사람이 손으로 쓰고 방치), 그 공백이 2026-08-17 에 81KB 수동 정리로 청구됐다.
+        #    가장 좋은 감사자는 방금 그 가이드를 쓴 에이전트다 — 순찰은 추측하지만 이쪽은 안다.
+        #    관찰=자동 덧붙임 / 사실오류=기계 검증 후 수정 / 방침변경=제안 큐. 상세: guide_feedback.
+        if guides_used is None:
+            try:
+                from guide_registry import take_injected
+                guides_used = take_injected()
+            except Exception:
+                guides_used = []
+        if guides_used:
+            try:
+                from guide_feedback import review_used_guides
+                review_used_guides(guides_used, user_message, response, tool_calls=tool_calls)
+            except Exception as e:
+                log(f"[가이드되먹임] 오류 (무시): {e}")
 
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None):
@@ -573,6 +591,11 @@ AI 답변: {ai_response[:1400]}
         agent_name = get_current_agent_name()
         _ge = get_goal_eval_outcome()
         clear_goal_eval_outcome()  # 소비는 메인 컨텍스트에서 — 다음 메시지로 안 새게(기존 계약 유지)
+        try:
+            from guide_registry import take_injected
+            guides_used = take_injected()   # ★메인에서 스냅샷 — threading.local 은 스레드로 안 간다
+        except Exception:
+            guides_used = []
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()
 
@@ -589,6 +612,7 @@ AI 답변: {ai_response[:1400]}
                 ctx.run(
                     self._after_response, user_message, response,
                     tool_calls=tool_calls, hippo_score=hippo_score, top_code=top_code,
+                    guides_used=guides_used,   # 메인에서 뜬 스냅샷을 값으로 전달
                 )
             except Exception as e:
                 print(f"[증류] 백그라운드 오류 (무시): {e}")

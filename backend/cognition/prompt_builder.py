@@ -137,6 +137,29 @@ class PromptBuilder:
             return content
         return ""
 
+    def _guide_block(self, guide_filename: str, origin: str = "agent") -> str:
+        """주입할 가이드 블록 = 제목 + **신선도 표식** + 본문. 없으면 빈 문자열.
+
+        가이드는 절차 기억이라 낡는다. 나이만으로는 못 정하므로(오래됐어도 그 뒤
+        무수정으로 여러 번 쓰였으면 오히려 검증된 것) 최종수정일과 *그 이후의
+        무수정 사용*을 함께 붙여 읽는 쪽이 감안하게 한다. 상세: guide_registry.
+
+        표식은 실패해도 본문 주입을 막지 않는다(신선도는 부가 정보지 전제가 아니다).
+        """
+        content = self._load_guide_file(guide_filename)
+        if not content:
+            return ""
+        note = ""
+        try:
+            from guide_registry import freshness_note, record_use, mark_injected
+            note = freshness_note(guide_filename)
+            record_use(guide_filename, origin)
+            mark_injected(guide_filename)   # 턴 종료 후 증류 4단계가 회수해 되돌려 쓴다
+        except Exception as e:
+            logger.debug(f"[prompt_builder] 가이드 신선도 생략 (무시): {e}")
+        head = f"# 가이드: {guide_filename}"
+        return f"{head}\n{note}\n{content}" if note else f"{head}\n{content}"
+
     def _load_world_pulse(self) -> str:
         """World Pulse 로드 — 오늘의 세계 상태 요약
 
@@ -367,9 +390,9 @@ class PromptBuilder:
             # 의식 에이전트가 지정한 가이드 파일 로드 & 주입
             guide_files = consciousness_output.get("guide_files", [])
             for guide in guide_files:
-                content = self._load_guide_file(guide)
-                if content:
-                    parts.append(f"# 가이드: {guide}\n{content}")
+                block = self._guide_block(guide)
+                if block:
+                    parts.append(block)
 
         # 4.5 자원 목록 (가이드 제목 배경 지식)
         resource_list = self._build_resource_list()
@@ -582,9 +605,9 @@ def _build_dynamic_context(
 
         guide_files = consciousness_output.get("guide_files", [])
         for guide in guide_files:
-            content = builder._load_guide_file(guide)
-            if content:
-                parts.append(f"# 가이드: {guide}\n{content}")
+            block = builder._guide_block(guide)
+            if block:
+                parts.append(block)
     else:
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")

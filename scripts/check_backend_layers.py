@@ -48,7 +48,8 @@ LAYERS = {
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "face_config", "file_index", "focus_map",
-        "forage_memory", "health_sync", "ibl_registry", "ibl_usage_db", "install_approvals",
+        "forage_memory", "guide_registry", "health_sync", "ibl_registry", "ibl_usage_db",
+        "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_grant",
         "red_report", "red_watchdog", "service_status", "switch_manager", "system_ai_memory",
@@ -72,7 +73,7 @@ LAYERS = {
         "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",
-        "consciousness_agent", "forage_consolidation", "goal_evaluator",
+        "consciousness_agent", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "ibl_usage_generator", "ibl_usage_rag",
         "memory_consolidation", "prompt_builder", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",

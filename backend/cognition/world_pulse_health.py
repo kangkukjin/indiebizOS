@@ -425,6 +425,29 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 결정화 감지 실패 (무시): {e}")
 
+    # 6.5) 가이드 의미 순찰 (주간 카덴스) — 5번의 형제. desc 가 아니라 *가이드 산문*을 본다.
+    #      구조 가드(build --check 가이드 배선/부패)가 못 보는 것: 전제가 뒤집혔는가,
+    #      다른 가이드에 흡수됐는가. 2026-08-17 정리에서 가장 해로웠던 business.md 부류
+    #      ("이 도메인엔 액션이 없다"고 가르치는데 어휘가 실재)는 죽은-참조 스캔으로 못 잡는다.
+    #      전수는 비싸므로 신선도 낮은 순(오래됐고 무수정 사용 0)으로 회차당 몇 개만.
+    try:
+        from guide_audit import run_guide_drift_check
+        gd = run_guide_drift_check()
+        result["guide_drift"] = gd
+        if gd.get("flags"):
+            logger.warning(f"[Maintenance] 가이드 드리프트 {len(gd['flags'])}건 — guide_audit_flags.json")
+        # 판정 불가도 남긴다 — 깃발 0 이 '깨끗함'인지 '못 봤음'인지 구별할 수 없으면
+        # 이 점검은 조용할수록 안심되는 게 아니라 눈이 먼 것이다(5번과 같은 규율).
+        if gd.get("unchecked"):
+            logger.warning(f"[Maintenance] 가이드 감사 판정 불가 {len(gd['unchecked'])}개 — 이번 회차는 전수 아님")
+        if gd.get("node"):
+            try:
+                save_self_check(gd)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 가이드 순찰 실패 (무시): {e}")
+
     # 7) 좀비 건강기록 청소 — 은퇴·이동한 어휘의 self_checks/action_health 잔재 제거.
     #    저비용(SELECT DISTINCT + 드문 DELETE)이라 매일 호출해도 안전.
     try:

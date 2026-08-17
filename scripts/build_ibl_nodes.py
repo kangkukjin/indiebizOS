@@ -141,6 +141,8 @@ from iblbuild_validators import (  # noqa: E402,F401
     validate_phone_reachability,
     validate_fixture_coverage,
     validate_node_guides,
+    validate_guide_wiring,
+    guide_staleness_warnings,
     validate_enum_handler_branches,
     STANDARD_CORE_NODES,
     validate_standard_core,
@@ -443,6 +445,25 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 앱-템플릿 param 가드 통과 ✓ (모든 app 템플릿 키가 액션 허용키)")
 
+    # --- 가이드 배선 가드 (--check/--validate 전용) ---
+    # 가이드는 절차 기억이라 낡는다. 어휘 은퇴 절차엔 코퍼스 이관 의무는 있어도
+    # 가이드 정리 의무가 없어서 2026-08-17 에 81KB 를 손으로 걷어냈다 — 그 의무를 여기 둔다.
+    # 사실 관계(유령 등재·끊긴 코드 경로)만 하드 실패, 판단이 필요한 건 아래 경고로.
+    guidewire_failed = False
+    if check or validate_only:
+        gwissues = validate_guide_wiring(root)
+        if gwissues:
+            guidewire_failed = True
+            print(
+                f"[build_ibl_nodes] 가이드 배선 가드 실패: {len(gwissues)}건 "
+                f"(유령 등재는 침묵 주입 실패, 끊긴 경로는 잘못된 코드 지도)",
+                file=sys.stderr,
+            )
+            for issue in gwissues:
+                print(f"  \u2717 {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 가이드 배선 가드 통과 \u2713 (guide_db 실존 + 코드 경로 유효)")
+
     # --- 압축 경고 (--check/--validate 전용, ★비차단) ---
     # 개념중복 상설 감시(핸드오프 (5)): desc 면책 과다 + 같은 group op 닮음.
     # 경고만 출력하고 종료코드에 안 섞는다 — 병합 판단은 사람 몫.
@@ -455,12 +476,23 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] 압축 경고 없음 ✓ (desc 면책·op 닮음 신호 0)")
 
+    # --- 가이드 부패 경고 (--check/--validate 전용, ★비차단) ---
+    # 검출은 시스템, 결정은 사람 — 묘비로 남길지 지울지는 기계가 못 정한다(2026-08-17 실증).
+    if check or validate_only:
+        gwarns = guide_staleness_warnings(data, root) if data is not None else []
+        if gwarns:
+            print(f"[build_ibl_nodes] 가이드 부패 경고(비차단): {len(gwarns)}건")
+            for w in gwarns:
+                print(f"  \u26a0 {w}")
+        else:
+            print("[build_ibl_nodes] 가이드 부패 경고 없음 \u2713 (죽은 참조·고아 0)")
+
     if validate_only:
         return 1 if (validation_failed or corpus_failed or fixture_failed
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed or selfimg_failed
-                     or renderer_failed or appparam_failed) else 0
+                     or renderer_failed or appparam_failed or guidewire_failed) else 0
 
     # 폰 매니페스트 파생 (runs_on + 검증된 폰 패키지). data 파싱 성공 시에만.
     manifest_path = root / "data" / "phone_manifest.json"
@@ -696,7 +728,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed
                      and not appvocab_failed and not selfimg_failed
-                     and not renderer_failed and not appparam_failed) else 1
+                     and not renderer_failed and not appparam_failed
+                     and not guidewire_failed) else 1
 
     if validation_failed:
         print(

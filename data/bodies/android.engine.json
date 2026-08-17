@@ -38,6 +38,8 @@
     "cognition/consciousness_agent",
     "cognition/forage_consolidation",
     "cognition/goal_evaluator",
+    "cognition/guide_audit",
+    "cognition/guide_feedback",
     "cognition/history_checkpoint",
     "cognition/ibl_description_audit",
     "cognition/ibl_usage_generator",
@@ -70,6 +72,7 @@
     "datastore/file_index",
     "datastore/focus_map",
     "datastore/forage_memory",
+    "datastore/guide_registry",
     "datastore/health_sync",
     "datastore/ibl_registry",
     "datastore/ibl_usage_db",
@@ -243,8 +246,8 @@
     "test_step_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 237,
-    "engine": 205,
+    "total": 240,
+    "engine": 208,
     "blocklist": 32
   }
 }

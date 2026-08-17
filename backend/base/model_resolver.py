@@ -54,6 +54,9 @@ _DEFAULT_GEAR = {
         "consciousness": "의식", "execution": "실행", "system_ai": "실행",
         "reflex": "실행", "translate": "실행", "content_text": "실행",
         "android": "실행", "auto_response": "실행",
+        # 가이드 의미 순찰(주 6건)은 '전제가 뒤집혔는가' 판단이라 경량으로는 못 한다 —
+        # 실측: 최소 형태 질문에도 경량 모델이 []를 뱉었다(2026-08-17). 빈도가 낮아 실행 축이 감당된다.
+        "guide_audit": "실행",
     },
     "overrides": {},
     "consciousness_enabled": True,

@@ -308,3 +308,9 @@ python3 scripts/build_ibl_nodes.py && python3 scripts/build_ibl_nodes.py --check
 - **W-정련(11회차 판정 보정)**: book 의 message="조회했습니다" 스텁을 추출해 실데이터 유실 실측 → v3: items 외 비어있지 않은 dict/list 페이로드 동반 시 추출 안 함(구조 보존). devdocs 추출 유지.
 - **F16·F18 소품**: messages 오류문에 op:"inbox" 안내 / manage_events `aliases: event_id: [id]`(trigger 선례).
 - 판정 후보: **message 스텁 생산자 전수 감사**(book 부류 — "message=산문 정본" 계약 위반 순찰) 여부. 시드 후보 15건.
+
+### ★사이클 종결 (2026-08-17 — 판정 7건 집행 `5d0b48e` + 시드 51 일괄 + 재학습 채택 `ca3d414`)
+- **판정 집행**(사용자 위임 "장기 방향"): contest=desc 정직화(Kaggle 영문 명시·소스 추가 기각) / forage=3층 인지 기억 유지+desc "통화 밖" 명시 / 폰 battery=실수요 인준 대기 / hidden 실행 계약=의도 확정 / **앱 채널 identity=미배선 아님 실증**(시스템 프로젝트[앱모드]로 email 10건 실수신 — 8회차 관찰은 일반 프로젝트 프로브의 산물. 신원 규약: 시스템 프로젝트만 system_ai 부여=의도) / ask 결과=자연어 유지(구조 반출=사전 결합 뒷문) / **message 스텁=생산자 관례 판정**(픽스처 스윕 74액션·의심 13 분석 — 한줄 요약+items는 계약 위반 아님. write 싱크 v4로 종결: 추출=message가 문서 모양[다행 또는 200자+]+items 외 페이로드 없음. 오분류는 항상 JSON 보존 방향).
+- **시드 51건**: `scripts/seed_imagination_rounds_6_12.py` — 6~12회차 실행 검증 통과분, 해마 3,326 용례(벡터 누락 0)·ibl_distilled 949.
+- **재학습 채택**: 로컬 M4, 5,813쌍·epoch 4 최적(검증 0.878), 백업 `.bak.20260817_090211`. compare 보류 권고를 뒤집은 근거 2: ①회귀 프로브(self:read PDF 표)=desc-공간 인공물 — 코퍼스 인출은 1.000 완벽 ②조합 문장 인출 우세(공연+전시→병렬 union 문장 직행, 이번 사이클의 목적 축). 재색인 3,310·hippo 재수출·keeper_off 재기동·워밍업 완료. 라이브 일반화 실증: "공기청정기 20만원 이하 5개"→filter 4단 변주 / "매주 금요일 저녁 7시"→cron `0 19 * * 5`.
+- **다음 모드**: 실사용 증류 관찰(수 주) → `vocab_composition_metrics.py` 행동 지표 재측정 → 분기별 재점검 회차.

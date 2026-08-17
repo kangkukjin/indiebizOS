@@ -5,39 +5,40 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:5588
+- dataset_size:5813
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 이더리움 코인 가격
+- source_sentence: 도서 카테고리 코드
   sentences:
-  - '[sense:search]'
-  - 메신저 — 대화 목록(inbox) 또는 한 이웃과의 메시지 스레드(thread). 채널 통합(Gmail/Nostr) — business.db와
-    Nostr DM 캐시를 병합한 대화의 정본 뷰(원시 채널 조회는 channel_read). inbox items(unread·favorite
-    필드) — table:filter 로 미독·즐겨찾기만 선별.
-  - '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
-- source_sentence: 바탕화면에서 신청서 PDF를 찾아 정보를 채워줘
-  sentences:
-  - '[others:delegate]'
   - '[self:script]'
-  - '[self:file_find] >> [self:fill]}'
-- source_sentence: 이 음성 받아쓰고 메모에 저장해
+  - '[sense:book]'
+  - '[limbs:open_window]'
+- source_sentence: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document
+    파이프로 추리고 문서화.
   sentences:
-  - '[sense:performance]'
-  - 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드
-    지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
-  - 이 몸의 마이크로 음성 입력 (지표어·op 분기 — 폰=SpeechRecognizer/MediaRecorder, 데스크탑=ffmpeg 마이크+Gemini
-    STT). 마이크 없는 몸이면 작동불능(정직 거절). 상시 청취 아닌 호출 시 1회.
-- source_sentence: 수집한 데이터에서 AI 검색해
+  - '[self:webapp] >> [table:each]", limit: 30}'
+  - '[sense:performance] & [sense:exhibit] >> [table:union] >> [table:dedup] >> [table:take]'
+  - '[sense:cctv] >> [self:output] & [sense:search_youtube] & [sense:search_ddg]'
+- source_sentence: 강릉 단기임대 원룸
   sentences:
-  - '[self:cctv]'
-  - '[sense:collect]'
-  - '[self:health]'
-- source_sentence: K-Startup 공고 좀
+  - '[limbs:cctv]'
+  - '[sense:stay]'
+  - 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
+- source_sentence: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어
+    질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은
+    각 도메인 검색 액션.
   sentences:
-  - '[sense:feed]'
-  - '[self:schedule]"}'
-  - '[sense:startup]'
+  - '[sense:search] >> [table:filter]'
+  - '[self:blog]'
+  - '[limbs:screen]'
+- source_sentence: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
+  sentences:
+  - '[limbs:android]'
+  - '[self:time]'
+  - Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt
+    지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은
+    read_guide(query="Gemini 이미지").
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -91,9 +92,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    'K-Startup 공고 좀',
-    '[sense:startup]',
-    '[self:schedule]"}',
+    '현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.',
+    '[self:time]',
+    '[limbs:android]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -102,9 +103,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.9189, -0.0679],
-#         [ 0.9189,  1.0000, -0.0661],
-#         [-0.0679, -0.0661,  1.0000]])
+# tensor([[1.0000, 0.8765, 0.0938],
+#         [0.8765, 1.0000, 0.1322],
+#         [0.0938, 0.1322, 1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -148,20 +149,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 5,588 training samples
+* Size: 5,813 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.44 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 24.33 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 16.81 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 8 tokens</li><li>mean: 26.26 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                                       | sentence_1                                                                                                                                   |
-  |:-------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>{lecture_id}를 {format} 형식의 문서로 내보내줘</code> | <code>강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.</code>                                                                           |
-  | <code>이 메뉴 위에 마우스 올려봐</code>                     | <code>[limbs:browser]</code>                                                                                                                 |
-  | <code>폰 카카오톡에 메시지 써서 전송해줘</code>                 | <code>안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.</code> |
+  | sentence_0                                                        | sentence_1                                                 |
+  |:------------------------------------------------------------------|:-----------------------------------------------------------|
+  | <code>작업 README 문서의 특정 섹션을 영문 및 국문 버전 모두 동일한 구조와 내용으로 업데이트</code> | <code>[self:edit] & [self:edit]</code>                     |
+  | <code>컴퓨터 비전 공모전 마감 임박한 거</code>                                  | <code>[sense:contest]</code>                               |
+  | <code>뉴스랑 블로그 합쳐 한 목록으로</code>                                    | <code>[sense:search] & [self:blog] >> [table:merge]</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -291,11 +292,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.7153 | 500  | 0.0134        |
+| 0.6878 | 500  | 0.0260        |
 
 
 ### Training Time
-- **Training**: 3.7 minutes
+- **Training**: 3.9 minutes
 
 ### Framework Versions
 - Python: 3.13.5

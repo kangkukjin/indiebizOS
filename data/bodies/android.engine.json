@@ -243,11 +243,12 @@
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
-    "test_step_ledger": "force_exclude_glob"
+    "test_step_ledger": "force_exclude_glob",
+    "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 240,
+    "total": 241,
     "engine": 208,
-    "blocklist": 32
+    "blocklist": 33
   }
 }

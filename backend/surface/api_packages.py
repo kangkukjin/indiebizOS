@@ -273,11 +273,13 @@ async def install_package(package_id: str, request: AIInstallRequest = None):
                 result = package_manager.install_package(package_id)
             else:
                 api_key = config.get("apiKey", "")
-                if not api_key:
+                provider = config.get("provider", "google")
+                # ★키 불요 프로바이더(claude_code·ollama)는 키가 없어도 AI 설치가 가능하다.
+                from model_resolver import provider_needs_api_key
+                if not api_key and provider_needs_api_key(provider):
                     # API 키 없으면 단순 설치
                     result = package_manager.install_package(package_id)
                 else:
-                    provider = config.get("provider", "google")
                     model = config.get("model")
                     result = await package_manager.install_package_with_ai(
                         package_id, api_key, provider, model
@@ -329,11 +331,13 @@ async def analyze_folder_with_ai(request: AnalyzeFolderWithAIRequest):
             raise HTTPException(status_code=400, detail="시스템 AI가 비활성화되어 있습니다.")
 
         api_key = config.get("apiKey", "")
-        if not api_key:
-            raise HTTPException(status_code=400, detail="AI API 키가 설정되지 않았습니다.")
-
         provider = config.get("provider", "anthropic")
         model = config.get("model")
+
+        # ★provider 를 보고 판정 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다(model_resolver).
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider):
+            raise HTTPException(status_code=400, detail=f"AI API 키가 설정되지 않았습니다. ({provider})")
 
         result = await package_manager.analyze_folder_with_ai(
             request.folder_path,

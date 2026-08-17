@@ -269,8 +269,10 @@ Output: Return only valid JSON in the specified format."""
         model = self.config.get('model', 'gemini-2.0-flash')
         role = system_role or self.NODE_DISTRIBUTOR_PROMPT
 
-        if not api_key:
-            print("⚠️ 시스템 AI: API 키가 설정되지 않았습니다.")
+        # ★provider 를 보고 판정 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다(model_resolver).
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider):
+            print(f"⚠️ 시스템 AI: API 키가 설정되지 않았습니다. ({provider})")
             return ""
 
         try:

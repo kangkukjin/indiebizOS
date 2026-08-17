@@ -534,11 +534,14 @@ def _get_lightweight_provider():
             config = _json.load(f)
 
         api_key = config.get("apiKey", "").strip()
-        if not api_key:
-            return None
-
         provider_name = config.get("provider", "google").strip()
         model_name = config.get("model", "gemini-2.5-flash-lite").strip()
+
+        # ★provider 를 보고 판정 — 기어 프리셋이 이 축에 claude_code/ollama 를 올리면
+        #   키가 없는 게 정상이다. 여기서 키를 요구하면 경량 축이 조용히 죽는다.
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider_name):
+            return None
 
         from providers import get_provider
         _lightweight_provider = get_provider(
@@ -609,8 +612,8 @@ def _get_midtier_provider_legacy():
         # API 키 없으면 시스템 AI 키 사용. 단 claude_code/ollama는 자체 인증 경로(OAuth/로컬)가
         # 있으므로 api_key 요구를 건너뛴다.
         api_key = config.get("apiKey", "").strip()
-        providers_without_api_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-        if not api_key and provider_name.lower() not in providers_without_api_key:
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider_name):
             from model_resolver import SYSTEM_AI_CONFIG_PATH
             if SYSTEM_AI_CONFIG_PATH.exists():
                 with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
@@ -783,9 +786,9 @@ def _get_system_oneshot_provider():
         provider_name = config.get("provider", "google").strip()
         model_name = config.get("model", "").strip()
         api_key = config.get("apiKey", "").strip()
-        # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 api_key 불요
-        providers_without_api_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-        if not api_key and provider_name.lower() not in providers_without_api_key:
+        # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 api_key 불요 (판정 정본=model_resolver)
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider_name):
             return None
 
         from providers import get_provider

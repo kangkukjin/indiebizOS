@@ -145,7 +145,9 @@ def run_benchmark_for_agent(
     """한 에이전트의 naked vs full 벤치마크 실행"""
 
     config = load_config(agent_def["config_name"])
-    if not config.get("apiKey"):
+    # ★provider 를 보고 판정 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다(model_resolver).
+    from model_resolver import provider_needs_api_key
+    if not config.get("apiKey") and provider_needs_api_key(config.get("provider")):
         return {"error": f"API 키 없음 ({agent_def['config_name']})"}
 
     full_prompt = agent_def["system_prompt"]

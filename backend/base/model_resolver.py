@@ -39,6 +39,19 @@ logger = logging.getLogger(__name__)
 # claude_code/ollama는 자체 인증(OAuth/로컬)이라 api_key 불요.
 _NO_KEY_PROVIDERS = {"claude_code", "claude-code", "claudecode", "ollama"}
 
+
+def provider_needs_api_key(provider) -> bool:
+    """이 프로바이더가 api_key 를 필요로 하는가.
+
+    ★"키가 있나"로 "쓸 수 있나"를 판정하는 자리는 **전부 이 함수를 지날 것**.
+    claude_code(중앙 OAuth)·ollama(로컬)는 키가 원래 없고, 그 자리에서 키를 요구하면
+    멀쩡한 경로가 "API 키가 설정되지 않았습니다"라며 죽는다 — 2026-08-17 실사고:
+    시스템 AI 채팅 3 진입점이 provider 를 안 보고 apiKey 만 봐서, 기어가 claude_code 인데도
+    인사 한 마디에 2ms 만에 거절했다(엉뚱한 비-Anthropic 키가 그 칸에 들어 있던 동안만
+    우연히 가려져 있었다).
+    """
+    return str(provider or "").strip().lower() not in _NO_KEY_PROVIDERS
+
 # 파일 부재/손상 시 폴백 (data/model_gear.json 과 동일 구조).
 _DEFAULT_GEAR = {
     "current_gear": "균형",

@@ -223,11 +223,14 @@ def chat_with_system_ai(chat: ChatMessage):
         raise HTTPException(status_code=400, detail="시스템 AI가 비활성화되어 있습니다.")
 
     api_key = config.get("apiKey", "")
-    if not api_key:
-        raise HTTPException(status_code=400, detail="API 키가 설정되지 않았습니다. 설정에서 API 키를 입력해주세요.")
-
     provider = config.get("provider", "anthropic")
     model = config.get("model", "claude-sonnet-4-20250514")
+
+    # ★provider 를 보고 판정 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다(model_resolver).
+    from model_resolver import provider_needs_api_key
+    if not api_key and provider_needs_api_key(provider):
+        raise HTTPException(status_code=400,
+                            detail=f"API 키가 설정되지 않았습니다({provider}). 설정에서 API 키를 입력해주세요.")
 
     # 시스템 문서 초기화 (서버 시작 후 최초 1회만)
     if not _docs_initialized:
@@ -894,8 +897,10 @@ def forage_chat(chat: ForageMessage):
     config = load_system_ai_config()
     if not config.get("enabled", True):
         raise HTTPException(status_code=400, detail="시스템 AI가 비활성화되어 있습니다.")
-    if not config.get("apiKey", ""):
-        raise HTTPException(status_code=400, detail="API 키가 설정되지 않았습니다.")
+    from model_resolver import provider_needs_api_key
+    _provider = config.get("provider", "anthropic")
+    if not config.get("apiKey", "") and provider_needs_api_key(_provider):
+        raise HTTPException(status_code=400, detail=f"API 키가 설정되지 않았습니다. ({_provider})")
 
     extra_role = FORAGE_ROLE_PATH.read_text(encoding='utf-8') if FORAGE_ROLE_PATH.exists() else ""
     # ★포식 가이드 항상 주입(포식=늘 웹검색) — 검색법(키워드·소스·언어·지어내지마라) + 포식 문법

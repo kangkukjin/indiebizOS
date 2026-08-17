@@ -921,8 +921,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         provider = config.get("provider", "anthropic")
         model = config.get("model", "claude-sonnet-4-20250514")
 
-        if not api_key:
-            await _bail_stream(client_id, "API 키가 설정되지 않았습니다.")
+        # ★provider 를 보고 판정한다 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다.
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider):
+            await _bail_stream(client_id, f"API 키가 설정되지 않았습니다. ({provider})")
             return
 
         # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)

@@ -62,9 +62,10 @@
 ### 4) 원문 다운로드 후 분석 (파이프라인)
 ```
 [sense:classic]{op: "western", query: "moby dick"}
-# 결과의 text_url을 받아서:
-[sense:web_get]{url: "<text_url>"} >> [self:write]{path: "/tmp/moby.txt", content: "<원문>"}
+# 결과의 text_url 을 받아서 — 원문 받기는 [sense:crawl] (옛 [sense:web_get] 은 은퇴):
+[sense:crawl]{url: "<text_url>"} >> [self:write]{path: "/tmp/moby.txt"}
 ```
+★`[self:write]` 는 파이프 싱크로 쓸 때 `content` 를 적지 않습니다 — 앞 단계의 통화가 그대로 흘러듭니다.
 긴 원문은 한 번에 컨텍스트에 넣지 말고 파일로 저장 후 필요한 부분만 `[self:read]`.
 
 ## 활용 팁

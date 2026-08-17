@@ -87,8 +87,13 @@
 ### 분석으로 연결
 ```
 [sense:startup]{query:"AI", count:50}
-  >> [engines:summarize]{focus:"마감 임박 + 지원 규모 큰 순"}
+  >> [table:filter]{...} >> [table:sort]{by:"deadline"} >> [table:take]{n:10}
 ```
+
+★**요약·판단은 IBL 액션이 아닙니다.** 옛 판은 여기서 `[engines:summarize]` 를 불렀지만 그런 액션은 없습니다 —
+IBL 은 *몸의 언어*라 검색·저장 같은 **행위**만 있고, 분석·비교·종합은 **사고**입니다. 파이프로는 기계적으로
+추리기만 하고(위 `table` 변환자들), "마감 임박 + 지원 규모 큰 순"처럼 의미를 저울질하는 일은 **당신이 결과를
+읽고 직접** 하십시오. 정렬 기준이 단일 필드로 떨어지면 `[table:sort]`, 그렇지 않으면 사고의 몫입니다.
 
 ---
 
@@ -103,5 +108,5 @@
 ## 관련
 
 - `data/packages/installed/tools/startup/` — 패키지
-- 단계별 가이드: `business.md`, `local_info.md` (지역 창업지원)
+- 단계별 가이드: `business.md` (지역 정보는 `[sense:search]{source:"naver", type:"cafe"}` — 옛 local_info 가이드·패키지는 2026-08-15 은퇴)
 - 정기 알림: `self:trigger` schedule 타입

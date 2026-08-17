@@ -111,7 +111,7 @@ config:{repeat:"once", date:"2026-06-15", time:"14:00"}
 [self:trigger]{op:"create", trigger_id:"morning_routine",
   type:"schedule",
   config:{repeat:"daily", time:"07:30"},
-  pipeline:'[engines:run_switch]{switch_id:"daily_briefing"}'
+  do:'[self:switch]{op:"run", switch_id:"daily_briefing"}'
 }
 ```
 

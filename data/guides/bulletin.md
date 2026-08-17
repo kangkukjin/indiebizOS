@@ -19,7 +19,7 @@
 ## 저장·서빙 (이음매)
 
 - 게시판 메타 = `data/bulletin/state.json`, 글 = 게시판별 `data/bulletin/<board_id>/posts.json` (즉석 append, flock). 인덱싱·manifest 없음 — 맥이 요청 시 서빙.
-- 공개 서빙·익명 글쓰기 = `backend/api_bulletin.py` (`/bulletin/page·media·post`). `X-Showcase-Secret`(공개파일과 공유 시크릿) 게이트.
+- 공개 서빙·익명 글쓰기 = `backend/surface/api_bulletin.py` (`/bulletin/page·media·post`). `X-Showcase-Secret`(공개파일과 공유 시크릿) 게이트.
 - 공개 Worker(`public-files/site/worker.js`)가 `/b/<slug>/…` 를 맥으로 프록시(동적, no-cache). 형제 `/s/`·`/n/`·`/h/` 와 같은 Worker·R2.
 
 ## 방어 (익명 공개 쓰기)

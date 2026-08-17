@@ -63,7 +63,7 @@
 | `radius` | 검색 반경(m) | 3000 |
 | `limit` | 최대 매물 수 | 30 |
 
-### 반환 (records 통화)
+### 반환 (items 통화)
 각 매물: `{title, meta, summary, url, image}`
 - `meta` = `전세 1억 5,000만 · 78㎡ · 2/4층 · 쓰리룸 · 평택시 동삭동 664-19 · 중심에서 2380m`
 - `url` = `https://www.zigbang.com/home/villa/items/49460021` (클릭 시 직방 매물 페이지)

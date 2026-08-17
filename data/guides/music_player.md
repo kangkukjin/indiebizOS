@@ -120,4 +120,4 @@ path/stream(재생 URL)/image(앨범아트) → `>> [table:filter/sort/groupby]`
 - playlist_add/remove 의 path 는 library/track 결과의 path 를 그대로 쓸 것 (NFC 정규화 매칭).
 - `music_core.py` 는 패키지 서브모듈이라 `/packages/reload` 로 안 바뀐다 — backend 파일 touch 로
   워커를 리로드해야 반영된다(sys.modules 캐시).
-- 저장: data/music/ (sources.json·library.db·playlists.json). 서빙: backend/api_music.py.
+- 저장: data/music/ (sources.json·library.db·playlists.json). 서빙: backend/surface/api_music.py.

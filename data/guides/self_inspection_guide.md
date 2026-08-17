@@ -291,7 +291,7 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 [발견] `[sense:paper]{op:"search", source:"pubmed", q:X} & [sense:search]{q:X}` 조합이
        의료 에이전트 최근 7일 12회 반복
 [해석] 의학 정보 다각도 검색을 매번 모델이 재구성. 토큰·시간 비용 누적.
-[제안] `[engines:medical_research]{query: ...}` 등록.
+[제안] `[engines:medical_research]{query: ...}` 등록.   ← ★가상의 이름(제안 대상이지 실재 어휘 아님)
        내부 구현: PubMed + DDG 병렬 + 결과 정리
 [검증] 등록 후 1주 — 의료 에이전트의 직접 호출이 매크로 호출로 대체되는지
 [위험] 매크로가 너무 좁으면 어휘 비대. 본 패턴은 3개 이상 에이전트가
@@ -326,6 +326,13 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
        가이드는 사용 예시집으로 축소.
 ```
 
+> ★**이 예시는 실제로 일어났다** — 2026-07-23 에 신문 발행 레시피가 `[engines:newspaper]` 로 결정화됐습니다
+> (이름은 `newspaper_pipeline` 이 아니라 `newspaper`). 다만 뒷이야기가 교훈입니다: 그 액션은 2026-08-15 에
+> **스위치화**(`prompt_hidden`)됐습니다 — 오케스트레이션+조판은 낱말이 아니라 **문장**이고, 사전에 상주시킬
+> 값어치가 없었던 것입니다. 계기 버튼 전용으로 남았습니다. **결정화 제안을 낼 때는 "낱말이냐 문장이냐"를
+> 먼저 물으십시오**(§낱말 자격 판정: 가능성 공간에 새 차원을 더하는가, 아니면 기존 낱말의 호출 순서인가).
+> 절차라면 답은 새 액션이 아니라 `[self:script]` 등록입니다.
+
 ### D. 기존 어휘 개선 후보 (액션·가이드 수정)
 
 신규 추가만이 진화가 아니다. 이미 있는 어휘를 다듬는 것도 진화. **자주 쓰이지만 매끄럽지 않은** 어휘를 찾아 다듬을 기회를 제안하라.
@@ -356,12 +363,18 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 [위험] 외부에서 옛 명으로 호출하는 코드가 있으면 경고 발생 → 사용자가 정리
 ```
 
+> ★**이 예시도 실제 사건이었고, 결말은 제안보다 나았다** — `sense:apt_rent`·`sense:house_rent` 는
+> 파라미터 이름을 통일하는 대신 **액션 자체가 `[sense:realty]{op:"query", source}` 하나로 합쳐졌습니다.**
+> 교훈: "두 액션의 파라미터 이름이 어긋난다"는 신호는 종종 *이름 문제*가 아니라 **두 액션이 사실 하나여야
+> 한다는 신호**입니다. 호환층을 6개월 끄는 제안을 내기 전에, 합칠 수 있는지부터 보십시오
+> (호환층은 전환 도구일 때만 정당하고, 그 자체가 목적이 되면 부채입니다).
+
 **제안 형식 예시 (가이드 수정)**:
 ```
 [발견] `real_estate.md` 가이드 highlight 후에도 다가구 주택 영역에서 NOT_ACHIEVED 4회
 [해석] 가이드가 아파트(apt_*) 위주, 다가구 주인세대 같은 비-아파트 시나리오 미흡
 [제안] 가이드에 "다가구·단독주택 시세 조회" 섹션 추가.
-       핵심: apt_* 액션은 아파트 한정 → house_rent + search(웹 검색) 조합 사용.
+       핵심: 아파트 외 유형은 `[sense:realty]{source:"naver", type:"house"}` + search 조합.
        시·군별 행정구역 매핑 표 포함
 [검증] 1주일 — 다가구·단독 관련 질문의 ACHIEVED 비율 측정
 [위험] 가이드가 길어짐 → 의식 에이전트의 컨텍스트 부담 약간 ↑

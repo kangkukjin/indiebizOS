@@ -383,7 +383,7 @@
     - 수집
     - 지출
     guides:
-    - lecture_workspace.md
+    - slides.md
     - trigger.md
     - photo.md
     - music_player.md

@@ -104,7 +104,7 @@
 ### 5) 시각화로 연결
 ```
 [sense:realty]{region_code:"11680", start_month:"202504", end_month:"202604"}
-  >> [table:chart_line]{x:"month", y:"price"}
+  >> [table:chart]{chart_type:"line", x:"month", y:"price"}
 ```
 
 ---

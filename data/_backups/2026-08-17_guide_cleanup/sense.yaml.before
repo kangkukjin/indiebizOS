@@ -89,6 +89,7 @@
     - 최저가
     guides:
     - investment.md
+    - local_info.md
     - real_estate.md
     - web_search.md
     - realty.md

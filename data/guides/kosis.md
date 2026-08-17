@@ -95,7 +95,7 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 ### 3) 시각화로 연결
 ```
 [sense:kosis]{org_id:"101", tbl_id:"...", prd_se:"M", start_prd_de:"202101"}
-  >> [table:chart_line]{x:"period", y:"value"}
+  >> [table:chart]{chart_type:"line", x:"period", y:"value"}
 ```
 
 ### 4) 정책/창업 분석용 추세
@@ -138,5 +138,5 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 ## 관련
 
 - `data/packages/installed/tools/kosis/` — 패키지
-- 차트화: `table:chart_line`, `table:chart_bar`
+- 차트화: `[table:chart]{chart_type:"line"|"bar"|"pie"|"scatter"|"heatmap"|"candlestick"|"multi"}` (기본 line — 옛 `chart_line`·`chart_bar` 는 이 하나로 통합)
 - 정기 모니터링: `self:trigger` schedule 타입

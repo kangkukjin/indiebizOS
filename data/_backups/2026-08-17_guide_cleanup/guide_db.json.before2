@@ -247,6 +247,21 @@
       "file": "real_estate.md"
     },
     {
+      "id": "house_designer",
+      "name": "건축 설계 가이드",
+      "description": "2D/3D 건축 설계 도구. 평면도, 입면도, 3D 모델링.",
+      "keywords": [
+        "건축",
+        "설계",
+        "평면도",
+        "3D",
+        "모델링",
+        "도면",
+        "건물"
+      ],
+      "file": "house_designer.md"
+    },
+    {
       "id": "cctv",
       "name": "CCTV 영상 가이드",
       "description": "한국 교통 CCTV 등 실시간 영상 조회.",
@@ -258,6 +273,22 @@
         "카메라"
       ],
       "file": "cctv.md"
+    },
+    {
+      "id": "agent_publishing",
+      "name": "에이전트 웹 퍼블리싱 가이드",
+      "description": "IndieBiz OS 에이전트를 Cloudflare Workers 기반 웹앱으로 배포하는 절차. Worker 생성, 시크릿 설정, 프론트엔드 HTML, 배포 및 업데이트.",
+      "keywords": [
+        "퍼블리싱",
+        "배포",
+        "deploy",
+        "workers",
+        "웹앱",
+        "cloudflare",
+        "publishing",
+        "에이전트배포"
+      ],
+      "file": "agent_publishing.md"
     },
     {
       "id": "calendar",
@@ -556,6 +587,55 @@
         "임베딩"
       ],
       "file": "action_removal.md"
+    },
+    {
+      "id": "book_publishing",
+      "name": "출판 프로젝트 관리 가이드",
+      "description": "책 쓰기, 원고 관리, 출판 프로젝트 운영 가이드. 폴더 구조, book_plan.md 작성법, 조각글 수집, 문체 참고, 진척 기록, 합본 출력.",
+      "keywords": [
+        "출판",
+        "책",
+        "원고",
+        "글쓰기",
+        "집필",
+        "publishing",
+        "book",
+        "manuscript",
+        "출판사",
+        "챕터",
+        "조각글",
+        "문체",
+        "원고관리",
+        "book_plan",
+        "draft"
+      ],
+      "file": "book_publishing.md"
+    },
+    {
+      "id": "book_typesetting",
+      "name": "책 조판 가이드 (typst 한국어 단행본)",
+      "description": "typst로 한국어 단행본 PDF를 조판하는 가이드. 표준 결정사항(미래상상/신국판/Pretendard), 표지·내지·책등·날개 디자인, 미세조정 vs 출고 검증, PNG 검토 사이클, 인쇄용/디지털 분리, 자주 발견되는 결함 체크리스트. 원고 관리는 book_publishing.md 참조.",
+      "keywords": [
+        "조판",
+        "typst",
+        "단행본",
+        "PDF",
+        "표지",
+        "책등",
+        "내지",
+        "인쇄",
+        "출판",
+        "책",
+        "typesetting",
+        "book",
+        "cover",
+        "pretendard",
+        "신국판",
+        "미래상상",
+        "manuscript",
+        "convert"
+      ],
+      "file": "book_typesetting.md"
     },
     {
       "id": "self_inspection",

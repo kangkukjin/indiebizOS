@@ -72,7 +72,7 @@ def execute(tool_input: dict, context):
         return _my_action(tool_input, context)
     return {"success": False, "error": f"알 수 없는 도구: {name}"}
 ```
-> `context`는 `ToolContext`(backend/tool_context.py): `tool_name`, `project_path`(절대경로), `project_id`, `agent_id`, `task_id` + `output_dir()`, `resolve_path()`. 산출물은 `context.output_dir()` 아래에 쓴다.
+> `context`는 `ToolContext`(backend/ibl/tool_context.py): `tool_name`, `project_path`(절대경로), `project_id`, `agent_id`, `task_id` + `output_dir()`, `resolve_path()`. 산출물은 `context.output_dir()` 아래에 쓴다.
 
 ### 도구 정의 — `ibl_actions.yaml` 의 `tool_json:` 블록 템플릿
 ```yaml
@@ -180,6 +180,7 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
       my_action:
         returns: items
         fixture: '[sense:my_action]{query: "올바른 예시 입력"}'   # ← returns 옆에 한 줄
+        #  ※ my_action 은 자리표시자(실재 어휘 아님) — 네 액션 이름으로 바꿔 읽어라
         # 실행 인자가 꼭 필요해 고정 예시가 불가능하면 fixture 대신:
         # exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
 ```
@@ -192,7 +193,7 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
         ops:
           side_effect: {list: false, detail: false}
           fixture:
-            list: '[self:my_action]{op: "list"}'      # 읽기 op 만 (쓰기 op 은 빌드가 거부)
+            list: '[self:my_action]{op: "list"}'      # 읽기 op 만 (쓰기 op 은 빌드가 거부, my_action=자리표시자)
           exempt:
             detail: id 필요(list 결과의 id) — 고정 fixture 부적합
 ```

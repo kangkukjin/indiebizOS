@@ -1,8 +1,23 @@
-# 비즈니스 창 가이드
+# 비즈니스 도메인 가이드
 
-이 가이드는 AI 에이전트가 **비즈니스 창(BusinessManager)**의 데이터를 조회하고 편집하는 방법을 설명합니다. 비즈니스 창은 사용자의 이웃·비즈니스 영역·아이템·메시지를 통합 관리하는 indiebizOS의 핵심 도메인입니다.
+이 가이드는 AI 에이전트가 사용자의 **이웃·비즈니스 영역·아이템·메시지**를 조회하고 편집하는 방법을 설명합니다. indiebizOS의 핵심 도메인입니다.
 
-> **사용 원칙**: 비즈니스 도메인은 액션을 미리 정의하지 않고 **이 가이드 + DB 직접 접근 + REST API**로 처리합니다. 사용자마다 비즈니스 형태가 다르고 진화하기 때문입니다. 외부 통신(이메일 발신, Nostr DM)만 별도 액션(`[limbs:gmail_send]`, `[others:indienet_send]` 등)을 거칩니다.
+> **★사용 원칙 (2026-08-17 개정 — 이전 판은 정반대를 말하고 있었다)**: 이 도메인은 이제 **IBL 어휘가 정본**입니다.
+> 옛 판은 "비즈니스 도메인은 액션을 미리 정의하지 않고 DB 직접 접근 + REST 로 처리한다"고 적혀 있었지만,
+> 그건 어휘가 생기기 전(~2026-06-12)의 이야기입니다. **먼저 아래 어휘를 쓰고**, 그것으로 표현이 안 되는
+> 집계·복잡한 JOIN·일회성 정리에만 DB/REST 로 내려가십시오.
+>
+> | 무엇 | 어휘 |
+> |---|---|
+> | 사업·아이템·공개문서·근무지침 | **`[self:ledger]{store, op}`** — store=`business`/`item`/`document`/`guideline` |
+> | 이웃·연락처 | **`[others:neighbor]{op}`** — 연락처는 `contact_add`/`contact_update`/`contact_delete` op |
+> | 메시지 조회 | **`[others:messages]{op}`** |
+> | 외부 발신(이메일·Nostr) | **`[others:channel_send]{channel_type, to, subject, body}`** |
+>
+> 옛 이름 `[self:business]`·`[self:business_item]`·`[self:business_document]`·`[self:work_guideline]` 은
+> 2026-08-15 에 `[self:ledger]{store}` 하나로 통합됐고, `[others:contact]` 는 `[others:neighbor]` 의 op 로
+> 흡수됐습니다. `[limbs:gmail_send]`·`[others:indienet_send]` 는 존재한 적 없거나 은퇴한 이름입니다 —
+> 발신은 `[others:channel_send]` 하나입니다.
 
 ## 0. 아이템 = 공유창고 진열대 (2026-07-29)
 
@@ -16,15 +31,20 @@
 
 - 공개 범위 = **비즈니스의 레벨**(아이템별 레벨은 없습니다). 레벨을 바꾸면 진열 위치가 통째로 옮겨집니다.
 - 편집 창구는 **비즈니스 계기의 '아이템' 탭 하나뿐**입니다(제목·설명·사진). 사진 추가는 데스크탑 파일 선택에서만 됩니다.
-- 물질화·청소는 `backend/warehouse_items.py`, 카탈로그 디자인은 `backend/warehouse_catalog.py`.
+- 물질화·청소는 `backend/datastore/warehouse_items.py`, 카탈로그 디자인은 `backend/datastore/warehouse_catalog.py`.
   기계가 만든 파일만 사이드카(`.gen_items.json`)로 추적해 지우므로 사용자가 손으로 넣은 파일은 절대 건드리지 않습니다.
 
 ```
-[self:business_item]{op: "list"}                          # 전체 아이템(비즈니스 무관)
-[self:business_item]{op: "list", search: "책상"}           # 제목·설명 검색
-[self:business_item]{op: "save", business_id: 6, title: "원목 책상", details: "…"}
-[self:business_item]{op: "add_image", item_id: 9, path: "/…/photo.jpg"}
+[self:ledger]{store: "item"}                                          # 전체 아이템(비즈니스 무관, op:list 기본)
+[self:ledger]{store: "item", search: "책상"}                           # 제목·설명 검색
+[self:ledger]{store: "item", business_id: 6}                          # 한 비즈니스의 아이템만
+[self:ledger]{store: "item", op: "save", business_id: 6, title: "원목 책상", description: "…"}
+[self:ledger]{store: "item", op: "add_image", id: 9, path: "/…/photo.jpg"}
 ```
+
+★파라미터 함정 둘: 아이템 본문은 `details` 가 아니라 **`description`** 이고(DB 컬럼명 `details` 와 다름),
+`id` 는 **생성/수정을 가르는 스위치**입니다 — 새 아이템을 만들 때 `id` 를 넘기면 수정으로 오독됩니다.
+(`item_id`·`business_id` 는 `id` 의 별칭이지만, `store:"item"` 의 `business_id` 는 *소속* 지정이라 별개 파라미터입니다.)
 
 ---
 
@@ -219,12 +239,17 @@ POST /business/documents/regenerate
 
 ### 4.6 메시지 발신 (외부) — IBL 액션 경유
 
-비즈니스 DB는 **기록**만 담당합니다. 실제 발신은 별도 채널을 통해:
+비즈니스 DB는 **기록**만 담당합니다. 실제 발신은 채널 어휘 하나로 합니다:
 
 ```
-이메일 발신:  [limbs:gmail_send]  또는 Gmail API 직접 호출
-Nostr 발신:   [others:indienet_send]  (구현 예정) 또는 indienet 모듈 직접
+[others:channel_send]{channel_type: "email", to: "김이웃", subject: "주문 확인", body: "…"}
+[others:channel_send]{channel_type: "nostr", to: "김이웃", body: "…"}
 ```
+
+★**수신자는 이름으로 넘기십시오** — `to` 에 이웃 이름 또는 `"나"`(주인 본인)를 주면 시스템이 주소록에서
+주소를 해소합니다. raw 이메일/npub 을 직접 넣으면 주소록에 등록된 경우만 나가고, 미등록이면
+`needs_confirmation` 으로 막힙니다(임의 주소 발송 방지). 발신 계정은 호출 주체의 것으로 자동 설정되고,
+미설정이면 발신이 차단됩니다.
 
 발신 후 `POST /business/messages`로 기록을 남기는 것이 권장 패턴:
 
@@ -251,22 +276,24 @@ POST /business/messages {
     ↓
 1. 이 가이드 로드
     ↓
-2. 요청 유형 분류
-   ├ 조회: SELECT (DB 직접) 또는 GET (REST)
-   ├ 변경: INSERT/UPDATE (DB 직접) 또는 POST/PUT (REST)
-   ├ 발신: [limbs:gmail_send] / [others:indienet_send] + 기록
-   └ 분석: 조회 + [engines:summarize] 등 조합
+2. 요청 유형 분류 — ★먼저 IBL 어휘로 되는지 본다
+   ├ 조회: [self:ledger]{store, op:"list"|"detail"} / [others:neighbor] / [others:messages]
+   ├ 변경: [self:ledger]{op:"save"|"delete"|"add_image"} / [others:neighbor]{op:"save"|"contact_add"}
+   ├ 발신: [others:channel_send]{channel_type} + 기록(POST /business/messages)
+   └ 분석: 조회 >> [table:filter/sort/groupby] 로 추리고, **판단·요약은 당신이 한다**
+           (IBL 에는 사고 액션이 없습니다 — 요약 액션을 찾지 마십시오)
     ↓
-3. 결과 확인 (변경의 경우 SELECT으로 검증)
+3. 어휘로 표현이 안 될 때만 DB/REST 로 내려간다 (집계·복잡한 JOIN·일회성 정리)
     ↓
-4. 사용자에게 보고
+4. 결과 확인 후 사용자에게 보고
 ```
 
-### REST vs DB 직접 — 선택 기준
-- **REST 사용**: 트리거·검증·연쇄 작업이 있을 가능성 (자동 응답, 폴러, WebSocket 알림 등)
-- **DB 직접**: 단순 조회, 집계, 복잡한 JOIN, 일회성 데이터 정리
+### 어휘 → REST → DB 직접, 이 순서
+- **IBL 어휘 우선**: 위 표의 네 어휘로 되는 일은 전부 어휘로. 부작용 게이팅·기록·동기화가 딸려옵니다.
+- **REST**: 어휘에 없는 조작인데 트리거·검증·연쇄가 필요할 때 (자동 응답, 폴러, WebSocket 알림)
+- **DB 직접**: 집계, 복잡한 JOIN, 일회성 데이터 정리
 
-확실하지 않으면 REST를 우선.
+확실하지 않으면 위로 올라가십시오(어휘 → REST → DB).
 
 ---
 

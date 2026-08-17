@@ -82,7 +82,12 @@ USB 디버깅으로 연결된 안드로이드 폰을, **화면을 읽고 → 터
 
 아직 전용 IBL 액션은 없습니다. **`run_command` 도구로 adb 명령을 직접 실행**합니다.
 (`run_command`는 `execute_ibl`과 같은 레벨의 최상위 쉘 도구 — IBL 경유가 아니라 곧장 호출.)
-자주 쓰게 되면 `[limbs:android_message]{op}` 액션으로 승격 — 백업 `_archive/android_full_*/`에 옛 구현 보존.
+자주 쓰게 되면 `[limbs:android_message]{op}` 라는 이름으로 승격 후보 — **★아직 없는 이름입니다**(제안일 뿐이니
+호출하지 마십시오). 백업 `_archive/android_full_*/`에 옛 구현 보존.
+
+★승격 전에 물을 것: 이게 **낱말**인가 **문장**인가? 조회·정렬·집계의 *호출 순서*일 뿐이라면 답은 새 액션이
+아니라 **`[self:script]` 등록 스크립트**입니다(아래 레시피가 곧 그 후보). 새 감각 표면·프로토콜·원장을
+더할 때만 낱말 자격이 있습니다.
 
 ### 문자 정리 — 검증된 레시피 (2026-06-06 실측)
 
@@ -132,5 +137,5 @@ adb shell "am force-stop com.samsung.android.messaging"                         
 
 옛 SMS/통화/연락처/앱관리 등 45개 액션은 `data/packages/_archive/android_full_*/`에 백업되어 있습니다
 (`sms_manager.py`=문자 get/search/delete, `device_info.py`=appops 권한부여). 위 레시피를 자주 쓰게 되면
-이 백업을 바탕으로 `[limbs:android_message]{op}` 액션으로 부활시키되, **함정 3개 + cellbroadcasts**를 반영할 것.
-지금 등록된 건 "화면 조작" 센터피스 하나뿐입니다.
+이 백업을 바탕으로 `[limbs:android_message]{op}` 액션으로 부활시키되(**아직 없는 이름 — 부활 제안**),
+**함정 3개 + cellbroadcasts**를 반영할 것. 지금 등록된 건 "화면 조작" 센터피스 하나뿐입니다.

@@ -58,7 +58,7 @@
 ## 아키텍처 (3층 + 함정)
 
 - 운영자 어휘 = community-portal 패키지 handler.py / 상태·게이트 = **portal_core.py 단일 소스**
-  (`data/portal_state.json`, flock 직렬화) / 공개 서빙 = `backend/api_portal.py` / Worker `/h/`
+  (`data/portal_state.json`, flock 직렬화) / 공개 서빙 = `backend/surface/api_portal.py` / Worker `/h/`
   (public-files 와 공유, **무캐시 no-store** — 쿠키 개인화라 캐시 절대 금지).
 - ★portal_core.py 수정 = 백엔드 재시작 필요(api_portal 이 sys.modules 캐시). handler 만이면 /packages/reload.
 - 계기 페이지 = 원격 런처 셸 재사용(`window.__PORTAL` 주입, 포크 없음). 실행은 `/h/<슬러그>/tool/<계기>`.

@@ -21,7 +21,7 @@ tee 되어(공개파일 스트리밍 트랜스코드 선례) 두 번째 재생�
   (`/yt/relay/<video_id>?kind=audio|video`)을 무는 순간(재생 버튼) 시작된다.
 - 실측: 첫 바이트 ~2초(해소 포함), 4분 영상 완주 캐시 ~30초. 캐시 직행 ~5ms.
 
-## 서빙 면 (backend/api_ytrelay.py)
+## 서빙 면 (backend/surface/api_ytrelay.py)
 - `GET /yt/relay/{video_id}?kind=audio|video` — 캐시 있으면 FileResponse(Range 206),
   없으면 생방송(`X-Transcode-Live: 1`, no-store) + 파이썬 tee → 완주 시 faststart 리먹스.
 - 시청 중단 시에도 데몬 스레드가 마저 받아 캐시를 완성한다(thumbnails.detach 재사용).
@@ -72,7 +72,7 @@ ytsearch·자기 시청 기록.
   사다리 복구(실측). 화질 저하 신고가 오면 렁 수부터 실측.
 - HLS 경로는 캐시 tee 없음(조각 스프 — 재시청 캐시는 프로그레시브 경로의 것).
 - **로컬 파일(NAS·공개파일)도 같은 방식으로 확장됨**(2026-08-04): 사다리를 우리가
-  만든다 — `backend/hls_ladder.py`(렌디션=전역 sidx fMP4 한 파일, 요청 기반 빌드),
+  만든다 — `backend/base/hls_ladder.py`(렌디션=전역 sidx fMP4 한 파일, 요청 기반 빌드),
   공개파일 `/showcase/hls/…`·NAS `/nas/hls/…`. 상세는 public-files 패키지 guide.md.
 
 ## 저대역 (테슬라 등 느린 회선 — 프로그레시브 폴백용)

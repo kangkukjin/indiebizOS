@@ -589,8 +589,59 @@ def test_p19_totals_detection_baseline():
     print("P19 OK — 기준선 11픽스처: F1~F6 + 교차시트 + F7 상수참조 무오탐 + F10 절대범위 + F11 + F9 상한 신고")
 
 
+def test_p20_workflow_save_syntax_gate():
+    """P20(2026-08-17): workflow save 가 do 를 검증 없이 저장 — 깨진 문장이 success:true 로
+    등록되고 run 에서야 엉뚱하게 실행됐다(지연 실패). P17 의 register pre-flight 를 문장에 적용.
+
+    ★파서만으론 못 잡는다: 파서는 닫히지 않은 따옴표를 관대하게 흡수해
+    `[self:discover]{query: "` 를 query:"" 로 통과시킨다 → 등록 관문이 균형을 따로 본다."""
+    from ibl import workflow_engine as _wf
+    tmp = tempfile.mkdtemp()
+    orig_env = os.environ.get("INDIEBIZ_BASE_PATH")
+    os.environ["INDIEBIZ_BASE_PATH"] = tmp
+    try:
+        def save(**p):
+            p.setdefault("op", "save")
+            return _wf.execute_workflow_action("workflow", p, ".")
+
+        # 실측 재현: 따옴표가 잘린 do → 저장 거부 (전엔 success:true)
+        r = save(name="p20_broken", steps='[self:discover]{query: "')
+        assert r.get("success") is False and "따옴표" in r["error"], r
+        # 중괄호 잘림 · 산문 · 짝 없는 } 도 같은 관문에서 거부
+        assert save(name="p20_brace", steps='[self:read]{path: "a"').get("success") is False
+        assert save(name="p20_prose", steps="워크플로우 만들어줘").get("success") is False
+        assert save(name="p20_extra", steps='[self:read]{path:"a"}}').get("success") is False
+        # 배열 do 는 원소 하나만 깨져도 거부 (부분 저장 없음)
+        assert save(name="p20_arr", steps=['[sense:weather]{city:"서울"}',
+                                           '[self:write]{path:"']).get("success") is False
+        # 몸통 자체가 없으면 거부 — run 에서야 "steps 가 없습니다" 를 만나던 부류
+        assert save(name="p20_nobody").get("success") is False
+        # 거부된 것은 하나도 파일로 남지 않는다
+        assert not list((_wf._get_workflows_path()).glob("p20_*.yaml")), "거부인데 저장됨"
+
+        # 정상 문장은 그대로 저장된다 (회귀 없음)
+        assert save(name="p20_ok", steps='[sense:weather]{city: "서울"}').get("success") is True
+        assert save(name="p20_pipe",
+                    steps='[sense:search]{query:"a"} >> [table:take]{n:3}').get("success") is True
+        # ★미할당 $변수는 합법 — 호출자 params 주입 자리라 관문이 막으면 안 된다
+        assert save(name="p20_var",
+                    steps='[sense:search]{query: $q} >> [table:take]{n: 3}').get("success") is True
+        # 주석·멀티라인 문자열(본문 속 `#`)도 통과
+        assert save(name="p20_multi",
+                    steps='# 주석\n[self:write]{path:"a", content: "l1\n# 제목\nl2"}'
+                    ).get("success") is True
+        # 저장본은 run 이 읽어 실행 가능한 형태로 남는다 (파싱만 했지 실행은 안 함)
+        assert _wf.get_workflow("p20_var")["steps"], "몸통 유실"
+    finally:
+        if orig_env is None:
+            os.environ.pop("INDIEBIZ_BASE_PATH", None)
+        else:
+            os.environ["INDIEBIZ_BASE_PATH"] = orig_env
+    print("P20 OK — save 등록 관문(따옴표·중괄호·산문·빈 몸통 거부 / $변수·주석·멀티라인 통과)")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P19) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P20) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -610,4 +661,5 @@ if __name__ == "__main__":
     test_p17_script_list_preflight()
     test_p18_sheet_semantic_silence()
     test_p19_totals_detection_baseline()
+    test_p20_workflow_save_syntax_gate()
     print("\n=== 전부 통과 ===")

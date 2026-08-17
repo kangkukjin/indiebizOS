@@ -1061,6 +1061,67 @@ def get_workflow(workflow_id: str) -> Optional[Dict]:
         return None
 
 
+# === 등록 시점 문법 관문 (2026-08-17) ===
+# save 가 do 를 검증 없이 저장해 "저장은 됐는데 돌리면 깨지는" 지연 실패를 냈다
+# (실측: 따옴표가 잘린 do — `[self:discover]{query: "` — 가 success:true 로 저장되고
+# run 에서야 엉뚱하게 실행됐다). [self:script]{op:"register"} 의 pre-flight 선례를
+# 문장에 적용한다: 등록=문법 관문, 실행 가능성은 런타임 몫이라 파싱만 하고 실행 안 함.
+#
+# ★파서만으로는 못 잡는다(실측): 파서는 닫히지 않은 따옴표·중괄호를 관대하게 흡수해
+#   위 잘린 문장을 query:"" 로 통과시킨다(_extract_bracket 의 "닫는 bracket 못 찾으면
+#   원본 반환"). 그 관대함은 실행 경로의 기존 계약이라 건드리지 않고, 등록 관문에서만
+#   균형을 따로 본다.
+
+_SENTENCE_KEYS = ("steps", "pipeline", "do")
+
+
+def _unclosed_reason(code: str) -> Optional[str]:
+    """따옴표·중괄호 균형 검사. 반환: 오류 사유|None.
+
+    문자열 상태를 줄 경계 너머로 승계하는 파서의 스캐너를 그대로 쓴다
+    (주석 줄을 스캔에서 빼는 규칙도 _preprocess 와 동일 — 주석 속 따옴표가
+    상태를 오염시키지 않게)."""
+    from ibl_parser import _scan_line_state
+    depth, in_string, string_char = 0, False, None
+    for line in str(code).split('\n'):
+        stripped = line.strip()
+        if not in_string and (not stripped or stripped.startswith('#')):
+            continue
+        d, in_string, string_char = _scan_line_state(stripped, in_string, string_char)
+        depth += d
+    if in_string:
+        return f"따옴표({string_char})가 닫히지 않았습니다"
+    if depth > 0:
+        return "중괄호 {가 닫히지 않았습니다"
+    if depth < 0:
+        return "여는 중괄호 없이 }가 있습니다"
+    return None
+
+
+def _validate_sentence(raw) -> Optional[str]:
+    """저장 전 do(문장 또는 문장 배열) 문법 검사. 반환: 오류문|None.
+
+    미할당 $변수는 합법(호출자 params 주입 자리)이라 파서가 리터럴로 통과시킨다.
+    이미 파싱된 dict step 은 파서를 지나온 값이므로 통과."""
+    from ibl_parser import parse as ibl_parse, IBLSyntaxError
+    sentences = raw if isinstance(raw, list) else [raw]
+    if not sentences:
+        return "do 가 비어 있습니다 — 저장할 IBL 문장이 필요합니다."
+    for one in sentences:
+        if isinstance(one, dict):
+            continue
+        if not isinstance(one, str) or not one.strip():
+            return "do 에 빈 문장이 있습니다 — 저장할 IBL 문장이 필요합니다."
+        reason = _unclosed_reason(one)
+        if reason:
+            return f"do 문법 오류 — {reason}: {one[:120]}"
+        try:
+            ibl_parse(one)
+        except IBLSyntaxError as e:
+            return f"do 문법 오류 — {e}"
+    return None
+
+
 def save_workflow(workflow: dict) -> str:
     """
     워크플로우 저장
@@ -1196,6 +1257,17 @@ def execute_workflow_action(action: str, params: dict,
     elif action in ("save", "save_workflow"):
         if not params:
             return {"error": "워크플로우 정의(params)가 필요합니다."}
+        # 등록 시점 문법 관문 — 몸통이 없거나 깨졌으면 저장 자체를 거부한다.
+        body_key = next((k for k in _SENTENCE_KEYS if params.get(k) is not None), None)
+        if body_key is None:
+            return {"success": False,
+                    "error": "do 가 필요합니다 — 저장할 IBL 문장(또는 문장 배열).",
+                    "hint": '[self:workflow]{op: "save", name: "이름", do: "[node:action]{...}"}'}
+        err = _validate_sentence(params[body_key])
+        if err:
+            return {"success": False, "error": err,
+                    "hint": "저장하지 않았습니다 — 문장을 고쳐 다시 save 하세요. "
+                            "(등록은 문법만 봅니다; 실행 성공 여부는 run 이 판정합니다.)"}
         wf_data = dict(params)
         if workflow_id:
             wf_data["id"] = workflow_id

@@ -152,7 +152,7 @@ def sync_finance_from_phone(input_data: dict) -> str:
     """폰(USB) 결제 앱 알림 수거 → 재무 원장 거래로 병합 (ext_id dedup — 재수거 안전)."""
     owner = input_data.get('owner') or input_data.get('person')
     try:
-        rows, skipped_non_payment = finance_sync.collect_from_phone()
+        rows, skipped_non_payment, source = finance_sync.collect_from_phone()
     except RuntimeError as e:
         return _err(str(e))
     new_rows = storage.merge_synced_rows(rows, owner=owner)
@@ -164,9 +164,16 @@ def sync_finance_from_phone(input_data: dict) -> str:
     if charges:
         msg += f" (충전 {charges}건은 이체라 원장 제외)"
     if not rows:
-        msg = "폰에 결제 알림이 없습니다. 알림을 지우기 전에 수거해야 내역이 남습니다."
+        msg = "폰에 결제 알림이 없습니다."
+    elif new_rows and source == "capture":
+        msg += " — 포획소에 남아 있으니 폰 알림은 지우셔도 됩니다."
     elif new_rows:
         msg += " — 수거된 알림은 이제 지우셔도 됩니다."
+    # ★출처를 숨기지 않는다: dumpsys 경로는 활성 알림만 보므로 72시간 지난 결제를
+    # 원리적으로 못 가져온다. 그 상태로 "없습니다"만 말하면 유실을 침묵으로 덮는 셈.
+    if source == "dumpsys":
+        msg += (" ⚠️ 폰 포획소가 꺼져 있어 화면에 살아 있는 알림만 봤습니다"
+                " — 설정 > 알림 > 알림 접근에서 IndieBiz 를 켜면 72시간 만료분도 남습니다.")
     collected = [{
         "title": f"{'↩️ ' if r.get('type') == 'cancel' else ''}{r.get('merchant') or r.get('title') or '(미분류)'}"
                  f" · {_won(r.get('amount')) if r.get('amount') else '금액 미상'}",

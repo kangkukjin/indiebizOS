@@ -5,9 +5,9 @@ nodes:
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:phone]{}'
-        description: 폰 컴패니언이 보낸 최근 알림 조회. "지금 폰에 연락/알림 오나"의 정답 소스. USB 불필요. 폰 동작 실행은 [limbs:phone].
+        description: 폰 포획소가 붙잡아 둔 알림 조회 (결제 앱 등 지정 앱만 — 전체 연락 아님). USB 연결 필요. 폰 동작 실행은 [limbs:phone].
         group: device
-        target_description: 최근 폰 알림 — latest_ago/ago("방금"·"N분 전")로 지금 오는 연락인지 판별, pkg로 앱 필터(예 com.kakao.talk). limit=개수.
+        target_description: 폰이 포획한 알림 — latest_ago/ago로 최근성 판별, stale=true면 포획소가 꺼졌거나 폰 미연결이라 옛 기록(현재 상태로 읽지 말 것). pkg로 앱 필터. limit=개수.
         target_key: op
         router: handler
         tool: phone_op
@@ -15,8 +15,8 @@ nodes:
         ops:
           default: notifications
           values:
-            notifications: 최근 폰 알림 (카톡·문자·앱 푸시 — "지금 연락 오나")
-        implementation: phone_notifications.py(폰 NotificationListener 가 보낸 알림 → 로컬/폴링 저장)의 recent 조회. android 패키지 phone_op 핸들러(scope:system). raw ADB 우회 대체. (2026-06-12 location/steps 상시 수집 폐기 — 위치는 sense:here 온디맨드.)
+            notifications: 폰 포획소의 알림 (화이트리스트 앱 — 기본 결제 앱)
+        implementation: phone_notifications.recent 조회 — 폰 프로파일=로컬 JSONL / PC=USB 포획소(adb run-as) / 폴백=옛 Nostr SQLite(2026-06-22 이후 얼어붙음 → stale 플래그). android 패키지 phone_op 핸들러(scope:system). (2026-06-12 location/steps 상시 수집 폐기 — 위치는 sense:here 온디맨드. 2026-06-22 전수 알림 수집 폐기 → 2026-08-17 결제 앱 한정으로 범위 축소 복귀.)
         keywords:
         - 폰알림
         - 연락

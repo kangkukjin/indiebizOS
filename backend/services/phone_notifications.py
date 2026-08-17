@@ -105,6 +105,8 @@ def _recent_local(limit: int, pkg: Optional[str]) -> List[Dict]:
                     d = json.loads(line)
                 except Exception:
                     continue
+                if not isinstance(d, dict):
+                    continue  # 유효 JSON 이지만 객체가 아닌 줄
                 if d.get("type") and d.get("type") != "notification":
                     continue
                 if pkg and d.get("pkg") != pkg:
@@ -126,12 +128,76 @@ def _recent_local(limit: int, pkg: Optional[str]) -> List[Dict]:
     return items[:limit]
 
 
+# ── PC 에서 폰 포획소 읽기 (USB) ──
+# 폰의 NotificationCaptureService 가 적는 app-private JSONL 을 adb run-as 로 당겨 온다.
+# ★같은 경로를 finance-record/finance_sync.py 도 읽는다 — 경로를 바꾸면 그쪽도 함께.
+_CAPTURE_PKG = "com.indiebiz.phoneagent"
+_CAPTURE_PATH = "files/signals/notifications.jsonl"
+
+
+def _recent_via_adb(limit: int, pkg: Optional[str]) -> Optional[List[Dict]]:
+    """USB 로 폰 포획소를 읽어 최근 알림 반환. None = 폰 미연결이거나 포획소 없음."""
+    import subprocess
+    # ★adb 경로 후보는 file_index 가 이미 쥔 OS 이음매다 — 여기 박으면 몸 독립 코어에
+    # OS 경로가 흩어진다(빌드의 OS-가드가 실제로 잡아냈다). 이음매 하나만 쓴다.
+    try:
+        from file_index import _adb_bin
+    except Exception:
+        return None
+    adb = _adb_bin()
+    if not adb:
+        return None
+    try:
+        st = subprocess.run([adb, "get-state"], capture_output=True, timeout=8)
+        if b"device" not in st.stdout:
+            return None
+        r = subprocess.run([adb, "shell", "run-as", _CAPTURE_PKG, "cat", _CAPTURE_PATH],
+                           capture_output=True, timeout=20)
+    except Exception:
+        return None
+    out = r.stdout.decode("utf-8", "ignore")
+    if r.returncode != 0 or "No such file" in out or not out.strip():
+        return None
+    items: List[Dict] = []
+    for line in out.replace("\r\n", "\n").split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        if not isinstance(d, dict):
+            continue
+        if d.get("type", "notification") != "notification":
+            continue
+        if pkg and d.get("pkg") != pkg:
+            continue
+        ts = _to_ms(d.get("posted_at") or d.get("received_at") or 0)
+        items.append({
+            "event_id": f"{d.get('pkg','')}:{ts}:{(d.get('title') or '')[:24]}",
+            "sender": "phone-capture",
+            "pkg": d.get("pkg"),
+            "title": d.get("title"),
+            "body": d.get("text") or d.get("body"),
+            "posted_at": ts,
+            "received_at": _to_ms(d.get("received_at") or ts),
+        })
+    items.sort(key=lambda r: _to_ms(r.get("posted_at")), reverse=True)
+    return items[:limit]
+
+
 def recent(limit: int = 30, pkg: Optional[str] = None) -> List[Dict]:
     """최근 폰 알림(시간 내림차순). 시스템 AI 대화 참조용.
 
-    폰 프로파일(INDIEBIZ_PROFILE=phone)=로컬 JSONL 직접 읽기(M3). PC=SQLite(Nostr 수신분)."""
+    우선순위: 폰 프로파일=로컬 JSONL 직접 / PC=USB 포획소 / 그것도 없으면 SQLite.
+    ★SQLite 는 2026-06-22 에 폐기된 옛 Nostr 수신분이라 **얼어붙어 있다**(2026-08-17 실측:
+    success=true 로 72일 전 데이터를 현재인 양 반환). 과거 기록으로만 남기고 마지막에 둔다."""
     if os.environ.get("INDIEBIZ_PROFILE") == "phone":
         return _recent_local(limit, pkg)
+    via_usb = _recent_via_adb(limit, pkg)
+    if via_usb is not None:
+        return via_usb
     conn = _conn()
     q = "SELECT event_id, sender, pkg, title, body, posted_at, received_at FROM notifications"
     args: list = []

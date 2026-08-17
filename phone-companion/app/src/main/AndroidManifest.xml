@@ -49,9 +49,22 @@
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden" />
 
-        <!-- 알림 캡처 서비스 제거됨(2026-06-22) — 폰 알림 수집/중계 폐기.
-             과거: NotificationListenerService 가 모든 알림을 가로채 로컬 JSONL 적재(+옛 Nostr 푸시).
-             외부 전송은 2026-06-15 제거됐으나 로컬 수집이 남아 있어 완전 폐기. [sense:phone] 알림은 빈 결과. -->
+        <!-- 알림 포획소 — 2026-08-17 **범위를 좁혀 복귀**.
+             이력: 2026-06-15 외부 전송(Nostr 푸시) 제거 → 2026-06-22 로컬 수집까지 완전 폐기.
+             폐기 사유는 메커니즘이 아니라 **범위**였다 — 옛것은 *모든* 앱의 알림을 가로챘다.
+             복귀 사유: 결제 앱 알림에 timeout=PT72H 가 걸려 있어(2026-08-17 실측) 3일이 지나면
+             안드로이드가 스스로 지운다. USB 수거만으로는 놓친 결제를 원리적으로 못 가져온다.
+             복귀 조건 3: ①화이트리스트(결제 앱)만 포획 — 목록 밖은 메모리에도 안 올림
+                          ②외부 전송 없음 — 폰에 쌓고 PC 가 USB 로 당겨감(금융 데이터는 릴레이에 안 올린다)
+                          ③파싱 없음 — 원문만 보관, 해석은 PC 몫 -->
+        <service
+            android:name=".NotificationCaptureService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <!-- [limbs:android] 폰 네이티브 화면 조작 (AccessibilityService) — USB-ADB 없이 자기 화면 독해·터치 -->
         <service

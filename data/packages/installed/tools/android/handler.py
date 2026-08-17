@@ -114,11 +114,15 @@ def _swipe(tool_input: dict) -> dict:
 
 
 def _phone_notifications(tool_input: dict) -> dict:
-    """폰 컴패니언 sense 피드 조회 ([sense:phone]{op:notifications}).
+    """폰 포획소 조회 ([sense:phone]{op:notifications}).
 
-    폰 에이전트(NotificationListenerService)가 NIP-17 DM 으로 보내 60초마다 폴링·저장된
-    데이터를 읽는다 (backend/phone_notifications.py). USB-ADB 불필요 — 폰이 켜져 있고
-    컴패니언 앱이 살아 있기만 하면 됨. "지금 폰에 연락/알림 오나"의 정답 소스.
+    폰의 NotificationCaptureService 가 붙잡아 둔 알림을 읽는다(USB). ★범위는 폰 화이트리스트
+    (결제 앱 등 지정 앱)뿐 — 2026-06-22 에 전수 수집을 폐기하고 2026-08-17 에 범위를 좁혀
+    복귀시켰다. 그러니 "폰에 온 모든 연락"의 소스가 아니다.
+
+    폰 미연결이면 옛 Nostr 수신분(SQLite)으로 떨어지는데 그건 2026-06-22 이후 **얼어붙어**
+    있다 — 그래서 stale 플래그로 명시한다(옛 구현은 72일 전 데이터를 success=true 로
+    현재인 양 반환했다).
     """
     import time as _time
     try:
@@ -167,14 +171,23 @@ def _phone_notifications(tool_input: dict) -> dict:
         "summary": it.get("body") or "",
         "url": None,
     } for it in items]
-    return {
+    # ★얼어붙은 피드 방어: 가장 최근이 이틀보다 오래면 '현재 상태'로 읽히면 안 된다.
+    # (2026-08-17 실측 — 수집기가 폐기된 뒤에도 success=true 로 72일 전 데이터를 냈다.)
+    newest = items[0]["posted_at"] if items else 0
+    stale = bool(items) and (now_ms - int(newest or 0)) > 2 * 86400_000
+    out = {
         "success": True,
         "count": len(items),
         "latest_ago": latest_ago,
+        "stale": stale,
         "notifications": items,
         "items": records,
         "hint": "ago='방금'/'N분 전'이면 방금 온 연락. 가장 최근이 수시간/수일 전이면 지금 오는 연락은 없음.",
     }
+    if stale:
+        out["warning"] = (f"가장 최근 알림이 {latest_ago}입니다 — 포획소가 꺼져 있거나 폰이"
+                          " 연결되지 않아 옛 기록을 보고 있을 수 있습니다. 현재 상태로 읽지 마세요.")
+    return out
 
 
 # === [limbs:phone] 송신측 — 폰 네이티브 effector ===

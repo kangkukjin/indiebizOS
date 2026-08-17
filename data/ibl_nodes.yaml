@@ -2577,7 +2577,7 @@ nodes:
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입).
+        target_description: get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음).
         group: workflow
         target_key: op
         router: workflow_engine
@@ -2585,18 +2585,19 @@ nodes:
           returns:
             save: effect
             delete: effect
-            run: effect
+            run: items
           side_effect:
             list: false
             get: false
           exempt:
             get: workflow_id 필요(list 결과의 id) — 고정 fixture 부적합
+            run: workflow_id/name 또는 do 필요 + 부작용 몸통 실행 — 고정 fixture 부적합
           values:
             list: 저장된 워크플로우 목록
             get: 워크플로우 조회 (workflow_id)
             save: 워크플로우 저장 (name + steps IBL 코드 배열)
             delete: 워크플로우 삭제 (workflow_id)
-            run: 워크플로우 실행 — workflow_id/name(저장본) 또는 steps/pipeline(즉석) + params($변수 주입)
+            run: 워크플로우 실행 — workflow_id/name(저장본) 또는 do(즉석) + params($변수 주입)
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우

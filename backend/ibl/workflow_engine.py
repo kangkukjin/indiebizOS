@@ -1137,7 +1137,7 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     result["workflow_name"] = wf.get("name", workflow_id)
     if inject_meta:
         result.update(inject_meta)
-    return result
+    return _promote_final_currency(result)
 
 
 # === IBL 노드 액션 핸들러 ===
@@ -1250,7 +1250,33 @@ def _run_inline(params: dict, project_path: str,
     result = execute_pipeline(steps, project_path)
     if inject_meta and isinstance(result, dict):
         result.update(inject_meta)
-    return result
+    return _promote_final_currency(result)
+
+
+def _promote_final_currency(out):
+    """run 봉투 최상위로 마지막 문장의 통화(items)를 승격 — 워크플로우의 파이프 시민화.
+
+    2026-08-17 통화 조건 판정(사용자 A안): [self:script] 의 stdout items 승격 선례
+    (script_ops.py — 선언 items + 실려 있을 때만 승격, 아니면 하류 정직 에러)를
+    워크플로우에 적용. final_result 는 이미 파이프 이음매(_to_prev_currency)가
+    파생한 통화 문자열이라, items 가 실려 있으면 봉투 최상위로 올려
+    `[self:workflow]{op:"run", name:…} >> [table:*]` 가 흐른다.
+    몸통이 effect/scalar 로 끝나면 승격 없음 → 하류 변환자의 기존 정직 에러
+    (새 침묵 경로 0). error 계약 불변 — 바깥 파이프의 실패 처리가 우선한다.
+    """
+    if not isinstance(out, dict):
+        return out
+    fr = out.get("final_result")
+    if not isinstance(fr, str) or not fr.strip().startswith("{"):
+        return out
+    try:
+        obj = json.loads(fr)
+    except Exception:
+        return out
+    if isinstance(obj, dict) and isinstance(obj.get("items"), list):
+        out["items"] = obj["items"]
+        out["count"] = len(obj["items"])
+    return out
 
 
 # === 호출자 params → $변수 주입 (2026-08-17 B8 수리) ===

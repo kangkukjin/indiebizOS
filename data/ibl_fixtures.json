@@ -184,6 +184,7 @@
     "self:trigger#get": "트리거 id 필요 — 고정 fixture 부적합",
     "self:trigger#history": "트리거 id 필요 — 고정 fixture 부적합",
     "self:workflow#get": "workflow_id 필요(list 결과의 id) — 고정 fixture 부적합",
+    "self:workflow#run": "workflow_id/name 또는 do 필요 + 부작용 몸통 실행 — 고정 fixture 부적합",
     "sense:here": "위치 측정(폰=GPS 센서) — 자동 점검 실행 금지",
     "sense:listen": "마이크 하드웨어 — 자동 점검 실행 금지",
     "sense:navigate_route": "출발/도착 좌표 쌍 필요",

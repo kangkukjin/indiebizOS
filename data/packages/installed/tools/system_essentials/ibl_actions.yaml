@@ -6,7 +6,7 @@ nodes:
         fixture: '[self:time]{}'
         description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
         group: system
-        target_description: (파라미터 없음). format 옵션으로 포맷 지정 가능.
+        target_description: format 으로 출력 포맷 지정 (생략 시 %Y-%m-%d %H:%M:%S).
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)

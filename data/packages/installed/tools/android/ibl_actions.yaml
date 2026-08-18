@@ -29,7 +29,7 @@ nodes:
         exempt: '위치 측정(폰=GPS 센서) — 자동 점검 실행 금지'
         description: 지금 이 몸이 있는 곳 (지표어 — 몸마다 자기 방식으로 측정. 폰=GPS ±수십 m, 데스크탑=선언 위치[body_location.json]>OS 위치서비스[WiFi 수십~수백 m]>IP 도시 수준+움직임증거 캐시). 반환 source(gps|declared|wifi|ip)/accuracy_m — 정밀도 보고 판단. 상시 추적 없이 물을 때만.
         group: device
-        target_description: '파라미터 없음(선택 refresh: true = 강제 재측정, 이사·이동 후). "지금 어디"는 이 몸의 여기 — 도시 수준이면 날씨·지역뉴스에 충분. 사용자의 정밀 위치(길찾기 출발점)가 필요하면 폰 몸에 부탁: [others:ask]{message: "지금 위치 알려줘"}.'
+        target_description: 'refresh: true 면 강제 재측정(이사·이동 후). 생략하면 캐시된 위치. "지금 어디"는 이 몸의 여기 — 도시 수준이면 날씨·지역뉴스에 충분. 사용자의 정밀 위치(길찾기 출발점)가 필요하면 폰 몸에 부탁: [others:ask]{message: "지금 위치 알려줘"}.'
         router: handler
         tool: phone_locate
         scope: system

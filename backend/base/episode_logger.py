@@ -96,6 +96,7 @@ class EpisodeLogger:
         # 그게 안 도는 몸(폰 진입점)에선 INSERT 가 조용히 실패했다(테이블 부재).
         # 이제 로거가 직접 보장 → 어느 몸에서든 기록된다(world_pulse 의존 제거).
         _ensure_episode_tables()
+        _sweep_orphan_episodes()
 
     @classmethod
     def start_episode(cls, agent: str, user_message: str, project_id: str = ""):
@@ -117,6 +118,8 @@ class EpisodeLogger:
             cls._finalize(stale)  # 같은 컨텍스트의 누락 에피소드 salvage (데이터 보존)
         ep = _Episode(agent, user_message, project_id)
         _current_episode.set(ep)
+        # ★행을 먼저 만든다 — 이 턴이 리로드로 죽어도 기록은 남는다(_open_episode 참조).
+        ep.episode_id = _open_episode(ep.started_at, agent, mask_secrets(ep.user_message))
         # 시작 마커 — contextvar 가 ep 로 설정된 뒤 print → write() 가 ep.buffer 로 캡처
         _msg_preview = (user_message or "")[:80].replace("\n", " ")
         print(f"[Episode START] agent={agent} message={_msg_preview!r}")
@@ -165,7 +168,10 @@ class EpisodeLogger:
             log_text = mask_secrets("".join(ep.buffer))
             user_message = mask_secrets(ep.user_message)
             total_ms = int((datetime.now() - ep.started_at).total_seconds() * 1000)
-            episode_id = _save_episode(ep.started_at, ep.agent, user_message, log_text, total_ms)
+            # 개설된 행을 닫는다(없으면 INSERT 폴백). salvage 경로도 여기를 지나므로
+            # 미종료 행이 중복 INSERT 되지 않고 그 자리에서 닫힌다.
+            episode_id = _close_episode(ep.episode_id, ep.started_at, ep.agent,
+                                        user_message, log_text, total_ms)
             if episode_id:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
                 _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message,
@@ -358,8 +364,98 @@ def _ensure_episode_tables():
             pass
 
 
+ORPHAN_MARK = "[Episode ORPHAN] 종료 기록 없이 끊긴 턴 — 다음 부팅이 회수함"
+
+
+def _sweep_orphan_episodes():
+    """부팅 시 남아 있는 미종료 행을 닫는다 (이전 프로세스가 죽으며 남긴 것들).
+
+    ★ended_at NULL 은 '이 턴은 끝을 못 봤다'는 정직한 신호지만, 죽은 뒤에는 그걸 닫을
+    주체가 없다. **지금 막 뜬 프로세스가 대신 닫는다** — 이 프로세스가 존재하기 *전에*
+    시작된 미종료 행은 정의상 죽은 턴이다(그때 이 프로세스는 없었다).
+    리로드·크래시·kill 어느 죽음이든 같은 그물에 걸린다.
+
+    total_ms 는 NULL 로 남긴다 — 정상 종료(측정값 있음)와 회수(측정 불가)를 구별하는 표식.
+    """
+    try:
+        conn = _get_db()
+        now = datetime.now().isoformat()
+        cur = conn.execute(
+            "UPDATE episode_log SET ended_at = ?, "
+            "log = COALESCE(log, '') || ? "
+            "WHERE ended_at IS NULL",
+            (now, "\n" + ORPHAN_MARK + "\n"),
+        )
+        n = cur.rowcount or 0
+        conn.commit()
+        conn.close()
+        if n:
+            try:
+                if EpisodeLogger._original_stdout:
+                    EpisodeLogger._original_stdout.write(
+                        f"[EpisodeLogger] 미종료 에피소드 {n}건 회수 — 이전 프로세스가 "
+                        f"끊긴 자리(리로드·크래시). 기록은 보존됩니다.\n")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def _open_episode(started_at, agent, user_message):
+    """턴 **시작 시** 행을 먼저 만든다 (ended_at NULL). Returns: episode_id or None.
+
+    ★왜 (2026-08-18): 옛 구현은 END 에서 단 한 번 INSERT 했다 — 그때까지 에피소드
+    전체(시작 시각·사용자 메시지·로그 버퍼)가 **죽는 프로세스의 메모리에만** 있었다.
+    그런데 backend 를 고치는 수리는 apply 가 부른 리로드로 자기 턴을 죽이므로
+    end_episode 가 못 돌고 **행이 아예 안 생겼다** — 주행기록이 자기수정만 체계적으로
+    빼먹었다(실측: task_sysai_06fa6e7f 는 3파일 수리에 성공했는데 episode_log 에 흔적 0).
+    가장 결과가 큰 작업이 학습·감사에서 통째로 투명해지는 편향이다.
+
+    ⇒ 기록은 위험한 행위 *뒤*가 아니라 *앞*에 남긴다. 죽어도 행은 남고,
+    **ended_at 이 NULL 인 것 자체가 "이 턴은 끝을 못 봤다"는 신호**가 된다.
+    (오늘 세 번째 같은 원칙: 죽음을 넘어야 하는 단계를 죽는 쪽에 두지 말 것.)
+    """
+    try:
+        conn = _get_db()
+        cur = conn.execute(
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms)
+               VALUES (?, NULL, ?, ?, '', NULL)""",
+            (started_at.isoformat() if started_at else datetime.now().isoformat(),
+             agent, user_message),
+        )
+        eid = cur.lastrowid
+        conn.commit()
+        conn.close()
+        return eid
+    except Exception as e:
+        try:
+            if EpisodeLogger._original_stdout:
+                EpisodeLogger._original_stdout.write(f"[EpisodeLogger] 행 개설 실패(계속 진행): {e}\n")
+        except Exception:
+            pass
+        return None
+
+
+def _close_episode(episode_id, started_at, agent, user_message, log_text, total_ms):
+    """턴 종료 — 개설된 행을 갱신한다. 행이 없으면(개설 실패·옛 경로) INSERT 폴백."""
+    if episode_id:
+        try:
+            conn = _get_db()
+            conn.execute(
+                """UPDATE episode_log SET ended_at = ?, log = ?, total_ms = ?, user_message = ?
+                   WHERE id = ?""",
+                (datetime.now().isoformat(), log_text, total_ms, user_message, episode_id),
+            )
+            conn.commit()
+            conn.close()
+            return episode_id
+        except Exception:
+            pass          # 갱신 실패 시 아래 INSERT 폴백으로 데이터라도 남긴다
+    return _save_episode(started_at, agent, user_message, log_text, total_ms)
+
+
 def _save_episode(started_at, agent, user_message, log_text, total_ms):
-    """에피소드 전체 로그를 DB에 저장. Returns: episode_id"""
+    """에피소드 전체 로그를 DB에 INSERT (폴백 경로). Returns: episode_id"""
     try:
         conn = _get_db()
         cursor = conn.execute(

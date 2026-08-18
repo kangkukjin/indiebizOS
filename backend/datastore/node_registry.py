@@ -48,10 +48,21 @@ _node_cache: Optional[List[Dict]] = None
 _agent_node_cache: Optional[List[Dict]] = None
 
 
-def _invalidate_cache():
+def invalidate_node_cache():
+    """플랫/타입 노드 캐시 무효화 (ibl_nodes.yaml 재빌드 반영).
+
+    ★2026-08-18 공개화: 이 함수는 정의만 있고 호출자가 0이었다 — 이름은 정확한데
+    아무도 부르지 않아, /packages/reload 후에도 list_nodes() 소비처가 기동 시점
+    스냅샷을 계속 봤다. 무효화의 단일 진입점인 ibl_access.invalidate_nodes_cache()
+    가 이제 여기로 위임한다.
+    """
     global _node_cache, _typed_node_cache
     _node_cache = None
     _typed_node_cache = None
+
+
+# 하위 호환 별칭 (공개화 전 이름 — 원래 호출자가 0이라 깨질 곳은 없다)
+_invalidate_cache = invalidate_node_cache
 
 
 def invalidate_agent_cache():

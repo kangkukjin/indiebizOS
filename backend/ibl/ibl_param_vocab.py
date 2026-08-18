@@ -39,6 +39,14 @@ UNIVERSAL_PARAM_KEYS = {"op", "target"}
 #   (same/system/cross/workspace, ibl_routing.py params.get("scope") + ibl_engine action scope).
 RUNTIME_META_KEYS = {"project_id", "scope"}
 
+# 라우팅이 *가로채는* 키 — 작가가 params 에 적어도 핸들러까지 도달하지 못한다.
+#   project_path: ibl_routing._resolve_project_path 가 호출자 정체성 경로(2번 우선순위)를
+#   먼저 반환하므로, 호출자 경로가 있는 한 params 의 값은 영영 안 읽힌다. 이 부류의
+#   침묵은 특히 비싸다 — 빈 결과가 아니라 *다른 대상의 정상 응답*이 돌아와 오답을
+#   참으로 믿게 된다(2026-08-18 [self:recent_chats] 실측: 시스템 AI 가 투자 프로젝트를
+#   지정했는데 자기 대화가 멀쩡한 모양으로 반환). 의도를 나르는 정본 키는 project_id.
+ROUTING_INTERCEPTED_KEYS: Dict[str, str] = {"project_path": "project_id"}
+
 # 핸들러/별칭에 의도적으로 없는 문서화된 예외 (동적 pop 등 정적 검출 불가).
 # 코퍼스 정제/별칭으로 해소되면 제거할 것.
 CORPUS_PARAM_ALLOW: Dict[str, Set[str]] = {
@@ -185,6 +193,44 @@ def allowed_param_keys(node: str, action: str,
     return keys
 
 
+def _check_intercepted(node: str, action: str, params: dict,
+                       action_config: dict) -> Optional[dict]:
+    """라우팅 가로채기 키만 보는 좁은 검사 — 허용키 출처가 없는 라우터(driver/system/…)용.
+
+    전면 검사(allowed_param_keys)는 핸들러 패키지의 AST 읽기키에 기대므로 코어 액션엔
+    쓸 수 없다(코어 src yaml 에는 params 스키마가 아예 없다 — target_key 24건이 전부).
+    그래서 여기서는 *스키마를 요구하지 않는* 좁은 판정만 한다: 그 액션이 이 키를
+    자기 것으로 선언(tool.json input_schema · aliases · target_key)하지 않았는데
+    params 에 들어왔다면, 그 값은 라우팅에 먹혀 사라진다.
+    선언한 액션(web-builder 부류)은 정당한 도구 인자이므로 통과한다.
+    """
+    if not isinstance(action_config, dict):
+        return None
+    declared = _alias_keys(action_config) | UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
+    tk = action_config.get("target_key")
+    if tk:
+        declared.add(tk)
+    tool_name = action_config.get("tool")
+    if tool_name:
+        try:
+            declared |= _schema_props(tool_name)
+        except Exception:
+            pass
+    hits = [k for k in sorted(ROUTING_INTERCEPTED_KEYS)
+            if k in params and k not in declared]
+    if not hits:
+        return None
+    suggest = {k: ROUTING_INTERCEPTED_KEYS[k] for k in hits}
+    parts = [
+        f"'{k}' 는 [{node}:{action}] 에 전달되지 않습니다 — 라우팅이 호출자 경로로 "
+        f"덮어쓰므로 조용히 무시되고, 빈 결과가 아니라 *다른 대상의 정상 응답*이 "
+        f"돌아옵니다. 대신 '{suggest[k]}' 를 쓰세요."
+        for k in hits
+    ]
+    return {"unknown": hits, "suggest": suggest, "soft": {},
+            "message": " ".join(parts)}
+
+
 # === 검사 본체 ===
 
 def check_params(node: str, action: str, params: Any,
@@ -207,7 +253,10 @@ def check_params(node: str, action: str, params: Any,
 
     allowed = allowed_param_keys(node, action, action_config)
     if allowed is None:
-        return None
+        # 허용키 출처가 없는 액션(비핸들러 라우터·open_params·tool 미매핑).
+        # 전면 검사는 여전히 스킵하되(보수적), 라우팅 가로채기 키만은 좁게 본다 —
+        # 그 부류는 조용한 무시가 *그럴듯한 오답*을 만들어 침묵 비용이 특히 크다.
+        return _check_intercepted(node, action, params, action_config)
 
     user_keys = {k for k in params.keys()
                  if isinstance(k, str) and not k.startswith(("_", "$"))}

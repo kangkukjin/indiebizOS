@@ -379,6 +379,17 @@ def invalidate_nodes_cache():
     _node_groups_cache = None
     _package_meta_cache = None
 
+    # node_registry 도 같은 ibl_nodes.yaml 을 자기 캐시(_node_cache·_typed_node_cache)에
+    # 물고 있다. 그쪽 무효화 함수는 정의만 있고 호출자가 0이었다(2026-08-18 발견) —
+    # 그래서 재빌드 후에도 list_nodes() 소비처(인지 라우팅·node_summary·/nodes API)는
+    # 기동 시점 스냅샷을 프로세스 수명 내내 봤다. 무효화의 단일 진입점이 이 함수이므로
+    # 여기서 위임한다(층 방향 ibl → datastore, 정방향).
+    try:
+        from node_registry import invalidate_node_cache
+        invalidate_node_cache()
+    except Exception as e:
+        print(f"[ibl_access] node_registry 캐시 무효화 실패(무시): {e}")
+
 
 def _load_package_meta() -> dict:
     """data/package_meta.json 로드 (캐시) — Phase 4, needs_key/weight/locale + action_owner.

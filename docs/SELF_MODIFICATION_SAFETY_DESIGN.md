@@ -100,6 +100,36 @@
 > - **폴백**: git 이 없는 몸(설치본·폰)이나 그랜트 없는 경로에서는 세션이 안 열리고
 >   종전 라이브 직행으로 떨어진다(안전판은 그대로).
 >
+> **★원장 단일화 (2026-08-18 후속) — 격리가 둘이었다**
+>
+> 사정거리(문 하나)와 **쌍둥이 문제**가 하나 더 있었다: 격리 기구 자체가 둘이었다.
+>
+> ```
+> (구) propose → .worktrees/selfpatch-<ts> + patch_proposals/     ← 적용 경로 없음
+>      apply   → .worktrees/repair-<key>   + repair_sessions/     ← 제안을 못 봄
+> ```
+>
+> 같은 `[self:patch]` 어휘의 op 라 파이프라인처럼 보이는데 `op_apply` 본문에 proposal
+> 언급이 0건이었다 — 게이트에 막혀 propose 로 간 수리는 **재작업 말고는 라이브로 갈 길이
+> 없었다**(실측: 제안 7건 누적·적용 0건·5건은 워크트리도 사라진 죽은 기록).
+>
+> 이제 **제안도 세션이다**: `op_propose` 가 `ensure_session(key="proposal-<ts>")` +
+> `stage_file` 을 그대로 쓴다. 워크트리 접두사·원장·생애주기(`_cleanup_old`)가 하나로
+> 합쳐지고 apply/status/discard 의 이중 분기가 사라졌다(코드 순감). 그랜트 요구는
+> apply 쪽에 그대로라 자율 태스크의 자가적용 금지는 유지된다.
+>
+> 통합이 덤으로 고친 것 셋:
+> - **씨가 HEAD 가 아니라 라이브 원본**(`stage_file` 규약) — 옛 propose 는 `old_string` 을
+>   HEAD 내용에 맞춰봐서 미커밋 라이브와 어긋나면 헛발질했다.
+> - **같은 초 충돌**이 조용히 합쳐지지 않는다(접미사로 가름). 옛 구현은 worktree 생성 실패.
+> - **`read_session` 을 `load_session` 에서 분리**: 후자는 *staging 인 세션* 접근자라
+>   닫힌 세션을 `None` 으로 감춘다. 그걸 존재 판정에 쓰면 ①적용된 제안에 "그런 제안이
+>   없습니다"라 답하고 ②키가 비었다고 오판해 재사용 → `ensure_session` 이 **이전 격리본을
+>   지우고 원장을 덮어쓴다**(조용한 파괴). 존재·상태 질의는 `read_session`.
+>
+> 옛 원장은 **좌초 감지 읽기 전용**으로만 남는다(`list_legacy_proposals` → status 가 알림).
+> 통합 시점 살아있는 제안 0건이라 이관은 없었다.
+
 > **★★이 격리의 사정거리 — 파일이 아니라 문 하나다 (2026-08-18 정정)**
 >
 > 위 서술은 격리가 *backend 를 지킨다*처럼 읽히지만, 실제로 세운 불변식은 그게 아니다.
@@ -159,7 +189,7 @@
 
 > **구현 상태 (2026-07-12 갱신):**
 > - **Floor #1 ✅ 구현·커밋** (`30a4116`): RED 구역 직접 쓰기 차단. `system_essentials/handler.py` `_validate_path_in_scope` 에 `_red_zone_violation`(realpath 정규화, repo 루트 backend+frontend 독립 탐지) 게이트. 쓰기 계열 단일 초크포인트 전부 커버, 읽기는 유지. 에피소드 551 구멍 폐쇄.
-> - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록. 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
+> - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록(★그 별도 원장은 2026-08-18 에 세션 원장으로 통합됐다 — 아래 '원장 단일화'). 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
 > - **Floor #2·#3 △ 사용자 경로까지 확장** (2026-08-17, 위 '격리 스테이징' 절): 격리가
 >   `patch`(자율 태스크 전용)에만 있고 실제로 도는 수리 경로는 라이브 직행이던
 >   비대칭을 해소 — **단 `self:write`/`edit` 문에 한해서다**(사정거리 표 참조.
@@ -243,7 +273,8 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 
 **신규 어휘 `[self:patch]`** (scope: workspace, RED 전용):
 - 입력: 대상 파일(RED), 새 내용 또는 diff, 근거
-- 동작: `git worktree add .worktrees/selfpatch-<ts>` → 그 사본에만 기록 → **라이브 트리 무변경**
+- 동작: 격리 세션 worktree(`.worktrees/repair-proposal-<ts>`)에만 기록 → **라이브 트리 무변경**
+  (2026-08-18 통합 전에는 `selfpatch-<ts>` + 별도 원장 `patch_proposals/` 였다 — 아래 '원장 단일화' 절)
 - 산출: worktree 경로 + diff. 유기체는 자기 몸이 아니라 사본에만 손댄다.
 
 **근거:** git repo 확인(`main`, 미커밋 2개뿐, worktree 실현 가능).

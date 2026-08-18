@@ -101,61 +101,70 @@ def find_uncommitted_red():
     return sorted(out, key=lambda x: -x[2])
 
 
-def _proposal_status(wt_name):
-    """selfpatch-<ts> 격리본이 살아있는 제안인가 — (제안 id, 상태) 또는 (None, None).
+def _session_of(wt_name):
+    """이 격리본을 소유한 세션 기록 — 없으면 None(고아).
 
-    2026-08-18 다리 이후 selfpatch-* 는 '고아'가 아니라 **적용 대기 제안**일 수 있다
-    (apply{proposal_id} 로 재작업 없이 반영 가능). 기록이 없으면 그때는 진짜 고아다.
+    2026-08-18 통합 후 제안도 `repair-<key>` 세션이라 접두사 분기가 없다.
+    옛 `selfpatch-*`(통합 전 세대)는 소유 세션이 없으므로 자연히 고아로 잡힌다.
     """
-    if not wt_name.startswith("selfpatch-"):
-        return None, None
-    pid = wt_name[len("selfpatch-"):]
-    f = PROPOSAL_DIR / f"{pid}.json"
+    if not wt_name.startswith("repair-"):
+        return None
+    f = SESSION_DIR / f"{wt_name[len('repair-'):]}.json"
     if not f.exists():
-        return None, None
+        return None
     try:
-        return pid, (json.loads(f.read_text(encoding="utf-8")).get("status") or "proposed")
+        return json.loads(f.read_text(encoding="utf-8"))
     except Exception:
-        return pid, "unreadable"
+        return {"status": "unreadable"}
 
 
 def find_orphan_worktrees():
-    """.worktrees/ 아래 격리본 중 원장이 없는 것 + 적용 대기 제안."""
+    """.worktrees/ 아래 격리본 — 미적용 세션(제안 포함)과 원장 없는 고아."""
     out = []
     if not WORKTREE_DIR.is_dir():
         return out
     for wt in sorted(WORKTREE_DIR.iterdir()):
         if not wt.is_dir():
             continue
-        key = wt.name[len("repair-"):] if wt.name.startswith("repair-") else None
-        if key and (SESSION_DIR / f"{key}.json").exists():
-            continue                            # 살아있는 세션의 격리본
-        # ★진짜 워크트리인지 먼저 확인한다 — 아니면 `git -C` 가 **부모 저장소**의 상태를
-        #   반환해서, 저장소 전체의 미커밋 변경이 그 격리본 것인 양 보고된다(실측).
+        sess = _session_of(wt.name)
+        if sess is not None and sess.get("status") != "staging":
+            continue                        # 적용·폐기 완료 — TTL 청소 대기일 뿐
         if not (wt / ".git").exists():
-            out.append((wt.name, _age_hours(wt), None, None))  # None = 워크트리 아님(빈 잔재)
+            # ★진짜 워크트리가 아니면 `git -C` 가 **부모 저장소** 상태를 반환해
+            #   저장소 전체 변경이 이 격리본 것처럼 보고된다(실측).
+            out.append((wt.name, _age_hours(wt), None, None))
             continue
         dirty = [l for l in _git(["-C", str(wt), "status", "--porcelain"]).splitlines() if l.strip()]
-        pid, pstatus = _proposal_status(wt.name)
-        out.append((wt.name, _age_hours(wt), dirty, (pid if pstatus == "proposed" else None)))
+        pid = (sess or {}).get("proposal_id") if (sess or {}).get("kind") == "proposal" else None
+        out.append((wt.name, _age_hours(wt), dirty, pid))
     return out
 
 
 def find_dead_proposals():
-    """격리본이 사라져 되살릴 수 없는 제안 기록 — 생애주기가 없어 영원히 쌓인다."""
+    """격리본이 사라져 되살릴 수 없는 제안 세션 + 통합 전 원장에 좌초된 제안."""
     out = []
-    if not PROPOSAL_DIR.is_dir():
-        return out
-    for f in sorted(PROPOSAL_DIR.glob("*.json")):
-        try:
-            prop = json.loads(f.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if (prop.get("status") or "proposed") != "proposed":
-            continue                            # 적용·폐기로 닫힌 기록
-        wt = prop.get("worktree") or ""
-        if not wt or not (ROOT / wt).is_dir():
-            out.append((prop.get("id"), prop.get("target"), _age_hours(f)))
+    if SESSION_DIR.is_dir():
+        for f in sorted(SESSION_DIR.glob("*.json")):
+            try:
+                sess = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if sess.get("kind") != "proposal" or sess.get("status") != "staging":
+                continue
+            wt = sess.get("worktree") or ""
+            if not wt or not (ROOT / wt).is_dir():
+                out.append((sess.get("proposal_id") or sess.get("key"),
+                            ", ".join(r.get("rel", "") for r in (sess.get("files") or {}).values()),
+                            _age_hours(f)))
+    # 통합 전 세대(patch_proposals/) 에 살아있는 제안이 남아 있으면 apply 가 못 본다
+    if PROPOSAL_DIR.is_dir():
+        for f in sorted(PROPOSAL_DIR.glob("*.json")):
+            try:
+                prop = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if (prop.get("status") or "proposed") == "proposed":
+                out.append((f"{prop.get('id')} (옛 원장)", prop.get("target"), _age_hours(f)))
     return out
 
 
@@ -187,8 +196,9 @@ def main() -> int:
             if dirty is None:
                 print(f"  {mark}  .worktrees/{name}  {age:.1f}시간 — git 워크트리가 아닌 잔재 디렉토리")
                 continue
-            tag = (f'적용 대기 제안 — [self:patch]{{op:"apply", proposal_id:"{pid}"}}'
-                   if pid else "고아(원장 없음)")
+            sess = _session_of(name)
+            tag = (f'적용 대기 제안 — [self:patch]{{op:"apply", proposal_id:"{pid}"}}' if pid
+                   else ("미적용 수리 세션" if sess is not None else "고아(원장 없음)"))
             print(f"  {mark}  .worktrees/{name}  {age:.1f}시간, 변경 {len(dirty)}건 · {tag}")
             for d in dirty[:5]:
                 print(f"          {d}")

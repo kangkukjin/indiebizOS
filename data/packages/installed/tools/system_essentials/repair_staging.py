@@ -51,9 +51,9 @@ import sys
 from datetime import datetime, timedelta
 
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
-# propose 가 쓰는 원장 — apply 가 읽는 SESSION_DIRNAME 과 **다른 저장소**였다.
-# 같은 [self:patch] 어휘의 op 인데 서로를 못 봐서 propose 는 막다른 골목이었다
-# (실측 08-18: 제안 7건 누적 / 적용 0건, 그중 5건은 워크트리도 사라진 죽은 기록).
+# ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
+# 원리적으로 못 봤다(실측 08-18: 제안 7건 누적 / 적용 0건). 지금은 제안도 세션이라
+# 이 경로는 **좌초 감지 읽기 전용**으로만 남는다 — list_legacy_proposals 참조.
 PROPOSAL_DIRNAME = os.path.join("data", "system_ai_state", "patch_proposals")
 WORKTREE_PREFIX = os.path.join(".worktrees", "repair-")
 SESSION_TTL_DAYS = 7          # 이보다 오래된 종료 세션은 기회주의적으로 청소
@@ -84,42 +84,68 @@ def task_key(raw) -> str:
     return re.sub(r"[^A-Za-z0-9_-]", "_", (raw or "notask"))[:48] or "notask"
 
 
+def pending_proposals(repo: str):
+    """적용 대기 제안 id 목록 — 세션 원장 하나만 읽는다(격리본 살아있는 것만)."""
+    d = os.path.join(repo, SESSION_DIRNAME)
+    out = []
+    for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(d, name), encoding="utf-8") as f:
+                sess = json.load(f)
+        except Exception:
+            continue
+        if sess.get("kind") != "proposal" or sess.get("status") != "staging":
+            continue
+        if os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
+            out.append(sess.get("proposal_id") or sess.get("key"))
+    return out
+
+
 def _session_path(repo: str, key: str) -> str:
     d = os.path.join(repo, SESSION_DIRNAME)
     os.makedirs(d, exist_ok=True)
     return os.path.join(d, f"{key}.json")
 
 
-def load_session(repo: str, key: str):
-    """세션 원장 읽기 — 없으면 None. (핸들러 재임포트를 건너 살아남도록 디스크에 산다.)"""
+def read_session(repo: str, key: str):
+    """세션 원장 **원본** 읽기 — 상태 무관(applied/discarded 도 그대로 돌려준다).
+
+    ★load_session 과 나누는 이유(2026-08-18 실측): load_session 은 '지금 쌓는 중인
+    세션' 접근자라 staging 이 아니면 None 을 준다. 그걸 존재 판정에 쓰면 **닫힌 세션이
+    '없는 것'으로 보여** ①이미 적용된 제안에 "그런 제안이 없습니다"라 답하고 ②같은 키를
+    비어 있다고 판단해 재사용 → ensure_session 이 이전 격리본을 지우고 원장을 덮어쓴다
+    (조용한 파괴). 존재·상태를 물을 때는 이 함수를 쓸 것.
+    """
     try:
         with open(_session_path(repo, key), encoding="utf-8") as f:
-            s = json.load(f)
-        return s if s.get("status") == "staging" else None
-    except Exception:
-        return None
-
-
-def _proposal_path(repo: str, pid: str) -> str:
-    return os.path.join(repo, PROPOSAL_DIRNAME, f"{pid}.json")
-
-
-def load_proposal(repo: str, pid: str):
-    try:
-        with open(_proposal_path(repo, pid), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return None
 
 
-def _save_proposal(repo: str, prop: dict):
-    os.makedirs(os.path.join(repo, PROPOSAL_DIRNAME), exist_ok=True)
-    with open(_proposal_path(repo, prop["id"]), "w", encoding="utf-8") as f:
-        json.dump(prop, f, ensure_ascii=False, indent=2)
+def load_session(repo: str, key: str):
+    """지금 쌓는 중인 세션 — staging 이 아니면 None. (존재 판정엔 read_session 을 쓸 것.)"""
+    s = read_session(repo, key)
+    return s if s and s.get("status") == "staging" else None
 
 
-def list_proposals(repo: str):
-    """제안 목록 + 격리본 생존 여부. 워크트리가 사라진 것은 되살릴 수 없는 죽은 기록이다."""
+PROPOSAL_KEY_PREFIX = "proposal-"
+
+
+def proposal_key(pid: str) -> str:
+    """제안 id → 세션 키. 제안도 세션의 한 종류라 키 공간이 하나다(2026-08-18 통합)."""
+    pid = (pid or "").strip()
+    return pid if pid.startswith(PROPOSAL_KEY_PREFIX) else PROPOSAL_KEY_PREFIX + pid
+
+
+def list_legacy_proposals(repo: str):
+    """옛 patch_proposals/ 원장 — 통합 전(2026-08-18) 세대. 읽기 전용.
+
+    통합 시점에 살아있는 제안은 0건이라 이관은 불필요했다. 그래도 이 함수를 남기는 건
+    **좌초 감지**용이다 — 옛 판이 돌던 몸에서 올라온 제안이 있으면 status 가 알린다.
+    """
     d = os.path.join(repo, PROPOSAL_DIRNAME)
     out = []
     for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
@@ -130,46 +156,12 @@ def list_proposals(repo: str):
                 prop = json.load(f)
         except Exception:
             continue
+        if (prop.get("status") or "proposed") != "proposed":
+            continue                       # 이미 닫힌 기록
         wt = prop.get("worktree") or ""
-        prop["_alive"] = bool(wt) and os.path.isdir(os.path.join(repo, wt))
-        out.append(prop)
+        if wt and os.path.isdir(os.path.join(repo, wt)):
+            out.append(prop)               # 좌초: 옛 저장소에 살아있는 제안
     return out
-
-
-def _session_from_proposal(repo: str, pid: str):
-    """propose 가 남긴 제안을 apply 가 먹을 수 있는 **세션 모양**으로 되살린다.
-
-    ★왜 (2026-08-18): propose 는 `.worktrees/selfpatch-<ts>` + `patch_proposals/` 에
-    쓰고 apply 는 `.worktrees/repair-<key>` + `repair_sessions/` 를 읽어, 같은
-    `[self:patch]` 어휘의 op 인데 서로를 못 봤다. 그래서 게이트에 막혀 propose 로
-    간 수리는 **재작업 말고는 라이브로 갈 길이 없었다**(제안 7건 누적·적용 0건).
-    이 함수가 그 다리다 — 모양은 op_propose 의 pseudo 세션과 같다.
-
-    ★그랜트 요구는 그대로다: 이 다리는 *사용자 수리 턴이 이미 있는 제안을 집어가는*
-    길이지, 자율 태스크가 스스로 적용하는 길이 아니다(헌법 08-05 조건 1).
-    """
-    prop = load_proposal(repo, pid)
-    if not prop:
-        return None, None, f"그런 제안이 없습니다: {pid} (op:status 로 목록 확인)"
-    if prop.get("status") == "applied":
-        return None, None, f"이미 적용된 제안입니다: {pid} ({prop.get('applied_at')})"
-    if prop.get("status") == "discarded":
-        return None, None, f"폐기된 제안입니다: {pid}"
-    wt_rel = prop.get("worktree") or ""
-    wt_abs = os.path.join(repo, wt_rel)
-    if not wt_rel or not os.path.isdir(wt_abs):
-        return None, None, (f"제안 {pid} 의 격리 사본이 사라져 적용할 내용이 없습니다"
-                            f"({wt_rel or '경로 미기록'}). 기록만 남은 죽은 제안입니다 — "
-                            f"다시 propose 하세요.")
-    rel = prop.get("target") or ""
-    staged = os.path.join(wt_abs, rel)
-    if not rel or not os.path.exists(staged):
-        return None, None, f"제안 {pid} 의 격리 사본에 대상 파일이 없습니다: {rel}"
-    live_abs = os.path.realpath(os.path.join(repo, rel))
-    sess = {"key": f"proposal-{pid}", "worktree": wt_rel, "status": "staging",
-            "created_at": prop.get("created_at"), "proposal_id": pid,
-            "files": {live_abs: {"staged": staged, "rel": rel, "op": "write"}}}
-    return sess, prop, None
 
 
 def _save_session(repo: str, sess: dict):
@@ -459,28 +451,34 @@ def op_apply(ti):
     if not key:
         return {"success": False, "error":
                 "수리 그랜트가 없습니다 — apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다."}
-    # proposal_id 가 오면 propose 가 남긴 제안을 집어 적용한다(2026-08-18 다리).
-    # 없으면 종전대로 이 수리 세션의 스테이징을 적용한다.
+    # proposal_id 가 오면 그 제안 세션을, 없으면 이 수리 세션을 적용한다.
+    # 제안도 세션이라 분기는 '어느 키를 여는가'뿐이다(2026-08-18 통합).
     pid = (ti.get("proposal_id") or "").strip()
-    prop = None
+    sess = read_session(repo, proposal_key(pid)) if pid else load_session(repo, key)
     if pid:
-        sess, prop, perr = _session_from_proposal(repo, pid)
-        if perr:
-            return {"success": False, "applied": False, "error": perr}
-    else:
-        sess = load_session(repo, key)
+        if not sess:
+            return {"success": False, "applied": False,
+                    "error": f"그런 제안이 없습니다: {pid} (op:status 로 목록 확인)"}
+        st = sess.get("status")
+        if st in ("applied", "discarded"):
+            when = sess.get("applied_at") or sess.get("discarded_at") or ""
+            return {"success": False, "applied": False,
+                    "error": f"이미 {'적용' if st == 'applied' else '폐기'}된 제안입니다: {pid} {when}"}
+        if not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
+            return {"success": False, "applied": False,
+                    "error": (f"제안 {pid} 의 격리 사본이 사라져 적용할 내용이 없습니다 — "
+                              f"기록만 남은 죽은 제안입니다. 다시 propose 하세요.")}
     if not sess or not (sess.get("files") or {}):
-        pend = [x for x in list_proposals(repo)
-                if x.get("status") == "proposed" and x.get("_alive")]
+        pend = pending_proposals(repo)
         hint = ""
         if pend:
             hint = (" 대기 중인 제안이 있습니다 — 적용하려면 "
-                    + " 또는 ".join(f'[self:patch]{{op:"apply", proposal_id:"{x["id"]}"}}'
+                    + " 또는 ".join(f'[self:patch]{{op:"apply", proposal_id:"{x}"}}'
                                     for x in pend[:3]))
         return {"success": False, "error":
                 "적용할 스테이징 변경이 없습니다. RED 파일을 [self:write]/[self:edit] 로 "
                 "고치면 자동으로 격리 사본에 쌓입니다." + hint,
-                "pending_proposals": [x["id"] for x in pend]}
+                "pending_proposals": pend}
 
     ok, checks = verify(repo, sess)
     if not ok:
@@ -540,18 +538,8 @@ def op_apply(ti):
     sess["status"] = "applied"
     sess["applied_at"] = datetime.now().isoformat()
     sess["checks"] = checks
-    if prop is not None:
-        # 제안 경로 — 원장은 patch_proposals 쪽이다. 격리본은 회수한다(롤백은 워크트리가
-        # 아니라 _red_write_prepare 백업이 맡으므로 남겨둘 이유가 없고, 남기면 순찰에
-        # 미적용 제안으로 계속 잡힌다).
-        prop["status"] = "applied"
-        prop["applied_at"] = sess["applied_at"]
-        prop["checks"] = checks
-        _save_proposal(repo, prop)
-        _remove_worktree(repo, sess)
-    else:
-        _save_session(repo, sess)
-        _cleanup_old(repo)
+    _save_session(repo, sess)      # 제안이든 수리 세션이든 원장이 하나다
+    _cleanup_old(repo)
     _n = len(written) + len(removed)
     return {
         "success": True, "applied": True, "verified": True,
@@ -580,30 +568,32 @@ def op_status(ti):
         except Exception:
             continue
         items.append({
-            "key": s.get("key"), "status": s.get("status"),
+            "key": s.get("key"), "status": s.get("status"), "kind": s.get("kind") or "repair",
+            "proposal_id": s.get("proposal_id"), "reason": s.get("reason"),
+            "verified": s.get("verified"),
             "files": [r.get("rel") for r in (s.get("files") or {}).values()],
             "worktree": s.get("worktree"), "created_at": s.get("created_at"),
             "applied_at": s.get("applied_at"), "current": s.get("key") == key,
         })
     pending = [i for i in items if i["status"] == "staging"]
-    # ★제안도 같이 센다 — status 가 repair_sessions 만 읽어서, propose 로 올린 제안이
-    # 버젓이 있는데 "세션 0건"이라 답하던 것(08-18 실측).
-    props, dead = [], []
-    for x in list_proposals(repo):
-        row = {"proposal_id": x.get("id"), "target": x.get("target"),
-               "status": x.get("status"), "verified": x.get("verified"),
-               "reason": (x.get("reason") or "")[:120], "alive": x.get("_alive"),
-               "created_at": x.get("created_at")}
-        (props if x.get("status") == "proposed" and x.get("_alive") else dead).append(row)
-    msg = (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건) · "
-           f"적용 대기 제안 {len(props)}건. 미적용은 라이브에 아무 영향이 없습니다.")
+    props = [i for i in pending if i.get("kind") == "proposal"]
+    msg = (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건 · 그중 적용 대기 제안 "
+           f"{len(props)}건). 미적용은 라이브에 아무 영향이 없습니다.")
     if props:
         msg += (" 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} "
                 "— 수리(REPAIR) 경로에서만 통과합니다.")
-    if dead:
-        msg += f" (격리본이 사라졌거나 종료된 제안 {len(dead)}건은 되살릴 수 없습니다.)"
-    return {"success": True, "items": items, "proposals": props, "closed_proposals": dead,
-            "message": msg}
+    out = {"success": True, "items": items,
+           "proposals": [{"proposal_id": i.get("proposal_id") or i["key"],
+                          "files": i["files"], "reason": i.get("reason"),
+                          "verified": i.get("verified"), "created_at": i["created_at"]}
+                         for i in props],
+           "message": msg}
+    stranded = list_legacy_proposals(repo)
+    if stranded:   # 통합 전 세대가 남긴 살아있는 제안 — 이관 안내(코드는 안 읽는다)
+        out["legacy_stranded"] = [x.get("id") for x in stranded]
+        out["message"] += (f" ★옛 원장(patch_proposals)에 좌초된 제안 {len(stranded)}건이 "
+                           f"있습니다 — 통합 전 세대라 apply 가 못 봅니다. 다시 propose 하세요.")
+    return out
 
 
 def op_discard(ti):
@@ -611,20 +601,8 @@ def op_discard(ti):
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
-    # 제안 폐기 — discard 도 repair_sessions 만 읽어 propose 제안을 못 지웠다(08-18).
     pid = (ti.get("proposal_id") or "").strip()
-    if pid:
-        prop = load_proposal(repo, pid)
-        if not prop:
-            return {"success": False, "error": f"그런 제안이 없습니다: {pid}"}
-        _remove_worktree(repo, {"worktree": prop.get("worktree")})
-        prop["status"] = "discarded"
-        prop["discarded_at"] = datetime.now().isoformat()
-        _save_proposal(repo, prop)
-        return {"success": True, "proposal_id": pid,
-                "message": f"제안 {pid}({prop.get('target')})의 격리 사본을 폐기했습니다. "
-                           f"라이브는 원래 무변경이었습니다."}
-    target = task_key(ti.get("key") or key)
+    target = proposal_key(pid) if pid else task_key(ti.get("key") or key)
     try:
         with open(_session_path(repo, target), encoding="utf-8") as f:
             sess = json.load(f)
@@ -674,13 +652,20 @@ def _cleanup_old(repo: str):
 # ── op: propose (자율 태스크용 — 그랜트 없는 경로) ────────────────────────
 
 def op_propose(ti):
-    """RED 변경을 격리 사본에만 제안 + 검증. 라이브 무변경. 적용은 사용자 명령 수리가.
+    """RED 변경을 격리 사본에만 제안 + 검증. 라이브 무변경.
 
-    ★apply 와 다른 점 = 그랜트가 없다. 자율 태스크(스케줄러·자가점검)가 발견한 문제를
-    사람이 볼 수 있게 남기는 채널이라, **이 op 자체에는** 라이브로 가는 길이 없다.
-    다만 남긴 제안은 죽지 않는다 — 사용자가 수리(REPAIR) 경로로 명령한 턴에서
-    `[self:patch]{op:"apply", proposal_id:...}` 가 집어간다(2026-08-18 다리).
-    그랜트 요구는 그대로이므로 자율 태스크가 스스로 적용하는 길은 여전히 없다."""
+    ★2026-08-18 통합: 제안도 **같은 스테이징 세션**을 쓴다(key=`proposal-<ts>`).
+    옛 구현은 자기 워크트리(`.worktrees/selfpatch-<ts>`)와 자기 원장(`patch_proposals/`)을
+    따로 가져, 같은 `[self:patch]` 어휘인데 apply 가 원리적으로 못 봤다(제안 7건·적용 0건).
+    이제 저장소가 하나라 apply/status/discard 가 분기 없이 같은 것을 본다.
+
+    ★그랜트 요구는 apply 쪽에 그대로다 — 자율 태스크가 스스로 적용하는 길은 여전히 없다
+    (헌법 08-05 조건 1). propose 는 '그랜트 없이 세션을 여는' 유일한 입구일 뿐이다.
+
+    ★덤으로 고쳐진 것: 씨를 HEAD 가 아니라 **라이브 원본**에서 뿌린다(stage_file 규약).
+    옛 propose 는 old_string 을 HEAD 내용에 맞춰봐서, 미커밋 라이브와 어긋나면
+    "old_string 이 없습니다"로 헛발질했다.
+    """
     repo = ti.get("_repo_root")
     red_check = ti.get("_red_check")
     if not repo:
@@ -710,58 +695,64 @@ def op_propose(ti):
     if not _is_git_repo(repo):
         return {"success": False, "error": "git 저장소가 아니라 격리(worktree)를 만들 수 없습니다."}
 
+    # 같은 초에 두 번 부르면 키가 겹친다 — 옛 구현은 worktree 생성 실패로 떨어졌고,
+    # 세션을 재사용하면 두 제안이 조용히 한 세션에 합쳐진다. 접미사로 가른다.
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    wt_rel = os.path.join(".worktrees", f"selfpatch-{ts}")
-    wt_abs = os.path.join(repo, wt_rel)
-    add = _git(["worktree", "add", "--detach", wt_abs, "HEAD"], repo)
-    if add.returncode != 0:
-        return {"success": False, "error": f"worktree 생성 실패: {add.stderr.strip()}"}
+    base_ts, n = ts, 1
+    while read_session(repo, proposal_key(ts)) is not None:   # 닫힌 세션도 자리를 차지한다
+        n += 1
+        ts = f"{base_ts}_{n}"
+    key = proposal_key(ts)
 
+    st_abs = stage_file(repo, key, abs_target)
+    if not st_abs:
+        return {"success": False, "error": "격리 사본을 열지 못했습니다(git worktree 생성 실패)."}
     try:
-        wt_file = os.path.join(wt_abs, rel_target)
         if content is not None:
-            os.makedirs(os.path.dirname(wt_file), exist_ok=True)
-            with open(wt_file, "w", encoding="utf-8") as f:
+            os.makedirs(os.path.dirname(st_abs), exist_ok=True)
+            with open(st_abs, "w", encoding="utf-8") as f:
                 f.write(content)
         else:
-            if not os.path.exists(wt_file):
+            if not os.path.exists(st_abs):
                 raise FileNotFoundError(
-                    f"대상 파일이 HEAD에 없어 old_string 교체 불가: {rel_target} (신규 파일은 content 로)")
-            with open(wt_file, encoding="utf-8") as f:
+                    f"대상 파일이 없어 old_string 교체 불가: {rel_target} (신규 파일은 content 로)")
+            with open(st_abs, encoding="utf-8") as f:
                 orig = f.read()
-            n = orig.count(old_string)
-            if n == 0:
+            cnt = orig.count(old_string)
+            if cnt == 0:
                 raise ValueError("old_string 이 대상 파일에 없습니다.")
-            if n > 1:
-                raise ValueError(f"old_string 이 {n}번 나와 모호합니다 — 주변 맥락을 더 포함하세요.")
-            with open(wt_file, "w", encoding="utf-8") as f:
+            if cnt > 1:
+                raise ValueError(f"old_string 이 {cnt}번 나와 모호합니다 — 주변 맥락을 더 포함하세요.")
+            with open(st_abs, "w", encoding="utf-8") as f:
                 f.write(orig.replace(old_string, new_string, 1))
 
+        sess = load_session(repo, key)
+        wt_abs = os.path.join(repo, sess["worktree"])
         diff = _git(["diff", "--", rel_target], wt_abs).stdout
-        pseudo = {"worktree": wt_rel, "files": {abs_target: {"staged": wt_file, "rel": rel_target}}}
-        verified, checks = verify(repo, pseudo)
-
-        prop_dir = os.path.join(repo, "data", "system_ai_state", "patch_proposals")
-        os.makedirs(prop_dir, exist_ok=True)
-        proposal = {"id": ts, "target": rel_target, "reason": reason, "diff": diff,
-                    "checks": checks, "verified": verified, "worktree": wt_rel,
-                    "status": "proposed", "created_at": datetime.now().isoformat()}
-        with open(os.path.join(prop_dir, f"{ts}.json"), "w", encoding="utf-8") as f:
-            json.dump(proposal, f, ensure_ascii=False, indent=2)
+        verified, checks = verify(repo, sess)
+        sess.update({"kind": "proposal", "proposal_id": ts, "reason": reason,
+                     "verified": verified, "checks": checks, "diff": diff[:8000]})
+        _save_session(repo, sess)
 
         return {
             "success": True, "proposal_id": ts, "target": rel_target,
-            "verified": verified, "checks": checks, "worktree": wt_rel,
+            "verified": verified, "checks": checks, "worktree": sess["worktree"],
             "verdict": ("기계 검증 통과 ✓" if verified else "기계 검증 실패 ✗ — checks 확인"),
             "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
             "note": ("이 변경은 격리 사본에만 있고 라이브는 무변경입니다. "
-                     f"적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 "
+                     f'적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 '
                      f'[self:patch]{{op:"apply", proposal_id:"{ts}"}} — '
                      "그때 검증을 다시 돌려 통과분만 라이브로 갑니다(재작업 불필요). "
                      f'폐기: [self:patch]{{op:"discard", proposal_id:"{ts}"}}.'),
         }
     except Exception as e:
-        _git(["worktree", "remove", "--force", wt_abs], repo)
+        sess = load_session(repo, key)
+        if sess:
+            _remove_worktree(repo, sess)
+        try:
+            os.remove(_session_path(repo, key))
+        except OSError:
+            pass
         return {"success": False, "error": f"propose 실패: {e}"}
 
 

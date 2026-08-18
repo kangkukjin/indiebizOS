@@ -41,6 +41,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SESSION_DIR = ROOT / "data" / "system_ai_state" / "repair_sessions"
+PROPOSAL_DIR = ROOT / "data" / "system_ai_state" / "patch_proposals"
 WORKTREE_DIR = ROOT / ".worktrees"
 STALE_HOURS = 24
 GIT_TIMEOUT = 30
@@ -100,8 +101,26 @@ def find_uncommitted_red():
     return sorted(out, key=lambda x: -x[2])
 
 
+def _proposal_status(wt_name):
+    """selfpatch-<ts> 격리본이 살아있는 제안인가 — (제안 id, 상태) 또는 (None, None).
+
+    2026-08-18 다리 이후 selfpatch-* 는 '고아'가 아니라 **적용 대기 제안**일 수 있다
+    (apply{proposal_id} 로 재작업 없이 반영 가능). 기록이 없으면 그때는 진짜 고아다.
+    """
+    if not wt_name.startswith("selfpatch-"):
+        return None, None
+    pid = wt_name[len("selfpatch-"):]
+    f = PROPOSAL_DIR / f"{pid}.json"
+    if not f.exists():
+        return None, None
+    try:
+        return pid, (json.loads(f.read_text(encoding="utf-8")).get("status") or "proposed")
+    except Exception:
+        return pid, "unreadable"
+
+
 def find_orphan_worktrees():
-    """.worktrees/ 아래 격리본 중 세션 원장이 없는 것 (개명 전 세대 포함)."""
+    """.worktrees/ 아래 격리본 중 원장이 없는 것 + 적용 대기 제안."""
     out = []
     if not WORKTREE_DIR.is_dir():
         return out
@@ -114,10 +133,29 @@ def find_orphan_worktrees():
         # ★진짜 워크트리인지 먼저 확인한다 — 아니면 `git -C` 가 **부모 저장소**의 상태를
         #   반환해서, 저장소 전체의 미커밋 변경이 그 격리본 것인 양 보고된다(실측).
         if not (wt / ".git").exists():
-            out.append((wt.name, _age_hours(wt), None))   # None = 워크트리 아님(빈 잔재)
+            out.append((wt.name, _age_hours(wt), None, None))  # None = 워크트리 아님(빈 잔재)
             continue
         dirty = [l for l in _git(["-C", str(wt), "status", "--porcelain"]).splitlines() if l.strip()]
-        out.append((wt.name, _age_hours(wt), dirty))
+        pid, pstatus = _proposal_status(wt.name)
+        out.append((wt.name, _age_hours(wt), dirty, (pid if pstatus == "proposed" else None)))
+    return out
+
+
+def find_dead_proposals():
+    """격리본이 사라져 되살릴 수 없는 제안 기록 — 생애주기가 없어 영원히 쌓인다."""
+    out = []
+    if not PROPOSAL_DIR.is_dir():
+        return out
+    for f in sorted(PROPOSAL_DIR.glob("*.json")):
+        try:
+            prop = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if (prop.get("status") or "proposed") != "proposed":
+            continue                            # 적용·폐기로 닫힌 기록
+        wt = prop.get("worktree") or ""
+        if not wt or not (ROOT / wt).is_dir():
+            out.append((prop.get("id"), prop.get("target"), _age_hours(f)))
     return out
 
 
@@ -129,8 +167,9 @@ def main() -> int:
 
     drift = find_uncommitted_red()
     orphans = find_orphan_worktrees()
+    dead_props = find_dead_proposals()
 
-    if not drift and not orphans:
+    if not drift and not orphans and not dead_props:
         print(f"✓ RED 드리프트 없음 (격리 밖 미커밋 backend/*.py 0건, 고아 격리본 0건)")
         return 0
 
@@ -142,21 +181,28 @@ def main() -> int:
             mark = "‼ 방치" if age >= hours else "· 작업 중"
             print(f"  {mark}  {rel}  [{st}] {age:.1f}시간")
     if orphans:
-        print(f"고아 격리본 {len(orphans)}건 — 세션 원장이 없습니다:")
-        for name, age, dirty in orphans:
+        print(f"미적용 격리본 {len(orphans)}건:")
+        for name, age, dirty, pid in orphans:
             mark = "‼ 방치" if age >= hours else "·"
             if dirty is None:
                 print(f"  {mark}  .worktrees/{name}  {age:.1f}시간 — git 워크트리가 아닌 잔재 디렉토리")
                 continue
-            print(f"  {mark}  .worktrees/{name}  {age:.1f}시간, 미적용 변경 {len(dirty)}건")
+            tag = (f'적용 대기 제안 — [self:patch]{{op:"apply", proposal_id:"{pid}"}}'
+                   if pid else "고아(원장 없음)")
+            print(f"  {mark}  .worktrees/{name}  {age:.1f}시간, 변경 {len(dirty)}건 · {tag}")
             for d in dirty[:5]:
                 print(f"          {d}")
+    if dead_props:
+        print(f"죽은 제안 기록 {len(dead_props)}건 — 격리본이 사라져 되살릴 수 없습니다:")
+        for pid, target, age in dead_props:
+            print(f"  ·  {pid}  {target}  ({age/24:.0f}일 전)  → discard 로 정리")
 
     print()
     if stale:
         print(f"[FAIL] {hours:.0f}시간 넘게 방치된 항목 {len(stale)}건.")
         print("  · 살릴 것이면 커밋(=사람 승인), 버릴 것이면 되돌리기/격리본 제거")
-        print("  · 고아 격리본: 내용 확인 후 `git worktree remove --force .worktrees/<이름>`")
+        print('  · 적용 대기 제안: [self:patch]{op:"apply", proposal_id:"<id>"} (수리 경로에서)')
+        print("  · 진짜 고아: 내용 확인 후 `git worktree remove --force .worktrees/<이름>`")
         print("  · ★차단이 아니라 가시성 순찰입니다 — 아웃오브프로세스 편집자는 원리적으로 못 막습니다")
         return 1
 

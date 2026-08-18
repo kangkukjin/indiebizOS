@@ -215,7 +215,7 @@ nodes:
         target_key: path
       patch:
         returns: effect
-        description: 자기개조 패치 — RED 코어 코드(backend/·frontend/·scripts/) 변경을 격리 사본(worktree)에서 다룬다. 수리 경로의 RED write/edit 은 자동으로 격리에 쌓이고(라이브 무변경), apply 가 기계검증 후 통과분만 라이브로 옮긴다.
+        description: 자기개조 패치 — RED 코어 코드(backend/·frontend/·scripts/) 변경을 격리 사본(worktree)에서 다룬다. 수리 경로의 RED write/edit 은 자동으로 격리에 쌓이고(라이브 무변경), apply 가 기계검증 후 통과분만 라이브로 옮긴다. propose 제안도 apply{proposal_id} 로 집어간다.
         group: file
         ops:
           default: propose
@@ -226,11 +226,11 @@ nodes:
           fixture:
             status: '[self:patch]{op: "status"}'
           values:
-            propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용 경로 없음)
-            apply: 이 수리 세션의 격리 변경을 검증 후 통과분만 라이브 일괄 적용 (리로드는 이때 한 번)
-            status: 스테이징 세션 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
-            discard: 격리 사본 폐기 (라이브는 원래 무변경이라 되돌릴 것이 없다)
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수) / apply: 이 수리 세션에 쌓인 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경 / status: 스테이징 세션 현황(무엇이 아직 라이브에 안 갔나) / discard: 격리 사본 폐기(라이브는 원래 무변경).'
+            propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용은 사용자 수리 턴의 apply{proposal_id})
+            apply: 격리 변경을 검증 후 통과분만 라이브 적용(리로드 1회). proposal_id 주면 그 제안을 적용
+            status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
+            discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
         router: handler
         tool: patch_op
         implementation: repair_staging.py (system_essentials 형제 모듈) — 세션별 worktree(.worktrees/repair-<task>)에 라이브 원본을 씨로 스테이징, verify() 배터리, apply 가 _red_write_prepare/_red_write_finalize(백업·keeper·워치독)를 통과해 라이브 반영.
@@ -1098,7 +1098,9 @@ tool_json:
       \ 스모크)을 돌리고 **통과분만** 라이브로 한 번에 옮깁니다. 검증 실패면 라이브는 무변경이고\
       \ 실패 상세가 돌아오니 격리 사본에서 고쳐 쓰고 다시 apply 하세요.\n★apply 를 부르지 않으면\
       \ 그 수정은 라이브에 없습니다 — 고쳤다고 보고하지 마세요.\n\n## 자율 태스크에서 (그랜트 없음)\n\
-      op:\"propose\" (기본) — 격리 사본에 제안+검증만 남깁니다. 적용 경로는 없습니다.\n\n## op\n\
+      op:\"propose\" (기본) — 격리 사본에 제안+검증만 남깁니다. 스스로 적용할 수는\
+      \ 없지만 제안은 죽지 않습니다 — 사용자가 수리 경로로 명령한 턴에서 [self:patch]{op:\"apply\",\
+      \ proposal_id:\"<id>\"} 가 집어갑니다(재작업 불필요).\n\n## op\n\
       - propose(기본): path + content(전체) 또는 old_string+new_string(부분), reason 필수\n\
       - apply: 이 세션의 격리 변경을 검증 후 라이브 적용\n- status: 무엇이 격리에 쌓여 있고 아직\
       \ 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)"
@@ -1126,6 +1128,9 @@ tool_json:
         key:
           type: string
           description: (discard) 폐기할 스테이징 세션 키. 생략 시 현재 수리 세션.
+        proposal_id:
+          type: string
+          description: (apply/discard) propose 가 돌려준 제안 id. apply 에 주면 이 세션 대신 그 제안을 검증 후 적용한다(재작업 불필요, 수리 그랜트는 그대로 필요). discard 에 주면 그 제안을 폐기. 목록은 op:status.
   - name: read_op
     description: '파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
 

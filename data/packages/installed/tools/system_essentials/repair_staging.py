@@ -51,6 +51,10 @@ import sys
 from datetime import datetime, timedelta
 
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
+# propose 가 쓰는 원장 — apply 가 읽는 SESSION_DIRNAME 과 **다른 저장소**였다.
+# 같은 [self:patch] 어휘의 op 인데 서로를 못 봐서 propose 는 막다른 골목이었다
+# (실측 08-18: 제안 7건 누적 / 적용 0건, 그중 5건은 워크트리도 사라진 죽은 기록).
+PROPOSAL_DIRNAME = os.path.join("data", "system_ai_state", "patch_proposals")
 WORKTREE_PREFIX = os.path.join(".worktrees", "repair-")
 SESSION_TTL_DAYS = 7          # 이보다 오래된 종료 세션은 기회주의적으로 청소
 GIT_TIMEOUT = 120
@@ -94,6 +98,78 @@ def load_session(repo: str, key: str):
         return s if s.get("status") == "staging" else None
     except Exception:
         return None
+
+
+def _proposal_path(repo: str, pid: str) -> str:
+    return os.path.join(repo, PROPOSAL_DIRNAME, f"{pid}.json")
+
+
+def load_proposal(repo: str, pid: str):
+    try:
+        with open(_proposal_path(repo, pid), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _save_proposal(repo: str, prop: dict):
+    os.makedirs(os.path.join(repo, PROPOSAL_DIRNAME), exist_ok=True)
+    with open(_proposal_path(repo, prop["id"]), "w", encoding="utf-8") as f:
+        json.dump(prop, f, ensure_ascii=False, indent=2)
+
+
+def list_proposals(repo: str):
+    """제안 목록 + 격리본 생존 여부. 워크트리가 사라진 것은 되살릴 수 없는 죽은 기록이다."""
+    d = os.path.join(repo, PROPOSAL_DIRNAME)
+    out = []
+    for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(d, name), encoding="utf-8") as f:
+                prop = json.load(f)
+        except Exception:
+            continue
+        wt = prop.get("worktree") or ""
+        prop["_alive"] = bool(wt) and os.path.isdir(os.path.join(repo, wt))
+        out.append(prop)
+    return out
+
+
+def _session_from_proposal(repo: str, pid: str):
+    """propose 가 남긴 제안을 apply 가 먹을 수 있는 **세션 모양**으로 되살린다.
+
+    ★왜 (2026-08-18): propose 는 `.worktrees/selfpatch-<ts>` + `patch_proposals/` 에
+    쓰고 apply 는 `.worktrees/repair-<key>` + `repair_sessions/` 를 읽어, 같은
+    `[self:patch]` 어휘의 op 인데 서로를 못 봤다. 그래서 게이트에 막혀 propose 로
+    간 수리는 **재작업 말고는 라이브로 갈 길이 없었다**(제안 7건 누적·적용 0건).
+    이 함수가 그 다리다 — 모양은 op_propose 의 pseudo 세션과 같다.
+
+    ★그랜트 요구는 그대로다: 이 다리는 *사용자 수리 턴이 이미 있는 제안을 집어가는*
+    길이지, 자율 태스크가 스스로 적용하는 길이 아니다(헌법 08-05 조건 1).
+    """
+    prop = load_proposal(repo, pid)
+    if not prop:
+        return None, None, f"그런 제안이 없습니다: {pid} (op:status 로 목록 확인)"
+    if prop.get("status") == "applied":
+        return None, None, f"이미 적용된 제안입니다: {pid} ({prop.get('applied_at')})"
+    if prop.get("status") == "discarded":
+        return None, None, f"폐기된 제안입니다: {pid}"
+    wt_rel = prop.get("worktree") or ""
+    wt_abs = os.path.join(repo, wt_rel)
+    if not wt_rel or not os.path.isdir(wt_abs):
+        return None, None, (f"제안 {pid} 의 격리 사본이 사라져 적용할 내용이 없습니다"
+                            f"({wt_rel or '경로 미기록'}). 기록만 남은 죽은 제안입니다 — "
+                            f"다시 propose 하세요.")
+    rel = prop.get("target") or ""
+    staged = os.path.join(wt_abs, rel)
+    if not rel or not os.path.exists(staged):
+        return None, None, f"제안 {pid} 의 격리 사본에 대상 파일이 없습니다: {rel}"
+    live_abs = os.path.realpath(os.path.join(repo, rel))
+    sess = {"key": f"proposal-{pid}", "worktree": wt_rel, "status": "staging",
+            "created_at": prop.get("created_at"), "proposal_id": pid,
+            "files": {live_abs: {"staged": staged, "rel": rel, "op": "write"}}}
+    return sess, prop, None
 
 
 def _save_session(repo: str, sess: dict):
@@ -356,11 +432,28 @@ def op_apply(ti):
     if not key:
         return {"success": False, "error":
                 "수리 그랜트가 없습니다 — apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다."}
-    sess = load_session(repo, key)
+    # proposal_id 가 오면 propose 가 남긴 제안을 집어 적용한다(2026-08-18 다리).
+    # 없으면 종전대로 이 수리 세션의 스테이징을 적용한다.
+    pid = (ti.get("proposal_id") or "").strip()
+    prop = None
+    if pid:
+        sess, prop, perr = _session_from_proposal(repo, pid)
+        if perr:
+            return {"success": False, "applied": False, "error": perr}
+    else:
+        sess = load_session(repo, key)
     if not sess or not (sess.get("files") or {}):
+        pend = [x for x in list_proposals(repo)
+                if x.get("status") == "proposed" and x.get("_alive")]
+        hint = ""
+        if pend:
+            hint = (" 대기 중인 제안이 있습니다 — 적용하려면 "
+                    + " 또는 ".join(f'[self:patch]{{op:"apply", proposal_id:"{x["id"]}"}}'
+                                    for x in pend[:3]))
         return {"success": False, "error":
                 "적용할 스테이징 변경이 없습니다. RED 파일을 [self:write]/[self:edit] 로 "
-                "고치면 자동으로 격리 사본에 쌓입니다."}
+                "고치면 자동으로 격리 사본에 쌓입니다." + hint,
+                "pending_proposals": [x["id"] for x in pend]}
 
     ok, checks = verify(repo, sess)
     if not ok:
@@ -420,8 +513,18 @@ def op_apply(ti):
     sess["status"] = "applied"
     sess["applied_at"] = datetime.now().isoformat()
     sess["checks"] = checks
-    _save_session(repo, sess)
-    _cleanup_old(repo)
+    if prop is not None:
+        # 제안 경로 — 원장은 patch_proposals 쪽이다. 격리본은 회수한다(롤백은 워크트리가
+        # 아니라 _red_write_prepare 백업이 맡으므로 남겨둘 이유가 없고, 남기면 순찰에
+        # 미적용 제안으로 계속 잡힌다).
+        prop["status"] = "applied"
+        prop["applied_at"] = sess["applied_at"]
+        prop["checks"] = checks
+        _save_proposal(repo, prop)
+        _remove_worktree(repo, sess)
+    else:
+        _save_session(repo, sess)
+        _cleanup_old(repo)
     _n = len(written) + len(removed)
     return {
         "success": True, "applied": True, "verified": True,
@@ -456,9 +559,24 @@ def op_status(ti):
             "applied_at": s.get("applied_at"), "current": s.get("key") == key,
         })
     pending = [i for i in items if i["status"] == "staging"]
-    return {"success": True, "items": items,
-            "message": (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건). "
-                        f"미적용은 라이브에 아무 영향이 없습니다 — 적용은 op:apply.")}
+    # ★제안도 같이 센다 — status 가 repair_sessions 만 읽어서, propose 로 올린 제안이
+    # 버젓이 있는데 "세션 0건"이라 답하던 것(08-18 실측).
+    props, dead = [], []
+    for x in list_proposals(repo):
+        row = {"proposal_id": x.get("id"), "target": x.get("target"),
+               "status": x.get("status"), "verified": x.get("verified"),
+               "reason": (x.get("reason") or "")[:120], "alive": x.get("_alive"),
+               "created_at": x.get("created_at")}
+        (props if x.get("status") == "proposed" and x.get("_alive") else dead).append(row)
+    msg = (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건) · "
+           f"적용 대기 제안 {len(props)}건. 미적용은 라이브에 아무 영향이 없습니다.")
+    if props:
+        msg += (" 제안 적용은 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} "
+                "— 수리(REPAIR) 경로에서만 통과합니다.")
+    if dead:
+        msg += f" (격리본이 사라졌거나 종료된 제안 {len(dead)}건은 되살릴 수 없습니다.)"
+    return {"success": True, "items": items, "proposals": props, "closed_proposals": dead,
+            "message": msg}
 
 
 def op_discard(ti):
@@ -466,12 +584,27 @@ def op_discard(ti):
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
+    # 제안 폐기 — discard 도 repair_sessions 만 읽어 propose 제안을 못 지웠다(08-18).
+    pid = (ti.get("proposal_id") or "").strip()
+    if pid:
+        prop = load_proposal(repo, pid)
+        if not prop:
+            return {"success": False, "error": f"그런 제안이 없습니다: {pid}"}
+        _remove_worktree(repo, {"worktree": prop.get("worktree")})
+        prop["status"] = "discarded"
+        prop["discarded_at"] = datetime.now().isoformat()
+        _save_proposal(repo, prop)
+        return {"success": True, "proposal_id": pid,
+                "message": f"제안 {pid}({prop.get('target')})의 격리 사본을 폐기했습니다. "
+                           f"라이브는 원래 무변경이었습니다."}
     target = task_key(ti.get("key") or key)
     try:
         with open(_session_path(repo, target), encoding="utf-8") as f:
             sess = json.load(f)
     except Exception:
-        return {"success": False, "error": f"그런 스테이징 세션이 없습니다: {target}"}
+        return {"success": False, "error":
+                f"그런 스테이징 세션이 없습니다: {target}. "
+                f"propose 로 올린 제안을 지우려면 proposal_id 를 주세요(op:status 에 목록)."}
     _remove_worktree(repo, sess)
     sess["status"] = "discarded"
     sess["discarded_at"] = datetime.now().isoformat()
@@ -517,7 +650,10 @@ def op_propose(ti):
     """RED 변경을 격리 사본에만 제안 + 검증. 라이브 무변경. 적용은 사용자 명령 수리가.
 
     ★apply 와 다른 점 = 그랜트가 없다. 자율 태스크(스케줄러·자가점검)가 발견한 문제를
-    사람이 볼 수 있게 남기는 채널이라, 여기엔 라이브로 가는 길이 없다."""
+    사람이 볼 수 있게 남기는 채널이라, **이 op 자체에는** 라이브로 가는 길이 없다.
+    다만 남긴 제안은 죽지 않는다 — 사용자가 수리(REPAIR) 경로로 명령한 턴에서
+    `[self:patch]{op:"apply", proposal_id:...}` 가 집어간다(2026-08-18 다리).
+    그랜트 요구는 그대로이므로 자율 태스크가 스스로 적용하는 길은 여전히 없다."""
     repo = ti.get("_repo_root")
     red_check = ti.get("_red_check")
     if not repo:
@@ -591,9 +727,11 @@ def op_propose(ti):
             "verified": verified, "checks": checks, "worktree": wt_rel,
             "verdict": ("기계 검증 통과 ✓" if verified else "기계 검증 실패 ✗ — checks 확인"),
             "diff": diff[:4000] + ("\n…(diff 잘림)" if len(diff) > 4000 else ""),
-            "note": ("이 변경은 격리 사본에만 있고 라이브는 무변경입니다. 적용은 사용자가 "
-                     "수리 경로(REPAIR)로 명령할 때 하거나 사람이 직접 머지합니다. "
-                     f"폐기: git worktree remove {wt_rel}."),
+            "note": ("이 변경은 격리 사본에만 있고 라이브는 무변경입니다. "
+                     f"적용: 사용자가 수리(REPAIR) 경로로 명령한 턴에서 "
+                     f'[self:patch]{{op:"apply", proposal_id:"{ts}"}} — '
+                     "그때 검증을 다시 돌려 통과분만 라이브로 갑니다(재작업 불필요). "
+                     f'폐기: [self:patch]{{op:"discard", proposal_id:"{ts}"}}.'),
         }
     except Exception as e:
         _git(["worktree", "remove", "--force", wt_abs], repo)

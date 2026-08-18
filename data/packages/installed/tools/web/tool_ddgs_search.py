@@ -15,6 +15,10 @@ if _backend_dir not in sys.path:
 from ddgs import DDGS
 from common.response_formatter import format_json
 
+# ddgs rate limit 방어선. 숫자를 올리는 건 트레이드오프 판단이라 그대로 두고,
+# "깎였다는 사실을 알리지 않던 것"만 고쳤다(2026-08-18).
+SEARCH_COUNT_MAX = 10
+
 
 def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
     """
@@ -22,15 +26,17 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
 
     Args:
         query: 검색 키워드
-        count: 최대 결과 수 (1-10)
+        count: 최대 결과 수 (1-10). 상한 초과 시 clamped/requested 로 신고
         country: 검색 지역
 
     Returns:
         JSON 문자열 (results 포함)
     """
     try:
-        # 최대 결과 수 제한 (Rate limit 방지)
-        count = min(max(1, count), 10)
+        # 최대 결과 수 제한 (Rate limit 방지). 깎였으면 조용히 넘기지 말고 신고한다
+        # — 사용자는 "10건뿐"으로 읽는다(2026-08-18 침묵 클램프 부류, check_silent_clamp).
+        requested = max(1, int(count or 5))
+        count = min(requested, SEARCH_COUNT_MAX)
 
         # DuckDuckGo 검색
         ddgs = DDGS()
@@ -50,7 +56,7 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
                 "snippet": r.get("body", "설명 없음")
             })
 
-        return format_json({
+        out = {
             "success": True,
             "query": query,
             "count": len(formatted_results),
@@ -59,7 +65,13 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
             "items": [{"title": r["title"], "meta": "", "summary": r.get("snippet", ""),
                          "url": r.get("url", "")} for r in formatted_results],
             "_note": "검색 결과는 제목과 요약(snippet)만 포함합니다. 기사/페이지 본문이 필요하면 [sense:crawl]{url: \"...\"}로 URL을 크롤링하세요."
-        })
+        }
+        if requested != count:
+            out["clamped"] = True
+            out["requested"] = requested
+            out["message"] = (f"요청 {requested}건 → 상한 {SEARCH_COUNT_MAX}건으로 "
+                              f"조정되어 검색했습니다.")
+        return format_json(out)
 
     except Exception as e:
         return format_json({

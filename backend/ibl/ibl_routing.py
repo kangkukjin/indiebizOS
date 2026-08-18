@@ -892,11 +892,21 @@ def _search_guide(query: str, params: dict) -> Any:
 
     # 한국어 정규화: 조사 제거 + 복합어 분리 (korean_utils 공통 모듈)
     from korean_utils import tokenize_korean
+    import re as _re
     query_stems = tokenize_korean(query)
+
+    # 원형 토큰 — 토크나이저가 떨구는 짧은 낱말을 살린다 (2026-08-18).
+    #   실측: "유튜브 AI 팁 보고서" → stems ['ai','보고','유튜브'] 로 가장 변별력 있는
+    #   '팁' 이 통째로 사라져 youtube_ai_tips_report 와 youtube_relay 가 3점 동점이 됐고,
+    #   정확한 제목으로 부른 정본이 순서로 밀렸다(자율주행이면 가이드 없이 진행).
+    q_low = (query or "").strip().lower()
+    raw_tokens = [t for t in _re.split(r"[\s/,·]+", q_low) if t]
 
     scored = []
     for g in guides:
         score = 0
+        name_low = g.get("name", "").lower()
+        kw_low = [kw.lower() for kw in g.get("keywords", [])]
         search_text = " ".join([
             g.get("name", ""),
             g.get("description", ""),
@@ -906,8 +916,21 @@ def _search_guide(query: str, params: dict) -> Any:
         for word in query_stems:
             if word in search_text:
                 score += 1
-            if word in [kw.lower() for kw in g.get("keywords", [])]:
+            if word in kw_low:
                 score += 2
+
+        for word in raw_tokens:
+            if word in query_stems:
+                continue  # 위에서 이미 셈
+            if word in search_text:
+                score += 1
+            if word in kw_low:
+                score += 2
+
+        # 제목 호명 — 사용자가 가이드 이름을 그대로 불렀으면 가장 강한 신호다.
+        # 부분 점수 합산으로는 뒤집힐 수 있어(동점 → 순서 운) 명시적으로 앞세운다.
+        if q_low and (q_low in name_low or name_low.startswith(q_low)):
+            score += 10
 
         if score > 0:
             scored.append((score, g))

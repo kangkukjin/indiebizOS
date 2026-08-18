@@ -212,12 +212,17 @@ def _format_duration(seconds):
         return f"{m}:{s:02d}"
 
 
+# 검색 결과 상한 — yt-dlp ytsearchN 자체엔 제한이 없다. 가이드·앱 계기가 12를 쓰므로
+# 옛 상한 10 은 침묵 클램프였다(2026-08-18 수리). 넘으면 clamped 로 신고한다.
+SEARCH_COUNT_MAX = 25
+
+
 def search_youtube(query: str, count: int = 5) -> dict:
     """유튜브 검색 (재생하지 않고 결과만 반환)
 
     Args:
         query: 검색어
-        count: 검색 결과 수 (1-10, 기본 5)
+        count: 검색 결과 수 (1-25, 기본 5). 상한 초과 시 clamped/requested 로 신고
 
     Returns:
         dict: {success, count, results: [{video_id, title, channel, duration, url}, ...]}
@@ -230,7 +235,8 @@ def search_youtube(query: str, count: int = 5) -> dict:
             'message': 'yt-dlp 패키지가 설치되지 않았습니다. pip install yt-dlp'
         }
 
-    count = max(1, min(10, int(count or 5)))
+    requested = int(count or 5)
+    count = max(1, min(SEARCH_COUNT_MAX, requested))
 
     try:
         search_query = f"ytsearch{count}:{query}"
@@ -262,12 +268,20 @@ def search_youtube(query: str, count: int = 5) -> dict:
                 'thumb': f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",   # 앱 카드용
             })
 
-        return {
+        out = {
             'success': True,
             'query': query,
             'count': len(results),
             'results': results,
         }
+        # 침묵 클램프 금지 — 요청보다 적게 받았으면 그 사실을 결과에 실어 보낸다.
+        if requested != count:
+            out['clamped'] = True
+            out['requested'] = requested
+            out['message'] = (
+                f'요청 {requested}건 → 상한 {SEARCH_COUNT_MAX}건으로 조정되어 검색했습니다.'
+            )
+        return out
 
     except Exception as e:
         return {'success': False, 'error': f'검색 실패: {str(e)}'}
@@ -337,7 +351,8 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     Args:
         query: 검색어 또는 YouTube URL
         mode: 재생 모드 - "audio" (소리만, 기본), "video" (브라우저)
-        count: 검색 결과 수 (1-10, 기본 5). URL 직접 지정 시 무시됨
+        count: 검색 결과 수 (1-25, 기본 5). URL 직접 지정 시 무시됨.
+            상한 초과 시 clamped/requested 로 신고
 
     Returns:
         dict: {success, video_id, title, channel, duration, mode, message}
@@ -351,7 +366,16 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
         }
 
     mode = (mode or "audio").lower()
-    count = max(1, min(10, int(count or 5)))
+    requested = int(count or 5)
+    count = max(1, min(SEARCH_COUNT_MAX, requested))
+    # 침묵 클램프 금지 — 검색 경로(search_youtube)와 같은 자로 신고한다.
+    clamp_info = {}
+    if requested != count:
+        clamp_info = {
+            'clamped': True,
+            'requested': requested,
+            'clamp_message': f'요청 {requested}건 → 상한 {SEARCH_COUNT_MAX}건으로 조정되어 검색했습니다.',
+        }
 
     # URL인지 검색어인지 판단
     is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
@@ -450,6 +474,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                     result['search_results'] = search_results
                 except NameError:
                     pass
+                result.update(clamp_info)
             return result
 
     # client 모드: 서버측 재생(ffplay) 대신 오디오 URL 을 resolve 해 클라이언트(폰/원격
@@ -481,6 +506,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
                 result['search_results'] = search_results
             except NameError:
                 pass
+            result.update(clamp_info)
         return result
 
     # 이전 재생 종료
@@ -538,6 +564,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
             result['search_results'] = search_results
         except NameError:
             pass
+        result.update(clamp_info)
 
     # ★ 플레이어 시작 후 나머지 검색 결과를 큐에 추가
     if not is_url:

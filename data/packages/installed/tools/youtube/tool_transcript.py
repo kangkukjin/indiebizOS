@@ -475,7 +475,15 @@ def get_youtube_transcript(
                 'title': title,
                 'duration': duration,
                 'video_id': video_id,
-                'message': f'자막이 길어서 파일로 저장했습니다 ({len(full_text):,}자, {len(segments)}개 세그먼트). 파일을 부분적으로 읽어서 요약해주세요: {filepath}'
+                # 통째로 도로 읽으면 파일로 뺀 의미가 사라진다 — 부분 읽기 '방법'까지 알려준다.
+                # ★[self:grep] 은 path 가 아니라 root_path + file_pattern 을 받는다.
+                'message': (
+                    f'자막이 길어서 파일로 저장했습니다 ({len(full_text):,}자, {len(segments)}개 세그먼트): {filepath}\n'
+                    f'★통째로 읽지 마세요. 앵커를 먼저 잡고 그 구간만 읽습니다:\n'
+                    f'  1) [self:grep]{{pattern: "키워드1|키워드2", root_path: "{outputs_dir}", file_pattern: "{filename}"}} → 줄 번호 확보\n'
+                    f'  2) [self:read]{{path: "{filepath}", start_line: 640, end_line: 1045}} → 그 구간만 발췌 (1-기반 양끝 포함)\n'
+                    f'  전체 흐름만 필요하면 preview 필드(앞 2,000자)로 충분한 경우가 많습니다.'
+                )
             }
 
         return {

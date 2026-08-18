@@ -17,7 +17,7 @@
           },
           "count": {
             "type": "integer",
-            "description": "검색 결과 수 (1-10, 기본 5)"
+            "description": "검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림"
           }
         },
         "required": [

@@ -114,6 +114,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const reconnectAttemptRef = useRef(0);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intentionalCloseRef = useRef(false);
+  // 진행 중 여부 미러 — onclose 는 오래된 클로저를 볼 수 있어 state 를 직접 못 읽는다.
+  const isLoadingRef = useRef(false);
   const maxReconnectAttempts = 5;
 
   // 파일 첨부
@@ -151,6 +153,12 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   // ── 헬퍼 ──
+
+  // setIsLoading 단일 통로 — ref 를 함께 맞춘다(둘이 갈리면 onclose 판정이 틀어진다).
+  const setLoading = (v: boolean) => {
+    isLoadingRef.current = v;
+    setIsLoading(v);
+  };
 
   const resetStreamingState = () => {
     setStreamingContent('');
@@ -228,7 +236,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
       switch (data.type) {
         case 'start':
-          setIsLoading(true);
+          setLoading(true);
           resetStreamingState();
           break;
 
@@ -308,7 +316,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             }];
           });
           resetStreamingState();
-          setIsLoading(false);
+          setLoading(false);
           break;
         }
 
@@ -339,7 +347,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             content: data.content,
             timestamp: new Date(),
           }]);
-          setIsLoading(false);
+          setLoading(false);
           resetStreamingState();
           break;
 
@@ -352,7 +360,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             timestamp: new Date(),
           }]);
           resetStreamingState();
-          setIsLoading(false);
+          setLoading(false);
           break;
 
         case 'cancelled':
@@ -365,7 +373,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             }]);
           }
           resetStreamingState();
-          setIsLoading(false);
+          setLoading(false);
           break;
 
         case 'steer_accepted':
@@ -379,7 +387,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           break;
 
         case 'end':
-          setIsLoading(false);
+          setLoading(false);
           resetStreamingState();
           break;
       }
@@ -396,6 +404,22 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       // 의도적 종료(cleanup)면 재연결/에러 메시지 없이 종료
       if (intentionalCloseRef.current) return;
 
+      // ★진행 중이던 턴은 연결과 함께 죽었다 — 그 워커는 사라졌고 'end' 는 영영 안 온다.
+      //   옛 구현은 *재연결 최대 실패* 가지에서만 풀어서, 백엔드가 금방 돌아오는 흔한
+      //   경우(자기수정 apply 가 부른 리로드 등)에 오히려 영영 안 풀렸다 — 복구가 잘 될수록
+      //   창이 멈추는 구조였다(2026-08-18 실측: 수리는 성공했는데 칩이 계속 돎).
+      if (isLoadingRef.current) {
+        setLoading(false);
+        resetStreamingState();
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: '연결이 끊겨 이 턴은 중단됐습니다. 서버가 재기동된 경우(자기수정 반영 등) '
+                   + '작업 자체는 완료됐을 수 있습니다 — 다음 메시지에서 결과를 확인하세요.',
+          timestamp: new Date(),
+        }]);
+      }
+
       if (event.code !== 1000 && reconnectAttemptRef.current < maxReconnectAttempts) {
         reconnectAttemptRef.current++;
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current - 1), 16000);
@@ -411,7 +435,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           content: '연결이 불안정합니다. 잠시 후 다시 시도해주세요.',
           timestamp: new Date(),
         }]);
-        setIsLoading(false);
+        setLoading(false);
         reconnectAttemptRef.current = 0;
       }
     };
@@ -465,7 +489,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
             if (fresh.length === 0) return prev;
             return [...prev, ...fresh];
           });
-          setIsLoading(false);
+          setLoading(false);
           resetStreamingState();
         }
       } catch {
@@ -766,7 +790,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         console.error('Cancel failed:', error);
       }
     }
-    setIsLoading(false);
+    setLoading(false);
     resetStreamingState();
     if (isAgent) {
       setMessages(prev => [...prev, {

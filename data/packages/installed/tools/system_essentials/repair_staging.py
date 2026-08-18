@@ -28,6 +28,17 @@ _red_write_finalize 를 그대로 통과하므로 백업·keeper 일시정지·�
 **라이브 원본에서 씨를 뿌린다**(권위). HEAD 를 베이스로 쓰면 미커밋 라이브 작업을
 적용이 조용히 되돌린다 — 데이터 손실.
 
+★★사정거리 (2026-08-18 정정) — 이 격리는 **파일이 아니라 문 하나**에 걸려 있다.
+게이트는 handler 의 `_red_zone_write_block`(= `[self:write]`/`[self:edit]` 가 지나는 자리)
+이고 그랜트는 REPAIR 경로만 발급한다. 그 문을 안 쓰는 편집자 — 아웃오브프로세스
+Claude Code 세션(자체 Edit/Bash), `[self:script]{op:run}`, `run_command`, 패키지
+핸들러 자신의 `open()` — 는 backend 로 **라이브 직행**하고, 게이트는 repo 루트
+미탐지 시 fail-open 이다. 즉 참인 불변식은 "backend 는 격리를 거쳐야 바뀐다"가 아니라
+**"REPAIR 경로는 격리를 쓴다"** 이다. 아웃오브프로세스 손은 이 프로세스 밖이라
+원리적으로 차단할 수 없으므로, 우회는 차단이 아니라 **가시성**으로 다룬다 —
+`scripts/check_red_drift.py`(자가점검 §1H). 정본=docs/SELF_MODIFICATION_SAFETY_DESIGN.md
+'이 격리의 사정거리' 표.
+
 원장: data/system_ai_state/repair_sessions/<task_key>.json
 격리: .worktrees/repair-<task_key>/
 """
@@ -587,3 +598,55 @@ def op_propose(ti):
     except Exception as e:
         _git(["worktree", "remove", "--force", wt_abs], repo)
         return {"success": False, "error": f"propose 실패: {e}"}
+
+
+# ── 리로드 강제 금지 가드 (2026-08-17) ────────────────────────────────────
+# ★왜: 실측(08-18) 시스템 AI 가 수리 중 `touch backend/api.py && curl 헬스 폴링` 을
+# 셸로 돌렸다. touch 가 uvicorn 리로드를 부르고, 그 리로드가 **그 턴을 실행 중이던
+# 워커를 죽인다** — finally 가 못 돌아 에피소드가 안 닫히고, WS 가 끊겨 클라이언트는
+# 완료 신호를 영영 못 받는다(화면의 도구 칩이 영원히 도는 것처럼 보임). 서버는 멀쩡한데
+# 사용자 자리에서는 "혼자 돌고 있다"로 보인다.
+#
+# 이건 격리 스테이징이 없애려던 바로 그 동작의 **셸 우회**다. 반영은 apply 가 하고,
+# 그 뒤 판정은 분리 워치독이 다음 턴에 보고한다 — 손으로 리로드를 부를 이유가 없다.
+# 프롬프트(천장)가 아니라 쓰기 지점의 구조(바닥)로 막는다.
+#
+# ★한계(정직하게): 셸은 튜링완전이라 완전 차단은 불가하다(`find … | xargs touch` 등).
+# 흔한 직접 형태를 막고, 나머지는 프롬프트 수칙과 워치독이 받는다.
+_TOUCH_RE = re.compile(r"\btouch\b([^;&|]*)")
+_KILL_RE = re.compile(r"\b(?:kill|pkill|killall)\b([^;&|]*)")
+# 이 몸의 백엔드를 가리키는 표식 — kill 계열이 이걸 겨누면 자기 목을 치는 것이다.
+_BACKEND_MARKERS = ("uvicorn", "api.py", "backend_keeper", "8765")
+
+_RELOAD_HINT = (
+    "수리 반영은 [self:patch]{op:\"apply\"} 가 합니다 — 검증(구문·import·삼각)을 통과한 "
+    "내용만 라이브로 옮기고, 그때 리로드가 한 번 일어납니다. 그 뒤 헬스 판정은 분리 "
+    "워치독이 맡아 다음 턴에 보고하므로, 직접 폴링할 필요도 없습니다."
+)
+
+
+def reload_forcing_violation(command: str, repo: str):
+    """리로드를 손으로 강제하는 명령이면 거부 메시지, 아니면 None."""
+    if not command or not repo:
+        return None
+    red_roots = [os.path.join(repo, d) for d in ("backend", "frontend", "scripts")]
+
+    for m in _TOUCH_RE.finditer(command):
+        for tok in m.group(1).split():
+            if tok.startswith("-"):
+                continue
+            cand = tok.strip("'\"")
+            real = os.path.realpath(cand if os.path.isabs(cand) else os.path.join(repo, cand))
+            if any(real == r or real.startswith(r + os.sep) for r in red_roots):
+                return (f"Error: RED 구역 파일에 touch 로 리로드를 강제할 수 없습니다: {cand}\n"
+                        f"★그 리로드는 지금 이 턴을 실행 중인 워커를 죽입니다 — 에피소드가 "
+                        f"닫히지 않고 화면의 작업 표시가 영원히 멈춥니다(실측).\n{_RELOAD_HINT}")
+
+    for m in _KILL_RE.finditer(command):
+        args = m.group(1).lower()
+        if any(mk in args for mk in _BACKEND_MARKERS) or any(mk in command.lower() for mk in ("lsof", ":8765")):
+            return ("Error: 이 몸의 백엔드를 kill 로 재기동시킬 수 없습니다 — 자기 목을 치는 "
+                    "동작입니다(그 순간 이 턴도 함께 죽습니다).\n"
+                    "프로세스가 정말 멎었다면 keeper(scripts/backend_keeper.sh)가 되살립니다.\n"
+                    + _RELOAD_HINT)
+    return None

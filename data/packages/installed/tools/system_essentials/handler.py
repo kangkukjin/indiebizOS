@@ -746,7 +746,9 @@ def execute(tool_input: dict, context) -> str:
                 end = min(offset + limit, total_lines) if limit else total_lines
                 selected = lines[offset:end]
                 content = ''.join(selected)
-                header = f"[줄 {offset}-{min(end, total_lines)-1} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
+                # 표시는 1-기반 양끝 포함 — grep 줄번호·start_line/end_line 과 같은 자로 읽힌다
+                # (옛 표기는 0-기반 범위를 "줄"이라 찍어 1씩 어긋났다).
+                header = f"[줄 {offset + 1}-{min(end, total_lines)} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
                 return header + content
             else:
                 # 전체 읽기 — 대용량 파일 방어 (1MB 제한)
@@ -1071,6 +1073,17 @@ def execute(tool_input: dict, context) -> str:
 
             if not command:
                 return "Error: 명령어가 비어있습니다."
+
+            # 리로드 강제 금지 — touch/kill 로 자기 몸을 재기동하면 그 리로드가 **이 턴을
+            # 실행 중인 워커를 죽인다**(에피소드 미종료·화면 작업표시 영구 정지, 08-18 실측).
+            # 반영은 [self:patch]{op:"apply"}, 판정은 워치독이 다음 턴에. 로직=repair_staging.
+            try:
+                _rf = _staging_mod().reload_forcing_violation(
+                    command, str(_REPO_ROOT) if _REPO_ROOT is not None else "")
+            except Exception:
+                _rf = None
+            if _rf:
+                return json.dumps({"success": False, "error": _rf}, ensure_ascii=False)
 
             # 위험한 명령어 감지 - 승인되지 않았으면 승인 요청
             if not approved and is_dangerous_command(command):

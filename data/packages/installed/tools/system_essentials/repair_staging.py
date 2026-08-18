@@ -295,14 +295,36 @@ def stage_delete(repo: str, key: str, live_abs: str) -> bool:
 
 # ── 검증 배터리 (격리 사본 안에서만) ──────────────────────────────────────
 
-def _module_name(rel: str):
-    """backend/<층>/<모듈>.py → 모듈명. 평면 이름 + boot_paths 층 등재 규약."""
+def _module_name(rel: str, base_abs: str = None):
+    """backend 하위 .py → import 스모크가 실제로 쓸 수 있는 모듈명.
+
+    ★backend 안에 두 규약이 공존한다(2026-08-18 실측):
+      · 층 디렉토리(base·datastore·ibl·cognition·services·surface) = `__init__.py` **없음**
+        → boot_paths 가 각 디렉토리를 sys.path 에 올려 **평면 이름**(`import ibl_engine`)
+      · 진짜 패키지(drivers·providers·channels·common) = `__init__.py` **있음**
+        → backend/ 가 sys.path 라 **점 표기**(`import providers.claude_code`)
+    옛 구현은 전부 평면으로 뭉개서 후자를 `ModuleNotFoundError` 로 무조건 탈락시켰다.
+    제안 내용과 무관하게 import_smoke 가 ✗ 라 **apply 가 영원히 막혔다**
+    (실측: backend/drivers/sqlite_driver.py · backend/providers/claude_code.py 제안 2건).
+    디렉토리 목록을 박지 않고 `__init__.py` 존재로 판정한다 — 새 패키지가 생겨도 따라온다.
+    """
     if not (rel.startswith("backend" + os.sep) and rel.endswith(".py")):
         return None
     base = os.path.basename(rel)
     if base == "__init__.py":
         return None
-    return base[:-3]
+    mod = base[:-3]
+    if not base_abs:
+        return mod
+    parts = rel.split(os.sep)                     # backend, <디렉토리...>, 파일.py
+    pkg = []
+    for i in range(1, len(parts) - 1):
+        d = os.path.join(base_abs, *parts[:i + 1])
+        if not os.path.exists(os.path.join(d, "__init__.py")):
+            pkg = []                              # 층 디렉토리 — 평면 이름
+            break
+        pkg.append(parts[i])
+    return ".".join(pkg + [mod]) if pkg else mod
 
 
 def _smoke_env(wt_abs: str):
@@ -320,8 +342,13 @@ def _orphan_importers(wt_abs: str, mod: str, dropped_rels: set):
     ★왜 별도 검사인가: 쓰기의 위험은 *그 파일이 깨지는* 것이라 그 모듈만 import 해보면
     잡힌다. 삭제의 위험은 반대다 — **남의 import 가 깨진다**. 지워진 모듈은 import 해볼
     수도 없으니(없는 게 정상) 스모크로는 원리적으로 안 잡힌다."""
-    pat = re.compile(r"^\s*(?:from\s+%s\s+import|import\s+%s\b)" % (re.escape(mod), re.escape(mod)),
-                     re.MULTILINE)
+    esc = re.escape(mod)
+    pats = [r"^\s*(?:from\s+%s\s+import|import\s+%s\b)" % (esc, esc)]
+    if "." in mod:
+        # 패키지 내부 상대 import — providers/__init__.py 의 `from .claude_code import ...`
+        # 는 점 표기 패턴에 안 걸린다. 삭제 고아 검출에서 가장 가까운 참조를 놓치는 자리.
+        pats.append(r"^\s*from\s+\.%s\s+import" % re.escape(mod.rsplit(".", 1)[-1]))
+    pat = re.compile("|".join(pats), re.MULTILINE)
     hits = []
     try:
         listed = subprocess.run(["git", "ls-files", "*.py"], cwd=wt_abs,
@@ -356,7 +383,7 @@ def verify(repo: str, sess: dict):
         dropped = set(del_rels)
         orphans = {}
         for rel in del_rels:
-            mod = _module_name(rel)
+            mod = _module_name(rel, wt_abs)
             if not mod:
                 continue
             hits = _orphan_importers(wt_abs, mod, dropped)
@@ -380,7 +407,7 @@ def verify(repo: str, sess: dict):
 
     # 2. import 스모크 — ★사전 compile() 이 못 잡는 부류(ImportError·모듈 최상위
     #    NameError·순환 import)를 여기서 잡는다. 브릭의 실제 원인 대부분이 여기 산다.
-    mods = sorted({m for m in (_module_name(r) for r in rels) if m})
+    mods = sorted({m for m in (_module_name(r, wt_abs) for r in rels) if m})
     if mods:
         code = "import boot_paths\n" + "".join(f"import {m}\n" for m in mods)
         p = subprocess.run([py, "-c", code], cwd=os.path.join(wt_abs, "backend"),

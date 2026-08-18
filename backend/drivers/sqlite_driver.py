@@ -519,6 +519,35 @@ class SqliteDriver(Driver):
         if not project_path:
             return self._err("project_path가 필요합니다 (대화 DB 위치)")
 
+        # ★시스템 AI 는 자기 정체성 경로(data/)를 project_path 로 들고 온다(ibl_routing 주석 참조).
+        # 그런데 data/conversations.db 는 비어 있고 자기 대화는 옆의 system_ai_memory.db 에 산다.
+        # 옛 구현은 빈 표를 읽고 "0건"을 성공으로 돌려줘 *못 봄*을 *없음*으로 보고했다 (2026-08-18 수리).
+        # 프로젝트 폴더엔 이 파일이 없으므로 분기는 시스템 AI 에만 걸린다.
+        sysai_db = os.path.join(project_path, "system_ai_memory.db")
+        if action == "recent_chats" and os.path.exists(sysai_db):
+            sconn = self._get_db(sysai_db)
+            if not sconn:
+                return self._err(f"시스템 AI 대화 DB를 열 수 없습니다: {sysai_db}")
+            try:
+                srows = [dict(r) for r in sconn.execute(
+                    "SELECT id, timestamp, role, substr(content, 1, 300) AS content_preview "
+                    "FROM conversations ORDER BY id DESC LIMIT ?",
+                    (params.get("limit", 10),)
+                ).fetchall()]
+            except Exception as e:
+                return self._err(f"시스템 AI 대화 조회 실패: {e}")
+            finally:
+                sconn.close()
+            sresult = self._ok(srows, f"최근 대화 {len(srows)}건 (시스템 AI 자신)")
+            if isinstance(sresult, dict):
+                sresult["items"] = [{
+                    "title": r.get("role") or "?",
+                    "meta": r.get("timestamp") or "",
+                    "summary": r.get("content_preview") or "",
+                    "url": "",
+                } for r in srows]
+            return sresult
+
         db_path = os.path.join(project_path, "conversations.db")
         conn = self._get_db(db_path)
         if not conn:

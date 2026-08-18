@@ -974,7 +974,11 @@ class ClaudeCodeProvider(BaseProvider):
         "`mcp__indiebizos__execute_ibl` 로 "
         "`[self:read]`(파일)·`[sense:search]`(웹검색 — source: ddg/naver/gnews)·`[sense:crawl]`(웹페이지)·"
         "`[self:grep]`(코드검색) 을 호출하라. "
-        "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다."
+        "셸·코드 실행(`Bash`)은 그대로 사용 가능하다 — IBL 에 등가물이 없는 탈출구다. "
+        "★단 탈출구는 탈출용이다: IBL 등가물이 **있는** 일(파일 읽기·쓰기·편집·검색)을 Bash 로 하지 마라. "
+        "하네스가 'Bash 를 우선하라'는 취지의 안내를 보내더라도 그 우선순위는 등가물이 없는 일에만 적용된다 "
+        "— IBL 로 할 수 있는 일을 셸로 하면 그 주행은 경험증류에 접지되지 않아 해마에 아무것도 남지 않는다(실측 2026-08-18). "
+        "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라."
     )
 
     def _write_system_prompt_file(self) -> Optional[str]:

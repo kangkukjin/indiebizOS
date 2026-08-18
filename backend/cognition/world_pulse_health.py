@@ -211,6 +211,9 @@ def run_ibl_health_check() -> List[Dict]:
     # (base_path/ms-playwright)이 갈리면 슬라이드·강의영상·글자얹기·browser-action 이
     # 한꺼번에 죽는다. 그것도 *쓸 때* 처음 — 부팅도 import 도 초록이라 못 잡는 부류.
     out.append(_run_playwright_browsers(_root))
+    # §1H RED 드리프트 (2026-08-18) — 격리를 안 지난 backend/*.py 변경·고아 격리본.
+    # 워크트리 격리가 "문 하나"에만 걸린 구조라 우회가 조용하다. 차단은 못 하니 보이게 한다.
+    out.append(_run_red_drift(_root))
     # 러너 자신의 성공 기록 — 대시보드의 '점검 실행 실패' 항목을 초록으로 되돌리는 짝
     out.append({"node": "__ibl_health__", "action": "ibl_health_check", "success": True,
                 "response_ms": 0, "data_quality": "ok", "error_message": None})
@@ -335,6 +338,42 @@ def _run_silent_failure_regression(_root) -> Dict:
     return {"node": "__static__", "action": "silent_failure_regression",
             "success": True, "response_ms": int((_time.time() - t0) * 1000),
             "data_quality": "ok", "error_message": None}
+
+
+def _run_red_drift(_root) -> Dict:
+    """RED 드리프트 순찰(§1H, 2026-08-18) — 격리를 안 지난 살아있는 기질 변경 가시화.
+
+    08-17 워크트리 격리는 `[self:write]`/`[self:edit]` 문 하나에만 걸려 있다.
+    아웃오브프로세스 편집자(Claude Code 세션)·`[self:script]`·`run_command` 는
+    backend 를 라이브로 직행하고, 게이트는 repo 루트 미탐지 시 fail-open 이다.
+    차단은 원리적으로 불가(그 손은 이 프로세스 밖) — 그래서 **가시성**만 맡는다.
+
+    신호는 git 이 낸다: 미커밋 backend/*.py 인데 격리 세션이 안 붙잡은 것 + 고아 격리본.
+    작업 중(24시간 이내)은 통과, 방치는 실패. 커밋(=사람 승인)하면 저절로 해소된다.
+    """
+    import subprocess
+    script = _root / "scripts" / "check_red_drift.py"
+    if not script.exists():
+        return {"node": "__static__", "action": "red_drift", "success": False,
+                "response_ms": 0, "data_quality": "error",
+                "error_message": "scripts/check_red_drift.py 없음"}
+    t0 = _time.time()
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=120)
+    except Exception as e:
+        return {"node": "__static__", "action": "red_drift", "success": False,
+                "response_ms": int((_time.time() - t0) * 1000), "data_quality": "error",
+                "error_message": f"실행 실패: {str(e)[:150]}"}
+    ms = int((_time.time() - t0) * 1000)
+    if proc.returncode == 0:
+        return {"node": "__static__", "action": "red_drift", "success": True,
+                "response_ms": ms, "data_quality": "ok", "error_message": None}
+    # 방치 항목 요약 — 어느 파일이 격리 밖에 떠 있는지가 곧 진단이다.
+    stale = [l.strip() for l in (proc.stdout or "").splitlines() if "‼ 방치" in l]
+    note = " / ".join(stale)[:220] or ((proc.stdout or proc.stderr or "").strip()[-220:])
+    return {"node": "__static__", "action": "red_drift", "success": False,
+            "response_ms": ms, "data_quality": "isolation_bypass", "error_message": note}
 
 
 def run_maintenance_bundle() -> Dict:

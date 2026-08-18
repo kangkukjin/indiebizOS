@@ -102,6 +102,13 @@ indiebizOS/
 │   │   #   빌드: scripts/build_ibl_nodes.py (소스 data/ibl_nodes_src/ → 산출물 data/ibl_nodes.yaml)
 │   │   #   검증: --check 가 src↔tool.json↔handler.py(_OP_DISPATCHERS) 삼각 일치 AST 정확 비교
 │   │   #   게이트: scripts/git-hooks/pre-commit + world_pulse_health(12시간 self-check)
+│   │   #   ★파생 방향(어디를 고치면 어디로 흐르나 — 헛다리 방지, 2026-08-18 실측):
+│   │   #     data/ibl_nodes_src/*.yaml        → data/ibl_nodes.yaml (액션 선언·description)
+│   │   #     패키지 ibl_actions.yaml 의 tool_json 블록 → 그 패키지 tool.json **만**
+│   │   #       (ibl_nodes.yaml 에는 안 간다 — 파라미터 설명을 고치고 ibl_nodes.yaml 을
+│   │   #        grep 하면 안 나오는 게 정상. 정합 확인은 --check 의 'tool.json 파생 일치')
+│   │   #     패키지 handler.py                → /packages/reload 로 즉시 반영
+│   │   #     패키지 tool_*.py(서브모듈)       → **reload 밖** — 워커 재기동해야 반영
 │   │
 │   ├── cognition/       # 36 — 인지(분류→의식→실행→평가→증류)
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)

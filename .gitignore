@@ -374,3 +374,6 @@ data/_pylibs_cp314_backup_*/
 #   agents.yaml)이 그대로 들어 있다. 규약이 모두에게 이 폴더를 쓰라고 하므로
 #   무시하지 않으면 `git add -A` 한 번에 키가 히스토리로 들어간다.
 data/_backups/
+
+# 가이드 개선 제안 원장 — guide_feedback.py 가 append 하는 런타임 로그
+data/guide_proposals.jsonl

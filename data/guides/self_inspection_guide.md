@@ -481,3 +481,10 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 점검은 시스템이 자기 자신을 보는 행위이다. 무엇을 발견했는지보다 **무엇을 발견했다고 보고했는지** 가 중요하다. 사용자가 그 보고를 읽고 시스템을 어디로 키울지 결정한다.
 
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-08-18 실측: data/system_ai_memory.db 의 시스템 AI 자기 대화는 `conversations` 테이블(2,540행)에 들어 있고 `messages` 테이블은 0행이다 — 자기 대화 조회는 conversations 를 봐야 한다
+- 2026-08-18 실측: 심층메모리는 단일 DB가 아니라 에이전트별 격리 DB(data/system_ai_state/memory_system_ai.db, projects/*/memory_*.db)에 흩어져 있어 한 DB 질의로는 전수 점검이 안 된다
+- 2026-08-18 실측: [self:recent_chats] 는 project_path 기반이라 시스템 AI 컨텍스트(project_path=data/)에서 data/conversations.db(0행)를 열고, 자기 대화가 든 data/system_ai_memory.db 를 못 본다

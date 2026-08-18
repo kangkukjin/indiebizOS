@@ -597,27 +597,93 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         return {"success": False, "error": f"길찾기 실패: {str(e)}"}
 
 
+_MARKER_LABEL_KEYS = ("name", "title", "label")
+_MARKER_PLACE_KEYS = ("place", "query", "address", "location")
+
+
+def _marker_label(mk: dict, fallback: str = "") -> str:
+    for k in _MARKER_LABEL_KEYS:
+        if mk.get(k):
+            return str(mk[k])
+    return fallback
+
+
+def _marker_place_term(mk: dict) -> str:
+    """좌표 없는 마커에서 '무엇을 찾을지'를 뽑는다. 전용 키(place/address 등)가 라벨(name)보다
+    우선 — 라벨은 '① 어머니 댁 (황골마을1단지)'처럼 꾸며져 있어 검색어로는 약하다."""
+    for k in _MARKER_PLACE_KEYS:
+        if mk.get(k):
+            return str(mk[k])
+    return _marker_label(mk)
+
+
+def _normalize_markers(markers) -> tuple:
+    """마커 정규화. 좌표가 없으면 장소명으로 지오코딩해서 살린다.
+
+    좌표만 받던 옛 계약은 desc 가 광고한 "여러 장소 비교"를 실제로는 못 하게 했다 —
+    장소명을 넣으면 조용히 탈락한 뒤 "위치 정보가 필요합니다"라는 엉뚱한 거절이 나갔다
+    (2026-08-18 ep1202: 마커 3개를 줬는데 안 준 것처럼 답함).
+    반환: (정규화 목록, 지오코딩된 [(라벨, 찾은 이름)], 못 찾은 [라벨])
+    """
+    norm, geocoded, failed = [], [], []
+    for raw in markers or []:
+        mk = {"name": raw} if isinstance(raw, str) else raw
+        if not isinstance(mk, dict):
+            failed.append(str(raw)[:40])
+            continue
+        label, note = _marker_label(mk), None
+        try:
+            entry = {"name": label, "lat": float(mk["lat"]), "lng": float(mk["lng"])}
+        except (KeyError, TypeError, ValueError):
+            term = _marker_place_term(mk)
+            hit = _geocode_place(term) if term else None
+            if not hit:
+                failed.append(label or term or "?")
+                continue
+            x, y, found = hit          # _geocode_place 는 (경도, 위도, 이름) 순
+            entry = {"name": label or found or term, "lat": y, "lng": x}
+            geocoded.append((entry["name"], found or term))
+            if found and found != entry["name"]:
+                note = f"카카오 검색: {found}"   # 무엇으로 해석했는지 지도에서 보이게
+        # $items 파이프의 가격·링크를 통과시킨다 (여기서 조용히 사라지던 것).
+        # url 은 웹 주소만 — 사진 items 의 로컬 파일 경로는 지도 팝업에서 열리지 않는
+        # 죽은 링크가 되므로 싣지 않는다.
+        if mk.get("meta"):
+            entry["meta"] = str(mk["meta"])
+        if str(mk.get("url") or "").startswith(("http://", "https://")):
+            entry["url"] = str(mk["url"])
+        if note and not entry.get("meta"):
+            entry["meta"] = note
+        norm.append(entry)
+    return norm, geocoded, failed
+
+
 def show_location_map(query: str = None, lat: float = None, lng: float = None,
-                       zoom: int = 15, markers: list = None) -> dict:
+                       zoom: int = 15, markers: list = None, title: str = None) -> dict:
     """
     특정 위치의 지도를 대화창에 표시
 
     Args:
-        query: 검색할 장소명 (예: '강남역')
+        query: 장소명 (예: '강남역'). markers 가 있으면 좌표로 풀지 않고 제목으로만 쓴다.
         lat: 위도 (직접 지정시)
         lng: 경도 (직접 지정시)
         zoom: 줌 레벨 (기본: 15)
-        markers: 추가 마커 목록 [{name, lat, lng}, ...]
+        markers: 마커 목록. [{name, lat, lng}] 또는 장소명 문자열/이름만 있는 dict (자동 좌표 변환)
+        title: 지도 제목. 절대 좌표로 풀지 않는다 ('광교 코스'처럼 장소가 아닌 이름표용)
 
     Returns:
         지도 데이터 (map_data 포함)
     """
-    center_lat = lat
-    center_lng = lng
-    center_name = query or "위치"
+    norm_markers, geocoded, failed = _normalize_markers(markers)
 
-    # 장소명으로 검색
-    if query and (lat is None or lng is None):
+    center_lat, center_lng = lat, lng
+    center_name = title or query or "위치"
+
+    # query 지오코딩 — 마커가 이미 지도를 세우면 query 는 좌표로 풀지 않는다.
+    # 카카오 키워드 검색은 임계값이 없어 어떤 문자열에도 뭔가를 돌려준다. 그래서 코스
+    # 이름표 '광교 코스'가 상점 'COS 갤러리아광교점'으로 풀려 중심·대표 핀을 차지했다
+    # (ep1202). 이름표는 title, 보여줄 곳은 markers 로 간다.
+    if query and not norm_markers and (center_lat is None or center_lng is None):
         key_ok, key_error = check_api_key("kakao")
         if not key_ok:
             return {"success": False, "error": key_error}
@@ -631,42 +697,28 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
             place = data["documents"][0]
             center_lng = float(place["x"])
             center_lat = float(place["y"])
-            center_name = place.get("place_name", query)
+            center_name = title or place.get("place_name", query)
         else:
             return {"success": False, "error": f"'{query}' 장소를 찾을 수 없습니다."}
 
-    # markers 만으로도 지도가 서게 — 중심 미지정이면 첫 유효 마커를 중심으로 (2026-08-16 G1-③:
-    # 파이프 하류 `{markers: "$items"}` 호출의 자기 계약 완결. 좌표 없는 마커는 건너뛴다).
+    # 마커만으로도 지도가 서게 — 중심 미지정이면 첫 마커를 중심으로 (2026-08-16 G1-③:
+    # 파이프 하류 `{markers: "$items"}` 호출의 자기 계약 완결).
     center_from_markers = False
-    if (center_lat is None or center_lng is None) and markers:
-        for mk in markers:
-            if isinstance(mk, dict) and mk.get("lat") is not None and mk.get("lng") is not None:
-                try:
-                    center_lat = float(mk["lat"])
-                    center_lng = float(mk["lng"])
-                    center_name = str(mk.get("name") or mk.get("title") or center_name)
-                    center_from_markers = True
-                    break
-                except (TypeError, ValueError):
-                    continue
+    if (center_lat is None or center_lng is None) and norm_markers:
+        center_lat = norm_markers[0]["lat"]
+        center_lng = norm_markers[0]["lng"]
+        # 이름표 우선순위: title > query(좌표로 풀지 않고 제목으로만) > 첫 마커 이름
+        center_name = title or query or norm_markers[0]["name"] or center_name
+        center_from_markers = True
 
     if center_lat is None or center_lng is None:
-        return {"success": False, "error": "위치 정보가 필요합니다. query 또는 lat/lng를 지정하세요."}
-
-    # 마커 정규화 — $items 통행(여분 필드·title 제목·문자열 좌표) 표준화. 좌표 없는 행은
-    # 지도에 설 수 없어 제외하되, 몇 개를 못 실었는지 정직하게 신고한다(침묵 탈락 금지).
-    norm_markers, dropped = [], 0
-    for mk in markers or []:
-        if not isinstance(mk, dict):
-            dropped += 1
-            continue
-        try:
-            norm_markers.append({
-                "name": str(mk.get("name") or mk.get("title") or ""),
-                "lat": float(mk["lat"]), "lng": float(mk["lng"]),
-            })
-        except (KeyError, TypeError, ValueError):
-            dropped += 1
+        # 왜 못 세웠는지 말한다 — 준 것을 안 준 것처럼 답하지 않는다.
+        if failed:
+            return {"success": False, "error":
+                    f"마커 {len(failed)}개가 좌표 없이 들어왔고 장소명으로도 찾지 못했습니다: "
+                    f"{', '.join(failed[:5])}. 마커는 {{name, lat, lng}} 또는 실재하는 장소명이어야 합니다."}
+        return {"success": False,
+                "error": "위치 정보가 필요합니다. query 또는 lat/lng 또는 markers 를 지정하세요."}
 
     # 마커 목록 생성 (중심이 마커에서 나왔으면 같은 점을 이중 표기하지 않는다)
     all_markers = [] if center_from_markers else [{"name": center_name, "lat": center_lat, "lng": center_lng}]
@@ -678,13 +730,19 @@ def show_location_map(query: str = None, lat: float = None, lng: float = None,
         markers=all_markers, zoom=zoom)
 
     msg = f"'{center_name}' 위치 지도"
-    if dropped:
-        msg += f" (좌표 없는 항목 {dropped}개는 지도에 싣지 못함)"
-    return {
+    if geocoded:
+        shown = ", ".join(f"{lab}→{found}" for lab, found in geocoded[:3])
+        msg += f" (장소명 {len(geocoded)}개 좌표 변환: {shown}{'…' if len(geocoded) > 3 else ''})"
+    if failed:
+        msg += f" (좌표·장소를 못 찾은 {len(failed)}개는 싣지 못함: {', '.join(failed[:3])})"
+    result = {
         "message": msg,
         "center": {"lat": center_lat, "lng": center_lng, "name": center_name},
         "map_data": map_data
     }
+    if failed:
+        result["unresolved"] = failed
+    return result
 
 
 # ============== 날씨 (Open-Meteo, 무료/키불필요) ==============
@@ -1003,7 +1061,8 @@ def execute(tool_input: dict, context) -> str:
             lat=tool_input.get("lat"),
             lng=tool_input.get("lng"),
             zoom=tool_input.get("zoom", 15),
-            markers=tool_input.get("markers")
+            markers=tool_input.get("markers"),
+            title=tool_input.get("title")
         )
         return json.dumps(result, ensure_ascii=False, indent=2)
 

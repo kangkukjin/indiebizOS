@@ -1,5 +1,6 @@
 나레이션생성:
-  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts. 표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
+  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts.
+    표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
   file: 나레이션생성.py
   interpreter: .venv/bin/python3
   registered_at: '2026-08-15T23:08:41'

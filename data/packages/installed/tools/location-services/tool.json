@@ -118,7 +118,7 @@
     },
     {
       "name": "show_location_map",
-      "description": "특정 위치의 지도를 대화창에 표시합니다.\n\n## 사용 시점\n- 장소 검색 결과 시각화\n- 위치 안내\n- 여러 장소 비교 (markers 사용)\n\n## 사용법\n- query로 장소명 검색\n- 또는 lat, lng로 직접 좌표 지정\n- markers로 여러 마커 추가 가능",
+      "description": "특정 위치의 지도를 대화창에 표시합니다.\n\n## 사용 시점\n- 장소 검색 결과 시각화\n- 위치 안내\n- 여러 장소 비교 (markers 사용)\n\n## 사용법\n- 한 곳: query로 장소명 검색 (또는 lat, lng로 직접 좌표 지정)\n- 여러 곳: markers에 나열 — {name, lat, lng} 또는 장소명 문자열/{name}만 넣어도 자동 좌표 변환된다\n- 지도 제목은 title (좌표로 풀지 않는다). markers가 있으면 query는 제목으로만 쓰인다 — '광교 코스' 같은 이름표를 query에 넣으면 엉뚱한 상점으로 검색되던 사고 방지",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -140,7 +140,11 @@
           },
           "markers": {
             "type": "array",
-            "description": "추가 마커 [{name, lat, lng}, ...]"
+            "description": "마커 목록 [{name, lat, lng}, ...]. 좌표 없이 장소명 문자열이나 {name}만 넣어도 자동 좌표 변환된다"
+          },
+          "title": {
+            "type": "string",
+            "description": "지도 제목 (예: '광교 코스'). 좌표로 풀지 않는 순수 이름표"
           }
         }
       }

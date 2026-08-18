@@ -247,7 +247,7 @@ nodes:
         aliases:
           query: [location]
         returns: effect
-        description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
+        description: 지도에 위치 마커 표시. 한 곳은 query, 여러 곳은 markers(장소명·좌표 다 됨). 제목은 title.
         group: open
         target_description: 장소명 또는 좌표
         router: handler
@@ -414,11 +414,13 @@ tool_json:
 
       ## 사용법
 
-      - query로 장소명 검색
+      - 한 곳: query로 장소명 검색 (또는 lat, lng로 직접 좌표 지정)
 
-      - 또는 lat, lng로 직접 좌표 지정
+      - 여러 곳: markers에 나열 — {name, lat, lng} 또는 장소명 문자열/{name}만 넣어도 자동
+      좌표 변환된다
 
-      - markers로 여러 마커 추가 가능'
+      - 지도 제목은 title (좌표로 풀지 않는다). markers가 있으면 query는 제목으로만 쓰인다
+      — ''광교 코스'' 같은 이름표를 query에 넣으면 엉뚱한 상점으로 검색되던 사고 방지'
     input_schema:
       type: object
       properties:
@@ -436,7 +438,11 @@ tool_json:
           description: 줌 레벨 (기본 15, 1-18)
         markers:
           type: array
-          description: 추가 마커 [{name, lat, lng}, ...]
+          description: 마커 목록 [{name, lat, lng}, ...]. 좌표 없이 장소명 문자열이나 {name}만
+            넣어도 자동 좌표 변환된다
+        title:
+          type: string
+          description: '지도 제목 (예: ''광교 코스''). 좌표로 풀지 않는 순수 이름표'
   - name: reverse_geocode
     description: 'GPS 좌표를 행정구역 주소로 변환합니다 (카카오 로컬 API).
 

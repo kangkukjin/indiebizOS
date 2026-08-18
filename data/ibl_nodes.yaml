@@ -5024,7 +5024,7 @@ nodes:
           query:
           - location
         returns: effect
-        description: 지도에 위치 마커 표시 (HTML 지도 생성). 장소명 입력 시 자동 좌표 변환.
+        description: 지도에 위치 마커 표시. 한 곳은 query, 여러 곳은 markers(장소명·좌표 다 됨). 제목은 title.
         group: open
         target_description: 장소명 또는 좌표
         router: handler

@@ -11,6 +11,8 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
   S3 검증이 실패하면 라이브는 끝까지 무변경 (부분 적용 없음)
   S4 검증이 통과하면 라이브로 일괄 이동 + 기존 안전판(백업)이 이어받는다
   S5 그랜트가 없거나 git 이 없으면 스테이징 없이 종전 경로로 폴백한다
+  S8 검증 베이스 = 지금 라이브 + 세션 델타 (2026-08-19 거짓 초록 봉합 — 미추적 신규
+     의존·세션 개설 후 라이브 드리프트·커밋 드리프트까지 검증 시마다 동기화)
 
 실행: python3 backend/test_repair_staging.py   (exit 0 = 전부 통과)
 """
@@ -236,6 +238,52 @@ def run():
                          "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
         check("S7c_move_applied", r.get("applied") is True and moved_to.exists() and not mover.exists(),
               json.dumps(r, ensure_ascii=False)[:250])
+
+        # ══ S8 — 베이스 신선도 (2026-08-19 거짓 초록 봉합) ══
+        # S8a: 미추적 신규 의존 모듈 — 옛 이식(git diff HEAD | apply)은 추적 한정이라
+        #      격리 사본에 없었고, import 스모크가 제안 내용과 무관하게 거짓 빨강을 냈다.
+        dep = tmp / "backend" / "cognition" / "dep_live.py"
+        dep.write_text("TOKEN = 'v1'\n")                    # ★커밋하지 않는다(미추적)
+        importer = tmp / "backend" / "cognition" / "importer.py"
+        task_s8 = _grant(h, "task_sync")
+        s_imp = h._red_stage(str(importer), for_write=True)
+        Path(s_imp).parent.mkdir(parents=True, exist_ok=True)
+        Path(s_imp).write_text("import dep_live\nX = dep_live.TOKEN\n")
+        sess8 = st.load_session(str(tmp), st.task_key(task_s8))
+        ok8, checks8 = st.verify(str(tmp), sess8)
+        check("S8a_untracked_dep_visible", ok8,
+              json.dumps([c for c in checks8 if not c["passed"]], ensure_ascii=False)[:300])
+        check("S8a_live_sync_gate_present",
+              any(c["gate"] == "live_sync" and c["passed"] for c in checks8))
+
+        # S8b: ★거짓 초록 재현 — 세션 개설 *뒤* 의존 모듈이 라이브에서 바뀌면 검증은
+        #      '지금 라이브' 기준으로 다시 봐야 한다. 옛 코드는 개설 시점 스냅샷을 보고
+        #      초록을 냈고, apply 는 진짜 라이브(TOKEN 없는)로 갔다 — 브릭 경로.
+        dep.write_text("RENAMED = 'v2'\n")                  # TOKEN 소멸
+        ok8b, checks8b = st.verify(str(tmp), sess8)
+        failed8b = [c["gate"] for c in checks8b if not c["passed"]]
+        check("S8b_live_drift_breaks_green", (not ok8b) and "import_smoke" in failed8b,
+              json.dumps(failed8b, ensure_ascii=False))
+
+        # S8c: 커밋 드리프트 — 제안이 며칠 묵는 동안 라이브에 커밋이 쌓여도 따라온다
+        #      (워크트리 베이스 커밋 ↔ 라이브 HEAD 의 diff 까지 동기화 — 낡은 베이스 봉합).
+        dep.write_text("TOKEN = 'v3'\n")
+        subprocess.run(["git", "add", "backend/cognition/dep_live.py"],
+                       cwd=tmp, capture_output=True)
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t",
+                        "commit", "-qm", "dep v3"], cwd=tmp, capture_output=True)
+        ok8c, checks8c = st.verify(str(tmp), sess8)
+        check("S8c_committed_drift_synced", ok8c,
+              json.dumps([c for c in checks8c if not c["passed"]], ensure_ascii=False)[:300])
+
+        # S8d: 스테이징이 이긴다 — 세션에 적재된 파일은 동기화가 라이브로 덮지 않는다
+        importer.write_text("LIVE_EDIT = 1\n")              # 라이브에 같은 경로가 생겨도
+        st.verify(str(tmp), sess8)
+        check("S8d_staged_wins",
+              Path(s_imp).read_text() == "import dep_live\nX = dep_live.TOKEN\n",
+              Path(s_imp).read_text()[:120])
+        importer.unlink()
+        st.op_discard({"_repo_root": str(tmp), "_grant_key": st.task_key(task_s8)})
 
         # ── status / discard ──
         r = st.op_status({"_repo_root": str(tmp), "_grant_key": st.task_key(task)})

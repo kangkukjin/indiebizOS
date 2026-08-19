@@ -24,9 +24,10 @@ _red_write_finalize 를 그대로 통과하므로 백업·keeper 일시정지·�
 구조적 브릭[구문·import·삼각·안전장치 스모크]이고, 브릭 위험은 거기 산다.)
 
 ★스테이징 베이스 = 라이브 작업 트리 (HEAD 아님). worktree 는 HEAD 로 만들지만
-①세션 생성 시 추적 변경분(git diff HEAD)을 best-effort 로 얹고 ②파일을 처음 건드릴 때
-**라이브 원본에서 씨를 뿌린다**(권위). HEAD 를 베이스로 쓰면 미커밋 라이브 작업을
-적용이 조용히 되돌린다 — 데이터 손실.
+①세션 생성 시 라이브 드리프트(미커밋·미추적 포함)를 파일 복사로 맞추고 ②파일을 처음
+건드릴 때 **라이브 원본에서 씨를 뿌리며**(권위) ③검증 시마다 같은 동기화를 다시 돌려
+'지금 라이브 + 세션 델타'를 본다(_sync_worktree_to_live — 2026-08-19 거짓 초록 봉합).
+HEAD 를 베이스로 쓰면 미커밋 라이브 작업을 적용이 조용히 되돌린다 — 데이터 손실.
 
 ★★사정거리 (2026-08-18 정정) — 이 격리는 **파일이 아니라 문 하나**에 걸려 있다.
 게이트는 handler 의 `_red_zone_write_block`(= `[self:write]`/`[self:edit]` 가 지나는 자리)
@@ -178,6 +179,67 @@ def _is_git_repo(repo: str) -> bool:
 
 # ── 세션 (격리 사본) ──────────────────────────────────────────────────────
 
+_SYNC_MAX_FILES = 4000    # 드리프트가 이보다 크면 동기화 대신 정직한 거부(저장소 비정상)
+
+
+def _sync_worktree_to_live(repo: str, wt_abs: str, skip_rels=()):
+    """격리 사본을 '지금 라이브 작업 트리'로 맞춘다(세션 적재분 제외). 반환 (ok, detail).
+
+    ★왜 (2026-08-19 거짓 초록 봉합): 검증의 계약은 "이 델타를 **지금 라이브**에 얹으면
+    안전한가"인데, 격리 사본의 베이스는 세 경로로 낡는다 —
+      ①개설 때 미커밋 이식(git apply)이 컨텍스트 불일치로 조용히 실패 → 베이스=HEAD 잔류
+        (검증은 HEAD 기준 초록, apply 는 진짜 라이브로 — 거짓 초록)
+      ②세션 도중 격리 밖 파일이 라이브 직행으로 바뀜 — data/ibl_nodes_src 등은 RED 구역
+        밖이라 스테이징이 안 잡는데, 삼각 검증은 그 파일을 읽는다(다른 세계 대조)
+      ③제안(proposal)이 며칠 묵는 동안 라이브에 커밋이 쌓임 (낡은 베이스)
+    커밋 드리프트(워크트리 베이스↔라이브 HEAD diff)와 작업 트리 드리프트(status,
+    미추적 포함)를 합쳐 파일 단위 **복사**로 맞춘다 — 패치 적용이 아니라서 조용히
+    실패할 자리가 없다. skip_rels(세션 적재 파일)는 안 건드린다 — 스테이징이 이긴다.
+    경로는 -z(NUL 구분)로 받는다 — 한글 경로가 quotepath 로 깨지지 않게."""
+    skip = set(skip_rels)
+
+    def _excluded(r):
+        return (r == ".git" or r.startswith(".git" + os.sep)
+                or r.startswith(".worktrees" + os.sep))
+
+    rels = set()
+    try:
+        base = _git(["rev-parse", "HEAD"], wt_abs)
+        head = _git(["rev-parse", "HEAD"], repo)
+        if base.returncode != 0 or head.returncode != 0:
+            return False, "git rev-parse 실패: " + (base.stderr or head.stderr).strip()[:200]
+        if base.stdout.strip() != head.stdout.strip():
+            d = _git(["diff", "--name-only", "-z", "--no-renames",
+                      base.stdout.strip(), head.stdout.strip()], repo)
+            if d.returncode != 0:
+                return False, "git diff 실패: " + d.stderr.strip()[:200]
+            rels.update(x for x in d.stdout.split("\0") if x)
+        st = _git(["status", "--porcelain", "-z", "--no-renames",
+                   "--untracked-files=all"], repo)
+        if st.returncode != 0:
+            return False, "git status 실패: " + st.stderr.strip()[:200]
+        rels.update(e[3:] for e in st.stdout.split("\0") if len(e) > 3)
+        rels = {r for r in rels if r not in skip and not _excluded(r)}
+        if len(rels) > _SYNC_MAX_FILES:
+            return False, (f"라이브 드리프트 {len(rels)}건 — 상한({_SYNC_MAX_FILES}) 초과. "
+                           f"저장소 상태가 비정상입니다(.gitignore 붕괴 등) — 낡은 베이스로 "
+                           f"검증하는 대신 거부합니다.")
+        copied = removed = 0
+        for rel in sorted(rels):
+            live_p = os.path.join(repo, rel)
+            wt_p = os.path.join(wt_abs, rel)
+            if os.path.isfile(live_p):
+                os.makedirs(os.path.dirname(wt_p), exist_ok=True)
+                shutil.copy2(live_p, wt_p)
+                copied += 1
+            elif os.path.lexists(wt_p):
+                os.remove(wt_p)            # 라이브에서 사라진 파일 — 격리에서도 지운다
+                removed += 1
+        return True, f"라이브 동기화 {copied + removed}건 (복사 {copied}·삭제 {removed})"
+    except (OSError, subprocess.SubprocessError) as e:
+        return False, f"동기화 실패: {e}"
+
+
 def ensure_session(repo: str, key: str):
     """스테이징 세션 확보 — 없으면 worktree 를 만든다. 실패 시 None(=라이브 직행 폴백)."""
     sess = load_session(repo, key)
@@ -193,17 +255,17 @@ def ensure_session(repo: str, key: str):
     if add.returncode != 0:
         print(f"[수리 스테이징] worktree 생성 실패 — 스테이징 없이 진행: {add.stderr.strip()[:200]}")
         return None
-    # 라이브 미커밋 변경분을 격리 사본에 얹는다(추적 파일 한정, best-effort).
-    # 실패해도 치명적이지 않다 — 건드리는 파일은 stage_file 이 라이브에서 다시 씨를 뿌린다.
-    try:
-        diff = _git(["diff", "HEAD"], repo).stdout
-        if diff.strip():
-            p = subprocess.run(["git", "apply", "--allow-empty", "-"], cwd=wt_abs,
-                               input=diff, capture_output=True, text=True, timeout=GIT_TIMEOUT)
-            if p.returncode != 0:
-                print(f"[수리 스테이징] 미커밋 변경분 이식 실패(무시): {p.stderr.strip()[:200]}")
-    except Exception as e:
-        print(f"[수리 스테이징] 미커밋 변경분 이식 예외(무시): {e}")
+    # 라이브 드리프트(미커밋·미추적)를 격리 사본에 맞춘다 — ★best-effort 가 아니다.
+    # 옛 구현(git diff HEAD | git apply)은 ①추적 파일 한정이라 미추적 신규 모듈이 빠져
+    # import 스모크가 거짓 빨강을 냈고 ②컨텍스트 불일치로 조용히 실패하면 베이스가 HEAD 로
+    # 남아 검증이 HEAD 기준 초록을 냈다(거짓 초록 — 2026-08-19 봉합). 동기화가 안 되면
+    # 격리는 거짓말을 하므로 세션 자체를 거부한다 → 호출자는 종전 라이브 직행 경로
+    # (구문검증+백업+워치독)로 폴백한다(S5b 와 같은 착지 — 격리 없음 > 거짓 격리).
+    ok, detail = _sync_worktree_to_live(repo, wt_abs)
+    if not ok:
+        print(f"[수리 스테이징] 베이스 동기화 실패 — 스테이징 없이 진행: {detail}")
+        _git(["worktree", "remove", "--force", wt_abs], repo)
+        return None
     sess = {"key": key, "worktree": wt_rel, "status": "staging",
             "created_at": datetime.now().isoformat(), "files": {}}
     _save_session(repo, sess)
@@ -369,6 +431,15 @@ def verify(repo: str, sess: dict):
     del_rels = [r["rel"] for r in recs if r.get("op") == "delete"]
     checks = []
     py = sys.executable or "python3"       # ★venv 파이썬 — 시스템 python3 는 의존성이 없다
+
+    # ★베이스 신선도 — 격리 사본을 '지금 라이브 + 세션 델타'로 동기화한 뒤에만 관문을
+    # 돌린다. 안 그러면 세션 개설 후의 라이브 변화(격리 밖 파일 직행 편집·새 커밋·개설 때
+    # 이식 실패 잔재)를 못 본 채 초록을 낸다(거짓 초록 — 2026-08-19 봉합).
+    ok_sync, sync_detail = _sync_worktree_to_live(
+        repo, wt_abs, skip_rels={r["rel"] for r in recs})
+    checks.append({"gate": "live_sync", "passed": ok_sync, "detail": sync_detail[:800]})
+    if not ok_sync:
+        return False, checks               # 낡은 베이스 위의 관문은 초록도 빨강도 못 믿는다
 
     # 0. 삭제 — 남는 쪽의 import 가 깨지지 않는지 (삭제 고유의 위험)
     if del_rels:

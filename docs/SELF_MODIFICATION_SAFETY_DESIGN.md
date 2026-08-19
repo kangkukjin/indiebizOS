@@ -343,3 +343,31 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 ## 7. 한 줄 요약
 
 **시스템 AI의 `project_path`는 이미 `data/`(GREEN)다. 절대경로 구멍 하나가 RED를 열어놨을 뿐이다. 그 구멍을 코드로 막고(Floor #1), RED 변경은 "제안(worktree)→기계검증→사람승인→가역적용"이라는 이미-대부분-존재하는 관문으로만 흐르게 한다.**
+
+## 지연 적용 (2026-08-19) — 적용 순간의 리로드를 턴 밖으로
+
+격리 스테이징(08-17)은 스테이징 구간의 리로드를 없앴지만, **apply 순간의 한 번**은 남아
+있었다 — backend/*.py 를 쓰는 즉시 uvicorn 리로드(reload_delay 2초)가 apply 를 부른 턴의
+워커를 죽여, 최종 응답·주행기록 로그 버퍼(END 저장 전까지 메모리)·증류 데몬 스레드가
+함께 죽었다. "자기 죽음 이후 단계는 죽음을 넘는 프로세스가 맡는다"(라이브 백엔드 편집
+규약)를 적용 단계에 적용해 봉합했다:
+
+- **op:apply = 예약**: backend/*.py 가 낀 세트는 검증 통과 후 잡 파일
+  (`repair_sessions/<key>.apply.json`)을 남기고 분리 수행자
+  `backend/datastore/red_apply.py` 를 spawn(start_new_session), 세션 상태
+  `apply_scheduled`. frontend/scripts 만이면 리로드가 없으므로 종전대로 즉시 적용.
+- **수행자 대기 프로토콜**: ①주행기록 `ended_at`(=응답 전송·버퍼 저장 완료, 상한 900초)
+  ②증류 재합류 — cognitive_distill 의 finally 가 `refresh_episode` 로 log 를 한 번
+  다시 쓴다(길이 변화 감지, 상한 120초). 에피소드 문맥 없으면 10초 유예만.
+- **쓰기 직전 재검증**: 예약~수행 사이 라이브 드리프트를 live_sync 가 맞춘 뒤 관문 재실행.
+  실패=라이브 무변경+세션 staging 복귀+`result.json`(deferred_verify_failed)로 다음 턴 보고.
+- **그랜트 이월**: red_grant 는 인메모리 싱글턴 — 수행자의 프로세스-로컬 재발급은 턴에서
+  검증된 그랜트의 이월이지 새 권한이 아니다(워치독이 그랜트 없이 백업 복원하는 것과 동류).
+- **좌초 안전망**: 수행자가 죽어 `apply_scheduled` 가 30분+ 남으면 red_report 가
+  `<repair_staged stranded_scheduled>` 로 다음 턴에 문다 — 다시 apply 하면 재예약(멱등).
+- **예약 후 같은 세션에 쓰기가 이어지면** ensure_session 이 staging 으로 재개봉하고
+  수행자는 낡은 예약을 취소한다(deferred_canceled).
+
+이로써 세 보장이 완성된다: 주행기록(행+내용), 턴 내 최종 보고("검증 통과·적용 예약"),
+증류 — 전부 리로드보다 **먼저** 끝난다. 헬스 판정은 종전대로 워치독→다음 턴.
+검증=`backend/test_repair_staging.py` S4·S9·S10 (배터리 53검사).

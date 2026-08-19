@@ -13,6 +13,9 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
   S5 그랜트가 없거나 git 이 없으면 스테이징 없이 종전 경로로 폴백한다
   S8 검증 베이스 = 지금 라이브 + 세션 델타 (2026-08-19 거짓 초록 봉합 — 미추적 신규
      의존·세션 개설 후 라이브 드리프트·커밋 드리프트까지 검증 시마다 동기화)
+  S9 지연 적용 (2026-08-19): backend/*.py apply=예약(라이브 무변경)→수행자가 턴 종료
+     후 쓰기 직전 재검증 — 예약~수행 사이 라이브 드리프트가 적용을 막는다
+  S10 분리 수행자(red_apply) 실프로세스 종단 — 부트스트랩·핸들러 로드·그랜트 이월
 
 실행: python3 backend/test_repair_staging.py   (exit 0 = 전부 통과)
 """
@@ -89,9 +92,24 @@ def _ungrant():
     thread_context.clear_all_context()
 
 
+def _apply_full(st, h, tmp, key_str):
+    """op_apply → (backend 세트면 예약이므로) 수행자 경유로 완결 — 지연 적용의 두 단계를
+    배터리에서 잇는다. 예약이 아니면(즉시 경로) 그 결과 그대로."""
+    r = st.op_apply({"_repo_root": str(tmp), "_grant_key": key_str,
+                     "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+    if r.get("scheduled"):
+        return st.perform_scheduled_apply(str(tmp), key_str,
+                                          prepare=h._red_write_prepare,
+                                          finalize=h._red_write_finalize)
+    return r
+
+
 def run():
     h = _load_handler()
     st = h._staging_mod()
+    # 예약이 실제 수행자를 spawn 하면 배터리의 직접 perform 호출과 경주한다 — 심으로 차단
+    # (S10 만 실프로세스를 직접 기동해 종단을 본다)
+    os.environ["INDIEBIZ_REPAIR_NO_SPAWN"] = "1"
 
     # ══ S1/S2/S3/S4 — git 저장소에서 전 생애주기 ══
     tmp = Path(tempfile.mkdtemp(prefix="stg_")).resolve()
@@ -144,10 +162,20 @@ def run():
               r.get("applied") is not True and bystander.read_text() == "OTHER = 'live'\n",
               bystander.read_text())
 
-        # S4 — 통과하면 일괄 적용 + 백업(기존 안전판)이 이어받는다
+        # S4 — 통과하면: backend/*.py 는 ★지연 적용 — apply=예약(라이브 무변경),
+        #      실제 쓰기는 수행자(perform_scheduled_apply)가 턴 종료 후 재검증하고 수행
         Path(staged).write_text("VALUE = 'patched'\n")
         r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task),
                          "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        check("S4_backend_apply_is_scheduled",
+              r.get("scheduled") is True and r.get("applied") is False,
+              json.dumps(r, ensure_ascii=False)[:300])
+        check("S4_live_untouched_until_performed", victim.read_text() == "VALUE = 'original'\n")
+        check("S4_job_file_written",
+              (tmp / "data" / "system_ai_state" / "repair_sessions"
+               / f"{st.task_key(task)}.apply.json").exists())
+        r = st.perform_scheduled_apply(str(tmp), st.task_key(task),
+                                       prepare=h._red_write_prepare, finalize=h._red_write_finalize)
         check("S4_apply_succeeds", r.get("applied") is True, json.dumps(r, ensure_ascii=False)[:300])
         check("S4_live_updated", victim.read_text() == "VALUE = 'patched'\n", victim.read_text())
         check("S4_second_file_too", bystander.read_text() == "OTHER = 'would_be_applied'\n")
@@ -169,8 +197,7 @@ def run():
         check("S6_new_file_staged", s_new != str(newmod) and not newmod.exists())
         Path(s_new).parent.mkdir(parents=True, exist_ok=True)
         Path(s_new).write_text("FRESH = 1\n")
-        r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task_new),
-                         "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        r = _apply_full(st, h, tmp, st.task_key(task_new))
         check("S6_new_file_applied", r.get("applied") is True and newmod.exists(),
               json.dumps(r, ensure_ascii=False)[:200])
         nman = tmp / "data" / "system_ai_state" / "red_backups" / st.task_key(task_new) / "manifest.json"
@@ -191,8 +218,7 @@ def run():
               list(sess_del["files"].values())[0]["op"] == "delete")
         ok, checks_d = st.verify(str(tmp), sess_del)
         check("S7a_delete_verifies", ok, str([c["gate"] for c in checks_d if not c["passed"]]))
-        r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task_del),
-                         "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        r = _apply_full(st, h, tmp, st.task_key(task_del))
         check("S7a_delete_applied", r.get("applied") is True and not doomed.exists(),
               json.dumps(r, ensure_ascii=False)[:200])
         dman = tmp / "data" / "system_ai_state" / "red_backups" / st.task_key(task_del) / "manifest.json"
@@ -234,8 +260,7 @@ def run():
         Path(s_dst).write_text(mover.read_text())
         st.stage_delete(str(tmp), k_mv, str(mover))
         check("S7c_live_untouched_both", mover.exists() and not moved_to.exists())
-        r = st.op_apply({"_repo_root": str(tmp), "_grant_key": k_mv,
-                         "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        r = _apply_full(st, h, tmp, k_mv)
         check("S7c_move_applied", r.get("applied") is True and moved_to.exists() and not mover.exists(),
               json.dumps(r, ensure_ascii=False)[:250])
 
@@ -284,6 +309,59 @@ def run():
               Path(s_imp).read_text()[:120])
         importer.unlink()
         st.op_discard({"_repo_root": str(tmp), "_grant_key": st.task_key(task_s8)})
+
+        # ══ S9 — 지연 창 드리프트 (2026-08-19 지연 적용) ══
+        # 예약(검증 통과)~수행 사이에도 라이브는 변한다 — 수행자는 쓰기 직전 재검증해야
+        # 하고, 실패하면 라이브 무변경 + 세션은 staging 복귀 + 결말은 result.json.
+        dep9 = tmp / "backend" / "cognition" / "dep9.py"
+        dep9.write_text("NINE = 1\n")
+        imp9 = tmp / "backend" / "cognition" / "imp9.py"
+        task9 = _grant(h, "task_defer_drift")
+        s9 = h._red_stage(str(imp9), for_write=True)
+        Path(s9).parent.mkdir(parents=True, exist_ok=True)
+        Path(s9).write_text("import dep9\nY = dep9.NINE\n")
+        r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task9),
+                         "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        check("S9_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
+        dep9.write_text("GONE = 1\n")           # 예약~수행 사이 라이브 드리프트(NINE 소멸)
+        r = st.perform_scheduled_apply(str(tmp), st.task_key(task9),
+                                       prepare=h._red_write_prepare, finalize=h._red_write_finalize)
+        check("S9_reverify_blocks_stale_apply",
+              r.get("applied") is not True and not imp9.exists(),
+              json.dumps(r, ensure_ascii=False)[:300])
+        sess9 = st.read_session(str(tmp), st.task_key(task9))
+        check("S9_session_back_to_staging", bool(sess9) and sess9.get("status") == "staging",
+              str(sess9 and sess9.get("status")))
+        res9 = (tmp / "data" / "system_ai_state" / "red_backups"
+                / st.task_key(task9) / "result.json")
+        check("S9_deferred_result_reported",
+              res9.exists() and json.loads(res9.read_text()).get("outcome") == "deferred_verify_failed",
+              res9.read_text()[:200] if res9.exists() else "no result.json")
+        st.op_discard({"_repo_root": str(tmp), "_grant_key": st.task_key(task9)})
+        dep9.unlink()
+
+        # ══ S10 — 분리 수행자(red_apply) 실프로세스 종단 ══
+        # 부트스트랩(sys.path·boot_paths)·핸들러 로드·그랜트 이월(인메모리 재발급)까지
+        # 실제 프로세스로 검증 — 코드 루트(실저장소)와 데이터 루트(가짜 repo)가 갈라진다.
+        v10 = tmp / "backend" / "cognition" / "victim10.py"
+        v10.write_text("TEN = 'orig'\n")
+        task10 = _grant(h, "task_red_apply_proc")
+        s10 = h._red_stage(str(v10), for_write=True)
+        Path(s10).write_text("TEN = 'deferred'\n")
+        r = st.op_apply({"_repo_root": str(tmp), "_grant_key": st.task_key(task10),
+                         "_red_prepare": h._red_write_prepare, "_red_finalize": h._red_write_finalize})
+        check("S10_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
+        job10 = (tmp / "data" / "system_ai_state" / "repair_sessions"
+                 / f"{st.task_key(task10)}.apply.json")
+        env10 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0"}
+        env10.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
+        p10 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
+                              str(job10)], capture_output=True, text=True, timeout=180, env=env10)
+        check("S10_process_applies", p10.returncode == 0 and v10.read_text() == "TEN = 'deferred'\n",
+              ((p10.stdout or "") + (p10.stderr or ""))[-400:])
+        sess10 = st.read_session(str(tmp), st.task_key(task10))
+        check("S10_session_applied", bool(sess10) and sess10.get("status") == "applied",
+              str(sess10 and sess10.get("status")))
 
         # ── status / discard ──
         r = st.op_status({"_repo_root": str(tmp), "_grant_key": st.task_key(task)})

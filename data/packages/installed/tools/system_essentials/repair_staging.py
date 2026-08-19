@@ -15,7 +15,12 @@ repair_staging.py - 수리(REPAIR)의 격리 스테이징 (system_essentials 형
 
 스테이징 중에는 라이브가 무변경이라 **리로드가 없고, 편집자가 살아 있다** — 자기
 검증 결과를 읽고 고쳐 쓸 수 있다. 라이브가 받는 것은 언제나 검증을 통과한 내용이고,
-리로드는 적용 순간 한 번이다.
+리로드는 적용 순간 한 번이다. ★그 한 번마저 턴 밖으로 미룬다(2026-08-19 지연 적용):
+backend/*.py 적용은 분리 수행자(backend/datastore/red_apply.py)가 턴 종료(응답 전송→
+주행기록 END→증류 재합류)를 기다렸다가 쓰기 직전 재검증 후 수행한다 — 최종 보고·
+주행기록·증류가 리로드보다 **먼저** 완료된다("자기 죽음 이후 단계는 죽음을 넘는
+프로세스가 맡는다"의 적용 단계 판, 워치독 선례). frontend/scripts 만이면 리로드가
+없으므로 즉시 적용한다.
 
 ★기존 안전판은 무엇도 대체하지 않는다. 적용 단계가 _red_write_prepare/
 _red_write_finalize 를 그대로 통과하므로 백업·keeper 일시정지·분리 워치독·자동
@@ -49,6 +54,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
@@ -245,6 +251,17 @@ def ensure_session(repo: str, key: str):
     sess = load_session(repo, key)
     if sess and os.path.isdir(os.path.join(repo, sess["worktree"])):
         return sess
+    # ★적용 예약(apply_scheduled) 세션에 같은 키의 쓰기가 이어지면 staging 으로 재개봉한다
+    #   — 예약 스냅샷이 낡아지므로 수행자(red_apply)가 상태를 보고 그 예약을 취소한다.
+    #   재개봉 없이 두면 아래 '잔재 정리'가 예약분 워크트리를 지워버린다(예약 파괴).
+    full = read_session(repo, key)
+    if (full and full.get("status") == "apply_scheduled"
+            and os.path.isdir(os.path.join(repo, full.get("worktree") or ""))):
+        full["status"] = "staging"
+        full.pop("scheduled_at", None)
+        _save_session(repo, full)
+        print("[수리 스테이징] 적용 예약 세션에 쓰기 재개 — 예약 취소, staging 재개봉")
+        return full
     if not _is_git_repo(repo):
         return None                      # git 없는 몸 — 스테이징 불가, 종전 경로로
     wt_rel = WORKTREE_PREFIX + key
@@ -505,6 +522,170 @@ def verify(repo: str, sess: dict):
     return all(c["passed"] for c in checks), checks
 
 
+# ── 지연 적용 (2026-08-19) ────────────────────────────────────────────────
+
+def _reload_triggering(sess: dict) -> bool:
+    """이 적용이 uvicorn 리로드를 부르는가 — backend/**.py 가 하나라도 끼면 참.
+
+    uvicorn 은 reload=True(reload_delay 2초)로 backend 를 감시한다. frontend/scripts 는
+    라이브 프로세스가 import 하지 않아 즉시 적용해도 이 턴이 죽지 않는다."""
+    for r in (sess.get("files") or {}).values():
+        rel = (r.get("rel") or "").replace(os.sep, "/")
+        if rel.startswith("backend/") and rel.endswith(".py"):
+            return True
+    return False
+
+
+def _current_episode_id():
+    """지금 턴의 주행기록 행 id — 수행자가 '턴이 닫혔다'를 이 행의 ended_at 으로 판정한다."""
+    try:
+        from episode_logger import EpisodeLogger
+        return getattr(EpisodeLogger.current(), "episode_id", None)
+    except Exception:
+        return None
+
+
+def _grant_identity():
+    """현재 그랜트의 (task_id, agent_id, reason) — 잡 파일로 수행자에게 이월된다."""
+    try:
+        from red_grant import active_grant
+        from thread_context import get_current_task_id, get_current_agent_id
+        g = active_grant(task_id=get_current_task_id(), agent_id=get_current_agent_id())
+        if g:
+            return g.get("task_id") or "", g.get("agent_id") or "", g.get("reason") or ""
+    except Exception:
+        pass
+    return "", "", ""
+
+
+def _write_deferred_result(repo: str, key_str: str, payload: dict):
+    """수행자 단계의 결말을 red_report 가 줍는 자리(red_backups/<key>/result.json)에 남긴다
+    — 워치독 판정과 같은 형식·같은 회수 경로라 다음 턴에 반드시 보고된다."""
+    try:
+        bdir = os.path.join(repo, "data", "system_ai_state", "red_backups", key_str)
+        os.makedirs(bdir, exist_ok=True)
+        payload = dict(payload)
+        payload.setdefault("finished_at", time.time())
+        with open(os.path.join(bdir, "result.json"), "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[수리 스테이징] 지연 결과 기록 실패(계속): {e}")
+
+
+def _schedule_deferred_apply(repo: str, sess: dict, checks: list):
+    """지연 적용 예약 — 라이브 쓰기를 '이 턴이 닫힌 뒤'로 미뤄 분리 수행자에 맡긴다.
+
+    반환: 응답 dict / None(예약 불능 → 호출자가 즉시 적용으로 폴백).
+    수행자(red_apply)는 ①주행기록 ended_at(=응답 전송·버퍼 저장 완료) ②증류 재합류
+    (refresh_episode 의 log 재기록)를 기다린 뒤 쓰기 직전 재검증하고 적용한다."""
+    key = sess["key"]
+    job_path = os.path.join(repo, SESSION_DIRNAME, f"{key}.apply.json")
+    # 수행자 스크립트는 코드 루트(이 모듈이 사는 저장소) 기준 — 대상 repo 에 없으면
+    # (테스트의 가짜 저장소 등) 코드 루트 것을 쓴다.
+    script = os.path.join(repo, "backend", "datastore", "red_apply.py")
+    if not os.path.exists(script):
+        code_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                                 *[os.pardir] * 5))
+        script = os.path.join(code_root, "backend", "datastore", "red_apply.py")
+        if not os.path.exists(script):
+            return None
+    task_id, agent_id, reason = _grant_identity()
+    job = {"key": key, "repo": repo, "episode_id": _current_episode_id(),
+           "task_id": task_id or key, "agent_id": agent_id or "system_ai",
+           "reason": reason, "scheduled_at": datetime.now().isoformat(),
+           "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                        "handler.py")}
+    try:
+        with open(job_path, "w", encoding="utf-8") as f:
+            json.dump(job, f, ensure_ascii=False, indent=2)
+        if not os.environ.get("INDIEBIZ_REPAIR_NO_SPAWN"):   # 테스트 심 — 수행자는 직접 기동
+            log = open(job_path + ".log", "ab")
+            subprocess.Popen([sys.executable, script, job_path],
+                             stdout=log, stderr=log, start_new_session=True, cwd=repo)
+    except Exception as e:
+        print(f"[수리 스테이징] 지연 적용 예약 실패: {e}")
+        try:
+            os.remove(job_path)
+        except OSError:
+            pass
+        return None
+    sess["status"] = "apply_scheduled"
+    sess["scheduled_at"] = job["scheduled_at"]
+    sess["checks"] = checks
+    _save_session(repo, sess)
+    rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
+    return {
+        "success": True, "applied": False, "scheduled": True, "verified": True,
+        "checks": [{"gate": c["gate"], "passed": True} for c in checks],
+        "files": rels,
+        "message": (f"검증 통과 — 라이브 적용을 예약했습니다({len(rels)}건). 이 턴이 닫힌 뒤"
+                    f"(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 쓰기 직전 재검증 후 "
+                    f"적용하며, 리로드는 그때 한 번 일어납니다. 적용·헬스 판정은 다음 턴에 "
+                    f"보고됩니다. 사용자에게는 '검증 통과, 적용 예약됨'으로 알리세요 — "
+                    f"아직 라이브에 반영되지 않았습니다."),
+        "worktree": sess["worktree"],
+    }
+
+
+def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
+    """예약된 적용의 실제 수행 — 분리 수행자(red_apply)가 턴 종료 대기 후 부른다.
+
+    ★쓰기 직전 재검증: 예약~수행 사이에도 라이브는 변할 수 있다(그 창도 세계다).
+    verify 의 live_sync 가 그 드리프트까지 맞춘 뒤 관문을 다시 돌린다. 실패하면
+    라이브 무변경 + 세션은 staging 으로 되돌아가(<repair_staged> 가 계속 문다)
+    결말은 result.json 으로 다음 턴에 보고된다. 멱등: 이미 적용된 세션은 no-op."""
+    sess = read_session(repo, key)
+    if not sess:
+        return {"success": False, "applied": False, "error": f"세션 원장이 없습니다: {key}"}
+    key_str = task_key(sess.get("key") or key)
+    rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
+    st = sess.get("status")
+    if st == "applied":
+        return {"success": True, "applied": True, "note": "이미 적용됨(중복 수행 무시)"}
+    if st != "apply_scheduled":
+        # 예약 뒤 같은 세션에 쓰기가 이어지면 ensure_session 이 staging 으로 재개봉한다
+        # — 그 예약 스냅샷은 낡았으므로 취소가 맞다(세션은 <repair_staged> 로 계속 보인다).
+        _write_deferred_result(repo, key_str, {
+            "outcome": "deferred_canceled", "files": rels,
+            "note": f"예약 후 세션 상태가 '{st}' 로 바뀌어 적용을 취소했습니다(스냅샷 낡음)."})
+        return {"success": False, "applied": False,
+                "error": f"세션 상태 {st} — 예약이 낡아 취소했습니다(라이브 무변경)."}
+    if not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
+        sess["status"] = "discarded"
+        sess["discarded_at"] = datetime.now().isoformat()
+        sess["note"] = "격리 사본 소실로 예약 적용 불능"
+        _save_session(repo, sess)
+        _write_deferred_result(repo, key_str, {
+            "outcome": "deferred_apply_failed", "files": rels,
+            "note": "격리 사본이 사라져 예약 적용을 수행할 수 없었습니다 — 다시 수리하세요."})
+        return {"success": False, "applied": False, "error": "격리 사본 소실"}
+    ok, checks = verify(repo, sess)
+    if not ok:
+        failed = [c["gate"] for c in checks if not c["passed"]]
+        sess["status"] = "staging"
+        sess.pop("scheduled_at", None)
+        sess["checks"] = checks
+        _save_session(repo, sess)
+        _write_deferred_result(repo, key_str, {
+            "outcome": "deferred_verify_failed", "files": rels,
+            "note": (f"쓰기 직전 재검증 실패({', '.join(failed)}) — 예약~수행 사이 라이브가 "
+                     f"변했습니다. 라이브 무변경, 수정분은 격리 사본에 보존.")})
+        return {"success": False, "applied": False, "verified": False,
+                "checks": checks, "failed_gates": failed,
+                "error": f"쓰기 직전 재검증 실패({', '.join(failed)}) — 라이브 무변경"}
+    out = _perform_apply(repo, sess, checks, prepare, finalize)
+    if not out.get("applied"):
+        cur = read_session(repo, key)
+        if cur and cur.get("status") == "apply_scheduled":
+            cur["status"] = "staging"
+            cur.pop("scheduled_at", None)
+            _save_session(repo, cur)
+        _write_deferred_result(repo, key_str, {
+            "outcome": "deferred_apply_failed", "files": rels,
+            "note": (out.get("error") or out.get("message") or "적용 단계 오류")[:400]})
+    return out
+
+
 # ── op: apply / status / discard ──────────────────────────────────────────
 
 def _ctx(ti):
@@ -512,10 +693,11 @@ def _ctx(ti):
 
 
 def op_apply(ti):
-    """검증 통과분만 라이브로 일괄 이동 — 리로드는 여기서 한 번.
+    """검증 통과분의 라이브 반영 — backend/*.py 는 ★지연 적용(턴 종료 후 분리 수행자).
 
-    검증 → 준비(백업·구문·keeper) → 쓰기 → 워치독. 어느 단계에서 막히든 그 앞까지는
-    라이브 무변경이다(준비 단계 실패도 쓰기 전에 걸린다)."""
+    검증 → (리로드를 부르는 세트면) 예약 → 수행자가 턴 종료 대기 → 재검증 → 준비(백업·
+    구문·keeper) → 쓰기 → 워치독. 어느 단계에서 막히든 그 앞까지는 라이브 무변경이다.
+    리로드가 없는 세트(frontend/scripts)는 지금 즉시 같은 코어로 적용한다."""
     repo, key = _ctx(ti)
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
@@ -525,7 +707,16 @@ def op_apply(ti):
     # proposal_id 가 오면 그 제안 세션을, 없으면 이 수리 세션을 적용한다.
     # 제안도 세션이라 분기는 '어느 키를 여는가'뿐이다(2026-08-18 통합).
     pid = (ti.get("proposal_id") or "").strip()
-    sess = read_session(repo, proposal_key(pid)) if pid else load_session(repo, key)
+    if pid:
+        sess = read_session(repo, proposal_key(pid))
+    else:
+        # ★staging 뿐 아니라 apply_scheduled 도 받는다 — 예약이 좌초하면(수행자 사망)
+        #   다시 apply 가 재검증 후 재예약한다(수행자 중복은 perform 쪽 멱등으로 안전).
+        sess = read_session(repo, key)
+        if sess and sess.get("status") not in ("staging", "apply_scheduled"):
+            sess = None
+        if sess and not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
+            sess = None
     if pid:
         if not sess:
             return {"success": False, "applied": False,
@@ -562,6 +753,21 @@ def op_apply(ti):
 
     prepare = ti.get("_red_prepare")
     finalize = ti.get("_red_finalize")
+
+    # ★지연 적용 (2026-08-19): backend/*.py 가 끼면 라이브 쓰기가 uvicorn 리로드를 불러
+    # **이 턴을 실행 중인 워커를 죽인다** — 최종 응답·주행기록 버퍼·증류 스레드가 전부
+    # 그 워커 안에 산다. 검증은 방금 끝났으니 쓰기만 '턴이 닫힌 뒤'로 미뤄 분리 수행자에
+    # 맡긴다. frontend/scripts 만이면 리로드가 없으므로 지금 그대로 적용한다.
+    if _reload_triggering(sess):
+        out = _schedule_deferred_apply(repo, sess, checks)
+        if out is not None:
+            return out
+        print("[수리 스테이징] 지연 적용 예약 불능 — 즉시 적용 폴백(이 턴은 리로드에 끊길 수 있음)")
+    return _perform_apply(repo, sess, checks, prepare, finalize)
+
+
+def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
+    """검증 통과분의 실제 라이브 반영 — 즉시 경로와 지연 수행자가 공유하는 단일 쓰기 코어."""
     files = sess["files"]
     to_write = {p: r for p, r in files.items() if r.get("op") != "delete"}
     to_delete = {p: r for p, r in files.items() if r.get("op") == "delete"}

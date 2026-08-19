@@ -24,7 +24,15 @@ _OUTCOME_LABEL = {
     "rolled_back": "수리 실패 — 서버가 죽어 자동 롤백됨(원상 복구)",
     "intentional_shutdown": "판정 보류 — 시스템이 의도적으로 종료됨(수리는 보존)",
     "timeout": "판정 미완 — 감시견 수명 초과(수동 확인 필요)",
+    # 지연 적용(2026-08-19) 수행자 단계의 결말 — repair_staging._write_deferred_result
+    "deferred_verify_failed": "예약 적용 중단 — 쓰기 직전 재검증 실패(라이브 무변경, 격리 보존)",
+    "deferred_apply_failed": "예약 적용 실패 — 적용 단계 오류(라이브 상태는 detail 확인)",
+    "deferred_canceled": "예약 적용 취소 — 예약 후 세션이 변해 스냅샷이 낡음(라이브 무변경)",
 }
+
+# 예약 적용은 턴 종료 후 몇 분 안에 스스로 끝난다 — 이보다 오래 apply_scheduled 로
+# 남아 있으면 수행자(red_apply)가 죽은 것(좌초)이라 다시 보고 대상이 된다.
+SCHEDULED_STALE_S = 30 * 60
 
 
 def _backups_root(repo: str) -> str:
@@ -104,17 +112,24 @@ def collect_unapplied(repo: str, min_age_s: float = 60.0) -> list:
                 s = json.load(f)
         except Exception:
             continue
-        if s.get("status") != "staging" or not (s.get("files") or {}):
+        status = s.get("status")
+        if status not in ("staging", "apply_scheduled") or not (s.get("files") or {}):
             continue
         try:
             age = now - os.path.getmtime(path)
         except OSError:
             continue
-        if age < min_age_s or age > MAX_AGE_S:
+        if age > MAX_AGE_S:
+            continue
+        if status == "staging" and age < min_age_s:
+            continue
+        # 신선한 예약은 수행자가 곧 처리한다 — 오보하지 않는다. 오래 남은 것만 좌초.
+        if status == "apply_scheduled" and age < SCHEDULED_STALE_S:
             continue
         out.append({"key": s.get("key"),
                     "files": [r.get("rel") for r in (s.get("files") or {}).values()],
-                    "age_s": int(age)})
+                    "age_s": int(age),
+                    "stranded_scheduled": status == "apply_scheduled"})
     return out[:MAX_ITEMS]
 
 
@@ -155,10 +170,13 @@ def _staged_block(staged: list) -> str:
     """미적용 스테이징 블록. 없으면 빈 문자열."""
     if not staged:
         return ""
-    rows = [f'  <staged key="{s["key"]}" files="{len(s["files"])}">'
-            + ", ".join(s["files"][:6]) + "</staged>" for s in staged]
+    rows = [f'  <staged key="{s["key"]}" files="{len(s["files"])}"'
+            + (' stranded_scheduled="true"' if s.get("stranded_scheduled") else "")
+            + ">" + ", ".join(s["files"][:6]) + "</staged>" for s in staged]
     note = ("지난 수리가 격리 사본에만 쌓인 채 **라이브에 적용되지 않았다** — 그 수정은 "
             "지금 시스템에 없다. 이어서 마무리하려면 [self:patch]{op:\"apply\"} 로 "
             "검증·적용하고, 더 필요 없으면 {op:\"discard\"} 로 정리하라. 어느 쪽이든 "
-            "사용자에게 '아직 반영되지 않았다'는 사실을 먼저 알려라.")
+            "사용자에게 '아직 반영되지 않았다'는 사실을 먼저 알려라. "
+            "stranded_scheduled=true 는 예약된 지연 적용의 수행자가 죽어 좌초한 것 — "
+            "다시 apply 하면 재검증 후 재예약된다.")
     return f"\n<repair_staged note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_staged>"

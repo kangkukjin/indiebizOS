@@ -94,7 +94,7 @@ def _parse_handler_result(raw) -> dict:
 def _collect_economy() -> Dict:
     """경제 지표 수집 — 주요 지수, 환율
 
-    yf_stock_price 핸들러 반환 형태:
+    stock_op(op:quote) 핸들러 반환 형태:
     {"success": True, "data": {"current_price": 2650.0, "change_percent": -1.2, ...}}
     """
     from world_pulse import _load_config
@@ -112,7 +112,10 @@ def _collect_economy() -> Dict:
 
     for label, symbol in symbols.items():
         try:
-            raw = _exec_tool("yf_stock_price", {"symbol": symbol})
+            # ★B14-1 (2026-08-20 14회차): 옛 이름 yf_stock_price 는 어휘 정리에서 소멸 —
+            # 직접 호출 경로라 grep 에 안 걸려 load_tool_handler=None → economy 가 몇 달
+            # 침묵 공백이었다(08-05 search_gnews 함정과 같은 부류). 정본=stock_op(op:quote).
+            raw = _exec_tool("stock_op", {"op": "quote", "symbol": symbol})
             if raw is None:
                 continue
             parsed = _parse_handler_result(raw)
@@ -124,9 +127,10 @@ def _collect_economy() -> Dict:
             change_pct = data.get("change_percent")
 
             if price is not None:
-                # 실제 데이터 날짜 추출 (prices 배열의 마지막 거래일)
+                # 실제 데이터 날짜 추출 (prices 배열의 마지막 거래일, 없으면 quote 시각)
                 prices = data.get("prices", [])
-                data_date = prices[-1].get("date", "") if prices else ""
+                data_date = (prices[-1].get("date", "") if prices
+                             else str(data.get("quote_time") or data.get("timestamp") or "")[:10])
                 results[label] = {
                     "price": price,
                     "change_pct": change_pct,
@@ -209,9 +213,9 @@ def _collect_tech_news() -> List[str]:
 def _collect_weather() -> str:
     """날씨 수집 (설정의 location 기준)
 
-    get_api_ninjas_data 핸들러 반환 형태는 API마다 다름.
-    weather endpoint: {"temp": 12, "feels_like": 10, "humidity": 55, ...}
-    또는 {"success": True, "data": {...}} wrapper 가능
+    get_weather(location-services) 핸들러 반환 형태:
+    {"city": "...", "current": {"temp": 12, "feels_like": 10, "humidity": 55, ...}, "items": [...]}
+    (구 wrapper {"success": True, "data": {...}} 폴백 유지)
     """
     from world_pulse import _load_config
     config = _load_config()
@@ -222,15 +226,14 @@ def _collect_weather() -> str:
     location = config.get("location", "Cheongju")
 
     try:
-        raw = _exec_tool("get_api_ninjas_data", {
-            "endpoint": "weather",
-            "city": location,
-        })
+        # ★B14-1 (2026-08-20 14회차): 옛 이름 get_api_ninjas_data 소멸(경제와 같은
+        # 죽은-직접-호출 부류) → 정본 get_weather(location-services). 현재값은 current 아래.
+        raw = _exec_tool("get_weather", {"city": location})
         if raw is not None:
             parsed = _parse_handler_result(raw)
 
-            # wrapper 형태일 수 있음
-            data = parsed.get("data", parsed)
+            # 정본 봉투: {city, current: {...}, items: [...]} — 구 wrapper 폴백 유지
+            data = parsed.get("current") or parsed.get("data", parsed)
 
             temp = data.get("temp")
             feels = data.get("feels_like")

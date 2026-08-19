@@ -367,3 +367,18 @@ navigate → screenshot → image_read → (navigate >> screenshot) → image_re
 - **stock#info items 1행 병기**(quote·crypto 관례, data 키 보존) + **NaN/Inf 위생**: 검증 중 yfinance 간헐 NaN 이 FastAPI(allow_nan=False) 500 을 내는 잠복 결함 실측 — 정직 null 로 봉합(병기와 무관하게 터질 부류였음).
 - **상설화**: `run_maintenance_bundle` §8.5 신설 — 주간 카덴스(`data/returns_drift_state.json`)·subprocess(무접촉)·`@@RETURNS_DRIFT@@` 마커 회수·self_checks `returns_drift` 기록. 첫 실기동으로 배관 전체 검증(125 실측·마커·기록·카덴스 스탬프).
 - 검증: 해소 단위 13케이스 전부 items 정합(=다음 주간 런 드리프트 0 예상)·stock info 파이프 select 라이브·build --check 20 가드.
+
+### 14회차 (2026-08-20 — 보고서 `outputs/imagination_training/2026-08-20_14회차.md`) — 미조합 짝 개척 + 13회차 수리 열매 야생 검증
+- 12과제(검수 12/12·실행 11+격리 6): legal·kosis·book·freelance·restaurant·radio·notebook·performance·exhibit 미조합 짝 개척. 시간 문형(trigger cron+do 안 feed→since→notify 검침 3단)·적용(each)·조건(weather 중첩 필드)·`;`·`$변수` 커버. **이중 괄호 분기** `(A>>rename) & (B>>rename) >> union` 야생 완주(G13-1 개정이 설계보다 넓게 작동).
+- **F14-1(침묵 — 수리성·우선 권고)**: each 내부 `$` 치환이 미정의 변수/없는 필드를 **빈 문자열로 침묵 치환** → 빈 쿼리 하류 실행이 `_ok:true` success(`as` 지정 시 `$it`=유령 변수 무경고). 문장 간 `$st.items.0.x` 치환은 정직 실패+필드 힌트로 **같은 `$` 치환이 두 규율** — each 쪽을 정직 규율로 통일 제안. silent-clamp 부류.
+- **F14-2(수리성 소품)**: flatten `keep` 미실존 필드 침묵 무시(dedup 힌트 이식 제안). **F14-3(판정성)**: 상대경로 기준 불일치 — write=프로젝트 outputs / notebook add=backend cwd. **F14-4(수리성)**: table:structure 재시도 부재(간헐 LLM JSON 잘림 실측)+**ai_call 고지 누락**(매 실행 모델 호출인데 has_ai_call=false — oneshot_facade 이전 세대, 같은 부류 전수 감사 제안). **V14-1(판정성 소품)**: radio_favorite 통화 비소비+korean 행 stream_url 부재. **B14-1(깃발)**: sense:world economy 빈 dict + pulse_log 0행 — 경제 수집기 정지 의심(대장장이 진단 대상).
+- 긍정: 13회차 수리 5건 전부 야생 실증(괄호 분기·order:"desc"·조건 필드 힌트·dedup 힌트·병렬 봉투 — I11/I7/I4a/P3) + $변수 인덱스 경로 `.items.0.필드` 지원 확정(실패 시 행 필드 힌트). 시드 후보 11건(승인 대기). 스크래치 전량 원상복구.
+
+### ✅ 14회차 판정·수리 집행 완료 (2026-08-20 같은 날 — 사용자 판정 3건 전부 승인 → 수리 5건+진단 1건, 상세=14회차 보고서 부록)
+- **R-F14-1**(ibl_executors): each 진범 2겹 재진단 — 정직 코드는 있었으나 ①필드 정규식 `[A-Za-z_]` 전용=한글 필드 매칭 밖 ②`as` 지정 시 `$it`=패턴 밖 유령 변수. 수리=패턴 유니코드화+`_each_foreign_vars`(해석 불능 `$이름` 문장 단위 즉시 거절, `$items`·자기 할당 제외)+행 오류에 필드 힌트.
+- **R-F14-2**(data-ops): flatten keep 전무=오류+필드 힌트 / 일부 전무=`keep_missing`+warning.
+- **R-F14-3**(notebook): add 상대경로=프로젝트 기준(집 규약 합류)→저장소 루트 폴백, 실패 시 시도 경로 명시. yaml desc 명기.
+- **R-F14-4**: structure→oneshot_facade 이관(facade `role` 매개변수 신설 — 기존 경량 축 보존, 축 변경=판정감). ★동반 수리: `ingest_engine._strip_json`이 `[` 위치 무관 우선이라 {title,blocks:[…]}에서 blocks만 뽑던 드리프트→위치 우선+폴백. ai_call 고지 3어휘(structure·self:ask 액션 / notebook **op 레벨 신설** `ops.ai_call:{ask:true}` — api_ibl `_resolve_op` 해소+빌드 검증기 op 축 합류). ★경계 판정 기록: engines 미디어 생성기는 의도적 제외(🎨 아이콘 계기가 포털 대여 중 — 플래그=즉사).
+- **R-V14-1 오탐 정정**(정직 기록): add는 이미 station_id(권장)+aliases(url·title) 완비 — 진범=코퍼스 편향. 수리=station_id 파이프라인 시드 3건(벡터 부착)+오염 행 제거(id 2925 `op:"삼성전자"` 유령 op). 라이브 왕복 개통.
+- **B14-1 진단 완결+수리**: economy·weather 공백의 진범=`_exec_tool` 죽은 이름 2건(yf_stock_price→stock_op{op:quote} / get_api_ninjas_data→get_weather) — **08-05 "직접 도구 호출은 grep에 안 걸린다" 함정 재발**. 재배선 후 라이브 economy 7지표+weather 수집. pulse_log 0행=06-28 정기 수집 폐지의 휴면 잔재(save_pulse·_collect_world_delta 호출자 0 — 유령 테이블, 정리=판정감).
+- 검증=build --check 전 가드·P1~P20·ai-ops 배터리 25/25·each 스칼라/flatten/dedup/병렬 회귀·포털 게이트(structure 거부·weather 대조). ⏳커밋·시드 후보 11건(별도 승인)·재학습 대기열·판정 후보 2(engines ai_call 경계·pulse_log 정리).

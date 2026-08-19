@@ -215,6 +215,7 @@ actions:
     - 목록합치기
   structure:
     returns: scalar
+    ai_call: true  # F14-4 (2026-08-20): 실행마다 경량 LLM 편집자 호출 — dry-run 고지·포털 기본 거부
     exempt: 경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)
     runs_on: anywhere
     scope: workspace

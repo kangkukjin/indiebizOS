@@ -429,14 +429,26 @@ async def validate_ibl(req: ValidateRequest):
     has_side_effect = False
     has_ai_call = False
 
-    def _is_ai_call(node: str, action: str) -> bool:
-        """AI 낱말(ai_call: true — ai-ops 원샷 낱말) 여부 — 실행마다 모델 비용·출력 편차라
-        dry-run 이 초록불 대신 고지를 단다(0토큰 계약의 표시 의무, ONESHOT_VOCAB_DESIGN §7)."""
+    def _is_ai_call(node: str, action: str, params: dict = None) -> bool:
+        """AI 낱말(ai_call: true) 여부 — 실행마다 모델 비용·출력 편차라 dry-run 이
+        초록불 대신 고지를 단다(0토큰 계약의 표시 의무, ONESHOT_VOCAB_DESIGN §7).
+
+        ★op 레벨 지원 (F14-4, 2026-08-20): `ops.ai_call: {op: true}` 형제 맵 — notebook 처럼
+        한 op(ask)만 모델을 부르는 액션용(side_effect 의 op 축과 같은 모양). 액션 레벨
+        플래그가 우선하고, op 를 못 짚으면(유령 op) 보수적으로 고지한다."""
         try:
             from ibl_access import _load_nodes_data
             ad = ((_load_nodes_data() or {}).get("nodes", {})
                   .get(node, {}).get("actions", {}).get(action, {})) or {}
-            return bool(ad.get("ai_call"))
+            if ad.get("ai_call"):
+                return True
+            op_map = (ad.get("ops") or {}).get("ai_call") or {}
+            if op_map:
+                op = _resolve_op(node, action, params)
+                if op is None:
+                    return any(bool(v) for v in op_map.values())
+                return bool(op_map.get(op))
+            return False
         except Exception:
             return False
 
@@ -506,7 +518,7 @@ async def validate_ibl(req: ValidateRequest):
         if warn:
             param_warning = f"{param_warning} / {warn}" if param_warning else warn
 
-        ai_call = ok and _is_ai_call(node, action)
+        ai_call = ok and _is_ai_call(node, action, params)
         if ai_call:
             has_ai_call = True
             _ai_note = "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."

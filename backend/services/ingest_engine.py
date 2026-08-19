@@ -153,11 +153,12 @@ def _strip_json(raw: str):
         return None
     s = raw.strip()
     s = re.sub(r'^```(?:json)?\s*|\s*```$', '', s, flags=re.MULTILINE).strip()
-    # 첫 [ 또는 { 부터 짝 맞는 끝까지
-    for opener, closer in (('[', ']'), ('{', '}')):
-        i = s.find(opener)
-        if i < 0:
-            continue
+    # 첫 [ 또는 { 부터 짝 맞는 끝까지 — ★위치 우선 (F14-4, 2026-08-20): 옛 구현은 [ 를
+    # 위치 무관 우선해 {"title":…, "blocks":[…]} 객체에서 blocks 배열만 뽑았다(문서
+    # "첫 [ 또는 {"와 구현의 드리프트 — table:structure 관문 이관에서 실측). 먼저
+    # 나타나는 여는 괄호부터 시도하고, 파싱 실패 시 다른 쪽을 시도한다.
+    candidates = [(s.find(o), o, c) for o, c in (('[', ']'), ('{', '}')) if s.find(o) >= 0]
+    for i, opener, closer in sorted(candidates):
         depth = 0
         in_str = False
         esc = False

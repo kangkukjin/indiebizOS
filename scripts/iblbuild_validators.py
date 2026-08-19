@@ -118,6 +118,8 @@ def _check_op_axis(qualified: str, action: dict, ops: dict, values: dict) -> lis
         ("returns", lambda v: isinstance(v, str) and v in OP_RETURNS_ENUM,
          "|".join(sorted(OP_RETURNS_ENUM))),
         ("side_effect", lambda v: isinstance(v, bool), "true|false"),
+        # F14-4 (2026-08-20): op 레벨 AI 낱말 고지 — 한 op 만 모델을 부르는 액션용(notebook#ask)
+        ("ai_call", lambda v: isinstance(v, bool), "true|false"),
     ):
         block = ops.get(field)
         if block is None:

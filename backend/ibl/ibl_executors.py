@@ -764,6 +764,9 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
 
     ★없는 필드는 조용히 빈 값으로 만들지 않고 목록으로 돌려준다 — 호출자가 그 행을
     실패로 표시한다(빈 문자열로 밀어 넣으면 "성공처럼 보이는 오동작"이 된다).
+    ★필드 패턴은 유니코드(`[^\\W\\d]\\w*`) — 옛 `[A-Za-z_]` 전용은 `$it.없는필드` 같은
+    한글 필드가 매칭 밖이라 `$it` 만 치환되고 `.필드` 가 리터럴 잔존했다(F14-1, 14회차 실측:
+    빈/쓰레기 쿼리가 _ok:true 로 완주).
     """
     missing: list = []
 
@@ -783,8 +786,29 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
         missing.append(field)
         return m.group(0)
 
-    pattern = re.compile(r"\$" + re.escape(var) + r"((?:\.[A-Za-z_][A-Za-z0-9_]*)?)")
+    pattern = re.compile(r"\$" + re.escape(var) + r"((?:\.[^\W\d]\w*)?)")
     return pattern.sub(_sub, sentence), missing
+
+
+def _each_foreign_vars(do: str, var: str) -> list:
+    """do 문장 안에서 **해석되지 않을** `$변수` 이름 목록 (F14-1, 2026-08-20 14회차).
+
+    행 참조(`$<var>`)·예약어 `$items`·do 안에서 자기 할당된 변수는 정상.
+    그 밖의 `$이름` 은 어떤 행에서도 치환되지 않고 리터럴로 하류에 흘러간다 —
+    14회차 실측: `as:"google"` 지정 후 `$it.title` 이 통째로 구글 검색어가 되어
+    무관한 결과 30건이 success 로 완주했다(유령 변수의 침묵 통과).
+    ★외부 파이프의 `$변수` 는 each 실행 전에 상위 해석기가 이미 치환하므로,
+    여기 남은 것은 전부 오타/참조명 불일치다.
+    """
+    assigned = set(re.findall(r"\$([^\W\d]\w*)\s*=", do))
+    foreign = []
+    for m in re.finditer(r"\$([^\W\d]\w*)", do):
+        name = m.group(1)
+        if name == var or name == "items" or name in assigned:
+            continue
+        if name not in foreign:
+            foreign.append(name)
+    return foreign
 
 
 def _stamp_depth(steps: Any, depth: int) -> None:
@@ -855,6 +879,17 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     do = str(do)
     var = (str(params.get("as") or "it").lstrip("$").strip()) or "it"
 
+    # ★유령 변수 사전 차단 (F14-1): 어떤 행에서도 치환되지 않을 `$이름` 은 저작 오류라
+    # 행 단위가 아니라 문장 단위로 즉시 거절한다 — 모든 행이 같은 이유로 실패할 운명이고,
+    # 옛 동작(리터럴 잔존→하류 실행)은 "성공처럼 보이는 오동작"이었다.
+    foreign = _each_foreign_vars(do, var)
+    if foreign:
+        return {"success": False, "items": [], "count": 0,
+                "error": (f"each: do 안에 해석되지 않는 변수 "
+                          f"{', '.join('$' + f for f in foreign)} — 행 참조 이름은 '${var}'"
+                          f"{' (as 로 지정됨)' if var != 'it' else ''} 입니다. "
+                          f"행 값은 '${var}.필드' 로 참조하세요.")}
+
     rows, envelope = _each_input_rows(params)
     if rows is None:
         shape = (list(envelope.keys())[:8] if isinstance(envelope, dict)
@@ -886,8 +921,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         sentence, missing = _each_substitute(do, row, var)
         if missing:
             err_n += 1
+            avail = sorted(row.keys())[:12] if isinstance(row, dict) else [_EACH_SCALAR_FIELD]
             out_items.append({**base, "_ok": False,
-                              "_error": f"행에 없는 필드: {', '.join(sorted(set(missing)))}"})
+                              "_error": (f"행에 없는 필드: {', '.join(sorted(set(missing)))} "
+                                         f"(행 필드: {avail})")})
             if on_error == "stop":
                 halted = "on_error"
                 break

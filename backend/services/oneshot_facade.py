@@ -18,11 +18,17 @@ import re
 _WS = re.compile(r"\s+")
 
 
-def execution_oneshot(prompt: str, system_prompt: str = None, images: list = None):
-    """기어 실행 축 원샷 — oneshot 버킷(세션 비활성·thinking 차단)로 획득된다."""
+def execution_oneshot(prompt: str, system_prompt: str = None, images: list = None,
+                      role: str = "execution"):
+    """기어 실행 축 원샷 — oneshot 버킷(세션 비활성·thinking 차단)로 획득된다.
+
+    role 기본값은 실행 축(ai-ops 세 낱말의 판정) — 다른 축의 기존 LLM 원자가 이 관문의
+    검증(재시도 1회+정직 실패)만 빌릴 때는 자기 축을 명시해 넘긴다(축 변경은 판정감이라
+    관문 이관이 기어를 조용히 바꾸면 안 된다 — 2026-08-20 F14-4, table:structure 이관).
+    """
     from consciousness_agent import oneshot_ai_call
     return oneshot_ai_call(prompt, system_prompt=system_prompt,
-                           images=images, role="execution")
+                           images=images, role=role)
 
 
 def _strip_json(raw):
@@ -31,12 +37,13 @@ def _strip_json(raw):
     return _s(raw)
 
 
-def oneshot_json(prompt: str, system_prompt: str):
-    """실행 축 원샷 → JSON. 파싱 실패 시 오류를 되먹여 1회 재생성, 재실패=(None, err) 정직.
+def oneshot_json(prompt: str, system_prompt: str, role: str = "execution"):
+    """원샷 → JSON. 파싱 실패 시 오류를 되먹여 1회 재생성, 재실패=(None, err) 정직.
 
     반환 (parsed, err) — parsed 는 dict/list, err 는 사람이 읽는 실패 사유.
+    role 은 execution_oneshot 참조(기본 실행 축, 기존 원자 이관 시 자기 축 명시).
     """
-    raw = execution_oneshot(prompt, system_prompt=system_prompt)
+    raw = execution_oneshot(prompt, system_prompt=system_prompt, role=role)
     if raw:
         parsed = _strip_json(raw)
         if parsed is not None:
@@ -45,7 +52,7 @@ def oneshot_json(prompt: str, system_prompt: str):
             else f"모델 출력을 JSON으로 못 읽음: {str(raw)[:200]}")
     retry = (f"{prompt}\n\n[재시도] 직전 출력이 실패했다({err0[:120]}). "
              "코드펜스·설명 없이 유효한 JSON만 다시 출력하라.")
-    raw2 = execution_oneshot(retry, system_prompt=system_prompt)
+    raw2 = execution_oneshot(retry, system_prompt=system_prompt, role=role)
     if raw2:
         parsed = _strip_json(raw2)
         if parsed is not None:

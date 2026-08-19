@@ -41,7 +41,7 @@ class _Ctx:
 _FAKE = {"queue": [], "calls": 0}
 
 
-def _fake_oneshot(prompt, system_prompt=None, images=None):
+def _fake_oneshot(prompt, system_prompt=None, images=None, role="execution"):
     _FAKE["calls"] += 1
     if _FAKE["queue"]:
         return _FAKE["queue"].pop(0)

@@ -41,9 +41,36 @@ def _op_create(tool_input: dict, context) -> str:
 
 def _op_add(tool_input: dict, context) -> str:
     import notebook_core as core
+    path = str(tool_input.get("path") or "").strip()
+    # ★F14-3 (2026-08-20 14회차): 상대 경로 해석 규약 통일 — 집 규약(write·download 와
+    # 동일)대로 **프로젝트 기준**, 없으면 저장소 루트 폴백. 옛 동작은 backend cwd 기준이라
+    # 같은 문장 안에서 write(프로젝트)와 add(cwd)의 기준이 갈려 예측 불가였다(14회차 I9 실측).
+    if path and not core.is_url(path):
+        expanded = os.path.expanduser(path)
+        if not os.path.isabs(expanded):
+            repo_root = os.environ.get("INDIEBIZ_ROOT") or os.path.abspath(
+                os.path.join(CURRENT_DIR, "..", "..", "..", "..", ".."))
+            bases = []
+            if context is not None and getattr(context, "project_path", None):
+                bases.append(context.project_path)
+            bases.append(repo_root)
+            tried = []
+            resolved = None
+            for base in bases:
+                cand = os.path.abspath(os.path.join(base, expanded))
+                tried.append(cand)
+                if os.path.isfile(cand):
+                    resolved = cand
+                    break
+            if resolved is None:
+                return _json({"success": False,
+                              "error": ("파일이 없습니다 — 상대 경로는 프로젝트 기준"
+                                        "(없으면 저장소 루트 폴백)으로 해석합니다. 시도: "
+                                        + " / ".join(tried))})
+            path = resolved
     return _json(core.add_source(
         tool_input.get("name", ""),
-        path=tool_input.get("path", ""),
+        path=path,
         text=tool_input.get("text", ""),
         title=tool_input.get("title", ""),
     ))

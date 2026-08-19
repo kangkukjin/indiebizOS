@@ -1037,6 +1037,19 @@ def _op_flatten(prev, params):
         keep = [keep]
     keep = [str(k) for k in keep]
 
+    # ★F14-2 (2026-08-20 14회차): keep 미실존 필드의 침묵 무시 차단 — dedup 규율 이식.
+    # 전무(어느 행에도 없음)가 keep 전체면 이름 오타 확정 → 정직 오류.
+    # 일부만 전무면 진행하되 keep_missing 으로 신고(행마다 다른 필드는 정상 케이스).
+    keep_missing = []
+    if keep and recs:
+        keep_missing = [k for k in keep
+                        if not any(isinstance(r, dict) and k in r for r in recs)]
+        if keep_missing and len(keep_missing) == len(keep):
+            sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
+            return {"success": False,
+                    "error": (f"flatten: keep {keep} 이(가) 어느 행에도 없습니다. "
+                              f"사용 가능한 필드: {sample}")}
+
     def _dig(row, path):
         cur = row
         for part in path.split("."):
@@ -1089,6 +1102,9 @@ def _op_flatten(prev, params):
     res = _emit_items(env, out)
     if skipped:
         res["skipped_rows"] = skipped
+    if keep_missing:
+        res["keep_missing"] = keep_missing
+        res["warning"] = (f"keep 중 어느 행에도 없는 필드: {keep_missing} — 승계되지 않았습니다.")
     return res
 
 

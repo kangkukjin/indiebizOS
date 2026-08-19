@@ -60,29 +60,24 @@ def structure_document(tool_input, output_base="."):
         user += f"\n\n# 정리 방향\n{instruction}"
     user += "\n\n위 내용을 문서 IR(JSON 한 객체)로 출력하라."
 
+    # ★F14-4 (2026-08-20 14회차): oneshot_facade 관문 이관 — JSON 파싱 실패(간헐 출력
+    # 잘림 실측)에 되먹임 재시도 1회 + 재실패=정직 실패. role="classify" 명시로 기존
+    # 기어 축(경량) 보존 — 관문 이관이 모델 축을 조용히 바꾸면 안 된다(축 변경=판정감).
     try:
-        from consciousness_agent import oneshot_ai_call
-        resp = oneshot_ai_call(user, system_prompt=_STRUCTURE_PROMPT)
+        from oneshot_facade import oneshot_json
+        ir, err = oneshot_json(user, _STRUCTURE_PROMPT, role="classify")
     except Exception as e:
         return _json.dumps({"success": False, "error": f"구조화 AI 호출 실패: {e}"}, ensure_ascii=False)
-    if not resp or not resp.strip():
-        return _json.dumps({"success": False, "error": "구조화 AI 응답 없음"}, ensure_ascii=False)
-
-    txt = resp.strip()
-    if txt.startswith("```"):
-        txt = txt.strip("`")
-        if txt.lower().startswith("json"):
-            txt = txt[4:]
-        txt = txt.split("```")[0].strip()
-    try:
-        a, b = txt.find("{"), txt.rfind("}")
-        ir = _json.loads(txt[a:b + 1])
-    except Exception as e:
-        return _json.dumps({"success": False, "error": f"IR JSON 파싱 실패: {e}", "raw": resp[:300]},
+    if ir is None:
+        return _json.dumps({"success": False, "error": f"IR 생성 실패(재시도 1회 포함): {err}"},
                            ensure_ascii=False)
+    if not isinstance(ir, dict):
+        return _json.dumps({"success": False, "error": "IR 이 JSON 객체가 아닙니다.",
+                            "raw": str(ir)[:300]}, ensure_ascii=False)
     blocks = ir.get("blocks")
     if not isinstance(blocks, list) or not blocks:
-        return _json.dumps({"success": False, "error": "blocks가 없습니다.", "raw": resp[:300]},
+        return _json.dumps({"success": False, "error": "blocks가 없습니다.",
+                            "raw": _json.dumps(ir, ensure_ascii=False)[:300]},
                            ensure_ascii=False)
     return _json.dumps({"success": True, "title": ir.get("title", ""), "blocks": blocks,
                         "block_count": len(blocks),

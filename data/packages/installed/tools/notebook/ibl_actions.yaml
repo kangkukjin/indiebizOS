@@ -7,7 +7,7 @@ nodes:
         fixture: '[self:notebook]{op: "list"}'
         runs_on: pc_only     # 임베딩 모델·sqlite-vec 는 데스크톱만. 폰은 [others:ask]로 부탁.
         description: '근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.'
-        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12) — 답+citations[{n,source,loc,quote}]+items / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12) — 답+citations[{n,source,loc,quote}]+items / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
         target_key: op
         group: notebook
         router: handler
@@ -28,6 +28,8 @@ nodes:
             search: false
             sources: false
             list: false
+          ai_call:  # F14-4 (2026-08-20): ask 만 실행마다 모델 호출(생성) — search 는 LLM 0
+            ask: true
           fixture:
             list: '[self:notebook]{op: "list"}'
           exempt:

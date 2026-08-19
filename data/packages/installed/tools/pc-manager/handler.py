@@ -135,6 +135,13 @@ def _list_volumes(tool_input: dict) -> str:
     import storage_db
 
     result = storage_db.list_volumes()
+    # 통화 병기 (V13-1, 2026-08-19 상상훈련 13회차): volumes 키만으로는 어떤 table
+    # 변환자도 뒤에 못 붙는다(sort/take 굶음 실측). title=칸 규약, 원 필드 보존.
+    if isinstance(result, dict) and isinstance(result.get("volumes"), list):
+        items = [{"title": v.get("name") or v.get("root_path"), **v}
+                 for v in result["volumes"] if isinstance(v, dict)]
+        result["items"] = items
+        result["count"] = len(items)
     return json.dumps(result, ensure_ascii=False)
 
 
@@ -334,7 +341,11 @@ def _host_apps(tool_input: dict) -> str:
             "mem_percent": round(x.get("memory_percent") or 0, 1),
             "cpu_percent": round(x.get("cpu_percent") or 0, 1),
         } for x in procs[:limit]]
-        return json.dumps({"success": True, "count": len(procs), "top": top}, ensure_ascii=False)
+        # 통화 병기 (V13-1 스윕, 2026-08-19): top=주 페이로드 목록 — items 병기로
+        # table 변환자 접속 개통(title=칸 규약, 원 필드·top 키 보존).
+        items = [{"title": x.get("name"), **x} for x in top]
+        return json.dumps({"success": True, "count": len(procs), "top": top,
+                           "items": items}, ensure_ascii=False)
     except Exception as e:
         return json.dumps({"success": False, "error": f"host apps 실패: {e}"}, ensure_ascii=False)
 

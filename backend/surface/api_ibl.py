@@ -539,7 +539,7 @@ async def validate_ibl(req: ValidateRequest):
 
     def _is_plain(st) -> bool:
         return isinstance(st, dict) and not (
-            st.get("_parallel") or "_fallback_chain" in st
+            st.get("_parallel") or "_fallback_chain" in st or st.get("_branch_steps")
             or st.get("_condition") or st.get("_case") or st.get("_goal"))
 
     # do(문장을 param 문자열로 나르는 자리)를 가진 액션들 — each 외에 M1 `do` 통일 자리 전부.
@@ -651,7 +651,23 @@ async def validate_ibl(req: ValidateRequest):
             branches = st.get("branches") or []
             n = len(branches)
             for i, br in enumerate(branches):
+                # 괄호 분기 파이프 (G13-1) — 속 step 들을 위치 라벨로 전부 펼친다
+                if isinstance(br, dict) and br.get("_branch_steps"):
+                    subs = br["_branch_steps"]
+                    m = len(subs)
+                    for j, sub in enumerate(subs):
+                        _walk(sub, depth + 1,
+                              label=f"[병렬 {i + 1}/{n} · 분기 파이프 {j + 1}/{m}]",
+                              group="parallel")
+                    continue
                 _walk(br, depth + 1, label=f"[병렬 {i + 1}/{n}]", group="parallel")
+            return
+        if st.get("_branch_steps"):
+            # 방어 — 병렬 밖에서 만날 일은 없지만, 만나면 속을 보이게(opaque 금지)
+            subs = st.get("_branch_steps") or []
+            for j, sub in enumerate(subs):
+                _walk(sub, depth + 1, label=label or f"[분기 파이프 {j + 1}/{len(subs)}]",
+                      group=group or "parallel")
             return
         if "_fallback_chain" in st:
             chain = st.get("_fallback_chain") or []
@@ -708,8 +724,21 @@ async def validate_ibl(req: ValidateRequest):
                 _walk(st["strategy"], depth + 1, group="goal")
             return
 
-    for st in parsed:
-        _walk(st)
+    # F13-2 (2026-08-19 상상훈련 13회차): 병렬(&) 결과는 이항 변환자(union/merge/join)가
+    # 먼저 받아야 한다 — 다른 table 변환자를 바로 물리면 검수 초록 뒤 실행에서 굶는
+    # 사각이었다. 소프트 경고(실행기의 정직 거절이 최종 심판).
+    _BINARY_AFTER_PARALLEL = {"union", "merge", "join"}
+    for _pi, st in enumerate(parsed):
+        _pw = None
+        if (_pi > 0 and isinstance(parsed[_pi - 1], dict) and parsed[_pi - 1].get("_parallel")
+                and isinstance(st, dict) and not st.get("_seq_boundary")
+                and st.get("_node") == "table"
+                and st.get("action") not in _BINARY_AFTER_PARALLEL):
+            _pw = ("병렬(&) 결과는 이항 변환자(union/merge/join)가 먼저 받아야 합니다 — "
+                   f"'{st.get('action')}' 은(는) 병렬 봉투를 소비하지 못해 실행에서 거절됩니다. "
+                   "분기 하나에만 전처리를 붙이려면 괄호 분기: "
+                   "[A] & ([B] >> [table:rename]{…}) >> [table:merge]")
+        _walk(st, warn=_pw)
 
     return {
         "valid": all_valid,

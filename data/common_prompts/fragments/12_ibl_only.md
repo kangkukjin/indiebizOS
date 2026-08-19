@@ -100,8 +100,8 @@ Chain multiple steps with operators:
 
 **조합 규칙 (파서가 강제한다):**
 - 한 세그먼트에 `&`와 `??` 혼용 금지(명시 에러) — `>>`로 단계를 나누거나 문장을 분리.
-- `&`/`??`의 가지는 **단일 액션**만. 괄호 묶기는 없다 — `(A >> B) & C` 불가. 가지에 파이프가 필요하면: ①변수로 나눠 담고(`$a = A >> B` 후 참조) ②파이프 묶음을 `[self:workflow]{op: "save", name: "이름", do: "..."}` 로 저장해 가지엔 `[self:workflow]{op: "run", name: "이름"}` 을 세운다(run 은 몸통 마지막 문장의 items 를 통화로 낸다 — 이름 붙인 묶음이 곧 괄호) ③행별 반복이면 `[table:each]`.
-- `&` 병렬을 `>> [table:join/union/merge]`로 받으려면 **각 가지가 통화(items)를 내야** 한다. 스칼라 가지(예: `[self:time]`)는 결합 불가.
+- 병렬(`&`)의 가지는 **괄호로 파이프를 묶을 수 있다**(2026-08-19 문법 개정): `[A] & ([B] >> [table:rename]{map: {title: "name"}}) >> [table:merge]{by: "name"}` — 분기 하나에만 전처리를 붙이는 표현(교차 소스 키 정합이 대표 용례). 괄호 안은 일반 step 을 `>>` 로 이은 파이프만 — 중첩 병렬·폴백·블록은 명시 에러. `??`의 가지는 여전히 **단일 액션**만. 가지에 더 복잡한 묶음이 필요하면: ①변수로 나눠 담고(`$a = A >> B` 후 참조) ②파이프 묶음을 `[self:workflow]{op: "save", name: "이름", do: "..."}` 로 저장해 가지엔 `[self:workflow]{op: "run", name: "이름"}` 을 세운다(run 은 몸통 마지막 문장의 items 를 통화로 낸다) ③행별 반복이면 `[table:each]`.
+- `&` 병렬을 `>> [table:join/union/merge]`로 받으려면 **각 가지가 통화(items)를 내야** 한다. 스칼라 가지(예: `[self:time]`)는 결합 불가. **병렬 뒤 첫 변환자는 이항(join/union/merge)이어야** 한다 — 다른 변환자를 바로 물리면 실행이 정직하게 거절한다(분기별 전처리는 괄호 분기로).
 
 **여러 문장과 변수** — 줄바꿈(또는 `;`)으로 나뉜 문장은 서로 **독립**이다(앞 결과가 자동으로 안 넘어감). 앞 결과를 뒤에서 쓰려면 변수에 담아 뒤 문장의 param 값 안에서 참조한다:
 ```
@@ -147,7 +147,7 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선 사용. 예: 건강기록→`[self:health]{op: "query"}`, 메모리→`[self:memory]{op: "search"}`
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
-5. `>>` 순차, `&` 병렬, `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
+5. `>>` 순차, `&` 병렬(분기 파이프는 괄호: `A & (B >> C) >> [table:merge]`), `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
 6. 모든 파라미터는 `{key: "value"}` 형태
 7. 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 `execute_ibl`로 실행까지 완료할 것.
 

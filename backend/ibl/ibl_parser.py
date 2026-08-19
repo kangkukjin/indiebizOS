@@ -355,6 +355,7 @@ def _split_pipeline(text: str) -> List[tuple]:
     segments = []  # [(text, operator)]
     current = []
     depth = 0  # { } 깊이 추적
+    paren = 0  # ( ) 깊이 — 괄호 분기 파이프 안의 >> 는 분기 소유 (G13-1, 2026-08-19)
 
     i = 0
     chars = text
@@ -367,7 +368,14 @@ def _split_pipeline(text: str) -> List[tuple]:
         elif ch == '}':
             depth -= 1
             current.append(ch)
-        elif ch == '>' and i + 1 < len(chars) and chars[i + 1] == '>' and depth == 0:
+        elif ch == '(' and depth == 0:
+            paren += 1
+            current.append(ch)
+        elif ch == ')' and depth == 0:
+            paren = max(0, paren - 1)   # 홀로 남은 ')' 가 이후 전체를 잠그지 않게
+            current.append(ch)
+        elif (ch == '>' and i + 1 < len(chars) and chars[i + 1] == '>'
+              and depth == 0 and paren == 0):
             # >> 발견 (중괄호 밖) — 기계적 파이프
             seg = ''.join(current).strip()
             if seg:
@@ -432,10 +440,15 @@ def _parse_group(text: str) -> Optional[Dict]:
     if len(parallel_parts) > 1:
         branches = []
         for part in parallel_parts:
-            step = _parse_step(part.strip())
-            if step is None:
-                raise IBLSyntaxError(f"병렬 요소 파싱 실패: {part.strip()}")
-            branches.append(step)
+            p = part.strip()
+            # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): 분기 하나에만
+            # 전처리를 붙이는 표현 — [A] & ([B] >> [table:rename]{...}) >> [table:merge].
+            branch = _parse_paren_branch(p)
+            if branch is None:
+                branch = _parse_step(p)
+            if branch is None:
+                raise IBLSyntaxError(f"병렬 요소 파싱 실패: {p}")
+            branches.append(branch)
         return {"_parallel": True, "branches": branches}
 
     # ?? 연산자 확인 (fallback)
@@ -449,7 +462,73 @@ def _parse_group(text: str) -> Optional[Dict]:
         return {"_fallback_chain": chain}
 
     # 일반 단일 step
-    return _parse_step(text)
+    step = _parse_step(text)
+    if step is None and text.lstrip().startswith('('):
+        raise IBLSyntaxError(
+            "괄호 분기는 병렬(&)의 분기 자리에서만 씁니다 — 단독 파이프는 괄호 없이 >> 로 이으세요.")
+    return step
+
+
+def _parse_paren_branch(text: str) -> Optional[Dict]:
+    """병렬 분기의 괄호 파이프 '([A]{} >> [B]{})' → {_branch_steps: [step, ...]} (G13-1).
+
+    괄호가 분기 *전체*를 감싸는 경우만(첫 '(' 의 짝이 마지막 문자) — 아니면 None 을
+    돌려 일반 step 파싱으로 넘긴다. 괄호 안은 >> 로 이은 일반 step 들만 허용:
+    중첩 병렬/폴백/블록은 명시 에러(우선순위 미정의 → 침묵 소실 방지, D1 과 같은 원칙).
+    (단일 step) 은 괄호가 무의미하므로 그 step 자체로 푼다.
+    """
+    t = text.strip()
+    if not t.startswith('(') or not t.endswith(')'):
+        return None
+    # 첫 괄호의 짝 찾기 — 문자열·중괄호 안의 괄호는 구조가 아니다
+    depth = 0
+    brace = 0
+    in_str = False
+    str_ch = None
+    close_idx = -1
+    i = 0
+    while i < len(t):
+        ch = t[i]
+        if in_str:
+            if ch == '\\':
+                i += 2
+                continue
+            if ch == str_ch:
+                in_str = False
+            i += 1
+            continue
+        if ch in ('"', "'"):
+            in_str = True
+            str_ch = ch
+        elif ch == '{':
+            brace += 1
+        elif ch == '}':
+            brace -= 1
+        elif ch == '(' and brace == 0:
+            depth += 1
+        elif ch == ')' and brace == 0:
+            depth -= 1
+            if depth == 0:
+                close_idx = i
+                break
+        i += 1
+    if close_idx != len(t) - 1:
+        return None                      # 괄호가 전체를 안 감쌈 — 일반 파싱으로
+    inner = t[1:-1].strip()
+    if not inner:
+        raise IBLSyntaxError("괄호 분기가 비어 있습니다: ()")
+    steps = []
+    for seg_text, _op in _split_pipeline(inner):
+        st = _parse_step(seg_text.strip())
+        if st is None:
+            raise IBLSyntaxError(
+                f"괄호 분기 파이프 파싱 실패: {seg_text.strip()} — 괄호 분기 안은 "
+                "[node:action]{...} step 을 >> 로 이은 파이프만 허용합니다"
+                "(중첩 병렬/폴백/블록 불가).")
+        steps.append(st)
+    if len(steps) == 1:
+        return steps[0]
+    return {"_branch_steps": steps}
 
 
 def _split_by_operator(text: str, operator: str) -> List[str]:
@@ -464,6 +543,7 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
     segments = []
     current = []
     depth = 0        # { } 깊이
+    paren = 0        # ( ) 깊이 — 괄호 분기 안의 연산자는 분기 소유 (G13-1, 2026-08-19)
     in_string = False
     string_char = None
     op_len = len(operator)
@@ -499,7 +579,13 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
         elif ch == '}':
             depth -= 1
             current.append(ch)
-        elif depth == 0 and chars[i:i+op_len] == operator:
+        elif ch == '(' and depth == 0:
+            paren += 1
+            current.append(ch)
+        elif ch == ')' and depth == 0:
+            paren = max(0, paren - 1)
+            current.append(ch)
+        elif depth == 0 and paren == 0 and chars[i:i+op_len] == operator:
             # 연산자 발견 (중괄호/문자열 밖)
             # & 의 경우: && 가 아닌지 확인 (미래 확장 대비)
             if operator == '&' and i + 1 < len(chars) and chars[i + 1] == '&':
@@ -777,6 +863,10 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
 
 def format_step(step: dict) -> str:
     """step을 IBL 텍스트로 포맷팅 (역변환)"""
+    # 괄호 분기 파이프 (G13-1)
+    if step.get("_branch_steps"):
+        return "(" + " >> ".join(format_step(s) for s in step["_branch_steps"]) + ")"
+
     # 병렬 노드
     if step.get("_parallel"):
         branches = step.get("branches", [])

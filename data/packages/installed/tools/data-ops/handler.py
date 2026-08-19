@@ -55,8 +55,36 @@ def _get_items(obj):
         if isinstance(r, list):
             return r, obj
     if isinstance(obj, list):
+        # F13-2 (2026-08-19 상상훈련 13회차): 병렬(&) 결과 봉투(분기별 JSON 봉투 문자열
+        # 리스트)를 items 로 오인 채택하면 단항 변환자가 문자열 행으로 죽으며 원인을
+        # 못 말한다("행 필드 예: []" 실측). 이항 변환자(_extract_many)의 몫으로 넘긴다 —
+        # _no_currency_error 가 같은 감지로 정직한 안내를 낸다.
+        if _parallel_envelope_shape(obj):
+            return None, None
         return obj, {"items": obj}
     return None, None
+
+
+def _parallel_envelope_shape(obj):
+    """병렬(&) 결과 봉투 감지 — 원소 전부가 JSON dict 로 파싱되는 *문자열*인 2+ 리스트.
+
+    스칼라 행 리스트(["가","나"] — each 스칼라 지원)와 dict 행 리스트(정상 items)는
+    여기 안 걸린다(문자열이 dict 로 파싱될 때만).
+    """
+    if not isinstance(obj, list) or len(obj) < 2:
+        return False
+    for el in obj:
+        if not isinstance(el, str):
+            return False
+        s = el.strip()
+        if not s.startswith("{"):
+            return False
+        try:
+            if not isinstance(json.loads(s), dict):
+                return False
+        except Exception:
+            return False
+    return True
 
 
 def _get_items_for_fields(prev, fields):
@@ -169,6 +197,13 @@ def _no_currency_error(verb, prev):
     왔는지(키 목록)를 보여줘야 '기능이 없다'가 아니라 '이 생산자는 통화를 안 낸다
     (returns 선언 확인)'로 진단이 간다.
     """
+    # F13-2: 병렬 봉투는 부류가 다르다 — "통화 없음"이 아니라 "이항 변환자 자리".
+    if _parallel_envelope_shape(prev):
+        return {"success": False,
+                "error": f"{verb}: 입력이 병렬(&) 결과 봉투입니다 — 분기들은 이항 변환자"
+                         f"(union/merge/join)가 먼저 받아야 합니다. 예: [A] & [B] >> [table:union] "
+                         f">> [table:{verb}]. 분기 하나에만 전처리를 붙이려면 괄호 분기: "
+                         "[A] & ([B] >> [table:rename]{map: {…}}) >> [table:merge]{by: \"…\"}."}
     keys = sorted(prev.keys()) if isinstance(prev, dict) else type(prev).__name__
     return {"success": False,
             "error": f"{verb}: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투의 키: {keys} — "
@@ -358,6 +393,12 @@ def _op_sort(prev, params):
     """
     by = params.get("by")
     desc = bool(params.get("desc", False))
+    # F13-3 (2026-08-19 상상훈련 13회차): 자연 동의어 order:"desc"/"asc" 값-해석 —
+    # 예전엔 경고만 뜨고 오름차순이 success 로 나가 요청 의미가 반전됐다.
+    # 값-해석이라 aliases 블록(이름 별칭)으로는 못 나른다("desc" 문자열은 truthy).
+    if "desc" not in params and "order" in params:
+        desc = str(params.get("order") or "").strip().lower() in (
+            "desc", "descending", "reverse", "내림차순")
     if not by:
         return {"success": False, "error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
     by = str(by)
@@ -510,7 +551,7 @@ def _op_rename(prev, params):
         for r in recs:
             out.append({m.get(k, k): v for k, v in r.items()} if isinstance(r, dict) else r)
         return _emit_items(env, out)
-    return {"success": False, "error": "rename: 입력에서 통화(items/table)를 찾지 못했습니다."}
+    return _no_currency_error("rename", prev)
 
 
 def _op_dedup(prev, params):

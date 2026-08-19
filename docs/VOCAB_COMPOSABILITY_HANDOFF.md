@@ -339,3 +339,16 @@ navigate → screenshot → image_read → (navigate >> screenshot) → image_re
 **부수 발견 — 조합이 안 쓰인 자리가 실은 고장이었다**(둘 다 이 관찰에서 처음 드러남):
 - **`table:each` 스칼라 행 불가**(수리 완료 `3a04151`): `{"value": row}` 로 감싸는 자리와 `$it` 치환하는 자리가 어긋나 `{"value":"가","_error":"행에 없는 필드: value"}` 라는 자기모순을 냈다. 목록 각각을 다루는 **유일한** 고차 어휘가 문자열 배열에서 못 쓰였다. 교훈=같은 것을 두 자리가 각자 하드코딩하면 어긋난다(상수 공유로 봉함).
 - **`sense:crawl` 오진**(미수리): 자기 홈페이지를 `bot_blocked` 로 거부. 실측하니 **가져오기는 완벽**(200 · 254KB · 본문 11,841자 정상 추출, curl_cffi 0.07초). 원인은 `_diagnose` 의 `_BLOCK_TEXT_SIGNS` 부분문자열 매칭 — 본문의 "그래서 **CAPTCHA**도 없습니다"에 걸렸다. **CAPTCHA 가 없다고 자랑하는 페이지를 CAPTCHA 챌린지로 판정**한 것. 오진 후 불필요한 Playwright 렌더까지 돌아 30초를 쓰고 "봇 차단으로 본문을 가져오지 못했습니다"라는 거짓 사유를 반환했다. 부류=**언급을 존재로 착각하는 부분문자열 판정**(챌린지 페이지는 본문이 거의 없다는 점을 안 봄 — 판정에 길이 조건이 빠졌다).
+
+### 13회차 (2026-08-19 — 보고서 `outputs/imagination_training/2026-08-19_13회차.md`) — 원샷 낱말 첫 행동 조합 + 시간 문형
+- 과제 12(검수 12/12)·실측 11+격리 3·스크래치 전량 복구(파일·트리거·`table_since.db` 0행 검증). 지표(훈련 전): 미조합 108/148·파이프 중앙값 3·문형 5(시간 0)·스냅샷 JSON 보존.
+- **원샷 3낱말 계약 전부 야생 이행**: struct `_quote` 접지 3/3 / ai `rows_in/out/dropped` 신고 / brief 산문+`_ai` / **trigger.do 안 ai_call이 상위 has_ai_call 로 전파**(시간 문형 관통). 병렬→union→brief·검색→ai→take→write 4단·feed→since(peek 정직)→take·each `$it.url`·중첩 필드 조건(`.disk_root.percent`)+else 전부 완주.
+- **B10 검침판 야생 첫 발화**: 추측 필드(`disk_percent`) 조건이 "판정 불능 — else 보류" 정직 실패(거짓 단정 0). 단 오류문에 필드 목록이 없어 자가교정 1왕복 추가 → **F13-4**(수리성 소품: filter/sort 선례 이식).
+- **V13-1**(수리성): 통화 미준수 생산자 2건 — `goal list`→`goals` 키·`storage volumes`→`volumes` 키, items 병기 없어 table 변환자 전부 굶음(오류문은 정직). sense:host status=병기 모범. 같은 부류 전수 스윕 여부는 판정.
+- **G13-1**(판정성): 분기별 전처리 표현 불가 — `A & (B >> rename) >> merge` invalid(괄호 묶기 부재). 실수요=교차 소스 키 정합(다나와 name vs 번개장터 title, K10 merge 무력 실측=F1 증거 추가). 기존 '괄호 묶기' 판정 대기와 병합.
+- **F13-2**(수리성): `A & B >> rename >> merge` 검수 valid 인데 실행에서 rename 이 병렬 봉투 받고 즉사 — 오류문("행 필드 예: []")이 진짜 원인 미지목. 검수 경고("병렬 뒤 첫 변환자는 이항") + 변환자의 병렬 봉투 감지 안내 후보.
+- **F13-3**(판정성 소품): sort `order:"desc"` — R2 소프트 경고는 발화하나 **오름차순 결과가 success 로** 나감(의미 반전 부류). `order` 값-해석 별칭 수용 여부.
+- 시드 후보 7(K1·K3·K4·K5·K6·K7b·K8, 실행 검증 통과만). 판정 요청 3: G13-1 괄호 / F13-3 order 별칭 / V13-1 병기+스윕 범위.
+
+### ✅ 13회차 판정·수리 집행 완료 (2026-08-19 같은 날 — 사용자 판정 3건 전부 승인 → 5건 수리·라이브 검증)
+> 상세=13회차 보고서 부록. **G13-1**=병렬 괄호 분기 파이프 문법 개정: 파서 `_parse_paren_branch`→`{_branch_steps}`(괄호 깊이=중괄호 밖만·단일 step 언랩·단독 괄호/중첩 병렬=명시 에러)+엔진 분기 순차 실행(중간 `_raw`·실패 정직 전파)+검수 `[병렬 i/n · 분기 파이프 j/m]` 라벨+역변환+교재("괄호 묶기는 없다" 조항 개정)·ibl.md 등재. 라이브=K10 실수요 그대로 새상품·중고 가격 비교가 한 문장(분기 rename→merge by name→sort asc→take 5). / **F13-2**=data-ops `_get_items` 병렬 봉투 감지(`_parallel_envelope_shape`)로 items 오인 채택 차단+`_no_currency_error` 병렬 안내(rename 폴백도 공용화)+검수 인접 경고. / **F13-3**=sort `order` 값-해석(desc 우선)+yaml 스키마 등재(경고 소멸). / **V13-1**=goal list·storage volumes items 병기(title 칸 규약·원명 보존)+**`scripts/currency_items_sweep.py` 신설**(fixture 우주 전수 측정 — 같은 부류 상설 스윕). / **F13-4**=조건 판정 불능 오류문에 `_field_path_hints`(최상위+1단 경로) 동반, if 경로를 검침판으로 교체(사유 관통). 검증=build --check 전 가드·파서 자기시험+신규 7케이스·P1~P20·라이브 재검 7종(K9·K11·order·힌트·괄호 개통·비괄호 정직 거절·병렬→merge 회귀). **스윕 결과**: 125 fixture 중 준수 119·깃발 6 — 수리 1(`host#apps` items 병기·라이브 개통) / 판정 후보 4(`host#resources` 복합 봉투·`nostr#profile` 부속 목록·`video#transcript` 페이로드 배가·`video#languages` 이중 목록) / 기판정 준수 1(`forage`=통화 밖 유지).

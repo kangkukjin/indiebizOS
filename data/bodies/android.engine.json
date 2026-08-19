@@ -119,6 +119,7 @@
     "ibl/tool_selector",
     "ibl/trigger_engine",
     "ibl/workflow_engine",
+    "ibl/workflow_parallel",
     "ibl_embedding_trainer",
     "ibl_synthetic_opus",
     "migrate_alias_retirement",
@@ -253,8 +254,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 247,
-    "engine": 210,
+    "total": 248,
+    "engine": 211,
     "blocklist": 37
   }
 }

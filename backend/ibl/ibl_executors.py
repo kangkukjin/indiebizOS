@@ -12,7 +12,7 @@ import os
 import re
 import json
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 _nodes_cache: Optional[Dict] = None
@@ -254,7 +254,8 @@ def _goal_list(params: dict, project_path: str = "") -> dict:
         goals = db.list_goals(status=status_filter)
 
         if not goals:
-            return {"success": True, "goals": [], "message": "등록된 목표가 없습니다."}
+            return {"success": True, "goals": [], "items": [], "count": 0,
+                    "message": "등록된 목표가 없습니다."}
 
         result_goals = []
         for g in goals:
@@ -274,6 +275,10 @@ def _goal_list(params: dict, project_path: str = "") -> dict:
         return {
             "success": True,
             "goals": result_goals,
+            # 통화 병기 (V13-1, 2026-08-19 상상훈련 13회차): goals 키만으로는 어떤 table
+            # 변환자도 뒤에 못 붙는다. title=칸 규약 병기, 원명(name 등)은 보존.
+            "items": [{"title": g["name"], **g} for g in result_goals],
+            "count": len(result_goals),
             "total": len(result_goals),
         }
     except Exception as e:
@@ -998,7 +1003,9 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
         op = None
         compare_raw = None
 
-    value = _get_sense_value(source_expr, project_path, agent_id)
+    # F13-4 (2026-08-19 상상훈련 13회차): 검침판으로 — 판정 불능 사유(필드 경로 부재 시
+    # 사용 가능한 필드 목록 동반)를 버리지 않고 오류문에 싣는다.
+    value, _read_err = _get_sense_value_checked(source_expr, project_path, agent_id)
 
     if value is None:
         # ★2026-08-16 상상훈련 9회차: 비교 연산이 있는데 좌변 값을 못 읽었다면(경로 오타·
@@ -1008,8 +1015,10 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
         # 연산자 없는 불리언 평가는 None=falsy 유지(부재의 거짓은 정당한 의미).
         if op is not None:
             raise ValueError(
-                f"조건 좌변 '{source_expr}' 에서 값을 읽지 못했습니다 — 필드 경로를 확인하세요"
-                f"(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).")
+                f"조건 좌변 '{source_expr}' 에서 값을 읽지 못했습니다 — "
+                + (_read_err if _read_err else
+                   "필드 경로를 확인하세요(예: stock quote 는 .data.current_price — "
+                   "봉투 최상위가 아닙니다)."))
         return False
 
     if op is None:
@@ -1086,13 +1095,40 @@ def _get_sense_value_checked(source: str, project_path: str, agent_id: str) -> T
     if field is not None:
         value = _extract_dotted_field_checked(result, field)
         if value is _FIELD_MISSING:
+            # F13-4 (2026-08-19 상상훈련 13회차): 사용 가능한 경로를 동반한다 —
+            # filter/sort 오류문 선례. 없으면 자가교정에 단독 프로브 1왕복이 더 든다.
+            hints = _field_path_hints(result)
+            hint_txt = f" 사용 가능한 필드: {hints}" if hints else ""
             return None, (f"필드 경로 '.{field}' 가 결과에 없습니다 — 경로를 확인하세요"
-                          "(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).")
+                          f"(예: stock quote 는 .data.current_price — 봉투 최상위가 아닙니다).{hint_txt}")
         return value, None
 
     if isinstance(result, dict):
         return result.get("value", result.get("result", str(result))), None
     return result, None
+
+
+def _field_path_hints(result: Any, max_paths: int = 24) -> List[str]:
+    """조건 소스 결과에서 쓸 수 있는 점 경로 후보 — 최상위 + 1단 중첩 (F13-4).
+
+    스칼라 값 경로만 후보로 낸다(dict 중간 노드는 자식 경로가 대신 말한다).
+    items 같은 리스트 키는 경로 폭발이라 이름만 싣는다.
+    """
+    hints: List[str] = []
+    if not isinstance(result, dict):
+        return hints
+    for k, v in result.items():
+        if not isinstance(k, str) or k.startswith("_"):
+            continue
+        if isinstance(v, dict):
+            sub = [f"{k}.{sk}" for sk, sv in v.items()
+                   if isinstance(sk, str) and not isinstance(sv, (dict, list))]
+            hints.extend(sub if sub else [k])
+        else:
+            hints.append(k)
+        if len(hints) >= max_paths:
+            break
+    return hints[:max_paths]
 
 
 def _parse_source_ref(source: str) -> Optional[Tuple[str, str, Dict, Optional[str]]]:

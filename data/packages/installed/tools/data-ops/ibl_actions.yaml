@@ -297,6 +297,9 @@ tool_json:
         desc:
           type: boolean
           description: 내림차순 여부(기본 false).
+        order:
+          type: string
+          description: desc 의 값-해석 별칭 — "desc"=내림차순, "asc"=오름차순 (desc 키가 우선).
       required:
       - by
   - name: data_take

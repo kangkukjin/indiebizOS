@@ -378,7 +378,34 @@ def _stock_info(ti: dict):
     """[sense:stock]{op:info} — 종목 기본 정보."""
     ticker, market = _stock_common(ti, "info")
     tool = load_module("tool_yfinance")
-    return tool.get_stock_info(symbol=ticker)
+    result = tool.get_stock_info(symbol=ticker)
+    # items 1행 병기 (2026-08-19 returns 드리프트 스윕 [B]): 선언·desc 는 info=items 를
+    # 약속하는데 방출이 {success, data} 뿐이라 파이프가 굶었다 — quote·crypto 의 1행
+    # 스냅샷 관례로 동기화(원 data 키 보존).
+    parsed = result
+    if isinstance(parsed, str):
+        try:
+            parsed = json.loads(parsed)
+        except Exception:
+            return result
+    if (isinstance(parsed, dict) and isinstance(parsed.get("data"), dict)
+            and "items" not in parsed):
+        # NaN/Inf 위생 (실측 2026-08-19): yfinance 가 간헐로 NaN 을 주면 FastAPI 응답
+        # 인코더(allow_nan=False)가 500 을 낸다 — 정직한 null 로(정당한 결측 표현).
+        def _clean(v):
+            if isinstance(v, float) and (v != v or v == float("inf") or v == float("-inf")):
+                return None
+            if isinstance(v, dict):
+                return {k: _clean(x) for k, x in v.items()}
+            if isinstance(v, list):
+                return [_clean(x) for x in v]
+            return v
+        parsed = _clean(parsed)
+        d = parsed["data"]
+        parsed["items"] = [{"title": d.get("symbol") or ticker, **d}]
+        parsed["count"] = 1
+        return json.dumps(parsed, ensure_ascii=False) if isinstance(result, str) else parsed
+    return result
 
 
 def _stock_search(ti: dict):

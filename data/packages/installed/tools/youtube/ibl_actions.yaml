@@ -31,6 +31,10 @@ nodes:
         ops:
           default: info
           returns:
+            # feed·history 는 items(카드 행들) 실측 — 08-04 yttv 신설 때 op 레벨 선언
+            # 누락 (2026-08-19 드리프트 스윕 동기화).
+            feed: items
+            history: items
             summarize: effect
           side_effect:
             info: false

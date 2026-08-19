@@ -14,6 +14,12 @@ nodes:
         runs_on: pc_only
         ops:
           default: status
+          returns:
+            # status=1행 스냅샷·apps=프로세스 행들 items 병기 실측 (2026-08-19 드리프트
+            # 스윕 동기화). resources 는 복합 봉투(CPU·메모리·디스크·네트워크 축)라
+            # 액션 기본(scalar) 유지 — items 승격은 의미 왜곡 소지(판정 후보).
+            status: items
+            apps: items
           fixture:
             apps: '[sense:host]{op: "apps"}'
             resources: '[sense:host]{op: "resources"}'
@@ -97,7 +103,7 @@ nodes:
         returns: scalar
         side_effect: true    # scan 이 용량 인덱스를 구축한다
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — summary·volumes 는 items 병기(>> table 파이프 접속 가능). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -106,6 +112,10 @@ nodes:
         ops:
           default: volumes
           returns:
+            # summary·volumes 는 items 병기 실측 (2026-08-19 returns 드리프트 스윕 —
+            # volumes 병기=V13-1 수리, summary 는 storage_db 가 원래 병기).
+            summary: items
+            volumes: items
             scan: effect
           side_effect:
             summary: false

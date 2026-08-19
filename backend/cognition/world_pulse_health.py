@@ -376,6 +376,73 @@ def _run_red_drift(_root) -> Dict:
             "response_ms": ms, "data_quality": "isolation_bypass", "error_message": note}
 
 
+def _run_returns_drift_sweep() -> Dict:
+    """returns 선언 ↔ 실측 출력 대조 (주간 카덴스, §8.5) — scripts/returns_drift_sweep.py.
+
+    fixture 를 라이브 실행(수 분·외부 API)하므로 주간만. subprocess = 라이브 프로세스
+    무접촉(red_safety·ibl_health_check 선례). 결과는 @@RETURNS_DRIFT@@ 마커로 회수해
+    self_checks 에 기록 — 드리프트는 실행을 안 죽이는 대신(이음매 derive_items 가 살림)
+    건강 단언 사각을 만들므로, 깃발이 서면 선언 동기화가 대장장이 입력이 된다.
+    """
+    import subprocess
+    _root = Path(__file__).parent.parent.parent
+    state_path = _root / "data" / "returns_drift_state.json"
+    now = _time.time()
+    try:
+        state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    except Exception:
+        state = {}
+    if now - float(state.get("last_run", 0)) < 7 * 86400:
+        return {"skipped": "cadence", "last_run": state.get("last_run")}
+
+    script = _root / "scripts" / "returns_drift_sweep.py"
+    if not script.exists():
+        return {"error": "scripts/returns_drift_sweep.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=600)
+    except Exception as e:
+        return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
+
+    marker = None
+    for line in reversed((proc.stdout or "").splitlines()):
+        if line.startswith("@@RETURNS_DRIFT@@"):
+            marker = line[len("@@RETURNS_DRIFT@@"):].strip()
+            break
+    if proc.returncode != 0 or not marker:
+        out = {"error": f"스윕 비정상 종료(rc={proc.returncode}, 마커 {'유' if marker else '무'})"}
+    else:
+        try:
+            s = json.loads(marker)
+        except Exception as e:
+            s = None
+            out = {"error": f"요약 파싱 실패: {str(e)[:100]}"}
+        if s is not None:
+            over, under = s.get("over") or [], s.get("under") or []
+            out = {"checked": s.get("checked"), "over": over, "under": under}
+            ok = not over and not under
+            note = (None if ok else
+                    f"선언 드리프트 — scalar/effect인데 통화 {len(over)}건"
+                    f"{': ' + ', '.join(over[:5]) if over else ''}"
+                    + (f" / 통화 선언인데 scalar {len(under)}건: {', '.join(under[:3])}" if under else ""))
+            try:
+                save_self_check({"node": "__ibl_health__", "action": "returns_drift",
+                                 "success": ok, "response_ms": 0,
+                                 "data_quality": "ok" if ok else "declaration_drift",
+                                 "error_message": note and note[:220]})
+            except Exception:
+                pass
+            if not ok:
+                logger.warning(f"[Maintenance] returns 드리프트: over {len(over)} / under {len(under)}")
+
+    state["last_run"] = now
+    try:
+        state_path.write_text(json.dumps(state, ensure_ascii=False))
+    except Exception:
+        pass
+    return out
+
+
 def run_maintenance_bundle() -> Dict:
     """기계적 유지보수 번들 — 일일 건강 점검(run_daily_health_check) 끝에서 호출한다.
     IBL 건강과는 별개(forage 정리·메모리/해마 정리·연속실패 알림). 각 항목은 자체 카덴스
@@ -512,6 +579,16 @@ def run_maintenance_bundle() -> Dict:
             logger.info(f"[Maintenance] 좀비 건강기록 청소: {rows}행 제거")
     except Exception as e:
         logger.warning(f"[Maintenance] 좀비 건강기록 청소 실패 (무시): {e}")
+
+    # 8.5) returns 선언 드리프트 스윕 (주간 카덴스) — 선언(returns/ops.returns)과 실측
+    #      출력의 대조. 순찰(§1B)은 선언=items 인 것만 통화를 단언하므로, 선언이 scalar 로
+    #      낡으면 실제 items 출력이 깨져도 그물 밖이다(2026-08-19 조사: 드리프트 11건 실측
+    #      — 병기 수리가 선언 갱신을 빠뜨리는 부류가 재발함을 확인). fixture 를 라이브
+    #      실행하므로 주간만·subprocess(라이브 프로세스 무접촉, red_safety 선례).
+    try:
+        result["returns_drift"] = _run_returns_drift_sweep()
+    except Exception as e:
+        logger.warning(f"[Maintenance] returns 드리프트 스윕 실패 (무시): {e}")
 
     # 8) 어휘 개념중복 감사 (주간 카덴스) — 압축 상설 기관의 *실증* 신호.
     #    build --check 의 압축 경고(자백·구조)와 달리 코퍼스를 읽어야 해서 여기 산다

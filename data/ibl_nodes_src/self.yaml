@@ -150,6 +150,8 @@
         func: goal_op
         ops:
           returns:
+            # list 는 items 병기 실측 (V13-1 수리 2026-08-19 — 선언 동기화, 드리프트 스윕).
+            list: items
             kill: effect
             delete: effect
             log: effect

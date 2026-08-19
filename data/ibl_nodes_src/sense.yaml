@@ -17,6 +17,8 @@
         ops:
           default: snapshot
           returns:
+            # trend 는 일자별 행 items 실측 (2026-08-19 returns 드리프트 스윕 — 선언 동기화).
+            trend: items
             refresh: effect
           side_effect:
             # snapshot 은 읽기가 아니다 — collect_snapshot() 으로 외부 API 를 즉석 수집하고

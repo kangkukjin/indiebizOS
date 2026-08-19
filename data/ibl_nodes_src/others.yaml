@@ -44,7 +44,9 @@
         - 명함
         - 다른기기
       agents:
-        returns: scalar
+        # 실측 items(에이전트 트리 행들) — 07-28 통화 축 정정이 방출은 고치고 선언이
+        # 뒤처져 있던 것 (2026-08-19 returns 드리프트 스윕).
+        returns: items
         fixture: '[others:agents]{}'
         description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).

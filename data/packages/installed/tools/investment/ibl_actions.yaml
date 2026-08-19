@@ -215,7 +215,8 @@ actions:
     - DART
     - SEC
   crypto:
-    returns: scalar
+    # 실측 items 1행 스냅샷 병기 (stock quote 와 같은 관례 — 2026-08-19 드리프트 스윕 동기화).
+    returns: items
     fixture: '[sense:crypto]{symbol: "BTC"}'
     description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
     group: finance

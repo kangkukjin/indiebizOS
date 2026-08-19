@@ -29,6 +29,7 @@ nodes:
         ops:
           default: snapshot
           returns:
+            trend: items
             refresh: effect
           side_effect:
             trend: false
@@ -1046,7 +1047,7 @@ nodes:
         - DART
         - SEC
       crypto:
-        returns: scalar
+        returns: items
         fixture: '[sense:crypto]{symbol: "BTC"}'
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
         group: finance
@@ -1358,6 +1359,9 @@ nodes:
         runs_on: pc_only
         ops:
           default: status
+          returns:
+            status: items
+            apps: items
           fixture:
             apps: '[sense:host]{op: "apps"}'
             resources: '[sense:host]{op: "resources"}'
@@ -2111,6 +2115,8 @@ nodes:
         ops:
           default: info
           returns:
+            feed: items
+            history: items
             summarize: effect
           side_effect:
             info: false
@@ -2529,6 +2535,7 @@ nodes:
         func: goal_op
         ops:
           returns:
+            list: items
             kill: effect
             delete: effect
             log: effect
@@ -4128,7 +4135,7 @@ nodes:
         returns: scalar
         side_effect: true
         fixture: '[self:storage]{op: "volumes"}'
-        description: 디스크 용량 분석 (op 분기) — 응답은 집계 요약 1건(목록 통화 아님). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
+        description: 디스크 용량 분석 (op 분기) — summary·volumes 는 items 병기(>> table 파이프 접속 가능). ★파일 검색은 file_find·디스크 여유공간은 sense:host (둘 다 스캔 불요).
         group: file
         target_description: 용량 분석은 OS 색인이 못 하는 디렉토리 크기 롤업이라 인덱스가 필요 — scan(구축) 선행 → summary 가 폴더·확장자별 용량 집계. summary — volume_name/root_path 생략 시 전체 통합. volumes — 파라미터 없음.
         target_key: op
@@ -4137,6 +4144,8 @@ nodes:
         ops:
           default: volumes
           returns:
+            summary: items
+            volumes: items
             scan: effect
           side_effect:
             summary: false
@@ -5263,7 +5272,7 @@ nodes:
         - 명함
         - 다른기기
       agents:
-        returns: scalar
+        returns: items
         fixture: '[others:agents]{}'
         description: 프로젝트·에이전트 조회. agent_id 없으면 전체 프로젝트별 에이전트 트리(명부), 있으면 단건 상세. (구 [self:agents] 흡수 2026-08-05.)
         target_description: agent_id ('프로젝트/에이전트' 형식). 생략 시 전체 프로젝트별 에이전트 트리 반환 (위임 대상 확인용).

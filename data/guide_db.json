@@ -37,7 +37,12 @@
         "목소리",
         "화자",
         "TTS 엔진",
-        "voice"
+        "voice",
+        "받아쓰기",
+        "전사",
+        "STT",
+        "음성 파일",
+        "녹음"
       ],
       "file": "video_workflow.md"
     },

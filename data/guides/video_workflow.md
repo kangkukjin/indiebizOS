@@ -7,6 +7,14 @@
 
 ## 흐름 — "동영상 만들어줘" 의 결정론 경로
 
+0. **원본이 음성 파일일 때** (녹음·강연 m4a/mp3/영상에서 출발) — 먼저 받아쓴다:
+   `[self:script]{op:"run", id:"음성받아쓰기", args:{path:"<파일>"}}` → 전사문이
+   `outputs/transcripts/<이름>.transcript.txt` 에 남고 경로를 통화로 돌려준다.
+   **★`[sense:listen]` 을 쓰지 말 것** — 그건 *마이크 1회 입력*이라 파일에 못 쓴다(2026-08-19 ep1251 의 함정).
+   전사문은 요약이 아니라 전문이라 **오프닝·클로징 인사말이 보존된다** — 그대로 첫 장·마지막 장 슬라이드가 된다.
+   그다음 `[self:material]{op:"add", lecture_id, file_path}` 로 덱에 붙이면 아래 1번으로 이어진다.
+   긴 파일은 `segment_seconds`(기본 300)로 나눠 보낸다. 응답이 잘리면 이 값을 줄인다.
+
 1. **덱 준비** — 이미 있는 강의를 쓰거나, 원고에서 새로 만든다:
    - `[self:lecture]{op: "create", title, thesis, audience}` → `[self:material]{op: "add"}`(원고·자료)
    - `[self:slide]{op: "create", instruction, content}` × N — 장마다 **스피커 노트(나레이션 초안)가 자동 시드**된다.

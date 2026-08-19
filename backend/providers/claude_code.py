@@ -596,6 +596,7 @@ class ClaudeCodeProvider(BaseProvider):
                 accumulated_text = ""
                 captured_session_id: Optional[str] = None
                 committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
+                final_seen = False         # 이번 attempt 에서 final 을 방출했나
                 resume_err_text = ""       # stdout result 에러 텍스트 (보통 비어있음)
                 deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
                 try:
@@ -633,6 +634,8 @@ class ClaudeCodeProvider(BaseProvider):
                             if not committed and t2 in ("error", "final"):
                                 deferred.append(out_event)
                             else:
+                                if t2 == "final":
+                                    final_seen = True
                                 yield out_event
 
                     proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
@@ -702,7 +705,23 @@ class ClaudeCodeProvider(BaseProvider):
 
                 # --- 최종 attempt: 결과 확정 ---
                 for ev in deferred:          # 보류했던 터미널 이벤트 방출
+                    # ★본문이 온 뒤라면, 본문 이전에 보류된 *빈* final 은 이미 무효다.
+                    #  그대로 흘리면 맨 마지막에 도착해 진짜 최종 응답을 덮는다 —
+                    #  2026-08-19 ep1253·1254: resume 직후 `result in=0 out=0` 이 보류됐다가
+                    #  22분치 작업의 최종 보고를 빈 문자열로 덮어써 사용자가 아무 말도 못 받았다.
+                    if (committed and ev.get("type") == "final"
+                            and not (ev.get("content") or "").strip()):
+                        continue
+                    if ev.get("type") == "final":
+                        final_seen = True
                     yield ev
+                # ★result 이벤트 없이 스트림이 끝난 경우(프로세스가 조용히 사라짐):
+                #  흘러나온 본문이라도 최종으로 올린다 — 안 그러면 한 턴이 통째로 증발한다
+                #  (2026-08-19 ep1251: 22분 작업 뒤 result 미도달 → 최종 0자).
+                if not final_seen and accumulated_text.strip():
+                    print(f"[ClaudeCode/{self.agent_name}] result 이벤트 없이 종료 — "
+                          f"누적 본문 {len(accumulated_text)}자를 최종으로 승격")
+                    yield {"type": "final", "content": accumulated_text.strip()}
                 if proc.returncode not in (0, None) and not accumulated_text and not deferred:
                     yield {
                         "type": "error",

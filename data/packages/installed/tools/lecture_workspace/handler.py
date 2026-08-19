@@ -591,7 +591,7 @@ def _generate_native_slide(
         sn.create_native_slide(tool_input, str(slides_dir_path), slide_id=slide_id)
     )
     if not result.get("success"):
-        raise RuntimeError(result.get("message") or "네이티브 슬라이드 생성 실패")
+        raise RuntimeError(result.get("error") or result.get("message") or "네이티브 슬라이드 생성 실패")
 
     spec = result.get("spec") or {}
     spec_meta = {
@@ -656,7 +656,7 @@ def _generate_image_slide(
         si.create_image_slide(tool_input, str(slides_dir_path), style, slide_id=slide_id)
     )
     if not result.get("success"):
-        raise RuntimeError(result.get("message") or "이미지+글자 슬라이드 생성 실패")
+        raise RuntimeError(result.get("error") or result.get("message") or "이미지+글자 슬라이드 생성 실패")
 
     # spec json 저장 (layout="image"라 필드 직접 편집이 아니라 재생성 경로로 안내된다)
     spec = result.get("spec") or {}
@@ -1140,7 +1140,7 @@ def _patch_composite_slide(
     png_path = slides_dir_path / f"{slide_id}.png"
     result = json.loads(si.recompose_image_slide(spec, style, str(img_path), str(png_path)))
     if not result.get("success"):
-        return _err(result.get("message") or "재합성 실패", error_type="render_error")
+        return _err(result.get("error") or result.get("message") or "재합성 실패", error_type="render_error")
 
     with open(spec_file, "w", encoding="utf-8") as f:
         json.dump(spec, f, ensure_ascii=False, indent=2)

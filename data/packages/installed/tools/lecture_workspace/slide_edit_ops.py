@@ -109,7 +109,7 @@ def slide_image_edit(tool_input: dict) -> str:
     sn = load_slide_native()
     result = json.loads(sn.edit_native_slide(ti, str(base_png), str(slides_dir_path), slide_id))
     if not result.get("success"):
-        raise RuntimeError(result.get("message") or "이미지 편집 실패")
+        raise RuntimeError(result.get("error") or result.get("message") or "이미지 편집 실패")
 
     # 얹었던 글자는 방금 모델이 본 픽셀에 구워졌다 — 원본 백업·목록 폐기 (다음 얹기의 중복 적용 방지)
     discard_overlay_state(slides_dir_path, slide_id, meta)

@@ -299,7 +299,11 @@ class AIAgent:
                         self._last_tool_images.extend(event["images"])
 
                     if event_type == "final":
-                        final_content = event.get("content", "")
+                        _c = event.get("content", "")
+                        # ★빈 final 은 채워진 final 을 덮지 못한다 — 프로바이더가 늦게 흘린
+                        #  잔여 종료 이벤트가 실제 응답을 지우던 부류(2026-08-19 ep1251·1253·1254).
+                        if _c or not final_content:
+                            final_content = _c
                         # final은 아직 전달하지 않음 — 미완료 약속 체크 후 결정
                         continue
 

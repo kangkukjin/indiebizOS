@@ -300,8 +300,11 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     _remaining = int(_open_until - _now) + 1
                     _fail_count = _entry.get("fails", _ACTION_FAIL_LIMIT)
                     print(f"[IBL] 액션 차단(open): {_node}:{_action} (연속 {_fail_count}회 실패, {_remaining}초 후 재시도 가능)")
+                    _last_err = (_entry or {}).get("last_error")
+                    _cause = f" 마지막 실패 사유: {_last_err}" if _last_err else ""
                     return json.dumps({
-                        "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 약 {_remaining}초 후 자동으로 재시도가 허용됩니다. 그동안 파라미터를 점검하거나 다른 방법을 찾으세요.",
+                        "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 약 {_remaining}초 후 자동으로 재시도가 허용됩니다. 그동안 파라미터를 점검하거나 다른 방법을 찾으세요.{_cause}",
+                        "last_error": _last_err,
                         "blocked": True,
                         "action": f"{_node}:{_action}",
                         "consecutive_failures": _fail_count,
@@ -422,6 +425,13 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     _entry = _action_fail_counter.setdefault(_fk, {"fails": 0, "open_until": None})
                     _entry["fails"] += 1
                     _cnt = _entry["fails"]
+                    # ★차단 메시지가 원인을 나를 수 있게 마지막 실패 사유를 보관.
+                    # (원인 없는 "실패" 만 돌려주면 모델이 같은 호출을 눈감고 반복한다 —
+                    #  2026-08-19 ep1251: 429 쿼터 소진이 "생성 실패"로만 보여 9분 낭비)
+                    if isinstance(_ro, dict):
+                        _le = _ro.get("error") or _ro.get("message")
+                        if isinstance(_le, str) and _le.strip():
+                            _entry["last_error"] = _le.strip()[:300]
                     if _cnt >= _ACTION_FAIL_LIMIT:
                         _entry["open_until"] = time.monotonic() + _ACTION_OPEN_SECONDS
                         print(f"[IBL] 액션 차단(open) 진입: {_n}:{_a} ({_cnt}회 실패 — {_ACTION_OPEN_SECONDS}초 차단)")

@@ -230,6 +230,7 @@
     "migrate_vocab_cheap_merges": "force_exclude (프로파일 명시)",
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
+    "red_apply": "force_exclude (프로파일 명시)",
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
@@ -249,8 +250,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 243,
+    "total": 244,
     "engine": 209,
-    "blocklist": 34
+    "blocklist": 35
   }
 }

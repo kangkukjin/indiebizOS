@@ -232,6 +232,7 @@
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
+    "repair_verdict_distill": "force_exclude (프로파일 명시)",
     "test_ai_ops_words": "force_exclude_glob",
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
@@ -252,8 +253,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 246,
+    "total": 247,
     "engine": 210,
-    "blocklist": 36
+    "blocklist": 37
   }
 }

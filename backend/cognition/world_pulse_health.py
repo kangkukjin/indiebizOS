@@ -427,6 +427,21 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 포식 정리 실패 (무시): {e}")
 
+    # 4b) 수리 판정 증류 — 커밋 메시지의 판정(진범·오진·부류)을 code 냄새지도로.
+    #     자기수정의 판정이 사람 읽는 자리(커밋)에만 남고 회상 자리(포식)에 안 닿던
+    #     간극의 다리. 새 커밋 없으면 git 스캔 한 번으로 끝(무LLM).
+    try:
+        from repair_verdict_distill import run_repair_verdict_distill
+        rv = run_repair_verdict_distill()
+        result["repair_verdict"] = rv
+        if rv.get("noted"):
+            logger.info(
+                f"[Maintenance] 수리 판정 증류: 커밋 {rv.get('distilled', 0)}건 → "
+                f"지도 {rv['noted']}건 (남은 커밋 {rv.get('remaining', 0)})"
+            )
+    except Exception as e:
+        logger.warning(f"[Maintenance] 수리 판정 증류 실패 (무시): {e}")
+
     # 5) IBL 설명 의미 드리프트 점검 (주간 카덴스) — `--check`의 *의미* 판.
     #    구조 --check가 못 보는 description 산문의 stale 어휘·끊긴 참조를 경량 LLM이 플래그.
     try:

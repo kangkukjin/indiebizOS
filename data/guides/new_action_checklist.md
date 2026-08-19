@@ -129,6 +129,8 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
         #   기본은 검사 대상: 핸들러가 읽지 않는 파라미터 키는 실행 결과에 param_warning 으로
         #   경고된다 (ibl_param_vocab.check_params — 허용집합=패키지 읽기키∪input_schema∪aliases).
+        # ai_call: true          # (선택) 원샷 AI 낱말(실행마다 모델 호출)이면 — dry-run 비용 고지
+        #   +포털 대여 기본 거부. fixture 는 exempt 로 별도 면제. src README '선택 필드: ai_call' 참조.
         # runs_on: pc_only       # (선택) 폰 네이티브: 데스크톱(맥·리눅스·윈도우) 전용이면. 기본 anywhere.
         #   데스크톱 하드웨어/무거운 의존/미검증 패키지=pc_only · 폰 센서=phone_only.
         #   build 가 data/phone_manifest.json 파생(폰 번들/계기필터/엔진가드 SSOT).

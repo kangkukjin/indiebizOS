@@ -4,6 +4,7 @@
   "core": {
     "packages": {
       "tools": [
+        "ai-ops",
         "android",
         "blog",
         "browser-action",

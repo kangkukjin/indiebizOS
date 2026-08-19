@@ -1467,6 +1467,26 @@
         "composition"
       ],
       "file": "imagination_training.md"
+    },
+    {
+      "id": "ai_words",
+      "name": "원샷 AI 낱말 가이드 (struct·ai·brief)",
+      "description": "원샷 AI 호출을 파이프 시민으로 승격한 세 낱말 — [self:struct](비정형→items 구조화, grounded 원문 대조) · [table:ai](items 의미 변환) · [table:brief](items→산문 종합). 모델=기어 실행 축, 검증 관문·비용 규칙·경계(structure/ask/read 와 구분).",
+      "keywords": [
+        "구조화",
+        "원샷",
+        "AI 변환",
+        "의미 필터",
+        "요약 보고",
+        "판정",
+        "영수증",
+        "레코드 추출",
+        "struct",
+        "brief",
+        "grounded",
+        "ai_call"
+      ],
+      "file": "ai_words.md"
     }
   ]
 }

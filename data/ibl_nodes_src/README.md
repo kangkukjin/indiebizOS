@@ -81,6 +81,18 @@ delegate/world/self_check 등, 특정 패키지 없이 엔진 자체에 속하�
 폰 번들(Gradle `bundleIndiebizBase`)·앱 계기 필터(`_derive_instruments`)·엔진 라우팅(`ibl_engine._phone_runnable`)의 **단일 진실 소스**.
 `--check`가 enum + 매니페스트 정합을 검증. **패키지를 폰서 검증하면 `PHONE_VERIFIED_PACKAGES`에 추가**.
 
+## 선택 필드: `ai_call` (원샷 AI 낱말 — 2026-08-19)
+
+액션에 `ai_call: true`를 달면 "실행마다 모델을 호출하는 낱말"임을 선언한다(ai-ops 의
+`self:struct`·`table:ai`·`table:brief`). 소비처:
+- 조종실 dry-run(`/ibl/validate`)이 step 에 `ai_call: true` + "실행마다 모델 호출(비용·출력
+  편차)" 고지를 달고, 응답 최상위에 `has_ai_call` 을 싣는다 — 0토큰 계약의 **표시 의무**(차단 아님).
+- 포털 대여 게이트(`portal_core.action_allowed`)는 ai_call 액션을 **기본 거부**한다
+  (손님 클릭=모델 비용, 포털 한도는 토큰 회계가 아님 — 2026-08-19 판정 3).
+- 정기 자가점검·fixture 는 기존 `exempt:` 로 별도 면제한다(토큰 소모·비결정 — ask/structure 동류).
+모델은 낱말에 박지 않는다 — 기어 **실행 축**(model_resolver role="execution")이 단독 결정.
+정본 설계 = `docs/ONESHOT_VOCAB_DESIGN.md`.
+
 ## 주의
 
 - **단일 yaml을 직접 편집하지 말 것.** 다음 빌드에서 덮어쓴다.

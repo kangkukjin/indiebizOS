@@ -205,6 +205,18 @@ IBL의 진짜 엔진은 142개 액션이 아니라 `>>`(순차) `&`(병렬) `??`
 - 계약을 `--check`가 강제한다(`validate_transform_contract`): `scope: workspace`(무프로젝트 파이프서도 동작) + `runs_on: anywhere`(통화는 몸 무관). 새 변환자가 계약을 빠뜨리면 *침묵-실패 재발* 대신 빌드가 막는다.
 - 미래의 통화 연산자(`window`·`pivot`·`flatten`…)도 `table` 노드·같은 계약. 닫힌 계급은 *자기 노드로 드러나되* 5-몸 척추는 *열린 계급 전용*으로 깨끗이 유지된다.
 
+### 원샷 AI 낱말 — 통화 대수의 세 자리 (2026-08-19, ai-ops 패키지)
+
+원샷 AI 호출(개발 관행에서 결정론 배관의 의미론적 이음매를 잇던 그 함수)을 **파이프 시민**으로 승격했다. 낱말 수 = 타입 시그니처 수(자리마다 하나, 의미는 `instruction` 지시문이 나른다):
+
+| 자리 | 낱말 | 형태 |
+|---|---|---|
+| 입구 | `[self:struct]{file\|text, schema}` | 비정형 → items 구조화 (grounded=원문 발췌 결정론 대조) |
+| 중간 | `[table:ai]{instruction}` | items → items 의미 변환 (filter/sort 의 의미론적 형제) |
+| 출구 | `[table:brief]{instruction}` | items → 산문 종합 (message=산문 정본 → write 싱크) |
+
+계약: 모델=**기어 실행 축**(경량 `self:ask` 와 별개 — 새 의미 판단은 EXECUTE=본격 논리와 동류) · JSON 검증+재시도 1회+정직 실패 · 행 수 신고(rows_in/out) · `_ai` provenance · 집합 단위 1호출(0행=호출 생략) · `ai_call: true` 플래그로 dry-run 고지+포털 대여 기본 거부. 규칙으로 적을 수 있으면 filter/sort 가 먼저다. 상세 = `guides/ai_words.md`, 정본 설계 = `docs/ONESHOT_VOCAB_DESIGN.md`.
+
 > 옛 교훈(태그-only 시절): "engines에 이질적인 게 있다"는 관찰은 옳았고, 처음엔 *이름 이전*(화장+코퍼스 비용) 대신 태그·계약·문서로 그 다름을 *드러내는* 것으로 족하다고 봤다. 그러나 노드 on/off 요구가 생기자 태그로는 못 긋는 경계(끄기 단위)가 필요해져 결국 별도 노드로 승격했다 — 분류의 실효는 *기계가 그 구분에 작용할 때* 생긴다는 원리는 그대로다. 여기선 "작용"이 노드 토글이었다.
 
 ## 5. *용례 증류*와 *단어 주조*를 혼동하지 마라

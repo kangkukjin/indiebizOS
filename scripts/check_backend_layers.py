@@ -90,7 +90,8 @@ LAYERS = {
         "ingest_engine",
         "indienet_common", "indienet_publish", "indienet_relay",
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
-        "nas_webapp", "nostr_phone_bridge", "phone_notifications",
+        "nas_webapp", "nostr_phone_bridge", "oneshot_facade",
+        "phone_notifications",
         "report_html", "scheduler", "warehouse_adapters", "warehouse_feed",
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한

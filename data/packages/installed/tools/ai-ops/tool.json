@@ -1,0 +1,84 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "ai-ops",
+  "name": "AI Ops (원샷 낱말)",
+  "description": "원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미 변환 · 출구 table:brief=items→산문 종합). 모델=기어 실행 축, 검증 관문(JSON 재시도 1회·정직 실패·행 수 신고·grounded 원문 대조·_ai provenance) 동반. 정본 docs/ONESHOT_VOCAB_DESIGN.md.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "ai_struct",
+      "description": "비정형 입력(파일·텍스트·파이프 본문) → schema 계약의 레코드 items — [self:struct]. grounded=원문 발췌(_quote) 결정론 대조(탈락 수 신고). 이미 표인 입력은 read{tables:true}, 문서 IR 은 table:structure.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "type": "string",
+            "description": "출력 레코드 계약 — 자유 라벨(\"finance\") 또는 필드 명세 텍스트(\"date, item, amount(원)\")."
+          },
+          "file": {
+            "type": "string",
+            "description": "입력 파일 경로(이미지/PDF/엑셀/CSV/텍스트). text·파이프 본문과 택일."
+          },
+          "text": {
+            "type": "string",
+            "description": "직접 본문 텍스트(파일 대신)."
+          },
+          "grounded": {
+            "type": "boolean",
+            "description": "각 레코드에 원문 발췌(_quote) 요구+코드 대조. 기본 finance/health 스키마=on, 그 외 off."
+          }
+        },
+        "required": [
+          "schema"
+        ]
+      }
+    },
+    {
+      "name": "ai_transform",
+      "description": "items → items 의미 변환(AI) — [table:ai]. instruction(자연어 지시)대로 선별·주석·재구성. 집합 한 호출, rows_in/out 신고, >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "description": "자연어 지시(예 \"광고성 행 제거\", \"각 행에 요약 summary 필드 추가\")."
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "출력 행 필드 강제(선택, 생략=입력 필드 보존+추가 허용)."
+          },
+          "items": {
+            "type": "array",
+            "description": "단독 호출용 items(파이프 없이 직접 공급)."
+          }
+        },
+        "required": [
+          "instruction"
+        ]
+      }
+    },
+    {
+      "name": "ai_brief",
+      "description": "items → 산문 종합(AI) — [table:brief]. instruction 대로 요약·판정·작명 산문을 message 로 반환(write 싱크가 산문 정본으로 저장). >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "description": "산문 지시(예 \"급변 종목 중심 3문장 보고\")."
+          },
+          "items": {
+            "type": "array",
+            "description": "단독 호출용 items(파이프 없이 직접 공급)."
+          }
+        },
+        "required": [
+          "instruction"
+        ]
+      }
+    }
+  ]
+}

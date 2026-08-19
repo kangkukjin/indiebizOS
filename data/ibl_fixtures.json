@@ -182,6 +182,7 @@
     "self:notebook#sources": "노트북 name 필요 — 고정 fixture 부적합",
     "self:read": "파일 경로 인자 필요(고정 fixture 부적합)",
     "self:sheet": "실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)",
+    "self:struct": "원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)",
     "self:trigger#get": "트리거 id 필요 — 고정 fixture 부적합",
     "self:trigger#history": "트리거 id 필요 — 고정 fixture 부적합",
     "self:workflow#get": "workflow_id 필요(list 결과의 id) — 고정 fixture 부적합",
@@ -190,6 +191,7 @@
     "sense:listen": "마이크 하드웨어 — 자동 점검 실행 금지",
     "sense:navigate_route": "출발/도착 좌표 쌍 필요",
     "sense:see": "카메라 하드웨어 — 자동 점검 실행 금지",
+    "table:brief": "원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)",
     "table:structure": "경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)"
   }
 }

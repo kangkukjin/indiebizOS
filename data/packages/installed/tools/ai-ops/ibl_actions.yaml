@@ -1,0 +1,137 @@
+# ai-ops — 원샷 낱말: 통화 대수 세 자리의 AI 원자 (2026-08-19 신설).
+# 정본 설계 = docs/ONESHOT_VOCAB_DESIGN.md. 모델 = 기어 실행 축(하드코딩 금지).
+# ai_call: true = 검수·표면 신호(실행마다 모델 비용·출력 편차 — dry-run 고지, 포털 대여 금지).
+nodes:
+  self:
+    actions:
+      struct:
+        returns: items
+        ai_call: true
+        exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)
+        runs_on: anywhere
+        scope: workspace
+        description: AI 구조화 원자(입구) — 비정형 입력(파일·텍스트·파이프 본문)을 schema 계약의 레코드 items 통화로. 이미 표인 것은 [self:read]{tables:true}(결정론), 문서 조판용 IR 은 [table:structure].
+        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
+        group: ai
+        router: handler
+        tool: ai_struct
+        aliases:
+          file:
+          - path
+        implementation: ai-ops handler — ingest_engine.extract_source(원문층 재사용) → 실행 축 원샷(oneshot_facade, 파싱 재시도 1회+정직 실패) → grounded 결정론 원문 대조(notebook 인용 후검증 부류) → items(_ai:true).
+        target_key: schema
+        keywords:
+        - 구조화
+        - 레코드
+        - 영수증
+        - 추출
+        - 데이터화
+        - struct
+  table:
+    actions:
+      ai:
+        returns: transform
+        ai_call: true
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). filter/sort 의 의미론적 형제 — 규칙으로 적을 수 있으면 filter/sort 가 싸고 결정적이니 그쪽 먼저.
+        target_description: 'instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · fields(선택 — 출력 행 필드 강제 배열, 생략=입력 필드 보존+추가 허용). 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).'
+        group: transform
+        router: handler
+        tool: ai_transform
+        aliases:
+          instruction:
+          - do
+          - prompt
+        implementation: ai-ops handler — items 집합을 한 원샷(실행 축)에 넣어 지시대로 변환. JSON 검증+재시도 1회+정직 실패, 행 수 신고, _ai provenance. 0행=호출 생략(비용 0).
+        target_key: instruction
+        keywords:
+        - 골라줘
+        - 추려줘
+        - 판단
+        - 선별
+        - 의미변환
+        - ai
+      brief:
+        returns: scalar
+        ai_call: true
+        exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 emitter(AI 종합, 출구) — items 를 근거로 짧은 산문(요약·판정·작명)을 낸다. [table:document](결정론 조판)·[table:structure](텍스트→문서 IR)의 형제 — 출력이 '글'일 때. 평문 텍스트 요약은 [self:ask].
+        target_description: 'instruction(필수 — 산문 지시, 예 "급변 종목 중심 3문장 보고"·"어느 매물이 조건에 최적인지 판정과 이유"). 입력 = >> 파이프 items(0행=정직 거절). 반환 message=산문 정본(>> [self:write] 가 산문으로 저장, notify 등으로 연결). 지어내기 금지 — items 에 있는 것만. 실행마다 모델 비용(기어 실행 축).'
+        group: ai
+        router: handler
+        tool: ai_brief
+        aliases:
+          instruction:
+          - do
+          - prompt
+        implementation: ai-ops handler — items 집합을 한 원샷(실행 축)에 넣어 산문 종합. 빈 응답 1회 재시도 후 정직 실패. message=산문 정본(write 싱크 v4 추출 계약 접속).
+        target_key: instruction
+        keywords:
+        - 요약해
+        - 보고
+        - 판정
+        - 종합
+        - 한줄로
+        - brief
+
+# tool.json 파생 원본 — 빌드가 이 블록에서 tool.json 을 생성한다.
+tool_json:
+  header:
+    id: ai-ops
+    name: AI Ops (원샷 낱말)
+    description: 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미 변환 · 출구 table:brief=items→산문 종합). 모델=기어 실행 축, 검증 관문(JSON 재시도 1회·정직 실패·행 수 신고·grounded 원문 대조·_ai provenance) 동반. 정본 docs/ONESHOT_VOCAB_DESIGN.md.
+    version: 1.0.0
+  tools:
+  - name: ai_struct
+    description: '비정형 입력(파일·텍스트·파이프 본문) → schema 계약의 레코드 items — [self:struct]. grounded=원문 발췌(_quote) 결정론 대조(탈락 수 신고). 이미 표인 입력은 read{tables:true}, 문서 IR 은 table:structure.'
+    input_schema:
+      type: object
+      properties:
+        schema:
+          type: string
+          description: '출력 레코드 계약 — 자유 라벨("finance") 또는 필드 명세 텍스트("date, item, amount(원)").'
+        file:
+          type: string
+          description: 입력 파일 경로(이미지/PDF/엑셀/CSV/텍스트). text·파이프 본문과 택일.
+        text:
+          type: string
+          description: 직접 본문 텍스트(파일 대신).
+        grounded:
+          type: boolean
+          description: 각 레코드에 원문 발췌(_quote) 요구+코드 대조. 기본 finance/health 스키마=on, 그 외 off.
+      required:
+      - schema
+  - name: ai_transform
+    description: 'items → items 의미 변환(AI) — [table:ai]. instruction(자연어 지시)대로 선별·주석·재구성. 집합 한 호출, rows_in/out 신고, >> 앞 통화를 받음.'
+    input_schema:
+      type: object
+      properties:
+        instruction:
+          type: string
+          description: '자연어 지시(예 "광고성 행 제거", "각 행에 요약 summary 필드 추가").'
+        fields:
+          type: array
+          items:
+            type: string
+          description: 출력 행 필드 강제(선택, 생략=입력 필드 보존+추가 허용).
+        items:
+          type: array
+          description: 단독 호출용 items(파이프 없이 직접 공급).
+      required:
+      - instruction
+  - name: ai_brief
+    description: 'items → 산문 종합(AI) — [table:brief]. instruction 대로 요약·판정·작명 산문을 message 로 반환(write 싱크가 산문 정본으로 저장). >> 앞 통화를 받음.'
+    input_schema:
+      type: object
+      properties:
+        instruction:
+          type: string
+          description: '산문 지시(예 "급변 종목 중심 3문장 보고").'
+        items:
+          type: array
+          description: 단독 호출용 items(파이프 없이 직접 공급).
+      required:
+      - instruction

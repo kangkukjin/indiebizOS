@@ -153,6 +153,7 @@
     "services/nas_subtitle",
     "services/nas_webapp",
     "services/nostr_phone_bridge",
+    "services/oneshot_facade",
     "services/phone_notifications",
     "services/report_html",
     "services/scheduler",
@@ -231,6 +232,7 @@
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
+    "test_ai_ops_words": "force_exclude_glob",
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
@@ -250,8 +252,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 244,
-    "engine": 209,
-    "blocklist": 35
+    "total": 246,
+    "engine": 210,
+    "blocklist": 36
   }
 }

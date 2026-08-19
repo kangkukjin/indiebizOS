@@ -427,11 +427,23 @@ async def validate_ibl(req: ValidateRequest):
     steps = []
     all_valid = True
     has_side_effect = False
+    has_ai_call = False
+
+    def _is_ai_call(node: str, action: str) -> bool:
+        """AI 낱말(ai_call: true — ai-ops 원샷 낱말) 여부 — 실행마다 모델 비용·출력 편차라
+        dry-run 이 초록불 대신 고지를 단다(0토큰 계약의 표시 의무, ONESHOT_VOCAB_DESIGN §7)."""
+        try:
+            from ibl_access import _load_nodes_data
+            ad = ((_load_nodes_data() or {}).get("nodes", {})
+                  .get(node, {}).get("actions", {}).get(action, {})) or {}
+            return bool(ad.get("ai_call"))
+        except Exception:
+            return False
 
     def _emit_action(st: dict, label: str = None, group: str = None, warn: str = None):
         """평범한 액션 한 개를 검증해 steps 에 싣는다. label=구조 안 위치 표시(effect 앞),
         group=기계용 표식(parallel/fallback/condition/case/goal), warn=구조 층 경고(조건 문법 등)."""
-        nonlocal all_valid, has_side_effect
+        nonlocal all_valid, has_side_effect, has_ai_call
         node = st.get("_node", "")
         action = st.get("action", "")
         params = st.get("params", {}) or {}
@@ -494,6 +506,12 @@ async def validate_ibl(req: ValidateRequest):
         if warn:
             param_warning = f"{param_warning} / {warn}" if param_warning else warn
 
+        ai_call = ok and _is_ai_call(node, action)
+        if ai_call:
+            has_ai_call = True
+            _ai_note = "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+            param_warning = f"{param_warning} / {_ai_note}" if param_warning else _ai_note
+
         effect = _effect_description(node, action, params) or "(설명 없음)"
         entry = {
             "node": node, "action": action, "params": params,
@@ -503,6 +521,8 @@ async def validate_ibl(req: ValidateRequest):
             "valid": ok, "error": err,
             "param_warning": param_warning,
         }
+        if ai_call:
+            entry["ai_call"] = True
         if group:
             entry["group"] = group
         steps.append(entry)
@@ -698,6 +718,8 @@ async def validate_ibl(req: ValidateRequest):
         # 부작용 step이 하나라도 있으면 실행 전 명시적 확인을 요구한다 (되돌릴 수 없을 수 있음).
         # 전부 read-only면 무마찰 실행(검수 부담 최소화).
         "has_side_effect": has_side_effect,
+        # AI 낱말(ai_call) 포함 — 실행마다 모델 비용·출력 편차(표시 의무, 차단 아님).
+        "has_ai_call": has_ai_call,
         "steps": steps,
     }
 

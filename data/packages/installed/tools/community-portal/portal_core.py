@@ -671,6 +671,30 @@ def _value_regex(template_value: str):
     return re.compile(rx + r"$")
 
 
+_AI_CALL_ACTIONS_CACHE = None
+
+
+def _ai_call_actions():
+    """ai_call: true 액션 집합 — 레지스트리 파생(캐시). 실패 시 보수 폴백(몸의 어휘 이름).
+
+    포털 대여 계기에서 AI 낱말은 기본 금지(2026-08-19 판정 3): 손님 클릭 1회=기어 실행 축
+    모델 비용이고, 포털 한도는 횟수 회계지 토큰 회계가 아니다(tune "익명=공개 프록시화 금지"
+    부류). 개방하려면 회원 전용+강화 한도+토큰 회계를 조건으로 별도 판정."""
+    global _AI_CALL_ACTIONS_CACHE
+    if _AI_CALL_ACTIONS_CACHE is None:
+        acts = set()
+        try:
+            from ibl_access import _load_nodes_data
+            for nn, nd in ((_load_nodes_data() or {}).get("nodes", {}) or {}).items():
+                for an, ad in ((nd or {}).get("actions") or {}).items():
+                    if isinstance(ad, dict) and ad.get("ai_call"):
+                        acts.add((nn, an))
+        except Exception:
+            acts = {("table", "ai"), ("table", "brief"), ("self", "struct")}
+        _AI_CALL_ACTIONS_CACHE = acts
+    return _AI_CALL_ACTIONS_CACHE
+
+
 def action_allowed(code: str, templates: list):
     """posted code 가 선언 템플릿의 인스턴스인가 — (허용여부, 사유)."""
     step = _parse_single(code)
@@ -679,6 +703,8 @@ def action_allowed(code: str, templates: list):
     node, action, params = step["_node"], step["action"], step.get("params") or {}
     if node in {"self", "others"}:
         return False, "허용되지 않는 동작입니다"
+    if (node, action) in _ai_call_actions():
+        return False, "허용되지 않는 동작입니다 (AI 호출 동작은 포털에서 제공되지 않습니다)"
     for k, v in params.items():
         if isinstance(v, (dict, list)):
             return False, "허용되지 않는 파라미터 형식입니다"

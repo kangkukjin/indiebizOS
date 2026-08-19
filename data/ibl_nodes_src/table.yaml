@@ -24,7 +24,7 @@
         - 항목마다
         - 모두에게
         - each
-    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure) + 고차 변환자(each). 도메인·몸 무관 IBL 문법 계층.'
+    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure) + 고차 변환자(each) + AI 낱말(ai=의미 변환·brief=산문 종합 — ai-ops 패키지, 기어 실행 축·ai_call 고지). 도메인·몸 무관 IBL 문법 계층.'
     # 문법 계층 — 노드 on/off 선별에서 engines 가 꺼져도 파이프가 살도록 항상 허용
     always_on: true
     tags:

@@ -35,7 +35,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `self` | 자기 — 나를 관리한다 | 목표, 일정, 기억, 승인, 알림, 파일, 워크플로우 등 개인 영역 |
 | `limbs` | 손발 — 장치를 조작한다 | 브라우저 클릭, 앱 제어, 미디어 재생, 기기 조작 |
 | `engines` | 엔진 — 생성한다 | 슬라이드·영상·이미지·신문·웹 등 미디어 산출물 제작 |
-| `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/rename/flatten/dedup/groupby/join/union/merge/each)과 산출(chart/spreadsheet/document/structure) |
+| `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/rename/flatten/dedup/groupby/join/union/merge/each)과 산출(chart/spreadsheet/document/structure), AI 의미 변환·산문 종합(ai/brief) |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
 **판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]{query: "..."}`.
@@ -125,6 +125,11 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 - **집합 참조 `$items`** — `$it`(행 하나)의 짝. 파이프 다음 step 의 param **값**에 `"$items"`(전체 행 리스트) 또는 `"$items.필드"`(각 행의 그 필드만 모은 리스트)를 적으면 이전 결과의 items 가 통째로 그 param 에 바인딩된다 — "각각"이 아니라 **"한 번에 전부"**(each 로 돌리면 지도가 3장, $items 면 마커 3개 달린 지도 1장). 상한 500행(넘으면 앞에 take 로 줄이라는 거절). ★`$items` 를 변수 이름으로 할당하지 말 것(예약).
   ```
   [sense:restaurant]{query: "청주 맛집"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}
+  ```
+
+- **AI 낱말**(실행마다 모델 비용·출력 편차 — 규칙으로 적을 수 있으면 filter/sort 가 먼저): 입구 `[self:struct]{file|text, schema}` 비정형(영수증·문서·파이프 본문)→items 구조화 · 중간 `[table:ai]{instruction}` items 를 자연어 지시대로 의미 변환(선별·주석 — 집합 한 번에) · 출구 `[table:brief]{instruction}` items→산문 종합(요약·판정, message=산문 정본 → `>> [self:write]` 로 저장).
+  ```
+  [sense:search]{query: "청주 창업 지원", source: "naver"} >> [table:ai]{instruction: "실제 지원사업 공고만"} >> [table:brief]{instruction: "마감 임박 순 3문장 보고"}
   ```
 
 통화는 `table`의 **산출물** emitter로 흐른다: `document`(문서 — html/pdf/docx/pptx/typst) · `chart` · `spreadsheet` · `structure`(원본 콘텐츠→문서 IR 정리, 렌더 전 중간 단계).

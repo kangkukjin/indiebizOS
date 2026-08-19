@@ -1,5 +1,10 @@
 {
   "packages": {
+    "ai-ops": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "android": {
       "needs_key": [
         "GEMINI_API_KEY"
@@ -329,6 +334,7 @@
     "self:sheet": "system_essentials",
     "self:slide": "lecture_workspace",
     "self:storage": "pc-manager",
+    "self:struct": "ai-ops",
     "self:time": "system_essentials",
     "self:webapp": "system_essentials",
     "self:write": "system_essentials",
@@ -370,6 +376,8 @@
     "sense:video": "youtube",
     "sense:weather": "location-services",
     "sense:world_bank": "study",
+    "table:ai": "ai-ops",
+    "table:brief": "ai-ops",
     "table:chart": "visualization",
     "table:dedup": "data-ops",
     "table:document": "data-ops",

@@ -717,34 +717,17 @@ class OpenAIProvider(BaseProvider):
         return (response.choices[0].message.content or "") if response.choices else ""
 
     def _compact_openai(self, messages: List[Dict]) -> List[Dict]:
-        """Rolling Compaction: 오래된 대화를 AI 요약으로 압축 (OpenAI)
+        """Rolling Compaction — 절차는 base._compact_openai_shape 가 갖는다 (2026-08-19 승격).
 
-        1. 오래된 메시지를 텍스트로 추출
-        2. AI에게 요약 요청 (비스트리밍)
-        3. 요약 메시지 + 최근 메시지로 교체
+        이 클래스가 채우는 것은 '요약 1회 호출'(_summarize_for_compaction) 뿐이다.
+        절차를 공유한 이유 = 고아 tool 제거 같은 필수 방어가 배선하는 쪽 손에 달려
+        있으면 빠뜨린 프로바이더가 생긴다(http 변종 2종이 실제로 그랬다).
         """
-        # 최근 유지할 메시지 수
-        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2
+        return self._compact_openai_shape(messages, "OpenAI")
 
-        # system 메시지는 항상 유지
-        system_messages = [m for m in messages if m.get("role") == "system"]
-        non_system = [m for m in messages if m.get("role") != "system"]
-
-        summary_text, recent_messages = self._extract_text_for_summary(non_system, keep_recent)
-        if not summary_text:
-            return messages
-
-        print(f"[Compaction][OpenAI] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
-
-        # 이전 요약이 있으면 포함
-        prev_summary = ""
-        if self._compaction_summary:
-            prev_summary = f"\n\n[이전 요약]\n{self._compaction_summary}\n\n"
-
+    def _summarize_for_compaction(self, summary_input: str) -> str:
+        """OpenAI SDK 로 요약 1회 호출 (비스트리밍). 실패하면 빈 문자열 → 프루닝 폴백."""
         try:
-            summary_input = f"{prev_summary}[작업 기록]\n{summary_text}"
-            if len(summary_input) > 100000:
-                summary_input = summary_input[:50000] + "\n\n... (중략) ...\n\n" + summary_input[-50000:]
 
             # ★요약은 원샷 계약 — 추론을 반드시 끈다 (2026-08-17).
             #   하이브리드 thinking 모델(DeepSeek v4 등)은 추론이 max_tokens 를 전부 태워
@@ -765,47 +748,8 @@ class OpenAIProvider(BaseProvider):
                 summary_params["extra_body"] = dict(_off)
 
             response = self._client.chat.completions.create(**summary_params)
-
-            summary = response.choices[0].message.content if response.choices else ""
-
-            # <summary> 태그 추출
-            import re
-            summary_match = re.search(r'<summary>(.*?)</summary>', summary, re.DOTALL)
-            if summary_match:
-                summary = summary_match.group(1).strip()
-
-            if not summary:
-                print(f"[Compaction][OpenAI] 요약 생성 실패, 프루닝으로 대체")
-                return messages
-
-            self._compaction_summary = summary
-            print(f"[Compaction][OpenAI] 요약 완료: {len(summary):,}자")
-
-            # 새 messages 구성: [system] + [요약] + [assistant 확인] + [최근 메시지들]
-            compacted = list(system_messages)
-
-            # 요약을 user 메시지로 삽입
-            compacted.append({
-                "role": "user",
-                "content": f"<compaction_summary>\n{summary}\n</compaction_summary>\n\n위 요약은 이전 작업 기록의 압축본입니다. 이 맥락을 유지하면서 작업을 계속하세요."
-            })
-
-            # assistant 확인 응답
-            compacted.append({
-                "role": "assistant",
-                "content": "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
-            })
-
-            # 최근 메시지 추가 (+ 고아 tool 메시지 최후 방어선 — 남으면 400 으로 작업이 죽는다)
-            compacted.extend(recent_messages)
-            compacted = self._drop_orphan_tool_messages(compacted)
-
-            before_size = self._estimate_content_size(messages)
-            after_size = self._estimate_content_size(compacted)
-            print(f"[Compaction][OpenAI] 크기 변화: {before_size:,}자 → {after_size:,}자 ({(1 - after_size/before_size)*100:.0f}% 감소)")
-
-            return compacted
+            return (response.choices[0].message.content or "") if response.choices else ""
 
         except Exception as e:
-            print(f"[Compaction][OpenAI] 요약 생성 예외: {e}, 프루닝으로 대체")
-            return messages
+            print(f"[Compaction][OpenAI] 요약 호출 예외: {e}")
+            return ""

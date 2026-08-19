@@ -7,7 +7,8 @@ pydantic v1)에서 import 불가. 하지만 Gemini 의 generateContent REST 엔�
 
 설계: 동기 + 도구 호출 루프(함수호출 functionCall ↔ functionResponse)를 폰에서 돌린다.
 도구 실행(execute_tool)은 폰에서 일어나므로 limbs:phone 같은 폰 전용 도구가 동작한다.
-캐싱/스트리밍/compaction 은 생략(폰 v1) — 길어지면 base 의 Gemini pruning 만 적용.
+캐싱/스트리밍은 생략(폰 v1). 길어지면 compaction(요약)이 먼저 돌고, 그래도 압력이 남으면
+Gemini pruning 이 최후로 돈다 — 절차는 base._compact_gemini_http_shape(2026-08-19 배선).
 
 엔드포인트는 기본 google REST. base_url 인자로 맥 게이트웨이 등으로 바꿀 수 있게 열어둠.
 """
@@ -136,6 +137,44 @@ class GeminiHTTPProvider(BaseProvider):
             raise RuntimeError(f"Gemini REST {r.status_code}: {r.text[:300]}")
         return r.json()
 
+    # ── compaction 요약 호출 (절차는 base._compact_gemini_http_shape) ─
+    def _summarize_for_compaction(self, summary_input: str) -> str:
+        """Gemini REST 로 요약 1회 호출. 실패하면 빈 문자열 → 프루닝 폴백.
+
+        ★_generate 를 재사용하지 않는 이유 = 그 함수는 본 대화용이라 에이전트의
+          system_prompt·도구·온도를 싣는다. 요약은 COMPACTION_PROMPT 하나로 불러야 한다.
+        ★thinking 은 끈다(원샷 계약, ep889 부류). budget 0 을 거부하는 모델은 1회 재시도로
+          자가치유하고, _generate 와 _thinking_off_unsupported 표식을 공유한다."""
+        url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
+        for attempt in (0, 1):
+            gen_config: Dict[str, Any] = {"temperature": 0.3, "maxOutputTokens": 2048}
+            use_off = not self._thinking_off_unsupported
+            if use_off:
+                gen_config["thinkingConfig"] = {"thinkingBudget": 0}
+            body: Dict[str, Any] = {
+                "contents": [{"role": "user", "parts": [{"text": summary_input}]}],
+                "generationConfig": gen_config,
+                "system_instruction": {"parts": [{"text": self.COMPACTION_PROMPT}]},
+            }
+            try:
+                r = requests.post(url, json=body, timeout=120)
+            except Exception as e:
+                print(f"[Compaction][GeminiHTTP] 요약 호출 예외: {e}")
+                return ""
+            if r.status_code == 200:
+                cands = r.json().get("candidates") or []
+                if not cands:
+                    return ""
+                parts = (cands[0].get("content") or {}).get("parts") or []
+                return "".join(p["text"] for p in parts if isinstance(p, dict) and "text" in p)
+            if use_off and r.status_code == 400 and attempt == 0:
+                print("[Compaction][GeminiHTTP] thinkingBudget:0 400 거부 추정 — 차단 포기 후 재시도")
+                self._thinking_off_unsupported = True
+                continue
+            print(f"[Compaction][GeminiHTTP] 요약 호출 {r.status_code}: {r.text[:200]}")
+            return ""
+        return ""
+
     # ── 메인 루프 ───────────────────────────────────────────
     def process_message(self, message: str, history: List[Dict] = None,
                         images: List[Dict] = None, execute_tool: Callable = None) -> str:
@@ -147,6 +186,9 @@ class GeminiHTTPProvider(BaseProvider):
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
+            # ★보존(요약) 먼저, 삭제는 최후 — deepseek_http 와 대칭(2026-08-19 배선).
+            if iteration > 0 and self._should_compact(contents, iteration):
+                contents = self._compact_gemini_http_shape(contents, "GeminiHTTP")
             # ★압력이 있을 때만 지운다(최후 수단)
             if iteration > 0 and self._should_prune(contents, iteration):
                 contents = self._prune_messages_gemini(contents)

@@ -741,6 +741,123 @@ class BaseProvider(ABC):
             print(f"[Compaction] 임계값 도달: {content_size:,}자 >= {self.COMPACTION_CHAR_THRESHOLD:,}자 (iteration={iteration})")
         return should
 
+    # ── 공유 compaction 절차 (프로바이더는 '요약 1회 호출'만 채운다) ──────
+    # ★2026-08-19: 요약→교체 절차는 프로바이더마다 같고, 다른 건 요약을 부르는 방법뿐이다.
+    #   그래서 절차를 여기 한 벌 두고 프로바이더는 _summarize_for_compaction 만 구현한다.
+    #   그전엔 절차가 openai/gemini/anthropic 에 복제돼 있었고, http 변종 2종은 복제조차
+    #   못 받아 COMPACTION_CHAR_THRESHOLD 만 선언한 채 부르는 쪽이 없었다(선언-호출 분리 드리프트).
+
+    def _summarize_for_compaction(self, summary_input: str) -> str:
+        """요약 1회 호출 — 프로바이더가 구현한다. 빈 문자열이면 compaction 포기(프루닝 폴백).
+
+        ★원샷 계약이므로 추론을 반드시 꺼야 한다: 하이브리드 thinking 모델은 추론이
+          max_tokens 를 전부 태워 본문 0자를 돌려주고, 그러면 보존 층이 무너진다(ep1177).
+        기본 구현은 빈 문자열 = 미구현 프로바이더는 지금까지처럼 프루닝만 한다."""
+        return ""
+
+    def _compaction_summary_input(self, summary_text: str) -> str:
+        """이전 요약 + 이번 작업 기록을 합쳐 요약 입력을 만든다(과길면 양끝 보존 중략)."""
+        prev = getattr(self, "_compaction_summary", None)
+        prev_summary = f"\n\n[이전 요약]\n{prev}\n\n" if prev else ""
+        summary_input = f"{prev_summary}[작업 기록]\n{summary_text}"
+        if len(summary_input) > 100000:
+            summary_input = summary_input[:50000] + "\n\n... (중략) ...\n\n" + summary_input[-50000:]
+        return summary_input
+
+    @staticmethod
+    def _unwrap_summary_tag(summary: str) -> str:
+        """<summary>...</summary> 로 감싸 왔으면 벗긴다."""
+        import re as _re
+        m = _re.search(r'<summary>(.*?)</summary>', summary or "", _re.DOTALL)
+        return m.group(1).strip() if m else (summary or "").strip()
+
+    def _compaction_preamble_text(self, summary: str) -> str:
+        return (f"<compaction_summary>\n{summary}\n</compaction_summary>\n\n"
+                "위 요약은 이전 작업 기록의 압축본입니다. 이 맥락을 유지하면서 작업을 계속하세요.")
+
+    _COMPACTION_ACK = "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
+
+    def _log_compaction_size(self, label: str, before, after) -> None:
+        before_size = self._estimate_content_size(before)
+        after_size = self._estimate_content_size(after)
+        if before_size:
+            pct = (1 - after_size / before_size) * 100
+            print(f"[Compaction][{label}] 크기 변화: {before_size:,}자 → {after_size:,}자 ({pct:.0f}% 감소)")
+
+    def _compact_openai_shape(self, messages: List[Dict], label: str) -> List[Dict]:
+        """OpenAI 형식(role/content/tool_calls) 메시지의 rolling compaction — 공유 구현.
+
+        openai.py 와 deepseek_http.py 가 함께 쓴다. ★고아 tool 메시지 제거가 이 안에 있으므로
+        이 함수를 쓰는 쪽은 400("Messages with role 'tool' must be a response to a preceding
+        message with 'tool_calls'", ep1176)을 자동으로 면한다 — 배선하는 쪽이 잊을 수 없게."""
+        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2
+        system_messages = [m for m in messages if m.get("role") == "system"]
+        non_system = [m for m in messages if m.get("role") != "system"]
+
+        summary_text, recent_messages = self._extract_text_for_summary(non_system, keep_recent)
+        if not summary_text:
+            return messages
+
+        print(f"[Compaction][{label}] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
+        try:
+            summary = self._unwrap_summary_tag(
+                self._summarize_for_compaction(self._compaction_summary_input(summary_text)))
+            if not summary:
+                print(f"[Compaction][{label}] 요약 생성 실패, 프루닝으로 대체")
+                return messages
+
+            self._compaction_summary = summary
+            print(f"[Compaction][{label}] 요약 완료: {len(summary):,}자")
+
+            compacted = list(system_messages)
+            compacted.append({"role": "user",
+                              "content": self._compaction_preamble_text(summary)})
+            compacted.append({"role": "assistant", "content": self._COMPACTION_ACK})
+            # 최근 메시지 추가 (+ 고아 tool 메시지 최후 방어선 — 남으면 400 으로 작업이 죽는다)
+            compacted.extend(recent_messages)
+            compacted = self._drop_orphan_tool_messages(compacted)
+
+            self._log_compaction_size(label, messages, compacted)
+            return compacted
+        except Exception as e:
+            print(f"[Compaction][{label}] 요약 생성 예외: {e}, 프루닝으로 대체")
+            return messages
+
+    def _compact_gemini_http_shape(self, contents: List, label: str) -> List:
+        """Gemini REST 형식({role, parts}) 컨텐츠의 rolling compaction — gemini_http 전용.
+
+        SDK 판(gemini.py)은 Content 객체를 다뤄 자기 구현을 쓴다. 여기선 dict 만 만든다.
+        고아 방어는 _extract_text_for_summary 의 경계 스냅이 담당한다
+        (functionResponse 로 시작하는 자리는 스냅이 앞으로 밀어 잘리지 않는다)."""
+        keep_recent = self.KEEP_RECENT_TOOL_ROUNDS * 2 + 2
+        summary_text, recent_contents = self._extract_text_for_summary(contents, keep_recent)
+        if not summary_text:
+            return contents
+
+        print(f"[Compaction][{label}] 요약 시작: {len(summary_text):,}자 → AI 요약 요청")
+        try:
+            summary = self._unwrap_summary_tag(
+                self._summarize_for_compaction(self._compaction_summary_input(summary_text)))
+            if not summary:
+                print(f"[Compaction][{label}] 요약 생성 실패, 프루닝으로 대체")
+                return contents
+
+            self._compaction_summary = summary
+            print(f"[Compaction][{label}] 요약 완료: {len(summary):,}자")
+
+            compacted = [
+                {"role": "user",
+                 "parts": [{"text": self._compaction_preamble_text(summary)}]},
+                {"role": "model", "parts": [{"text": self._COMPACTION_ACK}]},
+            ]
+            compacted.extend(recent_contents)
+
+            self._log_compaction_size(label, contents, compacted)
+            return compacted
+        except Exception as e:
+            print(f"[Compaction][{label}] 요약 생성 예외: {e}, 프루닝으로 대체")
+            return contents
+
     def _should_prune(self, messages_or_contents, iteration: int = None) -> bool:
         """프루닝(삭제)이 필요한지 판단 — 컨텍스트 압력이 있을 때만 True.
 
@@ -884,6 +1001,24 @@ class BaseProvider(ABC):
                 if msg.get("tool_calls"):
                     tc_names = [tc.get("function", {}).get("name", "") for tc in msg["tool_calls"]]
                     content += f" [도구호출: {', '.join(tc_names)}]"
+
+                # Gemini REST 형식({role, parts}) — "content" 키가 없어 위에서 빈 문자열이 된다.
+                # ★2026-08-19: 이 갈래가 없으면 gemini_http 의 요약 입력이 통째로 빈 줄이 되어
+                #   요약이 무의미해진다(SDK 판은 아래 Content 객체 갈래가 받는다).
+                if not content and isinstance(msg.get("parts"), list):
+                    part_texts = []
+                    for p in msg["parts"]:
+                        if not isinstance(p, dict):
+                            continue
+                        if p.get("text"):
+                            part_texts.append(str(p["text"])[:1000])
+                        elif "functionCall" in p:
+                            part_texts.append(f"[도구호출:{(p['functionCall'] or {}).get('name', '')}]")
+                        elif "functionResponse" in p:
+                            fr = p["functionResponse"] or {}
+                            part_texts.append(
+                                f"[도구결과:{fr.get('name', '')}] {str(fr.get('response', ''))[:500]}")
+                    content = " | ".join(part_texts)
 
                 lines.append(f"[{role}] {content[:1000]}")
             else:

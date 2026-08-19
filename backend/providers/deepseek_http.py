@@ -7,7 +7,8 @@ deepseek_http.py — SDK 없는 DeepSeek REST 프로바이더 (폰 네이티브�
 
 설계: 동기 + 도구 호출 루프(tool_calls ↔ role:"tool")를 폰에서 돌린다. 도구 실행이
 폰에서 일어나므로 limbs:phone 같은 폰 전용 도구가 동작한다. 스트리밍·캐싱 생략(폰 v1),
-길어지면 base 의 _prune_messages_openai 적용.
+길어지면 compaction(요약)이 먼저 돌고, 그래도 압력이 남으면 프루닝(마스킹)이 최후로 돈다
+— 절차는 base._compact_openai_shape 공유(2026-08-19 배선).
 
 주의(딥시크 특성, deepseek.py 와 대칭):
 - v4 하이브리드 thinking: max_tokens 를 추론과 본문이 나눠 쓴다 → 16384 (4096 이면
@@ -98,6 +99,37 @@ class DeepSeekHTTPProvider(BaseProvider):
             raise RuntimeError(f"DeepSeek REST {r.status_code}: {r.text[:300]}")
         return r.json()
 
+    # ── compaction 요약 호출 (절차는 base._compact_openai_shape) ─
+    def _summarize_for_compaction(self, summary_input: str) -> str:
+        """DeepSeek REST 로 요약 1회 호출. 실패하면 빈 문자열 → 프루닝 폴백.
+
+        ★thinking 을 self.disable_thinking 과 무관하게 끈다: v4 하이브리드는 추론이
+          max_tokens 를 전부 태워 본문 0자를 돌려주고, 그러면 요약이 실패해 삭제로
+          폴백한다(ep1177 부류). 요약은 원샷 계약이라 추론이 필요 없다.
+        ★_chat 을 재사용하지 않는 이유 = 예산(16384)·온도(0.8)·thinking 조건이 본 대화용
+          이라 요약에 그대로 쓰면 안 된다."""
+        try:
+            body: Dict[str, Any] = {
+                "model": self.model,
+                "max_tokens": 2048,
+                "temperature": 0.3,
+                "messages": [
+                    {"role": "system", "content": self.COMPACTION_PROMPT},
+                    {"role": "user", "content": summary_input},
+                ],
+                "thinking": {"type": "disabled"},
+            }
+            r = requests.post(f"{self.base_url}/chat/completions", json=body, timeout=180,
+                              headers={"Authorization": f"Bearer {self.api_key}"})
+            if r.status_code != 200:
+                print(f"[Compaction][DeepSeekHTTP] 요약 호출 {r.status_code}: {r.text[:200]}")
+                return ""
+            choices = r.json().get("choices") or []
+            return ((choices[0].get("message") or {}).get("content") or "") if choices else ""
+        except Exception as e:
+            print(f"[Compaction][DeepSeekHTTP] 요약 호출 예외: {e}")
+            return ""
+
     # ── 메인 루프 ───────────────────────────────────────────
     def process_message(self, message: str, history: List[Dict] = None,
                         images: List[Dict] = None, execute_tool: Callable = None) -> str:
@@ -110,6 +142,12 @@ class DeepSeekHTTPProvider(BaseProvider):
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
+            # ★보존(요약) 먼저, 삭제는 최후 — 순서가 곧 정책이다(base 의 임계값 주석 참조).
+            #   2026-08-19: 그전엔 이 자리에 프루닝만 있었다. COMPACTION_CHAR_THRESHOLD 를
+            #   선언해 두고도 부르는 쪽이 없어, 폰 두뇌(3 티어 전부 이 프로바이더)는 마스킹
+            #   만으로 128K 컨텍스트를 버티고 있었다 = 선언-호출 분리 드리프트.
+            if iteration > 0 and self._should_compact(messages, iteration):
+                messages = self._compact_openai_shape(messages, "DeepSeekHTTP")
             # ★압력이 있을 때만 지운다(최후 수단)
             if iteration > 0 and self._should_prune(messages, iteration):
                 messages = self._prune_messages_openai(messages)

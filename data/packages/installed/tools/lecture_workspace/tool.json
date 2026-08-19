@@ -72,7 +72,8 @@
               "delete",
               "patch",
               "rerender",
-              "image_edit"
+              "image_edit",
+              "note"
             ]
           },
           "lecture_id": {

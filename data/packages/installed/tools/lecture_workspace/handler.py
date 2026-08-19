@@ -1001,6 +1001,50 @@ def _slide_rerender(tool_input: dict) -> str:
     })
 
 
+def _slide_note(tool_input: dict) -> str:
+    """스피커 노트(말할 내용) 설정 — AI 0·렌더 0.
+
+    why: 노트는 *덱 메타*(나레이션 원문)라 spec 필드가 아니다 — patch 는 spec 을 고치고
+    PNG 를 다시 그리며, 글자가 구워진 native/image 슬라이드는 아예 거부한다.
+    그래서 2026-08-19 ep1251 은 IBL 을 우회해 lecture_store 를 직접 import 하는
+    스크립트로 노트를 밀어넣어야 했다(층 침범). 그 자리를 어휘로 메운다.
+
+    단건: slide_id + note   /   일괄: notes={slide_id: note, ...}
+    (일괄이 있는 이유 = 덱 한 벌에 노트를 다는 게 정상 사용이고, 단건뿐이면
+     16장짜리 덱에 16왕복이 든다. 그게 우회 스크립트를 부른 실제 압력이었다.)
+    빈 문자열/None = 그 장의 노트 제거.
+    """
+    lecture_id = (tool_input.get("lecture_id") or "").strip()
+    if not lecture_id:
+        return _err("lecture_id 는 필수입니다.")
+
+    notes = tool_input.get("notes")
+    if notes is None:
+        slide_id = (tool_input.get("slide_id") or "").strip()
+        if not slide_id:
+            return _err("slide_id + note, 또는 notes={slide_id: note, ...} 가 필요합니다.")
+        notes = {slide_id: tool_input.get("note")}
+    elif not isinstance(notes, dict) or not notes:
+        return _err("notes 는 비어있지 않은 객체여야 합니다 — {slide_id: note, ...}")
+
+    applied, missing = [], []
+    for slide_id, note in notes.items():
+        try:
+            r = lecture_store.set_speaker_note(lecture_id, str(slide_id), note or "")
+        except ValueError:
+            missing.append(str(slide_id))
+            continue
+        applied.append({"title": str(slide_id), "chars": len(r.get("speaker_note") or "")})
+
+    if not applied:
+        return _err(f"적용된 슬라이드가 없습니다 — 없는 slide_id: {', '.join(missing)}",
+                    error_type="not_found")
+    # ★없는 id 를 조용히 삼키지 않는다 — 노트가 안 붙은 장은 무나레이션 씬이 된다.
+    return _ok({"lecture_id": lecture_id, "items": applied,
+                "applied": len(applied),
+                **({"missing": missing} if missing else {})})
+
+
 def _slide_patch_spec(tool_input: dict) -> str:
     """슬라이드 spec 필드를 직접 patch + PNG 재렌더. AI 호출 없음.
 
@@ -1302,7 +1346,7 @@ _OP_DISPATCHERS = {
                    "delete": _lecture_delete, "open": _lecture_open},
     "slide_op": {"create": _slide_create, "edit": _slide_edit, "delete": _slide_delete,
                  "patch": _slide_patch_spec, "rerender": _slide_rerender,
-                 "image_edit": _slide_image_edit},
+                 "image_edit": _slide_image_edit, "note": _slide_note},
     "material_op": {"add": _material_add, "remove": _material_remove},
     "deck_op": {"reorder": _deck_reorder, "export": _deck_export, "video": _deck_video},
 }

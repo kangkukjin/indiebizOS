@@ -3612,9 +3612,9 @@ nodes:
       slide:
         returns: effect
         runs_on: pc_only
-        description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
+        description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정/스피커 노트. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
         group: lecture
-        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book(빈티지북 기본)/blueprint(청사진)/architect(아키텍트)/ink_orange(먹과 주황), 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+(instruction=이미지 모델 최소 편집 | overlay_text=결정론 글자 얹기 — 재생성 없이 현재 그림 위 문구 합성, overlay_position(9방, 기본 bottom-right) 또는 overlay_x/overlay_y(자유 좌표 — 박스 좌상단 %, position 보다 우선)/overlay_size(small|medium|large) 또는 overlay_size_vw(자유 크기 — 폭 %)/overlay_font(sans|serif|gowun|jua|black|pen|brush)/overlay_shadow(그림자, 기본 없음)/overlay_color(white|black|#hex)/overlay_chip(반투명 배경칩)/overlay_clear(얹은 글자 전부 제거·원본 복원)/overlay_set(오버레이 객체 배열로 전체 교체 — 배치 편집기 저장, 빈 배열=원본 복원). 통짜 이미지/이미지 슬라이드만). create/edit/image_edit만 AI 호출.
+        target_description: create는 instruction 필수 — lecture_id 미지정 시 스크래치 덱(aesthetic 옵션으로 톤 지정 — vintage_book(빈티지북 기본)/blueprint(청사진)/architect(아키텍트)/ink_orange(먹과 주황), 같은 톤은 같은 스크래치 덱에 모임). render(선택)=렌더 방식 — native(이미지 only, 기본·가장 예쁨) / image(이미지+글자 합성 — 그림은 전면, 글자는 선명) / html(무료·빠름·나중에 필드 편집 가능). "가볍게/무료로" 같은 요청엔 render:"html". layout(선택)=HTML 구조 강제 — 보통 지정하지 말 것(AI가 내용 보고 고름). user_image_path(선택)=이 이미지 파일이 **들어간** 슬라이드를 조판(hero_image/content_image/custom 에 임베드, vision 으로 내용도 봄 — 새로 그리는 illustrations 와 다른 축). 나머지 op 는 lecture_id 필수. edit는 slide_id+instruction, delete/rerender는 slide_id, patch는 slide_id+patch(객체), image_edit는 slide_id+(instruction=이미지 모델 최소 편집 | overlay_text=결정론 글자 얹기 — 재생성 없이 현재 그림 위 문구 합성, overlay_position(9방, 기본 bottom-right) 또는 overlay_x/overlay_y(자유 좌표 — 박스 좌상단 %, position 보다 우선)/overlay_size(small|medium|large) 또는 overlay_size_vw(자유 크기 — 폭 %)/overlay_font(sans|serif|gowun|jua|black|pen|brush)/overlay_shadow(그림자, 기본 없음)/overlay_color(white|black|#hex)/overlay_chip(반투명 배경칩)/overlay_clear(얹은 글자 전부 제거·원본 복원)/overlay_set(오버레이 객체 배열로 전체 교체 — 배치 편집기 저장, 빈 배열=원본 복원). 통짜 이미지/이미지 슬라이드만). note는 slide_id+note(단건) 또는 notes 객체(키=slide_id, 값=노트)로 일괄 — 스피커 노트=나레이션 원문이라 deck video 의 입력이 된다(빈 문자열=제거). create/edit/image_edit만 AI 호출.
         target_key: op
         router: handler
         tool: slide_op
@@ -3626,13 +3626,16 @@ nodes:
             patch: 필드 직접 수정 (slide_id+patch, AI 우회 — composite 는 글자만·그림 보존 재합성)
             rerender: 재렌더링 (slide_id, AI 우회)
             image_edit: 이미지 부분수정 (slide_id + instruction=모델 편집 | overlay_text=결정론 글자 얹기)
-        implementation: handler.py가 op로 분기. create/edit/image_edit는 AI 호출, delete/patch/rerender는 AI 우회 (PowerPoint식 직접 편집).
+            note: 스피커 노트(말할 내용) 설정 — slide_id+note 단건 또는 notes 객체(키=slide_id) 일괄, AI·렌더 0
+        implementation: handler.py가 op로 분기. create/edit/image_edit는 AI 호출, delete/patch/rerender/note는 AI 우회 (PowerPoint식 직접 편집).
         keywords:
         - 슬라이드 만들기
         - 슬라이드 편집
         - 슬라이드 재렌더
         - 슬라이드 삭제
         - 슬라이드 일부 수정
+        - 스피커 노트
+        - 나레이션 원고
         - 다음 슬라이드
         scope: workspace
       material:

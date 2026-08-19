@@ -5,39 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:5882
+- dataset_size:6033
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정. create 는
-    lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
+- source_sentence: 의학 논문 다운로드
   sentences:
-  - 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
-  - '[sense:stock] & [sense:world_bank] >> [table:join]'
-  - '[self:slide]}'
-- source_sentence: '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은
-    폴더(폴더 구조=사용자의 의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님.
-    [limbs:music](유튜브뮤직 스트림)과 다른 개념: 이쪽은 내 파일.'
-  sentences:
-  - '[self:music] >> [table:take] >> [self:write]'
-  - 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items 통화(연도+지표값 필드) 반환.
-  - '[table:document]'
-- source_sentence: 항목마다 실행하되 하나라도 실패하면 멈춰줘
-  sentences:
-  - '[engines:music]'
-  - '[others:feed]'
-  - '[self:script] >> [table:each]", on_error: "stop"}'
-- source_sentence: 단지마다 매물을 긁어서 전부 모아 문서 하나로 만들어줘
-  sentences:
-  - '[sense:realty] >> [table:take] >> [table:each]"} >> [table:flatten] >> [table:document]'
-  - '[self:read]'
   - '[sense:paper]'
-- source_sentence: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb,
-    OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
+  - '[sense:entity]'
+  - '[self:file_find]'
+- source_sentence: AI 에이전트 프레임워크의 최적화 방안 탐색 (라우팅, 캐싱, 병렬 처리, 상태 관리, 지연 시간 감소 등)
   sentences:
+  - '[limbs:radio]'
   - '[sense:stock]'
-  - '[self:file_find]", path: "/Users/me/Pictures"}'
-  - '[others:agents] >> [table:take]'
+  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
+- source_sentence: 회의록 텍스트에서 할 일 뭐가 있어을 추출해서 기한순으로 보여줘
+  sentences:
+  - '[limbs:browser]'
+  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
+  - '[self:struct] >> [table:sort]'
+- source_sentence: 웹사이트 긁어서 문서로 보관
+  sentences:
+  - '[self:trigger] >> [table:take] >> [table:each]''}"}'
+  - '[sense:crawl] >> [self:write]'
+  - '[sense:stock] & [sense:stock]'
+- source_sentence: 사이트 정보 업데이트 — portfolio
+  sentences:
+  - 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
+  - '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
+  - '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도
+    가능.'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -91,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.',
-    '[self:file_find]", path: "/Users/me/Pictures"}',
-    '[others:agents] >> [table:take]',
+    '사이트 정보 업데이트 — portfolio',
+    '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.',
+    '라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -102,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.8821, -0.0252],
-#         [ 0.8821,  1.0000,  0.0587],
-#         [-0.0252,  0.0587,  1.0000]])
+# tensor([[ 1.0000,  0.7419, -0.1526],
+#         [ 0.7419,  1.0000, -0.0814],
+#         [-0.1526, -0.0814,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -148,20 +145,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 5,882 training samples
+* Size: 6,033 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 5 tokens</li><li>mean: 13.91 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 27.95 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 15.65 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.85 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                      | sentence_1                     |
-  |:--------------------------------|:-------------------------------|
-  | <code>팔로우한 사람을 이웃으로 승격해줘</code> | <code>[others:neighbor]</code> |
-  | <code>페이지 밑으로</code>            | <code>[limbs:browser]</code>   |
-  | <code>자료 정리할 폴더 하나 파줘</code>    | <code>[self:mkdir]</code>      |
+  | sentence_0                                  | sentence_1                                                                             |
+  |:--------------------------------------------|:---------------------------------------------------------------------------------------|
+  | <code>블로그 글 ID 5432 조회</code>               | <code>[self:blog]</code>                                                               |
+  | <code>매일 아침 9시에 뉴스 모아서 메일로 보내는 걸 예약해</code> | <code>트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.</code> |
+  | <code>내 블로그에 명상 관련 글 있나</code>              | <code>내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.</code>                  |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -291,11 +288,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6793 | 500  | 0.0122        |
+| 0.6623 | 500  | 0.0145        |
 
 
 ### Training Time
-- **Training**: 3.9 minutes
+- **Training**: 4.0 minutes
 
 ### Framework Versions
 - Python: 3.13.5

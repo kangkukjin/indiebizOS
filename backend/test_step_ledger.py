@@ -21,6 +21,15 @@ sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
 
 
+def _ensure_schema():
+    """스키마 보장 — 서버는 install() 이 하지만 테스트는 start_episode 를 직접 부른다.
+    로컬은 기존 world_pulse.db 가 있어 잠복하다가 CI 신선 클론에서만 터졌다
+    (2026-08-20 실측: no such table episode_summary — 나레이션 수집 오류에 가려져
+    있던 잠복 결함). idempotent 라 라이브 DB 에도 무해."""
+    import episode_logger as EL
+    EL._ensure_episode_tables()
+
+
 def test_class_method_snapshot():
     """★메서드 삼킴 가드 (2026-08-15 실측 회귀의 재발 방지): 클래스 본문 중간에 모듈
     함수를 끼우면 뒤의 메서드가 마지막 함수의 중첩 지역 함수로 조용히 삼켜진다 —
@@ -38,6 +47,7 @@ def test_class_method_snapshot():
 
 def test_step_ledger_roundtrip():
     import episode_logger as EL
+    _ensure_schema()
     ids = []
     try:
         EL.EpisodeLogger.start_episode("test_step_ledger", "스텝 원장 테스트")
@@ -86,6 +96,7 @@ def test_pure_oneshot_turn_is_null():
     폴백 정규식을 타면 안 된다(원장 분기에서 걷어낸 사칭이 폴백에서 되살아나던 구멍).
     주 경로만 테스트하고 폴백은 안 하던 패턴의 재발 방지."""
     import episode_logger as EL
+    _ensure_schema()
     from datetime import datetime
     steps = [
         {"event": "round", "provider": "DeepSeek", "model": "v4-flash", "round": 1,
@@ -111,6 +122,7 @@ def test_pure_oneshot_turn_is_null():
 def test_regex_fallback_provider_agnostic():
     """원장이 없을 때(claude_code 등)의 폴백 정규식 — 프로바이더 이름 무관."""
     import episode_logger as EL
+    _ensure_schema()
     from datetime import datetime
     log = "…\n[Anthropic] 라운드 4/30 시작\n…\n[Anthropic] 라운드 7/30 시작\n…"
     EL._extract_and_save_summary(None, datetime.now(), "test_regex_fb", "m", log, 1, steps=None)

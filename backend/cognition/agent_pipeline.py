@@ -178,6 +178,25 @@ class CognitivePipelineMixin:
                       f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
         elif request_type == "THINK":
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
+            # 늦은 REPAIR 승격 (2026-08-20, ep1264): 분류기의 REPAIR 는 '수리' 의미론이라
+            # 코어를 건드리는 개발 명령("강의 창에 버튼 만들어줘")을 놓치고, 그러면 그랜트
+            # 없이 주행해 apply 가 거부된다. 전체 맥락을 본 의식이 needs_repair 를 선언하면
+            # REPAIR 분기와 같은 한도(시스템 AI + 사람 명령)로 승격·그랜트를 발급한다 —
+            # 헌법 3조건 중 의식 각성은 THINK 경로가 이미 충족한 자리다.
+            if self._consciousness_needs_repair(consciousness_output):
+                from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
+                _origin = get_task_origin()
+                if is_system_ai and _origin == "user":
+                    original_provider = _switch_to_role(self, "system_repair")
+                    from red_grant import issue_grant
+                    _g_task = get_current_task_id() or ""
+                    issue_grant(agent_id=get_current_agent_id() or "system_ai",
+                                task_id=_g_task, reason=message)
+                    _repair_granted_task = _g_task or "__untasked__"
+                    print(f"[수리] 늦은 REPAIR 승격 (task={_g_task or '없음'}) — 의식 needs_repair 선언")
+                else:
+                    print(f"[수리] 의식 needs_repair 선언이지만 출처={_origin or '자율'}"
+                          f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
         elif reflex_hint:
             # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
             # ★이미지 첨부 시 스왑 금지(2026-08-13 실측): 중급(딥시크)은 비전 미지원이라

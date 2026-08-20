@@ -263,6 +263,20 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
             return task_framing.strip()
         return None
 
+    def _consciousness_needs_repair(self, consciousness_output: dict) -> bool:
+        """의식이 '이 태스크는 RED 코어 코드를 바꿔야 한다'고 선언했는가.
+
+        무의식 분류기의 REPAIR 감지는 '수리' 의미론(구역어+수리동사·분류 범주)이라
+        코어를 건드리는 *개발* 명령("강의 창에 녹음 버튼 만들어줘")을 놓친다 —
+        ep1264 에서 그랜트 없이 주행해 apply 가 거부됐다. 전체 맥락을 본 의식의
+        이 선언이 마지막 그물: true 면 파이프라인이 THINK 경로에서도 수리 승격
+        (고급 모델 + RED 그랜트)을 한다. 한도(시스템 AI + 사용자 출처)는
+        REPAIR 분기와 동일하고, 헌법 3조건 중 의식 각성은 이 자리가 이미 충족.
+        """
+        if not consciousness_output:
+            return False
+        return bool(consciousness_output.get("needs_repair"))
+
     def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
         """의식 에이전트의 판단에 따라 히스토리를 편집합니다.
 

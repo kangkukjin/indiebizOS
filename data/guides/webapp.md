@@ -54,3 +54,7 @@
 
 > 실행 에이전트가 턴 종료 후 덧붙인다.
 - 2026-08-19 실측: 단일 HTML 자족 문서(D 부류)는 새 Worker·새 공개면 없이 `공유창고/<레벨>/`에 파일 하나로 넣으면 기존 공개면 배관이 그대로 `/f?path=<파일명>` 공개 주소를 내준다 — 서버 상태 0인 웹앱의 최단 배포 경로(레벨 0=손님 공개).
+- 2026-08-20 실측(다이어리 PWA): **설치형+완전오프라인 PWA 는 D 부류(공유창고 `/f?path=`)로 못 만든다** — 서비스워커 스크립트 URL 의 *경로*가 `/f`(파일명은 쿼리)라 스코프가 `/` 로 잡히고, 그 origin 의 다른 앱(포털·게시판)까지 삼킨다. 게다가 같은 origin 다중 PWA = 알림 위임 얽힘(2026-08-01 함정). → **자기 데이터가 전부 클라이언트에 있는 앱은 C 부류(전용 Worker)가 정답**: `outputs/web-projects/<이름>/` + `wrangler.toml` 에 `main` 없이 `[assets] directory="./public"` 만 두면 정적자산 Worker 로 배포되고 자체 origin·자체 스코프를 얻는다(`npx wrangler deploy`, .env 의 CLOUDFLARE_API_TOKEN/ACCOUNT_ID 로 인증).
+- 2026-08-20 실측(서비스워커 함정): **Cloudflare 정적자산은 `/index.html` 을 307 로 `/` 에 넘긴다.** 이걸 모르고 precache 목록에 `/index.html` 을 넣으면 *리다이렉트된 응답*이 캐시에 들어가고, navigate 요청(redirect mode=manual)에 그걸 돌려주는 순간 브라우저가 network error 를 내 **오프라인에서 앱이 안 뜬다**. 앱 껍데기는 `/` 하나로만 다루고, 배경 갱신 때도 `res.redirected` 를 확인해 넣을 것. 검증은 `caches.match('/')` 의 `redirected === false`.
+- 2026-08-20 실측(오프라인 검증법): 헤드리스 브라우저 IBL 액션엔 네트워크 차단 op 이 없다 — **Playwright 를 직접 몰아 `context.set_offline(True)` 후 reload** 하면 진짜 비행기 모드 등가 검증이 된다(`.venv/bin/python` + `PLAYWRIGHT_BROWSERS_PATH=ms-playwright`). 설치 가능 여부는 CDP `Page.getAppManifest` 로 브라우저에게 직접 물어 `errors` 가 빈 배열인지 본다(육안 추정 금지).
+- 2026-08-20 실측(연락처): 안드로이드 폰 연락처 직접 읽기는 **Contact Picker API**(`navigator.contacts.select`, 안드 Chrome 전용·사용자 제스처 필요)로 가능하다 — 다만 기능 감지 후 **.vcf 임포트 폴백 필수**. 폰이 내보내는 .vcf 는 대개 **vCard 2.1 + QUOTED-PRINTABLE** 이라 QP 디코드(소프트 줄바꿈 `=` 이어붙이기 포함) 없이는 한글 이름이 전부 깨진다.

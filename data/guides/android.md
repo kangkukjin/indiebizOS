@@ -139,3 +139,10 @@ adb shell "am force-stop com.samsung.android.messaging"                         
 (`sms_manager.py`=문자 get/search/delete, `device_info.py`=appops 권한부여). 위 레시피를 자주 쓰게 되면
 이 백업을 바탕으로 `[limbs:android_message]{op}` 액션으로 부활시키되(**아직 없는 이름 — 부활 제안**),
 **함정 3개 + cellbroadcasts**를 반영할 것. 지금 등록된 건 "화면 조작" 센터피스 하나뿐입니다.
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-08-20 실측: 디버그 빌드로 설치된 앱은 root 없이 `adb shell run-as <package>` 로 /data/data/<pkg>/ 내부(앱 전용 DB·파일)를 그대로 읽을 수 있다 — 릴리스 빌드면 이 경로가 막힌다.
+- 2026-08-20 실측: Download/ 에 놓인 앱 백업 파일은 존재만으로 최신 데이터를 보장하지 않는다 — 실측 백업 JSON 의 entries 가 빈 배열(설치 당일 자동 생성분)이었고 사진만 그 뒤로 쌓여 있었다. 옮기기 전 백업 파일의 실제 레코드 수를 세어 볼 것.
+- 2026-08-20 실측: 화면 잠금(PIN/패턴)이 걸려 있으면 ADB 는 붙어 있어도 snapshot/tap 경로가 통째로 막혀 '앱에서 복원 버튼 누르기' 같은 마지막 GUI 한 걸음을 완료할 수 없다 — 사용자에게 잠금 해제를 요청해야 한다.

@@ -373,6 +373,58 @@ for name, code, kind in PIPES:
         pipe_fails.append(name)
     print(f"  [{'PASS' if ok else 'FAIL':4}] {name:24} {('items='+str(len(fr.get('items',[]))) if isinstance(fr,dict) and isinstance(fr.get('items'),list) else list(fr.keys())[:4] if isinstance(fr,dict) else fr)}")
 
+# ── §1C-3 거울 키 압력계 (통화 정합 — 봉투가 변환을 따라왔는가) ──
+# 왜 별도 절인가: §1C 는 `items` 만 본다. B15-1(2026-08-20 15회차)은 items 는 옳은데
+# **도메인 이름으로 병기된 거울 키**(`triggers` 등)가 변환 전 전량을 그대로 들고 있어
+# "take(1) 했는데 전 건이 나온다"로 읽힌 사건이다 — items 만 보는 눈엔 안 보인다.
+# `_emit_items` 의 재투영으로 부류는 닫혔고, 이 절은 **압력계**다: 재투영이 "거울 키를
+# 마음껏 만들어도 된다"는 면허로 오독되지 않게 개수를 남긴다(하우스 교리는 단일 통화).
+# 재투영이 못 미치는 형제 컬렉션(종류가 다른 원장·파생 원천)은 봉투가 `_untransformed`
+# 로 **자백**한다(2026-08-20 사용자 판정) — 드롭도 재투영도 아닌 세 번째 답. 이 절은 그
+# 자백도 함께 찍어, 자백이 조용히 늘어나는 것까지 눈에 보이게 한다.
+MIRROR_PIPES = [
+  ("trigger list>>take", '[self:trigger]{op: "list"} >> [table:take]{n: 1}'),
+  ("switch list>>take",  '[self:switch]{op: "list"} >> [table:take]{n: 1}'),
+  ("agents>>take",       '[others:agents] >> [table:take]{n: 1}'),
+]
+
+def _mirror_report(fr):
+    """(재투영된 거울 수, 변환 안 된 거울 키들) — 후자가 봉투의 남은 거짓말.
+
+    stale 판정은 **포함(containment)**으로 좁힌다: 현재 통화 행을 전부 품은 채 더 긴
+    리스트 = '같은 행인데 변환을 안 따라온 원본'(=B15-1 회귀). 단순히 '더 길다'로 재면
+    종류가 다른 형제 원장(trigger list 의 existing_schedules)이 매일 WARN 을 울려
+    압력계가 곧 무시된다 — 거짓 경보를 내는 계기는 죽은 계기다.
+    """
+    if not isinstance(fr, dict):
+        return 0, []
+    cur = fr.get("items")
+    if not isinstance(cur, list):
+        cur = []
+    stale = []
+    for k, v in fr.items():
+        if k in ("items", "rows", "columns", "table") or not isinstance(v, list):
+            continue
+        if len(v) > len(cur) and cur and all(r in v for r in cur):
+            stale.append(k)
+    return len(fr.get("_mirrored") or []), sorted(stale)
+
+print("\n" + "="*72); print("§1C-3 거울 키 압력계 (재투영 계수 + 남은 stale 뷰)"); print("="*72)
+mirror_total = 0
+mirror_warn = []
+for name, code in MIRROR_PIPES:
+    fr = final_of(execute(code))
+    n_mirror, stale = _mirror_report(fr)
+    mirror_total += n_mirror
+    if stale:
+        mirror_warn.append(f"{name}:{','.join(stale)}")
+    confessed = fr.get("_untransformed") or [] if isinstance(fr, dict) else []
+    print(f"  [{'WARN' if stale else 'OK  '}] {name:22} 재투영={n_mirror} "
+          f"자백={confessed or '-'} 남은 stale={stale or '-'}")
+if mirror_warn:
+    print(f"  ⚠ 변환 안 따라온 거울 키(회귀 의심): {'; '.join(mirror_warn)}")
+
+
 # ── §1C-2 연산자 (문법 자체 — 최종 통화가 아니라 *동작*을 본다) ──
 # 왜 별도 절인가: §1C 는 final_result 의 모양만 보므로 "폴백을 탔는가/단축했는가" 를 못 본다.
 # `??` 가 몇 달간 죽은 채 살아 있던 이유가 정확히 이 사각지대였다(NameError → 아무도 안 봄).

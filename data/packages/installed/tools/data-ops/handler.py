@@ -137,12 +137,69 @@ def _get_table(obj):
     return None, None
 
 
+_CURRENCY_KEYS = ("items", "table", "columns", "rows", "count")
+
+
+def _reproject_mirrors(out, originals, new_rows):
+    """거울 키(=통화를 도메인 이름으로 병기한 키)를 변환 결과로 함께 갱신한다.
+
+    ★B15-1 (2026-08-20 상상훈련 15회차): `[self:trigger]{op:"list"}` 는 `items` 와
+    `triggers` 에 **같은 리스트**를 병기한다(items 병행 방출 규약 — 그래야 `>> [table:*]`
+    가 통화를 찾는다). 그런데 변환자는 `items` 만 갈아끼우고 `triggers` 는 그대로 두어,
+    `take{n:1}` 뒤에도 `triggers` 에 전 건이 남았다 — **변환자는 일했는데 봉투가**
+    **거짓말을 한다**(실측: items 1건/count 1 인데 triggers 3건, filter 전멸 뒤에도 3건).
+    읽는 쪽(모델·사람·표면)은 도메인 이름을 먼저 믿으므로 "n개만 골라 알림"이 전량으로
+    번진다. `message`/`text`/`table` 을 이미 여기서 떨어내는 것과 **같은 부류**이고,
+    거울 키는 이름을 미리 알 수 없으므로 이름 목록이 아니라 **동일성**으로 찾는다.
+
+    ★생산자 7곳(trigger list/history·switch·agents·guestpc limbs·pc-manager top·web
+    sections)을 각각 고치지 않고 이 병목에서 닫는 이유: 8번째 병행 방출이 다시 감염된다
+    (입구를 하나로 접은 `_get_items_for_fields` 선례, F6).
+
+    판정 순서(오폭 방지): ①객체 동일성(is) 먼저 — 병기는 같은 객체를 두 키에 넣으므로
+    대부분 여기서 잡힌다 ②값 동등(==) 폴백 — 복사본 병기(`list(x)`)용. 빈 리스트는
+    값 동등을 건너뛴다(무관한 빈 리스트 오폭 방지). 원본과 **다른** 컬렉션은 손대지
+    않는다 — 예: trigger list 의 `existing_schedules` 는 종류가 다른 원장이라 보존된다.
+
+    `_mirrored` 는 순찰용 계수 표식이다(거울 키 증식 압력계 — 재투영이 "거울 키를
+    마음껏 만들어도 된다"는 면허로 오독되지 않게. 하우스 교리는 단일 통화 {items}).
+    """
+    cands = [o for o in (originals or []) if isinstance(o, list)]
+    mirrors = []
+    for k, v in list(out.items()):
+        if not cands or k in _CURRENCY_KEYS or not isinstance(v, list):
+            continue
+        hit = any(v is o for o in cands) or any(o and v == o for o in cands)
+        if hit:
+            out[k] = list(new_rows)
+            mirrors.append(k)
+    if mirrors:
+        out["_mirrored"] = sorted(mirrors)
+
+    # ★자백(2026-08-20 사용자 판정): 거울이 **아닌** 형제 컬렉션은 변환을 따라가지 못한다.
+    #   두 부류가 있고 둘 다 기계가 대신 정할 수 없다 —
+    #   ①종류가 다른 형제 원장(trigger list 의 existing_schedules): 애초에 다른 데이터라
+    #     변환 대상이 아니다. 손대면 그건 통화 수리가 아니라 의미 결정이다.
+    #   ②파생 원천(others:agents 의 projects 트리 — items 는 이걸 *펼쳐서* 만든 것):
+    #     평평한 items 로는 되돌릴 수 없어 재투영이 원리적으로 불가능하다.
+    #   그래서 드롭도 재투영도 아닌 **자백**을 택한다: 이 키들은 변환 전 상태라고 봉투에
+    #   적어 둔다. 읽는 쪽(모델·사람)이 도메인 이름을 통화로 오독하는 것이 B15-1 의 실제
+    #   피해였고, 자백은 그 오독만 막으면서 데이터는 하나도 안 버린다.
+    untouched = [k for k, v in out.items()
+                 if k not in _CURRENCY_KEYS and k not in mirrors and not str(k).startswith("_")
+                 and isinstance(v, list) and v and any(isinstance(x, dict) for x in v)]
+    if untouched:
+        out["_untransformed"] = sorted(untouched)
+    return out
+
+
 def _emit_items(envelope, new_items):
     """변환된 항목들을 원 envelope에 비파괴로 끼워 반환.
 
     단일 통화 키 `items`로 내보낸다(2026-06-27 단일통화 컷오버 완료 — 옛 이중방출 은퇴).
     """
     out = dict(envelope) if isinstance(envelope, dict) else {}
+    _orig = [out.get("items"), out.get("rows")]   # 거울 판정 기준 (덮어쓰기 전에 잡는다)
     out.pop("message", None)            # 변환 후 stale·O(items) 산문 제거 (파이프 블로업·정합성)
     out.pop("text", None)               # 동류 — 원본 전체를 서술하는 text 가 take(5) 뒤에도 15줄이면 거짓말(2026-08-08 실측)
     # stale 파생 뷰 제거 — message 와 같은 원리. items 만 갱신하고 낡은 table 을 남기면
@@ -154,11 +211,12 @@ def _emit_items(envelope, new_items):
     out["items"] = new_items          # 단일 통화
     out["count"] = len(new_items)
     out.setdefault("success", True)
-    return out
+    return _reproject_mirrors(out, _orig, new_items)
 
 
 def _emit_table(envelope, new_table):
     out = dict(envelope) if isinstance(envelope, dict) else {}
+    _orig = [out.get("items"), out.get("rows")]   # 거울 판정 기준 (덮어쓰기 전에)
     out.pop("message", None)            # 변환 후 stale 산문 제거
     out.pop("text", None)               # 동류(2026-08-08)
     # 대칭: table 만 갱신하고 낡은 items 를 남기면 같은 stale 부류 (2026-08-07).
@@ -170,7 +228,8 @@ def _emit_table(envelope, new_table):
         out["columns"] = new_table.get("columns", [])
         out["rows"] = new_table.get("rows", [])
     out.setdefault("success", True)
-    return out
+    # 표 경로의 거울 키는 행 dict 로 투영한다 — 도메인 키에 열-배열을 꽂으면 모양이 깨진다.
+    return _reproject_mirrors(out, _orig, _row_dicts(new_table))
 
 
 def _field_missing_error(verb, missing, rows):

@@ -419,12 +419,20 @@ def _run_returns_drift_sweep() -> Dict:
             out = {"error": f"요약 파싱 실패: {str(e)[:100]}"}
         if s is not None:
             over, under = s.get("over") or [], s.get("under") or []
-            out = {"checked": s.get("checked"), "over": over, "under": under}
+            unverified = s.get("op_unverified") or []
+            out = {"checked": s.get("checked"), "over": over, "under": under,
+                   "op_unverified": unverified}
+            # 미검증 op 경로는 드리프트(약속 위반)가 아니라 '조용한 미검증' — 깃발은
+            # 세우되(ok=False 아님) 노트로 자백해 fixture/exempt 정비를 대장장이 입력으로.
             ok = not over and not under
-            note = (None if ok else
-                    f"선언 드리프트 — scalar/effect인데 통화 {len(over)}건"
-                    f"{': ' + ', '.join(over[:5]) if over else ''}"
-                    + (f" / 통화 선언인데 scalar {len(under)}건: {', '.join(under[:3])}" if under else ""))
+            parts = []
+            if over:
+                parts.append(f"선언 드리프트 — scalar/effect인데 통화 {len(over)}건: {', '.join(over[:5])}")
+            if under:
+                parts.append(f"통화 선언인데 scalar {len(under)}건: {', '.join(under[:3])}")
+            if unverified:
+                parts.append(f"미검증 op 경로 {len(unverified)}건(fixture/exempt 없음): {', '.join(unverified[:5])}")
+            note = " / ".join(parts) if parts else None
             try:
                 save_self_check({"node": "__ibl_health__", "action": "returns_drift",
                                  "success": ok, "response_ms": 0,

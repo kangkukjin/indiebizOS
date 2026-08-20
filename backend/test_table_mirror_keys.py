@@ -120,7 +120,11 @@ def main():
 
     print('== 6. groupby (행 모양이 바뀌는 변환) ==')
     r = run('data_groupby', trig_env(), by='enabled', agg='count')
-    check('거울도 집계행', r.get('triggers') == r.get('items'), r.get('triggers'))
+    # ★옛 검사식 r['triggers'] == r['items'] 는 agg='count' 스칼라가 *거절*되던 동안
+    # None == None 으로 공허 통과했다 (2026-08-21 스칼라 count 수용이 드러냄).
+    # 의도(거울 = 집계 행)를 직접 단언한다 — 표 경로 거울은 변환된 행 dict (검사 5 규약).
+    check('집계 성공(스칼라 count 수용)', r.get('success', True) is not False, r.get('error'))
+    check('거울도 집계행', r.get('triggers') == [{'enabled': True, 'count': 3}], r.get('triggers'))
 
     print('== 7. 순수 table 통화 회귀 ==')
     r = run('data_take', {'columns': ['k', 'v'], 'rows': [['a', 1], ['b', 2], ['c', 3]]}, n=1)

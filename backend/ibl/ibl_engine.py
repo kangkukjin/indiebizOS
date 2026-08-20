@@ -754,6 +754,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     import time as _time
     _action_start = _time.time()
     _action_success = True
+    _action_err = None
     result = None
 
     try:
@@ -794,8 +795,11 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
                 _action_success = False
             elif result.get("error"):  # error 키가 있고 값이 비어있지 않은 경우
                 _action_success = False
-    except Exception:
+            if not _action_success:
+                _action_err = result.get("error") or result.get("message")
+    except Exception as _exc:
         _action_success = False
+        _action_err = f"exception: {str(_exc)[:260]}"
         raise
     finally:
         _action_ms = round((_time.time() - _action_start) * 1000)
@@ -814,12 +818,15 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             })
         except Exception:
             pass
-        # action_health 기록 (실사용 및 self_check 모두)
+        # action_health 기록 (실사용 및 self_check 모두). channel(호출 통로)·error(실패
+        # 오류문 절단본)는 2026-08-21 ③ 조사 — §1D 를 추정이 아니라 기록으로 읽기 위함.
         try:
             from pulse_db import record_action_health
-            from thread_context import is_health_check_mode
+            from thread_context import is_health_check_mode, get_call_channel
             _src = "self_check" if agent_id == "__self_check__" or is_health_check_mode() else "usage"
-            record_action_health(node, action, _action_success, _action_ms, source=_src)
+            record_action_health(node, action, _action_success, _action_ms, source=_src,
+                                 channel=get_call_channel(),
+                                 error=(None if _action_success else _action_err))
         except Exception:
             pass
 

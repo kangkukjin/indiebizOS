@@ -208,6 +208,30 @@ def get_current_surface() -> str:
     return getattr(_thread_local, 'surface', None)
 
 
+# ============ Call Channel (action_health 출처 — 2026-08-21 ③ 조사) ============
+# 이 IBL 실행을 *어느 통로가* 시작했는가. action_health.channel 로 기록돼 §1D 실사용
+# 실패율을 읽을 수 있게 한다 (그동안 사용자가 겪은 실패와 배터리·앱·순찰이 한 칸에
+# 섞여 품질 지표로 못 읽었다 — 08-15 selfcheck origin 분리와 같은 부류의 일반화).
+# 값: 'agent'(에이전트 도구 루프 — 위임·재진입 포함) / 'app'(앱·조종실·원격·포털의
+# 직접 /ibl/execute) / 'scheduler'(캘린더 파이프라인 직접 실행). 순찰·스윕은 channel 이
+# 아니라 source='self_check' 가 가른다. ★스케줄러가 *위임으로* 연 에이전트 런은 도구
+# 스레드가 새로 떠 'agent' 로 읽힌다(교차 스레드 전파는 task_id 유실 부류 — 미해결 명시).
+
+def set_call_channel(channel: str, override: bool = False):
+    """호출 통로 설정 — 기본 set-if-unset (바깥 이음매가 먼저 세운 값을 보존)."""
+    if override or getattr(_thread_local, 'call_channel', None) is None:
+        _thread_local.call_channel = channel
+
+
+def get_call_channel() -> str:
+    """현재 실행의 호출 통로 ('agent'/'app'/'scheduler' 또는 None=미상)."""
+    return getattr(_thread_local, 'call_channel', None)
+
+
+def clear_call_channel():
+    _thread_local.call_channel = None
+
+
 def is_web_surface() -> bool:
     """요청 표면이 브라우저인가 — 출력지(소리·저장) 판정용."""
     return get_current_surface() == 'web'
@@ -429,6 +453,7 @@ def clear_all_context():
     _thread_local.user_input = ''
     _thread_local.tool_calls = []
     _thread_local.health_check_mode = False
+    _thread_local.call_channel = None
 
 
 def get_context_summary() -> dict:

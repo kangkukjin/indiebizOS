@@ -47,7 +47,9 @@ def _init_pulse_db():
             success INTEGER NOT NULL,
             response_ms INTEGER,
             source TEXT NOT NULL DEFAULT 'usage',
-            timestamp TEXT NOT NULL
+            timestamp TEXT NOT NULL,
+            channel TEXT,
+            error TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_action_health_na ON action_health(node, action);
         CREATE INDEX IF NOT EXISTS idx_action_health_ts ON action_health(timestamp);
@@ -87,15 +89,52 @@ def _get_pulse_db():
     return conn
 
 
-def record_action_health(node: str, action: str, success: bool, response_ms: int = None, source: str = "usage"):
+_AH_COLS_ENSURED = False
+
+
+def _ensure_action_health_cols(conn):
+    """channel·error 컬럼 지연 마이그레이션 (2026-08-21 ③ 조사 — 멱등, 프로세스당 1회).
+
+    channel = 호출 통로('agent'/'app'/'scheduler', thread_context.get_call_channel) —
+    §1D 실사용 실패율에서 사용자가 겪은 실패와 앱·배터리를 가른다.
+    error = 실패 시 오류문 절단본(300자) — 이게 없어서 ③ 분석의 절반이 막혔다
+    (self:time 16% 미해명 부류: 실패 사유가 한 줄도 안 남아 재현 외엔 길이 없었다).
+    """
+    global _AH_COLS_ENSURED
+    if _AH_COLS_ENSURED:
+        return
+    try:
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(action_health)")}
+        if "channel" not in cols:
+            conn.execute("ALTER TABLE action_health ADD COLUMN channel TEXT")
+        if "error" not in cols:
+            conn.execute("ALTER TABLE action_health ADD COLUMN error TEXT")
+        _AH_COLS_ENSURED = True
+    except Exception:
+        pass  # 마이그레이션 실패 시 아래 INSERT 가 구 스키마 폴백으로 감
+
+
+def record_action_health(node: str, action: str, success: bool, response_ms: int = None,
+                         source: str = "usage", channel: str = None, error: str = None):
     """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
     try:
         conn = _get_pulse_db()
-        conn.execute(
-            "INSERT INTO action_health (node, action, success, response_ms, source, timestamp) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (node, action, 1 if success else 0, response_ms, source, datetime.now().isoformat())
-        )
+        _ensure_action_health_cols(conn)
+        err = (str(error)[:300] if error else None)
+        try:
+            conn.execute(
+                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp, channel, error) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (node, action, 1 if success else 0, response_ms, source,
+                 datetime.now().isoformat(), channel, err)
+            )
+        except sqlite3.OperationalError:
+            # 구 스키마 폴백 (마이그레이션 실패 시에도 기록 자체는 산다)
+            conn.execute(
+                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (node, action, 1 if success else 0, response_ms, source, datetime.now().isoformat())
+            )
         conn.commit()
         conn.close()
     except Exception:

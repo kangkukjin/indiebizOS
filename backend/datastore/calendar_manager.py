@@ -606,6 +606,16 @@ class CalendarManagerBase:
 
         self._log(f"작업 시작: {task.get('title', task.get('name', 'unknown'))}")
 
+        # 호출 통로 기록 (action_health.channel) — 스케줄러 발화. 루프 스레드는 재사용되므로
+        # finally 에서 반드시 해제한다. ★위임으로 연 에이전트 런은 도구 스레드가 새로 떠
+        # 'agent' 로 읽힘(교차 스레드 전파 미해결 — thread_context 주석 참조).
+        try:
+            from thread_context import set_call_channel, clear_call_channel
+            set_call_channel("scheduler", override=True)
+            _chan_set = True
+        except Exception:
+            _chan_set = False
+
         try:
             result = action_func(task)
 
@@ -620,6 +630,12 @@ class CalendarManagerBase:
         except Exception as e:
             self._log(f"작업 실패: {task.get('title')} - {str(e)}")
             return None
+        finally:
+            if _chan_set:
+                try:
+                    clear_call_channel()
+                except Exception:
+                    pass
 
     def run_task_now(self, task_id: str) -> bool:
         """작업 즉시 실행"""

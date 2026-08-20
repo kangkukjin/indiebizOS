@@ -2768,7 +2768,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: AI 구조화 원자(입구) — 비정형 입력(파일·텍스트·파이프 본문)을 schema 계약의 레코드 items 통화로. 이미 표인 것은 [self:read]{tables:true}(결정론), 문서 조판용 IR 은 [table:structure].
-        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
+        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
         group: ai
         router: handler
         tool: ai_struct
@@ -2816,6 +2816,7 @@ nodes:
           returns:
             rebuild_index: effect
             stats: scalar
+            vault: scalar
           side_effect:
             posts: false
             search: false
@@ -2823,6 +2824,9 @@ nodes:
           fixture:
             search: '[self:blog]{op: "search", query: "인공지능"}'
             stats: '[self:blog]{op: "stats"}'
+          exempt:
+            check_new: 수집 쓰기(posts INSERT + vault .md) + RSS 네트워크 의존 — 무인 정기 점검이 수집 시점을 소유하게 됨
+            latest: 지연 물질화(vault .md 부재 시 write_post_md) — 부작용 op 라 fixture 금지 가드 대상
           values:
             posts: 글 목록 조회 (category/기간 필터)
             search: RAG 검색 (mode hybrid/semantic/content)
@@ -3179,6 +3183,8 @@ nodes:
             save: effect
             delete: effect
             sync: effect
+          exempt:
+            ingest: AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합
           side_effect:
             query: false
           values:
@@ -3437,6 +3443,8 @@ nodes:
           returns:
             save: effect
             delete: effect
+          exempt:
+            ingest: AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합
           side_effect:
             query: false
           values:
@@ -7102,8 +7110,8 @@ nodes:
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자 — items를 키 필드로 그룹지어 집계(count/sum/avg/min/max).
-        target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
+        description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max, 생략(또는 "count")=그룹별 행수.
+        target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수). ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
         group: transform
         router: handler
         tool: data_groupby

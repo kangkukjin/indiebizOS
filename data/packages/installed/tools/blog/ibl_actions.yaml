@@ -32,6 +32,7 @@ actions:
       returns:
         rebuild_index: effect
         stats: scalar
+        vault: scalar    # 전 mode(stats/export/rebuild/link)가 요약 dict — 통화 아님 (2026-08-21 op 축 순찰 정비)
       side_effect:
         posts: false
         search: false
@@ -40,6 +41,9 @@ actions:
       fixture:
         search: '[self:blog]{op: "search", query: "인공지능"}'
         stats: '[self:blog]{op: "stats"}'
+      exempt:
+        check_new: '수집 쓰기(posts INSERT + vault .md) + RSS 네트워크 의존 — 무인 정기 점검이 수집 시점을 소유하게 됨'
+        latest: '지연 물질화(vault .md 부재 시 write_post_md) — 부작용 op 라 fixture 금지 가드 대상'
       values:
         posts: 글 목록 조회 (category/기간 필터)
         search: RAG 검색 (mode hybrid/semantic/content)

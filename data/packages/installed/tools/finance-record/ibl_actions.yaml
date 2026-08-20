@@ -18,6 +18,8 @@ actions:
         save: effect
         delete: effect
         sync: effect
+      exempt:
+        ingest: 'AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합'
       side_effect:
         query: false
       values:

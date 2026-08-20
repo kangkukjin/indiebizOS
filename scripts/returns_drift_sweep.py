@@ -28,6 +28,7 @@ def _load_declarations():
     decl = {}          # "node:action" -> returns (액션 레벨)
     decl_op = {}       # "node:action#op" -> returns (op 레벨)
     default_op = {}    # "node:action" -> ops.default
+    op_values = {}     # "node:action" -> [op, ...] (ops.values 키 — op 축 우주 열거용)
     for node, nd in (reg.get("nodes") or {}).items():
         for act, ad in (nd.get("actions") or {}).items():
             decl[f"{node}:{act}"] = ad.get("returns") or "?"
@@ -36,7 +37,10 @@ def _load_declarations():
                 default_op[f"{node}:{act}"] = ops["default"]
             for op, rv in (ops.get("returns") or {}).items():
                 decl_op[f"{node}:{act}#{op}"] = rv
-    return decl, decl_op, default_op
+            vals = list((ops.get("values") or {}).keys())
+            if vals:
+                op_values[f"{node}:{act}"] = vals
+    return decl, decl_op, default_op, op_values
 
 
 import re as _re
@@ -73,9 +77,14 @@ def _declared_of(name, decl, decl_op, default_op, code=""):
 
 
 def _execute(code, timeout=60):
+    # agent_id="__self_check__" — 이 순찰의 실행이 action_health 에 source='self_check' 로
+    # 기록되게 (ibl_health_check 선례). 이게 없던 동안 주 1회 126 fixture 가 'usage' 로
+    # 적재돼 §1D 실사용 실패율을 오염시켰다(2026-08-21 ③ 조사 — 배터리·순찰이 실사용
+    # 계수에 섞이는 부류).
     req = urllib.request.Request(
         f"{API}/ibl/execute",
-        data=json.dumps({"code": code, "project_id": "정보센터"}).encode(),
+        data=json.dumps({"code": code, "project_id": "정보센터",
+                         "agent_id": "__self_check__"}).encode(),
         headers={"Content-Type": "application/json"})
     return json.load(urllib.request.urlopen(req, timeout=timeout))
 
@@ -112,29 +121,92 @@ def _actual_shape(env):
     return "scalar"
 
 
+CURRENCY = {"items", "table", "blocks"}
+
+
+def _is_drift(declared, actual):
+    if declared in ("scalar", "effect") and actual in CURRENCY:
+        return "over"
+    if declared in ("items", "table") and actual == "scalar":
+        return "under"
+    return None
+
+
+def _try_once(code):
+    """1회 실행 → (shape, items_n, error). error 는 실행 불능(HTTP/타임아웃)만."""
+    try:
+        env = _final_envelope(_execute(code))
+    except Exception as e:
+        return None, 0, e
+    n = len(env.get("items") or []) if isinstance(env, dict) else 0
+    return _actual_shape(env), n, None
+
+
+def _op_axis_report(decl, decl_op, default_op, op_values, fixtures, exempt):
+    """op 축 검증 커버리지 — 통화(items/table)를 약속한 op 경로가 fixture·exempt 어느
+    쪽에도 없으면 '조용한 미검증'이다 (2026-08-21 ③ 조사: 이 신고가 없던 동안
+    '전체 정합'이 op 축 사각을 가렸다). fixture 를 못 다는 op 은 exempt 로 사유를
+    명시할 것 — 침묵 아닌 자백."""
+    total = covered = exempted = 0
+    unverified = []
+    for name, vals in op_values.items():
+        plain = fixtures.get(name)
+        plain_op = None
+        if plain:
+            m = _OP_IN_CODE.search(plain)
+            plain_op = m.group(1) if m else default_op.get(name)
+        for op in vals:
+            r = decl_op.get(f"{name}#{op}", decl.get(name))
+            if r not in ("items", "table"):
+                continue
+            total += 1
+            k = f"{name}#{op}"
+            if k in fixtures or op == plain_op:
+                covered += 1
+            elif k in exempt or name in exempt:
+                exempted += 1
+            else:
+                unverified.append(k)
+    return total, covered, exempted, unverified
+
+
 def main():
-    decl, decl_op, default_op = _load_declarations()
-    fixtures = json.load(open(ROOT / "data" / "ibl_fixtures.json"))["fixtures"]
-    rows, failed = [], []
+    decl, decl_op, default_op, op_values = _load_declarations()
+    fx = json.load(open(ROOT / "data" / "ibl_fixtures.json"))
+    fixtures, exempt = fx["fixtures"], fx.get("exempt") or {}
+    rows, failed, retried = [], [], []
     for name, code in sorted(fixtures.items()):
         declared, level = _declared_of(name, decl, decl_op, default_op, code)
-        try:
-            env = _final_envelope(_execute(code))
-        except Exception as e:
-            failed.append((name, str(e)[:80]))
+        actual, n, err = _try_once(code)
+        if err is not None or _is_drift(declared, actual):
+            # 외부 API 일시 블립 흡수 — 1회 재시도 (골든 파이프 §1C 선례. 2026-08-20
+            # sense:classic 실측: 같은 코드·fixture 가 1차 [B]→2차 정합 = 주 1회 거짓
+            # 깃발. 진짜 회귀는 결정론적이라 재시도로 안 사라진다).
+            a2, n2, e2 = _try_once(code)
+            if e2 is None:
+                if err is not None or not _is_drift(declared, a2):
+                    retried.append(name)
+                actual, n, err = a2, n2, None
+        if err is not None:
+            failed.append((name, str(err)[:80]))
             continue
-        actual = _actual_shape(env)
-        # items 개수(빈 목록=통화 계약은 지킴)
-        n = len(env.get("items") or []) if isinstance(env, dict) else 0
         rows.append((name, declared, level, actual, n))
 
-    CURRENCY = {"items", "table", "blocks"}
     over = [r for r in rows if r[1] in ("scalar", "effect") and r[3] in CURRENCY]
     under = [r for r in rows if r[1] in ("items", "table") and r[3] == "scalar"]
     exact = [r for r in rows if r not in over and r not in under]
+    op_total, op_covered, op_exempt, op_unverified = _op_axis_report(
+        decl, decl_op, default_op, op_values, fixtures, exempt)
 
     print("==== returns 드리프트 스윕 ====")
-    print(f"실측 {len(rows)} · 선언과 정합 {len(exact)} · 실행 불능 {len(failed)}")
+    print(f"실측 {len(rows)} · 선언과 정합 {len(exact)} · 실행 불능 {len(failed)}"
+          + (f" · 블립 재시도로 흡수 {len(retried)}건({', '.join(retried[:5])})" if retried else ""))
+    print(f"op 축 커버리지: 통화 약속 op 경로 {op_total} = fixture {op_covered} + exempt {op_exempt}"
+          f" + 미검증 {len(op_unverified)}")
+    if op_unverified:
+        print("  ⚠️ 조용한 미검증 op 경로 (fixture 또는 exempt+사유를 소스 yaml 에 달 것):")
+        for k in op_unverified[:20]:
+            print(f"    · {k}")
     print(f"\n[A] 선언 scalar/effect 인데 통화 실측 (조합 가능한데 선언이 가림 — 건강 단언 사각) — {len(over)}건")
     for name, d, lvl, a, n in over:
         print(f"  🚩 {name}: 선언 {d}({lvl}) → 실측 {a}" + (f"[{n}행]" if a == "items" else ""))
@@ -150,6 +222,9 @@ def main():
     print("@@RETURNS_DRIFT@@ " + json.dumps({
         "checked": len(rows), "exact": len(exact), "failed": len(failed),
         "over": [r[0] for r in over], "under": [r[0] for r in under],
+        "retried": retried,
+        "op_paths": op_total, "op_covered": op_covered, "op_exempt": op_exempt,
+        "op_unverified": op_unverified,
     }, ensure_ascii=False))
 
 

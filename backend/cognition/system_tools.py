@@ -902,6 +902,14 @@ def _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, can
 
 def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
     """도구 실행 내부 구현 (시스템 도구 + 동적 로딩). project_path는 필수."""
+    # 호출 통로 기록 (action_health.channel) — 에이전트 도구 루프. set-if-unset:
+    # 도구 스레드는 매 호출 새로 뜨므로(_execute_tool_with_cancel) 항상 미설정이고,
+    # 같은-스레드 경로에선 바깥 이음매(스케줄러 등)가 먼저 세운 값을 보존한다.
+    try:
+        from thread_context import set_call_channel
+        set_call_channel("agent")
+    except Exception:
+        pass
     try:
         # 승인 요청 도구 (가장 먼저 처리)
         if tool_name == "request_user_approval":

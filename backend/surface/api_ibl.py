@@ -100,15 +100,21 @@ async def execute_ibl_code(req: IBLRequest):
         from thread_context import (set_current_project_id, get_current_project_id,
                                     set_current_surface, get_current_surface,
                                     set_current_task_id, get_current_task_id,
-                                    clear_current_task_id)
+                                    clear_current_task_id,
+                                    set_call_channel, get_call_channel, clear_call_channel)
 
         def _run_in_context():
             _prev_pid = get_current_project_id()
             _prev_surface = get_current_surface()
             _prev_task = get_current_task_id()
+            _prev_channel = get_call_channel()
             if req.project_id:
                 set_current_project_id(req.project_id)
             set_current_surface(req.surface)
+            # 호출 통로 (action_health.channel): req.agent_id 명시 = 에이전트 신원이 실린
+            # 호출(claude_code MCP 재진입 등) / 비어 있음 = 앱·조종실·원격·포털 직접 실행.
+            # to_thread 풀 스레드는 재사용되므로 반드시 복원한다 (surface 선례).
+            set_call_channel("agent" if req.agent_id else "app", override=True)
             # 태스크 컨텍스트 복원 — claude_code(MCP→HTTP 재진입)가 실어 보낸 부모 task_id.
             # cross 위임(_execute_call_project_agent)이 get_current_task_id()로 부모를 찾는다.
             if req.task_id:
@@ -119,6 +125,10 @@ async def execute_ibl_code(req: IBLRequest):
             finally:
                 set_current_project_id(_prev_pid)
                 set_current_surface(_prev_surface)
+                if _prev_channel is None:
+                    clear_call_channel()
+                else:
+                    set_call_channel(_prev_channel, override=True)
                 if req.task_id:
                     # clear 는 set 과 대칭 — task_sysai_ 접두사가 이 워커 스레드에 등록한
                     # 활성작업(_touch_active_work)도 함께 해제된다.

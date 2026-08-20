@@ -534,6 +534,20 @@ try:
     if not rows: print("  (실패 기록 없음)")
     for a, ok, tot in rows:
         print(f"  {a:28} 실패 {tot-ok}/{tot} ({100*(tot-ok)/tot:.0f}%)")
+    # 호출 통로 내역 (2026-08-21 ③ 조사 — channel 컬럼 신설 이후 행만. agent=에이전트
+    # 도구 루프 / app=앱·조종실·원격 직접 실행 / scheduler=캘린더 발화 / ?=신설 전 구 행).
+    try:
+        ch = c.execute("""SELECT COALESCE(channel,'?') AS ch,
+                                 SUM(CASE WHEN success IN (1,'1','true','True') THEN 0 ELSE 1 END) AS bad,
+                                 COUNT(*) AS tot
+                          FROM action_health
+                          WHERE source = 'usage'
+                            AND timestamp >= strftime('%Y-%m-%dT%H:%M:%S', 'now', 'localtime', '-7 days')
+                          GROUP BY ch ORDER BY tot DESC""").fetchall()
+        if ch:
+            print("  통로별: " + " · ".join(f"{name} 실패 {bad}/{tot}" for name, bad, tot in ch))
+    except Exception:
+        pass  # channel 컬럼 이전 스키마
     c.close()
 except Exception as e:
     print("  (조회 실패:", e, ") — 스키마 다를 수 있음")

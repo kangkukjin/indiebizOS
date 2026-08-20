@@ -731,19 +731,27 @@ def _op_groupby(prev, params):
     _, env = _get_table(prev)
     env = env or {}
     agg = params.get("agg")
+    if isinstance(agg, str) and agg.strip().lower() == "count":
+        # 'count' 는 원본열이 필요 없는 유일한 op — 스칼라 철자가 중의성 0 이라 agg 생략
+        # (그룹별 count)과 같은 뜻으로 받는다 (ep1258: 거절→같은 철자 재시도가 두 왕복을
+        # 태웠다). 다른 스칼라("sum" 등)는 대상 열 없이는 의미가 성립하지 않아 거절 유지.
+        agg = None
     # agg 정규화 → [(out_col, op, src_col)]
     specs = []
+    auto_named = []
     if isinstance(agg, dict):
         for k, v in agg.items():
             if isinstance(v, (list, tuple)) and len(v) == 2:  # {새열: [op, 원본열]}
                 specs.append((str(k), str(v[0]).lower(), str(v[1])))
-            else:  # {원본열: op}
+            else:  # {원본열: op} — 집계열 이름은 'op_원본열' 자동 명명
                 specs.append((f"{v}_{k}", str(v).lower(), str(k)))
+                auto_named.append(f"{v}_{k}")
     elif agg:
         # dict 아닌 agg("sum:size" 등)를 조용히 버리면 count 로 위장된다(⑧′ 실측)
         return {"success": False,
                 "error": f"groupby: agg 는 dict 여야 합니다 — {{원본열: op}} 또는 {{새열명: [op, 원본열]}}, "
-                         f"op={'/'.join(_AGG)}. 받은 값: {agg!r}"}
+                         f"op={'/'.join(_AGG)}. 예: {{매출: [\"sum\", \"금액\"]}}. 받은 값: {agg!r} "
+                         f"(스칼라는 'count' 만 허용 — 원본열이 필요 없는 유일한 op)"}
     for out_col, op, src in specs:
         if op not in _AGG:
             return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(_AGG)})"}
@@ -769,7 +777,14 @@ def _op_groupby(prev, params):
             fn = _AGG.get(op, _AGG["count"])
             row.append(fn(vals))
         out_rows.append(row)
-    return _emit_table(env, {"columns": out_cols, "rows": out_rows})
+    res = _emit_table(env, {"columns": out_cols, "rows": out_rows})
+    if auto_named and isinstance(res, dict) and res.get("success", True):
+        # 자동 명명 열을 봉투에 자백 — 다음 스텝(sort{by:...} 등)이 이 이름을 알아야
+        # 한 왕복으로 이어진다 (ep1116: 'count_name' 을 몰라 하류 sort 가 죽었다).
+        note = (f"groupby: 집계열 이름 = {auto_named} ({{원본열: op}} 형태는 'op_원본열' 자동 명명 — "
+                f"직접 정하려면 {{새열명: [op, 원본열]}})")
+        res["message"] = f"{res['message']} · {note}" if res.get("message") else note
+    return res
 
 
 # ───────────────────────── since (검침 — 시간 차분) ─────────────────────────

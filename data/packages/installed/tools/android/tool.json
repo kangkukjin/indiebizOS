@@ -146,6 +146,10 @@
           "duration_sec": {
             "type": "integer",
             "description": "녹음 길이 초 (op=record, 기본 5, 1~300)"
+          },
+          "device": {
+            "type": "string",
+            "description": "데스크탑 전용 — 마이크 장치 지정(이름 부분일치, macOS 는 인덱스도 허용). 미지정=가상 장치(Zoom·BlackHole 등)를 건너뛴 첫 실물 마이크"
           }
         }
       }

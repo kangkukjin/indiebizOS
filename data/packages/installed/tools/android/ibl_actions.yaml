@@ -54,7 +54,7 @@ nodes:
         router: handler
         tool: phone_listen
         scope: system
-        implementation: 지표어 몸별 프로브(능력 감지=jclass) — 폰=SpeechRecognizer(ko-KR)/MediaRecorder(Chaquopy→Kotlin) / 데스크탑=desktop_av.py ffmpeg(avfoundation·dshow·alsa) 녹음 + transcribe 는 Gemini 오디오 받아쓰기(키 없으면 녹음만 정직 반환). 하드웨어 무=no_hardware.
+        implementation: 지표어 몸별 프로브(능력 감지=jclass) — 폰=SpeechRecognizer(ko-KR)/MediaRecorder(Chaquopy→Kotlin) / 데스크탑=desktop_av.py ffmpeg(avfoundation·dshow·alsa) 녹음 + transcribe 는 Gemini 오디오 받아쓰기(키 없으면 녹음만 정직 반환). 장치 자동 선택은 가상 오디오(Zoom·BlackHole 등) 제외 첫 실물 마이크, device 파라미터로 명시 지정 가능. 하드웨어 무=no_hardware.
         ops:
           default: transcribe
           values:
@@ -259,6 +259,9 @@ tool_json:
         duration_sec:
           type: integer
           description: 녹음 길이 초 (op=record, 기본 5, 1~300)
+        device:
+          type: string
+          description: 데스크탑 전용 — 마이크 장치 지정(이름 부분일치, macOS 는 인덱스도 허용). 미지정=가상 장치(Zoom·BlackHole 등)를 건너뛴 첫 실물 마이크
   - name: phone_capture
     description: 폰 카메라로 사진 1장 촬영 (미리보기 없이 정지 캡처). 상시 촬영 아닌 호출 시 1회. facing=back(기본)/front. 폰에 jpg 저장 후 경로 반환. 폰 네이티브 전용(맥/원격은
       분산 IBL 포워드 — 파일은 폰 잔류). 앱 포그라운드일 때 가장 안정적.

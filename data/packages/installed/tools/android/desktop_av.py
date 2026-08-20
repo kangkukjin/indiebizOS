@@ -121,21 +121,59 @@ def see_desktop(tool_input: dict) -> dict:
             "device": str(name)}
 
 
-def _record(ff, sysname: str, duration: int) -> dict:
+# 가상 오디오 장치 — 실물 마이크가 아니라 무음이 녹음되는 부류(Zoom·BlackHole 등).
+# 명시 지정 없이 자동 선택할 때만 건너뛴다.
+_VIRTUAL_AUDIO_PAT = re.compile(
+    r"zoomaudiodevice|blackhole|loopback|soundflower|vb-?audio|virtual|"
+    r"teams\s*audio|aggregate", re.I)
+
+
+def _pick_audio(entries, requested=None):
+    """마이크 장치 선택. entries=[(key, name)] — mac 은 key=인덱스, win 은 key=이름.
+
+    requested 가 있으면 그 장치만(인덱스 일치 또는 이름 부분일치, 못 찾으면 None
+    = 다른 장치를 조용히 잡는 대신 정직 거절). 없으면 가상 장치를 건너뛴 첫
+    실물 마이크, 전부 가상이면 첫 장치 폴백.
+    """
+    if requested is not None and str(requested).strip():
+        req = str(requested).strip().lower()
+        for key, name in entries:
+            if req == str(key).lower() or req in name.lower():
+                return key, name
+        return None
+    real = [(k, n) for k, n in entries if not _VIRTUAL_AUDIO_PAT.search(n)]
+    return (real or entries)[0]
+
+
+def _device_list_str(entries) -> str:
+    return ", ".join(f"[{k}] {n}" for k, n in entries)
+
+
+def _record(ff, sysname: str, duration: int, device=None) -> dict:
     """마이크 녹음 공통 — m4a 파일 경로 반환."""
     out = os.path.join(_outputs_dir(), f"listen_{time.strftime('%Y%m%d_%H%M%S')}.m4a")
     if sysname == "Darwin":
         _, audio = _mac_devices(ff)
         if not audio:
             return _no_hw("마이크", '[others:ask]{message: "지금 소리 받아써줘"}')
-        idx, name = audio[0]
+        picked = _pick_audio(audio, device)
+        if picked is None:
+            return {"success": False,
+                    "error": f"요청한 마이크(device={device})가 없습니다 — "
+                             f"장치: {_device_list_str(audio)}"}
+        idx, name = picked
         cmd = [ff, "-hide_banner", "-f", "avfoundation", "-i", f":{idx}",
                "-t", str(duration), "-y", out]
     elif sysname == "Windows":
         _, audio = _win_devices(ff)
         if not audio:
             return _no_hw("마이크", '[others:ask]{message: "지금 소리 받아써줘"}')
-        name = audio[0]
+        picked = _pick_audio([(n, n) for n in audio], device)
+        if picked is None:
+            return {"success": False,
+                    "error": f"요청한 마이크(device={device})가 없습니다 — "
+                             f"장치: {', '.join(audio)}"}
+        name = picked[1]
         cmd = [ff, "-hide_banner", "-f", "dshow", "-i", f"audio={name}",
                "-t", str(duration), "-y", out]
     else:
@@ -191,14 +229,15 @@ def listen_desktop(op: str, tool_input: dict) -> dict:
     if not ff:
         return _no_ffmpeg()
     sysname = platform.system()
+    device = tool_input.get("device")
 
     if op == "record":
         duration = int(tool_input.get("duration_sec") or 10)
-        return _record(ff, sysname, duration)
+        return _record(ff, sysname, duration, device)
 
     # transcribe: timeout_sec 만큼 듣고 받아쓴다
     duration = int(tool_input.get("timeout_sec") or 8)
-    rec = _record(ff, sysname, duration)
+    rec = _record(ff, sysname, duration, device)
     if not rec.get("success"):
         return rec
     stt = _gemini_stt(rec["path"])

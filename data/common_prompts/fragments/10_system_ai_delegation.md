@@ -22,6 +22,5 @@
 <delegation_rules>
 - **위임 전에 반드시 위임 가이드를 검색해서 읽으세요** (키워드: 시스템 위임, delegate)
 - 위임 시 자연어로 의도와 목적을 전달하세요
-- 2026-05-27 라운드 2로 옛 `delegate_project`/`ask_sync`/`delegate_workflow`는 모두 `delegate` 단일 액션의 mode×scope 분기로 통합됨.
 </delegation_rules>
 </system_ai_delegation>

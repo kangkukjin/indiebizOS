@@ -399,6 +399,45 @@ def run():
         import shutil
         shutil.rmtree(tmp2, ignore_errors=True)
 
+    # ══ S11 — 열린 턴 재해소: 오염된 agent 필터를 무필터 폴백이 이긴다 (ep1282) ══
+    # 재진입 스레드 문맥은 episode_id 를 잃고 agent_id 를 'agent_001' 로 오염시킨다 —
+    # 필터 0건이 곧 '문맥 없음'(10초 유예→턴 절단)으로 떨어지면 안 된다.
+    tmp3 = Path(tempfile.mkdtemp(prefix="stg_epi_")).resolve()
+    try:
+        import sqlite3
+        db3 = tmp3 / "data" / "world_pulse.db"
+        db3.parent.mkdir(parents=True, exist_ok=True)
+        conn3 = sqlite3.connect(db3)
+        conn3.execute("CREATE TABLE episode_log (id INTEGER PRIMARY KEY, started_at TEXT, "
+                      "ended_at TEXT, agent TEXT, user_message TEXT, log TEXT, total_ms INTEGER)")
+        conn3.execute("INSERT INTO episode_log (id, started_at, ended_at, agent) "
+                      "VALUES (1, '2026-08-20T15:00:00', '2026-08-20T15:01:00', 'system_ai')")
+        conn3.execute("INSERT INTO episode_log (id, started_at, ended_at, agent) "
+                      "VALUES (2, '2026-08-20T15:01:29', NULL, 'system_ai')")
+        conn3.commit()
+        conn3.close()
+        import importlib.util as _ilu
+        spec_ra = _ilu.spec_from_file_location(
+            "red_apply_s11", str(REPO / "backend" / "datastore" / "red_apply.py"))
+        ra = _ilu.module_from_spec(spec_ra)
+        spec_ra.loader.exec_module(ra)
+        check("S11_executor_wrong_agent_falls_back",
+              ra._resolve_open_episode(str(db3), "agent_001") == 2)
+        check("S11_executor_right_agent_direct",
+              ra._resolve_open_episode(str(db3), "system_ai") == 2)
+        check("S11_scheduler_wrong_agent_falls_back",
+              st._current_episode_id(str(tmp3), "agent_001") == 2)
+        conn3 = sqlite3.connect(db3)
+        conn3.execute("UPDATE episode_log SET ended_at='2026-08-20T15:02:35' WHERE id=2")
+        conn3.commit()
+        conn3.close()
+        check("S11_no_open_row_stays_none",
+              ra._resolve_open_episode(str(db3), "agent_001") is None
+              and st._current_episode_id(str(tmp3), "agent_001") is None)
+    finally:
+        import shutil
+        shutil.rmtree(tmp3, ignore_errors=True)
+
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:
         print(f"  ✗ {f}")

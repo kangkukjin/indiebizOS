@@ -98,44 +98,67 @@ class PromptBuilder:
     def __init__(self, prompts_path: Path = None):
         self.prompts_path = prompts_path or PROMPTS_PATH
         self._cache: Dict[str, str] = {}
+        self._cache_mtime: Dict[str, float] = {}
+
+    # --- 캐시 무효화 (mtime) ---------------------------------------------
+    # ★캐시 주인은 get_prompt_builder() 의 전역 싱글턴이라 캐시 수명 = 프로세스 수명이다.
+    #   mtime 검사가 없으면 프롬프트·가이드·시스템문서를 고쳐도 백엔드 재기동 전까지
+    #   그 프로세스의 모든 턴에 옛 본문이 주입된다. 특히 가이드는 에이전트가 매 턴
+    #   실측 교훈을 적어 넣는 *절차 기억*이라 되먹임 루프(guide_feedback)가 통째로
+    #   무효가 된다 — 헤더의 freshness_note 는 매 턴 새로 읽어 '최종수정'만 신선해
+    #   보이므로 증상이 조용하다. get_system_structure_core() 의 무효화와 같은 규약.
+
+    @staticmethod
+    def _file_mtime(path: Path) -> Optional[float]:
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            return None
+
+    def _cache_valid(self, cache_key: str, path: Path) -> bool:
+        """캐시가 있고 그 뒤 파일이 안 바뀌었으면 True."""
+        if cache_key not in self._cache:
+            return False
+        mtime = self._file_mtime(path)
+        return mtime is not None and self._cache_mtime.get(cache_key) == mtime
+
+    def _stamp(self, cache_key: str, path: Path) -> None:
+        mtime = self._file_mtime(path)
+        if mtime is None:
+            self._cache_mtime.pop(cache_key, None)
+        else:
+            self._cache_mtime[cache_key] = mtime
+
+    def _read_cached(self, cache_key: str, path: Path) -> str:
+        """파일을 캐시해 읽되, mtime 이 바뀌었으면 다시 읽는다."""
+        if not path.exists():
+            self._cache.pop(cache_key, None)
+            self._cache_mtime.pop(cache_key, None)
+            return ""
+        if self._cache_valid(cache_key, path):
+            return self._cache[cache_key]
+        content = path.read_text(encoding='utf-8')
+        self._cache[cache_key] = content
+        self._stamp(cache_key, path)
+        return content
 
     def _load_file(self, filename: str) -> str:
-        """프롬프트 파일 로드 (캐시 사용)"""
-        if filename in self._cache:
-            return self._cache[filename]
-
-        file_path = self.prompts_path / filename
-        if file_path.exists():
-            content = file_path.read_text(encoding='utf-8')
-            self._cache[filename] = content
-            return content
-        return ""
+        """프롬프트 파일 로드 (캐시 사용 — mtime 무효화)"""
+        return self._read_cached(filename, self.prompts_path / filename)
 
     def _load_system_doc(self, filename: str) -> str:
-        """data/system_docs/ 폴더에서 시스템 문서 로드 (캐시 사용)"""
-        cache_key = f"__sysdoc__{filename}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        doc_path = get_base_path() / "data" / "system_docs" / filename
-        if doc_path.exists():
-            content = doc_path.read_text(encoding='utf-8')
-            self._cache[cache_key] = content
-            return content
-        return ""
+        """data/system_docs/ 폴더에서 시스템 문서 로드 (캐시 사용 — mtime 무효화)"""
+        return self._read_cached(
+            f"__sysdoc__{filename}",
+            get_base_path() / "data" / "system_docs" / filename,
+        )
 
     def _load_guide_file(self, guide_filename: str) -> str:
-        """data/guides/ 폴더에서 가이드 파일 로드 (캐시 사용)"""
-        cache_key = f"__guide__{guide_filename}"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        guide_path = get_base_path() / "data" / "guides" / guide_filename
-        if guide_path.exists():
-            content = guide_path.read_text(encoding='utf-8')
-            self._cache[cache_key] = content
-            return content
-        return ""
+        """data/guides/ 폴더에서 가이드 파일 로드 (캐시 사용 — mtime 무효화)"""
+        return self._read_cached(
+            f"__guide__{guide_filename}",
+            get_base_path() / "data" / "guides" / guide_filename,
+        )
 
     def _guide_block(self, guide_filename: str, origin: str = "agent") -> str:
         """주입할 가이드 블록 = 제목 + **신선도 표식** + 본문. 없으면 빈 문자열.

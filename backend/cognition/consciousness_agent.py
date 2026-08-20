@@ -499,18 +499,32 @@ _midtier_provider_initialized = False
 _system_oneshot_provider = None  # 본격(system_ai) 원샷 프로바이더 (싱글톤, 도구·세션 없음)
 _system_oneshot_provider_initialized = False
 _unconscious_prompt_cache: str = ""
+_unconscious_prompt_mtime: Optional[float] = None
 
 
 def get_unconscious_prompt() -> str:
-    """무의식 에이전트 프롬프트 로드 (캐시). 의식 에이전트와 동일한 패턴."""
-    global _unconscious_prompt_cache
-    if not _unconscious_prompt_cache:
-        from runtime_utils import get_base_path
-        prompt_path = get_base_path() / "data" / "common_prompts" / "unconscious_prompt.md"
-        try:
-            _unconscious_prompt_cache = prompt_path.read_text(encoding='utf-8')
-        except FileNotFoundError:
-            _unconscious_prompt_cache = "EXECUTE 또는 THINK 중 하나만 답하라."
+    """무의식 에이전트 프롬프트 로드 (캐시 — mtime 무효화).
+
+    ★모듈 전역 캐시라 수명 = 프로세스 수명이고, /packages/reload 도 이 전역은 안 지운다.
+      mtime 검사가 없으면 unconscious_prompt.md 를 고쳐도 백엔드 재기동 전까지 분류
+      판정이 옛 프롬프트로 돈다 — 분류기는 매 턴 첫 관문이라 조용히 오래 어긋난다.
+      prompt_builder 의 로더들과 같은 규약.
+    """
+    global _unconscious_prompt_cache, _unconscious_prompt_mtime
+    from runtime_utils import get_base_path
+    prompt_path = get_base_path() / "data" / "common_prompts" / "unconscious_prompt.md"
+    try:
+        mtime = prompt_path.stat().st_mtime
+    except OSError:
+        mtime = None
+    if _unconscious_prompt_cache and mtime is not None and _unconscious_prompt_mtime == mtime:
+        return _unconscious_prompt_cache
+    try:
+        _unconscious_prompt_cache = prompt_path.read_text(encoding='utf-8')
+        _unconscious_prompt_mtime = mtime
+    except FileNotFoundError:
+        _unconscious_prompt_cache = "EXECUTE 또는 THINK 중 하나만 답하라."
+        _unconscious_prompt_mtime = None
     return _unconscious_prompt_cache
 
 

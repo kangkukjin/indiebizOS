@@ -536,11 +536,45 @@ def _reload_triggering(sess: dict) -> bool:
     return False
 
 
-def _current_episode_id():
-    """지금 턴의 주행기록 행 id — 수행자가 '턴이 닫혔다'를 이 행의 ended_at 으로 판정한다."""
+def _current_episode_id(repo: str = None, agent_id: str = None):
+    """지금 턴의 주행기록 행 id — 수행자가 '턴이 닫혔다'를 이 행의 ended_at 으로 판정한다.
+
+    ★contextvar 폴백(2026-08-20 ep1265·1267): apply 가 claude_code 의 MCP→HTTP
+    재진입 스레드로 들어오면 EpisodeLogger.current() 가 None 이다(agent_id·task_id
+    전파 유실과 같은 부류 — task_id 는 그랜트 매칭으로 수리됐지만 episode_id 는
+    빠져 있었다). 그러면 수행자가 10초 유예 후 라이브를 써서 리로드가 아직 열려
+    있는 턴을 끊는다. 폴백: 그 에이전트의 열린(ended_at 없는) 최신 행 = 지금 턴.
+
+    ★agent 필터는 참고일 뿐 최종이 아니다(2026-08-20 ep1282): agent_id 도 같은
+    오염원(재진입 스레드 문맥→그랜트)에서 온다 — 'agent_001' 이 실려 필터가 열린
+    system_ai 턴을 놓치고 null 을 반환, 수행자가 10초 유예로 떨어져 턴을 끊었다.
+    예약은 턴이 열려 있는 동안 일어나므로 무필터 열린 최신 행이 곧 이 턴이다."""
     try:
         from episode_logger import EpisodeLogger
-        return getattr(EpisodeLogger.current(), "episode_id", None)
+        eid = getattr(EpisodeLogger.current(), "episode_id", None)
+        if eid:
+            return eid
+    except Exception:
+        pass
+    if not repo:
+        return None
+    try:
+        import sqlite3
+        db = os.path.join(repo, "data", "world_pulse.db")
+        if not os.path.exists(db):
+            return None
+        conn = sqlite3.connect(db, timeout=5)
+        row = None
+        if agent_id:
+            row = conn.execute(
+                "SELECT id FROM episode_log WHERE ended_at IS NULL AND agent=? "
+                "ORDER BY id DESC LIMIT 1", (agent_id,)).fetchone()
+        if not row:
+            row = conn.execute(
+                "SELECT id FROM episode_log WHERE ended_at IS NULL "
+                "ORDER BY id DESC LIMIT 1").fetchone()
+        conn.close()
+        return row[0] if row else None
     except Exception:
         return None
 
@@ -590,7 +624,8 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list):
         if not os.path.exists(script):
             return None
     task_id, agent_id, reason = _grant_identity()
-    job = {"key": key, "repo": repo, "episode_id": _current_episode_id(),
+    job = {"key": key, "repo": repo,
+           "episode_id": _current_episode_id(repo, agent_id or "system_ai"),
            "task_id": task_id or key, "agent_id": agent_id or "system_ai",
            "reason": reason, "scheduled_at": datetime.now().isoformat(),
            "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),

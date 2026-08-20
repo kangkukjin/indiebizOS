@@ -59,12 +59,46 @@ def _episode_row(db_path: str, eid):
         return None
 
 
-def wait_turn_closed(repo: str, episode_id):
+def _resolve_open_episode(db_path: str, agent_id):
+    """잡에 episode_id 가 없을 때 열린(ended_at 없는) 최신 행을 재해소한다.
+
+    ★왜(2026-08-20 ep1265·1267): apply 가 claude_code 의 MCP→HTTP 재진입 스레드로
+    들어오면 EpisodeLogger.current() 의 contextvar 가 끊겨 잡에 episode_id=null 이
+    실렸고, 짧은 유예 후 라이브 쓰기 → 리로드가 **아직 열려 있는 턴**을 끊어
+    최종 보고·주행기록이 유실됐다(고아 회수만 남음). 열린 최신 행 = 예약한 그 턴.
+
+    ★agent 필터는 참고일 뿐 최종이 아니다(2026-08-20 ep1282): 잡의 agent_id 도
+    같은 오염원(재진입 스레드 문맥)에서 온다 — 'agent_001' 이 실려 필터가 열린
+    system_ai 턴을 놓치고, 10초 유예 뒤 쓰기가 그 턴을 끊었다. 필터 0건이면
+    무필터로 한 번 더 — 틀린 대기(최대 상한)가 틀린 즉시 쓰기보다 싸다."""
+    try:
+        conn = sqlite3.connect(db_path, timeout=5)
+        row = None
+        if agent_id:
+            row = conn.execute(
+                "SELECT id FROM episode_log WHERE ended_at IS NULL AND agent=? "
+                "ORDER BY id DESC LIMIT 1", (agent_id,)).fetchone()
+        if not row:
+            row = conn.execute(
+                "SELECT id FROM episode_log WHERE ended_at IS NULL "
+                "ORDER BY id DESC LIMIT 1").fetchone()
+        conn.close()
+        return row[0] if row else None
+    except Exception:
+        return None
+
+
+def wait_turn_closed(repo: str, episode_id, agent_id=None):
     """예약한 턴이 완전히 닫힐 때까지 대기 — ①ended_at ②증류 재합류(log 재기록).
 
     상한 초과는 '턴이 죽었다'로 보고 진행한다(좌초보다 적용이 낫고, 주행기록은
     부팅 고아 회수가 닫는다). 에피소드 문맥이 없으면(REST 직접 호출 등) 짧은 유예만."""
     db_path = os.path.join(repo, "data", "world_pulse.db")
+    if not episode_id and os.path.exists(db_path):
+        episode_id = _resolve_open_episode(db_path, agent_id)
+        if episode_id:
+            _log(f"에피소드 문맥 없음 → 열린 턴 재해소 (episode {episode_id}"
+                 f"{', agent=' + agent_id if agent_id else ''})")
     if not episode_id or not os.path.exists(db_path):
         _log(f"에피소드 문맥 없음 — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
         time.sleep(NO_EPISODE_GRACE_S)
@@ -114,7 +148,7 @@ def main() -> int:
     repo = job["repo"]
     _log(f"기동 — key={job['key']} episode={job.get('episode_id')} repo={repo}")
 
-    wait_turn_closed(repo, job.get("episode_id"))
+    wait_turn_closed(repo, job.get("episode_id"), agent_id=job.get("agent_id"))
 
     # 코드 루트의 backend 를 sys.path 에 — red_grant/thread_context/episode_logger 등
     sys.path.insert(0, str(CODE_ROOT / "backend"))

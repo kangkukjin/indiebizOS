@@ -233,6 +233,12 @@ def _check_intercepted(node: str, action: str, params: dict,
 
 # === 검사 본체 ===
 
+# 공용 런타임 컨텍스트 키 — 액션 어휘가 아니라 실행 경로가 소비하는 키(라우팅이 프로젝트
+# 해소·발신 신원에 씀). /ibl/execute 직접 경로는 이 키를 *요구*하므로, 액션별 어휘 검사가
+# 나무라면 "요구하며 경고하는" 자기모순이 된다 (2026-08-20 상상훈련 17회차 F17-1(b)).
+_CONTEXT_KEYS = {"project_id", "agent_id"}
+
+
 def check_params(node: str, action: str, params: Any,
                  action_config: Optional[dict] = None) -> Optional[dict]:
     """미인식 파라미터 검사. 문제 없으면 None, 있으면
@@ -259,7 +265,8 @@ def check_params(node: str, action: str, params: Any,
         return _check_intercepted(node, action, params, action_config)
 
     user_keys = {k for k in params.keys()
-                 if isinstance(k, str) and not k.startswith(("_", "$"))}
+                 if isinstance(k, str) and not k.startswith(("_", "$"))
+                 and k not in _CONTEXT_KEYS}
     unknown = sorted(user_keys - allowed)
 
     vocab = _documented_vocab(action_config, action_config.get("tool", ""))

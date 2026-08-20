@@ -304,7 +304,9 @@ def _route_handler(mapped_tool: str, params: dict,
             f"활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: {mapped_tool}. "
             "대상 프로젝트를 params.project_id로 명시하거나 "
             "프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. "
-            "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}')"
+            "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}') "
+            "★each/폴백/병렬 가지 안까지 컨텍스트를 전파하려면 문장 param 대신 "
+            "/ibl/execute 요청 body의 project_id 필드를 쓰세요 (param 방식은 그 step에만 적용)."
         )}
     from tool_context import ToolContext, ToolContextError
     try:
@@ -514,8 +516,17 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return {"success": False, "error": "op 파라미터가 필요합니다. (snapshot|trend|refresh)"}
         return _cap("world_pulse")(action_name, dict(params))
 
-    # 자가점검: IBL 건강 점검 (정적+fixture+골든, AI 0)
+    # 자가점검: IBL 건강 점검 (정적+fixture+골든, AI 0) — 단일 액션 패턴: self_check {op: run|results}
     elif func_name == "self_check":
+        op = (params.get("op") or "run").strip()
+        if op == "results":
+            # 결과 조회 (V17-1, 2026-08-20 판정): 원장은 자기 list 를 가진다 — 실행(run)만 있고
+            # 결과는 REST 전용이라 "실패 항목만 알림"이 IBL 로 표현 불가하던 갭의 해소.
+            # 구현은 cognition 층(routing_system._cap_self_check_results) — 층 가드가 잡은
+            # ibl→cognition 직수입을 능력 등록(의존 역전)으로 끊었다.
+            return _cap("self_check_results")(dict(params))
+        if op != "run":
+            return {"success": False, "error": "op 파라미터가 필요합니다. (run|results)"}
         return _cap("self_check")()
 
     # Phase 26: Goal 프로세스 관리

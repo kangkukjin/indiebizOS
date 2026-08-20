@@ -107,6 +107,7 @@
     "sense:search": "[sense:search]{query: \"climate policy\"}",
     "sense:search_shopping": "[sense:search_shopping]{query: \"노트북\"}",
     "sense:search_youtube": "[sense:search_youtube]{query: \"jazz\"}",
+    "sense:self_check#results": "[sense:self_check]{op: \"results\"}",
     "sense:startup": "[sense:startup]{query: \"AI\"}",
     "sense:stay": "[sense:stay]{region: \"제주\", source: \"goodchoice\"}",
     "sense:stock": "[sense:stock]{query: \"삼성전자\"}",

@@ -588,16 +588,35 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         #   딴 데로"이므로 0건(items:[]·total:0)도 다음 시도로 넘어간다. `>>` 는 불변.
         is_err = _is_error_result(result)
         is_empty = (not is_err) and _is_empty_result(result)
-        log.append({
+        entry = {
             "attempt": idx + 1,
             "node": tool_input.get("_node", "?"),
             "action": tool_input.get("action", "?"),
             "status": "error" if is_err else ("empty" if is_empty else "ok"),
             "duration_ms": duration_ms,
-        })
+        }
+        if is_err:
+            # 가지별 실패 사유 보존 (F17-2, 2026-08-20) — 전멸 시 마지막 가지 오류만 남으면
+            # 진단이 반쪽부터 시작된다. 병렬(&)의 행별 오류와 같은 규율.
+            _e = result.get("error") if isinstance(result, dict) else str(result)
+            entry["error"] = str(_e)[:300] if _e else None
+        log.append(entry)
 
         if not is_err and not is_empty:
             # 성공(내용 있는 결과)! 즉시 반환
+            # 2차 이후 가지 성공이면 폴백 발동 표식 (F17-2 소품 — 침묵 대체 방지 신고)
+            # 핸들러 대다수는 JSON *문자열*을 반환하므로 문자열 봉투도 마킹한다.
+            if idx > 0:
+                if isinstance(result, dict):
+                    result.setdefault("_fallback_used", idx + 1)
+                elif isinstance(result, str) and result.strip().startswith("{"):
+                    try:
+                        _obj = json.loads(result)
+                        if isinstance(_obj, dict) and "_fallback_used" not in _obj:
+                            _obj["_fallback_used"] = idx + 1
+                            result = json.dumps(_obj, ensure_ascii=False)
+                    except Exception:
+                        pass
             return result, log
 
         if is_empty and first_empty is None:
@@ -619,6 +638,12 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         # → 전체 실패 경로에서만 error dict 로 감싼다(성공 결과는 원형 그대로 반환되므로 무영향).
         last_result = {"error": str(last_result)}
     last_result["_all_failed"] = True
+    # 전멸 시 가지별 실패 사유 동봉 (F17-2) — 마지막 가지 오류만으로는 1차가 왜 죽었는지 소실
+    _branch_errors = [{"attempt": e["attempt"], "node": e.get("node"), "action": e.get("action"),
+                       "error": e.get("error")}
+                      for e in log if e.get("status") in ("error", "exception")]
+    if _branch_errors:
+        last_result["_branch_errors"] = _branch_errors
     return last_result, log
 
 
@@ -658,6 +683,38 @@ def _extract_result_field(raw: str, path: str) -> str:
     return "" if obj is None else str(obj)
 
 
+def _v4_var_payload(raw: str) -> str:
+    """bare `$var` 치환의 기본값 — v4 추출 계약 합류 (2026-08-20 상상훈련 17회차 F17-3 판정).
+
+    옛 동작: 결과 봉투 JSON 전체를 문자열화 → write content 에 success 같은 배관 키까지
+    박혔다(파이프 싱크의 v4 추출과 비대칭). 새 규약: message(산문 정본)/items(통화) 우선,
+    폴백=봉투 원형. 명시 경로($var.field.path)는 불변 — 정밀 추출은 경로가 정본.
+    규칙은 write v4(system_essentials)와 같은 게이트를 쓴다: 오분류는 항상 안전 방향
+    (봉투=구조 보존)으로 떨어진다."""
+    s = (raw or "").strip()
+    if not s.startswith("{"):
+        return raw
+    try:
+        obj = json.loads(s)
+    except Exception:
+        return raw
+    if not isinstance(obj, dict):
+        return raw
+    msg = obj.get("message")
+    has_msg = isinstance(msg, str) and bool(msg.strip())
+    items = obj.get("items")
+    items_nonempty = isinstance(items, list) and bool(items)
+    other_payload = any(isinstance(v, (dict, list)) and v
+                        for k, v in obj.items() if k not in ("items", "message"))
+    if has_msg and not other_payload:
+        doc_shaped = ("\n" in msg.strip()) or (len(msg) >= 200)
+        if doc_shaped or not items_nonempty:
+            return msg
+    if items_nonempty and not other_payload:
+        return json.dumps(items, ensure_ascii=False)
+    return raw
+
+
 def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
     """{{_step_N_result[.path]}} 참조를 저장된 step 별 결과로 치환 (재귀 — branches/체인 포함).
 
@@ -665,6 +722,7 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
     뭉개졌고, 문장 경계(_seq_boundary)가 prev_result 를 비워 문서화된 예제가 빈 문자열을
     치환받았다. 아직 실행되지 않았거나 예외로 결과가 없는 인덱스는 빈 문자열로 치환한다.
     .path 가 붙으면 결과(JSON)에서 그 필드를 추출한다 — 실패는 ValueError(정직 실패).
+    bare 참조는 v4 추출(_v4_var_payload)을 태운다 (F17-3).
     """
     if isinstance(obj, str):
         def _sub(m):
@@ -672,7 +730,7 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
             p = m.group(2)
             if p:
                 return _extract_result_field(base, p)
-            return base
+            return _v4_var_payload(base)
         return _STEP_RESULT_RE.sub(_sub, obj)
     if isinstance(obj, dict):
         return {k: _inject_step_results(v, step_results) for k, v in obj.items()}

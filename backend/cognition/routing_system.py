@@ -314,6 +314,37 @@ def _cap_self_check() -> Any:
     return run_daily_health_check()
 
 
+def _cap_self_check_results(params: dict) -> Any:
+    """자가점검 결과 items 투영 (V17-1, 2026-08-20) — [sense:self_check]{op:"results"}.
+
+    원장은 자기 list 를 가진다: run(실행)만 있고 결과는 REST 전용이라 "실패 항목만 알림"이
+    IBL 로 표현 불가하던 갭의 해소. 행 = title(node:action)·success·response_ms·error·
+    quality·checked_at — [table:filter]{where: "success == false"} 로 실패만."""
+    from world_pulse_health import get_recent_self_checks
+    SELF_CHECK_RESULTS_MAX = 500
+    try:
+        requested = int(params.get("limit") or 50)
+    except (TypeError, ValueError):
+        requested = 50
+    limit = max(1, min(SELF_CHECK_RESULTS_MAX, requested))
+    rows = get_recent_self_checks(limit)
+    items = [{
+        "title": f"{r.get('node')}:{r.get('action')}",
+        "node": r.get("node"), "action": r.get("action"),
+        "success": bool(r.get("success")),
+        "response_ms": r.get("response_ms"),
+        "error": r.get("error_message"),
+        "quality": r.get("data_quality"),
+        "checked_at": r.get("timestamp"),
+    } for r in rows]
+    out = {"success": True, "items": items, "count": len(items),
+           "message": f"최근 자가점검 {len(items)}건 (실패 {sum(1 for i in items if not i['success'])}건)"}
+    if requested != limit:
+        out["clamped"] = True
+        out["requested"] = requested
+    return out
+
+
 def _cap_reset_consciousness() -> None:
     from consciousness_agent import reset_consciousness_agent
     reset_consciousness_agent()
@@ -335,5 +366,6 @@ def register_all() -> None:
         "run_switch": _cap_run_switch,
         "world_pulse": _cap_world_pulse,
         "self_check": _cap_self_check,
+        "self_check_results": _cap_self_check_results,
         "reset_consciousness": _cap_reset_consciousness,
     })

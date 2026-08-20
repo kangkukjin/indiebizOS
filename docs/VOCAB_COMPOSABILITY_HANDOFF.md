@@ -401,3 +401,19 @@ navigate → screenshot → image_read → (navigate >> screenshot) → image_re
   - **차단기 판정·집행 완료** — 파라미터를 바꾼 **교정 호출은 open 창당 1회 즉시 허용**(`_params_sig`+`trial_used` — 동일 호출 반복 차단은 보존, 교정 시험 실패=재-open 후 그 창 봉쇄). 라이브 전 경로 검증.
   - 관찰: F7 봉투 비대칭 3·4번째 오독 표본(단일 액션=final_result 키 없음 — 훈련자도 반복해 밟음).
   - 검증=build --check·파서 자기시험·P1~P20·ai-ops 25/25. 시드 후보 7건(승인 대기)·⏳커밋·재학습 대기열. 보고서: `outputs/imagination_training/2026-08-20_16회차.md`(부록=집행 상세)
+- **17회차 (2026-08-20)** — 중점=순수 미조합 개척(patch·switch·follow·channel_read·crypto·freelance·host·output) + 15회차 수리 야생 검증. 과제 12(검수 12/12)·실측 11(격리 5)·스크래치 전량 복구(파일·트리거·알림).
+  - **개통 ★**: patch status>>take(자기수리 원장 첫 조합) · host resources>>filter{free_gb<100}>>select(**V15-1 수리 야생 확인** — items+거울 키) · trigger list>>filter(**B15-1 수리 야생 확인** 2표본: patch·trigger) · freelance gigs&experts>>union>>sort>>take 5단 자기결합(rename 불요 — experts title 기병기) · crypto ?? search 폴백 양경로(성공+유령 코인 발동) · trigger create(cron→weekly 해소)→검증→delete 왕복 · if/else host 조건 양분기 실발화(else 정당·알림 도달).
+  - `F17-1` **발견(수리성)** — 프로젝트 컨텍스트 채널 2중 비대칭: 문장 param project_id는 each/가지 **미전파**+일부 액션(patch)선 "문서화 안 된 키" 경고(요구하며 나무람), body project_id는 each 안까지 전파(격리 실측). 오류 처방이 param 채널만 안내 — 처방대로 하면 each에서 또 죽음. 제안=오류문에 body 채널 병기+공용 컨텍스트 키 검증 면제.
+  - `F17-2` **발견(수리성 소품)** — `??` 전 가지 전멸 시 마지막 가지 오류만 남고 1차 실패 사유 소실(`_branch_errors` 병기 제안).
+  - `F17-3` **발견(판정성 소품)** — $변수 값-바인딩이 봉투째 문자열화(write 파일에 success 키까지 박힘) — 파이프 v4 추출 계약과 비대칭.
+  - `V17-1` **판정대기** — 자가점검 **결과 조회** 어휘 부재(sense:self_check=실행 effect만, 결과=REST 전용) — "실패 항목만 알림" 표현 불가. 수요 실증=self_check_pattern 알림이 이미 흐름. 제안=op:results(items) — V16-2 "원장은 자기 list를 가진다" 선례.
+  - `F15-1` 증거 추가(3표본째: if/else 응답에 분기·좌변값 없음) · **8회차 관찰③ 좁혀짐** — channel identity는 body agent_id로 완주(배선 실존, 갭=직접 경로 기본 신원 부재 — 판정성).
+  - 검증=validate 전수·실측 격리·발신 규약 준수(notify 자기수신 1건 후 정리). 시드 후보 8건(승인 대기)·⏳판정 4건. 보고서: `outputs/imagination_training/2026-08-20_17회차.md`
+
+### ✅ 17회차 판정·수리 집행 완료 (2026-08-20 같은 날 — 사용자 판정 "제안대로 다" → 수리 5건+시드 9건, 상세=17회차 보고서 부록)
+- **R-F17-1(a)** 컨텍스트 오류문에 body 채널 병기(system_tools·ibl_routing 두 발생지) / **R-F17-1(b)** `_CONTEXT_KEYS={project_id, agent_id}` 어휘 검사 면제(ibl_param_vocab — 요구하며 나무라는 자기모순 해소).
+- **R-F17-2** 폴백: 가지별 실패 사유 attempts 보존+전멸 시 `_branch_errors`+발동 시 `_fallback_used` — ★핸들러 대다수=JSON 문자열 반환이라 dict 검사만으론 마커 안 붙음(실측)→문자열 봉투도 파싱·마킹.
+- **R-F17-3** bare `$var` 치환 v4 추출 합류(`_v4_var_payload` — message/items 우선·폴백=봉투·명시 경로 불변). 교재 `$변수→join{left,right}` 회귀 무손상 실측(join `_get_items`=bare 리스트 수용). ★한계: 무 message·무 items 봉투(folder_note 빈 주석)는 봉투 유지 — 그 액션의 통화 문제로 분리.
+- **R-V17-1** self_check op 패턴화(run|results) — results=self_checks DB items 투영(limit 50·상한 500), fixture 등재. 라이브 `results >> filter{success==false}` 실패 1건 적중(returns_drift 깃발 — self:limb 별도 진단감).
+- **R-신원** /ibl/execute 기본 agent_id=system_ai 전 직접 호출 확장(8회차 관찰③ 종결) — 도달 경로 전부 소유자 게이트 뒤.
+- 검증=build --check 20 가드(액션 148 불변)·P1~P20·ai-ops 25/25·py_compile. **시드 9건**(후보 8+V17-1 개통 시드 1, tags=imagination-round17, 벡터 누락 0, 코퍼스 3,432) — T8은 보류 유지(body 채널이 정본). ⏳커밋·재학습 대기열.

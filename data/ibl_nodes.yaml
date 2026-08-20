@@ -55,12 +55,24 @@ nodes:
         - 갱신
       self_check:
         returns: effect
-        description: 전수 자가점검 실행 — 부작용 없는 모든 IBL 액션을 테스트하여 시스템 건강 상태 확인
-        target_description: (파라미터 없음 — 전수 자가점검 실행). 결과는 world_pulse.db에 기록.
+        description: 전수 자가점검 (op 분기). run=부작용 없는 전 IBL 액션 실행 점검 / results=최근 점검 결과 조회(items — 실패만 골라 알림 등 파이프 접속).
+        target_description: "op로 분기 (기본 run).\n- run: 전수 자가점검 실행 (파라미터 없음, 수 분 소요). 결과는 world_pulse.db에 기록.\n- results: 최근 자가점검 결과 조회. limit 옵션(기본 50). items 행 = title(node:action)·\n  success(true/false)·response_ms·error·quality·checked_at — [table:filter]{where: \"success == false\"} 로 실패만.\n"
         group: world
+        target_key: op
         router: system
         func: self_check
-        implementation: 전체 IBL 액션 중 안전한 액션을 전수 실행, 결과를 world_pulse.db에 기록, 패턴 분석
+        ops:
+          default: run
+          returns:
+            results: items
+          side_effect:
+            results: false
+          fixture:
+            results: '[sense:self_check]{op: "results"}'
+          values:
+            run: 전수 자가점검 실행 (부작용 없는 전 액션, 수 분 소요 — 결과는 world_pulse.db)
+            results: 최근 자가점검 결과 조회 (limit 옵션, 기본 50 — 실패 필터·알림 파이프용)
+        implementation: _route_system이 op로 분기 — run=world_pulse_health.run_daily_health_check / results=get_recent_self_checks items 투영 (2026-08-20 상상훈련 V17-1 판정).
         keywords:
         - 자가점검
         - 전수점검

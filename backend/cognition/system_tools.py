@@ -963,7 +963,9 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
                         f"활성 프로젝트 경로를 확보할 수 없어 도구를 실행할 수 없습니다: {tool_name}. "
                         "대상 프로젝트를 params.project_id로 명시하거나 "
                         "프로젝트 컨텍스트(thread_context.project_id) 안에서 호출하세요. "
-                        "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}')"
+                        "예: execute_ibl(code='[node:action]{..., project_id: \"컨텐츠\"}') "
+                        "★each/폴백/병렬 가지 안까지 컨텍스트를 전파하려면 문장 param 대신 "
+                        "/ibl/execute 요청 body의 project_id 필드를 쓰세요 (param 방식은 그 step에만 적용)."
                     )
                 }, ensure_ascii=False)
             try:

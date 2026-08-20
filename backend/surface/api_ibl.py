@@ -79,12 +79,13 @@ async def execute_ibl_code(req: IBLRequest):
             if p and p.exists():
                 project_path = str(p.resolve())
 
-        # 직접조작 표면(앱/수동 모드)은 소유자가 직접 모는 것 = 시스템 운영자.
-        # agent_id가 비어 있으면 system_ai 신원으로 채널 발신(메신저 작성·커뮤니티 게시)을 허용한다.
-        # (이 표면은 데스크탑=localhost 또는 원격=런처 인증 게이트 뒤에 있음.)
-        agent_id = req.agent_id
-        if not agent_id and req.project_id in ProjectManager.SYSTEM_PROJECT_IDS:
-            agent_id = "system_ai"
+        # 직접조작 표면(앱/수동 모드·직접 호출)은 소유자가 직접 모는 것 = 시스템 운영자.
+        # agent_id가 비어 있으면 system_ai 신원으로 채널 발신·수신(메신저 작성·커뮤니티 게시·
+        # channel_read)을 허용한다. (이 표면은 데스크탑=localhost 또는 원격=런처 인증 게이트
+        # 뒤에 있음.) ★2026-08-20 상상훈련 17회차 판정: 시스템 프로젝트 한정이던 기본 신원을
+        # 전 직접 호출로 확장 — 이 엔드포인트에 닿는 경로는 전부 소유자 게이트 뒤라, 무신원
+        # 기본값은 보호가 아니라 정직한 조회(channel_read)까지 막는 마찰이었다(8회차 관찰③).
+        agent_id = req.agent_id or "system_ai"
 
         # 직접조작 표면은 thread_context에 자기 project_id를 명시한다.
         # thread_context 는 thread-local 이라, 워커 스레드 풀에선 직전 호출이 남긴

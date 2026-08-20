@@ -298,18 +298,33 @@ def _guardian_items(query: str, count: int = 30) -> list:
     return []
 
 
-def _hn_items(query: str = "", count: int = 30, front_page: bool = False) -> list:
+def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: int = 0) -> list:
     """Hacker News(Algolia API) → 신문 items 통화. 키 불요. points=주목도(편집장 hot 신호).
     front_page=현재 프론트페이지(핫토픽 analog), 아니면 story 키워드 검색. 실패 시 [] (신문 무손상).
-    url=외부 기사 우선(없으면 HN 토론), hn_url=HN 토론(댓글)은 항상 보존."""
+    url=외부 기사 우선(없으면 HN 토론), hn_url=HN 토론(댓글)은 항상 보존.
+    date=게시일(ISO8601) — Algolia 가 주는 created_at 을 그대로 통과시킨다. 2026-08-20 신설:
+    이 필드가 없어서 HN 결과에 신선도 하드룰을 적용할 방법이 아예 없었다(AI 동향 보고서
+    2026-08-20 호가 15건을 통째로 버린 원인). days>0 이면 최근 N일로 서버측 제한."""
     import urllib.request as _u, urllib.parse as _p
     try:
         n = min(max(count, 1), 50)
+        # days>0 → Algolia created_at_i 필터. 미지정(0)=옛 동작 그대로(전체 기간 인기순).
+        _since = ""
+        try:
+            _d = int(days or 0)
+        except (TypeError, ValueError):
+            _d = 0
+        if _d > 0:
+            import time as _t
+            _since = f"created_at_i>{int(_t.time()) - _d * 86400}"
         if front_page:
             url = f"http://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage={n}"
+            if _since:
+                url += "&numericFilters=" + _p.quote(_since)
         else:
+            _nf = _p.quote(_since + ",points>5" if _since else "points>5")
             url = (f"http://hn.algolia.com/api/v1/search?query={_p.quote(query or '')}"
-                   f"&tags=story&hitsPerPage={n}&numericFilters=points>5")
+                   f"&tags=story&hitsPerPage={n}&numericFilters={_nf}")
         with _u.urlopen(url, timeout=12) as r:
             hits = json.loads(r.read()).get("hits", [])
     except Exception as e:
@@ -321,6 +336,8 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False) -> lis
         ext = h.get("url") or ""
         disc = f"https://news.ycombinator.com/item?id={oid}"
         pts, nc = h.get("points") or 0, h.get("num_comments") or 0
+        _ca = h.get("created_at") or ""   # ISO8601 — 신선도 판정의 유일한 근거
+        _dt = _ca[:10]
         dom = ""
         if ext:
             try:
@@ -329,8 +346,9 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False) -> lis
                 dom = ""
         items.append({
             "title": h.get("title") or h.get("story_title") or "(제목 없음)",
-            "meta": " · ".join(x for x in [f"▲{pts}", f"💬{nc}", dom or "news.ycombinator.com"] if x),
+            "meta": " · ".join(x for x in [f"▲{pts}", f"💬{nc}", dom or "news.ycombinator.com", _dt] if x),
             "summary": "",
+            "date": _ca,             # 게시일 — 신선도 하드룰이 읽는 필드
             "url": ext or disc,      # 외부 기사 우선, 없으면 HN 토론
             "hn_url": disc,          # HN 토론(댓글) 항상 보존
             "link_label": "기사 보기",
@@ -824,6 +842,7 @@ def execute(tool_input: dict, context):
     elif tool_name == "search_hn":
         _curate = _parse_curate(tool_input)
         _fetch = 100 if _curate else tool_input.get("count", 15)
+        _days = tool_input.get("days") or 0   # 최근 N일 제한(미지정=전체 기간 인기순)
         _front = tool_input.get("headlines") in (True, "true", "True", 1, "1") or \
                  tool_input.get("front_page") in (True, "true", "True", 1, "1")
 
@@ -836,9 +855,9 @@ def execute(tool_input: dict, context):
                 return format_json({"success": False, "error": "검색어(queries)가 비었습니다."})
             jobs = []  # (섹션명, fetch thunk) — front_page 는 맨 앞(핫토픽 analog)
             if _front:
-                jobs.append(("HN 프론트페이지", lambda: _hn_items(count=_fetch, front_page=True)))
+                jobs.append(("HN 프론트페이지", lambda: _hn_items(count=_fetch, front_page=True, days=_days)))
             for q in _queries:
-                jobs.append((q, (lambda qq: (lambda: _hn_items(qq, _fetch)))(q)))
+                jobs.append((q, (lambda qq: (lambda: _hn_items(qq, _fetch, days=_days)))(q)))
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
                 fetched = list(ex.map(lambda j: j[1](), jobs))
@@ -862,7 +881,7 @@ def execute(tool_input: dict, context):
         topic = "HN 프론트페이지" if _front else tool_input.get("query", "")
         if not _front and not topic:
             return format_json({"success": False, "error": "검색어(query/queries) 또는 headlines 가 필요합니다."})
-        items = [{**it, "query": topic} for it in _hn_items("" if _front else topic, _fetch, front_page=_front)]
+        items = [{**it, "query": topic} for it in _hn_items("" if _front else topic, _fetch, front_page=_front, days=_days)]
         resp = {"success": True, "query": topic, "count": len(items), "items": items}
         if _curate:
             cr = _curate_sections_batch([{"topic": topic, "items": items}], _curate)[0]

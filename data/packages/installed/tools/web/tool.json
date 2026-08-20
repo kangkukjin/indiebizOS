@@ -52,6 +52,10 @@
             "type": "integer",
             "description": "결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)"
           },
+          "days": {
+            "type": "integer",
+            "description": "hn 전용 — 최근 N일로 제한. 미지정이면 전체 기간 인기순이라 몇 년 된 글이 1위로 온다(2026-08-20 실측 — \"AI agent\" 상위 3건이 2026-02·03·06월). 최신 동향을 볼 때는 days 를 반드시 줄 것(예 days 7). 결과의 date 필드가 ISO8601 게시일."
+          },
           "type": {
             "type": "string",
             "description": "naver 전용 — 검색 도메인 (webkr/news/blog/cafe/kin/encyc, 기본 webkr). 자연어 별칭(웹/뉴스/블로그/카페/지식인/백과) 허용. ★book/doc/shop 은 2026-08 네이버 은퇴(SE05)."

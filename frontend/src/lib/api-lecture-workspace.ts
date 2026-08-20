@@ -471,6 +471,17 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
     },
 
     /**
+     * 저장된 녹음 오디오의 HTTP URL — '강의 플레이'의 <audio src>.
+     * 파일 확장자는 브라우저가 준 mime 에 따라 달라지므로 경로를 여기서 짓지 않는다
+     * (timeline.json 의 audio_file 이 정본이고 백엔드가 그걸 보고 고른다).
+     * v = created_at 캐시버스터 — 다시 녹음하면 같은 URL 의 내용만 바뀌기 때문.
+     */
+    narrationAudioUrl(lectureId: string, v?: string): string {
+      const base = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording/audio`;
+      return v ? `${base}?v=${encodeURIComponent(v)}` : base;
+    },
+
+    /**
      * 실강 녹음(오디오 한 덩어리) + 슬라이드 전환 타임라인 저장.
      * ★기존 녹음은 통째로 대체된다 — 녹음 버튼을 다시 누르면 새로 찍는다는 뜻.
      */

@@ -918,6 +918,32 @@ async def get_narration_recording(lecture_id: str):
     return _live_status(ls, lecture_id)
 
 
+@router.get("/{lecture_id}/narration-recording/audio")
+async def narration_recording_audio(lecture_id: str):
+    """녹음 오디오 서빙 — 강의 창의 '강의 플레이'가 <audio> 로 문다.
+
+    ★파일명을 클라이언트가 넘기지 않는다: 확장자는 브라우저가 준 mime 마다 다르고
+      (webm/ogg/m4a…), 경로를 받으면 트래버설 방어를 여기서 또 짜야 한다.
+      timeline.json 의 audio_file 이 정본이므로 서버가 그걸 보고 고른다.
+
+    Range 는 starlette FileResponse 가 처리한다(206) — <audio> 의 탐색이 그걸 쓴다.
+    """
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    st = _live_status(ls, lecture_id)
+    if not st.get("exists") or not st.get("audio_path"):
+        raise HTTPException(status_code=404, detail="저장된 녹음이 없습니다.")
+    path = Path(st["audio_path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="녹음 오디오 파일이 없습니다.")
+    media = {
+        ".webm": "audio/webm", ".ogg": "audio/ogg", ".m4a": "audio/mp4",
+        ".mp3": "audio/mpeg", ".wav": "audio/wav",
+    }.get(path.suffix.lower(), "application/octet-stream")
+    return FileResponse(str(path), media_type=media)
+
+
 @router.post("/{lecture_id}/narration-recording")
 async def save_narration_recording(
     lecture_id: str,

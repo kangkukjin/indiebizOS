@@ -384,6 +384,13 @@ def _host_resources(tool_input: dict) -> str:
             "swap": {"used_gb": round(sw.used / 1e9, 1), "total_gb": round(sw.total / 1e9, 1),
                      "percent": sw.percent},
             "disks": parts,
+            # ★V15-1 판정(2026-08-20 사용자): 봉투의 통화 = 디스크 파티션 행들 — "디스크
+            # 여유공간"은 분석된 볼륨(storage 도메인)이 아니라 지금 마운트된 파일시스템의
+            # 현재 상태(host 영토)다. disks 와 같은 객체를 병기해 파이프가 흐르게 한다
+            # ([sense:host]{op:"resources"} >> [table:filter]{where:"percent > 90"}) —
+            # 변환 시 disks 는 동일성 재투영(_mirrored)이 자동 동행, CPU·메모리 축은
+            # dict 라 자백 대상도 아니어서 봉투 의미 불변.
+            "items": parts,
             "network": {"sent_gb": round(net.bytes_sent / 1e9, 2), "recv_gb": round(net.bytes_recv / 1e9, 2)},
             "battery": bat,
             "uptime_hours": round((time.time() - psutil.boot_time()) / 3600.0, 1),

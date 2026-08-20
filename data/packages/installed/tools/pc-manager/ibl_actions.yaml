@@ -16,10 +16,12 @@ nodes:
           default: status
           returns:
             # status=1행 스냅샷·apps=프로세스 행들 items 병기 실측 (2026-08-19 드리프트
-            # 스윕 동기화). resources 는 복합 봉투(CPU·메모리·디스크·네트워크 축)라
-            # 액션 기본(scalar) 유지 — items 승격은 의미 왜곡 소지(판정 후보).
+            # 스윕 동기화). resources=디스크 파티션 행들 items 병기 (2026-08-20 V15-1
+            # 사용자 판정 — "디스크 여유공간"의 영토는 storage 아닌 host, disks 는
+            # 동일성 재투영으로 변환에 동행).
             status: items
             apps: items
+            resources: items
           fixture:
             apps: '[sense:host]{op: "apps"}'
             resources: '[sense:host]{op: "resources"}'

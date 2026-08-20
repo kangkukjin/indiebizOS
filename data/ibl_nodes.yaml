@@ -1362,6 +1362,7 @@ nodes:
           returns:
             status: items
             apps: items
+            resources: items
           fixture:
             apps: '[sense:host]{op: "apps"}'
             resources: '[sense:host]{op: "resources"}'

@@ -18,6 +18,15 @@ import os
 import sys
 import types
 
+# ★스크립트형 테스트(def test_* 없음·모듈 레벨에서 sys.modules 스텁 설치) — pytest 아래서는
+# 수집이 임포트만 해도 스텁이 공유 프로세스에 남아, 뒤에 도는 다른 파일들이 가짜
+# thread_context/consciousness_agent 를 물려받아 죽는다(2026-08-20 실측: test_steer·
+# test_ibl_silent_failures AttributeError — 모듈 그림자 부류). 스텁 설치 *이전에* 스킵.
+if __name__ != '__main__':
+    import pytest
+    pytest.skip('로컬 전용 스크립트 테스트 — .venv/bin/python backend/test_framing_amend_gate.py 로 직접 실행',
+                allow_module_level=True)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TARGET = os.path.join(ROOT, 'backend', 'cognition', 'cognitive_consciousness.py')
 

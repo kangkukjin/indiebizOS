@@ -417,7 +417,12 @@ def create_html_video(tool_input, output_base):
         #   나레이션이 씬보다 길면 → 씬을 나레이션 + 여유시간으로 늘림
         #   이렇게 해야 나레이션끼리 겹치지 않음
         # ============================================================
-        NARRATION_PADDING = 0.5  # 나레이션 끝나고 다음 씬 시작까지 여유 시간(초)
+        # 나레이션 끝나고 다음 씬 시작까지 여유 시간(초). 기본 0.5 — 합성 나레이션은
+        # 씬 경계에서 숨 쉴 틈이 있어야 자연스럽다.
+        # ★실강 녹음처럼 **씬 길이가 이미 정답인** 입력은 이 여백이 곧 어긋남이므로
+        #   부르는 쪽이 0 을 준다(narration_padding). None/미지정이면 기존 0.5 그대로.
+        _np = tool_input.get("narration_padding")
+        NARRATION_PADDING = 0.5 if _np is None else float(_np)
 
         for i, scene in enumerate(scenes):
             original_dur = scene.get("duration", default_duration)

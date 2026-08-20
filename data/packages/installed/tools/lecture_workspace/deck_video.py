@@ -128,6 +128,84 @@ def _scene_html_from_png(png_path: Path, width: int, height: int) -> str:
     )
 
 
+# ── 실강 녹음(narration_live) — 나레이션의 셋째 원천 ─────────────────────
+# 우선순위: 실강 녹음 > narration/<sid>.wav(목소리 복제) > 스피커 노트 TTS.
+# ★TTS 경로와 인과가 반대다: TTS 는 "글이 길면 씬도 길어진다"인데,
+#   실강은 **사람이 그 슬라이드를 띄워 둔 시간이 이미 정답**이고 씬이 거기 맞춘다.
+#   그래서 순서도 덱 순서가 아니라 **녹음 타임라인**을 따른다 — 발표 중 되돌아간
+#   장은 영상에서도 그 자리에 다시 나온다(그게 실제로 일어난 일이다).
+LIVE_DIR_NAME = "narration_live"
+MIN_SEGMENT_SEC = 0.05      # 스치듯 지나간 장 — 오디오 구간이 없는 것으로 본다
+
+
+def live_recording(lecture_id: str) -> dict | None:
+    """narration_live/timeline.json 을 읽어 돌려준다. 없거나 깨졌으면 None(=TTS 경로)."""
+    d = lecture_store.lecture_dir(lecture_id) / LIVE_DIR_NAME
+    tj = d / "timeline.json"
+    if not tj.exists():
+        return None
+    try:
+        tl = json.loads(tj.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"[deck_video] 녹음 타임라인 읽기 실패 — TTS 경로로 진행: {e}")
+        return None
+    audio = d / (tl.get("audio_file") or "")
+    if not tl.get("audio_file") or not audio.exists():
+        print(f"[deck_video] 녹음 오디오 없음 — TTS 경로로 진행: {audio}")
+        return None
+    marks = [m for m in (tl.get("marks") or []) if m.get("slide_id")]
+    if not marks:
+        print("[deck_video] 녹음 타임라인에 전환 기록이 없음 — TTS 경로로 진행")
+        return None
+    tl["_dir"], tl["_audio"], tl["marks"] = d, audio, marks
+    return tl
+
+
+def audio_seconds(path: Path) -> float:
+    """ffprobe 로 실제 길이(초). 실패하면 0 — 부르는 쪽이 판단한다."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            capture_output=True, text=True, timeout=120)
+        return float((out.stdout or "").strip())
+    except Exception:
+        return 0.0
+
+
+def slice_recording(tl: dict, on_progress=None) -> list:
+    """녹음 한 덩어리 → 전환 시각으로 자른 슬라이드별 wav 목록.
+
+    반환: [{slide_id, start, duration, path}] — 타임라인 순서 그대로.
+    같은 슬라이드를 두 번 띄웠으면 구간도 두 개다(파일명에 순번을 넣어 안 덮는다).
+    """
+    d, audio = tl["_dir"], tl["_audio"]
+    total = float(tl.get("duration_sec") or 0) or audio_seconds(audio)
+    marks = sorted(tl["marks"], key=lambda m: float(m.get("t") or 0))
+    segs = []
+    for i, m in enumerate(marks):
+        sid = str(m.get("slide_id"))
+        start = max(0.0, float(m.get("t") or 0))
+        end = float(marks[i + 1].get("t") or 0) if i + 1 < len(marks) else total
+        if end - start <= MIN_SEGMENT_SEC:
+            continue
+        out = d / f"seg_{i:03d}_{sid}.wav"
+        if on_progress:
+            on_progress("slice", i + 1, len(marks), f"녹음 분할 {sid}")
+        # ★-i 뒤의 -ss = 출력 시킹(정확). 입력 시킹은 빠르지만 키프레임에 붙어 어긋난다.
+        r = subprocess.run(
+            ["ffmpeg", "-y", "-i", str(audio), "-ss", f"{start:.3f}", "-to", f"{end:.3f}",
+             "-vn", "-ac", "1", "-ar", "44100", str(out)],
+            capture_output=True, text=True, timeout=1800)
+        if r.returncode != 0 or not out.exists():
+            raise RuntimeError(f"녹음 분할 실패({sid}): {(r.stderr or '')[-300:]}")
+        segs.append({"slide_id": sid, "start": start,
+                     "duration": audio_seconds(out) or (end - start), "path": str(out)})
+    if not segs:
+        raise RuntimeError("녹음 타임라인에서 쓸 수 있는 구간이 하나도 나오지 않았습니다.")
+    return segs
+
+
 def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     """조립 + 렌더 본체 (동기). 자식 프로세스와 wait:true 양쪽에서 호출."""
     width, height = int(opts.get("width") or 1280), int(opts.get("height") or 720)
@@ -137,28 +215,56 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     slides = deck.get("slides") or {}
 
     scenes, narrations, missing_notes, skipped = [], [], [], []
-    # narration/<slide_id>.wav 가 있으면 그 파일이 TTS 를 이긴다 — 목소리 복제로 구운
-    # 내 목소리 나레이션을 넣는 자리(가이드 voice_narration.md, 스크립트 '나레이션생성').
-    narration_dir = lecture_dir_path / "narration"
     preset_audio = []
-    for sid in order:
-        meta = slides.get(sid) or {}
-        png = lecture_dir_path / (meta.get("png_file") or "")
-        if not meta.get("png_file") or not png.exists():
-            skipped.append(sid)
-            continue
+    live_info: dict = {}
+
+    def _scene(png_path: Path, duration: float) -> None:
         scenes.append({
-            "html": _scene_html_from_png(png, width, height),
-            "duration": float(opts.get("duration_per_scene") or 5),
+            "html": _scene_html_from_png(png_path, width, height),
+            "duration": float(duration),
             # ★덱 슬라이드는 정지 PNG 한 장이다 — 렌더러가 재볼 필요가 없다(프로브 비용 0).
             "static": True,
         })
-        note = (meta.get("speaker_note") or "").strip()
-        narrations.append(note)          # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
-        ready = narration_dir / f"{sid}.wav"
-        preset_audio.append(str(ready) if ready.exists() else None)
-        if not note and not ready.exists():
-            missing_notes.append(sid)
+
+    live = live_recording(lecture_id)
+    if live:
+        # ── 실강 녹음 경로 — 씬 길이도 순서도 녹음 타임라인이 정한다 ──
+        segs = slice_recording(live, on_progress=on_progress)
+        for seg in segs:
+            meta = slides.get(seg["slide_id"]) or {}
+            png = lecture_dir_path / (meta.get("png_file") or "")
+            if not meta.get("png_file") or not png.exists():
+                skipped.append(seg["slide_id"])
+                continue
+            _scene(png, seg["duration"])
+            narrations.append("")                    # TTS 를 타지 않는다
+            preset_audio.append(seg["path"])
+        shown = {s["slide_id"] for s in segs}
+        live_info = {
+            "live_recording": True,
+            "recording_sec": round(float(live.get("duration_sec") or 0), 2),
+            "segments": [{"slide_id": s["slide_id"], "start": round(s["start"], 2),
+                          "duration": round(s["duration"], 2)} for s in segs],
+            # 녹음 중 한 번도 안 띄운 장 — 영상에 안 나온다(빠뜨린 게 아니라 안 보여준 것).
+            "unrecorded": [sid for sid in order if sid not in shown],
+        }
+    else:
+        # narration/<slide_id>.wav 가 있으면 그 파일이 TTS 를 이긴다 — 목소리 복제로 구운
+        # 내 목소리 나레이션을 넣는 자리(가이드 voice_narration.md, 스크립트 '나레이션생성').
+        narration_dir = lecture_dir_path / "narration"
+        for sid in order:
+            meta = slides.get(sid) or {}
+            png = lecture_dir_path / (meta.get("png_file") or "")
+            if not meta.get("png_file") or not png.exists():
+                skipped.append(sid)
+                continue
+            _scene(png, float(opts.get("duration_per_scene") or 5))
+            note = (meta.get("speaker_note") or "").strip()
+            narrations.append(note)      # 빈 노트 = 무나레이션 씬 (html_video 가 기본 길이로 처리)
+            ready = narration_dir / f"{sid}.wav"
+            preset_audio.append(str(ready) if ready.exists() else None)
+            if not note and not ready.exists():
+                missing_notes.append(sid)
 
     if not scenes:
         raise RuntimeError("렌더할 슬라이드가 없습니다 (PNG 미존재).")
@@ -174,7 +280,11 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         # (2026-08-10부터 Gemini/Charon)이 이긴다. 옛날엔 Edge 화자가 박혀 있어서
         # 기본 엔진을 바꿔도 강의 영상만 옛 목소리로 남았다.
         "rate": opts.get("rate") or "+0%",
-        "transition": opts.get("transition") or "fade",
+        # ★실강 녹음일 때 전환·여백은 그대로 '어긋남'이 된다: xfade 는 씬을 겹치고
+        #   NARRATION_PADDING 은 씬마다 0.5초를 더한다 — 둘 다 원래 발표의 타이밍을 깬다.
+        #   그래서 기본을 뒤집는다(사용자가 transition 을 명시하면 그건 존중).
+        "transition": opts.get("transition") or ("none" if live_info else "fade"),
+        "narration_padding": 0.0 if live_info else None,
         "output_filename": opts.get("output_filename") or "lecture_video.mp4",
         "width": width, "height": height,
         "on_progress": on_progress,
@@ -195,6 +305,7 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         "narrated": len(scenes) - len(missing_notes),
         "preset_narration": sum(1 for p in preset_audio if p),   # 미리 구운 오디오를 쓴 장 수
         "missing_notes": missing_notes, "skipped": skipped,
+        **live_info,
     }
 
 

@@ -957,10 +957,31 @@ function LectureHeader(props: {
         current={deck.design_system}
         onChanged={onChange}
       />
+      <NarrationStudioHost lectureId={deck.lecture_id} deck={deck} />
       <ExportMenu lectureId={deck.lecture_id} slideCount={deck.slide_order.length} />
       <div className="text-xs text-stone-400 font-mono">{deck.lecture_id}</div>
     </header>
   );
+}
+
+
+// 실강 녹음 모드 + 동영상 렌더 버튼 (./lecture/NarrationStudio).
+// ★동적 import 인 이유는 게으른 로딩이 아니라 **통합 지점을 한 곳에 모으려는 것**이다 —
+//   상단 import 를 따로 고치면 이 파일에 훅이 둘이 되고, 격리 제안은 파일당 하나라
+//   나중 제안이 앞 제안을 조용히 덮는다. 덤으로 마이크·MediaRecorder 코드가
+//   녹음을 쓸 때까지 로드되지 않는다.
+type StudioMod = typeof import('./lecture/NarrationStudio');
+
+function NarrationStudioHost(props: { lectureId: string; deck: Deck }) {
+  const [mod, setMod] = useState<StudioMod | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void import('./lecture/NarrationStudio').then((m) => { if (alive) setMod(m); });
+    return () => { alive = false; };
+  }, []);
+  if (!mod) return null;
+  const Studio = mod.NarrationStudio;
+  return <Studio {...props} />;
 }
 
 

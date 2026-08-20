@@ -459,6 +459,64 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/export/file?filename=${encodeURIComponent(filename)}`;
     },
 
+    /** 저장된 실강 녹음 상태 — '동영상 렌더링'이 실녹음/TTS 어느 경로로 갈지의 근거. */
+    async getNarrationRecording(lectureId: string): Promise<{
+      exists: boolean; duration_sec?: number; created_at?: string; bytes?: number;
+      marks?: { slide_id: string; t: number }[];
+    }> {
+      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`녹음 상태 조회 실패 (${r.status})`);
+      return r.json();
+    },
+
+    /**
+     * 실강 녹음(오디오 한 덩어리) + 슬라이드 전환 타임라인 저장.
+     * ★기존 녹음은 통째로 대체된다 — 녹음 버튼을 다시 누르면 새로 찍는다는 뜻.
+     */
+    async saveNarrationRecording(
+      lectureId: string,
+      audio: Blob,
+      timeline: { duration_sec: number; marks: { slide_id: string; t: number }[] },
+    ): Promise<{ exists: boolean; duration_sec?: number; bytes?: number }> {
+      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const fd = new FormData();
+      // 확장자는 백엔드가 content-type 으로 정한다 — 이 파일명은 표식일 뿐.
+      fd.append('audio', audio, 'recording.webm');
+      fd.append('timeline', JSON.stringify(timeline));
+      const r = await fetch(url, { method: 'POST', body: fd });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({ detail: r.statusText }));
+        throw new Error(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail));
+      }
+      return r.json();
+    },
+
+    /** 녹음 폐기 — 다음 렌더는 다시 스피커 노트 TTS 경로로 간다. */
+    async deleteNarrationRecording(lectureId: string): Promise<void> {
+      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const r = await fetch(url, { method: 'DELETE' });
+      if (!r.ok) throw new Error(`녹음 삭제 실패 (${r.status})`);
+    },
+
+    /**
+     * 동영상 렌더 시작. ★능력은 IBL 어휘가 갖고 있고 여기는 그걸 부르는 다리다
+     * (custom_app_instrument.md 철칙0 — 렌더용 REST 를 새로 만들지 않는 이유).
+     * 녹음이 있으면 렌더가 알아서 그 녹음+타임라인으로 씬 길이를 정한다.
+     */
+    async renderLectureVideo(lectureId: string): Promise<unknown> {
+      const { iblExecuteApp } = await import('./instrument');
+      return iblExecuteApp(`[self:deck]{op: "video", lecture_id: ${JSON.stringify(lectureId)}}`);
+    },
+
+    /** 렌더 진행 상태 — 상태 파일을 직접 긁지 말고 check:true 로 (video_workflow.md). */
+    async lectureVideoStatus(lectureId: string): Promise<Record<string, unknown>> {
+      const { iblExecuteApp } = await import('./instrument');
+      const r = await iblExecuteApp(
+        `[self:deck]{op: "video", lecture_id: ${JSON.stringify(lectureId)}, check: true}`);
+      return (r ?? {}) as Record<string, unknown>;
+    },
+
     /** 슬라이드 PNG의 HTTP URL — <img src>에 직접 사용. file://보다 안정. */
     slidePngUrl(lectureId: string, slideId: string): string {
       return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png`;

@@ -866,6 +866,120 @@ async def remove_material(lecture_id: str, filename: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
+# ─────────────────────────────────────────────────────────────────────
+# 실강 녹음 (강의 창의 '나레이션 녹음 모드')
+# ─────────────────────────────────────────────────────────────────────
+# 강의 창에서 실제 강의를 녹음하면 오디오 한 덩어리 + 슬라이드 전환 타임라인이
+# 여기로 올라온다. 렌더([self:deck]{op:"video"})는 이 폴더가 있으면 TTS 대신
+# 이 녹음을 구간으로 잘라 쓰고, 씬 길이도 전환 간격이 정한다
+# (deck_video.live_recording / slice_recording).
+#
+# ★한 강의에 녹음은 하나다 — 다시 녹음하면 폴더째 갈아엎는다. 부분 갱신을 하면
+#   지난 녹음의 구간 wav(seg_*.wav)가 남아 다음 렌더가 옛것과 새것을 섞어 쓴다.
+
+LIVE_DIR_NAME = "narration_live"
+_AUDIO_SUFFIX = {
+    "audio/webm": ".webm", "audio/ogg": ".ogg", "audio/mp4": ".m4a",
+    "audio/mpeg": ".mp3", "audio/wav": ".wav", "audio/x-wav": ".wav",
+}
+
+
+def _live_dir(ls, lecture_id: str) -> Path:
+    return ls.lecture_dir(lecture_id) / LIVE_DIR_NAME
+
+
+def _live_status(ls, lecture_id: str) -> dict:
+    d = _live_dir(ls, lecture_id)
+    tj = d / "timeline.json"
+    if not tj.exists():
+        return {"exists": False}
+    try:
+        tl = json.loads(tj.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"exists": False, "error": f"타임라인 읽기 실패: {e}"}
+    audio = d / (tl.get("audio_file") or "")
+    ok = bool(tl.get("audio_file")) and audio.exists()
+    return {
+        "exists": ok,
+        "audio_path": str(audio) if ok else None,
+        "bytes": audio.stat().st_size if ok else 0,
+        "duration_sec": tl.get("duration_sec"),
+        "created_at": tl.get("created_at"),
+        "marks": tl.get("marks") or [],
+    }
+
+
+@router.get("/{lecture_id}/narration-recording")
+async def get_narration_recording(lecture_id: str):
+    """저장된 실강 녹음이 있는지 — 렌더 버튼이 어느 경로로 갈지의 근거."""
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    return _live_status(ls, lecture_id)
+
+
+@router.post("/{lecture_id}/narration-recording")
+async def save_narration_recording(
+    lecture_id: str,
+    audio: UploadFile = File(...),
+    timeline: str = Form(...),
+):
+    """녹음 오디오 + 전환 타임라인 저장. 기존 녹음은 통째로 대체된다."""
+    from datetime import datetime
+    import shutil
+
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    try:
+        tl = json.loads(timeline)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"timeline JSON 파싱 실패: {e}")
+    marks = [m for m in (tl.get("marks") or []) if m.get("slide_id")]
+    if not marks:
+        raise HTTPException(status_code=400, detail="전환 기록(marks)이 비었습니다.")
+    content = await audio.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="빈 오디오입니다.")
+
+    d = _live_dir(ls, lecture_id)
+    if d.exists():
+        await run_in_threadpool(shutil.rmtree, d)
+    d.mkdir(parents=True, exist_ok=True)
+
+    mime = (audio.content_type or "").split(";")[0].strip()
+    suffix = _AUDIO_SUFFIX.get(mime) or Path(audio.filename or "").suffix or ".webm"
+    name = f"recording{suffix}"
+    await run_in_threadpool((d / name).write_bytes, content)
+
+    payload = {
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "mime": mime or "audio/webm",
+        "audio_file": name,
+        "duration_sec": round(float(tl.get("duration_sec") or 0), 3),
+        # t = 그 슬라이드가 화면에 뜬 시각(녹음 시작 기준 초).
+        "marks": [{"slide_id": str(m["slide_id"]), "t": round(float(m.get("t") or 0), 3)}
+                  for m in marks],
+    }
+    await run_in_threadpool(
+        (d / "timeline.json").write_text,
+        json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+    return {"success": True, **_live_status(ls, lecture_id)}
+
+
+@router.delete("/{lecture_id}/narration-recording")
+async def delete_narration_recording(lecture_id: str):
+    """녹음 폐기 — 다음 렌더는 다시 스피커 노트 TTS 경로로 간다."""
+    import shutil
+    ls = _load_lecture_store()
+    if not ls.lecture_exists(lecture_id):
+        raise HTTPException(status_code=404, detail=f"강의 없음: {lecture_id}")
+    d = _live_dir(ls, lecture_id)
+    if d.exists():
+        await run_in_threadpool(shutil.rmtree, d)
+    return {"success": True, "exists": False}
+
+
 @router.post("/{lecture_id}/slides/upload-images")
 async def upload_slide_images(
     lecture_id: str,

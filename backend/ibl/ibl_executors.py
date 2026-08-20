@@ -620,6 +620,29 @@ def _nest(step: Any, tool_input: dict) -> Any:
     return {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
 
 
+def _meta_safe(v: Any) -> Any:
+    """관측 메타 값의 JSON-안전화 — 원시형은 그대로, 그 외는 짧은 문자열로."""
+    return v if isinstance(v, (str, int, float, bool)) or v is None else str(v)[:200]
+
+
+def _attach_branch_meta(result: Any, matched: str, matched_value: Any) -> Any:
+    """조건 블록([if:]/[case:]) 분기 결과에 관측 메타를 병기한다 (★P2, 2026-08-20).
+
+    matched=탄 분기의 라벨(조건식·패턴·"else"·"default"), matched_value=좌변 실측값.
+    종전엔 분기 결과만 반환해 어느 분기를 탔는지·좌변이 얼마였는지 원리적으로 진단
+    불가였다(트리거 안 오분기가 특히). 분기 결과가 곧 파이프 통화이므로 dict 일 때만
+    setdefault 로 병기(기존 키 불침범) — 문자열·리스트 결과를 감싸면 하류 통화 계약이
+    깨지니 그 경우는 로그로만 남긴다.
+    """
+    mv = _meta_safe(matched_value)
+    if isinstance(result, dict):
+        result.setdefault("matched", matched)
+        result.setdefault("matched_value", mv)
+    else:
+        print(f"[IBL_COND] matched={matched} value={mv} (비-dict 분기 결과 — 메타 병기 생략)")
+    return result
+
+
 def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str) -> Any:
     """if/case 분기 몸 실행 — 단일 액션(dict)과 **파이프(steps 리스트)** 둘 다.
 
@@ -665,20 +688,26 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
                     "condition_errors": cond_errors,
                 }
             if action:
-                return _run_branch(action, tool_input, project_path, agent_id)
-            return {"message": "else 분기 실행 (action 없음)"}
+                return _attach_branch_meta(
+                    _run_branch(action, tool_input, project_path, agent_id),
+                    matched="else", matched_value=None)
+            return {"message": "else 분기 실행 (action 없음)", "matched": "else"}
 
         # 조건 평가: sense 노드 실행
         try:
-            sense_result = _evaluate_sense_condition(condition, project_path, agent_id)
+            sense_result, left_value = _evaluate_condition_and_value(
+                condition, project_path, agent_id)
         except Exception as e:
             cond_errors.append({"condition": condition, "error": str(e)})
             continue  # 이 분기는 판정 불능 — 다음 분기로 가되 위에 기록해 둔다
 
         if sense_result:
             if action:
-                return _run_branch(action, tool_input, project_path, agent_id)
-            return {"message": f"조건 충족: {condition}"}
+                return _attach_branch_meta(
+                    _run_branch(action, tool_input, project_path, agent_id),
+                    matched=condition, matched_value=left_value)
+            return {"message": f"조건 충족: {condition}",
+                    "matched": condition, "matched_value": _meta_safe(left_value)}
 
     if cond_errors:
         # 어느 분기도 안 걸렸는데 평가 실패가 있었다면 그건 성공이 아니다.
@@ -721,10 +750,23 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
     else:
         action = default
 
-    if action:
-        return _run_branch(action, tool_input, project_path, agent_id)
+    # ★P2 (2026-08-20): 어느 분기를 탔는지 라벨 복원 — select_case_branch 는 action 만
+    # 돌려줘 결과만으론 오분기 진단이 원리적으로 불가했다. default 포함 라벨 + 좌변
+    # 실측값을 관측 메타로 병기한다.
+    matched = "default"
+    if action is not None:
+        for b in branches:
+            if b.get("action") is action:
+                matched = str(b.get("pattern") or b.get("range") or "?")
+                break
 
-    return {"message": f"case문 실행 완료 (source={source}, value={sense_value})"}
+    if action:
+        return _attach_branch_meta(
+            _run_branch(action, tool_input, project_path, agent_id),
+            matched=matched, matched_value=sense_value)
+
+    return {"message": f"case문 실행 완료 (source={source}, value={sense_value})",
+            "matched": matched, "matched_value": _meta_safe(sense_value)}
 
 
 # ── [table:each] — 문장을 값으로 받는 유일한 변환자 (2026-08-15 고차 문장 M2) ──────────
@@ -1016,9 +1058,12 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     return out
 
 
-def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:
+def _evaluate_condition_and_value(condition: str, project_path: str, agent_id: str) -> tuple:
     """
-    조건식 평가 — case/if의 source 표현 + 비교 연산.
+    조건식 평가 — case/if의 source 표현 + 비교 연산. (판정 bool, 좌변 실측값) 반환.
+
+    ★P2 (2026-08-20): 좌변값을 함께 반환하는 이유 — 조건 블록 결과에 matched_value 를
+    병기하려면 실측값이 필요한데, 별도 재조회는 소스 액션을 두 번 실행(부작용·비용)한다.
 
     지원하는 형태:
         node:action <op> value
@@ -1056,26 +1101,32 @@ def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) 
                 + (_read_err if _read_err else
                    "필드 경로를 확인하세요(예: stock quote 는 .data.current_price — "
                    "봉투 최상위가 아닙니다)."))
-        return False
+        return False, None
 
     if op is None:
-        return bool(value)
+        return bool(value), value
 
+    ok = False
     try:
         sv = float(value)
         cv = float(compare_raw)
-        if op == "==": return sv == cv
-        if op == "!=": return sv != cv
-        if op == ">":  return sv > cv
-        if op == ">=": return sv >= cv
-        if op == "<":  return sv < cv
-        if op == "<=": return sv <= cv
+        if op == "==": ok = sv == cv
+        elif op == "!=": ok = sv != cv
+        elif op == ">":  ok = sv > cv
+        elif op == ">=": ok = sv >= cv
+        elif op == "<":  ok = sv < cv
+        elif op == "<=": ok = sv <= cv
     except (ValueError, TypeError):
         ss = str(value)
-        if op == "==": return ss == compare_raw
-        if op == "!=": return ss != compare_raw
+        if op == "==": ok = ss == compare_raw
+        elif op == "!=": ok = ss != compare_raw
 
-    return False
+    return ok, value
+
+
+def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:
+    """불리언만 필요한 호출자용 호환 셈 (ibl_engine 재수출 계약 유지)."""
+    return _evaluate_condition_and_value(condition, project_path, agent_id)[0]
 
 
 _FIELD_MISSING = object()  # 경로 부재 표지 — "값이 null"(정당한 부재)과 구별 (★B10-case)

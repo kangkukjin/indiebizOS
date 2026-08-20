@@ -898,6 +898,9 @@ def _op_since(prev, params):
             result["note"] = (f"첫 검침(peek) — 기준선 저장 안 함({len(rows)}행 미기록). "
                               "peek 없이 호출하면 기준선이 저장됩니다.")
         else:
+            # ★P1 (2026-08-20, B15-2): 기계 판별용 플래그 — note 산문만으론 트리거·후속
+            # 파이프가 "첫 회라 0행"과 "고장이라 0행"을 구별할 수 없다. 2회차부턴 미표기.
+            result["seeded"] = True
             result["note"] = (f"첫 검침 — 기준선 {len(rows)}행 저장(스트림 '{key}'). "
                               "다음 호출부터 지난 검침 이후 새 행만 흐릅니다.")
     elif not out:

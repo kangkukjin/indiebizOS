@@ -9,7 +9,15 @@
 import importlib.util, json, shutil, sys, tempfile
 from pathlib import Path
 
-ROOT = Path("/Users/kangkukjin/Desktop/AI/indiebizOS")
+# 스크립트형 테스트(모듈 레벨 실행 + sys.exit) — pytest 수집이 임포트만 해도 본문이
+# 돌아버리므로 pytest 아래서는 모듈 단위 스킵. 의존도 로컬 전용이다:
+# 음성 참조 파일(data/voice/kkj.wav, 미추적 개인 데이터)·playwright(requirements-tools).
+if __name__ != "__main__":
+    import pytest
+    pytest.skip("로컬 전용 스크립트 테스트 — .venv/bin/python3 backend/test_narration_injection.py 로 직접 실행",
+                allow_module_level=True)
+
+ROOT = Path(__file__).resolve().parents[1]
 REF = ROOT / "data" / "voice" / "kkj.wav"      # 8.59초짜리 실파일
 REF_SECONDS = 8.59
 fails = []
@@ -87,7 +95,9 @@ check("혼용(preset/TTS/무나레이션) 각각 올바름", ok,
       f"{[round(x['duration'], 2) for x in s]}, TTS 호출 {tts_calls['n']}회")
 
 # [6] lecture_workspace 가 narration/<sid>.wav 를 집어 넘기는가
+#     (렌더 본체는 2026-08-17 분할로 handler._deck_video_build → deck_video.build)
 lw = load("lw_handler", ROOT / "data/packages/installed/tools/lecture_workspace/handler.py")
+dv = sys.modules["deck_video"]          # handler 가 import deck_video 로 이미 실어 놓음
 with tempfile.TemporaryDirectory() as td:
     lec = Path(td) / "L"
     (lec / "slides").mkdir(parents=True)
@@ -99,9 +109,9 @@ with tempfile.TemporaryDirectory() as td:
             "slides": {"s1": {"png_file": "slides/s1.png", "speaker_note": "노트1"},
                        "s2": {"png_file": "slides/s2.png", "speaker_note": "노트2"}}}
     (lec / "deck.json").write_text(json.dumps(deck), encoding="utf-8")
-    lw.lecture_store.lecture_dir = lambda lid: lec
-    lw.lecture_store.read_deck = lambda lid: deck
-    lw._scene_html_from_png = lambda png, w, h: "<html></html>"
+    dv.lecture_store.lecture_dir = lambda lid: lec
+    dv.lecture_store.read_deck = lambda lid: deck
+    dv._scene_html_from_png = lambda png, w, h: "<html></html>"
     cap = {}
 
     class FakeMedia:
@@ -109,8 +119,8 @@ with tempfile.TemporaryDirectory() as td:
             cap.update(tool_input)
             return "HTML 동영상 제작 완료: /tmp/x.mp4 (테스트)"
 
-    lw._load_media_handler = lambda: FakeMedia()
-    res = lw._deck_video_build("L", {})
+    dv._load_media_handler = lambda: FakeMedia()
+    res = dv.build("L", {})
 
 p = cap.get("narration_audio_paths")
 check("narration/<sid>.wav 경로 조립", isinstance(p, list) and len(p) == 2

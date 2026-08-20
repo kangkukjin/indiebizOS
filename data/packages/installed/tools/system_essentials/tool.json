@@ -559,7 +559,7 @@
           },
           "name": {
             "type": "string",
-            "description": "register 전용 — 웹앱 이름"
+            "description": "register — 웹앱 이름 / remove — 지울 웹앱 이름(url 대신 지목 가능)"
           },
           "url": {
             "type": "string",

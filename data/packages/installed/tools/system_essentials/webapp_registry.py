@@ -236,12 +236,33 @@ def op_register(tool_input: dict):
 
 
 def op_remove(tool_input: dict):
+    """수동 등록 해제 — url 또는 name(등록 때 준 이름) 어느 쪽으로도 지목할 수 있다.
+
+    ★register 가 name+url 을 받으므로 remove 도 그 둘 다 받아야 어휘가 대칭이다.
+      url 만 받던 시절엔 방금 이름으로 등록한 것을 지우려고 목록을 다시 조회해야 했다.
+    """
     url = (tool_input.get("url") or "").strip()
-    if not url:
-        return items([], success=False, message="지울 url 이 필요합니다")
+    name = (tool_input.get("name") or "").strip()
+    if not url and not name:
+        return items([], success=False, message="지울 url 또는 name 이 필요합니다")
+
     manual = _load_manual()
-    kept = [m for m in manual if (m.get("url") or "") != url]
+    if url:
+        kept = [m for m in manual if (m.get("url") or "") != url]
+        miss = "수동 등록에 없는 주소입니다"
+    else:
+        hit = [m for m in manual if (m.get("title") or "").strip() == name]
+        if not hit:  # 대소문자 무시 재시도
+            hit = [m for m in manual
+                   if (m.get("title") or "").strip().lower() == name.lower()]
+        if len(hit) > 1:
+            return items(hit, success=False,
+                         message=f"같은 이름의 등록이 {len(hit)}건입니다 — url 로 지목해 주세요")
+        hit_urls = {(m.get("url") or "") for m in hit}
+        kept = [m for m in manual if (m.get("url") or "") not in hit_urls] if hit else manual
+        miss = "수동 등록에 없는 이름입니다"
+
     if len(kept) == len(manual):
-        return items([], success=False, message="수동 등록에 없는 주소입니다 (파생 항목은 각자의 진실 소스에서 지워야 합니다 — 포털/게시판/사이트 등)")
+        return items([], success=False, message=miss + " (파생 항목은 각자의 진실 소스에서 지워야 합니다 — 포털/게시판/사이트 등)")
     _save_manual(kept)
     return op_list(tool_input)

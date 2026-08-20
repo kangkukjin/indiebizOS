@@ -98,20 +98,31 @@ def _struct(tool_input: dict) -> str:
     text = str(tool_input.get("text") or "").strip()
 
     # 입력 획득: file/text 우선, 없으면 >> 파이프 본문(예: [sense:crawl] 결과)
+    pipe_note = None
     if file_path or text:
         from ingest_engine import extract_source
         src = extract_source(path=file_path or None, text=text or None)
     else:
         prev = _parse_prev(tool_input.get("_prev_result"))
-        if isinstance(prev, dict) and isinstance(prev.get("items"), list):
-            return _fail("입력이 이미 items 통화입니다 — 통화의 의미 변환은 [table:ai], "
-                         "산문 종합은 [table:brief] 를 쓰세요.")
         body = ""
         if isinstance(prev, str):
             body = prev.strip()
         elif isinstance(prev, dict):
             body = str(prev.get("text") or prev.get("content") or prev.get("summary")
                        or prev.get("message") or "").strip()
+        if isinstance(prev, dict) and isinstance(prev.get("items"), list):
+            # 본문 병기 봉투(crawl: text=본문 + items=링크 부속)는 본문을 원문으로 쓴다 —
+            # "이미 items 통화" 거절은 쓸 본문이 없거나 요약 한 줄뿐일 때만 (2026-08-20
+            # ep1325 야생 실측: 대표 용례 crawl>>struct 가 이 거절로 죽어 있었다).
+            # 문서-모양 게이트는 write v4 와 같은 규율 — 오분류는 통화 보존(거절) 쪽으로.
+            doc_shaped = ("\n" in body) or (len(body) >= 200)
+            if not doc_shaped:
+                return _fail("입력이 이미 items 통화입니다 — 통화의 의미 변환은 [table:ai], "
+                             "산문 종합은 [table:brief] 를 쓰세요. (본문 텍스트가 함께 오는 "
+                             "봉투면 본문을 원문으로 씁니다 — 이 봉투엔 쓸 본문이 없습니다.)")
+            if prev["items"]:
+                pipe_note = (f"파이프 봉투의 items {len(prev['items'])}건은 부속(링크 목록 등)으로 "
+                             "보고 본문 텍스트를 원문으로 썼습니다.")
         if not body:
             return _fail("입력이 없습니다 — file(경로)·text(본문)·>> 파이프 본문 중 하나를 주세요.")
         src = {"ok": True, "kind": "text", "text": body[:_ITEMS_CAP],
@@ -168,8 +179,9 @@ def _struct(tool_input: dict) -> str:
         if dropped:
             result["dropped_ungrounded"] = dropped
         records = kept
-    if grounded_note:
-        result["note"] = grounded_note
+    _notes = [n for n in (grounded_note, pipe_note) if n]
+    if _notes:
+        result["note"] = " ".join(_notes)
     result["items"] = mark_ai(records)
     result["count"] = len(records)
     return _ok(result)

@@ -5,36 +5,40 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:6033
+- dataset_size:6218
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 의학 논문 다운로드
+- source_sentence: open chrome on my phone
   sentences:
-  - '[sense:paper]'
-  - '[sense:entity]'
-  - '[self:file_find]'
-- source_sentence: AI 에이전트 프레임워크의 최적화 방안 탐색 (라우팅, 캐싱, 병렬 처리, 상태 관리, 지연 시간 감소 등)
+  - '[self:health]'
+  - 빈 폴더 생성 (mkdir -p 동등, 중간 경로 자동 생성·이미 있으면 조용히 통과). 삭제는 delete, 이동·이름변경은 move.
+  - 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브
+    접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
+- source_sentence: 디자인 시스템 톤 일치 보여줘
   sentences:
-  - '[limbs:radio]'
-  - '[sense:stock]'
-  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
-- source_sentence: 회의록 텍스트에서 할 일 뭐가 있어을 추출해서 기한순으로 보여줘
+  - '[sense:contest]'
+  - 개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을
+    따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열
+    불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.
+  - '[engines:image_read]'
+- source_sentence: 여기가 어디야
   sentences:
-  - '[limbs:browser]'
-  - 학술 논문·학위논문 검색·다운로드 (op 분기). source로 DB 선택. 웹 검색은 search, 라이브러리 문서는 devdocs.
-  - '[self:struct] >> [table:sort]'
-- source_sentence: 웹사이트 긁어서 문서로 보관
+  - '[sense:here]'
+  - '[self:material]'
+  - '[sense:crypto]'
+- source_sentence: 크몽에서 로고 디자인 전문가 평점 좋은 순으로 5명 골라줘
   sentences:
-  - '[self:trigger] >> [table:take] >> [table:each]''}"}'
-  - '[sense:crawl] >> [self:write]'
-  - '[sense:stock] & [sense:stock]'
-- source_sentence: 사이트 정보 업데이트 — portfolio
+  - 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
+  - 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면
+    채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
+  - '[sense:freelance] >> [table:sort] >> [table:take]'
+- source_sentence: 보험비교 노트북 통째로 지워줘
   sentences:
-  - 라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.
-  - '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
-  - '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도
-    가능.'
+  - 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진
+    문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
+  - '[self:lecture]'
+  - '[self:cctv]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +92,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '사이트 정보 업데이트 — portfolio',
-    '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.',
-    '라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.',
+    '보험비교 노트북 통째로 지워줘',
+    '근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.',
+    '[self:cctv]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +103,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.7419, -0.1526],
-#         [ 0.7419,  1.0000, -0.0814],
-#         [-0.1526, -0.0814,  1.0000]])
+# tensor([[ 1.0000,  0.4677, -0.0247],
+#         [ 0.4677,  1.0000,  0.0398],
+#         [-0.0247,  0.0398,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -145,20 +149,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 6,033 training samples
+* Size: 6,218 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 5 tokens</li><li>mean: 15.65 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.85 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 4 tokens</li><li>mean: 15.75 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 24.55 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                                  | sentence_1                                                                             |
-  |:--------------------------------------------|:---------------------------------------------------------------------------------------|
-  | <code>블로그 글 ID 5432 조회</code>               | <code>[self:blog]</code>                                                               |
-  | <code>매일 아침 9시에 뉴스 모아서 메일로 보내는 걸 예약해</code> | <code>트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.</code> |
-  | <code>내 블로그에 명상 관련 글 있나</code>              | <code>내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.</code>                  |
+  | sentence_0                                      | sentence_1                                                            |
+  |:------------------------------------------------|:----------------------------------------------------------------------|
+  | <code>indiebizOS로 출품할 만한 AI 에이전트 대회 찾아줄래</code> | <code>[sense:contest]</code>                                          |
+  | <code>국내 학위논문 중에 베이지안 추론 관련</code>              | <code>[sense:paper]</code>                                            |
+  | <code>코스피랑 코스닥 동시에 확인</code>                    | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -288,11 +292,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6623 | 500  | 0.0145        |
+| 0.6427 | 500  | 0.0063        |
 
 
 ### Training Time
-- **Training**: 4.0 minutes
+- **Training**: 4.2 minutes
 
 ### Framework Versions
 - Python: 3.13.5

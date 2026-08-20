@@ -170,6 +170,7 @@
     "self:ledger#regenerate": "비즈니스 데이터 의존 — 고정 fixture 부적합",
     "self:ledger#remove_image": "item_id + 경로 필요 — 고정 fixture 부적합",
     "self:ledger#save": "생성/수정 대상 필요 — 고정 fixture 부적합",
+    "self:material#list": "lecture_id 필요 — 고정 fixture 부적합",
     "self:memory#read": "memory_id 필요(search 결과의 id) — 고정 fixture 부적합",
     "self:music#playlist": "플레이리스트 name 필요 — 고정 fixture 부적합",
     "self:music#track": "곡 path 필요 — 고정 fixture 부적합",

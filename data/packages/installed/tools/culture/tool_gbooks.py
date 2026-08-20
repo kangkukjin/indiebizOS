@@ -49,6 +49,8 @@ def search_google_books(query: str, max_results: int = 5, order_by: str = "relev
             img = info.get("imageLinks") or {}
             image_url = img.get("thumbnail") or img.get("smallThumbnail") or ""
             books.append({
+                # F16-4: 제목 칸 title 병기(R7 칸 규약 — bookname 원명 보존)
+                "title": info.get("title", ""),
                 "bookname": info.get("title", ""),
                 "authors": ", ".join(info.get("authors", [])),
                 "publisher": info.get("publisher", ""),

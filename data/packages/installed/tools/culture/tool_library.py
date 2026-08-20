@@ -119,6 +119,10 @@ def extract_books_from_xml(root, item_tag="doc"):
             if child.text:
                 book[child.tag] = child.text.strip()
         if book:
+            # F16-4 (2026-08-20 상상훈련 16회차, R7 칸 규약): 제목 칸 title 병기 —
+            # bookname 만 있으면 교차 계열 union→dedup{title} 이 죽는다(원명 보존).
+            if book.get("bookname") and "title" not in book:
+                book["title"] = book["bookname"]
             books.append(book)
 
     return books

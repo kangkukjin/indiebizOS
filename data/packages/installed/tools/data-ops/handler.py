@@ -717,6 +717,13 @@ def _op_groupby(prev, params):
     by = str(by)
     dicts = _rows_for_field(prev, by)
     if not dicts:
+        # F16-2 (2026-08-20 상상훈련 16회차): _rows_for_field 는 빈 리스트를 후보에서
+        # 제외하므로 items:[] (통화 실존·0행)와 통화 부재가 여기서 접힌다. 빈손은
+        # filter/take 처럼 0행으로 흘려보낸다(F17 "빈손 계약은 verb 마다 심사"의 잔여 verb).
+        recs, _env0 = _get_items(prev)
+        if recs is not None and len(recs) == 0:
+            return {"success": True, "items": [], "count": 0,
+                    "message": "groupby: 0행 입력 — 집계할 행이 없습니다."}
         return {"success": False, "error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
     if not any(by in d for d in dicts):
         # 없는 by 를 조용히 받으면 전 행이 null 한 그룹으로 뭉개진다(⑧′ 실측: [[null, 83]])

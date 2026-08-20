@@ -137,7 +137,16 @@ def parse(code: str) -> List[Dict]:
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
             parsed = _parse_group(seg_text.strip())
             if parsed is None:
-                raise IBLSyntaxError(f"파싱 실패: {seg_text.strip()}")
+                _st = seg_text.strip()
+                # F16-1 (2026-08-20 상상훈련 16회차): 분기 헤더가 홀로 오면(중괄호 몸 누락)
+                # 맨 "파싱 실패"는 자가교정을 못 이끈다 — 정답 형태를 오류문에 동반.
+                if _st.startswith(('[if:', '[case:', '[else')):
+                    raise IBLSyntaxError(
+                        f"파싱 실패: {_st} — 분기 몸은 같은 문장에서 중괄호로 감쌉니다: "
+                        "[if: 조건]{[액션]} [else]{[액션]} / "
+                        '[case: 소스]{"값": [액션], default: [액션]}. '
+                        "헤더와 몸을 줄로 나누면 파싱되지 않습니다.")
+                raise IBLSyntaxError(f"파싱 실패: {_st}")
             # 변수 참조 치환 — 앞 문장들에서 할당된 변수만 보인다(자기/앞선 참조 방지)
             parsed = _resolve_variables(parsed, variables)
             # 문장 경계 표식 — 문장들은 한 리스트로 평탄화되므로, 실행기가 "여기부터 새 문장"을

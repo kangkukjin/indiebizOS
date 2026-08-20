@@ -382,3 +382,22 @@ navigate → screenshot → image_read → (navigate >> screenshot) → image_re
 - **R-V14-1 오탐 정정**(정직 기록): add는 이미 station_id(권장)+aliases(url·title) 완비 — 진범=코퍼스 편향. 수리=station_id 파이프라인 시드 3건(벡터 부착)+오염 행 제거(id 2925 `op:"삼성전자"` 유령 op). 라이브 왕복 개통.
 - **B14-1 진단 완결+수리**: economy·weather 공백의 진범=`_exec_tool` 죽은 이름 2건(yf_stock_price→stock_op{op:quote} / get_api_ninjas_data→get_weather) — **08-05 "직접 도구 호출은 grep에 안 걸린다" 함정 재발**. 재배선 후 라이브 economy 7지표+weather 수집. pulse_log 0행=06-28 정기 수집 폐지의 휴면 잔재(save_pulse·_collect_world_delta 호출자 0 — 유령 테이블, 정리=판정감).
 - 검증=build --check 전 가드·P1~P20·ai-ops 배터리 25/25·each 스칼라/flatten/dedup/병렬 회귀·포털 게이트(structure 거부·weather 대조). ⏳커밋·시드 후보 11건(별도 승인)·재학습 대기열·판정 후보 2(engines ai_call 경계·pulse_log 정리).
+- **15회차 (2026-08-20)** — 중점=문형 '시간'(행동 조합 0회). 과제 11건 전수 validate 통과, 실측 11건.
+  - `B15-1` **발견/수리대상** — 변환자가 비-통화 봉투를 침묵 무변환 통과: `[self:trigger]{op:"list"} >> [table:take]{n:1}` 이 success:true 로 **전체** 반환(filter 도 동일). 대조군 `[sense:host]{op:"resources"} >> take` 는 정직 거절 → 규율이 봉투에 따라 갈림. "골라서 알림"이 전량 발송이 되는 부류.
+  - `B15-2` **발견** — `table:since` 첫 호출이 baseline 을 삼켜 0행(feed·realty 양쪽 확정). 트리거 첫 실행 침묵. 창고 폴러 `seed` 선례 제안.
+  - `V15-1` **판정대기** — 디스크 여유공간이 items 통화로 나오는 경로 부재(storage volumes=칸 없음 / host resources=통화 아님).
+  - `F15-1` **판정대기** — if/case 응답이 선택 분기·좌변값을 안 보고(`{"result":...}` 뿐, success/steps 없음).
+  - `F14-1` **수리됨 확인** — each 내부 치환이 정직 실패+필드 힌트로 전환.
+  - 오진 격리 1건: "since 가 같은 행을 반복 통과" → `since_seen` 키=URL 안정, 시각별 적재 +30/+2/+2 로 **진짜 새 URL**임이 확인돼 반증. 남는 사실=회전 창 소스에 since 를 걸면 알림이 잦다(소스 성질).
+  - 보고서: `outputs/imagination_training/2026-08-20_15회차.md`
+- **16회차 (2026-08-20)** — 중점=축적·적용 문형 + 순수 미조합 짝 개척(goal·webapp·script·render_html·notebook each·book&classic). 과제 12(검수 12/12)·실측 11+격리 5·스크래치 전량 복구.
+  - **개통 ★**: 검색→brief(HTML)→`$카드.message` 문장 간 반출→render_html PNG 4단 사슬(engines:render_html 첫 행동 편입 — 여러 줄 HTML 페이로드가 $변수 값-바인딩으로 무손상 통과=shell-IBL 은퇴 사유의 반대 실증) · `$위치.lat/lng`→restaurant 새 짝 · notebook list→each sources · 조건 양분기 실측(else 정당성 격리+반전 알림 실도달) · **schedule.do 안 ai_call 상위 전파 확인**(F14-4 부류 건강) · 괄호 분기 rename 우회 야생 재실증(G13-1).
+  - `F16-1` **수리됨** — if/else 중괄호 누락의 두 실패 경로 모두 정답 형태 힌트 동반(오도 처방 제거). 라이브 검증.
+  - `F16-2` **재진단 후 수리됨** — 진범=finance 아닌 **groupby**(`_rows_for_field` 가 빈 리스트를 후보 제외 → 통화 실존·0행과 통화 부재가 접힘. finance 는 items:[] 기병기=오진 격리). 빈손=0행 흐름·비통화=정직 거절 유지. F17 잔여 verb 소진.
+  - `F16-3` **수리됨** — script list 에 `last_status`·`last_run` 칸 병기. `filter{last_status=='error'}` 라이브 1건 적중.
+  - `F16-4` **수리됨** — book(정보나루 단일 관문+gbooks) title 병기. rename 없이 `book & classic >> union >> dedup{title}` 완주.
+  - `V16-1` **오탐 정정** — lecture list 는 items 기병기(500자 절단 출력 오독 — 키 부재 단언은 전체 봉투로). 수리 불요.
+  - `V16-2` **판정·집행 완료** — material **list op 신설**(원장은 자기 list 를 가진다). items에 exists 파일 실존 pre-flight 동반, ops.returns/side_effect/exempt 동시 선언. `list >> take >> each` 문형 개통. 액션 148 불변.
+  - **차단기 판정·집행 완료** — 파라미터를 바꾼 **교정 호출은 open 창당 1회 즉시 허용**(`_params_sig`+`trial_used` — 동일 호출 반복 차단은 보존, 교정 시험 실패=재-open 후 그 창 봉쇄). 라이브 전 경로 검증.
+  - 관찰: F7 봉투 비대칭 3·4번째 오독 표본(단일 액션=final_result 키 없음 — 훈련자도 반복해 밟음).
+  - 검증=build --check·파서 자기시험·P1~P20·ai-ops 25/25. 시드 후보 7건(승인 대기)·⏳커밋·재학습 대기열. 보고서: `outputs/imagination_training/2026-08-20_16회차.md`(부록=집행 상세)

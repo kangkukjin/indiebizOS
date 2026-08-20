@@ -176,6 +176,7 @@
             "type": "string",
             "description": "수행할 작업",
             "enum": [
+              "list",
               "add",
               "remove"
             ]

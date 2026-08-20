@@ -131,9 +131,14 @@ def _entry_item(sid, e, state):
         problems.append("⚠️ 인터프리터 없음")
     if problems:
         status = " · ".join(problems) + f" — {status}"
+    # F16-3 (2026-08-20 상상훈련 16회차): 성패가 summary 산문에만 접혀 "실패한 것만
+    # 골라줘"가 파이프 표현 불가였다(F1 규약: 파이프가 물 값은 칸으로 병기).
+    # last_status = ok|error|none — 원장이 이미 아는 값의 투영일 뿐.
     return {"title": sid, "meta": f"{e.get('interpreter', '')} · data/scripts/{e.get('file', '')}",
             "summary": f"{e.get('description', '')} — {status}".strip(" —"),
             "registered_at": e.get("registered_at", ""),
+            "last_status": ("ok" if lr.get("ok") else "error") if lr else "none",
+            "last_run": str(lr.get("at", "")) if lr else "",
             "runnable": not problems}
 
 

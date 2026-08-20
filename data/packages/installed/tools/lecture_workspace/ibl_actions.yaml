@@ -66,20 +66,28 @@ actions:
   material:
     returns: effect
     runs_on: pc_only
-    description: 강의 재료 관리 (op 분기). 추가/삭제.
+    description: 강의 재료 관리 (op 분기). 목록/추가/삭제.
     group: lecture
-    target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
+    target_description: 공통 lecture_id 필수. list는 재료 목록(items 통화 — 파일 실존 여부 동반), add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
     target_key: op
     router: handler
     tool: material_op
     ops:
+      returns:
+        list: items
+      side_effect:
+        list: false
+      exempt:
+        list: lecture_id 필요 — 고정 fixture 부적합
       values:
+        list: 재료 목록 (items 통화 — filename·type·size·파일 실존)
         add: 재료 추가 (file_path 또는 text+filename)
         remove: 재료 삭제 (filename)
-    implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
+    implementation: handler.py가 op로 분기. list는 deck.json 등재+파일 실존 투영, add는 file_path 모드/text 모드 자동 감지.
     keywords:
     - 재료 추가
     - 재료 삭제
+    - 재료 목록
     - 원고 추가
     - 자료 추가
     scope: workspace

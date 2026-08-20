@@ -289,6 +289,46 @@ def _slide_delete(tool_input: dict) -> str:
 # 재료 관리
 # ─────────────────────────────────────────────────────────────────────
 
+def _material_list(tool_input: dict) -> str:
+    """재료 목록 (items 통화).
+
+    V16-2 (2026-08-20 상상훈련 16회차 판정): material 이 add/remove 뿐이라 "이 강의 재료
+    뭐 들었나 → 각각 …"(each) 문형이 표현 불가였다. 원장은 자기 list 를 가진다
+    (연락처 은퇴 판정의 역방향 논리 — list 없는 원장은 반쪽). deck.json 등재 + 파일 실존을
+    함께 투영한다(script list 의 pre-flight 선례 — 등재됐는데 파일이 사라진 재료가 보이게).
+    """
+    lecture_id = (tool_input.get("lecture_id") or "").strip()
+    if not lecture_id:
+        return _err("lecture_id는 필수입니다.")
+    if not lecture_store.lecture_exists(lecture_id):
+        return _err(f"강의를 찾을 수 없습니다: {lecture_id}", error_type="not_found")
+    deck = lecture_store.read_deck(lecture_id)
+    md = lecture_store.materials_dir(lecture_id)
+    items = []
+    for m in deck.get("materials", []):
+        name = (m.get("file") or "").split("/")[-1]
+        fp = md / name
+        exists = fp.is_file()
+        items.append({
+            "title": name,
+            "filename": name,
+            "path": str(fp.resolve() if exists else fp),
+            "type": m.get("type", ""),
+            "added_at": m.get("added_at", ""),
+            "size_bytes": fp.stat().st_size if exists else 0,
+            "exists": exists,
+            "meta": " · ".join(p for p in [
+                m.get("type") or None,
+                (m.get("added_at") or "")[:16] or None,
+                None if exists else "⚠️ 파일 없음",
+            ] if p),
+        })
+    payload = {"items": items, "count": len(items)}
+    if not items:
+        payload["message"] = "등록된 재료가 없습니다 — op:add 로 추가 (file_path 또는 text+filename)."
+    return _ok(payload)
+
+
 def _material_add(tool_input: dict) -> str:
     lecture_id = (tool_input.get("lecture_id") or "").strip()
     if not lecture_id:
@@ -1347,7 +1387,7 @@ _OP_DISPATCHERS = {
     "slide_op": {"create": _slide_create, "edit": _slide_edit, "delete": _slide_delete,
                  "patch": _slide_patch_spec, "rerender": _slide_rerender,
                  "image_edit": _slide_image_edit, "note": _slide_note},
-    "material_op": {"add": _material_add, "remove": _material_remove},
+    "material_op": {"list": _material_list, "add": _material_add, "remove": _material_remove},
     "deck_op": {"reorder": _deck_reorder, "export": _deck_export, "video": _deck_video},
 }
 # 모두 op 필수 — _OP_DEFAULTS 항목 없음.

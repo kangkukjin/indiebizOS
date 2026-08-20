@@ -273,6 +273,13 @@ def _parse_if_else(code: str) -> Optional[Dict]:
 
     if remaining:
         # 조용히 버리면 체인 뒤 문장이 침묵 소실된다 — 문장 분리를 명시 요구.
+        # F16-1 (2026-08-20 상상훈련 16회차): 잔여가 [else 로 시작하면 진짜 원인은 십중팔구
+        # 분기 몸 중괄호 누락([else] [A] 형태) — "줄로 분리" 처방은 오도라 정답 형태를 지목.
+        if remaining.startswith('[else'):
+            raise IBLSyntaxError(
+                f"if/else 체인 뒤에 해석되지 않은 텍스트가 있습니다: '{remaining[:60]}' — "
+                "분기 몸은 중괄호로 감쌉니다: [if: 조건]{[액션]} [else]{[액션]}. "
+                "(중괄호 없는 [else] [액션] 형태는 파싱되지 않습니다.)")
         raise IBLSyntaxError(
             f"if/else 체인 뒤에 해석되지 않은 텍스트가 있습니다: '{remaining[:60]}' — "
             "블록과 다른 문장은 줄(또는 ;)로 분리하세요.")

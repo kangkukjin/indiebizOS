@@ -3641,20 +3641,28 @@ nodes:
       material:
         returns: effect
         runs_on: pc_only
-        description: 강의 재료 관리 (op 분기). 추가/삭제.
+        description: 강의 재료 관리 (op 분기). 목록/추가/삭제.
         group: lecture
-        target_description: 공통 lecture_id 필수. add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
+        target_description: 공통 lecture_id 필수. list는 재료 목록(items 통화 — 파일 실존 여부 동반), add는 file_path(파일 복사) 또는 text+filename(텍스트 저장), remove는 filename.
         target_key: op
         router: handler
         tool: material_op
         ops:
+          returns:
+            list: items
+          side_effect:
+            list: false
+          exempt:
+            list: lecture_id 필요 — 고정 fixture 부적합
           values:
+            list: 재료 목록 (items 통화 — filename·type·size·파일 실존)
             add: 재료 추가 (file_path 또는 text+filename)
             remove: 재료 삭제 (filename)
-        implementation: handler.py가 op로 분기. add는 file_path 모드/text 모드 자동 감지.
+        implementation: handler.py가 op로 분기. list는 deck.json 등재+파일 실존 투영, add는 file_path 모드/text 모드 자동 감지.
         keywords:
         - 재료 추가
         - 재료 삭제
+        - 재료 목록
         - 원고 추가
         - 자료 추가
         scope: workspace
@@ -4550,7 +4558,7 @@ nodes:
         fixture: '[self:webapp]{}'
         description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
-        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url. 파생 항목은 각자의 진실 소스에서 지운다).'
+        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url 또는 name — register 가 준 이름 그대로. 파생 항목은 각자의 진실 소스에서 지운다).'
         target_key: op
         router: handler
         tool: webapp_op
@@ -4569,7 +4577,7 @@ nodes:
             list: 전체 웹앱 목록 — 파생 + 수동 (부류·주소·출처)
             status: 전 웹앱 생존 실측 — HTTP 응답코드·지연 (🟢/🔴)
             register: 수동 등록 (name + url 필수) — 파생 밖 웹앱만
-            remove: 수동 등록 제거 (url)
+            remove: 수동 등록 제거 (url 또는 name)
         keywords:
         - 웹앱
         - webapp

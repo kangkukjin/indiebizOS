@@ -25,6 +25,23 @@ _action_fail_counter: Dict[str, dict] = {}
 _ACTION_FAIL_LIMIT = 3       # 연속 N번 실패 시 차단(open)
 _ACTION_OPEN_SECONDS = 90    # open 상태 유지 시간(초). 경과 후 half-open 시험 허용.
 
+
+def _params_sig(params) -> str:
+    """호출 시그니처 — params 의 안정 해시 (교정 시험 판정용).
+
+    판정 2026-08-20 (상상훈련 16회차): 차단기의 목적은 *같은 호출의 눈감은 반복*을 끊는
+    것이지 자가교정을 처벌하는 게 아니다. 실측: project_id 누락 3연발 뒤 파라미터를
+    교정한 올바른 호출까지 68초 차단 — 자가교정 1왕복이 원리적으로 막혔다. 파라미터를
+    바꾼 호출은 open 창당 1회 즉시 허용한다(아래 trial_used 게이트 — 실패하면 재-open
+    되고 그 창에서는 더 안 열리므로 폭주 방어는 보존).
+    """
+    import hashlib
+    try:
+        raw = json.dumps(params or {}, sort_keys=True, ensure_ascii=False, default=str)
+    except Exception:
+        raw = str(params)
+    return hashlib.sha1(raw.encode("utf-8", "replace")).hexdigest()[:12]
+
 # IBL_DEBUG 로그 디듀프 — 동일 코드 반복(=UI 라이브-상태 폴링)을 시간창으로 접어
 # 디버그 로그 도배를 막는다. 일회성 명령·서로 다른 조회는 영향 없음.
 _ibl_log_seen: Dict[str, float] = {}
@@ -296,20 +313,33 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             if _open_until is not None:
                 _now = time.monotonic()
                 if _now < _open_until:
-                    # open: 쿨다운 미경과 → 즉시 차단
-                    _remaining = int(_open_until - _now) + 1
-                    _fail_count = _entry.get("fails", _ACTION_FAIL_LIMIT)
-                    print(f"[IBL] 액션 차단(open): {_node}:{_action} (연속 {_fail_count}회 실패, {_remaining}초 후 재시도 가능)")
-                    _last_err = (_entry or {}).get("last_error")
-                    _cause = f" 마지막 실패 사유: {_last_err}" if _last_err else ""
-                    return json.dumps({
-                        "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 약 {_remaining}초 후 자동으로 재시도가 허용됩니다. 그동안 파라미터를 점검하거나 다른 방법을 찾으세요.{_cause}",
-                        "last_error": _last_err,
-                        "blocked": True,
-                        "action": f"{_node}:{_action}",
-                        "consecutive_failures": _fail_count,
-                        "retry_after_seconds": _remaining,
-                    }, ensure_ascii=False)
+                    # 교정 시험 (판정 2026-08-20, 상상훈련 16회차): 파라미터를 바꾼 호출은
+                    # open 창당 1회 즉시 허용 — 실패하면 재-open + trial_used 유지라
+                    # 그 창에서는 더 안 열린다(폭주 방어 보존, 자가교정 개통).
+                    _cur_sig = _params_sig(_pre_parsed[0].get("params"))
+                    _last_sig = _entry.get("last_params_sig")
+                    if (_last_sig is not None and _cur_sig != _last_sig
+                            and not _entry.get("trial_used")):
+                        _entry["trial_used"] = True
+                        print(f"[IBL] 액션 교정 시험 허용: {_node}:{_action} (파라미터 변경 감지 — open 창당 1회)")
+                    else:
+                        # open: 쿨다운 미경과 → 즉시 차단
+                        _remaining = int(_open_until - _now) + 1
+                        _fail_count = _entry.get("fails", _ACTION_FAIL_LIMIT)
+                        print(f"[IBL] 액션 차단(open): {_node}:{_action} (연속 {_fail_count}회 실패, {_remaining}초 후 재시도 가능)")
+                        _last_err = (_entry or {}).get("last_error")
+                        _cause = f" 마지막 실패 사유: {_last_err}" if _last_err else ""
+                        _trial_note = (" 파라미터를 바꾼 교정 호출은 차단 중에도 1회 즉시 허용됩니다."
+                                       if not _entry.get("trial_used")
+                                       else " 이번 차단 창의 교정 시험은 이미 사용했습니다 — 쿨다운을 기다리세요.")
+                        return json.dumps({
+                            "error": f"[{_node}:{_action}] 액션이 연속 {_fail_count}회 실패하여 일시 차단되었습니다. 약 {_remaining}초 후 자동으로 재시도가 허용됩니다. 그동안 파라미터를 점검하거나 다른 방법을 찾으세요.{_trial_note}{_cause}",
+                            "last_error": _last_err,
+                            "blocked": True,
+                            "action": f"{_node}:{_action}",
+                            "consecutive_failures": _fail_count,
+                            "retry_after_seconds": _remaining,
+                        }, ensure_ascii=False)
                 else:
                     # half-open: 쿨다운 경과 → 이번 1회 시험 실행 허용 (성공 시 reset, 실패 시 재-open)
                     print(f"[IBL] 액션 half-open 시험: {_node}:{_action} (쿨다운 경과, 1회 시험 실행)")
@@ -425,6 +455,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     _entry = _action_fail_counter.setdefault(_fk, {"fails": 0, "open_until": None})
                     _entry["fails"] += 1
                     _cnt = _entry["fails"]
+                    # 교정 시험 판정용 — 마지막 실패 호출의 파라미터 시그니처 (2026-08-20)
+                    _entry["last_params_sig"] = _params_sig(_pre_parsed2[0].get("params"))
                     # ★차단 메시지가 원인을 나를 수 있게 마지막 실패 사유를 보관.
                     # (원인 없는 "실패" 만 돌려주면 모델이 같은 호출을 눈감고 반복한다 —
                     #  2026-08-19 ep1251: 429 쿼터 소진이 "생성 실패"로만 보여 9분 낭비)

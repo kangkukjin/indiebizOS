@@ -34,6 +34,10 @@ SESSION_RESET_RESPONSE = "새 세션을 시작했습니다. 무엇을 도와드�
 _FRAMING_CACHE: Dict[str, Dict[str, Any]] = {}
 _FRAMING_TTL_SEC = 1800  # 30분 — 오래된 동선이 새 대화로 새지 않도록 만료
 
+# fit 게이트의 framing 고쳐쓰기(amend) 방어 — 둘 다 **결정론**이다(의미 판단 없음).
+_AMEND_MIN_LEN = 20        # 이보다 짧은 amended_framing 은 지도로 취급하지 않는다
+_AMEND_CHAIN_MAX = 2       # 연속 고쳐쓰기 상한 — 넘으면 재사용 포기·의식 재각성(티어 역전 차단)
+
 
 def framing_cache_get(key: str) -> Optional[dict]:
     """저장된 framing 조회 (TTL 경과 시 폐기하고 None)."""
@@ -104,15 +108,44 @@ class CognitiveConsciousnessMixin:
         if prev:
             gate = self._consciousness_fit_gate(user_message, prev)
             if gate and gate.get("fits"):
-                reused = dict(prev)
-                reused["achievement_criteria"] = (
-                    gate.get("criteria") or prev.get("achievement_criteria", "")
-                )
-                reused["history_summary"] = ""  # 실제 최근 history가 그대로 흐르도록
-                self._log(
-                    f"[의식] framing 재사용 (Opus 스킵): {reused.get('task_framing', '')[:50]}"
-                )
-                return reused
+                # 3값 게이트: fits=true 여도 산출물·범위가 커졌으면 지도를 고쳐 쓴다.
+                # (이진이던 시절엔 criteria 만 새로 뽑히고 task_framing 은 첫 판 그대로라,
+                #  옛 지도로 새 땅을 걷는 상태가 구조적으로 만들어졌다 — 2026-08-20 15:01 턴
+                #  실례: '#repair 남겨둔 것 다 처리해' 에 어제의 '판정하라(코드 수정 금지)'
+                #  framing 이 그대로 재사용됐다.)
+                amended = str(gate.get("amended_framing") or "").strip()
+                if amended and len(amended) < _AMEND_MIN_LEN:
+                    # 결정론 하한만 본다. "핵심어가 남았나" 같은 의미 검사를 여기 두면
+                    # 가드가 막으려는 병(경량 모델의 의미 오판)을 가드 안에 다시 들인다.
+                    self._log(f"[의식] amended_framing 무시 (하한 미달 {len(amended)}자)")
+                    amended = ""
+                chain = int(prev.get("_amend_count") or 0)
+                if amended and chain >= _AMEND_CHAIN_MAX:
+                    # ★래칫 — 진짜 구조적 위험은 한 번의 나쁜 수정이 아니라 **누적 드리프트**다.
+                    # 매 턴 경량 모델이 지도를 조금씩 고쳐 쓰면 N턴 뒤 framing 은 의식(고급
+                    # 모델)의 산물이 아니라 경량 모델의 산물인데 겉보기엔 '재사용'이다
+                    # (3단 인지의 티어 역전이 조용히 일어난다). 수정 사슬이 상한에 닿으면
+                    # 재사용을 포기하고 의식을 깨워 지도를 새로 뜬다 — '고쳐 쓸 권한'과
+                    # '지도의 저작권은 의식에 있다'를 양립시키는 자리.
+                    self._log(f"[의식] amend 사슬 상한({chain}회) — 의식 재각성으로 지도 재작성")
+                else:
+                    reused = dict(prev)
+                    if amended:
+                        reused.setdefault("_framing_origin",
+                                          prev.get("task_framing", ""))  # 드리프트 관측용 원본
+                        reused["task_framing"] = amended
+                        reused["_amend_count"] = chain + 1
+                    reused["achievement_criteria"] = (
+                        gate.get("criteria") or prev.get("achievement_criteria", "")
+                    )
+                    reused["history_summary"] = ""  # 실제 최근 history가 그대로 흐르도록
+                    if amended:
+                        framing_cache_set(key, reused)  # 갱신된 지도를 재고에도 반영
+                    self._log(
+                        f"[의식] framing {'갱신 재사용(amend %d)' % reused.get('_amend_count', 0) if amended else '재사용'}"
+                        f" (Opus 스킵): {reused.get('task_framing', '')[:50]}"
+                    )
+                    return reused
 
         # 없거나 안 맞음 → 의식 에이전트가 새로 만든다
         out = self._run_consciousness(user_message, history, execution_memory)
@@ -125,7 +158,14 @@ class CognitiveConsciousnessMixin:
         """저장된 framing이 현재 질문에 맞는지 경량 모델로 판정 + 이번 turn 달성 기준 생성.
 
         Returns:
-            {"fits": bool, "criteria": str} 또는 None(실패 → 호출 측은 풀 의식 폴백)
+            {"fits": bool, "amended_framing": str, "criteria": str}
+            또는 None(실패 → 호출 측은 풀 의식 폴백)
+
+        ★3값이다 — fits 는 '이 framing 을 버릴까'만 답하고, 버리지 않기로 했더라도
+          범위가 커졌으면 amended_framing 으로 지도를 고쳐 준다. 이진이면 '맞다'와
+          '틀렸다' 사이의 가장 흔한 경우(같은 일인데 더 커진 일)를 표현할 수 없다.
+          게이트는 실패한 적이 없었다 — 판정 규칙 1이 시킨 대로 했고, 결함은 반환의
+          표현력에 있었다. 소비 측 가드(_AMEND_MIN_LEN·_AMEND_CHAIN_MAX)와 한 쌍.
         """
         try:
             from consciousness_agent import oneshot_ai_call
@@ -145,9 +185,10 @@ class CognitiveConsciousnessMixin:
 판정하라:
 1. 이 framing이 새 메시지를 푸는 데 그대로 맞는가? 같은 태스크의 연장·변주(조건/방향/대상만 바뀐 경우)면 맞고(fits=true), 주제가 바뀌었으면 안 맞다(fits=false).
 2. ★같은 주제라도, 사용자가 직전 결론·전제를 **반박**하거나("아니야", "다시 찾아봐", "있어/없어" 단언, "틀렸어") 자신의 직접 경험으로 새 사실을 단언하면 fits=false다 — 기존 framing의 전제가 무너졌으므로 새 정보를 반영해 처음부터 다시 프레이밍해야 한다. 재사용은 이전 접근이 여전히 유효할 때만 정당하다.
-3. 맞다면 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라.
+3. ★fits=true 라도 **새 메시지가 할 일을 넓혔거나 다음 단계로 옮겨갔으면**(산출물이 늘었다·조건이 붙었다·'판정'에서 '적용'으로 넘어갔다 등) 옛 framing 을 그대로 두지 말고, 그 변화를 반영해 **고쳐 쓴 framing 전문**을 amended_framing 에 담아라. 그대로 충분하면 빈 문자열(""). 시험은 하나다 — 「이 framing 만 들고 새 메시지를 풀 수 있는가?」 아니면 고쳐 써라(지도가 낡은 채 재사용되면 옛 지도로 새 땅을 걷게 된다).
+4. 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라 — amended_framing 을 썼으면 그 기준도 새 범위에 맞춰라.
 
-JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
+JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria": "..."}}"""
 
             resp = oneshot_ai_call(
                 prompt,
@@ -169,6 +210,7 @@ JSON으로만 응답: {{"fits": true/false, "criteria": "..."}}"""
                 return None
             return {
                 "fits": bool(data.get("fits")),
+                "amended_framing": str(data.get("amended_framing", "") or ""),
                 "criteria": str(data.get("criteria", "") or ""),
             }
         except Exception as e:

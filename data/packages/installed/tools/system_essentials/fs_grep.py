@@ -116,7 +116,10 @@ def _rg_count(pattern, root, file_pattern, use_regex):
     count/files_with_matches 모드의 정답 소스이자, content 모드의 진짜 total 공급원.
     반환: {절대경로: 매칭수} (경로 정렬 = 결정적) 또는 None(실행 실패 → 호출부 폴백).
     """
-    cmd = [_RG_BIN, "--count-matches", "--no-messages"]
+    # --with-filename: 단일 파일 대상이면 rg 가 "path:N" 대신 "N" 만 내 아래 파싱이 빈 dict 를
+    # 만들고, {} 는 None(미가용) 이 아니라 "전수 0건" 으로 읽혀 "매칭 0건 중 2건만 표시"
+    # 같은 거짓 신고가 났다(2026-08-21 라이브 실측). 항상 파일명 접두를 강제.
+    cmd = [_RG_BIN, "--count-matches", "--with-filename", "--no-messages"]
     if not use_regex:
         cmd.append("-F")
     if not os.path.isfile(root) and file_pattern and file_pattern != "**/*":
@@ -218,6 +221,19 @@ def run(tool_input: dict, project_path: str) -> str:
     raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
     expanded = os.path.expanduser(raw_root)
     root = expanded if os.path.isabs(expanded) else os.path.join(project_path, expanded)
+    # ★존재하지 않는 경로 = 판정 불능(2026-08-21, ep1357): rg 도 파이썬 glob 도 없는 루트에서
+    # 조용히 0건을 내 "패턴이 안 잡힘"과 "경로 자체가 없음"이 구분되지 않았다 — 시스템 AI 가
+    # 경로를 잘못 추측하고도 침묵 0건을 받아 거짓 단정(B8 부류)으로 흘렀다. 두 검색 층보다
+    # 앞에서 한 번 가드하므로 rg/파이썬 어느 층을 타든 같은 신고. 형제 op(read/move/delete)의
+    # "경로가 존재하지 않습니다" 규약·P1~P20 시끄러운 실패 계약과 정렬(success:false + error).
+    if not os.path.exists(root):
+        msg = f"경로가 존재하지 않습니다: {raw_root}"
+        if root != raw_root:
+            msg += f" (해석된 절대경로: {root})"
+        msg += " — path 를 확인하세요(파일 위치가 불확실하면 [self:file_find] 로 먼저 찾기)."
+        return json.dumps({"success": False, "error": msg, "items": [], "total": 0,
+                           "total_files": 0, "truncated": False, "text": msg},
+                          ensure_ascii=False)
     # 정규식이 기본이다(grep/ripgrep·Claude Grep 습관과 동일, src desc도 "정규식"으로 광고).
     # 과거엔 기본이 fixed-string('a|b' 를 리터럴로 취급)이라 alternation·메타문자가
     # 조용히 No matches 가 되는 silent-failure 함정이었다. regex=false 로 리터럴 강제 가능.

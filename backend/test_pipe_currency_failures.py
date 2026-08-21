@@ -15,7 +15,7 @@
     P10. filter/dedup/take 침묵 삼킴                    → 명시 에러
     P11. quote 통화 부재로 병렬 결합 표현 불가 (실험 4)  → 1행 items 방출 + N항 union/merge
          (+ 옛 _extract_two 가 셋째 분기를 조용히 버림 → 전 분기 결합, join 은 명시 거부)
-    P12~P13 은 파일 아래쪽 참조 (grep ⑥′ · document ⑭)
+    P12~P21 은 파일 아래쪽 참조 (grep ⑥′ · document ⑭ · … · P21 grep 없는 경로 명시 신고)
 
 실행: python3 backend/test_pipe_currency_failures.py
   ★백엔드가 쓰는 인터프리터(openpyxl 설치본, 예: brew python3.14)로 돌릴 것 —
@@ -640,6 +640,40 @@ def test_p20_workflow_save_syntax_gate():
     print("P20 OK — save 등록 관문(따옴표·중괄호·산문·빈 몸통 거부 / $변수·주석·멀티라인 통과)")
 
 
+def test_p21_grep_missing_path_loud():
+    """P21(2026-08-21, ep1357): [self:grep] 이 없는 path 에서 success:true + 'No matches found' —
+    "패턴 미매칭"과 "경로 부재"가 구분되지 않아 잘못 추측한 경로가 침묵 0건으로 통과(B8 부류).
+    → success:false + '경로가 존재하지 않습니다' 명시 신고. rg·파이썬 두 층 모두(가드는 층 앞)."""
+    with tempfile.TemporaryDirectory() as td:
+        open(os.path.join(td, "real.py"), "w").write("needle\n")
+        missing = os.path.join(td, "nope", "ghost.py")
+        def g(**kw):
+            base = {"pattern": "needle", "path": missing}
+            base.update(kw)
+            return json.loads(_sysess.execute(base, _Ctx("grep_files", td)))
+        # ASCII 패턴(rg 층) — 절대경로 부재
+        r = g()
+        assert r.get("success") is False and "존재하지 않습니다" in r.get("error", ""), r
+        assert "ghost.py" in r["error"] and r.get("items") == [] and r.get("total") == 0, r
+        # 한글 패턴(파이썬 층 강제) — 같은 신고
+        r2 = g(pattern="바늘")
+        assert r2.get("success") is False and "존재하지 않습니다" in r2.get("error", ""), r2
+        # 상대경로 부재 — 해석된 절대경로도 함께 신고
+        r3 = g(path="nope/ghost.py")
+        assert r3.get("success") is False and td in r3["error"], r3
+        # 오탐 없음: 존재하는 루트에서 진짜 0건은 여전히 success:true + No matches
+        ok = json.loads(_sysess.execute({"pattern": "zzz_absent", "path": td}, _Ctx("grep_files", td)))
+        assert ok.get("success") is True and ok.get("total") == 0 and "No matches" in ok.get("text", ""), ok
+        hit = json.loads(_sysess.execute({"pattern": "needle", "path": td}, _Ctx("grep_files", td)))
+        assert hit.get("total") == 1, hit
+        # 인접 결함: 단일 파일 path 에서 rg --count-matches 가 파일명 접두를 생략 → 전수 {} →
+        # total 0 + truncated true 거짓 신고 ("매칭 0건 중 N건만 표시"). --with-filename 강제.
+        one = json.loads(_sysess.execute({"pattern": "needle", "path": os.path.join(td, "real.py")},
+                                         _Ctx("grep_files", td)))
+        assert one.get("total") == 1 and one.get("total_files") == 1 and one.get("truncated") is False, one
+    print("P21 OK — grep 없는 경로 = success:false 명시 신고(rg·파이썬 층), 진짜 0건은 그대로·단일 파일 전수 계수 정직")
+
+
 if __name__ == "__main__":
     print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P20) ===\n")
     test_p1_stale_derived_views_removed()
@@ -662,4 +696,5 @@ if __name__ == "__main__":
     test_p18_sheet_semantic_silence()
     test_p19_totals_detection_baseline()
     test_p20_workflow_save_syntax_gate()
+    test_p21_grep_missing_path_loud()
     print("\n=== 전부 통과 ===")

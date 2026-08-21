@@ -105,7 +105,11 @@ async def tool_gate(slug: str, iid: str, request: Request,
         from api_ibl import execute_ibl_code, IBLRequest
         # surface='web': 회원은 브라우저로 보고 있다 — 소리·저장이 맥이 아니라 회원 기기에서
         # 나야 한다(운영자 집에서 소리가 나면 안 된다). 게이트가 서버측에서 붙인다.
-        result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드", surface="web"))
+        # origin='portal': /ibl/execute 는 무신원 직접 호출을 origin='user'(소유자의 직접
+        # 명령)로 기본하는데, 포털 회원·손님은 소유자가 아니다 — 명시해서 그 기본을 막는다
+        # (origin=='user' 는 자기수정 그랜트의 게이트 축, fail-closed 유지).
+        result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드",
+                                                   surface="web", origin="portal"))
         # 유튜브뮤직 등 클라이언트 재생: googlevideo URL 은 맥 IP 에 잠겨 외부망 회원은 403.
         # 오디오 프록시(/h/<slug>/tune/<vid>)로 바꿔치기 — 맥이 집 IP 로 받아 중계한다.
         if (isinstance(result, dict) and result.get("play_in_client")

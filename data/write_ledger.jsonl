@@ -1,1 +1,14 @@
 {"ts": "2026-08-21T11:00:53", "path": "projects/수동모드/outputs/ledger_probe.txt", "event": "write", "gate": "self_write", "agent": "", "task": "", "origin": "", "size": 5}
+{"ts": "2026-08-21T11:08:32", "path": "data/_probe_A_nocontext.txt", "event": "write", "gate": "probe", "agent": "", "task": "", "origin": "", "size": 1}
+{"ts": "2026-08-21T11:08:32", "path": "data/_probe_B_withcontext.txt", "event": "write", "gate": "probe", "agent": "probe_agent", "task": "probe_task_123", "origin": "user", "size": 2}
+{"ts": "2026-08-21T11:08:39", "path": "projects/수동모드/outputs/_probe_C_live.txt", "event": "write", "gate": "self_write", "agent": "", "task": "", "origin": "", "size": 20}
+{"ts": "2026-08-21T11:09:37", "path": "data/outputs/_probe_D_agent.txt", "event": "write", "gate": "self_write", "agent": "", "task": "task_sysai_5469b528", "origin": "", "size": 20}
+{"ts": "2026-08-21T11:12:44", "path": "outputs/_probe_E_ws.txt", "event": "write", "gate": "self_write", "agent": "", "task": "", "origin": "", "size": 20}
+{"ts": "2026-08-21T11:15:18", "path": "projects/study/outputs/_probe_F_inproc.txt", "event": "write", "gate": "self_write", "agent": "agent_001", "task": "", "origin": "user", "size": 20}
+{"ts": "2026-08-21T11:15:59", "path": "data/outputs/_probe_G_sched.txt", "event": "write", "gate": "self_write", "agent": "", "task": "", "origin": "", "size": 20}
+{"ts": "2026-08-21T11:23:39", "path": "projects/수동모드/outputs/_verify_A.txt", "event": "write", "gate": "self_write", "agent": "system_ai", "task": "", "origin": "user", "size": 18}
+{"ts": "2026-08-21T11:23:53", "path": "data/outputs/_verify_B.txt", "event": "write", "gate": "self_write", "agent": "system_ai", "task": "task_sysai_ee78fd0b", "origin": "", "size": 18}
+{"ts": "2026-08-21T11:25:57", "path": "data/outputs/_verify_B2.txt", "event": "write", "gate": "self_write", "agent": "system_ai", "task": "task_sysai_fde6c4fd", "origin": "", "size": 19}
+{"ts": "2026-08-21T11:27:19", "path": "data/outputs/_verify_B3.txt", "event": "write", "gate": "self_write", "agent": "system_ai", "task": "task_sysai_1cb84a49", "origin": "user", "size": 19}
+{"ts": "2026-08-21T11:28:04", "path": "projects/study/outputs/_verify_C.txt", "event": "write", "gate": "self_write", "agent": "agent_001", "task": "", "origin": "user", "size": 18}
+{"ts": "2026-08-21T11:28:27", "path": "data/outputs/_verify_E.txt", "event": "write", "gate": "self_write", "agent": "system_ai", "task": "", "origin": "", "size": 18}

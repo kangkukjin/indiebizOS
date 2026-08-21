@@ -1034,6 +1034,19 @@ class ClaudeCodeProvider(BaseProvider):
         except Exception:
             return None
 
+    @staticmethod
+    def _current_task_origin() -> Optional[str]:
+        """spawn 시점(요청 워커 스레드)의 task_origin — task_id 와 같은 부류.
+
+        이게 없던 시절 아웃오브프로세스 실행의 재진입 /ibl/execute 는 출처를 몰라,
+        사람 명령에서 온 쓰기까지 전부 무출처로 원장(write_ledger)에 남았다
+        (2026-08-21 실측). 부모가 안 세운 경우(스케줄러 등)는 None → 미동봉(fail-closed)."""
+        try:
+            from thread_context import get_task_origin
+            return get_task_origin()
+        except Exception:
+            return None
+
     def _http_mcp_config_path(self) -> Optional[str]:
         """HTTP MCP config 를 spawn 마다 유니크 temp 파일로 쓴다 (플래그 ON일 때만).
 
@@ -1053,6 +1066,9 @@ class ClaudeCodeProvider(BaseProvider):
         task_id = self._current_task_id()
         if task_id:
             headers["X-IndieBiz-Task-Id"] = quote(str(task_id))
+        origin = self._current_task_origin()
+        if origin:
+            headers["X-IndieBiz-Task-Origin"] = quote(str(origin))
         cfg = {"mcpServers": {"indiebizos": {
             "type": "http",
             # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
@@ -1153,6 +1169,11 @@ class ClaudeCodeProvider(BaseProvider):
         task_id = self._current_task_id()
         if task_id:
             env["INDIEBIZOS_TASK_ID"] = str(task_id)
+        # 태스크 출처: 'user'(사람의 직접 명령) 여부가 원장 행위자·자기수정 게이트의 축 —
+        # task_id 와 같은 통로로 동봉해 재진입 /ibl/execute 가 복원한다.
+        origin = self._current_task_origin()
+        if origin:
+            env["INDIEBIZOS_TASK_ORIGIN"] = str(origin)
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

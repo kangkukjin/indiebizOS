@@ -8,6 +8,7 @@ IndieBiz OS Core
 
 import threading
 import time
+from contextlib import contextmanager
 
 # 스레드 로컬 저장소
 _thread_local = threading.local()
@@ -258,6 +259,44 @@ def get_task_origin() -> str:
 def clear_task_origin():
     """태스크 출처 해제 — 파이프라인이 소비 후 호출(풀 스레드 누수 방지)."""
     _thread_local.task_origin = None
+
+
+@contextmanager
+def actor_context(agent_id=None, task_id=None, origin=None):
+    """진입점 계약 — 행위자 3칸(agent·task·origin)을 세우고 끝나면 이전 값으로 복원.
+
+    쓰기 관문 원장(write_ledger)·episode 조인이 이 3칸을 읽는다. 진입점마다 세우는
+    칸이 제각각이라(2026-08-21 실측: api_agents=agent+origin / api_system_ai=task+origin /
+    api_ibl=task만) 같은 구멍이 재발하던 것을 계약 하나로 모은다 — 새 진입점은 개별
+    세터 대신 이것을 부를 것.
+
+    None 인 칸은 건드리지 않는다(모르는 값을 빈 값으로 덮지 않음 — 부분 복원이 부모
+    컨텍스트를 지우는 사고 방지). 복원은 set 과 대칭: task 는 clear_current_task_id 로
+    task_sysai_ 활성작업 등록까지 해제(api_ibl 의 기존 수동 복원과 동일 규약)."""
+    prev_agent = get_current_agent_id()
+    prev_task = get_current_task_id()
+    prev_origin = get_task_origin()
+    if agent_id is not None:
+        set_current_agent_id(agent_id)
+    if task_id is not None:
+        set_current_task_id(task_id)
+    if origin is not None:
+        set_task_origin(origin)
+    try:
+        yield
+    finally:
+        if agent_id is not None:
+            set_current_agent_id(prev_agent)
+        if task_id is not None:
+            if prev_task:
+                set_current_task_id(prev_task)
+            else:
+                clear_current_task_id()
+        if origin is not None:
+            if prev_origin:
+                set_task_origin(prev_origin)
+            else:
+                clear_task_origin()
 
 
 def get_current_registry_key() -> str:

@@ -17,6 +17,10 @@ class IBLRequest(BaseModel):
     task_id: Optional[str] = None      # 태스크 컨텍스트(위임 체인). claude_code 재진입 경로는 원 요청과 다른
                                        # 스레드라 threading.local의 task_id가 비어 [others:delegate]{scope:"cross"}가
                                        # "현재 태스크 ID 없음"으로 실패했다 → agent_id처럼 payload로 복원 (없으면 현 동작 그대로).
+    origin: Optional[str] = None       # 태스크 출처('user'=사람의 직접 명령). claude_code 재진입 봉투가
+                                       # 부모의 task_origin 을 실어 보내는 통로(task_id 와 같은 부류) —
+                                       # 없던 시절 아웃오브프로세스 실행의 쓰기가 전부 무출처로 원장에
+                                       # 남았다(2026-08-21 실측). 미지정+무신원(직접 표면)이면 'user'.
     surface: Optional[str] = None      # 요청한 *표면* ('web' = 원격런처/포털/폰 WebView).
                                        # 소리·저장 같은 "어디서 나야 하는가"의 판정 축 — 실행하는 몸이
                                        # 아니라 보고 있는 표면이 정한다(thread_context.set_current_surface).
@@ -99,14 +103,12 @@ async def execute_ibl_code(req: IBLRequest):
         # 같은 스레드 안에서 해야 하므로 래퍼째 내린다.
         from thread_context import (set_current_project_id, get_current_project_id,
                                     set_current_surface, get_current_surface,
-                                    set_current_task_id, get_current_task_id,
-                                    clear_current_task_id,
-                                    set_call_channel, get_call_channel, clear_call_channel)
+                                    set_call_channel, get_call_channel, clear_call_channel,
+                                    actor_context)
 
         def _run_in_context():
             _prev_pid = get_current_project_id()
             _prev_surface = get_current_surface()
-            _prev_task = get_current_task_id()
             _prev_channel = get_call_channel()
             if req.project_id:
                 set_current_project_id(req.project_id)
@@ -115,27 +117,28 @@ async def execute_ibl_code(req: IBLRequest):
             # 호출(claude_code MCP 재진입 등) / 비어 있음 = 앱·조종실·원격·포털 직접 실행.
             # to_thread 풀 스레드는 재사용되므로 반드시 복원한다 (surface 선례).
             set_call_channel("agent" if req.agent_id else "app", override=True)
-            # 태스크 컨텍스트 복원 — claude_code(MCP→HTTP 재진입)가 실어 보낸 부모 task_id.
-            # cross 위임(_execute_call_project_agent)이 get_current_task_id()로 부모를 찾는다.
-            if req.task_id:
-                set_current_task_id(req.task_id)
-            try:
-                from system_tools import _execute_ibl_unified
-                return _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
-            finally:
-                set_current_project_id(_prev_pid)
-                set_current_surface(_prev_surface)
-                if _prev_channel is None:
-                    clear_call_channel()
-                else:
-                    set_call_channel(_prev_channel, override=True)
-                if req.task_id:
-                    # clear 는 set 과 대칭 — task_sysai_ 접두사가 이 워커 스레드에 등록한
-                    # 활성작업(_touch_active_work)도 함께 해제된다.
-                    if _prev_task:
-                        set_current_task_id(_prev_task)
+            # 행위자 3칸(agent·task·origin) — 쓰기 관문 원장(write_ledger)·episode 조인의 재료.
+            #   agent: 위에서 해소된 신원(직접 표면=system_ai — line 88 판정과 같은 근거).
+            #     옛 코드는 이 값을 _execute_ibl_unified 인자로만 넘기고 thread_context 에
+            #     안 실어, 이 경로의 쓰기가 전부 무기명으로 원장에 남았다(2026-08-21 실측).
+            #   task: 재진입 봉투가 복원한 부모 task_id — cross 위임
+            #     (_execute_call_project_agent)이 get_current_task_id()로 부모를 찾는다.
+            #   origin: 봉투 값 우선. 없으면 직접 호출(무신원)만 'user' — 소유자 게이트 뒤
+            #     표면의 직접 실행=사람의 명령. ★재진입(req.agent_id 실림)은 부모가 보낸
+            #     값만 신뢰, 빈 값이면 빈 채로 둔다(모르는 출처를 'user' 로 단정 금지).
+            _origin = req.origin or (None if req.agent_id else "user")
+            with actor_context(agent_id=agent_id, task_id=req.task_id or None,
+                               origin=_origin):
+                try:
+                    from system_tools import _execute_ibl_unified
+                    return _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
+                finally:
+                    set_current_project_id(_prev_pid)
+                    set_current_surface(_prev_surface)
+                    if _prev_channel is None:
+                        clear_call_channel()
                     else:
-                        clear_current_task_id()
+                        set_call_channel(_prev_channel, override=True)
 
         import asyncio
         result = await asyncio.to_thread(_run_in_context)

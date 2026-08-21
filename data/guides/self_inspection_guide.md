@@ -483,6 +483,8 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
 
 ## 실측 기록 (자동 누적)
+- 2026-08-21 실측: MCP `mcp__indiebizos__execute_ibl` 로 `[self:read]`/`[self:grep]` 를 호출할 때 문장 안의 `project_id: "indiebizOS"` 는 해석되지 않아 '활성 프로젝트 경로를 확보할 수 없어' 에러가 났다 — 도구 인자 `project_path` 에 절대경로를 넘겨야 통했다.
+- 2026-08-21 실측: episode_log 의 `log` 컬럼에는 execute_ibl 호출 코드가 원문 그대로 남아, `>>`·`??`·블록 사용 건수를 grep 만으로 셀 수 있다 — 액션별 빈도/실패율뿐 아니라 '조합률' 통계를 같은 소스에서 바로 낼 수 있다.
 - 2026-08-20 실측: data/guides/*.md 를 고쳐도 러닝 백엔드엔 반영되지 않는다 — cognition/prompt_builder.py `_load_guide_file` 이 파일명 키로만 캐시하고 mtime 검사가 없어(줄 127-138 실측) 프로세스 재기동 전까지 옛 본문이 계속 주입된다. §8 가이드 점검에서 '고쳤다'와 '적용됐다'를 같은 것으로 보면 안 된다.
 
 > 실행 에이전트가 턴 종료 후 덧붙인다.

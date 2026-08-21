@@ -52,7 +52,7 @@ indiebizOS/
 │   │   └── api_engine.py / api_pipeline.py / api_transforms.py # ★이름만 api_* — 라우터 아님
 │   │   #   빌드: scripts/build_ibl_nodes.py (소스 data/ibl_nodes_src/ → 산출물 data/ibl_nodes.yaml)
 │   │   #   검증: --check 가 src↔tool.json↔handler.py(_OP_DISPATCHERS) 삼각 일치 AST 정확 비교
-│   │   #   게이트: scripts/git-hooks/pre-commit + world_pulse_health(12시간 self-check)
+│   │   #   게이트: scripts/git-hooks/pre-commit + world_pulse_health(하루 1회 건강 점검)
 │   │   #   ★파생 방향(어디를 고치면 어디로 흐르나 — 헛다리 방지, 2026-08-18 실측):
 │   │   #     data/ibl_nodes_src/*.yaml        → data/ibl_nodes.yaml (액션 선언·description)
 │   │   #     패키지 ibl_actions.yaml 의 tool_json 블록 → 그 패키지 tool.json **만**
@@ -149,7 +149,7 @@ indiebizOS/
 │   ├── bodies/          # 몸 프로파일 (android.json 등) → 폰 엔진 번들 파생 소스 (build_body_bundle.py)
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 13 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
 │   ├── guides/          # 가이드 파일 (수=architecture '시스템 통계', 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── scripts/         # 등록 스크립트 — 어휘가 아닌 절차의 거처(`[self:script]{op:run}`)
 │   │   #   registry.yaml(정의) + <이름>.py. 결정화 사다리의 가운데 가로대 = 반-어휘-증식 장치.
@@ -163,8 +163,7 @@ indiebizOS/
 │   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
 │   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
 │   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
-│   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
-│   └── my_profile.txt   # 사용자 프로필
+│   └── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │
 ├── projects/            # 사용자 프로젝트
 │   ├── projects.json    # 프로젝트 목록

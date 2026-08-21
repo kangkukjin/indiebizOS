@@ -427,6 +427,18 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 포식 정리 실패 (무시): {e}")
 
+    # 4a) 라이브 코퍼스 어휘 생존 감사 (주간 카덴스, 무LLM)
+    #     커밋 게이트(build_ibl_nodes --check)는 git 이 추적하는 data/training/*.json 만 본다.
+    #     라이브 ibl_usage.db 는 증류로 계속 자라고 gitignore 라 그 게이트 밖이라 여기서 본다.
+    try:
+        from corpus_vocab_audit import run_corpus_vocab_audit
+        cv = run_corpus_vocab_audit()
+        result["corpus_vocab"] = cv
+        if cv.get("ok") is False:
+            logger.warning(f"[Maintenance] 코퍼스 어휘 생존: {cv.get('detail')}")
+    except Exception as e:
+        logger.warning(f"[Maintenance] 코퍼스 어휘 감사 실패 (무시): {e}")
+
     # 4b) 수리 판정 증류 — 커밋 메시지의 판정(진범·오진·부류)을 code 냄새지도로.
     #     자기수정의 판정이 사람 읽는 자리(커밋)에만 남고 회상 자리(포식)에 안 닿던
     #     간극의 다리. 새 커밋 없으면 git 스캔 한 번으로 끝(무LLM).

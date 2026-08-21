@@ -136,6 +136,7 @@ from iblbuild_validators import (  # noqa: E402,F401
     _check_action,
     _load_corpus_param_keys,
     validate_corpus_params,
+    validate_corpus_vocab,
     validate_runs_on,
     validate_transform_contract,
     validate_phone_reachability,
@@ -259,6 +260,25 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print(f"  ✗ {issue}", file=sys.stderr)
         else:
             print("[build_ibl_nodes] 코퍼스 param 정합 통과 ✓")
+
+        # 코퍼스 어휘 생존 검사 (2026-08-22) — param 정합은 "핸들러가 이 키를 읽나" 만 묻고
+        # "이 액션이 아직 있나" 는 묻지 않았다. 그 틈으로 은퇴 어휘 20여 종 208항목이
+        # 학습 파일에 3개월간 남아 있었다(트레이너는 DB 와 data/training/*.json 을 둘 다 읽는다).
+        vissues = validate_corpus_vocab(data, root)
+        if vissues is None:
+            print("[build_ibl_nodes] 코퍼스/파서 미가용 — 어휘 생존 검사 건너뜀", file=sys.stderr)
+        elif vissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 코퍼스 어휘 생존 실패: {len(vissues)}건", file=sys.stderr)
+            for issue in vissues[:15]:
+                print(f"  ✗ {issue}", file=sys.stderr)
+            if len(vissues) > 15:
+                print(f"  … 외 {len(vissues) - 15}건 (원인 어휘는 소수 — 위 목록으로 충분)",
+                      file=sys.stderr)
+            print("  → 은퇴 어휘는 라이브 코퍼스(ibl_usage.db)의 이관본을 권위로 고친다: "
+                  "scripts/repair_training_dead_vocab.py", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 코퍼스 어휘 생존 통과 ✓ (죽은 어휘·파싱 불가 0)")
 
     # --- 행동 건강 fixture 완전성 (--check/--validate 전용) ---
     # 실행 가능한(items/scalar) 액션은 ibl_fixtures.json 에 fixture 또는 exempt 가 있어야 한다.

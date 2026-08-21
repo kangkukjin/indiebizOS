@@ -447,6 +447,82 @@ def _load_corpus_param_keys(root: Path) -> dict[str, set[str]] | None:
     return out if found_any else None
 
 
+def _corpus_entries(root: Path):
+    """트레이너가 **실제로 읽는** 학습 파일들을 그대로 훑는다.
+
+    ★CORPUS_FILES 는 두 파일을 이름으로 못박고 있는데, 트레이너는
+    `data/training/*.json` 글롭이다(ibl_embedding_trainer.py). 그 차이만큼 검사가
+    학습 입력보다 좁았다 — 여기서는 트레이너와 같은 규칙을 쓴다.
+    반환: (파일이름, 항목) 이터레이터. 파일이 없으면 아무것도 내지 않는다."""
+    tdir = root / "data" / "training"
+    if not tdir.is_dir():
+        return
+    for f in sorted(tdir.glob("*.json")):
+        try:
+            entries = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not isinstance(entries, list):
+            continue
+        for e in entries:
+            if isinstance(e, dict):
+                yield f.name, e
+
+
+def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
+    """학습 코퍼스가 **아직 존재하는 어휘**만 가르치는지 + 전부 파싱되는지.
+
+    2026-08-22 실측 배경: 라이브 코퍼스(ibl_usage.db)는 어휘 은퇴 때마다 이관돼 왔지만
+    `data/training/ibl_training_balanced_20260516.json` 은 부분적으로만 따라와, 은퇴 어휘
+    20여 종 208항목을 3개월간 안고 있었다. 트레이너는 DB 와 이 파일을 **둘 다** 읽으므로
+    다음 풀 재학습이 죽은 어휘를 그대로 되살린다. 아무도 안 보고 있었다 — param 정합
+    검사는 같은 파일을 읽으면서도 "이 액션이 아직 있나" 는 묻지 않았고, 파싱 실패는
+    `except: continue` 로 조용히 넘겼다(그 침묵이 파싱 불가 용례 1건을 살려 뒀다).
+
+    파서/코퍼스 미가용 시 None (검사 건너뜀)."""
+    backend = root / "backend"
+    try:
+        if str(backend) not in sys.path:
+            sys.path.insert(0, str(backend))
+            import boot_paths  # noqa: F401
+        import ibl_parser  # type: ignore
+    except Exception:
+        return None
+
+    def walk(obj):
+        res = []
+        if isinstance(obj, dict):
+            if "_node" in obj and "action" in obj:
+                res.append(obj)
+            for v in obj.values():
+                res += walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                res += walk(v)
+        return res
+
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    issues: list[str] = []
+    seen_any = False
+    for fname, e in _corpus_entries(root):
+        seen_any = True
+        code = e.get("ibl_code") or ""
+        intent = str(e.get("intent") or "")[:40]
+        try:
+            parsed = ibl_parser.parse(code)
+        except Exception as ex:
+            issues.append(f"{fname}: 파싱 불가 — {intent} :: {str(ex)[:60]}")
+            continue
+        for st in walk(parsed):
+            n, a = st.get("_node"), st.get("action")
+            if n not in nodes or a not in (nodes.get(n, {}).get("actions") or {}):
+                issues.append(f"{fname}: 죽은 어휘 [{n}:{a}] — {intent}")
+    if not seen_any:
+        return None
+    # 같은 어휘가 수십 건 반복되므로 앞부분만 보여준다(원인은 어휘 하나다).
+    return issues
+
+
 def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
     """코퍼스 param 키 ↔ (핸들러 읽기키 ∪ 액션 aliases 선언 ∪ 보편키 ∪ target_key) 대조.
 

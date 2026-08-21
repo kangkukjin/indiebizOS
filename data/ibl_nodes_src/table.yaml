@@ -24,7 +24,28 @@
         - 항목마다
         - 모두에게
         - each
-    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure) + 고차 변환자(each) + AI 낱말(ai=의미 변환·brief=산문 종합 — ai-ops 패키지, 기어 실행 축·ai_call 고지). 도메인·몸 무관 IBL 문법 계층.'
+      reduce:
+        # 프로그램급 IBL M5 (2026-08-22, docs/IBL_PROGRAM_GRADE_DESIGN.md §2.3): 행을 순회하며 상태(acc)를
+        # 넘기는 fold — groupby(고정 집계 5종)·compute(행→행)가 못 하는 "누적". 식 한 줄만(경계선 판정):
+        # 상태가 dict 이거나 분기가 섞이면 [self:script]. 식 평가기는 common.safe_expr(compute 와 같은 화이트리스트).
+        returns: transform
+        runs_on: anywhere
+        scope: workspace
+        description: 통화 변환자(고차) — items 를 순회하며 한 줄 식으로 누적(fold). init 초기값, step 식(acc=누적값·i=행 번호·열 이름·col("열")), as 결과 이름. 합·최대·문자열 이어붙이기 같은 한 줄 누적만 — 그 이상은 [self:script].
+        target_description: 'step(한 줄 식, 필수 — acc 가 누적값, 열 이름을 그대로 쓴다: "acc + 보증금", "max(acc, price)", "acc + title + \", \"") · init(초기값, 기본 0 — 문자열 누적이면 "") · as(결과 열 이름, 기본 value) · items(앞 통화 없이 직접 줄 때). 결과: value(스칼라)·message·items 1행 [{as: value}] — $변수로 받아 조건에 쓴다. 예: [sense:realty]{…} >> [table:reduce]{init: 0, step: "acc + 보증금", as: "총보증금"}'
+        group: transform
+        router: system
+        func: table_reduce
+        target_key: step
+        implementation: ibl_executors._execute_table_reduce — common.safe_expr 화이트리스트 식을 행마다 acc·i 와 함께 평가. 없는 열·식 오류·행 계산 실패는 정직 에러(partial 동봉).
+        keywords:
+        - 누적
+        - 합계
+        - 접기
+        - 모으기
+        - reduce
+        - fold
+    description: '표/통화 변환 문법 — 관계대수(filter·sort·take·select·dedup·groupby·join·union·merge)와 통화 emitter(chart·spreadsheet·document·structure) + 고차 변환자(each·reduce) + AI 낱말(ai=의미 변환·brief=산문 종합 — ai-ops 패키지, 기어 실행 축·ai_call 고지). 도메인·몸 무관 IBL 문법 계층.'
     # 문법 계층 — 노드 on/off 선별에서 engines 가 꺼져도 파이프가 살도록 항상 허용
     always_on: true
     tags:

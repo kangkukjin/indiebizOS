@@ -6,7 +6,7 @@ register_parse() 로 주입(의존 역전). 이 모듈은 ibl_parser 를 모른�
 ★파이프 설탕(_pipe_block)은 본체 잔류 — 표준-코어 가드가 ibl_parser.py 경로를 스캔.
 """
 import re
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ibl_parser_values import IBLSyntaxError, _parse_params
 
@@ -502,6 +502,12 @@ def _parse_block_body(body: str) -> Optional[Dict]:
     if case is not None:
         return case
 
+    # try / repeat 시도 (프로그램급 IBL M3·M4)
+    if body.startswith('[try]'):
+        return _parse_try_block(body)
+    if body.startswith('[repeat:'):
+        return _parse_repeat_block(body)
+
     # 일반 step 시도 (parse 는 주입 슬롯 — register_parse 로 의존 역전)
     if _PARSE is None:
         raise RuntimeError(
@@ -596,3 +602,157 @@ def parse_range_expression(expr: str) -> Optional[Dict]:
 # - [node:action] 필수
 # - {params} 는 regex가 아닌 _extract_bracket으로 추출
 # - (target)은 감지하여 에러 메시지 제공 (폐지됨)
+
+
+# === 프로그램급 IBL M3·M4 — try/catch/finally · repeat (2026-08-22) ===
+# 설계 정본: docs/IBL_PROGRAM_GRADE_DESIGN.md §2.4·§2.2. 헤더는 전부 깊이 인식 스캔(_block_header).
+_TRY_PREFIX = re.compile(r'^\s*\[try\]\s*\{')
+_CATCH_PREFIX = re.compile(r'^\s*\[catch\]\s*\{')
+_FINALLY_PREFIX = re.compile(r'^\s*\[finally\]\s*\{')
+_REPEAT_PREFIX = re.compile(r'^\s*\[repeat:\s*')
+
+# 본체의 변수-인식 파서 주입 슬롯 — repeat 의 until 조건이 몸통 안의 `$x = …` 할당을 읽어야 한다.
+_PARSE_VARS: Optional[Callable[[str], Tuple[List[Dict], Dict[str, int]]]] = None
+
+
+def register_parse_vars(fn) -> None:
+    global _PARSE_VARS
+    _PARSE_VARS = fn
+
+
+def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str]]:
+    """`[키워드]{…}` 를 먹고 (파싱된 몸, 나머지 텍스트). 모양이 아니면 None."""
+    m = prefix.match(text)
+    if not m:
+        return None
+    brace = m.end() - 1
+    body, end = _extract_bracket_raw(text, brace, '{', '}')
+    if body is None:
+        raise IBLSyntaxError(f"{text[:12].strip()} 블록 중괄호가 닫히지 않았습니다.")
+    return _parse_block_body(body.strip()), text[end + 1:].strip()
+
+
+def _parse_try_block(code: str) -> Optional[Dict]:
+    """[try]{…} [catch]{…} [finally]{…} → {"_try": True, "body", "catch", "finally"}.
+
+    catch 안에서 `$error`(.step/.action/.error/.summary) 를 쓸 수 있다 — 실행기가 바인딩.
+    catch·finally 는 선택이지만 둘 다 없으면 try 는 무의미하므로 명시 에러.
+    """
+    got = _take_brace_body(code, _TRY_PREFIX)
+    if got is None:
+        return None
+    body, rest = got
+    if body is None:
+        raise IBLSyntaxError("try 몸이 비어 있습니다.")
+    out: Dict[str, Any] = {"_try": True, "body": body, "catch": None, "finally": None}
+    while rest:
+        g = _take_brace_body(rest, _CATCH_PREFIX)
+        if g is not None:
+            if out["catch"] is not None:
+                raise IBLSyntaxError("catch 블록이 두 번 나왔습니다.")
+            out["catch"], rest = g
+            continue
+        g = _take_brace_body(rest, _FINALLY_PREFIX)
+        if g is not None:
+            if out["finally"] is not None:
+                raise IBLSyntaxError("finally 블록이 두 번 나왔습니다.")
+            out["finally"], rest = g
+            continue
+        raise IBLSyntaxError(
+            f"try 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{rest[:60]}' — "
+            "형태: [try]{…} [catch]{…} [finally]{…} (블록과 다른 문장은 줄로 분리).")
+    if out["catch"] is None and out["finally"] is None:
+        raise IBLSyntaxError("try 에는 [catch]{…} 또는 [finally]{…} 가 하나 이상 필요합니다.")
+    return out
+
+
+def _split_top_commas(text: str) -> List[str]:
+    parts, cur, depth, in_s, q = [], [], 0, False, ''
+    for c in text:
+        if in_s:
+            cur.append(c)
+            if c == q:
+                in_s = False
+            continue
+        if c in '"\'':
+            in_s, q = True, c
+        elif c in '{[(':
+            depth += 1
+        elif c in '}])':
+            depth -= 1
+        if c == ',' and depth == 0:
+            parts.append(''.join(cur).strip()); cur = []
+        else:
+            cur.append(c)
+    if ''.join(cur).strip():
+        parts.append(''.join(cur).strip())
+    return parts
+
+
+def _parse_repeat_block(code: str) -> Optional[Dict]:
+    """[repeat: N]{…} · [repeat: until 조건, max: 30, every: "10s", collect: true]{…} · [repeat: while 조건, max: N]{…}
+
+    → {"_repeat": True, "mode": count|until|while, "count", "condition", "max", "every", "collect", "var", "body", "body_vars"}
+    until 은 몸통 실행 *뒤* 평가(몸통이 할당한 $변수를 읽는다), while 은 *앞* 평가(바깥 $변수).
+    max 는 until/while 에 필수 — 상한 없는 루프 금지(헌법 원칙 5: 침묵 클램프 금지 → 상한은 신고된다).
+    """
+    hdr = _block_header(code, _REPEAT_PREFIX)
+    if hdr is None:
+        if _REPEAT_PREFIX.match(code):
+            raise IBLSyntaxError("repeat 블록 헤더가 닫히지 않았습니다 — 형태: [repeat: until 조건, max: N]{...}")
+        return None
+    header, brace = hdr
+    body_txt, end = _extract_bracket_raw(code, brace, '{', '}')
+    if body_txt is None:
+        raise IBLSyntaxError("repeat 블록 중괄호가 닫히지 않았습니다.")
+    rest = code[end + 1:].strip()
+    if rest:
+        raise IBLSyntaxError(f"repeat 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{rest[:60]}' — 줄로 분리하세요.")
+    parts = _split_top_commas(header)
+    if not parts:
+        raise IBLSyntaxError("repeat 헤더가 비어 있습니다 — [repeat: 5] / [repeat: until 조건, max: N] / [repeat: while 조건, max: N]")
+    head = parts[0]
+    out: Dict[str, Any] = {"_repeat": True, "mode": None, "count": None, "condition": None,
+                           "max": None, "every": None, "collect": False, "var": "i"}
+    if re.fullmatch(r'\d+', head):
+        out["mode"], out["count"] = "count", int(head)
+    elif re.match(r'^until\s+', head):
+        out["mode"], out["condition"] = "until", head[5:].strip()
+    elif re.match(r'^while\s+', head):
+        out["mode"], out["condition"] = "while", head[5:].strip()
+    else:
+        raise IBLSyntaxError(
+            f"repeat 헤더 '{head[:40]}' 을 읽지 못했습니다 — 고정 횟수([repeat: 5]), "
+            "until 조건([repeat: until $st.status == \"done\", max: 30, every: \"10s\"]), "
+            "while 조건([repeat: while count($q) > 0, max: 100]) 중 하나여야 합니다.")
+    for p in parts[1:]:
+        km = re.match(r'^(\w+)\s*:\s*(.+)$', p, re.DOTALL)
+        if not km:
+            raise IBLSyntaxError(f"repeat 옵션 '{p[:40]}' 은 key: value 꼴이어야 합니다 (max/every/collect/as).")
+        k, v = km.group(1), km.group(2).strip().strip('"\'')
+        if k == "max":
+            if not re.fullmatch(r'\d+', v):
+                raise IBLSyntaxError("repeat max 는 정수여야 합니다.")
+            out["max"] = int(v)
+        elif k == "every":
+            out["every"] = v
+        elif k == "collect":
+            out["collect"] = v.lower() in ("true", "1", "yes")
+        elif k == "as":
+            out["var"] = v.lstrip("$")
+        else:
+            raise IBLSyntaxError(f"repeat 가 모르는 옵션 '{k}' — max/every/collect/as 만.")
+    if out["mode"] in ("until", "while") and out["max"] is None:
+        raise IBLSyntaxError("repeat until/while 에는 max(반복 상한)가 필수입니다 — 상한 없는 루프는 금지.")
+    if out["mode"] == "count" and out["max"] is None:
+        out["max"] = out["count"]
+    body_src = body_txt.strip()
+    if not body_src:
+        raise IBLSyntaxError("repeat 몸이 비어 있습니다.")
+    if _PARSE_VARS is not None:
+        steps, body_vars = _PARSE_VARS(body_src)
+    else:
+        steps, body_vars = _PARSE(body_src), {}
+    out["body"] = steps
+    out["body_vars"] = body_vars
+    return out

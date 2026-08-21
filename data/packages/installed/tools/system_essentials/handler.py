@@ -793,6 +793,16 @@ def execute(tool_input: dict, context) -> str:
             if content is None:
                 content = tool_input.get("_prev_result")
                 piped = content is not None
+                if piped:
+                    # 스필 참조 봉투(M5)면 본문을 저장 — 참조 JSON 이 파일이 되면 침묵 오답
+                    try:
+                        from common.spill import resolve_ref_str
+                        _resolved, _ref_err = resolve_ref_str(content)
+                        if _ref_err:
+                            return json.dumps({"success": False, "error": _ref_err}, ensure_ascii=False)
+                        content = _resolved
+                    except ImportError:
+                        pass
             if content is None:
                 return json.dumps({"success": False, "error": "content가 필요합니다 (파이프에서는 직전 step 결과가 자동 저장됨)."}, ensure_ascii=False)
             extracted = None

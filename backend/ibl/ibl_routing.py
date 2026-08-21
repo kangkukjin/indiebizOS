@@ -411,6 +411,9 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     elif func_name == "table_each":
         from ibl_executors import _execute_table_each
         return _execute_table_each(dict(params), project_path, agent_id=agent_id)
+    elif func_name == "table_reduce":
+        from ibl_control_blocks import _execute_table_reduce
+        return _execute_table_reduce(dict(params), project_path, agent_id=agent_id)
 
     # (2026-08-05 감사 D12) 죽은 elif 6개 삭제 — call_agent/delegate_workflow/agent_ask/
     # agent_ask_sync/agent_list/agent_info 는 어떤 액션도 func: 로 선언하지 않았다.

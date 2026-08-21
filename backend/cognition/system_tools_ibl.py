@@ -154,7 +154,8 @@ def _collect_step_nodes(obj, out: set):
             if m:
                 out.add(m.group(1))
     # 구조 키 재귀 — 일반 step 의 action 은 문자열이라 여기 안 걸린다
-    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps"):
+    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps",
+                "body", "catch", "finally", "_branch_steps"):
         v = obj.get(key)
         if isinstance(v, (list, dict)):
             _collect_step_nodes(v, out)
@@ -177,7 +178,8 @@ def _collect_step_actions(obj, out: list):
     a = obj.get("action")
     if isinstance(n, str) and n and isinstance(a, str) and a:
         out.append((n, a))
-    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps"):
+    for key in ("branches", "_fallback_chain", "action", "default", "strategy", "steps",
+                "body", "catch", "finally", "_branch_steps"):
         v = obj.get(key)
         if isinstance(v, (list, dict)):
             _collect_step_actions(v, out)
@@ -376,10 +378,47 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             for s in parsed
         )
 
+        # 재개 (M5 §2.6): 실패 봉투의 resume={from_step, prev_ref} 로 그 step 부터 — 1~(from_step-1) 단은 재실행하지 않는다.
+        resume = tool_input.get("resume")
+        if isinstance(resume, dict) and resume.get("from_step"):
+            from workflow_engine import execute_pipeline
+            from common.spill import read_ref
+            try:
+                from_step = int(resume.get("from_step"))
+            except (TypeError, ValueError):
+                return json.dumps({"error": "resume.from_step 은 정수여야 합니다."}, ensure_ascii=False)
+            if not (2 <= from_step <= len(parsed)):
+                return json.dumps({"error": f"resume.from_step={from_step} 범위 밖 — 이 코드는 step {len(parsed)}개입니다(2 이상)."}, ensure_ascii=False)
+            ref = resume.get("prev_ref")
+            ref = {"path": ref} if isinstance(ref, str) else (ref or {})
+            body, err = read_ref(ref)
+            if err:
+                return json.dumps({"error": f"resume 실패 — {err}"}, ensure_ascii=False)
+            tail = [dict(st) if isinstance(st, dict) else st for st in parsed[from_step - 1:]]
+            # 앞 단을 참조하는 $변수({{_step_N_result}}·_vars N < from_step-1)가 남아 있으면 정직 거절 — 빈 값 치환은 침묵 오답
+            blob = json.dumps(tail, ensure_ascii=False)
+            early = sorted({int(m) for m in re.findall(r"\{\{_step_(\d+)_result", blob) if int(m) < from_step - 1})
+            for st in tail:
+                if isinstance(st, dict):
+                    early += [int(ix) for ix in (st.get("_vars") or {}).values() if int(ix) < from_step - 1]
+            if early:
+                return json.dumps({"error": f"resume 불가 — step {from_step} 이후가 재실행하지 않는 앞 단(step {sorted(set(x + 1 for x in early))})의 $변수를 참조합니다. 처음부터 다시 실행하세요."}, ensure_ascii=False)
+            if isinstance(tail[0], dict):
+                tail[0].pop("_seq_boundary", None)
+            result = execute_pipeline(tail, project_path, context={"_prev_result": body}, agent_id=agent_id)
+            if isinstance(result, dict):
+                result["resumed_from"] = from_step
+                for r in result.get("results") or []:
+                    if isinstance(r, dict) and isinstance(r.get("step"), int):
+                        r["step"] += from_step - 1
+            from ibl_envelope import diet_envelope
+            result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
+            return json.dumps(result, ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
+
         if len(parsed) == 1 and not has_special:
             # 단일 step 직접 실행
             step = parsed[0]
-            if step.get("_goal") or step.get("_condition") or step.get("_case"):
+            if step.get("_goal") or step.get("_condition") or step.get("_case") or step.get("_try") or step.get("_repeat"):
                 # 복합 블록([goal:]/[if:]/[case:])은 step 통짜 전달 — 아래처럼 키를 골라
                 # 담으면 _goal/_condition/_case 가 유실돼 엔진의 블록 디스패치에 못 닿고
                 # "action 파라미터가 필요합니다"로 죽는다(전 표면 블록 실행 봉쇄 부류).

@@ -619,7 +619,8 @@ def _nest(step: Any, tool_input: dict) -> Any:
         return step
     out = {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
     # 블록 속 블록이 바깥 문장의 $변수를 계속 읽게 — 변수 값 봉투 계승 (2026-08-22 M2)
-    if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")) \
+    if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")
+                                          or out.get("_try") or out.get("_repeat")) \
             and "_var_values" not in out:
         out["_var_values"] = tool_input["_var_values"]
     return out
@@ -875,8 +876,9 @@ def _stamp_depth(steps: Any, depth: int) -> None:
         if not isinstance(st, dict):
             continue
         st["_depth"] = depth
-        for key in ("branches", "_fallback_chain"):
-            _stamp_depth(st.get(key), depth)
+        for key in ("branches", "_fallback_chain", "body", "catch", "finally", "_branch_steps"):
+            v = st.get(key)
+            _stamp_depth(v if isinstance(v, list) else ([v] if isinstance(v, dict) else None), depth)
 
 
 def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
@@ -889,6 +891,11 @@ def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
     유일한 고차 변환자가 항상 앞에 생산자를 요구하던 셈이다.
     """
     prev = params.get("_prev_result")
+    # 스필 참조 봉투면 본문으로 (M5 자동 스필 — 소비자는 투명하게 읽는다)
+    from common.spill import resolve_ref_str
+    prev, _ref_err = resolve_ref_str(prev)
+    if _ref_err:
+        return None, {"error": _ref_err}
     obj = prev
     if isinstance(prev, str):
         s = prev.strip()
@@ -1039,6 +1046,24 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         "error_count": err_n,
     }
     notes = []
+    if params.get("collect") and out_items:
+        # collect:true (M4 설계 §2.3-1) — 회차 결과(_result 의 items)를 이어붙인 하나의 items 로(= flatten 내장).
+        flat: list = []
+        for r in out_items:
+            if not r.get("_ok"):
+                continue
+            fr = r.get("_result")
+            if isinstance(fr, dict) and isinstance(fr.get("items"), list):
+                flat.extend(fr["items"])
+            elif isinstance(fr, list):
+                flat.extend(fr)
+            elif fr is not None:
+                flat.append(fr)
+        out["items"] = flat
+        out["count"] = len(flat)
+        out["rows_processed"] = len(out_items)
+        if err_n:
+            notes.append(f"collect: 실패 {err_n}행은 제외(원 행 단위 결과는 collect 없이 실행해 확인)")
     if skipped:
         if halted == "budget":
             notes.append(f"하위 스텝 예산({_EACH_MAX_SUBSTEPS}) 초과로 중단 — {skipped}건 미처리")
@@ -1295,3 +1320,6 @@ def _find_top_level_comparison_op(text: str) -> Optional[Tuple[int, int, str]]:
                 return (i, i + 1, c)
         i += 1
     return None
+
+# try/catch/finally · repeat · [table:reduce] 실행기(프로그램급 IBL M3~M5)는 형제 모듈
+# ibl_control_blocks.py 에 산다(1500줄 규칙) — 여기서 import 하지 않는다(단방향: 그쪽이 이쪽을 쓴다).

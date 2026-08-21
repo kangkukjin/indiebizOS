@@ -271,10 +271,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(23) → `datastore`(35) → `ibl`(26) → `cognition`(42) → `services`(28) → `surface`(60). `.py` 총 266개(test 제외).
+  `base`(23) → `datastore`(35) → `ibl`(28) → `cognition`(42) → `services`(28) → `surface`(60). `.py` 총 270개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
-  - 층 밖 공용: `backend/common/`(10) · `backend/providers/`(11, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
+  - 층 밖 공용: `backend/common/`(12) · `backend/providers/`(11, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (**41개** — op 분기 **28개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)

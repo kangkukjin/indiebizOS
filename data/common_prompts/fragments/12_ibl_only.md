@@ -174,6 +174,26 @@ $r = [sense:search]{query: "청주 부동산"}
 - **판정 불능은 거짓이 아니다** — 자연어 조건(`[if: 디스크가 부족하면]`)·미할당 `$변수`·없는 경로·숫자 아닌 값의 크기 비교는 `condition_errors` 로 신고되고 **else 도 보류**된다(else 실행=조건 거짓의 단정). dry-run 검수가 미리 경고한다.
 - case는 값·범위 매칭: `[case: 소스]{"값": 문장, "10~20": 문장, default: 문장}` — 소스에도 `$r.count` 같은 변수 경로 가능.
 
+**오류 처리·반복 (M3·M4)** — 긴 문장은 실패를 *감싸서* 산다:
+```
+[try]{[sense:crawl]{url: "$u"} >> [self:struct]{schema: "제목·날짜·본문"}}
+[catch]{[sense:search]{source: "naver", query: "$u"}}
+[finally]{[self:notify_user]{message: "수집 시도 끝: $error.summary"}}
+
+[on_error: skip] [sense:search]{query: "A"} >> [table:ai]{instruction: "요지"} >> [self:write]{path: "a.md"}   # ai 가 죽어도 직전 통화로 write
+[sense:stock]{op: "quote", ticker: "AAPL"} ?? ([sense:search]{query: "AAPL 주가"} >> [table:take]{n: 1})
+
+$job = [self:script]{op: "run", id: "long_job", background: true}
+[repeat: until $st.status == "done", max: 30, every: "10s"]{$st = [self:script]{op: "status", job_id: "$job.job_id"}}
+[repeat: 3, collect: true]{[sense:search]{query: "AI 뉴스", page: "$i"}}                 # $i = 0,1,2 · collect = 회차 items 이어붙임
+```
+- `[try]`: 몸이 실패하면 `[catch]`(안에서 `$error.summary/.step/.action` 사용), `[finally]` 는 결과를 바꾸지 않는다. catch 도 실패하면 두 오류가 함께 신고된다.
+- `[on_error: skip|null]` 문장 접두: 실패 step 을 건너뛰고(skip=직전 통화, null=빈 items) 계속 — 봉투 `skipped_steps` 로 신고되니 조용한 성공이 아니다. 기본은 stop(현행).
+- `[repeat:]`: `until` 은 몸 실행 *뒤* 평가(몸이 할당한 `$변수`를 읽음), `while` 은 *앞*(바깥 `$변수`). `max` 필수, `every` ≤ 60s, 전체 300s 상한 — 넘으면 `halted: "max"|"wall"` 로 신고(성공도 실패도 아님). 단일 액션 대기는 `[self:script]{wait}`, 분 단위 이상은 `[goal:]`/`[self:schedule]`.
+- 누적은 `[table:reduce]{init: 0, step: "acc + 보증금", as: "총보증금"}` — **식 한 줄**만(acc·i·열 이름). 상태가 dict 이거나 분기가 섞이면 `[self:script]` 로.
+- **문법으로 만들지 않은 것(script 의 자리)**: dict 상태 누적·파서·상태기계, 외부 라이브러리 계산, 템플릿 언어, 함수 정의(`def` — `[self:workflow]{op:"save"}` 가 그 자리), 타입. 이런 게 필요하면 `[self:script]` 에 얼리고 IBL 은 그것을 한 단어로 부른다.
+- 긴 문장이 도중에 죽으면 봉투에 `resume: {from_step, prev_ref}` 가 실린다 — 코드를 고친 뒤 `execute_ibl(code, resume=그 값)` 으로 그 step 부터(앞 단 재실행 없음, 24h 유효).
+
 **봉투 읽는 법** — 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 중간 결과를 파일로 내리고 뒤에는 참조만 흘리려면 `[self:write]{path, spill: true}`(뒤 step 은 `{items: [], ref: {path, kind, count, bytes}}` 를 받음 — 데이터가 다시 필요하면 `[self:read]{path}`).
 
 **goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:

@@ -50,6 +50,15 @@ def _get_items(obj):
 
     반환: (items_list, envelope_dict)  — envelope에 변환 결과를 다시 끼워 비파괴 반환용.
     """
+    if isinstance(obj, dict) and isinstance(obj.get("ref"), dict) and (obj.get("_spilled") or obj.get("spilled")):
+        # 스필 참조 봉투(M5 자동 스필·write spill) — 변환자는 투명하게 본문을 읽는다
+        try:
+            from common.spill import resolve_ref
+            resolved, _err = resolve_ref(obj)
+            if _err is None and resolved is not obj:
+                obj = resolved
+        except Exception:
+            pass
     if isinstance(obj, dict):
         r = obj.get("items")            # 단일 통화 — 모든 생산자가 items 방출
         if isinstance(r, list):
@@ -1432,7 +1441,18 @@ def execute(tool_input: dict, context):
             if isinstance(params.get("inputs"), list):
                 prev = params["inputs"]
             elif params.get("items") is not None:
-                prev = {"items": params["items"]}
+                _it = params["items"]
+                if isinstance(_it, str):
+                    # `items: "$변수"` — 변수 치환은 items JSON 문자열을 넣는다(v4 추출). 목록으로 되읽는다 (2026-08-22 M4).
+                    try:
+                        _parsed = json.loads(_it)
+                        if isinstance(_parsed, list):
+                            _it = _parsed
+                        elif isinstance(_parsed, dict) and isinstance(_parsed.get("items"), list):
+                            _it = _parsed["items"]
+                    except Exception:
+                        pass
+                prev = {"items": _it}
             elif params.get("table") is not None:
                 prev = {"table": params["table"]}
     if prev is None:

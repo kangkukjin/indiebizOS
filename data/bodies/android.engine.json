@@ -106,6 +106,7 @@
     "ibl/channel_engine",
     "ibl/event_engine",
     "ibl/ibl_access",
+    "ibl/ibl_control_blocks",
     "ibl/ibl_engine",
     "ibl/ibl_envelope",
     "ibl/ibl_executors",
@@ -124,6 +125,7 @@
     "ibl/tool_selector",
     "ibl/trigger_engine",
     "ibl/workflow_engine",
+    "ibl/workflow_fallback",
     "ibl/workflow_parallel",
     "ibl_embedding_trainer",
     "ibl_synthetic_opus",
@@ -254,6 +256,7 @@
     "test_history_checkpoint": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_program_grade": "force_exclude_glob",
+    "test_ibl_program_grade_m3m5": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
@@ -269,8 +272,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 263,
-    "engine": 216,
-    "blocklist": 47
+    "total": 266,
+    "engine": 218,
+    "blocklist": 48
   }
 }

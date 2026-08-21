@@ -135,6 +135,7 @@
     "table:groupby",
     "table:join",
     "table:merge",
+    "table:reduce",
     "table:rename",
     "table:select",
     "table:since",

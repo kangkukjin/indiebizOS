@@ -207,6 +207,13 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."]'
                     )
                 },
+                "resume": {
+                    "type": "object",
+                    "description": (
+                        "실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터 다시 돈다. "
+                        "앞 단은 재실행하지 않고 스필된 직전 통화를 받는다(24h 유효)."
+                    )
+                },
                 "verbose": {
                     "type": "boolean",
                     "description": (

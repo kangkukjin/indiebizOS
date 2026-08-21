@@ -43,8 +43,8 @@ IBL 표현 계층:     [node:action]{params}
 브라우저 / HTML / 사용자의 HTML 파일이 서로 다른 것이듯, **하네스 / IBL 표준 / 개인 사전**은 서로 다른 층이며 섞이지 않는다. 이 구분이 두 이동성을 만든다: 다른 사용자는 같은 IBL 위에 자기 어휘를 가질 수 있고(어휘와 그에 키잉된 축적물 — 해마 코퍼스·임베딩·증류 — 은 사람을 따라감), 하네스(모델·에이전트 러너)는 갈아끼워도 언어와 축적물은 무사하다.
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
-1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), **병렬 괄호 분기**(`A & (B >> C) >> [table:merge]` — 분기 하나에만 전처리 파이프, 2026-08-19 개정·괄호 안=일반 step 파이프만), `$변수`·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar), **조건 언어**(2026-08-22 개정, `ibl_predicates.py`: 좌변 = `node:action{…}[.경로]` 소스 참조 | `$변수[.경로]`(앞 문장 결과, 실행 없음) | `count()`/`empty()`/`exists()` | `[table:brief]{…}` AI 술어(message 가 값) · 연산자 `== != > >= < <= matches`(정규식) · `and`/`or`/`not`·괄호 · 판정 불능≠거짓), **봉투 다이어트**(에이전트 경계의 `results[]`=step 요약·`final_result`=원형, `verbose:true` 로 원형 — 하네스 이음매 `execute_ibl` 하나의 응답 모양이라 언어 밖) · `[self:write]{spill:true}` 스필 싱크(뒤 step 엔 `{items:[], ref}` 참조만). **예약어**(블록 키워드 — 어휘 이름으로 쓸 수 없음): `if else case goal repeat try catch finally`. 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다. 개정 로드맵·집행 기록 = `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
-2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 16 액션 중 **`each` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — 데이터가 아니라 *문장*을 인자로 받는 고차 어휘이고 실행이 `execute_ibl` 재귀라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
+1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), **병렬 괄호 분기**(`A & (B >> C) >> [table:merge]` — 분기 하나에만 전처리 파이프, 2026-08-19 개정·괄호 안=일반 step 파이프만), `$변수`·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar), **조건 언어**(2026-08-22 개정, `ibl_predicates.py`: 좌변 = `node:action{…}[.경로]` 소스 참조 | `$변수[.경로]`(앞 문장 결과, 실행 없음) | `count()`/`empty()`/`exists()` | `[table:brief]{…}` AI 술어(message 가 값) · 연산자 `== != > >= < <= matches`(정규식) · `and`/`or`/`not`·괄호 · 판정 불능≠거짓), **봉투 다이어트**(에이전트 경계의 `results[]`=step 요약·`final_result`=원형, `verbose:true` 로 원형 — 하네스 이음매 `execute_ibl` 하나의 응답 모양이라 언어 밖) · `[self:write]{spill:true}` 스필 싱크(뒤 step 엔 `{items:[], ref}` 참조만). **제어 블록**(2026-08-22 M3·M4): `[try]{…} [catch]{…} [finally]{…}`(catch 안 `$error`), `[on_error: stop|skip|null]` 문장 접두(`>>` 실패 규약 — 기본 stop, skip/null 은 건너뛴 step 을 봉투에 신고), `??` 가지의 괄호 파이프 `A ?? (B >> C)`, `[repeat: N | until 조건 | while 조건, max(필수), every(≤60s), collect, as]{…}`(문장 안 결정론 반복 — 벽시계 300s 상한 신고, 더 길면 goal/schedule). 기능어 `[table:reduce]{init, step, as}`(식 한 줄 fold). **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조, 소비자 투명 해소, 24h 캐시 GC)·**재개**(실패 봉투 `resume:{from_step, prev_ref}` → `execute_ibl(code, resume)`) 은 엔진 규약. **예약어**(블록 키워드 — 어휘 이름으로 쓸 수 없음): `if else case goal repeat try catch finally on_error`. 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다. 개정 로드맵·집행 기록 = `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
+2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 17 액션 중 **`each`·`reduce` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — each 는 데이터가 아니라 *문장*을 인자로 받는 고차 어휘라 실행이 `execute_ibl` 재귀이고, reduce(2026-08-22 M5)는 한 줄 식 fold 로 조건·반복과 함께 상태를 넘기는 제어 구조의 일부라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
 
 **개인 사전** — 그 외 모든 내용어(sense·limbs·engines의 액션들). 정의(`ibl_nodes_src/`·패키지 `ibl_actions.yaml`)·구현(패키지 핸들러)·파라미터 별칭(`aliases:`)·프롬프트 설명까지 전부 데이터가 소유한다.
 
@@ -203,7 +203,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 **원리**: 열린 계급을 담으려 만든 분류함(5 도메인)에 닫힌 계급은 구조적으로 안 들어간다. 초기엔 변환자를 engines에 *실용적 셋방*으로 얹어 두고 "이름 이전은 비싸니 `group: transform` 태그로만 계급을 드러내자"고 판단했으나(아래 옛 교훈), **2026-06-30 신규 `table` 노드로 분리**하며 태그-only 방침을 개정했다. 결정적 동기는 **노드 on/off**다: 무거운 engines(미디어 생성)를 꺼도 가벼운 통화 문법은 살아야 하는데, 태그만으론 그 켜고/끔 경계를 못 그린다. 그래서 닫힌 계급이 *자기 노드*를 갖고, engines는 **순수 미디어 생성**만 남았다.
 
 **그래서 어떻게 다루나** — 이제 `table` 노드가 계급의 거처다:
-- `table` 노드(16 액션: 변환자 11 + emitter 4 + 고차 each 1)는 **기능어 코어**로 `always_on: true`다(`self`·`others`와 함께). 어떤 노드 선별에서도 꺼지지 않아 파이프라인이 항상 산다. (헌법: 위 "언어의 경계 — 표준과 사전" 조항)
+- `table` 노드(17 액션: 변환자 11 + emitter 4 + 고차 each·reduce 2)는 **기능어 코어**로 `always_on: true`다(`self`·`others`와 함께). 어떤 노드 선별에서도 꺼지지 않아 파이프라인이 항상 산다. (헌법: 위 "언어의 경계 — 표준과 사전" 조항)
 - 계약을 `--check`가 강제한다(`validate_transform_contract`): `scope: workspace`(무프로젝트 파이프서도 동작) + `runs_on: anywhere`(통화는 몸 무관). 새 변환자가 계약을 빠뜨리면 *침묵-실패 재발* 대신 빌드가 막는다.
 - 미래의 통화 연산자(`window`·`pivot`·`flatten`…)도 `table` 노드·같은 계약. 닫힌 계급은 *자기 노드로 드러나되* 5-몸 척추는 *열린 계급 전용*으로 깨끗이 유지된다.
 
@@ -323,7 +323,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - `phone_only`: 폰 하드웨어 전용 — 현재 `limbs:phone` 하나(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 113 · `pc_only` 36 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 114 · `pc_only` 36 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `_forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `_forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -340,7 +340,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **150 액션** — sense 40 · self 50 · limbs 14 · others 17 · engines 9 · table 20
+총 **151 액션** — sense 40 · self 50 · limbs 14 · others 17 · engines 9 · table 21
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 

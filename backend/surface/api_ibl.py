@@ -571,7 +571,8 @@ async def validate_ibl(req: ValidateRequest):
     def _is_plain(st) -> bool:
         return isinstance(st, dict) and not (
             st.get("_parallel") or "_fallback_chain" in st or st.get("_branch_steps")
-            or st.get("_condition") or st.get("_case") or st.get("_goal"))
+            or st.get("_condition") or st.get("_case") or st.get("_goal")
+            or st.get("_try") or st.get("_repeat"))
 
     # do(문장을 param 문자열로 나르는 자리)를 가진 액션들 — each 외에 M1 `do` 통일 자리 전부.
     # (2026-08-16 상상훈련 G2: each·goal.strategy 는 펼치는데 schedule.do 는 안 펼쳐,
@@ -740,6 +741,24 @@ async def validate_ibl(req: ValidateRequest):
                 shown = True
             if not shown:
                 _opaque_block("case 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "case")
+            return
+        if st.get("_try"):
+            shown = _walk_branch(st.get("body"), "[try]", "try")
+            if st.get("catch") is not None:
+                shown = _walk_branch(st.get("catch"), "[catch]", "try") or shown
+            if st.get("finally") is not None:
+                shown = _walk_branch(st.get("finally"), "[finally]", "try") or shown
+            if not shown:
+                _opaque_block("try 블록 — 내부를 읽지 못했습니다(실행 시 결정).", "try")
+            return
+        if st.get("_repeat"):
+            _hdr = (f"[repeat {st.get('count')}회]" if st.get("mode") == "count"
+                    else f"[repeat {st.get('mode')} {st.get('condition')} · max {st.get('max')}"
+                         + (f" · every {st.get('every')}" if st.get("every") else "") + "]")
+            _cw = (_condition_syntax_warning(st.get("condition"))
+                   if st.get("condition") and st.get("mode") == "while" else None)
+            if not _walk_branch(st.get("body"), _hdr, "repeat", _cw):
+                _opaque_block("repeat 블록 — 내부를 읽지 못했습니다(실행 시 결정).", "repeat")
             return
         if st.get("_goal"):
             # 목표 블록 = 에이전트 반복 루프. 내부 실행이 정적으로 결정되지 않으므로

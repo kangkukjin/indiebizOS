@@ -1,10 +1,11 @@
 # 프로그램급 IBL 설계 — 한 문장이 한 프로그램이 되려면 (2026-08-21)
 
-> **상태**: **M1·M2 집행 완료(2026-08-22)** — §4 표 참조. M3~M5 는 설계만. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
+> **상태**: **M1~M5 전부 집행 완료(2026-08-22)** — §4 표 참조. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
 > 수리처럼 하나씩 박지 않고, 마일스톤 단위로 집행한다(사용자 지시 2026-08-22 "설계를 진행").
 > **집행 기록**: M1 = `ibl/ibl_envelope.py`(봉투 다이어트, `_execute_ibl_unified` 경계·`verbose` 플래그·MCP `_trim_for_agent` 표지 인식·평가자 증거 final_result) + `[self:write]{spill:true}`.
+> M3 = `ibl_parser_blocks._parse_try_block`+`ibl_control_blocks._execute_try`(형제 모듈, 1500줄 규칙)(`$error` 바인딩)·`[on_error:]` 접두(`workflow_engine._handle_failure`)·`??` 괄호 가지. M4 = `_parse_repeat_block`+`ibl_control_blocks._execute_repeat`(until=몸 뒤·while=앞, `$i`, collect)+each `collect`. M5 = `[table:reduce]`(코어 src, `common/safe_expr.py`)·`common/spill.py`(자동 스필 200K자·`resolve_ref` 소비자 4곳·24h GC)·재개(`resume` 봉투→`execute_ibl(code, resume)`). 배터리 `backend/test_ibl_program_grade_m3m5.py`.
 > M2 = `ibl/ibl_predicates.py`(술어 언어: `$변수` 좌변·count/empty/exists·matches·and/or/not·괄호·AI 술어) + 파서 `_resolve_block_variables`(조건식 `$변수`=값 바인딩 `_vars`→`_var_values`, 분기 몸=step 치환) + 블록 헤더 깊이 인식(`_block_header`) + case `$변수` 소스 + dry-run `validate_condition`. 배터리 `backend/test_ibl_program_grade.py` E1~E4·C1~C8.
-> **§7 열린 질문의 잠정 처리**: ①AI 술어 기어=brief 의 현행 기어 그대로(별도 기어 안 둠 — 실사용 후 판단) ③봉투 다이어트 기본값=**요약 기본·`verbose` 옵트인**, 표면은 `final_result` 만 읽어 무영향(실측: 조종실·웹소켓·런처 JS 전부 final_result 소비) ②④=M4·M5 때.
+> **§7 열린 질문 — 판정(2026-08-22)**: ①**AI 술어 기어 = 실행 에이전트와 같은 기어**(사용자 원칙) — `[table:brief]` 는 이미 기어 실행 축(`role="execution"`, ai-ops)이라 술어로 쓰여도 같은 기어를 탄다(별도 경량 기어 안 둠; 비용은 dry-run `ai_call` 고지로). ②**repeat 휴지 상한 = every ≤ 60s · 반복 전체 ≤ 300s**(`[self:script]{wait}` 240s 와 같은 급, MCP 재진입 120s 초과분은 한 문장의 일이 아니다) — 넘으면 `halted:"wall"` 신고, 분 단위 이상 대기는 `[goal:]`/`[self:schedule]` 의 자리(세션 밖). ③**봉투 다이어트 기본값 = 요약 기본·`verbose` 옵트인, 소비자별 기본 없음** — 표면 계약은 `final_result` 하나(실측: 조종실·웹소켓·런처 JS·MCP 전부), `results[]` 는 진단 채널. 소비자마다 기본이 갈리면 같은 문장이 표면마다 다른 모양을 내 드리프트의 씨앗. ④**`data/spill` = cache 계급, 24h 기계 삭제**(소유 선언 등재) — "실삭제=사용자 결정" 원칙은 *원본*에 대한 것이고 스필은 문장을 다시 돌리면 재생산되는 파생물이라 예외가 맞다. GC 는 쓰기 때마다 기회주의적(데몬 없음), 만료 참조를 읽으면 정직 오류.
 > 자매: `HIGHER_ORDER_SENTENCE_DESIGN.md`(each — 선례), `IBL_GRAMMAR_HANDOFF.md`(문법 층),
 > `ONESHOT_VOCAB_DESIGN.md`(원샷 낱말), `data/system_docs/ibl.md` "언어의 경계"(헌법).
 > 발단: 2026-08-21 에피소드 220건 진단(조합 15%·단일 85%)과 그 뒤 사용자 판정 —
@@ -172,9 +173,9 @@
 |---|---|---|---|
 | **M1** ✅ 2026-08-22 | 2.5-2 봉투 다이어트(results 요약) + 2.5-1 `spill: true` | 중 | 모든 에피소드의 토큰 즉시 감소. 조합과 무관. 배터리 E1~E4 |
 | **M2** ✅ 2026-08-22 | 2.1 술어 확장(변수 좌변·count/empty/exists·and/or·matches·AI 술어) | 중 | `[if:]` 가 실제로 쓰이기 시작(지금 표본 1회·실패). 배터리 C1~C8 + 라이브 종단 |
-| **M3** | 2.4 `??` 괄호 파이프 + `>>` on_error + `[try]/[catch]/[finally]` | 중 | 긴 문장 생존율 |
-| **M4** | 2.2 `[repeat:]` + 2.3 `collect` | 중 | 수집 루프·대기 루프가 문장 안으로 |
-| **M5** | 2.3 `[table:reduce]`(식 한 줄) · 2.5-3 자동 스필 · 2.6 재개 | 중 | 마무리 |
+| **M3** ✅ 2026-08-22 | 2.4 `??` 괄호 파이프 + `[on_error:]` 문장 접두 + `[try]/[catch]/[finally]` | 중 | 긴 문장 생존율. 배터리 T1~T6 |
+| **M4** ✅ 2026-08-22 | 2.2 `[repeat:]` + 2.3 `collect`(repeat·each) | 중 | 수집 루프·대기 루프가 문장 안으로. 배터리 R1~R5 |
+| **M5** ✅ 2026-08-22 | 2.3 `[table:reduce]`(식 한 줄) · 2.5-3 자동 스필 · 2.6 재개 | 중 | 마무리. 배터리 D1·S1~S3 |
 
 각 M 의 **완료 정의**: ①배터리(기존 `test_pipe_currency_failures.py` P1~P19 회귀 + 신규) ②dry-run 검수 경고 ③교재 `12_ibl_only.md` 절 ④ibl.md 문법 1항·"언어의 경계" 예약어 목록 ⑤`iblbuild_validators.STANDARD_CORE_NODES`/표준-코어 가드(기능어 추가 시) ⑥시드 10~20·재학습 대기열 ⑦`changelog.log` 한 줄.
 

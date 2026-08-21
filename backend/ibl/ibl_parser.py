@@ -69,8 +69,13 @@ from typing import List, Dict, Optional, Any, Tuple
 # === 공개 API ===
 
 def parse(code: str) -> List[Dict]:
+    """IBL 코드 → step 리스트 (parse_with_vars 의 steps 만)."""
+    return parse_with_vars(code)[0]
+
+
+def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
     """
-    IBL 코드를 파싱하여 실행 가능한 step 리스트로 변환
+    IBL 코드를 파싱하여 실행 가능한 step 리스트로 변환 (+ $변수명→최종 step 인덱스 맵 — repeat until 이 몸통 할당을 읽는 데 씀, 2026-08-22 M4)
 
     Args:
         code: IBL 코드 텍스트
@@ -105,7 +110,7 @@ def parse(code: str) -> List[Dict]:
     _m_stmts: List[str] = []
     _m_names: List[Optional[str]] = []
     for _s, _n in zip(statements, assign_names):
-        if _m_stmts and _s.lstrip().startswith('[else'):
+        if _m_stmts and _s.lstrip().startswith(('[else', '[catch]', '[finally]')):
             _m_stmts[-1] = _m_stmts[-1] + ' ' + _s
         else:
             _m_stmts.append(_s)
@@ -120,6 +125,17 @@ def parse(code: str) -> List[Dict]:
     for _stmt_idx, stmt in enumerate(statements):
         # 문장 전체가 블록([goal:]/[if:]/[case:])이면 블록 step 하나로 —
         # desugar·파이프 분리에 넣으면 블록 내부 문장이 난도질당한다.
+        # [on_error: stop|skip|null] 문장 접두(프로그램급 IBL M3, 설계 §2.4): 이 문장의 >> 파이프에서
+        # step 실패를 어떻게 넘길지 — skip=실패 step 을 건너뛰고 직전 통화로, null=빈 items 로 계속.
+        # 기본은 stop(현행). 실행기가 건너뛴 step 을 봉투에 신고한다(조용한 계속 금지).
+        _on_err = None
+        _pm = _ON_ERROR_RE.match(stmt)
+        if _pm:
+            _on_err = _pm.group(1).lower()
+            stmt = stmt[_pm.end():].strip()
+            if not stmt:
+                raise IBLSyntaxError("[on_error: …] 뒤에 문장이 없습니다 — 예: [on_error: skip] [A] >> [B] >> [C]")
+        _stmt_start = len(all_steps)
         blk = _parse_statement_block(stmt)
         if blk is not None:
             # 블록도 앞 문장의 $변수를 본다 (2026-08-22 프로그램급 IBL M2): 분기 몸의
@@ -130,6 +146,8 @@ def parse(code: str) -> List[Dict]:
                 blk = _resolve_block_variables(blk, variables)
             if _stmt_idx > 0:
                 blk["_seq_boundary"] = True
+            if _on_err:
+                blk["_on_error"] = _on_err
             all_steps.append(blk)
             if assign_names[_stmt_idx]:
                 variables[assign_names[_stmt_idx]] = len(all_steps) - 1
@@ -161,13 +179,16 @@ def parse(code: str) -> List[Dict]:
             if _stmt_idx > 0 and idx == 0:
                 parsed["_seq_boundary"] = True
             all_steps.append(parsed)
+        if _on_err:
+            for _st in all_steps[_stmt_start:]:
+                _st["_on_error"] = _on_err
         if assign_names[_stmt_idx] and all_steps:
             variables[assign_names[_stmt_idx]] = len(all_steps) - 1
 
     if not all_steps:
         raise IBLSyntaxError("실행 가능한 명령이 없습니다.")
 
-    return all_steps
+    return all_steps, variables
 
 
 def _parse_statement_block(stmt: str) -> Optional[Dict]:
@@ -183,6 +204,10 @@ def _parse_statement_block(stmt: str) -> Optional[Dict]:
         return _parse_if_else(s)
     if s.startswith('[case:'):
         return _parse_case(s)
+    if s.startswith('[try]'):
+        return _parse_try_block(s)
+    if s.startswith('[repeat:'):
+        return _parse_repeat_block(s)
     return None
 
 
@@ -222,10 +247,17 @@ from ibl_parser_blocks import (  # noqa: E402,F401
     _extract_bracket_raw,
     parse_range_expression,
     register_parse as _register_parse,
+    _parse_try_block,
+    _parse_repeat_block,
+    register_parse_vars as _register_parse_vars,
 )
 
 # 재귀 하강 주입 — 블록 파서는 본체를 모른다(의존 역전, 순환 간선 제거).
 _register_parse(parse)
+_register_parse_vars(parse_with_vars)
+
+# [on_error: stop|skip|null] 문장 접두 (M3)
+_ON_ERROR_RE = re.compile(r'^\s*\[on_error:\s*(stop|skip|null)\s*\]\s*', re.I)
 
 
 _STEP_PATTERN = re.compile(
@@ -470,7 +502,10 @@ def _parse_group(text: str) -> Optional[Dict]:
     if len(fallback_parts) > 1:
         chain = []
         for part in fallback_parts:
-            step = _parse_step(part.strip())
+            # 괄호 파이프 가지 (프로그램급 IBL M3): A ?? (B >> C) — 병렬 괄호 분기와 같은 규칙·같은 파서.
+            step = _parse_paren_branch(part.strip())
+            if step is None:
+                step = _parse_step(part.strip())
             if step is None:
                 raise IBLSyntaxError(f"fallback 요소 파싱 실패: {part.strip()}")
             chain.append(step)
@@ -480,7 +515,7 @@ def _parse_group(text: str) -> Optional[Dict]:
     step = _parse_step(text)
     if step is None and text.lstrip().startswith('('):
         raise IBLSyntaxError(
-            "괄호 분기는 병렬(&)의 분기 자리에서만 씁니다 — 단독 파이프는 괄호 없이 >> 로 이으세요.")
+            "괄호 분기는 병렬(&)·폴백(??)의 분기 자리에서만 씁니다 — 단독 파이프는 괄호 없이 >> 로 이으세요.")
     return step
 
 
@@ -890,13 +925,19 @@ def _resolve_block_variables(blk: dict, variables: Dict[str, int]) -> dict:
         if isinstance(body, list):
             return [_resolve_body(b) for b in body]
         if isinstance(body, dict):
-            if body.get("_condition") or body.get("_case"):
+            if body.get("_condition") or body.get("_case") or body.get("_try") or body.get("_repeat"):
                 return _resolve_block_variables(body, variables)
             return _resolve_variables(body, variables)
         return body
 
     out = dict(blk)
-    if blk.get("_condition"):
+    if blk.get("_try"):
+        for k in ("body", "catch", "finally"):
+            if blk.get(k) is not None:
+                out[k] = _resolve_body(blk[k])
+    elif blk.get("_repeat"):
+        out["body"] = _resolve_body(blk.get("body"))
+    elif blk.get("_condition"):
         out["branches"] = [{**b, "action": _resolve_body(b.get("action"))}
                            for b in blk.get("branches", [])]
     elif blk.get("_case"):
@@ -913,6 +954,8 @@ def _resolve_block_variables(blk: dict, variables: Dict[str, int]) -> dict:
                 texts.extend(str(b.get("condition") or "") for b in node.get("branches", []))
             if node.get("_case"):
                 texts.append(str(node.get("source") or ""))
+            if node.get("_repeat") and node.get("condition"):
+                texts.append(str(node["condition"]))
             for v in node.values():
                 _collect(v)
         elif isinstance(node, list):

@@ -103,7 +103,7 @@ tool_json:
 
       3. 복잡한 페이지(500+요소)에서는 evaluate로 JS 직접 실행
 
-      4. 로그인 유지: cookies_save → 다음 세션에서 cookies_load'
+      4. 로그인 유지: cookies(save) → 다음 세션에서 cookies(load)'
     version: 6.0.0
   tools:
   # 2026-07-03 미소유 도구 감사: 죽은 tool.json 항목 37개 제거. [limbs:browser]{op} 26개 동작은

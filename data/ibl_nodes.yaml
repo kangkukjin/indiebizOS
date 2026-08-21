@@ -1152,7 +1152,7 @@ nodes:
       restaurant:
         returns: items
         fixture: '[sense:restaurant]{query: "강남 파스타"}'
-        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건) — 상호·주소·전화·place 링크 + 네이버 블로그 후기 근거(blog_count·reason), 언급 많은 순. 별점 숫자는 공개 API 미제공. 커뮤니티 후기 원문은 sense:search_local.
+        description: 맛집/음식점 검색 (카카오+네이버 Local API, 최대 45건) — 상호·주소·전화·place 링크 + 네이버 블로그 후기 근거(blog_count·reason), 언급 많은 순. 별점 숫자는 공개 API 미제공. 커뮤니티 후기 원문은 [sense:search] 의 naver 소스(블로그·카페).
         group: places
         target_description: 검색어 (강남 파스타 등). x(경도)/y(위도)/radius로 좌표 주변 검색, limit(기본 30, 최대 45), enrich:false면 블로그 근거 생략(빠름).
         router: handler
@@ -1563,12 +1563,12 @@ nodes:
           - x
         returns: items
         fixture: '[sense:commercial]{lat: 37.5, lng: 127.0}'
-        description: 상권 분석 (소상공인진흥공단). 업종별 점포 수/밀집도, 좌표 또는 행정동 기반. 창업 입지 분석용.
+        description: 상권 점포 목록 (소상공인진흥공단). 지명·좌표·행정동으로 영역 지정, 업종 필터. 집계는 [table:groupby]로.
         group: real_estate
-        target_description: 업종 코드 또는 키워드. 좌표(lat/lng) 또는 행정동 코드(district)로 영역 지정.
+        target_description: 지명(query) 또는 좌표(lat/lng, radius m) 또는 행정동 코드(region_code). 업종 대분류 indsLclsCd(I 음식·Q 숙박 등).
         router: handler
         tool: search_commercial_district
-        implementation: 소상공인진흥공단 상권정보 공개 API로 업종별 점포 밀집도/분포 분석
+        implementation: 소상공인진흥공단 상권정보 공개 API(storeListInRadius/storeListInDong) 전 페이지 수집 → 점포 items. 집계 없음.
         app:
           instrument: commercial
           icon: 🏪
@@ -5170,7 +5170,7 @@ nodes:
           - title
         returns: effect
         description: 라디오 즐겨찾기 관리 (op 분기). list 조회 / add 등록 / remove 삭제. 재생 중 채널 자동 인식.
-        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — radio_play로 재생 중 마음에 들면 바로 add 호출.
+        target_description: list — 파라미터 없음, 전체 즐겨찾기 목록. add — station_id(권장) 또는 stream_url 중 하나 + name 옵션. 둘 다 생략하면 현재 재생 중인 채널 자동 등록. remove — name 파라미터로 채널 지정. 워크플로 — [limbs:radio] play 로 재생 중 마음에 들면 바로 add 호출.
         group: media
         target_key: op
         router: handler

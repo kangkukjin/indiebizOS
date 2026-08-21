@@ -71,7 +71,8 @@ def _items_payload(items):
     payload = json.dumps(items, ensure_ascii=False)
     if len(payload) > _ITEMS_CAP:
         return None, (f"입력이 너무 큽니다({len(payload):,}자 > {_ITEMS_CAP:,}) — "
-                      "앞에 [table:take]/[table:filter] 로 줄이거나 [table:each] 로 나누세요.")
+                      "앞에 [table:take]/[table:filter] 로 줄이거나 [table:each] 로 나누세요 "
+                      "(병렬 & 결과면 [table:union]/[table:merge] 가 먼저 — take 는 병렬 봉투를 직접 받지 않는다).")
     return payload, None
 
 

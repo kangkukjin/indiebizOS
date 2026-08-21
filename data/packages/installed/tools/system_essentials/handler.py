@@ -822,7 +822,10 @@ def execute(tool_input: dict, context) -> str:
                         isinstance(v, (dict, list)) and v
                         for k, v in probe.items() if k != "items")
                     _doc_shaped = ("\n" in _msg.strip()) or (len(_msg) >= 200)
-                    if not _other_payload and _doc_shaped:
+                    # ★2026-08-21: AI 산문 emitter([table:brief] 등, _ai:true)의 message 는 길이와
+                    # 무관하게 산문 정본 — 2문장 brief(190자)가 봉투 JSON 으로 저장되던 구멍.
+                    _ai_prose = bool(probe.get("_ai")) and not isinstance(probe.get("items"), list)
+                    if not _other_payload and (_doc_shaped or _ai_prose):
                         if isinstance(probe.get("items"), list) and probe["items"]:
                             items_alongside = len(probe["items"])
                         content = _msg

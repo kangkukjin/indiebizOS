@@ -106,6 +106,7 @@ data/param_friction.jsonl
 # 몸 독립 소통 연구 런타임 계측·캐시 (docs/BODY_CARD_RESEARCH.md)
 data/forwarding_census.jsonl
 data/body_ask_log.jsonl
+data/write_ledger.jsonl*
 data/clipbox.json
 data/peer_cards/
 data/here_cache.json

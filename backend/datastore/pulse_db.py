@@ -60,7 +60,8 @@ def _init_pulse_db():
             agent TEXT,
             user_message TEXT,
             log TEXT,
-            total_ms INTEGER
+            total_ms INTEGER,
+            task_id TEXT
         );
         CREATE TABLE IF NOT EXISTS episode_summary (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

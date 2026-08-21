@@ -65,7 +65,7 @@ def _denoise_for_buffer(text: str) -> str:
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
     __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id",
-                 "steps")
+                 "steps", "task_id")
 
     def __init__(self, agent: str, user_message: str, project_id: str = ""):
         self.agent = agent
@@ -75,6 +75,14 @@ class _Episode:
         self.project_id = project_id or ""
         self.episode_id = None  # END 저장 후 DB row id — 백그라운드 증류 로그 재합류(refresh)용
         self.steps = []  # 구조화 스텝 원장 (notify_round/record_role_switch — 정규식 회수 대체)
+        # 태스크 컨텍스트 — write_ledger(쓰기 관문 원장)와의 조인 키(2026-08-21).
+        # 시작 시점 캡처 + end 늦은 캡처 2중(진입점마다 task 세우는 순서가 다름).
+        self.task_id = ""
+        try:
+            from thread_context import get_current_task_id
+            self.task_id = get_current_task_id() or ""
+        except Exception:
+            pass
 
 
 class EpisodeLogger:
@@ -119,7 +127,8 @@ class EpisodeLogger:
         ep = _Episode(agent, user_message, project_id)
         _current_episode.set(ep)
         # ★행을 먼저 만든다 — 이 턴이 리로드로 죽어도 기록은 남는다(_open_episode 참조).
-        ep.episode_id = _open_episode(ep.started_at, agent, mask_secrets(ep.user_message))
+        ep.episode_id = _open_episode(ep.started_at, agent, mask_secrets(ep.user_message),
+                                      ep.task_id)
         # 시작 마커 — contextvar 가 ep 로 설정된 뒤 print → write() 가 ep.buffer 로 캡처
         _msg_preview = (user_message or "")[:80].replace("\n", " ")
         print(f"[Episode START] agent={agent} message={_msg_preview!r}")
@@ -133,6 +142,15 @@ class EpisodeLogger:
         # 종료 마커 — contextvar 가 아직 ep 라 캡처되어 log_text 에 포함
         _total_ms = int((datetime.now() - ep.started_at).total_seconds() * 1000)
         print(f"[Episode END] agent={ep.agent} total_ms={_total_ms}")
+        # 늦은 캡처 — 태스크가 에피소드 시작 *뒤*에 생기는 진입점(WS 등) 커버.
+        # ★진입점 finally 가 clear_current_task_id 를 end_episode 보다 먼저 부르면
+        # 여기서도 빈다 — 그 경로는 시작 캡처가 이미 받았어야 한다(2중의 이유).
+        if not ep.task_id:
+            try:
+                from thread_context import get_current_task_id
+                ep.task_id = get_current_task_id() or ""
+            except Exception:
+                pass
         _current_episode.set(None)  # 컨텍스트 비움(같은 태스크 다음 메시지로 누수 방지)
         cls._finalize(ep)
 
@@ -171,7 +189,7 @@ class EpisodeLogger:
             # 개설된 행을 닫는다(없으면 INSERT 폴백). salvage 경로도 여기를 지나므로
             # 미종료 행이 중복 INSERT 되지 않고 그 자리에서 닫힌다.
             episode_id = _close_episode(ep.episode_id, ep.started_at, ep.agent,
-                                        user_message, log_text, total_ms)
+                                        user_message, log_text, total_ms, ep.task_id)
             if episode_id:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
                 _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message,
@@ -332,7 +350,8 @@ def _ensure_episode_tables():
                 agent TEXT,
                 user_message TEXT,
                 log TEXT,
-                total_ms INTEGER
+                total_ms INTEGER,
+                task_id TEXT
             );
             CREATE TABLE IF NOT EXISTS episode_summary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -352,6 +371,13 @@ def _ensure_episode_tables():
         # 기존 DB 마이그레이션 — 구조화 스텝 원장 컬럼 (2026-08-14)
         try:
             conn.execute("ALTER TABLE episode_summary ADD COLUMN steps TEXT")
+        except sqlite3.OperationalError:
+            pass  # 이미 존재
+        # 마이그레이션 — write_ledger 조인 키 (2026-08-21): 원장은 task 를 나르는데
+        # episode 쪽에 받아줄 컬럼이 없어 "이 파일 왜 바뀌었나"가 시각창 추정 조인
+        # (동시 실행에서 정확히 깨짐)뿐이었다.
+        try:
+            conn.execute("ALTER TABLE episode_log ADD COLUMN task_id TEXT")
         except sqlite3.OperationalError:
             pass  # 이미 존재
         conn.commit()
@@ -401,7 +427,7 @@ def _sweep_orphan_episodes():
         pass
 
 
-def _open_episode(started_at, agent, user_message):
+def _open_episode(started_at, agent, user_message, task_id=""):
     """턴 **시작 시** 행을 먼저 만든다 (ended_at NULL). Returns: episode_id or None.
 
     ★왜 (2026-08-18): 옛 구현은 END 에서 단 한 번 INSERT 했다 — 그때까지 에피소드
@@ -418,10 +444,10 @@ def _open_episode(started_at, agent, user_message):
     try:
         conn = _get_db()
         cur = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms)
-               VALUES (?, NULL, ?, ?, '', NULL)""",
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id)
+               VALUES (?, NULL, ?, ?, '', NULL, ?)""",
             (started_at.isoformat() if started_at else datetime.now().isoformat(),
-             agent, user_message),
+             agent, user_message, task_id or ""),
         )
         eid = cur.lastrowid
         conn.commit()
@@ -436,31 +462,36 @@ def _open_episode(started_at, agent, user_message):
         return None
 
 
-def _close_episode(episode_id, started_at, agent, user_message, log_text, total_ms):
-    """턴 종료 — 개설된 행을 갱신한다. 행이 없으면(개설 실패·옛 경로) INSERT 폴백."""
+def _close_episode(episode_id, started_at, agent, user_message, log_text, total_ms,
+                   task_id=""):
+    """턴 종료 — 개설된 행을 갱신한다. 행이 없으면(개설 실패·옛 경로) INSERT 폴백.
+
+    task_id 는 늦은 캡처분을 반영하되 빈 값으로 개설분을 덮지 않는다(COALESCE·NULLIF)."""
     if episode_id:
         try:
             conn = _get_db()
             conn.execute(
-                """UPDATE episode_log SET ended_at = ?, log = ?, total_ms = ?, user_message = ?
+                """UPDATE episode_log SET ended_at = ?, log = ?, total_ms = ?, user_message = ?,
+                          task_id = COALESCE(NULLIF(?, ''), task_id)
                    WHERE id = ?""",
-                (datetime.now().isoformat(), log_text, total_ms, user_message, episode_id),
+                (datetime.now().isoformat(), log_text, total_ms, user_message,
+                 task_id or "", episode_id),
             )
             conn.commit()
             conn.close()
             return episode_id
         except Exception:
             pass          # 갱신 실패 시 아래 INSERT 폴백으로 데이터라도 남긴다
-    return _save_episode(started_at, agent, user_message, log_text, total_ms)
+    return _save_episode(started_at, agent, user_message, log_text, total_ms, task_id)
 
 
-def _save_episode(started_at, agent, user_message, log_text, total_ms):
+def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id=""):
     """에피소드 전체 로그를 DB에 INSERT (폴백 경로). Returns: episode_id"""
     try:
         conn = _get_db()
         cursor = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 started_at.isoformat() if started_at else datetime.now().isoformat(),
                 datetime.now().isoformat(),
@@ -468,6 +499,7 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms):
                 user_message,
                 log_text,
                 total_ms,
+                task_id or "",
             )
         )
         episode_id = cursor.lastrowid

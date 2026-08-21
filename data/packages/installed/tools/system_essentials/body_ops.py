@@ -217,6 +217,33 @@ def op_log(tool_input):
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
 
 
+def _join_episode_requests(root, rows):
+    """원장 task ↔ episode_log.task_id 조인 — "이 파일 왜 바뀌었나"의 답(요청 원문).
+
+    2026-08-21 개통: 그 전엔 시각창 추정 조인뿐이라 동시 실행에서 정확히 깨졌다.
+    표시분(limit 이후) task 만 한 번에 조회 — 옛 DB(컬럼 부재)·조인 실패는 조용히
+    생략(회상은 관측 — 원장 표시를 절대 깨지 않는다)."""
+    tasks = sorted({r["작업"] for r in rows if r.get("작업")})
+    if not tasks:
+        return
+    try:
+        import sqlite3
+        conn = sqlite3.connect(os.path.join(root, "data", "world_pulse.db"))
+        try:
+            q = ",".join("?" * len(tasks))
+            found = dict(conn.execute(
+                f"SELECT task_id, user_message FROM episode_log "
+                f"WHERE task_id IN ({q}) AND task_id != ''", tasks))
+        finally:
+            conn.close()
+        for r in rows:
+            msg = found.get(r.get("작업") or "")
+            if msg:
+                r["요청"] = (msg or "")[:80]
+    except Exception:
+        pass
+
+
 def op_writes(tool_input):
     """런타임 쓰기 원장 회상 — git 이 못 보는 층(data/·outputs/)의 관문 통과 쓰기.
 
@@ -268,6 +295,7 @@ def op_writes(tool_input):
     total = len(rows)
     truncated = total > limit
     rows = rows[:limit]
+    _join_episode_requests(root, rows)
     scope_txt = f" (스코프 {scope})" if scope else ""
     text = (f"최근 {days}일 런타임 쓰기{scope_txt}: {total}건 — "
             f"관문(safe_store·[self:write]) 통과분만(전수 아님, 코드 층 전수는 changes)")

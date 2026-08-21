@@ -569,6 +569,7 @@ def _get_lightweight_provider():
         # 분류·평가·증류용 — 메인 에이전트와 session_key 충돌 방지를 위해 세션 비활성
         if hasattr(_lightweight_provider, "disable_session_persistence"):
             _lightweight_provider.disable_session_persistence = True
+            _lightweight_provider.no_tools = True  # 원샷=도구 없음(claude_code 도구 스키마 생략)
         # 원샷 계약 — 하이브리드 thinking 차단(model_resolver oneshot 버킷과 대칭)
         _lightweight_provider.disable_thinking = True
         print(f"[LightweightAI] 초기화 완료 ({provider_name}/{model_name})")
@@ -816,6 +817,7 @@ def _get_system_oneshot_provider():
         _system_oneshot_provider.init_client()
         if hasattr(_system_oneshot_provider, "disable_session_persistence"):
             _system_oneshot_provider.disable_session_persistence = True
+            _system_oneshot_provider.no_tools = True  # 원샷=도구 없음(claude_code 도구 스키마 생략)
         print(f"[SystemAI oneshot] 초기화 완료 ({provider_name}/{model_name})")
         return _system_oneshot_provider
     except Exception as e:

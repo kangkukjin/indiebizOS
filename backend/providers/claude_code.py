@@ -521,11 +521,15 @@ class ClaudeCodeProvider(BaseProvider):
                         f"{full_prompt}"
                     )
 
+                _tools_mode = None
+                if getattr(self, "no_tools", False):
+                    _tools_mode = "read" if image_paths else "none"
                 cmd = self._build_command(
                     mcp_config_path=mcp_config_path,
                     stream=True,
                     resume_session_id=resume_session_id,
                     system_prompt_file=system_prompt_file,
+                    tools_mode=_tools_mode,
                 )
 
                 _sp_len = len(self.system_prompt or "")
@@ -1007,7 +1011,8 @@ class ClaudeCodeProvider(BaseProvider):
         에이전트별 고정 경로에 매 호출 덮어써 리트라이 간 재사용하므로 별도 정리가 필요 없다
         (누적되지 않고 덮어써짐). 생성 실패 시 None → 호출 측이 인자 방식으로 폴백.
         """
-        text = (self.system_prompt or "") + self.TOOL_POLICY
+        # 도구 없는 원샷에는 도구 정책(차단 네이티브→IBL 안내)이 무의미 — 싣지 않는다
+        text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False) else self.TOOL_POLICY)
         safe = re.sub(
             r"[^A-Za-z0-9_.-]", "_",
             str(self.agent_id or self.agent_name or "default"),
@@ -1086,8 +1091,13 @@ class ClaudeCodeProvider(BaseProvider):
         stream: bool = False,
         resume_session_id: Optional[str] = None,
         system_prompt_file: Optional[str] = None,
+        tools_mode: Optional[str] = None,
     ) -> List[str]:
         """공통 CLI 인자 구성 (positional prompt는 호출 측에서 append).
+
+        tools_mode(2026-08-21, 원샷 다이어트): None=평소(eager 내장 도구+MCP) / "none"=`--tools ""`
+        (도구 스키마 0 — 원샷 텍스트 호출) / "read"=`--tools Read`(원샷이 이미지를 봐야 할 때만).
+        실측: 같은 한 줄 질문이 평소 29.5K 컨텍스트·$0.30, 도구 없음 3.9K·$0.04.
 
         --no-session-persistence는 일부러 빼놓음 — Claude Code가 디스크에 세션을 저장해야
         다음 호출 시 --resume으로 자기 과거를 이어볼 수 있음.
@@ -1104,11 +1114,22 @@ class ClaudeCodeProvider(BaseProvider):
             "--output-format", "stream-json" if stream else "json",
             # 비대화 모드에서 권한 프롬프트로 멈추지 않도록 — MCP 호출은 indiebizOS 자체 게이트
             "--permission-mode", "bypassPermissions",
-            # ToolSearch 우회: 자주 쓰는 도구를 eager-load
-            "--allowed-tools", ",".join(self.EAGER_TOOLS),
-            # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
-            "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
         ]
+        if tools_mode == "none":
+            cmd += ["--tools", ""]                  # 원샷: 도구 스키마 0
+        elif tools_mode == "read":
+            cmd += ["--tools", "Read"]              # 원샷+이미지: 파일 읽기만
+        if tools_mode:
+            # 원샷은 CLAUDE.md·settings 도 안 읽는다(모델·권한은 인자로 명시됨) — cwd 의
+            # 프로젝트 지침 ~3.4K 가 "2문장 요약해" 에 따라붙던 것(실측 8.5K→5.1K).
+            cmd += ["--setting-sources", ""]
+        else:
+            cmd += [
+                # ToolSearch 우회: 자주 쓰는 도구를 eager-load
+                "--allowed-tools", ",".join(self.EAGER_TOOLS),
+                # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
+                "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
+            ]
 
         # stream-json 출력은 verbose 필수
         if stream:
@@ -1128,10 +1149,10 @@ class ClaudeCodeProvider(BaseProvider):
         if system_prompt_file:
             cmd += ["--append-system-prompt-file", system_prompt_file]
         else:
-            cmd += ["--append-system-prompt", (self.system_prompt or "") + self.TOOL_POLICY]
+            cmd += ["--append-system-prompt", (self.system_prompt or "") + ("" if tools_mode else self.TOOL_POLICY)]
 
-        # MCP 브리지 (IBL execute_ibl 등)
-        if mcp_config_path:
+        # MCP 브리지 (IBL execute_ibl 등) — 도구 없는 원샷은 브리지도 안 세운다(프로세스 기동 비용)
+        if mcp_config_path and tools_mode is None:
             cmd += ["--mcp-config", mcp_config_path]
 
         return cmd

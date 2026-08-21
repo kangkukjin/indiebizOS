@@ -455,6 +455,8 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
             # 지원 프로바이더(DeepSeek 등)만 해석, 나머진 무시(base 기본 False 속성).
             if oneshot:
                 prov.disable_thinking = True
+                # 원샷은 도구를 쓰지 않는다(execute_tool=None) — 도구 스키마 적재 생략(비용 7배 차).
+                prov.no_tools = True
             _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")

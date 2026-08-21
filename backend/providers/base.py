@@ -369,6 +369,9 @@ class BaseProvider(ABC):
     # 지원 프로바이더만 해석(DeepSeek/Gemini/OpenRouter 등), 나머지는 무시. ep889: thinking이
     # max_tokens를 전부 태워 텍스트 0자 → Auto-Continue/빈응답 재시도 연쇄로 증류 1건에 7콜 4.5분.
     disable_thinking = False
+    # 원샷 버킷(분류·증류·brief 등 도구 없는 1회 호출) — 지원 프로바이더(claude_code)는 내장 도구
+    # 스키마·MCP 브리지·도구 정책을 싣지 않는다(컨텍스트 29.5K→3.9K 실측, 2026-08-21).
+    no_tools = False
     # thinking 차단 파라미터를 400 거부하는 모델(gemini flash-latest 부류) 자가치유 표식 —
     # 한 번 거부되면 그 프로바이더 인스턴스(=모델별 캐시)에선 차단 시도를 접는다.
     _thinking_off_unsupported = False

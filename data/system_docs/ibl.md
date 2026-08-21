@@ -4,7 +4,7 @@ scope: IBL 명세, 6-Node 구조(액션 수=본문 '핵심 노드 분류' 빌드
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [memory.md, packages.md, technical.md]
 ---
 
@@ -44,7 +44,7 @@ IBL 표현 계층:     [node:action]{params}
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
 1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), **병렬 괄호 분기**(`A & (B >> C) >> [table:merge]` — 분기 하나에만 전처리 파이프, 2026-08-19 개정·괄호 안=일반 step 파이프만), `$변수`(맨몸 `$이름` = 괄호 `${이름}`, 2026-08-22 — 경계가 `\w` 라 한글 조사·단위가 이름에 먹히는 것을 괄호로 끊는다)·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar), **조건 언어**(2026-08-22 개정, `ibl_predicates.py`: 좌변 = `node:action{…}[.경로]` 소스 참조 | `$변수[.경로]`(앞 문장 결과, 실행 없음) | `count()`/`empty()`/`exists()` | `[table:brief]{…}` AI 술어(message 가 값) · 연산자 `== != > >= < <= matches`(정규식) · `and`/`or`/`not`·괄호 · 판정 불능≠거짓), **봉투 다이어트**(에이전트 경계의 `results[]`=step 요약·`final_result`=원형, `verbose:true` 로 원형 — 하네스 이음매 `execute_ibl` 하나의 응답 모양이라 언어 밖) · `[self:write]{spill:true}` 스필 싱크(뒤 step 엔 `{items:[], ref}` 참조만). **제어 블록**(2026-08-22 M3·M4): `[try]{…} [catch]{…} [finally]{…}`(catch 안 `$error`), `[on_error: stop|skip|null]` 문장 접두(`>>` 실패 규약 — 기본 stop, skip/null 은 건너뛴 step 을 봉투에 신고), `??` 가지의 괄호 파이프 `A ?? (B >> C)`, `[repeat: N | until 조건 | while 조건, max(필수), every(≤60s), collect, as]{…}`(문장 안 결정론 반복 — 벽시계 300s 상한 신고, 더 길면 goal/schedule). 기능어 `[table:reduce]{init, step, as}`(식 한 줄 fold). **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조, 소비자 투명 해소, 24h 캐시 GC)·**재개**(실패 봉투 `resume:{from_step, prev_ref}` → `execute_ibl(code, resume)`) 은 엔진 규약. **M6(2026-08-22)**: 식 할당 `$n = 0` / `$n = $n + 1` / `$s = $r.count * 2`(한 줄 식, `common/safe_expr` — 우변이 액션이 아니면 식), 블록을 파이프 세그먼트로(`[A] >> [if: count($items) > 0]{…} >> [B]`, `[repeat:…]{…} >> [table:dedup]` — 블록은 직전 통화를 `$items` 로 보고 몸에 넘기며 결과가 다음 통화), `while` 이 몸 변수를 봄(회차마다 현재 값으로 몸 치환·루프 뒤 바깥 `$n` 최신값), `$return = …` 반환 규약(`[self:workflow]` run). ★블록 몸의 `$변수`는 파서가 아니라 **실행기가 실행 직전 값으로 치환**한다(안쪽 파이프 인덱스와 바깥 인덱스 충돌 방지). **예약어**(블록 키워드 — 어휘 이름으로 쓸 수 없음): `if else case goal repeat try catch finally on_error` + 변수 `$items $it $i $error $return`. 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다. 개정 로드맵·집행 기록 = `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
-2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 17 액션 중 **`each`·`reduce` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — each 는 데이터가 아니라 *문장*을 인자로 받는 고차 어휘라 실행이 `execute_ibl` 재귀이고, reduce(2026-08-22 M5)는 한 줄 식 fold 로 조건·반복과 함께 상태를 넘기는 제어 구조의 일부라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
+2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 17 액션 중 **`each`·`reduce` 만 코어 src(`data/ibl_nodes_src/table.yaml`)에 산다** — each 는 데이터가 아니라 *문장*을 인자로 받는 고차 어휘라 실행이 `execute_ibl` 재귀이고, reduce(2026-08-22 M5)는 한 줄 식 fold 로 조건·반복과 함께 상태를 넘기는 제어 구조의 일부라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
 
 **개인 사전** — 그 외 모든 내용어(sense·limbs·engines의 액션들). 정의(`ibl_nodes_src/`·패키지 `ibl_actions.yaml`)·구현(패키지 핸들러)·파라미터 별칭(`aliases:`)·프롬프트 설명까지 전부 데이터가 소유한다.
 
@@ -217,7 +217,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 | 중간 | `[table:ai]{instruction}` | items → items 의미 변환 (filter/sort 의 의미론적 형제) |
 | 출구 | `[table:brief]{instruction}` | items → 산문 종합 (message=산문 정본 → write 싱크) |
 
-계약: 모델=**기어 실행 축**(경량 `self:ask` 와 별개 — 새 의미 판단은 EXECUTE=본격 논리와 동류) · JSON 검증+재시도 1회+정직 실패 · 행 수 신고(rows_in/out) · `_ai` provenance · 집합 단위 1호출(0행=호출 생략) · `ai_call: true` 플래그로 dry-run 고지+포털 대여 기본 거부. 규칙으로 적을 수 있으면 filter/sort 가 먼저다. 상세 = `guides/ai_words.md`, 정본 설계 = `docs/ONESHOT_VOCAB_DESIGN.md`.
+계약: 모델=**기어 실행 축**(경량 `self:ask` 와 별개 — 새 의미 판단은 EXECUTE=본격 논리와 동류) · JSON 검증+재시도 1회+정직 실패 · 행 수 신고(rows_in/out) · `_ai` provenance · 집합 단위 1호출(0행=호출 생략) · `ai_call: true` 플래그로 dry-run 고지+포털 대여 기본 거부. 규칙으로 적을 수 있으면 filter/sort 가 먼저다. 상세 = `data/guides/ai_words.md`, 정본 설계 = `docs/ONESHOT_VOCAB_DESIGN.md`.
 
 > 옛 교훈(태그-only 시절): "engines에 이질적인 게 있다"는 관찰은 옳았고, 처음엔 *이름 이전*(화장+코퍼스 비용) 대신 태그·계약·문서로 그 다름을 *드러내는* 것으로 족하다고 봤다. 그러나 노드 on/off 요구가 생기자 태그로는 못 긋는 경계(끄기 단위)가 필요해져 결국 별도 노드로 승격했다 — 분류의 실효는 *기계가 그 구분에 작용할 때* 생긴다는 원리는 그대로다. 여기선 "작용"이 노드 토글이었다.
 
@@ -389,8 +389,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `feed` | 커뮤니티 피드 (IndieNet) 조회/게시 | `[others:feed]{op: "read"}` · `[others:feed]{op: "post", content: "..."}` |
 | `board` | 커뮤니티 보드 관리 | `[others:board]{op: "list"}` |
 | `nostr` | IndieNet/Nostr 계정 (신원·릴레이) | `[others:nostr]{op: "profile"}` · `[others:nostr]{op: "rename", name: "..."}` |
-| `neighbor` | 이웃 CRM — 조회/관리 (op: list/detail/save/delete/favorite) | `[others:neighbor]{op: "list"}` · `[others:neighbor]{op: "detail", name: "김사장"}` · `[others:neighbor]{op: "save", name: "..."}` |
-| `contact` | 이웃 연락처 CRUD | `[others:contact]{op: "add", neighbor_id: 3, contact_type: "gmail", contact_value: "a@b.c"}` |
+| `neighbor` | 이웃 CRM — 조회/관리 + **연락처**(op: list/detail/save/delete/favorite/merge/contact_add/contact_update/contact_delete) | `[others:neighbor]{op: "list"}` · `[others:neighbor]{op: "detail", name: "김사장"}` · `[others:neighbor]{op: "contact_add", neighbor_id: 3, contact_type: "gmail", contact_value: "a@b.c"}` |
 | `auto_response` | 자동응답 토글 (PC 전용) | `[others:auto_response]{op: "status"}` · `[others:auto_response]{op: "start"}` |
 
 ### 수족 노드 — limbs (장치 제어 + 미디어 재생)
@@ -538,7 +537,7 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 
 위 둘은 *구조·행동*을 본다(AI 0). 그러나 `description:` 산문은 자유 자연어라 동작이 바뀌어도(예: 통화 records/table→items) 설명이 조용히 stale해진다(좀비 어휘). 그 빈틈은 세 번째 검사가 메운다:
 
-3. **주 1회 `backend/ibl_description_audit.py`** (`run_maintenance_bundle` 합류, 카덴스 게이트) — `--check`의 *의미* 판:
+3. **주 1회 `backend/cognition/ibl_description_audit.py`** (`run_maintenance_bundle` 합류, 카덴스 게이트) — `--check`의 *의미* 판:
    - **결정적 교차참조**(AI 0): 설명이 가리키는 `[node:action]`이 실재하는지. 끊긴 참조(개명·삭제된 액션을 가리킴)를 LLM 없이 잡는다.
    - **의미 드리프트**(경량 LLM, role=background): 정본 어휘 앵커(`_VOCAB_ANCHOR` — 통화는 items 하나 등)에 비춰 각 설명이 ①옛 통화 어휘 ②returns/op와 모순 을 쓰는지 플래그. *교차참조 존재 검사는 LLM에 안 맡긴다*(결정적 검사가 더 정확). 경량 모델이라 오탐 꼬리가 있어 — 구조 `--check`가 커밋을 *막는다*면 이건 self_checks에 *깃발만 꽂고*, 판단·수정은 사람.
 
@@ -625,9 +624,9 @@ $result = [sense:search]{query: "AI 뉴스"}
 
 ---
 
-## 워크플로우
+## 워크플로우 — 이름 붙은 함수 (2026-08-22 개정)
 
-자주 쓰는 파이프라인을 YAML로 저장해두면 한 줄로 실행할 수 있다.
+자주 쓰는 문장을 YAML로 저장해두면 한 줄로 실행할 수 있다.
 
 ```yaml
 # data/workflows/news_briefing.yaml
@@ -646,6 +645,30 @@ steps:
     action: price
     target: "삼성전자"
 ```
+
+### 함수의 다섯 부품
+
+워크플로우는 "이름 붙은 문장"에서 **함수**로 한 칸 옮겨졌다. 다섯 부품 중 넷은 이미 있었고(이름·인자·반환값·스코프), 2026-08-22에 시그니처와 재귀 안전이 채워졌다.
+
+| 부품 | 모양 |
+|------|------|
+| 이름 | `name` 또는 `workflow_id` (`do` 를 직접 주면 저장 없는 즉석 실행) |
+| 인자 | 몸통에 남은 **미할당 `$이름`** = 자유 변수. `save` 가 `params_required` 로 계산·저장, `list`/`get` 이 노출 |
+| 기본값 | 저장본의 `params_default: {이름: 값}` — 호출자 `params` 가 이긴다 |
+| 반환값 | 몸통 마지막 문장의 통화. `$return = …` 이 있으면 그 결과(마지막이 effect 여도 됨) |
+| 스코프 | `execute_pipeline` 의 `step_results` 가 run 마다 새로 나는 지역 dict — 호출 경계가 닫혀 있다. 블록(`_nest`)은 바깥 변수를 계승하지만 워크플로우 경계는 불투명 |
+
+```ibl
+[self:workflow]{op: "save", name: "맛집", do: "[sense:search]{query: \"${city} 맛집\"} >> [table:take]{n: 5}"}
+→ params_required: ["city"]
+
+[self:workflow]{op: "run", name: "맛집", params: {"city": "수원"}} >> [table:brief]{}
+```
+
+- **누락은 정직 거절**: 저장본 `run` 은 인자가 비면 실패한다(`params_missing` + 시그니처를 응답에 동봉). 저장이라는 *선언 시점*이 있기 때문이다. 즉석 `run`(`do` 직접)은 선언 시점이 없어 `params_warning` 만 붙인다.
+- **한글 조사·단위 함정**: 변수 이름 경계가 `\w` 라 `"$n건"` 은 변수 `n건` 으로 읽힌다 → 괄호형 `"${n}건"` 으로 끊는다.
+- **재귀·순환 가드**(`backend/ibl/workflow_contract.py`): 같은 id 재진입은 경로를 보여주며 즉시 거절(직접·상호 모두), 중첩 깊이 상한은 5. 반복은 `[repeat:]` / `[table:each]` 로 쓴다. ★중첩 실행 깊이(`MAX_NEST_DEPTH`)는 몸통에서 0으로 재시작한다 — "긴 절차는 워크플로우에 저장해 id 로 부르라"는 탈출구 안내를 지키려면 그래야 하고, 그래서 워크플로우 호출 자체를 세는 별도 스택(`_wf_stack`)이 있다.
+- **합성**: `run` 은 몸통 마지막 문장의 items 를 통화로 내므로 `[self:workflow]{op:"run", …} >> [table:*]` 로 이어 쓸 수 있다(effect 로 끝나는 몸통이면 통화 없음).
 
 ---
 
@@ -675,7 +698,7 @@ self:
       scope: project      # 이 액션만 오버라이드
 ```
 
-**라우팅 동작** — `_route_handler`(`backend/ibl_routing.py`)가 scope를 보고:
+**라우팅 동작** — `_route_handler`(`backend/ibl/ibl_routing.py`)가 scope를 보고:
 - `project`: `_resolve_project_path` 4단 폴백 (인자 → thread_context → params.project_path → params.project_id). 모두 실패하면 에러.
 - `workspace`/`system`: `get_base_path()`를 ToolContext에 주입. project_path/project_id 무시 — 의도적 격리.
 
@@ -755,16 +778,16 @@ self:
 | `scripts/git-hooks/pre-commit` | 정합성 게이트 (commit 시점에 `--check` 자동 호출) |
 | `scripts/ibl_health_check.py` | **건강 점검 단일 소스** — §1A 정적 + §1B fixture 통화 + §1C 골든 파이프 (AI 0) |
 | `data/ibl_fixtures.json` | **행동 건강 fixture 단일 소스** — 액션별 올바른 파라미터 예 하나 (+ exempt) |
-| `backend/world_pulse_health.py` | `run_daily_health_check`(하루 1회·RED면 알림) · `run_ibl_health_check`(스크립트 실행·파싱) |
+| `backend/cognition/world_pulse_health.py` | `run_daily_health_check`(하루 1회·RED면 알림) · `run_ibl_health_check`(스크립트 실행·파싱) |
 | `data/api_registry.yaml` | API 도구 정의 (node 필드로 자동 병합) |
-| `backend/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
-| `backend/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
-| `backend/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
-| `backend/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_xml` — op 자식 노출) |
-| `backend/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
-| `backend/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |
+| `backend/ibl/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
+| `backend/ibl/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
+| `backend/ibl/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
+| `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_xml` — op 자식 노출) |
+| `backend/ibl/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
+| `backend/ibl/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |
 | `data/workflows/` | 저장된 워크플로우 YAML |
-| `backend/goal_evaluator.py` | Goal 조건 평가, 비용 산출 (Phase 26) |
+| `backend/cognition/goal_evaluator.py` | Goal 조건 평가, 비용 산출 (Phase 26) |
 
 ---
 
@@ -816,7 +839,7 @@ click:
       list: false
       detail: false
     fixture:            # op 별 '올바른 파라미터 예 하나' — 읽기 op 전용
-      list: '[self:business_item]{op: "list"}'
+      list: '[self:ledger]{op: "list", store: "item"}'
     exempt:             # 자동 실행 불가한 읽기 op — 사유
       detail: item_id 필요(list 결과의 id) — 고정 fixture 부적합
     values:             # {op: 설명 문자열} — 모양 고정(프롬프트 카탈로그가 읽는 유일한 맵)
@@ -825,7 +848,7 @@ click:
       delete: 아이템 삭제 (item_id 필수)
 ```
 
-**부작용 해소 규칙 — 조이는 건 자동, 푸는 건 명시** (`backend/ibl_ops.py` 단일 소스):
+**부작용 해소 규칙 — 조이는 건 자동, 푸는 건 명시** (`backend/ibl/ibl_ops.py` 단일 소스):
 1. `ops.side_effect[op]` 가 bool 이면 그것
 2. 액션이 `side_effect:` 를 선언했으면 그것 — **끈적하다**. op 가 `false` 를 직접 말하기
    전엔 안 풀린다(카메라·마이크처럼 "통화는 읽기, 행위는 셔터"인 액션을 지키는 자리)
@@ -869,7 +892,7 @@ op 분기 패키지 모두 이 패턴 채택(수·목록은 packages.md — 빌�
 
 **이중 게이트**:
 - `pre-commit` 훅: commit 시점, 정적 검증
-- `world_pulse_health.run_ibl_health_check()`: 12시간 self-check 사이클 — `scripts/ibl_health_check.py` §1A 정적 정합성을 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록
+- `world_pulse_health.run_daily_health_check()`: **하루 1회** 건강 점검 — `scripts/ibl_health_check.py` 를 subprocess 로 돌려 §1A 정적 정합성·§1B fixture 통화·§1C 골든 파이프 결과를 `self_checks` 테이블에 기록(정적분 식별자 `__static__:ibl_consistency`). AI 0
 
 ---
 
@@ -988,8 +1011,8 @@ op 분기 패키지 모두 이 패턴 채택(수·목록은 packages.md — 빌�
 
 ---
 
-| `backend/ibl_usage_db.py` | IBL 용례 사전 DB + 하이브리드 검색 |
-| `backend/ibl_usage_rag.py` | 용례 RAG 참조 모듈 |
+| `backend/datastore/ibl_usage_db.py` | IBL 용례 사전 DB + 하이브리드 검색 |
+| `backend/cognition/ibl_usage_rag.py` | 용례 RAG 참조 모듈 |
 | `data/ibl_usage.db` | 용례 사전 + 실행 로그 DB |
 
 ---
@@ -1099,4 +1122,4 @@ IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프
 *Phase 24: verb 시스템 제거. 런타임 verb→action 해석 삭제. 프롬프트 가독성을 위해 category 태그로 대체 (순수 표시용).*
 *Phase 25: 5-Node 최종 구조 재설계. source→sense(외부 정보), system→self(개인 도메인), interface+stream→limbs(신체/장치), team+messenger→others(협업/통신), forge→engines(엔진/창작). 총 308 액션.*
 *Phase 26: self 노드에 log_attempt, get_attempts (전략 에스컬레이션/라운드 메모리). sense 노드에 cctv_refresh, cctv_stats (UTIC 실시간 API).*
-*최근 변경(2026-08-19): 병렬 괄호 분기 파이프 `[A] & ([B] >> [C])` 문법 개정 + 동반 수리 4(본문 반영됨). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 워크플로우 절을 '함수의 다섯 부품'으로 재작성(시그니처·기본값·반환·스코프·재귀 가드). 모듈 경로 층 정정·은퇴 어휘 예시 교체. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

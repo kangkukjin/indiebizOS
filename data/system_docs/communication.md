@@ -2,7 +2,7 @@
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
 owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py
-last_updated: 2026-08-01
+last_updated: 2026-08-22
 see_also: [architecture.md, scheduler_guide.md]
 ---
 
@@ -51,13 +51,13 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **인증**: nsec 개인키 (NIP-01)
 - **수신**: 실시간 WebSocket (릴레이 구독). DM 조회는 전체 릴레이 fan-out + dedup (`_query_relays` — 단일 릴레이만 읽던 버그 수정됨)
 - **발송**: **NIP-17 gift-wrap DM 단일** (2026-06-05 전환 → 2026-06-13 NIP-04 완전 은퇴). 모든 발신(메신저 작성·자동응답·REST·폰)이 `send_dm_nip17`. 구 `send_dm`(NIP-04 kind:4)은 최신 앱이 복호 못 해 DM이 깨져 삭제. 수신은 NIP-17(kind:1059) 우선 + NIP-04(kind:4) 레거시 읽기(폰=NIP-17 전용, pynostr 부재)
-- **모듈**: `backend/nip44.py` (NIP-44 암호화, 공식 테스트 벡터 150/150 통과) + `backend/nip17.py` (gift-wrap). DM inbox relay 선언(kind:10050) 자동 발행
+- **모듈**: `backend/base/nip44.py` (NIP-44 암호화, 공식 테스트 벡터 150/150 통과) + `backend/base/nip17.py` (gift-wrap). DM inbox relay 선언(kind:10050) 자동 발행
 - **기본 릴레이**: wss://relay.damus.io, wss://relay.nostr.band, wss://nos.lol, wss://relay.primal.net, wss://nostr.wine
 - **기본 켜짐(2026-07-28)**: nostr 채널 스위치의 기본값이 꺼짐이라 설정할 게 없는데도 DM **수신만** 조용히 멈춰 있었다 → 기본 켜짐으로. 스위치가 여닫는 것이 *수신*임을 UI 문구에도 명시(발신은 스위치와 무관).
 
 ### 폰 컴패니언 피드 (한방향 센서, 대화 채널과 분리)
 폰의 네이티브 컴패니언 앱(`phone-companion/`, NotificationListenerService)이 알림을 전송:
-- **수신/저장**: `backend/phone_notifications.py` → `data/phone_notifications.db` (대화용 channel_poller와 분리된 한방향 피드)
+- **수신/저장**: `backend/services/phone_notifications.py` → `data/phone_notifications.db` (대화용 channel_poller와 분리된 한방향 피드)
 - **인가**: `data/phone_agent.json`의 pubkey만 수용, 그 외 발신자 무시
 - **조회**: `[sense:phone]{op: notifications}` 또는 `/phone/notifications` API — "지금 폰에 연락 오나"의 정답 소스
 - **위치**: `[sense:here]`(지표어 — 모든 몸) — 상시 수집 폐기, 물을 때 1회 능동 조회. 폰=fused GPS ±수십 m / 데스크탑 사다리(2026-08-06)=선언 위치(`data/body_location.json`, 고정 몸 정답) > OS 위치서비스(WiFi AP 지문 수십~수백 m, 랩탑 정답 — macOS CoreLocation·Windows GeoCoordinateWatcher·Linux GeoClue, 권한거부=조용히 폴백) > IP 지오(도시 수준, ISP 등록지라 틀릴 수 있음) + 움직임-증거 캐시(네트워크 지문). source=gps|declared|wifi|ip. 걸음수 수집은 폐기됨(2026-06-12).
@@ -197,9 +197,9 @@ Nostr 키는 IndieNet identity와 연동 가능:
 | 파일 | 역할 |
 |------|------|
 | `channel_poller.py` | 채널 수신/발송 통합 관리 |
-| `channels/base.py` | 채널 추상 인터페이스 |
-| `channels/gmail.py` | Gmail 구현 |
-| `channels/nostr.py` | Nostr 구현 |
+| `backend/channels/base.py` | 채널 추상 인터페이스 |
+| `backend/channels/gmail.py` | Gmail 구현 |
+| `backend/channels/nostr.py` | Nostr 구현 |
 | `business_manager.py` | 비즈니스/이웃/메시지 DB 관리 |
 | `auto_response.py` | 자동응답 서비스 V3 (Tool Use 통합) |
 
@@ -534,10 +534,26 @@ agents:
 
 | 파일 | 역할 |
 |------|------|
-| `system_tools.py` | `call_agent()` 도구, 위임 컨텍스트 관리 |
+| `system_tools.py` | `call_agent()` 도구(→ `[others:delegate]` 로 매핑), 위임 컨텍스트 관리 |
 | `agent_runner.py` | 자동 보고 체인, 메시지 큐 처리 |
+| `system_ai_runner.py` | 시스템 AI 위임 루프 — 무태스크 위임에 태스크 발급(2026-08-21) |
 | `conversation_db.py` | tasks 테이블 (태스크/위임 정보 저장) |
-| `thread_context.py` | 스레드별 task_id, call_agent 플래그 |
+| `thread_context.py` | 스레드별 `agent`·`task_id`·`origin` 전파, call_agent 플래그 |
+
+## 행위자 봉투 — 누가·무슨 과제로·어디서 (2026-08-21)
+
+위임은 *다른 실행 주체가 이 몸을 쓰는* 자리다. 그래서 세 칸이 실행 경로를 따라다닌다:
+
+| 칸 | 뜻 | 비면 |
+|----|----|------|
+| `agent` | 발신 신원. 채널 발신·수신 게이트의 판정 축 | 직접 표면(조종실·앱)은 `system_ai` 로 채운다 — 이 표면들은 전부 소유자 게이트 뒤다 |
+| `task` | 태스크 컨텍스트(위임 체인의 마디) | `[others:delegate]{scope:"cross"}` 가 "현재 태스크 ID 없음"으로 실패한다 |
+| `origin` | 출처. `user`=사람의 직접 명령, `portal`=공개 포털 경유 | 그 런의 쓰기가 **무출처**로 원장에 남는다 |
+
+- 전파는 `thread_context`(스레드-로컬)가 맡고, 프로세스 밖 프로바이더(claude_code)는 `/ibl/execute` **요청 봉투**로 같은 세 칸을 복원한다. 병렬 branch 는 스레드를 건너므로 값이 명시 스탬프로 실려 내려간다.
+- **무태스크 위임에는 태스크를 발급한다**: 스케줄러 하달·앱 버튼이 낸 `[others:delegate]{scope:"system"}` 은 task 없이 도착해, 그 런의 쓰기가 원장에 무작업으로 남고 조인이 끊겼다. 이제 러너가 `task_sysai_*` 를 발급한다(자가점검은 제외 — 순찰의 쓰기가 태스크 원장을 오염시키지 않도록).
+- 결과: **`write_ledger` → `episode_log` → `tasks`** 3중 조인이 닫힌다. "이 파일 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오르는 통로가 `[self:body]{op:"writes"}`.
+- 공개 표면(게시판·가족신문)에서는 **행위자가 빈 값인 것이 곧 "외부 방문자"** 신호다.
 
 ## 태스크 (Task)
 
@@ -1172,4 +1188,4 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 시스템 AI용: `delegation_system_ai.md`
 > - 작업계획서 작성: `work_plan_writing.md`
 
-*최근 변경(2026-08-01): 알림 도달 경로 A+B(notify_dispatch 단일 관문) + 창고 이웃찾기·둘러보기(본문 절 참조). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 행위자 봉투(agent·task·origin) 절 신설 — 무태스크 위임 태스크 발급·3중 조인. 모듈 경로를 층 구조로. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

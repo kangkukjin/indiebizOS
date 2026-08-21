@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 
@@ -34,15 +34,16 @@ see_also: [architecture.md, memory.md, ibl.md]
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
 - 시스템 AI가 장기 기억으로 참조하는 문서들
 - **문서 신뢰 규약**: 정본 서열 = git 커밋(사건) > docs/(설계) > system_docs/(장기기억). 문서 속 수치·파일명·함수명은 *쓰인 당시의 기록*일 수 있다 — 행동 전 `[self:body]`·`[self:grep]` 로 실재를 확인하라. `<!-- …:START/END -->` 마커 구간은 빌드가 재생성하는 기계 소유(손 수정 금지).
-- **파일 목록** (12 문서 + changelog):
+- **파일 목록** (13 문서 + changelog):
   - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
   - `anatomy.md` - **해부도(정문)** — 신참용 전체 지도(철학→3표면→IBL→인지→메모리→검색브라우저→몸), 각 상세 문서 허브
   - `vision.md` - **비전: 인지 외골격** — 목표(자율 아닌 융합)·개발 북극성=착용감. 모든 설계 결정의 최상위 기준
+  - `harness_haerye.md` - **하네스 해례** — 구현·파일명 없이 읽히는 코드 독립 아홉 원리(자기 하네스를 지으려는 사람용). 공개면 후보
   - `architecture.md` - 시스템 개요·아키텍처·설계 의도 (구 overview.md 오브젝트/에이전트 유형 흡수)
   - `technical.md` - 기술 문서 (API, 설정, 경로)
   - `ibl.md` - IBL 명세(6-Node·op 어휘화·삼각 검증) + **설계 철학**(구 ibl_design_philosophy.md)
   - `memory.md` - 메모리 7종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
-  - `packages.md` - 패키지 시스템 (41개 도구 + 5개 extensions)
+  - `packages.md` - 패키지 시스템 (구조·설치 절차·설치 목록. 수·표는 빌드 파생)
   - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
   - `communication.md` - 통신/연동 + **위임 체인**(구 delegation.md)
   - `scheduler_guide.md` - 스케줄러 가이드
@@ -102,7 +103,7 @@ indiebizOS/
 │   │   └── api_engine.py / api_pipeline.py / api_transforms.py # ★이름만 api_* — 라우터 아님
 │   │   #   빌드: scripts/build_ibl_nodes.py (소스 data/ibl_nodes_src/ → 산출물 data/ibl_nodes.yaml)
 │   │   #   검증: --check 가 src↔tool.json↔handler.py(_OP_DISPATCHERS) 삼각 일치 AST 정확 비교
-│   │   #   게이트: scripts/git-hooks/pre-commit + world_pulse_health(12시간 self-check)
+│   │   #   게이트: scripts/git-hooks/pre-commit + world_pulse_health(하루 1회 건강 점검)
 │   │   #   ★파생 방향(어디를 고치면 어디로 흐르나 — 헛다리 방지, 2026-08-18 실측):
 │   │   #     data/ibl_nodes_src/*.yaml        → data/ibl_nodes.yaml (액션 선언·description)
 │   │   #     패키지 ibl_actions.yaml 의 tool_json 블록 → 그 패키지 tool.json **만**
@@ -199,7 +200,7 @@ indiebizOS/
 │   ├── bodies/          # 몸 프로파일 (android.json 등) → 폰 엔진 번들 파생 소스 (build_body_bundle.py)
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
-│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
+│   ├── system_docs/     # 시스템 AI 문서 (장기기억, 13 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
 │   ├── guides/          # 가이드 파일 (수=architecture '시스템 통계', 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── scripts/         # 등록 스크립트 — 어휘가 아닌 절차의 거처(`[self:script]{op:run}`)
 │   │   #   registry.yaml(정의) + <이름>.py. 결정화 사다리의 가운데 가로대 = 반-어휘-증식 장치.
@@ -213,8 +214,7 @@ indiebizOS/
 │   ├── webapps.json     # 웹앱 등기부의 수동 보충분(본체는 진실 소스 7곳에서 매 호출 파생)
 │   ├── warehouse_directory.json # 창고 둘러보기 시드(사용자 편집 가능)
 │   ├── forage_memory.db # 포식 기억 (공간 지도 + 주인 모델)
-│   ├── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
-│   └── my_profile.txt   # 사용자 프로필
+│   └── system_ai_memory.db # 시스템 AI 메모리 (SQLite)
 │
 ├── projects/            # 사용자 프로젝트
 │   ├── projects.json    # 프로젝트 목록
@@ -260,7 +260,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 [5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동)
 ```
 
-**모델 기어 (계기판 변속, 2026-06-30):** 자동차 기어처럼 레버 하나로 시스템 전체 모델 등급을 변속. 자동 변속기(무의식 분류기=작업마다 티어 자동선택) 위의 **수동 변속 레버**. `backend/model_resolver.py`가 *역할 → 축 → 기어 → 티어 → 모델*로 해소하고 매 호출 읽기(핫리로드, `/model-gear` REST). 설정=`data/model_gear.json`.
+**모델 기어 (계기판 변속, 2026-06-30):** 자동차 기어처럼 레버 하나로 시스템 전체 모델 등급을 변속. 자동 변속기(무의식 분류기=작업마다 티어 자동선택) 위의 **수동 변속 레버**. `backend/base/model_resolver.py`가 *역할 → 축 → 기어 → 티어 → 모델*로 해소하고 매 호출 읽기(핫리로드, `/model-gear` REST). 설정=`data/model_gear.json`.
 - **3 티어 = 모델 슬롯** (한 번만 설정): 경량(`lightweight_ai_config.json`) / 중급(`midtier_ai_config.json`) / 고급(`system_ai_config.json` 재사용, UI 라벨 '고급').
 - **4 축** (각 독립 티어 배정): 분류(무의식+백그라운드 정리) · 평가(GoalEval) · 실행(프로젝트 에이전트·시스템 AI·Reflex·수동 번역·android·자동응답·임베디드 텍스트생성) · 의식(consciousness).
 - **기어 = 축→티어 프리셋**: 절약(전부 경량) / 균형(분류·평가=경량, 실행·의식=중급) / 최대(분류·평가=경량, 실행·의식=고급). 분류·평가는 원샷이라 최대에서도 경량 유지(속도 명제).
@@ -283,7 +283,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
   - 출력 필드: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, self_awareness, world_state
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<related_memory>`, `<world_pulse>`, `<available_guides>`, `<user_message>`)
-  - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `fragments/12_ibl_only.md`
+  - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
   - THINK 시 같은 대화의 직전 framing이 재고(30분 TTL)에 있고 경량 fit 게이트가 적합 판정하면 의식(Opus) 호출을 스킵·재사용(criteria만 갱신). 없음/안 맞음/실패 또는 SESSION_RESET·재시작 시엔 풀 의식. 상세: architecture.md
 - **평가 에이전트 (경량 AI)** — `_run_goal_evaluation_loop()`
@@ -296,6 +296,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 151 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 21)·41 도구 패키지 + 5 extensions·backend .py 272(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 151 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 21)·41 도구 패키지 + 5 extensions·backend .py 273(test 제외)**<!-- SELF_IMAGE:END -->
 
-*최근 변경(2026-08-21): 문서 파생·드리프트 감사 기계화 — 수치 마커=빌드 소유, 트리 계수 산문 은퇴. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): system_docs 목록 13문서(harness_haerye 누락분)·유령 파일(my_profile.txt) 제거·자가점검 카덴스 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

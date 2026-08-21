@@ -2,7 +2,7 @@
 title: 도구 패키지 시스템
 scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘 등록은 `data/ibl_nodes_src/<node>.yaml` 단일 진실 소스(ibl.md 참조). op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -34,24 +34,34 @@ see_also: [architecture.md, ibl.md]
 
 ## 필수 파일 형식
 
-### 1. tool.json - 도구 정의 (배열 형식)
-에이전트에게 노출될 도구의 이름과 입력 스키마를 정의합니다.
+### 1. tool.json - 도구 정의 **(빌드 산출물 — 직접 편집 금지)**
+에이전트에게 노출될 도구의 이름과 입력 스키마. **손으로 쓰지 않는다** — `scripts/build_ibl_nodes.py` 가 패키지의 `ibl_actions.yaml`(아래 §3) 의 `tool_json` 블록 + `ops` 에서 파생하고, 파일 첫 줄 `_generated` 표식이 그 사실을 광고한다. 편집해도 다음 빌드가 되돌리고, `--check` 가 커밋을 막는다.
+
+형식은 **객체**(옛 배열 형식 아님):
 
 ```json
-[
-  {
-    "name": "도구명",
-    "description": "도구 설명",
-    "input_schema": {
-      "type": "object",
-      "properties": {
-        "param1": {"type": "string", "description": "파라미터 설명"}
-      },
-      "required": ["param1"]
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지.",
+  "id": "패키지id",
+  "name": "패키지 이름",
+  "description": "패키지 설명",
+  "version": "1.0.0",
+  "guide_file": "guide.md",
+  "tools": [
+    {
+      "name": "도구명",
+      "description": "도구 설명",
+      "input_schema": {
+        "type": "object",
+        "properties": {"param1": {"type": "string", "description": "파라미터 설명"}},
+        "required": ["param1"]
+      }
     }
-  }
-]
+  ]
+}
 ```
+
+**삼각 검증**: `--check` 가 `ibl_actions.yaml`(또는 코어 src) ↔ `tool.json` ↔ `handler.py` 의 `_OP_DISPATCHERS` 를 AST 로 정확 비교한다 — op 하나가 어긋나도 커밋이 막힌다.
 
 ### 도구 설명 작성 가이드 (2026-01-20)
 AI가 도구를 정확히 선택하도록 간결하고 범용적인 설명 권장:
@@ -65,7 +75,7 @@ description에 모든 내용을 넣지 않고, 필요할 때만 가이드를 주
 **두 가지 유형:**
 
 **(A) 공용 가이드 (data/guides/)** — 의식 에이전트 기반 선택
-- `data/guides/` 폴더에 마크다운 파일 저장 (현재 67개 / `guide_db.json` 등록 65개)
+- `data/guides/` 폴더에 마크다운 파일 저장 (수치는 architecture.md '시스템 통계'의 빌드 파생 구간)
 - 의식 에이전트가 사용자 메시지를 분석하여 관련 가이드 2-3개 선택
 - `prompt_builder._load_guide_file()`로 로드 후 프롬프트에 주입
 
@@ -118,9 +128,18 @@ kosis_search_statistics:
 
 api_engine 라우팅 액션들이 이 방식을 사용합니다.
 
-### 3. IBL 노드 액션 등록 — 단일 진실 소스 (2026-05-28~)
+### 3. IBL 노드 액션 등록 — 어휘가 사는 두 자리
 
-패키지의 도구를 IBL 노드 액션으로 노출하려면 **`data/ibl_nodes_src/<node>.yaml`에 직접 액션을 추가**한다. 패키지 폴더에 `ibl_actions.yaml`을 두지 않는다 (옛 방식은 폐기됨; [[architecture_ibl_unification]] 참조).
+어휘의 단일 진실 소스는 **둘로 갈린다**(2026-08 현재, 설치 패키지 40개가 자기 fragment 를 갖고 있다):
+
+| 어디에 | 무엇 |
+|--------|------|
+| `data/ibl_nodes_src/<node>.yaml` | **코어 어휘** — 기능어(`self`·`others`·`table`)와 패키지에 묶이지 않는 액션 |
+| `<패키지>/ibl_actions.yaml` | **패키지 어휘** — 그 패키지가 가져오는 낱말. 능력 자기완결화: 설치하면 어휘가 따라 들어오고 제거하면 따라 나간다 |
+
+빌드가 둘을 합쳐 `data/ibl_nodes.yaml`(런타임 캐시)과 각 `tool.json` 을 만든다. 패키지 fragment 는 두 형식을 받는다 — 단일 노드 `{node: <이름>, actions: {...}}`, 다중 노드 `{nodes: {<노드>: {actions: {...}}}}`. 템플릿은 `data/packages/not_installed/tools/house-designer/ibl_actions.yaml`.
+
+> 옛 판(2026-05-28)은 "패키지 폴더에 `ibl_actions.yaml` 을 두지 않는다"고 적고 있었다 — 그 규약은 능력 자기완결화로 뒤집혔다. 지금 코어 src 에 넣어야 하는 것은 *패키지가 없어도 존재해야 하는 낱말*뿐이다.
 
 ```yaml
 # data/ibl_nodes_src/engines.yaml
@@ -150,8 +169,10 @@ python3 scripts/build_ibl_nodes.py --check  # 일치 확인
 
 빌드 산출물(`data/ibl_nodes.yaml`)은 첫 줄에 `# GENERATED — DO NOT EDIT` 헤더가 있으며 런타임이 읽는 단일 파일이다. 직접 편집하지 말 것.
 
-#### postprocess 필드 (감각 전처리)
-정보성 액션의 출력이 길 때 경량 AI로 압축하여 에이전틱 루프의 컨텍스트 폭발을 방지한다. 감각기관이 원시 데이터를 전처리해서 뇌에 보내는 것과 같은 원리. `ibl_nodes_src/<node>.yaml`의 액션 정의 안에 `postprocess` 블록으로 선언.
+#### postprocess 필드 (감각 전처리) — ★현재 선언한 액션 0개
+정보성 액션의 출력이 길 때 경량 AI로 압축하여 컨텍스트 폭발을 방지하는 층. 액션 정의 안에 `postprocess` 블록으로 선언한다.
+
+> **새 액션에 이걸 붙이기 전에 읽을 것**: 2026-06-27 이후 이 블록을 선언한 액션은 없다. 압축이 `records[]`/`items[]` 통화를 문자열로 파괴해서, 검색·여행계가 전부 **구조화 통화 + 사람용 `message`** 로 옮겨갔기 때문이다. 통화를 내는 액션에는 붙이지 말 것 — 파이프가 그 자리에서 끊긴다. 긴 결과의 현행 대책은 압축이 아니라 봉투 다이어트·자동 스필(technical.md)이다.
 
 ```yaml
 search:
@@ -163,10 +184,10 @@ search:
     prompt: "각 검색 결과를 제목, URL, 핵심 내용 1줄로 압축하라."  # 액션별 커스텀 프롬프트 (선택)
 ```
 
-- **type**: 전처리 유형. 현재 `compress`만 구현. 향후 `filter`, `structure` 등 추가 가능.
+- **type**: 전처리 유형. 현재 `compress`만 구현.
 - **threshold**: 결과가 이 글자 수 미만이면 후처리를 건너뜀 (기본: 1500).
 - **prompt**: 액션 특성에 맞는 압축 지시. 생략 시 범용 프롬프트 사용.
-- engines 등 결과를 보존해야 하는 액션에는 적용하지 않는다.
+- 통화(`items`/`records`)를 내는 액션·결과를 보존해야 하는 액션에는 적용하지 않는다. 호출자는 `params._raw: true` 로 우회할 수 있다.
 
 ### 4. 가이드 파일 - 에이전트용 사용 설명서 (선택)
 
@@ -177,7 +198,7 @@ search:
 #### (A) 패키지 레벨 가이드 (도구 호출 시 자동 주입)
 - tool.json에 `"guide_file": "파일명.md"` 추가
 - 에이전트가 이 패키지의 도구를 처음 호출할 때 자동으로 가이드 내용이 주입됨
-- 파일 위치: 패키지 폴더 내 (예: `installed/tools/web-builder/web_builder_guide.md`)
+- 파일 위치: 패키지 폴더 내 (예: `data/packages/installed/tools/bulletin/guide.md`)
 
 #### (B) 시스템 레벨 가이드 (search_guide로 검색 가능)
 - `data/guides/` 폴더에 마크다운 파일 작성
@@ -196,7 +217,7 @@ search:
 3. inventory.md 자동 업데이트
 4. (선택) `ibl_usage_generator`로 새 도구의 기본 용례를 RAG에 추가
 
-**패키지 설치는 IBL 어휘를 자동 추가하지 않는다.** 패키지가 새 IBL 액션으로 노출되어야 하면 `data/ibl_nodes_src/<node>.yaml`에 액션을 직접 추가하고 `python3 scripts/build_ibl_nodes.py`를 실행한다. ([[architecture_ibl_unification]])
+**설치가 어휘를 런타임에 자동 등록하지는 않는다 — 빌드가 등록한다.** 패키지가 자기 폴더에 `ibl_actions.yaml` 을 갖고 있으면(설치 패키지 대부분) `python3 scripts/build_ibl_nodes.py` 가 그 fragment 를 흡수해 `data/ibl_nodes.yaml`·`tool.json` 을 다시 만든다. 패키지에 묶이지 않는 낱말만 `data/ibl_nodes_src/<node>.yaml` 에 넣는다. 빌드 없이는 어휘가 살아나지 않고, `--check` 가 커밋 시점에 그 사실을 알려준다.
 
 ### 수동 설치 (패키지 폴더를 직접 생성한 경우)
 패키지 폴더를 `installed/tools/`에 직접 만들면 된다.
@@ -204,19 +225,21 @@ search:
 **필수 파일 구조:**
 ```
 installed/tools/{package_id}/
-├── tool.json          # 필수 — 도구 정의
-├── handler.py         # 필수 — execute(tool_name, tool_input, project_path) 함수
+├── ibl_actions.yaml   # 어휘 소스 — 액션 정의 + tool_json 블록 (빌드가 읽는다)
+├── tool.json          # 빌드 산출물 — 손으로 만들지 말 것
+├── handler.py         # 필수 — execute(tool_name, tool_input, project_path). op 분기는 `_OP_DISPATCHERS`
 ├── manifest.json      # 권장 — 패키지 메타데이터
-└── tools/             # 실제 도구 모듈들
+└── tools/             # 실제 도구 모듈들 (tool_*.py)
 ```
 
-IBL 어휘 추가가 필요하면 별개 작업:
+어휘를 살리는 절차:
 ```bash
-# data/ibl_nodes_src/<node>.yaml 편집 후
-python3 scripts/build_ibl_nodes.py          # 빌드
-python3 scripts/build_ibl_nodes.py --check  # 검증
-# 백엔드의 인메모리 캐시는 invalidate_cache() 또는 재시작으로 갱신
+# <패키지>/ibl_actions.yaml (또는 코어면 data/ibl_nodes_src/<node>.yaml) 편집 후
+python3 scripts/build_ibl_nodes.py          # ibl_nodes.yaml·tool.json·문서 파생 재생성
+python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선도
 ```
+- 라이브 반영: `POST /packages/reload` 는 **`handler.py` 만** 갈아끼운다 — `tool_*.py` 같은 서브모듈이나 새 어휘는 백엔드 재기동이 필요하다.
+- 새 액션을 더했으면 `data/guides/new_action_checklist.md` 의 문서 표면 갱신 의무도 함께 처리한다.
 
 **가이드 파일 등록** (있는 경우):
 - 패키지 레벨: tool.json에 `"guide_file": "가이드파일명.md"` 필드 추가
@@ -353,4 +376,4 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*최근 변경(2026-08-21): 패키지 표 행 집합=빌드 관리(산문 행 불가침)·수치=파생 마커. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): tool.json=빌드 산출물(객체 형식)·패키지 어휘=`<패키지>/ibl_actions.yaml` 로 정정(옛 '패키지에 두지 않는다' 규약 뒤집힘)·postprocess 선언 0 경고. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

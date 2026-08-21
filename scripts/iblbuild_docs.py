@@ -93,12 +93,14 @@ def collect_doc_facts(root: Path, data: dict | None) -> dict | None:
     ops_actions = 0
     se = {"true": 0, "false": 0, "none": 0}
     runs_on = {"anywhere": 0, "pc_only": 0, "phone_only": 0}
+    routers: dict = {}
     for b in nodes.values():
         for a in (b.get("actions") or {}).values():
             if not isinstance(a, dict):
                 continue
             if a.get("ops"):
                 ops_actions += 1
+            routers[a.get("router") or "(미지정)"] = routers.get(a.get("router") or "(미지정)", 0) + 1
             v = a.get("side_effect")
             se["none" if v is None else ("true" if v else "false")] += 1
             ro = a.get("runs_on") or "anywhere"
@@ -139,6 +141,7 @@ def collect_doc_facts(root: Path, data: dict | None) -> dict | None:
         "op_pkgs": op_pkgs,
         "side_effect": se,
         "runs_on": runs_on,
+        "routers": routers,
         "packages": packages,
     }
 
@@ -254,6 +257,17 @@ def _render_architecture(span: str, f: dict, issues: list[str]) -> str:
     return span
 
 
+def _render_architecture_routers(span: str, f: dict, issues: list[str]) -> str:
+    """라우터별 액션 수 — 액션이 늘 때마다 낡던 손 수치를 실측으로."""
+    r = f["routers"]
+    order = ["handler", "system", "channel_engine", "driver", "workflow_engine", "trigger_engine"]
+    parts = [f"{k} {r[k]}" for k in order if k in r]
+    parts += [f"{k} {v}" for k, v in sorted(r.items()) if k not in order]
+    return _sub(span, r"\(액션 단위 실측, 합 \d+\): .*",
+                f"(액션 단위 실측, 합 {sum(r.values())}): " + " · ".join(parts),
+                "architecture.md 라우팅", issues)
+
+
 def _render_technical(span: str, f: dict, issues: list[str]) -> str:
     L = f["layers"]
     span = _sub(span,
@@ -355,6 +369,8 @@ DOC_TARGETS = [
     ("README.ko.md", IBL_STATS_START, IBL_STATS_END, _render_readme_ko),
     ("data/system_docs/anatomy.md", IBL_STATS_START, IBL_STATS_END, _render_anatomy),
     ("data/system_docs/architecture.md", IBL_STATS_START, IBL_STATS_END, _render_architecture),
+    ("data/system_docs/architecture.md", "<!-- ROUTERS:START -->", "<!-- ROUTERS:END -->",
+     _render_architecture_routers),
     ("data/system_docs/technical.md", IBL_STATS_START, IBL_STATS_END, _render_technical),
     ("data/system_docs/ibl.md", IBL_STATS_START, IBL_STATS_END, _render_ibl),
     ("data/system_docs/ibl.md", "<!-- RUNS_ON:START -->", "<!-- RUNS_ON:END -->", _render_ibl_runs_on),

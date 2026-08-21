@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -133,6 +133,13 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/start` - 자동응답 시작
 - `POST /business/auto-response/stop` - 자동응답 중지
 
+### IBL 실행·번역 (/ibl) — api_ibl.py
+- `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트)
+- **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
+- **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
+- **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
+- 실행은 워커 스레드에서 돈다(`asyncio.to_thread`) — 블로킹 핸들러가 이벤트 루프를 잡으면 그 대기를 풀어줄 요청 자체를 못 받아 자기교착한다.
+
 ### 몸 사이 소통 (/nodes) — api_nodes.py
 - `GET /nodes/card` - 내 **명함**(capability card): 레지스트리 파생 desc-프로젝션(표준 코어 제외·params 미포함·몸 인식 필터·`dictionary_hash`)
 - `POST /nodes/ask` - 이웃 몸의 **자연어 부탁** 수신 → 자기 사전으로 컴파일→실행→통화 회신(1회 자가교정, 어휘 밖=정직 거절). 어휘 진입점은 `[others:ask]`
@@ -194,8 +201,10 @@ execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op:
 # 고차 문장 — 찾은 것 *각각*에 IBL 문장을 적용 (2026-08-15 신설)
 execute_ibl(code='[sense:search]{query: "AI"} >> [table:each]{as: "row", do: "[self:notify_user]{message: \'{row.title}\'}"}')
 
-# 블록 — 조건 분기. ★블록은 **문장 위치에 통째로** 쓴다(파이프 속엔 못 넣는다).
-#   좌변은 반드시 IBL 소스 참조 `node:action{params}[.field]` — 자연어 조건은 평가되지 않는다.
+# 블록 — 조건 분기. 문장 위치에 통째로 쓰거나, 2026-08-22부터 **파이프 한 칸**으로도 쓴다
+#   (`[A] >> [if: count($items) > 0]{…} >> [B]` — 블록이 직전 통화를 $items 로 받는다).
+#   좌변은 IBL 소스 참조 `node:action{params}[.field]` 또는 `$변수[.경로]`·count()/empty()/exists() —
+#   자연어 조건은 평가되지 않는다(판정 불능은 조용한 false 가 아니라 오류).
 execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}')
 ```
 
@@ -206,7 +215,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 **인프라 노드 (항상 허용)**: `self`, `others`, `table` — 모든 에이전트에 자동 제공. 노드 yaml의 `always_on: true` 플래그가 단일 소스 (`ibl_access._always_allowed()`가 레지스트리에서 읽음, 노드 on/off 기능의 토대)
 
 ## 설정 파일 위치
-- **모델 기어 (계기판 변속)**: `data/model_gear.json` — 현재 기어(절약/균형/최대) + 프리셋(기어 × 축 → 티어) + 에이전트 핀(overrides). `backend/model_resolver.py`가 *역할 → 축 → 기어 → 티어*로 해소하고 매 호출 읽기(핫리로드). 아래 3개 티어 설정은 이제 **모델 슬롯**(고급=system_ai 재사용)이고, 어느 축이 어느 슬롯을 쓰는지는 기어가 정함. 에이전트별 모델 설정은 폐지(yaml provider/model/apiKey 무시, 모델·키 모두 티어 상속).
+- **모델 기어 (계기판 변속)**: `data/model_gear.json` — 현재 기어(절약/균형/최대) + 프리셋(기어 × 축 → 티어) + 에이전트 핀(overrides). `backend/base/model_resolver.py`가 *역할 → 축 → 기어 → 티어*로 해소하고 매 호출 읽기(핫리로드). 아래 3개 티어 설정은 이제 **모델 슬롯**(고급=system_ai 재사용)이고, 어느 축이 어느 슬롯을 쓰는지는 기어가 정함. 에이전트별 모델 설정은 폐지(yaml provider/model/apiKey 무시, 모델·키 모두 티어 상속).
 - **고급 AI 슬롯 (구 '본격' / 시스템 AI config 재사용)**: `data/system_ai_config.json`
 - **중급 AI 슬롯**: `data/midtier_ai_config.json`
 - **경량 AI 슬롯 (원샷=분류·평가·증류 등)**: `data/lightweight_ai_config.json`
@@ -222,17 +231,17 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
-- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `ibl_distilled.json`. usage_db ~2,988건. **2026-08-04 로컬 맥미니 M4 Pro 재학습 완료**(batch=8·epoch 5 최적·검증 0.882, 직전 모델 대비 code Top-5 88.9→92.2%/desc 92.2→94.2%/런타임 ~99%). 절차·함정은 `data/guides/hippocampus_retraining.md`.
-- **폰 컴패니언 피드 DB**: `data/phone_notifications.db` (SQLite — 알림·위치·걸음. `backend/phone_notifications.py`가 NIP-17 수신분 저장, 인가 폰 신원은 `data/phone_agent.json`). 조회 API `/phone/notifications|locations|steps` (`backend/api_phone.py`) + `[sense:phone]{op}`
-- **NIP-17/NIP-44 모듈**: `backend/nip17.py` (gift-wrap DM) + `backend/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
+- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `data/training/ibl_distilled.json`. usage_db 3,530건(2026-08-22 실측). 라이브 세대·측정표·재학습 대기열은 **memory.md '현재 라이브 모델'** 이 정본이고, 절차·함정은 `data/guides/hippocampus_retraining.md`. 재학습 경로는 **로컬 M4 Pro(MPS)** 가 정본(클라우드 Modal 경로는 보존만).
+- **폰 컴패니언 피드 DB**: `data/phone_notifications.db` (SQLite — 알림·위치·걸음. `backend/services/phone_notifications.py`가 NIP-17 수신분 저장, 인가 폰 신원은 `data/phone_agent.json`). 조회 API `/phone/notifications|locations|steps` (`backend/surface/api_phone.py`) + `[sense:phone]{op}`
+- **NIP-17/NIP-44 모듈**: `backend/base/nip17.py` (gift-wrap DM) + `backend/base/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
 - **외부 API 키 (`.env`)**: 패키지 핸들러가 외부 서비스 호출 시 `.env`에서 로드. 예: `NANET_API_KEY` — 국회도서관 국가학술정보(LOSI) OpenAPI (losi-open.nanet.go.kr, 연구자·학위논문 검색 `[sense:researcher]`·`[sense:paper]{source: "nanet"}`, study 패키지, auth_manager 'nanet' 레지스트리).
 - **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml` — 단일 진실 소스, 직접 편집. op-bearing 액션은 `ops: {default, values}` 블록 의무.
 - **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
-- **웹앱 등기부**: `data/webapps.json` — **파생 밖 예외만** 담는 수동 보충분(원장 아님). 진실 소스 7곳(포털·게시판·가족신문·공개파일·정기보고·web-builder `sites.json`·`outputs/web-projects/*/wrangler.toml`)은 `backend/../system_essentials/webapp_registry.py` 가 매 호출 재계산. 어휘 `[self:webapp]{op}`.
+- **웹앱 등기부**: `data/webapps.json` — **파생 밖 예외만** 담는 수동 보충분(원장 아님). 진실 소스 7곳(포털·게시판·가족신문·공개파일·정기보고·web-builder `sites.json`·`outputs/web-projects/*/wrangler.toml`)은 `data/packages/installed/tools/system_essentials/webapp_registry.py` 가 매 호출 재계산. 어휘 `[self:webapp]{op}`.
 - **이웃 창고 둘러보기 시드**: `data/warehouse_directory.json` — 장르별 후보 목록(자가 생성·사용자 편집 가능). live 경로는 Neocities 태그 브라우즈를 요청 1회로 파싱.
-- **IBL 검증 게이트**: `scripts/git-hooks/pre-commit` (commit 시점) + `world_pulse_health.run_ibl_health_check` (12시간 self-check — `scripts/ibl_health_check.py` §1A 가 `__static__:ibl_consistency` 로 기록)
+- **IBL 검증 게이트**: `scripts/git-hooks/pre-commit` (commit 시점) + `world_pulse_health.run_daily_health_check` (**하루 1회** — `scripts/ibl_health_check.py` 를 subprocess 로 돌려 §1A 정적·§1B fixture 통화·§1C 골든 파이프를 `self_checks` 에 기록, `__static__:ibl_consistency` 식별자. AI 0)
 - **이음매 가드(액션 아닌 것의 시민권, 2026-07-25~26)**: `scripts/check_event_loop.py`(async 본문의 동기 블로킹 = 자기교착 부류) · `scripts/check_public_routes.py`(공개 노출 ↔ 인증 대조 — 오라클은 살아있는 `app.routes`, 공허한 통과 금지) · `scripts/check_win_portability.py`(유닉스 전용 stdlib 무가드 import — ★위험지대는 `data/packages/`) · `scripts/ci_import_smoke.py`. pre-commit + `.github/workflows/`(우분투 정적 스캔 + windows-latest 부팅 등가 스모크 + **신선 clone** 게이트).
-- **부팅 관측**: `backend/boot_status.py` — lifespan 의 '실패(무시)' 블록 10개를 성패 계측, `/world-pulse/health` 의 `boot` 절로 노출(하나라도 실패면 overall=degraded).
+- **부팅 관측**: `backend/datastore/boot_status.py` — lifespan 의 '실패(무시)' 블록 10개를 성패 계측, `/world-pulse/health` 의 `boot` 절로 노출(하나라도 실패면 overall=degraded).
 - **표준 코어 경계 (설치·업데이트 이음매, 2026-07-10~)**: `data/core_manifest.json` — 코어 vs 사용자(어휘·앱) 경계의 **단일 진실**. `scripts/build_core_manifest.py`가 **git 추적 집합**(=배포에 딸려오는 것)에서 파생·커밋(installed+not_installed 양쪽 패키지·계기·중앙 어휘). 손목록 없음. **opt-out**: 개인 패키지·앱을 커밋해도 코어에서 빼려면 `<패키지>/.origin` 파일에 `user`(또는 계기 yaml 최상위 `origin: user`). 런타임 origin은 `backend/package_manager.resolve_package_origin()`가 이 매니페스트로 해소해 `/packages` 응답에 `origin: core|user` 노출. **가드**: pre-commit + `build_ibl_nodes.py --check`에 core_manifest·dist_filter 신선도 합류.
 - **설치 파일 필터 (코어 기준 배포)**: `scripts/build_dist_filter.py` — `frontend/package.json`의 electron-builder `data` 필터에서 sentinel(`!__GEN_START/END__`) 구간을 매니페스트 주도로 생성(비-코어 패키지·계기 제외 + 개인 크러프트 `.fuse_hidden*`·최상위 `*.md/*.html/*.png`·`*.bak*` 제외). 기존 secret 손목록은 보존(순수 추가). `npm run electron:build*`가 `dist:filter`(predist=매니페스트 재생성)를 프리스텝으로 실행.
 - **업데이트 시 사용자 보존 규칙 (`frontend/electron/main.js` `initUserData`)**: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
@@ -248,10 +257,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **파이프라인 시**: `_action_count × 16KB` 허용 (다중 액션 실행 시 비례 확장)
 
 ### 감각 전처리 (Sensory Preprocessing)
-- 정보성 액션의 출력을 경량 AI(flash-lite)로 압축하여 컨텍스트 폭발 방지
-- `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언적 설정
-- 적용 액션: `search`, `crawl`, `travel`
-- 구현: `ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
+- 액션 출력을 경량 AI로 압축해 컨텍스트 폭발을 막는 층. `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언
+- **현재 선언한 액션은 0개**(2026-06-27~): 압축이 `records[]` 통화를 문자열로 파괴하던 결함이 드러나, 검색·여행계가 전부 구조화 통화(`records`/`items`) + 사람용 `message` 로 옮겨가며 compress 가 폐지됐다. 엔진의 기계와 우회 플래그(`params._raw`)는 남아 있다
+- 컨텍스트 폭발의 현행 대책은 압축이 아니라 **봉투 다이어트 + 자동 스필**(위 `/ibl/execute` 절)
+- 구현: `backend/ibl/ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
 
 ### IBL 액션 단일 진실 소스 (2026-05-28~)
 - `data/ibl_nodes_src/` 7개 yaml(meta + 6개 노드: sense/self/limbs/others/engines/table)이 사람이 편집하는 단일 소스
@@ -262,7 +271,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
   - op enum: src.ops.values 키 ↔ tool.json input_schema.properties.op.enum
   - default: src.ops.default ↔ tool.json input_schema.properties.op.default
   - dispatcher: src.ops.values 키 ↔ handler.py `_OP_DISPATCHERS[tool_name]` dict 키
-- **이중 게이트**: pre-commit 훅(commit 시점) + self-check 사이클(12시간, `__static__:ibl_consistency` 식별자)
+- **이중 게이트**: pre-commit 훅(commit 시점) + 일일 건강 점검(하루 1회, `__static__:ibl_consistency` 식별자)
 - **dispatcher 표준** (op 분기 패키지·액션 수는 아래 '물리적 구조'의 빌드 파생 수치; 일부 op 액션은 패키지 밖 backend-native): `_OP_DISPATCHERS = {tool_name: {op: handler_or_None}}` 모듈 레벨 dict 노출 의무
 
 ## 물리적 구조 (주요 경로)
@@ -271,14 +280,14 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(23) → `datastore`(35) → `ibl`(29) → `cognition`(42) → `services`(28) → `surface`(60). `.py` 총 272개(test 제외).
+  `base`(23) → `datastore`(35) → `ibl`(29) → `cognition`(43) → `services`(28) → `surface`(60). `.py` 총 273개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(13) · `backend/providers/`(11, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (**41개** — op 분기 **28개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)
-- `data/api_registry.yaml`: API 도구 정의 (node 필드로 IBL 자동 병합, 현재 2개 액션)
+- `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node: sense` 로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper·audio_briefing)
 - `data/guides/`: 가이드 68개 (guide_db 등록 67). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
@@ -322,4 +331,4 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*최근 변경(2026-08-21): '물리적 구조' 수치=빌드 파생 마커(08-17 층 구조 개서 위에). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): /ibl 실행 API 절 신설(행위자 봉투·봉투 다이어트·스필·재개), 자가점검 카덴스·해마 데이터·api_registry·감각 전처리 실측 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

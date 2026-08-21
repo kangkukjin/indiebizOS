@@ -2,7 +2,7 @@
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
 owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, nas_*.py
-last_updated: 2026-08-01
+last_updated: 2026-08-22
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -53,7 +53,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 ### 표면 분리 — 원격 런처(PC의 일부) vs 폰 네이티브(독립 시스템) (2026-07-22)
 
 두 표면은 같은 HTML 조각을 쓰지만 **정체가 다르다**. 그래서 조립을 코드에서 갈랐다:
-- 기질(탭별 모듈) = `launcher_app_common/warehouse/autopilot/manual/appmode.py` + 셸 조각
+- 기질(탭별 모듈) = `backend/surface/launcher_app_{common,warehouse,autopilot,manual,appmode}.py` + 셸 조각
 - 정체(표면 조립) = `launcher_surface_remote.py`(원격 5탭 — PC의 일부) / `launcher_surface_phone.py`(폰 3탭 — 독립 시스템: 자율주행·조종실·앱)
 - 폰 조종실은 **로컬 완결**(`/ibl/translate`·`validate`·`distill`·`actions/catalog`) — 옛 '리모컨' 프록시는 은퇴했다. 폰은 자기 어휘(자기 사전)만 컴파일한다.
 
@@ -572,10 +572,10 @@ cloudflared --config ~/.cloudflared/config.yml tunnel run {터널이름}
 
 | 구분 | 파일 |
 |-----|------|
-| 원격 Finder 백엔드 | `backend/api_nas.py` |
-| 원격 런처 백엔드 | `backend/api_launcher_web.py` |
-| 터널 관리 백엔드 | `backend/api_tunnel.py` |
-| 프론트엔드 설정 | `frontend/src/components/.../SettingsDialog.tsx` |
+| 원격 Finder 백엔드 | `backend/surface/api_nas.py` |
+| 원격 런처 백엔드 | `backend/surface/api_launcher_web.py` |
+| 터널 관리 백엔드 | `backend/surface/api_tunnel.py` |
+| 프론트엔드 설정 | `frontend/src/components/launcher-components/dialogs/SettingsDialog.tsx` |
 | Finder 설정 | `data/nas_config.json` |
 | 런처 설정 | `data/launcher_web_config.json` |
 | 터널 설정 | `data/tunnel_config.json` |
@@ -635,4 +635,4 @@ cloudflared tunnel login
 
 ---
 
-*최근 변경(2026-08-01): 원격 표면 실사용 수리(윈도우 NAS 파인더 404 등) + 웹앱 등기부 `[self:webapp]`. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 모듈 경로를 층 구조·실경로로 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

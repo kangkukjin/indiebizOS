@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -56,7 +56,9 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   (위 수치는 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 - API든 크롤링이든 안드로이드든 DB든 같은 문법으로 요청 — 프로토콜 차이는 드라이버가 감춘다.
 - **왜 도구 더미가 아니라 *언어*인가**: 표현력은 어휘 크기가 아니라 *조합*에서 나온다. 적게 고른 프리미티브 + 풍부한 조합 = 사실상 무한. 업계의 "자연어 SKILL.md" 대신 정합적 언어로 도구 폭증을 다스린다.
-  - **조합 문법**: `>>` 순차(파이프 단축 `|`) · `&` 병렬 · `??` 폴백 · 조건/분기 **블록**(`if`/`else`/`case`, 문장 위치에도 놓인다) · 고차 문장 **`[table:each]{do, as}`**(찾은 것 *각각*에 IBL 문장 적용 — "각각에 대해 ~해라"를 처음으로 표현 가능하게 한 유일한 고차 변환자) · 변수 · `goal`. 재귀 깊이 상한 3.
+  - **조합 문법**: `>>` 순차(파이프 단축 `|`) · `&` 병렬 · `??` 폴백 · 조건/분기 **블록**(`if`/`else`/`case`) · 고차 문장 **`[table:each]{do, as}`**(찾은 것 *각각*에 IBL 문장 적용 — "각각에 대해 ~해라"를 처음으로 표현 가능하게 한 유일한 고차 변환자) · 변수 · `goal`. 중첩 실행 깊이 상한 3(더 긴 절차는 `[self:workflow]` 에 저장해 id 로 부른다 — 그쪽은 순환 금지·깊이 5).
+  - **한 문장 = 한 프로그램 (2026-08-22)**: 문장이 프로그램급으로 올라갔다 — 술어 언어(`count()`/`empty()`/`matches`/`and`·`or`·`not`, AI 술어) · 오류 처리(`[try][catch][finally]`, `[on_error: skip|null]`) · 반복(`[repeat: N|until|while]`) · 상태(`$n = $n + 1` 한 줄 식) · 블록을 파이프 한 칸으로 · `$return` 반환. **어휘 증가는 `[table:reduce]` 하나뿐, 나머지는 전부 문법**이다. 범용 자료구조·재귀는 언어로 끌어들이지 않고 `[self:script]` 로 얼린다.
+  - **워크플로우 = 함수**: 저장한 문장을 이름·인자(미할당 `$이름`)·반환값(`$return`)·닫힌 스코프로 부른다.
   - **어휘는 작아지면서 세졌다**: 2026-08-05~17 압축으로 163→**144**. 복합어를 지우고 보편어를 세우는 것(`pew_research`→`[sense:feed]`)·같은 개념의 낱말을 `op`/`source` 축으로 접는 것(사업 4형제→`[self:ledger]{store, op}`)이 표준 수술이다. 반대 방향의 압력은 `[self:script]`(등록 스크립트)가 받는다 — "새 낱말 만들까?"의 기본 답은 "스크립트로 얼려라".
 → 명세·설계 철학: [ibl.md](ibl.md)
 
@@ -122,6 +124,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 - **여러 몸**: PC(허브)와 폰이 각각 독립 자아(폰=온디바이스 두뇌)이고, 낯선 PC 도 USB 손발로 잠깐 몸이 된다. 사용자 세계-데이터(연락처·일정·비즈니스)는 CRDT로 공유·동기화, 각 자아의 주관적 기억(대화·해마)은 사적. **사전도 몸마다 다르다** — 설치된 몸은 자기 어휘만 갖는다. → [architecture.md](architecture.md) · [communication.md](communication.md)
 - **몸끼리**: 특권 배관 대신 **명함**(`/nodes/card`)과 **자연어 부탁**(`[others:ask]`) — 받는 몸이 자기 사전으로 컴파일해 실행한다. 특별함은 배관이 아니라 **이웃 등급**이다.
 - **소통**: Gmail·Nostr(NIP-17 DM) + 탈중앙 망 **IndieNet**. AI와, 이웃과, 에이전트끼리 소통. → [communication.md](communication.md)
+- **자기 몸의 변화를 기억한다**(몸 원장, 2026-08-21): git(추적 파일의 사건) + 쓰기 관문 원장(런타임 쓰기)을 `[self:body]{op}` 어휘로 회상한다. 몸이 바뀌면 몸에 대한 가정이 깨지므로, 변화 자체가 연상 가능한 기억이어야 한다 — 실제로 층 구조 개편이 회상 불가능해 낡은 가정이 6주 잠복한 사건이 계기였다. 행위자(누가·무슨 과제로·어디서)가 실려 "이 파일 왜 바뀌었나"가 한 호출에 닫힌다. → [architecture.md](architecture.md) '몸 원장'
 
 ---
 
@@ -145,4 +148,4 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 → 더 깊이: [vision.md](vision.md) (인지 외골격의 4문제의식·모양·기반 철학)
 
 ---
-*최근 변경(2026-08-21): 2장 IBL — 조합 문법 본문화(08-17) + 수치=빌드 파생 마커(08-21). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 2장 IBL — 프로그램급 문법·워크플로우=함수 반영, 6장에 몸 원장 추가. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

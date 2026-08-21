@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -24,7 +24,7 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)�
 | 반사 신경 | 경량 AI (분류) | EXECUTE/THINK 분류 — 의식 각성(THINK)은 **장기 작업 또는 위험 작업**일 때만(2026-08-10 기준 상향), 그 외 전부 의식 건너뜀 |
 | 자기 교정 | 평가 에이전트 | 달성 기준 대비 평가, NOT_ACHIEVED 시 재시도 |
 | 자의식/각성 | World Pulse | 매시간 세계/사용자/자기 상태 수집 |
-| 면역계 | AI 건강 체크 + action_health | 매 12시간 시스템 AI가 부작용 없는 액션 전수 테스트, 모든 액션 실행을 자동 기록 |
+| 면역계 | 일일 건강 점검 + action_health | 매일 1회 fixture·골든 검사(**AI 0** — 옛 'AI가 assumed 액션을 순찰'하던 배선은 은퇴), 모든 액션 실행을 자동 기록 |
 | 자율신경계 | 스케줄러, 이벤트 엔진 | 의식 없이 돌아가는 리듬 |
 | 해마 | 실행기억 (해마 + discover) | 1회 생성, 전 에이전트 공유. fine-tuned 임베딩으로 관련 기억 자동 인출 |
 | 에피소딕 메모리 | episode_log + episode_summary | 에피소드(명령→응답)별 실행 로그 기록, 인지 품질 지표 영구 추적 |
@@ -57,10 +57,10 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 
 - **연상기억**: 파이프라인 최상단에서 1회 생성. 해마(과거 IBL 사례)와 심층메모리(사용자 사실)를 합친 self-describing XML 묶음 (`<execution_memory>` + `<related_memory>`)
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
-- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. code Top-5 92.2%/desc 94.2%, **실제 런타임 검색 ~99%** (2026-08-04 **로컬 맥미니 M4 Pro 재학습** — 클라우드는 옛 맥에어 OOM 한정이었음, 코퍼스 2,988). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
+- **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. **실제 런타임 검색 ~99%** (라이브 세대·측정표는 memory.md '현재 라이브 모델' — 재학습은 **로컬 M4 Pro**가 정본 경로, 클라우드는 옛 맥에어 OOM 한정이었다). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
-- 상세: `system_docs/memory.md`
+- 상세: `data/system_docs/memory.md`
 
 ## 사용자 표면 — 런처의 세 모드 (트릴레마)
 
@@ -74,9 +74,9 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.*
 
-- 조종실: `backend/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/.../ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
+- 조종실: `backend/surface/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/src/components/ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
 - 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브 12종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action/thread/form/editable_list/map(인터랙티브 leaflet)/calendar), `on:` 뷰-이벤트(지도 moveend→재조회·marker_click→IBL 액션 또는 `{stream:true}`→HLS 영상), filter 필터칩(정적 단일선택 재조회 + 동적 `from_field`=결과-필드 distinct 칩, 클라이언트 측 거르기), 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(photo 풍부창·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖 — 2026-06-29 상권은 인터랙티브 map+동적필터+드릴로 흡수돼 은퇴). `build_ibl_nodes --check`에 app 블록 정합성 합류.
-- `_raw: true` 파라미터로 `postprocess:compress`(검색계 액션의 AI 요약)를 우회 — 앱·파이프라인이 구조화 원본을 받는다.
+- `_raw: true` 파라미터는 `postprocess:compress`(액션 결과의 AI 요약)를 우회한다 — 다만 **현재 그 블록을 선언한 액션은 0개**다(2026-06-27, 검색계가 `records`/`items` 구조화 통화로 옮겨가며 compress 폐지 — 압축이 통화를 문자열로 파괴하던 결함). 엔진의 기계는 남아 있고 선언만 비었다.
 
 ## 시스템 구조
 디렉토리 트리는 **system_structure.md** 참조 (의식·실행·평가 에이전트의 시스템 프롬프트에 자동 주입되는 정전 문서).
@@ -87,14 +87,14 @@ backend 는 평면 폴더가 아니라 **층=디렉토리**다. 의존은 아래
 
 ```
 base → datastore → ibl → cognition → services → surface
- 22       33        23       36         27        59
 ```
+(층별 모듈 수는 아래 '시스템 통계'의 빌드 파생 구간 — 산문에 적으면 다음 커밋에 낡는다.)
 
-- **왜 층인가**: 195 모듈이 평면으로 쌓이면 "누가 누구를 부르는가"가 사람 머릿속에만 남는다. 층은 그 규율을 **디렉토리 위치로 강제**한다 — 물리 위치가 곧 선언이고, 어긴 파일은 `git mv` 하거나 `LAYERS` 를 고쳐야 한다.
-- **가드**: `scripts/check_backend_layers.py` — 층 미배정 모듈·역방향 간선·교차층 순환을 잡는다. 동결 부채 `BASELINE` 7간선(전부 한 방향 상향 읽기, 순환 0)은 **신규 추가 금지**이고, 위반이 사라지면 가드가 목록에서 지우라고 요구한다. pre-commit + 12시간 자가점검 양쪽에 합류.
+- **왜 층인가**: 모듈이 평면으로 쌓이면(이동 당시 195개) "누가 누구를 부르는가"가 사람 머릿속에만 남는다. 층은 그 규율을 **디렉토리 위치로 강제**한다 — 물리 위치가 곧 선언이고, 어긴 파일은 `git mv` 하거나 `LAYERS` 를 고쳐야 한다.
+- **가드**: `scripts/check_backend_layers.py` — 층 미배정 모듈·역방향 간선·교차층 순환을 잡는다. 동결 부채 `BASELINE` 7간선(전부 한 방향 상향 읽기, 순환 0)은 **신규 추가 금지**이고, 위반이 사라지면 가드가 목록에서 지우라고 요구한다. pre-commit + 일일 건강 점검 양쪽에 합류.
 - **모듈 이름은 평면 유지**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다. 그래서 이동이 import 를 깨지 않았고, **그래서 조용히 낡을 수 있다**(코드베이스 지도가 반년 가까이 평면 구조를 그리고 있었다).
 - **새 backend 모듈 규약**: 층 폴더에 두고 `LAYERS` 에 배정 · 스크립트는 맨 위에 `import boot_paths`.
-- ★층 가드가 실제로 잡은 것: `ibl_routing`(ibl 층)이 `api_pcmanager`·`api_photo`(surface 층)를 직접 부르던 역전 → 창 열기 pending-queue 를 `base/window_requests.py` 단일 저장소로 **의존 역전**해 해소. 층은 장식이 아니라 설계 압력이다.
+- ★층 가드가 실제로 잡은 것: `ibl_routing`(ibl 층)이 `api_pcmanager`·`api_photo`(surface 층)를 직접 부르던 역전 → 창 열기 pending-queue 를 `backend/base/window_requests.py` 단일 저장소로 **의존 역전**해 해소. 층은 장식이 아니라 설계 압력이다.
 
 ## 핵심 컴포넌트
 
@@ -143,8 +143,8 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 모든 프롬프트의 XML 태그 구조와 지원 AI 프로바이더 목록은 **technical.md** 참조.
 프로바이더는 모두 실시간 스트리밍 지원 (`process_message_stream()`, 이벤트: `text`/`tool_start`/`tool_result`/`thinking`/`final`/`error`).
 
-### 위임 체인 시스템 (Delegation Chain) — Phase 27: 3단계 위임
-에이전트 간 협업을 위한 핵심 메커니즘. 세 가지 위임 방식을 지원합니다:
+### 위임 체인 시스템 (Delegation Chain)
+에이전트 간 협업을 위한 핵심 메커니즘. 두 가지 위임 방식이 있고, 그 위에 **행위자 봉투**가 흐른다(상세=communication.md):
 
 **1. 동기/비동기 위임** (기존)
 - `[others:delegate]`/`[others:delegate]{scope: "cross"}`를 통해 작업을 위임하고 결과를 자동으로 보고받음
@@ -157,18 +157,30 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 - 크로스 위임: `target_project_id`/`target_agent_id` 지정 시 대상 에이전트 소유로 등록
 - `calendar_manager.py`가 실행 시 소유 에이전트의 컨텍스트로 파이프라인 실행
 
+**행위자 3칸 봉투 (2026-08-21)** — 위임은 사람이 아니라 다른 실행 주체가 몸을 쓰는 자리라, 누가·무슨 과제로·어디서 왔는지가 따라다녀야 한다.
+- `thread_context` 가 `agent` / `task` / `origin` 세 칸을 스레드 경계 너머로 전파하고, `/ibl/execute` 는 요청 봉투(env·헤더)에서 이를 받는다(포털 경유는 `origin='portal'`).
+- 무태스크 위임(스케줄러 하달·앱 버튼의 `[others:delegate]{scope:"system"}`)에는 러너가 태스크를 발급한다 — 그래야 그 런의 쓰기가 **3중 조인**(`write_ledger` → `episode_log` → `tasks`)에 닫힌다.
+- 회상 어휘는 `[self:body]{op:"writes"}`(쓰기 관문 원장) + `{op:"changes"|"log"|"file"}`(git 원장).
+
+**몸 대 몸은 위임이 아니다**: 이웃 *몸*에게 능력을 부탁하는 건 `[others:ask]`(자연어 → 상대 사전으로 컴파일 → 실행 → 통화 회신). 몸 사이 전용 특권 배관은 두지 않는다.
+
 ### IBL (IndieBiz Logic) 시스템
 - 노드 기반 추상화: `[node:action]{params}` 문법
-- execute_ibl + 범용 언어 + 인지 도구 (총 9개 최상위 도구)
+- execute_ibl + 범용 도구 + 인지 도구 (총 7개 최상위 도구 — 셸이 없는 몸(폰)에만 `execute_python` 이 추가로 붙는다)
 - **6개 노드** — 총 액션 수·노드별 내역은 아래 '시스템 통계'(빌드 파생) 참조
   - **어휘는 작아지면서 세졌다** — 2026-08-05~17 개념중복 압축으로 163→144. 표준 수술 세 가지:
     ①**복합어를 지우고 보편어를 세운다**(`sense:pew_research`→`[sense:feed]{url}` — 사전은 −1+1 인데 차원은 늘고 중복 파서도 수렴)
     ②**같은 개념의 낱말을 축으로 접는다**(검색 5액션→`[sense:search]{source}` · 사업 4형제→`[self:ledger]{store, op}` · 연락처→`[others:neighbor]{op:"contact_*"}` · 라디오 재생제어→`[limbs:radio]{op}`)
     ③**절차는 낱말이 아니라 문장이다** — 오케스트레이션뿐인 것은 `[self:script]`(등록 스크립트)나 앱 인스턴스로 얼린다. "새 낱말 만들까?"의 기본 답이 "스크립트로 등록"인 것이 **반-어휘-증식 장치**다.
   - ★**계수만으로 생사를 판정하지 말 것**(2026-08-15 실측): `sense:search_local` 은 호출 계수 19였지만 결과를 낸 적이 없었다(후계 3건 vs 은퇴어 0건). 계수는 "호출됐다"이지 "쓸모 있었다"가 아니다 — **판별법은 핸들러를 열어 대체 경로를 실측하는 것**.
+- **문장이 프로그램급으로 올라갔다 (2026-08-22, M1~M6)** — 어휘 증가는 `[table:reduce]` 하나뿐이고 나머지는 전부 *문법*이다. 설계 의도: **한 문장 = 한 프로그램**, 단 범용 자료구조·재귀는 `[self:script]` 로 얼린다(언어를 프로그래밍 언어로 키우지 않는다).
+  - 술어 언어(`$변수[.경로]`·`count/empty/exists`·`matches`·`and/or/not`·AI 술어) · 제어 블록(`[try][catch][finally]`·`[on_error:]`·`[repeat:]`) · 상태(`$n = $n + 1` 한 줄 식·`while` 이 몸 변수를 봄) · 블록-인-파이프 · `$return` 반환
+  - 봉투 다이어트·자동 스필·재개는 **엔진 규약**(언어 밖) — 아래 '감각 피드백' 절.
+  - 워크플로우는 **함수 쪽으로 한 칸** 옮겨졌다: 이름·인자(미할당 `$이름`=시그니처, `params_required`/`params_default`)·반환값(`$return`)·스코프 격리·합성(파이프로 다음 문장에 통화를 넘김) + 순환·깊이(5) 가드.
+  - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
-- **액션 라우팅**(액션 단위 실측, 합 144): handler 116 · system 18 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1
+- **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 151): handler 122 · system 19 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
   - (`api_engine` 은 `api_registry.yaml` 실행 엔진 — 라우터 축이 아니라 별도 경로다.)
 - `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
@@ -190,26 +202,36 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 - 기본: 8KB → **16KB**로 확대
 - 파이프라인 실행 시: `_action_count × 16KB`로 동적 확장 — 액션 수에 비례하여 결과 보존
 
-**중간 결과 보존**
-- `workflow_engine`/`ibl_engine`: 중간 결과 500자 절삭 제거, 전체 결과 누적
-- AI가 파이프라인의 모든 단계 결과를 온전히 확인 가능
+**중간 결과 보존 — 원칙의 현행 모양(2026-08-22 봉투 다이어트, M1)**
+- `workflow_engine`/`ibl_engine`은 중간 결과를 절삭하지 않고 전부 누적한다(엔진 안쪽은 원형 그대로).
+- 바뀐 것은 **에이전트 경계**다: `results[]`는 step 요약(shape·count·bytes·columns·preview, 실패 step은 오류문 원형)으로 접히고 **`final_result` 하나만 원형**으로 나간다. 옛 모양은 `verbose: true`.
+  - 원칙은 유지된다("각 단계가 무엇을 냈는지 보인다") — 접힌 것은 *같은 내용의 중복 전송*이지 관측 자체가 아니다.
+- `[self:write]{spill:true}` 스필 싱크와 **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조 봉투)도 같은 계열: 통화를 참조로 바꾸고 소비자가 투명 해소.
 
-**>> 연산자 실패 즉시 중단**
-- 순차 실행(`>>`) 시 앞 단계가 실패하면 즉시 중단하여 불필요한 후속 실행 방지
+**>> 연산자 실패 규약**
+- 기본은 **즉시 중단**(`stop`) — 앞 단계가 실패하면 뒤를 돌리지 않는다.
+- 문장 접두 `[on_error: skip|null]`로 문장 단위 변경 가능(2026-08-22 M3). 건너뛴 step 은 봉투에 신고된다(침묵 금지). 블록 차원의 처리는 `[try]{…}[catch]{…}[finally]{…}`.
 
 **검색 결과 후속 액션 안내**
 - 검색 결과에 `_note` 필드로 후속 액션 안내 (crawl, video_transcript 등)
 - AI가 다음 단계로 자연스럽게 이어갈 수 있도록 힌트 제공
 
 ### 감각 전처리 (Sensory Preprocessing)
-정보성 액션의 출력을 경량 AI로 압축하여 컨텍스트 폭발을 방지. `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언. 적용 액션: `search_ddg`, `crawl`, `search_gnews`, `travel`. 실측 65-70% 압축.
-설정 형식과 디테일은 **technical.md** 참조. 구현: `ibl_engine.py`의 `_postprocess()`.
+액션 출력을 경량 AI로 압축해 컨텍스트 폭발을 막는 층. `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언한다 — 다만 **2026-06-27 이후 이 블록을 선언한 액션은 0개**다. 압축이 `records[]` 통화를 문자열로 파괴하던 결함이 드러나, 검색·여행계가 전부 **구조화 통화(`records`/`items`) + 사람용 `message`** 로 옮겨가면서 압축 자체가 필요 없어졌다(당시 은퇴한 액션명 `search_ddg`·`search_gnews`는 지금 `[sense:search]{source}` 로 접혔다).
+엔진의 기계는 남아 있다(`ibl_engine.py`의 `_postprocess()`, 우회 플래그 `_raw`) — 되살릴 자리는 "통화가 아니라 산문을 내는 액션"뿐이다. 컨텍스트 폭발의 현행 대책은 압축이 아니라 **봉투 다이어트 + 스필**(위 감각 피드백 절).
 
 ### 연상기억 (해마 + 심층메모리)
 fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(심층메모리)을 단계 0에서 1회 검색해 모든 에이전트에 self-describing XML로 주입.
-- 해마: 2026-08-04 로컬 맥미니 M4 Pro 재학습, code Top-5 92.2%/desc 94.2%/런타임 ~99% — 자동 경험 증류 (점수 < 0.7 시)
+- 해마: 로컬 M4 Pro 재학습(세대·측정표 정본=memory.md), 런타임 검색 ~99% — 자동 경험 증류 (점수 < 0.7, 또는 ≥0.7이어도 회상이 실제로 안 쓰였으면)
 - 심층메모리: 같은 모델 공유로 시맨틱 검색 (2026-05-16 도입)
 - 상세 (단계별 흐름·증류 조건·DB 스키마·학습 절차): **memory.md**
+
+### 몸 원장 (Body Ledger, 2026-08-21)
+"몸이 언제 어떻게 바뀌었나"를 몸 스스로 회상하는 네 기둥. 계기는 `[self:grep]` 사건이었다 — 2026-08-05 층 분리 같은 **몸 개조가 회상 불가능**해서 낡은 가정이 6주간 잠복했다. 몸이 바뀌면 몸에 대한 가정이 깨지므로, 변화 자체가 연상 가능한 기억이어야 한다.
+1. **소유 선언 레지스트리**(`backend/cognition/data_ownership.py`) — 데이터 가족마다 주인·수명·백업 계급을 선언. 새 데이터 가족을 만들면 `DECLARATIONS` 등재가 의무다.
+2. **어휘**(`[self:body]{op}`) — `changes`(최근 파일 변화, 미커밋 포함) / `log`(커밋) / `file`(한 파일의 일생, 이름변경·이동 관통) / `diff` / `writes`. 전 op 읽기 전용 — 원장은 git 과 관문이 쓴다.
+3. **쓰기 관문 원장**(`backend/base/write_ledger.py`) — git 이 못 보는 런타임 쓰기(`data/`·`outputs/`)를 관문 통과 시 append-only 로 한 줄. 행위자(agent·task·origin)가 실려 episode·tasks 와 조인된다. ★**전수 감시 데몬은 두지 않는다**(관문 훅만) — 그래서 관문 밖 직접 쓰기는 원리적으로 미기록이고, `writes` op 는 그 **부분성을 정직하게 광고**한다. 폴링류(심장박동 가족)의 행위자 없는 쓰기는 6시간당 1건으로 압축.
+4. **정본 서열** — git 커밋(사건) > `docs/`(설계) > `data/system_docs/`(장기기억). 하네스 뷰(`CLAUDE.md`)는 시스템 *바깥*이라, 바깥 뷰에만 있는 사실은 누출로 친다.
 
 ### 도구 패키지 시스템 (노드 구현체)
 도구 패키지들이 IBL 노드의 실제 구현체로 동작(수는 아래 '시스템 통계'·목록은 packages.md — 둘 다 빌드 파생). 폴더 기반 탐지 + 동적 로딩. op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택(2026-05-28~) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
@@ -226,7 +248,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 ### 의식·평가 에이전트
 인지 파이프라인의 전체 흐름과 단계별 디테일은 위 "인지 파이프라인" 섹션과 `memory.md` 참조.
 
-- **의식 에이전트 (본격 AI)** — `backend/consciousness_agent.py`
+- **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
   - 출력: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, self_awareness, world_state
@@ -259,26 +281,27 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
               world_pulse.md 가이드 파일 갱신
 ```
 
-**AI 건강 체크 (매 12시간)**: 시스템 AI가 부작용 없는 IBL 액션을 전수 테스트
-- 읽기 전용 액션만 선택, 캐시된 테스트 계획(`data/self_check_plan.json`)에서 파라미터 사용
-- 결과는 `action_health` 및 `self_checks` 테이블에 자동 기록 (실사용 액션도 동일 테이블)
-- 3단계 상태: verified(7일 이내 성공), assumed(기록 없음), failed(최근 실패)
-- 사용자가 "자기 점검해줘" 명령 시 시스템 AI가 이 데이터를 `self_inspection_guide.md`의 검증 절차(실패 액션 재시도 → transient/reproducible 분류 → 수정 난이도 평가)에 따라 분석
+**일일 건강 점검 (매일 1회, `run_daily_health_check` — AI 0)**: `scripts/ibl_health_check.py` 를 subprocess 로 한 번 돌린다. §1A 정적 정합성 + §1B 통화 무결성(fixture 전수 probe) + §1C 골든 파이프(연산자·거울 키 포함) — 전 구간 결정론이다.
+- **AI 순찰은 은퇴했다**: 옛 배선(`trigger_ai_health_check`, 6h)은 시스템 AI에게 assumed 액션을 훑게 했다. IBL 구조 건강이 변하는 건 *어휘를 쓸 때뿐*이고 그건 커밋 게이트가 막으므로, 정기 잡은 회귀 그물 한 벌이면 족하다.
+- **파라미터의 출처**: 액션별 fixture(`data/ibl_fixtures.json`, `--check` 가 완전성 강제). 어느 액션을 돌려도 되는지는 `ibl_safety.py` 가 **선언에서 파생**한다(`returns:` + `side_effect:` 선언, op 단위 해소는 `ibl_ops`) — 옛 LLM 분류 캐시 `self_check_plan.json` 은 생성 경로가 2026-06-27 삭제된 뒤 3주간 유령 목록으로 판정을 대신하다 파생으로 교체됐다.
+- 결과는 `self_checks` 에, 실사용 액션 건강은 `action_health` 에 기록(2026-08-21: `channel`·`error` 칸 추가 — 어느 통로에서 왜 실패했는지가 남는다). 부작용 op 는 fixture 금지이므로 `exempt` 로 선언한다.
+- 3단계 상태: verified(**실사용** 최근 성공), failed(실사용 실패만), assumed(실사용 기록 없음 — 건강 체크 전용 실패는 failed 로 올리지 않는다). ★"assumed 가 많다"는 미검증이 아니라 *실사용이 없었다*는 뜻이다.
+- 사용자가 "자기 점검해줘" 하면 시스템 AI가 이 데이터를 `self_inspection_guide.md` 절차(실패 액션 재시도 → transient/reproducible 분류 → 수정 난이도 평가)로 분석한다. RED 가 있으면 일일 잡이 알림 한 통을 사람에게 보낸다.
 
-**정적 정합성 검증 합류 (2026-05-28 신설, 현행 배관은 2026-06-27 단순화)**: `build_ibl_nodes.py`의 삼각 검증(src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS`)을 self-check 사이클이 실행 — 현행은 `world_pulse_health.run_ibl_health_check()`가 `scripts/ibl_health_check.py`를 subprocess로 돌려 §1A 결과를 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록(옛 `run_static_ibl_check()`는 2026-06-27 은퇴). 정적 부채(누락된 등록, op 키 drift)와 런타임 부채(액션 실패)가 같은 사이클에서 잡힘. pre-commit 훅(commit 시점)과 self-check 사이클(12시간 정기)의 이중 검증 채널.
+**정적 정합성 검증 합류 (2026-05-28 신설, 현행 배관은 2026-06-27 단순화)**: `build_ibl_nodes.py`의 삼각 검증(src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS`)을 self-check 사이클이 실행 — 현행은 `world_pulse_health.run_ibl_health_check()`가 `scripts/ibl_health_check.py`를 subprocess로 돌려 §1A 결과를 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록(옛 `run_static_ibl_check()`는 2026-06-27 은퇴). 정적 부채(누락된 등록, op 키 drift)와 런타임 부채(액션 실패)가 같은 사이클에서 잡힘. pre-commit 훅(commit 시점)과 일일 건강 점검(하루 1회)의 이중 검증 채널.
 
 **의식 에이전트 메타 인지 가드 (2026-05-28)**: consciousness_prompt에 3 가드 — backend 자기 편집=자기 reload 자해 인식, 첫 호출 성공 시 의심 즉시 갱신, timeout/실패 후 같은 코드 재시도 금지. 어제 dispatcher audit 사고에서 시스템 AI가 보인 자해/의심 휴리스틱 패턴을 후속으로 처치.
 
 **에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
 - `episode_log` 테이블: 전체 로그 (최근 100개 보존)
 - `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
-- 파일: `backend/episode_logger.py`, DB: `data/world_pulse.db`
+- 파일: `backend/base/episode_logger.py`, DB: `data/world_pulse.db`
 - API: `/xray/episodes`, `/xray/episodes/{id}`, `/xray/episode-summaries`
 
 **서버 시작 시**: 최근 1시간 내 펄스가 없으면 즉시 수집, 있으면 건너뜀
 
 - 비용: 사용자/자신 상태는 DB 쿼리만 (비용 0), 세계 정보는 경량 API 호출
-- 파일: `backend/world_pulse.py`, `backend/world_pulse_health.py`, `data/world_pulse.db`
+- 파일: `backend/cognition/world_pulse.py`, `backend/cognition/world_pulse_health.py`, `data/world_pulse.db`
 - 설정: `data/world_pulse_config.json`
 - API (`api_config.py` 내): `/world-pulse/config`, `/world-pulse/refresh`, `/world-pulse/today`, `/world-pulse/trend`, `/world-pulse/pulses`, `/world-pulse/self-checks`, `/world-pulse/health`
 
@@ -305,7 +328,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **부탁** `POST /nodes/ask` (어휘 `[others:ask]`) — 받는 몸이 **자기 사전으로** 컴파일→실행→통화로 회신(1회 자가교정, 어휘 밖이면 정직한 거절). 컴파일러 능력 축은 *해마 유무*(용례 있으면 조종실 경로, 없으면 사전-동봉 경량 모델).
 - **사전 물리 분리**: 배포물=전체 사전집, 설치=자기 어휘만(로더 필터 + 폰 번들 물리 필터). 카탈로그·해마 회상이 **소유-필터**를 지나 "남의 어휘를 학습하지 않는다".
 - **신뢰 = 이웃 등급**(`body_trust.py`): 특별함은 배관이 아니라 레벨. 낯선 몸의 부탁은 거절되고, 폰-맥도 "최고 레벨 이웃"일 뿐이다 — **몸 사이 특권 배관을 두지 않는다**가 설계 원칙.
-- **표면 분리**: 원격 런처(=PC의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 가름(`launcher_surface_remote/phone.py`). 폰 조종실은 로컬 완결(translate/validate/distill/catalog).
+- **표면 분리**: 원격 런처(=PC의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 가름(`backend/surface/launcher_surface_remote.py`·`backend/surface/launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate/validate/distill/catalog).
 
 ### USB 손발 (게스트 PC 헬퍼, 2026-07-23)
 
@@ -418,19 +441,19 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
-- backend **.py 272개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 29 · cognition 42 · services 28 · surface 60`(+ common 13·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
+- backend **.py 273개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 29 · cognition 43 · services 28 · surface 60`(+ common 13·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
 - op 분기 액션 **69개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 39·false 16·미선언 96)
 <!-- IBL_STATS:END -->
-- 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-21 실측)
-- 해마 코퍼스 **3,449 용례**·증류 누적 825 (2026-08-21 실측 — 라이브 수치는 조종실·memory.md)
-- 등록 스크립트 `data/scripts/` 4개(`registry.yaml` + .py) — 어휘가 아닌 절차의 거처 (2026-08-21 실측)
+- 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)
+- 해마 코퍼스 **3,530 용례**·증류 누적 907 (2026-08-22 실측 — 라이브 수치는 조종실·memory.md)
+- 등록 스크립트 `data/scripts/` 4개(`registry.yaml` + .py) — 어휘가 아닌 절차의 거처 (2026-08-22 실측)
 
 ## 참조
 
-- IBL 명세: `system_docs/ibl.md`
-- 실행기억 & 해마: `system_docs/memory.md`
-- 패키지 가이드: `system_docs/packages.md`
+- IBL 명세: `data/system_docs/ibl.md`
+- 실행기억 & 해마: `data/system_docs/memory.md`
+- 패키지 가이드: `data/system_docs/packages.md`
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*최근 변경(2026-08-21): 문서 파생·드리프트 감사 기계화 — '시스템 통계'=빌드 파생 마커. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 낡은 배관 정정(AI 순찰 은퇴→일일 결정론 점검·postprocess 선언 0·층 경로) + 몸 원장 절·프로그램급 IBL 단락·행위자 봉투. 라우팅 분포=파생 마커로 승격. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-08-21
+last_updated: 2026-08-22
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -67,6 +67,7 @@ see_also: [architecture.md, ibl.md]
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **1000건** 롤링)
   - `episode_summary`: 로그에서 정규식으로 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 달성 여부(ACHIEVED/NOT_ACHIEVED) (**영구 보존**)
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
+- **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
 - **한계**: 현재 *집계 통계*로만 소비. 개별 일화를 회상해 행동을 교정하는 루프는 미완. → 다듬을 자리 ②.
   - (단, 프로젝트 에이전트에는 `attempt_log` 테이블에 라운드별 시도·교훈을 적는 더 미세한 메커니즘이 별도로 존재.)
 
@@ -75,7 +76,7 @@ see_also: [architecture.md, ibl.md]
 세 겹으로 구성된다.
 
 **(a) 액션 정의** — 가장 안정된 절차 지식
-`ibl_nodes_src/*.yaml`(단일 진실) → `build_ibl_nodes.py`(삼각 검증) → `ibl_nodes.yaml`(런타임 캐시). 150개 액션이 곧 어휘화된 방법 지식.
+`data/ibl_nodes_src/*.yaml`(단일 진실) → `scripts/build_ibl_nodes.py`(삼각 검증) → `data/ibl_nodes.yaml`(런타임 캐시). 액션 하나하나가 곧 어휘화된 방법 지식이다(총계는 system_structure.md 의 빌드 파생 줄).
 
 **(b) 해마(실행기억)** — 가장 살아있는 자기 학습 루프 ⭐
 - `ibl_usage.db:ibl_examples`에 `(자연어 의도 → IBL 코드)` 쌍 + 768차원 임베딩 저장
@@ -84,9 +85,13 @@ see_also: [architecture.md, ibl.md]
 - 임계값: 표시 MIN_SCORE 0.65 / 증류 DISTILL_THRESHOLD 0.7 — 단 점수 ≥ 0.7이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면(가짜 유사도) 새 패턴으로 보고 증류 진행(`_recall_was_used`, 2026-08-07 ep949 학습 유실 수리. top_code 없는 조종실 경로는 점수 게이트 그대로)
 - 상세: 아래 **부록: 연상기억 심층**
 
-**(c) 워크플로우** — 명시적으로 저장된 조합
-`data/workflows/*.yaml`에 파이프라인(`>>` 순차 / `&` 병렬 / `??` 폴백)을 이름 붙여 저장. `save_workflow()` 동적 생성, `execute_workflow(id)` 재실행.
-- **한계**: 저장된 워크플로우가 1급 IBL 액션으로 *등록*되지는 않음 — `[self:workflow]{op:"run", workflow_id:"…"}`로만 호출되어 다른 IBL 코드와 합성 불가. → 다듬을 자리 ①.
+**(c) 워크플로우** — 명시적으로 저장된 조합, **2026-08-22부터 함수 쪽으로 한 칸**
+`data/workflows/*.yaml`에 문장(`>>` 순차 / `&` 병렬 / `??` 폴백 / 블록)을 이름 붙여 저장. `[self:workflow]{op:"save|run|list|get|delete"}`.
+- **이름**: 저장본은 `name` 또는 `workflow_id` 로 부른다(`do` 를 직접 주면 저장 없는 즉석 실행).
+- **인자(시그니처)**: 파스 후에도 남은 **미할당 `$이름`이 곧 자유 변수 = 인자**다. `save` 가 계산해 `params_required` 로 저장·보고하고 `list`/`get` 이 노출한다. 저장본 `run` 은 인자 누락을 **정직 거절**(선언 시점이 있으므로), 즉석 `run` 은 `params_warning` 만. `params_default:{이름:값}` 는 기본값이고 호출자 `params` 가 이긴다. ★한글 조사·단위가 이름에 먹히는 자리는 괄호로 끊는다(`"${n}건"`).
+- **반환값**: 몸통 마지막 문장의 통화가 반환값. 몸통에 `$return = …` 이 있으면 그 결과가 반환값이 된다(마지막 문장이 알림 같은 effect 여도 된다).
+- **합성**: `[self:workflow]{op:"run", name:…} >> [table:*]` 로 다음 문장에 통화를 넘긴다 — 옛 '다른 IBL 과 합성 불가'는 해소됐다. 남은 것은 *이름을 1급 어휘로 승격*하는 것뿐인데, 그건 반-어휘-증식 원칙과 정면으로 부딪힌다(아래 다듬을 자리 ①).
+- **스코프·재귀**: 몸통의 `step_results` 는 run 마다 새로 나는 지역 dict — 호출 경계가 실제로 닫혀 있다. 워크플로우가 워크플로우를 부르는 사슬은 **순환(같은 id 재진입)·깊이 상한 5**에서 거절된다(`backend/ibl/workflow_contract.py`). 반복이 필요하면 `[repeat:]`/`[table:each]`.
 
 ## 5. 관계 기억 — 심층메모리 (사용자 지식 자동 흡수)
 
@@ -105,9 +110,11 @@ see_also: [architecture.md, ibl.md]
 
 - **저장**:
   - `pulse_log` (매시간, 30일): world(경제/날씨/뉴스) + user(대화수/일정) + self(서비스 alive/디스크/proprioception: 메모리·CPU·스레드·태스크)
-  - `self_checks` (매 6~12시간, 30일): 부작용 없는 액션 전수 점검 + 정적 정합성 검증(`run_ibl_health_check` §1A → `__static__:ibl_consistency`)
-  - `action_health` (실행마다): 실사용 기반 액션 건강
+  - `self_checks` (매일 1회, 30일): 결정론 건강 점검 — §1A 정적 정합성(`__static__:ibl_consistency`) + §1B fixture 통화 무결성 + §1C 골든 파이프. **AI 0**
+  - `action_health` (실행마다): 실사용 기반 액션 건강. 2026-08-21부터 `channel`·`error` 칸 — *어느 통로에서 왜* 실패했는지가 남는다. ★`assumed` 는 '미검증'이 아니라 '실사용 기록 없음'이다
 - **사용**: 프롬프트에 압축 주입 + 면역 순찰(만성 실패 감지) + `diagnostic_report.md`.
+
+**몸 원장은 어디 있나 (2026-08-21)**: "내 몸이 언제 어떻게 바뀌었나"는 위 일곱 종에 새로 끼는 여덟 번째 기억이 *아니다* — 저장소가 이미 둘 있기 때문이다. **git**(추적 파일의 사건)과 **쓰기 관문 원장**(`data/write_ledger.jsonl` — git 이 못 보는 런타임 쓰기). 없던 것은 회상 통로뿐이었고, 그것이 `[self:body]{op:"changes|log|file|diff|writes"}` 어휘다. 전 op 읽기 전용이며, 관문 밖 직접 쓰기는 원리적으로 미기록이라 `writes` op 가 그 **부분성을 정직하게 광고**한다. 소유·수명 선언은 `backend/cognition/data_ownership.py` 의 `DECLARATIONS` (새 데이터 가족을 만들면 등재 의무). 상세=architecture.md '몸 원장'.
 
 ---
 
@@ -116,14 +123,14 @@ see_also: [architecture.md, ibl.md]
 > **"쓰면서 *공간*에 대한 지식을 흡수"의 실현체.** 해마(#4)가 "어떻게 하는가"를 증류한다면, 포식 기억은 "어디에 무엇이 사는가"를 증류한다.
 
 - **문제**: AI는 stateless라 디스크를 한 시간 뒤져 알아낸 것(폴더 정체·죽은 가지·주인 관습)을 세션이 끝나면 잊고 매번 콜드 스타트한다. 그 "어떻게 뒤지나"는 *나만의 것*이라 가중치에도 없다.
-- **저장소** (`backend/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
+- **저장소** (`backend/datastore/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
 - **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`file_find`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
 - **★owner 빈도 게이트**(2026-07-29): 주인모델은 상시 노출이라 **1회 추론이 영구 주입**되는 구멍이 있었다(실측: 66건 전부 obs=1, 질문 *대상*이 주인의 "소속"이 되는 오염). → 첫 관측은 **임시**(`scent=0`, map처럼 query 필터), **서로 다른 포식에서 재확인**되면 상시 냄새로 결정화(`_OWNER_SCENT_PROMOTE_AT=2`, 상한 8). territory 승격과 같은 '빈도가 결정화한다' 모티프. 임시 항목도 지워지지 않아 **잃는 정보 0**, 모델에는 `provisional="1"`로 노출. 상세=`docs/FORAGER_MULTIBODY_DESIGN.md` §10-1.
 - **부패 무효화**: lazy — 회상 시 폴더 mtime 비교해 `stale`/`missing` 노출(삭제 안 함, 판단은 AI. 손튜닝 감쇠 곡선 안 씀).
 - **수동 액세서**(augmentation): `[self:forage]{op:recall|note|forget}` — 사람이 직접 조회·정정·재오픈.
 - **다중 몸**(`forage_map.body`=포식 *공간*): 디스크(`mac`)·코드(`code:<repo>`)·웹(`web`) 등 같은 자아가 여러 공간을 포식하면 body가 갈린다(하드웨어 자아=게이트 / 포식 공간=body 키 분리). `owner_model`은 1명·전 공간 공유 → 한 공간서 강화한 주인모델이 다른 공간 포식까지 풍부화(교차-몸 전이). **맥 자아 전용**(주관적 기억은 자아별 사적). **#4 해마와의 차이**: 해마=절차(NL→IBL 코드), 포식=공간(공간→지도 지식). 둘 다 증류+정리 대칭.
-- **음성-단언 측정** `[self:residual]{op:sample|estimate}`: 포식 출력의 "거기 없음 vs 덜 봤음"을 측정으로 가른다(sample=미관측 균일 무작위 표본 / estimate=Wilson 이항추정). 판단은 AI 몫, 도구는 측정·중립 해석만(열거 가능한 공간 전용 — 웹은 무한·비열거라 제외).
+- **음성-단언 측정**: 포식 출력의 "거기 없음 vs 덜 봤음"을 측정으로 가른다(sample=미관측 균일 무작위 표본 / estimate=Wilson 이항추정). 판단은 AI 몫, 도구는 측정·중립 해석만(열거 가능한 공간 전용 — 웹은 무한·비열거라 제외). ★어휘 `[self:residual]` 은 2026-08-15 은퇴하고 **등록 스크립트**로 내려갔다: `[self:script]{op: "run", id: "잔여추정"}` (측정 절차는 낱말이 아니라 절차라는 판정 — 후보 제공자는 `backend/datastore/file_index.py`).
 - **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FORAGER_MULTIBODY_DESIGN.md`(다중 몸), `docs/FILE_FORAGING_RESEARCH.md`(연구).
 - **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
 - **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). 회상은 실행기억처럼 항상-on, owner 모델은 query 면제(상시 노출=냄새) — 단 2026-07-29부터 *결정화된*(재확인 2회) owner만 상시이고 1회 관측은 임시(query 필터). 증류(쓰기)는 전 티어 post-response 유지.
@@ -161,9 +168,9 @@ see_also: [architecture.md, ibl.md]
 
 설계 이상에 비추어 코드에 비어 있는 곳. 우선 *진단*으로만 기록하며 구현은 보류한다.
 
-### ① 워크플로우 → 1급 IBL 액션 승격
-- **현재**: 워크플로우는 저장·재실행되나 새 액션으로 등록되지 않음. `[self:workflow]{op:"run",…}`로만 호출되어 다른 IBL과 합성 불가.
-- **이상**: `save_workflow("일일브리핑")` → `ibl_nodes.yaml`에 `[self:일일브리핑]` 자동 등록 → `[self:일일브리핑] >> [self:blog]{op:save}`처럼 합성. (`architecture_three_tier_cognition` 메모의 "하향 진화: 액션→단축키 미구현 빈자리"와 동일.)
+### ① 워크플로우 → 1급 IBL 액션 승격 (2026-08-22 재평가 — 절반 해소, 절반 기각 쪽)
+- **해소된 절반**: 합성은 된다. `[self:workflow]{op:"run", name:…} >> [table:*]` 로 통화가 다음 문장으로 흐르고, 인자·반환값·스코프 격리·재귀 가드까지 갖춰 **함수 호출**의 모양이 됐다(위 4-(c)).
+- **남은 절반**: 이름이 `[self:일일브리핑]` 처럼 어휘가 되지는 않는다. 그런데 이건 부채라기보다 **선택**이다 — "새 낱말 만들까?"의 기본 답은 "아니오, 문장으로 얼려라"이고(반-어휘-증식), 어휘가 늘면 전 에이전트의 프롬프트 비용이 는다. 승격을 다시 논하려면 *빈도가 결정화를 정당화하는지*(앱 표면으로 굳힐 정도인지)부터 재야 한다.
 
 ### ② 일화 기억 → 개별 반성 루프 닫기
 - **현재**: episode_summary는 집계 추이로만 소비.
@@ -200,7 +207,7 @@ see_also: [architecture.md, ibl.md]
 - `world_pulse_health.run_maintenance_bundle` 에 `run_memory_consolidation()` 합류(옛 `run_self_check` 는 2026-06-27 은퇴). **내부 24h/DB 카덴스 게이트**로 6h마다 호출돼도 각 DB는 하루 한 번만 실제 정리. dirty하지 않으면 즉시 스킵
 - 비용 가드: `MIN_ROWS_FOR_CLUSTER=8`(미만이면 클러스터 스킵), `MAX_CLUSTERS_PER_DB=12`
 - 진입점: 정기(self-check 자동) — 추후 수동 IBL op `[self:memory]{op:consolidate}` 추가 여지
-- 파일: `backend/memory_consolidation.py`, `data/packages/installed/tools/memory/memory_db.py`
+- 파일: `backend/cognition/memory_consolidation.py`, `data/packages/installed/tools/memory/memory_db.py`
 
 **검증(2026-05-31)**: 시스템 AI DB(16건)에 force 실행 → 사용자 주소 중복(id 2·3) 병합, 자녀 주소(id 1)는 분리 유지, 15건으로 정리. vec 동기화·카덴스 게이트 확인.
 
@@ -240,7 +247,7 @@ see_also: [architecture.md, ibl.md]
 | **④ json 무한 append** | ✅ dedup + 상한 | `_consolidate_distilled_json` — 완전중복(intent+code) 제거 + 최신 800건만 유지 |
 | 상한 | ✅ | distilled가 200 초과 시 미검증(trial 0)부터 오래된 순 삭제 |
 
-**아키텍처**: `run_hippocampus_consolidation`을 `world_pulse_health.run_maintenance_bundle`에 합류(메모리 정리 패스 바로 다음 — 옛 `run_self_check` 는 2026-06-27 은퇴). 내부 24h 카덴스 게이트(마커 파일 `data/training/.hippocampus_consolidated`). 삭제는 행+vec 동시(`_delete_examples`, FTS는 DELETE 트리거로 자동). 파일: `backend/ibl_usage_db.py`, `backend/ibl_usage_rag.py`.
+**아키텍처**: `run_hippocampus_consolidation`을 `world_pulse_health.run_maintenance_bundle`에 합류(메모리 정리 패스 바로 다음 — 옛 `run_self_check` 는 2026-06-27 은퇴). 내부 24h 카덴스 게이트(마커 파일 `data/training/.hippocampus_consolidated`). 삭제는 행+vec 동시(`_delete_examples`, FTS는 DELETE 트리거로 자동). 파일: `backend/datastore/ibl_usage_db.py`, `backend/cognition/ibl_usage_rag.py`.
 
 **검증(2026-05-31)**: 드라이런(실코퍼스 2267 불변), 입증된 나쁨 가지치기(fail2/success0 삭제), 근접중복(sim 0.995 병합·우량 보존·실데이터 무손실·0.92미만 제외), json dedup, 24h 카덴스 스킵 모두 확인.
 
@@ -252,9 +259,11 @@ see_also: [architecture.md, ibl.md]
 
 World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, **Self-Check가 두 메커니즘으로 분기되며 기계적 유지보수가 고아가 됐다**는 단일 문제가 있었다.
 
-- `run_self_check` (직접 안전 액션 전수 실행) → 이벤트 비활성화됨(`register_pulse_tasks` line 462), **dormant**
-- `trigger_ai_health_check` (시스템 AI에게 assumed 액션 점검 위임) → **활성, 매 6h**
-- `record_action_health`(ibl_engine.py:364)는 모든 IBL 실행에서 기록 — 실시간 신호 정상
+- `run_self_check` (직접 안전 액션 전수 실행) → 이벤트 비활성화, **dormant**
+- `trigger_ai_health_check` (시스템 AI에게 assumed 액션 점검 위임) → 당시 활성, 매 6h
+- `record_action_health` 는 모든 IBL 실행에서 기록 — 실시간 신호 정상
+
+> **현행(2026-08-22)**: 위 두 함수는 **은퇴했다.** 정기 경로는 `run_daily_health_check()` 하나이고(하루 1회, `world_pulse.py` 가 등록·옛 이름 `self_check`/`ai_health_check` 는 하위 호환 별칭), 그 꼬리에서 `run_maintenance_bundle()` 이 돈다. AI 순찰은 없다 — 아래 표의 'A. 유지보수 고아' 해결은 그대로 유효하고, 합류 지점 이름만 바뀌었다.
 
 문제: `run_self_check`에 번들돼 있던 유지보수(정적 IBL 검증·만성실패 알림·**메모리/해마 정리 패스**)가 스케줄러 마이그레이션으로 정기 실행 경로에서 빠졌다. (패턴분석·진단리포트는 `generate_guide`에서 매시간 도므로 무사.)
 
@@ -265,7 +274,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 | **A. 유지보수 고아** | `run_maintenance_bundle()` 추출(실패알림+메모리정리+해마정리) → **활성 경로 `trigger_ai_health_check`에 합류** + 수동 `run_self_check`도 공유. 각 항목 자체 카덴스 게이트라 양쪽 호출돼도 중복 작업 없음 |
 | **B. 확률적 cleanup** | `_cleanup_old_data` 트리거를 `random()<0.04`(평균 25h, 비결정적) → **마커 파일 기반 결정적 24h 게이트**(`_cleanup_is_due`/`.world_pulse_cleanup`). 누락·중복 없고 마지막 정리 시각 기록 |
 
-**의의**: 앞서 만든 메모리 정리 패스·해마 정리 패스가 dormant 경로에 걸려 실제로는 정기 실행되지 않던 것을 활성화. 파일: `backend/world_pulse_health.py`, `backend/world_pulse.py`. 검증: 번들이 세 작업 호출, 활성/수동 양쪽 배선, cleanup 결정적 게이트 모두 확인.
+**의의**: 앞서 만든 메모리 정리 패스·해마 정리 패스가 dormant 경로에 걸려 실제로는 정기 실행되지 않던 것을 활성화. 파일: `backend/cognition/world_pulse_health.py`, `backend/cognition/world_pulse.py`. 검증: 번들이 세 작업 호출, 활성/수동 양쪽 배선, cleanup 결정적 게이트 모두 확인.
 
 ### ⚠️ 남은 빈자리 (별도)
 - **C. 뉴스 게이팅이 JSON LIKE**: `world LIKE '%news%'`로 마지막 뉴스 시각 탐색(취약하나 pulse_log 30일 바운드라 실害 적음) → 전용 메타/컬럼이 깔끔.
@@ -286,12 +295,10 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 ### 가이드 — 절차 기억의 시민 (2026-08-17)
 
 가이드(`data/guides/`)는 액션 desc 의 10~30배 길이로 절차를 가르치는 **절차 기억**인데, 오래 증류도 순찰도 없는 유일한 기억이었다. 네 겹으로 봉합:
-- **신선도 표식**(`datastore/guide_registry.py`): 주입 시 `작성·최종수정(N일 전)·이후 무수정 사용 M회` 를 동반 — 읽는 에이전트가 낡음을 안다(나이=git 이력 기반).
-- **주간 산문 감사**(`cognition/guide_audit.py`, `__ibl_health__:guide_drift`): 회차당 6개, 신선도 역순.
-- **사용 후 증류**(`cognition/guide_feedback.py`): 턴 종료 증류 4단계 — 실제 사용된 가이드의 갱신 필요를 경량 AI 가 판정(깃발만, 수정은 사람/AI 별도 턴).
+- **신선도 표식**(`backend/datastore/guide_registry.py`): 주입 시 `작성·최종수정(N일 전)·이후 무수정 사용 M회` 를 동반 — 읽는 에이전트가 낡음을 안다(나이=git 이력 기반).
+- **주간 산문 감사**(`backend/cognition/guide_audit.py`, `__ibl_health__:guide_drift`): 회차당 6개, 신선도 역순.
+- **사용 후 증류**(`backend/cognition/guide_feedback.py`): 턴 종료 증류 4단계 — 실제 사용된 가이드의 갱신 필요를 경량 AI 가 판정(깃발만, 수정은 사람/AI 별도 턴).
 - 죽은 참조·고아는 build `--check` 의 가이드 부패 경고(비차단)가 잡는다.
-
-*최근 변경(2026-08-17): 가이드가 7종 기억의 시민이 됨(위 절로 승격). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
 
 *이 문서는 7종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
 
@@ -402,9 +409,11 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 뇌의 해마처럼 fine-tuned 임베딩 모델이 밀리초 내에 관련 IBL 코드 사례를 인출한다.
 
-### 현재 라이브 모델 (2026-08-20 재학습 — 148 액션 어휘, 코퍼스 **3,436**, epoch 7·검증 0.864)
+### 현재 라이브 모델 (2026-08-21 재학습 — 몸 원장 어휘 세대, 코퍼스 **3,448**, epoch 3·검증 0.886)
 
-원샷 3낱말(08-19)과 상상훈련 13~17회차 시드(워크플로 params·블록 조합·round17 파이프 9건 등)를 흡수한 세대 — A/B 게이트 aggregate 전 지표 동급 이상(code T1 +1.6p·desc T1 +1.1p·desc T5 +0.6p)으로 채택. 백업=`data/models/ibl_embedding.bak.20260820_181847`. ★관찰 항목: "네이버 블로그 후기"(주제 없는 표현) 경계가 임베딩 공간에서 self:blog 쪽으로 기움 — 대조 시드 2건 보강(FTS는 1·2위 적중), 근본 레버=하이브리드 결합(06-04 결론). 직전 세대 2026-08-17(epoch 4·0.878).
+`[self:body]` 3 op 시드 16 + `writes` 시드 5 + 증류분(+35)을 흡수한 세대 — 게이트(1,245쌍·607패턴)에서 **code Top-5 +3.1p(88.3→91.4)**·desc T5 +0.7p, T1 −0.7/−0.9p(노이즈)로 채택. 백업=`data/models/ibl_embedding.bak.20260821_114913`. 몸 원장 어휘가 연상 직행하고, ★08-20 세대의 관찰 항목이던 "네이버 블로그 후기" 경계가 대조 시드 흡수로 잡혔다(라이브 translate 실증: `source:naver`·`type:blog` 정확). 신어휘 프로브 40/45 — 잔여 실패 5(`table:since`·`table:ai`·`table:brief`)는 코퍼스 희소가 원인이라 다음 시드 후보. 직전 세대 2026-08-20(epoch 7·0.864) · 2026-08-17(epoch 4·0.878).
+
+**재학습 대기열(2026-08-22 기준)**: 프로그램급 IBL M1~M6 시드 36건이 아직 코퍼스에만 있고 모델에는 안 들어갔다 — 새 문법(술어·try/catch·repeat·식 할당·블록-인-파이프)의 연상은 당분간 FTS·문법 교재에 기댄다.
 
 > ★**채택 판단에서 회귀 프로브를 액면 그대로 믿지 말 것**(이번 세대의 교훈): 자동 비교는 "보류"를 권고했는데
 > 실측하니 회귀로 보인 항목이 **desc-공간 인공물**이었다(같은 문장을 코퍼스에서 인출하는 정확도는 1.000).
@@ -433,7 +442,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 - **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
 - **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
-- **어휘 정합**: 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(**3,436건**, 증류 누적 `ibl_distilled.json` **862건**. 현 6노드 **148 액션** 어휘). ★**어휘를 지우면 코퍼스도 따라온다** — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했고, 2026-08-15 지역정보·연락처·사업원장 은퇴에서도 코퍼스 이관(41행·27행 등)이 은퇴의 일부였다. 은퇴어의 용례는 **후계어로 재배선**하되, 후계가 없으면 삭제한다(합성 코퍼스 15행 사례).
+- **어휘 정합**: 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(2026-08-22 실측 **3,530건**, 증류 누적 `data/training/ibl_distilled.json` **907건** — 정리 패스가 돌면 상한 800으로 깎인다. 어휘 총계는 system_structure.md 의 빌드 파생 줄). ★**어휘를 지우면 코퍼스도 따라온다** — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했고, 2026-08-15 지역정보·연락처·사업원장 은퇴에서도 코퍼스 이관(41행·27행 등)이 은퇴의 일부였다. 은퇴어의 용례는 **후계어로 재배선**하되, 후계가 없으면 삭제한다(합성 코퍼스 15행 사례).
 - **시딩은 단일 경로**: `add_examples_batch`(source=`manual_seed`). ★두 함정 — ①직후엔 임베딩 모델이 백그라운드 로딩 중이라 **벡터가 조용히 안 붙는다**(FTS 로만 걸려 회상되는 척함. 신호=`export_hippo_index` 의 '누락 N') → `_load_model_sync()` 후 `_index_batch` 재색인 ②시딩은 **`.venv` 파이썬 필수**(시스템 python3 엔 sqlite_vec 이 없다).
 - 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
 
@@ -570,7 +579,7 @@ IBLUsageDB.add_example() → DB 저장 + 임베딩 즉시 생성 (~8ms)
 
 ```
 data/training/
-├── ibl_distilled.json                    ← 경험 증류 누적(800건). 시딩은 `add_examples_batch` 단일 경로 (정적 시드 스크립트 rebuild_usage_db.py·generate_missing_intents.py 는 2026-07-22 폐기)
+├── ibl_distilled.json                    ← 경험 증류 누적(정리 패스 상한 800). 시딩은 `add_examples_batch` 단일 경로 (정적 시드 스크립트 rebuild_usage_db.py·generate_missing_intents.py 는 2026-07-22 폐기)
 └── _archive/                              ← 옛 학습 데이터 및 중간 산출물
     ├── ibl_synthetic_opus_final_2479.json
     ├── ibl_distilled.json
@@ -670,20 +679,20 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 | 파일 | 역할 |
 |------|------|
-| `backend/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
-| `backend/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
+| `backend/cognition/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
+| `backend/datastore/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
-| `backend/agent_cognitive.py` | `_build_execution_memory()` — 해마+심층메모리 합성, `_search_related_memory()` |
+| `backend/cognition/agent_cognitive.py` | `_build_execution_memory()` — 해마+심층메모리 합성, `_search_related_memory()` |
 | `data/packages/installed/tools/memory/memory_db.py` | 심층메모리 (시맨틱 우선 + LIKE 폴백, 2026-05-16 시맨틱 추가) |
-| `backend/api_websocket.py` | GUI/WS 경로 — 연상 단계 → Reflex 분기 → 실행 |
-| `backend/agent_communication.py` | 채널 경로 — 동일 패턴 (2026-05-17 중급 모델 전환 추가로 일관성 확보) |
-| `backend/system_ai_core.py` | 시스템 AI 경로 — 동일 패턴 |
-| `backend/prompt_builder.py` | 시스템 프롬프트에 연상기억 삽입 (외부 래퍼 없이 직접) |
-| `backend/system_tools.py` | `_log_ibl()` — 도구 호출 이력 |
-| `backend/thread_context.py` | 스레드별 도구 호출 이력 |
+| `backend/surface/api_websocket.py` | GUI/WS 경로 — 연상 단계 → Reflex 분기 → 실행 |
+| `backend/cognition/agent_communication.py` | 채널 경로 — 동일 패턴 (2026-05-17 중급 모델 전환 추가로 일관성 확보) |
+| `backend/cognition/system_ai_core.py` | 시스템 AI 경로 — 동일 패턴 |
+| `backend/cognition/prompt_builder.py` | 시스템 프롬프트에 연상기억 삽입 (외부 래퍼 없이 직접) |
+| `backend/cognition/system_tools.py` | `_log_ibl()` — 도구 호출 이력 |
+| `backend/base/thread_context.py` | 스레드별 도구 호출 이력 |
 | `data/models/ibl_embedding/` | fine-tuned 모델 (해마+심층메모리 공유, 422MB) |
 | `data/training/ibl_training_balanced_20260516.json` | 현재 학습 데이터 |
 
 ---
 
-*최근 변경(2026-08-20): 라이브 해마 모델=2026-08-20 세대 채택(재학습 대기열 소진). 라이브 수치=조종실·ibl_usage.db 실측. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 절차기억(c) 워크플로우=함수·진단① 재평가, 해마 라이브 세대 08-21, #6 은퇴 함수 현행 주석, 몸 원장의 자리, self:residual 은퇴 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

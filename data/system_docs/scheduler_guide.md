@@ -1,8 +1,8 @@
 ---
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
-owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, calendar_manager.py
-last_updated: 2026-08-17
+owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, workflow_contract.py, calendar_actions.py, calendar_manager.py
+last_updated: 2026-08-22
 see_also: [architecture.md, communication.md]
 ---
 
@@ -126,6 +126,16 @@ action_params:
   "workflow_id": "워크플로우_ID"
 }
 ```
+
+★**인자를 요구하는 워크플로우는 스케줄에 걸지 말 것**(2026-08-22): 스케줄러 액션은 `workflow_id` 만 넘긴다(`calendar_actions._action_run_workflow`). 워크플로우 몸통에 미할당 `$이름`이 있으면 실행 시 **"인자 누락"으로 정직 거절**된다(옛날엔 `$city` 가 리터럴로 흘러 엉뚱한 결과를 내고도 success 였다). 스케줄용 워크플로우는 ①인자가 없게 짓거나 ②저장본에 `params_default:{이름:값}` 을 두거나 ③`[self:schedule]`/`manage_events` 의 문장(`do`) 자리에 인자를 채운 `[self:workflow]{op:"run", …, params:{…}}` 를 직접 적는다.
+
+#### 워크플로우 = 이름 붙은 함수 (2026-08-22)
+`[self:workflow]` 는 저장된 문장을 **함수처럼** 부른다 — 스케줄에 거는 쪽에서 알아야 할 계약:
+- **시그니처**: 몸통에 남은 미할당 `$이름`이 인자다. `save` 가 `params_required` 로 계산·저장하고 `list`/`get` 이 노출한다 — 스케줄 걸기 전에 `[self:workflow]{op:"list"}` 로 인자 유무를 먼저 본다.
+- **기본값**: 저장본의 `params_default:{이름:값}`. 호출자가 준 `params` 가 이긴다.
+- **반환값**: 몸통 마지막 문장의 통화. `$return = …` 을 쓰면 그 결과가 반환값(마지막이 알림 같은 effect 여도 됨).
+- **재귀 금지**: 워크플로우가 (직접이든 다른 워크플로우를 거쳐서든) 자기를 부르면 거절된다. 중첩 깊이 상한도 5다. 반복은 `[repeat:]{times: N}` 또는 `[table:each]`.
+- 명세 정본은 ibl.md '워크플로우' 절.
 
 #### run_goal - 목표 반복 실행 (Phase 26)
 Goal의 every/schedule 설정에 의해 트리거됩니다. CalendarManager가 주기에 맞춰 goal의 다음 라운드를 실행합니다.
@@ -369,4 +379,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 - **신문 발행은 결정론 액션 `[engines:newspaper]{}`** 를 직접 스케줄에 건다(기본 백그라운드, `wait:true`=동기). 정기보고 '작성'은 본질이 LLM 글쓰기라 `[others:delegate]{scope:"system"}` 위임 유지.
 
 ---
-*최근 변경(2026-08-17): 문장 자리 `do` 통일·goal 블록 정본화 등 어휘 정합(위 '어휘 주의' 절로 승격). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 워크플로우=함수 계약 절 신설 + 스케줄 run_workflow 는 인자를 못 넘긴다는 함정 명시. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

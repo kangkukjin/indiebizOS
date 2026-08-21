@@ -24,6 +24,7 @@ desc("run — … + params 옵션(문장 안 $변수에 주입)")가 선언만 �
     W12. 워크플로우 중첩 깊이 상한(MAX_WORKFLOW_DEPTH)
     W13. 즉석 실행의 미채움 자유 변수 → 경고(거절 아님 — 선언하는 순간이 없다)
     W14. save 가 시그니처를 계산·저장·보고하고 list 가 노출
+    W15. 스케줄러 run_workflow 액션이 action_params.params 를 엔진에 통과 (2026-08-22)
 
 실행: python3 backend/test_workflow_params.py
 """
@@ -384,8 +385,78 @@ def test_w12_depth_cap():
     print(f"W12 OK — 워크플로우 중첩 깊이 상한({workflow_engine.MAX_WORKFLOW_DEPTH})")
 
 
+# === 스케줄 표면 — 저장된 인자를 실행 시점까지 나르는가 (2026-08-22) ===
+# 시그니처 도입 뒤, 스케줄러의 run_workflow 액션이 workflow_id 만 읽고 params 를 버려
+# "인자를 요구하는 워크플로우는 스케줄에 걸면 실행 시점에 반드시 실패" 하는 구멍이 있었다.
+
+
+class _FakeScheduler:
+    """CalendarActionsMixin._action_run_workflow 만 떼어 쓰는 최소 숙주(_log 만 요구)."""
+
+    def __init__(self):
+        import calendar_actions
+        self.logs = []
+        self._run = calendar_actions.CalendarActionsMixin._action_run_workflow
+
+    def _log(self, msg):
+        self.logs.append(str(msg))
+
+    def run(self, action_params):
+        return self._run(self, {"title": "_t_sched", "action_params": action_params})
+
+
+def test_w15_scheduler_passes_params():
+    wf_id = _save_tmp_workflow("_t_params_w15", {
+        "name": "_t_params_w15",
+        "steps": ['[sense:search]{query: "$city 맛집"}'],
+    })
+    sched = _FakeScheduler()
+    try:
+        # (a) 인자 없이 스케줄 실행 → 엔진의 정직 거절이 그대로 보고된다
+        with _FakeEngine():
+            out = sched.run({"workflow_id": wf_id})
+        assert not out.get("success"), f"인자 누락인데 완주: {out}"
+        assert "인자 누락" in str(out.get("error", "")), out
+
+        # (b) action_params.params 를 실으면 실제 주입까지 도달
+        with _FakeEngine() as eng:
+            out = sched.run({"workflow_id": wf_id, "params": {"city": "청주"}})
+        assert out.get("success"), out
+        q = eng.calls[0]["params"]["query"]
+        assert q == "청주 맛집", f"query={q!r} — 스케줄이 params 를 버리면 회귀"
+        assert out.get("params_injected") == ["city"], out
+
+        # (c) 모델이 JSON 문자열로 저장해도 엔진과 같은 규칙으로 수용
+        with _FakeEngine() as eng:
+            out = sched.run({"workflow_id": wf_id, "params": '{"city": "부산"}'})
+        assert out.get("success"), out
+        assert eng.calls[0]["params"]["query"] == "부산 맛집", eng.calls[0]
+
+        # (d) 객체가 아닌 params → 침묵 무시 대신 정직 거절
+        with _FakeEngine():
+            out = sched.run({"workflow_id": wf_id, "params": "청주"})
+        assert not out.get("success") and "객체여야" in str(out.get("error", "")), out
+    finally:
+        _cleanup(wf_id)
+
+    # (e) params_default 만 있는 저장본은 스케줄에서 인자 없이도 돈다 (엔진이 처리)
+    wf2 = _save_tmp_workflow("_t_params_w15b", {
+        "name": "_t_params_w15b",
+        "steps": ['[sense:search]{query: "$city 맛집"}'],
+        "params_default": {"city": "서울"},
+    })
+    try:
+        with _FakeEngine() as eng:
+            out = sched.run({"workflow_id": wf2})
+        assert out.get("success"), out
+        assert eng.calls[0]["params"]["query"] == "서울 맛집", eng.calls[0]
+    finally:
+        _cleanup(wf2)
+    print("W15 OK — 스케줄러 run_workflow 가 params 를 엔진까지 통과")
+
+
 if __name__ == "__main__":
-    print("=== workflow params·시그니처·재귀 가드 회귀 테스트 (W1~W14) ===\n")
+    print("=== workflow params·시그니처·재귀 가드 회귀 테스트 (W1~W15) ===\n")
     test_w1_saved_run_injects_params()
     test_w2_type_preservation()
     test_w3_unmatched_param_warns()
@@ -397,6 +468,7 @@ if __name__ == "__main__":
     test_w9_params_default()
     test_w13_inline_unfilled_warns_not_rejects()
     test_w14_signature_saved_and_listed()
+    test_w15_scheduler_passes_params()
     print("\n--- 재귀·순환 가드 (실경로) ---")
     test_w10_self_cycle_rejected()
     test_w11_mutual_cycle_rejected()

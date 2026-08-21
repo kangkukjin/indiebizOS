@@ -71,6 +71,21 @@ script 의 몸통은 원리적으로 그게 안 된다(경계는 argv + stdin/st
 저장본에는 save 라는 선언 시점이 있으므로 이제 정직하게 거절한다.
 즉석 실행(`do`)은 선언 시점이 없어 거절하지 않고 `params_warning` 으로 알린다.
 
+### 스케줄에 걸 때는 인자도 같이 저장한다
+
+예약 시각에는 인자를 물어볼 사람이 없다. 스케줄 이벤트의 `action_params` 에
+`params` 를 함께 넣으면 스케줄러가 그대로 엔진에 넘긴다(2026-08-22).
+
+```
+[self:manage_events]{op: "create", title: "아침 맛집", time: "08:00", repeat: "daily",
+                     do: "run_workflow",
+                     action_params: {workflow_id: "동네맛집", params: {city: "청주"}}}
+```
+
+`params` 를 비우면 예약 시각마다 "인자 누락"으로 거절된다. 매번 값이 달라져야 하면
+(어제 날짜 등) 저장본 대신 `do` 자리에 문장을 직접 적는다 — `action_params.params` 는
+등록 시점에 얼어붙은 상수다.
+
 ### 한글에서는 괄호로 경계를 긋는다
 
 이름 경계는 파서와 같은 `\w` 라, 조사·단위가 이름에 먹힌다.

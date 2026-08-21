@@ -123,11 +123,19 @@ action_params:
 action_params:
 ```json
 {
-  "workflow_id": "워크플로우_ID"
+  "workflow_id": "워크플로우_ID",
+  "params": {"city": "청주"}
 }
 ```
 
-★**인자를 요구하는 워크플로우는 스케줄에 걸지 말 것**(2026-08-22): 스케줄러 액션은 `workflow_id` 만 넘긴다(`calendar_actions._action_run_workflow`). 워크플로우 몸통에 미할당 `$이름`이 있으면 실행 시 **"인자 누락"으로 정직 거절**된다(옛날엔 `$city` 가 리터럴로 흘러 엉뚱한 결과를 내고도 success 였다). 스케줄용 워크플로우는 ①인자가 없게 짓거나 ②저장본에 `params_default:{이름:값}` 을 두거나 ③`[self:schedule]`/`manage_events` 의 문장(`do`) 자리에 인자를 채운 `[self:workflow]{op:"run", …, params:{…}}` 를 직접 적는다.
+**인자(params)**(2026-08-22 수리): 스케줄러 액션이 `action_params.params` 를 엔진에 그대로 넘긴다(`calendar_actions._action_run_workflow` → `execute_workflow(..., params=…)`). 주입·경고 규칙은 직접 실행과 완전히 동일하다(강제 규칙도 엔진의 `_coerce_caller_params` 단일 소스 — 모델이 JSON 문자열로 저장한 `params` 도 같이 수용).
+
+- 워크플로우 몸통에 미할당 `$이름`이 있으면 그것이 인자다 — **등록 시점에 값을 같이 저장해야 한다**(예약 시각엔 물어볼 사람이 없다). 비워 두면 실행 시각에 **"인자 누락"으로 정직 거절**된다(옛날엔 `$city` 가 리터럴로 흘러 엉뚱한 결과를 내고도 success 였다).
+- 인자 유무는 스케줄 걸기 전에 `[self:workflow]{op: "list"}` 의 `params_required` 로 본다.
+- 저장본에 `params_default:{이름:값}` 이 있으면 그게 기본값이고, 여기 넣은 `params` 가 기본값을 이긴다.
+- 값이 매번 달라져야 하면(어제 날짜 등) 워크플로우 대신 `do` 자리에 문장을 직접 적는다 — `action_params.params` 는 등록 시점에 얼어붙은 상수다.
+
+수리 전엔 이 자리가 `workflow_id` 만 읽어, 인자를 요구하는 워크플로우를 스케줄에 걸면 실행 시점에 반드시 실패했다. 무회귀는 `backend/test_workflow_params.py` W15.
 
 #### 워크플로우 = 이름 붙은 함수 (2026-08-22)
 `[self:workflow]` 는 저장된 문장을 **함수처럼** 부른다 — 스케줄에 거는 쪽에서 알아야 할 계약:
@@ -379,4 +387,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 - **신문 발행은 결정론 액션 `[engines:newspaper]{}`** 를 직접 스케줄에 건다(기본 백그라운드, `wait:true`=동기). 정기보고 '작성'은 본질이 LLM 글쓰기라 `[others:delegate]{scope:"system"}` 위임 유지.
 
 ---
-*최근 변경(2026-08-22): 워크플로우=함수 계약 절 신설 + 스케줄 run_workflow 는 인자를 못 넘긴다는 함정 명시. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-22): 워크플로우=함수 계약 절 신설 + 스케줄 run_workflow 가 `action_params.params` 로 인자를 넘긴다(함정 → 수리). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

@@ -42,7 +42,9 @@
 - **run_pipeline**: IBL 코드 직접 실행 (action_params: {pipeline: "[node:action]{params}"}) ← **가장 유연한 방식**
 - **run_switch**: 스위치 실행 (action_params: {switch_id})
 - **send_notification**: 알림 전송 (action_params: {title, message})
-- **run_workflow**: 저장된 워크플로우 실행 (action_params: {workflow_id})
+- **run_workflow**: 저장된 워크플로우 실행 (action_params: {workflow_id, params})
+  - 워크플로우가 `$변수`(시그니처)를 요구하면 등록 시점에 `params: {이름: 값}` 을 같이 저장하라 —
+    비우면 실행 시각에 "인자 누락"으로 거절된다(저장본 `params_default` 는 기본값으로 자동 적용).
 - **test**: 테스트 실행
 
 ### 호출 예시

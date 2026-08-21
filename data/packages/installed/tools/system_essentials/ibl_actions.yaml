@@ -422,7 +422,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(생략 시 확장자 추론 .py/.sh/.js)·description·timeout(초, 기본 300) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 → 스크립트 stdin), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록) / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(생략 시 확장자 추론 .py/.sh/.js)·description·timeout(초, 기본 300) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 → 스크립트 stdin), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: system_essentials/script_ops.py — data/scripts.json 원장(원자쓰기) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단).
@@ -436,10 +436,14 @@ nodes:
             remove: effect
           side_effect:
             list: false
+            status: false
+          fixture:
+            status: '[self:script]{op: "status"}'
           values:
             list: 등록 목록 + 마지막 실행 상태
             register: 스크립트 등록/갱신 — path 필수, 완성본만
             run: 등록 id 결정론 실행 — stdout JSON 은 통화로, 실패는 정직하게
+            status: 백그라운드 작업 상태·결과 — job_id|id, wait(≤240초 유한 대기)
             remove: 등록 해제 — 파일은 보존
         keywords:
         - 스크립트
@@ -1308,13 +1312,22 @@ tool_json:
           type: number
           description: find 결과 상한 (기본 50)
   - name: script_op
-    description: 등록 스크립트 실행기 — list/register/run/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로.
+    description: 등록 스크립트 실행기 — list/register/run/status/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로. run{background:true}→job_id, status{job_id, wait}.
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: list(기본)/register/run/remove
+          description: list(기본)/register/run/status/remove
+        background:
+          type: boolean
+          description: 'run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)'
+        job_id:
+          type: string
+          description: 'status 선택 — 조회할 작업 id (run background 가 돌려준 값)'
+        wait:
+          type: number
+          description: 'status 선택 — 끝날 때까지 유한 대기 초(≤240)'
         id:
           type: string
           description: 스크립트 id (register 생략 시 파일명에서 유도)

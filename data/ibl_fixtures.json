@@ -57,6 +57,7 @@
     "self:photo": "[self:photo]{op: \"stats\"}",
     "self:recent_chats": "[self:recent_chats]{}",
     "self:script": "[self:script]{}",
+    "self:script#status": "[self:script]{op: \"status\"}",
     "self:storage": "[self:storage]{op: \"volumes\"}",
     "self:storage#summary": "[self:storage]{op: \"summary\"}",
     "self:switch": "[self:switch]{op: \"list\"}",

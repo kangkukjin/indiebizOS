@@ -589,6 +589,7 @@ _OP_DISPATCHERS = {
         "list": _sib_op("script_ops", "op_list"),
         "register": _sib_op("script_ops", "op_register"),
         "run": _sib_op("script_ops", "op_run"),
+        "status": _sib_op("script_ops", "op_status"),
         "remove": _sib_op("script_ops", "op_remove"),
     },
     # 몸 변화 회상 — git 원장을 items 로 (전 op 읽기 전용, 원장은 git 이 쓴다)

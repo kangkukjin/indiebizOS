@@ -74,6 +74,22 @@
       }
     },
     {
+      "name": "data_compute",
+      "description": "records|table → 열끼리 계산한 파생 열 추가. set({새열: \"식\"}, 필수) — 식=열 이름·col(\"열\")·숫자·사칙·round/abs/min/max·비교·조건식. 없는 열=명시 에러. >> 앞 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "set": {
+            "type": "object",
+            "description": "{새열: \"식\"} — 예 {전세가율: \"round(보증금 / 매매가 * 100, 1)\"}"
+          }
+        },
+        "required": [
+          "set"
+        ]
+      }
+    },
+    {
       "name": "data_rename",
       "description": "records|table → 열/필드 이름 바꾸기. map({옛이름: 새이름}, 필수). 없는 이름·충돌=명시 에러, 값 무변경. 소스가 다른 두 통화의 join 전 키 맞추기. >> 앞 통화를 받음.",
       "input_schema": {

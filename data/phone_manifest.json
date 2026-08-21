@@ -126,6 +126,7 @@
     "sense:world_bank",
     "table:ai",
     "table:brief",
+    "table:compute",
     "table:dedup",
     "table:document",
     "table:each",

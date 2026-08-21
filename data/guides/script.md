@@ -84,3 +84,15 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 2. **어휘 신설 압력의 배출구**: "X 자동화 어휘 만들까?"의 기본 답은 이제 "스크립트 짜서 등록"
    이다. 새 액션은 [ibl.md] §4 기준(기존 어휘로 비싸거나 불가능 + 모양 안정)을 넘을 때만.
 3. 긴 작업은 timeout 을 넉넉히 — 초과 시 프로세스가 중단된다(부분 실행 상태 주의).
+
+
+## 긴 작업 — background + status (2026-08-21)
+타임아웃(기본 300초)을 넘길 스크립트(나레이션 생성·렌더·대량 수집)는 **동기로 부르지 말 것**. 동기 호출이 타임아웃으로 죽으면 결과도 잃고, 그 뒤 셸 `sleep`/`ps` 폴링 한 번이 모델 왕복 한 번이다.
+```
+[self:script]{op: "run", id: "나레이션생성", args: {lecture_id: "x"}, background: true}   # → job_id 즉시
+[self:script]{op: "status", job_id: "나레이션생성-20260821_233000", wait: 120}          # 끝날 때까지 ≤120초 유한 대기, done 이면 result
+[self:script]{op: "status", id: "나레이션생성"}                                           # 그 스크립트의 최근 작업들
+```
+- 러너는 별도 프로세스(`_bg_runner.py`)라 백엔드 리로드·워커 교체에 살아남는다. `running` 인데 러너 pid 가 죽었으면 `lost` 로 정직 표시.
+- 상태 파일 `data/script_runs/jobs/<job_id>.json`, 로그 `data/script_runs/<job_id>.log`.
+- wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.

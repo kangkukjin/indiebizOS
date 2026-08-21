@@ -20,6 +20,12 @@
 - 파일 경로는 registry 에 **이름만** 적힌다(저장소 상대) — 클론한 어느 기기에서나 돈다.
 
 로그: data/script_runs/<id>.log.
+
+긴 작업 핸들(2026-08-21): `run{background:true}` 는 즉시 job_id 를 돌려주고 별도 프로세스
+(`_bg_runner.py`, 백엔드 리로드와 무관하게 생존)가 실행·기록한다. `status{job_id|id, wait}` 가
+상태·결과를 읽는다(wait≤240초 유한 대기). 왜: ep1253~1256 에서 나레이션 생성이 타임아웃된 뒤
+네 에피소드가 Bash `until …; sleep` 폴링이었다 — 폴링 1회=모델 왕복 1회. 원칙(worker-thread-dies-on-reload):
+긴 작업=별도 프로세스+상태 파일, "running" 은 살아 있다는 뜻이어야 한다(pid 생존 검사).
 """
 import json
 import os
@@ -37,6 +43,9 @@ _SCRIPT_DIR = _ROOT / "data" / "scripts"           # 본문 (추적)
 _REGISTRY = _SCRIPT_DIR / "registry.yaml"          # 정의 (추적)
 _STATE = _ROOT / "data" / "scripts.json"           # 실행 상태 (무시)
 _RUN_DIR = _ROOT / "data" / "script_runs"
+_JOB_DIR = _RUN_DIR / "jobs"
+_BG_RUNNER = Path(__file__).with_name("_bg_runner.py")
+_MAX_WAIT = 240
 
 _INTERPRETERS = {".py": sys.executable or "python3", ".sh": "/bin/bash", ".js": "node"}
 _STDOUT_TAIL = 8000
@@ -245,6 +254,8 @@ def op_run(tool_input):
 
     _RUN_DIR.mkdir(parents=True, exist_ok=True)
     log_path = _RUN_DIR / f"{sid}.log"
+    if tool_input.get("background"):
+        return _run_background(sid, entry, p, stdin_data, timeout)
     started = time.time()
     try:
         proc = subprocess.run(
@@ -298,4 +309,112 @@ def op_run(tool_input):
             res.setdefault(k, v)
     else:
         res["stdout"] = stdout[-_STDOUT_TAIL:]
+    return res
+
+
+# ───────────── 긴 작업 핸들 (background run / status) ─────────────
+
+def _pid_alive(pid):
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def _read_job(path):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+def _run_background(sid, entry, script_path, stdin_data, timeout):
+    """별도 프로세스로 실행 — 즉시 job_id 반환. 상태는 data/script_runs/jobs/<job_id>.json."""
+    _JOB_DIR.mkdir(parents=True, exist_ok=True)
+    job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}"
+    job_path = _JOB_DIR / f"{job_id}.json"
+    log_path = _RUN_DIR / f"{job_id}.log"
+    job = {"job_id": job_id, "id": sid, "status": "starting", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+           "timeout": timeout, "log": str(log_path), "interpreter": _resolve_interpreter(entry["interpreter"]),
+           "script": str(script_path), "stdin": stdin_data}
+    _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
+    try:
+        runner = subprocess.Popen(
+            [sys.executable or "python3", str(_BG_RUNNER), str(job_path)],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True, cwd=str(script_path.parent),
+        )
+    except OSError as e:
+        job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"
+        _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
+        return {"success": False, "job_id": job_id, "error": job["error"]}
+    job["runner_pid"] = runner.pid
+    _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
+    state = _read_state()
+    state.setdefault(sid, {})["last_job"] = job_id
+    _write_state(state)
+    return {"success": True, "job_id": job_id, "id": sid, "status": "running", "log": str(log_path),
+            "message": f"백그라운드 시작 — [self:script]{{op: \"status\", job_id: \"{job_id}\", wait: 60}} 로 확인(폴링 대신 wait)."}
+
+
+def op_status(tool_input):
+    """작업 상태 — job_id(하나) 또는 id(그 스크립트의 최근 작업들) 또는 전체. wait(초, ≤240)=끝날 때까지 유한 대기."""
+    _JOB_DIR.mkdir(parents=True, exist_ok=True)
+    job_id = str(tool_input.get("job_id") or "").strip()
+    sid = _sanitize_id(tool_input.get("id") or "") if tool_input.get("id") else ""
+    try:
+        wait = min(int(tool_input.get("wait") or 0), _MAX_WAIT)
+    except (TypeError, ValueError):
+        wait = 0
+    notes = []
+    if tool_input.get("wait") and int(tool_input.get("wait")) > _MAX_WAIT:
+        notes.append(f"wait 상한 {_MAX_WAIT}초로 줄임")
+
+    def _collect():
+        rows = []
+        for jp in sorted(_JOB_DIR.glob("*.json"), reverse=True):
+            j = _read_job(jp)
+            if not j:
+                continue
+            if job_id and j.get("job_id") != job_id:
+                continue
+            if sid and j.get("id") != sid:
+                continue
+            # "running" 은 살아 있다는 뜻이어야 한다 — 러너 pid 가 죽었는데 종료 기록이 없으면 lost
+            if j.get("status") in ("starting", "running") and not _pid_alive(j.get("runner_pid")):
+                j["status"] = "lost"
+                j["error"] = "러너 프로세스가 종료 기록 없이 사라짐(강제 종료·재부팅?) — 로그 확인"
+                _atomic_write(jp, json.dumps(j, ensure_ascii=False))
+            rows.append(j)
+        return rows
+
+    deadline = time.time() + wait
+    while True:
+        rows = _collect()
+        pending = [r for r in rows if r.get("status") in ("starting", "running")]
+        if not wait or not pending or time.time() >= deadline:
+            break
+        time.sleep(2)
+    if job_id and not rows:
+        return {"success": False, "error": f"job_id 없음: {job_id}"}
+    items = []
+    for j in rows[:50]:
+        row = {k: j.get(k) for k in ("job_id", "id", "status", "started_at", "ended_at", "exit_code", "duration_ms", "log")}
+        if j.get("error"):
+            row["error"] = j["error"]
+        if j.get("status") == "done" and j.get("result") is not None:
+            row["result"] = j["result"]
+        items.append(row)
+    still = [r["job_id"] for r in items if r.get("status") in ("starting", "running")]
+    text = f"작업 {len(items)}건" + (f" · 진행 중 {len(still)}" if still else "") + (" · " + ", ".join(notes) if notes else "")
+    res = {"success": True, "items": items, "count": len(items), "running": still, "text": text}
+    if job_id and len(items) == 1:
+        res["status"] = items[0]["status"]
+        if items[0].get("result") is not None:
+            r = items[0]["result"]
+            if isinstance(r, dict):
+                for k in ("items", "table", "stdout"):
+                    if k in r:
+                        res[k] = r[k]
     return res

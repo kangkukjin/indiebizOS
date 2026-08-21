@@ -320,7 +320,7 @@ You define *who* an agent is, not *which model* runs it — model and API key ar
 ## Under the hood (reference)
 
 <!-- IBL_STATS:START -->
-**6 nodes, 149 composable actions** — one tool (`execute_ibl`), one vocabulary, not 149 schemas:
+**6 nodes, 150 composable actions** — one tool (`execute_ibl`), one vocabulary, not 150 schemas:
 
 | Node | Actions | What lives here |
 |------|---------|-----------------|
@@ -329,7 +329,7 @@ You define *who* an agent is, not *which model* runs it — model and API key ar
 | **limbs** | 14 | UI automation (browser, Android, desktop screen), phone-native actions, a guest PC reached by USB limb, media playback (YouTube, radio), window opening, maps |
 | **others** | 17 | Collaboration, delegation, **asking another body in plain language**, messaging (DM/feed/board/Nostr NIP-17), neighbor CRM (contacts are ops on a neighbor — a warehouse address is just another contact type), auto-response — and the public-web surfaces others can reach: personal portals, family newspaper, login-free bulletin boards, public file shares |
 | **engines** | 9 | Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation |
-| **table** | 19 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
+| **table** | 20 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
 
 IBL's definition lives in a single source of truth (`data/ibl_nodes_src/`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (41 installed, plus 5 backend core modules) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
 <!-- IBL_STATS:END -->

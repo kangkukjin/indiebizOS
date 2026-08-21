@@ -662,20 +662,33 @@
     },
     {
       "name": "script_op",
-      "description": "등록 스크립트 실행기 — list/register/run/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로.",
+      "description": "등록 스크립트 실행기 — list/register/run/status/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로. run{background:true}→job_id, status{job_id, wait}.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "list(기본)/register/run/remove",
+            "description": "list(기본)/register/run/status/remove",
             "enum": [
               "list",
               "register",
               "run",
+              "status",
               "remove"
             ],
             "default": "list"
+          },
+          "background": {
+            "type": "boolean",
+            "description": "run 선택 — true 면 별도 프로세스로 실행하고 즉시 job_id 반환(긴 작업)"
+          },
+          "job_id": {
+            "type": "string",
+            "description": "status 선택 — 조회할 작업 id (run background 가 돌려준 값)"
+          },
+          "wait": {
+            "type": "number",
+            "description": "status 선택 — 끝날 때까지 유한 대기 초(≤240)"
           },
           "id": {
             "type": "string",

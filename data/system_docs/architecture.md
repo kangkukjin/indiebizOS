@@ -417,9 +417,9 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 > 아래 마커 구간의 수치는 `scripts/build_ibl_nodes.py`가 레지스트리 실측으로 재생성한다(손 수정 금지). 마커 밖 항목(프로젝트·해마 등 런타임 수치)은 날짜를 달아 손으로 갱신.
 
 <!-- IBL_STATS:START -->
-- 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 149 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 19)
+- 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 150 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 20)
 - backend **.py 263개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 24 · cognition 41 · services 28 · surface 60`(+ common 10·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
-- op 분기 액션 **69개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 39·false 16·미선언 94)
+- op 분기 액션 **69개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 39·false 16·미선언 95)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-21 실측)
 - 해마 코퍼스 **3,449 용례**·증류 누적 825 (2026-08-21 실측 — 라이브 수치는 조종실·memory.md)

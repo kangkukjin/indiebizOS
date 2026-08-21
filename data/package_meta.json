@@ -380,6 +380,7 @@
     "table:ai": "ai-ops",
     "table:brief": "ai-ops",
     "table:chart": "visualization",
+    "table:compute": "data-ops",
     "table:dedup": "data-ops",
     "table:document": "data-ops",
     "table:filter": "data-ops",

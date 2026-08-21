@@ -1297,7 +1297,100 @@ structure_document = _docs.structure_document
 render_document = _docs.render_document
 
 
+# ───────────── compute — 파생 열(관계대수 π 확장, 2026-08-21) ─────────────
+# 왜: 전세가율·기여도·증감률 같은 열끼리의 산술이 없어 모델이 *이미 받은 숫자를* 파이썬
+# 소스에 손으로 다시 타이핑했다(ep1325 `sam0, sam1 = 70300, 271000`) — 통화가 모델
+# 컨텍스트를 거쳐 나오는 자리. groupby 는 집계(행→1)만, 이건 행→행 파생.
+import ast as _ast
+import math as _math
+
+_COMPUTE_FUNCS = {"round": round, "abs": abs, "min": min, "max": max, "int": int,
+                  "float": float, "len": len, "str": str, "sqrt": _math.sqrt, "log": _math.log}
+_COMPUTE_NODES = (_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Name, _ast.Load,
+                  _ast.Call, _ast.Compare, _ast.BoolOp, _ast.IfExp, _ast.Subscript, _ast.Tuple,
+                  _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.FloorDiv, _ast.Mod, _ast.Pow,
+                  _ast.USub, _ast.UAdd, _ast.Not, _ast.And, _ast.Or,
+                  _ast.Eq, _ast.NotEq, _ast.Lt, _ast.LtE, _ast.Gt, _ast.GtE)
+
+
+class _Row(dict):
+    """식 안에서 col("보증금(만원)") 로 식별자가 못 되는 열도 읽는다."""
+
+
+def _compute_compile(expr):
+    tree = _ast.parse(str(expr), mode="eval")
+    for n in _ast.walk(tree):
+        if not isinstance(n, _COMPUTE_NODES):
+            raise ValueError(f"허용되지 않는 구문: {type(n).__name__}")
+        if isinstance(n, _ast.Call) and not (isinstance(n.func, _ast.Name) and n.func.id in (*_COMPUTE_FUNCS, "col")):
+            raise ValueError("허용 함수: " + ", ".join(sorted(_COMPUTE_FUNCS)) + ", col")
+        if isinstance(n, _ast.Name) and n.id.startswith("__"):
+            raise ValueError("금지된 이름")
+    names = sorted({n.id for n in _ast.walk(tree) if isinstance(n, _ast.Name)
+                    and n.id not in _COMPUTE_FUNCS and n.id != "col"})
+    cols = [n.value for n in _ast.walk(tree) if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Name)
+            and n.func.id == "col" and n.args and isinstance(n.args[0], _ast.Constant)]
+    return compile(tree, "<compute>", "eval"), names, [str(c) for c in cols]
+
+
+def _op_compute(prev, params):
+    """items 각 행에 파생 열 추가. set={새열: "식"} — 식은 열 이름(식별자) 또는 col("열")·숫자·
+    + - * / // % ** · round/abs/min/max/int/float/len · 비교·조건식(a if c else b).
+    숫자 문자열("3,500")은 수치로 읽는다. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈·형 오류=그 행 None + 신고."""
+    spec = params.get("set") or params.get("columns") or params.get("expr")
+    if isinstance(spec, str) and params.get("as"):
+        spec = {str(params["as"]): spec}
+    if not isinstance(spec, dict) or not spec:
+        return {"success": False, "error": 'compute: set={새열: "식"} 이 필요합니다. 예: [table:compute]{set: {전세가율: "보증금 / 매매가 * 100"}}'}
+    compiled = {}
+    need_names, need_cols = set(), set()
+    for new_col, expr in spec.items():
+        try:
+            code, names, cols = _compute_compile(expr)
+        except (SyntaxError, ValueError) as e:
+            return {"success": False, "error": f"compute: '{new_col}' 식 오류 — {e}"}
+        compiled[str(new_col)] = code
+        need_names.update(names); need_cols.update(cols)
+    recs, env = _get_items_for_fields(prev, sorted(need_names | need_cols)) if (need_names or need_cols) else (None, None)
+    if recs is None:
+        items, env = _get_items(prev)
+        recs = items
+    if recs is None:
+        table, tenv = _get_table(prev)
+        if table is not None:
+            recs, env = _row_dicts(table), tenv
+    if recs is None:
+        return _no_currency_error("compute", prev)
+    dict_recs = [r for r in recs if isinstance(r, dict)]
+    if not dict_recs:
+        return _emit_items(env, [])
+    missing = [k for k in sorted(need_names | need_cols) if not any(k in r for r in dict_recs)]
+    if missing:
+        return _field_missing_error("compute", missing, dict_recs)
+    out, errors = [], 0
+    sample_err = None
+    for r in dict_recs:
+        row = dict(r)
+        scope = {k: _as_num(v) if _as_num(v) is not None else v for k, v in r.items()
+                 if isinstance(k, str) and k.isidentifier()}
+        scope["col"] = (lambda _r: (lambda name: (_as_num(_r.get(name)) if _as_num(_r.get(name)) is not None else _r.get(name))))(r)
+        for new_col, code in compiled.items():
+            try:
+                row[new_col] = eval(code, {"__builtins__": {}, **_COMPUTE_FUNCS}, scope)
+            except Exception as e:
+                row[new_col] = None
+                errors += 1
+                sample_err = sample_err or f"{new_col}: {type(e).__name__} {e}"
+        out.append(row)
+    res = _emit_items(env, out)
+    if errors:
+        res["compute_errors"] = errors
+        res["note"] = f"compute: {errors}칸 계산 실패 → None (예: {sample_err}). 0 나눗셈·빈 값·문자 열을 확인하세요."
+    return res
+
+
 _DISPATCH = {
+    "data_compute": _op_compute,
     "data_filter": _op_filter,
     "data_sort": _op_sort,
     "data_take": _op_take,

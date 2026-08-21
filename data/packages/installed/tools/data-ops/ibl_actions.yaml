@@ -68,6 +68,25 @@ actions:
     - 투영
     - select
     - 골라
+  compute:
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
+    target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby.'
+    group: transform
+    router: handler
+    tool: data_compute
+    implementation: data-ops handler.py — ast 화이트리스트 식 평가(행별 scope=열 값, 수치 강제), 행→행 파생. 비파괴.
+    target_key: set
+    keywords:
+    - 계산
+    - 비율
+    - 증감률
+    - 파생
+    - 곱하기
+    - 나누기
+    - compute
   rename:
     returns: transform
     runs_on: anywhere
@@ -323,6 +342,16 @@ tool_json:
           description: 남길 열/필드 이름 배열.
       required:
       - columns
+  - name: data_compute
+    description: 'records|table → 열끼리 계산한 파생 열 추가. set({새열: "식"}, 필수) — 식=열 이름·col("열")·숫자·사칙·round/abs/min/max·비교·조건식. 없는 열=명시 에러. >> 앞 통화를 받음.'
+    input_schema:
+      type: object
+      properties:
+        set:
+          type: object
+          description: '{새열: "식"} — 예 {전세가율: "round(보증금 / 매매가 * 100, 1)"}'
+      required:
+      - set
   - name: data_rename
     description: 'records|table → 열/필드 이름 바꾸기. map({옛이름: 새이름}, 필수). 없는 이름·충돌=명시 에러, 값 무변경. 소스가 다른 두 통화의 join 전 키 맞추기. >> 앞 통화를 받음.'
     input_schema:

@@ -355,8 +355,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 # {이름: step 인덱스} 를 실제 결과로 — 텍스트 치환이 아니라 봉투로 싣는다.
                 if step.get("_vars"):
                     step = dict(step)
-                    step["_var_values"] = {n: step_results.get(int(i), "")
-                                           for n, i in step["_vars"].items()}
+                    # 바깥(스탬프)보다 이 파이프의 최신 결과가 우선 (M6: 안쪽 재할당)
+                    step["_var_values"] = {**(step.get("_var_values") or {}),
+                                           **{n: step_results.get(int(i), "") for n, i in step["_vars"].items()}}
             except ValueError as e:
                 results.append({
                     "step": i + 1,
@@ -547,6 +548,12 @@ def execute_pipeline(steps: list, project_path: str = ".",
             "duration_ms": duration_ms,
         })
         step_results[i] = result_str
+        # 블록 몸이 재할당한 바깥 변수(M6 repeat) — 루프 뒤 `$n` 이 최신값이 되게 되쓴다
+        if isinstance(result, dict) and isinstance(result.get("_var_updates"), dict) and step.get("_vars"):
+            for _n, _raw in result["_var_updates"].items():
+                _ix = step["_vars"].get(_n)
+                if _ix is not None:
+                    step_results[int(_ix)] = _raw if isinstance(_raw, str) else json.dumps(_raw, ensure_ascii=False)
 
         if is_err:
             err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
@@ -683,6 +690,9 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
             return _v4_var_payload(base)
         return _STEP_RESULT_RE.sub(_sub, obj)
     if isinstance(obj, dict):
+        # 블록은 건드리지 않는다 (M6): 몸은 안쪽 파이프의 인덱스 공간 — 바깥 치환은 실행기가 _vars/_var_values 로.
+        if any(obj.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
+            return obj
         return {k: _inject_step_results(v, step_results) for k, v in obj.items()}
     if isinstance(obj, list):
         return [_inject_step_results(v, step_results) for v in obj]
@@ -851,6 +861,8 @@ def _step_label(step: Any) -> Tuple[str, str]:
         return "try", "block"
     if step.get("_repeat"):
         return "repeat", "block"
+    if step.get("_assign"):
+        return "assign", f"${step.get('name')}"
     return step.get("_node", step.get("node", "?")), step.get("action", "?")
 
 
@@ -914,7 +926,7 @@ def preflight_sentence(code: Any) -> Dict:
     dead = []
     for st in steps:
         if not isinstance(st, dict) or st.get("_goal") or st.get("_condition") or st.get("_case") \
-                or st.get("_try") or st.get("_repeat"):
+                or st.get("_try") or st.get("_repeat") or st.get("_assign"):
             continue                        # 복합 블록은 내부 분기를 정적으로 못 본다
         node, action = st.get("_node"), st.get("action")
         if not node or not action:
@@ -1139,7 +1151,7 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     result["workflow_name"] = wf.get("name", workflow_id)
     if inject_meta:
         result.update(inject_meta)
-    return _promote_final_currency(result)
+    return _promote_final_currency(result, steps)
 
 
 # === IBL 노드 액션 핸들러 ===
@@ -1263,10 +1275,10 @@ def _run_inline(params: dict, project_path: str,
     result = execute_pipeline(steps, project_path)
     if inject_meta and isinstance(result, dict):
         result.update(inject_meta)
-    return _promote_final_currency(result)
+    return _promote_final_currency(result, steps)
 
 
-def _promote_final_currency(out):
+def _promote_final_currency(out, steps: Optional[list] = None):
     """run 봉투 최상위로 마지막 문장의 통화(items)를 승격 — 워크플로우의 파이프 시민화.
 
     2026-08-17 통화 조건 판정(사용자 A안): [self:script] 의 stdout items 승격 선례
@@ -1279,6 +1291,17 @@ def _promote_final_currency(out):
     """
     if not isinstance(out, dict):
         return out
+    # `$return = …` 반환 규약 (M6 — 설계 §3 "반환 규약 보강"): 몸통에 $return 할당이 있으면 *그 문장의 결과*가
+    # run 의 반환값이다(마지막 문장이 effect 로 끝나도 됨). 파서가 할당 문장의 끝 step 에 _assign_name 을 찍는다.
+    if isinstance(steps, list) and out.get("success", True):
+        for idx, st in enumerate(steps):
+            if isinstance(st, dict) and st.get("_assign_name") == "return":
+                for r in out.get("results") or []:
+                    if isinstance(r, dict) and r.get("step") == idx + 1 and "result" in r:
+                        out["final_result"] = r["result"]
+                        out["returned"] = "$return"
+                        break
+                break
     fr = out.get("final_result")
     if not isinstance(fr, str) or not fr.strip().startswith("{"):
         return out

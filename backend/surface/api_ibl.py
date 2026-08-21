@@ -572,7 +572,7 @@ async def validate_ibl(req: ValidateRequest):
         return isinstance(st, dict) and not (
             st.get("_parallel") or "_fallback_chain" in st or st.get("_branch_steps")
             or st.get("_condition") or st.get("_case") or st.get("_goal")
-            or st.get("_try") or st.get("_repeat"))
+            or st.get("_try") or st.get("_repeat") or st.get("_assign"))
 
     # do(문장을 param 문자열로 나르는 자리)를 가진 액션들 — each 외에 M1 `do` 통일 자리 전부.
     # (2026-08-16 상상훈련 G2: each·goal.strategy 는 펼치는데 schedule.do 는 안 펼쳐,
@@ -741,6 +741,11 @@ async def validate_ibl(req: ValidateRequest):
                 shown = True
             if not shown:
                 _opaque_block("case 블록 — 내부 분기를 읽지 못했습니다(실행 시 결정).", "case")
+            return
+        if st.get("_assign"):
+            steps.append({"node": "assign", "action": f"${st.get('name')}", "params": {"expr": st.get("expr")},
+                          "kind": "assign", "effect": f"변수 ${st.get('name')} = {st.get('expr')} (한 줄 식)",
+                          "safety": "read", "valid": True, "error": None, "param_warning": None, "group": "assign"})
             return
         if st.get("_try"):
             shown = _walk_branch(st.get("body"), "[try]", "try")

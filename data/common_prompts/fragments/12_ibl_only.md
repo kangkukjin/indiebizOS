@@ -194,6 +194,22 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 - **문법으로 만들지 않은 것(script 의 자리)**: dict 상태 누적·파서·상태기계, 외부 라이브러리 계산, 템플릿 언어, 함수 정의(`def` — `[self:workflow]{op:"save"}` 가 그 자리), 타입. 이런 게 필요하면 `[self:script]` 에 얼리고 IBL 은 그것을 한 단어로 부른다.
 - 긴 문장이 도중에 죽으면 봉투에 `resume: {from_step, prev_ref}` 가 실린다 — 코드를 고친 뒤 `execute_ibl(code, resume=그 값)` 으로 그 step 부터(앞 단 재실행 없음, 24h 유효).
 
+**상태 변수·블록-인-파이프·반환 (M6)** — 긴 프로그램이 파이썬처럼 상태를 들고 돈다:
+```
+$n = 0
+[repeat: while $n < 5, max: 20]{$n = $n + 1
+  [sense:search]{query: "AI 뉴스", page: "$n"} >> [table:since]{key: "AI뉴스"} >> [if: empty($items)]{[self:notify_user]{message: "$n 페이지에서 새 글 끝"}} [else]{[self:write]{path: "ai_$n.json"}}}
+[self:notify_user]{message: "총 $n 페이지"}                     # 루프 뒤 $n 은 최신값
+
+[sense:realty]{source: "naver", region: "죽백동", deal: "lease"} >> [if: count($items) > 10]{[table:take]{n: 10}} [else]{[self:notify_user]{message: "매물 적음"}} >> [table:spreadsheet]{path: "전세.xlsx"}
+$total = [sense:realty]{…} >> [table:reduce]{init: 0, step: "acc + 보증금"}
+$avg = $total.value / 10
+```
+- **식 할당** `$x = 식`: 우변이 `[…]` 액션이 아니면 한 줄 식(산술·비교·`a if c else b`·`"문자열"`·`$변수.경로`). 결과는 스칼라 — 뒤 문장의 `"$x"` 엔 값 문자열이, 조건·식에는 값이 들어간다. 미할당 변수·따옴표 빠진 문자열은 정직 에러.
+- **블록은 파이프 세그먼트가 될 수 있다**: `[A] >> [if: …]{…} [else]{…} >> [B]`, `[repeat: …]{…} >> [table:dedup]`. 블록은 직전 통화를 **`$items`** 로 본다(`count($items)`, `empty($items)`, `$items.0.title`) 그리고 몸의 첫 액션에 그 통화를 넘긴다. 블록 결과(분기 결과·repeat items)가 다음 step 의 통화.
+- `while` 은 몸 변수를 본다(첫 회차 전엔 바깥 값만). 몸이 재할당한 바깥 변수는 루프 뒤에도 최신값.
+- `[self:workflow]{op: "save", do: "…$return = …"}`: 몸통에 `$return = …` 이 있으면 run 의 반환값은 그 문장의 결과(마지막이 알림이어도 됨). 없으면 옛 규약(마지막 문장의 items).
+
 **봉투 읽는 법** — 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 중간 결과를 파일로 내리고 뒤에는 참조만 흘리려면 `[self:write]{path, spill: true}`(뒤 step 은 `{items: [], ref: {path, kind, count, bytes}}` 를 받음 — 데이터가 다시 필요하면 `[self:read]{path}`).
 
 **goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:

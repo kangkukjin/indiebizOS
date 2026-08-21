@@ -9,7 +9,8 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from ibl_executors import _nest, _get_sense_value_checked, _each_input_rows
+from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
+                           _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
 
 import copy as _copy
 import time as _time
@@ -71,9 +72,17 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
 
     list(파이프)면 execute_pipeline 봉투의 final_result 를 결과로(통화가 바로 흐르게), dict 면 execute_ibl.
     """
-    from workflow_engine import execute_pipeline, _is_error_result
+    from workflow_engine import execute_pipeline, _is_error_result, _auto_inject_prev
+    prev = _prev_of(tool_input)
+    if context is None and prev:
+        context = {"_prev_result": prev}
+    try:
+        body = _subst_var_refs(_copy.deepcopy(body), {k: v for k, v in (tool_input.get("_var_values") or {}).items()})
+    except ValueError as e:
+        return None, True, {"error": f"몸의 $변수 치환 실패: {e}", "step": 1, "summary": str(e)[:200]}, {}
     if isinstance(body, list):
         steps = [_nest(s, tool_input) for s in body]
+        _stamp_var_values(steps, tool_input.get("_var_values") or {})
         try:
             env = execute_pipeline(steps, project_path, context=context, agent_id=agent_id)
         except Exception as e:
@@ -92,7 +101,10 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
         return _parse_final(env.get("final_result") if isinstance(env, dict) else env), False, {}, by_idx
     from ibl_engine import execute_ibl
     try:
-        res = execute_ibl(_nest(body, tool_input), project_path, agent_id)
+        st = _nest(body, tool_input)
+        if prev and isinstance(st, dict) and not st.get("_assign"):
+            st = _auto_inject_prev(st, prev)
+        res = execute_ibl(st, project_path, agent_id)
     except Exception as e:
         return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200],
                             "node": body.get("_node") if isinstance(body, dict) else None,
@@ -157,7 +169,7 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     var = tool_input.get("var") or "i"
     body = tool_input.get("body")
     body_vars = tool_input.get("body_vars") or {}
-    outer_vars = dict(tool_input.get("_var_values") or {})
+    outer_vars = _vars_with_items(tool_input)
     notes: List[str] = []
     try:
         every_s = _parse_duration_s(tool_input.get("every"))
@@ -199,8 +211,11 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         if substeps > _REPEAT_MAX_SUBSTEPS:
             halted = "budget"
             break
+        # 회차마다 *현재* 변수 값으로 몸을 치환한다(M6 — `$n = $n + 1` 이 돌고 while 이 몸 변수를 본다):
+        # 텍스트 자리($x·$x.path)는 v4/경로 추출로, 안쪽 블록·식 할당은 _var_values 스탬프로.
         it_body = _subst_tokens(_copy.deepcopy(body), {var: i})
-        result, failed, err, by_idx = _run_body(it_body, tool_input, project_path, agent_id)
+        it_input = {**tool_input, "_var_values": cur_vars}     # 몸 치환·스탬프는 _run_body 가 현재 값으로
+        result, failed, err, by_idx = _run_body(it_body, it_input, project_path, agent_id)
         iterations += 1
         if failed:
             halted, err_info, last = "error", {**err, "iteration": i + 1}, result
@@ -259,9 +274,65 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
             notes.append(f"벽시계 상한 {_REPEAT_WALL_MAX_S}s 도달로 중단 — 긴 대기는 [self:script]{{wait}}·[goal:]")
         elif halted == "budget":
             notes.append(f"하위 step 예산 {_REPEAT_MAX_SUBSTEPS} 초과로 중단")
+    # 몸이 재할당한 바깥 변수의 최종값 — 바깥 파이프가 step_results 에 되쓴다(루프 뒤 `$n` 이 최신값).
+    _upd = {n: cur_vars[n] for n in body_vars if n in (tool_input.get("_var_values") or {}) and n in cur_vars}
+    if _upd:
+        out["_var_updates"] = _upd
     if notes:
         out["note"] = " / ".join(notes)
     return out
+
+
+def _scalar_of(v: Any) -> Any:
+    """식 안에서 쓸 값 — 액션 결과 봉투면 value→result→message, 숫자 문자열은 수로."""
+    from common.safe_expr import as_num
+    if isinstance(v, dict):
+        if isinstance(v.get("items"), list) and "value" not in v:
+            return v["items"]
+        for k in ("value", "result", "message"):
+            if k in v and v[k] is not None:
+                v = v[k]
+                break
+    if isinstance(v, str):
+        n = as_num(v)
+        return n if n is not None else v
+    return v
+
+
+def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """`$이름 = 식` (M6): 한 줄 식(common.safe_expr)에 $변수 값을 바인딩해 평가. 결과는 스칼라 봉투
+    {value, message} — 뒤 문장의 `$이름` 은 message(v4)로, 조건·식에서는 value 로 읽힌다.
+    미할당 $변수·없는 경로·허용 밖 구문은 정직 에러(거짓·0 으로 접지 않음)."""
+    from common.safe_expr import compile_expr, eval_expr, FUNCS
+    from ibl_predicates import walk_path, _MISSING, _load_var
+    expr = str(tool_input.get("expr") or "").strip()
+    name = tool_input.get("name")
+    vals = _vars_with_items(tool_input)
+    scope: Dict[str, Any] = {}
+
+    def _bind(m):
+        vn, path = m.group(1), (m.group(2) or "")[1:]
+        if vn not in vals:
+            raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
+        v = walk_path(_load_var(vals[vn]), path or None)
+        if v is _MISSING:
+            raise ValueError(f"${vn}.{path} 경로가 값에 없습니다.")
+        key = f"_v{len(scope)}"
+        scope[key] = _scalar_of(v)
+        return key
+    try:
+        py = re.sub(r"\$(\w+)((?:\.\w+)*)", _bind, expr)
+        code, names, _cols = compile_expr(py)
+        unknown = [n for n in names if n not in scope and n not in FUNCS]
+        if unknown:
+            raise ValueError(f"알 수 없는 이름 {unknown} — 문자열이면 따옴표로, 변수면 $ 를 붙이세요.")
+        value = eval_expr(code, {}, scope)
+    except Exception as e:
+        return {"success": False, "error": f"${name} = {expr}: {type(e).__name__ if not isinstance(e, ValueError) else '식 오류'} {e}",
+                "assigned": name}
+    if isinstance(value, float) and value.is_integer() and "/" not in expr:
+        value = int(value)
+    return {"success": True, "value": value, "message": str(value), "assigned": name}
 
 
 def _execute_table_reduce(params: dict, project_path: str, agent_id: str = None) -> Any:

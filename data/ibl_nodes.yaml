@@ -2599,7 +2599,7 @@ nodes:
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음).
+        target_description: get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6).
         group: workflow
         target_key: op
         router: workflow_engine

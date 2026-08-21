@@ -153,7 +153,7 @@ def test_c1_parser_block_vars():
     blk = steps[1]
     assert blk["_condition"] and blk["_vars"] == {"r": 0}, blk
     assert blk["branches"][0]["condition"] == 'count($r) > 0 and $r.items.0.title matches "속보"'   # 텍스트 치환 없음
-    assert blk["branches"][0]["action"]["params"]["message"] == "{{_step_0_result.items.0.title}}"  # 몸은 치환
+    assert blk["branches"][0]["action"]["params"]["message"] == "$r.items.0.title"  # 몸은 실행 직전 값 치환(M6 개정)
 
 
 def test_c2_engine_var_predicates_and_body_binding():

@@ -136,7 +136,23 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             if not stmt:
                 raise IBLSyntaxError("[on_error: …] 뒤에 문장이 없습니다 — 예: [on_error: skip] [A] >> [B] >> [C]")
         _stmt_start = len(all_steps)
-        blk = _parse_statement_block(stmt)
+        # 문장에 깊이 0 의 >> 가 있으면 파이프 경로로(블록이 첫 세그먼트여도: `[repeat:…]{…} >> [table:dedup]`, M6)
+        _piped = len(_split_pipeline(stmt)) > 1
+        # 식 할당 `$n = 0` / `$n = $n + 1` / `$s = $r.count * 2` (M6 — 카운터·상태 변수): 우변이 액션이
+        # 아니면 한 줄 식 문장. $변수는 값 바인딩(_vars), 평가는 ibl_control_blocks._execute_assign.
+        if assign_names[_stmt_idx] and not _piped and not stmt.lstrip().startswith(('[', '(')):
+            blk = {"_assign": True, "name": assign_names[_stmt_idx], "expr": stmt.strip()}
+            refs = {m for m in _VAR_REF_PATTERN.findall(stmt)}
+            vars_used = {n: i for n, i in variables.items() if n in refs}
+            if vars_used:
+                blk["_vars"] = vars_used
+            if _stmt_idx > 0:
+                blk["_seq_boundary"] = True
+            blk["_assign_name"] = assign_names[_stmt_idx]
+            all_steps.append(blk)
+            variables[assign_names[_stmt_idx]] = len(all_steps) - 1
+            continue
+        blk = None if _piped else _parse_statement_block(stmt)
         if blk is not None:
             # 블록도 앞 문장의 $변수를 본다 (2026-08-22 프로그램급 IBL M2): 분기 몸의
             # 파라미터는 일반 step 처럼 {{_step_N_result}} 치환, 조건식·case 소스 안의 $변수는
@@ -148,6 +164,8 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
                 blk["_seq_boundary"] = True
             if _on_err:
                 blk["_on_error"] = _on_err
+            if assign_names[_stmt_idx]:
+                blk["_assign_name"] = assign_names[_stmt_idx]
             all_steps.append(blk)
             if assign_names[_stmt_idx]:
                 variables[assign_names[_stmt_idx]] = len(all_steps) - 1
@@ -172,7 +190,11 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
                         "헤더와 몸을 줄로 나누면 파싱되지 않습니다.")
                 raise IBLSyntaxError(f"파싱 실패: {_st}")
             # 변수 참조 치환 — 앞 문장들에서 할당된 변수만 보인다(자기/앞선 참조 방지)
-            parsed = _resolve_variables(parsed, variables)
+            # 파이프 속 블록(M6: `[A] >> [if:…]{…} >> [B]`, `[repeat:…]{…} >> [table:dedup]`)은 블록 규약으로.
+            if _is_block_step(parsed):
+                parsed = _resolve_block_variables(parsed, variables) if variables else parsed
+            else:
+                parsed = _resolve_variables(parsed, variables)
             # 문장 경계 표식 — 문장들은 한 리스트로 평탄화되므로, 실행기가 "여기부터 새 문장"을
             # 알 방법이 이 표식뿐이다. 경계에서는 앞 문장의 실패가 전파되지 않고
             # _prev_result 도 넘어가지 않는다(독립이란 뜻이므로). 첫 step 에만 붙인다.
@@ -184,11 +206,19 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
                 _st["_on_error"] = _on_err
         if assign_names[_stmt_idx] and all_steps:
             variables[assign_names[_stmt_idx]] = len(all_steps) - 1
+            all_steps[-1]["_assign_name"] = assign_names[_stmt_idx]   # $return 규약·재개 진단용 표지
 
     if not all_steps:
         raise IBLSyntaxError("실행 가능한 명령이 없습니다.")
 
     return all_steps, variables
+
+
+_BLOCK_PREFIXES = ('[goal:', '[if:', '[case:', '[try]', '[repeat:')
+
+
+def _is_block_step(st: Any) -> bool:
+    return isinstance(st, dict) and any(st.get(k) for k in ("_goal", "_condition", "_case", "_try", "_repeat", "_assign"))
 
 
 def _parse_statement_block(stmt: str) -> Optional[Dict]:
@@ -471,6 +501,13 @@ def _parse_group(text: str) -> Optional[Dict]:
     """
     if not text:
         return None
+
+    # 파이프 속 블록 세그먼트 (M6): `[A] >> [if: 조건]{…} [else]{…} >> [B]` — 블록은 _prev_result 를 받아
+    # 몸에 넘기고, 블록 결과(분기 결과·repeat items)가 다음 step 의 통화가 된다.
+    if text.lstrip().startswith(_BLOCK_PREFIXES):
+        blk = _parse_statement_block(text.strip())
+        if blk is not None:
+            return blk
 
     # ★혼용 거부(D1, 2026-08-05): 한 세그먼트에 & 와 ?? 가 섞이면 명시 파스 에러.
     #   예전엔 & 를 먼저 무조건 분할하고 각 조각을 _parse_step(첫 매치만)이 먹어,
@@ -909,61 +946,21 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
     return resolved
 
 
-def _resolve_block_variables(blk: dict, variables: Dict[str, int]) -> dict:
-    """블록([if:]/[case:]) 의 $변수 처리 (2026-08-22 M2).
+def _resolve_block_variables(blk: dict, variables: Dict[str, int], nested: bool = False) -> dict:
+    """블록([if:]/[case:]/[try]/[repeat:]/식 할당) 의 $변수 처리 (2026-08-22 M2 → M6 개정).
 
-    - 분기 *몸*(action/default)의 문자열 파라미터: 일반 step 과 같은 {{_step_N_result}} 치환.
-    - *조건식*(branches[].condition)·*case 소스*(source): 손대지 않는다 — JSON 텍스트가 식 안에
-      박히면 파싱이 깨진다. 대신 참조된 이름만 `_vars` = {이름: step 인덱스} 로 적어 두고
-      실행기가 값으로 바인딩한다.
-    - goal 블록은 스케줄러 의미(세션 밖)라 건드리지 않는다.
-    """
+    블록 *몸* 은 파서가 치환하지 않는다 — 몸은 안쪽 파이프(자기 step 인덱스)로 실행되는데, 바깥 인덱스의
+    `{{_step_N_result}}` 를 몸에 박아 두면 바깥 주입이 안쪽 인덱스와 충돌한다(M6 실측: repeat 몸의
+    `$n = $n + 1` 이 늘 바깥 0 을 읽음). 대신 블록 전체 텍스트가 참조하는 바깥 변수 이름만 `_vars`
+    = {이름: step 인덱스} 로 적고, 실행기가 실행 직전에 값으로 바인딩(조건·식)하거나 치환(몸 파라미터,
+    `_subst_var_refs` — v4/경로 규약은 파서 치환과 동일)한다. 중첩 블록(nested)엔 _vars 를 붙이지 않고
+    실행기가 _var_values 를 내려보낸다. goal 블록은 스케줄러 의미라 불변."""
     if not isinstance(blk, dict) or blk.get("_goal"):
         return blk
-
-    def _resolve_body(body):
-        if isinstance(body, list):
-            return [_resolve_body(b) for b in body]
-        if isinstance(body, dict):
-            if body.get("_condition") or body.get("_case") or body.get("_try") or body.get("_repeat"):
-                return _resolve_block_variables(body, variables)
-            return _resolve_variables(body, variables)
-        return body
-
     out = dict(blk)
-    if blk.get("_try"):
-        for k in ("body", "catch", "finally"):
-            if blk.get(k) is not None:
-                out[k] = _resolve_body(blk[k])
-    elif blk.get("_repeat"):
-        out["body"] = _resolve_body(blk.get("body"))
-    elif blk.get("_condition"):
-        out["branches"] = [{**b, "action": _resolve_body(b.get("action"))}
-                           for b in blk.get("branches", [])]
-    elif blk.get("_case"):
-        out["branches"] = [{**b, "action": _resolve_body(b.get("action"))}
-                           for b in blk.get("branches", [])]
-        if blk.get("default") is not None:
-            out["default"] = _resolve_body(blk.get("default"))
-    # 조건식·소스가 참조하는 변수만 바인딩 대상으로 (블록 전체 텍스트에서 수집 — 중첩 포함)
-    texts: List[str] = []
-
-    def _collect(node):
-        if isinstance(node, dict):
-            if node.get("_condition"):
-                texts.extend(str(b.get("condition") or "") for b in node.get("branches", []))
-            if node.get("_case"):
-                texts.append(str(node.get("source") or ""))
-            if node.get("_repeat") and node.get("condition"):
-                texts.append(str(node["condition"]))
-            for v in node.values():
-                _collect(v)
-        elif isinstance(node, list):
-            for v in node:
-                _collect(v)
-
-    _collect(out)
-    refs = {m for t in texts for m in re.findall(r'\$(\w+)', t)}
+    if nested:
+        return out
+    refs = set(re.findall(r'\$(\w+)', json.dumps(blk, ensure_ascii=False)))
     vars_used = {name: idx for name, idx in variables.items() if name in refs}
     if vars_used:
         out["_vars"] = vars_used

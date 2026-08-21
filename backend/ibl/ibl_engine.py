@@ -666,6 +666,9 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if tool_input.get("_repeat"):
         from ibl_control_blocks import _execute_repeat
         return _execute_repeat(tool_input, project_path, agent_id)
+    if tool_input.get("_assign"):
+        from ibl_control_blocks import _execute_assign
+        return _execute_assign(tool_input, project_path, agent_id)
 
     # (2026-08-05 감사 D11) 옛 노드타입 모드(_node_type: info/store/exec/output) 디스패치 삭제 —
     # 그 노드들은 레지스트리에 없어 정상 경로의 "알 수 없는 노드" 오류로 수렴한다.

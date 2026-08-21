@@ -362,6 +362,9 @@ class Evaluator:
                     f"변수 ${name} 이(가) 이 문장 앞에서 할당되지 않았습니다 — "
                     f"`${name} = [node:action]{{...}}` 문장을 먼저 두세요.")
             base = _load_var(self.vars[name])
+            # 스칼라 봉투(식 할당·reduce: {value, message}) 는 경로 없이 쓰면 value 가 값 (M6)
+            if path is None and isinstance(base, dict) and "value" in base and not isinstance(base.get("items"), list):
+                return base["value"]
             v = walk_path(base, path)
             if v is _MISSING:
                 if checked:

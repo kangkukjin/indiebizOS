@@ -32,7 +32,7 @@ NEW = [
      '[repeat: until $st.status == "done", max: 30, every: "10s"]{$st = [self:script]{op: "status", job_id: "$job.job_id"}}',
      "self", "system", "repeat,until,대기,스크립트"),
     ("AI 뉴스 3페이지까지 모아서 중복 빼고 저장해줘",
-     '[table:each]{items: [{page: 1}, {page: 2}, {page: 3}], collect: true, do: "[sense:search]{source: \'gnews\', query: \'AI 뉴스\', page: \'$it.page\'}"} >> [table:dedup]{by: "title"} >> [self:write]{path: "AI뉴스_3페이지.json"}',
+     '[table:each]{items: [{page: 1}, {page: 2}, {page: 3}], collect: true, do: "[sense:feed]{url: \'https://news.hada.io/rss/news?page=$it.page\'}"} >> [table:dedup]{by: "title"} >> [self:write]{path: "AI뉴스_3페이지.json"}',
      "sense,table,self", "web", "each,collect,페이지"),
     ("새 글이 없어질 때까지 피드 검침 반복해서 전부 모아줘",
      '$f = [sense:feed]{url: "https://news.hada.io/rss/news"} >> [table:since]{key: "하다뉴스"}\n'

@@ -1,6 +1,6 @@
 # 프로그램급 IBL 설계 — 한 문장이 한 프로그램이 되려면 (2026-08-21)
 
-> **상태**: **M1~M5 전부 집행 완료(2026-08-22)** — §4 표 참조. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
+> **상태**: **M1~M6 전부 집행 완료(2026-08-22)** — §4 표·§8 참조. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
 > 수리처럼 하나씩 박지 않고, 마일스톤 단위로 집행한다(사용자 지시 2026-08-22 "설계를 진행").
 > **집행 기록**: M1 = `ibl/ibl_envelope.py`(봉투 다이어트, `_execute_ibl_unified` 경계·`verbose` 플래그·MCP `_trim_for_agent` 표지 인식·평가자 증거 final_result) + `[self:write]{spill:true}`.
 > M3 = `ibl_parser_blocks._parse_try_block`+`ibl_control_blocks._execute_try`(형제 모듈, 1500줄 규칙)(`$error` 바인딩)·`[on_error:]` 접두(`workflow_engine._handle_failure`)·`??` 괄호 가지. M4 = `_parse_repeat_block`+`ibl_control_blocks._execute_repeat`(until=몸 뒤·while=앞, `$i`, collect)+each `collect`. M5 = `[table:reduce]`(코어 src, `common/safe_expr.py`)·`common/spill.py`(자동 스필 200K자·`resolve_ref` 소비자 4곳·24h GC)·재개(`resume` 봉투→`execute_ibl(code, resume)`). 배터리 `backend/test_ibl_program_grade_m3m5.py`.
@@ -180,6 +180,28 @@
 각 M 의 **완료 정의**: ①배터리(기존 `test_pipe_currency_failures.py` P1~P19 회귀 + 신규) ②dry-run 검수 경고 ③교재 `12_ibl_only.md` 절 ④ibl.md 문법 1항·"언어의 경계" 예약어 목록 ⑤`iblbuild_validators.STANDARD_CORE_NODES`/표준-코어 가드(기능어 추가 시) ⑥시드 10~20·재학습 대기열 ⑦`changelog.log` 한 줄.
 
 **M1 을 먼저** 하는 이유: 언어 개정이 아니라 이음매 변경이라 헌법 절차가 가볍고, 효과가 가장 크고 즉시 측정된다(에피소드당 결과 토큰).
+
+---
+
+## 8. M6 — 긴 프로그램이 멈추던 자리 4곳 (2026-08-22, M5 직후 사용자 판정 "그렇게 해")
+
+M1~M5 뒤 재평가에서 "한 문장 = 한 프로그램"을 가로막는 **구조적** 한계 넷이 남았다. 전부 문법·기능어(어휘 0)라
+반-증식 원칙에 걸리지 않고, 실사용을 기다릴 이유가 없어 바로 집행했다(실사용 대기는 *어휘*에 대한 규율이지 문법의 구멍에 대한 규율이 아니다).
+
+| # | 한계 | 개정 | 위치 |
+|---|---|---|---|
+| 1 | 변수 재할당·카운터 없음 | **식 할당** `$n = 0` · `$n = $n + 1` · `$s = $r.count * 2` — 우변이 액션이 아니면 한 줄 식(`common/safe_expr`, 조건 언어와 같은 `$변수.경로` 바인딩). 결과 `{value, message}` 스칼라 봉투 | `ibl_parser`(`_assign` step) · `ibl_control_blocks._execute_assign` |
+| 2 | `while` 이 몸 변수를 못 봄 | 회차마다 **현재 값**으로 몸을 치환·스탬프(`_run_body`), `cur_vars` 에 몸 할당 반영 → `while`·`until` 모두 봄. 몸이 재할당한 바깥 변수는 `_var_updates` 로 바깥 `step_results` 에 되씀 → 루프 뒤 `$n` 최신값 | `_execute_repeat` · `workflow_engine` |
+| 3 | 블록이 파이프 속에 못 들어감 | 블록 세그먼트 허용(`_parse_group`). 블록은 직전 통화를 **`$items`** 로 보고(`_vars_with_items`) 몸 첫 액션에 넘기며, 결과가 다음 통화 | `ibl_parser` · `_run_branch`/`_run_body` |
+| 4 | 함수 반환 규약 없음 | **`$return = …`**: 몸통에 있으면 run 반환값 = 그 문장 결과(파서 `_assign_name` 표지 → `_promote_final_currency`) | `workflow_engine` |
+
+**부수 개정(중요)**: 블록 몸의 `$변수` 치환을 **파서 시점 → 실행 직전**으로 옮겼다. 파서가 몸에 바깥 인덱스의 `{{_step_N_result}}` 를
+박아 두면 바깥 주입이 안쪽 파이프의 인덱스 공간을 덮어쓴다(M2 부터 잠복, repeat 몸의 `$n = $n + 1` 이 늘 0 을 읽는 것으로 표면화).
+이제 파서는 `_vars`(이름→바깥 인덱스)만 적고, 실행기가 `_var_values` 로 값을 받아 몸을 치환(`_subst_var_refs`, v4/경로 규약 동일)·
+중첩 블록엔 스탬프로 내려보낸다. 바깥 `_inject_step_results` 는 블록 안으로 재귀하지 않는다.
+
+**여전히 넣지 않는 것(§3 유지)**: 범용 데이터 구조(dict 조작·리스트 연산), 재귀 함수, 타입. → `[self:script]`.
+배터리 `backend/test_ibl_program_grade_m6.py` A1~A2·W1~W2·P1~P2·F1~F2.
 
 ---
 

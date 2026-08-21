@@ -509,3 +509,8 @@ RAG 재인덱싱 3,702편. 발행물 재생성 → **12문단 + 이미지 1**, f
 - 배터리 `backend/test_ibl_program_grade_m3m5.py` T1~T6·R1~R5·D1·S1~S3. 예약어에 `on_error` 추가. §7 판정 4건은 설계 문서 헤더.
 - 곁다리 수리(라이브 검증 중 발견): ①단일 문장 `[try]`/`[repeat:]` 가 에이전트 진입점의 단일-step 경로에서 블록으로 인식되지 않아 "action 파라미터가 필요합니다"로 죽던 것(`_execute_ibl_unified` 블록 판별에 `_try/_repeat` 추가 — 파이프 안에선 정상이었음) ②블록 결과를 `$변수` 로 받아 `[table:*]{items: "$변수"}` 에 넣으면 v4 치환이 items JSON *문자열*을 넣어 변환자가 "통화 없음"으로 거절하던 것(data-ops 디스패처가 문자열 items 를 목록으로 되읽음) — 블록은 파이프 속에 못 들어가므로 이 경로가 블록 결과를 변환자에 잇는 정본 관용구다. ③워크플로 저장 문법 관문의 dead-vocab 검사가 try/repeat 블록을 건너뛰도록.
 - 정리(같은 날): data-ops `[table:compute]` 의 식 화이트리스트 두 벌을 `common/safe_expr` 단일 소스로 합침(`_compute_compile` 위임·`_COMPUTE_FUNCS` 재수출) — reduce 와 허용 구문이 갈라질 수 없다.
+
+### §11-4. M6 — 긴 프로그램이 멈추던 자리 4곳 (2026-08-22, 설계 §8)
+- 식 할당 `$n = $n + 1`(`_assign` step, `ibl_control_blocks._execute_assign`, `common/safe_expr`) · `while` 이 몸 변수를 봄 + 루프 뒤 바깥 `$n` 최신값(`_var_updates`) · 블록-인-파이프(`_parse_group` 블록 세그먼트, `$items`=직전 통화, 몸 첫 액션에 prev 전달) · `$return` 반환 규약(`_assign_name` 표지 → `_promote_final_currency`).
+- ★구조 개정: 블록 몸의 `$변수` 는 파서가 치환하지 않는다 — `_resolve_block_variables` 는 `_vars` 만 적고, 실행기(`_run_branch`/`_run_body`)가 실행 직전 `_subst_var_refs` 로 치환·중첩 블록엔 `_stamp_var_values` 로 내려보냄. `_inject_step_results` 는 블록 안으로 재귀하지 않음(안쪽 파이프 인덱스 충돌 — M2 부터 잠복). 예약 변수 `$items $it $i $error $return`.
+- 배터리 `test_ibl_program_grade_m6.py` 8건 + 전 배터리 재통과. M2 배터리 C1 의 "몸은 step 치환" 단언을 새 계약으로 갱신.

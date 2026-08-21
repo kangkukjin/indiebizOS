@@ -10,6 +10,7 @@ execute_ibl 등은 함수 내부에서 지연 임포트합니다.
 
 import os
 import re
+import copy
 import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -620,9 +621,8 @@ def _nest(step: Any, tool_input: dict) -> Any:
     out = {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
     # 블록 속 블록이 바깥 문장의 $변수를 계속 읽게 — 변수 값 봉투 계승 (2026-08-22 M2)
     if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")
-                                          or out.get("_try") or out.get("_repeat")) \
-            and "_var_values" not in out:
-        out["_var_values"] = tool_input["_var_values"]
+                                          or out.get("_try") or out.get("_repeat") or out.get("_assign")):
+        out["_var_values"] = {**tool_input["_var_values"], **(out.get("_var_values") or {})}
     return out
 
 
@@ -649,6 +649,86 @@ def _attach_branch_meta(result: Any, matched: str, matched_value: Any) -> Any:
     return result
 
 
+def _prev_of(tool_input: dict) -> Any:
+    """블록이 파이프 속에 있을 때 받은 직전 통화(_prev_result) — 없으면 None."""
+    p = tool_input.get("params")
+    return p.get("_prev_result") if isinstance(p, dict) else None
+
+
+def _vars_with_items(tool_input: dict) -> Dict[str, Any]:
+    """블록의 변수 봉투 + 파이프 입력을 `$items` 로 (M6 블록-인-파이프): `[A] >> [if: count($items) > 0]{…}`.
+    $items 는 집합 참조 예약어(G1-③)라 변수 이름과 충돌하지 않는다. 입력에 items 통화가 있으면 그 목록을,
+    아니면 입력 원형을 싣는다."""
+    vals = dict(tool_input.get("_var_values") or {})
+    prev = _prev_of(tool_input)
+    if prev is not None and "items" not in vals:
+        obj = prev
+        if isinstance(prev, str):
+            s = prev.strip()
+            if s[:1] in "{[":
+                try:
+                    obj = json.loads(s)
+                except Exception:
+                    obj = prev
+        if isinstance(obj, dict) and isinstance(obj.get("items"), list):
+            vals["items"] = json.dumps(obj["items"], ensure_ascii=False)
+        else:
+            vals["items"] = prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False)
+    return vals
+
+
+def _subst_var_refs(obj: Any, values: Dict[str, Any]) -> Any:
+    """블록 몸 텍스트의 `$이름`/`$이름.경로` 를 현재 값으로 — 파서 _resolve_variables 와 같은 규약
+    (bare=v4 추출, 경로=_extract_result_field, 부재=ValueError). 구조 키(condition·expr·source)는 값
+    바인딩 자리라 건드리지 않고, `$items` 는 엔진의 집합 바인딩 예약어라 제외한다 (M6)."""
+    from workflow_engine import _v4_var_payload, _extract_result_field
+    names = [k for k in (values or {}) if k != "items"]
+    if not names:
+        return obj
+    pat = re.compile(r"\$(" + "|".join(re.escape(k) for k in names) + r")((?:\.\w+)*)(?!\w)")
+
+    def _one(m):
+        raw = values[m.group(1)]
+        raw = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
+        if m.group(2):
+            return _extract_result_field(raw, m.group(2))
+        return _v4_var_payload(raw)
+
+    def _walk(o, key=None):
+        if isinstance(o, str):
+            if key in ("condition", "expr", "source"):
+                return o
+            return pat.sub(_one, o)
+        if isinstance(o, dict):
+            # 중첩 블록은 건드리지 않는다 — 그 블록의 실행기가 *자기 실행 시점*의 (더 새로운) 값으로 치환한다
+            if any(o.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
+                return o
+            return {k: _walk(v, k) for k, v in o.items()}
+        if isinstance(o, list):
+            return [_walk(v) for v in o]
+        return o
+    return _walk(obj)
+
+
+def _stamp_var_values(steps: Any, values: Dict[str, Any]) -> None:
+    """몸(파이프) 안의 블록 step 에 바깥 변수 값을 내려보낸다 — 안쪽 값이 우선(M6)."""
+    if not values:
+        return
+    if isinstance(steps, dict):
+        steps = [steps]
+    if not isinstance(steps, list):
+        return
+    for st in steps:
+        if not isinstance(st, dict):
+            continue
+        if any(st.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign")):
+            st["_var_values"] = {**values, **(st.get("_var_values") or {})}
+        for key in ("branches", "body", "catch", "finally", "default", "action", "_branch_steps"):
+            v = st.get(key)
+            if isinstance(v, (list, dict)):
+                _stamp_var_values(v, values)
+
+
 def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str) -> Any:
     """if/case 분기 몸 실행 — 단일 액션(dict)과 **파이프(steps 리스트)** 둘 다.
 
@@ -656,12 +736,23 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     실행기가 dict 만 가정해 `'list' object has no attribute 'get'` 으로 죽었다 —
     문법이 허용하는 모양(블록 속 파이프)을 실행기가 전부 받아야 한다.
     """
+    prev = _prev_of(tool_input)
+    try:
+        action = _subst_var_refs(copy.deepcopy(action), tool_input.get("_var_values") or {})
+    except ValueError as e:
+        return {"success": False, "error": f"분기 몸의 $변수 치환 실패: {e}"}
     if isinstance(action, list):
         from workflow_engine import execute_pipeline
         steps = [_nest(s, tool_input) for s in action]
-        return execute_pipeline(steps, project_path, agent_id=agent_id)
+        _stamp_var_values(steps, tool_input.get("_var_values") or {})
+        return execute_pipeline(steps, project_path, agent_id=agent_id,
+                                context=({"_prev_result": prev} if prev else None))
     from ibl_engine import execute_ibl
-    return execute_ibl(_nest(action, tool_input), project_path, agent_id)
+    from workflow_engine import _auto_inject_prev
+    st = _nest(action, tool_input)
+    if prev and isinstance(st, dict) and not st.get("_assign"):
+        st = _auto_inject_prev(st, prev)
+    return execute_ibl(st, project_path, agent_id)
 
 
 def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:
@@ -701,7 +792,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
         # 조건 평가: 소스 참조 실행 + $변수(앞 문장 결과, _var_values) 술어
         try:
             sense_result, left_value = _evaluate_condition_and_value(
-                condition, project_path, agent_id, tool_input.get("_var_values"))
+                condition, project_path, agent_id, _vars_with_items(tool_input))
         except Exception as e:
             cond_errors.append({"condition": condition, "error": str(e)})
             continue  # 이 분기는 판정 불능 — 다음 분기로 가되 위에 기록해 둔다
@@ -745,7 +836,7 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
         # $변수[.경로] 소스 (2026-08-22 M2) — 앞 문장 결과를 실행 없이 읽는다.
         from ibl_predicates import Evaluator, PredicateError
         try:
-            sense_value = Evaluator(lambda s: (None, "변수 소스"), tool_input.get("_var_values")
+            sense_value = Evaluator(lambda s: (None, "변수 소스"), _vars_with_items(tool_input)
                                     ).atom_value(source.strip())
             read_error = None
         except PredicateError as e:

@@ -9,8 +9,8 @@
         side_effect: true   # do 안에 무엇이든 올 수 있다 — dry-run 이 초록불을 켜면 안 된다
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘.
-        target_description: 'do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop). 결과는 원 행 + _ok + _error/_result 의 items. 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
+        description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘. 앞 통화 없이 items 를 직접 주면 리터럴 팬아웃(같은 액션 N번 대신).
+        target_description: 'do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop). 결과는 원 행 + _ok + _error/_result 의 items. 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
         group: transform
         router: system
         func: table_each

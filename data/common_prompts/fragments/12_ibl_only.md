@@ -211,6 +211,12 @@ execute_ibl(code='[sense:search]{query: "반도체 시장 동향"} & [sense:sear
 ```
 → 왕복 1회. 판단은 파이프 안의 AI 낱말이 맡고, 결과는 통화로 흐른다. 목록의 각 행마다 다른 행동이면 `[table:each]`.
 
+**팬아웃 — 같은 액션을 파라미터만 바꿔 N번 부를 때는 `&` 를 손으로 N번 쓰지 말고 `[table:each]` 에 목록을 직접 줘라:**
+```
+execute_ibl(code='[table:each]{items: [{code: "43112"}, {code: "43113"}, {code: "43114"}], do: "[sense:realty]{source: \'molit\', region_code: \'$it.code\', type: \'apt\', deal: \'rent\'} >> [table:take]{n: 4}"} >> [table:flatten]')
+```
+→ 앞 통화가 없어도 된다. 좌표 4개·단지 3개·영상 5개 — 네가 방금 정한 목록이면 전부 이 자리다.
+
 ### 하나씩 부르는 것이 맞는 경우 (예외 — 이것뿐)
 - **다음 문장의 *모양* 자체가 결과에 달려 있을 때** — 결과를 보고 어느 액션을 쓸지·어떤 파라미터를 줄지 정해야 하는 분기. 값만 달라지는 분기는 `[if:]`/`$변수` 로 문장 안에서 해결된다.
 - **결과가 커서 다음 입력에 다 실을 수 없을 때** — 그래도 먼저 `>> [table:take]`·`[table:select]`·`[table:ai]` 로 줄여서 한 문장에 담을 수 있는지 본다.

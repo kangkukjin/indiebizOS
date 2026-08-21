@@ -159,7 +159,15 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
     if os.path.isfile(root):
         files = [root]
     else:
-        files = glob.glob(os.path.join(root, file_pattern), recursive=True)
+        # ★글롭 방언 정렬(2026-08-21): rg --glob 은 gitignore 방언이라 '*.py'(구분자 없는
+        # basename 글롭)가 전 깊이에서 매칭되는데, 파이썬 glob 은 recursive=True 여도
+        # '**' 가 없으면 최상위만 봤다 — 같은 질의가 어느 층을 타느냐(한글 패턴·rg 부재·
+        # rg 오류)에 따라 모집단이 조용히 갈리던 침묵 부분결과. 구분자·'**' 없는 패턴은
+        # '**/' 접두로 재귀 정렬. 구분자 있는 패턴('sub/*.py')은 앵커 의미 보존.
+        fp = file_pattern
+        if "/" not in fp and os.sep not in fp and "**" not in fp:
+            fp = os.path.join("**", fp)
+        files = glob.glob(os.path.join(root, fp), recursive=True)
         files = [
             f for f in files
             if os.path.isfile(f)

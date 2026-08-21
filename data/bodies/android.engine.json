@@ -241,6 +241,7 @@
     "test_dispatcher_stub_guard": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
+    "test_grep_glob_dialect": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
@@ -257,8 +258,8 @@
     "test_workflow_params": "force_exclude_glob"
   },
   "counts": {
-    "total": 251,
+    "total": 252,
     "engine": 211,
-    "blocklist": 40
+    "blocklist": 41
   }
 }

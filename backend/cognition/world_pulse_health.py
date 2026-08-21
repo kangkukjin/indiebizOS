@@ -598,6 +598,23 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] returns 드리프트 스윕 실패 (무시): {e}")
 
+    # 8.7) 데이터 소유 감사 (주간 카덴스) — 소유 선언 레지스트리(data_ownership.DECLARATIONS)
+    #      에 안 잡히는 data/·outputs/ 항목을 깃발로. 고아 캐시 소탕의 기계화 —
+    #      **보고만, 삭제 없음**(실집행=사용자). _backups 30일 초과분도 삭제 후보로 보고.
+    try:
+        from data_ownership import run_data_ownership_check
+        do = run_data_ownership_check()
+        result["data_ownership"] = do
+        if do.get("orphans"):
+            logger.warning(f"[Maintenance] 주인 없는 파일 {len(do['orphans'])}건 — data_ownership_flags.json")
+        if do.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
+            try:
+                save_self_check(do)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 데이터 소유 감사 실패 (무시): {e}")
+
     # 8) 어휘 개념중복 감사 (주간 카덴스) — 압축 상설 기관의 *실증* 신호.
     #    build --check 의 압축 경고(자백·구조)와 달리 코퍼스를 읽어야 해서 여기 산다
     #    (빌드는 코퍼스를 안 읽는 원칙). 교차-액션 최근접 cos≥0.95 쌍을 깃발로.

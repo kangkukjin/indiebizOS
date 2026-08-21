@@ -74,7 +74,7 @@ LAYERS = {
         "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",
-        "consciousness_agent", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
+        "consciousness_agent", "data_ownership", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "ibl_usage_generator", "ibl_usage_rag",
         "memory_consolidation", "prompt_builder", "repair_verdict_distill",
         "routing_system", "switch_runner",

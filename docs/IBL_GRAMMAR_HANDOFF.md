@@ -475,3 +475,28 @@ RAG 재인덱싱 3,702편. 발행물 재생성 → **12문단 + 이미지 1**, f
 > 이번 작업의 신규 어휘도 **0개**(157 불변) — 고친 건 전부 연산자·판정·검사다.
 > 그리고 `??` 가 죽어 있던 진짜 이유는 코드가 아니라 **코퍼스 0건**이었다.
 > 그래서 이번엔 `;` 를 문서에만 적지 않고 **코퍼스에 심었다.**
+
+---
+
+## 11. 프로그램급 IBL 개정 이력 (2026-08-22 ~) — 정본 `IBL_PROGRAM_GRADE_DESIGN.md`
+
+문법 개정은 어휘 변경이 아니라 **언어 개정**이다. 마일스톤마다 아래 **문법 개정 체크리스트**(설계 §4 완료 정의)를 전부 밟는다:
+①배터리(`test_pipe_currency_failures.py` P1~ 회귀 + `test_ibl_silent_failures.py` + `test_condition_observability.py` + 신규 `test_ibl_program_grade.py`)
+②dry-run 검수 경고(`/ibl/validate`) ③교재 `12_ibl_only.md` ④`ibl.md` '언어의 경계' 1항 + 예약어 목록
+⑤기능어 추가 시 `STANDARD_CORE_NODES`/표준-코어 가드 ⑥시드 10~20(`add_examples_batch`)·재학습 대기열 ⑦`changelog.log` 한 줄.
+
+### §11-1. M1 봉투 다이어트 + 스필 싱크 (2026-08-22)
+- `ibl/ibl_envelope.py` — 에이전트 경계(`_execute_ibl_unified`)에서 파이프 봉투 `results[]` 를 step 요약(shape·count·bytes·columns·preview)으로, `final_result` 원형. 실패 step 오류문 원형 보존. 표지 `_results_summarized`.
+- `verbose:true`(도구 스키마·`IBLRequest`) = 옛 모양. MCP `_trim_for_agent` 는 표지가 있으면 `final_result` 를 지우지 않는다(유일한 원형). 평가자 `cognitive_trace._unwrap_payload` 는 표지가 있으면 `final_result` 를 증거로.
+- `[self:write]{spill:true}` → `{items:[], ref:{path,kind,count,bytes}, spilled:true}`. 자동 ref 해소(변환자 `_get_items`)는 M5.
+- ★정정: write 는 원래 종단 싱크(`{success,path,size}`) — "뒤 step 이 전체 통화를 받는다"는 설계 전제는 틀렸고, 누수는 `results[]`+`final_result` 중복뿐.
+
+### §11-2. M2 술어 언어 (2026-08-22)
+- `ibl/ibl_predicates.py` — 토큰화(깊이 0)·재귀 하강·평가·정적 검수. 좌변 = 소스 참조 | `$변수[.경로]`(리스트 인덱스 가능) | `count/empty/exists` | `[node:action]{…}` 대괄호 형태(AI 술어 관용, message 가 값). `matches` 정규식, `and/or/not`, 괄호. 판정 불능 = `PredicateError`(ValueError) → `condition_errors`·else 보류(B8·B10 유지).
+- 파서: 블록이 처음으로 `$변수`를 본다 — `_resolve_block_variables`: 분기 몸은 `{{_step_N_result}}` 치환, 조건식·case 소스는 **값 바인딩**(`_vars`→엔진 `_var_values`). `_nest` 가 중첩 블록에 계승. 블록 헤더는 정규식 대신 `_block_header` 깊이 스캔(`[if: [table:brief]{…} == "yes"]`).
+- `_get_sense_value_checked` 경로 없는 값: value→result→**message**→봉투 문자열(옛 str(dict) 폴백이 brief 비교를 늘 거짓으로 만들던 것).
+- 파이프 봉투에서 블록 step 라벨(`node:"if"/"case"/"goal"`, action `"block"`) — 옛 `"?"`.
+- 비어 있던 자리: `[if:]` 표본 1회·실패(08-21 진단). 이제 `$r = …` 한 줄 뒤 `[if: count($r) > 0]` 가 한 문장이다.
+
+### §11-3. 다음(M3~M5, 설계 §2.4·2.2·2.3·2.5-3·2.6)
+`??` 괄호 파이프 + `>>` on_error + `[try]/[catch]/[finally]` → `[repeat:]`+`collect` → `[table:reduce]`·자동 스필·재개. 예약어 목록은 헌법에 선등재(`if else case goal repeat try catch finally`).

@@ -4396,9 +4396,9 @@ nodes:
         - form
       write:
         returns: effect
-        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05).
+        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 뒤 step 에 참조(ref)만 흘린다.
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다.
+        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. spill:true = 스필 싱크 — 결과에 {items:[], ref:{path,kind,count,bytes}} 를 실어 뒤 step 이 데이터 대신 참조를 받는다(재개는 [self:read]{path}).
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).

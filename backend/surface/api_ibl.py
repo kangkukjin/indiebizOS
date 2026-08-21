@@ -10,6 +10,7 @@ router = APIRouter(prefix="/ibl", tags=["ibl"])
 
 class IBLRequest(BaseModel):
     code: str
+    verbose: bool = False              # 파이프 봉투 results[] 원형(true) / step 요약(기본) — ibl_envelope (2026-08-22 M1)
     project_id: Optional[str] = None   # 수동/앱 모드 등 표면이 자기 프로젝트를 지정
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
@@ -131,7 +132,8 @@ async def execute_ibl_code(req: IBLRequest):
                                origin=_origin):
                 try:
                     from system_tools import _execute_ibl_unified
-                    return _execute_ibl_unified({"code": req.code}, project_path, agent_id=agent_id)
+                    return _execute_ibl_unified({"code": req.code, "verbose": req.verbose},
+                                                project_path, agent_id=agent_id)
                 finally:
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)
@@ -410,6 +412,9 @@ async def validate_ibl(req: ValidateRequest):
     code = (req.code or "").strip()
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
+    # 조건식 검수용 — 이 코드가 할당하는 $변수 이름(조건의 미할당 $변수를 미리 잡는다, M2)
+    import re as _re
+    _assigned_vars = set(_re.findall(r'^\s*\$(\w+)\s*=', code, _re.M))
 
     # 1) 파싱 (문법 검사)
     try:
@@ -631,14 +636,10 @@ async def validate_ibl(req: ValidateRequest):
         거짓 판정이라, 자연어 조건('[if: 디스크가 부족하면]')이 침묵으로 else 에 떨어진다.
         dry-run 이 유일하게 미리 소리 낼 수 있는 자리다."""
         try:
-            from ibl_executors import _find_top_level_comparison_op, _parse_source_ref
-            op_info = _find_top_level_comparison_op(cond)
-            src = cond[:op_info[0]].strip() if op_info else cond.strip()
-            if _parse_source_ref(src) is None:
-                return (f"조건 좌변 '{src}' 이(가) node:action 소스 참조가 아닙니다 — "
-                        "실행 시 이 조건은 조용히 거짓이 되어 다음 분기/else 로 넘어갑니다. "
-                        '예: [if: sense:host{op: "status"}.cpu_percent > 80]')
-            return None
+            # 2026-08-22 M2: 술어 언어(ibl_predicates)의 정적 검수 — $변수·count/empty/exists·
+            # and/or/not·matches·AI 술어까지 한 문법. 미할당 $변수도 여기서 미리 잡는다.
+            from ibl_predicates import validate_condition
+            return validate_condition(cond, known_vars=sorted(_assigned_vars))
         except Exception:
             return None
 

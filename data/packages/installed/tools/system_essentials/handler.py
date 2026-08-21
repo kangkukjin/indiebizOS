@@ -862,6 +862,19 @@ def execute(tool_input: dict, context) -> str:
                                       "구조 보존이 필요하면 table:spreadsheet/structure 로 저장하세요.")
             if redirected:
                 result["redirected_to"] = "outputs/"
+            if tool_input.get("spill"):
+                # 스필 싱크 (2026-08-22 프로그램급 IBL M1 / 설계 §2.5-1): 뒤 step 에는 통화 대신
+                # *참조*만 흐른다 — {items: [], ref: {path, kind, count, bytes}}. 다음 step 이 데이터가
+                # 필요하면 [self:read]{path} 로 재개(결정론). 자동 ref 해소는 M5(변환자 _get_items).
+                _kind = "text"
+                _count = None
+                if piped and isinstance(probe, dict) and isinstance(probe.get("items"), list) and extracted is None:
+                    _kind, _count = "items", len(probe["items"])
+                elif extracted == "message":
+                    _kind = "message"
+                result["items"] = []
+                result["ref"] = {"path": abs_path, "kind": _kind, "count": _count, "bytes": len(content)}
+                result["spilled"] = True
             return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "fill_op":

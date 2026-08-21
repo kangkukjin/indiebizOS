@@ -206,6 +206,14 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         'IBL 코드에서 $file:0, $file:1 등으로 참조. '
                         '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."]'
                     )
+                },
+                "verbose": {
+                    "type": "boolean",
+                    "description": (
+                        "파이프(>>) 봉투의 results[] 를 step 원형으로 받는다. 기본 false = step 요약"
+                        "(shape·count·preview)만 싣고 전체 데이터는 final_result 에. 중간 step 의 "
+                        "원형이 꼭 필요할 때만 true."
+                    )
                 }
             },
             "required": ["code"]

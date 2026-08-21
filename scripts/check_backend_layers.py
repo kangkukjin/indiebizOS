@@ -63,7 +63,8 @@ LAYERS = {
         # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.
         "api_engine", "api_pipeline", "api_transforms",
         "capability_card", "channel_engine", "event_engine", "ibl_access",
-        "ibl_engine", "ibl_executors", "ibl_ops", "ibl_param_vocab",
+        "ibl_engine", "ibl_envelope", "ibl_executors", "ibl_ops", "ibl_param_vocab",
+        "ibl_predicates",
         "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing",
         "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",

@@ -475,6 +475,13 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
         # 단일-스텝 에러면 액션 사용법 힌트 부착 (실패 가시화 → 다음 턴 자가교정)
         result = _enrich_error_with_param_hint(result, code)
 
+        # 봉투 다이어트 (2026-08-22 프로그램급 IBL M1): 파이프 봉투의 results[] 는 step 요약,
+        # final_result 만 원형 — 여기는 에이전트 경계(인프로세스·MCP 재진입·/ibl/execute 공통).
+        # verbose: true 가 옛 모양. 표면은 final_result 만 읽으므로 무영향.
+        if isinstance(result, dict):
+            from ibl_envelope import diet_envelope
+            result = diet_envelope(result, verbose=bool(tool_input.get("verbose")))
+
         if isinstance(result, dict):
             return json.dumps(result, ensure_ascii=False, indent=2)
         return str(result)

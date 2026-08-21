@@ -122,6 +122,12 @@ def parse(code: str) -> List[Dict]:
         # desugar·파이프 분리에 넣으면 블록 내부 문장이 난도질당한다.
         blk = _parse_statement_block(stmt)
         if blk is not None:
+            # 블록도 앞 문장의 $변수를 본다 (2026-08-22 프로그램급 IBL M2): 분기 몸의
+            # 파라미터는 일반 step 처럼 {{_step_N_result}} 치환, 조건식·case 소스 안의 $변수는
+            # 텍스트 치환이 아니라 *값 바인딩* — 파서는 이름→step 인덱스(_vars)만 적고
+            # 실행기(workflow_engine)가 실행 시점에 _var_values 로 값을 실어 준다.
+            if variables:
+                blk = _resolve_block_variables(blk, variables)
             if _stmt_idx > 0:
                 blk["_seq_boundary"] = True
             all_steps.append(blk)
@@ -866,6 +872,59 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
             resolved[key] = val
 
     return resolved
+
+
+def _resolve_block_variables(blk: dict, variables: Dict[str, int]) -> dict:
+    """블록([if:]/[case:]) 의 $변수 처리 (2026-08-22 M2).
+
+    - 분기 *몸*(action/default)의 문자열 파라미터: 일반 step 과 같은 {{_step_N_result}} 치환.
+    - *조건식*(branches[].condition)·*case 소스*(source): 손대지 않는다 — JSON 텍스트가 식 안에
+      박히면 파싱이 깨진다. 대신 참조된 이름만 `_vars` = {이름: step 인덱스} 로 적어 두고
+      실행기가 값으로 바인딩한다.
+    - goal 블록은 스케줄러 의미(세션 밖)라 건드리지 않는다.
+    """
+    if not isinstance(blk, dict) or blk.get("_goal"):
+        return blk
+
+    def _resolve_body(body):
+        if isinstance(body, list):
+            return [_resolve_body(b) for b in body]
+        if isinstance(body, dict):
+            if body.get("_condition") or body.get("_case"):
+                return _resolve_block_variables(body, variables)
+            return _resolve_variables(body, variables)
+        return body
+
+    out = dict(blk)
+    if blk.get("_condition"):
+        out["branches"] = [{**b, "action": _resolve_body(b.get("action"))}
+                           for b in blk.get("branches", [])]
+    elif blk.get("_case"):
+        out["branches"] = [{**b, "action": _resolve_body(b.get("action"))}
+                           for b in blk.get("branches", [])]
+        if blk.get("default") is not None:
+            out["default"] = _resolve_body(blk.get("default"))
+    # 조건식·소스가 참조하는 변수만 바인딩 대상으로 (블록 전체 텍스트에서 수집 — 중첩 포함)
+    texts: List[str] = []
+
+    def _collect(node):
+        if isinstance(node, dict):
+            if node.get("_condition"):
+                texts.extend(str(b.get("condition") or "") for b in node.get("branches", []))
+            if node.get("_case"):
+                texts.append(str(node.get("source") or ""))
+            for v in node.values():
+                _collect(v)
+        elif isinstance(node, list):
+            for v in node:
+                _collect(v)
+
+    _collect(out)
+    refs = {m for t in texts for m in re.findall(r'\$(\w+)', t)}
+    vars_used = {name: idx for name, idx in variables.items() if name in refs}
+    if vars_used:
+        out["_vars"] = vars_used
+    return out
 
 
 # === 유틸리티 ===

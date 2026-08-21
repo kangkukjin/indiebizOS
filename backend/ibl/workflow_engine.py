@@ -25,7 +25,7 @@ import time
 import yaml
 from pathlib import Path
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 # === 경로 ===
@@ -306,10 +306,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if step_results and isinstance(step, dict):
             try:
                 step = _inject_step_results(step, step_results)
+                # 블록 조건식의 $변수 = 값 바인딩 (2026-08-22 M2): 파서가 적어 둔 _vars
+                # {이름: step 인덱스} 를 실제 결과로 — 텍스트 치환이 아니라 봉투로 싣는다.
+                if step.get("_vars"):
+                    step = dict(step)
+                    step["_var_values"] = {n: step_results.get(int(i), "")
+                                           for n, i in step["_vars"].items()}
             except ValueError as e:
                 results.append({
                     "step": i + 1,
-                    "node": step.get("_node", step.get("node", "?")),
+                    "node": _step_label(step)[0],
                     "action": step.get("action", "?"),
                     "error": str(e),
                     "duration_ms": 0,
@@ -427,8 +433,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if _bind_err:
             results.append({
                 "step": i + 1,
-                "node": tool_input.get("_node", "?"),
-                "action": tool_input.get("action", "?"),
+                "node": _step_label(tool_input)[0],
+                "action": _step_label(tool_input)[1],
                 "error": _bind_err,
                 "duration_ms": 0,
             })
@@ -461,8 +467,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
         except Exception as e:
             results.append({
                 "step": i + 1,
-                "node": tool_input.get("_node", "?"),
-                "action": tool_input.get("action", "?"),
+                "node": _step_label(tool_input)[0],
+                "action": _step_label(tool_input)[1],
                 "error": str(e),
                 "duration_ms": int((time.time() - step_start) * 1000),
             })
@@ -490,8 +496,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
         action_count += 1
         results.append({
             "step": i + 1,
-            "node": tool_input.get("_node", "?"),
-            "action": tool_input.get("action", "?"),
+            "node": _step_label(tool_input)[0],
+            "action": _step_label(tool_input)[1],
             "result": result_str,
             "duration_ms": duration_ms,
         })
@@ -572,8 +578,8 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
             duration_ms = int((time.time() - start) * 1000)
             log.append({
                 "attempt": idx + 1,
-                "node": tool_input.get("_node", "?"),
-                "action": tool_input.get("action", "?"),
+                "node": _step_label(tool_input)[0],
+                "action": _step_label(tool_input)[1],
                 "status": "exception",
                 "error": str(e),
                 "duration_ms": duration_ms,
@@ -590,8 +596,8 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         is_empty = (not is_err) and _is_empty_result(result)
         entry = {
             "attempt": idx + 1,
-            "node": tool_input.get("_node", "?"),
-            "action": tool_input.get("action", "?"),
+            "node": _step_label(tool_input)[0],
+            "action": _step_label(tool_input)[1],
             "status": "error" if is_err else ("empty" if is_empty else "ok"),
             "duration_ms": duration_ms,
         }
@@ -879,6 +885,20 @@ def _to_prev_currency(result: Any) -> str:
     if isinstance(r, dict):
         return _to_string(derive_items(r))
     return _to_string(result)
+
+
+def _step_label(step: Any) -> Tuple[str, str]:
+    """봉투 results[] 의 (node, action) 라벨 — 블록 step 은 if/case/goal + "block" (옛 "?").
+    긴 문장이 "어느 step 에서 왜" 죽었는지 읽으려면 블록도 이름이 있어야 한다(2026-08-22 M2)."""
+    if not isinstance(step, dict):
+        return "?", "?"
+    if step.get("_condition"):
+        return "if", "block"
+    if step.get("_case"):
+        return "case", "block"
+    if step.get("_goal"):
+        return "goal", "block"
+    return step.get("_node", step.get("node", "?")), step.get("action", "?")
 
 
 def _to_string(result: Any) -> str:

@@ -69,8 +69,11 @@ def _trim_for_agent(raw: str) -> str:
         data = json.loads(raw)
     except Exception:
         return raw
+    # ★2026-08-22 M1 봉투 다이어트: results[] 가 step *요약*이면(_results_summarized) final_result
+    # 가 유일한 원형 — 지우면 데이터가 사라진다. 옛 모양(verbose)일 때만 중복 제거.
     if (isinstance(data, dict) and "final_result" in data
-            and isinstance(data.get("results"), list) and data["results"]):
+            and isinstance(data.get("results"), list) and data["results"]
+            and not data.get("_results_summarized")):
         data.pop("final_result", None)
         raw = json.dumps(data, ensure_ascii=False)
     return _budget_for_agent(raw, data if isinstance(data, dict) else None)

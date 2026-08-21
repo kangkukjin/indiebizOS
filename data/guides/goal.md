@@ -65,7 +65,7 @@ IBL은 일회성 명령뿐 아니라 **목적 선언**도 지원한다. Goal을 
 
 조건식의 좌변은 `node:action{params}.field` 형태로 쓸 수 있다. `.field`는 액션 결과 dict에서 점 표기법으로 값을 꺼낸다(`memory.percent` 중첩 가능, JSON 문자열 봉투도 자동 파싱). 생략하면 결과의 `value` → `result` → 전체 dict 순으로 폴백한다.
 
-**★좌변은 반드시 소스 참조여야 한다** — 자연어(`[if: 디스크가 부족하면]`)나 리터럴(`[if: 1 > 0]`)은 평가할 수 없어 **조용히 거짓**이 되고 else 분기로 넘어간다. 조종실 dry-run(`/ibl/validate`)이 이 경우 경고를 단다.
+**★좌변은 소스 참조(`node:action{…}[.field]`) 또는 `$변수[.경로]`** — 자연어(`[if: 디스크가 부족하면]`)는 평가할 수 없어 **판정 불능**(`condition_errors` 신고, else 도 보류)이 된다(2026-08-22 개정 — 옛 '조용히 거짓' 아님). `count()/empty()/exists()`·`matches`·`and/or/not`·AI 술어(`[table:brief]{…} == "yes"`)는 시스템 프롬프트의 '조건 언어' 절 참조. 조종실 dry-run(`/ibl/validate`)이 미리 경고를 단다.
 
 ## 케이스문 (case)
 

@@ -107,12 +107,14 @@
     "ibl/event_engine",
     "ibl/ibl_access",
     "ibl/ibl_engine",
+    "ibl/ibl_envelope",
     "ibl/ibl_executors",
     "ibl/ibl_ops",
     "ibl/ibl_param_vocab",
     "ibl/ibl_parser",
     "ibl/ibl_parser_blocks",
     "ibl/ibl_parser_values",
+    "ibl/ibl_predicates",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
     "ibl/ibl_translate",
@@ -251,6 +253,7 @@
     "test_grep_glob_dialect": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
+    "test_ibl_program_grade": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
@@ -266,8 +269,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 260,
-    "engine": 214,
-    "blocklist": 46
+    "total": 263,
+    "engine": 216,
+    "blocklist": 47
   }
 }

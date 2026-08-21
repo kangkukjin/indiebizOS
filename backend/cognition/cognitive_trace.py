@@ -99,6 +99,9 @@ def _unwrap_payload(obj: Any, depth: int = 0) -> Any:
                 return obj
         return obj
     if isinstance(obj, dict):
+        # 봉투 다이어트(2026-08-22 M1) 뒤엔 results[] 가 요약이라 증거는 final_result 에만 있다.
+        if obj.get("_results_summarized") and obj.get("final_result"):
+            return _unwrap_payload(obj["final_result"], depth + 1)
         for k in ("results", "result"):
             if obj.get(k):
                 return _unwrap_payload(obj[k], depth + 1)

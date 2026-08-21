@@ -1,7 +1,10 @@
 # 프로그램급 IBL 설계 — 한 문장이 한 프로그램이 되려면 (2026-08-21)
 
-> **상태**: 설계만. 집행 0. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
-> 수리처럼 하나씩 박지 않고, 사용자 판정 후 마일스톤 단위로 집행한다.
+> **상태**: **M1·M2 집행 완료(2026-08-22)** — §4 표 참조. M3~M5 는 설계만. 이 문서의 §2 전부가 **언어 개정**(헌법 "언어의 경계" — 문법·기능어 코어)이라
+> 수리처럼 하나씩 박지 않고, 마일스톤 단위로 집행한다(사용자 지시 2026-08-22 "설계를 진행").
+> **집행 기록**: M1 = `ibl/ibl_envelope.py`(봉투 다이어트, `_execute_ibl_unified` 경계·`verbose` 플래그·MCP `_trim_for_agent` 표지 인식·평가자 증거 final_result) + `[self:write]{spill:true}`.
+> M2 = `ibl/ibl_predicates.py`(술어 언어: `$변수` 좌변·count/empty/exists·matches·and/or/not·괄호·AI 술어) + 파서 `_resolve_block_variables`(조건식 `$변수`=값 바인딩 `_vars`→`_var_values`, 분기 몸=step 치환) + 블록 헤더 깊이 인식(`_block_header`) + case `$변수` 소스 + dry-run `validate_condition`. 배터리 `backend/test_ibl_program_grade.py` E1~E4·C1~C8.
+> **§7 열린 질문의 잠정 처리**: ①AI 술어 기어=brief 의 현행 기어 그대로(별도 기어 안 둠 — 실사용 후 판단) ③봉투 다이어트 기본값=**요약 기본·`verbose` 옵트인**, 표면은 `final_result` 만 읽어 무영향(실측: 조종실·웹소켓·런처 JS 전부 final_result 소비) ②④=M4·M5 때.
 > 자매: `HIGHER_ORDER_SENTENCE_DESIGN.md`(each — 선례), `IBL_GRAMMAR_HANDOFF.md`(문법 층),
 > `ONESHOT_VOCAB_DESIGN.md`(원샷 낱말), `data/system_docs/ibl.md` "언어의 경계"(헌법).
 > 발단: 2026-08-21 에피소드 220건 진단(조합 15%·단일 85%)과 그 뒤 사용자 판정 —
@@ -132,8 +135,9 @@
 
 ### 2.5 스필 — 통화 대신 *참조* 를 흘리기
 
-**지금**: `A >> [self:write]{path} >> B` 에서 B 는 여전히 A 의 전체 통화를 받는다. 문장이 길수록 봉투가 커지고,
-**모든 step 결과가 모델 컨텍스트로 돌아온다**(`results[]`). 긴 입력 문제의 절반은 여기서 난다.
+**지금**: ~~`A >> [self:write]{path} >> B` 에서 B 는 여전히 A 의 전체 통화를 받는다~~ — **정정(2026-08-22 실측)**: write 는 이미
+`{success, path, size}` 만 돌려주는 종단 싱크라 B 는 A 의 통화를 받지 *않는다*(받을 길이 없어서 문제). 진짜 누수는 하나 —
+**모든 step 결과가 원형으로 모델 컨텍스트로 돌아오고 `final_result` 가 그 사본을 한 번 더 싣는다**(`results[]`). 긴 입력 문제의 절반은 여기서 난다.
 
 **개정**:
 1. **스필 싱크**: `[self:write]{path, spill: true}` — 뒤에는 `{items: [], ref: {path, kind: "items", count, bytes}}` 만 흐른다. 다음 step 이 items 가 필요하면 `[self:read]{path: "$ref.path"}` 로 재개(결정론). 기본 `spill: false`(현행 유지).
@@ -166,8 +170,8 @@
 
 | M | 내용 | 크기 | 즉시 효과 |
 |---|---|---|---|
-| **M1** | 2.5-2 봉투 다이어트(results 요약) + 2.5-1 `spill: true` | 중 | 모든 에피소드의 토큰 즉시 감소. 조합과 무관 |
-| **M2** | 2.1 술어 확장(변수 좌변·count/empty/exists·and/or·matches·AI 술어) | 중 | `[if:]` 가 실제로 쓰이기 시작(지금 표본 1회·실패) |
+| **M1** ✅ 2026-08-22 | 2.5-2 봉투 다이어트(results 요약) + 2.5-1 `spill: true` | 중 | 모든 에피소드의 토큰 즉시 감소. 조합과 무관. 배터리 E1~E4 |
+| **M2** ✅ 2026-08-22 | 2.1 술어 확장(변수 좌변·count/empty/exists·and/or·matches·AI 술어) | 중 | `[if:]` 가 실제로 쓰이기 시작(지금 표본 1회·실패). 배터리 C1~C8 + 라이브 종단 |
 | **M3** | 2.4 `??` 괄호 파이프 + `>>` on_error + `[try]/[catch]/[finally]` | 중 | 긴 문장 생존율 |
 | **M4** | 2.2 `[repeat:]` + 2.3 `collect` | 중 | 수집 루프·대기 루프가 문장 안으로 |
 | **M5** | 2.3 `[table:reduce]`(식 한 줄) · 2.5-3 자동 스필 · 2.6 재개 | 중 | 마무리 |

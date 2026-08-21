@@ -158,14 +158,23 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 
 블록은 **문장 위치에 통째로** 쓴다 — 여러 문장 코드 안에 다른 문장과 줄로 나뉘어 섞일 수 있고, 파이프(`>>`) *속*에는 넣을 수 없다. 블록 뒤에 같은 줄로 다른 문장을 붙이면 명시 에러.
 
-**조건 언어 (if/case 공통)** — 좌변은 반드시 IBL 소스 참조 `node:action{params}[.field]`:
+**조건 언어 (if/case 공통)** — 좌변은 **소스 참조** `node:action{params}[.field]`(실행해서 읽음) 또는 **`$변수[.경로]`**(앞 문장이 할당한 값 — 실행 없이 이미 가진 값):
 ```
 [if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}
 [else]{[self:time]}
+
+$r = [sense:search]{query: "청주 부동산"}
+[if: count($r) > 0 and $r.items.0.title matches "속보|긴급"]{[self:notify_user]{message: "$r.items.0.title"}}
+[else if: empty($r)]{[sense:search]{source: "naver", query: "청주 부동산"}}
+[else]{[table:brief]{items: "$r", instruction: "3문장 요지"}}
 ```
-- `.field`는 결과에서 점 표기로 값 추출(`memory.percent` 중첩 가능). 비교 연산자 `== != > >= < <=`, 연산자 없으면 불리언 평가.
-- **자연어 조건은 평가되지 않는다** — `[if: 디스크가 부족하면]`은 조용히 거짓이 되어 else로 간다(dry-run 검수가 경고해 준다).
-- case는 값·범위 매칭: `[case: 소스]{"값": 문장, "10~20": 문장, default: 문장}`
+- 술어 함수: `count($r)`(items 개수) · `empty($r)`(0건·빈값) · `exists($r.items.0.url)`(경로 존재). 경로는 `items.0.title` 처럼 리스트 인덱스 가능.
+- 연산자 `== != > >= < <=`, `matches "정규식"`, 논리 `and` / `or` / `not` + 괄호. 연산자 없으면 불리언 평가(통화는 items 비어있지 않음=참).
+- **AI 술어**: `[if: [table:brief]{instruction: "이 기사들이 청주 부동산과 직접 관련 있으면 yes, 아니면 no"} == "yes"]{…}` — brief 의 답(message)이 좌변값("Yes." 도 yes). 판단이 조건이 될 때 이 자리(dry-run 이 `ai_call` 로 비용 고지).
+- **판정 불능은 거짓이 아니다** — 자연어 조건(`[if: 디스크가 부족하면]`)·미할당 `$변수`·없는 경로·숫자 아닌 값의 크기 비교는 `condition_errors` 로 신고되고 **else 도 보류**된다(else 실행=조건 거짓의 단정). dry-run 검수가 미리 경고한다.
+- case는 값·범위 매칭: `[case: 소스]{"값": 문장, "10~20": 문장, default: 문장}` — 소스에도 `$r.count` 같은 변수 경로 가능.
+
+**봉투 읽는 법** — 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 중간 결과를 파일로 내리고 뒤에는 참조만 흘리려면 `[self:write]{path, spill: true}`(뒤 step 은 `{items: [], ref: {path, kind, count, bytes}}` 를 받음 — 데이터가 다시 필요하면 `[self:read]{path}`).
 
 **goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:
 ```

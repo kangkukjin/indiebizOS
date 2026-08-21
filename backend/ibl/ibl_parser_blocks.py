@@ -48,6 +48,52 @@ _ELSE_PATTERN = re.compile(
     re.DOTALL
 )
 
+# 블록 헤더 접두 — 헤더 *본문*은 정규식이 아니라 깊이 인식 스캔(_block_header)으로 읽는다.
+# (2026-08-22 M2: 조건식에 `[table:brief]{…} == "yes"` 같은 대괄호 술어가 오면 비탐욕 정규식
+#  `\[if:\s*(.+?)\]\s*\{` 가 첫 `]{` 에서 끊겨 블록 전체가 '해석되지 않은 텍스트'로 죽었다.)
+_IF_PREFIX = re.compile(r'^\s*\[if:\s*')
+_ELSE_IF_PREFIX = re.compile(r'^\s*\[else\s+if:\s*')
+
+
+def _block_header(text: str, prefix: "re.Pattern") -> Optional[Tuple[str, int]]:
+    """`[키워드: 헤더]{` 를 깊이 인식으로 읽어 (헤더 본문, '{' 위치) — 모양이 아니면 None.
+
+    헤더 안의 `[`·`{`·문자열은 깊이로 건너뛰고, 깊이 0 의 첫 `]` 가 헤더의 끝이다."""
+    m = prefix.match(text)
+    if not m:
+        return None
+    start = m.end()
+    depth = 0
+    in_s = False
+    q = ''
+    i, n = start, len(text)
+    while i < n:
+        c = text[i]
+        if in_s:
+            if c == '\\':
+                i += 2
+                continue
+            if c == q:
+                in_s = False
+        elif c in '"\'':
+            in_s = True
+            q = c
+        elif c in '[{':
+            depth += 1
+        elif c == '}':
+            depth -= 1
+        elif c == ']':
+            if depth == 0:
+                j = i + 1
+                while j < n and text[j] in ' \t\r\n':
+                    j += 1
+                if j < n and text[j] == '{':
+                    return text[start:i].strip(), j
+                return None
+            depth -= 1
+        i += 1
+    return None
+
 # case문 패턴: [case: sense:field]{...}
 _CASE_PATTERN = re.compile(
     r'^\s*\[case:\s*(.+?)\]\s*\{',
@@ -222,17 +268,17 @@ def _parse_if_else(code: str) -> Optional[Dict]:
 
     각 branch: {"condition": "..." 또는 None (else), "action": {...}}
     """
-    m = _IF_PATTERN.match(code)
-    if not m:
+    hdr = _block_header(code, _IF_PREFIX)
+    if hdr is None:
+        if _IF_PREFIX.match(code):
+            raise IBLSyntaxError("if 블록 헤더가 닫히지 않았습니다 — 형태: [if: 조건]{...}")
         return None
 
     branches = []
     pos = 0
 
-    # 첫 번째 if
-    condition_text = m.group(1).strip()
-    # 정규식이 매칭한 '{' 위치 사용 (condition 안의 '{'에 속지 않도록)
-    brace_start = m.end() - 1
+    # 첫 번째 if — 헤더는 깊이 인식으로 읽었다(조건 안의 `[…]{…}`·'{' 에 속지 않음)
+    condition_text, brace_start = hdr
     body, end_pos = _extract_bracket_raw(code, brace_start, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"if 블록 중괄호가 닫히지 않았습니다.")
@@ -245,10 +291,9 @@ def _parse_if_else(code: str) -> Optional[Dict]:
     remaining = code[pos:].strip()
     while remaining:
         # else if
-        m_elif = _ELSE_IF_PATTERN.match(remaining)
+        m_elif = _block_header(remaining, _ELSE_IF_PREFIX)
         if m_elif:
-            cond = m_elif.group(1).strip()
-            brace_start = remaining.index('{', m_elif.start())
+            cond, brace_start = m_elif
             body, end_pos = _extract_bracket_raw(remaining, brace_start, '{', '}')
             if body is None:
                 raise IBLSyntaxError("else if 블록 중괄호가 닫히지 않았습니다.")

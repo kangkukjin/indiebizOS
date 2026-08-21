@@ -617,7 +617,12 @@ def _nest(step: Any, tool_input: dict) -> Any:
     """
     if not isinstance(step, dict):
         return step
-    return {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
+    out = {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
+    # 블록 속 블록이 바깥 문장의 $변수를 계속 읽게 — 변수 값 봉투 계승 (2026-08-22 M2)
+    if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")) \
+            and "_var_values" not in out:
+        out["_var_values"] = tool_input["_var_values"]
+    return out
 
 
 def _meta_safe(v: Any) -> Any:
@@ -652,8 +657,7 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     """
     if isinstance(action, list):
         from workflow_engine import execute_pipeline
-        depth = (tool_input.get("_depth") or 0) + 1
-        steps = [({**s, "_depth": depth} if isinstance(s, dict) else s) for s in action]
+        steps = [_nest(s, tool_input) for s in action]
         return execute_pipeline(steps, project_path, agent_id=agent_id)
     from ibl_engine import execute_ibl
     return execute_ibl(_nest(action, tool_input), project_path, agent_id)
@@ -693,10 +697,10 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
                     matched="else", matched_value=None)
             return {"message": "else 분기 실행 (action 없음)", "matched": "else"}
 
-        # 조건 평가: sense 노드 실행
+        # 조건 평가: 소스 참조 실행 + $변수(앞 문장 결과, _var_values) 술어
         try:
             sense_result, left_value = _evaluate_condition_and_value(
-                condition, project_path, agent_id)
+                condition, project_path, agent_id, tool_input.get("_var_values"))
         except Exception as e:
             cond_errors.append({"condition": condition, "error": str(e)})
             continue  # 이 분기는 판정 불능 — 다음 분기로 가되 위에 기록해 둔다
@@ -736,7 +740,17 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
     # (정당한 부재 — 예: 데스크탑의 battery)을 구별한다. 전자에 default 를 실행하면
     # "어느 패턴과도 불일치"라는 단정이 된다(B10 else 위장의 case 짝). 후자는 default 가
     # 부재의 의미를 받는 정당한 용법이라 보존.
-    sense_value, read_error = _get_sense_value_checked(source, project_path, agent_id)
+    if source.strip().startswith("$"):
+        # $변수[.경로] 소스 (2026-08-22 M2) — 앞 문장 결과를 실행 없이 읽는다.
+        from ibl_predicates import Evaluator, PredicateError
+        try:
+            sense_value = Evaluator(lambda s: (None, "변수 소스"), tool_input.get("_var_values")
+                                    ).atom_value(source.strip())
+            read_error = None
+        except PredicateError as e:
+            sense_value, read_error = None, str(e)
+    else:
+        sense_value, read_error = _get_sense_value_checked(source, project_path, agent_id)
 
     if read_error is not None:
         return {
@@ -1058,70 +1072,28 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     return out
 
 
-def _evaluate_condition_and_value(condition: str, project_path: str, agent_id: str) -> tuple:
+def _evaluate_condition_and_value(condition: str, project_path: str, agent_id: str,
+                                  var_values: Optional[Dict[str, Any]] = None) -> tuple:
     """
-    조건식 평가 — case/if의 source 표현 + 비교 연산. (판정 bool, 좌변 실측값) 반환.
+    조건식 평가 — (판정 bool, 첫 좌변 실측값) 반환.
 
     ★P2 (2026-08-20): 좌변값을 함께 반환하는 이유 — 조건 블록 결과에 matched_value 를
     병기하려면 실측값이 필요한데, 별도 재조회는 소스 액션을 두 번 실행(부작용·비용)한다.
 
-    지원하는 형태:
-        node:action <op> value
-        node:action{params} <op> value
-        node:action{params}.field <op> value
-        node:action.field <op> value
-        node:action                    (불리언 평가, 연산자 없음)
-
-    sense뿐 아니라 self/limbs/others/engines 모두 허용한다.
-    비교 연산자는 {}/[]/문자열 밖의 첫 번째 것을 사용한다.
+    ★2026-08-22 프로그램급 IBL M2: 문법은 ibl_predicates 로 옮겼다 — 소스 참조
+    `node:action{…}[.field] <op> 값` 은 그대로이고, 그 위에 `$변수[.경로]` 좌변(실행 없이
+    이미 가진 값)·count/empty/exists·matches(정규식)·and/or/not·괄호·AI 술어
+    (`[table:brief]{…} == "yes"`)가 얹혔다. 판정 불능은 ValueError(PredicateError)로 올라
+    _execute_condition 의 cond_errors 정직 채널을 탄다(B8 — 거짓으로 접지 않음).
+    var_values = {변수명: 앞 문장 결과(문자열)} — 파이프 엔진이 _var_values 로 실어 준다.
     """
-    op_info = _find_top_level_comparison_op(condition)
-    if op_info:
-        op_start, op_end, op = op_info
-        source_expr = condition[:op_start].strip()
-        compare_raw = condition[op_end:].strip().strip("'\"")
-    else:
-        source_expr = condition.strip()
-        op = None
-        compare_raw = None
+    from ibl_predicates import evaluate
 
-    # F13-4 (2026-08-19 상상훈련 13회차): 검침판으로 — 판정 불능 사유(필드 경로 부재 시
-    # 사용 가능한 필드 목록 동반)를 버리지 않고 오류문에 싣는다.
-    value, _read_err = _get_sense_value_checked(source_expr, project_path, agent_id)
+    def _resolve(src: str):
+        # 소스 참조 실행 — 검침판(판정 불능 사유 동반, F13-4)
+        return _get_sense_value_checked(src, project_path, agent_id)
 
-    if value is None:
-        # ★2026-08-16 상상훈련 9회차: 비교 연산이 있는데 좌변 값을 못 읽었다면(경로 오타·
-        # 필드 부재) "조건 거짓"과 "읽기 실패"는 다른 상태다 — 조용한 거짓으로 접으면
-        # goal.md 의 낡은 경로(.current_price)가 항상-거짓으로 몇 달을 살았듯 오독이
-        # 영속한다. 예외로 던져 _execute_condition 의 cond_errors 정직 채널을 태운다.
-        # 연산자 없는 불리언 평가는 None=falsy 유지(부재의 거짓은 정당한 의미).
-        if op is not None:
-            raise ValueError(
-                f"조건 좌변 '{source_expr}' 에서 값을 읽지 못했습니다 — "
-                + (_read_err if _read_err else
-                   "필드 경로를 확인하세요(예: stock quote 는 .data.current_price — "
-                   "봉투 최상위가 아닙니다)."))
-        return False, None
-
-    if op is None:
-        return bool(value), value
-
-    ok = False
-    try:
-        sv = float(value)
-        cv = float(compare_raw)
-        if op == "==": ok = sv == cv
-        elif op == "!=": ok = sv != cv
-        elif op == ">":  ok = sv > cv
-        elif op == ">=": ok = sv >= cv
-        elif op == "<":  ok = sv < cv
-        elif op == "<=": ok = sv <= cv
-    except (ValueError, TypeError):
-        ss = str(value)
-        if op == "==": ok = ss == compare_raw
-        elif op == "!=": ok = ss != compare_raw
-
-    return ok, value
+    return evaluate(condition, _resolve, var_values)
 
 
 def _evaluate_sense_condition(condition: str, project_path: str, agent_id: str) -> bool:
@@ -1192,7 +1164,13 @@ def _get_sense_value_checked(source: str, project_path: str, agent_id: str) -> T
         return value, None
 
     if isinstance(result, dict):
-        return result.get("value", result.get("result", str(result))), None
+        # 경로 없는 소스 참조의 값: value → result → message(산문 emitter·AI 술어 [table:brief]
+        # 의 계약, 2026-08-22 M2) → 봉투 문자열. 옛 str(result) 폴백은 brief 의 yes/no 를
+        # '{"success": true, "message": "yes"}' 로 감싸 비교가 늘 거짓이 되게 했다.
+        for _k in ("value", "result", "message"):
+            if _k in result and result[_k] is not None:
+                return result[_k], None
+        return str(result), None
     return result, None
 
 

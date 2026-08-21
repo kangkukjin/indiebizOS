@@ -403,16 +403,19 @@ def _red_write_finalize(path: str):
         pid_path = os.path.join(bdir, "watchdog.pid")
         if os.path.exists(pid_path):
             try:
+                # ★생존 '질문'은 공용 pid_alive 로 — os.kill(pid, 0) 은 윈도우에서 워치독을
+                #   실제로 죽이고도 예외가 안 나 "살아 있음"으로 판정된다(안전판이 조용히 소멸).
+                from common.platform_utils import pid_alive
                 with open(pid_path) as f:
-                    os.kill(int(f.read().strip()), 0)
-                return  # 워치독 생존 — 매니페스트 mtime 변경이 곧 신호
+                    if pid_alive(f.read().strip()):
+                        return  # 워치독 생존 — 매니페스트 mtime 변경이 곧 신호
             except Exception:
                 pass
         wd_script = str(_REPO_ROOT / "backend" / "datastore" / "red_watchdog.py")
         log = open(os.path.join(bdir, "watchdog.log"), "ab")
-        p = subprocess.Popen([sys.executable, wd_script, manifest_path],
-                             stdout=log, stderr=log, start_new_session=True,
-                             cwd=str(_REPO_ROOT))
+        from common.platform_utils import spawn_detached
+        p = spawn_detached([sys.executable, wd_script, manifest_path],
+                           stdout=log, stderr=log, cwd=str(_REPO_ROOT))
         with open(pid_path, "w") as f:
             f.write(str(p.pid))
         print(f"[RED 안전판] 워치독 기동 (pid={p.pid}) — 헬스체크·자동 롤백 대기")

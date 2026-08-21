@@ -18,10 +18,26 @@ AST 로 훑으므로 의존성 설치가 필요 없고, 맥·리눅스·윈도�
 멀쩡하고 윈도우 설치앱에서만 기동이 죽는다(v1.3.6 `import mime_compat` 실측,
 a70260c 에서 수정). 이 부류도 파싱으로 잡는다.
 
-대상: backend/ + data/packages/installed/ (윈도우 설치본에 실리는 실행 코드).
+셋째 검사 — 추적되는 원장에 박힌 OS 고유 경로:
+`data/scripts/registry.yaml`([self:script] 등록 원장)은 git 추적 대상이라 3 OS 로 그대로
+클론된다. 여기 interpreter 에 경로를 적으면(`/opt/homebrew/...`, `.venv/bin/python3`,
+`C:\\Python\\python.exe`) 그 몸에서만 도는 원장이 된다 — 맥의 `.venv/bin` 은 윈도우에선
+`.venv\\Scripts` 다. 원장엔 **역할 이름**(python·bash·node)만 적고 실경로는 런타임이
+해소한다(script_ops._resolve_interpreter). 이 검사는 그 규약이 데이터로 지켜지는지 본다.
+의존성 없이 돌아야 하므로 yaml 파서 대신 줄 단위로 읽는다.
+
+넷째 검사 — `os.kill(pid, 0)`:
+유닉스에선 "살아 있니?"라는 무해한 질문이지만 **윈도우 CPython 에선 TerminateProcess** 로
+옮겨져 그 프로세스를 죽인다(exit code 0 이라 정상 종료처럼 보이기까지 한다). 상태를 물을
+때마다 대상이 죽는 부류라 증상이 유령 같고, 실제로 이 저장소에서 세 곳(스크립트 백그라운드
+러너·강의 렌더·RED 자기수정 워치독)에 잠복해 있었다(2026-08-22). 판정은 전 OS 단일 소스
+`common.platform_utils.pid_alive` 하나만 쓴다 — 이 검사가 재발을 막는다.
+
+대상: backend/ + data/packages/installed/ (윈도우 설치본에 실리는 실행 코드) + 위 원장.
 pre-commit 훅과 CI(portability.yml) 양쪽에서 호출된다.
 """
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +50,13 @@ UNIX_ONLY = {
 }
 
 SCAN_ROOTS = [ROOT / "backend", ROOT / "data" / "packages" / "installed"]
+
+# 셋째 검사: 추적 원장의 인터프리터는 역할 이름이어야 한다(경로 금지)
+SCRIPT_REGISTRY = ROOT / "data" / "scripts" / "registry.yaml"
+
+# 넷째 검사: os.kill(pid, 0) 은 윈도우에서 '질문'이 아니라 '처형'이다 — 단일 소스만 예외
+PID_ALIVE_HOME = ROOT / "backend" / "common" / "platform_utils.py"
+_INTERP_LINE = re.compile(r"^\s*interpreter:\s*(.+?)\s*$")
 SKIP_DIRS = {"__pycache__", "_archive", "node_modules", ".git"}
 
 # 서브트리 전체가 "가드됨"으로 간주되는 컨테이너
@@ -126,6 +149,41 @@ def check_entrypoint_import_order():
     return flagged
 
 
+def scan_os_kill_probe(path):
+    """os.kill(<pid>, 0) 호출 탐지 — 생존 판정 관용구가 윈도우에선 프로세스를 죽인다."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+    hits = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or len(node.args) != 2:
+            continue
+        fn = node.func
+        if not (isinstance(fn, ast.Attribute) and fn.attr == "kill"
+                and isinstance(fn.value, ast.Name) and fn.value.id == "os"):
+            continue
+        sig = node.args[1]
+        if isinstance(sig, ast.Constant) and sig.value == 0:
+            hits.append(node.lineno)
+    return hits
+
+
+def check_registry_interpreters():
+    """registry.yaml 의 interpreter 가 경로면 신고 — 다른 OS·기기에서 원리적으로 안 풀린다."""
+    if not SCRIPT_REGISTRY.exists():
+        return []
+    flagged = []
+    for lineno, line in enumerate(SCRIPT_REGISTRY.read_text(encoding="utf-8").splitlines(), 1):
+        m = _INTERP_LINE.match(line)
+        if not m:
+            continue
+        value = m.group(1).strip().strip("'\"")
+        if "/" in value or "\\" in value or re.match(r"^[A-Za-z]:", value):
+            flagged.append((lineno, value))
+    return flagged
+
+
 def main() -> int:
     flagged = []
     for root in SCAN_ROOTS:
@@ -138,6 +196,17 @@ def main() -> int:
                 flagged.append((path.relative_to(ROOT), lineno, mod))
 
     order_flagged = check_entrypoint_import_order()
+    registry_flagged = check_registry_interpreters()
+
+    kill_flagged = []
+    for root in SCAN_ROOTS:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*.py")):
+            if any(part in SKIP_DIRS for part in path.parts) or path == PID_ALIVE_HOME:
+                continue
+            for lineno in scan_os_kill_probe(path):
+                kill_flagged.append((path.relative_to(ROOT), lineno))
 
     failed = False
     if flagged:
@@ -159,10 +228,32 @@ def main() -> int:
         print("고치는 법: 해당 import 를 sys.path.insert(0, str(BACKEND_PATH)) 뒤로 이동"
               "(v1.3.7 a70260c 의 mime_compat 수정 참조).")
 
+    if registry_flagged:
+        failed = True
+        rel = SCRIPT_REGISTRY.relative_to(ROOT)
+        print("[FAIL] 추적 원장에 박힌 인터프리터 경로 — 이 원장은 3 OS 로 클론됩니다:")
+        for lineno, value in registry_flagged:
+            print(f"  {rel}:{lineno}  interpreter: {value}")
+        print()
+        print("고치는 법: 역할 이름만 적으세요 — python / bash / node.")
+        print("  등록 시 interpreter 를 생략하면 확장자로 역할이 정해지고,")
+        print("  실경로는 실행 시점에 그 몸이 해소합니다(파이썬=sys.executable).")
+
+    if kill_flagged:
+        failed = True
+        print("[FAIL] os.kill(pid, 0) — 윈도우에선 생존 '질문'이 아니라 TerminateProcess 입니다"
+              " (상태를 물을 때마다 그 프로세스가 죽습니다):")
+        for rel, lineno in kill_flagged:
+            print(f"  {rel}:{lineno}")
+        print()
+        print("고치는 법: from common.platform_utils import pid_alive — 전 OS 단일 소스입니다.")
+
     if failed:
         return 1
 
-    print("[OK] 윈도우 이식성 정적 검사 통과 (유닉스 전용 무가드 import 없음 + 진입점 import 순서 정상)")
+    print("[OK] 윈도우 이식성 정적 검사 통과 "
+          "(유닉스 전용 무가드 import 없음 + 진입점 import 순서 정상 + "
+          "원장 인터프리터 역할 이름 + os.kill 생존질문 없음)")
     return 0
 
 

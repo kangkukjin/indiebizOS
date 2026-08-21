@@ -59,16 +59,15 @@ def read_state(lecture_id: str) -> dict:
 
 
 def _pid_alive(pid) -> bool | None:
-    """True=살아있음 / False=없음 / None=판정 불가(pid 를 안 적은 옛 상태 파일)."""
+    """True=살아있음 / False=없음 / None=판정 불가(pid 를 안 적은 옛 상태 파일).
+
+    판정 자체는 common.platform_utils.pid_alive 한 곳에 있다 — 옛 os.kill(pid, 0) 은
+    윈도우에서 렌더 프로세스를 실제로 죽였다(질문이 아니라 TerminateProcess)."""
     if not pid:
         return None
     try:
-        os.kill(int(pid), 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:      # 남의 프로세스 = 살아는 있음
-        return True
+        from common.platform_utils import pid_alive
+        return pid_alive(pid)
     except Exception:
         return None
 

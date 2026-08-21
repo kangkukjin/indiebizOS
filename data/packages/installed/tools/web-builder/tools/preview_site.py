@@ -74,13 +74,16 @@ def remove_process_info(project_path: str) -> None:
 
 
 def is_process_running(pid: int) -> bool:
-    """프로세스 실행 여부 확인 (psutil, 전 OS).
-    ★윈도우에선 os.kill(pid, 0) 이 프로세스를 실제로 종료(TerminateProcess)시키므로 금지."""
-    try:
-        import psutil
-        return psutil.pid_exists(pid) and psutil.Process(pid).is_running()
-    except Exception:
-        return False
+    """프로세스 실행 여부 확인 (전 OS).
+
+    판정은 common.platform_utils.pid_alive 단일 소스에 있다 — 이 함수는 그 얇은 경유다.
+    ★윈도우에선 os.kill(pid, 0) 이 프로세스를 실제로 종료(TerminateProcess)시키므로 금지.
+      이 파일은 그 사실을 알고 psutil 로 피하고 있었지만, 판정이 두 벌이면 한쪽만 고쳐지는
+      드리프트가 생긴다(실제로 저장소의 다른 세 곳은 os.kill 관용구로 잠복해 있었다, 2026-08-22).
+    함수 안 import: 이 모듈은 백엔드가 importlib 로 인프로세스 로드하지만 파일 단독 실행
+      진입점(__main__)도 있어, 톱레벨 의존으로 만들면 그 경로가 import 시점에 깨진다."""
+    from common.platform_utils import pid_alive
+    return pid_alive(pid)
 
 
 def start_preview(project_path: str, port: int) -> dict:

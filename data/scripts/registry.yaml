@@ -2,25 +2,25 @@
   description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts.
     표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
   file: 나레이션생성.py
-  interpreter: .venv/bin/python3
-  registered_at: '2026-08-15T23:08:41'
+  interpreter: python
+  registered_at: '2026-08-22T03:03:36'
   timeout: 2400
 음성받아쓰기:
   description: '오디오/영상 파일 받아쓰기(Gemini) — args: path(필수), out, segment_seconds(기본 300),
     prompt, model. 축약 금지·인사말 보존 verbatim. [sense:listen]은 마이크 전용이라 파일 STT의 유일한 경로.'
   file: 음성받아쓰기.py
-  interpreter: .venv/bin/python3
+  interpreter: python
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
 잔여추정:
   description: 탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체
   file: 잔여추정.py
-  interpreter: .venv/bin/python3
+  interpreter: python
   registered_at: '2026-08-15T14:02:43'
   timeout: 300
 폴더용량:
   description: outputs 폴더 용량 요약 (items)
   file: 샘플_폴더용량.py
-  interpreter: /opt/homebrew/opt/python@3.14/bin/python3.14
-  registered_at: '2026-08-07T17:04:15'
+  interpreter: python
+  registered_at: '2026-08-22T03:03:55'
   timeout: 300

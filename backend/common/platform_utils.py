@@ -8,6 +8,7 @@ common.platform_utils — OS 이식성 헬퍼 (맥/윈도우/리눅스 공통)
 원칙
   - 바이너리 탐색:   PATH(shutil.which) 우선 + OS별 표준 설치 경로 폴백(윈도우 .exe 포함).
   - 프로세스 관리:   psutil 로 통일(pgrep/pkill/tasklist 불필요, 전 OS 동일).
+  - 생존 판정:       pid_alive() — os.kill(pid,0) 은 윈도우에선 프로세스를 죽인다(금지).
   - 백그라운드 기동: 유닉스=start_new_session, 윈도우=DETACHED_PROCESS(콘솔창 없이 분리).
   - 열기:            윈도우=os.startfile, 맥=open, 리눅스=xdg-open / URL=webbrowser.
 """
@@ -139,6 +140,51 @@ def spawn_detached(cmd: list[str], **kwargs) -> subprocess.Popen:
     else:
         kwargs.setdefault("start_new_session", True)
     return subprocess.Popen(cmd, **kwargs)
+
+
+# ─────────────────────────────────────────────────────────────
+# 프로세스 생존 판정
+# ─────────────────────────────────────────────────────────────
+
+def pid_alive(pid) -> bool:
+    """이 pid 가 살아 있는가 (전 OS).
+
+    ★★유닉스의 관용구 `os.kill(pid, 0)` 을 윈도우에 그대로 쓰면 **질문이 아니라 처형**이다 —
+      윈도우 CPython 의 os.kill 은 CTRL_C/CTRL_BREAK 가 아닌 신호를 TerminateProcess 로 옮기므로
+      "살아 있니?" 한 번에 그 프로세스가 죽는다(그것도 exit code 0 이라 정상 종료처럼 보인다).
+      백그라운드 작업의 상태를 물을 때마다 그 작업을 죽이는 부류라 증상이 유령 같다.
+    psutil 이 있으면 그걸로, 없으면 윈도우=OpenProcess+GetExitCodeProcess / 유닉스=os.kill(pid,0).
+    """
+    try:
+        pid = int(pid)
+    except (TypeError, ValueError):
+        return False
+    if pid <= 0:
+        return False
+    if psutil:
+        try:
+            return psutil.pid_exists(pid) and psutil.Process(pid).is_running()
+        except Exception:
+            return False
+    if IS_WINDOWS:
+        import ctypes  # lazy — windll 은 윈도우에만 있다
+        PROCESS_QUERY_LIMITED_INFORMATION, STILL_ACTIVE = 0x1000, 259
+        k32 = ctypes.windll.kernel32
+        handle = k32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            return False
+        try:
+            code = ctypes.c_ulong()
+            return bool(k32.GetExitCodeProcess(handle, ctypes.byref(code))) and code.value == STILL_ACTIVE
+        finally:
+            k32.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:      # 남의 프로세스 = 살아는 있음
+        return True
+    except OSError:
+        return False
 
 
 # ─────────────────────────────────────────────────────────────

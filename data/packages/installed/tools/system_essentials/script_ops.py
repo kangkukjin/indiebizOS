@@ -18,6 +18,9 @@
 - 실행 상태(last_run·last_error)=`data/scripts.json` **무시 대상**. 정의와 상태를 안 가르면
   실행할 때마다 원장이 바뀌어 git 이 시끄럽다.
 - 파일 경로는 registry 에 **이름만** 적힌다(저장소 상대) — 클론한 어느 기기에서나 돈다.
+- 인터프리터도 같은 이유로 **역할 이름**(python·bash·node)만 적는다 (2026-08-22). 실경로는
+  실행 시점에 그 몸이 해소한다 — 원장은 3 OS 로 클론되므로 경로를 얼리면 원리적으로 부서진다.
+  옛 형식(경로가 박힌) 원장은 런타임이 자가치유하고, CI(check_win_portability)가 재발을 막는다.
 
 로그: data/script_runs/<id>.log.
 
@@ -38,6 +41,8 @@ from pathlib import Path
 
 import yaml
 
+from common import platform_utils  # OS 이식성 단일 소스(분리 실행·생존 판정)
+
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _SCRIPT_DIR = _ROOT / "data" / "scripts"           # 본문 (추적)
 _REGISTRY = _SCRIPT_DIR / "registry.yaml"          # 정의 (추적)
@@ -47,7 +52,8 @@ _JOB_DIR = _RUN_DIR / "jobs"
 _BG_RUNNER = Path(__file__).with_name("_bg_runner.py")
 _MAX_WAIT = 240
 
-_INTERPRETERS = {".py": sys.executable or "python3", ".sh": "/bin/bash", ".js": "node"}
+# 확장자 → **역할 이름**(경로 아님). 실경로는 _resolve_interpreter 가 매 실행 해소한다.
+_INTERPRETERS = {".py": "python", ".sh": "bash", ".js": "node"}
 _STDOUT_TAIL = 8000
 _STDERR_TAIL = 2000
 _DEFAULT_TIMEOUT = 300
@@ -101,13 +107,53 @@ def _rel_to_root(raw):
         return str(raw)
 
 
-def _resolve_interpreter(raw):
-    """registry 의 interpreter 를 실행 가능한 형태로. 상대경로면 저장소 기준."""
-    s = str(raw or "")
-    p = Path(s)
-    if s and not p.is_absolute() and "/" in s:
-        return str(_ROOT / s)
-    return s
+def _is_python_name(name):
+    """python / python3 / python3.13 / python.exe / pythonw … 파이썬 가족인가."""
+    n = str(name).lower()
+    if n.endswith(".exe"):
+        n = n[:-4]
+    return n.rstrip("0123456789.") in ("python", "pythonw")
+
+
+def _resolve_interpreter(raw, suffix=None):
+    """원장 값 → **이 몸에서** 실행 가능한 경로. 반환 (경로, note|None).
+
+    ★인터프리터는 '몸의 명사'다 — "지금 무슨 파이썬으로 도는가"는 그 몸의 런타임만 아는
+      사실이지, 원장에 적어 다른 몸에 부칠 데이터가 아니다("명사의 자리" 헌법).
+      registry.yaml 은 추적되어 3 OS 로 클론되므로 여기에 경로를 얼리면 원리적으로 부서진다
+      (맥 .venv/bin/python3 ↔ 윈도우 .venv\\Scripts\\python.exe, 마이너 버전 고착, 홈브루 절대경로).
+
+    해소 순서:
+      1. 경로가 박혀 있고(옛 원장·명시 override) 이 몸에 실존하면 → 존중
+      2. 박힌 경로가 없으면 → **역할로 되살린다**(다른 기기에서 온 원장 자가치유) + note
+      3. 역할 이름: 파이썬 가족 → sys.executable(그 몸 자신) / 그 외 → PATH 조회
+    이래서 옛 형식 원장도 마이그레이션 없이 어디서든 돈다.
+    """
+    s = str(raw or "").strip()
+    if not s:
+        s = _INTERPRETERS.get(str(suffix or "").lower(), "")
+    if not s:
+        return "", "인터프리터를 알 수 없습니다 — interpreter 파라미터로 지정하세요."
+    note = None
+    if "/" in s or "\\" in s:                      # 경로가 박힌 값
+        p = Path(s)
+        if not p.is_absolute():
+            p = _ROOT / s                          # 저장소 상대
+        if p.is_file():
+            return str(p), None
+        note = (f"원장에 박힌 인터프리터 경로({s})가 이 몸에 없어 역할로 해소했습니다 — "
+                f"interpreter 를 생략해 재등록하면 어느 기기에서나 풉니다.")
+        # ★파일명은 두 구분자 모두로 자른다 — POSIX 의 Path 는 백슬래시를 구분자로 안 봐서
+        #   윈도우에서 등록된 원장(C:\\Python\\python.exe)이 맥에 오면 자가치유가 안 된다.
+        s = re.split(r"[\\/]", s)[-1]
+    if _is_python_name(s):
+        return (sys.executable or shutil.which("python3") or shutil.which("python") or "python3"), note
+    found = shutil.which(s)
+    if not found and s.lower().endswith(".exe"):
+        found = shutil.which(s[:-4])          # 윈도우 원장(bash.exe)이 유닉스에 온 경우
+    if found:
+        return found, note
+    return s, (note or f"'{s}' 을 PATH 에서 찾지 못했습니다.")
 
 
 def _sanitize_id(raw):
@@ -135,8 +181,8 @@ def _entry_item(sid, e, state):
     problems = []
     if not _script_path(e).is_file():
         problems.append("⚠️ 파일 없음")
-    interp = _resolve_interpreter(e.get("interpreter")).split()[0]
-    if interp and not (shutil.which(interp) or Path(interp).is_file()):
+    interp, _note = _resolve_interpreter(e.get("interpreter"), _script_path(e).suffix)
+    if not interp or not (shutil.which(interp) or Path(interp).is_file()):
         problems.append("⚠️ 인터프리터 없음")
     if problems:
         status = " · ".join(problems) + f" — {status}"
@@ -178,31 +224,50 @@ def op_register(tool_input):
                 "hint": f"mv '{p}' data/scripts/ 로 옮긴 뒤 그 경로로 다시 register 하세요 — "
                         f"어휘와 같이 버전 관리되고 다른 기기에서도 실행되게 하기 위함입니다."}
 
-    interpreter = (tool_input.get("interpreter") or "").strip() or _INTERPRETERS.get(p.suffix.lower())
-    if not interpreter:
-        return {"success": False,
-                "error": f"인터프리터를 추론할 수 없습니다({p.suffix}) — interpreter 파라미터로 지정 (예 python3)."}
+    # 원장에는 **역할 이름**만 적는다 — 경로를 얼리면 그 몸에서만 도는 원장이 된다.
+    # (registry.yaml 은 git 추적 대상이라 3 OS 로 그대로 클론된다.)
+    raw_interp = str(tool_input.get("interpreter") or "").strip()
+    warn = None
+    if not raw_interp:
+        interpreter = _INTERPRETERS.get(p.suffix.lower())
+        if not interpreter:
+            return {"success": False,
+                    "error": f"인터프리터를 추론할 수 없습니다({p.suffix}) — interpreter 파라미터로 지정 (예 python3)."}
+    elif "/" in raw_interp or "\\" in raw_interp:
+        interpreter = _rel_to_root(raw_interp)          # 명시 override — 존중하되 경고
+        warn = ("인터프리터에 경로를 박았습니다 — registry.yaml 은 추적되어 다른 기기·OS 로 "
+                "클론되므로 그쪽에선 이 경로가 없습니다(런타임이 역할로 되살리지만 의도와 다를 수 있음). "
+                "특별한 이유가 없으면 interpreter 를 생략하세요 — 그 몸 자신의 파이썬이 잡힙니다.")
+    elif _is_python_name(raw_interp):
+        interpreter = "python"                          # python3.13 등 버전 고착을 역할로 정규화
+    else:
+        interpreter = raw_interp
 
     sid = _sanitize_id(tool_input.get("id") or p.stem)
     if not sid:
         return {"success": False, "error": "유효한 id 를 만들 수 없습니다 — id 파라미터로 지정."}
-    try:
-        timeout = int(tool_input.get("timeout", _DEFAULT_TIMEOUT) or _DEFAULT_TIMEOUT)
-    except (TypeError, ValueError):
-        timeout = _DEFAULT_TIMEOUT
 
     registry = _read_registry()
     updated = sid in registry
     prev = registry.get(sid) or {}
+    # timeout 미지정 = "그대로 두라" — 승계하지 않으면 재등록이 기존 값을 조용히 깎는다(silent clamp).
+    raw_timeout = tool_input.get("timeout")
+    try:
+        timeout = int(raw_timeout) if raw_timeout not in (None, "") else int(prev.get("timeout") or _DEFAULT_TIMEOUT)
+    except (TypeError, ValueError):
+        timeout = int(prev.get("timeout") or _DEFAULT_TIMEOUT)
+
     registry[sid] = {
         "file": rel,
-        "interpreter": _rel_to_root(interpreter) if "/" in interpreter else interpreter,
+        "interpreter": interpreter,
         "description": str(tool_input.get("description") or prev.get("description") or ""),
         "timeout": timeout,
         "registered_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
     _write_registry(registry)
     return {"success": True, "id": sid, "updated": updated, "path": str(p), "interpreter": interpreter,
+            "timeout": timeout,
+            **({"warning": warn} if warn else {}),
             "message": f"등록 {'갱신' if updated else '완료'} — 실행: [self:script]{{op: \"run\", id: \"{sid}\"}}"}
 
 
@@ -254,12 +319,13 @@ def op_run(tool_input):
 
     _RUN_DIR.mkdir(parents=True, exist_ok=True)
     log_path = _RUN_DIR / f"{sid}.log"
+    interp, interp_note = _resolve_interpreter(entry.get("interpreter"), p.suffix)
     if tool_input.get("background"):
-        return _run_background(sid, entry, p, stdin_data, timeout)
+        return _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
     started = time.time()
     try:
         proc = subprocess.run(
-            [_resolve_interpreter(entry["interpreter"]), str(p)],
+            [interp, str(p)],
             input=stdin_data, capture_output=True, text=True,
             timeout=timeout, cwd=str(p.parent),
         )
@@ -270,9 +336,9 @@ def op_run(tool_input):
         stdout = (te.stdout or b"").decode("utf-8", "replace") if isinstance(te.stdout, bytes) else (te.stdout or "")
         stderr = (te.stderr or b"").decode("utf-8", "replace") if isinstance(te.stderr, bytes) else (te.stderr or "")
     except OSError as e:
-        interp_shown = _resolve_interpreter(entry.get("interpreter"))
         return {"success": False,
-                "error": f"실행 불가: {e} — interpreter({interp_shown}) 존재 여부 확인 후 재등록."}
+                "error": f"실행 불가: {e} — interpreter({interp or entry.get('interpreter')}) 를 이 몸에서 찾지 못했습니다.",
+                **({"interpreter_note": interp_note} if interp_note else {})}
     duration_ms = int((time.time() - started) * 1000)
 
     try:
@@ -295,9 +361,12 @@ def op_run(tool_input):
         return {"success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
                 **({"timed_out": True, "error": f"타임아웃 {timeout}초 초과 — 스크립트 중단."} if timed_out
                    else {"error": f"스크립트 실패 (exit {exit_code}) — 로그를 보고 도구층(run_command)에서 고친 뒤 재등록."}),
-                "stderr_tail": stderr[-_STDERR_TAIL:], "log": str(log_path)}
+                "stderr_tail": stderr[-_STDERR_TAIL:], "log": str(log_path),
+                **({"interpreter_note": interp_note} if interp_note else {})}
 
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
+    if interp_note:
+        res["interpreter_note"] = interp_note
     # stdout 이 JSON 이고 items/table 을 실으면 통화로 승격 — 파이프로 흐른다.
     parsed = None
     try:
@@ -315,11 +384,9 @@ def op_run(tool_input):
 # ───────────── 긴 작업 핸들 (background run / status) ─────────────
 
 def _pid_alive(pid):
-    try:
-        os.kill(int(pid), 0)
-        return True
-    except (OSError, TypeError, ValueError):
-        return False
+    """살아 있나? — 판정은 common.platform_utils 한 곳에 있다.
+    (윈도우에서 os.kill(pid, 0) 은 질문이 아니라 TerminateProcess 라 그 작업을 죽인다.)"""
+    return platform_utils.pid_alive(pid)
 
 
 def _read_job(path):
@@ -329,21 +396,23 @@ def _read_job(path):
         return None
 
 
-def _run_background(sid, entry, script_path, stdin_data, timeout):
+def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp_note=None):
     """별도 프로세스로 실행 — 즉시 job_id 반환. 상태는 data/script_runs/jobs/<job_id>.json."""
     _JOB_DIR.mkdir(parents=True, exist_ok=True)
     job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}"
     job_path = _JOB_DIR / f"{job_id}.json"
     log_path = _RUN_DIR / f"{job_id}.log"
     job = {"job_id": job_id, "id": sid, "status": "starting", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-           "timeout": timeout, "log": str(log_path), "interpreter": _resolve_interpreter(entry["interpreter"]),
+           "timeout": timeout, "log": str(log_path), "interpreter": interp,
            "script": str(script_path), "stdin": stdin_data}
     _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
+    # 러너는 부모(백엔드)의 죽음·리로드를 넘어 살아야 한다 — 분리 방식은 OS 마다 다르므로
+    # 공용 spawn_detached 에 맡긴다(유닉스=새 세션 / 윈도우=DETACHED_PROCESS, 세션 개념 없음).
     try:
-        runner = subprocess.Popen(
+        runner = platform_utils.spawn_detached(
             [sys.executable or "python3", str(_BG_RUNNER), str(job_path)],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True, cwd=str(script_path.parent),
+            cwd=str(script_path.parent),
         )
     except OSError as e:
         job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"
@@ -355,6 +424,7 @@ def _run_background(sid, entry, script_path, stdin_data, timeout):
     state.setdefault(sid, {})["last_job"] = job_id
     _write_state(state)
     return {"success": True, "job_id": job_id, "id": sid, "status": "running", "log": str(log_path),
+            **({"interpreter_note": interp_note} if interp_note else {}),
             "message": f"백그라운드 시작 — [self:script]{{op: \"status\", job_id: \"{job_id}\", wait: 60}} 로 확인(폴링 대신 wait)."}
 
 

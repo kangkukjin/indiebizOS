@@ -2,7 +2,7 @@
 
 data-ops `[table:compute]` 의 `_compute_compile` 과 같은 화이트리스트·같은 함수 집합. 패키지 핸들러를
 엔진 층이 import 하면 층 역전이라 공용 층(common)에 한 벌 더 둔다 — 허용 목록이 갈라지지 않게
-두 자리 모두 이 파일의 상수를 정본으로 본다(compute 는 후속 정리에서 이쪽을 import 하도록).
+두 자리 모두 이 파일의 상수를 정본으로 본다 — compute(data-ops) 는 2026-08-22 정리로 이쪽을 import 해 재수출한다(화이트리스트 단일 소스).
 """
 import ast as _ast
 import math as _math

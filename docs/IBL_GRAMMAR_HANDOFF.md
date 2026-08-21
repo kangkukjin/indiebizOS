@@ -508,3 +508,4 @@ RAG 재인덱싱 3,702편. 발행물 재생성 → **12문단 + 이미지 1**, f
 - 접점 갱신: `ibl_engine` 디스패치(`_try`/`_repeat`), `_nest` 변수 계승, `_stamp_depth`·ACL `_collect_step_nodes`·사용 계수 키(`body/catch/finally/_branch_steps`), dry-run `_walk`(try/repeat 펼침), `_step_label`(try/repeat), 도구 스키마 `resume`.
 - 배터리 `backend/test_ibl_program_grade_m3m5.py` T1~T6·R1~R5·D1·S1~S3. 예약어에 `on_error` 추가. §7 판정 4건은 설계 문서 헤더.
 - 곁다리 수리(라이브 검증 중 발견): ①단일 문장 `[try]`/`[repeat:]` 가 에이전트 진입점의 단일-step 경로에서 블록으로 인식되지 않아 "action 파라미터가 필요합니다"로 죽던 것(`_execute_ibl_unified` 블록 판별에 `_try/_repeat` 추가 — 파이프 안에선 정상이었음) ②블록 결과를 `$변수` 로 받아 `[table:*]{items: "$변수"}` 에 넣으면 v4 치환이 items JSON *문자열*을 넣어 변환자가 "통화 없음"으로 거절하던 것(data-ops 디스패처가 문자열 items 를 목록으로 되읽음) — 블록은 파이프 속에 못 들어가므로 이 경로가 블록 결과를 변환자에 잇는 정본 관용구다. ③워크플로 저장 문법 관문의 dead-vocab 검사가 try/repeat 블록을 건너뛰도록.
+- 정리(같은 날): data-ops `[table:compute]` 의 식 화이트리스트 두 벌을 `common/safe_expr` 단일 소스로 합침(`_compute_compile` 위임·`_COMPUTE_FUNCS` 재수출) — reduce 와 허용 구문이 갈라질 수 없다.

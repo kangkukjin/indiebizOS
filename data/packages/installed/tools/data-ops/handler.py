@@ -1310,36 +1310,14 @@ render_document = _docs.render_document
 # 왜: 전세가율·기여도·증감률 같은 열끼리의 산술이 없어 모델이 *이미 받은 숫자를* 파이썬
 # 소스에 손으로 다시 타이핑했다(ep1325 `sam0, sam1 = 70300, 271000`) — 통화가 모델
 # 컨텍스트를 거쳐 나오는 자리. groupby 는 집계(행→1)만, 이건 행→행 파생.
-import ast as _ast
-import math as _math
-
-_COMPUTE_FUNCS = {"round": round, "abs": abs, "min": min, "max": max, "int": int,
-                  "float": float, "len": len, "str": str, "sqrt": _math.sqrt, "log": _math.log}
-_COMPUTE_NODES = (_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Name, _ast.Load,
-                  _ast.Call, _ast.Compare, _ast.BoolOp, _ast.IfExp, _ast.Subscript, _ast.Tuple,
-                  _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.FloorDiv, _ast.Mod, _ast.Pow,
-                  _ast.USub, _ast.UAdd, _ast.Not, _ast.And, _ast.Or,
-                  _ast.Eq, _ast.NotEq, _ast.Lt, _ast.LtE, _ast.Gt, _ast.GtE)
-
-
-class _Row(dict):
-    """식 안에서 col("보증금(만원)") 로 식별자가 못 되는 열도 읽는다."""
+# ★2026-08-22 M5 정리: 식 화이트리스트·함수 집합의 정본은 common/safe_expr (reduce 와 공유) —
+# 두 벌로 두면 허용 구문이 갈라진다. 여기선 그 정본을 compute 의 이름으로 재수출만 한다.
+from common.safe_expr import FUNCS as _COMPUTE_FUNCS, compile_expr as _safe_compile
 
 
 def _compute_compile(expr):
-    tree = _ast.parse(str(expr), mode="eval")
-    for n in _ast.walk(tree):
-        if not isinstance(n, _COMPUTE_NODES):
-            raise ValueError(f"허용되지 않는 구문: {type(n).__name__}")
-        if isinstance(n, _ast.Call) and not (isinstance(n.func, _ast.Name) and n.func.id in (*_COMPUTE_FUNCS, "col")):
-            raise ValueError("허용 함수: " + ", ".join(sorted(_COMPUTE_FUNCS)) + ", col")
-        if isinstance(n, _ast.Name) and n.id.startswith("__"):
-            raise ValueError("금지된 이름")
-    names = sorted({n.id for n in _ast.walk(tree) if isinstance(n, _ast.Name)
-                    and n.id not in _COMPUTE_FUNCS and n.id != "col"})
-    cols = [n.value for n in _ast.walk(tree) if isinstance(n, _ast.Call) and isinstance(n.func, _ast.Name)
-            and n.func.id == "col" and n.args and isinstance(n.args[0], _ast.Constant)]
-    return compile(tree, "<compute>", "eval"), names, [str(c) for c in cols]
+    """(code, 식별자 이름들, col("…") 열 이름들) — common.safe_expr.compile_expr 위임."""
+    return _safe_compile(expr)
 
 
 def _op_compute(prev, params):

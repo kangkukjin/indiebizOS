@@ -217,6 +217,67 @@ def op_log(tool_input):
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
 
 
+def op_writes(tool_input):
+    """런타임 쓰기 원장 회상 — git 이 못 보는 층(data/·outputs/)의 관문 통과 쓰기.
+
+    ★부분성 정직: 원장은 관문(safe_store·[self:write])을 지난 쓰기만 기록한다 —
+    관문 밖 직접 쓰기는 원리적으로 없다. 전수가 필요한 코드 층은 changes(git)가 정답.
+    """
+    root, err = _guard_root()
+    if err:
+        return err
+    notes = []
+    days = _clamp(tool_input, "days", _DEFAULT_DAYS, _MAX_DAYS, notes)
+    limit = _clamp(tool_input, "limit", _DEFAULT_LIMIT, _MAX_LIMIT, notes)
+    scope, serr = _scope_of(tool_input, root)
+    if serr:
+        return {"success": False, "message": serr}
+
+    ledger = os.path.join(root, "data", "write_ledger.jsonl")
+    raw = []
+    for p in (ledger + ".1", ledger):
+        try:
+            with open(p, encoding="utf-8") as f:
+                raw += [ln for ln in f.read().splitlines() if ln.strip()]
+        except OSError:
+            continue
+    if not raw:
+        return {"success": True, "items": [], "total": 0, "truncated": False,
+                "text": "쓰기 원장이 비어 있습니다 — 관문(safe_store·[self:write]) 쓰기가 아직 기록되지 않았습니다."}
+
+    import json as _json
+    from datetime import datetime as _dt, timedelta as _td
+    cutoff = (_dt.now() - _td(days=days)).isoformat(timespec="seconds")
+    rows = []
+    for ln in raw:
+        try:
+            r = _json.loads(ln)
+        except ValueError:
+            continue
+        if (r.get("ts") or "") < cutoff:
+            continue
+        fp = r.get("path") or ""
+        if scope and not (fp == scope or fp.startswith(scope + "/")):
+            continue
+        rows.append({"시각": r.get("ts", ""), "파일": fp, "사건": r.get("event", ""),
+                     "관문": r.get("gate", ""), "영역": _area_of(fp),
+                     "행위자": r.get("agent") or "",
+                     "작업": r.get("task") or "",
+                     "출처": ("자가점검" if r.get("hc") else (r.get("origin") or ""))})
+    rows.sort(key=lambda r: r["시각"], reverse=True)
+    total = len(rows)
+    truncated = total > limit
+    rows = rows[:limit]
+    scope_txt = f" (스코프 {scope})" if scope else ""
+    text = (f"최근 {days}일 런타임 쓰기{scope_txt}: {total}건 — "
+            f"관문(safe_store·[self:write]) 통과분만(전수 아님, 코드 층 전수는 changes)")
+    if truncated:
+        text += f" · {limit}건만 표시"
+    if notes:
+        text += " · " + ", ".join(notes)
+    return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+
+
 def op_file(tool_input):
     """한 파일의 일생 — --follow 가 이름변경·이동을 관통해 생성까지 거슬러 오른다."""
     root, err = _guard_root()

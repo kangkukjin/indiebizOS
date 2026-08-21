@@ -166,6 +166,7 @@ DECLARATIONS: List[tuple] = [
     ("data/.*",                     "감사·카덴스 숨김 상태",                     "state"),
 
     # 원장(ledger)·로그·부속
+    ("data/write_ledger.jsonl*",    "쓰기 관문 원장(write_ledger — 로테이션 포함)", "ledger"),
     ("data/*.jsonl",                "append-only 사건 원장",                     "ledger"),
     ("data/*.log",                  "런타임 로그",                               "log"),
     ("data/*.log.*",                "런타임 로그(로테이션)",                     "log"),

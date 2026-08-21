@@ -11,6 +11,7 @@
 | `changes` (기본) | 최근 **파일 단위** 변화 — 미커밋 작업분 포함 | `days`(기본 7) · `path`(스코프) · `limit` |
 | `log` | **커밋 단위** 이력 — "무슨 일을 했나" | `days` · `path` · `limit` |
 | `file` | **한 파일의 일생** — 생성·수정·이동을 `--follow` 로 관통 | `path`(필수) · `limit` |
+| `writes` | **런타임 쓰기 원장** — git 밖 층(data/·outputs/)의 쓰기를 행위자(agent·task·출처)와 함께 | `days` · `path` · `limit` |
 
 ```
 [self:body]{}                                          # 최근 7일 몸 변화
@@ -29,8 +30,14 @@ items 행: changes=`{파일, 상태, 영역, 시각, 요지, 커밋}` (이동이
 [self:body]{op: "log", days: 7} >> [table:take]{n: 5}
 ```
 
+```
+[self:body]{op: "writes", days: 2}                     # 최근 이틀 런타임 쓰기 — 누가 뭘 썼나
+[self:body]{op: "writes", path: "data"} >> [table:groupby]{by: "행위자"}
+```
+
 ## 함정·경계
 
+- **★`writes`=부분 기록**: 쓰기 관문(safe_store·`[self:write]`)을 지난 쓰기만 원장(`data/write_ledger.jsonl`)에 남는다 — 핸들러가 직접 open() 으로 쓰면 원리적으로 미기록. 결과 text 가 이 부분성을 항상 광고한다. 코드 층 전수는 `changes`(git)가 정답. `작업` 열=task_id → 주행기록(episode)과 조인하면 "왜 바뀌었나"까지.
 - **pc_only** — 폰 몸엔 git 이 없다. git 저장소 밖이면 정직 거절(빈 결과 아님).
 - `file` op 의 미추적 파일=이력 0 이 정상("아직 커밋된 적 없음"으로 구분 보고). 경로 오타와 구분됨.
 - `limit` 상한 1000 — 초과 요청은 **신고 후** 상한 적용(침묵 클램프 아님). `truncated`/`total` 로 절단 정직 신고.

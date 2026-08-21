@@ -21,6 +21,7 @@
     "base/thread_context",
     "base/thumbnails",
     "base/window_requests",
+    "base/write_ledger",
     "boot_common",
     "boot_paths",
     "cognition/agent_cognitive",
@@ -258,11 +259,12 @@
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
-    "test_workflow_params": "force_exclude_glob"
+    "test_workflow_params": "force_exclude_glob",
+    "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 255,
-    "engine": 211,
-    "blocklist": 44
+    "total": 257,
+    "engine": 212,
+    "blocklist": 45
   }
 }

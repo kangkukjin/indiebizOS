@@ -46,3 +46,9 @@ def safe_save_json(path, data: Any) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp, p)
+    # 쓰기 관문 원장 — 행위자 동반 사건 기록(관측일 뿐, 실패해도 본 쓰기 무영향)
+    try:
+        from write_ledger import log_write
+        log_write(p, event="write", gate="safe_store")
+    except Exception:
+        pass

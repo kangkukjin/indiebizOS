@@ -582,27 +582,28 @@
     },
     {
       "name": "body_op",
-      "description": "몸(이 저장소) 파일 변화 이력 — git 원장 회상. changes(최근 파일 변화, 미커밋 포함)/log(커밋 이력)/file(한 파일의 일생 — 이름변경·이동 관통).",
+      "description": "몸(이 저장소) 파일 변화 이력 — git 원장 회상. changes(최근 파일 변화, 미커밋 포함)/log(커밋 이력)/file(한 파일의 일생 — 이름변경·이동 관통)/writes(런타임 쓰기 원장 — 관문 통과분만, 행위자 동반).",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "changes(기본)/log/file",
+            "description": "changes(기본)/log/file/writes",
             "enum": [
               "changes",
               "log",
-              "file"
+              "file",
+              "writes"
             ],
             "default": "changes"
           },
           "days": {
             "type": "integer",
-            "description": "changes/log — 조회 기간(일). 기본 7, 최대 365"
+            "description": "changes/log/writes — 조회 기간(일). 기본 7, 최대 365"
           },
           "path": {
             "type": "string",
-            "description": "changes/log — 스코프 폴더(예 backend/cognition) / file — 대상 파일 경로(필수)"
+            "description": "changes/log/writes — 스코프 폴더(예 backend/cognition) / file — 대상 파일 경로(필수)"
           },
           "limit": {
             "type": "integer",

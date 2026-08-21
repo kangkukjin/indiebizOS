@@ -596,6 +596,7 @@ _OP_DISPATCHERS = {
         "changes": _sib_op("body_ops", "op_changes"),
         "log": _sib_op("body_ops", "op_log"),
         "file": _sib_op("body_ops", "op_file"),
+        "writes": _sib_op("body_ops", "op_writes"),
     },
     # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).
     # 안전판 콜백(_red_prepare/_red_finalize)은 게이트가 쥔 채 넘긴다(_patch_op).
@@ -834,6 +835,12 @@ def execute(tool_input: dict, context) -> str:
             with open(path, 'w', encoding='utf-8') as f:
                 f.write(content)
             _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
+            # 쓰기 관문 원장 — 행위자 동반 사건 기록(관측일 뿐, 실패해도 본 쓰기 무영향)
+            try:
+                from write_ledger import log_write
+                log_write(path, event="write", gate="self_write", size=len(content))
+            except Exception:
+                pass
             abs_path = os.path.abspath(path)
             result = {"success": True, "path": abs_path, "size": len(content)}
             if path != _live_target:   # 격리 사본에 쌓였다 — 라이브는 아직 무변경

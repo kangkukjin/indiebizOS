@@ -744,6 +744,17 @@ class PackageManager:
             lines.append(f"| {pkg['id']} | {pkg['name']} | {desc} | {status} |")
         lines.append("")
 
+        # 보존된 섹션 추가 (extensions·IBL 어휘 — 2026-08-21 시한폭탄 수리: 보존 목록에
+        # 없어서 다음 재생성 한 번에 두 절이 통째로 사라질 상태였다. IBL 어휘 절의
+        # 마커 구간은 build_ibl_nodes 가 재생성하므로 여기서는 통째로 보존만 한다.)
+        if preserved_sections.get("extensions"):
+            lines.extend(preserved_sections["extensions"])
+            lines.append("")
+
+        if preserved_sections.get("ibl"):
+            lines.extend(preserved_sections["ibl"])
+            lines.append("")
+
         # 보존된 섹션 추가 (템플릿, 스위치, 에이전트)
         if preserved_sections.get("templates"):
             lines.extend(preserved_sections["templates"])
@@ -768,6 +779,8 @@ class PackageManager:
         sections = {
             "projects": [],
             "folders": [],
+            "extensions": [],
+            "ibl": [],
             "templates": [],
             "switches": [],
             "agents": []
@@ -799,6 +812,14 @@ class PackageManager:
                 _flush()
                 current_section = None
                 current_lines = []
+            elif line.startswith('## 백엔드'):
+                _flush()
+                current_section = "extensions"
+                current_lines = [line]
+            elif line.startswith('## IBL'):
+                _flush()
+                current_section = "ibl"
+                current_lines = [line]
             elif line.startswith('## 템플릿'):
                 _flush()
                 current_section = "templates"

@@ -31,13 +31,14 @@
 | 수동모드 | 수동모드 | (시스템) 조종실 표면의 IBL 실행 컨텍스트 |
 | 앱모드 | 앱모드 | (시스템) 앱 표면의 IBL 실행 컨텍스트 |
 
-## 도구 패키지 (Tools) - 45개 (설치 40 · 미설치 5)
+## 도구 패키지 (Tools) - 46개 (설치 41 · 미설치 5)
 에이전트가 사용할 수 있는 유틸리티
 
-> 자동 갱신되는 것은 **상태 칸(설치됨/미설치)뿐**이다(`system_docs.update_inventory_packages`) — 행 추가·삭제는 안 된다. 은퇴한 패키지가 목록에 남아 있으면 손으로 지울 것.
+> 이 절은 패키지 설치/제거 시 **전체 재생성**된다(`package_manager._regenerate_inventory_md` — tool.json 기준 스캔). 행을 손으로 고쳐도 다음 재생성에서 사라진다. (옛 주석의 `update_inventory_packages` 상태 칸 갱신은 호출자 없는 죽은 코드였다 — 2026-08-21 확인.)
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
+| ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→ | 설치됨 |
 | android | Android Phone Control | ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 | 설치됨 |
 | blog | Blog Tools | 개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 | 설치됨 |
 | browser-action | Browser Action | Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 | 설치됨 |
@@ -97,8 +98,11 @@
 
 ## IBL 어휘 현황
 
-**6노드 144 액션** — sense 40 · self 48 · limbs 14 · others 17 · engines 9 · **table 16**
-(op 분기 액션 66개 / op 분기 패키지 28개, 나머지 op 액션은 backend-native 라우팅)
+<!-- IBL_STATS:START -->
+**6노드 149 액션** — sense 40 · self 50 · limbs 14 · others 17 · engines 9 · table 19
+(op 분기 액션 69개 / op 분기 패키지 28개, 나머지 op 액션은 backend-native 라우팅)
+<!-- IBL_STATS:END -->
+(위 수치는 빌드가 재생성 — 손 수정 금지)
 
 ---
 *마지막 업데이트: 2026-08-17 — 손 갱신(자동 갱신은 상태 칸만 바꾼다): 은퇴 패키지 2행 삭제(`local-info`·`web-collector` — 2026-08-15 어휘 압축에서 디렉토리째 삭제됨), 누락 2행 추가(`finance-record`·`notebook`), extensions 절·IBL 어휘 현황 신설. 프로젝트 절은 실측 일치(22 + 시스템 2 / 에이전트 33). 이전: 2026-08-05 18:43*

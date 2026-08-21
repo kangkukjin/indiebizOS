@@ -135,7 +135,7 @@ IBL 에는 **"A 하고, 되든 안 되든 B 한다"** 를 표현할 방법이 �
 | 검사 | 대상 |
 |---|---|
 | `scripts/build_ibl_nodes.py --check` | **선언 삼각형**(src ↔ tool.json ↔ handler `_OP_DISPATCHERS`) |
-| self-check §1A `run_static_ibl_check` | 위 정적 정합성 |
+| self-check §1A (`run_ibl_health_check` → `__static__:ibl_consistency`) | 위 정적 정합성 |
 | self-check §1B 통화(fixture) | 액션 반환 형태 |
 | self-check §1C **골든 파이프** | `scripts/ibl_health_check.py:226` `PIPES` — **`>>` 5건만** |
 | **연산자 `??` · `&`** | **아무도 안 봄** ← `??` 가 몇 달 버틴 이유 |

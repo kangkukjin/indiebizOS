@@ -694,6 +694,23 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print("[build_ibl_nodes] check: 설치필터(dist) 일치 ✓")
         except Exception as _e:
             print(f"[build_ibl_nodes] check: dist_filter 검사 건너뜀 ({_e})")
+        # 문서 파생 신선도 (README·system_docs 의 마커 구간 ↔ 레지스트리 실측)
+        # — 자기상 가드의 확장: 검사에서 재생성으로 승격(빌드가 고치고, check 가 대조).
+        docs_ok = True
+        try:
+            import iblbuild_docs as _docs
+            _doc_issues = _docs.check_docs(root, data)
+            if _doc_issues:
+                docs_ok = False
+                print(f"[build_ibl_nodes] check: 문서 파생 불일치 {len(_doc_issues)}건",
+                      file=sys.stderr)
+                for _di in _doc_issues:
+                    print(f"  ✗ {_di}", file=sys.stderr)
+            else:
+                print(f"[build_ibl_nodes] check: 문서 파생 일치 ✓ "
+                      f"({len(dict.fromkeys(t[0] for t in _docs.DOC_TARGETS))}개 문서)")
+        except Exception as _e:
+            print(f"[build_ibl_nodes] check: 문서 파생 검사 건너뜀 ({_e})")
 
         # ── 프롬프트 예산 계측 (판정하지 않음 — 숫자만 보인다) ────────────────
         # 어휘 카탈로그는 매 요청 프롬프트에 통째로 들어간다. 액션을 하나 늘리는 비용이
@@ -722,6 +739,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
 
         return 0 if (bytes_ok and manifest_ok and pkg_meta_ok and fixtures_ok
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
+                     and docs_ok
                      and not validation_failed
                      and not corpus_failed and not fixture_failed
                      and not enum_failed
@@ -768,6 +786,17 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         print(f"[build_ibl_nodes] 작성: {_bcm.MANIFEST_PATH} (표준 코어 매니페스트)")
     except Exception as _e:
         print(f"[build_ibl_nodes] core_manifest 재생성 건너뜀 ({_e})")
+    # 문서 파생 재기입 (README·system_docs 마커 구간 ← 레지스트리 실측 — 사건 시점 갱신:
+    # 어휘·코드를 바꾼 행위자가 빌드를 돌리는 순간 문서가 같은 커밋에 실린다)
+    try:
+        import iblbuild_docs as _docs
+        _written, _doc_issues = _docs.apply_docs(root, data)
+        if _written:
+            print(f"[build_ibl_nodes] 문서 파생 재기입: {', '.join(_written)}")
+        for _di in _doc_issues:
+            print(f"[build_ibl_nodes] 문서 파생 경고: {_di}", file=sys.stderr)
+    except Exception as _e:
+        print(f"[build_ibl_nodes] 문서 파생 건너뜀 ({_e})")
     return 0
 
 

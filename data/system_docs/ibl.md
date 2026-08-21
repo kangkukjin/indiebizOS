@@ -1,10 +1,10 @@
 ---
 title: IBL (IndieBiz Logic)
-scope: IBL 명세, 6-Node 구조, 144 액션, 파서/엔진/라우팅, 조합 문법(파이프·병렬·폴백·블록·고차 문장)
+scope: IBL 명세, 6-Node 구조(액션 수=본문 '핵심 노드 분류' 빌드 파생), 파서/엔진/라우팅, 조합 문법(파이프·병렬·폴백·블록·고차 문장)
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
-last_updated: 2026-08-17
+last_updated: 2026-08-21
 see_also: [memory.md, packages.md, technical.md]
 ---
 
@@ -114,7 +114,7 @@ IBL(실행 언어) 위에 표현을 맡는 언어가 두 부류 더 있고, 셋�
 - 잘 고른 소수 프리미티브 + 풍부한 조합 = **생성 문법**(무한). → 언어
 - 많은 프리미티브 + 빈약한 조합 = **납작한 룩업 테이블**(크지만 유한). → 사전
 
-IBL의 진짜 엔진은 142개 액션이 아니라 `>>`(순차) `&`(병렬 — 괄호 분기 `(B >> C)` 로 분기별 전처리) `??`(폴백) `;`(독립 문장)
+IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — 괄호 분기 `(B >> C)` 로 분기별 전처리) `??`(폴백) `;`(독립 문장)
 `$변수`(바인딩) `$items`(집합 참조 — 아래) `[if:]`/`[case:]`(분기) **`[table:each]`(적용 — 문장을 값으로 받는 고차 변환자)**
 + 접근 + 가이드다.
 
@@ -288,7 +288,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ## 액션 카테고리
 
-총 142개 액션(sense 40, self 48, limbs 14, others 17, engines 9, table 14)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
+전 액션(수·노드별 내역은 아래 '핵심 노드 분류' — 빌드 파생)은 프롬프트 가독성을 위해 카테고리로 그룹화된다. 카테고리는 순수 표시 목적이며, 런타임 동작에 영향을 주지 않는다. 에이전트는 항상 구체적 액션명을 직접 사용해야 한다.
 
 | 카테고리 | 의미 | 올바른 사용 예시 |
 |---------|------|----------------|
@@ -322,7 +322,9 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - `pc_only`: 데스크톱(맥·리눅스·윈도우) 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존). 폰서 직접 실행 못 함 → **허브(데스크톱)에 단건 라우팅**(아래 분산 IBL).
 - `phone_only`: 폰 하드웨어 전용 — 현재 `limbs:phone` 하나(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
-- 현 분포: `anywhere` 123 · `pc_only` 38 · `phone_only` 1.
+<!-- RUNS_ON:START -->
+- 현 분포: `anywhere` 112 · `pc_only` 36 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+<!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `_forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `_forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
 
@@ -337,7 +339,10 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 
 ### 핵심 노드 분류
 
-총 **144 액션** — sense 40 · self 48 · limbs 14 · others 17 · engines 9 · **table 16**
+<!-- IBL_STATS:START -->
+총 **149 액션** — sense 40 · self 50 · limbs 14 · others 17 · engines 9 · table 19
+<!-- IBL_STATS:END -->
+(위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 
 (2026-08-16 **`table:rename`·`table:flatten` 신설** — 관계대수 ρ(rename)와 unnest(flatten). rename 은 *소스가 다른 통화를 join 하기 전에 키를 맞추는* 자리를 메우고, flatten 은 `[table:each]` 가 낸 중첩 결과를 한 판으로 모은다. 둘이 붙어 통화 대수가 닫힌 계급으로 완결 → 142에서 **144**. 이전: 2026-08-15 **연락처를 이웃의 op 로 흡수**: `others:contact` 은퇴 → `[others:neighbor]{op: "contact_add"|"contact_update"|"contact_delete"}`. 근거는 구조다 — contact 에는 **list op 이 없었고**(연락처는 neighbor detail 안에 실려 나온다) 전 op 가 부모 id(neighbor_id) 또는 자식 id(contact_id)를 요구했다 = 대등한 원장이 아니라 **자식 컬렉션**. `self:ledger` 의 item 이 add_image/remove_image 를 자기 op 로 갖는 것과 같은 모양. ★`self:ledger{store:"contact"}` 로 접지 않은 이유: store 축은 *대등한 원장*의 축인데 연락처는 대등하지 않다 — 넣었으면 store 가 거짓말을 시작했을 것이다. ★`others:neighbor` 자체는 유지 — `others`(타자) 노드 축이 실질 정보를 나르므로 `self:ledger` 로 옮기면 "이웃은 나다"가 된다. 코퍼스 0행(이관 없음)·메신저 계기 템플릿 2건 재배선 → 143에서 142. 이전: **지역정보 3형제 은퇴**: `sense:search_local`·`sense:local_query`·`self:local_save` + local-info 패키지 삭제. ★`search_local` 은 중복이자 **이미 죽어 있었다** — `[sense:search]{source:"naver", type:"cafe"}` 가 같은 일을 하고(라이브 대조: 후계 3건 vs 은퇴어 0건, 스크래핑 정지) 계수 19는 "호출됐다"이지 "결과를 냈다"가 아니었다. `local_save` 는 유일한 쓰기 경로인데 계수 0이고 수집 트리거가 없어 원장이 9개월 정지(최신 글 2025-11) → `local_query` 는 얼어붙은 39행을 읽고 있었다. ★부수 수리: 합성 용례 생성기 3종이 `local`(지역)을 **로컬 파일**로 오해해 `[self:local_save]{path:...}` 를 파이프 싱크로 쓰고 있었다(그 액션은 path 를 안 읽는다) → 정본인 `[self:write]` 로 교정(10건). 코퍼스 16행 중 5행은 search naver/cafe 로 이관, 11행은 후계어 없어 삭제. ★`area` 기본값이 `"오송"` 으로 하드코딩돼 있었다 — 세계의 명사가 코드에 박힌 "명사의 자리" 위반의 순수한 형태(패키지와 함께 소멸) → 146에서 143. 이전: **사업 원장 통합**: `self:business`·`business_item`·`business_document`·`work_guideline` → **`[self:ledger]{store, op}`**. 헌법 "명사의 자리" 집행 — 비즈니스·아이템·문서·지침은 *세계의 명사*라 어휘 이름이 아니라 데이터(store 라벨)가 나른다. 조항은 2026-08-06 선포인데 이 어휘들은 06-12 부터 있어 소급된 적이 없었다. ★store 는 Object Type 선언이 아닌 자유 라벨이라 "선행 명사 스키마 금지"와 충돌하지 않는다. ★저장 구조 무변경(사용자 판정): 기존 테이블로 라우팅만, 데이터 이관 0. ★부수 이득: `save`(business·item)와 `update`(document·guideline)가 같은 연산인데 이름만 달랐다 → `save` 통일. store 에 없는 op 는 가능한 op 를 알려주며 명시 거절. 코퍼스 41행 이관 → 149에서 146. 이전: **라디오 재생 제어 흡수**: `[limbs:player_status]`·`[limbs:volume]` 은퇴 → `[limbs:radio]{op:"status"|"volume"}`. 둘 다 desc 는 "음악·라디오"라고 선언하면서 구현은 라디오 모듈 전역만 만졌다(`limbs:explorer` 의 "Finder" 거짓말과 같은 부류 — 그건 이미 은퇴 사유였다). volume 의 "mpv IPC" 도 거짓(구현 docstring 이 "mpv 재시작 방식"). ★`limbs:radio_favorite` 는 **접지 않았다** — 즐겨찾기는 원장 CRUD 라 재생 제어와 `op` 축의 의미가 다르다(섞으면 한 축이 두 개념을 나른다). 코퍼스 11행 이관 시 곡/노래 의도 3행은 라디오가 아니라 `[limbs:music]{op:"queue"}` 로 정직 재배선(거짓 desc 를 보고 쓰인 행들 — 08-15 1차 "파인더→os_open" 선례). ⏳잔여 갭: 로컬 음악 재생 상태는 표면 `<audio>` 가 쥐고 있어 보고할 액션이 없다 → 151에서 149. 이전: 2026-08-15 **고차 문장**: `[table:each]{do, as, limit, on_error}` 신설 — 문장을
 값으로 받는 유일한 변환자. 같은 날 M1 로 문장 자리의 이름을 `do` 하나로 통일[trigger.pipeline·
@@ -839,11 +844,11 @@ _OP_DISPATCHERS = {
 }
 _OP_DEFAULTS = {tool_name: default_op, ...}  # 기본값 있을 때만
 ```
-op 분기 26 패키지 모두 이 패턴 채택(액션 기준 67개 — 목록은 packages.md).
+op 분기 패키지 모두 이 패턴 채택(수·목록은 packages.md — 빌드 파생).
 
 **이중 게이트**:
 - `pre-commit` 훅: commit 시점, 정적 검증
-- `world_pulse_health.run_static_ibl_check()`: 12시간 self-check 사이클 합류, `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록
+- `world_pulse_health.run_ibl_health_check()`: 12시간 self-check 사이클 — `scripts/ibl_health_check.py` §1A 정적 정합성을 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록
 
 ---
 

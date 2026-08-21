@@ -1,0 +1,103 @@
+"""문서 드리프트 감사 배터리 (doc_drift.py) — T1~T6.
+
+실행: python3 backend/test_doc_drift.py  (또는 pytest)
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import boot_paths  # noqa: E402,F401
+
+from doc_drift import (  # noqa: E402
+    _check_dates, _check_dead_refs, _check_stats_claims,
+    _collect_ident_tokens, _is_historical, _mask, measure,
+)
+
+FACTS = {"node_count": 6, "total": 149, "tools_n": 41, "exts_n": 5}
+
+
+def test_t1_stale_compound_claim_flagged():
+    text = "시스템은 6노드 144 액션을 갖는다.\nIt has 6 nodes, 144 composable actions."
+    flags = _check_stats_claims("x.md", text, FACTS)
+    assert len(flags) == 2, flags
+    assert flags[0]["kind"] == "stats_claim"
+    # 정확한 현재값은 깃발 없음
+    assert not _check_stats_claims("x.md", "6노드 149 액션", FACTS)
+
+
+def test_t2_historical_lines_skipped():
+    for line in [
+        "*마지막 업데이트: 2026-08-17 — 당시 6노드 144 액션이었다*",
+        "압축으로 163→144, 즉 6노드 144 액션이 됐다",
+        "332개에서 144개로 줄었다 — 6노드 144 액션",
+        "`old_action` 은퇴 — 당시 6노드 142 액션",
+        "이전(2026-08-06) — 6노드 150 액션",
+    ]:
+        assert _is_historical(line), line
+        assert not _check_stats_claims("x.md", line, FACTS), line
+
+
+def test_t3_marker_and_fence_masked():
+    text = ("<!-- IBL_STATS:START -->\n6노드 144 액션\n<!-- IBL_STATS:END -->\n"
+            "```\n6노드 100 액션\n```\n본문 주장 6노드 149 액션")
+    masked = _mask(text)
+    assert "144" not in masked and "100" not in masked
+    assert "149" in masked
+    # 마스킹은 줄 수를 보존한다 (깃발 line 번호 정확성)
+    assert masked.count("\n") == text.count("\n")
+
+
+def test_t4_date_mismatch():
+    doc = "---\nlast_updated: 2026-08-17\n---\n본문\n*마지막 업데이트: 2026-08-20 — x*\n"
+    flags = _check_dates("x.md", doc)
+    assert flags and flags[0]["kind"] == "date_mismatch"
+    ok = "---\nlast_updated: 2026-08-21\n---\n*최종 업데이트: 2026-08-20 — x*\n"
+    assert not _check_dates("x.md", ok)
+
+
+def test_t5_dead_refs():
+    # 죽은 식별자·죽은 파일은 깃발, 산 것·슬래시 축약 관용구는 통과
+    # ※식별자 대조는 코드 *본문 문자열* 기준 — 주석·docstring 의 언급도 '산 것'으로
+    #   친다(grep 수준 정밀도). 그래서 시험용 죽은 식별자는 이 파일에도 리터럴로 안
+    #   적히도록 런타임에 조립한다(이 파일 자신이 코퍼스에 들어가 자기오염되기 때문).
+    dead_fn = "zz_" + "dead" + "_fn" + "_qq"
+    dead_py = "no_" + "such" + "_module" + "_xyz.py"
+    tokens = _collect_ident_tokens(
+        f"배관은 `{dead_fn}()` 가 담당하고 `{dead_py}` 를 읽는다.\n"
+        "현행은 `world_pulse_health.run_maintenance_bundle` 이고 `doc_drift.py` 가 산다.\n"
+        "표면 조립은 `launcher_surface_remote/phone.py` 두 모듈.\n"
+    )
+    flags = []
+    _check_dead_refs(flags, {"x.md": tokens})
+    claims = {f["claim"] for f in flags}
+    assert f"{dead_fn}()" in claims, flags
+    assert dead_py in claims, flags
+    assert not any("run_maintenance_bundle" in c for c in claims), flags
+    assert not any("doc_drift.py" == c for c in claims), flags
+    assert not any("launcher_surface" in c for c in claims), flags
+
+
+def test_t6_real_repo_clean():
+    # 불변식: 실저장소는 깃발 0 을 유지한다 (2026-08-21 대청소 이후).
+    # 깃발이 생기면 문서를 고치든 은퇴 표기를 하든 — 이 감사가 그 강제 장치다.
+    r = measure()
+    assert not r["flags"], r["flags"]
+    assert not r["unchecked"], r["unchecked"]
+
+
+def main():
+    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    failed = 0
+    for t in tests:
+        try:
+            t()
+            print(f"  ✓ {t.__name__}")
+        except AssertionError as e:
+            failed += 1
+            print(f"  ✗ {t.__name__}: {e}")
+    print(f"[test_doc_drift] {len(tests) - failed}/{len(tests)} 통과")
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

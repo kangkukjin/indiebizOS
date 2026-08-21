@@ -155,6 +155,12 @@ GUARD_INPUT_PATTERNS = [
     r"data/system_docs/ibl\.md",
     r"data/guides/.*\.md",
     r"data/common_prompts/fragments/12_ibl_only\.md",
+
+    # ── 문서 파생 대상 (2026-08-21 — iblbuild_docs.DOC_TARGETS 와 동기) ──
+    # 자기상 가드(system_structure.md)가 트리거에 없어 문서만 고친 커밋이 새던
+    # 구멍(뷰-렌더러 가드 2026-07-25 봉합과 같은 부류)도 여기서 함께 막는다.
+    r"README(\.ko)?\.md",
+    r"data/system_docs/(system_structure|anatomy|architecture|technical|packages|inventory)\.md",
 ]
 
 

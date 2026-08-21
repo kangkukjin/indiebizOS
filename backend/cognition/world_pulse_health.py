@@ -615,6 +615,23 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 데이터 소유 감사 실패 (무시): {e}")
 
+    # 8.8) 문서 드리프트 감사 (주간 카덴스) — 빌드의 문서 파생(마커 구간)이 못 덮는
+    #      *산문 속* 낡음을 깃발로: 복합 수치 주장·죽은 참조(은퇴 함수를 정본으로
+    #      가르치는 문서)·날짜 모순. **보고만, 고치지 않음**(산문 수정=사람/AI 판단).
+    try:
+        from doc_drift import run_doc_drift_check
+        dd = run_doc_drift_check()
+        result["doc_drift"] = dd
+        if dd.get("flags"):
+            logger.warning(f"[Maintenance] 문서 드리프트 {len(dd['flags'])}건 — doc_drift_flags.json")
+        if dd.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
+            try:
+                save_self_check(dd)
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"[Maintenance] 문서 드리프트 감사 실패 (무시): {e}")
+
     # 8) 어휘 개념중복 감사 (주간 카덴스) — 압축 상설 기관의 *실증* 신호.
     #    build --check 의 압축 경고(자백·구조)와 달리 코퍼스를 읽어야 해서 여기 산다
     #    (빌드는 코퍼스를 안 읽는 원칙). 교차-액션 최근접 cos≥0.95 쌍을 깃발로.

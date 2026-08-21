@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 40개 패키지 목록. IBL 어휘 등록은 `data/ibl_nodes_src/<node>.yaml` 단일 진실 소스(ibl.md 참조). op 분기 패키지 28개는 `_OP_DISPATCHERS` 표준 채택.
+scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘 등록은 `data/ibl_nodes_src/<node>.yaml` 단일 진실 소스(ibl.md 참조). op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-08-17
+last_updated: 2026-08-21
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -232,14 +232,20 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
-## 현재 설치된 도구 패키지 (40개 — 2026-08-17 실측)
+<!-- IBL_STATS:START -->
+## 현재 설치된 도구 패키지 (41개 — 빌드 파생)
 
-**op 분기 28 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · **finance-record** · guest-helper · health-record · investment · lecture_workspace · **media_producer** · memory · music-player · **notebook** · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 **66개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 28 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · **finance-record** · guest-helper · health-record · investment · lecture_workspace · **media_producer** · memory · music-player · **notebook** · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 **69개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > location-services 는 op 분기 목록에서 빠졌다 — 유일한 op 액션이던 `sense:travel`(항공·호텔)이 은퇴하면서(국내 숙박은 `sense:stay` 가 source 분기로 승계) op 보유 액션이 0이 됐다.
+<!-- IBL_STATS:END -->
 
+> 아래 표의 **행 집합은 빌드가 관리**한다(은퇴 행 자동 삭제·신설 행 자동 추가 — tool.json 설명으로). 설명 산문은 문서 소유라 풍부하게 고쳐도 보존된다.
+
+<!-- PACKAGES_TABLE:START -->
 | ID | 이름 | 설명 |
 |----|------|------|
+| ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미  |
 | android | Android | 안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). 집 PC=ADB+uiautomator(USB) / 폰 자신=네이티브 AccessibilityService(USB 불필요) — 핸들러가 프로파일로 분기. 폰 온디맨드 감각(`sense:here`/`listen`/`see`/`phone`) 핸들러도 이 패키지 |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 (진실 소스=Obsidian vault, DB는 파생 검색 인덱스) |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
@@ -280,6 +286,7 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 | web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용) |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
+<!-- PACKAGES_TABLE:END -->
 
 **미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec · remotion-video(2026-08-05 은퇴 — 영상 정본=`[self:deck]{op:"video"}`) · spending(2026-08-14 은퇴 — 재무 정본=`[self:finance]`) — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).
 
@@ -290,7 +297,9 @@ python3 scripts/build_ibl_nodes.py --check  # 검증
 
 ---
 
+<!-- EXT_COUNT:START -->
 ## 백엔드 코어 모듈 (extensions/) — 5개
+<!-- EXT_COUNT:END -->
 
 `installed/extensions/`에 위치한 모듈들은 에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈입니다.
 (prompt-generator·scheduler·switch-runner 는 pre-IBL 휴면 사본이라 2026-08-13 은퇴 — 정본은 backend/ 의 prompt_builder·scheduler·switch_runner)

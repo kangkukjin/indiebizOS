@@ -292,23 +292,38 @@ def init_all_docs():
 # ============ 문서 업데이트 함수들 ============
 
 def update_inventory_projects(projects: List[Dict[str, Any]]):
-    """프로젝트 목록 업데이트"""
-    content = read_doc("inventory")
+    """프로젝트 목록 업데이트.
 
-    # 프로젝트 섹션 업데이트
-    project_section = "## 프로젝트\n"
+    ★2026-08-21 수리: 옛 정규식이 `## 프로젝트\\n`(꼬리 없는 헤딩)만 잡아 실제 문서의
+    `## 프로젝트 (활성) - N개 …` 헤딩에 매치되지 않았다 — 즉 이 함수는 타임스탬프만
+    바꾸는 무동작이었다. 헤딩 꼬리를 허용하고, 출력도 옛 불릿이 아니라 현재 문서의
+    표 형식으로 재생성한다. 헤딩 직후의 `>` 인용 주석(시스템 프로젝트 안내)은 보존.
+    """
+    content = read_doc("inventory")
+    import re
+
+    # 기존 섹션에서 `>` 인용 주석 보존
+    m = re.search(r'## 프로젝트[^\n]*\n(.*?)(?=\n## |\n---)', content, flags=re.DOTALL)
+    notes = []
+    if m:
+        for line in m.group(1).split('\n'):
+            if line.startswith('>'):
+                notes.append(line)
+
+    project_section = f"## 프로젝트 (활성) - {len(projects)}개\n"
+    if notes:
+        project_section += "\n" + "\n".join(notes) + "\n"
     if projects:
-        for p in projects:
-            project_section += f"- **{p.get('name', 'Unknown')}** (ID: {p.get('id', '?')})\n"
-            if p.get('description'):
-                project_section += f"  - {p['description']}\n"
+        project_section += "\n| ID | 이름 | 설명 |\n|----|------|------|\n"
+        for p in sorted(projects, key=lambda x: str(x.get('id', ''))):
+            desc = (p.get('description') or '').replace('\n', ' ').replace('|', '/').strip()
+            project_section += f"| {p.get('id', '?')} | {p.get('name', 'Unknown')} | {desc} |\n"
     else:
         project_section += "(아직 프로젝트가 없습니다)\n"
 
-    # 기존 프로젝트 섹션 교체
-    import re
+    # 기존 프로젝트 섹션 교체 (헤딩 꼬리 허용)
     content = re.sub(
-        r'## 프로젝트\n.*?(?=\n## |\n---)',
+        r'## 프로젝트[^\n]*\n.*?(?=\n## |\n---)',
         project_section,
         content,
         flags=re.DOTALL

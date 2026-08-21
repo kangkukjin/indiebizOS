@@ -6,7 +6,7 @@
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — .py 267개
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — .py 수는 architecture '시스템 통계'(빌드 파생)
 │   │   # ★층=디렉토리(2026-08-05 물리 이동). 의존은 아래→위 한 방향만:
 │   │   #   base → datastore → ibl → cognition → services → surface
 │   │   #   가드=scripts/check_backend_layers.py (LAYERS 배정·역방향 간선·교차층 순환 금지,
@@ -17,7 +17,7 @@ indiebizOS/
 │   ├── api.py           # 메인 서버 엔트리포인트 (조립 층 — 층 검사 밖)
 │   ├── boot_paths.py / boot_common.py # 층 경로 부트스트랩 · 공용 기동
 │   │
-│   ├── base/            # 22 — 의존 없는 바닥(유틸·OS·프로토콜)
+│   ├── base/            # 의존 없는 바닥(유틸·OS·프로토콜)
 │   │   ├── model_resolver.py # 모델 기어 — 역할→축→기어→티어→모델 단일 리졸버 (핫리로드)
 │   │   ├── episode_logger.py # 에피소드(주행기록) 로깅 — 채팅·HTTP·위임·외부채널 전 경로
 │   │   ├── thumbnails.py / hls_ladder.py # 썸네일·스트리밍 트랜스코드 · HLS 적응형 사다리
@@ -28,7 +28,7 @@ indiebizOS/
 │   │   ├── safe_store.py / repeat_guard.py / steer_inbox.py / thread_context.py
 │   │   └── nip17.py / nip44.py / r2_client.py / korean_utils.py / runtime_utils.py …
 │   │
-│   ├── datastore/       # 33 — 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
+│   ├── datastore/       # 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
 │   │   ├── ibl_usage_db.py   # IBL 해마 DB (벡터 검색 + FTS5)
 │   │   ├── forage_memory.py  # 포식 기억(공간 지도 + 주인 모델)
 │   │   ├── business_manager.py / calendar_manager.py / conversation_db.py / multi_chat_db.py
@@ -39,7 +39,7 @@ indiebizOS/
 │   │   ├── peer_cards.py / body_trust.py # 이웃 몸 명함 캐시 · 몸 신뢰=이웃 등급
 │   │   └── boot_status.py / pulse_db.py / file_index.py / focus_map.py / xray_stream.py …
 │   │
-│   ├── ibl/             # 23 — 언어(파서·엔진·라우팅·도구 로딩)
+│   ├── ibl/             # 언어(파서·엔진·라우팅·도구 로딩)
 │   │   ├── ibl_parser.py (+ ibl_parser_blocks.py / ibl_parser_values.py) # 구문 파서·블록·값
 │   │   ├── ibl_engine.py     # 실행 엔진 코어 (조합 연산자 `>>`·`&`·`??`, 재귀 깊이 상한 3)
 │   │   ├── ibl_executors.py / ibl_routing.py # 실행기 · 9종 라우터(handler·system·driver 등)
@@ -61,7 +61,7 @@ indiebizOS/
 │   │   #     패키지 handler.py                → /packages/reload 로 즉시 반영
 │   │   #     패키지 tool_*.py(서브모듈)       → **reload 밖** — 워커 재기동해야 반영
 │   │
-│   ├── cognition/       # 36 — 인지(분류→의식→실행→평가→증류)
+│   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
 │   │   ├── cognitive_recall.py # 0단계 연상 회상 (해마+심층+포식+디스크골격+손발 프레즌스)
@@ -77,7 +77,7 @@ indiebizOS/
 │   │   ├── body_ask.py       # 자연어 부탁 수신 — 자기 사전으로 컴파일→실행→통화
 │   │   └── world_pulse.py / world_pulse_health.py / world_pulse_collectors.py # 자의식·면역 순찰
 │   │
-│   ├── services/        # 27 — 바깥 세계(스케줄·채널·NAS·발급)
+│   ├── services/        # 바깥 세계(스케줄·채널·NAS·발급)
 │   │   ├── scheduler.py / channel_poller.py # 스케줄러 · 채널 폴링(수신 단일 관문)
 │   │   ├── indienet*.py      # IndieNet(Nostr) 코어·발행·릴레이·소셜
 │   │   ├── warehouse_feed.py # 이웃 창고 폴러(30분 diff, seed/new/changed) + 자격 로그인
@@ -88,7 +88,7 @@ indiebizOS/
 │   │   ├── auto_response.py / business_sync.py / calendar_actions.py / report_html.py
 │   │   └── gen_newspaper.py / generate_newspaper.py / nostr_phone_bridge.py …
 │   │
-│   ├── surface/         # 59 — 바깥 얼굴(HTTP 라우터·런처·공개면). 프리픽스 api_/launcher_/portal_
+│   ├── surface/         # 바깥 얼굴(HTTP 라우터·런처·공개면). 프리픽스 api_/launcher_/portal_
 │   │   ├── api_ibl.py           # IBL 전용 API (조종실 translate/validate/execute/distill)
 │   │   ├── api_system_ai.py / api_websocket.py # 시스템 AI · WebSocket
 │   │   ├── api_agents.py / api_projects.py / api_packages.py / api_models.py / api_config.py
@@ -113,10 +113,10 @@ indiebizOS/
 │   │   ├── launcher_surface_phone.py  # 폰 네이티브 조립 (독립 시스템, 3탭)
 │   │   └── launcher_web_shell.py / launcher_web_render.py / launcher_render_core.py
 │   │
-│   ├── common/          # 10 — 층 밖 공용(auth_manager·http_fetch·currency·platform_utils·pkg_utils …)
-│   ├── providers/       # 11 — LLM 프로바이더(anthropic·gemini(+http)·deepseek(+http)·openai·ollama·openrouter·claude_code)
-│   ├── channels/        # 4  — 채널 드라이버(gmail·nostr)
-│   ├── drivers/         # 3  — IBL 드라이버(sqlite 등)
+│   ├── common/          # 층 밖 공용(auth_manager·http_fetch·currency·platform_utils·pkg_utils …)
+│   ├── providers/       # LLM 프로바이더(anthropic·gemini(+http)·deepseek(+http)·openai·ollama·openrouter·claude_code)
+│   ├── channels/        # 채널 드라이버(gmail·nostr)
+│   ├── drivers/         # IBL 드라이버(sqlite 등)
 │   └── test_*.py        # 회귀 배터리 (★파이프 실험 전 test_pipe_currency_failures.py 권장)
 │
 ├── helper/              # USB 손발 헬퍼 (Go 단일파일, win/mac/linux 크로스컴파일)
@@ -134,8 +134,8 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (41개 — op 분기 28패키지는 _OP_DISPATCHERS 표준)
-│   │   │   └── extensions/  # 백엔드 코어 모듈 (5개)
+│   │   │   ├── tools/       # 도구 패키지 (수·목록=packages.md 빌드 파생, op 분기=_OP_DISPATCHERS 표준)
+│   │   │   └── extensions/  # 백엔드 코어 모듈 (수=packages.md)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
 │   ├── ibl_nodes_src/   # IBL 액션 단일 진실 소스 (편집 위치, 노드별 yaml)
@@ -150,7 +150,7 @@ indiebizOS/
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
-│   ├── guides/          # 가이드 파일 (67개 / guide_db 등록 65, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── guides/          # 가이드 파일 (수=architecture '시스템 통계', 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── scripts/         # 등록 스크립트 — 어휘가 아닌 절차의 거처(`[self:script]{op:run}`)
 │   │   #   registry.yaml(정의) + <이름>.py. 결정화 사다리의 가운데 가로대 = 반-어휘-증식 장치.
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)

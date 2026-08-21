@@ -97,7 +97,7 @@ cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/models && rm -rf ibl_embedding &
 1. **op 어휘 단일화** — `data/ibl_nodes_src/*.yaml`의 op-bearing 24개 액션에 `ops: {default, values}` 블록 추가
 2. **삼각 검증** — `scripts/build_ibl_nodes.py --check`로 src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS` AST 정확 비교
 3. **pre-commit 훅** — `scripts/git-hooks/pre-commit` (commit 시점 게이트)
-4. **self-check 합류** — `backend/world_pulse_health.run_static_ibl_check` (12시간 정기 게이트)
+4. **self-check 합류** — `backend/world_pulse_health.run_ibl_health_check` (12시간 정기 게이트, §1A `__static__:ibl_consistency`)
 5. **dispatcher 표준화** — 9 op-bearing 패키지 모두 `_OP_DISPATCHERS` dict 노출
 6. **의식 에이전트 op 힌트 + 메타 인지 가드** — `data/common_prompts/consciousness_prompt.md`
 7. **시스템 문서/CLAUDE.md/common_prompts** 모두 갱신

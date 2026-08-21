@@ -49,7 +49,7 @@ indiebizOS를 새 OS(윈도우/리눅스)에 깔 때 **다시 개발할 필요 �
 - **빌드 강제**: `build_ibl_nodes.py --check/--validate` 가 OS-가드 실행. INDIEBIZ_PROFILE
   포크-가드(폰 vs 데스크탑)의 형제 — 이쪽은 맥 vs 윈도우 vs 리눅스.
 - **이중 채널**: pre-commit 훅(`scripts/git-hooks/pre-commit`) + World Pulse self-check(12h 순찰,
-  `run_static_ibl_check`)에 같이 합류 → commit 시점 + 정기 순찰 양쪽에서 적발.
+  `run_ibl_health_check` §1A → `__static__:ibl_consistency`)에 같이 합류 → commit 시점 + 정기 순찰 양쪽에서 적발.
 - 철학: IBL `--check` 삼각검증이 src↔tool.json↔handler 드리프트를 막듯, OS-가드가 OS 의존
   드리프트를 막는다. (2026-06-21 에피소드 로거 누락 같은 침묵 누락의 OS 판 방지.)
 

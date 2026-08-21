@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-08-17
+last_updated: 2026-08-21
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -105,7 +105,7 @@ see_also: [architecture.md, ibl.md]
 
 - **저장**:
   - `pulse_log` (매시간, 30일): world(경제/날씨/뉴스) + user(대화수/일정) + self(서비스 alive/디스크/proprioception: 메모리·CPU·스레드·태스크)
-  - `self_checks` (매 6~12시간, 30일): 부작용 없는 액션 전수 점검 + 정적 정합성 검증(`run_static_ibl_check`)
+  - `self_checks` (매 6~12시간, 30일): 부작용 없는 액션 전수 점검 + 정적 정합성 검증(`run_ibl_health_check` §1A → `__static__:ibl_consistency`)
   - `action_health` (실행마다): 실사용 기반 액션 건강
 - **사용**: 프롬프트에 압축 주입 + 면역 순찰(만성 실패 감지) + `diagnostic_report.md`.
 
@@ -197,7 +197,7 @@ see_also: [architecture.md, ibl.md]
 **아키텍처** — self-check(면역 순찰)가 정적 IBL 검증을 합류시킨 패턴과 동일:
 - 기계 단계(가지치기·클러스터·정규화)는 `memory_db.py` (무LLM, 싸다)
 - 의미 병합만 경량 AI에 위임 (`memory_consolidation._merge_cluster_llm`, 클러스터당 1회)
-- `world_pulse_health.run_self_check` 끝에 `run_memory_consolidation()` 합류. **내부 24h/DB 카덴스 게이트**로 6h마다 호출돼도 각 DB는 하루 한 번만 실제 정리. dirty하지 않으면 즉시 스킵
+- `world_pulse_health.run_maintenance_bundle` 에 `run_memory_consolidation()` 합류(옛 `run_self_check` 는 2026-06-27 은퇴). **내부 24h/DB 카덴스 게이트**로 6h마다 호출돼도 각 DB는 하루 한 번만 실제 정리. dirty하지 않으면 즉시 스킵
 - 비용 가드: `MIN_ROWS_FOR_CLUSTER=8`(미만이면 클러스터 스킵), `MAX_CLUSTERS_PER_DB=12`
 - 진입점: 정기(self-check 자동) — 추후 수동 IBL op `[self:memory]{op:consolidate}` 추가 여지
 - 파일: `backend/memory_consolidation.py`, `data/packages/installed/tools/memory/memory_db.py`
@@ -240,7 +240,7 @@ see_also: [architecture.md, ibl.md]
 | **④ json 무한 append** | ✅ dedup + 상한 | `_consolidate_distilled_json` — 완전중복(intent+code) 제거 + 최신 800건만 유지 |
 | 상한 | ✅ | distilled가 200 초과 시 미검증(trial 0)부터 오래된 순 삭제 |
 
-**아키텍처**: `run_hippocampus_consolidation`을 `world_pulse_health.run_self_check`에 합류(메모리 정리 패스 바로 다음). 내부 24h 카덴스 게이트(마커 파일 `data/training/.hippocampus_consolidated`). 삭제는 행+vec 동시(`_delete_examples`, FTS는 DELETE 트리거로 자동). 파일: `backend/ibl_usage_db.py`, `backend/ibl_usage_rag.py`.
+**아키텍처**: `run_hippocampus_consolidation`을 `world_pulse_health.run_maintenance_bundle`에 합류(메모리 정리 패스 바로 다음 — 옛 `run_self_check` 는 2026-06-27 은퇴). 내부 24h 카덴스 게이트(마커 파일 `data/training/.hippocampus_consolidated`). 삭제는 행+vec 동시(`_delete_examples`, FTS는 DELETE 트리거로 자동). 파일: `backend/ibl_usage_db.py`, `backend/ibl_usage_rag.py`.
 
 **검증(2026-05-31)**: 드라이런(실코퍼스 2267 불변), 입증된 나쁨 가지치기(fail2/success0 삭제), 근접중복(sim 0.995 병합·우량 보존·실데이터 무손실·0.92미만 제외), json dedup, 24h 카덴스 스킵 모두 확인.
 

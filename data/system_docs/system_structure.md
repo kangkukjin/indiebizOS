@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-08-17
+last_updated: 2026-08-21
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 
@@ -33,6 +33,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 ## 시스템 문서 (System AI 참조)
 - **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
 - 시스템 AI가 장기 기억으로 참조하는 문서들
+- **문서 신뢰 규약**: 정본 서열 = git 커밋(사건) > docs/(설계) > system_docs/(장기기억). 문서 속 수치·파일명·함수명은 *쓰인 당시의 기록*일 수 있다 — 행동 전 `[self:body]`·`[self:grep]` 로 실재를 확인하라. `<!-- …:START/END -->` 마커 구간은 빌드가 재생성하는 기계 소유(손 수정 금지).
 - **파일 목록** (12 문서 + changelog):
   - `system_structure.md` - 시스템 구조 가이드 (**항상 프롬프트에 포함** — 의식/실행/평가 에이전트)
   - `anatomy.md` - **해부도(정문)** — 신참용 전체 지도(철학→3표면→IBL→인지→메모리→검색브라우저→몸), 각 상세 문서 허브
@@ -55,7 +56,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 
 ```
 indiebizOS/
-├── backend/              # Python FastAPI 백엔드 (포트 8765) — .py 267개
+├── backend/              # Python FastAPI 백엔드 (포트 8765) — .py 수는 architecture '시스템 통계'(빌드 파생)
 │   │   # ★층=디렉토리(2026-08-05 물리 이동). 의존은 아래→위 한 방향만:
 │   │   #   base → datastore → ibl → cognition → services → surface
 │   │   #   가드=scripts/check_backend_layers.py (LAYERS 배정·역방향 간선·교차층 순환 금지,
@@ -66,7 +67,7 @@ indiebizOS/
 │   ├── api.py           # 메인 서버 엔트리포인트 (조립 층 — 층 검사 밖)
 │   ├── boot_paths.py / boot_common.py # 층 경로 부트스트랩 · 공용 기동
 │   │
-│   ├── base/            # 22 — 의존 없는 바닥(유틸·OS·프로토콜)
+│   ├── base/            # 의존 없는 바닥(유틸·OS·프로토콜)
 │   │   ├── model_resolver.py # 모델 기어 — 역할→축→기어→티어→모델 단일 리졸버 (핫리로드)
 │   │   ├── episode_logger.py # 에피소드(주행기록) 로깅 — 채팅·HTTP·위임·외부채널 전 경로
 │   │   ├── thumbnails.py / hls_ladder.py # 썸네일·스트리밍 트랜스코드 · HLS 적응형 사다리
@@ -77,7 +78,7 @@ indiebizOS/
 │   │   ├── safe_store.py / repeat_guard.py / steer_inbox.py / thread_context.py
 │   │   └── nip17.py / nip44.py / r2_client.py / korean_utils.py / runtime_utils.py …
 │   │
-│   ├── datastore/       # 33 — 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
+│   ├── datastore/       # 원장·DB(층 이름은 'data' 지만 런타임 폴더와 충돌해 디렉토리는 datastore)
 │   │   ├── ibl_usage_db.py   # IBL 해마 DB (벡터 검색 + FTS5)
 │   │   ├── forage_memory.py  # 포식 기억(공간 지도 + 주인 모델)
 │   │   ├── business_manager.py / calendar_manager.py / conversation_db.py / multi_chat_db.py
@@ -88,7 +89,7 @@ indiebizOS/
 │   │   ├── peer_cards.py / body_trust.py # 이웃 몸 명함 캐시 · 몸 신뢰=이웃 등급
 │   │   └── boot_status.py / pulse_db.py / file_index.py / focus_map.py / xray_stream.py …
 │   │
-│   ├── ibl/             # 23 — 언어(파서·엔진·라우팅·도구 로딩)
+│   ├── ibl/             # 언어(파서·엔진·라우팅·도구 로딩)
 │   │   ├── ibl_parser.py (+ ibl_parser_blocks.py / ibl_parser_values.py) # 구문 파서·블록·값
 │   │   ├── ibl_engine.py     # 실행 엔진 코어 (조합 연산자 `>>`·`&`·`??`, 재귀 깊이 상한 3)
 │   │   ├── ibl_executors.py / ibl_routing.py # 실행기 · 9종 라우터(handler·system·driver 등)
@@ -110,7 +111,7 @@ indiebizOS/
 │   │   #     패키지 handler.py                → /packages/reload 로 즉시 반영
 │   │   #     패키지 tool_*.py(서브모듈)       → **reload 밖** — 워커 재기동해야 반영
 │   │
-│   ├── cognition/       # 36 — 인지(분류→의식→실행→평가→증류)
+│   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
 │   │   ├── cognitive_recall.py # 0단계 연상 회상 (해마+심층+포식+디스크골격+손발 프레즌스)
@@ -126,7 +127,7 @@ indiebizOS/
 │   │   ├── body_ask.py       # 자연어 부탁 수신 — 자기 사전으로 컴파일→실행→통화
 │   │   └── world_pulse.py / world_pulse_health.py / world_pulse_collectors.py # 자의식·면역 순찰
 │   │
-│   ├── services/        # 27 — 바깥 세계(스케줄·채널·NAS·발급)
+│   ├── services/        # 바깥 세계(스케줄·채널·NAS·발급)
 │   │   ├── scheduler.py / channel_poller.py # 스케줄러 · 채널 폴링(수신 단일 관문)
 │   │   ├── indienet*.py      # IndieNet(Nostr) 코어·발행·릴레이·소셜
 │   │   ├── warehouse_feed.py # 이웃 창고 폴러(30분 diff, seed/new/changed) + 자격 로그인
@@ -137,7 +138,7 @@ indiebizOS/
 │   │   ├── auto_response.py / business_sync.py / calendar_actions.py / report_html.py
 │   │   └── gen_newspaper.py / generate_newspaper.py / nostr_phone_bridge.py …
 │   │
-│   ├── surface/         # 59 — 바깥 얼굴(HTTP 라우터·런처·공개면). 프리픽스 api_/launcher_/portal_
+│   ├── surface/         # 바깥 얼굴(HTTP 라우터·런처·공개면). 프리픽스 api_/launcher_/portal_
 │   │   ├── api_ibl.py           # IBL 전용 API (조종실 translate/validate/execute/distill)
 │   │   ├── api_system_ai.py / api_websocket.py # 시스템 AI · WebSocket
 │   │   ├── api_agents.py / api_projects.py / api_packages.py / api_models.py / api_config.py
@@ -162,10 +163,10 @@ indiebizOS/
 │   │   ├── launcher_surface_phone.py  # 폰 네이티브 조립 (독립 시스템, 3탭)
 │   │   └── launcher_web_shell.py / launcher_web_render.py / launcher_render_core.py
 │   │
-│   ├── common/          # 10 — 층 밖 공용(auth_manager·http_fetch·currency·platform_utils·pkg_utils …)
-│   ├── providers/       # 11 — LLM 프로바이더(anthropic·gemini(+http)·deepseek(+http)·openai·ollama·openrouter·claude_code)
-│   ├── channels/        # 4  — 채널 드라이버(gmail·nostr)
-│   ├── drivers/         # 3  — IBL 드라이버(sqlite 등)
+│   ├── common/          # 층 밖 공용(auth_manager·http_fetch·currency·platform_utils·pkg_utils …)
+│   ├── providers/       # LLM 프로바이더(anthropic·gemini(+http)·deepseek(+http)·openai·ollama·openrouter·claude_code)
+│   ├── channels/        # 채널 드라이버(gmail·nostr)
+│   ├── drivers/         # IBL 드라이버(sqlite 등)
 │   └── test_*.py        # 회귀 배터리 (★파이프 실험 전 test_pipe_currency_failures.py 권장)
 │
 ├── helper/              # USB 손발 헬퍼 (Go 단일파일, win/mac/linux 크로스컴파일)
@@ -183,8 +184,8 @@ indiebizOS/
 ├── data/                # 런타임 데이터
 │   ├── packages/        # 도구 패키지 저장소
 │   │   ├── installed/
-│   │   │   ├── tools/       # 도구 패키지 (41개 — op 분기 28패키지는 _OP_DISPATCHERS 표준)
-│   │   │   └── extensions/  # 백엔드 코어 모듈 (5개)
+│   │   │   ├── tools/       # 도구 패키지 (수·목록=packages.md 빌드 파생, op 분기=_OP_DISPATCHERS 표준)
+│   │   │   └── extensions/  # 백엔드 코어 모듈 (수=packages.md)
 │   │   ├── not_installed/   # 미설치 패키지
 │   │   └── dev/             # 개발 중
 │   ├── ibl_nodes_src/   # IBL 액션 단일 진실 소스 (편집 위치, 노드별 yaml)
@@ -199,7 +200,7 @@ indiebizOS/
 │   ├── guide_db.json    # 가이드 검색 DB
 │   ├── world_pulse.db   # World Pulse DB (SQLite: pulse_log, self_checks, action_health, episode_log, episode_summary)
 │   ├── system_docs/     # 시스템 AI 문서 (장기기억, 12 문서+changelog — system_structure.md 정체성 코어는 항상 프롬프트에 포함, CODEBASE_MAP 구간은 guides/codebase_map.md 로 자동 파생·온디맨드)
-│   ├── guides/          # 가이드 파일 (67개 / guide_db 등록 65, 의식 에이전트가 선택하여 프롬프트에 주입)
+│   ├── guides/          # 가이드 파일 (수=architecture '시스템 통계', 의식 에이전트가 선택하여 프롬프트에 주입)
 │   ├── scripts/         # 등록 스크립트 — 어휘가 아닌 절차의 거처(`[self:script]{op:run}`)
 │   │   #   registry.yaml(정의) + <이름>.py. 결정화 사다리의 가운데 가로대 = 반-어휘-증식 장치.
 │   ├── common_prompts/  # 공용 프롬프트 (consciousness/evaluator/unconscious + fragments)
@@ -295,4 +296,4 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-*마지막 업데이트: 2026-08-19 — **원샷 낱말 세 자리(ai-ops 패키지, 145→148 액션)**: 원샷 AI 호출을 파이프 시민으로 — 입구 `[self:struct]`{file|text, schema}(비정형→items 구조화, grounded=원문 발췌 결정론 대조) · 중간 `[table:ai]`{instruction}(items→items 의미 변환 — filter/sort 의 의미론적 형제) · 출구 `[table:brief]`{instruction}(items→산문 종합, message=산문 정본→write 싱크). 모델=**기어 실행 축**(self:ask 경량과 별개 — 새 의미 판단이라 실행 축, 2026-08-19 사용자 판정). 검증 관문=JSON 재시도 1회+정직 실패·행 수 신고(rows_in/out)·_ai provenance. `ai_call: true` 플래그 신설 — dry-run 이 "실행마다 모델 비용·출력 편차" 고지, 포털 대여 게이트는 AI 낱말 거부. 공용 층=`backend/services/oneshot_facade.py`. 정본=docs/ONESHOT_VOCAB_DESIGN.md. 이전(2026-08-17) — **코드베이스 지도를 층 구조로 정합화**(이 문서의 가장 큰 드리프트였다): 2026-08-05 물리 이동(`d143b6a`)으로 backend 195 모듈이 `backend/{base,datastore,ibl,cognition,services,surface}/` 층 디렉토리로 갔는데 지도는 여전히 평면 `backend/api_*.py` 를 그리고 있었다 — **자기 몸의 지도가 틀리면 자기 코드를 못 찾는다**(모듈 이름은 평면 유지라 import 는 멀쩡해서 조용히 낡았다). 층 순서·의존 방향·`boot_paths` 규약·새 모듈 배정법을 지도 머리에 명시. 함께: `data/scripts/`(등록 스크립트=절차의 거처) 등재 · 가이드 65→**79개**(guide_db 58→**70**) · extensions 8→**5** · op 분기 **28 패키지** · IBL 기능 줄에 조합 문법(블록·`each`·재귀 상한) 명시. <!-- SELF_IMAGE:START -->**현 상태 = 6노드 149 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 19)·41 도구 패키지 + 5 extensions·backend .py 268**<!-- SELF_IMAGE:END -->. 이전(2026-08-16) — **table:rename·flatten 신설**(관계대수 ρ·unnest — 소스 다른 통화의 join 전 키 맞추기 + each 결과 모으기, 닫힌 계급의 완결). 2026-08-05 개념중복 압축(163→150: 싼 병합 5건·검색 통합 `[sense:search]{source}`[web-kr 은퇴]·book군 `[sense:book]{source:"google"}`·슬라이드 일원화 `[self:slide]{op:create}`·영상 `[self:deck]{op:"video"}`)이 changelog 에만 기록되고 이 문서의 수치가 낡아, 에피소드 935 에서 시스템이 자기 액션 수를 "163+"로 잘못 말한 것의 수리(자기상도 임시적 명사 — 낡으면 노출·수정). + 헌법 부속 조항 **"명사의 자리"** 추가(`ibl.md` — 몸의 명사는 코드에·세계의 명사는 반증 가능한 데이터에, 선행 명사 스키마 금지). 이전(2026-08-04) — backend 파일 수 197→**198** 정합화. 이전 — **코드베이스 지도 정합화 + 새 기관 다섯**(backend 192→**197 파일**, 6노드 **163 액션**): `notify_dispatch.py`·`desktop_notify.py`(알림이 사용자에게 닿는 단일 관문 — 런처 연결 시 OS 네이티브 알림, 미연결이면 의존성 0 폴백), `boot_status.py`(lifespan 의 '실패(무시)' 블록 계측 → `/world-pulse/health` `boot` 절), `warehouse_catalog.py`(비즈니스 아이템 → 자족 카탈로그 HTML, 지문 게이트), `warehouse_directory.py`(이웃 창고 둘러보기 — 장르별 후보). 어휘는 `[self:webapp]` 하나 늘었다(system_essentials, 웹앱 등기부=파생 우선). 축소도 있었다 — 음악 관련곡 그래프 계기(`MusicGraphInstrument.tsx`)와 `library.db` 의 `edges` 테이블, 클립박스(`clipbox.json`), 웹 푸시가 전부 은퇴. 이전(2026-07-25) — **몸의 주소·몸 사이 소통·손발·음악**: ①**공유창고**(2026-07-18~21)가 몸의 공개 얼굴로 자람 — `공유창고/0..4/` 폴더 그대로 서빙 + `/manifest` 기계 얼굴 + 이웃 창고 폴러(30분, 방언 어댑터 native/autoindex/RSS/Nextcloud/page) + 리트윗(`.url`) + 회원 자격 폴링 + 창고 점수(0~3). 몸의 주소는 이제 **파생**(`origin_host`, 권위=`public_face.provider`) 이고 Cloudflare 발급이 터널·Worker·R2 캐시까지 만든다(`cdn_provision.py`). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card`(명함) + `POST /nodes/ask`(자연어 부탁, 어휘 `[others:ask]`) — 공유 사전 RPC 은퇴, **사전 물리 분리**(설치=자기 어휘만·해마 소유-필터) + 신뢰=이웃 등급(`body_trust`). **표면 분리**: 원격 런처(PC의 일부, 5탭)와 폰 네이티브(독립 시스템, 3탭)를 조립 모듈로 가름. **특권 소멸**: 몸 간 특권 배관 철거 방향 확정(클립보드는 원격 런처 clipbox 로 재배치). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 / `[limbs:guestpc]` 조작 — 낯선 PC 에 꽂는 얇은 몸(Go 헬퍼, 허브로 아웃바운드). `runs_on mac_only`→**`pc_only`** 전역 개명. ④**신문 발행 결정화**(`[engines:newspaper]`) + 에피소드 로깅 전 경로 배선. ⑤**내 음악 라이브러리**(`[self:music]`, 2026-07-24) + 관련곡 그래프(랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). **현 상태: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13)·42 도구 패키지 + 8 extensions·backend 192 파일**. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리**: `others` 노드에 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`) 자람 — 신규 패키지 community-portal·public-files·family-news·bulletin. 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`·`[sense:used]`·`[self:install_lib]`·`[engines:icon]`. **table 노드 분리**(2026-06-30, engines 변환자/emitter 13종→신규 table 노드). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지 + 8 extensions**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합. 레버(절약/균형/최대)·프리셋 편집기·에이전트 핀, 핫리로드(`/model-gear` REST). 4축=분류·평가·실행·의식. per-agent 모델 폐지(모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 키=`.env` `NANET_API_KEY` + auth_manager 'nanet' 레지스트리. 포식기억(forager) 추가로 기억 7종. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지 / backend 134 파일. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰이 두 번째 독립 자아로: 폰-로컬 in-process Gemini 두뇌(경량+본격 티어) + 하드웨어 자기감지(detect_body — 자신을 맥 아닌 "폰"으로 인식) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지 → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화 + 자동응답 IBL화 + 폰↔PC business.db 동기화 + neighbor 통합 + 해마 로컬 재학습(M4 Pro, code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 인지 경로 개편. 이전(2026-06-02): 런처 3표면.*
+*마지막 업데이트: 2026-08-21 — **문서 파생·드리프트 감사 기계화(전수조사 은퇴)**: 문서가 낡는 문제의 4겹 해소 — ①파생: 빌드 꼬리가 README 2종+system_docs 7종의 마커 구간(IBL_STATS·SELF_IMAGE·PACKAGES_TABLE 등)을 레지스트리 실측으로 재기입(`scripts/iblbuild_docs.py` — 자기상 가드의 검사→**재생성** 승격. ★원칙: 수치는 기계가·산문은 문서가 소유[마커 안에서도 숫자 토큰만 외과 치환, 패턴 불발=시끄러운 실패]·치환 결과는 매치와 같은 모양[멱등]·파일 계수는 git 추적 기준[미추적 스크래치가 CI 를 붉히지 않게]. packages.md 표는 행 *집합*만 기계 관리 — 산문 행 불가침, ai-ops 누락 행이 첫 자동 합류) ②사건 시점: --check 가 문서 파생을 파생 산출물 4종과 동급 대조 → 어휘·backend 를 바꾼 커밋은 pre-commit 이 빌드를 강제해 문서가 **같은 커밋**에 실린다(GUARD_INPUT_PATTERNS 에 README·system_docs 6종 합류 — system_structure 단독 편집이 가드를 안 깨우던 구멍도 봉합, 뷰-렌더러 2026-07-25 부류) ③감사: 주간 `doc_drift`(backend/cognition, 유지보수 번들 8.8, `__static__:doc_drift` — 복합 수치 주장·죽은 참조·날짜 모순, 역사 서술[꼬리 changelog·→·은퇴 표기]은 불침범, 보고만). 첫 실행이 은퇴 함수 `run_static_ibl_check`(2026-06-27 은퇴) 를 정본 배관으로 가르치던 문서 7곳 + `run_self_check` 2곳 + 날짜 모순 3건을 적발(전부 수리) ④읽기 정직: 문서 신뢰 규약(정본 서열 git>docs>system_docs·휘발성 사실은 [self:body]·grep 검증 후 신뢰·마커 구간=기계 소유)을 정체성 코어에 등재. 부수 수리: inventory.md 시한폭탄(extensions·IBL 절이 `_extract_preserved_sections` 보존 목록 밖 — 다음 패키지 설치 한 번에 소실될 상태)+프로젝트 갱신 무동작(헤딩 정규식 불일치로 타임스탬프만 바꾸던 것)+`update_inventory_packages`=호출자 0 죽은 코드 판정 기록. 낡은 수치 대청소(144→149 부류 11문서·문서 내 3중 모순 소멸). 검증=build --check 전 가드+문서 파생 9문서 일치·배터리 6/6(backend/test_doc_drift.py — ★자기오염 함정: 시험 조어가 코퍼스에 실리면 '산 것' 오판→런타임 조립)·감사 깃발 0·층 가드. ★함정: zsh 는 `=단어` 를 명령 경로 확장으로 해석(echo ====가 죽음). 이전(2026-08-19) — **원샷 낱말 세 자리(ai-ops 패키지, 145→148 액션)**: 원샷 AI 호출을 파이프 시민으로 — 입구 `[self:struct]`{file|text, schema}(비정형→items 구조화, grounded=원문 발췌 결정론 대조) · 중간 `[table:ai]`{instruction}(items→items 의미 변환 — filter/sort 의 의미론적 형제) · 출구 `[table:brief]`{instruction}(items→산문 종합, message=산문 정본→write 싱크). 모델=**기어 실행 축**(self:ask 경량과 별개 — 새 의미 판단이라 실행 축, 2026-08-19 사용자 판정). 검증 관문=JSON 재시도 1회+정직 실패·행 수 신고(rows_in/out)·_ai provenance. `ai_call: true` 플래그 신설 — dry-run 이 "실행마다 모델 비용·출력 편차" 고지, 포털 대여 게이트는 AI 낱말 거부. 공용 층=`backend/services/oneshot_facade.py`. 정본=docs/ONESHOT_VOCAB_DESIGN.md. 이전(2026-08-17) — **코드베이스 지도를 층 구조로 정합화**(이 문서의 가장 큰 드리프트였다): 2026-08-05 물리 이동(`d143b6a`)으로 backend 195 모듈이 `backend/{base,datastore,ibl,cognition,services,surface}/` 층 디렉토리로 갔는데 지도는 여전히 평면 `backend/api_*.py` 를 그리고 있었다 — **자기 몸의 지도가 틀리면 자기 코드를 못 찾는다**(모듈 이름은 평면 유지라 import 는 멀쩡해서 조용히 낡았다). 층 순서·의존 방향·`boot_paths` 규약·새 모듈 배정법을 지도 머리에 명시. 함께: `data/scripts/`(등록 스크립트=절차의 거처) 등재 · 가이드 65→**79개**(guide_db 58→**70**) · extensions 8→**5** · op 분기 **28 패키지** · IBL 기능 줄에 조합 문법(블록·`each`·재귀 상한) 명시. <!-- SELF_IMAGE:START -->**현 상태 = 6노드 149 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 19)·41 도구 패키지 + 5 extensions·backend .py 263(test 제외)**<!-- SELF_IMAGE:END -->. 이전(2026-08-16) — **table:rename·flatten 신설**(관계대수 ρ·unnest — 소스 다른 통화의 join 전 키 맞추기 + each 결과 모으기, 닫힌 계급의 완결). 2026-08-05 개념중복 압축(163→150: 싼 병합 5건·검색 통합 `[sense:search]{source}`[web-kr 은퇴]·book군 `[sense:book]{source:"google"}`·슬라이드 일원화 `[self:slide]{op:create}`·영상 `[self:deck]{op:"video"}`)이 changelog 에만 기록되고 이 문서의 수치가 낡아, 에피소드 935 에서 시스템이 자기 액션 수를 "163+"로 잘못 말한 것의 수리(자기상도 임시적 명사 — 낡으면 노출·수정). + 헌법 부속 조항 **"명사의 자리"** 추가(`ibl.md` — 몸의 명사는 코드에·세계의 명사는 반증 가능한 데이터에, 선행 명사 스키마 금지). 이전(2026-08-04) — backend 파일 수 197→**198** 정합화. 이전 — **코드베이스 지도 정합화 + 새 기관 다섯**(backend 192→**197 파일**, 6노드 **163 액션**): `notify_dispatch.py`·`desktop_notify.py`(알림이 사용자에게 닿는 단일 관문 — 런처 연결 시 OS 네이티브 알림, 미연결이면 의존성 0 폴백), `boot_status.py`(lifespan 의 '실패(무시)' 블록 계측 → `/world-pulse/health` `boot` 절), `warehouse_catalog.py`(비즈니스 아이템 → 자족 카탈로그 HTML, 지문 게이트), `warehouse_directory.py`(이웃 창고 둘러보기 — 장르별 후보). 어휘는 `[self:webapp]` 하나 늘었다(system_essentials, 웹앱 등기부=파생 우선). 축소도 있었다 — 음악 관련곡 그래프 계기(`MusicGraphInstrument.tsx`)와 `library.db` 의 `edges` 테이블, 클립박스(`clipbox.json`), 웹 푸시가 전부 은퇴. 이전(2026-07-25) — **몸의 주소·몸 사이 소통·손발·음악**: ①**공유창고**(2026-07-18~21)가 몸의 공개 얼굴로 자람 — `공유창고/0..4/` 폴더 그대로 서빙 + `/manifest` 기계 얼굴 + 이웃 창고 폴러(30분, 방언 어댑터 native/autoindex/RSS/Nextcloud/page) + 리트윗(`.url`) + 회원 자격 폴링 + 창고 점수(0~3). 몸의 주소는 이제 **파생**(`origin_host`, 권위=`public_face.provider`) 이고 Cloudflare 발급이 터널·Worker·R2 캐시까지 만든다(`cdn_provision.py`). ②**몸 사이 소통 = 명함+부탁**(2026-07-22): `GET /nodes/card`(명함) + `POST /nodes/ask`(자연어 부탁, 어휘 `[others:ask]`) — 공유 사전 RPC 은퇴, **사전 물리 분리**(설치=자기 어휘만·해마 소유-필터) + 신뢰=이웃 등급(`body_trust`). **표면 분리**: 원격 런처(PC의 일부, 5탭)와 폰 네이티브(독립 시스템, 3탭)를 조립 모듈로 가름. **특권 소멸**: 몸 간 특권 배관 철거 방향 확정(클립보드는 원격 런처 clipbox 로 재배치). ③**USB 손발**(2026-07-23): `[self:limb]` 발급 / `[limbs:guestpc]` 조작 — 낯선 PC 에 꽂는 얇은 몸(Go 헬퍼, 허브로 아웃바운드). `runs_on mac_only`→**`pc_only`** 전역 개명. ④**신문 발행 결정화**(`[engines:newspaper]`) + 에피소드 로깅 전 경로 배선. ⑤**내 음악 라이브러리**(`[self:music]`, 2026-07-24) + 관련곡 그래프(랜덤 산책·🕸️ 그래프 계기), **공개 파일 동영상 생방송 재생**(스트리밍 트랜스코드·자막·오프셋 시크). **현 상태: 6노드 162 액션(sense 48·self 51·limbs 18·others 18·engines 14·table 13)·42 도구 패키지 + 8 extensions·backend 192 파일**. 이전(2026-07-17) — **공개 표면 가족(커뮤니티당 노드 하나) + table 노드 분리**: `others` 노드에 공개 웹 표면(portal `/h/`·showcase `/s/`·family_news `/n/`·bulletin `/b/` + 정기보고 `/r/`) 자람 — 신규 패키지 community-portal·public-files·family-news·bulletin. 그 외 신규 어휘: `[sense:stay]`·`[sense:entity]`·`[sense:used]`·`[self:install_lib]`·`[engines:icon]`. **table 노드 분리**(2026-06-30, engines 변환자/emitter 13종→신규 table 노드). **현 상태: 6노드 157 액션(sense 48·self 49·limbs 17·others 17·engines 13·table 13)·40 도구 패키지 + 8 extensions**. 이전(2026-06-30) — 모델 기어(계기판 변속) + per-agent 모델 폐지: 모델 선택 ~15곳을 `model_resolver.py`(역할→축→기어→티어)로 통합. 레버(절약/균형/최대)·프리셋 편집기·에이전트 핀, 핫리로드(`/model-gear` REST). 4축=분류·평가·실행·의식. per-agent 모델 폐지(모델·키 티어 상속). 폰 엔진 번들=`data/bodies/*.json` 파생. 142 액션·38 도구 패키지. 이전(2026-06-27) — 앱 표면 품질 일괄 개선(라디오 즐겨찾기·CCTV 인앱 재생 stream 버튼·여행 날짜+한국 지방공항·투자 TIGER200·날씨 오송·문화 지역·길찾기 거리/예상시간) + 부동산 직방 호가(sense:realty source:zigbang)·AI 공모/창업(sense:contest/startup) + read_guide claude_code 노출 + 폰 네이티브 재빌드. 142 액션(sense 44·self 44·limbs 17·others 11·engines 26)·38 도구 패키지. 이전(2026-06-22) — 국회도서관 국가학술정보(LOSI) 인물/학위논문 액션 추가: `[sense:researcher]`·`[sense:paper]{source: "nanet"}`(연구자·학위논문 검색, study 패키지). 키=`.env` `NANET_API_KEY` + auth_manager 'nanet' 레지스트리. 포식기억(forager) 추가로 기억 7종. 5-Node 142 액션(sense 44·self 44·limbs 17·others 11·engines 26) / 38 패키지 / backend 134 파일. 이전(2026-06-15) — 통화 대수(engines 변환자 9: filter/sort/take/select/dedup/groupby/join/union/merge + 파이프 문법 `|` + 문서 IR emitter) → 122~124에서 136 액션. 이전(2026-06-14) — 폰이 두 번째 독립 자아로: 폰-로컬 in-process Gemini 두뇌(경량+본격 티어) + 하드웨어 자기감지(detect_body — 자신을 맥 아닌 "폰"으로 인식) + 상주 스케줄러(self:trigger/schedule 폰 바인딩) + runs_on 정직성(anywhere/mac_only/phone_only) + 사용자 세계-데이터 CRDT 동기화(비즈니스·의료기록, 단 주관적 기억은 자아별 사적) + 의료 에이전트 환자차트 자동주입. 폰 온디맨드 감각 삼각(sense:here/listen/see) + self:show_calendar 폐지 → 125→124 액션. 이전(2026-06-12): 메신저/커뮤니티/비즈니스 IBL 앱모드 계기화 + 자동응답 IBL화 + 폰↔PC business.db 동기화 + neighbor 통합 + 해마 로컬 재학습(M4 Pro, code Top-5 92.6%/desc 92.8%). 이전(2026-06-10): 인지 경로 개편. 이전(2026-06-02): 런처 3표면.*

@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-08-17
+last_updated: 2026-08-21
 see_also: [vision.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -50,7 +50,10 @@ see_also: [vision.md, architecture.md, ibl.md, memory.md, packages.md]
 [node:action]{params}      예) [sense:search]{query: "AI 뉴스"}
 ```
 
-- **6개 노드 144 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 40) · `self`(내 자원, 48) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 9) · `table`(통화 변환 문법, 16)
+<!-- IBL_STATS:START -->
+- **6개 노드 149 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 40) · `self`(내 자원, 50) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 9) · `table`(통화 변환 문법, 19)
+<!-- IBL_STATS:END -->
+  (위 수치는 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 - API든 크롤링이든 안드로이드든 DB든 같은 문법으로 요청 — 프로토콜 차이는 드라이버가 감춘다.
 - **왜 도구 더미가 아니라 *언어*인가**: 표현력은 어휘 크기가 아니라 *조합*에서 나온다. 적게 고른 프리미티브 + 풍부한 조합 = 사실상 무한. 업계의 "자연어 SKILL.md" 대신 정합적 언어로 도구 폭증을 다스린다.
   - **조합 문법**: `>>` 순차(파이프 단축 `|`) · `&` 병렬 · `??` 폴백 · 조건/분기 **블록**(`if`/`else`/`case`, 문장 위치에도 놓인다) · 고차 문장 **`[table:each]{do, as}`**(찾은 것 *각각*에 IBL 문장 적용 — "각각에 대해 ~해라"를 처음으로 표현 가능하게 한 유일한 고차 변환자) · 변수 · `goal`. 재귀 깊이 상한 3.

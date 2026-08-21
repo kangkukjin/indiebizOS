@@ -1495,6 +1495,24 @@
         "ai_call"
       ],
       "file": "ai_words.md"
+    },
+    {
+      "id": "body",
+      "name": "몸 변화 회상([self:body]) 가이드",
+      "description": "내 몸(저장소) 파일이 언제 생기고 바뀌고 옮겨졌는지 git 원장에서 회상. changes/log/file 3 op, table 조합, 미추적·limit 신고 함정.",
+      "keywords": [
+        "몸",
+        "변화 이력",
+        "최근 변경",
+        "바뀐 파일",
+        "파일 이력",
+        "커밋",
+        "이동",
+        "body",
+        "history",
+        "git"
+      ],
+      "file": "body.md"
     }
   ]
 }

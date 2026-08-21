@@ -339,6 +339,39 @@ nodes:
                 lines:
                 - '{meta}'
                 - '{summary|opt:}'
+      body:
+        returns: items
+        # 전 op 읽기 전용 — 원장은 git 이 쓴다(이 어휘는 회상 통로).
+        side_effect: false
+        fixture: '[self:body]{days: 7, limit: 10}'
+        description: 내 몸(이 저장소) 파일 변화 이력 — git 원장 회상. 최근 바뀐 파일·커밋·한 파일의 일생(생성·수정·이동). 집계는 table:groupby(영역 열).
+        group: system
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 작업분 포함, 영역 열=층) / log: 커밋 단위 이력(무슨 일 했나, 파일수 동반) / file: 한 파일의 일생(path 필수 — git --follow 라 이름변경·이동을 관통해 생성까지). limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_key: op
+        router: handler
+        tool: body_op
+        implementation: system_essentials/body_ops.py — git log --name-status/-M/--follow 파싱, 저장소 루트=코드 위치에서 .git 조상 탐색. 전 op 읽기 전용(원장은 git 이 쓴다 — 이 어휘는 회상 통로).
+        runs_on: pc_only
+        ops:
+          default: changes
+          fixture:
+            log: '[self:body]{op: "log", days: 7, limit: 10}'
+            file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
+          values:
+            changes: 최근 파일 단위 변화 — 파일·상태·영역·시각·요지 (미커밋 포함)
+            log: 커밋 단위 이력 — 커밋·시각·요지·파일수
+            file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
+        keywords:
+        - 몸
+        - 변화 이력
+        - 최근 변경
+        - 바뀐 파일
+        - 파일 이력
+        - 커밋
+        - body
+        - history
+        guides:
+        - body.md
       sheet:
         returns: items
         # append/update 가 장부 파일을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).
@@ -1224,6 +1257,23 @@ tool_json:
         timeout:
           type: number
           description: status 선택 — 프로브 타임아웃 초 (기본 5)
+  - name: body_op
+    description: 몸(이 저장소) 파일 변화 이력 — git 원장 회상. changes(최근 파일 변화, 미커밋 포함)/log(커밋 이력)/file(한 파일의 일생 — 이름변경·이동 관통).
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: changes(기본)/log/file
+        days:
+          type: integer
+          description: changes/log — 조회 기간(일). 기본 7, 최대 365
+        path:
+          type: string
+          description: changes/log — 스코프 폴더(예 backend/cognition) / file — 대상 파일 경로(필수)
+        limit:
+          type: integer
+          description: 최대 행 수. 기본 200, 상한 1000 (초과 요청은 신고 후 상한 적용)
   - name: sheet_op
     description: 엑셀 장부 부분 편집 — 행 검색(find)/행 추가(append)/셀 수정(update). 기존 수식·서식·다른 시트 보존.
     input_schema:

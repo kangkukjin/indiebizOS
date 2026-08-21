@@ -591,6 +591,12 @@ _OP_DISPATCHERS = {
         "run": _sib_op("script_ops", "op_run"),
         "remove": _sib_op("script_ops", "op_remove"),
     },
+    # 몸 변화 회상 — git 원장을 items 로 (전 op 읽기 전용, 원장은 git 이 쓴다)
+    "body_op": {
+        "changes": _sib_op("body_ops", "op_changes"),
+        "log": _sib_op("body_ops", "op_log"),
+        "file": _sib_op("body_ops", "op_file"),
+    },
     # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).
     # 안전판 콜백(_red_prepare/_red_finalize)은 게이트가 쥔 채 넘긴다(_patch_op).
     "patch_op": {
@@ -601,7 +607,7 @@ _OP_DISPATCHERS = {
     },
 }
 _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list",
-                "patch_op": "propose"}
+                "patch_op": "propose", "body_op": "changes"}
 
 
 def execute(tool_input: dict, context) -> str:

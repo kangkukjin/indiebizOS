@@ -581,6 +581,37 @@
       }
     },
     {
+      "name": "body_op",
+      "description": "몸(이 저장소) 파일 변화 이력 — git 원장 회상. changes(최근 파일 변화, 미커밋 포함)/log(커밋 이력)/file(한 파일의 일생 — 이름변경·이동 관통).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "changes(기본)/log/file",
+            "enum": [
+              "changes",
+              "log",
+              "file"
+            ],
+            "default": "changes"
+          },
+          "days": {
+            "type": "integer",
+            "description": "changes/log — 조회 기간(일). 기본 7, 최대 365"
+          },
+          "path": {
+            "type": "string",
+            "description": "changes/log — 스코프 폴더(예 backend/cognition) / file — 대상 파일 경로(필수)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "최대 행 수. 기본 200, 상한 1000 (초과 요청은 신고 후 상한 적용)"
+          }
+        }
+      }
+    },
+    {
       "name": "sheet_op",
       "description": "엑셀 장부 부분 편집 — 행 검색(find)/행 추가(append)/셀 수정(update). 기존 수식·서식·다른 시트 보존.",
       "input_schema": {

@@ -304,6 +304,7 @@
     "others:showcase": "public-files",
     "self:ask": "system_essentials",
     "self:blog": "blog",
+    "self:body": "system_essentials",
     "self:cctv": "cctv",
     "self:copy": "system_essentials",
     "self:deck": "lecture_workspace",

@@ -4668,6 +4668,38 @@ nodes:
                 lines:
                 - '{meta}'
                 - '{summary|opt:}'
+      body:
+        returns: items
+        side_effect: false
+        fixture: '[self:body]{days: 7, limit: 10}'
+        description: 내 몸(이 저장소) 파일 변화 이력 — git 원장 회상. 최근 바뀐 파일·커밋·한 파일의 일생(생성·수정·이동). 집계는 table:groupby(영역 열).
+        group: system
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 작업분 포함, 영역 열=층) / log: 커밋 단위 이력(무슨 일 했나, 파일수 동반) / file: 한 파일의 일생(path 필수 — git --follow 라 이름변경·이동을 관통해 생성까지). limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_key: op
+        router: handler
+        tool: body_op
+        implementation: system_essentials/body_ops.py — git log --name-status/-M/--follow 파싱, 저장소 루트=코드 위치에서 .git 조상 탐색. 전 op 읽기 전용(원장은 git 이 쓴다 — 이 어휘는 회상 통로).
+        runs_on: pc_only
+        ops:
+          default: changes
+          fixture:
+            log: '[self:body]{op: "log", days: 7, limit: 10}'
+            file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
+          values:
+            changes: 최근 파일 단위 변화 — 파일·상태·영역·시각·요지 (미커밋 포함)
+            log: 커밋 단위 이력 — 커밋·시각·요지·파일수
+            file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
+        keywords:
+        - 몸
+        - 변화 이력
+        - 최근 변경
+        - 바뀐 파일
+        - 파일 이력
+        - 커밋
+        - body
+        - history
+        guides:
+        - body.md
       sheet:
         returns: items
         side_effect: true

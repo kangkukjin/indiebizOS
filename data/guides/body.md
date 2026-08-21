@@ -4,7 +4,7 @@
 
 배경: 2026-08-05 백엔드 층 분리 같은 "몸 개조"가 회상 불가능해, 몸을 만지는 도구의 낡은 가정이 몇 주씩 잠복했다(grep 방언 사건). 몸이 바뀌면 몸에 대한 가정이 깨진다 — 변화 자체가 연상 가능한 기억이어야 한다.
 
-## op 3종
+## op 5종
 
 | op | 무엇 | 주요 파라미터 |
 |----|------|--------------|
@@ -12,12 +12,16 @@
 | `log` | **커밋 단위** 이력 — "무슨 일을 했나" | `days` · `path` · `limit` |
 | `file` | **한 파일의 일생** — 생성·수정·이동을 `--follow` 로 관통 | `path`(필수) · `limit` |
 | `writes` | **런타임 쓰기 원장** — git 밖 층(data/·outputs/)의 쓰기를 행위자(agent·task·출처)와 함께 | `days` · `path` · `limit` |
+| `diff` | **실제 바뀐 줄** — 파일별 items(추가·삭제·diff 본문). 기본=미커밋 작업분(HEAD 대비) | `commit`(한 커밋) · `ref`(구간 ref..HEAD) · `path` · `lines`(파일당 본문 줄, 기본 200) · `limit`(파일 수, 기본 50) |
 
 ```
 [self:body]{}                                          # 최근 7일 몸 변화
 [self:body]{days: 30, path: "backend/cognition"}       # 인지층 한 달 변화
 [self:body]{op: "log", days: 7}                        # 이번 주 커밋들
 [self:body]{op: "file", path: "backend/ibl/ibl_parser.py"}  # 이 파일 일생 (이동 포함)
+[self:body]{op: "diff", path: "backend/ibl"}             # 지금 미커밋 변경의 실제 줄
+[self:body]{op: "diff", commit: "a8fd28b", lines: 60}   # 그 커밋이 바꾼 줄
+[self:body]{op: "diff", ref: "HEAD~3"}                  # 최근 3커밋 구간
 ```
 
 ## 통화·조합

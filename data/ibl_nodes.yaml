@@ -1628,19 +1628,19 @@ nodes:
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
         description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
         group: real_estate
-        target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → 법정동 지역코드 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
+        target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
         target_key: op
         router: handler
         tool: realty_op
         ops:
           default: query
           returns:
-            codes: scalar
+            codes: items
           fixture:
-            codes: '[sense:realty]{op: "codes", region: "서울"}'
+            codes: '[sense:realty]{op: "codes", city: "서울"}'
           values:
             query: 시세·매물 조회 (source=molit 실거래가 / source=zigbang 직방 매물 / source=naver 네이버부동산 매물)
-            codes: 법정동 지역코드 조회 (보조)
+            codes: 법정동 지역코드 목록 — items(지역·코드), city 생략 시 시/도 목록
         implementation: query source=molit=type×deal 국토부 6종 API(region 자동해소). source=zigbang=tool_zigbang(지명→geohash5→직방 리스트→거리필터→상세 병렬→records). source=naver=tool_naver(curl_cffi 크롬위장+페이지 JWT→/api/search 지역·단지 해소→/api/articles→items). codes=get_region_codes.
         keywords:
         - 부동산
@@ -1706,7 +1706,9 @@ nodes:
             label: 구/군
             required: true
             options_action: '[sense:realty]{op: "codes", city: "$province"}'
-            options_from: regions
+            options_from: items
+            option_value: 코드
+            option_label: 지역
           - key: type
             type: select
             label: 유형
@@ -4674,7 +4676,7 @@ nodes:
         fixture: '[self:body]{days: 7, limit: 10}'
         description: 내 몸(이 저장소) 파일 변화 이력 — git 원장 회상. 최근 바뀐 파일·커밋·한 파일의 일생(생성·수정·이동). 집계는 table:groupby(영역 열).
         group: system
-        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 작업분 포함, 영역 열=층) / log: 커밋 단위 이력(무슨 일 했나, 파일수 동반) / file: 한 파일의 일생(path 필수 — git --follow 라 이름변경·이동을 관통해 생성까지) / writes: 런타임 쓰기 원장(git 밖 data·outputs 층 — ★관문 safe_store·[self:write] 통과분만, 전수 아님, 행위자·task 동반). limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 작업분 포함, 영역 열=층) / log: 커밋 단위 이력(무슨 일 했나, 파일수 동반) / file: 한 파일의 일생(path 필수 — git --follow 라 이름변경·이동을 관통해 생성까지) / writes: 런타임 쓰기 원장(git 밖 data·outputs 층 — ★관문 safe_store·[self:write] 통과분만, 전수 아님, 행위자·task 동반) / diff: 실제 바뀐 줄(파일별 items: 추가·삭제·diff 본문) — 기본 미커밋 작업분(HEAD 대비), commit=한 커밋, ref=구간(ref..HEAD), path 스코프, lines=파일당 본문 줄 상한(기본 200·넘치면 신고), limit=파일 수(기본 50). limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
         target_key: op
         router: handler
         tool: body_op
@@ -4686,11 +4688,13 @@ nodes:
             log: '[self:body]{op: "log", days: 7, limit: 10}'
             file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
             writes: '[self:body]{op: "writes", days: 7, limit: 10}'
+            diff: '[self:body]{op: "diff", path: "backend", lines: 40}'
           values:
             changes: 최근 파일 단위 변화 — 파일·상태·영역·시각·요지 (미커밋 포함)
             log: 커밋 단위 이력 — 커밋·시각·요지·파일수
             file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
             writes: 런타임 쓰기 원장 — 관문 통과 쓰기의 행위자·작업 (전수 아님)
+            diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·commit·ref..HEAD, 파일별 본문
         keywords:
         - 몸
         - 변화 이력

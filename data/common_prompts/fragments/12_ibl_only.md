@@ -188,29 +188,33 @@ execute_ibl(code='[self:slide]{op: "create", instruction: "분기 실적 핵심�
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')  # 병렬 수집
 ```
 
-### 파이프라인을 쓰지 않는 경우 (분석/판단이 필요할 때)
-사용자가 "반도체 시장 분석해줘"라고 했다면:
+### AI 판단이 중간에 필요할 때 — 파이프 안에 넣어라 (하나씩 부르는 게 기본이 아니다)
+"반도체 시장 분석해줘"처럼 결과를 *읽고 판단*해야 하는 일도 대부분 한 문장이다:
 
-**WRONG — 파이프라인으로 한번에 보내기:**
+**WRONG — 판단 없이 원본을 그대로 저장:**
 ```
-execute_ibl(code='[sense:search]{query: "반도체"} & [sense:search]{source: "gnews", query: "반도체"} >> [self:write]{path: "분석.md"}')
+execute_ibl(code='[sense:search]{query: "반도체"} >> [self:write]{path: "분석.md"}')
 ```
-→ 검색 결과 JSON이 분석 없이 그대로 파일에 저장됨. 쓸모없다.
+→ 검색 JSON 이 분석 없이 파일에 박힌다.
 
-**RIGHT — 하나씩 호출하고 네가 생각하기:**
+**WRONG — 낱개로 N번 부르고 머릿속에서 합치기:**
 ```
-1. execute_ibl(code='[sense:search]{query: "반도체 시장 동향"}')
-2. (결과를 보고 네가 분석 — 핵심 트렌드, 주요 기업 동향 파악)
-3. execute_ibl(code='[sense:search]{source: "gnews", query: "반도체 투자"}')
-4. (추가 결과와 함께 종합 분석)
-5. execute_ibl(code='[self:write]{path: "반도체_분석.md", content: "네가 정리한 분석 내용"}')
+1. execute_ibl('[sense:search]{query: "반도체 시장 동향"}')
+2. execute_ibl('[sense:search]{source: "gnews", query: "반도체 투자"}')
+3. (네가 읽고 정리) → execute_ibl('[self:write]{...content: "네가 정리한 글"}')
 ```
-→ 너의 사고가 중간에 들어가서 의미 있는 결과가 나온다.
+→ 왕복 3회, 통화가 네 컨텍스트를 거쳐 나온다(숫자를 손으로 옮기다 틀린다). 같은 액션을 파라미터만 바꿔 연달아 부르고 있다면 `&` 로 접어라.
 
-### 판단 기준
-- **다음 스텝이 이전 결과를 그대로 받아도 되는가?** → `>>` 파이프라인 OK
-- **다음 스텝 전에 분석/요약/판단/비교가 필요한가?** → 파이프라인 쓰지 말고 하나씩 호출
-- 사용자가 "분석", "요약", "비교", "보고서", "인사이트", "평가" 같은 단어를 쓰면 → 반드시 하나씩 호출
+**RIGHT — 수집은 `&`, 판단은 `[table:ai]`/`[table:brief]`, 저장은 `>>`:**
+```
+execute_ibl(code='[sense:search]{query: "반도체 시장 동향"} & [sense:search]{source: "gnews", query: "반도체 투자"} >> [table:ai]{instruction: "광고·중복 제거, 행마다 한 줄 요지 추가"} >> [table:brief]{instruction: "핵심 트렌드·주요 기업 동향 5문장"} >> [self:write]{path: "반도체_분석.md"}')
+```
+→ 왕복 1회. 판단은 파이프 안의 AI 낱말이 맡고, 결과는 통화로 흐른다. 목록의 각 행마다 다른 행동이면 `[table:each]`.
+
+### 하나씩 부르는 것이 맞는 경우 (예외 — 이것뿐)
+- **다음 문장의 *모양* 자체가 결과에 달려 있을 때** — 결과를 보고 어느 액션을 쓸지·어떤 파라미터를 줄지 정해야 하는 분기. 값만 달라지는 분기는 `[if:]`/`$변수` 로 문장 안에서 해결된다.
+- **결과가 커서 다음 입력에 다 실을 수 없을 때** — 그래도 먼저 `>> [table:take]`·`[table:select]`·`[table:ai]` 로 줄여서 한 문장에 담을 수 있는지 본다.
+- 사용자가 "분석·요약·보고서" 같은 단어를 썼다는 것은 **하나씩 부를 이유가 아니다** — 그 단어는 파이프 끝에 `[table:brief]` 가 온다는 뜻이다.
 
 ## IBL Code in Responses
 - **실행할 때**: 반드시 `execute_ibl` 도구의 `code` 파라미터로 호출. 텍스트에 IBL을 쓰는 것은 실행이 아니다.

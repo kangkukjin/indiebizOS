@@ -593,7 +593,8 @@
               "changes",
               "log",
               "file",
-              "writes"
+              "writes",
+              "diff"
             ],
             "default": "changes"
           },

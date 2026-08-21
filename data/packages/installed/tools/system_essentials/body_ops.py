@@ -8,6 +8,9 @@
 - changes(기본): 최근 파일 단위 변화 (미커밋 작업분 포함)
 - log: 커밋 단위 이력 ("내가 뭘 했나")
 - file: 한 파일의 일생 — git --follow 로 생성·수정·이동(이름변경)을 관통 추적
+- diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·한 커밋·구간(ref..HEAD). 파일별 items + 본문
+  (2026-08-21 추가: 7일간 Bash git 서브커맨드 1위가 `git diff` 95회 — 회상 통로가 "무엇이"
+   까지만 답하고 "어떻게"는 못 답해 셸로 떨어지던 자리)
 """
 import os
 import shutil
@@ -350,3 +353,71 @@ def op_file(tool_input):
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+
+
+_DEFAULT_DIFF_LINES = 200   # 파일당 본문 줄 상한(기본) — 넘치면 자르고 신고
+_MAX_DIFF_LINES = 2000
+_DEFAULT_DIFF_FILES = 50
+_MAX_DIFF_FILES = 300
+
+
+def op_diff(tool_input):
+    """실제 바뀐 줄 — 파일별 items(추가·삭제·본문).
+
+    범위: commit 지정=그 커밋 하나(부모 대비) / ref 지정=ref..HEAD / 둘 다 없음=미커밋 작업분
+    (스테이지+미스테이지, HEAD 대비). path 로 스코프. 본문은 파일당 lines 줄까지 싣고 넘치면 신고.
+    """
+    root, err = _guard_root()
+    if err:
+        return err
+    notes = []
+    lines = _clamp(tool_input, "lines", _DEFAULT_DIFF_LINES, _MAX_DIFF_LINES, notes)
+    limit = _clamp(tool_input, "limit", _DEFAULT_DIFF_FILES, _MAX_DIFF_FILES, notes)
+    scope, serr = _scope_of(tool_input, root)
+    if serr:
+        return {"success": False, "message": serr}
+    commit = (tool_input.get("commit") or "").strip()
+    ref = (tool_input.get("ref") or "").strip()
+    if commit and ref:
+        return {"success": False, "message": "commit 과 ref 는 동시에 줄 수 없습니다 — 한 커밋이면 commit, 구간이면 ref(예 HEAD~3)."}
+    if commit:
+        rng, label = [f"{commit}^!"], f"커밋 {commit}"
+    elif ref:
+        rng, label = [f"{ref}..HEAD"], f"{ref}..HEAD"
+    else:
+        rng, label = ["HEAD"], "미커밋 작업분"
+    tail = ["--", scope] if scope else []
+    stdout, gerr = _git(root, ["diff", "--numstat", "-M"] + rng + tail)
+    if gerr:
+        return {"success": False, "message": gerr}
+    files = []
+    for line in stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 3:
+            continue
+        add, dele, fp = parts[0], parts[1], parts[2]
+        if " => " in fp:  # 이름변경 표기 "a/{old => new}.py" 는 새 경로만
+            fp = fp.replace("{", "").replace("}", "")
+            fp = fp.split(" => ")[-1] if "/" not in fp.split(" => ")[0] else fp
+        files.append((fp, add, dele))
+    total = len(files)
+    truncated = total > limit
+    files = files[:limit]
+    rows = []
+    for fp, add, dele in files:
+        body, derr = _git(root, ["diff", "-M"] + rng + ["--", fp])
+        body_lines = (body or "").splitlines() if not derr else [f"(diff 실패: {derr})"]
+        cut = len(body_lines) > lines
+        row = {"파일": fp, "영역": _area_of(fp),
+               "추가": int(add) if add.isdigit() else None,
+               "삭제": int(dele) if dele.isdigit() else None,
+               "diff": "\n".join(body_lines[:lines])}
+        if cut:
+            row["diff_잘림"] = f"{len(body_lines)}줄 중 {lines}줄 — lines 를 올리거나 path 로 좁히세요"
+        rows.append(row)
+    text = f"{label}: 변경 파일 {total}개" + (f" — {limit}개만 표시" if truncated else "")
+    if total == 0:
+        text += " (바뀐 줄 없음)"
+    if notes:
+        text += " · " + ", ".join(notes)
+    return {"success": True, "items": rows, "total": total, "truncated": truncated, "range": label, "text": text}

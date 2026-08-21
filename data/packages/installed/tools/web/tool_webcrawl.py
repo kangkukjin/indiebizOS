@@ -545,11 +545,16 @@ def _resolve_google_news(url: str) -> str | None:
             data={"f.req": payload}, timeout=10)
         if r.status_code != 200:
             return None
-        # 응답은 JSON-in-JSON — 정밀 패턴 우선, 실패 시 비-구글 URL 스캔 폴백
-        m2 = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', r.text)
+        # 응답은 JSON-in-JSON 이고 URL 안의 = & 등이 \\u003d 꼴로 이스케이프돼 있다 —
+        # 풀지 않으면 정규식이 백슬래시에서 끊겨 `?idxno` 까지만 남는다
+        # (2026-08-21 ep1339·1258 등 7일간 gnews 발 크롤 17건 전멸의 실체).
+        body = re.sub(r'\\{1,2}u([0-9a-fA-F]{4})',
+                      lambda m: chr(int(m.group(1), 16)), r.text)
+        # 정밀 패턴 우선, 실패 시 비-구글 URL 스캔 폴백
+        m2 = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', body)
         if m2:
             return m2.group(1)
-        for line in r.text.split('\n'):
+        for line in body.split('\n'):
             hits = re.findall(r'https?://[^\\"\s]+', line)
             real = [h for h in hits
                     if 'news.google' not in h and 'gstatic' not in h

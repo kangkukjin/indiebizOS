@@ -415,10 +415,13 @@ def get_region_codes(city: str = ""):
 
         for key in REGION_CODES:
             if city_normalized in key or key in city_normalized:
+                # items 통화 — >> 파이프(take/filter/each)로 흐른다.
+                # (dict 만 내던 시절 `[sense:realty]{op:"codes"} >> [table:take]` 가
+                #  ep1116·1334 에서 같은 문장으로 두 번 단절 — 2026-08-21 수리)
                 return {
                     "success": True,
                     "city": key,
-                    "regions": REGION_CODES[key],
+                    "items": [{"지역": name, "코드": code} for name, code in REGION_CODES[key].items()],
                     "count": len(REGION_CODES[key])
                 }
 
@@ -427,17 +430,11 @@ def get_region_codes(city: str = ""):
             "error": f"'{city}'에 해당하는 지역을 찾을 수 없습니다. 지원 도시: {', '.join(REGION_CODES.keys())}"
         }
 
-    # 전체 목록 반환 (요약)
-    summary = {}
-    for city_name, regions in REGION_CODES.items():
-        summary[city_name] = {
-            "구/군 수": len(regions),
-            "예시": list(regions.items())[:3]
-        }
-
+    # 전체 목록 — 시/도 단위 items (구/군까지 펼치려면 city 지정)
+    items = [{"시도": city_name, "구군수": len(regions)} for city_name, regions in REGION_CODES.items()]
     return {
         "success": True,
         "total_cities": len(REGION_CODES),
-        "cities": summary,
+        "items": items,
         "usage": "특정 도시의 전체 코드를 보려면 city 파라미터에 도시명을 입력하세요. (예: 서울, 경기, 부산)"
     }

@@ -597,6 +597,7 @@ _OP_DISPATCHERS = {
         "log": _sib_op("body_ops", "op_log"),
         "file": _sib_op("body_ops", "op_file"),
         "writes": _sib_op("body_ops", "op_writes"),
+        "diff": _sib_op("body_ops", "op_diff"),
     },
     # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).
     # 안전판 콜백(_red_prepare/_red_finalize)은 게이트가 쥔 채 넘긴다(_patch_op).

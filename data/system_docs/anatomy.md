@@ -3,7 +3,7 @@ title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
 last_updated: 2026-08-21
-see_also: [vision.md, architecture.md, ibl.md, memory.md, packages.md]
+see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
 # indiebizOS 해부도 (Anatomy)
@@ -23,7 +23,7 @@ see_also: [vision.md, architecture.md, ibl.md, memory.md, packages.md]
 - **시야 패러다임** (indiebizOS): 인간 판단에 기반해 가능성을 *늘린다*. 힘은 AI가 대되, 어디로 뻗을지는 매 순간 사람이 정한다. 웨어러블 로봇처럼.
 
 깊은 일(연구·집필·창업·"뭘 원하는지 알아내기")은 목적지가 루프 *안*에서 생성된다 — 그래서 한 방에 정답을 뽑는 게 아니라 사람과 함께 좁혀 간다.
-→ 정본 telos: [vision.md](vision.md)
+→ 정본 telos: [vision.md](vision.md) · 코드 독립 원리(자기 하네스를 지으려는 사람용): [harness_haerye.md](harness_haerye.md)
 
 ---
 

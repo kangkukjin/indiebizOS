@@ -11,4 +11,5 @@ export { ActiveProjects } from './ActiveProjects';
 export { ModelGearLever } from './ModelGearLever';
 export { LimbSwitch } from './LimbSwitch';
 export { SystemLogViewer } from './SystemLogViewer';
+export { BodyLedger } from './BodyLedger';
 export * from './dialogs';

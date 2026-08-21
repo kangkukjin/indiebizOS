@@ -249,6 +249,8 @@ def op_writes(tool_input):
 
     ★부분성 정직: 원장은 선언된 관문(safe_store·[self:write]·개별 저장 관문 — gate 열이 목록)을 지난 쓰기만 기록한다 —
     관문 밖 직접 쓰기는 원리적으로 없다. 전수가 필요한 코드 층은 changes(git)가 정답.
+    또 심장박동 가족(write_ledger._HEARTBEAT_PATHS)의 행위자 없는 폴링 쓰기는
+    6시간당 1건으로 압축된다(출처="심장박동(압축)") — 그 파일의 마지막 실쓰기 시각은 mtime.
     """
     root, err = _guard_root()
     if err:
@@ -290,7 +292,9 @@ def op_writes(tool_input):
                      "관문": r.get("gate", ""), "영역": _area_of(fp),
                      "행위자": r.get("agent") or "",
                      "작업": r.get("task") or "",
-                     "출처": ("자가점검" if r.get("hc") else (r.get("origin") or ""))})
+                     "출처": ("심장박동(압축)" if r.get("hb")
+                              else "자가점검" if r.get("hc")
+                              else (r.get("origin") or ""))})
     rows.sort(key=lambda r: r["시각"], reverse=True)
     total = len(rows)
     truncated = total > limit
@@ -298,7 +302,8 @@ def op_writes(tool_input):
     _join_episode_requests(root, rows)
     scope_txt = f" (스코프 {scope})" if scope else ""
     text = (f"최근 {days}일 런타임 쓰기{scope_txt}: {total}건 — "
-            f"선언 관문 통과분만(전수 아님 — gate 열이 관문 이름, 코드 층 전수는 changes)")
+            f"선언 관문 통과분만(전수 아님 — gate 열이 관문 이름, 코드 층 전수는 changes) · "
+            f"심장박동 폴링은 6시간당 1건 압축")
     if truncated:
         text += f" · {limit}건만 표시"
     if notes:

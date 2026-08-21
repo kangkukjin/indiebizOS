@@ -16,17 +16,30 @@ episode 주행기록과 task_id 로 조인해 "이 파일 왜 바뀌었나"가 �
 
 저장: data/write_ledger.jsonl (O_APPEND 단일행 — 소규모 동시 append 안전),
 8MB 초과 시 .jsonl.1 로 1세대 로테이션. 소유 선언=ledger(data_ownership).
+
+심장박동 압축 (2026-08-21 첫날 실측 후): device_registry.json 폴링이 하루 ~350행
+(전체의 93%)을 차지해 원장이 provenance 기록이 아니라 폴링 로그가 됐다. 선언된
+심장박동 가족의 **행위자 없는** 쓰기만 _HB_WINDOW_S 당 1건으로 압축(hb=True 표식)
+— 행위자(agent·task·origin)가 실린 쓰기는 진짜 사건(기기 등록 등)이라 전부 기록.
+소비자([self:body]{op:"writes"})는 이 압축도 부분성 광고에 포함해야 한다.
 """
 from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
 _ROOT = Path(__file__).parent.parent.parent
 _LEDGER_PATH = _ROOT / "data" / "write_ledger.jsonl"
 _ROTATE_BYTES = 8 * 1024 * 1024   # 1세대 로테이션 (~40k행)
+
+# 심장박동 가족 — 폴링·상태 갱신이 분 단위로 두드리는 파일(상대경로). 행위자 없는
+# 쓰기만 압축 대상. 프로세스 내 메모리 창이라 리로드 시 초기화(추가 몇 행 무해).
+_HEARTBEAT_PATHS = {"data/device_registry.json"}
+_HB_WINDOW_S = 6 * 3600
+_hb_last: dict = {}   # rel path -> 마지막 기록 epoch
 
 
 def _actor() -> dict:
@@ -62,8 +75,19 @@ def log_write(path, event: str = "write", gate: str = "", size=None) -> None:
         if rel.startswith("data/write_ledger.jsonl") or \
                 Path(path).name.startswith("write_ledger.jsonl"):
             return
+        actor = _actor()
+        hb = False
+        if rel in _HEARTBEAT_PATHS and not (actor.get("agent") or actor.get("task")
+                                            or actor.get("origin")):
+            now = time.time()
+            if now - _hb_last.get(rel, 0.0) < _HB_WINDOW_S:
+                return
+            _hb_last[rel] = now
+            hb = True
         row = {"ts": datetime.now().isoformat(timespec="seconds"),
-               "path": rel, "event": event, "gate": gate, **_actor()}
+               "path": rel, "event": event, "gate": gate, **actor}
+        if hb:
+            row["hb"] = True
         if size is not None:
             row["size"] = int(size)
         line = (json.dumps(row, ensure_ascii=False) + "\n").encode("utf-8")

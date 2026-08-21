@@ -130,6 +130,39 @@ def test_t7_body_writes_op(tmp):
     assert out["total"] == 0 and "비어" in out["text"], "빈 원장 정직 메시지 누락"
 
 
+def test_t8_heartbeat_compress(tmp):
+    """심장박동 압축 — 행위자 없는 폴링 쓰기는 창(6h)당 1건(hb 표식), 행위자 실리면 전부."""
+    hb_path = tmp["root"] / "data" / "device_registry.json"
+    try:
+        tmp["ledger"].unlink()
+    except OSError:
+        pass
+    wl._hb_last.clear()
+    wl.log_write(hb_path, gate="device_registry")   # 첫 심장박동 → 기록(hb)
+    wl.log_write(hb_path, gate="device_registry")   # 창 안 → 억제
+    wl.log_write(hb_path, gate="device_registry")   # 창 안 → 억제
+    rows = _read_lines(tmp["ledger"])
+    assert len(rows) == 1 and rows[0].get("hb") is True, f"압축 실패: {rows}"
+    # 행위자가 실린 쓰기(진짜 사건)는 창 안이어도 전부 기록 — hb 아님
+    tc.set_current_agent_id("registrar")
+    try:
+        wl.log_write(hb_path, gate="device_registry")
+    finally:
+        tc.set_current_agent_id(None)
+    rows = _read_lines(tmp["ledger"])
+    assert len(rows) == 2 and not rows[-1].get("hb"), f"행위자 쓰기가 억제됨: {rows}"
+    # 창 만료 → 다시 1건 기록
+    wl._hb_last["data/device_registry.json"] -= wl._HB_WINDOW_S + 1
+    wl.log_write(hb_path, gate="device_registry")
+    assert len(_read_lines(tmp["ledger"])) == 3, "창 만료 후 미기록"
+    # 비심장박동 파일은 무영향
+    wl.log_write(tmp["root"] / "data" / "normal.json", gate="safe_store")
+    wl.log_write(tmp["root"] / "data" / "normal.json", gate="safe_store")
+    normal = [r for r in _read_lines(tmp["ledger"]) if r["path"] == "data/normal.json"]
+    assert len(normal) == 2, "비심장박동 파일이 압축됨"
+    wl._hb_last.clear()
+
+
 def _make_tmp():
     root = Path(tempfile.mkdtemp(prefix="write_ledger_"))
     (root / "data").mkdir()

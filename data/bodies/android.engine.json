@@ -38,6 +38,7 @@
     "cognition/cognitive_trace",
     "cognition/consciousness_agent",
     "cognition/doc_drift",
+    "cognition/fixture_sweeps",
     "cognition/forage_consolidation",
     "cognition/goal_evaluator",
     "cognition/guide_audit",
@@ -265,8 +266,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 259,
-    "engine": 213,
+    "total": 260,
+    "engine": 214,
     "blocklist": 46
   }
 }

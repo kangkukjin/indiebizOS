@@ -105,7 +105,8 @@ def get_denied_message(node: str, allowed: Set[str]) -> dict:
 CATALOG_LEGEND = (
     "# 표기법: '노드:액션 :: 설명' = 액션 한 줄 (호출은 [노드:액션]{...}). "
     "그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표 = 기본 op, op 생략 시 적용; "
-    "설명 없는 .op 는 이름 그대로의 동작). (dormant: 키이름) = API 키가 없어 휴면 중."
+    "설명 없는 .op 는 이름 그대로의 동작). ⟨열: a·b⟩ = 실측 반환 열 이름 — 뒤에 붙일 "
+    "filter/sort/select/compute 의 필드명은 이걸 쓴다. (dormant: 키이름) = API 키가 없어 휴면 중."
 )
 
 # R3: 이름이 자명한 op 는 설명을 방출하지 않는다(이름만) — 데이터(ops.values)는 그대로,
@@ -127,6 +128,49 @@ def _op_desc_suppressible(op_name: str, op_desc: str) -> bool:
     d = op_desc or ""
     return ((op_name in _SELF_EVIDENT_OPS or base in _SELF_EVIDENT_OPS)
             and len(d) <= 60 and "=" not in d and "필수" not in d)
+
+
+_SHAPES_CACHE = {"mtime": None, "data": {}}
+
+
+def _return_shapes() -> dict:
+    """fixture 실측 반환 열(data/ibl_return_shapes.json, scripts/ibl_shape_sweep.py 산출) — mtime 캐시.
+
+    2026-08-21: 조합의 1위 구조적 한계="뒷문장을 쓰려면 앞문장의 열 이름을 봐야 한다"(ep1325
+    `where: "연도 == '2024'"` 실패 → 한 번 돌려 보고 다시 씀). 카탈로그가 열을 말하면 그 왕복이 준다.
+    관측 데이터라 src yaml 이 아니라 런타임 파일에서 읽는다(세계의 명사=데이터)."""
+    try:
+        from runtime_utils import get_base_path
+        path = get_base_path() / "data" / "ibl_return_shapes.json"
+        mt = path.stat().st_mtime
+    except Exception:
+        return {}
+    if _SHAPES_CACHE["mtime"] != mt:
+        try:
+            import json as _json
+            _SHAPES_CACHE["data"] = _json.loads(path.read_text(encoding="utf-8")).get("shapes", {}) or {}
+        except Exception:
+            _SHAPES_CACHE["data"] = {}
+        _SHAPES_CACHE["mtime"] = mt
+    return _SHAPES_CACHE["data"]
+
+
+def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
+    """'⟨열: a·b·c⟩' — 액션 줄엔 기본 op(또는 op 없는 fixture)의 열, op 줄엔 그 op 의 열(액션 열과 다를 때만)."""
+    shapes = _return_shapes()
+    if not shapes:
+        return ""
+    if op is None:
+        default = (ops or {}).get("default") if isinstance(ops, dict) else None
+        ent = shapes.get(qualified) or (shapes.get(f"{qualified}#{default}") if default else None)
+    else:
+        ent = shapes.get(f"{qualified}#{op}")
+        base = shapes.get(qualified) or shapes.get(f"{qualified}#{(ops or {}).get('default')}")
+        if ent and base and ent.get("keys") == base.get("keys"):
+            return ""
+    if not ent or not ent.get("keys"):
+        return ""
+    return " ⟨열: " + "·".join(ent["keys"][:8]) + "⟩"
 
 
 def _emit_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:
@@ -154,15 +198,16 @@ def _emit_action_line(node_name: str, action_name: str, action_config, indent: s
     desc = action_config.get("description", "")
     ops = action_config.get("ops")
 
-    lines = [f"{indent}{qualified} :: {desc}{dormant_suffix}"]
+    lines = [f"{indent}{qualified} :: {desc}{_shape_suffix(qualified, None, ops)}{dormant_suffix}"]
     if isinstance(ops, dict) and ops.get("values"):
         default = ops.get("default")
         for op_name, op_desc in (ops.get("values") or {}).items():
             star = "*" if op_name == default else ""
-            if _op_desc_suppressible(op_name, op_desc):
+            sfx = _shape_suffix(qualified, op_name, ops)
+            if _op_desc_suppressible(op_name, op_desc) and not sfx:
                 lines.append(f"{indent}  .{op_name}{star}")
             else:
-                lines.append(f"{indent}  .{op_name}{star} {op_desc}")
+                lines.append(f"{indent}  .{op_name}{star} {op_desc}{sfx}")
     return "\n".join(lines)
 
 

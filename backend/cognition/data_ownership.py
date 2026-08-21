@@ -63,6 +63,8 @@ DECLARATIONS: List[tuple] = [
     # 빌드 파생 (derived — 재생성 가능, 직접 편집 금지 부류)
     ("data/ibl_nodes.yaml",         "build_ibl_nodes 산출물",                    "derived"),
     ("data/ibl_fixtures.json",      "build_ibl_nodes 산출물",                    "derived"),
+    ("data/ibl_return_shapes.json", "ibl_shape_sweep 실측 반환 열(카탈로그 ⟨열⟩)",  "derived"),
+    ("data/ibl_shape_sweep_state.json", "반환 모양 스윕 주간 카덴스 상태",        "state"),
     ("data/core_manifest.json",     "build_ibl_nodes 산출물",                    "derived"),
     ("data/package_meta.json",      "build_ibl_nodes 산출물",                    "derived"),
     ("data/phone_manifest.json",    "build_ibl_nodes 산출물",                    "derived"),

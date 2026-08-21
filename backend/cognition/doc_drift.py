@@ -73,8 +73,9 @@ def _mask(text: str) -> str:
 
 def _is_historical(line: str) -> bool:
     s = line.strip()
-    if s.startswith("*마지막 업데이트") or s.startswith("*최종 업데이트"):
-        return True  # 꼬리 changelog — 그때의 기록
+    if (s.startswith("*마지막 업데이트") or s.startswith("*최종 업데이트")
+            or s.startswith("*최근 변경")):
+        return True  # 꼬리 changelog — 그때의 기록 (최근 변경=2026-08-21 다이어트 후 규약)
     if "→" in s:
         return True  # 이행 서술 (163→144 등)
     if re.search(r"\d+\s*개?\s*(?:에서|to)\s+\d+", s):
@@ -196,7 +197,8 @@ def _check_dates(rel: str, text: str) -> List[Dict]:
     fm = re.search(r"^last_updated:\s*(\d{4}-\d{2}-\d{2})", text, re.MULTILINE)
     if not fm:
         return []
-    tails = re.findall(r"\*(?:마지막|최종) 업데이트:\s*(\d{4}-\d{2}-\d{2})", text)
+    tails = (re.findall(r"\*(?:마지막|최종) 업데이트:\s*(\d{4}-\d{2}-\d{2})", text)
+             + re.findall(r"\*최근 변경\((\d{4}-\d{2}-\d{2})\)", text))
     if not tails:
         return []
     newest_tail = max(tails)

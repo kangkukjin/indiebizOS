@@ -5,40 +5,36 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:6218
+- dataset_size:6243
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: open chrome on my phone
+- source_sentence: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
   sentences:
-  - '[self:health]'
-  - 빈 폴더 생성 (mkdir -p 동등, 중간 경로 자동 생성·이미 있으면 조용히 통과). 삭제는 delete, 이동·이름변경은 move.
-  - 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브
-    접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
-- source_sentence: 디자인 시스템 톤 일치 보여줘
+  - '[self:download]'
+  - '[table:each], ], do: "[sense:weather]"} >> [table:flatten]'
+  - '[self:limb]'
+- source_sentence: 실행 에이전트 모델 교체의 용이성 보여줘
   sentences:
-  - '[sense:contest]'
-  - 개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을
-    따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열
-    불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.
-  - '[engines:image_read]'
-- source_sentence: 여기가 어디야
+  - '[limbs:screen]'
+  - 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은
+    web_site.
+  - '[self:grep] & [self:list] & [self:file_find] & [self:read] & [self:read]'
+- source_sentence: 초보자를 위한 특정 주제의 용어집을 만들기 위해 인터넷 검색과 내부 문서 탐색으로 관련 정보를 수집한다.
   sentences:
-  - '[sense:here]'
-  - '[self:material]'
-  - '[sense:crypto]'
-- source_sentence: 크몽에서 로고 디자인 전문가 평점 좋은 순으로 5명 골라줘
+  - '[self:read]'
+  - '[others:portal] >> [table:take]'
+  - '[sense:search] 초보자 용어집"}'
+- source_sentence: 메모리 사용률 95% 넘으면 프로세스 점검해
   sentences:
-  - 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
-  - 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면
-    채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
-  - '[sense:freelance] >> [table:sort] >> [table:take]'
-- source_sentence: 보험비교 노트북 통째로 지워줘
+  - '[if: sense:host.memory.percent > 95]} [else]}'
+  - '[sense:search] & [sense:search]'
+  - 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
+- source_sentence: 네이버 검색 안 되면 다른 걸로 검색해줘
   sentences:
-  - 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진
-    문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
-  - '[self:lecture]'
-  - '[self:cctv]'
+  - '[self:schedule] & [sense:stock]"}'
+  - '[self:file_find]'
+  - '[sense:search] ?? [sense:search]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -92,9 +88,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '보험비교 노트북 통째로 지워줘',
-    '근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.',
-    '[self:cctv]',
+    '네이버 검색 안 되면 다른 걸로 검색해줘',
+    '[sense:search] ?? [sense:search]',
+    '[self:file_find]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -103,9 +99,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.4677, -0.0247],
-#         [ 0.4677,  1.0000,  0.0398],
-#         [-0.0247,  0.0398,  1.0000]])
+# tensor([[1.0000, 0.7758, 0.0971],
+#         [0.7758, 1.0000, 0.0995],
+#         [0.0971, 0.0995, 1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -149,20 +145,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 6,218 training samples
+* Size: 6,243 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 4 tokens</li><li>mean: 15.75 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 24.55 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.06 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.38 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                                      | sentence_1                                                            |
-  |:------------------------------------------------|:----------------------------------------------------------------------|
-  | <code>indiebizOS로 출품할 만한 AI 에이전트 대회 찾아줄래</code> | <code>[sense:contest]</code>                                          |
-  | <code>국내 학위논문 중에 베이지안 추론 관련</code>              | <code>[sense:paper]</code>                                            |
-  | <code>코스피랑 코스닥 동시에 확인</code>                    | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code> |
+  | sentence_0                        | sentence_1                                                                                                                                   |
+  |:----------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>텍스트 음성 변환</code>            | <code>텍스트를 음성 MP3로 변환 (기본 Gemini TTS, 한국어 지원). 동영상 나레이션용.</code>                                                                             |
+  | <code>삼성전자 현재 시세</code>           | <code>[sense:stock]</code>                                                                                                                   |
+  | <code>카톡 입력창에 글 쓰고 전송까지 해줘</code> | <code>안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -292,11 +288,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6427 | 500  | 0.0063        |
+| 0.6402 | 500  | 0.0628        |
 
 
 ### Training Time
-- **Training**: 4.2 minutes
+- **Training**: 4.1 minutes
 
 ### Framework Versions
 - Python: 3.13.5

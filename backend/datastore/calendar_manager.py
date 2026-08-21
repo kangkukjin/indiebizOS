@@ -139,6 +139,12 @@ class CalendarManagerBase:
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, ensure_ascii=False, indent=2)
         os.replace(tmp, CALENDAR_CONFIG_PATH)
+        # 쓰기 관문 원장 — 일정·스케줄 변경 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(CALENDAR_CONFIG_PATH, event="write", gate="calendar")
+        except Exception:
+            pass
 
     # =========================================================================
     # 이벤트 CRUD (캘린더 + 스케줄 통합)

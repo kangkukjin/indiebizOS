@@ -79,6 +79,12 @@ def _save() -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(_cache or {"keys": {}}, f, ensure_ascii=False, indent=2)
         os.replace(tmp, p)
+        # 쓰기 관문 원장 — 손발 자격 발급·폐기는 보안 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(p, event="write", gate="limb_keys")
+        except Exception:
+            pass
     except Exception as e:
         print(f"[limb_keys] 저장 실패: {e}")
 

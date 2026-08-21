@@ -1,6 +1,8 @@
 """쓰기 관문 원장 (write_ledger) — 몸 원장 4기둥의 ③ (2026-08-21 신설)
 
-런타임 쓰기(git 이 못 보는 data/·outputs/ 층)가 좁은 관문(safe_store·[self:write])을
+런타임 쓰기(git 이 못 보는 data/·outputs/ 층)가 좁은 관문(safe_store·[self:write] +
+2026-08-21 ④: 보안·설정·공개쓰기 가족의 개별 저장 관문 — limb_keys·device_registry·
+model_gear·calendar·portal_state·bulletin·family_news·webapp_registry·package·config)을
 지날 때 append-only 원장에 한 줄을 남긴다 — 행위자(agent·task·origin)가 실리므로
 episode 주행기록과 task_id 로 조인해 "이 파일 왜 바뀌었나"가 닫힌다.
 

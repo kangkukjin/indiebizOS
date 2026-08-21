@@ -71,6 +71,12 @@ def _save_state(state: dict) -> None:
         tmp = _STATE_PATH.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
         tmp.replace(_STATE_PATH)
+        # 쓰기 관문 원장 — 신문 발행·초안 상태 변경 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(_STATE_PATH, event="write", gate="family_news")
+        except Exception:
+            pass
 
 
 def _default_public_base() -> str:
@@ -309,6 +315,12 @@ def _save_uploads(entries: list) -> None:
     tmp = _UPLOADS_META.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(entries, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(_UPLOADS_META)
+    # 쓰기 관문 원장 — 가족 공개 업로드 원장 사건(행위자 빈 값=외부 방문자)
+    try:
+        from write_ledger import log_write
+        log_write(_UPLOADS_META, event="write", gate="family_news_uploads")
+    except Exception:
+        pass
 
 
 def _pending_uploads(entries: list) -> list:

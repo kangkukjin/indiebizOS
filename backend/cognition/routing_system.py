@@ -33,8 +33,18 @@ def _delegate_unified(params: dict, project_path: str) -> Any:
             return {"error": "message 파라미터가 필요합니다. 예: {scope: \"system\", message: \"AI 동향 보고서 써줘\"}"}
         try:
             from system_ai_runner import SystemAIRunner
+            # 부모 task 동봉 — fire-and-forget 큐가 스레드 컨텍스트를 잃으므로
+            # 여기서 떠서 봉투에 싣는다(claude_code 재진입 env/헤더와 같은 부류,
+            # 2026-08-21 ③-b). 없으면 러너 루프가 새로 발급한다.
+            _parent_task = None
+            try:
+                from thread_context import get_current_task_id
+                _parent_task = get_current_task_id() or None
+            except Exception:
+                pass
             SystemAIRunner.send_message(content=message,
-                                        from_agent=params.get("from_agent") or "앱")
+                                        from_agent=params.get("from_agent") or "앱",
+                                        task_id=_parent_task)
         except Exception as e:  # noqa: BLE001 — 큐잉 실패는 그대로 보고
             return {"error": f"시스템 AI 위임 실패: {e}"}
         return {"success": True, "queued": True, "target": "시스템 AI",

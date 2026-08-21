@@ -29,6 +29,15 @@ from typing import Dict, Any, List, Optional
 
 from runtime_utils import get_python_cmd
 
+
+def _log_pkg_file_write(path):
+    """쓰기 관문 원장 — AI 패키지 파일 생성·수정 사건(관측, 실패 무해)."""
+    try:
+        from write_ledger import log_write
+        log_write(path, event="write", gate="package_files")
+    except Exception:
+        pass
+
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent
 from runtime_utils import get_base_path as _get_base_path
@@ -432,6 +441,12 @@ class PackageManager:
         }
         with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
             json.dump(install_info, f, ensure_ascii=False, indent=2)
+        # 쓰기 관문 원장 — 패키지 설치 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(dst_path / ".install_info.json", event="install", gate="package_manager")
+        except Exception:
+            pass
 
         # 캐시 무효화
         self.invalidate_cache()
@@ -614,6 +629,12 @@ class PackageManager:
         }
         with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
             json.dump(install_info, f, ensure_ascii=False, indent=2)
+        # 쓰기 관문 원장 — AI 패키지 설치 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(dst_path / ".install_info.json", event="install", gate="package_manager")
+        except Exception:
+            pass
 
         # inventory.md 업데이트
         self._update_inventory()
@@ -1301,6 +1322,7 @@ def decode_package(encoded_text: str, target_dir: Path = None) -> Dict[str, Any]
                     file_path = pkg_path / current_file
                     file_path.write_text(file_content, encoding='utf-8')
                     result["files_created"].append(current_file)
+                    _log_pkg_file_write(file_path)
 
                 # 새 파일 시작
                 current_file = line[8:-3]  # ===FILE: 과 === 제거
@@ -1312,6 +1334,7 @@ def decode_package(encoded_text: str, target_dir: Path = None) -> Dict[str, Any]
                     file_path = pkg_path / current_file
                     file_path.write_text(file_content, encoding='utf-8')
                     result["files_created"].append(current_file)
+                    _log_pkg_file_write(file_path)
                 break
             else:
                 if current_file:

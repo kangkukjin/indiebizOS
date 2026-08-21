@@ -334,6 +334,12 @@ def _write_gear(gear: dict):
     """gear dict 를 파일에 쓰고 provider 캐시 무효화(핫리로드)."""
     _gear_path().write_text(json.dumps(gear, ensure_ascii=False, indent=2), encoding="utf-8")
     clear_provider_cache()
+    # 쓰기 관문 원장 — 기어·핀 변경은 실행 모델을 바꾸는 사건(관측, 실패 무해)
+    try:
+        from write_ledger import log_write
+        log_write(_gear_path(), event="write", gate="model_gear")
+    except Exception:
+        pass
 
 
 def set_gear(name: str) -> bool:

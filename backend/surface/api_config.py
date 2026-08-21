@@ -182,6 +182,12 @@ async def update_project_config(project_id: str, config: Dict[str, Any]):
 
             with open(project_json, 'w', encoding='utf-8') as f:
                 json.dump(project_data, f, ensure_ascii=False, indent=2)
+            # 쓰기 관문 원장 — 프로젝트 설정 변경 사건(관측, 실패 무해)
+            try:
+                from write_ledger import log_write
+                log_write(project_json, event="write", gate="project_config")
+            except Exception:
+                pass
 
         return {"status": "updated"}
     except Exception as e:
@@ -212,6 +218,12 @@ async def update_profile(profile: Dict[str, str]):
     try:
         SYSTEM_MEMO_PATH.parent.mkdir(parents=True, exist_ok=True)
         SYSTEM_MEMO_PATH.write_text(profile.get('content', ''), encoding='utf-8')
+        # 쓰기 관문 원장 — 사용자 메모(source 가족) 변경 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(SYSTEM_MEMO_PATH, event="write", gate="system_memo")
+        except Exception:
+            pass
         return {"status": "updated"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -947,6 +959,12 @@ async def import_config(file: UploadFile = File(...)):
 
                 with open(projects_json_path, 'w', encoding='utf-8') as pf:
                     json.dump(existing_projects, pf, ensure_ascii=False, indent=2)
+                # 쓰기 관문 원장 — 백업 가져오기의 프로젝트 목록 변경 사건(관측, 실패 무해)
+                try:
+                    from write_ledger import log_write
+                    log_write(projects_json_path, event="write", gate="projects_import")
+                except Exception:
+                    pass
 
                 # 3. 시스템 AI 상태 가져오기
                 import_state = temp_path / "data" / "system_ai_state"

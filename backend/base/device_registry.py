@@ -74,6 +74,12 @@ def _save() -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(_cache or {"nodes": {}}, f, ensure_ascii=False, indent=2)
         os.replace(tmp, p)
+        # 쓰기 관문 원장 — 기기 등록·승인은 보안 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(p, event="write", gate="device_registry")
+        except Exception:
+            pass
     except Exception as e:
         print(f"[device_registry] 저장 실패: {e}")
 

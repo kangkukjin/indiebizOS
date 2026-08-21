@@ -114,6 +114,12 @@ def mutate_state(fn):
             tmp = _STATE_PATH.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
             tmp.replace(_STATE_PATH)
+            # 쓰기 관문 원장 — 게시판 생성·설정 변경 사건(관측, 실패 무해)
+            try:
+                from write_ledger import log_write
+                log_write(_STATE_PATH, event="write", gate="bulletin_state")
+            except Exception:
+                pass
             return state if ret is None else ret
         finally:
             _flock_un(lk)
@@ -244,6 +250,12 @@ def _save_posts(board_id: str, posts: list):
     tmp = p.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(posts, ensure_ascii=False, indent=1), encoding="utf-8")
     tmp.replace(p)
+    # 쓰기 관문 원장 — 공개 방문자 글쓰기·모더레이션 사건(행위자 빈 값=익명 방문자)
+    try:
+        from write_ledger import log_write
+        log_write(p, event="write", gate="bulletin_posts")
+    except Exception:
+        pass
 
 
 def looks_image(head: bytes) -> bool:

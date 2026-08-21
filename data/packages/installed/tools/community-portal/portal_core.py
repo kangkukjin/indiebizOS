@@ -161,6 +161,12 @@ def mutate_state(fn):
             tmp = _STATE_PATH.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(state, ensure_ascii=False, indent=1), encoding="utf-8")
             tmp.replace(_STATE_PATH)
+            # 쓰기 관문 원장 — 회원·진열·한도 변경 사건(관측, 실패 무해)
+            try:
+                from write_ledger import log_write
+                log_write(_STATE_PATH, event="write", gate="portal_state")
+            except Exception:
+                pass
             return state if ret is None else ret
         finally:
             _flock_un(lk)

@@ -262,6 +262,27 @@ class SystemAIRunner:
                     if task_match:
                         extracted_task_id = task_match.group(1)
 
+                # 무태스크 위임에 태스크 발급 (2026-08-21 ③-b) — 스케줄러 하달·앱 버튼의
+                # [others:delegate]{scope:system} 이 task 없이 와서, 이 런의 쓰기가
+                # write_ledger·episode 에 무작업으로 남아 "왜 바뀌었나" 조인이 끊겼다.
+                # HTTP 채팅 _process 의 task 발급과 대칭. ★자가점검은 제외(태스크 원장
+                # 오염 방지 — 에피소드 제외와 같은 근거).
+                if not extracted_task_id and from_agent != "__health_check__":
+                    import uuid as _uuid
+                    extracted_task_id = f"task_sysai_{_uuid.uuid4().hex[:8]}"
+                    try:
+                        create_task(
+                            task_id=extracted_task_id,
+                            requester=agent_identifier,
+                            requester_channel="delegate",
+                            original_request=content,
+                            delegated_to="system_ai",
+                        )
+                    except Exception as e:
+                        # 기록 실패해도 스레드 컨텍스트 task 는 세운다 —
+                        # 원장·에피소드 조인이 우선, DB 태스크 원장은 부가.
+                        print(f"[SystemAIRunner] 위임 태스크 기록 실패(계속): {e}")
+
                 if extracted_task_id:
                     print(f"   [task_id] {extracted_task_id}")
 

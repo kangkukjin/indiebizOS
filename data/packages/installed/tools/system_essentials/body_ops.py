@@ -247,7 +247,7 @@ def _join_episode_requests(root, rows):
 def op_writes(tool_input):
     """런타임 쓰기 원장 회상 — git 이 못 보는 층(data/·outputs/)의 관문 통과 쓰기.
 
-    ★부분성 정직: 원장은 관문(safe_store·[self:write])을 지난 쓰기만 기록한다 —
+    ★부분성 정직: 원장은 선언된 관문(safe_store·[self:write]·개별 저장 관문 — gate 열이 목록)을 지난 쓰기만 기록한다 —
     관문 밖 직접 쓰기는 원리적으로 없다. 전수가 필요한 코드 층은 changes(git)가 정답.
     """
     root, err = _guard_root()
@@ -270,7 +270,7 @@ def op_writes(tool_input):
             continue
     if not raw:
         return {"success": True, "items": [], "total": 0, "truncated": False,
-                "text": "쓰기 원장이 비어 있습니다 — 관문(safe_store·[self:write]) 쓰기가 아직 기록되지 않았습니다."}
+                "text": "쓰기 원장이 비어 있습니다 — 관문(safe_store·[self:write]·개별 저장 관문) 쓰기가 아직 기록되지 않았습니다."}
 
     import json as _json
     from datetime import datetime as _dt, timedelta as _td
@@ -298,7 +298,7 @@ def op_writes(tool_input):
     _join_episode_requests(root, rows)
     scope_txt = f" (스코프 {scope})" if scope else ""
     text = (f"최근 {days}일 런타임 쓰기{scope_txt}: {total}건 — "
-            f"관문(safe_store·[self:write]) 통과분만(전수 아님, 코드 층 전수는 changes)")
+            f"선언 관문 통과분만(전수 아님 — gate 열이 관문 이름, 코드 층 전수는 changes)")
     if truncated:
         text += f" · {limit}건만 표시"
     if notes:

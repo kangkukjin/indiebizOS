@@ -154,6 +154,12 @@ def _save_manual(entries: list) -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump({"webapps": entries}, f, ensure_ascii=False, indent=2)
         os.replace(tmp, _MANUAL_PATH)
+        # 쓰기 관문 원장 — 등기부 수동 보충 사건(관측, 실패 무해)
+        try:
+            from write_ledger import log_write
+            log_write(_MANUAL_PATH, event="write", gate="webapp_registry")
+        except Exception:
+            pass
 
 
 def _all_entries() -> list:

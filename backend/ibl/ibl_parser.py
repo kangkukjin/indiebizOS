@@ -142,7 +142,7 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
         # 아니면 한 줄 식 문장. $변수는 값 바인딩(_vars), 평가는 ibl_control_blocks._execute_assign.
         if assign_names[_stmt_idx] and not _piped and not stmt.lstrip().startswith(('[', '(')):
             blk = {"_assign": True, "name": assign_names[_stmt_idx], "expr": stmt.strip()}
-            refs = {m for m in _VAR_REF_PATTERN.findall(stmt)}
+            refs = set(_var_names(stmt))
             vars_used = {n: i for n, i in variables.items() if n in refs}
             if vars_used:
                 blk["_vars"] = vars_used
@@ -296,14 +296,12 @@ _STEP_PATTERN = re.compile(
     re.DOTALL
 )
 
-# 변수 할당 패턴: $name = [node:action](...)
-_VAR_ASSIGN_PATTERN = re.compile(
-    r'^\$(\w+)\s*=\s*(.+)$',
-    re.DOTALL
-)
-
-# 변수 참조 패턴: $name
-_VAR_REF_PATTERN = re.compile(r'\$(\w+)')
+# 변수 할당·참조 표기는 common.ibl_vars 가 단일 진실 (2026-08-22 괄호형 `${이름}` 도입).
+# 맨몸 `$이름` 과 괄호 `${이름}` 이 같은 뜻이고, 괄호는 한글 조사·단위가 이름에 먹히는 것을
+# 막는 경계 표시다(`"$n건"`=변수 n건 / `"${n}건"`=변수 n + 글자 건).
+from common.ibl_vars import (ASSIGN_RE as _VAR_ASSIGN_PATTERN,  # noqa: E402
+                             REF_RE as _VAR_REF_PATTERN,
+                             find_names as _var_names, sub_ref as _sub_var_ref)
 
 
 def _preprocess(code: str) -> List[str]:
@@ -410,8 +408,8 @@ def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]
     for line in lines:
         m = _VAR_ASSIGN_PATTERN.match(line)
         if m:
-            assign_names.append(m.group(1))
-            statements.append(m.group(2).strip())
+            assign_names.append(m.group(1) or m.group(2))
+            statements.append(m.group(3).strip())
         else:
             assign_names.append(None)
             statements.append(line)
@@ -928,9 +926,8 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
             for var_name, step_idx in variables.items():
                 # $var.field.path — 필드 경로를 템플릿에 실어 실행기가 추출하게 한다
                 # (2026-08-16 상상훈련 G1: 경로 없이 통짜 치환하면 `.lat` 이 리터럴로 남았다).
-                val = re.sub(r'\$%s((?:\.\w+)+)?(?!\w)' % re.escape(var_name),
-                             lambda m, _i=step_idx: "{{_step_%d_result%s}}" % (_i, m.group(1) or ""),
-                             val)
+                val = _sub_var_ref(val, var_name,
+                                   lambda path, _i=step_idx: "{{_step_%d_result%s}}" % (_i, path))
             resolved[key] = val
         elif isinstance(val, dict):
             resolved[key] = _resolve_variables(val, variables)
@@ -960,7 +957,7 @@ def _resolve_block_variables(blk: dict, variables: Dict[str, int], nested: bool 
     out = dict(blk)
     if nested:
         return out
-    refs = set(re.findall(r'\$(\w+)', json.dumps(blk, ensure_ascii=False)))
+    refs = set(_var_names(json.dumps(blk, ensure_ascii=False)))
     vars_used = {name: idx for name, idx in variables.items() if name in refs}
     if vars_used:
         out["_vars"] = vars_used

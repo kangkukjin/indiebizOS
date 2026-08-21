@@ -723,6 +723,13 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if _depth and isinstance(params, dict):
         params["_depth"] = _depth
 
+    # 워크플로우 호출 스택 (2026-08-22 재귀 가드) — 같은 밑줄-메타 관습으로 라우터에 실어
+    # 보낸다. workflow_engine 이 몸통 step 에 찍어 두면 여기서 params 로 내려가고, 몸통 안의
+    # 또 다른 [self:workflow]{op:"run"} 이 그 스택을 읽어 순환·과중첩을 판정한다.
+    _wf_stack = tool_input.get("_wf_stack")
+    if _wf_stack and isinstance(params, dict):
+        params["_wf_stack"] = _wf_stack
+
     # 중앙 파라미터 별칭 정규화 — 비-handler 라우터(system/workflow_engine/channel_engine/
     # trigger_engine 등)도 액션의 aliases 선언(레지스트리) 적용받게. handler/driver는
     # _route_by_config 에서 한 번 더 적용되나 정규 키 우선이라 멱등. (예: self:trigger 의 id→trigger_id)

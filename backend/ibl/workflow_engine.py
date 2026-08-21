@@ -702,7 +702,8 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
 # $items 집합 바인딩 행 수 상한 — 초과는 침묵 절단 대신 정직 거절(take 로 줄이라고 안내).
 ITEMS_BIND_CAP = 500
 
-_ITEMS_REF = re.compile(r'^\$items(?:\.(\w+))?$')
+# `$items` / `${items}` / `$items.열` — 집합 바인딩 예약어 (표기는 common.ibl_vars 규약)
+_ITEMS_REF = re.compile(r'^\$(?:\{\s*items(?:\.(\w+))?\s*\}|items(?:\.(\w+))?)$')
 
 
 def _bind_items_params(tool_input: dict, prev_result: str):
@@ -757,7 +758,7 @@ def _bind_items_params(tool_input: dict, prev_result: str):
     out = dict(tool_input)
     out["params"] = dict(params)
     for key, m in refs.items():
-        field = m.group(1)
+        field = m.group(1) or m.group(2)   # 괄호형 `${items.열}` / 맨몸 `$items.열`
         if field:
             missing = [1 for r in items if not (isinstance(r, dict) and field in r)]
             if items and len(missing) == len(items):
@@ -957,12 +958,12 @@ def list_workflows() -> List[Dict]:
                 "problem": f"워크플로 파일을 읽을 수 없습니다: {e}",
             })
             continue
-        steps = data.get("steps", []) or data.get("pipeline") or []
+        steps = data.get("steps") or data.get("do") or data.get("pipeline") or []
         # ★B1 동형: steps 가 문자열(저장 원문)이면 len()이 글자 수가 된다 — 목록에서
         # "스텝 121개"로 보이는 오표시 방지. 문장 하나 = 스텝 하나로 센다.
         if isinstance(steps, str):
             steps = [steps] if steps.strip() else []
-        raw_steps = data.get("steps", []) or []
+        raw_steps = data.get("steps") or data.get("do") or []
         if isinstance(raw_steps, str):
             raw_steps = [raw_steps] if raw_steps.strip() else []
         pf = preflight_sentence(steps)
@@ -974,6 +975,14 @@ def list_workflows() -> List[Dict]:
             "file": str(f),
             "runnable": pf["runnable"],
         }
+        # 시그니처 — 목록에서 "이 워크플로우가 무엇을 요구하는지"가 보여야 부를 수 있다.
+        sig = data.get("params_required")
+        if not isinstance(sig, list):
+            sig = _signature_of(data.get("steps") or data.get("do") or data.get("pipeline"))
+        if sig:
+            entry["params_required"] = sig
+        if isinstance(data.get("params_default"), dict) and data["params_default"]:
+            entry["params_default"] = data["params_default"]
         if pf["problem"]:
             entry["problem"] = pf["problem"]
             if pf["dead_vocab"]:
@@ -1109,7 +1118,8 @@ def delete_workflow(workflow_id: str) -> bool:
 
 
 def execute_workflow(workflow_id: str, project_path: str = ".",
-                     params: Optional[dict] = None) -> dict:
+                     params: Optional[dict] = None,
+                     stack: Optional[list] = None) -> dict:
     """
     저장된 워크플로우 실행
 
@@ -1126,7 +1136,10 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     if not wf:
         return {"success": False, "error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
 
-    steps = wf.get("steps", [])
+    # 몸통 키는 save 관문(_SENTENCE_KEYS)과 **같은 집합**을 읽는다. 예전엔 save 는 do 를
+    # 몸통으로 받아 그대로 저장하는데 run 은 steps/pipeline 만 봐서, IBL 표면(별칭 do→steps)이
+    # 아닌 직접 호출로 저장한 do 워크플로우가 "저장 성공 → 실행 시 steps 없음" 으로 죽었다.
+    steps = wf.get("steps") or wf.get("do") or []
 
     # Phase 15: pipeline 문자열 지원 — steps가 없으면 pipeline 필드를 IBL 파서로 변환
     if not steps and wf.get("pipeline"):
@@ -1137,18 +1150,56 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
             return {"success": False, "error": f"워크플로우 pipeline 문법 오류: {str(e)}"}
 
     if not steps:
-        return {"success": False, "error": "워크플로우에 steps 또는 pipeline이 없습니다."}
+        return {"success": False,
+                "error": f"워크플로우 '{workflow_id}' 에 몸통이 없습니다 "
+                         f"(do/steps/pipeline 중 하나가 필요). 저장된 키: "
+                         f"{sorted(k for k in wf if not str(k).startswith('_'))}"}
+
+    wf_name = wf.get("name", workflow_id)
+
+    # 호출 스택 — 자기 자신을 (직접·간접으로) 부르는 워크플로우를 몸통 실행 전에 끊는다.
+    stack, _serr = _wf_push(stack, workflow_id)
+    if _serr:
+        return {"success": False, "workflow_id": workflow_id,
+                "workflow_name": wf_name, "error": _serr}
+
+    # 스탬프·시그니처 판정 둘 다 dict step 을 요구한다 — 주입 여부와 무관하게 정규화.
+    steps, _perr = _normalize_steps_for_injection(steps)
+    if _perr:
+        return {"success": False, "error": f"워크플로우 문법 오류: {_perr}"}
+
+    # === 시그니처 검사 (2026-08-22) ===
+    # 저장된 워크플로우에는 "선언하는 순간"(save)이 있으므로 인자 누락을 정직하게 거절한다.
+    # 전엔 미할당 $이름이 리터럴로 흘러 "$city 맛집" 이 그대로 검색어가 되고도 success 였다.
+    required = _free_vars(steps)
+    defaults = wf.get("params_default")
+    defaults = defaults if isinstance(defaults, dict) else {}
+    effective = {**defaults, **(params or {})}
+    missing = [n for n in required if n not in effective]
+    if missing:
+        example = ", ".join(f'"{n}": "값"' for n in missing)
+        return {"success": False, "workflow_id": workflow_id, "workflow_name": wf_name,
+                "params_required": required,
+                "params_missing": missing,
+                "error": (f"워크플로우 '{wf_name}' 인자 누락: "
+                          f"{', '.join('$' + n for n in missing)}. "
+                          f"이 워크플로우의 시그니처는 "
+                          f"{', '.join('$' + n for n in required)} 입니다 — params 로 채우세요. "
+                          f'예: [self:workflow]{{op: "run", workflow_id: "{workflow_id}", '
+                          f'params: {{{example}}}}}'
+                          + (" (기본값을 주려면 저장본에 params_default 를 두세요.)"
+                             if not defaults else ""))}
 
     inject_meta = None
-    if params:
-        steps, _perr = _normalize_steps_for_injection(steps)
-        if _perr:
-            return {"success": False, "error": f"워크플로우 문법 오류: {_perr}"}
-        steps, inject_meta = _apply_caller_params(steps, params)
+    if effective:
+        steps, inject_meta = _apply_caller_params(steps, effective)
 
+    _stamp_wf_stack(steps, stack)
     result = execute_pipeline(steps, project_path)
     result["workflow_id"] = workflow_id
-    result["workflow_name"] = wf.get("name", workflow_id)
+    result["workflow_name"] = wf_name
+    if required:
+        result["params_required"] = required
     if inject_meta:
         result.update(inject_meta)
     return _promote_final_currency(result, steps)
@@ -1198,14 +1249,16 @@ def execute_workflow_action(action: str, params: dict,
         caller, _perr = _coerce_caller_params(params.get("params"))
         if _perr:
             return {"error": _perr}
+        # 호출 스택 — ibl_engine 이 tool_input._wf_stack 을 params 로 내려 준다(재귀 가드).
+        _stack = params.get("_wf_stack")
         # 즉석 실행 (2026-08-05, 구 [self:run_pipeline] 흡수 — 변형=op 명명 헌법):
         # workflow_id 없이 steps/pipeline 이 오면 저장 없이 바로 실행.
         if not workflow_id and (params.get("steps") or params.get("pipeline")):
-            return _run_inline(params, project_path, caller_params=caller)
+            return _run_inline(params, project_path, caller_params=caller, stack=_stack)
         if not workflow_id:
             return {"error": "workflow_id(저장본) 또는 steps/pipeline(즉석 실행)이 필요합니다.",
                     "available": [w["id"] for w in list_workflows()]}
-        return execute_workflow(workflow_id, project_path, params=caller)
+        return execute_workflow(workflow_id, project_path, params=caller, stack=_stack)
 
     elif action in ("save", "save_workflow"):
         if not params:
@@ -1224,8 +1277,27 @@ def execute_workflow_action(action: str, params: dict,
         wf_data = dict(params)
         if workflow_id:
             wf_data["id"] = workflow_id
+        # 시그니처 = 몸통의 자유 변수. 저장해 두면 list/get 이 "이 워크플로우가 무엇을
+        # 요구하는지" 를 보여주고, run 은 실행 시점에 다시 계산해 판정한다(손 편집 대비).
+        signature = _signature_of(params[body_key])
+        declared_default = wf_data.get("params_default")
+        declared_default = declared_default if isinstance(declared_default, dict) else {}
+        if signature:
+            wf_data["params_required"] = signature
+        else:
+            wf_data.pop("params_required", None)
         wf_id = save_workflow(wf_data)
-        return {"success": True, "workflow_id": wf_id, "message": f"워크플로우 '{wf_id}' 저장 완료"}
+        out = {"success": True, "workflow_id": wf_id,
+               "message": f"워크플로우 '{wf_id}' 저장 완료"}
+        if signature:
+            out["params_required"] = signature
+            need = [n for n in signature if n not in declared_default]
+            out["message"] += (
+                f" — 인자 {', '.join('$' + n for n in signature)} 를 받습니다"
+                + (f'. 실행: [self:workflow]{{op: "run", workflow_id: "{wf_id}", '
+                   f'params: {{{", ".join(chr(34) + n + chr(34) + ": 값" for n in need)}}}}}'
+                   if need else " (전부 params_default 로 채워져 있습니다)"))
+        return out
 
     elif action in ("delete", "delete_workflow"):
         if not workflow_id:
@@ -1243,13 +1315,23 @@ def execute_workflow_action(action: str, params: dict,
         caller, _perr = _coerce_caller_params(params.get("params"))
         if _perr:
             return {"error": _perr}
-        return _run_inline(params, project_path, caller_params=caller)
+        return _run_inline(params, project_path, caller_params=caller,
+                           stack=params.get("_wf_stack"))
 
     return {"error": f"알 수 없는 워크플로우 액션: {action}", "available_actions": ["run", "list", "get", "save", "delete", "run_pipeline"]}
 
 
+# === 워크플로우 호출 계약 — 재귀·순환 가드 + 시그니처 (2026-08-22) ===
+# 본체는 workflow_contract.py (1500줄 규칙). 이름은 여기서도 그대로 쓰인다.
+from workflow_contract import (  # noqa: E402,F401
+    MAX_WORKFLOW_DEPTH, _INLINE_FRAME, _wf_push, _stamp_wf_stack,
+    _free_vars, _signature_of,
+)
+
+
 def _run_inline(params: dict, project_path: str,
-                caller_params: Optional[dict] = None) -> Any:
+                caller_params: Optional[dict] = None,
+                stack: Optional[list] = None) -> Any:
     """즉석 파이프라인 실행 — pipeline(IBL 코드 문자열) 또는 steps(파싱된/코드 배열).
     caller_params 가 있으면 저장본 실행과 동일하게 $변수 주입."""
     pipeline = params.get("pipeline", "")
@@ -1265,13 +1347,34 @@ def _run_inline(params: dict, project_path: str,
     if not steps:
         return {"error": "params.steps 또는 params.pipeline이 필요합니다."}
 
+    # 호출 스택 판정 먼저 — 몸통을 파싱하기 전에 순환을 끊는다.
+    stack, _serr = _wf_push(stack if stack is not None else params.get("_wf_stack"),
+                            _INLINE_FRAME)
+    if _serr:
+        return {"success": False, "error": _serr}
+
+    # 스탬프는 dict step 에만 찍힌다 — 문자열 step 이 남아 있으면 가드에 구멍이 난다.
+    # 그래서 주입 여부와 무관하게 여기서 한 번 정규화한다(execute_pipeline 입구 정규화와
+    # 같은 규칙이라 무회귀).
+    steps, _perr = _normalize_steps_for_injection(steps)
+    if _perr:
+        return {"error": _perr}
+
     inject_meta = None
     if caller_params:
-        steps, _perr = _normalize_steps_for_injection(steps)
-        if _perr:
-            return {"error": _perr}
         steps, inject_meta = _apply_caller_params(steps, caller_params)
 
+    # 즉석 실행은 "선언하는 순간"이 없어 저장본처럼 거절하지 않는다 — 대신 채워지지 않은
+    # 자유 변수를 정직하게 알린다(전엔 리터럴 `$이름` 이 그대로 하류로 흘러 침묵했다).
+    _unfilled = _free_vars(steps)
+    if _unfilled:
+        _msg = (f"문장 안 {', '.join('$' + n for n in _unfilled)} 에 값이 주입되지 않아 "
+                f"리터럴로 흘러갑니다 — params 로 채우거나 이름을 확인하세요.")
+        inject_meta = dict(inject_meta or {})
+        inject_meta["params_warning"] = (
+            (inject_meta.get("params_warning", "") + " " + _msg).strip())
+
+    _stamp_wf_stack(steps, stack)
     result = execute_pipeline(steps, project_path)
     if inject_meta and isinstance(result, dict):
         result.update(inject_meta)
@@ -1315,139 +1418,11 @@ def _promote_final_currency(out, steps: Optional[list] = None):
     return out
 
 
-# === 호출자 params → $변수 주입 (2026-08-17 B8 수리) ===
-# desc 는 "run — … + params 옵션(문장 안 $변수에 주입)" 을 선언해 왔지만 구현이 없어
-# 호출자 params 가 침묵 유실됐다(워크플로우는 고정값으로 돌아 거짓 정상을 냈다).
-# 주입 자리: 파서의 $var 기계장치는 *할당된* 변수만 {{_step_N_result}} 로 치환하고
-# 미할당 $이름은 리터럴로 남긴다 — 그 리터럴 자리가 호출자 params 의 자리다.
-# 파스 *후* dict 값 층에서 주입하므로 ①문장 안 할당($x = …)이 항상 이기고
-# ②값에 따옴표·개행이 들어도 IBL 문법을 깨뜨리지 않는다.
-
-# $it(each 행 참조)·$items(집합 바인딩) — 런타임 바인더 소유라 주입 금지.
-_CALLER_VAR_RESERVED = {"it", "items"}
-
-
-def _coerce_caller_params(raw) -> tuple:
-    """run 의 params 를 dict 로 강제. 반환: (dict|None, 오류문|None).
-
-    모델이 JSON *문자열*로 넘기는 경우를 관용 수용하되, 객체가 아니면
-    침묵 무시 대신 정직 거절(B8 부류 재발 방지)."""
-    if raw is None:
-        return None, None
-    if isinstance(raw, dict):
-        return (raw or None), None
-    if isinstance(raw, str):
-        s = raw.strip()
-        if not s:
-            return None, None
-        try:
-            loaded = json.loads(s)
-        except Exception:
-            loaded = None
-        if isinstance(loaded, dict):
-            return (loaded or None), None
-    return None, (f"params 는 {{변수명: 값}} 객체여야 합니다 (받은 형: {type(raw).__name__}). "
-                  '예: [self:workflow]{op:"run", workflow_id:"x", params:{city:"청주"}}')
-
-
-def _normalize_steps_for_injection(steps) -> tuple:
-    """문자열 step 을 파싱해 dict 로 — 주입은 파싱된 값 층에서만 안전하다.
-    execute_pipeline 입구 정규화와 같은 규칙(통짜 문자열 감싸기 + 원소별 파싱).
-    반환: (steps|None, 오류문|None)."""
-    if isinstance(steps, str):
-        steps = [steps] if steps.strip() else []
-    if not steps:
-        return None, "steps가 비어있습니다."
-    if not any(isinstance(s, str) for s in steps):
-        return steps, None
-    from ibl_parser import parse as ibl_parse, IBLSyntaxError
-    normalized = []
-    for s in steps:
-        if isinstance(s, str):
-            if not s.strip():
-                continue
-            try:
-                normalized.extend(ibl_parse(s))
-            except IBLSyntaxError as e:
-                return None, f"IBL 문법 오류: {s} → {str(e)}"
-        else:
-            normalized.append(s)
-    if not normalized:
-        return None, "steps가 비어있습니다."
-    return normalized, None
-
-
-def _reserved_row_names(steps) -> set:
-    """주입 금지 이름 — $it/$items + 문장 안 each 가 as 로 정한 커스텀 행 이름."""
-    names = set(_CALLER_VAR_RESERVED)
-
-    def _walk(obj):
-        if isinstance(obj, dict):
-            a = obj.get("as")
-            if isinstance(a, str) and a.strip():
-                names.add(a.strip())
-            for v in obj.values():
-                _walk(v)
-        elif isinstance(obj, list):
-            for v in obj:
-                _walk(v)
-
-    _walk(steps)
-    return names
-
-
-def _apply_caller_params(steps: list, caller: dict) -> tuple:
-    """호출자 params 를 steps 의 $변수 자리에 주입. 반환: (새 steps, 정직 메타 dict).
-
-    치환 규칙(파서 _resolve_variables 와 동일한 이름 경계):
-      - 값이 정확히 "$key" 하나면 원시 타입 보존(숫자·리스트·dict 그대로)
-      - 문자열 속에 섞여 있으면 문자열 임베드(dict/list 는 JSON)
-    메타: params_injected(주입된 키) / params_warning(대응 $변수 없는 키·예약 이름 —
-    조용히 버리지 않고 알린다)."""
-    reserved = _reserved_row_names(steps)
-    hits = set()
-
-    def _embed(value) -> str:
-        if isinstance(value, (dict, list)):
-            return json.dumps(value, ensure_ascii=False)
-        return str(value)
-
-    def _sub_str(s: str):
-        for key, value in caller.items():
-            if key in reserved:
-                continue
-            if s == f"${key}":
-                hits.add(key)
-                return value  # 통짜 참조 — 원시 타입 보존
-            pattern = r'\$%s(?!\w)' % re.escape(key)
-            if re.search(pattern, s):
-                hits.add(key)
-                s = re.sub(pattern, lambda _m, _v=value: _embed(_v), s)
-        return s
-
-    def _walk(obj):
-        if isinstance(obj, str):
-            return _sub_str(obj)
-        if isinstance(obj, dict):
-            return {k: _walk(v) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [_walk(v) for v in obj]
-        return obj
-
-    new_steps = _walk(steps)
-    meta = {}
-    if hits:
-        meta["params_injected"] = sorted(hits)
-    unmatched = sorted(set(caller) - hits - reserved)
-    skipped = sorted(set(caller) & reserved)
-    warnings = []
-    if unmatched:
-        warnings.append(f"params {unmatched} 에 대응하는 $변수가 문장에 없어 주입되지 않았습니다.")
-    if skipped:
-        warnings.append(f"params {skipped} 는 예약 이름($it/$items/each as)이라 주입하지 않습니다.")
-    if warnings:
-        meta["params_warning"] = " ".join(warnings)
-    return new_steps, meta
+# 호출자 params 주입기도 workflow_contract 로 이관(2026-08-22) — 시그니처와 같은 계약.
+from workflow_contract import (  # noqa: E402,F401
+    _CALLER_VAR_RESERVED, _coerce_caller_params, _normalize_steps_for_injection,
+    _reserved_row_names, _apply_caller_params,
+)
 
 
 # === 유틸리티 ===

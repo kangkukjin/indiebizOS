@@ -685,20 +685,20 @@ def _subst_var_refs(obj: Any, values: Dict[str, Any]) -> Any:
     names = [k for k in (values or {}) if k != "items"]
     if not names:
         return obj
-    pat = re.compile(r"\$(" + "|".join(re.escape(k) for k in names) + r")((?:\.\w+)*)(?!\w)")
+    from common.ibl_vars import sub_refs
 
-    def _one(m):
-        raw = values[m.group(1)]
+    def _one(name, path):
+        raw = values[name]
         raw = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
-        if m.group(2):
-            return _extract_result_field(raw, m.group(2))
+        if path:
+            return _extract_result_field(raw, path)
         return _v4_var_payload(raw)
 
     def _walk(o, key=None):
         if isinstance(o, str):
             if key in ("condition", "expr", "source"):
                 return o
-            return pat.sub(_one, o)
+            return sub_refs(o, names, _one)
         if isinstance(o, dict):
             # 중첩 블록은 건드리지 않는다 — 그 블록의 실행기가 *자기 실행 시점*의 (더 새로운) 값으로 치환한다
             if any(o.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
@@ -919,7 +919,8 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
     missing: list = []
 
     def _sub(m):
-        field = (m.group(1) or "").lstrip(".")
+        # group(1)=괄호형 경로(`${it.title}`), group(2)=맨몸 경로(`$it.title`)
+        field = ((m.group(1) if m.group(1) is not None else m.group(2)) or "").lstrip(".")
         if not field:
             return _each_escape(row)
         if isinstance(row, dict):
@@ -934,7 +935,8 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
         missing.append(field)
         return m.group(0)
 
-    pattern = re.compile(r"\$" + re.escape(var) + r"((?:\.[^\W\d]\w*)?)")
+    from common.ibl_vars import ref_pattern
+    pattern = re.compile(ref_pattern(var))
     return pattern.sub(_sub, sentence), missing
 
 
@@ -948,11 +950,17 @@ def _each_foreign_vars(do: str, var: str) -> list:
     ★외부 파이프의 `$변수` 는 each 실행 전에 상위 해석기가 이미 치환하므로,
     여기 남은 것은 전부 오타/참조명 불일치다.
     """
-    assigned = set(re.findall(r"\$([^\W\d]\w*)\s*=", do))
+    from common.ibl_vars import REF_RE, split_ref
+    # 자기 할당(`$x = …`) — 경계 판정만 표기 모듈로 옮기고, "= 뒤가 오면 할당" 이라는
+    # 옛 규칙은 그대로 둔다(`==` 도 할당으로 세는 관용까지 포함 — 무회귀).
+    assigned = set()
+    for m in REF_RE.finditer(do):
+        name, path = split_ref(m)
+        if not path and re.match(r"\s*=", do[m.end():]):
+            assigned.add(name)
     foreign = []
-    for m in re.finditer(r"\$([^\W\d]\w*)", do):
-        name = m.group(1)
-        if name == var or name == "items" or name in assigned:
+    for name, _path in (split_ref(m) for m in REF_RE.finditer(do)):
+        if name == var or name == "items" or name in assigned or name[0].isdigit():
             continue
         if name not in foreign:
             foreign.append(name)
@@ -1100,6 +1108,12 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             break
 
         _stamp_depth(steps, depth + 1)
+        # each 의 do 는 *문자열*이라 행마다 새로 파싱된다 — 바깥에서 찍힌 워크플로우 호출
+        # 스택이 여기서 끊기면, 워크플로우 → each → 자기 워크플로우 사슬이 가드를 우회한다.
+        _wf_stack = params.get("_wf_stack")
+        if _wf_stack:
+            from workflow_contract import _stamp_wf_stack
+            _stamp_wf_stack(steps, _wf_stack)
         try:
             res = execute_pipeline(steps, project_path, agent_id=agent_id)
         except Exception as e:  # 실행기 자체가 터진 경우도 행 단위로 정직하게

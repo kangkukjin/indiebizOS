@@ -10,7 +10,20 @@ desc("run — … + params 옵션(문장 안 $변수에 주입)")가 선언만 �
     W5. 즉석 실행(do/steps·pipeline) + params — 저장본과 동일 지원
     W6. 문장 안 할당($x = …)이 호출자 params 보다 항상 이긴다(파스 후 주입)
     W7. params 비객체(JSON 아님) → 침묵 무시 대신 정직 거절 / JSON 문자열은 관용 수용
-    W8. params 없으면 기존 동작 그대로(무회귀 — 리터럴 $변수 보존, 새 필드 없음)
+    W8. 저장본 인자 누락 → 정직 거절 (2026-08-22 승격 — 아래 참조)
+
+2026-08-22 시그니처·재귀 가드 (M-sig / M-rec):
+    W8 은 원래 "params 없으면 리터럴 $변수 보존"을 무회귀로 못박고 있었다. 그 동작이
+    바로 결함이었다 — 인자 없이 부른 저장본이 "$city 맛집" 을 그대로 검색어로 삼고도
+    success 로 완주했다(스코프 문제가 아니라 시그니처 부재의 증상). 저장본에는 save 라는
+    "선언하는 순간"이 있으므로 정직 거절로 승격한다. 무인자 워크플로우의 무회귀는 유지.
+
+    W9.  params_default — 기본값이 인자를 채우고, 호출자 params 가 기본값을 이긴다
+    W10. 자기 순환 워크플로우 → 정직 거절 (실경로: 가짜 엔진 없이 engine 왕복)
+    W11. 상호 순환 A→B→A → 정직 거절
+    W12. 워크플로우 중첩 깊이 상한(MAX_WORKFLOW_DEPTH)
+    W13. 즉석 실행의 미채움 자유 변수 → 경고(거절 아님 — 선언하는 순간이 없다)
+    W14. save 가 시그니처를 계산·저장·보고하고 list 가 노출
 
 실행: python3 backend/test_workflow_params.py
 """
@@ -59,7 +72,7 @@ def _cleanup(wf_id):
 def test_w1_saved_run_injects_params():
     wf_id = _save_tmp_workflow("_t_params_w1", {
         "name": "_t_params_w1",
-        "steps": ['[sense:web_search]{query: "$city 맛집"}'],
+        "steps": ['[sense:search]{query: "$city 맛집"}'],
     })
     try:
         with _FakeEngine() as eng:
@@ -98,7 +111,7 @@ def test_w2_type_preservation():
 def test_w3_unmatched_param_warns():
     wf_id = _save_tmp_workflow("_t_params_w3", {
         "name": "_t_params_w3",
-        "steps": ['[sense:web_search]{query: "$city 맛집"}'],
+        "steps": ['[sense:search]{query: "$city 맛집"}'],
     })
     try:
         with _FakeEngine():
@@ -157,7 +170,7 @@ def test_w5_inline_run_injects_params():
 def test_w6_assignment_wins_over_params():
     wf_id = _save_tmp_workflow("_t_params_w6", {
         "name": "_t_params_w6",
-        "pipeline": ('$r = [sense:web_search]{query: "AI"}\n'
+        "pipeline": ('$r = [sense:search]{query: "AI"}\n'
                      '[others:channel_send]{body: "$r"}'),
     })
     try:
@@ -194,26 +207,185 @@ def test_w7_bad_params_rejected():
     print("W7 OK — 비객체 params 정직 거절 / JSON 문자열 관용 수용")
 
 
-def test_w8_no_params_no_regression():
+def test_w8_missing_arg_rejected():
+    """인자를 요구하는 저장본을 인자 없이 부르면 정직 거절 (2026-08-22 승격)."""
     wf_id = _save_tmp_workflow("_t_params_w8", {
         "name": "_t_params_w8",
-        "steps": ['[sense:web_search]{query: "$city 맛집"}'],
+        "steps": ['[sense:search]{query: "$city 맛집"}'],
     })
     try:
         with _FakeEngine() as eng:
             out = execute_workflow_action("workflow", {
                 "op": "run", "workflow_id": wf_id,
             }, ".")
-        assert out.get("success"), out
-        assert eng.calls[0]["params"]["query"] == "$city 맛집", eng.calls[0]
-        assert "params_injected" not in out and "params_warning" not in out, out
+        assert not out.get("success"), f"인자 누락이 success 로 완주: {out}"
+        assert out.get("params_missing") == ["city"], out
+        assert out.get("params_required") == ["city"], out
+        assert "$city" in out.get("error", ""), out
+        assert not eng.calls, f"거절해 놓고 몸통을 실행함: {eng.calls}"
     finally:
         _cleanup(wf_id)
-    print("W8 OK — params 없으면 기존 동작 그대로(무회귀)")
+
+    # 무인자 워크플로우는 무회귀 — params 없이 그대로 돌고 새 필드도 붙지 않는다.
+    wf2 = _save_tmp_workflow("_t_params_w8b", {
+        "name": "_t_params_w8b",
+        "steps": ['[sense:search]{query: "고정 검색어"}'],
+    })
+    try:
+        with _FakeEngine() as eng:
+            out2 = execute_workflow_action("workflow", {
+                "op": "run", "workflow_id": wf2,
+            }, ".")
+        assert out2.get("success"), out2
+        assert eng.calls[0]["params"]["query"] == "고정 검색어", eng.calls[0]
+        assert "params_injected" not in out2 and "params_warning" not in out2, out2
+        assert "params_required" not in out2, out2
+    finally:
+        _cleanup(wf2)
+    print("W8 OK — 인자 누락 정직 거절 / 무인자 워크플로우 무회귀")
+
+
+# === 2026-08-22 시그니처 (M-sig) ===
+
+def test_w9_params_default():
+    wf_id = _save_tmp_workflow("_t_params_w9", {
+        "name": "_t_params_w9",
+        "steps": ['[sense:search]{query: "$city 맛집", note: "$n 건"}'],
+        "params_default": {"city": "청주", "n": 5},
+    })
+    try:
+        # 기본값만으로 실행된다 — 거절 없음
+        with _FakeEngine() as eng:
+            out = execute_workflow_action("workflow", {
+                "op": "run", "workflow_id": wf_id,
+            }, ".")
+        assert out.get("success"), out
+        assert eng.calls[0]["params"]["query"] == "청주 맛집", eng.calls[0]
+
+        # 호출자 params 가 기본값을 이긴다
+        with _FakeEngine() as eng2:
+            out2 = execute_workflow_action("workflow", {
+                "op": "run", "workflow_id": wf_id, "params": {"city": "오송"},
+            }, ".")
+        assert out2.get("success"), out2
+        assert eng2.calls[0]["params"]["query"] == "오송 맛집", eng2.calls[0]
+    finally:
+        _cleanup(wf_id)
+    print("W9 OK — params_default 가 인자를 채우고 호출자가 이김")
+
+
+def test_w14_signature_saved_and_listed():
+    out = execute_workflow_action("workflow", {
+        "op": "save", "workflow_id": "_t_params_w14", "name": "_t_params_w14",
+        "do": '[sense:search]{query: "$city 맛집"} >> [table:take]{n: "$count"}',
+    }, ".")
+    try:
+        assert out.get("success"), out
+        assert out.get("params_required") == ["city", "count"], out
+        assert "$city" in out.get("message", ""), out["message"]
+
+        wf = execute_workflow_action("workflow", {"op": "get", "workflow_id": "_t_params_w14"}, ".")
+        assert wf.get("params_required") == ["city", "count"], wf
+
+        listed = execute_workflow_action("workflow", {"op": "list"}, ".")["workflows"]
+        row = next(w for w in listed if w["id"] == "_t_params_w14")
+        assert row.get("params_required") == ["city", "count"], row
+    finally:
+        _cleanup("_t_params_w14")
+
+    # ★한글 접미 함정 (2026-08-22 발견): 파서(_VAR_REF_PATTERN=\$(\w+))·주입기·시그니처가
+    # 모두 \w 경계라 `$n건` 은 변수 `n` + 글자 `건` 이 아니라 **변수 `n건`** 이다.
+    # 셋이 일관되므로 오동작은 아니지만, 한글에서는 조사·단위가 이름에 먹힌다.
+    # 시그니처가 save 시점에 그걸 드러내는 것이 유일한 방어선이라 회귀로 못박는다.
+    out2 = execute_workflow_action("workflow", {
+        "op": "save", "workflow_id": "_t_params_w14b", "name": "_t_params_w14b",
+        "do": '[table:take]{n: "$n건"}',
+    }, ".")
+    try:
+        assert out2.get("params_required") == ["n건"], \
+            f"한글 접미 경계가 파서와 어긋남: {out2.get('params_required')}"
+    finally:
+        _cleanup("_t_params_w14b")
+    print("W14 OK — save 가 시그니처를 계산·저장·보고 / list 노출 / 한글 접미 경계 일관")
+
+
+def test_w13_inline_unfilled_warns_not_rejects():
+    """즉석 실행은 '선언하는 순간'이 없다 — 거절 대신 정직 경고."""
+    with _FakeEngine() as eng:
+        out = execute_workflow_action("workflow", {
+            "op": "run", "steps": ['[sense:search]{query: "$city 맛집"}'],
+        }, ".")
+    assert out.get("success"), out
+    assert eng.calls[0]["params"]["query"] == "$city 맛집", eng.calls[0]
+    assert "$city" in out.get("params_warning", ""), \
+        f"미채움 자유 변수가 침묵 통과: {out}"
+    print("W13 OK — 즉석 실행의 미채움 자유 변수는 경고(거절 아님)")
+
+
+# === 2026-08-22 재귀·순환 가드 (M-rec) ===
+# 여기부터는 _FakeEngine 을 쓰지 않는다 — 스택이 step → execute_ibl → params → 다음
+# workflow run 으로 이어지는지가 검증 대상이라, 실제 엔진 왕복이 아니면 의미가 없다.
+
+def test_w10_self_cycle_rejected():
+    wf_id = _save_tmp_workflow("_t_rec_self", {
+        "name": "_t_rec_self",
+        "steps": ['[self:workflow]{op: "run", workflow_id: "_t_rec_self"}'],
+    })
+    try:
+        out = execute_workflow_action("workflow", {"op": "run", "workflow_id": wf_id}, ".")
+        assert not out.get("success"), f"자기 순환이 완주: {out}"
+        assert "순환" in str(out.get("error", "")), out
+        assert f"{wf_id} → {wf_id}" in str(out.get("error", "")), out
+    finally:
+        _cleanup(wf_id)
+    print("W10 OK — 자기 순환 워크플로우 정직 거절(경로 표시)")
+
+
+def test_w11_mutual_cycle_rejected():
+    a = _save_tmp_workflow("_t_rec_a", {
+        "name": "_t_rec_a",
+        "steps": ['[self:workflow]{op: "run", workflow_id: "_t_rec_b"}'],
+    })
+    b = _save_tmp_workflow("_t_rec_b", {
+        "name": "_t_rec_b",
+        "steps": ['[self:workflow]{op: "run", workflow_id: "_t_rec_a"}'],
+    })
+    try:
+        out = execute_workflow_action("workflow", {"op": "run", "workflow_id": a}, ".")
+        assert not out.get("success"), f"상호 순환이 완주: {out}"
+        err = str(out.get("error", ""))
+        assert "순환" in err and "_t_rec_a → _t_rec_b → _t_rec_a" in err, err
+    finally:
+        _cleanup(a)
+        _cleanup(b)
+    print("W11 OK — 상호 순환(A→B→A) 정직 거절")
+
+
+def test_w12_depth_cap():
+    # 단위: 스택이 상한에 닿으면 순환이 아니어도 거절
+    stack = [f"w{i}" for i in range(workflow_engine.MAX_WORKFLOW_DEPTH)]
+    pushed, err = workflow_engine._wf_push(stack, "w_last")
+    assert pushed is None and "중첩 깊이 상한" in err, (pushed, err)
+
+    # 실경로: 순환 없는 사슬 w0→w1→…→wN 이 상한에서 끊긴다
+    n = workflow_engine.MAX_WORKFLOW_DEPTH + 2
+    ids = [f"_t_rec_chain{i}" for i in range(n)]
+    for i, wid in enumerate(ids):
+        body = (f'[self:workflow]{{op: "run", workflow_id: "{ids[i + 1]}"}}'
+                if i + 1 < n else '[self:time]{}')
+        _save_tmp_workflow(wid, {"name": wid, "steps": [body]})
+    try:
+        out = execute_workflow_action("workflow", {"op": "run", "workflow_id": ids[0]}, ".")
+        assert not out.get("success"), f"상한을 넘은 사슬이 완주: {out}"
+        assert "중첩 깊이 상한" in str(out.get("error", "")), out
+    finally:
+        for wid in ids:
+            _cleanup(wid)
+    print(f"W12 OK — 워크플로우 중첩 깊이 상한({workflow_engine.MAX_WORKFLOW_DEPTH})")
 
 
 if __name__ == "__main__":
-    print("=== workflow run params 주입 회귀 테스트 (W1~W8) ===\n")
+    print("=== workflow params·시그니처·재귀 가드 회귀 테스트 (W1~W14) ===\n")
     test_w1_saved_run_injects_params()
     test_w2_type_preservation()
     test_w3_unmatched_param_warns()
@@ -221,5 +393,12 @@ if __name__ == "__main__":
     test_w5_inline_run_injects_params()
     test_w6_assignment_wins_over_params()
     test_w7_bad_params_rejected()
-    test_w8_no_params_no_regression()
+    test_w8_missing_arg_rejected()
+    test_w9_params_default()
+    test_w13_inline_unfilled_warns_not_rejects()
+    test_w14_signature_saved_and_listed()
+    print("\n--- 재귀·순환 가드 (실경로) ---")
+    test_w10_self_cycle_rejected()
+    test_w11_mutual_cycle_rejected()
+    test_w12_depth_cap()
     print("\n=== 전부 통과 ===")

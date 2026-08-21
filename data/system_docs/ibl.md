@@ -43,7 +43,7 @@ IBL 표현 계층:     [node:action]{params}
 브라우저 / HTML / 사용자의 HTML 파일이 서로 다른 것이듯, **하네스 / IBL 표준 / 개인 사전**은 서로 다른 층이며 섞이지 않는다. 이 구분이 두 이동성을 만든다: 다른 사용자는 같은 IBL 위에 자기 어휘를 가질 수 있고(어휘와 그에 키잉된 축적물 — 해마 코퍼스·임베딩·증류 — 은 사람을 따라감), 하네스(모델·에이전트 러너)는 갈아끼워도 언어와 축적물은 무사하다.
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
-1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), **병렬 괄호 분기**(`A & (B >> C) >> [table:merge]` — 분기 하나에만 전처리 파이프, 2026-08-19 개정·괄호 안=일반 step 파이프만), `$변수`·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar), **조건 언어**(2026-08-22 개정, `ibl_predicates.py`: 좌변 = `node:action{…}[.경로]` 소스 참조 | `$변수[.경로]`(앞 문장 결과, 실행 없음) | `count()`/`empty()`/`exists()` | `[table:brief]{…}` AI 술어(message 가 값) · 연산자 `== != > >= < <= matches`(정규식) · `and`/`or`/`not`·괄호 · 판정 불능≠거짓), **봉투 다이어트**(에이전트 경계의 `results[]`=step 요약·`final_result`=원형, `verbose:true` 로 원형 — 하네스 이음매 `execute_ibl` 하나의 응답 모양이라 언어 밖) · `[self:write]{spill:true}` 스필 싱크(뒤 step 엔 `{items:[], ref}` 참조만). **제어 블록**(2026-08-22 M3·M4): `[try]{…} [catch]{…} [finally]{…}`(catch 안 `$error`), `[on_error: stop|skip|null]` 문장 접두(`>>` 실패 규약 — 기본 stop, skip/null 은 건너뛴 step 을 봉투에 신고), `??` 가지의 괄호 파이프 `A ?? (B >> C)`, `[repeat: N | until 조건 | while 조건, max(필수), every(≤60s), collect, as]{…}`(문장 안 결정론 반복 — 벽시계 300s 상한 신고, 더 길면 goal/schedule). 기능어 `[table:reduce]{init, step, as}`(식 한 줄 fold). **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조, 소비자 투명 해소, 24h 캐시 GC)·**재개**(실패 봉투 `resume:{from_step, prev_ref}` → `execute_ibl(code, resume)`) 은 엔진 규약. **M6(2026-08-22)**: 식 할당 `$n = 0` / `$n = $n + 1` / `$s = $r.count * 2`(한 줄 식, `common/safe_expr` — 우변이 액션이 아니면 식), 블록을 파이프 세그먼트로(`[A] >> [if: count($items) > 0]{…} >> [B]`, `[repeat:…]{…} >> [table:dedup]` — 블록은 직전 통화를 `$items` 로 보고 몸에 넘기며 결과가 다음 통화), `while` 이 몸 변수를 봄(회차마다 현재 값으로 몸 치환·루프 뒤 바깥 `$n` 최신값), `$return = …` 반환 규약(`[self:workflow]` run). ★블록 몸의 `$변수`는 파서가 아니라 **실행기가 실행 직전 값으로 치환**한다(안쪽 파이프 인덱스와 바깥 인덱스 충돌 방지). **예약어**(블록 키워드 — 어휘 이름으로 쓸 수 없음): `if else case goal repeat try catch finally on_error` + 변수 `$items $it $i $error $return`. 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다. 개정 로드맵·집행 기록 = `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
+1. **문법**: `[node:action]{params}` 패턴, 연산자(`>>` 순차, `&` 병렬, `??` 폴백, `;` 독립 문장), **병렬 괄호 분기**(`A & (B >> C) >> [table:merge]` — 분기 하나에만 전처리 파이프, 2026-08-19 개정·괄호 안=일반 step 파이프만), `$변수`(맨몸 `$이름` = 괄호 `${이름}`, 2026-08-22 — 경계가 `\w` 라 한글 조사·단위가 이름에 먹히는 것을 괄호로 끊는다)·`$file:N`, if/case/goal 블록, 파이프 설탕(`| where:` 등 → `[table:*]` desugar), **조건 언어**(2026-08-22 개정, `ibl_predicates.py`: 좌변 = `node:action{…}[.경로]` 소스 참조 | `$변수[.경로]`(앞 문장 결과, 실행 없음) | `count()`/`empty()`/`exists()` | `[table:brief]{…}` AI 술어(message 가 값) · 연산자 `== != > >= < <= matches`(정규식) · `and`/`or`/`not`·괄호 · 판정 불능≠거짓), **봉투 다이어트**(에이전트 경계의 `results[]`=step 요약·`final_result`=원형, `verbose:true` 로 원형 — 하네스 이음매 `execute_ibl` 하나의 응답 모양이라 언어 밖) · `[self:write]{spill:true}` 스필 싱크(뒤 step 엔 `{items:[], ref}` 참조만). **제어 블록**(2026-08-22 M3·M4): `[try]{…} [catch]{…} [finally]{…}`(catch 안 `$error`), `[on_error: stop|skip|null]` 문장 접두(`>>` 실패 규약 — 기본 stop, skip/null 은 건너뛴 step 을 봉투에 신고), `??` 가지의 괄호 파이프 `A ?? (B >> C)`, `[repeat: N | until 조건 | while 조건, max(필수), every(≤60s), collect, as]{…}`(문장 안 결정론 반복 — 벽시계 300s 상한 신고, 더 길면 goal/schedule). 기능어 `[table:reduce]{init, step, as}`(식 한 줄 fold). **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조, 소비자 투명 해소, 24h 캐시 GC)·**재개**(실패 봉투 `resume:{from_step, prev_ref}` → `execute_ibl(code, resume)`) 은 엔진 규약. **M6(2026-08-22)**: 식 할당 `$n = 0` / `$n = $n + 1` / `$s = $r.count * 2`(한 줄 식, `common/safe_expr` — 우변이 액션이 아니면 식), 블록을 파이프 세그먼트로(`[A] >> [if: count($items) > 0]{…} >> [B]`, `[repeat:…]{…} >> [table:dedup]` — 블록은 직전 통화를 `$items` 로 보고 몸에 넘기며 결과가 다음 통화), `while` 이 몸 변수를 봄(회차마다 현재 값으로 몸 치환·루프 뒤 바깥 `$n` 최신값), `$return = …` 반환 규약(`[self:workflow]` run). ★블록 몸의 `$변수`는 파서가 아니라 **실행기가 실행 직전 값으로 치환**한다(안쪽 파이프 인덱스와 바깥 인덱스 충돌 방지). **예약어**(블록 키워드 — 어휘 이름으로 쓸 수 없음): `if else case goal repeat try catch finally on_error` + 변수 `$items $it $i $error $return`. 파서(`ibl_parser.py`)는 이름-무검증 — 모르는 어휘도 문법적으로 파싱한다. 개정 로드맵·집행 기록 = `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 2. **기능어 코어**: `self` / `others` / `table` — 노드 yaml의 `always_on: true` 플래그가 단일 소스. 언어학의 기능어(조사·전치사)처럼 닫힌 부류라 모든 화자가 공유하며, 특히 table(통화 변환 문법)은 파이프라인 생존에 필수라 어떤 노드 선별에서도 꺼지지 않는다. table 의 17 액션 중 **`each`·`reduce` 만 코어 src(`ibl_nodes_src/table.yaml`)에 산다** — each 는 데이터가 아니라 *문장*을 인자로 받는 고차 어휘라 실행이 `execute_ibl` 재귀이고, reduce(2026-08-22 M5)는 한 줄 식 fold 로 조건·반복과 함께 상태를 넘기는 제어 구조의 일부라 엔진 층에 구현이 있어야 하기 때문이다(패키지가 엔진을 import 하면 층 역전). 나머지 15(변환자 11·emitter 4)는 data-ops 패키지 fragment.
 
 **개인 사전** — 그 외 모든 내용어(sense·limbs·engines의 액션들). 정의(`ibl_nodes_src/`·패키지 `ibl_actions.yaml`)·구현(패키지 핸들러)·파라미터 별칭(`aliases:`)·프롬프트 설명까지 전부 데이터가 소유한다.
@@ -578,9 +578,30 @@ $result = [sense:search]{query: "AI 뉴스"}
 ```
 
 - `$변수명 = 액션` 형태로 할당
-- `$변수명`으로 이전 결과를 참조
+- `$변수명` 또는 `$변수명.필드.경로`로 이전 결과를 참조
 - 파이프라인(`>>`) 없이도 중간 결과를 명시적으로 전달 가능
-- 변수명은 영문/숫자/밑줄(`_`)로 구성
+- 변수명 경계는 정규식 `\w` — 영문·숫자·밑줄 **그리고 한글**(유니코드 낱말 문자)
+
+### 괄호 표기 `${변수명}` (2026-08-22)
+
+`$변수명` 과 `${변수명}` 은 **같은 뜻**이다. 경로도 괄호 안에 넣는다 — `${r.file}`.
+
+괄호가 필요한 이유는 경계다. 이름 경계가 `\w` 라서 한국어에서는 조사·단위가 이름에 먹힌다:
+
+```
+"$n건"      → 변수 `n건` (변수 n 뒤의 글자 '건'이 아니다)
+"${n}건"    → 변수 `n` + 글자 '건'
+```
+
+영어는 공백이 경계를 대신 그어 주지만 한국어는 아니라서, 괄호가 경계를 사람이 직접 긋는
+유일한 수단이다. 맨몸 표기의 경계는 **바꾸지 않았다** — 옛 문장이 뜻을 바꾸면 안 되므로,
+괄호는 더하는 표기이지 고치는 표기가 아니다.
+
+표기의 단일 진실은 `backend/common/ibl_vars.py` 다(발견 `find_names`, 치환 `sub_ref`/`sub_refs`,
+통짜 판정 `is_sole_ref`). 파서·주입기·시그니처·each 행 참조·조건/식 바인딩·`$items` 예약어가
+모두 이 모듈을 통해 같은 표기를 읽는다 — `$` 를 직접 정규식으로 훑는 코드를 새로 만들면
+"파서는 아는데 시그니처는 모르는 변수" 가 생긴다(2026-08-22 이전에 실제로 층마다
+`\w+` 와 `[^\W\d]\w*` 로 방언이 갈려 있었다).
 
 ---
 

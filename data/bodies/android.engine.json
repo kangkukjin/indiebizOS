@@ -124,6 +124,7 @@
     "ibl/tool_loader",
     "ibl/tool_selector",
     "ibl/trigger_engine",
+    "ibl/workflow_contract",
     "ibl/workflow_engine",
     "ibl/workflow_fallback",
     "ibl/workflow_parallel",
@@ -259,6 +260,7 @@
     "test_ibl_program_grade_m3m5": "force_exclude_glob",
     "test_ibl_program_grade_m6": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
+    "test_ibl_var_notation": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
@@ -273,8 +275,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 267,
-    "engine": 218,
-    "blocklist": 49
+    "total": 269,
+    "engine": 219,
+    "blocklist": 50
   }
 }

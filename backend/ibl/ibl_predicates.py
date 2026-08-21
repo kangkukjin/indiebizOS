@@ -233,11 +233,13 @@ def classify_atom(text: str) -> Tuple[str, Any]:
     except ValueError:
         pass
     if t.startswith("$"):
-        m = re.fullmatch(r"\$(\w+)((?:\.\w+)*)", t)
+        from common.ibl_vars import REF_RE
+        m = REF_RE.fullmatch(t)
         if not m:
             return "unknown", t
-        path = m.group(2)[1:] if m.group(2) else None
-        return "var", (m.group(1), path)
+        from common.ibl_vars import split_ref
+        name, raw_path = split_ref(m)
+        return "var", (name, raw_path[1:] if raw_path else None)
     m = re.fullmatch(r"(\w+)\((.*)\)", t, re.DOTALL)
     if m and m.group(1).lower() in _FUNCS:
         return "func", (m.group(1).lower(), m.group(2).strip())
@@ -254,7 +256,8 @@ def classify_atom(text: str) -> Tuple[str, Any]:
 def referenced_vars(cond: str) -> List[str]:
     """조건식이 참조하는 $변수 이름(중복 제거, 등장 순)."""
     seen: List[str] = []
-    for name in re.findall(r"\$(\w+)", cond or ""):
+    from common.ibl_vars import find_names
+    for name in find_names(cond or ""):
         if name not in seen:
             seen.append(name)
     return seen

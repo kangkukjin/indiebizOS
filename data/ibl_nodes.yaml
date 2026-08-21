@@ -2599,7 +2599,7 @@ nodes:
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6).
+        target_description: 'get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6). **시그니처**: 몸통의 미할당 `$이름`(괄호형 `${이름}` 동일 — 한글 조사·단위가 이름에 먹히는 자리엔 괄호를 쓴다: `"${n}건"`)이 곧 인자다 — save 가 계산해 params_required 로 저장·보고하고, 저장본 run 은 빠진 인자를 정직 거절한다(즉석 run 은 선언 시점이 없어 경고만). 저장본에 params_default:{이름:값}을 두면 기본값이 된다(호출자 params 가 이김). 워크플로우가 워크플로우를 부르는 사슬은 순환(같은 id 재진입)·깊이 상한 5에서 거절된다 — 반복은 [repeat:]/[table:each] 로.'
         group: workflow
         target_key: op
         router: workflow_engine
@@ -2619,7 +2619,7 @@ nodes:
             get: 워크플로우 조회 (workflow_id)
             save: 워크플로우 저장 (name + steps IBL 코드 배열)
             delete: 워크플로우 삭제 (workflow_id)
-            run: 워크플로우 실행 — workflow_id/name(저장본) 또는 do(즉석) + params($변수 주입)
+            run: 워크플로우 실행 — workflow_id/name(저장본) 또는 do(즉석) + params($변수 주입, 저장본은 인자 누락 거절)
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우

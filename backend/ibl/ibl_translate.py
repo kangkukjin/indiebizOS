@@ -45,7 +45,8 @@ def _strip_code_fence(text: str) -> str:
     # 시작점은 세 모양 — [node:action] 토큰 · 블록 개시([goal:]/[if:]/[case:]) ·
     # 변수 할당($이름 =). 액션 토큰만 찾으면 블록/할당 접두가 잘려 코드가 훼손된다
     # (예: "[if: ...]{[self:notify_user]..." 에서 [if: 가 소실 — 2026-08-16 실측).
-    m = re.search(r"\[[a-z_]+:[a-z_]+\]|\[(?:goal|if|case)\s*:|\$\w+\s*=", t)
+    from common.ibl_vars import HAS_ASSIGN_RE
+    m = re.search(r"\[[a-z_]+:[a-z_]+\]|\[(?:goal|if|case)\s*:|" + HAS_ASSIGN_RE.pattern, t)
     if m:
         t = t[m.start():].strip()
     # 마지막 } 또는 ] 이후는 잘라낸다 (execute_ibl('...') 흉내의 ') 꼬리, 후행 설명 제거)

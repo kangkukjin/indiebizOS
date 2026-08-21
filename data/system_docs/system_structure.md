@@ -296,6 +296,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 151 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 21)·41 도구 패키지 + 5 extensions·backend .py 270(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 151 액션(sense 40·self 50·limbs 14·others 17·engines 9·table 21)·41 도구 패키지 + 5 extensions·backend .py 272(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-08-21): 문서 파생·드리프트 감사 기계화 — 수치 마커=빌드 소유, 트리 계수 산문 은퇴. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

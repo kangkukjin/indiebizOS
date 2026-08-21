@@ -68,7 +68,7 @@ LAYERS = {
         "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing",
         "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
-        "workflow_parallel", "workflow_fallback",
+        "workflow_parallel", "workflow_fallback", "workflow_contract",
     },
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals",

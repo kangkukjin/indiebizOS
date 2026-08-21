@@ -25,7 +25,9 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
     """문자열 속 `$이름[.경로]` 를 값으로 치환 — $error(try)·$i(repeat). 이름 경계 존중($items 불침범)."""
     if isinstance(obj, str):
         def _one(m):
-            name, path = m.group(1), (m.group(2) or "")[1:]
+            from common.ibl_vars import split_ref
+            name, path = split_ref(m)
+            path = path[1:]
             if name not in mapping:
                 return m.group(0)
             val = mapping[name]
@@ -34,8 +36,8 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
                 v = walk_path(val, path)
                 val = "" if v is _MISSING else v
             return val if isinstance(val, str) else json.dumps(val, ensure_ascii=False)
-        pat = r"\$(" + "|".join(re.escape(k) for k in mapping) + r")((?:\.\w+)*)(?!\w)"
-        return re.sub(pat, _one, obj)
+        from common.ibl_vars import refs_pattern
+        return re.sub(refs_pattern(mapping), _one, obj)
     if isinstance(obj, dict):
         return {k: _subst_tokens(v, mapping) for k, v in obj.items()}
     if isinstance(obj, list):
@@ -311,7 +313,9 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
     scope: Dict[str, Any] = {}
 
     def _bind(m):
-        vn, path = m.group(1), (m.group(2) or "")[1:]
+        from common.ibl_vars import split_ref
+        vn, path = split_ref(m)
+        path = path[1:]
         if vn not in vals:
             raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
         v = walk_path(_load_var(vals[vn]), path or None)
@@ -321,7 +325,8 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
         scope[key] = _scalar_of(v)
         return key
     try:
-        py = re.sub(r"\$(\w+)((?:\.\w+)*)", _bind, expr)
+        from common.ibl_vars import REF_RE
+        py = REF_RE.sub(_bind, expr)
         code, names, _cols = compile_expr(py)
         unknown = [n for n in names if n not in scope and n not in FUNCS]
         if unknown:

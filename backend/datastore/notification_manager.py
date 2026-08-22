@@ -28,16 +28,19 @@ class NotificationManager:
         title: str,
         message: str,
         type: str = "info",
-        source: str = "system"
+        source: str = "system",
+        deliver: bool = True
     ) -> Dict[str, Any]:
         """
-        알림 생성
+        알림 생성 — **기록과 전달이 한 몸이다**.
 
         Args:
             title: 알림 제목
             message: 알림 내용
             type: 알림 유형 (info, success, warning, error)
             source: 발생 주체 (system, 에이전트명 등)
+            deliver: 사용자에게 전달까지 할지. False 는 관문
+                (notify_dispatch.notify_user)이 자기 전달과 겹치지 않게 쓸 때만.
 
         Returns:
             생성된 알림 정보
@@ -60,6 +63,18 @@ class NotificationManager:
                 listener(notification)
             except Exception as e:
                 print(f"[NotificationManager] 리스너 호출 실패: {e}")
+
+        # ★2026-08-22: 기록과 전달을 한 몸으로 — '알림함엔 쌓이는데 사용자에겐
+        # 닿지 않는' 조용한 유실을 구조가 막는다. 옛 구조는 전달이 notify_dispatch
+        # 에만 있어, 관문을 안 거친 호출처 17곳(스케줄 실행 완료·자가점검 경고·
+        # 손발 연결·포털 가입·설치 승인 대기 …)의 알림이 런처를 보고 있지 않으면
+        # 아무 일도 안 일어난 것과 같았다. 규약을 문서가 아니라 구조로.
+        if deliver:
+            try:
+                from notify_dispatch import deliver_notification
+                deliver_notification(title, message, type)
+            except Exception as e:
+                print(f"[NotificationManager] 전달 실패: {e}")
 
         return notification
 

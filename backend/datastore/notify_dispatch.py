@@ -27,14 +27,30 @@ def notify_user(title: str, body: str, kind: str = "info", source: str = "system
         command: 알림 클릭 시 실행할 런처 명령 (예: "open_messenger_window"). 런처 경로에서만 유효.
         badge: 런처 배지 카운트 증가 여부 (독/트레이 미확인 표시)
     """
-    # 1) 알림함 기록 (실패해도 전달은 계속)
+    # 1) 알림함 기록. deliver=False — 전달은 아래에서 command/badge 까지 실어
+    #    한 번만 한다(create 안의 전달과 이중이 되지 않게).
     try:
         from notification_manager import get_notification_manager
-        get_notification_manager().create(title=title, message=body, type=kind, source=source)
+        get_notification_manager().create(title=title, message=body, type=kind,
+                                          source=source, deliver=False)
     except Exception as e:
         print(f"[알림] 알림함 기록 실패: {e}")
 
-    # 2) A. Electron 런처 (연결돼 있으면 네이티브 알림 + 배지 + 클릭 연동)
+    # 2) 전달 (기록 실패와 무관하게 계속)
+    return deliver_notification(title, body, kind, command, command_params, badge)
+
+
+def deliver_notification(title: str, body: str, kind: str = "info",
+                         command: str = None, command_params: dict = None,
+                         badge: bool = True) -> bool:
+    """전달만 — 알림함 기록 없이 런처 푸시(A) → 실패 시 OS 네이티브(B).
+
+    ★2026-08-22 분리: notification_manager.create() 가 기록 직후 이 함수를 부른다.
+    그래서 **어느 입구로 들어온 알림이든** 사용자에게 닿는다 — '관문을 지나라'는
+    규약을 문서가 아니라 구조가 강제한다(옛 규약은 호출처 18곳 중 17곳이 어겼고,
+    그 알림들은 알림함에만 쌓인 채 조용히 유실됐다).
+    """
+    # A. Electron 런처 (연결돼 있으면 네이티브 알림 + 배지 + 클릭 연동)
     delivered = False
     try:
         from websocket_manager import send_launcher_command_sync
@@ -50,7 +66,7 @@ def notify_user(title: str, body: str, kind: str = "info", source: str = "system
         print(f"[알림] 런처 전달 실패: {e}")
         delivered = False
 
-    # 3) B. 폴백 — 백엔드가 직접 OS 네이티브 알림
+    # B. 폴백 — 백엔드가 직접 OS 네이티브 알림
     if not delivered:
         try:
             from desktop_notify import native_notify

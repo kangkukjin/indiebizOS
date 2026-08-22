@@ -100,7 +100,7 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
     "backend/base/runtime_utils.py",   # detect_body + 번들 런타임 경로(Win/Unix 분기)
-    "backend/ibl/ibl_executors.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
+    "backend/ibl/ibl_exec_output.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
     "backend/surface/api_pcmanager.py",   # 드라이브/볼륨 열거·열기(3 OS)
     "backend/datastore/file_index.py",      # 파일 검색(맥=Spotlight mdfind/mdls·폰=MediaStore)
     "backend/surface/api_nas.py",         # ffmpeg/ffprobe 경로 해석

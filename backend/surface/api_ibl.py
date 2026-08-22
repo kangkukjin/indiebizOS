@@ -11,6 +11,15 @@ router = APIRouter(prefix="/ibl", tags=["ibl"])
 class IBLRequest(BaseModel):
     code: str
     verbose: bool = False              # 파이프 봉투 results[] 원형(true) / step 요약(기본) — ibl_envelope (2026-08-22 M1)
+    resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
+    files: Optional[List[str]] = None  # 긴 텍스트/코드를 IBL 파서 밖에서 전달 ($file:0 로 참조).
+    # ★2026-08-22 B23-1(상상훈련 23회차): 위 두 필드는 도구 스키마(tool_loader)와 엔진
+    # (system_tools_ibl)에는 처음부터 있었는데 **이 요청 모델에만 없어서**, body 에 실어 보낸
+    # resume/files 가 pydantic 단계에서 조용히 탈락했다. 봉투의 실패 note 는 표면을 가리지 않고
+    # "execute_ibl(code, resume={from_step, prev_ref})" 를 모두에게 안내하므로, **안내받은 대로
+    # 보낸 값이 침묵으로 사라지는 자리**였다(교재에 resume 용례가 0건인 이유 — 닿을 수가 없었다).
+    # 표면은 도구 스키마와 같은 파라미터 집합을 날라야 한다 — 새 파라미터를 스키마에 넣을 때
+    # 이 모델과 mcp_server.execute_ibl 도 함께 늘릴 것.
     project_id: Optional[str] = None   # 수동/앱 모드 등 표면이 자기 프로젝트를 지정
     project_path: str = "."
     agent_id: Optional[str] = None     # 발신 신원(channel_send/read 게이트). out-of-process 프로바이더(Claude Code)가
@@ -132,8 +141,14 @@ async def execute_ibl_code(req: IBLRequest):
                                origin=_origin):
                 try:
                     from system_tools import _execute_ibl_unified
-                    return _execute_ibl_unified({"code": req.code, "verbose": req.verbose},
-                                                project_path, agent_id=agent_id)
+                    # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서
+                    # 옛 호출의 tool_input 모양을 바꾸지 않는다(무회귀).
+                    _ti = {"code": req.code, "verbose": req.verbose}
+                    if req.resume is not None:
+                        _ti["resume"] = req.resume
+                    if req.files is not None:
+                        _ti["files"] = req.files
+                    return _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
                 finally:
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)

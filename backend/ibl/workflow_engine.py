@@ -285,7 +285,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 return j
         return -1
 
-    _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": []}
+    _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": [], "halted": []}
 
     def _handle_failure(idx: int, abort_payload: dict):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -557,6 +557,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bmeta = tool_input.get("_branch_meta") if isinstance(tool_input, dict) else None
         if isinstance(_bmeta, dict):
             _rec.update(_bmeta)
+        # ★F23-2(상상훈련 23회차): [repeat:] 가 종료 조건을 못 채우고 상한에 걸려 멈추면
+        # 블록 결과는 halted 와 "성공 아님·실패 아님" note 를 정확히 싣는데, **파이프 봉투
+        # 최상위는 success: true** 였다 — 자동화가 success 만 보면 "조건을 만족하고 끝났다"로
+        # 읽는다. skipped_steps 와 같은 승격 규약으로 봉투 표면까지 올린다(실패로 뒤집지는
+        # 않는다 — 통화는 실제로 나왔고 note 도 실패가 아니라고 말한다).
+        if isinstance(result, dict) and result.get("halted") in ("max", "wall", "budget"):
+            _seq["halted"].append({"step": i + 1, "halted": result["halted"],
+                                   "iterations": result.get("iterations")})
         results.append(_rec)
         step_results[i] = result_str
         # 블록 몸이 재할당한 바깥 변수(M6 repeat) — 루프 뒤 `$n` 이 최신값이 되게 되쓴다
@@ -598,6 +606,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
+    if _seq["halted"]:
+        out["halted_steps"] = list(_seq["halted"])
+        _hs = ", ".join(f"step {h['step']}({h['halted']})" for h in _seq["halted"])
+        out["warning"] = (f"[repeat] 상한으로 중단: {_hs} — 종료 조건은 충족되지 않았습니다"
+                          "(성공 아님·실패 아님, 통화는 냄). success 만 보고 '조건 달성'으로 읽지 말 것.")
     if _seq["skipped"]:
         out["skipped_steps"] = list(_seq["skipped"])
         out["warning"] = (f"[on_error] 로 step {', '.join(map(str, _seq['skipped']))} 실패를 건너뛰었습니다 — "

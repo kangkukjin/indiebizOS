@@ -6,6 +6,7 @@
 import json
 import os
 import urllib.request
+from typing import Optional, List
 
 import anyio
 from mcp.server.fastmcp import FastMCP, Context
@@ -246,7 +247,11 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
 
 
 @mcp.tool()
-async def execute_ibl(code: str, project_path: str = "", ctx: Context = None):
+async def execute_ibl(code: str, project_path: str = "",
+                      resume: Optional[dict] = None,
+                      files: Optional[List[str]] = None,
+                      verbose: bool = False,
+                      ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
     """IBL 코드를 실행합니다.
@@ -258,6 +263,16 @@ async def execute_ibl(code: str, project_path: str = "", ctx: Context = None):
         [limbs:radio]{op: "play", station_id: "kbs_coolfm"}
 
     project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
+
+    resume: 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터
+        다시 돈다(앞 단 재실행 없음, 스필 24h 유효).
+    files: 긴 텍스트/코드를 IBL 파서 밖에서 전달. 코드에서 $file:0, $file:1 로 참조.
+    verbose: 파이프 봉투 results[] 를 step 원형으로 받는다(기본 false = step 요약).
+
+    ★2026-08-22 B23-1: 이 셋은 도구 스키마(tool_loader)와 엔진에는 있었는데 이 MCP 표면에만
+    없어서, 봉투 note 가 안내하는 대로 보낸 resume 이 조용히 사라졌다. 표면은 도구 스키마와
+    같은 파라미터 집합을 나른다 — 스키마에 새 파라미터를 넣을 때 여기와 api_ibl.IBLRequest 도
+    함께 늘릴 것.
     """
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
     h_agent, h_project, h_task, h_origin = _http_identity(ctx)
@@ -266,6 +281,13 @@ async def execute_ibl(code: str, project_path: str = "", ctx: Context = None):
     task_id = h_task or DEFAULT_TASK_ID
     origin = h_origin or DEFAULT_TASK_ORIGIN
     payload = {"code": code, "project_path": effective_path}
+    # 없을 때만 빼서 옛 호출의 payload 모양을 바꾸지 않는다(무회귀) — B23-1
+    if resume is not None:
+        payload["resume"] = resume
+    if files is not None:
+        payload["files"] = files
+    if verbose:
+        payload["verbose"] = True
     if agent_id:
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
     if task_id:

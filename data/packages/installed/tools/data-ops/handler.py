@@ -286,66 +286,15 @@ def _emit_table(envelope, new_table):
     return _reproject_mirrors(out, _orig, _row_dicts(new_table))
 
 
-def _observed_fields(rows=None, columns=None):
-    """행/열에서 **실제로 관측된** 필드 이름 집합. 관측이 없으면 빈 집합."""
-    if columns is not None:
-        return {str(c) for c in columns}
-    return {str(k) for r in (rows or []) if isinstance(r, dict) for k in r.keys()}
+# 정직한 거절 층(부재 판정·필드 오류문·each 봉투 처방)은 diagnostics.py 로 분리
+# (2026-08-23, 1500줄 규칙). 재수출이라 기존 호출부는 그대로다.
+from common.pkg_utils import load_sibling as _load_sibling_diag
 
-
-def _absent_fields(names, observed):
-    """이름들 중 **부재를 주장할 수 있는** 것만 돌려준다 (B28-1, 상상훈련 28회차).
-
-    ★증거의 부재는 부재의 증거가 아니다. 관측된 필드가 하나도 없으면(=행이 0개면)
-    "그 필드는 없다"는 **주장할 수 없는 명제**다 — 스키마는 멀쩡한데 행만 비었을 수 있다.
-
-    실측(2026-08-23):
-        [self:body]{days: 3, limit: 5} >> [table:filter]{where: "존재하지않는값ZZZ"}
-                                       >> [table:rename]{map: {"파일": "경로"}}
-        → step1 columns: ['상태','시각','영역','요지','커밋','파일']   ← '파일' 은 실재한다
-          step2 count: 0                                            ← 정당한 0행
-          step3 "rename: 필드 ['파일'] 이(가) 없습니다. 행 필드 예: []"
-    오류문이 스스로를 반박한다 — `행 필드 예: []` 는 *아무것도 못 봤다*는 말이지
-    *없다*는 말이 아니다.
-
-    ★왜 두 갈래가 생겼나: F17 이 빈손 계약을 **"verb 마다 심사"** 로 정해 두었기 때문이다.
-    그래서 verb 마다 `not any(k in r for r in dict_recs)` 를 손으로 다시 적고, 빈손 보호는
-    *호출자가 먼저 짧게 끊어 주는* 우연에 기댔다. 단항 9개 중 8개는 우연히 끊겼고
-    rename 만 안 끊겨서 혼자 다른 답을 냈다(28회차 실측 행렬).
-    → 갈래를 없애는 자리는 verb 가 아니라 **판정기**다. 판정기가 빈 관측에서 부재를
-      주장하지 않으면, 앞으로 생길 verb 도 같은 실수를 할 수 없다.
-      (같은 규율의 선례: 조건 평가의 "판정 불능은 거짓이 아니다" — 판정 불능이면 else 도 보류.)
-
-    반환: 정말로 없는 이름 목록(관측 0이면 빈 목록 = 주장 없음).
-    """
-    if isinstance(names, (list, tuple, set)):
-        names = [str(n) for n in names]
-    else:
-        names = [str(names)]
-    if not observed:
-        return []
-    return [n for n in names if n not in observed]
-
-
-def _field_missing_error(verb, missing, rows):
-    """명시 파라미터가 가리키는 필드가 어느 행에도 없을 때의 정직한 에러.
-
-    침묵-삼킴 금지 계약(2026-08-08, 3방식 실험 ⑧′): 잘못된 필드/형식을 조용히
-    기본값으로 위장하면 '그럴듯하게 틀린' 결과가 나가고, 진짜 비용은 틀린 답이
-    아니라 틀린 진단이다(실험자가 '기능이 없다'고 오진). sort 의 가드를 계열 전체로.
-    """
-    avail = []
-    for r in rows or []:
-        if isinstance(r, dict):
-            avail = list(r.keys())
-            break
-    miss = "', '".join(str(m) for m in missing) if isinstance(missing, (list, tuple)) else str(missing)
-    hint = f" 사용 가능한 필드: {avail}" if avail else ""
-    if verb == "filter":
-        # 워드 연산자 합류(B19-1) 뒤엔 "필드 op 값" 문자열이 조건으로 읽히므로, 전-필드
-        # 검색을 의도했던 문장이 여기로 온다 — 그 갈림길을 오류문이 직접 안내한다.
-        hint += " (모든 필드에서 그냥 찾으려면 연산자 없는 문자열을 주세요: where: \"자이\")"
-    return {"success": False, "error": f"{verb}: '{miss}' 필드가 어느 행에도 없습니다.{hint}"}
+_diag = _load_sibling_diag(__file__, "diagnostics")
+_observed_fields = _diag._observed_fields
+_absent_fields = _diag._absent_fields
+_each_envelope_remedy = _diag._each_envelope_remedy
+_field_missing_error = _diag._field_missing_error
 
 
 def _no_currency_error(verb, prev):
@@ -500,6 +449,7 @@ def _op_sort(prev, params):
     if not avail and dug:
         avail = list(dug[0].keys())
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
+    hint += _each_envelope_remedy(avail)
     return {"success": False, "error": f"sort: '{by}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
@@ -545,7 +495,8 @@ def _op_select(prev, params):
                     return _emit_items(denv if denv is not None else env, out)
             # 없는 열을 조용히 떨구면 빈 표가 success 로 나간다(⑧′)
             return {"success": False,
-                    "error": f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
+                    "error": (f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"
+                              + _each_envelope_remedy(src_cols))}
         idx = [src_cols.index(c) for c in cols_keep]
         new_cols = [src_cols[i] for i in idx]
         new_rows = [[(r[i] if i < len(r) else None) for i in idx] for r in (table.get("rows") or [])]
@@ -592,7 +543,8 @@ def _op_rename(prev, params):
         missing = _absent_fields(list(m), _observed_fields(columns=src_cols))
         if missing:
             return {"success": False,
-                    "error": f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
+                    "error": (f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"
+                              + _each_envelope_remedy(src_cols))}
         clash = [v for k, v in m.items() if v in src_cols and v not in m]
         if clash:
             return {"success": False,
@@ -649,7 +601,9 @@ def _op_dedup(prev, params):
         cols = [str(c) for c in (table.get("columns") or [])]
         if by and str(by) not in cols:
             # 잘못된 by 를 조용히 첫 열로 폴백하면 엉뚱한 키로 중복 제거된다(⑧′)
-            return {"success": False, "error": f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"}
+            return {"success": False,
+                    "error": (f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"
+                              + _each_envelope_remedy(cols))}
         ki = cols.index(str(by)) if by else 0
         seen, rows = set(), []
         for r in table.get("rows") or []:
@@ -851,7 +805,8 @@ def _op_since(prev, params):
             avail = sorted({f for r in rows for f in r.keys()})
             return {"success": False, "error": (
                 "since: 행 식별 필드를 못 골랐습니다(후보 url/id/link/title 이 모든 행에 없음). "
-                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}")}
+                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}"
+                + _each_envelope_remedy(avail))}
 
     watch = params.get("watch") or []
     if isinstance(watch, str):
@@ -1185,6 +1140,16 @@ def _op_flatten(prev, params):
                 pass
         if isinstance(v, dict) and isinstance(v.get("items"), list):
             v = v["items"]
+        elif isinstance(v, dict):
+            # ★레코드 하나도 '펼 수 있는 것'이다 (2026-08-23).
+            # each 의 do 가 목록이 아니라 **레코드 하나**를 내는 경우(대다수의 조회 액션이
+            # 그렇다)가 여기로 떨어져 "목록을 가진 행이 없습니다" 로 거절됐다. 그런데 형제
+            # 변환자들의 오류문은 바로 그 상황에서 ">> [table:flatten] 을 붙이세요" 라고
+            # 안내한다 — **안내대로 했는데 안 되는** 상태였다. 안내가 맞는지까지 봐야
+            # 안내다. 레코드는 1행짜리 표이므로 그대로 한 행이 된다(손실 0).
+            # 스칼라는 계속 건너뛴다 — {value: …} 로 감싸면 field 오타가 조용히
+            # '성공'으로 위장돼 정직한 거절이 사라진다.
+            v = [v]
         if not isinstance(v, list):
             skipped += 1
             continue

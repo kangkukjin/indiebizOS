@@ -11,9 +11,58 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
+def _sink_content(content: Any, params: dict) -> Tuple[Any, Optional[dict]]:
+    """파이프 싱크 계약 — [self:write] 와 **같은** 규약 (B26-3, 상상훈련 26회차).
+
+    2026-08-05 어휘 압축이 `output op:file` 을 [self:write] 로 흡수하면서 이 파일에
+    삭제 사유를 적어 남겼다 — *"이 함수는 안전판을 우회했고 **파이프 입력도 무시해 빈
+    파일을 쓰던 반쪽 싱크**였다."* ★그런데 **같은 결함을 가진 형제 둘(gui·clipboard)는
+    그 자리에 그대로 남았다** — 흡수는 op 하나만 데려가고 *계약은 안 데려갔다*.
+    즉 새 부류가 아니라, 이미 진단되고 기록까지 된 부류의 안 쓸어낸 나머지다.
+
+    실측(2026-08-23):
+        [sense:book]{…} >> [table:take]{n: 3} >> [table:select]{…} >> [self:output]{op: "gui", format: "테이블"}
+        → {"ok": true, "output": {…, "content": ""}}      ← 3행을 먹고 빈 카드를 **성공으로** 신고
+    ok:true + 빈 산출 = 침묵-삼킴. 이 저장소가 ⑪′에서 부류로 봉한 바로 그것이고,
+    진짜 비용은 틀린 답이 아니라 **틀린 진단**이다(사용자는 "표시가 안 된다"가 아니라
+    "빈 결과가 왔다"고 읽는다).
+
+    규약은 write 에서 그대로 가져온다 — 새 의미 없음:
+      ① `content` 가 **명시되면** 그것을 쓴다. 빈 문자열도 유효한 값(의도적 비움).
+      ② 생략되면 `_prev_result` 를 쓴다.
+      ③ 스필 참조 봉투(M5)면 본문으로 해소한다 — 참조 JSON 이 화면·클립보드에
+         박히면 그 자체가 조용한 오답이다(write 가 같은 이유로 하는 일).
+    반환: (content|None, error_dict|None). None 은 "쓸 것이 아무것도 없다" — 부르는 쪽이
+    침묵하지 말고 정직하게 거절하라는 신호다.
+    """
+    if "content" in params:
+        return params.get("content"), None
+    if content:
+        return content, None
+    prev = params.get("_prev_result")
+    if prev is None:
+        return None, None
+    try:
+        from common.spill import resolve_ref_str
+        resolved, ref_err = resolve_ref_str(prev)
+        if ref_err:
+            return None, {"error": ref_err}
+        prev = resolved
+    except ImportError:
+        pass
+    return prev, None
+
+
 def _output_gui(content: str, params: dict, project_path: str) -> Any:
-    """UI에 결과를 HTML/카드/테이블로 표시"""
-    content = params.get("content", content or "")
+    """UI에 결과를 HTML/카드/테이블로 표시 (파이프 싱크 — _sink_content 계약)"""
+    content, err = _sink_content(content, params)
+    if err:
+        return err
+    if content is None:
+        return {"error": "표시할 내용이 없습니다. content 를 주거나 앞 단계가 결과를 내야 합니다.",
+                "hint": "파이프라인: [도구]{…} >> [self:output]{op: \"gui\"} — 앞 액션이 통화를 내야 동작합니다."}
+    if not isinstance(content, str):
+        content = json.dumps(content, ensure_ascii=False)
     format_type = params.get("format", "html")  # html, card, table, markdown
     title = params.get("title", "결과")
 
@@ -136,10 +185,16 @@ def _output_open(path: str, params: dict, project_path: str = ".") -> Any:
 
 
 def _output_clipboard(content: str, params: dict) -> Any:
-    """결과를 클립보드에 복사"""
-    content = params.get("content", content or "")
+    """결과를 클립보드에 복사 (파이프 싱크 — _sink_content 계약, gui 와 같은 규약)"""
+    content, err = _sink_content(content, params)
+    if err:
+        return err
+    if content is not None and not isinstance(content, str):
+        content = json.dumps(content, ensure_ascii=False)
     if not content:
-        return {"error": "복사할 내용이 없습니다."}
+        # 거절은 이전부터 정직했다(gui 와 달리 ok:true 를 안 냈다) — 유지하되
+        # 이제는 파이프로 들어온 통화를 먼저 먹고 난 뒤의 거절이다.
+        return {"error": "복사할 내용이 없습니다. content 를 주거나 앞 단계가 결과를 내야 합니다."}
 
     import subprocess
     import platform

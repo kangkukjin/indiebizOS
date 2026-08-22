@@ -720,8 +720,72 @@ def test_p22_copy_empty_hands_vs_no_currency():
     print("P22 OK — copy: 통화 없음=거절(봉투 진단) · 0행=빈손 성공 · 비-레코드=별도 거절")
 
 
+def test_p23_unary_transformers_restate_scope():
+    """P23(26회차 B26-1·B26-2): 단항 변환자가 봉투의 자기-기수 서술을 안 고쳐 거짓말을 했다.
+
+    시스템 자신의 정의: truncated == total > len(items) (portal_warehouse:304 · test_body_vocab T1/T5).
+    ⑭가 이항 변환자에 `_carry_flags` 를 달았지만 단항 경로는 안 쓸었다.
+    """
+    trunc_free = json.dumps({"success": True, "total": 29,  "truncated": False,
+                             "items": [{"파일": f"f{i}.py", "n": i} for i in range(29)]}, ensure_ascii=False)
+    # take: 29 → 1 이면 total(29) > 1 이므로 truncated 가 켜져야 한다
+    t = _run("data_take", {"_prev_result": trunc_free, "n": 1})
+    assert t.get("truncated") is True and t.get("count") == 1 and t.get("total") == 29, t
+    # filter·dedup 도 같은 부류
+    f = _run("data_filter", {"_prev_result": trunc_free, "where": "n < 5"})
+    assert f.get("truncated") is True and f.get("count") == 5, {k: f.get(k) for k in ("truncated", "count")}
+    # ★기수 불변 변환(sort)은 건드리지 않는다 — 오폭 방지
+    s = _run("data_sort", {"_prev_result": trunc_free, "by": "n"})
+    assert s.get("truncated") is False and s.get("count") == 29, {k: s.get(k) for k in ("truncated", "count")}
+    # total 이 없으면 지어내지 않는다(_carry_flags 의 join 조항) — 침묵은 거짓말이 아니다
+    no_total = json.dumps({"success": True, "items": [{"a": i} for i in range(10)]}, ensure_ascii=False)
+    n = _run("data_take", {"_prev_result": no_total, "n": 2})
+    assert "total" not in n and "truncated" not in n, n
+    # 상류가 이미 truncated 면 꺼지지 않는다(단조)
+    already = json.dumps({"success": True, "total": 500, "truncated": True,
+                          "items": [{"a": i} for i in range(3)]}, ensure_ascii=False)
+    a = _run("data_sort", {"_prev_result": already, "by": "a"})
+    assert a.get("truncated") is True, a
+    # B26-2: 기수가 변한 변환 뒤의 봉투 summary 는 변환 전 집계라 stale
+    with_sum = json.dumps({"success": True, "summary": {"총건수": 90, "평균가": "31,952만원"},
+                           "items": [{"동": "a", "가": i} for i in range(9)]}, ensure_ascii=False)
+    g = _run("data_groupby", {"_prev_result": with_sum, "by": "동", "agg": {"평균": ["avg", "가"]}})
+    assert "summary" not in g, g
+    k = _run("data_take", {"_prev_result": with_sum, "n": 3})
+    assert "summary" not in k, k
+    # 기수 불변이면 summary 는 여전히 참이므로 보존한다
+    s2 = _run("data_sort", {"_prev_result": with_sum, "by": "가"})
+    assert isinstance(s2.get("summary"), dict) and s2["summary"]["총건수"] == 90, s2.get("summary")
+    print("P23 OK — 단항 변환자 truncated 재서술(단조·무오폭·total 무생성) + stale summary 제거")
+
+
+def test_p24_output_sink_consumes_currency():
+    """P24(26회차 B26-3): [self:output] 이 파이프 통화를 안 먹고 빈 산출을 성공으로 신고했다.
+
+    2026-08-05 어휘 압축이 `_output_file` 을 지우면서 삭제 사유를 파일에 적어 남겼다 —
+    "파이프 입력도 무시해 빈 파일을 쓰던 반쪽 싱크". 형제 둘(gui·clipboard)은 그대로 남았다.
+    """
+    from ibl_exec_output import _sink_content, _output_gui
+    prev = json.dumps({"success": True, "items": [{"bookname": "건축입문"}]}, ensure_ascii=False)
+    # ① content 생략 → _prev_result 를 먹는다
+    got, err = _sink_content("", {"_prev_result": prev})
+    assert err is None and got == prev, (got, err)
+    # ② content 명시가 이긴다. 빈 문자열도 유효한 값(write 규약)
+    assert _sink_content("", {"content": "직접", "_prev_result": prev})[0] == "직접"
+    assert _sink_content("", {"content": "", "_prev_result": prev})[0] == ""
+    # ③ 쓸 것이 아무것도 없으면 None — 부르는 쪽이 정직하게 거절하라는 신호
+    assert _sink_content("", {})[0] is None
+    # ④ gui: 통화를 먹으면 content 가 채워진다 (수리 전엔 "" 였다)
+    r = _output_gui("", {"_prev_result": prev, "format": "테이블"}, ".")
+    assert r.get("ok") and r["output"]["content"] == prev, r
+    # ⑤ gui: 빈손이면 ok:true 가 아니라 정직한 거절 (침묵-삼킴 금지)
+    e = _output_gui("", {"format": "테이블"}, ".")
+    assert "error" in e and "ok" not in e, e
+    print("P24 OK — output gui/clipboard 가 write 와 같은 싱크 계약(_prev_result 수용·빈손 정직 거절)")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P22) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P24) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -744,4 +808,6 @@ if __name__ == "__main__":
     test_p20_workflow_save_syntax_gate()
     test_p21_grep_missing_path_loud()
     test_p22_copy_empty_hands_vs_no_currency()
+    test_p23_unary_transformers_restate_scope()
+    test_p24_output_sink_consumes_currency()
     print("\n=== 전부 통과 ===")

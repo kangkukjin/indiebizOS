@@ -391,6 +391,12 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 실패 알림 실패 (무시): {e}")
 
+    # 1a) 자가점검 패턴 알림 — 조회(get_system_health)가 아니라 이 정기 경로에서만 발사.
+    try:
+        result["failure_patterns"] = _notify_failure_patterns()
+    except Exception as e:
+        logger.warning(f"[Maintenance] 패턴 알림 실패 (무시): {e}")
+
     # 2) 심층메모리 정리 패스 (DB별 24h 카덴스)
     try:
         from memory_consolidation import run_memory_consolidation
@@ -811,32 +817,50 @@ def analyze_failure_patterns() -> Dict:
         if recovered:
             result["recovered"] = recovered
 
-        # 알림 생성 — 만성 실패나 성능 저하가 있을 때
-        alerts = []
-        if chronic_failures:
-            alerts.append(f"만성 실패: {', '.join(chronic_failures)}")
-        if degrading:
-            alerts.append(f"성공률 하락: {', '.join(d['action'] for d in degrading)}")
-        if slowdowns:
-            alerts.append(f"응답 느려짐: {', '.join(s['action'] for s in slowdowns)}")
-
-        if alerts:
-            try:
-                from notification_manager import get_notification_manager
-                nm = get_notification_manager()
-                nm.create(
-                    title="자가점검 패턴 분석",
-                    message=" / ".join(alerts),
-                    type="warning" if chronic_failures else "info",
-                    source="self_check_pattern"
-                )
-            except Exception:
-                pass
-
+        # 알림은 여기서 쏘지 않는다 — 이 함수는 조회 경로(get_system_health)에서도
+        # 불리므로 부작용을 품으면 '들여다볼 때마다 알림'이 된다.
+        # 발사는 정기 점검 경로의 _notify_failure_patterns() 가 맡는다.
         return result
     except Exception as e:
         logger.debug(f"[SelfCheck] 패턴 분석 실패: {e}")
         return {}
+
+
+def _notify_failure_patterns() -> Dict:
+    """패턴 분석 결과를 사람에게 알린다 — 정기 점검(run_maintenance_bundle) 경로 전용.
+
+    조회(get_system_health)는 analyze_failure_patterns() 만 부르므로 알림이 나가지 않는다.
+    '응답 느려짐'만 있는 회차는 알리지 않는다 — 점검이 몰려 돌 때의 측정 노이즈가
+    신호를 덮기 때문. 만성 실패나 성공률 하락이 있을 때만 발사하고, 느려짐은 그때 덧붙인다.
+    """
+    patterns = analyze_failure_patterns()
+    chronic = patterns.get("chronic_failures") or []
+    degrading = patterns.get("degrading") or []
+    slowdowns = patterns.get("slowdowns") or []
+
+    if not chronic and not degrading:
+        return {"notified": False, "reason": "no_signal"}
+
+    alerts = []
+    if chronic:
+        alerts.append(f"만성 실패: {', '.join(chronic)}")
+    if degrading:
+        alerts.append(f"성공률 하락: {', '.join(d['action'] for d in degrading)}")
+    if slowdowns:
+        alerts.append(f"응답 느려짐: {', '.join(s['action'] for s in slowdowns)}")
+
+    try:
+        from notification_manager import get_notification_manager
+        get_notification_manager().create(
+            title="자가점검 패턴 분석",
+            message=" / ".join(alerts),
+            type="warning" if chronic else "info",
+            source="self_check_pattern",
+        )
+        return {"notified": True, "alerts": alerts}
+    except Exception as e:
+        logger.warning(f"[SelfCheck] 패턴 알림 발송 실패: {e}")
+        return {"notified": False, "reason": "error"}
 
 
 def get_action_health_summary() -> Dict:

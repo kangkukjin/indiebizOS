@@ -98,6 +98,26 @@ def test_e5_healthy_inputs_unchanged():
         assert got == want, "%s → %r (기대 %r)" % (text, got, want)
 
 
+def test_e6_multiline_indent_preserved():
+    """F19-3: 물리 개행이 든 여러 줄 값에서 둘째 줄부터의 들여쓰기가 살아야 한다.
+
+    옛 _preprocess 는 열린 문자열 안에서 시작하는 줄까지 strip() 해서,
+    [self:write]/[self:edit] 로 쓴 파이썬이 IndentationError 로 즉사했다.
+    """
+    import ast
+    NL = chr(10)
+    body = NL.join(["    if x:", "", "        y = 1", "        return y", "    return 0"])
+    code = '[self:edit]{path: "/tmp/a.py", old_string: "PASS", new_string: "' + body + '", regex: false}'
+    params = parse(code)[0]["params"]
+    new = params["new_string"]
+    lines = new.split(NL)
+    assert lines[2] == "        y = 1", "둘째 줄부터 들여쓰기가 깎였다: %r" % new
+    assert lines[1] == "", "빈 줄이 사라졌다: %r" % new
+    assert lines[4] == "    return 0", "꼬리가 어긋났다: %r" % new
+    assert params.get("regex") is False, "여러 줄 값 뒤의 파라미터를 잃었다: %r" % params
+    ast.parse("def f(x):" + NL + new + NL)
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     fails = 0

@@ -2,6 +2,7 @@
 
 - run_returns_drift_sweep: returns 선언 ↔ 실측 통화 모양 대조 (scripts/returns_drift_sweep.py)
 - run_shape_sweep: 실측 반환 열 관측 → data/ibl_return_shapes.json → 카탈로그 ⟨열: …⟩ (scripts/ibl_shape_sweep.py)
+- run_honesty_sweep: 정직성 불변식 A/B/C(거짓 성공·통화 부재·0행 거짓) — 침묵 부류를 봉투 입구 하나에서 (scripts/honesty_invariants_sweep.py)
 둘 다 subprocess(라이브 프로세스 무접촉)·주간 카덴스(상태 파일)·self_checks 기록. run_maintenance_bundle 이 부른다.
 """
 import json
@@ -132,3 +133,68 @@ def run_shape_sweep() -> Dict:
     return out
 
 
+
+
+def run_honesty_sweep() -> Dict:
+    """정직성 불변식 스윕 (주간 카덴스, §8.6b) — scripts/honesty_invariants_sweep.py.
+
+    왜 (2026-08-23, 상상훈련 21회차 평가): 침묵/거짓 성공 **부류**가 자리만 바꿔 7회 재발했다
+    (B8→B10→F14-1→B15-1→F18-1→B19-1→B21-1). 자리별 수리는 부류를 못 막는다 — 성공 봉투의
+    정직성을 fixture 우주 전체에서 한 입구로 단언해, 다음 위반자가 어느 핸들러에서 나오든
+    여기서 잡히게 한다. 위반 = 판정 대기가 아니라 **수리 대상**(대장장이 입력).
+    returns_drift 와 같은 우주·같은 규율(subprocess·주간·self_checks 기록)."""
+    import subprocess
+    from world_pulse_health import save_self_check
+    _root = Path(__file__).parent.parent.parent
+    state_path = _root / "data" / "honesty_sweep_state.json"
+    now = _time.time()
+    try:
+        state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    except Exception:
+        state = {}
+    if now - float(state.get("last_run", 0)) < 7 * 86400:
+        return {"skipped": "cadence", "last_run": state.get("last_run")}
+    script = _root / "scripts" / "honesty_invariants_sweep.py"
+    if not script.exists():
+        return {"error": "scripts/honesty_invariants_sweep.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=900)
+    except Exception as e:
+        return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
+    marker = None
+    for line in reversed((proc.stdout or "").splitlines()):
+        if line.startswith("@@HONESTY@@"):
+            marker = line[len("@@HONESTY@@"):].strip()
+            break
+    if proc.returncode != 0 or not marker:
+        out = {"error": f"스윕 비정상 종료(rc={proc.returncode}, 마커 {'유' if marker else '무'})"}
+    else:
+        try:
+            s = json.loads(marker)
+        except Exception as e:
+            s, out = None, {"error": f"요약 파싱 실패: {str(e)[:100]}"}
+        if s is not None:
+            viol = s.get("violations") or []
+            out = {"checked": s.get("checked"), "violations": viol,
+                   "prefix_contract_sites": s.get("prefix_contract_sites")}
+            ok = not viol
+            by = {}
+            for v in viol:
+                by.setdefault(v.get("inv"), []).append(v.get("name"))
+            note = " / ".join(f"{k} {len(v)}건: {', '.join(v[:4])}" for k, v in sorted(by.items())) or None
+            try:
+                save_self_check({"node": "__ibl_health__", "action": "honesty_invariants",
+                                 "success": ok, "response_ms": 0,
+                                 "data_quality": "ok" if ok else "dishonest_envelope",
+                                 "error_message": note and note[:220]})
+            except Exception:
+                pass
+            if not ok:
+                logger.warning(f"[Maintenance] 정직성 불변식 위반 {len(viol)}건: {note}")
+    state["last_run"] = now
+    try:
+        state_path.write_text(json.dumps(state, ensure_ascii=False))
+    except Exception:
+        pass
+    return out

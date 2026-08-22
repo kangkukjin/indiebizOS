@@ -334,11 +334,12 @@ class MultiChatDB:
             cursor.execute("""
                 SELECT * FROM room_messages
                 WHERE room_id = ?
-                ORDER BY message_time DESC
+                ORDER BY message_time DESC, id DESC
                 LIMIT ? OFFSET ?
             """, (room_id, limit, offset))
 
             messages = [dict(row) for row in cursor.fetchall()]
+            # 동률(같은 초) 타이브레이커가 id DESC 라 reversed() 가 정확히 시간순이 된다
             return list(reversed(messages))  # 시간순으로 정렬
 
     def get_history_for_ai(self, room_id: str, limit: int = 20) -> List[Dict]:
@@ -353,7 +354,7 @@ class MultiChatDB:
             cursor.execute("""
                 SELECT speaker, content FROM room_messages
                 WHERE room_id = ?
-                ORDER BY message_time DESC
+                ORDER BY message_time DESC, id DESC
                 LIMIT ?
             """, (room_id, limit))
 

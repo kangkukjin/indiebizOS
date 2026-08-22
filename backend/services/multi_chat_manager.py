@@ -255,14 +255,22 @@ class MultiChatManager:
             return []
 
         # @지목 파싱
-        mentioned = self._parse_mentions(message, participants)
+        mentioned, unknown_mentions = self._parse_mentions(message, participants)
 
         # 응답할 에이전트 선택
         if mentioned:
             # 지목된 에이전트만
             responders = mentioned
+        elif unknown_mentions:
+            # 멘션을 썼는데 방에 없는 이름이다. 여기서 랜덤 폴백을 하면
+            # "못 알아들었다"가 "아무나 대답했다"로 조용히 둔갑한다 — 그냥 말한다.
+            roster = ", ".join(p['agent_name'] for p in participants)
+            missing = ", ".join("@" + n for n in unknown_mentions)
+            note = f"{missing} 은(는) 이 방에 없습니다. 참여자: {roster}"
+            self.db.add_message(room_id, "시스템", note)
+            return [{"speaker": "시스템", "content": note}]
         else:
-            # 랜덤 선택
+            # 지목이 아예 없을 때만 랜덤 선택
             count = min(response_count, len(participants))
             responders = random.sample(participants, count)
 
@@ -280,20 +288,42 @@ class MultiChatManager:
 
         return responses
 
-    def _parse_mentions(self, message: str, participants: List[Dict]) -> List[Dict]:
-        """@지목 파싱"""
-        mentioned = []
-        participant_names = {p['agent_name']: p for p in participants}
+    # 방 전체를 부르는 이름들 (@everyone 류)
+    MENTION_ALL = ("everyone", "all", "모두", "전체", "다들")
 
-        # @이름 패턴 찾기
-        pattern = r'@(\S+)'
-        matches = re.findall(pattern, message)
+    def _parse_mentions(self, message: str,
+                        participants: List[Dict]) -> Tuple[List[Dict], List[str]]:
+        """@지목 파싱 → (지목된 참여자, 방에 없는 이름)
 
-        for match in matches:
-            if match in participant_names:
-                mentioned.append(participant_names[match])
+        한글은 이름 뒤에 조사가 붙는다(`@뉴턴한테`, `@자비스가`). 토큰을 통째로
+        이름과 비교하면 조사가 붙는 순간 매칭이 깨지므로, 토큰이 참여자 이름으로
+        **시작하는지**를 긴 이름부터 본다("김대리"와 "김"이 함께 있으면 긴 쪽이 정답).
+        """
+        mentioned: List[Dict] = []
+        unknown: List[str] = []
+        seen = set()
 
-        return mentioned
+        by_length = sorted(participants, key=lambda p: len(p['agent_name']), reverse=True)
+
+        for token in re.findall(r'@(\S+)', message):
+            if token.strip('!,.?~:;()[]<>"\'').lower() in self.MENTION_ALL:
+                for p in participants:
+                    if p['agent_name'] not in seen:
+                        seen.add(p['agent_name'])
+                        mentioned.append(p)
+                continue
+
+            for p in by_length:
+                name = p['agent_name']
+                if token.startswith(name):  # 뒤에 붙은 조사는 무시
+                    if name not in seen:
+                        seen.add(name)
+                        mentioned.append(p)
+                    break
+            else:
+                unknown.append(token)
+
+        return mentioned, unknown
 
     def _get_agent_response(self, room_id: str, participant: Dict, images: List[Dict] = None) -> str:
         """개별 에이전트 응답 생성"""
@@ -345,17 +375,25 @@ class MultiChatManager:
                 # tools 파라미터 생략 → AIAgent가 프로젝트 설정에서 자동 로드
             )
 
-            # 응답 생성
-            # 마지막 사용자 메시지 추출
-            last_user_msg = ""
-            for msg in reversed(history):
-                if msg.get('role') == 'user':
-                    last_user_msg = msg.get('content', '')
-                    break
+            # 응답 생성 — 이번 턴의 사용자 메시지만 히스토리에서 빼내고 나머지는 전부 넘긴다.
+            # 옛 코드는 `history[:-1]` 로 꼬리를 잘랐는데, 꼬리가 사용자 메시지인 것은
+            # 첫 응답자뿐이다. 두 번째 응답자부터는 **방금 앞사람이 한 말**이 잘려 나가,
+            # "서로의 답을 보며 대화한다"는 다중채팅방의 전제 자체가 무너져 있었다.
+            last_user_idx = next(
+                (i for i in range(len(history) - 1, -1, -1)
+                 if history[i].get('role') == 'user'),
+                None
+            )
+            if last_user_idx is None:
+                last_user_msg = ""
+                prior_history = list(history)
+            else:
+                last_user_msg = history[last_user_idx].get('content', '')
+                prior_history = history[:last_user_idx] + history[last_user_idx + 1:]
 
             response = agent.process_message_with_history(
                 message_content=last_user_msg,
-                history=history[:-1] if history else [],  # 마지막 메시지 제외
+                history=prior_history,
                 images=images  # 이미지 전달
             )
 

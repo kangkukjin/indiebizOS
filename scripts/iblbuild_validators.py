@@ -17,6 +17,7 @@ from iblbuild_common import (
     PHONE_VERIFIED_PACKAGES,
     VALID_RUNS_ON,
     UNIVERSAL_PARAM_KEYS,
+    RUNTIME_META_KEYS,
     CORPUS_PARAM_ALLOW,
     _dir_read_keys,
     _extract_action_param_aliases,
@@ -550,7 +551,10 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
             used = corpus.get(qualified)
             if not used:
                 continue
-            known = set(UNIVERSAL_PARAM_KEYS)
+            # 런타임 메타 키(project_id·scope)는 핸들러 인자가 아니라 라우팅이 읽는다.
+            # 런타임 허용집합(ibl_param_vocab._allowed_keys)은 이미 이걸 더하는데 이 가드만
+            # 빼놓아, 두 층이 같은 질문에 다르게 답하고 있었다 — 단일 소스로 정렬(2026-08-22).
+            known = set(UNIVERSAL_PARAM_KEYS) | set(RUNTIME_META_KEYS)
             if action.get("target_key"):
                 known.add(action["target_key"])
             known |= aliases.get(qualified, set())

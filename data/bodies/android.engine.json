@@ -257,6 +257,7 @@
     "test_grep_glob_dialect": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
+    "test_ibl_param_escape": "force_exclude_glob",
     "test_ibl_program_grade": "force_exclude_glob",
     "test_ibl_program_grade_m3m5": "force_exclude_glob",
     "test_ibl_program_grade_m6": "force_exclude_glob",
@@ -276,8 +277,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 270,
+    "total": 271,
     "engine": 220,
-    "blocklist": 50
+    "blocklist": 51
   }
 }

@@ -1344,12 +1344,17 @@ def _parse_source_ref(source: str) -> Optional[Tuple[str, str, Dict, Optional[st
 
     params: Dict[str, Any] = {}
     if rest.startswith('{'):
-        from ibl_parser import _extract_bracket_raw, _parse_params
+        from ibl_parser import _extract_bracket_raw, _parse_params, IBLSyntaxError
         body, end_pos = _extract_bracket_raw(rest, 0, '{', '}')
         if body is None:
             return None
         try:
             params = _parse_params('{' + body + '}') or {}
+        except IBLSyntaxError:
+            # 2026-08-22: 파라미터를 끝까지 못 읽은 것을 params={} 로 눙치면
+            # 조건이 인자를 잃은 채 조용히 평가된다 — 이 함수의 정직한
+            # 실패 모양(None = 유효하지 않은 참조)으로 돌려준다.
+            return None
         except Exception:
             params = {}
         rest = rest[end_pos + 1:]

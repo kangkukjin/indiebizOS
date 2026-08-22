@@ -51,6 +51,29 @@ def _parse_params(text: str) -> dict:
     return _parse_relaxed_params(text)
 
 
+def _reject_residue(inner: str, pos: int, parsed: dict) -> None:
+    """느슨한 파싱이 입력을 끝까지 소비하지 못했으면 정직하게 거절한다.
+
+    2026-08-22 신설. 예전에는 여기서 그냥 break 해서, 값 문자열 안의
+    이스케이프되지 않은 `"` 하나에 뒤 내용이 통째로 사라진 params 를
+    **성공으로** 돌려줬다. `[self:write]` 는 그 잘린 본문을 정상 저장하고
+    success:true 를 반환했으므로 하류에서 알아챌 방법이 없었다
+    (침묵 절단 — pitfall silent_clamp 부류).
+
+    잔여가 공백·쉼표뿐이면 정상 종료로 본다.
+    """
+    residue = inner[pos:].strip(" \t\n\r,")
+    if not residue:
+        return
+    snippet = residue if len(residue) <= 60 else residue[:60] + "…"
+    keys = ", ".join(str(k) for k in parsed) or "없음"
+    raise IBLSyntaxError(
+        f"파라미터를 끝까지 읽지 못했습니다. 해석된 키: [{keys}] / 남은 조각: {snippet!r}\n"
+        f"→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. "
+        f'자유 텍스트(content 등) 안의 " 는 \\" 로 쓰세요.'
+    )
+
+
 def _parse_relaxed_params(text: str) -> dict:
     """
     느슨한 파라미터 파싱 — 배열 [...], 중첩 객체 {...} 포함 지원
@@ -87,6 +110,7 @@ def _parse_relaxed_params(text: str) -> dict:
             i += 1
         key = inner[key_start:i]
         if not key:
+            _reject_residue(inner, i, params)
             break
 
         # 공백 건너뛰기
@@ -97,6 +121,7 @@ def _parse_relaxed_params(text: str) -> dict:
         if i < n and inner[i] == ':':
             i += 1
         else:
+            _reject_residue(inner, key_start, params)
             break
 
         # 공백 건너뛰기
@@ -156,19 +181,52 @@ def _extract_value(text: str, pos: int):
     return _extract_unquoted(text, pos)
 
 
+# 표준 이스케이프 표 (JSON/JSON5 공통). 이 표에 없는 것은 백슬래시째 보존한다.
+_SIMPLE_ESCAPES = {
+    'n': '\n', 't': '\t', 'r': '\r', 'b': '\b', 'f': '\f', 'v': '\v',
+    '0': '\0', '"': '"', "'": "'", '\\': '\\', '/': '/',
+    '\n': '', '\r': '',  # 줄 이음(JSON5 line continuation)
+}
+_HEX = '0123456789abcdefABCDEF'
+
+
 def _extract_string(text: str, pos: int, quote: str):
-    """따옴표 문자열 추출"""
+    r"""따옴표 문자열 추출 — 표준 이스케이프를 해석한다.
+
+    2026-08-22 수리: 예전에는 백슬래시를 버리고 다음 글자를 그대로 넣어서
+    `\n` 이 글자 `n` 으로 박혔다. 보고서 본문이 한 줄로 뭉개지던 원인
+    (data/guides/youtube_ai_tips_report.md 2026-08-20 실측 ①).
+
+    모르는 이스케이프는 **백슬래시째 보존**한다 — `[self:grep]{pattern: "\d+"}`
+    의 `\d` 가 글자 `d` 로 뭉개지던 같은 부류의 손실을 막는다.
+    """
     i = pos + 1  # 여는 따옴표 건너뛰기
     result = []
-    while i < len(text):
-        if text[i] == '\\' and i + 1 < len(text):
-            result.append(text[i + 1])
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if ch == '\\' and i + 1 < n:
+            esc = text[i + 1]
+            # \uXXXX / \xXX — 코드포인트
+            if esc == 'u' and i + 6 <= n and all(c in _HEX for c in text[i + 2:i + 6]):
+                result.append(chr(int(text[i + 2:i + 6], 16)))
+                i += 6
+                continue
+            if esc == 'x' and i + 4 <= n and all(c in _HEX for c in text[i + 2:i + 4]):
+                result.append(chr(int(text[i + 2:i + 4], 16)))
+                i += 4
+                continue
+            if esc in _SIMPLE_ESCAPES:
+                result.append(_SIMPLE_ESCAPES[esc])
+            else:
+                result.append('\\')   # 모르는 이스케이프는 원문 보존
+                result.append(esc)
             i += 2
-        elif text[i] == quote:
+        elif ch == quote:
             i += 1  # 닫는 따옴표 건너뛰기
             return ''.join(result), i
         else:
-            result.append(text[i])
+            result.append(ch)
             i += 1
     return ''.join(result), i
 

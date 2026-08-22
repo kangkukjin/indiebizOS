@@ -262,6 +262,8 @@
     "test_episode_source": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
+    "test_framing_privilege_inherit": "force_exclude_glob",
+    "test_goal_eval_streaming": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
     "test_handler_error_contract": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
@@ -292,8 +294,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 286,
+    "total": 288,
     "engine": 224,
-    "blocklist": 62
+    "blocklist": 64
   }
 }

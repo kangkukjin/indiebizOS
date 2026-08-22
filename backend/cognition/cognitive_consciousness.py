@@ -105,6 +105,28 @@ class CognitiveConsciousnessMixin:
 
         # 후속 turn(히스토리 존재) + 저장된 framing 있을 때만 재사용 시도
         prev = framing_cache_get(key) if history else None
+
+        # ★권한은 캐시로 상속되지 않는다 (2026-08-22, 22회차 사고).
+        # `needs_repair` 는 파이프라인에서 **RED 자기수정 그랜트**(고급 모델 고정 +
+        # 라이브 코어 쓰기 권한)로 환산된다. 그런데 재사용 경로는 `dict(prev)` 로
+        # 통째로 물려주고 게이트는 criteria·amended_framing 만 새로 뽑으므로,
+        # *의식이 본 적 없는 턴*이 앞 턴의 수리 권한을 그대로 쓰게 된다 —
+        # 헌법 3조건의 '의식 각성'이 실제로는 빠진 채 승격되는 구멍이다
+        # (`_consciousness_needs_repair` 주석의 "이 자리가 이미 충족" 은
+        #  풀 의식 경로에서만 참이었다).
+        # 실측: "상상훈련을 다시 한번 해줘" 에 직전 `#repair` 턴의 framing
+        # (task_framing="…유효한 것만 수리해야 한다", criteria="…수정분은
+        #  [self:patch]{op:apply} 로 통과시킬 것") 이 fits=true 로 재사용돼,
+        # 보고만 해야 할 훈련 턴이 라이브 코어를 고치고 지연 적용까지 갔다
+        # (task_sysai_6521f965 → workflow_contract.py 19:45:59 적용).
+        # 대조군: 같은 지시라도 의식이 깬 21회차는 보고만 하고 끝났다.
+        # → 수리 권한이 걸린 지도는 재사용하지 않는다. 값을 몰래 벗겨 지도만 쓰면
+        #   "고쳐라" 라고 적힌 지도를 든 채 권한만 없는 상태가 되어 더 나쁘다.
+        if prev and prev.get("needs_repair"):
+            self._log("[의식] 재고 framing 이 needs_repair(수리 권한) 선언 — "
+                      "재사용 금지, 의식 재각성 (권한은 캐시로 상속되지 않는다)")
+            prev = None
+
         if prev:
             gate = self._consciousness_fit_gate(user_message, prev)
             if gate and gate.get("fits"):

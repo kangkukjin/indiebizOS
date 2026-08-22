@@ -32,6 +32,30 @@ def _own_only(results: list) -> list:
         return results
 
 
+def _xml_attr(s: str) -> str:
+    """XML 속성값 이스케이프 — `&`·`<` 를 **먼저**(엔티티 이중 이스케이프 방지) 그 다음 따옴표.
+
+    ★2026-08-22: 옛 코드는 `"` 만(또는 `"`·`'` 만) 바꿔서 `&`·`<` 가 든 값이 들어오면
+    블록 전체가 비적합 XML 이 됐다. 계기판(ManualMode.tsx)은 이 블록을 DOMParser 로
+    진짜 파싱하므로, 비적합이면 예외가 아니라 **빈 목록**이 되어 '번역 근거' 패널이
+    조용히 사라진다(침묵 실패).
+
+    이 블록의 속성은 전부 **큰따옴표**라 `'` 는 이스케이프하지 않는다 — 모델이 읽는
+    글이므로 불필요한 엔티티는 노이즈다(속성 인용부호를 바꾸려면 여기부터 고칠 것).
+    """
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
+
+
+def _cdata(s: str) -> str:
+    """CDATA 본문 — 안에서 유일한 금지 시퀀스 `]]>` 만 분할(표준 관용).
+
+    코드를 엔티티로 escape 하지 않는 이유: 이 블록의 다른 소비자는 **모델**이고,
+    모델은 본 대로 베낀다. `[A] & [B]` 가 `[A] &amp; [B]` 로 보이면 그대로 베껴
+    파스 에러가 된다 — 코드는 원문이어야 한다.
+    """
+    return (s or "").replace("]]>", "]]]]><![CDATA[>")
+
+
 class IBLUsageRAG:
     """IBL 용례 RAG 참조 시스템 (싱글톤)"""
 
@@ -148,17 +172,17 @@ class IBLUsageRAG:
         else:
             note = ("참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. "
                     "success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증).")
-        lines = [f'<ibl_references note="{note}">']
+        lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
-            # XML 속성용 이스케이프
-            intent = ex.intent.replace('"', '&quot;').replace("'", "&apos;")
-            code = ex.ibl_code.replace('"', '&quot;')
-            attrs = f'intent="{intent}" code=\'{ex.ibl_code}\' score="{ex.score}"'
+            # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
+            # 속성을 그 자리에서 끊는다(실측: 코퍼스 3,539건 중 301건 8.5% 가
+            # `'`·`&`·`<` 를 담고 있어 그 블록 전체가 비적합 XML 이었다).
+            attrs = f'intent="{_xml_attr(ex.intent)}" score="{ex.score}"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
             # -1.0(미검증)은 표시하지 않아 노이즈를 줄인다.
             if ex.success_rate >= 0:
                 attrs += f' success_rate="{ex.success_rate}"'
-            lines.append(f'  <ref {attrs}/>')
+            lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
 
@@ -352,7 +376,7 @@ def build_execution_memory_from_hint(action_hint: str) -> tuple:
         return ("", 0.0, "")
 
     def _esc(s: str) -> str:
-        return (s or "").replace('"', '&quot;')
+        return _xml_attr(s)   # `&`·`<` 도 — 실측 16건의 description 이 이 둘을 담고 있었다
 
     action_id = f"[{node}:{action}]"
     description = _esc(action_config.get("description", ""))
@@ -399,7 +423,7 @@ def _extract_implementations_from_refs(refs_xml: str) -> str:
     for node, action in sorted(ref_actions):
         impl = _lookup_implementation(node, action)
         if impl:
-            impl_escaped = impl.replace('"', '&quot;')
+            impl_escaped = _xml_attr(impl)   # 실측 8건의 implementation 이 `&`·`<` 를 담고 있었다
             lines.append(f'  <impl action="[{node}:{action}]" implementation="{impl_escaped}"/>')
     lines.append('</implementations>')
 

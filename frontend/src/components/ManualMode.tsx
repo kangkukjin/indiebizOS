@@ -85,7 +85,8 @@ function parseReferences(xml: string): ParsedRef[] {
     const doc = new DOMParser().parseFromString(xml, 'text/xml');
     return Array.from(doc.querySelectorAll('ref')).map((el) => ({
       intent: el.getAttribute('intent') || '',
-      code: el.getAttribute('code') || '',
+      // 코드는 CDATA 본문(2026-08-22) — 속성 code= 는 옛 형식 호환용 폴백.
+      code: el.getAttribute('code') || (el.textContent || '').trim(),
       score: el.getAttribute('score') || '',
       successRate: el.getAttribute('success_rate') || '',
     }));

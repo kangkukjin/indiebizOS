@@ -155,7 +155,17 @@ def _realty_price(tool_input):
     }
     sel = _dispatch.get((rtype, deal))
     if not sel:
-        return {"success": False, "error": f"잘못된 조합: type={rtype}, deal={deal}. type은 apt|house|villa, deal은 trade|rent."}
+        # ★F20-1 후속 (2026-08-22): 유효 조합은 _dispatch 에서 파생한다 — 손으로 적은
+        # 목록은 표가 늘 때마다 뒤처진다(F20-4 와 같은 부류). 그리고 이 자리에 오는
+        # 오해의 대다수는 *source 별 어휘 차이*다(molit 은 trade|rent, 전세·월세 구분은
+        # 현재 매물의 lease 파라미터 — 다른 source 의 낱말). 그 갈림길을 함께 말한다.
+        _types = "|".join(sorted({t for t, _ in _dispatch}))
+        _deals = "|".join(sorted({d for _, d in _dispatch}))
+        return {"success": False, "error": (
+            f"잘못된 조합: type={rtype}, deal={deal} (source=molit 실거래가). "
+            f"molit 은 type={_types} · deal={_deals} 입니다. "
+            f"전세/월세를 나눠 보려면 현재 매물 쪽 어휘입니다 — "
+            f"source: \"naver\"|\"zigbang\" + deal: \"rent\" + lease: \"전세\"|\"월세\".")}
     mod, fn = sel
     result = getattr(load_module(mod), fn)(region_code, start_month, end_month, count_per_month)
     # 공통 키 보강: type별로 명칭/면적 필드명이 달라(apt=아파트명/전용면적, house=주택유형/연면적,

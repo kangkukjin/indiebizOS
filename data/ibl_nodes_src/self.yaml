@@ -182,12 +182,12 @@
       notify_user:
         returns: effect
         description: 사용자에게 데스크탑 알림 전송. 중요 이벤트 통지용.
-        target_description: 알림 메시지. title·type 옵션 (info/warning/error).
+        target_description: 알림 메시지. title·type 옵션 (info/warning/error). title 을 생략하면 message 첫 줄이 제목이 된다(관문 파생 — 굳이 message 를 title 에 옮겨 적지 말 것).
         group: system
         target_key: message
         router: system
         func: send_notification
-        implementation: notify_dispatch 관문 — 알림함 기록 + 런처 WS 네이티브 알림, 런처 미연결 시 desktop_notify로 백엔드가 직접 OS 알림
+        implementation: notify_dispatch 관문 — 알림함 기록 + 런처 WS 네이티브 알림, 런처 미연결 시 desktop_notify로 백엔드가 직접 OS 알림. 빈 제목은 notification_manager.derive_title 이 message 앞머리에서 파생(입구 18곳 공통)
         keywords:
         - 알림
         - 통지

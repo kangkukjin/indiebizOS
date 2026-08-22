@@ -13,6 +13,8 @@
     grounded 원문 대조 / _ai provenance.
   · 비용 통제 = 집합 단위 호출(items 전체 한 번, 편집장 curate 선례).
     입력 상한 초과=정직 거절(take/filter 안내). 0행=AI 호출 생략(비용 0).
+    ★0행 계약(F20-3, 세 낱말 공통): 통화 없음=에러 / 0행=성공(빈손 + note).
+      새 소비자 낱말을 더할 때 이 두 갈래를 반드시 갈라 심사한다.
   · ★파라미터 이름: 지시문 자리는 `instruction`(table:structure 선례) — `do` 는
     IBL *문장*을 나르는 자리(M1 통일)라 자연어 지시에 쓰면 개념이 흐려진다.
 
@@ -263,7 +265,20 @@ def _brief(tool_input: dict) -> str:
         return _fail("입력 통화가 없습니다 — >> 파이프로 앞 액션의 items 를 받습니다. "
                      "예: [sense:stock]{...} >> [table:brief]{instruction: ...}")
     if not items:
-        return _fail("입력 items 가 0행 — 종합할 근거가 없습니다(앞 단계 결과를 확인하세요).")
+        # ★F20-3 판정 (2026-08-22): 0행은 고장이 아니라 정당한 빈손이다.
+        # 같은 몸의 F17 계약(each·flatten·groupby·filter·take·table:ai 전부 0행 통과)에
+        # brief 하나만 예외로 남아 있었고, 그 예외가 감시자 문형의 자연스러운 꼬리
+        # (`[table:since] >> [table:brief]`)를 **첫 실행마다 error 로 끝내고** 있었다.
+        # 우회(`[if: empty($items)]`·`[on_error: skip]`)를 관용구로 승인하지 않은 이유:
+        # 감시자 문장마다 가드를 다는 문법 세금이고, on_error:skip 은 진짜 실패까지
+        # 삼켜 침묵 실패 습관을 함께 가르친다.
+        # 구분은 유지한다 — 통화 없음(위 _fail)=에러 / 0행=성공. 조용한 성공이 아니라
+        # **말하는 빈손**이 되도록 rows_in 과 note 를 반드시 싣는다(seeded:true 와 함께
+        # 읽으면 "첫 회라 0행"과 "고장이라 0행"이 구별된다).
+        # message(산문 정본) 키는 넣지 않는다 — 행이 없으면 산문도 없다. 빈 문자열로
+        # 위장하면 write 싱크가 빈 파일을 쓰고, `??` 폴백도 빈손을 못 알아본다.
+        return _ok({"items": [], "rows_in": 0,
+                    "note": "입력 0행 — 종합할 내용이 없어 AI 호출 생략(비용 0)."})
     payload, perr = _items_payload(items)
     if perr:
         return _fail(perr)

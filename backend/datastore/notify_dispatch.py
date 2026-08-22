@@ -31,10 +31,18 @@ def notify_user(title: str, body: str, kind: str = "info", source: str = "system
     #    한 번만 한다(create 안의 전달과 이중이 되지 않게).
     try:
         from notification_manager import get_notification_manager
-        get_notification_manager().create(title=title, message=body, type=kind,
-                                          source=source, deliver=False)
+        rec = get_notification_manager().create(title=title, message=body, type=kind,
+                                                source=source, deliver=False)
+        # ★F20-5 (2026-08-22): 제목 파생은 create 한 곳에서만 일어난다 — 전달도
+        # 기록과 같은 제목을 써야 알림함과 OS 알림이 갈리지 않는다.
+        title = (rec or {}).get("title") or title
     except Exception as e:
         print(f"[알림] 알림함 기록 실패: {e}")
+        try:
+            from notification_manager import derive_title
+            title = (title or "").strip() or derive_title(body)   # 기록이 죽어도 제목은 산다
+        except Exception:
+            pass
 
     # 2) 전달 (기록 실패와 무관하게 계속)
     return deliver_notification(title, body, kind, command, command_params, badge)

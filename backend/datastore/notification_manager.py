@@ -11,6 +11,44 @@ from typing import List, Dict, Any, Optional
 from collections import deque
 
 
+# ============ 제목 파생 (2026-08-22, F20-5 판정) ============
+
+_TITLE_MAX = 40
+
+
+def derive_title(message: str) -> str:
+    """title 이 비었을 때 message 에서 제목을 파생한다 — 단일 소스.
+
+    ★F20-5 판정 (2026-08-22): title 을 필수로 만드는 안은 기각했다. 필수화하면
+    부르는 쪽(모델 포함)이 message 를 title 에 그대로 복붙한다 — 형식만 채우고
+    내용은 중복되는 토큰이 되고, `[self:notify_user]{message:}` 로 이미 쓰인
+    기존 문장·코퍼스도 통째로 깨진다. 대신 message 앞머리를 제목으로 승격한다.
+
+    파생 자리가 액션이 아니라 **관문(create)** 인 이유: 알림 입구는 18곳이고
+    액션 쪽에서 고치면 나머지 우회 호출처는 여전히 빈 제목이다. 규약을 문서가
+    아니라 구조로 (2026-08-22 N-1 수리가 create 를 단일 입구로 만들어 둔 자리).
+
+    규칙: 첫 번째 비어있지 않은 줄 → 길면 낱말 경계에서 자르고 '…'.
+    ※문장 부호로 자르지 않는다 — "3.5% 올랐습니다" 의 소수점이 마침표라
+      숫자에서 잘린다. 예측 가능한 규칙 하나가 영리한 규칙보다 낫다.
+    ※로그 절단 표식(`…(+N자)`) 규약은 여기 적용하지 않는다 — 잘린 payload 가
+      아니라 표시용 요약이고, 원문(message)이 바로 아래 칸에 그대로 있다.
+    """
+    text = (message or "").strip()
+    if not text:
+        return "알림"
+    line = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    if not line:
+        return "알림"
+    if len(line) <= _TITLE_MAX:
+        return line
+    cut = line[:_TITLE_MAX]
+    sp = cut.rfind(" ")
+    if sp >= _TITLE_MAX // 2:      # 낱말 중간에서 끊기지 않게 (한글은 공백이 드물어 폴백)
+        cut = cut[:sp]
+    return cut.rstrip() + "…"
+
+
 class NotificationManager:
     """알림 관리자"""
 
@@ -45,6 +83,10 @@ class NotificationManager:
         Returns:
             생성된 알림 정보
         """
+        # ★F20-5 (2026-08-22): 빈 제목은 알림함에 빈칸으로 남는다. 어느 입구로
+        # 들어오든 여기서 한 번 파생한다(derive_title docstring = 판정 근거).
+        title = (title or "").strip() or derive_title(message)
+
         notification = {
             "id": str(uuid.uuid4()),
             "type": type,

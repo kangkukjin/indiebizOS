@@ -116,11 +116,24 @@ check("B1 정상 — message=산문 정본", r.get("success") and "\n" in r["mes
 check("B2 write 싱크 추출 계약 — items 밖 dict/list 페이로드 없음",
       not any(isinstance(v, (dict, list)) and v for k, v in r.items() if k != "items"))
 
+# ★F20-3 판정 (2026-08-22): 0행은 고장이 아니라 정당한 빈손 — 옛 B3("정직 거절")을
+# 뒤집었다. 감시자 문형 `[table:since] >> [table:brief]` 이 첫 실행마다 error 로 끝나던
+# 원인이고, brief 는 F17 빈손 계약(each·flatten·groupby·filter·take·table:ai)의 유일한 예외였다.
+_calls_before = _FAKE["calls"]
 r = run("ai_brief", {"instruction": "요약", "_prev_result": json.dumps({"items": []})})
-check("B3 0행 → 정직 거절(근거 없음)", not r.get("success") and "근거" in r.get("error", ""))
+check("B3 0행 → 빈손 성공(고장 아님)", r.get("success") is True and r.get("rows_in") == 0)
+check("B3-a 0행 → AI 호출 생략(비용 0)", _FAKE["calls"] == _calls_before)
+check("B3-b 0행 → 조용한 성공 금지(note 로 말한다)", "0행" in (r.get("note") or ""))
+check("B3-c 0행 → message(산문 정본) 없음 — 행이 없으면 산문도 없다", "message" not in r)
+check("B3-d 0행 → items:[] 라 `??` 폴백이 빈손을 알아본다", r.get("items") == [])
 
 r = run("ai_brief", {"instruction": "요약", "_prev_result": "그냥 긴 평문 텍스트..."})
 check("B4 평문 입력 → self:ask 안내", not r.get("success") and "self:ask" in r.get("error", ""))
+
+# ★구분 유지(F20-3 의 절반) — 0행을 통과시키되 **통화 없음**은 여전히 에러여야 한다.
+r = run("ai_brief", {"instruction": "요약", "_prev_result": json.dumps({"ok": True})})
+check("B4-a 통화 없음 → 여전히 정직 거절(0행과 다른 갈래)",
+      not r.get("success") and "통화" in r.get("error", ""))
 
 _arm(None, None)
 r = run("ai_brief", {"instruction": "요약", "items": items3})

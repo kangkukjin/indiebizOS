@@ -895,6 +895,61 @@ def validate_fixture_coverage(data: dict, root: Path) -> list[str]:
                 )
 
             issues += _check_op_fixture_coverage(f"{node_name}:{action_name}", action)
+            issues += _check_shape_variants(f"{node_name}:{action_name}", action)
+    return issues
+
+
+_SHAPE_VARIANT_LABEL = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=\S+$")
+
+
+def _check_shape_variants(qualified: str, action: dict) -> list[str]:
+    """변이 축 선언 검사 — `shape_variants:` (2026-08-22, F20-1 판정).
+
+    왜 필요한가: 카탈로그의 ⟨열⟩ 은 fixture 실측이고 색인 키가 `node:action[#op]` 이다.
+    그런데 반환 열이 **op 이 아니라 param 으로 갈리는** 액션이 있다(`[sense:realty]`
+    의 source=molit/naver/zigbang — molit 은 `아파트명·법정동·보증금·전용면적`,
+    naver 는 `title·name·meta·price`). 그런 액션에서 카탈로그는 *한 변이의 열을
+    전부인 양* 말하고, 뒷문장(`>> [table:compute]{set: …}`)이 없는 필드를 골라 죽는다.
+    열 이름을 하나로 정규화하는 안은 기각했다 — 열 이름은 세계의 명사(관측 데이터)이고
+    몸이 이름을 붙이면 외부 API 가 바뀔 때 몸이 조용히 거짓말을 한다(헌법 '명사의 자리').
+    대신 **색인 키를 변이 축까지 넓혀** 카탈로그가 변이별로 실측 열을 말하게 한다.
+
+    검사: ①라벨은 `param=값` ②코드가 정말 자기 액션을 부른다(드리프트) ③읽기 액션만
+    (스윕이 실제로 실행한다) ④items/table 통화를 내는 액션만(열이 있어야 의미가 있다).
+    """
+    sv = action.get("shape_variants")
+    if sv is None:
+        return []
+    issues: list[str] = []
+    if not isinstance(sv, dict) or not sv:
+        return [f"{qualified}: shape_variants 는 비어있지 않은 매핑이어야 함 "
+                f"(예 `source=naver: '[sense:realty]{{source: \"naver\", …}}'`)"]
+    if action.get("returns") not in ("items", "table"):
+        issues.append(
+            f"{qualified}: returns:{action.get('returns')} 인데 shape_variants 보유 — "
+            f"⟨열⟩ 이 있는 통화(items/table)만 변이를 선언한다")
+    if action.get("side_effect") is True:
+        issues.append(
+            f"{qualified}: 부작용 액션에 shape_variants — 관측 스윕이 매 실행마다 "
+            f"부작용을 낸다(읽기 액션만)")
+    for label, code in sv.items():
+        if not _SHAPE_VARIANT_LABEL.match(str(label)):
+            issues.append(
+                f"{qualified}: shape_variants 라벨 '{label}' — `param=값` 형식이어야 함 "
+                f"(카탈로그가 그대로 인쇄하고, 읽는 쪽이 param 이름으로 읽는다)")
+        if not isinstance(code, str) or not code.strip():
+            issues.append(f"{qualified}: shape_variants.{label} 는 비어있지 않은 문자열이어야 함")
+            continue
+        if f"[{qualified}]" not in code:
+            issues.append(
+                f"{qualified}: shape_variants.{label} 코드가 자기 액션을 부르지 않음 "
+                f"(관측된 열이 엉뚱한 액션의 것이 된다)")
+            continue
+        param = str(label).split("=", 1)[0]
+        if not re.search(rf'\b{re.escape(param)}\s*:', code):
+            issues.append(
+                f"{qualified}: shape_variants.{label} 코드에 '{param}' 파라미터가 없음 — "
+                f"라벨이 가리키는 변이를 실제로 고르지 않는다")
     return issues
 
 

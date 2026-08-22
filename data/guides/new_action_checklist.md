@@ -203,6 +203,15 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
   선언하기 전에 **한 번 실행해 보고** 통화를 확인할 것 — 실측하면 "items 라 선언했는데 통화를 안 다는" 경로가 드러난다(⑤에서 `sense:performance` venue/genres/regions·`sense:book` recommended 4곳이 그렇게 잡혔다). 통화가 없는 읽기 op 이면 `ops.returns: {<op>: scalar}` 로 정직하게 선언한다.
 - **effect(부작용)·transform(변환자)은 필드 없음** — effect 는 실행 불가(구조검사만), transform 은 골든 파이프(`ibl_health_check.py` §1C)로 흐름 검증.
 - **파생**: `data/ibl_fixtures.json` 은 build 산출물이다(**직접 편집 금지** — 소스는 액션 필드). fixture 가 액션과 한 몸이라 **설치/제거를 자동으로 따라가고 고아 fixture 가 생기지 않는다**(2026-07-02 자기완결화). 패키지 능력이면 그 패키지 `ibl_actions.yaml`, 코어 노드면 `ibl_nodes_src` 에 필드를 둔다.
+- ★**반환 열이 파라미터로 갈리면 `shape_variants:` 를 단다**(2026-08-22 F20-1 판정). 카탈로그의 `⟨열: …⟩` 은 fixture 실측이고 색인 키가 `node:action[#op]` 다 — 그래서 반환 열이 **op 이 아니라 param 으로** 갈리는 액션은 *한 변이의 열을 전부인 양* 말하고, 모델이 뒷문장(`>> [table:compute]`)에서 없는 필드를 골라 죽는다. 그럴 땐 열 이름을 하나로 **정규화하지 말고**(열 이름은 세계의 명사=관측 데이터 — 몸이 이름을 붙이면 외부 API 가 바뀔 때 몸이 조용히 거짓말한다) 변이를 선언해 각각 관측한다:
+
+```yaml
+        shape_variants:                                    # 라벨 = `param=값` (카탈로그가 그대로 인쇄)
+          source=naver: '[sense:realty]{op: "query", source: "naver", region: "평택 비전동", limit: 5}'
+          source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
+```
+
+  카탈로그 줄은 `⟨열: 아파트명·법정동·… | source=naver: title·name·price | …⟩` 이 된다(라벨 없는 앞자리=기본값의 열). 선언 후 `.venv/bin/python scripts/ibl_shape_sweep.py --only <node:action>` 로 한 번 관측한다(주간 순찰이 이후 재관측). **변이 fixture 는 건강검진 우주를 넓히지 않는다** — `ibl_fixtures.json` 의 별도 `shape_variants` 섹션에 파생되고 읽는 쪽은 관측 스윕 하나다(외부 API 를 매일 더 두드리지 않게). 읽기·items/table 액션만, 라벨의 param 을 코드가 실제로 골라야 한다(`--check` 가 강제).
 - **검증**: `python scripts/ibl_health_check.py` 로 자기 액션이 **GREEN** 인지 확인. RED 면 통화 계약 위반 — 고치기 전엔 미완성. 자세히 `docs/IBL_MAINTENANCE_MANUAL.md`.
 
 ---

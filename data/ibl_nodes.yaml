@@ -1626,6 +1626,9 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
+        shape_variants:
+          source=naver: '[sense:realty]{op: "query", source: "naver", region: "평택 비전동", limit: 5}'
+          source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
         description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
         group: real_estate
         target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.)\n"
@@ -2581,12 +2584,12 @@ nodes:
       notify_user:
         returns: effect
         description: 사용자에게 데스크탑 알림 전송. 중요 이벤트 통지용.
-        target_description: 알림 메시지. title·type 옵션 (info/warning/error).
+        target_description: 알림 메시지. title·type 옵션 (info/warning/error). title 을 생략하면 message 첫 줄이 제목이 된다(관문 파생 — 굳이 message 를 title 에 옮겨 적지 말 것).
         group: system
         target_key: message
         router: system
         func: send_notification
-        implementation: notify_dispatch 관문 — 알림함 기록 + 런처 WS 네이티브 알림, 런처 미연결 시 desktop_notify로 백엔드가 직접 OS 알림
+        implementation: notify_dispatch 관문 — 알림함 기록 + 런처 WS 네이티브 알림, 런처 미연결 시 desktop_notify로 백엔드가 직접 OS 알림. 빈 제목은 notification_manager.derive_title 이 message 앞머리에서 파생(입구 18곳 공통)
         keywords:
         - 알림
         - 통지
@@ -7007,7 +7010,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 emitter(AI 종합, 출구) — items 를 근거로 짧은 산문(요약·판정·작명)을 낸다. [table:document](결정론 조판)·[table:structure](텍스트→문서 IR)의 형제 — 출력이 '글'일 때. 평문 텍스트 요약은 [self:ask].
-        target_description: instruction(필수 — 산문 지시, 예 "급변 종목 중심 3문장 보고"·"어느 매물이 조건에 최적인지 판정과 이유"). 입력 = >> 파이프 items(0행=정직 거절). 반환 message=산문 정본(>> [self:write] 가 산문으로 저장, notify 등으로 연결). 지어내기 금지 — items 에 있는 것만. 실행마다 모델 비용(기어 실행 축).
+        target_description: 'instruction(필수 — 산문 지시, 예 "급변 종목 중심 3문장 보고"·"어느 매물이 조건에 최적인지 판정과 이유"). 입력 = >> 파이프 items(통화 없음=거절 / 0행=빈손 성공: message 없이 note+rows_in:0, AI 호출 생략). 반환 message=산문 정본(>> [self:write] 가 산문으로 저장, notify 등으로 연결). 지어내기 금지 — items 에 있는 것만. 실행마다 모델 비용(기어 실행 축).'
         group: ai
         router: handler
         tool: ai_brief
@@ -7015,7 +7018,7 @@ nodes:
           instruction:
           - do
           - prompt
-        implementation: ai-ops handler — items 집합을 한 원샷(실행 축)에 넣어 산문 종합. 빈 응답 1회 재시도 후 정직 실패. message=산문 정본(write 싱크 v4 추출 계약 접속).
+        implementation: ai-ops handler — items 집합을 한 원샷(실행 축)에 넣어 산문 종합. 빈 응답 1회 재시도 후 정직 실패. 0행=호출 생략(비용 0, 빈손 성공). message=산문 정본(write 싱크 v4 추출 계약 접속).
         target_key: instruction
         keywords:
         - 요약해

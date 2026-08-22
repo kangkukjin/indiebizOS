@@ -13,7 +13,7 @@ router = APIRouter(prefix="/notifications")
 
 
 class NotificationCreate(BaseModel):
-    title: str
+    title: str = ""          # 비우면 message 앞머리에서 파생 (F20-5)
     message: str
     type: str = "info"  # info, success, warning, error
     source: str = "system"

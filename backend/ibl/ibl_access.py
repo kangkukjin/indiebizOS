@@ -106,7 +106,9 @@ CATALOG_LEGEND = (
     "# 표기법: '노드:액션 :: 설명' = 액션 한 줄 (호출은 [노드:액션]{...}). "
     "그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표 = 기본 op, op 생략 시 적용; "
     "설명 없는 .op 는 이름 그대로의 동작). ⟨열: a·b⟩ = 실측 반환 열 이름 — 뒤에 붙일 "
-    "filter/sort/select/compute 의 필드명은 이걸 쓴다. (dormant: 키이름) = API 키가 없어 휴면 중."
+    "filter/sort/select/compute 의 필드명은 이걸 쓴다. ⟨열: a·b | source=x: c·d⟩ 처럼 "
+    "'|' 로 갈린 것은 그 파라미터에 따라 열이 달라진다는 뜻(앞자리=기본값의 열). "
+    "(dormant: 키이름) = API 키가 없어 휴면 중."
 )
 
 # R3: 이름이 자명한 op 는 설명을 방출하지 않는다(이름만) — 데이터(ops.values)는 그대로,
@@ -155,14 +157,39 @@ def _return_shapes() -> dict:
     return _SHAPES_CACHE["data"]
 
 
+def _variant_shapes(qualified: str) -> list:
+    """`node:action@param=값` 변이 관측 — (라벨, 열) 목록 (2026-08-22, F20-1 판정).
+
+    왜: ⟨열⟩ 색인 키는 `node:action[#op]` 인데, 반환 열이 **op 이 아니라 param 으로**
+    갈리는 액션이 있다([sense:realty] source=molit/naver/zigbang — molit 은
+    `아파트명·법정동·보증금·전용면적`, naver 는 `title·name·meta·price`). 그 상태의
+    카탈로그는 *한 변이의 열을 전부인 양* 말한다 — 구조적 거짓말이고, 뒷문장
+    (`>> [table:compute]`)이 없는 필드를 고르고 죽는 원인이 된다(20회차 F20-1 최소재현).
+    열 이름 정규화(=몸이 세계에 이름 붙이기)는 기각하고 색인 키를 변이 축까지 넓혔다."""
+    shapes = _return_shapes()
+    prefix = f"{qualified}@"
+    out = []
+    for k in sorted(shapes):
+        if k.startswith(prefix):
+            keys = (shapes[k] or {}).get("keys") or []
+            if keys:
+                out.append((k[len(prefix):], keys))
+    return out
+
+
 def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
-    """'⟨열: a·b·c⟩' — 액션 줄엔 기본 op(또는 op 없는 fixture)의 열, op 줄엔 그 op 의 열(액션 열과 다를 때만)."""
+    """'⟨열: a·b·c⟩' — 액션 줄엔 기본 op(또는 op 없는 fixture)의 열, op 줄엔 그 op 의 열(액션 열과 다를 때만).
+
+    변이가 선언된 액션은 '⟨열: 기본열 | source=naver: 열…⟩' 로 병기한다(F20-1).
+    라벨 없는 앞자리 = 기본값의 열."""
     shapes = _return_shapes()
     if not shapes:
         return ""
+    variants = []
     if op is None:
         default = (ops or {}).get("default") if isinstance(ops, dict) else None
         ent = shapes.get(qualified) or (shapes.get(f"{qualified}#{default}") if default else None)
+        variants = _variant_shapes(qualified)
     else:
         ent = shapes.get(f"{qualified}#{op}")
         base = shapes.get(qualified) or shapes.get(f"{qualified}#{(ops or {}).get('default')}")
@@ -170,7 +197,9 @@ def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
             return ""
     if not ent or not ent.get("keys"):
         return ""
-    return " ⟨열: " + "·".join(ent["keys"][:8]) + "⟩"
+    parts = ["·".join(ent["keys"][:8])]
+    parts += [f"{label}: " + "·".join(keys[:8]) for label, keys in variants]
+    return " ⟨열: " + " | ".join(parts) + "⟩"
 
 
 def _emit_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:

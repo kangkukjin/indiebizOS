@@ -272,10 +272,12 @@
     "test_multi_chat_round": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
+    "test_notify_title": "force_exclude_glob",
     "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
+    "test_shape_variant_axis": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
@@ -284,8 +286,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 278,
+    "total": 280,
     "engine": 220,
-    "blocklist": 58
+    "blocklist": 60
   }
 }

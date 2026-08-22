@@ -35,7 +35,7 @@
 - **행 수 신고** — `table:ai` 는 rows_in/rows_out(+rows_dropped)을 항상 동반(조용한 깎기 금지).
 - **grounded**(struct) — 각 레코드에 원문 발췌 `_quote` 를 요구하고 **코드가 원문과 대조**(notebook 인용 후검증 부류). finance/health 원장 스키마=기본 on, 그 외 off, `grounded:` 파라미터로 오버라이드. 탈락 수는 `dropped_ungrounded` 로 신고, 전멸=정직 실패.
 - **_ai provenance** — 출력 items 행에 `_ai: true`.
-- **비용 = 집합 단위 1호출** — items 전체를 한 번에. 입력 상한(6만 자) 초과=정직 거절(take/filter 로 줄이기). 0행 입력=`table:ai` 는 호출 생략(비용 0), `brief` 는 정직 거절(근거 없음).
+- **비용 = 집합 단위 1호출** — items 전체를 한 번에. 입력 상한(6만 자) 초과=정직 거절(take/filter 로 줄이기). 0행 입력=**세 낱말 모두 호출 생략(비용 0)·빈손 성공** — `table:ai` 는 `items:[]`, `brief` 는 `message` 없이 `note`+`rows_in:0`(F20-3 판정 2026-08-22: 0행은 고장이 아니라 정당한 빈손이다. 감시자 문형 `[table:since] >> [table:brief]` 이 첫 실행마다 error 로 끝나던 원인). **통화 자체가 없으면 여전히 정직 거절** — 두 갈래를 섞지 말 것.
 - **`ai_call: true`** — dry-run 이 "실행마다 모델 호출(비용·편차)" 을 고지하고, 포털 대여 계기에서는 기본 거부된다.
 
 ## 함정·경계

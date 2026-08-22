@@ -7,6 +7,11 @@
 돌려 보고 다시 쓴다 — 최소 2왕복. 카탈로그의 `returns: items` 는 "표다"까지만 말한다.
 이 스윕은 부작용 없는 fixture 우주(data/ibl_fixtures.json)를 실행해 실측 열 이름을
 `data/ibl_return_shapes.json` 에 적고, ibl_access 가 카탈로그 줄에 ⟨열: …⟩ 로 붙인다.
+
+★변이 축(2026-08-22, F20-1): 색인 키는 `node:action[#op]` 인데 반환 열이 **param 으로**
+갈리는 액션이 있다([sense:realty] 의 source=molit/naver/zigbang). 그런 액션은 자기
+정의에 `shape_variants: {param=값: '<fixture 코드>'}` 를 선언하고, 여기서 함께 관측해
+`node:action@param=값` 키로 적는다 — 카탈로그가 변이별로 열을 말한다.
 열 이름은 세계의 명사(입력·외부 API 에 따라 변함)라 src yaml 에 손으로 적지 않고 **관측 데이터**로 둔다.
 사용: .venv/bin/python scripts/ibl_shape_sweep.py [--only node:action]   (백엔드 8765 필요)
 """
@@ -69,7 +74,11 @@ def main():
     only = None
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
-    fixtures = json.load(open(ROOT / "data" / "ibl_fixtures.json", encoding="utf-8"))["fixtures"]
+    fx = json.load(open(ROOT / "data" / "ibl_fixtures.json", encoding="utf-8"))
+    # ★F20-1 (2026-08-22): 변이 축 합류 — 반환 열이 op 이 아니라 param 으로 갈리는
+    # 액션(`shape_variants:` 선언)의 변이도 관측한다. 키 = `node:action@param=값`.
+    # 건강검진·통화 스윕은 `fixtures` 만 읽으므로 그 측정 우주는 그대로다.
+    fixtures = {**fx["fixtures"], **(fx.get("shape_variants") or {})}
     prev = {}
     if OUT.exists():
         try:

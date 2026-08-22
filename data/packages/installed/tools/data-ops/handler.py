@@ -950,7 +950,7 @@ def _op_union(prev, params):
             all_rows.extend(remap(t))
         env = _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
         col_sets = [{str(c) for c in (t.get("columns") or [])} for t in tables if t.get("columns")]
-        return _attach_shape_warning(env, col_sets)
+        return _attach_branch_warning(_attach_shape_warning(env, col_sets), objs)
     item_lists = [_get_items(o)[0] for o in objs]
     if all(il is not None for il in item_lists):
         out = []
@@ -967,8 +967,26 @@ def _op_union(prev, params):
                     ks |= {k for k, v in it.items() if v is not None}
             if ks:
                 key_sets.append(ks)
-        return _attach_shape_warning(env, key_sets)
+        return _attach_branch_warning(_attach_shape_warning(env, key_sets), objs)
     return {"success": False, "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items)."}
+
+
+def _attach_branch_warning(env, objs):
+    """★B24-1(c) 24회차 상상훈련: 병렬 가지가 죽어도 이항 변환자가 **조용히 삼켰다**.
+    죽은 가지의 봉투는 items:[] 라 union/merge/join 이 0행으로 흘려보내고, 사용자는
+    "두 소스를 합쳤다" 로 읽는다(실측: 살아있는 3행만 나오고 경고 0). 결합은 정직하게
+    하되 무엇이 빠졌는지 말한다 — _attach_shape_warning(공유 칸 0)과 같은 배관."""
+    bad = []
+    for i, o in enumerate(objs or [], 1):
+        if isinstance(o, dict) and (o.get("success") is False
+                                    or (o.get("error") and o.get("success") is not True)):
+            bad.append(i)
+    if not bad:
+        return env
+    note = (f"결합 입력 중 분기 {', '.join(map(str, bad))} 이(가) 실패했습니다 — "
+            f"그 분기는 0행으로 흘렀습니다. 결과는 부분입니다(살아남은 분기만 합쳐졌습니다).")
+    prev = env.get("warning") if isinstance(env, dict) else None
+    return {**env, "warning": (prev + " / " + note) if prev else note}
 
 
 def _attach_shape_warning(env, key_sets):
@@ -1016,7 +1034,7 @@ def _op_merge(prev, params):
             seen.add(k)
             dd.append(r)
         out = dd
-    return _emit_items(_carry_flags(objs), out)
+    return _attach_branch_warning(_emit_items(_carry_flags(objs), out), objs)
 
 
 def _op_flatten(prev, params):
@@ -1182,7 +1200,7 @@ def _op_join(prev, params):
                 for orig, name in zip(add, disp):
                     merged[name] = r[orig]
                 out.append(merged)
-        return _emit_items(_carry_flags([a, b], with_total=False), out)
+        return _attach_branch_warning(_emit_items(_carry_flags([a, b], with_total=False), out), [a, b])
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
@@ -1201,7 +1219,9 @@ def _op_join(prev, params):
         for rb_row in index.get(k, []):
             rbd = {cb[i]: (rb_row[i] if i < len(rb_row) else None) for i in range(len(cb))}
             out_rows.append(list(r) + [rbd.get(c) for c in extra])
-    return _emit_table({**_carry_flags([a, b], with_total=False), "table": {}}, {"columns": out_cols, "rows": out_rows})
+    return _attach_branch_warning(
+        _emit_table({**_carry_flags([a, b], with_total=False), "table": {}},
+                    {"columns": out_cols, "rows": out_rows}), [a, b])
 
 
 # ── 문서 IR(공유 문서 모델) → 산출물 emitter ───────────────────────────

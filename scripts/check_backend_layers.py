@@ -70,6 +70,7 @@ LAYERS = {
         "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
         "workflow_parallel", "workflow_fallback", "workflow_contract",
+        "workflow_binding",
     },
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals",

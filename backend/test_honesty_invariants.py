@@ -87,6 +87,41 @@ def test_final_of_unwraps_pipeline_and_json_string():
     assert hs.final_of({"success": True, "items": [1]}) == {"success": True, "items": [1]}
 
 
+# ── E. 병렬 봉투 (B24-1, 24회차 상상훈련) ──────────────────────────────────────
+def _pinvs(env, expect):
+    return [i for i, _ in hs.check_parallel_envelope(env, expect)]
+
+
+def test_e_parallel_branch_failure_must_be_reported():
+    # 한 가지 실패 — 신고 있고 부분 성공
+    ok = {"success": True, "branches_failed": [{"step": 1, "of": 2,
+          "failed": [{"branch": 2, "node": "sense", "action": "feed", "error": "…"}]}]}
+    assert _pinvs(ok, {"success": True, "failed": 1}) == []
+    # 옛 동작(신고 0) 은 위반이어야 한다 — 이게 B24-1 그 자체다
+    old = {"success": True}
+    assert _pinvs(old, {"success": True, "failed": 1}) == ["E"]
+
+
+def test_e_all_branches_failed_is_not_success():
+    old = {"success": True, "branches_failed": [{"step": 1, "of": 2,
+           "failed": [{"branch": 1}, {"branch": 2}]}]}
+    # 전 가지 실패인데 success:true → 위반(아무것도 못 가져온 것은 성공이 아니다)
+    assert _pinvs(old, {"success": False, "failed": 2}) == ["E"]
+    new = {**old, "success": False}
+    assert _pinvs(new, {"success": False, "failed": 2}) == []
+
+
+def test_e_healthy_parallel_is_untouched():
+    assert _pinvs({"success": True}, {"success": True, "failed": 0}) == []
+
+
+def test_e_probe_universe_is_network_free():
+    # 프로브가 외부 API 를 타면 블립이 판정을 흔든다 — 우주는 결정론이어야 한다.
+    for _n, code, _e in hs.PARALLEL_PROBES:
+        assert "http" not in code, code
+        assert " & " in code, code
+
+
 # ── D. 정적 부채 정규식 ────────────────────────────────────────────────────────
 def test_d_static_regex_shape():
     r = hs.BARE_ERROR_RETURN_RE

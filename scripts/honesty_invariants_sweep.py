@@ -120,6 +120,34 @@ def check_envelope(name: str, declared: str, env) -> list:
     return out
 
 
+# ── E. 병렬(&) 봉투 (B24-1, 2026-08-22 24회차 상상훈련) ──────────────────────────────────────
+# fixture 우주는 **단일 액션** 봉투뿐이라 병렬 봉투가 한 번도 측정되지 않았고, 바로 그 사각에서
+# 침묵/거짓 성공 부류가 여덟 번째로 났다(가지가 하나 죽어도·전부 죽어도 success:true, 신고 키 0).
+# 우주를 넓힌다 — 네트워크 없는 결정론 프로브라 블립이 없다.
+PARALLEL_PROBES = [
+    ("병렬_한가지실패", '[self:time] & [self:read]{path: "/__honesty_parallel_probe_missing__"}',
+     {"success": True, "failed": 1}),
+    ("병렬_전가지실패", '[self:read]{path: "/__hp_a__"} & [self:read]{path: "/__hp_b__"}',
+     {"success": False, "failed": 2}),
+    ("병렬_무회귀정상", '[self:time] & [self:time]', {"success": True, "failed": 0}),
+]
+
+
+def check_parallel_envelope(env, expect) -> list:
+    """(불변식, 사유) 목록. 빈 목록 = 정직. ★파이프 **최상위** 봉투를 본다(final_result 아님)."""
+    if not isinstance(env, dict):
+        return [("E", f"병렬 봉투가 dict 가 아님: {type(env).__name__}")]
+    out = []
+    bf = env.get("branches_failed")
+    n = sum(len(b.get("failed") or []) for b in bf if isinstance(b, dict)) if isinstance(bf, list) else 0
+    if n != expect["failed"]:
+        out.append(("E", f"실패 분기 신고 {n}건 (기대 {expect['failed']}건) — 병렬은 신고 키가 없던 자리"))
+    if bool(env.get("success")) is not expect["success"]:
+        out.append(("E", f"success={env.get('success')} (기대 {expect['success']}) — "
+                         "전 가지 실패는 성공이 아니다"))
+    return out
+
+
 # ── D. 정적 정보: 텍스트 계약(접두) 실패 return 자리 ────────────────────────────────────────────
 BARE_ERROR_RETURN_RE = re.compile(r"""return\s+f?["'](Error|오류|에러|실패)\s*[:：]""")
 
@@ -172,6 +200,15 @@ def main(argv) -> int:
             checked += 1
             for inv, why in probs:
                 violations.append({"name": name, "inv": inv, "why": why})
+        # E. 병렬 봉투 — fixture 우주(단일 액션) 밖이라 따로 돈다 (B24-1)
+        for pname, pcode, expect in PARALLEL_PROBES:
+            resp, err = _try(pcode)
+            if err is not None:
+                failed.append((pname, str(err)[:80]))
+                continue
+            checked += 1
+            for inv, why in check_parallel_envelope(resp, expect):
+                violations.append({"name": pname, "inv": inv, "why": why})
     static = static_bare_error_returns()
 
     print("==== 정직성 불변식 스윕 ====")
@@ -180,7 +217,8 @@ def main(argv) -> int:
               + (f" · 블립 재시도 {len(retried)}건" if retried else ""))
         for inv, label in (("A", "거짓 성공(오류문이 success 봉투에)"),
                            ("B", "통화 부재(선언 items/table 인데 items 없음)"),
-                           ("C", "0행 거짓(0행=성공 계약 위반)")):
+                           ("C", "0행 거짓(0행=성공 계약 위반)"),
+                           ("E", "병렬 봉투(분기 실패 미신고·전 가지 실패를 성공으로)")):
             rows = [v for v in violations if v["inv"] == inv]
             print(f"\n[{inv}] {label} — {len(rows)}건")
             for v in rows:

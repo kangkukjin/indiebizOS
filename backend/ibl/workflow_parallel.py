@@ -2,7 +2,7 @@
 """병렬(&) 분기 실행기 — workflow_engine 의 형제 모듈.
 
 2026-08-19 분리(1500줄 규칙): G13-1 괄호 분기 파이프 추가로 본체가 1532줄이 되어
-`_execute_parallel` 를 여기로 옮김. 이음매 헬퍼(_inject_prev_result 등)는 본체 소유라
+`_execute_parallel` 를 여기로 옮김. 이음매 헬퍼(_inject_prev_result 등)는 workflow_binding.py 소유·본체 재수출이라
 호출 시점에 지연 import 한다(본체가 이 모듈을 top-level import 하므로 — 순환 회피).
 """
 

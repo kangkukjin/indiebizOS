@@ -129,6 +129,7 @@
     "ibl/tool_loader",
     "ibl/tool_selector",
     "ibl/trigger_engine",
+    "ibl/workflow_binding",
     "ibl/workflow_contract",
     "ibl/workflow_engine",
     "ibl/workflow_fallback",
@@ -294,8 +295,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 288,
-    "engine": 224,
+    "total": 289,
+    "engine": 225,
     "blocklist": 64
   }
 }

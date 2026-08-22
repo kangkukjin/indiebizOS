@@ -1419,7 +1419,8 @@ def execute(tool_input: dict, context):
     if tool_name == "structure_document":
         return structure_document(tool_input, context.output_dir())
     if tool_name == "render_document":
-        return render_document(tool_input, context.output_dir())
+        # context 도 넘긴다 — 산출 경로 해소기(J29-1)가 거기 산다.
+        return render_document(tool_input, context.output_dir(), context)
     fn = _DISPATCH.get(tool_name)
     if not fn:
         return {"success": False, "error": f"data-ops: 알 수 없는 변환자 '{tool_name}'."}

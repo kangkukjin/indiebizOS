@@ -728,20 +728,16 @@ def execute(tool_input: dict, context) -> str:
             raw_path = _get_path(tool_input)
             if not raw_path:
                 return json.dumps({"success": False, "error": "파일 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
-            path = os.path.join(project_path, raw_path)
-
-            # 새 파일 + bare 파일명(디렉토리 없음) → outputs/ 폴더로 자동 리다이렉트
-            redirected = False
-            if (not os.path.isabs(raw_path)
-                    and os.sep not in raw_path and '/' not in raw_path
-                    and not os.path.exists(path)):
-                raw_path = os.path.join("outputs", raw_path)
-                path = os.path.join(project_path, raw_path)
-                redirected = True
-
-            scope_err = _validate_path_in_scope(path, project_path)
-            if scope_err:
-                return scope_err
+            # 배치 규칙(절대경로 존중 / 디렉토리 포함 상대는 프로젝트 기준 / bare 파일명은
+            # outputs/ 리다이렉트)의 정본은 ToolContext.resolve_output_path 하나다 —
+            # 이 자리가 그 규약의 **출처**지만, 형제 emitter 셋이 같은 규칙을 각자 들고
+            # 있다가 3인3색이 된 것이 29회차 F29-2 였다. 출처도 정본을 통과시켜야
+            # 다음 변경이 갈라지지 않는다(J29-1).
+            _res = context.resolve_output_path(raw_path, guard=_validate_path_in_scope)
+            if _res.get("error"):
+                return _res["error"]
+            path = _res["path"]
+            redirected = _res["redirected"]
             _live_target = path                 # 신고용 — 실제 쓰기는 격리 사본에 갈 수 있다
             path = _red_stage(path, for_write=True)
             content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
@@ -1335,7 +1331,9 @@ def execute(tool_input: dict, context) -> str:
 
         elif tool_name == "spreadsheet":
             # [table:spreadsheet] — office_ops 로 이동. 경로 가드는 handler 소유라 주입.
-            return _office.spreadsheet(tool_input, project_path, _validate_path_in_scope)
+            # context 도 넘긴다: 형제 emitter 와 공유하는 산출 경로 해소기가 거기 산다(J29-1).
+            return _office.spreadsheet(tool_input, project_path, _validate_path_in_scope,
+                                       context=context)
 
         elif tool_name == "todo_write":
             todos = tool_input.get("todos", [])

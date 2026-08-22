@@ -286,7 +286,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         return -1
 
     _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": [], "halted": [],
-            "branches_failed": []}
+            "branches_failed": [], "empty_notes": []}
 
     def _handle_failure(idx: int, abort_payload: dict):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -615,6 +615,20 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if isinstance(result, dict) and result.get("halted") in ("max", "wall", "budget"):
             _seq["halted"].append({"step": i + 1, "halted": result["halted"],
                                    "iterations": result.get("iterations")})
+        # ★29회차 관찰: **0행의 이유**는 통화에 실을 자리가 없어 파이프 중간에서 사라진다.
+        # `[table:since]` 첫 검침은 "기준선 3행을 세웠다(그래서 0건)" 라고 정직하게 말하지만,
+        # 뒤에 무엇이 오면 그 note 는 다음 step 의 결과에 덮여 사용자는 0건만 본다 —
+        # *"처음이라 기준선만 세웠다"* 와 *"새 것이 없다"* 가 구별 불가능해진다.
+        # 승격 규약은 halted/skipped_steps 와 같다. **모양으로만 판정**한다(어휘 이름을 엔진에
+        # 심지 않는다): 통화가 0행인데 note 를 달고 있는 중간 step. 마지막 step 은
+        # final_result 로 이미 보이므로 싣지 않는다(중복 토큰 0).
+        if i < total - 1 and isinstance(result, dict):
+            _note = result.get("note")
+            if (isinstance(result.get("items"), list) and not result["items"]
+                    and isinstance(_note, str) and _note.strip()):
+                _n, _a = _step_label(tool_input)
+                _seq["empty_notes"].append({"step": i + 1, "action": f"{_n}:{_a}",
+                                            "note": _note.strip()})
         results.append(_rec)
         step_results[i] = result_str
         # 블록 몸이 재할당한 바깥 변수(M6 repeat) — 루프 뒤 `$n` 이 최신값이 되게 되쓴다
@@ -656,8 +670,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
-    # 경고 생산자가 셋(repeat 상한·on_error 건너뜀·병렬 분기 실패)이라 한 키에 덮어쓰면
-    # 뒤엣것이 앞엣것을 지운다 — 모아서 한 번에 싣는다(B24-1 이 세 번째 생산자를 더하면서 드러남).
+    # 경고 생산자가 넷(repeat 상한·on_error 건너뜀·0행 사유·병렬 분기 실패)이라 한 키에
+    # 덮어쓰면 뒤엣것이 앞엣것을 지운다 — 모아서 한 번에 싣는다(B24-1 이 세 번째 생산자를
+    # 더하면서 드러났고, 29회차 0행 사유가 네 번째다).
     _warns = []
     if _seq["halted"]:
         out["halted_steps"] = list(_seq["halted"])
@@ -668,6 +683,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
         out["skipped_steps"] = list(_seq["skipped"])
         _warns.append(f"[on_error] 로 step {', '.join(map(str, _seq['skipped']))} 실패를 건너뛰었습니다 — "
                       "결과는 부분입니다(results[] 의 skipped 표지·error 참조).")
+    if _seq["empty_notes"]:
+        out["empty_notes"] = list(_seq["empty_notes"])
+        _es = " / ".join(f"step {e['step']}[{e['action']}] {e['note']}" for e in _seq["empty_notes"])
+        _warns.append(f"[0행 사유] {_es} — 0건이 '없다'는 뜻이 아닐 수 있습니다(중간 step 의 신고).")
     if _seq["branches_failed"]:
         out["branches_failed"] = list(_seq["branches_failed"])
         _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in _seq["branches_failed"])

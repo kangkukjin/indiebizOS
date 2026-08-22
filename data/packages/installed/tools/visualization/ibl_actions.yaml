@@ -3,6 +3,11 @@ actions:
   chart:
     aliases:
       chart_type: [type]
+      # 형제 emitter([table:document]·[table:spreadsheet])는 산출 경로를 `path` 로 받는다.
+      # chart 만 output_path 를 고집해 같은 파이프 안에서 낱말이 갈렸고, 사용자가 path 를
+      # 쓰면 검수가 '미인식 파라미터' 로 경고만 하고 파일은 딴 데 떨어졌다. (29회차 F29-1)
+      # 별칭은 데이터로 — 어휘 이름을 핸들러 코드에 심지 않는다(IBL 헌법 '명사의 자리').
+      output_path: [path]
     returns: effect
     runs_on: pc_only
     description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
@@ -111,7 +116,7 @@ tool_json:
           description: 기본값 png
         output_path:
           type: string
-          description: 출력 파일 경로 (선택)
+          description: 출력 파일 경로 (선택, path 로도 부를 수 있다). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약).
         charts:
           type: array
           description: multi 차트 전용 — 여러 서브차트 배열

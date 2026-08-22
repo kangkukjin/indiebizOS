@@ -95,6 +95,53 @@ def _extract_ohlc_from_prev(prev):
     return None
 
 
+def _diagnose_no_data(tool_input: dict, chart_type: str):
+    """차트 입력이 비었을 때 '왜' 비었는지 가른다 (29회차 B29-1).
+
+    "입력이 아예 없다"와 "통화는 왔는데 그릴 축이 없다"는 다른 사건이다. 뒤엣것을
+    앞엣것으로 보고하면 사용자는 자기가 주지도 않은 data/data_file 을 찾아 헤맨다.
+    세 상태를 구별한다 — ①통화 미도착(판단 불가 → None, 기존 경로에 맡김)
+    ②도착했으나 0행 ③행은 있으나 이 차트가 쓸 축/값이 없음.
+    """
+    _t = tool_input.get("table")
+    if not isinstance(_t, dict):
+        _t = _extract_table_from_prev(tool_input.get("_prev_result"))
+    if not isinstance(_t, dict):
+        # _extract_table_from_prev 는 *그릴 수 있는* 표만 만들어 주므로 빈 items 를 먼저
+        # 버린다 — 그래서 "0행이 도착했다"는 사실이 여기까지 오지 못했다. 통화가 왔다는
+        # 사실 자체는 봉투를 직접 봐야 안다(0행도 엄연히 도착한 통화다).
+        _prev = tool_input.get("_prev_result")
+        if isinstance(_prev, str):
+            try:
+                _prev = json.loads(_prev)
+            except Exception:
+                _prev = None
+        if isinstance(_prev, dict) and isinstance(_prev.get("items"), list):
+            _t = {"columns": [], "rows": []}
+        else:
+            return None
+    cols = list(_t.get("columns") or [])
+    rows = list(_t.get("rows") or [])
+    if not rows:
+        return {"success": False, "rows_in": 0, "columns": cols,
+                "error": ("입력 0행 — 그릴 내용이 없습니다. [table:chart] 는 앞 단계 통화를 "
+                          "받았지만 행이 하나도 없습니다"
+                          + (f"(열: {cols})" if cols else "")
+                          + ". 앞 단계의 필터·검침을 보세요.")}
+    if chart_type == "candlestick":
+        return {"success": False, "rows_in": len(rows), "columns": cols,
+                "error": (f"입력 {len(rows)}행이 왔지만 캔들스틱이 쓸 open/high/low/close 열을 "
+                          f"찾지 못했습니다. 현재 열: {cols}.")}
+    if len(cols) < 2:
+        return {"success": False, "rows_in": len(rows), "columns": cols,
+                "error": (f"입력 {len(rows)}행이 왔지만 값 열이 없습니다 — 첫 열은 x축/라벨이라 "
+                          f"최소 2열이 필요합니다. 현재 열: {cols}. 값 열을 함께 남기세요 "
+                          "(예: [table:select]{columns: [\"라벨열\", \"값열\"]}).")}
+    return {"success": False, "rows_in": len(rows), "columns": cols,
+            "error": (f"입력 {len(rows)}행·열 {cols} 이 왔지만 '{chart_type}' 차트가 쓸 수 있는 "
+                      "값을 한 칸도 못 찾았습니다(값 칸이 비었거나 숫자가 아님).")}
+
+
 def _table_to_chart_data(table: dict, chart_type: str) -> dict:
     """표준 테이블 통화 → 차트 입력 변환.
 
@@ -252,14 +299,21 @@ def execute(tool_input: dict, context):
     # data_file 경로 해석
     data_file = _resolve_data_file(tool_input.get("data_file"), context)
 
-    # output_path를 프로젝트 outputs 폴더 기준으로 강제
+    # 산출 경로 — 형제 emitter 와 같은 해소기 하나를 쓴다 (ToolContext.resolve_output_path,
+    # 2026-08-23 J29-1). 옛 코드는 여기서 basename() 으로 디렉토리를 **말없이** 버려
+    # spreadsheet(경로 존중)·document(버리되 고지)와 셋이 다 달랐다. 이제 규약은 하나 —
+    # "준 경로는 지킨다, bare 파일명만 outputs/ 로".
+    # (낱말 `path` 는 ibl_actions.yaml 의 aliases 로 여기 닿기 전에 output_path 로
+    #  정규화된다 — 어휘는 데이터에 산다. 29회차 F29-1)
     output_base = context.output_dir()
     raw_output = tool_input.get("output_path")
     if raw_output:
-        # 파일명만 추출하여 프로젝트 outputs에 저장
-        tool_input["output_path"] = os.path.join(output_base, os.path.basename(raw_output))
+        _res = context.resolve_output_path(raw_output)
+        if _res.get("error"):
+            return json.dumps({"success": False, "error": _res["error"]}, ensure_ascii=False)
+        tool_input["output_path"] = _res["path"]
     else:
-        # output_path 미지정 시 프로젝트 outputs 폴더 사용
+        # output_path 미지정 시 프로젝트 outputs 폴더 사용 (하위 렌더러가 이름을 짓는다)
         tool_input["output_path"] = output_base
 
     try:
@@ -314,6 +368,12 @@ def execute(tool_input: dict, context):
                     tool_input["data"] = [{"label": l, "value": v} for l, v in zip(_labels, _d)]
                 elif chart_type in ("line", "scatter"):
                     tool_input["data"] = [{"x": l, "y": v} for l, v in zip(_labels, _d)]
+            # 입력 진단 정직화 (29회차 B29-1) — 렌더러에 넘기면 공용 로더가
+            # "데이터가 비어있습니다. data 또는 data_file을 제공하세요" 하나로 뭉갠다.
+            if not tool_input.get("data") and not data_file:
+                _diag = _diagnose_no_data(tool_input, chart_type)
+                if _diag:
+                    return _diag
             renderer = _RENDERERS.get(chart_type, _render_line)
             return renderer(tool_input, data_file)
 

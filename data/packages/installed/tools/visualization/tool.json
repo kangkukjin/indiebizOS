@@ -61,7 +61,7 @@
           },
           "output_path": {
             "type": "string",
-            "description": "출력 파일 경로 (선택)"
+            "description": "출력 파일 경로 (선택, path 로도 부를 수 있다). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약)."
           },
           "charts": {
             "type": "array",

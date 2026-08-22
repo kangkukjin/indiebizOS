@@ -653,7 +653,7 @@ def _items_to_table(rows_src) -> dict | None:
     return {"columns": _cols, "rows": [[x.get(c) for c in _cols] for x in _it]}
 
 
-def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope) -> str:
+def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, context=None) -> str:
     # [table:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
     import openpyxl
 
@@ -688,28 +688,35 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope) -> 
         if _table.get("rows"):
             tool_input["rows"] = _table["rows"]
 
+    # 확장자 보정은 emitter 의 몫(형식이 정한다), 배치는 몸의 단일 해소기가 한다.
+    # (J29-1 — 세 emitter 가 서로 다른 배치 규칙을 들고 있던 것을 하나로 접었다.
+    #  path 생략 = 기본 이름 생성은 F4(2026-08-16)에서 이미 형제와 맞춘 규약이다.)
     raw_path = _get_path(tool_input)
-    if not raw_path:
-        # path 생략 = 기본 경로 생성 (chart·document 와 같은 규약 — F4, 2026-08-16 상상훈련.
-        # emitter 셋 중 spreadsheet 만 path 필수 거절이라 파이프 종착이 비대칭이었다).
-        from datetime import datetime as _dt
-        raw_path = f"spreadsheet_{_dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    if not raw_path.lower().endswith((".xlsx", ".xlsm")):
+    if raw_path and not raw_path.lower().endswith((".xlsx", ".xlsm")):
         raw_path += ".xlsx"
-    path = os.path.join(project_path, raw_path)
-
-    # write_file과 동일: bare 파일명 → outputs/ 리다이렉트
-    redirected = False
-    if (not os.path.isabs(raw_path)
-            and os.sep not in raw_path and '/' not in raw_path
-            and not os.path.exists(path)):
-        raw_path = os.path.join("outputs", raw_path)
+    if context is not None and hasattr(context, "resolve_output_path"):
+        _res = context.resolve_output_path(raw_path, stem="spreadsheet", ext=".xlsx",
+                                           guard=validate_path_in_scope)
+        if _res.get("error"):
+            return _res["error"]
+        path = _res["path"]
+        redirected = _res["redirected"]
+    else:
+        # 구 호출자(context 없음) — 같은 규약을 인라인으로 유지한다.
+        if not raw_path:
+            from datetime import datetime as _dt
+            raw_path = f"spreadsheet_{_dt.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         path = os.path.join(project_path, raw_path)
-        redirected = True
-
-    scope_err = validate_path_in_scope(path, project_path)
-    if scope_err:
-        return scope_err
+        redirected = False
+        if (not os.path.isabs(raw_path)
+                and os.sep not in raw_path and '/' not in raw_path
+                and not os.path.exists(path)):
+            raw_path = os.path.join("outputs", raw_path)
+            path = os.path.join(project_path, raw_path)
+            redirected = True
+        scope_err = validate_path_in_scope(path, project_path)
+        if scope_err:
+            return scope_err
 
     def _coerce(cell):
         # openpyxl이 받는 타입(str/int/float/bool/None)으로 강제

@@ -109,24 +109,36 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
 
     # ThreadPoolExecutor로 동시 실행 (타임아웃 적용)
     branch_results = [None] * len(branches)
-    with ThreadPoolExecutor(max_workers=min(len(branches), 8)) as executor:
+    executor = ThreadPoolExecutor(max_workers=min(len(branches), 8))
+    try:
         future_to_idx = {
             executor.submit(_run_branch, branch): idx
             for idx, branch in enumerate(branches)
         }
-        for future in as_completed(future_to_idx, timeout=PARALLEL_BRANCH_TIMEOUT):
-            idx = future_to_idx[future]
-            try:
-                branch_results[idx] = future.result(timeout=PARALLEL_BRANCH_TIMEOUT)
-            except FuturesTimeoutError:
-                node = branches[idx].get("node", branches[idx].get("_node", "?"))
-                action = branches[idx].get("action", "?")
-                print(f"[IBL] 병렬 브랜치 타임아웃: [{node}:{action}] ({PARALLEL_BRANCH_TIMEOUT}초)")
-                branch_results[idx] = {
-                    "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
-                }
-            except Exception as e:
-                branch_results[idx] = {"error": str(e)}
+        try:
+            for future in as_completed(future_to_idx, timeout=PARALLEL_BRANCH_TIMEOUT):
+                idx = future_to_idx[future]
+                try:
+                    branch_results[idx] = future.result(timeout=PARALLEL_BRANCH_TIMEOUT)
+                except FuturesTimeoutError:
+                    node = branches[idx].get("node", branches[idx].get("_node", "?"))
+                    action = branches[idx].get("action", "?")
+                    print(f"[IBL] 병렬 브랜치 타임아웃: [{node}:{action}] ({PARALLEL_BRANCH_TIMEOUT}초)")
+                    branch_results[idx] = {
+                        "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
+                    }
+                except Exception as e:
+                    branch_results[idx] = {"error": str(e)}
+        except FuturesTimeoutError:
+            # as_completed 자신의 타임아웃. 여기서 잡지 않으면 이 예외가 함수 밖으로 튀어
+            # concurrent.futures 의 내부 문구("1 (of 2) futures unfinished")가 그대로 사용자
+            # 봉투에 실리고, 아래의 "미완료 브랜치 처리"(어느 가지가 몇 초에 걸렸는지 말해 주는
+            # 정직한 신고)는 영영 실행되지 않는 죽은 코드가 된다. (29회차 B29-3)
+            print(f"[IBL] 병렬 전체 타임아웃 ({PARALLEL_BRANCH_TIMEOUT}초) — 미완료 브랜치를 개별 신고합니다")
+    finally:
+        # wait=False: 타임아웃이 벽시계를 실제로 묶는다. with 문의 암묵적
+        # shutdown(wait=True)은 낙오 가지가 끝날 때까지 기다려 타임아웃을 무력화했다.
+        executor.shutdown(wait=False, cancel_futures=True)
 
     # as_completed 자체가 타임아웃된 경우 미완료 브랜치 처리
     for idx, result in enumerate(branch_results):

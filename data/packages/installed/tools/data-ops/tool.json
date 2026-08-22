@@ -252,7 +252,7 @@
           },
           "filename": {
             "type": "string",
-            "description": "출력 파일명 (선택, 기본 document)"
+            "description": "출력 파일명·경로 (선택, 기본 document). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약). 확장자는 format 이 정한다."
           },
           "meta": {
             "type": "string",

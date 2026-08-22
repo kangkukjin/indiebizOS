@@ -118,11 +118,12 @@ def test_e2_verbose_idempotent_noop():
 def test_e3_write_spill_ref():
     sysess = _load("_t_sysess_pg", _PKG / "system_essentials" / "handler.py")
 
-    class _Ctx:
-        def __init__(self, td):
-            self.tool_name = "write_file"
-            self.project_path = td
-            self.agent_id = "test"
+    # ★스텁 대신 진짜 ToolContext — 쓰기 경로 해소(resolve_output_path)가 컨텍스트 계약의
+    # 일부가 됐다(J29-1). 반쪽 스텁은 그 계약을 안 밟아 결함을 가린다.
+    from tool_context import ToolContext
+
+    def _Ctx(td):
+        return ToolContext(project_path=td, tool_name="write_file", agent_id="test")
 
     with tempfile.TemporaryDirectory() as td:
         piped = json.dumps({"items": [{"a": 1}, {"a": 2}], "success": True})

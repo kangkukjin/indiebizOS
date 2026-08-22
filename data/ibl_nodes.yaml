@@ -7295,7 +7295,7 @@ nodes:
 
           title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
 
-          · filename(선택) · group_by(선택, items 섹션 분할 필드 예 "query") · format(html 기본/pdf/png/docx/pptx/typst/markdown — 같은 IR을 여러 emitter로).
+          · filename(선택 — bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약); 확장자는 format 이 정한다) · group_by(선택, items 섹션 분할 필드 예 "query") · format(html 기본/pdf/png/docx/pptx/typst/markdown — 같은 IR을 여러 emitter로).
 
           결과 산출물 경로(path·file) 반환. markdown 은 md 텍스트도 결과의 markdown 필드로 반환(>> [others:publish] 로 바로 발행 가능). 단일 IR → 다중 emitter. typst=책 품질 조판 PDF(산문·보고서에 최적, HTML theme/cards 그리드는 무시). pptx는 문서 구조를 슬라이드로 투영(heading=새 슬라이드) — 시각 레이아웃 슬라이드가 필요하면 [self:slide]{op:"create"} 를 쓸 것.
 
@@ -7315,7 +7315,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: items 통화 → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
-        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 outputs/로. 읽기는 self:read{format=xlsx}.'
+        target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약). 읽기는 self:read{format=xlsx}.'
         group: chart
         router: handler
         tool: spreadsheet
@@ -7332,6 +7332,8 @@ nodes:
         aliases:
           chart_type:
           - type
+          output_path:
+          - path
         returns: effect
         runs_on: pc_only
         description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'

@@ -359,7 +359,20 @@ def _markdown_to_blocks(md: str, meta_out: dict = None) -> list:
     return blocks
 
 
-def render_document(tool_input, output_base="."):
+class _PlacementRefused(Exception):
+    """산출 경로 해소기가 범위를 이유로 거절 — 사용자 봉투로 그대로 올린다."""
+
+
+def render_document(tool_input, output_base=".", context=None):
+    """[table:document] 진입점. 경로 거절만 여기서 봉투로 바꾸고 나머지는 본체가 한다."""
+    import json as _json
+    try:
+        return _render_document(tool_input, output_base, context)
+    except _PlacementRefused as e:
+        return _json.dumps({"success": False, "error": str(e)}, ensure_ascii=False)
+
+
+def _render_document(tool_input, output_base=".", context=None):
     """문서 IR → 산출물. emitter: html/pdf/png/docx/pptx/typst/markdown.
 
     파라미터: blocks 또는 items(단일 통화 — group_by로 섹션 분할) · title · meta ·
@@ -387,6 +400,12 @@ def render_document(tool_input, output_base="."):
 
     group_by = (tool_input.get("group_by") or "").strip() or None
     blocks = tool_input.get("blocks")
+    # 통화 도착 여부/기수 기록 (29회차 B29-1) — "입력이 아예 없다"와 "통화는 왔는데 0행"은
+    # 다른 사건이다. 뒤엣것을 "blocks 가 필요합니다"로 보고하면 사용자는 자기가 줄 필요도
+    # 없는 파라미터를 찾아 헤맨다(같은 파이프가 행이 있을 땐 blocks 없이 잘 흐른다).
+    _arrived_rows = None
+    if isinstance(tool_input.get("items"), list):
+        _arrived_rows = len(tool_input["items"])
     # 직접 items 파라미터 (조립된 단일 통화 items 전달 — >> 파이프 밖 호출, 예: 데스크탑 신문)
     if not blocks and isinstance(tool_input.get("items"), list) and tool_input["items"]:
         blocks = _items_to_blocks(tool_input["items"], group_by)
@@ -420,6 +439,8 @@ def render_document(tool_input, output_base="."):
                         blocks = _lift_doc_title(_b, tool_input)
                         po = None
                 if isinstance(po, dict):
+                    if isinstance(po.get("items"), list):
+                        _arrived_rows = len(po["items"])
                     if po.get("blocks"):
                         blocks = po["blocks"]
                     elif isinstance(po.get("items"), list) and po["items"]:
@@ -447,6 +468,12 @@ def render_document(tool_input, output_base="."):
         except Exception:
             blocks = None
     if not isinstance(blocks, list) or not blocks:
+        if _arrived_rows == 0:
+            return _json.dumps({"success": False, "rows_in": 0,
+                                "error": ("입력 0행 — 문서로 렌더할 내용이 없습니다. 앞 단계가 통화를 "
+                                          "넘겼지만 행이 하나도 없습니다(blocks 를 직접 줄 필요는 "
+                                          "없습니다 — 앞 단계의 필터·검침을 보세요).")},
+                               ensure_ascii=False)
         return _json.dumps({"success": False, "error": "blocks(문서 IR 블록 배열)가 필요합니다."},
                            ensure_ascii=False)
 
@@ -464,17 +491,30 @@ def render_document(tool_input, output_base="."):
     os.makedirs(output_base, exist_ok=True)
     _raw_name = str(tool_input.get("filename") or "document")
     base = os.path.splitext(os.path.basename(_raw_name))[0] or "document"
-    # 산출 위치는 output_base 가 정한다(프로젝트 outputs). filename 에 경로를 적어도 파일명만
-    # 취하는데, 예전엔 그걸 말없이 했다 → "원하는 위치에 썼다"고 착각하기 쉬웠다(침묵 실패).
-    # 자르는 동작은 유지하되 note 로 소리를 낸다. 원하는 위치로 옮기려면 `>> [self:copy]`.
-    if os.path.dirname(_raw_name):
-        note += (f" (filename 의 경로 부분은 무시하고 '{base}' 만 씁니다 — 산출 위치는 "
-                 f"{output_base}. 다른 곳에 두려면 >> [self:copy]{{destination: ...}})")
+    # 산출 위치 — 형제 emitter 와 같은 해소기 하나(ToolContext.resolve_output_path, J29-1).
+    # 옛 동작은 filename 의 경로 부분을 *버리고* note 로 고지했다. 고지는 정직했지만
+    # 사용자가 준 경로를 지키지 않는 것 자체가 규약 불일치였다(spreadsheet 는 지켰다).
+    # 이제 준 경로를 지킨다 — bare 파일명은 여전히 outputs/ 로 간다(가장 흔한 경우 무변화).
+    # 확장자는 format 이 정하므로 여기서 붙이고, 배치만 해소기에 맡긴다.
+    _dirpart = os.path.dirname(_raw_name)
+    _outdir = output_base   # 확장자별 out_path 조립의 기준 — 아래에서 해소 결과로 덮인다
+
+    def _place(ext: str) -> str:
+        """base+ext 를 몸의 단일 규약으로 배치한 절대경로. 해소 실패는 예외로 올린다."""
+        _name = f"{base}{ext}"
+        if context is None or not hasattr(context, "resolve_output_path"):
+            # 구 호출자(context 없음) — 옛 동작 유지. 있는 척하지 않는다.
+            return os.path.join(output_base, _name)
+        _r = context.resolve_output_path(
+            os.path.join(_dirpart, _name) if _dirpart else _name)
+        if _r.get("error"):
+            raise _PlacementRefused(_r["error"])
+        return _r["path"]
 
     # markdown emitter — 문서 IR → md 텍스트(+.md 파일). NIP-23 발행 등 텍스트 파이프.
     if fmt == "markdown":
         md_text = _doc_blocks_to_markdown(blocks, title, meta)
-        out_path = os.path.join(output_base, f"{base}.md")
+        out_path = _place(".md")
         try:
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(md_text)
@@ -489,7 +529,7 @@ def render_document(tool_input, output_base="."):
     # typst emitter — 책 품질 조판 PDF(산문·보고서). HTML theme/cards 그리드는 무시(조판 모델 상이).
     if fmt == "typst":
         try:
-            out_path = os.path.join(output_base, f"{base}.pdf")
+            out_path = _place(".pdf")
             _doc_blocks_to_typst(blocks, title, meta, out_path)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
                                 "title": title, "format": "typst_pdf", "blocks": len(blocks),
@@ -502,7 +542,7 @@ def render_document(tool_input, output_base="."):
     # docx/pptx emitter — 같은 문서 IR을 사무 포맷으로. pptx는 문서 IR을 슬라이드로 *투영*(종류 경계 주의).
     if fmt in ("docx", "pptx"):
         try:
-            out_path = os.path.join(output_base, f"{base}.{fmt}")
+            out_path = _place(f".{fmt}")
             if fmt == "docx":
                 _doc_blocks_to_docx(blocks, title, out_path)
             else:
@@ -531,7 +571,7 @@ def render_document(tool_input, output_base="."):
     if fmt in ("pdf", "png"):
         try:
             from playwright.sync_api import sync_playwright
-            out_path = os.path.join(output_base, f"{base}.{fmt}")
+            out_path = _place(f".{fmt}")
             with sync_playwright() as pw:
                 br = pw.chromium.launch()
                 pg = br.new_page(viewport={"width": 900, "height": 1200})
@@ -551,7 +591,7 @@ def render_document(tool_input, output_base="."):
             # emitter 실패 시 HTML로 폴백(산출 보존)
             note = f" ({fmt} 렌더 실패 → HTML 폴백: {e})"
 
-    out_path = os.path.join(output_base, f"{base}.html")
+    out_path = _place(".html")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(doc)
     return _json.dumps({"success": True, "path": out_path, "file": out_path,

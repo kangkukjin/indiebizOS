@@ -784,8 +784,130 @@ def test_p24_output_sink_consumes_currency():
     print("P24 OK — output gui/clipboard 가 write 와 같은 싱크 계약(_prev_result 수용·빈손 정직 거절)")
 
 
+def test_p25_envelope_shape_uses_one_currency_judge():
+    """P25(27회차 B27-1): 봉투 요약의 shape 판정기가 파이프 이음매의 판정기와 달랐다.
+
+    D13(원형 유지)과 M1(요약 접기)이 각각 옳았는데, 접고 나서는 모델이 원형이 아니라
+    **판정**을 읽는다 — 그 판정이 이음매를 반박하면 통화가 살아 있는데 죽었다고 읽힌다.
+    """
+    from ibl_envelope import summarize_result
+    # ① 표 형(columns/rows)만 낸 변환자 — 이음매는 items 를 파생한다
+    tbl = json.dumps({"success": True, "total": 240, "truncated": True,
+                      "columns": ["파일", "영역"],
+                      "rows": [["a.py", "backend"], ["b.md", "docs"]]}, ensure_ascii=False)
+    s = summarize_result(tbl)
+    assert s["shape"] == "items", s          # 수리 전엔 "effect"
+    assert s["count"] == 2, s
+    assert s.get("items_derived") is True, s  # keys 에 items 가 없는 이유를 밝힌다
+    assert s["columns"] == ["영역", "파일"], s
+    # ② 진짜 효과 봉투는 여전히 effect — 오폭 금지
+    eff = json.dumps({"success": True, "path": "/tmp/x.md", "size": 12}, ensure_ascii=False)
+    assert summarize_result(eff)["shape"] == "effect", summarize_result(eff)
+    # ③ items 를 직접 낸 봉투는 파생기를 부르지 않는다(빠른 경로 무변경)
+    it = json.dumps({"success": True, "items": [{"a": 1}]}, ensure_ascii=False)
+    s3 = summarize_result(it)
+    assert s3["shape"] == "items" and "items_derived" not in s3, s3
+    # ④ 실패 봉투는 error 가 먼저(진단은 다이어트 밖)
+    er = json.dumps({"success": False, "error": "x", "columns": ["a"], "rows": [[1]]})
+    assert summarize_result(er)["shape"] == "error", summarize_result(er)
+    print("P25 OK — 봉투 shape 판정이 이음매(derive_items)와 같은 판정기 · 효과 오폭 없음")
+
+
+def test_p26_spill_resolved_at_injection_seam():
+    """P26(27회차 B27-2): 스필 해소기가 입구가 아니라 소비처마다 흩어져 구멍이 남았다.
+
+    교재의 약속은 "뒤 step 은 참조를 투명하게 해소해 원래 데이터를 그대로 본다" 인데,
+    `_op_groupby` 는 `_rows_for_field` 로 들어가고 해소기는 형제 입구 `_get_items` 에만 있었다.
+    """
+    import tempfile
+    from workflow_binding import _auto_inject_prev
+    body = json.dumps({"success": True,
+                       "items": [{"영역": "backend"}, {"영역": "docs"}, {"영역": "backend"}]},
+                      ensure_ascii=False)
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+        f.write(body)
+        spilled_path = f.name
+    ref_env = json.dumps({"success": True, "path": spilled_path, "items": [], "spilled": True,
+                          "ref": {"path": spilled_path, "kind": "items", "count": 3,
+                                  "bytes": len(body)}}, ensure_ascii=False)
+    # ① 이음매가 참조를 본문으로 되돌린다 — 모든 패키지가 계약을 상속한다
+    ti = _auto_inject_prev({"params": {}}, ref_env)
+    assert json.loads(ti["params"]["_prev_result"])["items"] == json.loads(body)["items"], ti
+    # ② 해소된 통화를 groupby 가 실제로 먹는가 (수리 전엔 "통화를 찾지 못했습니다")
+    g = _run("data_groupby", {"_prev_result": ti["params"]["_prev_result"], "by": "영역"})
+    # groupby 는 표 형(columns/rows)으로 방출한다 — 그 자체가 P25 가 다루는 자리다
+    assert g.get("success") and sorted(g.get("rows") or []) == [["backend", 2], ["docs", 1]], g
+    # ③ 스필이 아닌 평범한 통화는 손대지 않는다(빠른 경로)
+    plain = json.dumps({"items": [{"a": 1}]}, ensure_ascii=False)
+    assert _auto_inject_prev({"params": {}}, plain)["params"]["_prev_result"] == plain
+    # ④ 만료·부재는 삼키지 않고 참조를 그대로 흘려보낸다 — 새 침묵 경로 0
+    os.unlink(spilled_path)
+    gone = _auto_inject_prev({"params": {}}, ref_env)
+    assert gone["params"]["_prev_result"] == ref_env, gone
+    print("P26 OK — 스필 해소가 주입 이음매 하나에 · groupby 관통 · 평범 통화 무변경 · 만료 무침묵")
+
+
+def test_p27_each_substitution_respects_syntactic_slot():
+    """P27(27회차 B27-3): each 의 $it 치환이 자리의 문법을 안 보고 늘 맨몸 텍스트였다.
+
+    파라미터 자리는 저자가 따옴표를 쓰므로 우연히 맞았고, 조건 자리는 따옴표를 쓸 수 없어
+    깨졌다 — `each × [if:]` 라는 가장 자연스러운 교차가 통째로 말할 수 없는 문장이었다.
+    """
+    from ibl_exec_each import _each_substitute, _inside_string
+    row = {"영역": "backend/ibl", "파일": "a.py", "n": 3, "플래그": True, "빈것": None,
+           "제목": "그는 \"안녕\" 이라 했다"}
+    # ① 조건 자리(따옴표 밖) — 문자열은 따옴표를 얻는다
+    out, miss = _each_substitute("[if: $it.영역 matches 'backend']{[self:time]}", row, "it")
+    assert not miss and out.startswith('[if: "backend/ibl" matches'), out
+    # ② 숫자·불리언·null 은 맨몸 — 조건의 크기 비교가 문자열로 변질되지 않게
+    assert _each_substitute("[if: $it.n > 1]{x}", row, "it")[0] == "[if: 3 > 1]{x}"
+    assert _each_substitute("[if: $it.플래그]{x}", row, "it")[0] == "[if: true]{x}"
+    assert _each_substitute("[if: $it.빈것 == null]{x}", row, "it")[0] == "[if: null == null]{x}"
+    # ③ 파라미터 자리(따옴표 안)는 옛 규약 그대로 — 본문만, 따옴표 추가 없음(무회귀)
+    p, _ = _each_substitute("[self:notify_user]{message: '$it.파일'}", row, "it")
+    assert p == "[self:notify_user]{message: 'a.py'}", p
+    # ④ 따옴표 밖이라도 값 속 따옴표는 이스케이프되어 문장을 깨지 않는다
+    q, _ = _each_substitute("[if: $it.제목 matches 'x']{y}", row, "it")
+    assert q.count('[if: "') == 1 and q.endswith("matches 'x']{y}"), q
+    # ⑤ 자리 판정기 자체 — 이스케이프된 따옴표에 속지 않는다
+    assert _inside_string("{a: 'x', b: $it", 14) is False
+    assert _inside_string("{a: 'x$it", 6) is True
+    assert _inside_string("{a: 'it\\'s', b: $it", 18) is False
+    # ⑥ 없는 필드는 여전히 정직하게 missing (조용한 빈 값 금지 — F14-1 무회귀)
+    _, m2 = _each_substitute("[if: $it.없는것 > 1]{x}", row, "it")
+    assert m2 == ["없는것"], m2
+    print("P27 OK — each 치환이 자리의 문법을 따른다(조건=리터럴·파라미터=본문·수·불리언 맨몸)")
+
+
+def test_p28_repeat_carries_body_honesty():
+    """P28(27회차 B27-4): [repeat:] 경계가 몸통의 정직 신고(skipped_steps)를 삼켰다.
+
+    `[on_error: skip|null]` 의 계약은 "봉투 skipped_steps 로 신고되니 조용한 성공이 아니다".
+    그 신고가 몸통 봉투에 실리고 repeat 봉투는 iterations/items 만 조립해 경계에서 증발했다 —
+    24회차의 병렬 판정(부분 성공은 실패를 지우지 않는다)이 안 닿은 나머지 경계.
+    """
+    from ibl_control_blocks import _execute_repeat
+    from ibl_parser import parse
+    # 문장 모양은 파서가 정본 — 손으로 지은 step dict 는 실제와 어긋난다
+    # ① 몸통이 매 회차 step 을 건너뛰면 바깥도 그 사실을 말한다
+    out = _execute_repeat(parse('[repeat: 2, collect: true]{[on_error: null] '
+                                '[sense:crawl]{url: "https://invalid.invalid.invalid"} '
+                                '>> [table:take]{n: 1}}')[0], ".", None)
+    assert out.get("success") is True and out.get("count") == 0, out
+    sk = out.get("skipped_steps")
+    assert isinstance(sk, list) and len(sk) == 2, out          # 수리 전엔 키 자체가 없었다
+    assert {e["iteration"] for e in sk} == {1, 2}, sk          # 어느 회차였는지가 진단의 절반
+    assert "회차에서 step 을 건너뛰었습니다" in (out.get("note") or ""), out.get("note")
+    # ② 아무 일 없으면 조용하다 — 없는 것을 지어내지 않는다
+    # (몸통은 도구를 안 부르는 식 할당 — 이 하네스엔 활성 프로젝트가 없다)
+    clean = _execute_repeat(parse('[repeat: 2, collect: true]{$x = 1}')[0], ".", None)
+    assert clean.get("success") is True and "skipped_steps" not in clean, clean
+    assert "건너뛰" not in (clean.get("note") or ""), clean.get("note")
+    print("P28 OK — repeat 이 몸통의 skipped_steps 를 회차와 함께 승계 · 무사고 회차는 조용함")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P24) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P28) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -810,4 +932,8 @@ if __name__ == "__main__":
     test_p22_copy_empty_hands_vs_no_currency()
     test_p23_unary_transformers_restate_scope()
     test_p24_output_sink_consumes_currency()
+    test_p25_envelope_shape_uses_one_currency_judge()
+    test_p26_spill_resolved_at_injection_seam()
+    test_p27_each_substitution_respects_syntactic_slot()
+    test_p28_repeat_carries_body_honesty()
     print("\n=== 전부 통과 ===")

@@ -43,6 +43,53 @@ def _each_escape(value: Any) -> str:
     return s.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
 
 
+def _inside_string(text: str, pos: int) -> bool:
+    """text[pos] 자리가 IBL 문자열 리터럴 **안**인가 (따옴표·백슬래시 이스케이프 인식)."""
+    q = None
+    i = 0
+    while i < pos:
+        c = text[i]
+        if q:
+            if c == "\\":
+                i += 2
+                continue
+            if c == q:
+                q = None
+        elif c in "\"'":
+            q = c
+        i += 1
+    return q is not None
+
+
+def _each_literal(value: Any) -> str:
+    """따옴표 **밖** 자리에 놓일 값의 IBL 리터럴 표기 (B27-3, 27회차).
+
+    `$it` 치환은 문장을 파싱하기 **전에** 텍스트로 이뤄진다. 그래서 치환된 값은 자기가 놓인
+    자리의 문법을 만족해야 하는데, 지금까지는 어느 자리든 **맨몸 텍스트**를 넣었다.
+    파라미터 자리에서는 저자가 따옴표를 직접 쓰므로(`{message: '$it.title'}`) 우연히 맞았고,
+    조건 자리에서는 저자가 따옴표를 쓸 수 없으므로(`$변수` 는 원래 맨몸으로 쓰는 문법) 깨졌다.
+    실측(2026-08-23):
+        [self:body]{days: 2, limit: 3} >> [table:each]{do: "[if: $it.영역 matches 'backend']{…} [else]{…}"}
+        → condition: "backend/ibl matches 'backend'"
+          "'backend/ibl' 은(는) 소스 참조·$변수·리터럴·술어 함수 어느 것도 아닙니다"
+    값은 옳게 뽑혔는데 **따옴표가 없어서** 판정 불능이 됐고, 판정 불능이라 else 도 보류되어
+    each 의 전 행이 실패했다. 즉 `each × [if:]` — 목록의 각 행을 조건으로 가르는, 가장 자연스러운
+    교차 — 가 통째로 말할 수 없는 문장이었다(전 코퍼스 3,582문장에 이 교차 0건).
+
+    ★근본 자리: 값을 만드는 곳이 아니라 **자리를 아는 곳**이 표기를 정해야 한다.
+    숫자·불리언·null 은 맨몸이 곧 리터럴이므로 그대로 두고(조건의 크기 비교가 문자열로
+    변질되지 않게), 그 밖은 따옴표를 씌운다. 실측으로 확인한 조건 문법의 수용 형태:
+        [if: 'backend/ibl' matches 'backend'] ✓   [if: 3 > 1] ✓   [if: true] ✓
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return json.dumps(value)
+    return '"' + _each_escape(value) + '"'
+
+
 def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
     """문장 안의 `$it.필드` / `$it` 를 행 값으로 치환. 반환: (치환된 문장, 없는 필드 목록).
 
@@ -54,20 +101,24 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
     """
     missing: list = []
 
+    def _render(value: Any, at: int) -> str:
+        """자리를 보고 표기를 고른다 (B27-3) — 따옴표 안이면 본문만, 밖이면 리터럴로."""
+        return _each_escape(value) if _inside_string(sentence, at) else _each_literal(value)
+
     def _sub(m):
         # group(1)=괄호형 경로(`${it.title}`), group(2)=맨몸 경로(`$it.title`)
         field = ((m.group(1) if m.group(1) is not None else m.group(2)) or "").lstrip(".")
         if not field:
-            return _each_escape(row)
+            return _render(row, m.start())
         if isinstance(row, dict):
             if field not in row:
                 missing.append(field)
                 return m.group(0)
-            return _each_escape(row.get(field))
+            return _render(row.get(field), m.start())
         # 스칼라 행: 호출자가 출력에서 {_EACH_SCALAR_FIELD: row} 로 감싸므로
         # `$it.value` 도 그 값 자체로 푼다(`$it` 와 같은 뜻). 그 밖의 필드는 정직하게 없음.
         if field == _EACH_SCALAR_FIELD:
-            return _each_escape(row)
+            return _render(row, m.start())
         missing.append(field)
         return m.group(0)
 

@@ -69,11 +69,40 @@ def _parse_final(v: Any) -> Any:
     return v
 
 
+def _collect_honesty(env: Any, into: Optional[dict]) -> None:
+    """몸통 봉투의 **정직 신고**를 호출자에게 건넨다 (B27-4, 27회차).
+
+    `_run_body` 는 몸통 봉투에서 `final_result`(통화)만 꺼내 돌려준다 — 통화가 바로 흐르게
+    하려는 옳은 선택이지만, 그 바람에 봉투가 나른 *신고*(무엇이 죽었는데 봐줬나)가 블록
+    경계에서 통째로 사라진다. 그래서 `[on_error:]` 의 계약("skipped_steps 로 신고되니 조용한
+    성공이 아니다")이 블록 **안에서만** 무효가 됐다. 실측(2026-08-23):
+        [on_error: null] [sense:crawl]{url: "…invalid…"} >> [table:take]{n: 1}
+          → {success: true, skipped_steps: [1]}                     ← 정직
+        [repeat: 2, collect: true]{같은 문장}
+          → {success: true, items: [], count: 0, iterations: 2}     ← 침묵
+    한 곳(repeat)만 고치면 if·case·try 가 같은 침묵을 그대로 물려받으므로, 봉투를 손에
+    쥐고 있는 **유일한 자리**인 여기서 건넨다 — 블록 종류가 늘어도 계약이 따라온다.
+    통화 흐름·반환 튜플 arity 는 불변(신고를 원하는 호출자만 out-param 을 준다).
+    """
+    if into is None or not isinstance(env, dict):
+        return
+    for k in ("skipped_steps", "condition_errors", "_caught"):
+        v = env.get(k)
+        if isinstance(v, list) and v:
+            into.setdefault(k, []).extend(v)
+        elif isinstance(v, dict) and v:
+            into.setdefault(k, []).append(v)
+    if env.get("truncated") is True:
+        into["truncated"] = True
+
+
 def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
-              context: Optional[dict] = None) -> Tuple[Any, bool, Dict[str, Any], Dict[int, str]]:
+              context: Optional[dict] = None,
+              honesty: Optional[dict] = None) -> Tuple[Any, bool, Dict[str, Any], Dict[int, str]]:
     """블록 몸 실행 — (결과, 실패 여부, 오류 정보, step 인덱스→결과 문자열).
 
     list(파이프)면 execute_pipeline 봉투의 final_result 를 결과로(통화가 바로 흐르게), dict 면 execute_ibl.
+    honesty(선택): 몸통 봉투의 정직 신고를 담아 갈 dict — 주면 `_collect_honesty` 가 채운다(B27-4).
     """
     from workflow_engine import execute_pipeline, _is_error_result, _auto_inject_prev
     prev = _prev_of(tool_input)
@@ -90,6 +119,7 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
             env = execute_pipeline(steps, project_path, context=context, agent_id=agent_id)
         except Exception as e:
             return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200]}, {}
+        _collect_honesty(env, honesty)     # 봉투를 버리기 전에 신고만 건져낸다 (B27-4)
         by_idx: Dict[int, str] = {}
         for r in (env.get("results") or []) if isinstance(env, dict) else []:
             if isinstance(r, dict) and isinstance(r.get("step"), int) and "result" in r:
@@ -194,6 +224,47 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     collected: List[Any] = []
     err_info: Dict[str, Any] = {}
     substeps = 0
+    carried: Dict[str, Any] = {}
+    skipped_rounds = 0
+
+    def _absorb_honesty(rep: Dict[str, Any], round_no: int) -> None:
+        """반복 몸통이 낸 **정직 신고**를 바깥 봉투로 올린다 (B27-4, 27회차).
+
+        `[on_error: skip|null]` 은 "봉투 skipped_steps 로 신고되니 조용한 성공이 아니다"가
+        계약이다. 그런데 그 신고는 몸통 봉투에 실리고 repeat 봉투는 iterations/items 만 조립해
+        경계에서 증발했다. 실측(2026-08-23):
+            [on_error: null] [sense:crawl]{url: "…invalid…"} >> [table:take]{n: 1}
+              → {success: true, skipped_steps: [1]}                      ← 정직
+            [repeat: 2, collect: true]{같은 문장}
+              → {success: true, items: [], count: 0, iterations: 2}      ← 침묵
+        두 회차 모두 step 이 죽고 빈손으로 대체됐는데 바깥은 "성공·0행"만 말한다. 읽는 쪽은
+        "할 일이 없었다"와 "전부 실패했지만 봐줬다"를 구별할 수 없다.
+
+        24회차가 병렬 경계에 내린 판정(**부분 성공은 실패를 지우지 않는다**)과 ⑭가 이항
+        변환자에 단 `_carry_flags` 가 같은 모양이다 — 경계는 신고를 삼키지 않는다.
+        규칙도 그 선례에서 그대로 가져온다:
+          · `truncated` 는 OR(단조) — 한 회차라도 잘렸으면 모은 통화는 부분집합이다.
+          · 목록형 신고(skipped_steps·condition_errors·_caught)는 회차 표시를 붙여 이어붙인다
+            — 어느 회차였는지가 진단의 절반이다.
+          · 없는 것을 지어내지 않는다 — 몸통이 신고를 안 했으면 바깥도 조용하다.
+        """
+        nonlocal skipped_rounds
+        if not rep:
+            return
+        if rep.get("truncated") is True:
+            carried["truncated"] = True
+        sk = rep.get("skipped_steps")
+        if isinstance(sk, list) and sk:
+            skipped_rounds += 1
+            carried.setdefault("skipped_steps", []).extend(
+                [{"iteration": round_no, "step": s} for s in sk])
+        for key in ("condition_errors", "_caught"):
+            v = rep.get(key)
+            if isinstance(v, list) and v:
+                carried.setdefault(key, []).extend(
+                    [{**e, "iteration": round_no} if isinstance(e, dict) else {"iteration": round_no, "detail": e}
+                     for e in v])
+
     cur_vars = dict(outer_vars)
     body_len = len(body) if isinstance(body, list) else 1
     for i in range(max_n):
@@ -218,8 +289,11 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         # 텍스트 자리($x·$x.path)는 v4/경로 추출로, 안쪽 블록·식 할당은 _var_values 스탬프로.
         it_body = _subst_tokens(_copy.deepcopy(body), {var: i})
         it_input = {**tool_input, "_var_values": cur_vars}     # 몸 치환·스탬프는 _run_body 가 현재 값으로
-        result, failed, err, by_idx = _run_body(it_body, it_input, project_path, agent_id)
+        _round_honesty: Dict[str, Any] = {}
+        result, failed, err, by_idx = _run_body(it_body, it_input, project_path, agent_id,
+                                                honesty=_round_honesty)
         iterations += 1
+        _absorb_honesty(_round_honesty, iterations)   # 경계는 신고를 삼키지 않는다 (B27-4)
         if failed:
             halted, err_info, last = "error", {**err, "iteration": i + 1}, result
             break
@@ -281,6 +355,12 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     _upd = {n: cur_vars[n] for n in body_vars if n in (tool_input.get("_var_values") or {}) and n in cur_vars}
     if _upd:
         out["_var_updates"] = _upd
+    for _k, _v in carried.items():                # 몸통의 정직 신고를 바깥으로 (B27-4)
+        if _k not in out:
+            out[_k] = _v
+    if skipped_rounds:
+        notes.append(f"{skipped_rounds}/{iterations} 회차에서 step 을 건너뛰었습니다"
+                     " — 모은 통화는 그만큼 비어 있습니다(on_error)")
     if notes:
         out["note"] = " / ".join(notes)
     return out

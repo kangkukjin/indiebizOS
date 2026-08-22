@@ -48,6 +48,36 @@ def _compact(obj: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap] + f"…(+{len(s) - cap}자)"
 
 
+def _derived_items(obj: Dict[str, Any]):
+    """이 봉투가 통화를 나르는가 — **파이프 이음매와 같은 판정기**에게 묻는다 (B27-1, 27회차).
+
+    두 결정이 각각 옳았는데 교차에서 거짓이 났다:
+      · 2026-08-05 D13 — `results[]` 는 **원형** 유지(토큰 중복 0), 통화 파생은 파이프
+        이음매(`_to_prev_currency` → `derive_items`)에서만. 그때는 모델이 원형 JSON 을
+        직접 봤으므로 `columns/rows` 를 보고 표인 줄 알았다.
+      · 2026-08-22 M1 — 이 파일이 `results[]` 를 shape/keys 한 단어 *판정*으로 접었다.
+    접고 나서는 모델이 원형 대신 **판정**을 읽는데, 그 판정을 내리는 자(`obj.get("items")`)가
+    이음매의 판정기와 달랐다. 실측(2026-08-23, 27회차 실측 119 step 중 11):
+        [self:body]{…} >> [table:select]{columns: ["파일","영역"]}
+        step2 → shape: "effect" · keys 에 items 없음   ← 같은 step 의 final_result 엔 items 2행
+    `groupby`·`select`·`union`(= table 형으로 방출하는 변환자 전부)이 매번 이 거짓을 맞는다.
+    비용은 틀린 데이터가 아니라 **틀린 진단**이다 — "effect"(통화 종착)를 읽은 모델은 그 자리에서
+    통화가 죽은 줄 알고 `>> [table:*]` 를 잇지 않는다. 이 저장소가 반복해 봉해 온 부류다.
+
+    ★파생본은 **판정에만** 쓰고 봉투에 싣지 않는다 — shape/count/columns 만 갱신한다.
+    derive_items 를 `_route_handler` 에 두지 않은 이유(파생본이 모델 결과에 실려 토큰 중복)는
+    그대로 지켜진다. 요약은 요약 크기 그대로다.
+    반환: items 리스트 또는 None(통화 아님 — 효과·스칼라는 그대로 effect/dict).
+    """
+    try:
+        from common.currency import derive_items
+        d = derive_items(dict(obj))
+    except Exception:
+        return None                      # 판정기가 없으면 옛 판정 유지(새 실패 경로 0)
+    it = d.get("items") if isinstance(d, dict) else None
+    return it if isinstance(it, list) else None
+
+
 def summarize_result(raw: Any) -> Dict[str, Any]:
     """step 결과 하나(대개 JSON 문자열)의 요약 — shape/count/bytes/preview/keys."""
     s = raw if isinstance(raw, str) else _compact(raw, 10 ** 9)
@@ -68,9 +98,18 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
             out["error"] = obj.get("error") or obj.get("message")   # 원형 — 진단은 다이어트 밖
             return out
         items = obj.get("items")
+        _derived = False
+        if not isinstance(items, list):
+            # 통화 판정기는 하나여야 한다 (B27-1) — 이음매가 items 를 파생해 줄 봉투를
+            # 요약이 "effect" 라 부르면, 요약이 이음매를 반박하는 셈이 된다.
+            items = _derived_items(obj)
+            _derived = items is not None
         if isinstance(items, list):
             out["shape"] = "items"
             out["count"] = len(items)
+            if _derived:
+                # keys 엔 items 가 없는데 shape 은 items — 왜인지 밝힌다(표 형 방출).
+                out["items_derived"] = True
             if items:
                 first = items[0]
                 if isinstance(first, dict):

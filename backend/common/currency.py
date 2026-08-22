@@ -119,6 +119,9 @@ def derive_items(result: Any) -> Any:
       2) body_ask — 몸 간 부탁 통화
       3) workflow_engine._to_prev_currency — **파이프 이음매**(prev_result 로 다음 step 에
          물릴 때만). table/blocks 생산자가 `>> [table:*]` 소비자에 바로 물리게 한다.
+      4) ibl_envelope._derived_items — 봉투 요약의 **shape 판정에만**(2026-08-23 B27-1).
+         파생본은 봉투에 싣지 않으므로 위 토큰 중복 회피와 충돌하지 않는다: 3)이 items 를
+         파생해 줄 봉투를 요약이 "effect" 라 부르던 자기모순을 없앤다.
     _route_handler(에이전트 최종 tool-result 포함 전체)에 두지 않는 이유: 파생본이 모델에게
     가는 결과에도 실려 토큰이 중복된다 — 에이전트 경로의 의도된 회피(api_ibl 주석 참조).
 

@@ -215,6 +215,53 @@ def _has_prev_ref(tool_input: dict) -> bool:
     return False
 
 
+def _resolve_spill_for_injection(prev: Any) -> Any:
+    """스필 참조를 **주입 이음매 하나에서** 본문으로 되돌린다 (B27-2, 27회차).
+
+    교재가 스필을 이렇게 약속한다 — *"step 봉투엔 참조만 실리지만 **뒤 step 은 그 참조를
+    투명하게 해소해 원래 데이터를 그대로 본다**(파이프 흐름 불변 · 가벼워지는 건 results[]·
+    모델 컨텍스트뿐)"*. 그런데 해소기가 **입구가 아니라 소비처마다** 흩어져 있었다:
+      · workflow_binding `$items` 바인딩 · ibl_exec_each · ibl_exec_output `_sink_content`
+      · data-ops `_get_items`
+    네 곳을 두고도 구멍이 남는다. 실측(2026-08-23):
+        [self:body]{days: 2, limit: 20} >> [self:write]{path: …, spill: true} >> [table:groupby]{by: "영역"}
+        → "groupby: 입력에서 items 통화를 찾지 못했습니다"
+    `_op_groupby` 는 `_rows_for_field` 로 들어가는데 해소기는 형제 입구인 `_get_items` 에만
+    있었다 — **한 파일 안에서도 입구가 둘**이었다. 게다가 `_prev_result` 를 읽는 7개 패키지 중
+    해소기를 가진 것은 둘뿐이라(ai-ops·visualization·media_producer·blog·android 는 없음),
+    자동 스필(`_spill_if_large`)이 큰 결과를 참조로 바꾸는 순간 — 즉 **데이터가 클수록** —
+    그 다섯은 0행을 보게 된다.
+
+    25회차가 같은 모양의 결함에 내린 판정을 그대로 적용한다: **해소기는 하나여야 한다.**
+    `_prev_result` 가 핸들러에 닿는 자리는 `_auto_inject_prev` 하나뿐이므로 여기서 푼다 —
+    그러면 7개 패키지 전부와 앞으로 생길 패키지가 계약을 공짜로 상속한다.
+    소비처의 기존 해소기는 지우지 않는다: 파이프가 아닌 입구(리터럴 씨앗·params 직접 통화)는
+    이 이음매를 지나지 않으므로 중복이 아니라 **다른 입구의 담당**이다(resolve_ref 는 멱등).
+
+    ★만료·부재는 여기서 삼키지 않고 참조를 **그대로 흘려보낸다** — 소비처의 기존 정직 오류가
+    그대로 신고한다(이 수리가 새로 만드는 침묵 경로 0).
+    """
+    if not isinstance(prev, str):
+        return prev
+    s = prev.strip()
+    if not (s.startswith("{") and '"ref"' in s):
+        return prev                      # 빠른 경로 — 스필 봉투가 아닌 절대다수는 무비용
+    try:
+        obj = json.loads(s)
+    except Exception:
+        return prev
+    try:
+        from common.spill import is_ref, resolve_ref
+        if not is_ref(obj):
+            return prev
+        resolved, err = resolve_ref(obj)
+    except Exception:
+        return prev
+    if err or resolved is obj:
+        return prev
+    return _to_string(resolved)
+
+
 def _auto_inject_prev(tool_input: dict, prev_result: str) -> dict:
     """
     파이프라인 자동 데이터 전달.
@@ -227,6 +274,8 @@ def _auto_inject_prev(tool_input: dict, prev_result: str) -> dict:
     """
     if not prev_result:
         return tool_input
+
+    prev_result = _resolve_spill_for_injection(prev_result)   # 스필 해소는 입구 하나에서 (B27-2)
 
     # 이미 {{_prev_result}} 템플릿 치환이 끝난 후이므로,
     # 원본에 참조가 있었다면 이미 치환됨 → 자동 주입 불필요

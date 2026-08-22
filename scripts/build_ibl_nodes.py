@@ -54,6 +54,7 @@ if _SCRIPTS_DIR not in sys.path:
 
 from iblbuild_common import (  # noqa: E402,F401
     _BACKEND_DIR,
+    atomic_write_text,
     UNIVERSAL_PARAM_KEYS,
     RUNTIME_META_KEYS,
     CORPUS_PARAM_ALLOW,
@@ -777,22 +778,23 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         )
         return 1
 
-    target.write_text(output, encoding="utf-8")
+    # 라이브 백엔드가 부분 파일을 읽지 않도록 tmp+rename (2026-08-22)
+    atomic_write_text(target, output)
     print(f"[build_ibl_nodes] 작성: {target}")
     if manifest_text is not None:
-        manifest_path.write_text(manifest_text, encoding="utf-8")
+        atomic_write_text(manifest_path, manifest_text)
         print(f"[build_ibl_nodes] 작성: {manifest_path} "
               f"(폰 패키지 {len(PHONE_VERIFIED_PACKAGES)}, runnable {manifest_text.count(':')})")
-    pkg_meta_path.write_text(pkg_meta_text, encoding="utf-8")
+    atomic_write_text(pkg_meta_path, pkg_meta_text)
     print(f"[build_ibl_nodes] 작성: {pkg_meta_path}")
     if fixtures_text is not None:
-        fixtures_path.write_text(fixtures_text, encoding="utf-8")
+        atomic_write_text(fixtures_path, fixtures_text)
         print(f"[build_ibl_nodes] 작성: {fixtures_path}")
     tj_written = 0
     for tj_path, tj_text in sorted(tool_json_docs.items()):
         current = tj_path.read_text(encoding="utf-8") if tj_path.is_file() else None
         if current != tj_text:
-            tj_path.write_text(tj_text, encoding="utf-8")
+            atomic_write_text(tj_path, tj_text)
             tj_written += 1
     if tool_json_docs:
         print(
@@ -802,7 +804,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     # 표준 코어 매니페스트 재생성 (git 추적 패키지/앱/어휘 집합 파생 — 코어/사용자 경계)
     try:
         import build_core_manifest as _bcm
-        _bcm.MANIFEST_PATH.write_text(_bcm._serialize(_bcm.build_manifest()), encoding="utf-8")
+        atomic_write_text(_bcm.MANIFEST_PATH, _bcm._serialize(_bcm.build_manifest()))
         print(f"[build_ibl_nodes] 작성: {_bcm.MANIFEST_PATH} (표준 코어 매니페스트)")
     except Exception as _e:
         print(f"[build_ibl_nodes] core_manifest 재생성 건너뜀 ({_e})")

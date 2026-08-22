@@ -27,6 +27,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
+from iblbuild_common import atomic_write_text
 
 IBL_STATS_START = "<!-- IBL_STATS:START -->"
 IBL_STATS_END = "<!-- IBL_STATS:END -->"
@@ -416,7 +417,7 @@ def apply_docs(root: Path, data: dict | None) -> tuple[list[str], list[str]]:
             continue
         fp = root / rel
         if fp.read_text(encoding="utf-8") != new_text:
-            fp.write_text(new_text, encoding="utf-8")
+            atomic_write_text(fp, new_text)
             written.append(rel)
     return written, issues
 

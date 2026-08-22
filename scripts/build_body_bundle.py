@@ -25,6 +25,7 @@ import json
 import sys
 import fnmatch
 from pathlib import Path
+from iblbuild_common import atomic_write_text
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKEND = ROOT / "backend"
@@ -157,8 +158,7 @@ def derive_nodes_registry(body):
                             "이 몸의 어휘만 추출. 직접 편집 금지(사전집·매니페스트를 고치고 재생성)."},
            "nodes": nodes}
     path = BODIES / f"{body}.nodes.yaml"
-    path.write_text(yaml.safe_dump(out, allow_unicode=True, sort_keys=False),
-                    encoding="utf-8")
+    atomic_write_text(path, yaml.safe_dump(out, allow_unicode=True, sort_keys=False))
     return kept, path
 
 
@@ -186,7 +186,7 @@ def main():
         print(f"✓ {body} 엔진 번들 일치 ({derived['counts']})")
         return 0
 
-    out_path.write_text(json.dumps(derived, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(out_path, json.dumps(derived, ensure_ascii=False, indent=2))
     kept, npath = derive_nodes_registry(body)
     print(f"✓ {npath.relative_to(ROOT)} 파생: 몸-사전 {kept}개 어휘 (남의 어휘 미탑재)")
     c = derived["counts"]

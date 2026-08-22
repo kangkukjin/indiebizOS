@@ -25,6 +25,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from iblbuild_common import atomic_write_text
 
 # ★Windows CI 등 비-UTF-8 로케일(cp1252/cp949)에서 ✓·한글 출력이 UnicodeEncodeError 로
 # 죽지 않도록 stdout/stderr 를 UTF-8 로 고정한다(audit_bundle_secrets.py 와 같은 처방 —
@@ -177,7 +178,7 @@ def main() -> int:
         return 0
 
     MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MANIFEST_PATH.write_text(serialized, encoding="utf-8")
+    atomic_write_text(MANIFEST_PATH, serialized)
     core = manifest["core"]
     print(
         f"[core-manifest] ✓ 생성: tools {len(core['packages']['tools'])} · "

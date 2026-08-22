@@ -329,26 +329,72 @@ def _cap_self_check_results(params: dict) -> Any:
 
     원장은 자기 list 를 가진다: run(실행)만 있고 결과는 REST 전용이라 "실패 항목만 알림"이
     IBL 로 표현 불가하던 갭의 해소. 행 = title(node:action)·success·response_ms·error·
-    quality·checked_at — [table:filter]{where: "success == false"} 로 실패만."""
-    from world_pulse_health import get_recent_self_checks
+    quality·checked_at·source — [table:filter]{where: "success == false"} 로 실패만.
+
+    ★source (V18-2, 2026-08-22 18회차): 건강 원장은 **둘**이다 — 자가점검(self_checks)과
+    실사용(action_health). 만성 실패 경보는 후자의 source='usage' 만 세는데 이 어휘는
+    전자만 투영해서, 경보를 받은 쪽이 근거로 되짚어 오면 0건을 만났다. self_check(기본)|
+    usage|all 로 열되, 기본 조회가 0건이어도 실사용 실패가 있으면 message 가 가리킨다."""
+    from world_pulse_health import get_recent_self_checks, get_recent_action_health
     SELF_CHECK_RESULTS_MAX = 500
     try:
         requested = int(params.get("limit") or 50)
     except (TypeError, ValueError):
         requested = 50
     limit = max(1, min(SELF_CHECK_RESULTS_MAX, requested))
-    rows = get_recent_self_checks(limit)
-    items = [{
-        "title": f"{r.get('node')}:{r.get('action')}",
-        "node": r.get("node"), "action": r.get("action"),
-        "success": bool(r.get("success")),
-        "response_ms": r.get("response_ms"),
-        "error": r.get("error_message"),
-        "quality": r.get("data_quality"),
-        "checked_at": r.get("timestamp"),
-    } for r in rows]
-    out = {"success": True, "items": items, "count": len(items),
-           "message": f"최근 자가점검 {len(items)}건 (실패 {sum(1 for i in items if not i['success'])}건)"}
+
+    source = str(params.get("source") or "self_check").strip().lower()
+    if source not in ("self_check", "usage", "all"):
+        return {"success": False,
+                "error": f"source 는 self_check|usage|all 중 하나입니다 (받은 값: '{source}'). "
+                         "self_check=자가점검 원장 · usage=실사용 원장(만성 실패 경보의 근거) · all=둘 다."}
+
+    def _rows_self_check():
+        return [{
+            "title": f"{r.get('node')}:{r.get('action')}",
+            "node": r.get("node"), "action": r.get("action"),
+            "success": bool(r.get("success")),
+            "response_ms": r.get("response_ms"),
+            "error": r.get("error_message"),
+            "quality": r.get("data_quality"),
+            "checked_at": r.get("timestamp"),
+            "source": "self_check",
+        } for r in get_recent_self_checks(limit)]
+
+    def _rows_usage(scope):
+        return [{
+            "title": f"{r.get('node')}:{r.get('action')}",
+            "node": r.get("node"), "action": r.get("action"),
+            "success": bool(r.get("success")),
+            "response_ms": r.get("response_ms"),
+            "error": r.get("error"),
+            "quality": None,
+            "checked_at": r.get("timestamp"),
+            "source": r.get("source") or "usage",
+        } for r in get_recent_action_health(limit, scope)]
+
+    if source == "self_check":
+        items = _rows_self_check()
+    elif source == "usage":
+        items = _rows_usage("usage")
+    else:
+        items = sorted(_rows_self_check() + _rows_usage("all"),
+                       key=lambda i: i.get("checked_at") or "", reverse=True)[:limit]
+
+    fails = sum(1 for i in items if not i["success"])
+    label = {"self_check": "자가점검", "usage": "실사용", "all": "자가점검+실사용"}[source]
+    out = {"success": True, "items": items, "count": len(items), "source": source,
+           "message": f"최근 {label} 기록 {len(items)}건 (실패 {fails}건)"}
+
+    # 여기 없으면 어디 있는지 말한다 (V18-2): 만성 실패 경보는 실사용 원장만 세므로,
+    # 기본 조회가 조용히 0건이면 경보를 받은 쪽은 근거가 없다고 오판한다.
+    if source == "self_check":
+        usage_fails = sum(1 for r in get_recent_action_health(limit, "usage")
+                          if not r.get("success"))
+        if usage_fails:
+            out["usage_failures"] = usage_fails
+            out["message"] += (f" · 실사용 원장에 최근 실패 {usage_fails}건 "
+                               "— 만성 실패 경보의 근거는 이쪽이다: source: \"usage\"")
     if requested != limit:
         out["clamped"] = True
         out["requested"] = requested

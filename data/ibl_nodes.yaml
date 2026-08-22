@@ -56,7 +56,7 @@ nodes:
       self_check:
         returns: effect
         description: 전수 자가점검 (op 분기). run=부작용 없는 전 IBL 액션 실행 점검 / results=최근 점검 결과 조회(items — 실패만 골라 알림 등 파이프 접속).
-        target_description: "op로 분기 (기본 run).\n- run: 전수 자가점검 실행 (파라미터 없음, 수 분 소요). 결과는 world_pulse.db에 기록.\n- results: 최근 자가점검 결과 조회. limit 옵션(기본 50). items 행 = title(node:action)·\n  success(true/false)·response_ms·error·quality·checked_at — [table:filter]{where: \"success == false\"} 로 실패만.\n"
+        target_description: "op로 분기 (기본 run).\n- run: 전수 자가점검 실행 (파라미터 없음, 수 분 소요). 결과는 world_pulse.db에 기록.\n- results: 최근 점검 결과 조회. limit 옵션(기본 50). items 행 = title(node:action)·\n  success(true/false)·response_ms·error·quality·checked_at·source — [table:filter]{where: \"success == false\"} 로 실패만.\n  source 옵션 — 건강 원장은 둘이다: self_check(기본, 자가점검 원장) / usage(실사용 원장 —\n  \"만성 실패\" 경보가 세는 곳) / all(둘 다). 기본 조회가 0건이어도 실사용 실패가 있으면 message 가 가리킨다.\n"
         group: world
         target_key: op
         router: system
@@ -71,8 +71,8 @@ nodes:
             results: '[sense:self_check]{op: "results"}'
           values:
             run: 전수 자가점검 실행 (부작용 없는 전 액션, 수 분 소요 — 결과는 world_pulse.db)
-            results: 최근 자가점검 결과 조회 (limit 옵션, 기본 50 — 실패 필터·알림 파이프용)
-        implementation: _route_system이 op로 분기 — run=world_pulse_health.run_daily_health_check / results=get_recent_self_checks items 투영 (2026-08-20 상상훈련 V17-1 판정).
+            results: 최근 점검 결과 조회 (limit·source=self_check|usage|all — 실패 필터·알림 파이프용)
+        implementation: _route_system이 op로 분기 — run=world_pulse_health.run_daily_health_check / results=get_recent_self_checks(자가점검)+get_recent_action_health(실사용) source 분기 투영 (2026-08-20 V17-1 신설, 2026-08-22 V18-2 로 원장 이원화 해소).
         keywords:
         - 자가점검
         - 전수점검

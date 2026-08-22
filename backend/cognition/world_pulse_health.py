@@ -927,6 +927,36 @@ def get_recent_self_checks(limit: int = 20) -> List[Dict]:
         return []
 
 
+def get_recent_action_health(limit: int = 50, source: str = "usage") -> List[Dict]:
+    """실사용 원장(action_health) 최근 행 — 자가점검 원장(self_checks)의 짝.
+
+    왜 둘을 다 열어야 하나: 만성 실패 경보는 `action_health` 의 `source='usage'` 만
+    세는데(analyze_failure_patterns), 어휘 `[sense:self_check]{op:"results"}` 는
+    `self_checks` 만 투영했다 — **경보를 받고도 그 근거에 어휘로 갈 수 없었다**
+    (V18-2 실측 2026-08-22: 알림은 "만성 실패: self:workflow" 인데 results 500건에 0행,
+    훈련자가 결국 DB 직독으로만 근거에 닿았다). 같은 칸 모양으로 내어 한 파이프에서
+    대조할 수 있게 한다. source="all" 이면 시험 격리분(source='test')까지 포함.
+    """
+    from pulse_db import _get_pulse_db
+
+    try:
+        conn = _get_pulse_db()
+        if source and source != "all":
+            rows = conn.execute(
+                "SELECT * FROM action_health WHERE source = ? ORDER BY id DESC LIMIT ?",
+                (source, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM action_health ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        logger.warning(f"[ActionHealth] 행 조회 실패: {e}")
+        return []
+
+
 def get_system_health() -> Dict:
     """시스템 전체 건강 요약 — API용"""
     from world_pulse import _collect_self_state, get_recent_pulses

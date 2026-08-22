@@ -575,11 +575,14 @@ _REASON_HINTS = {
         "로그인해 두면 세션이 자동 저장되어(data/browser_cookies/_auto_state.json) 이후 크롤이 "
         "접근할 수 있습니다. 사용자에게 로그인을 요청하거나 로그인 불필요한 다른 소스를 시도하세요."
     ),
+    # ★"모두 시도" 같은 말을 고정 문구에 박지 않는다 — 실제로 무엇이 돌았는지는
+    # 호출마다 다르고, 하지 않은 일을 했다고 말하면 읽는 쪽이 다음 수를 잃는다.
+    # 실제 단계 내역은 결과의 stages 가 나른다 (2026-08-22).
     "bot_blocked": (
-        "봇 차단으로 본문을 가져오지 못했습니다 (TLS 크롬 위장·실브라우저 렌더링 모두 시도). "
+        "봇 차단으로 본문을 가져오지 못했습니다. "
         "같은 정보를 다루는 다른 소스를 시도하세요."
     ),
-    "insufficient_content": "본문을 충분히 추출하지 못했습니다 (정적·브라우저 렌더링 모두 시도).",
+    "insufficient_content": "본문을 충분히 추출하지 못했습니다.",
 }
 
 
@@ -604,32 +607,54 @@ def crawl_website(url: str, max_length: int = 10000) -> dict:
         return result
 
     attempts = []
+    # 단계 내역 — 무엇이 돌았고 무엇이 왜 안 돌았는지. 실패 신고가 이걸 나른다.
+    # (2026-08-22: 옛 신고는 "정적·브라우저 렌더링 모두 시도"를 고정 문구로 말했는데,
+    #  브라우저 단계가 아예 안 돈 호출에서도 같은 말이 나가 읽는 쪽이 "이 페이지는
+    #  못 읽는다"로 잘못 닫았다. 실제로는 "나중에 다시" 또는 [limbs:browser] 가 답이었다.)
+    stages = []
+
+    def _note(stage, ran, detail):
+        stages.append({"stage": stage, "ran": ran, "detail": detail})
 
     # 1단계: 정적 크롤링 — 깨끗하면 바로 반환
     static = _crawl_static(url, max_length)
     attempts.append(static)
+    _note("정적(curl_cffi)", True,
+          static.get("error") or static.get("reason") or f"본문 {static.get('length', 0)}자")
     if static.get("success") and not static.get("reason"):
         return static
 
     # 2단계: Chrome MCP가 "이미 연결돼 있으면" 우선 사용 (실제 크롬 로그인 세션·쿠키 활용).
     #        연결돼 있지 않으면 외부 서버(12306)가 필요하므로 건너뛴다 — 자동 연결하지 않음.
     driver = _get_chrome_driver()
-    if driver is not None:
+    if driver is None:
+        _note("Chrome MCP", False, "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)")
+    else:
         chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
         attempts.append(chrome_result)
+        _note("Chrome MCP", True,
+              chrome_result.get("error") or chrome_result.get("reason")
+              or f"본문 {chrome_result.get('length', 0)}자")
         if chrome_result.get("success") and not chrome_result.get("reason"):
             return chrome_result
 
     # 3단계: Playwright — 자동 복원된 로그인 세션 + 전 프레임 수집
     session = _get_browser_session()
-    if session is not None:
+    if session is None:
+        _note("Playwright", False, "건너뜀 — 브라우저 세션을 얻지 못함")
+    else:
         try:
             pw_result = _run_async(_crawl_playwright_async(session, url, max_length))
             attempts.append(pw_result)
+            _note("Playwright", True,
+                  pw_result.get("error") or pw_result.get("reason")
+                  or f"본문 {pw_result.get('length', 0)}자")
             if pw_result.get("success") and not pw_result.get("reason"):
                 return pw_result
-        except Exception:
-            pass
+        except Exception as e:
+            # ★예전엔 pass — 단계가 죽은 이유가 사라지고 methods_tried 에서도 빠져서
+            # "브라우저도 시도했는데 안 됐다"는 거짓 신고가 됐다.
+            _note("Playwright", False, f"실행 중 죽음: {type(e).__name__}: {e}")
 
     # ── 전 단계가 흠 있음 — 사유 확정 (가장 능력 있는 마지막 단계의 진단이 진실에 가장 가까움) ──
     reason = None
@@ -653,12 +678,25 @@ def crawl_website(url: str, max_length: int = 10000) -> dict:
             return best
 
     reason = reason or "insufficient_content"
+    hint = _REASON_HINTS.get(reason, "크롤 실패")
+    # 브라우저 렌더링 단계가 하나도 못 돈 호출은 "이 페이지는 못 읽는다"가 아니라
+    # "아직 제대로 시도하지 못했다" — 읽는 쪽이 다음 수를 고를 수 있게 구별해 말한다.
+    browser_ran = any(st["ran"] for st in stages if st["stage"] != "정적(curl_cffi)")
+    if not browser_ran:
+        skipped = "; ".join(f"{st['stage']}: {st['detail']}"
+                            for st in stages if st["stage"] != "정적(curl_cffi)")
+        hint = (
+            f"{hint} 정적 단계만 돌았습니다 — 브라우저 렌더링 단계가 실행되지 못했습니다"
+            f"({skipped}). JS 로 그리는 페이지라면 정적 단계만으로는 원래 비어 있습니다. "
+            f"잠시 후 재시도하거나 [limbs:browser] 로 직접 열어 보세요."
+        )
     result = {
         "success": False,
         "url": url,
         "reason": reason,
-        "error": _REASON_HINTS.get(reason, "크롤 실패"),
+        "error": hint,
         "methods_tried": [a.get("method") for a in attempts if a.get("method")],
+        "stages": stages,
     }
     if static.get("error"):
         result["detail"] = static["error"]

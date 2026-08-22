@@ -10,6 +10,14 @@ import json
 import uuid
 
 
+def _err(message: str) -> dict:
+    """실패는 문자열이 아니라 계약으로 낸다 — handler._err 과 같은 규약 (B21-1, 2026-08-22).
+
+    이 파일은 spec-load 로 실려 handler 의 네임스페이스를 공유하지 않으므로 같은 헬퍼를 둔다.
+    """
+    return {"success": False, "error": message}
+
+
 STYLE_PRESETS = {
     "vintage_book": (
         "Hand-drawn pen and ink illustration on aged beige parchment paper, "
@@ -95,7 +103,7 @@ def generate_gemini_image(tool_input, output_base):
 
     prompt = tool_input.get("prompt")
     if not prompt:
-        return "오류: prompt는 필수입니다."
+        return _err("prompt는 필수입니다.")
 
     # input_image = 원본 사진을 주고 지시대로 고치는 편집 축 (채팅 첨부 사진 편집 등).
     # 문자열 하나 또는 목록 — 존재하는 파일만 inlineData 파트로 텍스트 앞에 첨부한다
@@ -105,11 +113,11 @@ def generate_gemini_image(tool_input, output_base):
         input_images = [input_images]
     input_images = [p for p in input_images if isinstance(p, str) and os.path.exists(p)]
     if (tool_input.get("input_image") or tool_input.get("input_image_path")) and not input_images:
-        return "오류: input_image 경로의 파일이 없습니다. 절대 경로를 확인하세요."
+        return _err("input_image 경로의 파일이 없습니다. 절대 경로를 확인하세요.")
 
     api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        return "오류: GEMINI_API_KEY 환경변수가 설정되지 않았거나 api_key 파라미터가 필요합니다."
+        return _err("GEMINI_API_KEY 환경변수가 설정되지 않았거나 api_key 파라미터가 필요합니다.")
 
     output_path = tool_input.get("output_path")
     # 편집(input_image)일 땐 aspect_ratio 미지정 시 비율을 강제하지 않는다(원본 비율 보존).
@@ -185,7 +193,7 @@ def generate_gemini_image(tool_input, output_base):
         # 응답에서 이미지 데이터 추출
         candidates = data.get("candidates", [])
         if not candidates:
-            return f"오류: Gemini API 응답에 결과가 없습니다. 응답: {data}"
+            return _err(f"Gemini API 응답에 결과가 없습니다. 응답: {data}")
 
         parts = candidates[0].get("content", {}).get("parts", [])
         image_saved = False
@@ -201,7 +209,7 @@ def generate_gemini_image(tool_input, output_base):
                 description = part["text"]
 
         if not image_saved:
-            return f"오류: 응답에 이미지 데이터가 없습니다. 텍스트 응답: {description or data}"
+            return _err(f"응답에 이미지 데이터가 없습니다. 텍스트 응답: {description or data}")
 
         size_note = "" if is_legacy else f" / {image_size}"
         # JSON + image_data 봉투 반환 — system_tools 수확 관문이 모델·채팅에 그림으로
@@ -222,7 +230,7 @@ def generate_gemini_image(tool_input, output_base):
         return json.dumps(out, ensure_ascii=False, indent=2)
 
     except httpx.HTTPStatusError as e:
-        return f"Gemini API 오류 ({e.response.status_code}): {e.response.text}"
+        return _err(f"Gemini API 오류 ({e.response.status_code}): {e.response.text}")
     except Exception as e:
-        return f"Gemini 이미지 생성 중 오류 발생: {str(e)}"
+        return _err(f"Gemini 이미지 생성 중 오류 발생: {str(e)}")
 

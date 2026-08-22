@@ -15,6 +15,69 @@ STATIC_PROBE_GAPS_MS = (150, 500, 1500)
 #  어휘가 개인 패키지에 살던 경계 이상 해소. 이 패키지는 순수 미디어 생성(engines)만 남음.)
 # (moviepy는 이미 각 함수가 로컬 re-import 중이라 모듈레벨 심볼은 0회 사용 — 그냥 제거. edge_tts는 generate_tts로.)
 
+def _html_from_prev(prev) -> str:
+    """파이프로 흘러온 통화를 렌더 가능한 HTML 조각으로 (V21-1 수리, 2026-08-22).
+
+    `[self:write]` 가 content 생략 시 직전 통화를 저장하는 것과 **같은 규약**을
+    `[engines:render_html]` 에도 준다 — 어휘·파라미터 신설 0. 옛 동작은 html 파라미터만
+    봐서 `[table:brief]{...} >> [engines:render_html]` 이 "html은 필수입니다" 로 죽었고,
+    사람이 브리프 결과를 눈으로 읽어 다시 타이핑해야 했다.
+
+    받는 모양 세 가지: 이미 HTML 인 문자열 · 통화 봉투(message/items) · 평문.
+    """
+    from html import escape as _escape
+    if prev is None:
+        return ""
+    s = prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False)
+    s = s.strip()
+    if not s:
+        return ""
+
+    obj = None
+    if s.startswith("{"):
+        try:
+            obj = json.loads(s)
+        except Exception:
+            obj = None
+
+    if isinstance(obj, dict):
+        items = obj.get("items")
+        if isinstance(items, list) and items and isinstance(items[0], dict):
+            cols = list(items[0].keys())
+            head = "".join(f"<th>{_escape(str(c))}</th>" for c in cols)
+            rows = "".join(
+                "<tr>" + "".join(f"<td>{_escape(str(r.get(c, '')))}</td>" for c in cols) + "</tr>"
+                for r in items if isinstance(r, dict)
+            )
+            return ("<table style=\"border-collapse:collapse;font-family:sans-serif;font-size:15px\" "
+                    "border=1 cellpadding=6>"
+                    f"<thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>")
+        msg = obj.get("message")
+        if isinstance(msg, str) and msg.strip():
+            s = msg.strip()
+        else:
+            s = json.dumps(obj, ensure_ascii=False, indent=1)
+
+    if "<" in s and ">" in s:      # 이미 HTML 조각이면 그대로
+        return s
+    return ("<div style=\"font-family:sans-serif;font-size:22px;line-height:1.6;"
+            f"padding:40px;white-space:pre-wrap\">{_escape(s)}</div>")
+
+
+def _err(message: str) -> dict:
+    """실패는 **문자열이 아니라 계약**으로 낸다 (B21-1 수리, 2026-08-22).
+
+    옛 코드는 실패를 `"오류: …"`·`"렌더링 중 오류 발생: …"` 같은 **평문**으로 돌려줬다.
+    실행기의 실패 판정(`workflow_engine._is_error_result`)은 dict 의 success/error 와
+    `"Error:"` 접두만 보므로, 이 평문들은 전부 **정상 결과**로 읽혔다 — 파이프가
+    `success: true · steps 3/3` 으로 닫히고 스케줄·트리거가 실패를 성공으로 집계했다.
+    접두를 늘리는 것으로는 못 고친다: 26자리 중 10자리는 애초에 접두가 없었다
+    (`FFmpeg 오류:`·`렌더링 중 오류 발생:`). 규약을 문자열 모양에 두는 한 다음 문구가
+    또 샌다. 그래서 **모양이 아니라 타입**으로 옮긴다.
+    """
+    return {"success": False, "error": message}
+
+
 # Helper functions
 def get_image_base64(image_path):
     if not image_path or not os.path.exists(image_path):
@@ -354,7 +417,7 @@ def create_html_video(tool_input, output_base):
                 "scenes(각 {html, duration} 배열) 또는 scene_dir(저장된 씬 디렉토리)을 주세요. "
                 "주제→슬라이드 자동 생성은 [self:slide]{op:\"create\"} 또는 [self:lecture] 워크스페이스를 사용하세요."
             )
-        return "오류: scenes 리스트가 비어 있습니다 (scenes 배열 또는 scene_dir 필요)."
+        return _err("scenes 리스트가 비어 있습니다 (scenes 배열 또는 scene_dir 필요).")
 
     # scenes 검증: html 키 필수
     missing_html = [i for i, s in enumerate(scenes) if isinstance(s, dict) and "html" not in s]
@@ -557,7 +620,7 @@ def create_html_video(tool_input, output_base):
 
         if not scene_videos:
             shutil.rmtree(temp_dir)
-            return "오류: 캡처된 프레임이 없습니다."
+            return _err("캡처된 프레임이 없습니다.")
 
         # ============================================================
         # 4단계: 씬 전환 효과 적용 및 병합
@@ -653,7 +716,7 @@ def create_html_video(tool_input, output_base):
                 ], capture_output=True)
                 if concat_result.returncode != 0:
                     shutil.rmtree(temp_dir)
-                    return f"FFmpeg concat 오류: {concat_result.stderr.decode()}"
+                    return _err(f"FFmpeg concat 오류: {concat_result.stderr.decode()}")
 
         # ============================================================
         # 5단계: 나레이션과 BGM 합성
@@ -722,9 +785,9 @@ def create_html_video(tool_input, output_base):
 
         return f"HTML 동영상 제작 완료: {os.path.abspath(output_path)}{transition_info}"
     except subprocess.CalledProcessError as e:
-        return f"FFmpeg 오류: {e.stderr.decode() if e.stderr else str(e)}"
+        return _err(f"FFmpeg 오류: {e.stderr.decode() if e.stderr else str(e)}")
     except Exception as e:
-        return f"HTML 동영상 제작 중 오류 발생: {str(e)}"
+        return _err(f"HTML 동영상 제작 중 오류 발생: {str(e)}")
 
 
 def render_html_to_image(tool_input, output_base="."):
@@ -748,7 +811,10 @@ def render_html_to_image(tool_input, output_base="."):
     base_path = tool_input.get("base_path")  # 로컬 파일 기준 경로
 
     if not html:
-        return "오류: html은 필수입니다."
+        # 파이프 싱크(V21-1) — html 생략 시 직전 통화를 받는다 ([self:write] 와 같은 규약).
+        html = _html_from_prev(tool_input.get("_prev_result"))
+    if not html:
+        return _err("html 이 필요합니다 — 파라미터로 주거나 파이프로 통화를 흘려보내세요.")
 
     # output_path가 지정되면 파일명만 추출하여 output_base에 저장
     if output_path:
@@ -823,21 +889,21 @@ def render_html_to_image(tool_input, output_base="."):
                     element.screenshot(path=output_path)
                 else:
                     browser.close()
-                    return f"오류: 셀렉터 '{selector}'를 찾을 수 없습니다."
+                    return _err(f"셀렉터 '{selector}'를 찾을 수 없습니다.")
             else:
                 page.screenshot(path=output_path)
             browser.close()
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
         return f"렌더링 완료: {os.path.abspath(output_path)}"
     except Exception as e:
-        return f"렌더링 중 오류 발생: {str(e)}"
+        return _err(f"렌더링 중 오류 발생: {str(e)}")
 
 def generate_ai_image(tool_input, output_base):
     import urllib.parse
     import httpx
     prompt = tool_input.get("prompt")
     if not prompt:
-        return "오류: prompt는 필수입니다."
+        return _err("prompt는 필수입니다.")
     output_path = tool_input.get("output_path")
     width = min(tool_input.get("width", 1024), 2048)
     height = min(tool_input.get("height", 1024), 2048)
@@ -863,7 +929,7 @@ def generate_ai_image(tool_input, output_base):
         # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
         return f"AI 이미지 생성 완료: {os.path.abspath(output_path)}\n프롬프트: {prompt}"
     except Exception as e:
-        return f"이미지 생성 중 오류 발생: {str(e)}"
+        return _err(f"이미지 생성 중 오류 발생: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -1171,7 +1237,7 @@ def create_tts(tool_input, output_base):
     """텍스트를 음성 파일(MP3)로 변환합니다. (기본 Gemini TTS, engine:"edge" 로 무과금 회귀)"""
     text = tool_input.get("text")
     if not text:
-        return "오류: text는 필수입니다."
+        return _err("text는 필수입니다.")
 
     voice = tool_input.get("voice")
     engine = tool_input.get("engine")
@@ -1208,7 +1274,7 @@ def create_tts(tool_input, output_base):
             lines.append(f"※ 이 엔진에 없는 축이라 무시됨: {', '.join(meta['ignored'])}")
         return "\n".join(lines)
     except Exception as e:
-        return f"TTS 생성 중 오류 발생: {str(e)}"
+        return _err(f"TTS 생성 중 오류 발생: {str(e)}")
 
 
 def render_html_video(tool_input, output_base):
@@ -1244,14 +1310,14 @@ def render_html_video(tool_input, output_base):
     if scene_dir and not scene_files:
         scene_dir = os.path.abspath(scene_dir)
         if not os.path.isdir(scene_dir):
-            return f"오류: scene_dir '{scene_dir}'이 존재하지 않습니다."
+            return _err(f"scene_dir '{scene_dir}'이 존재하지 않습니다.")
         html_paths = sorted(glob_module.glob(os.path.join(scene_dir, "*.html")))
         if not html_paths:
-            return f"오류: '{scene_dir}'에 HTML 파일이 없습니다."
+            return _err(f"'{scene_dir}'에 HTML 파일이 없습니다.")
         scene_files = [{"path": p, "duration": default_duration} for p in html_paths]
 
     if not scene_files:
-        return "오류: scene_files 또는 scene_dir이 필요합니다."
+        return _err("scene_files 또는 scene_dir이 필요합니다.")
 
     # 경로 검증
     for i, sf in enumerate(scene_files):
@@ -1260,7 +1326,7 @@ def render_html_video(tool_input, output_base):
             path = os.path.join(output_base, path)
             sf["path"] = path
         if not os.path.exists(path):
-            return f"오류: scene_files[{i}]의 파일이 없습니다: {path}"
+            return _err(f"scene_files[{i}]의 파일이 없습니다: {path}")
 
     output_path = os.path.join(output_base, output_filename)
     temp_dir = os.path.join(output_base, f"temp_render_{uuid.uuid4().hex[:8]}")
@@ -1319,7 +1385,7 @@ def render_html_video(tool_input, output_base):
 
         if global_frame == 0:
             shutil.rmtree(temp_dir)
-            return "오류: 캡처된 프레임이 없습니다."
+            return _err("캡처된 프레임이 없습니다.")
 
         # FFmpeg 인코딩
         merged_video = os.path.join(temp_dir, "merged.mp4")
@@ -1334,7 +1400,7 @@ def render_html_video(tool_input, output_base):
 
         if ffmpeg_result.returncode != 0:
             shutil.rmtree(temp_dir)
-            return f"FFmpeg 인코딩 오류: {ffmpeg_result.stderr.decode()}"
+            return _err(f"FFmpeg 인코딩 오류: {ffmpeg_result.stderr.decode()}")
 
         # 오디오 합성 (나레이션 + BGM)
         if bgm_path:
@@ -1388,7 +1454,7 @@ def render_html_video(tool_input, output_base):
     except Exception as e:
         if os.path.exists(temp_dir):
             shutil.rmtree(temp_dir)
-        return f"렌더링 중 오류 발생: {str(e)}"
+        return _err(f"렌더링 중 오류 발생: {str(e)}")
 
 
 # === 단일 액션 + op 분기 표 (2026-08-05 image_critic 흡수) ===

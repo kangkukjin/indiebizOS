@@ -71,10 +71,10 @@ nodes:
   self:
     actions:
       cctv:
-        returns: scalar
+        returns: items    # V21-2(2026-08-22): stats 가 소스별 현황 행을 items 로 낸다
         side_effect: true    # refresh 가 UTIC 캐시를 갱신한다
         exempt: '기기 의존(카메라 연결)'
-        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
+        description: 'CCTV 데이터 캐시 행정 (op 분기). stats(기본): 소스별 현황 items / refresh: UTIC 캐시 갱신. 검색은 [sense:cctv].'
         group: cctv
         target_description: 'op 외 파라미터 없음. op 분기 — stats(기본): 카카오·UTIC·ITS·Windy 전체 소스 CCTV 현황·총수 / refresh: UTIC 실시간 API로 전국 캐시 일괄 갱신(유지보수).'
         target_key: op

@@ -53,7 +53,12 @@ def _is_error_result(result) -> bool:
 
     실패로 치는 것:
       1. dict: `success is False`, 또는 최상위 `error` 키가 있고 success 가 참이 아님
-      2. str `"Error:"` 접두 — system_essentials 계열(self:read/delete/copy)
+      2. str `"Error:"`·`"오류:"` 접두 — system_essentials 계열(self:read/delete/copy).
+         ★한글 접두는 2026-08-22 추가(B21-1): 영어판만 등록돼 있어 `"오류: …"` 를 내던
+         media_producer 계열이 통째로 성공으로 샜다. 다만 이건 **그물**일 뿐이다 —
+         같은 계열 26자리 중 10자리는 애초에 접두가 없었으므로(`FFmpeg 오류:`·
+         `렌더링 중 오류 발생:`) 접두를 늘리는 것으로는 못 고친다. 진짜 수리는 그쪽
+         핸들러를 error dict 계약으로 옮긴 것이고, 이 줄은 다음 위반자를 잡는 안전망이다.
       3. **JSON 문자열** — handler 라우터는 `format_json(...)` 으로 *문자열*을 돌려주므로
          `{"success": false, "message": …}` 가 문자열에 실려 온다. 파싱해서 1번 규칙 적용.
          ★이걸 안 보면 handler 도구의 실패가 전부 성공으로 샌다(2026-07-18 블로그 파이프에서
@@ -77,7 +82,7 @@ def _is_error_result(result) -> bool:
         return ("error" in result) and not result.get("success")
     if isinstance(result, str):
         s = result.lstrip()
-        if s.startswith("Error:"):
+        if s.startswith("Error:") or s.startswith("오류:"):
             return True
         # handler 라우터의 JSON 문자열 — 최상위만 파싱해 dict 규칙 재사용
         if s.startswith("{"):

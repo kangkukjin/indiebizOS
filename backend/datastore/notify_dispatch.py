@@ -27,6 +27,13 @@ def notify_user(title: str, body: str, kind: str = "info", source: str = "system
         command: 알림 클릭 시 실행할 런처 명령 (예: "open_messenger_window"). 런처 경로에서만 유효.
         badge: 런처 배지 카운트 증가 여부 (독/트레이 미확인 표시)
     """
+    # 0) 내용 없는 알림은 만들지도 보내지도 않는다 (21회차 관찰, 2026-08-22).
+    #    기록 관문(notification_manager.create)에도 같은 규칙이 있지만, 전달은 기록 실패와
+    #    무관하게 진행되는 구조라 여기서 막지 않으면 껍데기가 화면까지 간다(반쪽 수리 방지).
+    if not (title or "").strip() and not (body or "").strip():
+        print("[알림] 제목도 본문도 비어 있어 보내지 않았습니다.")
+        return False
+
     # 1) 알림함 기록. deliver=False — 전달은 아래에서 command/badge 까지 실어
     #    한 번만 한다(create 안의 전달과 이중이 되지 않게).
     try:

@@ -420,7 +420,13 @@ def cctv_capture(url: str, save_path: str = None, name: str = None, **kwargs) ->
 
 
 def cctv_sources() -> str:
-    """지원하는 CCTV 소스 목록 + 데이터 현황"""
+    """지원하는 CCTV 소스 목록 + 데이터 현황 — **통화(items)로 낸다** (V21-2, 2026-08-22).
+
+    소스별 현황은 본질적으로 행의 목록인데 옛 봉투는 `sources` 키에만 담고 `items` 를 안 내
+    `>> [table:take]` 가 "items 통화를 찾지 못했습니다" 로 거절됐다(거절 자체는 정직했다 —
+    봉투 실제 키까지 인쇄했다). 어휘 선언도 scalar 였다. `sources` 는 그대로 두고 items 를
+    나란히 실어(거울 키 규약 — 변환 시 `_mirrored` 가 자동 동행) 기존 소비자를 안 깨뜨린다.
+    """
     # 카카오맵 통계
     kakao_total = 0
     try:
@@ -434,10 +440,7 @@ def cctv_sources() -> str:
     utic_stats = json.loads(utic.get_data_stats())
     utic_total = utic_stats.get("total_cctv", 0)
 
-    return json.dumps({
-        "success": True,
-        "total_cctv": kakao_total + utic_total,
-        "sources": [
+    _sources = [
             {
                 "id": "kakao",
                 "name": "카카오맵",
@@ -454,7 +457,14 @@ def cctv_sources() -> str:
             },
             {"id": "its", "name": "국가교통정보센터", "description": "전국 고속도로/국도 CCTV"},
             {"id": "windy", "name": "Windy Webcams", "description": "전세계 실시간 웹캠"}
-        ]
+    ]
+
+    return json.dumps({
+        "success": True,
+        "total_cctv": kakao_total + utic_total,
+        "sources": _sources,
+        "items": _sources,          # 통화 — 거울 키(sources)와 같은 리스트
+        "count": len(_sources),
     }, ensure_ascii=False)
 
 

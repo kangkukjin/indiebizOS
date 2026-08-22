@@ -294,6 +294,10 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     if opts.get("bgm_path"):
         tool_input["bgm_path"] = opts["bgm_path"]
     result_msg = mh.create_html_video(tool_input, str(video_dir))
+    # 실패는 이제 계약(dict)으로 온다 — B21-1 수리 이후. dict 면 error 를 그대로 올린다
+    # (예전엔 평문이라 str() 이 곧 사유였다. repr 이 사유 자리에 오지 않게 여기서 푼다.)
+    if isinstance(result_msg, dict):
+        raise RuntimeError(str(result_msg.get("error") or result_msg)[:500])
     if not str(result_msg).startswith("HTML 동영상 제작 완료"):
         raise RuntimeError(str(result_msg)[:500])
     # "HTML 동영상 제작 완료: <경로> | 씬 전환: fade (0.5초)" → 경로만.

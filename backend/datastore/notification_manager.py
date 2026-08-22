@@ -83,6 +83,14 @@ class NotificationManager:
         Returns:
             생성된 알림 정보
         """
+        # ★21회차 관찰 (2026-08-22): 제목도 본문도 없는 알림은 **알림이 아니다**.
+        # 실측 — send_notification 이 빈 message 로 불려 제목 "알림"(derive_title 의
+        # 빈 입력 기본값)·본문 "" 인 껍데기가 알림함에 남고 사용자 화면까지 갔다.
+        # 파생은 내용이 있을 때 제목을 채우는 장치이지, 없는 내용을 있는 것처럼
+        # 만드는 장치가 아니다. 입구가 하나이므로 여기서 한 번 막는다(호출처 18곳 불문).
+        if not (title or "").strip() and not (message or "").strip():
+            return {"success": False, "error": "제목도 본문도 비어 있어 알림을 만들지 않았습니다."}
+
         # ★F20-5 (2026-08-22): 빈 제목은 알림함에 빈칸으로 남는다. 어느 입구로
         # 들어오든 여기서 한 번 파생한다(derive_title docstring = 판정 근거).
         title = (title or "").strip() or derive_title(message)

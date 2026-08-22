@@ -101,7 +101,11 @@ def _field_path_hints(result: Any, max_paths: int = 24) -> List[str]:
     """조건 소스 결과에서 쓸 수 있는 점 경로 후보 — 최상위 + 1단 중첩 (F13-4).
 
     스칼라 값 경로만 후보로 낸다(dict 중간 노드는 자식 경로가 대신 말한다).
-    items 같은 리스트 키는 경로 폭발이라 이름만 싣는다.
+
+    ★B25-1 (2026-08-23): 리스트 키는 이름만 싣던 옛 판이 결함의 **공범**이었다 —
+    `.items.0.max_temp` 가 판정 불능이 됐을 때 힌트가 `items` 에서 멈춰,
+    쓸 수 있는 진짜 경로를 한 번도 안 보여 줬다. 이제 첫 행의 스칼라 칸을
+    `items.0.칸` 형태로 몇 개 싣는다(경로 폭발은 max_paths 와 행당 상한이 막는다).
     """
     hints: List[str] = []
     if not isinstance(result, dict):
@@ -113,6 +117,12 @@ def _field_path_hints(result: Any, max_paths: int = 24) -> List[str]:
             sub = [f"{k}.{sk}" for sk, sv in v.items()
                    if isinstance(sk, str) and not isinstance(sv, (dict, list))]
             hints.extend(sub if sub else [k])
+        elif isinstance(v, list):
+            first = v[0] if v and isinstance(v[0], dict) else None
+            sub = [f"{k}.0.{sk}" for sk, sv in (first or {}).items()
+                   if isinstance(sk, str) and not sk.startswith("_")
+                   and not isinstance(sv, (dict, list))] if first else []
+            hints.extend(sub[:6] if sub else [k])
         else:
             hints.append(k)
         if len(hints) >= max_paths:
@@ -171,14 +181,22 @@ def _extract_dotted_field(result: Any, field_path: str) -> Any:
 def _extract_dotted_field_checked(result: Any, field_path: str) -> Any:
     """점 표기 추출의 검침판 — 경로 부재는 _FIELD_MISSING, 값이 진짜 null 이면 None.
 
-    중간 노드가 null 이거나 dict 가 아니면 그 아래 경로는 "부재"다(★B10-case).
+    중간 노드가 null 이거나 dict/list 가 아니면 그 아래 경로는 "부재"다(★B10-case).
+
+    ★B25-1 (2026-08-23 상상훈련 25회차): 경로 해소기를 **정본 하나로 접었다.**
+    옛 판은 `isinstance(current, dict)` 만 봐서 리스트 인덱스(`items.0.max_temp`)를
+    못 넘었다. 같은 조건 언어의 다른 좌변(`$변수.items.0.max_temp`)은 이미
+    `ibl_predicates.walk_path` 로 넘어가고 있었으므로 **한 문법이 좌변 종류에 따라
+    두 갈래로 갈려** 있었다 — 소스 참조 쪽만 판정 불능이 되고, 판정 불능은 else 까지
+    보류시키므로 문장이 통째로 죽었다.
+    `items` 는 IBL 의 단일 통화라 "방금 조회한 통화의 첫 행을 보고 분기"가 조건문의
+    가장 흔한 수요인데 그 자리가 막혀 있었던 것이다. F20-2(20회차)가 붙인 items 폴백은
+    행이 정확히 1개일 때만 발동해(위 74~80줄) 같은 구멍의 국소 덧대기였다 — 그 폴백은
+    `.items.0.x` 아닌 `.x` 표기를 받아 주는 별개 편의라 그대로 둔다.
     """
-    current = result
-    for key in field_path.split('.'):
-        if not isinstance(current, dict) or key not in current:
-            return _FIELD_MISSING
-        current = current[key]
-    return current
+    from ibl_predicates import walk_path, _MISSING as _PRED_MISSING
+    value = walk_path(result, field_path)
+    return _FIELD_MISSING if value is _PRED_MISSING else value
 
 
 def _find_top_level_comparison_op(text: str) -> Optional[Tuple[int, int, str]]:

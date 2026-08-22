@@ -113,3 +113,52 @@ def test_since_seeded_flag(monkeypatch):
     assert r1.get("seeded") is True and r1["items"] == [], r1
     r2 = mod._op_since(prev, {"key": "테스트스트림"})
     assert "seeded" not in r2, r2
+
+
+# ── B25-1 회귀 (2026-08-23 상상훈련 25회차) ──────────────────────────────────
+# 조건 좌변이 소스 참조(`node:action{}.경로`)든 변수 참조(`$r.경로`)든 **같은 경로
+# 해소기**를 쓴다. 갈라지면 한 문법이 좌변 종류에 따라 두 갈래가 되고, 소스 참조
+# 쪽 판정 불능은 else 까지 보류시켜 문장을 통째로 죽인다(보고서 최소 재현 (a)(b)(c)).
+import ibl_exec_sense as es                                    # noqa: E402
+from ibl_predicates import walk_path, _MISSING as _PRED_MISSING  # noqa: E402
+
+_ENVELOPE = {
+    "city": "청주",
+    "current": {"temp": 24.7, "condition": "대체로 맑음"},
+    "items": [{"date": "2026-08-22", "max_temp": 30.3, "min_temp": 23.4},
+              {"date": "2026-08-23", "max_temp": 33.4, "min_temp": 23.8}],
+}
+
+
+def test_source_ref_walks_list_index():
+    """(b) 소스 참조의 리스트 인덱스 — 옛 판은 여기서 _FIELD_MISSING 이었다."""
+    assert es._extract_dotted_field_checked(_ENVELOPE, "items.0.max_temp") == 30.3
+
+
+def test_source_and_var_resolvers_agree():
+    """(a)(b)(c) 불변식 — 두 좌변이 같은 경로에 같은 값을 내야 한다."""
+    for path in ("items.0.max_temp", "items.1.min_temp", "current.temp", "city"):
+        src = es._extract_dotted_field_checked(_ENVELOPE, path)
+        var = walk_path(_ENVELOPE, path)
+        assert src == var, (path, src, var)
+
+
+def test_absent_path_still_missing():
+    """★B10-case 계약 보존 — 부재는 여전히 부재(값 null 과 구별)."""
+    for path in ("items.9.max_temp", "items.0.없는칸", "current.없음", "없는키",
+                 "city.max_temp"):
+        assert es._extract_dotted_field_checked(_ENVELOPE, path) is es._FIELD_MISSING, path
+    assert walk_path(_ENVELOPE, "items.9.max_temp") is _PRED_MISSING
+
+
+def test_null_value_is_not_missing():
+    """필드는 실존하되 값이 null 이면 부재가 아니다(정당한 부재)."""
+    env = {"items": [{"battery_percent": None}]}
+    assert es._extract_dotted_field_checked(env, "items.0.battery_percent") is None
+
+
+def test_hints_show_list_row_paths():
+    """힌트가 `items` 에서 멈추지 않는다 — 결함의 공범이었던 자리."""
+    hints = es._field_path_hints(_ENVELOPE)
+    assert any(h.startswith("items.0.") for h in hints), hints
+    assert "items" not in hints, hints

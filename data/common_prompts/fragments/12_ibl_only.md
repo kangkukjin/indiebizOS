@@ -49,7 +49,7 @@ execute_ibl(code='[node:action]{params}')
 execute_ibl(code='[node:action]{param: "value"}')
 ```
 
-공통 파라미터 `_raw: true` — 일부 검색 액션은 결과를 AI로 자동 요약(postprocess:compress)해서 돌려준다. 원본 구조화 데이터(JSON)가 필요하면 `{_raw: true}`를 더해 요약을 건너뛴다. 예: `[sense:search]{source: "naver", query: "한강", _raw: true}`. (앱·파이프라인용. 평소 읽기엔 요약본이 더 편하다.)
+공통 파라미터 `_raw: true` — 액션 결과의 AI 요약(postprocess:compress)을 건너뛰는 플래그. **지금은 잠자는 플래그다**: 2026-06-27 이후 compress 를 선언한 액션이 0개라(검색계가 구조화 통화로 옮겨가며 폐지) 붙여도 결과가 바뀌지 않는다. 없는 문제를 피하려 습관적으로 붙이지 말 것 — 통화가 이미 원본 구조다.
 
 ## Common Mistakes — NEVER do these
 
@@ -185,7 +185,7 @@ $r = [sense:search]{query: "청주 부동산"}
 
 $job = [self:script]{op: "run", id: "long_job", background: true}
 [repeat: until $st.status == "done", max: 30, every: "10s"]{$st = [self:script]{op: "status", job_id: "$job.job_id"}}
-[repeat: 3, collect: true]{[sense:search]{query: "AI 뉴스", page: "$i"}}                 # $i = 0,1,2 · collect = 회차 items 이어붙임
+[repeat: 3, collect: true, every: "5s"]{[sense:host]{op: "status"}}                      # $i = 0,1,2 · collect = 회차 items 이어붙임(여기선 5초 간격 표본 3행)
 ```
 - `[try]`: 몸이 실패하면 `[catch]`(안에서 `$error.summary/.step/.action` 사용), `[finally]` 는 결과를 바꾸지 않는다. catch 도 실패하면 두 오류가 함께 신고된다.
 - `[on_error: skip|null]` 문장 접두: 실패 step 을 건너뛰고(skip=직전 통화, null=빈 items) 계속 — 봉투 `skipped_steps` 로 신고되니 조용한 성공이 아니다. 기본은 stop(현행).
@@ -198,8 +198,8 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 ```
 $n = 0
 [repeat: while $n < 5, max: 20]{$n = $n + 1
-  [sense:search]{query: "AI 뉴스", page: "$n"} >> [table:since]{key: "AI뉴스"} >> [if: empty($items)]{[self:notify_user]{message: "$n 페이지에서 새 글 끝"}} [else]{[self:write]{path: "ai_$n.json"}}}
-[self:notify_user]{message: "총 $n 페이지"}                     # 루프 뒤 $n 은 최신값
+  [sense:feed]{url: "https://news.hada.io/rss/news", limit: 10} >> [table:since]{key: "긱뉴스"} >> [if: empty($items)]{[self:notify_user]{message: "$n 회차에서 새 글 끝"}} [else]{[self:write]{path: "geek_$n.json"}}}
+[self:notify_user]{message: "총 $n 회차"}                       # 루프 뒤 $n 은 최신값
 
 [sense:realty]{source: "naver", region: "죽백동", deal: "lease"} >> [if: count($items) > 10]{[table:take]{n: 10}} [else]{[self:notify_user]{message: "매물 적음"}} >> [table:spreadsheet]{path: "전세.xlsx"}
 $total = [sense:realty]{…} >> [table:reduce]{init: 0, step: "acc + 보증금"}

@@ -5,36 +5,40 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:6243
+- dataset_size:6470
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: URL에서 파일 다운로드해 로컬 저장. HTML 페이지 텍스트 추출은 sense:crawl.
+- source_sentence: 목표 상태 체크
   sentences:
-  - '[self:download]'
-  - '[table:each], ], do: "[sense:weather]"} >> [table:flatten]'
-  - '[self:limb]'
-- source_sentence: 실행 에이전트 모델 교체의 용이성 보여줘
+  - 목표 프로세스 관리 (op 분기). list/status/kill/delete/log/attempts. 의식 에이전트가 평가 루프 라운드를
+    누적·종료하는 메타 인지 도구.
+  - '[self:time] & [sense:stock]'
+  - '[self:delete] ; [self:file_find] >> [table:take] >> [table:document]'
+- source_sentence: 매일 아침 9시에 뉴스 모아서 메일로 보내는 걸 예약해줘
   sentences:
-  - '[limbs:screen]'
-  - 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은
-    web_site.
+  - '[self:trigger] >> [table:take] >> [others:channel_send]"}'
+  - 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글
+    뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
+  - '[engines:image_gemini]", style_preset: "", aspect_ratio: "", image_size: "",
+    output_path: ""} >> [engines:image_read]", intent: ""} >> [engines:image_read]",
+    prompt: ""} & [self:copy]", dest: ""}'
+- source_sentence: 블로그 새 글 받아오고 최신글 창고에 발행해줘
+  sentences:
+  - '[sense:stock] & [sense:stock] & [sense:stock] & [sense:search]'
+  - '[self:deck]'
+  - '[self:blog] ; [self:blog] >> [self:read] >> [table:document] >> [self:copy]'
+- source_sentence: 오른쪽 클릭 — table_row_3
+  sentences:
+  - '[limbs:browser]'
   - '[self:grep] & [self:list] & [self:file_find] & [self:read] & [self:read]'
-- source_sentence: 초보자를 위한 특정 주제의 용어집을 만들기 위해 인터넷 검색과 내부 문서 탐색으로 관련 정보를 수집한다.
+  - Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes).
+- source_sentence: '사용자가 특정 식당을 언급하며 다른 대안을 요청하는 상황에서, 가족 구성원의 기호(예: 조개 불호)를 고려해 대안
+    식당을 탐색·비교·추천한다'
   sentences:
-  - '[self:read]'
-  - '[others:portal] >> [table:take]'
-  - '[sense:search] 초보자 용어집"}'
-- source_sentence: 메모리 사용률 95% 넘으면 프로세스 점검해
-  sentences:
-  - '[if: sense:host.memory.percent > 95]} [else]}'
-  - '[sense:search] & [sense:search]'
-  - 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
-- source_sentence: 네이버 검색 안 되면 다른 걸로 검색해줘
-  sentences:
-  - '[self:schedule] & [sense:stock]"}'
-  - '[self:file_find]'
-  - '[sense:search] ?? [sense:search]'
+  - '[self:write]'
+  - '[sense:realty] >> [table:take] >> [table:brief]'
+  - '[sense:restaurant]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -88,9 +92,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '네이버 검색 안 되면 다른 걸로 검색해줘',
-    '[sense:search] ?? [sense:search]',
-    '[self:file_find]',
+    '사용자가 특정 식당을 언급하며 다른 대안을 요청하는 상황에서, 가족 구성원의 기호(예: 조개 불호)를 고려해 대안 식당을 탐색·비교·추천한다',
+    '[sense:restaurant]',
+    '[sense:realty] >> [table:take] >> [table:brief]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -99,9 +103,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[1.0000, 0.7758, 0.0971],
-#         [0.7758, 1.0000, 0.0995],
-#         [0.0971, 0.0995, 1.0000]])
+# tensor([[ 1.0000,  0.5861,  0.0365],
+#         [ 0.5861,  1.0000, -0.1440],
+#         [ 0.0365, -0.1440,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -145,20 +149,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 6,243 training samples
+* Size: 6,470 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.06 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.38 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 4 tokens</li><li>mean: 15.41 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.83 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                        | sentence_1                                                                                                                                   |
-  |:----------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>텍스트 음성 변환</code>            | <code>텍스트를 음성 MP3로 변환 (기본 Gemini TTS, 한국어 지원). 동영상 나레이션용.</code>                                                                             |
-  | <code>삼성전자 현재 시세</code>           | <code>[sense:stock]</code>                                                                                                                   |
-  | <code>카톡 입력창에 글 쓰고 전송까지 해줘</code> | <code>안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.</code> |
+  | sentence_0                           | sentence_1                                                                                      |
+  |:-------------------------------------|:------------------------------------------------------------------------------------------------|
+  | <code>강의 동영상 렌더 다 됐는지 봐줘해줘</code>    | <code>[self:deck]</code>                                                                        |
+  | <code>새로운 테스트 시작해줘</code>            | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code>                           |
+  | <code>뉴스수집-요약-저장 워크플로우 새로 만들어</code> | <code>[self:workflow], do: "[sense:search]'} >> [table:brief] >> [self:write]_리포트.md'}"}</code> |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -288,11 +292,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6402 | 500  | 0.0628        |
+| 0.6180 | 500  | 0.0177        |
 
 
 ### Training Time
-- **Training**: 4.1 minutes
+- **Training**: 4.4 minutes
 
 ### Framework Versions
 - Python: 3.13.5

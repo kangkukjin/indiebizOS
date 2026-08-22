@@ -195,13 +195,15 @@ def test_d6_sync_handler_timeout():
     print("D6 OK — 동기 핸들러 타임아웃·컨텍스트 승계·예외 재전파")
 
 
-if __name__ == "__main__":
-    print("=== IBL 침묵 실패 수리 회귀 테스트 (D1~D6) ===\n")
-    test_d1_mixed_operators_rejected()
-    test_d2_leftover_text_rejected()
-    test_d3_string_protected_comment_strip()
-    test_d4_var_binding_parser()
-    test_d4_var_binding_engine()
-    test_d5_recursive_acl()
-    test_d6_sync_handler_timeout()
-    print("\n=== 전부 통과 ===")
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

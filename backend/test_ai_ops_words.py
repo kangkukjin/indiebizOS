@@ -194,6 +194,25 @@ check("F1 레지스트리 — 세 낱말 ai_call 플래그",
       and _acts["table"]["actions"]["brief"].get("ai_call") is True)
 
 print(f"\n결과: PASS {len(PASS)} / FAIL {len(FAIL)}")
-if FAIL:
-    print("실패:", FAIL)
-    sys.exit(1)
+
+
+def test_battery_results():
+    """pytest 가 이 배터리의 **판정을 보게 하는 다리** (2026-08-23).
+
+    이 파일은 모듈 레벨에서 배터리 전체가 도는 스크립트형이라 `def test_*` 가 없었다 —
+    그래서 정본 러너(pytest.ini·CI)가 여기서 **0건을 수집하고 조용히 지나갔다**.
+    ★더 고약한 건 수집이 임포트를 하므로 배터리는 *돌고 있었는데* 그 판정만 아무도 안 봤다는
+    것이다. 0건 수집은 '통과'가 아니라 '아무것도 안 봤다'인데 러너는 둘을 같은 초록으로 보여준다
+    (27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적은 것과 같은 부류).
+    본문은 이미 임포트 때 돌았으므로 여기서는 **누적된 판정만 단언**한다(중복 실행 없음).
+    """
+    assert not FAIL, "실패 %d건 / 통과 %d건 — %s" % (len(FAIL), len(PASS), FAIL)
+
+
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

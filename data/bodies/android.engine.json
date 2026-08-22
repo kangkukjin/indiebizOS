@@ -267,6 +267,7 @@
     "test_goal_eval_streaming": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
     "test_handler_error_contract": "force_exclude_glob",
+    "test_health_source_isolation": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
     "test_honesty_invariants": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
@@ -287,6 +288,7 @@
     "test_render_core": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
     "test_shape_variant_axis": "force_exclude_glob",
+    "test_single_runner": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
@@ -295,8 +297,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 289,
+    "total": 291,
     "engine": 225,
-    "blocklist": 64
+    "blocklist": 66
   }
 }

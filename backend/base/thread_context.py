@@ -261,6 +261,30 @@ def clear_task_origin():
     _thread_local.task_origin = None
 
 
+# ── 리허설 출처 — **리허설은 삶이 아니다** (2026-08-23) ──────────────────────
+# 상상 훈련은 언어의 갭을 찾으려고 *일부러* 안 되는 문장·없는 종목·빈 손을 밟는다.
+# 그 의도된 실패가 실사용과 같은 칸에 쌓이면 몸이 자기 삶을 잘못 읽는다 —
+# 실측(2026-08-23): 8배 회차 20분이 남긴 `table:flatten` 실패 32건이 만성 실패
+# 순위 1위(37건 중 86%)를 만들었다. 사용자 알림함까지 올라갔던 B18-1 사고의 재연이다.
+# 훈련 가이드 §6 은 이미 같은 판정을 내려 두었다("훈련 실측은 일부러 증류에 안 담긴다.
+# 리허설은 삶이 아니다") — 그 판정이 건강 원장에는 아직 적용되지 않았을 뿐이다.
+#
+# ★판정을 '이름 규약'이 아니라 **행위자 봉투**로 한다: 훈련 프로브가 /ibl/execute 에
+#   origin: "training" 을 실으면 actor_context 가 each·폴백·병렬 가지까지 전파한다.
+#   (B18-1 이 프로세스 정체로 시험을 격리한 것과 같은 자리 — 판정은 한 벌, 표식은 기계가.)
+# ★덤: origin 이 'user' 가 아니게 되므로 리허설은 RED 수정 그랜트도 못 받는다(fail-closed).
+#   훈련 턴이 라이브 코어를 고쳤던 22회차 사고와 같은 방향의 보호다.
+REHEARSAL_ORIGINS = frozenset({"training"})
+
+
+def in_rehearsal() -> bool:
+    """이 실행이 리허설(상상 훈련)인가 — 건강·통계 원장이 실사용과 가르는 판정."""
+    try:
+        return get_task_origin() in REHEARSAL_ORIGINS
+    except Exception:
+        return False
+
+
 @contextmanager
 def actor_context(agent_id=None, task_id=None, origin=None):
     """진입점 계약 — 행위자 3칸(agent·task·origin)을 세우고 끝나면 이전 값으로 복원.

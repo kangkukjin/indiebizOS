@@ -116,7 +116,15 @@ def test_nip44_official_vectors():
     assert run(default), "NIP-44 공식 벡터 불일치 — nip44.py 구현 회귀"
 
 
-if __name__ == "__main__":
-    default = os.path.join(os.path.dirname(__file__), "testdata", "nip44_vectors.json")
-    path = sys.argv[1] if len(sys.argv) > 1 else default
-    sys.exit(0 if run(path) else 1)
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

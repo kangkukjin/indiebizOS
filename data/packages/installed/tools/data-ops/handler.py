@@ -286,6 +286,47 @@ def _emit_table(envelope, new_table):
     return _reproject_mirrors(out, _orig, _row_dicts(new_table))
 
 
+def _observed_fields(rows=None, columns=None):
+    """행/열에서 **실제로 관측된** 필드 이름 집합. 관측이 없으면 빈 집합."""
+    if columns is not None:
+        return {str(c) for c in columns}
+    return {str(k) for r in (rows or []) if isinstance(r, dict) for k in r.keys()}
+
+
+def _absent_fields(names, observed):
+    """이름들 중 **부재를 주장할 수 있는** 것만 돌려준다 (B28-1, 상상훈련 28회차).
+
+    ★증거의 부재는 부재의 증거가 아니다. 관측된 필드가 하나도 없으면(=행이 0개면)
+    "그 필드는 없다"는 **주장할 수 없는 명제**다 — 스키마는 멀쩡한데 행만 비었을 수 있다.
+
+    실측(2026-08-23):
+        [self:body]{days: 3, limit: 5} >> [table:filter]{where: "존재하지않는값ZZZ"}
+                                       >> [table:rename]{map: {"파일": "경로"}}
+        → step1 columns: ['상태','시각','영역','요지','커밋','파일']   ← '파일' 은 실재한다
+          step2 count: 0                                            ← 정당한 0행
+          step3 "rename: 필드 ['파일'] 이(가) 없습니다. 행 필드 예: []"
+    오류문이 스스로를 반박한다 — `행 필드 예: []` 는 *아무것도 못 봤다*는 말이지
+    *없다*는 말이 아니다.
+
+    ★왜 두 갈래가 생겼나: F17 이 빈손 계약을 **"verb 마다 심사"** 로 정해 두었기 때문이다.
+    그래서 verb 마다 `not any(k in r for r in dict_recs)` 를 손으로 다시 적고, 빈손 보호는
+    *호출자가 먼저 짧게 끊어 주는* 우연에 기댔다. 단항 9개 중 8개는 우연히 끊겼고
+    rename 만 안 끊겨서 혼자 다른 답을 냈다(28회차 실측 행렬).
+    → 갈래를 없애는 자리는 verb 가 아니라 **판정기**다. 판정기가 빈 관측에서 부재를
+      주장하지 않으면, 앞으로 생길 verb 도 같은 실수를 할 수 없다.
+      (같은 규율의 선례: 조건 평가의 "판정 불능은 거짓이 아니다" — 판정 불능이면 else 도 보류.)
+
+    반환: 정말로 없는 이름 목록(관측 0이면 빈 목록 = 주장 없음).
+    """
+    if isinstance(names, (list, tuple, set)):
+        names = [str(n) for n in names]
+    else:
+        names = [str(names)]
+    if not observed:
+        return []
+    return [n for n in names if n not in observed]
+
+
 def _field_missing_error(verb, missing, rows):
     """명시 파라미터가 가리키는 필드가 어느 행에도 없을 때의 정직한 에러.
 
@@ -547,7 +588,8 @@ def _op_rename(prev, params):
     table, env = _get_table(prev)
     if table is not None:
         src_cols = [str(c) for c in (table.get("columns") or [])]
-        missing = [k for k in m if k not in src_cols]
+        # 부재 판정은 판정기에게 (B28-1) — 관측이 0이면 부재를 주장하지 않는다
+        missing = _absent_fields(list(m), _observed_fields(columns=src_cols))
         if missing:
             return {"success": False,
                     "error": f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
@@ -561,7 +603,8 @@ def _op_rename(prev, params):
     recs, env = _get_items(prev)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
-        missing = [k for k in m if not any(k in r for r in dict_recs)]
+        # 부재 판정은 판정기에게 (B28-1) — 빈손이면 형제 8개 verb 처럼 0행으로 흘려보낸다
+        missing = _absent_fields(list(m), _observed_fields(rows=dict_recs))
         if missing:
             sample = sorted({kk for r in dict_recs[:20] for kk in r.keys()})[:12]
             return {"success": False,

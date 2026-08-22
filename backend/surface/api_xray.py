@@ -78,8 +78,11 @@ def _collect_ibl_stats() -> Dict:
 
         # 2) action_health에서 7일간 액션별 집계
         # 상태 판정은 실사용(usage) 실패만 기준 — 건강 체크 실패는 테스트 환경 문제일 수 있음
+        # ★격리 출처(시험·리허설)는 집계에서 뺀다 — 조각의 정본은 pulse_db 한 벌
+        #   (건강 요약과 같은 조각을 써야 같은 액션에 두 성공률이 생기지 않는다).
         cutoff = (datetime.now() - timedelta(days=7)).isoformat()
-        rows = conn.execute("""
+        from pulse_db import NOT_ISOLATED_SQL
+        rows = conn.execute(f"""
             SELECT node, action,
                    COUNT(*) as total,
                    SUM(success) as successes,
@@ -87,7 +90,7 @@ def _collect_ibl_stats() -> Dict:
                    MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
                    MAX(CASE WHEN success = 0 AND source = 'usage' THEN timestamp END) as last_failure
             FROM action_health
-            WHERE timestamp >= ?
+            WHERE timestamp >= ? AND {NOT_ISOLATED_SQL}
             GROUP BY node, action
         """, (cutoff,)).fetchall()
 

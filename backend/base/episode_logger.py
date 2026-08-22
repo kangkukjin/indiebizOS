@@ -236,7 +236,7 @@ class EpisodeLogger:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
                 _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message,
                                           log_text, total_ms, steps=ep.steps)
-                _cleanup_old_episodes()
+                _cleanup_old_episodes(keep_id=episode_id)   # 방금 쓴 행은 축출 후보가 아니다
         except Exception as e:
             # 에피소드 기록 실패가 시스템에 영향 주면 안 됨
             if cls._original_stdout:
@@ -667,13 +667,24 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         pass
 
 
-def _cleanup_old_episodes():
+def _cleanup_old_episodes(keep_id=None):
     """episode_log에서 MAX_EPISODES(1000)개 초과 시 오래된 것 삭제 (episode_summary는 유지)
 
     ★삭제 순서는 시험분 먼저(B18-2, 2026-08-22): 1000칸은 몸이 자기 삶을 되짚는 창인데
     시험 프로세스의 주행이 같은 칸을 먹으면 **실사용 주행이 그만큼 일찍 창 밖으로
     밀려난다**(실측: 창 999건 중 36건이 시험 유래). 표식이 있으니 순서만 바꾸면 된다 —
-    같은 출처 안에서는 종전대로 오래된 것부터."""
+    같은 출처 안에서는 종전대로 오래된 것부터.
+
+    ★keep_id — **턴은 자기 기록을 자기가 지우지 않는다** (2026-08-23 수리).
+    `id ASC` 는 실사용 행에겐 그 자체로 보호였다(방금 쓴 행이 언제나 가장 새 행이라 축출
+    후보의 반대편 끝에 선다). 그런데 B18-2 가 앞에 세운 출처 키가 그 보호를 **시험 행에서만**
+    무력화했다 — 원장에 시험 행이 그것 하나뿐이면 '가장 오래된 시험 행' = 방금 쓴 행이다.
+    실측(상한 초과 상태): `_finalize` 가 행을 닫고 요약까지 쓴 직후 자기가 부른 이 정리가
+    그 행을 지웠고, 그래서 B18-2 가드가 원장 적재량에 따라 통과·실패를 오갔다
+    (주변 상태로 답이 바뀌는 가드는 신뢰할 수 없다 — 거짓 초록의 사촌).
+    보호는 정렬이 아니라 **후보 집합**에서 한다: 방금 쓴 행을 후보에서 빼고 그 다음 것을
+    지우므로 상한은 정확히 지켜지고(한 칸 덜 지우는 미봉책 아님), 규칙은 출처와 무관하다.
+    """
     try:
         conn = _get_db()
         count = conn.execute("SELECT COUNT(*) FROM episode_log").fetchone()[0]
@@ -682,9 +693,10 @@ def _cleanup_old_episodes():
             conn.execute(
                 "DELETE FROM episode_log WHERE id IN ("
                 "  SELECT id FROM episode_log"
+                "  WHERE ? IS NULL OR id <> ?"
                 "  ORDER BY CASE WHEN COALESCE(source, 'usage') = 'test' THEN 0 ELSE 1 END, id ASC"
                 "  LIMIT ?)",
-                (delete_count,)
+                (keep_id, keep_id, delete_count)
             )
             conn.commit()
         conn.close()

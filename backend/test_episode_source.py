@@ -150,6 +150,56 @@ def test_cap_evicts_test_rows_first(tmp_path):
         EL._get_db = orig
 
 
+def test_turn_does_not_evict_its_own_row(tmp_path):
+    """**턴은 자기 기록을 자기가 지우지 않는다** (2026-08-23 실측 수리).
+
+    재현 조건은 '원장이 상한을 넘긴 상태'다. B18-2 가 축출 정렬 맨 앞에 출처 키를 세우면서,
+    `id ASC` 가 실사용 행에 주던 보호(방금 쓴 행 = 가장 새 행 = 축출 후보의 반대편)가
+    **시험 행에서만** 사라졌다 — 원장의 유일한 시험 행은 곧 '가장 오래된 시험 행'이라
+    `_finalize` 가 행을 닫고 요약까지 쓴 직후, 자기가 부른 정리가 그 행을 지웠다.
+
+    증상이 고약했던 이유: 위 `test_live_episode_from_test_process_is_marked` 가 원장
+    적재량에 따라 통과·실패를 오갔다(999건이면 통과, 1001건이면 실패). **주변 상태로
+    답이 바뀌는 가드는 신뢰할 수 없다** — 초록을 봐도 무엇이 증명된 건지 알 수 없다.
+    """
+    import episode_logger as EL
+    path, orig = _tmp_db(tmp_path)
+    orig_max = EL.MAX_EPISODES
+    try:
+        conn = EL._get_db()
+        old = [_row(conn, "episode_log", "usage", f"옛{i}") for i in range(3)]
+        conn.commit()
+        conn.close()
+        EL.MAX_EPISODES = 2                      # 이미 3건 = 상한 초과 상태에서 턴을 연다
+
+        EL.EpisodeLogger.start_episode("test_self_evict", "자기 축출 재현")
+        ep = EL.EpisodeLogger.current()
+        eid = ep.episode_id
+        assert eid, "행 개설 자체가 실패했다"
+        EL.EpisodeLogger.end_episode()           # ← _finalize 가 정리를 부르는 자리
+
+        conn = EL._get_db()
+        row = conn.execute("SELECT id, source, ended_at FROM episode_log WHERE id=?", (eid,)).fetchone()
+        left = conn.execute("SELECT COUNT(*) FROM episode_log").fetchone()[0]
+        conn.close()
+        assert row is not None, "턴이 방금 쓴 자기 행을 스스로 지웠다"
+        assert row["source"] == "test" and row["ended_at"], dict(row)
+        # 보호는 '한 칸 덜 지우기'가 아니다 — 후보에서 빼고 그 다음 것을 지우므로 상한은 정확하다.
+        assert left == EL.MAX_EPISODES, f"상한이 안 지켜졌다: {left} != {EL.MAX_EPISODES}"
+        assert old[0] not in {r[0] for r in _ids(EL)}, "가장 오래된 것부터 지운다는 규칙은 그대로"
+        print("OK 상한 초과에서도 방금 쓴 행은 축출 후보가 아니다 (상한은 정확히 유지)")
+    finally:
+        EL.MAX_EPISODES = orig_max
+        EL._get_db = orig
+
+
+def _ids(EL):
+    conn = EL._get_db()
+    rows = conn.execute("SELECT id FROM episode_log").fetchall()
+    conn.close()
+    return rows
+
+
 def test_open_episode_resolution_skips_test_rows(tmp_path):
     """②의 핵심 — 무필터 폴백은 살리되(ep1282), 죽은 시험 고아는 후보가 아니다."""
     import episode_logger as EL
@@ -182,5 +232,15 @@ def test_analysis_readers_exclude_test(tmp_path):
     print("OK 분석 독자(결정화·조합지표) 시험분 제외")
 
 
-if __name__ == "__main__":
-    print("이 배터리는 pytest 러너로 실행하세요: .venv/bin/python -m pytest backend/test_episode_source.py -q")
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

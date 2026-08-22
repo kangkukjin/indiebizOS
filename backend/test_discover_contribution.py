@@ -143,5 +143,13 @@ except ImportError:  # pytest 없는 환경(폰 등)에서도 스크립트 직�
     pass
 
 
-if __name__ == "__main__":
-    run_test()
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # 이 파일의 pytest 시험은 같은 `run_test()` 를 **같은 프로세스에서** 부르므로 위임해도
+    # 재귀하지 않는다. 위임하면 해마 DB 가 없는 환경에서 조용히 성공하는 대신 pytest 가
+    # `skipped` 라고 **말해 준다**(부재와 통과를 구별하는 것이 이 규약의 요점).
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:                          # pytest 없는 환경(폰 등)은 스크립트로
+        raise SystemExit(0 if run_test() is not None else 1)
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

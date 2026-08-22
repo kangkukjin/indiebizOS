@@ -885,7 +885,11 @@ def get_action_health_summary() -> Dict:
         cutoff = (datetime.now() - timedelta(days=7)).isoformat()
 
         # 실사용(usage) 기록으로 상태 판정
-        rows = conn.execute("""
+        # ★집계에서 격리 출처(시험·리허설)를 뺀다 — 옛 질의는 last_usage_failure 만
+        #   source 를 보고 total/successes 는 안 봐서, 훈련이 일부러 밟은 실패가 성공률에
+        #   섞였다(2026-08-23 실측: 8배 회차 20분이 table:flatten 성공률을 40%로 끌어내렸다).
+        from pulse_db import NOT_ISOLATED_SQL
+        rows = conn.execute(f"""
             SELECT node, action,
                    COUNT(*) as total,
                    SUM(success) as successes,
@@ -893,7 +897,7 @@ def get_action_health_summary() -> Dict:
                    MAX(CASE WHEN success = 1 THEN timestamp END) as last_success,
                    MAX(CASE WHEN success = 0 AND source = 'usage' THEN timestamp END) as last_usage_failure
             FROM action_health
-            WHERE timestamp >= ?
+            WHERE timestamp >= ? AND {NOT_ISOLATED_SQL}
             GROUP BY node, action
         """, (cutoff,)).fetchall()
 
@@ -966,7 +970,8 @@ def get_recent_action_health(limit: int = 50, source: str = "usage") -> List[Dic
     `self_checks` 만 투영했다 — **경보를 받고도 그 근거에 어휘로 갈 수 없었다**
     (V18-2 실측 2026-08-22: 알림은 "만성 실패: self:workflow" 인데 results 500건에 0행,
     훈련자가 결국 DB 직독으로만 근거에 닿았다). 같은 칸 모양으로 내어 한 파이프에서
-    대조할 수 있게 한다. source="all" 이면 시험 격리분(source='test')까지 포함.
+    대조할 수 있게 한다. source="all" 이면 격리분(`test`=시험, `training`=상상 훈련
+    리허설)까지 포함 — 격리 출처의 정본 목록은 `pulse_db.ISOLATED_SOURCES`.
     """
     from pulse_db import _get_pulse_db
 

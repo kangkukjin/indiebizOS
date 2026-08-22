@@ -505,5 +505,30 @@ def run():
     return 1 if _failed else 0
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+def test_battery_under_pytest():
+    """pytest 가 이 배터리를 **보게 하는 다리** (2026-08-23).
+
+    이 파일은 `check(name, cond)` 누적형 스크립트라 `def test_*` 가 없다 — 그래서
+    정본 러너(pytest.ini·CI `python -m pytest -m "not local"`)가 여기서 **0건을 수집하고
+    조용히 지나갔다**. 실측: 자기수정 격리 생애주기 배터리(63검사)가 CI 에서 한 번도 안 돌고 있었다.
+    ★0건 수집은 '통과'가 아니라 '아무것도 안 봤다'이다 — 러너가 그 둘을 같은 초록으로
+    보여주는 것이 거짓 초록의 뿌리다(27·28회차 상상훈련이 이 초록을 "전부 통과"로 적었다).
+    본문은 모듈 레벨에서 스텁·전역을 만지므로 **별도 프로세스**로 돌린다(공유 프로세스
+    오염 회피 — test_framing_amend_gate 가 모듈 스킵을 택한 것과 같은 이유의 반대편 해법).
+    """
+    import subprocess
+    import sys as _sys
+    proc = subprocess.run([_sys.executable, os.path.abspath(__file__)],
+                          cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                          capture_output=True, text=True, timeout=900)
+    assert proc.returncode == 0, \
+        "배터리 실패 (rc=%s)\n%s" % (proc.returncode, ((proc.stdout or "") + (proc.stderr or ""))[-3000:])
+
+
+# RUNNER: script-battery — 직접 실행이 배터리 전체를 돌리고 실패 시 종료코드≠0 을 낸다.
+# pytest 는 이 파일을 다리 시험(별도 프로세스)으로 본다. `__main__` 을 pytest 로
+# 위임하면 다리가 자기를 다시 불러 무한 재귀하므로 여기만 위임하지 않는다.
+# (가드: backend/test_single_runner.py R2 — 면제는 추론이 아니라 이 선언으로만.)
 if __name__ == "__main__":
     raise SystemExit(run())

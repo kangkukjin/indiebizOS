@@ -906,34 +906,73 @@ def test_p28_repeat_carries_body_honesty():
     print("P28 OK — repeat 이 몸통의 skipped_steps 를 회차와 함께 승계 · 무사고 회차는 조용함")
 
 
-if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P28) ===\n")
-    test_p1_stale_derived_views_removed()
-    test_p2_spreadsheet_inline_items()
-    test_p3_sort_source_fallback_and_loud_error()
-    test_p4_price_projection_keeps_fields()
-    test_p5_rich_items_full_projection()
-    test_p6_file_find_truncated_envelope()
-    test_p7_declarative_sort_guard()
-    test_p8_groupby_loud_params()
-    test_p9_select_loud_columns()
-    test_p10_filter_dedup_take_loud_params()
-    test_p11_quote_currency_and_nary_combine()
-    test_p12_grep_truncation_honesty()
-    test_p13_document_open_dict_and_table()
-    test_p14_fallback_empty_predicate()
-    test_p15_binary_transformers_carry_flags()
-    test_p16_fallback_matrix_and_mixed_grammar()
-    test_p17_script_list_preflight()
-    test_p18_sheet_semantic_silence()
-    test_p19_totals_detection_baseline()
-    test_p20_workflow_save_syntax_gate()
-    test_p21_grep_missing_path_loud()
-    test_p22_copy_empty_hands_vs_no_currency()
-    test_p23_unary_transformers_restate_scope()
-    test_p24_output_sink_consumes_currency()
-    test_p25_envelope_shape_uses_one_currency_judge()
-    test_p26_spill_resolved_at_injection_seam()
-    test_p27_each_substitution_respects_syntactic_slot()
-    test_p28_repeat_carries_body_honesty()
-    print("\n=== 전부 통과 ===")
+def test_p29_empty_hand_contract_is_one_rule():
+    """P29(28회차 B28-1): 빈손(0행)에서 필드 부재를 주장하면 안 된다 — verb 전수 불변식.
+
+    F17 이 빈손 계약을 "verb 마다 심사" 로 정해 둔 탓에 verb 마다 부재 판정을 손으로
+    다시 적었고, 빈손 보호는 *호출자가 먼저 짧게 끊어 주는* 우연에 기댔다. 단항 9개 중
+    8개는 우연히 끊겼고 rename 만 안 끊겨 혼자 다른 답을 냈다.
+        [self:body]{days: 3, limit: 5} >> [table:filter]{where: "존재하지않는값ZZZ"}
+                                       >> [table:rename]{map: {"파일": "경로"}}
+        → "rename: 필드 ['파일'] 이(가) 없습니다. 행 필드 예: []"
+    step1 이 '파일' 을 열로 신고했으므로 그 필드는 실재한다 — 사라진 건 행뿐이다.
+    오류문이 스스로를 반박한다: `행 필드 예: []` 는 *아무것도 못 봤다*이지 *없다*가 아니다.
+
+    ★이 시험이 지키는 것은 rename 하나가 아니라 **부류**다 — 새 verb 가 부재 판정을
+    손으로 적어도 여기서 걸린다(갈래가 다시 생기지 않게).
+    """
+    from importlib import reload  # noqa: F401
+    EMPTY = json.dumps({"success": True, "items": []}, ensure_ascii=False)
+    FULL = json.dumps({"success": True, "items": [{"동": "a", "가": 1}, {"동": "b", "가": 2}]},
+                      ensure_ascii=False)
+    # (도구, 없는 필드를 가리키는 params) — 단항 변환자 전수
+    VERBS = [
+        ("data_filter", {"where": "없는열 > 1"}),
+        ("data_sort", {"by": "없는열"}),
+        ("data_take", {"n": 3}),
+        ("data_select", {"columns": ["없는열"]}),
+        ("data_dedup", {"by": "없는열"}),
+        ("data_rename", {"map": {"없는열": "새"}}),
+        ("data_groupby", {"by": "없는열"}),
+        ("data_compute", {"set": {"x": "없는열 * 2"}}),
+        ("data_flatten", {"field": "없는열"}),
+    ]
+    # ① 불변식 A — 빈손이면 **전 verb** 가 0행 성공으로 흘려보낸다(부재 주장 금지)
+    offenders = []
+    for tool, params in VERBS:
+        r = _run(tool, {**params, "_prev_result": EMPTY})
+        if r.get("success") is False:
+            offenders.append((tool, str(r.get("error"))[:80]))
+    assert not offenders, f"빈손에서 부재를 주장한 verb: {offenders}"
+    # ② 불변식 B — 행이 있으면 없는 필드는 **여전히 시끄럽게** 거절한다(과교정 금지)
+    silent = []
+    for tool, params in VERBS:
+        if tool == "data_take":
+            continue                      # take 는 필드를 안 본다
+        r = _run(tool, {**params, "_prev_result": FULL})
+        if r.get("success") is not False:
+            silent.append(tool)
+    assert not silent, f"행이 있는데 없는 필드를 조용히 통과시킨 verb: {silent}"
+    # ③ 판정기 자체 — 관측이 0이면 어떤 이름도 부재로 주장하지 않는다
+    from importlib import import_module  # noqa: F401
+    _abs = _dataops._absent_fields
+    _obs = _dataops._observed_fields
+    assert _abs(["파일", "없는것"], _obs(rows=[])) == []            # 빈 관측 = 주장 없음
+    assert _abs(["파일", "없는것"], _obs(columns=[])) == []
+    assert _abs(["파일", "없는것"], _obs(rows=[{"파일": 1}])) == ["없는것"]
+    assert _abs("없는것", _obs(columns=["파일"])) == ["없는것"]      # 스칼라 이름도 받는다
+    print("P29 OK — 빈손 계약이 verb 전수 한 규칙(부재 주장 금지) · 행 있으면 시끄러운 거절 유지")
+
+
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

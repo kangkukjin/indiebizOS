@@ -494,23 +494,15 @@ def test_w16_body_bound_vars_not_signature():
     print('W16 OK — 몸통이 할당한 변수는 시그니처가 아니다(식 할당 우변·repeat·$i)')
 
 
-if __name__ == "__main__":
-    print("=== workflow params·시그니처·재귀 가드 회귀 테스트 (W1~W15) ===\n")
-    test_w1_saved_run_injects_params()
-    test_w2_type_preservation()
-    test_w3_unmatched_param_warns()
-    test_w4_reserved_names_protected()
-    test_w5_inline_run_injects_params()
-    test_w6_assignment_wins_over_params()
-    test_w7_bad_params_rejected()
-    test_w8_missing_arg_rejected()
-    test_w9_params_default()
-    test_w13_inline_unfilled_warns_not_rejects()
-    test_w14_signature_saved_and_listed()
-    test_w15_scheduler_passes_params()
-    test_w16_body_bound_vars_not_signature()
-    print("\n--- 재귀·순환 가드 (실경로) ---")
-    test_w10_self_cycle_rejected()
-    test_w11_mutual_cycle_rejected()
-    test_w12_depth_cap()
-    print("\n=== 전부 통과 ===")
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

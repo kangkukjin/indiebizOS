@@ -239,14 +239,36 @@ def test_d1_reduce():
 
 
 def test_s1_auto_spill_transparent(tmp_spill, monkeypatch):
+    """스필의 계약 = **봉투는 가벼워지고 뒤 step 은 원래 데이터를 그대로 본다**.
+
+    ★2026-08-23 개정(B27-2, 27회차): 이 시험은 원래 *메커니즘*을 단언했다 —
+    "핸들러가 받는 `_prev_result` 는 참조 봉투(`items: []` + `_spilled`)이고, 소비처가
+    각자 해소한다". 그런데 그 모양은 계약이 아니라 **그 시점의 구현**이었고, 실제로는
+    소비처마다 해소기를 복제해야만 성립하는 약속이라 구멍이 남았다(`_op_groupby` 는
+    `_rows_for_field` 로 들어가는데 해소기는 형제 입구 `_get_items` 에만 있었다.
+    `_prev_result` 를 읽는 7개 패키지 중 해소기를 가진 것은 둘뿐이었다).
+    27회차 수리가 해소를 **주입 이음매 하나**(`workflow_binding._auto_inject_prev`)로
+    옮겨서, 이제 핸들러는 *해소된 본문*을 받는다 — 해소기 없는 패키지도 계약을 상속한다.
+
+    그래서 단언을 계약 쪽으로 옮긴다:
+      · 스필은 여전히 일어나고 원장(`results[].spilled`)이 그것을 기록한다 (경량화의 근거)
+      · 뒤 step 은 **자기 해소기 없이도** 원래 50행을 그대로 본다 (교재가 약속한 투명성)
+      · 스필 파일은 디스크에 실재한다 (참조가 허공을 가리키지 않는다)
+    ★이 배터리의 가짜 핸들러는 해소기가 **없다** — 그래서 이 단언이 곧 "새 패키지도
+      공짜로 상속한다"의 회귀 증명이다.
+    """
     monkeypatch.setattr(spill_mod, "AUTO_SPILL_THRESHOLD", 500)
     calls = []
     out = _run('[sense:big]{} >> [sense:take]{n: 2} >> [self:show]{markers: "$items"}', calls)
     assert out["success"], out
-    assert out["results"][0]["spilled"]["kind"] == "items" and out["results"][0]["spilled"]["count"] == 50
-    ref_env = json.loads(calls[1]["params"]["_prev_result"])
-    assert ref_env["items"] == [] and ref_env["_spilled"] is True
-    assert os.path.isfile(ref_env["ref"]["path"])
+    spilled = out["results"][0]["spilled"]
+    assert spilled["kind"] == "items" and spilled["count"] == 50
+    assert os.path.isfile(spilled["path"]), "스필 참조가 실재하지 않는 파일을 가리킨다"
+    # 뒤 step 이 받는 것 = 참조가 아니라 원래 통화 (이음매가 해소했다)
+    seen = json.loads(calls[1]["params"]["_prev_result"])
+    assert len(seen["items"]) == 50, f"뒤 step 이 원래 데이터를 못 봤다: {str(seen)[:200]}"
+    assert "ref" not in seen and not seen.get("_spilled"), \
+        "이음매를 지났는데도 참조가 핸들러까지 샜다 — 소비처마다 해소기를 두어야 하는 옛 모양"
     assert len(calls[2]["params"]["markers"]) == 2          # $items 바인딩이 참조 너머를 읽음(step2 결과는 작아 스필 안 됨)
     # 마지막 step 결과는 스필하지 않는다 (final_result 원형)
     out = _run('[sense:big]{}', [])
@@ -293,3 +315,17 @@ def test_s3_spill_gc(tmp_spill):
     assert not os.path.exists(old) and os.path.exists(fresh)
     body, err = spill_mod.read_ref(env["ref"])
     assert body is None and "24h" in err
+
+
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

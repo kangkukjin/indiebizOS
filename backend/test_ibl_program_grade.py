@@ -241,3 +241,17 @@ def test_c8_legacy_forms(monkeypatch):
     monkeypatch.setattr(ex, "_get_sense_value_checked", lambda s, p, a: (None, "필드 경로 '.x' 가 결과에 없습니다"))
     r = ex._execute_condition({"branches": [{"condition": "sense:kospi.x > 1", "action": {"x": 1}}, {"action": {"y": 1}}]}, "/tmp", "t")
     assert r["success"] is False and r["condition_errors"]      # 읽기 실패 = 판정 불능, else 보류 (B10 유지)
+
+
+if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
+    # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
+    # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.
+    # 실측(2026-08-23): 배터리 44개·시험 303건 중 **147건**이 직접 실행에서 한 번도 안 돌았고,
+    # 27·28회차 상상훈련이 그 초록을 "전부 통과"로 보고서에 적었다(거짓 초록).
+    # 위임하면 직접 실행도 살고(순찰·손버릇) 수집은 pytest 가 하므로 드리프트가 불가능하다.
+    import sys as _sys
+    try:
+        import pytest as _pytest
+    except ImportError:
+        raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
+    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))

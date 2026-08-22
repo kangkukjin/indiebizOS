@@ -132,11 +132,36 @@ def _in_test_process() -> bool:
         return False
 
 
+def _in_rehearsal() -> bool:
+    """이 실행이 리허설(상상 훈련)인가 — 판정 정본은 thread_context.in_rehearsal().
+
+    ★_in_test_process 와 같은 규율(2026-08-23): 판정을 여기에 복제하지 않는다. 복제하면
+    '리허설'의 뜻이 원장마다 갈라진다. 근거·설계 의도는 그 함수 위 주석에 있다.
+    """
+    try:
+        from thread_context import in_rehearsal
+        return in_rehearsal()
+    except Exception:
+        return False
+
+
+# ── 격리 출처 — '의도된 실패'는 몸의 삶이 아니다 ────────────────────────────
+# 시험(B18-1)과 리허설(상상 훈련)은 상한·오류·빈손 경로를 *일부러* 밟는다. 그 자국이
+# 실사용과 같은 칸에 쌓이면 몸은 자기 삶을 잘못 읽는다. `self_check`(12시간 순찰)은
+# **격리하지 않는다** — 그건 몸이 스스로를 실제로 재는 진짜 신호다.
+# ★SQL 조각을 여기 한 벌만 둔다: 집계 질의가 두 곳(건강 요약·X-Ray)이라 복제하면
+#   한쪽만 갱신돼 같은 액션에 두 성공률이 생긴다(27회차 B27-1 이 가르친 부류).
+ISOLATED_SOURCES = ("test", "training")
+NOT_ISOLATED_SQL = "COALESCE(source, 'usage') NOT IN ('test', 'training')"
+
+
 def record_action_health(node: str, action: str, success: bool, response_ms: int = None,
                          source: str = "usage", channel: str = None, error: str = None):
     """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
     if source == "usage" and _in_test_process():
         source = "test"   # 시험의 의도된 실패를 실사용 통계에서 격리 (B18-1)
+    elif source == "usage" and _in_rehearsal():
+        source = "training"   # 리허설의 의도된 실패를 실사용 통계에서 격리 (2026-08-23)
     try:
         conn = _get_pulse_db()
         _ensure_action_health_cols(conn)

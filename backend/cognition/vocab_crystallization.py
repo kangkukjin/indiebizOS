@@ -39,6 +39,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List
 
+from episode_logger import strip_trunc_mark
 from logging_utils import get_logger
 from runtime_utils import get_base_path
 
@@ -137,7 +138,12 @@ def _parse_episode(log: str) -> Dict[str, Any]:
                 entry["kind"] = "shell"
             elif base == "execute_ibl":
                 cm = _CC_CODE_RE.search(input_repr)
-                code = (cm.group(1) if cm else "").replace('\\"', '"').rstrip('"}')
+                # 절단분이면 로거가 남긴 `…(+N자)` 표식을 먼저 떼어 낸다 — 안 떼면
+                # 표식이 코드 꼬리에 붙어 집계 키(shape)를 오염시킨다(2026-08-22).
+                code = strip_trunc_mark(
+                    (cm.group(1) if cm else "").replace('\\"', '"')).rstrip('"}')
+                if code.endswith("..."):
+                    code = code[:-3]   # 옛 표식(2026-08-22 이전 행). 창 밖으로 밀려나면 제거.
                 if code:
                     ibl_codes.append(code)
                 entry.update(kind="ibl",

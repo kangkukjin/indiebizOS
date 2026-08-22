@@ -267,6 +267,7 @@
     "test_ibl_program_grade_m6": "force_exclude_glob",
     "test_ibl_silent_failures": "force_exclude_glob",
     "test_ibl_var_notation": "force_exclude_glob",
+    "test_log_truncation_mark": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
     "test_multi_chat_round": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
@@ -283,8 +284,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 277,
+    "total": 278,
     "engine": 220,
-    "blocklist": 57
+    "blocklist": 58
   }
 }

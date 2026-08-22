@@ -38,6 +38,22 @@ from typing import Any, Callable, Dict, Generator, List, Optional
 from urllib.parse import quote
 
 from .base import BaseProvider
+from episode_logger import truncate_for_log
+
+# 로그 절단 폭 — 회고 가치 대 로그 예산의 값. 자른 자리는 truncate_for_log 가 반드시
+# `…(+N자)` 표식을 남기므로, 읽는 쪽은 "짧다"와 "잘렸다"를 추정 없이 가른다.
+#
+# ★execute_ibl 만 폭이 다른 이유(2026-08-22 실측): IBL 코드는 **조합 구조가 사는 자리**라
+# 뒷부분이 잘리면 `>>`·`&`·`??` 를 셀 수 없어 조합률 지표가 통째로 하한이 된다
+# (창 1,720건 중 436건=25% 가 300자에서 잘렸다). 400건 표본의 실제 길이 분포는
+# p50=125 · p90=957 · p95=1,473 · p98=3,273 이고, 그 위의 꼬리는 전부
+# [self:edit]·[self:write]·[self:patch] 의 **내용** payload(최대 51,987자)다.
+# 그래서 '면제'가 아니라 폭이다 — 무제한은 예산의 대부분을 편집 payload 에 쓰고
+# (표본 합계 6배), 2,000자는 호출의 97%를 온전히 담으면서 episode_log 총량을
+# 약 +5% 늘린다(측정: log 10.3M자 중 tool_use 18.8% · 그중 execute_ibl 8.7%).
+_TOOLUSE_CAP = 300
+_TOOLUSE_CAP_IBL = 2000
+_TOOLRESULT_CAP = 300
 
 
 _IMG_EXT_BY_MEDIA = {
@@ -791,8 +807,9 @@ class ClaudeCodeProvider(BaseProvider):
                         input_repr = json.dumps(tool_input, ensure_ascii=False)
                     except (TypeError, ValueError):
                         input_repr = str(tool_input)
-                    if len(input_repr) > 300:
-                        input_repr = input_repr[:300] + "..."
+                    _cap = (_TOOLUSE_CAP_IBL if tool_name.endswith("execute_ibl")
+                            else _TOOLUSE_CAP)
+                    input_repr = truncate_for_log(input_repr, _cap)
                     print(f"[ClaudeCode/{self.agent_name}] tool_use {tool_name} {input_repr}")
                     out.append((
                         {
@@ -848,9 +865,8 @@ class ClaudeCodeProvider(BaseProvider):
                     result_text = str(result_content)
                 is_error = bool(block.get("is_error"))
                 # episode_logger 캡처용 — 결과는 앞부분만
-                result_preview = result_text.replace("\n", " ")
-                if len(result_preview) > 300:
-                    result_preview = result_preview[:300] + "..."
+                result_preview = truncate_for_log(
+                    result_text.replace("\n", " "), _TOOLRESULT_CAP)
                 err_tag = " (error)" if is_error else ""
                 print(f"[ClaudeCode/{self.agent_name}] tool_result{err_tag} {result_preview}")
                 # 지도 봉투(route_map/location_map)를 캡처해 최종 응답 끝에 재주입 예약.

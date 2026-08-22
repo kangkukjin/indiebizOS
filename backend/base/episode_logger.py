@@ -29,6 +29,37 @@ from logging_utils import mask_secrets
 
 MAX_EPISODES = 1000
 
+# ─── 로그 절단 표식 — 단일 진실 ───────────────────────────────────────────────
+# 로그로 흘려보내는 긴 값(도구 인자·결과·IBL 코드)은 자를 수밖에 없지만, **자른 사실과
+# 자른 양은 반드시 남긴다**. 표식이 없으면 읽는 쪽이 "짧은 값"과 "잘린 값"을 정규식
+# 실패로 *추정*해야 하고(2026-08-22 실측: ibl_composition_metrics 가 그렇게 셌다),
+# 추정은 이스케이프 깨진 값을 절단으로 오분류한다 — 침묵 클램프(pitfall_silent_clamp)
+# 부류의 로그 판이다. 모양이 두 벌이면 그 자체가 드리프트라 여기 한 벌만 둔다.
+_TRUNC_MARK_FMT = "…(+{n}자)"
+TRUNC_MARK_RE = re.compile(r"…\(\+(\d+)자\)$")
+
+
+def truncate_for_log(text: str, cap: int) -> str:
+    """cap 문자를 넘으면 자르고 숨긴 글자수를 표식으로 남긴다.
+
+    읽는 쪽 계약: 반환값이 TRUNC_MARK_RE 에 걸리면 절단분이다. group(1) = 숨긴 문자수,
+    원문 길이 = cap + group(1). 걸리지 않으면 **완전 관측분**임이 보장된다."""
+    text = text if isinstance(text, str) else str(text)
+    if cap <= 0 or len(text) <= cap:
+        return text
+    return text[:cap] + _TRUNC_MARK_FMT.format(n=len(text) - cap)
+
+
+def hidden_chars(text: str) -> int:
+    """로그에서 읽은 값이 절단분이면 숨겨진 문자수, 아니면 0."""
+    m = TRUNC_MARK_RE.search(text or "")
+    return int(m.group(1)) if m else 0
+
+
+def strip_trunc_mark(text: str) -> str:
+    """표식을 떼어 낸 본문(절단분이 아니면 그대로)."""
+    return TRUNC_MARK_RE.sub("", text or "")
+
 # 주행기록의 출처 — 'usage'(실사용) / 'test'(시험 프로세스). 판정 정본은 base 층 한 벌.
 # ★기록은 지우지 않고 표식만 붙인다(B18-2): 시험도 자기 행을 읽어야 하고(배터리가
 # start/end 를 직접 부른다), 지운 기록은 되살릴 수 없다. 읽는 쪽이 기본값으로 거른다.

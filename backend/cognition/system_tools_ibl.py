@@ -9,6 +9,8 @@ import re
 import time
 from typing import Dict, Optional
 
+from episode_logger import truncate_for_log
+
 
 # === 액션 서킷 브레이커 (같은 액션 반복 실패 방지) ===
 # 표준 서킷 브레이커 패턴: closed → (연속 N회 실패) → open → (쿨다운 경과) → half-open
@@ -46,6 +48,7 @@ def _params_sig(params) -> str:
 # 디버그 로그 도배를 막는다. 일회성 명령·서로 다른 조회는 영향 없음.
 _ibl_log_seen: Dict[str, float] = {}
 _IBL_LOG_WINDOW = 30.0       # 같은 코드 재로그 최소 간격(초)
+_IBL_DEBUG_CAP = 2000        # providers/claude_code.py _TOOLUSE_CAP_IBL 과 같은 값
 
 
 def reset_action_breaker(key: Optional[str] = None) -> int:
@@ -288,8 +291,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
     files = tool_input.get("files")
 
-    # 디버그 — 잘림 한도를 500자로 늘림. 8개 병렬 호출 같은 긴 IBL 코드도 회고 가능.
-    _c = code if len(code) <= 500 else code[:500] + f"... [trunc, total={len(code)}]"
+    # 디버그 — 잘림 한도 2000자. 표식 모양은 episode_logger 가 소유한다(단일 진실):
+    # 옛 판은 `... [trunc, total=N]` 로 자기만의 모양을 썼는데, 같은 사실을 두 모양으로
+    # 적으면 읽는 쪽이 두 벌을 알아야 한다(이름 드리프트). 폭도 tool_use 쪽과 맞춘다.
+    _c = truncate_for_log(code, _IBL_DEBUG_CAP)
     # 폴링 도배 방지 — 동일 코드가 _IBL_LOG_WINDOW 초 안에 또 오면 로그 생략.
     # (UI 라이브-상태 폴링 op:queue 류가 디버그 로그를 덮는 걸 막음. 일회성 명령·서로 다른 조회는 그대로 보임.)
     _now_log = time.monotonic()

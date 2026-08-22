@@ -34,11 +34,16 @@
   표꼬리 = `>>` 이고 첫 스텝 이후가 전부 `table:*` / 다단 = 그 밖의 `>>`
   한 호출이 여러 칸에 겹쳐 셀 수 있다(단일만 배타적) — 칸 합계는 100% 를 넘을 수 있다.
 
-★관측의 한계(silent-clamp 부류) — episode_log 는 tool_use 인자를 **약 300자에서 자른다**.
-그래서 긴 호출 25%(1,685건 중 421건)는 앞 ~280자만 보인다. 잘린 뒤의 `>>`·`&` 는 셀 수 없으므로
-**절단분은 분모에서 빼고**(완전 관측분만 집계) 건수만 따로 신고한다. 절단분은 대개
-`[self:edit]`·`[self:patch]` 의 긴 payload 라 조합이 아니라 내용이 길다. 로거의 절단 폭이 바뀌면
-이 수치의 분모도 바뀐다 — 재측정 때 절단 건수를 먼저 볼 것.
+★관측의 한계(silent-clamp 부류) — episode_log 는 tool_use 인자를 자른다. 잘린 뒤의
+`>>`·`&` 는 셀 수 없으므로 **절단분은 분모에서 빼고**(완전 관측분만 집계) 건수와 숨은
+글자수를 따로 신고한다. 절단분은 대개 `[self:edit]`·`[self:patch]` 의 긴 payload 라
+조합이 아니라 내용이 길다.
+  · 폭은 로거가 소유한다(backend/providers/claude_code.py `_TOOLUSE_CAP_IBL`). 2026-08-22
+    이전엔 300자였고 그 체제의 창은 IBL 호출의 25%가 절단이었다(1,723건 중 436건) —
+    **그 창의 조합률은 하한이다**. 폭이 바뀌면 분모가 바뀌므로 재측정 때 절단 건수를 먼저 볼 것.
+  · 판정은 로거가 남긴 `…(+N자)` 표식으로 한다 — 정규식 실패로 *추정*하지 않는다. 추정은
+    이스케이프가 깨진 값을 절단으로 오분류하는데, 깨짐과 절단은 서로 다른 사실이라
+    따로 신고한다(`code 파싱 실패`).
 
 docs/IBL_PROGRAM_GRADE_DESIGN.md §5 의 측정기.
 사용: python3 scripts/ibl_composition_metrics.py [시작일=2026-08-16 | N에피소드] [분할일=2026-08-21]
@@ -60,6 +65,10 @@ N = None if SINCE else int(ARG1)
 SPLIT = sys.argv[2] if len(sys.argv) > 2 else "2026-08-21"   # 이 날짜부터 '배치 후'
 
 TOOL = re.compile(r"\] tool_use (\S+) (\{.*)")
+TRUNC = re.compile(r"…\(\+(\d+)자\)$")   # 로거의 절단 표식(정본=backend/base/episode_logger.py)
+# 전환 도구 — 2026-08-22 이전 로거는 숨은 양 없이 `...` 만 남겼다. episode_log 는 최근
+# 1000행만 보존하므로 옛 행이 창 밖으로 밀려나면(≈2개월) 이 가지와 legacy 신고를 지운다.
+TRUNC_LEGACY = re.compile(r"\.\.\.$")
 CODE = re.compile(r'"code"\s*:\s*"((?:[^"\\]|\\.)*)"')
 HEAD = re.compile(r'\[([a-z_]+):([a-z_0-9]+)\]')
 PAR = re.compile(r'\}\s*&\s*\[')            # 액션 경계의 & 만 — 문자열 안 & 제외
@@ -140,12 +149,18 @@ BLOCK = re.compile(r"<ibl_references\b.*?</ibl_references>", re.S)
 stats = []
 blocks_total = blocks_dead = 0
 trunc_total = 0
+hidden_total = 0
+legacy_total = 0
+malformed_total = 0
 for eid, ts, agent, msg, log in rows:
     if not log:
         continue
     tools = collections.Counter()
     ibl = []
     trunc = 0
+    hidden = 0
+    legacy = 0
+    malformed = 0
     for line in log.splitlines():
         m = TOOL.search(line)
         if not m:
@@ -153,12 +168,27 @@ for eid, ts, agent, msg, log in rows:
         name = m.group(1)
         tools[name] += 1
         if "execute_ibl" in name:
-            c = CODE.search(m.group(2))
+            arg = m.group(2)
+            c = CODE.search(arg)
             if c:
+                # code 값이 통째로 잡혔다 = 완전 관측. (줄 끝에 절단 표식이 있어도
+                #  잘린 자리가 code *뒤*의 다른 키라면 code 자체는 온전하다.)
                 ibl.append(c.group(1))
+            elif TRUNC.search(arg):
+                trunc += 1          # 잘렸다 — 뒤에 숨은 조합을 셀 수 없어 분모에서 뺀다
+                hidden += int(TRUNC.search(arg).group(1))
+            elif TRUNC_LEGACY.search(arg):
+                trunc += 1          # 표식이 생기기 전(2026-08-22 이전) 행 — 숨은 양은 모른다
+                legacy += 1
             else:
-                trunc += 1   # 로그가 ~300자에서 잘랐다 — 뒤에 숨은 조합을 셀 수 없어 분모에서 뺀다
+                # ★절단이 아닌데 code 를 못 뜯었다 = 값이 깨진 것(날 따옴표·미이스케이프).
+                # 옛 판은 이 자리를 '절단'으로 셌다 — 표식이 생기기 전이라 구분할 길이
+                # 없었다. 서로 다른 사실이므로 따로 신고한다(2026-08-22).
+                malformed += 1
     trunc_total += trunc
+    hidden_total += hidden
+    legacy_total += legacy
+    malformed_total += malformed
     # 회상층 — 이 턴의 프롬프트에 실제로 주입된 용례
     refs = REF_ATTR.findall(log) + [m.group(1) for m in REF_CDATA.finditer(log)]
     # 표면층 — 계기판(ManualMode.tsx)은 이 블록을 DOMParser 로 진짜 파싱한다.
@@ -171,7 +201,8 @@ for eid, ts, agent, msg, log in rows:
             blocks_dead += 1
     stats.append(dict(id=eid, ts=ts, agent=agent, msg=(msg or "")[:70].replace("\n", " "),
                       n_tools=sum(tools.values()), tools=dict(tools), ibl=ibl,
-                      truncated=trunc, refs=refs))
+                      truncated=trunc, hidden_chars=hidden, malformed=malformed,
+                      refs=refs))
 
 exec_codes = [c for s in stats for c in s["ibl"]]
 recall_codes = [c for s in stats for c in s["refs"]]
@@ -186,8 +217,14 @@ except sqlite3.Error as e:
 # ─────────────────────────── 출력 ───────────────────────────
 win = [s["ts"] for s in stats if s["ts"]]
 print(f"에피소드 {len(stats)}건  창: {min(win)[:16]} ~ {max(win)[:16]}" if win else f"에피소드 {len(stats)}건")
-print(f"IBL 호출 {len(exec_codes) + trunc_total}건 중 완전 관측 {len(exec_codes)}건 · "
-      f"로그 절단 {trunc_total}건({trunc_total/(len(exec_codes)+trunc_total):.0%}) — 절단분은 분모에서 뺐다")
+_calls = len(exec_codes) + trunc_total + malformed_total
+print(f"IBL 호출 {_calls}건 중 완전 관측 {len(exec_codes)}건 · "
+      f"로그 절단 {trunc_total}건({trunc_total/max(_calls,1):.0%}"
+      + (f", 숨은 {hidden_total:,}자" if hidden_total else "")
+      + (f", 옛 표식 {legacy_total}건(숨은 양 미상)" if legacy_total else "")
+      + ") — 절단분은 분모에서 뺐다"
+      + (f" · ★code 파싱 실패 {malformed_total}건(절단 아님 = 값이 깨졌다)"
+         if malformed_total else ""))
 
 print("\n=== ① 4층 조합률 — 층 사이 낙차가 병목의 위치 ===")
 print(HDR)
@@ -295,7 +332,9 @@ for k, v in dupes.most_common(10):
 
 json.dump(dict(
     window=dict(episodes=len(stats), since=SINCE, last_n=N, first=(min(win) if win else None), last=(max(win) if win else None),
-                split=SPLIT, calls_observed=len(exec_codes), calls_truncated=trunc_total),
+                split=SPLIT, calls_observed=len(exec_codes), calls_truncated=trunc_total,
+                hidden_chars=hidden_total, calls_truncated_legacy=legacy_total,
+                calls_malformed=malformed_total),
     layers={lab: dict(tally(c)) for lab, c in
             (("corpus", corpus_codes), ("recall", recall_codes), ("exec", exec_codes)) if c},
     surface=dict(blocks=blocks_total, unparseable=blocks_dead),

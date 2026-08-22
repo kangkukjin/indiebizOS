@@ -15,6 +15,7 @@ ms-playwright/ 를 보고 있어 어긋난다. 증상이 조용한 게 최악이
 사용:
   python scripts/check_playwright_browsers.py             # 점검만 (어긋나면 rc 1)
   python scripts/check_playwright_browsers.py --install    # 없으면 올바른 주소로 받는다
+  python scripts/check_playwright_browsers.py --prune      # 옛 빌드 정리(기대 빌드는 안 건드림)
   python scripts/check_playwright_browsers.py --with-deps  # (리눅스 CI) OS 의존성까지
   python scripts/check_playwright_browsers.py --json       # 요약 JSON 만
 
@@ -42,6 +43,8 @@ def main() -> int:
                     help="기대 빌드가 없으면 올바른 주소로 받는다 (있으면 즉시 통과 — 멱등)")
     ap.add_argument("--with-deps", action="store_true",
                     help="--install 시 OS 의존성까지 (리눅스 CI. sudo 필요)")
+    ap.add_argument("--prune", action="store_true",
+                    help="옛 빌드(stale) 삭제 — 지금 playwright 가 기대하는 빌드는 건드리지 않는다")
     ap.add_argument("--json", action="store_true", help="사람용 출력 없이 요약 마커만")
     args = ap.parse_args()
 
@@ -77,6 +80,30 @@ def main() -> int:
             return emit({**res, "ok": False, "status": "install_failed",
                          "note": f"playwright install rc={proc.returncode}"}, 1)
         res = check_playwright_browsers()   # 받은 뒤 같은 눈으로 재확인
+
+    # 옛 빌드 정리 — 알리기만 하던 것에 짝을 붙인다 (2026-08-22).
+    # playwright 를 올릴 때마다 빌드 번호가 바뀌어 옛 판이 통째로 남는다(빌드 하나 ~540MB).
+    # 삭제는 사용자 결정이라 기본은 여전히 알리기만 하고, --prune 을 준 호출에서만 지운다.
+    # 안전 조건 셋을 모두 만족하는 것만: ①이 점검이 stale 로 판정 ②browsers_path 안 ③디렉토리.
+    # 재다운로드 가능한 산출물이라 백업하지 않는다(--install 이 언제든 다시 받는다).
+    if args.prune and res["stale"]:
+        import shutil
+        base = Path(res["browsers_path"]).resolve()
+        expected_names = {f"{e['name']}-{e['revision']}" for e in res["expected"]}
+        pruned, freed = [], 0
+        for raw in res["stale"]:
+            path = Path(raw).resolve()
+            if base not in path.parents or path.name in expected_names or not path.is_dir():
+                continue   # 기대 빌드·주소 밖·파일은 절대 손대지 않는다
+            freed += sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+            shutil.rmtree(path)
+            pruned.append(path.name)
+        size = f"{freed / 1e9:.2f}GB" if freed >= 1e9 else f"{freed / 1e6:.0f}MB"
+        if not args.json and pruned:
+            print(f"  🧹 옛 빌드 {len(pruned)}개 삭제 ({size}): " + ", ".join(pruned))
+        res = check_playwright_browsers()   # 지운 뒤 같은 눈으로 재확인
+        res["note"] = (res["note"] + " " if res["note"] else "") + \
+                      f"prune: {len(pruned)}개 삭제({size})"
 
     summary = {"ok": bool(res["ok"]), "status": res["status"],
                "browsers_path": res["browsers_path"],

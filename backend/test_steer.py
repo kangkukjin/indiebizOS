@@ -119,8 +119,17 @@ def test_role_tags_oneshot():
         roles = [s.get("role") for s in ep.steps if s.get("event") == "round"]
         assert roles == ["oneshot:evaluate", "oneshot:classify", "execution"], roles
     finally:
-        # 저장 없이 정리 (라이브 DB 무접촉)
+        # ★"라이브 DB 무접촉"은 2026-08-18 부로 거짓이 됐다(B18-2): start_episode 가
+        # 그때부터 START 시점에 행을 먼저 연다(죽는 턴도 기록이 남게). 그래서 이 배터리는
+        # ended_at NULL 인 고아를 매 실행마다 라이브 원장에 쌓아 왔다(실측 ep1423 외 다수).
+        # 컨텍스트만 비우지 말고 연 행도 되돌린다 — 배터리의 원상복구 원칙.
+        eid = getattr(ep, "episode_id", None)
         EL._current_episode.set(None)
+        if eid:
+            conn = EL._get_db()
+            conn.execute("DELETE FROM episode_log WHERE id=?", (eid,))
+            conn.commit()
+            conn.close()
     print("OK 원샷 역할 태그 (evaluate/classify 구분 + 원복)")
 
 

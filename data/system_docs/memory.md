@@ -66,6 +66,7 @@ see_also: [architecture.md, ibl.md]
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **1000건** 롤링)
   - `episode_summary`: 로그에서 정규식으로 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 달성 여부(ACHIEVED/NOT_ACHIEVED) (**영구 보존**)
+  - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 1000건 롤링에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
 - **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
 - **한계**: 현재 *집계 통계*로만 소비. 개별 일화를 회상해 행동을 교정하는 루프는 미완. → 다듬을 자리 ②.
@@ -111,7 +112,7 @@ see_also: [architecture.md, ibl.md]
 - **저장**:
   - `pulse_log` (매시간, 30일): world(경제/날씨/뉴스) + user(대화수/일정) + self(서비스 alive/디스크/proprioception: 메모리·CPU·스레드·태스크)
   - `self_checks` (매일 1회, 30일): 결정론 건강 점검 — §1A 정적 정합성(`__static__:ibl_consistency`) + §1B fixture 통화 무결성 + §1C 골든 파이프. **AI 0**
-  - `action_health` (실행마다): 실사용 기반 액션 건강. 2026-08-21부터 `channel`·`error` 칸 — *어느 통로에서 왜* 실패했는지가 남는다. ★`assumed` 는 '미검증'이 아니라 '실사용 기록 없음'이다
+  - `action_health` (실행마다): 실사용 기반 액션 건강. 2026-08-21부터 `channel`·`error` 칸 — *어느 통로에서 왜* 실패했는지가 남는다. ★`assumed` 는 '미검증'이 아니라 '실사용 기록 없음'이다 · 시험 프로세스의 기록은 `source='test'` 로 격리(2026-08-21 B18-1) — 같은 판정을 주행기록도 쓴다(위 §3)
 - **사용**: 프롬프트에 압축 주입 + 면역 순찰(만성 실패 감지) + `diagnostic_report.md`.
 
 **몸 원장은 어디 있나 (2026-08-21)**: "내 몸이 언제 어떻게 바뀌었나"는 위 일곱 종에 새로 끼는 여덟 번째 기억이 *아니다* — 저장소가 이미 둘 있기 때문이다. **git**(추적 파일의 사건)과 **쓰기 관문 원장**(`data/write_ledger.jsonl` — git 이 못 보는 런타임 쓰기). 없던 것은 회상 통로뿐이었고, 그것이 `[self:body]{op:"changes|log|file|diff|writes"}` 어휘다. 전 op 읽기 전용이며, 관문 밖 직접 쓰기는 원리적으로 미기록이라 `writes` op 가 그 **부분성을 정직하게 광고**한다. 소유·수명 선언은 `backend/cognition/data_ownership.py` 의 `DECLARATIONS` (새 데이터 가족을 만들면 등재 의무). 상세=architecture.md '몸 원장'.

@@ -70,17 +70,25 @@ def _resolve_open_episode(db_path: str, agent_id):
     ★agent 필터는 참고일 뿐 최종이 아니다(2026-08-20 ep1282): 잡의 agent_id 도
     같은 오염원(재진입 스레드 문맥)에서 온다 — 'agent_001' 이 실려 필터가 열린
     system_ai 턴을 놓치고, 10초 유예 뒤 쓰기가 그 턴을 끊었다. 필터 0건이면
-    무필터로 한 번 더 — 틀린 대기(최대 상한)가 틀린 즉시 쓰기보다 싸다."""
+    무필터로 한 번 더 — 틀린 대기(최대 상한)가 틀린 즉시 쓰기보다 싸다.
+    ★시험 유래 행은 후보가 아니다(2026-08-22 B18-2): 시험 프로세스가 start 만 하고
+    끝내지 않은 행(실측 ep1423)은 다음 부팅의 고아 회수 전까지 영원히 ended_at NULL 로
+    남는다. 무필터 2차 폴백이 그걸 "열린 턴"으로 집으면 apply 가 죽은 턴이 닫히기를
+    상한(900초)까지 기다린다 — 무필터 폴백은 살리되(ep1282 의 이유는 그대로) 시험분만
+    후보에서 뺀다.
+    """
     try:
         conn = sqlite3.connect(db_path, timeout=5)
         row = None
         if agent_id:
             row = conn.execute(
                 "SELECT id FROM episode_log WHERE ended_at IS NULL AND agent=? "
+                "AND COALESCE(source, 'usage') <> 'test' "
                 "ORDER BY id DESC LIMIT 1", (agent_id,)).fetchone()
         if not row:
             row = conn.execute(
                 "SELECT id FROM episode_log WHERE ended_at IS NULL "
+                "AND COALESCE(source, 'usage') <> 'test' "
                 "ORDER BY id DESC LIMIT 1").fetchone()
         conn.close()
         return row[0] if row else None

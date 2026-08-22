@@ -548,7 +548,11 @@ def _current_episode_id(repo: str = None, agent_id: str = None):
     ★agent 필터는 참고일 뿐 최종이 아니다(2026-08-20 ep1282): agent_id 도 같은
     오염원(재진입 스레드 문맥→그랜트)에서 온다 — 'agent_001' 이 실려 필터가 열린
     system_ai 턴을 놓치고 null 을 반환, 수행자가 10초 유예로 떨어져 턴을 끊었다.
-    예약은 턴이 열려 있는 동안 일어나므로 무필터 열린 최신 행이 곧 이 턴이다."""
+    예약은 턴이 열려 있는 동안 일어나므로 무필터 열린 최신 행이 곧 이 턴이다.
+
+    ★단 시험 유래 행은 후보가 아니다(2026-08-22 B18-2): 시험 프로세스가 start 만 하고
+    끝내지 않은 행은 다음 부팅의 고아 회수 전까지 영원히 ended_at NULL 이라, 무필터
+    폴백이 그걸 집으면 수행자가 죽은 턴을 상한까지 기다린다."""
     try:
         from episode_logger import EpisodeLogger
         eid = getattr(EpisodeLogger.current(), "episode_id", None)
@@ -568,10 +572,12 @@ def _current_episode_id(repo: str = None, agent_id: str = None):
         if agent_id:
             row = conn.execute(
                 "SELECT id FROM episode_log WHERE ended_at IS NULL AND agent=? "
+                "AND COALESCE(source, 'usage') <> 'test' "
                 "ORDER BY id DESC LIMIT 1", (agent_id,)).fetchone()
         if not row:
             row = conn.execute(
                 "SELECT id FROM episode_log WHERE ended_at IS NULL "
+                "AND COALESCE(source, 'usage') <> 'test' "
                 "ORDER BY id DESC LIMIT 1").fetchone()
         conn.close()
         return row[0] if row else None

@@ -29,6 +29,17 @@ from logging_utils import mask_secrets
 
 MAX_EPISODES = 1000
 
+# 주행기록의 출처 — 'usage'(실사용) / 'test'(시험 프로세스). 판정 정본은 base 층 한 벌.
+# ★기록은 지우지 않고 표식만 붙인다(B18-2): 시험도 자기 행을 읽어야 하고(배터리가
+# start/end 를 직접 부른다), 지운 기록은 되살릴 수 없다. 읽는 쪽이 기본값으로 거른다.
+def _episode_source() -> str:
+    try:
+        from runtime_utils import in_test_process
+        return "test" if in_test_process() else "usage"
+    except Exception:
+        return "usage"
+
+
 # 현재 실행 컨텍스트의 에피소드 — 태스크/스레드 로컬(asyncio 태스크별 격리, copy_context 로 전파).
 # 전역 단일 _active/_buffer 를 대체한다(동시 에피소드 충돌·강제종료·교차오염 제거).
 _current_episode: contextvars.ContextVar = contextvars.ContextVar(
@@ -351,7 +362,8 @@ def _ensure_episode_tables():
                 user_message TEXT,
                 log TEXT,
                 total_ms INTEGER,
-                task_id TEXT
+                task_id TEXT,
+                source TEXT
             );
             CREATE TABLE IF NOT EXISTS episode_summary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -365,7 +377,8 @@ def _ensure_episode_tables():
                 execution_rounds INTEGER,
                 total_ms INTEGER,
                 evaluation_result TEXT,
-                steps TEXT
+                steps TEXT,
+                source TEXT
             );
         """)
         # 기존 DB 마이그레이션 — 구조화 스텝 원장 컬럼 (2026-08-14)
@@ -380,6 +393,14 @@ def _ensure_episode_tables():
             conn.execute("ALTER TABLE episode_log ADD COLUMN task_id TEXT")
         except sqlite3.OperationalError:
             pass  # 이미 존재
+        # 마이그레이션 — 시험 격리 칸 (2026-08-22, B18-2): 시험 프로세스가 남긴 주행은
+        # 몸의 삶이 아니다. 지우지 않고 **표식만 붙인다**(시험도 자기 행을 읽어야 하고,
+        # 지운 기록은 되살릴 수 없다). NULL = 칸이 생기기 전의 행 = 실사용으로 읽는다.
+        for _t in ("episode_log", "episode_summary"):
+            try:
+                conn.execute(f"ALTER TABLE {_t} ADD COLUMN source TEXT")
+            except sqlite3.OperationalError:
+                pass  # 이미 존재
         conn.commit()
         conn.close()
     except Exception as e:
@@ -444,10 +465,10 @@ def _open_episode(started_at, agent, user_message, task_id=""):
     try:
         conn = _get_db()
         cur = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id)
-               VALUES (?, NULL, ?, ?, '', NULL, ?)""",
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source)
+               VALUES (?, NULL, ?, ?, '', NULL, ?, ?)""",
             (started_at.isoformat() if started_at else datetime.now().isoformat(),
-             agent, user_message, task_id or ""),
+             agent, user_message, task_id or "", _episode_source()),
         )
         eid = cur.lastrowid
         conn.commit()
@@ -490,8 +511,8 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id="
     try:
         conn = _get_db()
         cursor = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 started_at.isoformat() if started_at else datetime.now().isoformat(),
                 datetime.now().isoformat(),
@@ -500,6 +521,7 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id="
                 log_text,
                 total_ms,
                 task_id or "",
+                _episode_source(),
             )
         )
         episode_id = cursor.lastrowid
@@ -591,8 +613,8 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
             """INSERT INTO episode_summary
                (episode_id, started_at, agent, user_message,
                 hippocampus_score, unconscious_decision, consciousness_ms,
-                execution_rounds, total_ms, evaluation_result, steps)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                execution_rounds, total_ms, evaluation_result, steps, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 episode_id,
                 started_at.isoformat() if started_at else None,
@@ -605,6 +627,7 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
                 total_ms,
                 evaluation_result,
                 steps_json,
+                _episode_source(),
             )
         )
         conn.commit()
@@ -614,14 +637,22 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
 
 
 def _cleanup_old_episodes():
-    """episode_log에서 MAX_EPISODES(1000)개 초과 시 오래된 것 삭제 (episode_summary는 유지)"""
+    """episode_log에서 MAX_EPISODES(1000)개 초과 시 오래된 것 삭제 (episode_summary는 유지)
+
+    ★삭제 순서는 시험분 먼저(B18-2, 2026-08-22): 1000칸은 몸이 자기 삶을 되짚는 창인데
+    시험 프로세스의 주행이 같은 칸을 먹으면 **실사용 주행이 그만큼 일찍 창 밖으로
+    밀려난다**(실측: 창 999건 중 36건이 시험 유래). 표식이 있으니 순서만 바꾸면 된다 —
+    같은 출처 안에서는 종전대로 오래된 것부터."""
     try:
         conn = _get_db()
         count = conn.execute("SELECT COUNT(*) FROM episode_log").fetchone()[0]
         if count > MAX_EPISODES:
             delete_count = count - MAX_EPISODES
             conn.execute(
-                "DELETE FROM episode_log WHERE id IN (SELECT id FROM episode_log ORDER BY id ASC LIMIT ?)",
+                "DELETE FROM episode_log WHERE id IN ("
+                "  SELECT id FROM episode_log"
+                "  ORDER BY CASE WHEN COALESCE(source, 'usage') = 'test' THEN 0 ELSE 1 END, id ASC"
+                "  LIMIT ?)",
                 (delete_count,)
             )
             conn.commit()
@@ -632,14 +663,20 @@ def _cleanup_old_episodes():
 
 # ============ 조회 함수 ============
 
-def get_episode_list(limit: int = 20):
-    """최근 에피소드 목록 반환"""
+# 읽는 쪽의 기본값 — 실사용 주행만. NULL(칸 생기기 전 행)은 실사용으로 읽는다.
+USAGE_ONLY = "COALESCE(source, 'usage') <> 'test'"
+
+
+def get_episode_list(limit: int = 20, include_test: bool = False):
+    """최근 에피소드 목록 반환 (기본=실사용만, include_test 로 시험분 포함)"""
     try:
         conn = _get_db()
         rows = conn.execute(
-            """SELECT id, started_at, ended_at, agent,
-                      SUBSTR(user_message, 1, 100) as user_message, total_ms
-               FROM episode_log ORDER BY id DESC LIMIT ?""",
+            f"""SELECT id, started_at, ended_at, agent,
+                      SUBSTR(user_message, 1, 100) as user_message, total_ms, source
+               FROM episode_log
+               {'' if include_test else 'WHERE ' + USAGE_ONLY}
+               ORDER BY id DESC LIMIT ?""",
             (limit,)
         ).fetchall()
         conn.close()
@@ -648,7 +685,7 @@ def get_episode_list(limit: int = 20):
         return []
 
 
-def get_episode_journal(limit: int = 30):
+def get_episode_journal(limit: int = 30, include_test: bool = False):
     """주행기록계 — 분석 가능한(전체 로그 보존) 에피소드를 요약 지표와 함께 반환.
 
     episode_log(전체 로그, 최근 1000개 cap) LEFT JOIN episode_summary(지표, 영구)로
@@ -658,13 +695,14 @@ def get_episode_journal(limit: int = 30):
     try:
         conn = _get_db()
         rows = conn.execute(
-            """SELECT e.id, e.started_at, e.agent,
+            f"""SELECT e.id, e.started_at, e.agent,
                       SUBSTR(e.user_message, 1, 120) as user_message,
                       e.total_ms,
                       s.hippocampus_score, s.unconscious_decision,
                       s.execution_rounds, s.evaluation_result
                FROM episode_log e
                LEFT JOIN episode_summary s ON s.episode_id = e.id
+               {'' if include_test else 'WHERE ' + USAGE_ONLY.replace('source', 'e.source')}
                ORDER BY e.id DESC LIMIT ?""",
             (limit,)
         ).fetchall()
@@ -687,12 +725,14 @@ def get_episode_detail(episode_id: int):
         return None
 
 
-def get_episode_summaries(limit: int = 50):
+def get_episode_summaries(limit: int = 50, include_test: bool = False):
     """에피소드 요약 지표 목록 (영구 보존분)"""
     try:
         conn = _get_db()
         rows = conn.execute(
-            """SELECT * FROM episode_summary ORDER BY id DESC LIMIT ?""",
+            f"""SELECT * FROM episode_summary
+                {'' if include_test else 'WHERE ' + USAGE_ONLY}
+                ORDER BY id DESC LIMIT ?""",
             (limit,)
         ).fetchall()
         conn.close()
@@ -727,6 +767,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 AVG(total_ms) as avg_ms
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
+              AND COALESCE(source, 'usage') <> 'test'
         """, (start, end)).fetchone()
 
         # EXECUTE 비율
@@ -736,6 +777,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 SUM(CASE WHEN unconscious_decision = 'EXECUTE' THEN 1 ELSE 0 END) as exec_count
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
+              AND COALESCE(source, 'usage') <> 'test'
               AND unconscious_decision IS NOT NULL
         """, (start, end)).fetchone()
 
@@ -746,6 +788,7 @@ def get_cognitive_trends(days: int = 7) -> dict:
                 SUM(CASE WHEN evaluation_result = 'ACHIEVED' THEN 1 ELSE 0 END) as achieved
             FROM episode_summary
             WHERE started_at >= ? AND started_at < ?
+              AND COALESCE(source, 'usage') <> 'test'
               AND evaluation_result IS NOT NULL
         """, (start, end)).fetchone()
 

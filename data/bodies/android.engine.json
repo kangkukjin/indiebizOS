@@ -255,6 +255,7 @@
     "test_dispatcher_stub_guard": "force_exclude_glob",
     "test_doc_drift": "force_exclude_glob",
     "test_edit_miss_diagnosis": "force_exclude_glob",
+    "test_episode_source": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
@@ -281,8 +282,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 275,
+    "total": 276,
     "engine": 220,
-    "blocklist": 55
+    "blocklist": 56
   }
 }

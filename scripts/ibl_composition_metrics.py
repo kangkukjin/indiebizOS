@@ -10,7 +10,9 @@ DB=str(ROOT/"data"/"world_pulse.db")
 OUT=str(ROOT/"data"/"ibl_composition_metrics.json")
 N=int(sys.argv[1]) if len(sys.argv)>1 else 220
 con=sqlite3.connect(DB)
-rows=con.execute("SELECT id, started_at, agent, user_message, log FROM episode_log ORDER BY id DESC LIMIT ?", (N,)).fetchall()
+# 시험 유래 주행 제외(B18-2) — 지표는 실사용 파이프만 센다.
+rows=con.execute("SELECT id, started_at, agent, user_message, log FROM episode_log "
+                 "WHERE COALESCE(source, 'usage') <> 'test' ORDER BY id DESC LIMIT ?", (N,)).fetchall()
 TOOL=re.compile(r"\] tool_use (\S+) (\{.*)")
 stats=[]
 for eid, ts, agent, msg, log in rows:

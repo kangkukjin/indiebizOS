@@ -6,9 +6,7 @@ package_manager(제거 후 정리)가 이 *데이터 쓰기* 때문에 인지층
 매듭의 교차층 간선이었다 — 데이터는 데이터층에.
 """
 import logging
-import os
 import sqlite3
-import sys
 from datetime import datetime
 from typing import Dict, List
 
@@ -63,7 +61,8 @@ def _init_pulse_db():
             user_message TEXT,
             log TEXT,
             total_ms INTEGER,
-            task_id TEXT
+            task_id TEXT,
+            source TEXT
         );
         CREATE TABLE IF NOT EXISTS episode_summary (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,7 +75,8 @@ def _init_pulse_db():
             consciousness_ms INTEGER,
             execution_rounds INTEGER,
             total_ms INTEGER,
-            evaluation_result TEXT
+            evaluation_result TEXT,
+            source TEXT
         );
     """)
     conn.close()
@@ -118,23 +118,16 @@ def _ensure_action_health_cols(conn):
 
 
 def _in_test_process() -> bool:
-    """이 프로세스가 자기시험인가 — **시험이 만든 실패는 몸의 병이 아니다**.
+    """이 프로세스가 자기시험인가 — 판정 정본은 runtime_utils.in_test_process().
 
-    시험은 상한·순환·오류 경로를 *일부러* 밟는다. 그 의도된 실패가 `source='usage'` 로
-    적재되면 만성 실패 집계(world_pulse_health, `source='usage'` 만 셈)가 건강한 몸을
-    아프다고 신고한다 — B18-1 실측: 재귀 깊이 시험 픽스처 `_t_rec_chain0…5` 의 실패가
-    "만성 실패: self:workflow" 경보를 만들어 사용자 알림함까지 올라갔다(같은 날 실사용은
-    전부 success=1).
-
-    픽스처 이름(`_t_` 접두)으로 거르지 않는 이유: 이름 규약은 시험마다 다르고 새 시험이
-    다시 감염시킨다. **프로세스 정체**로 판정하면 시험 전체가 한 번에 격리된다
-    (기록 병목 한 곳에서 닫는다 — 호출자 7곳을 각각 고치지 않는 것과 같은 규율).
+    ★왜 여기서 위임하나(2026-08-22): 같은 판정이 주행기록(episode_log)에도 필요해졌다.
+    복제하면 두 원장의 '시험'이 조용히 다른 뜻으로 갈라진다(어느 쪽이 pytest 를 보고
+    어느 쪽이 argv 를 보는지가 드리프트한다) — base 층 한 벌을 함께 부른다.
+    B18-1 의 근거·설계 의도는 그 함수의 docstring 에 있다.
     """
     try:
-        if "pytest" in sys.modules:
-            return True
-        argv0 = os.path.basename(sys.argv[0] or "")
-        return argv0.startswith("test_") and argv0.endswith(".py")
+        from runtime_utils import in_test_process
+        return in_test_process()
     except Exception:
         return False
 

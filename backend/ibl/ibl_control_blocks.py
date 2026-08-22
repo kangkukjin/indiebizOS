@@ -9,9 +9,9 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from common.currency import currency_shape_note
 from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
-                           _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs,
-                           currency_shape_note)
+                           _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
 
 import copy as _copy
 import time as _time

@@ -4518,10 +4518,10 @@ nodes:
         returns: effect
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
-        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다.
+        target_description: src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다. 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.
         router: handler
         tool: copy_path
-        implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull)
+        implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
         target_key: source
       move:
         returns: effect

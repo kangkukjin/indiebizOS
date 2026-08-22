@@ -41,53 +41,6 @@ except Exception:  # import 경로 미확보 시 폴백(동일 내용)
 _FIND_DEADLINE_S = 25.0  # 엔진 타임아웃 전에 부분결과라도 반환
 
 
-# ── 파이프 통화 → 파일 복사 ────────────────────────────────────────────────
-# "몇 장을 어디에 저장" 은 새 동사가 아니라 *조합*이다 — 고르는 일은 앞 액션과 table
-# 변환자가 하고(take/filter/sort), copy 는 받은 것을 그대로 옮긴다.
-#   [self:photo]{source:"usb"} >> [table:take]{n:10} >> [self:copy]{dest:"~/Desktop/폰사진"}
-
-def _piped_items(prev_result) -> list:
-    """파이프로 온 결과에서 items 목록 추출 (문자열 JSON·dict·list 전부 관용)."""
-    data = prev_result
-    if isinstance(data, str):
-        if not data.strip():
-            return []
-        try:
-            data = json.loads(data)
-        except (ValueError, TypeError):
-            return []
-    if isinstance(data, dict):
-        data = data.get("items") or data.get("records") or []
-    return [it for it in data if isinstance(it, dict)] if isinstance(data, list) else []
-
-
-def _copy_piped_items(tool_input: dict, dest: str, project_path: str) -> str:
-    """파이프로 온 items 의 파일들을 dest *폴더* 로 복사 (실제 복사는 file_index 단일 소스)."""
-    items = _piped_items(tool_input.get("_prev_result"))
-    if not items:
-        return ("Error: 복사할 항목이 없습니다. src(원본 경로)를 주거나, "
-                "앞 액션의 결과를 >> 로 넘기세요.")
-
-    dst_dir = os.path.join(project_path, os.path.expanduser(dest))
-    scope_err = _validate_path_in_scope(dst_dir, project_path)
-    if scope_err:
-        return scope_err
-
-    import file_index
-    res = file_index.save_media_files(items, dst_dir)
-    saved, failed = res.get("saved") or [], res.get("failed") or []
-    if res.get("error"):
-        return f"Error: {res['error']}"
-    if not saved and not failed:
-        return "Error: 항목에 파일 경로가 없습니다 (path 필드 필요)."
-    msg = f"{len(saved)}개 파일을 저장했습니다: {res.get('dest')}"
-    if saved:
-        msg += "\n  " + ", ".join(saved[:5]) + (f" 외 {len(saved) - 5}개" if len(saved) > 5 else "")
-    if failed:
-        msg += f"\n실패 {len(failed)}개: " + "; ".join(failed[:3])
-    return msg
-
-
 def _is_dead_dir(path):
     """절대-dead(설치트리·캐시) 디렉토리면 True — walk 가 안 들어감(의도 불문 제외)."""
     p = path.rstrip("/") + "/"
@@ -1189,7 +1142,8 @@ def execute(tool_input: dict, context) -> str:
             _dst = tool_input.get("dest") or tool_input.get("destination")
             # src 생략 + 파이프 통화 = "앞에서 고른 것들을 여기에 저장" (여러 개를 한 번에)
             if not _src and _dst:
-                return _copy_piped_items(tool_input, _dst, project_path)
+                return _load_sibling("copy_ops").copy_piped_items(
+                    tool_input, _dst, project_path, _validate_path_in_scope)
             if not _src or not _dst:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
             src = os.path.join(project_path, os.path.expanduser(_src))

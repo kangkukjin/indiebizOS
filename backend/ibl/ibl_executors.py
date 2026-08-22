@@ -15,6 +15,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+# 통화 진단의 정본 — 2026-08-22 에 여기서 common/currency 로 이사했다(소비자가 셋이 되며
+# ibl 층 안쪽에 두면 패키지 핸들러가 ibl 내부를 찔러야 했다). 옛 import 경로 보존용 재수출.
+from common.currency import currency_shape_note  # noqa: F401
+
 
 _nodes_cache: Optional[Dict] = None
 
@@ -986,25 +990,6 @@ def _stamp_depth(steps: Any, depth: int) -> None:
         for key in ("branches", "_fallback_chain", "body", "catch", "finally", "_branch_steps"):
             v = st.get(key)
             _stamp_depth(v if isinstance(v, list) else ([v] if isinstance(v, dict) else None), depth)
-
-
-def currency_shape_note(envelope: Any) -> str:
-    """'받은 봉투' 진단 문자열 — each·reduce 가 공유한다 (B19-2).
-
-    키만 찍으면 "items 통화를 찾지 못했습니다. 받은 봉투: ['items']" 라는 자기모순이 난다.
-    items 자리에 무엇이 왔는지(타입·미리보기)까지 말해야 진단이 사람·모델에게 닿는다.
-    """
-    if isinstance(envelope, dict):
-        keys = list(envelope.keys())[:8]
-        payload = envelope.get("items")
-        if payload is not None and not isinstance(payload, list):
-            preview = str(payload)
-            if len(preview) > 60:
-                preview = preview[:60] + "…"
-            return (f"{keys} — items 자리에 목록이 아니라 "
-                    f"{type(payload).__name__}({len(str(payload))}자)가 있습니다: {preview}")
-        return str(keys)
-    return type(envelope).__name__
 
 
 def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:

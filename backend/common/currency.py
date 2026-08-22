@@ -25,6 +25,7 @@
 완전 컷오버 후 옛 키 분기를 삭제한다.
 """
 
+import json
 from typing import Any, Iterable
 
 
@@ -71,6 +72,42 @@ def coerce_items_payload(value: Any) -> Any:
         except Exception:
             return None
     return None
+
+
+def currency_shape_note(envelope: Any) -> str:
+    """'받은 봉투' 진단 문자열 — each·reduce 가 공유한다 (B19-2).
+
+    키만 찍으면 "items 통화를 찾지 못했습니다. 받은 봉투: ['items']" 라는 자기모순이 난다.
+    items 자리에 무엇이 왔는지(타입·미리보기)까지 말해야 진단이 사람·모델에게 닿는다.
+
+    ★2026-08-22 (F20-3 후속, 세 번째 소비자가 붙으며 드러남): **JSON 문자열도 판다**.
+    each·reduce 는 이미 파싱한 봉투를 넘겨서 안 드러났지만, `_prev_result` 를 날것으로
+    쥔 소비자(system_essentials copy)가 부르면 진단이 통째로 `str` 한 글자였다 — 진단이
+    "무엇이 왔는지"를 말해야 하는데 "문자열이 왔다"만 말하는 건 안 판 것과 같다.
+    """
+    if isinstance(envelope, str):
+        s = envelope.strip()
+        if s.startswith("{") or s.startswith("["):
+            try:
+                envelope = json.loads(s)
+            except Exception:
+                pass                      # JSON 아닌 문자열 — 아래 타입 이름 경로로
+    if isinstance(envelope, list):
+        return f"목록({len(envelope)}행) — 봉투가 아니라 행 목록"
+    if isinstance(envelope, dict):
+        keys = list(envelope.keys())[:8]
+        payload = envelope.get("items")
+        if payload is not None and not isinstance(payload, list):
+            preview = str(payload)
+            if len(preview) > 60:
+                preview = preview[:60] + "…"
+            return (f"{keys} — items 자리에 목록이 아니라 "
+                    f"{type(payload).__name__}({len(str(payload))}자)가 있습니다: {preview}")
+        return str(keys)
+    if isinstance(envelope, str):
+        preview = envelope if len(envelope) <= 60 else envelope[:60] + "…"
+        return f"str({len(envelope)}자): {preview}"
+    return type(envelope).__name__
 
 
 def derive_items(result: Any) -> Any:

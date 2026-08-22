@@ -15,6 +15,7 @@
     P10. filter/dedup/take 침묵 삼킴                    → 명시 에러
     P11. quote 통화 부재로 병렬 결합 표현 불가 (실험 4)  → 1행 items 방출 + N항 union/merge
          (+ 옛 _extract_two 가 셋째 분기를 조용히 버림 → 전 분기 결합, join 은 명시 거부)
+    P22. copy 가 통화 없음과 0행을 접음(같은 에러)     → 3갈래 분간(F20-3 계약)
     P12~P21 은 파일 아래쪽 참조 (grep ⑥′ · document ⑭ · … · P21 grep 없는 경로 명시 신고)
 
 실행: python3 backend/test_pipe_currency_failures.py
@@ -674,8 +675,53 @@ def test_p21_grep_missing_path_loud():
     print("P21 OK — grep 없는 경로 = success:false 명시 신고(rg·파이썬 층), 진짜 0건은 그대로·단일 파일 전수 계수 정직")
 
 
+def test_p22_copy_empty_hands_vs_no_currency():
+    """P22(2026-08-22, F20-3 후속): `[self:copy]{dest}` 가 **통화 없음과 0행을 접었다** —
+    `_piped_items` 가 둘 다 `[]` 로 만들어, 앞 액션이 통화를 안 내는 액션이었을 때와
+    앞 액션이 정상적으로 0행을 냈을 때가 똑같이 "Error: 복사할 항목이 없습니다"로 보고됐다.
+    0행 계약(통화 없음=에러 / 0행=성공)을 이 자리에선 지킬 수가 없던 것.
+    → 3갈래 분간: 통화 없음=거절(받은 봉투 진단 동봉) · 0행=빈손 성공 · 행은 있으나
+      레코드 아님=별도 거절. 성공 문자열은 "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다."""
+    import importlib
+    wf = importlib.import_module("workflow_engine")
+    _copyops = _load("_t_copyops", os.path.join(_PKG, "system_essentials", "copy_ops.py"))
+
+    def copy_with(prev):
+        return _sysess.execute({"dest": "~/Desktop/_p22_없는폴더", "_prev_result": prev},
+                               _Ctx("copy_path", "/tmp"))
+
+    # ① 0행 = 빈손 성공 (감시자·필터 문형의 정상 결과)
+    for zero in (json.dumps({"items": []}), {"items": []}, []):
+        r = copy_with(zero)
+        assert "0행" in r and not r.startswith("Error:"), (zero, r)
+        assert wf._is_error_result(r) is False, r        # 파이프가 성공으로 읽는가
+        assert "복사할 항목이 없습니다" not in r, r       # 옛 문장으로 되돌아가지 않았는가
+
+    # ② 통화 없음 = 여전히 거절 + 받은 봉투 진단(무엇이 왔는지)
+    r = copy_with("그냥 평문 결과입니다")
+    assert r.startswith("Error:") and "통화가 없습니다" in r, r
+    assert wf._is_error_result(r) is True, r
+    r2 = copy_with(json.dumps({"success": True, "message": "완료"}))
+    assert r2.startswith("Error:") and "message" in r2, r2   # 봉투 키를 보여준다
+    r3 = copy_with(json.dumps({"items": "목록이 아님"}))
+    assert r3.startswith("Error:") and "목록이 아니라" in r3, r3
+    r4 = copy_with(None)                                   # 파이프도 src 도 없음
+    assert r4.startswith("Error:") and "src" in r4, r4     # 옛 안내 보존
+
+    # ③ 행은 있으나 레코드가 아님 = 0행과 다른 사실이라 다른 문장
+    r5 = copy_with(json.dumps({"items": ["a.jpg", "b.jpg"]}))
+    assert r5.startswith("Error:") and "2행" in r5 and "레코드" in r5, r5
+
+    # ④ 옛 records 봉투 관용은 보존(생산자 0이지만 잔존 데이터)
+    assert _copyops.piped_items(json.dumps({"records": [{"path": "/x"}]})) == [{"path": "/x"}]
+    # ⑤ 세 갈래가 반환값 층에서도 갈리는가 (None ≠ [])
+    assert _copyops.piped_items("평문") is None
+    assert _copyops.piped_items(json.dumps({"items": []})) == []
+    print("P22 OK — copy: 통화 없음=거절(봉투 진단) · 0행=빈손 성공 · 비-레코드=별도 거절")
+
+
 if __name__ == "__main__":
-    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P20) ===\n")
+    print("=== 파이프 침묵 실패 수리 회귀 테스트 (P1~P22) ===\n")
     test_p1_stale_derived_views_removed()
     test_p2_spreadsheet_inline_items()
     test_p3_sort_source_fallback_and_loud_error()
@@ -697,4 +743,5 @@ if __name__ == "__main__":
     test_p19_totals_detection_baseline()
     test_p20_workflow_save_syntax_gate()
     test_p21_grep_missing_path_loud()
+    test_p22_copy_empty_hands_vs_no_currency()
     print("\n=== 전부 통과 ===")

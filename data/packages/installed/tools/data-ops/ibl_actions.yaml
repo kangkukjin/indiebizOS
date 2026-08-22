@@ -5,7 +5,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
-    target_description: 'where(필터 조건): 문자열(전 필드 부분일치, 예 "전세") · {field, op, value}(op=eq/ne/lt/le/gt/ge/contains/in) · {열:값} 단축형 · 조건 배열(AND). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
+    target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이") · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
     group: transform
     router: handler
     tool: data_filter
@@ -299,13 +299,14 @@ tool_json:
     version: 1.0.0
   tools:
   - name: data_filter
-    description: 'records|table → 조건 부분집합. where: 문자열(전 필드 부분일치) 또는 {field,op,value}(op=eq/ne/lt/le/gt/ge/contains/in) 또는
-      {열:값} 단축형 또는 조건 배열(AND). >> 앞 통화를 받음.'
+    description: 'records|table → 조건 부분집합. where: 문자열 "필드 op 값"(기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge)
+      또는 연산자 없는 문자열(전 필드 부분일치) 또는 {field,op,value} 또는 {열:값} 단축형 또는 조건 배열(AND).
+      모르는 op 은 정직 거절. >> 앞 통화를 받음.'
     input_schema:
       type: object
       properties:
         where:
-          description: 필터 조건. 문자열·{field,op,value}·{열:값}·배열(AND).
+          description: 필터 조건. 문자열("필드 op 값" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND).
   - name: data_sort
     description: records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.
     input_schema:

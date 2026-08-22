@@ -45,6 +45,34 @@ def items(rows: Iterable[Any] = (), **wrapper) -> dict:
     return out
 
 
+def coerce_items_payload(value: Any) -> Any:
+    """params 로 **직접 받은** 통화 페이로드를 행 목록으로 되읽는다 (없으면 None).
+
+    `[table:reduce]{items: "$r.items"}` 처럼 변수 치환이 통화를 **JSON 문자열**로 넣는
+    경로가 있어서, 소비자마다 문자열을 읽고/못 읽고가 갈렸다 — 같은 문장이 take 에서는
+    통과하고 reduce·brief 에서는 "통화를 찾지 못했습니다" 로 죽었다(2026-08-22 상상훈련
+    19회차 B19-2). 어휘가 약속한 입력은 모든 소비자가 **같은 눈**으로 읽어야 한다.
+
+    받는 모양: list(그대로) · {"items": [...]} 봉투 · 그 둘의 JSON 문자열.
+    그 밖(빈 문자열·JSON 아님·스칼라)은 None — 호출자의 기존 진단 경로를 그대로 둔다.
+    """
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        rows = value.get("items")
+        return rows if isinstance(rows, list) else None
+    if isinstance(value, str):
+        s = value.strip()
+        if not s or s[0] not in "[{":
+            return None
+        try:
+            import json as _json
+            return coerce_items_payload(_json.loads(s))
+        except Exception:
+            return None
+    return None
+
+
 def derive_items(result: Any) -> Any:
     """옛 통화 형태에서 단일 통화 `items`를 파생한다 (전환기 choke-point 정규화).
 

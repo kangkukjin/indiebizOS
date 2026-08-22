@@ -631,7 +631,8 @@ def _meta_safe(v: Any) -> Any:
     return v if isinstance(v, (str, int, float, bool)) or v is None else str(v)[:200]
 
 
-def _attach_branch_meta(result: Any, matched: str, matched_value: Any) -> Any:
+def _attach_branch_meta(result: Any, matched: str, matched_value: Any,
+                        tool_input: dict = None) -> Any:
     """조건 블록([if:]/[case:]) 분기 결과에 관측 메타를 병기한다 (★P2, 2026-08-20).
 
     matched=탄 분기의 라벨(조건식·패턴·"else"·"default"), matched_value=좌변 실측값.
@@ -641,11 +642,18 @@ def _attach_branch_meta(result: Any, matched: str, matched_value: Any) -> Any:
     깨지니 그 경우는 로그로만 남긴다.
     """
     mv = _meta_safe(matched_value)
+    # ★F19-1 (2026-08-22 상상훈련 19회차): 분기 몸이 스칼라를 내면(예 [self:time]) 옛 코드는
+    # 메타를 로그로만 흘려, 같은 블록이 결과 모양에 따라 진단 가능/불가로 갈렸다
+    # ("case 는 안 내고 if 는 낸다"로 보이던 것의 실체 = dict/비-dict 비대칭).
+    # 통화(payload)는 불침범한 채, 관측 메타는 **봉투 쪽 side-channel**(step dict)로 낸다 —
+    # 파이프는 results[] step 기록에, 단독 실행은 상위에서 결과를 감싸 실어 보낸다.
+    if isinstance(tool_input, dict):
+        tool_input["_branch_meta"] = {"matched": matched, "matched_value": mv}
     if isinstance(result, dict):
         result.setdefault("matched", matched)
         result.setdefault("matched_value", mv)
     else:
-        print(f"[IBL_COND] matched={matched} value={mv} (비-dict 분기 결과 — 메타 병기 생략)")
+        print(f"[IBL_COND] matched={matched} value={mv} (비-dict 분기 결과 — 봉투로만 신고)")
     return result
 
 
@@ -786,7 +794,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
             if action:
                 return _attach_branch_meta(
                     _run_branch(action, tool_input, project_path, agent_id),
-                    matched="else", matched_value=None)
+                    matched="else", matched_value=None, tool_input=tool_input)
             return {"message": "else 분기 실행 (action 없음)", "matched": "else"}
 
         # 조건 평가: 소스 참조 실행 + $변수(앞 문장 결과, _var_values) 술어
@@ -801,7 +809,7 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
             if action:
                 return _attach_branch_meta(
                     _run_branch(action, tool_input, project_path, agent_id),
-                    matched=condition, matched_value=left_value)
+                    matched=condition, matched_value=left_value, tool_input=tool_input)
             return {"message": f"조건 충족: {condition}",
                     "matched": condition, "matched_value": _meta_safe(left_value)}
 
@@ -869,7 +877,7 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
     if action:
         return _attach_branch_meta(
             _run_branch(action, tool_input, project_path, agent_id),
-            matched=matched, matched_value=sense_value)
+            matched=matched, matched_value=sense_value, tool_input=tool_input)
 
     return {"message": f"case문 실행 완료 (source={source}, value={sense_value})",
             "matched": matched, "matched_value": _meta_safe(sense_value)}
@@ -980,6 +988,25 @@ def _stamp_depth(steps: Any, depth: int) -> None:
             _stamp_depth(v if isinstance(v, list) else ([v] if isinstance(v, dict) else None), depth)
 
 
+def currency_shape_note(envelope: Any) -> str:
+    """'받은 봉투' 진단 문자열 — each·reduce 가 공유한다 (B19-2).
+
+    키만 찍으면 "items 통화를 찾지 못했습니다. 받은 봉투: ['items']" 라는 자기모순이 난다.
+    items 자리에 무엇이 왔는지(타입·미리보기)까지 말해야 진단이 사람·모델에게 닿는다.
+    """
+    if isinstance(envelope, dict):
+        keys = list(envelope.keys())[:8]
+        payload = envelope.get("items")
+        if payload is not None and not isinstance(payload, list):
+            preview = str(payload)
+            if len(preview) > 60:
+                preview = preview[:60] + "…"
+            return (f"{keys} — items 자리에 목록이 아니라 "
+                    f"{type(payload).__name__}({len(str(payload))}자)가 있습니다: {preview}")
+        return str(keys)
+    return type(envelope).__name__
+
+
 def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
     """입력 통화(items)를 꺼낸다. 반환: (행 목록 또는 None, 파싱된 봉투).
 
@@ -1008,7 +1035,14 @@ def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
             obj = prev
     if obj is None:                  # 파이프 입력 없음 → params 에서 통화 수용
         if params.get("items") is not None:
-            obj = {"items": params["items"]}
+            # ★B19-2 (2026-08-22 상상훈련 19회차): `items: "$r.items"` 는 변수 치환이
+            # 통화를 **JSON 문자열**로 넣는다. 옛 코드는 그 문자열을 그대로 items 자리에
+            # 담아 "items 를 찾지 못했습니다 — 받은 봉투: ['items']" 라는 자기모순 거절이
+            # 났다(같은 문장이 take 에선 통과 — 읽는 쪽이 갈렸다). 정본 =
+            # common.currency.coerce_items_payload — data-ops·ai-ops 도 같은 눈을 쓴다.
+            from common.currency import coerce_items_payload
+            _rows = coerce_items_payload(params["items"])
+            obj = {"items": _rows if _rows is not None else params["items"]}
         elif params.get("table") is not None:
             obj = {"table": params["table"]}
 
@@ -1054,8 +1088,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
     rows, envelope = _each_input_rows(params)
     if rows is None:
-        shape = (list(envelope.keys())[:8] if isinstance(envelope, dict)
-                 else type(envelope).__name__)
+        shape = currency_shape_note(envelope)
         return {"success": False, "items": [], "count": 0,
                 "error": f"each: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape} — "
                          f"each 는 목록의 각 행에 문장을 적용합니다. 파이프(>>) 뒤에 놓거나, "

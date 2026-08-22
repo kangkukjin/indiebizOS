@@ -51,6 +51,13 @@ def _parse_prev(prev):
     return None
 
 
+try:
+    from common.currency import coerce_items_payload as _coerce_items
+except ImportError:      # 백엔드 공용 모듈이 없는 환경(패키지 단독 시험) — 옛 동작 유지
+    def _coerce_items(v):
+        return v if isinstance(v, list) else None
+
+
 def _prev_items(tool_input):
     """파이프(_prev_result) 또는 직접 param(items)에서 items 통화 추출.
 
@@ -61,8 +68,13 @@ def _prev_items(tool_input):
         return prev["items"], prev
     if isinstance(prev, list):
         return prev, prev
-    if isinstance(tool_input.get("items"), list):
-        return tool_input["items"], None
+    if tool_input.get("items") is not None:
+        # ★B19-2 (2026-08-22 상상훈련 19회차): `items: "$r.items"` 는 변수 치환이 통화를
+        # JSON 문자열로 넣는다 — list 만 받던 옛 코드는 어휘가 약속한 입력을 거절했다.
+        # 정본 = common.currency.coerce_items_payload (each·reduce·data-ops 와 같은 눈).
+        rows = _coerce_items(tool_input["items"])
+        if rows is not None:
+            return rows, None
     return None, prev
 
 

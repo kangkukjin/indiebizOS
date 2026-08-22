@@ -10,7 +10,8 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
-                           _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
+                           _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs,
+                           currency_shape_note)
 
 import copy as _copy
 import time as _time
@@ -354,8 +355,8 @@ def _execute_table_reduce(params: dict, project_path: str, agent_id: str = None)
         return {"success": False, "items": [], "error": f"reduce: step 식 오류 — {e}"}
     rows, env = _each_input_rows(params)
     if rows is None:
-        shape = (list(env.keys())[:8] if isinstance(env, dict) else type(env).__name__)
-        return {"success": False, "items": [], "error": f"reduce: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape}"}
+        shape = currency_shape_note(env)
+        return {"success": False, "items": [], "error": f"reduce: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape} — 파이프(>>) 뒤에 놓거나, 단독으로 쓰려면 items 에 목록(또는 $변수)을 주세요."}
     dict_rows = [r for r in rows if isinstance(r, dict)]
     need = [n for n in names if n not in ("acc", "i")] + cols
     missing = [k for k in need if dict_rows and not any(k in r for r in dict_rows)]

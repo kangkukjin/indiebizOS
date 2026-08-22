@@ -422,7 +422,13 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 # 복합 블록([goal:]/[if:]/[case:])은 step 통짜 전달 — 아래처럼 키를 골라
                 # 담으면 _goal/_condition/_case 가 유실돼 엔진의 블록 디스패치에 못 닿고
                 # "action 파라미터가 필요합니다"로 죽는다(전 표면 블록 실행 봉쇄 부류).
-                result = execute_ibl(dict(step), project_path, agent_id)
+                _blk = dict(step)
+                result = execute_ibl(_blk, project_path, agent_id)
+                # ★F19-1: 분기 몸이 스칼라를 내면 통화에 관측 메타를 못 싣는다 — 단독 실행은
+                # 하류 소비자가 없으므로 여기서 봉투로 감싸 어느 가지를 탔는지 보이게 한다.
+                _bmeta = _blk.get("_branch_meta")
+                if isinstance(_bmeta, dict) and not isinstance(result, dict):
+                    result = {"result": result, **_bmeta}
             else:
                 ibl_input = {
                     "_node": step.get("_node", step.get("node", "")),

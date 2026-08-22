@@ -255,6 +255,10 @@ def _field_missing_error(verb, missing, rows):
             break
     miss = "', '".join(str(m) for m in missing) if isinstance(missing, (list, tuple)) else str(missing)
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
+    if verb == "filter":
+        # 워드 연산자 합류(B19-1) 뒤엔 "필드 op 값" 문자열이 조건으로 읽히므로, 전-필드
+        # 검색을 의도했던 문장이 여기로 온다 — 그 갈림길을 오류문이 직접 안내한다.
+        hint += " (모든 필드에서 그냥 찾으려면 연산자 없는 문자열을 주세요: where: \"자이\")"
     return {"success": False, "error": f"{verb}: '{miss}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
@@ -279,25 +283,22 @@ def _no_currency_error(verb, prev):
                      f"있습니다. 통화를 내는 액션·op 으로 바꾸거나 선언(returns)을 확인하세요."}
 
 
-def _where_fields(where):
-    """where 조건이 명시적으로 가리키는 필드 이름들(존재 검증용).
+# 조건 언어(where 미니 DSL)·정렬 키는 where_dsl.py 로 분리(2026-08-22, 1500줄 규칙).
+# 이 파일은 통화 대수(관계대수)만 — 판정은 저 모듈이 한다.
+from common.pkg_utils import load_sibling as _load_sibling_where
 
-    전-필드 substring 형태(연산자 없는 문자열)는 필드를 지목하지 않으므로 [].
-    """
-    if isinstance(where, str):
-        m = _CMP_RE.match(where)
-        return [m.group(1).strip()] if m else []
-    if isinstance(where, list):
-        out = []
-        for w in where:
-            out.extend(_where_fields(w))
-        return out
-    if isinstance(where, dict):
-        f = where.get("field") or where.get("col") or where.get("column")
-        if f:
-            return [str(f)]
-        return [str(k) for k in where.keys() if k not in ("op", "value")]
-    return []
+_wdsl = _load_sibling_where(__file__, "where_dsl")
+_WhereError = _wdsl._WhereError
+_OPS = _wdsl._OPS
+_match = _wdsl._match
+_where_fields = _wdsl._where_fields
+_sort_key = _wdsl._sort_key
+_as_num = _wdsl._as_num
+_num_eq = _wdsl._num_eq
+_num_cmp = _wdsl._num_cmp
+_parse_where_str = _wdsl._parse_where_str
+
+
 
 
 def _row_dicts(table):
@@ -312,109 +313,19 @@ def _row_dicts(table):
     return out
 
 
-# ───────────────────────── where 미니 DSL ─────────────────────────
-
-_OPS = {
-    "==": lambda a, b: _num_eq(a, b),
-    "eq": lambda a, b: _num_eq(a, b),
-    "!=": lambda a, b: not _num_eq(a, b),
-    "ne": lambda a, b: not _num_eq(a, b),
-    "<": lambda a, b: _num_cmp(a, b) < 0,
-    "lt": lambda a, b: _num_cmp(a, b) < 0,
-    "<=": lambda a, b: _num_cmp(a, b) <= 0,
-    "le": lambda a, b: _num_cmp(a, b) <= 0,
-    ">": lambda a, b: _num_cmp(a, b) > 0,
-    "gt": lambda a, b: _num_cmp(a, b) > 0,
-    ">=": lambda a, b: _num_cmp(a, b) >= 0,
-    "ge": lambda a, b: _num_cmp(a, b) >= 0,
-    "contains": lambda a, b: str(b).lower() in str(a).lower(),
-    "in": lambda a, b: (a in b) if isinstance(b, (list, tuple, set)) else (str(a).lower() in str(b).lower()),
-}
-
-
-def _as_num(v):
-    try:
-        return float(str(v).replace(",", "").strip())
-    except Exception:
-        return None
-
-
-def _num_eq(a, b):
-    na, nb = _as_num(a), _as_num(b)
-    if na is not None and nb is not None:
-        return na == nb
-    return str(a).strip().lower() == str(b).strip().lower()
-
-
-def _num_cmp(a, b):
-    na, nb = _as_num(a), _as_num(b)
-    if na is not None and nb is not None:
-        return (na > nb) - (na < nb)
-    sa, sb = str(a), str(b)
-    return (sa > sb) - (sa < sb)
-
-
-_CMP_RE = re.compile(r"^\s*(.+?)\s*(>=|<=|==|!=|>|<|=)\s*(.+?)\s*$")
-
-
-def _match(item, where):
-    """item(dict) 이 where 조건을 만족하나.
-
-    where 형태:
-      - str "필드 op 값"  : 비교 연산자(>= <= > < == != =)가 있으면 단일 비교로 파싱
-                            (예 "연도 >= 2000" → {field:연도, op:>=, value:2000}).
-                            모델이 자연스럽게 쓰는 SQL식 문자열을 침묵 부분일치로 삼키지 않는다.
-      - str S            : 연산자 없으면 아무 필드 값에 S가 부분일치 (전 필드 substring)
-      - {field, op, value}: SQL식 단일 조건 (op 기본 ==; field=col/column 별칭)
-      - {col: value, ...}: 각 열=값 동등(AND) 단축형
-      - [cond, cond, ...]: AND 결합
-    """
-    if where is None or where == "":
-        return True
-    if isinstance(where, str):
-        m = _CMP_RE.match(where)
-        if m:  # 비교 연산자가 든 문자열 → 단일 비교로 해석 (침묵 부분일치 함정 제거)
-            field, op, val = m.group(1).strip(), m.group(2), m.group(3).strip()
-            if op == "=":
-                op = "=="
-            if len(val) >= 2 and val[0] in "\"'" and val[-1] == val[0]:
-                val = val[1:-1]  # 따옴표 제거
-            fn = _OPS.get(op, _OPS["=="])
-            return fn(item.get(field), val)
-        s = where.lower()
-        return any(s in str(v).lower() for v in item.values())
-    if isinstance(where, list):
-        return all(_match(item, w) for w in where)
-    if isinstance(where, dict):
-        field = where.get("field") or where.get("col") or where.get("column")
-        if field is not None:  # 구조형 {field, op, value}
-            op = str(where.get("op", "==")).lower()
-            val = where.get("value")
-            fn = _OPS.get(op, _OPS["=="])
-            return fn(item.get(str(field)), val)
-        # 단축형 {col: value, ...} — 모두 동등(AND)
-        return all(_num_eq(item.get(str(k)), v) for k, v in where.items())
-    return True
-
-
-# ───────────────────────── sort 키 (수치 인식) ─────────────────────────
-
-def _sort_key(field):
-    def key(item):
-        v = item.get(str(field)) if isinstance(item, dict) else None
-        n = _as_num(v)
-        # 숫자 먼저(0) 안정 정렬, 그다음 문자열(1). None은 맨 뒤.
-        if v is None:
-            return (2, 0.0, "")
-        if n is not None:
-            return (0, n, "")
-        return (1, 0.0, str(v).lower())
-    return key
 
 
 # ───────────────────────── 단항 동사 ─────────────────────────
 
 def _op_filter(prev, params):
+    """where 문법 오류(모르는 연산자·깨진 정규식)를 정직 거절로 바꾸는 겉옷 (B19-1)."""
+    try:
+        return _op_filter_impl(prev, params)
+    except _WhereError as e:
+        return {"success": False, "error": f"filter: {e}"}
+
+
+def _op_filter_impl(prev, params):
     """items|table → 부분집합. params.where (미니 DSL). condition 별칭 수용.
 
     where 가 지목한 필드가 어느 행에도 없으면 빈 결과 대신 에러(⑧′ — 빈 결과와

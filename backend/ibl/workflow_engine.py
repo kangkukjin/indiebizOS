@@ -540,13 +540,19 @@ def execute_pipeline(steps: list, project_path: str = ".",
         is_err = _is_error_result(result)
 
         action_count += 1
-        results.append({
+        _rec = {
             "step": i + 1,
             "node": _step_label(tool_input)[0],
             "action": _step_label(tool_input)[1],
             "result": result_str,
             "duration_ms": duration_ms,
-        })
+        }
+        # ★F19-1: 조건 블록(if/case)이 side-channel 로 남긴 관측 메타(어느 가지·좌변값)를
+        # step 기록에 싣는다 — 분기 결과가 스칼라라 통화에 못 실리는 경우에도 봉투로 보인다.
+        _bmeta = tool_input.get("_branch_meta") if isinstance(tool_input, dict) else None
+        if isinstance(_bmeta, dict):
+            _rec.update(_bmeta)
+        results.append(_rec)
         step_results[i] = result_str
         # 블록 몸이 재할당한 바깥 변수(M6 repeat) — 루프 뒤 `$n` 이 최신값이 되게 되쓴다
         if isinstance(result, dict) and isinstance(result.get("_var_updates"), dict) and step.get("_vars"):

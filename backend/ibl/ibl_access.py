@@ -500,8 +500,12 @@ def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> L
     try:
         with open(agents_file, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-    except Exception:
-        return []
+    except Exception as e:
+        # ★깨진 명부를 [] 로 눙치면 "동료가 없다"가 되어 위임 자체가 사라진다.
+        # 파일이 없는 경우(위의 exists 검사)와 구별한다. 2026-08-22.
+        raise RuntimeError(
+            f"동료 명부가 깨졌습니다 — {agents_file} 를 읽을 수 없습니다: {e}"
+        ) from e
 
     agents = data.get("agents", [])
     peers = []
@@ -547,10 +551,17 @@ def _load_nodes_data() -> dict:
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
-        _nodes_data_cache = data
-        return data
-    except Exception:
-        return {}
+    except Exception as e:
+        # ★깨진 어휘 파일을 {} 로 눙치면 낱말 전부가 "없는 낱말"이 되고,
+        # 환경 프롬프트가 빈 문자열이 되어 에이전트가 몸 없이 조용히 돈다
+        # (build_environment_prompt: `if not nodes_data: return ""`). 2026-08-22.
+        raise RuntimeError(
+            f"어휘 원장이 깨졌습니다 — {path} 를 읽을 수 없습니다: {e}\n"
+            f"→ 빌드 중이었다면 잠시 후 재시도, 아니면 "
+            f"`python3 scripts/build_ibl_nodes.py` 로 재생성하세요."
+        ) from e
+    _nodes_data_cache = data
+    return data
 
 
 def _load_node_groups() -> dict:

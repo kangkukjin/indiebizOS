@@ -1017,10 +1017,16 @@ def get_workflow(workflow_id: str) -> Optional[Dict]:
         return None
     try:
         data = yaml.safe_load(wf_path.read_text(encoding="utf-8"))
-        data["id"] = workflow_id
-        return data
-    except Exception:
-        return None
+    except Exception as e:
+        # ★파일이 있는데 못 읽은 것을 None(=없음)으로 눙치지 않는다 — 바로 위
+        # list_workflows 가 이미 세운 계약과 같은 어휘로 신고한다(2026-08-22).
+        return {"id": workflow_id, "name": workflow_id, "runnable": False,
+                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}"}
+    if not isinstance(data, dict):
+        return {"id": workflow_id, "name": workflow_id, "runnable": False,
+                "problem": f"워크플로 파일이 매핑이 아닙니다(빈 파일?): {type(data).__name__}"}
+    data["id"] = workflow_id
+    return data
 
 
 # === 등록 시점 문법 관문 (2026-08-17) ===
@@ -1135,6 +1141,8 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     wf = get_workflow(workflow_id)
     if not wf:
         return {"success": False, "error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
+    if wf.get("problem"):
+        return {"success": False, "error": wf["problem"]}
 
     # 몸통 키는 save 관문(_SENTENCE_KEYS)과 **같은 집합**을 읽는다. 예전엔 save 는 do 를
     # 몸통으로 받아 그대로 저장하는데 run 은 steps/pipeline 만 봐서, IBL 표면(별칭 do→steps)이
@@ -1241,6 +1249,8 @@ def execute_workflow_action(action: str, params: dict,
         wf = get_workflow(workflow_id)
         if not wf:
             return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
+        if wf.get("problem"):
+            return {"error": wf["problem"]}
         return wf
 
     elif action == "run":

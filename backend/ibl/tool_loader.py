@@ -249,17 +249,22 @@ def load_tool_schema(tool_name: str) -> Optional[dict]:
 
     try:
         tool_def = json.loads(tool_json_path.read_text(encoding='utf-8'))
-        # {"tools": [...]} 형식
-        if isinstance(tool_def, dict) and "tools" in tool_def:
-            for t in tool_def["tools"]:
-                if t.get("name") == tool_name:
-                    return t
-        # 단일 도구
-        elif isinstance(tool_def, dict) and tool_def.get("name") == tool_name:
-            return tool_def
-    except Exception:
-        pass
-    return None
+    except Exception as e:
+        # ★깨진 tool.json 을 None(="그런 도구 없음")으로 눙치지 않는다 — 패키지의
+        # 액션 전체가 조용히 사라진다. 파일 부재(위의 exists 검사)와 구별한다. 2026-08-22.
+        raise RuntimeError(
+            f"도구 정의가 깨졌습니다 — {tool_json_path} 를 읽을 수 없습니다: {e}"
+        ) from e
+
+    # {"tools": [...]} 형식
+    if isinstance(tool_def, dict) and "tools" in tool_def:
+        for t in tool_def["tools"] or []:
+            if isinstance(t, dict) and t.get("name") == tool_name:
+                return t
+    # 단일 도구
+    elif isinstance(tool_def, dict) and tool_def.get("name") == tool_name:
+        return tool_def
+    return None  # 파일은 멀쩡한데 이 이름이 없다 = 진짜 없음
 
 
 def load_tool_handler(tool_name: str) -> Optional[Any]:

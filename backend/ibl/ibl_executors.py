@@ -1324,6 +1324,18 @@ def _get_sense_value_checked(source: str, project_path: str, agent_id: str) -> T
     if field is not None:
         value = _extract_dotted_field_checked(result, field)
         if value is _FIELD_MISSING:
+            # ★F20-2 (2026-08-22 상상훈련 20회차): 카탈로그 ⟨열⟩ 은 **items 기준**인데
+            # 조건 좌변은 봉투 최상위만 봤다. 같은 액션의 같은 개념이 두 이름이라
+            # (sense:host — 봉투 `disk_root.percent` / items `disk_percent`) 카탈로그에
+            # 적힌 이름으로 조건을 걸면 판정 불능이 되고 **else 까지 보류돼 문장이
+            # 통째로 죽었다**. `cpu_percent` 만 두 곳 이름이 우연히 같아 교재 대표
+            # 예시가 돌고 있었다. 액션마다 봉투에 미러를 넣는 대신(=액션 수만큼 반복될
+            # 덧대기) 조건 언어가 통화를 보게 한다 — 어휘 증식 0, 전 액션 일반 적용.
+            # ★1행일 때만: 여러 행이면 어느 행의 값인지 언어가 정할 수 없다(정직 실패 유지).
+            _items = result.get("items") if isinstance(result, dict) else None
+            if isinstance(_items, list) and len(_items) == 1 and isinstance(_items[0], dict):
+                value = _extract_dotted_field_checked(_items[0], field)
+        if value is _FIELD_MISSING:
             # F13-4 (2026-08-19 상상훈련 13회차): 사용 가능한 경로를 동반한다 —
             # filter/sort 오류문 선례. 없으면 자가교정에 단독 프로브 1왕복이 더 든다.
             hints = _field_path_hints(result)

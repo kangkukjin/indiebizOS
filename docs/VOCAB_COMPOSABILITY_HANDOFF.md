@@ -473,3 +473,23 @@ navigate → screenshot → image_read → (navigate >> screenshot) → image_re
   - `F20-4`·`F20-5` **마찰(소소)** — finance 유령 op 안내 문구가 실제 op 5개 중 `sync` 누락(`handler.py:85`) / `[self:notify_user]{message:}` 만 주면 알림함 제목이 빈칸으로 남는다.
   - **관찰(갭 아님 — 훈련자 읽기 규율)**: step 요약 `columns` 에 방금 만든 한글 파생 열이 안 보여 "compute 가 조용히 실패"로 오판할 뻔했으나, 봉투는 `columns_truncated: 5 · columns_total: 17` 로 **이미 절단을 신고**하고 있었다(F18-1 수리가 실사용에서 작동하는 증거). 격리해 보니 `등락폭: 0.88` 정상. — 봉투의 절단 신고를 읽어라.
   - **원장 이동**: 이번 회차는 발견 6건(결함 1·마찰 4·꼬임 1). 수리는 대장장이 고리의 일(훈련은 고치지 않는다).
+
+### ✅ 20회차 판정·수리 집행 (2026-08-22 16:2x — 사용자 지시 "장기적으로 바람직한 쪽으로 판정해서 수리")
+판정 기준(원장에 없어 실행자가 세움): **IBL 헌법** — ①새 낱말의 기본 답은 "아니오"(반-어휘-증식) ②증상을 액션마다 덧대지 말고 **문법·검증·코퍼스 같은 원인 층**에서 없앤다 ③파괴적 변경(기존 문장을 깨뜨리는 것)은 사용자 판정.
+
+**먼저 진단 정정 4건** — 원장 문구는 발견 당시 기록이라 현재 상태를 실측했고, 넷은 **이미 닫혀 있었다**(원장에 반영):
+- `B15-1` **해소 확인** — `[self:trigger]{op:"list"} >> [table:take]{n:1}` 이 items 1행으로 정상 변환 + `_untransformed: ['existing_schedules']` 자백. 침묵 통과 아님.
+- `F17-1` **해소 확인** — 프로젝트 컨텍스트 오류문에 "★each/폴백/병렬 가지 안까지 … body의 project_id 필드를 쓰세요"가 이미 병기돼 있다.
+- `F17-2` **해소 확인** — `??` 전멸 시 `attempts[]` 에 가지별 실패 사유 전부 보존(`_branch_errors` 도 존재).
+- `F17-3` **해소 확인** — `_v4_var_payload`(workflow_engine)가 bare `$var` 를 v4 추출 계약에 합류시킴.
+- ★그리고 **20회차 보고 자체의 정정**: "validate 가 유령 op 를 통과시킨다"는 부정확했다 — `/ibl/validate` 는 `valid:true` 를 주되 **`param_warning` 으로 이미 신고**하고 있었다(`op 'summary' 은(는) 이 액션에 없습니다 — 실행 시 거절됩니다. 사용 가능: [...]`). 20회차 검수 스크립트가 그 필드를 출력하지 않아 못 본 것. 남은 진짜 원인은 **코퍼스 쪽**이었다(아래 B20-1).
+
+**수리 3건 (원인 층)**
+- `B20-1` **수리됨** — 진범은 검증이 아니라 **검사 범위와 검사 항목**이었다. ①`_corpus_entries` 가 `data/training/*.json` 만 훑는데 **트레이너는 DB(ibl_usage.db)와 파일을 둘 다 읽는다** — `validate_corpus_vocab` 의 docstring 자신이 그렇게 적어 놓고도 검사는 절반만 봤고, 20회차가 주운 오염이 하필 DB 쪽에 있었다. ②액션 생존만 묻고 **op 생존은 안 물었다** — 액션 은퇴는 이관돼 왔지만 op 은퇴(`stock price→quote`, `output file→self:write` 흡수 …)는 아무도 안 봤다. 수리=같은 루프에서 op enum 대조 + `include_db=True`(vocab 검사만. param 정합은 관대한 상위집합이라 범위를 넓히면 오탐 폭증 — 기본 False 유지). **실측 오염 40건**(파일 36·DB 4, 고유 5종: `stock op=price` 26 · `self:output op=file` 7 · `showcase op=sync` 4 · `finance op=summary` 2 · `radio op="AI 뉴스"` 1)을 명백한 은퇴만 치환(37건)하고 의미가 소실된 것은 제거(5건 — 코퍼스는 *가르치는 것*이라 틀린 걸 남기느니 지운다). 백업=`data/_backups/2026-08-22_corpus_op정리/`. 증상 소멸 실측: 새 가드로 재스캔 **0건** · 해마 회상이 `showcase{op:"sync"}` 대신 `status/add` 를, `finance{op:"query", query_type:"summary"}` 를, `stock{op:"quote"}` 를 낸다.
+- `F20-2` **수리됨(검증 통과·적용 예약)** — 액션마다 봉투에 미러를 넣는 안(=액션 수만큼 반복될 덧대기)을 버리고 **조건 언어가 통화를 보게** 했다: 조건 좌변 필드 해소가 봉투에서 실패하면 **items 가 1행일 때만** 그 행에서 한 번 더 찾는다(`ibl_executors._resolve_source_value`). 여러 행이면 어느 행의 값인지 언어가 정할 수 없으므로 정직 실패 유지. 어휘 증식 0, 전 액션 일반 적용.
+- `F20-4` **수리됨** — `finance_op` 의 유령 op 안내를 `_OP_DISPATCHERS` 에서 파생(손으로 적힌 목록은 op 를 늘릴 때마다 뒤처진다 — 실측으로 `sync` 누락). 증상 소멸 실측: `알 수 없는 op 'summary'. 사용 가능: delete|ingest|query|save|sync`.
+
+**보류 3건 (판정성 — 사용자 결정 없이 고치면 안 되는 것)**
+- `F20-1` realty ⟨열⟩ source 미구분 — 열 이름 정규화는 **기존 문장을 깨뜨린다**(파괴적). 카탈로그 표기 병기는 미봉책이라 근본과 갈림 → 사용자 판정.
+- `F20-3`·`B15-2` since 첫 검침 0행 — 첫 검침 **침묵은 이미 해소**됐다(`seeded: true` + note 정직 신고). 남은 것은 "0행을 받은 소비자가 에러를 낼지 침묵할지"이고, 이는 **언어의 관용구를 정하는 일**이라 판정 대상(문법으로 우회 가능: `[if: empty($items)]`·`[on_error: skip]`).
+- `F20-5` `notify_user{message:}` 만 주면 알림 제목 빈칸 — message 앞머리를 제목으로 승격할지, title 을 필수로 할지는 알림 계약 변경 → 판정.

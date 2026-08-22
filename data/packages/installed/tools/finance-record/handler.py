@@ -82,7 +82,11 @@ def execute(tool_input: dict, context) -> str:
         op = (tool_input.get("op") or "").strip()
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
-            return _err(f"알 수 없는 op '{op}'. (save|query|delete|ingest)")
+            # ★2026-08-22 (20회차 F20-4): 안내 문구를 손으로 적어 두면 op 를 늘릴 때마다
+            # 뒤처진다(실측: 실제 5개인데 문구엔 sync 가 빠져 있었다). 디스패처에서 파생해
+            # 어휘와 안내가 갈라질 수 없게 한다 — android 핸들러가 이미 쓰는 패턴.
+            return _err(f"알 수 없는 op '{op}'. 사용 가능: "
+                        f"{'|'.join(sorted(_OP_DISPATCHERS[tool_name]))}")
         return fn(tool_input)
     return _err(f"알 수 없는 도구: {tool_name}")
 

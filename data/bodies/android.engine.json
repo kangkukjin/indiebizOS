@@ -275,12 +275,13 @@
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
+    "test_venv_pinned": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 273,
+    "total": 274,
     "engine": 220,
-    "blocklist": 53
+    "blocklist": 54
   }
 }

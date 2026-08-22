@@ -25,13 +25,19 @@ if lsof -ti :8765 > /dev/null 2>&1; then
     sleep 1
 fi
 
-# 파이썬 선택: 저장소 루트에 가상환경(.venv)이 있으면 그걸 쓴다.
-# (시스템 파이썬에는 fastapi/dotenv 등이 없어 ModuleNotFoundError 가 날 수 있다)
-PY="python3"
-if [ -x ".venv/bin/python3" ]; then
-    PY="$(pwd)/.venv/bin/python3"
-    echo "✅ 가상환경 파이썬 사용 (.venv)"
+# 파이썬 선택: 소스 경로의 몸은 .venv 하나로 고정한다 (2026-08-22).
+# 예전엔 .venv 가 없으면 조용히 시스템 파이썬으로 떨어졌다. 그건 "다른 몸으로
+# 도는데 아무도 모르는" 상태다 — fastapi/dotenv 부재는 그나마 시끄럽게 죽지만,
+# playwright 처럼 *버전이 다르게* 깔린 의존은 조용히 반쪽으로 돈다(시스템 파이썬의
+# playwright 1.58 은 이 저장소가 받아 둔 크로미움 빌드를 못 찾는다). 조용한 폴백 대신
+# 정직하게 거절하고 처방을 준다. bootstrap 이 .venv 를 만든다.
+if [ ! -x ".venv/bin/python3" ]; then
+    echo "❌ .venv 가 없습니다 — 소스 경로는 저장소 가상환경 하나로 고정입니다."
+    echo "   python3 scripts/bootstrap.py   # venv + 의존성 + .env 시드"
+    exit 1
 fi
+PY="$(pwd)/.venv/bin/python3"
+echo "✅ 가상환경 파이썬 사용 (.venv)"
 
 # 의도적 종료 표식 제거 — 시스템 재가동 (수리 워치독·keeper 정상 작동 재개)
 rm -f data/.intentional_shutdown

@@ -42,11 +42,25 @@ async function startPythonBackend() {
     // 개발 모드: 상대 경로
     backendPath = path.join(__dirname, '..', '..', 'backend');
     basePath = path.join(__dirname, '..', '..'); // indiebizOS root
-    pythonPath = process.platform === 'win32' ? 'python' : 'python3';
-    // 저장소 가상환경 우선 — 시스템 파이썬엔 fastapi 등이 없다 (start.sh 와 동일 규칙)
-    const venvPy = path.join(basePath, '.venv', 'bin', 'python3');
-    if (process.platform !== 'win32' && fs.existsSync(venvPy)) {
+    // 소스 경로의 몸은 .venv 하나로 고정 (start.sh·backend_keeper.sh 와 동일 규칙,
+    // 2026-08-22). 조용히 시스템 파이썬으로 떨어지면 "다른 몸으로 도는데 아무도
+    // 모르는" 상태가 된다 — playwright 처럼 버전이 다르게 깔린 의존은 시끄럽게
+    // 죽지도 않고 반쪽으로 돈다.
+    const venvPy = process.platform === 'win32'
+      ? path.join(basePath, '.venv', 'Scripts', 'python.exe')
+      : path.join(basePath, '.venv', 'bin', 'python3');
+    if (fs.existsSync(venvPy)) {
       pythonPath = venvPy;
+    } else if (process.platform === 'win32') {
+      // 윈도우 개발 환경은 아직 실측되지 않았다 — 막지 않되 조용히 넘어가지도 않는다.
+      console.warn(`[Python] ⚠️ .venv 없음(${venvPy}) — 시스템 파이썬으로 뜹니다. ` +
+                   `의존성 버전이 저장소와 어긋날 수 있습니다: python scripts/bootstrap.py`);
+      pythonPath = 'python';
+    } else {
+      throw new Error(
+        `.venv 가 없습니다 (${venvPy}) — 소스 경로는 저장소 가상환경 하나로 고정입니다.\n` +
+        `  python3 scripts/bootstrap.py   # venv + 의존성 + .env 시드`
+      );
     }
     pythonArgs = [path.join(backendPath, 'api.py')];
   } else {

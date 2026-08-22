@@ -101,11 +101,18 @@ revive() {
         if [ -f .env ]; then
             export $(cat .env | grep -v '^#' | xargs)
         fi
-        PY="python3"
-        [ -x "$REPO/.venv/bin/python3" ] && PY="$REPO/.venv/bin/python3"
+        # ★소생도 같은 몸으로만 한다 (2026-08-22). 시스템 파이썬으로 되살리면
+        # "살아는 있는데 몸이 다른" 상태가 되고, /health 는 초록이라 아무도 모른다.
+        # 되살릴 수 없으면 되살리지 않고 신고한다 — 다음 순회에서 다시 시도한다.
+        if [ ! -x "$REPO/.venv/bin/python3" ]; then
+            echo "[$(date '+%F %T')] ❌ 재기동 보류 — $REPO/.venv 가 없습니다."
+            echo "[$(date '+%F %T')]    python3 scripts/bootstrap.py 로 가상환경을 만드세요."
+            return 1
+        fi
+        PY="$REPO/.venv/bin/python3"
         cd backend || return 1
         nohup "$PY" api.py >> "$LOG" 2>&1 &
-        echo "[$(date '+%F %T')] 재기동 완료 (pid=$!)"
+        echo "[$(date '+%F %T')] 재기동 완료 (pid=$!, .venv)"
     } >> "$LOG" 2>&1
 }
 

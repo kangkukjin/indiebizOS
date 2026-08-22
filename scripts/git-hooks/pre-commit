@@ -274,10 +274,23 @@ if echo "$staged" | grep -qE '^(backend/api_.*\.py|backend/public_face\.py|scrip
 fi
 
 # 자기수정 안전장치 기능 스모크 (③검증자 없는 영역 보강, 2026-08-05) —
-# 게이트·그랜트·백업·워치독 파일이 스테이징되면 red_safety_selftest 통과를 강제.
+# 게이트·그랜트·백업·워치독·격리 스테이징 파일이 스테이징되면 red_safety_selftest 통과를 강제.
 # 안전장치를 고치다 안전장치를 죽인 커밋(침묵 결함)이 저장소에 들어오는 걸 막는다.
-if echo "$staged" | grep -qE '^(backend/red_grant\.py|backend/red_watchdog\.py|data/packages/installed/tools/system_essentials/handler\.py|scripts/red_safety_selftest\.py)$'; then
-  repo_root=$(git rev-parse --show-toplevel)
+#
+# ★방아쇠 목록은 **여기 없다**(2026-08-22). 정본은 red_watchdog.SAFETY_SUFFIXES 이고
+# 훅은 `--triggers-regex` 로 물어본다 — IBL 트리거의 2026-07-25 수리와 같은 이유다.
+# 하드코딩하던 시절 실측: 2026-08-05 에 안전장치 둘이 backend/datastore/ 로 이사한 뒤
+# 훅의 목록만 옛 경로에 남았고 repair_staging.py 는 아예 없었다 = 안전장치 파일을 고쳐도
+# 커밋 게이트가 안 걸렸다(게이트가 자기 입력을 안 보는 부류).
+repo_root=$(git rev-parse --show-toplevel)
+if ! safety_trigger=$(python3 "$repo_root/scripts/red_safety_selftest.py" --triggers-regex 2>/dev/null) \
+   || [ -z "$safety_trigger" ]; then
+  # 조회 실패 = 넓게 잡는다(fail-closed) — 게이트 고장이 곧 무검사가 되지 않게.
+  echo "[pre-commit] ⚠ 안전장치 방아쇠 조회 실패 — 검사를 강제 실행합니다." >&2
+  safety_trigger='.'
+fi
+
+if echo "$staged" | grep -qE "$safety_trigger"; then
   echo "[pre-commit] 자기수정 안전장치 기능 스모크 실행..."
   if ! python3 "$repo_root/scripts/red_safety_selftest.py"; then
     echo "" >&2

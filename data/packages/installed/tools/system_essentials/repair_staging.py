@@ -440,6 +440,115 @@ def _orphan_importers(wt_abs: str, mod: str, dropped_rels: set):
     return hits
 
 
+_TSC_ERR = re.compile(r"^(?P<file>[^(]+)\((?P<line>\d+),(?P<col>\d+)\):\s+(?P<rest>error TS\d+:.*)$")
+
+
+def _tsc_errors(text: str):
+    """tsc 출력 → **자리(줄·칸)를 뺀** 오류 집합. 델타 판정용 — 델타가 줄 번호를 밀면
+    같은 선행 오류가 새 오류로 보인다(파일+메시지로만 동일성 판정)."""
+    out = set()
+    for ln in (text or "").splitlines():
+        m = _TSC_ERR.match(ln.strip())
+        if m:
+            out.add((m.group("file").strip(), m.group("rest").strip()))
+    return out
+
+
+def _run_tsc(fe_dir: str, tsc_bin: str, wt_abs: str):
+    p = subprocess.run([tsc_bin, "-p", "tsconfig.app.json", "--noEmit"], cwd=fe_dir,
+                       capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
+                       env=_smoke_env(wt_abs))
+    return p.returncode, ((p.stdout or "") + (p.stderr or "")).strip()
+
+
+def _tsc_check(repo: str, wt_abs: str, ts_rels: list):
+    """frontend 타입검사 관문 (2026-08-22 신설).
+
+    ★왜: RED 구역은 `("backend", "frontend", "scripts")` 인데 관문은 전부 파이썬용이라
+    **타입은 아무도 안 봤다** — 실측으로 이 경로를 이미 `.tsx`/`.ts` 10건이 무검사로
+    통과했다(NarrationStudio.tsx 등). 브릭은 아니지만(프런트가 깨져도 백엔드는 산다)
+    빌드 때까지 조용한 부류다.
+
+    두 가지를 **빌린다**:
+    - `node_modules` — 의존성은 델타가 아니다. 워크트리는 HEAD 로 뜨고 node_modules 는
+      gitignore 라 없으므로 라이브 것을 심링크로 읽고 **검증 후 즉시 회수**한다(격리
+      사본에 남기면 워크트리 청소가 라이브를 향하게 된다).
+    - **선행 상태** — 실패했을 때만 라이브에서 한 번 더 돌려(읽기 전용·noEmit) 델타가
+      *새로* 만든 오류만 빨강으로 친다. 선행 파손이 무관한 수리를 볼모로 잡지 않게
+      (`build --check` 를 격리에 못 들인 것과 같은 이유가 여기선 이렇게 풀린다).
+
+    ★검사할 수 없으면 초록도 빨강도 아닌 **건너뜀**을 적는다 — node_modules 없는 몸에서
+    apply 가 영원히 막히는 것은 import 스모크가 패키지 모듈을 탈락시켜 apply 를 막던
+    2026-08-18 부류의 재생산이다. 대신 침묵하지 않는다(사유를 detail 에 적는다).
+    """
+    gate = {"gate": "frontend_tsc", "files": ts_rels[:12]}
+    fe_wt = os.path.join(wt_abs, "frontend")
+    if not os.path.exists(os.path.join(fe_wt, "tsconfig.app.json")):
+        return dict(gate, passed=True, skipped=True,
+                    detail="frontend/tsconfig.app.json 없음 — 타입검사 건너뜀")
+
+    nm_wt = os.path.join(fe_wt, "node_modules")
+    nm_live = os.path.join(repo, "frontend", "node_modules")
+    borrowed = False
+    if not os.path.exists(nm_wt):
+        if not os.path.isdir(nm_live):
+            return dict(gate, passed=True, skipped=True,
+                        detail="frontend/node_modules 미설치 — 타입검사 불가"
+                               "(npm install 후 재검증하면 이 관문이 켜집니다)")
+        try:
+            os.symlink(nm_live, nm_wt)
+            borrowed = True
+        except OSError as e:
+            return dict(gate, passed=True, skipped=True,
+                        detail=f"node_modules 를 빌리지 못함 — 타입검사 건너뜀 ({e})")
+
+    tsc_bin = os.path.join(nm_wt, ".bin", "tsc")
+    try:
+        if not os.path.exists(tsc_bin):
+            return dict(gate, passed=True, skipped=True,
+                        detail="node_modules/.bin/tsc 없음 — 타입검사 건너뜀")
+        try:
+            rc, out = _run_tsc(fe_wt, tsc_bin, wt_abs)
+        except (OSError, subprocess.SubprocessError) as e:
+            return dict(gate, passed=True, skipped=True,
+                        detail=f"tsc 실행 실패 — 타입검사 건너뜀 ({e})")
+        if rc == 0:
+            return dict(gate, passed=True, detail="타입 오류 없음")
+
+        # 실패 — 선행 상태와 대조해 '이 델타가 만든 오류'만 빨강으로
+        after = _tsc_errors(out)
+        base_bin = os.path.join(nm_live, ".bin", "tsc")
+        before = None
+        if after and os.path.exists(base_bin):
+            try:
+                # ★선행 상태 실측 — 라이브 소스를 읽기만 한다(noEmit·incremental 없음).
+                #   _smoke_env 에 라이브 루트를 넘기지 않는다(격리 규약: 라이브
+                #   INDIEBIZ_BASE_PATH 를 물려주지 않는다 — tsc 는 안 읽지만 규약을 지킨다).
+                _, base_out = _run_tsc(os.path.join(repo, "frontend"), base_bin,
+                                       os.path.join(repo, "frontend"))
+                before = _tsc_errors(base_out)
+            except (OSError, subprocess.SubprocessError):
+                before = None
+        if before is not None:
+            new = after - before
+            if not new:
+                return dict(gate, passed=True, preexisting=len(after),
+                            detail=(f"타입 오류 {len(after)}건은 전부 **선행 파손**"
+                                    f"(이 델타가 만든 것 아님) — 통과시킵니다.\n"
+                                    + out[-800:]))
+            return dict(gate, passed=False, preexisting=len(after) - len(new),
+                        detail=(f"이 델타가 만든 타입 오류 {len(new)}건"
+                                f"(선행 {len(after) - len(new)}건 제외):\n"
+                                + "\n".join(f"{f}: {m}" for f, m in sorted(new))[:1500]))
+        return dict(gate, passed=False, detail=out[-1500:])
+    finally:
+        if borrowed:
+            try:
+                os.unlink(nm_wt)           # ★심링크만 끊는다(라이브는 못 건드린다)
+            except OSError:
+                pass
+
+
 def verify(repo: str, sess: dict):
     """격리 사본에서 기계 검증. (통과여부, checks[]) — 자기채점 아닌 pass/fail 기계값."""
     wt_abs = os.path.join(repo, sess["worktree"])
@@ -508,7 +617,17 @@ def verify(repo: str, sess: dict):
         checks.append({"gate": "ibl_triangle", "passed": p.returncode == 0,
                        "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-800:]})
 
-    # 4. 안전장치를 고쳤으면(지웠으면 더더욱) 기능 스모크까지 — 게이트를 고치다 게이트를
+    # 4. frontend 타입검사 — RED 구역에 frontend 가 있으므로 .ts/.tsx 도 이 층을 지난다.
+    #    삭제도 방아쇠에 넣는다: 지워진 모듈을 아직 import 하는 쪽은 파이썬만 고아 검사가
+    #    있고(delete_no_orphan_imports) 프런트는 없었는데, 격리 사본엔 이미 그 파일이
+    #    없으므로 tsc 가 그대로 잡는다.
+    ts_rels = [r for r in (rels + del_rels)
+               if r.replace(os.sep, "/").startswith("frontend/")
+               and r.endswith((".ts", ".tsx"))]
+    if ts_rels:
+        checks.append(_tsc_check(repo, wt_abs, ts_rels))
+
+    # 5. 안전장치를 고쳤으면(지웠으면 더더욱) 기능 스모크까지 — 게이트를 고치다 게이트를
     #    죽여도 서버는 멀쩡히 뜬다 = 침묵 결함이라 /health 로는 못 잡는다
     if any(r.replace(os.sep, "/").endswith(s) for r in (rels + del_rels) for s in SAFETY_SUFFIXES):
         st = os.path.join(wt_abs, "scripts", "red_safety_selftest.py")

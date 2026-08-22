@@ -218,6 +218,10 @@ def run():
               list(sess_del["files"].values())[0]["op"] == "delete")
         ok, checks_d = st.verify(str(tmp), sess_del)
         check("S7a_delete_verifies", ok, str([c["gate"] for c in checks_d if not c["passed"]]))
+        # S12f — 파이썬만 든 세션엔 tsc 관문이 아예 안 뜬다(안 건드린 것은 검사도 비용 0)
+        check("S12f_no_tsc_gate_without_frontend",
+              "frontend_tsc" not in [c["gate"] for c in checks_d],
+              str([c["gate"] for c in checks_d]))
         r = _apply_full(st, h, tmp, st.task_key(task_del))
         check("S7a_delete_applied", r.get("applied") is True and not doomed.exists(),
               json.dumps(r, ensure_ascii=False)[:200])
@@ -408,8 +412,12 @@ def run():
         db3 = tmp3 / "data" / "world_pulse.db"
         db3.parent.mkdir(parents=True, exist_ok=True)
         conn3 = sqlite3.connect(db3)
+        # ★source 열 — 2026-08-22 `5a42ea5`(B18-2)가 재해소 쿼리에 `COALESCE(source,…)`
+        #   를 넣으면서 이 픽스처가 낡았다. 열이 없으면 쿼리가 던지고 재해소는 except 로
+        #   None 이 되어 S11 셋이 통째로 빨강이 된다(픽스처 부패 — 수리 대상은 코드가 아님).
         conn3.execute("CREATE TABLE episode_log (id INTEGER PRIMARY KEY, started_at TEXT, "
-                      "ended_at TEXT, agent TEXT, user_message TEXT, log TEXT, total_ms INTEGER)")
+                      "ended_at TEXT, agent TEXT, user_message TEXT, log TEXT, "
+                      "total_ms INTEGER, source TEXT)")
         conn3.execute("INSERT INTO episode_log (id, started_at, ended_at, agent) "
                       "VALUES (1, '2026-08-20T15:00:00', '2026-08-20T15:01:00', 'system_ai')")
         conn3.execute("INSERT INTO episode_log (id, started_at, ended_at, agent) "
@@ -437,6 +445,57 @@ def run():
     finally:
         import shutil
         shutil.rmtree(tmp3, ignore_errors=True)
+
+    # ══ S12 — frontend 타입검사 관문 (2026-08-22 신설) ══
+    # RED 구역에 frontend 가 있는데 관문은 전부 파이썬용이었다 — 이 경로로 .tsx 10건이
+    # 무검사 통과한 것이 실측 근거. 여기서는 가짜 워크트리에 진짜 tsc 를 돌린다
+    # (node_modules 는 라이브에서 빌리고 즉시 회수 — 라이브는 읽기만).
+    check("S12_errors_ignore_position",
+          st._tsc_errors("src/a.ts(3,7): error TS2322: Type 'string' is not assignable.")
+          == st._tsc_errors("src/a.ts(41,7): error TS2322: Type 'string' is not assignable."),
+          "줄·칸이 밀린 같은 오류가 '새 오류'로 보이면 델타 판정이 선행 파손을 볼모로 잡는다")
+
+    tmp4 = Path(tempfile.mkdtemp(prefix="stg_tsc_")).resolve()
+    try:
+        fe = tmp4 / "frontend"
+        (fe / "src").mkdir(parents=True)
+        (fe / "tsconfig.app.json").write_text(json.dumps({
+            "compilerOptions": {"target": "ES2022", "module": "ESNext",
+                                "moduleResolution": "bundler", "strict": True,
+                                "noEmit": True, "skipLibCheck": True},
+            "include": ["src"]}), encoding="utf-8")
+        live_nm = REPO / "frontend" / "node_modules"
+
+        # (a) node_modules 가 없는 몸 — 정직한 건너뜀이지 빨강이 아니다
+        #     (검사 못 하는 것이 apply 를 영원히 막으면 2026-08-18 부류의 재생산)
+        g_skip = st._tsc_check(str(tmp4), str(tmp4), ["frontend/src/x.ts"])
+        check("S12a_skips_honestly_without_node_modules",
+              g_skip["passed"] is True and g_skip.get("skipped") is True and g_skip["detail"],
+              json.dumps(g_skip, ensure_ascii=False)[:200])
+
+        if live_nm.is_dir():
+            # (b) 타입 오류가 있는 격리 사본은 빨강 — 실 tsc
+            (fe / "src" / "x.ts").write_text('export const n: number = "문자열";\n',
+                                             encoding="utf-8")
+            g_bad = st._tsc_check(str(REPO), str(tmp4), ["frontend/src/x.ts"])
+            check("S12b_catches_type_error",
+                  g_bad["passed"] is False and "TS2322" in (g_bad.get("detail") or ""),
+                  json.dumps(g_bad, ensure_ascii=False)[:300])
+            # (c) ★심링크 회수 — 격리 사본에 라이브를 가리키는 잔재를 남기지 않는다
+            #     (워크트리 청소가 라이브 node_modules 를 향하게 되는 자리)
+            check("S12c_borrowed_node_modules_returned",
+                  not (fe / "node_modules").exists() and not (fe / "node_modules").is_symlink())
+            # (d) 깨끗한 사본은 초록
+            (fe / "src" / "x.ts").write_text('export const n: number = 3;\n', encoding="utf-8")
+            g_ok = st._tsc_check(str(REPO), str(tmp4), ["frontend/src/x.ts"])
+            check("S12d_clean_passes", g_ok["passed"] is True and not g_ok.get("skipped"),
+                  json.dumps(g_ok, ensure_ascii=False)[:300])
+        else:
+            check("S12b_live_node_modules_absent_skipped", True,
+                  "라이브 frontend/node_modules 미설치 — 실 tsc 검사 생략")
+    finally:
+        import shutil
+        shutil.rmtree(tmp4, ignore_errors=True)
 
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:

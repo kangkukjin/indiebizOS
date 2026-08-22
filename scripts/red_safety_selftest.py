@@ -40,6 +40,23 @@ def check(name, cond):
     (_passed if cond else _failed).append(name)
 
 
+def triggers_regex() -> str:
+    """안전장치 파일 방아쇠 정규식 — **목록의 거처는 여기가 아니라 워치독**이다.
+
+    ★왜 (2026-08-22): pre-commit 이 이 목록을 하드코딩하고 있었고, 2026-08-05 에
+    안전장치 둘이 `backend/datastore/` 로 이사한 뒤 훅의 목록만 옛 경로에 남았다 —
+    게다가 `repair_staging.py` 는 애초에 목록에 없었다. 즉 **안전장치 파일을 고쳐도
+    커밋 게이트가 안 걸렸다**(이 스크립트를 손으로 돌려야 알았다). IBL 트리거를
+    빌더에게 물어보게 만든 2026-07-25 수리와 같은 부류 — 훅은 묻기만 한다.
+
+    suffix 매칭이라 `(^|/)접미사$` 로 낸다(`tools/system_essentials/handler.py` 가
+    `data/packages/installed/...` 아래에 있어도 걸리게)."""
+    import re as _re
+    sys.path.insert(0, str(REPO / "backend" / "datastore"))
+    import red_watchdog as _rw
+    return "(^|/)(" + "|".join(_re.escape(s) for s in _rw.SAFETY_SUFFIXES) + ")$"
+
+
 def main():
     spec = importlib.util.spec_from_file_location(
         "h", str(REPO / "data/packages/installed/tools/system_essentials/handler.py"))
@@ -162,6 +179,13 @@ def main():
         import red_watchdog as _rw
         check("staging_in_watchdog_safety_list",
               any(s.endswith("repair_staging.py") for s in _rw.SAFETY_SUFFIXES))
+        # ★목록의 사본이 셋이다(워치독·스테이징·pre-commit). 셋이 어긋나면 어느 한 층만
+        #   조용히 안 걸린다 — 실측(2026-08-22): 훅만 옛 경로에 남아 커밋 게이트가 안 걸렸다.
+        check("safety_list_single_truth",
+              tuple(h._staging_mod().SAFETY_SUFFIXES) == tuple(_rw.SAFETY_SUFFIXES))
+        _hook = (REPO / "scripts/git-hooks/pre-commit").read_text(encoding="utf-8")
+        check("precommit_asks_for_safety_triggers",
+              "--triggers-regex" in _hook and "backend/red_grant" not in _hook)
 
         # ── 프롬프트 기계 계약 (분류기·파서가 스위치하는 토큰) ──
         up = (REPO / "data/common_prompts/unconscious_prompt.md").read_text(encoding="utf-8")
@@ -188,4 +212,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--triggers-regex" in sys.argv:
+        print(triggers_regex())
+        sys.exit(0)
     sys.exit(main())

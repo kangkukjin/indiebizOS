@@ -80,8 +80,10 @@
 > - **★베이스는 라이브 작업 트리(HEAD 아님)**: 세션 생성 시 `git diff HEAD` 를
 >   best-effort 로 얹고, 파일을 처음 건드릴 때 **라이브 원본에서 씨를 뿌린다**(권위).
 >   HEAD 를 베이스로 쓰면 적용이 미커밋 라이브 작업을 조용히 되돌린다 = 데이터 손실.
-> - **검증 배터리**(`repair_staging.verify`, 실측 2.5초): py_compile → **import 스모크**
->   → IBL 삼각(plain build) → 안전장치 파일이면 `red_safety_selftest`.
+> - **검증 배터리**(`repair_staging.verify`, 실측 2.5초 / frontend 포함 시 +3초):
+>   live_sync → 삭제면 `delete_no_orphan_imports` → py_compile → **import 스모크**
+>   → IBL 삼각(plain build) → `.ts/.tsx` 가 끼면 **frontend tsc** → 안전장치 파일이면
+>   `red_safety_selftest`.
 >   ★import 스모크가 새 축이다 — 사전 `compile()` 이 원리적으로 못 잡는 부류
 >   (ImportError·모듈 최상위 NameError·순환 import)를 잡는다. **브릭 원인 대부분이
 >   거기 산다.** 스모크는 `INDIEBIZ_BASE_PATH` 를 worktree 로 박아 격리한다(라이브
@@ -176,6 +178,20 @@
 >   깨진다.** 지워진 모듈은 import 해볼 수조차 없으니(없는 게 정상) 스모크로는 원리적
 >   으로 안 잡힌다. 그래서 격리 사본의 추적 .py 를 훑어 아직 그 모듈을 import 하는
 >   파일을 찾아 이름을 대고 막는다.
+> - **★frontend 타입검사 게이트 `frontend_tsc`** (2026-08-22 신설): RED 구역은
+>   `("backend", "frontend", "scripts")` 인데 관문은 전부 파이썬용이었다 — **타입은
+>   아무도 안 봤다**(실측: 이 경로로 `.tsx`/`.ts` 10건이 무검사 통과. NarrationStudio.tsx
+>   등). 브릭은 아니지만 빌드 때까지 조용한 부류다. 세션에 `.ts/.tsx` 가 끼면
+>   격리 사본에서 `tsc -p tsconfig.app.json --noEmit`(실측 3초). 두 가지를 **빌린다**:
+>   ①`node_modules` — 의존성은 델타가 아니므로 라이브 것을 심링크로 읽고 **검증 후 즉시
+>   회수**(격리 사본에 남기면 워크트리 청소가 라이브를 향한다) ②**선행 상태** — 실패했을
+>   때만 라이브에서 한 번 더 돌려(읽기 전용) *이 델타가 새로 만든 오류*만 빨강으로 친다
+>   (`build --check` 를 격리에 못 들인 이유였던 '선행 파손 볼모' 문제가 여기선 이렇게
+>   풀린다. 자리 비교는 줄·칸을 빼고 파일+메시지로 — 델타가 줄을 밀어도 유령 신규가 없게).
+>   ★검사할 수 없으면(node_modules 미설치·tsc 부재) 초록도 빨강도 아닌 **건너뜀을 정직히
+>   적는다** — 검사 불능이 apply 를 영원히 막는 것은 import 스모크가 패키지 모듈을
+>   탈락시켜 apply 를 막던 2026-08-18 부류의 재생산이다. 삭제도 방아쇠에 넣는다(프런트엔
+>   고아-import 검사가 따로 없는데, 격리 사본엔 이미 그 파일이 없으니 tsc 가 그대로 잡는다).
 > - **남은 갭(정직하게)**: **행동 검증은 여전히 적용 이후**다 — 격리 사본에서 잡는 것은
 >   구조적 브릭이고, 라이브 프로세스의 실제 동작은 워치독·다음 턴이 판정한다. 디렉토리
 >   단위 RED 복사·이동·삭제는 종전대로 **금지**(그랜트가 있어도 — 파급 과대).
@@ -183,7 +199,7 @@
 > **배선**: `data/packages/installed/tools/system_essentials/repair_staging.py`(본체) +
 > handler 의 `_red_stage`/`_patch_op`(이음매 — RED 구역 정의의 단일 출처는 계속
 > `_red_zone_violation` 하나) + `red_report.collect_unapplied` + `agent_pipeline` finally
-> 경고. 배터리: `backend/test_repair_staging.py`(38검사, 임시 git 저장소·라이브 무접촉).
+> 경고. 배터리: `backend/test_repair_staging.py`(**63검사**, 임시 git 저장소·라이브 무접촉).
 >
 > 아래 본문의 Floor #4 절은 역사 기록으로 보존한다.
 
@@ -370,4 +386,4 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 
 이로써 세 보장이 완성된다: 주행기록(행+내용), 턴 내 최종 보고("검증 통과·적용 예약"),
 증류 — 전부 리로드보다 **먼저** 끝난다. 헬스 판정은 종전대로 워치독→다음 턴.
-검증=`backend/test_repair_staging.py` S4·S9·S10 (배터리 53검사).
+검증=`backend/test_repair_staging.py` S4·S9·S10 (배터리 63검사 — S11 오염 agent 폴백, S12 frontend tsc 포함).

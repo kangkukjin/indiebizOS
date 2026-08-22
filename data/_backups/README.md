@@ -7,6 +7,9 @@
 - 디렉토리: `YYYY-MM-DD_이름/` (예: `2026-08-14_contact_type_migration/`)
 - 단일 파일: `YYYY-MM-DD_이름.확장자` (예: `2026-08-14_ibl_usage.db`)
 - **30일 지난 항목은 삭제 후보**다. 실제 삭제는 사용자가 결정한다(자동 삭제 없음).
+- **큰 백업은 개수로도 센다** — 해마 모델 백업(`data/models/ibl_embedding.bak.*`)은 하나가 423MB 이고
+  재학습마다 하나씩 생겨 30일을 기다리면 10개(4G)가 된다. 보관 = **최근 3개**(2026-08-22 사용자 판정,
+  절차 정본 `cloud_training/README.md` 함정 ①). 기각 모델 `._rejected_*` 은 백업이 아니라 폐기물이다.
 - 라이브 SQLite 는 파일 복사가 아니라 `VACUUM INTO` 또는 `.backup` 으로 뜰 것(WAL).
 
 ## 예외 (여기 안 둠)

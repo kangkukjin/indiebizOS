@@ -193,6 +193,12 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 - 누적은 `[table:reduce]{init: 0, step: "acc + 보증금", as: "총보증금"}` — **식 한 줄**만(acc·i·열 이름). 상태가 dict 이거나 분기가 섞이면 `[self:script]` 로.
 - **문법으로 만들지 않은 것(script 의 자리)**: dict 상태 누적·파서·상태기계, 외부 라이브러리 계산, 템플릿 언어, 함수 정의(`def` — `[self:workflow]{op:"save"}` 가 그 자리), 타입. 이런 게 필요하면 `[self:script]` 에 얼리고 IBL 은 그것을 한 단어로 부른다.
 - 긴 문장이 도중에 죽으면 봉투에 `resume: {from_step, prev_ref}` 가 실린다 — 코드를 고친 뒤 `execute_ibl(code, resume=그 값)` 으로 그 step 부터(앞 단 재실행 없음, 24h 유효).
+- ★**정직 표지를 읽어라 — `success: true` 가 "다 잘 됐다"는 뜻이 아니다.** 몸은 부분 실패·경로 변경을 봉투에 반드시 적지만, 안 찾으면 안 보인다(30회차 실측: 실패 96칸 중 **62칸이 최상위 표지로만** 신고했다). 결과를 보고하기 전에 이 키들을 확인하라:
+  - `_fallback_used` — **`??` 가 첫 가지를 버리고 다음 가지로 갈아탔다.** 데이터의 *출처가 바뀌었다*는 뜻이다. `[sense:stock]{...} ?? [sense:search]{...}` 가 이 표지를 달고 오면 그건 시세가 아니라 검색 결과다 — "주가는 X" 라고 말하면 거짓이 된다.
+  - `ok_count` / `error_count` / `errors` — `[table:each]` 의 **행별 부분 실패**. `error_count > 0` 이면 통화에는 **성공분만** 흐르고, 실패한 원 행과 사유는 봉투의 `errors: [{원 행…, _error}]` 에 있다(2026-08-23 계약 개정 — 옛 판은 실패를 통화 안에 `_ok: false` 로 섞었다). "3곳 다 조회했다"가 아니라 "3곳 중 2곳" 이다. `passthrough_rows` 가 있으면 그 행들의 `do` 가 통화를 안 내서(효과·스칼라) **원 행**이 흐른 것이니, 통화에 있는 값을 `do` 의 결과로 읽지 마라.
+  - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행이거나 값 열이 없음). 입력이 아예 없었던 것과 다른 사건이다.
+  - `skipped_steps` / `warning` (`[on_error:]`) · `_caught` (`[try]`) · `condition_errors` (`[if:]` 판정 불능) · `halted` (`[repeat:]` 상한) · `truncated` / `rows_dropped` (원천 절단).
+  이 중 하나라도 있으면 **응답에 그 사실을 적어라.** 적지 않고 결과만 말하는 것이 이 시스템에서 가장 흔한 거짓말이다.
 
 **상태 변수·블록-인-파이프·반환 (M6)** — 긴 프로그램이 파이썬처럼 상태를 들고 돈다:
 ```
@@ -260,7 +266,7 @@ execute_ibl(code='[sense:search]{query: "반도체 시장 동향"} & [sense:sear
 
 **팬아웃 — 같은 액션을 파라미터만 바꿔 N번 부를 때는 `&` 를 손으로 N번 쓰지 말고 `[table:each]` 에 목록을 직접 줘라:**
 ```
-execute_ibl(code='[table:each]{items: [{code: "43112"}, {code: "43113"}, {code: "43114"}], do: "[sense:realty]{source: \'molit\', region_code: \'$it.code\', type: \'apt\', deal: \'rent\'} >> [table:take]{n: 4}"} >> [table:flatten]')
+execute_ibl(code='[table:each]{items: [{code: "43112"}, {code: "43113"}, {code: "43114"}], do: "[sense:realty]{source: \'molit\', region_code: \'$it.code\', type: \'apt\', deal: \'rent\'} >> [table:take]{n: 4}"}')
 ```
 → 앞 통화가 없어도 된다. 좌표 4개·단지 3개·영상 5개 — 네가 방금 정한 목록이면 전부 이 자리다.
 

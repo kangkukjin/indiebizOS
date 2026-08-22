@@ -670,6 +670,31 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         from ibl_control_blocks import _execute_assign
         return _execute_assign(tool_input, project_path, agent_id)
 
+    # 병렬(`[A] & [B]`)도 여기서 받는다 — 소유자(파이프 실행기)에게 위임 (30회차 B30-1).
+    # 파서는 병렬을 `{"_parallel": [...]}` 한 step 으로 낸다. 최상위 경로는 파이프 실행기가
+    # 잡아 주지만, **블록 몸**(`[try]{[A] & [B]}`·`[repeat:]{…}`)은 _run_body 가 dict 몸을
+    # 이 함수로 곧장 넘기므로 여기 분기가 없으면 아래 `action` 검사까지 떨어져
+    # "action 파라미터가 필요합니다"(node·action=null)라는 **엉뚱한 문구**로 죽었다.
+    # 이 파일 위쪽 형제들(_goal/_condition/_case/_try/_repeat/_assign)이 이미 같은 이유로
+    # 여기 모여 있다 — system_tools_ibl.py 가 "전 표면 블록 실행 봉쇄 부류"라 이름 붙인 그것.
+    # 병렬 의미론은 복제하지 않고 execute_pipeline 에 그대로 맡긴다(러너는 하나).
+    if tool_input.get("_parallel"):
+        from workflow_engine import execute_pipeline
+        _env = execute_pipeline([tool_input], project_path,
+                                context={"_prev_result": tool_input.get("_prev_result")}
+                                if tool_input.get("_prev_result") else None,
+                                agent_id=agent_id)
+        if isinstance(_env, dict) and not _env.get("success", True):
+            return {"success": False, "error": _env.get("error") or "병렬 실행 실패",
+                    "results": _env.get("results")}
+        _fr = _env.get("final_result") if isinstance(_env, dict) else _env
+        if isinstance(_fr, str):
+            try:
+                _fr = json.loads(_fr)
+            except Exception:
+                pass
+        return _fr
+
     # (2026-08-05 감사 D11) 옛 노드타입 모드(_node_type: info/store/exec/output) 디스패치 삭제 —
     # 그 노드들은 레지스트리에 없어 정상 경로의 "알 수 없는 노드" 오류로 수렴한다.
 

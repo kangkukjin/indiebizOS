@@ -627,6 +627,10 @@ async def serve_image(path: str):
 
 # ============ 메인 ============
 
+# 리로드 감시에서 빼는 것 — 서버가 import 하지 않는 파일들(가드가 이 이름을 읽는다).
+RELOAD_EXCLUDES = ["test_*.py", "*_test.py", "conftest.py"]
+
+
 if __name__ == "__main__":
     import uvicorn
 
@@ -649,6 +653,14 @@ if __name__ == "__main__":
         host=os.environ.get("INDIEBIZ_BIND_HOST", "127.0.0.1"),
         port=port,
         reload=not is_production,
+        # ★서버가 **한 번도 import 하지 않는 파일**로는 재기동하지 않는다 (2026-08-23).
+        #   실측 사고: 다른 세션이 `backend/test_each_envelope_remedy.py` 를 새로 쓰자
+        #   WatchFiles 가 이를 감지해 08:12:38 에 리로드 → [SystemAIRunner] 시스템 AI 중지 →
+        #   그 순간 20분째 돌던 30회차 상상훈련 턴이 **종료 기록도 못 남기고 끊겼다**
+        #   (episode 1627 = ORPHAN). 위 reload_delay 주석이 말하는 "자기 컨텍스트를 잃는
+        #   자해 패턴"과 같은 부류인데, 디바운스로는 못 막는다 — 편집이 한 번뿐이었다.
+        #   시험 파일·conftest 는 app 의 import 그래프에 없다. 감시할 이유가 애초에 없다.
+        reload_excludes=RELOAD_EXCLUDES,
         reload_delay=2.0,
         log_level="warning"
     )

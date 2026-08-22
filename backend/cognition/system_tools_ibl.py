@@ -27,6 +27,40 @@ _action_fail_counter: Dict[str, dict] = {}
 _ACTION_FAIL_LIMIT = 3       # 연속 N번 실패 시 차단(open)
 _ACTION_OPEN_SECONDS = 90    # open 상태 유지 시간(초). 경과 후 half-open 시험 허용.
 
+# 블록 문장 표지 — 이것들은 '액션 하나'가 아니다(엔진의 디스패치 표지와 같은 목록).
+_BLOCK_MARKERS = ("_goal", "_condition", "_case", "_try", "_repeat", "_assign", "_parallel")
+
+
+def _breaker_key(parsed: Optional[list], agent_id: Optional[str]) -> Optional[str]:
+    """차단기 키 — 대상이 아니면 None. **판정은 여기 한 벌뿐이다** (30회차 B30-2).
+
+    체크 지점과 갱신 지점이 각자 키를 조립하다 같은 실수를 두 번 했다. 이제 둘 다 이 함수를 부른다.
+
+    대상은 *진짜 단일 액션 하나*뿐 — 원래 주석이 말하던 "단일 액션만 체크" 그대로다.
+    ★블록 문장([repeat:]·[try]·[if:]…)은 node·action 이 비어 있어, 옛 코드가 조립한 키가
+      전부 `agent::` **하나로 뭉쳤다**. 서로 무관한 블록 문장 셋이 실패하면 *모든* 블록
+      문장이 90초 차단됐고, 메시지는 `[:] 액션이 연속 3회 실패…` 라며 아무 이름도 대지
+      못했다(30회차 실측: 한 회차에 빈 키 차단 **36회**).
+    ★리허설(`origin: "training"`)은 **자기 키 공간**을 쓴다 — 훈련이 일부러 밟는 실패가
+      사용자의 실제 호출을 차단하면 안 된다. 지우지 않고 분리한다: 훈련 안에서의 폭주
+      방어는 그대로 살아 있다(E28-3 '리허설은 삶이 아니다'와 같은 규율·같은 판정기).
+    """
+    if not parsed or len(parsed) != 1:
+        return None
+    st = parsed[0]
+    if not isinstance(st, dict) or any(st.get(m) for m in _BLOCK_MARKERS):
+        return None
+    node = st.get("_node") or ""
+    action = st.get("action") or ""
+    if not node or not action:
+        return None
+    try:
+        from thread_context import in_rehearsal
+        scope = "training:" if in_rehearsal() else ""
+    except Exception:
+        scope = ""
+    return f"{agent_id or 'default'}:{scope}{node}:{action}"
+
 
 def _params_sig(params) -> str:
     """호출 시그니처 — params 의 안정 해시 (교정 시험 판정용).
@@ -311,10 +345,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     try:
         from ibl_parser import parse as _pre_parse
         _pre_parsed = _pre_parse(code)
-        if _pre_parsed and len(_pre_parsed) == 1 and not _pre_parsed[0].get("_parallel"):
+        _fail_key = _breaker_key(_pre_parsed, agent_id)   # 판정은 한 벌 (B30-2)
+        if _fail_key:
             _node = _pre_parsed[0].get("_node", "")
             _action = _pre_parsed[0].get("action", "")
-            _fail_key = f"{agent_id or 'default'}:{_node}:{_action}"
             _entry = _action_fail_counter.get(_fail_key)
             _open_until = _entry.get("open_until") if _entry else None
             if _open_until is not None:
@@ -472,10 +506,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
         # half-open 시험 실행이 실패하면 fails 는 이미 한도 이상이므로 곧장 open_until 갱신 → 재-open.
         try:
             _pre_parsed2 = parse_ibl(code)
-            if _pre_parsed2 and len(_pre_parsed2) == 1 and not _pre_parsed2[0].get("_parallel"):
+            _fk = _breaker_key(_pre_parsed2, agent_id)    # 판정은 한 벌 (B30-2)
+            if _fk:
                 _n = _pre_parsed2[0].get("_node", "")
                 _a = _pre_parsed2[0].get("action", "")
-                _fk = f"{agent_id or 'default'}:{_n}:{_a}"
                 # 성공/실패 판정: *최상위* success/error만 본다. 중첩 "error" 키(예: 성공한
                 # native 슬라이드의 verify.error: null)에 오탐하지 않도록 — 문자열이면 JSON 파싱 후
                 # 최상위 키로 판정. (2026-06-23: '"error" in result' 부분문자열 검색이 성공한

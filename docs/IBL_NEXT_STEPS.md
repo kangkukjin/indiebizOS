@@ -124,7 +124,7 @@
 
 원칙: (a) 명시적 접두사(`browser_`, `blog_`, `photo_`)가 일반 명사보다 우위, (b) UI/앱 띄우기는 `limbs`, 외부 데이터 인출은 `sense`, 내부 데이터 저장/조회는 `self`. 일부(예: `route_navigate`가 sense에 → 데이터 인출)는 노드 경계 일관성을 우선해 캐노니컬 노드를 바꿈.
 
-백업: `data/ibl_nodes.yaml.bak.20260526` (안정화 후 제거).
+백업: `data/ibl_nodes.yaml.bak.20260526` — **제거됨**(2026-08-22, 30일 백업 정리). `ibl_nodes.yaml` 은 빌드 파생물이라 백업의 정본은 git 이력이다.
 
 ## 이전 세션(1차)에서 끝낸 것
 

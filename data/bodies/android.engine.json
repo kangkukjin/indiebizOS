@@ -259,7 +259,7 @@
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
     "test_doc_drift": "force_exclude_glob",
-    "test_each_envelope_remedy": "force_exclude_glob",
+    "test_each_currency_contract": "force_exclude_glob",
     "test_edit_miss_diagnosis": "force_exclude_glob",
     "test_emitter_input_honesty": "force_exclude_glob",
     "test_emitter_output_path": "force_exclude_glob",

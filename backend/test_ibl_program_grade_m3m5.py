@@ -212,13 +212,23 @@ def test_r4_repeat_while_outer_var_and_body_failure():
     assert out["success"] is False and _final(out)["halted"] == "condition_error"
 
 
-def test_r5_each_collect():
+def test_r5_each_통화를_그대로_낸다():
+    """★2026-08-23 언어 개정: each 의 평탄화는 `collect` 라는 knob 이 아니라 **기본 동작**이다.
+    (옛 판은 `collect: true` 를 켜야 평탄했고, 끄면 `원 행+_ok+_result` 봉투였다.)"""
     calls = []
-    out = _run('[sense:rows]{} >> [table:each]{collect: true, do: "[self:echo]{t: \'$it.title\'}"}', calls)
+    # ① do 가 통화를 내면 그 행들이 그대로 흐른다 — 감싸기 없음
+    out = _run('[sense:rows]{} >> [table:each]{do: "[sense:rows]{}"}', calls)
     assert out["success"], out
     fr = _final(out)
-    assert fr["rows_processed"] == 3 and fr["count"] == 3, fr
-    assert [r["params"]["t"] for r in fr["items"]] == ["a", "b", "c"]      # 회차 결과가 행 감싸기 없이 평탄
+    assert fr["rows_processed"] == 3
+    assert [r["title"] for r in fr["items"]] == ["a", "b", "c"] * 3, fr
+    assert "passthrough_rows" not in fr
+    # ② do 가 통화를 안 내면(효과·스칼라) 원 행이 흐르고, 봉투가 그 사실을 말한다
+    out = _run('[sense:rows]{} >> [table:each]{do: "[self:echo]{t: \'$it.title\'}"}', calls)
+    fr = _final(out)
+    assert [r["title"] for r in fr["items"]] == ["a", "b", "c"], fr
+    assert fr["passthrough_rows"] == 3
+    assert "원 행" in fr["message"], fr
 
 
 # ═══ M5 ═══

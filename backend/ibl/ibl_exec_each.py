@@ -216,11 +216,82 @@ def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
     return None, obj
 
 
+def _each_carry(rows: list, base: dict, keep: list) -> list:
+    """부모 행의 지목된 필드를 결과 행에 승계 — 옛 `flatten{keep: […]}` 의 자리 이동.
+
+    옛 관용구 `each >> flatten{keep: ["city"]}` 는 팬아웃 결과에 "어느 부모에서 왔는지"를
+    붙이는 유일한 방법이었다. each 가 통화를 그대로 내게 되면서 flatten 이 파이프에서
+    빠지므로, 그 능력이 사라지지 않도록 부모 행이 아직 손에 있는 이 자리로 옮긴다
+    (능력을 없애는 개정이 아니라 자리를 옮기는 개정이다).
+
+    충돌은 flatten 과 같은 규율 — 조용히 덮지 않고 `_2` 접미를 붙인다(침묵 오선택 금지).
+    """
+    if not keep:
+        return rows
+    carry = {k: base.get(k) for k in keep if k in base}
+    if not carry:
+        return rows
+    out = []
+    for r in rows:
+        merged = dict(r)
+        for k, v in carry.items():
+            name = k
+            while name in merged:
+                name += "_2"
+            merged[name] = v
+        out.append(merged)
+    return out
+
+
+def _each_success_rows(final: Any, base: dict):
+    """성공한 행 하나가 통화에 기여할 행들.
+
+    `do` 의 결과가 통화면 그 행들을, 통화가 아니면(효과·스칼라 — notify·write 등)
+    **원 행**을 그대로 흘린다. "결과가 통화가 아닐 땐 빈손" 으로 두면 종착 액션 파이프
+    (`… >> [table:each]{do: "[self:notify_user]{…}"}`)가 통화를 잃어 어느 행에 대해
+    실행됐는지조차 안 보인다 — 그건 옛 봉투가 유일하게 잘하던 일이라 버리지 않는다.
+
+    통화 판정은 몸의 단일 게이트 `common.currency.derive_items` 가 한다(여기서 items/
+    table/blocks 를 각자 알아보지 않는다 — 판정기가 둘이면 갈라진다).
+    """
+    from common.currency import derive_items
+
+    if isinstance(final, list):
+        return [r if isinstance(r, dict) else {_EACH_SCALAR_FIELD: r} for r in final], True
+    if isinstance(final, dict):
+        derived = derive_items(final)
+        rows = derived.get("items") if isinstance(derived, dict) else None
+        if isinstance(rows, list):
+            return [r if isinstance(r, dict) else {_EACH_SCALAR_FIELD: r} for r in rows], True
+    # 통화 아님 — 원 행을 흘린다. 봉투가 이 사실을 말한다(두 번째 반환값). 결과를 행에
+    # 병합해 만들어 내지 않는다: 이름 충돌을 조용히 처리할 방법이 없고, 없는 통화를
+    # 있는 척하는 게 이 몸이 가장 싫어하는 부류다.
+    return [dict(base)], False
+
+
 def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -> Any:
     """[table:each]{do, as, limit, on_error} — items 의 각 행에 IBL 문장을 적용.
 
-    통화 계약: items → items. 각 출력 행 = 원 행 + `_ok` + (`_error` | `_result`).
-    원 행을 보존하므로 `>> [table:filter]{where: {_ok: false}}` 로 실패만 추릴 수 있다.
+    통화 계약(2026-08-23 언어 개정 — 사용자 판정): **성공은 통화로, 실패는 봉투로.**
+
+    옛 계약은 출력 행을 `원 행 + _ok + (_error|_result)` 봉투로 쌌다. 명분은 "원 행 보존 =
+    `>> [table:filter]{where:"_ok == false"}` 로 실패만 추리기"였는데, 실측하니 코퍼스
+    3,582문장에서 `_ok` 를 쓴 문장이 **0건**이었다. 반대로 그 봉투 때문에 뒤에 붙는 변환자가
+    전부 "그 필드 없다"로 끊겨서, `each` 는 항상 `>> [table:flatten]` 을 동반해야 하는
+    2낱말 관용구였다(each 문장 49건 중 15건이 flatten 동반, 최다 후속). 즉 **한 번도 안 쓰인
+    관용구를 위해 매번 쓰이는 관용구를 끊고 있었다.**
+
+    그리고 이 몸은 이미 다른 답을 갖고 있었다 — `halted_steps`·`skipped_steps`·
+    `branches_failed`·`empty_notes` 가 전부 **부분 실패는 봉투로** 나른다. each 만
+    2026-08-15 에 그 규약이 서기 전에 만들어져 실패를 통화 *안*에 섞고 있었다.
+    IBL 에서 유일하게 통화-in/통화-out 이 아닌 변환자였다.
+
+    새 계약:
+      · 성공 행 → `do` 의 결과가 통화면 그 행들을, 통화가 아니면(효과·스칼라) **원 행**을
+        그대로 흘린다. 통화 판정은 `common.currency.derive_items` 하나가 한다.
+      · 실패 행 → 통화에 섞지 않고 봉투 `errors: [{원 행…, _error}]` + `error_count` 로.
+        침묵 금지는 그대로다 — 부분 실패면 `warning` 을 반드시 싣는다.
+      · 전 행 실패는 여전히 상위로 전파한다.
     """
     from ibl_parser import parse as ibl_parse, IBLSyntaxError
     from workflow_engine import execute_pipeline
@@ -262,15 +333,22 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     if limit < 0:
         limit = _EACH_DEFAULT_LIMIT
     on_error = str(params.get("on_error") or "continue").strip().lower()
+    keep = params.get("keep") or []
+    if not isinstance(keep, list):
+        keep = [keep]
+    keep = [str(k) for k in keep]
     depth = int(params.get("_depth") or 0)
 
     target = rows[:limit]
     skipped = max(0, len(rows) - len(target))
     out_items: list = []
+    errors: list = []
     ok_n = err_n = substeps = 0
     halted: Optional[str] = None
 
+    processed = noncurrency = 0
     for idx, row in enumerate(target):
+        processed += 1
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
 
         sentence, missing = _each_substitute(do, row, var)
@@ -283,9 +361,8 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
             else:
                 avail = [_EACH_SCALAR_FIELD]
-            out_items.append({**base, "_ok": False,
-                              "_error": (f"행에 없는 필드: {', '.join(sorted(set(missing)))} "
-                                         f"(행 필드: {avail})")})
+            errors.append({**base, "_error": (
+                f"행에 없는 필드: {', '.join(sorted(set(missing)))} (행 필드: {avail})")})
             if on_error == "stop":
                 halted = "on_error"
                 break
@@ -295,7 +372,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             steps = ibl_parse(sentence)
         except IBLSyntaxError as e:
             err_n += 1
-            out_items.append({**base, "_ok": False, "_error": f"IBL 문법 오류: {e}"})
+            errors.append({**base, "_error": f"IBL 문법 오류: {e}"})
             if on_error == "stop":
                 halted = "on_error"
                 break
@@ -329,45 +406,43 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
         if isinstance(res, dict) and not res.get("success", True):
             err_n += 1
-            out_items.append({**base, "_ok": False,
-                              "_error": res.get("error") or "실행 실패",
-                              "_result": final})
+            errors.append({**base, "_error": res.get("error") or "실행 실패"})
             if on_error == "stop":
                 halted = "on_error"
                 break
         else:
             ok_n += 1
-            out_items.append({**base, "_ok": True, "_result": final})
+            _rows_from, _was_currency = _each_success_rows(final, base)
+            if _was_currency:
+                _rows_from = _each_carry(_rows_from, base, keep)
+            out_items.extend(_rows_from)
+            if not _was_currency:
+                noncurrency += 1
 
     # 중단 시 남은 행은 '처리 안 함'으로 정직하게 집계 (조용히 사라지지 않게)
     if halted:
-        skipped += len(target) - len(out_items)
+        # ★출력 행 수 ≠ 처리한 입력 행 수 다(한 행이 N행을 낼 수 있다) — 처리 수로 센다.
+        skipped += len(target) - processed
 
     out: Dict[str, Any] = {
         "items": out_items,
         "count": len(out_items),
+        "rows_processed": processed,
         "ok_count": ok_n,
         "error_count": err_n,
     }
     notes = []
-    if params.get("collect") and out_items:
-        # collect:true (M4 설계 §2.3-1) — 회차 결과(_result 의 items)를 이어붙인 하나의 items 로(= flatten 내장).
-        flat: list = []
-        for r in out_items:
-            if not r.get("_ok"):
-                continue
-            fr = r.get("_result")
-            if isinstance(fr, dict) and isinstance(fr.get("items"), list):
-                flat.extend(fr["items"])
-            elif isinstance(fr, list):
-                flat.extend(fr)
-            elif fr is not None:
-                flat.append(fr)
-        out["items"] = flat
-        out["count"] = len(flat)
-        out["rows_processed"] = len(out_items)
-        if err_n:
-            notes.append(f"collect: 실패 {err_n}행은 제외(원 행 단위 결과는 collect 없이 실행해 확인)")
+    if errors:
+        # 실패는 통화에 섞지 않고 봉투로 — halted_steps·branches_failed·empty_notes 와 같은 규약.
+        out["errors"] = errors
+    if noncurrency:
+        # ★침묵 금지: 통화를 안 내는 do(효과·스칼라)면 원 행이 그대로 흘렀다는 사실을 말한다.
+        #   말 없이 원 행을 흘리면 소비자가 그걸 do 의 결과로 오독한다.
+        out["passthrough_rows"] = noncurrency
+        notes.append(f"{noncurrency}행의 do 가 통화를 내지 않아(효과·스칼라) **원 행**을 "
+                     f"그대로 흘렸습니다 — 통화에 있는 값은 do 의 결과가 아닙니다.")
+    # ★`collect` 은퇴(2026-08-23): 이 파라미터가 하던 일("_result 를 이어붙인 하나의 items")이
+    #   이제 기본 동작이다. 낱말을 남겨 두면 "켜야 되는 것"으로 읽혀 어휘가 무거워진다.
     if skipped:
         if halted == "budget":
             notes.append(f"하위 스텝 예산({_EACH_MAX_SUBSTEPS}) 초과로 중단 — {skipped}건 미처리")
@@ -377,11 +452,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             notes.append(f"limit={limit} 로 앞에서 잘랐습니다 — {skipped}건 미처리")
         out["skipped"] = skipped
     # 전 행 실패만 상위로 전파한다. 부분 실패는 파이프를 끊지 않되 반드시 보이게 한다.
-    if out_items and ok_n == 0:
+    if processed and ok_n == 0:
         out["success"] = False
         out["error"] = (f"each: {err_n}건 전부 실패 — 첫 오류: "
-                        f"{out_items[0].get('_error')}")
-    elif not out_items:
+                        f"{errors[0].get('_error') if errors else '실행 실패'}")
+    elif not processed:
         if not rows:
             # ★F17 (2026-08-17 상상훈련 12회차): 입력 0행은 실수가 아니라 정당한 빈손 —
             # 0회 실행=성공(공허 참)으로 0건 통화를 내려 파이프가 완주하게 한다.
@@ -395,7 +470,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     else:
         out["success"] = True
         if err_n:
-            notes.append(f"{err_n}/{len(out_items)}건 실패 (성공 {ok_n}) — _ok:false 행의 _error 참조")
+            # ★부분 실패가 통화에서 안 보이게 됐으므로(성공만 흐른다) 봉투가 더 크게 말해야
+            #   한다 — 침묵 금지. 소비자가 warning 하나만 봐도 부분성을 안다.
+            out["warning"] = (f"[each] {err_n}/{processed}행 실패 (성공 {ok_n}) — 통화에는 성공분만 "
+                              f"흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.")
+            notes.append(f"{err_n}/{processed}건 실패 (성공 {ok_n}) — errors 참조")
     if notes:
         out["message"] = " / ".join(notes)
     return out

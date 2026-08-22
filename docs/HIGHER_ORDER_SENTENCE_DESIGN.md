@@ -115,11 +115,35 @@ structure document spreadsheet chart                      ← 전부 데이터�
 }
 ```
 
-**통화 계약** (`IBL_CURRENCY_CONTRACT.md` 준수)
+**통화 계약** (`IBL_CURRENCY_CONTRACT.md` 준수) — ★2026-08-23 개정, 아래 각주 참조
 - 입력: `{items:[...]}`
-- 출력: `{items:[...]}` — 각 행은 **원 행 + `_ok` + (`_error` | `_result`)**
-  (원 행 보존 = 뒤에 `>> [table:filter]{where:"_ok == false"}` 로 실패만 추리는 문장이 가능)
-- 요약 필드: `{ok_count, error_count, skipped}` — **침묵 금지**(§4-3)
+- 출력: `{items:[...]}` — **성공은 통화로**: `do` 가 통화를 내면 그 행들이 감싸기 없이 흐르고
+  (뒤에 변환자를 바로 이을 수 있다), 통화를 안 내면(효과·스칼라) **원 행**이 흐르며
+  봉투가 `passthrough_rows` 로 그 사실을 말한다.
+- **실패는 봉투로**: `errors: [{원 행…, _error}]` + `error_count` + `warning`.
+  통화에 섞지 않는다.
+- `keep: [부모 필드]` — 팬아웃 결과 행에 원 행의 필드를 승계(옛 `flatten{keep}` 의 자리 이동).
+- 요약 필드: `{ok_count, error_count, rows_processed, skipped}` — **침묵 금지**(§4-3)
+
+> **★개정 각주 (2026-08-23, 사용자 판정)** — 초판은 출력 행을 `원 행 + _ok + (_error|_result)`
+> 봉투로 쌌고, 명분은 바로 위에 적혀 있던 *"원 행 보존 = `>> [table:filter]{where:"_ok == false"}`
+> 로 실패만 추리는 문장이 가능"* 이었다. 그 기능은 실제로 잘 작동했다 — 그런데 **코퍼스
+> 3,582문장에서 `_ok` 를 쓴 문장이 0건**이었다. 반대편에서는 그 봉투 때문에 뒤에 붙는 변환자가
+> 전부 "그 필드 없다"로 끊겨 `each` 가 항상 `>> [table:flatten]` 을 동반하는 2낱말 관용구였다
+> (each 문장 49건 중 15건, 최다 후속). **한 번도 안 쓰인 관용구를 위해 매번 쓰이는 관용구를
+> 끊고 있었다.** 실사용도 8일간 7건에 그쳤고, 같은 기간 "한 문장으로 접힐 수 있었던" 연속
+> 동일 액션 반복이 700여 건이었다.
+>
+> 그리고 이 몸은 이미 답을 갖고 있었다: `halted_steps`·`skipped_steps`·`branches_failed`·
+> `empty_notes` 가 전부 **부분 실패는 봉투로** 나른다. `each` 만 2026-08-15(이 문서)에 그 규약이
+> 서기 전에 만들어져 실패를 통화 *안*에 섞었고, 그래서 IBL 에서 유일하게 통화-in/통화-out 이
+> 아닌 변환자였다. 개정은 그 예외를 없앤 것이다.
+>
+> 능력은 잃지 않았다 — `flatten{keep}` 은 `each{keep}` 으로 자리를 옮겼고, 실패 원 행은
+> `errors` 에 그대로 있다. 부수 은퇴: `collect` 파라미터(그 일이 이제 기본 동작이다).
+> 이행: 코퍼스 15문장 이관(DB+`data/training/ibl_distilled.json` 양쪽), 옛 관용구
+> `each >> flatten` 은 flatten 이 "이미 평탄합니다 — flatten 없이 바로 이으세요"로 정직하게 거절.
+> 가드 `backend/test_each_currency_contract.py` C1~C11.
 
 **왜 `table` 노드인가**: 통화를 먹고 통화를 뱉는 변환자라는 `table` 의 정의에 정확히 부합한다.
 그리고 `always_on: true` 라 어떤 노드 선별에서도 살아남는다 — 문형의 뼈대가 꺼지면 안 된다.

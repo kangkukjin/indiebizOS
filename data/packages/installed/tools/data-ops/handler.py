@@ -293,7 +293,6 @@ from common.pkg_utils import load_sibling as _load_sibling_diag
 _diag = _load_sibling_diag(__file__, "diagnostics")
 _observed_fields = _diag._observed_fields
 _absent_fields = _diag._absent_fields
-_each_envelope_remedy = _diag._each_envelope_remedy
 _field_missing_error = _diag._field_missing_error
 
 
@@ -449,7 +448,6 @@ def _op_sort(prev, params):
     if not avail and dug:
         avail = list(dug[0].keys())
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
-    hint += _each_envelope_remedy(avail)
     return {"success": False, "error": f"sort: '{by}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
@@ -495,8 +493,7 @@ def _op_select(prev, params):
                     return _emit_items(denv if denv is not None else env, out)
             # 없는 열을 조용히 떨구면 빈 표가 success 로 나간다(⑧′)
             return {"success": False,
-                    "error": (f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"
-                              + _each_envelope_remedy(src_cols))}
+                    "error": f"select: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
         idx = [src_cols.index(c) for c in cols_keep]
         new_cols = [src_cols[i] for i in idx]
         new_rows = [[(r[i] if i < len(r) else None) for i in idx] for r in (table.get("rows") or [])]
@@ -543,8 +540,7 @@ def _op_rename(prev, params):
         missing = _absent_fields(list(m), _observed_fields(columns=src_cols))
         if missing:
             return {"success": False,
-                    "error": (f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"
-                              + _each_envelope_remedy(src_cols))}
+                    "error": f"rename: 열 {missing} 이(가) 없습니다. 실제 열: {src_cols}"}
         clash = [v for k, v in m.items() if v in src_cols and v not in m]
         if clash:
             return {"success": False,
@@ -601,9 +597,7 @@ def _op_dedup(prev, params):
         cols = [str(c) for c in (table.get("columns") or [])]
         if by and str(by) not in cols:
             # 잘못된 by 를 조용히 첫 열로 폴백하면 엉뚱한 키로 중복 제거된다(⑧′)
-            return {"success": False,
-                    "error": (f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"
-                              + _each_envelope_remedy(cols))}
+            return {"success": False, "error": f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"}
         ki = cols.index(str(by)) if by else 0
         seen, rows = set(), []
         for r in table.get("rows") or []:
@@ -805,8 +799,7 @@ def _op_since(prev, params):
             avail = sorted({f for r in rows for f in r.keys()})
             return {"success": False, "error": (
                 "since: 행 식별 필드를 못 골랐습니다(후보 url/id/link/title 이 모든 행에 없음). "
-                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}"
-                + _each_envelope_remedy(avail))}
+                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}")}
 
     watch = params.get("watch") or []
     if isinstance(watch, str):
@@ -1170,10 +1163,19 @@ def _op_flatten(prev, params):
             res["message"] = "flatten: 입력 0행 — 펼칠 것 없음 (빈 목록)"
             return res
         sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
+        # ★기본 field(_result)로 왔는데 어느 행에도 _result 가 없다 = 입력이 **이미 평탄**하다.
+        #   `[table:each]` 가 통화를 그대로 내게 된 뒤(2026-08-23 언어 개정) 옛 관용구
+        #   `each >> flatten` 이 정확히 여기로 온다. "목록이 없다"만 말하면 사용자는 field 를
+        #   고치려 들지만, 참인 처방은 **flatten 을 빼는 것**이다.
+        if field == "_result":
+            return {"success": False,
+                    "error": (f"flatten: 입력이 이미 평탄합니다 — 어느 행에도 '_result' 가 없습니다"
+                              f"(행 {len(recs)}개). 행 필드 예: {sample} — [table:each] 는 통화를 "
+                              f"그대로 내므로 flatten 없이 바로 이으세요. 중첩 목록을 펴려는 "
+                              f"것이었다면 field 로 그 필드를 지목하세요.")}
         return {"success": False,
                 "error": (f"flatten: field '{field}' 에서 목록을 가진 행이 없습니다"
-                          f"(행 {len(recs)}개 전부 건너뜀). 행 필드 예: {sample} — "
-                          f"each 뒤라면 field: \"_result\" 또는 \"_result.items\" 를 확인하세요.")}
+                          f"(행 {len(recs)}개 전부 건너뜀). 행 필드 예: {sample}")}
     res = _emit_items(env, out)
     if skipped:
         res["skipped_rows"] = skipped

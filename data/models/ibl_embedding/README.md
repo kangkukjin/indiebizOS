@@ -5,40 +5,41 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:6470
+- dataset_size:6553
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 목표 상태 체크
+- source_sentence: 공연 카테고리 목록
   sentences:
-  - 목표 프로세스 관리 (op 분기). list/status/kill/delete/log/attempts. 의식 에이전트가 평가 루프 라운드를
-    누적·종료하는 메타 인지 도구.
-  - '[self:time] & [sense:stock]'
-  - '[self:delete] ; [self:file_find] >> [table:take] >> [table:document]'
-- source_sentence: 매일 아침 9시에 뉴스 모아서 메일로 보내는 걸 예약해줘
+  - '[self:photo]'
+  - 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document
+    파이프로 추리고 문서화.
+  - '[sense:realty] >> [table:filter]'
+- source_sentence: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단
+    신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
   sentences:
-  - '[self:trigger] >> [table:take] >> [others:channel_send]"}'
+  - '[others:portal]'
+  - '[self:grep]'
+  - '$r = [sense:search] [if: count($r) > 0] >> [self:notify_user]} [else] >> [table:brief]
+    >> [self:notify_user]}'
+- source_sentence: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로
+    개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
+  sentences:
+  - '[sense:realty]'
+  - '[self:finance] >> [table:sort] >> [table:take]'
+  - '[sense:search] >> [table:sort]'
+- source_sentence: 관광지 선택을 위해 복수 후보지의 인기·경관·체험 정보를 탐색하고 비교 판단 요청
+  sentences:
+  - '[sense:search] 관광명소", count: 10}'
+  - '[sense:search] & [sense:search] & [sense:crawl]'
+  - '[sense:cctv] >> [table:take]'
+- source_sentence: 매물 전부 저장해두고 상위 3개만 보여줘
+  sentences:
+  - 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산
+    현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
+  - 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
   - 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글
     뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
-  - '[engines:image_gemini]", style_preset: "", aspect_ratio: "", image_size: "",
-    output_path: ""} >> [engines:image_read]", intent: ""} >> [engines:image_read]",
-    prompt: ""} & [self:copy]", dest: ""}'
-- source_sentence: 블로그 새 글 받아오고 최신글 창고에 발행해줘
-  sentences:
-  - '[sense:stock] & [sense:stock] & [sense:stock] & [sense:search]'
-  - '[self:deck]'
-  - '[self:blog] ; [self:blog] >> [self:read] >> [table:document] >> [self:copy]'
-- source_sentence: 오른쪽 클릭 — table_row_3
-  sentences:
-  - '[limbs:browser]'
-  - '[self:grep] & [self:list] & [self:file_find] & [self:read] & [self:read]'
-  - Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes).
-- source_sentence: '사용자가 특정 식당을 언급하며 다른 대안을 요청하는 상황에서, 가족 구성원의 기호(예: 조개 불호)를 고려해 대안
-    식당을 탐색·비교·추천한다'
-  sentences:
-  - '[self:write]'
-  - '[sense:realty] >> [table:take] >> [table:brief]'
-  - '[sense:restaurant]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -92,9 +93,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '사용자가 특정 식당을 언급하며 다른 대안을 요청하는 상황에서, 가족 구성원의 기호(예: 조개 불호)를 고려해 대안 식당을 탐색·비교·추천한다',
-    '[sense:restaurant]',
-    '[sense:realty] >> [table:take] >> [table:brief]',
+    '매물 전부 저장해두고 상위 3개만 보여줘',
+    '부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.',
+    '웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -103,9 +104,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.5861,  0.0365],
-#         [ 0.5861,  1.0000, -0.1440],
-#         [ 0.0365, -0.1440,  1.0000]])
+# tensor([[ 1.0000,  0.6111, -0.0494],
+#         [ 0.6111,  1.0000,  0.0773],
+#         [-0.0494,  0.0773,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -149,20 +150,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 6,470 training samples
+* Size: 6,553 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 4 tokens</li><li>mean: 15.41 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 25.83 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.54 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 27.43 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                           | sentence_1                                                                                      |
-  |:-------------------------------------|:------------------------------------------------------------------------------------------------|
-  | <code>강의 동영상 렌더 다 됐는지 봐줘해줘</code>    | <code>[self:deck]</code>                                                                        |
-  | <code>새로운 테스트 시작해줘</code>            | <code>주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.</code>                           |
-  | <code>뉴스수집-요약-저장 워크플로우 새로 만들어</code> | <code>[self:workflow], do: "[sense:search]'} >> [table:brief] >> [self:write]_리포트.md'}"}</code> |
+  | sentence_0                   | sentence_1                                                                                                                                                                 |
+  |:-----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>스무스 재즈 좀</code>        | <code>[limbs:music]</code>                                                                                                                                                 |
+  | <code>가족신문 공개 주소 알려줘</code>  | <code>가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.</code> |
+  | <code>실사용에서 실패 나면 알려줘</code> | <code>[sense:self_check] >> [table:filter] >> [table:take] >> [self:notify_user]</code>                                                                                    |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -292,7 +293,7 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6180 | 500  | 0.0177        |
+| 0.6098 | 500  | 0.0051        |
 
 
 ### Training Time

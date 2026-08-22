@@ -30,25 +30,90 @@ def _parse_params(text: str) -> dict:
     if not text:
         return {}
 
-    # 1. JSON5 시도 — unquoted keys, 양쪽 따옴표, trailing comma 등 모두 처리
-    try:
-        import pyjson5
-        result = pyjson5.loads(text)
-        if isinstance(result, dict):
-            return result
-    except Exception:
-        pass
+    # ★2026-08-22 (파서 계열 점검): 표준 밖 이스케이프가 있으면 JSON/JSON5 를 건너뛴다.
+    # pyjson5 는 `"\d+"` 를 `d+` 로 **백슬래시째 먹는다**(실측). 그래서 아래 수동 파서가
+    # "모르는 이스케이프는 원문 보존"으로 고쳐져 있어도 이 경로에서 통째로 무효가 됐고,
+    # `[self:grep]{pattern: "\d+"}` 같은 정규식 param 이 조용히 다른 패턴으로 바뀌어
+    # 0건을 돌려줬다(침묵 실패). 두 파서가 같은 입력에 다른 답을 내면 안 된다.
+    if not _has_nonstandard_escape(text):
+        # 1. JSON5 시도 — unquoted keys, 양쪽 따옴표, trailing comma 등 모두 처리
+        try:
+            import pyjson5
+            result = pyjson5.loads(text)
+            if isinstance(result, dict):
+                return result
+        except Exception:
+            pass
 
-    # 2. 표준 JSON (JSON5 라이브러리 부재 또는 파싱 실패 시 보험)
-    try:
-        result = json.loads(text)
-        if isinstance(result, dict):
-            return result
-    except json.JSONDecodeError:
-        pass
+        # 2. 표준 JSON (JSON5 라이브러리 부재 또는 파싱 실패 시 보험)
+        try:
+            result = json.loads(text)
+            if isinstance(result, dict):
+                return result
+        except json.JSONDecodeError:
+            pass
 
     # 3. 최후 폴백: 간단한 key: value 파싱
     return _parse_relaxed_params(text)
+
+
+# JSON/JSON5 가 아는 이스케이프 — 이 밖의 `\x` 는 수동 파서만 원문대로 보존한다.
+_STD_ESCAPES = set('"\\/bfnrtu\'\n')
+
+
+def _has_nonstandard_escape(text: str) -> bool:
+    """표준 밖 이스케이프(`\\d`·`\\s`·`\\q` 등)가 들어 있나 — JSON5 우회 판정."""
+    i = 0
+    n = len(text)
+    while i < n - 1:
+        if text[i] == '\\':
+            if text[i + 1] not in _STD_ESCAPES:
+                return True
+            i += 2      # 이스케이프된 백슬래시·표준 이스케이프는 건너뛴다
+            continue
+        i += 1
+    return False
+
+
+def _escape_control_in_strings(raw: str) -> str:
+    """리터럴 배열/객체 안 **문자열 안의 실제 개행·탭**을 JSON 이스케이프로 바꾼다.
+
+    ★2026-08-22: `[table:each]{items: [{"code": "a<개행>    b"}]}` 처럼 값 안에 진짜
+    개행이 있으면 JSON 규격상 제어문자라 파싱이 실패하고, 예전엔 그때 **원본 문자열을
+    그대로 돌려줘**("배열이면 원본 문자열 반환") items 가 list 가 아닌 str 로 떨어졌다 —
+    소비자는 "통화를 못 찾음"으로 죽고 원인은 안 보였다(F19-3 과 같은 '개행이 값을
+    깨뜨린다' 계열). 이스케이프해 한 번 더 시도하면 그 부류가 통째로 산다.
+    """
+    out = []
+    in_s = False
+    quote = None
+    i = 0
+    n = len(raw)
+    while i < n:
+        ch = raw[i]
+        if in_s:
+            if ch == '\\' and i + 1 < n:
+                out.append(ch)
+                out.append(raw[i + 1])
+                i += 2
+                continue
+            if ch == quote:
+                in_s, quote = False, None
+                out.append(ch)
+            elif ch == '\n':
+                out.append('\\n')
+            elif ch == '\t':
+                out.append('\\t')
+            elif ch == '\r':
+                out.append('\\r')
+            else:
+                out.append(ch)
+        else:
+            if ch in '"\'':
+                in_s, quote = True, ch
+            out.append(ch)
+        i += 1
+    return ''.join(out)
 
 
 def _reject_residue(inner: str, pos: int, parsed: dict) -> None:
@@ -243,17 +308,32 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
             depth -= 1
             if depth == 0:
                 raw = text[pos:i + 1]
-                # 1. JSON5 시도 — 모든 JSON-like 입력의 표준 해석기
-                try:
-                    import pyjson5
-                    return pyjson5.loads(raw), i + 1
-                except Exception:
-                    pass
-                # 2. 표준 JSON (JSON5 부재 시 보험)
-                try:
-                    return json.loads(raw), i + 1
-                except (json.JSONDecodeError, ValueError):
-                    pass
+                # 표준 밖 이스케이프(`\d` 등)는 JSON5 가 백슬래시째 먹으므로 우회 (위 주석 참조)
+                if not _has_nonstandard_escape(raw):
+                    # 1. JSON5 시도 — 모든 JSON-like 입력의 표준 해석기
+                    try:
+                        import pyjson5
+                        return pyjson5.loads(raw), i + 1
+                    except Exception:
+                        pass
+                    # 2. 표준 JSON (JSON5 부재 시 보험)
+                    try:
+                        return json.loads(raw), i + 1
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                    # 3. 값 안의 진짜 개행·탭만 이스케이프해 한 번 더 — 실패=원본 문자열 폴백은
+                    #    소비자에게 통화 아닌 str 을 조용히 넘긴다(침묵). 살릴 수 있으면 살린다.
+                    _esc = _escape_control_in_strings(raw)
+                    if _esc != raw:
+                        try:
+                            import pyjson5
+                            return pyjson5.loads(_esc), i + 1
+                        except Exception:
+                            pass
+                        try:
+                            return json.loads(_esc), i + 1
+                        except (json.JSONDecodeError, ValueError):
+                            pass
                 # 3. 중첩 객체면 재귀적 relaxed 파싱
                 if open_br == '{':
                     return _parse_relaxed_params(raw), i + 1

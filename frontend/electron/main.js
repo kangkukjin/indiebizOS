@@ -467,8 +467,17 @@ function showMainWindow() {
 }
 
 // ─── Launcher WS 브릿지 (메인 프로세스 상주) ───
+// ★2026-08-22: 이 소켓이 죽으면 사용자에게 가는 **모든 알림이 조용히 사라진다**
+// (notify_dispatch 는 런처 미연결이면 OS 네이티브로 폴백하지만, 배지·클릭연동은 없다).
+// 옛 코드는 재연결을 onclose 에만 걸었는데, 백엔드가 kill -9·크래시로 죽으면 소켓이
+// 반열림으로 남아 onclose 가 안 오는 경우가 있고, 그러면 `if (_launcherWS) return` 가드가
+// **영구히** 재연결을 막았다(실측 2026-08-22 14:15 재기동 후 6분간 미연결, 앱은 살아 있음).
+// 그래서 ①가드를 상태 기반으로 바꾸고 ②ping 에 대한 pong 을 확인해 죽은 소켓을 스스로 버린다.
 let _launcherWS = null;
 let _launcherReconnectTimer = null;
+let _launcherPingTimer = null;
+let _launcherLastPong = 0;
+const LAUNCHER_PONG_TIMEOUT_MS = 90000;  // ping 30초 × 3회 무응답 = 죽은 소켓
 
 function handleLauncherCommand(command, params) {
   switch (command) {
@@ -517,8 +526,23 @@ function handleLauncherCommand(command, params) {
   }
 }
 
+function _launcherDrop(reason) {
+  // 죽은/의심스러운 소켓을 버리고 재연결 경로를 연다 (중복 타이머 없이).
+  console.log('[Launcher WS] 소켓 폐기:', reason);
+  if (_launcherPingTimer) { clearInterval(_launcherPingTimer); _launcherPingTimer = null; }
+  if (_launcherWS) {
+    try { _launcherWS.onclose = null; _launcherWS.close(); } catch (e) { /* 이미 죽은 소켓 */ }
+    _launcherWS = null;
+  }
+  if (_launcherReconnectTimer) clearTimeout(_launcherReconnectTimer);
+  _launcherReconnectTimer = setTimeout(startLauncherWS, 3000);
+}
+
 function startLauncherWS() {
-  if (_launcherWS) return;
+  // ★상태 기반 가드 — 옛 `if (_launcherWS) return` 는 반열림 소켓 하나로 영구 침묵을 만들었다.
+  if (_launcherWS && (_launcherWS.readyState === 0 || _launcherWS.readyState === 1)) return;
+  if (_launcherWS) { try { _launcherWS.onclose = null; _launcherWS.close(); } catch (e) {} _launcherWS = null; }
+  if (_launcherPingTimer) { clearInterval(_launcherPingTimer); _launcherPingTimer = null; }
 
   try {
     _launcherWS = new WebSocket('ws://127.0.0.1:8765/ws/launcher');
@@ -530,12 +554,13 @@ function startLauncherWS() {
 
   _launcherWS.onopen = () => {
     console.log('[Launcher WS] 메인 프로세스 연결됨');
+    _launcherLastPong = Date.now();   // 연결 순간을 첫 생존 신호로
   };
 
   _launcherWS.onmessage = (event) => {
     try {
       const data = JSON.parse(typeof event.data === 'string' ? event.data : event.data.toString());
-      if (data.type === 'pong') return;
+      if (data.type === 'pong') { _launcherLastPong = Date.now(); return; }
 
       if (data.type === 'launcher_command') {
         const { command, params } = data;
@@ -549,20 +574,31 @@ function startLauncherWS() {
 
   _launcherWS.onclose = () => {
     console.log('[Launcher WS] 연결 끊김, 3초 후 재연결...');
-    _launcherWS = null;
-    _launcherReconnectTimer = setTimeout(startLauncherWS, 3000);
+    _launcherDrop('onclose');
   };
 
   _launcherWS.onerror = () => {
-    // onclose에서 재연결 처리
+    // onclose 가 뒤따르지 않는 구현도 있어(반열림) 여기서도 폐기 경로를 연다 —
+    // _launcherDrop 은 멱등이라 두 번 불려도 타이머가 겹치지 않는다.
+    _launcherDrop('onerror');
   };
 
-  // 30초마다 ping으로 연결 유지
-  const pingInterval = setInterval(() => {
-    if (_launcherWS?.readyState === WebSocket.OPEN) {
+  // 30초마다 ping — 그리고 **pong 이 돌아오는지**까지 본다.
+  // 옛 코드는 보내기만 하고 응답을 안 봐서, 백엔드가 죽은 뒤 남은 반열림 소켓이
+  // readyState=OPEN 인 채로 영원히 살아 있는 척했다(알림 전부 증발).
+  _launcherPingTimer = setInterval(() => {
+    if (_launcherWS?.readyState !== WebSocket.OPEN) {
+      _launcherDrop('ping: 소켓이 OPEN 이 아님');
+      return;
+    }
+    if (_launcherLastPong && Date.now() - _launcherLastPong > LAUNCHER_PONG_TIMEOUT_MS) {
+      _launcherDrop(`pong ${Math.round((Date.now() - _launcherLastPong) / 1000)}초 무응답`);
+      return;
+    }
+    try {
       _launcherWS.send(JSON.stringify({ type: 'ping' }));
-    } else {
-      clearInterval(pingInterval);
+    } catch (e) {
+      _launcherDrop('ping 전송 실패: ' + e.message);
     }
   }, 30000);
 }
@@ -741,6 +777,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   // Launcher WS 정리
   if (_launcherReconnectTimer) clearTimeout(_launcherReconnectTimer);
+  if (_launcherPingTimer) { clearInterval(_launcherPingTimer); _launcherPingTimer = null; }
   if (_launcherWS) {
     _launcherWS.onclose = null;
     _launcherWS.close();

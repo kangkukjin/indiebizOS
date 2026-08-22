@@ -54,6 +54,36 @@ def main():
             job["result"] = {"stdout": out[-STDOUT_TAIL:]}
     job.pop("stdin", None)
     _write(job_path, job)
+    _announce(job)
+
+
+def _announce(job):
+    """완료를 사용자에게 알린다 — 백그라운드 작업의 **완료 훅**.
+
+    ★2026-08-22: 여기엔 알림이 아예 없었다. 러너는 상태 파일만 쓰고 조용히 죽었고,
+    아는 방법은 status{wait≤240} 폴링뿐이라 240초를 넘는 작업(재학습·렌더·수집)은
+    **끝나도 아무도 모르는** 구조였다(사용자 실측 호소: "알림이 자꾸 끊긴다").
+    러너는 백엔드와 다른 프로세스라 알림함(메모리 deque)에 직접 못 넣는다 —
+    그래서 REST 입구로 넣고, 그 입구가 notify_dispatch 단일 관문을 지난다.
+    알림 실패가 작업 기록을 망치면 안 되므로 전부 삼킨다(기록은 이미 저장됨).
+    """
+    try:
+        import os
+        import urllib.request
+        port = os.environ.get("INDIEBIZ_API_PORT", "8765")
+        ok = job.get("status") == "done"
+        secs = round((job.get("duration_ms") or 0) / 1000)
+        body = (f"{job.get('id')} {'완료' if ok else '실패'} ({secs}초)"
+                + ("" if ok else " — " + str(job.get("error", ""))[:200])
+                + f"\n결과: [self:script]{{op: \"status\", job_id: \"{job.get('job_id')}\"}}")
+        payload = json.dumps({"title": "백그라운드 작업 " + ("완료" if ok else "실패"),
+                              "message": body, "type": "info" if ok else "error",
+                              "source": "script"}).encode("utf-8")
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/notifications", data=payload,
+                                     headers={"Content-Type": "application/json"}, method="POST")
+        urllib.request.urlopen(req, timeout=5).read()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

@@ -321,8 +321,15 @@ def _preprocess(code: str) -> List[str]:
         if not in_string:
             if not stripped or stripped.startswith('#'):
                 continue
-        entries.append((stripped, in_string))
-        _d, in_string, string_char = _scan_line_state(stripped, in_string, string_char)
+        # ★F19-3 (2026-08-22): 열린 문자열 안에서 시작하는 줄은 **내용이므로 깎지 않는다**.
+        # D3 는 문자열 속 주석·빈 줄을 지키는 데까지만 갔고, 그 줄을 여전히 strip() 해서
+        # entries 에 넣었다 — 그래서 여러 줄 문자열 param 의 둘째 줄부터 들여쓰기가 통째로
+        # 사라졌다(파이썬 코드를 [self:write]/[self:edit] 로 쓰면 IndentationError 로 즉사).
+        # `\n` 이스케이프로 쓴 문장은 한 줄이라 멀쩡했던 것이 진단을 늦췄다.
+        # \r 만 떼는 이유: 윈도우 줄끝은 내용이 아니라 줄 구분자의 잔재다.
+        text = line.rstrip('\r') if in_string else stripped
+        entries.append((text, in_string))
+        _d, in_string, string_char = _scan_line_state(text, in_string, string_char)
 
     if not entries:
         return []

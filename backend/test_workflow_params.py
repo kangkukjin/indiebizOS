@@ -25,6 +25,7 @@ desc("run — … + params 옵션(문장 안 $변수에 주입)")가 선언만 �
     W13. 즉석 실행의 미채움 자유 변수 → 경고(거절 아님 — 선언하는 순간이 없다)
     W14. save 가 시그니처를 계산·저장·보고하고 list 가 노출
     W15. 스케줄러 run_workflow 액션이 action_params.params 를 엔진에 통과 (2026-08-22)
+    W16. 몸통이 스스로 할당한 변수는 시그니처가 아니다 — 시그니처 = 사용 − 할당 (B22-1)
 
 실행: python3 backend/test_workflow_params.py
 """
@@ -455,6 +456,44 @@ def test_w15_scheduler_passes_params():
     print("W15 OK — 스케줄러 run_workflow 가 params 를 엔진까지 통과")
 
 
+def test_w16_body_bound_vars_not_signature():
+    """W16 (B22-1, 22회차 상상훈련) — 몸통이 스스로 할당한 변수는 시그니처가 아니다.
+
+    시그니처는 '사용' 이 아니라 '사용 − 할당' 이다. 파서 치환기는 param 값 자리만 치환하고
+    식 할당의 우변·repeat 조건에 남은 $이름은 리터럴로 남긴다. 그걸 자유 변수로 세면
+    교재 M6 의 `do: '…$return = …'` 저장본이 저장은 되고 실행은 거절된다.
+    아래 표가 오탐 경계다 — 진짜 자유 변수(W8)는 차집합 뒤에도 그대로 걸려야 한다.
+    """
+    from workflow_contract import _free_vars, _normalize_steps_for_injection
+
+    cases = [
+        ('$r = [self:time]\n$return = $r', [], '식 할당 우변'),
+        ('$a = [self:time]\n[table:brief]{items: "$a", instruction: "한 줄"}', [], 'param 값 자리'),
+        ('$n = 0\n[repeat: while $n < 3, max: 5]{$n = $n + 1\n[self:time]}', [], 'repeat 조건'),
+        ('[repeat: 3, collect: true]{[sense:search]{query: "AI", page: "$i"}}', [], '회차 변수 $i'),
+        ('[sense:search]{query: "$topic"}', ['topic'], '진짜 자유 변수 — W8 무회귀'),
+        ('[sense:search]{query: "$topic"}\n$r = [self:time]\n$return = $r', ['topic'], '혼합'),
+    ]
+    for body, want, label in cases:
+        steps, err = _normalize_steps_for_injection(body)
+        assert not err, (label, err)
+        got = _free_vars(steps)
+        assert got == want, f'{label}: 시그니처 {got} (기대 {want}) — {body!r}'
+
+    wf = _save_tmp_workflow('_t_params_w16', {
+        'name': '_t_params_w16',
+        'do': '$r = [self:time]\n$return = $r',
+    })
+    try:
+        with _FakeEngine():
+            out = execute_workflow_action('workflow', {'op': 'run', 'workflow_id': wf}, '.')
+        assert out.get('success'), f'몸통이 할당한 변수를 인자로 요구했다: {out}'
+        assert 'params_missing' not in out, out
+    finally:
+        _cleanup(wf)
+    print('W16 OK — 몸통이 할당한 변수는 시그니처가 아니다(식 할당 우변·repeat·$i)')
+
+
 if __name__ == "__main__":
     print("=== workflow params·시그니처·재귀 가드 회귀 테스트 (W1~W15) ===\n")
     test_w1_saved_run_injects_params()
@@ -469,6 +508,7 @@ if __name__ == "__main__":
     test_w13_inline_unfilled_warns_not_rejects()
     test_w14_signature_saved_and_listed()
     test_w15_scheduler_passes_params()
+    test_w16_body_bound_vars_not_signature()
     print("\n--- 재귀·순환 가드 (실경로) ---")
     test_w10_self_cycle_rejected()
     test_w11_mutual_cycle_rejected()

@@ -210,7 +210,7 @@ $avg = $total.value / 10
 - `while` 은 몸 변수를 본다(첫 회차 전엔 바깥 값만). 몸이 재할당한 바깥 변수는 루프 뒤에도 최신값.
 - `[self:workflow]{op: "save", do: "…$return = …"}`: 몸통에 `$return = …` 이 있으면 run 의 반환값은 그 문장의 결과(마지막이 알림이어도 됨). 없으면 옛 규약(마지막 문장의 items).
 
-**봉투 읽는 법** — **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "기록이 없습니다"}` 는 '통화 0행'이지 실패가 아니다 — 키가 없다고 실패로 읽지 말 것). `final_result` 는 파이프·병렬 봉투에만 있다. 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 중간 결과를 파일로 내리고 뒤에는 참조만 흘리려면 `[self:write]{path, spill: true}`(뒤 step 은 `{items: [], ref: {path, kind, count, bytes}}` 를 받음 — 데이터가 다시 필요하면 `[self:read]{path}`).
+**봉투 읽는 법** — **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "기록이 없습니다"}` 는 '통화 0행'이지 실패가 아니다 — 키가 없다고 실패로 읽지 말 것). `final_result` 는 파이프·병렬 봉투에만 있다. 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 덩치 큰 중간 결과를 **봉투·컨텍스트에서만** 덜어내려면 `[self:write]{path, spill: true}` — step 봉투엔 `{items: [], ref: {path, kind, count, bytes}}` 만 실리지만 **뒤 step 은 그 참조를 투명하게 해소해 원래 데이터를 그대로 본다**(파이프 흐름 불변 · 가벼워지는 건 `results[]`·모델 컨텍스트뿐). 나중에 다시 읽으려면 `[self:read]{path}`.
 
 **goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:
 ```

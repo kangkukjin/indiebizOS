@@ -74,6 +74,49 @@ def _stamp_wf_stack(steps, stack: list) -> None:
 _SIGNATURE_EXTRA_RESERVED = {"return"}
 
 
+def _bound_names(steps) -> set:
+    """몸통이 **스스로 묶는** 이름 — 시그니처(자유 변수)에서 빼야 할 집합.
+
+    B22-1(22회차 상상훈련 실측): 아래 주석의 전제 "파스 후 남은 $이름 = 자유 변수" 는
+    **식 할당의 우변에서만 거짓**이다. 파서의 치환기는 *param 값* 자리만 치환하고
+    `$return = $r` / `$avg = $total.value / 10` / `[repeat: while $n < 3]` 의 식·조건
+    자리는 리터럴로 남긴다. 그래서 몸통이 방금 할당한 이름이 "호출자가 채워야 할 인자" 로
+    계산돼, 교재가 M6 에서 가르치는 `do: '…$return = …'` 저장본이 **저장은 되고 실행은
+    거절**됐다(`params_required: ['r']` → run 에서 '인자 누락: $r').
+
+    즉 시그니처는 `사용` 이 아니라 `사용 − 할당` 이다. 묶는 자리 셋:
+      · `_assign_name`  — 파이프/액션 할당의 대상(`$r = [self:time]`, `$t = A >> B`)
+      · `_assign` step 의 `name` — 식 할당(`$avg = $total.value / 10`, `$return = $avg`)
+      · `_repeat` 의 `var` — 회차 변수(기본 `i`)
+    중첩 몸(body·branches·catch·finally)까지 훑는다 — `_reserved_row_names` 와 같은 순회.
+
+    ★위치가 아니라 집합으로 뺀다(할당 *전* 참조도 인자로 안 센다). 그 방향이 안전한 쪽이다 —
+    W8(미할당 `$city` 가 리터럴로 흘러 "$city 맛집" 이 검색어가 되던 침묵 실패)이 막으려던
+    것은 **한 번도 할당되지 않는** 이름이고, 그건 이 차집합 뒤에도 그대로 걸린다."""
+    names: set = set()
+
+    def _walk(obj):
+        if isinstance(obj, dict):
+            n = obj.get("_assign_name")
+            if isinstance(n, str) and n.strip():
+                names.add(n.strip())
+            if obj.get("_assign"):
+                n2 = obj.get("name")
+                if isinstance(n2, str) and n2.strip():
+                    names.add(n2.strip())
+            if obj.get("_repeat"):
+                v = obj.get("var")
+                names.add(v.strip() if isinstance(v, str) and v.strip() else "i")
+            for v in obj.values():
+                _walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                _walk(v)
+
+    _walk(steps)
+    return names
+
+
 def _free_vars(steps) -> List[str]:
     """파스 후에도 리터럴로 남은 `$이름` 목록 = 이 워크플로우의 시그니처.
 
@@ -81,7 +124,7 @@ def _free_vars(steps) -> List[str]:
     표기는 맨몸 `$이름` 과 괄호 `${이름}` 둘 다(common.ibl_vars).
     `$100` 처럼 숫자로 시작하는 이름은 인자로 세지 않는다 — 파서는 변수로 읽지만
     가격·금액 리터럴일 확률이 훨씬 높고, 잘못 세면 멀쩡한 저장본이 거절된다."""
-    reserved = _reserved_row_names(steps) | _SIGNATURE_EXTRA_RESERVED
+    reserved = _reserved_row_names(steps) | _SIGNATURE_EXTRA_RESERVED | _bound_names(steps)
     found: List[str] = []
 
     def _walk(obj):

@@ -632,7 +632,14 @@ def _extract_result_field(raw: str, path: str) -> str:
         elif isinstance(obj, list) and key.isdigit() and int(key) < len(obj):
             obj = obj[int(key)]
         else:
-            avail = list(obj.keys())[:12] if isinstance(obj, dict) else f"목록(길이 {len(obj)})" if isinstance(obj, list) else type(obj).__name__
+            # 필드 힌트의 절단도 신고한다 (F18-1 부류 — 침묵 클램프 금지)
+            if isinstance(obj, dict):
+                _names = list(obj.keys())
+                avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
+            elif isinstance(obj, list):
+                avail = f"목록(길이 {len(obj)})"
+            else:
+                avail = type(obj).__name__
             raise ValueError(
                 f"$변수 필드 추출 실패: '{key}' 필드가 없습니다 (경로 {path}, 사용 가능: {avail}).")
     if isinstance(obj, (dict, list)):
@@ -1241,7 +1248,13 @@ def execute_workflow_action(action: str, params: dict,
         workflow_id = _resolve_workflow_id(params.get("name") or params.get("id"))
 
     if action in ("list", "list_workflows"):
-        return {"workflows": list_workflows(), "count": len(list_workflows())}
+        # 원장은 자기 list 를 통화로 낸다 (16회차 V16-2 원칙 — trigger·script·webapp·
+        # notebook·goal·material 은 이미 items 병기). workflow 만 빠져 있어
+        # `[self:workflow]{op:"list"} >> [table:filter] >> [table:each]`(저장해 둔 절차 중
+        # 조건 맞는 것만 돌려라)가 표현 불가였다(V18-1). `items` 는 `workflows` 와 같은
+        # 객체로 둔다 — 변환자의 거울 키 판정(동일성)이 둘을 함께 변환한다.
+        wfs = list_workflows()
+        return {"workflows": wfs, "items": wfs, "count": len(wfs)}
 
     elif action in ("get", "get_workflow"):
         if not workflow_id:

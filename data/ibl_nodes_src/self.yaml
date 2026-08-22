@@ -208,6 +208,8 @@
           returns:
             save: effect
             delete: effect
+            # list: 원장은 자기 list 를 통화로 낸다(16회차 V16-2 — 2026-08-22 V18-1 합류).
+            list: items
             # run: 몸통 마지막 문장의 통화를 승격(2026-08-17 통화 조건 판정 A안 —
             # script stdout 승격 선례). effect 로 끝나는 몸통이면 items 없음 → 하류 정직 에러.
             run: items

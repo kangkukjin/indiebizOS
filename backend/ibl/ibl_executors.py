@@ -1083,7 +1083,13 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         sentence, missing = _each_substitute(do, row, var)
         if missing:
             err_n += 1
-            avail = sorted(row.keys())[:12] if isinstance(row, dict) else [_EACH_SCALAR_FIELD]
+            # 필드 힌트도 잘렸으면 잘렸다고 말한다 (F18-1 부류 — 침묵 클램프 금지):
+            # 12개에서 끊긴 목록을 전부로 읽으면 있는 필드를 없다고 오판한다.
+            if isinstance(row, dict):
+                _names = sorted(row.keys())
+                avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
+            else:
+                avail = [_EACH_SCALAR_FIELD]
             out_items.append({**base, "_ok": False,
                               "_error": (f"행에 없는 필드: {', '.join(sorted(set(missing)))} "
                                          f"(행 필드: {avail})")})

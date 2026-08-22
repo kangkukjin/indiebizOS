@@ -844,6 +844,20 @@ def execute(tool_input: dict, context) -> str:
                             items_alongside = len(probe["items"])
                         content = _msg
                         extracted = "message"
+            # ★F18-2 (2026-08-22 상상훈련 18회차): 변환자는 따라오지 못한 형제 컬렉션을
+            #   `_untransformed` 로 **자백**한다(2026-08-20 판정된 설계). 그 자백을 싱크가
+            #   안 읽으면 "골라서 저장"이 **전량 저장**이 된다 — 실측: trigger list >> filter
+            #   >> write 가 필터에서 걸러낸 WorldPulse 항목을 파일에 그대로 박았다.
+            #   B15-1("골라서 알림"이 전량 발송)의 저장판이라 같은 규율로 닫는다.
+            #   버리는 게 아니라 **이번 저장의 대상이 아님**을 밝히고 빼는 것이라, 무엇을
+            #   뺐는지 결과에 신고한다(침묵 변형 금지 — 이 파일의 extracted 신고와 동형).
+            excluded_untransformed = None
+            if piped and extracted is None and isinstance(probe, dict):
+                _untouched = [k for k in (probe.get("_untransformed") or []) if k in probe]
+                if _untouched:
+                    content = {k: v for k, v in probe.items() if k not in _untouched}
+                    excluded_untransformed = sorted(_untouched)
+                    content["_untransformed_excluded"] = excluded_untransformed
             if not isinstance(content, str):
                 content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)
             _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
@@ -868,6 +882,11 @@ def execute(tool_input: dict, context) -> str:
                              "검증 후 실제로 반영하려면 [self:patch]{op:\"apply\"} 를 "
                              "호출하세요. 적용하지 않으면 이 수정은 라이브에 없습니다."),
                 })
+            if excluded_untransformed:
+                result["excluded_untransformed"] = excluded_untransformed
+                result["note"] = (f"변환을 따라오지 못한 형제 키 {', '.join(excluded_untransformed)} 는 "
+                                  "저장에서 제외했습니다(필터 밖 항목이 파일에 섞이지 않게). "
+                                  "원본째 저장하려면 앞 step 결과를 content 로 명시하세요.")
             if extracted:
                 result["extracted"] = extracted  # message 본문만 저장했음을 신고
                 if items_alongside:

@@ -23,6 +23,23 @@ _HINT = ("results[] 는 step 요약(shape·count·bytes·preview) — 전체 데
          "step 원형이 필요하면 verbose: true 로 다시 실행.")
 
 
+def _clamp_names(names, out: Dict[str, Any], field: str) -> list:
+    """이름 목록을 KEYS_MAX 로 자르되 **잘랐다고 신고한다**(침묵 클램프 금지).
+
+    `keys`·`columns` 는 모델이 다음 step 의 필드 이름을 고를 때 보는 눈이다. 조용히
+    잘리면 "그 열이 없다"로 오판한다 — 정렬이 ASCII→한글 순이라 **한글 열과 방금
+    compute 로 만든 파생 열이 가장 먼저 사라지므로** 하필 제일 중요한 열이 없는 것처럼
+    보인다(F18-1 실측: 14키 중 `층`·`평당가만원` 소실, 행 1건이어도 재현).
+    어느 열이 '방금 만든 것'인지는 봉투가 알 수 없으므로 고르지 않고 **절단을 밝힌다**.
+    """
+    names = list(names)
+    if len(names) > KEYS_MAX:
+        out[f"{field}_truncated"] = len(names) - KEYS_MAX
+        out[f"{field}_total"] = len(names)
+        return names[:KEYS_MAX]
+    return names
+
+
 def _compact(obj: Any, cap: int) -> str:
     try:
         s = json.dumps(obj, ensure_ascii=False)
@@ -45,7 +62,7 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
                 obj = raw
     if isinstance(obj, dict):
         keys = sorted(k for k in obj.keys() if isinstance(k, str) and not k.startswith("_"))
-        out["keys"] = keys[:KEYS_MAX]
+        out["keys"] = _clamp_names(keys, out, "keys")
         if obj.get("success") is False or ("error" in obj and not obj.get("success")):
             out["shape"] = "error"
             out["error"] = obj.get("error") or obj.get("message")   # 원형 — 진단은 다이어트 밖
@@ -57,7 +74,8 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
             if items:
                 first = items[0]
                 if isinstance(first, dict):
-                    out["columns"] = sorted(str(k) for k in first.keys())[:KEYS_MAX]
+                    out["columns"] = _clamp_names(
+                        sorted(str(k) for k in first.keys()), out, "columns")
                 out["preview"] = _compact(first, PREVIEW_ITEM_CHARS)
             msg = obj.get("message")
             if isinstance(msg, str) and msg.strip():

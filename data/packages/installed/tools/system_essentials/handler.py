@@ -1085,7 +1085,12 @@ def execute(tool_input: dict, context) -> str:
             # old_string이 파일에 있는지 확인
             count = content.count(old_string)
             if count == 0:
-                return f"Error: 교체할 문자열을 찾을 수 없습니다. 파일 내용을 다시 확인하세요."
+                # 왜 안 맞았는지 말한다 (2026-08-22). 실측한 실패 둘(ep1395·ep1393)이
+                # 전부 *근접 실패*였다 — 내용은 맞는데 들여쓰기·공백이 달랐다. 옛 신고는
+                # "파일 내용을 다시 확인하세요" 뿐이라 매번 grep 한 번을 더 쓰게 했다.
+                # 구현=fs_edit.py 형제 모듈 (1500줄 규칙 — handler 는 부채 파일)
+                return "Error: " + _load_sibling("fs_edit").miss_diagnosis(
+                    content, old_string, new_string)
             elif count > 1:
                 return f"Error: 교체할 문자열이 {count}번 발견되었습니다. 더 구체적인 문자열을 지정하세요."
 

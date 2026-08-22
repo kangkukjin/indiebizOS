@@ -30,6 +30,14 @@ def test_s1_broken_workflow_is_not_missing():
     """S1: 깨진 워크플로 파일은 '없음'이 아니라 problem 을 달고 온다."""
     import workflow_engine as wf
 
+    _orig = wf._get_workflows_path      # ★전역을 갈아끼우면 반드시 되돌린다 —
+    try:                                #   임시 폴더가 사라진 뒤 뒤 시험들이 그 자리를 본다
+        _run_s1(wf)
+    finally:
+        wf._get_workflows_path = _orig
+
+
+def _run_s1(wf):
     with tempfile.TemporaryDirectory() as td:
         wf._get_workflows_path = lambda: Path(td)          # noqa: E731
         (Path(td) / "broken.yaml").write_text(BROKEN_YAML, encoding="utf-8")
@@ -53,6 +61,15 @@ def test_s2_broken_vocabulary_raises():
     """S2: 깨진 어휘 원장은 {} 가 아니라 오류 — 몸이 조용히 사라지면 안 된다."""
     import ibl_access
 
+    _orig = ibl_access._get_nodes_path
+    try:
+        _run_s2(ibl_access)
+    finally:
+        ibl_access._get_nodes_path = _orig
+        ibl_access._nodes_data_cache = None
+
+
+def _run_s2(ibl_access):
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / "ibl_nodes.yaml"
         p.write_text(BROKEN_YAML, encoding="utf-8")
@@ -94,6 +111,15 @@ def test_s4_broken_tool_json_raises():
     """S4: 깨진 tool.json 은 None(=그런 도구 없음)이 아니라 오류."""
     import tool_loader
 
+    _o1, _o2 = tool_loader.get_tools_path, tool_loader.build_tool_package_map
+    try:
+        _run_s4(tool_loader)
+    finally:
+        tool_loader.get_tools_path = _o1
+        tool_loader.build_tool_package_map = _o2
+
+
+def _run_s4(tool_loader):
     with tempfile.TemporaryDirectory() as td:
         pkg = Path(td) / "가짜패키지"
         pkg.mkdir()

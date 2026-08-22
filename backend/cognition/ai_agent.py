@@ -137,7 +137,7 @@ class AIAgent:
     def get_last_tool_results(self) -> List[str]:
         """현재 턴에서 도구가 반환한 결과 텍스트 목록 반환 후 초기화.
 
-        non-streaming 경로에서 evaluator(_run_goal_evaluation_loop의 tool_results 인자)에
+        non-streaming 경로에서 evaluator(_run_goal_evaluation_stream의 tool_results 인자)에
         전달하기 위해 사용. provider가 _last_tool_results 속성으로 누적한 것을 가져온다.
         """
         results = self._last_tool_results

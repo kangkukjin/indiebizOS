@@ -4,7 +4,8 @@ IndieBiz OS Core
 
 agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 의식 에이전트의
 달성 기준(achievement_criteria) 기반 자동 평가 — 기준 추출, 생성 파일/시각
-산출물 수집, 평가자 호출(_evaluate_achievement), 재실행 루프(_run_goal_evaluation_loop).
+산출물 수집, 평가자 호출(_evaluate_achievement), 재실행 루프(_run_goal_evaluation_stream —
+제너레이터: 재실행 이벤트를 그대로 흘린다, 2026-08-22).
 trace 직렬화·액션 원장은 cognitive_trace 모듈 함수를 쓴다.
 ★consciousness_output 키 소비처 — scripts/consciousness_schema_check.py CONSUMER_FILES 등록.
 """
@@ -391,14 +392,25 @@ class CognitiveEvalMixin:
             self._log(f"[GoalEval] 평가 오류: {e}")
             return True, f"평가 오류 (통과 처리): {e}", 0
 
-    def _run_goal_evaluation_loop(self, user_message: str, criteria: str,
-                                   initial_response: str, history: list,
-                                   consciousness_output: dict = None,
-                                   max_rounds: int = 2,
-                                   tool_results: list = None,
-                                   tool_calls: list = None,
-                                   execution_memory: str = "") -> str:
-        """달성 기준 기반 평가 루프.
+    def _run_goal_evaluation_stream(self, user_message: str, criteria: str,
+                                    initial_response: str, history: list,
+                                    consciousness_output: dict = None,
+                                    max_rounds: int = 2,
+                                    tool_results: list = None,
+                                    tool_calls: list = None,
+                                    execution_memory: str = "",
+                                    cancel_check=None):
+        """달성 기준 기반 평가 루프 — **제너레이터**. 최종 응답은 `return` 값.
+
+        호출자는 `evaluated = yield from self._run_goal_evaluation_stream(...)` 로 쓴다.
+
+        ★왜 제너레이터인가 (2026-08-22): 옛 판은 `-> str` 블로킹 함수라 평가자 호출
+        (실측 50~90초)과 **에이전트 전면 재실행**(실측 595,995ms = 9분56초, 도구 30여 회)이
+        전부 스트림 밖이었다. 실행 단계(6번)는 도구마다 이벤트를 흘리는데 같은 에이전트를
+        다시 돌리는 재실행은 한 글자도 안 흘리는 비대칭 — 화면에는 1라운드 응답이 나온 뒤
+        영원히 도는 스피너로 보였고, 그 침묵 구간이 WS 유휴 타임아웃(600초)보다 길어
+        긴 턴은 NOT_ACHIEVED 를 받는 순간 타임아웃이 구조적으로 확정이었다.
+        이제 재실행 이벤트가 그대로 흐르므로 화면도 살고 유휴 타이머도 리셋된다.
 
         Args:
             user_message: 사용자 원래 요청
@@ -412,9 +424,16 @@ class CognitiveEvalMixin:
                 tool_results보다 우선 사용된다. 둘 다 있으면 tool_calls 사용.
                 평가자가 시퀀스 자체(어떤 도구를 어떤 순서로)를 판단 근거로 쓸 수 있다.
             execution_memory: 실행기억 (도구/사례/implementation)
+            cancel_check: 중단 여부 콜백 — 재실행 구간에도 사용자의 중단이 닿게 한다.
+                옛 판은 이 인자가 없어 평가 루프에 들어간 뒤로는 중단 버튼이 무력했다.
+
+        Yields:
+            평가 진행 상태(`thinking`)와 재실행 에이전트의 스트림 이벤트 그대로
+            (`text`/`tool_start`/`tool_result`/`thinking`). 재실행의 `final` 은
+            여기서 회수해 반환값으로 삼으므로 흘리지 않는다.
 
         Returns:
-            최종 응답 텍스트
+            최종 응답 텍스트 (`yield from` 의 값)
         """
         import time as _time
         from thread_context import set_goal_eval_outcome, clear_goal_eval_outcome
@@ -463,7 +482,16 @@ class CognitiveEvalMixin:
         _tc_seen = len(_tc_calls())
 
         for round_num in range(1, max_rounds + 1):
+            if cancel_check and cancel_check():
+                self._log("[GoalEval] 사용자 중단 — 현재 응답 반환")
+                set_goal_eval_outcome(False, 0)
+                return response
+
             self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
+            # 평가자 호출은 50~90초 블로킹 — 들어가기 전에 상태를 흘려 화면과
+            # WS 유휴 타이머를 함께 살린다(transient: thinking).
+            yield {"type": "thinking",
+                   "content": f"🎯 달성 기준 평가 중 (라운드 {round_num}/{max_rounds})"}
             eval_start = _time.time()
 
             # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
@@ -540,12 +568,26 @@ class CognitiveEvalMixin:
                 {"role": "user", "content": feedback_message}
             ]
 
+            # 재실행 표식 — 실행 단계와 같은 어법(`[자기반성]`)으로 화면에 남긴다.
+            yield {"type": "text",
+                   "content": f"\n\n---\n[평가 피드백 반영 재실행 {round_num}/{max_rounds - 1}]\n\n"}
+
             try:
-                retry_response = self.ai.process_message_with_history(
+                # ★스트리밍 재실행 — 이벤트를 그대로 흘린다. `final` 만 회수해
+                #  응답으로 삼는다(빈 final 이 채워진 final 을 못 덮게: ep1251 규약).
+                retry_response = ""
+                for ev in self.ai.process_message_stream(
                     message_content=feedback_message,
                     history=retry_history,
-                    task_id=f"goal_retry_{round_num}"
-                )
+                    images=None,
+                    cancel_check=cancel_check,
+                ):
+                    if ev.get("type") == "final":
+                        _c = ev.get("content", "")
+                        if _c or not retry_response:
+                            retry_response = _c
+                        continue
+                    yield ev
                 # 재실행 결과가 비어있으면 (503 등) 이전 응답 유지
                 if retry_response and retry_response.strip():
                     response = retry_response
@@ -554,17 +596,15 @@ class CognitiveEvalMixin:
                     # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
                     # 판정 → 실제로 크롤링/검색을 해놓고도 "원장에 없으니 안 했다 = 조작"
                     # 이라는 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함).
-                    # 소스: thread_context 델타(provider 독립) 우선, 비면 provider
-                    # get_last_tool_calls 폴백(claude_code MCP 경로 대비). '델타 우선,
-                    # 없으면 폴백'이라 둘 다 채우는 provider여도 이중계상되지 않는다.
+                    # 소스: thread_context 델타 하나 — 실행기(execute_tool/ibl_engine)가
+                    # 채우므로 provider·스트리밍 여부와 무관한 진실 소스다.
+                    # ★옛 `get_last_tool_calls()` 폴백은 제거했다(2026-08-22): 그 속성은
+                    # provider 의 **논스트림** 래퍼만 채우는데 재실행이 스트리밍으로 바뀌어
+                    # 영영 안 채워진다 — 남겨 두면 델타가 빈 라운드에서 *이전 논스트림
+                    # 호출의 잔여*를 이번 라운드 원장으로 오적재한다(빈손보다 나쁜 거짓 원장).
                     _all_tc = _tc_calls()
                     _new_calls = _all_tc[_tc_seen:]
                     _tc_seen = len(_all_tc)
-                    if not _new_calls:
-                        try:
-                            _new_calls = self.ai.get_last_tool_calls() or []
-                        except Exception:
-                            _new_calls = []
                     if _new_calls:
                         if trace_source and isinstance(trace_source[0], dict):
                             trace_source = list(trace_source) + list(_new_calls)

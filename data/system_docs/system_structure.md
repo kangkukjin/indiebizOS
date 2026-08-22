@@ -286,8 +286,9 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
   - THINK 시 같은 대화의 직전 framing이 재고(30분 TTL)에 있고 경량 fit 게이트가 적합 판정하면 의식(Opus) 호출을 스킵·재사용(criteria만 갱신). 없음/안 맞음/실패 또는 SESSION_RESET·재시작 시엔 풀 의식. 상세: architecture.md
-- **평가 에이전트 (경량 AI)** — `_run_goal_evaluation_loop()`
+- **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
   - achievement_criteria가 있을 때만 실행. NOT_ACHIEVED 시 피드백과 함께 재실행 (최대 3라운드)
+  - **제너레이터** — 평가·재실행 구간의 이벤트를 그대로 흘린다(`yield from`). 재실행도 실행 단계와 같이 도구·본문이 실시간으로 보인다
   - 입력에 `## 연상기억` 섹션으로 연상 묶음 그대로 전달
   - 프롬프트: `data/common_prompts/evaluator_prompt.md` + 시스템 구조 + IBL 단편
 - **공통 원칙**

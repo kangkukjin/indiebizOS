@@ -376,7 +376,14 @@ class CognitivePipelineMixin:
                     if _goal_cfg.get("enabled", True):
                         _eval_ran = True
                         print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
-                        evaluated = self._run_goal_evaluation_loop(
+                        # ★yield from — 평가·재실행 구간의 이벤트를 그대로 흘린다.
+                        # 옛 판은 이 호출이 블로킹 함수라 평가(50~90초)+전면 재실행
+                        # (실측 9분56초)이 전부 스트림 밖이었다. 실행 단계는 도구마다
+                        # 흘리는데 같은 에이전트를 다시 돌리는 재실행은 침묵 —
+                        # 그 비대칭이 화면의 "멈춤"이었고, 침묵이 WS 유휴 타임아웃
+                        # (600초)보다 길어 긴 턴은 재실행에 들어가는 순간 타임아웃이
+                        # 확정이었다(2026-08-22 상상훈련 22회차 턴, ep total 24분41초).
+                        evaluated = yield from self._run_goal_evaluation_stream(
                             user_message=message,
                             criteria=criteria,
                             initial_response=final_content,
@@ -386,11 +393,12 @@ class CognitivePipelineMixin:
                             tool_results=tool_results_log,
                             tool_calls=eval_tool_calls,
                             execution_memory=execution_memory,
+                            cancel_check=cancel_check,
                         )
                         if evaluated and evaluated.strip() and evaluated != final_content:
                             final_content = evaluated
-                            yield {"type": "text", "content": "\n\n---\n[평가 피드백 반영 재실행]\n\n"}
-                            yield {"type": "text", "content": evaluated}
+                            # 본문은 재실행이 이미 실시간으로 흘렸다 — 여기선 최종
+                            # 채택만 알린다(옛 판의 전문 재출력은 중복이 된다).
                             yield {"type": "final", "content": evaluated}
                             print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
 

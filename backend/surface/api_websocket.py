@@ -563,6 +563,44 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         tool_calls_log = []  # X-Ray/태스크 이력용 — 제너레이터 _turn_meta에서 수신
 
+        def _complete_task_row(final_text: str):
+            """태스크 행을 completed 로 닫고 X-Ray 이벤트를 민다.
+
+            정상 종료와 '타임아웃 후 워커 완주' 두 자리가 같은 마무리를 쓰도록 한 곳에
+            둔다 — 옛 판은 소비자 쪽에만 있어서, 타임아웃이 나면 살아 있는 워커 위에
+            *부분* 결과로 completed 를 찍었다.
+            """
+            if not task_id:
+                return
+            try:
+                import json as _json
+                tool_history_json = _json.dumps(tool_calls_log, ensure_ascii=False) if tool_calls_log else None
+                with db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    try:
+                        cursor.execute("ALTER TABLE tasks ADD COLUMN tool_history TEXT")
+                    except Exception:
+                        pass
+                    cursor.execute("""
+                        UPDATE tasks SET status = 'completed', result = ?,
+                                         completed_at = CURRENT_TIMESTAMP, tool_history = ?
+                        WHERE task_id = ?
+                    """, ((final_text or "")[:500], tool_history_json, task_id))
+                    conn.commit()
+                # X-Ray 실시간 이벤트
+                try:
+                    from xray_stream import push_xray_event
+                    push_xray_event("task_complete", {
+                        "task_id": task_id,
+                        "request": (message or "")[:100],
+                        "agent": agent_name,
+                        "tool_count": len(tool_calls_log),
+                    })
+                except Exception:
+                    pass
+            except Exception as ct_err:
+                print(f"[WS] complete_task 실패 (무시): {ct_err}")
+
         def run_stream():
             """워커 스레드 — 인지 파이프라인 제너레이터를 소비해 이벤트를 pump (transport 어댑터).
 
@@ -624,14 +662,27 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 )
             finally:
                 print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, timed_out={timed_out}")
-                if timed_out and final_content:
-                    # 타임아웃 이후 워커가 결과를 완성한 경우: DB에 미전달로 저장
+                if timed_out:
+                    # 타임아웃 이후 완주분 인계 — 소비자는 이미 떠났으므로 저장·태스크
+                    # 닫기·원장 닫기를 실제로 끝낸 여기서 한다(시스템 AI 경로와 대칭).
+                    if final_content:
+                        try:
+                            filtered = filter_internal_markers(final_content)
+                            msg_id = db.save_message_undelivered(target_agent_id, user_id, filtered)
+                            print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
+                        except Exception as save_err:
+                            print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
+                    _complete_task_row(final_content)
                     try:
-                        filtered = filter_internal_markers(final_content)
-                        msg_id = db.save_message_undelivered(target_agent_id, user_id, filtered)
-                        print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
-                    except Exception as save_err:
-                        print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
+                        from episode_logger import EpisodeLogger
+                        EpisodeLogger.end_episode()
+                    except Exception:
+                        pass
+                    try:
+                        from thread_context import clear_all_context as _cac
+                        _cac()
+                    except Exception:
+                        pass
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put(None),  # 종료 신호
                     loop
@@ -653,9 +704,16 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 print(f"[WS] 에이전트 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과 (10분). 작업이 완료되면 자동으로 표시됩니다."
+                    "message": "응답 시간 초과 (10분). 작업은 계속 진행 중이며, "
+                               "끝나면 미전달 메시지로 저장됩니다."
                 })
-                break
+                # 뒷정리는 하지 않는다 — 워커가 살아 있다(시스템 AI 경로와 같은 부류의
+                # 고아 실행 수리, 2026-08-22). 저장·태스크 닫기·Episode END 는 워커의
+                # finally 가 완주 시점에 한다. thread_context 만 이 스레드 몫으로 비운다
+                # (threading.local — 워커가 비워도 루프 스레드 것은 안 지워진다).
+                from thread_context import clear_all_context as _cac_loop
+                _cac_loop()
+                return
 
             if event is None:
                 break
@@ -782,35 +840,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         # 태스크 완료 처리 (X-Ray 타임라인용)
         # tool_calls_log는 run_stream 스레드에서 수집됨 — thread_context가 아닌 이 변수를 직접 사용
-        if task_id:
-            try:
-                import json as _json
-                tool_history_json = _json.dumps(tool_calls_log, ensure_ascii=False) if tool_calls_log else None
-                with db.get_connection() as conn:
-                    cursor = conn.cursor()
-                    try:
-                        cursor.execute("ALTER TABLE tasks ADD COLUMN tool_history TEXT")
-                    except Exception:
-                        pass
-                    cursor.execute("""
-                        UPDATE tasks SET status = 'completed', result = ?,
-                                         completed_at = CURRENT_TIMESTAMP, tool_history = ?
-                        WHERE task_id = ?
-                    """, ((final_content or "")[:500], tool_history_json, task_id))
-                    conn.commit()
-                # X-Ray 실시간 이벤트
-                try:
-                    from xray_stream import push_xray_event
-                    push_xray_event("task_complete", {
-                        "task_id": task_id,
-                        "request": (message or "")[:100],
-                        "agent": agent_name,
-                        "tool_count": len(tool_calls_log),
-                    })
-                except Exception:
-                    pass
-            except Exception as ct_err:
-                print(f"[WS] complete_task 실패 (무시): {ct_err}")
+        _complete_task_row(final_content)
 
         # 완료 알림
         await manager.send_message(client_id, {
@@ -992,14 +1022,48 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             finally:
                 # 조기 종료(취소·예외)여도 제너레이터 finally(모델 복원·메모리 쓰기) 실행 보장
                 gen.close()
-                if timed_out and final_content:
-                    # 타임아웃 이후 워커가 결과를 완성한 경우: 시스템 AI 대화 저장
+                if timed_out:
+                    # 타임아웃 이후 완주분 인계 — 소비자(WS)는 이미 떠났으므로 저장·
+                    # 전송·원장 닫기를 실제로 끝낸 쪽인 여기서 한다.
+                    if final_content:
+                        try:
+                            filtered = filter_internal_markers(final_content)
+                            save_conversation("assistant", filtered, source=conv_source)
+                            print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
+                            # ★저장만 하면 사용자는 결과를 영영 못 본다 — 창이 다시
+                            #  열려 있으면(재접속·다른 창) 밀어 준다. auto_report 는
+                            #  프론트가 response 와 같은 자리에 그린다.
+                            asyncio.run_coroutine_threadsafe(
+                                manager.send_to_system_ai_chat({
+                                    "type": "auto_report",
+                                    "content": filtered,
+                                    "agent": "system_ai",
+                                }), loop)
+                        except Exception as save_err:
+                            print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
+                    # 태스크 정리 — 위임이 걸려 있으면 남긴다(결과를 기다리는 주인이 있다).
+                    # 판정은 DB 의 pending_delegations 하나로 한다: 소비자가 모으던
+                    # tool_results_list 는 타임아웃 시점에서 끊겨 반쪽이다.
                     try:
-                        filtered = filter_internal_markers(final_content)
-                        save_conversation("assistant", filtered, source=conv_source)
-                        print(f"[WS run_stream] 시스템AI 타임아웃 후 대화 저장 완료")
-                    except Exception as save_err:
-                        print(f"[WS run_stream] 시스템AI 타임아웃 후 저장 실패: {save_err}")
+                        _td = get_task(task_id)
+                        if _td and _td.get("pending_delegations", 0) > 0:
+                            print(f"[WS run_stream] 위임 대기 중 — 태스크 유지: {task_id}")
+                        else:
+                            delete_task(task_id)
+                            print(f"[WS run_stream] 시스템 AI 태스크 삭제(타임아웃 후 완주): {task_id}")
+                    except Exception as _te:
+                        print(f"[WS run_stream] 타임아웃 후 태스크 정리 실패: {_te}")
+                    # 에피소드는 여기서 닫는다 — 소비자가 닫으면 원장의 total_ms 가
+                    # 실제 종료가 아니라 타임아웃 시각이 된다(실측 24분41초 vs 실제 27분).
+                    try:
+                        from episode_logger import EpisodeLogger
+                        EpisodeLogger.end_episode()
+                    except Exception:
+                        pass
+                    try:
+                        clear_all_context()
+                    except Exception:
+                        pass
                 asyncio.run_coroutine_threadsafe(event_queue.put(None), loop)
 
         # 스레드에서 스트리밍 시작
@@ -1018,9 +1082,21 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 print(f"[WS] 시스템AI 타임아웃 발생 (600초), final_content 길이: {len(final_content)}")
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": "응답 시간 초과 (10분). 작업이 완료되면 자동으로 표시됩니다."
+                    "message": "응답 시간 초과 (10분). 작업은 계속 진행 중이며, "
+                               "끝나면 채팅창에 자동으로 표시됩니다."
                 })
-                break
+                # ★뒷정리를 여기서 하지 않는다 (2026-08-22 수리). 워커 스레드는 아직
+                #  살아 있다 — 옛 판은 여기서 곧장 아래로 떨어져 부분 응답 저장 ·
+                #  response/end 전송 · 태스크 삭제 · Episode END 를 전부 찍었고,
+                #  그 뒤로도 워커가 3분간 보고서 파일을 계속 편집했다(고아 실행).
+                #  게다가 워커의 finally 가 완성본을 또 저장해 대화가 이중 적재됐다.
+                #  살아 있는 실행 위에 "끝남"을 찍지 않는다 — 뒷정리 전부를
+                #  워커의 finally 한 곳으로 넘기고 여기서는 전송만 끝낸다.
+                #  ★단 이벤트 루프 *스레드*의 thread_context 는 여기서 비운다 —
+                #   thread_context 는 threading.local 이라 워커가 비워도 이 스레드
+                #   것은 안 지워지고, 공유 루프 스레드에 task_id 가 남는다.
+                clear_all_context()
+                return
 
             if event is None:
                 break

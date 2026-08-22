@@ -259,8 +259,9 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
   - 같은 대화(registry_key)에서 만든 framing이 30분 내 재고에 있고 경량 fit 게이트가 적합 판정 → 의식(Opus) 호출 스킵, 재사용. turn마다 바뀌는 achievement_criteria만 게이트가 새로 생성 (비싼 framing 재사용 / 싼 criteria 갱신)
   - 캐시: 모듈 레벨 `_FRAMING_CACHE` (30분 TTL), SESSION_RESET·재시작 시 폐기. fits=false·재고 없음·게이트 실패 시 풀 의식 폴백(품질 손실 0)
   - 효과: 연속 THINK turn에서 의식 40~54초 + Opus 호출 제거. 주제 전환은 명시적=SESSION_RESET / 암묵적=fit 게이트가 분담
-- **평가 에이전트 (경량 AI)** — `agent_cognitive._run_goal_evaluation_loop()`
+- **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
   - achievement_criteria 대비 평가. NOT_ACHIEVED 시 재실행 (최대 3라운드)
+  - **스트림 안**에서 돈다: 평가 진행 표지와 재실행 에이전트의 이벤트가 그대로 흐른다. 블로킹 함수였던 옛 판은 재실행(실측 10분)이 통째로 화면 밖이라 WS 유휴 타임아웃(600초)을 구조적으로 넘겼다(2026-08-22 수리)
   - 프롬프트: `data/common_prompts/evaluator_prompt.md`
 
 ### 의식 시스템 (Consciousness Pulse & Self-Check)

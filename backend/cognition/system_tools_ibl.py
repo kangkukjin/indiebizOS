@@ -284,10 +284,34 @@ def _enrich_error_with_param_hint(result, code: str):
         from ibl_access import _load_nodes_data
         meta = _load_nodes_data().get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})
         desc = (meta.get("description") or "").strip()
-        if desc:
+        # ★F31-1 (31회차 실측): description 은 파라미터 *이름*을 거의 안 담는다. 그래서
+        #   `[self:ask]{question: …}` 은 "prompt 가 필요합니다" 만 듣고, **자기가 준 question 이
+        #   읽히지 않았다는 사실은 끝내 듣지 못한다**(31회차 96과제 중 12건이 이 침묵으로 죽었다).
+        #   몸은 이미 안다 — ibl_param_vocab 이 그 액션이 선언한 키를 계산할 수 있다.
+        #   아는 것을 말하지 않는 것이 결함이므로, 실패한 순간에 한 번 말한다.
+        #   ★액션마다 별칭을 늘리는 길(question→prompt)을 택하지 않은 이유: 별칭 목록은
+        #   반드시 뒤처지고, 다음 오타는 또 침묵한다. 여기 한 곳이 모든 액션을 덮는다.
+        _unknown_note = ""
+        try:
+            _params = parsed[0].get("params")
+            if isinstance(_params, dict) and _params:
+                from ibl_param_vocab import (_documented_vocab, UNIVERSAL_PARAM_KEYS,
+                                             RUNTIME_META_KEYS)
+                _vocab = _documented_vocab(meta, meta.get("tool"))
+                if _vocab:                       # 선언 어휘가 없으면 침묵(오탐 회피 우선)
+                    _known = _vocab | UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
+                    _unk = sorted(k for k in _params if k not in _known and not k.startswith("_"))
+                    if _unk:
+                        _unknown_note = (
+                            f" ★당신이 준 {_unk} 는 [{node}:{action}] 이 선언한 키가 아니라 "
+                            f"읽히지 않았습니다. 이 액션이 받는 키: {sorted(_vocab)}."
+                        )
+        except Exception:
+            pass
+        if desc or _unknown_note:
             obj["_param_hint"] = (
                 f"[{node}:{action}] 올바른 사용법: {desc} "
-                "— 위 사용법에 맞는 파라미터명/값으로 다시 시도하세요."
+                "— 위 사용법에 맞는 파라미터명/값으로 다시 시도하세요." + _unknown_note
             )
             return json.dumps(obj, ensure_ascii=False, indent=2) if was_str else obj
     except Exception:

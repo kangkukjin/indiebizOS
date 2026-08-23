@@ -150,6 +150,29 @@ def _bind_items_params(tool_input: dict, prev_result: str):
         return tool_input, None
     refs = {k: m for k, v in params.items()
             if isinstance(v, str) and (m := _ITEMS_REF.match(v.strip()))}
+
+    # ★B31-2 (31회차 실측): 집합 참조는 param 값 **전체**일 때만 바인딩된다(위 정규식은 ^...$).
+    #   문장 *속*에 섞여 들어오면 지금까지 아무 일도 일어나지 않았다 — 치환도, 경고도, 실패도.
+    #   실측: [self:memory]{op:'save', content: '스크래치 realty: $items.title'} 가
+    #   success: true · '메모리 저장 완료(ID: 1)' 를 돌려주고, 원장에는 **글자 그대로**
+    #   $items.title 이 저장됐다(12건 전수 확인). 데이터가 아니라 문법 기호가 영구 보존된 것.
+    #   ★언어가 여기서 일관되지 않다: `$변수`(파서 치환)와 `$it.필드`(each)는 문장 속에서도
+    #   치환되는데 `$items` 만 안 된다. 사용자가 그 차이를 미리 알 방법이 없다.
+    #   ★임시방편(문장 속 치환을 지금 구현)을 택하지 않은 이유: 목록을 문장에 끼울 때의
+    #   결합 규약(줄바꿈? 쉼표? 인용?)은 **언어 개정**이라 사용자 판정 사항이다(가이드 §4 2종).
+    #   판정 전까지 옳은 것은 침묵이 아니라 정직한 거절이다 — 조용히 쓰레기를 저장하는 것보다
+    #   못 하겠다고 말하는 편이 언제나 낫다. 판정이 나면 이 자리가 그대로 구현 지점이 된다.
+    _mixed = [k for k, v in params.items()
+              if isinstance(v, str) and "$items" in v and k not in refs]
+    if _mixed:
+        return tool_input, (
+            f"$items 는 파라미터 값 **전체**일 때만 집합으로 바인딩됩니다 — {sorted(_mixed)} 처럼 "
+            "문장 속에 섞으면 치환되지 않고 글자 그대로 남습니다(조용한 저장을 막기 위해 거절). "
+            "값 전체를 \"$items\" 또는 \"$items.필드\" 로 두거나, 행마다 문장을 만들려면 "
+            "[table:each]{do: \"…$it.필드…\"} 를 쓰세요. "
+            "AI 낱말([table:brief]·[table:ai])은 파이프 통화를 이미 받으므로 지시문에 "
+            "$items 를 적을 필요가 없습니다.")
+
     if not refs:
         return tool_input, None
 
@@ -189,7 +212,36 @@ def _bind_items_params(tool_input: dict, prev_result: str):
             out["params"][key] = [r.get(field) for r in items if isinstance(r, dict)]
         else:
             out["params"][key] = items
+    # ★B31-1 (31회차): 무엇이 집합으로 바인딩됐는지 표식을 남긴다.
+    #   이 step 이 실패하면 _items_bound_note 가 그 사실을 오류문에 실어 준다 — 아래 참조.
+    out["_items_bound"] = {k: (len(out["params"][k]) if isinstance(out["params"][k], list) else 1)
+                            for k in refs}
     return out, None
+
+
+def _items_bound_note(tool_input: dict, err_msg: str) -> str:
+    """실패한 step 의 오류문에 **집합 참조로 무엇이 몇 건 들어갔는지**를 덧붙인다.
+
+    ★31회차 실측 결함: `[sense:realty]{…} >> [table:take]{n:3} >> [self:notify_user]{message: "$items.title"}`
+      → `'list' object has no attribute 'strip'`. 글자 하나를 받는 자리에 집합 3건이 들어가
+      핸들러가 파이썬 예외로 터졌고, 사용자에게는 **그 예외문이 그대로** 나갔다. 무엇이
+      잘못됐는지도, 어떻게 고치는지도 없는 문장이다.
+
+    ★왜 핸들러를 고치지 않나(임시방편 배제): `.strip()` 하는 자리는 액션마다 있고 앞으로도
+      늘어난다 — 열거 목록은 반드시 뒤처진다(28·30회차가 같은 교훈). 또 코어 액션
+      (router=system)은 tool.json 스키마가 없어 param 타입으로 미리 막는 길도 닫혀 있다.
+      대신 **맥락을 아는 유일한 자리**(바인딩)가 표식을 남기고, **오류를 내보내는 유일한
+      자리**(파이프의 step 실패)가 그 표식을 번역한다. 액션 수와 무관하게 한 번만 산다.
+
+    사실만 싣는다(추측 금지) — 무엇이 몇 건 들어갔는지, 그리고 두 갈래 출구.
+    """
+    bound = tool_input.get("_items_bound") if isinstance(tool_input, dict) else None
+    if not isinstance(bound, dict) or not bound:
+        return err_msg
+    parts = ", ".join(f"{k}={n}건" for k, n in bound.items())
+    return (f"{err_msg} ★이 step 의 파라미터에 집합 참조($items)로 목록이 들어갔습니다({parts}). "
+            f"받는 자리가 값 하나를 기대하면 이렇게 실패합니다 — 한 줄로 만들려면 "
+            f"[table:brief], 행마다 따로 실행하려면 [table:each]{{do: \"…$it.필드…\"}} 를 쓰세요.")
 
 
 def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:

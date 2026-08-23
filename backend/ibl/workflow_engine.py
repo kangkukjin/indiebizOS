@@ -640,6 +640,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
         if is_err:
             err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
+            err_msg = _items_bound_note(tool_input, err_msg)   # ★B31-1: 집합 바인딩 사실을 실패에 실어 준다
             _abort = _handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
@@ -712,7 +713,7 @@ from workflow_fallback import _execute_fallback  # noqa: E402,F401
 from workflow_binding import (  # noqa: E402,F401
     _STEP_RESULT_RE, _ITEMS_REF,
     _extract_result_field, _v4_var_payload, _inject_step_results,
-    _bind_items_params, _inject_prev_result, _has_prev_ref, _auto_inject_prev,
+    _bind_items_params, _items_bound_note, _inject_prev_result, _has_prev_ref, _auto_inject_prev,
     _to_prev_currency, _step_label, _to_string,
 )
 

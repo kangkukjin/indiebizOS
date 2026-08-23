@@ -261,6 +261,71 @@ def _resolve_project_id(project_id: str) -> Optional[str]:
     return None
 
 
+_SCALAR_TYPES = ("string", "number", "integer", "boolean")
+
+
+def _coerce_declared_scalar(v, declared):
+    """B35-1·B35-2 (2026-08-24 #repair): 선언 타입 대비 값 하나를 **3값**으로 판정.
+
+    반환 (ok, value, why)
+      ok=True  손실 없이 declared 로 맞췄다(또는 이미 맞다) → value 로 진행
+      ok=False 변환이 손실·모호하다 → 정직 거절, why 가 사유
+
+    ★왜 이분법(전부 통과 / 전부 거절)이 아닌가 — 둘 다 실측으로 틀렸다.
+      · 전부 통과 = 수리 전 상태 = B35-2. `[table:take]{n: 3.7}` 이 10행을 3행으로
+        조용히 깎고 success:true 를 냈고, `regex: \"false\"` 는 파이썬 진리값 규칙에 걸려
+        **참**으로 읽혀 같은 질의가 70건 vs 79건으로 갈렸다(경고 한 줄 없음).
+      · 전부 거절 = 코퍼스 33건 파괴(3,610문장 전수 대조). 그런데 그 33건은 전부
+        `memory_id: \"23\"`·`business_id: 2`·`volume: \"80\"`·`enabled: \"true\"` 같은
+        **손실 없는 표기 차이**라 안전 이득이 0이고 사용자만 잃는다.
+        (35회차 문서는 이를 '79건 파괴·파괴적 변경'으로 적었으나 실측이 반증했다 —
+         그 79건에 포함된 `[limbs:screen]{x,y}` 45건은 애초에 선언이 없어 불검사다.)
+      그래서 가르는 자리는 타입이 아니라 **손실 여부**다. 되돌릴 수 있으면 맞춰 주고,
+      버림·모호가 생기면 거절한다.
+    """
+    if isinstance(v, (list, dict)):
+        return False, None, (f"{len(v)}개짜리 "
+                             f"{'목록' if isinstance(v, list) else '사전'}이 왔습니다")
+    _isbool = isinstance(v, bool)          # bool 은 int 의 하위형 — 먼저 갈라야 한다
+
+    if declared == "string":
+        if isinstance(v, str):
+            return True, v, None
+        if _isbool:
+            return False, None, f"참거짓값({v})이 왔습니다 — 문자열 표기가 모호합니다"
+        if isinstance(v, (int, float)):
+            return True, str(v), None      # 12345 → "12345" (되돌릴 수 있다)
+        return False, None, f"{type(v).__name__} 이 왔습니다"
+
+    if declared == "boolean":
+        if _isbool:
+            return True, v, None
+        if isinstance(v, str) and v.strip().lower() in ("true", "false"):
+            return True, v.strip().lower() == "true", None
+        return False, None, (f"{v!r} 가 왔습니다 — true/false 만 참거짓으로 읽습니다"
+                             f" (yes·1 은 모호해서 받지 않습니다)")
+
+    if declared in ("integer", "number"):
+        if _isbool:
+            return False, None, f"참거짓값({v})이 왔습니다"
+        if isinstance(v, str):
+            _s = v.strip()
+            try:
+                v = float(_s) if ("." in _s or "e" in _s.lower()) else int(_s)
+            except ValueError:
+                return False, None, f"{v!r} 는 숫자로 읽을 수 없습니다"
+        if declared == "number":
+            return True, v, None
+        if isinstance(v, int):
+            return True, v, None
+        if isinstance(v, float) and v.is_integer():
+            return True, int(v), None      # 3.0 → 3 (버리는 게 없다)
+        return False, None, (f"{v} 는 정수가 아닙니다 — 버림이 생기면 "
+                             f"답이 조용히 달라집니다")
+
+    return True, v, None
+
+
 def _route_handler(mapped_tool: str, params: dict,
                    project_path: str, agent_id: str = None,
                    scope: str = "project") -> Any:
@@ -296,26 +361,45 @@ def _route_handler(mapped_tool: str, params: dict,
     #     있으므로 관문에서 그 진실 소스를 한 번 읽는다. array 로 선언된 param($items 통짜
     #     바인딩의 정당한 자리 — markers·items·columns·blocks…)은 그대로 통과하므로
     #     깨지는 기존 용법이 없다. 선언이 없는 param 은 검사하지 않는다(모르면 통과).
-    _listish = {k: v for k, v in merged_params.items() if isinstance(v, (list, dict))}
-    if _listish:                      # 흔한 스칼라-only 호출은 스키마를 읽지도 않는다
+    #   ★B35-1·B35-2 로 확장 (2026-08-24 #repair): 관문이 보는 범위를 목록·사전에서
+    #     **선언된 스칼라 전부**로 넓힌다. 옛 관문은 list/dict 만 봤기 때문에 같은 자리의
+    #     같은 종류 위반인데 결말이 갈렸다 —
+    #       [sense:weather]{city: ["수원","서울"]} → 정직 거절(무엇을 쓰라는 안내까지)
+    #       [sense:weather]{city: 12345}          → 'int' object has no attribute 'lower'
+    #     그리고 스칼라 쪽은 조용히 뭉개지기까지 했다: [table:take]{n: 3.7} 이 10행을
+    #     3행으로 말없이 깎았고, regex: "false" 가 참으로 읽혀 같은 질의가 70 vs 79 로 갈렸다.
+    #     판정은 타입이 아니라 **손실 여부**로 한다 → _coerce_declared_scalar 참조.
+    #   ★비용: load_tool_schema 1회 0.45ms 실측. 액션 자체가 ms~s 단위라 무시할 수준이어서
+    #     옛 '스칼라-only 면 스키마를 읽지도 않는다' 지름길은 걷어냈다(param 이 없으면 생략).
+    if merged_params:
         try:
             from tool_loader import load_tool_schema
             _props = (((load_tool_schema(mapped_tool) or {}).get("input_schema") or {})
                       .get("properties") or {})
         except Exception:
             _props = {}
-        _bad = [(k, (_props.get(k) or {}).get("type"), v) for k, v in _listish.items()
-                if (_props.get(k) or {}).get("type") in ("string", "number", "integer", "boolean")]
-        if _bad:
-            _detail = "; ".join(
-                f"`{k}` 는 {t} 하나를 받는데 "
-                f"{len(v)}개짜리 {'목록' if isinstance(v, list) else '사전'}이 왔습니다"
-                for k, t, v in _bad)
-            return {"success": False, "error": (
-                f"{mapped_tool}: {_detail}. 목록의 항목마다 실행하려면 "
-                "[table:each]{do: \"…$it.필드…\"} 를 쓰세요 "
-                "($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다)."
-            )}
+        _refused, _had_container = [], False
+        for _k, _v in list(merged_params.items()):
+            _t = (_props.get(_k) or {}).get("type")
+            if _t not in _SCALAR_TYPES:
+                continue                  # 선언 없음·array 선언 = 불검사(모르면 통과)
+            if isinstance(_v, str) and _v.startswith("$"):
+                continue                  # 미해소 바인딩은 이 관문의 일이 아니다
+            _ok, _new, _why = _coerce_declared_scalar(_v, _t)
+            if not _ok:
+                _refused.append(f"`{_k}` 에는 {_t} 이 와야 하는데 {_why}")
+                _had_container = _had_container or isinstance(_v, (list, dict))
+            elif type(_new) is not type(_v) or _new != _v:
+                merged_params[_k] = _new  # 되돌릴 수 있는 표기 차이는 조용히 맞춰 준다
+        if _refused:
+            if _had_container:
+                _tail = ("목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 "
+                         "($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).")
+            else:
+                _tail = ("선언된 타입으로 적어 주세요 — 되돌릴 수 있는 표기 차이"
+                         "(\"23\"→23, 2→\"2\", \"true\"→true)는 관문이 알아서 맞춥니다.")
+            return {"success": False,
+                    "error": f"{mapped_tool}: " + "; ".join(_refused) + ". " + _tail}
 
     # handler.execute는 신규 시그니처 (tool_input, context)만 지원
     import inspect

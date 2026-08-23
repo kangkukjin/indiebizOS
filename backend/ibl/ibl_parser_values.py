@@ -364,6 +364,17 @@ def _extract_number(text: str, pos: int):
         while i < len(text) and text[i].isdigit():
             i += 1
     raw = text[pos:i]
+    # ★B35-1 2단계 (2026-08-24 #repair): 앞자리가 0 인 정수 리터럴은 **수량이 아니라 식별자**다.
+    #   앞 0 을 붙여 쓰는 수는 세상에 없고, 그렇게 쓰는 건 전부 코드다 — 종목(005930)·
+    #   우편번호·계좌·법정동코드. int() 는 그 0 을 지우고, 지워진 뒤에는 아무도 되살릴 수
+    #   없다: 35회차가 `ticker: 005930` → 5930 을 실측하고 "str() 변환도 불가"라며 관문
+    #   수리를 막다른 길로 판정한 근거가 이것이었다. 정보가 사라지는 자리는 관문이 아니라
+    #   **여기**이므로 여기서 지키지 않으면 아래층 어디서도 못 고친다.
+    #   파급 실측: 코퍼스 3,610 문장의 파스 트리를 이 규칙 적용 전후로 대조해 **변화 0건**
+    #   (앞 0 리터럴은 전부 따옴표 안 시각·날짜라 이 함수에 오지도 않는다).
+    _digits = raw[1:] if raw[:1] == '-' else raw
+    if '.' not in raw and len(_digits) > 1 and _digits[:1] == '0':
+        return raw, i
     try:
         return float(raw) if '.' in raw else int(raw), i
     except ValueError:

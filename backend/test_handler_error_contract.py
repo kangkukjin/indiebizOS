@@ -100,7 +100,67 @@ def test_b34_1_array_params_and_scalars_still_pass():
     assert '("string", "number", "integer", "boolean")' in src, "스칼라 화이트리스트가 사라졌다"
     # 스칼라만 실린 흔한 호출은 스키마를 읽는 경로에 들어가지도 않는다
     out = ibl_routing._route_handler("get_weather", {"city": "수원"}, ".")
-    assert "string 하나를 받는데" not in json.dumps(out, ensure_ascii=False), out
+    assert "와야 하는데" not in json.dumps(out, ensure_ascii=False), out
+
+
+def test_b35_1_string_param_given_number_is_normalized_not_exploded():
+    """B35-1(2026-08-24 #repair): string 자리에 숫자가 오면 **파이썬 예외가 새면 안 된다**.
+
+    수리 전 실측 — 같은 param, 같은 종류의 위반인데 결말이 갈렸다:
+      [sense:weather]{city: [\"수원\",\"서울\"]} → 정직 거절(무엇을 쓰라는 안내까지)
+      [sense:weather]{city: 12345}          → 'int' object has no attribute 'lower'
+    옛 관문이 list/dict 만 봤기 때문이다. 숫자→문자열은 **되돌릴 수 있으므로**
+    거절이 아니라 정규화가 맞다(코퍼스 33건이 이 표기 차이에 기대고 있다)."""
+    import ibl_routing as R
+    ok, new, why = R._coerce_declared_scalar(12345, "string")
+    assert ok and new == "12345" and isinstance(new, str), (ok, new, why)
+    # 코퍼스가 실제로 쓰는 표기 차이 — 되돌릴 수 있으니 전부 통과해야 한다
+    for v, t, want in (("23", "integer", 23), (2, "string", "2"),
+                       ("80", "integer", 80), ("true", "boolean", True),
+                       (3.0, "integer", 3), ("80", "number", 80)):
+        ok, new, why = R._coerce_declared_scalar(v, t)
+        assert ok and new == want and type(new) is type(want), (v, t, ok, new, why)
+
+
+def test_b35_2_lossy_or_ambiguous_scalar_is_refused_not_coerced():
+    """B35-2(2026-08-24 #repair): 버림·모호가 생기는 변환은 **조용히 해주면 안 된다**.
+
+    수리 전 실측:
+      [table:take]{n: 3.7}  → 10행을 3행으로 말없이 깎고 success:true (경고 0)
+      [self:grep]{regex: \"false\"} → 파이썬 진리값 규칙에 걸려 **참**으로 읽혀
+                                     같은 질의가 70건 vs 79건으로 갈렸다
+    이 저장소가 pre-commit 으로 따로 감시하는 '침묵 클램프' 와 같은 부류다."""
+    import ibl_routing as R
+    for v, t, mark in ((3.7, "integer", "정수"), ("yes", "boolean", "true/false"),
+                       (1, "boolean", "true/false"), ("abc", "integer", "숫자"),
+                       (True, "string", "참거짓"), (True, "integer", "참거짓")):
+        ok, new, why = R._coerce_declared_scalar(v, t)
+        assert not ok and mark in (why or ""), (v, t, ok, new, why)
+    # \"false\" 는 참이 아니라 거짓으로 읽혀야 한다(파이썬 bool(\"false\") 는 True)
+    ok, new, why = R._coerce_declared_scalar("false", "boolean")
+    assert ok and new is False, (ok, new, why)
+    # 관문을 통과한 뒤가 아니라 관문에서 막힌다 — 사유가 실려야 한다
+    out = R._route_handler("data_take", {"n": 3.7, "items": [{"a": 1}, {"a": 2}]}, ".")
+    assert out.get("success") is False and "n" in (out.get("error") or ""), out
+
+
+def test_b35_1_parser_keeps_leading_zero_identifiers():
+    """B35-1 2단계: 앞 0 이 붙은 정수 리터럴은 수량이 아니라 식별자다.
+
+    파서가 `ticker: 005930` 을 int 5930 으로 만들면 앞 0 은 **아래층 어디서도**
+    못 되살린다 — 35회차가 \"str() 변환도 불가\"라며 관문 수리를 막다른 길로 판정한
+    근거가 이것이었다. 정보가 사라지는 자리에서 지킨다.
+    파급 실측: 코퍼스 3,610 문장 파스 트리 대조 변화 0건."""
+    from ibl_parser import parse
+    p = parse('[sense:stock]{op: \"quote\", ticker: 005930}')[0]["params"]
+    assert p["ticker"] == "005930" and isinstance(p["ticker"], str), p
+    # ★평범한 숫자는 그대로 숫자여야 한다(좌표·개수가 문자열이 되면 그게 새 결함)
+    q = parse('[limbs:screen]{op: \"click\", x: 300, y: 200}')[0]["params"]
+    assert q["x"] == 300 and isinstance(q["x"], int), q
+    r = parse('[table:take]{n: 0}')[0]["params"]
+    assert r["n"] == 0 and isinstance(r["n"], int), r
+    s = parse('[sense:weather]{lat: 0.5}')[0]["params"]
+    assert s["lat"] == 0.5 and isinstance(s["lat"], float), s
 
 
 def test_v21_1_render_html_eats_pipe_currency():

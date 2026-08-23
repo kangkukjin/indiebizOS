@@ -516,7 +516,7 @@ def execute_trigger(action: str, params: dict,
 
     if action in ("list", "list_triggers", "list_events"):
         return _list_triggers(params)
-    elif action in ("get", "get_trigger", "get_event"):
+    elif action in ("detail", "get", "get_trigger", "get_event"):   # detail=정본(2026-08-24 #repair B5)
         if not trigger_id:
             return {"error": "trigger_id가 필요합니다."}
         return _get_trigger(trigger_id)

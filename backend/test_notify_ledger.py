@@ -10,7 +10,7 @@ world_pulse.db 의 notify_log 에 한 줄 남긴다. 격리 규율은 action_hea
 (_in_test_process / _in_rehearsal → source 컬럼) — 시험·리허설이 쏜 알림이 실사용
 집계를 물들이지 않는다.
 
-실행: .venv/bin/python -m pytest backend/test_notify_ledger.py -q
+실행: .venv/bin/python -m pytest backend/test_notify_ledger.py
 """
 import os
 import sqlite3
@@ -210,4 +210,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

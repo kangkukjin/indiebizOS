@@ -30,7 +30,7 @@
      아니다')이 건강 원장에 내린 판정과 같은 규율을 차단기에도 적용 — **지우지 않고
      키 공간을 분리**한다(훈련 안에서의 폭주 방어는 그대로 산다).
 
-실행: .venv/bin/python -m pytest backend/test_failure_grammar_honesty.py -q
+실행: .venv/bin/python -m pytest backend/test_failure_grammar_honesty.py
 """
 import os
 import sys
@@ -186,4 +186,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

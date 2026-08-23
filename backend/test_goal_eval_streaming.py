@@ -9,7 +9,7 @@
 여기서 단언하는 것은 "재실행이 도는 동안 무언가 흐른다"는 계약이다 —
 봉투(반환값)만 보는 시험은 옛 판도 통과했다.
 
-실행: cd indiebizOS && .venv/bin/python -m pytest backend/test_goal_eval_streaming.py -q
+실행: cd indiebizOS && .venv/bin/python -m pytest backend/test_goal_eval_streaming.py
 """
 
 import os
@@ -158,4 +158,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

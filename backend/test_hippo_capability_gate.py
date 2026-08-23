@@ -13,7 +13,7 @@ FTS5 폴백은 코드에 있었지만 **도달하지 못했다** — 에러 없�
 처방: 능력 질문은 능력으로 답한다(`_has_local_encoder`). 가졌는데 아직 안 올라왔을
 뿐이면 렌트가 아니라 **폴백**이 답이다.
 
-실행: .venv/bin/python -m pytest backend/test_hippo_capability_gate.py -q
+실행: .venv/bin/python -m pytest backend/test_hippo_capability_gate.py
 """
 import os
 import sys
@@ -126,4 +126,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

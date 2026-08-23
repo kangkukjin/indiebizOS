@@ -131,6 +131,7 @@ from iblbuild_appview import (  # noqa: E402,F401
     _template_param_keys,
     validate_app_template_params,
 )
+from iblbuild_params_check import validate_declared_params
 from iblbuild_validators import (  # noqa: E402,F401
     _extract_op_dispatchers,
     _extract_op_defaults,
@@ -138,7 +139,6 @@ from iblbuild_validators import (  # noqa: E402,F401
     _load_corpus_param_keys,
     validate_corpus_params,
     validate_corpus_vocab,
-    validate_declared_params,
     validate_runs_on,
     validate_transform_contract,
     validate_phone_reachability,

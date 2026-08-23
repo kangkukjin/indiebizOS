@@ -131,4 +131,4 @@ def test_sweep_reports_truncation_and_parse_failures():
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (28회차 R2)
     import pytest
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

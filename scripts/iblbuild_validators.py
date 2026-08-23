@@ -611,79 +611,6 @@ def validate_corpus_params(data: dict, root: Path) -> list[str] | None:
     return issues
 
 
-def validate_declared_params(data: dict, root: Path) -> list[str] | None:
-    """B35-3 2조각 (2026-08-24 #repair): 코퍼스가 **실제로 쓰는** param 자리 중
-    tool.json input_schema.properties 에 선언이 없는 것을 오류로 보고한다.
-
-    왜 새 검사가 필요한가 — 형제인 validate_corpus_params 는 "**핸들러가 이 키를 읽나**"
-    만 묻고 "**타입이 선언돼 있나**"는 묻지 않는다. 그 틈으로 타입 관문(ibl_routing)이
-    눈감는 자리가 생겼고, 거기서 파이썬 예외가 그대로 새었다
-    (실측: [self:read]{path: [...]} → "expected str, bytes or os.PathLike object, not list").
-
-    ★이 검사는 카운터가 아니라 **빌드 실패**다. 수를 세어 지켜보는 장치는 수리를 미루는
-    장치일 뿐이고, 판정 기준이 코드 안에 전부 있을 때는 세지 말고 닫아야 한다.
-    남은 자리는 각 패키지 ibl_actions.yaml 의 tool_json.tools[].input_schema.properties 에
-    타입을 적어 0 으로 만든다(정당한 컨테이너 용법은 object/array 로 선언).
-
-    파서/코퍼스 미가용 시 None (검사 건너뜀).
-    """
-    corpus = _load_corpus_param_keys(root)
-    if corpus is None:
-        return None
-    aliases = _extract_action_param_aliases(data)
-    tool_index = build_tool_index(root)
-    tj_cache: dict[Path, dict] = {}
-
-    def _props_of(pkg_dir: Path, tool_name: str) -> set[str] | None:
-        """그 패키지 tool.json 에서 tool_name 의 properties 키 집합. 문서가 없으면 None."""
-        if pkg_dir not in tj_cache:
-            path = pkg_dir / "tool.json"
-            try:
-                tj_cache[pkg_dir] = json.loads(path.read_text(encoding="utf-8"))
-            except Exception:  # noqa: BLE001
-                tj_cache[pkg_dir] = {}
-        doc = tj_cache[pkg_dir] or {}
-        for t in (doc.get("tools") or []):
-            if isinstance(t, dict) and t.get("name") == tool_name:
-                isch = t.get("input_schema")
-                if not isinstance(isch, dict):
-                    return set()
-                return set((isch.get("properties") or {}).keys())
-        return None
-
-    issues: list[str] = []
-    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
-    for node_name, node in nodes.items():
-        if not isinstance(node, dict):
-            continue
-        for action_name, action in (node.get("actions", {}) or {}).items():
-            if not isinstance(action, dict):
-                continue
-            qualified = f"{node_name}:{action_name}"
-            used = corpus.get(qualified)
-            if not used:
-                continue
-            if action.get("router") != "handler":
-                continue          # tool.json 이 없는 라우터(system/engine/…)는 대상 밖
-            tool_name = action.get("tool")
-            if not tool_name or tool_name not in tool_index:
-                continue
-            declared = _props_of(tool_index[tool_name][0], tool_name)
-            if declared is None:
-                continue          # 액션 미소유 도구·문서 미이관 — 다른 가드의 일
-            known = set(declared) | set(UNIVERSAL_PARAM_KEYS) | set(RUNTIME_META_KEYS)
-            known |= aliases.get(qualified, set())
-            known |= CORPUS_PARAM_ALLOW.get(qualified, set())
-            missing = sorted(used - known)
-            if missing:
-                issues.append(
-                    f"{qualified} ({tool_name}): 코퍼스가 쓰는 param 에 타입 선언이 없음 — {missing} "
-                    f"(해당 패키지 ibl_actions.yaml 의 tool_json.tools[name={tool_name}]"
-                    f".input_schema.properties 에 타입을 적을 것; 컨테이너 자리면 object/array)"
-                )
-    return issues
-
-
 def _enum_param_branch_literals(
     handler_text: str, params: set[str]
 ) -> dict[str, set[str]] | None:
@@ -1287,6 +1214,19 @@ _COMPRESSION_DESC_BASELINE = {
 _DESC_MENTION_WARN = 3     # desc 가 타 액션 ≥3개를 지목하면 개념 경계가 흐리다는 자백
 _OP_JACCARD_WARN = 0.8     # 같은 group 에서 op 집합이 이만큼 닮으면 병합 후보 (다른 group=정상 CRUD 관습이라 면제)
 
+# ★사람이 판정한 op-닮음 예외 (2026-08-24) — 값은 **판정 사유**다.
+#   경고를 그냥 지우지 않고 사유를 여기 남기는 이유: 이 신호는 "닮았다"는 구조 관측이고,
+#   병합 여부는 개념 판단이라 사람만 할 수 있다. 판정을 안 적어 두면 같은 경고가 매
+#   빌드마다 다시 뜨고, 매번 다시 생각하거나(비용) 눈감는다(마모). 판정을 적으면 경고는
+#   닫히고 **근거는 코드에 남는다.**
+#   ※새 쌍을 여기 넣으려면 사용자 판정이 있어야 한다 — 빌드가 스스로 채우지 않는다.
+_OP_JACCARD_JUDGED = {
+    ("self:script", "self:webapp"):
+        "병합하지 않음(2026-08-24 사용자 판정) — webapp 은 등기부(명사: 무엇이 살아 있나), "
+        "script 는 실행기(동사: 무엇을 돌리나)다. list/register/remove 라는 CRUD 관습이 "
+        "겹칠 뿐 개념이 다르고, 합치면 '등록'이 두 가지 뜻을 갖는다.",
+}
+
 
 def compression_warnings(data: dict) -> list[str]:
     """개념중복 경고(비차단) — ①desc 다참조 면책 ②같은 group op Jaccard.
@@ -1347,6 +1287,8 @@ def compression_warnings(data: dict) -> list[str]:
             continue
         j = len(i1["ops"] & i2["ops"]) / len(union)
         if j >= _OP_JACCARD_WARN:
+            if tuple(sorted((f1, f2))) in _OP_JACCARD_JUDGED:
+                continue          # 사람이 판정한 쌍 — 사유는 _OP_JACCARD_JUDGED 에 있다
             warnings.append(
                 f"op 닮음: {f1} ↔ {f2} (group={i1['group']}, Jaccard {j:.2f}) — 병합 후보"
             )

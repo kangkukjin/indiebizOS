@@ -11,6 +11,11 @@ import sys
 import os
 import time
 
+try:
+    import pytest
+except ImportError:  # pytest 없는 몸(폰) — 스크립트 실행 경로
+    pytest = None
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401 — 층 디렉토리 등재 (물리 이동 2026-08-05)
 
@@ -50,6 +55,37 @@ TEST_COMMANDS = [
     "웹사이트 만들어줘",
 ]
 
+
+
+def _hippocampus_unavailable():
+    """해마 회상이 원리적으로 불가능한 환경이면 그 사유, 가능하면 None.
+
+    ①교재 DB 파일이 없거나 비었다 ②시맨틱 인덱스를 못 연다 — 둘 다 '이 몸에 해마가
+    아직 없다'는 뜻이지 회상 품질의 회귀가 아니다."""
+    try:
+        import ibl_usage_db
+        # ★경로 정본 = 모듈 상수 DB_PATH. 종전의 getattr(db, "db_path", None) 은 존재하지
+        #   않는 속성이라 항상 None 이었고, sqlite3.connect(str(None)) 이 cwd 에 `None`
+        #   파일을 만들며(빈 DB) "테이블 부재"로 **라이브에서도** skip 시켰다 — 판별자가
+        #   결함이면 skip 이 아니라 실패해야 한다.
+        path = getattr(ibl_usage_db, "DB_PATH", None)
+        assert path, "판별자 결함: ibl_usage_db.DB_PATH 가 없다 — skip 으로 덮지 말 것"
+        if not os.path.exists(str(path)):
+            return f"해마 DB 없음({path}) — 이 몸엔 교재가 아직 없다"
+        import sqlite3
+        try:
+            con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)  # ro — 판별자가 파일을 만들면 안 된다
+            n = con.execute("SELECT COUNT(*) FROM ibl_examples").fetchone()[0]
+            con.close()
+        except Exception:
+            return "해마 DB 를 읽을 수 없다(테이블 부재) — 부재이지 회귀가 아니다"
+        if n == 0:
+            return "해마 교재 0건 — 회상할 것이 없다"
+    except AssertionError:
+        raise
+    except Exception as e:  # noqa: BLE001
+        return f"해마 모듈을 열 수 없다: {type(e).__name__}"
+    return None
 
 def extract_actions(xml_str: str) -> set:
     """XML에서 [node:action] 패턴 추출"""
@@ -134,6 +170,13 @@ try:
     @pytest.mark.skipif(not _hippo_data_ready(), reason="해마 DB 없음 (data/ibl_usage.db)")
     def test_hippocampus_recall_quality():
         """해마 회상이 대다수 명령에 실행기억을 내놓는지 (측정 스크립트의 pytest 편입, 감사 ⑧)."""
+        # ★환경 부재는 실패가 아니다(2026-08-24 #repair C7). 격리 사본·CI 에는 해마 DB 와
+        #   임베딩 모델이 없어 회상이 30/30 으로 비고, 그 빨강을 회차마다 사람이 "환경 탓"
+        #   이라고 설명해 왔다. 부재를 감지해 skip(사유) 로 말하게 한다 — 부재와 회귀는
+        #   다른 사건이고, 그 구별은 시험이 스스로 해야 한다.
+        _why = _hippocampus_unavailable()
+        if _why:
+            pytest.skip(_why)
         stats = run_test()
         # 30개 일상 명령 중 빈 회상이 다수면 해마 인덱스/모델 회귀
         assert stats["empty_count"] <= stats["n"] // 3, \
@@ -152,4 +195,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:                          # pytest 없는 환경(폰 등)은 스크립트로
         raise SystemExit(0 if run_test() is not None else 1)
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

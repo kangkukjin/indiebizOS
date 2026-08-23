@@ -11,7 +11,7 @@
 처방은 B18-1(action_health)과 같은 규율: **지우지 않고 표식**(source=usage|test),
 판정은 이름 규약이 아니라 **프로세스 정체**, 판정 정본은 base 층 한 벌.
 
-실행: .venv/bin/python -m pytest backend/test_episode_source.py -q
+실행: .venv/bin/python -m pytest backend/test_episode_source.py
 """
 import os
 import sqlite3
@@ -243,4 +243,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

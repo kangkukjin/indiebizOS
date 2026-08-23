@@ -11,7 +11,7 @@
 수행자가 완주시키지만, 예약 전에 죽으면 격리 사본에 **좌초**한다. 그리고 좌초한 *task*
 세션을 되살릴 동사가 없다 — apply 는 RED 그랜트 + 현재 세션 키로만 동작한다.
 
-실행: .venv/bin/python -m pytest backend/test_preflight_restart.py -q
+실행: .venv/bin/python -m pytest backend/test_preflight_restart.py
 """
 import importlib.util
 import json
@@ -111,4 +111,4 @@ def test_P6_apply_세션_파일은_스테이징으로_안_센다(pf, tmp_path, m
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

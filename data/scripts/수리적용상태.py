@@ -54,6 +54,38 @@ def _git(args):
         return ""
 
 
+def _head_blob(rel):
+    """HEAD 에 있는 그 경로의 blob sha (없으면 None)."""
+    out = _git(["rev-parse", "--verify", "-q", f"HEAD:{rel}"]).strip()
+    return out or None
+
+
+def _blob_of(path):
+    """작업 파일의 git blob sha (git hash-object — 내용만으로 계산)."""
+    if path is None or not os.path.exists(path):
+        return None
+    return _git(["hash-object", "--", path]).strip() or None
+
+
+def _git_state(rel, content_path, dirty):
+    """이 **변경 내용**이 HEAD 에 있는가 — 라이브의 더러움을 묻지 않는다.
+
+    ★2026-08-24 재수리: 종전엔 `git status` 에 안 뜨면 '커밋됨'이었다. 그러면 격리에만
+    있는 새 내용을 라이브가 아직 옛 판일 때 물으면 라이브는 깨끗하니 '커밋됨'이 나온다
+    — 66파일이 커밋 0건인데 전부 '커밋됨'으로 보고된 실측. 판정은 내용 blob 으로:
+      격리 내용 blob == HEAD blob → 커밋됨
+      HEAD 에 경로 없음        → 신규(미커밋)
+      다름                     → 미커밋(HEAD와 다름)
+    """
+    head = _head_blob(rel)
+    mine = _blob_of(content_path)
+    if mine is None:
+        return dirty.get(rel) or "—"
+    if head is None:
+        return "신규(미커밋)"
+    return "커밋됨" if mine == head else "미커밋(HEAD와 다름)"
+
+
 def main():
     try:
         args = json.loads(sys.stdin.read() or "{}")
@@ -118,10 +150,10 @@ def main():
                 "세션": key,
                 "세션상태": status,
                 "라이브": live_state,
-                # ★라이브에 파일이 없으면 git 상태는 '커밋됨'이 아니라 **미상**이다.
-                #   없는 파일은 git status 에 안 뜨므로 기본값을 그대로 쓰면
-                #   격리에만 있는 새 파일이 '커밋됨'으로 보인다(기계의 조용한 오답).
-                "git": dirty.get(rel) or ("—" if live_state == "라이브없음" else "커밋됨"),
+                # ★git 열 = "이 변경 내용이 HEAD 에 있는가"(격리 사본 blob vs HEAD blob).
+                #   라이브 더러움(git status)으로 판정하던 두 판(라이브없음→커밋됨,
+                #   격리에만→커밋됨)의 오답을 한 원인으로 닫는다.
+                "git": _git_state(rel, staged if h_stage is not None else live_abs, dirty),
                 "격리해시": (h_stage or "")[:8],
                 "라이브해시": (h_live or "")[:8],
             })
@@ -141,7 +173,7 @@ def main():
                 "세션": f"커밋 {sha}",
                 "세션상태": subj[:60],
                 "라이브": "반영됨" if os.path.exists(os.path.join(ROOT, rel)) else "삭제됨",
-                "git": dirty.get(rel, "커밋됨"),
+                "git": _git_state(rel, os.path.join(ROOT, rel), dirty),
                 "격리해시": "",
                 "라이브해시": (_sha(os.path.join(ROOT, rel)) or "")[:8],
             })

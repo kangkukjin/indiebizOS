@@ -538,7 +538,7 @@ def forage_history_add(item: ForageHistoryItem):
 def forage_history_list(limit: int = 200, q: str = ""):
     conn = _history_conn()
     try:
-        limit = max(1, min(1000, limit))
+        limit = max(1, min(1000, limit))  # clamp-ok: REST 목록 안전 난간 1000
         if q:
             like = f"%{q}%"
             rows = conn.execute(
@@ -930,7 +930,7 @@ def forage_chat(chat: ForageMessage):
     elif chat.count:
         # 첫 검색의 판 크기 — 역할 프롬프트의 "10개면 충분" 기본값을 사용자 조정값으로 덮는다.
         try:
-            n = max(3, min(30, int(chat.count)))
+            n = max(3, min(30, int(chat.count)))  # clamp-ok: 요약 대상 최근 대화 수 난간 30 — 사용자 요청 개수가 아니다
             message_text = f"{chat.message}\n\n(가볼 만한 곳을 약 {n}개 제시하라.)"
         except (TypeError, ValueError):
             pass

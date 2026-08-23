@@ -11,7 +11,7 @@
   ②원장이 침묵할 때 몸에게 직접 묻기 — /health 의 live_turns (못 봤다 ≠ 없다, B28-1)
   ③되돌릴 수 없는 부팅 부작용은 부팅 주체만 — boot_common._another_body_is_live 게이트
 
-실행: .venv/bin/python -m pytest backend/test_episode_owner_sweep.py -q
+실행: .venv/bin/python -m pytest backend/test_episode_owner_sweep.py
 """
 import os
 import sqlite3
@@ -276,4 +276,4 @@ def test_o10_cleanup_is_gated_at_the_call_site():
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import pytest
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

@@ -22,7 +22,7 @@
   (`ibl_engine._run_router_safely`, `ibl_routing` 워커)이 이미 쓰던 관용에 맞춘 것이다.
   열거 목록은 반드시 뒤처지므로, 통째 승계라야 다음 칸이 생겨도 자동으로 건너간다.
 
-실행: .venv/bin/python -m pytest backend/test_parallel_context_inherit.py -q
+실행: .venv/bin/python -m pytest backend/test_parallel_context_inherit.py
 """
 import os
 import sys
@@ -114,4 +114,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

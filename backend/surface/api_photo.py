@@ -386,7 +386,7 @@ async def get_usb_gallery(page: int = Query(1), limit: int = Query(50),
     from starlette.concurrency import run_in_threadpool
 
     page = max(1, page)
-    limit = max(1, min(limit, 200))
+    limit = max(1, min(limit, 200))  # clamp-ok: REST 페이지 안전 난간 200 — 초과분은 다음 페이지로 받는다
     kind = {"photo": "image", "video": "video"}.get(media_type, "media")
     res = await run_in_threadpool(
         lambda: file_index.query(kind=kind, q=q, limit=page * limit, sort="date",

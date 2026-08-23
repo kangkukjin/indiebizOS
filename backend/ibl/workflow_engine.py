@@ -1112,7 +1112,7 @@ def execute_workflow_action(action: str, params: dict,
     # 코퍼스/사용자는 name으로도 호출 → 저장된 id로 해소 (run/get/delete round-trip).
     # save는 제외 (save_workflow가 name→slug로 새 id를 생성).
     if (not workflow_id
-            and action in ("get", "get_workflow", "run", "delete", "delete_workflow")
+            and action in ("detail", "get", "get_workflow", "run", "delete", "delete_workflow")
             and (params.get("name") or params.get("id"))):
         workflow_id = _resolve_workflow_id(params.get("name") or params.get("id"))
 
@@ -1125,7 +1125,7 @@ def execute_workflow_action(action: str, params: dict,
         wfs = list_workflows()
         return {"workflows": wfs, "items": wfs, "count": len(wfs)}
 
-    elif action in ("get", "get_workflow"):
+    elif action in ("detail", "get", "get_workflow"):   # detail=정본(2026-08-24 #repair B5), get=구어휘 수용
         if not workflow_id:
             return {"error": "workflow_id가 필요합니다."}
         wf = get_workflow(workflow_id)

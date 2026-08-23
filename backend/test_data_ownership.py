@@ -13,6 +13,7 @@ import os
 import shutil
 import sys
 import tempfile
+import pytest
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -91,6 +92,13 @@ def _writer_of(root: Path, rel: str):
 def test_t6_real_repo_no_vanished(_):
     """선언은 **실체** 아니면 **실체를 만드는 코드** 를 가리켜야 한다 — 둘 다 없으면 부패."""
     root = Path(__file__).parent.parent
+    # ★환경 부재는 실패가 아니다(2026-08-24 #repair C7). 자기수리 격리 사본(git worktree)
+    #   에는 gitignore 된 런타임 파일(ibl_examples.db·ai_desktop_map.json…)이 없어서 이
+    #   시험이 늘 빨강이었고, 회차마다 사람이 "환경 탓"이라고 **설명**해 왔다. 설명은 한 번,
+    #   판정은 코드로 — 링크된 워크트리는 `.git` 이 디렉토리가 아니라 파일이다(정확한 표지).
+    if (root / ".git").is_file():
+        pytest.skip("git worktree 격리 사본 — gitignore 된 런타임 파일이 없어 선언 부패를 "
+                    "판정할 수 없다(본 저장소에서 돌 때만 의미 있음)")
     vanished = []
     for pat, owner, _kind in do.DECLARATIONS:
         if any(c in pat for c in "*?[") or (root / pat).exists():
@@ -183,4 +191,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

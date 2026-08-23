@@ -620,7 +620,7 @@ def get_feed(limit: int = 100, wh_url: Optional[str] = None,
     wh_urls=허용 집합(레벨·즐겨찾기 필터) — 접기 *전에* 걸러야 필터가 limit 를 안 갉아먹는다.
     """
     _init_db()
-    lim = max(1, min(500, limit))
+    lim = max(1, min(500, limit))  # clamp-ok: 공유창고 피드 안전 난간 500 — 요청량이 아니라 서빙 폭주 방지
     q = "SELECT * FROM feed"
     params: list = []
     if wh_url:
@@ -706,7 +706,7 @@ def search_snapshots(query: str, limit: int = 100, sort: str = "recent",
     q = (query or "").strip()
     if not q:
         return []
-    cap = max(1, min(500, limit))
+    cap = max(1, min(500, limit))  # clamp-ok: 공유창고 피드 안전 난간 500 — 요청량이 아니라 서빙 폭주 방지
     like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     where = "path LIKE ? ESCAPE '\\'"
     params: list = [like]

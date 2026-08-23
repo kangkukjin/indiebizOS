@@ -16,7 +16,7 @@
   · 격리 SQL 조각도 **한 벌** — `pulse_db.NOT_ISOLATED_SQL`(두 집계가 같은 것을 쓴다).
   · `self_check`(12시간 순찰)은 격리하지 **않는다** — 몸이 스스로를 실제로 재는 진짜 신호다.
 
-실행: .venv/bin/python -m pytest backend/test_health_source_isolation.py -q
+실행: .venv/bin/python -m pytest backend/test_health_source_isolation.py
 """
 import os
 import sqlite3
@@ -133,4 +133,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

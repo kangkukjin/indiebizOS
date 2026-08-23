@@ -291,6 +291,7 @@
     "test_multi_chat_round": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
+    "test_no_stringified_null_filenames": "force_exclude_glob",
     "test_notify_ledger": "force_exclude_glob",
     "test_notify_title": "force_exclude_glob",
     "test_parallel_context_inherit": "force_exclude_glob",
@@ -302,6 +303,7 @@
     "test_reload_scope": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
+    "test_repair_status_git_column": "force_exclude_glob",
     "test_shape_variant_axis": "force_exclude_glob",
     "test_single_runner": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
@@ -309,11 +311,12 @@
     "test_table_mirror_keys": "force_exclude_glob",
     "test_venv_pinned": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
+    "test_world_noun_refutable": "force_exclude_glob",
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 306,
+    "total": 309,
     "engine": 225,
-    "blocklist": 81
+    "blocklist": 84
   }
 }

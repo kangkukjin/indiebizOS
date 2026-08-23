@@ -19,7 +19,7 @@
      튀었고, 바로 아래에 저자가 써 둔 "미완료 브랜치 처리"(어느 가지가 몇 초에 걸렸는지
      말해 주는 정직한 신고)는 **한 번도 실행되지 않는 죽은 코드**였다.
 
-실행: .venv/bin/python -m pytest backend/test_emitter_input_honesty.py -q
+실행: .venv/bin/python -m pytest backend/test_emitter_input_honesty.py
 """
 import importlib.util
 import os
@@ -156,4 +156,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

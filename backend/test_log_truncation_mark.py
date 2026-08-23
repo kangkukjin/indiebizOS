@@ -13,7 +13,7 @@
 처방: 표식 모양·절단 함수를 base 층 한 벌(episode_logger)이 소유하고, 폭은 자리마다
 값으로 두되 **자른 양을 반드시 신고**한다.
 
-실행: .venv/bin/python -m pytest backend/test_log_truncation_mark.py -q
+실행: .venv/bin/python -m pytest backend/test_log_truncation_mark.py
 """
 import sys
 
@@ -127,4 +127,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

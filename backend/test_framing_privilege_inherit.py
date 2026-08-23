@@ -9,7 +9,7 @@ framing 이 fits=true 로 재사용됐다. 재사용은 `dict(prev)` 통짜 복�
 풀 의식 경로에서만 참인데, 재사용 경로가 같은 승격을 물려받았다.
 대조군 — 같은 지시라도 의식이 깬 21회차는 보고만 하고 끝났다.
 
-실행: cd indiebizOS && .venv/bin/python -m pytest backend/test_framing_privilege_inherit.py -q
+실행: cd indiebizOS && .venv/bin/python -m pytest backend/test_framing_privilege_inherit.py
 """
 
 import os
@@ -116,4 +116,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

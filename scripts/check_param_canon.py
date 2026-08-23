@@ -38,26 +38,27 @@ PARAM_CANON = {
     "latitude": "lat", "longitude": "lng", "lon": "lng",
 }
 
-# 2026-08-05 동결 부채. 값 = 그 액션에서 이미 쓰는 비정본 이름(그것만 면제 — 같은
-# 액션이 또 다른 비정본을 추가하면 걸림). 개명·이주 완료 시 항목 삭제. 신규 추가 금지.
-BASELINE_PARAMS = {
-    "sense:cctv": {"count"}, "sense:contest": {"count"}, "sense:performance": {"keyword"},
-    "sense:book": {"keyword"}, "sense:exhibit": {"keyword"}, "sense:company": {"count"},
-    "sense:search_local": {"display"}, "sense:weather": {"lon"},
-    "sense:reverse_geocode": {"lon"}, "sense:search_shopping": {"display"},
-    "sense:paper": {"max_results"}, "sense:researcher": {"max_results"},
-    "sense:entity": {"max_results"},   # (search_books 면제는 2026-08-05 book{source:google} 흡수로 소멸 — max_results 는 핸들러 내부 수용)
-    "sense:search": {"count"},   # 2026-08-05 검색 통합 — 구 5액션(count/display/page_size)의 면제 이주(display/page_size 는 aliases 로 흡수)
-    "sense:search_youtube": {"count"}, "self:blog": {"count"}, "self:music": {"q"},
-    "self:photo": {"q"},
-    # search_term 은 구 fs_query 의 면제를 흡수 이주 (2026-08-05 어휘 압축 — 신규 아님)
-    "self:file_find": {"max_results", "search_term"}, "limbs:guestpc": {"display"},
-    "limbs:music": {"count"},
-}
-BASELINE_OPS = {
-    "self:workflow": {"op-get"}, "self:trigger": {"op-get"}, "self:folder_note": {"op-get"},
-    "others:contact": {"pair-add-delete"}, "others:portal": {"pair-save-remove"},
-}
+# 2026-08-24 (#repair B5): 동결 부채 목록을 **지우고** 예외 0 으로 돌린다.
+#
+# 왜 지우나 — 동결은 미루기의 다른 이름이다. 2026-08-05 에 21 param + 5 op 을
+# 얼려 두었고, 그 목록은 그 뒤 한 번도 줄지 않았다. 더 나쁜 것은 그 면제가
+# **관문의 사각지대와 같은 자리**였다는 점이다: 선언이 없으니 타입 관문도
+# 정본 가드도 그 param 을 모두 못 보았다(B35-3 ① 에서 선언을 채우자 이 가드가
+# 즉시 5건을 잡았다 — 가리지 않으면 보이지 않는다).
+#
+# 어떻게 갑0나 — 이름을 지우지 않고 자리를 옮겼다:
+#   · param 20건: tool_json properties 에서 정본으로 개명(또는 중복 삭제)하고
+#     관습어는 aliases 로 수용. 핸들러는 정본 키를 먼저 읽는다(둘 다 온다).
+#     → 기존 호출(count/q/keyword/max_results/display/lon)은 그대로 통과한다.
+#   · op 4건: get→detail(workflow·trigger·folder_note), remove→delete(portal).
+#     엔진은 구 철자를 계속 받고(어휘만 정본), 교재(코퍼스 48문장)·가이드는
+#     정본으로 이주했다 — 이름을 바꾸면 표면을 다 옴기는 것이 규약(checklist 0단계).
+#   · 죽은 면제 2건(sense:search_local·others:contact): 그 액션은 이미 없다.
+#
+# ★이제 예외가 없다. 새 비정본이 들어오면 그냠 바로 커밋이 막힌다 —
+#   목록을 다시 세우지 말 것(면허가 아니라는 말은 목록이 있는 한 지켜지지 않았다).
+BASELINE_PARAMS: dict = {}
+BASELINE_OPS: dict = {}
 
 
 def _tool_props(root: str) -> dict:

@@ -13,7 +13,7 @@ description 을 똑같이 당겨 **머리의 desc Top-1 이 동전던지기**가
 ★평가(`extract_action_from_code`)와 측정자(`cloud_training/compare_models.py`)는 건드리지
 않았다 — **자는 그대로 두고 학습만 바꾼다.** 그래야 A/B 가 이전 회차들과 비교 가능하다.
 
-실행: .venv/bin/python -m pytest backend/test_desc_pair_coverage.py -q
+실행: .venv/bin/python -m pytest backend/test_desc_pair_coverage.py
 """
 import os
 import sys
@@ -136,4 +136,4 @@ def test_D7_클라우드_트레이너가_같은_규칙인가():
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

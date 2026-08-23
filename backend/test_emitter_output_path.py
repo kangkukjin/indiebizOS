@@ -17,7 +17,7 @@
   ③ 준 경로(상대·절대)는 지킨다.
   ④ 범위 밖은 **거절**한다 — 있는 척하고 딴 데 쓰지 않는다(fail-closed).
 
-실행: .venv/bin/python -m pytest backend/test_emitter_output_path.py -q
+실행: .venv/bin/python -m pytest backend/test_emitter_output_path.py
 """
 import importlib.util
 import os
@@ -198,4 +198,4 @@ def test_P12_spreadsheet_규약이_해소기와_같다(tmp_path):
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차: 두 번째 러너는 조용히 0건).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

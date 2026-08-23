@@ -20,7 +20,7 @@
   ④ `keep` 이 옛 `flatten{keep}` 의 능력을 잇는다 (개정이 능력을 없애지 않는다).
   ⑤ 옛 관용구 `each >> flatten` 은 **정직하게** 거절하고 참인 처방(flatten 을 빼라)을 말한다.
 
-실행: .venv/bin/python -m pytest backend/test_each_currency_contract.py -q
+실행: .venv/bin/python -m pytest backend/test_each_currency_contract.py
 """
 import importlib.util
 import json
@@ -236,4 +236,4 @@ def test_C13_교재도_같은_계약을_가르친다():
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

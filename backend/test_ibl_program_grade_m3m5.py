@@ -19,7 +19,7 @@
     S2. 실패 봉투 resume → 그 step 부터 재개(앞 단 재실행 0)
     S3. 스필 GC(24h)
 
-실행: .venv/bin/python3 -m pytest -q backend/test_ibl_program_grade_m3m5.py
+실행: .venv/bin/python3 -m pytest backend/test_ibl_program_grade_m3m5.py
 """
 import importlib.util
 import json
@@ -338,4 +338,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

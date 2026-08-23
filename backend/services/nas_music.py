@@ -87,8 +87,15 @@ async def api_music_search(request: Request, q: str, count: int, STREAM_CHUNK_SI
     """YouTube 음악 검색"""
     try:
         loop = asyncio.get_event_loop()
-        results = await loop.run_in_executor(None, _search_youtube, q, min(count, 10))
-        return {"results": results, "query": q}
+        # ★침묵 클램프 청산(2026-08-24 #repair B6): 깎았으면 깎았다고 말한다.
+        _requested = int(count or 10)
+        _n = max(1, min(_requested, 10))
+        results = await loop.run_in_executor(None, _search_youtube, q, _n)
+        out = {"results": results, "query": q}
+        if _requested > _n:
+            out.update(clamped=True, requested=_requested,
+                       message=f"검색은 상한 {_n}건까지입니다 — 요청 {_requested}건을 깎았습니다.")
+        return out
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"검색 실패: {str(e)}")
 

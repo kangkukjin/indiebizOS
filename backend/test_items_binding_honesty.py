@@ -12,7 +12,7 @@ F31-1: `[self:ask]{question: …}` → "prompt 가 필요합니다" 만 들리�
        읽히지 않았다는 사실은 끝내 못 듣는다**(31회차 96과제 중 12건이 이 침묵으로 죽음).
        ibl_param_vocab 은 그 액션이 선언한 키를 계산할 수 있었다 — 아는 것을 안 말한 것이 결함.
 
-실행: .venv/bin/python -m pytest backend/test_items_binding_honesty.py -q
+실행: .venv/bin/python -m pytest backend/test_items_binding_honesty.py
 """
 import os
 import sys
@@ -187,4 +187,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

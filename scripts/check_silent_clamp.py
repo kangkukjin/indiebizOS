@@ -29,8 +29,8 @@ play_youtube) 중 **한 자리만 고쳐진 채 세션이 끝났고**, 다음 �
         out['clamped'] = True; out['requested'] = requested
         out['message'] = f'요청 {requested}건 → 상한 {LIMIT_MAX}건으로 조정했습니다.'
 
-BASELINE 은 부채 목록이지 면허가 아니다 — 파일당 허용 건수를 동결하고,
-늘어나면 실패(래칫). 줄어들면 BASELINE 을 낮추라고 안내한다(재진입 봉인).
+BASELINE(동결 목록)은 2026-08-24 에 비웠다 — 예외 0. 새 침묵 클램프는 그 자리에서
+고치거나 그 줄에 `# clamp-ok: <사유>` 를 달아 사유를 코드에 남긴다.
 
 대상: backend/ + data/packages/installed/. pre-commit 훅에서 호출된다.
 """
@@ -56,44 +56,18 @@ REQUEST_NAMES = {
 # 깎였다는 사실을 알리는 신호 — 이 중 하나가 함수 본문에 있으면 침묵이 아니다.
 REPORT_MARKERS = ("clamped", "requested", "clamp_message")
 
-# 기존 부채 동결(2026-08-18 최초 세움, 실측 43건/29파일). 값 = 파일당 침묵 클램프 수.
-# ★면허가 아니라 부채 목록이다. 그 자리를 손볼 일이 생기면 신고를 붙이고 숫자를 낮출 것.
+# 2026-08-24 (#repair B6): 동결 목록을 **지웠다** — 예외 0.
 #
-# 우선순위는 상한의 크기다 — 상한이 낮을수록 실제로 사용자를 문다.
-BASELINE = {
-    # --- 상한이 낮아 실제로 무는 자리 (우선 청산 대상) ---
-    "data/packages/installed/tools/location-services/handler.py": 1,        # 5(display) 네이버 지역검색
-    "data/packages/installed/tools/memory/handler.py": 1,                   # 5(limit) 대화 이력
-    "data/packages/installed/tools/youtube/tool_youtube.py": 1,             # 5(count) 큐 담기
-    "backend/services/nas_music.py": 1,                                     # 10(count)
-    "data/packages/installed/tools/shopping-assistant/handler.py": 1,       # 20(limit)
-    "data/packages/installed/tools/culture/tool_gbooks.py": 1,              # 40(max_results)
-    "data/packages/installed/tools/lecture_workspace/slide_ai.py": 1,       # 40(count)
-    "data/packages/installed/tools/shopping-assistant/tool_freelance.py": 2,  # 40(limit) x2
-    "data/packages/installed/tools/cctv/windy_webcam.py": 2,                # 50(limit), 50(count)
-    "data/packages/installed/tools/culture/tool_nl.py": 1,                  # 50(page_size)
-    "data/packages/installed/tools/location-services/tool_stay.py": 2,      # 50, 100(limit)
-    "data/packages/installed/tools/radio/tool_radio.py": 1,                 # 50(limit)
-    "data/packages/installed/tools/real-estate/tool_zigbang.py": 1,         # 50(limit)
-    "data/packages/installed/tools/real-estate/tool_naver.py": 1,           # 60(limit)
-
-    # --- 상한이 커서 안전 난간에 가까운 자리 (신고만 붙이면 충분) ---
-    "backend/surface/api_photo.py": 1,                                      # 200(limit)
-    "backend/surface/api_system_ai.py": 2,                                  # 1000(limit), 30(count)
-    "backend/services/warehouse_feed.py": 2,                                # 500(limit) x2
-    "data/packages/installed/tools/blog/tool_blog_insight.py": 3,           # 100, 100, 50(count)
-    "data/packages/installed/tools/culture/tool_kcisa.py": 1,               # 100(rows)
-    "data/packages/installed/tools/culture/tool_kopis.py": 3,               # 100(rows) x3
-    "data/packages/installed/tools/culture/tool_library.py": 4,             # 100(page_size) x4
-    "data/packages/installed/tools/family-news/handler.py": 1,              # 200(photo_limit)
-    "data/packages/installed/tools/kosis/tool_kosis_api.py": 1,             # 100(count)
-    "data/packages/installed/tools/music-player/music_core.py": 1,          # 2000(limit)
-    "data/packages/installed/tools/notebook/notebook_core.py": 1,           # 1000(top_k)
-    "data/packages/installed/tools/study/handler.py": 1,                    # 200(max_results)
-    "data/packages/installed/tools/system_essentials/fs_grep.py": 1,        # 2000(max_results)
-    "data/packages/installed/tools/web/handler.py": 3,                      # 100, 50, 50(count)
-    "data/packages/installed/tools/web/tool_naver_search.py": 1,            # 100(display)
-}
+# 43자리를 두 갈래로 청산했다:
+#   · 7자리 = 우리가 정한 낮은 상한이라 실제로 사용자를 문다 → **정직 거절 또는 신고**
+#     (radio 50 · 직방 50 · 네이버부동산 60 · 유튜브 큐 5 = 거절, memory 5 ·
+#      네이버카페 20 · NAS 검색 10 = clamped/requested 를 봉투에 실어 신고)
+#   · 36자리 = 원천 API 스펙 상한이거나 요청량이 아닌 안전 난간 → 그 줄에
+#     `# clamp-ok: <사유>` 를 달아 **자리마다 사유가 코드에 남게** 했다.
+#     (파일당 숫자만 얼려 두면 사유가 어디에도 없다 — 그게 동결의 진짜 문제였다.)
+#
+# ★목록을 다시 세우지 말 것. 새 침묵 클램프는 그 자리에서 고치거나 사유를 적는다.
+BASELINE: dict = {}
 
 
 def _names_in(node: ast.AST) -> set:
@@ -216,7 +190,7 @@ def main() -> int:
         if actual < cap:
             print(f"ℹ {rel} 이 {actual}건으로 내려옴 — BASELINE 을 {actual} 로 낮추세요(재진입 봉인)")
 
-    print(f"✓ 침묵 클램프 OK (신규 0건, 부채 {sum(BASELINE.values())}건 동결)")
+    print("✓ 침묵 클램프 OK — 예외 목록 0 (동결 부채 없음)")
     return 0
 
 

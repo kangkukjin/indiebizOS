@@ -15,7 +15,7 @@
     C7. 정적 검수(validate_condition) — 자연어·상수·미할당 경고, 정상식 None
     C8. 옛 문법 회귀 없음 — node:action{…}.field <op> 값 · 연산자 없는 불리언
 
-실행: .venv/bin/python3 -m pytest -q backend/test_ibl_program_grade.py
+실행: .venv/bin/python3 -m pytest backend/test_ibl_program_grade.py
 """
 import importlib.util
 import json
@@ -255,4 +255,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

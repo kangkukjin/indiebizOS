@@ -15,7 +15,7 @@ step 의 결과에 덮이기 때문이다. 이 몸엔 이미 halted/skipped_step
   "통화가 0행인데 note 를 달고 있는 **중간** step" 하나가 조건 전부다.
 마지막 step 은 final_result 로 이미 보이므로 싣지 않는다(토큰 중복 0).
 
-실행: .venv/bin/python -m pytest backend/test_empty_reason_visibility.py -q
+실행: .venv/bin/python -m pytest backend/test_empty_reason_visibility.py
 """
 import os
 import sys
@@ -102,4 +102,4 @@ def test_E6_다른_경고와_함께_실려도_서로_지우지_않는다():
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차: 두 번째 러너는 조용히 0건).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

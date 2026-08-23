@@ -19,7 +19,7 @@
 *시스템 안쪽*에만 적용된다. 바깥(하네스·다른 세션)에서 들어오는 편집에는 강제력이 없으므로,
 방어는 서버 쪽에 서 있어야 한다.
 
-실행: .venv/bin/python -m pytest backend/test_reload_scope.py -q
+실행: .venv/bin/python -m pytest backend/test_reload_scope.py
 """
 import ast
 import os
@@ -96,4 +96,4 @@ def test_L4_디바운스는_그대로_있다():
 
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
-    raise SystemExit(pytest.main([__file__, "-q"]))
+    raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

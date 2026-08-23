@@ -20,7 +20,7 @@
 처방: 수집은 pytest 하나가 하고(R1), 직접 실행은 그 pytest 로 위임한다(R2).
 그러면 어느 문으로 들어와도 같은 집합이 돌고, 드리프트할 두 번째 목록이 없다.
 
-실행: .venv/bin/python -m pytest backend/test_single_runner.py -q
+실행: .venv/bin/python -m pytest backend/test_single_runner.py
 """
 import ast
 import os
@@ -151,4 +151,4 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
         import pytest as _pytest
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
-    raise SystemExit(_pytest.main([__file__, "-q"] + _sys.argv[1:]))
+    raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))

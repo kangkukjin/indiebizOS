@@ -37,13 +37,29 @@ ibl_parser↔parser_values↔parser_blocks, workflow_engine↔binding↔contract
   수동 시퀀스로 3곳 캐시(access raw · registry 설치본 · node_registry)를 비우는데, 각 단계가
   `except Exception: pass` 로 삼켜져 실패해도 성공 응답이 나간다 (silent-clamp 부류)
 
-## 1. 수리 3부 — 커밋 3개 (main 직접, pathspec 커밋)
+## 1. 수리 3부 — **✅ 전부 완료 2026-08-24** (커밋 3개, main 직접)
 
-| 부 | 내용 | 규모 |
+| 부 | 내용 | 커밋 |
 |---|---|---|
-| A | ibl 층 사적 심볼의 층-밖 소비 21곳 → 공개 승격(개명) + 죽은 호환층 제거 | **✅ 완료 2026-08-24** |
-| B | 사전 이음매 계약화 (이동 없음): 이름·경로 앵커·reload 정직화·docstring 계약 | 2~3시간 |
-| C | 관문: check_backend_layers.py 에 "ibl 사적 심볼 층-밖 import 금지" AST 검사 (부채 0 시작) | 1~2시간 |
+| A | ibl 층 사적 심볼의 층-밖 소비 → 공개 승격(개명) + 죽은 호환층 제거 | `1713f71` |
+| B | 사전 이음매 계약화 (이동 없음): 경로 앵커·부재≠파손·reload 정직화·docstring 계약 | `a7a0232` |
+| C | 관문: check_backend_layers.py 에 "ibl 사적 심볼 층-밖 import 금지" AST 검사 (부채 0 시작) | `70ee84b` |
+
+**세 부를 관통한 교훈**: C부 관문을 켜는 순간 A부가 놓친 위반이 하나 나왔다
+(`system_essentials/handler.py:645 → ibl_executors._extract_path_from_prev`). A부의 AST
+스윕이 `backend/` 만 훑고 패키지 트리는 이름 grep 으로만 봤기 때문이다 — **사람이 고른
+스윕 범위는 반드시 샌다.** 부류를 다 걷었다는 주장은 관문이 대신 해야 한다.
+
+B부에서도 같은 모양이 한 번 더 나왔다: `ibl_routing._rebuild_ibl_vocab` 이 "`/packages/reload`
+와 동형"이라 적어두고 `reload_registry` 단계가 빠져 있었다 — **주석이 동형을 주장하면
+드리프트가 이미 시작된 것이다.** 두 벌로 적힌 절차는 한쪽만 고쳐진다.
+
+### 후속 (별도 판단 — 이 문서의 범위 밖)
+- 상향 8간선(엔진→consciousness_agent·goal_evaluator·ibl_usage_generator 등)의 훅 승격
+- 순수 코어 격리 가드: 의존 0인 9파일(파서 3종·ops·envelope·predicates·control_blocks·
+  exec_each·api_transforms)을 빈 환경에서 단독 import 하는 검증 — "분리 가능함"을 문서의
+  주장이 아니라 매 빌드의 사실로
+- `ibl_registry` 의 ibl 층 이동 = **기각**(§0). 재론 조건: 언어 반출의 실소비자 등장
 
 ## 2. A부 — 공개 승격 (✅ 완료 2026-08-24)
 
@@ -94,6 +110,7 @@ ibl_parser↔parser_values↔parser_blocks, workflow_engine↔binding↔contract
 | `trigger_engine._add_history` | `add_history` | calendar_actions.py:195, channel_poller.py:813·820 (층 안: event_engine.py:5) |
 | `trigger_engine._load_triggers` | `load_triggers` | channel_poller.py:758 |
 | `channel_engine._get_system_gmail_address` | `get_system_gmail_address` | portal_auth.py:215 |
+| `ibl_exec_output._extract_path_from_prev` | `extract_path_from_prev` | **C부에서 뒤늦게 발견** — system_essentials/handler.py:645 (재수출: ibl_executors·ibl_engine) |
 
 ### 2-2. 같은 커밋의 청소
 
@@ -104,7 +121,14 @@ ibl_parser↔parser_values↔parser_blocks, workflow_engine↔binding↔contract
   (S2 시나리오명), guides·system_docs 내 언급 — 마감 조건: `grep -rn "_load_nodes_data\|_load_nodes_config" backend scripts data/packages data/guides data/system_docs` **0건**.
 - `getattr` 동적 참조 확인: `grep -rn "getattr.*_load_nodes\|getattr.*_search_guide"` 등 개명 대상 전수 — 0건 확인 후 진행.
 
-## 3. B부 — 사전 이음매 계약화 (코드 이동 없음)
+## 3. B부 — 사전 이음매 계약화 (✅ 완료 `a7a0232`, 코드 이동 없음)
+
+**계획 대비 추가 2건**: ①경로 앵커 사본이 셋이 아니라 **넷**이었다 —
+`ibl_registry._phone_runnable` 안에 `os.environ.get("INDIEBIZ_BASE_PATH") or …` 가 한 벌 더
+있었다(폰 매니페스트 읽는 자리). ②`/packages/reload` 뿐 아니라 그 짝인
+`ibl_routing._rebuild_ibl_vocab`(패키지 install/remove 후 호출)도 같은 삼킴이었고, 게다가
+**"동형"이라 적어두고 `reload_registry` 단계가 빠져 있었다** — `/packages/reload` 가
+2026-07-03 에 고친 유령-액션 병이 이쪽에만 살아 있었다. 둘 다 함께 집행.
 
 1. **경로 앵커 단일화**: `ibl_access._get_base_path`/`_get_nodes_path`,
    `ibl_registry._get_nodes_path`/`_get_registry_path` 의 자체 경로 계산을
@@ -123,7 +147,7 @@ ibl_parser↔parser_values↔parser_blocks, workflow_engine↔binding↔contract
    같은 내용을 `data/system_docs/architecture.md` 의 해당 절에 한 단락으로.
    (어휘 변경이 아니므로 문서 7표면 의무는 비해당 — 산문 한 곳이면 된다.)
 
-## 4. C부 — 관문 (no-counter-watch: 세지 말고 실패시켜라)
+## 4. C부 — 관문 (✅ 완료 `70ee84b` · no-counter-watch: 세지 말고 실패시켜라)
 
 `scripts/check_backend_layers.py` (이미 모듈→층 지도를 가진 자리)에 검사 추가:
 

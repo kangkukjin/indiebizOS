@@ -5,6 +5,12 @@
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
   timeout: 2400
+수리적용상태:
+  description: ''
+  file: 수리적용상태.py
+  interpreter: python
+  registered_at: '2026-08-24T03:39:12'
+  timeout: 300
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.

@@ -203,9 +203,15 @@ def observe(min_ratio: float = 0.05):
     # 가르친 것이다(그 액션의 코퍼스 예문 0건). 갈라서 센다:
     #   ⓐ 교재 공백  = 그 액션 자체가 코퍼스에 없다 → 시드 대기열의 재료(모델은 옳게 쓰고 있다)
     #   ⓑ 발명 후보  = 그 액션은 코퍼스에 있는데 *이 키만* 교재에 없다 → 인자 오류율 대리 지표
+    #   ⓒ 은퇴·환각 이름 = 카탈로그 밖 액션 — ⓐ에 섞으면 '교재 공백'이 부풀어 거짓이 된다
+    #     (08-23 실측: search_ddg/naver/gnews 옛 이름 호출 ~330건이 ⓐ의 72% 였다. 마지막 호출 08-08).
     gap, invented, exec_key_total = [], [], 0
+    retired_n = 0
     for q, per_key in key_src.items():
         if "#" in q:
+            continue
+        if known and q not in known:
+            retired_n += sum(srcs.get("exec", 0) for srcs in per_key.values())
             continue
         taught_action = src_counts[q].get("corpus", 0) > 0
         for k, srcs in per_key.items():
@@ -224,6 +230,7 @@ def observe(min_ratio: float = 0.05):
     print(f"분열 후보 {len(split)}건" + (f" (상위: " + ", ".join(
         f"{d['action']} {d['keys'][0]}/{d['keys'][1]}" for d in split[:4]) + ")" if split else ""))
     print(f"ⓐ 교재 공백 {gap_n}건({len(gap)}종) — 코퍼스에 없는 액션을 실사용이 쓴다(시드 재료)")
+    print(f"ⓒ 은퇴·환각 이름 호출 {retired_n}건 — 카탈로그 밖(분모·ⓐ에서 제외)")
     print(f"ⓑ 발명 후보 {invented_n}/{exec_key_total} = {rate * 100:.1f}% ({len(invented)}종) "
           f"— 교재가 있는 액션에 교재 없는 키. ★인자 오류율 대리 지표(낮을수록 좋다)")
 
@@ -233,7 +240,8 @@ def observe(min_ratio: float = 0.05):
                         split_candidates=split[:40],
                         invented_keys={"n": invented_n, "of": exec_key_total, "rate": rate,
                                        "top": invented[:25]},
-                        corpus_gap_keys={"n": gap_n, "top": gap[:25]})
+                        corpus_gap_keys={"n": gap_n, "top": gap[:25]},
+                        retired_or_unknown_calls=retired_n)
 
 
 def _alias_map() -> dict:

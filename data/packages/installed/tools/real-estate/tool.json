@@ -31,6 +31,10 @@
           "indsLclsCd": {
             "type": "string",
             "description": "업종 대분류 코드 (I: 음식, Q: 숙박, R: 학문/교육, S: 소매, T: 생활서비스, U: 의료, V: 부동산, W: 관광/여가/오락)"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:commercial 파라미터"
           }
         }
       }
@@ -138,6 +142,14 @@
           "city": {
             "type": "string",
             "description": "[codes] 시/도명"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:realty 파라미터"
+          },
+          "year_month": {
+            "type": "string",
+            "description": "sense:realty 파라미터"
           }
         },
         "required": []

@@ -11,6 +11,22 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "annotations": {
+            "type": "array",
+            "description": "주석 배열."
+          },
+          "bands": {
+            "type": "array",
+            "description": "구간 음영 배열."
+          },
+          "table": {
+            "type": "object",
+            "description": "표형 통화 {columns, rows}."
+          },
+          "labels": {
+            "type": "array",
+            "description": "x축 라벨 배열."
+          },
           "chart_type": {
             "type": "string",
             "enum": [
@@ -69,6 +85,14 @@
             "items": {
               "type": "object"
             }
+          },
+          "x": {
+            "type": "string",
+            "description": "table:chart 파라미터"
+          },
+          "y": {
+            "type": "string",
+            "description": "table:chart 파라미터"
           }
         }
       }

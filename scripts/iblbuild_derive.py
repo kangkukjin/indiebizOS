@@ -287,8 +287,8 @@ def derive_tool_json_docs(root: Path, yaml_mod) -> tuple[dict, list[str]]:
                 issues.append(f"{pkg_dir.name}: tool_json 블록에 header(dict)+tools(list) 필수")
                 continue
 
-            # 액션 소유 맵: tool_name → ops 블록 (형식 A/B 모두)
-            owned_ops: dict = {}
+            # 액션 소유 맵: tool_name → (노드, 액션명, 액션정의) (형식 A/B 모두)
+            owned: dict = {}
             node_defs = (
                 doc["nodes"].items() if isinstance(doc.get("nodes"), dict)
                 else [(doc.get("node"), {"actions": doc.get("actions") or {}})]
@@ -296,7 +296,7 @@ def derive_tool_json_docs(root: Path, yaml_mod) -> tuple[dict, list[str]]:
             for _node, ndef in node_defs:
                 for aname, acfg in ((ndef or {}).get("actions") or {}).items():
                     if isinstance(acfg, dict) and acfg.get("tool"):
-                        owned_ops[acfg["tool"]] = acfg.get("ops")
+                        owned[acfg["tool"]] = (_node, aname, acfg)
 
             out_tools = []
             for entry in tools_src:
@@ -305,7 +305,64 @@ def derive_tool_json_docs(root: Path, yaml_mod) -> tuple[dict, list[str]]:
                 if not name:
                     issues.append(f"{pkg_dir.name}: tools 항목에 name 없음")
                     continue
-                ops = owned_ops.get(name)
+                _node_a, _act_a, _acfg = owned.get(name) or (None, None, {})
+                ops = _acfg.get("ops")
+                # ★B35-3 1조각 (2026-08-24 #repair): 액션의 **주 param**(target_key)을
+                #   input_schema.properties 에 주입한다. 지금까지 주 param 은 src 에서
+                #   `target_key: path` 로 선언되고 산문(target_description)으로만 설명될 뿐
+                #   properties 에 실리지 않아, 타입 관문(ibl_routing)이 그 자리를 원리적으로
+                #   못 봤다 — [self:read]{path: [...]} 가 파이썬 예외로 새던 이유.
+                #   op enum 주입과 같은 자리·같은 원리(검증이 아니라 구조로 정합).
+                #   타입은 src 의 `target_type:`(없으면 string). 이미 선언돼 있으면 손대지
+                #   않는다(패키지가 쓴 더 구체적인 설명을 지우지 않기 위해).
+                if _acfg.get("target_key"):
+                    _tk = _acfg["target_key"]
+                    _isch = entry.setdefault("input_schema", {"type": "object"})
+                    if isinstance(_isch, dict):
+                        _tprops = _isch.setdefault("properties", {})
+                        _declared = _tprops.get(_tk)
+                        _want = _acfg.get("target_type") or "string"
+                        if not isinstance(_declared, dict):
+                            _tprops[_tk] = {
+                                "type": _want,
+                                "description": f"{_node_a}:{_act_a} 의 주 파라미터",
+                            }
+                        elif (_acfg.get("target_type")
+                              and _declared.get("type")
+                              and _declared["type"] != _want):
+                            issues.append(
+                                f"{pkg_dir.name}/{name}: target_type({_want}) 과 "
+                                f"tool_json 의 {_tk}.type({_declared['type']}) 이 어긋남 "
+                                f"— 단일 소스 위반(한쪽만 남길 것)"
+                            )
+                # ★B35-3 ① 2차 (2026-08-24 #repair): 액션의 `params:` 블록을
+                #   input_schema.properties 로 주입한다. target_key 는 주 param
+                #   **하나**라 op 어휘의 나머지 자리([self:read]{format,limit,tables}
+                #   류)를 원리적으로 못 덮었다 — 실측으로 target_key 주입만으로
+                #   닫힌 자리는 34건 중 1건뿐이었다. 타입의 단일 소스를 aliases 와
+                #   같은 자리(액션 정의)에 두고 빌드가 옮긴다 — 검증이 아니라 구조로
+                #   정합(op enum · target_key 주입과 같은 자리·같은 원리).
+                #   값은 "string" 또는 유니온 목록 ["string", "array"].
+                _pdecl = _acfg.get("params")
+                if isinstance(_pdecl, dict):
+                    _isch = entry.setdefault("input_schema", {"type": "object"})
+                    if isinstance(_isch, dict):
+                        _pprops = _isch.setdefault("properties", {})
+                        for _pk, _pt in _pdecl.items():
+                            _cur = _pprops.get(_pk)
+                            if not isinstance(_cur, dict):
+                                _pprops[_pk] = {
+                                    "type": _pt,
+                                    "description": f"{_node_a}:{_act_a} 파라미터",
+                                }
+                            elif _cur.get("type") and _cur["type"] != _pt:
+                                issues.append(
+                                    f"{pkg_dir.name}/{name}: params.{_pk}({_pt}) 과 "
+                                    f"tool_json 의 {_pk}.type({_cur['type']}) 이 어긋남 "
+                                    f"— 단일 소스 위반(한쪽만 남길 것)"
+                                )
+                            else:
+                                _cur["type"] = _pt
                 op_prop = (
                     entry.get("input_schema", {}).get("properties", {}).get("op")
                     if isinstance(entry.get("input_schema"), dict) else None

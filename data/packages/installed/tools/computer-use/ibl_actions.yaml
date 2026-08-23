@@ -1,6 +1,19 @@
 node: limbs
 actions:
   screen:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      direction: string
+      end_x: integer
+      end_y: integer
+      key: string
+      start_x: integer
+      start_y: integer
+      text: string
+      x: integer
+      y: integer
     returns: effect
     runs_on: pc_only
     description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.

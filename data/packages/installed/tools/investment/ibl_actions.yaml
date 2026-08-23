@@ -1,6 +1,11 @@
 node: sense
 actions:
   stock:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      coin_id: string
     # 별칭은 어휘 데이터가 소유한다 (2026-08-23) — 핸들러 _arg(ti,"ticker","symbol",…) 가
     # 코드 안에서 사적으로 풀고 있어서 카탈로그가 두 이름을 다 광고했다(관측 ticker 210/symbol 126,
     # 한 호출에 함께 온 적 0 = 같은 자리를 나눠 가진 두 이름). 호출은 계속 둘 다 통과한다.
@@ -192,6 +197,15 @@ actions:
           - k: 거래량
             v: '{data.volume|num}'
   company:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      company: string
+      corp_name: string
+      query: string
+      symbol: string
+      type: string
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
@@ -220,6 +234,12 @@ actions:
     - DART
     - SEC
   crypto:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      coin: string
+      symbol: string
     # 실측 items 1행 스냅샷 병기 (stock quote 와 같은 관례 — 2026-08-19 드리프트 스윕 동기화).
     returns: items
     fixture: '[sense:crypto]{symbol: "BTC"}'

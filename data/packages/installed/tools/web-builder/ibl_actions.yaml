@@ -1,6 +1,13 @@
 node: engines
 actions:
   web_site:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      local_path: string
+      name: string
+      site_id: string
     returns: effect
     runs_on: pc_only
     description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
@@ -26,6 +33,11 @@ actions:
     - 사이트삭제
     - 사이트수정
   web:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      url: string
     returns: effect
     runs_on: pc_only
     description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
@@ -68,6 +80,11 @@ actions:
     - 미리보기
     - vercel
   web_component:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      site_id: string
     returns: effect
     runs_on: pc_only
     description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).

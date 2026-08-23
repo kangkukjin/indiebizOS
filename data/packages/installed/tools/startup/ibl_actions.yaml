@@ -1,6 +1,14 @@
 node: sense
 actions:
   startup:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      limit: integer
+      source: string
+    aliases:
+      limit: [count]      # ★정본은 limit(check_param_canon) — 코퍼스 관습어 count 는 별칭
     returns: items
     fixture: '[sense:startup]{query: "AI"}'
     description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.

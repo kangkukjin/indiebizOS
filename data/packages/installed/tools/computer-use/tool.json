@@ -30,6 +30,42 @@
           "ref": {
             "type": "string",
             "description": "snapshot이 부여한 요소 ref(예 e3). click/type에서 좌표 없이 요소 직접 조작(AXPress/AXValue). 권장 1순위, OCR 글자는 ref 없어 x,y 사용."
+          },
+          "direction": {
+            "type": "string",
+            "description": "limbs:screen 파라미터"
+          },
+          "end_x": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
+          },
+          "end_y": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
+          },
+          "key": {
+            "type": "string",
+            "description": "limbs:screen 파라미터"
+          },
+          "start_x": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
+          },
+          "start_y": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
+          },
+          "text": {
+            "type": "string",
+            "description": "limbs:screen 파라미터"
+          },
+          "x": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
+          },
+          "y": {
+            "type": "integer",
+            "description": "limbs:screen 파라미터"
           }
         },
         "required": [

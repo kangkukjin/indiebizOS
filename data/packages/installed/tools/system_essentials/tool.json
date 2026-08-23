@@ -19,6 +19,14 @@
           "content": {
             "type": "string",
             "description": "기록할 전체 내용. 생략 시 파이프의 직전 step 결과(_prev_result)를 저장"
+          },
+          "path": {
+            "type": "string",
+            "description": "self:write 의 주 파라미터"
+          },
+          "spill": {
+            "type": "boolean",
+            "description": "self:write 파라미터"
           }
         },
         "required": [
@@ -35,6 +43,14 @@
           "dir_path": {
             "type": "string",
             "description": "디렉토리 경로 (기본: 현재 작업 디렉토리)"
+          },
+          "path": {
+            "type": "string",
+            "description": "self:list 의 주 파라미터"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "self:list 파라미터"
           }
         }
       }
@@ -69,6 +85,10 @@
               "count"
             ],
             "description": "출력 형태: content(매칭 라인, 기본) / files_with_matches(파일 목록) / count(파일별 매칭 수)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "self:grep 파라미터"
           }
         },
         "required": [
@@ -199,6 +219,10 @@
           "new_string": {
             "type": "string",
             "description": "새 문자열"
+          },
+          "path": {
+            "type": "string",
+            "description": "self:edit 의 주 파라미터"
           }
         },
         "required": [
@@ -339,6 +363,14 @@
           "destination": {
             "type": "string",
             "description": "복사 대상 경로 (파이프 저장이면 대상 폴더)"
+          },
+          "dest": {
+            "type": "string",
+            "description": "self:copy 파라미터"
+          },
+          "src": {
+            "type": "string",
+            "description": "self:copy 파라미터"
           }
         },
         "required": [
@@ -359,6 +391,14 @@
           "destination": {
             "type": "string",
             "description": "이동 대상 경로"
+          },
+          "dest": {
+            "type": "string",
+            "description": "self:move 파라미터"
+          },
+          "src": {
+            "type": "string",
+            "description": "self:move 파라미터"
           }
         },
         "required": [
@@ -469,6 +509,22 @@
           "end_line": {
             "type": "integer",
             "description": "text — 발췌 끝 줄 (1-기반, 포함). start_line 과 짝"
+          },
+          "path": {
+            "type": "string",
+            "description": "self:read 의 주 파라미터"
+          },
+          "format": {
+            "type": "string",
+            "description": "self:read 파라미터"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "self:read 파라미터"
+          },
+          "tables": {
+            "type": "boolean",
+            "description": "self:read 파라미터"
           }
         },
         "additionalProperties": true
@@ -508,6 +564,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "table": {
+            "type": "object",
+            "description": "표형 통화 {columns, rows}."
+          },
           "path": {
             "type": "string",
             "description": "출력 파일 경로 (.xlsx 자동 보정)"

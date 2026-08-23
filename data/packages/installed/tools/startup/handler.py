@@ -63,7 +63,9 @@ def execute(tool_input: dict, context):
         # 기본 kstartup — 중기부(MSS) data.go.kr API 폐기로 all 은 실패 호출만 낭비.
         # source=all/mss 는 여전히 호출 가능(MSS 는 graceful 강등).
         source = tool_input.get("source", "kstartup")
-        count = tool_input.get("count", 10)
+        # ★정본 limit(별칭 count — ibl_actions.yaml aliases). 관문이 count→limit 로
+        #   정규화하지만 직접 호출(REST·앱)도 있으니 둘 다 읽는다.
+        count = tool_input.get("limit", tool_input.get("count", 10))
         if source == "kstartup":
             tool = load_module("tool_kstartup")
             return _attach_records(tool.search_kstartup(query, count))

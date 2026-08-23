@@ -52,6 +52,10 @@
           "limit": {
             "type": "integer",
             "description": "곡 수 상한 (library, 기본 300)"
+          },
+          "artist": {
+            "type": "string",
+            "description": "self:music 파라미터"
           }
         },
         "additionalProperties": true

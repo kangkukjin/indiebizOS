@@ -124,6 +124,15 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         tool: my_action           # ← tool.json 의 name 과 일치해야 함
         implementation: 내부 동작 요약 (UI 전용)
         target_key: query         # tool_input 의 주 파라미터 키
+        # target_type: string     # (선택) 주 param 의 타입. 빌드가 properties 에 주입(기본 string)
+        # params:                 # (선택이 아니다 — 코퍼스가 쓰는 자리면 **필수**)
+        #   path: string          #   op 하위 param 의 타입 단일 소스. target_key 는 주 param
+        #   limit: integer        #   하나뿐이라 나머지 자리를 못 덮는다. 빌드가 이 블록을
+        #   tables: boolean       #   input_schema.properties 로 옮긴다(검증 아닌 구조로 정합).
+        #   where: [string, object, array]   # 유니온은 목록. 컨테이너 자리는 array/object 로
+        #                         #   선언해야 통과한다(미선언 자리의 목록·사전은 관문이 거절).
+        #   ★`--check` 의 'param 선언 완전성' 이 코퍼스가 쓰는 자리의 미선언을
+        #     빌드 실패로 만든다 — 타입은 짐작하지 말고 핸들러·코퍼스 값을 보고 적을 것.
         keywords: [한글키워드, english_keyword]
         # aliases: {정규키: [별칭1, 별칭2]}   # (선택) 자연스러운 인자명 → 정규키 자동 매핑
         # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.

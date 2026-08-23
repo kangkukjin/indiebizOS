@@ -279,7 +279,9 @@ def get_health_context(input_data: dict) -> str:
     query_type = input_data.get('query_type', 'summary')
     category = input_data.get('category')
     days = input_data.get('days', 365)
-    keyword = input_data.get('keyword')
+    # ★정본 query(별칭 keyword — ibl_actions.yaml aliases). 관문이 keyword→query 로
+    #   정규화하지만 직접 호출도 있으니 둘 다 읽는다.
+    keyword = input_data.get('query') or input_data.get('keyword')
     include_images = input_data.get('include_images', False)
     person = input_data.get('person')  # 대상자
 

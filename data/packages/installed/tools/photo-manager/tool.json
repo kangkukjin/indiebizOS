@@ -56,6 +56,14 @@
               "usb"
             ],
             "description": "어느 몸의 사진인가 — self(기본)=실행되는 몸, usb=USB로 연결된 안드로이드 폰(PC에서만, GPS 필터 미지원)"
+          },
+          "page": {
+            "type": "integer",
+            "description": "self:photo 파라미터"
+          },
+          "query": {
+            "type": "string",
+            "description": "self:photo 파라미터"
           }
         },
         "additionalProperties": true

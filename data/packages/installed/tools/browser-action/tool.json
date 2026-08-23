@@ -120,6 +120,30 @@
               "playwright"
             ],
             "default": "auto"
+          },
+          "checked": {
+            "type": "boolean",
+            "description": "limbs:browser 파라미터"
+          },
+          "direction": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "headless": {
+            "type": "boolean",
+            "description": "limbs:browser 파라미터"
+          },
+          "id": {
+            "type": "string",
+            "description": "limbs:browser 파라미터"
+          },
+          "index": {
+            "type": "integer",
+            "description": "limbs:browser 파라미터"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "limbs:browser 파라미터"
           }
         }
       }

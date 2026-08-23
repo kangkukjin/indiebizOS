@@ -14,6 +14,18 @@
           "op": {
             "type": "string",
             "description": "동작 분기 — target_description 참조"
+          },
+          "local_path": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
+          },
+          "name": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
+          },
+          "site_id": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
           }
         },
         "additionalProperties": true
@@ -133,6 +145,10 @@
               "full"
             ],
             "description": "[styles] 테두리 반경 (기본 md)"
+          },
+          "url": {
+            "type": "string",
+            "description": "engines:web 파라미터"
           }
         },
         "required": []
@@ -185,6 +201,10 @@
               "file"
             ],
             "description": "[fetch] 출력 형식"
+          },
+          "site_id": {
+            "type": "string",
+            "description": "engines:web_component 파라미터"
           }
         },
         "required": []

@@ -28,6 +28,10 @@
           "volume_name": {
             "type": "string",
             "description": "[scan] 볼륨 식별 이름(생략시 자동) / [summary] 대상 볼륨(필수)"
+          },
+          "root_path": {
+            "type": "string",
+            "description": "self:storage 파라미터"
           }
         }
       }

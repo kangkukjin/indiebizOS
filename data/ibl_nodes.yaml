@@ -318,6 +318,8 @@ nodes:
         - context7
         - 공식문서
       performance:
+        params:
+          query: string
         returns: items
         side_effect: false
         fixture: '[sense:performance]{}'
@@ -381,6 +383,8 @@ nodes:
             - '{prfpdfrom}~{prfpdto}'
             - '{area} · {prfstate}'
       book:
+        params:
+          query: string
         returns: items
         side_effect: false
         fixture: '[sense:book]{query: "역사"}'
@@ -848,6 +852,8 @@ nodes:
             - '{startDate}~{endDate}'
             - '{area} · {realmName}'
       stock:
+        params:
+          coin_id: string
         aliases:
           ticker:
           - symbol
@@ -1034,6 +1040,12 @@ nodes:
               - k: 거래량
                 v: '{data.volume|num}'
       company:
+        params:
+          company: string
+          corp_name: string
+          query: string
+          symbol: string
+          type: string
         returns: items
         side_effect: false
         fixture: '[sense:company]{op: "disclosures", query: "삼성전자"}'
@@ -1062,6 +1074,9 @@ nodes:
         - DART
         - SEC
       crypto:
+        params:
+          coin: string
+          symbol: string
         returns: items
         fixture: '[sense:crypto]{symbol: "BTC"}'
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
@@ -1072,6 +1087,8 @@ nodes:
         implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
         target_key: coin_id
       kosis:
+        params:
+          indicator: string
         returns: items
         fixture: '[sense:kosis]{query: "인구"}'
         description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히 read_guide(query="통계").
@@ -1461,6 +1478,8 @@ nodes:
               k: '{mount}'
               v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
       radio:
+        params:
+          query: string
         returns: items
         side_effect: false
         fixture: '[sense:radio]{op: "search", query: "jazz"}'
@@ -1557,6 +1576,8 @@ nodes:
                 action: '[limbs:radio_favorite]{op: "remove", name: "{name}"}'
                 refresh: true
       commercial:
+        params:
+          query: string
         aliases:
           region_code:
           - district_code
@@ -1626,6 +1647,9 @@ nodes:
                     href: '{url}'
                     label: 카카오맵·상세 보기 →
       realty:
+        params:
+          query: string
+          year_month: string
         aliases:
           region_code:
           - district_code
@@ -1807,6 +1831,9 @@ nodes:
         - 물건값
         target_key: query
       used:
+        aliases:
+          query:
+          - q
         returns: items
         fixture: '[sense:used]{source: "bunjang", query: "맥미니 m4 pro"}'
         description: 중고 C2C 매물 검색 (source 분기). 당근·번개장터·중고나라·네이버카페 중고 매물을 items 통화로. 자주 하는 중고 검색을 어휘화.
@@ -1928,6 +1955,12 @@ nodes:
                   href: '{url}'
                   label: 프로필 보기 →
       startup:
+        params:
+          limit: integer
+          source: string
+        aliases:
+          limit:
+          - count
         returns: items
         fixture: '[sense:startup]{query: "AI"}'
         description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
@@ -1978,6 +2011,9 @@ nodes:
                   href: '{url}'
                   label: 공고 상세 →
       paper:
+        params:
+          arxiv_id: string
+          pmcid: string
         returns: items
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
@@ -2077,6 +2113,7 @@ nodes:
           count:
           - display
           - page_size
+          - max_results
         returns: items
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
@@ -3178,6 +3215,20 @@ nodes:
         - CCTV 통계
         - CCTV 갱신
       finance:
+        params:
+          amount: number
+          asset_type: string
+          category: string
+          days: integer
+          file: string
+          items: array
+          kind: string
+          month: string
+          name: string
+          owner: string
+          query_type: string
+          source: string
+          value: number
         returns: items
         side_effect: true
         fixture: '[self:finance]{op: "query", query_type: "summary"}'
@@ -3444,6 +3495,16 @@ nodes:
         - 손발폐기
         - 헬퍼만들기
       health:
+        params:
+          category: string
+          file: string
+          info_type: string
+          query: string
+          query_type: string
+          text: string
+        aliases:
+          query:
+          - keyword
         returns: items
         side_effect: true
         fixture: '[self:health]{op: "query", query_type: "medications"}'
@@ -3645,6 +3706,8 @@ nodes:
         - 강의 워크스페이스
         scope: workspace
       slide:
+        params:
+          content: string
         returns: effect
         runs_on: pc_only
         description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정/스피커 노트. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
@@ -3761,6 +3824,8 @@ nodes:
         - 메모리 삭제
         - 메모리 읽기
       music:
+        params:
+          artist: string
         returns: items
         side_effect: true
         fixture: '[self:music]{op: "sources"}'
@@ -4180,6 +4245,8 @@ nodes:
         - grounded
         - 소스
       storage:
+        params:
+          root_path: string
         returns: scalar
         side_effect: true
         fixture: '[self:storage]{op: "volumes"}'
@@ -4258,6 +4325,9 @@ nodes:
         - 주인모델
         implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
       photo:
+        params:
+          page: integer
+          query: string
         aliases:
           media_type:
           - filter
@@ -4374,6 +4444,10 @@ nodes:
         - summarize
         - rewrite
       read:
+        params:
+          format: string
+          limit: integer
+          tables: boolean
         returns: scalar
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
@@ -4407,6 +4481,8 @@ nodes:
         - fill
         - form
       write:
+        params:
+          spill: boolean
         returns: effect
         description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 봉투에 참조(ref)만 싣는다(뒤 step 은 투명 해소 — 데이터 흐름 불변).
         group: file
@@ -4416,6 +4492,8 @@ nodes:
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).
         target_key: path
       list:
+        params:
+          pattern: string
         returns: items
         fixture: '[self:list]{path: "."}'
         description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
@@ -4494,11 +4572,15 @@ nodes:
                 - '{meta}'
                 - '{path}'
       grep:
+        params:
+          limit: integer
         aliases:
           root_path:
           - path
           pattern:
           - query
+          limit:
+          - max_results
         returns: items
         fixture: '[self:grep]{pattern: "provider", path: "."}'
         description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
@@ -4523,6 +4605,9 @@ nodes:
         implementation: Python 문자열 치환으로 파일 부분 편집
         target_key: path
       copy:
+        params:
+          dest: string
+          src: string
         returns: effect
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
@@ -4532,6 +4617,9 @@ nodes:
         implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
         target_key: source
       move:
+        params:
+          dest: string
+          src: string
         returns: effect
         description: 파일 또는 폴더 이동·이름 변경. 같은 폴더면 이름 변경, 다른 폴더면 이동.
         group: file
@@ -4928,6 +5016,13 @@ nodes:
         - 클립보드복사
         - 앱실행
       browser:
+        params:
+          checked: boolean
+          direction: string
+          headless: boolean
+          id: string
+          index: integer
+          timeout: number
         aliases:
           source_ref:
           - from_ref
@@ -5031,6 +5126,16 @@ nodes:
         - R2
         - Pages
       screen:
+        params:
+          direction: string
+          end_x: integer
+          end_y: integer
+          key: string
+          start_x: integer
+          start_y: integer
+          text: string
+          x: integer
+          y: integer
         returns: effect
         runs_on: pc_only
         description: macOS 데스크톱 자동화 (op 분기). 화면독해(snapshot)/마우스/키보드/스크린샷. 브라우저는 limbs:browser.
@@ -6711,6 +6816,13 @@ nodes:
         - TTS
         - 나레이션
       image_gemini:
+        params:
+          image_size: string
+          input_image:
+          - string
+          - array
+          path: string
+          style_preset: string
         aliases:
           output_path:
           - filename
@@ -6843,6 +6955,10 @@ nodes:
         - 발행
         - 뉴스 신문
       web_site:
+        params:
+          local_path: string
+          name: string
+          site_id: string
         returns: effect
         runs_on: pc_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
@@ -6868,6 +6984,8 @@ nodes:
         - 사이트삭제
         - 사이트수정
       web:
+        params:
+          url: string
         returns: effect
         runs_on: pc_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
@@ -6910,6 +7028,8 @@ nodes:
         - 미리보기
         - vercel
       web_component:
+        params:
+          site_id: string
         returns: effect
         runs_on: pc_only
         description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
@@ -7042,6 +7162,12 @@ nodes:
         - 한줄로
         - brief
       filter:
+        params:
+          field: string
+          value:
+          - string
+          - number
+          - boolean
         returns: transform
         runs_on: anywhere
         scope: workspace
@@ -7343,6 +7469,9 @@ nodes:
         - 시트
         - 장부
       chart:
+        params:
+          x: string
+          y: string
         aliases:
           chart_type:
           - type

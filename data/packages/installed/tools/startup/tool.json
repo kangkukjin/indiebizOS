@@ -14,6 +14,18 @@
           "op": {
             "type": "string",
             "description": "동작 분기 — target_description 참조"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:startup 의 주 파라미터"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "sense:startup 파라미터"
+          },
+          "source": {
+            "type": "string",
+            "description": "sense:startup 파라미터"
           }
         },
         "additionalProperties": true

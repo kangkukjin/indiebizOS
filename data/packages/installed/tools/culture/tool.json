@@ -74,6 +74,10 @@
           "page": {
             "type": "integer",
             "description": "페이지"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:performance 파라미터"
           }
         },
         "required": []
@@ -183,6 +187,10 @@
           "rows": {
             "type": "integer",
             "description": "결과 수"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:book 파라미터"
           }
         },
         "required": []

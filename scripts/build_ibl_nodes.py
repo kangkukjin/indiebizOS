@@ -138,6 +138,7 @@ from iblbuild_validators import (  # noqa: E402,F401
     _load_corpus_param_keys,
     validate_corpus_params,
     validate_corpus_vocab,
+    validate_declared_params,
     validate_runs_on,
     validate_transform_contract,
     validate_phone_reachability,
@@ -261,6 +262,22 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print(f"  ✗ {issue}", file=sys.stderr)
         else:
             print("[build_ibl_nodes] 코퍼스 param 정합 통과 ✓")
+
+        # --- B35-3 2조각: param 타입 선언 완전성 (2026-08-24 #repair) ---
+        # 위 정합 검사는 "핸들러가 이 키를 읽나" 만 묻는다. 타입 관문(ibl_routing)이 보는
+        # 진실 소스는 tool.json input_schema 인데 거기 없는 자리는 관문이 원리적으로 눈감고,
+        # 그 자리에서 파이썬 예외가 그대로 샜다. 세지 말고 닫는다 — 빌드 실패로.
+        dissues = validate_declared_params(data, root)
+        if dissues is None:
+            print("[build_ibl_nodes] 코퍼스/파서 미가용 — param 선언 완전성 검사 건너뜀",
+                  file=sys.stderr)
+        elif dissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] param 선언 완전성 실패: {len(dissues)}건", file=sys.stderr)
+            for issue in dissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] param 선언 완전성 통과 ✓ (미선언 0)")
 
         # 코퍼스 어휘 생존 검사 (2026-08-22) — param 정합은 "핸들러가 이 키를 읽나" 만 묻고
         # "이 액션이 아직 있나" 는 묻지 않았다. 그 틈으로 은퇴 어휘 20여 종 208항목이

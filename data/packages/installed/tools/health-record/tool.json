@@ -11,6 +11,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "data": {
+            "type": "object",
+            "description": "증상·투약·문서의 구조화 본문."
+          },
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "object"
+            ],
+            "description": "측정값 — 문자열('128/85')·숫자·구조화 dict."
+          },
           "op": {
             "type": "string",
             "description": "동작 분기 — target_description 참조",
@@ -34,6 +46,30 @@
           "record_id": {
             "type": "integer",
             "description": "delete 시 삭제할 기록 번호 (조회 출력의 #번호)"
+          },
+          "category": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "file": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "info_type": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "query": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "query_type": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "text": {
+            "type": "string",
+            "description": "self:health 파라미터"
           }
         },
         "additionalProperties": true

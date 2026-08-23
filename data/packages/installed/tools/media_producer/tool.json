@@ -65,6 +65,25 @@
           "api_key": {
             "type": "string",
             "description": "Gemini API 키 (환경변수 GEMINI_API_KEY가 없을 때 사용)"
+          },
+          "image_size": {
+            "type": "string",
+            "description": "engines:image_gemini 파라미터"
+          },
+          "input_image": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "engines:image_gemini 파라미터"
+          },
+          "path": {
+            "type": "string",
+            "description": "engines:image_gemini 파라미터"
+          },
+          "style_preset": {
+            "type": "string",
+            "description": "engines:image_gemini 파라미터"
           }
         },
         "required": [

@@ -136,6 +136,10 @@
           "broadcaster": {
             "type": "string",
             "description": "[korean] KBS/MBC/SBS 등(비우면 전체)"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:radio 파라미터"
           }
         },
         "required": []

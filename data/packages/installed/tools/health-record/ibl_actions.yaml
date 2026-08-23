@@ -1,6 +1,18 @@
 node: self
 actions:
   health:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      category: string
+      file: string
+      info_type: string
+      query: string
+      query_type: string
+      text: string
+    aliases:
+      query: [keyword]    # ★정본은 query(check_param_canon) — 관습어 keyword 는 별칭
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:health]{op: "query", query_type: "medications"}'
@@ -161,6 +173,12 @@ tool_json:
     input_schema:
       type: object
       properties:
+        data:
+          type: object
+          description: 증상·투약·문서의 구조화 본문.
+        value:
+          type: [string, number, object]
+          description: 측정값 — 문자열('128/85')·숫자·구조화 dict.
         op:
           type: string
           description: 동작 분기 — target_description 참조

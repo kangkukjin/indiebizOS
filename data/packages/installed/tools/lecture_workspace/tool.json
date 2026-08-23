@@ -63,6 +63,14 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "notes": {
+            "type": "object",
+            "description": "슬라이드별 스피커 노트 {slide_id: note}."
+          },
+          "slides": {
+            "type": "array",
+            "description": "슬라이드 spec 배열."
+          },
           "op": {
             "type": "string",
             "description": "수행할 작업",
@@ -159,6 +167,10 @@
           "overlay_set": {
             "type": "array",
             "description": "image_edit — 오버레이 객체 배열({text, x, y, size_vw, font, color, chip})로 전체 교체. 배치 편집기의 저장 경로, 빈 배열=원본 복원"
+          },
+          "content": {
+            "type": "string",
+            "description": "self:slide 파라미터"
           }
         },
         "required": [

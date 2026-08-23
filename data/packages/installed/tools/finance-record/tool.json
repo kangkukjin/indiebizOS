@@ -33,6 +33,58 @@
           "record_id": {
             "type": "integer",
             "description": "delete 시 삭제할 기록 번호 (조회 출력의 #번호)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "self:finance 파라미터"
+          },
+          "asset_type": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "category": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "days": {
+            "type": "integer",
+            "description": "self:finance 파라미터"
+          },
+          "file": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "items": {
+            "type": "array",
+            "description": "self:finance 파라미터"
+          },
+          "kind": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "month": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "name": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "owner": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "query_type": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "source": {
+            "type": "string",
+            "description": "self:finance 파라미터"
+          },
+          "value": {
+            "type": "number",
+            "description": "self:finance 파라미터"
           }
         },
         "additionalProperties": true

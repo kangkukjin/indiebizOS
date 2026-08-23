@@ -35,6 +35,11 @@ actions:
     - 강의 워크스페이스
     scope: workspace
   slide:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      content: string
     returns: effect
     runs_on: pc_only
     description: 슬라이드 한 장의 유일한 어휘 (op 분기). 생성/편집/삭제/필드 패치/재렌더/이미지 부분수정/스피커 노트. create 는 lecture_id 없이도 가능 — 스크래치 덱에 자동 등록(구 engines:slide 단발 생성 흡수, 2026-08-05).
@@ -196,6 +201,12 @@ tool_json:
     input_schema:
       type: object
       properties:
+        notes:
+          type: object
+          description: '슬라이드별 스피커 노트 {slide_id: note}.'
+        slides:
+          type: array
+          description: 슬라이드 spec 배열.
         op:
           type: string
           description: 수행할 작업

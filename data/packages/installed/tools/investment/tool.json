@@ -88,6 +88,10 @@
           "max_points": {
             "type": "integer",
             "description": "[quote/history] 반환 데이터 포인트 수 (기본 10)"
+          },
+          "coin_id": {
+            "type": "string",
+            "description": "sense:stock 파라미터"
           }
         },
         "required": []
@@ -164,6 +168,26 @@
           "count": {
             "type": "integer",
             "description": "[disclosures] 조회할 공시 수 (한국 기본 20, 미국 기본 10)"
+          },
+          "company": {
+            "type": "string",
+            "description": "sense:company 파라미터"
+          },
+          "corp_name": {
+            "type": "string",
+            "description": "sense:company 파라미터"
+          },
+          "query": {
+            "type": "string",
+            "description": "sense:company 파라미터"
+          },
+          "symbol": {
+            "type": "string",
+            "description": "sense:company 파라미터"
+          },
+          "type": {
+            "type": "string",
+            "description": "sense:company 파라미터"
           }
         },
         "required": []
@@ -178,6 +202,14 @@
           "coin_id": {
             "type": "string",
             "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)"
+          },
+          "coin": {
+            "type": "string",
+            "description": "sense:crypto 파라미터"
+          },
+          "symbol": {
+            "type": "string",
+            "description": "sense:crypto 파라미터"
           }
         },
         "required": [

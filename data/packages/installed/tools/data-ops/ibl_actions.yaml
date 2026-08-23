@@ -1,6 +1,12 @@
 node: table
 actions:
   filter:
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      field: string
+      value: [string, number, boolean]
     returns: transform
     runs_on: anywhere
     scope: workspace
@@ -306,6 +312,7 @@ tool_json:
       type: object
       properties:
         where:
+          type: [string, object, array]
           description: 필터 조건. 문자열("필드 op 값" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND).
   - name: data_sort
     description: records|table → 정렬. by(필드/열명, 필수), desc(bool, 기본 false). 수치 인식 정렬. >> 앞 통화를 받음.
@@ -328,6 +335,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 자를 행 배열(앞 통화 대신 직접 줄 때).
         n:
           type: integer
           description: 취할 개수(기본 10). 음수=뒤에서 n개.
@@ -336,6 +346,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        fields:
+          type: array
+          description: 남길 필드 이름 배열(columns 의 동의 표기).
         columns:
           type: array
           items:
@@ -389,6 +402,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 검침할 행 배열(앞 통화 대신 직접 줄 때).
         key:
           type: string
           description: 검침 스트림 이름(감시 파이프마다 고유, 필수).

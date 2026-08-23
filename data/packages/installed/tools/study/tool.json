@@ -77,6 +77,14 @@
           "filename": {
             "type": "string",
             "description": "[download] 저장 파일명(선택)"
+          },
+          "arxiv_id": {
+            "type": "string",
+            "description": "sense:paper 파라미터"
+          },
+          "pmcid": {
+            "type": "string",
+            "description": "sense:paper 파라미터"
           }
         },
         "required": []

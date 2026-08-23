@@ -263,7 +263,6 @@ def _resolve_project_id(project_id: str) -> Optional[str]:
 
 _SCALAR_TYPES = ("string", "number", "integer", "boolean")
 
-
 def _coerce_declared_scalar(v, declared):
     """B35-1·B35-2 (2026-08-24 #repair): 선언 타입 대비 값 하나를 **3값**으로 판정.
 
@@ -371,6 +370,7 @@ def _route_handler(mapped_tool: str, params: dict,
     #     판정은 타입이 아니라 **손실 여부**로 한다 → _coerce_declared_scalar 참조.
     #   ★비용: load_tool_schema 1회 0.45ms 실측. 액션 자체가 ms~s 단위라 무시할 수준이어서
     #     옛 '스칼라-only 면 스키마를 읽지도 않는다' 지름길은 걷어냈다(param 이 없으면 생략).
+    _props = {}
     if merged_params:
         try:
             from tool_loader import load_tool_schema
@@ -380,15 +380,36 @@ def _route_handler(mapped_tool: str, params: dict,
             _props = {}
         _refused, _had_container = [], False
         for _k, _v in list(merged_params.items()):
-            _t = (_props.get(_k) or {}).get("type")
-            if _t not in _SCALAR_TYPES:
-                continue                  # 선언 없음·array 선언 = 불검사(모르면 통과)
+            if str(_k).startswith("_"):
+                continue                  # 런타임 내부 키(_wf_stack·_prev_result…)
+            # 선언은 단일 타입 또는 **타입 목록**(JSON Schema 유니온)일 수 있다 —
+            # 한 param 이 문자열 DSL 과 사전을 둘 다 받는 자리가 실제로 있다
+            # ([table:filter]{where: "a > 1"} 와 {where: {상태: "이동"}}).
+            _tdecl = (_props.get(_k) or {}).get("type")
+            _types = _tdecl if isinstance(_tdecl, list) else ([_tdecl] if _tdecl else [])
             if isinstance(_v, str) and _v.startswith("$"):
                 continue                  # 미해소 바인딩은 이 관문의 일이 아니다
+            # ★B35-3 3조각 (2026-08-24 #repair): 컨테이너는 **array/object 로 선언된
+            #   자리에만** 들어간다. 옛 규약은 '선언 없으면 불검사' 라 미선언 자리의
+            #   컨테이너가 핸들러까지 흘러 파이썬 예외로 샜다(self:read{path:[...]}).
+            #   정당한 컨테이너 용법은 '선언이 없어서 보호받는' 게 아니라
+            #   **object/array 로 선언되어** 통과하는 것이다 — 빌드의 param 선언
+            #   완전성 검사가 그 선언을 강제한다.
+            if isinstance(_v, (list, dict)):
+                if "array" in _types or "object" in _types:
+                    continue
+                _kind = "목록" if isinstance(_v, list) else "사전"
+                _decl = (f"{'/'.join(_types)} 이 와야 하는데" if _types
+                         else "타입 선언이 없는 자리인데")
+                _refused.append(f"`{_k}` 에는 {_decl} {len(_v)}개짜리 {_kind}이 왔습니다")
+                _had_container = True
+                continue
+            if len(_types) != 1 or _types[0] not in _SCALAR_TYPES:
+                continue                  # 미선언·유니온 = 스칼라 강제 안 함(모르면 통과)
+            _t = _types[0]
             _ok, _new, _why = _coerce_declared_scalar(_v, _t)
             if not _ok:
                 _refused.append(f"`{_k}` 에는 {_t} 이 와야 하는데 {_why}")
-                _had_container = _had_container or isinstance(_v, (list, dict))
             elif type(_new) is not type(_v) or _new != _v:
                 merged_params[_k] = _new  # 되돌릴 수 있는 표기 차이는 조용히 맞춰 준다
         if _refused:

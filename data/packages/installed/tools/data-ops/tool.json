@@ -12,7 +12,24 @@
         "type": "object",
         "properties": {
           "where": {
+            "type": [
+              "string",
+              "object",
+              "array"
+            ],
             "description": "필터 조건. 문자열(\"필드 op 값\" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND)."
+          },
+          "field": {
+            "type": "string",
+            "description": "table:filter 파라미터"
+          },
+          "value": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ],
+            "description": "table:filter 파라미터"
           }
         }
       }
@@ -47,6 +64,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "자를 행 배열(앞 통화 대신 직접 줄 때)."
+          },
           "n": {
             "type": "integer",
             "description": "취할 개수(기본 10). 음수=뒤에서 n개."
@@ -60,6 +81,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "fields": {
+            "type": "array",
+            "description": "남길 필드 이름 배열(columns 의 동의 표기)."
+          },
           "columns": {
             "type": "array",
             "items": {
@@ -144,6 +169,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "검침할 행 배열(앞 통화 대신 직접 줄 때)."
+          },
           "key": {
             "type": "string",
             "description": "검침 스트림 이름(감시 파이프마다 고유, 필수)."
@@ -201,6 +230,10 @@
           },
           "right": {
             "description": "우측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
+          },
+          "true": {
+            "type": "string",
+            "description": "table:join 의 주 파라미터"
           }
         },
         "required": [

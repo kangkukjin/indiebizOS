@@ -144,6 +144,41 @@ def test_b35_2_lossy_or_ambiguous_scalar_is_refused_not_coerced():
     assert out.get("success") is False and "n" in (out.get("error") or ""), out
 
 
+def test_b35_3_container_goes_only_where_array_or_object_is_declared():
+    """B35-3 3조각(2026-08-24 #repair) — 컨테이너는 **array/object 로 선언된
+    자리에만** 들어간다.
+
+    이 시험이 대체한 두 개(_..._error_is_translated / _..._stays_permissive_...)는
+    정반대 계약을 못 박고 있었다: ①미선언 자리의 컨테이너는 핸들러까지 흘려보내고
+    실패한 뒤 파이썬 예외를 사후에 '번역'한다(_container_type_error_hint)
+    ②'선언 없으면 불검사' 기본값은 뒤집지 않는다.
+    3조각 수리가 그 둘을 걷어냈다 — 정당한 컨테이너 용법은 '선언이 없어서' 사는 게
+    아니라 **object/array 로 선언되어서** 산다(빌드의 param 선언 완전성 검사가
+    그 선언을 강제한다). 시험도 새 계약을 본다.
+
+    ★사후 번역 층은 소스에 잔해가 남으면 안 된다 — 다시 자라는 길을 막는다."""
+    import ibl_routing as R
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ibl", "ibl_routing.py"),
+               encoding="utf-8").read()
+    assert "_container_type_error_hint" not in src, "사후 번역 층 잔해가 남았다"
+    assert not hasattr(R, "_container_type_error_hint")
+
+    # ① 스칼라로 선언된 자리의 컨테이너는 관문에서 거절된다 — 파이썬 예외로 새지 않는다
+    #    (read_op.path 는 이번 수리 ①로 빌드가 target_key 를 properties 에 넣어 선언됐다)
+    out = R._route_handler("read_op", {"path": ["/etc/hosts", "/etc/passwd"]}, ".")
+    assert out.get("success") is False, out
+    _e = out.get("error") or ""
+    assert "path" in _e and "table:each" in _e, out
+
+    # ② array/object 로 선언된 자리는 그대로 통과한다 — 관문이 거절을 만들지 않는다
+    out = R._route_handler("data_take", {"n": 2, "items": [{"a": 1}, {"a": 2}, {"a": 3}]}, ".")
+    assert "개짜리 목록이 왔습니다" not in (out.get("error") or ""), out
+    # 유니온 선언(where: string|object|array)의 사전 용법도 산다
+    out = R._route_handler("data_filter",
+                           {"items": [{"상태": "이동"}], "where": {"상태": "이동"}}, ".")
+    assert "개짜리 사전이 왔습니다" not in (out.get("error") or ""), out
+
+
 def test_b35_1_parser_keeps_leading_zero_identifiers():
     """B35-1 2단계: 앞 0 이 붙은 정수 리터럴은 수량이 아니라 식별자다.
 

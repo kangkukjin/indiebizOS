@@ -245,7 +245,9 @@ def run(tool_input: dict, project_path: str) -> str:
         output_mode = "content"
     # max_results: 파라미터화(2026-08-08 ⑥′ — 옛 100 하드코딩은 올릴 길이 없었다)
     try:
-        max_results = int(tool_input.get("max_results", 100))
+        # ★정본 limit(별칭 max_results — ibl_actions.yaml aliases). 관문이 정규화하지만
+        #   직접 호출도 있으니 둘 다 읽는다.
+        max_results = int(tool_input.get("limit", tool_input.get("max_results", 100)))
     except (TypeError, ValueError):
         max_results = 100
     max_results = max(1, min(max_results, 2000))

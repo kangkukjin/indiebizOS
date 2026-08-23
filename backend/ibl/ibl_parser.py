@@ -944,7 +944,15 @@ def _resolve_variables_used(step: dict, variables: Dict[str, int]):
     used: Dict[str, int] = {}
     for key, val in step.items():
         if isinstance(val, str):
+            from common.ibl_vars import assigned_names
+            # ★B33-2 (33회차): 이 텍스트가 스스로 할당하는 이름은 바깥이 덮지 않는다.
+            #   `do:` 처럼 **코드를 나르는 param** 은 블록 몸과 같은 안쪽 스코프인데
+            #   (M6 가 블록 몸엔 이미 처방했다) 일반 param 이라 그 보호를 못 받아,
+            #   바깥 동명 변수가 있으면 `$n = $n + 1` 의 좌변까지 치환돼 파싱이 깨졌다.
+            _shadowed = assigned_names(val)
             for var_name, step_idx in variables.items():
+                if var_name in _shadowed:
+                    continue
                 # $var.field.path — 필드 경로를 템플릿에 실어 실행기가 추출하게 한다
                 # (2026-08-16 상상훈련 G1: 경로 없이 통짜 치환하면 `.lat` 이 리터럴로 남았다).
                 before = val

@@ -346,7 +346,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     ok_n = err_n = substeps = 0
     halted: Optional[str] = None
 
-    processed = noncurrency = 0
+    processed = noncurrency = currency_n = 0
     for idx, row in enumerate(target):
         processed += 1
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
@@ -418,6 +418,8 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             out_items.extend(_rows_from)
             if not _was_currency:
                 noncurrency += 1
+            else:
+                currency_n += 1
 
     # 중단 시 남은 행은 '처리 안 함'으로 정직하게 집계 (조용히 사라지지 않게)
     if halted:
@@ -441,6 +443,18 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         out["passthrough_rows"] = noncurrency
         notes.append(f"{noncurrency}행의 do 가 통화를 내지 않아(효과·스칼라) **원 행**을 "
                      f"그대로 흘렸습니다 — 통화에 있는 값은 do 의 결과가 아닙니다.")
+    if currency_n:
+        # ★B32-1 (32회차): 위 신고의 **거울**. 지금까지 한 방향(스칼라→원 행 통과)만 말하고
+        #   반대 방향(do 가 통화를 내어 **원 행이 대체됨**)은 침묵했다. 실측: 2행을 넣었더니
+        #   10행이 나오고(검색 결과), 어느 행에서 나왔는지 통화에도 봉투에도 없었다.
+        #   병렬 do 는 열 이름이 통째로 'value' 로 바뀌어 정체가 더 지워졌다.
+        #   행 수가 조용히 바뀌는 것은 하류 판단을 통째로 어긋나게 한다("3곳 조회했는데 10건?").
+        #   ★한 방향만 신고하는 비대칭이 결함이었으므로 처방도 그 자리 한 곳이다 — 소비자마다
+        #   추적 코드를 심는 길(열거)은 반드시 뒤처진다. keep 이 이미 답을 갖고 있으니 가리킨다.
+        out["rows_replaced"] = currency_n
+        notes.append(f"{currency_n}행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다"
+                     f"(입력 {processed}행 → 출력 {len(out_items)}행) — 어느 행에서 나온 결과인지는 "
+                     f"통화에 남지 않습니다. 원 행의 필드를 함께 보려면 keep: [\"필드\"] 를 쓰세요.")
     # ★`collect` 은퇴(2026-08-23): 이 파라미터가 하던 일("_result 를 이어붙인 하나의 items")이
     #   이제 기본 동작이다. 낱말을 남겨 두면 "켜야 되는 것"으로 읽혀 어휘가 무거워진다.
     if skipped:

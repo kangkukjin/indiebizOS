@@ -92,6 +92,25 @@ def sub_refs(text: str, names: Iterable[str], repl: Callable[[str, str], str]) -
     return re.sub(refs_pattern(names), lambda m: repl(*split_ref(m)), text)
 
 
+# ★B33-2 (2026-08-23 상상훈련 33회차): 텍스트가 **자기 스코프에서** 할당하는 이름들.
+#   M6 는 블록 *몸* 에 대해 이미 같은 판정을 내렸다("몸은 안쪽 파이프의 인덱스 공간 —
+#   바깥 치환은 실행기가", 실측: `repeat 몸의 $n = $n + 1 이 늘 바깥 0 을 읽음`).
+#   그런데 **코드를 나르는 자리는 블록 몸만이 아니다** — `[table:each]{do: "…"}`·
+#   `[self:workflow]{op:"run", do: "…"}` 의 do 는 일반 step 의 param 문자열이라 그 처방을
+#   못 받았고, 바깥에 같은 이름이 있으면 파서가 **할당 좌변까지** 치환해 `$n = $n + 1` 이
+#   `0 = 0 + 1` 로 깨졌다(33회차 실측 4칸, 파싱 실패).
+#   ★처방을 param 이름 목록(`do`·`steps`·`code`…)으로 적지 않는다 — 그런 열거는 반드시
+#     뒤처진다. 판별을 **텍스트 자신**에 둔다: 스스로 할당하는 이름은 바깥이 못 덮는다
+#     (모든 언어의 섀도잉 규칙). 통째 유예가 아니라 그 이름만이라 기존 용법은 안 깨진다.
+INNER_ASSIGN_RE = re.compile(
+    r"^[ \t]*\$(?:\{\s*(" + _NAME + r")\s*\}|(" + _NAME + r"))\s*=(?!=)", re.M)
+
+
+def assigned_names(text: str) -> set:
+    """텍스트(IBL 코드)가 스스로 할당하는 변수 이름 집합 — 바깥 치환의 섀도잉 판별."""
+    return {(m.group(1) or m.group(2)) for m in INNER_ASSIGN_RE.finditer(text or "")}
+
+
 def is_sole_ref(text: str, name: str) -> bool:
     """텍스트 전체가 **경로 없는** 그 변수 참조 하나뿐인가 — 통짜 참조(원시 타입 보존) 판정.
 

@@ -315,17 +315,23 @@ def _execute_case(tool_input: dict, project_path: str, agent_id: str) -> Any:
     # (정당한 부재 — 예: 데스크탑의 battery)을 구별한다. 전자에 default 를 실행하면
     # "어느 패턴과도 불일치"라는 단정이 된다(B10 else 위장의 case 짝). 후자는 default 가
     # 부재의 의미를 받는 정당한 용법이라 보존.
-    if source.strip().startswith("$"):
-        # $변수[.경로] 소스 (2026-08-22 M2) — 앞 문장 결과를 실행 없이 읽는다.
-        from ibl_predicates import Evaluator, PredicateError
-        try:
-            sense_value = Evaluator(lambda s: (None, "변수 소스"), _vars_with_items(tool_input)
-                                    ).atom_value(source.strip())
-            read_error = None
-        except PredicateError as e:
-            sense_value, read_error = None, str(e)
-    else:
-        sense_value, read_error = _get_sense_value_checked(source, project_path, agent_id)
+    # ★B33-1 (2026-08-23 상상훈련 33회차): 좌변 해석기를 if 와 **하나로** 통일한다.
+    #   옛 코드는 `$` 접두만 평가기에 보내고 나머지는 소스 참조라고 단정했다 — 그래서
+    #   교재가 "조건 언어(if/case 공통)"라 가르치는 술어 함수가 case 에서만 죽었다
+    #   (실측: `[case: count($items)]` → "판정 불능", 같은 자리 `[if: count($items) > 0]` 은 통과).
+    #   ★특례를 더하지 않고 **판별을 없앤다** — atom_value 는 리터럴·$변수·술어함수·소스참조
+    #     네 갈래를 이미 모두 알고, 소스 참조는 resolve_source 콜백으로 처리하므로 옛 동작은
+    #     그대로 보존된다. if 쪽 _evaluate_condition_and_value 와 같은 배선이다.
+    from ibl_predicates import Evaluator, PredicateError
+
+    def _resolve(src: str):
+        return _get_sense_value_checked(src, project_path, agent_id)
+
+    try:
+        sense_value = Evaluator(_resolve, _vars_with_items(tool_input)).atom_value(source.strip())
+        read_error = None
+    except PredicateError as e:
+        sense_value, read_error = None, str(e)
 
     if read_error is not None:
         return {

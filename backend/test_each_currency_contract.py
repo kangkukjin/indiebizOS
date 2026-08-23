@@ -204,6 +204,36 @@ def test_C11_카탈로그가_새_계약을_가르친다():
     assert "keep(" in td
 
 
+def test_C12_통화_대체도_봉투가_말한다():
+    """B32-1(32회차): 신고가 한 방향뿐이었다 — 스칼라→원행 통과는 말하고,
+    do 가 통화를 내어 **원 행이 대체**되는 반대 방향은 침묵했다.
+    실측(32회차): 2행을 넣었는데 10행이 나오고(각 행을 검색한 결과), 어느 행에서
+    나왔는지가 통화에도 봉투에도 없었다. 행 수가 조용히 바뀌면 하류 판단이 틀린다."""
+    out = _run("[sense:weather]{city: '$it.city'}", result=CURRENCY)
+    assert out["rows_replaced"] == len(PARENTS), out
+    msg = out.get("message") or ""
+    assert "대체" in msg, f"대체 사실을 말하지 않는다: {msg}"
+    assert "keep" in msg, f"정체를 지키는 법(keep)을 안 가리킨다: {msg}"
+    assert "passthrough_rows" not in out, "통화를 냈는데 통과로 신고했다"
+
+
+def test_C13_교재도_같은_계약을_가르친다():
+    """F32-1(32회차): C11 은 yaml 카탈로그를 지켰지만 **항상 프롬프트에 주입되는
+    교재**(12_ibl_only.md)는 아무도 안 보고 있었다 — 그사이 교재는 은퇴한 `_ok`/`_result`
+    감싸기를 계속 가르쳐, 같은 문서가 124행과 199행에서 서로 다른 계약을 말했다.
+    가르치는 자리가 둘이면 둘 다 지켜야 한다."""
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    p = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    src = open(p, encoding="utf-8").read()
+    each_line = [ln for ln in src.splitlines() if "**고차**" in ln and "each{" in ln]
+    assert each_line, "교재에서 each 설명을 못 찾았다"
+    ln = each_line[0]
+    assert "원 행에 `_ok`" not in ln, "교재가 은퇴한 _ok 감싸기 계약을 아직 가르친다"
+    for token in ("rows_replaced", "passthrough_rows", "keep"):
+        assert token in ln, f"교재가 {token} 를 가르치지 않는다"
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
     raise SystemExit(pytest.main([__file__, "-q"]))

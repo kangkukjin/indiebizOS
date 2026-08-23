@@ -121,7 +121,7 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 - **인자 이름은 카탈로그의 ⟨인자: a·b·(c)⟩ 를 쓴다** — 교재·실행에서 실제 쓰인 키다. 괄호 없는 것은 거의 항상 함께 오는 인자, (괄호)는 선택. 없는 키를 지어내지 말고 거기서 집어라.
 - **긴 스크립트**(렌더·나레이션·대량 수집)는 `[self:script]{op: "run", id, background: true}` → `{op: "status", job_id, wait: 120}`. 셸 `sleep`/`ps` 폴링 금지 — 폴링 한 번이 왕복 한 번이다.
 - **이항**(`&` 두 입력): `join{on}` · `union`(행 이어붙이기) · `merge{by}`(합치되 by 키로 중복 제거) — 두 소스의 키 이름이 다르면 join 전에 `[table:rename]{map: {"아파트명": "단지명"}}` 으로 맞춘다(각 가지엔 파이프가 안 붙으므로 변수+`left`/`right` 파라미터로: `$a = [A] >> [table:rename]{...}` 후 `[table:join]{left: "$a", right: "$b", on: ...}`)
-- **고차** `each{do, as, limit, on_error}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다. 검색 결과의 각 행으로 후속 조회·행동을 돌릴 때 id·제목을 손으로 옮겨 적어 `&`를 늘어놓지 말고 each 로 잇는다.
+- **고차** `each{do, as, limit, on_error, keep}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). ★결과는 **통화 그대로**다(2026-08-23 계약 — `_ok`/`_result` 감싸기는 **은퇴**했다. 그 필드로 거르려 하면 0건이 나온다): do 가 통화를 내면 그 행들이 감싸기 없이 흘러 **원 행은 대체**되고(봉투가 `rows_replaced` 로 말한다 — 입력 N행이 출력 M행이 되면서 어느 행에서 나왔는지가 사라진다. 원 행 필드를 지키려면 `keep: ["필드"]`), do 가 통화를 안 내면(효과·스칼라 — notify·write) **원 행**이 흘르고 `passthrough_rows` 로 신고한다. 실패한 행은 통화에 섞지 않고 봉투의 `errors`·`error_count` 로 간다. 검색 결과의 각 행으로 후속 조회·행동을 돌릴 때 id·제목을 손으로 옮겨 적어 `&`를 늘어놓지 말고 each 로 잇는다.
   ```
   [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}
   ```
@@ -213,7 +213,7 @@ $total = [sense:realty]{…} >> [table:reduce]{init: 0, step: "acc + 보증금"}
 $avg = $total.value / 10
 ```
 - **식 할당** `$x = 식`: 우변이 `[…]` 액션이 아니면 한 줄 식(산술·비교·`a if c else b`·`"문자열"`·`$변수.경로`). 결과는 스칼라 — 뒤 문장의 `"$x"` 엔 값 문자열이, 조건·식에는 값이 들어간다. 미할당 변수·따옴표 빠진 문자열은 정직 에러.
-- **블록은 파이프 세그먼트가 될 수 있다**: `[A] >> [if: …]{…} [else]{…} >> [B]`, `[repeat: …]{…} >> [table:dedup]`. 블록은 직전 통화를 **`$items`** 로 본다(`count($items)`, `empty($items)`, `$items.0.title`) 그리고 몸의 첫 액션에 그 통화를 넘긴다. 블록 결과(분기 결과·repeat items)가 다음 step 의 통화.
+- **블록은 파이프 세그먼트가 될 수 있다**: `[A] >> [if: …]{…} [else]{…} >> [B]`, `[repeat: …, collect: true]{…} >> [table:dedup]`. 블록은 직전 통화를 **`$items`** 로 본다(`count($items)`, `empty($items)`, `$items.0.title`) 그리고 **몸의 첫 액션**에만 그 통화를 넘긴다(몸 첫 줄이 `$n = …` 할당이면 그 다음 변환자는 통화를 못 받는다 — 변환자를 첫 줄에 두라). 블록 결과가 다음 step 의 통화: 분기 결과는 그대로, **repeat 은 `collect: true` 일 때만** items 를 낸다(없으면 `{iterations, last}` 스칼라 봉투라 뒤에 변환자를 물리면 정직하게 거절된다 — 33회차 실측 2칸).
 - `while` 은 몸 변수를 본다(첫 회차 전엔 바깥 값만). 몸이 재할당한 바깥 변수는 루프 뒤에도 최신값.
 - `[self:workflow]{op: "save", do: "…$return = …"}`: 몸통에 `$return = …` 이 있으면 run 의 반환값은 그 문장의 결과(마지막이 알림이어도 됨). 없으면 옛 규약(마지막 문장의 items).
 

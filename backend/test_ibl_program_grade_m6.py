@@ -135,6 +135,47 @@ def test_p2_repeat_and_try_in_pipe():
     assert out["success"] and len(json.loads(calls[-1]["params"]["_prev_result"])["items"]) == 2
 
 
+def test_b33_1_case_reads_the_same_predicate_language_as_if():
+    """B33-1(33회차): 조건 언어는 if/case 공통이라 교재가 가르치는데, case 만 `$` 접두를
+    보고 나머지를 소스 참조로 단정해 술어 함수가 죽었다.
+    실측(수리 전): `[case: count($items)]` → "case source 'count($items)' 판정 불능",
+    같은 파이프의 `[if: count($items) > 0]` 은 통과. 좌변 해석기가 둘이면 둘 다 틀린다."""
+    calls = []
+    out = _run('[sense:rows]{} >> [case: count($items)]{"3": [self:three]{}, default: [self:other]{}}', calls)
+    assert out["success"], out
+    assert [c["action"] for c in calls][-1] == "three", calls          # 술어가 읽혔다(3행)
+    # empty() 도 같은 평가기 — 그리고 옛 두 갈래(소스 참조·$변수)는 그대로 살아 있어야 한다
+    calls.clear()
+    out = _run('[sense:rows]{} >> [case: empty($items)]{"False": [self:has]{}, default: [self:none]{}}', calls)
+    assert [c["action"] for c in calls][-1] == "has", calls
+    calls.clear()
+    out = _run('$r = [sense:rows]{}\n[case: $r.count]{"3": [self:three]{}, default: [self:other]{}}', calls)
+    assert [c["action"] for c in calls][-1] == "three", calls          # $변수 경로 소스 불변
+
+
+def test_b33_2_inner_assignment_is_not_overwritten_by_outer_var():
+    """B33-2(33회차): `do:` 는 코드를 나르는 param 인데 블록 몸이 받은 M6 보호를 못 받아,
+    바깥에 같은 이름이 있으면 파서가 **할당 좌변까지** 치환했다.
+    실측(수리 전): `$n = 0` 뒤의 `{do: "$n = $n + 1"}` → `0 = 0 + 1` → 파싱 실패.
+    처방은 param 이름 열거가 아니라 텍스트 자신의 섀도잉 판별이다."""
+    from common.ibl_vars import assigned_names
+    assert assigned_names('$n = $n + 1\n[self:time]') == {"n"}
+    assert assigned_names('${총합} = 0') == {"총합"}
+    assert assigned_names('[self:echo]{m: "$n = 값"}') == set()        # 줄 시작이 아니면 할당 아님
+    assert assigned_names('[if: $n == 1]{[self:a]{}}') == set()        # `==` 는 할당이 아니다
+
+    # 안쪽에서 할당되는 이름은 바깥이 못 덮는다 — 좌변이 살아 파싱이 성립한다
+    calls = []
+    out = _run('$n = 7\n[self:each]{do: "$n = $n + 1"}', calls)
+    assert out["success"], out
+    assert calls[-1]["params"]["do"] == "$n = $n + 1", calls[-1]["params"]
+
+    # ★깨질 용법 0 — 안쪽이 할당하지 **않는** 이름은 예전대로 치환된다(통째 유예 아님)
+    calls.clear()
+    out = _run('$dir = "/tmp"\n[self:each]{do: "[self:write]{path: \'$dir/a\'}"}', calls)
+    assert "/tmp" in calls[-1]["params"]["do"], calls[-1]["params"]
+
+
 def test_f1_return_convention(monkeypatch):
     calls = []
     orig = ibl_engine.execute_ibl

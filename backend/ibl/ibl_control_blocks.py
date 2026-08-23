@@ -104,7 +104,7 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
     list(파이프)면 execute_pipeline 봉투의 final_result 를 결과로(통화가 바로 흐르게), dict 면 execute_ibl.
     honesty(선택): 몸통 봉투의 정직 신고를 담아 갈 dict — 주면 `_collect_honesty` 가 채운다(B27-4).
     """
-    from workflow_engine import execute_pipeline, _is_error_result, _auto_inject_prev
+    from workflow_engine import execute_pipeline, is_error_result, _auto_inject_prev
     prev = _prev_of(tool_input)
     if context is None and prev:
         context = {"_prev_result": prev}
@@ -142,7 +142,7 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
         return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200],
                             "node": body.get("_node") if isinstance(body, dict) else None,
                             "action": body.get("action") if isinstance(body, dict) else None}, {}
-    if _is_error_result(res):
+    if is_error_result(res):
         obj = _parse_final(res)
         msg = (obj.get("error") or obj.get("message")) if isinstance(obj, dict) else str(obj)
         info = {"error": str(msg), "step": 1, "summary": str(msg)[:200],

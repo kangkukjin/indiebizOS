@@ -84,14 +84,15 @@ class CalendarActionsMixin:
             return {"success": False, "error": "workflow_id 누락"}
 
         try:
-            # params 강제 규칙은 엔진(_coerce_caller_params)이 단일 소스 — 스케줄 표면이
+            # params 강제 규칙은 엔진(coerce_caller_params)이 단일 소스 — 스케줄 표면이
             # 따로 흉내내지 않는다(모델이 JSON 문자열로 넣은 params 도 같은 규칙으로 수용).
-            from workflow_engine import execute_workflow, _coerce_caller_params
+            from workflow_engine import execute_workflow
+            from workflow_contract import coerce_caller_params  # 계약의 정의처 직수입
 
             # 인자(2026-08-22 시그니처): action_params.params 를 그대로 통과시킨다.
             # 전엔 이 자리가 params 를 안 읽어, 인자를 요구하는 워크플로우를 스케줄에 걸면
             # 실행 시점에 반드시 "인자 누락"으로 거절당했다(저장본의 params_default 는 엔진이 처리).
-            wf_params, perr = _coerce_caller_params(params.get("params"))
+            wf_params, perr = coerce_caller_params(params.get("params"))
             if perr:
                 self._log(f"워크플로우 params 오류: {perr}")
                 return {"success": False, "error": perr}
@@ -192,8 +193,8 @@ class CalendarActionsMixin:
             # 트리거 이력 기록
             if trigger_id:
                 try:
-                    from trigger_engine import _add_history
-                    _add_history(
+                    from trigger_engine import add_history
+                    add_history(
                         trigger_id=trigger_id,
                         trigger_name=task.get("title", ""),
                         success=result.get("success", False),

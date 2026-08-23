@@ -222,7 +222,7 @@ def atomic_write_text(path: Path, text: str, encoding: str = "utf-8") -> None:
     빌드가 write_text 로 직접 쓰면 라이브 백엔드가 **부분 파일**을 읽을 수 있다.
     ibl_nodes.yaml 이 그렇게 읽히면 어휘가 조용히 반쪽이 되고, yaml 은 줄 단위라
     보통 예외도 나지 않는다 — 낱말 일부가 사라진 채 정상처럼 돈다. 파싱 실패로
-    떨어지는 경우도 이제는 시끄러운 오류(ibl_access._load_nodes_data)라, 애초에
+    떨어지는 경우도 이제는 시끄러운 오류(ibl_access.load_nodes_raw)라, 애초에
     부분 파일이 보이지 않게 하는 것이 맞다.
 
     os.replace 는 같은 파일시스템 안에서 원자적이다 — 그래서 임시파일도 대상과

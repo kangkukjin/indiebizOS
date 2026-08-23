@@ -212,9 +212,9 @@ async def logout(slug: str, x_showcase_secret: str = Header(default="")):
 def _send_email(to: str, subject: str, body: str):
     """시스템 Gmail 계정으로 발송. (성공, 오류메시지)."""
     try:
-        from channel_engine import _get_system_gmail_address
+        from channel_engine import get_system_gmail_address
         from api_gmail import get_gmail_client_for_email
-        sys_email = _get_system_gmail_address()
+        sys_email = get_system_gmail_address()
         if not sys_email:
             return False, "시스템 Gmail 계정이 설정되지 않았어요 (gmail extension config.yaml)"
         client = get_gmail_client_for_email(sys_email)

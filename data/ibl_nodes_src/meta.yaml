@@ -1,6 +1,6 @@
 meta:
   constraint: ONLY the nodes listed below exist. No other node names are valid.
   # 참고: 과거 여기 있던 usage/pipeline/principles 블록은 2026-07-03 제거 —
-  # 런타임 소비자가 constraint뿐이었고(ibl_access._load_nodes_data → build_environment),
+  # 런타임 소비자가 constraint뿐이었고(ibl_access.load_nodes_raw → build_environment),
   # 내용은 정식 교재 data/common_prompts/fragments/12_ibl_only.md 가 단일 소스로 커버한다
   # (교재 ↔ 카탈로그 정합은 build --check 의 교재-가드가 검증).

@@ -4,7 +4,7 @@
 그래서 방향을 뒤집는다: 폰의 기존 heartbeat(/nodes/heartbeat)가 롱폴로 승격돼
 "작업 있어?" 를 물으며 hold 하고, 맥은 여기 큐에 작업을 넣어 그 응답에 실어 내려보낸다.
 폰이 실행 결과를 /nodes/job-result 로 회신하면, 대기 중이던 포워드(wait_result)가
-동기적으로 받아간다 → ibl_engine._forward_to_phone 의 동기 의미가 큐 경로에서도 보존된다.
+동기적으로 받아간다 → ibl_engine.forward_to_phone 의 동기 의미가 큐 경로에서도 보존된다.
 
 동기화는 threading 프리미티브: 엔진 포워드는 동기 스레드에서 돌고, FastAPI 핸들러는
 anyio.to_thread 로 워커 스레드에서 pull_blocking 을 hold 한다(이벤트 루프 비차단).

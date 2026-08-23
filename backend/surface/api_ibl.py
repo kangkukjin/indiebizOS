@@ -47,7 +47,7 @@ class EmbedRequest(BaseModel):
 class GuideRequest(BaseModel):
     """가이드 읽기 — **claude_code(아웃오브프로세스 MCP) 프로바이더 전용 브리지**.
 
-    in-process 프로바이더(Gemini 등)는 system_tools 의 read_guide → _search_guide 를
+    in-process 프로바이더(Gemini 등)는 system_tools 의 read_guide → search_guide 를
     같은 프로세스에서 직접 부른다(이미 동작). 그러나 claude_code 는 MCP 브리지(execute_ibl)
     로만 백엔드에 닿아 가이드 읽기 통로가 없었다 — 그래서 read_guide 호출이
     'No such tool available' 로 실패하고 file_find+경로 하드코딩으로 우회하던 문제(헛걸음).
@@ -202,13 +202,13 @@ def _attach_steer(envelope, explicit_agent_id: str):
 async def read_guide_bridge(req: GuideRequest):
     """가이드 DB 검색 — claude_code MCP 브리지(mcp_server.read_guide)가 호출하는 HTTP 통로.
 
-    in-process 경로(system_tools.handle_tool 'read_guide')와 **동일한 _search_guide** 를
+    in-process 경로(system_tools.handle_tool 'read_guide')와 **동일한 search_guide** 를
     호출해 프로바이더 간 동작 동치를 보장한다. 이 라우트는 순수 배관(가이드 검색)일 뿐
     프로바이더 행동을 바꾸지 않는다 — read_guide 도구가 노출되는 곳은 claude_code 의
     MCP 화이트리스트(EAGER_TOOLS)뿐이다."""
     try:
-        from ibl_routing import _search_guide
-        return _search_guide(req.query, {"read": req.read})
+        from ibl_routing import search_guide
+        return search_guide(req.query, {"read": req.read})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -251,8 +251,8 @@ async def get_actions_catalog():
     전체 IBL 액션 목록을 반환한다. 프론트의 액션 사전 모달이
     이 데이터로 책장을 그린다.
     """
-    from ibl_access import _load_nodes_data
-    data = _load_nodes_data()
+    from ibl_access import load_nodes_raw
+    data = load_nodes_raw()
     if not data:
         raise HTTPException(status_code=500, detail="ibl_nodes.yaml 로드 실패")
 
@@ -280,9 +280,9 @@ async def get_actions_catalog():
 # 번역 task 프레이밍·교재 로더·출력 정제기는 ibl_translate(언어층)로 이동 —
 # body_ask(인지층)가 라우터를 import 하지 않게 (2026-08-05 감사 ⑦).
 from ibl_translate import (  # noqa: E402
-    _IBL_TRANSLATE_TASK,
-    _load_ibl_spec,
-    _strip_code_fence,
+    IBL_TRANSLATE_TASK,
+    load_ibl_spec,
+    strip_code_fence,
 )
 
 
@@ -321,8 +321,8 @@ async def translate_to_ibl(req: TranslateRequest):
             prompt += "(관련 과거 용례 없음 — 위 6개 노드 지식으로 직접 번역하라.)\n\n"
         prompt += "위 명령을 IBL 코드로 번역하라. IBL 코드만 출력."
 
-        spec = _load_ibl_spec()
-        system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
+        spec = load_ibl_spec()
+        system_prompt = IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
         # 수동 모드 번역 = 모델 기어 '실행' 축(role=translate)으로 해소.
         return references, system_ai_call(prompt, system_prompt=system_prompt, role="translate")
 
@@ -331,7 +331,7 @@ async def translate_to_ibl(req: TranslateRequest):
     if not raw:
         raise HTTPException(status_code=503, detail="번역 모델이 응답하지 않았습니다. 모델 기어(실행 축) 설정을 확인하세요.")
 
-    ibl_code = _strip_code_fence(raw)
+    ibl_code = strip_code_fence(raw)
     return {
         "intent": intent,
         "ibl_code": ibl_code,
@@ -343,8 +343,8 @@ async def translate_to_ibl(req: TranslateRequest):
 def _action_description(node: str, action: str) -> str:
     """노드/액션의 사람이 읽는 효과 설명 (dry-run 미리보기용)."""
     try:
-        from ibl_access import _load_nodes_data
-        data = _load_nodes_data() or {}
+        from ibl_access import load_nodes_raw
+        data = load_nodes_raw() or {}
         ac = (data.get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})) or {}
         return ac.get("description", "")
     except Exception:
@@ -359,8 +359,8 @@ def _effect_description(node: str, action: str, params: dict) -> str:
     하는지"를 op 단위로 정확히 읽게 한다.
     """
     try:
-        from ibl_access import _load_nodes_data
-        data = _load_nodes_data() or {}
+        from ibl_access import load_nodes_raw
+        data = load_nodes_raw() or {}
         ac = (data.get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})) or {}
         base = ac.get("description", "")
         ops = ac.get("ops") or {}
@@ -380,8 +380,8 @@ def _effect_description(node: str, action: str, params: dict) -> str:
 def _known_nodes() -> list:
     """등록된 노드 이름 목록(정렬) — 에러 문구가 레지스트리를 따라가게."""
     try:
-        from ibl_registry import _load_nodes_config
-        return sorted((_load_nodes_config().get("nodes") or {}).keys())
+        from ibl_registry import load_nodes_installed
+        return sorted((load_nodes_installed().get("nodes") or {}).keys())
     except Exception:
         return []
 
@@ -408,9 +408,9 @@ def _load_op_safety_map() -> dict:
 def _resolve_op(node: str, action: str, params: dict = None) -> str:
     """이 호출에서 실제 실행될 op (없거나 유령이면 None) — ibl_ops 단일 소스."""
     try:
-        from ibl_access import _load_nodes_data
+        from ibl_access import load_nodes_raw
         from ibl_ops import resolve_op
-        data = _load_nodes_data() or {}
+        data = load_nodes_raw() or {}
         ac = (data.get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})) or {}
         return resolve_op(ac, params)
     except Exception:
@@ -471,8 +471,8 @@ async def validate_ibl(req: ValidateRequest):
         한 op(ask)만 모델을 부르는 액션용(side_effect 의 op 축과 같은 모양). 액션 레벨
         플래그가 우선하고, op 를 못 짚으면(유령 op) 보수적으로 고지한다."""
         try:
-            from ibl_access import _load_nodes_data
-            ad = ((_load_nodes_data() or {}).get("nodes", {})
+            from ibl_access import load_nodes_raw
+            ad = ((load_nodes_raw() or {}).get("nodes", {})
                   .get(node, {}).get("actions", {}).get(action, {})) or {}
             if ad.get("ai_call"):
                 return True
@@ -538,8 +538,8 @@ async def validate_ibl(req: ValidateRequest):
             try:
                 _op_val = str(params.get("op") or "").strip()
                 if _op_val:
-                    from ibl_access import _load_nodes_data
-                    _ac = ((_load_nodes_data() or {}).get("nodes", {})
+                    from ibl_access import load_nodes_raw
+                    _ac = ((load_nodes_raw() or {}).get("nodes", {})
                            .get(node, {}).get("actions", {}).get(action, {})) or {}
                     _vals = ((_ac.get("ops") or {}).get("values") or {})
                     if _vals and _op_val not in _vals:

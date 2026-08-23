@@ -135,7 +135,7 @@ def _phone_runnable(node: str, action: str) -> bool:
     return True if rs is None else (f"{node}:{action}" in rs)
 
 
-def _load_nodes_config() -> Dict:
+def load_nodes_installed() -> Dict:
     """노드 정의 로드 (캐싱)"""
     global _nodes
     if _nodes is not None:
@@ -191,12 +191,12 @@ def pruned_reason(node: str, action: str) -> Optional[str]:
     설치에서 걷혔다면 그 사유. "액션이 없습니다"(유령)와 "이 몸의 사전에 없습니다"
     (다른 몸의 어휘)는 다른 상태다 — 전자로 접으면 오류문이 거짓말이 된다.
     """
-    _load_nodes_config()  # prune 이 아직 안 돌았으면 채운다
+    load_nodes_installed()  # prune 이 아직 안 돌았으면 채운다
     return _pruned_foreign.get(f"{node}:{action}")
 
 
 def invalidate_nodes() -> None:
-    """사전 캐시 무효화 — 다음 _load_nodes_config() 가 디스크에서 다시 읽는다.
+    """사전 캐시 무효화 — 다음 load_nodes_installed() 가 디스크에서 다시 읽는다.
     (ibl_engine.reload_nodes 의 캐시 리셋 부분이 여기로 위임)"""
     global _nodes
     _nodes = None
@@ -206,7 +206,7 @@ def invalidate_nodes() -> None:
 # "이 코드가 내 사전인가"는 사전(여기)의 질문 — 해마(ibl_usage_db)·카탈로그(ibl_access)
 # 가 명함 모듈을 import 하지 않게 한다. 명함(카드 조립)은 capability_card 에 남는다.
 
-def _self_can_run(node: str, action: str, cfg: dict) -> bool:
+def self_can_run(node: str, action: str, cfg: dict) -> bool:
     """이 몸이 이 액션을 실제 실행할 수 있는가 (명함=자기 능력만)."""
     if cfg.get("router") == "stub":
         return False
@@ -234,11 +234,11 @@ def foreign_actions(code: str) -> List[str]:
     limbs:phone 실측). 사전에 없는 것 = 이 몸이 실행할 수 없는 것(폐어휘 포함).
     예외는 삼키지 않는다 — fail-open 이 필요한 호출자는 code_is_own 을 쓸 것.
     """
-    nodes = _load_nodes_config().get("nodes") or {}
+    nodes = load_nodes_installed().get("nodes") or {}
     bad: List[str] = []
     for node, action in _ACT_RE.findall(code or ""):
         cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
-        if cfg is None or not _self_can_run(node, action, cfg):
+        if cfg is None or not self_can_run(node, action, cfg):
             bad.append(f"{node}:{action}")
     return bad
 

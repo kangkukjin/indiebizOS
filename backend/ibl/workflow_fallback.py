@@ -23,7 +23,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
     """
     from ibl_engine import execute_ibl
     from workflow_engine import (execute_pipeline, _inject_prev_result, _auto_inject_prev,
-                                 _is_error_result, _is_empty_result, _step_label)
+                                 is_error_result, _is_empty_result, _step_label)
 
     log = []
     last_result = None
@@ -67,7 +67,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         # 에러 확인 — `>>` 와 **같은 함수**를 쓴다(갈라지면 폴백이 문자열 에러를 성공으로 센다)
         # + 빈손 확인 — `??` 전용 술어(⑯, 2026-08-08): 폴백의 의미는 "원하는 걸 못 얻으면
         #   딴 데로"이므로 0건(items:[]·total:0)도 다음 시도로 넘어간다. `>>` 는 불변.
-        is_err = _is_error_result(result)
+        is_err = is_error_result(result)
         is_empty = (not is_err) and _is_empty_result(result)
         entry = {
             "attempt": idx + 1,
@@ -108,7 +108,7 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
     if last_result is None:
         last_result = {"error": "fallback 체인이 비어있습니다.", "_all_failed": True}
         return last_result, log
-    if not _is_error_result(last_result):
+    if not is_error_result(last_result):
         # 마지막 시도가 빈손(에러 아님) — 정직한 0건이 답. 에러로 위장하지 않는다.
         return last_result, log
     if first_empty is not None:

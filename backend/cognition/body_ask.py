@@ -39,7 +39,7 @@ def _payload_note(payload) -> str:
 def _foreign_actions(code: str) -> list:
     """이 몸이 실행할 수 없는 액션 목록 — 부탁 컴파일 산출물의 소유-가드.
 
-    판정 단일 구현은 capability_card.foreign_actions(미지=남의 것 — 물리 분리 후
+    판정 단일 구현은 ibl_registry.foreign_actions(미지=남의 것 — 물리 분리 후
     남의 어휘는 레지스트리에 없어 미지로 나타난다). 여기선 판정 불가 시만 열어둔다
     (가드가 부탁 자체를 깨서는 안 됨).
     """
@@ -115,7 +115,7 @@ def _compile(message: str, correction: str = "", payload=None) -> Dict[str, Any]
 def _compile_cockpit(message: str, correction: str, references: str,
                      payload=None) -> Dict[str, Any]:
     """조종실 번역기(해마 용례 + translate 기어) — 해마 있는 몸의 컴파일러."""
-    from ibl_translate import _IBL_TRANSLATE_TASK, _load_ibl_spec, _strip_code_fence
+    from ibl_translate import IBL_TRANSLATE_TASK, load_ibl_spec, strip_code_fence
     from consciousness_agent import system_ai_call
     prompt = f'사용자 명령: "{message}"\n\n'
     prompt += _payload_note(payload)
@@ -129,15 +129,15 @@ def _compile_cockpit(message: str, correction: str, references: str,
     prompt += ("위 명령을 IBL 코드로 번역하라. 내 어휘로 수행 불가능한 요청이면 "
                "코드 대신 정확히 CANNOT 이라고만 출력하라. IBL 코드만 출력.")
 
-    spec = _load_ibl_spec()
-    system_prompt = _IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
+    spec = load_ibl_spec()
+    system_prompt = IBL_TRANSLATE_TASK + (f"\n\n<ibl_spec>\n{spec}\n</ibl_spec>" if spec else "")
     raw = system_ai_call(prompt, system_prompt=system_prompt, role="translate")
     if not raw:
         return {"ok": False, "error": "이 몸에 컴파일 수단이 없습니다(번역 모델 무응답)."}
     if "CANNOT" in raw and "[" not in raw:
         return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
                 "compiler": "cockpit"}
-    code = _strip_code_fence(raw)
+    code = strip_code_fence(raw)
     if not code.startswith("["):
         return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
                 "compiler": "cockpit"}
@@ -150,14 +150,14 @@ def _own_vocab_lines() -> str:
     명함(build_card)은 코어를 빼지만(공통어휘 전제) 컴파일러는 코어까지 알아야
     파이프(table)·자기관리(self)를 조립한다. 사전이 작은 몸일수록 이 프롬프트도 작다.
     """
-    from capability_card import _registry, _action_entry
-    from ibl_registry import _self_can_run
+    from capability_card import action_entry
+    from ibl_registry import load_nodes_installed, self_can_run
     lines = []
-    for node, ncfg in (_registry().get("nodes") or {}).items():
+    for node, ncfg in ((load_nodes_installed() or {}).get("nodes") or {}).items():
         for a, c in (ncfg.get("actions") or {}).items():
-            if not _self_can_run(node, a, c):
+            if not self_can_run(node, a, c):
                 continue
-            e = _action_entry(node, a, c)
+            e = action_entry(node, a, c)
             ops = f" (op: {', '.join(e['ops'])})" if e.get("ops") else ""
             lines.append(f"[{e['act']}] {e['desc']}{ops}")
     return "\n".join(lines)
@@ -215,8 +215,8 @@ def _compile_gemini(message: str, correction: str = "", payload=None) -> Dict[st
     if "CANNOT" in raw and "[" not in raw:
         return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
                 "compiler": "gemini"}
-    from ibl_translate import _strip_code_fence
-    code = _strip_code_fence(raw)
+    from ibl_translate import strip_code_fence
+    code = strip_code_fence(raw)
     if not code.startswith("["):
         return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
                 "compiler": "gemini"}

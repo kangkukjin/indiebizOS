@@ -755,11 +755,11 @@ class ChannelPoller:
         schedule 트리거가 calendar_manager 폴링으로 발화하듯, 채널 트리거는 이 수신 훅으로 발화.
         메시지 텍스트는 파이프라인 첫 step 의 _prev_result 로 주입(자동 데이터 전달)."""
         try:
-            from trigger_engine import _load_triggers
+            from trigger_engine import load_triggers
         except Exception:
             return  # trigger_engine 미가용 — graceful (폰 등)
         try:
-            triggers = [t for t in (_load_triggers().get("triggers") or [])
+            triggers = [t for t in (load_triggers().get("triggers") or [])
                         if t.get("type") == "channel" and t.get("enabled", True)]
         except Exception as e:
             self._log(f"채널 트리거 로드 실패: {e}")
@@ -810,15 +810,15 @@ class ChannelPoller:
                 result = execute_pipeline(steps, ".", context={"_prev_result": msg_ctx},
                                           agent_id="system_ai")
                 try:
-                    from trigger_engine import _add_history
-                    _add_history(trigger.get("id"), trigger.get("name", ""), True, str(result)[:200])
+                    from trigger_engine import add_history
+                    add_history(trigger.get("id"), trigger.get("name", ""), True, str(result)[:200])
                 except Exception:
                     pass
             except Exception as e:
                 self._log(f"채널 트리거 실행 실패: {e}")
                 try:
-                    from trigger_engine import _add_history
-                    _add_history(trigger.get("id"), trigger.get("name", ""), False, str(e)[:200])
+                    from trigger_engine import add_history
+                    add_history(trigger.get("id"), trigger.get("name", ""), False, str(e)[:200])
                 except Exception:
                     pass
 

@@ -56,11 +56,10 @@ def _get_persistent_loop() -> asyncio.AbstractEventLoop:
 
 
 # === 노드 레지스트리 로딩 ===
-# 사전 로더(_load_nodes_config·_phone_runnable·캐시)는 ibl_registry 로 이동 —
+# 사전 로더(load_nodes_installed·_phone_runnable·캐시)는 ibl_registry 로 이동 —
 # 명함·안전분류 등 사전만 필요한 소비자가 엔진을 import 하지 않게 (2026-08-05 ⑦).
 from ibl_registry import (  # noqa: E402
-    _get_nodes_path,
-    _load_nodes_config,
+    load_nodes_installed,
     _phone_runnable,
     invalidate_nodes as _invalidate_nodes,
 )
@@ -146,7 +145,7 @@ def _queue_push_fallback(phone_url: str, code: str, agent_id: str = None):
             "message": "폰 직결 불가(LTE 등)라 푸시 큐에 담았습니다 — 폰이 곧 수신해 실행합니다."}
 
 
-def _forward_to_phone(phone_url: str, node: str, action: str, params: dict,
+def forward_to_phone(phone_url: str, node: str, action: str, params: dict,
                       agent_id: str = None) -> Dict:
     """분산 IBL(#2) — phone_only 액션을 폰 /ibl/execute 로 HTTP 포워드(몸=폰).
 
@@ -229,7 +228,7 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
                     mac_url: str = None) -> Dict:
     """분산 IBL — 폰서 못 도는 액션을 맥 /ibl/execute 로 단건 포워드(머리=맥).
 
-    `_forward_to_phone`(맥→폰)의 대칭(폰→맥). 이게 "액션이 진짜 실행 단위" 의 핵심:
+    `forward_to_phone`(맥→폰)의 대칭(폰→맥). 이게 "액션이 진짜 실행 단위" 의 핵심:
     execute_ibl 은 합성 code(&/>>/??)의 leaf 액션마다 호출되므로(workflow_engine), 각
     액션이 여기서 개별적으로 로컬/맥을 결정한다 → 혼합 code 도 액션별로 쪼개져 실행.
 
@@ -369,7 +368,7 @@ def _forward_to_node(entry: dict, node: str, action: str, params: dict,
         if not url:
             return {"error": f"노드 '{entry.get('alias')}'의 주소를 모릅니다(미등록).",
                     "node_unreachable": True}
-        return _forward_to_phone(url, node, action, params, agent_id=agent_id)
+        return forward_to_phone(url, node, action, params, agent_id=agent_id)
     # compute-class(맥/허브)
     return _forward_to_mac(node, action, params, agent_id=agent_id, mac_url=url or None)
 
@@ -440,7 +439,7 @@ def _resolve_and_maybe_forward(node, action, action_config, params,
             return _forward_to_mac(node, action, params, agent_id=agent_id)
         purl = os.environ.get("INDIEBIZ_PHONE_URL")
         if purl:
-            return _forward_to_phone(purl, node, action, params, agent_id=agent_id)
+            return forward_to_phone(purl, node, action, params, agent_id=agent_id)
         return None  # 폰 없음 → 로컬 핸들러가 phone_only graceful 거부
 
     if len(cands) == 1:
@@ -466,8 +465,8 @@ def reload_nodes():
     backend 재시작 없이 실행 경로에도 반영되도록.
     """
     _invalidate_nodes()
-    _load_nodes_config()
-    # ibl_executors 가 _load_nodes_config 결과의 nodes 섹션을 별도 캐싱하므로 함께 비운다.
+    load_nodes_installed()
+    # ibl_executors 가 load_nodes_installed 결과의 nodes 섹션을 별도 캐싱하므로 함께 비운다.
     try:
         import ibl_executors
         ibl_executors._nodes_cache = None
@@ -477,7 +476,7 @@ def reload_nodes():
 
 def get_node_actions(node_name: str) -> set:
     """특정 노드의 유효한 액션 이름 set 반환"""
-    config = _load_nodes_config()
+    config = load_nodes_installed()
     nodes = config.get("nodes", {})
     node_def = nodes.get(node_name, {})
     actions = node_def.get("actions", {})
@@ -487,7 +486,7 @@ def get_node_actions(node_name: str) -> set:
 # === 하위 모듈 import (re-export) ===
 from ibl_routing import (
     _route_api_engine, _route_handler, _route_system,
-    _execute_launcher_command, _discover_nodes, _search_guide,
+    _execute_launcher_command, _discover_nodes, search_guide,
     _route_driver,
 )
 from ibl_executors import (
@@ -505,7 +504,7 @@ from ibl_executors import (
 
 def list_ibl_nodes() -> List[Dict]:
     """사용 가능한 노드 목록"""
-    reg = _load_nodes_config()
+    reg = load_nodes_installed()
     result = []
     for name, config in reg.get("nodes", {}).items():
         result.append({
@@ -518,7 +517,7 @@ def list_ibl_nodes() -> List[Dict]:
 
 def list_actions(node: str) -> List[Dict]:
     """특정 노드의 액션 목록"""
-    reg = _load_nodes_config()
+    reg = load_nodes_installed()
     node_config = reg.get("nodes", {}).get(node)
     if not node_config:
         return []
@@ -702,7 +701,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if not action:
         node = tool_input.get("_node")
         if node:
-            reg = _load_nodes_config()
+            reg = load_nodes_installed()
             nc = reg.get("nodes", {}).get(node, {})
             actions = list(nc.get("actions", {}).keys())
             return {
@@ -720,7 +719,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     if not node:
         return {"error": "_node이 설정되지 않았습니다. handler.py를 통해 호출해주세요."}
 
-    reg = _load_nodes_config()
+    reg = load_nodes_installed()
     node_config = reg.get("nodes", {}).get(node)
     if not node_config:
         return {"error": f"알 수 없는 노드: {node}", "available_nodes": [d["node"] for d in list_ibl_nodes()]}

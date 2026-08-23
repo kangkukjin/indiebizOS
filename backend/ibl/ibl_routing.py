@@ -99,8 +99,8 @@ def _normalize_param_aliases(node: str, action: str, params: dict,
     if not isinstance(params, dict):
         return params
     if action_config is None:
-        from ibl_registry import _load_nodes_config
-        action_config = (_load_nodes_config().get("nodes", {})
+        from ibl_registry import load_nodes_installed
+        action_config = (load_nodes_installed().get("nodes", {})
                          .get(node, {}).get("actions", {}).get(action)) or {}
     aliases = action_config.get("aliases") if isinstance(action_config, dict) else None
     if not isinstance(aliases, dict):
@@ -167,7 +167,7 @@ def _resolve_path_by_scope(scope: str, project_path: str,
 
     - workspace/system: get_base_path() (indiebizOS 루트 / userData).
                        project_path/project_id 무시 — 의도적 격리.
-    - project (기본):   기존 4단 폴백 우선순위 적용 (_resolve_project_path).
+    - project (기본):   기존 4단 폴백 우선순위 적용 (resolve_project_path).
     """
     if scope in WORKSPACE_SCOPES:
         try:
@@ -176,10 +176,10 @@ def _resolve_path_by_scope(scope: str, project_path: str,
         except Exception as e:
             print(f"[ibl_routing] workspace 경로 해석 실패: {e}")
             return None
-    return _resolve_project_path(project_path, params)
+    return resolve_project_path(project_path, params)
 
 
-def _resolve_project_path(project_path: str,
+def resolve_project_path(project_path: str,
                           params: Optional[dict] = None) -> Optional[str]:
     """project_path를 우선순위로 해석 (scope='project' 전용).
 
@@ -938,7 +938,7 @@ def _discover_nodes(query: str, params: dict) -> Any:
     """
     import re as _re
     from node_registry import list_nodes, node_summary
-    from ibl_access import _load_nodes_data
+    from ibl_access import load_nodes_raw
 
     if not query:
         return node_summary()
@@ -969,7 +969,7 @@ def _discover_nodes(query: str, params: dict) -> Any:
         return out
 
     # 해마 결과에서 [node:action] 추출 → ibl_nodes.yaml에서 상세 조회
-    nodes_data = _load_nodes_data() or {}
+    nodes_data = load_nodes_raw() or {}
     nodes_config = nodes_data.get("nodes", {})
     action_pattern = _re.compile(r'\[([a-z_-]+):([a-z_-]+)\]')
 
@@ -1014,7 +1014,7 @@ def _discover_nodes(query: str, params: dict) -> Any:
     }
 
 
-def _search_guide(query: str, params: dict) -> Any:
+def search_guide(query: str, params: dict) -> Any:
     """가이드 DB 검색 — 복잡한 작업 전에 워크플로우/레시피 확인
 
     DB(guide_db.json)에서 키워드 매칭 후 data/guides/ 폴더에서 파일 읽기.
@@ -1165,14 +1165,14 @@ def _route_driver(driver_type: str, node: str, action: str,
     params["_node"] = driver_node or node
 
     # project_path 해소 — 작가가 IBL 코드에 손으로 쓴 `{project_id: "…"}` 를 핸들러
-    # 라우터(_route_handler → _resolve_project_path)와 **같은 규칙**으로 존중한다.
+    # 라우터(_route_handler → resolve_project_path)와 **같은 규칙**으로 존중한다.
     # 종전엔 호출자 경로만 그대로 실어, 드라이버 액션에 project_id 를 적으면 조용히
     # 무시되고 *빈 결과가 success 로* 돌아왔다(실측: `[self:agents]{project_id:"study"}`
     # → "에이전트 0명", 같은 DB 직접 조회는 3명). 도구 실패 힌트 문구가 바로 그
     # `{…, project_id: "…"}` 를 안내하고 있어서 AI 는 시킨 대로 쓰고 빈손을 받았다.
     # project_id 가 없으면 종전 경로 그대로 — 프로젝트 에이전트 흐름 무변경.
     if isinstance(params.get("project_id"), str) and params["project_id"].strip():
-        project_path = _resolve_project_path(project_path, params) or project_path
+        project_path = resolve_project_path(project_path, params) or project_path
     if project_path:
         params["project_path"] = project_path
 

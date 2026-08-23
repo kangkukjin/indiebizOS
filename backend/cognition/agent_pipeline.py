@@ -344,8 +344,8 @@ class CognitivePipelineMixin:
                     if _idx < len(tool_calls_log):
                         if not _is_err:
                             try:
-                                from workflow_engine import _is_error_result
-                                _is_err = _is_error_result(_rt)
+                                from workflow_engine import is_error_result
+                                _is_err = is_error_result(_rt)
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err

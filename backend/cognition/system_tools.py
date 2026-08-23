@@ -917,10 +917,10 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
 
         # 가이드 검색 (독립 도구 — IBL/Python 어디서든 사용 가능)
         if tool_name == "read_guide":
-            from ibl_engine import _search_guide
+            from ibl_routing import search_guide  # 정의처 직수입(엔진 재수출 경유 아님)
             query = tool_input.get("query", "")
             read = tool_input.get("read", True)
-            result = _search_guide(query, {"read": read})
+            result = search_guide(query, {"read": read})
             return json.dumps(result, ensure_ascii=False, indent=2)
 
         # IBL 통합 실행기 (Phase 13)
@@ -961,9 +961,9 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
                     )
                 }, ensure_ascii=False)
 
-            from ibl_routing import _resolve_project_path
+            from ibl_routing import resolve_project_path
             from tool_context import ToolContext, ToolContextError
-            resolved_path = _resolve_project_path(project_path, tool_input)
+            resolved_path = resolve_project_path(project_path, tool_input)
             if not resolved_path:
                 return json.dumps({
                     "success": False,

@@ -128,7 +128,7 @@ action_params:
 }
 ```
 
-**인자(params)**(2026-08-22 수리): 스케줄러 액션이 `action_params.params` 를 엔진에 그대로 넘긴다(`calendar_actions._action_run_workflow` → `execute_workflow(..., params=…)`). 주입·경고 규칙은 직접 실행과 완전히 동일하다(강제 규칙도 엔진의 `_coerce_caller_params` 단일 소스 — 모델이 JSON 문자열로 저장한 `params` 도 같이 수용).
+**인자(params)**(2026-08-22 수리): 스케줄러 액션이 `action_params.params` 를 엔진에 그대로 넘긴다(`calendar_actions._action_run_workflow` → `execute_workflow(..., params=…)`). 주입·경고 규칙은 직접 실행과 완전히 동일하다(강제 규칙도 엔진의 `coerce_caller_params` 단일 소스 — 모델이 JSON 문자열로 저장한 `params` 도 같이 수용).
 
 - 워크플로우 몸통에 미할당 `$이름`이 있으면 그것이 인자다 — **등록 시점에 값을 같이 저장해야 한다**(예약 시각엔 물어볼 사람이 없다). 비워 두면 실행 시각에 **"인자 누락"으로 정직 거절**된다(옛날엔 `$city` 가 리터럴로 흘러 엉뚱한 결과를 내고도 success 였다).
 - 인자 유무는 스케줄 걸기 전에 `[self:workflow]{op: "list"}` 의 `params_required` 로 본다.

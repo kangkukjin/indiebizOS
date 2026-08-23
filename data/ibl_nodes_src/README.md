@@ -75,7 +75,7 @@ delegate/world/self_check 등, 특정 패키지 없이 엔진 자체에 속하�
 - `pc_only`: 집 PC 하드웨어·무거운 의존·미검증 패키지. **폰서 직접 실행 못 함 → 맥(연합 두뇌)에 단건 라우팅**(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존).
 - `phone_only`: 폰 하드웨어 전용. 입력=`sense:phone`(알림 피드)·`sense:here`(현재위치 온디맨드 1회 조회 — 상시 추적 아님), 출력=`limbs:phone`(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화 스테이징, Chaquopy→Kotlin PhoneActions). PC선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
 
-**분산 IBL 라우팅 (액션이 실행 단위)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션(`runnable_actions` 밖)을 거부하지 않고 **맥에 단건 위임**한다(`_forward_to_mac`, `_forward_to_phone`의 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로, **혼합 code도 액션별로 쪼개져** 일부는 폰서·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. 추상화 의도=라우팅은 "맥에 프록시"가 아니라 "신뢰 노드(신원)에 위임" — 미래 피어(허가한 친구)가 같은 뼈대에 슬롯인(허가 층만 미구현).
+**분산 IBL 라우팅 (액션이 실행 단위)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션(`runnable_actions` 밖)을 거부하지 않고 **맥에 단건 위임**한다(`_forward_to_mac`, `forward_to_phone`의 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로, **혼합 code도 액션별로 쪼개져** 일부는 폰서·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. 추상화 의도=라우팅은 "맥에 프록시"가 아니라 "신뢰 노드(신원)에 위임" — 미래 피어(허가한 친구)가 같은 뼈대에 슬롯인(허가 층만 미구현).
 
 빌드가 `runs_on` + 검증 패키지에서 `data/phone_manifest.json`(packages + runnable_actions)을 파생한다 —
 폰 번들(Gradle `bundleIndiebizBase`)·앱 계기 필터(`_derive_instruments`)·엔진 라우팅(`ibl_engine._phone_runnable`)의 **단일 진실 소스**.
@@ -103,7 +103,7 @@ delegate/world/self_check 등, 특정 패키지 없이 엔진 자체에 속하�
 ## 런타임 영향 없음
 
 다음 백엔드 코드가 단일 yaml을 직접 로드한다 — 이 분할 작업에서는 건드리지 않음:
-- `backend/ibl_access.py` (`_load_nodes_data`) — 1차 로더, 캐시 보유
+- `backend/ibl_access.py` (`load_nodes_raw`) — 1차 로더, 캐시 보유
 - `backend/tool_loader.py`
 - `backend/bootstrap_ibl_actions.py`
 - `backend/api_xray.py` (2곳)

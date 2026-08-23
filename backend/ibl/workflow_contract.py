@@ -173,7 +173,7 @@ def _signature_of(raw_body) -> List[str]:
 _CALLER_VAR_RESERVED = {"it", "items"}
 
 
-def _coerce_caller_params(raw) -> tuple:
+def coerce_caller_params(raw) -> tuple:
     """run 의 params 를 dict 로 강제. 반환: (dict|None, 오류문|None).
 
     모델이 JSON *문자열*로 넘기는 경우를 관용 수용하되, 객체가 아니면

@@ -17,7 +17,7 @@
   D. (정적·정보) 패키지 핸들러가 실패를 `Error:` **접두 문자열**로 return 하는 자리 수.
      ★부채가 아니다 — system_essentials 계열은 execute()->str 인 **텍스트 계약** 핸들러라
      접두가 곧 실패 규약이고(P1~P19 회귀가 `startswith("Error:")` 를 단언, copy_ops 주석이
-     규약을 명시) 실행기 `_is_error_result` 가 그 접두를 읽는다. 문제는 *접두 없는* 실패문
+     규약을 명시) 실행기 `is_error_result` 가 그 접두를 읽는다. 문제는 *접두 없는* 실패문
      (B21-1 — media_producer 의 `FFmpeg 오류:`)이며 그건 A 가 라이브로 잡는다. D 는 이 텍스트
      계약 가족의 크기를 기록해, 새 텍스트 핸들러가 생기면 접두 규약을 따르는지 대조하는 정보.
 
@@ -38,7 +38,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from returns_drift_sweep import _load_declarations, _declared_of, _execute  # noqa: E402
 
-# ── 오류문 판독 (휴리스틱 — _is_error_result 접두 그물 + 본문 표지) ─────────────────────
+# ── 오류문 판독 (휴리스틱 — is_error_result 접두 그물 + 본문 표지) ─────────────────────
 ERROR_PREFIX_RE = re.compile(r"^\s*(Error|ERROR|오류|에러|실패)\s*[:：]")
 ERROR_BODY_RE = re.compile(r"Traceback \(most recent call last\)|오류 발생|Exception:|\bFFmpeg 오류")
 

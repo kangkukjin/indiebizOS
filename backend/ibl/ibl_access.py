@@ -35,8 +35,8 @@ _ALWAYS_ALLOWED_FALLBACK = {"self", "others", "table"}
 
 
 def _always_allowed() -> Set[str]:
-    """ibl_nodes.yaml 에서 always_on: true 노드 집합을 읽는다 (_load_nodes_data 캐시 공유)."""
-    nodes = _load_nodes_data().get("nodes") or {}
+    """ibl_nodes.yaml 에서 always_on: true 노드 집합을 읽는다 (load_nodes_raw 캐시 공유)."""
+    nodes = load_nodes_raw().get("nodes") or {}
     if not nodes:
         return set(_ALWAYS_ALLOWED_FALLBACK)
     return {n for n, cfg in nodes.items()
@@ -324,7 +324,7 @@ def build_environment(
     Returns:
         환경 프롬프트 문자열
     """
-    nodes_data = _load_nodes_data()
+    nodes_data = load_nodes_raw()
     if not nodes_data:
         return ""
 
@@ -393,8 +393,8 @@ def build_environment(
             # 상대 능력은 이웃 몸 명함(냄새)으로 알고 [others:ask]{to, message}로 부탁한다.
             # 실행 경로(ibl_engine)는 과도기 동안 유지 — 기존 계기·스케줄 호환.
             try:
-                from ibl_registry import _self_can_run
-                if not _self_can_run(node_name, action_name, action_config):
+                from ibl_registry import self_can_run
+                if not self_can_run(node_name, action_name, action_config):
                     continue
             except Exception:
                 pass
@@ -528,7 +528,7 @@ def invalidate_nodes_cache():
         print(f"[ibl_access] node_registry 캐시 무효화 실패(무시): {e}")
 
 
-def _load_package_meta() -> dict:
+def load_package_meta() -> dict:
     """data/package_meta.json 로드 (캐시) — Phase 4, needs_key/weight/locale + action_owner.
 
     파일이 없거나 파싱 실패하면 빈 dict(관용 — 활성 필터가 통째로 죽지 않고 그냥
@@ -557,7 +557,7 @@ def _dormant_reason(node_name: str, action_name: str) -> Optional[str]:
     부재-패키지 관용과 같은 결 — 액션을 카탈로그에서 지우지 않고 *왜 못 쓰는지*를
     보여준다(SIM 슬롯 비유, 임시방편 아님. docs/CAPABILITY_SELF_CONTAINMENT_PLAN.md Phase 4).
     """
-    meta = _load_package_meta()
+    meta = load_package_meta()
     owner = meta.get("action_owner", {}).get(f"{node_name}:{action_name}")
     if not owner:
         return None
@@ -630,7 +630,7 @@ def _get_nodes_path() -> Path:
     return _get_base_path() / "data" / "ibl_nodes.yaml"
 
 
-def _load_nodes_data() -> dict:
+def load_nodes_raw() -> dict:
     """ibl_nodes.yaml 전체 로드 (캐시)"""
     global _nodes_data_cache
     if _nodes_data_cache is not None:

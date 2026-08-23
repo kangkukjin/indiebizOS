@@ -327,7 +327,7 @@ def test_p13_document_open_dict_and_table():
 
 def test_p14_fallback_empty_predicate():
     """P14(⑯ 실험 7): ??가 빈 결과(total:0·items:[])를 성공으로 세어 폴백이 안 돌았다."""
-    from ibl.workflow_engine import _is_empty_result, _is_error_result
+    from ibl.workflow_engine import _is_empty_result, is_error_result
     # 빈손 판정 — 구조 신호
     assert _is_empty_result({"success": True, "items": [], "total": 0}) is True
     assert _is_empty_result(json.dumps({"total": 0, "items": []})) is True
@@ -339,7 +339,7 @@ def test_p14_fallback_empty_predicate():
     assert _is_empty_result("자유 텍스트 응답") is False
     assert _is_empty_result({"success": True, "truncated": False, "total": 5, "items": [{}]}) is False
     # 에러와 빈손은 별개 축 (에러는 기존 술어가)
-    assert _is_error_result({"success": False, "error": "x"}) and not _is_empty_result({"a": 1})
+    assert is_error_result({"success": False, "error": "x"}) and not _is_empty_result({"a": 1})
     # grep/file_find 0건 = 이제 맨 문자열이 아니라 통화 봉투(술어가 잡을 수 있게)
     with tempfile.TemporaryDirectory() as td:
         g0 = json.loads(_sysess.execute({"pattern": "없는패턴XYZ", "path": td}, _Ctx("grep_files", td)))
@@ -694,13 +694,13 @@ def test_p22_copy_empty_hands_vs_no_currency():
     for zero in (json.dumps({"items": []}), {"items": []}, []):
         r = copy_with(zero)
         assert "0행" in r and not r.startswith("Error:"), (zero, r)
-        assert wf._is_error_result(r) is False, r        # 파이프가 성공으로 읽는가
+        assert wf.is_error_result(r) is False, r        # 파이프가 성공으로 읽는가
         assert "복사할 항목이 없습니다" not in r, r       # 옛 문장으로 되돌아가지 않았는가
 
     # ② 통화 없음 = 여전히 거절 + 받은 봉투 진단(무엇이 왔는지)
     r = copy_with("그냥 평문 결과입니다")
     assert r.startswith("Error:") and "통화가 없습니다" in r, r
-    assert wf._is_error_result(r) is True, r
+    assert wf.is_error_result(r) is True, r
     r2 = copy_with(json.dumps({"success": True, "message": "완료"}))
     assert r2.startswith("Error:") and "message" in r2, r2   # 봉투 키를 보여준다
     r3 = copy_with(json.dumps({"items": "목록이 아님"}))

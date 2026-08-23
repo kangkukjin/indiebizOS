@@ -24,18 +24,18 @@ from typing import Any, Dict, List
 
 
 def _registry() -> Dict:
-    from ibl_registry import _load_nodes_config
-    return _load_nodes_config() or {"nodes": {}}
+    from ibl_registry import load_nodes_installed
+    return load_nodes_installed() or {"nodes": {}}
 
 
-# 소유 판정(_self_can_run·foreign_actions·code_is_own)은 ibl_registry(사전층)로
-# 이동 — 해마·카탈로그가 명함 모듈을 import 하지 않게 (2026-08-05 ⑦).
-from ibl_registry import (  # noqa: F401
-    _self_can_run, foreign_actions, code_is_own,
-)
+# 소유 판정(self_can_run·foreign_actions·code_is_own)은 ibl_registry(사전층)로
+# 이동 — 해마·카탈로그가 명함 모듈을 import 하지 않게 (2026-08-05 ⑦). 명함이 실제로
+# 쓰는 것은 self_can_run 뿐이라, 이동기의 재수출(foreign_actions·code_is_own)은
+# 소비자 0 을 확인하고 걷었다 — 소비처는 ibl_registry 직수입이 정착 (2026-08-24).
+from ibl_registry import self_can_run
 
 
-def _action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
+def action_entry(node: str, action: str, cfg: dict) -> Dict[str, Any]:
     entry: Dict[str, Any] = {"act": f"{node}:{action}",
                              "desc": cfg.get("description", "")}
     ops = cfg.get("ops")
@@ -57,9 +57,9 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
             continue  # 표준 코어 — 공통어휘 전제, 소개 불필요
         actions = node_cfg.get("actions", {}) or {}
         entries = [
-            _action_entry(node_name, a, c)
+            action_entry(node_name, a, c)
             for a, c in actions.items()
-            if _self_can_run(node_name, a, c)
+            if self_can_run(node_name, a, c)
         ]
         if not entries:
             continue
@@ -72,7 +72,7 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
         if detail == "summary":
             groups: Dict[str, int] = {}
             for a, c in actions.items():
-                if _self_can_run(node_name, a, c):
+                if self_can_run(node_name, a, c):
                     g = c.get("group", "-")
                     groups[g] = groups.get(g, 0) + 1
             cap["groups"] = groups
@@ -83,10 +83,10 @@ def build_card(detail: str = "full") -> Dict[str, Any]:
     # hash 는 full 프로젝션 기준(사전의 지문) — detail 과 무관하게 동일해야
     # "명함이 낡았는가" 대조에 쓸 수 있다.
     full_proj = [
-        _action_entry(n, a, c)
+        action_entry(n, a, c)
         for n, ncfg in nodes.items() if not ncfg.get("always_on")
         for a, c in (ncfg.get("actions", {}) or {}).items()
-        if _self_can_run(n, a, c)
+        if self_can_run(n, a, c)
     ]
     canonical = json.dumps(full_proj, ensure_ascii=False, sort_keys=True)
     dictionary_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:12]

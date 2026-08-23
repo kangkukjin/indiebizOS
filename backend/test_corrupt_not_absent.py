@@ -6,7 +6,7 @@ ep1396 쓰기 경로 추적에서 파서의 침묵 절단을 고친 뒤, 같은 
 진단 가능성 결함이다: 사용자와 AI 가 원인을 영영 못 본다.
 
     S1. workflow_engine.get_workflow    깨진 yaml → None(=없는 워크플로)
-    S2. ibl_access._load_nodes_data     깨진 어휘 → {} (낱말 151개가 전부 증발)
+    S2. ibl_access.load_nodes_raw     깨진 어휘 → {} (낱말 151개가 전부 증발)
     S3. ibl_access._load_peer_agents    깨진 명부 → [] (동료가 사라져 위임 불가)
     S4. tool_loader.load_tool_schema    깨진 tool.json → None(=그런 도구 없음)
 
@@ -76,7 +76,7 @@ def _run_s2(ibl_access):
         ibl_access._nodes_data_cache = None
         ibl_access._get_nodes_path = lambda: p             # noqa: E731
         try:
-            ibl_access._load_nodes_data()
+            ibl_access.load_nodes_raw()
         except RuntimeError as e:
             assert "어휘 원장" in str(e), str(e)
         else:
@@ -86,7 +86,7 @@ def _run_s2(ibl_access):
 
         # 부재는 여전히 조용한 {}
         ibl_access._get_nodes_path = lambda: Path(td) / "없는파일.yaml"   # noqa: E731
-        assert ibl_access._load_nodes_data() == {}, "진짜 부재까지 시끄러워졌다"
+        assert ibl_access.load_nodes_raw() == {}, "진짜 부재까지 시끄러워졌다"
         ibl_access._nodes_data_cache = None
 
 

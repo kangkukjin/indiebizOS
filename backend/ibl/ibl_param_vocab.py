@@ -35,12 +35,12 @@ from typing import Any, Dict, List, Optional, Set
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
 
 # 런타임 메타 키 — 핸들러 인자가 아니라 라우팅이 읽는 키.
-#   project_id: ibl_routing._resolve_project_path · scope: ibl_routing scope 해소
+#   project_id: ibl_routing.resolve_project_path · scope: ibl_routing scope 해소
 #   (same/system/cross/workspace, ibl_routing.py params.get("scope") + ibl_engine action scope).
 RUNTIME_META_KEYS = {"project_id", "scope"}
 
 # 라우팅이 *가로채는* 키 — 작가가 params 에 적어도 핸들러까지 도달하지 못한다.
-#   project_path: ibl_routing._resolve_project_path 가 호출자 정체성 경로(2번 우선순위)를
+#   project_path: ibl_routing.resolve_project_path 가 호출자 정체성 경로(2번 우선순위)를
 #   먼저 반환하므로, 호출자 경로가 있는 한 params 의 값은 영영 안 읽힌다. 이 부류의
 #   침묵은 특히 비싸다 — 빈 결과가 아니라 *다른 대상의 정상 응답*이 돌아와 오답을
 #   참으로 믿게 된다(2026-08-18 [self:recent_chats] 실측: 시스템 AI 가 투자 프로젝트를
@@ -146,7 +146,7 @@ def _schema_props(tool_name: str) -> Set[str]:
         return set()
 
 
-def _documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
+def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
     """제안(did-you-mean)용 문서화 어휘 — 허용집합보다 좁은, 사람이 쓰라고 만든 키."""
     vocab = _schema_props(tool_name) | _alias_keys(action_config) | {"op"}
     tk = action_config.get("target_key")
@@ -251,8 +251,8 @@ def check_params(node: str, action: str, params: Any,
         return None
     if action_config is None:
         try:
-            from ibl_registry import _load_nodes_config
-            action_config = (_load_nodes_config().get("nodes", {})
+            from ibl_registry import load_nodes_installed
+            action_config = (load_nodes_installed().get("nodes", {})
                              .get(node, {}).get("actions", {}).get(action)) or {}
         except Exception:
             return None
@@ -269,7 +269,7 @@ def check_params(node: str, action: str, params: Any,
                  and k not in _CONTEXT_KEYS}
     unknown = sorted(user_keys - allowed)
 
-    vocab = _documented_vocab(action_config, action_config.get("tool", ""))
+    vocab = documented_vocab(action_config, action_config.get("tool", ""))
 
     # 소프트 층 (2026-08-16 상상훈련 F2): 패키지 AST 합집합(allowed)은 내부 파이썬
     # 식별자까지 품는 과대 허용이라, [self:notebook]{notebook: ...} 같은 오타가 침묵

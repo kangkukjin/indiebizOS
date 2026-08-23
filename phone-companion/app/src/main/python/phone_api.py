@@ -146,7 +146,7 @@ app = FastAPI()
 # #3 폰 인증 게이트 — LAN 노출(0.0.0.0 바인드) 시 인바운드 보호.
 # localhost(WebView 자기접속·adb forward loopback)는 무인증 통과. 비localhost(맥→폰 WiFi
 # 분산 포워드)는 X-Phone-Token == INDIEBIZ_PHONE_TOKEN 일치 요구. 토큰 미설정이면 비localhost
-# 전면 거부(= LAN에 무인증으로 절대 노출 안 함). 맥 _forward_to_phone 이 이 헤더를 동봉한다.
+# 전면 거부(= LAN에 무인증으로 절대 노출 안 함). 맥 forward_to_phone 이 이 헤더를 동봉한다.
 import hmac as _hmac
 
 
@@ -764,7 +764,7 @@ async def _register_with_hub(port: int):
 async def _run_push_job(job: dict, port: int):
     """허브가 heartbeat 롱폴로 내려보낸 푸시 작업(맥→폰 반전 전달) 실행.
 
-    직결 포워드(_forward_to_phone)와 같은 페이로드 의미(code+agent_id)로 자기
+    직결 포워드(forward_to_phone)와 같은 페이로드 의미(code+agent_id)로 자기
     /ibl/execute 에 넣는다(localhost=인증 통과, 실행 경로 단일화). 결과는
     /nodes/job-result 로 회신 — 맥의 대기 중 포워드(wait_result)가 동기적으로 받아간다.
     """
@@ -1318,7 +1318,7 @@ async def execute(req: Request):
     if not code:
         return JSONResponse({"success": False, "error": "code 파라미터가 필요합니다."})
 
-    # 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4): 맥→폰 위임(_forward_to_phone)이 호출자
+    # 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4): 맥→폰 위임(forward_to_phone)이 호출자
     # 신원을 실어 보내면 그걸로 기록하고, 폰 자체 표면 호출(미동봉)이면 폰-자아("phone")로 떨어진다.
     agent_id = body.get("agent_id") or "phone"
 

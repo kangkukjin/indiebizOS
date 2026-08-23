@@ -40,7 +40,7 @@ SYSTEM_AI_ID = "system_ai"
 
 # === 시스템 계정 조회 ===
 
-def _get_system_gmail_address() -> Optional[str]:
+def get_system_gmail_address() -> Optional[str]:
     """시스템 AI gmail 주소 — gmail extension config.yaml의 email.
 
     indiebizOS가 운영하는 계정이다. (owner 개인 계정과는 별개 — owner는 .env의
@@ -87,7 +87,7 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     if agent_id == SYSTEM_AI_ID:
         account = params.get("account")
         if channel_type == "email":
-            email = account or _get_system_gmail_address()
+            email = account or get_system_gmail_address()
             if not email:
                 return {"error": "시스템 gmail 계정이 설정되지 않았습니다. (gmail extension config.yaml의 email)"}
             return {"email": email}

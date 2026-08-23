@@ -67,7 +67,7 @@ def copy_piped_items(tool_input: dict, dest: str, project_path: str, path_guard)
                 f"— 복사는 path 필드를 가진 항목이 필요합니다. 첫 행: {str(rows[0])[:60]}")
     if not items:
         # ★0행은 고장이 아니라 정당한 빈손 — 감시자·필터 문형의 정상 결과다(F20-3 계약).
-        # "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다(_is_error_result 규약).
+        # "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다(is_error_result 규약).
         return "입력 0행 — 복사할 파일이 없습니다 (0개 저장, 빈손). 앞 단계가 0행을 냈습니다."
 
     dst_dir = os.path.join(project_path, os.path.expanduser(dest))

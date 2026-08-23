@@ -44,7 +44,7 @@ def _get_workflows_path() -> Path:
 
 # === 실패 판정 (단일 소스) ===
 
-def _is_error_result(result) -> bool:
+def is_error_result(result) -> bool:
     """도구 결과가 실패인지 판정한다 — `>>`·`??` 공용 **단일 소스**.
 
     도구가 실패를 알리는 방식이 **네 갈래**라 판정이 곳곳에 복제됐다가 갈라졌었다
@@ -92,7 +92,7 @@ def _is_error_result(result) -> bool:
             except Exception:
                 return False
             if isinstance(parsed, dict):
-                return _is_error_result(parsed)
+                return is_error_result(parsed)
         return False
     return False
 
@@ -101,13 +101,13 @@ def _is_empty_result(result) -> bool:
     """도구 결과가 **빈손**인지 판정한다 — `??` 전용 보조 술어 (2026-08-08, 실험 7 ⑯).
 
     두 연산자의 술어는 원래 다르다:
-      - `>>` 순차: "앞이 죽었으면 멈춰라" → 고장(_is_error_result)만. 0건은 죽음이
+      - `>>` 순차: "앞이 죽었으면 멈춰라" → 고장(is_error_result)만. 0건은 죽음이
         아니고, 0건 위의 take/filter 가 0건을 내는 것이 정답이다.
       - `??` 폴백: "원하는 걸 못 얻었으면 딴 데로" → **빈손도 못 얻은 것**.
         폴백을 거는 대상은 대개 검색이고 목록형 검색의 흔한 실패 모드가 0건이라,
         고장 판정만으로는 발동해야 할 자리의 다수를 통과시킨다(실측: [sense:used]
         total:0 이 status ok 로 기록되고 뒤의 웹 검색이 손도 안 대진 채 남았다).
-    2026-07-18 의 판정 통일(_is_error_result 단일 소스)은 유지 — 이 술어는 or 로만 얹는다.
+    2026-07-18 의 판정 통일(is_error_result 단일 소스)은 유지 — 이 술어는 or 로만 얹는다.
 
     빈손 판정은 **구조 신호만** (산문 휴리스틱 없음):
       - dict(또는 JSON 문자열)의 items == [] (빈 리스트)
@@ -423,11 +423,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # skipped_steps·statements_failed·halted_steps 로, 폴백은 attempts[] 로 신고하는데
             # 병렬은 가지가 하나 죽어도 전부 죽어도 봉투가 success: true 였다(침묵/거짓 성공
             # 부류의 여덟 번째 자리 — 하필 행동 기준 가장 많이 쓰이는 조합 문법 18.7%).
-            # 판정은 단일 소스 _is_error_result 로, 승격은 skipped_steps/halted_steps 와 같은 규약.
+            # 판정은 단일 소스 is_error_result 로, 승격은 skipped_steps/halted_steps 와 같은 규약.
             _branches = result if isinstance(result, list) else []
             _bfail = []
             for _bi, _br in enumerate(_branches):
-                if not _is_error_result(_br):
+                if not is_error_result(_br):
                     continue
                 _bs = step["branches"][_bi] if _bi < len(step["branches"]) else {}
                 _bd = _br
@@ -499,7 +499,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             result_str = _to_string(result)
 
             # fallback 결과에 에러가 있으면 (모든 체인 실패 — `_all_failed` 는 _execute_fallback 이 붙인다)
-            is_err = isinstance(result, dict) and result.get("_all_failed") and _is_error_result(result)
+            is_err = isinstance(result, dict) and result.get("_all_failed") and is_error_result(result)
             action_count += 1
             _rec_fb = {
                 "step": i + 1, "type": "fallback",
@@ -618,7 +618,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         result_str = _to_string(result)
 
         # 에러 확인 (단일 소스)
-        is_err = _is_error_result(result)
+        is_err = is_error_result(result)
 
         action_count += 1
         _rec = {
@@ -1138,7 +1138,7 @@ def execute_workflow_action(action: str, params: dict,
     elif action == "run":
         # 호출자 params({변수: 값}) — 문장 안 미할당 $변수에 주입. desc 선언대로
         # 저장본·즉석 양 경로 동일 지원 (2026-08-17 B8 수리 — 전엔 침묵 유실).
-        caller, _perr = _coerce_caller_params(params.get("params"))
+        caller, _perr = coerce_caller_params(params.get("params"))
         if _perr:
             return {"error": _perr}
         # 호출 스택 — ibl_engine 이 tool_input._wf_stack 을 params 로 내려 준다(재귀 가드).
@@ -1204,7 +1204,7 @@ def execute_workflow_action(action: str, params: dict,
         # 직접 호출 + 스케줄 event_action 어휘). IBL 표면 어휘 [self:run_pipeline] 은
         # 2026-08-05 [self:workflow]{op:"run", steps} 로 흡수 — 실행 본체는 _run_inline 공유.
         # params 주입도 run 과 일관 지원 (내부 호출자는 params 키를 안 쓰므로 무회귀).
-        caller, _perr = _coerce_caller_params(params.get("params"))
+        caller, _perr = coerce_caller_params(params.get("params"))
         if _perr:
             return {"error": _perr}
         return _run_inline(params, project_path, caller_params=caller,
@@ -1312,7 +1312,7 @@ def _promote_final_currency(out, steps: Optional[list] = None):
 
 # 호출자 params 주입기도 workflow_contract 로 이관(2026-08-22) — 시그니처와 같은 계약.
 from workflow_contract import (  # noqa: E402,F401
-    _CALLER_VAR_RESERVED, _coerce_caller_params, _normalize_steps_for_injection,
+    _CALLER_VAR_RESERVED, coerce_caller_params, _normalize_steps_for_injection,
     _reserved_row_names, _apply_caller_params,
 )
 

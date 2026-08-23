@@ -437,7 +437,7 @@ def _attempts_of(d):
     return []
 
 def _op_fallback_string_err(d):
-    """앞이 **문자열** 에러여도 폴백해야 한다 — 실패 판정 단일화(_is_error_result)의 회귀 테스트.
+    """앞이 **문자열** 에러여도 폴백해야 한다 — 실패 판정 단일화(is_error_result)의 회귀 테스트.
     이전엔 `??` 만 문자열 에러를 성공으로 세어, 1차가 status:ok 로 기록되고 폴백을 안 탔다."""
     a = _attempts_of(d)
     return (len(a) == 2 and a[0].get("status") == "error" and a[1].get("status") == "ok",

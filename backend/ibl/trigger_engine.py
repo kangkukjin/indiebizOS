@@ -118,7 +118,7 @@ def _resolve_schedule_config(params: dict) -> dict:
     return {"config": {}}
 
 
-def _load_triggers() -> dict:
+def load_triggers() -> dict:
     """트리거 파일 로드 (손상 시 빈 설정으로 덮어쓰기 방지 — safe_store)"""
     from safe_store import safe_load_json
     return safe_load_json(TRIGGERS_PATH, {"triggers": [], "history": []})
@@ -186,10 +186,10 @@ def _sync_schedule_trigger(trigger: dict, action: str = "add"):
 
 # === 실행 이력 ===
 
-def _add_history(trigger_id: str, trigger_name: str, success: bool,
+def add_history(trigger_id: str, trigger_name: str, success: bool,
                  result_summary: str = "", duration_ms: int = 0):
     """실행 이력 추가"""
-    data = _load_triggers()
+    data = load_triggers()
     history = data.get("history", [])
     history.append({
         "trigger_id": trigger_id,
@@ -208,7 +208,7 @@ def _add_history(trigger_id: str, trigger_name: str, success: bool,
 
 def _list_triggers(params: dict) -> dict:
     """트리거 목록"""
-    data = _load_triggers()
+    data = load_triggers()
     triggers = data.get("triggers", [])
 
     # 타입 필터
@@ -278,7 +278,7 @@ def _get_existing_schedule_events() -> list:
 
 def _get_trigger(target: str) -> dict:
     """트리거 상세"""
-    data = _load_triggers()
+    data = load_triggers()
     for t in data.get("triggers", []):
         if t["id"] == target or t.get("name") == target:
             return {"trigger": t}
@@ -324,7 +324,7 @@ def _create_trigger(target: str, params: dict) -> dict:
     }
 
     # 트리거 저장
-    data = _load_triggers()
+    data = load_triggers()
     data.setdefault("triggers", []).append(trigger)
     _save_triggers(data)
 
@@ -342,7 +342,7 @@ def _create_trigger(target: str, params: dict) -> dict:
 
 def _update_trigger(target: str, params: dict) -> dict:
     """트리거 수정"""
-    data = _load_triggers()
+    data = load_triggers()
     for t in data.get("triggers", []):
         if t["id"] == target or t.get("name") == target:
             # 수정 가능 필드
@@ -372,7 +372,7 @@ def _update_trigger(target: str, params: dict) -> dict:
 
 def _delete_trigger(target: str) -> dict:
     """트리거 삭제"""
-    data = _load_triggers()
+    data = load_triggers()
     triggers = data.get("triggers", [])
     original_len = len(triggers)
 
@@ -410,7 +410,7 @@ def _disable_trigger(target: str) -> dict:
 
 def _toggle_trigger(target: str, enabled: bool) -> dict:
     """트리거 활성화/비활성화"""
-    data = _load_triggers()
+    data = load_triggers()
     for t in data.get("triggers", []):
         if t["id"] == target or t.get("name") == target:
             t["enabled"] = enabled
@@ -428,7 +428,7 @@ def _toggle_trigger(target: str, enabled: bool) -> dict:
 
 def _trigger_status() -> dict:
     """트리거 시스템 전체 상태"""
-    data = _load_triggers()
+    data = load_triggers()
     triggers = data.get("triggers", [])
 
     # 트리거 통계
@@ -471,7 +471,7 @@ def _trigger_status() -> dict:
 
 def _trigger_history(target: str, params: dict) -> dict:
     """트리거 실행 이력"""
-    data = _load_triggers()
+    data = load_triggers()
     history = data.get("history", [])
 
     if target:

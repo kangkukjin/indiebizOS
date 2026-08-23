@@ -690,8 +690,8 @@ def _ai_call_actions():
     if _AI_CALL_ACTIONS_CACHE is None:
         acts = set()
         try:
-            from ibl_access import _load_nodes_data
-            for nn, nd in ((_load_nodes_data() or {}).get("nodes", {}) or {}).items():
+            from ibl_access import load_nodes_raw
+            for nn, nd in ((load_nodes_raw() or {}).get("nodes", {}) or {}).items():
                 for an, ad in ((nd or {}).get("actions") or {}).items():
                     if isinstance(ad, dict) and ad.get("ai_call"):
                         acts.add((nn, an))

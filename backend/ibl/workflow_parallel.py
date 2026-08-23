@@ -28,7 +28,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     from ibl_engine import execute_ibl
     from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
     from workflow_engine import (_inject_prev_result, _auto_inject_prev,
-                                 _is_error_result, _to_prev_currency)
+                                 is_error_result, _to_prev_currency)
 
     # 부모 스레드의 thread_context 를 **통째로** 떠서 자식 스레드에 승계한다.
     #
@@ -77,7 +77,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
                     return {"error": f"괄호 분기 {j + 1}/{len(subs)} 단계 실패: {e}",
                             "_node": ti.get("_node", "?"), "action": ti.get("action", "?")}
                 # 단계 실패 위에 다음 단계를 쌓지 않는다 — 실패 위 파이프는 거짓 (정직 전파)
-                if _is_error_result(last):
+                if is_error_result(last):
                     _fail = last if isinstance(last, dict) else {"error": str(last)[:400]}
                     return {**_fail,
                             "_branch_step_failed": f"{j + 1}/{len(subs)}",

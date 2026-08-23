@@ -281,8 +281,8 @@ def _enrich_error_with_param_hint(result, code: str):
             return result  # 파이프라인/병렬은 스텝별 결과로 이미 구분됨
         node = parsed[0].get("_node", "")
         action = parsed[0].get("action", "")
-        from ibl_access import _load_nodes_data
-        meta = _load_nodes_data().get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})
+        from ibl_access import load_nodes_raw
+        meta = load_nodes_raw().get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})
         desc = (meta.get("description") or "").strip()
         # ★F31-1 (31회차 실측): description 은 파라미터 *이름*을 거의 안 담는다. 그래서
         #   `[self:ask]{question: …}` 은 "prompt 가 필요합니다" 만 듣고, **자기가 준 question 이
@@ -295,9 +295,9 @@ def _enrich_error_with_param_hint(result, code: str):
         try:
             _params = parsed[0].get("params")
             if isinstance(_params, dict) and _params:
-                from ibl_param_vocab import (_documented_vocab, UNIVERSAL_PARAM_KEYS,
+                from ibl_param_vocab import (documented_vocab, UNIVERSAL_PARAM_KEYS,
                                              RUNTIME_META_KEYS)
-                _vocab = _documented_vocab(meta, meta.get("tool"))
+                _vocab = documented_vocab(meta, meta.get("tool"))
                 if _vocab:                       # 선언 어휘가 없으면 침묵(오탐 회피 우선)
                     _known = _vocab | UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
                     _unk = sorted(k for k in _params if k not in _known and not k.startswith("_"))

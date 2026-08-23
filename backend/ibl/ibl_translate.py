@@ -13,7 +13,7 @@ import re
 # 지능(주권)은 인간 + 언어(IBL)에 남는다. 검수는 코드가 아니라 효과(dry-run)로 한다.
 
 # 번역 task 프레이밍 — IBL 문법은 아래 정식 교재(12_ibl_only.md)에 맡기고, 여기선 '번역만 하라'는 역할과 출력 규칙만 둔다.
-_IBL_TRANSLATE_TASK = """너는 IBL(IndieBiz Logic) 컴파일러다. 사용자의 자연어 명령을 IBL 코드로 번역만 한다.
+IBL_TRANSLATE_TASK = """너는 IBL(IndieBiz Logic) 컴파일러다. 사용자의 자연어 명령을 IBL 코드로 번역만 한다.
 아래 <ibl_spec>가 IBL 문법·노드 체계·패턴의 정식 명세다 (모든 에이전트가 쓰는 교재). 이대로 따르라.
 
 규칙:
@@ -22,7 +22,7 @@ _IBL_TRANSLATE_TASK = """너는 IBL(IndieBiz Logic) 컴파일러다. 사용자�
 3. 의도가 모호하면 가장 단순하고 되돌릴 수 있는 해석을 택하라."""
 
 
-def _load_ibl_spec() -> str:
+def load_ibl_spec() -> str:
     """모든 에이전트가 받는 정식 IBL 교재(12_ibl_only.md)를 그대로 읽는다.
     수동 모드 번역기도 같은 문법 진실 소스를 쓰게 해 중복을 없앤다 (사람-페이스라 매번 읽어도 무방)."""
     try:
@@ -33,7 +33,7 @@ def _load_ibl_spec() -> str:
         return ""
 
 
-def _strip_code_fence(text: str) -> str:
+def strip_code_fence(text: str) -> str:
     """모델 출력에서 IBL 원문만 추출. 앞의 펜스/설명/execute_ibl( 래퍼와
     뒤의 따옴표/괄호 잔여물(예: ...}')))을 모두 떼어낸다."""
     t = (text or "").strip()

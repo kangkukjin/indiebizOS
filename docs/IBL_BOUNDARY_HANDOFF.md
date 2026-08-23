@@ -1,0 +1,159 @@
+# IBL 경계 수리 핸드오프 — 사적 심볼 월경 + 사전 이음매 계약화
+
+작성: 2026-08-24 (Claude Code 세션, 조사만 수행 — 코드 무변경).
+발단: "IBL을 다른 하네스가 쓸 수 있게 경계를 분명히 할까" 논의에서 지목된 3번 문제
+(① `_load_nodes_data` 사적 심볼 누수, ② 사전 로더가 datastore 층에 있음)의 실측 조사와 수리 계획.
+
+## 0. 조사 결과 요약 — 원래 진단 두 개 중 하나는 수정됨
+
+**① 사적 심볼 누수 — 실재하되, 부류의 경계를 다시 그어야 한다.**
+backend 전체의 모듈-간 언더스코어 import는 AST 실측 **208곳**이다. 그러나 대부분은
+1500줄 규칙으로 쪼갠 **친구-모듈 간 공유**(ibl_engine↔ibl_executors↔ibl_routing,
+ibl_parser↔parser_values↔parser_blocks, workflow_engine↔binding↔contract, world_pulse 3분할 등)로,
+한 유기체를 파일만 나눈 자리다. 이건 결함이 아니고 개명하면 저비용 churn 만 남는다.
+**진짜 결함은 "ibl 층 밖(cognition·surface·services·datastore·패키지)에서 ibl 층 모듈의
+사적 심볼을 import 하는 것"** — 실측 **21 import 사이트, 16개 심볼, 11개 ibl 모듈** (§2 표).
+
+**② "언어가 자기 사전을 자기 밖에서 읽는다" — 진단이 부정확했다. 이동은 기각.**
+같은 `ibl_nodes.yaml`을 읽는 로더가 둘인데 중복이 아니라 의미가 다르다:
+
+| 로더 | 층 | 의미 | 부재 시 | 파손 시 |
+|---|---|---|---|---|
+| `ibl_access._load_nodes_data` | ibl | **원본 사전집**(생 yaml) | `{}` 조용히 | RuntimeError + 재생성 안내 (2026-08-22 정직화) |
+| `ibl_registry._load_nodes_config` | datastore | **이 몸에 설치된 사전**(api_registry 병합 + `_prune_foreign_vocabulary` 몸-필터) | `{"nodes":{}}` 조용히 | 생 yaml 예외 (안내문 없음) |
+
+언어(ibl 층)는 원본 사전을 **이미 스스로 읽고 있다**(ibl_access). datastore에 있는 것은
+**설치본 빌더**이고, 설치(=api_registry 병합, `detect_body` 기반 타몸 어휘 제거)는 몸의
+의미론이다("몸의 명사=코드"). 언어를 반출하는 시나리오에서도 설치기는 숙주가 다시 짓는
+부품이므로, 지금 자리가 헌법상 맞다. **`ibl_registry`를 ibl 층으로 옮기지 않는다.**
+이동의 실비용도 확인했다: 유일한 하향 소비자 `datastore/ibl_usage_db.py:402`(해마 입구
+소유-게이트 `code_is_own`)가 상향 간선이 되어 훅 주입 배관이 필요해지고, LAYERS·폰 번들
+목록 churn 이 붙는다. 이득(상징적 소속감) < 비용.
+
+대신 그 자리의 **진짜 결함 3개**를 고친다 (§3):
+- (a) raw/설치본 구분이 이름에 없다 — `_load_nodes_data` vs `_load_nodes_config`는 아무 힌트가 없다 (이름법: 한단어=한개념 위반)
+- (b) 경로 앵커 3중 중복 — `runtime_utils.get_base_path`(정본) 외에 `ibl_access._get_base_path`·`ibl_registry._get_nodes_path`/`_get_registry_path`가 같은 로직 재구현
+- (c) 캐시 정합성이 손-유지 암묵 계약 — `/packages/reload`(api_packages.py:158~178)가 4단계
+  수동 시퀀스로 3곳 캐시(access raw · registry 설치본 · node_registry)를 비우는데, 각 단계가
+  `except Exception: pass` 로 삼켜져 실패해도 성공 응답이 나간다 (silent-clamp 부류)
+
+## 1. 수리 3부 — 커밋 3개 (main 직접, pathspec 커밋)
+
+| 부 | 내용 | 규모 |
+|---|---|---|
+| A | ibl 층 사적 심볼의 층-밖 소비 21곳 → 공개 승격(개명) + 죽은 호환층 제거 | **✅ 완료 2026-08-24** |
+| B | 사전 이음매 계약화 (이동 없음): 이름·경로 앵커·reload 정직화·docstring 계약 | 2~3시간 |
+| C | 관문: check_backend_layers.py 에 "ibl 사적 심볼 층-밖 import 금지" AST 검사 (부채 0 시작) | 1~2시간 |
+
+## 2. A부 — 공개 승격 (✅ 완료 2026-08-24)
+
+**실행 결과**: 심볼 17종 개명, **47파일 203곳** 치환. 검증 = 층 가드 통과(모듈 309) ·
+`build_ibl_nodes.py --check` 전항 통과 · backend 전 스위트 **456 passed, 2 skipped**.
+
+**계획 대비 정정 2건**(계획이 좁았던 자리):
+- 스캔 범위가 부족했다 — `data/ibl_nodes_src/`(어휘 단일 소스)와 `phone-companion/` 이 빠져
+  있었다. 특히 `ibl_nodes_src/self.yaml` 의 `target_description` 은 **에이전트 프롬프트로
+  들어가는 텍스트**라 옛 이름이 남으면 모델에게 거짓 포인터를 주게 된다. src 를 고치고
+  `build_ibl_nodes.py` 로 파생(`ibl_nodes.yaml`)을 재생성 — 파생 직접 편집 없음.
+- 테스트 환경 함정 2건(둘 다 이번 변경과 무관, 접지 확인함): `test_hippo_capability_gate`
+  는 시스템 python 에서 sentence-transformers 버전 불일치로 실패한다 → **`.venv/bin/python`
+  으로 돌릴 것**. `test_log_truncation_mark` 는 저장소-루트 상대경로를 열어 **cwd=루트**를
+  요구한다.
+
+**`docs/` 는 갱신하지 않았다** — 날짜가 박힌 설계 스냅샷(“2026-07-18 수리”, “✅ 완료”)이라
+개명하면 기록이 거짓이 된다. `doc_drift` 감사 범위도 README+`system_docs` 뿐이다.
+같은 이유로 `changelog.log`·`TOOL_SDK_FOLLOWUPS.md`(이미 옛 층 경로를 적은 역사 문서)도 보존.
+현재형 코드 포인터인 `data/system_docs/`·`data/guides/`·`data/ibl_nodes_src/` 만 갱신했다.
+옛↔새 이름 대응은 아래 표가 정본이다.
+
+### (계획 원문 — 부채 목록 전수)
+
+원칙: **층 안 친구-모듈 사적 공유는 그대로 둔다.** 층 밖 소비가 있는 심볼만 정의처에서
+공개명으로 개명하고, 저장소 내 전 호출처(층 안 포함)를 일괄 갱신한다. 별칭·재수출 금지
+(no_temporary_patches — 소비자가 전부 저장소 안이므로 호환층 불요).
+
+### 2-1. 개명 대상 심볼 (16종)
+
+| 현재 | 공개명 | 층-밖 소비처 |
+|---|---|---|
+| `ibl_access._load_nodes_data` | `load_nodes_raw` | api_ibl.py:254·346·362·411·474·541, ibl_usage_rag.py:367·439·468, system_tools_ibl.py:284, **패키지** community-portal/portal_core.py:693 |
+| `ibl_access._load_package_meta` | `load_package_meta` | api_packages.py:84 |
+| `ibl_registry._load_nodes_config` | `load_nodes_installed` | api_ibl.py:383 (층 안: engine·executors·safety·routing·param_vocab·capability_card) |
+| `ibl_registry._self_can_run` | `self_can_run` | body_ask.py:154 (층 안: ibl_access:396, capability_card) |
+| `capability_card._action_entry` | `action_entry` | body_ask.py:153 |
+| `capability_card._registry` | (개명 대신) body_ask 가 `load_nodes_installed` 직수입 | body_ask.py:153 |
+| `workflow_engine._is_error_result` | `is_error_result` | agent_pipeline.py:347 |
+| `workflow_contract._coerce_caller_params` | `coerce_caller_params` | calendar_actions.py:89 (현재 workflow_engine 경유 — 직수입으로) |
+| `ibl_routing._search_guide` | `search_guide` | api_ibl.py:210, system_tools.py:920 (현재 ibl_engine 재수출 경유 — 직수입으로) |
+| `ibl_routing._resolve_project_path` | `resolve_project_path` | system_tools.py:964 |
+| `ibl_param_vocab._documented_vocab` | `documented_vocab` | system_tools_ibl.py:298 |
+| `ibl_engine._forward_to_phone` | `forward_to_phone` | api_launcher_web.py:678 |
+| `ibl_translate._IBL_TRANSLATE_TASK` | `IBL_TRANSLATE_TASK` | body_ask.py:118, api_ibl.py:282 |
+| `ibl_translate._load_ibl_spec` | `load_ibl_spec` | 〃 |
+| `ibl_translate._strip_code_fence` | `strip_code_fence` | body_ask.py:118·218, api_ibl.py:282 |
+| `trigger_engine._add_history` | `add_history` | calendar_actions.py:195, channel_poller.py:813·820 (층 안: event_engine.py:5) |
+| `trigger_engine._load_triggers` | `load_triggers` | channel_poller.py:758 |
+| `channel_engine._get_system_gmail_address` | `get_system_gmail_address` | portal_auth.py:215 |
+
+### 2-2. 같은 커밋의 청소
+
+- **ibl_engine.py:62 `_get_nodes_path` 죽은 import 삭제** (import 후 사용 0).
+- **capability_card.py:33 F401 재수출 3종(`_self_can_run`·`foreign_actions`·`code_is_own`) 삭제** —
+  외부 소비자 0 실측 (2026-08-05 이동의 호환층 잔재). 소비처는 ibl_registry 직수입이 이미 정착.
+- 문자열·주석·문서의 옛 이름 갱신: `iblbuild_common.py:225`, `test_corrupt_not_absent.py`
+  (S2 시나리오명), guides·system_docs 내 언급 — 마감 조건: `grep -rn "_load_nodes_data\|_load_nodes_config" backend scripts data/packages data/guides data/system_docs` **0건**.
+- `getattr` 동적 참조 확인: `grep -rn "getattr.*_load_nodes\|getattr.*_search_guide"` 등 개명 대상 전수 — 0건 확인 후 진행.
+
+## 3. B부 — 사전 이음매 계약화 (코드 이동 없음)
+
+1. **경로 앵커 단일화**: `ibl_access._get_base_path`/`_get_nodes_path`,
+   `ibl_registry._get_nodes_path`/`_get_registry_path` 의 자체 경로 계산을
+   `runtime_utils.get_base_path()` 경유로 통일 (ibl→base, datastore→base 모두 정방향).
+   `INDIEBIZ_BASE_PATH` 해석이 한 곳이 된다.
+2. **registry 로더 corrupt-not-absent 정직화**: `_load_nodes_config`(→`load_nodes_installed`)와
+   `_load_registry` 의 파손 시 생 yaml 예외를 ibl_access 와 같은 문구의 RuntimeError
+   (재생성 안내 포함)로 통일. 부재 시 조용히 빈 값은 양쪽 기존 방침 유지.
+   `test_corrupt_not_absent.py` 에 registry 케이스 추가.
+3. **`/packages/reload` 예외 삼킴 제거**: api_packages.py 리로드 4단계의
+   `except Exception: pass` 를 실패 수집으로 바꿔 응답에 `failed_steps` 로 표면화.
+   스테일 사전인 채 200 OK 가 나가는 구멍을 막는다 (silent-clamp 부류).
+4. **이음매 문서화**: `ibl_registry` 모듈 docstring 에 "사전 이음매 — ibl 층이 소비하는
+   공개 표면은 `load_nodes_installed`·`invalidate_nodes`·`pruned_reason`·`self_can_run`·
+   `foreign_actions`·`code_is_own`·`phone_runnable`(승격 시)·레지스트리 로더" 를 명시하고,
+   같은 내용을 `data/system_docs/architecture.md` 의 해당 절에 한 단락으로.
+   (어휘 변경이 아니므로 문서 7표면 의무는 비해당 — 산문 한 곳이면 된다.)
+
+## 4. C부 — 관문 (no-counter-watch: 세지 말고 실패시켜라)
+
+`scripts/check_backend_layers.py` (이미 모듈→층 지도를 가진 자리)에 검사 추가:
+
+- **규칙**: AST `ImportFrom` 에서, importer 의 층 ≠ ibl 이고 imported 모듈의 층 = ibl 이며
+  심볼명이 `_` 로 시작하면 실패. `ibl_registry` 는 datastore 지만 사전 이음매로 같은 규칙에
+  명시 포함.
+- **스캔 범위**: `backend/**/*.py` + `data/packages/installed/tools/**/*.py`
+  (패키지의 backend 사적 심볼 의존 금지 — community-portal 이 A부에서 마지막 부채였다).
+- **면제**: `backend/test_*.py` (화이트박스 테스트는 내부 도달이 정당).
+- **부채 목록·동결 없음**: A부가 부채를 0으로 만든 뒤 켠다. 신규 위반 = 즉시 실패.
+- 층 안 친구-모듈 공유는 규칙 밖 — 기존 관례 그대로.
+
+## 5. 검증·반영·커밋
+
+- 검증: `python3 scripts/check_backend_layers.py` → `python3 scripts/build_ibl_nodes.py --check`
+  → `backend/test_corrupt_not_absent.py` → `backend/test_pipe_currency_failures.py`(P1~P19,
+  엔진 표면을 건드리므로) → §2-2 grep 0건 마감.
+- 라이브 반영: 변경이 전부 backend 모듈·패키지 서브모듈이므로 `/packages/reload` 로 부족 —
+  **백엔드 재시작 필요** (portal_core.py 는 tool_* 서브모듈 부류). 평범한 backend 편집이므로
+  keeper 의례 불요.
+- 커밋 3개(A→B→C), main 직접, 동시 세션 대비 pathspec 으로. 예:
+  `git commit -m "..." -- backend/ data/packages/installed/tools/community-portal/ scripts/check_backend_layers.py docs/ data/system_docs/architecture.md`
+
+## 6. 하지 않는 것 (범위 밖 — 별도 판단)
+
+- **`ibl_registry` 의 ibl 층 이동** — §0 에서 기각. 재론 조건: 언어 반출의 실소비자 등장.
+- 같은 파일 3중 캐시(access raw · registry 설치본 · node_registry) 통합 — 의미가 셋 다 달라
+  (raw/설치본/타입드 노드 뷰) 지금은 정합성 배선(B-3)만 정직화. 통합은 수요 생기면.
+- 상향 8간선(엔진→consciousness_agent·goal_evaluator 등) 훅 승격 — 원 논의의 1번 항목,
+  별도 계획.
+- 순수 코어 격리 가드(의존 0 파일 9개의 빈 환경 단독 import 검증) — 원 논의의 후속 제안,
+  별도 계획.
+- 층 안 친구-모듈 언더스코어 공유 (~180곳) — 결함 아님, 손대지 않는다.

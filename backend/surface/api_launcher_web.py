@@ -646,7 +646,7 @@ def app_source(app_id: str):
 # ===== '폰으로' — 맥 클립보드 → 폰 클립보드 + 도착 알림 (2026-07-28 clipbox 철회·원복) =====
 # 사전 물리 분리(6cb85ea) 후 맥 레지스트리엔 limbs:phone 이 없어 /ibl/execute 경유가
 # 불가("액션 없음" 정직 에러). 엔진 사전을 거치지 않고 폰 사전의 고정 봉투를
-# ibl_engine._forward_to_phone 으로 보낸다 — 직결(Wi-Fi) 우선, LTE/CGNAT 면 heartbeat
+# ibl_engine.forward_to_phone 으로 보낸다 — 직결(Wi-Fi) 우선, LTE/CGNAT 면 heartbeat
 # 롱폴 푸시 큐로 반전 전달(폰이 자기 사전으로 실행). 어휘 사용이 아니라 리모컨 계약.
 
 
@@ -675,9 +675,9 @@ async def clip_to_phone(req: ClipToPhone):
         if not url:
             return {"success": False, "error": "연결된 폰이 없습니다.",
                     "phone_unreachable": True}
-        from ibl_engine import _forward_to_phone
-        r1 = _forward_to_phone(url, "limbs", "phone", {"op": "clipboard", "text": text})
-        r2 = _forward_to_phone(url, "limbs", "phone", {
+        from ibl_engine import forward_to_phone
+        r1 = forward_to_phone(url, "limbs", "phone", {"op": "clipboard", "text": text})
+        r2 = forward_to_phone(url, "limbs", "phone", {
             "op": "notify", "title": "📋 맥 클립보드 도착",
             "body": "입력창을 길게 눌러 붙여넣기 하세요"})
         results = [r1, r2]

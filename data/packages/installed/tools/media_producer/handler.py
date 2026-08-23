@@ -68,7 +68,7 @@ def _err(message: str) -> dict:
     """실패는 **문자열이 아니라 계약**으로 낸다 (B21-1 수리, 2026-08-22).
 
     옛 코드는 실패를 `"오류: …"`·`"렌더링 중 오류 발생: …"` 같은 **평문**으로 돌려줬다.
-    실행기의 실패 판정(`workflow_engine._is_error_result`)은 dict 의 success/error 와
+    실행기의 실패 판정(`workflow_engine.is_error_result`)은 dict 의 success/error 와
     `"Error:"` 접두만 보므로, 이 평문들은 전부 **정상 결과**로 읽혔다 — 파이프가
     `success: true · steps 3/3` 으로 닫히고 스케줄·트리거가 실패를 성공으로 집계했다.
     접두를 늘리는 것으로는 못 고친다: 26자리 중 10자리는 애초에 접두가 없었다

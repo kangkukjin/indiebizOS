@@ -81,8 +81,8 @@ def _enrich_with_meta(pkgs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     package_meta.json(빌드가 코드 스캔으로 도출), 여기선 읽기만."""
     import os
     try:
-        from ibl_access import _load_package_meta
-        meta = _load_package_meta().get("packages", {})
+        from ibl_access import load_package_meta
+        meta = load_package_meta().get("packages", {})
     except Exception:
         meta = {}
     for p in pkgs:

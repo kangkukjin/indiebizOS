@@ -68,8 +68,8 @@ def build_op_safety_map(nodes: dict) -> Dict[Tuple[str, str, str], bool]:
 
 
 def _live_nodes() -> dict:
-    from ibl_registry import _load_nodes_config
-    return (_load_nodes_config() or {}).get("nodes") or {}
+    from ibl_registry import load_nodes_installed
+    return (load_nodes_installed() or {}).get("nodes") or {}
 
 
 def load_safety_map() -> Dict[Tuple[str, str], bool]:

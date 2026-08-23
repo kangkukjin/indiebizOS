@@ -364,8 +364,8 @@ def build_execution_memory_from_hint(action_hint: str) -> tuple:
         return ("", 0.0, "")
 
     try:
-        from ibl_access import _load_nodes_data
-        data = _load_nodes_data()
+        from ibl_access import load_nodes_raw
+        data = load_nodes_raw()
         action_config = (
             (data.get("nodes") or {}).get(node, {}).get("actions", {}).get(action, {})
         )
@@ -436,8 +436,8 @@ def _extract_implementations_from_refs(refs_xml: str) -> str:
 def _lookup_implementation(node: str, action: str) -> str:
     """ibl_nodes.yaml에서 특정 액션의 implementation을 조회한다."""
     try:
-        from ibl_access import _load_nodes_data
-        nodes_data = _load_nodes_data()
+        from ibl_access import load_nodes_raw
+        nodes_data = load_nodes_raw()
         if not nodes_data:
             return ""
         node_config = nodes_data.get("nodes", {}).get(node, {})
@@ -465,8 +465,8 @@ def _validate_ibl_actions(code: str) -> bool:
     if not pairs:
         return False  # 액션 패턴이 없으면 용례로서 무의미
     try:
-        from ibl_access import _load_nodes_data
-        nodes_data = _load_nodes_data() or {}
+        from ibl_access import load_nodes_raw
+        nodes_data = load_nodes_raw() or {}
         nodes = nodes_data.get("nodes", {})
     except Exception:
         # 노드 데이터 로드 실패 시 검증 불가 → 보수적으로 통과(기존 동작 유지)

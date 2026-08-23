@@ -537,7 +537,8 @@ def load_package_meta() -> dict:
     global _package_meta_cache
     if _package_meta_cache is not None:
         return _package_meta_cache
-    path = _get_base_path() / "data" / "package_meta.json"
+    from runtime_utils import get_base_path
+    path = get_base_path() / "data" / "package_meta.json"
     if not path.is_file():
         _package_meta_cache = {}
         return _package_meta_cache
@@ -619,15 +620,12 @@ def _load_peer_agents(project_path: Optional[str], agent_id: Optional[str]) -> L
     return peers
 
 
-def _get_base_path() -> Path:
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    if env_path:
-        return Path(env_path)
-    return Path(__file__).parent.parent.parent
-
-
 def _get_nodes_path() -> Path:
-    return _get_base_path() / "data" / "ibl_nodes.yaml"
+    """원본 사전집(ibl_nodes.yaml)의 경로. 경로 앵커는 runtime_utils.get_base_path 하나 —
+    INDIEBIZ_BASE_PATH 해석을 여기서 다시 짜지 않는다 (2026-08-24 앵커 단일화).
+    ★이 함수는 test_corrupt_not_absent 의 몽키패치 지점이므로 모듈 수준을 유지한다."""
+    from runtime_utils import get_base_path
+    return get_base_path() / "data" / "ibl_nodes.yaml"
 
 
 def load_nodes_raw() -> dict:
@@ -681,7 +679,8 @@ def _resolve_db_path(project_path: Optional[str]) -> Optional[str]:
         if db_file.exists():
             return str(db_file)
     # 환경변수에서 기본 경로 시도
-    base = _get_base_path()
+    from runtime_utils import get_base_path
+    base = get_base_path()
     default_db = base / "conversations.db"
     if default_db.exists():
         return str(default_db)

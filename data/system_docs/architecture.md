@@ -328,6 +328,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **명함** `GET /nodes/card` — 레지스트리에서 파생한 desc-프로젝션(표준 코어 제외·params 미포함·몸 인식 필터). 등록 시 상호 자동 교환·캐시(`peer_cards.py`), 프롬프트 냄새 ~70토큰/몸.
 - **부탁** `POST /nodes/ask` (어휘 `[others:ask]`) — 받는 몸이 **자기 사전으로** 컴파일→실행→통화로 회신(1회 자가교정, 어휘 밖이면 정직한 거절). 컴파일러 능력 축은 *해마 유무*(용례 있으면 조종실 경로, 없으면 사전-동봉 경량 모델).
 - **사전 물리 분리**: 배포물=전체 사전집, 설치=자기 어휘만(로더 필터 + 폰 번들 물리 필터). 카탈로그·해마 회상이 **소유-필터**를 지나 "남의 어휘를 학습하지 않는다".
+- **사전 이음매 — 로더가 둘인 이유**(2026-08-24 계약화): 같은 `ibl_nodes.yaml` 을 읽는 로더가 둘인데 중복이 아니라 **의미가 다르다**. `ibl_access.load_nodes_raw` = *원본 사전집*(생 yaml, 배포물 전체), `ibl_registry.load_nodes_installed` = *이 몸의 설치본*(원본 + api_registry 병합 + `detect_body` 기반 타몸 어휘 prune). 설치는 몸의 의미론이라 언어(ibl 층)가 아니라 datastore 층에 산다 — "몸의 명사=코드"의 자리다. ibl 층이 소비하는 공개 표면은 `load_nodes_installed`·`invalidate_nodes`·`pruned_reason`·`self_can_run`·`foreign_actions`·`code_is_own` 이고, 그 밖의 언더스코어 심볼은 계약이 아니다(층-밖에서 찌르지 말 것). 두 로더 다 **부재≠파손** — 없는 파일은 조용한 빈 값, 깨진 파일은 재생성 안내를 단 오류다.
 - **신뢰 = 이웃 등급**(`body_trust.py`): 특별함은 배관이 아니라 레벨. 낯선 몸의 부탁은 거절되고, 폰-맥도 "최고 레벨 이웃"일 뿐이다 — **몸 사이 특권 배관을 두지 않는다**가 설계 원칙.
 - **표면 분리**: 원격 런처(=PC의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 가름(`backend/surface/launcher_surface_remote.py`·`backend/surface/launcher_surface_phone.py`). 폰 조종실은 로컬 완결(translate/validate/distill/catalog).
 

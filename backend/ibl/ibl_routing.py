@@ -774,26 +774,39 @@ def _rebuild_ibl_vocab() -> Optional[str]:
     except Exception as e:  # noqa: BLE001
         return f"어휘 재빌드 예외: {e}"
 
-    # /packages/reload와 동일한 캐시 초기화 절차.
-    try:
+    # /packages/reload(api_packages)와 같은 절차·같은 순서.
+    def _pkg_meta():
         from package_manager import package_manager
         package_manager.invalidate_cache()
-    except Exception:
-        pass
-    try:
+
+    def _catalog():
         from ibl_access import invalidate_nodes_cache
         invalidate_nodes_cache()
-    except Exception:
-        pass
-    try:
+
+    def _registry():
+        # ★2026-08-24 발견: 여기만 이 단계가 빠져 있었다("동형"이라 적어두고 아니었다).
+        # 안 비우면 reload_nodes 가 낡은 레지스트리를 재병합해 삭제된 registry 액션이
+        # 실행기에 유령으로 남는다(/packages/reload 가 2026-07-03 에 고친 바로 그 병).
+        from ibl_registry import reload_registry
+        reload_registry()
+
+    def _executor():
         from ibl_engine import reload_nodes
         reload_nodes()
-    except Exception:
-        pass
-    try:
-        _cap("reset_consciousness")()
-    except Exception:
-        pass
+
+    # ★실패를 삼키지 않는다 — 한 단계라도 못 비우면 스테일 사전인 채 "재빌드 성공"이
+    #   반환돼 거짓말이 된다(침묵 클램프 부류).
+    failed = []
+    for name, step in (("package_meta", _pkg_meta), ("catalog", _catalog),
+                       ("api_registry", _registry), ("executor", _executor),
+                       ("consciousness", lambda: _cap("reset_consciousness")())):
+        try:
+            step()
+        except Exception as e:  # noqa: BLE001
+            failed.append(f"{name}({type(e).__name__})")
+    if failed:
+        return ("어휘는 재빌드했으나 런타임 캐시 초기화 실패 — 스테일 사전일 수 있습니다"
+                f"(백엔드 재기동 권장): {', '.join(failed)}")
     return None
 
 

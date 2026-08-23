@@ -9,6 +9,7 @@ ep1396 쓰기 경로 추적에서 파서의 침묵 절단을 고친 뒤, 같은 
     S2. ibl_access.load_nodes_raw     깨진 어휘 → {} (낱말 151개가 전부 증발)
     S3. ibl_access._load_peer_agents    깨진 명부 → [] (동료가 사라져 위임 불가)
     S4. tool_loader.load_tool_schema    깨진 tool.json → None(=그런 도구 없음)
+    S5. ibl_registry.load_nodes_installed  깨진 설치본 사전 → 안내 없는 생 예외 (2026-08-24 추가)
 
 각 시험은 **진짜 없는 경우와 구별되는가**를 함께 확인한다 — 부재는 여전히
 조용한 None/[] 여야 한다(그건 정상이니까).
@@ -136,6 +137,42 @@ def _run_s4(tool_loader):
         # 파일은 멀쩡한데 이름이 없다 = 진짜 없음(조용한 None)
         (pkg / "tool.json").write_text('{"tools": [{"name": "다른도구"}]}', encoding="utf-8")
         assert tool_loader.load_tool_schema("가짜도구") is None, "진짜 부재까지 시끄러워졌다"
+
+
+def test_s5_broken_installed_dictionary_raises():
+    """S5(2026-08-24 추가): **설치본** 사전도 깨지면 시끄럽다.
+
+    S2 는 원본 사전집(ibl_access.load_nodes_raw)만 덮었다. 같은 ibl_nodes.yaml 을 읽는
+    두 번째 로더(ibl_registry.load_nodes_installed = 원본+api_registry 병합+몸-필터)는
+    깨진 파일을 그대로 예외로 흘리되 재생성 안내가 없었다 — 실행 경로 전체가 이쪽을 쓴다.
+    """
+    import ibl_registry
+
+    _orig_path, _orig_nodes = ibl_registry._nodes_path, ibl_registry._nodes
+    try:
+        _run_s5(ibl_registry)
+    finally:
+        ibl_registry._nodes_path, ibl_registry._nodes = _orig_path, _orig_nodes
+
+
+def _run_s5(ibl_registry):
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "ibl_nodes.yaml"
+        p.write_text(BROKEN_YAML, encoding="utf-8")
+        ibl_registry._nodes, ibl_registry._nodes_path = None, p
+        try:
+            ibl_registry.load_nodes_installed()
+        except RuntimeError as e:
+            assert "어휘 원장" in str(e), str(e)
+            assert "build_ibl_nodes" in str(e), "재생성 안내가 없다"
+        else:
+            raise AssertionError("깨진 설치본 사전이 조용히 {'nodes': {}} 로 통과했다")
+
+        # 부재는 여전히 조용한 빈 사전
+        ibl_registry._nodes = None
+        ibl_registry._nodes_path = Path(td) / "없는파일.yaml"
+        assert ibl_registry.load_nodes_installed() == {"nodes": {}}, "진짜 부재까지 시끄러워졌다"
+        ibl_registry._nodes = None
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

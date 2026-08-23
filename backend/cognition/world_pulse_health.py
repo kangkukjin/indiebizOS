@@ -549,6 +549,13 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 반환 모양 스윕 실패 (무시): {e}")
 
+    # 8.6c) 입력 모양 관측 스윕 (주간 카덴스) — 카탈로그 ⟨인자: …⟩ 의 원천(data/ibl_param_shapes.json).
+    try:
+        from fixture_sweeps import run_param_sweep
+        result["param_sweep"] = run_param_sweep()
+    except Exception as e:
+        logger.warning(f"[Maintenance] 입력 모양 스윕 실패 (무시): {e}")
+
     # 8.6b) 정직성 불변식 스윕 (주간 카덴스) — 침묵/거짓 성공 부류를 봉투 입구 하나에서(2026-08-23).
     try:
         from fixture_sweeps import run_honesty_sweep

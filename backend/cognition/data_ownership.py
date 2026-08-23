@@ -65,6 +65,8 @@ DECLARATIONS: List[tuple] = [
     ("data/ibl_fixtures.json",      "build_ibl_nodes 산출물",                    "derived"),
     ("data/ibl_return_shapes.json", "ibl_shape_sweep 실측 반환 열(카탈로그 ⟨열⟩)",  "derived"),
     ("data/ibl_shape_sweep_state.json", "반환 모양 스윕 주간 카덴스 상태",        "state"),
+    ("data/ibl_param_shapes.json",  "ibl_param_sweep 실측 입력 인자(카탈로그 ⟨인자⟩)", "derived"),
+    ("data/ibl_param_sweep_state.json", "입력 모양 스윕 주간 카덴스 상태",        "state"),
     ("data/ibl_composition_metrics.json", "IBL 조합률 측정 산출(ibl_composition_metrics)", "derived"),
     ("data/core_manifest.json",     "build_ibl_nodes 산출물",                    "derived"),
     ("data/package_meta.json",      "build_ibl_nodes 산출물",                    "derived"),

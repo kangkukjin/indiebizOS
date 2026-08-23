@@ -294,6 +294,7 @@
     "test_notify_ledger": "force_exclude_glob",
     "test_notify_title": "force_exclude_glob",
     "test_parallel_context_inherit": "force_exclude_glob",
+    "test_param_shapes": "force_exclude_glob",
     "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_preflight_restart": "force_exclude_glob",
@@ -310,8 +311,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 304,
+    "total": 305,
     "engine": 225,
-    "blocklist": 79
+    "blocklist": 80
   }
 }

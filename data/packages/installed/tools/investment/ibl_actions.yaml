@@ -1,6 +1,11 @@
 node: sense
 actions:
   stock:
+    # 별칭은 어휘 데이터가 소유한다 (2026-08-23) — 핸들러 _arg(ti,"ticker","symbol",…) 가
+    # 코드 안에서 사적으로 풀고 있어서 카탈로그가 두 이름을 다 광고했다(관측 ticker 210/symbol 126,
+    # 한 호출에 함께 온 적 0 = 같은 자리를 나눠 가진 두 이름). 호출은 계속 둘 다 통과한다.
+    aliases:
+      ticker: [symbol]
     returns: scalar
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:stock]{query: "삼성전자"}'

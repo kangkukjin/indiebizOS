@@ -108,6 +108,8 @@ CATALOG_LEGEND = (
     "설명 없는 .op 는 이름 그대로의 동작). ⟨열: a·b⟩ = 실측 반환 열 이름 — 뒤에 붙일 "
     "filter/sort/select/compute 의 필드명은 이걸 쓴다. ⟨열: a·b | source=x: c·d⟩ 처럼 "
     "'|' 로 갈린 것은 그 파라미터에 따라 열이 달라진다는 뜻(앞자리=기본값의 열). "
+    "⟨인자: a·b·(c)⟩ = 실측 입력 인자 이름(교재·실행에서 실제 쓰인 키) — 호출의 {…} 키는 "
+    "이걸 쓴다; 괄호 없음 = 거의 항상 함께 오는 인자, (괄호) = 가끔 쓰는 선택 인자. "
     "(dormant: 키이름) = API 키가 없어 휴면 중."
 )
 
@@ -202,6 +204,66 @@ def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
     return " ⟨열: " + " | ".join(parts) + "⟩"
 
 
+_PARAM_CACHE = {"mtime": None, "data": {}, "always": 0.8}
+
+
+def _param_shapes() -> dict:
+    """교재·실행 실측 입력 인자(data/ibl_param_shapes.json, scripts/ibl_param_sweep.py 산출) — mtime 캐시.
+
+    2026-08-23: 반환 모양(⟨열⟩)은 실측으로 구조화됐는데 **입력 모양은 아무 데도 구조로
+    없었다** — 151 액션 중 params 스키마 0, 인자 의미는 target_description 산문에만 있고
+    그 산문은 프롬프트에 실리지 않는다. 모델은 인자를 해마 예문에서 추측했다. 선언 스키마를
+    손으로 쓰는 대신(선행 명사 스키마 금지) **쓰인 흔적**을 센다 — ⟨열⟩의 거울."""
+    try:
+        from runtime_utils import get_base_path
+        path = get_base_path() / "data" / "ibl_param_shapes.json"
+        mt = path.stat().st_mtime
+    except Exception:
+        return {}
+    if _PARAM_CACHE["mtime"] != mt:
+        try:
+            import json as _json
+            doc = _json.loads(path.read_text(encoding="utf-8"))
+            _PARAM_CACHE["data"] = doc.get("shapes", {}) or {}
+            _PARAM_CACHE["always"] = float(doc.get("always_ratio", 0.8))
+        except Exception:
+            _PARAM_CACHE["data"] = {}
+        _PARAM_CACHE["mtime"] = mt
+    return _PARAM_CACHE["data"]
+
+
+def _param_suffix(qualified: str, op: str = None) -> str:
+    """'⟨인자: a·b·(c)⟩' — 액션 줄엔 액션 전체의 인자, op 줄엔 그 op 의 인자(액션과 이름이 다를 때만).
+
+    괄호 없음 = 그 액션 호출 중 always_ratio(기본 0.8) 이상 함께 온 키, (괄호) = 그 아래.
+    `op` 키는 싣지 않는다 — `.op` 줄이 이미 구조로 말한다."""
+    shapes = _param_shapes()
+    if not shapes:
+        return ""
+    always = _PARAM_CACHE["always"]
+    if op is None:
+        ent = shapes.get(qualified)
+    else:
+        ent = shapes.get(f"{qualified}#{op}")
+        base = shapes.get(qualified)
+        if ent and base and not _op_adds_information(ent, base, always):
+            return ""
+    if not ent or not ent.get("keys"):
+        return ""
+    parts = [k if r >= always else f"({k})" for k, r in ent["keys"][:8]]
+    return " ⟨인자: " + "·".join(parts) + "⟩"
+
+
+def _op_adds_information(ent: dict, base: dict, always: float) -> bool:
+    """op 줄의 ⟨인자⟩ 는 액션 줄이 못 말한 것이 있을 때만 — 새 키가 있거나, 액션 줄에선
+    (선택)이던 키가 이 op 에선 거의 항상 오는 키로 승격될 때. 그 밖엔 중복이라 카탈로그만 부푼다."""
+    base_keys = {k for k, _ in base.get("keys", [])}
+    base_plain = {k for k, r in base.get("keys", []) if r >= always}
+    op_keys = [k for k, _ in ent.get("keys", [])[:8]]
+    op_plain = {k for k, r in ent.get("keys", [])[:8] if r >= always}
+    return bool(set(op_keys) - base_keys) or bool(op_plain - base_plain)
+
+
 def _emit_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:
     """단일 액션을 완전수식 줄-표기(R1q)로 직렬화.
 
@@ -227,12 +289,13 @@ def _emit_action_line(node_name: str, action_name: str, action_config, indent: s
     desc = action_config.get("description", "")
     ops = action_config.get("ops")
 
-    lines = [f"{indent}{qualified} :: {desc}{_shape_suffix(qualified, None, ops)}{dormant_suffix}"]
+    lines = [f"{indent}{qualified} :: {desc}{_param_suffix(qualified)}"
+             f"{_shape_suffix(qualified, None, ops)}{dormant_suffix}"]
     if isinstance(ops, dict) and ops.get("values"):
         default = ops.get("default")
         for op_name, op_desc in (ops.get("values") or {}).items():
             star = "*" if op_name == default else ""
-            sfx = _shape_suffix(qualified, op_name, ops)
+            sfx = _param_suffix(qualified, op_name) + _shape_suffix(qualified, op_name, ops)
             if _op_desc_suppressible(op_name, op_desc) and not sfx:
                 lines.append(f"{indent}  .{op_name}{star}")
             else:

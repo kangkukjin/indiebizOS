@@ -110,7 +110,8 @@ def _emit_xml(aname: str, acfg: dict, indent: str = "") -> str:
 
 
 _R1_LEGEND = (
-    "# 표기법: '이름 :: 설명' = 액션. 그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표=기본 op).\n"
+    "# 표기법: '이름 :: 설명' = 액션. 그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표=기본 op). "
+    "⟨인자: a·(b)⟩ = 실측 입력 인자(괄호=선택).\n"
 )
 
 # R3: "이름이 자명한" op 는 설명을 억제(이름만) — 메모의 '49개 비자명만 유지' 경계의 보수판.
@@ -132,8 +133,49 @@ def _op_desc_suppressible(op_name: str, op_desc: str) -> bool:
             and len(d) <= 60 and "=" not in d and "필수" not in d)
 
 
+_PARAM_SHAPES: dict | None = None
+
+
+def _param_shapes() -> dict:
+    """R4 용 실측 입력 인자(data/ibl_param_shapes.json) — 없으면 빈 dict (R4=R3 와 동일)."""
+    global _PARAM_SHAPES
+    if _PARAM_SHAPES is None:
+        try:
+            doc = json.loads((ROOT / "data" / "ibl_param_shapes.json").read_text(encoding="utf-8"))
+            _PARAM_SHAPES = {"shapes": doc.get("shapes", {}), "always": float(doc.get("always_ratio", 0.8))}
+        except Exception:
+            _PARAM_SHAPES = {"shapes": {}, "always": 0.8}
+    return _PARAM_SHAPES
+
+
+def _param_suffix(qualified: str, op: str | None = None) -> str:
+    """ibl_access._param_suffix 충실 재현 — ⟨인자: a·b·(c)⟩ (op 줄은 액션과 이름이 다를 때만)."""
+    ps = _param_shapes()
+    shapes = ps["shapes"]
+    if not shapes:
+        return ""
+    always = ps["always"]
+    if op is None:
+        ent = shapes.get(qualified)
+    else:
+        ent = shapes.get(f"{qualified}#{op}")
+        base = shapes.get(qualified)
+        if ent and base:
+            base_keys = {k for k, _ in base.get("keys", [])}
+            base_plain = {k for k, r in base.get("keys", []) if r >= always}
+            op_keys = [k for k, _ in ent.get("keys", [])[:8]]
+            op_plain = {k for k, r in ent.get("keys", [])[:8] if r >= always}
+            if not (set(op_keys) - base_keys) and not (op_plain - base_plain):
+                return ""
+    if not ent or not ent.get("keys"):
+        return ""
+    parts = [k if r >= always else f"({k})" for k, r in ent["keys"][:8]]
+    return " ⟨인자: " + "·".join(parts) + "⟩"
+
+
 def render_r1(data: dict, strip_op_desc: bool = False, qualify: bool = False,
-              suppress_evident: bool = False, only_nodes: set | None = None) -> str:
+              suppress_evident: bool = False, only_nodes: set | None = None,
+              param_shapes: bool = False) -> str:
     """R1: 태그 제거 줄 표기 (설명 무손실). strip_op_desc=True 면 R2(op 설명 전삭, 이름만).
     qualify=True 면 액션 이름을 node:action 완전수식 — 스모크에서 비수식 R1 이 그룹명을
     노드로 오인(travel:stay 환각)하는 소속 약화가 관측되어 처방 변형으로 추가."""
@@ -150,26 +192,29 @@ def render_r1(data: dict, strip_op_desc: bool = False, qualify: bool = False,
         for gname, acts in grouped.items():
             parts.append(f"  [{gname}]")
             for aname, acfg in acts:
-                parts.append(_emit_line(aname, acfg, strip_op_desc, nname if qualify else None, suppress_evident))
+                parts.append(_emit_line(aname, acfg, strip_op_desc, nname if qualify else None, suppress_evident, param_shapes))
         for aname, acfg in ungrouped:
-            parts.append(_emit_line(aname, acfg, strip_op_desc, nname if qualify else None, suppress_evident))
+            parts.append(_emit_line(aname, acfg, strip_op_desc, nname if qualify else None, suppress_evident, param_shapes))
     return "\n".join(parts)
 
 
 def _emit_line(aname: str, acfg: dict, strip_op_desc: bool, node: str | None = None,
-               suppress_evident: bool = False) -> str:
+               suppress_evident: bool = False, param_shapes: bool = False) -> str:
     desc = acfg.get("description", "")
     ops = acfg.get("ops")
     shown = f"{node}:{aname}" if node else aname
-    lines = [f"  {shown} :: {desc}"]
+    qualified = f"{node}:{aname}" if node else aname
+    psfx = _param_suffix(qualified) if param_shapes else ""
+    lines = [f"  {shown} :: {desc}{psfx}"]
     if isinstance(ops, dict) and ops.get("values"):
         default = ops.get("default")
         for op_name, op_desc in (ops.get("values") or {}).items():
             star = "*" if op_name == default else ""
-            if strip_op_desc or (suppress_evident and _op_desc_suppressible(op_name, op_desc)):
+            osfx = _param_suffix(qualified, op_name) if param_shapes else ""
+            if (strip_op_desc or (suppress_evident and _op_desc_suppressible(op_name, op_desc))) and not osfx:
                 lines.append(f"    .{op_name}{star}")
             else:
-                lines.append(f"    .{op_name}{star} {op_desc}")
+                lines.append(f"    .{op_name}{star} {op_desc}{osfx}")
     return "\n".join(lines)
 
 
@@ -208,7 +253,18 @@ def sample_examples(n: int, seed: int = 42) -> list[dict]:
 
 def _model_conf() -> dict:
     c = json.loads((ROOT / "data" / "lightweight_ai_config.json").read_text())
-    return {"model": c["model"], "key": c["apiKey"],
+    key = c.get("apiKey") or ""
+    if not key:
+        # 설정 json 의 apiKey 가 비어 있으면 .env 의 DEEPSEEK_API_KEY (백엔드와 같은 출처, 2026-08-23)
+        import os
+        key = os.environ.get("DEEPSEEK_API_KEY", "")
+        if not key and (ROOT / ".env").exists():
+            for ln in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
+                if ln.startswith("DEEPSEEK_API_KEY="):
+                    key = ln.split("=", 1)[1].strip().strip('"').strip("'")
+    if not key:
+        raise SystemExit("DeepSeek 키 없음 — data/lightweight_ai_config.json apiKey 또는 .env DEEPSEEK_API_KEY")
+    return {"model": c["model"], "key": key,
             "url": "https://api.deepseek.com/chat/completions"}
 
 
@@ -502,6 +558,8 @@ def main():
         "R1q": render_r1(data, qualify=True),
         "R2": render_r1(data, strip_op_desc=True, qualify=True),
         "R3": render_r1(data, qualify=True, suppress_evident=True),
+        # R4 (2026-08-23): R3 + ⟨인자: …⟩ 실측 입력 인자 — 프로덕션 현행.
+        "R4": render_r1(data, qualify=True, suppress_evident=True, param_shapes=True),
     }
     for name, cat in encodings.items():
         (out_dir / f"catalog_{name}.txt").write_text(cat)

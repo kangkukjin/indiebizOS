@@ -102,6 +102,11 @@ nodes:
         - 이미지
         - 렌더링
       image_read:
+        # gemini_vision.py 가 코드에서 풀던 별칭을 데이터로(2026-08-23). ★intent 는 제외 —
+        # op:critic 의 *정규 키*라 question 으로 접으면 두 자리가 섞인다.
+        aliases:
+          image_path: [path]
+          question: [query, prompt]
         # 세계를 바꾸지 않는 순수 읽기(Gemini Vision 조회) — 반환은 단일값 → scalar.
         # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 —
         # 같은 Gemini Vision, 프레이밍만 달랐다. 변형=op 명명 헌법).

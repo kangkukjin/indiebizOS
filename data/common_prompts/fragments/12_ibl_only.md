@@ -118,6 +118,7 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 `table`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 낸다 → `>>` 로 임의 깊이 조합(도메인 무관, 모든 items에 적용):
 - **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `rename{map}`(열 이름 바꾸기) · `flatten{field}`(중첩 목록 펼치기) · `dedup{by}` · `groupby{by, agg}`  · **`compute{set: {새열: "식"}}`**(열끼리 계산 — 비율·차이·증감률. `round(보증금 / 매매가 * 100, 1)`. ★받은 숫자를 네가 다시 타이핑해 계산하지 마라 — 통화가 네 컨텍스트를 거치면 틀린다)
 - **열 이름은 카탈로그의 ⟨열: a·b·c⟩ 를 쓴다** — 실측 반환 열이다. filter/sort/select/compute 의 필드명을 추측하지 말고 거기서 집어라(없으면 한 번 돌려 보고 쓴다).
+- **인자 이름은 카탈로그의 ⟨인자: a·b·(c)⟩ 를 쓴다** — 교재·실행에서 실제 쓰인 키다. 괄호 없는 것은 거의 항상 함께 오는 인자, (괄호)는 선택. 없는 키를 지어내지 말고 거기서 집어라.
 - **긴 스크립트**(렌더·나레이션·대량 수집)는 `[self:script]{op: "run", id, background: true}` → `{op: "status", job_id, wait: 120}`. 셸 `sleep`/`ps` 폴링 금지 — 폴링 한 번이 왕복 한 번이다.
 - **이항**(`&` 두 입력): `join{on}` · `union`(행 이어붙이기) · `merge{by}`(합치되 by 키로 중복 제거) — 두 소스의 키 이름이 다르면 join 전에 `[table:rename]{map: {"아파트명": "단지명"}}` 으로 맞춘다(각 가지엔 파이프가 안 붙으므로 변수+`left`/`right` 파라미터로: `$a = [A] >> [table:rename]{...}` 후 `[table:join]{left: "$a", right: "$b", on: ...}`)
 - **고차** `each{do, as, limit, on_error}`: 목록의 **각 행에 IBL 문장을 적용** — "찾은 것 각각에 대해 ~해라". `do` 문장 속 `$it.필드`가 행 값으로 치환된다(`as`로 변수명 변경, 기본 행 수 20, 중첩 깊이 상한 3). 행별 결과는 원 행에 `_ok`/`_result`(실패 시 `_error`)로 붙는다. 검색 결과의 각 행으로 후속 조회·행동을 돌릴 때 id·제목을 손으로 옮겨 적어 `&`를 늘어놓지 말고 each 로 잇는다.

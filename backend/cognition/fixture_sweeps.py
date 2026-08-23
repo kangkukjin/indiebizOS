@@ -135,6 +135,48 @@ def run_shape_sweep() -> Dict:
 
 
 
+def run_param_sweep() -> Dict:
+    """입력 모양(인자 이름) 관측 스윕 (주간 카덴스, §8.6c) — scripts/ibl_param_sweep.py.
+
+    카탈로그의 ⟨인자: …⟩ 는 교재·실행 실측이라 코퍼스 시딩·실사용이 쌓일수록 바뀐다 — 주간
+    재관측이 없으면 새 낱말·새 인자가 카탈로그에 '인자 없음'으로 남는다(2026-08-23, ⟨열⟩의 거울).
+    백엔드 API 를 두드리지 않는다(DB 만 읽음) — fixture 우주와 무관."""
+    import subprocess
+    from world_pulse_health import save_self_check
+    _root = Path(__file__).parent.parent.parent
+    state_path = _root / "data" / "ibl_param_sweep_state.json"
+    now = _time.time()
+    try:
+        state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    except Exception:
+        state = {}
+    if now - float(state.get("last_run", 0)) < 7 * 86400:
+        return {"skipped": "cadence", "last_run": state.get("last_run")}
+    script = _root / "scripts" / "ibl_param_sweep.py"
+    if not script.exists():
+        return {"error": "scripts/ibl_param_sweep.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=600)
+    except Exception as e:
+        return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
+    tail = (proc.stdout or "").strip().splitlines()[-1:] or [""]
+    out = {"rc": proc.returncode, "summary": tail[0][:200]}
+    try:
+        save_self_check({"node": "__ibl_health__", "action": "param_sweep",
+                         "success": proc.returncode == 0, "response_ms": 0,
+                         "data_quality": "ok" if proc.returncode == 0 else "sweep_failed",
+                         "error_message": None if proc.returncode == 0 else (proc.stderr or "")[-200:]})
+    except Exception:
+        pass
+    state["last_run"] = now
+    try:
+        state_path.write_text(json.dumps(state, ensure_ascii=False))
+    except Exception:
+        pass
+    return out
+
+
 def run_honesty_sweep() -> Dict:
     """정직성 불변식 스윕 (주간 카덴스, §8.6b) — scripts/honesty_invariants_sweep.py.
 

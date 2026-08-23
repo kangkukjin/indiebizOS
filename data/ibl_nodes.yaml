@@ -848,6 +848,9 @@ nodes:
             - '{startDate}~{endDate}'
             - '{area} · {realmName}'
       stock:
+        aliases:
+          ticker:
+          - symbol
         returns: scalar
         side_effect: false
         fixture: '[sense:stock]{query: "삼성전자"}'
@@ -1189,6 +1192,11 @@ nodes:
                 href: '{url}'
                 label: 지도/상세 →
       navigate_route:
+        aliases:
+          origin:
+          - from
+          destination:
+          - to
         returns: scalar
         exempt: 출발/도착 좌표 쌍 필요
         description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
@@ -6782,6 +6790,12 @@ nodes:
         - 이미지
         - 렌더링
       image_read:
+        aliases:
+          image_path:
+          - path
+          question:
+          - query
+          - prompt
         returns: scalar
         side_effect: false
         exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합

@@ -67,6 +67,42 @@ def test_b21_1_no_bare_error_strings_left():
         assert not hits, "%s 에 평문 오류 return 이 남았다: %r" % (rel, hits[:3])
 
 
+def test_b34_1_scalar_param_given_list_is_refused():
+    """B34-1(2026-08-23 #repair): 스칼라를 선언한 param 에 목록이 오면 관문이 거절한다.
+
+    실측(수리 전) — 결말이 액션마다 달랐고 셋 다 잘못이었다:
+      [sense:stock]{op:"quote", ticker: ["AAPL","MSFT"]} → success:true, 태국 AAPL19.BK
+      [sense:weather]{city: ["수원","서울"]}              → 'list' has no attribute 'lower'
+      [sense:stock]{op:"search", query: [...]}            → 'list' has no attribute 'strip'
+    조용한 오답이 예외보다 나쁘다 — 아무도 의심하지 않는다.
+    처방은 함수 열거가 아니라 tool.json input_schema 대조 한 곳이다."""
+    import ibl_routing
+    out = ibl_routing._route_handler("get_weather", {"city": ["수원", "서울"]}, ".")
+    assert out.get("success") is False, out
+    msg = out.get("error") or ""
+    assert "city" in msg and "string" in msg, msg
+    assert "table:each" in msg, f"항목마다 도는 법을 안 가리킨다: {msg}"
+    # 조용한 오답의 원본 사례도 같은 관문에서 막힌다
+    out2 = ibl_routing._route_handler("stock_op", {"op": "quote", "ticker": ["AAPL", "MSFT"]}, ".")
+    assert out2.get("success") is False and "ticker" in (out2.get("error") or ""), out2
+
+
+def test_b34_1_array_params_and_scalars_still_pass():
+    """★깨질 용법 0 — array 로 선언된 param($items 통짜 바인딩의 정당한 자리)과
+    선언 없는 내부 키는 관문을 그대로 통과해야 한다. 가드가 넓으면 그게 새 결함이다."""
+    from tool_loader import load_tool_schema
+    props = ((load_tool_schema("show_location_map") or {}).get("input_schema") or {}).get("properties") or {}
+    assert props.get("markers", {}).get("type") == "array", props.get("markers")
+
+    import ibl_routing
+    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ibl", "ibl_routing.py"),
+               encoding="utf-8").read()
+    assert '("string", "number", "integer", "boolean")' in src, "스칼라 화이트리스트가 사라졌다"
+    # 스칼라만 실린 흔한 호출은 스키마를 읽는 경로에 들어가지도 않는다
+    out = ibl_routing._route_handler("get_weather", {"city": "수원"}, ".")
+    assert "string 하나를 받는데" not in json.dumps(out, ensure_ascii=False), out
+
+
 def test_v21_1_render_html_eats_pipe_currency():
     """V21-1: html 생략 시 직전 통화를 받는다([self:write] 와 같은 규약)."""
     mp = _load(MP, "mp_pipe_probe")

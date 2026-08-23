@@ -284,6 +284,39 @@ def _route_handler(mapped_tool: str, params: dict,
 
     merged_params = dict(params)
 
+    # ★B34-1 (2026-08-23 #repair): 스칼라를 선언한 param 에 목록·사전이 오면 정직하게 거절한다.
+    #   실측 3종 — [sense:stock]{ticker: ["AAPL","MSFT"]} 는 에러도 없이 **태국 증시**
+    #   AAPL19.BK 를 돌려줬고(str() 로 뭉개진 "['AAPL', 'MSFT']" 가 종목명 검색어가 됐다),
+    #   [sense:weather]{city: [...]} 는 'list' object has no attribute 'lower',
+    #   [sense:stock]{op:"search", query: [...]} 는 'attribute strip' 이라는 파이썬 예외를
+    #   그대로 샜다. 실사용 원장에도 같은 계열이 남아 있었다('attribute upper').
+    #   조용한 오답이 예외보다 나쁘다 — 아무도 의심하지 않기 때문이다.
+    #   ★처방을 함수·액션 목록으로 적지 않는다: .upper()/.strip()/.lower() 자리만 58곳이고
+    #     그런 열거는 반드시 뒤처진다. tool.json 의 input_schema 가 **이미** 타입을 선언하고
+    #     있으므로 관문에서 그 진실 소스를 한 번 읽는다. array 로 선언된 param($items 통짜
+    #     바인딩의 정당한 자리 — markers·items·columns·blocks…)은 그대로 통과하므로
+    #     깨지는 기존 용법이 없다. 선언이 없는 param 은 검사하지 않는다(모르면 통과).
+    _listish = {k: v for k, v in merged_params.items() if isinstance(v, (list, dict))}
+    if _listish:                      # 흔한 스칼라-only 호출은 스키마를 읽지도 않는다
+        try:
+            from tool_loader import load_tool_schema
+            _props = (((load_tool_schema(mapped_tool) or {}).get("input_schema") or {})
+                      .get("properties") or {})
+        except Exception:
+            _props = {}
+        _bad = [(k, (_props.get(k) or {}).get("type"), v) for k, v in _listish.items()
+                if (_props.get(k) or {}).get("type") in ("string", "number", "integer", "boolean")]
+        if _bad:
+            _detail = "; ".join(
+                f"`{k}` 는 {t} 하나를 받는데 "
+                f"{len(v)}개짜리 {'목록' if isinstance(v, list) else '사전'}이 왔습니다"
+                for k, t, v in _bad)
+            return {"success": False, "error": (
+                f"{mapped_tool}: {_detail}. 목록의 항목마다 실행하려면 "
+                "[table:each]{do: \"…$it.필드…\"} 를 쓰세요 "
+                "($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다)."
+            )}
+
     # handler.execute는 신규 시그니처 (tool_input, context)만 지원
     import inspect
     sig = inspect.signature(handler.execute)

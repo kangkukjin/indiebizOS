@@ -5,6 +5,14 @@
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
   timeout: 2400
+에피소드통계:
+  description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
+    도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.
+    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로'
+  file: 에피소드통계.py
+  interpreter: python
+  registered_at: '2026-08-23T21:52:31'
+  timeout: 300
 음성받아쓰기:
   description: '오디오/영상 파일 받아쓰기(Gemini) — args: path(필수), out, segment_seconds(기본 300),
     prompt, model. 축약 금지·인사말 보존 verbatim. [sense:listen]은 마이크 전용이라 파일 STT의 유일한 경로.'

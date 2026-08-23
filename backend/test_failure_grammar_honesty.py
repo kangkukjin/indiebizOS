@@ -135,6 +135,51 @@ def test_R7_봉투_정직_표지가_교재에_있다():
         assert marker in src, f"교재가 정직 표지 '{marker}' 를 가르치지 않는다"
 
 
+def test_R8_fallback_표지가_교재뿐_아니라_실물로도_나온다(monkeypatch):
+    """F35-1(35회차): R7 은 **교재에 적혀 있는지**만 봤고 '몸이 실제로 싣는다'는
+    30회차의 가정을 검증하지 않았다. 실측하니 안 실었다 —
+
+        [sense:stock]{op:"quote", ticker:"ZZZZINVALID"} ?? [self:time]
+        → final_result '2026-08-23 21:05:31' · 최상위/final_result/results[0] 어디에도
+          `_fallback_used` 없음
+
+    옛 배선은 표지를 *결과 안*에 넣어서 dict 나 '{' 로 시작하는 JSON 문자열에만 붙었다.
+    **평문 스칼라**라는 세 번째 모양에서 조용히 사라졌고, 읽는 쪽은 표지가 없으니
+    '폴백 안 씀'으로 단정한다(34회차의 이 저장소 자신이 그렇게 읽었다).
+    가르치는 자리와 신고하는 자리는 **둘 다** 지켜져야 한다."""
+    import ibl_engine, workflow_engine
+    from ibl_parser import parse
+
+    def _fake(tool_input, project_path, agent_id=None, **kw):
+        if tool_input.get("action") == "bad":
+            return {"success": False, "error": "없는 종목"}
+        return "2026-08-23 21:05:31"          # ★평문 스칼라 — 옛 배선이 놓치던 모양
+
+    orig = ibl_engine.execute_ibl
+    ibl_engine.execute_ibl = _fake
+    try:
+        out = workflow_engine.execute_pipeline(parse('[sense:bad]{} ?? [self:time]'), ".")
+    finally:
+        ibl_engine.execute_ibl = orig
+
+    assert out.get("success"), out
+    assert "_fallback_used" in out, f"갈아탄 사실이 최상위 봉투에 없다: {sorted(out.keys())}"
+    fb = out["_fallback_used"]
+    assert fb and fb[0]["attempt"] == 2, fb
+    assert "sense:bad" in fb[0]["skipped"], fb          # 무엇을 버렸는지도 말한다
+    assert "출처" in (out.get("warning") or ""), out.get("warning")
+
+    # ★첫 가지가 그냥 성공하면 표지가 붙지 않아야 한다(거짓 경보 금지)
+    def _ok(tool_input, project_path, agent_id=None, **kw):
+        return "2026-08-23 21:05:31"
+    ibl_engine.execute_ibl = _ok
+    try:
+        out2 = workflow_engine.execute_pipeline(parse('[self:time]{} ?? [sense:bad]{}'), ".")
+    finally:
+        ibl_engine.execute_ibl = orig
+    assert "_fallback_used" not in out2, out2
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import sys as _sys
     try:

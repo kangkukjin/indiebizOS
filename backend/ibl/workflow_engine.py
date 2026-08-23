@@ -286,7 +286,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
         return -1
 
     _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": [], "halted": [],
-            "branches_failed": [], "empty_notes": [], "list_in_text": []}
+            "branches_failed": [], "empty_notes": [], "list_in_text": [],
+            # ★F35-1 (35회차): `??` 가 갈아탄 사실을 봉투 최상위로 올리는 누산기.
+            #   교재는 `_fallback_used` 를 정직 표지 **1번**으로 가르치는데 실물이 없었다.
+            "fallback_used": []}
 
     def _handle_failure(idx: int, abort_payload: dict):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -498,13 +501,36 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # fallback 결과에 에러가 있으면 (모든 체인 실패 — `_all_failed` 는 _execute_fallback 이 붙인다)
             is_err = isinstance(result, dict) and result.get("_all_failed") and _is_error_result(result)
             action_count += 1
-            results.append({
+            _rec_fb = {
                 "step": i + 1, "type": "fallback",
                 "chain_length": len(step["_fallback_chain"]),
                 "attempts": fallback_log,
                 "result": result_str,
                 "duration_ms": duration_ms,
-            })
+            }
+            # ★F35-1 (2026-08-23 상상훈련 35회차): 갈아탄 사실을 **봉투**에 단다.
+            #   옛 배선은 표지를 *결과 안*에 넣었다(_execute_fallback: dict 면 키 추가,
+            #   '{' 로 시작하는 JSON 문자열이면 파싱해 추가). 그래서 결과가 **평문 스칼라**면
+            #   ─ 세 번째 모양 ─ 표지가 조용히 사라졌다. 실측: `[sense:stock]{ZZZZINVALID}
+            #   ?? [self:time]` 의 final_result 는 '2026-08-23 21:05:31' 이고 최상위·
+            #   final_result·results[0] 어디에도 `_fallback_used` 가 없었다.
+            #   ★교재가 이 표지를 **정직 표지 1번**으로 가르치므로("데이터의 출처가 바뀌었다"),
+            #     읽는 쪽은 없으면 '폴백 안 씀'으로 단정한다 — 34회차의 이 세션 자신이
+            #     그 키를 세어 0 을 얻고 그렇게 읽었다(거짓 안심).
+            #   처방은 결과 모양을 열거하지 않는다. 성패 판정의 진실 소스는 이미 `attempts`
+            #   이므로 그것만 보고, 신고는 branches_failed 와 **같은 배선**(step 요약 →
+            #   _seq 누산 → 최상위 승격 + warning)에 태운다.
+            _fb_ok = [a for a in (fallback_log or []) if a.get("status") == "ok"]
+            if _fb_ok and _fb_ok[0].get("attempt", 1) > 1:
+                _fb_at = _fb_ok[0]["attempt"]
+                _rec_fb["_fallback_used"] = _fb_at
+                _seq["fallback_used"].append({
+                    "step": i + 1, "attempt": _fb_at,
+                    "action": f"{_fb_ok[0].get('node')}:{_fb_ok[0].get('action')}",
+                    "skipped": [f"{a.get('node')}:{a.get('action')}" for a in (fallback_log or [])
+                                if a.get("attempt", 0) < _fb_at],
+                })
+            results.append(_rec_fb)
             step_results[i] = result_str
 
             if is_err:
@@ -701,6 +727,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in _seq["branches_failed"])
         _warns.append(f"[병렬] 분기 실패: {_bs} — 결과는 부분입니다"
                       "(살아남은 분기만 다음 step 으로 흐릅니다. results[] 의 branches_failed 참조).")
+    if _seq["fallback_used"]:
+        # ★F35-1: `??` 가 갈아탄 사실 — 데이터의 **출처가 바뀌었다**는 뜻이라
+        #   최상위에 없으면 읽는 쪽이 첫 가지 결과로 착각한다(교재의 정직 표지 1번).
+        out["_fallback_used"] = list(_seq["fallback_used"])
+        _fs = ", ".join(f"step {f['step']}({f['action']}, {f['attempt']}번째 가지)"
+                        for f in _seq["fallback_used"])
+        _warns.append(f"폴백 발동: {_fs} — 앞 가지를 버리고 갈아탔으므로 **데이터의 출처가 "
+                      f"다릅니다**(건너뛴 가지는 results[] 의 attempts 참조).")
     if _seq["list_in_text"]:
         out["list_in_text"] = list(_seq["list_in_text"])
         _warns.append(_list_in_text_warning(_seq["list_in_text"]))

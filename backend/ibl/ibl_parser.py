@@ -926,28 +926,46 @@ def _resolve_variables(step: dict, variables: Dict[str, int]) -> dict:
     """
     if not variables:
         return step
+    resolved, used = _resolve_variables_used(step, variables)
+    # ★_ref_vars (2026-08-23 G31-1): 치환이 이름을 지우면 실행기는 "{{_step_2_result}}" 만 본다 —
+    #   봉투 경고가 `$step2` 라고 말하게 된다(실측). 사용자가 쓴 이름으로 말하려면 파서가 이름을
+    #   남겨야 한다. 블록의 `_vars`(값 바인딩용)와 다른 키 — 엔진이 `_vars` 를 보면 `_var_values` 를
+    #   싣는 블록 규약이 발동하므로 섞지 않는다. 사실(이름→인덱스)만, step 모양 dict 에만.
+    #   참조는 대개 params 안(중첩)에 있으므로 used 는 재귀에서 모아 올린다.
+    if used and ("params" in resolved or "action" in resolved):
+        resolved["_ref_vars"] = used
+    return resolved
 
+
+def _resolve_variables_used(step: dict, variables: Dict[str, int]):
+    """_resolve_variables 의 몸 — (치환된 dict, 실제 참조된 {이름: 인덱스}). 분기 리스트의
+    dict 는 각자 step 이라 _resolve_variables 로 보내 자기 표식을 갖게 한다."""
     resolved = {}
+    used: Dict[str, int] = {}
     for key, val in step.items():
         if isinstance(val, str):
             for var_name, step_idx in variables.items():
                 # $var.field.path — 필드 경로를 템플릿에 실어 실행기가 추출하게 한다
                 # (2026-08-16 상상훈련 G1: 경로 없이 통짜 치환하면 `.lat` 이 리터럴로 남았다).
+                before = val
                 val = _sub_var_ref(val, var_name,
                                    lambda path, _i=step_idx: "{{_step_%d_result%s}}" % (_i, path))
+                if val != before:
+                    used[var_name] = step_idx
             resolved[key] = val
         elif isinstance(val, dict):
-            resolved[key] = _resolve_variables(val, variables)
+            sub, sub_used = _resolve_variables_used(val, variables)
+            resolved[key] = sub
+            used.update(sub_used)
         elif isinstance(val, list):
-            # _parallel.branches, _fallback_chain 리스트 처리
+            # _parallel.branches, _fallback_chain 리스트 처리 — 각 dict 는 step 이라 자기 표식
             resolved[key] = [
                 _resolve_variables(item, variables) if isinstance(item, dict) else item
                 for item in val
             ]
         else:
             resolved[key] = val
-
-    return resolved
+    return resolved, used
 
 
 def _resolve_block_variables(blk: dict, variables: Dict[str, int], nested: bool = False) -> dict:

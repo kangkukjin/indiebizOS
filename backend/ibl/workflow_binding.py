@@ -94,7 +94,56 @@ def _v4_var_payload(raw: str) -> str:
     return raw
 
 
-def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
+def _mark_list_in_text(step: dict, param: str, ref: str, rows: int) -> None:
+    """step 표식 `_list_in_text` — **목록이 글자 자리에 JSON 으로 들어갔다**는 사실.
+
+    ★G31-1 판정(2026-08-23, 사용자): 문장 *속* 집합/변수 참조는 거절하지 않고 **치환 + 신고**
+      로 통일한다. 근거 셋 — ①규칙이 둘이었다(`$변수`=조용한 JSON, `$items`=조용한 거절),
+      ②깨질 문장이 없다(코퍼스 3,594 중 문장 속 `$변수` 61건 전부 스칼라·저장 워크플로우 0),
+      ③거절로 통일하면 **두 목록을 한 AI 지시문에 넣는 길**이 닫힌다(파이프는 하나만 나른다).
+    표식은 사실만 싣는다(어느 param 에 어느 참조가 몇 행). 번역(경고문)은 엔진이 한 번 —
+    `$items`·`$변수`·파이프·블록 몸 어디서 왔든 같은 표식, 같은 문장.
+    """
+    lst = step.get("_list_in_text")
+    if not isinstance(lst, list):
+        lst = []
+        step["_list_in_text"] = lst
+    lst.append({"param": param, "ref": ref, "rows": rows})
+
+
+def _is_json_list(text: str):
+    """치환된 텍스트가 JSON 목록이면 그 목록, 아니면 None (모양으로만 판정)."""
+    t = (text or "").lstrip()
+    if not t.startswith("["):
+        return None
+    try:
+        v = json.loads(t)
+    except Exception:
+        return None
+    return v if isinstance(v, list) else None
+
+
+def _sub_step_refs(text: str, step_results: Dict[int, str], names: Dict[int, str],
+                   sink, param_key):
+    """문자열 하나의 {{_step_N_result[.path]}} 를 치환. sink 가 있으면 **문장 속**(통짜가
+    아닌) 참조가 목록을 JSON 으로 넣은 경우를 표식 후보로 모은다."""
+    sole = _STEP_RESULT_RE.fullmatch(text.strip()) is not None
+
+    def _sub(m):
+        n = int(m.group(1))
+        base = step_results.get(n, "")
+        p = m.group(2)
+        val = _extract_result_field(base, p) if p else _v4_var_payload(base)
+        if sink is not None and not sole:
+            lst = _is_json_list(val)
+            if lst is not None:
+                label = names.get(n) if names else None
+                sink.append((param_key, f"${label or f'step{n + 1}'}{p}", len(lst)))
+        return val
+    return _STEP_RESULT_RE.sub(_sub, text)
+
+
+def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[int, str] = None) -> Any:
     """{{_step_N_result[.path]}} 참조를 저장된 step 별 결과로 치환 (재귀 — branches/체인 포함).
 
     변수 바인딩($var)의 실제 구현(D4, 2026-08-05): 예전엔 $var 가 전부 {{_prev_result}} 로
@@ -102,22 +151,41 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str]) -> Any:
     치환받았다. 아직 실행되지 않았거나 예외로 결과가 없는 인덱스는 빈 문자열로 치환한다.
     .path 가 붙으면 결과(JSON)에서 그 필드를 추출한다 — 실패는 ValueError(정직 실패).
     bare 참조는 v4 추출(_v4_var_payload)을 태운다 (F17-3).
+    ★문장 속 참조가 목록을 JSON 으로 넣으면 step 에 `_list_in_text` 표식(G31-1) — 통짜 참조
+      (`content: "$곡"`)는 의도된 목록 전달이라 표식 없음. `_vars`(이름→인덱스)가 있으면
+      표식에 변수 이름을 쓰고, 없으면 step 번호로 말한다(추측 금지).
     """
     if isinstance(obj, str):
-        def _sub(m):
-            base = step_results.get(int(m.group(1)), "")
-            p = m.group(2)
-            if p:
-                return _extract_result_field(base, p)
-            return _v4_var_payload(base)
-        return _STEP_RESULT_RE.sub(_sub, obj)
+        return _sub_step_refs(obj, step_results, _names or {}, None, None)
     if isinstance(obj, dict):
         # 블록은 건드리지 않는다 (M6): 몸은 안쪽 파이프의 인덱스 공간 — 바깥 치환은 실행기가 _vars/_var_values 로.
         if any(obj.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
             return obj
-        return {k: _inject_step_results(v, step_results) for k, v in obj.items()}
+        names = _names
+        _nm = {}
+        for _k in ("_vars", "_ref_vars"):          # 블록(_vars)·일반 step(_ref_vars, 파서가 남긴 이름)
+            if isinstance(obj.get(_k), dict):
+                _nm.update({int(ix): n for n, ix in obj[_k].items() if str(ix).isdigit()})
+        if _nm:
+            names = {**(_names or {}), **_nm}
+        params = obj.get("params")
+        if not isinstance(params, dict):
+            return {k: _inject_step_results(v, step_results, names) for k, v in obj.items()}
+        sink = []
+        new = {}
+        for k, v in obj.items():
+            if k == "params":
+                new[k] = {pk: (_sub_step_refs(pv, step_results, names or {}, sink, pk)
+                               if isinstance(pv, str)
+                               else _inject_step_results(pv, step_results, names))
+                          for pk, pv in v.items()}
+            else:
+                new[k] = _inject_step_results(v, step_results, names)
+        for pk, ref, rows in sink:
+            _mark_list_in_text(new, pk, ref, rows)
+        return new
     if isinstance(obj, list):
-        return [_inject_step_results(v, step_results) for v in obj]
+        return [_inject_step_results(v, step_results, _names) for v in obj]
     return obj
 
 
@@ -151,29 +219,19 @@ def _bind_items_params(tool_input: dict, prev_result: str):
     refs = {k: m for k, v in params.items()
             if isinstance(v, str) and (m := _ITEMS_REF.match(v.strip()))}
 
-    # ★B31-2 (31회차 실측): 집합 참조는 param 값 **전체**일 때만 바인딩된다(위 정규식은 ^...$).
-    #   문장 *속*에 섞여 들어오면 지금까지 아무 일도 일어나지 않았다 — 치환도, 경고도, 실패도.
-    #   실측: [self:memory]{op:'save', content: '스크래치 realty: $items.title'} 가
-    #   success: true · '메모리 저장 완료(ID: 1)' 를 돌려주고, 원장에는 **글자 그대로**
-    #   $items.title 이 저장됐다(12건 전수 확인). 데이터가 아니라 문법 기호가 영구 보존된 것.
-    #   ★언어가 여기서 일관되지 않다: `$변수`(파서 치환)와 `$it.필드`(each)는 문장 속에서도
-    #   치환되는데 `$items` 만 안 된다. 사용자가 그 차이를 미리 알 방법이 없다.
-    #   ★임시방편(문장 속 치환을 지금 구현)을 택하지 않은 이유: 목록을 문장에 끼울 때의
-    #   결합 규약(줄바꿈? 쉼표? 인용?)은 **언어 개정**이라 사용자 판정 사항이다(가이드 §4 2종).
-    #   판정 전까지 옳은 것은 침묵이 아니라 정직한 거절이다 — 조용히 쓰레기를 저장하는 것보다
-    #   못 하겠다고 말하는 편이 언제나 낫다. 판정이 나면 이 자리가 그대로 구현 지점이 된다.
-    _mixed = [k for k, v in params.items()
-              if isinstance(v, str) and "$items" in v and k not in refs]
-    if _mixed:
-        return tool_input, (
-            f"$items 는 파라미터 값 **전체**일 때만 집합으로 바인딩됩니다 — {sorted(_mixed)} 처럼 "
-            "문장 속에 섞으면 치환되지 않고 글자 그대로 남습니다(조용한 저장을 막기 위해 거절). "
-            "값 전체를 \"$items\" 또는 \"$items.필드\" 로 두거나, 행마다 문장을 만들려면 "
-            "[table:each]{do: \"…$it.필드…\"} 를 쓰세요. "
-            "AI 낱말([table:brief]·[table:ai])은 파이프 통화를 이미 받으므로 지시문에 "
-            "$items 를 적을 필요가 없습니다.")
+    # ★문장 *속* `$items`/`$items.필드` (31회차 B31-2 → G31-1 판정, 2026-08-23):
+    #   실측(31회차): `[self:memory]{content: '… $items.title'}` 이 success:true 로 **글자 그대로**
+    #   `$items.title` 을 저장했다(12건) — 치환도 경고도 실패도 없었다. 그날 거절로 막았고,
+    #   사용자 판정으로 **치환 + 신고**로 개정했다: 값 전체 참조와 같은 자료(전체 행 / 필드
+    #   목록)를 JSON 으로 문장에 넣고 `_list_in_text` 표식을 남긴다. 산문이 필요한 사람은
+    #   엔진의 경고가 [table:brief]/[table:each] 로 안내하고, 데이터를 AI 지시문에 먹이려는
+    #   사람(두 목록 → 한 지시문)은 그대로 쓴다. 규칙은 `$변수`와 동일 — 예약어 특수 취급 없음.
+    from common.ibl_vars import ref_pattern
+    _in_text = re.compile(ref_pattern("items"))
+    mixed = {k: v for k, v in params.items()
+             if isinstance(v, str) and k not in refs and _in_text.search(v)}
 
-    if not refs:
+    if not refs and not mixed:
         return tool_input, None
 
     # 이전 결과에서 items 통화 추출 (prev_result 는 _to_prev_currency 가 이미 items 파생을 마친 JSON)
@@ -212,10 +270,43 @@ def _bind_items_params(tool_input: dict, prev_result: str):
             out["params"][key] = [r.get(field) for r in items if isinstance(r, dict)]
         else:
             out["params"][key] = items
+
+    for key, text in mixed.items():
+        notes = []
+
+        def _repl(path, _notes=notes):
+            if not path:
+                payload = items
+            else:
+                seg = path.lstrip(".").split(".")
+                if len(seg) == 1 and not seg[0].isdigit():
+                    field = seg[0]
+                    missing = [1 for r in items if not (isinstance(r, dict) and field in r)]
+                    if items and len(missing) == len(items):
+                        raise ValueError(
+                            f"$items.{field} 치환 실패: '{field}' 필드가 어느 행에도 없습니다. 실제 필드: "
+                            f"{sorted(items[0].keys()) if isinstance(items[0], dict) else '비-dict 행'}")
+                    payload = [r.get(field) for r in items if isinstance(r, dict)]
+                else:
+                    val = _extract_result_field(json.dumps(items, ensure_ascii=False), path)
+                    lst = _is_json_list(val)
+                    if lst is not None:
+                        _notes.append((f"$items{path}", len(lst)))
+                    return val
+            _notes.append((f"$items{path}", len(payload)))
+            return json.dumps(payload, ensure_ascii=False)
+        try:
+            out["params"][key] = _in_text.sub(lambda m: _repl(m.group(1) if m.group(1) is not None
+                                                               else (m.group(2) or "")), text)
+        except ValueError as e:
+            return tool_input, str(e)
+        for ref, rows in notes:
+            _mark_list_in_text(out, key, ref, rows)
     # ★B31-1 (31회차): 무엇이 집합으로 바인딩됐는지 표식을 남긴다.
     #   이 step 이 실패하면 _items_bound_note 가 그 사실을 오류문에 실어 준다 — 아래 참조.
-    out["_items_bound"] = {k: (len(out["params"][k]) if isinstance(out["params"][k], list) else 1)
-                            for k in refs}
+    if refs:   # 문장 속 치환만 있던 step 에 빈 바인딩 표식을 남기지 않는다(번역 오탐 방지)
+        out["_items_bound"] = {k: (len(out["params"][k]) if isinstance(out["params"][k], list) else 1)
+                               for k in refs}
     return out, None
 
 
@@ -236,12 +327,29 @@ def _items_bound_note(tool_input: dict, err_msg: str) -> str:
     사실만 싣는다(추측 금지) — 무엇이 몇 건 들어갔는지, 그리고 두 갈래 출구.
     """
     bound = tool_input.get("_items_bound") if isinstance(tool_input, dict) else None
-    if not isinstance(bound, dict) or not bound:
-        return err_msg
-    parts = ", ".join(f"{k}={n}건" for k, n in bound.items())
-    return (f"{err_msg} ★이 step 의 파라미터에 집합 참조($items)로 목록이 들어갔습니다({parts}). "
-            f"받는 자리가 값 하나를 기대하면 이렇게 실패합니다 — 한 줄로 만들려면 "
-            f"[table:brief], 행마다 따로 실행하려면 [table:each]{{do: \"…$it.필드…\"}} 를 쓰세요.")
+    lit = tool_input.get("_list_in_text") if isinstance(tool_input, dict) else None
+    if isinstance(bound, dict) and bound:
+        parts = ", ".join(f"{k}={n}건" for k, n in bound.items())
+        err_msg = (f"{err_msg} ★이 step 의 파라미터에 집합 참조($items)로 목록이 들어갔습니다({parts}). "
+                   f"받는 자리가 값 하나를 기대하면 이렇게 실패합니다 — 한 줄로 만들려면 "
+                   f"[table:brief], 행마다 따로 실행하려면 [table:each]{{do: \"…$it.필드…\"}} 를 쓰세요.")
+    if isinstance(lit, list) and lit:
+        parts = ", ".join(f"{e.get('param')}←{e.get('ref')} {e.get('rows')}행" for e in lit)
+        err_msg = (f"{err_msg} ★이 step 의 문장 속에 목록이 JSON 으로 들어갔습니다({parts}) — "
+                   f"받는 자리가 그 모양을 못 받으면 이렇게 실패합니다. 산문이면 [table:brief], "
+                   f"행마다면 [table:each]{{do: \"…$it.필드…\"}}.")
+    return err_msg
+
+
+def _list_in_text_warning(entries: list) -> str:
+    """봉투 최상위 경고 한 줄 — `_seq["list_in_text"]` 의 번역(G31-1). 사실 + 두 갈래 출구 + 무시 허가."""
+    parts = " / ".join(
+        f"step {e['step']}[{e['action']}] " +
+        ", ".join(f"{r.get('param')}←{r.get('ref')} {r.get('rows')}행" for r in (e.get("refs") or []))
+        for e in entries)
+    return (f"[목록→글자] {parts} 이 JSON 으로 문장에 들어갔습니다 — 산문 한 줄이 의도면 [table:brief], "
+            f"행마다면 [table:each]{{do: \"…$it.필드…\"}}. 목록 그대로(AI 지시문에 데이터 먹이기)가 "
+            f"의도면 이 경고는 무시하세요.")
 
 
 def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:

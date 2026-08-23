@@ -80,26 +80,105 @@ def test_i6_declared_keys_are_not_flagged():
     assert "선언한 키가 아니라" not in hint, f"정당한 키를 신고했다: {hint}"
 
 
-def test_i7_mixed_reference_is_refused_not_stored():
-    """B31-2: 문장 속 집합 참조는 치환도 경고도 없이 **글자 그대로 저장**됐다 — 이젠 거절한다."""
+def test_i7_mixed_items_ref_substitutes_and_marks():
+    """G31-1 판정(2026-08-23): 문장 속 `$items.필드` 는 **치환 + 표식** — 거절도 침묵도 아니다."""
+    import json
     from workflow_binding import _bind_items_params
     prev = '{"items": [{"title": "a"}, {"title": "b"}]}'
     ti = {"_node": "self", "action": "memory",
-          "params": {"op": "save", "content": "스크래치 realty: $items.title"}}
+          "params": {"op": "save", "content": "스크래치 realty: $items.title 끝"}}
     out, err = _bind_items_params(ti, prev)
-    assert err, "문장 속 집합 참조가 조용히 통과했다 — 글자 그대로 저장된다"
-    assert "content" in err and "$items" in err, err
-    assert "table:each" in err, "나갈 길을 안 알려준다"
+    assert err is None, err
+    assert out["params"]["content"] == '스크래치 realty: ["a", "b"] 끝', out["params"]["content"]
+    assert out.get("_list_in_text") == [{"param": "content", "ref": "$items.title", "rows": 2}], out.get("_list_in_text")
+    assert "_items_bound" not in out, "문장 속 참조는 값 바인딩이 아니다 — 표식이 섞이면 번역이 거짓이 된다"
 
 
 def test_i8_standalone_reference_still_binds():
-    """거절이 정상 사용까지 잡으면 안 된다 — 값 전체 참조는 그대로 산다(무회귀)."""
+    """값 전체 참조는 그대로 산다(무회귀) — 그리고 표식을 남기지 않는다(의도된 목록 전달)."""
     from workflow_binding import _bind_items_params
     prev = '{"items": [{"title": "a"}, {"title": "b"}]}'
     out, err = _bind_items_params(
         {"_node": "limbs", "action": "show_map", "params": {"markers": "$items"}}, prev)
     assert err is None, err
     assert isinstance(out["params"]["markers"], list) and len(out["params"]["markers"]) == 2
+    assert "_list_in_text" not in out
+
+
+def test_i9_var_in_text_marks_with_name():
+    """`$변수` 도 같은 규칙 — 문장 속 목록은 JSON 치환 + 표식, 표식은 변수 **이름**으로 말한다."""
+    from workflow_binding import _inject_step_results
+    step = {"_node": "self", "action": "write", "_vars": {"곡": 0},
+            "params": {"path": "x.txt", "content": "오늘 곡: {{_step_0_result}} 입니다"}}
+    res = {0: '{"success": true, "items": [{"title": "a"}, {"title": "b"}, {"title": "c"}]}'}
+    out = _inject_step_results(step, res)
+    assert out["params"]["content"].startswith("오늘 곡: [{"), out["params"]["content"]
+    assert out.get("_list_in_text") == [{"param": "content", "ref": "$곡", "rows": 3}], out.get("_list_in_text")
+
+
+def test_i10_sole_var_and_scalar_path_do_not_mark():
+    """통짜 `$변수`(의도된 목록 전달)와 스칼라 경로(`$곡.0.title`)는 조용히 — 자주 틀리는 경고는 침묵보다 나쁘다."""
+    from workflow_binding import _inject_step_results
+    res = {0: '{"success": true, "items": [{"title": "a"}, {"title": "b"}]}'}
+    sole = _inject_step_results({"action": "write", "params": {"content": "{{_step_0_result}}"}}, res)
+    assert "_list_in_text" not in sole, sole.get("_list_in_text")
+    scalar = _inject_step_results({"action": "write", "params": {"content": "첫 곡 {{_step_0_result.items.0.title}}"}}, res)
+    assert scalar["params"]["content"] == "첫 곡 a"
+    assert "_list_in_text" not in scalar, scalar.get("_list_in_text")
+
+
+def test_i11_block_body_marks_the_same_way():
+    """블록 몸의 `$변수`(실행기 치환)도 같은 표식 — 파이프와 블록이 다른 규칙이면 사용자는 모른다."""
+    from ibl_executors import _subst_var_refs
+    body = [{"_node": "self", "action": "notify_user",
+             "params": {"message": "목록: $r 확인"}}]
+    out = _subst_var_refs(body, {"r": {"items": [{"a": 1}, {"a": 2}]}})
+    assert out[0]["params"]["message"].startswith("목록: [{"), out[0]["params"]["message"]
+    assert out[0].get("_list_in_text") == [{"param": "message", "ref": "$r", "rows": 2}], out[0].get("_list_in_text")
+
+
+def test_i12_failure_note_and_envelope_warning_speak_the_mark():
+    """실패 번역기와 봉투 경고 둘 다 표식을 사람 말로 — 사실 + 두 갈래 출구 + 무시 허가."""
+    from workflow_binding import _items_bound_note, _list_in_text_warning
+    msg = _items_bound_note({"_list_in_text": [{"param": "message", "ref": "$items.title", "rows": 3}]},
+                            "'list' object has no attribute 'strip'")
+    assert "message←$items.title 3행" in msg and "table:brief" in msg and "table:each" in msg, msg
+    w = _list_in_text_warning([{"step": 3, "action": "self:write",
+                                "refs": [{"param": "content", "ref": "$곡", "rows": 3}]}])
+    assert "[목록→글자]" in w and "step 3[self:write]" in w and "content←$곡 3행" in w, w
+    assert "무시" in w, "정당한 용법(AI 에 데이터 먹이기)을 틀렸다고 읽게 하면 안 된다"
+
+
+def test_i13_engine_wires_the_mark_into_the_envelope():
+    """배선 가드 — 표식을 올리는 자리(step 기록)와 번역하는 자리(봉투 경고)가 엔진에 실재해야 한다."""
+    import workflow_engine
+    src = open(workflow_engine.__file__, encoding="utf-8").read()
+    assert '_seq["list_in_text"].append(' in src, "step 기록이 표식을 안 모은다"
+    assert "_list_in_text_warning(_seq[\"list_in_text\"])" in src, "봉투 경고가 표식을 안 번역한다"
+
+
+def test_i14_caller_params_list_embed_is_reported():
+    """호출자 params(저장 워크플로우 run) 의 목록 임베드도 같은 사실·같은 신고 — 세 번째 치환 자리."""
+    from workflow_contract import _apply_caller_params
+    steps = [{"_node": "self", "action": "write", "params": {"content": "목록: $L 끝"}}]
+    _, meta = _apply_caller_params(steps, {"L": [1, 2, 3]})
+    assert "목록" in (meta.get("params_warning") or "") and "table:brief" in meta["params_warning"], meta
+
+
+def test_i15_parser_keeps_the_variable_name_for_the_mark():
+    """파서가 `$곡` 을 {{_step_N_result}} 로 바꾸며 이름을 지우면 경고는 `$step2` 라고 말한다(실측) —
+    `_ref_vars` 로 이름을 남겨 표식이 사용자의 낱말로 말하게 한다."""
+    from ibl_parser import parse_with_vars
+    from workflow_binding import _inject_step_results
+    steps, variables = parse_with_vars(
+        '$곡 = [self:music]{op: "library", q: "김광석"} >> [table:take]{n: 2}\n'
+        '[self:write]{path: "x.txt", content: "오늘 곡: $곡 끝"}')
+    last = steps[-1]
+    assert last.get("_ref_vars") == {"곡": variables["곡"]}, last.get("_ref_vars")
+    assert "_vars" not in last, "일반 step 에 블록 키를 섞으면 엔진이 블록 규약(_var_values)을 발동한다"
+    res = {variables["곡"]: '{"items": [{"title": "a"}, {"title": "b"}]}'}
+    out = _inject_step_results(last, res)
+    assert out["_list_in_text"][0]["ref"] == "$곡", out["_list_in_text"]
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

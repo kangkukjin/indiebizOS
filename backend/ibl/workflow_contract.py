@@ -252,6 +252,7 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
     조용히 버리지 않고 알린다)."""
     reserved = _reserved_row_names(steps)
     hits = set()
+    embedded_lists = set()   # 목록이 문장 속에 JSON 으로 들어간 키 (G31-1 — 같은 사실, 같은 신고)
 
     def _embed(value) -> str:
         if isinstance(value, (dict, list)):
@@ -271,6 +272,8 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
             s = sub_ref(s, key, lambda path, _v=value: _embed(_v) + path)
             if s != before:
                 hits.add(key)
+                if isinstance(value, list):
+                    embedded_lists.add(key)
         return s
 
     def _walk(obj):
@@ -293,6 +296,9 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         warnings.append(f"params {unmatched} 에 대응하는 $변수가 문장에 없어 주입되지 않았습니다.")
     if skipped:
         warnings.append(f"params {skipped} 는 예약 이름($it/$items/each as)이라 주입하지 않습니다.")
+    if embedded_lists:
+        warnings.append(f"params {sorted(embedded_lists)} 는 목록인데 문장 속에 섞여 JSON 으로 들어갔습니다 — "
+                        f"산문이면 [table:brief], 행마다면 [table:each]{{do: \"…$it.필드…\"}}.")
     if warnings:
         meta["params_warning"] = " ".join(warnings)
     return new_steps, meta

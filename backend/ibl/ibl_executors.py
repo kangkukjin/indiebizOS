@@ -141,32 +141,54 @@ def _vars_with_items(tool_input: dict) -> Dict[str, Any]:
 def _subst_var_refs(obj: Any, values: Dict[str, Any]) -> Any:
     """블록 몸 텍스트의 `$이름`/`$이름.경로` 를 현재 값으로 — 파서 _resolve_variables 와 같은 규약
     (bare=v4 추출, 경로=_extract_result_field, 부재=ValueError). 구조 키(condition·expr·source)는 값
-    바인딩 자리라 건드리지 않고, `$items` 는 엔진의 집합 바인딩 예약어라 제외한다 (M6)."""
-    from workflow_engine import _v4_var_payload, _extract_result_field
+    바인딩 자리라 건드리지 않고, `$items` 는 엔진의 집합 바인딩 예약어라 제외한다 (M6).
+    ★문장 속 참조가 목록을 JSON 으로 넣으면 그 step 에 `_list_in_text` 표식(G31-1) — 파이프의
+      주입기(_inject_step_results)와 같은 표식이라 안쪽 파이프의 엔진이 같은 문장으로 번역한다."""
+    from workflow_engine import _v4_var_payload, _extract_result_field, _mark_list_in_text, _is_json_list
     names = [k for k in (values or {}) if k != "items"]
     if not names:
         return obj
-    from common.ibl_vars import sub_refs
+    import re as _re
+    from common.ibl_vars import sub_refs, refs_pattern
+    _sole_re = _re.compile(refs_pattern(names))
 
-    def _one(name, path):
-        raw = values[name]
-        raw = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
-        if path:
-            return _extract_result_field(raw, path)
-        return _v4_var_payload(raw)
+    def _sub_text(o: str, sink, pkey):
+        sole = _sole_re.fullmatch(o.strip()) is not None
 
-    def _walk(o, key=None):
+        def _one(name, path):
+            raw = values[name]
+            raw = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
+            val = _extract_result_field(raw, path) if path else _v4_var_payload(raw)
+            if sink is not None and not sole:
+                lst = _is_json_list(val)
+                if lst is not None:
+                    sink.append((pkey, f"${name}{path}", len(lst)))
+            return val
+        return sub_refs(o, names, _one)
+
+    def _walk(o, key=None, sink=None, pkey=None):
         if isinstance(o, str):
             if key in ("condition", "expr", "source"):
                 return o
-            return sub_refs(o, names, _one)
+            return _sub_text(o, sink, pkey)
         if isinstance(o, dict):
             # 중첩 블록은 건드리지 않는다 — 그 블록의 실행기가 *자기 실행 시점*의 (더 새로운) 값으로 치환한다
             if any(o.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
                 return o
-            return {k: _walk(v, k) for k, v in o.items()}
+            if isinstance(o.get("params"), dict):
+                my_sink = []
+                new = {}
+                for k, v in o.items():
+                    if k == "params":
+                        new[k] = {pk: _walk(pv, pk, my_sink, pk) for pk, pv in v.items()}
+                    else:
+                        new[k] = _walk(v, k)
+                for pk, ref, rows in my_sink:
+                    _mark_list_in_text(new, pk, ref, rows)
+                return new
+            return {k: _walk(v, k, sink, pkey) for k, v in o.items()}
         if isinstance(o, list):
-            return [_walk(v) for v in o]
+            return [_walk(v, None, sink, pkey) for v in o]
         return o
     return _walk(obj)
 

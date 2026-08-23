@@ -286,7 +286,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         return -1
 
     _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": [], "halted": [],
-            "branches_failed": [], "empty_notes": []}
+            "branches_failed": [], "empty_notes": [], "list_in_text": []}
 
     def _handle_failure(idx: int, abort_payload: dict):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -607,6 +607,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bmeta = tool_input.get("_branch_meta") if isinstance(tool_input, dict) else None
         if isinstance(_bmeta, dict):
             _rec.update(_bmeta)
+        # ★G31-1(2026-08-23 판정): 문장 속 참조가 목록을 JSON 으로 넣은 사실을 step 기록과 봉투
+        #   최상위 경고로 올린다. 표식은 바인딩·주입기·블록 실행기가 같은 키로 남기고, 번역은 여기
+        #   한 번(_list_in_text_warning). 실패로 뒤집지 않는다 — 데이터를 AI 에 먹이는 정당한 용법이다.
+        _lit = tool_input.get("_list_in_text") if isinstance(tool_input, dict) else None
+        if isinstance(_lit, list) and _lit:
+            _rec["list_in_text"] = list(_lit)
+            _n, _a = _step_label(tool_input)
+            _seq["list_in_text"].append({"step": i + 1, "action": f"{_n}:{_a}", "refs": list(_lit)})
         # ★F23-2(상상훈련 23회차): [repeat:] 가 종료 조건을 못 채우고 상한에 걸려 멈추면
         # 블록 결과는 halted 와 "성공 아님·실패 아님" note 를 정확히 싣는데, **파이프 봉투
         # 최상위는 success: true** 였다 — 자동화가 success 만 보면 "조건을 만족하고 끝났다"로
@@ -693,6 +701,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in _seq["branches_failed"])
         _warns.append(f"[병렬] 분기 실패: {_bs} — 결과는 부분입니다"
                       "(살아남은 분기만 다음 step 으로 흐릅니다. results[] 의 branches_failed 참조).")
+    if _seq["list_in_text"]:
+        out["list_in_text"] = list(_seq["list_in_text"])
+        _warns.append(_list_in_text_warning(_seq["list_in_text"]))
     if _warns:
         out["warning"] = " / ".join(_warns)
     return out
@@ -713,7 +724,8 @@ from workflow_fallback import _execute_fallback  # noqa: E402,F401
 from workflow_binding import (  # noqa: E402,F401
     _STEP_RESULT_RE, _ITEMS_REF,
     _extract_result_field, _v4_var_payload, _inject_step_results,
-    _bind_items_params, _items_bound_note, _inject_prev_result, _has_prev_ref, _auto_inject_prev,
+    _bind_items_params, _items_bound_note, _list_in_text_warning, _mark_list_in_text,
+    _is_json_list, _inject_prev_result, _has_prev_ref, _auto_inject_prev,
     _to_prev_currency, _step_label, _to_string,
 )
 

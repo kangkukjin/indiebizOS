@@ -125,7 +125,7 @@ $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
   ```
   [sense:search]{query: "부동산 규제"} >> [table:take]{n: 3} >> [table:each]{do: "[self:notify_user]{message: '$it.title'}"}
   ```
-- **집합 참조 `$items`** — `$it`(행 하나)의 짝. 파이프 다음 step 의 param **값**에 `"$items"`(전체 행 리스트) 또는 `"$items.필드"`(각 행의 그 필드만 모은 리스트)를 적으면 이전 결과의 items 가 통째로 그 param 에 바인딩된다 — "각각"이 아니라 **"한 번에 전부"**(each 로 돌리면 지도가 3장, $items 면 마커 3개 달린 지도 1장). 상한 500행(넘으면 앞에 take 로 줄이라는 거절). ★`$items` 를 변수 이름으로 할당하지 말 것(예약).
+- **집합 참조 `$items`** — `$it`(행 하나)의 짝. 파이프 다음 step 의 param **값**에 `"$items"`(전체 행 리스트) 또는 `"$items.필드"`(각 행의 그 필드만 모은 리스트)를 적으면 이전 결과의 items 가 통째로 그 param 에 바인딩된다 — "각각"이 아니라 **"한 번에 전부"**(each 로 돌리면 지도가 3장, $items 면 마커 3개 달린 지도 1장). 상한 500행(넘으면 앞에 take 로 줄이라는 거절). ★`$items` 를 변수 이름으로 할당하지 말 것(예약). 문장 *속*에 섞인 `$items.필드`·`$변수`는 목록이 **JSON 으로** 들어가고 봉투가 `warning` 으로 말한다 — 산문 한 줄이면 `[table:brief]`, 행마다면 `[table:each]{do: "…$it.필드…"}`, 두 목록을 한 AI 지시문에 먹일 때만 문장 속 참조를 쓴다.
   ```
   [sense:restaurant]{query: "청주 맛집"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}
   ```

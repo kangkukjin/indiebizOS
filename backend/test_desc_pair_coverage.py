@@ -103,6 +103,37 @@ def test_D6_실제_코퍼스에_굶는_액션이_남지_않는다():
     assert not starved, f"코퍼스에 있는데 desc 쌍을 못 받는 액션이 남았다: {starved}"
 
 
+# ── 쌍둥이 드리프트 — 추적되지 않는 파일이라 시험이 대신 묻는다 ─────────────
+
+_CLOUD = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "cloud_training", "ibl_embedding_trainer_cloud.py")
+
+
+def test_D7_클라우드_트레이너가_같은_규칙인가():
+    """★`cloud_training/` 은 **gitignore** 라 커밋 심사에 안 걸린다 — 갈라져도 아무도 모른다.
+    그래서 추적되는 이 시험이 대신 묻는다(pre-commit 훅이 red_safety_selftest 에게
+    *묻기만* 하는 것과 같은 형태).
+
+    두 트레이너가 갈리면 **어느 경로로 학습했느냐에 따라 몸이 달라진다** — 로컬로 구우면
+    꼬리 낱말이 이름을 얻고 클라우드로 구우면 굶는다. 같은 코퍼스인데 결과가 다르면
+    A/B 판정 자체가 무의미해진다.
+
+    파일이 아예 없으면 건너뛴다 — 없는 것은 갈라질 수도 없다(부재 주장 금지, B28-1).
+    """
+    if not os.path.exists(_CLOUD):
+        pytest.skip("cloud_training 경로 없음 — 갈라질 대상이 없다")
+    src = open(_CLOUD, encoding="utf-8").read()
+    assert "def extract_actions_from_code" in src, (
+        "클라우드 트레이너가 옛 규칙(첫 액션만)에 머물러 있다 — 그 경로로 학습하면 "
+        "파이프 꼬리 낱말이 다시 굶는다")
+    assert "actions[1:]" in src, (
+        "클라우드 트레이너가 꼬리 액션에 desc 쌍을 주지 않는다")
+    # 몫의 비율도 같아야 한다 — 꼬리에 intents[:5] 를 주면 로컬과 다른 몸이 나온다
+    assert "intents[0], action_descs[tail]" in src, (
+        "클라우드 트레이너의 꼬리 몫이 로컬(code 당 1개)과 다르다")
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다(28회차).
     raise SystemExit(pytest.main([__file__, "-q"]))

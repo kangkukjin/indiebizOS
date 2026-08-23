@@ -357,7 +357,17 @@ def run():
         check("S10_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
         job10 = (tmp / "data" / "system_ai_state" / "repair_sessions"
                  / f"{st.task_key(task10)}.apply.json")
-        env10 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0"}
+        # ★가짜 저장소에는 가짜 몸을 준다 (2026-08-23): 수행자의 턴-종료 대기는 두 출처를
+        #   본다 — 원장(여기선 빈 가짜 repo)과 **몸의 /health**. 그런데 HEALTH_URL 은 repo 가
+        #   아니라 127.0.0.1:8765 고정이라, 이 시험이 *살아 있는 턴 안에서* 돌면 수행자가
+        #   진짜 몸에게 물어 "지금 도는 턴 있음"을 듣고 그 턴이 닫히기를 기다린다(상한 900초).
+        #   그 턴은 이 pytest 가 끝나야 닫히므로 순환 대기 → 아래 timeout=180 에서 반드시 죽는다.
+        #   실측: 수리 턴 안에서 돌린 회차는 늘 이 한 건만 빨갛고, 턴 밖에서 돌리면 6.6초에 통과.
+        #   ★격리는 repo·유예·정착만이 아니라 **몸까지** 격리해야 완성된다. 닿지 않는 URL 을
+        #   주면 수행자는 '백엔드 없음'으로 판정해 원장(빈 가짜 repo)만 보고 진행한다.
+        #   (살아 있는 턴을 실제로 기다리는지는 test_episode_owner_sweep 이 따로 지킨다.)
+        env10 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0",
+                 "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env10.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
         p10 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
                               str(job10)], capture_output=True, text=True, timeout=180, env=env10)

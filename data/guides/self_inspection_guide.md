@@ -483,6 +483,9 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
 
 ## 실측 기록 (자동 누적)
+- 2026-08-23 실측: `[sense:self_check]`에는 가이드가 적은 `run_daily_health_check` 트리거 외에 `{op:"results", source:"usage", limit:N}` 형태가 있고, 이쪽은 self_checks 테이블(정적·fixture·골든 결과)이 아니라 실사용 원장을 돌려준다 — 이번 턴 실패 6건/200건은 전부 이 경로에서만 보였다.
+- 2026-08-23 실측: `[self:body]{op:"diff"}` 로 미커밋 변경(13파일)을 IBL 안에서 바로 볼 수 있다 — 직전 턴에 제안만 했던 수정이 이미 라이브에 적용돼 있는지를 이걸로 분별했다.
+- 2026-08-23 실측: `pytest backend -m "not local"` 회귀 배터리가 '기존부터 실패하던 것'과 '이번에 내가 깬 것'을 가르는 기준선 역할을 했다. ★단 그때 '기존 실패'로 판정한 `test_repair_staging::test_battery_under_pytest` 1건은 **유령이었다** — 그 배터리의 S10 이 띄우는 실수행자가 진짜 몸(`/health`)에게 물어 "지금 도는 턴 있음"을 듣고 기다렸고, 그 턴은 이 pytest 가 끝나야 닫히므로 순환 대기로 180초 timeout 에 죽은 것이다. **턴 밖에서 돌리면 6.6초에 통과한다.** 수리 완료(수행자에게 닿지 않는 health URL 을 준다). ⇒ 자기 턴 안에서 돌린 배터리의 빨강은 시스템의 건강이 아니라 **관찰자 효과**일 수 있으니, '기존 실패'로 넘기기 전에 턴 밖 기준선과 대조할 것.
 - 2026-08-21 실측: MCP `mcp__indiebizos__execute_ibl` 로 `[self:read]`/`[self:grep]` 를 호출할 때 문장 안의 `project_id: "indiebizOS"` 는 해석되지 않아 '활성 프로젝트 경로를 확보할 수 없어' 에러가 났다 — 도구 인자 `project_path` 에 절대경로를 넘겨야 통했다.
 - 2026-08-21 실측: episode_log 의 `log` 컬럼에는 execute_ibl 호출 코드가 원문 그대로 남아, `>>`·`??`·블록 사용 건수를 grep 만으로 셀 수 있다 — 액션별 빈도/실패율뿐 아니라 '조합률' 통계를 같은 소스에서 바로 낼 수 있다.
 - 2026-08-20 실측: data/guides/*.md 를 고쳐도 러닝 백엔드엔 반영되지 않는다 — cognition/prompt_builder.py `_load_guide_file` 이 파일명 키로만 캐시하고 mtime 검사가 없어(줄 127-138 실측) 프로세스 재기동 전까지 옛 본문이 계속 주입된다. §8 가이드 점검에서 '고쳤다'와 '적용됐다'를 같은 것으로 보면 안 된다.

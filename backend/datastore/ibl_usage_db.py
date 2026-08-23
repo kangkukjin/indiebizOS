@@ -804,11 +804,41 @@ class IBLUsageDB:
         return cls._rented_mode()
 
     @classmethod
+    def _has_local_encoder(cls) -> bool:
+        """이 몸이 로컬 인코더를 **가졌는가** — 지금 로드돼 있는가가 아니다.
+
+        ★2026-08-23 실측 결함: `_rented_mode` 가 능력을 `is_semantic_available()` 로 물었는데
+        그 함수는 *준비 상태*를 답한다(`_load_model` 은 모델이 아직 안 올라왔으면 백그라운드
+        로딩을 시작하고 False 를 돌려준다). 그래서 로컬 인코더를 가진 맥에서도 **모델이
+        로딩 중인 동안**은 렌트(폰) 몸으로 오인됐고, `hippo_disabled()` 가 참이 되어
+        `search_hybrid` 가 맨 앞에서 [] 를 반환했다 — FTS5 폴백까지 가지도 못한 채
+        회상이 통째로 0건이 되고 **에러는 하나도 안 났다**.
+        실측: 새 프로세스에서 fts5=3건인데 hybrid=0건 / 30개 일상 명령 전부 빈 실행기억.
+        영향은 시험만이 아니다 — 백엔드는 코드를 고칠 때마다 리로드되고, 그 직후
+        모델 로딩 창(수십 초~수 분) 동안 모든 턴의 연상 단계가 조용히 빈손이 된다.
+
+        능력 질문은 능력으로 답한다: 모델이 올라와 있거나(확정), 로드 시도가 아직
+        없었고 모델 폴더가 실재하면 '가졌다'. 시도했는데 없으면 진짜로 없는 것
+        (폰·sentence-transformers 미설치·로드 실패) — 그때만 렌트가 옳다.
+        """
+        if cls._model is not None:
+            return True
+        if cls._model_load_attempted:
+            return False
+        try:
+            d = Path(cls._resolve_model_dir())
+            return (d / "model.safetensors").exists() or (d / "config.json").exists()
+        except Exception:
+            return False
+
+    @classmethod
     def _rented_mode(cls) -> bool:
         """렌트 모드 여부: 로컬 시맨틱 스택(model+sqlite-vec)이 없고, 정적 인덱스를 로드할 수 있으며,
         질의 임베딩을 빌릴 맥(INDIEBIZ_MAC_URL)이 있을 때. capability 게이트(profile 분기 아님)."""
         if cls.is_semantic_available():
             return False
+        if cls._has_local_encoder():
+            return False        # 가졌는데 아직 안 올라왔을 뿐 — 렌트가 아니라 폴백이 답이다
         if not (os.environ.get("INDIEBIZ_MAC_URL") or "").strip():
             return False
         return cls._ensure_rented_index()

@@ -179,6 +179,18 @@ def _red_grant_active():
         return None
 
 
+def _grant_denial_note() -> str:
+    """활성 그랜트가 없는 **사유** — 거절 문구를 부르는 쪽이 베끼지 않게 원장에서 빌린다.
+    (2026-08-23 ep1746: 만료·미발급·주인 불일치가 한 문장으로 뭉개져 수리 턴이 자기를
+    오진했다. 판정은 그대로 fail-closed, 사유만 정직하게.)"""
+    try:
+        from red_grant import denial_note
+        from thread_context import get_current_task_id, get_current_agent_id
+        return denial_note(task_id=get_current_task_id(), agent_id=get_current_agent_id())
+    except Exception:
+        return ""
+
+
 def _is_static_asset(real: str) -> bool:
     """backend/static/ 아래 비-파이썬 정적 자산인가 — RED 면제 대상.
     프로세스가 import 하지 않고 요청마다 디스크에서 읽어 서빙하므로 reload 절단이
@@ -225,10 +237,14 @@ def _red_zone_violation(abs_path: str) -> str | None:
             if _red_grant_active():
                 return None  # 수리 그랜트 — 쓰기 지점 안전판이 이어받는다
             rel = os.path.relpath(real, str(_REPO_ROOT))
+            # ★사유를 한 줄로 말한다 — 옛 문구는 어떤 거절이든 "지금 태스크는 조건 밖"이라
+            #   단정해, 만료로 막힌 수리 턴까지 자기를 '수리 경로 밖'으로 오진하게 했다.
+            _why = _grant_denial_note() or "이 턴에 유효한 수리 그랜트가 없습니다."
             return (
                 f"Error: RED 구역(살아있는 기질) 쓰기가 허가되지 않았습니다: {rel}\n"
+                f"사유: {_why}\n"
                 f"시스템 자기수정은 ①사용자가 직접 명령한 태스크에서 ②고급 모델+의식 각성"
-                f"(REPAIR 경로)으로만 허용됩니다(헌법 2026-08-05). 지금 태스크는 그 조건 밖입니다.\n"
+                f"(REPAIR 경로)으로만 허용됩니다(헌법 2026-08-05).\n"
                 f"→ 자율 태스크(스케줄러·자가점검 등)가 발견한 문제면 [self:patch]로 "
                 f"제안만 남기세요 — 적용은 사용자가 명령할 때 수리 경로가 수행합니다.\n"
                 f"→ 사용자 명령을 수행 중인데 이 게이트에 막혔다면, 사용자에게 '#repair' 태그나 "
@@ -522,6 +538,7 @@ def _patch_op(fn_name):
             "reason": tool_input.get("reason") or tool_input.get("rationale") or "",
             "_repo_root": str(_REPO_ROOT) if _REPO_ROOT is not None else None,
             "_grant_key": _staging_key(),
+            "_grant_denial": _grant_denial_note(),
             "_red_check": _red_zone_violation,
             "_red_prepare": _red_write_prepare,
             "_red_finalize": _red_write_finalize,

@@ -41,8 +41,15 @@
 > 시스템 AI 한정·파일 읽기뿐·없으면 0토큰·`announced_at` 표식으로 한 번만).
 > 원칙: **죽음을 넘긴 판정은 다음 턴의 입이 닫는다.**
 >
-> **배선**: 그랜트 원장 `backend/red_grant.py`(프로세스 전역 — claude_code 의 MCP→HTTP
+> **배선**: 그랜트 원장 `backend/datastore/red_grant.py`(프로세스 전역 — claude_code 의 MCP→HTTP
 > 재진입 심을 task_id 매칭으로 건넘), 발급/회수는 `agent_pipeline` REPAIR 분기/finally 만.
+> **만료는 시계가 아니라 발급 턴의 생사로 판정한다**(2026-08-23, ep1746): 그 턴이 이 프로세스에
+> 열려 있는 동안(`episode_logger` 의 열린-턴 집합 — `/health` 의 `live_turns` 와 같은 출처)
+> 그랜트는 만료되지 않고, 턴이 닫힌 뒤에는 **마지막 사용**부터 재는 유휴 한도로 회수한다
+> (시계의 용도는 'finally 가 못 돈 누수' 하나뿐 — 프로세스가 죽으면 인메모리 그랜트도 같이
+> 죽으므로 크래시는 시계가 막는 대상이 아니다). 거절은 fail-closed 그대로 두되 **사유**
+> (만료/미발급/주인 불일치)를 구별해 말한다 — 뭉갠 거절 문구가 막힌 수리 턴의 자기 오진을
+> 낳았다.
 > 게이트 `system_essentials/handler.py` `_red_zone_violation` + `_red_write_prepare/finalize`.
 > **구역 재구획**: `backend/static/` 비-py 정적 자산은 RED 제외(프로세스가 import 하지
 > 않아 reload 절단 원리적 불가 — 2026-08-04 자막 수리 하루 지연의 교훈).

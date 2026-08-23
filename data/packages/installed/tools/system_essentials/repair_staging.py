@@ -862,8 +862,14 @@ def op_apply(ti):
     if not repo:
         return {"success": False, "error": "repo 루트를 찾지 못했습니다."}
     if not key:
+        # ★사유는 게이트가 동봉한다(_grant_denial) — 만료·미발급·주인 불일치는 다른 사건이고,
+        #   한 문장으로 뭉개면 막힌 쪽이 자기를 오진한다(2026-08-23 ep1746: 45분 턴의 그랜트가
+        #   시계에 만료됐는데 "수리 경로 전용"만 읽고 '나는 수리 세션이 아니다'로 보고했다).
+        _why = (ti.get("_grant_denial") or "").strip()
         return {"success": False, "error":
-                "수리 그랜트가 없습니다 — apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다."}
+                (f"{_why} apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다." if _why else
+                 "수리 그랜트가 없습니다 — apply 는 사용자 명령 수리(REPAIR) 경로 전용입니다."),
+                "grant_denial": _why}
     # proposal_id 가 오면 그 제안 세션을, 없으면 이 수리 세션을 적용한다.
     # 제안도 세션이라 분기는 '어느 키를 여는가'뿐이다(2026-08-18 통합).
     pid = (ti.get("proposal_id") or "").strip()

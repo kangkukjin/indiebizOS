@@ -30,32 +30,27 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     from workflow_engine import (_inject_prev_result, _auto_inject_prev,
                                  _is_error_result, _to_prev_currency)
 
-    # 부모 스레드의 thread_context를 캡처 (자식 스레드에 전파하기 위함)
-    from thread_context import (
-        get_current_task_id, set_current_task_id,
-        get_current_agent_id, set_current_agent_id,
-        get_current_agent_name, set_current_agent_name,
-        get_current_project_id, set_current_project_id,
-        get_allowed_nodes, set_allowed_nodes,
-    )
-    _parent_task_id = get_current_task_id()
-    _parent_agent_id = get_current_agent_id()
-    _parent_agent_name = get_current_agent_name()
-    _parent_project_id = get_current_project_id()
-    _parent_allowed_nodes = get_allowed_nodes()
+    # 부모 스레드의 thread_context 를 **통째로** 떠서 자식 스레드에 승계한다.
+    #
+    # ★손으로 칸을 열거하지 않는다. 옛 코드는 5칸(task_id·agent_id·agent_name·
+    #   project_id·allowed_nodes)만 골라 날랐고, 뒤에 추가된 `task_origin`
+    #   (= in_rehearsal() 이 읽는 칸)이 그 목록에 없어서 **병렬 가지에서만**
+    #   리허설 표식이 사라졌다 — 훈련이 일부러 밟은 실패가 `source='usage'` 로
+    #   라이브 건강 원장에 쌓였다(실측 2026-08-23: 훈련 창 44행이 usage 로 기록,
+    #   그중 실패 5건). 단일 액션·`??` 폴백·`[table:each]`·`[try]` 는 같은 스레드라
+    #   멀쩡했고 병렬만 샜다 — threading.local 은 스레드를 안 건넌다.
+    #
+    # ★같은 저장소의 다른 스레드 경계 둘은 이미 이 관용을 쓴다:
+    #   ibl_engine._run_router_safely · ibl_routing 의 워커(“snapshot/restore 로
+    #   워커 스레드에 승계한다”). 이탈은 여기 하나뿐이었으므로 여기로 맞춘다.
+    #
+    # ★열거 대신 통째 승계인 이유: 열거 목록은 반드시 뒤처진다. 새 컨텍스트 칸이
+    #   생길 때마다 이 파일을 고쳐야 하는 구조 자체가 결함의 원인이었다.
+    import thread_context as _tc
+    _parent_ctx = _tc.snapshot()
 
     def _run_branch(branch):
-        # 부모 스레드의 thread_context를 자식 스레드에 복원
-        if _parent_task_id:
-            set_current_task_id(_parent_task_id)
-        if _parent_agent_id:
-            set_current_agent_id(_parent_agent_id)
-        if _parent_agent_name:
-            set_current_agent_name(_parent_agent_name)
-        if _parent_project_id:
-            set_current_project_id(_parent_project_id)
-        if _parent_allowed_nodes is not None:
-            set_allowed_nodes(_parent_allowed_nodes)
+        _tc.restore(_parent_ctx)   # 부모 컨텍스트 승계 (origin 포함 — 열거 없음)
 
         # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): (A >> B >> C) —
         # 분기 안을 순차 실행해 마지막 결과를 이 분기의 출력으로 낸다. 분기별

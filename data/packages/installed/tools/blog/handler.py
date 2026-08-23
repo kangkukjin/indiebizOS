@@ -74,7 +74,7 @@ def _op_check_new(tool_input: dict, context) -> str:
 def _op_latest(tool_input: dict, context) -> str:
     # 최근 글 1개 **선택**. 본문을 여기서 렌더하지 않는다 — vault .md 경로만 준다.
     # 발행은 기존 동사로 잇는다(>> [self:read]{} >> [table:document] >> [self:copy]).
-    # self:read 는 path 가 없으면 _prev_result 에서 경로를 자동 추출하므로(_extract_path_from_prev)
+    # self:read 는 path 가 없으면 _prev_result 에서 경로를 자동 추출하므로(extract_path_from_prev)
     # 이 op 이 top-level `path` 를 내면 파이프가 그대로 이어진다.
     # ★전용 발행 기계를 만들지 않는 이유: 그건 self:copy·table:document 재구현이다
     #   (2026-07-18 warehouse_publish.py 를 같은 이유로 폐기했다).

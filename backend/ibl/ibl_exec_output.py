@@ -88,7 +88,7 @@ def _output_gui(content: str, params: dict, project_path: str) -> Any:
 #  이 함수는 안전판을 우회했고 파이프 입력도 무시해 빈 파일을 쓰던 반쪽 싱크였다.)
 
 
-def _extract_path_from_prev(prev_result: str) -> Optional[str]:
+def extract_path_from_prev(prev_result: str) -> Optional[str]:
     """_prev_result JSON에서 파일 경로 또는 URL을 추출
 
     1차: 명시적 키 매칭 (file, path, url 등)
@@ -146,7 +146,7 @@ def _output_open(path: str, params: dict, project_path: str = ".") -> Any:
 
     # 파이프라인 자동 추출: path가 비어있으면 _prev_result에서 경로 추출
     if not path and "_prev_result" in params:
-        extracted = _extract_path_from_prev(params.get("_prev_result", ""))
+        extracted = extract_path_from_prev(params.get("_prev_result", ""))
         if extracted:
             path = extracted
         else:

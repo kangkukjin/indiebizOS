@@ -642,8 +642,8 @@ def execute(tool_input: dict, context) -> str:
             prev = tool_input.get("_prev_result") or tool_input.get("params", {}).get("_prev_result", "")
             if prev:
                 try:
-                    from ibl_executors import _extract_path_from_prev
-                    extracted = _extract_path_from_prev(prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False))
+                    from ibl_executors import extract_path_from_prev
+                    extracted = extract_path_from_prev(prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False))
                     if extracted:
                         tool_input = {**tool_input, "path": extracted}
                 except Exception:  # noqa: BLE001 — 추출 실패 시 기존 경로 없음 흐름

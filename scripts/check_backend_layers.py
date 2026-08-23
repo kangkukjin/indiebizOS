@@ -270,6 +270,64 @@ def cross_layer_cycles(graph):
     return bad
 
 
+# ── 사적 심볼 월경 가드 (2026-08-24, IBL 경계 C부) ───────────────────────────────
+# 층 안 친구-모듈끼리 언더스코어를 나눠 쓰는 것은 결함이 아니다 — 1500줄 규칙으로 한
+# 유기체를 파일만 나눈 자리다(engine↔executors↔routing, parser 3종, workflow 3종).
+# 결함은 **ibl 층 밖에서 ibl 층의 사적 심볼을 찌르는 것**: 사적 심볼은 계약이 아니라서,
+# 언어와 숙주가 섞이는 자리가 어디인지 아무도 선언한 적이 없다는 뜻이 된다.
+# A부(2026-08-24)가 부채를 0으로 만들었으므로 동결 목록 없이 새 위반을 즉시 실패시킨다.
+SEAM_MODULES = {"ibl_registry"}   # datastore 에 살지만 언어가 소비하는 '사전 이음매'
+PKG_TOOLS = os.path.join(ROOT, "data", "packages", "installed", "tools")
+
+
+def _private_imports(path):
+    """(줄번호, 모듈, [사적심볼…]) — 톱레벨·함수-안 전부."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return []
+    out = []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
+            mod = n.module.split(".")[-1]
+            privs = [a.name for a in n.names
+                     if a.name.startswith("_") and a.name != "*"]
+            if privs:
+                out.append((n.lineno, mod, privs))
+    return out
+
+
+def private_symbol_leaks(backend_dir, pkg_tools=PKG_TOOLS):
+    """ibl 층(+사전 이음매)의 사적 심볼을 층 밖에서 import 하는 자리 목록."""
+    guarded = set(LAYERS["ibl"]) | SEAM_MODULES
+    bad = []
+
+    for name, rel in sorted(module_paths(backend_dir).items()):
+        lay = layer_of(name)
+        if lay is None:            # test_*/migrate_* 등 검사 밖 — 화이트박스 시험은 정당
+            continue
+        if lay == "ibl" or name in SEAM_MODULES:
+            continue               # 층 안(친구-모듈) 공유는 규칙 밖
+        for lineno, mod, privs in _private_imports(os.path.join(backend_dir, rel)):
+            if mod in guarded:
+                bad.append(f"backend/{rel}:{lineno}: from {mod} import "
+                           f"{', '.join(privs)}")
+
+    for dirpath, dirs, files in os.walk(pkg_tools):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+            full = os.path.join(dirpath, f)
+            for lineno, mod, privs in _private_imports(full):
+                if mod in guarded:
+                    rel = os.path.relpath(full, ROOT).replace(os.sep, "/")
+                    bad.append(f"{rel}:{lineno}: from {mod} import "
+                               f"{', '.join(privs)}")
+    return bad
+
+
 def main() -> int:
     graph = build_graph(BACKEND)
     viol, unassigned, into_assembly = find_violations(graph)
@@ -298,6 +356,13 @@ def main() -> int:
             "조립 루트(api/boot_common)를 import — 조립은 아무도 참조하지 않는다:\n"
             + "\n".join(f"  {e}" for e in into_assembly))
 
+    leaks = private_symbol_leaks(BACKEND)
+    if leaks:
+        errors.append(
+            "ibl 층의 사적 심볼을 층 밖에서 import — 사적 심볼은 계약이 아니다.\n"
+            "정의처에서 공개명으로 승격하고 전 호출처를 함께 고칠 것 (동결 목록 없음):\n"
+            + "\n".join(f"  {v}" for v in leaks))
+
     new = [v for v in viol if v not in BASELINE]
     stale = sorted(BASELINE - set(viol))
     if new:
@@ -315,7 +380,8 @@ def main() -> int:
         for e in errors:
             print("\n" + e)
         return 1
-    print(f"[OK] backend 층 가드 통과 (모듈 {len(graph)} · 동결 부채 {len(viol)}건)")
+    print(f"[OK] backend 층 가드 통과 (모듈 {len(graph)} · 동결 부채 {len(viol)}건 · "
+          f"ibl 사적 심볼 월경 0건)")
     return 0
 
 
@@ -350,6 +416,18 @@ def self_test() -> int:
     assert cross_layer_cycles(fake_ok) == [], "같은 층 순환이 오탐"
     # 물리 위치 = 층 선언 (물리 이동 후 불변식)
     assert misplaced_modules(BACKEND) == [], misplaced_modules(BACKEND)[:5]
+    # 사적 심볼 월경: 판정 로직 + 실측 0 (A부가 부채를 0으로 만들었다 — 후퇴 금지)
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as td:
+        os.makedirs(os.path.join(td, "cognition"))
+        os.makedirs(os.path.join(td, "ibl"))
+        with open(os.path.join(td, "cognition", "body_ask.py"), "w") as f:
+            f.write("def f():\n    from ibl_access import _secret\n")   # 층 밖 → 잡힌다
+        with open(os.path.join(td, "ibl", "ibl_engine.py"), "w") as f:
+            f.write("from ibl_access import _friend\n")                 # 층 안 → 규칙 밖
+        found = private_symbol_leaks(td, pkg_tools=os.path.join(td, "없는패키지"))
+        assert len(found) == 1 and "body_ask.py:2" in found[0], found
+    assert private_symbol_leaks(BACKEND) == [], private_symbol_leaks(BACKEND)[:5]
     # 실그래프: 교차층 순환 0 이어야 한다 (2026-08-05 달성 불변식)
     graph0 = build_graph(BACKEND)
     assert cross_layer_cycles(graph0) == [], "실그래프에 교차층 순환 존재"

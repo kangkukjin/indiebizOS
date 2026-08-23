@@ -45,7 +45,7 @@ def _load_nodes() -> Dict:
 # ── 이사(2026-08-23, 1500줄 규칙): 출력·목표·each·소스 평가는 형제 모듈에 산다.
 #    공개 이름은 여기서 재수출 — 호출자·시험(`ex._x` monkeypatch 포함)은 무변경.
 from ibl_exec_output import (  # noqa: F401
-    _output_gui, _extract_path_from_prev, _output_open, _output_clipboard, _output_download,
+    _output_gui, extract_path_from_prev, _output_open, _output_clipboard, _output_download,
 )
 from ibl_exec_goal import (  # noqa: F401
     _goal_list, _goal_status, _goal_kill, _goal_delete,

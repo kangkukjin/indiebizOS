@@ -127,3 +127,8 @@ def test_sweep_reports_truncation_and_parse_failures():
     """깨짐≠없음 — 스윕은 절단·파싱 실패를 분모에서 빼고 건수를 신고한다."""
     src = open(os.path.join(_ROOT, "scripts", "ibl_param_sweep.py"), encoding="utf-8").read()
     assert "parse_fail" in src and "TRUNC" in src and "unknown_actions" in src
+
+
+if __name__ == "__main__":                      # 러너는 하나 — pytest (28회차 R2)
+    import pytest
+    raise SystemExit(pytest.main([__file__, "-q"]))

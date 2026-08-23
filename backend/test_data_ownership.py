@@ -64,11 +64,49 @@ def test_t5_hints(_):
     assert "디렉토리" in do._hint_of("data/somedir", True)
 
 
+def _writer_of(root: Path, rel: str):
+    """이 경로를 **만드는 코드**가 저장소에 있는가 — 있으면 (파일명) 없으면 None.
+
+    ★왜 필요한가 (2026-08-23): 선언은 실체보다 **앞설 수 있다**. `data/ibl_param_sweep_state.json`
+      은 주간 카덴스가 처음 돌 때 생긴다 — 파일이 생긴 뒤에 선언하면 그 사이 감사는 그걸
+      '미선언 고아'로 신고한다(레지스트리가 막으려던 바로 그 드리프트). 그렇다고 없는 선언을
+      전부 봐주면 **은퇴한 가족의 선언이 영원히 남는다**(T6 가 잡으려던 부패).
+      가르는 기준은 시간이 아니라 사실이다: *그 파일을 쓰는 코드가 아직 있는가.*
+      쓰는 코드가 사라졌으면 파일이 없는 것이 곧 부패다.
+    """
+    base = rel.rsplit("/", 1)[-1]
+    for sub in ("backend", "scripts", "data/packages"):
+        for path in (root / sub).rglob("*.py"):
+            name = path.name
+            if name.startswith("test_") or name == "data_ownership.py":
+                continue          # 시험·선언 자신은 '쓰는 코드' 가 아니다(자기 참조 금지)
+            try:
+                if base in path.read_text(encoding="utf-8", errors="replace"):
+                    return str(path.relative_to(root))
+            except OSError:
+                continue
+    return None
+
+
 def test_t6_real_repo_no_vanished(_):
+    """선언은 **실체** 아니면 **실체를 만드는 코드** 를 가리켜야 한다 — 둘 다 없으면 부패."""
     root = Path(__file__).parent.parent
-    vanished = [pat for pat, _, _ in do.DECLARATIONS
-                if not any(c in pat for c in "*?[") and not (root / pat).exists()]
-    assert not vanished, f"실체 사라진 선언(선언 부패): {vanished}"
+    vanished = []
+    for pat, owner, _kind in do.DECLARATIONS:
+        if any(c in pat for c in "*?[") or (root / pat).exists():
+            continue
+        if _writer_of(root, pat):
+            continue              # 아직 안 생겼을 뿐 — 첫 실행이 만든다
+        vanished.append(f"{pat}({owner})")
+    assert not vanished, (
+        f"실체도 만드는 코드도 없는 선언(선언 부패): {vanished}\n"
+        "  → 은퇴한 가족이면 DECLARATIONS 에서 빼고, 살아 있으면 쓰는 코드를 확인할 것.")
+
+
+def test_t6b_retired_family_is_still_caught(tmp_path):
+    """게이트가 무뎌지지 않았는지 — 쓰는 코드가 없는 선언은 여전히 빨강이어야 한다."""
+    assert _writer_of(Path(__file__).parent.parent, "data/zzz_retired_family.json") is None, \
+        "아무도 안 쓰는 이름에서 '쓰는 코드' 를 찾았다 — 게이트가 전부 통과시킨다"
 
 
 def _make_tmp_root():

@@ -199,7 +199,13 @@ def _http_get_json(url, timeout=10):
 
 def search_radio(name=None, tag=None, country=None, state=None, language=None, order=None, bitrateMin=None, limit=10):
     """Radio Browser API로 방송 검색"""
-    limit = min(max(1, limit or 10), 50)
+    # ★침묵 클램프 청산(2026-08-24 #repair B6): 조용히 깎지 않고 거절한다.
+    _requested = int(limit or 10)
+    if _requested > 50:
+        return json.dumps({"success": False, "requested": _requested,
+                           "error": f"방송 검색은 한 번에 50건까지입니다(요청 {_requested})."},
+                          ensure_ascii=False)
+    limit = max(1, _requested)
 
     # 정렬 기준 (기본: votes, random일 때는 reverse 안 함)
     order = order or "votes"

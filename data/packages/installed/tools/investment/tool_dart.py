@@ -98,19 +98,51 @@ def _load_corp_codes():
 
 
 def _find_corp_code(corp_name: str):
-    """회사명으로 기업코드 찾기"""
+    """회사명 → (기업코드, 해소된_회사명, 거절봉투|None).
+
+    ★세계 명사 해소 계약 (2026-08-24 #repair A2) — 추측 금지.
+      옛 코드는 `if corp_name in name or name in corp_name` 로 **처음 걸린 것**을
+      골랐다. dict 순회 순서라 '삼성전자'를 물으면 '삼성공조'·'삼성전자서비스'가
+      먼저 나올 수 있고, 그 회사의 재무제표가 에러 없이 돌아온다. 이름을 못 대면
+      후보를 들고 거절한다 — 본: real-estate tool_region_codes.resolve_region_code.
+
+    우선순위: 정확 일치 > 접두 일치 > 포함(유일할 때만). 포함이 복수면 거절.
+    """
     corps = _load_corp_codes()
+    q = str(corp_name or "").strip()
+    if not q:
+        return None, None, None
 
-    # 정확한 매칭
-    if corp_name in corps:
-        return corps[corp_name]["corp_code"]
+    if q in corps:
+        return corps[q]["corp_code"], q, None
 
-    # 부분 매칭
-    for name, info in corps.items():
-        if corp_name in name or name in corp_name:
-            return info["corp_code"]
+    starts = [(n, i) for n, i in corps.items() if n.startswith(q)]
+    if len(starts) == 1:
+        return starts[0][1]["corp_code"], starts[0][0], None
+    if len(starts) > 1:
+        exacts = [x for x in starts if x[0] == q]
+        if len(exacts) == 1:
+            return exacts[0][1]["corp_code"], exacts[0][0], None
+        return None, None, _corp_ambiguous(q, [n for n, _ in starts])
 
-    return None
+    contains = [(n, i) for n, i in corps.items() if q in n or n in q]
+    if len(contains) == 1:
+        return contains[0][1]["corp_code"], contains[0][0], None
+    if len(contains) > 1:
+        return None, None, _corp_ambiguous(q, [n for n, _ in contains])
+
+    return None, None, None
+
+
+def _corp_ambiguous(asked: str, names: list):
+    """포함 매칭이 여럿 — 하나를 몰래 고르지 않고 후보를 돌려준다."""
+    return {
+        "success": False,
+        "asked": asked,
+        "candidates": sorted(names)[:12],
+        "error": (f"'{asked}' 와 일치하는 기업이 여럿입니다({len(names)}건). "
+                  f"정확한 회사명이나 corp_code 로 다시 부르세요."),
+    }
 
 
 def _api_request(endpoint: str, params: dict):
@@ -164,8 +196,11 @@ def get_company_info(corp_code: str = None, corp_name: str = None):
         기업 기본정보 (대표자, 업종, 주소, 설립일 등)
     """
     # 기업코드 확인
+    _resolved = None          # corp_code 직접 지정 경로에서도 정의돼야 한다
     if not corp_code and corp_name:
-        corp_code = _find_corp_code(corp_name)
+        corp_code, _resolved, _refused = _find_corp_code(corp_name)
+        if _refused:
+            return _refused          # 후보를 들고 거절 — 몰래 하나 고르지 않는다
         if not corp_code:
             return {
                 "success": False,
@@ -203,7 +238,9 @@ def get_company_info(corp_code: str = None, corp_name: str = None):
             "establishment_date": data.get("est_dt"),
             "accounting_month": data.get("acc_mt")
         },
-        "summary": f"{data.get('corp_name')} ({data.get('stock_code', 'N/A')}) - 대표: {data.get('ceo_nm')}, 업종: {data.get('induty_code')}"
+        "summary": f"{data.get('corp_name')} ({data.get('stock_code', 'N/A')}) - 대표: {data.get('ceo_nm')}, 업종: {data.get('induty_code')}",
+        # ★답이 자기가 무엇에 대한 답인지 말한다(반증 가능성)
+        "resolved": _resolved or data.get("corp_name"),
     }
 
 
@@ -222,8 +259,11 @@ def get_financial_statements(corp_code: str = None, corp_name: str = None,
         재무제표 주요 계정과목
     """
     # 기업코드 확인
+    _resolved = None          # corp_code 직접 지정 경로에서도 정의돼야 한다
     if not corp_code and corp_name:
-        corp_code = _find_corp_code(corp_name)
+        corp_code, _resolved, _refused = _find_corp_code(corp_name)
+        if _refused:
+            return _refused          # 후보를 들고 거절 — 몰래 하나 고르지 않는다
         if not corp_code:
             return {
                 "success": False,
@@ -310,7 +350,8 @@ def get_financial_statements(corp_code: str = None, corp_name: str = None,
                     "cash_flow": cash_flow[:5]
                 }
             },
-            "summary": f"{year}년 재무제표 - 재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개, 현금흐름표 {len(cash_flow)}개 항목. 전체 데이터: {file_path}"
+            "summary": f"{year}년 재무제표 - 재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개, 현금흐름표 {len(cash_flow)}개 항목. 전체 데이터: {file_path}",
+            "resolved": _resolved,
         }
     else:
         return {
@@ -324,7 +365,8 @@ def get_financial_statements(corp_code: str = None, corp_name: str = None,
                 "income_statement": income_statement,
                 "cash_flow": cash_flow
             },
-            "summary": f"{year}년 재무제표 조회 완료 (재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개 항목)"
+            "summary": f"{year}년 재무제표 조회 완료 (재무상태표 {len(balance_sheet)}개, 손익계산서 {len(income_statement)}개 항목)",
+            "resolved": _resolved,
         }
 
 
@@ -346,8 +388,11 @@ def get_disclosures(corp_code: str = None, corp_name: str = None,
         공시 목록
     """
     # 기업코드 확인 (선택사항)
+    _resolved = None          # corp_code 직접 지정 경로에서도 정의돼야 한다
     if not corp_code and corp_name:
-        corp_code = _find_corp_code(corp_name)
+        corp_code, _resolved, _refused = _find_corp_code(corp_name)
+        if _refused:
+            return _refused          # 후보를 들고 거절 — 몰래 하나 고르지 않는다
         if not corp_code:
             return {
                 "success": False,
@@ -407,5 +452,6 @@ def get_disclosures(corp_code: str = None, corp_name: str = None,
             "disclosures": disclosures
         },
         "items": records,
-        "summary": f"총 {data.get('total_count', len(disclosures))}건의 공시 중 {len(disclosures)}건 조회"
+        "summary": f"총 {data.get('total_count', len(disclosures))}건의 공시 중 {len(disclosures)}건 조회",
+        "resolved": _resolved,
     }

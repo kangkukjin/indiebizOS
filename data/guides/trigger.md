@@ -128,7 +128,7 @@ config:{repeat:"once", date:"2026-06-15", time:"14:00"}
 
 ```
 [self:trigger]{op:"list"}                                       # 등록 상태 점검
-[self:trigger]{op:"get", trigger_id:"morning_news"}             # 상세
+[self:trigger]{op:"detail", trigger_id:"morning_news"}             # 상세
 [self:trigger]{op:"history", trigger_id:"morning_news", limit:10} # 실행 이력·실패 여부
 [self:trigger]{op:"disable", trigger_id:"morning_news"}          # 잠시 멈춤
 [self:trigger]{op:"enable", trigger_id:"morning_news"}           # 재개

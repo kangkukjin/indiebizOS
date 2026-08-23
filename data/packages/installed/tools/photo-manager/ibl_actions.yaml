@@ -9,6 +9,7 @@ nodes:
           page: integer
           query: string
         aliases:
+          query: [q]
           media_type: [filter]
         returns: items
         fixture: '[self:photo]{op: "stats"}'
@@ -16,7 +17,7 @@ nodes:
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
         target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
-        target_key: q
+        target_key: query   # 정본(2026-08-24 #repair B5) — q 는 aliases 로 수용
         router: handler
         tool: photo_op
         implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
@@ -128,7 +129,7 @@ tool_json:
     input_schema:
       type: object
       properties:
-        q:
+        query:
           type: string
           description: 파일명·기종 키워드 부분일치 (선택)
         kind:

@@ -84,7 +84,7 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
 def use_tool(tool_input: dict) -> str:
     """도구 실행"""
     query = tool_input.get('query', '')
-    count = tool_input.get('count', 5)
+    count = tool_input.get('limit', tool_input.get('count', 5))
     country = tool_input.get('country', 'kr-kr')
 
     if not query:

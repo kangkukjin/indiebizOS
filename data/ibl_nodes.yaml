@@ -162,6 +162,9 @@ nodes:
         - photo
         - camera
       cctv:
+        aliases:
+          limit:
+          - count
         returns: items
         side_effect: false
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
@@ -227,6 +230,9 @@ nodes:
               label: ▶ 보기
               stream: true
       contest:
+        aliases:
+          limit:
+          - count
         returns: items
         fixture: '[sense:contest]{}'
         description: Kaggle 국제 AI/데이터 경진대회 검색(현재 소스=Kaggle 하나, 영문 대회). 상금·마감일·주최로 출품 기회 탐색. 국내 공모전·대회는 [sense:search] 웹 검색이 정직한 경로.
@@ -318,6 +324,9 @@ nodes:
         - context7
         - 공식문서
       performance:
+        aliases:
+          query:
+          - keyword
         params:
           query: string
         returns: items
@@ -383,6 +392,9 @@ nodes:
             - '{prfpdfrom}~{prfpdto}'
             - '{area} · {prfstate}'
       book:
+        aliases:
+          query:
+          - keyword
         params:
           query: string
         returns: items
@@ -820,8 +832,8 @@ nodes:
         - 한국고전
       exhibit:
         aliases:
-          keyword:
-          - query
+          query:
+          - keyword
         returns: items
         fixture: '[sense:exhibit]{query: "미술"}'
         description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
@@ -830,7 +842,7 @@ nodes:
         router: handler
         tool: kcisa_quick_search
         implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
-        target_key: keyword
+        target_key: query
         app:
           instrument: culture
           mode: 전시
@@ -1040,6 +1052,9 @@ nodes:
               - k: 거래량
                 v: '{data.volume|num}'
       company:
+        aliases:
+          limit:
+          - count
         params:
           company: string
           corp_name: string
@@ -1125,6 +1140,9 @@ nodes:
         - 헌재
         - 행정규칙
       weather:
+        aliases:
+          lng:
+          - lon
         returns: items
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
@@ -1257,6 +1275,9 @@ nodes:
             k: '{name}'
             v: '{guidance}'
       reverse_geocode:
+        aliases:
+          lng:
+          - lon
         returns: scalar
         fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
@@ -1806,6 +1827,9 @@ nodes:
                   lines:
                   - '{거래금액}만원 · {면적}㎡ · {층}층'
       search_shopping:
+        aliases:
+          limit:
+          - display
         returns: items
         fixture: '[sense:search_shopping]{query: "노트북"}'
         description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). 순수 HTTP 라 PC·폰 모두 동작. ★중고 매물은 [sense:used] 가 정본(2026-08 site=used/all 은퇴). ★site=naver 도 은퇴(공식 API SE05 + 내부 API 봇차단).
@@ -2011,6 +2035,9 @@ nodes:
                   href: '{url}'
                   label: 공고 상세 →
       paper:
+        aliases:
+          limit:
+          - max_results
         params:
           arxiv_id: string
           pmcid: string
@@ -2041,6 +2068,9 @@ nodes:
         - 논문검색
         - 학위논문
       researcher:
+        aliases:
+          limit:
+          - max_results
         returns: items
         side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
@@ -2066,6 +2096,9 @@ nodes:
         - 공저자
         - researcher
       entity:
+        aliases:
+          limit:
+          - max_results
         returns: items
         side_effect: false
         fixture: '[sense:entity]{query: "강국진"}'
@@ -2110,7 +2143,8 @@ nodes:
         target_key: indicator
       search:
         aliases:
-          count:
+          limit:
+          - count
           - display
           - page_size
           - max_results
@@ -2333,6 +2367,9 @@ nodes:
                     action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
                     recursive: true
       search_youtube:
+        aliases:
+          limit:
+          - count
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
         runs_on: pc_only
@@ -2647,7 +2684,7 @@ nodes:
         side_effect: true
         fixture: '[self:workflow]{op: "list"}'
         description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: 'get/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6). **시그니처**: 몸통의 미할당 `$이름`(괄호형 `${이름}` 동일 — 한글 조사·단위가 이름에 먹히는 자리엔 괄호를 쓴다: `"${n}건"`)이 곧 인자다 — save 가 계산해 params_required 로 저장·보고하고, 저장본 run 은 빠진 인자를 정직 거절한다(즉석 run 은 선언 시점이 없어 경고만). 저장본에 params_default:{이름:값}을 두면 기본값이 된다(호출자 params 가 이김). 워크플로우가 워크플로우를 부르는 사슬은 순환(같은 id 재진입)·깊이 상한 5에서 거절된다 — 반복은 [repeat:]/[table:each] 로.'
+        target_description: 'detail/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6). **시그니처**: 몸통의 미할당 `$이름`(괄호형 `${이름}` 동일 — 한글 조사·단위가 이름에 먹히는 자리엔 괄호를 쓴다: `"${n}건"`)이 곧 인자다 — save 가 계산해 params_required 로 저장·보고하고, 저장본 run 은 빠진 인자를 정직 거절한다(즉석 run 은 선언 시점이 없어 경고만). 저장본에 params_default:{이름:값}을 두면 기본값이 된다(호출자 params 가 이김). 워크플로우가 워크플로우를 부르는 사슬은 순환(같은 id 재진입)·깊이 상한 5에서 거절된다 — 반복은 [repeat:]/[table:each] 로.'
         group: workflow
         target_key: op
         router: workflow_engine
@@ -2659,13 +2696,13 @@ nodes:
             run: items
           side_effect:
             list: false
-            get: false
+            detail: false
           exempt:
-            get: workflow_id 필요(list 결과의 id) — 고정 fixture 부적합
+            detail: workflow_id 필요(list 결과의 id) — 고정 fixture 부적합
             run: workflow_id/name 또는 do 필요 + 부작용 몸통 실행 — 고정 fixture 부적합
           values:
             list: 저장된 워크플로우 목록
-            get: 워크플로우 조회 (workflow_id)
+            detail: 워크플로우 조회 (workflow_id)
             save: 워크플로우 저장 (name + steps IBL 코드 배열)
             delete: 워크플로우 삭제 (workflow_id)
             run: 워크플로우 실행 — workflow_id/name(저장본) 또는 do(즉석) + params($변수 주입, 저장본은 인자 누락 거절)
@@ -2701,17 +2738,17 @@ nodes:
             status: scalar
           side_effect:
             list: false
-            get: false
+            detail: false
             status: false
             history: false
           fixture:
             status: '[self:trigger]{op: "status"}'
           exempt:
-            get: 트리거 id 필요 — 고정 fixture 부적합
+            detail: 트리거 id 필요 — 고정 fixture 부적합
             history: 트리거 id 필요 — 고정 fixture 부적합
           values:
             list: 등록된 트리거 목록
-            get: 단일 트리거 조회 (id)
+            detail: 단일 트리거 조회 (id)
             create: 트리거 등록 (name + pipeline + schedule이면 cron|config)
             update: 트리거 수정 (id + 변경 필드, cron 가능)
             delete: 트리거 삭제 (trigger_id)
@@ -2836,6 +2873,9 @@ nodes:
         - 데이터화
         - struct
       blog:
+        aliases:
+          limit:
+          - count
         returns: items
         side_effect: true
         fixture: '[self:blog]{op: "posts"}'
@@ -3837,8 +3877,8 @@ nodes:
         router: handler
         tool: music_library_op
         aliases:
-          q:
-          - query
+          query:
+          - q
           - keyword
           path:
           - file
@@ -4280,22 +4320,22 @@ nodes:
           - path
         returns: scalar
         side_effect: true
-        fixture: '[self:folder_note]{op: "get"}'
-        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
+        fixture: '[self:folder_note]{op: "detail"}'
+        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/detail(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
-        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
+        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. detail — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
         target_key: op
         router: handler
         tool: folder_note_op
         ops:
-          default: get
+          default: detail
           returns:
             set: effect
           side_effect:
-            get: false
+            detail: false
           values:
             set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
-            get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
+            detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         returns: scalar
@@ -4329,6 +4369,8 @@ nodes:
           page: integer
           query: string
         aliases:
+          query:
+          - q
           media_type:
           - filter
         returns: items
@@ -4337,7 +4379,7 @@ nodes:
         description: 사진·동영상 라이브 질의 — OS 미디어 색인(맥 Spotlight/폰 MediaStore) 직접, 선스캔 불필요. 날짜·위치·기종·키워드로 걸러 items 반환(기본=실행되는 몸의 미디어, source:usb면 USB로 연결된 안드로이드 폰). 타임라인·통계·중복은 >> table 변환자.
         target_description: 'q(파일명·기종 키워드, 선택). 필터: kind(photo/video/all 기본 all), start·end(촬영일 범위, YYYY-MM 또는 YYYY-MM-DD), has_gps(true면 위치 보유만), path(검색 루트, 생략 시 홈 전체), file(단일 파일 절대경로 상세), limit(기본 50), source(self 기본=실행되는 몸 / usb=USB로 연결된 안드로이드 폰의 사진, PC에서만·GPS 필터 미지원). 결과 items에 lat/lng/taken_at/month/kind/camera/size/source 구조 필드 포함 → groupby·지도와 직결.'
         group: photo
-        target_key: q
+        target_key: query
         router: handler
         tool: photo_op
         implementation: handler.py _query_photos — mdfind(필터)로 경로, mdls(색인 메타)로 보강. 비색인 경로는 라이브 walk 폴백. photo_db 자체 인덱스 미사용(데스크탑 풍부창 REST만 사용).
@@ -4505,6 +4547,10 @@ nodes:
         target_key: path
       file_find:
         aliases:
+          limit:
+          - max_results
+          query:
+          - search_term
           min_size_mb:
           - min_size
         returns: items
@@ -5190,6 +5236,9 @@ nodes:
         - 화면분석
         - 버튼찾기
       guestpc:
+        aliases:
+          limit:
+          - display
         returns: effect
         description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
         target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
@@ -5346,6 +5395,9 @@ nodes:
                 href: '{url}'
                 label: 열기 →
       music:
+        aliases:
+          limit:
+          - count
         returns: effect
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
@@ -6162,7 +6214,7 @@ nodes:
           default: status
           returns:
             create: effect
-            remove: effect
+            delete: effect
             join: effect
             promote: effect
             issue: effect
@@ -6182,7 +6234,7 @@ nodes:
             status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
             portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)
             create: 새 포털 만들기 (title — 새 5자 주소 발급)
-            remove: 포털 삭제 (portal 필수, 회원 있으면 force:true)
+            delete: 포털 삭제 (portal 필수, 회원 있으면 force:true)
             members: 이웃 목록 (레벨·아이디·개인 링크·오늘 사용량)
             join: 이웃 직접 등록 — 링크 전용 회원 (name 필수, contact·level 옵션)
             promote: 레벨 승급/강등 (member_id + level 0~4 지정 또는 +1, down:true 면 -1 — 전역 이웃등급)

@@ -432,7 +432,7 @@ def blog_check_new_posts() -> Dict[str, Any]:
 def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = None, with_summary: bool = False, only_without_summary: bool = False) -> Dict[str, Any]:
     try:
         conn = get_db()
-        count = min(count, 100)
+        count = min(count, 100)  # clamp-ok: 내부 분석 표본 상한 100 — 사용자 요청 개수가 아니라 통계 표본
         
         if only_without_summary:
             query = "SELECT p.* FROM posts p LEFT JOIN summaries s ON p.post_id = s.post_id WHERE s.post_id IS NULL"
@@ -477,7 +477,7 @@ def blog_get_post(post_id: str) -> Dict[str, Any]:
 def blog_get_summaries(count: int = 20, offset: int = 0, category: Optional[str] = None) -> Dict[str, Any]:
     try:
         conn = get_db()
-        count = min(count, 100)
+        count = min(count, 100)  # clamp-ok: 내부 분석 표본 상한 100 — 사용자 요청 개수가 아니라 통계 표본
         query = "SELECT p.post_id, p.title, p.category, p.pub_date, s.summary, s.keywords FROM summaries s JOIN posts p ON s.post_id = p.post_id WHERE 1=1"
         params = []
         if category: query += " AND p.category = ?"; params.append(category)
@@ -511,7 +511,7 @@ def blog_save_summary(post_id: str, summary: str, keywords: str = "") -> Dict[st
 def blog_search(query: str, count: int = 20, search_in: str = "all") -> Dict[str, Any]:
     try:
         conn = get_db()
-        count = min(count, 50)
+        count = min(count, 50)  # clamp-ok: 내부 분석 표본 상한 50 — 사용자 요청 개수가 아니라 통계 표본
         where = "p.title LIKE ?" if search_in == "title" else "p.content LIKE ?" if search_in == "content" else "(p.title LIKE ? OR p.content LIKE ?)"
         like_query = f"%{query}%"
         params = [like_query, like_query, count] if search_in == "all" else [like_query, count]

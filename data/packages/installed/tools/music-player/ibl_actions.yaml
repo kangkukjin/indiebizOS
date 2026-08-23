@@ -18,7 +18,7 @@ nodes:
         router: handler
         tool: music_library_op
         aliases:
-          q: [query, keyword]
+          query: [q, keyword]
           path: [file]
         ops:
           default: library
@@ -310,7 +310,7 @@ tool_json:
         op:
           type: string
           description: library(기본)/track/folders/playlists/playlist/playlist_create/playlist_delete/playlist_add/playlist_remove/sources/add_source/remove_source/scan/stop
-        q:
+        query:
           type: string
           description: 검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)
         path:

@@ -1,6 +1,8 @@
 node: sense
 actions:
   search_shopping:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [display]
     returns: items
     fixture: '[sense:search_shopping]{query: "노트북"}'
     description: 새 상품 가격비교 검색 (다나와 — 상품명·최저가·스펙·링크). 순수 HTTP 라 PC·폰 모두 동작. ★중고 매물은 [sense:used] 가 정본(2026-08 site=used/all 은퇴). ★site=naver 도 은퇴(공식 API SE05 + 내부 API 봇차단).
@@ -161,7 +163,7 @@ tool_json:
           - danawa
           - naver
           default: danawa
-        display:
+        limit:
           type: integer
           description: 검색 결과 개수 (최대 10)
           default: 5

@@ -171,11 +171,7 @@
             "type": "string",
             "description": "(deprecated) path와 동일. path 사용 권장"
           },
-          "max_results": {
-            "type": "integer",
-            "description": "반환할 최대 파일 수 (기본 200). 0이면 무제한 (큰 검색 시 컨텍스트 폭주 위험)"
-          },
-          "search_term": {
+          "query": {
             "type": "string",
             "description": "(메타 검색) 파일명 부분일치 검색어 — OS 색인(Spotlight) 직접, 선스캔 불요"
           },

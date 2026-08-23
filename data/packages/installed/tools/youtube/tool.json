@@ -15,7 +15,7 @@
             "type": "string",
             "description": "검색어. 예: '김필 너무 아픈 사랑은', '빅뱅 판타스틱베이비'"
           },
-          "count": {
+          "limit": {
             "type": "integer",
             "description": "검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림"
           }
@@ -74,7 +74,7 @@
             ],
             "description": "릴레이 형태 (op=relay 시, 기본 audio — 소리만/영상+소리)"
           },
-          "count": {
+          "limit": {
             "type": "integer",
             "description": "곡 수 (op=play/add/relay 시)"
           },

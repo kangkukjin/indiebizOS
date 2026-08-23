@@ -1239,7 +1239,7 @@ def outline_from_materials(
 
     if count is not None:
         try:
-            count = max(1, min(40, int(count)))
+            count = max(1, min(40, int(count)))  # clamp-ok: 프롬프트에 넣을 슬라이드 장수 상한 40 — 결과 목록이 아니라 생성 지시
         except (TypeError, ValueError):
             count = None
 

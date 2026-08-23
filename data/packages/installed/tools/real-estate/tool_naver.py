@@ -214,10 +214,15 @@ def get_naver_listings(tool_input: dict):
         return {"success": False,
                 "error": f"type '{rtype}' 미지원 — apt/officetel/villa/house/oneroom 중 하나를 쓰세요."}
     trade_code, trade_label = _trade_types(tool_input.get("deal"), tool_input.get("lease"))
+    # ★침묵 클램프 청산(2026-08-24 #repair B6)
     try:
-        limit = max(1, min(60, int(tool_input.get("limit") or 30)))
+        _requested = int(tool_input.get("limit") or 30)
     except (TypeError, ValueError):
-        limit = 30
+        _requested = 30
+    if _requested > 60:
+        return {"success": False, "requested": _requested,
+                "error": f"네이버부동산은 한 번에 60건까지입니다(요청 {_requested}). limit 을 60 이하로 주세요."}
+    limit = max(1, _requested)
 
     try:
         loc = _resolve_keyword(str(region).strip())

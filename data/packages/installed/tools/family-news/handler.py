@@ -966,7 +966,7 @@ def _fn_config(params: dict) -> str:
         changed.append("제호")
     if params.get("photo_limit") not in (None, ""):
         try:
-            state["photo_limit"] = max(4, min(200, int(float(params["photo_limit"]))))
+            state["photo_limit"] = max(4, min(200, int(float(params["photo_limit"]))))  # clamp-ok: 판당 사진 상한(설정값) — 요청 개수가 아니라 조판 정책
             changed.append("사진 수 상한")
         except Exception:
             pass

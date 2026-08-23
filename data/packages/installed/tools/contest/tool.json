@@ -23,7 +23,7 @@
             "type": "string",
             "description": "분류 — featured/research/playground/gettingStarted 등 (선택)"
           },
-          "count": {
+          "limit": {
             "type": "integer",
             "default": 10,
             "minimum": 1,

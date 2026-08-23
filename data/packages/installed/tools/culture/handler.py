@@ -132,7 +132,7 @@ def _book_search(ti: dict):
     title = ti.get("title")
     author = ti.get("author")
     publisher = ti.get("publisher")
-    keyword = ti.get("keyword") or ti.get("query")
+    keyword = ti.get("query") or ti.get("keyword")
     detail = ti.get("detail", False)
     rows = ti.get("rows", 10)
     # source=nl → 국립중앙도서관 납본 소장 검색 (정보나루=공공도서관 대출 렌즈와 코퍼스가 다름
@@ -312,7 +312,7 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "kcisa_quick_search":
             from tool_kcisa import quick_search_culture
             result = quick_search_culture(
-                keyword=tool_input.get("keyword"),
+                keyword=tool_input.get("query") or tool_input.get("keyword"),
                 rows=tool_input.get("rows", 10)
             )
             # 레코드 통화 부착(비파괴) — data 전시/행사목록을 records로.

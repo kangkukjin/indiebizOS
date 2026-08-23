@@ -66,7 +66,7 @@
             "type": "string",
             "description": "[search] 검색 쿼리"
           },
-          "max_results": {
+          "limit": {
             "type": "integer",
             "description": "[search] 최대 결과 수(기본 5)"
           },
@@ -121,7 +121,7 @@
             "type": "string",
             "description": "[coauthor] 연구자 lodID (find 결과에서 획득)"
           },
-          "max_results": {
+          "limit": {
             "type": "integer",
             "description": "최대 결과 수(기본 30)"
           }
@@ -165,7 +165,7 @@
             "description": "라벨 언어(기본 ko, 없으면 en 폴백)",
             "default": "ko"
           },
-          "max_results": {
+          "limit": {
             "type": "integer",
             "description": "[resolve] 최대 후보 수(기본 7)"
           }

@@ -48,7 +48,7 @@
             "default": "ddg",
             "description": "검색 엔진 (기본 ddg). 한국어 질의는 naver, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian."
           },
-          "count": {
+          "limit": {
             "type": "integer",
             "description": "결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)"
           },

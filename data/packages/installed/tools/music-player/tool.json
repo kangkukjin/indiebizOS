@@ -33,7 +33,7 @@
             ],
             "default": "library"
           },
-          "q": {
+          "query": {
             "type": "string",
             "description": "검색어 — 제목·아티스트·앨범·파일명 부분일치 (library)"
           },

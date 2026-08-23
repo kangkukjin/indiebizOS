@@ -38,7 +38,7 @@
     },
     {
       "name": "folder_note_op",
-      "description": "폴더 주석 관리 (op 분기) — [self:folder_note].\n- op=get (기본): 저장된 폴더 주석 조회 (root_path 필수).\n- op=set: 폴더에 메모·주석 추가 (root_path + folder_path + note 필수).\nroot_path는 storage_op(op='scan')으로 스캔한 볼륨 경로.\n\n## 예시\n- folder_note_op(op='set', root_path='/Volumes/MyDrive', folder_path='/Volumes/MyDrive/backup', note='2023 백업')\n- folder_note_op(op='get', root_path='/Volumes/MyDrive')",
+      "description": "폴더 주석 관리 (op 분기) — [self:folder_note].\n- op=detail (기본): 저장된 폴더 주석 조회 (root_path 필수).\n- op=set: 폴더에 메모·주석 추가 (root_path + folder_path + note 필수).\nroot_path는 storage_op(op='scan')으로 스캔한 볼륨 경로.\n\n## 예시\n- folder_note_op(op='set', root_path='/Volumes/MyDrive', folder_path='/Volumes/MyDrive/backup', note='2023 백업')\n- folder_note_op(op='get', root_path='/Volumes/MyDrive')",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -47,9 +47,9 @@
             "description": "get=주석 조회(기본), set=주석 추가",
             "enum": [
               "set",
-              "get"
+              "detail"
             ],
-            "default": "get"
+            "default": "detail"
           },
           "root_path": {
             "type": "string",

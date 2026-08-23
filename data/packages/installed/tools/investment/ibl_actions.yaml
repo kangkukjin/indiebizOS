@@ -197,6 +197,8 @@ actions:
           - k: 거래량
             v: '{data.volume|num}'
   company:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [count]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -413,9 +415,6 @@ tool_json:
         end_date:
           type: string
           description: '[disclosures, 한국] 검색 종료일 (YYYYMMDD)'
-        count:
-          type: integer
-          description: '[disclosures] 조회할 공시 수 (한국 기본 20, 미국 기본 10)'
       required: []
   - name: crypto_price
     description: 'CoinGecko API로 암호화폐 가격을 조회합니다 — [sense:crypto] (무료, API 키 불필요).

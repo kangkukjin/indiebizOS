@@ -135,7 +135,7 @@ script 의 몸통은 원리적으로 그게 안 된다(경계는 argv + stdin/st
 
 ```
 [self:workflow]{op: "list"}
-[self:workflow]{op: "get", workflow_id: "동네맛집"}
+[self:workflow]{op: "detail", workflow_id: "동네맛집"}
 [self:workflow]{op: "delete", workflow_id: "동네맛집"}
 ```
 

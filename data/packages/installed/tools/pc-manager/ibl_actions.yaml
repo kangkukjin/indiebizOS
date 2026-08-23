@@ -140,22 +140,22 @@ nodes:
           root_path: [path]
         returns: scalar
         side_effect: true    # set 이 폴더 주석을 저장한다
-        fixture: '[self:folder_note]{op: "get"}'
-        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/get(저장된 주석 조회). 폴더 의미를 기록·확인.
+        fixture: '[self:folder_note]{op: "detail"}'
+        description: 폴더 주석 관리 (op 분기). set(메모·주석 추가)/detail(저장된 주석 조회). 폴더 의미를 기록·확인.
         group: file
-        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. get — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
+        target_description: set — root_path(스캔된 볼륨 경로) + folder_path + note 필수. detail — root_path/volume_name 생략 시 전체 볼륨 주석 통합 조회.
         target_key: op
         router: handler
         tool: folder_note_op
         ops:
-          default: get
+          default: detail
           returns:
             set: effect
           side_effect:
-            get: false
+            detail: false
           values:
             set: 폴더에 메모·주석 추가 (root_path + folder_path + note)
-            get: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
+            detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
         returns: scalar
@@ -226,7 +226,7 @@ tool_json:
   - name: folder_note_op
     description: '폴더 주석 관리 (op 분기) — [self:folder_note].
 
-      - op=get (기본): 저장된 폴더 주석 조회 (root_path 필수).
+      - op=detail (기본): 저장된 폴더 주석 조회 (root_path 필수).
 
       - op=set: 폴더에 메모·주석 추가 (root_path + folder_path + note 필수).
 

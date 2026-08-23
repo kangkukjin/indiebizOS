@@ -128,7 +128,7 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
 
     params = {
         "query": query,
-        "display": min(display, 5),
+        "display": min(display, 5),  # clamp-ok: 네이버 지역검색 API 스펙 상한(display 5) — 원천이 5건까지만 준다
         "sort": sort
     }
 
@@ -784,7 +784,10 @@ _WMO_CODES = {
 
 
 def _geocode_openmeteo(city: str) -> tuple:
-    """Open-Meteo geocoding (무키). 영어/로마자 도시명에 강함 — 한글은 빈 결과를 준다."""
+    """Open-Meteo geocoding (무키) → (lat, lon, 해소명, 나라) | None.
+
+    ★해소기는 **자기가 무엇으로 해소했는지** 함께 돌려준다(2026-08-24 #repair A3).
+      좌표만 돌려주면 '12345' 가 Schenectady, US 로 해석돼도 호출자가 알 길이 없다."""
     try:
         resp = requests.get(
             "https://geocoding-api.open-meteo.com/v1/search",
@@ -795,14 +798,15 @@ def _geocode_openmeteo(city: str) -> tuple:
             results = resp.json().get("results", [])
             if results:
                 r = results[0]
-                return (r["latitude"], r["longitude"])
+                return (r["latitude"], r["longitude"],
+                        r.get("name") or city, r.get("country") or "")
     except Exception:
         pass
     return None
 
 
 def _geocode_kakao(city: str) -> tuple:
-    """카카오 주소(행정구역) 검색 → (lat, lon). 한국 도시/구/동에 정확. 업소 오매칭 없음(주소 전용)."""
+    """카카오 주소(행정구역) 검색 → (lat, lon, 해소명, 나라). 한국 도시/구/동에 정확."""
     key_ok, _ = check_api_key("kakao")
     if not key_ok:
         return None
@@ -811,7 +815,8 @@ def _geocode_kakao(city: str) -> tuple:
     if isinstance(data, dict) and data.get("documents"):
         d = data["documents"][0]
         try:
-            return (float(d["y"]), float(d["x"]))  # 카카오: x=경도, y=위도
+            return (float(d["y"]), float(d["x"]),          # 카카오: x=경도, y=위도
+                    d.get("address_name") or city, "대한민국")
         except (KeyError, ValueError, TypeError):
             pass
     return None
@@ -826,15 +831,50 @@ def _geocode_nominatim(city: str) -> tuple:
     from common.geocode import nominatim_search
     hit = nominatim_search(city, countrycodes=None, accept_language="ko",
                            timeout=8, retries=1, user_agent="indiebizOS/1.0 (weather)")
-    return (hit["lat"], hit["lng"]) if hit else None
+    if not hit:
+        return None
+    matched = hit.get("matched") or city
+    country = matched.split(",")[-1].strip() if "," in matched else ""
+    return (hit["lat"], hit["lng"], matched, country)
 
 
 def _has_hangul(s: str) -> bool:
     return any('가' <= c <= '힣' for c in s)
 
 
-def _resolve_city_coords(city: str) -> tuple:
-    """도시명 → (lat, lon). 정적표에 없으면 외부 지오코더로 내부 해소(호출자가 좌표를 떠넘길 필요 없음).
+def _name_agrees(query: str, resolved: str) -> bool:
+    """질의와 해소명이 서로를 가리키는가 (2026-08-24 #repair A3).
+
+    규칙: 정규화 후 서로를 포함하거나 토큰이 하나라도 겹치면 동의. 아니면 불일치.
+      '수원' → 'Luxor, Egypt', '12345' → 'Schenectady, US' 가 잡히는 자리다.
+
+    ★문자셋이 다르다는 이유로 봐주지 않는다. 한글 질의에 라틴 라벨이 오는 것은
+      "그 지명의 한국어 이름이 없다"는 뜻이고, 그 상태에서 좌표를 조용히 쓰는 것이
+      바로 '전주→압록강변' 사고였다. 흔한 로마자·한글 도시는 _CITY_COORDS 정적표가
+      먼저 받아내므로(seoul·서울·paris…) 이 엄격함의 실제 비용은 희귀 지명에 한한다.
+      거절은 해소명을 담아 돌려주므로 사용자는 무엇으로 해석됐는지 보고 다시 부를 수 있다."""
+    qn = re.sub(r"[\s,·\-]", "", str(query or "")).lower()
+    rn = re.sub(r"[\s,·\-]", "", str(resolved or "")).lower()
+    if not qn or not rn:
+        return True                      # 판정 불가
+    if qn in rn or rn in qn:
+        return True
+    qt = {t for t in re.split(r"[\s,·\-]+", str(query).lower()) if t}
+    rt = {t for t in re.split(r"[\s,·\-]+", str(resolved).lower()) if t}
+    if qt & rt:
+        return True
+    # 접두 일치 — '파리시내'가 '파리, 일드프랑스'로 해소되는 정당한 경우를 살린다.
+    #   최소 길이를 문자셋별로 다르게: 한글 2자는 지명 단위지만 라틴 2자('se')는
+    #   'Schenectady'에 우연히 걸린다('seoul' 오매칭이 통과하면 안 된다).
+    minlen = 2 if _has_hangul(qn) else 4
+    for i in range(len(qn), minlen - 1, -1):
+        if qn[:i] in rn:
+            return True
+    return False
+
+
+def _resolve_city_coords(city: str):
+    """도시명 → (lat, lon, 해소명, 거절봉투|None). 정적표에 없으면 외부 지오코더로 내부 해소.
 
     한글 도시는 Open-Meteo가 동음 외국/타지역 지명으로 오매칭하므로(예 '전주'→압록강변
     40.4N, '수원'→전남 영광 부근 35.36N) 한글이면 Nominatim(accept-language=ko)·Kakao만
@@ -844,33 +884,55 @@ def _resolve_city_coords(city: str) -> tuple:
     """
     key = city.lower().strip()
     if key in _CITY_COORDS:
-        return _CITY_COORDS[key]
+        v = _CITY_COORDS[key]
+        return v[0], v[1], (v[2] if len(v) > 2 else city), None   # 정적표=사람이 큐레이션
 
     if _has_hangul(city):
         resolvers = (_geocode_nominatim, _geocode_kakao)
     else:
         resolvers = (_geocode_openmeteo, _geocode_nominatim)
 
+    mismatch = None
     for resolver in resolvers:
-        coords = resolver(city)
-        if coords:
-            _CITY_COORDS[key] = coords  # 런타임 캐시
-            return coords
-    return None
+        hit = resolver(city)
+        if not hit:
+            continue
+        lat, lon = hit[0], hit[1]
+        name = hit[2] if len(hit) > 2 else city
+        country = hit[3] if len(hit) > 3 else ""
+        # ★해소명이 질의와 아무 관계가 없으면 **조용히 그 좌표를 쓰지 않는다.**
+        #   틀린 위치의 날씨가 에러 없이 오는 것이 "못 찾음"보다 나쁘다.
+        if not _name_agrees(city, name):
+            where = name if (not country or country in name) else f"{name}, {country}"
+            mismatch = {
+                "success": False,
+                "asked": city,
+                "resolved": where,
+                "error": (f"'{city}' 는 {where} 로 해석됩니다 — 물으신 곳과 이름이 "
+                          f"겹치지 않아 좌표를 쓰지 않았습니다. 정확한 지명이나 "
+                          f"lat/lon 좌표로 다시 불러 주세요."),
+            }
+            continue
+        _CITY_COORDS[key] = (lat, lon, name)   # 런타임 캐시(해소명 포함)
+        return lat, lon, name, None
+    return None, None, None, mismatch
 
 
 def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None,
                           days: int = 3) -> dict:
     """Open-Meteo로 날씨 조회 (무료, API 키 불필요)"""
     # 좌표 결정
+    _resolved_name = None
     if lat is not None and lon is not None:
         resolved_city = f"{lat},{lon}"
     elif city:
-        coords = _resolve_city_coords(city)
-        if not coords:
+        lat, lon, _rname, _refused = _resolve_city_coords(city)
+        if _refused:
+            return _refused          # 오매칭은 조용한 성공이 아니라 정직한 거절
+        if lat is None:
             return {"success": False, "error": f"'{city}' 도시를 찾을 수 없습니다."}
-        lat, lon = coords
         resolved_city = city
+        _resolved_name = _rname
     else:
         return {"success": False, "error": "city(도시명) 또는 lat/lon(좌표)이 필요합니다."}
 
@@ -894,7 +956,11 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
         daily = data.get("daily", {})
 
         result = {
+            "success": True,
             "city": resolved_city,
+            # ★답이 자기가 무엇에 대한 답인지 말한다 — 지오코더가 어디로 해소했는지
+            #   결과에 실려야 사용자가 오매칭을 반증할 수 있다(2026-08-24 #repair A3).
+            "resolved": _resolved_name or resolved_city,
             "current": {
                 "temp": current.get("temperature_2m"),
                 "feels_like": current.get("apparent_temperature"),

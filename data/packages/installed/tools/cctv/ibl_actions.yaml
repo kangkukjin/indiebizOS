@@ -2,6 +2,8 @@ nodes:
   sense:
     actions:
       cctv:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          limit: [count]
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:cctv]{op: "search", query: "해운대"}'
@@ -195,9 +197,6 @@ tool_json:
         radius_km:
           type: number
           description: '[nearby] 검색 반경 km (기본 5)'
-        count:
-          type: integer
-          description: '[nearby] 반환할 CCTV 수 (기본 5)'
         category:
           type: string
           description: '[search] Windy 카테고리 (mountain, beach, city 등)'

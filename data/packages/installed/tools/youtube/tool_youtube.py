@@ -630,7 +630,12 @@ def add_to_queue(query: str, count: int = 3) -> dict:
     except ImportError:
         return {'success': False, 'error': 'yt-dlp 패키지가 없습니다.'}
 
-    count = max(1, min(5, int(count or 3)))
+    # ★침묵 클램프 청산(2026-08-24 #repair B6): 조용히 깎는 대신 정직하게 거절한다.
+    _requested = int(count or 3)
+    if _requested > 5:
+        return {'success': False, 'requested': _requested,
+                'error': f'큐 담기는 한 번에 5곡까지입니다(요청 {_requested}). count 를 5 이하로 주세요.'}
+    count = max(1, _requested)
     is_url = bool(re.match(r'https?://', query)) or 'youtu' in query
 
     if is_url:

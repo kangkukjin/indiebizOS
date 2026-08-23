@@ -164,7 +164,7 @@ def search_books(keyword=None, title=None, author=None, publisher=None, page=1, 
     Returns:
         검색 결과 목록
     """
-    params = {"pageNo": page, "pageSize": min(page_size, 100)}
+    params = {"pageNo": page, "pageSize": min(page_size, 100)}  # clamp-ok: 도서관정보나루 API 스펙 상한(pageSize 100)
     if keyword:
         params["keyword"] = keyword
     if title:
@@ -341,7 +341,7 @@ def get_popular_books(start_date=None, end_date=None, gender=None,
         "startDt": start_date,
         "endDt": end_date,
         "pageNo": page,
-        "pageSize": min(page_size, 100)
+        "pageSize": min(page_size, 100)  # clamp-ok: 도서관정보나루 API 스펙 상한(pageSize 100)
     }
 
     # 선택 파라미터 추가
@@ -488,7 +488,7 @@ def search_libraries(name=None, region=None, page=1, page_size=10):
     """
     params = {
         "pageNo": page,
-        "pageSize": min(page_size, 100)
+        "pageSize": min(page_size, 100)  # clamp-ok: 도서관정보나루 API 스펙 상한(pageSize 100)
     }
 
     if name:
@@ -540,7 +540,7 @@ def search_libraries_by_book(isbn13, region=None, page=1, page_size=10):
     params = {
         "isbn": clean_isbn,
         "pageNo": page,
-        "pageSize": min(page_size, 100)
+        "pageSize": min(page_size, 100)  # clamp-ok: 도서관정보나루 API 스펙 상한(pageSize 100)
     }
 
     if region:

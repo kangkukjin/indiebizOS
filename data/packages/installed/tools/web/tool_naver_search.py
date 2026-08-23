@@ -138,7 +138,7 @@ def search_naver(
         return {"success": False, "error": err}
 
     # display는 네이버 API 제한(1~100, shop은 1~100, 그 외 1~100) 적용
-    display = max(1, min(int(display) if display else 5, 100))
+    display = max(1, min(int(display) if display else 5, 100))  # clamp-ok: 네이버 검색 API 스펙 상한(display 100)
 
     params = {
         "query": query,

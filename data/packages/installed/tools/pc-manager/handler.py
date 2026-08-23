@@ -4,7 +4,7 @@ AI 에이전트가 PC Manager 창을 열고, 스토리지를 스캔/검색할 �
 
 기능:
 - storage_op: 저장소 인덱스 조작 — scan/summary/volumes op 분기 ([self:storage])
-- folder_note_op: 폴더 주석 관리 — set/get op 분기 ([self:folder_note])
+- folder_note_op: 폴더 주석 관리 — set/detail op 분기 ([self:folder_note])
 (구 query_storage([self:fs_query])는 2026-08-05 어휘 압축으로 system_essentials 의
  [self:file_find] 메타 검색 모드에 흡수 — 파일 찾기는 한 개념, 기제는 어휘가 아니다.)
 """
@@ -405,11 +405,11 @@ def _host_resources(tool_input: dict) -> str:
 _OP_DISPATCHERS = {
     "storage_op": {"scan": _scan_storage, "summary": _get_storage_summary,
                    "volumes": _list_volumes},
-    "folder_note_op": {"set": _annotate_folder, "get": _get_folder_annotations},
+    "folder_note_op": {"set": _annotate_folder, "detail": _get_folder_annotations},
     "host_op": {"status": _host_status, "apps": _host_apps,
                 "resources": _host_resources},
     "forage_op": {"recall": _forage_recall, "note": _forage_note,
                   "forget": _forage_forget},
 }
-_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "get", "host_op": "status",
+_OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "detail", "host_op": "status",
                 "forage_op": "recall"}

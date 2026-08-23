@@ -19,7 +19,7 @@
             "type": "number",
             "description": "위도"
           },
-          "lon": {
+          "lng": {
             "type": "number",
             "description": "경도"
           },
@@ -159,7 +159,7 @@
             "type": "number",
             "description": "위도 (latitude)"
           },
-          "lon": {
+          "lng": {
             "type": "number",
             "description": "경도 (longitude)"
           }

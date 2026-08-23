@@ -88,7 +88,7 @@
             "type": "integer",
             "description": "JPEG 품질 1-100 (op=screen, 기본 82)"
           },
-          "display": {
+          "limit": {
             "type": "integer",
             "description": "다중 모니터 인덱스 1부터 (op=screen, 생략 시 전체/주화면)"
           },

@@ -122,7 +122,7 @@ def search_webcam(lat: float = None, lon: float = None, radius_km: float = 50,
     """전세계 웹캠 검색"""
     try:
         params = {
-            "limit": min(limit, 50)
+            "limit": min(limit, 50)  # clamp-ok: Windy Webcams API 스펙 상한(limit 50)
         }
 
         # 위치 기반 검색
@@ -165,7 +165,7 @@ def get_nearby_webcam(lat: float, lon: float, radius_km: float = 50, count: int 
     try:
         params = {
             "nearby": f"{lat},{lon},{min(radius_km, 250)}",
-            "limit": min(count, 50)
+            "limit": min(count, 50)  # clamp-ok: Windy Webcams API 스펙 상한(limit 50)
         }
 
         data = _call_windy_api(params)

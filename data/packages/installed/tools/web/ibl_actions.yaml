@@ -3,8 +3,8 @@ nodes:
     actions:
       search:
         aliases:
+          limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
-          count: [display, page_size, max_results]
         returns: items
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
@@ -181,7 +181,7 @@ tool_json:
           - guardian
           default: ddg
           description: 검색 엔진 (기본 ddg). 한국어 질의는 naver, 뉴스는 gnews(한국 출처는 naver+type:news), 기술 동향은 hn, 영어 아카이브는 guardian.
-        count:
+        limit:
           type: integer
           description: 결과 수 (기본 ddg 5 · naver 5 · gnews 10 · hn 15 · guardian 10. gnews 는 100까지 GET 1회)
         days:

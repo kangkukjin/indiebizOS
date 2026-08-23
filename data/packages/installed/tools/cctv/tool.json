@@ -37,10 +37,6 @@
             "type": "number",
             "description": "[nearby] 검색 반경 km (기본 5)"
           },
-          "count": {
-            "type": "integer",
-            "description": "[nearby] 반환할 CCTV 수 (기본 5)"
-          },
           "category": {
             "type": "string",
             "description": "[search] Windy 카테고리 (mountain, beach, city 등)"

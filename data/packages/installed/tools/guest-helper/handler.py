@@ -206,7 +206,7 @@ def _copy_shot_keys(tool_input: dict, envelope: dict) -> None:
         ("max_width", tool_input.get("max_width")),
         ("format", tool_input.get("format")),
         ("quality", tool_input.get("quality")),
-        ("display", tool_input.get("display")),
+        ("display", tool_input.get("limit") or tool_input.get("display")),
         ("shot", tool_input.get("shot")),
         ("settle_ms", tool_input.get("settle_ms")),
     ):

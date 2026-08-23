@@ -104,11 +104,11 @@ def _op_play(tool_input, yt):
     return yt.play_youtube(
         query=tool_input.get('query', ''),
         mode=tool_input.get('mode', 'audio'),
-        count=tool_input.get('count', 5))
+        count=tool_input.get('limit', tool_input.get('count', 5)))
 
 
 def _op_add(tool_input, yt):
-    return yt.add_to_queue(query=tool_input.get('query', ''), count=tool_input.get('count', 3))
+    return yt.add_to_queue(query=tool_input.get('query', ''), count=tool_input.get('limit', tool_input.get('count', 3)))
 
 
 def _op_skip(tool_input, yt):
@@ -150,7 +150,7 @@ def _op_relay(tool_input, yt):
     return yt.relay_youtube(
         query=tool_input.get('query') or tool_input.get('url', ''),
         media=media,
-        count=tool_input.get('count', 6))
+        count=tool_input.get('limit', tool_input.get('count', 6)))
 
 
 def _op_queue(tool_input, yt):
@@ -164,7 +164,7 @@ def _op_stop(tool_input, yt):
 def _direct_search(tool_input, yt):
     result = yt.search_youtube(
         query=tool_input.get('query', ''),
-        count=tool_input.get('count', 5))
+        count=tool_input.get('limit', tool_input.get('count', 5)))
     # 단일 통화 — native results(title/channel/duration/video_id/url 등 풍부)를 items로.
     # (옛 records 5칸 변환은 video_id/duration 등을 버려 손실적이라 은퇴.)
     if isinstance(result, dict) and isinstance(result.get('results'), list):

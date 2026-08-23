@@ -30,7 +30,7 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
         return {"success": False, "error": "검색어(keyword)가 필요합니다.", "items": []}
     params = {
         "pageNum": max(1, int(page or 1)),
-        "pageSize": min(max(1, int(page_size or 20)), 50),
+        "pageSize": min(max(1, int(page_size or 20)), 50),  # clamp-ok: 국립중앙도서관 API 스펙 상한(pageSize 50)
         "srchTarget": "total",
         "kwd": keyword,
     }

@@ -66,7 +66,7 @@ def _search_gigs(query: str, limit: int, sort: str, max_price):
             "isPrime": "false", "isFastReaction": "false", "isCompany": "false",
             "isNowContactable": "false", "hasPortfolios": "false",
             "includeAggregations": "false", "page": page,
-            "perPage": min(max(limit, 20), 40), "sortType": sort_type,
+            "perPage": min(max(limit, 20), 40), "sortType": sort_type,  # clamp-ok: 크몽 목록 API perPage 상한 40
             "service": "web",
             "rootCategoryId": "null", "subCategoryId": "null", "thirdCategoryId": "null",
         })
@@ -127,7 +127,7 @@ def _search_experts(query: str, limit: int, sort: str):
             "keyword": query, "isFastReaction": "false", "isCompany": "false",
             "isResident": "false", "hasPortfolios": "false",
             "sortType": sort_type, "page": page,
-            "perPage": min(max(limit, 20), 40), "includeAggregations": "false",
+            "perPage": min(max(limit, 20), 40), "includeAggregations": "false",  # clamp-ok: 크몽 목록 API perPage 상한 40
         })
         pg = data.get("sellerProfilePage") or {}
         total = pg.get("totalItemCount", total)

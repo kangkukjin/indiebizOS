@@ -773,7 +773,7 @@ def _search_semantic(notebook_id: int, query: str, top_k: int) -> List[Tuple[int
     conn = _connect(with_vec=True)
     try:
         # vec0 MATCH는 전역 이웃 → 오버페치 후 노트북 필터 (설계 §4-2, 파티션 키 버전 의존 회피)
-        k = min(1000, max(top_k * 12, 120))
+        k = min(1000, max(top_k * 12, 120))  # clamp-ok: 사용자 요청량이 아니라 top_k 에서 파생된 내부 후보 폭(안전 난간)
         try:
             rows = conn.execute(
                 "SELECT rowid, distance FROM chunks_vec WHERE embedding MATCH ? AND k=? ORDER BY distance",

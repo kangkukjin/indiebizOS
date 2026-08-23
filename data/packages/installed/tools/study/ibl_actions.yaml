@@ -1,6 +1,8 @@
 node: sense
 actions:
   paper:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [max_results]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -34,6 +36,8 @@ actions:
     - 논문검색
     - 학위논문
   researcher:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [max_results]
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
@@ -59,6 +63,8 @@ actions:
     - 공저자
     - researcher
   entity:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [max_results]
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:entity]{query: "강국진"}'
@@ -185,7 +191,7 @@ tool_json:
         query:
           type: string
           description: '[search] 검색 쿼리'
-        max_results:
+        limit:
           type: integer
           description: '[search] 최대 결과 수(기본 5)'
         id:
@@ -219,7 +225,7 @@ tool_json:
         id:
           type: string
           description: '[coauthor] 연구자 lodID (find 결과에서 획득)'
-        max_results:
+        limit:
           type: integer
           description: 최대 결과 수(기본 30)
       required: []
@@ -251,7 +257,7 @@ tool_json:
           type: string
           description: 라벨 언어(기본 ko, 없으면 en 폴백)
           default: ko
-        max_results:
+        limit:
           type: integer
           description: '[resolve] 최대 후보 수(기본 7)'
       required: []

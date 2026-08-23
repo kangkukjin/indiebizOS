@@ -1,6 +1,8 @@
 node: sense
 actions:
   performance:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      query: [keyword]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -69,6 +71,8 @@ actions:
         - '{prfpdfrom}~{prfpdto}'
         - '{area} · {prfstate}'
   book:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      query: [keyword]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -463,7 +467,7 @@ actions:
     - 한국고전
   exhibit:
     aliases:
-      keyword: [query]
+      query: [keyword]
     returns: items
     fixture: '[sense:exhibit]{query: "미술"}'
     description: 전시·문화행사 검색 (KCISA). 박물관·미술관 행사 위주, 공연은 performance. items 통화 — table 파이프·& 병렬(공연과 동시 검색) 조합.
@@ -472,7 +476,7 @@ actions:
     router: handler
     tool: kcisa_quick_search
     implementation: 한국문화정보원(KCISA) API로 전시/문화행사 검색
-    target_key: keyword
+    target_key: query   # 정본(2026-08-24 #repair B5) — keyword 는 aliases 로 수용
     app:
       instrument: culture
       mode: 전시
@@ -511,7 +515,7 @@ tool_json:
     input_schema:
       type: object
       properties:
-        keyword:
+        query:
           type: string
           description: 검색어
         rows:
@@ -536,7 +540,7 @@ tool_json:
         op:
           type: string
           description: search=공연검색(기본), venue=공연장, genres=장르코드, regions=지역코드
-        keyword:
+        query:
           type: string
           description: '[search] 공연명 / [venue] 공연장명'
         genre:
@@ -584,7 +588,7 @@ tool_json:
         publisher:
           type: string
           description: '[search] 출판사 전용 검색'
-        keyword:
+        query:
           type: string
           description: '[search] 광역 검색 (제목+저자+출판사)'
         source:

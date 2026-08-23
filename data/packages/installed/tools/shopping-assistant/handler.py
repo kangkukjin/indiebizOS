@@ -172,8 +172,10 @@ def _search_naver_used(query: str, limit: int = 15):
     ok, err = check_api_key("naver")
     if not ok:
         return {"success": False, "source": "naver", "error": err, "items": []}
+    # ★침묵 클램프 청산(2026-08-24 #repair B6)
+    _display = min(limit, 20)
     data = api_call("naver", "/v1/search/cafearticle.json",
-                    params={"query": query, "display": min(limit, 20), "sort": "date"})
+                    params={"query": query, "display": _display, "sort": "date"})
     if isinstance(data, dict) and "error" in data:
         return {"success": False, "source": "naver", "error": data["error"], "items": []}
     records = []
@@ -186,6 +188,9 @@ def _search_naver_used(query: str, limit: int = 15):
             "image": "",
         })
     return {"source": "naver", "total": len(records), "items": records,
+            **({"clamped": True, "requested": limit,
+                "message": f"네이버 카페 검색은 {_display}건까지 — 요청 {limit}건을 깎았습니다."}
+               if limit > _display else {}),
             "note": "네이버 카페 통합검색(중고나라 등) — 게시글 기준"}
 
 
@@ -246,7 +251,7 @@ def execute(tool_input: dict, context) -> str:
         query = tool_input.get("query")
         # site 는 이제 danawa(실동작) + naver(은퇴 안내) 둘뿐이다 — 중고 축은 2026-08-04 은퇴.
         site = tool_input.get("site", "danawa")
-        display = tool_input.get("display", 5)
+        display = tool_input.get("limit", tool_input.get("display", 5))
 
         if not query:
             return format_json({"success": False, "error": "검색어를 입력해주세요.", "items": []})

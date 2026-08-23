@@ -69,10 +69,6 @@
           "category": {
             "type": "string",
             "description": "[posts] 카테고리 필터"
-          },
-          "count": {
-            "type": "integer",
-            "description": "[posts] 개수(기본 20)"
           }
         },
         "required": []

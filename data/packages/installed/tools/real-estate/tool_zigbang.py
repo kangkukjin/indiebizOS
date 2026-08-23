@@ -234,10 +234,15 @@ def get_zigbang_listings(tool_input: dict):
         radius = int(tool_input.get("radius") or 3000)
     except (TypeError, ValueError):
         radius = 3000
+    # ★침묵 클램프 청산(2026-08-24 #repair B6)
     try:
-        limit = max(1, min(50, int(tool_input.get("limit") or 30)))
+        _requested = int(tool_input.get("limit") or 30)
     except (TypeError, ValueError):
-        limit = 30
+        _requested = 30
+    if _requested > 50:
+        return {"success": False, "requested": _requested,
+                "error": f"직방은 한 번에 50건까지입니다(요청 {_requested}). limit 을 50 이하로 주세요."}
+    limit = max(1, _requested)
 
     # 리스트 호출 (geohash5 박스 — 약 4.9km). salesTypes 서버 필터.
     # 2026-08-10: /v2/items/{cat} 404 은퇴 → /house/property/v1/items/{복수형}. 평문 geohash 통과.

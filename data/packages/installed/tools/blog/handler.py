@@ -122,7 +122,7 @@ def _op_posts(tool_input: dict, context) -> str:
     """글 목록 (옛 blog_get_posts)."""
     from tool_blog_insight import blog_get_posts
     result = blog_get_posts(
-        count=tool_input.get("count", 20),
+        count=tool_input.get("limit", tool_input.get("count", 20)),
         offset=tool_input.get("offset", 0),
         category=tool_input.get("category"),
         with_summary=tool_input.get("with_summary", False),
@@ -137,7 +137,7 @@ def _op_posts(tool_input: dict, context) -> str:
 def _tool_blog_get_summaries(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_get_summaries
     result = blog_get_summaries(
-        count=tool_input.get("count", 20),
+        count=tool_input.get("limit", tool_input.get("count", 20)),
         offset=tool_input.get("offset", 0),
         category=tool_input.get("category")
     )
@@ -158,7 +158,7 @@ def _tool_blog_search(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_search
     result = blog_search(
         query=tool_input.get("query"),
-        count=tool_input.get("count", 20),
+        count=tool_input.get("limit", tool_input.get("count", 20)),
         search_in=tool_input.get("search_in", "all")
     )
     return format_json(result)
@@ -174,7 +174,7 @@ def _tool_blog_insight_report(tool_input: dict, context) -> str:
     from tool_blog_insight import blog_insight_report
     # project_path 전달 필수
     result = blog_insight_report(
-        count=tool_input.get("count", 50),
+        count=tool_input.get("limit", tool_input.get("count", 50)),
         category=tool_input.get("category"),
         project_path=context.project_path
     )

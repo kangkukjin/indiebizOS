@@ -165,10 +165,6 @@
             "type": "string",
             "description": "[disclosures, 한국] 검색 종료일 (YYYYMMDD)"
           },
-          "count": {
-            "type": "integer",
-            "description": "[disclosures] 조회할 공시 수 (한국 기본 20, 미국 기본 10)"
-          },
           "company": {
             "type": "string",
             "description": "sense:company 파라미터"

@@ -332,3 +332,8 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 **1~4(+items/scalar이면 2.5)를 모두 완료해야 에이전트가 액션을 인식하고 사용할 수 있다.**
 계약 프로브(5.5)에서 잡은 결함은 수리 후 `backend/test_pipe_currency_failures.py`에 재현 케이스로 박제할 것 — 그 파일이 12시간 자가점검(`__static__:silent_failure_regression`)의 순찰 대상이다.
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-08-24 실측: op 분기 액션은 `self.yaml` 에서 `target_key: op` 를 쓰는 경우가 많아, 액션 정의의 `params:` 에 타입을 주입해도 op 수준 파라미터(`read.path`·`write.path` 등)는 여전히 미선언으로 남는다 — `--check` 의 미선언 ✗ 가 그대로 유지된다(실측 34건).

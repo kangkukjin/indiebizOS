@@ -48,7 +48,7 @@ _EMPTY_HINT = "라이브러리가 비어 있습니다. 보관함 탭에서 음�
 def _library(params: dict) -> dict:
     c = _core()
     rows = c.query_tracks(
-        q=(params.get("q") or "").strip(),
+        q=(params.get("query") or params.get("q") or "").strip(),
         path=(params.get("path") or "").strip(),
         folder=(params.get("folder") or "").strip(),
         limit=params.get("limit") or 300,

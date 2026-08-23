@@ -250,7 +250,7 @@ def run(tool_input: dict, project_path: str) -> str:
         max_results = int(tool_input.get("limit", tool_input.get("max_results", 100)))
     except (TypeError, ValueError):
         max_results = 100
-    max_results = max(1, min(max_results, 2000))
+    max_results = max(1, min(max_results, 2000))  # clamp-ok: 표본 상한 2000 — 초과분은 total/truncated 로 이미 신고한다
     # 줄 수만으로는 토큰 폭발을 못 막는다 — 미니파이드/JSON 한 줄이 수만 자면
     # 100줄로도 수십만 자가 된다. 줄 길이·총량 상한을 함께 둔다.
     MAX_LINE_CHARS = 500       # 한 줄 매칭 내용 상한 (초과 시 잘라 표시)

@@ -12,7 +12,7 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "q": {
+          "query": {
             "type": "string",
             "description": "파일명·기종 키워드 부분일치 (선택)"
           },
@@ -59,10 +59,6 @@
           },
           "page": {
             "type": "integer",
-            "description": "self:photo 파라미터"
-          },
-          "query": {
-            "type": "string",
             "description": "self:photo 파라미터"
           }
         },

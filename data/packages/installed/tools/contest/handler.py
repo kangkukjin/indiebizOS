@@ -97,6 +97,6 @@ def execute(tool_input: dict, context):
             tool_input.get("query") or tool_input.get("keyword", ""),
             tool_input.get("sort", "recentlyCreated"),
             tool_input.get("category", ""),
-            tool_input.get("count", 10),
+            tool_input.get("limit", tool_input.get("count", 10)),
         )
     return {"success": False, "error": f"Unknown tool: {context.tool_name}"}

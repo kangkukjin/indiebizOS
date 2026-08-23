@@ -137,7 +137,7 @@ def search_culture_events(keyword=None, start_date=None, end_date=None, area=Non
         page: 페이지 번호
     """
     params = {
-        "numOfrows": min(rows, 100),  # API 스펙에 맞게 수정
+        "numOfrows": min(rows, 100),  # API 스펙에 맞게 수정  # clamp-ok: KCISA API 스펙 상한(numOfrows 100) — 더 요청해도 서버가 100 만 준다
         "PageNo": page  # API 스펙에 맞게 수정
     }
 

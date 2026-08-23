@@ -106,14 +106,20 @@ def _memory_search(db, tool_input, project_path, agent_id):
     results.extend(deep_results)
 
     # 2) 대화 이력 검색
-    conv_results = _search_conversations(project_path, query, limit=min(limit, 5))
+    # ★침묵 클램프 청산(2026-08-24 #repair B6): 깎았으면 깎았다고 말한다.
+    _conv_req, _conv_lim = limit, min(limit, 5)
+    conv_results = _search_conversations(project_path, query, limit=_conv_lim)
     results.extend(conv_results)
+    _clamp = ({"clamped": True, "requested": _conv_req,
+               "message": f"대화 이력은 상한 {_conv_lim}건까지만 함께 봅니다(요청 {_conv_req})."}
+              if _conv_req > _conv_lim else {})
 
     # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [table:document/spreadsheet] 파이프용.
     return json.dumps({
         "count": len(results),
         "memories": results,
-        "items": _memories_to_records(results)
+        "items": _memories_to_records(results),
+        **_clamp,
     }, ensure_ascii=False, indent=2)
 
 

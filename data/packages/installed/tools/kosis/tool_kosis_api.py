@@ -343,7 +343,7 @@ def integrated_search(
     params = {
         "method": "getList",
         "searchNm": keyword,
-        "resultCount": min(count, 100),
+        "resultCount": min(count, 100),  # clamp-ok: KOSIS API 스펙 상한(resultCount 100)
         "format": "json",
         "jsonVD": "Y"
     }

@@ -122,7 +122,7 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
         }
 
     try:
-        count = min(max(1, count), 100)  # 검색 RSS는 GET 1회에 ~105개 — 100까지 공짜(같은 요청)
+        count = min(max(1, count), 100)  # 검색 RSS는 GET 1회에 ~105개 — 100까지 공짜(같은 요청)  # clamp-ok: 구글뉴스 RSS 는 GET 1회에 ~105개가 전부 — 100 이 원천의 끝
         # region 자동 결정
         if region is None:
             region = {"ko": "KR", "en": "US", "ja": "JP", "zh": "CN"}.get(language, "US")
@@ -221,7 +221,7 @@ def _search_guardian(tool_input: dict) -> dict:
         return {"success": False, "error": "GUARDIAN_API_KEY 환경 변수가 설정되지 않았습니다.", "items": []}
 
     query = tool_input.get("query")
-    page_size = tool_input.get("count") or tool_input.get("page_size") or 10
+    page_size = tool_input.get("limit") or tool_input.get("count") or tool_input.get("page_size") or 10
     from_date = tool_input.get("from_date")
     to_date = tool_input.get("to_date")
 
@@ -285,7 +285,7 @@ def _guardian_items(query: str, count: int = 30) -> list:
     """가디언 기사 → 신문 items 통화(_search_guardian 의 신문용 투영).
     GUARDIAN_API_KEY 부재·무결과 시 [] 반환 — 신문은 gnews만으로 진행."""
     try:
-        res = _search_guardian({"query": query, "count": min(count, 50)})
+        res = _search_guardian({"query": query, "count": min(count, 50)})  # clamp-ok: Guardian Open Platform page-size 상한 50
         if isinstance(res, dict) and res.get("items"):
             return [{
                 "title": r.get("title", ""),
@@ -307,7 +307,7 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: 
     2026-08-20 호가 15건을 통째로 버린 원인). days>0 이면 최근 N일로 서버측 제한."""
     import urllib.request as _u, urllib.parse as _p
     try:
-        n = min(max(count, 1), 50)
+        n = min(max(count, 1), 50)  # clamp-ok: Guardian Open Platform page-size 상한 50
         # days>0 → Algolia created_at_i 필터. 미지정(0)=옛 동작 그대로(전체 기간 인기순).
         _since = ""
         try:
@@ -661,7 +661,7 @@ def execute(tool_input: dict, context):
     elif tool_name == "ddgs_search":
         tool_ddgs = load_module("tool_ddgs_search")
         query = tool_input.get("query")
-        count = tool_input.get("count", 5)
+        count = tool_input.get("limit", tool_input.get("count", 5))
         country = tool_input.get("country", "kr-kr")
         return tool_ddgs.search_web(query, count, country)
 
@@ -671,7 +671,7 @@ def execute(tool_input: dict, context):
         result = tool_naver.search_naver(
             query=tool_input.get("query", ""),
             type=tool_input.get("type", "webkr"),
-            display=tool_input.get("count") or tool_input.get("display") or 5,
+            display=tool_input.get("limit") or tool_input.get("count") or tool_input.get("display") or 5,
             sort=tool_input.get("sort", "sim"),
         )
         return format_json(result)
@@ -722,7 +722,7 @@ def execute(tool_input: dict, context):
             _queries = [str(q).strip() for q in _queries if str(q).strip()]
             if not _queries:
                 return format_json({"success": False, "error": "검색어(queries)가 비었습니다."})
-            _count = tool_input.get("count", 10)
+            _count = tool_input.get("limit", tool_input.get("count", 10))
             _lang = tool_input.get("language", "auto")
             _curate = _parse_curate(tool_input)
             # curate 시 오버페치(약 3배)해 섹션별 dedup 후 빈 자리 자동 채움
@@ -786,7 +786,7 @@ def execute(tool_input: dict, context):
             if language == "auto":
                 language = "ko"
             _curate = _parse_curate(tool_input)
-            _fetch = 100 if _curate else tool_input.get("count", 12)   # 헤드라인 피드는 실제 최대 ~34
+            _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 12))   # 헤드라인 피드는 실제 최대 ~34
             result = search_gnews(count=_fetch, language=language, headlines=True)
             if isinstance(result, dict) and isinstance(result.get("results"), list):
                 result["items"] = [{
@@ -814,7 +814,7 @@ def execute(tool_input: dict, context):
             language = "ko" if korean_chars > len(query) * 0.2 else "en"
 
         _curate = _parse_curate(tool_input)
-        _fetch = 100 if _curate else tool_input.get("count", 10)   # 편집장은 넓게 보고 좁게 뽑는다
+        _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 10))   # 편집장은 넓게 보고 좁게 뽑는다
         result = search_gnews(
             query=query,
             count=_fetch,
@@ -841,7 +841,7 @@ def execute(tool_input: dict, context):
     # Hacker News (search source:hn 내부 갈래) — gnews 와 형제. HN 전용 신문 판용. 편집장·관점 필터 공유.
     elif tool_name == "search_hn":
         _curate = _parse_curate(tool_input)
-        _fetch = 100 if _curate else tool_input.get("count", 15)
+        _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 15))
         _days = tool_input.get("days") or 0   # 최근 N일 제한(미지정=전체 기간 인기순)
         _front = tool_input.get("headlines") in (True, "true", "True", 1, "1") or \
                  tool_input.get("front_page") in (True, "true", "True", 1, "1")

@@ -193,6 +193,8 @@ nodes:
                     action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
                     recursive: true
       search_youtube:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          limit: [count]
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
         runs_on: pc_only
@@ -262,6 +264,8 @@ nodes:
   limbs:
     actions:
       music:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          limit: [count]
         returns: effect
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
@@ -330,7 +334,7 @@ tool_json:
         query:
           type: string
           description: '검색어. 예: ''김필 너무 아픈 사랑은'', ''빅뱅 판타스틱베이비'''
-        count:
+        limit:
           type: integer
           description: 검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림
       required:
@@ -364,7 +368,7 @@ tool_json:
           - audio
           - video
           description: 릴레이 형태 (op=relay 시, 기본 audio — 소리만/영상+소리)
-        count:
+        limit:
           type: integer
           description: 곡 수 (op=play/add/relay 시)
         output_path:

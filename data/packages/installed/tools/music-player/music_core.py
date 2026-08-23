@@ -614,7 +614,7 @@ def query_tracks(q: str = "", path: str = "", folder: str = "", limit: int = 300
     if where:
         sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY album, disc_no, track_no, title LIMIT ?"
-    args.append(max(1, min(int(limit or 300), 2000)))
+    args.append(max(1, min(int(limit or 300), 2000)))  # clamp-ok: SQL LIMIT 안전 난간 2000 — 요청량이 아니라 폭주 방지
     with _conn() as conn:
         return [track_row(r) for r in conn.execute(sql, args)]
 

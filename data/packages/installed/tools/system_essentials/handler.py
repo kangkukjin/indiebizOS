@@ -968,7 +968,7 @@ def execute(tool_input: dict, context) -> str:
                 root = os.path.join(project_path, expanded)
 
             try:
-                max_results = int(tool_input.get("max_results", 200))
+                max_results = int(tool_input.get("limit", tool_input.get("max_results", 200)))
             except (TypeError, ValueError):
                 max_results = 200
 

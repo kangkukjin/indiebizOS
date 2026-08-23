@@ -190,7 +190,7 @@ def get_performances(stdate, eddate, shcate=None, signgucode=None, prfstate="02"
     params = {
         "stdate": _format_date(stdate),
         "eddate": _format_date(eddate),
-        "rows": min(rows, 100),
+        "rows": min(rows, 100),  # clamp-ok: KOPIS API 스펙 상한(rows 100)
         "cpage": cpage,
     }
 
@@ -287,7 +287,7 @@ def get_facilities(facility_name=None, facility_id=None, signgucode=None, rows=1
     if facility_id:
         return call_kopis_api(f"prfplc/{facility_id}", {})
 
-    params = {"rows": min(rows, 100), "cpage": cpage}
+    params = {"rows": min(rows, 100), "cpage": cpage}  # clamp-ok: KOPIS API 스펙 상한(rows 100)
 
     if facility_name:
         params["shprfnmfct"] = facility_name
@@ -325,7 +325,7 @@ def get_festivals(stdate=None, eddate=None, shcate=None, signgucode=None, rows=2
     params = {
         "stdate": _format_date(stdate),
         "eddate": _format_date(eddate),
-        "rows": min(rows, 100),
+        "rows": min(rows, 100),  # clamp-ok: KOPIS API 스펙 상한(rows 100)
         "cpage": cpage,
     }
 

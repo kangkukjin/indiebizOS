@@ -177,7 +177,7 @@ def _search_33m2(tool_input: dict) -> dict:
         return {"success": False, "error": "region(지역/키워드)이 필요합니다. 예: {region: \"평택\"}"}
     limit = _to_int(tool_input.get("limit"), 20)
 
-    params = {"keyword": region, "size": min(limit, 50), "page": 1, "sortBy": "POPULAR"}
+    params = {"keyword": region, "size": min(limit, 50), "page": 1, "sortBy": "POPULAR"}  # clamp-ok: 여기어때 검색 API 스펙 상한(size 50)
     if tool_input.get("max_week_fee") is not None:
         params["maxUsingFee"] = _to_int(tool_input["max_week_fee"])
     if tool_input.get("min_week_fee") is not None:
@@ -258,7 +258,7 @@ def _search_tourapi(tool_input: dict) -> dict:
     limit = _to_int(tool_input.get("limit"), 20)
 
     base = {"serviceKey": key, "MobileOS": "ETC", "MobileApp": "indiebiz", "_type": "json",
-            "contentTypeId": 32, "numOfRows": min(limit, 100), "pageNo": 1, "arrange": "C"}
+            "contentTypeId": 32, "numOfRows": min(limit, 100), "pageNo": 1, "arrange": "C"}  # clamp-ok: 관광공사 TourAPI 스펙 상한(numOfRows 100)
     area_code = _TOURAPI_AREACODE.get(region)
     if area_code:
         url, params = _TOURAPI_AREA, {**base, "areaCode": area_code}

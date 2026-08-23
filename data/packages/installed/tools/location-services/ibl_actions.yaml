@@ -2,6 +2,8 @@ nodes:
   sense:
     actions:
       weather:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          lng: [lon]
         returns: items
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
@@ -134,6 +136,8 @@ nodes:
             k: '{name}'
             v: '{guidance}'
       reverse_geocode:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          lng: [lon]
         returns: scalar
         fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
@@ -289,7 +293,7 @@ tool_json:
         lat:
           type: number
           description: 위도
-        lon:
+        lng:
           type: number
           description: 경도
         days:
@@ -468,7 +472,7 @@ tool_json:
         lat:
           type: number
           description: 위도 (latitude)
-        lon:
+        lng:
           type: number
           description: 경도 (longitude)
       required:

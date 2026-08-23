@@ -16,7 +16,7 @@ nodes:
           default: status
           returns:
             create: effect
-            remove: effect
+            delete: effect
             join: effect
             promote: effect
             issue: effect
@@ -36,7 +36,7 @@ nodes:
             status: 포털 현황 — 공개 주소(/h/…)·회원 수·오늘 사용량·진열 수 (portal 로 지정)
             portals: 포털 목록 — 대상별 주소 전부 (가족용·친구용…)
             create: 새 포털 만들기 (title — 새 5자 주소 발급)
-            remove: 포털 삭제 (portal 필수, 회원 있으면 force:true)
+            delete: 포털 삭제 (portal 필수, 회원 있으면 force:true)
             members: 이웃 목록 (레벨·아이디·개인 링크·오늘 사용량)
             join: 이웃 직접 등록 — 링크 전용 회원 (name 필수, contact·level 옵션)
             promote: 레벨 승급/강등 (member_id + level 0~4 지정 또는 +1, down:true 면 -1 — 전역 이웃등급)
@@ -281,7 +281,7 @@ tool_json:
 
       - create: 새 포털 만들기 — title 필수, 새 5자 주소 발급. 진열은 전부 꺼진 채 시작(안전 기본).
 
-      - remove: 포털 삭제 — portal 필수, 회원이 있으면 force:true.
+      - delete: 포털 삭제 — portal 필수, 회원이 있으면 force:true.
 
       - members: 이웃 목록 — 레벨·아이디(셀프 가입)·가입일·오늘 사용량·개인 링크(key_link).
 

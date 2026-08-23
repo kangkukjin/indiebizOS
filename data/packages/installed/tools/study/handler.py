@@ -41,7 +41,7 @@ def _search_arxiv(tool_input: dict) -> str:
     순수파이썬)로 직접 호출해 라이브러리 의존 제거 + 양쪽 몸에서 동일 작동(이식 가능)."""
     import urllib.parse
     query = tool_input.get("query", "")
-    max_results = tool_input.get("max_results", 5)
+    max_results = tool_input.get("limit", tool_input.get("max_results", 5))
     url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode({
         "search_query": f"all:{query}", "start": 0, "max_results": max_results,
         "sortBy": "relevance", "sortOrder": "descending"})
@@ -187,7 +187,7 @@ def _nanet_author_find(tool_input: dict, context=None) -> str:
         "name_ko": name,
         "name_en": tool_input.get("name_en"),
         "orgName_ko": org,
-        "display": tool_input.get("max_results") or tool_input.get("display") or 30,
+        "display": tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display") or 30,
     }
     rows, err = _nanet_rows(_nanet_call("authorView", params))
     if err:
@@ -257,7 +257,7 @@ def _nanet_coauthor(tool_input: dict, context=None) -> str:
     rows = r0.get("authorList") or []
     if not rows:
         return {"items": [], "message": f"'{name}'의 연관연구자 정보가 없습니다."}
-    limit = int(tool_input.get("max_results") or tool_input.get("display") or 30)
+    limit = int(tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display") or 30)
     lines = [f"'{name}' 연관연구자 — {min(len(rows), limit)}명 (전체 {len(rows)}명, 동명이인 합산 주의):"]
     records = []
     for a in rows[:limit]:
@@ -286,7 +286,7 @@ def _search_nanet(tool_input: dict) -> str:
     query = tool_input.get("query") or tool_input.get("q") or tool_input.get("keyword")
     if not query:
         return {"success": False, "error": "검색어(query)가 필요합니다.", "items": []}
-    want = int(tool_input.get("max_results") or tool_input.get("display") or 10)
+    want = int(tool_input.get("limit") or tool_input.get("max_results") or tool_input.get("display") or 10)
     year_f = str(tool_input.get("year") or "").strip()
     type_f = str(tool_input.get("type") or "").strip()
     # 자료유형 후필터 — divFlag 값으로 정규화(모르는 값은 대문자 부분일치)
@@ -429,7 +429,7 @@ def _wikidata_resolve(tool_input: dict) -> str:
     if not query:
         return {"success": False, "error": "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"강국진\"}", "items": []}
     lang = (tool_input.get("lang") or "ko").strip()
-    limit = int(tool_input.get("max_results") or tool_input.get("limit") or 7)
+    limit = int(tool_input.get("limit") or tool_input.get("max_results") or 7)
     try:
         hits = _wd_search(query, lang, limit)
     except Exception as e:
@@ -576,7 +576,7 @@ def _search_semantic_scholar(tool_input: dict) -> str:
     import time
 
     query = tool_input.get("query")
-    max_results = tool_input.get("max_results", 5)
+    max_results = tool_input.get("limit", tool_input.get("max_results", 5))
     year_from = tool_input.get("year_from")
 
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -671,7 +671,7 @@ def _search_semantic_scholar(tool_input: dict) -> str:
 def _search_pubmed(tool_input: dict) -> str:
     """PubMed API를 사용한 의학/생명과학 논문 검색 (PMC ID 포함)"""
     query = tool_input.get("query")
-    max_results = tool_input.get("max_results", 5)
+    max_results = tool_input.get("limit", tool_input.get("max_results", 5))
 
     # Step 1: Search for paper IDs
     search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -912,7 +912,7 @@ def _search_openalex(tool_input: dict) -> str:
     API 문서: https://docs.openalex.org/
     """
     query = tool_input.get("query")
-    max_results = min(tool_input.get("max_results", 10), 200)  # 최대 200개
+    max_results = min(tool_input.get("limit", tool_input.get("max_results", 10)), 200)  # 최대 200개  # clamp-ok: arXiv API 안전 난간 200
     year_from = tool_input.get("year_from")
     year_to = tool_input.get("year_to")
     open_access = tool_input.get("open_access", False)

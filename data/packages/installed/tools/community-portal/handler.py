@@ -421,7 +421,7 @@ _OP_DISPATCHERS = {
         "status": _fn_status,
         "portals": _fn_portals,
         "create": _fn_create,
-        "remove": _fn_remove,
+        "delete": _fn_remove,   # 엔티티 파기는 delete(정본, 2026-08-24 #repair B5)
         "members": _fn_members,
         "join": _fn_join,
         "promote": _fn_promote,

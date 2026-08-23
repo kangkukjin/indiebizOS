@@ -11,7 +11,7 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "keyword": {
+          "query": {
             "type": "string",
             "description": "검색어"
           },
@@ -43,7 +43,7 @@
             ],
             "default": "search"
           },
-          "keyword": {
+          "query": {
             "type": "string",
             "description": "[search] 공연명 / [venue] 공연장명"
           },
@@ -74,10 +74,6 @@
           "page": {
             "type": "integer",
             "description": "페이지"
-          },
-          "query": {
-            "type": "string",
-            "description": "sense:performance 파라미터"
           }
         },
         "required": []
@@ -113,7 +109,7 @@
             "type": "string",
             "description": "[search] 출판사 전용 검색"
           },
-          "keyword": {
+          "query": {
             "type": "string",
             "description": "[search] 광역 검색 (제목+저자+출판사)"
           },
@@ -187,10 +183,6 @@
           "rows": {
             "type": "integer",
             "description": "결과 수"
-          },
-          "query": {
-            "type": "string",
-            "description": "sense:book 파라미터"
           }
         },
         "required": []

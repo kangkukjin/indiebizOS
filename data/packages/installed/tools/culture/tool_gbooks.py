@@ -15,7 +15,7 @@ def search_google_books(query: str, max_results: int = 5, order_by: str = "relev
     url = "https://www.googleapis.com/books/v1/volumes"
     params = {
         "q": query,
-        "maxResults": min(max_results, 40),
+        "maxResults": min(max_results, 40),  # clamp-ok: Google Books API 스펙 상한(maxResults 40)
         "orderBy": order_by,
         "printType": "books"
     }

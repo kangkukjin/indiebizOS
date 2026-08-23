@@ -96,28 +96,47 @@ def _looks_like_code(t) -> bool:
 def _resolve_ticker(ticker):
     """이름(예 'TIGER 200', '삼성전자')이면 search로 종목코드를 내부 해소.
     이미 코드/티커면 그대로. (호출자에게 코드를 떠넘기지 않는 '내부 해소' 원칙.)
-    Returns: (해소된_심볼, 매칭된_이름 또는 None)
+
+    ★세계 명사 해소 계약 (2026-08-24 #repair A1) — 추측 금지.
+      옛 코드는 `chosen = exact or starts or quotes[0]` 이었다. 즉 아무것도 안 맞으면
+      **검색 결과의 첫 줄**을 골랐다: 'TIGER200' 을 물었는데 상장폐지된 동음 종목이
+      1위면 그 종목의 시세가 에러 없이 돌아온다. 사용자는 자기가 물은 종목의 값을
+      받았다고 믿을 뿐, 결과 안에 확인할 방법이 없다(반증 불가능한 답).
+      정확/접두 일치가 없으면 **후보를 들고 거절**한다. 본: real-estate
+      tool_region_codes.resolve_region_code.
+
+    Returns: (해소된_심볼, 매칭된_이름 또는 None, 거절봉투 또는 None)
     """
     t = str(ticker or "").strip()
     # 코드/티커(005930·AAPL·102110.KS)가 아니면 모두 이름으로 보고 해소.
     #   "tiger200"(영숫자 혼합)·"TIGER 200"(공백)·"삼성전자"(한글) 모두 포함.
     if not t or _looks_like_code(t):
-        return ticker, None
+        return ticker, None, None
     try:
         tool = load_module("tool_yfinance")
         res = tool.search_stock(query=t, search_type="quotes")
         quotes = (res.get("data", {}) or {}).get("quotes", []) if isinstance(res, dict) else []
         if not quotes:
-            return ticker, None
+            return ticker, None, None   # 검색 자체가 빈손 — 코드일 수도 있으니 원문 유지
         norm = lambda s: re.sub(r"\s+", "", str(s or "")).strip().lower()  # 공백 제거 비교(TIGER 200 == TIGER200)
         q = norm(t)
         exact = [x for x in quotes if norm(x.get("name")) == q]
         starts = sorted([x for x in quotes if norm(x.get("name")).startswith(q)],
                         key=lambda x: len(norm(x.get("name"))))  # 질의로 시작하는 최단명 (TIGER200 > TIGER200IT)
-        chosen = exact[0] if exact else (starts[0] if starts else quotes[0])
-        return chosen.get("symbol") or ticker, chosen.get("name")
+        chosen = exact[0] if exact else (starts[0] if starts else None)
+        if chosen is None:
+            # ★추측하지 않는다 — 후보를 들고 거절한다.
+            return ticker, None, {
+                "success": False,
+                "asked": t,
+                "candidates": [{"name": x.get("name"), "symbol": x.get("symbol"),
+                                "exchange": x.get("exchange")} for x in quotes[:8]],
+                "error": (f"'{t}' 와 정확히·앞부분이 일치하는 종목이 없습니다. "
+                          f"후보 중 하나의 이름이나 종목코드로 다시 부르세요."),
+            }
+        return chosen.get("symbol") or ticker, chosen.get("name"), None
     except Exception:
-        return ticker, None
+        return ticker, None, None
 
 
 def _months_ago(d: date, n: int) -> date:
@@ -277,21 +296,29 @@ def _attach_company_table(result):
 
 
 def _stock_common(ti: dict, op: str):
-    """[sense:stock] 공용 전처리 (옛 _stock_op 앞부분 그대로) — (ticker, market) 반환."""
+    """[sense:stock] 공용 전처리 — (ticker, market, 거절봉투|None) 반환.
+
+    거절봉투가 있으면 op 함수는 **그것을 그대로 반환**한다(추측 금지 계약)."""
     ticker = _arg(ti, "ticker", "symbol", "query", "corp_name")
     # 이름→코드 내부 해소 (search는 이름 그대로 받으므로 제외). 코드면 그대로.
     if op != "search":
-        ticker, _ = _resolve_ticker(ticker)
+        ticker, _rname, _refused = _resolve_ticker(ticker)
+        if _refused:
+            return ticker, None, _refused
+        if _rname:
+            ti["_resolved_name"] = _rname   # 성공 봉투에 resolved 로 실린다(execute 말미)
     market = _detect_market(ticker, ti.get("market"))  # 해소된 코드로 시장 재판별
     # 상대기간 period → start/end_date 내부 해소 (quote=현재가는 yfinance period native라 제외)
     if op in ("history", "news", "earnings", "investors"):
         _resolve_period(ti)
-    return ticker, market
+    return ticker, market, None
 
 
 def _stock_quote(ti: dict):
     """[sense:stock]{op:quote} — 현재가 스냅샷 (2026-06-15 quote로 복원, 옛 price)."""
-    ticker, market = _stock_common(ti, "quote")
+    ticker, market, _refused = _stock_common(ti, "quote")
+    if _refused:
+        return _refused
     tool = load_module("tool_yfinance")
     return _attach_quote_items(tool.get_stock_price(
         symbol=ticker,
@@ -347,7 +374,9 @@ def _attach_quote_items(result):
 
 def _stock_history(ti: dict):
     """[sense:stock]{op:history} — 기간별 주가 이력/차트 (2026-06-04 개명: 옛 price)."""
-    ticker, market = _stock_common(ti, "history")
+    ticker, market, _refused = _stock_common(ti, "history")
+    if _refused:
+        return _refused
     if str(ticker or "").startswith("^"):
         # 지수(^GSPC·^IXIC·^SOX…)는 FMP 무료 티어가 402(프리미엄 전용) → quote 와 같은
         # Yahoo chart 경로로 우회. 통화는 동일하게 data.prices 라 _attach_price_table 호환.
@@ -376,7 +405,9 @@ def _stock_history(ti: dict):
 
 def _stock_info(ti: dict):
     """[sense:stock]{op:info} — 종목 기본 정보."""
-    ticker, market = _stock_common(ti, "info")
+    ticker, market, _refused = _stock_common(ti, "info")
+    if _refused:
+        return _refused
     tool = load_module("tool_yfinance")
     result = tool.get_stock_info(symbol=ticker)
     # items 1행 병기 (2026-08-19 returns 드리프트 스윕 [B]): 선언·desc 는 info=items 를
@@ -410,14 +441,18 @@ def _stock_info(ti: dict):
 
 def _stock_search(ti: dict):
     """[sense:stock]{op:search} — 종목 검색 (이름 그대로, 해소 없음)."""
-    ticker, market = _stock_common(ti, "search")
+    ticker, market, _refused = _stock_common(ti, "search")
+    if _refused:
+        return _refused
     tool = load_module("tool_yfinance")
     return tool.search_stock(query=ticker, search_type=ti.get("search_type", "quotes"))
 
 
 def _stock_investors(ti: dict):
     """[sense:stock]{op:investors} — KRX 투자자별 매매동향."""
-    ticker, market = _stock_common(ti, "investors")
+    ticker, market, _refused = _stock_common(ti, "investors")
+    if _refused:
+        return _refused
     tool = load_module("tool_krx_investor")
     if ticker:  # 개별종목 매매동향
         return tool.get_stock_investor_trading(
@@ -438,13 +473,17 @@ def _stock_investors(ti: dict):
 
 def _stock_news(ti: dict):
     """[sense:stock]{op:news} — 종목 뉴스 (Finnhub→Yahoo 폴백)."""
-    ticker, market = _stock_common(ti, "news")
+    ticker, market, _refused = _stock_common(ti, "news")
+    if _refused:
+        return _refused
     return _company_news(ticker, ti)
 
 
 def _stock_earnings(ti: dict):
     """[sense:stock]{op:earnings} — 실적 캘린더 (Finnhub)."""
-    ticker, market = _stock_common(ti, "earnings")
+    ticker, market, _refused = _stock_common(ti, "earnings")
+    if _refused:
+        return _refused
     tool = load_module("tool_finnhub")
     return tool.get_earnings_calendar(
         symbol=ticker,
@@ -503,13 +542,13 @@ def _company_disclosures(ti: dict):
             start_date=ti.get("start_date"),
             end_date=ti.get("end_date"),
             pblntf_ty=ti.get("pblntf_ty"),
-            count=ti.get("count", 20),
+            count=ti.get("limit", ti.get("count", 20)),
         )
     tool = load_module("tool_sec_edgar")
     return tool.get_filings(
         symbol=ticker,
         filing_type=ti.get("filing_type"),
-        count=ti.get("count", 10),
+        count=ti.get("limit", ti.get("count", 10)),
     )
 
 
@@ -536,7 +575,13 @@ def execute(tool_input: dict, context):
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
                 return error_response(f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS[tool_name])}")
-            return fn(tool_input)
+            _out = fn(tool_input)
+            # ★해소된 이름을 성공 봉투에 싣는다 — 답이 자기가 무엇에 대한 답인지 말해야
+            #   사용자가 오매칭을 반증할 수 있다(세계 명사 해소 계약, 2026-08-24 #repair).
+            _rn = tool_input.get("_resolved_name") or tool_input.get("_resolved")
+            if _rn and isinstance(_out, dict) and _out.get("success") is not False:
+                _out.setdefault("resolved", _rn)
+            return _out
 
         elif tool_name == "crypto_price":
             tool = load_module("tool_yfinance")

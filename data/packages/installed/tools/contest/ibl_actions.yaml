@@ -1,6 +1,8 @@
 node: sense
 actions:
   contest:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      limit: [count]
     returns: items
     fixture: '[sense:contest]{}'
     description: Kaggle 국제 AI/데이터 경진대회 검색(현재 소스=Kaggle 하나, 영문 대회). 상금·마감일·주최로 출품 기회 탐색. 국내 공모전·대회는 [sense:search] 웹 검색이 정직한 경로.
@@ -103,7 +105,7 @@ tool_json:
         category:
           type: string
           description: 분류 — featured/research/playground/gettingStarted 등 (선택)
-        count:
+        limit:
           type: integer
           default: 10
           minimum: 1

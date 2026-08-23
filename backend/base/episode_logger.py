@@ -17,10 +17,12 @@ executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `c
 """
 
 import json
+import os
 import re
 import sys
 import sqlite3
 import contextvars
+import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -394,7 +396,8 @@ def _ensure_episode_tables():
                 log TEXT,
                 total_ms INTEGER,
                 task_id TEXT,
-                source TEXT
+                source TEXT,
+                owner TEXT
             );
             CREATE TABLE IF NOT EXISTS episode_summary (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -432,6 +435,13 @@ def _ensure_episode_tables():
                 conn.execute(f"ALTER TABLE {_t} ADD COLUMN source TEXT")
             except sqlite3.OperationalError:
                 pass  # 이미 존재
+        # 마이그레이션 — 행의 주인 (2026-08-23, ep1689): 고아 회수가 '시간 순서'로
+        # 추정하던 것을 '주인의 생사'로 실측하게 하는 칸. NULL = 칸이 생기기 전의 행 =
+        # 종전대로(무조건 회수) 읽는다 — 옛 행에 없는 사실을 지어내지 않는다.
+        try:
+            conn.execute("ALTER TABLE episode_log ADD COLUMN owner TEXT")
+        except sqlite3.OperationalError:
+            pass  # 이미 존재
         conn.commit()
         conn.close()
     except Exception as e:
@@ -444,39 +454,110 @@ def _ensure_episode_tables():
 
 ORPHAN_MARK = "[Episode ORPHAN] 종료 기록 없이 끊긴 턴 — 다음 부팅이 회수함"
 
+# ─── 행의 주인 — 회수는 **죽은 프로세스의 행만** 닫는다 (2026-08-23, ep1689) ────────
+# ★왜: 옛 회수는 "지금 막 뜬 프로세스보다 먼저 시작된 미종료 행은 정의상 죽은 턴"을
+#   전제했다. 그 전제는 **서버 진입점에서만** 참이다. 실측(31회차): 살아 있는 백엔드가
+#   도는 중에 그 턴이 격리 사본에서 프로브를 띄우며 INDIEBIZ_BASE_PATH 를 라이브로
+#   겨눴고, 그 프로브가 boot_common.wire_local_subsystems() → install() → 회수를 돌려
+#   **자기 자신의 살아 있는 행**을 12:33:03 에 ORPHAN 으로 닫았다. 7분 뒤 red_apply 는
+#   "열린 턴 없음"으로 읽고(그 표식이 유일한 근거였다) 10초 유예 뒤 라이브에 썼다 —
+#   리로드가 그 턴을 끊었다. 자기를 지켜줄 표식을 자기가 지운 것이다.
+# ⇒ 판정 근거를 '시간 순서'(추정)에서 '주인의 생사'(실측)로 옮긴다. 표식은 기계가 소유한다.
+def _process_stamp(pid: int):
+    """프로세스 시작시각 도장 — pid 재사용을 가른다. 못 구하면 None(판정 불능)."""
+    try:
+        import psutil
+        return str(int(psutil.Process(pid).create_time()))
+    except Exception:
+        return None            # psutil 없는 몸(폰 번들 등) — pid 만으로 판정한다
+
+
+def _process_identity(pid: int = None) -> str:
+    """`pid:시작시각` — 행에 적는 주인 표식."""
+    pid = pid or os.getpid()
+    return f"{pid}:{_process_stamp(pid) or ''}"
+
+
+def _owner_is_alive(owner) -> bool:
+    """이 행의 주인이 아직 살아 있는가.
+
+    ★판정 불능은 '없다'로 뭉개지 않는다(B28-1) — 도장을 대조 못 하면 **살아 있다고**
+    본다. 틀린 보존(행이 열린 채 남아 red_apply 가 상한까지 기다림)이 틀린 회수(도는
+    턴을 죽었다고 선언 → 그 턴이 절단됨)보다 언제나 싸다.
+    """
+    if not owner:
+        return False           # 칸이 생기기 전의 옛 행 — 종전대로 회수한다
+    pid_s, _, stamp = str(owner).partition(":")
+    try:
+        pid = int(pid_s)
+    except ValueError:
+        return False
+    if pid <= 0:
+        return False
+    try:
+        from common.platform_utils import pid_alive  # 생사 판정 단일 소스(전 OS)
+    except Exception:
+        return True            # 판정 불능 → 보존
+    if not pid_alive(pid):
+        return False           # 주인은 죽었다 — 회수 대상
+    if not stamp:
+        return True            # 도장 없는 행(psutil 없는 몸) — pid 생존만으로 보존
+    now = _process_stamp(pid)
+    return True if now is None else now == stamp
+
 
 def _sweep_orphan_episodes():
-    """부팅 시 남아 있는 미종료 행을 닫는다 (이전 프로세스가 죽으며 남긴 것들).
+    """남아 있는 미종료 행 중 **주인이 죽은 것만** 닫는다.
 
     ★ended_at NULL 은 '이 턴은 끝을 못 봤다'는 정직한 신호지만, 죽은 뒤에는 그걸 닫을
-    주체가 없다. **지금 막 뜬 프로세스가 대신 닫는다** — 이 프로세스가 존재하기 *전에*
-    시작된 미종료 행은 정의상 죽은 턴이다(그때 이 프로세스는 없었다).
-    리로드·크래시·kill 어느 죽음이든 같은 그물에 걸린다.
+    주체가 없다. 그래서 뜬 프로세스가 대신 닫되, **누구의 행인지 물어보고** 닫는다.
+    리로드·크래시·kill 로 죽은 주인의 행은 같은 그물에 걸리고, 살아 있는 백엔드의
+    도는 턴은 어떤 프로세스가 이 함수를 불러도 건드려지지 않는다.
 
     total_ms 는 NULL 로 남긴다 — 정상 종료(측정값 있음)와 회수(측정 불가)를 구별하는 표식.
     """
     try:
         conn = _get_db()
         now = datetime.now().isoformat()
-        cur = conn.execute(
-            "UPDATE episode_log SET ended_at = ?, "
-            "log = COALESCE(log, '') || ? "
-            "WHERE ended_at IS NULL",
-            (now, "\n" + ORPHAN_MARK + "\n"),
-        )
-        n = cur.rowcount or 0
+        rows = conn.execute(
+            "SELECT id, owner FROM episode_log WHERE ended_at IS NULL").fetchall()
+        dead = [r[0] for r in rows if not _owner_is_alive(r[1])]
+        alive = len(rows) - len(dead)
+        n = 0
+        if dead:
+            marks = ",".join("?" * len(dead))
+            cur = conn.execute(
+                f"UPDATE episode_log SET ended_at = ?, "
+                f"log = COALESCE(log, '') || ? WHERE id IN ({marks})",
+                [now, "\n" + ORPHAN_MARK + "\n"] + dead,
+            )
+            n = cur.rowcount or 0
         conn.commit()
         conn.close()
-        if n:
+        if n or alive:
             try:
                 if EpisodeLogger._original_stdout:
                     EpisodeLogger._original_stdout.write(
                         f"[EpisodeLogger] 미종료 에피소드 {n}건 회수 — 이전 프로세스가 "
-                        f"끊긴 자리(리로드·크래시). 기록은 보존됩니다.\n")
+                        f"끊긴 자리(리로드·크래시). 기록은 보존됩니다."
+                        + (f" (주인이 살아 있어 건드리지 않음: {alive}건)\n" if alive else "\n"))
             except Exception:
                 pass
     except Exception:
         pass
+
+
+# ─── 이 프로세스 안에서 지금 도는 턴 — 표식이 아니라 사실 ────────────────────────
+# DB 의 ended_at 은 '기록'이고 이건 '현재'다. red_apply(다른 프로세스)가 /health 로 물어
+# 살아 있는 턴을 확인한다 — 원장 한 벌에만 의존하면 그 한 벌이 틀렸을 때 물어볼 곳이 없다.
+_live_lock = threading.Lock()
+_live_episode_ids = set()
+
+
+def live_episode_ids():
+    """이 프로세스가 지금 열어 두고 있는 에피소드 id 목록(정렬)."""
+    with _live_lock:
+        return sorted(_live_episode_ids)
 
 
 def _open_episode(started_at, agent, user_message, task_id=""):
@@ -496,14 +577,17 @@ def _open_episode(started_at, agent, user_message, task_id=""):
     try:
         conn = _get_db()
         cur = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source)
-               VALUES (?, NULL, ?, ?, '', NULL, ?, ?)""",
+            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source, owner)
+               VALUES (?, NULL, ?, ?, '', NULL, ?, ?, ?)""",
             (started_at.isoformat() if started_at else datetime.now().isoformat(),
-             agent, user_message, task_id or "", _episode_source()),
+             agent, user_message, task_id or "", _episode_source(), _process_identity()),
         )
         eid = cur.lastrowid
         conn.commit()
         conn.close()
+        if eid:
+            with _live_lock:
+                _live_episode_ids.add(eid)
         return eid
     except Exception as e:
         try:
@@ -520,6 +604,8 @@ def _close_episode(episode_id, started_at, agent, user_message, log_text, total_
 
     task_id 는 늦은 캡처분을 반영하되 빈 값으로 개설분을 덮지 않는다(COALESCE·NULLIF)."""
     if episode_id:
+        with _live_lock:
+            _live_episode_ids.discard(episode_id)
         try:
             conn = _get_db()
             conn.execute(

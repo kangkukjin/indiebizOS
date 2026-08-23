@@ -40,6 +40,32 @@ TURN_CLOSE_CAP_S = float(os.environ.get("RED_APPLY_TURN_CAP_S", 900))
 DISTILL_GRACE_S = float(os.environ.get("RED_APPLY_DISTILL_GRACE_S", 120))
 NO_EPISODE_GRACE_S = float(os.environ.get("RED_APPLY_NO_EPISODE_GRACE_S", 10))
 SETTLE_S = float(os.environ.get("RED_APPLY_SETTLE_S", 2))
+# 판정 불능 유예 — 몸은 살아 있는데 도는 턴을 못 본 경우(옛 몸의 /health 등). 짧은 유예로
+# 떨어지기 전에 이만큼 다시 묻는다. '못 봤다'와 '없다'는 다른 사건이다(B28-1).
+UNKNOWN_LIVE_GRACE_S = float(os.environ.get("RED_APPLY_UNKNOWN_LIVE_GRACE_S", 60))
+HEALTH_URL = os.environ.get(
+    "RED_APPLY_HEALTH_URL",
+    f"http://127.0.0.1:{os.environ.get('INDIEBIZ_API_PORT', '8765')}/health")
+
+
+def _probe_live_turns(url: str = None):
+    """살아 있는 몸에게 직접 묻는다 → (도달했나, 라이브 턴 id 목록 | None).
+
+    None = 답은 왔는데 그 칸이 없다(live_turns 를 모르는 옛 몸) = **판정 불능**.
+    빈 목록 = 몸이 "지금 도는 턴 없다"고 답한 것 = 판정됨.
+    """
+    import urllib.request
+    try:
+        with urllib.request.urlopen(url or HEALTH_URL, timeout=3) as r:
+            if r.status != 200:
+                return False, None
+            data = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:
+        return False, None      # 몸이 없다(또는 못 물었다)
+    if not isinstance(data, dict) or "live_turns" not in data:
+        return True, None
+    ids = data.get("live_turns")
+    return True, [int(i) for i in ids] if isinstance(ids, list) else None
 
 
 def _log(msg: str):
@@ -100,7 +126,12 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
     """예약한 턴이 완전히 닫힐 때까지 대기 — ①ended_at ②증류 재합류(log 재기록).
 
     상한 초과는 '턴이 죽었다'로 보고 진행한다(좌초보다 적용이 낫고, 주행기록은
-    부팅 고아 회수가 닫는다). 에피소드 문맥이 없으면(REST 직접 호출 등) 짧은 유예만."""
+    부팅 고아 회수가 닫는다).
+
+    ★출처는 두 벌이다 (2026-08-23, ep1689): ①원장(episode_log.ended_at) ②몸에게 직접
+    묻기(/health 의 live_turns). 원장이 침묵할 때 곧바로 짧은 유예로 떨어지면, 표식이
+    지워진 경우(살아 있는 행이 고아로 잘못 닫힌 실측) 도는 턴 위에 쓰게 된다.
+    원장이 조용하면 몸에게 묻고, 몸이 "도는 턴 없다"고 답할 때만 짧은 유예로 간다."""
     db_path = os.path.join(repo, "data", "world_pulse.db")
     if not episode_id and os.path.exists(db_path):
         episode_id = _resolve_open_episode(db_path, agent_id)
@@ -108,8 +139,49 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
             _log(f"에피소드 문맥 없음 → 열린 턴 재해소 (episode {episode_id}"
                  f"{', agent=' + agent_id if agent_id else ''})")
     if not episode_id or not os.path.exists(db_path):
-        _log(f"에피소드 문맥 없음 — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
-        time.sleep(NO_EPISODE_GRACE_S)
+        # ★원장이 '열린 턴 없음'이라고 해서 아무도 안 도는 것은 아니다 (2026-08-23, ep1689):
+        #   그 표식은 지워질 수 있다(살아 있는 행이 고아로 잘못 닫힌 실측). 원장이 침묵하면
+        #   **몸에게 직접 묻는다** — 두 번째 출처가 없으면 틀린 한 벌이 곧 결론이 된다.
+        reached, live = _probe_live_turns()
+        if reached and live:
+            episode_id = max(live)
+            _log(f"원장엔 열린 턴이 없지만 몸이 도는 턴을 신고 — episode {live} → "
+                 f"{episode_id} 이 닫히기를 기다린다")
+        elif reached and live is None:
+            _log(f"판정 불능(몸은 살아 있는데 live_turns 를 모른다) — "
+                 f"{UNKNOWN_LIVE_GRACE_S:.0f}초 재확인")
+            t_u = time.time()
+            while time.time() - t_u < UNKNOWN_LIVE_GRACE_S:
+                time.sleep(3)
+                again = _resolve_open_episode(db_path, agent_id) if os.path.exists(db_path) else None
+                if not again:
+                    _, live2 = _probe_live_turns()
+                    again = max(live2) if live2 else None
+                if again:
+                    episode_id = again
+                    _log(f"재확인에서 열린 턴 발견 (episode {episode_id})")
+                    break
+            if not episode_id:
+                _log("재확인에도 도는 턴 없음 — 진행")
+                return
+        else:
+            if reached:
+                _log(f"몸이 '도는 턴 없음'으로 답함 — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
+            else:
+                _log(f"몸에 닿지 못함(백엔드 없음) — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
+            time.sleep(NO_EPISODE_GRACE_S)
+            return
+    if not os.path.exists(db_path):
+        # 몸은 턴을 신고했는데 원장 파일이 없다 — 닫힘을 볼 창이 없으므로 상한까지 몸에게만 묻는다.
+        t_h = time.time()
+        while time.time() - t_h < TURN_CLOSE_CAP_S:
+            _, live = _probe_live_turns()
+            if not live or episode_id not in live:
+                _log(f"몸이 턴 종료를 신고 (episode {episode_id})")
+                time.sleep(SETTLE_S)
+                return
+            time.sleep(2)
+        _log(f"턴 종료 대기 상한({TURN_CLOSE_CAP_S:.0f}초) — 진행")
         return
     t0 = time.time()
     row = None

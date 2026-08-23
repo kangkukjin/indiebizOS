@@ -33,6 +33,13 @@ def wire_local_subsystems(profile: str = None) -> dict:
     results = {}
     tag = f"[boot:{profile}]" if profile else "[boot]"
 
+    # ★이 배선은 **부팅 주체가 아닌 프로세스**도 부를 수 있다 (2026-08-23, ep1689):
+    #   격리 사본에서 띄운 프로브가 INDIEBIZ_BASE_PATH 를 라이브로 겨눈 채 이 함수를
+    #   불렀고, 라이브 데이터에 부팅용 부작용(고아 회수·완료 task 정리)을 냈다.
+    #   고아 회수는 이제 스스로 주인을 확인하지만(episode_logger._owner_is_alive),
+    #   **되돌릴 수 없는 부작용(삭제)** 은 여기서 게이트가 막는다.
+    other_body = _another_body_is_live()
+
     # 에피소드 로거: 사용자 명령 → 최종 응답까지 1턴을 로컬 SQLite(world_pulse.db)에 기록한다.
     # 순수 로컬, 하드웨어 무관 — 모든 몸이 자기 실행을 (성공·실패 모두) 회고할 수 있어야 한다.
     # install() 이 자기 스키마(episode_log/episode_summary)도 보장하므로 추가 DB 초기화 불필요.
@@ -49,12 +56,18 @@ def wire_local_subsystems(profile: str = None) -> dict:
     # status='completed' 행을 비운다(현재 세션 task만 보존). 순수 로컬 SQLite, 하드웨어 무관 —
     # 폰-자아도 로컬에서 에이전트를 돌려 task 를 쌓으므로 같이 정리받아야 한다(맥 진입점에만
     # 있던 것이 폰서 침묵 누락이었다). 경로는 runtime_utils 가 INDIEBIZ_BASE_PATH 로 몸별 해소.
-    try:
-        from runtime_utils import get_base_path, get_data_path
-        results["task_cleanup"] = _cleanup_completed_tasks(get_base_path(), get_data_path(), tag)
-    except Exception as e:
-        print(f"{tag} task 정리 실패 (무시): {e}")
-        results["task_cleanup"] = False
+    if other_body:
+        # 이미 이 몸의 백엔드가 떠 있다 = 나는 부팅 주체가 아니다(프로브·스크립트 등).
+        # 남의 삶을 정리하지 않는다 — 건너뛴 사실은 말한다(침묵 생략 금지).
+        print(f"{tag} 완료 task 정리 건너뜀 — 이미 도는 백엔드가 있다(부팅 주체 아님)")
+        results["task_cleanup"] = "skipped"
+    else:
+        try:
+            from runtime_utils import get_base_path, get_data_path
+            results["task_cleanup"] = _cleanup_completed_tasks(get_base_path(), get_data_path(), tag)
+        except Exception as e:
+            print(f"{tag} task 정리 실패 (무시): {e}")
+            results["task_cleanup"] = False
 
     # 시스템 프로젝트(앱모드/수동모드) 폴더 보장: 런처의 앱/수동 모드가 IBL 실행 시
     # project_path 컨텍스트로 쓰는 홀더 폴더다. projects/ 는 런타임 상태(gitignore·미번들)라
@@ -94,6 +107,26 @@ def wire_local_subsystems(profile: str = None) -> dict:
         results["system_capabilities"] = False
 
     return results
+
+
+def _another_body_is_live() -> bool:
+    """이 몸의 백엔드가 **이미** 응답하고 있는가 = 이 프로세스는 부팅 주체가 아니다.
+
+    부팅 중인 진입점 자신은 아직 포트를 서비스하지 않으므로 False 를 받는다(리로드도
+    옛 워커 종료 → 새 워커 기동 순서라 겹치지 않는다). 살아 있는 서버 곁에서 뜬 임시
+    프로세스만 True 를 받는다.
+
+    stdlib(urllib)만 쓴다 — 폰 번들 안전(이 모듈의 규약). 못 물으면 False(=부팅 주체로
+    보고 종전 동작 유지) — 게이트가 부팅을 볼모로 잡지 않는다.
+    """
+    import os
+    import urllib.request
+    url = f"http://127.0.0.1:{os.environ.get('INDIEBIZ_API_PORT', '8765')}/health"
+    try:
+        with urllib.request.urlopen(url, timeout=1) as r:
+            return r.status == 200
+    except Exception:
+        return False
 
 
 def _cleanup_completed_tasks(base_path, data_path, tag: str) -> bool:

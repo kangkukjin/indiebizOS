@@ -542,10 +542,22 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    # live_turns — 이 워커가 **지금** 열어 두고 있는 에피소드 id (2026-08-23, ep1689).
+    # ★왜 여기에: red_apply(다른 프로세스)는 라이브에 쓰기 전 "도는 턴이 있나"를 원장
+    #   (episode_log.ended_at) 한 벌로만 물었다. 그 한 벌이 틀리자(살아 있는 행이 고아로
+    #   잘못 닫힘) 물어볼 곳이 없어 10초 뒤 써버렸고 리로드가 그 턴을 끊었다.
+    #   기록이 아니라 **프로세스 자신**에게 묻는 두 번째 출처다. id 만 싣는다(내용 없음).
+    live_turns = []
+    try:
+        from episode_logger import live_episode_ids
+        live_turns = live_episode_ids()
+    except Exception:
+        pass
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "base_path": str(BASE_PATH)
+        "base_path": str(BASE_PATH),
+        "live_turns": live_turns,
     }
 
 

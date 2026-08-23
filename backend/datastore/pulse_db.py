@@ -81,7 +81,8 @@ def _init_pulse_db():
             log TEXT,
             total_ms INTEGER,
             task_id TEXT,
-            source TEXT
+            source TEXT,
+            owner TEXT           -- 행의 주인(pid:시작시각) — 고아 회수 판정 (episode_logger)
         );
         CREATE TABLE IF NOT EXISTS episode_summary (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

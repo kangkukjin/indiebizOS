@@ -5,41 +5,37 @@ tags:
 - feature-extraction
 - dense
 - generated_from_trainer
-- dataset_size:6553
+- dataset_size:7395
 - loss:MultipleNegativesRankingLoss
 base_model: jhgan/ko-sroberta-multitask
 widget:
-- source_sentence: 공연 카테고리 목록
+- source_sentence: 건수만 바꿔 쓰는 뉴스 요약 작업흐름 만들어줘
   sentences:
-  - '[self:photo]'
-  - 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document
-    파이프로 추리고 문서화.
-  - '[sense:realty] >> [table:filter]'
-- source_sentence: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단
-    신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
+  - '[self:folder_note]'
+  - '[self:edit]'
+  - '[self:workflow]''} >> [table:take]''} >> [table:brief]건 요지''} >> [self:notify_user]"}'
+- source_sentence: HTML 실행해줘 결과 봐
   sentences:
-  - '[others:portal]'
+  - '[limbs:radio_favorite]'
+  - '[self:ask]'
+  - '[engines:render_html]'
+- source_sentence: 내 음악에서 김광석 곡 5개만 제목이랑 앨범으로 보여
+  sentences:
+  - '[sense:startup]'
+  - '내 음악 라이브러리 (op 분기) — 등록한 소스 폴더의 음악 파일을 스캔해 태그·앨범아트로 정리한다. 보는 축은 폴더(폴더 구조=사용자의
+    의미 단위)와 검색·플레이리스트. 재생은 통화의 stream 필드를 표면의 <audio>가 문다 — 서버 재생 아님. [limbs:music](유튜브뮤직
+    스트림)과 다른 개념: 이쪽은 내 파일.'
   - '[self:grep]'
-  - '$r = [sense:search] [if: count($r) > 0] >> [self:notify_user]} [else] >> [table:brief]
-    >> [self:notify_user]}'
-- source_sentence: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로
-    개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
+- source_sentence: 쓸데없는 파일 제거해줘
   sentences:
-  - '[sense:realty]'
-  - '[self:finance] >> [table:sort] >> [table:take]'
-  - '[sense:search] >> [table:sort]'
-- source_sentence: 관광지 선택을 위해 복수 후보지의 인기·경관·체험 정보를 탐색하고 비교 판단 요청
+  - 파일 또는 폴더 영구 삭제. 휴지통 거치지 않음 — 신중히 사용.
+  - '[sense:crawl]'
+  - '[self:edit] & [self:edit]'
+- source_sentence: 긱뉴스 피드 안 되면 BBC 피드로라도 3개 보여
   sentences:
-  - '[sense:search] 관광명소", count: 10}'
-  - '[sense:search] & [sense:search] & [sense:crawl]'
-  - '[sense:cctv] >> [table:take]'
-- source_sentence: 매물 전부 저장해두고 상위 3개만 보여줘
-  sentences:
-  - 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산
-    현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
-  - 즐겨찾기 런처 대시보드 띄우기(기본) 또는 사이트 관리. action 미지정 시 대시보드 UI 표시
-  - 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글
-    뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
+  - '[self:schedule] & [sense:stock]"}'
+  - '[sense:feed] ?? [sense:feed] >> [table:take]'
+  - '[self:notebook]; [self:notebook]; [self:notebook]'
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
 ---
@@ -93,9 +89,9 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer("sentence_transformers_model_id")
 # Run inference
 sentences = [
-    '매물 전부 저장해두고 상위 3개만 보여줘',
-    '부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.',
-    '웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.',
+    '긱뉴스 피드 안 되면 BBC 피드로라도 3개 보여',
+    '[sense:feed] ?? [sense:feed] >> [table:take]',
+    '[self:notebook]; [self:notebook]; [self:notebook]',
 ]
 embeddings = model.encode(sentences)
 print(embeddings.shape)
@@ -104,9 +100,9 @@ print(embeddings.shape)
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
 print(similarities)
-# tensor([[ 1.0000,  0.6111, -0.0494],
-#         [ 0.6111,  1.0000,  0.0773],
-#         [-0.0494,  0.0773,  1.0000]])
+# tensor([[ 1.0000,  0.7625, -0.1313],
+#         [ 0.7625,  1.0000, -0.1461],
+#         [-0.1313, -0.1461,  1.0000]])
 ```
 <!--
 ### Direct Usage (Transformers)
@@ -150,20 +146,20 @@ You can finetune this model on your own dataset.
 
 #### Unnamed Dataset
 
-* Size: 6,553 training samples
+* Size: 7,395 training samples
 * Columns: <code>sentence_0</code> and <code>sentence_1</code>
 * Approximate statistics based on the first 100 samples:
   |          | sentence_0                                                                        | sentence_1                                                                        |
   |:---------|:----------------------------------------------------------------------------------|:----------------------------------------------------------------------------------|
   | type     | string                                                                            | string                                                                            |
   | modality | text                                                                              | text                                                                              |
-  | details  | <ul><li>min: 5 tokens</li><li>mean: 14.54 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 7 tokens</li><li>mean: 27.43 tokens</li><li>max: 64 tokens</li></ul> |
+  | details  | <ul><li>min: 5 tokens</li><li>mean: 16.18 tokens</li><li>max: 64 tokens</li></ul> | <ul><li>min: 8 tokens</li><li>mean: 29.52 tokens</li><li>max: 64 tokens</li></ul> |
 * Samples:
-  | sentence_0                   | sentence_1                                                                                                                                                                 |
-  |:-----------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-  | <code>스무스 재즈 좀</code>        | <code>[limbs:music]</code>                                                                                                                                                 |
-  | <code>가족신문 공개 주소 알려줘</code>  | <code>가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.</code> |
-  | <code>실사용에서 실패 나면 알려줘</code> | <code>[sense:self_check] >> [table:filter] >> [table:take] >> [self:notify_user]</code>                                                                                    |
+  | sentence_0                                                                                                                                                     | sentence_1                                                                                                                                                                      |
+  |:---------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | <code>KBS 클래식 FM 즐겨찾기에 추가해</code>                                                                                                                              | <code>라디오 방송국 검색·탐색 (op 분기). search(전세계)/korean(한국 방송사). 재생은 limbs:radio.</code>                                                                                                |
+  | <code>크롤링한 거 문서로 남겨줘</code>                                                                                                                                    | <code>텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 봉투에 참조(ref)만 싣는다(뒤 step 은 투명 해소 — 데이터 흐름 불변).</code> |
+  | <code>파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.</code> | <code>[self:file_find]", path: "/Users/me/Pictures"}</code>                                                                                                                     |
 * Loss: [<code>MultipleNegativesRankingLoss</code>](https://sbert.net/docs/package_reference/sentence_transformer/losses.html#multiplenegativesrankingloss) with these parameters:
   ```json
   {
@@ -293,11 +289,11 @@ You can finetune this model on your own dataset.
 ### Training Logs
 | Epoch  | Step | Training Loss |
 |:------:|:----:|:-------------:|
-| 0.6098 | 500  | 0.0051        |
+| 0.5405 | 500  | 0.0111        |
 
 
 ### Training Time
-- **Training**: 4.4 minutes
+- **Training**: 5.0 minutes
 
 ### Framework Versions
 - Python: 3.13.5

@@ -256,6 +256,7 @@
     "test_corrupt_not_absent": "force_exclude_glob",
     "test_crawl_stage_honesty": "force_exclude_glob",
     "test_data_ownership": "force_exclude_glob",
+    "test_desc_pair_coverage": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
     "test_doc_drift": "force_exclude_glob",
@@ -288,6 +289,7 @@
     "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
     "test_notify_title": "force_exclude_glob",
+    "test_parallel_context_inherit": "force_exclude_glob",
     "test_pipe_currency_failures": "force_exclude_glob",
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_reload_scope": "force_exclude_glob",
@@ -303,8 +305,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 297,
+    "total": 299,
     "engine": 225,
-    "blocklist": 72
+    "blocklist": 74
   }
 }

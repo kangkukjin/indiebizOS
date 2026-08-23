@@ -243,10 +243,31 @@ def load_action_descriptions() -> Dict[str, str]:
 
 
 def extract_action_from_code(ibl_code: str) -> str:
-    """IBL 코드에서 첫 번째 [node:action] 추출"""
+    """IBL 코드에서 첫 번째 [node:action] 추출 — **머리 액션**.
+
+    평가(desc Top-k)의 정답 라벨은 계속 이것이다. 자를 바꾸지 않는다.
+    """
     import re
     match = re.search(r'\[(\w+:\w+)\]', ibl_code)
     return match.group(1) if match else ""
+
+
+def extract_actions_from_code(ibl_code: str) -> list:
+    """코드에 등장하는 **모든** [node:action] — 등장 순, 중복 제거.
+
+    왜 필요했나(2026-08-23 실측): desc 쌍이 머리 액션으로만 만들어져서, 파이프의
+    꼬리에만 사는 낱말은 intent→description 학습 쌍을 **한 건도** 못 받았다.
+    코퍼스에 나오지만 머리에 선 적 없는 액션이 **14개, 전부 `table:` 변환자**였고
+    (take 150회·filter 52·sort 46·brief 30·since 25·…), 직전 A/B 에서 실패한 프로브
+    6건 중 5건이 정확히 그 부류였다. 파이프의 뒷낱말에게 이름이 없었던 셈이다.
+    """
+    import re
+    seen, out = set(), []
+    for a in re.findall(r'\[(\w+:\w+)\]', ibl_code):
+        if a not in seen:
+            seen.add(a)
+            out.append(a)
+    return out
 
 
 def normalize_code_to_pattern(ibl_code: str) -> str:
@@ -307,12 +328,27 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
         # 3. intent → action description 쌍 — 2026-05-29 v6 복원.
         # v5 (제거) 시 best 0.796 vs v4 (유지) 0.829 — description 페어가 핵심 신호.
         # batch_size=1 로 메모리 부담 대신 시간으로 비용 전환.
-        action = extract_action_from_code(code)
+        actions = extract_actions_from_code(code)
+        action = actions[0] if actions else ""
         if action in action_descs:
             desc = action_descs[action]
             for intent in intents[:5]:  # 상위 5개 intent
                 train_examples.append(InputExample(texts=[intent, desc]))
             train_examples.append(InputExample(texts=[desc, code]))
+
+        # 3-b. ★꼬리 액션도 **굶지는 않게** — code 당 intent 1개 (2026-08-23).
+        #
+        # 문장의 의미는 액션들에 나뉘어 있는데 옛 규칙은 머리에게만 몫을 줬다. 그래서
+        # 파이프 꼬리에만 사는 14개 낱말(전부 table: 변환자)이 desc 쌍 0건이었다.
+        #
+        # ★그렇다고 꼬리에 머리와 같은 몫(intents[:5])을 주지는 않는다. 그러면 하나의
+        #   질의가 두 description 을 똑같이 당겨 **머리의 desc Top-1 이 동전던지기가 된다**
+        #   — 평가의 정답 라벨은 여전히 머리이므로 그건 자를 만족시키려다 몸을 흐리는 짓이다.
+        #   고치려는 병은 '희석'이 아니라 '굶주림'이다. 0 을 벗어나게 하는 최소량만 준다.
+        #   (부족하면 늘린다. 늘리는 것은 쉽고, 흐려진 뒤 되돌리는 것은 어렵다.)
+        for tail in actions[1:]:
+            if tail in action_descs and intents:
+                train_examples.append(InputExample(texts=[intents[0], action_descs[tail]]))
 
     random.shuffle(train_examples)
     print(f"[학습] {len(train_examples)}개 학습 쌍 구성")

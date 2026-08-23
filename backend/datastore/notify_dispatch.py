@@ -19,6 +19,20 @@ CLAUDE.md 2026-08-01 항목에 기록).
 """
 
 
+def _in_test_process() -> bool:
+    """이 프로세스가 자기시험인가 — 판정 정본은 runtime_utils.in_test_process().
+
+    pulse_db 와 같은 규율(2026-08-23): 판정을 복제하지 않는다. 복제하면 '시험'의 뜻이
+    원장마다·관문마다 갈린다(어느 쪽이 pytest 를 보고 어느 쪽이 argv 를 보는지 드리프트).
+    근거·설계 의도는 그 함수의 docstring 에 있다.
+    """
+    try:
+        from runtime_utils import in_test_process
+        return in_test_process()
+    except Exception:
+        return False
+
+
 def notify_user(title: str, body: str, kind: str = "info", source: str = "system",
                 command: str = None, command_params: dict = None, badge: bool = True) -> bool:
     """사용자 알림 전달. 반환값 = 런처(Electron)로 전달됐는지 여부.
@@ -65,6 +79,19 @@ def deliver_notification(title: str, body: str, kind: str = "info",
     규약을 문서가 아니라 구조가 강제한다(옛 규약은 호출처 18곳 중 17곳이 어겼고,
     그 알림들은 알림함에만 쌓인 채 조용히 유실됐다).
     """
+    # ★2026-08-23: 시험이 만든 알림은 사용자에게 닿지 않는다 — 전달 경계의 단일 차단.
+    #   실측된 결함: 회귀 배터리(test_workflow_params)가 스케줄러 run_workflow 액션을
+    #   스텁 없이 실물 실행해 "워크플로우 실행 완료/실패" 알림이 런처·OS 알림까지
+    #   나갔다. 클로드 코드로 코드를 고칠 때마다 사용자에게 유령 알림이 뜬 원인
+    #   (배터리 1회 = 4건, 원장 실측).
+    #   ★왜 시험 파일마다 스텁하지 않나: 알림 경로를 스치는 시험은 지금 7개이고
+    #   앞으로 늘어난다 — 열거 목록은 반드시 뒤처진다(2026-08-23 병렬 컨텍스트
+    #   승계 수리가 가르친 부류). 나가는 문이 하나이므로 여기서 한 번 막는다.
+    #   기록(notification_manager.create → notify_log)은 그대로 둔다: source='test'
+    #   표식으로 이미 격리돼 있고, 무엇이 발사됐는지는 감사에 필요하다.
+    if _in_test_process():
+        return False
+
     # A. Electron 런처 (연결돼 있으면 네이티브 알림 + 배지 + 클릭 연동)
     delivered = False
     try:

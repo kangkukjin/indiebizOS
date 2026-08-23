@@ -148,6 +148,62 @@ def test_n6_schema_is_declared_once(tmp_path, monkeypatch):
     assert "_NOTIFY_LOG_DDL" in src and "_ensure_notify_log" in src
 
 
+# ── 전달 격리 (2026-08-23) — 기록은 남고, 사용자에게는 닿지 않는다 ────────────────
+# 실측된 결함: 회귀 배터리가 스케줄러 run_workflow 를 스텁 없이 실물 실행해
+# "워크플로우 실행 완료/실패" 알림이 런처·OS 알림까지 나갔다(배터리 1회 = 4건).
+# 코드를 고칠 때마다 사용자에게 유령 알림이 떴다. 시험 파일마다 스텁하는 대신
+# 나가는 문(deliver_notification)에서 한 번 막는다 — 열거 목록은 반드시 뒤처지므로.
+
+
+def _delivery_spies(monkeypatch):
+    """진짜 출구 둘(런처 WS·OS 네이티브)에 스파이를 심는다."""
+    import desktop_notify
+    import websocket_manager
+    seen = {"launcher": 0, "native": 0}
+    monkeypatch.setattr(websocket_manager, "send_launcher_command_sync",
+                        lambda *a, **kw: seen.update(launcher=seen["launcher"] + 1) or True)
+    monkeypatch.setattr(desktop_notify, "native_notify",
+                        lambda *a, **kw: seen.update(native=seen["native"] + 1))
+    return seen
+
+
+def test_n7_test_process_notifications_never_reach_the_user(tmp_path, monkeypatch):
+    """시험이 만든 알림은 화면에 뜨지 않는다 — 그래도 원장에는 남는다(감사용)."""
+    import notify_dispatch
+    get = _tmp_pulse(tmp_path, monkeypatch)
+    seen = _delivery_spies(monkeypatch)
+
+    import notification_manager as nm_mod
+    shared = nm_mod.NotificationManager()
+    monkeypatch.setattr(nm_mod, "get_notification_manager", lambda: shared)
+
+    delivered = notify_dispatch.notify_user(
+        title="워크플로우 실행 완료", body="'_t_params_w15' (1/1 steps)", source="scheduler")
+
+    assert delivered is False
+    assert seen == {"launcher": 0, "native": 0}, \
+        f"시험 알림이 사용자에게 전달됐다: {seen} — 유령 알림의 재발"
+    rows = _rows(get)
+    assert rows and rows[-1]["source"] == "test", "전달을 막느라 기록까지 잃었다(감사 불능)"
+
+
+def test_n8_real_notifications_still_get_through(tmp_path, monkeypatch):
+    """격리가 전달 자체를 죽이면 안 된다 — 실사용 알림은 그대로 닿는다."""
+    import notify_dispatch
+    _tmp_pulse(tmp_path, monkeypatch)
+    seen = _delivery_spies(monkeypatch)
+    monkeypatch.setattr(notify_dispatch, "_in_test_process", lambda: False)
+
+    import notification_manager as nm_mod
+    shared = nm_mod.NotificationManager()
+    monkeypatch.setattr(nm_mod, "get_notification_manager", lambda: shared)
+
+    delivered = notify_dispatch.notify_user(title="진짜 알림", body="사용자에게 닿아야 한다")
+
+    assert delivered is True
+    assert seen["launcher"] == 1, f"실사용 알림이 전달되지 않았다: {seen}"
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import sys as _sys
     try:

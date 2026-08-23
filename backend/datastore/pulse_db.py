@@ -17,6 +17,25 @@ logger = logging.getLogger(__name__)
 CONSCIOUSNESS_DB_PATH = get_base_path() / "data" / "world_pulse.db"
 
 
+# ── 알림 발사 원장 (2026-08-23) ──────────────────────────────────────────────
+# DDL 을 상수로 한 벌만 둔다: 새 설치(_init_pulse_db)와 기존 설치(_ensure_notify_log 지연
+# 마이그레이션)가 같은 스키마를 써야 한다 — 복제하면 한쪽만 늘어나 조용히 갈린다.
+# (기존 DB 는 파일이 이미 있어 _init_pulse_db 를 다시 타지 않는다. action_health 의
+#  channel·error 컬럼이 지연 마이그레이션으로 들어온 것과 같은 사정.)
+_NOTIFY_LOG_DDL = """
+    CREATE TABLE IF NOT EXISTS notify_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        type TEXT,
+        title TEXT,
+        message TEXT,
+        emitter TEXT,
+        source TEXT NOT NULL DEFAULT 'usage'
+    );
+    CREATE INDEX IF NOT EXISTS idx_notify_log_ts ON notify_log(timestamp);
+"""
+
+
 def _init_pulse_db():
     """의식 DB 초기화 — pulse_log + self_checks 테이블"""
     conn = sqlite3.connect(str(CONSCIOUSNESS_DB_PATH), timeout=10)
@@ -78,7 +97,7 @@ def _init_pulse_db():
             evaluation_result TEXT,
             source TEXT
         );
-    """)
+    """ + _NOTIFY_LOG_DDL)
     conn.close()
 
 
@@ -184,6 +203,54 @@ def record_action_health(node: str, action: str, success: bool, response_ms: int
         conn.close()
     except Exception:
         pass  # 기록 실패가 액션 실행에 영향 주면 안 됨
+
+
+_NOTIFY_LOG_ENSURED = False
+
+
+def _ensure_notify_log(conn):
+    """notify_log 지연 마이그레이션 (멱등, 프로세스당 1회)."""
+    global _NOTIFY_LOG_ENSURED
+    if _NOTIFY_LOG_ENSURED:
+        return
+    try:
+        conn.executescript(_NOTIFY_LOG_DDL)
+        _NOTIFY_LOG_ENSURED = True
+    except Exception:
+        pass  # 원장이 없어도 알림 자체는 살아야 한다
+
+
+def record_notification(kind: str, title: str, message: str, emitter: str = "system"):
+    """발사된 알림 한 건을 notify_log 에 남긴다 — 경량, 실패 시 무시.
+
+    왜 원장이 필요한가(2026-08-23 조사에서 실제로 막힌 자리): 알림함은
+    notification_manager 의 deque(maxlen=100) 뿐이라 백엔드가 리로드되면 통째로
+    사라진다. "이 알림이 자꾸 뜬다"는 물음에 '언제·무엇이·몇 번' 을 아무도 되짚을 수
+    없었다 — 전달은 휘발해도 원장은 남는다. 입구가 하나(NotificationManager.create)
+    이므로 기록도 한 곳이면 족하다.
+
+    ★컬럼 이름 주의: `source` 는 이 DB 의 다른 원장과 **같은 뜻**(격리 출처
+    usage/test/training)이라 NOT_ISOLATED_SQL 이 그대로 걸린다. 알림을 쏜 주체는
+    `emitter`(scheduler·messenger·에이전트명 …) — notification 딕셔너리의 'source'
+    필드가 이쪽이다. 두 낱말을 한 칸에 겹치면 집계가 조용히 갈린다.
+    """
+    source = "usage"
+    if _in_test_process():
+        source = "test"
+    elif _in_rehearsal():
+        source = "training"
+    try:
+        conn = _get_pulse_db()
+        _ensure_notify_log(conn)
+        conn.execute(
+            "INSERT INTO notify_log (timestamp, type, title, message, emitter, source) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (datetime.now().isoformat(), kind, title, (message or "")[:500], emitter, source)
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass  # 기록 실패가 알림 전달에 영향 주면 안 됨
 
 
 def purge_action_records(actions: List[str]) -> Dict:

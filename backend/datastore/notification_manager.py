@@ -107,6 +107,17 @@ class NotificationManager:
 
         self.notifications.appendleft(notification)
 
+        # ★2026-08-23: 발사 원장 — 알림함(deque, maxlen=100)은 백엔드 리로드에 통째로
+        # 날아간다. "이 알림이 자꾸 뜬다"는 물음에 '언제·무엇이·몇 번'을 되짚을 방법이
+        # 없었다(조사에서 실제로 막힌 자리). 입구가 하나이므로 여기 한 줄이 모든
+        # 알림을 남긴다 — 전달은 휘발해도 원장은 남는다. 기록 실패는 삼킨다(알림이
+        # 원장 때문에 죽으면 안 된다).
+        try:
+            from pulse_db import record_notification
+            record_notification(type, title, message, emitter=source)
+        except Exception as e:
+            print(f"[NotificationManager] 발사 원장 기록 실패: {e}")
+
         # 리스너에게 알림
         for listener in self._listeners:
             try:

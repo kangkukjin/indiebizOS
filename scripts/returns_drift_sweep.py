@@ -14,6 +14,7 @@
 사용: .venv/bin/python scripts/returns_drift_sweep.py
 """
 import json
+import time
 import urllib.request
 from pathlib import Path
 
@@ -134,6 +135,12 @@ def _actual_shape(env):
 
 CURRENCY = {"items", "table", "blocks"}
 
+# 차단기 쿨다운을 기다려 줄 상한 — 이보다 길면 기다리지 않고 '실행 불능'으로 적는다
+# (순찰이 한 액션 때문에 몇 분씩 서 있으면 그것대로 규율이 깨진다).
+# 실측 쿨다운은 90초까지 관측됐다(연속 3회 실패). 주 1회 순찰이 90초 서는 값은,
+# 사람이 멀쩡한 API 를 유령 신고 때문에 파헤치는 20분보다 싸다.
+_MAX_BREAKER_WAIT = 120
+
 
 def _is_drift(declared, actual):
     if declared in ("scalar", "effect") and actual in CURRENCY:
@@ -144,19 +151,21 @@ def _is_drift(declared, actual):
 
 
 def _try_once(code):
-    """1회 실행 → (shape, items_n, error). error 는 실행 불능(HTTP/타임아웃)만.
+    """1회 실행 → (shape, items_n, error, blocked_for). error 는 실행 불능만.
 
     봉투 안의 오류(외부 API 다운 등)도 '실행 불능'으로 올린다 — 모양 판정 밖이다.
+    blocked_for = 차단기(circuit breaker) 쿨다운 잔여 초 · 아니면 None.
     """
     try:
         env = _final_envelope(_execute(code))
     except Exception as e:
-        return None, 0, e
+        return None, 0, e, None
     shape = _actual_shape(env)
     if shape == "error":
-        return None, 0, RuntimeError(f"봉투 오류: {str(env.get('error'))[:120]}")
+        blocked = env.get("retry_after_seconds") if env.get("blocked") else None
+        return None, 0, RuntimeError(f"봉투 오류: {str(env.get('error'))[:120]}"), blocked
     n = len(env.get("items") or []) if isinstance(env, dict) else 0
-    return shape, n, None
+    return shape, n, None, None
 
 
 def _op_axis_report(decl, decl_op, default_op, op_values, fixtures, exempt):
@@ -192,14 +201,27 @@ def main():
     fx = json.load(open(ROOT / "data" / "ibl_fixtures.json"))
     fixtures, exempt = fx["fixtures"], fx.get("exempt") or {}
     rows, failed, retried = [], [], []
+    _waited = set()   # 차단기 대기는 액션당 1회 — 순찰이 쿨다운마다 멈추지 않게
     for name, code in sorted(fixtures.items()):
         declared, level = _declared_of(name, decl, decl_op, default_op, code)
-        actual, n, err = _try_once(code)
+        actual, n, err, blocked = _try_once(code)
+        if blocked is not None:
+            # ★2026-08-24: 차단기 연쇄를 독립 실패로 세지 않는다. 한 액션이 한 번
+            # 느려서 차단되면, 같은 액션의 **다른 op fixture 들이 API 를 부르지도 못한 채**
+            # 줄줄이 실패로 적힌다(실측: sense:book 1건 타임아웃 → book·#codes·#popular·
+            # #recommended·#trending 5건 신고. 바깥은 멀쩡했다 — 0.9초에 20,607건).
+            # 즉시 재시도는 쿨다운이 안 지나 무의미하므로 **한 액션당 한 번만** 기다린다.
+            act = name.split("#", 1)[0]
+            if act not in _waited and blocked <= _MAX_BREAKER_WAIT:
+                _waited.add(act)
+                print(f"  · {act} 차단기 대기 {blocked}s (연쇄 오탐 방지)")
+                time.sleep(blocked + 1)
+                actual, n, err, blocked = _try_once(code)
         if err is not None or _is_drift(declared, actual):
             # 외부 API 일시 블립 흡수 — 1회 재시도 (골든 파이프 §1C 선례. 2026-08-20
             # sense:classic 실측: 같은 코드·fixture 가 1차 [B]→2차 정합 = 주 1회 거짓
             # 깃발. 진짜 회귀는 결정론적이라 재시도로 안 사라진다).
-            a2, n2, e2 = _try_once(code)
+            a2, n2, e2, _b2 = _try_once(code)
             if e2 is None:
                 if err is not None or not _is_drift(declared, a2):
                     retried.append(name)

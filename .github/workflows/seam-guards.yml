@@ -25,6 +25,8 @@ on:
       - 'scripts/check_string_returns.py'
       - 'scripts/check_render_core.py'
       - 'scripts/check_backend_layers.py'
+      - 'scripts/check_tracked_ignored.py'
+      - '.gitignore'
       - 'scripts/test_render_core.js'
       - 'frontend/src/components/**'
       - 'pytest.ini'
@@ -133,3 +135,16 @@ jobs:
         run: pip install -r backend/requirements-core.txt pytest openpyxl
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local"
+
+  # 추적 ∩ 무시 = 0 (2026-08-24): .gitignore 는 이미 추적 중인 파일을 되돌리지 못해,
+  # 규칙을 나중에 세운 부류(런타임 캐시·일회성 백업·모델 카드)가 규칙이 생긴 뒤에도
+  # 계속 커밋된다. 오라클은 git 자신 — 동결 목록 없음. 의존성 0.
+  tracked-ignored:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 추적 중인 무시 대상 검사
+        run: python scripts/check_tracked_ignored.py

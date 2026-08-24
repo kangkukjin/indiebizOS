@@ -1,0 +1,32 @@
+{
+  "name": "publishing",
+  "version": "1.0.0",
+  "description": "출판 프로젝트(책) 관리 도구. 프로젝트 생성, 목록 조회, 상태 확인.\n\n포함된 도구:\n- publish_list: 출판 프로젝트 목록 조회\n- publish_create: 새 출판 프로젝트 생성 (폴더 구조 + 기본 파일 초기화)\n- publish_status: 프로젝트 상세 상태 (챕터 진행, 조각글, 진척 기록)\n\n사용 가이드: data/guides/book_publishing.md",
+  "author": "IndieBiz",
+  "category": "tools",
+  "tags": ["출판", "원고", "책", "publishing", "manuscript"],
+  "dependencies": {
+    "system": ["python3"],
+    "optional": ["pandoc"]
+  },
+  "tools": [
+    {
+      "name": "publish_list",
+      "description": "출판 프로젝트 목록 조회",
+      "file": "tools/registry.py"
+    },
+    {
+      "name": "publish_create",
+      "description": "새 출판 프로젝트 생성",
+      "file": "tools/registry.py"
+    },
+    {
+      "name": "publish_status",
+      "description": "프로젝트 상세 상태 조회",
+      "file": "tools/registry.py"
+    }
+  ],
+  "config": {
+    "books_dir": "projects/출판사/outputs/books"
+  }
+}

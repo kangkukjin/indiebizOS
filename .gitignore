@@ -175,6 +175,12 @@ data/warehouse_media_web/
 !data/ibl_nodes.yaml
 !**/tool.json
 !**/ibl_actions.yaml
+# 패키지 자기완결 소스 — tool.json 과 같은 자격이다(data/**/*.json 광역 규칙의 예외).
+!data/packages/**/package.json
+!data/packages/**/manifest.json
+!data/packages/**/tsconfig.json
+# 몸 프로파일(사람 저술)과 그 빌드 파생 — build.gradle 이 engine.json 을 읽는다.
+!data/bodies/*.json
 
 # 특수 폴더 및 파일
 ..bfg-report/
@@ -374,7 +380,9 @@ data/_pylibs_cp314_backup_*/
 # ★반드시 무시할 것: 이관·정리 전에 뜨는 백업이라 자격증명(.env·티어 config·
 #   agents.yaml)이 그대로 들어 있다. 규약이 모두에게 이 폴더를 쓰라고 하므로
 #   무시하지 않으면 `git add -A` 한 번에 키가 히스토리로 들어간다.
-data/_backups/
+data/_backups/*
+# 단, 규약 정본 문서는 추적한다 — 신선 clone 에도 규칙이 있어야 하므로.
+!data/_backups/README.md
 
 # 가이드 개선 제안 원장 — guide_feedback.py 가 append 하는 런타임 로그
 data/guide_proposals.jsonl

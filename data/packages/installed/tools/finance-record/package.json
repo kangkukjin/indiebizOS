@@ -1,0 +1,8 @@
+{
+  "id": "finance-record",
+  "name": "Finance Record Manager",
+  "description": "개인·회사 재무를 기록하고 관리하는 도구입니다. 지출·수입 거래와 자산·부채 소유 현황을 주체(owner)별로 저장하고, 월간 요약·순자산 계산, 영수증·가계부 AI 적재를 지원합니다.",
+  "tools": [
+    "finance_op"
+  ]
+}

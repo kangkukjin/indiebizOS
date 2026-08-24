@@ -301,4 +301,15 @@ if echo "$staged" | grep -qE "$safety_trigger"; then
   echo "[pre-commit] 안전장치 기능 스모크 OK ✓"
 fi
 
+# 추적 ∩ 무시 = 0 (2026-08-24 신설) — 생산물·런타임 부산물이 저장소에 눌러앉는 부류.
+#
+# ★방아쇠 없음, 매 커밋 실행. 누출은 "어떤 파일을 만졌는가"가 아니라 "무엇이 인덱스에
+# 남아 있는가"의 문제라, 경로 방아쇠를 달면 정작 그 파일을 안 만지는 커밋에서 샌다.
+# 검사 비용 = git ls-files 한 번.
+if ! python3 "$repo_root/scripts/check_tracked_ignored.py"; then
+  echo "" >&2
+  echo "[pre-commit] 무시 대상이 추적 중 — 커밋 차단." >&2
+  exit 1
+fi
+
 exit 0

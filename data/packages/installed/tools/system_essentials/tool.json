@@ -442,7 +442,7 @@
     },
     {
       "name": "patch_op",
-      "description": "자기개조 패치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에서 다룹니다.\n\n## 수리 경로에서 (사용자 명령 수리 = 그랜트 있음)\nRED 파일을 [self:write]/[self:edit] 로 그냥 고치세요 — **자동으로 격리 사본에 쌓입니다** (라이브 무변경 = 리로드 없음 = 당신의 턴이 안 끊깁니다). 다 고쳤으면 반드시:\n\n  [self:patch]{op:\"apply\"}\n\n가 기계 검증(구문·import 스모크·IBL 삼각·안전장치 스모크)을 돌리고 **통과분만** 라이브로 한 번에 옮깁니다. 검증 실패면 라이브는 무변경이고 실패 상세가 돌아오니 격리 사본에서 고쳐 쓰고 다시 apply 하세요.\n★apply 를 부르지 않으면 그 수정은 라이브에 없습니다 — 고쳤다고 보고하지 마세요.\n\n## 자율 태스크에서 (그랜트 없음)\nop:\"propose\" (기본) — 격리 사본에 제안+검증만 남깁니다. 스스로 적용할 수는 없지만 제안은 죽지 않습니다 — 사용자가 수리 경로로 명령한 턴에서 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} 가 집어갑니다(재작업 불필요).\n\n## op\n- propose(기본): path + content(전체) 또는 old_string+new_string(부분), reason 필수\n- apply: 이 세션의 격리 변경을 검증 후 라이브 적용\n- status: 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)",
+      "description": "자기개조 패치 — RED 구역(backend/·frontend/·scripts/) 코어 코드 변경을 격리 사본(git worktree)에서 다룹니다.\n\n## 수리 경로에서 (사용자 명령 수리 = 그랜트 있음)\nRED 파일을 [self:write]/[self:edit] 로 그냥 고치세요 — **자동으로 격리 사본에 쌓입니다** (라이브 무변경 = 리로드 없음 = 당신의 턴이 안 끊깁니다). 다 고쳤으면 반드시:\n\n  [self:patch]{op:\"apply\"}\n\n가 기계 검증(구문·import 스모크·IBL 삼각·안전장치 스모크)을 돌리고 **통과분만** 라이브로 한 번에 옮깁니다. 검증 실패면 라이브는 무변경이고 실패 상세가 돌아오니 격리 사본에서 고쳐 쓰고 다시 apply 하세요.\n★apply 를 부르지 않으면 그 수정은 라이브에 없습니다 — 고쳤다고 보고하지 마세요.\n\n## 자율 태스크에서 (그랜트 없음)\nop:\"propose\" (기본) — 격리 사본에 제안+검증만 남깁니다. 스스로 적용할 수는 없지만 제안은 죽지 않습니다 — 사용자가 수리 경로로 명령한 턴에서 [self:patch]{op:\"apply\", proposal_id:\"<id>\"} 가 집어갑니다(재작업 불필요).\n\n## op\n- propose(기본): path + content(전체) 또는 old_string+new_string(부분), reason 필수\n- apply: 이 세션의 격리 변경을 검증 후 라이브 적용\n- status: 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)\n\n## backend 를 고쳤다면 — 적용은 당신이 죽은 뒤에 일어납니다\napply 응답에 scheduled 가 오면 **아직 라이브가 아닙니다**. 수행자는 지금 이 턴이 닫히기를 기다립니다 — 즉 기다림의 대상이 곧 당신입니다. 적용을 기다리거나 폴링하지 말고 **즉시 턴을 닫으세요** (기다리면 적용은 안 오고 대기 상한이 통째로 탑니다). 적용·헬스 판정은 다음 턴에 자동 보고됩니다. 적용 후 돌려볼 명령이 있으면 verify_cmd 로 함께 맡기면 수행자가 대신 돌려 그 결과까지 보고합니다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -484,6 +484,10 @@
           "proposal_id": {
             "type": "string",
             "description": "(apply/discard) propose 가 돌려준 제안 id. apply 에 주면 이 세션 대신 그 제안을 검증 후 적용한다(재작업 불필요, 수리 그랜트는 그대로 필요). discard 에 주면 그 제안을 폐기. 목록은 op:status."
+          },
+          "verify_cmd": {
+            "type": "string",
+            "description": "(apply) 적용 후 돌릴 검증 명령 — backend 수정은 이 턴이 닫힌 뒤에야 적용되므로 결과를 이 턴에서는 볼 수 없다. 확인할 명령을 여기 맡기면 분리 수행자가 적용 후 대신 실행해 결과를 다음 턴 보고에 실어 준다(작업 폴더는 저장소 루트, 상한 180초). 리로드 없는 즉시 적용에서는 돌리지 않는다 — 그때는 이 턴이 살아 있으니 직접 확인하면 된다."
           }
         }
       }

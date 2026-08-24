@@ -16,6 +16,8 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
   S9 지연 적용 (2026-08-19): backend/*.py apply=예약(라이브 무변경)→수행자가 턴 종료
      후 쓰기 직전 재검증 — 예약~수행 사이 라이브 드리프트가 적용을 막는다
   S10 분리 수행자(red_apply) 실프로세스 종단 — 부트스트랩·핸들러 로드·그랜트 이월
+  S13 예약을 낸 턴이 자기가 병목인 줄 안다 (2026-08-25 ep1934) — 예약 응답이 대기를
+     금지하고, 적용 후 검증은 수행자에게 위탁되며, 상한 강행은 결말로 보고된다
 
 실행: python3 backend/test_repair_staging.py   (exit 0 = 전부 통과)
 """
@@ -506,6 +508,119 @@ def run():
     finally:
         import shutil
         shutil.rmtree(tmp4, ignore_errors=True)
+
+    # ══ S13 — 예약을 낸 턴이 자기가 병목인 줄 알아야 한다 (2026-08-25, ep1934 실측) ══
+    # 그날 실제로 일어난 일: 시스템 AI 가 backend 수리를 예약해놓고 **자기 턴 안에서**
+    # 적용을 폴링했다. 적용은 그 턴이 닫혀야 일어나므로 영영 오지 않았고, 대기 상한
+    # 900초가 통째로 탄 뒤 '턴이 끊긴 것으로 보고' 강행되면서 끝났다. 안전망이 시간표가
+    # 된 것이다. 고친 자리 셋을 여기서 못 박는다:
+    #   (가) 예약 응답이 **기다리는 턴 = 너**임을 지목하고 대기를 금지한다
+    #   (나) 적용 후 검증은 죽음을 넘는 프로세스(red_apply)가 대신 돌린다(verify_cmd)
+    #   (다) 상한 강행은 결말로 기록되어 다음 턴 보고에 실린다
+    tmp5 = Path(tempfile.mkdtemp(prefix="stg_wait_")).resolve()
+    try:
+        _make_repo(tmp5)
+        h._REPO_ROOT = tmp5
+        v13 = tmp5 / "backend" / "cognition" / "victim13.py"
+        v13.write_text("T13 = 'orig'\n")
+        task13 = _grant(h, "task_wait_contract")
+        s13 = h._red_stage(str(v13), for_write=True)
+        Path(s13).write_text("T13 = 'patched'\n")
+        r13 = st.op_apply({"_repo_root": str(tmp5), "_grant_key": st.task_key(task13),
+                           "verify_cmd": "python3 -c \"open('verify_ran.txt','w').write('ok')\"",
+                           "_red_prepare": h._red_write_prepare,
+                           "_red_finalize": h._red_write_finalize})
+        # (가) 자기수용감각 — 응답이 '기다리는 대상이 곧 너'라고 말하는가
+        check("S13a_scheduled", r13.get("scheduled") is True,
+              json.dumps(r13, ensure_ascii=False)[:200])
+        check("S13a_do_not_wait_flag", r13.get("do_not_wait") is True,
+              "예약 응답이 기계가 읽을 수 있는 '기다리지 말라'를 안 실었다")
+        _m13 = r13.get("message") or ""
+        check("S13a_message_forbids_waiting",
+              "폴링" in _m13 and "기다리는 대상이 곧 당신" in _m13,
+              "문구가 '기다리지 마라'를 명령형으로 말하지 않는다: " + _m13[:200])
+        check("S13a_message_names_the_cap", str(st._turn_cap_s()) in _m13,
+              "기다림의 대가(대기 상한)를 숫자로 말하지 않는다 — 문구와 실제가 갈라진다")
+        # (나) 위탁 — 검증 명령이 잡에 실려 수행자에게 건네지는가
+        job13 = (tmp5 / "data" / "system_ai_state" / "repair_sessions"
+                 / f"{st.task_key(task13)}.apply.json")
+        check("S13b_verify_cmd_handed_to_executor",
+              job13.exists() and "verify_ran.txt" in json.loads(job13.read_text()).get("verify_cmd", ""),
+              job13.read_text()[:200] if job13.exists() else "no job")
+        # 실프로세스 종단 — 적용 + 검증 실행 + 후속 기록까지 (S10 과 같은 격리: 닿지 않는 몸)
+        env13 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0",
+                 "RED_APPLY_VERIFY_HEALTH_WAIT_S": "0",
+                 "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
+        env13.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
+        p13 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
+                              str(job13)], capture_output=True, text=True, timeout=180, env=env13)
+        check("S13b_process_applied", p13.returncode == 0 and v13.read_text() == "T13 = 'patched'\n",
+              ((p13.stdout or "") + (p13.stderr or ""))[-400:])
+        check("S13b_verify_cmd_actually_ran", (tmp5 / "verify_ran.txt").exists(),
+              "위탁받은 검증 명령이 적용 후에 돌지 않았다 — 위탁이 말뿐이면 AI 는 다시 기다린다")
+        fu13 = (tmp5 / "data" / "system_ai_state" / "red_backups"
+                / st.task_key(task13) / "followup.json")
+        check("S13b_followup_written", fu13.exists(), "후속 기록(followup.json)이 없다")
+        if fu13.exists():
+            _f = json.loads(fu13.read_text())
+            check("S13b_followup_has_verdict",
+                  (_f.get("post_verify") or {}).get("exit_code") == 0,
+                  json.dumps(_f, ensure_ascii=False)[:300])
+            check("S13b_followup_records_wait_outcome",
+                  _f.get("wait_outcome") in ("observed", "cap", "no_turn"),
+                  str(_f.get("wait_outcome")))
+    finally:
+        _ungrant()
+        import shutil
+        shutil.rmtree(tmp5, ignore_errors=True)
+
+    # (다) 상한 강행이 **결말로** 돌아오는가 — 옛 코드는 아무것도 안 돌려줬다(조용한 진행)
+    import sqlite3
+    import red_apply as _ra
+    tmp6 = Path(tempfile.mkdtemp(prefix="stg_cap_")).resolve()
+    try:
+        db6 = tmp6 / "data" / "world_pulse.db"
+        db6.parent.mkdir(parents=True, exist_ok=True)
+        conn6 = sqlite3.connect(db6)
+        conn6.execute("CREATE TABLE episode_log (id INTEGER PRIMARY KEY, started_at TEXT, "
+                      "ended_at TEXT, agent TEXT, user_message TEXT, log TEXT, "
+                      "total_ms INTEGER, source TEXT)")
+        conn6.execute("INSERT INTO episode_log (id, ended_at, agent, log, source) "
+                      "VALUES (1934, NULL, 'system_ai', '', 'usage')")     # 안 닫히는 턴
+        conn6.commit()
+        _cap, _dg = _ra.TURN_CLOSE_CAP_S, _ra.DISTILL_GRACE_S
+        try:
+            _ra.TURN_CLOSE_CAP_S, _ra.DISTILL_GRACE_S = 0.5, 0.1
+            check("S13c_cap_forced_is_reported",
+                  _ra.wait_turn_closed(str(tmp6), 1934) == "cap",
+                  "상한 강행이 결말로 안 돌아오면 안전망이 시간표가 된 걸 아무도 못 본다")
+            conn6.execute("UPDATE episode_log SET ended_at='now' WHERE id=1934")
+            conn6.commit()
+            check("S13c_observed_close_is_reported",
+                  _ra.wait_turn_closed(str(tmp6), 1934) == "observed")
+        finally:
+            _ra.TURN_CLOSE_CAP_S, _ra.DISTILL_GRACE_S = _cap, _dg
+            conn6.close()
+
+        # 그 결말이 다음 턴의 보고에 실리는가 (red_report 가 판정 옆의 후속을 합친다)
+        import red_report as _rr
+        bd6 = tmp6 / "data" / "system_ai_state" / "red_backups" / "task_cap"
+        bd6.mkdir(parents=True, exist_ok=True)
+        (bd6 / "result.json").write_text(json.dumps(
+            {"outcome": "healthy", "files": ["backend/x.py"], "finished_at": 9e9}), encoding="utf-8")
+        (bd6 / "followup.json").write_text(json.dumps(
+            {"wait_outcome": "cap", "turn_cap_s": 900, "episode_id": 1934,
+             "post_verify": {"ran": True, "cmd": "pytest -q", "exit_code": 1,
+                             "output": "1 failed"}}), encoding="utf-8")
+        scent = _rr.pending_scent(str(tmp6))
+        check("S13d_report_surfaces_cap", "상한" in scent and "1934" in scent,
+              "상한 강행이 다음 턴 보고에 안 실린다: " + scent[:200])
+        check("S13d_report_surfaces_verify",
+              'verdict="fail"' in scent and "1 failed" in scent,
+              "위탁 검증 결과가 다음 턴 보고에 안 실린다: " + scent[:300])
+    finally:
+        import shutil
+        shutil.rmtree(tmp6, ignore_errors=True)
 
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:

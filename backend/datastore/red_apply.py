@@ -43,6 +43,10 @@ SETTLE_S = float(os.environ.get("RED_APPLY_SETTLE_S", 2))
 # 판정 불능 유예 — 몸은 살아 있는데 도는 턴을 못 본 경우(옛 몸의 /health 등). 짧은 유예로
 # 떨어지기 전에 이만큼 다시 묻는다. '못 봤다'와 '없다'는 다른 사건이다(B28-1).
 UNKNOWN_LIVE_GRACE_S = float(os.environ.get("RED_APPLY_UNKNOWN_LIVE_GRACE_S", 60))
+# 적용 후 검증 위탁(2026-08-25) — 턴이 자기 죽음 뒤를 못 보므로 재현·회귀 확인도 여기서 돈다.
+VERIFY_HEALTH_WAIT_S = float(os.environ.get("RED_APPLY_VERIFY_HEALTH_WAIT_S", 120))
+VERIFY_TIMEOUT_S = float(os.environ.get("RED_APPLY_VERIFY_TIMEOUT_S", 180))
+VERIFY_OUTPUT_CAP = 4000
 HEALTH_URL = os.environ.get(
     "RED_APPLY_HEALTH_URL",
     f"http://127.0.0.1:{os.environ.get('INDIEBIZ_API_PORT', '8765')}/health")
@@ -122,8 +126,13 @@ def _resolve_open_episode(db_path: str, agent_id):
         return None
 
 
-def wait_turn_closed(repo: str, episode_id, agent_id=None):
+def wait_turn_closed(repo: str, episode_id, agent_id=None) -> str:
     """예약한 턴이 완전히 닫힐 때까지 대기 — ①ended_at ②증류 재합류(log 재기록).
+
+    반환: 대기가 **어떻게 끝났는가** — "observed"(턴이 스스로 닫힘) / "cap"(상한 강행) /
+    "no_turn"(도는 턴이 없었음). ★상한은 안전망이지 시간표가 아니다(2026-08-25): 예약한
+    턴이 적용을 기다리며 안 닫히면 매번 상한으로 떨어지는데, 그러면 안전망이 하중을 받아
+    정작 진짜 좌초를 아무도 못 알아챈다. 그래서 결말을 되돌려 다음 턴 보고에 싣는다.
 
     상한 초과는 '턴이 죽었다'로 보고 진행한다(좌초보다 적용이 낫고, 주행기록은
     부팅 고아 회수가 닫는다).
@@ -163,14 +172,14 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
                     break
             if not episode_id:
                 _log("재확인에도 도는 턴 없음 — 진행")
-                return
+                return "no_turn"
         else:
             if reached:
                 _log(f"몸이 '도는 턴 없음'으로 답함 — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
             else:
                 _log(f"몸에 닿지 못함(백엔드 없음) — {NO_EPISODE_GRACE_S:.0f}초 유예 후 진행")
             time.sleep(NO_EPISODE_GRACE_S)
-            return
+            return "no_turn"
     if not os.path.exists(db_path):
         # 몸은 턴을 신고했는데 원장 파일이 없다 — 닫힘을 볼 창이 없으므로 상한까지 몸에게만 묻는다.
         t_h = time.time()
@@ -179,10 +188,10 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
             if not live or episode_id not in live:
                 _log(f"몸이 턴 종료를 신고 (episode {episode_id})")
                 time.sleep(SETTLE_S)
-                return
+                return "observed"
             time.sleep(2)
         _log(f"턴 종료 대기 상한({TURN_CLOSE_CAP_S:.0f}초) — 진행")
-        return
+        return "cap"
     t0 = time.time()
     row = None
     while time.time() - t0 < TURN_CLOSE_CAP_S:
@@ -193,7 +202,7 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
         time.sleep(2)
     else:
         _log(f"턴 종료 대기 상한({TURN_CLOSE_CAP_S:.0f}초) — 턴이 끊긴 것으로 보고 진행")
-        return
+        return "cap"
     # 증류 재합류: distill 스레드의 finally 가 refresh_episode 로 log 를 한 번 다시 쓴다.
     # 미감지=증류 생략/무변화/미배선 부류 — 상한 후 진행(적용을 볼모로 잡지 않는다).
     base_len = row[1] or 0
@@ -203,9 +212,50 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None):
         if row is not None and (row[1] or 0) != base_len:
             _log(f"증류 재합류 감지 ({int(time.time() - t1)}초)")
             time.sleep(SETTLE_S)
-            return
+            return "observed"
         time.sleep(3)
     _log(f"증류 재합류 미감지({DISTILL_GRACE_S:.0f}초) — 진행")
+    return "observed"      # 턴 종료는 봤다 — 증류만 못 봤을 뿐(적용을 볼모로 잡지 않는다)
+
+
+def _wait_healthy(cap_s: float) -> bool:
+    """적용 리로드가 끝나 몸이 다시 200 을 낼 때까지 — 검증 명령이 죽은 몸을 때리지 않게."""
+    t = time.time()
+    while time.time() - t < cap_s:
+        reached, _ = _probe_live_turns()
+        if reached:
+            return True
+        time.sleep(2)
+    return False
+
+
+def _run_post_verify(repo: str, cmd: str) -> dict:
+    """적용 후 검증 명령을 **여기서** 돌린다 — 죽음을 넘는 프로세스가 소유한다(2026-08-25).
+
+    ★왜: 턴은 자기 죽음 이후를 볼 수 없는데, backend 수리의 결과는 죽음 뒤에야 관측된다.
+    검증을 턴에 남겨두면 AI 는 자기 턴 안에서 '적용됐나' 를 폴링하게 되고, 그 기다림이
+    바로 적용을 막는다(자기 자신이 병목). 그래서 확인할 명령을 예약과 함께 위탁받아
+    적용 뒤 여기서 돌리고, 결과를 다음 턴 보고에 실어 보낸다.
+
+    권한은 새로 열리지 않는다 — 이 명령은 예약을 낸 그 턴이 이미 셸로 돌릴 수 있던 것이고,
+    바뀐 것은 **실행 시점**뿐이다. 대신 시간(타임아웃)·출력량(캡)은 여기서 묶는다."""
+    import subprocess
+    if not _wait_healthy(VERIFY_HEALTH_WAIT_S):
+        _log(f"검증 위탁: 몸이 {VERIFY_HEALTH_WAIT_S:.0f}초 안에 돌아오지 않음 — 그래도 실행")
+    _log(f"검증 위탁 실행: {cmd[:160]}")
+    try:
+        r = subprocess.run(cmd, shell=True, cwd=repo, capture_output=True,
+                           text=True, timeout=VERIFY_TIMEOUT_S)
+        out = ((r.stdout or "") + (("\n[stderr] " + r.stderr) if r.stderr else ""))
+        return {"ran": True, "cmd": cmd, "exit_code": r.returncode,
+                "output": out.strip()[:VERIFY_OUTPUT_CAP],
+                "truncated": len(out) > VERIFY_OUTPUT_CAP}
+    except subprocess.TimeoutExpired:
+        return {"ran": True, "cmd": cmd, "exit_code": None,
+                "output": f"검증 명령이 상한({VERIFY_TIMEOUT_S:.0f}초)을 넘겨 중단됐습니다.",
+                "timed_out": True}
+    except Exception as e:
+        return {"ran": True, "cmd": cmd, "exit_code": None, "output": f"실행 실패: {e!r}"}
 
 
 def _load_handler(job: dict):
@@ -228,7 +278,11 @@ def main() -> int:
     repo = job["repo"]
     _log(f"기동 — key={job['key']} episode={job.get('episode_id')} repo={repo}")
 
-    wait_turn_closed(repo, job.get("episode_id"), agent_id=job.get("agent_id"))
+    wait_outcome = wait_turn_closed(repo, job.get("episode_id"),
+                                    agent_id=job.get("agent_id")) or "observed"
+    if wait_outcome == "cap":
+        _log("★상한 강행 — 예약한 턴이 스스로 닫히지 않았다. 대개 그 턴이 적용을 기다리며 "
+             "살아 있던 경우이고, 그러면 이 대기는 통째로 낭비다. 다음 턴 보고에 싣는다.")
 
     # 코드 루트의 backend 를 sys.path 에 — red_grant/thread_context/episode_logger 등
     sys.path.insert(0, str(CODE_ROOT / "backend"))
@@ -250,9 +304,31 @@ def main() -> int:
         prepare=handler._red_write_prepare, finalize=handler._red_write_finalize)
     _log(f"결과: {json.dumps(out, ensure_ascii=False)[:500]}")
 
+    # 적용 후 검증 — 위탁받았을 때만. 적용이 안 일어났으면 돌릴 이유가 없다.
+    cmd = (job.get("verify_cmd") or "").strip()
+    post = None
+    if cmd:
+        post = (_run_post_verify(repo, cmd) if out.get("applied") else
+                {"ran": False, "cmd": cmd,
+                 "output": "적용이 일어나지 않아 검증 명령을 돌리지 않았습니다."})
+
+    # 후속 기록 — result.json 을 워치독이 나중에 통째로 덮으므로 **옆자리 파일**에 남긴다.
+    try:
+        staging.write_followup(repo, staging.task_key(job["key"]), {
+            "wait_outcome": wait_outcome,
+            "turn_cap_s": TURN_CLOSE_CAP_S,
+            "episode_id": job.get("episode_id"),
+            "post_verify": post,
+        })
+    except Exception as e:
+        _log(f"후속 기록 실패(계속): {e}")
+
     try:
         job["done_at"] = datetime.now().isoformat()
         job["applied"] = bool(out.get("applied"))
+        job["wait_outcome"] = wait_outcome
+        if post is not None:
+            job["post_verify"] = post
         job["outcome_note"] = (out.get("error") or out.get("message") or out.get("note") or "")[:300]
         with open(job_path, "w", encoding="utf-8") as f:
             json.dump(job, f, ensure_ascii=False, indent=2)

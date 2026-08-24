@@ -92,6 +92,46 @@ def _iter_result_paths(repo: str):
         return
 
 
+def _read_followup(result_path: str) -> dict:
+    """판정 옆자리의 수행자 후속 기록(followup.json) — 없으면 빈 dict. 부작용 없음.
+
+    ★왜 옆자리인가(2026-08-25): 성공 판정의 result.json 은 워치독이 헬스 확인 뒤 통째로
+    덮는다. 수행자(red_apply)가 남기는 것 — 턴 종료를 봤는지 상한으로 강행했는지, 위탁받은
+    검증 명령의 결과 — 은 그래서 같은 폴더의 다른 파일에 산다. 회수는 여기서 합친다."""
+    try:
+        with open(os.path.join(os.path.dirname(result_path), "followup.json"),
+                  encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def followup_rows(followup: dict) -> list:
+    """후속 기록 → 연상 블록에 얹을 XML 줄들. 말할 것이 없으면 빈 목록(0토큰)."""
+    rows = []
+    fu = followup or {}
+    if fu.get("wait_outcome") == "cap":
+        # ★상한은 안전망이지 시간표가 아니다 — 하중을 받기 시작하면 AI 의 얼굴 앞에 띄운다.
+        cap = int(fu.get("turn_cap_s") or 0)
+        rows.append(
+            f'    <wait outcome="cap">예약한 턴({fu.get("episode_id") or "?"})이 스스로 '
+            f'닫히지 않아 대기 상한{f"({cap}초)" if cap else ""}으로 강행했다 — 대개 그 턴이 '
+            f'적용을 기다리며 살아 있던 경우다(자기가 자기 병목). 다음부터 예약 뒤에는 곧바로 '
+            f'턴을 닫아라 — 그러면 몇 초 안에 적용된다.</wait>')
+    pv = fu.get("post_verify") or {}
+    if pv.get("ran"):
+        code = pv.get("exit_code")
+        verdict = "pass" if code == 0 else ("fail" if code is not None else "unknown")
+        body = (pv.get("output") or "").replace("<", "‹").replace('"', "'").strip()[:500]
+        rows.append(
+            f'    <verify verdict="{verdict}" exit="{code}" cmd="'
+            f'{(pv.get("cmd") or "").replace(chr(34), chr(39))[:120]}">{body}</verify>')
+    elif pv:
+        rows.append(f'    <verify verdict="skipped">{(pv.get("output") or "")[:200]}</verify>')
+    return rows
+
+
 def collect_pending(repo: str, max_items: int = MAX_ITEMS, owner: str = None) -> list:
     """아직 사용자에게 보고되지 않은 수리 판정 목록(최신 우선). 부작용 없음.
 
@@ -112,6 +152,7 @@ def collect_pending(repo: str, max_items: int = MAX_ITEMS, owner: str = None) ->
         if finished and now - finished > MAX_AGE_S:
             continue
         data["_path"] = path
+        data["_followup"] = _read_followup(path)
         out.append(data)
     out.sort(key=lambda d: d.get("finished_at") or 0, reverse=True)
     return out[:max_items]
@@ -198,20 +239,25 @@ def pending_scent(repo: str, owner: str = None) -> str:
     if not items:
         return _staged_block(staged)
     rows = []
+    has_verify = False
     for d in items:
         outcome = d.get("outcome") or "unknown"
         label = _OUTCOME_LABEL.get(outcome, outcome)
         files = d.get("files") or d.get("restored") or []
         detail = (d.get("detail") or d.get("note") or "").replace('"', "'")[:160]
-        rows.append(
-            f'  <repair outcome="{outcome}" files="{len(files)}">{label}'
-            + (f' — {detail}' if detail else "")
-            + "</repair>"
-        )
+        head = (f'  <repair outcome="{outcome}" files="{len(files)}">{label}'
+                + (f' — {detail}' if detail else ""))
+        sub = followup_rows(d.get("_followup"))
+        has_verify = has_verify or any(r.startswith("    <verify") for r in sub)
+        rows.append(head + "</repair>" if not sub
+                    else "\n".join([head] + sub + ["  </repair>"]))
     note = ("직전 자기수리의 결말이다(리로드로 그때의 턴이 끊겨 아직 사용자에게 보고되지 "
             "않았다). 사용자에게 결과를 한 문장으로 먼저 알리고, 실패·롤백이면 무엇이 "
             "원상 복구됐는지 말한 뒤 다음 행동을 제안하라. 이미 지난 일이니 다시 수리하지 "
             "말고, 사용자가 새로 요청한 일이 있으면 그것을 이어서 하라.")
+    if has_verify:
+        note += (" <verify> 는 네가 적용과 함께 위탁한 검증 명령을 수행자가 대신 돌린 "
+                 "결과다(네 턴이 죽은 뒤에 돌았다) — 그 판정도 한 문장으로 함께 전하라.")
     mark_announced(items)
     return (f"<repair_outcome note=\"{note}\">\n" + "\n".join(rows) + "\n</repair_outcome>"
             + _staged_block(staged))

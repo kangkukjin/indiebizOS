@@ -274,10 +274,10 @@ nodes:
             status: '[self:patch]{op: "status"}'
           values:
             propose: RED 변경을 격리 사본에 제안 + 기계검증 (라이브 무변경, 자율 태스크용 — 적용은 사용자 수리 턴의 apply{proposal_id})
-            apply: 격리 변경을 검증 후 통과분만 라이브 적용(리로드 1회). proposal_id 주면 그 제안을 적용
+            apply: 격리 변경을 검증 후 통과분만 라이브 적용. proposal_id 로 제안 적용. backend 는 턴 종료 후 적용
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
         router: handler
         tool: patch_op
         implementation: repair_staging.py (system_essentials 형제 모듈) — 세션별 worktree(.worktrees/repair-<task>)에 라이브 원본을 씨로 스테이징, verify() 배터리, apply 가 _red_write_prepare/_red_write_finalize(백업·keeper·워치독)를 통과해 라이브 반영.
@@ -1188,7 +1188,13 @@ tool_json:
       \ proposal_id:\"<id>\"} 가 집어갑니다(재작업 불필요).\n\n## op\n\
       - propose(기본): path + content(전체) 또는 old_string+new_string(부분), reason 필수\n\
       - apply: 이 세션의 격리 변경을 검증 후 라이브 적용\n- status: 무엇이 격리에 쌓여 있고 아직\
-      \ 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)"
+      \ 라이브에 안 갔는지\n- discard: 격리 사본 폐기 (라이브는 원래 무변경)\n\n\
+      ## backend 를 고쳤다면 — 적용은 당신이 죽은 뒤에 일어납니다\napply 응답에 scheduled\
+      \ 가 오면 **아직 라이브가 아닙니다**. 수행자는 지금 이 턴이 닫히기를 기다립니다 —\
+      \ 즉 기다림의 대상이 곧 당신입니다. 적용을 기다리거나 폴링하지 말고 **즉시 턴을 닫으세요**\
+      \ (기다리면 적용은 안 오고 대기 상한이 통째로 탑니다). 적용·헬스 판정은 다음 턴에 자동\
+      \ 보고됩니다. 적용 후 돌려볼 명령이 있으면 verify_cmd 로 함께 맡기면 수행자가 대신\
+      \ 돌려 그 결과까지 보고합니다."
     input_schema:
       type: object
       properties:
@@ -1216,6 +1222,9 @@ tool_json:
         proposal_id:
           type: string
           description: (apply/discard) propose 가 돌려준 제안 id. apply 에 주면 이 세션 대신 그 제안을 검증 후 적용한다(재작업 불필요, 수리 그랜트는 그대로 필요). discard 에 주면 그 제안을 폐기. 목록은 op:status.
+        verify_cmd:
+          type: string
+          description: (apply) 적용 후 돌릴 검증 명령 — backend 수정은 이 턴이 닫힌 뒤에야 적용되므로 결과를 이 턴에서는 볼 수 없다. 확인할 명령을 여기 맡기면 분리 수행자가 적용 후 대신 실행해 결과를 다음 턴 보고에 실어 준다(작업 폴더는 저장소 루트, 상한 180초). 리로드 없는 즉시 적용에서는 돌리지 않는다 — 그때는 이 턴이 살아 있으니 직접 확인하면 된다.
   - name: read_op
     description: '파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
 

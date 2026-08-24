@@ -747,7 +747,33 @@ def _write_deferred_result(repo: str, key_str: str, payload: dict, owner: str = 
         print(f"[수리 스테이징] 지연 결과 기록 실패(계속): {e}")
 
 
-def _schedule_deferred_apply(repo: str, sess: dict, checks: list):
+def write_followup(repo: str, key_str: str, payload: dict):
+    """수행자가 남기는 **후속 기록** — result.json 옆자리(followup.json).
+
+    ★왜 옆자리냐: 성공 경로의 result.json 은 나중에 워치독이 헬스 판정으로 **통째로
+    덮는다**. 수행자가 먼저 쓰면 사라진다. 같은 폴더의 다른 파일이면 둘이 안 부딪히고,
+    회수하는 쪽(red_report)은 판정을 집을 때 옆을 한 번 더 보면 된다."""
+    try:
+        bdir = os.path.join(repo, "data", "system_ai_state", "red_backups", key_str)
+        os.makedirs(bdir, exist_ok=True)
+        payload = dict(payload)
+        payload.setdefault("finished_at", time.time())
+        with open(os.path.join(bdir, "followup.json"), "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[수리 스테이징] 후속 기록 실패(계속): {e}")
+
+
+def _turn_cap_s() -> int:
+    """수행자의 턴 종료 대기 상한 — **출처는 red_apply 하나**(문구와 실제가 갈라지지 않게)."""
+    try:
+        import red_apply
+        return int(red_apply.TURN_CLOSE_CAP_S)
+    except Exception:
+        return 900      # 수행자를 못 읽는 자리(가짜 저장소 시험 등) — 문구용 폴백
+
+
+def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: str = ""):
     """지연 적용 예약 — 라이브 쓰기를 '이 턴이 닫힌 뒤'로 미뤄 분리 수행자에 맡긴다.
 
     반환: 응답 dict / None(예약 불능 → 호출자가 즉시 적용으로 폴백).
@@ -769,6 +795,7 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list):
            "episode_id": _current_episode_id(repo, agent_id or "system_ai"),
            "task_id": task_id or key, "agent_id": agent_id or "system_ai",
            "reason": reason, "scheduled_at": datetime.now().isoformat(),
+           "verify_cmd": (verify_cmd or "").strip(),
            "handler_path": os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                         "handler.py")}
     try:
@@ -790,14 +817,35 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list):
     sess["checks"] = checks
     _save_session(repo, sess)
     rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
+    # ★"기다리는 그 턴이 곧 당신이다" 를 기계가 들이민다 (2026-08-25, ep1934 실측)
+    #   — 옛 문구는 "이 턴이 닫힌 뒤 적용된다"까지만 말했다. 사실로는 맞지만, 예약을 낸
+    #   AI 는 자기 턴이 **그 병목이라는 것**을 읽지 못하고 턴 안에서 적용을 폴링했다.
+    #   그러면 적용은 영영 안 오고 대기 상한이 통째로 타며, 안전망이던 상한이 시간표가 된다.
+    #   episode_id 는 이미 잡에 있다 — 없던 것은 정보가 아니라 **자기수용감각**이었다.
+    eid = job.get("episode_id")
+    _cap = _turn_cap_s()
+    _who = f"지금 이 턴(주행기록 {eid})" if eid else "지금 이 턴"
+    _verify_note = (
+        f"위탁한 검증 명령(`{job['verify_cmd'][:120]}`)도 적용 뒤 수행자가 대신 돌려 "
+        f"결과를 같은 보고에 실어 보냅니다."
+        if job.get("verify_cmd") else
+        "적용 뒤 확인할 것이 있으면 apply 에 verify_cmd 로 명령을 함께 맡기세요 — "
+        "수행자가 적용 후 돌려 다음 턴에 보고합니다. 이 턴에서 기다려서는 볼 수 없습니다.")
     return {
         "success": True, "applied": False, "scheduled": True, "verified": True,
         "checks": [{"gate": c["gate"], "passed": True} for c in checks],
         "files": rels,
-        "message": (f"검증 통과 — 라이브 적용을 예약했습니다({len(rels)}건). 이 턴이 닫힌 뒤"
-                    f"(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 쓰기 직전 재검증 후 "
-                    f"적용하며, 리로드는 그때 한 번 일어납니다. 적용·헬스 판정은 다음 턴에 "
-                    f"보고됩니다. 사용자에게는 '검증 통과, 적용 예약됨'으로 알리세요 — "
+        "waiting_on_episode": eid,
+        "do_not_wait": True,
+        "message": (f"검증 통과 — 라이브 적용을 예약했습니다({len(rels)}건). "
+                    f"★{_who}이 닫혀야 적용이 일어납니다 — 기다리는 대상이 곧 당신입니다. "
+                    f"그러니 이 턴에서 적용을 기다리거나 폴링하지 마십시오. 기다리면 적용은 "
+                    f"오지 않고 대기 상한 {_cap}초를 통째로 태운 뒤에야 강행됩니다. "
+                    f"**지금 턴을 닫는 것이 이 작업의 완결입니다.** "
+                    f"턴이 닫히면(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 쓰기 직전 "
+                    f"재검증 후 적용하고, 리로드는 그때 한 번 일어납니다. 적용·헬스 판정은 "
+                    f"다음 턴에 자동으로 보고됩니다. {_verify_note} "
+                    f"사용자에게는 '검증 통과, 적용 예약됨'으로 알리세요 — "
                     f"아직 라이브에 반영되지 않았습니다."),
         "worktree": sess["worktree"],
     }
@@ -945,12 +993,25 @@ def op_apply(ti):
     # **이 턴을 실행 중인 워커를 죽인다** — 최종 응답·주행기록 버퍼·증류 스레드가 전부
     # 그 워커 안에 산다. 검증은 방금 끝났으니 쓰기만 '턴이 닫힌 뒤'로 미뤄 분리 수행자에
     # 맡긴다. frontend/scripts 만이면 리로드가 없으므로 지금 그대로 적용한다.
+    verify_cmd = (ti.get("verify_cmd") or "").strip()
+    if len(verify_cmd) > 2000:
+        return {"success": False, "applied": False,
+                "error": "verify_cmd 가 너무 깁니다(2000자 상한) — 스크립트로 만들어 그 경로를 주세요."}
+
     if _reload_triggering(sess):
-        out = _schedule_deferred_apply(repo, sess, checks)
+        out = _schedule_deferred_apply(repo, sess, checks, verify_cmd)
         if out is not None:
             return out
         print("[수리 스테이징] 지연 적용 예약 불능 — 즉시 적용 폴백(이 턴은 리로드에 끊길 수 있음)")
-    return _perform_apply(repo, sess, checks, prepare, finalize)
+    out = _perform_apply(repo, sess, checks, prepare, finalize)
+    if verify_cmd and out.get("applied"):
+        # 즉시 적용 경로(리로드 없음)에는 위탁할 죽음이 없다 — 이 턴이 그대로 살아 있으므로
+        # 검증은 지금 직접 하는 게 맞다. 조용히 삼키면 "돌렸겠지"로 오해된다.
+        out["verify_cmd_deferred"] = False
+        out["message"] = (out.get("message") or "") + (
+            f" ★verify_cmd 는 돌리지 않았습니다 — 리로드 없는 즉시 적용이라 이 턴이 살아 "
+            f"있습니다. 지금 직접 확인하세요: {verify_cmd[:160]}")
+    return out
 
 
 def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):

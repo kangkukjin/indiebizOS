@@ -35,6 +35,48 @@ _OUTCOME_LABEL = {
 SCHEDULED_STALE_S = 30 * 60
 
 
+# ★판정의 주인 (2026-08-25, 사용자 확정: "수리한 에이전트가 말하도록 해야지")
+# 수리는 자기 턴이 죽은 뒤에 결말이 나므로, 그 결말을 **누구의 입이 닫느냐**가 정해져야 한다.
+# 옛 규칙은 "시스템 AI 만"(수리의 주체이자 보고 책임자)이었는데, 2026-08-25 에 그랜트 한도가
+# 정본대로 복원되면서 프로젝트 에이전트도 수리 주체가 됐다 — 그러면 그 판정이 명령한 창이
+# 아닌 곳으로 간다. 주인은 **수리를 한 그 에이전트**다.
+#
+# 열쇠는 쓰기 시점에 원장(manifest·session)에 박히고, 다음 턴의 회상이 자기 열쇠로 조회한다.
+# 규칙 한 벌만 두는 이유: 생산자(handler·repair_staging)와 소비자(cognitive_recall)가 각자
+# 조립하면 반드시 어긋난다 — 어긋나면 판정이 **아무 입에도 안 걸려 영영 침묵**한다.
+OWNER_SYSTEM_AI = "system_ai"
+
+
+def owner_key(agent_id: str = "", project_id: str = "") -> str:
+    """수리 주체의 열쇠. 에이전트 신원이 없으면 시스템 AI(그 몸은 agent_id 를 안 세운다).
+
+    프로젝트를 앞에 붙이는 이유: agent_001 같은 id 는 **프로젝트 안에서만** 유일하다.
+
+    ★시스템 AI 는 자리에 따라 신원이 반쯤 서 있다 — 채팅 턴은 agent_id 를 안 세우지만
+    자기 상주 루프는 config 의 id/project(`system_ai`/`system`)를 세운다. 같은 몸이
+    자리에 따라 다른 열쇠를 받으면 판정이 어긋나 영영 침묵하므로, 예약된 id 하나로
+    접는다(id 가 system_ai 면 프로젝트와 무관하게 시스템 AI)."""
+    aid = (agent_id or "").strip()
+    pid = (project_id or "").strip()
+    if not aid or aid == OWNER_SYSTEM_AI:
+        return OWNER_SYSTEM_AI
+    return f"{pid}:{aid}" if pid else aid
+
+
+def current_owner() -> str:
+    """지금 이 스레드가 누구인가 — 스레드 컨텍스트에서 읽는다(없으면 시스템 AI)."""
+    try:
+        from thread_context import get_current_agent_id, get_current_project_id
+        return owner_key(get_current_agent_id() or "", get_current_project_id() or "")
+    except Exception:
+        return OWNER_SYSTEM_AI
+
+
+def _owner_of(record: dict) -> str:
+    """원장 한 건의 주인. 표식이 없는 옛 기록은 종전 규약대로 시스템 AI 것이다."""
+    return (record or {}).get("owner") or OWNER_SYSTEM_AI
+
+
 def _backups_root(repo: str) -> str:
     return os.path.join(repo, "data", "system_ai_state", "red_backups")
 
@@ -50,8 +92,10 @@ def _iter_result_paths(repo: str):
         return
 
 
-def collect_pending(repo: str, max_items: int = MAX_ITEMS) -> list:
-    """아직 사용자에게 보고되지 않은 수리 판정 목록(최신 우선). 부작용 없음."""
+def collect_pending(repo: str, max_items: int = MAX_ITEMS, owner: str = None) -> list:
+    """아직 사용자에게 보고되지 않은 수리 판정 목록(최신 우선). 부작용 없음.
+
+    owner 를 주면 **그 주체가 낸 판정만** 돌려준다(None=전부 — 감사·시험용)."""
     out = []
     now = time.time()
     for path in _iter_result_paths(repo):
@@ -61,6 +105,8 @@ def collect_pending(repo: str, max_items: int = MAX_ITEMS) -> list:
         except Exception:
             continue
         if data.get("announced_at"):
+            continue
+        if owner is not None and _owner_of(data) != owner:
             continue
         finished = data.get("finished_at") or 0
         if finished and now - finished > MAX_AGE_S:
@@ -87,7 +133,7 @@ def mark_announced(items: list):
             continue
 
 
-def collect_unapplied(repo: str, min_age_s: float = 60.0) -> list:
+def collect_unapplied(repo: str, min_age_s: float = 60.0, owner: str = None) -> list:
     """적용되지 않은 채 남은 격리 스테이징 세션 (2026-08-17).
 
     ★왜 여기냐: 격리 스테이징은 라이브를 안 건드리는 게 장점인데, 바로 그래서 **적용을
@@ -115,6 +161,8 @@ def collect_unapplied(repo: str, min_age_s: float = 60.0) -> list:
         status = s.get("status")
         if status not in ("staging", "apply_scheduled") or not (s.get("files") or {}):
             continue
+        if owner is not None and _owner_of(s) != owner:
+            continue
         try:
             age = now - os.path.getmtime(path)
         except OSError:
@@ -133,15 +181,18 @@ def collect_unapplied(repo: str, min_age_s: float = 60.0) -> list:
     return out[:MAX_ITEMS]
 
 
-def pending_scent(repo: str) -> str:
+def pending_scent(repo: str, owner: str = None) -> str:
     """미보고 판정 + 미적용 스테이징을 연상 블록용 XML 로. 없으면 빈 문자열(0토큰).
 
     ★부작용 있음: 반환과 동시에 판정에 보고 표식을 남긴다(한 번만 말하기 위해).
     스테이징 쪽은 표식을 남기지 않는다 — 그건 지나간 사건이 아니라 *지금도 참인 상태*라,
     해소(apply/discard)될 때까지 계속 보여야 한다.
+
+    owner: 이 턴을 도는 주체의 열쇠 — 자기가 한 수리의 결말만 줍는다. 남의 판정을
+    가져가면 그 판정은 announced 표식이 찍힌 채 **정작 명령한 창에서는 영영 안 보인다.**
     """
-    items = collect_pending(repo)
-    staged = collect_unapplied(repo)
+    items = collect_pending(repo, owner=owner)
+    staged = collect_unapplied(repo, owner=owner)
     if not items and not staged:
         return ""
     if not items:

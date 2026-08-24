@@ -304,6 +304,7 @@
     "test_render_core": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
     "test_repair_status_git_column": "force_exclude_glob",
+    "test_repair_verdict_owner": "force_exclude_glob",
     "test_runtime_shape": "force_exclude_glob",
     "test_shape_variant_axis": "force_exclude_glob",
     "test_single_runner": "force_exclude_glob",
@@ -317,8 +318,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 311,
+    "total": 312,
     "engine": 225,
-    "blocklist": 86
+    "blocklist": 87
   }
 }

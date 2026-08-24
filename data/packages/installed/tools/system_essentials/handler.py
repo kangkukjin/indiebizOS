@@ -294,6 +294,15 @@ def _keeper_pause(task_key: str):
         print(f"[RED 안전판] keeper 일시정지 표식 실패(계속 진행): {e}")
 
 
+def _repair_owner() -> str:
+    """이 수리를 하는 주체의 열쇠 — 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형)."""
+    try:
+        from red_report import current_owner
+        return current_owner()
+    except Exception:
+        return "system_ai"
+
+
 def _red_backup_dir(grant: dict) -> str:
     key = re.sub(r"[^A-Za-z0-9_-]", "_", (grant.get("task_id") or "notask"))[:48] or "notask"
     bdir = os.path.join(str(_REPO_ROOT), "data", "system_ai_state", "red_backups", key)
@@ -331,6 +340,9 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
         if not manifest:
             _port = os.environ.get("INDIEBIZ_API_PORT", "8765")
             manifest = {"repo": str(_REPO_ROOT), "task_key": grant.get("task_id") or "notask",
+                        # ★판정의 주인 — 워치독이 result.json 으로 실어 나르고, 다음 턴의
+                        #   회상이 자기 열쇠로 조회한다("수리한 에이전트가 말한다", 08-25).
+                        "owner": _repair_owner(),
                         "health_url": f"http://127.0.0.1:{_port}/health", "files": {}}
         files = manifest.setdefault("files", {})
         if abs_path not in files:

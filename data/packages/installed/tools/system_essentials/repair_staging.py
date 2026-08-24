@@ -283,8 +283,10 @@ def ensure_session(repo: str, key: str):
         print(f"[수리 스테이징] 베이스 동기화 실패 — 스테이징 없이 진행: {detail}")
         _git(["worktree", "remove", "--force", wt_abs], repo)
         return None
+    # ★주인 — 미적용 스테이징(<repair_staged>)과 지연 적용 결말이 **명령한 창으로**
+    #   돌아가게 하는 열쇠. 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형, 08-25).
     sess = {"key": key, "worktree": wt_rel, "status": "staging",
-            "created_at": datetime.now().isoformat(), "files": {}}
+            "created_at": datetime.now().isoformat(), "owner": _repair_owner(), "files": {}}
     _save_session(repo, sess)
     print(f"[수리 스테이징] 격리 사본 개설: {wt_rel} — 라이브는 이 세션이 적용될 때까지 무변경")
     return sess
@@ -717,14 +719,28 @@ def _grant_identity():
     return "", "", ""
 
 
-def _write_deferred_result(repo: str, key_str: str, payload: dict):
+def _repair_owner() -> str:
+    """이 수리를 하는 주체의 열쇠 — 규칙은 red_report 한 곳에만 둔다(생산자·소비자 동형)."""
+    try:
+        from red_report import current_owner
+        return current_owner()
+    except Exception:
+        return "system_ai"
+
+
+def _write_deferred_result(repo: str, key_str: str, payload: dict, owner: str = None):
     """수행자 단계의 결말을 red_report 가 줍는 자리(red_backups/<key>/result.json)에 남긴다
-    — 워치독 판정과 같은 형식·같은 회수 경로라 다음 턴에 반드시 보고된다."""
+    — 워치독 판정과 같은 형식·같은 회수 경로라 다음 턴에 반드시 보고된다.
+
+    ★owner 는 **세션 원장에서** 온다 — 이 함수는 분리 수행자(red_apply) 프로세스에서
+    도는데, 거기엔 수리한 에이전트의 스레드 컨텍스트가 없다. 지금 여기서 물으면
+    언제나 '시스템 AI' 라는 오답이 나온다."""
     try:
         bdir = os.path.join(repo, "data", "system_ai_state", "red_backups", key_str)
         os.makedirs(bdir, exist_ok=True)
         payload = dict(payload)
         payload.setdefault("finished_at", time.time())
+        payload.setdefault("owner", owner or "system_ai")
         with open(os.path.join(bdir, "result.json"), "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
     except Exception as e:
@@ -798,6 +814,7 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
     if not sess:
         return {"success": False, "applied": False, "error": f"세션 원장이 없습니다: {key}"}
     key_str = task_key(sess.get("key") or key)
+    _owner = sess.get("owner")   # 수리한 에이전트 — 이 프로세스는 그를 알 길이 없다
     rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
     st = sess.get("status")
     if st == "applied":
@@ -807,7 +824,8 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
         # — 그 예약 스냅샷은 낡았으므로 취소가 맞다(세션은 <repair_staged> 로 계속 보인다).
         _write_deferred_result(repo, key_str, {
             "outcome": "deferred_canceled", "files": rels,
-            "note": f"예약 후 세션 상태가 '{st}' 로 바뀌어 적용을 취소했습니다(스냅샷 낡음)."})
+            "note": f"예약 후 세션 상태가 '{st}' 로 바뀌어 적용을 취소했습니다(스냅샷 낡음)."},
+            owner=_owner)
         return {"success": False, "applied": False,
                 "error": f"세션 상태 {st} — 예약이 낡아 취소했습니다(라이브 무변경)."}
     if not os.path.isdir(os.path.join(repo, sess.get("worktree") or "")):
@@ -817,7 +835,8 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
         _save_session(repo, sess)
         _write_deferred_result(repo, key_str, {
             "outcome": "deferred_apply_failed", "files": rels,
-            "note": "격리 사본이 사라져 예약 적용을 수행할 수 없었습니다 — 다시 수리하세요."})
+            "note": "격리 사본이 사라져 예약 적용을 수행할 수 없었습니다 — 다시 수리하세요."},
+            owner=_owner)
         return {"success": False, "applied": False, "error": "격리 사본 소실"}
     ok, checks = verify(repo, sess)
     if not ok:
@@ -829,7 +848,8 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
         _write_deferred_result(repo, key_str, {
             "outcome": "deferred_verify_failed", "files": rels,
             "note": (f"쓰기 직전 재검증 실패({', '.join(failed)}) — 예약~수행 사이 라이브가 "
-                     f"변했습니다. 라이브 무변경, 수정분은 격리 사본에 보존.")})
+                     f"변했습니다. 라이브 무변경, 수정분은 격리 사본에 보존.")},
+            owner=_owner)
         return {"success": False, "applied": False, "verified": False,
                 "checks": checks, "failed_gates": failed,
                 "error": f"쓰기 직전 재검증 실패({', '.join(failed)}) — 라이브 무변경"}
@@ -842,7 +862,8 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
             _save_session(repo, cur)
         _write_deferred_result(repo, key_str, {
             "outcome": "deferred_apply_failed", "files": rels,
-            "note": (out.get("error") or out.get("message") or "적용 단계 오류")[:400]})
+            "note": (out.get("error") or out.get("message") or "적용 단계 오류")[:400]},
+            owner=_owner)
     return out
 
 

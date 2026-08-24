@@ -50,8 +50,20 @@
 > 그냥 멎은 수리가 구별되지 않았다. ①워치독이 **성공·판정미완에도** OS 알림(종전엔
 > 실패만) ②`backend/datastore/red_report.py` 가 미보고 판정을 회수해 다음 턴의 0단계
 > 연상에 `<repair_outcome>` 으로 얹는다(`cognitive_recall._pending_repair_scent` —
-> 시스템 AI 한정·파일 읽기뿐·없으면 0토큰·`announced_at` 표식으로 한 번만).
+> 파일 읽기뿐·없으면 0토큰·`announced_at` 표식으로 한 번만).
 > 원칙: **죽음을 넘긴 판정은 다음 턴의 입이 닫는다.**
+>
+> **★그 입은 수리한 에이전트다 (2026-08-25, 사용자 확정)**: 옛 게이트는 '시스템 AI 만'
+> 이었고 그건 수리 주체가 하나라는 전제였다 — 같은 날 한도가 정본대로 복원되며 깨졌다.
+> 게이트를 신원('내가 시스템 AI 인가')에서 **소유**('이 판정이 내 것인가')로 옮긴다.
+> 주인 열쇠(`red_report.owner_key` — 규칙 한 벌. 시스템 AI 는 예약 id `system_ai` 하나로
+> 접는다: 그 몸은 채팅 턴에선 신원을 안 세우고 상주 루프에선 세워, 안 접으면 자리마다
+> 다른 열쇠를 받는다)를 **쓰기 시점에** 원장에 박는다 — `handler._red_write_prepare` →
+> manifest → `red_watchdog` → `result.json`, 그리고 `repair_staging` 세션 원장 → 지연
+> 결말(분리 수행자 red_apply 에겐 수리한 턴의 컨텍스트가 없으므로 **원장에서 실려 와야**
+> 한다. 거기서 물으면 언제나 '시스템 AI' 라는 오답이 나온다). 회수가 한 번뿐이라 엉뚱한
+> 입이 먼저 주우면 표식만 찍히고 명령한 창에서는 영영 안 보인다 — 침묵 실패라 관문으로
+> 잠갔다(`backend/test_repair_verdict_owner.py` O1~O6).
 >
 > **배선**: 그랜트 원장 `backend/datastore/red_grant.py`(프로세스 전역 — claude_code 의 MCP→HTTP
 > 재진입 심을 task_id 매칭으로 건넘), 발급/회수는 `agent_pipeline` REPAIR 분기/finally 만.

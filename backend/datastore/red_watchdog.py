@@ -152,6 +152,16 @@ def _rollback(manifest: dict) -> list:
     return restored
 
 
+def _manifest_owner(manifest_path: str) -> str:
+    """매니페스트가 적어 둔 수리 주체. 못 읽으면 종전 규약(시스템 AI)으로 착지한다 —
+    주인을 모른다고 판정을 버리면 그 수리는 어느 입에도 안 걸린다."""
+    try:
+        with open(manifest_path, encoding="utf-8") as f:
+            return json.load(f).get("owner") or "system_ai"
+    except Exception:
+        return "system_ai"
+
+
 def main():
     manifest_path = sys.argv[1]
     started = time.time()
@@ -160,6 +170,10 @@ def main():
     def _write_result(payload: dict):
         try:
             payload["finished_at"] = time.time()
+            # ★판정의 주인을 매니페스트에서 실어 나른다 (2026-08-25) — 회수하는 쪽
+            #   (red_report)이 "이 판정이 내 것인가"로 묻기 때문. 매니페스트를 못 읽는
+            #   결말(수명 초과 등)도 있으므로 여기서 매번 best-effort 로 읽는다.
+            payload.setdefault("owner", _manifest_owner(manifest_path))
             with open(result_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, ensure_ascii=False, indent=2)
         except Exception:

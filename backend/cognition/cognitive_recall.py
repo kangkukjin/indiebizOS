@@ -162,14 +162,19 @@ class CognitiveRecallMixin:
         (분리 워치독이 헬스체크·롤백 후 result.json 에 판정 기록). 그 판정을 사용자에게
         말할 입이 없어, 성공한 수리와 그냥 멎어버린 수리가 구별되지 않았다 — 자기수리가
         '멈춘 것처럼' 보이던 증상의 나머지 절반. 여기서 미보고 판정을 주워 다음 턴이
-        말로 닫는다. 시스템 AI 만 — 수리의 주체이자 보고 책임자다(프로젝트 에이전트에게는
-        남의 일이라 잡음)."""
+        말로 닫는다.
+
+        ★주인 것만 줍는다 (2026-08-25, 사용자 확정: "수리한 에이전트가 말하도록 해야지").
+        옛 게이트는 '시스템 AI 만'이었다 — 수리 주체가 시스템 AI 뿐이라는 전제였고, 그 전제는
+        같은 날 그랜트 한도가 정본대로 복원되며 깨졌다(프로젝트 에이전트도 수리한다).
+        게이트를 '내가 시스템 AI 인가'에서 '이 판정이 내 것인가'로 옮긴다 — 물음이 신원이
+        아니라 **소유**여야 판정이 명령한 창으로 돌아간다. 남의 것을 주우면 announced 표식만
+        찍고 정작 그 창에서는 영영 안 보인다(회수는 한 번뿐이므로)."""
         try:
-            if not self.config.get("_is_system_ai"):
-                return ""
             from runtime_utils import get_base_path
             import red_report
-            return red_report.pending_scent(str(get_base_path()))
+            return red_report.pending_scent(str(get_base_path()),
+                                            owner=red_report.current_owner())
         except Exception:
             return ""
 

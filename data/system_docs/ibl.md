@@ -53,7 +53,11 @@ IBL 표현 계층:     [node:action]{params}
 - 표준(문법·기능어 코어)을 바꾸는 것은 **언어 개정**이다 — 파서·desugar·always_on 플래그·이 조항·빌드의 `STANDARD_CORE_NODES` 선언을 함께, 의식적으로 바꾼다. 선언 없이 바꾸면 표준-코어 가드가 빌드를 멈춘다.
 - 하네스 쪽 이음매는 `execute_ibl` 단 하나 — 하네스 기능(분류·의식·평가·회상)은 언어에 스며들지 않는다.
 
-**집행**: `build_ibl_nodes.py --check`의 **표준-코어 가드**(always_on 집합 = `STANDARD_CORE_NODES` 선언 일치, 파서 desugar 타깃이 표준 코어의 실존 액션인지) — pre-commit 훅과 self-check 12h 순찰에 합류.
+**집행**: 두 겹이다.
+- *어휘 층* — `build_ibl_nodes.py --check`의 **표준-코어 가드**(always_on 집합 = `STANDARD_CORE_NODES` 선언 일치, 파서 desugar 타깃이 표준 코어의 실존 액션인지).
+- *코드 층* (2026-08-24 추가) — `check_backend_layers.py`의 **순수 코어 폐포 가드**: 문법·통화 계약(`ibl_parser`·`ibl_envelope`·`ibl_predicates`·`ibl_ops`·`api_transforms`)의 전이 폐포가 **ibl 층 + `backend/common/` 밖으로 나가지 않는다**. 직접이든 전이든 숙주(DB·에이전트·HTTP·설정)에 닿으면 실패한다 — "표준은 몸을 몰라야 한다"를 선언이 아니라 매 빌드의 사실로 만든다. 파일 목록이 아니라 뿌리에서 뻗는 폐포라, 1500줄 규칙으로 파서가 또 쪼개져도 새 파일이 자동으로 검사에 들어온다. ★`ibl_control_blocks`·`ibl_exec_each`는 뿌리가 아니다(층-밖 의존은 0이지만 엔진·워크플로를 끌어와 실제로는 엔진 한복판이다).
+
+둘 다 pre-commit 훅과 self-check 12h 순찰에 합류.
 
 ### 사전은 몸마다 다르다 — 물리 분리와 몸 사이 소통 (부속 조항, 2026-07-22)
 

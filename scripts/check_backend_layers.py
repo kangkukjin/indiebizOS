@@ -270,6 +270,91 @@ def cross_layer_cycles(graph):
     return bad
 
 
+# ── 순수 코어 폐포 가드 (2026-08-24, IBL 경계 후속) ──────────────────────────────
+# 헌법 "표준 = 문법 + 기능어 코어"는 지금까지 *어휘* 층에서만 기계적으로 강제됐다
+# (STANDARD_CORE_NODES — scripts/iblbuild_validators.py). 이 가드가 그것을 *코드* 층까지
+# 내린다: 문법·통화 계약은 숙주(DB·에이전트·HTTP·설정)를 몰라야 한다.
+#
+# ★파일 목록을 손으로 유지하지 않는다 — 뿌리에서 출발한 **전이 폐포**를 검사한다.
+#   1500줄 규칙으로 파서가 또 쪼개져도 새 파일이 폐포에 자동으로 들어오므로, "가드가
+#   조용히 안 보는 파일"이 생길 수 없다(2026-08-24 교훈: 사람이 고른 범위는 반드시 샌다).
+#
+# 불변식: 뿌리의 전이 폐포는 **ibl 층 모듈 + backend/common/** 밖으로 나가지 않는다.
+#   직접이든 전이든 숙주에 닿으면 실패한다 — 예컨대 파서가 ibl_engine 을 import 하면
+#   엔진이 끌고 오는 ibl_registry(data 층)에서 걸린다.
+# 비-뿌리: ibl_control_blocks·ibl_exec_each 는 뿌리가 아니다. 층-밖 의존은 0이지만
+#   ibl_engine·ibl_executors·workflow_engine 을 끌어와 실제로는 엔진 한복판이다
+#   (2026-08-24 실측 — "의존 0인 9파일"은 *층-밖* 0이었지 분리 가능이 아니었다).
+PURE_CORE_ROOTS = ["ibl_parser", "ibl_envelope", "ibl_predicates", "ibl_ops",
+                   "api_transforms"]
+# backend 아래 서브패키지: common 만 코어가 기대도 되는 잎 기질(통화·변수표기·HTML 유틸).
+_LEAF_PKG = "common"
+_HOST_PKGS = ("drivers", "providers", "channels")
+
+
+def _core_module_paths(backend_dir):
+    """폐포 검사용 경로표 — 평면 모듈 + 서브패키지(common/drivers/providers/channels)."""
+    out = dict(module_paths(backend_dir))
+    for pkg in (_LEAF_PKG,) + _HOST_PKGS:
+        d = os.path.join(backend_dir, pkg)
+        if not os.path.isdir(d):
+            continue
+        for f in sorted(os.listdir(d)):
+            if f.endswith(".py") and f != "__init__.py":
+                out[f"{pkg}.{f[:-3]}"] = f"{pkg}/{f}"
+    return out
+
+
+def _closure_deps(path, known):
+    """이 파일이 import 하는 저장소 안 모듈 — 톱레벨·함수-안 전부."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        return set()
+    deps = set()
+    for n in ast.walk(tree):
+        names = []
+        if isinstance(n, ast.Import):
+            names = [a.name for a in n.names]
+        elif isinstance(n, ast.ImportFrom) and n.level == 0 and n.module:
+            names = [n.module]
+        for name in names:
+            if name in known:                    # common.ibl_vars 부류
+                deps.add(name)
+            elif name.split(".")[0] in known:    # 평면 모듈
+                deps.add(name.split(".")[0])
+    return deps
+
+
+def pure_core_leaks(backend_dir, roots=PURE_CORE_ROOTS):
+    """뿌리의 전이 폐포가 숙주에 닿은 자리 — (모듈, 도달 경로) 목록. 없으면 폐포 크기만."""
+    known = _core_module_paths(backend_dir)
+    roots = [r for r in roots if r in known]
+    seen, order = set(roots), list(roots)
+    parent = {r: None for r in roots}
+    bad, i = [], 0
+    while i < len(order):
+        m = order[i]
+        i += 1
+        # 판정: common.* 은 허용, ibl 층 모듈은 허용, 그 밖은 숙주 도달 = 위반
+        if m.startswith(f"{_LEAF_PKG}."):
+            pass
+        elif m.startswith(_HOST_PKGS) or layer_of(m) != "ibl":
+            chain, x = [], m
+            while x:
+                chain.append(x)
+                x = parent[x]
+            bad.append(" ← ".join(chain))
+            continue          # 숙주 안쪽까지 파고들지 않는다 (첫 도달점만 신고)
+        for d in sorted(_closure_deps(os.path.join(backend_dir, known[m]), known)):
+            if d not in seen:
+                seen.add(d)
+                parent[d] = m
+                order.append(d)
+    return bad, len(order)
+
+
 # ── 사적 심볼 월경 가드 (2026-08-24, IBL 경계 C부) ───────────────────────────────
 # 층 안 친구-모듈끼리 언더스코어를 나눠 쓰는 것은 결함이 아니다 — 1500줄 규칙으로 한
 # 유기체를 파일만 나눈 자리다(engine↔executors↔routing, parser 3종, workflow 3종).
@@ -356,6 +441,13 @@ def main() -> int:
             "조립 루트(api/boot_common)를 import — 조립은 아무도 참조하지 않는다:\n"
             + "\n".join(f"  {e}" for e in into_assembly))
 
+    core_bad, core_n = pure_core_leaks(BACKEND)
+    if core_bad:
+        errors.append(
+            "순수 코어(문법·통화 계약)가 숙주에 닿았다 — 표준은 몸을 몰라야 한다.\n"
+            "도달 경로(오른쪽이 뿌리). 숙주 의존은 코어 밖(엔진·실행기)으로 옮길 것:\n"
+            + "\n".join(f"  {v}" for v in core_bad))
+
     leaks = private_symbol_leaks(BACKEND)
     if leaks:
         errors.append(
@@ -381,7 +473,7 @@ def main() -> int:
             print("\n" + e)
         return 1
     print(f"[OK] backend 층 가드 통과 (모듈 {len(graph)} · 동결 부채 {len(viol)}건 · "
-          f"ibl 사적 심볼 월경 0건)")
+          f"ibl 사적 심볼 월경 0건 · 순수 코어 폐포 {core_n}모듈 닫힘)")
     return 0
 
 
@@ -428,6 +520,30 @@ def self_test() -> int:
         found = private_symbol_leaks(td, pkg_tools=os.path.join(td, "없는패키지"))
         assert len(found) == 1 and "body_ask.py:2" in found[0], found
     assert private_symbol_leaks(BACKEND) == [], private_symbol_leaks(BACKEND)[:5]
+    # 순수 코어 폐포: 판정 로직(직접·전이·common 허용) + 실측 닫힘
+    with _tf.TemporaryDirectory() as td:
+        for d in ("ibl", "datastore", "common"):
+            os.makedirs(os.path.join(td, d), exist_ok=True)
+        w = lambda d, f, s: open(os.path.join(td, d, f), "w").write(s)  # noqa: E731
+        w("common", "currency.py", "")
+        w("datastore", "conversation_db.py", "")
+        w("ibl", "ibl_registry.py", "")
+        # ① common 만 기대는 뿌리 = 정상
+        w("ibl", "ibl_envelope.py", "from common.currency import x\n")
+        assert pure_core_leaks(td, roots=["ibl_envelope"]) == ([], 2), \
+            pure_core_leaks(td, roots=["ibl_envelope"])
+        # ② 숙주 직접 도달 = 잡힌다
+        w("ibl", "ibl_ops.py", "def f():\n    from conversation_db import x\n")
+        bad, _ = pure_core_leaks(td, roots=["ibl_ops"])
+        assert bad == ["conversation_db ← ibl_ops"], bad
+        # ③ 전이 도달도 잡힌다 (파서 → 엔진 → 사전)
+        w("ibl", "ibl_engine.py", "from ibl_registry import x\n")
+        w("ibl", "ibl_parser.py", "from ibl_engine import x\n")
+        bad, _ = pure_core_leaks(td, roots=["ibl_parser"])
+        assert bad == ["ibl_registry ← ibl_engine ← ibl_parser"], bad
+    core_bad, core_n = pure_core_leaks(BACKEND)
+    assert core_bad == [], core_bad
+    assert core_n >= len(PURE_CORE_ROOTS), core_n
     # 실그래프: 교차층 순환 0 이어야 한다 (2026-08-05 달성 불변식)
     graph0 = build_graph(BACKEND)
     assert cross_layer_cycles(graph0) == [], "실그래프에 교차층 순환 존재"

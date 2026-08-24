@@ -54,11 +54,19 @@ B부에서도 같은 모양이 한 번 더 나왔다: `ibl_routing._rebuild_ibl_
 와 동형"이라 적어두고 `reload_registry` 단계가 빠져 있었다 — **주석이 동형을 주장하면
 드리프트가 이미 시작된 것이다.** 두 벌로 적힌 절차는 한쪽만 고쳐진다.
 
-### 후속 (별도 판단 — 이 문서의 범위 밖)
-- 상향 8간선(엔진→consciousness_agent·goal_evaluator·ibl_usage_generator 등)의 훅 승격
-- 순수 코어 격리 가드: 의존 0인 9파일(파서 3종·ops·envelope·predicates·control_blocks·
-  exec_each·api_transforms)을 빈 환경에서 단독 import 하는 검증 — "분리 가능함"을 문서의
-  주장이 아니라 매 빌드의 사실로
+### 후속
+- **순수 코어 폐포 가드 = ✅ 완료 `d0b1e0f`** (§5). ★원안의 전제가 틀렸다: "의존 0인 9파일"은
+  *층-밖* 의존 0이었지 분리 가능이 아니었다 — `ibl_control_blocks`·`ibl_exec_each` 는
+  `ibl_engine`·`ibl_executors`·`workflow_engine` 을 끌어와 엔진 한복판이다. 실제 순수 코어는
+  **7파일 + `backend/common/` 잎**이고, 폐포는 10모듈에서 닫힌다.
+- 상향 5간선(BASELINE 동결분 중 ibl 층 발신: `ibl_engine→consciousness_agent` ·
+  `ibl_executors→goal_evaluator` · `package_manager→ibl_usage_generator` ·
+  `channel_engine→api_gmail`·`indienet`)의 훅 승격 = **지금은 보류**. 층 가드 BASELINE 이 이미
+  새 간선을 막고 있어 *드리프트 방지*라는 목적은 달성돼 있다. 훅 전환에 남는 값은
+  "떼어낼 수 있음" 하나뿐인데 등록 배관은 영구 표면이고 현재 소비자가 0이다 — 소비자를
+  상상해 설계하면 틀린 모양이 나온다. **재론 조건: 두 번째 숙주 등장.**
+  (참고: `channel_engine→api_gmail`·`indienet` 둘은 부류가 다르다 — "언어가 인지를 부른다"가
+  아니라 "채널 엔진이 구체 채널을 안다"이므로 답은 훅이 아니라 채널 등록부일 가능성이 높다.)
 - `ibl_registry` 의 ibl 층 이동 = **기각**(§0). 재론 조건: 언어 반출의 실소비자 등장
 
 ## 2. A부 — 공개 승격 (✅ 완료 2026-08-24)
@@ -171,13 +179,65 @@ B부에서도 같은 모양이 한 번 더 나왔다: `ibl_routing._rebuild_ibl_
 - 커밋 3개(A→B→C), main 직접, 동시 세션 대비 pathspec 으로. 예:
   `git commit -m "..." -- backend/ data/packages/installed/tools/community-portal/ scripts/check_backend_layers.py docs/ data/system_docs/architecture.md`
 
+## 5. 순수 코어 폐포 가드 (✅ 완료 2026-08-24)
+
+헌법 "표준 = 문법 + 기능어 코어"(`ibl.md` 언어의 경계)는 그동안 **어휘 층에서만** 기계적으로
+강제됐다(`STANDARD_CORE_NODES`). 이 가드가 그것을 **코드 층**까지 내린다: 문법·통화 계약은
+숙주(DB·에이전트·HTTP·설정)를 몰라야 한다.
+
+### 5-1. 원안의 전제가 틀렸다 (실측 정정)
+
+원 제안은 "의존 0인 9파일을 빈 환경에서 단독 import"였다. 실행해 보면 **첫날부터 2개가
+실패한다**:
+
+| 파일 | 실제 내부 의존 |
+|---|---|
+| `ibl_control_blocks` | `ibl_engine` · `ibl_executors` · `workflow_engine` · `ibl_predicates` |
+| `ibl_exec_each` | `ibl_parser` · `workflow_contract` · `workflow_engine` |
+
+"의존 0"은 *층-밖* 의존이 0이었다는 뜻이고, 이 둘은 층 안에서 가장 무거운 모듈들(층-밖 간선
+94건을 지고 있는 그 모듈들)을 끌어온다. 즉 **분리 가능이 아니라 엔진 한복판**이다.
+
+실제 순수 코어는 **7파일 + `backend/common/` 잎**이다. 단독 import 실증: 5개
+(`ibl_parser_values`·`ibl_parser_blocks`·`ibl_ops`·`ibl_envelope`·`ibl_predicates`)는 저장소
+경로를 다 걷어낸 환경에서 그대로 떴고, `ibl_parser`·`api_transforms` 는 `common` 하나만
+필요했다. `common/` 은 층 체계 **밖**의 잎 기질이고(층 가드 `_SKIP_DIRS`) 통화 계약
+(`common.currency`)·변수 표기(`common.ibl_vars`)·HTML 유틸이 산다 — 의미상 코어가 맞다.
+
+### 5-2. 설계 — 파일 목록이 아니라 폐포
+
+★**손으로 유지하는 파일 목록을 쓰지 않는다.** 1500줄 규칙으로 파서가 또 쪼개지는 날 새 파일이
+목록에 안 들어가고 가드가 조용히 그 파일을 안 보게 된다(오늘 배운 바로 그 병).
+
+- **뿌리**: `ibl_parser` · `ibl_envelope` · `ibl_predicates` · `ibl_ops` · `api_transforms`
+- **불변식**: 뿌리의 전이 폐포가 `{ibl 층 모듈, backend/common/*}` 밖으로 나가지 않는다.
+  직접이든 전이든 숙주에 닿으면 실패 — 파서가 `ibl_engine` 을 import 하면 엔진이 끌고 오는
+  `ibl_registry`(data 층)에서 걸린다.
+- 새로 쪼갠 파일은 폐포에 자동으로 들어와 자기 import 까지 검사받는다. 목록 드리프트 불가.
+- 현재 폐포 = **10모듈**에서 닫힘(뿌리 5 + `ibl_parser_blocks`·`ibl_parser_values` +
+  `common.ibl_vars`·`common.currency`·`common.html_utils`).
+
+### 5-3. 실증
+
+self-test 가 판정 3갈래(common 허용 / 숙주 직접 도달 / 전이 도달)를 인공 트리로 검사하고,
+실그래프 폐포가 닫혀 있음을 불변식으로 못박는다. 라이브 실증도 했다:
+
+```
+ibl_parser_values 에 conversation_db import 한 줄
+  → conversation_db ← ibl_parser_values ← ibl_parser        (전이 1단)
+ibl_envelope 에 ibl_engine import 한 줄
+  → conversation_db ← ibl_exec_goal ← ibl_executors ← ibl_engine ← ibl_envelope
+  → ibl_usage_generator ← package_manager ← ibl_routing ← ibl_engine ← ibl_envelope  (외 2건)
+```
+둘 다 exit 1 + 도달 경로 출력, 원복 후 재통과.
+
 ## 6. 하지 않는 것 (범위 밖 — 별도 판단)
 
 - **`ibl_registry` 의 ibl 층 이동** — §0 에서 기각. 재론 조건: 언어 반출의 실소비자 등장.
 - 같은 파일 3중 캐시(access raw · registry 설치본 · node_registry) 통합 — 의미가 셋 다 달라
   (raw/설치본/타입드 노드 뷰) 지금은 정합성 배선(B-3)만 정직화. 통합은 수요 생기면.
-- 상향 8간선(엔진→consciousness_agent·goal_evaluator 등) 훅 승격 — 원 논의의 1번 항목,
-  별도 계획.
-- 순수 코어 격리 가드(의존 0 파일 9개의 빈 환경 단독 import 검증) — 원 논의의 후속 제안,
-  별도 계획.
+- 상향 5간선 훅 승격 — **보류**(§1 후속에 사유·재론 조건).
+- `ibl_control_blocks`·`ibl_exec_each` 를 순수 코어로 끌어오기 — 엔진 한복판이라 뿌리가 아니다
+  (§5-1). 끌어오려면 제어 블록에서 엔진 재귀(`execute_ibl`)를 걷어내야 하는데, 그건 언어
+  설계 변경이지 정리가 아니다.
 - 층 안 친구-모듈 언더스코어 공유 (~180곳) — 결함 아님, 손대지 않는다.

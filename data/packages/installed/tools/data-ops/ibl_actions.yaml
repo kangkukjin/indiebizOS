@@ -239,7 +239,11 @@ actions:
     - 통합
     - 목록합치기
   structure:
-    returns: scalar
+    # 실측 2026-08-24: 방출은 {title, blocks, block_count, items, …} — 이미 통화다.
+    # 2026-08-19 스윕이 '정적 3건'으로 지목했으나 모드-조건부 부류로 묶여 유보됐고,
+    # 그 뒤 items 가 붙어 조건부가 아니게 됐는데 선언만 남았다. ★fixture 면제(LLM 비용)라
+    # 주간 스윕의 측정 우주 밖이었다 — 면제 = 측정 사각.
+    returns: items
     ai_call: true  # F14-4 (2026-08-20): 실행마다 경량 LLM 편집자 호출 — dry-run 고지·포털 기본 거부
     exempt: 경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)
     runs_on: anywhere

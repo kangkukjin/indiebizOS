@@ -30,6 +30,7 @@ def _load_declarations():
     decl_op = {}       # "node:action#op" -> returns (op 레벨)
     default_op = {}    # "node:action" -> ops.default
     op_values = {}     # "node:action" -> [op, ...] (ops.values 키 — op 축 우주 열거용)
+    variants = {}      # "node:action" -> {param=값: returns} (param-조건부 통화, B36-3)
     for node, nd in (reg.get("nodes") or {}).items():
         for act, ad in (nd.get("actions") or {}).items():
             decl[f"{node}:{act}"] = ad.get("returns") or "?"
@@ -41,7 +42,9 @@ def _load_declarations():
             vals = list((ops.get("values") or {}).keys())
             if vals:
                 op_values[f"{node}:{act}"] = vals
-    return decl, decl_op, default_op, op_values
+            if isinstance(ad.get("returns_variants"), dict):
+                variants[f"{node}:{act}"] = ad["returns_variants"]
+    return decl, decl_op, default_op, op_values, variants
 
 
 import re as _re
@@ -168,6 +171,61 @@ def _try_once(code):
     return shape, n, None, None
 
 
+# ── 런타임 모양 실측 (action_health.shape, 2026-08-24 B36-3) ─────────────────────
+# fixture 면제(하드웨어·유료 LLM·인자 의존)는 이 스윕의 측정 우주 밖이라 선언 드리프트가
+# 영영 안 잡혔다(table:structure 실측 — 면제 = 측정 사각). ibl_engine 이 실행마다 봉투
+# 모양을 action_health.shape 에 적으므로(판정기 = ibl_envelope.classify_currency 한 벌),
+# 실사용에서 한 번이라도 돈 액션은 여기서 공짜로 대조된다 — 면제는 '합성 실행 면제'일 뿐
+# '측정 면제'가 아니게 된다.
+#
+# 판정은 보수적이다: action_health 는 op·param 을 기록하지 않으므로, 허용 집합 =
+# 액션 선언 ∪ 모든 op 선언 ∪ returns_variants(param-조건부 통화) 의 합집합. 이 합집합
+# 밖의 모양이 성공 행에서 관측되면 위반이다.
+_RUNTIME_OK = {
+    "items": {"items"},
+    "transform": {"items"},
+    # scalar 와 effect 는 이 입도에서 구별 불가 — {success:true, lat:…} 같은 데이터 봉투도
+    # 판정기는 "effect" 라 부른다(sense:here 실측). 런타임 축의 판정은 한 방향만 본다:
+    # **통화(items)를 선언 없이 내는가 / 선언하고 안 내는가**. scalar↔effect 오류는
+    # fixture 스윕(op 축 포함)의 몫이다.
+    "scalar": {"dict", "text", "message", "effect"},
+    "effect": {"effect", "dict", "message", "text"},
+}
+
+
+def _runtime_observations(days=60):
+    """{node:action: {shape: count}} — 성공 행만, test/training 격리(B18-1 규율)."""
+    import sqlite3
+    db = ROOT / "data" / "world_pulse.db"
+    if not db.exists():
+        return {}
+    out = {}
+    try:
+        conn = sqlite3.connect(str(db), timeout=5)
+        cur = conn.execute(
+            "SELECT node, action, shape, COUNT(*) FROM action_health "
+            "WHERE success=1 AND shape IS NOT NULL "
+            "AND source NOT IN ('test','training') "
+            "AND timestamp >= datetime('now', ?) "
+            "GROUP BY node, action, shape", (f"-{days} days",))
+        for node, action, shape, cnt in cur.fetchall():
+            out.setdefault(f"{node}:{action}", {})[shape] = cnt
+        conn.close()
+    except Exception:
+        return {}
+    return out
+
+
+def _allowed_shapes(act, decl, decl_op, variants):
+    allowed = set(_RUNTIME_OK.get(decl.get(act, "?"), set()))
+    for k, rv in decl_op.items():
+        if k.split("#", 1)[0] == act:
+            allowed |= _RUNTIME_OK.get(rv, set())
+    for rv in (variants.get(act) or {}).values():
+        allowed |= _RUNTIME_OK.get(rv, set())
+    return allowed
+
+
 def _op_axis_report(decl, decl_op, default_op, op_values, fixtures, exempt):
     """op 축 검증 커버리지 — 통화(items/table)를 약속한 op 경로가 fixture·exempt 어느
     쪽에도 없으면 '조용한 미검증'이다 (2026-08-21 ③ 조사: 이 신고가 없던 동안
@@ -197,7 +255,7 @@ def _op_axis_report(decl, decl_op, default_op, op_values, fixtures, exempt):
 
 
 def main():
-    decl, decl_op, default_op, op_values = _load_declarations()
+    decl, decl_op, default_op, op_values, variants = _load_declarations()
     fx = json.load(open(ROOT / "data" / "ibl_fixtures.json"))
     fixtures, exempt = fx["fixtures"], fx.get("exempt") or {}
     rows, failed, retried = [], [], []
@@ -257,6 +315,29 @@ def main():
         for name, why in failed[:8]:
             print(f"  · {name}: {why}")
 
+    # ── 런타임 모양 실측 — 면제=측정 사각을 닫는 눈 (2026-08-24 B36-3) ──
+    runtime = _runtime_observations()
+    exempt_actions = sorted({str(k).split("#", 1)[0] for k in exempt})
+    rt_blind = [a for a in exempt_actions if not runtime.get(a)]
+    rt_flags = []
+    for act, shapes in sorted(runtime.items()):
+        if act not in decl:
+            continue   # 은퇴·미지 어휘의 잔재 행
+        bad = {s: c for s, c in shapes.items()
+               if s not in _allowed_shapes(act, decl, decl_op, variants)}
+        if bad:
+            rt_flags.append((act, decl.get(act), bad, shapes))
+    print(f"\n런타임 모양 실측 (action_health 성공 행, 최근 60일): 관측 액션 {len(runtime)}개")
+    print(f"  면제 액션 {len(exempt_actions)} 중 실측 있음 {len(exempt_actions) - len(rt_blind)}"
+          f" · 실측 없는 사각 {len(rt_blind)}"
+          + (f": {', '.join(rt_blind)}" if rt_blind else ""))
+    if not runtime:
+        print("  (아직 기록 없음 — shape 컬럼은 2026-08-24 부터 적재)")
+    if rt_flags:
+        print(f"  ‼️ 런타임 위반 {len(rt_flags)}건 — 선언에 없는 통화 모양이 실사용에서 관측:")
+        for act, d, bad, shapes in rt_flags:
+            print(f"     {act}: 선언 {d} · 위반 관측 {bad} (전체 {shapes})")
+
     # 기계 판독 요약 (유지보수 번들 §9 소비 — ibl_health_check 의 @@HEALTH_JSON@@ 계약 선례)
     print("@@RETURNS_DRIFT@@ " + json.dumps({
         "checked": len(rows), "exact": len(exact), "failed": len(failed),
@@ -264,6 +345,9 @@ def main():
         "retried": retried,
         "op_paths": op_total, "op_covered": op_covered, "op_exempt": op_exempt,
         "op_unverified": op_unverified,
+        "runtime_actions": len(runtime),
+        "runtime_flags": [f"{a}: {bad}" for a, _, bad, _ in rt_flags],
+        "exempt_blind": rt_blind,
     }, ensure_ascii=False))
 
 

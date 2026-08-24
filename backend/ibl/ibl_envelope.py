@@ -78,59 +78,94 @@ def _derived_items(obj: Dict[str, Any]):
     return it if isinstance(it, list) else None
 
 
-def summarize_result(raw: Any) -> Dict[str, Any]:
-    """step 결과 하나(대개 JSON 문자열)의 요약 — shape/count/bytes/preview/keys."""
-    s = raw if isinstance(raw, str) else _compact(raw, 10 ** 9)
-    out: Dict[str, Any] = {"bytes": len(s)}
-    obj: Any = raw
+def _parse_obj(raw: Any) -> Any:
+    """JSON 문자열이면 파싱, 아니면 그대로."""
     if isinstance(raw, str):
         t = raw.strip()
         if t[:1] in "{[":
             try:
-                obj = json.loads(t)
+                return json.loads(t)
             except Exception:
-                obj = raw
+                return raw
+    return raw
+
+
+def classify_currency(raw: Any):
+    """(shape, obj, items|None, derived) — 통화 모양 판정의 **단일 지점** (B27-1: 판정기는 하나).
+
+    소비자 둘: summarize_result(봉투 다이어트, M1)와 action_health 런타임 실측
+    (2026-08-24 — 면제 액션의 측정 사각을 실사용 기록으로 닫는다). 판정기가 갈라지면
+    요약과 건강 기록이 서로를 반박한다 — B27-1 이 봉했던 바로 그 부류.
+    shape ∈ {error, items, message, effect, dict, list, text}. derived 는 items 가
+    봉투 직방출이 아니라 이음매 판정기(derive_items — 표 형 등)에서 파생됐다는 표지.
+    """
+    obj = _parse_obj(raw)
+    if isinstance(obj, dict):
+        if obj.get("success") is False or ("error" in obj and not obj.get("success")):
+            return "error", obj, None, False
+        items = obj.get("items")
+        derived = False
+        if not isinstance(items, list):
+            # 통화 판정기는 하나여야 한다 (B27-1) — 이음매가 items 를 파생해 줄 봉투를
+            # 여기가 "effect" 라 부르면, 이 판정이 이음매를 반박하는 셈이 된다.
+            items = _derived_items(obj)
+            derived = items is not None
+        if isinstance(items, list):
+            return "items", obj, items, derived
+        msg = obj.get("message")
+        if isinstance(msg, str) and msg.strip():
+            return "message", obj, None, False
+        return ("effect" if obj.get("success") is True else "dict"), obj, None, False
+    if isinstance(obj, list):
+        return "list", obj, None, False
+    return "text", obj, None, False
+
+
+def shape_of(raw: Any) -> str:
+    """결과 하나의 통화 모양 한 단어 — 런타임 건강 기록용 경량 진입점."""
+    return classify_currency(raw)[0]
+
+
+def summarize_result(raw: Any) -> Dict[str, Any]:
+    """step 결과 하나(대개 JSON 문자열)의 요약 — shape/count/bytes/preview/keys."""
+    s = raw if isinstance(raw, str) else _compact(raw, 10 ** 9)
+    out: Dict[str, Any] = {"bytes": len(s)}
+    shape, obj, items, _derived = classify_currency(raw)
     if isinstance(obj, dict):
         keys = sorted(k for k in obj.keys() if isinstance(k, str) and not k.startswith("_"))
         out["keys"] = _clamp_names(keys, out, "keys")
-        if obj.get("success") is False or ("error" in obj and not obj.get("success")):
-            out["shape"] = "error"
-            out["error"] = obj.get("error") or obj.get("message")   # 원형 — 진단은 다이어트 밖
-            return out
-        items = obj.get("items")
-        _derived = False
-        if not isinstance(items, list):
-            # 통화 판정기는 하나여야 한다 (B27-1) — 이음매가 items 를 파생해 줄 봉투를
-            # 요약이 "effect" 라 부르면, 요약이 이음매를 반박하는 셈이 된다.
-            items = _derived_items(obj)
-            _derived = items is not None
-        if isinstance(items, list):
-            out["shape"] = "items"
-            out["count"] = len(items)
-            if _derived:
-                # keys 엔 items 가 없는데 shape 은 items — 왜인지 밝힌다(표 형 방출).
-                out["items_derived"] = True
-            if items:
-                first = items[0]
-                if isinstance(first, dict):
-                    out["columns"] = _clamp_names(
-                        sorted(str(k) for k in first.keys()), out, "columns")
-                out["preview"] = _compact(first, PREVIEW_ITEM_CHARS)
-            msg = obj.get("message")
-            if isinstance(msg, str) and msg.strip():
-                out["message"] = msg if len(msg) <= PREVIEW_CHARS else msg[:PREVIEW_CHARS] + "…"
-            return out
+    if shape == "error":
+        out["shape"] = "error"
+        out["error"] = obj.get("error") or obj.get("message")   # 원형 — 진단은 다이어트 밖
+        return out
+    if shape == "items":
+        out["shape"] = "items"
+        out["count"] = len(items)
+        if _derived:
+            # keys 엔 items 가 없는데 shape 은 items — 왜인지 밝힌다(표 형 방출).
+            out["items_derived"] = True
+        if items:
+            first = items[0]
+            if isinstance(first, dict):
+                out["columns"] = _clamp_names(
+                    sorted(str(k) for k in first.keys()), out, "columns")
+            out["preview"] = _compact(first, PREVIEW_ITEM_CHARS)
         msg = obj.get("message")
         if isinstance(msg, str) and msg.strip():
-            out["shape"] = "message"
-            out["preview"] = msg if len(msg) <= PREVIEW_CHARS else msg[:PREVIEW_CHARS] + "…"
-            return out
-        out["shape"] = "effect" if obj.get("success") is True else "dict"
+            out["message"] = msg if len(msg) <= PREVIEW_CHARS else msg[:PREVIEW_CHARS] + "…"
+        return out
+    if shape == "message":
+        out["shape"] = "message"
+        msg = obj.get("message")
+        out["preview"] = msg if len(msg) <= PREVIEW_CHARS else msg[:PREVIEW_CHARS] + "…"
+        return out
+    if shape in ("effect", "dict"):
+        out["shape"] = shape
         # 작은 효과 봉투(path·size 따위)는 통째로 — 요약이 원형보다 클 이유가 없다
         if len(s) <= PREVIEW_ITEM_CHARS:
             out["preview"] = s
         return out
-    if isinstance(obj, list):
+    if shape == "list":
         out["shape"] = "list"
         out["count"] = len(obj)
         if obj:

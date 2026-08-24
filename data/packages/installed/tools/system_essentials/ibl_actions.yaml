@@ -30,7 +30,16 @@ nodes:
           format: string
           limit: integer
           tables: boolean
+          blocks: boolean   # 문단 items 분할 — B35-3 params 블록에 빠져 있던 실존 param (2026-08-24)
         returns: scalar
+        # 변이 축이 op 이 아니라 **param** 인 통화 (F20-1 shape_variants 판정의 동형 —
+        # "변이 축은 param" 문제를 op 로 바꾸지 않고 선언의 입도를 param 축으로 확장한다).
+        # 평범한 read=본문 텍스트(진짜 scalar), 아래 모드에서만 통화가 나온다.
+        # 2026-08-24 B36-3: 이 조건부가 선언에 없어서 08-19 스윕이 '표현 불가 straggler'
+        # 로 유보했었다 — 런타임 shape 실측(action_health)이 이 선언과 대조된다.
+        returns_variants:
+          blocks=true: items    # 문단 분할 — items 26행 실측 (2026-08-24)
+          tables=true: items    # pdf 표 추출 — {text, table, items} 완전 통화 (08-19 실측)
         exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file

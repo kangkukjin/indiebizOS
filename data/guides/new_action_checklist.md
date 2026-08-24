@@ -62,6 +62,14 @@
 
 > ★`returns:` 는 **필수 필드**다. src 액션에 `returns: items | transform | scalar | effect` 한 줄을 명시한다 — `build_ibl_nodes.py --check` 가 존재·enum·transform 정합(`group:transform ⇔ returns:transform`)을 강제한다. 빠뜨리면 `--check` 실패.
 
+> ★**param-조건부 통화 = `returns_variants`** (2026-08-24 B36-3). 변이 축이 op 이 아니라 **param** 인 액션(`self:read` 의 `blocks:true`→문단 items, `tables:true`→pdf 표 통화)은 op 로 가르지 않는다 — F20-1 판정("변이 축은 param")의 동형으로, 선언의 입도를 param 축으로 확장한다:
+> ```yaml
+> returns: scalar          # 평범한 호출의 통화 역할
+> returns_variants:        # 키 문법은 shape_variants 와 같은 "param=값"
+>   blocks=true: items
+> ```
+> `--check` 가 키 형식·enum·param 실존(params 블록/target_key/aliases 대조)을 강제한다. 소비자는 주간 returns 스윕의 **런타임 모양 실측**(action_health.shape — 실사용이 돌 때마다 봉투 모양이 적힌다) — 선언된 조건부 통화는 드리프트로 오인되지 않고, 선언 밖 모양이 관측되면 위반으로 신고된다. fixture 면제 액션도 이 경로로 측정된다(면제 = 합성 실행 면제이지 측정 면제가 아니다).
+
 ---
 
 ## 1단계: 패키지 도구 작성

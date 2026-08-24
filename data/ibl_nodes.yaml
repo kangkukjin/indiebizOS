@@ -4491,7 +4491,11 @@ nodes:
           format: string
           limit: integer
           tables: boolean
+          blocks: boolean
         returns: scalar
+        returns_variants:
+          blocks=true: items
+          tables=true: items
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file

@@ -284,6 +284,43 @@ def _check_action(
         if returns == "transform" and group != "transform":
             issues.append(f"{qualified}: returns:transform 은 group:transform 액션에만 (현재 group={group!r})")
 
+    # --- returns_variants(param-조건부 통화) 검증 — 2026-08-24 B36-3 ---
+    # 변이 축이 op 이 아니라 **param** 인 액션(self:read blocks/tables — F20-1
+    # shape_variants 판정의 동형): 같은 호출이 파라미터에 따라 통화를 낸다.
+    # returns 단일 값은 이를 못 적으므로 형제 키로 선언한다 — 키 문법은
+    # shape_variants 와 같은 "param=값". 소비자 = returns_drift_sweep 의 런타임
+    # 모양 판정(선언된 조건부 통화를 드리프트로 오인하지 않게).
+    rv = action.get("returns_variants")
+    if rv is not None:
+        _RV_ENUM = {"items", "scalar", "effect"}
+        if not isinstance(rv, dict) or not rv:
+            issues.append(f"{qualified}: returns_variants 는 비어있지 않은 매핑({{'param=값': 통화}})이어야 함")
+        else:
+            if returns == "transform":
+                issues.append(f"{qualified}: transform 은 returns_variants 를 갖지 않음 (통화→통화 폐포)")
+            declared_params = set((action.get("params") or {}).keys())
+            if action.get("target_key"):
+                declared_params.add(action["target_key"])
+            for canon, alts in (action.get("aliases") or {}).items():
+                declared_params.add(canon)
+                if isinstance(alts, list):
+                    declared_params.update(a for a in alts if isinstance(a, str))
+            for k, v in rv.items():
+                if not isinstance(k, str) or "=" not in k or not k.split("=", 1)[0]:
+                    issues.append(f"{qualified}: returns_variants 키 {k!r} — 'param=값' 형식이어야 함")
+                    continue
+                pname = k.split("=", 1)[0]
+                # params 블록이 있는 액션(B35-3 타입 단일 소스)에서만 실존 검증 —
+                # 오타 난 param 은 어떤 실행과도 안 맞아 선언이 조용히 죽는다.
+                if declared_params and pname not in declared_params:
+                    issues.append(
+                        f"{qualified}: returns_variants 의 param {pname!r} 미선언 — "
+                        f"params 블록/target_key/aliases 에 없음 (선언: {sorted(declared_params)})")
+                if v not in _RV_ENUM:
+                    issues.append(
+                        f"{qualified}: returns_variants[{k!r}]={v!r} 허용 안 됨 "
+                        f"({'|'.join(sorted(_RV_ENUM))})")
+
     # --- handler 라우터 등록 검증 ---
     if router == "handler":
         if not tool_name:

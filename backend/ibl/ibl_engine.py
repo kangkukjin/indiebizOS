@@ -862,13 +862,21 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
             pass
         # action_health 기록 (실사용 및 self_check 모두). channel(호출 통로)·error(실패
         # 오류문 절단본)는 2026-08-21 ③ 조사 — §1D 를 추정이 아니라 기록으로 읽기 위함.
+        # shape(통화 모양)는 2026-08-24 — fixture 면제 액션의 측정 사각을 실사용 기록으로
+        # 닫는다(주간 returns 스윕이 읽는다). 판정기는 봉투 다이어트와 같은 한 벌(B27-1).
         try:
             from pulse_db import record_action_health
             from thread_context import is_health_check_mode, get_call_channel
             _src = "self_check" if agent_id == "__self_check__" or is_health_check_mode() else "usage"
+            try:
+                from ibl_envelope import shape_of
+                _shape = shape_of(result) if result is not None else None
+            except Exception:
+                _shape = None
             record_action_health(node, action, _action_success, _action_ms, source=_src,
                                  channel=get_call_channel(),
-                                 error=(None if _action_success else _action_err))
+                                 error=(None if _action_success else _action_err),
+                                 shape=_shape)
         except Exception:
             pass
 

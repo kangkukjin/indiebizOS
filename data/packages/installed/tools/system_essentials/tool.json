@@ -521,6 +521,10 @@
           "tables": {
             "type": "boolean",
             "description": "self:read 파라미터"
+          },
+          "blocks": {
+            "type": "boolean",
+            "description": "self:read 파라미터"
           }
         },
         "additionalProperties": true

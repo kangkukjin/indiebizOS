@@ -32,7 +32,12 @@ args (stdin JSON):
   · IBL 조합 판정은 정규식이 아니라 실제 파서(ibl_parser.parse)로 한다. 파서를 못 부르면
     조합 칸을 비우고 상태에 적는다 — 열등한 숫자를 조용히 내지 않는다.
   · 조합 = 한 문장이 2단계 이상이거나 병렬(&)·폴백(??)·블록을 품은 것.
-  · 로그는 상한이 있어 잘린다. 잘린 자리의 도구 인자는 JSON 이 깨지므로 파싱실패로 센다.
+  · 로그는 상한이 있어 잘린다(현행 표식 episode_logger.TRUNC_MARK_RE, 2026-08-22 이전 행은
+    꼬리 '...'). 잘린 코드는 버리지 않고 **보이는 앞부분만으로 하한 집계**한다 — 잘린 자리는
+    조합을 숨길 수는 있어도 만들 수는 없으므로 앞부분 지표는 과대보고가 불가능하다.
+    앞부분 뒤에 조합 연산자가 보이면('… >> [잘림') 그 문장은 조합 확정이라 한 칸 올려 센다.
+    상태=절단하한 N 으로 신고하니, 그 주행의 조합·단계는 '실제 이상은 아닌 값' 으로 읽어라.
+    앞부분조차 못 읽으면 그때만 파싱실패.
 """
 import json
 import re
@@ -58,6 +63,10 @@ IBL_CONT = re.compile(
 # 가르는 유일한 근거. 라운드 줄(in-process 에이전트 루프)·ClaudeCode 줄·IBL_DEBUG 중
 # 하나라도 있으면 이 스크립트가 읽는 방언이므로 도구 0 은 사실이다.
 READABLE = re.compile(r"^\[[^\]]+\] 라운드 \d+|^\[ClaudeCode/|^\[IBL_DEBUG\] code=", re.M)
+# 잘린 코드의 절단면에 남은 조합 연산자 — 뒷단은 몰라도 '조합했다' 는 확정이다.
+TAIL_OP = re.compile(r"^\s*(>>|\?\?|&|\|)")
+# 잘린 JSON 에서 code 값의 시작점 — 뒤따르는 키(files 등)가 잘려도 코드는 온전할 수 있다.
+CODE_KEY = re.compile(r'"code"\s*:\s*"')
 BLOCK_KEYS = ("_condition", "_try", "_repeat", "_case", "_goal")
 
 
@@ -160,24 +169,99 @@ def _collect(log):
     return counts, codes, tool_lines
 
 
+def _code_of(kind, raw, trunc_re):
+    """로그 한 줄 → (IBL 코드, 절단여부). 잘린 줄도 보이는 만큼은 돌려준다.
+
+    절단 표식은 두 벌이 관측된다 — 현행(TRUNC_MARK_RE)과 2026-08-22 이전의 꼬리 '...'.
+    옛 표식은 창 밖으로 밀려나면 사라지지만, 아직 남은 행이 실측 111건이라 함께 읽는다.
+    ★줄이 잘려도 code 값이 다 보이면 그 코드는 완전 관측이다 — 절단면이 뒤따르는 키(files 등)
+      안일 수 있기 때문(실측 20건). 그래서 JSON 전체를 복구하지 않고 code 문자열만 이스케이프를
+      존중해 훑어, 닫는 따옴표를 만났는지로 코드의 절단 여부를 판정한다.
+    """
+    cut = bool(trunc_re is not None and trunc_re.search(raw))
+    body = trunc_re.sub("", raw) if cut else raw
+    if not cut and body.rstrip().endswith("..."):
+        cut, body = True, body.rstrip()[:-3]
+    if kind != "json":
+        return body, cut
+    m = CODE_KEY.search(body)
+    if not m:
+        raise ValueError("code 키가 없음")
+    s, out, i, closed = body[m.end():], [], 0, False
+    while i < len(s):
+        if s[i] == "\\":                 # 이스케이프는 두 자를 한 몸으로 넘긴다
+            out.append(s[i:i + 2])
+            i += 2
+            continue
+        if s[i] == '"':
+            closed = True                # 닫는 따옴표를 만났다 = 코드는 완전 관측
+            break
+        out.append(s[i])
+        i += 1
+    frag = "".join(out)
+    for back in range(7):                # 절단이 이스케이프 한가운데면 몇 자 물러선다
+        try:
+            return json.loads('"' + frag[:len(frag) - back] + '"'), not closed
+        except Exception:
+            continue
+    raise ValueError("code 문자열을 복원하지 못함")
+
+
+def _measure_prefix(code, parse):
+    """잘린 코드 → 파싱되는 가장 긴 앞부분의 지표(하한). 못 읽으면 None.
+
+    하한이 안전한 이유: 잘린 자리는 조합을 숨길 수는 있어도 만들 수는 없다.
+    앞부분 뒤에 조합 연산자가 보이면(예 '… >> [잘림') 그 문장이 조합이라는 건
+    관측된 사실이므로 한 칸 올려 센다 — 몇 단계였는지는 여전히 모른다.
+    """
+    cut = code
+    while cut:
+        i = cut.rfind("}")
+        if i < 0:
+            return None
+        cut = cut[:i + 1]
+        try:
+            m = _measure(cut, parse)
+        except Exception:
+            cut = cut[:i]
+            continue
+        op = TAIL_OP.match(code[len(cut):])
+        if op and m["문장"]:
+            m["조합"] = min(m["문장"], m["조합"] + 1)
+            m[{">>": "seq", "|": "seq", "&": "par", "??": "fb"}[op.group(1)]] += 1
+            m["최대단계"] = max(m["최대단계"], 2)
+        return m
+    return None
+
+
 def _scan(log, parse, trunc_re=None):
     """에피소드 로그 한 건 → 도구·조합 계수."""
-    acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0,
+    acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
     counts, codes, tool_lines = _collect(log)
     acc.update(counts)
     for kind, raw in codes:
         if parse is None:
             break
-        if trunc_re is not None and trunc_re.search(raw):
-            acc["파싱실패"] += 1        # 잘린 코드는 앞부분만 파싱돼 조합을 낮게 속인다
+        try:
+            code, cut = _code_of(kind, raw, trunc_re)
+        except Exception:
+            acc["파싱실패"] += 1        # 로그 줄 자체를 못 읽었다 = 형식 변화 신호
             continue
         try:
-            code = json.loads(raw).get("code") if kind == "json" else raw
-            got = _measure(code or "", parse)
+            got = _measure_prefix(code, parse) if cut else _measure(code, parse)
         except Exception:
-            acc["파싱실패"] += 1
+            got = None
+        if got is None:
+            # 세 사건을 한 칸에 뭉치면 셋 다 안 보인다:
+            #   절단불가 = 잘린 자리에 완결된 문장이 없다 (관측 한계)
+            #   문법오류 = 온전한 코드가 파서를 통과 못 한다 = 그 주행에서 에이전트가
+            #              실제로 잘못 쓴 IBL 이다 (로그 문제가 아니라 관측된 사실 — 그
+            #              호출은 실행도 실패했다)
+            acc["절단불가" if cut else "문법오류"] += 1
             continue
+        if cut:
+            acc["절단"] += 1          # 이 주행의 조합·단계는 하한이다
         for k, v in got.items():
             acc[k] = max(acc[k], v) if k == "최대단계" else acc[k] + v
     acc["_tool_lines"] = tool_lines
@@ -233,10 +317,17 @@ def main():
     rows = conn.execute(sql, params + [limit]).fetchall()
     conn.close()
 
-    items, skipped, unparsed, nocode = [], 0, 0, 0
+    items, skipped, unparsed, nocode, lowered, uncut, bad_ibl = [], 0, 0, 0, 0, 0, 0
     for r in rows:
         a = _scan(r["log"], parse, trunc_re)
         tools = a["IBL"] + a["Bash"] + a["기타도구"]
+        # 합계는 상태 표시와 따로 센다 — 한 주행이 절단과 파싱실패를 함께 가질 수 있고,
+        # 상태 칸은 그중 하나만 보여주므로 여기서 누락되면 메시지가 조용히 적게 신고한다.
+        unparsed += a["파싱실패"]
+        lowered += a["절단"]
+        uncut += a["절단불가"]
+        bad_ibl += a["문법오류"]
+        nocode += a["코드미기록"]
         if a["_tool_lines"] == 0:
             _log = r["log"] or ""
             if not _log.strip():
@@ -252,10 +343,14 @@ def main():
             state = "파서없음"
         elif a["파싱실패"]:
             state = f"파싱실패 {a['파싱실패']}"
-            unparsed += a["파싱실패"]
+        elif a["문법오류"]:
+            state = f"문법오류 {a['문법오류']}"   # 에이전트가 보낸 IBL 이 실제로 깨졌다
+        elif a["절단불가"]:
+            state = f"절단불가 {a['절단불가']}"  # 잘린 자리에 완결된 문장이 없다
+        elif a["절단"]:
+            state = f"절단하한 {a['절단']}"   # 조합·단계는 '실제 이상은 아닌 값'
         elif a["코드미기록"]:
             state = f"코드미기록 {a['코드미기록']}"
-            nocode += a["코드미기록"]
         else:
             state = "ok"
         ts = (r["started_at"] or "")[5:16].replace("T", " ")
@@ -296,9 +391,19 @@ def main():
     if nocode:
         msg += (f" · IBL 호출 {nocode}건은 코드 원문이 로그에 없어(30초 디듀프 또는 구판 로그) "
                 "조합 지표에서만 빠졌습니다 — 도구 계수는 온전합니다")
+    if lowered:
+        msg += (f" · IBL 호출 {lowered}건은 로그가 잘려 보이는 앞부분만으로 하한 집계했습니다 "
+                "— 잘린 자리는 조합을 숨길 수는 있어도 만들 수는 없으니 조합·단계는 '실제 이상은 "
+                "아닌 값' 입니다(같은 이유로 조합률은 여전히 낮게 나올 수 있습니다)")
+    if uncut:
+        msg += (f" · IBL 호출 {uncut}건은 잘린 자리에 완결된 문장이 하나도 없어 조합 지표에서 "
+                "빠졌습니다(도구 계수는 온전 — 대부분 2026-08-22 이전 300자 상한 시절 행)")
+    if bad_ibl:
+        msg += (f" · IBL 호출 {bad_ibl}건은 코드 자체가 문법 오류였습니다 "
+                "— 로그 문제가 아니라 그 주행에서 실제로 깨진 문장을 보냈다는 관측입니다")
     if unparsed:
-        msg += (f" · IBL 호출 {unparsed}건은 로그 줄이 잘려 인자 JSON 이 깨졌습니다 "
-                "— 조합 지표에서 빠졌고, 잘리는 건 대개 긴(=조합된) 문장이라 조합률이 낮게 나옵니다")
+        msg += (f" · ★IBL 호출 {unparsed}건은 절단 표식도 없이 로그 줄을 못 읽었습니다 "
+                "— 로그 형식이 바뀌었다는 신호일 수 있습니다")
     print(json.dumps({"items": items, "message": msg}, ensure_ascii=False))
 
 

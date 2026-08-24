@@ -54,8 +54,13 @@ _WINDOW_DAYS = 7       # 감사 창
 _MIN_RECUR = 3         # "반복" 판정 최소 횟수
 
 # 화살표 라인: [21:40:06] [system_ai] [tool:run_command|self:list] (입력…) -> OK (41ms)
+# ★힌트 괄호는 선택이다(2026-08-25): system_tools._log_ibl 은 대표 파라미터가 없으면
+# 괄호째 생략한다. 지금 창(400주행)에서 그런 줄은 전부 tool:todo_write 라 이 모듈이
+# 어차피 무시했고 회수되는 신호는 0 이다 — 예방 수리다. 파라미터 없는 IBL 액션
+# ([self:time]·[self:discover] 류)이 in-process 로 불리면 그 호출이 통째로 불가시가
+# 되고, 그때의 0 은 '안 썼다' 가 아니라 '못 봤다' 가 된다.
 _ARROW_RE = re.compile(
-    r"^\[\d{2}:\d{2}:\d{2}\] \[[^\]]*\] \[([^\]]+)\] \((.*)\) -> (\S+) \((\d+)ms\)\s*$"
+    r"^\[\d{2}:\d{2}:\d{2}\] \[[^\]]*\] \[([^\]]+)\](?: \((.*)\))? -> (\S+) \((\d+)ms\)\s*$"
 )
 _IBL_CODE_RE = re.compile(r"^\[IBL_DEBUG\] code=(.*)$")
 _STEP_RE = re.compile(r"\[(\w+:\w+)\]")
@@ -119,7 +124,8 @@ def _parse_episode(log: str) -> Dict[str, Any]:
             continue
         m = _ARROW_RE.match(s)
         if m:
-            marker, arg, token = m.group(1), m.group(2), m.group(3)
+            # 힌트가 없는 줄이면 group(2)=None — 뒤의 _cmd_head 가 터지지 않게 빈 문자열로.
+            marker, arg, token = m.group(1), m.group(2) or "", m.group(3)
             if marker == "tool:run_command":
                 shell_calls.append((idx, arg))
             elif ":" in marker and not marker.startswith("tool:"):

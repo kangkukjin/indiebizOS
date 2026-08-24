@@ -616,6 +616,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             set_current_task_id(task_id)
             _set_user_input(message)
             _set_origin("user")  # 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
+            # 텍스트 청크 합산 — 청크마다 로그를 찍지 않고 종료 한 줄에 총량만 싣는다.
+            _text_chunks = _text_chars = 0
 
             try:
                 # (2026-08-15 4라운드 감사) cancel_check 배선 — 이전엔 이 경로만 None 이라
@@ -643,8 +645,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     if event_type == "error":
                         print(f"[WS run_stream] error: {event.get('content', '')[:300]}")
                     elif event_type == "text":
-                        _len = len(str(event.get("content", "")))
-                        print(f"[WS run_stream] text: ({_len}자)")
+                        # ★청크마다 찍지 않는다(2026-08-25): 청크 크기는 프로바이더가 정한다
+                        # — in-process DeepSeek 은 1~5자씩 흘려보내 한 턴이 수백 줄이 됐다
+                        # (실측: backend_runtime.log 62,670줄 중 6,016줄=9.6%가 이 한 줄에서
+                        # 나왔고 그동안 실제 턴은 20여 회였다). 진단에 쓰이는 건 청크마다의
+                        # 길이가 아니라 총량이므로 합산해 스트림 종료 한 줄에 싣는다.
+                        _text_chunks += 1
+                        _text_chars += len(str(event.get("content", "")))
                     elif event_type not in ("tool_start", "tool_result", "thinking", "final", "cognition"):
                         print(f"[WS run_stream] 이벤트 수신: {event_type}")
                     asyncio.run_coroutine_threadsafe(
@@ -661,7 +668,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     loop
                 )
             finally:
-                print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, timed_out={timed_out}")
+                print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, "
+                      f"text {_text_chars}자/{_text_chunks}청크, timed_out={timed_out}")
                 if timed_out:
                     # 타임아웃 이후 완주분 인계 — 소비자는 이미 떠났으므로 저장·태스크
                     # 닫기·원장 닫기를 실제로 끝낸 여기서 한다(시스템 AI 경로와 대칭).

@@ -310,14 +310,15 @@
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
+    "test_user_surface_pipeline": "force_exclude_glob",
     "test_venv_pinned": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
     "test_world_noun_refutable": "force_exclude_glob",
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 310,
+    "total": 311,
     "engine": 225,
-    "blocklist": 85
+    "blocklist": 86
   }
 }

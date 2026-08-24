@@ -12,7 +12,10 @@
   G4 신원 매칭은 종전 그대로 (무임승차 거부·양쪽 미상은 fail-closed)
   G5 사유를 구별해 말한다 (만료 / 미발급 / 주인 아님)
   G6 판정 불능인 몸(폰·분리 수행자 red_apply — 열린 턴 원장이 없다)에서는 종전대로 시계로 회수
+  G7 발급 조건은 **헌법이 선언한 것뿐**이다 — 선언에 없는 조건이 코드에만 붙지 않는다 (2026-08-25)
 """
+import ast
+import os
 import time
 
 import pytest
@@ -127,6 +130,41 @@ def test_g6_bodies_without_a_turn_ledger_still_expire():
     assert rg.active_grant(task_id="task_headless") is None
     assert "판정 불능" in rg.denial_note(task_id="task_headless")
 
+
+
+def test_g7_grant_condition_is_only_what_the_constitution_declared():
+    """그랜트를 여는 `if` 는 `_origin == "user"` 하나만 본다 (ep1915 수리, 2026-08-25).
+
+    헌법(2026-08-05, 커밋 6caa2ea)의 한도는 셋이고 그 첫째는 **누가 명령했나**다.
+    그런데 같은 커밋의 코드는 선언에 없는 넷째 `is_system_ai` 를 함께 걸었고, 하필
+    헌법이 정당한 진입점으로 이름 붙인 '에이전트 명령 HTTP'(폰 원격런처 → 프로젝트
+    에이전트)를 그 조건이 배제했다 — 사용자가 `#repair` 를 붙인 턴이 RED 에 막혔다.
+    '누가 명령했나'(origin)와 '누가 실행하나'(is_system_ai)는 다른 축이다.
+    조건이 다시 늘어나면 여기서 실패한다 — 선언 없는 조건은 조건이 아니다."""
+    src = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "cognition", "agent_pipeline.py")
+    tree = ast.parse(open(src, encoding="utf-8").read())
+
+    def _issues(node):
+        return any(isinstance(c, ast.Call) and getattr(c.func, "id", "") == "issue_grant"
+                   for c in ast.walk(node))
+
+    # ast.walk 는 바깥 분기까지 잡으므로 **가장 안쪽** if 만 남긴다(그게 실제 관문이다).
+    cands = [n for n in ast.walk(tree) if isinstance(n, ast.If) and _issues(n)]
+    gates = [n for n in cands
+             if not any(c is not n and isinstance(c, ast.If) and _issues(c) for c in ast.walk(n))]
+    assert len(gates) == 2, (
+        f"issue_grant 를 여는 분기가 {len(gates)}개다 — REPAIR 분기와 늦은 승격 둘이어야 한다. "
+        f"경로가 늘었다면 이 배터리도 같이 늘려라.")
+
+    for g in gates:
+        expr = ast.dump(g.test)
+        assert "is_system_ai" not in expr, (
+            "그랜트 조건에 `is_system_ai` 가 다시 붙었다 — 헌법에 없는 넷째 조건이다.\n"
+            "누가 실행하느냐로 막고 싶다면 먼저 헌법(docs/SELF_MODIFICATION_SAFETY_DESIGN.md·"
+            "data/system_docs/architecture.md)을 개정할 것. 코드가 정본을 앞서지 않는다.")
+        assert isinstance(g.test, ast.Compare) and getattr(g.test.left, "id", "") == "_origin", (
+            f"그랜트 조건이 `_origin == \"user\"` 한 칸이 아니다: {ast.unparse(g.test)}")
 
 if __name__ == "__main__":
     # ★러너는 하나 — 직접 실행도 pytest 로 위임한다(2026-08-23 28회차: 직접 실행이

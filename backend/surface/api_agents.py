@@ -306,7 +306,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
     """
     from conversation_db import ConversationDB
     from thread_context import (set_current_agent_id, set_current_agent_name,
-                                set_current_project_id, set_task_origin, clear_all_context)
+                                set_current_project_id, set_task_origin, set_user_input,
+                                clear_all_context)
 
     try:
         project_path = project_manager.get_project_path(project_id)
@@ -317,6 +318,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         set_current_agent_name(agent_name)
         set_current_project_id(project_id)
         set_task_origin("user")  # 원격 런처 에이전트 명령 HTTP = 사람의 직접 명령
+        set_user_input(command)  # 쓰기 관문 원장·episode 조인이 읽는 행위자 칸 (WS 경로와 대칭)
 
         # 에피소드 로깅 — 이 엔드포인트는 원격 런처 자율주행 탭이 프로젝트 에이전트에게
         # 보내는 HTTP 경로인데, start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼
@@ -342,14 +344,22 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         # 사용자 메시지 저장
         db.save_message(user_id, target_agent_id, command)
 
-        # AI 응답 생성 (cognitive_stream 우회 경로라 기어 동기화를 직접 호출)
-        runner._sync_execution_gear()
-        response = runner.ai.process_message_with_history(
-            message_content=command,
-            from_email="user@gui",
-            history=history,
-            reply_to="user@gui"
-        )
+        # AI 응답 생성 — 인지 파이프라인 제너레이터를 drain 하는 블로킹 어댑터.
+        #
+        # ★2026-08-25 합류: 여기는 폰 원격런처 자율주행 탭이 프로젝트 에이전트에게 말을 거는
+        # **사람의 채팅 표면**인데, 사람 표면 중 혼자만 cognitive_stream 을 우회해
+        # process_message_with_history 를 직접 불렀다. 그래서 이 표면의 턴은 태그가 읽히는
+        # 자리(cognitive_consciousness._tag_override)를 아예 지나지 않아 REPAIR 분류·의식
+        # 각성·모델 승격·RED 그랜트가 통째로 없었다 — 실측 ep1915: '…고쳐줘. #repair' 인데
+        # 런타임 로그에 [무의식] 분류 0줄, 그랜트 미발급으로 [self:edit] 이 RED 에 거절됐다.
+        # 사용자는 태그를 붙였는데 그 표면에는 태그를 읽는 코드가 없었던 것.
+        #
+        # 헌법(2026-08-05, 커밋 6caa2ea)이 origin='user' 진입점 넷 중 하나로 이미 지목한
+        # 표면이다("에이전트 명령 HTTP"). WS×2·/system-ai/chat 과 같은 드라이버로 합류시킨다.
+        # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
+        from agent_pipeline import drain_stream
+        result = drain_stream(runner.cognitive_stream(command, history, agent_name=agent_name))
+        response = result.get("final") or result.get("error") or ""
 
         # AI 응답 저장
         db.save_message(target_agent_id, user_id, response)

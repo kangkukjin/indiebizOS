@@ -160,10 +160,21 @@ class CognitivePipelineMixin:
             # 시스템 자기수정 경로 (헌법 2026-08-05): 사람 승인 게이트(Floor #4) 폐기 대신
             # ①사람 명령 태스크 ②고급 모델 승격 ③의식 각성(토글 OFF 여도 강제) + 기계 안전판.
             # 의식은 토글과 무관하게 깨운다 — _run_consciousness_or_reuse 는 토글을 안 본다.
+            #
+            # ★2026-08-25: 조건에서 `is_system_ai` 를 뗀다 — 헌법에 없는 네 번째 조건이었다.
+            # 정본(커밋 6caa2ea·SELF_MODIFICATION_SAFETY_DESIGN.md)의 한도는 셋이고 그 첫째는
+            # **누가 명령했나**(task_origin=='user')다. '누가 실행하나'(시스템 AI냐 프로젝트
+            # 에이전트냐)는 다른 축인데 코드만 그 축을 하나 더 걸고 있었다. 심지어 헌법이
+            # origin='user' 를 세우는 정당한 진입점 넷 중 하나로 이름 붙인 "에이전트 명령
+            # HTTP"(= 폰 원격런처 → 프로젝트 에이전트)를 바로 그 조건이 배제했다.
+            # 범위는 넓어지지 않는다: set_task_origin 호출처는 지금도 헌법이 적은 네 곳뿐이고
+            # (위임 사슬·스케줄러·외부 채널 = 미세팅 = fail-closed), origin 은 threading.local
+            # 이라 위임으로 상속되지 않는다. 기계 안전판(격리 스테이징·compile·백업·워치독·
+            # 자동 롤백)은 실행 주체와 무관하게 그대로 걸린다.
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
             from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
             _origin = get_task_origin()
-            if is_system_ai and _origin == "user":
+            if _origin == "user":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
                 _g_task = get_current_task_id() or ""
@@ -172,21 +183,20 @@ class CognitivePipelineMixin:
                 _repair_granted_task = _g_task or "__untasked__"
                 print(f"[수리] RED 그랜트 발급 (task={_g_task or '없음'}) — 고급 모델·의식 각성 경로")
             else:
-                # 자율 태스크/프로젝트 에이전트 — 승격·그랜트 없음. 의식 framing 은 하되
+                # 자율 태스크 — 승격·그랜트 없음. 의식 framing 은 하되
                 # RED 쓰기는 게이트가 막고 [self:patch]{op:"propose"} 경로를 안내한다.
-                print(f"[수리] REPAIR 분류지만 출처={_origin or '자율'}"
-                      f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
+                print(f"[수리] REPAIR 분류지만 출처={_origin or '자율'} — 그랜트 없이 THINK 로 진행")
         elif request_type == "THINK":
             consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
             # 늦은 REPAIR 승격 (2026-08-20, ep1264): 분류기의 REPAIR 는 '수리' 의미론이라
             # 코어를 건드리는 개발 명령("강의 창에 버튼 만들어줘")을 놓치고, 그러면 그랜트
             # 없이 주행해 apply 가 거부된다. 전체 맥락을 본 의식이 needs_repair 를 선언하면
-            # REPAIR 분기와 같은 한도(시스템 AI + 사람 명령)로 승격·그랜트를 발급한다 —
+            # REPAIR 분기와 같은 한도(사람 명령)로 승격·그랜트를 발급한다 —
             # 헌법 3조건 중 의식 각성은 THINK 경로가 이미 충족한 자리다.
             if self._consciousness_needs_repair(consciousness_output):
                 from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
                 _origin = get_task_origin()
-                if is_system_ai and _origin == "user":
+                if _origin == "user":
                     original_provider = _switch_to_role(self, "system_repair")
                     from red_grant import issue_grant
                     _g_task = get_current_task_id() or ""
@@ -196,7 +206,7 @@ class CognitivePipelineMixin:
                     print(f"[수리] 늦은 REPAIR 승격 (task={_g_task or '없음'}) — 의식 needs_repair 선언")
                 else:
                     print(f"[수리] 의식 needs_repair 선언이지만 출처={_origin or '자율'}"
-                          f"{'' if is_system_ai else '·프로젝트 에이전트'} — 그랜트 없이 THINK 로 진행")
+                          f" — 그랜트 없이 THINK 로 진행")
         elif reflex_hint:
             # reflex만 중급 모델 — 무의식 EXECUTE 오분류여도 본격 모델이 받아 품질 방어
             # ★이미지 첨부 시 스왑 금지(2026-08-13 실측): 중급(딥시크)은 비전 미지원이라

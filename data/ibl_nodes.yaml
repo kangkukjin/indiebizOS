@@ -1278,7 +1278,7 @@ nodes:
         aliases:
           lng:
           - lon
-        returns: scalar
+        returns: items
         fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
@@ -2215,6 +2215,7 @@ nodes:
             feed: items
             history: items
             summarize: effect
+            info: items
           side_effect:
             info: false
             transcript: false
@@ -2489,7 +2490,7 @@ nodes:
         - 대화이력
         - 이전
       discover:
-        returns: scalar
+        returns: items
         fixture: '[self:discover]{query: "주가"}'
         description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
         target_description: 검색 키워드 (자연어). 결과 — 후보 액션 + 사용 예시.

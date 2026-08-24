@@ -76,7 +76,37 @@ def _op_info(tool_input, yt):
     url = _resolve_video_url(tool_input)
     if not url:
         return {"success": False, "error": "url 또는 video_id 파라미터가 필요합니다."}
-    return yt.get_youtube_info(url=url)
+    result = yt.get_youtube_info(url=url)
+    return _snapshot_row(result, video_id=tool_input.get('video_id'), url=url)
+
+
+# 병기(items 1행 스냅샷)는 **op 함수(=액션 경계)** 에서 한다 — 공용 헬퍼
+# get_youtube_info 는 relay·tool_youtube 도 쓰므로 거기 넣으면 내부 호출자까지 오염된다.
+# sense:stock#info 선례(2026-08-19)와 같은 자리·같은 방식.
+_INFO_ROW_KEYS = ("title", "duration", "uploader", "view_count", "upload_date")
+
+
+def _snapshot_row(result, video_id=None, url=None):
+    """단일 개체 조회 결과에 items 1행을 병기한다 (원 키는 그대로 보존).
+
+    ★2026-08-24 B36-2: op:info 는 6필드 레코드(=표의 한 줄)인데 통화를 안 내서
+    `[table:each]` 팬아웃이 원 행을 그대로 흘리고(passthrough_rows) `[table:filter]`
+    가 upload_date 를 영영 못 봤다 — upload_date 는 애초에 '최신성 필터'를 위해 넣은
+    필드였다(액션 자신의 설계 모순). 실측 우회는 `&` 로 손수 이어붙인 8중 병렬이었다.
+    """
+    if not isinstance(result, dict) or not result.get("success"):
+        return result
+    row = {k: result[k] for k in _INFO_ROW_KEYS if k in result}
+    if not row:
+        return result
+    # 식별자 동반 — 팬아웃 후 어느 행이 어느 영상인지 되짚을 수 있어야 표가 쓸모 있다.
+    if video_id:
+        row["video_id"] = video_id
+    elif url and "v=" in url:
+        row["video_id"] = url.rsplit("v=", 1)[-1].split("&")[0]
+    if url:
+        row["url"] = url
+    return {**result, "items": [row], "count": 1}
 
 
 def _op_transcript(tool_input, yt):

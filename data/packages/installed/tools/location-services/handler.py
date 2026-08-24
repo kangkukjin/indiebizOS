@@ -1139,6 +1139,17 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": "lat(위도)과 lon(경도)이 필요합니다."}, ensure_ascii=False)
         # 카카오 API는 x=경도, y=위도
         result = reverse_geocode_kakao(x=float(lon), y=float(lat))
+        # items 1행 병기 (2026-08-24 B36-2 — sense:stock#info 선례): 주소 레코드는
+        # 표의 한 줄인데 통화를 안 내서, 좌표 여러 개를 `[table:each]` 로 팬아웃하면
+        # 원 행(lat/lon)만 흘렀다(passthrough_rows 실측). 실사용 우회는 `&` 3중 병렬.
+        # 원 키는 보존 — 기존 소비자·코퍼스 용례를 깨지 않는 가산적 변경.
+        if isinstance(result, dict) and "items" not in result and "error" not in result:
+            row = {k: v for k, v in result.items()
+                   if not isinstance(v, (dict, list)) and k != "success"}
+            if row:
+                row.setdefault("lat", float(lat))
+                row.setdefault("lon", float(lon))
+                result = {**result, "items": [row], "count": 1}
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     return error_response(f"Unknown tool: {tool_name}")

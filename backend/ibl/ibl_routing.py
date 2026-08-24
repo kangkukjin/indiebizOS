@@ -973,6 +973,10 @@ def _discover_nodes(query: str, params: dict) -> Any:
         out = {
             "query": query,
             "results": [],
+            # 0행도 통화다 — 빈손 성공(F17 계약). items 를 빼면 파이프가 "통화 없음"
+            # (=진짜 오류)으로 읽어 0건과 고장이 접힌다.
+            "items": [],
+            "count": 0,
             "message": (f"'{query}' 탐색 실패 — 검색층 오류: {_search_error}" if _search_error
                         else f"'{query}'에 매칭되는 노드를 찾을 수 없습니다."),
             "total_nodes": len(list_nodes()),
@@ -1019,9 +1023,14 @@ def _discover_nodes(query: str, params: dict) -> Any:
 
     results.sort(key=lambda x: x["score"], reverse=True)
 
+    # ★2026-08-24 B36-2: 목록을 `results` 라는 사적 키에만 담아 파이프가 굶었다
+    # (`[self:discover]{query} >> [table:take]{n:1}` 이 통화 없음으로 거절). 1행 스냅샷
+    # 부류의 형제 — 저쪽은 레코드가 통화가 아니었고, 이쪽은 통화가 남의 이름을 달고
+    # 있었다. `results` 는 기존 소비자·코퍼스를 위해 보존하고 items 를 병기한다.
     return {
         "query": query,
         "results": results,
+        "items": results,
         "count": len(results),
         "best_match": results[0]["suggestion"] if results else "",
     }

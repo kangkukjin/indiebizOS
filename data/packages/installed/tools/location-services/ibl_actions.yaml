@@ -138,7 +138,7 @@ nodes:
       reverse_geocode:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           lng: [lon]
-        returns: scalar
+        returns: items   # 1행 스냅샷 — 주소 레코드는 표의 한 줄 (2026-08-24 B36-2)
         fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places

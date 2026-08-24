@@ -107,9 +107,20 @@ def _final_envelope(resp):
 
 
 def _actual_shape(env):
-    """실측 통화 모양: items / table / blocks / scalar(dict인데 통화 없음) / raw(비 dict)."""
+    """실측 통화 모양: items / table / blocks / scalar(dict인데 통화 없음) / raw(비 dict).
+
+    ★2026-08-24: 바깥 세계가 죽은 것을 '약속 위반'으로 읽지 않는다. 외부 API 가
+    타임아웃·오류를 내면 봉투에 통화가 없으니 옛 판정은 scalar 였고, 그러면 items 를
+    약속한 액션이 매번 [B]('더 나쁨')로 신고됐다 — 실측 sense:book=data4library 30초
+    타임아웃. **부재≠파손을 계측층에도 적용**: 오류 봉투는 모양이 아니라 '실행 불능'
+    (failed)이다. 늑대를 외치는 관문은 다음 사람이 안 믿는다.
+    """
     if env is None:
         return "raw"
+    if env.get("error") and not (
+            isinstance(env.get("items"), list) or isinstance(env.get("blocks"), list)
+            or isinstance(env.get("table"), dict) or isinstance(env.get("rows"), list)):
+        return "error"
     if isinstance(env.get("items"), list):
         return "items"
     t = env.get("table")
@@ -133,13 +144,19 @@ def _is_drift(declared, actual):
 
 
 def _try_once(code):
-    """1회 실행 → (shape, items_n, error). error 는 실행 불능(HTTP/타임아웃)만."""
+    """1회 실행 → (shape, items_n, error). error 는 실행 불능(HTTP/타임아웃)만.
+
+    봉투 안의 오류(외부 API 다운 등)도 '실행 불능'으로 올린다 — 모양 판정 밖이다.
+    """
     try:
         env = _final_envelope(_execute(code))
     except Exception as e:
         return None, 0, e
+    shape = _actual_shape(env)
+    if shape == "error":
+        return None, 0, RuntimeError(f"봉투 오류: {str(env.get('error'))[:120]}")
     n = len(env.get("items") or []) if isinstance(env, dict) else 0
-    return _actual_shape(env), n, None
+    return shape, n, None
 
 
 def _op_axis_report(decl, decl_op, default_op, op_values, fixtures, exempt):

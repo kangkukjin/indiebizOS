@@ -36,6 +36,9 @@ nodes:
             feed: items
             history: items
             summarize: effect
+            # info 는 6필드 레코드(=표의 한 줄) — 1행 스냅샷 병기 (2026-08-24 B36-2,
+            # sense:stock#info 선례). 이걸 안 내주면 upload_date 로 거르지 못한다.
+            info: items
           side_effect:
             info: false
             transcript: false

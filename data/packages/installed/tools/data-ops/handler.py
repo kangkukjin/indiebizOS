@@ -340,7 +340,8 @@ _as_num = _wdsl._as_num
 _num_eq = _wdsl._num_eq
 _num_cmp = _wdsl._num_cmp
 _parse_where_str = _wdsl._parse_where_str
-_group_identity = _load_sibling_where(__file__, "group_keys").group_identity
+_group_keys = _load_sibling_where(__file__, "group_keys")
+_group_identity, _relation_identity = _group_keys.group_identity, _group_keys.relation_identity
 
 def _row_dicts(table):
     """table rows → [{col: val}] (where/sort/dedup이 items와 같은 코드 쓰도록)."""
@@ -518,10 +519,8 @@ def _op_select(prev, params):
 
 
 def _norm(s):
-    import re
-    # B38-1(2026-08-25): ``s or ""`` 는 관계 키 0·False 를 결측과 같은 빈
-    # 문자열로 지웠다. None 만 결측이고 나머지 falsey 스칼라는 실존 값이다.
-    return re.sub(r"\s+", " ", str("" if s is None else s).strip().lower())
+    """B38 falsey 스칼라 보존 + B41 구조 키의 재귀적·순서 독립 정규화."""
+    return _relation_identity(s)
 
 
 def _join_key(value):

@@ -1,4 +1,6 @@
-"""groupby 내부 키 정체성 — 공개 값은 바꾸지 않고 해시 가능한 식별자만 만든다."""
+"""관계 연산 내부 키 정체성 — 공개 값은 바꾸지 않고 해시 가능한 식별자만 만든다."""
+
+import re
 
 
 def group_identity(value):
@@ -27,3 +29,14 @@ def group_identity(value):
     except TypeError:
         return f"{type(value).__module__}.{type(value).__qualname__}", repr(value)
 
+
+def relation_identity(value):
+    """기존 스칼라 비교 규칙을 유지하며 JSON 구조를 재귀적으로 정규화한다."""
+    if isinstance(value, (list, tuple)):
+        return "list", tuple(relation_identity(item) for item in value)
+    if isinstance(value, dict):
+        pairs = [(relation_identity(key), relation_identity(item))
+                 for key, item in value.items()]
+        pairs.sort(key=repr)
+        return "dict", tuple(pairs)
+    return re.sub(r"\s+", " ", str("" if value is None else value).strip().lower())

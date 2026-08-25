@@ -993,5 +993,5 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - 가드=`backend/test_imagination_round40_repairs.py`(원 48칸+중첩·순서 경계 9건). 전체 backend 564건, IBL 빌드·층·파일 크기·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 96행 test 격리. 긍정 24칸, 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_40회차.md`.
 
 - **41회차 (2026-08-25, 4.00배 48과제)** — 축: **구조 키 8종 × 관계 경로 6종**(items/변수/table join·merge·union→dedup·단일 dedup). validate/execute 48/48 · 기대 의미 36/48. 액션 160행 전부 training, 실패 0.
-  - `B41-1` **사전 삽입 순서가 관계 동등성을 바꿈** — 다른 순서·중첩 사전 2모양×6경로=12칸. join은 0행, merge/dedup은 2행의 침묵 오답. 발견·수리 대기.
-  - 처방: scalar `_norm` 계약은 보존하고 list/dict만 40회차 재귀 구조 식별자로 정규화. 사전 순서 무관·목록 순서 보존, join/merge/dedup 한 벌 유지. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_41회차.md`.
+  - `B41-1` **사전 삽입 순서가 관계 동등성을 바꿈 — 수리됨.** 다른 순서·중첩 사전 2모양×6경로=12칸에서 join은 0행, merge/dedup은 2행의 침묵 오답이었다. scalar `_norm` 계약은 보존하고 list/dict를 재귀 관계 식별자로 정규화해 사전 순서 무관·목록 순서 보존을 통일했다. 정규화된 키 충돌 경계도 `(키, 값)` 쌍 전체 정렬로 닫았다.
+  - 가드=`backend/test_imagination_round41_repairs.py`(원 48칸+재귀 스칼라·목록 순서·False/0 경계). 관련 44건·전체 backend 573건, IBL 빌드·층·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 160행 test 격리. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_41회차.md`.

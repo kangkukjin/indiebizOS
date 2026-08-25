@@ -50,11 +50,14 @@ def structural_equal(left: Any, right: Any,
 
 
 def numeric_value(value: Any):
-    """bool을 제외하고 쉼표 숫자·숫자 문자열을 float로 읽는다."""
+    """bool을 제외하고 쉼표·표시 백분율을 포함한 숫자 문자열을 float로 읽는다."""
     if isinstance(value, bool):
         return None
     try:
-        return float(str(value).replace(",", "").strip())
+        text = str(value).replace(",", "").strip()
+        if text.endswith("%"):
+            text = text[:-1].strip()
+        return float(text)
     except (TypeError, ValueError):
         return None
 

@@ -27,7 +27,7 @@ import json
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from common.value_semantics import structural_equal
+from common.value_semantics import numeric_value, structural_equal
 
 _MISSING = object()          # 경로 부재 표지 (값 null 과 구별)
 _KEYWORDS = {"and", "or", "not"}
@@ -299,19 +299,7 @@ def walk_path(obj: Any, path: Optional[str]) -> Any:
 
 
 def _num(v: Any) -> Optional[float]:
-    if isinstance(v, bool):
-        return None
-    if isinstance(v, (int, float)):
-        return float(v)
-    if isinstance(v, str):
-        s = v.strip().replace(",", "")
-        if s.endswith("%"):
-            s = s[:-1]
-        try:
-            return float(s)
-        except ValueError:
-            return None
-    return None
+    return numeric_value(v)
 
 
 def _count(v: Any, label: str) -> int:

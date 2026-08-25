@@ -1009,5 +1009,5 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - 검증: 관련 127건·전체 backend 586건, IBL 파생 정합·backend 층(325모듈, 순수 코어 폐포 11)·Android 번들(225/325, blocklist 100), 패키지 reload·라이브 구조 `[if]`·구조 크기 정직 거절·health 통과.
 
 - **43회차 (2026-08-25, 4.00배 48과제)** — 축: **숫자 표기 8종 × 순서 판정 표면 6종**(filter gt/>/lt·sort asc/desc·블록 >). validate/execute 48/48 · 기대 의미 43/48. 액션 104행 전부 training·성공.
-  - `B43-1` **백분율 순서가 filter/sort와 블록 술어에서 갈림** — `2%`/`10%`에서 filter 3표면은 0행, sort asc/desc는 순서 반전, 블록 술어만 정상. 공통 `numeric_value`가 기존 술어 `_num`의 끝 `%` 제거 계약을 승계하지 못한 5칸 침묵 오답. 발견·수리 대기.
-  - 처방: 백분율 표시값 숫자 판독을 공통 코어 한 곳으로 옮기고 술어도 위임. filter/sort/response.sort/블록 술어가 숫자 판독기 한 벌을 공유. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_43회차.md`.
+  - `B43-1` **백분율 순서가 filter/sort와 블록 술어에서 갈림 — 수리됨.** `2%`/`10%`에서 filter 3표면은 0행, sort asc/desc는 순서 반전, 블록 술어만 정상이었다. 끝 `%` 제거를 공통 `numeric_value`로 옮기고 술어 독자 파서를 삭제해 filter/sort/response.sort/블록 술어가 숫자 판독기 한 벌을 공유한다.
+  - 가드=`backend/test_imagination_round43_repairs.py`(원 48칸+공통 코어·술어·response.sort 횡단 백분율 경계). 관련 136건·전체 backend 595건, IBL 빌드·층·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 104행 test 격리. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_43회차.md`.

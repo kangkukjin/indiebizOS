@@ -326,6 +326,10 @@ class GeminiProvider(BaseProvider):
         loop_start_time = time.time()
 
         while iteration < self.MAX_TOOL_ITERATIONS:
+            # lazy stream에서 thinkingBudget:0 거부를 발견했다면 다음 라운드도 복구된
+            # config를 써야 한다. 옛 코드는 재시도 한 번만 고치고 다음 라운드에 0을 부활시켰다.
+            if self._thinking_off_unsupported:
+                config = self._build_config(gemini_tools)
             # 중단 체크
             if cancel_check and cancel_check():
                 print(f"[Gemini] 사용자 중단 요청 (iteration={iteration})")
@@ -402,12 +406,8 @@ class GeminiProvider(BaseProvider):
                 # [steer] 도구 실행 전 사용자 중단 확인
                 if cancel_check and cancel_check():
                     print(f"[Gemini][round={iteration}] 사용자 중단 — 도구 '{fc.name}' 스킵")
-                    function_response_parts.append(
-                        types.Part.from_function_response(
-                            name=fc.name,
-                            response={"result": "[사용자가 중단했습니다]"}
-                        )
-                    )
+                    function_response_parts.append(self._function_response_part(
+                        fc, "[사용자가 중단했습니다]"))
                     cancelled = True
                     continue
 
@@ -455,12 +455,7 @@ class GeminiProvider(BaseProvider):
                     if _actions > 1:
                         _max_len = _max_len * _actions
                 truncated_output = tool_output[:_max_len] if len(tool_output) > _max_len else tool_output
-                function_response_parts.append(
-                    types.Part.from_function_response(
-                        name=fc.name,
-                        response={"result": truncated_output}
-                    )
-                )
+                function_response_parts.append(self._function_response_part(fc, truncated_output))
 
                 # [images] 이미지가 있으면 inline_data Part로 추가 (AI가 볼 수 있도록)
                 if tool_images:
@@ -489,10 +484,9 @@ class GeminiProvider(BaseProvider):
                 return
 
             # 도구 응답을 contents에 추가
-            contents.append(types.Content(
-                role="tool",
-                parts=function_response_parts
-            ))
+            # Gemini의 function response는 OpenAI식 `tool` 역할이 아니라 USER 턴이다.
+            # google-genai 2.x는 role=tool을 400 INVALID_ARGUMENT로 거부한다.
+            contents.append(self._function_response_content(function_response_parts))
 
             iteration += 1
 
@@ -560,6 +554,10 @@ class GeminiProvider(BaseProvider):
                 continue
 
             for part in candidate.content.parts:
+                # 스트림 끝에 SDK가 빈 Part를 보내는 모델이 있다. 이를 대화 기록에 되넣으면
+                # 다음 function-response 라운드가 포괄적인 400 INVALID_ARGUMENT로 거부된다.
+                if not self._part_has_payload(part):
+                    continue
                 all_response_parts.append(part)
 
                 # Thinking part 감지 (Extended Thinking)
@@ -638,6 +636,23 @@ class GeminiProvider(BaseProvider):
 
         raise last_error if last_error else Exception("스트림 생성 실패")
 
+    def _function_response_content(self, parts):
+        """도구 결과를 Gemini 대화 규약의 USER function-response 턴으로 감싼다."""
+        return self._genai_types.Content(role="user", parts=parts)
+
+    @staticmethod
+    def _part_has_payload(part) -> bool:
+        return any(getattr(part, key, None) for key in (
+            "text", "thought", "thought_signature", "function_call", "function_response",
+            "inline_data", "file_data", "executable_code", "code_execution_result"))
+
+    def _function_response_part(self, function_call, output):
+        """Gemini 3.x가 발급한 function-call id를 결과에 그대로 돌려준다."""
+        response = self._genai_types.FunctionResponse(
+            name=function_call.name, id=getattr(function_call, "id", None),
+            response={"output": output})
+        return self._genai_types.Part(function_response=response)
+
     def _iterate_stream_with_retry(self, stream, contents: List, config, max_retries: int = 3):
         """스트림 반복 (500 에러 재시도, 캐시 만료 시 자동 복구)"""
         retry_count = 0
@@ -672,6 +687,18 @@ class GeminiProvider(BaseProvider):
                         contents=contents,
                         config=config
                     )
+                    continue
+                elif (self.disable_thinking and not self._thinking_off_unsupported
+                      and ("400" in error_str or "INVALID_ARGUMENT" in error_str)
+                      and retry_count < max_retries):
+                    # generate_content_stream은 lazy라 요청 오류가 생성 시점이 아니라 iterator에서
+                    # 터질 수 있다. 생성 경로와 같은 thinkingBudget:0 자가치유를 여기에도 둔다.
+                    retry_count += 1
+                    print("[Gemini] 스트리밍 400 — thinking 차단 포기 후 재시도")
+                    self._thinking_off_unsupported = True
+                    config = self._build_config(self._cached_gemini_tools)
+                    stream = self._genai_client.models.generate_content_stream(
+                        model=self.model, contents=contents, config=config)
                     continue
                 else:
                     raise e

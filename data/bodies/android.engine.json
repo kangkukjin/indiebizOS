@@ -272,6 +272,7 @@
     "test_failure_grammar_honesty": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
     "test_framing_privilege_inherit": "force_exclude_glob",
+    "test_gemini_provider_contract": "force_exclude_glob",
     "test_goal_eval_streaming": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
     "test_handler_error_contract": "force_exclude_glob",
@@ -322,8 +323,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 316,
+    "total": 317,
     "engine": 225,
-    "blocklist": 91
+    "blocklist": 92
   }
 }

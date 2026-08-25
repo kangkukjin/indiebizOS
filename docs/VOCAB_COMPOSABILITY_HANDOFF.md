@@ -1007,3 +1007,7 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - `BVS-3` **선언형 `response.sort` 자동 정렬·내림차순 결측 위치 오류 — 수리됨.** 10/2를 문자열로 정렬해 10이 먼저였고, desc는 문자열·결측 버킷까지 뒤집었다. data-ops와 같은 숫자→문자열→결측 고정 버킷을 공유해 asc/desc 모두 결측 마지막.
 - **근본 처방**: `backend/common/value_semantics.py` 신설. 구조 동결·구조 동등성·쉼표 숫자 판독·버킷 정렬을 한 벌로 접고, groupby/관계키/filter/블록술어/두 sort 표면은 스칼라 정책만 소유한다. 가드 `backend/test_value_semantics_convergence.py` 4건은 표면 횡단 불변식이라 새 연산이 옛 복제 구현으로 돌아가면 함께 빨강이 된다.
 - 검증: 관련 127건·전체 backend 586건, IBL 파생 정합·backend 층(325모듈, 순수 코어 폐포 11)·Android 번들(225/325, blocklist 100), 패키지 reload·라이브 구조 `[if]`·구조 크기 정직 거절·health 통과.
+
+- **43회차 (2026-08-25, 4.00배 48과제)** — 축: **숫자 표기 8종 × 순서 판정 표면 6종**(filter gt/>/lt·sort asc/desc·블록 >). validate/execute 48/48 · 기대 의미 43/48. 액션 104행 전부 training·성공.
+  - `B43-1` **백분율 순서가 filter/sort와 블록 술어에서 갈림** — `2%`/`10%`에서 filter 3표면은 0행, sort asc/desc는 순서 반전, 블록 술어만 정상. 공통 `numeric_value`가 기존 술어 `_num`의 끝 `%` 제거 계약을 승계하지 못한 5칸 침묵 오답. 발견·수리 대기.
+  - 처방: 백분율 표시값 숫자 판독을 공통 코어 한 곳으로 옮기고 술어도 위임. filter/sort/response.sort/블록 술어가 숫자 판독기 한 벌을 공유. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_43회차.md`.

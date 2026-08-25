@@ -172,6 +172,19 @@ def _in_rehearsal() -> bool:
         return False
 
 
+def _context_isolation_source() -> str:
+    """HTTP body 등 행위자 봉투가 명시한 test/training 출처.
+
+    프로세스 자체가 pytest인지 판정하는 `_in_test_process`와는 독립이다. 외부 검증기는
+    pytest 프로세스가 아니므로 origin='test'를 이 경로로 읽어야 실사용으로 새지 않는다.
+    """
+    try:
+        from thread_context import get_isolated_origin
+        return get_isolated_origin()
+    except Exception:
+        return None
+
+
 # ── 격리 출처 — '의도된 실패'는 몸의 삶이 아니다 ────────────────────────────
 # 시험(B18-1)과 리허설(상상 훈련)은 상한·오류·빈손 경로를 *일부러* 밟는다. 그 자국이
 # 실사용과 같은 칸에 쌓이면 몸은 자기 삶을 잘못 읽는다. `self_check`(12시간 순찰)은
@@ -188,8 +201,10 @@ def record_action_health(node: str, action: str, success: bool, response_ms: int
     """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
     if source == "usage" and _in_test_process():
         source = "test"   # 시험의 의도된 실패를 실사용 통계에서 격리 (B18-1)
-    elif source == "usage" and _in_rehearsal():
-        source = "training"   # 리허설의 의도된 실패를 실사용 통계에서 격리 (2026-08-23)
+    elif source == "usage":
+        # 외부 HTTP 검증기는 pytest 프로세스가 아니다. body origin(test/training)을
+        # actor_context가 복원하므로 그 명시 출처를 그대로 쓴다(B39-2차 수리).
+        source = _context_isolation_source() or source
     try:
         conn = _get_pulse_db()
         _ensure_action_health_cols(conn)
@@ -246,8 +261,8 @@ def record_notification(kind: str, title: str, message: str, emitter: str = "sys
     source = "usage"
     if _in_test_process():
         source = "test"
-    elif _in_rehearsal():
-        source = "training"
+    else:
+        source = _context_isolation_source() or source
     try:
         conn = _get_pulse_db()
         _ensure_notify_log(conn)

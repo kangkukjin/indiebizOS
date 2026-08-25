@@ -197,7 +197,7 @@
     },
     {
       "name": "data_groupby",
-      "description": "table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 시 그룹별 count). >> 앞 table 통화를 받음.",
+      "description": "table → 그룹 집계. by(그룹 키 열, 필수), agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max). 미지정 또는 agg:\"count\"는 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null. >> 앞 table 통화를 받음.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -207,7 +207,7 @@
           },
           "agg": {
             "type": "object",
-            "description": "집계 명세. {새열:[op,원본열]} 또는 {원본열:op}."
+            "description": "집계 명세. {새열:[op,원본열]} 또는 {원본열:op}. 명시 count는 non-null 수, 숫자 집계는 무관측이면 null."
           }
         },
         "required": [

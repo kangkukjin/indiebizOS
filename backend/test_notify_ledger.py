@@ -109,10 +109,10 @@ def test_n4_rehearsal_and_test_are_isolated(tmp_path, monkeypatch):
     mgr.create(title="시험 알림", message="x", source="system", deliver=False)   # 이 프로세스 = pytest
 
     monkeypatch.setattr(pulse_db, "_in_test_process", lambda: False)
-    monkeypatch.setattr(pulse_db, "_in_rehearsal", lambda: True)
+    monkeypatch.setattr(pulse_db, "_context_isolation_source", lambda: "training")
     mgr.create(title="리허설 알림", message="y", source="system", deliver=False)
 
-    monkeypatch.setattr(pulse_db, "_in_rehearsal", lambda: False)
+    monkeypatch.setattr(pulse_db, "_context_isolation_source", lambda: None)
     mgr.create(title="실사용 알림", message="z", source="system", deliver=False)
 
     got = [(r["title"], r["source"]) for r in _rows(get)]

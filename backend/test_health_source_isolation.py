@@ -59,14 +59,15 @@ def _rows(get):
 
 
 def test_r1_judgment_is_single_sourced():
-    """판정을 복제하면 원장마다 '리허설'이 다른 뜻이 된다 — pulse_db 는 위임만."""
+    """판정을 복제하면 원장마다 격리 출처의 뜻이 갈린다 — pulse_db 는 위임만."""
     import pulse_db
     import thread_context
     assert callable(thread_context.in_rehearsal)
+    assert callable(thread_context.get_isolated_origin)
     src = open(pulse_db.__file__, encoding="utf-8").read()
-    assert "REHEARSAL_ORIGINS" not in src, \
-        "pulse_db 가 리허설 판정을 다시 복제했다 — thread_context.in_rehearsal 에 위임할 것"
-    assert "from thread_context import in_rehearsal" in src
+    assert "ISOLATED_ORIGINS" not in src, \
+        "pulse_db 가 격리 출처 판정을 복제했다 — thread_context.get_isolated_origin 에 위임할 것"
+    assert "from thread_context import get_isolated_origin" in src
 
 
 def test_r2_rehearsal_origin_is_marked(tmp_path, monkeypatch):
@@ -100,6 +101,20 @@ def test_r3_origin_does_not_leak_after_context(tmp_path, monkeypatch):
     pulse_db.record_action_health("a", "y", True, 1)
     rows = _rows(get)
     assert [r["source"] for r in rows] == ["training", "usage"], rows
+
+
+def test_r3b_http_test_origin_is_marked_without_pytest_process(tmp_path, monkeypatch):
+    """외부 HTTP 검증기는 pytest 프로세스가 아니어도 origin='test'로 격리된다."""
+    import pulse_db
+    from thread_context import actor_context
+    get = _tmp_pulse(tmp_path, monkeypatch)
+
+    with actor_context(agent_id="system_ai", origin="test"):
+        pulse_db.record_action_health("table", "take", True, 1)
+    pulse_db.record_action_health("table", "take", True, 1)
+
+    rows = _rows(get)
+    assert [r["source"] for r in rows] == ["test", "usage"], rows
 
 
 def test_r4_aggregates_exclude_isolated_sources():

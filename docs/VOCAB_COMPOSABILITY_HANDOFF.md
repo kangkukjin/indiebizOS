@@ -979,3 +979,10 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - `B38-2` **items/table 흡수 순서에 따라 null·부재 join 결과가 달라짐 — 수리됨.** 강제 table 투영 전에 공개 통화 모양을 판별하고 items→items·명시 table→table로 유지. 공용 `_join_key`가 두 경로의 null·부재 제외를 통일하며 혼합 통화는 정직 거절.
   - `G38-1` **빈 문자열 관계 키 의미 — 판정·집행 완료(사용자: 권고 따름).** 빈/공백 문자열을 null·부재와 같은 키 없음으로 보아 join 제외. merge/dedup의 기존 의미와 통일.
   - 수리 가드=`backend/test_imagination_round38_repairs.py`(원 48칸 + falsey·공백·출력 모양·혼합 통화 경계), 옛 거울키 join 가드도 items 정본으로 교정. 전체 backend 543 passed·2 skipped, IBL 빌드·층·Android 번들, 백엔드 재기동 후 라이브 48/48 통과. 긍정: 정상·대소문자·다중공백·숫자문자열 24/24 경로 동치, merge/dedup은 키 없는 원행 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_38회차.md`.
+
+- **39회차 (2026-08-25, 4.00배 48과제)** — 축: **집계 연산 6종 × 값 품질 8종**(행수 count·명시 field count·sum·avg·min·max × 정수·숫자문자열·쉼표·부재·null·비수치·불리언·전부 무효). validate 48/48 · 무부작용 실측 48/48 · 깨끗 39 · 의미 불일치 9. 본 과제 액션 96행은 `source=training`으로 전량 격리.
+  - `B39-1` **avg가 무효값을 분자에서는 0, 분모에서는 1로 세어 `[10,missing]`을 5로 왜곡 — 수리됨.** 공용 숫자 관측기 한 벌로 sum/avg/min/max의 집합을 통일하고 avg 분모에서 무효값 제외·무관측 null.
+  - `G39-1` **기본 행수 count와 명시 `count(field)` 의미 분리 — 판정·집행 완료(사용자: 권고 따름).** 명시형은 존재+non-null 관측 수를 세고, 전 행에 필드가 없으면 정직 거절.
+  - `G39-2` **숫자 무관측 sum 의미 — 판정·집행 완료(사용자: 권고 따름).** 실제 숫자 0과 관측 부재를 구별하도록 무관측은 null. 값 `[0,null]`은 0 유지.
+  - `B39-2` **HTTP `origin:test`가 건강 원장에서 usage로 새던 재발 — 수리됨.** 외부 검증기는 pytest 프로세스가 아니어서 종전 프로세스 판정에 안 걸렸다. `thread_context.get_isolated_origin()` 한 벌을 액션·알림 원장이 공유. 오염 96행(ID 70284~70379)은 백업 후 test로 교정, 라이브 새 2행 test 확인.
+  - 가드=`backend/test_imagination_round39_repairs.py`(원 48칸+필드 부재+실제0/무관측) 및 `test_health_source_isolation.py` HTTP test origin. 전체 backend 554건, IBL 빌드·층·Android 번들, 라이브 원 48/48 통과. 긍정: 정수·숫자문자열·쉼표 숫자 18/18 정확, min/max의 기존 계약 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_39회차.md`.

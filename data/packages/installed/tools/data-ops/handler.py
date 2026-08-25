@@ -632,12 +632,42 @@ def _op_dedup(prev, params):
     return _no_currency_error("dedup", prev)
 
 
+def _numeric_observations(values):
+    """실제 숫자만 값당 한 번 변환 — 무효값은 0이 아니다(B39-1)."""
+    numbers = []
+    for value in values:
+        number = _as_num(value)
+        if number is not None:
+            numbers.append(number)
+    return numbers
+
+
+def _agg_sum(values):
+    numbers = _numeric_observations(values)
+    return round(sum(numbers), 6) if numbers else None
+
+
+def _agg_avg(values):
+    numbers = _numeric_observations(values)
+    return round(sum(numbers) / len(numbers), 6) if numbers else None
+
+
+def _agg_min(values):
+    return min(_numeric_observations(values), default=None)
+
+
+def _agg_max(values):
+    return max(_numeric_observations(values), default=None)
+
+
 _AGG = {
-    "count": lambda vs: len(vs),
-    "sum": lambda vs: round(sum(_as_num(v) or 0 for v in vs), 6),
-    "avg": lambda vs: round(sum(_as_num(v) or 0 for v in vs) / len(vs), 6) if vs else 0,
-    "min": lambda vs: min((_as_num(v) for v in vs if _as_num(v) is not None), default=None),
-    "max": lambda vs: max((_as_num(v) for v in vs if _as_num(v) is not None), default=None),
+    # 명시 count(field)는 실존(non-null) 관측 수. 기본 그룹 행수 count는 _op_groupby가
+    # src=None인 내부 명세로 별도 처리한다(G39-1) — 공개 op를 하나 더 만들지 않는다.
+    "count": lambda vs: sum(value is not None for value in vs),
+    "sum": _agg_sum,
+    "avg": _agg_avg,
+    "min": _agg_min,
+    "max": _agg_max,
 }
 
 
@@ -733,10 +763,12 @@ def _op_groupby(prev, params):
     for out_col, op, src in specs:
         if op not in _AGG:
             return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(_AGG)})"}
-        if op != "count" and not any(src in d for d in dicts):
+        # 명시 count(field)의 field도 장식이 아니다. 기본 행수 count는 이 검사가 끝난 뒤
+        # src=None으로 만들어지므로, 전 행에 없는 명시 필드는 다른 집계와 같이 거절한다.
+        if not any(src in d for d in dicts):
             return _field_missing_error("groupby", src, dicts)
     if not specs:
-        specs = [("count", "count", by)]
+        specs = [("count", "count", None)]
     # 그룹핑 (입력 순서 보존)
     groups, order = {}, []
     for d in dicts:
@@ -751,6 +783,9 @@ def _op_groupby(prev, params):
         members = groups[gk]
         row = [gk]
         for out_col, op, src in specs:
+            if op == "count" and src is None:
+                row.append(len(members))
+                continue
             vals = [m.get(src) for m in members]
             fn = _AGG.get(op, _AGG["count"])
             row.append(fn(vals))

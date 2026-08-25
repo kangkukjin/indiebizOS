@@ -274,15 +274,27 @@ def clear_task_origin():
 #   (B18-1 이 프로세스 정체로 시험을 격리한 것과 같은 자리 — 판정은 한 벌, 표식은 기계가.)
 # ★덤: origin 이 'user' 가 아니게 되므로 리허설은 RED 수정 그랜트도 못 받는다(fail-closed).
 #   훈련 턴이 라이브 코어를 고쳤던 22회차 사고와 같은 방향의 보호다.
+ISOLATED_ORIGINS = frozenset({"test", "training"})
 REHEARSAL_ORIGINS = frozenset({"training"})
+
+
+def get_isolated_origin() -> str:
+    """현재 실행의 명시적 격리 출처(test/training), 아니면 None.
+
+    pytest 프로세스 판정은 runtime_utils의 몫이다. 이 함수는 외부 HTTP 검증기처럼
+    별도 프로세스가 body의 origin으로 선언한 격리만 판정한다. 원장이 origin 집합을
+    각자 복제하지 않도록 행위자 봉투의 단일 판정점에 둔다.
+    """
+    try:
+        origin = get_task_origin()
+        return origin if origin in ISOLATED_ORIGINS else None
+    except Exception:
+        return None
 
 
 def in_rehearsal() -> bool:
     """이 실행이 리허설(상상 훈련)인가 — 건강·통계 원장이 실사용과 가르는 판정."""
-    try:
-        return get_task_origin() in REHEARSAL_ORIGINS
-    except Exception:
-        return False
+    return get_isolated_origin() in REHEARSAL_ORIGINS
 
 
 @contextmanager

@@ -7390,8 +7390,8 @@ nodes:
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max, 생략(또는 "count")=그룹별 행수.
-        target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수). ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
+        description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
+        target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
         group: transform
         router: handler
         tool: data_groupby

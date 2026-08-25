@@ -988,6 +988,6 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - 가드=`backend/test_imagination_round39_repairs.py`(원 48칸+필드 부재+실제0/무관측) 및 `test_health_source_isolation.py` HTTP test origin. 전체 backend 554건, IBL 빌드·층·Android 번들, 라이브 원 48/48 통과. 긍정: 정수·숫자문자열·쉼표 숫자 18/18 정확, min/max의 기존 계약 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_39회차.md`.
 
 - **40회차 (2026-08-25, 4.00배 48과제)** — 축: **그룹 키 값 모양 8종 × 집계 6종**(문자열·숫자/문자열·False/0·True/1·null/부재·빈/공백·목록·사전 × count/field count/sum/avg/min/max). validate 48/48 · 실행 성공 36/48 · 기대 의미 일치 24/48. 액션 96행 전부 `source=training`(groupby 실패 12 포함).
-  - `B40-1` **False/0·True/1이 파이썬 동등성으로 침묵 병합** — 12칸. 합계30·평균15 같은 정상 숫자 오답. 발견·수리 대기.
-  - `B40-2` **목록·사전 그룹 키가 `unhashable type`으로 실패** — 12칸. validate는 전부 통과. 발견·수리 대기.
-  - 처방: 공개 키는 원값, 내부 식별자만 타입 태그+재귀 동결. bool/number 분리, 목록 순서 보존, 사전 키 순서 무관. 새 어휘·판정 없음. 긍정 24칸, 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_40회차.md`.
+  - `B40-1` **False/0·True/1이 파이썬 동등성으로 침묵 병합 — 수리됨.** 내부 그룹 식별자에 타입 태그를 붙여 bool/number 분리, 공개 키는 첫 원값 보존.
+  - `B40-2` **목록·사전 그룹 키가 `unhashable type`으로 실패 — 수리됨.** 목록은 순서 보존 재귀 튜플, 사전은 키 순서 무관 정렬 쌍으로 동결. 중첩 구조도 동일 계약.
+  - 가드=`backend/test_imagination_round40_repairs.py`(원 48칸+중첩·순서 경계 9건). 전체 backend 564건, IBL 빌드·층·파일 크기·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 96행 test 격리. 긍정 24칸, 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_40회차.md`.

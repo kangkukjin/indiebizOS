@@ -340,9 +340,7 @@ _as_num = _wdsl._as_num
 _num_eq = _wdsl._num_eq
 _num_cmp = _wdsl._num_cmp
 _parse_where_str = _wdsl._parse_where_str
-
-
-
+_group_identity = _load_sibling_where(__file__, "group_keys").group_identity
 
 def _row_dicts(table):
     """table rows → [{col: val}] (where/sort/dedup이 items와 같은 코드 쓰도록)."""
@@ -773,14 +771,15 @@ def _op_groupby(prev, params):
     groups, order = {}, []
     for d in dicts:
         gk = d.get(by)
-        if gk not in groups:
-            groups[gk] = []
-            order.append(gk)
-        groups[gk].append(d)
+        gid = _group_identity(gk)
+        if gid not in groups:
+            groups[gid] = (gk, [])
+            order.append(gid)
+        groups[gid][1].append(d)
     out_cols = [by] + [s[0] for s in specs]
     out_rows = []
-    for gk in order:
-        members = groups[gk]
+    for gid in order:
+        gk, members = groups[gid]
         row = [gk]
         for out_col, op, src in specs:
             if op == "count" and src is None:

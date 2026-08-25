@@ -2,9 +2,10 @@
 
 import re
 
+from common.value_semantics import freeze_structure
 
-def group_identity(value):
-    """IBL JSON 값의 타입·구조 동등성을 해시 가능한 재귀 튜플로 보존한다."""
+
+def _group_scalar_identity(value):
     if value is None:
         return "null", None
     if isinstance(value, bool):
@@ -16,13 +17,6 @@ def group_identity(value):
         return "number", value
     if isinstance(value, str):
         return "string", value
-    if isinstance(value, (list, tuple)):
-        return "list", tuple(group_identity(item) for item in value)
-    if isinstance(value, dict):
-        pairs = [(group_identity(key), group_identity(item))
-                 for key, item in value.items()]
-        pairs.sort(key=lambda pair: repr(pair[0]))
-        return "dict", tuple(pairs)
     try:
         hash(value)
         return f"{type(value).__module__}.{type(value).__qualname__}", value
@@ -30,13 +24,15 @@ def group_identity(value):
         return f"{type(value).__module__}.{type(value).__qualname__}", repr(value)
 
 
+def group_identity(value):
+    """IBL JSON 값의 타입·구조 동등성을 해시 가능한 재귀 튜플로 보존한다."""
+    return freeze_structure(value, _group_scalar_identity)
+
+
+def _relation_scalar_identity(value):
+    return re.sub(r"\s+", " ", str("" if value is None else value).strip().lower())
+
+
 def relation_identity(value):
     """기존 스칼라 비교 규칙을 유지하며 JSON 구조를 재귀적으로 정규화한다."""
-    if isinstance(value, (list, tuple)):
-        return "list", tuple(relation_identity(item) for item in value)
-    if isinstance(value, dict):
-        pairs = [(relation_identity(key), relation_identity(item))
-                 for key, item in value.items()]
-        pairs.sort(key=repr)
-        return "dict", tuple(pairs)
-    return re.sub(r"\s+", " ", str("" if value is None else value).strip().lower())
+    return freeze_structure(value, _relation_scalar_identity)

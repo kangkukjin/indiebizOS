@@ -18,6 +18,9 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
 
 import re
 
+from common.value_semantics import (numeric_value, sort_records, structural_equal,
+                                    value_sort_key)
+
 
 # ───────────────────────── where 미니 DSL ─────────────────────────
 
@@ -87,36 +90,23 @@ def _apply_op(op, left, right):
 
 
 def _as_num(v):
-    try:
-        return float(str(v).replace(",", "").strip())
-    except Exception:
-        return None
+    return numeric_value(v)
 
 
-def _num_eq(a, b):
-    # B42-1(2026-08-25): str(dict)는 삽입 순서를 의미로 오인한다. JSON 구조는
-    # dict=순서 없는 쌍 집합, list=순서 있는 열로 비교하고 스칼라만 기존 숫자 규칙으로 판다.
-    if isinstance(a, dict) or isinstance(b, dict):
-        if not isinstance(a, dict) or not isinstance(b, dict) or len(a) != len(b):
-            return False
-        unmatched = list(b.items())
-        for akey, avalue in a.items():
-            found = next((i for i, (bkey, bvalue) in enumerate(unmatched)
-                          if _num_eq(akey, bkey) and _num_eq(avalue, bvalue)), None)
-            if found is None:
-                return False
-            unmatched.pop(found)
-        return True
-    if isinstance(a, list) or isinstance(b, list):
-        return (isinstance(a, list) and isinstance(b, list) and len(a) == len(b)
-                and all(_num_eq(left, right) for left, right in zip(a, b)))
+def _scalar_num_eq(a, b):
     na, nb = _as_num(a), _as_num(b)
     if na is not None and nb is not None:
         return na == nb
     return str(a).strip().lower() == str(b).strip().lower()
 
 
+def _num_eq(a, b):
+    return structural_equal(a, b, _scalar_num_eq)
+
+
 def _num_cmp(a, b):
+    if isinstance(a, (dict, list, tuple)) or isinstance(b, (dict, list, tuple)):
+        raise _WhereError("구조 값(dict/list)은 크기 순서를 비교할 수 없습니다")
     na, nb = _as_num(a), _as_num(b)
     if na is not None and nb is not None:
         return (na > nb) - (na < nb)
@@ -231,16 +221,7 @@ def _match(item, where):
 # ───────────────────────── sort 키 (수치 인식) ─────────────────────────
 
 def _sort_key(field):
-    def key(item):
-        v = item.get(str(field)) if isinstance(item, dict) else None
-        n = _as_num(v)
-        # 숫자 먼저(0) 안정 정렬, 그다음 문자열(1). None은 맨 뒤.
-        if v is None:
-            return (2, 0.0, "")
-        if n is not None:
-            return (0, n, "")
-        return (1, 0.0, str(v).lower())
-    return key
+    return value_sort_key(field, _as_num)
 
 
 def _sort_records(records, field, desc=False):
@@ -249,13 +230,7 @@ def _sort_records(records, field, desc=False):
     ``sorted(..., reverse=True)`` 는 값뿐 아니라 종류 표지까지 뒤집어 None 과 문자열을
     숫자보다 앞으로 보냈다. 결측값은 정렬 방향과 무관하게 끝에 두는 것이 계약이다.
     """
-    key = _sort_key(field)
-    buckets = {0: [], 1: [], 2: []}
-    for row in records:
-        buckets[key(row)[0]].append(row)
-    return (sorted(buckets[0], key=key, reverse=desc)
-            + sorted(buckets[1], key=key, reverse=desc)
-            + buckets[2])
+    return sort_records(records, field, desc, _as_num)
 
 
 def _where_fields(where):

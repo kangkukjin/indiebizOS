@@ -179,6 +179,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
   - 워크플로우는 **함수 쪽으로 한 칸** 옮겨졌다: 이름·인자(미할당 `$이름`=시그니처, `params_required`/`params_default`)·반환값(`$return`)·스코프 격리·합성(파이프로 다음 문장에 통화를 넘김) + 순환·깊이(5) 가드.
   - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
+- **값 의미론 코어**(2026-08-25): `common/value_semantics.py`가 JSON 구조 순회(dict=무순서 쌍·list=순서 열), 숫자 판독, 정렬 버킷(숫자→문자열→결측)을 한 벌로 소유한다. groupby·join/merge/dedup·`table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`는 구조 순회를 복제하지 않고 각 언어가 의도한 **스칼라 정책만** 주입한다. 연산별 `str(dict)`·`reverse=True` 재구현은 금지하며 `test_value_semantics_convergence.py`가 표면 횡단 불변식을 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 151): handler 122 · system 19 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
@@ -452,7 +453,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
-- backend **.py 276개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 34 · cognition 43 · services 28 · surface 60`(+ common 13·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
+- backend **.py 277개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 34 · cognition 43 · services 28 · surface 60`(+ common 14·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
 - op 분기 액션 **69개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 39·false 16·미선언 96)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

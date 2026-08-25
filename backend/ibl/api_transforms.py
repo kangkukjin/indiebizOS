@@ -29,6 +29,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from common.html_utils import clean_html
+from common.value_semantics import sort_records
 
 
 # === 메인 함수 ===
@@ -418,20 +419,9 @@ def _apply_sort(data: list, sort_config: dict) -> list:
 
     reverse = sort_config.get("order", "asc") == "desc"
     sort_type = sort_config.get("type", "auto")
-
-    def key_func(item):
-        val = item.get(sort_key, "") if isinstance(item, dict) else ""
-        if sort_type == "number":
-            try:
-                return float(val)
-            except (ValueError, TypeError):
-                return 0
-        return str(val) if val is not None else ""
-
-    try:
-        return sorted(data, key=key_func, reverse=reverse)
-    except TypeError:
-        return data
+    if sort_type in ("auto", "number"):
+        return sort_records(data, sort_key, reverse)
+    return sort_records(data, sort_key, reverse, None)
 
 
 # === 7. wrap: 응답 포장 ===

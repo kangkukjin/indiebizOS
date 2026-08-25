@@ -991,3 +991,7 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - `B40-1` **False/0·True/1이 파이썬 동등성으로 침묵 병합 — 수리됨.** 내부 그룹 식별자에 타입 태그를 붙여 bool/number 분리, 공개 키는 첫 원값 보존.
   - `B40-2` **목록·사전 그룹 키가 `unhashable type`으로 실패 — 수리됨.** 목록은 순서 보존 재귀 튜플, 사전은 키 순서 무관 정렬 쌍으로 동결. 중첩 구조도 동일 계약.
   - 가드=`backend/test_imagination_round40_repairs.py`(원 48칸+중첩·순서 경계 9건). 전체 backend 564건, IBL 빌드·층·파일 크기·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 96행 test 격리. 긍정 24칸, 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_40회차.md`.
+
+- **41회차 (2026-08-25, 4.00배 48과제)** — 축: **구조 키 8종 × 관계 경로 6종**(items/변수/table join·merge·union→dedup·단일 dedup). validate/execute 48/48 · 기대 의미 36/48. 액션 160행 전부 training, 실패 0.
+  - `B41-1` **사전 삽입 순서가 관계 동등성을 바꿈** — 다른 순서·중첩 사전 2모양×6경로=12칸. join은 0행, merge/dedup은 2행의 침묵 오답. 발견·수리 대기.
+  - 처방: scalar `_norm` 계약은 보존하고 list/dict만 40회차 재귀 구조 식별자로 정규화. 사전 순서 무관·목록 순서 보존, join/merge/dedup 한 벌 유지. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_41회차.md`.

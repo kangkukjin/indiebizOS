@@ -5,10 +5,13 @@
 """
 
 from collections.abc import Callable
+import math
+import re
 from typing import Any
 
 
 _SEQUENCES = (list, tuple)
+_INTEGER_TEXT = re.compile(r"^[+-]?\d+$")
 
 
 def freeze_structure(value: Any, scalar_identity: Callable[[Any], Any]):
@@ -50,15 +53,27 @@ def structural_equal(left: Any, right: Any,
 
 
 def numeric_value(value: Any):
-    """bool을 제외하고 쉼표·표시 백분율을 포함한 숫자 문자열을 float로 읽는다."""
+    """유한 숫자를 읽되 정수 정밀도는 보존한다.
+
+    JSON 통화에 유한 숫자로 실을 수 없는 NaN/Infinity와 실수 오버플로는 숫자 관측이
+    아니다. 정수까지 무조건 float로 접으면 2**53 이후의 서로 다른 식별자가 같아지므로
+    정수 표기는 Python의 임의정밀도 int로 유지한다.
+    """
     if isinstance(value, bool):
         return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
     try:
         text = str(value).replace(",", "").strip()
         if text.endswith("%"):
             text = text[:-1].strip()
-        return float(text)
-    except (TypeError, ValueError):
+        if _INTEGER_TEXT.fullmatch(text):
+            return int(text)
+        number = float(text)
+        return number if math.isfinite(number) else None
+    except (TypeError, ValueError, OverflowError):
         return None
 
 

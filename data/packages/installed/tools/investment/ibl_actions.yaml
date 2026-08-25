@@ -16,7 +16,7 @@ actions:
     fixture: '[sense:stock]{query: "삼성전자"}'
     description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
     group: finance
-    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
+    target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
     target_key: op
     router: handler
     tool: stock_op
@@ -44,7 +44,7 @@ actions:
         investors: 투자자별 매매동향 (한국 전용)
         news: 종목 관련 뉴스 (Finnhub→Yahoo)
         earnings: 실적발표 일정 (예상 vs 실적)
-    implementation: market 자동판별(6자리/한글=kr, 그외=us) 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
+    implementation: market 자동판별(6자리/한글=kr, 그외=us) + 시장지수 별칭(KOSPI·KS11·코스피→^KS11, KOSDAQ·KQ11·코스닥→^KQ11) 정규화 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
     keywords:
     - 주가
     - 주식

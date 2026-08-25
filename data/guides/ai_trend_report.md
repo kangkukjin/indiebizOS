@@ -21,7 +21,7 @@
   - 날짜 기반 파일명이므로 파일명을 사전순 정렬하면 곧 시간순 정렬이 된다(최신 보고서 찾기의 핵심).
 - 폴더가 없으면 첫 작성 시 `[self:write]`가 자동 생성한다(별도 mkdir 불필요).
 - **저장도 검증도 IBL 액션으로 한다 (필수)** — 저장 `[self:write]` · 부분수정 `[self:edit]` · 확인 `[self:list]`·`[self:grep]`·`[self:read]`. 하네스가 주는 네이티브 파일 도구(`Write`, Bash 의 `ls`·`grep`)로 대신하지 말 것. **결과 파일은 같지만 네이티브 경로로 돈 주행은 경험 증류에 접지되지 않아 해마에 아무것도 남지 않는다** — 매일 도는 작업이라 그 손실이 매일 누적된다. (실측 2026-08-20: 그날 호가 보고서 저장에 네이티브 `Write`, 최종 검증에 Bash `ls`/`grep` 을 썼다. 산출물은 정상이었고 그래서 더 조용히 새어 나갔다.)
-- 셸(`run_command`)은 **IBL 등가물이 없는 일에만** 쓴다 — GitHub·HuggingFace API 직접 호출, JSON 원장 집계 같은 것. 파일 읽기·쓰기·검색은 등가물이 있으므로 해당하지 않는다.
+- 셸(`run_command`)은 **IBL 등가물이 없는 일에만** 쓴다. GitHub 다건 조회는 등록 스크립트 `github저장소메타`, JSON 원장 갱신은 `json원장`, arXiv 최신 카테고리 피드는 `arxiv최신피드`가 맡는다. 파일 읽기·쓰기·검색에도 이미 IBL 등가물이 있다.
 
 ---
 
@@ -102,9 +102,9 @@
 ### 2-2. 기술·연구 동향 섹션 조사
 
 사용할 IBL 검색 액션:
-- `[sense:search]{source: "gnews", query: "AI 신모델 출시"}` / `[sense:search]{source: "gnews", query: "AI model release"}`
-- `[sense:search]{query: "new LLM benchmark state of the art"}` — 영어 웹
-- `[sense:paper]{op: "search", query: "large language model", source: "arxiv"}` — 최신 논문
+- 서로 독립인 검색은 낱개 턴으로 보내지 말고 한 문장 `&`로 묶는다: `[sense:search]{source: "gnews", query: "AI 신모델 출시"} & [sense:search]{source: "gnews", query: "AI model release"} & [sense:search]{query: "new LLM benchmark state of the art"}`
+- `[sense:paper]{op: "search", query: "large language model", source: "arxiv"}` — 주제 키워드 논문
+- `[self:script]{op: "run", id: "arxiv최신피드", args: {categories: ["cs.AI", "cs.CL", "cs.LG"], limit: 60}}` — 카테고리별 최신 제출 다건. curl·sleep·XML 파서 즉석 조합 금지.
 - 중요한 논문/발표는 `[sense:crawl]{url: "..."}`로 원문 확인.
 
 조사 대상 예: 새 모델·버전 출시, 벤치마크 갱신, 주목 논문, 오픈소스 릴리스, 새 기법·아키텍처, 멀티모달/에이전트/로보틱스 진전.
@@ -153,9 +153,10 @@
 
 `created:` 필터로 레거시 유명 레포를 배제하고, **최근 생겼는데 별이 빠르게 붙는** 레포만 뽑는다:
 ```
-run_command(cmd: 'curl -s "https://api.github.com/search/repositories?q=topic:ai+created:>YYYY-MM-DD&sort=stars&order=desc&per_page=15"')
+[self:script]{op: "run", id: "github저장소메타", args: {query: "topic:ai created:>YYYY-MM-DD", limit: 15, sort: "stars"}}
 ```
 (`YYYY-MM-DD`는 대략 최근 2~4주 전 날짜. `topic:ai` 외에 `topic:llm`·`topic:agent`·`topic:mcp` 등으로 각을 바꿔가며.) 또는 급상승 스냅샷은 `[sense:crawl]{url: "https://github.com/trending?since=weekly"}`.
+- 후보 저장소 여러 개의 stars·forks·pushed를 확인할 때도 curl for-loop 대신 한 번에 부른다: `[self:script]{op: "run", id: "github저장소메타", args: {repos: ["owner/a", "owner/b"]}}` (최대 8개 병렬).
 - **필터**: `AI-powered todo앱` 류 껍데기·단순 래퍼는 버리고, README에 *예상 밖 도메인*이나 새로운 방식이 담긴 것만 남긴다.
 
 **(B-2) 채널이 막히면 실패를 매일 적지 말고 채널을 바꾼다 (필수)**
@@ -302,7 +303,7 @@ run_command(cmd: 'curl -s "https://api.github.com/search/repositories?q=topic:ai
 - [매체명](URL) — [원문] 또는 [검색결과] 등급 표기
 ```
 
-저장 직후 **커버리지 원장을 갱신한다**(§3-2 규칙 4): `_coverage_ledger.json`을 읽어(없으면 빈 배열) 이번 호 항목 `{"date": "YYYY-MM-DD", "tags": [이번 호가 다룬 고유명사·주제 태그]}`를 끝에 더하고, 항목이 10개를 넘으면 가장 오래된 것을 잘라 다시 쓴다. (전체 보고서를 쓴 날만 갱신 — 빈 날 점검 로그는 원장을 건드리지 않는다.)
+저장 직후 **커버리지 원장을 갱신한다**(§3-2 규칙 4): `[self:script]{op: "run", id: "json원장", args: {path: "outputs/ai_trend_reports/_coverage_ledger.json", op: "append", item: {date: "YYYY-MM-DD", tags: [이번 호 태그]}, max_items: 10}}`. Python 원라이너·heredoc으로 읽고 다시 쓰지 않는다. (전체 보고서를 쓴 날만 갱신 — 빈 날 점검 로그는 원장을 건드리지 않는다.)
 
 '방법론 자기 점검'에서 **승격 또는 은퇴 판정이 난 규칙이 있으면 규칙 원장(`_methodology_rules.md`)도 같이 갱신한다**(§3-3 절차·원장 머리 템플릿 준수). 판정 없는 날은 원장을 건드리지 않는다.
 

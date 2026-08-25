@@ -1,0 +1,157 @@
+#!/usr/bin/env python3
+"""JSON 배열 원장의 append/upsert/set을 원자적으로 수행한다.
+
+경로는 저장소 루트 기준이며 루트 밖 쓰기는 거절한다. args 예:
+  {"path":"outputs/x.json", "op":"append", "item":{...}, "max_items":10}
+  {"path":"outputs/x.json", "op":"upsert", "target":"covered", "key":"id", "items":[...]}
+  {"path":"outputs/x.json", "op":"set", "target":"cursor", "value":3}
+"""
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _target_path(raw):
+    path = Path(str(raw or ""))
+    if not path.is_absolute():
+        path = _ROOT / path
+    path = path.resolve()
+    try:
+        path.relative_to(_ROOT)
+    except ValueError as exc:
+        raise ValueError("JSON 원장 경로는 indiebizOS 저장소 안이어야 합니다.") from exc
+    return path
+
+
+def _parts(raw):
+    if raw in (None, "", "/"):
+        return []
+    if isinstance(raw, list):
+        return [str(x) for x in raw]
+    return [x for x in str(raw).strip("/.").replace("/", ".").split(".") if x]
+
+
+def _slot(root, parts, create=False):
+    current = root
+    for part in parts[:-1]:
+        if not isinstance(current, dict):
+            raise ValueError(f"target 중간값 '{part}'이 객체가 아닙니다.")
+        if part not in current:
+            if not create:
+                raise ValueError(f"target을 찾을 수 없습니다: {'.'.join(parts)}")
+            current[part] = {}
+        current = current[part]
+    return current, (parts[-1] if parts else None)
+
+
+def _get_target(root, parts, create_list=False):
+    if not parts:
+        return root
+    parent, key = _slot(root, parts, create=create_list)
+    if not isinstance(parent, dict):
+        raise ValueError("target의 부모가 객체가 아닙니다.")
+    if key not in parent and create_list:
+        parent[key] = []
+    return parent.get(key)
+
+
+def _key_value(item, dotted):
+    value = item
+    for part in _parts(dotted):
+        if not isinstance(value, dict) or part not in value:
+            return None
+        value = value[part]
+    return value
+
+
+def _atomic_json(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    finally:
+        try:
+            os.unlink(tmp_name)
+        except FileNotFoundError:
+            pass
+
+
+def main():
+    try:
+        args = json.loads(sys.stdin.read() or "{}")
+        path = _target_path(args.get("path"))
+        op = str(args.get("op") or "append").lower()
+        target = _parts(args.get("target"))
+        if path.exists():
+            root = json.loads(path.read_text(encoding="utf-8"))
+        else:
+            root = [] if not target and op in ("append", "upsert") else {}
+
+        changed = []
+        if op in ("append", "upsert"):
+            array = _get_target(root, target, create_list=True)
+            if not isinstance(array, list):
+                raise ValueError("append/upsert target은 JSON 배열이어야 합니다.")
+            incoming = args.get("items")
+            if incoming is None:
+                incoming = [args.get("item")]
+            if not isinstance(incoming, list):
+                incoming = [incoming]
+            if any(item is None for item in incoming):
+                raise ValueError("item 또는 items가 필요합니다.")
+
+            if op == "append":
+                array.extend(incoming)
+                changed = incoming
+            else:
+                key = str(args.get("key") or "id")
+                for item in incoming:
+                    if not isinstance(item, dict) or _key_value(item, key) is None:
+                        raise ValueError(f"upsert 항목마다 key '{key}'가 필요합니다.")
+                    value = _key_value(item, key)
+                    index = next((i for i, row in enumerate(array)
+                                  if isinstance(row, dict)
+                                  and _key_value(row, key) == value), None)
+                    old = array.pop(index) if index is not None else None
+                    # 갱신된 행도 이번 관측의 최신 행이다. 끝으로 보내야 max_items
+                    # 롤링이 방금 갱신한 항목을 오래된 위치에서 잘라내지 않는다.
+                    array.append({**old, **item} if isinstance(old, dict) else item)
+                    changed.append(item)
+            max_items = args.get("max_items")
+            if max_items not in (None, ""):
+                keep = max(0, int(max_items))
+                if len(array) > keep:
+                    del array[:len(array) - keep]
+            count = len(array)
+        elif op == "set":
+            if not target:
+                root = args.get("value")
+            else:
+                parent, key = _slot(root, target, create=True)
+                if not isinstance(parent, dict):
+                    raise ValueError("set target의 부모가 객체가 아닙니다.")
+                parent[key] = args.get("value")
+            changed = [{"target": ".".join(target) or "/", "value": args.get("value")}]
+            count = 1
+        else:
+            raise ValueError("op은 append|upsert|set 중 하나여야 합니다.")
+
+        _atomic_json(path, root)
+        print(json.dumps({"success": True, "op": op, "path": str(path),
+                          "count": count, "items": changed}, ensure_ascii=False))
+    except (OSError, ValueError, TypeError) as exc:
+        print(json.dumps({"success": False, "error": str(exc), "items": []}, ensure_ascii=False))
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()

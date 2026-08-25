@@ -301,6 +301,7 @@
     "test_pkg_singleton_race": "force_exclude_glob",
     "test_preflight_restart": "force_exclude_glob",
     "test_red_grant_liveness": "force_exclude_glob",
+    "test_registered_report_scripts": "force_exclude_glob",
     "test_reload_scope": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
@@ -319,8 +320,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 313,
+    "total": 314,
     "engine": 225,
-    "blocklist": 88
+    "blocklist": 89
   }
 }

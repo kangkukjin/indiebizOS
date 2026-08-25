@@ -90,7 +90,26 @@ def _looks_like_code(t) -> bool:
         return True
     if re.fullmatch(r"[A-Za-z]{1,6}(\.[A-Za-z]{1,3})?", t):  # AAPL, BRK.B
         return True
+    if re.fullmatch(r"\^[A-Za-z0-9.]{1,12}", t):             # ^KS11, ^GSPC
+        return True
+    if re.fullmatch(r"[A-Za-z0-9]{1,12}=F", t, re.IGNORECASE):  # GC=F, CL=F 선물
+        return True
     return False
+
+
+_INDEX_ALIASES = {
+    "KS11": ("^KS11", "KOSPI Composite Index"),
+    "KOSPI": ("^KS11", "KOSPI Composite Index"),
+    "KOSPI COMPOSITE INDEX": ("^KS11", "KOSPI Composite Index"),
+    "코스피": ("^KS11", "KOSPI Composite Index"),
+    "KQ11": ("^KQ11", "KOSDAQ Composite Index"),
+    "KOSDAQ": ("^KQ11", "KOSDAQ Composite Index"),
+    "KOSDAQ COMPOSITE INDEX": ("^KQ11", "KOSDAQ Composite Index"),
+    "코스닥": ("^KQ11", "KOSDAQ Composite Index"),
+    "KS200": ("^KS200", "KOSPI 200"),
+    "KOSPI200": ("^KS200", "KOSPI 200"),
+    "KOSPI 200": ("^KS200", "KOSPI 200"),
+}
 
 
 def _resolve_ticker(ticker):
@@ -108,6 +127,12 @@ def _resolve_ticker(ticker):
     Returns: (해소된_심볼, 매칭된_이름 또는 None, 거절봉투 또는 None)
     """
     t = str(ticker or "").strip()
+    # tool_yfinance는 이 별칭을 이미 알지만, 핸들러의 세계명사 해소기가 먼저
+    # Yahoo 검색을 거쳐 거절해 버려 그 코드까지 도달하지 못했다(ep1943: KS11→^KS11
+    # →정식명 세 번). 안정된 시장지수 명사는 검색 전에 정규화한다.
+    mapped = _INDEX_ALIASES.get(t.upper()) or _INDEX_ALIASES.get(t)
+    if mapped:
+        return mapped[0], mapped[1], None
     # 코드/티커(005930·AAPL·102110.KS)가 아니면 모두 이름으로 보고 해소.
     #   "tiger200"(영숫자 혼합)·"TIGER 200"(공백)·"삼성전자"(한글) 모두 포함.
     if not t or _looks_like_code(t):

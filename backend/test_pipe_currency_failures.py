@@ -443,7 +443,13 @@ def test_p17_script_list_preflight():
             assert r0.get("success") is False and "data/scripts" in r0.get("error", ""), r0
         # data/scripts/ 안이면 등록된다
         sp.write_text("print('{}')", encoding="utf-8")
-        r = _script.op_register({"id": sid, "path": str(sp)})
+        # 시스템 AI는 _project_path=<repo>/data 로 호출한다. 그래도 가이드의
+        # 저장소 상대 표기 data/scripts/...가 data/data/...로 겹치지 않아야 한다.
+        r = _script.op_register({
+            "id": sid,
+            "path": f"data/scripts/{sid}.py",
+            "_project_path": str(_script._ROOT / "data"),
+        })
         assert r.get("success"), r
         # 파일 실존 → runnable true, ⚠️ 없음
         it = next(x for x in _script.op_list({})["items"] if x["title"] == sid)

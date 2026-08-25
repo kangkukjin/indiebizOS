@@ -164,7 +164,16 @@ def _sanitize_id(raw):
 def _resolve_path(tool_input, raw):
     p = Path(str(raw))
     if not p.is_absolute():
-        p = Path(tool_input.get("_project_path") or ".") / p
+        # 공개 계약과 가이드의 register 예시는 저장소 상대 경로
+        # (`data/scripts/정산.py`)다. 시스템 AI의 _project_path 는 보통
+        # `<repo>/data`라 여기에 다시 붙이면 `<repo>/data/data/scripts/...`가 되어
+        # 문서에 적힌 정답이 실패한다(ep1950). 명시적인 data/scripts 경로는
+        # 등록 스크립트의 정본 루트에서 먼저 해소한다.
+        parts = p.parts
+        if len(parts) >= 2 and parts[:2] == ("data", "scripts"):
+            p = _ROOT / p
+        else:
+            p = Path(tool_input.get("_project_path") or ".") / p
     return p.resolve()
 
 

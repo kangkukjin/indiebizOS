@@ -1,3 +1,24 @@
+arxiv최신피드:
+  description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본
+    60), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'
+  file: arxiv최신피드.py
+  interpreter: python
+  registered_at: '2026-08-25T12:31:26'
+  timeout: 180
+github저장소메타:
+  description: 'GitHub 저장소 탐색·메타 다건 조회 — args: repos:[owner/repo,...] 또는 query, limit·sort·order.
+    repos는 최대 8개 병렬 조회, items에 stars·forks·pushed 등 반환'
+  file: github저장소메타.py
+  interpreter: python
+  registered_at: '2026-08-25T12:31:26'
+  timeout: 180
+json원장:
+  description: 'JSON 배열 원장 원자 갱신 — args: path, op(append|upsert|set), target(선택),
+    item|items, key(기본 id), max_items. 저장소 밖 쓰기 거절'
+  file: json원장.py
+  interpreter: python
+  registered_at: '2026-08-25T12:31:26'
+  timeout: 60
 나레이션생성:
   description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts.
     표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'

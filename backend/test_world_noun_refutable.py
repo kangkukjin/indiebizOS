@@ -26,6 +26,9 @@ sense:* 는 세계의 명사를 다룬다 — "수원", "TIGER 200", "삼성전�
 import os
 import sys
 import types
+from pathlib import Path
+
+import yaml
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401,E402  — 층 디렉토리 등재
@@ -160,6 +163,48 @@ def test_ticker_resolution_accepts_an_exact_or_prefix_match():
     finally:
         h.load_module = saved
     assert refused is None and symbol == "102110.KS" and name == "TIGER 200", (symbol, name, refused)
+
+
+def test_stock_index_aliases_bypass_ambiguous_search():
+    """ep1943: KS11·^KS11을 거절해 정식 영문명까지 세 번 부르던 마찰."""
+    h = _investment()
+    saved = h.load_module
+    h.load_module = lambda _name: (_ for _ in ()).throw(
+        AssertionError("안정된 지수 별칭은 Yahoo 검색을 부르면 안 된다"))
+    try:
+        for asked in ("KS11", "KOSPI", "코스피", "KOSPI Composite Index"):
+            symbol, name, refused = h._resolve_ticker(asked)
+            assert (symbol, name, refused) == (
+                "^KS11", "KOSPI Composite Index", None), asked
+        symbol, name, refused = h._resolve_ticker("^KS11")
+        assert (symbol, name, refused) == ("^KS11", None, None)
+    finally:
+        h.load_module = saved
+
+
+def test_invest_app_commodity_futures_bypass_name_search():
+    """투자 앱 자원 탭의 Yahoo 선물 심볼은 완성된 티커다.
+
+    옛 _looks_like_code는 `=F`를 몰라 GC=F를 Yahoo 이름 검색에 다시 넣었고,
+    정확/접두 후보가 없어 거절한 뒤 sense:stock 회로차단기까지 열었다.
+    """
+    h = _investment()
+    source = Path(__file__).resolve().parents[1] / "data/packages/installed/tools/investment/ibl_actions.yaml"
+    app = yaml.safe_load(source.read_text(encoding="utf-8"))["actions"]["stock"]["app"]
+    resource_mode = next(mode for mode in app["modes"] if mode["name"] == "자원")
+    select_input = next(item for item in resource_mode["inputs"] if item["key"] == "sym")
+    symbols = tuple(option["value"] for option in select_input["options"])
+    assert symbols == ("GC=F", "SI=F", "CL=F", "BZ=F", "NG=F", "HG=F")
+    saved = h.load_module
+    h.load_module = lambda _name: (_ for _ in ()).throw(
+        AssertionError("완성된 선물 티커는 이름 검색을 부르면 안 된다"))
+    try:
+        for symbol in symbols:
+            assert h._looks_like_code(symbol), symbol
+            resolved, name, refused = h._resolve_ticker(symbol)
+            assert (resolved, name, refused) == (symbol, None, None), symbol
+    finally:
+        h.load_module = saved
 
 
 def test_corp_code_refuses_when_the_partial_match_is_ambiguous():

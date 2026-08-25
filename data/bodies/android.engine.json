@@ -256,6 +256,7 @@
     "test_corrupt_not_absent": "force_exclude_glob",
     "test_crawl_stage_honesty": "force_exclude_glob",
     "test_data_ownership": "force_exclude_glob",
+    "test_deepseek_reasoning": "force_exclude_glob",
     "test_desc_pair_coverage": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
     "test_dispatcher_stub_guard": "force_exclude_glob",
@@ -318,8 +319,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 312,
+    "total": 313,
     "engine": 225,
-    "blocklist": 87
+    "blocklist": 88
   }
 }

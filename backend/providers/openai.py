@@ -52,6 +52,10 @@ class OpenAIProvider(BaseProvider):
     # 추론+본문이 이 예산을 나눠 쓰므로 해당 프로바이더가 오버라이드로 키운다.
     DEFAULT_MAX_TOKENS = 4096
 
+    # DeepSeek처럼 thinking+tools 후속 요청에 reasoning_content를 요구하는 호환
+    # 프로바이더만 켠다. OpenAI 본가 메시지에 미지원 필드를 보내지 않기 위한 방언 훅.
+    preserve_reasoning_content = False
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._compaction_summary = None  # Rolling Compaction 요약 저장
@@ -325,6 +329,7 @@ class OpenAIProvider(BaseProvider):
                     create_params.setdefault("extra_body", {}).update(_off)
 
             collected_text = ""
+            collected_reasoning = ""
             tool_calls = {}  # id -> {id, name, arguments}
             current_tool_id = None
             finish_reason = None
@@ -355,6 +360,13 @@ class OpenAIProvider(BaseProvider):
                 if delta.content:
                     collected_text += delta.content
                     yield {"type": "text", "content": delta.content}
+
+                # DeepSeek thinking 스트림의 방언 필드. OpenAI SDK 모델에 정식 필드가
+                # 없어도 extra="allow"라 getattr로 읽을 수 있다. UI에는 노출하지 않고
+                # 도구 루프의 다음 API 요청에 원문 그대로 되돌려 보내는 용도다.
+                reasoning_chunk = getattr(delta, "reasoning_content", None)
+                if reasoning_chunk:
+                    collected_reasoning += reasoning_chunk
 
                 # 도구 호출 청크
                 if delta.tool_calls:
@@ -424,6 +436,7 @@ class OpenAIProvider(BaseProvider):
                     messages, openai_tools, execute_tool, depth + 1, max_tokens,
                     empty_response_retries + 1,
                     auto_continues=auto_continues, accumulated_text=accumulated_text,
+                    force_thinking_off=force_thinking_off,
                     cancel_check=cancel_check
                 )
                 return
@@ -438,6 +451,7 @@ class OpenAIProvider(BaseProvider):
                         yield from self._agentic_loop(
                             messages, openai_tools, execute_tool, depth, new_max_tokens,
                             auto_continues=auto_continues, accumulated_text=accumulated_text,
+                            force_thinking_off=force_thinking_off,
                             cancel_check=cancel_check
                         )
                     else:
@@ -452,7 +466,10 @@ class OpenAIProvider(BaseProvider):
                     yield {"type": "thinking", "content": f"응답 이어서 생성 중... ({auto_continues + 1}/{self.MAX_AUTO_CONTINUES})"}
 
                     # 부분 응답을 assistant 메시지로 추가
-                    messages.append({"role": "assistant", "content": collected_text})
+                    partial_message = {"role": "assistant", "content": collected_text}
+                    if self.preserve_reasoning_content and collected_reasoning:
+                        partial_message["reasoning_content"] = collected_reasoning
+                    messages.append(partial_message)
                     # 이어쓰기 요청
                     messages.append({"role": "user", "content": self.CONTINUATION_PROMPT})
 
@@ -461,6 +478,7 @@ class OpenAIProvider(BaseProvider):
                         messages, openai_tools, execute_tool, depth + 1, max_tokens,
                         auto_continues=auto_continues + 1,
                         accumulated_text=new_accumulated,
+                        force_thinking_off=force_thinking_off,
                         cancel_check=cancel_check
                     )
                 else:
@@ -472,7 +490,9 @@ class OpenAIProvider(BaseProvider):
             elif finish_reason == "tool_calls" or tool_calls:
                 # 도구 실행 필요
                 yield from self._execute_tools_and_continue(
-                    messages, collected_text, tool_calls, openai_tools, execute_tool, depth,
+                    messages, collected_text, collected_reasoning, tool_calls,
+                    openai_tools, execute_tool, depth,
+                    force_thinking_off=force_thinking_off,
                     cancel_check=cancel_check
                 )
                 return
@@ -489,6 +509,23 @@ class OpenAIProvider(BaseProvider):
                 yield {"type": "final", "content": final_result}
 
         except Exception as e:
+            # DeepSeek의 thinking+tools 이력 규약이 다시 바뀌거나 옛 이력에 추론 필드가
+            # 없어도 긴 작업을 통째로 버리지 않는다. 정식 수리는 위의 원문 보존이고,
+            # 이것은 정확히 그 400에만 발동해 남은 도구 루프를 non-thinking으로 마친다.
+            if (self.preserve_reasoning_content and not force_thinking_off
+                    and "reasoning_content" in str(e)
+                    and "passed back" in str(e)):
+                print("[DeepSeek] reasoning_content 400 — thinking을 끄고 1회 복구")
+                yield from self._agentic_loop(
+                    messages, openai_tools, execute_tool, depth, max_tokens,
+                    empty_response_retries=empty_response_retries,
+                    auto_continues=auto_continues,
+                    accumulated_text=accumulated_text,
+                    zero_output_retries=zero_output_retries,
+                    force_thinking_off=True,
+                    cancel_check=cancel_check,
+                )
+                return
             import traceback
             traceback.print_exc()
             yield {"type": "error", "content": f"API 호출 실패: {str(e)}"}
@@ -523,10 +560,12 @@ class OpenAIProvider(BaseProvider):
         self,
         messages: List[Dict],
         collected_text: str,
+        collected_reasoning: str,
         tool_calls: Dict,
         openai_tools: List[Dict],
         execute_tool: Callable,
         depth: int,
+        force_thinking_off: bool = False,
         cancel_check: Callable = None
     ) -> Generator[Dict[str, Any], None, None]:
         """
@@ -558,6 +597,8 @@ class OpenAIProvider(BaseProvider):
             "content": collected_text if collected_text else None,
             "tool_calls": tool_calls_list
         }
+        if self.preserve_reasoning_content and collected_reasoning:
+            assistant_message["reasoning_content"] = collected_reasoning
         messages.append(assistant_message)
 
         # 2. 도구 실행 및 결과 메시지 추가
@@ -695,6 +736,7 @@ class OpenAIProvider(BaseProvider):
         yield from self._agentic_loop(
             messages, openai_tools, execute_tool, depth + 1,
             auto_continues=0, accumulated_text="",
+            force_thinking_off=force_thinking_off,
             cancel_check=cancel_check
         )
 

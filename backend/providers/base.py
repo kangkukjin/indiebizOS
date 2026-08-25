@@ -780,6 +780,15 @@ class BaseProvider(ABC):
 
     _COMPACTION_ACK = "이전 작업 요약을 확인했습니다. 요약된 맥락을 유지하며 작업을 계속하겠습니다."
 
+    def _openai_compaction_ack(self):
+        """OpenAI형 compaction 뒤에 넣을 확인 턴.
+
+        보통 OpenAI 호환 프로바이더에는 무해하지만, DeepSeek thinking+tools 규약은
+        assistant 턴의 reasoning_content 재전송을 요구한다. 모델이 실제로 만들지 않은
+        합성 ACK에는 되돌려 보낼 추론이 없으므로 DeepSeek 두 경로가 None으로 끈다.
+        """
+        return {"role": "assistant", "content": self._COMPACTION_ACK}
+
     def _log_compaction_size(self, label: str, before, after) -> None:
         before_size = self._estimate_content_size(before)
         after_size = self._estimate_content_size(after)
@@ -815,7 +824,9 @@ class BaseProvider(ABC):
             compacted = list(system_messages)
             compacted.append({"role": "user",
                               "content": self._compaction_preamble_text(summary)})
-            compacted.append({"role": "assistant", "content": self._COMPACTION_ACK})
+            ack = self._openai_compaction_ack()
+            if ack:
+                compacted.append(ack)
             # 최근 메시지 추가 (+ 고아 tool 메시지 최후 방어선 — 남으면 400 으로 작업이 죽는다)
             compacted.extend(recent_messages)
             compacted = self._drop_orphan_tool_messages(compacted)

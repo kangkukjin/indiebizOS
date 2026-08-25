@@ -14,7 +14,7 @@ deepseek_http.py — SDK 없는 DeepSeek REST 프로바이더 (폰 네이티브�
 - v4 하이브리드 thinking: max_tokens 를 추론과 본문이 나눠 쓴다 → 16384 (4096 이면
   무거운 프롬프트에서 추론이 예산을 태워 본문 0자).
 - 원샷 계약(disable_thinking): body 에 {"thinking": {"type": "disabled"}} (2026-08-01 실측).
-- reasoning_content 는 다음 턴에 재전송하지 않는다(DeepSeek 규약).
+- thinking+tools 요청의 reasoning_content 는 후속 요청에 그대로 재전송한다(누락 시 400).
 - 비전 없음: images 파라미터는 받되 무시(이미지 파트를 보내면 400 — 2026-08-13 실측 부류).
 """
 import json
@@ -34,9 +34,8 @@ class DeepSeekHTTPProvider(BaseProvider):
 
     MAX_TOOL_ITERATIONS = MAX_TOOL_ROUNDS  # 전 프로바이더 공통값(base.MAX_TOOL_ROUNDS)
 
-    # DeepSeek: 128K 토큰 컨텍스트 → 80% = 102K 토큰 → ~205,000자 (2자=1토큰 실측).
-    # ★base 기본값(Claude 200K 기준)을 물려받고 있었다 — 자기 모델보다 헐거운 방어선.
-    COMPACTION_CHAR_THRESHOLD = 205000
+    # V4 공식 1M 컨텍스트의 80% × 이 시스템 실측 2자/토큰 = 1.6M자.
+    COMPACTION_CHAR_THRESHOLD = 1_600_000
     DEFAULT_MAX_TOKENS = 16384  # v4 하이브리드 thinking 예산 (deepseek.py 와 동일 근거)
 
     def __init__(self, **kwargs):
@@ -44,6 +43,10 @@ class DeepSeekHTTPProvider(BaseProvider):
             "DEEPSEEK_BASE_URL") or _DEFAULT_BASE).rstrip("/")
         super().__init__(**kwargs)
         self.temperature = 0.8
+
+    def _openai_compaction_ack(self):
+        """합성 assistant ACK은 DeepSeek thinking 규약상 reasoning_content가 없어 금지."""
+        return None
 
     # ── 초기화 ──────────────────────────────────────────────
     def init_client(self) -> bool:
@@ -81,7 +84,7 @@ class DeepSeekHTTPProvider(BaseProvider):
         return messages
 
     # ── REST 호출 ───────────────────────────────────────────
-    def _chat(self, messages: list, tools: Optional[list]) -> dict:
+    def _chat(self, messages: list, tools: Optional[list], force_thinking_off: bool = False) -> dict:
         url = f"{self.base_url}/chat/completions"
         body: Dict[str, Any] = {
             "model": self.model,
@@ -91,7 +94,7 @@ class DeepSeekHTTPProvider(BaseProvider):
         }
         if tools:
             body["tools"] = tools
-        if self.disable_thinking:
+        if self.disable_thinking or force_thinking_off:
             body["thinking"] = {"type": "disabled"}
         r = requests.post(url, json=body, timeout=180,
                           headers={"Authorization": f"Bearer {self.api_key}"})
@@ -140,6 +143,7 @@ class DeepSeekHTTPProvider(BaseProvider):
         tools = self._openai_tools()
         accumulated = ""
         iteration = 0
+        force_thinking_off = False
         while iteration < self.MAX_TOOL_ITERATIONS:
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             # ★보존(요약) 먼저, 삭제는 최후 — 순서가 곧 정책이다(base 의 임계값 주석 참조).
@@ -152,9 +156,20 @@ class DeepSeekHTTPProvider(BaseProvider):
             if iteration > 0 and self._should_prune(messages, iteration):
                 messages = self._prune_messages_openai(messages)
             try:
-                data = self._execute_with_retry(self._chat, messages, tools)
+                data = self._execute_with_retry(
+                    self._chat, messages, tools, force_thinking_off)
             except Exception as e:
-                return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
+                if (not force_thinking_off and "reasoning_content" in str(e)
+                        and "passed back" in str(e)):
+                    print("[DeepSeekHTTP] reasoning_content 400 — thinking을 끄고 1회 복구")
+                    force_thinking_off = True
+                    try:
+                        data = self._execute_with_retry(
+                            self._chat, messages, tools, force_thinking_off)
+                    except Exception as retry_error:
+                        return (accumulated + f"\n\n[LLM 호출 오류] {retry_error}").strip()
+                else:
+                    return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
 
             choices = data.get("choices") or []
             if not choices:
@@ -167,9 +182,12 @@ class DeepSeekHTTPProvider(BaseProvider):
             if not tool_calls:
                 break
 
-            # 어시스턴트 턴 기록 — reasoning_content 는 재전송 금지(규약)라 제외
-            messages.append({"role": "assistant", "content": text or None,
-                             "tool_calls": tool_calls})
+            # thinking+tools 규약: 모델이 낸 추론을 도구 결과와 함께 다음 요청에 되돌린다.
+            assistant_message = {"role": "assistant", "content": text or None,
+                                 "tool_calls": tool_calls}
+            if "reasoning_content" in msg:
+                assistant_message["reasoning_content"] = msg.get("reasoning_content")
+            messages.append(assistant_message)
 
             # 도구 실행 (폰에서) → role:"tool" 응답
             for tc in tool_calls:

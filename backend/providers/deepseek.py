@@ -25,11 +25,23 @@ class DeepSeekProvider(OpenAIProvider):
     그대로 사용하며, base_url만 DeepSeek로 변경합니다.
     """
 
+    # V4 공식 1M 컨텍스트의 80% × 이 시스템 실측 2자/토큰 = 1.6M자.
+    # 옛 205K자는 128K 모델 시절 값이라 정상 장기 작업을 너무 일찍 압축했다.
+    COMPACTION_CHAR_THRESHOLD = 1_600_000
+
+    # thinking 모드에서 tools를 실은 요청은 후속 assistant 턴의 reasoning_content를
+    # 그대로 되돌려 보내야 한다(누락 시 DeepSeek API 400).
+    preserve_reasoning_content = True
+
     # v4 하이브리드 thinking: 추론과 본문이 max_tokens 한 예산을 나눠 쓴다.
     # 4096이면 무거운 프롬프트에서 추론이 예산을 전부 태워 본문 0자(length)가
     # 난다(2026-08-09 실측: 입력 32.7K에 추론 4095/4096). 추론이 완주하고도
     # 본문을 쓸 공간이 남게 넉넉히 잡는다(16384 수용 실측).
     DEFAULT_MAX_TOKENS = 16384
+
+    def _openai_compaction_ack(self):
+        """모델이 만들지 않은 ACK에는 보존할 reasoning_content가 없으므로 넣지 않는다."""
+        return None
 
     def _thinking_off_params(self):
         """v4 하이브리드 thinking 차단 — 2026-08-01 라이브 실측: 이 파라미터로

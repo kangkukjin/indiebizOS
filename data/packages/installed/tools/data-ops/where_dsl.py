@@ -12,6 +12,8 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
     " or " 는 리스트 형으로 옮길 수 없으므로 조용히 삼키지 않고 정직 거절.
   · 모르는 op·깨진 정규식은 침묵 폴백이 아니라 _WhereError(정직 거절).
   · matches 는 `[if:]` 술어와 같은 뜻(re.search) — 한 몸 안의 두 조건 언어를 같게 둔다.
+  · 비교 필드가 없거나 null 이면 !=/ne·순서 비교는 불일치. 모르는 값을 "다르다/더 크다"고
+    주장하지 않는다. 결측 동등 검색은 구조형 {field,op:"eq",value:null} 로 가능하다.
 """
 
 import re
@@ -62,12 +64,25 @@ _OPS = {
     "endswith": lambda a, b: str(a).lower().endswith(str(b).lower()),
 }
 
+_ORDER_OPS = {"<", "lt", "<=", "le", ">", "gt", ">=", "ge"}
+_NULL_LEFT_REJECTING_OPS = _ORDER_OPS | {"!=", "ne"}
+
 
 def _apply_op(op, left, right):
     """연산자 하나 적용 — 모르는 op 은 침묵 `==` 폴백이 아니라 정직 거절(B19-1)."""
-    fn = _OPS.get(str(op).lower())
+    op = str(op).lower()
+    fn = _OPS.get(op)
     if fn is None:
         raise _WhereError(f"지원하지 않는 연산자 '{op}' — 쓸 수 있는 것: {', '.join(sorted(_OPS))}")
+
+    # B37-1·G37-1(2026-08-25): 희소 행의 None 을 문자열 "None" 으로 승격하면
+    # `None > 10` 이 사전식으로 참이고, `None != 10` 도 관측 없이 참이 된다.
+    # 왼쪽 결측은 다름·순서를 주장하지 않는다. 순서의 오른쪽 결측도 판정 불능이다.
+    # eq 는 결측 검색({field, op:"eq", value:null})을 보존하려고 막지 않는다.
+    if left is None and op in _NULL_LEFT_REJECTING_OPS:
+        return False
+    if right is None and op in _ORDER_OPS:
+        return False
     return fn(left, right)
 
 

@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "data_filter",
-      "description": "records|table → 조건 부분집합. where: 문자열 \"필드 op 값\"(기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge) 또는 연산자 없는 문자열(전 필드 부분일치) 또는 {field,op,value} 또는 {열:값} 단축형 또는 조건 배열(AND). 모르는 op 은 정직 거절. >> 앞 통화를 받음.",
+      "description": "records|table → 조건 부분집합. where: 문자열 \"필드 op 값\"(기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge) 또는 연산자 없는 문자열(전 필드 부분일치) 또는 {field,op,value} 또는 {열:값} 단축형 또는 조건 배열(AND). 비교 필드가 없거나 null이면 !=/ne·순서 비교는 불일치(모르는 값을 다름·대소로 단정하지 않음). 모르는 op 은 정직 거절. >> 앞 통화를 받음.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -17,7 +17,7 @@
               "object",
               "array"
             ],
-            "description": "필터 조건. 문자열(\"필드 op 값\" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND)."
+            "description": "필터 조건. 문자열(\"필드 op 값\" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND). 비교 필드의 결측은 !=/ne·순서 비교에서도 불일치."
           },
           "field": {
             "type": "string",

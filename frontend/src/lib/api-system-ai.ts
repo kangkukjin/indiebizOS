@@ -16,6 +16,8 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         provider: string;
         model: string;
         apiKey: string;
+        providerModels?: Record<string, string>;
+        providerHasApiKey?: Record<string, boolean>;
         role: string;
       }}>('/system-ai');
       return data.config;
@@ -26,6 +28,9 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       provider: string;
       model: string;
       apiKey: string;
+      providerModels?: Record<string, string>;
+      providerHasApiKey?: Record<string, boolean>;
+      providerApiKeys?: Record<string, string>;
       role?: string;
     }) {
       return client.request<{ status: string; config: typeof config }>('/system-ai', {
@@ -42,6 +47,8 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         provider: string;
         model: string;
         apiKey: string;
+        providerModels?: Record<string, string>;
+        providerHasApiKey?: Record<string, boolean>;
       }}>('/lightweight-ai');
       return data.config;
     },
@@ -51,6 +58,9 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       provider: string;
       model: string;
       apiKey: string;
+      providerModels?: Record<string, string>;
+      providerHasApiKey?: Record<string, boolean>;
+      providerApiKeys?: Record<string, string>;
     }) {
       return client.request<{ status: string; config: typeof config }>('/lightweight-ai', {
         method: 'PUT',
@@ -79,6 +89,8 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         provider: string;
         model: string;
         apiKey: string;
+        providerModels?: Record<string, string>;
+        providerHasApiKey?: Record<string, boolean>;
       }}>('/midtier-ai');
       return data.config;
     },
@@ -88,6 +100,9 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       provider: string;
       model: string;
       apiKey: string;
+      providerModels?: Record<string, string>;
+      providerHasApiKey?: Record<string, boolean>;
+      providerApiKeys?: Record<string, string>;
     }) {
       return client.request<{ status: string; config: typeof config }>('/midtier-ai', {
         method: 'PUT',

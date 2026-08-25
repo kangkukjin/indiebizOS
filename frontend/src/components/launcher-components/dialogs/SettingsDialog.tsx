@@ -60,6 +60,29 @@ export function SettingsDialog({
 }: SettingsDialogProps) {
   const [activeTab, setActiveTab] = useState<'models' | 'apikeys' | 'persona' | 'channels' | 'data' | 'nas' | 'launcher' | 'tunnel' | 'world'>('models');
 
+  type TierSettings = SystemAISettings | LightweightAISettings | MidtierAISettings;
+  const switchProvider = <T extends TierSettings>(current: T, provider: string): T => {
+    const providerModels = { ...(current.providerModels || {}) };
+    if (current.model) providerModels[current.provider] = current.model;
+    const providerApiKeys = { ...(current.providerApiKeys || {}) };
+    if (current.apiKey) providerApiKeys[current.provider] = current.apiKey;
+    return { ...current, provider, model: providerModels[provider] || '',
+      apiKey: providerApiKeys[provider] || '', providerModels, providerApiKeys };
+  };
+  const changeModel = <T extends TierSettings>(current: T, model: string): T => ({
+    ...current, model,
+    providerModels: { ...(current.providerModels || {}), [current.provider]: model },
+  });
+  const changeApiKey = <T extends TierSettings>(current: T, apiKey: string): T => ({
+    ...current, apiKey,
+    providerApiKeys: { ...(current.providerApiKeys || {}), [current.provider]: apiKey },
+  });
+  const keyPlaceholder = (current: TierSettings) => current.provider === 'claude_code'
+    ? 'API 키가 필요하지 않습니다'
+    : current.providerHasApiKey?.[current.provider]
+      ? '저장된 API 키 사용 중 — 새 키를 입력하면 교체됩니다'
+      : 'API 키를 입력하세요';
+
   // 데이터 내보내기/가져오기 상태
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -294,7 +317,7 @@ export function SettingsDialog({
                   <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
                   <select
                     value={settings.provider}
-                    onChange={(e) => onSettingsChange({ ...settings, provider: e.target.value })}
+                    onChange={(e) => onSettingsChange(switchProvider(settings, e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
                   >
                     <option value="google">Google (Gemini)</option>
@@ -312,7 +335,7 @@ export function SettingsDialog({
                   <input
                     type="text"
                     value={settings.model}
-                    onChange={(e) => onSettingsChange({ ...settings, model: e.target.value })}
+                    onChange={(e) => onSettingsChange(changeModel(settings, e.target.value))}
                     placeholder="gemini-2.0-flash-exp"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
@@ -325,8 +348,8 @@ export function SettingsDialog({
                     <input
                       type={showApiKey ? 'text' : 'password'}
                       value={settings.apiKey}
-                      onChange={(e) => onSettingsChange({ ...settings, apiKey: e.target.value })}
-                      placeholder="API 키를 입력하세요"
+                      onChange={(e) => onSettingsChange(changeApiKey(settings, e.target.value))}
+                      placeholder={keyPlaceholder(settings)}
                       className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                     />
                     <button
@@ -405,7 +428,7 @@ export function SettingsDialog({
                   <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
                   <select
                     value={lightweightSettings.provider}
-                    onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, provider: e.target.value })}
+                    onChange={(e) => onLightweightSettingsChange(switchProvider(lightweightSettings, e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
                   >
                     <option value="google">Google (Gemini)</option>
@@ -423,7 +446,7 @@ export function SettingsDialog({
                   <input
                     type="text"
                     value={lightweightSettings.model}
-                    onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, model: e.target.value })}
+                    onChange={(e) => onLightweightSettingsChange(changeModel(lightweightSettings, e.target.value))}
                     placeholder="gemini-2.5-flash-lite"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
@@ -436,8 +459,8 @@ export function SettingsDialog({
                     <input
                       type={showLightweightApiKey ? 'text' : 'password'}
                       value={lightweightSettings.apiKey}
-                      onChange={(e) => onLightweightSettingsChange({ ...lightweightSettings, apiKey: e.target.value })}
-                      placeholder="API 키를 입력하세요 (비워두면 시스템 AI 키 사용)"
+                      onChange={(e) => onLightweightSettingsChange(changeApiKey(lightweightSettings, e.target.value))}
+                      placeholder={keyPlaceholder(lightweightSettings)}
                       className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                     />
                     <button
@@ -448,7 +471,7 @@ export function SettingsDialog({
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    비워두면 시스템 AI의 프로바이더를 공유합니다. 별도 모델을 사용하면 비용과 속도를 최적화할 수 있습니다.
+                    프로바이더별 키는 한 번 저장하면 다시 전환해도 자동으로 사용됩니다. 새 키를 입력하면 기존 키를 교체합니다.
                   </p>
                 </div>
               </div>
@@ -478,7 +501,7 @@ export function SettingsDialog({
                   <label className="block text-sm font-semibold text-gray-900 mb-1">AI 제공자</label>
                   <select
                     value={midtierSettings.provider}
-                    onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, provider: e.target.value })}
+                    onChange={(e) => onMidtierSettingsChange(switchProvider(midtierSettings, e.target.value))}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900"
                   >
                     <option value="google">Google (Gemini)</option>
@@ -496,7 +519,7 @@ export function SettingsDialog({
                   <input
                     type="text"
                     value={midtierSettings.model}
-                    onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, model: e.target.value })}
+                    onChange={(e) => onMidtierSettingsChange(changeModel(midtierSettings, e.target.value))}
                     placeholder="gemini-2.5-flash"
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
@@ -509,8 +532,8 @@ export function SettingsDialog({
                     <input
                       type={showMidtierApiKey ? 'text' : 'password'}
                       value={midtierSettings.apiKey}
-                      onChange={(e) => onMidtierSettingsChange({ ...midtierSettings, apiKey: e.target.value })}
-                      placeholder="API 키를 입력하세요 (비워두면 시스템 AI 키 사용)"
+                      onChange={(e) => onMidtierSettingsChange(changeApiKey(midtierSettings, e.target.value))}
+                      placeholder={keyPlaceholder(midtierSettings)}
                       className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                     />
                     <button
@@ -521,7 +544,7 @@ export function SettingsDialog({
                     </button>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    비워두면 시스템 AI의 키를 사용합니다. 설정하지 않으면 시스템 AI 모델이 그대로 사용됩니다.
+                    프로바이더별 키는 한 번 저장하면 다시 전환해도 자동으로 사용됩니다. 새 키를 입력하면 기존 키를 교체합니다.
                   </p>
                 </div>
               </div>

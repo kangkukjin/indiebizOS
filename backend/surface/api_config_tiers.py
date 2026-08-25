@@ -20,10 +20,12 @@ from model_resolver import (
     LIGHTWEIGHT_AI_CONFIG_PATH,
     MIDTIER_AI_CONFIG_PATH,
     UNCONSCIOUS_AI_CONFIG_PATH,
+    env_key_for_provider,
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+_MODEL_PROVIDERS = ("google", "anthropic", "openai", "openrouter", "deepseek", "claude_code")
 
 
 # ============ 시스템 AI 설정 API ============
@@ -47,6 +49,40 @@ def _stash_key_to_env(config: dict) -> str:
     return ""
 
 
+def _with_provider_memory(config: dict) -> dict:
+    """비밀은 숨기고, provider별 모델 기억과 키 존재 여부만 UI에 투영한다."""
+    out = dict(config)
+    models = dict(out.get("providerModels") or {})
+    provider, model = out.get("provider", ""), out.get("model", "")
+    if provider and model:
+        models.setdefault(provider, model)  # 옛 단일-provider 설정의 무손실 이관
+    out.update(apiKey="", providerModels=models,
+               providerHasApiKey={p: bool(env_key_for_provider(p)) for p in _MODEL_PROVIDERS})
+    return out
+
+
+def _saved_config(config: dict, existing: dict, defaults: dict, *, with_role=False) -> dict:
+    """활성 설정 + provider별 모델 이력을 병합한다. 키는 종전처럼 .env에만 저장."""
+    provider = config.get("provider") or defaults["provider"]
+    model = config.get("model") or defaults["model"]
+    models = dict(existing.get("providerModels") or {})
+    old_provider, old_model = existing.get("provider"), existing.get("model")
+    if old_provider and old_model:
+        models.setdefault(old_provider, old_model)
+    models.update(config.get("providerModels") or {})
+    if model:
+        models[provider] = model
+    # 한 번의 편집 중 여러 provider 키를 바꾼 경우도 모두 착지시킨다. 응답/JSON에는 안 남긴다.
+    for key_provider, key in (config.get("providerApiKeys") or {}).items():
+        if key_provider != provider and str(key or "").strip():
+            _stash_key_to_env({"provider": key_provider, "apiKey": key})
+    out = {"enabled": config.get("enabled", True), "provider": provider, "model": model,
+           "apiKey": _stash_key_to_env(config), "providerModels": models}
+    if with_role:
+        out["role"] = config.get("role", existing.get("role", ""))
+    return out
+
+
 def get_default_system_ai_config() -> dict:
     """기본 시스템 AI 설정"""
     return {
@@ -67,7 +103,7 @@ async def get_system_ai_config():
                 config = json.load(f)
         else:
             config = get_default_system_ai_config()
-        return {"config": config}
+        return {"config": _with_provider_memory(config)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -76,15 +112,9 @@ async def get_system_ai_config():
 async def update_system_ai_config(config: Dict[str, Any]):
     """전역 시스템 AI 설정 저장"""
     try:
-        config_dict = {
-            "enabled": config.get("enabled", True),
-            "provider": config.get("provider", "anthropic"),
-            "model": config.get("model", "claude-sonnet-4-20250514"),
-            # ★키는 티어 json 이 아니라 `.env` 로 간다 — 자격증명 보관소는 하나다
-            #   (model_resolver.set_env_key). json 에는 빈 문자열만 남긴다.
-            "apiKey": _stash_key_to_env(config),
-            "role": config.get("role", "")
-        }
+        existing = json.loads(SYSTEM_AI_CONFIG_PATH.read_text(encoding="utf-8")) \
+            if SYSTEM_AI_CONFIG_PATH.exists() else {}
+        config_dict = _saved_config(config, existing, get_default_system_ai_config(), with_role=True)
         with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
         # 수동모드 번역용 본격 원샷 프로바이더 캐시 무효화 (모델 변경 즉시 반영)
@@ -93,7 +123,7 @@ async def update_system_ai_config(config: Dict[str, Any]):
             reset_system_oneshot_provider()
         except Exception:
             pass
-        return {"status": "saved", "config": config_dict}
+        return {"status": "saved", "config": _with_provider_memory(config_dict)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -126,7 +156,7 @@ async def get_lightweight_ai_config():
     """경량 AI 설정 조회"""
     try:
         config = _load_lightweight_config()
-        return {"config": config}
+        return {"config": _with_provider_memory(config)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -135,17 +165,11 @@ async def get_lightweight_ai_config():
 async def update_lightweight_ai_config(config: Dict[str, Any]):
     """경량 AI 설정 저장"""
     try:
-        config_dict = {
-            "enabled": config.get("enabled", True),
-            "provider": config.get("provider", "google"),
-            "model": config.get("model", "gemini-2.5-flash-lite"),
-            # ★키는 티어 json 이 아니라 `.env` 로 간다 — 자격증명 보관소는 하나다
-            #   (model_resolver.set_env_key). json 에는 빈 문자열만 남긴다.
-            "apiKey": _stash_key_to_env(config),
-        }
+        existing = _load_lightweight_config()
+        config_dict = _saved_config(config, existing, get_default_lightweight_ai_config())
         with open(LIGHTWEIGHT_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
-        return {"status": "saved", "config": config_dict}
+        return {"status": "saved", "config": _with_provider_memory(config_dict)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -184,7 +208,7 @@ async def get_midtier_ai_config():
                 config = json.load(f)
         else:
             config = get_default_midtier_ai_config()
-        return {"config": config}
+        return {"config": _with_provider_memory(config)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -193,14 +217,9 @@ async def get_midtier_ai_config():
 async def update_midtier_ai_config(config: Dict[str, Any]):
     """중급 AI 설정 저장. 저장 후 provider 캐시 무효화하여 즉시 반영."""
     try:
-        config_dict = {
-            "enabled": config.get("enabled", True),
-            "provider": config.get("provider", "google"),
-            "model": config.get("model", "gemini-2.5-flash"),
-            # ★키는 티어 json 이 아니라 `.env` 로 간다 — 자격증명 보관소는 하나다
-            #   (model_resolver.set_env_key). json 에는 빈 문자열만 남긴다.
-            "apiKey": _stash_key_to_env(config),
-        }
+        existing = json.loads(MIDTIER_AI_CONFIG_PATH.read_text(encoding="utf-8")) \
+            if MIDTIER_AI_CONFIG_PATH.exists() else {}
+        config_dict = _saved_config(config, existing, get_default_midtier_ai_config())
         with open(MIDTIER_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
             json.dump(config_dict, f, ensure_ascii=False, indent=2)
 
@@ -211,6 +230,6 @@ async def update_midtier_ai_config(config: Dict[str, Any]):
         except Exception as cache_err:
             print(f"[midtier-ai] 캐시 무효화 경고: {cache_err}")
 
-        return {"status": "saved", "config": config_dict}
+        return {"status": "saved", "config": _with_provider_memory(config_dict)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

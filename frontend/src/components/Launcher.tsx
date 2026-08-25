@@ -464,6 +464,8 @@ export function Launcher() {
         provider: config.provider ?? 'google',
         model: config.model ?? 'gemini-2.0-flash-exp',
         apiKey: config.apiKey ?? '',
+        providerModels: config.providerModels ?? {},
+        providerHasApiKey: config.providerHasApiKey ?? {},
       });
       // 경량 AI 설정 로드
       try {
@@ -473,6 +475,8 @@ export function Launcher() {
           provider: lConfig.provider ?? 'google',
           model: lConfig.model ?? 'gemini-2.5-flash-lite',
           apiKey: lConfig.apiKey ?? '',
+          providerModels: lConfig.providerModels ?? {},
+          providerHasApiKey: lConfig.providerHasApiKey ?? {},
         });
       } catch { /* 경량 AI 설정 없으면 기본값 유지 */ }
       // 중급 AI 설정 로드
@@ -483,6 +487,8 @@ export function Launcher() {
           provider: mConfig.provider ?? 'google',
           model: mConfig.model ?? 'gemini-2.5-flash',
           apiKey: mConfig.apiKey ?? '',
+          providerModels: mConfig.providerModels ?? {},
+          providerHasApiKey: mConfig.providerHasApiKey ?? {},
         });
       } catch { /* 중급 AI 설정 없으면 기본값 유지 */ }
       setShowSettingsDialog(true);

@@ -290,6 +290,7 @@
     "test_items_binding_honesty": "force_exclude_glob",
     "test_log_truncation_mark": "force_exclude_glob",
     "test_mcp_boundary": "force_exclude_glob",
+    "test_model_provider_memory": "force_exclude_glob",
     "test_multi_chat_round": "force_exclude_glob",
     "test_narration_injection": "top-level import: playwright",
     "test_nip44_vectors": "top-level import: pynostr",
@@ -321,8 +322,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 315,
+    "total": 316,
     "engine": 225,
-    "blocklist": 90
+    "blocklist": 91
   }
 }

@@ -77,6 +77,9 @@ export interface SystemAISettings {
   provider: string;
   model: string;
   apiKey: string;
+  providerModels?: Record<string, string>;
+  providerHasApiKey?: Record<string, boolean>;
+  providerApiKeys?: Record<string, string>;
   role?: string;
 }
 
@@ -86,6 +89,9 @@ export interface LightweightAISettings {
   provider: string;
   model: string;
   apiKey: string;
+  providerModels?: Record<string, string>;
+  providerHasApiKey?: Record<string, boolean>;
+  providerApiKeys?: Record<string, string>;
 }
 
 // 중급 AI 설정 타입
@@ -94,6 +100,9 @@ export interface MidtierAISettings {
   provider: string;
   model: string;
   apiKey: string;
+  providerModels?: Record<string, string>;
+  providerHasApiKey?: Record<string, boolean>;
+  providerApiKeys?: Record<string, string>;
 }
 
 // 하위호환 별칭

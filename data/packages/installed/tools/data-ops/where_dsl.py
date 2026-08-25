@@ -20,8 +20,8 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
 
 import re
 
-from common.value_semantics import (numeric_value, sort_records, structural_equal,
-                                    value_sort_key)
+from common.value_semantics import (compare_order, numeric_value, sort_records,
+                                    value_sort_key, values_equal)
 
 
 # ───────────────────────── where 미니 DSL ─────────────────────────
@@ -95,26 +95,16 @@ def _as_num(v):
     return numeric_value(v)
 
 
-def _scalar_num_eq(a, b):
-    na, nb = _as_num(a), _as_num(b)
-    if na is not None and nb is not None:
-        return na == nb
-    return str(a).strip().lower() == str(b).strip().lower()
-
-
 def _num_eq(a, b):
-    return structural_equal(a, b, _scalar_num_eq)
+    """호환 이름 — 실제 동등성은 common.value_semantics 한 벌이다."""
+    return values_equal(a, b)
 
 
 def _num_cmp(a, b):
-    if isinstance(a, (dict, list, tuple)) or isinstance(b, (dict, list, tuple)):
-        raise _WhereError("구조 값(dict/list)은 크기 순서를 비교할 수 없습니다")
-    na, nb = _as_num(a), _as_num(b)
-    if na is not None and nb is not None:
-        return (na > nb) - (na < nb)
-    if isinstance(a, str) and isinstance(b, str):
-        sa, sb = a.strip(), b.strip()       # ISO 날짜 등 사전식 — 블록 술어와 같은 계약
-        return (sa > sb) - (sa < sb)
+    """호환 이름 — 공통 순서의 판정 불능만 filter 오류로 번역한다."""
+    order = compare_order(a, b)
+    if order is not None:
+        return int(order)
     raise _WhereError(
         f"크기 비교 불가 — 좌변 {type(a).__name__}({str(a)[:40]!r}) 과 "
         f"우변 {type(b).__name__}({str(b)[:40]!r}) 은 둘 다 숫자이거나 문자열이어야 합니다"

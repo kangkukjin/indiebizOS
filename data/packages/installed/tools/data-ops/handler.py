@@ -24,6 +24,8 @@ IBL의 깊이(depth)를 만드는 부품. 생산자(sense:* 등)가 내는 공�
 import json
 import re
 
+from common.value_semantics import numeric_observations
+
 
 # ───────────────────────── 통화 추출/주입 (공유) ─────────────────────────
 
@@ -629,32 +631,22 @@ def _op_dedup(prev, params):
     return _no_currency_error("dedup", prev)
 
 
-def _numeric_observations(values):
-    """실제 숫자만 값당 한 번 변환 — 무효값은 0이 아니다(B39-1)."""
-    numbers = []
-    for value in values:
-        number = _as_num(value)
-        if number is not None:
-            numbers.append(number)
-    return numbers
-
-
 def _agg_sum(values):
-    numbers = _numeric_observations(values)
+    numbers = numeric_observations(values)
     return round(sum(numbers), 6) if numbers else None
 
 
 def _agg_avg(values):
-    numbers = _numeric_observations(values)
+    numbers = numeric_observations(values)
     return round(sum(numbers) / len(numbers), 6) if numbers else None
 
 
 def _agg_min(values):
-    return min(_numeric_observations(values), default=None)
+    return min(numeric_observations(values), default=None)
 
 
 def _agg_max(values):
-    return max(_numeric_observations(values), default=None)
+    return max(numeric_observations(values), default=None)
 
 
 _AGG = {

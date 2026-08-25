@@ -1,10 +1,12 @@
-"""IBL 값 의미론의 구조 순회·정렬 공통 코어.
+"""IBL 값 의미론의 단일 코어.
 
-연산마다 다른 것은 스칼라 정책뿐이다. JSON dict/list를 순회하는 법과 정렬 버킷은
-여기 한 벌로 두어 삽입 순서·결측 위치가 표면마다 다시 갈리지 않게 한다.
+값 분류·조건 동등성·순서·정렬·그룹/관계 식별·숫자 관측은 여기 한 벌만 둔다.
+호출자는 판정 불능을 자기 오류 봉투로 번역할 수 있지만 값의 의미를 다시 정하지 않는다.
 """
 
 from collections.abc import Callable
+from dataclasses import dataclass
+from enum import Enum, IntEnum
 import math
 import re
 from typing import Any
@@ -12,6 +14,32 @@ from typing import Any
 
 _SEQUENCES = (list, tuple)
 _INTEGER_TEXT = re.compile(r"^[+-]?\d+$")
+_YESNO_TEXT = {"yes", "no", "true", "false"}
+
+
+class ValueKind(str, Enum):
+    NULL = "null"
+    BOOL = "bool"
+    NUMBER = "number"
+    TEXT = "text"
+    STRUCTURE = "structure"
+    OTHER = "other"
+
+
+class OrderResult(IntEnum):
+    LESS = -1
+    EQUAL = 0
+    GREATER = 1
+
+
+@dataclass(frozen=True)
+class ClassifiedValue:
+    """원값을 한 번 분류한 결과. number/text는 비교 가능한 정규형이다."""
+
+    kind: ValueKind
+    original: Any
+    number: Any = None
+    text: str | None = None
 
 
 def freeze_structure(value: Any, scalar_identity: Callable[[Any], Any]):
@@ -77,17 +105,115 @@ def numeric_value(value: Any):
         return None
 
 
+def classify_value(value: Any) -> ClassifiedValue:
+    """IBL 공개 값의 타입과 비교 정규형을 한 번만 결정한다."""
+    if value is None:
+        return ClassifiedValue(ValueKind.NULL, value)
+    if isinstance(value, bool):
+        return ClassifiedValue(ValueKind.BOOL, value,
+                               text=str(value).casefold())
+    if isinstance(value, (dict, *_SEQUENCES)):
+        return ClassifiedValue(ValueKind.STRUCTURE, value)
+    number = numeric_value(value)
+    if number is not None:
+        return ClassifiedValue(ValueKind.NUMBER, value, number=number)
+    if isinstance(value, str):
+        text = value.strip().casefold()
+        yesno = text.rstrip(".!。").strip()
+        if yesno in _YESNO_TEXT:
+            text = yesno
+        return ClassifiedValue(ValueKind.TEXT, value,
+                               text=text)
+    return ClassifiedValue(ValueKind.OTHER, value)
+
+
+def _conditional_scalar_equal(left: Any, right: Any) -> bool:
+    """filter와 블록 술어가 공유하는 스칼라 동등성."""
+    a, b = classify_value(left), classify_value(right)
+    if ValueKind.NULL in (a.kind, b.kind):
+        return a.kind is b.kind
+    if a.kind is ValueKind.NUMBER and b.kind is ValueKind.NUMBER:
+        return a.number == b.number
+    # 기존 공개 계약: false == "false". bool은 숫자와는 절대 같지 않다.
+    if ValueKind.BOOL in (a.kind, b.kind):
+        return (a.kind in (ValueKind.BOOL, ValueKind.TEXT)
+                and b.kind in (ValueKind.BOOL, ValueKind.TEXT)
+                and a.text == b.text)
+    if a.kind is ValueKind.TEXT and b.kind is ValueKind.TEXT:
+        return a.text == b.text
+    if a.kind is ValueKind.OTHER and b.kind is ValueKind.OTHER:
+        return type(left) is type(right) and left == right
+    return False
+
+
+def values_equal(left: Any, right: Any) -> bool:
+    """조건 언어 전체의 재귀 동등성(dict 무순서·list 순서 보존)."""
+    return structural_equal(left, right, _conditional_scalar_equal)
+
+
+def compare_order(left: Any, right: Any) -> OrderResult | None:
+    """공개 값의 크기 순서. 정의되지 않은 조합은 ``None``이다."""
+    a, b = classify_value(left), classify_value(right)
+    if a.kind is ValueKind.NUMBER and b.kind is ValueKind.NUMBER:
+        return OrderResult((a.number > b.number) - (a.number < b.number))
+    if a.kind is ValueKind.TEXT and b.kind is ValueKind.TEXT:
+        return OrderResult((a.text > b.text) - (a.text < b.text))
+    return None
+
+
+def numeric_observations(values):
+    """유한 숫자 관측만 원순서로 반환한다."""
+    return [classified.number for value in values
+            if (classified := classify_value(value)).kind is ValueKind.NUMBER]
+
+
+def _group_scalar_identity(value):
+    """groupby는 JSON 타입을 보존하고 native int/float만 number로 합친다."""
+    if value is None:
+        return "null", None
+    if isinstance(value, bool):
+        return "bool", value
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            return "number", str(value).casefold()
+        return "number", value
+    if isinstance(value, str):
+        return "string", value
+    try:
+        hash(value)
+        return f"{type(value).__module__}.{type(value).__qualname__}", value
+    except TypeError:
+        return f"{type(value).__module__}.{type(value).__qualname__}", repr(value)
+
+
+def group_identity(value):
+    """그룹 키의 엄격한 타입·구조 식별자."""
+    return freeze_structure(value, _group_scalar_identity)
+
+
+def _relation_scalar_identity(value):
+    return re.sub(r"\s+", " ", str("" if value is None else value).strip().casefold())
+
+
+def relation_identity(value):
+    """join/merge/dedup의 느슨한 관계 키 식별자."""
+    return freeze_structure(value, _relation_scalar_identity)
+
+
 def value_sort_key(field: str, number_parser=numeric_value):
     """숫자(0)→문자열(1)→결측(2) 버킷의 행 정렬 키."""
     def key(item):
         value = item.get(str(field)) if isinstance(item, dict) else None
         if value is None:
             return 2, 0.0, ""
-        number = number_parser(value) if number_parser else None
-        if number is not None:
-            return 0, number, ""
-        # 조건 언어도 ISO 날짜 같은 텍스트 순서에서 양끝 공백을 의미로 삼지 않는다.
-        return 1, 0.0, str(value).strip().lower()
+        if number_parser:
+            number = number_parser(value)
+            if number is not None:
+                return 0, number, ""
+        classified = classify_value(value)
+        text = (classified.text if classified.kind is ValueKind.TEXT
+                else str(value).strip().casefold())
+        return 1, 0.0, text
     return key
 
 

@@ -179,7 +179,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
   - 워크플로우는 **함수 쪽으로 한 칸** 옮겨졌다: 이름·인자(미할당 `$이름`=시그니처, `params_required`/`params_default`)·반환값(`$return`)·스코프 격리·합성(파이프로 다음 문장에 통화를 넘김) + 순환·깊이(5) 가드.
   - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
-- **값 의미론 코어**(2026-08-25): `common/value_semantics.py`가 JSON 구조 순회(dict=무순서 쌍·list=순서 열), 숫자 판독, 정렬 버킷(숫자→문자열→결측)을 한 벌로 소유한다. groupby·join/merge/dedup·`table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`는 구조 순회를 복제하지 않고 각 언어가 의도한 **스칼라 정책만** 주입한다. 연산별 `str(dict)`·`reverse=True` 재구현은 금지하며 `test_value_semantics_convergence.py`가 표면 횡단 불변식을 지킨다.
+- **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/text/structure/other), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 151): handler 122 · system 19 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진

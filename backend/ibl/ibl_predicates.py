@@ -27,14 +27,13 @@ import json
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from common.value_semantics import numeric_value, structural_equal
+from common.value_semantics import compare_order, numeric_value, values_equal
 
 _MISSING = object()          # 경로 부재 표지 (값 null 과 구별)
 _KEYWORDS = {"and", "or", "not"}
 _OPS2 = ("==", "!=", ">=", "<=")
 _OPS1 = (">", "<")
 _FUNCS = ("count", "empty", "exists")
-_YESNO = {"yes", "no", "true", "false"}
 _SOURCE_RE = re.compile(r'^\[?\w+:\w+\]?(\{|\.|$)')
 
 
@@ -326,30 +325,6 @@ def _empty(v: Any) -> bool:
     return False
 
 
-def _norm_yesno(v: Any) -> Any:
-    if isinstance(v, str):
-        s = v.strip().rstrip(".!。").strip().lower()
-        return s
-    return v
-
-
-def _scalar_equal(left: Any, right: Any) -> bool:
-    """술어 언어의 기존 스칼라 계약. 구조 순회는 common.value_semantics가 맡는다."""
-    if left is None or right is None:
-        return left is None and right is None
-    left_num, right_num = _num(left), _num(right)
-    if (left_num is not None and right_num is not None
-            and not (isinstance(left, str) and isinstance(right, str))):
-        return left_num == right_num
-    if isinstance(left, bool) or isinstance(right, bool):
-        return str(left).lower() == str(right).lower()
-    a, b = _norm_yesno(left), _norm_yesno(right)
-    if ((isinstance(b, str) and b in _YESNO)
-            or (isinstance(a, str) and a in _YESNO)):
-        return a == b
-    return str(left).strip() == str(right).strip()
-
-
 # ── 평가 ─────────────────────────────────────────────────────────────────────
 class Evaluator:
     """resolve_source(text) -> (값, 오류문|None) 은 호출자가 준다(실행 엔진 의존 역전)."""
@@ -446,28 +421,21 @@ class Evaluator:
             except re.error as e:
                 raise PredicateError(f"정규식 오류 '{rv}': {e}")
         if op in ("==", "!="):
-            eq = structural_equal(lv, rv, _scalar_equal)
+            eq = values_equal(lv, rv)
             return eq if op == "==" else not eq
-        # 크기 비교
-        if lv is None or rv is None:
-            raise PredicateError(f"크기 비교({op})의 한쪽이 null 입니다 — 값 부재는 거짓이 아니라 판정 불능입니다.")
-        ln, rn = _num(lv), _num(rv)
-        if ln is not None and rn is not None:
-            a, b = ln, rn
-        elif isinstance(lv, str) and isinstance(rv, str):
-            a, b = lv.strip(), rv.strip()          # ISO 날짜 등 사전식
-        else:
+        order = compare_order(lv, rv)
+        if order is None:
             raise PredicateError(
                 f"크기 비교({op}) 불가 — 좌변 {type(lv).__name__}({str(lv)[:40]!r}) 과 "
-                f"우변 {type(rv).__name__}({str(rv)[:40]!r}) 은 숫자로 읽히지 않습니다.")
+                f"우변 {type(rv).__name__}({str(rv)[:40]!r}) 은 둘 다 숫자이거나 문자열이어야 합니다.")
         if op == ">":
-            return a > b
+            return order > 0
         if op == ">=":
-            return a >= b
+            return order >= 0
         if op == "<":
-            return a < b
+            return order < 0
         if op == "<=":
-            return a <= b
+            return order <= 0
         raise PredicateError(f"알 수 없는 비교 연산자 {op}")
 
 

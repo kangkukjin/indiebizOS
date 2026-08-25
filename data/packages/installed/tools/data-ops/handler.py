@@ -521,7 +521,20 @@ def _op_select(prev, params):
 
 def _norm(s):
     import re
-    return re.sub(r"\s+", " ", str(s or "").strip().lower())
+    # B38-1(2026-08-25): ``s or ""`` 는 관계 키 0·False 를 결측과 같은 빈
+    # 문자열로 지웠다. None 만 결측이고 나머지 falsey 스칼라는 실존 값이다.
+    return re.sub(r"\s+", " ", str("" if s is None else s).strip().lower())
+
+
+def _join_key(value):
+    """join 가능한 정규화 키. null·빈/공백 문자열은 관계 식별자가 아니다.
+
+    B38-2·G38-1(2026-08-25): items 경로는 null 을 빼고 table 경로는 ``""`` 로
+    조인했으며, 빈 문자열은 양쪽 모두에서 서로 연결됐다. 외부 자료의 빈 ID 둘을 같은
+    실체로 묶는 거짓 양성을 막기 위해 모든 통화 모양이 이 판정 한 벌을 쓴다.
+    """
+    key = _norm(value)
+    return key if key else None
 
 
 def _op_rename(prev, params):
@@ -1239,25 +1252,32 @@ def _op_join(prev, params):
         return {"success": False,
                 "error": f"join: {_sides} 분기의 출력이 통화(items/table)로 파싱되지 않습니다"
                          f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
-    ta, _ = _get_table(a)
-    tb, _ = _get_table(b)
-    if ta is None or tb is None:
-        # 두 입력이 items 통화면 items inner join (table 분기와 대칭).
-        # items 행도 dict 라 키 필드로 조인 가능 — merge/union 이 items 를 받는 것과 일관.
-        ra, _ = _get_items(a)
-        rb, _ = _get_items(b)
+    # B38-2(2026-08-25): items 봉투도 _get_table 이 투영할 수 있으므로 table 을 먼저
+    # 물으면 직접 병렬 items 만 table 경로를 타고, 변수 raw list 는 items 경로를 탔다.
+    # 공개 통화 모양을 **강제 투영 전에** 판별해 문장 경계가 의미를 바꾸지 않게 한다.
+    ra, _ = _get_items(a)
+    rb, _ = _get_items(b)
+    if ra is not None or rb is not None:
         if ra is None or rb is None:
             return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
+        # 두 입력이 items 통화면 items inner join (table 분기와 대칭).
+        # items 행도 dict 라 키 필드로 조인 가능 — merge/union 이 items 를 받는 것과 일관.
         index = {}
         for r in rb:
-            if isinstance(r, dict) and r.get(on) is not None:
-                index.setdefault(_norm(r.get(on)), []).append(r)
+            if not isinstance(r, dict):
+                continue
+            key = _join_key(r.get(on))
+            if key is not None:
+                index.setdefault(key, []).append(r)
         out = []
         for l in ra:
-            if not isinstance(l, dict) or l.get(on) is None:
+            if not isinstance(l, dict):
+                continue
+            key = _join_key(l.get(on))
+            if key is None:
                 continue
             lkeys = list(l.keys())
-            for r in index.get(_norm(l.get(on)), []):
+            for r in index.get(key, []):
                 add = [k for k in r.keys() if k != on]
                 disp = _suffix_collisions(lkeys, add)  # 동명 필드 _2 (침묵 오선택 방지)
                 merged = dict(l)
@@ -1265,6 +1285,10 @@ def _op_join(prev, params):
                     merged[name] = r[orig]
                 out.append(merged)
         return _attach_branch_warning(_emit_items(_carry_flags([a, b], with_total=False), out), [a, b])
+    ta, _ = _get_table(a)
+    tb, _ = _get_table(b)
+    if ta is None or tb is None:
+        return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
     if on not in ca or on not in cb:
@@ -1273,14 +1297,17 @@ def _op_join(prev, params):
     # 우측을 키로 인덱싱
     index = {}
     for r in tb.get("rows") or []:
-        k = _norm(r[rki] if rki < len(r) else None)
-        index.setdefault(k, []).append(r)
+        key = _join_key(r[rki] if rki < len(r) else None)
+        if key is not None:
+            index.setdefault(key, []).append(r)
     extra = [c for c in cb if c != on]  # 우측에서 가져올 열(키 제외, 읽기는 원본 이름)
     out_cols = ca + _suffix_collisions(ca, extra)  # 표시 이름만 충돌 회피
     out_rows = []
     for r in ta.get("rows") or []:
-        k = _norm(r[lki] if lki < len(r) else None)
-        for rb_row in index.get(k, []):
+        key = _join_key(r[lki] if lki < len(r) else None)
+        if key is None:
+            continue
+        for rb_row in index.get(key, []):
             rbd = {cb[i]: (rb_row[i] if i < len(rb_row) else None) for i in range(len(cb))}
             out_rows.append(list(r) + [rbd.get(c) for c in extra])
     return _attach_branch_warning(

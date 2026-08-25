@@ -146,7 +146,9 @@ def main():
     b = json.dumps({'items': [{'k': 'x', 'w': 2}]}, ensure_ascii=False)
     prev = json.dumps([a, b], ensure_ascii=False)
     r = H.execute({'_prev_result': prev, 'on': 'k'}, _Ctx('data_join'))
-    check('join 정상', len(r.get('table', {}).get('rows', [])) == 1, r)
+    # B38-2(2026-08-25): items 봉투를 _get_table 이 먼저 흡수해 직접 병렬만 table로
+    # 나가던 경로 의존을 제거했다. 단일 통화 정본대로 items 입력 join은 items를 낸다.
+    check('join 정상(items→items)', len(r.get('items', [])) == 1, r)
     r = H.execute({'_prev_result': prev}, _Ctx('data_union'))
     check('union 정상', len(r.get('table', {}).get('rows', [])) == 2, r)
 

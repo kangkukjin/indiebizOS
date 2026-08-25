@@ -975,7 +975,7 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - 수리 가드=`backend/test_imagination_round37_repairs.py`(원 96칸 재생 + 결측/null × 3조건형 + 결측 검색 경계). 전체 backend 528 passed·2 skipped, 빌드·층·Android 번들·라이브 종단 3건 통과. 긍정: 기호/워드 별칭 6쌍 × 8모양 전부 동치, 값이 있는 288개 행 판정은 예상과 일치, 숫자 표기 8종의 수치 의미 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_37회차.md`.
 
 - **38회차 (2026-08-25, 4.00배 48과제)** — 축: **조인 키 모양 8종 × 전달·결합 경로 6종**(items 직접·변수·table join, merge 직접·변수, union→dedup). validate 48/48 · 무부작용 실측 48/48 · 깨끗 35 · 의미 불일치 13. 훈련 액션 184행은 `source=training`으로 전량 격리.
-  - `B38-1` **숫자 키 0이 빈 키로 소실 — 발견됨.** `_norm(s or "")`가 `0`·`False`를 `""`로 바꿔 `0`/`"0"` join은 누락, merge/dedup은 중복 보존(6경로 전부 오답). `None`만 별도 처리하는 수리 필요.
-  - `B38-2` **items/table 흡수 순서에 따라 null·부재 join 결과가 달라짐 — 발견됨.** 직접 병렬 items 봉투는 `_get_table` 우선으로 table화되어 null끼리 조인(2행), 같은 자료의 변수 raw list 경로는 items 규약으로 제외(1행). 공용 조인키 유효성 판정과 입력 모양 선판별 필요.
-  - `G38-1` **빈 문자열 관계 키 의미 — 판정 완료(사용자: 권고 따름), 미집행.** join은 빈 키끼리 연결하지만 merge/dedup은 키 없음으로 보존. 거짓 관계 연결을 막도록 빈/공백 키를 null·부재와 같이 join 제외로 결정, 다음 수리 턴에서 집행.
-  - 긍정: 정상·대소문자·다중공백·숫자문자열 24/24 경로 동치, merge/dedup은 키 없는 원행 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_38회차.md`.
+  - `B38-1` **숫자 키 0이 빈 키로 소실 — 수리됨.** `_norm`이 falsey 전체가 아니라 `None`만 비우도록 교정해 `0`·`False`를 실존 키로 보존. join/merge/dedup 6경로 동시 회복.
+  - `B38-2` **items/table 흡수 순서에 따라 null·부재 join 결과가 달라짐 — 수리됨.** 강제 table 투영 전에 공개 통화 모양을 판별하고 items→items·명시 table→table로 유지. 공용 `_join_key`가 두 경로의 null·부재 제외를 통일하며 혼합 통화는 정직 거절.
+  - `G38-1` **빈 문자열 관계 키 의미 — 판정·집행 완료(사용자: 권고 따름).** 빈/공백 문자열을 null·부재와 같은 키 없음으로 보아 join 제외. merge/dedup의 기존 의미와 통일.
+  - 수리 가드=`backend/test_imagination_round38_repairs.py`(원 48칸 + falsey·공백·출력 모양·혼합 통화 경계), 옛 거울키 join 가드도 items 정본으로 교정. 전체 backend 543 passed·2 skipped, IBL 빌드·층·Android 번들, 백엔드 재기동 후 라이브 48/48 통과. 긍정: 정상·대소문자·다중공백·숫자문자열 24/24 경로 동치, merge/dedup은 키 없는 원행 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_38회차.md`.

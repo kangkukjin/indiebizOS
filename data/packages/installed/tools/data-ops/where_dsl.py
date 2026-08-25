@@ -14,6 +14,8 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
   · matches 는 `[if:]` 술어와 같은 뜻(re.search) — 한 몸 안의 두 조건 언어를 같게 둔다.
   · 비교 필드가 없거나 null 이면 !=/ne·순서 비교는 불일치. 모르는 값을 "다르다/더 크다"고
     주장하지 않는다. 결측 동등 검색은 구조형 {field,op:"eq",value:null} 로 가능하다.
+  · 크기 순서는 양쪽이 숫자이거나 양쪽이 문자열일 때만 정의한다. 서로 다른 타입의 표시
+    문자열을 임의로 비교하지 않으며 문자열 양끝 공백은 조건·정렬 표면에서 무시한다.
 """
 
 import re
@@ -110,8 +112,13 @@ def _num_cmp(a, b):
     na, nb = _as_num(a), _as_num(b)
     if na is not None and nb is not None:
         return (na > nb) - (na < nb)
-    sa, sb = str(a), str(b)
-    return (sa > sb) - (sa < sb)
+    if isinstance(a, str) and isinstance(b, str):
+        sa, sb = a.strip(), b.strip()       # ISO 날짜 등 사전식 — 블록 술어와 같은 계약
+        return (sa > sb) - (sa < sb)
+    raise _WhereError(
+        f"크기 비교 불가 — 좌변 {type(a).__name__}({str(a)[:40]!r}) 과 "
+        f"우변 {type(b).__name__}({str(b)[:40]!r}) 은 둘 다 숫자이거나 문자열이어야 합니다"
+    )
 
 
 _CMP_RE = re.compile(r"^\s*(.+?)\s*(>=|<=|==|!=|>|<|=)\s*(.+?)\s*$")

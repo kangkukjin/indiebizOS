@@ -86,7 +86,8 @@ def value_sort_key(field: str, number_parser=numeric_value):
         number = number_parser(value) if number_parser else None
         if number is not None:
             return 0, number, ""
-        return 1, 0.0, str(value).lower()
+        # 조건 언어도 ISO 날짜 같은 텍스트 순서에서 양끝 공백을 의미로 삼지 않는다.
+        return 1, 0.0, str(value).strip().lower()
     return key
 
 

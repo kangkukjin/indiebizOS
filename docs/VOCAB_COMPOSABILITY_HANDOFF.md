@@ -986,3 +986,8 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - `G39-2` **숫자 무관측 sum 의미 — 판정·집행 완료(사용자: 권고 따름).** 실제 숫자 0과 관측 부재를 구별하도록 무관측은 null. 값 `[0,null]`은 0 유지.
   - `B39-2` **HTTP `origin:test`가 건강 원장에서 usage로 새던 재발 — 수리됨.** 외부 검증기는 pytest 프로세스가 아니어서 종전 프로세스 판정에 안 걸렸다. `thread_context.get_isolated_origin()` 한 벌을 액션·알림 원장이 공유. 오염 96행(ID 70284~70379)은 백업 후 test로 교정, 라이브 새 2행 test 확인.
   - 가드=`backend/test_imagination_round39_repairs.py`(원 48칸+필드 부재+실제0/무관측) 및 `test_health_source_isolation.py` HTTP test origin. 전체 backend 554건, IBL 빌드·층·Android 번들, 라이브 원 48/48 통과. 긍정: 정수·숫자문자열·쉼표 숫자 18/18 정확, min/max의 기존 계약 보존. 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_39회차.md`.
+
+- **40회차 (2026-08-25, 4.00배 48과제)** — 축: **그룹 키 값 모양 8종 × 집계 6종**(문자열·숫자/문자열·False/0·True/1·null/부재·빈/공백·목록·사전 × count/field count/sum/avg/min/max). validate 48/48 · 실행 성공 36/48 · 기대 의미 일치 24/48. 액션 96행 전부 `source=training`(groupby 실패 12 포함).
+  - `B40-1` **False/0·True/1이 파이썬 동등성으로 침묵 병합** — 12칸. 합계30·평균15 같은 정상 숫자 오답. 발견·수리 대기.
+  - `B40-2` **목록·사전 그룹 키가 `unhashable type`으로 실패** — 12칸. validate는 전부 통과. 발견·수리 대기.
+  - 처방: 공개 키는 원값, 내부 식별자만 타입 태그+재귀 동결. bool/number 분리, 목록 순서 보존, 사전 키 순서 무관. 새 어휘·판정 없음. 긍정 24칸, 시드 0건. 보고서=`outputs/imagination_training/2026-08-25_40회차.md`.

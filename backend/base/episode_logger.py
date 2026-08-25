@@ -717,12 +717,7 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         if round_matches:
             execution_rounds = max(int(r) for r in round_matches)
 
-    # 평가 결과 추출 — 평가 루프가 여러 라운드면 마지막 라운드 결과가 최종 결과
-    # (재실행 후 ACHIEVED로 통과한 경우 첫 NOT_ACHIEVED만 저장되는 버그 수정)
-    evaluation_result = None
-    eval_matches = re.findall(r'\[GoalEval\].*?평가 응답: (\w+)', log_text)
-    if eval_matches:
-        evaluation_result = eval_matches[-1]
+    evaluation_result = _final_evaluation_result(log_text)
 
     try:
         conn = _get_db()
@@ -751,6 +746,22 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         conn.close()
     except Exception:
         pass
+
+
+def _final_evaluation_result(log_text):
+    """평가 루프의 최종 판정을 읽는다. 산문 응답이 아니라 라운드 마커가 1차 원장이다."""
+    rounds = re.findall(
+        r'\[GoalEval\]\s*라운드\s+\d+(?:/\d+)?\s*:\s*(ACHIEVED|NOT_ACHIEVED)\b',
+        log_text,
+    )
+    if rounds:
+        return rounds[-1]
+    # 구버전 단일 라운드 로그 호환. 응답 앞에 Markdown 산문이 끼면 판정으로 추측하지 않는다.
+    responses = re.findall(
+        r'\[GoalEval\].*?평가 응답:\s*(ACHIEVED|NOT_ACHIEVED)\b',
+        log_text,
+    )
+    return responses[-1] if responses else None
 
 
 def _cleanup_old_episodes(keep_id=None):

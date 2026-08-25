@@ -170,6 +170,14 @@ def _op_history(tool_input, yt):
     return load_tool_watch().history(limit=tool_input.get('limit', 40))
 
 
+def _op_channel(tool_input, yt):
+    return yt.get_youtube_channel(
+        handle=tool_input.get('handle', ''),
+        url=tool_input.get('url', ''),
+        channel_id=tool_input.get('channel_id', ''),
+        limit=tool_input.get('limit', 5))
+
+
 def _op_relay(tool_input, yt):
     # 검색어/URL → 맥 경유 릴레이 스트림 목록(items.stream=/yt/relay/…).
     # 재생 축은 mode(audio|video) 재사용 — client 값이 오면 릴레이의 취지(직접 접속 없음)와
@@ -225,6 +233,7 @@ _OP_DISPATCHERS = {
         "feed": _op_feed,
         "watch": _op_watch,
         "history": _op_history,
+        "channel": _op_channel,
     },
 }
 _OP_DEFAULTS = {"music_op": "play", "video_op": "info"}

@@ -332,11 +332,12 @@
     "test_venv_pinned": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
     "test_world_noun_refutable": "force_exclude_glob",
-    "test_write_ledger": "force_exclude_glob"
+    "test_write_ledger": "force_exclude_glob",
+    "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 329,
+    "total": 330,
     "engine": 225,
-    "blocklist": 104
+    "blocklist": 105
   }
 }

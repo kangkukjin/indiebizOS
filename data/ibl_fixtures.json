@@ -125,6 +125,7 @@
     "sense:stock#search": "[sense:stock]{op: \"search\", query: \"삼성\"}",
     "sense:used": "[sense:used]{source: \"bunjang\", query: \"맥미니 m4 pro\"}",
     "sense:video": "[sense:video]{op: \"info\", video_id: \"jNQXAC9IVRw\"}",
+    "sense:video#channel": "[sense:video]{op: \"channel\", handle: \"@YouTube\", limit: 3}",
     "sense:video#feed": "[sense:video]{op: \"feed\", limit: 5}",
     "sense:video#history": "[sense:video]{op: \"history\", limit: 5}",
     "sense:video#languages": "[sense:video]{op: \"languages\", video_id: \"jNQXAC9IVRw\"}",

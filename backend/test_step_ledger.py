@@ -139,6 +139,19 @@ def test_regex_fallback_provider_agnostic():
     print("OK 폴백 정규식 — 프로바이더 이름 무관")
 
 
+def test_goal_eval_uses_last_round_marker():
+    """평가 응답이 Markdown 산문이어도 최종 라운드의 구조화 판정을 저장해야 한다."""
+    import episode_logger as EL
+    log = """[GoalEval] 평가 응답: NOT_ACHIEVED
+[GoalEval] 라운드 1: NOT_ACHIEVED (severity=major)
+[GoalEval] 평가 응답: ## 도구 실행 결과\n검증을 마쳤습니다.
+[GoalEval] 라운드 2: ACHIEVED (severity=none)"""
+    assert EL._final_evaluation_result(log) == "ACHIEVED"
+    assert EL._final_evaluation_result("[GoalEval] 평가 응답: NOT_ACHIEVED") == "NOT_ACHIEVED"
+    assert EL._final_evaluation_result("평가 없음") is None
+    print("OK 최종 GoalEval 라운드 판정")
+
+
 def test_carry_context_atomic():
     from system_ai_core import _carry_context, _CONTEXT_FIELDS
     src = SimpleNamespace(system_prompt="P", tools=[{"name": "t"}], agent_id="system_ai",

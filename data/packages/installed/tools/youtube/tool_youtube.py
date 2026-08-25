@@ -215,6 +215,142 @@ def _format_duration(seconds):
 # 검색 결과 상한 — yt-dlp ytsearchN 자체엔 제한이 없다. 가이드·앱 계기가 12를 쓰므로
 # 옛 상한 10 은 침묵 클램프였다(2026-08-18 수리). 넘으면 clamped 로 신고한다.
 SEARCH_COUNT_MAX = 25
+CHANNEL_ITEM_MAX = 25
+
+
+def _normalize_channel_ref(handle: str = "", url: str = "", channel_id: str = "") -> dict:
+    """채널 입력의 세 표기(@handle/URL/UC id)를 한 계약으로 접는다."""
+    raw = str(channel_id or url or handle or "").strip()
+    if not raw:
+        return {}
+    cid = re.search(r"(?:^|/)(UC[A-Za-z0-9_-]{20,})(?:$|[/?#])", raw)
+    if cid:
+        return {"channel_id": cid.group(1), "url": f"https://www.youtube.com/channel/{cid.group(1)}"}
+    if raw.startswith(("http://", "https://")):
+        match = re.search(r"youtube\.com/@([^/?#]+)", raw, re.I)
+        return {"handle": f"@{match.group(1)}", "url": raw} if match else {"url": raw}
+    normalized = raw if raw.startswith("@") else f"@{raw}"
+    return {"handle": normalized, "url": f"https://www.youtube.com/{normalized}"}
+
+
+def _channel_row(entry: dict, channel_name: str = "") -> Optional[dict]:
+    vid = str(entry.get("id") or entry.get("video_id") or "")
+    if not vid or vid.startswith("UC") or len(vid) > 16:
+        return None
+    return {
+        "video_id": vid,
+        "title": entry.get("title") or "",
+        "channel": entry.get("channel") or entry.get("uploader") or channel_name,
+        "duration": _format_duration(entry.get("duration")),
+        "url": entry.get("url") if str(entry.get("url") or "").startswith("http")
+               else f"https://www.youtube.com/watch?v={vid}",
+        "thumb": f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg",
+    }
+
+
+def _extract_channel_with_ytdlp(url: str, limit: int) -> dict:
+    import yt_dlp
+    with yt_dlp.YoutubeDL({
+        "quiet": True, "no_warnings": True, "extract_flat": True,
+        "playlistend": limit,
+    }) as ydl:
+        info = ydl.extract_info(url, download=False) or {}
+    entries = list(info.get("entries") or [])
+    candidates = [info] + entries[:3]
+    cid = next((str(row.get(key)) for row in candidates for key in
+                ("channel_id", "uploader_id", "id")
+                if str(row.get(key) or "").startswith("UC")), "")
+    name = info.get("channel") or info.get("uploader") or info.get("title") or ""
+    return {
+        "channel_id": cid,
+        "title": name,
+        "description": info.get("description") or "",
+        "items": [row for row in (_channel_row(e, name) for e in entries[:limit]) if row],
+    }
+
+
+def _extract_channel_from_html(url: str) -> dict:
+    """yt-dlp가 채널 표면을 못 읽을 때 공개 HTML의 canonical channelId를 회수한다."""
+    import html as html_lib
+    import urllib.request
+    request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(request, timeout=10) as response:
+        page = response.read().decode("utf-8", "replace")
+    cid_match = re.search(
+        r'(?:"channelId"\s*:\s*"|/channel/)(UC[A-Za-z0-9_-]{20,})', page)
+    title_match = re.search(r'<meta\s+(?:property="og:title"|name="title")\s+content="([^"]*)"', page, re.I)
+    return {
+        "channel_id": cid_match.group(1) if cid_match else "",
+        "title": html_lib.unescape(title_match.group(1)) if title_match else "",
+        "description": "",
+        "items": [],
+    }
+
+
+def _fetch_channel_feed(channel_id: str, channel_name: str, limit: int) -> List[dict]:
+    import urllib.request
+    import xml.etree.ElementTree as ET
+    feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+    with urllib.request.urlopen(feed_url, timeout=10) as response:
+        root = ET.fromstring(response.read())
+    atom = "{http://www.w3.org/2005/Atom}"
+    yt = "{http://www.youtube.com/xml/schemas/2015}"
+    rows = []
+    for entry in root.findall(f"{atom}entry")[:limit]:
+        vid = entry.findtext(f"{yt}videoId") or ""
+        row = _channel_row({"id": vid, "title": entry.findtext(f"{atom}title") or ""}, channel_name)
+        if row:
+            rows.append(row)
+    return rows
+
+
+def get_youtube_channel(handle: str = "", url: str = "", channel_id: str = "",
+                        limit: int = 5) -> dict:
+    """YouTube 채널 핸들/URL/ID를 해석하고 최신 영상까지 반환한다."""
+    ref = _normalize_channel_ref(handle=handle, url=url, channel_id=channel_id)
+    if not ref:
+        return {"success": False, "error": "handle, url 또는 channel_id 파라미터가 필요합니다."}
+    requested = int(limit or 5)
+    limit = max(1, min(CHANNEL_ITEM_MAX, requested))
+    info, errors = {}, []
+    try:
+        info = _extract_channel_with_ytdlp(ref["url"], limit)
+    except Exception as exc:
+        errors.append(f"yt-dlp: {exc}")
+    if not info.get("channel_id"):
+        try:
+            fallback = _extract_channel_from_html(ref["url"])
+            info = {**info, **{k: v for k, v in fallback.items() if v}}
+        except Exception as exc:
+            errors.append(f"html: {exc}")
+    cid = info.get("channel_id") or ref.get("channel_id") or ""
+    if not cid:
+        return {"success": False, "error": "채널 ID를 확인하지 못했습니다.", "input": ref,
+                "details": errors}
+    name = info.get("title") or ref.get("handle") or cid
+    items = info.get("items") or []
+    if not items:
+        try:
+            items = _fetch_channel_feed(cid, name, limit)
+        except Exception as exc:
+            errors.append(f"feed: {exc}")
+    result = {
+        "success": True,
+        "channel_id": cid,
+        "handle": ref.get("handle", ""),
+        "title": name,
+        "description": info.get("description") or "",
+        "url": f"https://www.youtube.com/channel/{cid}",
+        "feed_url": f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}",
+        "uploads_playlist_id": f"UU{cid[2:]}",
+        "count": len(items),
+        "items": items,
+    }
+    if requested != limit:
+        result.update({"clamped": True, "requested": requested})
+    if errors:
+        result["warnings"] = errors
+    return result
 
 
 def search_youtube(query: str, count: int = 5) -> dict:

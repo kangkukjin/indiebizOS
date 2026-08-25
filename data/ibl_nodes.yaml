@@ -2196,6 +2196,8 @@ nodes:
 
           - languages: 사용 가능한 자막 언어 목록.
 
+          - channel: 채널 핸들(@name)·채널 URL·channel_id를 채널 ID로 해석하고 최신 영상을 조회. handle/url/channel_id 중 하나, limit 옵션.
+
           - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션.
 
           - feed: 추천 홈 피드 (시청 기록의 채널 RSS + 연관 검색, 기록 없으면 기본 카테고리). limit 옵션.
@@ -2216,26 +2218,30 @@ nodes:
             history: items
             summarize: effect
             info: items
+            channel: items
           side_effect:
             info: false
             transcript: false
             languages: false
             history: false
             feed: false
+            channel: false
           fixture:
             transcript: '[sense:video]{op: "transcript", video_id: "jNQXAC9IVRw"}'
             languages: '[sense:video]{op: "languages", video_id: "jNQXAC9IVRw"}'
             feed: '[sense:video]{op: "feed", limit: 5}'
             history: '[sense:video]{op: "history", limit: 5}'
+            channel: '[sense:video]{op: "channel", handle: "@YouTube", limit: 3}'
           values:
             info: 동영상 메타데이터 (제목·조회수·채널)
             transcript: 자막/스크립트 추출
             languages: 사용 가능한 자막 언어 목록
+            channel: 채널 핸들·URL·ID 해석 + 채널 메타데이터와 최신 영상
             summarize: 자막+AI요약+HTML 보고서 생성
             feed: 추천 홈 피드 (시청 기록 기반 채널 RSS+연관 검색, 콜드스타트=기본 카테고리)
             watch: 시청 페이지 (video_id — 맥 경유 릴레이 플레이어 + 연관 동영상)
             history: 시청 기록 (최신순, limit 옵션)
-        implementation: youtube 패키지 op 분기. info=get_youtube_info, transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube, feed/watch/history=tool_watch.py(채널 RSS·ytsearch·youtube_watch.json — 재생 로그는 api_ytrelay 가 적재).
+        implementation: youtube 패키지 op 분기. info=get_youtube_info, channel=get_youtube_channel(yt-dlp+공개 HTML channelId 폴백+RSS), transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube, feed/watch/history=tool_watch.py(채널 RSS·ytsearch·youtube_watch.json — 재생 로그는 api_ytrelay 가 적재).
         keywords:
         - youtube
         - 유튜브
@@ -2245,6 +2251,8 @@ nodes:
         - 시청
         - 추천
         - 피드
+        - 채널
+        - 핸들
         app:
           instrument: yttv
           icon: ▶️

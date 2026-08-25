@@ -184,3 +184,8 @@ def test_http_reasoning_400_falls_back_to_non_thinking_once():
 def test_v4_compaction_threshold_uses_one_million_context():
     assert DeepSeekProvider.COMPACTION_CHAR_THRESHOLD == 1_600_000
     assert DeepSeekHTTPProvider.COMPACTION_CHAR_THRESHOLD == 1_600_000
+
+
+if __name__ == "__main__":
+    import pytest
+    raise SystemExit(pytest.main([__file__]))

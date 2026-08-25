@@ -279,6 +279,7 @@
     "test_hippo_capability_gate": "force_exclude_glob",
     "test_history_checkpoint": "force_exclude_glob",
     "test_honesty_invariants": "force_exclude_glob",
+    "test_ibl_health_runner_timeout": "force_exclude_glob",
     "test_ibl_ops_axis": "force_exclude_glob",
     "test_ibl_param_escape": "force_exclude_glob",
     "test_ibl_program_grade": "force_exclude_glob",
@@ -320,8 +321,8 @@
     "test_write_ledger": "force_exclude_glob"
   },
   "counts": {
-    "total": 314,
+    "total": 315,
     "engine": 225,
-    "blocklist": 89
+    "blocklist": 90
   }
 }

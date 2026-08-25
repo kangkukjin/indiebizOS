@@ -539,7 +539,7 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
    - `returns:` 필수·enum(`items|transform|scalar|effect`)·transform 정합
    - **fixture 완전성**: `returns: items|scalar` 액션은 `data/ibl_fixtures.json`에 fixture 또는 exempt(사유 명시) 필수 → **신규 액션이 검사망을 못 빠져나가고, 삭제 시 고아 fixture도 잡힌다.**
 
-2. **하루 1회 `scripts/ibl_health_check.py`** (`run_daily_health_check`, AI 0, 수 초) — 그 정적·행동·흐름 검사를 회귀 그물로 한 번 더:
+2. **하루 1회 `scripts/ibl_health_check.py`** (`run_daily_health_check`, AI 0, 수 분) — 그 정적·행동·흐름 검사를 회귀 그물로 한 번 더:
    - **§1A 정적**: `--check` 호출
    - **§1B 통화(fixture)**: `data/ibl_fixtures.json`의 "올바른 파라미터 예 하나"를 라이브 실행 → items 통화 유효성 단언 (GREEN/YELLOW/RED)
    - **§1C 골든 파이프**: 고정 파이프 몇 개를 돌려 `>>` 흐름 단언

@@ -1285,7 +1285,7 @@ def run_ibl_health_check_sync():
     """IBL 건강 점검 동기 실행 — 정적(§1A)+fixture 통화(§1B)+골든 파이프(§1C) 결과 반환 (AI 0).
 
     수동 모드 '건강확인' 버튼용. sync def 라 FastAPI 가 스레드풀에서 돌려(이벤트 루프 비차단),
-    수십 초 걸리는 점검을 끝까지 기다렸다가 GREEN/RED 요약을 돌려준다. self_checks 에도 기록.
+    수 분 걸리는 점검을 끝까지 기다렸다가 GREEN/RED 요약을 돌려준다. self_checks 에도 기록.
     """
     from world_pulse_health import run_ibl_health_check, save_self_check
     try:

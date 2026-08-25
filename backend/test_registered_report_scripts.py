@@ -109,3 +109,7 @@ def test_arxiv_feed_retries_parse_failure(monkeypatch):
     feed, error = module._fetch("cat:cs.AI", "submittedDate", 10)
     assert error is None and len(feed.entries) == 1
 
+
+if __name__ == "__main__":
+    import pytest
+    raise SystemExit(pytest.main([__file__]))

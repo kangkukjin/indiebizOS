@@ -337,7 +337,7 @@ export default function ManualMode() {
   // 계기판 열릴 때 1회 로드
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
-  // 지금 점검 — fixture 통화+정적+골든을 새로 실행(AI 0, 수십 초) 후 계기판 갱신
+  // 지금 점검 — fixture 통화+정적+골든을 새로 실행(AI 0, 수 분) 후 계기판 갱신
   const handleHealthCheck = async () => {
     if (healthChecking) return;
     setErr(null);
@@ -491,7 +491,7 @@ export default function ManualMode() {
             <button
               onClick={handleHealthCheck}
               disabled={healthChecking}
-              title="지금 점검 — fixture 통화·정적·골든을 새로 실행 (AI 0, 수십 초)"
+              title="지금 점검 — fixture 통화·정적·골든을 새로 실행 (AI 0, 수 분)"
               className="px-2.5 py-1 rounded-lg text-xs flex items-center gap-1.5 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 disabled:opacity-50 transition shrink-0"
             >
               {healthChecking ? <Loader2 size={12} className="animate-spin" /> : <RotateCw size={12} />}
@@ -555,7 +555,7 @@ export default function ManualMode() {
           {healthChecking && (
             <div className="text-[11px] text-stone-500 flex items-center gap-1.5">
               <Loader2 size={12} className="animate-spin" />
-              fixture를 실제 실행해 점검 중… 수십 초 걸릴 수 있습니다 (AI 0).
+              fixture를 실제 실행해 점검 중… 약 5분 걸릴 수 있습니다 (AI 0).
             </div>
           )}
           </div>

@@ -159,7 +159,7 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
       });
     },
 
-    /** IBL 건강 점검 동기 실행 — 정적+fixture 통화+골든 파이프 (AI 0). 수십 초 걸린다. */
+    /** IBL 건강 점검 동기 실행 — 정적+fixture 통화+골든 파이프 (AI 0). 수 분 걸린다. */
     async runIblHealthCheck() {
       return client.request<IblHealthResult>('/world-pulse/ibl-health-check', { method: 'POST' });
     },

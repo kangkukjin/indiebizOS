@@ -24,6 +24,8 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+IBL_HEALTH_CHECK_TIMEOUT_S = 600  # 전수 probe 실측 267.52초; 주간 fixture sweep과 같은 하한
+
 
 # ============================================================
 # 가이드 파일 생성
@@ -110,8 +112,12 @@ def run_ibl_health_check() -> List[Dict]:
     try:
         proc = subprocess.run(
             [sys.executable, str(_script)],
-            cwd=str(_root), capture_output=True, text=True, timeout=300,
+            cwd=str(_root), capture_output=True, text=True,
+            timeout=IBL_HEALTH_CHECK_TIMEOUT_S,
         )
+    except subprocess.TimeoutExpired:
+        return _runner_fail(f"ibl_health_check 제한시간 초과 ({IBL_HEALTH_CHECK_TIMEOUT_S}초) — "
+                            "외부 fixture 응답 지연 또는 백엔드 정체 확인 필요")
     except Exception as e:
         return _runner_fail(f"ibl_health_check 실행 실패: {str(e)[:150]}")
 
@@ -1055,7 +1061,7 @@ def get_system_health() -> Dict:
 def get_ibl_health_status() -> Dict:
     """조종실용 — self_checks 에 마지막으로 기록된 IBL 건강을 읽는다.
 
-    검사를 *실행하지 않는다* (수십 초 걸리는 ibl_health_check.py 호출 X). 마지막 일일/수동
+    검사를 *실행하지 않는다* (수 분 걸리는 ibl_health_check.py 호출 X). 마지막 일일/수동
     점검 결과를 SQL 한 번으로 즉시 돌려준다 — 조종실이 열릴 때마다 가볍게 표시하기 위한 것.
     아직 한 번도 점검 안 됐으면 ok=None('미점검').
 

@@ -997,5 +997,5 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - 가드=`backend/test_imagination_round41_repairs.py`(원 48칸+재귀 스칼라·목록 순서·False/0 경계). 관련 44건·전체 backend 573건, IBL 빌드·층·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 160행 test 격리. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_41회차.md`.
 
 - **42회차 (2026-08-25, 4.00배 48과제)** — 축: **구조 값 8종 × 조건 동등성 표기 6종**(단축형·eq·==·ne·!=·조건 목록). validate/execute 48/48 · 기대 의미 36/48. 본 격자 액션 96행 전부 training·성공.
-  - `B42-1` **사전 삽입 순서가 조건 동등성·부등성을 뒤집음** — 다른 순서·중첩 사전 2모양×6표기=12칸. eq 계열은 0행, ne 계열은 1행의 침묵 오답. 발견·수리 대기.
-  - 처방: 스칼라의 기존 수치 비교 계약을 보존하고 dict는 키 순서 무관·list는 순서 보존으로 재귀 비교. 단축형과 eq/ne 별칭이 `_num_eq` 한 벌을 계속 공유. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_42회차.md`.
+  - `B42-1` **사전 삽입 순서가 조건 동등성·부등성을 뒤집음 — 수리됨.** 다른 순서·중첩 사전 2모양×6표기=12칸에서 eq 계열은 0행, ne 계열은 1행의 침묵 오답이었다. 스칼라의 기존 수치 비교 계약을 보존하고 dict는 키 순서 무관 쌍 집합·list는 순서 있는 열로 재귀 비교한다. 정규화된 키 충돌도 쌍 일대일 매칭으로 닫았다.
+  - 가드=`backend/test_imagination_round42_repairs.py`(원 48칸+재귀 스칼라·키 충돌·구조/표시문자열 경계). 관련 101건·전체 backend 582건, IBL 빌드·층·Android 번들, 패키지 reload 후 라이브 원 48/48 통과. 검증 액션 96행 test 격리. 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-25_42회차.md`.

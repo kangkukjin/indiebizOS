@@ -94,6 +94,22 @@ def _as_num(v):
 
 
 def _num_eq(a, b):
+    # B42-1(2026-08-25): str(dict)는 삽입 순서를 의미로 오인한다. JSON 구조는
+    # dict=순서 없는 쌍 집합, list=순서 있는 열로 비교하고 스칼라만 기존 숫자 규칙으로 판다.
+    if isinstance(a, dict) or isinstance(b, dict):
+        if not isinstance(a, dict) or not isinstance(b, dict) or len(a) != len(b):
+            return False
+        unmatched = list(b.items())
+        for akey, avalue in a.items():
+            found = next((i for i, (bkey, bvalue) in enumerate(unmatched)
+                          if _num_eq(akey, bkey) and _num_eq(avalue, bvalue)), None)
+            if found is None:
+                return False
+            unmatched.pop(found)
+        return True
+    if isinstance(a, list) or isinstance(b, list):
+        return (isinstance(a, list) and isinstance(b, list) and len(a) == len(b)
+                and all(_num_eq(left, right) for left, right in zip(a, b)))
     na, nb = _as_num(a), _as_num(b)
     if na is not None and nb is not None:
         return na == nb

@@ -238,6 +238,13 @@ def _check_intercepted(node: str, action: str, params: dict,
 # 나무라면 "요구하며 경고하는" 자기모순이 된다 (2026-08-20 상상훈련 17회차 F17-1(b)).
 _CONTEXT_KEYS = {"project_id", "agent_id"}
 
+# 단항이며 공개 계약상 앞 통화만 받는 data-ops. take/since 는 리터럴 시작점으로
+# items 를 선언하고, join/union/merge 는 병렬·양쪽 입력 계약이라 이 부류가 아니다.
+_PIPELINE_ONLY_TRANSFORMS = {
+    "data_filter", "data_sort", "data_select", "data_compute",
+    "data_rename", "data_flatten", "data_dedup", "data_groupby",
+}
+
 
 def check_params(node: str, action: str, params: Any,
                  action_config: Optional[dict] = None) -> Optional[dict]:
@@ -256,6 +263,19 @@ def check_params(node: str, action: str, params: Any,
                              .get(node, {}).get("actions", {}).get(action)) or {}
         except Exception:
             return None
+
+    # 파이프 전용 변환자의 handler 구현은 내부 통화 주입 때문에 ``items`` 를 읽지만,
+    # 그것이 곧 사용자가 직접 넣어도 된다는 공개 계약은 아니다. AST 읽기키 합집합이
+    # 이 차이를 가려 /validate 만 초록불이고 실행 관문은 거절하던 불일치를 미리 알린다.
+    tool_name = action_config.get("tool", "")
+    schema_props = _schema_props(tool_name) if tool_name else set()
+    direct_items_warning = (
+        "items" in params
+        and action_config.get("router") == "handler"
+        and action_config.get("returns") == "transform"
+        and tool_name in _PIPELINE_ONLY_TRANSFORMS
+        and "items" not in schema_props
+    )
 
     allowed = allowed_param_keys(node, action, action_config)
     if allowed is None:
@@ -288,7 +308,7 @@ def check_params(node: str, action: str, params: Any,
                 if close and close[0] not in user_keys:
                     soft[k] = close[0]
 
-    if not unknown and not soft:
+    if not unknown and not soft and not direct_items_warning:
         return None
 
     suggest: Dict[str, str] = {}
@@ -298,6 +318,12 @@ def check_params(node: str, action: str, params: Any,
             suggest[k] = close[0]
 
     parts = []
+    if direct_items_warning:
+        parts.append(
+            f"'items' 직접 입력은 [{node}:{action}]의 공개 파라미터가 아닙니다 — "
+            f"[table:take]{{items: […], n: …}} >> [{node}:{action}]{{…}}처럼 "
+            "앞 통화로 넘기세요."
+        )
     if unknown:
         parts.append(f"미인식 파라미터 {unknown} — [{node}:{action}] 핸들러가 읽지 않는 키라 "
                      f"조용히 무시됐을 수 있습니다.")
@@ -306,6 +332,9 @@ def check_params(node: str, action: str, params: Any,
     for k, v in soft.items():
         parts.append(f"'{k}' 는 이 액션의 문서화된 파라미터가 아니고 용례에도 없습니다 — "
                      f"'{v}' 를 의도했나요? (핸들러가 읽지 않는 키는 조용히 무시됩니다.)")
+    if direct_items_warning and "items" not in unknown:
+        unknown.append("items")
+        unknown.sort()
     if vocab:
         parts.append(f"이 액션의 주요 키: {sorted(vocab)}.")
     return {"unknown": unknown, "suggest": suggest, "soft": soft,

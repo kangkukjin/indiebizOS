@@ -629,7 +629,15 @@ def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str
     body, end = _extract_bracket_raw(text, brace, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"{text[:12].strip()} 블록 중괄호가 닫히지 않았습니다.")
-    return _parse_block_body(body.strip()), text[end + 1:].strip()
+    parsed = _parse_block_body(body.strip())
+    if parsed is None:
+        label = text.lstrip().split(']', 1)[0].lstrip('[') or "블록"
+        raise IBLSyntaxError(
+            f"{label} 블록은 있지만 몸을 해석하지 못했습니다: {body.strip()[:60]!r}. "
+            "몸에는 IBL 문장 또는 지원되는 한 줄 식을 쓰세요 "
+            "(목록·사전 리터럴을 식에 직접 할당하는 문법은 지원하지 않습니다)."
+        )
+    return parsed, text[end + 1:].strip()
 
 
 def _parse_try_block(code: str) -> Optional[Dict]:

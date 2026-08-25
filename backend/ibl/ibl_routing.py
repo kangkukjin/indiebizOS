@@ -378,7 +378,7 @@ def _route_handler(mapped_tool: str, params: dict,
                       .get("properties") or {})
         except Exception:
             _props = {}
-        _refused, _had_container = [], False
+        _refused, _had_container, _pipeline_items = [], False, False
         for _k, _v in list(merged_params.items()):
             if str(_k).startswith("_"):
                 continue                  # 런타임 내부 키(_wf_stack·_prev_result…)
@@ -403,6 +403,10 @@ def _route_handler(mapped_tool: str, params: dict,
                          else "타입 선언이 없는 자리인데")
                 _refused.append(f"`{_k}` 에는 {_decl} {len(_v)}개짜리 {_kind}이 왔습니다")
                 _had_container = True
+                if (_k == "items" and not _types and mapped_tool in {
+                        "data_filter", "data_sort", "data_select", "data_compute",
+                        "data_rename", "data_flatten", "data_dedup", "data_groupby"}):
+                    _pipeline_items = True
                 continue
             if len(_types) != 1 or _types[0] not in _SCALAR_TYPES:
                 continue                  # 미선언·유니온 = 스칼라 강제 안 함(모르면 통과)
@@ -413,7 +417,11 @@ def _route_handler(mapped_tool: str, params: dict,
             elif type(_new) is not type(_v) or _new != _v:
                 merged_params[_k] = _new  # 되돌릴 수 있는 표기 차이는 조용히 맞춰 준다
         if _refused:
-            if _had_container:
+            if _pipeline_items:
+                _action = mapped_tool.removeprefix("data_")
+                _tail = (f"[table:{_action}] 은 items 직접 입력 대신 앞 통화를 받습니다. "
+                         f"[table:take]{{items: […], n: …}} >> [table:{_action}]{{…}}처럼 이으세요.")
+            elif _had_container:
                 _tail = ("목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 "
                          "($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).")
             else:

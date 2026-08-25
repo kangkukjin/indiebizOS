@@ -138,10 +138,18 @@ def _get_table(obj):
             return {"columns": t.get("columns") or [], "rows": t["rows"]}, obj
         if isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list):
             return {"columns": obj["columns"], "rows": obj["rows"]}, obj
-        # 단일 통화 items(행 dict) → table 재구성: 첫 dict의 키 순서=열, 값=행(§3 table 흡수).
+        # 단일 통화 items(행 dict) → table 재구성. 열은 첫 행 하나가 아니라 전 행에서
+        # 처음 나타난 순서로 합친다. 희소 행의 뒤쪽 키를 첫 행 스키마로 잘라 버리면
+        # union/join 같은 표 연산이 실제 값을 None 으로 바꾸는 침묵 손실이 된다(B36-1).
         items = obj.get("items")
         if isinstance(items, list) and items and all(isinstance(x, dict) for x in items):
-            cols = list(items[0].keys())
+            cols = []
+            seen = set()
+            for item in items:
+                for key in item:
+                    if key not in seen:
+                        seen.add(key)
+                        cols.append(key)
             return {"columns": cols, "rows": [[d.get(c) for c in cols] for d in items]}, obj
     return None, None
 
@@ -327,6 +335,7 @@ _OPS = _wdsl._OPS
 _match = _wdsl._match
 _where_fields = _wdsl._where_fields
 _sort_key = _wdsl._sort_key
+_sort_records = _wdsl._sort_records
 _as_num = _wdsl._as_num
 _num_eq = _wdsl._num_eq
 _num_cmp = _wdsl._num_cmp
@@ -420,19 +429,19 @@ def _op_sort(prev, params):
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         if not dict_recs or any(by in r for r in dict_recs):
-            srt = sorted(dict_recs, key=_sort_key(by), reverse=desc)
+            srt = _sort_records(dict_recs, by, desc)
             return _emit_items(env, srt)
     table, tenv = _get_table(prev)
     if table is not None and by in [str(c) for c in (table.get("columns") or [])]:
         dicts = _row_dicts(table)
-        dicts.sort(key=_sort_key(by), reverse=desc)
+        dicts = _sort_records(dicts, by, desc)
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in dicts]
         return _emit_table(tenv, {"columns": cols, "rows": rows})
     # 손실 투영(예: 주가 table=날짜·종가)이 정렬 키를 접은 경우 — 원천 행까지 거슬러 찾기
     dug = _rows_for_field(prev, by)
     if dug and any(by in r for r in dug):
-        srt = sorted(dug, key=_sort_key(by), reverse=desc)
+        srt = _sort_records(dug, by, desc)
         base_env = env if env is not None else (tenv if tenv is not None else (prev if isinstance(prev, dict) else {}))
         return _emit_items(base_env, srt)
     if recs is None and table is None and not dug:

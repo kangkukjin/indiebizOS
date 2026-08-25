@@ -212,6 +212,21 @@ def _sort_key(field):
     return key
 
 
+def _sort_records(records, field, desc=False):
+    """수치→문자열→결측 순서는 고정하고, 각 값 부류 안의 방향만 뒤집는다.
+
+    ``sorted(..., reverse=True)`` 는 값뿐 아니라 종류 표지까지 뒤집어 None 과 문자열을
+    숫자보다 앞으로 보냈다. 결측값은 정렬 방향과 무관하게 끝에 두는 것이 계약이다.
+    """
+    key = _sort_key(field)
+    buckets = {0: [], 1: [], 2: []}
+    for row in records:
+        buckets[key(row)[0]].append(row)
+    return (sorted(buckets[0], key=key, reverse=desc)
+            + sorted(buckets[1], key=key, reverse=desc)
+            + buckets[2])
+
+
 def _where_fields(where):
     """where 조건이 명시적으로 가리키는 필드 이름들(존재 검증용).
 

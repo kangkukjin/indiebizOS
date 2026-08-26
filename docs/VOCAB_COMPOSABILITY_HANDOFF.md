@@ -1037,3 +1037,13 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **정본이 이긴 계약 충돌 2건**: (a) filter 의 판정 불능 = **오류**(45회차 계약; Codex 는 침묵 False) — 단 결측(null)의 순서 주장은 B37-1 대로 불일치. (b) `inf == inf` 는 참(IEEE) — 비유한수의 공개 유출은 결과 관문이 막는다(Codex 는 동등성 자체를 거부).
 - **정본 관문의 실효 확인**: Codex 원안의 패키지 모듈명 `value_semantics.py` 는 모듈 그림자 관문이, handler 1519줄은 1500줄 관문이 커밋을 차단해 각각 `dataops_value_semantics.py` 개명·분할로 교정했다 — 고립 클론에는 이 관문들이 없었다.
 - **가드(신규 7파일)**: `test_trajectory_spine` · `test_value_semantics_consumer_contract` · `test_groupby_observation_honesty` · `test_groupby_key_currency_matrix` · `test_aggregate_finite_result_gate` · `test_value_semantics_root_convergence` · `test_public_result_contract`+`test_public_result_boundary_matrix`. 전체 backend 스위트 통과.
+
+- **46회차 (2026-08-27, 4.00배 = 4축 × 48칸 = 192칸)** — 축: **A** 텍스트 연산자 6표면 × 정규화 모양 8종 · **B** 텍스트 연산자 × 비문자열/결측 좌변 8종 · **C** where vs api_transforms 표면 동형성 · **D** 관계 키 6표면 × 값 표현 모양 8종. 직접 모듈 프로브 192칸 전수 + 라이브 종단 6건(`origin:"training"` 격리 41행 실측). 결함 62칸 → 7부류, 전부 수리성으로 근본 집행.
+  - `B46-1` **부분일치 연산자(contains/startswith/endswith/in)가 eq 의 텍스트 정규화(공백·casefold)를 승계하지 않음 — 수리됨.** 사설 `str().lower()` 제거, `common.value_semantics.text_match()` 한 벌 신설.
+  - `B46-2` **NFC/NFD 정규형이 전 값 표면에서 다른 실체 — 수리됨.** macOS 파일명(NFD) 직격. classify_value·relation/group 식별자·regex_text 에 NFC. NFKC(전각)는 하지 않음 — 숫자 문법의 전각 침묵 수선 금지와 같은 판정.
+  - `B46-3` **결측 좌변이 "None" 텍스트로 승격돼 contains 가 참을 주장 — 수리됨.** 결측·구조 좌변은 아무것도 주장하지 않는다(B37-1 계약 확장).
+  - `B46-4` **구조(list/dict) 좌변의 파이썬 repr 누출 — 수리됨.** list 좌변 contains 만 원소 멤버십(values_equal)으로 정의, 블록 술어 matches 는 정직 오류.
+  - `B46-5` **`in` 목록 멤버십이 원시 동등성(True∈[1] 참·1.5∈["1.5"] 거짓) — 수리됨.** `list_membership()` = values_equal 멤버십, null∈[null] 보존.
+  - `B46-6` **api_transforms 응답 필터의 contains/in 이 where 와 다른 판결(대소문자 구분) + 비문자열 우변 TypeError 원시 누출 — 수리됨.** 4연산자 전부 common 위임, not_* 의 결측 좌변 무주장.
+  - `B46-7` **관계 키(join/dedup/merge)가 숫자 표기(1 vs 1.0·"1,000" vs 1000·"02" vs 2)를 다른 실체로 — 수리됨.** relation 식별자가 수치 정규형을 접음(43·44회차 숫자 계약 승계). groupby 는 엄격 계약 유지(의도 재확인).
+  - 가드=`backend/test_imagination_round46_repairs.py` 26건(이빨 확인 — 수리 전 코드에서 빨강). 전체 backend 864 passed·2 skipped(가드 포함), IBL 빌드·층·1500줄·Android 번들, 라이브 종단 6/6. 수용된 한계: since 스칼라 키는 str(value) 보존(영속 원장 호환)·compute 식 문자열 비교는 파이썬 의미론(다음 축 후보). 판정·시드 없음. 보고서=`outputs/imagination_training/2026-08-27_46회차.md`.

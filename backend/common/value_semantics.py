@@ -11,6 +11,7 @@ from enum import Enum, IntEnum
 import json
 import math
 import re
+import unicodedata
 from typing import Any
 
 
@@ -145,7 +146,10 @@ def classify_value(value: Any) -> ClassifiedValue:
     if number is not None:
         return ClassifiedValue(ValueKind.NUMBER, value, number=number)
     if isinstance(value, str):
-        text = value.strip().casefold()
+        # NFC 정규형 — 같은 글자의 결합형(NFD, macOS 파일명)과 조합형이 다른 실체가
+        # 되지 않게 한다(46회차 B46-2). 호환 분해(NFKC — 전각·리가처)는 하지 않는다:
+        # 전각 표기 침묵 수선 금지는 숫자 문법과 같은 판정이다.
+        text = unicodedata.normalize("NFC", value).strip().casefold()
         yesno = text.rstrip(".!。").strip()
         if yesno in _YESNO_TEXT:
             text = yesno
@@ -176,6 +180,79 @@ def _conditional_scalar_equal(left: Any, right: Any) -> bool:
 def values_equal(left: Any, right: Any) -> bool:
     """조건 언어 전체의 재귀 동등성(dict 무순서·list 순서 보존)."""
     return structural_equal(left, right, _conditional_scalar_equal)
+
+
+def _partial_text_form(value: Any) -> str | None:
+    """부분일치 연산자(contains/startswith/endswith/in)의 텍스트 관점.
+
+    스칼라만 텍스트가 된다 — 결측(null)·구조(list/dict)는 None(판정 대상 아님).
+    결측을 str() 로 "None" 텍스트로 승격하면 contains 가 없는 값에 대해 참을
+    주장하고(B46-3), 구조를 repr 로 읽으면 따옴표·괄호가 우연 판정을 만든다(B46-4).
+    숫자는 표시 문자열 그대로(쉼표 표기는 접지 않는다 — 부분일치는 텍스트 공간 판정),
+    bool 은 조건 언어의 기존 텍스트("true"/"false")를 쓴다.
+    """
+    classified = classify_value(value)
+    if classified.kind in (ValueKind.NULL, ValueKind.STRUCTURE, ValueKind.OTHER):
+        return None
+    if classified.kind is ValueKind.BOOL:
+        return classified.text
+    if classified.kind is ValueKind.NUMBER:
+        return unicodedata.normalize("NFC", str(value).strip()).casefold()
+    return classified.text
+
+
+def text_match(op: str, left: Any, right: Any) -> bool:
+    """부분일치 텍스트 연산자의 한 벌 판정 — 조건 표면 전부가 이것을 쓴다(B46-6).
+
+    정규화는 eq 의 텍스트 계약(양끝 공백·casefold·NFC)을 그대로 승계한다(B46-1) —
+    한 낱말이 표면·연산자마다 다른 판결을 내지 않는다. list 좌변의 contains 는
+    원소 멤버십(values_equal)이다 — 목록이 값을 '담고 있다'의 자연 의미.
+    """
+    if op == "contains" and isinstance(left, _SEQUENCES):
+        return any(values_equal(item, right) for item in left)
+    left_text, right_text = _partial_text_form(left), _partial_text_form(right)
+    if left_text is None or right_text is None:
+        return False
+    if op == "contains":
+        return right_text in left_text
+    if op == "startswith":
+        return left_text.startswith(right_text)
+    if op == "endswith":
+        return left_text.endswith(right_text)
+    if op == "in":
+        return left_text in right_text
+    raise ValueError(f"알 수 없는 텍스트 연산자: {op}")
+
+
+def negative_text_match(op: str, left: Any, right: Any) -> bool:
+    """부정 부분일치 — 결측·구조 좌변은 부정도 주장하지 않는다(ne 의 결측 계약과 동일)."""
+    if isinstance(left, _SEQUENCES) and op == "contains":
+        return not text_match(op, left, right)
+    if _partial_text_form(left) is None:
+        return False
+    return not text_match(op, left, right)
+
+
+def list_membership(left: Any, collection: Any) -> bool:
+    """목록 멤버십(in)의 한 벌 판정 — 원소 동등성은 조건 언어의 values_equal 이다(B46-5).
+
+    파이썬 원시 `in` 은 True∈[1] 을 참(bool==int), 1.5∈["1.5"] 를 거짓으로 읽어
+    같은 몸의 eq 계약과 정반대 판결을 냈다. null∈[null] 은 참 — 결측 동등 검색
+    ({op:"eq", value:null})과 같은 보존이다.
+    """
+    if not isinstance(collection, (*_SEQUENCES, set, frozenset)):
+        return text_match("in", left, collection)
+    return any(values_equal(left, item) for item in collection)
+
+
+def regex_text(value: Any) -> str | None:
+    """matches(정규식) 표면의 문자열 관점 — NFC 정규형, 대소문자는 정규식의 몫.
+
+    결측·구조는 None(판정 대상 아님) — repr 누출 방지는 부분일치와 같은 계약.
+    """
+    if value is None or isinstance(value, (dict, *_SEQUENCES)):
+        return None
+    return unicodedata.normalize("NFC", str(value))
 
 
 def compare_order(left: Any, right: Any) -> OrderResult | None:
@@ -228,7 +305,8 @@ def _group_scalar_identity(value):
             return "number", str(value).casefold()
         return "number", value
     if isinstance(value, str):
-        return "string", value
+        # NFC — 결합형/조합형은 같은 글자다(B46-2). 대소문자·공백은 다른 JSON 값이라 보존.
+        return "string", unicodedata.normalize("NFC", value)
     try:
         hash(value)
         return f"{type(value).__module__}.{type(value).__qualname__}", value
@@ -242,7 +320,16 @@ def group_identity(value):
 
 
 def _relation_scalar_identity(value):
-    return re.sub(r"\s+", " ", str("" if value is None else value).strip().casefold())
+    # 숫자로 읽히는 표기는 수치 정규형이 키다(B46-7) — 1 과 1.0, "1,000" 과 1000,
+    # "02" 와 2 는 조건 eq 가 같다고 판정하는 같은 실체다(43·44회차 숫자 계약).
+    # 관계 키만 텍스트 표기로 갈라 두면 join/dedup 이 filter 와 다른 선고를 낸다.
+    number = numeric_value(value)
+    if number is not None:
+        if isinstance(number, float) and number.is_integer():
+            number = int(number)
+        return str(number)
+    return re.sub(r"\s+", " ", unicodedata.normalize(
+        "NFC", str("" if value is None else value)).strip().casefold())
 
 
 def relation_identity(value):

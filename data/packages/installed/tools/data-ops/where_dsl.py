@@ -16,11 +16,15 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
     주장하지 않는다. 결측 동등 검색은 구조형 {field,op:"eq",value:null} 로 가능하다.
   · 크기 순서는 양쪽이 숫자이거나 양쪽이 문자열일 때만 정의한다. 서로 다른 타입의 표시
     문자열을 임의로 비교하지 않으며 문자열 양끝 공백은 조건·정렬 표면에서 무시한다.
+  · 부분일치(contains/startswith/endswith/in)·목록 멤버십은 common.value_semantics 한 벌 —
+    eq 의 텍스트 정규화(양끝 공백·casefold·NFC)를 승계하고, 결측·구조 좌변은 아무것도
+    주장하지 않는다(list 좌변의 contains 만 원소 멤버십). 46회차 B46-1~5.
 """
 
 import re
 
-from common.value_semantics import (compare_order, numeric_value, sort_records,
+from common.value_semantics import (compare_order, list_membership, numeric_value,
+                                    regex_text, sort_records, text_match,
                                     value_sort_key, values_equal)
 
 
@@ -40,15 +44,20 @@ def _op_matches(a, b):
 
     두 조건 언어(블록 술어 / where 미니 DSL)의 문법을 같게 두기 위한 낱말이다.
     한쪽에서 배운 표현이 다른 쪽에서 죽으면 그 자체가 마찰이다(19회차 판정).
+    결측·구조 좌변은 불일치 — repr 문자열을 정규식에 먹이지 않는다(B46-4).
     """
-    if a is None:
+    a_text = regex_text(a)
+    if a_text is None:
         return False
     try:
-        return re.search(str(b), str(a)) is not None
+        return re.search(regex_text(str(b)), a_text) is not None
     except re.error as e:
         raise _WhereError(f"정규식 오류 '{b}': {e}")
 
 
+# 부분일치(contains/startswith/endswith/in)·멤버십의 판정은 common.value_semantics
+# 한 벌이다(46회차 B46-1·3·4·5) — 사설 str().lower() 는 eq 의 텍스트 계약(공백·
+# casefold·NFC)을 승계하지 못했고, 결측을 "None" 텍스트로 승격해 참을 주장했다.
 _OPS = {
     "==": lambda a, b: _num_eq(a, b),
     "eq": lambda a, b: _num_eq(a, b),
@@ -62,11 +71,11 @@ _OPS = {
     "gt": lambda a, b: _num_cmp(a, b) > 0,
     ">=": lambda a, b: _num_cmp(a, b) >= 0,
     "ge": lambda a, b: _num_cmp(a, b) >= 0,
-    "contains": lambda a, b: str(b).lower() in str(a).lower(),
-    "in": lambda a, b: (a in b) if isinstance(b, (list, tuple, set)) else (str(a).lower() in str(b).lower()),
+    "contains": lambda a, b: text_match("contains", a, b),
+    "in": lambda a, b: list_membership(a, b),
     "matches": _op_matches,
-    "startswith": lambda a, b: str(a).lower().startswith(str(b).lower()),
-    "endswith": lambda a, b: str(a).lower().endswith(str(b).lower()),
+    "startswith": lambda a, b: text_match("startswith", a, b),
+    "endswith": lambda a, b: text_match("endswith", a, b),
 }
 
 _ORDER_OPS = {"<", "lt", "<=", "le", ">", "gt", ">=", "ge"}

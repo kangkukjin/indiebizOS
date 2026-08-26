@@ -27,7 +27,8 @@ import json
 import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from common.value_semantics import compare_order, numeric_value, values_equal
+from common.value_semantics import (compare_order, numeric_value, regex_text,
+                                    values_equal)
 
 _MISSING = object()          # 경로 부재 표지 (값 null 과 구별)
 _KEYWORDS = {"and", "or", "not"}
@@ -416,8 +417,15 @@ class Evaluator:
         if op == "matches":
             if lv is None:
                 raise PredicateError("matches 좌변이 null 입니다.")
+            lv_text = regex_text(lv)
+            if lv_text is None:
+                # 구조(list/dict)를 repr 로 정규식에 먹이면 따옴표·괄호가 우연 판정을
+                # 만든다(B46-4). 판정 불능은 거짓이 아니다 — 정직 오류 채널로.
+                raise PredicateError(
+                    f"matches 좌변이 목록/사전({type(lv).__name__})입니다 — "
+                    "텍스트 필드를 경로로 지목하세요.")
             try:
-                return re.search(str(rv), str(lv)) is not None
+                return re.search(regex_text(str(rv)), lv_text) is not None
             except re.error as e:
                 raise PredicateError(f"정규식 오류 '{rv}': {e}")
         if op in ("==", "!="):

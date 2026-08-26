@@ -29,8 +29,9 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from common.html_utils import clean_html
-from common.value_semantics import (compare_order, order_matches, sort_records,
-                                    values_equal)
+from common.value_semantics import (compare_order, list_membership,
+                                    negative_text_match, order_matches,
+                                    sort_records, text_match, values_equal)
 
 
 # === 메인 함수 ===
@@ -370,14 +371,17 @@ def _match_condition(item: Any, condition: dict) -> bool:
         return _safe_compare(value, condition["lt"], "<")
     if "lte" in condition:
         return _safe_compare(value, condition["lte"], "<=")
+    # 부분일치·멤버십의 뜻은 조건 언어(where)와 같은 한 벌이다(46회차 B46-6) —
+    # 이 표면만 대소문자를 구분하고 비문자열 우변에 TypeError 를 흘리던 사설 판정 제거.
     if "contains" in condition:
-        return isinstance(value, str) and condition["contains"] in value
+        return text_match("contains", value, condition["contains"])
     if "not_contains" in condition:
-        return not (isinstance(value, str) and condition["not_contains"] in value)
+        return negative_text_match("contains", value, condition["not_contains"])
     if "in" in condition:
-        return value in condition["in"]
+        return list_membership(value, condition["in"])
     if "not_in" in condition:
-        return value not in condition["not_in"]
+        # 결측 좌변은 부정도 주장하지 않는다(ne 의 결측 계약과 동일)
+        return value is not None and not list_membership(value, condition["not_in"])
 
     return True
 

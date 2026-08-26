@@ -258,6 +258,7 @@
     "test_corrupt_not_absent": "force_exclude_glob",
     "test_crawl_stage_honesty": "force_exclude_glob",
     "test_data_ownership": "force_exclude_glob",
+    "test_datetime_semantics": "force_exclude_glob",
     "test_deepseek_reasoning": "force_exclude_glob",
     "test_desc_pair_coverage": "force_exclude_glob",
     "test_discover_contribution": "force_exclude_glob",
@@ -350,8 +351,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 344,
+    "total": 345,
     "engine": 225,
-    "blocklist": 119
+    "blocklist": 120
   }
 }

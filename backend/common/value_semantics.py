@@ -6,6 +6,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, localcontext
 from enum import Enum, IntEnum
 import json
@@ -24,12 +25,21 @@ _NUMBER_TEXT = re.compile(
     r"(?:[eE][+-]?[0-9]+)?(?:[ \t]*%)?$"
 )
 _YESNO_TEXT = {"yes", "no", "true", "false"}
+# 선언된 날짜 표기만 날짜다 — **ISO 8601** (2026-08-27 사용자 판정: "ISO 8601만 날짜로 선언").
+# 날짜(YYYY-MM-DD) + 선택 시각(T 또는 공백 구분, 초·소수초 선택) + 선택 시간대(Z/±HH:MM).
+# "08/25/2026"·"2026.8.25" 를 조용히 날짜로 수선해 읽으면 오독이 관측으로 위장된다
+# (숫자 문법 엄격화와 같은 판정). 표기가 맞아도 달력이 거부하면(2026-13-45) 날짜가 아니다.
+_DATETIME_TEXT = re.compile(
+    r"^\d{4}-\d{2}-\d{2}"
+    r"(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})?)?$"
+)
 
 
 class ValueKind(str, Enum):
     NULL = "null"
     BOOL = "bool"
     NUMBER = "number"
+    DATETIME = "datetime"
     TEXT = "text"
     STRUCTURE = "structure"
     OTHER = "other"
@@ -43,12 +53,13 @@ class OrderResult(IntEnum):
 
 @dataclass(frozen=True)
 class ClassifiedValue:
-    """원값을 한 번 분류한 결과. number/text는 비교 가능한 정규형이다."""
+    """원값을 한 번 분류한 결과. number/text/moment 는 비교 가능한 정규형이다."""
 
     kind: ValueKind
     original: Any
     number: Any = None
     text: str | None = None
+    moment: Any = None      # DATETIME 의 파싱 정규형 (datetime — 날짜만이면 그날 00:00 naive)
 
 
 def freeze_structure(value: Any, scalar_identity: Callable[[Any], Any]):
@@ -117,6 +128,33 @@ def numeric_value(value: Any):
         return None
 
 
+def datetime_value(value: Any):
+    """선언된 ISO 8601 표기(또는 datetime 객체)를 시각으로 읽는다. 아니면 None.
+
+    날짜만(YYYY-MM-DD)은 그날 00:00 naive — "그날 이후" 필터의 자연 해석이다.
+    표기 밖(슬래시·점 구분)과 달력 위반은 수선하지 않는다(선언 표기 계약).
+    """
+    if isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not _DATETIME_TEXT.fullmatch(text):
+        return None
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def _moment_order(a: "ClassifiedValue", b: "ClassifiedValue"):
+    """두 시각의 순서. naive 와 aware 가 섞이면 판정 불능(None) — 시간대를 지어내지 않는다."""
+    left, right = a.moment, b.moment
+    if (left.tzinfo is None) != (right.tzinfo is None):
+        return None
+    return OrderResult((left > right) - (left < right))
+
+
 def is_nonfinite_number(value: Any) -> bool:
     """값이 NaN/Infinity 수치(또는 그 표기)인지 판정한다."""
     if isinstance(value, bool) or isinstance(value, int):
@@ -145,6 +183,9 @@ def classify_value(value: Any) -> ClassifiedValue:
     number = numeric_value(value)
     if number is not None:
         return ClassifiedValue(ValueKind.NUMBER, value, number=number)
+    moment = datetime_value(value)
+    if moment is not None:
+        return ClassifiedValue(ValueKind.DATETIME, value, moment=moment)
     if isinstance(value, str):
         # NFC 정규형 — 같은 글자의 결합형(NFD, macOS 파일명)과 조합형이 다른 실체가
         # 되지 않게 한다(46회차 B46-2). 호환 분해(NFKC — 전각·리가처)는 하지 않는다:
@@ -165,6 +206,12 @@ def _conditional_scalar_equal(left: Any, right: Any) -> bool:
         return a.kind is b.kind
     if a.kind is ValueKind.NUMBER and b.kind is ValueKind.NUMBER:
         return a.number == b.number
+    if a.kind is ValueKind.DATETIME and b.kind is ValueKind.DATETIME:
+        # 같은 순간은 표기가 달라도 같다(Z ↔ +00:00, 날짜만 ↔ 그날 00:00).
+        # naive 와 aware 는 같은 순간임을 증명할 수 없다 — 다르다고 본다.
+        if (a.moment.tzinfo is None) != (b.moment.tzinfo is None):
+            return False
+        return a.moment == b.moment
     # 기존 공개 계약: false == "false". bool은 숫자와는 절대 같지 않다.
     if ValueKind.BOOL in (a.kind, b.kind):
         return (a.kind in (ValueKind.BOOL, ValueKind.TEXT)
@@ -196,7 +243,8 @@ def _partial_text_form(value: Any) -> str | None:
         return None
     if classified.kind is ValueKind.BOOL:
         return classified.text
-    if classified.kind is ValueKind.NUMBER:
+    if classified.kind in (ValueKind.NUMBER, ValueKind.DATETIME):
+        # 숫자·날짜의 부분일치는 표시 문자열 관점 — "2026-08" contains 검색 지원
         return unicodedata.normalize("NFC", str(value).strip()).casefold()
     return classified.text
 
@@ -260,6 +308,8 @@ def compare_order(left: Any, right: Any) -> OrderResult | None:
     a, b = classify_value(left), classify_value(right)
     if a.kind is ValueKind.NUMBER and b.kind is ValueKind.NUMBER:
         return OrderResult((a.number > b.number) - (a.number < b.number))
+    if a.kind is ValueKind.DATETIME and b.kind is ValueKind.DATETIME:
+        return _moment_order(a, b)
     if a.kind is ValueKind.TEXT and b.kind is ValueKind.TEXT:
         return OrderResult((a.text > b.text) - (a.text < b.text))
     return None
@@ -304,7 +354,13 @@ def _group_scalar_identity(value):
         if isinstance(value, float) and not math.isfinite(value):
             return "number", str(value).casefold()
         return "number", value
+    if isinstance(value, datetime):
+        return "datetime", _canonical_moment_text(value)
     if isinstance(value, str):
+        # 선언 표기(ISO 8601)의 날짜는 표기가 아니라 순간이 정체성이다(2026-08-27 판정)
+        moment = datetime_value(value)
+        if moment is not None:
+            return "datetime", _canonical_moment_text(moment)
         # NFC — 결합형/조합형은 같은 글자다(B46-2). 대소문자·공백은 다른 JSON 값이라 보존.
         return "string", unicodedata.normalize("NFC", value)
     try:
@@ -319,6 +375,14 @@ def group_identity(value):
     return freeze_structure(value, _group_scalar_identity)
 
 
+def _canonical_moment_text(moment) -> str:
+    """시각의 정본 키 표기 — aware 는 UTC 로 접고, naive 와는 접두로 영구 분리."""
+    if moment.tzinfo is not None:
+        from datetime import timezone
+        return "aware:" + moment.astimezone(timezone.utc).replace(tzinfo=None).isoformat()
+    return "naive:" + moment.isoformat()
+
+
 def _relation_scalar_identity(value):
     # 숫자로 읽히는 표기는 수치 정규형이 키다(B46-7) — 1 과 1.0, "1,000" 과 1000,
     # "02" 와 2 는 조건 eq 가 같다고 판정하는 같은 실체다(43·44회차 숫자 계약).
@@ -328,6 +392,11 @@ def _relation_scalar_identity(value):
         if isinstance(number, float) and number.is_integer():
             number = int(number)
         return str(number)
+    # 선언 표기의 날짜도 같은 순간이면 같은 실체다(ISO 8601 판정, 2026-08-27) —
+    # "2026-08-25T01:00Z" 와 "+00:00", 날짜만과 그날 00:00 이 join/dedup 에서 만난다.
+    moment = datetime_value(value)
+    if moment is not None:
+        return _canonical_moment_text(moment)
     return re.sub(r"\s+", " ", unicodedata.normalize(
         "NFC", str("" if value is None else value)).strip().casefold())
 
@@ -486,29 +555,40 @@ def aggregate_numbers(op: str, numbers: list):
 
 
 def value_sort_key(field: str, number_parser=numeric_value):
-    """숫자(0)→문자열(1)→결측(2) 버킷의 행 정렬 키."""
+    """숫자(0)→날짜(1)→문자열(2)→결측(3) 버킷의 행 정렬 키.
+
+    날짜 버킷은 파싱 순간으로 정렬한다(ISO 8601 판정, 2026-08-27) — 표기·시간대가
+    섞여도 순서가 참이다. naive 는 aware 앞의 하위 버킷(둘의 순서는 판정 불능이라
+    지어내지 않고 종류로 가른다 — 숫자→문자열 버킷과 같은 규율).
+    number_parser=None(문자열 강제 정렬)이면 날짜 해석도 끈다 — 강제의 뜻을 지킨다.
+    """
     def key(item):
         value = item.get(str(field)) if isinstance(item, dict) else None
         if value is None:
-            return 2, 0.0, ""
+            return 3, 0.0, ""
         if number_parser:
             number = number_parser(value)
             if number is not None:
                 return 0, number, ""
+            moment = datetime_value(value)
+            if moment is not None:
+                prefix = "0|" if moment.tzinfo is None else "1|"
+                return 1, 0.0, prefix + _canonical_moment_text(moment)
         classified = classify_value(value)
         text = (classified.text if classified.kind is ValueKind.TEXT
                 else str(value).strip().casefold())
-        return 1, 0.0, text
+        return 2, 0.0, text
     return key
 
 
 def sort_records(records, field: str, descending: bool = False,
                  number_parser=numeric_value):
-    """버킷 순서는 고정하고 숫자·문자열 버킷 안에서만 방향을 적용한다."""
+    """버킷 순서는 고정하고 숫자·날짜·문자열 버킷 안에서만 방향을 적용한다."""
     key = value_sort_key(field, number_parser)
-    buckets = {0: [], 1: [], 2: []}
+    buckets = {0: [], 1: [], 2: [], 3: []}
     for row in records:
         buckets[key(row)[0]].append(row)
     return (sorted(buckets[0], key=key, reverse=descending)
             + sorted(buckets[1], key=key, reverse=descending)
-            + buckets[2])
+            + sorted(buckets[2], key=key, reverse=descending)
+            + buckets[3])

@@ -42,7 +42,7 @@ def _semantic_compare(left: Any, pairs) -> bool:
             if order is None:
                 raise ValueError(
                     f"크기 비교({op}) 불가 — {type(cur).__name__} 와 {type(right).__name__} 은 "
-                    "둘 다 숫자이거나 문자열이어야 합니다")
+                    "숫자·날짜(ISO 8601)·문자열 중 같은 종류여야 합니다")
             ok = {"<": order < 0, "<=": order <= 0, ">": order > 0, ">=": order >= 0}[op]
         if not ok:
             return False

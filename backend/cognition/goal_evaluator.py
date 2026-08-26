@@ -166,19 +166,11 @@ def check_termination(goal: Dict) -> Optional[str]:
 
 def _parse_datetime(text: str) -> Optional[datetime]:
     """다양한 형식의 날짜/시간 문자열 파싱"""
-    formats = [
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%d",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M",
-    ]
-    for fmt in formats:
-        try:
-            return datetime.strptime(text, fmt)
-        except ValueError:
-            continue
-    return None
+    # 선언 표기의 정본은 common.value_semantics.datetime_value 한 벌이다
+    # (ISO 8601 판정, 2026-08-27) — 사설 포맷 목록은 같은 표기의 사본이라 접었다.
+    # 위임으로 소수초·시간대(Z/±HH:MM)까지 같은 문법으로 읽는다.
+    from common.value_semantics import datetime_value
+    return datetime_value(text)
 
 
 # ============ within 기한 계산 ============

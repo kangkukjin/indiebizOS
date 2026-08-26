@@ -423,7 +423,8 @@ class Evaluator:
         if order is None:
             raise PredicateError(
                 f"크기 비교({op}) 불가 — 좌변 {type(lv).__name__}({str(lv)[:40]!r}) 과 "
-                f"우변 {type(rv).__name__}({str(rv)[:40]!r}) 은 둘 다 숫자이거나 문자열이어야 합니다.")
+                f"우변 {type(rv).__name__}({str(rv)[:40]!r}) 은 숫자·날짜(ISO 8601)·문자열 중 "
+                "같은 종류여야 합니다.")
         if op == ">":
             return order > 0
         if op == ">=":

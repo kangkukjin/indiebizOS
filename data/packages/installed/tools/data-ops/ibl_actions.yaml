@@ -28,7 +28,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
-    target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+    target_description: 'by(정렬 기준 필드/열명, 필수) · desc(내림차순 bool, 기본 false). 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
     group: transform
     router: handler
     tool: data_sort

@@ -1133,12 +1133,13 @@ def _op_merge(prev, params):
 
 
 def _op_flatten(prev, params):
-    """행 속 중첩 목록을 펼쳐(unnest) 행들로 — each 의 출구.
+    """행 속 중첩 목록 필드를 펼쳐(unnest) 행들로.
 
-    field(기본 "_result") 경로의 값이 목록이면 그 원소들이 새 행이 되고,
-    {items: [...]} 봉투면 items 로 자동 승격(each 가 do 결과를 _result 에 통째로
-    붙이는 계약의 짝). keep=[부모 필드]는 각 새 행에 승계(충돌 시 _2 접미 —
+    field 경로의 값이 목록이면 그 원소들이 새 행이 되고, {items: [...]} 봉투면
+    items 로 자동 승격. keep=[부모 필드]는 각 새 행에 승계(충돌 시 _2 접미 —
     침묵 오선택 방지). 목록 아닌 행은 건너뛰되 skipped_rows 로 신고한다.
+    ★기본값 "_result" 는 은퇴한 옛 each 계약의 잔영이다 — 지금은 그 자리로 온
+    옛 문장에게 "flatten 을 빼라"는 참인 처방을 돌려주는 이행 진단용으로만 남는다.
     """
     recs, env = _get_items(prev)
     if recs is None:
@@ -1147,7 +1148,7 @@ def _op_flatten(prev, params):
             return {"success": False,
                     "error": "flatten: items 통화 전용입니다(표형 table 셀엔 중첩 목록이 없습니다)."}
         return {"success": False,
-                "error": "flatten: 입력에서 items 통화를 찾지 못했습니다. each 결과 뒤(>>)에 놓으세요."}
+                "error": "flatten: 입력에서 items 통화를 찾지 못했습니다. 중첩 목록을 가진 통화 뒤(>>)에 놓고 field 로 그 필드를 지목하세요."}
     field = str(params.get("field") or "_result")
     keep = params.get("keep") or []
     if not isinstance(keep, list):

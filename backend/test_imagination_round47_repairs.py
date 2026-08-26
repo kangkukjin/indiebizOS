@@ -78,5 +78,20 @@ def test_catalog_teaches_current_researcher_and_flatten_contracts():
     assert "flatten 없이" in flatten["target_description"]
 
 
+def test_flatten_runtime_message_does_not_teach_retired_each_idiom():
+    """카탈로그만 고치면 샌다 — 런타임 오류 문구·독스트링도 같은 계약을 말해야 한다."""
+    dops_path = (_ROOT / "data" / "packages" / "installed" / "tools" /
+                 "data-ops" / "handler.py")
+    spec = importlib.util.spec_from_file_location("round47_dataops", dops_path)
+    dops = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dops)
+
+    out = dops._op_flatten({"ok": True}, {})
+    assert out["success"] is False
+    assert "each 결과 뒤" not in out["error"]
+    assert "field" in out["error"]
+    assert "each 의 출구" not in (dops._op_flatten.__doc__ or "")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

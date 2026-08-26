@@ -722,11 +722,8 @@ _PIPE_SUGAR = {
 
 
 def _pipe_looks_numeric(s: str) -> bool:
-    try:
-        float(str(s).replace(",", "").strip())
-        return True
-    except Exception:
-        return False
+    from common.value_semantics import numeric_value
+    return numeric_value(s) is not None
 
 
 def _pipe_block(verb: str, val: str) -> str:

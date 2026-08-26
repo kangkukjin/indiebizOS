@@ -13,7 +13,13 @@ from typing import Any
 
 
 _SEQUENCES = (list, tuple)
-_INTEGER_TEXT = re.compile(r"^[+-]?\d+$")
+_INTEGER_TEXT = re.compile(r"^[+-]?[0-9]+$")
+# 선언된 숫자 표기만 숫자다: 자릿수 구분은 3자리 정군("1,234,567"), 소수점·지수·백분율.
+# "1,,000"·"12,34"(유럽식 소수)·"1_000" 을 조용히 수선해 읽으면 오독이 관측으로 위장된다.
+_NUMBER_TEXT = re.compile(
+    r"^[+-]?(?:(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{3})+)(?:\.[0-9]*)?|\.[0-9]+)"
+    r"(?:[eE][+-]?[0-9]+)?(?:[ \t]*%)?$"
+)
 _YESNO_TEXT = {"yes", "no", "true", "false"}
 
 
@@ -94,15 +100,34 @@ def numeric_value(value: Any):
     if isinstance(value, float):
         return value if math.isfinite(value) else None
     try:
-        text = str(value).replace(",", "").strip()
+        text = str(value).strip()
+        if not _NUMBER_TEXT.fullmatch(text):
+            return None
         if text.endswith("%"):
-            text = text[:-1].strip()
+            text = text[:-1].rstrip()
+        text = text.replace(",", "")
         if _INTEGER_TEXT.fullmatch(text):
             return int(text)
         number = float(text)
         return number if math.isfinite(number) else None
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def is_nonfinite_number(value: Any) -> bool:
+    """값이 NaN/Infinity 수치(또는 그 표기)인지 판정한다."""
+    if isinstance(value, bool) or isinstance(value, int):
+        return False
+    if isinstance(value, float):
+        return not math.isfinite(value)
+    if isinstance(value, str):
+        if numeric_value(value) is not None:
+            return False
+        try:
+            return not math.isfinite(float(value.strip().replace(",", "").rstrip("%")))
+        except (ValueError, OverflowError):
+            return False
+    return False
 
 
 def classify_value(value: Any) -> ClassifiedValue:
@@ -159,6 +184,29 @@ def compare_order(left: Any, right: Any) -> OrderResult | None:
     if a.kind is ValueKind.TEXT and b.kind is ValueKind.TEXT:
         return OrderResult((a.text > b.text) - (a.text < b.text))
     return None
+
+
+def order_matches(result: OrderResult | None, op: str) -> bool:
+    """공통 순서를 비교 연산자의 bool 로 번역한다. 판정 불능(None)은 항상 False.
+
+    오류 봉투를 낼 수 없는 표면(goal case 분기·응답 변환 match)이 판정 불능을
+    조용한 성공 오답 대신 불일치로 접기 위한 한 벌 번역기다. 오류를 낼 수 있는
+    표면(where/블록 술어)은 None 을 자기 오류로 번역해야 한다 — 이 함수를 쓰지 말 것.
+    """
+    if result is None:
+        return False
+    return {
+        "<": result < 0,
+        "lt": result < 0,
+        "<=": result <= 0,
+        "lte": result <= 0,
+        "le": result <= 0,
+        ">": result > 0,
+        "gt": result > 0,
+        ">=": result >= 0,
+        "gte": result >= 0,
+        "ge": result >= 0,
+    }.get(op, False)
 
 
 def numeric_observations(values):

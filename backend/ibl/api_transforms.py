@@ -29,7 +29,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from common.html_utils import clean_html
-from common.value_semantics import sort_records
+from common.value_semantics import (compare_order, order_matches, sort_records,
+                                    values_equal)
 
 
 # === 메인 함수 ===
@@ -358,9 +359,9 @@ def _match_condition(item: Any, condition: dict) -> bool:
     value = item.get(field) if isinstance(item, dict) else None
 
     if "eq" in condition:
-        return value == condition["eq"]
+        return values_equal(value, condition["eq"])
     if "ne" in condition:
-        return value != condition["ne"]
+        return not values_equal(value, condition["ne"])
     if "gt" in condition:
         return _safe_compare(value, condition["gt"], ">")
     if "gte" in condition:
@@ -382,19 +383,9 @@ def _match_condition(item: Any, condition: dict) -> bool:
 
 
 def _safe_compare(a: Any, b: Any, op: str) -> bool:
-    """안전한 비교 (타입 불일치 시 False)"""
-    try:
-        if op == ">":
-            return a > b
-        elif op == ">=":
-            return a >= b
-        elif op == "<":
-            return a < b
-        elif op == "<=":
-            return a <= b
-    except (TypeError, ValueError):
-        pass
-    return False
+    """안전한 비교 (판정 불능 시 False) — Python 원시 비교는 "10">"9" 를 사전식으로
+    읽어 조건 표면마다 답이 갈렸다. 순서의 뜻은 공통 엔진 한 벌이다."""
+    return order_matches(compare_order(a, b), op)
 
 
 # === 5. sort: 정렬 ===

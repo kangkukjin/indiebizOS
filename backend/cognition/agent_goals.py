@@ -461,24 +461,14 @@ class AgentGoalsMixin:
         op = match.group(1)
         compare_raw = match.group(2).strip().strip("'\"")
 
-        try:
-            # 숫자 비교 시도
-            sense_num = float(sense_value)
-            compare_num = float(compare_raw)
-
-            if op == "==": return sense_num == compare_num
-            if op == "!=": return sense_num != compare_num
-            if op == ">":  return sense_num > compare_num
-            if op == ">=": return sense_num >= compare_num
-            if op == "<":  return sense_num < compare_num
-            if op == "<=": return sense_num <= compare_num
-        except (ValueError, TypeError):
-            # 문자열 비교
-            sense_str = str(sense_value)
-            if op == "==": return sense_str == compare_raw
-            if op == "!=": return sense_str != compare_raw
-
-        return False
+        # 값의 뜻은 공통 엔진 한 벌 — float() 직접 호출은 "nan" 문자열을 숫자로 읽고
+        # "1,000" 을 못 읽어 조건 표면마다 다른 답을 냈다.
+        from common.value_semantics import compare_order, order_matches, values_equal
+        if op == "==":
+            return values_equal(sense_value, compare_raw)
+        if op == "!=":
+            return not values_equal(sense_value, compare_raw)
+        return order_matches(compare_order(sense_value, compare_raw), op)
 
     def _execute_sense_source(self, source: str) -> Any:
         """

@@ -12,6 +12,9 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Any
 import re
 
+from common.value_semantics import (compare_order, numeric_value, order_matches,
+                                    values_equal)
+
 
 # ============ 모델별 토큰 단가 (USD) ============
 
@@ -64,18 +67,13 @@ def evaluate_range(value: float, range_expr: Dict) -> bool:
     """
     op = range_expr.get("op")
 
-    if op == "gt":
-        return value > range_expr["value"]
-    elif op == "gte":
-        return value >= range_expr["value"]
-    elif op == "lt":
-        return value < range_expr["value"]
-    elif op == "lte":
-        return value <= range_expr["value"]
+    if op in ("gt", "gte", "lt", "lte"):
+        return order_matches(compare_order(value, range_expr["value"]), op)
     elif op == "eq":
-        return value == range_expr["value"]
+        return values_equal(value, range_expr["value"])
     elif op == "range":
-        return range_expr["min"] <= value <= range_expr["max"]
+        return (order_matches(compare_order(value, range_expr["min"]), "gte")
+                and order_matches(compare_order(value, range_expr["max"]), "lte"))
 
     return False
 
@@ -109,24 +107,20 @@ def select_case_branch(sense_value: Any, branches: List[Dict],
 
         # 범위 표현식 매칭 (숫자)
         if range_expr and _is_numeric(sense_value):
-            num_value = float(sense_value)
+            num_value = numeric_value(sense_value)
             if evaluate_range(num_value, range_expr):
                 return branch.get("action")
 
         # 문자열 매칭
-        elif str(sense_value) == pattern:
+        elif values_equal(sense_value, pattern):
             return branch.get("action")
 
     return default
 
 
 def _is_numeric(value: Any) -> bool:
-    """값이 숫자로 변환 가능한지 확인"""
-    try:
-        float(value)
-        return True
-    except (TypeError, ValueError):
-        return False
+    """값이 유한 숫자 관측인지 — float() 은 "nan"/"inf" 문자열도 삼켰다."""
+    return numeric_value(value) is not None
 
 
 # ============ 종료 조건 판단 ============

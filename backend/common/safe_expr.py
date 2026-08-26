@@ -37,19 +37,13 @@ def compile_expr(expr: str) -> Tuple[Any, List[str], List[str]]:
 
 
 def as_num(v: Any):
-    if isinstance(v, bool):
-        return None
-    if isinstance(v, (int, float)):
-        return v
-    if isinstance(v, str):
-        s = v.strip().replace(",", "")
-        if s.endswith("%"):
-            s = s[:-1]
-        try:
-            return float(s) if ("." in s or "e" in s.lower()) else int(s)
-        except ValueError:
-            return None
-    return None
+    """호환 이름 — 숫자 관측의 뜻은 common.value_semantics 한 벌이다.
+
+    이 자리의 사설 판은 float NaN/Infinity 를 관측으로 통과시켜 compute/reduce 가
+    조건·정렬 표면과 다른 수 체계를 살았다(44회차 수리의 사각).
+    """
+    from common.value_semantics import numeric_value
+    return numeric_value(v)
 
 
 def eval_expr(code: Any, row: Dict[str, Any], extra: Dict[str, Any] = None) -> Any:

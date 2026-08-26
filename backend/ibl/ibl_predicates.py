@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from common.value_semantics import (compare_order, numeric_value, regex_text,
                                     values_equal)
 
-_MISSING = object()          # 경로 부재 표지 (값 null 과 구별)
+from common.field_path import MISSING as _MISSING, walk_path as _fp_walk  # 경로 해석 한 벌 (2026-08-27)
 _KEYWORDS = {"and", "or", "not"}
 _OPS2 = ("==", "!=", ">=", "<=")
 _OPS1 = (">", "<")
@@ -279,23 +279,11 @@ def _load_var(raw: Any) -> Any:
 
 
 def walk_path(obj: Any, path: Optional[str]) -> Any:
-    """점 경로 추출 — dict 키와 리스트 인덱스(숫자). 부재는 _MISSING."""
-    if not path:
-        return obj
-    cur = obj
-    for key in path.split("."):
-        if isinstance(cur, dict):
-            if key not in cur:
-                return _MISSING
-            cur = cur[key]
-        elif isinstance(cur, list) and key.isdigit():
-            idx = int(key)
-            if idx >= len(cur):
-                return _MISSING
-            cur = cur[idx]
-        else:
-            return _MISSING
-    return cur
+    """점 경로 추출 — dict 키와 리스트 인덱스(숫자). 부재는 _MISSING.
+
+    걷는 규칙의 정본은 common.field_path 한 벌이다(2026-08-27 경로 방언 통일).
+    """
+    return _fp_walk(obj, path) if path else obj
 
 
 def _num(v: Any) -> Optional[float]:

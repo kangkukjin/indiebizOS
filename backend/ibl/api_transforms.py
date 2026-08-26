@@ -28,6 +28,7 @@ Python 코드 없이 YAML 선언만으로 응답 변환이 가능합니다.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
+from common.field_path import MISSING as PATH_MISSING, walk_path
 from common.html_utils import clean_html
 from common.value_semantics import (compare_order, list_membership,
                                     negative_text_match, order_matches,
@@ -125,58 +126,13 @@ def _extract_path(data: Any, path) -> Any:
     if not path:
         return data
 
-    parts = _parse_path(path)
-    current = data
-
-    for part in parts:
-        if current is None:
-            return None
-
-        if isinstance(part, int):
-            # 배열 인덱스
-            if isinstance(current, list) and 0 <= part < len(current):
-                current = current[part]
-            else:
-                return None
-        elif isinstance(current, dict):
-            if part in current:
-                current = current[part]
-            else:
-                # XML 중첩 탐색: body > items > {part} 등
-                found = _extract_xml_nested(current, part)
-                if found is not None:
-                    current = found
-                else:
-                    return None
-        else:
-            return None
-
-    return current
-
-
-def _parse_path(path: str) -> list:
-    """경로 문자열을 파트 리스트로 분리
-
-    "data[0].name" -> ["data", 0, "name"]
-    "items"        -> ["items"]
-    "[0]"          -> [0]
-    """
-    import re
-    parts = []
-    for segment in path.split("."):
-        if not segment:
-            continue
-        # "[0]" 또는 "data[0]" 패턴
-        match = re.match(r'^(\w*)(?:\[(\d+)\])?$', segment)
-        if match:
-            name, idx = match.groups()
-            if name:
-                parts.append(name)
-            if idx is not None:
-                parts.append(int(idx))
-        else:
-            parts.append(segment)
-    return parts
+    # 걷는 규칙의 정본은 common.field_path 한 벌 (2026-08-27 경로 방언 통일 —
+    # 대괄호는 이 표면 전용 확장, XML 중첩 태그 탐색은 문법이 아니라 이 표면의 폴백 정책).
+    value = walk_path(
+        data, path, brackets=True,
+        fallback=lambda cur, part: _extract_xml_nested(cur, part)
+        if isinstance(cur, dict) else None)
+    return None if value is PATH_MISSING else value
 
 
 def _extract_xml_nested(data: dict, tag_name: str) -> Any:
@@ -311,14 +267,9 @@ class _SafeDict(dict):
 
 
 def _get_nested(data: dict, dotted_key: str) -> Any:
-    """점(.) 경로로 중첩 값 접근: "a.b.c" -> data["a"]["b"]["c"]"""
-    current = data
-    for part in dotted_key.split("."):
-        if isinstance(current, dict):
-            current = current.get(part)
-        else:
-            return None
-    return current
+    """점(.) 경로로 중첩 값 접근: "a.b.c" -> data["a"]["b"]["c"] — field_path 한 벌."""
+    value = walk_path(data, dotted_key)
+    return None if value is PATH_MISSING else value
 
 
 # === 4. filter: 조건 필터링 ===

@@ -581,7 +581,7 @@ class BlogHybridSearch:
         if not content or len(content) < 50:
             return ""
         query_words = [w for w in query.split() if len(w) > 1]
-        sentences = [s.strip() for s in content.split('.') if len(s.strip()) > 30]
+        sentences = [s.strip() for s in content.split('.') if len(s.strip()) > 30]  # path-ok: 문장 분리 — 경로 아님
         relevant = []
         for sentence in sentences:
             score = sum(1 for w in query_words if w in sentence)

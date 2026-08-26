@@ -1168,12 +1168,11 @@ def _op_flatten(prev, params):
                               f"사용 가능한 필드: {sample}")}
 
     def _dig(row, path):
-        cur = row
-        for part in path.split("."):
-            if not isinstance(cur, dict):
-                return None
-            cur = cur.get(part)
-        return cur
+        # 걷는 규칙의 정본은 common.field_path 한 벌 (2026-08-27 경로 방언 통일 —
+        # 리스트 숫자 인덱스는 블록 술어의 문서화된 경로 문법을 승계한다)
+        from common.field_path import MISSING, walk_path
+        value = walk_path(row, path)
+        return None if value is MISSING else value
 
     out = []
     skipped = 0

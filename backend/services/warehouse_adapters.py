@@ -581,7 +581,7 @@ def _neo_candidates(text: str, host: str) -> List[str]:
             seen.add(c)
             out.append(c)
 
-    add(host.split(".")[0])
+    add(host.split(".")[0])  # path-ok: 호스트명 분해
     body = text[:_MAX_BODY]
     for m in _NEO_BADGE.finditer(body):
         add(m.group(1))

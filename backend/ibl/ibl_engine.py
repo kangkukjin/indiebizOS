@@ -167,7 +167,7 @@ def forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     # 직결은 구조적으로 불가 — 4초 connect 대기 없이 바로 푸시 큐로 (버튼 체감 지연 절감).
     _url_key = phone_url.rstrip('/')
     _host = _url_key.split("//")[-1].split("/")[0].split(":")[0]
-    _parts = _host.split(".")
+    _parts = _host.split(".")  # path-ok: 호스트명 분해 — 경로 아님
     _is_lan = (_host in ("localhost", "127.0.0.1") or
                (len(_parts) == 4 and _parts[0].isdigit() and (
                    _parts[0] == "10" or

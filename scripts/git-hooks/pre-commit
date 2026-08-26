@@ -275,6 +275,21 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 사설 값 판정 OK ✓"
 fi
 
+# 사설 경로 분해 — 점 경로 해석("경로가 가리키는 값")의 방언 탄생 차단. 5개 방언이
+# 같은 경로에 다른 답을 내던 밭을 common/field_path.py 한 벌로 통일(2026-08-27).
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_field_path\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 사설 경로 분해 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_field_path.py"; then
+    echo "" >&2
+    echo "[pre-commit] 사설 경로 분해 — 커밋 차단." >&2
+    echo "[pre-commit]   • 경로 해석이면 common.field_path.walk_path/parse_path 로 위임" >&2
+    echo "[pre-commit]   • 호스트명·버전·문장 분리 등 경로가 아니면 그 줄에 \`# path-ok: <사유>\` (사유 필수)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 사설 경로 분해 OK ✓"
+fi
+
 # 공개 노출 ↔ 인증 대조 — is_public_remote_path 가 세션 없이 통과시키는 경로가 자체
 # 인증을 실제로 가졌는지. "자체 시크릿 게이트 보유"는 지금까지 주석으로만 있던 불변식이라
 # 등록만 하고 검사를 빠뜨리면 그 라우트가 조용히 공개 인터넷에 열렸다.

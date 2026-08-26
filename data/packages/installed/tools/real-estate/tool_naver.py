@@ -53,7 +53,7 @@ def _get_session():
 
 def _jwt_exp(tok):
     try:
-        payload = tok.split(".")[1]
+        payload = tok.split(".")[1]  # path-ok: JWT 3분절 — 경로 아님
         payload += "=" * (-len(payload) % 4)
         return int(json.loads(base64.urlsafe_b64decode(payload)).get("exp", 0))
     except Exception:

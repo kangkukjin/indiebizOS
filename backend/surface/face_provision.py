@@ -223,7 +223,7 @@ def api_verify_public_face():
 
 def _machine_slug() -> str:
     """이 머신의 기본 이름 — 서브도메인·터널명 제안용 (소문자 영숫자-하이픈)."""
-    raw = (platform.node() or "indiebiz").split(".")[0].lower()
+    raw = (platform.node() or "indiebiz").split(".")[0].lower()  # path-ok: 호스트명 분해
     slug = re.sub(r"[^a-z0-9-]+", "-", raw).strip("-")
     return slug or "indiebiz"
 

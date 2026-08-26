@@ -1054,3 +1054,12 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **집행 3단**: ① `scripts/check_value_judgment.py` — AST census(규칙 [A] 사설 정규화 매칭 전역 · [B] 조건 표면 명단의 원시 비교), 267 원시 히트→60 유의 자리로 조율. ② 일괄 스윕 15자리(발견 대기 없이 한 번에): ★where 전-필드 substring 이 **여전히 결측을 "None" 으로 승격**하고 구조를 repr 로 읽고 있었다(B46-3 의 잔당 — census 즉시 적발이 관문 실효의 증명). since watch 원시 `!=` 가 표기 변경(1000→"1,000")을 값 변화로 오보하던 것 포함, 파일 검색 2곳·메시지 검색·연락처/기기/웹앱 이름 동등 등 전부 text_match/values_equal/relation_identity 위임(macOS NFD 파일명 검색 실효). ③ 잔여 34자리는 자리마다 `# vj-ok: <사유>` — 동결 목록 금지(silent_clamp 08-24 교리), pre-commit 상설 배선 + `test_value_judgment_gate` 8건(이빨·사유 강제·표면 명단 실존·행동 가드).
 - **수용된 잔여**(정직 기록): SURFACE_FILES 명단 밖 모듈의 정규화 없는 원시 비교(B46-6 부류)는 기계로 못 잡는다 — 판정 심볼 소비자 자동 편입은 한 벌 채택이 벌칙이 되는 역유인이라 기각, 명단은 사람이 관리(관문 헤더에 명문).
 - **함의**: 값 의미론 밭은 census+관문으로 닫혔다. 다음 상상훈련 축은 다른 과(시간 의미론·경로 해석·동시성·compute 식 문자열 비교)로 이동한다.
+
+### 밭 열거·census 폐쇄 2차 (2026-08-27) — 경로 해석·compute 식·파라미터 표면
+
+- **방법 확정**: 밭당 11회차 채굴 대신 밭마다 census→일괄 스윕→탄생 차단 관문. 이번에 닫은 밭 셋:
+  - **경로 해석**: 워커 5방언("items.0.title" 이 표면마다 값/None/오류) → `common/field_path.py` 한 벌 + `check_field_path.py` 관문. 결측(MISSING)≠null 구별·대괄호는 응답변환 국소 확장·숫자 인덱스는 술어 문서 계약을 정본으로. 가드 `test_field_path_single_owner`(동형성 8건).
+  - **compute 식 비교**: safe_expr AST 재작성으로 동등=values_equal·순서=compare_order (46회차 '수용된 한계' 폐기). 판정 불능=행 None+신고. 가드 `test_compute_condition_semantics` 7건.
+  - **파라미터 표면 일치**: B23-1 재발 방지를 주석→기계로 — `test_surface_param_parity` 가 스키마⊆REST⊆MCP 포함 단언.
+- **열린 밭 census**(닫지 않음 — 정직 기록): ①**시간 의미론** — 파싱 65자리(판정 표면 20). 실결함 모양=서로 다른 날짜 표기("08/25/2026" vs ISO)가 텍스트 순서로 침묵 오답. 닫음 = 어떤 문자열이 날짜인가의 **표기 선언**(숫자 문법 엄격화와 동형) → 언어 개정이라 **판정 요청**. ②**동시성** — Thread 생성 63자리, 기존 관문(reload_scope·load_singleton·keeper) 부분 커버 — census 가능하나 별도 회차 규모.
+- 검증: backend 888 passed · 관문 3종 초록 · Android 번들 · 라이브 종단.

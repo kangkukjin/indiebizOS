@@ -252,6 +252,7 @@
     "test_aggregate_finite_result_gate": "force_exclude_glob",
     "test_ai_ops_words": "force_exclude_glob",
     "test_body_vocab": "force_exclude_glob",
+    "test_compute_condition_semantics": "force_exclude_glob",
     "test_condition_observability": "force_exclude_glob",
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_corrupt_not_absent": "force_exclude_glob",
@@ -271,6 +272,7 @@
     "test_episode_source": "force_exclude_glob",
     "test_evaluator_trace": "force_exclude_glob",
     "test_failure_grammar_honesty": "force_exclude_glob",
+    "test_field_path_single_owner": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
     "test_framing_privilege_inherit": "force_exclude_glob",
     "test_gemini_provider_contract": "force_exclude_glob",
@@ -332,6 +334,7 @@
     "test_single_runner": "force_exclude_glob",
     "test_steer": "force_exclude_glob",
     "test_step_ledger": "force_exclude_glob",
+    "test_surface_param_parity": "force_exclude_glob",
     "test_table_mirror_keys": "force_exclude_glob",
     "test_trajectory_spine": "force_exclude_glob",
     "test_user_surface_pipeline": "force_exclude_glob",
@@ -347,8 +350,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 341,
+    "total": 344,
     "engine": 225,
-    "blocklist": 116
+    "blocklist": 119
   }
 }

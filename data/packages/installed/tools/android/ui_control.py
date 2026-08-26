@@ -311,7 +311,7 @@ def get_ui_hierarchy(device_id: Optional[str] = None) -> dict:
                 "text": text,
                 "content_desc": content_desc,
                 "resource_id": resource_id,
-                "class": class_name.split(".")[-1] if class_name else "",
+                "class": class_name.split(".")[-1] if class_name else "",  # path-ok: 자바 클래스명 축약 — 경로 아님
                 "clickable": clickable == "true",
                 "enabled": enabled == "true",
             }
@@ -441,7 +441,7 @@ def _parse_ui_elements(device_id: Optional[str] = None) -> list:
                 "text": text,
                 "content_desc": content_desc,
                 "resource_id": resource_id,
-                "class": class_name.split(".")[-1] if class_name else "",
+                "class": class_name.split(".")[-1] if class_name else "",  # path-ok: 자바 클래스명 축약 — 경로 아님
                 "clickable": clickable == "true",
                 "enabled": enabled == "true",
             }

@@ -21,6 +21,8 @@ from typing import Any, Dict, Tuple
 
 # $var 바인딩 참조 패턴 — 파서(_resolve_variables)가 $var 를 {{_step_N_result}} 로,
 # $var.field.path 를 {{_step_N_result.field.path}} 로 치환한다 (G1, 2026-08-16).
+from common.field_path import walk_path
+
 _STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result((?:\.\w+)*)\}\}")
 
 
@@ -41,22 +43,20 @@ def _extract_result_field(raw: str, path: str) -> str:
         else:
             raise ValueError(
                 f"$변수 필드 추출 실패: 결과가 구조화 데이터가 아니라 '{path}' 경로를 풀 수 없습니다.")
-    for key in path.lstrip(".").split("."):
-        if isinstance(obj, dict) and key in obj:
-            obj = obj[key]
-        elif isinstance(obj, list) and key.isdigit() and int(key) < len(obj):
-            obj = obj[int(key)]
+    def _missing(cur, key):
+        # 필드 힌트의 절단도 신고한다 (F18-1 부류 — 침묵 클램프 금지)
+        if isinstance(cur, dict):
+            _names = list(cur.keys())
+            avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
+        elif isinstance(cur, list):
+            avail = f"목록(길이 {len(cur)})"
         else:
-            # 필드 힌트의 절단도 신고한다 (F18-1 부류 — 침묵 클램프 금지)
-            if isinstance(obj, dict):
-                _names = list(obj.keys())
-                avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
-            elif isinstance(obj, list):
-                avail = f"목록(길이 {len(obj)})"
-            else:
-                avail = type(obj).__name__
-            raise ValueError(
-                f"$변수 필드 추출 실패: '{key}' 필드가 없습니다 (경로 {path}, 사용 가능: {avail}).")
+            avail = type(cur).__name__
+        raise ValueError(
+            f"$변수 필드 추출 실패: '{key}' 필드가 없습니다 (경로 {path}, 사용 가능: {avail}).")
+
+    # 걷는 규칙의 정본은 common.field_path 한 벌 (2026-08-27 경로 방언 통일)
+    obj = walk_path(obj, path, on_missing=_missing)
     if isinstance(obj, (dict, list)):
         return json.dumps(obj, ensure_ascii=False)
     return "" if obj is None else str(obj)
@@ -278,7 +278,7 @@ def _bind_items_params(tool_input: dict, prev_result: str):
             if not path:
                 payload = items
             else:
-                seg = path.lstrip(".").split(".")
+                seg = path.lstrip(".").split(".")  # path-ok: $items 행별 벡터 치환 — 단일 객체 걷기가 아니라 행 사상(M 시리즈 검증 계약)
                 if len(seg) == 1 and not seg[0].isdigit():
                     field = seg[0]
                     missing = [1 for r in items if not (isinstance(r, dict) and field in r)]

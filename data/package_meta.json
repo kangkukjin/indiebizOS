@@ -278,7 +278,7 @@
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",
-    "engines:render_html": "media_producer",
+    "engines:render": "media_producer",
     "engines:tts": "media_producer",
     "engines:web": "web-builder",
     "engines:web_component": "web-builder",

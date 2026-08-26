@@ -6,41 +6,89 @@
   "version": "1.0.0",
   "tools": [
     {
-      "name": "render_html_to_image",
-      "description": "HTML/CSS 코드를 이미지(PNG)로 렌더링합니다. Playwright 브라우저 엔진을 사용하여 고품질 렌더링을 지원합니다.\n\n로컬 이미지 사용: base_path를 지정하면 HTML 내 상대 경로 이미지와 CSS background-image가 자동으로 Base64 변환되어 로드됩니다.",
+      "name": "render_artifact",
+      "description": "시각 형식(HTML/PDF/SVG)을 PNG 스크린샷으로 결정론 투영합니다 (op 분기). 반환은 items 통화 — 행마다 스크린샷 1장의 절대 경로. 판단 없는 순수 지각 — 심사는 read_gemini_image(op:critic).",
       "input_schema": {
         "type": "object",
         "properties": {
+          "op": {
+            "type": "string",
+            "description": "동작 분기 — html(기본) | pdf | svg",
+            "enum": [
+              "html",
+              "pdf",
+              "svg",
+              "xlsx"
+            ],
+            "default": "html"
+          },
+          "path": {
+            "type": "string",
+            "description": "입력 파일 절대 경로 (html/pdf/svg 파일). html 은 file:// 로드라 상대 자산이 자연 해소됨"
+          },
           "html": {
             "type": "string",
-            "description": "렌더링할 전체 HTML 코드 (CSS 포함 권장)"
+            "description": "(html) 렌더링할 HTML 문자열. path 와 함께 생략 시 직전 파이프 통화를 렌더"
+          },
+          "svg": {
+            "type": "string",
+            "description": "(svg) 렌더링할 SVG 마크업 문자열 (<svg …> 포함)"
+          },
+          "viewports": {
+            "type": "array",
+            "description": "(html) 뷰포트 배열 — \"1280x720\" 문자열 또는 {width,height,label} 객체. 뷰포트별 1행. 웹 검수는 데스크톱+모바일 두 눈 권장",
+            "items": {
+              "type": [
+                "string",
+                "object"
+              ]
+            }
           },
           "output_path": {
             "type": "string",
-            "description": "저장할 파일명 (예: slide.png). 경로는 자동으로 프로젝트 outputs 폴더에 저장됨"
+            "description": "저장 파일명 stem (예: page.png → page_모바일.png 등). 경로는 프로젝트 outputs 폴더 자동"
           },
           "base_path": {
             "type": "string",
-            "description": "HTML 내 상대 경로 이미지의 기준 디렉토리. 예: /Users/.../project 지정 시 <img src=\"images/photo.jpg\">가 자동 로드됨"
+            "description": "(html 문자열 전용) 상대 경로 이미지·배경의 기준 디렉토리 — base64 인라인"
           },
-          "width": {
-            "type": "integer",
-            "description": "이미지 가로 크기 (기본: 1280)",
-            "default": 1280
-          },
-          "height": {
-            "type": "integer",
-            "description": "이미지 세로 크기 (기본: 720)",
-            "default": 720
+          "full_page": {
+            "type": "boolean",
+            "description": "(html) 페이지 전체 높이 캡처 (기본 true, false=뷰포트 크롭)"
           },
           "selector": {
             "type": "string",
-            "description": "특정 요소만 캡처하고 싶은 경우의 CSS 셀렉터 (선택)"
+            "description": "(html) 특정 요소만 캡처할 CSS 셀렉터"
+          },
+          "scale": {
+            "type": "number",
+            "description": "배율 — html/svg: device_scale_factor(기본 html 1, svg 2) / pdf: 렌더 배율(기본 2.0≈144dpi)"
+          },
+          "max_pages": {
+            "type": "integer",
+            "description": "(pdf) 렌더 페이지 상한 (기본 20) — 초과분은 truncated·total_pages 로 정직 보고"
+          },
+          "pages": {
+            "type": "array",
+            "description": "(pdf) 렌더할 페이지 번호 배열 (1-기준, 생략 시 앞에서부터)",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "width": {
+            "type": "integer",
+            "description": "(html, viewports 미지정 시) 뷰포트 가로 (기본 1280)"
+          },
+          "height": {
+            "type": "integer",
+            "description": "(html, viewports 미지정 시) 뷰포트 세로 (기본 720)"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "engines:render 파라미터"
           }
         },
-        "required": [
-          "html"
-        ]
+        "required": []
       }
     },
     {
@@ -199,6 +247,10 @@
           "preset": {
             "type": "string",
             "description": "(critic) 평가 프리셋 — slide_illustration(기본) | general"
+          },
+          "criteria": {
+            "type": "string",
+            "description": "(critic) 취향 파일 — data/criteria/ 의 이름(\"web\"/\"visual_base\") 또는 yaml 절대 경로. extends 사슬 지원. 지정 시 preset 기본 체크 대신 이 파일의 checks/forbidden 으로 심사"
           },
           "checks": {
             "type": "array",

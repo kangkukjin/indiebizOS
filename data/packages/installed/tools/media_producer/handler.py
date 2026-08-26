@@ -15,53 +15,8 @@ STATIC_PROBE_GAPS_MS = (150, 500, 1500)
 #  어휘가 개인 패키지에 살던 경계 이상 해소. 이 패키지는 순수 미디어 생성(engines)만 남음.)
 # (moviepy는 이미 각 함수가 로컬 re-import 중이라 모듈레벨 심볼은 0회 사용 — 그냥 제거. edge_tts는 generate_tts로.)
 
-def _html_from_prev(prev) -> str:
-    """파이프로 흘러온 통화를 렌더 가능한 HTML 조각으로 (V21-1 수리, 2026-08-22).
-
-    `[self:write]` 가 content 생략 시 직전 통화를 저장하는 것과 **같은 규약**을
-    `[engines:render_html]` 에도 준다 — 어휘·파라미터 신설 0. 옛 동작은 html 파라미터만
-    봐서 `[table:brief]{...} >> [engines:render_html]` 이 "html은 필수입니다" 로 죽었고,
-    사람이 브리프 결과를 눈으로 읽어 다시 타이핑해야 했다.
-
-    받는 모양 세 가지: 이미 HTML 인 문자열 · 통화 봉투(message/items) · 평문.
-    """
-    from html import escape as _escape
-    if prev is None:
-        return ""
-    s = prev if isinstance(prev, str) else json.dumps(prev, ensure_ascii=False)
-    s = s.strip()
-    if not s:
-        return ""
-
-    obj = None
-    if s.startswith("{"):
-        try:
-            obj = json.loads(s)
-        except Exception:
-            obj = None
-
-    if isinstance(obj, dict):
-        items = obj.get("items")
-        if isinstance(items, list) and items and isinstance(items[0], dict):
-            cols = list(items[0].keys())
-            head = "".join(f"<th>{_escape(str(c))}</th>" for c in cols)
-            rows = "".join(
-                "<tr>" + "".join(f"<td>{_escape(str(r.get(c, '')))}</td>" for c in cols) + "</tr>"
-                for r in items if isinstance(r, dict)
-            )
-            return ("<table style=\"border-collapse:collapse;font-family:sans-serif;font-size:15px\" "
-                    "border=1 cellpadding=6>"
-                    f"<thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>")
-        msg = obj.get("message")
-        if isinstance(msg, str) and msg.strip():
-            s = msg.strip()
-        else:
-            s = json.dumps(obj, ensure_ascii=False, indent=1)
-
-    if "<" in s and ">" in s:      # 이미 HTML 조각이면 그대로
-        return s
-    return ("<div style=\"font-family:sans-serif;font-size:22px;line-height:1.6;"
-            f"padding:40px;white-space:pre-wrap\">{_escape(s)}</div>")
+# _html_from_prev(V21-1 파이프 싱크)는 render_artifact.py 로 이관 (2026-08-26 render 승계) —
+# 아래 spec-load 구간에서 같은 이름으로 재바인딩한다(회귀 테스트가 mp._html_from_prev 를 본다).
 
 
 def _err(message: str) -> dict:
@@ -105,8 +60,22 @@ def execute(tool_input: dict, context) -> str:
     # html_video 도구 갈래는 2026-08-05 은퇴 — 슬라이드가 HTML 이던 시절의 어휘. 지금 영상은
     # [self:deck]{op:"video"}(덱→나레이션 MP4) 하나. create_html_video/render_html_video 함수는
     # 그 파이프라인의 엔진으로 잔류(lecture_workspace 가 함수층에서 차용).
-    if tool_name == "render_html_to_image":
-        return render_html_to_image(tool_input, output_base)
+    if tool_name == "render_artifact":
+        # [engines:render] — 형식=변형=op (html/pdf/svg/xlsx). 구 render_html 은 op:html 로 흡수(2026-08-26).
+        op = (tool_input.get("op") or "").strip()
+        if not op:
+            # op 생략 + path 있음 → 확장자로 결정론 라우팅 (RENDER_XLSX Phase 1.5) —
+            # 화면검수 워크플로우($path)가 문장 무수정으로 pdf/svg/장부를 받는다.
+            # path 없음(html/svg 문자열·파이프 통화)은 현행 기본 html 유지, 명시 op 항상 우선.
+            ext = os.path.splitext(str(tool_input.get("path") or ""))[1].lower()
+            op = {".pdf": "pdf", ".svg": "svg", ".xlsx": "xlsx", ".xlsm": "xlsx"}.get(ext, "html")
+        fn = _OP_DISPATCHERS["render_artifact"].get(op)
+        if fn is None:
+            return json.dumps({"success": False,
+                               "error": f"알 수 없는 op '{op}' — html(HTML→PNG) | pdf(페이지별 PNG) | "
+                                        f"svg(SVG→PNG) | xlsx(장부 재계산→페이지별 PNG)"},
+                              ensure_ascii=False)
+        return fn(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
     elif tool_name == "generate_icon":
@@ -790,113 +759,8 @@ def create_html_video(tool_input, output_base):
         return _err(f"HTML 동영상 제작 중 오류 발생: {str(e)}")
 
 
-def render_html_to_image(tool_input, output_base="."):
-    """HTML을 이미지로 렌더링
-
-    로컬 이미지 사용 방법:
-    1. base_path 옵션: HTML 내 상대 경로의 기준 디렉토리 지정
-       - base_path="/Users/.../project" 설정 시 <img src="images/photo.jpg">가 작동
-    2. 절대 경로: <img src="file:///Users/.../image.jpg">
-    3. Base64: <img src="data:image/png;base64,...">
-    """
-    from playwright.sync_api import sync_playwright
-    import re
-    import tempfile
-
-    html = tool_input.get("html")
-    output_path = tool_input.get("output_path")
-    width = tool_input.get("width", 1280)
-    height = tool_input.get("height", 720)
-    selector = tool_input.get("selector")
-    base_path = tool_input.get("base_path")  # 로컬 파일 기준 경로
-
-    if not html:
-        # 파이프 싱크(V21-1) — html 생략 시 직전 통화를 받는다 ([self:write] 와 같은 규약).
-        html = _html_from_prev(tool_input.get("_prev_result"))
-    if not html:
-        return _err("html 이 필요합니다 — 파라미터로 주거나 파이프로 통화를 흘려보내세요.")
-
-    # output_path가 지정되면 파일명만 추출하여 output_base에 저장
-    if output_path:
-        filename = os.path.basename(output_path)
-        output_path = os.path.join(output_base, filename)
-    else:
-        output_path = os.path.join(output_base, f"rendered_{uuid.uuid4().hex[:8]}.png")
-
-    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": width, "height": height})
-
-            # base_path가 있으면 임시 HTML 파일 생성 후 file:// 프로토콜로 로드
-            if base_path:
-                base_path = os.path.abspath(base_path)
-
-                # HTML 내 상대 경로 이미지를 Base64로 변환
-                def replace_img_src(match):
-                    src = match.group(1)
-                    # 이미 data: 또는 http로 시작하면 스킵
-                    if src.startswith(('data:', 'http://', 'https://', 'file://')):
-                        return match.group(0)
-                    # 상대 경로를 절대 경로로 변환
-                    if not os.path.isabs(src):
-                        abs_path = os.path.join(base_path, src)
-                    else:
-                        abs_path = src
-                    # Base64로 변환
-                    base64_data = get_image_base64(abs_path)
-                    if base64_data:
-                        return f'src="{base64_data}"'
-                    return match.group(0)  # 변환 실패시 원본 유지
-
-                # src="..." 패턴 찾아서 변환
-                html = re.sub(r'src=["\']([^"\']+)["\']', replace_img_src, html)
-
-                # CSS background-image의 url()도 처리
-                def replace_bg_url(match):
-                    url = match.group(1)
-                    if url.startswith(('data:', 'http://', 'https://', 'file://')):
-                        return match.group(0)
-                    if not os.path.isabs(url):
-                        abs_path = os.path.join(base_path, url)
-                    else:
-                        abs_path = url
-                    base64_data = get_image_base64(abs_path)
-                    if base64_data:
-                        return f'url("{base64_data}")'
-                    return match.group(0)
-
-                html = re.sub(r'url\(["\']?([^"\')\s]+)["\']?\)', replace_bg_url, html)
-
-            # 스타일 추가: 여백 제거 및 크기 강제
-            html_with_style = f"""
-            <style>
-                body, html {{ margin: 0; padding: 0; width: {width}px; height: {height}px; overflow: hidden; }}
-            </style>
-            {html}
-            """
-            page.set_content(html_with_style)
-
-            # 이미지 로딩 대기
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(500)  # Tailwind/폰트 로딩 대기
-
-            if selector:
-                element = page.query_selector(selector)
-                if element:
-                    element.screenshot(path=output_path)
-                else:
-                    browser.close()
-                    return _err(f"셀렉터 '{selector}'를 찾을 수 없습니다.")
-            else:
-                page.screenshot(path=output_path)
-            browser.close()
-        # 절대 경로로 변환하여 반환 (에이전트 간 경로 혼동 방지)
-        return f"렌더링 완료: {os.path.abspath(output_path)}"
-    except Exception as e:
-        return _err(f"렌더링 중 오류 발생: {str(e)}")
+# render_html_to_image 는 2026-08-26 [engines:render]{op:"html"} 로 승계·은퇴 —
+# 구현은 render_artifact.py (다형식·다뷰포트·통화 items 반환).
 
 def generate_ai_image(tool_input, output_base):
     import urllib.parse
@@ -1232,6 +1096,18 @@ _gi = _ilu.module_from_spec(_gi_spec)
 _gi_spec.loader.exec_module(_gi)
 generate_gemini_image = _gi.generate_gemini_image
 
+# [engines:render] 다형식 투영(html/pdf/svg/xlsx)은 render_artifact.py
+# (2026-08-26 render_html 승계 — 같은 spec-load 패턴).
+_ra_spec = _ilu.spec_from_file_location(
+    "mp_render_artifact", os.path.join(os.path.dirname(__file__), "render_artifact.py"))
+_ra = _ilu.module_from_spec(_ra_spec)
+_ra_spec.loader.exec_module(_ra)
+render_op_html = _ra.render_op_html
+render_op_pdf = _ra.render_op_pdf
+render_op_svg = _ra.render_op_svg
+render_op_xlsx = _ra.render_op_xlsx
+_html_from_prev = _ra._html_from_prev  # V21-1 회귀 테스트가 mp._html_from_prev 를 본다
+
 
 def create_tts(tool_input, output_base):
     """텍스트를 음성 파일(MP3)로 변환합니다. (기본 Gemini TTS, engine:"edge" 로 무과금 회귀)"""
@@ -1462,5 +1338,7 @@ def render_html_video(tool_input, output_base):
 # 함수 정의 뒤에 두어 전방 참조 없이 실제 함수를 값으로 묶는다.
 _OP_DISPATCHERS = {
     "read_gemini_image": {"read": read_gemini_image, "critic": critique_gemini_image},
+    "render_artifact": {"html": render_op_html, "pdf": render_op_pdf, "svg": render_op_svg,
+                        "xlsx": render_op_xlsx},
 }
-_OP_DEFAULTS = {"read_gemini_image": "read"}
+_OP_DEFAULTS = {"read_gemini_image": "read", "render_artifact": "html"}

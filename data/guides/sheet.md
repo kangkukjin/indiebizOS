@@ -11,6 +11,7 @@
 | 전체 읽기 | `[self:read]` | 수식 셀은 캐시값, 캐시 없으면 수식 원문 표시 |
 | **기존 장부 부분 편집** | `[self:sheet]` | 수식·서식·병합·다른 시트 **보존** |
 | **PDF 표 추출** | `[self:read]{tables: true}` | table{columns,rows} 통화로 |
+| **장부 눈으로 확인** | `[engines:render]{op:"xlsx"}` | 수식 **재계산**+페이지별 PNG, pdf_path 동봉 |
 
 ## [self:sheet] — op 3종
 
@@ -41,10 +42,33 @@
 같은 계약), 나머지는 `tables` 목록에. PDF 표의 첫 행이 헤더로 간주되므로 append 대상 장부의
 열 이름과 맞아야 한다(다르면 `table:select` 로 먼저 다듬기).
 
+## 편집 후 검수 — 장부를 눈으로 확인하기 (2026-08-27, [engines:render]{op:"xlsx"})
+
+sheet 로 편집한 직후의 장부는 **수식 캐시가 낡아 있다** — [self:read] 가 보여주는 계산값은
+Excel 이 마지막으로 열었을 때 것이다. `[engines:render]{op:"xlsx"}` 가 LibreOffice 헤드리스로
+수식을 **재계산**해 페이지별 PNG 로 투영한다(원본 불변·재계산 PDF 경로 `pdf_path` 동봉).
+
+```
+# 편집 → 지각 → 심사 (취향 파일 "sheet" — #### 잘림·수식 오류 노출·페이지 절단 검사)
+[self:sheet]{op: "append", path: "재고장.xlsx", items: [{"품목": "C형", "수량": 30}]} >>
+  [engines:render]{op: "xlsx", path: "재고장.xlsx"} >>
+  [table:each]{do: "[engines:image_read]{op: 'critic', image_path: '$it.path', intent: '새 행이 표에 맞게 들어가고 합계가 성립하는가', criteria: 'sheet'}"}
+
+# 계산된 값을 텍스트로 확인 (재계산 PDF 를 변수 필드로)
+$r = [engines:render]{op: "xlsx", path: "정산표.xlsx"}
+[self:read]{path: "${r.pdf_path}"}
+```
+
+op 를 생략해도 path 확장자(.xlsx/.xlsm)로 자동 라우팅되므로 `화면검수` 워크플로우
+(`params: {path: "장부.xlsx", criteria: "sheet"}`)에 그대로 넣을 수 있다.
+LibreOffice 가 없으면 설치 안내와 함께 정직 실패(맥 `brew install --cask libreoffice`).
+매크로(.xlsm)는 렌더 시 실행되지 않는다(보안상 정상).
+
 ## 함정
 
 1. **차트·이미지는 저장 시 유실** (openpyxl 한계). 차트가 든 장부는 데이터 시트와 차트 파일을
-   분리해 두는 것이 안전. 로고 박힌 견적서 템플릿 편집엔 부적합.
+   분리해 두는 것이 안전. 로고 박힌 견적서 템플릿 편집엔 부적합. (렌더 지각 자체는 차트를
+   보지만, sheet 로 **저장한** 파일은 이미 유실 후일 수 있다.)
 2. **PDF 표 추출은 실선 표 기준** (PyMuPDF find_tables). 선 없는 표·스캔 이미지 PDF(OCR 필요)는
    못 잡을 수 있다 — `tables_found: 0` + note 로 정직하게 알림.
 3. **PDF 추출값은 전부 문자열**. 숫자 연산이 필요하면 table 파이프(`filter`/`sort`)가 자동

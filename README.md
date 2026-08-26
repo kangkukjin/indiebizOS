@@ -168,6 +168,8 @@ Three moves do the shrinking, and they are worth naming because they're the oppo
 - **Fold same-shaped words onto an axis.** Five search verbs became `[sense:search]{source}`; four business-ledger verbs became `[self:ledger]{store, op}`. The axis has to be honest, though: contacts got folded into `[others:neighbor]{op}` rather than `[self:ledger]{store:"contact"}`, because `store` is the axis of *peer* ledgers and contacts are a child collection — putting them there would have made the axis start lying.
 - **Procedures aren't words; they're sentences.** Anything that's only an ordering of existing verbs gets frozen as a registered script (`[self:script]`) or an app instance instead of a new verb. That makes "should I add a word for this?" default to *no* — an anti-vocabulary-inflation device built into the language.
 
+Once a word is justified, implementation is still only half the job. `description` and `ops.values` put **what exists** into the catalog every agent reads; hippocampus examples `(natural-language intent → IBL code)` teach **which phrasing should recall it and which arguments to use**. Only arguments observed in the corpus and real executions become the catalog's `⟨args: …⟩` shape. A new capability is therefore complete only when **body (handler), dictionary (catalog prose), textbook (corpus), and observation (argument/return shapes)** close together. Description without examples is visible but hard to recall naturally; examples without a body cannot run.
+
 One measurement lesson from that pass, since it generalizes: **a call count is not a life sign.** A retired action had 19 recorded calls and had never once returned a result — the count said "invoked", not "worked". The test that survived is to open the handler and measure the replacement path.
 
 Here is what *falls out* of having a real language:
@@ -278,13 +280,16 @@ User Message
    │ EXECUTE                 │ THINK
    ▼                         ▼
 [Direct execution]    [Consciousness] — frames the problem:
-                       task framing, achievement criteria,
-                       self-awareness, guide selection
-                             │
-                      [Executor] — solves the already-framed problem
+   │                    task framing, achievement criteria,
+   ├─ complex/failure/      self-awareness, guide selection
+   │  world change?              │
+   │  SelfReflect           [Executor] — solves the already-framed problem
+   └─ otherwise finish            │
                              │
                       [Evaluator] — achieved, or retry? (max 3 rounds)
 ```
+
+The two branches do not validate in the same way. Only `THINK` has achievement criteria authored by consciousness, so only it enters GoalEval and retry. `EXECUTE` has no criteria and records no GoalEval result; instead, when its trace contains failure signals, enough complexity, or a world-changing action, the executor performs one **SelfReflect** pass over its own work. A `NULL` episode evaluation therefore does not itself mean failure — it can mean the turn was EXECUTE/Reflex and never entered GoalEval.
 
 The consciousness agent reframes the raw request into a well-defined problem *before* the executor ever sees it. Because the two are different subjects, the executor solves an *already-framed* problem: the off-target or unsafe paths a single plan-then-act agent would have to *consider and reject* are largely kept out of its frame from the start. This is **containment, not alignment** — safety dissolved into the goal rather than bolted on as a rule. And it's a property a single agent *cannot* have, because it cannot un-ask its own question — which is exactly why a more capable reasoning model doesn't absorb it.
 
@@ -397,6 +402,8 @@ python3 scripts/bootstrap.py     # Windows: py scripts\bootstrap.py
 
 The bootstrap creates `.venv` (auto-selecting Python 3.10–3.13), installs backend dependencies (core strictly; tools and semantic-memory extras best-effort — without the latter, recall degrades to keyword search), seeds `.env` from `.env.example` (put your LLM API key there), and installs the Electron desktop UI if `npm` is present — backend-only otherwise (remote launcher/REST still work).
 
+Optional dependency: **LibreOffice** — needed only for ledger (xlsx) rendering with formula recalculation (`[engines:render]{op:"xlsx"}`): macOS `brew install --cask libreoffice` / Linux `apt install libreoffice-calc` / Windows official installer. Without it, only that feature fails — honestly, with the install hint.
+
 Run:
 ```bash
 ./start.sh                              # macOS/Linux (backend + desktop UI)
@@ -443,6 +450,8 @@ cd frontend && npm run electron:dev  # Frontend (Electron)
 ```
 
 ---
+
+*Documentation update: 2026-08-25 — **Closing the gap between executable vocabulary and vocabulary the AI can actually use.** A new action/op is not complete when its handler and build pass. Catalog prose makes its existence visible; the hippocampus corpus teaches which natural-language phrasing should recall the word and its arguments; observation sweeps feed real argument and return shapes back into the catalog. The cognitive docs now make the two branches explicit as well: THINK uses consciousness-authored criteria for GoalEval and retry, while EXECUTE records no evaluation and falls back to SelfReflect only for failure, complexity, or world-changing traces. A `NULL` episode evaluation is therefore not synonymous with failure, and `ACHIEVED` must still be read alongside the action ledger, artifacts, and evidence of external effects. The long-form digest below remains the historical summary through 2026-08-22.*
 
 *IndieBiz OS — An AI system that grows with you, not one that's given to you.*
 

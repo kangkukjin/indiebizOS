@@ -390,13 +390,13 @@ nodes:
         # 전 op 읽기 전용 — 원장은 git 이 쓴다(이 어휘는 회상 통로).
         side_effect: false
         fixture: '[self:body]{days: 7, limit: 10}'
-        description: 내 몸(이 저장소) 파일 변화 이력 — git 원장 회상. 최근 바뀐 파일·커밋·한 파일의 일생(생성·수정·이동). 집계는 table:groupby(영역 열).
+        description: 내 몸의 변화·실행 이력 회상. git 변화, 런타임 쓰기, 한 run의 요청→IBL→검증→부작용 trajectory(hash/ref)를 읽는다. 집계는 table:groupby.
         group: system
-        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 작업분 포함, 영역 열=층) / log: 커밋 단위 이력(무슨 일 했나, 파일수 동반) / file: 한 파일의 일생(path 필수 — git --follow 라 이름변경·이동을 관통해 생성까지) / writes: 런타임 쓰기 원장(git 밖 data·outputs 층 — ★관문 safe_store·[self:write] 통과분만, 전수 아님, 행위자·task 동반) / diff: 실제 바뀐 줄(파일별 items: 추가·삭제·diff 본문) — 기본 미커밋 작업분(HEAD 대비), commit=한 커밋, ref=구간(ref..HEAD), path 스코프, lines=파일당 본문 줄 상한(기본 200·넘치면 신고), limit=파일 수(기본 50). limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: 한 실행의 request·model·IBL·validation·side-effect 순번 원장(run_id·episode_id·task_id 중 하나, 없으면 최근 episode; 원문 대신 hash/ref) / diff: 실제 바뀐 줄. limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
         target_key: op
         router: handler
         tool: body_op
-        implementation: system_essentials/body_ops.py — git log --name-status/-M/--follow 파싱, 저장소 루트=코드 위치에서 .git 조상 탐색. 전 op 읽기 전용(원장은 git 이 쓴다 — 이 어휘는 회상 통로).
+        implementation: system_essentials/body_ops.py — git 변화 원장 + world_pulse.db trajectory_event 회상. 전 op 읽기 전용(이 어휘는 회상 통로).
         runs_on: pc_only
         ops:
           default: changes
@@ -404,12 +404,14 @@ nodes:
             log: '[self:body]{op: "log", days: 7, limit: 10}'
             file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
             writes: '[self:body]{op: "writes", days: 7, limit: 10}'
+            trajectory: '[self:body]{op: "trajectory", limit: 10}'
             diff: '[self:body]{op: "diff", path: "backend", lines: 40}'
           values:
             changes: 최근 파일 단위 변화 — 파일·상태·영역·시각·요지 (미커밋 포함)
             log: 커밋 단위 이력 — 커밋·시각·요지·파일수
             file: 한 파일의 일생 — 생성·수정·이동 이력 (path 필수, --follow)
             writes: 런타임 쓰기 원장 — 관문 통과 쓰기의 행위자·작업 (전수 아님)
+            trajectory: 한 실행의 핵심 사건 — request·model·IBL·validation·side-effect 순서(hash/ref, 원문 아님)
             diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·commit·ref..HEAD, 파일별 본문
         keywords:
         - 몸

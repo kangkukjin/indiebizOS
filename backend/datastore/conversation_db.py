@@ -102,6 +102,8 @@ class ConversationDB:
                     delegated_to TEXT,
                     delegation_context TEXT,
                     parent_task_id TEXT,
+                    run_id TEXT,
+                    parent_run_id TEXT,
                     pending_delegations INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'pending',
                     result TEXT,
@@ -173,6 +175,8 @@ class ConversationDB:
     ALLOWED_COLUMNS = {
         'delegation_context': 'TEXT',
         'parent_task_id': 'TEXT',
+        'run_id': 'TEXT',
+        'parent_run_id': 'TEXT',
         'pending_delegations': 'INTEGER DEFAULT 0',
         'ws_client_id': 'TEXT'
     }
@@ -197,6 +201,8 @@ class ConversationDB:
                     delegated_to TEXT,
                     delegation_context TEXT,
                     parent_task_id TEXT,
+                    run_id TEXT,
+                    parent_run_id TEXT,
                     pending_delegations INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'pending',
                     result TEXT,
@@ -565,14 +571,29 @@ class ConversationDB:
         """
         with self.get_connection() as conn:
             cursor = conn.cursor()
+            from episode_logger import trajectory_run_id
             cursor.execute("""
                 INSERT INTO tasks (task_id, requester, requester_channel,
                                    original_request, delegated_to,
-                                   delegation_context, parent_task_id, ws_client_id, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                                   delegation_context, parent_task_id, run_id,
+                                   parent_run_id, ws_client_id, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
             """, (task_id, requester, requester_channel, original_request,
-                  delegated_to, delegation_context, parent_task_id, ws_client_id))
+                  delegated_to, delegation_context, parent_task_id,
+                  trajectory_run_id(task_id),
+                  trajectory_run_id(parent_task_id) if parent_task_id else "",
+                  ws_client_id))
             conn.commit()
+            try:
+                from episode_logger import record_trajectory_event
+                record_trajectory_event("task.created", {
+                    "child_task_id": task_id,
+                    "child_run_id": trajectory_run_id(task_id),
+                    "parent_task_id": parent_task_id or "",
+                    "delegated_to": delegated_to or "",
+                })
+            except Exception:
+                pass
             return cursor.lastrowid
 
     def get_task(self, task_id: str) -> Optional[Dict]:
@@ -581,7 +602,16 @@ class ConversationDB:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
+            if not row:
+                return None
+            out = dict(row)
+            # 칸이 생기기 전 옛 task 도 같은 결정 함수로 읽을 때 보완(원행 추정 UPDATE 없음).
+            from episode_logger import trajectory_run_id
+            out["run_id"] = out.get("run_id") or trajectory_run_id(task_id)
+            if out.get("parent_task_id"):
+                out["parent_run_id"] = out.get("parent_run_id") or trajectory_run_id(
+                    out["parent_task_id"])
+            return out
 
     def complete_task(self, task_id: str, result: str) -> bool:
         """작업 완료 처리 — status 업데이트 + 도구 이력 저장 (세션 내 조회용)"""
@@ -1112,4 +1142,3 @@ class ConversationDB:
             if self.get_consecutive_failures(task_id, cat) >= threshold:
                 failed.append(cat)
         return failed
-

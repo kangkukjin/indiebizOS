@@ -5,6 +5,7 @@ system_tools.py 에서 verbatim 이동: execute_ibl 단일도구의 실행 본�
 system_tools 가 재수출하므로 기존 `from system_tools import _execute_ibl_unified` 불변.
 """
 import json
+import hashlib
 import re
 import time
 from typing import Dict, Optional
@@ -319,7 +320,8 @@ def _enrich_error_with_param_hint(result, code: str):
     return result
 
 
-def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None, cancel_check=None) -> str:
+def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str = None,
+                              cancel_check=None) -> str:
     """execute_ibl 통합 실행기 — IBL 코드 기반
 
     AI가 IBL 코드 문자열을 생성하면, 파서가 해석하고 엔진이 실행한다.
@@ -596,3 +598,69 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
     except Exception as e:
         return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
+
+
+def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None,
+                         cancel_check=None) -> str:
+    """전 IBL 표면의 trajectory choke point.
+
+    실행 본체의 많은 이른 return 을 건드리지 않고 wrapper 한 벌에서 start/end/resume 을
+    남긴다. 코드와 결과 원문은 저장하지 않는다 — 안정 해시·길이·액션 이름만 기록한다.
+    """
+    from episode_logger import trajectory_scope, record_trajectory_event
+
+    code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
+    actions = [f"{n}:{a}" for n, a in re.findall(r"\[([a-z_]+):([a-z_]+)\]", code)]
+    resume = (tool_input or {}).get("resume")
+    called = False
+    result = None
+    try:
+        with trajectory_scope():
+            start = time.monotonic()
+            record_trajectory_event("ibl.started", {
+                "code_sha256": hashlib.sha256(code.encode("utf-8", "replace")).hexdigest(),
+                "code_chars": len(code),
+                "actions": actions[:100],
+                "action_count": len(actions),
+                "agent": agent_id or "",
+            })
+            if isinstance(resume, dict):
+                ref = resume.get("prev_ref")
+                ref_path = ref if isinstance(ref, str) else (
+                    ref.get("path") if isinstance(ref, dict) else "")
+                record_trajectory_event("ibl.resumed", {
+                    "from_step": resume.get("from_step"),
+                    "prev_ref_sha256": hashlib.sha256(str(ref_path).encode(
+                        "utf-8", "replace")).hexdigest() if ref_path else "",
+                })
+            called = True
+            result = _execute_ibl_unified_impl(
+                tool_input, project_path, agent_id, cancel_check=cancel_check)
+            obj = result if isinstance(result, dict) else None
+            if obj is None and isinstance(result, str):
+                try:
+                    obj = json.loads(result)
+                except Exception:
+                    obj = None
+            failed = bool(isinstance(obj, dict) and (
+                obj.get("success") is False or ("error" in obj and not obj.get("success"))))
+            raw = result if isinstance(result, str) else json.dumps(
+                result, ensure_ascii=False, sort_keys=True, default=str)
+            record_trajectory_event("ibl.finished", {
+                "success": not failed,
+                "elapsed_ms": int((time.monotonic() - start) * 1000),
+                "result_sha256": hashlib.sha256(raw.encode(
+                    "utf-8", "replace")).hexdigest(),
+                "result_chars": len(raw),
+                "resumed_from": obj.get("resumed_from") if isinstance(obj, dict) else None,
+            })
+            return result
+    except Exception as e:
+        # trajectory 는 관측이다. 계측 실패가 IBL 실행을 막지 않는다.
+        # ★본체가 이미 시작됐으면 절대 재실행하지 않는다 — 쓰기/메시지 부작용 중복 방지.
+        if called:
+            if result is not None:
+                return result
+            return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
+        return _execute_ibl_unified_impl(tool_input, project_path, agent_id,
+                                         cancel_check=cancel_check)

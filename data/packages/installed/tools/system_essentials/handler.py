@@ -583,6 +583,7 @@ _OP_DISPATCHERS = {
         "log": _sib_op("body_ops", "op_log"),
         "file": _sib_op("body_ops", "op_file"),
         "writes": _sib_op("body_ops", "op_writes"),
+        "trajectory": _sib_op("body_ops", "op_trajectory"),
         "diff": _sib_op("body_ops", "op_diff"),
     },
     # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).

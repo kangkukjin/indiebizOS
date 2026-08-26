@@ -511,6 +511,22 @@ class CognitiveEvalMixin:
 
             eval_time = _time.time() - eval_start
             severity_label = {0: "-", 1: "LOW", 2: "MED", 3: "HIGH"}.get(severity, "?")
+            try:
+                import hashlib as _hashlib
+                from episode_logger import record_trajectory_event
+                record_trajectory_event("validation.completed", {
+                    "validator": "goal_eval",
+                    "round": round_num,
+                    "achieved": bool(achieved),
+                    "severity": int(severity or 0),
+                    "elapsed_ms": int(eval_time * 1000),
+                    "criteria_sha256": _hashlib.sha256((criteria or "").encode(
+                        "utf-8", "replace")).hexdigest(),
+                    "feedback_sha256": _hashlib.sha256((feedback or "").encode(
+                        "utf-8", "replace")).hexdigest(),
+                })
+            except Exception:
+                pass  # 검증 기록은 관측 — 평가 결과를 바꾸지 않는다
             self._log(
                 f"[GoalEval] 라운드 {round_num}: "
                 f"{'ACHIEVED' if achieved else 'NOT_ACHIEVED'} "

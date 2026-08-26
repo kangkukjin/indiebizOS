@@ -63,6 +63,16 @@ ORDER BY id DESC;
 sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE id = ?;"
 ```
 
+원인·실패·재개·파일 변경의 **순서**가 질문이면 원문 로그 grep보다 먼저 구조화 궤적을 쓴다:
+
+```ibl
+[self:body]{op: "trajectory", episode_id: 123}
+```
+
+`run_id`·`task_id`로도 조회할 수 있고, 식별자 없이 부르면 최근 실사용 episode를 읽는다.
+trajectory는 request·model·IBL·validation·side-effect의 hash/ref 원장이므로, 의미 회상은
+episode memory, 정확한 실행 순서는 trajectory, 세부 원문이 정말 필요할 때만 episode_log로 내려간다.
+
 ### B. episode_summary
 요약된 메트릭 (영구 보존).
 

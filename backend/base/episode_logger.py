@@ -17,12 +17,15 @@ executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `c
 """
 
 import json
+import hashlib
 import os
 import re
 import sys
 import sqlite3
 import contextvars
 import threading
+import uuid
+from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -79,6 +82,96 @@ _current_episode: contextvars.ContextVar = contextvars.ContextVar(
     "indiebiz_episode", default=None
 )
 
+# episode 이 없는 직접 IBL 표면(앱/수동/원격)도 같은 궤적 척추를 쓴다. 이 값은
+# contextvars 라 asyncio.to_thread/copy_context 경계를 따라가며, 중첩 실행은 바깥 run 을
+# 그대로 상속한다. episode memory 와 달리 원문을 담지 않고 사건의 순서·참조만 나른다.
+_current_trajectory: contextvars.ContextVar = contextvars.ContextVar(
+    "indiebiz_trajectory", default=None
+)
+
+
+def trajectory_run_id(task_id: str = "") -> str:
+    """task 가 있으면 어디서 계산해도 같은 run id, 없으면 새 run id.
+
+    task_id 원문을 run id 로 재사용하지 않는 이유는 외부 표면에 내부 접두사/식별자를
+    그대로 노출하지 않기 위해서다. 조인은 이 함수 한 벌로 결정적으로 재계산한다.
+    """
+    if task_id:
+        digest = hashlib.sha256(str(task_id).encode("utf-8", "replace")).hexdigest()[:20]
+        return f"run_{digest}"
+    return f"run_{uuid.uuid4().hex}"
+
+
+class _Trajectory:
+    """한 run 의 사건 순번. episode 와 직접 IBL 양쪽이 같은 모양을 쓴다."""
+    __slots__ = ("run_id", "parent_run_id", "episode_id", "task_id", "seq", "lock")
+
+    def __init__(self, run_id: str, task_id: str = "", parent_run_id: str = ""):
+        self.run_id = run_id
+        self.parent_run_id = parent_run_id or ""
+        self.episode_id = None
+        self.task_id = task_id or ""
+        self.seq = 0
+        self.lock = threading.Lock()
+
+
+def _current_trace():
+    ep = _current_episode.get(None)
+    if ep is not None:
+        return ep.trajectory
+    return _current_trajectory.get(None)
+
+
+@contextmanager
+def trajectory_scope(task_id: str = "", parent_run_id: str = ""):
+    """episode 밖 실행에 run 을 세운다. 이미 run 안이면 중첩 생성하지 않는다."""
+    existing = _current_trace()
+    if existing is not None:
+        yield existing
+        return
+    if not task_id:
+        try:
+            from thread_context import get_current_task_id
+            task_id = get_current_task_id() or ""
+        except Exception:
+            task_id = ""
+    trace = _Trajectory(trajectory_run_id(task_id), task_id, parent_run_id)
+    token = _current_trajectory.set(trace)
+    try:
+        yield trace
+    finally:
+        _current_trajectory.reset(token)
+
+
+def current_trajectory_identity() -> dict:
+    """write/task 원장이 같은 run 을 나르기 위한 작은 공개 봉투."""
+    tr = _current_trace()
+    if tr is None:
+        return {"run_id": "", "parent_run_id": "", "episode_id": None}
+    return {"run_id": tr.run_id, "parent_run_id": tr.parent_run_id,
+            "episode_id": tr.episode_id}
+
+
+def record_trajectory_event(kind: str, data: dict = None):
+    """현재 run 에 순번 있는 사건 한 건. 원문/내용 대신 작은 메타데이터만 허용한다.
+
+    실패해도 본 실행을 깨지 않는 관측 훅이다. 데이터는 비밀 마스킹 뒤 4KB로 제한하며,
+    큰 본문은 호출자가 hash/ref/length 로 바꿔 싣는 것이 계약이다.
+    """
+    tr = _current_trace()
+    if tr is None or not kind:
+        return None
+    try:
+        with tr.lock:
+            safe = data if isinstance(data, dict) else {}
+            encoded = json.dumps(safe, ensure_ascii=False, sort_keys=True, default=str)
+            encoded = mask_secrets(truncate_for_log(encoded, 4096))
+            seq = _save_trajectory_event(tr, str(kind)[:80], encoded)
+            tr.seq = max(tr.seq, seq)
+        return {"run_id": tr.run_id, "event_seq": seq, "episode_id": tr.episode_id}
+    except Exception:
+        return None
+
 
 # ── 버퍼 무손실 청소 ──────────────────────────────────────────────────────
 # 에피소드 *버퍼에만* 적용한다(터미널 출력은 _original 로 전문 유지 → 라이브 디버깅 무손실).
@@ -109,7 +202,7 @@ def _denoise_for_buffer(text: str) -> str:
 class _Episode:
     """단일 에피소드의 격리 상태 — 컨텍스트별로 하나씩, 자기 버퍼를 소유한다."""
     __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id",
-                 "steps", "task_id")
+                 "steps", "task_id", "trajectory")
 
     def __init__(self, agent: str, user_message: str, project_id: str = ""):
         self.agent = agent
@@ -127,6 +220,7 @@ class _Episode:
             self.task_id = get_current_task_id() or ""
         except Exception:
             pass
+        self.trajectory = _Trajectory(trajectory_run_id(self.task_id), self.task_id)
 
 
 class EpisodeLogger:
@@ -172,7 +266,16 @@ class EpisodeLogger:
         _current_episode.set(ep)
         # ★행을 먼저 만든다 — 이 턴이 리로드로 죽어도 기록은 남는다(_open_episode 참조).
         ep.episode_id = _open_episode(ep.started_at, agent, mask_secrets(ep.user_message),
-                                      ep.task_id)
+                                      ep.task_id, ep.trajectory.run_id,
+                                      ep.trajectory.parent_run_id)
+        ep.trajectory.episode_id = ep.episode_id
+        record_trajectory_event("request.received", {
+            "message_sha256": hashlib.sha256((ep.user_message or "").encode(
+                "utf-8", "replace")).hexdigest(),
+            "message_chars": len(ep.user_message or ""),
+            "agent": agent or "",
+            "task_id": ep.task_id,
+        })
         # 시작 마커 — contextvar 가 ep 로 설정된 뒤 print → write() 가 ep.buffer 로 캡처
         _msg_preview = (user_message or "")[:80].replace("\n", " ")
         print(f"[Episode START] agent={agent} message={_msg_preview!r}")
@@ -195,6 +298,7 @@ class EpisodeLogger:
                 ep.task_id = get_current_task_id() or ""
             except Exception:
                 pass
+        record_trajectory_event("run.ended", {"total_ms": _total_ms})
         _current_episode.set(None)  # 컨텍스트 비움(같은 태스크 다음 메시지로 누수 방지)
         cls._finalize(ep)
 
@@ -233,11 +337,14 @@ class EpisodeLogger:
             # 개설된 행을 닫는다(없으면 INSERT 폴백). salvage 경로도 여기를 지나므로
             # 미종료 행이 중복 INSERT 되지 않고 그 자리에서 닫힌다.
             episode_id = _close_episode(ep.episode_id, ep.started_at, ep.agent,
-                                        user_message, log_text, total_ms, ep.task_id)
+                                        user_message, log_text, total_ms, ep.task_id,
+                                        ep.trajectory.run_id,
+                                        ep.trajectory.parent_run_id)
             if episode_id:
                 ep.episode_id = episode_id  # 백그라운드 증류(refresh_episode)가 이 행에 로그를 덧붙임
                 _extract_and_save_summary(episode_id, ep.started_at, ep.agent, user_message,
-                                          log_text, total_ms, steps=ep.steps)
+                                          log_text, total_ms, steps=ep.steps,
+                                          run_id=ep.trajectory.run_id)
                 _cleanup_old_episodes(keep_id=episode_id)   # 방금 쓴 행은 축출 후보가 아니다
         except Exception as e:
             # 에피소드 기록 실패가 시스템에 영향 주면 안 됨
@@ -308,6 +415,10 @@ def notify_round(provider: str, model: str, round_no: int, budget: int):
     if ep is not None:
         ep.steps.append({"event": "round", "provider": provider, "model": model,
                          "round": round_no, "budget": budget, "role": role})
+        record_trajectory_event("model.round", {
+            "provider": provider, "model": model, "round": round_no,
+            "budget": budget, "role": role,
+        })
 
 
 def record_role_switch(role: str, provider: str, model: str):
@@ -315,6 +426,9 @@ def record_role_switch(role: str, provider: str, model: str):
     ep = _current_episode.get(None)
     if ep is not None:
         ep.steps.append({"event": "switch", "role": role, "provider": provider, "model": model})
+        record_trajectory_event("model.switched", {
+            "role": role, "provider": provider, "model": model,
+        })
 
 
 class _TeeWriter:
@@ -378,6 +492,33 @@ def _get_db():
     return conn
 
 
+def _save_trajectory_event(trace: "_Trajectory", kind: str, data_json: str) -> int:
+    """append-only 사건 저장 + run 안의 다음 순번 원자 할당.
+
+    repair/reload 뒤 같은 task(run)가 다른 프로세스에서 이어져도 MAX+1 을 IMMEDIATE
+    트랜잭션 안에서 정하므로 (run_id,event_seq) 충돌이나 순번 되감김이 없다.
+    """
+    conn = _get_db()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            "SELECT COALESCE(MAX(event_seq), 0) FROM trajectory_event WHERE run_id=?",
+            (trace.run_id,)).fetchone()
+        seq = int(row[0] or 0) + 1
+        conn.execute(
+            """INSERT INTO trajectory_event
+               (run_id, event_seq, episode_id, task_id, parent_run_id, ts, kind, data, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (trace.run_id, seq, trace.episode_id, trace.task_id,
+             trace.parent_run_id, datetime.now().isoformat(), kind, data_json,
+             _episode_source()),
+        )
+        conn.commit()
+        return seq
+    finally:
+        conn.close()
+
+
 def _ensure_episode_tables():
     """episode_log / episode_summary 테이블 보장 (idempotent, CREATE IF NOT EXISTS).
 
@@ -396,6 +537,8 @@ def _ensure_episode_tables():
                 log TEXT,
                 total_ms INTEGER,
                 task_id TEXT,
+                run_id TEXT,
+                parent_run_id TEXT,
                 source TEXT,
                 owner TEXT
             );
@@ -412,8 +555,25 @@ def _ensure_episode_tables():
                 total_ms INTEGER,
                 evaluation_result TEXT,
                 steps TEXT,
+                run_id TEXT,
                 source TEXT
             );
+            CREATE TABLE IF NOT EXISTS trajectory_event (
+                run_id TEXT NOT NULL,
+                event_seq INTEGER NOT NULL,
+                episode_id INTEGER,
+                task_id TEXT,
+                parent_run_id TEXT,
+                ts TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                data TEXT,
+                source TEXT,
+                PRIMARY KEY (run_id, event_seq)
+            );
+            CREATE INDEX IF NOT EXISTS idx_trajectory_episode
+                ON trajectory_event(episode_id, event_seq);
+            CREATE INDEX IF NOT EXISTS idx_trajectory_task
+                ON trajectory_event(task_id, event_seq);
         """)
         # 기존 DB 마이그레이션 — 구조화 스텝 원장 컬럼 (2026-08-14)
         try:
@@ -427,6 +587,13 @@ def _ensure_episode_tables():
             conn.execute("ALTER TABLE episode_log ADD COLUMN task_id TEXT")
         except sqlite3.OperationalError:
             pass  # 이미 존재
+        for _t, _c in (("episode_log", "run_id"),
+                       ("episode_log", "parent_run_id"),
+                       ("episode_summary", "run_id")):
+            try:
+                conn.execute(f"ALTER TABLE {_t} ADD COLUMN {_c} TEXT")
+            except sqlite3.OperationalError:
+                pass
         # 마이그레이션 — 시험 격리 칸 (2026-08-22, B18-2): 시험 프로세스가 남긴 주행은
         # 몸의 삶이 아니다. 지우지 않고 **표식만 붙인다**(시험도 자기 행을 읽어야 하고,
         # 지운 기록은 되살릴 수 없다). NULL = 칸이 생기기 전의 행 = 실사용으로 읽는다.
@@ -560,7 +727,8 @@ def live_episode_ids():
         return sorted(_live_episode_ids)
 
 
-def _open_episode(started_at, agent, user_message, task_id=""):
+def _open_episode(started_at, agent, user_message, task_id="", run_id="",
+                  parent_run_id=""):
     """턴 **시작 시** 행을 먼저 만든다 (ended_at NULL). Returns: episode_id or None.
 
     ★왜 (2026-08-18): 옛 구현은 END 에서 단 한 번 INSERT 했다 — 그때까지 에피소드
@@ -577,10 +745,13 @@ def _open_episode(started_at, agent, user_message, task_id=""):
     try:
         conn = _get_db()
         cur = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source, owner)
-               VALUES (?, NULL, ?, ?, '', NULL, ?, ?, ?)""",
+            """INSERT INTO episode_log
+               (started_at, ended_at, agent, user_message, log, total_ms, task_id,
+                run_id, parent_run_id, source, owner)
+               VALUES (?, NULL, ?, ?, '', NULL, ?, ?, ?, ?, ?)""",
             (started_at.isoformat() if started_at else datetime.now().isoformat(),
-             agent, user_message, task_id or "", _episode_source(), _process_identity()),
+             agent, user_message, task_id or "", run_id or "", parent_run_id or "",
+             _episode_source(), _process_identity()),
         )
         eid = cur.lastrowid
         conn.commit()
@@ -599,7 +770,7 @@ def _open_episode(started_at, agent, user_message, task_id=""):
 
 
 def _close_episode(episode_id, started_at, agent, user_message, log_text, total_ms,
-                   task_id=""):
+                   task_id="", run_id="", parent_run_id=""):
     """턴 종료 — 개설된 행을 갱신한다. 행이 없으면(개설 실패·옛 경로) INSERT 폴백.
 
     task_id 는 늦은 캡처분을 반영하되 빈 값으로 개설분을 덮지 않는다(COALESCE·NULLIF)."""
@@ -620,16 +791,20 @@ def _close_episode(episode_id, started_at, agent, user_message, log_text, total_
             return episode_id
         except Exception:
             pass          # 갱신 실패 시 아래 INSERT 폴백으로 데이터라도 남긴다
-    return _save_episode(started_at, agent, user_message, log_text, total_ms, task_id)
+    return _save_episode(started_at, agent, user_message, log_text, total_ms, task_id,
+                         run_id, parent_run_id)
 
 
-def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id=""):
+def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id="",
+                  run_id="", parent_run_id=""):
     """에피소드 전체 로그를 DB에 INSERT (폴백 경로). Returns: episode_id"""
     try:
         conn = _get_db()
         cursor = conn.execute(
-            """INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, total_ms, task_id, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO episode_log
+               (started_at, ended_at, agent, user_message, log, total_ms, task_id,
+                run_id, parent_run_id, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 started_at.isoformat() if started_at else datetime.now().isoformat(),
                 datetime.now().isoformat(),
@@ -638,6 +813,8 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id="
                 log_text,
                 total_ms,
                 task_id or "",
+                run_id or trajectory_run_id(task_id),
+                parent_run_id or "",
                 _episode_source(),
             )
         )
@@ -655,7 +832,7 @@ def _save_episode(started_at, agent, user_message, log_text, total_ms, task_id="
 
 
 def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_text, total_ms,
-                              steps=None):
+                              steps=None, run_id=""):
     """요약 지표 추출·저장. 실행 라운드는 구조화 스텝 원장(steps)이 1차 소스 —
     정규식 회수는 원장이 빈 경우(claude_code 아웃오브프로세스 등)의 폴백."""
 
@@ -725,8 +902,8 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
             """INSERT INTO episode_summary
                (episode_id, started_at, agent, user_message,
                 hippocampus_score, unconscious_decision, consciousness_ms,
-                execution_rounds, total_ms, evaluation_result, steps, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                execution_rounds, total_ms, evaluation_result, steps, run_id, source)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 episode_id,
                 started_at.isoformat() if started_at else None,
@@ -739,6 +916,7 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
                 total_ms,
                 evaluation_result,
                 steps_json,
+                run_id or trajectory_run_id(""),
                 _episode_source(),
             )
         )
@@ -787,6 +965,11 @@ def _cleanup_old_episodes(keep_id=None):
         count = conn.execute("SELECT COUNT(*) FROM episode_log").fetchone()[0]
         if count > MAX_EPISODES:
             delete_count = count - MAX_EPISODES
+            doomed = conn.execute(
+                "SELECT id FROM episode_log WHERE ? IS NULL OR id <> ? "
+                "ORDER BY CASE WHEN COALESCE(source, 'usage') = 'test' THEN 0 ELSE 1 END, id ASC "
+                "LIMIT ?", (keep_id, keep_id, delete_count)).fetchall()
+            doomed_ids = [r[0] for r in doomed]
             conn.execute(
                 "DELETE FROM episode_log WHERE id IN ("
                 "  SELECT id FROM episode_log"
@@ -795,6 +978,10 @@ def _cleanup_old_episodes(keep_id=None):
                 "  LIMIT ?)",
                 (keep_id, keep_id, delete_count)
             )
+            if doomed_ids:
+                marks = ",".join("?" * len(doomed_ids))
+                conn.execute(f"DELETE FROM trajectory_event WHERE episode_id IN ({marks})",
+                             doomed_ids)
             conn.commit()
         conn.close()
     except Exception:
@@ -835,7 +1022,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
     try:
         conn = _get_db()
         rows = conn.execute(
-            f"""SELECT e.id, e.started_at, e.agent,
+            f"""SELECT e.id, e.run_id, e.started_at, e.agent,
                       SUBSTR(e.user_message, 1, 120) as user_message,
                       e.total_ms,
                       s.hippocampus_score, s.unconscious_decision,
@@ -863,6 +1050,39 @@ def get_episode_detail(episode_id: int):
         return dict(row) if row else None
     except Exception:
         return None
+
+
+def get_trajectory(run_id: str = "", episode_id: int = None,
+                   include_test: bool = False):
+    """한 run/episode 의 시간순 핵심 사건. 기본은 실사용만(시험은 삶이 아니다)."""
+    if not run_id and episode_id is None:
+        return []
+    try:
+        conn = _get_db()
+        if run_id:
+            rows = conn.execute(
+                "SELECT * FROM trajectory_event WHERE run_id=?"
+                + ("" if include_test else " AND COALESCE(source, 'usage') <> 'test'")
+                + " ORDER BY event_seq",
+                (run_id,)).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM trajectory_event WHERE episode_id=?"
+                + ("" if include_test else " AND COALESCE(source, 'usage') <> 'test'")
+                + " ORDER BY event_seq",
+                (episode_id,)).fetchall()
+        conn.close()
+        out = []
+        for row in rows:
+            item = dict(row)
+            try:
+                item["data"] = json.loads(item.get("data") or "{}")
+            except ValueError:
+                pass
+            out.append(item)
+        return out
+    except Exception:
+        return []
 
 
 def get_episode_summaries(limit: int = 50, include_test: bool = False):

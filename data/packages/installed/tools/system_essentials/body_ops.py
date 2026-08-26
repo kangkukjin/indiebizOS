@@ -8,6 +8,7 @@
 - changes(기본): 최근 파일 단위 변화 (미커밋 작업분 포함)
 - log: 커밋 단위 이력 ("내가 뭘 했나")
 - file: 한 파일의 일생 — git --follow 로 생성·수정·이동(이름변경)을 관통 추적
+- trajectory: 한 run 의 요청·IBL·검증·부작용 핵심 사건 — 원문이 아닌 hash/ref 순번 원장
 - diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·한 커밋·구간(ref..HEAD). 파일별 items + 본문
   (2026-08-21 추가: 7일간 Bash git 서브커맨드 1위가 `git diff` 95회 — 회상 통로가 "무엇이"
    까지만 답하고 "어떻게"는 못 답해 셸로 떨어지던 자리)
@@ -312,6 +313,90 @@ def op_writes(tool_input):
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+
+
+def op_trajectory(tool_input):
+    """한 실행의 기계용 핵심 사건을 회상한다.
+
+    식별자는 run_id / episode_id / task_id 중 하나. 없으면 최근 실사용 episode 한 건을
+    고른다. episode memory 를 대체하지 않으며 request·IBL·검증 원문도 복제하지 않는다 —
+    data 에는 hash/ref/길이와 부작용 경로만 있다.
+    """
+    notes = []
+    limit = _clamp(tool_input, "limit", _DEFAULT_LIMIT, _MAX_LIMIT, notes)
+    run_id = str(tool_input.get("run_id") or "").strip()
+    task_id = str(tool_input.get("task_id") or "").strip()
+    episode_raw = tool_input.get("episode_id")
+    episode_id = None
+    if episode_raw not in (None, ""):
+        try:
+            episode_id = int(episode_raw)
+        except (TypeError, ValueError):
+            return {"success": False,
+                    "message": "episode_id 는 정수여야 합니다 — 예: [self:body]{op: \"trajectory\", episode_id: 123}"}
+        if episode_id <= 0:
+            return {"success": False, "message": "episode_id 는 1 이상의 정수여야 합니다."}
+
+    given = sum(bool(x) for x in (run_id, task_id, episode_id))
+    if given > 1:
+        return {"success": False,
+                "message": "run_id·episode_id·task_id 중 하나만 지정하세요 — 서로 다른 실행을 섞지 않습니다."}
+
+    try:
+        from episode_logger import (get_episode_detail, get_episode_journal,
+                                    get_trajectory, trajectory_run_id)
+    except Exception as e:
+        return {"success": False, "message": f"trajectory 회상기를 불러올 수 없습니다: {e}"}
+
+    selected = ""
+    if episode_id is not None:
+        ep = get_episode_detail(episode_id)
+        if not ep:
+            return {"success": False,
+                    "message": f"episode {episode_id}를 찾을 수 없습니다 — 상세 로그 보존창 밖일 수 있습니다."}
+        run_id = ep.get("run_id") or trajectory_run_id(ep.get("task_id") or "")
+        task_id = ep.get("task_id") or ""
+        events = get_trajectory(episode_id=episode_id)
+        selected = f"episode {episode_id}"
+    elif task_id:
+        run_id = trajectory_run_id(task_id)
+        events = get_trajectory(run_id=run_id)
+        selected = f"task {task_id}"
+    elif run_id:
+        events = get_trajectory(run_id=run_id)
+        selected = run_id
+    else:
+        latest = get_episode_journal(1)
+        if not latest:
+            return {"success": True, "items": [], "total": 0, "truncated": False,
+                    "text": "회상할 최근 실사용 episode가 없습니다."}
+        ep = latest[0]
+        episode_id = ep.get("id")
+        run_id = ep.get("run_id") or ""
+        if not run_id:
+            detail = get_episode_detail(episode_id) or {}
+            task_id = detail.get("task_id") or ""
+            run_id = trajectory_run_id(task_id) if task_id else ""
+        events = get_trajectory(episode_id=episode_id)
+        selected = f"최근 episode {episode_id}"
+
+    total = len(events)
+    truncated = total > limit
+    if truncated:
+        # 시작 원인과 최종 결과를 함께 보존한다. 중간 생략은 event_seq 틈으로도 드러난다.
+        head = max(1, limit // 2)
+        tail = max(0, limit - head)
+        events = events[:head] + (events[-tail:] if tail else [])
+    text = (f"{selected}의 trajectory: 핵심 사건 {total}건"
+            + (f" — 앞뒤 {limit}건만 표시(중간 {total - limit}건 생략)" if truncated else "")
+            + " · 원문 기억이 아니라 순번 있는 hash/ref 원장")
+    if not events:
+        text += " — 이 실행은 trajectory 계측 이전 기록이거나 핵심 사건이 없습니다"
+    if notes:
+        text += " · " + ", ".join(notes)
+    return {"success": True, "items": events, "total": total,
+            "truncated": truncated, "run_id": run_id, "episode_id": episode_id,
+            "task_id": task_id, "text": text}
 
 
 def op_file(tool_input):

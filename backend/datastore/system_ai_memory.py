@@ -122,6 +122,8 @@ def init_memory_db():
             delegated_to TEXT,
             delegation_context TEXT,
             parent_task_id TEXT,
+            run_id TEXT,
+            parent_run_id TEXT,
             pending_delegations INTEGER DEFAULT 0,
             status TEXT DEFAULT 'pending',
             result TEXT,
@@ -130,6 +132,14 @@ def init_memory_db():
             completed_at TIMESTAMP
         )
     """)
+
+    # 기존 tasks 행은 지우지 않고 연결 칸만 보탠다. 값이 빈 옛 행은 task_id 로 run_id 를
+    # 결정적으로 재계산할 수 있어 마이그레이션 시 추정 UPDATE 를 하지 않는다.
+    for _col in ("run_id", "parent_run_id"):
+        try:
+            cursor.execute(f"ALTER TABLE tasks ADD COLUMN {_col} TEXT")
+        except sqlite3.OperationalError:
+            pass
 
     conn.commit()
     conn.close()
@@ -520,16 +530,31 @@ def create_task(task_id: str, requester: str, requester_channel: str,
     init_memory_db()
     conn = _get_connection()
     cursor = conn.cursor()
+    from episode_logger import trajectory_run_id
     cursor.execute("""
         INSERT INTO tasks (task_id, requester, requester_channel,
                            original_request, delegated_to,
-                           delegation_context, parent_task_id, ws_client_id, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                           delegation_context, parent_task_id, run_id,
+                           parent_run_id, ws_client_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
     """, (task_id, requester, requester_channel, original_request,
-          delegated_to, delegation_context, parent_task_id, ws_client_id))
+          delegated_to, delegation_context, parent_task_id,
+          trajectory_run_id(task_id),
+          trajectory_run_id(parent_task_id) if parent_task_id else "",
+          ws_client_id))
     conn.commit()
     result = cursor.lastrowid
     conn.close()
+    try:
+        from episode_logger import record_trajectory_event
+        record_trajectory_event("task.created", {
+            "child_task_id": task_id,
+            "child_run_id": trajectory_run_id(task_id),
+            "parent_task_id": parent_task_id or "",
+            "delegated_to": delegated_to or "",
+        })
+    except Exception:
+        pass
     return result
 
 
@@ -541,7 +566,15 @@ def get_task(task_id: str) -> Optional[Dict]:
     cursor.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    out = dict(row)
+    from episode_logger import trajectory_run_id
+    out["run_id"] = out.get("run_id") or trajectory_run_id(task_id)
+    if out.get("parent_task_id"):
+        out["parent_run_id"] = out.get("parent_run_id") or trajectory_run_id(
+            out["parent_task_id"])
+    return out
 
 
 def complete_task(task_id: str, result: str = None) -> bool:

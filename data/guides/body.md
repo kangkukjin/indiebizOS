@@ -37,13 +37,16 @@ items 행: changes=`{파일, 상태, 영역, 시각, 요지, 커밋}` (이동이
 ```
 [self:body]{op: "writes", days: 2}                     # 최근 이틀 런타임 쓰기 — 누가 뭘 썼나
 [self:body]{op: "writes", path: "data"} >> [table:groupby]{by: "행위자"}
+[self:body]{op: "trajectory"}                          # 가장 최근 실사용 실행의 핵심 사건
+[self:body]{op: "trajectory", episode_id: 123}         # 특정 주행 — run_id·task_id도 가능(셋 중 하나)
 ```
 
 ## 함정·경계
 
-- **★`writes`=부분 기록**: 쓰기 관문(safe_store·`[self:write]`)을 지난 쓰기만 원장(`data/write_ledger.jsonl`)에 남는다 — 핸들러가 직접 open() 으로 쓰면 원리적으로 미기록. 결과 text 가 이 부분성을 항상 광고한다. 코드 층 전수는 `changes`(git)가 정답. `작업` 열=task_id → 주행기록(episode)과 조인하면 "왜 바뀌었나"까지.
+- **★`writes`=부분 기록**: 쓰기 관문(safe_store·`[self:write]`)을 지난 쓰기만 원장(`data/write_ledger.jsonl`)에 남는다 — 핸들러가 직접 open() 으로 쓰면 원리적으로 미기록. 결과 text 가 이 부분성을 항상 광고한다. 코드 층 전수는 `changes`(git)가 정답. `작업`(task_id)과 `run`(run_id) → 주행기록·`trajectory_event`와 조인하면 "어떤 요청의 몇 번째 사건이 이 파일을 바꿨나"까지 추정 없이 닫힌다.
+- **`trajectory` 식별자**: `run_id`·`episode_id`·`task_id` 중 하나만 준다. 아무것도 안 주면 최근 실사용 episode. 여러 개를 섞으면 서로 다른 실행을 합치지 않고 거절한다. `limit` 절단 시 시작과 끝을 반씩 보존해 원인·결말을 함께 나른다.
 - **pc_only** — 폰 몸엔 git 이 없다. git 저장소 밖이면 정직 거절(빈 결과 아님).
 - `file` op 의 미추적 파일=이력 0 이 정상("아직 커밋된 적 없음"으로 구분 보고). 경로 오타와 구분됨.
 - `limit` 상한 1000 — 초과 요청은 **신고 후** 상한 적용(침묵 클램프 아님). `truncated`/`total` 로 절단 정직 신고.
 - 미커밋 행은 `상태: "미커밋"`, 시각·커밋 빈값 — 시각 정렬 시 유의.
-- **경계**: 시스템의 *현재 상태*(CPU·디스크)는 `[sense:host]` / *실행 이력*(무슨 명령이 돌았나)은 주행기록(episode) / **파일(몸)의 변화 이력**이 이 어휘. 파일 *내용*은 `[self:read]`, 파일 *찾기*는 `file_find`.
+- **경계**: 시스템의 *현재 상태*(CPU·디스크)는 `[sense:host]` / *사람이 읽는 실행 이력*은 주행기록(episode) / *기계가 잇는 핵심 사건 순서*는 `trajectory_event` / **파일(몸)의 변화 이력**이 이 어휘. trajectory 는 원문 기억이 아니라 request·IBL·검증·부작용·종료의 hash/ref 원장이고, episode memory 는 여기서 의미만 압축해 가져간다. 파일 *내용*은 `[self:read]`, 파일 *찾기*는 `file_find`.

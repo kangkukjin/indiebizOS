@@ -1218,6 +1218,22 @@ async def get_episode_analysis_prompt(episode_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/world-pulse/episodes/{episode_id}/trajectory")
+async def get_episode_trajectory(episode_id: int):
+    """주행의 기계용 핵심 사건 — 원문 episode log 를 장황하게 복제하지 않는다."""
+    try:
+        from episode_logger import get_episode_detail, get_trajectory
+        ep = get_episode_detail(episode_id)
+        if not ep:
+            raise HTTPException(status_code=404, detail="에피소드를 찾을 수 없습니다.")
+        return {"episode_id": episode_id, "run_id": ep.get("run_id") or "",
+                "events": get_trajectory(episode_id=episode_id)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/world-pulse/health")
 async def get_health():
     """시스템 전체 건강 요약"""

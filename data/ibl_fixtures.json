@@ -30,6 +30,7 @@
     "self:body#diff": "[self:body]{op: \"diff\", path: \"backend\", lines: 40}",
     "self:body#file": "[self:body]{op: \"file\", path: \"backend/api.py\", limit: 10}",
     "self:body#log": "[self:body]{op: \"log\", days: 7, limit: 10}",
+    "self:body#trajectory": "[self:body]{op: \"trajectory\", limit: 10}",
     "self:body#writes": "[self:body]{op: \"writes\", days: 7, limit: 10}",
     "self:discover": "[self:discover]{query: \"주가\"}",
     "self:file_find": "[self:file_find]{pattern: \"*.md\", path: \".\"}",

@@ -81,6 +81,8 @@ def _init_pulse_db():
             log TEXT,
             total_ms INTEGER,
             task_id TEXT,
+            run_id TEXT,
+            parent_run_id TEXT,
             source TEXT,
             owner TEXT           -- 행의 주인(pid:시작시각) — 고아 회수 판정 (episode_logger)
         );
@@ -96,8 +98,25 @@ def _init_pulse_db():
             execution_rounds INTEGER,
             total_ms INTEGER,
             evaluation_result TEXT,
+            run_id TEXT,
             source TEXT
         );
+        CREATE TABLE IF NOT EXISTS trajectory_event (
+            run_id TEXT NOT NULL,
+            event_seq INTEGER NOT NULL,
+            episode_id INTEGER,
+            task_id TEXT,
+            parent_run_id TEXT,
+            ts TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            data TEXT,
+            source TEXT,
+            PRIMARY KEY (run_id, event_seq)
+        );
+        CREATE INDEX IF NOT EXISTS idx_trajectory_episode
+            ON trajectory_event(episode_id, event_seq);
+        CREATE INDEX IF NOT EXISTS idx_trajectory_task
+            ON trajectory_event(task_id, event_seq);
     """ + _NOTIFY_LOG_DDL)
     conn.close()
 

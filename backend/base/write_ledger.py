@@ -51,11 +51,17 @@ def _actor() -> dict:
             "task": tc.get_current_task_id() or "",
             "origin": tc.get_task_origin() or "",
         }
+        try:
+            from episode_logger import current_trajectory_identity
+            ident = current_trajectory_identity()
+            a["run"] = ident.get("run_id") or ""
+        except Exception:
+            a["run"] = ""
         if tc.is_health_check_mode():
             a["hc"] = True   # 자가점검 순찰의 쓰기 — 계수 오염 방지 표식(selfcheck 선례)
         return a
     except Exception:
-        return {"agent": "", "task": "", "origin": ""}
+        return {"agent": "", "task": "", "origin": "", "run": ""}
 
 
 def _rel(path) -> str:
@@ -86,6 +92,20 @@ def log_write(path, event: str = "write", gate: str = "", size=None) -> None:
             hb = True
         row = {"ts": datetime.now().isoformat(timespec="seconds"),
                "path": rel, "event": event, "gate": gate, **actor}
+        # 실제 쓰기는 이미 성공한 뒤 이 훅으로 들어온다. 같은 사건을 trajectory 에도
+        # 남기고 받은 순번을 JSONL 행에 실으면 episode/task/side-effect 를 추정 없이 조인한다.
+        try:
+            from episode_logger import record_trajectory_event
+            ev = record_trajectory_event("side_effect.write", {
+                "path": rel, "event": event, "gate": gate,
+                **({"size": int(size)} if size is not None else {}),
+            })
+            if ev:
+                row["run"] = ev.get("run_id") or row.get("run", "")
+                row["event_seq"] = ev.get("event_seq")
+                row["episode_id"] = ev.get("episode_id")
+        except Exception:
+            pass
         if hb:
             row["hb"] = True
         if size is not None:

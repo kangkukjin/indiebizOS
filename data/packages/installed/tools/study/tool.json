@@ -92,7 +92,7 @@
     },
     {
       "name": "researcher_op",
-      "description": "연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search(웹 검색).\n- op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → 후보별 소속·출생연도·직위·lodID.\n- op=coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망(소속·협업으로 신원 재확인).",
+      "description": "연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search(웹 검색).\n- op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → name·org·birth_year·position·lodID·name_en 구조 열(+표시용 공통 열).\n- op=coauthor: name(연구자 이름, 필수) → 같은 구조 열의 공저자망(이름 기반이라 동명이인 합산 주의).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -107,7 +107,7 @@
           },
           "name": {
             "type": "string",
-            "description": "[find] 연구자명(한글)"
+            "description": "[find/coauthor] 연구자 이름(필수)"
           },
           "name_en": {
             "type": "string",
@@ -116,10 +116,6 @@
           "org": {
             "type": "string",
             "description": "[find] 소속 기관(동명이인 압축, 선택)"
-          },
-          "id": {
-            "type": "string",
-            "description": "[coauthor] 연구자 lodID (find 결과에서 획득)"
           },
           "limit": {
             "type": "integer",

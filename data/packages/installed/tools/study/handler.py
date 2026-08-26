@@ -226,6 +226,14 @@ def _nanet_author_find(tool_input: dict, context=None) -> str:
                                             (pos if pos != "-" else None)] if x),
             "summary": (f"lodID:{lid}" if lid else "") + (f" / {en}" if en else ""),
             "url": None,
+            # 공통 검색 4열은 표시용이다. 식별값을 문자열에만 접으면
+            # select/dedup/join 이 못 쓰므로 열린 통화의 구조 열도 보존한다.
+            "name": a.get("name_ko") or name,
+            "org": org_ko if org_ko != "?" else None,
+            "birth_year": by if by != "?" else None,
+            "position": pos if pos != "-" else None,
+            "lodID": lid,
+            "name_en": en or None,
         })
     lines.append("→ [sense:researcher]{op:coauthor, name:\"<이름>\"}으로 연관연구자망 교차검증 가능(이름 기반 — 동명이인 합산 주의).")
     return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
@@ -273,6 +281,12 @@ def _nanet_coauthor(tool_input: dict, context=None) -> str:
             "meta": " · ".join(x for x in [inst, (f"출생 {birth}" if birth else "")] if x),
             "summary": (f"lodID:{lid}" if lid else ""),
             "url": None,
+            "name": nm,
+            "org": inst or None,
+            "birth_year": birth or None,
+            "position": None,
+            "lodID": lid or None,
+            "name_en": None,
         })
     return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
 
@@ -1223,4 +1237,3 @@ _OP_DISPATCHERS = {
     "researcher_op": {"find": _nanet_author_find, "coauthor": _nanet_coauthor},
     "entity_op": {"resolve": _entity_resolve, "detail": _entity_detail},
 }
-

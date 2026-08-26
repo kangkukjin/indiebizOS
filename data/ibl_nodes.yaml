@@ -2075,7 +2075,7 @@ nodes:
         side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
         description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search(웹 검색).
-        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
+        target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환 열: name·org·birth_year·position·lodID·name_en (+ 표시용 title·meta·summary·url). 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 같은 열의 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
         target_key: op
         group: research
         router: handler
@@ -7382,8 +7382,8 @@ nodes:
         returns: transform
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자 — 행 속 중첩 목록을 펼쳐(unnest) 행들로. each 결과를 한 표로 모으는 출구.
-        target_description: 'field(중첩 목록 경로, 기본 "_result" — each 가 행에 붙인 결과 자리. 점 표기 "_result.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. 예: ... >> [table:each]{do: "[sense:crawl]{url: \"$it.url\"}"} >> [table:flatten]{} >> [table:document]{}.'
+        description: 통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다.
+        target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
         group: transform
         router: handler
         tool: data_flatten

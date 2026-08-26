@@ -132,13 +132,13 @@
     },
     {
       "name": "data_flatten",
-      "description": "records → 행 속 중첩 목록 펼치기(unnest). field(경로, 기본 \"_result\"), keep(각 행에 승계할 부모 필드 배열). each 출력의 _result 를 한 표로 모을 때. >> 앞 통화를 받음.",
+      "description": "records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 승계할 부모 필드 배열). each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.",
       "input_schema": {
         "type": "object",
         "properties": {
           "field": {
             "type": "string",
-            "description": "중첩 목록 경로(점 표기, 기본 \"_result\"). 값이 {items:[...]} 봉투면 items 자동 승격."
+            "description": "중첩 목록 경로(점 표기). 값이 {items:[...]} 봉투면 items 자동 승격. 생략 시 옛 문장의 정직한 이행 오류만 제공."
           },
           "keep": {
             "type": "array",

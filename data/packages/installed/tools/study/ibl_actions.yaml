@@ -42,7 +42,7 @@ actions:
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
     description: 연구자(학자) 검색 (op 분기, 국회도서관 국가학술정보). 동명이인을 소속·출생연도로 분리. 일반 인물은 search(웹 검색).
-    target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환: 후보별 소속·출생연도·직위·lodID. 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
+    target_description: "op로 분기 (기본 find).\n- find: name(한글, 필수) + org(소속 — 동명이인 압축) + name_en + max_results.\n  반환 열: name·org·birth_year·position·lodID·name_en (+ 표시용 title·meta·summary·url). 흔한 이름이 사람 단위로 갈라짐(웹 검색이 못 넘는 동명이인 벽 해소).\n- coauthor: name(연구자 이름, 필수) → 같은 열의 연관연구자망(함께 연구한 학자들). 협업 이름들로 신원 재확인.\n  주의: 이름 기반이라 동명이인의 연관연구자가 합쳐져 옴 — find의 소속과 교차 검증.\n"
     target_key: op
     group: research
     router: handler
@@ -204,9 +204,9 @@ tool_json:
   - name: researcher_op
     description: '연구자(학자) 검색 (op 분기) — [sense:researcher]. 국회도서관 국가학술정보. 동명이인을 소속·출생연도·lodID로 분리. 일반 인물 OSINT는 search(웹 검색).
 
-      - op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → 후보별 소속·출생연도·직위·lodID.
+      - op=find(기본): name(한글, 필수) + org(소속, 동명이인 압축) + name_en + max_results → name·org·birth_year·position·lodID·name_en 구조 열(+표시용 공통 열).
 
-      - op=coauthor: id(연구자 lodID, find로 먼저 획득) → 공저자망(소속·협업으로 신원 재확인).'
+      - op=coauthor: name(연구자 이름, 필수) → 같은 구조 열의 공저자망(이름 기반이라 동명이인 합산 주의).'
     input_schema:
       type: object
       properties:
@@ -215,16 +215,13 @@ tool_json:
           description: find(기본)/coauthor
         name:
           type: string
-          description: '[find] 연구자명(한글)'
+          description: '[find/coauthor] 연구자 이름(필수)'
         name_en:
           type: string
           description: '[find] 연구자명(영문, 선택)'
         org:
           type: string
           description: '[find] 소속 기관(동명이인 압축, 선택)'
-        id:
-          type: string
-          description: '[coauthor] 연구자 lodID (find 결과에서 획득)'
         limit:
           type: integer
           description: 최대 결과 수(기본 30)

@@ -117,8 +117,8 @@ actions:
     returns: transform
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — 행 속 중첩 목록을 펼쳐(unnest) 행들로. each 결과를 한 표로 모으는 출구.
-    target_description: 'field(중첩 목록 경로, 기본 "_result" — each 가 행에 붙인 결과 자리. 점 표기 "_result.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. 예: ... >> [table:each]{do: "[sense:crawl]{url: \"$it.url\"}"} >> [table:flatten]{} >> [table:document]{}.'
+    description: 통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다.
+    target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
     group: transform
     router: handler
     tool: data_flatten
@@ -381,13 +381,13 @@ tool_json:
       required:
       - map
   - name: data_flatten
-    description: 'records → 행 속 중첩 목록 펼치기(unnest). field(경로, 기본 "_result"), keep(각 행에 승계할 부모 필드 배열). each 출력의 _result 를 한 표로 모을 때. >> 앞 통화를 받음.'
+    description: 'records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 승계할 부모 필드 배열). each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.'
     input_schema:
       type: object
       properties:
         field:
           type: string
-          description: 중첩 목록 경로(점 표기, 기본 "_result"). 값이 {items:[...]} 봉투면 items 자동 승격.
+          description: 중첩 목록 경로(점 표기). 값이 {items:[...]} 봉투면 items 자동 승격. 생략 시 옛 문장의 정직한 이행 오류만 제공.
         keep:
           type: array
           items:

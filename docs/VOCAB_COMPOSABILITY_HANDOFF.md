@@ -1077,3 +1077,7 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **집행**: [A] 전 자리 `timeout=10` 명시(AST 좌표 삽입 38파일 — 잠금 대기는 저자의 결정) · [B] 13자리 실사 후 수명 설계 사유 주석(재생마다 재무장·join 봉인·상태 마커 관측·멱등 재실행·호출 경계 왕복) · [C] 잠금 풀 설계 명시. 관문 `check_concurrency.py`+pre-commit+`test_concurrency_gate`.
 - **수용된 잔여**(관문 헤더 명문): backend 엔진 스레드 50자리(프로세스와 함께 재기동 — 다른 부류) · "긴 작업" 판정·락 없는 공유 상태·사설 싱글턴은 AST 불능 — pitfall 원장(worker-thread-dies-on-reload·singleton-import-race)이 소유.
 - **밭 지도 종결**: census 가능 밭 6개 전부 폐쇄(값 의미론 `75e420cc` · 경로/compute식/param표면 `b2ef4967` · 시간 `7ac16dca` · 동시성 이 커밋). 상시 관문 4종(값·경로·동시성 + silent_clamp)이 부류의 탄생을 커밋 전에 차단한다. 상상훈련은 원래 직업(표현력 갭·마찰·꼬임)으로 복귀.
+
+- **47회차 (2026-08-27, 4배=48과제)** — 개정 가이드대로 닫힌 격자를 떠나 행동 미조합 어휘를 사용자 도메인의 조회/발신/축적/조건/적용/시간 각 8건에 접지. validate 47/48(1건은 PC에 없는 phone-only 어휘의 정확한 몸 차이 거절), 읽기 전용 20건 실측.
+  - `B47-1` **researcher가 동명이인 식별값을 meta/summary에만 접어 표 연산이 실패 — 수리됨.** find/coauthor가 표시용 공통 4열과 `name/org/birth_year/position/lodID/name_en` 구조 열을 함께 내도록 수렴. 낡은 coauthor id 스키마도 실제 name 기반 계약으로 교정. 최초 select/dedup 실패가 라이브 3행/5행 성공으로 회복.
+  - `F47-1` **flatten 설명이 은퇴한 each `_result` 계약을 계속 가르침 — 수리됨.** 실제 중첩 목록 필드 전용 설명과 `field:"tags"` 예시로 교체하고 each 뒤에는 flatten 불필요를 명시. 가드=`test_imagination_round47_repairs.py` 3건(수리 전 3 FAIL). 보고서=`outputs/imagination_training/2026-08-27_47회차.md`.

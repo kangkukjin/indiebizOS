@@ -16,6 +16,7 @@ import sys
 import yaml
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from common.value_semantics import text_match, values_equal
 
 
 # === 지원 채널 ===
@@ -258,11 +259,10 @@ def _resolve_recipient(channel_type: str, to: str, confirmed: bool = False) -> d
         }
 
     # 3) 이름 → 주소록 해소 (이름이 같은 이웃들의 해당 채널 연락처 수집)
-    name_l = to.lower()
     matched = []
     try:
         for n in bm.get_neighbors():
-            if (n.get("name") or "").strip().lower() != name_l:
+            if not values_equal(n.get("name"), to):
                 continue
             for c in bm.get_contacts(n.get("id")):
                 if c.get("contact_type") == channel_type and c.get("contact_value"):
@@ -304,9 +304,8 @@ def _default_channel_for(to: str) -> Optional[str]:
         try:
             from business_manager import BusinessManager
             bm = BusinessManager()
-            name_l = to.lower()
             for n in bm.get_neighbors():
-                if (n.get("name") or "").strip().lower() != name_l:
+                if not values_equal(n.get("name"), to):
                     continue
                 for c in bm.get_contacts(n.get("id")):
                     if c.get("contact_value") and c.get("contact_type") in CHANNEL_PREFERENCE:
@@ -1031,7 +1030,7 @@ def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
                 if msg.get("contact_type") != "nostr":
                     continue
                 content = (msg.get("content") or "") + " " + (msg.get("subject") or "")
-                if query_text.lower() in content.lower():
+                if text_match("contains", content, query_text):
                     matched.append({
                         "id": msg.get("id"),
                         "from": msg.get("contact_value", ""),

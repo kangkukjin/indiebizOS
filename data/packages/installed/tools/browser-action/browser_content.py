@@ -404,7 +404,8 @@ async def browser_console_logs(params: dict) -> dict:
         logs = [l for l in logs if l["type"] == log_type]
 
     if search:
-        logs = [l for l in logs if search.lower() in l["text"].lower()]
+        from common.value_semantics import text_match
+        logs = [l for l in logs if text_match("contains", l["text"], search)]
 
     logs = logs[-limit:]
 

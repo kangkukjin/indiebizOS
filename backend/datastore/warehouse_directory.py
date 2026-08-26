@@ -27,6 +27,7 @@ import re
 import time
 from html import unescape
 from pathlib import Path
+from common.value_semantics import values_equal
 from typing import Dict, List, Optional
 from urllib.parse import urljoin
 
@@ -170,7 +171,7 @@ def _neocities_tag(tag: str, limit: int) -> List[Dict]:
         thumb = urljoin("https://neocities.org/", ms.group(1).strip("'\" ")) if ms else ""
         mv = _VIEWS.search(block)
         views = int(mv.group(1).replace(",", "")) if mv else None
-        tags = [t for t in _TAGS.findall(block) if t.lower() != tag.lower()][:4]
+        tags = [t for t in _TAGS.findall(block) if not values_equal(t, tag)][:4]
         items.append({
             "name": name,
             "url": url.rstrip("/"),

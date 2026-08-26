@@ -335,6 +335,7 @@
     "test_table_mirror_keys": "force_exclude_glob",
     "test_trajectory_spine": "force_exclude_glob",
     "test_user_surface_pipeline": "force_exclude_glob",
+    "test_value_judgment_gate": "force_exclude_glob",
     "test_value_semantics_consumer_contract": "force_exclude_glob",
     "test_value_semantics_convergence": "force_exclude_glob",
     "test_value_semantics_root_convergence": "force_exclude_glob",
@@ -346,8 +347,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 340,
+    "total": 341,
     "engine": 225,
-    "blocklist": 115
+    "blocklist": 116
   }
 }

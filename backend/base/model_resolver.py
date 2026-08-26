@@ -315,7 +315,7 @@ def api_key_for_provider(provider: str) -> str:
             c = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
             continue
-        if (c.get("provider") or "").lower() == provider.lower():
+        if (c.get("provider") or "").lower() == provider.lower():  # vj-ok: 프로바이더 설정 식별자 대조
             k = (c.get("apiKey") or c.get("api_key") or "").strip()
             if k:
                 return k

@@ -11,6 +11,7 @@ import time
 import threading
 from pathlib import Path
 from datetime import datetime, timedelta
+from common.value_semantics import text_match
 from typing import Optional, Dict, List, Any, Callable
 
 # 경로 설정
@@ -506,8 +507,8 @@ class AutoResponseService:
                 business_items = bm.get_business_items(business['id'])
 
                 for item in business_items:
-                    title = (item.get('title') or '').lower()
-                    details = (item.get('details') or '').lower()
+                    title = item.get('title') or ''
+                    details = item.get('details') or ''
 
                     if not keywords:
                         items.append({
@@ -517,7 +518,7 @@ class AutoResponseService:
                         })
                     else:
                         for kw in keywords:
-                            if kw.lower() in title or kw.lower() in details:
+                            if text_match("contains", title, kw) or text_match("contains", details, kw):
                                 items.append({
                                     'title': item.get('title'),
                                     'details': item.get('details'),

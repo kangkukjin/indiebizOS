@@ -238,7 +238,7 @@ def _get_author_ai():
     provider_name = (cfg.get("provider") or "anthropic").strip()
     api_key = (cfg.get("apiKey") or "").strip()
     no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-    if not api_key and provider_name.lower() not in no_key:
+    if not api_key and provider_name.lower() not in no_key:  # vj-ok: 프로바이더 설정 식별자
         raise RuntimeError("텍스트 생성 모델 키가 없습니다 (모델 기어 실행 축 / 시스템 AI 설정 확인).")
     from providers import get_provider
     prov = get_provider(provider_name, api_key=api_key,

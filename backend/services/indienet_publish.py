@@ -237,9 +237,9 @@ class IndieNetPublishMixin:
                 content = event.get('content', '')
                 tags = event.get('tags', [])
                 has_tag = any(
-                    (len(t) >= 2 and t[0] == 't' and t[1].lower() == target_tag)
+                    (len(t) >= 2 and t[0] == 't' and t[1].lower() == target_tag)  # vj-ok: NOSTR 태그 프로토콜 소문자 규약
                     for t in tags if t
-                ) or f'#{target_tag}' in content.lower()
+                ) or f'#{target_tag}' in content.lower()  # vj-ok: NOSTR 태그 프로토콜 소문자 규약
                 if not has_tag:
                     return None
                 # hex pubkey → npub 변환

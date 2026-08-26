@@ -45,7 +45,7 @@ class WebSocketManager:
         except Exception as e:
             error_msg = str(e)
             # 연결이 닫힌 경우 disconnect
-            if any(keyword in error_msg.lower() for keyword in ["closed", "close", "disconnect"]):
+            if any(keyword in error_msg.lower() for keyword in ["closed", "close", "disconnect"]):  # vj-ok: 오류문 분류 표식
                 print(f"[WS] 연결 끊김 감지: {client_id}")
                 self.disconnect(client_id)
             else:

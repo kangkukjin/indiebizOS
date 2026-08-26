@@ -22,6 +22,8 @@ import json
 import re
 import shutil
 import time
+
+from common.value_semantics import text_match
 import calendar
 import plistlib
 import subprocess
@@ -694,10 +696,10 @@ def code_candidate_paths(repo_root: str, *, q: Optional[str] = None,
     for dp, dirs, files in os.walk(root):
         dirs[:] = [d for d in dirs if d not in _CODE_NOISE_DIRS and not d.startswith(".")]
         for name in files:
-            if os.path.splitext(name)[1].lower() not in want:
+            if os.path.splitext(name)[1].lower() not in want:  # vj-ok: 파일 확장자 어휘 — ASCII lower 가 스펙
                 continue
             full = os.path.join(dp, name)
-            if ql and ql not in full.lower():
+            if ql and not text_match("contains", full, q):
                 continue
             out.append(full)
         if len(out) > _MAX_CANDIDATES:
@@ -793,7 +795,7 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
                     continue
                 if ext_low and dot_ext.lstrip(".") != ext_low:
                     continue
-                if q_low and q_low not in name.lower():
+                if q_low and not text_match("contains", name, q):
                     continue
                 mt = _safe_stat(fp, mtime=True) or 0
                 if start_ep and mt < start_ep:

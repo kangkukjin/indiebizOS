@@ -52,7 +52,7 @@ class ConsciousnessAgent:
 
             # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 키 불요. 그 외엔 키 없으면 비활성.
             no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-            if not model or (not api_key and provider_name.lower() not in no_key):
+            if not model or (not api_key and provider_name.lower() not in no_key):  # vj-ok: 프로바이더 설정 식별자
                 logger.warning(f"[ConsciousnessAgent] 모델/키 없음 — 비활성 (source={d.get('source')})")
                 return
 
@@ -450,7 +450,7 @@ def get_guide_list(user_message: str = "") -> List[str]:
         for g in guides:
             score = 0
             for kw in g.get("keywords", []):
-                if kw.lower() in msg_lower:
+                if kw.lower() in msg_lower:  # vj-ok: 내부 표식 탐지 — 코드 소유 어휘
                     score += 1
             if score > 0:
                 scored.append((score, g))

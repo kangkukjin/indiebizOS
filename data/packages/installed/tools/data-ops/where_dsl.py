@@ -149,7 +149,7 @@ def _parse_where_str(where):
         if not m:
             return None
         field, op, val = m.group(1).strip(), m.group(2).lower(), m.group(3).strip()
-    if len(val) >= 2 and val[0] in "\"'" and val[-1] == val[0]:
+    if len(val) >= 2 and val[0] in "\"'" and val[-1] == val[0]:  # vj-ok: 인용부호 짝 검사
         val = val[1:-1]  # 따옴표 제거
     return field, op, val
 
@@ -210,8 +210,10 @@ def _match(item, where):
         if parsed:  # 기호·워드 연산자가 든 문자열 → 단일 비교 (침묵 부분일치 함정 제거)
             field, op, val = parsed
             return _apply_op(op, item.get(field), val)
-        s = where.lower()
-        return any(s in str(v).lower() for v in item.values())
+        # 전-필드 substring 도 contains 와 같은 한 벌 — 사설 str().lower() 는 결측을
+        # "None" 텍스트로 승격시키고(B46-3 의 잔당, 46회차 후속 census 가 적발)
+        # 구조 값을 repr 로 읽었다. 스칼라 필드만 텍스트 공간에서 검색한다.
+        return any(text_match("contains", v, where) for v in item.values())
     if isinstance(where, list):
         return all(_match(item, w) for w in where)
     if isinstance(where, dict):

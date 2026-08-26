@@ -1325,7 +1325,7 @@ def reload_forcing_violation(command: str, repo: str):
 
     for m in _KILL_RE.finditer(command):
         args = m.group(1).lower()
-        if any(mk in args for mk in _BACKEND_MARKERS) or any(mk in command.lower() for mk in ("lsof", ":8765")):
+        if any(mk in args for mk in _BACKEND_MARKERS) or any(mk in command.lower() for mk in ("lsof", ":8765")):  # vj-ok: 명령행 표식 탐지
             return ("Error: 이 몸의 백엔드를 kill 로 재기동시킬 수 없습니다 — 자기 목을 치는 "
                     "동작입니다(그 순간 이 턴도 함께 죽습니다).\n"
                     "프로세스가 정말 멎었다면 keeper(scripts/backend_keeper.sh)가 되살립니다.\n"

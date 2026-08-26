@@ -257,6 +257,24 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 침묵 클램프 OK ✓"
 fi
 
+# 사설 값 판정 — 값의 동등·순서·포함을 common/value_semantics 밖에서 私설로 판정하는 자리.
+# 43~46회차 상상훈련이 4연속 같은 속(사설 값 판정)의 새 종을 발견한 구조 원인의 근본 수리:
+# 발견(상상훈련)을 기다리지 않고 탄생을 커밋 전에 차단한다(2026-08-27 전수 census 후 0).
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_value_judgment\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 사설 값 판정 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_value_judgment.py"; then
+    echo "" >&2
+    echo "[pre-commit] 사설 값 판정 — 커밋 차단." >&2
+    echo "[pre-commit]   • 값 판정이면 common.value_semantics 로 위임 (values_equal/compare_order/text_match/list_membership)" >&2
+    echo "[pre-commit]   • 프로토콜·확장자·op 어휘 등 기계 식별자면 그 줄에 \`# vj-ok: <사유>\` (사유 필수)" >&2
+    echo "[pre-commit]   • 새 조건 언어 해석기는 scripts/check_value_judgment.py SURFACE_FILES 에 등록" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 사설 값 판정 OK ✓"
+fi
+
 # 공개 노출 ↔ 인증 대조 — is_public_remote_path 가 세션 없이 통과시키는 경로가 자체
 # 인증을 실제로 가졌는지. "자체 시크릿 게이트 보유"는 지금까지 주석으로만 있던 불변식이라
 # 등록만 하고 검사를 빠뜨리면 그 라우트가 조용히 공개 인터넷에 열렸다.

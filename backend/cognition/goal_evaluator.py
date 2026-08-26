@@ -144,7 +144,7 @@ def check_termination(goal: Dict) -> Optional[str]:
     if deadline:
         try:
             deadline_dt = _parse_datetime(deadline)
-            if deadline_dt and datetime.now() >= deadline_dt:
+            if deadline_dt and datetime.now() >= deadline_dt:  # vj-ok: 엔진 내부 시각 비교 — 통화 값 아님
                 return "expired"
         except (ValueError, TypeError):
             pass
@@ -152,13 +152,13 @@ def check_termination(goal: Dict) -> Optional[str]:
     # max_rounds 체크
     current_round = goal.get("current_round", 0)
     max_rounds = goal.get("max_rounds")
-    if max_rounds and current_round >= max_rounds:
+    if max_rounds and current_round >= max_rounds:  # vj-ok: 엔진 내부 계수 비교
         return "limit_reached_rounds"
 
     # max_cost 체크
     cumulative_cost = goal.get("cumulative_cost", 0.0)
     max_cost = goal.get("max_cost")
-    if max_cost and cumulative_cost >= max_cost:
+    if max_cost and cumulative_cost >= max_cost:  # vj-ok: 엔진 내부 계수 비교
         return "limit_reached_cost"
 
     return None

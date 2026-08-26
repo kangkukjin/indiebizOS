@@ -22,6 +22,7 @@ _BACKEND = str(_ROOT / "backend")
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
 from common.currency import items  # IBL 단일 통화 생성자
+from common.value_semantics import values_equal
 
 _DATA = _ROOT / "data"
 _MANUAL_PATH = _DATA / "webapps.json"
@@ -259,8 +260,7 @@ def op_remove(tool_input: dict):
     else:
         hit = [m for m in manual if (m.get("title") or "").strip() == name]
         if not hit:  # 대소문자 무시 재시도
-            hit = [m for m in manual
-                   if (m.get("title") or "").strip().lower() == name.lower()]
+            hit = [m for m in manual if values_equal(m.get("title"), name)]
         if len(hit) > 1:
             return items(hit, success=False,
                          message=f"같은 이름의 등록이 {len(hit)}건입니다 — url 로 지목해 주세요")

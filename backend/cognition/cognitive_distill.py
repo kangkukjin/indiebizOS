@@ -54,7 +54,7 @@ class CognitiveDistillMixin:
         blob = " ".join(t for t in texts if t).lower()
         if not blob:
             return False
-        return any(mk.lower() in blob for mk in self._SELF_COGNITION_MARKERS)
+        return any(mk.lower() in blob for mk in self._SELF_COGNITION_MARKERS)  # vj-ok: 내부 표식 탐지 — 코드 소유 어휘
 
     def _repo_root_path(self, *texts: str) -> Optional[str]:
         """포식 중인 코드 공간의 *루트 절대경로* — 응답 속 소스파일 경로의 .git 조상.

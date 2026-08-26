@@ -259,7 +259,7 @@ class GmailClient:
         
         def get_header(name):
             for h in headers:
-                if h['name'].lower() == name.lower():
+                if h['name'].lower() == name.lower():  # vj-ok: MIME 헤더 이름 — 프로토콜 식별자
                     return h['value']
             return ''
         

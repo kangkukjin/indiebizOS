@@ -77,7 +77,7 @@ def _merge_keywords(existing: str, new: str) -> str:
     seen, out = set(), []
     for kw in (existing or "").split(",") + (new or "").split(","):
         k = kw.strip()
-        if k and k.lower() not in seen:
+        if k and k.lower() not in seen:  # vj-ok: 내부 트레이스 키 dedup
             seen.add(k.lower())
             out.append(k)
     return ",".join(out)

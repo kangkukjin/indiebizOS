@@ -482,13 +482,13 @@ def find_element(query: str, device_id: Optional[str] = None) -> dict:
             "hint": "android_screenshot_grid로 화면을 확인하고 tap(좌표) 또는 tap_grid(셀ID)를 사용하세요."
         }
 
-    query_lower = query.lower()
+    from common.value_semantics import text_match as _contains
     matched = []
 
     for el in elements:
-        text_match = query_lower in el.get("text", "").lower()
-        desc_match = query_lower in el.get("content_desc", "").lower()
-        rid_match = query_lower in el.get("resource_id", "").lower()
+        text_match = _contains("contains", el.get("text", ""), query)
+        desc_match = _contains("contains", el.get("content_desc", ""), query)
+        rid_match = _contains("contains", el.get("resource_id", ""), query)
 
         if text_match or desc_match or rid_match:
             matched.append(el)

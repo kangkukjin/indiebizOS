@@ -245,9 +245,9 @@ def _restate_scope(out, prior_len, new_len):
          → 오폭을 피하면서 거짓말만 정확히 지운다.
     """
     tot = out.get("total")
-    if isinstance(tot, int) and not isinstance(tot, bool) and tot > new_len:
+    if isinstance(tot, int) and not isinstance(tot, bool) and tot > new_len:  # vj-ok: 봉투 계수 비교
         out["truncated"] = True
-    if prior_len is not None and prior_len != new_len and isinstance(out.get("summary"), (dict, str)):
+    if prior_len is not None and prior_len != new_len and isinstance(out.get("summary"), (dict, str)):  # vj-ok: 봉투 계수 비교
         out.pop("summary", None)
     return out
 
@@ -433,7 +433,7 @@ def _op_sort(prev, params):
             srt = _sort_records(dict_recs, by, desc)
             return _emit_items(env, srt)
     table, tenv = _get_table(prev)
-    if table is not None and by in [str(c) for c in (table.get("columns") or [])]:
+    if table is not None and by in [str(c) for c in (table.get("columns") or [])]:  # vj-ok: 열 이름 실존 검사
         dicts = _row_dicts(table)
         dicts = _sort_records(dicts, by, desc)
         cols = table.get("columns") or []
@@ -876,7 +876,7 @@ def _op_since(prev, params):
         for r in rows:
             rk, legacy_rk = _value_semantics.persistent_keys(r.get(by))
             previous = seen.get(rk, _missing)
-            if previous is _missing and legacy_rk != rk:
+            if previous is _missing and legacy_rk != rk:  # vj-ok: 정본 키 비교
                 previous = seen.get(legacy_rk, _missing)  # 옛 str(dict) 원장 호환
             if previous is _missing:
                 if not first_run:
@@ -889,7 +889,9 @@ def _op_since(prev, params):
                     prev_wv = None
                 cur_wv = {w: r.get(w) for w in watch}
                 # 감시 시작 전 키(prev_wv 없음)는 변화 판정 불가 — 거짓 changed 금지.
-                if prev_wv is not None and cur_wv != prev_wv:
+                # 변화 판정은 조건 언어의 동등성 한 벌 — 원시 != 는 생산자의 표기 변경
+                # (1 → "1")을 값 변화로 오보한다(46회차 후속 census).
+                if prev_wv is not None and not _wdsl.values_equal(cur_wv, prev_wv):
                     out.append({**r, "_since": "changed", "_since_prev": prev_wv})
                     n_changed += 1
         if not peek:

@@ -307,7 +307,7 @@ class CognitiveRecallMixin:
         '지원하는 척' 안 한다 — _search_forage_memory 의 폰 게이트와 같은 자리.
         """
         # 포식 의도 게이트 — 비포식(아키텍처·대화·버그) 질의엔 골격을 넣지 않는다.
-        if not any(cue in (user_message or "").lower() for cue in self._FORAGE_CUES):
+        if not any(cue in (user_message or "").lower() for cue in self._FORAGE_CUES):  # vj-ok: 내부 큐 탐지 — 코드 소유 어휘
             return ""
         try:
             import sys, os

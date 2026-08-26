@@ -191,7 +191,7 @@ def _extract_xml_nested(data: dict, tag_name: str) -> Any:
     # 한 단계 아래 탐색
     for key in ("body", "response", "dbs", "items", "result", "data"):
         if key in data and isinstance(data[key], dict):
-            if tag_name in data[key]:
+            if tag_name in data[key]:  # vj-ok: 구조 키 존재 검사
                 return data[key][tag_name]
             # 두 단계까지
             for subkey in ("body", "items", "result", "data"):

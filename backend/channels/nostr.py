@@ -7,6 +7,7 @@ import time
 import json
 import threading
 from .base import Channel
+from common.value_semantics import text_match
 
 try:
     from pynostr.key import PrivateKey
@@ -612,7 +613,7 @@ class NostrChannel(Channel):
                                 return
 
                             # query 필터링 (query가 있을 때만)
-                            if query and query.lower() not in content.lower():
+                            if query and not text_match("contains", content, query):
                                 return
 
                             received.append(event)
@@ -1079,7 +1080,7 @@ class NostrChannel(Channel):
                                 return
 
                             # query 필터링
-                            if query and query.lower() not in content.lower():
+                            if query and not text_match("contains", content, query):
                                 return
 
                             received.append(event)

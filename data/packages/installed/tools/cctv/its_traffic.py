@@ -199,8 +199,8 @@ def get_cctv_by_name(keyword: str, road_type: str = "all", limit: int = 10) -> s
             _name_search_cache["timestamp"] = now
 
         # 키워드 필터링
-        keyword_lower = keyword.lower()
-        matched = [c for c in all_cctvs if keyword_lower in c.get("cctvname", "").lower()]
+        from common.value_semantics import text_match
+        matched = [c for c in all_cctvs if text_match("contains", c.get("cctvname", ""), keyword)]
 
         if not matched:
             return success_response(count=0,

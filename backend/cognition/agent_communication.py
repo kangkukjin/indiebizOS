@@ -252,7 +252,7 @@ class AgentCommunicationMixin:
 
         # 시스템 메시지 필터링
         system_senders = ['mailer-daemon@', 'postmaster@', 'noreply@', 'no-reply@']
-        if any(sender in from_addr.lower() for sender in system_senders):
+        if any(sender in from_addr.lower() for sender in system_senders):  # vj-ok: 메일 주소=기계 식별자 표식 대조
             self._log(f"시스템 메시지 무시: {subject}")
             return
 

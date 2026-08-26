@@ -17,6 +17,8 @@ import yaml
 import json
 import random
 import argparse
+
+from common.value_semantics import relation_identity
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -221,15 +223,15 @@ def generate_for_package(package_id: str) -> int:
     conn = _sqlite3.connect(DB_PATH)
     conn.row_factory = _sqlite3.Row
     existing = set()
-    for row in conn.execute("SELECT LOWER(intent) as i, ibl_code as c FROM ibl_examples").fetchall():
-        existing.add(row['i'])
+    for row in conn.execute("SELECT intent as i, ibl_code as c FROM ibl_examples").fetchall():
+        existing.add(relation_identity(row['i']))
         existing.add(row['c'])
     conn.close()
 
     added = 0
     for ex in examples:
         # 중복 스킵
-        if ex['intent'].lower() in existing or ex['ibl_code'] in existing:
+        if relation_identity(ex['intent']) in existing or ex['ibl_code'] in existing:
             continue
         try:
             example_id = db.add_example(**ex)

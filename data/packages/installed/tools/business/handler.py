@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from common.currency import items  # IBL 단일 통화 생성자
+from common.value_semantics import text_match
 
 
 # === messages_op: 메신저 (op 분기 — build --check 삼각 검증 대상) ===
@@ -370,7 +371,7 @@ def _msg_inbox(bm, tool_input: dict) -> str:
                 if h in hidden and float((g["last"] or {}).get("created_at") or 0) <= hidden[h]:
                     continue
                 npub = _hex_to_npub(h)
-                if search and search.lower() not in npub.lower():
+                if search and not text_match("contains", npub, search):
                     continue  # 검색어가 있으면 npub 매칭만
                 last = g["last"]; ts = last.get("created_at") or 0
                 convs.append({
@@ -669,7 +670,7 @@ def _item_list(bm, ti: dict) -> str:
     items = []
     for b_id, b_name in pairs:
         for it in bm.get_business_items(b_id):
-            if q and q not in f"{it.get('title') or ''} {it.get('details') or ''}".lower():
+            if q and not text_match("contains", f"{it.get('title') or ''} {it.get('details') or ''}", q):
                 continue
             items.append(_item_enrich(it, b_name))
     # 단일 통화 items = 아이템 dict(title/details/id/attachment_path) + 표시용 파생 필드.

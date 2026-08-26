@@ -778,7 +778,7 @@ async def export_config():
                         sub_dir = project_dir / dir_name
                         if sub_dir.exists() and sub_dir.is_dir():
                             for sub_file in sub_dir.rglob("*"):
-                                if sub_file.is_file() and sub_file.suffix.lower() not in exclude_extensions:
+                                if sub_file.is_file() and sub_file.suffix.lower() not in exclude_extensions:  # vj-ok: 파일 확장자 어휘
                                     try:
                                         rel_path = sub_file.relative_to(project_dir)
                                         arcname = f"projects/{project_dir.name}/{rel_path}"

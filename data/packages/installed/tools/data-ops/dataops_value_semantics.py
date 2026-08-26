@@ -45,7 +45,7 @@ def persisted_seen(rows):
     for stored_key, watched in rows:
         seen[stored_key] = watched
         alias = legacy_persistent_alias(stored_key)
-        if alias != stored_key:
+        if alias != stored_key:  # vj-ok: 정본 키 이관 내부 비교
             seen.setdefault(alias, watched)
             legacy.setdefault(alias, stored_key)
     return seen, legacy
@@ -53,11 +53,11 @@ def persisted_seen(rows):
 
 def migrate_since_keys(conn, stream, canonical_key, legacy_key, legacy_seen):
     """구조형 키의 옛 순서 의존 원장 레코드를 읽은 뒤 정본 키로 점진 이관한다."""
-    if legacy_key != canonical_key:
+    if legacy_key != canonical_key:  # vj-ok: 정본 키 이관 내부 비교
         conn.execute("DELETE FROM since_seen WHERE stream=? AND k=?",
                      (stream, legacy_key))
     old_stored_key = legacy_seen.get(canonical_key)
-    if old_stored_key and old_stored_key != legacy_key:
+    if old_stored_key and old_stored_key != legacy_key:  # vj-ok: 정본 키 이관 내부 비교
         conn.execute("DELETE FROM since_seen WHERE stream=? AND k=?",
                      (stream, old_stored_key))
 

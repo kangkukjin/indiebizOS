@@ -8,6 +8,7 @@ api_nas.py에서 분리됨
 import re
 from pathlib import Path
 from typing import List
+from common.value_semantics import text_match
 
 from fastapi import APIRouter, HTTPException, Request, Response, Query
 
@@ -258,7 +259,7 @@ def detect_subtitles(video_path: Path) -> list:
             continue
 
         # 동영상 이름으로 시작하는 자막만 (예: movie.srt, movie.ko.srt)
-        if not f.stem.lower().startswith(video_stem.lower()):
+        if not text_match("startswith", f.stem, video_stem):
             continue
 
         # SMI 파일: 내부 언어 클래스별로 별도 항목 생성

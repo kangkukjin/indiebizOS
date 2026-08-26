@@ -378,7 +378,7 @@ def _scan_line_state(text: str, in_string: bool, string_char: Optional[str]):
         if in_string:
             if ch == '\\':
                 i += 1  # 이스케이프 건너뛰기
-            elif ch == string_char:
+            elif ch == string_char:  # vj-ok: 렉서 문자 비교
                 in_string = False
                 string_char = None
         else:
@@ -470,7 +470,7 @@ def _split_pipeline(text: str) -> List[tuple]:
             quote = ch
             current.append(ch)
             i += 1
-            while i < len(chars) and chars[i] != quote:
+            while i < len(chars) and chars[i] != quote:  # vj-ok: 렉서 문자 비교
                 if chars[i] == '\\':
                     current.append(chars[i])
                     i += 1
@@ -585,7 +585,7 @@ def _parse_paren_branch(text: str) -> Optional[Dict]:
             if ch == '\\':
                 i += 2
                 continue
-            if ch == str_ch:
+            if ch == str_ch:  # vj-ok: 렉서 문자 비교
                 in_str = False
             i += 1
             continue
@@ -658,7 +658,7 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
                 current.append(chars[i + 1])
                 i += 2
                 continue
-            elif ch == string_char:
+            elif ch == string_char:  # vj-ok: 렉서 문자 비교
                 in_string = False
             current.append(ch)
             i += 1
@@ -677,7 +677,7 @@ def _split_by_operator(text: str, operator: str) -> List[str]:
         elif ch == ')' and depth == 0:
             paren = max(0, paren - 1)
             current.append(ch)
-        elif depth == 0 and paren == 0 and chars[i:i+op_len] == operator:
+        elif depth == 0 and paren == 0 and chars[i:i+op_len] == operator:  # vj-ok: 렉서 연산자 경계 비교
             # 연산자 발견 (중괄호/문자열 밖)
             # & 의 경우: && 가 아닌지 확인 (미래 확장 대비)
             if operator == '&' and i + 1 < len(chars) and chars[i + 1] == '&':
@@ -955,7 +955,7 @@ def _resolve_variables_used(step: dict, variables: Dict[str, int]):
                 before = val
                 val = _sub_var_ref(val, var_name,
                                    lambda path, _i=step_idx: "{{_step_%d_result%s}}" % (_i, path))
-                if val != before:
+                if val != before:  # vj-ok: 이스케이프 수렴 검사
                     used[var_name] = step_idx
             resolved[key] = val
         elif isinstance(val, dict):

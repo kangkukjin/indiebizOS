@@ -478,7 +478,7 @@ async def copy_images_for_item(data: ImageCopyRequest):
             src = Path(src_path)
             if not src.exists() or not src.is_file():
                 continue
-            if src.suffix.lower() not in allowed_exts:
+            if src.suffix.lower() not in allowed_exts:  # vj-ok: 파일 확장자 어휘
                 continue
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")

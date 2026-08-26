@@ -936,7 +936,7 @@ class ChannelPoller:
             config = self._load_system_ai_config()
             no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
             if not config.get('model') or (
-                not config.get('apiKey') and config.get('provider', '').lower() not in no_key):
+                not config.get('apiKey') and config.get('provider', '').lower() not in no_key):  # vj-ok: 프로바이더 설정 식별자
                 self._log("시스템 AI 모델/키 없음")
                 return
 

@@ -136,9 +136,9 @@ def _pick_audio(entries, requested=None):
     실물 마이크, 전부 가상이면 첫 장치 폴백.
     """
     if requested is not None and str(requested).strip():
-        req = str(requested).strip().lower()
+        from common.value_semantics import text_match, values_equal
         for key, name in entries:
-            if req == str(key).lower() or req in name.lower():
+            if values_equal(requested, key) or text_match("contains", name, requested):
                 return key, name
         return None
     real = [(k, n) for k, n in entries if not _VIRTUAL_AUDIO_PAT.search(n)]

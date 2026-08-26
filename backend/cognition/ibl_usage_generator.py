@@ -737,7 +737,7 @@ def generate_all(stages: List[int] = None) -> Dict[str, int]:
         if not source:
             import sqlite3
             from ibl_usage_db import DB_PATH
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(DB_PATH, timeout=10)
             conn.row_factory = sqlite3.Row
             rows = conn.execute("SELECT intent, ibl_code, nodes, category, difficulty, tags FROM ibl_examples").fetchall()
             source = [dict(r) for r in rows]

@@ -360,7 +360,7 @@ def _corpus_action_keys(node: str, action: str) -> Optional[Set[str]]:
         from runtime_utils import get_base_path
         db_path = Path(get_base_path()) / "data" / "ibl_usage.db"
         if db_path.is_file():
-            conn = sqlite3.connect(str(db_path))
+            conn = sqlite3.connect(str(db_path), timeout=10)
             try:
                 rows = conn.execute(
                     "SELECT ibl_code FROM ibl_examples WHERE ibl_code LIKE ? LIMIT 400",

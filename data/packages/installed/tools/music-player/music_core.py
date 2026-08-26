@@ -556,7 +556,7 @@ def start_scan(roots: list = None) -> dict:
     if not _scan_lock.acquire(blocking=False):
         return {"ok": False, "error": "이미 스캔이 진행 중입니다.", "scan": scan_state()}
     _set_scan_state({"status": "scanning", "seen": 0, "updated": 0, "removed": 0, "started_at": _now_iso()})
-    threading.Thread(target=_scan_worker, args=(roots,), daemon=True).start()
+    threading.Thread(target=_scan_worker, args=(roots,), daemon=True).start()  # cc-ok: 멱등 스캔 잡 — 사멸 시 다음 스캔 호출이 재실행
     return {"ok": True, "queued": True, "roots": roots}
 
 

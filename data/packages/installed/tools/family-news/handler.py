@@ -502,7 +502,7 @@ def _fn_create(params: dict) -> str:
         st.pop("last_build_error", None)
     _mutate_state(_clear_err)
     _set_building({"eid": eid, "no": no, "stage": f"사진 {len(picked)}장 가져오는 중"})
-    t = threading.Thread(
+    t = threading.Thread(  # cc-ok: 제작 잡 — building 상태 마커로 관측(사멸 시 미완이 상태로 드러남)
         target=_build_edition,
         args=(eid, no, picked, uploads, since_ms, until_ms, pool),
         daemon=True,

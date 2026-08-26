@@ -183,7 +183,7 @@ class BlogHybridSearch:
             return None
         try:
             import sqlite_vec
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(DB_PATH, timeout=10)
             conn.enable_load_extension(True)
             sqlite_vec.load(conn)
             conn.enable_load_extension(False)
@@ -195,7 +195,7 @@ class BlogHybridSearch:
 
     def _get_plain_connection(self) -> sqlite3.Connection:
         """일반 SQLite 연결 반환"""
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.row_factory = sqlite3.Row
         return conn
 
@@ -705,7 +705,7 @@ def get_post_content(post_id: str) -> dict:
                 'message': 'post_id 또는 query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
     post_id = str(post_id).strip()
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.row_factory = sqlite3.Row
 
         # 숫자면 post_id로, 아니면 제목으로 검색

@@ -262,7 +262,7 @@ def delete_scan(scan_id: int) -> Dict:
     if os.path.exists(db_path):
         try:
             # 삭제 전 파일 개수 확인
-            conn = sqlite3.connect(db_path)
+            conn = sqlite3.connect(db_path, timeout=10)
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM media_files")
             deleted_files = cursor.fetchone()[0]
@@ -486,7 +486,7 @@ def get_gps_photos(root_path: str) -> Dict:
     if not os.path.exists(db_path):
         return {"success": False, "error": "DB 파일이 없습니다.", "items": []}
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 

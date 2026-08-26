@@ -475,7 +475,7 @@ _DB_PATH = os.path.join(_DATA_DIR, "blog_insight.db")
 
 
 def _db() -> sqlite3.Connection:
-    conn = sqlite3.connect(_DB_PATH)
+    conn = sqlite3.connect(_DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 

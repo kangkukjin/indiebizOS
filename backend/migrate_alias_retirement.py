@@ -215,7 +215,7 @@ def migrate_world_pulse(resolve, dry, existing):
     # 다른 노드의 현재 캐노니컬명과 충돌하므로, 현재 카탈로그에 없는 bare명만 삭제(보수적).
     current_bare = {a for (n, a) in existing}
     old_actions = sorted(({name for (node, name) in resolve} | {"slide"}) - current_bare)
-    conn = sqlite3.connect(str(WORLD_PULSE))
+    conn = sqlite3.connect(str(WORLD_PULSE), timeout=10)
     try:
         ph = ",".join("?" * len(old_actions))
         d1 = conn.execute(f"SELECT COUNT(*) FROM action_health WHERE action IN ({ph})", old_actions).fetchone()[0]

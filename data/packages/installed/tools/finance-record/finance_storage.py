@@ -53,7 +53,7 @@ DEFAULT_OWNER = _load_default_owner()
 def get_db_connection():
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(FILES_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("""
         CREATE TABLE IF NOT EXISTS owners (

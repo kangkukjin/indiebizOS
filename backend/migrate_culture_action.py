@@ -100,7 +100,7 @@ def migrate_world_pulse():
         return
     old_actions = list(MAP.keys())
     ph = ",".join(["?"] * len(old_actions))
-    conn = sqlite3.connect(str(WORLD_PULSE))
+    conn = sqlite3.connect(str(WORLD_PULSE), timeout=10)
     try:
         d1 = conn.execute(f"DELETE FROM action_health WHERE action IN ({ph})", old_actions).rowcount
         d2 = conn.execute(f"DELETE FROM self_checks WHERE action IN ({ph})", old_actions).rowcount

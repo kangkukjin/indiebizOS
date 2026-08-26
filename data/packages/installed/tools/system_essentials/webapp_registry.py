@@ -215,7 +215,7 @@ def op_status(tool_input: dict):
             results[i] = {**e, "alive": False, "http": 0,
                           "status_line": f"🔴 접속 실패 ({type(ex).__name__})"}
 
-    threads = [threading.Thread(target=probe, args=(i, e), daemon=True)
+    threads = [threading.Thread(target=probe, args=(i, e), daemon=True)  # cc-ok: 병렬 프로브 — 바로 아래 join 으로 수명을 호출 안에 봉인
                for i, e in enumerate(ents)]
     for t in threads:
         t.start()

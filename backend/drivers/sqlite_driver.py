@@ -52,7 +52,7 @@ class SqliteDriver(Driver):
         """DB 연결 (없으면 None)"""
         if not os.path.exists(db_path):
             return None
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=10)
         conn.row_factory = sqlite3.Row
         return conn
 

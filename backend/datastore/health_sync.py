@@ -62,7 +62,7 @@ def _ensure_db():
 
 
 def _conn():
-    c = sqlite3.connect(_db_path())
+    c = sqlite3.connect(_db_path(), timeout=10)
     c.row_factory = sqlite3.Row
     return c
 

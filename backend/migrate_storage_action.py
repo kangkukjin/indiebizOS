@@ -87,7 +87,7 @@ def migrate_world_pulse():
     if not WORLD_PULSE.exists():
         print(f"[world_pulse] 파일 없음: {WORLD_PULSE}")
         return
-    conn = sqlite3.connect(str(WORLD_PULSE))
+    conn = sqlite3.connect(str(WORLD_PULSE), timeout=10)
     try:
         ph = ",".join("?" * len(OLD_NAMES))
         d1 = conn.execute(

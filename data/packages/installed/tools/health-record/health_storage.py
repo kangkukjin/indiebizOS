@@ -62,7 +62,7 @@ def get_db_connection():
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(IMAGES_DIR, exist_ok=True)
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
 
     # 테이블 생성 — 동기화 컬럼(uuid/updated_at/deleted, 자식 person_uuid) 포함(신규 DB).

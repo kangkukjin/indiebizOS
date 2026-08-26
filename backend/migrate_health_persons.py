@@ -28,7 +28,7 @@ def main():
     shutil.copy2(DB_PATH, BACKUP_PATH)
     print(f"백업: {BACKUP_PATH}")
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
 
     # person_id=1 ("나") 존재 확인

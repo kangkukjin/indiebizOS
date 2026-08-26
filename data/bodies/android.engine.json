@@ -253,6 +253,7 @@
     "test_ai_ops_words": "force_exclude_glob",
     "test_body_vocab": "force_exclude_glob",
     "test_compute_condition_semantics": "force_exclude_glob",
+    "test_concurrency_gate": "force_exclude_glob",
     "test_condition_observability": "force_exclude_glob",
     "test_consciousness_json_relax": "force_exclude_glob",
     "test_corrupt_not_absent": "force_exclude_glob",
@@ -351,8 +352,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 345,
+    "total": 346,
     "engine": 225,
-    "blocklist": 120
+    "blocklist": 121
   }
 }

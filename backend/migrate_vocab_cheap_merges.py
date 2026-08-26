@@ -57,7 +57,7 @@ def _nodes_of(code: str) -> str:
 
 
 def migrate_db() -> int:
-    conn = sqlite3.connect(USAGE_DB)
+    conn = sqlite3.connect(USAGE_DB, timeout=10)
     rows = conn.execute("SELECT id, ibl_code, nodes FROM ibl_examples").fetchall()
     n = 0
     for rid, code, nodes in rows:

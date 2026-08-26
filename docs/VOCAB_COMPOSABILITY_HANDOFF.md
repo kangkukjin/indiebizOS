@@ -1070,3 +1070,10 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **집행**: 값 코어(ValueKind.DATETIME·datetime_value·_canonical_moment_text) 한 벌 — 같은 순간은 표기·시간대가 달라도 같은 실체(동등·순서·관계/그룹 키), naive/aware 혼합·비표기 텍스트와의 순서는 판정 불능(정직 거절), 정렬 버킷 숫자→날짜→문자열→결측. 달력 위반·표기 밖은 침묵 수선 금지. 기한 파서(goal_evaluator)의 사설 포맷 목록도 한 벌 위임.
 - **수렴의 증명**: 표면 스윕 0 — 45회차 후속~밭 폐쇄 2차가 모든 판정을 코어 한 벌로 접어 둔 덕에, 종류 하나를 코어에 더하니 filter·블록·compute·정렬·관계 키·응답 변환이 자동 승계했다(918 passed 무회귀). 밭을 먼저 닫으면 언어 개정이 싸진다.
 - 가드 `test_datetime_semantics` 30건. 열린 밭 잔여 = **동시성**(Thread 63자리, 별도 회차) 하나.
+
+### 동시성 밭 폐쇄 (2026-08-27) — 판정 가능한 3부류만 정직하게
+
+- **census**: connect 107 · Thread 63(backend 50 + 패키지 13). 기계로 판정 가능한 것 — [A] sqlite timeout 미선언 67 · [B] 리로드 워커(패키지) 안 Thread 13 · [C] check_same_thread=False 1.
+- **집행**: [A] 전 자리 `timeout=10` 명시(AST 좌표 삽입 38파일 — 잠금 대기는 저자의 결정) · [B] 13자리 실사 후 수명 설계 사유 주석(재생마다 재무장·join 봉인·상태 마커 관측·멱등 재실행·호출 경계 왕복) · [C] 잠금 풀 설계 명시. 관문 `check_concurrency.py`+pre-commit+`test_concurrency_gate`.
+- **수용된 잔여**(관문 헤더 명문): backend 엔진 스레드 50자리(프로세스와 함께 재기동 — 다른 부류) · "긴 작업" 판정·락 없는 공유 상태·사설 싱글턴은 AST 불능 — pitfall 원장(worker-thread-dies-on-reload·singleton-import-race)이 소유.
+- **밭 지도 종결**: census 가능 밭 6개 전부 폐쇄(값 의미론 `75e420cc` · 경로/compute식/param표면 `b2ef4967` · 시간 `7ac16dca` · 동시성 이 커밋). 상시 관문 4종(값·경로·동시성 + silent_clamp)이 부류의 탄생을 커밋 전에 차단한다. 상상훈련은 원래 직업(표현력 갭·마찰·꼬임)으로 복귀.

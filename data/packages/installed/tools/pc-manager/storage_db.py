@@ -74,7 +74,7 @@ def _get_db_path(scan_id: int) -> str:
 def _get_connection(scan_id: int) -> sqlite3.Connection:
     """스캔별 DB 연결"""
     db_path = _get_db_path(scan_id)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 

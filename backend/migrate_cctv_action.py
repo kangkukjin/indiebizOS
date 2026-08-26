@@ -74,7 +74,7 @@ def migrate_world_pulse():
     if not WORLD_PULSE.exists():
         print(f"[world_pulse] 파일 없음: {WORLD_PULSE}")
         return
-    conn = sqlite3.connect(str(WORLD_PULSE))
+    conn = sqlite3.connect(str(WORLD_PULSE), timeout=10)
     try:
         d1 = conn.execute(
             "DELETE FROM action_health WHERE action IN ('cctv_search','cctv_nearby')"

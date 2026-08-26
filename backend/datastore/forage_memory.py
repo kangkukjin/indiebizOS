@@ -108,7 +108,7 @@ def _now() -> str:
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(os.path.abspath(_DB_PATH))
+    conn = sqlite3.connect(os.path.abspath(_DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
     # 마이그레이션: 기존 DB 에 territory 컬럼 없으면 추가

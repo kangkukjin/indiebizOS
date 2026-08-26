@@ -122,7 +122,7 @@ class IBLUsageDB:
     def _init_db(self):
         """DB 테이블 생성"""
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.execute("PRAGMA journal_mode=WAL")
 
         # 용례 사전 테이블
@@ -210,7 +210,7 @@ class IBLUsageDB:
     @contextmanager
     def _get_connection(self):
         """일반 SQLite 연결"""
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         conn.row_factory = sqlite3.Row
         try:
             yield conn
@@ -223,7 +223,7 @@ class IBLUsageDB:
             return None
         try:
             import sqlite_vec
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(DB_PATH, timeout=10)
             conn.enable_load_extension(True)
             sqlite_vec.load(conn)
             conn.enable_load_extension(False)

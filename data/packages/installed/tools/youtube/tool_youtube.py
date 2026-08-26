@@ -676,7 +676,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
             _player_video_id = video_id
             _player_title = title
             # 큐 모니터링 스레드 시작 (곡 끝나면 자동 다음곡)
-            t = threading.Thread(target=_queue_monitor, daemon=True)
+            t = threading.Thread(target=_queue_monitor, daemon=True)  # cc-ok: 재생마다 재무장 — 사멸 시 다음 재생 호출이 새 모니터를 세움
             t.start()
         except Exception as e:
             return {
@@ -855,7 +855,7 @@ def skip_youtube() -> dict:
             next_item = _player_queue[0]  # peek
             if _play_next_in_queue_locked():
                 # 새 모니터 스레드 시작
-                t = threading.Thread(target=_queue_monitor, daemon=True)
+                t = threading.Thread(target=_queue_monitor, daemon=True)  # cc-ok: 재생마다 재무장 — 사멸 시 다음 재생 호출이 새 모니터를 세움
                 t.start()
                 return {
                     'success': True,
@@ -936,7 +936,7 @@ def seek_youtube(position) -> dict:
             return {'success': False, 'error': f'위치 이동 실패: {str(e)}'}
 
         # 새 모니터 스레드(곡 끝나면 큐 진행)
-        t = threading.Thread(target=_queue_monitor, daemon=True)
+        t = threading.Thread(target=_queue_monitor, daemon=True)  # cc-ok: 재생마다 재무장 — 사멸 시 다음 재생 호출이 새 모니터를 세움
         t.start()
 
     return {

@@ -38,7 +38,7 @@ class TrainingPair:
 
 def extract_examples_from_db() -> List[Dict]:
     """현재 DB에서 (intent, ibl_code) 쌍 추출"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.execute(
         "SELECT id, intent, ibl_code, nodes, category FROM ibl_examples ORDER BY id"

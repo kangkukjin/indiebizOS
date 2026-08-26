@@ -42,7 +42,7 @@ def _phone_pubkeys() -> set:
 
 
 def _conn():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.execute(
         """CREATE TABLE IF NOT EXISTS notifications (
             event_id    TEXT PRIMARY KEY,

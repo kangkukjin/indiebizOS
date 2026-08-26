@@ -110,7 +110,7 @@ def _get_vec_conn(db_path: str) -> Optional[sqlite3.Connection]:
     """sqlite-vec 확장 로드된 연결 반환 (불가 시 None)"""
     try:
         import sqlite_vec
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=10)
         conn.enable_load_extension(True)
         sqlite_vec.load(conn)
         conn.enable_load_extension(False)
@@ -227,7 +227,7 @@ def _ensure_schema(db_path: str):
     첫 search/distill 이 '_search_like → SELECT FROM memories' 에서
     'no such table: memories' 로 죽던 버그를 막는다.
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         conn.executescript('''
             CREATE TABLE IF NOT EXISTS memories (
@@ -250,7 +250,7 @@ def _ensure_schema(db_path: str):
 def get_db(project_path: str, agent_id: str):
     """DB 연결 및 테이블 초기화"""
     db_path = _get_db_path(project_path, agent_id)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
 
     conn.executescript('''
@@ -318,7 +318,7 @@ def save(project_path: str, agent_id: str,
 def _search_like(db_path: str, query: str, category: str = None,
                  limit: int = 20) -> List[Dict]:
     """기존 LIKE 키워드 검색"""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         words = query.strip().split()
@@ -397,7 +397,7 @@ def search(project_path: str, agent_id: str,
 
     # 카테고리 필터 (시맨틱 경로에서도 적용)
     if category and sem_pairs:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(db_path, timeout=10)
         try:
             ph = ",".join("?" * len(sorted_ids))
             allowed = {r[0] for r in conn.execute(
@@ -411,7 +411,7 @@ def search(project_path: str, agent_id: str,
             return []
 
     # 메타 로드
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         ph = ",".join("?" * len(sorted_ids))
@@ -455,7 +455,7 @@ def update(project_path: str, agent_id: str, memory_id: int,
     """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성)"""
     db_path = _get_db_path(project_path, agent_id)
     get_db(project_path, agent_id).close()  # source_ref 등 지연 마이그레이션 보장
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         sets, params = [], []
@@ -500,7 +500,7 @@ def update(project_path: str, agent_id: str, memory_id: int,
 def delete(project_path: str, agent_id: str, memory_id: int) -> bool:
     """메모리 + vec 인덱스 동시 삭제"""
     db_path = _get_db_path(project_path, agent_id)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         cur = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         conn.commit()
@@ -531,7 +531,7 @@ def rebuild_index(project_path: str, agent_id: str) -> Dict:
     db_path = _get_db_path(project_path, agent_id)
 
     # 메모리 항목 전수 조회
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
@@ -591,7 +591,7 @@ def _ensure_meta(conn):
 
 
 def get_meta(db_path: str, key: str) -> Optional[str]:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         _ensure_meta(conn)
         row = conn.execute("SELECT value FROM _meta WHERE key = ?", (key,)).fetchone()
@@ -601,7 +601,7 @@ def get_meta(db_path: str, key: str) -> Optional[str]:
 
 
 def set_meta(db_path: str, key: str, value: str):
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         _ensure_meta(conn)
         conn.execute(
@@ -616,7 +616,7 @@ def set_meta(db_path: str, key: str, value: str):
 
 def list_all(db_path: str) -> List[Dict]:
     """전체 메모리 전문 조회 (정리 패스용)."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
@@ -631,7 +631,7 @@ def list_all(db_path: str) -> List[Dict]:
 
 
 def count_at(db_path: str) -> int:
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         return conn.execute("SELECT COUNT(*) FROM memories").fetchone()[0]
     except sqlite3.OperationalError:
@@ -651,7 +651,7 @@ def prune_lru(db_path: str, cap: int = DEFAULT_MEMORY_CAP,
     if total <= cap:
         return 0
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         # 가지치기 후보: 비보호 카테고리, 오래 안 쓰인 순(used_at/created_at 오름차순)
@@ -670,7 +670,7 @@ def prune_lru(db_path: str, cap: int = DEFAULT_MEMORY_CAP,
     if not victims:
         return 0
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         ph = ",".join("?" * len(victims))
         conn.execute(f"DELETE FROM memories WHERE id IN ({ph})", victims)
@@ -752,7 +752,7 @@ def find_duplicate_clusters(db_path: str,
 
 def get_by_id(db_path: str, memory_id: int) -> Optional[Dict]:
     """id로 메모리 전문 조회 (used_at 갱신 없음 — 정리 패스용)."""
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         row = conn.execute(
@@ -771,7 +771,7 @@ def apply_merge(db_path: str, keep_id: int, content: str,
     content/keywords/category를 keep_id에 갱신하고 재인덱싱, drop_ids는
     행+vec 동시 삭제. 카테고리는 정규화된다."""
     category = normalize_category(category)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         conn.execute(
             "UPDATE memories SET content=?, keywords=?, category=? WHERE id=?",
@@ -797,7 +797,7 @@ def normalize_all_categories(db_path: str) -> int:
     무조건 '기타'로 강등하면 보호를 잃기 때문. 빈칸 분류는 LLM 병합 단계에 맡긴다."""
     rows = list_all(db_path)
     changed = 0
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     try:
         for r in rows:
             cur = (r.get("category") or "").strip()

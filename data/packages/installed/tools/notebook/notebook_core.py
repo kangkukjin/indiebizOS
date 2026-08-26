@@ -617,7 +617,7 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
             conn.close()
 
     if char_count > BACKGROUND_THRESHOLD_CHARS:
-        t = threading.Thread(target=_index_chunks_job, args=(nb["id"], source_id, src_title, chunks),
+        t = threading.Thread(target=_index_chunks_job, args=(nb["id"], source_id, src_title, chunks),  # cc-ok: 색인 잡 — queued+source_id 로 관측, 사멸 시 재색인 호출로 복구
                              daemon=True, name=f"nb-index-{source_id}")
         _bg_threads[source_id] = t
         t.start()

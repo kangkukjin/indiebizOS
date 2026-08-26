@@ -48,7 +48,7 @@ JSON 배열로만 응답하세요. 다른 설명 없이:
 
 def load_examples() -> Dict[str, List[str]]:
     """DB에서 ibl_code별 intent 그룹핑"""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     cursor = conn.execute("SELECT intent, ibl_code FROM ibl_examples ORDER BY id")
     rows = cursor.fetchall()
     conn.close()

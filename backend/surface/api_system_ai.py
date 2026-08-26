@@ -498,7 +498,7 @@ FORAGE_HISTORY_DB = DATA_PATH / "forage_history.db"
 
 def _history_conn():
     import sqlite3
-    conn = sqlite3.connect(str(FORAGE_HISTORY_DB))
+    conn = sqlite3.connect(str(FORAGE_HISTORY_DB), timeout=10)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS history("
         "id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT NOT NULL, url TEXT NOT NULL, "
@@ -584,7 +584,7 @@ FORAGE_BOARDS_DB = DATA_PATH / "forage_boards.db"
 
 def _boards_conn():
     import sqlite3
-    conn = sqlite3.connect(str(FORAGE_BOARDS_DB))
+    conn = sqlite3.connect(str(FORAGE_BOARDS_DB), timeout=10)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS boards("
         "id TEXT PRIMARY KEY, name TEXT DEFAULT '', ts TEXT NOT NULL, "
@@ -685,7 +685,7 @@ FORAGE_THUMBS_DB = DATA_PATH / "forage_thumbs.db"
 
 def _thumbs_conn():
     import sqlite3
-    conn = sqlite3.connect(str(FORAGE_THUMBS_DB))
+    conn = sqlite3.connect(str(FORAGE_THUMBS_DB), timeout=10)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS thumbs("
         "url TEXT PRIMARY KEY, image TEXT DEFAULT '', ts TEXT NOT NULL)"
@@ -1305,7 +1305,7 @@ async def get_conversation_dates():
     import sqlite3
     from system_ai_memory import MEMORY_DB_PATH
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
 
@@ -1329,7 +1329,7 @@ async def get_conversations_by_date(date: str):
     import sqlite3
     from system_ai_memory import MEMORY_DB_PATH
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
 
@@ -1363,7 +1363,7 @@ async def clear_conversations():
     import sqlite3
     from system_ai_memory import MEMORY_DB_PATH
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH))
+    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=10)
     conn.execute("PRAGMA journal_mode=WAL")
     cursor = conn.cursor()
     cursor.execute("DELETE FROM conversations")

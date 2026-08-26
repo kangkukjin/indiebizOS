@@ -97,7 +97,7 @@ class MultiChatDB:
     @contextmanager
     def get_connection(self):
         """컨텍스트 매니저로 연결 관리"""
-        conn = sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
         try:

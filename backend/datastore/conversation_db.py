@@ -260,7 +260,7 @@ class ConversationDB:
                     pass
 
         # 새 연결 생성
-        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)
+        conn = sqlite3.connect(self.db_path, timeout=30.0, check_same_thread=False)  # cc-ok: _pool_lock 잠금 풀 설계 — 커넥션 대여·반납이 락으로 직렬화
         conn.execute("PRAGMA journal_mode=WAL")
         conn.row_factory = sqlite3.Row
         return conn

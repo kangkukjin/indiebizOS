@@ -184,7 +184,7 @@ def _cmd_head(cmd: str) -> str:
 def scan(days: int = _WINDOW_DAYS) -> Dict[str, Any]:
     """최근 N일 에피소드에서 마찰 신호 A/B/C 를 수집 (카덴스 무관 순수 스캔)."""
     cutoff = (datetime.now() - timedelta(days=days)).isoformat()
-    conn = sqlite3.connect(str(_PULSE_DB))
+    conn = sqlite3.connect(str(_PULSE_DB), timeout=10)
     try:
         rows = conn.execute(
             "SELECT id, started_at, user_message, log FROM episode_log "

@@ -234,7 +234,7 @@ def main():
     print("=" * 60)
 
     # DB에서 추출
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=10)
     rows = conn.execute("SELECT intent, ibl_code FROM ibl_examples ORDER BY id").fetchall()
     conn.close()
 

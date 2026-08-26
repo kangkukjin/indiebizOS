@@ -52,7 +52,7 @@ def audit_corpus_vocab() -> Dict:
     from ibl_parser import parse
 
     nodes = (yaml.safe_load(_NODES_PATH.read_text(encoding="utf-8")) or {}).get("nodes", {})
-    conn = sqlite3.connect(str(_DB_PATH))
+    conn = sqlite3.connect(str(_DB_PATH), timeout=10)
     rows = list(conn.execute("SELECT id, intent, ibl_code FROM ibl_examples"))
     conn.close()
 

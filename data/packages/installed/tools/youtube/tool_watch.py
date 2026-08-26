@@ -190,7 +190,7 @@ def _prewarm_relay(video_id: str) -> None:
         except Exception:
             pass
     import threading
-    threading.Thread(target=_run, daemon=True).start()
+    threading.Thread(target=_run, daemon=True).start()  # cc-ok: 선인출 워밍업 — 실패·사멸 무해(재생 시 자체 해소)
 
 
 def watch(video_id: str) -> dict:

@@ -569,7 +569,7 @@ async def get_timeline_zoom_data(
     if not os.path.exists(db_path):
         return {"success": False, "error": f"데이터베이스 파일을 찾을 수 없습니다."}
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
@@ -758,7 +758,7 @@ async def get_timemap_regions(
     if not os.path.exists(db_path):
         return {"success": False, "error": "데이터베이스 파일을 찾을 수 없습니다."}
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
@@ -908,7 +908,7 @@ async def get_media_list_by_ids(
     if not os.path.exists(db_path):
         return {"success": False, "error": "데이터베이스 파일을 찾을 수 없습니다."}
 
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 

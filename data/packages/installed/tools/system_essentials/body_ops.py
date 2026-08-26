@@ -232,7 +232,7 @@ def _join_episode_requests(root, rows):
         return
     try:
         import sqlite3
-        conn = sqlite3.connect(os.path.join(root, "data", "world_pulse.db"))
+        conn = sqlite3.connect(os.path.join(root, "data", "world_pulse.db"), timeout=10)
         try:
             q = ",".join("?" * len(tasks))
             found = dict(conn.execute(

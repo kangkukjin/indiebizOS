@@ -384,7 +384,7 @@ class IndieNet:
             on_close=on_close
         )
 
-        wst = threading.Thread(target=ws.run_forever, daemon=True)
+        wst = threading.Thread(target=ws.run_forever, daemon=True)  # cc-ok: 릴레이 왕복 — 호출 경계 안에서 대기·종료(수명=호출)
         wst.start()
 
         # 5초 대기
@@ -470,7 +470,7 @@ class IndieNet:
                 on_close=on_close
             )
 
-            wst = threading.Thread(target=ws.run_forever, daemon=True)
+            wst = threading.Thread(target=ws.run_forever, daemon=True)  # cc-ok: 릴레이 왕복 — 호출 경계 안에서 대기·종료(수명=호출)
             wst.start()
 
             # 연결 대기
@@ -557,7 +557,7 @@ class IndieNet:
                 on_close=on_close
             )
 
-            wst = threading.Thread(target=ws.run_forever, daemon=True)
+            wst = threading.Thread(target=ws.run_forever, daemon=True)  # cc-ok: 릴레이 왕복 — 호출 경계 안에서 대기·종료(수명=호출)
             wst.start()
 
             connected.wait(timeout=5)
@@ -651,7 +651,7 @@ class IndieNet:
                 on_close=on_close
             )
 
-            wst = threading.Thread(target=ws.run_forever, daemon=True)
+            wst = threading.Thread(target=ws.run_forever, daemon=True)  # cc-ok: 릴레이 왕복 — 호출 경계 안에서 대기·종료(수명=호출)
             wst.start()
 
             connected.wait(timeout=5)

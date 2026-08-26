@@ -260,7 +260,7 @@ def publish_newspaper(tool_input: dict, gnews_batch) -> dict:
             _write_state(out, {"status": "error", "finished_at": datetime.now().isoformat(),
                                "message": f"발행 실패: {e}"})
 
-    threading.Thread(target=_bg, daemon=True).start()
+    threading.Thread(target=_bg, daemon=True).start()  # cc-ok: 발행 잡 — 상태 파일로 관측(사멸 시 상태 버튼이 미완을 드러냄)
     return {"success": True, "queued": True,
             "message": "신문 발행을 시작했습니다 — 약 1분 뒤 신문 탭을 다시 열면 새 판이 보입니다. (발행 상태 버튼으로 진행 확인)"}
 

@@ -33,7 +33,7 @@
     },
     {
       "name": "web_op",
-      "description": "웹 프로젝트 생애주기 작업 (op 분기) — [engines:web]. UI 컴포넌트는 web_component_op, 사이트 목록은 web_site.\n- op=preview(기본): 로컬 미리보기 서버. project_path + action(start/stop/status).\n- op=create: 프로젝트/페이지 생성. target=site(name+template+features) | page(project_path+page_name+sections+metadata).\n- op=build: 프로덕션 빌드(Next.js).\n- op=deploy: Vercel 배포(project_name/production).\n- op=snapshot: site_id 스크린샷.\n- op=check: site_id Lighthouse 품질검사.\n- op=styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.",
+      "description": "웹 프로젝트 생애주기 작업 (op 분기) — [engines:web]. UI 컴포넌트는 web_component_op, 사이트 목록은 web_site.\n- op=preview(기본): 로컬 미리보기 서버. project_path + action(start/stop/status).\n- op=create: 프로젝트/페이지 생성. target=site(name+template+features) | page(project_path+page_name+sections+metadata).\n- op=build: 프로덕션 빌드(Next.js).\n- op=deploy: Vercel 배포(project_name/production).\n- op=snapshot: site_id 현재 상태 요약.\n- op=check: site_id Lighthouse 품질검사.\n- op=styles: shadcn 테마 편집. project_path + theme(프리셋) 또는 custom_colors(HSL) + border_radius.",
       "input_schema": {
         "type": "object",
         "properties": {

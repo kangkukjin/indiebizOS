@@ -7103,7 +7103,7 @@ nodes:
 
           - preview: 로컬 미리보기 서버. project_path + action(start/stop/status).
 
-          - snapshot: site_id 스크린샷 캡처.
+          - snapshot: site_id 현재 상태 요약 (파일 구조·git 이력·페이지·의존성·배포 설정).
 
           - check: site_id Lighthouse 품질검사 (성능·접근성·SEO).
 
@@ -7121,7 +7121,7 @@ nodes:
             build: 프로덕션 빌드 (Next.js)
             deploy: Vercel 배포
             preview: 로컬 미리보기 서버 (start/stop/status, 기본)
-            snapshot: 사이트 스크린샷 캡처
+            snapshot: 등록 사이트 현재 상태 요약
             check: Lighthouse 품질 검사 (성능·접근성·SEO)
             styles: shadcn 테마/색상/반경 구조화 편집 (globals.css)
         implementation: web-builder 패키지 op 분기. create=create_project|create_page(target), build=build_site, deploy=deploy_vercel, preview=preview_site, snapshot=site_snapshot, check=site_live_check, styles=edit_styles. 가이드 web_builder.md.

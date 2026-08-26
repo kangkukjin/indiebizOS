@@ -43,7 +43,7 @@ web 액션은 *출발점*이지 울타리가 아니다.
 | | build | 프로덕션 빌드 (project_path) |
 | | deploy | Vercel 배포 (project_path + production) |
 | | preview | 로컬 미리보기 서버 (project_path + action: start/stop/status) — **기본 op** |
-| | snapshot | 사이트 스크린샷 (site_id) |
+| | snapshot | 등록 사이트 현재 상태 요약 — 파일 구조·git·페이지·의존성·배포 설정 (site_id) |
 | | check | Lighthouse 품질 검사 (site_id + checks) |
 | | styles | shadcn 테마 편집 (project_path + theme 프리셋/custom_colors HSL + border_radius) |
 | `[engines:web_component]` | catalog | 컴포넌트/섹션 카탈로그 조회 (kind: components/sections) |
@@ -78,7 +78,7 @@ web_site(list) → 현재 페이지가 뭘 말하는지 읽기 → 목적에 맞
 ```
 
 1. **web_site(op=list)**: 사이트의 루트 경로·배포 URL 확보. ★**registry의 `site_id`는 폴더명과 다를 수 있다** — 폴더가 `indiebiz-homepage`여도 id는 `indiebiz-os-홈페이지`다. 폴더명을 site_id로 추측해 넣지 말고 list가 준 id를 그대로 쓴다(2026-08-17 실측: 추측해서 ERR 1라운드 낭비).
-2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:snapshot}` 또는 `[limbs:browser]{op:screenshot}`.)
+2. **현재 페이지 파악**: `[sense:crawl]{url: "배포URL"}`로 라이브 텍스트를 빠르게 읽고, `[self:read]`로 관련 컴포넌트(page.tsx·해당 섹션들)를 읽어 *지금 페이지가 무엇을·어떻게 말하는지* 본다. (전체 화면을 픽셀로 봐야 하면 `[engines:web]{op:check, checks:["screenshot"]}` 또는 `[limbs:browser]{op:screenshot}` — `op:snapshot`은 스크린샷이 아니라 파일 구조·git 등 상태 요약이다.)
 
    ★**"많이 바뀌었으니 반영해줘" 류 요청의 진실 소스는 정해져 있다** — 무엇이 바뀌었는지를 찾아 헤매지 말고 이 둘을 먼저 읽는다:
    `README.ko.md`(또는 `README.md`)와 `data/system_docs/system_structure.md`. 이 둘과 현재 페이지의 *메시지*를 대조하면 고칠 것이 나온다. (2026-08-17 실측: 이 지점에서 4분 30초를 배회했다 — 첫 쓰기까지 41회 호출 중 38회가 읽기였다.)
@@ -430,7 +430,7 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 1. (배포 전) [self:grep]{pattern: "<바뀌어야 할 옛 수치/카피>", path: "{project_path}/src"}
    # 옛 숫자·문구가 코드 어딘가에 남아있지 않은지 전수 색출. 남아있으면 먼저 고친다.
 2. (배포 후) [engines:web]{op: "check", site_id: "<web_site list가 준 id>", checks: ["screenshot"]}
-   # 또는 [engines:web]{op: "snapshot", site_id: "<web_site list가 준 id>"} 로 실제 배포 화면 캡처
+   # 스크린샷 캡처는 check 전용 — op=snapshot 은 화면이 아니라 파일 구조·git 등 상태 요약
    # ★site_id 를 폴더명으로 추측하지 말 것 — list 가 준 값을 그대로 쓴다
 3. [engines:image_read]{path: "<캡처된 스크린샷 경로>", question: "표시된 수치/핵심 카피/이미지/레이아웃이 의도대로인가? 옛 값이 남아있지 않은가?"}
    # Gemini Vision으로 스크린샷을 실제로 '읽어' 눈으로 확인 (시각 QA·OCR)

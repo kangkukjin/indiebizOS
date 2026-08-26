@@ -261,11 +261,14 @@ class IBLUsageDB:
         if cls._model_loading or cls._model_load_attempted:
             return
         cls._model_loading = True
+        # ★경로 해석은 스폰 시점(호출자 스레드)에 — 스레드 안에서 느린 import(수 초) 뒤에
+        #   해석하면 그 사이 바뀐 상태(테스트의 monkeypatch·환경변수)를 주워 엉뚱한 경로를
+        #   로드한다 (2026-08-26 실측: 다른 시험의 tmp_path 를 집어 g5 가 순서 의존으로 죽었다).
+        _model_dir = cls._resolve_model_dir()
 
         def _load():
             try:
                 from sentence_transformers import SentenceTransformer
-                _model_dir = cls._resolve_model_dir()
                 print(f"[IBL Usage DB] 백그라운드 임베딩 모델 로딩 시작: {_model_dir}")
                 cls._model = SentenceTransformer(_model_dir)
                 print("[IBL Usage DB] 임베딩 모델 로딩 완료")

@@ -22,10 +22,29 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401
 
 
+def _drain_loader_threads():
+    """살아 있는 ibl-model-loader 스레드를 끝까지 기다린다.
+
+    왜: 앞선 시험(또는 앞선 시험 파일)이 띄운 백그라운드 로더가 이 시험 **도중**에
+    finally 로 클래스 전역(_model_load_attempted 등)을 덮어쓰면, _gate 가 만든 콜드
+    상태가 무효가 된다 — 전체 실행에서만 g5 가 죽던 순서 의존의 원인(2026-08-26 실측:
+    다른 시험의 tmp_path 로 뒤늦게 로드를 시도한 스레드가 g5 한복판에서 죽었다).
+    """
+    import threading
+    for t in threading.enumerate():
+        if t.name == "ibl-model-loader":
+            t.join(timeout=30)
+
+
 def _gate(monkeypatch, *, model=None, attempted=False, model_dir=None,
           mac_url="http://mac.example:8765"):
     """능력 게이트만 떼어 재는 시느대 — 라이브 DB·모델 무접촉."""
     from ibl_usage_db import IBLUsageDB
+    _drain_loader_threads()
+    # 게이트 시험은 게이트만 잰다 — 시험 중 로더 스레드를 새로 띄우지 않는다
+    # (띄우면 그 finally 가 다음 시험의 콜드 상태를 또 덮어쓴다).
+    monkeypatch.setattr(IBLUsageDB, "_start_background_model_load",
+                        classmethod(lambda cls: None))
     monkeypatch.setattr(IBLUsageDB, "_model", model, raising=False)
     monkeypatch.setattr(IBLUsageDB, "_model_load_attempted", attempted, raising=False)
     monkeypatch.setattr(IBLUsageDB, "_model_loading", False, raising=False)
@@ -118,6 +137,44 @@ def test_g5_fts_fallback_survives_a_cold_model(monkeypatch):
         pytest.skip("코퍼스에 이 질의에 걸리는 용례가 없다")
     assert hybrid, \
         f"FTS 는 {len(fts)}건인데 hybrid 가 0건 — 폴백에 도달하지 못했다(이번 결함의 증상)"
+
+
+def test_g6_loader_resolves_dir_at_spawn_time(monkeypatch, tmp_path):
+    """로더의 모델 경로 해석은 **스폰 시점**(호출자 스레드)이어야 한다.
+
+    스레드 안에서 느린 import 뒤에 해석하면, 그 수 초 사이 바뀐 상태(다른 시험의
+    monkeypatch·환경변수)를 주워 엉뚱한 경로를 로드한다 — g5 순서 의존 오염의 뿌리.
+    """
+    import sys as _sys
+    import threading
+    import types
+    from ibl_usage_db import IBLUsageDB
+
+    _drain_loader_threads()
+    seen = []
+    release = threading.Event()
+    fake = types.ModuleType("sentence_transformers")
+
+    def _fake_st(model_dir):
+        release.wait(10)     # 느린 import/로드 재현 — 해석이 스레드 안이면 이 뒤에 일어난다
+        raise RuntimeError("fake model load")
+    fake.SentenceTransformer = _fake_st
+
+    monkeypatch.setitem(_sys.modules, "sentence_transformers", fake)
+    monkeypatch.setattr(IBLUsageDB, "_model", None, raising=False)
+    monkeypatch.setattr(IBLUsageDB, "_model_load_attempted", False, raising=False)
+    monkeypatch.setattr(IBLUsageDB, "_model_loading", False, raising=False)
+    monkeypatch.setattr(
+        IBLUsageDB, "_resolve_model_dir",
+        staticmethod(lambda: (seen.append(threading.current_thread().name), str(tmp_path))[1]))
+
+    IBLUsageDB._start_background_model_load()
+    try:
+        assert seen and seen[0] == threading.current_thread().name, \
+            "경로 해석이 스폰 스레드에서 일어나지 않았다 — 로더가 남의 monkeypatch 아래에서 해석한다"
+    finally:
+        release.set()
+        _drain_loader_threads()   # 스레드를 이 시험 안에서 끝낸다 — 다음 시험으로 새지 않게
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

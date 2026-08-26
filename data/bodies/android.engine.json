@@ -328,6 +328,7 @@
     "test_registered_report_scripts": "force_exclude_glob",
     "test_reload_scope": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
+    "test_render_prescreen_contract": "force_exclude_glob",
     "test_render_xlsx_contract": "force_exclude_glob",
     "test_repair_staging": "force_exclude_glob",
     "test_repair_status_git_column": "force_exclude_glob",
@@ -353,8 +354,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 347,
+    "total": 348,
     "engine": 225,
-    "blocklist": 122
+    "blocklist": 123
   }
 }

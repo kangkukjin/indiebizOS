@@ -113,6 +113,63 @@ def _inline_assets(html: str, base_path: str) -> str:
 _DEFAULT_VIEWPORT = {"width": 1280, "height": 720}
 
 
+# ── 0층 기계 관측 (검수 비용 계층화, INSPECTION_COST_TIER 2026-08-27) ─────────
+#
+# 행 필드 `prescreen` = 렌더 중 공짜로 얻는 관측 사실의 요약 문자열("" = 깨끗).
+# 판단(취향)이 아니라 관측의 기계 요약 — truncated 와 같은 정직층 부류. 합격/불합격
+# 판정은 critic 층이 한다(prescreen 비었으면 비전 호출, 차 있으면 무비용 단락).
+# 문자열 하나인 이유: [table:each] 의 $it.필드 치환이 문자열에서 안전하다.
+
+def _clip(s, n=120):
+    s = str(s).replace("\n", " ").strip()
+    return s[:n] + ("…" if len(s) > n else "")
+
+
+def _ink_ratio_from_samples(samples):
+    """비백색 바이트 비율(표본) — 0 에 가까우면 백지 렌더. 정밀 측색이 아니라 존재 검사."""
+    step = max(1, len(samples) // 100_000)
+    sub = samples[::step]
+    if not sub:
+        return None
+    return sum(1 for b in sub if b < 245) / len(sub)
+
+
+def _ink_ratio_png(png_path):
+    try:
+        import fitz
+        pix = fitz.Pixmap(png_path)
+        return _ink_ratio_from_samples(pix.samples)
+    except Exception:
+        return None
+
+
+def _blank_fact(ratio):
+    if ratio is not None and ratio < 0.001:
+        return f"빈 화면(잉크 {ratio * 100:.2f}%)"
+    return None
+
+
+def _web_prescreen_facts(events):
+    """Playwright 이벤트 → 사실 문장들. 수집은 렌더가 이미 여는 페이지 위라 한계비용 0."""
+    facts = []
+    if events["pageerror"]:
+        facts.append(f"페이지 예외 {len(events['pageerror'])}건: {_clip(events['pageerror'][0])}")
+    if events["console"]:
+        facts.append(f"콘솔 오류 {len(events['console'])}건: {_clip(events['console'][0])}")
+    if events["reqfail"]:
+        facts.append(f"요청 실패 {len(events['reqfail'])}건: {_clip(events['reqfail'][0], 100)}")
+    return facts
+
+
+def _attach_prescreen(row, facts):
+    row["prescreen"] = "; ".join(f for f in facts if f)
+    return row
+
+
+# 수식 오류 표식 — criteria/sheet.yaml forbidden 의 0층 선행판(비전은 백업 그물).
+_FORMULA_ERR_MARKERS = ("#REF!", "#DIV/0!", "#VALUE!", "#NAME?", "#N/A", "#NULL!", "#NUM!")
+
+
 def _parse_viewports(tool_input):
     """viewports 파라미터 정규화 — [{width,height,label}] 또는 "1280x720" 문자열 혼용 수용."""
     raw = tool_input.get("viewports")
@@ -148,7 +205,10 @@ def _out_stem(tool_input, src_path=None):
 
 
 def _finish(rows, output_base, extra=None):
+    # prescreen_flagged 는 필드가 정본(메시지에 안 넣는 이유: xlsx 가 위임 뒤 표식 스캔으로
+    # 행 prescreen 을 더 채우므로, 문장에 박은 수는 낡을 수 있다).
     result = {"items": rows, "total": len(rows),
+              "prescreen_flagged": sum(1 for r in rows if r.get("prescreen")),
               "message": f"렌더 완료: {len(rows)}장 → {os.path.abspath(output_base)}"}
     if extra:
         result.update(extra)
@@ -194,6 +254,13 @@ def render_op_html(tool_input, output_base="."):
                 page = browser.new_page(
                     viewport={"width": vp["width"], "height": vp["height"]},
                     device_scale_factor=scale)
+                # 0층 관측 — 렌더가 이미 여는 페이지 위의 공짜 수집(비용 계층화)
+                events = {"console": [], "pageerror": [], "reqfail": []}
+                page.on("console",
+                        lambda m, ev=events: ev["console"].append(m.text) if m.type == "error" else None)
+                page.on("pageerror", lambda e, ev=events: ev["pageerror"].append(str(e)))
+                page.on("requestfailed",
+                        lambda r, ev=events: ev["reqfail"].append(f"{r.url} ({r.failure})"))
                 if src_path:
                     # file:// 로드 — 상대 경로 CSS/이미지가 자연 해소된다 (인라이닝 불필요)
                     page.goto("file://" + src_path)
@@ -212,8 +279,10 @@ def render_op_html(tool_input, output_base="."):
                 else:
                     page.screenshot(path=out, full_page=bool(full_page))
                 page.close()
-                rows.append({"op": "html", "label": vp["label"], "page": 1,
-                             "width": vp["width"], "height": vp["height"], "path": out})
+                facts = _web_prescreen_facts(events) + [_blank_fact(_ink_ratio_png(out))]
+                rows.append(_attach_prescreen(
+                    {"op": "html", "label": vp["label"], "page": 1,
+                     "width": vp["width"], "height": vp["height"], "path": out}, facts))
             browser.close()
         return _finish(rows, output_base)
     except Exception as e:
@@ -256,8 +325,10 @@ def render_op_pdf(tool_input, output_base="."):
             pix = doc.load_page(n - 1).get_pixmap(matrix=mat)
             out = os.path.abspath(os.path.join(output_base, f"{stem}_p{n}.png"))
             pix.save(out)
-            rows.append({"op": "pdf", "label": f"p{n}", "page": n,
-                         "width": pix.width, "height": pix.height, "path": out})
+            facts = [_blank_fact(_ink_ratio_from_samples(pix.samples))]
+            rows.append(_attach_prescreen(
+                {"op": "pdf", "label": f"p{n}", "page": n,
+                 "width": pix.width, "height": pix.height, "path": out}, facts))
         doc.close()
         return _finish(rows, output_base,
                        {"total_pages": total_pages, "truncated": truncated})
@@ -411,6 +482,20 @@ def render_op_xlsx(tool_input, output_base="."):
         return out  # pdf 단계의 정직 오류 그대로
     for row in result["items"]:
         row["op"] = "xlsx"
+    # 0층: 재계산 PDF 텍스트의 수식 오류 표식 — sheet.yaml forbidden 의 무비용 선행판
+    try:
+        import fitz
+        doc = fitz.open(pdf_path)
+        for row in result["items"]:
+            text = doc.load_page(int(row["page"]) - 1).get_text()
+            found = [m for m in _FORMULA_ERR_MARKERS if m in text]
+            if found:
+                fact = f"수식 오류 표식 노출: {', '.join(found)}"
+                row["prescreen"] = "; ".join(x for x in [row.get("prescreen", ""), fact] if x)
+        doc.close()
+    except Exception:
+        pass  # 표식 스캔 실패는 0층 공백일 뿐 — 렌더 결과 자체를 막지 않는다
+    result["prescreen_flagged"] = sum(1 for r in result["items"] if r.get("prescreen"))
     result["pdf_path"] = pdf_path
     result["message"] += f" (재계산 PDF: {pdf_path} — 계산값 텍스트 확인은 [self:read])"
     if tool_input.get("viewports"):
@@ -453,9 +538,10 @@ def render_op_svg(tool_input, output_base="."):
             box = el.bounding_box() or {}
             el.screenshot(path=out)
             browser.close()
-        rows = [{"op": "svg", "label": "svg", "page": 1,
-                 "width": int(box.get("width") or 0), "height": int(box.get("height") or 0),
-                 "path": out}]
+        rows = [_attach_prescreen(
+            {"op": "svg", "label": "svg", "page": 1,
+             "width": int(box.get("width") or 0), "height": int(box.get("height") or 0),
+             "path": out}, [_blank_fact(_ink_ratio_png(out))])]
         return _finish(rows, output_base)
     except Exception as e:
         return _err(f"SVG 렌더 실패: {e}")

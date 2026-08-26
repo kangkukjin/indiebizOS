@@ -7,13 +7,13 @@
   "tools": [
     {
       "name": "render_artifact",
-      "description": "시각 형식(HTML/PDF/SVG)을 PNG 스크린샷으로 결정론 투영합니다 (op 분기). 반환은 items 통화 — 행마다 스크린샷 1장의 절대 경로. 판단 없는 순수 지각 — 심사는 read_gemini_image(op:critic).",
+      "description": "시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영합니다 (op 분기, 생략 시 path 확장자로 추론). 반환은 items 통화 — 행마다 스크린샷 1장의 절대 경로 + prescreen(0층 기계 관측: 콘솔 오류·빈 화면·수식 오류 표식, 비었으면 깨끗). 판단 없는 순수 지각 — 심사는 read_gemini_image(op:critic).",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "동작 분기 — html(기본) | pdf | svg",
+            "description": "동작 분기 — html(기본) | pdf | svg | xlsx. 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 추론",
             "enum": [
               "html",
               "pdf",
@@ -21,6 +21,10 @@
               "xlsx"
             ],
             "default": "html"
+          },
+          "timeout": {
+            "type": "integer",
+            "description": "(xlsx) LibreOffice 변환 타임아웃 초 (기본 120)"
           },
           "path": {
             "type": "string",
@@ -82,10 +86,6 @@
           "height": {
             "type": "integer",
             "description": "(html, viewports 미지정 시) 뷰포트 세로 (기본 720)"
-          },
-          "timeout": {
-            "type": "integer",
-            "description": "engines:render 파라미터"
           }
         },
         "required": []
@@ -262,6 +262,10 @@
           "style_preset": {
             "type": "string",
             "description": "(critic) 디자인 시스템 톤 평가 기준 (예: vintage_book)"
+          },
+          "prescreen": {
+            "type": "string",
+            "description": "(critic) render 행의 0층 기계 관측 문자열($it.prescreen) — 비어 있지 않으면 비전 호출 없이 즉시 실패 verdict(tier: prescreen, 비용 계층화)"
           },
           "api_key": {
             "type": "string",

@@ -1,7 +1,7 @@
 description: HTML 페이지를 데스크톱·모바일 두 뷰포트로 렌더해 취향 파일 기준으로 장별 심사 (지각→심사, 수정은 호출자 몫)
 do: '[engines:render]{path: "$path", viewports: ["1280x800", "390x844"]} >> [table:each]{do:
   "[engines:image_read]{op: ''critic'', image_path: ''$it.path'', intent: ''$intent
-  — $it.label 폭에서 성립하는가'', criteria: ''$criteria''}"}'
+  — $it.label 폭에서 성립하는가'', criteria: ''$criteria'', prescreen: ''$it.prescreen''}"}'
 name: 화면검수
 op: save
 params_default:
@@ -12,5 +12,5 @@ params_required:
 - criteria
 steps: '[engines:render]{path: "$path", viewports: ["1280x800", "390x844"]} >> [table:each]{do:
   "[engines:image_read]{op: ''critic'', image_path: ''$it.path'', intent: ''$intent
-  — $it.label 폭에서 성립하는가'', criteria: ''$criteria''}"}'
+  — $it.label 폭에서 성립하는가'', criteria: ''$criteria'', prescreen: ''$it.prescreen''}"}'
 updated: '2026-08-26T23:04:21.921291'

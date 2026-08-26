@@ -80,6 +80,23 @@ def critique_gemini_image(tool_input, output_base):
     if not intent:
         return json.dumps({"success": False, "error": "intent(이 일러스트가 무엇을 표현해야 하는지)가 필요합니다."}, ensure_ascii=False)
 
+    # ── 0층 단락 (검수 비용 계층화, INSPECTION_COST_TIER 2026-08-27) ──
+    # render 가 행에 동봉한 기계 관측(prescreen)이 비어 있지 않으면 이미 구체적 실패
+    # 증거(콘솔 오류·빈 화면·수식 오류 표식)가 있다 — 유료 비전 호출 없이 즉시 실패
+    # verdict 를 같은 모양으로 반환한다. API 키 검사보다 앞이라 키 없이도 돈다.
+    prescreen = str(tool_input.get("prescreen") or "").strip()
+    if prescreen:
+        verdict = {"passed": False, "score": 0,
+                   "issues": [f.strip() for f in prescreen.split(";") if f.strip()],
+                   "notes": "0층 기계 관측 실패 — 비전 심사 생략(비용 계층화)",
+                   "tier": "prescreen"}
+        return "\n".join([
+            f"이미지 평가: {image_path}",
+            f"의도: {intent[:80]}{'...' if len(intent) > 80 else ''}",
+            f"평가 결과: ✗ 실패 (score=0/10, 0층 기계 관측 — 비전 호출 생략)",
+            "문제점:", *(f"  - {i}" for i in verdict["issues"]), "",
+            f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"])
+
     api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return json.dumps({"success": False, "error": "GEMINI_API_KEY가 설정되지 않았습니다."}, ensure_ascii=False)
@@ -203,6 +220,8 @@ def critique_gemini_image(tool_input, output_base):
         verdict = _json.loads(text)
     except Exception:
         return json.dumps({"success": False, "error": "VLM 응답 파싱 실패", "raw": text[:500]}, ensure_ascii=False)
+    if isinstance(verdict, dict):
+        verdict.setdefault("tier", "vision")  # 0층(prescreen) 단락과 판정 출처를 구분
 
     summary_lines = [
         f"이미지 평가: {image_path}",

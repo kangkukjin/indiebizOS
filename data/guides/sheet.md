@@ -61,6 +61,9 @@ $r = [engines:render]{op: "xlsx", path: "정산표.xlsx"}
 
 op 를 생략해도 path 확장자(.xlsx/.xlsm)로 자동 라우팅되므로 `화면검수` 워크플로우
 (`params: {path: "장부.xlsx", criteria: "sheet"}`)에 그대로 넣을 수 있다.
+**비용 계층화(0층)**: render 행의 `prescreen` 에 무비용 기계 관측(빈 쪽·수식 오류 표식
+#REF!/#DIV/0! 등)이 실리고, critic 에 `prescreen: '$it.prescreen'` 으로 넘기면 걸린 쪽은
+**비전 호출 없이** 즉시 실패 verdict(tier: prescreen) — 유료 심사는 깨끗한 쪽만 받는다.
 LibreOffice 가 없으면 설치 안내와 함께 정직 실패(맥 `brew install --cask libreoffice`).
 매크로(.xlsm)는 렌더 시 실행되지 않는다(보안상 정상).
 

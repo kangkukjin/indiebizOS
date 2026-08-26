@@ -398,7 +398,7 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 |---|---|
 | `[engines:image_gemini]` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
 | `[self:slide]{op:"create"}` / `[engines:render]{op:"html"}` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG, 뷰포트별 1행) |
-| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes). `criteria: "web"` 을 주면 data/criteria/web.yaml 취향 파일이 기준 |
+| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes). `criteria: "web"` 을 주면 data/criteria/web.yaml 취향 파일이 기준. `prescreen: '$it.prescreen'` 을 넘기면 render 의 0층 기계 관측(콘솔 오류·빈 화면)에 걸린 화면은 **비전 호출 없이** 실패 verdict(비용 계층화) |
 
 ### 절차
 ```

@@ -6976,7 +6976,7 @@ nodes:
         runs_on: pc_only
         scope: workspace
         description: 자기 산출물 지각 — 시각 형식(HTML/PDF/SVG/XLSX 장부)을 PNG 스크린샷으로 결정론 투영 (op 분기, 생략 시 path 확장자로 추론). 행=스크린샷 1장이라 `>> [table:each]` 로 장별 critic 심사 파이프 가능. 판단 없음 — 심사는 image_read{op:"critic"}. 슬라이드는 self:slide.
-        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(파일명 stem).'
+        target_description: 'op: html(기본)/pdf/svg/xlsx — op 생략 시 path 확장자(.pdf/.svg/.xlsx/.xlsm)로 결정론 추론, path 없으면 html. html — path(HTML 파일, file:// 로드라 상대 자산 자연 해소) 또는 html(문자열, base_path 로 로컬 이미지 인라인), 둘 다 생략 시 직전 통화를 렌더(파이프 싱크). viewports(["1280x720" 또는 {width,height,label}] 배열 — 뷰포트별 1행, 웹 검수는 데스크톱+모바일 두 눈 권장) · full_page(기본 true) · selector · scale. pdf — path 필수, 페이지별 1행, scale(기본 2.0≈144dpi) · max_pages(기본 20, 초과는 truncated·total_pages 로 정직 보고) · pages(1-기준 번호 배열). svg — path 또는 svg(문자열), svg 요소 경계로 캡처. xlsx — path(xlsx/xlsm) 필수, LibreOffice 헤드리스로 수식 재계산 후 인쇄 투영(원본 불변·매크로 미실행), pdf 와 같은 페이지 param + timeout(기본 120s), 결과에 pdf_path 동봉 — 계산된 숫자의 텍스트 확인은 [self:read]{path: pdf_path}. viewports 는 xlsx 에 비적용(note 로 알림). 공통 — output_path(파일명 stem). 행마다 prescreen(0층 기계 관측 문자열, ""=깨끗 — html: 콘솔 오류·페이지 예외·요청 실패·빈 화면 / pdf·svg: 빈 화면 / xlsx: +수식 오류 표식) 동봉, 봉투에 prescreen_flagged 수 — critic 에 prescreen: ''$it.prescreen'' 으로 넘기면 걸린 행은 비전 호출 없이 실패 verdict(비용 계층화).'
         group: media_produce
         router: handler
         tool: render_artifact
@@ -7018,7 +7018,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes) — criteria 로 data/criteria/*.yaml 취향 파일을 기준으로 심사.
-        target_description: image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열) 옵션.
+        target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
         group: media_produce
         router: handler
         tool: read_gemini_image
@@ -7029,7 +7029,7 @@ nodes:
           values:
             read: 시각 QA·OCR — 질문에 자유서술로 답함 (question)
             critic: 의도 정합 채점 — passed/score/issues/notes (intent 필수)
-        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 한글 검출 시 passed=false.
+        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 한글 검출 시 passed=false. prescreen 이 차 있으면 비전 호출 0회에 tier=prescreen 실패 verdict(관측 사실이 issues 로 승계).
         keywords:
         - 이미지 읽기
         - 스크린샷 읽기

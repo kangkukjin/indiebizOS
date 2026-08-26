@@ -52,4 +52,7 @@ def eval_expr(code: Any, row: Dict[str, Any], extra: Dict[str, Any] = None) -> A
     if extra:
         scope.update(extra)
     scope["col"] = lambda name: (as_num(row.get(name)) if as_num(row.get(name)) is not None else row.get(name))
-    return eval(code, {"__builtins__": {}, **FUNCS}, scope)
+    # 유한 결과 관문 — 1e308*2 같은 오버플로가 Infinity 로 통화에 실려 하류 계산·분기·
+    # 저장으로 전염되기 전에 여기서 ValueError 로 끊는다(compute/reduce/assign 공유).
+    from common.value_semantics import require_finite_numbers
+    return require_finite_numbers(eval(code, {"__builtins__": {}, **FUNCS}, scope))

@@ -249,6 +249,7 @@
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
     "repair_verdict_distill": "force_exclude (프로파일 명시)",
+    "test_aggregate_finite_result_gate": "force_exclude_glob",
     "test_ai_ops_words": "force_exclude_glob",
     "test_body_vocab": "force_exclude_glob",
     "test_condition_observability": "force_exclude_glob",
@@ -275,6 +276,8 @@
     "test_gemini_provider_contract": "force_exclude_glob",
     "test_goal_eval_streaming": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
+    "test_groupby_key_currency_matrix": "force_exclude_glob",
+    "test_groupby_observation_honesty": "force_exclude_glob",
     "test_handler_error_contract": "force_exclude_glob",
     "test_health_source_isolation": "force_exclude_glob",
     "test_hippo_capability_gate": "force_exclude_glob",
@@ -330,6 +333,7 @@
     "test_user_surface_pipeline": "force_exclude_glob",
     "test_value_semantics_consumer_contract": "force_exclude_glob",
     "test_value_semantics_convergence": "force_exclude_glob",
+    "test_value_semantics_root_convergence": "force_exclude_glob",
     "test_value_semantics_single_owner": "force_exclude_glob",
     "test_venv_pinned": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
@@ -338,8 +342,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 332,
+    "total": 336,
     "engine": 225,
-    "blocklist": 107
+    "blocklist": 111
   }
 }

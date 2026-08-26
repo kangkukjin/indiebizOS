@@ -24,8 +24,6 @@ IBL의 깊이(depth)를 만드는 부품. 생산자(sense:* 등)가 내는 공�
 import json
 import re
 
-from common.value_semantics import numeric_observations
-
 
 # ───────────────────────── 통화 추출/주입 (공유) ─────────────────────────
 
@@ -344,6 +342,8 @@ _num_cmp = _wdsl._num_cmp
 _parse_where_str = _wdsl._parse_where_str
 _group_keys = _load_sibling_where(__file__, "group_keys")
 _group_identity, _relation_identity = _group_keys.group_identity, _group_keys.relation_identity
+# 패키지 소유 정책(집계 관측·그룹 표시값·since 원장 키) — 값의 뜻은 common 이 소유.
+_value_semantics = _load_sibling_where(__file__, "dataops_value_semantics")
 
 def _row_dicts(table):
     """table rows → [{col: val}] (where/sort/dedup이 items와 같은 코드 쓰도록)."""
@@ -631,33 +631,14 @@ def _op_dedup(prev, params):
     return _no_currency_error("dedup", prev)
 
 
-def _agg_sum(values):
-    numbers = numeric_observations(values)
-    return round(sum(numbers), 6) if numbers else None
+# 명시 count(field)는 실존(non-null) 관측 수. 기본 그룹 행수 count는 _op_groupby가
+# 내부 명세 row_count 로 별도 처리한다(G39-1) — 공개 op를 하나 더 만들지 않는다.
+# 관측·누산의 실제 판정은 value_semantics.aggregate_members 한 벌이다.
+_AGG = {"count", "sum", "avg", "min", "max"}
 
+_aggregate_members = _value_semantics.aggregate_members
 
-def _agg_avg(values):
-    numbers = numeric_observations(values)
-    return round(sum(numbers) / len(numbers), 6) if numbers else None
-
-
-def _agg_min(values):
-    return min(numeric_observations(values), default=None)
-
-
-def _agg_max(values):
-    return max(numeric_observations(values), default=None)
-
-
-_AGG = {
-    # 명시 count(field)는 실존(non-null) 관측 수. 기본 그룹 행수 count는 _op_groupby가
-    # src=None인 내부 명세로 별도 처리한다(G39-1) — 공개 op를 하나 더 만들지 않는다.
-    "count": lambda vs: sum(value is not None for value in vs),
-    "sum": _agg_sum,
-    "avg": _agg_avg,
-    "min": _agg_min,
-    "max": _agg_max,
-}
+_group_output_value = _value_semantics.strict_json_value
 
 
 def _rows_for_field(obj, field):
@@ -747,40 +728,61 @@ def _op_groupby(prev, params):
         # dict 아닌 agg("sum:size" 등)를 조용히 버리면 count 로 위장된다(⑧′ 실측)
         return {"success": False,
                 "error": f"groupby: agg 는 dict 여야 합니다 — {{원본열: op}} 또는 {{새열명: [op, 원본열]}}, "
-                         f"op={'/'.join(_AGG)}. 예: {{매출: [\"sum\", \"금액\"]}}. 받은 값: {agg!r} "
+                         f"op={'/'.join(sorted(_AGG))}. 예: {{매출: [\"sum\", \"금액\"]}}. 받은 값: {agg!r} "
                          f"(스칼라는 'count' 만 허용 — 원본열이 필요 없는 유일한 op)"}
     for out_col, op, src in specs:
         if op not in _AGG:
-            return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(_AGG)})"}
+            return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(sorted(_AGG))})"}
         # 명시 count(field)의 field도 장식이 아니다. 기본 행수 count는 이 검사가 끝난 뒤
-        # src=None으로 만들어지므로, 전 행에 없는 명시 필드는 다른 집계와 같이 거절한다.
+        # 내부 명세 row_count 로 만들어지므로, 전 행에 없는 명시 필드는 다른 집계와 같이 거절한다.
         if not any(src in d for d in dicts):
             return _field_missing_error("groupby", src, dicts)
     if not specs:
-        specs = [("count", "count", None)]
-    # 그룹핑 (입력 순서 보존)
-    groups, order = {}, []
+        # agg 생략은 행 수다. 명시 count(열)의 non-null 의미와 섞으면 null/부재
+        # 그룹이 2행이어도 0으로 나온다(B40-3).
+        specs = [("count", "row_count", "")]
+    # 그룹핑 (입력 순서 보존). 표시값은 엄격 JSON — NaN/Infinity 키가 통화에 실려
+    # 직렬화를 깨지 않게 하되, 강제한 수를 group_key_coercions 로 자백한다.
+    groups, labels, order = {}, {}, []
+    group_key_coercions = []
     for d in dicts:
         gk = d.get(by)
         gid = _group_identity(gk)
         if gid not in groups:
-            groups[gid] = (gk, [])
+            groups[gid] = []
+            label, changed = _group_output_value(gk)
+            labels[gid] = label
+            if changed:
+                group_key_coercions.append({
+                    "field": by, "key": label, "nonfinite_parts": changed,
+                })
             order.append(gid)
-        groups[gid][1].append(d)
+        groups[gid].append(d)
     out_cols = [by] + [s[0] for s in specs]
     out_rows = []
+    aggregation_skips = []
+    aggregation_errors = []
     for gid in order:
-        gk, members = groups[gid]
+        gk = labels[gid]
+        members = groups[gid]
         row = [gk]
         for out_col, op, src in specs:
-            if op == "count" and src is None:
-                row.append(len(members))
-                continue
-            vals = [m.get(src) for m in members]
-            fn = _AGG.get(op, _AGG["count"])
-            row.append(fn(vals))
+            value, skipped, aggregate_error = _aggregate_members(op, members, src)
+            row.append(value)
+            if skipped:
+                aggregation_skips.append({
+                    "group": gk, "output": out_col, "op": op,
+                    "source": src, "skipped": skipped, "rows": len(members),
+                })
+            if aggregate_error:
+                aggregation_errors.append({
+                    "group": gk, "output": out_col, "op": op,
+                    "source": src, "error": aggregate_error,
+                })
         out_rows.append(row)
     res = _emit_table(env, {"columns": out_cols, "rows": out_rows})
+    res = _value_semantics.attach_group_reports(
+        res, group_key_coercions, aggregation_skips, aggregation_errors)
     if auto_named and isinstance(res, dict) and res.get("success", True):
         # 자동 명명 열을 봉투에 자백 — 다음 스텝(sort{by:...} 등)이 이 이름을 알아야
         # 한 왕복으로 이어진다 (ep1116: 'count_name' 을 몰라 하류 sort 가 죽었다).
@@ -863,19 +865,26 @@ def _op_since(prev, params):
     conn = _since_conn()
     trimmed = 0
     try:
-        seen = {r[0]: r[1] for r in conn.execute(
-            "SELECT k, watched FROM since_seen WHERE stream=?", (key,))}
+        # 구조형 키는 순서 독립 정본 키로 읽고 쓴다. 구버전이 str(dict) 로 남긴
+        # 원장도 별칭으로 함께 색인해 필드 순서가 바뀐 같은 실체를 거짓 new 로
+        # 오보하지 않는다 (Codex 흡수, 2026-08-26).
+        seen, legacy_seen = _value_semantics.persisted_seen(conn.execute(
+            "SELECT k, watched FROM since_seen WHERE stream=?", (key,)))
         first_run = not seen
         out, n_new, n_changed = [], 0, 0
+        _missing = object()
         for r in rows:
-            rk = str(r.get(by))
-            if rk not in seen:
+            rk, legacy_rk = _value_semantics.persistent_keys(r.get(by))
+            previous = seen.get(rk, _missing)
+            if previous is _missing and legacy_rk != rk:
+                previous = seen.get(legacy_rk, _missing)  # 옛 str(dict) 원장 호환
+            if previous is _missing:
                 if not first_run:
                     out.append({**r, "_since": "new"})
                     n_new += 1
             elif watch:
                 try:
-                    prev_wv = json.loads(seen[rk]) if seen[rk] else None
+                    prev_wv = json.loads(previous) if previous else None
                 except Exception:
                     prev_wv = None
                 cur_wv = {w: r.get(w) for w in watch}
@@ -885,7 +894,7 @@ def _op_since(prev, params):
                     n_changed += 1
         if not peek:
             for r in rows:
-                rk = str(r.get(by))
+                rk, legacy_rk = _value_semantics.persistent_keys(r.get(by))
                 wjson = (json.dumps({w: r.get(w) for w in watch},
                                     ensure_ascii=False, sort_keys=True)
                          if watch else None)
@@ -894,6 +903,7 @@ def _op_since(prev, params):
                     " VALUES (?,?,?,?,?) ON CONFLICT(stream,k) DO UPDATE SET"
                     " watched=excluded.watched, last_seen=excluded.last_seen",
                     (key, rk, wjson, now, now))
+                _value_semantics.migrate_since_keys(conn, key, rk, legacy_rk, legacy_seen)
             total = conn.execute(
                 "SELECT COUNT(*) FROM since_seen WHERE stream=?", (key,)).fetchone()[0]
             if total > _SINCE_CAP:
@@ -1359,7 +1369,7 @@ render_document = _docs.render_document
 # 컨텍스트를 거쳐 나오는 자리. groupby 는 집계(행→1)만, 이건 행→행 파생.
 # ★2026-08-22 M5 정리: 식 화이트리스트·함수 집합의 정본은 common/safe_expr (reduce 와 공유) —
 # 두 벌로 두면 허용 구문이 갈라진다. 여기선 그 정본을 compute 의 이름으로 재수출만 한다.
-from common.safe_expr import FUNCS as _COMPUTE_FUNCS, compile_expr as _safe_compile
+from common.safe_expr import compile_expr as _safe_compile, eval_expr as _safe_eval
 
 
 def _compute_compile(expr):
@@ -1405,12 +1415,10 @@ def _op_compute(prev, params):
     sample_err = None
     for r in dict_recs:
         row = dict(r)
-        scope = {k: _as_num(v) if _as_num(v) is not None else v for k, v in r.items()
-                 if isinstance(k, str) and k.isidentifier()}
-        scope["col"] = (lambda _r: (lambda name: (_as_num(_r.get(name)) if _as_num(_r.get(name)) is not None else _r.get(name))))(r)
+        # scope 구성·유한 결과 관문의 정본은 common.safe_expr.eval_expr (reduce 와 공유).
         for new_col, code in compiled.items():
             try:
-                row[new_col] = eval(code, {"__builtins__": {}, **_COMPUTE_FUNCS}, scope)
+                row[new_col] = _safe_eval(code, r)
             except Exception as e:
                 row[new_col] = None
                 errors += 1

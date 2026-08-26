@@ -70,10 +70,9 @@ def test_round44_matrix_preserves_integer_order_across_six_surfaces(
 def test_non_finite_values_are_not_numeric_observations(data_ops, value):
     """JSON에 유한 숫자로 실을 수 없는 값은 집계·숫자 버킷에 들어가지 않는다."""
     assert numeric_value(value) is None
-    assert data_ops._agg_sum([value]) is None
-    assert data_ops._agg_avg([value]) is None
-    assert data_ops._agg_min([value]) is None
-    assert data_ops._agg_max([value]) is None
+    for op in ("sum", "avg", "min", "max"):
+        observed, skipped, error = data_ops._aggregate_members(op, [{"v": value}], "v")
+        assert observed is None and skipped == 1 and error is None
 
 
 def test_non_finite_text_has_deterministic_cross_surface_sorting(data_ops):

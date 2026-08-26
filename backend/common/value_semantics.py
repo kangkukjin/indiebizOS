@@ -6,6 +6,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from decimal import Decimal, localcontext
 from enum import Enum, IntEnum
 import math
 import re
@@ -246,6 +247,61 @@ def _relation_scalar_identity(value):
 def relation_identity(value):
     """join/merge/dedup의 느슨한 관계 키 식별자."""
     return freeze_structure(value, _relation_scalar_identity)
+
+
+def require_finite_numbers(value: Any, *, path: str = "$") -> Any:
+    """계산 결과 안의 NaN/Infinity 를 공개 JSON 경계 전에 정직하게 거절한다."""
+    if isinstance(value, float) and not math.isfinite(value):
+        label = "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+        raise ValueError(f"계산 결과 {path}가 비유한 수 {label}입니다")
+    if isinstance(value, _SEQUENCES):
+        for index, item in enumerate(value):
+            require_finite_numbers(item, path=f"{path}[{index}]")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            require_finite_numbers(key, path=f"{path}.<key>")
+            require_finite_numbers(item, path=f"{path}.{key}")
+    return value
+
+
+def aggregate_numbers(op: str, numbers: list):
+    """유한 수치 집합의 안정 집계 결과와 표현 오류를 반환한다. 반환값은 (value, error).
+
+    관측/결측 정책은 호출자가 소유하지만 누산·타입 보존·공개 수 표현 가능성은 이
+    한 벌만 소유한다. 순진한 float sum 은 부분합 오버플로(1e308+1e308-1e308→inf)와
+    큰 정수 avg 의 정밀도 소실을 만들고, 고정 반올림은 서브노멀을 0 으로 접었다.
+    """
+    if not numbers:
+        return None, None
+    if op == "min":
+        return min(numbers), None
+    if op == "max":
+        return max(numbers), None
+    if op not in ("sum", "avg"):
+        raise ValueError(f"알 수 없는 수치 집계: {op}")
+
+    decimals = [Decimal(number) if isinstance(number, int) else Decimal.from_float(number)
+                for number in numbers]
+    max_digits = max(len(number.as_tuple().digits) for number in decimals)
+    with localcontext() as context:
+        context.prec = max(28, max_digits + len(str(len(decimals))) + 8)
+        result = sum(decimals, Decimal(0))
+        if op == "avg":
+            result /= Decimal(len(decimals))
+
+    integral = result == result.to_integral_value()
+    has_float = any(isinstance(number, float) for number in numbers)
+    if integral and not has_float:
+        return int(result), None
+    try:
+        value = float(result)
+    except (OverflowError, ValueError):
+        value = math.inf
+    if math.isfinite(value) and not (value == 0.0 and result != 0):
+        return value, None
+    if integral:
+        return int(result), None
+    return None, "집계 결과가 JSON 유한 수로 표현 가능한 범위를 벗어났습니다"
 
 
 def value_sort_key(field: str, number_parser=numeric_value):

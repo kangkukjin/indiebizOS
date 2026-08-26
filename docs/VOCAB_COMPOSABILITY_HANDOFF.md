@@ -1028,3 +1028,12 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **근본 처방**: `common/value_semantics.py`가 `ValueKind` 분류, `ClassifiedValue`, 조건 재귀 동등성, `OrderResult(LESS/EQUAL/GREATER)`+판정불능, 숫자 관측, sort key, group/relation 식별자를 모두 소유한다. where와 블록 술어는 공통 `values_equal/compare_order`를 호출해 판정불능을 자기 예외로 번역만 하며, `group_keys.py`는 공통 식별자를 재수출하고 집계도 공통 숫자 관측을 쓴다.
 - **재발 차단**: `test_value_semantics_single_owner.py`가 조건 표면 답 일치, 순서 반대칭·추이성, 동등성과 order=EQUAL 일치, sort와 비교 일치, 판정불능 비날조, group/relation 정책의 명시적 차이, 어댑터 실제 위임, 사적 정책 함수 재도입 금지를 검사한다.
 - **호환성**: 37~45회차 값 경계와 실제 `[if]/[case]/repeat` 프로그램 조건 계약을 보존했다. 값 의미를 바꾸는 새 공개 어휘나 파라미터는 없다.
+
+### Codex 병행 훈련선 흡수 (2026-08-26/27)
+
+- **경위**: Codex(별도 도구)가 39회차 커밋(`99e21a39`) 직후의 **고립 클론**(`~/Documents/Codex/2026-08-25/.../work/indiebizOS`)에서 자체 상상훈련 39~43회차(그쪽 회차 번호)를 돌려 10커밋을 쌓았다 — 정본은 같은 기간 40~45회차로 같은 결함 부류를 다른 코드로 수리해, 같은 뿌리의 이중 구현이 생겼다. 원본 체인은 정본 저장소에 `refs/codex/absorb-20260826` 으로 보존.
+- **흡수 원칙**: 구현은 정본(`common/value_semantics.py` 일족)을 유지하고, Codex 선이 **정본에 없던 것**만 정본 API 로 번역 이식. 시험은 전부 이식해 행동 차이를 드러낸 뒤 정본 계약으로 판정.
+- **흡수 4커밋**: ① `6a107818` 실행 궤적 척추(trajectory_event 원장 + `[self:body]{op:"trajectory"}`) ② `9cb316ce` 소비처 확장(agent_goals·goal_evaluator·api_transforms·ibl_parser·safe_expr 사설 비교 제거) + **숫자 문법 엄격화**(잘못된 쉼표 정군·`1_000`·전각 숫자 침묵 수선 금지) ③ `e60549d9` 안정 집계(Decimal 누산·round(,6) 제거)·groupby 정직 봉투(aggregation_skips/errors·group_key_coercions)·since 구조형 키 정본화+옛 str(dict) 점진 이관·compute/reduce/assign 유한 관문 ④ `2696f1d8` 공개 결과 계약(`public_result`/`dumps_public_result` — NONFINITE_RESULT/NON_JSON_RESULT 봉투, 경계 5종 배선).
+- **정본이 이긴 계약 충돌 2건**: (a) filter 의 판정 불능 = **오류**(45회차 계약; Codex 는 침묵 False) — 단 결측(null)의 순서 주장은 B37-1 대로 불일치. (b) `inf == inf` 는 참(IEEE) — 비유한수의 공개 유출은 결과 관문이 막는다(Codex 는 동등성 자체를 거부).
+- **정본 관문의 실효 확인**: Codex 원안의 패키지 모듈명 `value_semantics.py` 는 모듈 그림자 관문이, handler 1519줄은 1500줄 관문이 커밋을 차단해 각각 `dataops_value_semantics.py` 개명·분할로 교정했다 — 고립 클론에는 이 관문들이 없었다.
+- **가드(신규 7파일)**: `test_trajectory_spine` · `test_value_semantics_consumer_contract` · `test_groupby_observation_honesty` · `test_groupby_key_currency_matrix` · `test_aggregate_finite_result_gate` · `test_value_semantics_root_convergence` · `test_public_result_contract`+`test_public_result_boundary_matrix`. 전체 backend 스위트 통과.

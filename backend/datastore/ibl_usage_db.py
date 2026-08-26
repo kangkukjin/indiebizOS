@@ -584,8 +584,11 @@ class IBLUsageDB:
             text = self._prepare_search_text(intent, ibl_code)
             emb = self._generate_embedding(text)
             if emb:
+                # vec0 은 REPLACE/UPSERT 를 지원하지 않는다 — DELETE→INSERT 만 유효.
+                # (INSERT OR REPLACE 는 기존 행에서 UNIQUE 오류 → 스테일 벡터가 조용히 잔존했다)
+                conn.execute("DELETE FROM ibl_examples_vec WHERE rowid = ?", (example_id,))
                 conn.execute(
-                    "INSERT OR REPLACE INTO ibl_examples_vec(rowid, embedding) VALUES (?, ?)",
+                    "INSERT INTO ibl_examples_vec(rowid, embedding) VALUES (?, ?)",
                     (example_id, emb)
                 )
                 conn.commit()

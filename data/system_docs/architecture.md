@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -50,7 +50,8 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
     (자동 변속기[무의식 분류기]가 작업마다 티어를 고르고, 수동 레버[절약/균형/최대]가 전체를 변속.
      상세: system_structure.md "모델 기어")
     ↓
-[4] 평가 (경량 AI, 달성 기준 있을 때만, 최대 3라운드)
+[4a] THINK → GoalEval (경량 AI, 달성 기준 있을 때만, 최대 3라운드)
+     EXECUTE → GoalEval 없음; 실패·복잡 궤적·세계 변경이면 SelfReflect 1회
     ↓
 [5] 증류 (해마 경험 증류 + 심층메모리 증류)
 ```
@@ -60,6 +61,7 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 - **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. **실제 런타임 검색 ~99%** (라이브 세대·측정표는 memory.md '현재 라이브 모델' — 재학습은 **로컬 M4 Pro**가 정본 경로, 클라우드는 옛 맥에어 OOM 한정이었다). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
+- **두 검증 갈래**: GoalEval은 `consciousness_output`과 그 안의 달성 기준이 있는 `THINK`에서만 돈다. `EXECUTE`는 평가값을 만들지 않고, 도구 호출에 실패 신호·복잡성·세계 변경이 있을 때 실행기 자신이 같은 세션으로 SelfReflect한다. 그러므로 `episode_summary.evaluation_result=NULL`은 미달성이 아니라 **평가 미실행**일 수 있다. Reflex·강제 역할은 SelfReflect도 생략한다.
 - 상세: `data/system_docs/memory.md`
 
 ## 사용자 표면 — 런처의 세 모드 (트릴레마)
@@ -454,7 +456,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
 - backend **.py 277개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 35 · ibl 34 · cognition 43 · services 28 · surface 60`(+ common 14·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
-- op 분기 액션 **69개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 39·false 16·미선언 96)
+- op 분기 액션 **70개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 40·false 16·미선언 95)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)
 - 해마 코퍼스 **3,530 용례**·증류 누적 907 (2026-08-22 실측 — 라이브 수치는 조종실·memory.md)
@@ -468,4 +470,4 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*최근 변경(2026-08-22): 낡은 배관 정정(AI 순찰 은퇴→일일 결정론 점검·postprocess 선언 0·층 경로) + 몸 원장 절·프로그램급 IBL 단락·행위자 봉투. 라우팅 분포=파생 마커로 승격. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-25): 인지 파이프라인을 THINK=GoalEval, EXECUTE=조건부 SelfReflect 두 검증 갈래로 명시하고 `evaluation_result=NULL`의 뜻을 교정. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

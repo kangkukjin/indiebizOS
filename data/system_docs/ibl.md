@@ -4,7 +4,7 @@ scope: IBL 명세, 6-Node 구조(액션 수=본문 '핵심 노드 분류' 빌드
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [memory.md, packages.md, technical.md]
 ---
 
@@ -240,6 +240,17 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 
 → 빈도/낮은 해마 점수 트리거는 **용례 증류엔 적합, 단어 주조엔 부적합.** 같은 잣대로 보지 마라.
 
+### 새 액션/op는 네 얼굴이 함께 살아야 한다
+
+| 얼굴 | 정본 | AI에게 가르치는 것 |
+|---|---|---|
+| **몸** | handler 구현 + `_OP_DISPATCHERS` | 실제로 실행되는가 |
+| **사전** | `description` + `ops.values` | 카탈로그에서 무엇이 가능한가 |
+| **교재** | `ibl_usage.db`의 자연어→IBL 용례 + 재학습용 데이터 | 어떤 표현에서 이 액션/op를 떠올리는가 |
+| **관측** | `ibl_param_shapes.json` + fixture 반환 shape | 어떤 인자와 반환 열을 실제로 쓰는가 |
+
+`target_description`과 `tool_json.input_schema`에 인자를 자세히 적어도 그것만으로 에이전트의 IBL 카탈로그에 인자명이 실리는 것은 아니다. 런타임 카탈로그는 `ibl_access._emit_action_line()`이 `description`·`ops.values`를 방출하고, `⟨인자: …⟩`는 코퍼스와 실행 로그에서 **관측된 키**만 `ibl_param_sweep.py`가 만든다. 따라서 새 op의 설명만 추가하면 AI는 존재는 보되 호출 모양을 몰라 범용 크롤·셸로 우회할 수 있다. 첫 등록은 자동 증류를 기다리지 말고 `data/guides/new_action_checklist.md`에 따라 다양한 manual seed를 넣고 실제 연상 프로브를 통과시킨다.
+
 ## 6. 가능성을 여는 세 가지 모드 — *큐레이션이 어디 있는가*로 고른다
 
 | 모드 | 무엇 | 언제 |
@@ -260,7 +271,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 
 ## 7. 프롬프트 비용 — 어휘는 *상시 세금*, 가이드는 *주문형*
 
-액션 설명은 *모든 프롬프트*의 시스템 프롬프트에 실린다(`ibl_access._emit_action_xml`).
+액션 설명은 *모든 프롬프트*의 시스템 프롬프트에 실린다(`ibl_access._emit_action_line`).
 Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*에 붙는다 — 안 쓰는 대화에도.
 가이드는 의식 에이전트가 *필요할 때만* 부른다.
 → **Mode C는 큐레이션 비용뿐 아니라 프롬프트 비용에서도 이긴다.** desc 비용은 [memory.md]·desc 길이 규율 참조.
@@ -361,12 +372,12 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `self` | 48 | 개인 도메인: 시스템 관리, 파일(읽기/쓰기/채우기/장부 부분편집), 트리거/스케줄/목표, 메모리·포식기억, **원장(`ledger` 사업·아이템·문서·지침 / `finance` 소비·소유 / `health`)**, 근거 고정 질의(notebook), 등록 스크립트(script), 폰 동기화, 내 음악, USB 손발 발급, 웹앱 등기부, 워크플로우, 패키지·라이브러리 생애주기 | read, write, edit, fill, sheet, file_find, grep, storage, trigger, schedule, workflow, goal, memory, forage, ledger, finance, health, notebook, script, slide, deck, phone_sync, music, limb, webapp, package, install_lib |
+| `self` | 50 | 개인 도메인: 시스템 관리, 파일(읽기/쓰기/채우기/장부 부분편집), 트리거/스케줄/목표, 메모리·포식기억, **원장(`ledger` 사업·아이템·문서·지침 / `finance` 소비·소유 / `health`)**, 근거 고정 질의(notebook), 등록 스크립트(script), 폰 동기화, 내 음악, USB 손발 발급, 웹앱 등기부, 워크플로우, 패키지·라이브러리 생애주기 | read, write, edit, fill, sheet, file_find, grep, storage, trigger, schedule, workflow, goal, memory, forage, ledger, finance, health, notebook, script, slide, deck, phone_sync, music, limb, webapp, package, install_lib |
 | `limbs` | 14 | 장치 제어: UI 조작(브라우저, 데스크톱 화면, 안드로이드 폰) + 폰 네이티브 동작(phone) + 게스트 PC(USB 손발) + 미디어 재생 + 창 열기 | browser, screen, android, phone, guestpc, music, radio, radio_favorite, cctv, launch, os_open, open_window, show_map, cloudflare_api |
 | `sense` | 40 | 감각 확장: 외부 정보 수집(연구자·학술·부동산·숙박·중고·프리랜서·개체해소 포함) + 범용 RSS/Atom(feed) + 몸별 지표어 감각(알림·위치·마이크·카메라 — 몸마다 프로브, 없으면 정직하게 no_hardware) | search, feed, stock, company, crawl, realty, stay, used, freelance, entity, weather, researcher, paper, contest, phone, here, listen, see, host, self_check |
 | `others` | 17 | 협업·통신·공개 표면: 에이전트 위임 + **이웃 몸에 자연어 부탁(ask)** + 메시지/커뮤니티 + 이웃 CRM(연락처는 `neighbor` 의 op) + 남이 브라우저로 닿는 공개 웹 표면(포털·공개파일·가족신문·게시판·발행·팔로우) | delegate, ask, channel_send, channel_read, messages, feed, board, nostr, follow, auto_response, neighbor, portal, showcase, family_news, bulletin, publish, agents |
 | `engines` | 9 | 순수 미디어 생성: 이미지(생성 image_gemini·읽기/평가 image_read[op: read/critic])·아이콘·신문 발행·웹·웹컴포넌트·TTS. 슬라이드는 [self:slide]·동영상은 [self:deck]{op:"video"} 로 일원화(2026-08-05), 통화 변환 문법은 `table` 노드로 분리(2026-06-30). | image_gemini, icon, newspaper, image_read, web, web_site, web_component, tts, render_html |
-| `table` | 16 | 표·통화 변환 문법(관계대수 11 + **고차 `each`** + emitter 4). engines에서 분리(2026-06-30) — 무거운 engines를 꺼도(노드 on/off) 가벼운 문법은 생존. `each` 만 코어 src(table.yaml)에 사는 이유 = 실행이 `execute_ibl` 재귀라 엔진 층이 필요(패키지가 엔진을 import 하면 층 역전), 나머지 13은 data-ops fragment. | filter, sort, take, select, dedup, groupby, join, union, merge, **rename**, **flatten**, **each**, chart, spreadsheet, document, structure |
+| `table` | 21 | 표·통화 변환 문법(관계대수·고차 `each`·AI 변환·emitter). engines에서 분리(2026-06-30) — 무거운 engines를 꺼도(노드 on/off) 가벼운 문법은 생존. `each` 만 코어 src(table.yaml)에 사는 이유 = 실행이 `execute_ibl` 재귀라 엔진 층이 필요(패키지가 엔진을 import 하면 층 역전), 나머지는 패키지 fragment가 공급한다. | filter, sort, take, select, dedup, groupby, join, union, merge, **rename**, **flatten**, **each**, ai, brief, chart, spreadsheet, document, structure |
 
 **Phase 25 통합 맥락:**
 - source → sense(78): 외부 정보 인식의 "감각 기관" 역할
@@ -406,7 +417,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `limbs` | 17 | UI 조작 + 폰 네이티브 동작 + 미디어 재생: 브라우저 자동화, 데스크톱 화면, 안드로이드 폰, phone(진동/알림/TTS), 유튜브, 라디오, CCTV | browser, screen, android, phone, music, radio, cctv, launch |
+| `limbs` | 14 | UI 조작 + 폰 네이티브 동작 + 미디어 재생: 브라우저 자동화, 데스크톱 화면, 안드로이드 폰, phone(진동/알림/TTS), 게스트 PC, 음악, 라디오, CCTV | browser, screen, android, phone, guestpc, music, radio, cctv, launch |
 
 구성: browser(op 26종 통합) + screen(데스크톱 화면) + android(폰 화면 조작) + music/radio(미디어) + cctv + launcher
 
@@ -425,7 +436,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `sense` | 43 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
+| `sense` | 40 | 외부 정보(웹 검색, API): 금융, 문화, 학술(연구자·논문), 법률, 통계, 부동산, 위치, CCTV, 뉴스·영상 + 폰 온디맨드 감각(알림·위치·마이크·카메라) | search, stock, company, crawl, video, realty, weather, world_bank, researcher, paper, phone, here, listen, see |
 
 구성: 외부 정보 수집(웹 API, 크롤링) 중심. 사진/블로그/건강 등 로컬 DB 조회는 self 노드로 이동(`[self:photo]`/`[self:blog]`/`[self:health]`).
 
@@ -435,6 +446,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 | `stock` | 주가·시세 (op 분기) | `[sense:stock]{op: "quote", ticker: "삼성전자"}` |
 | `crawl` | 웹 크롤링 | `[sense:crawl]{url: "https://..."}` |
 | `company` | 기업 펀더멘털 (op 분기) | `[sense:company]{op: "profile", ticker: "삼성전자"}` |
+| `video` | YouTube 동영상·채널 조회 (op 분기). `channel`은 `handle`·`url`·`channel_id` 중 하나를 받음 | `[sense:video]{op: "channel", handle: "@YouTube", limit: 3}` |
 | `stay` | 숙박·단기임대 (source 분기 goodchoice/33m2/tourapi) | `[sense:stay]{region: "제주", type: "hotel"}` |
 | `world_bank` | 세계은행 지표 (지표명·국가명 자연어 내부해소) | `[sense:world_bank]{indicator: "인구", country: "한국"}` |
 | `researcher` | 연구자 검색 (op: find/coauthor) — 국회도서관 국가학술정보(LOSI). 동명이인을 소속·생년으로 분리, 공저자 추적. 인물 찾기 | `[sense:researcher]{op: "find", name: "홍길동"}` |
@@ -450,7 +462,7 @@ workflow.steps·schedule.pipeline·manage_events.event_action·delegate.steps �
 
 | 노드 | 액션 수 | 설명 | 주요 액션 |
 |--------|---------|------|----------|
-| `engines` | 26 | 변환·창작: 통화 변환자·문서IR·차트·표·슬라이드·영상·이미지 | filter, sort, join, document, structure, chart, spreadsheet, newspaper, image_read |
+| `engines` | 9 | 순수 미디어 생성: 이미지 생성·읽기/평가, 아이콘, 신문, 웹, 웹컴포넌트, TTS, HTML 렌더링. 표 변환은 `table`, 슬라이드·영상은 `self`로 분리됨 | image_gemini, image_read, icon, newspaper, web, web_site, web_component, tts, render_html |
 
 특징: 복잡한 프로세스를 기동시켜 결과물을 산출하는 엔진 노드.
 
@@ -565,6 +577,8 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 
 가이드가 절차를 나르고, `--check`가 빠질 수 없는 부분을 강제한다:
 - **생성**: `data/guides/new_action_checklist.md` — 0.5단계(역할·통화 계약) + 2.5단계(fixture 한 줄 추가).
+- **가르치기**: 같은 체크리스트의 해마 단계 — `.venv`에서 `_load_model_sync()` 후 `add_examples_batch` 단일 경로로 자연어 변형·op·인자·조합 용례를 넣고, 재학습용 데이터에도 남긴다. 이어 `scripts/ibl_param_sweep.py`로 관측 인자 표면을 갱신하고 실제 연상 검색을 확인한다. **빌드 통과는 실행 가능성, 연상 프로브는 사용 가능성**을 각각 증명한다.
+- **라이브 반영**: `build_ibl_nodes.py`가 중앙 레지스트리·tool.json·문서 마커를 파생한다. `/packages/reload`는 `handler.py`만 교체하므로 `tool_*.py`·서브모듈 변경은 백엔드 재기동까지 해야 한다.
 - **삭제**: `data/guides/action_removal.md` — src·tool.json·handler·**fixture** 줄 + 해마·건강기록 정리.
 - 절차서·처리 플레이북: `docs/IBL_MAINTENANCE_MANUAL.md`.
 
@@ -797,7 +811,7 @@ self:
 | `backend/ibl/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
 | `backend/ibl/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
 | `backend/ibl/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
-| `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_xml` — op 자식 노출) |
+| `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_line` — op 자식 노출) |
 | `backend/ibl/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
 | `backend/ibl/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |
 | `data/workflows/` | 저장된 워크플로우 YAML |
@@ -1025,7 +1039,7 @@ op 분기 패키지 모두 이 패턴 채택(수·목록은 packages.md — 빌�
 
 ---
 
-| `backend/datastore/ibl_usage_db.py` | IBL 용례 사전 DB + 하이브리드 검색 |
+| `backend/datastore/ibl_usage_db.py` | IBL 용례 사전 DB + 시맨틱 검색(FTS5 폴백) |
 | `backend/cognition/ibl_usage_rag.py` | 용례 RAG 참조 모듈 |
 | `data/ibl_usage.db` | 용례 사전 + 실행 로그 DB |
 
@@ -1035,7 +1049,7 @@ op 분기 패키지 모두 이 패턴 채택(수·목록은 packages.md — 빌�
 
 에이전트가 IBL 코드를 생성할 때, 유사한 과거 성공 사례를 자동으로 참조한다.
 
-사용자 메시지가 들어오면 용례 사전에서 하이브리드 검색(시맨틱 70% + BM25 30%)으로 유사 용례를 찾아 XML 형태로 프롬프트에 주입한다. AI는 이 참조를 기계적으로 복사하지 않고, 현재 상황에 맞게 변형한다.
+사용자 메시지가 들어오면 용례 사전에서 검색해 유사 용례를 XML 형태로 프롬프트에 주입한다. 현재 기본은 시맨틱 100%(`DEFAULT_ALPHA=1.0`)이며, 임베딩 모델이 준비되지 않은 짧은 구간에만 FTS5/BM25가 폴백한다. AI는 이 참조를 기계적으로 복사하지 않고 현재 상황에 맞게 변형한다.
 
 ```xml
 <ibl_references note="아래는 유사한 과거 용례입니다. code의 IBL 코드를 참고하되, 반드시 execute_ibl 도구의 code 파라미터로 실행하세요. 절대 텍스트 응답에 IBL 코드를 포함하지 마세요. 분석/판단/정리가 필요한 작업은 파이프라인(>>)으로 엮지 말고 액션을 하나씩 호출하면서 중간에 생각하세요.">
@@ -1136,4 +1150,4 @@ IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프
 *Phase 24: verb 시스템 제거. 런타임 verb→action 해석 삭제. 프롬프트 가독성을 위해 category 태그로 대체 (순수 표시용).*
 *Phase 25: 5-Node 최종 구조 재설계. source→sense(외부 정보), system→self(개인 도메인), interface+stream→limbs(신체/장치), team+messenger→others(협업/통신), forge→engines(엔진/창작). 총 308 액션.*
 *Phase 26: self 노드에 log_attempt, get_attempts (전략 에스컬레이션/라운드 메모리). sense 노드에 cctv_refresh, cctv_stats (UTIC 실시간 API).*
-*최근 변경(2026-08-22): 워크플로우 절을 '함수의 다섯 부품'으로 재작성(시그니처·기본값·반환·스코프·재귀 가드). 모듈 경로 층 정정·은퇴 어휘 예시 교체. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-25): 새 액션/op의 네 얼굴(몸·사전·교재·관측)과 시딩→param sweep→연상 프로브 생명주기를 명문화하고 현행 줄-카탈로그·시맨틱 검색 경로를 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

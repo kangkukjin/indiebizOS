@@ -20,7 +20,7 @@
 이 작업은 web 액션만의 일이 아니다. **indiebizOS의 IBL 전체가 네 재료 창고다.** 텍스트만 채우거나, 누가 미리 넣어둔 파일만 쓰지 말고, 필요한 걸 *만들어서* 쓴다. 막히면 먼저 떠올린다 — *"이 일에 indiebizOS의 어떤 능력이 도움이 되나?"*
 
 - **이미지가 빈약하면 만든다**: `[engines:image_gemini]`(Nano Banana 2)로 히어로 배경·일러스트·아이콘을 생성하고 `[engines:image_read]{op: "critic"}`로 채점해 통과분만 쓴다. (단, 추상 일러스트보다 *실제 제품·화면 스크린샷*이 신뢰를 준다 — 있으면 그쪽이 우선.)
-- **도식·목업이 필요하면**: `[self:slide]{op:"create"}` / `[engines:render_html]`로 다이어그램을 PNG로 렌더해 임베드.
+- **도식·목업이 필요하면**: `[self:slide]{op:"create"}` / `[engines:render]{op:"html"}`로 다이어그램을 PNG로 렌더해 임베드.
 - **데이터를 보여줘야 하면**: `[table:chart]`로 차트를. 그리고 *진짜 수치*는 추측하지 말고 소스(README·레지스트리·실제 데이터)에서 길어온다.
 - **결과를 눈으로 본다**: `[engines:image_read]`로 스크린샷을 실제로 읽어 확인한다(아래 [배포 후 시각 검증]).
 
@@ -397,8 +397,8 @@ registry로 *위치*를 잡고(파일을 ls로 다시 찾지 말 것), 프로젝
 | 액션 | 용도 |
 |---|---|
 | `[engines:image_gemini]` | AI 이미지 생성 (Nano Banana 2). **`style_preset`을 사이트 톤과 통일**해 일관된 일러스트/배경/아이콘 생성 |
-| `[self:slide]{op:"create"}` / `[engines:render_html]` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG) |
-| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes) |
+| `[self:slide]{op:"create"}` / `[engines:render]{op:"html"}` | 도식·목업·다이어그램을 이미지(PNG)로 렌더 (HTML→PNG, 뷰포트별 1행) |
+| `[engines:image_read]{op: "critic"}` | 생성된 이미지가 의도와 맞는지 1차 채점 (반환: passed / score / issues / notes). `criteria: "web"` 을 주면 data/criteria/web.yaml 취향 파일이 기준 |
 
 ### 절차
 ```

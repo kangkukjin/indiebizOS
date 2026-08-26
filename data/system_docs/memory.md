@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -65,7 +65,7 @@ see_also: [architecture.md, ibl.md]
 
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **1000건** 롤링)
-  - `episode_summary`: 로그에서 정규식으로 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 달성 여부(ACHIEVED/NOT_ACHIEVED) (**영구 보존**)
+  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, GoalEval 최종 판정(ACHIEVED/NOT_ACHIEVED/**NULL**) (**영구 보존**). `NULL`은 실패가 아니라 GoalEval 미실행일 수 있다: 의식이 달성 기준을 만든 THINK만 GoalEval을 타고, EXECUTE/Reflex는 조건부 SelfReflect가 별도 바닥이다. 여러 평가 라운드는 마지막 `[GoalEval] 라운드 N: ...` 구조 마커가 정본이며 산문 `평가 응답`은 구로그 폴백이다.
   - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 1000건 롤링에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
 - **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
@@ -77,12 +77,13 @@ see_also: [architecture.md, ibl.md]
 세 겹으로 구성된다.
 
 **(a) 액션 정의** — 가장 안정된 절차 지식
-`data/ibl_nodes_src/*.yaml`(단일 진실) → `scripts/build_ibl_nodes.py`(삼각 검증) → `data/ibl_nodes.yaml`(런타임 캐시). 액션 하나하나가 곧 어휘화된 방법 지식이다(총계는 system_structure.md 의 빌드 파생 줄).
+`data/ibl_nodes_src/*.yaml`(코어) + 설치 패키지의 `ibl_actions.yaml`(패키지 자기완결 fragment) → `scripts/build_ibl_nodes.py`(삼각 검증) → `data/ibl_nodes.yaml`(런타임 캐시). 액션 하나하나가 곧 어휘화된 방법 지식이다(총계는 system_structure.md 의 빌드 파생 줄).
 
 **(b) 해마(실행기억)** — 가장 살아있는 자기 학습 루프 ⭐
 - `ibl_usage.db:ibl_examples`에 `(자연어 의도 → IBL 코드)` 쌍 + 768차원 임베딩 저장
-- **검색**: 매 요청 1회, 시맨틱(fine-tuned 모델) + FTS5 하이브리드, Top-5 → XML 주입
+- **검색**: 매 요청 1회, 현재 기본은 시맨틱 100%(`DEFAULT_ALPHA=1.0`) Top-5 → XML 주입. 임베딩 모델이 아직 준비되지 않았거나 사용할 수 없을 때 FTS5/BM25가 폴백한다
 - **증류**: 해마 점수 < 0.7(유사 선례 없음) + 실행 성공 시 → 반성 에이전트가 일반화 → DB + `ibl_distilled.json` 누적 → 다음 검색부터 반영
+- **첫 등록의 닭과 달걀**: 새 액션/op는 아직 성공 실행이 없어 자동 증류가 시작될 재료도 없다. `description`/`ops.values`는 존재를 알리지만 자연어→op 선택과 인자 모양을 대신하지 않는다. 그래서 첫 등록은 manual seed를 넣고 실제 연상 프로브를 통과시켜야 한다. 코퍼스·실행에서 관측된 키는 `ibl_param_sweep.py`가 카탈로그의 `⟨인자: …⟩`로 올린다.
 - 임계값: 표시 MIN_SCORE 0.65 / 증류 DISTILL_THRESHOLD 0.7 — 단 점수 ≥ 0.7이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면(가짜 유사도) 새 패턴으로 보고 증류 진행(`_recall_was_used`, 2026-08-07 ep949 학습 유실 수리. top_code 없는 조종실 경로는 점수 게이트 그대로)
 - 상세: 아래 **부록: 연상기억 심층**
 
@@ -371,7 +372,8 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 [3] 실행 에이전트 ← 시스템 프롬프트에 연상기억 + (의식 출력)
     모델은 모델 기어가 결정(역할→축→기어→티어): Reflex='reflex' 축, EXECUTE·THINK='execute'/'consciousness' 축 (균형 기어 기본=중급/중급)
     ↓
-[4] 평가 에이전트 ← `## 연상기억` 섹션으로 전달
+[4a] THINK: GoalEval ← `## 연상기억` + 의식의 달성 기준, 미달이면 재실행
+[4b] EXECUTE: GoalEval 없음; 실패·복잡성·세계 변경이면 실행기 SelfReflect 1회
     ↓
 [5] 증류
     ├─ 해마: top_score < 0.7(또는 ≥0.7이나 회상 미사용) + 도구 호출 성공 → distill_experience()
@@ -383,7 +385,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 - **무의식**: 사용자 메시지 앞에 prepend
 - **의식**: 외부 래퍼 없이 `<execution_memory>` + `<related_memory>` 직접 노출 (2026-05-17 정리)
 - **실행** (프로젝트/시스템 AI): `prompt_builder`가 시스템 프롬프트에 그대로 삽입
-- **평가**: markdown `## 연상기억` 헤더로 그룹화 (2026-05-17 정정 — 옛 "실행기억" 헤더는 부정확)
+- **평가**: THINK의 GoalEval에만 markdown `## 연상기억` 헤더로 그룹화 (2026-05-17 정정 — 옛 "실행기억" 헤더는 부정확). EXECUTE/Reflex는 이 평가를 받지 않는다.
 - **에이전트 간 위임**: 메시지 prepend
 
 ### XML 출력 형식 (현재)
@@ -443,11 +445,11 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 - **재학습 경로 = 로컬**: 클라우드(Modal/Colab)는 옛 맥에어 OOM 때문이었음. 현 Mac M4 Pro 24GB는 OOM 없고 데이터셋이 작아 로컬 MPS가 더 빠름(클라우드 콜드스타트·400MB 다운로드 회피). lib 버전도 트레이너 검증값과 일치(torch/MPS·st 5.2.2·transformers 5.1.0). 파이프라인=백업→`backend/ibl_embedding_trainer.py`→rebuild_index→백엔드 touch.
 - **실제 런타임 검색 정확도 ~99%**: 위 벤치마크(query→벌거벗은 코드 패턴)는 보수적 프록시다. 런타임은 query→저장용례(`intent×3 + code`)로 검색하므로(아래 "검색 방식") 액션단위 Top-5 ≈ **99%**로 천장.
-- **어휘 정합**: 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인 유지(2026-08-22 실측 **3,530건**, 증류 누적 `data/training/ibl_distilled.json` **907건** — 정리 패스가 돌면 상한 800으로 깎인다. 어휘 총계는 system_structure.md 의 빌드 파생 줄). ★**어휘를 지우면 코퍼스도 따라온다** — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했고, 2026-08-15 지역정보·연락처·사업원장 은퇴에서도 코퍼스 이관(41행·27행 등)이 은퇴의 일부였다. 은퇴어의 용례는 **후계어로 재배선**하되, 후계가 없으면 삭제한다(합성 코퍼스 15행 사례).
+- **어휘 정합**: 코퍼스(usage_db)는 항상 최신 어휘로 마이그·재색인한다(현재 건수는 빠르게 변하므로 `SELECT count(*) FROM ibl_examples`가 정본; 문서에 고정하지 않는다). ★**어휘를 지우면 코퍼스도 따라온다** — 음악앱 5기능 은퇴 때 `--check` 의 코퍼스 param 정합 가드가 죽은 파라미터를 잡아 용례 15건 삭제를 강제했고, 2026-08-15 지역정보·연락처·사업원장 은퇴에서도 코퍼스 이관(41행·27행 등)이 은퇴의 일부였다. 은퇴어의 용례는 **후계어로 재배선**하되, 후계가 없으면 삭제한다.
 - **시딩은 단일 경로**: `add_examples_batch`(source=`manual_seed`). ★두 함정 — ①직후엔 임베딩 모델이 백그라운드 로딩 중이라 **벡터가 조용히 안 붙는다**(FTS 로만 걸려 회상되는 척함. 신호=`export_hippo_index` 의 '누락 N') → `_load_model_sync()` 후 `_index_batch` 재색인 ②시딩은 **`.venv` 파이썬 필수**(시스템 python3 엔 sqlite_vec 이 없다).
 - 학습 환경: **로컬 Mac M4 Pro(MPS)**, batch=8(로컬최선), max_seq 64, 10 epoch, patience 3. 베이스 `jhgan/ko-sroberta-multitask`. (클라우드 Modal 경로 cloud_training/ 은 보존하되 기본은 로컬 — OOM 없는 M4 Pro에선 로컬이 빠름.)
 
-> **결론(2026-06-04): 모델은 런타임 천장(99.3%)이라 재학습은 거의 무차별.** batch 스윕(b4~b64)·트레이너 변수 조정 모두 런타임 검색을 의미 있게 못 올림 — 해마는 IBL *어휘*가 아니라 query↔저장 intent *의미*를 매칭해 vocab 변경에 본질적으로 강건하기 때문. 검색 품질을 더 올리려면 임베딩이 아니라 **하이브리드 alpha/FTS5**가 레버. (관찰된 오랭킹 사례는 FTS5 키워드 artifact였지 임베딩 실패가 아님.)
+> **당시 결론(2026-06-04): 모델은 런타임 천장(99.3%)이라 재학습은 거의 무차별.** batch 스윕(b4~b64)·트레이너 변수 조정 모두 런타임 검색을 의미 있게 못 올림 — 해마는 IBL *어휘*가 아니라 query↔저장 intent *의미*를 매칭해 vocab 변경에 본질적으로 강건하기 때문. 당시에는 하이브리드 alpha/FTS5를 품질 레버로 보았지만, 이후 키워드 artifact 때문에 현행 기본은 `DEFAULT_ALPHA=1.0`(시맨틱 100%, FTS5는 폴백 전용)으로 바뀌었다.
 
 ### 검색 방식
 
@@ -696,4 +698,4 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ---
 
-*최근 변경(2026-08-22): 절차기억(c) 워크플로우=함수·진단① 재평가, 해마 라이브 세대 08-21, #6 은퇴 함수 현행 주석, 몸 원장의 자리, self:residual 은퇴 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-25): GoalEval의 THINK 전용·EXECUTE SelfReflect 분기와 nullable 평가값을 명시하고, 새 어휘 첫 등록의 manual seed·관측 인자 생명주기를 절차기억에 연결. 빠르게 변하는 라이브 코퍼스 건수는 DB 질의가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

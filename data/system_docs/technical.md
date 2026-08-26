@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -188,6 +188,14 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 | `final` | 최종 응답 |
 | `error` | 에러 발생 |
 
+### GoalEval과 SelfReflect의 실행 조건
+
+- `THINK`: ConsciousnessAgent가 `achievement_criteria`를 만들면 GoalEval이 최대 3라운드 평가·재실행한다.
+- `EXECUTE`: `consciousness_output=None`이므로 GoalEval에 진입하지 않는다. 도구 실패·복잡 궤적·세계 변경이 있으면 실행기 자신의 SelfReflect가 한 번 돈다.
+- `Reflex`와 강제 역할 실행은 SelfReflect도 생략한다.
+- `episode_summary.evaluation_result`는 GoalEval 구조 마커의 마지막 라운드를 저장한다. `NULL`은 평가 미실행이며 실패와 동의어가 아니다.
+- **현재 실패 의미론 주의**: 평가 모델이 빈 응답/API 오류를 내면 `_evaluate_achievement()`는 턴을 깨지 않기 위해 성공으로 통과시키고 로그에 `AI 응답 없음 (API 오류 등), 통과 처리`를 남긴다. 그러므로 `ACHIEVED`만으로 외부 효과 완료를 단정하지 말고 action ledger·생성 파일·배포/HTTP 같은 증거를 함께 본다. 이 fail-open은 현행 동작을 정직하게 기록한 것이며, 신뢰성 개선 대상이다.
+
 ## IBL 도구 — execute_ibl
 
 모든 에이전트는 `execute_ibl(code='[node:action]{params}')` 단일 도구로 IBL을 호출. 6노드(sense/self/limbs/others/engines/table) 전 액션의 정의·카테고리·라우팅 방식은 **ibl.md** 참조(액션 수는 아래 '물리적 구조'의 빌드 파생 수치).
@@ -231,7 +239,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
-- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `data/training/ibl_distilled.json`. usage_db 3,530건(2026-08-22 실측). 라이브 세대·측정표·재학습 대기열은 **memory.md '현재 라이브 모델'** 이 정본이고, 절차·함정은 `data/guides/hippocampus_retraining.md`. 재학습 경로는 **로컬 M4 Pro(MPS)** 가 정본(클라우드 Modal 경로는 보존만).
+- **해마 학습 데이터**: `data/training/ibl_training_balanced_20260516.json` + `data/training/ibl_distilled.json`. 빠르게 변하는 usage DB 건수는 `SELECT count(*) FROM ibl_examples` 실측이 정본이다. 라이브 세대·측정표·재학습 대기열은 **memory.md '현재 라이브 모델'** 이 정본이고, 절차·함정은 `data/guides/hippocampus_retraining.md`. 재학습 경로는 **로컬 Mac M4 Pro(MPS)** 가 정본(클라우드 Modal 경로는 보존만).
 - **폰 컴패니언 피드 DB**: `data/phone_notifications.db` (SQLite — 알림·위치·걸음. `backend/services/phone_notifications.py`가 NIP-17 수신분 저장, 인가 폰 신원은 `data/phone_agent.json`). 조회 API `/phone/notifications|locations|steps` (`backend/surface/api_phone.py`) + `[sense:phone]{op}`
 - **NIP-17/NIP-44 모듈**: `backend/base/nip17.py` (gift-wrap DM) + `backend/base/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
 - **외부 API 키 (`.env`)**: 패키지 핸들러가 외부 서비스 호출 시 `.env`에서 로드. 예: `NANET_API_KEY` — 국회도서관 국가학술정보(LOSI) OpenAPI (losi-open.nanet.go.kr, 연구자·학위논문 검색 `[sense:researcher]`·`[sense:paper]{source: "nanet"}`, study 패키지, auth_manager 'nanet' 레지스트리).
@@ -257,15 +265,15 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **파이프라인 시**: `_action_count × 16KB` 허용 (다중 액션 실행 시 비례 확장)
 
 ### 감각 전처리 (Sensory Preprocessing)
-- 액션 출력을 경량 AI로 압축해 컨텍스트 폭발을 막는 층. `data/ibl_nodes_src/<node>.yaml`의 `postprocess` 블록으로 액션별 선언
-- **현재 선언한 액션은 0개**(2026-06-27~): 압축이 `records[]` 통화를 문자열로 파괴하던 결함이 드러나, 검색·여행계가 전부 구조화 통화(`records`/`items`) + 사람용 `message` 로 옮겨가며 compress 가 폐지됐다. 엔진의 기계와 우회 플래그(`params._raw`)는 남아 있다
+- 액션 출력을 경량 AI로 압축해 컨텍스트 폭발을 막는 층. 코어 src 또는 패키지 `ibl_actions.yaml`의 `postprocess` 블록으로 액션별 선언
+- **현재 선언한 액션은 0개**(2026-06-27~): 압축이 구조화 통화 `items[]`를 문자열로 파괴하던 결함이 드러나, 검색·여행계가 전부 `items` + 사람용 `message`로 옮겨가며 compress가 폐지됐다. 엔진의 기계와 우회 플래그(`params._raw`)는 남아 있다
 - 컨텍스트 폭발의 현행 대책은 압축이 아니라 **봉투 다이어트 + 자동 스필**(위 `/ibl/execute` 절)
 - 구현: `backend/ibl/ibl_engine.py`의 `_postprocess()` → `_pp_compress()`
 
 ### IBL 액션 단일 진실 소스 (2026-05-28~)
-- `data/ibl_nodes_src/` 7개 yaml(meta + 6개 노드: sense/self/limbs/others/engines/table)이 사람이 편집하는 단일 소스
+- 어휘 소스는 소유권에 따라 둘이다: `data/ibl_nodes_src/` 7개 yaml(meta + 6개 노드)은 패키지와 무관한 코어 어휘, 설치 패키지의 `ibl_actions.yaml`은 그 능력과 함께 설치·제거되는 패키지 어휘다
 - `python3 scripts/build_ibl_nodes.py`로 `data/ibl_nodes.yaml` 빌드 (명시적, 자동 등록 없음)
-- 패키지 설치/제거가 IBL 어휘를 자동 변경하지 않음 — 어휘 추가/삭제는 src 수동 편집
+- 빌드는 설치된 package fragment만 합쳐 `ibl_nodes.yaml`·`tool.json`·fixture·문서 마커를 파생한다. 패키지 폴더 이동만 하고 빌드하지 않으면 런타임 레지스트리는 바뀌지 않는다
 - **삼각 검증** (`--check`): src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS` 3중 일치 AST 정확 비교
   - 등록: src.tool ↔ tool.json.name
   - op enum: src.ops.values 키 ↔ tool.json input_schema.properties.op.enum
@@ -273,6 +281,18 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
   - dispatcher: src.ops.values 키 ↔ handler.py `_OP_DISPATCHERS[tool_name]` dict 키
 - **이중 게이트**: pre-commit 훅(commit 시점) + 일일 건강 점검(하루 1회, `__static__:ibl_consistency` 식별자)
 - **dispatcher 표준** (op 분기 패키지·액션 수는 아래 '물리적 구조'의 빌드 파생 수치; 일부 op 액션은 패키지 밖 backend-native): `_OP_DISPATCHERS = {tool_name: {op: handler_or_None}}` 모듈 레벨 dict 노출 의무
+
+### 에이전트가 새 액션/op를 알게 되는 경로
+
+실행 스키마와 에이전트의 IBL 교재는 다른 층이다.
+
+- `description`과 `ops.values`: `ibl_access._emit_action_line()`이 매 턴 카탈로그에 방출 — 기능의 존재와 op 의미
+- `target_description`: UI/저술용 상세 산문. 현재 에이전트 카탈로그에는 직접 실리지 않는다
+- `tool_json.input_schema`: 라우팅·검증·도구 스키마 파생용. 자연어에서 IBL을 고르는 해마 사례를 대신하지 않는다
+- `ibl_usage.db:ibl_examples`: 자연어→IBL 코드의 즉시 검색 교재. 첫 등록은 `add_examples_batch`로 시드하고 재학습용 데이터에도 남긴다
+- `data/ibl_param_shapes.json`: 코퍼스와 실제 실행에서 관측한 인자 키. `scripts/ibl_param_sweep.py`가 생성하며 카탈로그의 `⟨인자: …⟩`가 된다
+
+따라서 빌드·fixture 통과는 “실행 가능”, 카탈로그 노출은 “존재 인지”, 해마 연상 프로브는 “자연어 선택 가능”, param sweep은 “호출 모양 인지”를 각각 증명한다. `/packages/reload`는 `handler.py`만 라이브 교체하므로 `tool_*.py`·서브모듈 변경은 백엔드 재기동이 필요하다.
 
 ## 물리적 구조 (주요 경로)
 
@@ -331,4 +351,4 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*최근 변경(2026-08-22): /ibl 실행 API 절 신설(행위자 봉투·봉투 다이어트·스필·재개), 자가점검 카덴스·해마 데이터·api_registry·감각 전처리 실측 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-25): 코어/패키지 어휘 소유권, 카탈로그·코퍼스·관측 인자 경계, 패키지 리로드 범위, THINK GoalEval/EXECUTE SelfReflect 및 평가 fail-open의 현행 의미를 기술. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

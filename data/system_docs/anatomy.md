@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -74,9 +74,12 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   ↓ [1] 반사   해마 점수 ≥ 0.85 → 곧장 실행(무의식 스킵) / 미만 → 경량 AI가 EXECUTE·THINK 분류
   ↓ [2] 의식   (THINK만) 본격 AI가 "지금 무슨 문제를 풀어야 하나" 규정 + 달성 기준
   ↓ [3] 실행   IBL 엔진 → 도구 실행
-  ↓ [4] 평가   경량 AI가 달성 기준 대비 검증, NOT_ACHIEVED면 재시도(최대 3라운드)
+  ↓ [4a] THINK 평가   경량 AI가 달성 기준 대비 검증, NOT_ACHIEVED면 재시도(최대 3라운드)
+  ↓ [4b] EXECUTE 반성 달성 기준은 없고, 실패·복잡 궤적·세계 변경이면 실행기 SelfReflect 1회
   ↓ [5] 증류   성공 경험을 해마·심층메모리에 저장 (다음엔 더 빠르게)
 ```
+
+**평가값의 뜻**: GoalEval은 의식이 달성 기준을 만든 `THINK` 턴에만 돈다. `EXECUTE`/Reflex의 `evaluation_result=NULL`은 “실패”가 아니라 “GoalEval 미실행”이며, 그 갈래의 바닥은 조건부 SelfReflect다. 에피소드 판정을 읽을 때 분류와 평가값을 반드시 함께 봐야 한다.
 
 **모델 기어**(절약/균형/최대 레버, 조종실에 노출)가 4축(분류·평가·실행·의식)을 티어(경량/중급/본격)로 매핑 — 비용/속도를 한 손잡이로 변속. 의식 토글을 끄면 THINK 경로를 차단해 빠르고 싸게 돈다.
 → 상세: [architecture.md](architecture.md) "인지 파이프라인" · 뇌 구조 대응표는 [memory.md](memory.md) 부록

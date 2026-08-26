@@ -5,6 +5,53 @@ handler.py 에서 2026-08-05 분리 (1500줄 규칙 — image_critic 흡수로 �
 """
 import os
 import json
+from pathlib import Path
+
+# 취향 파일 원장 — 심사 기준은 코드 상수가 아니라 데이터로 산다("명사의 자리").
+# 사용자의 비평이 이 디렉토리 yaml 의 diff 로 축적된다.
+_ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
+_CRITERIA_DIR = _ROOT / "data" / "criteria"
+
+
+def _load_criteria(name_or_path, _seen=None):
+    """data/criteria/*.yaml 로딩 (+extends 사슬 병합).
+
+    반환: ({intro, checks, forbidden}, None) 또는 (None, 오류문).
+    병합 규칙: checks/forbidden 은 기저+자식 이어붙임, intro 는 자식이 이김.
+    """
+    import yaml
+    _seen = _seen or set()
+    name = str(name_or_path).strip()
+    path = Path(name) if os.path.isabs(name) else _CRITERIA_DIR / (
+        name if name.endswith((".yaml", ".yml")) else f"{name}.yaml")
+    key = str(path.resolve())
+    if key in _seen:
+        return None, f"criteria extends 순환: {name}"
+    _seen.add(key)
+    if not path.exists():
+        try:
+            available = sorted(p.stem for p in _CRITERIA_DIR.glob("*.yaml"))
+        except Exception:
+            available = []
+        return None, f"criteria 파일이 없습니다: {path} (사용 가능: {', '.join(available) or '없음'})"
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception as e:
+        return None, f"criteria 파싱 실패({path.name}): {e}"
+
+    merged = {"intro": "", "checks": [], "forbidden": []}
+    base_name = raw.get("extends")
+    if base_name:
+        base, err = _load_criteria(base_name, _seen)
+        if err:
+            return None, err
+        merged = base
+    merged = {
+        "intro": (raw.get("intro") or merged["intro"] or "").strip(),
+        "checks": list(merged["checks"]) + [str(c) for c in (raw.get("checks") or [])],
+        "forbidden": list(merged["forbidden"]) + [str(f) for f in (raw.get("forbidden") or [])],
+    }
+    return merged, None
 
 
 def critique_gemini_image(tool_input, output_base):
@@ -57,8 +104,24 @@ def critique_gemini_image(tool_input, output_base):
     style_preset = tool_input.get("style_preset", "")
     # preset: "slide_illustration"(기본, 현행 슬라이드 일러스트 체크) | "general"(임의 산출물 범용)
     preset = (tool_input.get("preset") or "slide_illustration").strip().lower()
+    # criteria: data/criteria/*.yaml 취향 파일 — 지정 시 preset 기본 체크 대신 이 파일이 기준.
+    criteria_name = (tool_input.get("criteria") or "").strip()
 
-    if preset == "general":
+    if criteria_name:
+        crit, cerr = _load_criteria(criteria_name)
+        if cerr:
+            return json.dumps({"success": False, "error": cerr}, ensure_ascii=False)
+        default_checks = list(crit["checks"])
+        if style_preset:
+            default_checks.append(f"스타일/톤이 '{style_preset}'와 일관되는가?")
+        intro = crit["intro"] or "당신은 시각 산출물 품질 평가자입니다. 아래 이미지를 기준에 대고 엄격하게 평가하세요."
+        forbidden = crit["forbidden"]
+        if forbidden:
+            default_checks.extend(f"[금지] {f} — 발견되면 실패" for f in forbidden)
+            hard_rule = " 금지([금지]) 항목이 하나라도 발견되면 무조건 passed=false."
+        else:
+            hard_rule = ""
+    elif preset == "general":
         default_checks = [
             "이미지가 의도(intent)를 정확하고 충분히 충족하는가?",
             "시각적 결함(텍스트 잘림·겹침, 레이아웃 불균형, 깨짐, 저해상도, 빈 공간 과다)이 없는가?",

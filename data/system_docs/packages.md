@@ -1,8 +1,8 @@
 ---
 title: 도구 패키지 시스템
-scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘 등록은 `data/ibl_nodes_src/<node>.yaml` 단일 진실 소스(ibl.md 참조). op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
+scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘는 코어 `ibl_nodes_src`와 패키지 `ibl_actions.yaml`이 소유권별 정본이며, op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-08-22
+last_updated: 2026-08-25
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -102,15 +102,15 @@ description에 모든 내용을 넣지 않고, 필요할 때만 가이드를 주
 ### 2. 실행 로직 — 두 가지 방식
 
 #### (A) handler.py (복잡한 후처리가 필요한 경우)
-`execute(tool_name, tool_input, project_path)` 함수를 포함해야 합니다.
+표준 `execute(tool_input, context)` 함수를 포함해야 합니다. 도구 이름·프로젝트 경로·에이전트 등 호출 문맥은 `ToolContext`가 나릅니다.
 
 ```python
-def execute(tool_name: str, tool_input: dict, project_path: str = ".") -> str:
+def execute(tool_input: dict, context):
     """도구 실행 함수"""
-    if tool_name == "도구명":
+    if context.tool_name == "도구명":
         # 로직 구현
-        return "결과"
-    return f"알 수 없는 도구: {tool_name}"
+        return {"success": True, "items": []}
+    raise ValueError(f"알 수 없는 도구: {context.tool_name}")
 ```
 
 #### (B) api_registry.yaml 등록 (API 호출 + transform으로 충분한 경우)
@@ -227,12 +227,19 @@ search:
 installed/tools/{package_id}/
 ├── ibl_actions.yaml   # 어휘 소스 — 액션 정의 + tool_json 블록 (빌드가 읽는다)
 ├── tool.json          # 빌드 산출물 — 손으로 만들지 말 것
-├── handler.py         # 필수 — execute(tool_name, tool_input, project_path). op 분기는 `_OP_DISPATCHERS`
+├── handler.py         # 필수 — execute(tool_input, context). op 분기는 `_OP_DISPATCHERS`
 ├── manifest.json      # 권장 — 패키지 메타데이터
 └── tools/             # 실제 도구 모듈들 (tool_*.py)
 ```
 
 어휘를 살리는 절차:
+1. `ibl_actions.yaml`에 액션/op 설명·통화·부작용·fixture와 `tool_json` 원본을 쓴다.
+2. `handler.py` 구현과 `_OP_DISPATCHERS`를 맞춘다.
+3. 빌드로 중앙 레지스트리·tool.json·fixture·문서 마커를 파생한다.
+4. 첫 등록은 `add_examples_batch`로 자연어→IBL 용례를 시드하고 재학습용 데이터에도 남긴다. 설명은 존재를 알릴 뿐 자연어 선택과 인자 모양을 대신하지 않는다.
+5. `scripts/ibl_param_sweep.py`로 관측 인자 표면을 갱신하고 실제 해마 연상 프로브와 fixture 종단을 확인한다.
+6. `build_ibl_nodes.py --check`와 패키지 건강검사를 통과시킨다.
+
 ```bash
 # <패키지>/ibl_actions.yaml (또는 코어면 data/ibl_nodes_src/<node>.yaml) 편집 후
 python3 scripts/build_ibl_nodes.py          # ibl_nodes.yaml·tool.json·문서 파생 재생성
@@ -246,7 +253,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 - 시스템 레벨: `data/guide_db.json`에 항목 추가 + `data/guides/`에 파일 작성
 
 ### 패키지 제거
-`POST /packages/{id}/uninstall`이 패키지 폴더를 `not_installed/`로 이동한다. **IBL 어휘는 자동 제거되지 않음** — 이 패키지가 노출하던 IBL 액션이 src에 있다면 직접 정리해야 한다 (`ibl_nodes_src/<node>.yaml`에서 제거 → 재빌드).
+`POST /packages/{id}/uninstall`이 패키지 폴더를 `not_installed/`로 이동한다. 패키지 소유 어휘는 다음 빌드에서 설치 fragment 집합에서 빠져 중앙 레지스트리에서도 제거된다. 패키지 능력을 코어 `ibl_nodes_src`에 잘못 중복 등록했다면 그 줄은 자동으로 사라지지 않으므로 직접 정리한다. 해마 용례·건강 기록의 제거/후계어 이관은 `data/guides/action_removal.md`를 따른다.
 
 ### 주의사항
 - **노드 추가 금지**: 기존 6개 노드(sense, self, limbs, others, engines, table)만 사용. 새 노드는 `data/ibl_nodes_src/meta.yaml`/`scripts/build_ibl_nodes.py`(NODE_ORDER) 변경 + 라우팅 코드 합의 후 별건 작업.
@@ -258,7 +265,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 <!-- IBL_STATS:START -->
 ## 현재 설치된 도구 패키지 (41개 — 빌드 파생)
 
-**op 분기 28 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · **finance-record** · guest-helper · health-record · investment · lecture_workspace · **media_producer** · memory · music-player · **notebook** · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 **69개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 28 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · **finance-record** · guest-helper · health-record · investment · lecture_workspace · **media_producer** · memory · music-player · **notebook** · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 **70개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > location-services 는 op 분기 목록에서 빠졌다 — 유일한 op 액션이던 `sense:travel`(항공·호텔)이 은퇴하면서(국내 숙박은 `sense:stay` 가 source 분기로 승계) op 보유 액션이 0이 됐다.
 <!-- IBL_STATS:END -->
@@ -376,4 +383,4 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*최근 변경(2026-08-22): tool.json=빌드 산출물(객체 형식)·패키지 어휘=`<패키지>/ibl_actions.yaml` 로 정정(옛 '패키지에 두지 않는다' 규약 뒤집힘)·postprocess 선언 0 경고. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-25): 표준 ToolContext handler 서명, 패키지 fragment 제거 대칭, 새 어휘의 구현→빌드→코퍼스 시드→param sweep→연상/fixture 검증 생명주기를 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

@@ -22,6 +22,7 @@ import re
 import time
 import uuid
 import subprocess
+import tempfile
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -104,7 +105,11 @@ def _resolve_cached(video_id: str, kind: str, q: str = "") -> dict:
 
 def _start_relay(res: dict, kind: str):
     """ffmpeg 릴레이 시작 — googlevideo 에서 받으며 fMP4 를 stdout 에 흘린다.
-    (proc, tmp) 반환. 완주=thumbnails.finish_stream_transcode / 중단=detach_….
+    (proc, tmp, errf) 반환. 완주=thumbnails.finish_stream_transcode / 중단=detach_….
+    errf = ffmpeg 오류문 보관 임시파일 — DEVNULL 이면 실패 이유(403·포맷 없음)가
+    통째로 사라져 502 가 "릴레이 시작 실패" 한 줄로만 남는다(2026-08-26 무음 사건:
+    낡은 yt-dlp 가 물어온 URL 이 403 이었는데 그 사실이 어디에도 안 보였다).
+    PIPE 가 아니라 파일인 이유: 아무도 안 읽는 PIPE 는 64KB 에서 ffmpeg 을 세운다.
 
     ★tee 머서 금지·단일 fMP4 출력 + 파이썬 tee (thumbnails.start_stream_transcode 의
     교훈 그대로 — 여기선 입력이 파일이 아니라 URL 2개라 커맨드만 자작한다)."""
@@ -124,8 +129,26 @@ def _start_relay(res: dict, kind: str):
             else ["-c:a", "aac", "-b:a", "160k", "-ac", "2"])
     cmd += ["-f", "mp4", "-movflags", "frag_keyframe+empty_moov+default_base_moof",
             "pipe:1"]
-    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-    return proc, tmp
+    errf = tempfile.TemporaryFile()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=errf)
+    return proc, tmp, errf
+
+
+def _err_tail(errf, limit: int = 300) -> str:
+    """ffmpeg 오류문의 마지막 줄 — 무음/502 의 진짜 이유를 표면까지 나른다.
+    마지막 줄만 쓰는 이유: 그 앞 줄엔 서명 붙은 googlevideo URL 이 통째로 실린다."""
+    try:
+        errf.seek(0)
+        txt = errf.read().decode("utf-8", "replace").strip()
+    except Exception:
+        txt = ""
+    finally:
+        try:
+            errf.close()
+        except Exception:
+            pass
+    line = txt.splitlines()[-1] if txt else ""
+    return line[:limit] or "(오류문 없음)"
 
 
 _WATCH_LOG = Path(__file__).resolve().parent.parent.parent / "data" / "youtube_watch.json"
@@ -247,15 +270,20 @@ def _resolve_ladder(video_id: str) -> dict:
     with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "noplaylist": True}) as ydl:
         info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
     by_height = {}
+    # ★protocol="https"(DASH 직행 URL)만 — 2026.08 판 yt-dlp 는 같은 높이에
+    # m3u8_native 렁(itag 269·270…)도 함께 물어온다. 그 url 은 파일이 아니라
+    # 재생목록(.m3u8 텍스트)이라 sidx 파싱이 "sidx 없음" 으로 죽는다(실측).
     for f in info.get("formats") or []:
-        if (not f.get("url") or not (f.get("vcodec") or "").startswith("avc1")
+        if (not f.get("url") or f.get("protocol") != "https"
+                or not (f.get("vcodec") or "").startswith("avc1")
                 or (f.get("acodec") or "none") != "none" or f.get("ext") != "mp4"):
             continue
         h = f.get("height") or 0
         if h and (h not in by_height or (f.get("tbr") or 0) > (by_height[h].get("tbr") or 0)):
             by_height[h] = f
     auds = [f for f in (info.get("formats") or [])
-            if f.get("url") and (f.get("acodec") or "").startswith("mp4a")
+            if f.get("url") and f.get("protocol") == "https"
+            and (f.get("acodec") or "").startswith("mp4a")
             and (f.get("vcodec") or "none") == "none" and f.get("ext") == "m4a"]
     if not by_height or not auds:
         raise RuntimeError("화질 사다리 없음 (DASH 포맷 미제공 영상)")
@@ -487,13 +515,15 @@ async def relay(video_id: str, kind: str = Query(default="audio"), q: str = Quer
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"유튜브 해소 실패: {e}")
     await run_in_threadpool(_log_watch, video_id, kind, res)
-    proc, tmp = _start_relay(res, kind)
+    proc, tmp, errf = _start_relay(res, kind)
     head = await _read_init_segment(proc)
     if not head:
         thumbnails.kill_stream(proc)
         # 해소 결과가 부패했을 수 있다(드묾) — 다음 요청이 새로 해소하게 캐시 비움
         _resolve_cache.pop((video_id, kind, q), None)
-        raise HTTPException(status_code=502, detail="릴레이 시작 실패 (ffmpeg)")
+        raise HTTPException(status_code=502,
+                            detail=f"릴레이 시작 실패 (ffmpeg): {_err_tail(errf)}")
+    errf.close()   # 시작에 성공했으면 오류문은 필요 없다(자식 fd 는 그대로)
     head = thumbnails.patch_fmp4_duration(head, res["duration"])
     # X-Transcode-Live: 생방송(중단되면 반쪽) — 중간 캐시 금지(공개파일 선례)
     return StreamingResponse(

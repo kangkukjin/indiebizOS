@@ -604,10 +604,13 @@ def execute_request_user_approval(tool_input: dict, project_path: str) -> str:
 
 
 def _dict_to_json(result) -> str:
-    """dict 결과를 JSON 문자열로 변환, _ibl_guide 잔여 메타데이터 제거"""
+    """도구 결과를 공개 값 계약으로 검사하고 dict를 엄격 JSON으로 변환한다."""
+    from common.value_semantics import dumps_public_result, public_result
     if isinstance(result, dict):
         result.pop("_ibl_guide", None)
-        return json.dumps(result, ensure_ascii=False, indent=2)
+    normalized = public_result(result, producer="execute_tool")
+    if isinstance(normalized, (dict, list, tuple)):
+        return dumps_public_result(normalized, ensure_ascii=False, indent=2)
     return result
 
 
@@ -798,6 +801,15 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         else:
             result = _execute_tool_inner(tool_name, tool_input, project_path, agent_id)
 
+        # 시스템 내장·레지스트리·동적 핸들러·IBL을 모두 덮는 최외곽 결과 관문.
+        # 내부 이른 return이나 JSON 문자열 핸들러도 이 지점을 우회할 수 없다.
+        from common.value_semantics import dumps_public_result, public_result
+        _public = public_result(result, producer=tool_name)
+        if isinstance(result, str) and isinstance(_public, dict):
+            result = dumps_public_result(_public, ensure_ascii=False, indent=2)
+        else:
+            result = _public
+
         # [MAP:...] 태그 변환 — 결과 트리 전체를 재귀 수확하는 단일 관문.
         # 단독/파이프/병렬/중첩 깊이 무관. 태그는 결과 끝에 부착(프로바이더 재주입 regex가 끝 앵커).
         if isinstance(result, str) and "map_data" in result:
@@ -921,7 +933,7 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
             query = tool_input.get("query", "")
             read = tool_input.get("read", True)
             result = search_guide(query, {"read": read})
-            return json.dumps(result, ensure_ascii=False, indent=2)
+            return _dict_to_json(result)
 
         # IBL 통합 실행기 (Phase 13)
         if tool_name == "execute_ibl":
@@ -942,7 +954,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
         if is_registry_tool(tool_name):
             result = registry_execute_tool(tool_name, tool_input, project_path)
             if isinstance(result, dict) and "images" in result:
-                return result
+                from common.value_semantics import public_result
+                return public_result(result, producer=tool_name)
             result = _dict_to_json(result)
             return result
 
@@ -989,7 +1002,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
 
             # [images] 이미지를 포함한 dict 결과는 그대로 반환 (providers가 처리)
             if isinstance(result, dict) and "images" in result:
-                return result
+                from common.value_semantics import public_result
+                return public_result(result, producer=tool_name)
 
             # dict → JSON 변환 (_ibl_guide 잔여 메타데이터 제거 포함)
             result = _dict_to_json(result)

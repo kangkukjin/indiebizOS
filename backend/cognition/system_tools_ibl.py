@@ -10,6 +10,7 @@ import re
 import time
 from typing import Dict, Optional
 
+from common.value_semantics import dumps_public_result
 from episode_logger import truncate_for_log
 
 
@@ -478,7 +479,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                         r["step"] += from_step - 1
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
-            return json.dumps(result, ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
+            return dumps_public_result(result, producer="execute_ibl:resume",
+                                       ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
         if len(parsed) == 1 and not has_special:
             # 단일 step 직접 실행
@@ -593,7 +595,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose")))
 
         if isinstance(result, dict):
-            return json.dumps(result, ensure_ascii=False, indent=2)
+            return dumps_public_result(result, producer="execute_ibl",
+                                       ensure_ascii=False, indent=2)
         return str(result)
 
     except Exception as e:

@@ -177,7 +177,9 @@ async def execute_ibl_code(req: IBLRequest):
         # 조향(steer) 배달 — 클로드 코드 경로 어댑터 (2026-08-15): MCP 호출만
         # (req.agent_id 명시 = 에이전트 신원이 실린 호출). 앱/수동 모드는 req.agent_id 가
         # 비어 있어(위에서 system_ai 로 채워지기 *전* 값 기준) 결정론 결과가 오염되지 않는다.
-        return _attach_steer(derive_items(result), req.agent_id)
+        from common.value_semantics import public_result
+        envelope = _attach_steer(derive_items(result), req.agent_id)
+        return public_result(envelope, producer="POST /ibl/execute")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from common.value_semantics import dumps_public_result, require_finite_numbers
+
 
 def success_response(data: Any = None, message: str = "", **extra) -> dict:
     """
@@ -72,7 +74,8 @@ def format_json(data: Any, ensure_ascii: bool = False, indent: int = 2) -> str:
     Returns:
         JSON 문자열
     """
-    return json.dumps(data, ensure_ascii=ensure_ascii, indent=indent)
+    return dumps_public_result(data, ensure_ascii=ensure_ascii, indent=indent,
+                               producer="response_formatter")
 
 
 def save_large_data(data: Any, category: str, identifier: str, base_dir: str = None) -> str:
@@ -105,7 +108,8 @@ def save_large_data(data: Any, category: str, identifier: str, base_dir: str = N
     filepath = output_dir / filename
 
     with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        require_finite_numbers(data)
+        json.dump(data, f, ensure_ascii=False, indent=2, allow_nan=False)
 
     return str(filepath)
 

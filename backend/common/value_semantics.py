@@ -8,6 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal, localcontext
 from enum import Enum, IntEnum
+import json
 import math
 import re
 from typing import Any
@@ -262,6 +263,99 @@ def require_finite_numbers(value: Any, *, path: str = "$") -> Any:
             require_finite_numbers(key, path=f"{path}.<key>")
             require_finite_numbers(item, path=f"{path}.{key}")
     return value
+
+
+_NONFINITE_RESULT = "NONFINITE_RESULT"
+_NON_JSON_RESULT = "NON_JSON_RESULT"
+
+
+class _PublicResultViolation(ValueError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+def _json_object(pairs):
+    """JSON 문자열의 중복 객체 키를 파싱 단계에서 소실되기 전에 거절한다."""
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise _PublicResultViolation(
+                _NON_JSON_RESULT, f"JSON 문자열 객체에 중복 키 {key!r}가 있습니다")
+        out[key] = value
+    return out
+
+
+def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
+    """공개 JSON 값을 재귀 정규화한다. 손실 없는 변환만 하고 나머지는 거절한다."""
+    if isinstance(value, str) and value.lstrip().startswith(("{", "[")):
+        try:
+            nested = json.loads(value, object_pairs_hook=_json_object)
+        except _PublicResultViolation as error:
+            raise _PublicResultViolation(error.code, f"{path}<json>: {error}") from error
+        except (json.JSONDecodeError, TypeError):
+            return value
+        _normalize_public_value(nested, path=f"{path}<json>", active=active)
+        return value
+    if isinstance(value, float) and not math.isfinite(value):
+        label = "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+        raise _PublicResultViolation(
+            _NONFINITE_RESULT, f"계산 결과 {path}가 비유한 수 {label}입니다")
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if not isinstance(value, (*_SEQUENCES, dict)):
+        raise _PublicResultViolation(
+            _NON_JSON_RESULT,
+            f"공개 결과 {path}의 {type(value).__name__} 값은 JSON으로 표현할 수 없습니다")
+    active = active if active is not None else set()
+    marker = id(value)
+    if marker in active:
+        raise _PublicResultViolation(
+            _NON_JSON_RESULT, f"공개 결과 {path}에 순환 참조가 있습니다")
+    active.add(marker)
+    try:
+        if isinstance(value, _SEQUENCES):
+            return [_normalize_public_value(item, path=f"{path}[{index}]", active=active)
+                    for index, item in enumerate(value)]
+        if all(isinstance(key, str) for key in value):
+            return {key: _normalize_public_value(item, path=f"{path}.{key}", active=active)
+                    for key, item in value.items()}
+        # JSON 은 객체 키를 문자열로 강제해 1 과 "1" 을 충돌시킨다. 문자열화하지 않고
+        # strict_json_value 와 같은 pair 표현으로 모든 키의 타입과 항목을 보존한다.
+        return {"$object_pairs": [
+            [_normalize_public_value(key, path=f"{path}.<key>", active=active),
+             _normalize_public_value(item, path=f"{path}.{key}", active=active)]
+            for key, item in value.items()
+        ]}
+    finally:
+        active.remove(marker)
+
+
+def public_result(value: Any, *, producer: str = "") -> Any:
+    """공개 결과의 유한 JSON 수 계약을 적용하고 위반을 정직한 오류 봉투로 바꾼다.
+
+    JSON 컨테이너 문자열도 검사한다. 평문 ``"NaN"`` 은 텍스트일 수 있으므로 문자열은
+    ``{``/``[`` 로 시작할 때만 JSON 결과로 해석한다.
+    """
+    try:
+        return _normalize_public_value(value)
+    except _PublicResultViolation as error:
+        envelope = {
+            "success": False,
+            "error_code": error.code,
+            "error": f"공개 결과 계약 위반: {error}",
+        }
+        if producer:
+            envelope["producer"] = producer
+        return envelope
+
+
+def dumps_public_result(value: Any, *, producer: str = "", ensure_ascii: bool = False,
+                        indent=None, sort_keys: bool = False) -> str:
+    """공개 결과를 오류 봉투 변환 뒤 엄격 JSON(``allow_nan=False``)으로 직렬화한다."""
+    normalized = public_result(value, producer=producer)
+    return json.dumps(normalized, ensure_ascii=ensure_ascii, indent=indent,
+                      sort_keys=sort_keys, allow_nan=False)
 
 
 def aggregate_numbers(op: str, numbers: list):

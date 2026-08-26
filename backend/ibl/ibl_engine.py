@@ -618,7 +618,7 @@ def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
 MAX_NEST_DEPTH = 3
 
 
-def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
+def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
 
@@ -831,6 +831,11 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
         else:
             return {"error": f"알 수 없는 라우터: {router}"}
 
+        # 모든 라우터가 공유하는 공개 결과 계약. 파이프 다음 step이 읽기 전에 막아
+        # NaN/Infinity가 계산·분기·저장으로 전염되지 않게 한다.
+        from common.value_semantics import public_result
+        result = public_result(result, producer=f"{node}:{action}")
+
         # 결과에서 성공/실패 판단
         if isinstance(result, dict):
             if result.get("success") is False:
@@ -891,6 +896,15 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
 
     # 인자 경고 부착 — postprocess 이후 (압축이 경고를 지우지 않게)
     return _attach_param_warning(result, _param_warning)
+
+
+def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
+    """모든 IBL 실행 모양에 공개 결과 계약을 적용하는 최외곽 관문."""
+    from common.value_semantics import public_result
+    result = _execute_ibl_impl(tool_input, project_path, agent_id)
+    node = tool_input.get("_node") or "ibl"
+    action = tool_input.get("action") or "block"
+    return public_result(result, producer=f"{node}:{action}")
 
 
 # === 후처리 시스템 (Postprocessing) ===

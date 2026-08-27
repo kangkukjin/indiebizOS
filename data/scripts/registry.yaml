@@ -26,6 +26,14 @@ json원장:
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
   timeout: 2400
+보고서HTML:
+  description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
+    h1) · subtitle(머리 한 줄) · theme(plain|card) · accent · drop_lines(그 문자열이 든 줄 제거
+    — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행). items 로 링크·표·제목 수와 제거한 줄 수를 신고'
+  file: 보고서HTML.py
+  interpreter: python
+  registered_at: '2026-08-28T07:10:03'
+  timeout: 120
 수리적용상태:
   description: ''
   file: 수리적용상태.py

@@ -149,7 +149,10 @@ def main():
         print(json.dumps({"success": True, "op": op, "path": str(path),
                           "count": count, "items": changed}, ensure_ascii=False))
     except (OSError, ValueError, TypeError) as exc:
-        print(json.dumps({"success": False, "error": str(exc), "items": []}, ensure_ascii=False))
+        # 사유는 stderr 로도 낸다 — 러너가 실패 봉투에 싣는 것은 stderr_tail 이라,
+        # stdout 에만 두면 호출부가 로그 파일을 열어야 이유를 안다.
+        print(str(exc), file=sys.stderr)
+        print(json.dumps({"success": False, "items": [], "error": str(exc)}, ensure_ascii=False))
         raise SystemExit(1)
 
 

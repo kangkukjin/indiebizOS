@@ -631,7 +631,22 @@ async def validate_ibl(req: ValidateRequest):
             except _DoSynErr:
                 # $it/$변수 치환 자리가 따옴표 밖(예: {n: $it.n})이면 실행 시엔 합법 —
                 # 자리만 더미(1)로 메워 재시도한다. 이걸로도 안 되면 진짜 문법 오류.
-                inner = _parse_do(re.sub(r"\$\w+(?:\.\w+)*", "1", do))
+                # ★B49-1(49회차 상상훈련): 이 재시도가 `$` 만 훑어서 **바깥 할당이 있는**
+                #   문장을 놓쳤다. 파서는 `$n = 2` 가 앞에 있으면 do 속 `$n` 을 여기 오기
+                #   *전에* `{{_step_0_result}}` 로 바꿔 둔다 — 남은 것은 `$` 가 아니라
+                #   중괄호 자리표라, 재파싱이 그것을 객체 리터럴의 시작으로 읽고
+                #   "파라미터를 끝까지 읽지 못했습니다" 로 죽었다. 실측:
+                #     $n = 2
+                #     [table:each]{items: [{a: 1}], do: "[sense:host]{op: \"apps\", limit: $n}"}
+                #       → validate valid:false / execute success:true   ← 검수만 거짓 빨강
+                #   따옴표로 감싼 `\"$n\"` 은 문자열 값이 되어 통과했으므로 **인용 없는
+                #   자리에서만** 났다. _DO_CARRYING 6종(each·schedule·trigger·workflow·
+                #   manage_events·delegate) 이 같은 재파싱을 쓰므로 부류 전체가 이 한 줄에 걸려 있다.
+                #   자리표를 먼저 메우고, 남은 맨 `$참조`는 정본 REF_RE 로 훑는다
+                #   (손으로 쓴 `\$\w+` 은 `${이름}` 괄호형을 놓쳤다 — ibl_vars.py 의 경고).
+                from workflow_binding import blank_step_refs
+                from common.ibl_vars import REF_RE
+                inner = _parse_do(REF_RE.sub("1", blank_step_refs(do)))
         except _DoSynErr as e:
             entry = {
                 "node": st.get("_node", ""), "action": st.get("action", ""),

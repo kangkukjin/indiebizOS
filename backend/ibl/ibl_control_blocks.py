@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from common.currency import currency_shape_note
 from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
                            _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
+# 경계가 떨군 변수의 신고 (B49-2) — 잎 모듈에 두어 ibl_executors 의 분기 실행기와 한 벌을 쓴다.
+from ibl_honesty import note_vars_dropped as _note_vars_dropped
 
 import copy as _copy
 import time as _time
@@ -194,6 +196,8 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
         if not isinstance(out, dict):
             out = {"result": out}
         out.setdefault("_caught", caught_meta)
+    # try/catch 몸의 할당은 추적 슬롯이 아예 없다 — 전량이 경계에서 떨어진다 (B49-2)
+    out = _note_vars_dropped(out, [body, catch] if caught_meta is not None else body)
     return out
 
 
@@ -365,6 +369,9 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     _upd = {n: cur_vars[n] for n in body_vars if n in (tool_input.get("_var_values") or {}) and n in cur_vars}
     if _upd:
         out["_var_updates"] = _upd
+    # 되쓸 슬롯이 없어 떨군 이름은 조용히 두지 않는다 (B49-2) — 바깥에 없던 이름은
+    # step_results 에 자리가 없어 원리적으로 못 나간다. 그 사실 자체가 신고 대상이다.
+    _note_vars_dropped(out, body, kept=set(_upd))
     for _k, _v in carried.items():                # 몸통의 정직 신고를 바깥으로 (B27-4)
         if _k not in out:
             out[_k] = _v

@@ -220,6 +220,10 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     문법이 허용하는 모양(블록 속 파이프)을 실행기가 전부 받아야 한다.
     """
     prev = _prev_of(tool_input)
+    # ★B49-2(49회차): 분기 몸의 할당은 되쓸 슬롯이 없어 경계에서 전량 떨어진다.
+    #   치환 전 원본에서 이름을 걷는다(치환이 모양을 바꾸기 전에).
+    from ibl_honesty import note_vars_dropped as _note_vars_dropped
+    _body_src = action
     try:
         action = _subst_var_refs(copy.deepcopy(action), tool_input.get("_var_values") or {})
     except ValueError as e:
@@ -228,14 +232,16 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
         from workflow_engine import execute_pipeline
         steps = [_nest(s, tool_input) for s in action]
         _stamp_var_values(steps, tool_input.get("_var_values") or {})
-        return execute_pipeline(steps, project_path, agent_id=agent_id,
-                                context=({"_prev_result": prev} if prev else None))
+        return _note_vars_dropped(
+            execute_pipeline(steps, project_path, agent_id=agent_id,
+                             context=({"_prev_result": prev} if prev else None)),
+            _body_src)
     from ibl_engine import execute_ibl
     from workflow_engine import _auto_inject_prev
     st = _nest(action, tool_input)
     if prev and isinstance(st, dict) and not st.get("_assign"):
         st = _auto_inject_prev(st, prev)
-    return execute_ibl(st, project_path, agent_id)
+    return _note_vars_dropped(execute_ibl(st, project_path, agent_id), _body_src)
 
 
 def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:

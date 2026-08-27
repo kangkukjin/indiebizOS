@@ -25,6 +25,7 @@ HONESTY_LIST_KEYS = (
     "errors",             # [table:each] 의 행별 실패(원 행 + _error)
     "branches_failed",    # 병렬 가지 전체 실패
     "empty_notes",        # 0행 사유
+    "vars_dropped",       # 블록 몸이 할당한 변수가 경계 밖으로 못 나갔다 (B49-2)
 )
 
 #: 수량형 — 0 이 아니면 신고한다.
@@ -45,6 +46,56 @@ HONESTY_FLAG_KEYS = (
 )
 
 HONESTY_KEYS = HONESTY_LIST_KEYS + HONESTY_COUNT_KEYS + HONESTY_FLAG_KEYS
+
+
+def assigned_in_body(body: Any) -> list:
+    """블록 몸이 **스스로 할당하는** 변수 이름들 — 경계가 무엇을 떨궜는지 신고하려고.
+
+    파서는 몸의 모양(파이프 list · 단일 dict · 분기 action)과 무관하게 할당 자리에
+    `_assign_name` 을 남긴다 — 판별이 한 벌로 족한 이유다(모양마다 손으로 열거하면
+    빠진 모양에서 조용해진다 — 이 모듈이 존재하는 바로 그 이유)."""
+    out: list = []
+
+    def _walk(b: Any) -> None:
+        if isinstance(b, list):
+            for x in b:
+                _walk(x)
+        elif isinstance(b, dict):
+            n = b.get("_assign_name") or (b.get("name") if b.get("_assign") else None)
+            if isinstance(n, str) and n and n not in out:
+                out.append(n)
+
+    _walk(body)
+    return out
+
+
+def note_vars_dropped(out: Any, body: Any, kept: Any = ()) -> Any:
+    """몸이 할당했지만 바깥으로 못 나간 변수를 봉투에 신고한다 (★B49-2, 49회차 상상훈련).
+
+    실측 — 몸 안에서 *태어난* 변수는 소리 없이 사라졌고, 뒤따르는 읽기는 원인을 엉뚱한
+    곳에 돌렸다:
+
+        [if: 1 == 1]{$k = 7}
+        [if: $k == 7]{[self:time]}[else]{[sense:host]{op:"status"}}
+          → "조건 평가 실패 1건 — 판정 불능"   ← 조건 탓처럼 들리지만 진범은 경계다
+
+    `[repeat:]` 은 **바깥에 이미 있던** 이름만 되쓰고(`_var_updates` — step_results 에
+    슬롯이 있어야 한다), `[if]/[case]/[try]` 는 몸의 할당을 아예 추적하지 않는다.
+    그래서 `$n = 0` 을 미리 둔 *재할당*만 살아남는 비대칭이 생겼다.
+
+    이 함수는 그 비대칭을 **없애지 않는다** — 블록이 스코프를 만드는지 아닌지는 언어
+    개정 사안이라 사용자 판정 몫이다. 다만 떨궜다는 사실을 조용히 두지 않는다:
+    48회차가 연 "정직 표지가 조합 경계를 못 건넌다" 부류의 같은 처방.
+
+    통화 계약 불침범 — dict 봉투에만 싣는다(스칼라를 감싸면 하류 통화가 깨진다.
+    F19-1 이 `_branch_meta` 를 side-channel 로 뺀 것과 같은 판정).
+    """
+    names = [n for n in assigned_in_body(body) if n not in (kept or ())]
+    if names and isinstance(out, dict):
+        out.setdefault("vars_dropped", names)
+    elif names:
+        print(f"[IBL_BLOCK] vars_dropped={names} (비-dict 블록 결과 — 봉투로만 신고)")
+    return out
 
 
 def markers_of(env: Any) -> Dict[str, Any]:

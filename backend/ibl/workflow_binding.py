@@ -26,6 +26,21 @@ from common.field_path import walk_path
 _STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result((?:\.\w+)*)\}\}")
 
 
+def blank_step_refs(text: str, repl: str = "1") -> str:
+    """아직 주입되지 않은 `{{_step_N_result[.path]}}` 자리를 더미로 메운다.
+
+    ★B49-1(49회차 상상훈련): dry-run(`/ibl/validate`)은 실행 전이라 주입이 안 일어난
+    상태에서 `do` 속 문장을 재파싱한다. 그런데 파서는 바깥에 `$n = …` 이 있으면 do
+    문자열 안의 `$n` 을 **이미** 이 자리표로 바꿔 둔 뒤다 — `$` 로 훑는 재시도는 그
+    모양을 못 보고 지나쳐, 멀쩡히 실행되는 문장에 검수가 `valid:false` 를 냈다.
+    조종실은 번역→검수→실행이라 거짓 빨강이 곧 멀쩡한 문장의 차단이다.
+
+    자리표 정규식을 호출부마다 다시 적으면 방언이 갈린다(ibl_vars.py 가 `$` 표기에
+    대해 내린 판정과 같은 이유) — 이 자리표의 주인은 이 모듈이므로 걷어내는 굴절도
+    여기서 낸다."""
+    return _STEP_RESULT_RE.sub(repl, text or "")
+
+
 def _extract_result_field(raw: str, path: str) -> str:
     """저장된 step 결과 문자열에서 .field.path 를 추출해 스칼라 문자열로.
 

@@ -21,6 +21,7 @@
 모듈레벨 = stdlib 만(폰 import-safe 불변식, data-ops 선례) — 무거운 것은 함수 안 지연 import.
 """
 import json
+import re
 
 _ITEMS_CAP = 60_000       # items 직렬화 상한(자) — ingest_engine._TEXT_CAP 과 동률
 # grounded 기본 on 스키마 = 원장 적재 부류(2026-08-19 판정 4: 환각 레코드의 원장 오염이
@@ -119,13 +120,45 @@ def _struct(tool_input: dict) -> str:
         src = extract_source(path=file_path or None, text=text or None)
     else:
         prev = _parse_prev(tool_input.get("_prev_result"))
+        src = None
         body = ""
         if isinstance(prev, str):
             body = prev.strip()
         elif isinstance(prev, dict):
-            body = str(prev.get("text") or prev.get("content") or prev.get("summary")
-                       or prev.get("message") or "").strip()
-        if isinstance(prev, dict) and isinstance(prev.get("items"), list):
+            # ★외부화 봉투를 따라간다 (2026-08-27, 51회차 후속 실측): transcript 는
+            #   10,000자 초과분을 파일로 내리고(saved_to_file+file_path) 봉투엔 preview·
+            #   안내 message 만 남긴다. 아래 본문 사슬은 그걸 몰라 **안내문을 원문으로
+            #   오독**했다 — struct 가 사용법 안내에서 "기록"을 추출하는 조용한 품질 실패.
+            #   생산자의 외부화 계약을 소비자가 따라가면 파이프도 전문을 읽는다
+            #   (`transcript >> struct` = 자막 증류가 한 문장에 들어오는 열쇠).
+            if prev.get("saved_to_file") and prev.get("file_path"):
+                # 파일이 사라졌으면(24h 정리 등) 조용히 아래 본문 사슬(preview 폴백)로 —
+                # 따라가기 실패가 문장을 죽이면 안 된다.
+                try:
+                    from ingest_engine import extract_source
+                    _fsrc = extract_source(path=str(prev["file_path"]), text=None)
+                except Exception:
+                    _fsrc = {"ok": False}
+                if _fsrc.get("ok"):
+                    # 자막류 외부화 파일은 `[MM:SS] 문장` 병기 포맷이다 — 세그먼트마다
+                    # 표식이 끼어 어떤 발췌도 원문의 연속 부분열이 될 수 없고, grounded
+                    # 대조(_quote 원문 대조)가 구조적으로 전멸한다(2026-08-27 실측:
+                    # 추출 16건 전원 탈락). 표식·헤더를 걷어 흐르는 본문으로 정규화 —
+                    # 모델 입력과 대조 기준이 같은 텍스트가 되어 grounded 가 성립한다.
+                    if isinstance(_fsrc.get("text"), str):
+                        _lines = [re.sub(r"^\[[0-9:.]+\]\s*", "", ln)
+                                  for ln in _fsrc["text"].splitlines()
+                                  if not ln.lstrip().startswith("#")]
+                        _fsrc["text"] = re.sub(r"\s+", " ", " ".join(_lines)).strip()
+                    src = _fsrc
+                    pipe_note = "외부화 봉투(saved_to_file)를 따라가 파일 전문을 원문으로 썼습니다."
+            if src is None:
+                # 본문 필드 사슬 — transcript(자막 전문)·preview(외부화 봉투의 앞부분)도
+                # 본문이다. message(상태 안내문)는 최후 폴백으로만 남긴다.
+                body = str(prev.get("transcript") or prev.get("text") or prev.get("content")
+                           or prev.get("summary") or prev.get("preview")
+                           or prev.get("message") or "").strip()
+        if src is None and isinstance(prev, dict) and isinstance(prev.get("items"), list):
             # 본문 병기 봉투(crawl: text=본문 + items=링크 부속)는 본문을 원문으로 쓴다 —
             # "이미 items 통화" 거절은 쓸 본문이 없거나 요약 한 줄뿐일 때만 (2026-08-20
             # ep1325 야생 실측: 대표 용례 crawl>>struct 가 이 거절로 죽어 있었다).
@@ -138,10 +171,11 @@ def _struct(tool_input: dict) -> str:
             if prev["items"]:
                 pipe_note = (f"파이프 봉투의 items {len(prev['items'])}건은 부속(링크 목록 등)으로 "
                              "보고 본문 텍스트를 원문으로 썼습니다.")
-        if not body:
-            return _fail("입력이 없습니다 — file(경로)·text(본문)·>> 파이프 본문 중 하나를 주세요.")
-        src = {"ok": True, "kind": "text", "text": body[:_ITEMS_CAP],
-               "images": None, "label": "파이프 본문"}
+        if src is None:
+            if not body:
+                return _fail("입력이 없습니다 — file(경로)·text(본문)·>> 파이프 본문 중 하나를 주세요.")
+            src = {"ok": True, "kind": "text", "text": body[:_ITEMS_CAP],
+                   "images": None, "label": "파이프 본문"}
     if not src.get("ok"):
         return _fail(src.get("error") or "원문 추출 실패")
 

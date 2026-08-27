@@ -1118,5 +1118,14 @@ outputs·chart 동일·RED 거절·since 사유 승격).
   - **census 가 즉시 잔당을 잡았다**: `ibl_control_blocks._absorb_honesty` 가 `truncated`·`skipped_steps`·`condition_errors`·`_caught` **넷만** 걷어, 나머지 12종이 **repeat 회차 경계**에서 사라지고 있었다(B27-4 가 고쳤다고 여긴 자리의 잔당). `merge_into` 위임으로 교체 — 관문 실효의 증명.
   - **명단은 정직하게 좁혔다**: 첫 census 의 [B] 3건은 오탐이었다(`ibl_exec_each` 는 표지 *생산자*, `workflow_parallel`·`workflow_fallback` 의 걷기는 workflow_engine 의 `_seq` 가 한다). 넓은 명단은 관문을 무시당하게 만든다 — 전파자 2곳으로 좁히고 사유를 관문 헤더에 명문화.
 - **자리표 방언 3벌 → 1벌.** `workflow_binding.step_ref_indices()` 신설, `system_tools_ibl` 의 손 정규식 제거(그 판은 닫는 괄호를 안 봐서 `{{_step_1_resultXYZ` 도 집었다).
-- **새로 발견(범위 밖 · 보고만)**: `??` 폴백의 **이긴 가지 안**에서 난 부분 실패 표지가 위로 오르는지 미확인(`workflow_fallback` 은 `_fallback_used` 한 키만 손으로 다룬다). B48-2 가 병렬에서 고친 것과 같은 모양일 수 있다 — 다음 회차 축 후보.
+- **~~새로 발견(미확인)~~ → 실측으로 닫음(2026-08-27, 같은 날): `??` 폴백은 오류가 아니다.** 이긴 가지 *안*의 부분 실패 표지는 봉투 최상위로 **정상 전파된다**. 판별 실측(같은 몸 `list >> take >> each`(1행 실패)를 네 경계에 넣어 대조):
+  | 경계 | 최상위 표지 |
+  |---|---|
+  | 맨 파이프(대조) | `error_count·errors·passthrough_rows·warning` |
+  | `&` 병렬 가지 | `branches_honesty·warning` (나머지는 문자열 안 — 병렬이 오히려 덜 완전) |
+  | **`??` 폴백 이긴 가지(괄호 파이프)** | `error_count·errors·passthrough_rows·**_fallback_used**·warning` |
+  | 폴백 + 뒤에 변환자 한 단 더 | 위와 동일 |
+  비-폴백(`each >> take`)과 폴백(`?? (…) >> take`)이 **완전히 같고**, 폴백은 `_fallback_used` 를 더 얹는다 — 폴백 고유 결함이 아니다.
+  **왜 괜찮았나**: 걱정의 전제("`workflow_fallback` 이 `_fallback_used` 한 키만 손으로 다룬다")는 참이지만 결론이 틀렸다. 이긴 가지의 결과가 곧 파이프의 통화라 표지가 **탑재물에 실려 따라오고**, 같은 턴에 세운 F48-7 승격(`markers_of` 한 벌로 `final_result`→최상위)이 경계와 무관하게 그것을 올린다. 즉 **F48-7 이 이 자리를 이미 덮었다** — 경계마다 손으로 배관하지 않아도 되는 것이 그 수리의 요점이었다. 새 관문도 이 파일을 [A] 위반으로 잡지 않는다(`_fallback_used` 는 자기 산물이지 전파 목록이 아니다).
+  → **다음 회차 축 후보에서 제외**(중복 검침 방지, 가이드 §6).
 - 검증: backend **1015 passed**(기준선 1001 + 신규 가드 14) · 관문 **11종** 전부 OK(신설 포함) · 새 관문 이빨 실측(수리 전 라이브 1건 적발 → 수리 후 0건).

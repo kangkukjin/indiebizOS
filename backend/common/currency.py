@@ -46,6 +46,24 @@ def items(rows: Iterable[Any] = (), **wrapper) -> dict:
     return out
 
 
+def coerce_json_param(value: Any) -> Any:
+    """param 자리의 JSON 문자열을 원형(list/dict)으로 — `$변수` 치환은 문자열을 넣는다.
+
+    ★B19-2 부류의 범용 게이트 (2026-08-27): items 는 coerce_items_payload 가 맡지만,
+    blocks 의 columns/rows 처럼 **items 가 아닌 구조 param** 도 같은 병을 앓는다
+    (실측: `columns: "$표.columns"` 가 JSON 문자열로 들어가 렌더러가 문자 단위로
+    쪼갰다). 판정은 보수적으로 — JSON 으로 안 읽히면 문자열 그대로(텍스트를 뺏지
+    않는다). 호출자는 구조를 기대하는 자리에만 쓸 것."""
+    if isinstance(value, str):
+        s = value.strip()
+        if s[:1] in "{[":
+            try:
+                return json.loads(s)
+            except Exception:
+                pass
+    return value
+
+
 def coerce_items_payload(value: Any) -> Any:
     """params 로 **직접 받은** 통화 페이로드를 행 목록으로 되읽는다 (없으면 None).
 

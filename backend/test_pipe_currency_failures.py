@@ -1002,6 +1002,41 @@ def test_P30_파이프결과_변수를_items_로_주입할_수_있다():
     print("P30 OK — 파이프 결과 변수도 통화로 읽힌다(판정은 단일 게이트)")
 
 
+def test_P31_blocks_의_변수_주입도_원형으로_읽힌다():
+    """P31 — blocks 안 구조 필드에 `$변수` 를 주입하면 원형(list)으로 읽혀야 한다 (2026-08-27).
+
+    P30(items)과 같은 병의 blocks 판: 변수 치환은 JSON **문자열**을 넣는데, document 의
+    blocks 소비자는 되읽기가 없어 `columns: "$표.columns"` 가 문자열 그대로 들어갔다 —
+    렌더러가 그 문자열을 문자 리스트로 순회해 표 헤더가 **한 글자씩 쪼개진 표**가 나왔다
+    (완성 보고서 프로그램 실측). 수리 = 범용 게이트 coerce_json_param + doc_build 가
+    blocks 전체와 블록 구조 필드(columns/rows/items)만 되읽는다 — text(산문)는 안 건드린다.
+    """
+    from common.currency import coerce_json_param
+    # 범용 게이트: JSON 문자열 → 원형, 산문·비JSON 은 그대로
+    assert coerce_json_param('["이름", "가격"]') == ["이름", "가격"]
+    assert coerce_json_param('{"a": 1}') == {"a": 1}
+    assert coerce_json_param("[삭제] 그냥 산문") == "[삭제] 그냥 산문"
+    assert coerce_json_param(["이미", "원형"]) == ["이미", "원형"]
+
+    _doc = _load("_t_docbuild_p31", os.path.join(_PKG, "data-ops", "doc_build.py"))
+    with tempfile.TemporaryDirectory() as td:
+        out = json.loads(_doc.render_document({
+            "format": "markdown", "title": "P31",
+            "blocks": [
+                {"type": "paragraph", "text": "[유지] 산문은 그대로"},
+                # 변수 치환이 실제로 넣는 모양 — JSON 문자열
+                {"type": "table", "columns": '["이름", "가격"]', "rows": '[["A", 100]]'},
+                {"type": "cards", "columns": 2, "items": '[{"title": "t", "url": "u"}]'},
+            ],
+        }, output_base=td))
+        assert out.get("success"), out
+        md = out.get("markdown") or open(out["path"], encoding="utf-8").read()
+        assert "| 이름 | 가격 |" in md, f"표 헤더가 원형으로 렌더돼야 한다: {md[:200]}"
+        assert "| [ |" not in md, "JSON 문자열이 문자 단위로 쪼개졌다 — 되읽기가 죽었다"
+        assert "[유지] 산문은 그대로" in md, "산문 text 를 건드리면 안 된다"
+    print("P31 OK — blocks 의 변수 주입도 원형으로(구조 필드만, 산문 불가침)")
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
     # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.

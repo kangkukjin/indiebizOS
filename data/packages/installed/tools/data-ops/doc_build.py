@@ -400,6 +400,19 @@ def _render_document(tool_input, output_base=".", context=None):
 
     group_by = (tool_input.get("group_by") or "").strip() or None
     blocks = tool_input.get("blocks")
+    # ★blocks 의 `$변수` 주입 되읽기 (2026-08-27, B19-2 부류의 blocks 판): 변수 치환은
+    #   JSON 문자열을 넣는다. blocks 전체("$구조.blocks")와 블록 안 구조 필드
+    #   (table 의 columns/rows, list/cards 의 items)가 문자열로 오면 원형으로 되읽는다 —
+    #   실측: `columns: "$표.columns"` 가 문자열로 들어가 표 헤더가 문자 단위로 쪼개졌다.
+    #   text 류 필드는 건드리지 않는다(산문을 뺏지 않는다) — 구조 필드만.
+    from common.currency import coerce_json_param as _coerce_param
+    blocks = _coerce_param(blocks)
+    if isinstance(blocks, list):
+        blocks = [
+            ({**b, **{k: _coerce_param(b[k]) for k in ("columns", "rows", "items") if k in b}}
+             if isinstance(b, dict) else b)
+            for b in blocks
+        ]
     # 통화 도착 여부/기수 기록 (29회차 B29-1) — "입력이 아예 없다"와 "통화는 왔는데 0행"은
     # 다른 사건이다. 뒤엣것을 "blocks 가 필요합니다"로 보고하면 사용자는 자기가 줄 필요도
     # 없는 파라미터를 찾아 헤맨다(같은 파이프가 행이 있을 땐 blocks 없이 잘 흐른다).

@@ -171,7 +171,13 @@ def u_units():
         {"traceback": build_tb("e")}))
 
 
-if __name__ == "__main__":
+def test_트레이스백_배터리_전건이_pytest_에도_보인다():
+    """다리 시험 (2026-08-27, 단일 러너 규약 test_single_runner R1) — 이 배터리는
+    스크립트형(check/PASS/FAIL)이라 pytest 가 0건을 수집했고, CI 초록이 이 파일을
+    조용히 지나치고 있었다(27·28회차 거짓 초록과 같은 부류). 전 케이스를 한 시험으로
+    노출한다 — 실패 상세는 check() 가 stdout 에 이미 찍는다."""
+    global PASS, FAIL
+    PASS = FAIL = 0
     u_units()
     t1_pipeline_frame()
     t2_each_rows()
@@ -179,5 +185,11 @@ if __name__ == "__main__":
     t5_syntax()
     t6_parallel()
     t7_try_block()
-    print(f"\n{PASS} ok / {FAIL} fail")
-    sys.exit(1 if FAIL else 0)
+    assert FAIL == 0, f"{FAIL}건 실패 / {PASS}건 통과 — 상세는 stdout 의 FAIL 줄"
+    assert PASS > 0, "0건 통과는 통과가 아니라 '아무것도 안 봤다'이다"
+
+
+if __name__ == "__main__":
+    # 러너는 하나 — pytest 에 위임 (test_single_runner 규약).
+    import pytest
+    sys.exit(pytest.main([__file__] + sys.argv[1:]))

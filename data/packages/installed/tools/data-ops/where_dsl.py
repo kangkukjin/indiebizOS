@@ -4,8 +4,10 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
 만 판정한다 — 통화를 모르고 변환자를 모른다(handler 는 이 판정을 빌려 쓸 뿐).
 
 조건 언어의 계약(19회차 B19-1 판정):
-  · 문자열 "필드 op 값" — 기호(>= <= > < == != =)와 워드(contains/in/matches/
-    startswith/endswith/eq/ne/lt/le/gt/ge)를 **같은 계약**으로 판다.
+  · 문자열 "필드 op 값" — 기호(>= <= > < == != =)와 워드(contains/in/not_in/
+    not_contains/matches/startswith/endswith/eq/ne/lt/le/gt/ge)를 **같은 계약**으로 판다.
+    부정 멤버십(not_in/not_contains)은 api_transforms 와 같은 의미론(2026-08-28 —
+    한쪽 표면만 부정을 팔던 비대칭 수리, 팁 보고서 프로그램 실측이 적발).
   · 연산자가 없는 문자열은 전-필드 부분일치(검색어).
   · " and "/" or " 로 이은 문자열은 **조각 전부가 비교식일 때만** 논리식으로 나눈다.
     우선순위는 SQL 과 같다 — or 가 가장 낮고 and 가 그 위("A and B or C" = (A and B) or C).
@@ -31,7 +33,8 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
 
 import re
 
-from common.value_semantics import (compare_order, list_membership, numeric_value,
+from common.value_semantics import (compare_order, list_membership,
+                                    negative_text_match, numeric_value,
                                     regex_text, sort_records, text_match,
                                     value_sort_key, values_equal)
 
@@ -81,6 +84,10 @@ _OPS = {
     "ge": lambda a, b: _num_cmp(a, b) >= 0,
     "contains": lambda a, b: text_match("contains", a, b),
     "in": lambda a, b: list_membership(a, b),
+    # 부정 멤버십 — api_transforms 의 not_in/not_contains 와 같은 계약(표면 동형성).
+    # 결측 좌변은 부정도 주장하지 않는다(negative_text_match 내장 · not_in 은 명시 가드).
+    "not_in": lambda a, b: a is not None and not list_membership(a, b),
+    "not_contains": lambda a, b: negative_text_match("contains", a, b),
     "matches": _op_matches,
     "startswith": lambda a, b: text_match("startswith", a, b),
     "endswith": lambda a, b: text_match("endswith", a, b),
@@ -136,7 +143,10 @@ _CMP_RE = re.compile(r"^\s*(.+?)\s*(>=|<=|==|!=|>|<|=)\s*(.+?)\s*$")
 # 같은 문자열이 통째로 전-필드 substring 검색어가 되어 조용히 0건이 나왔다 — 액션 자신이
 # 약속한 op 이 모델이 가장 많이 쓰는 문자열 형태에서만 안 지켜지던 비대칭.
 # 양쪽 공백을 요구하므로 'startswith' 안의 'in' 같은 부분일치엔 안 걸린다.
-_WORD_OPS = tuple(sorted((k for k in _OPS if k.isalpha()), key=len, reverse=True))
+# not_in/not_contains 의 밑줄도 워드 연산자다 — 빼면 "필드 not_in 값" 문자열이
+# 조용히 전-필드 substring 검색으로 내려앉는다(침묵 폴백 금지 계약).
+_WORD_OPS = tuple(sorted((k for k in _OPS if k.replace("_", "").isalpha()),
+                         key=len, reverse=True))
 _WORD_CMP_RE = re.compile(r"^\s*(.+?)\s+(" + "|".join(_WORD_OPS) + r")\s+(.+?)\s*$", re.IGNORECASE)
 
 

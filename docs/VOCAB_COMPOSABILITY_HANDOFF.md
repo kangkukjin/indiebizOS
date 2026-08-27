@@ -1193,3 +1193,9 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - `F51-1` **긴 문장은 MCP 표면 타임아웃에 봉투를 잃는다.** 변형 1(2분 10초)은 **실행을 완주해 파일까지 만들었는데** `execute_ibl` 이 `{"error": "timed out"}` 만 돌려줘 정직 표지를 볼 수 없었다(백엔드로 직접 돌려서야 `branches_honesty` 를 읽었다). 실행이 산 채로 결과만 잃는 것은 조합 표현력의 실질적 상한이다 — 표면 타임아웃/부분 결과 규약이 다음 후보.
 - **판정: 알림 관문 우회(핸드오프:465) = 오류 아님.** 직접 호출(`nm.warning`)을 실측하니 `deliver_notification` 이 **1회** 탄다 — N-1 제안대로 `notification_manager.create()` 가 입구에서 관문을 부르게 고쳐져 있어 14곳 우회가 구조로 닫혔다.
 - ★**사건: 수리 그랜트가 턴 중간에 사라졌다.** 같은 `#repair` 턴에서 RED 편집 4건이 격리에 정상으로 쌓인 뒤, MCP 서버 재연결(시스템 알림) 직후부터 `[self:edit]`·`[self:patch]{op:"apply"}` 가 **"이 턴은 REPAIR 경로로 발급된 적이 없습니다"** 로 거절됐다. 유휴 만료(30분)가 아니다 — 그 메시지는 "N분 무사용"을 말한다. 태스크 정체가 재연결로 새로 생기면서 그랜트가 고아가 된 것으로 보인다. 결과: **검증까지 끝난 격리본(`currency.py`+`test_P30`)이 적용되지 못한 채 남았다**(`.worktrees/repair-task_sysai_9c6fb012`). 다음 `#repair` 턴이 `[self:patch]{op:"apply"}` 만 부르면 된다.
+
+#### 후속 — 좌초 원인 확정 + 착륙 + 변형 6 라이브 완주 (2026-08-27 저녁, 하네스 세션)
+
+- **그랜트 상실의 진범 = 자기 리로드.** 위 "MCP 서버 재연결"은 원인이 아니라 증상이다 — 런타임 로그 실측: 16:09:12 이빨 실측 사본을 `backend/` 루트에 `_it51_teeth.py` 로 cp → 16:09:24 WatchFiles 리로드("detected changes in '_it51_teeth.py'") → 백엔드 워커 재기동 → 그 워커 안에 살던 턴·그랜트가 절단. resumed Claude Code 세션에게는 그 재기동이 "MCP 재연결"로 보였다. 08-23 `test_*.py` 사건과 같은 부류(다른 이름) — `RELOAD_EXCLUDES += "_[!_]*.py"` 로 봉인, 가드 L5·L6, 규약은 imagination_training.md §4-4 (`5c2cd41b`).
+- **좌초분 착륙 완료** — "다음 `#repair` 턴이 apply" 대신 사용자 명령으로 08-23 선례(applied_by:hand)대로: 이빨(라이브 None 실측)·py_compile·import_smoke·파이프 30 passed(P30 포함)·전체 배터리 **1025 passed** 후 라이브 반영 (`4890fa74`). 원장 status=applied.
+- **변형 6 라이브 완주** — 백엔드 재기동(새 코드) 후 원문 그대로 종단: `$날씨표 = each{3도시} >> compute >> select >> sort` → `[table:brief]{items: "$날씨표", instruction: …}` = **5/5 step 성공**, 실제 2문장 요약 산출. 위 표의 ★실패는 이로써 6/6 전부 성공으로 닫혔다 — **긴 문장 가설은 변수 되먹임까지 포함해 실전에서 돈다.** (곁가지: brief 는 `instruction` 필수 — `title` 은 미인식 param_warning 으로 정직하게 신고됐다.)

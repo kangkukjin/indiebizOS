@@ -134,6 +134,16 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
     if isinstance(obj, dict):
         keys = sorted(k for k in obj.keys() if isinstance(k, str) and not k.startswith("_"))
         out["keys"] = _clamp_names(keys, out, "keys")
+        # 부분 실패(each 의 errors[])는 진단 정보다 — 다이어트 대상이 아니다.
+        # 옛 요약은 이 배열을 통째로 접으면서 message 의 "errors 참조"만 남겨, 다문장
+        # 프로그램에서 어느 행이 왜 실패했는지 회수 불능이었다(2026-08-28 팁 보고서
+        # 완성 프로그램 실측 — 자막 실패 영상의 정체가 봉투에서 사라졌다).
+        errs = obj.get("errors")
+        if isinstance(errs, list) and errs:
+            out["error_count"] = obj.get("error_count") or len(errs)
+            out["errors_digest"] = [_compact(e, 300) for e in errs[:3]]
+            if len(errs) > 3:
+                out["errors_digest_truncated"] = len(errs) - 3
     if shape == "error":
         out["shape"] = "error"
         out["error"] = obj.get("error") or obj.get("message")   # 원형 — 진단은 다이어트 밖

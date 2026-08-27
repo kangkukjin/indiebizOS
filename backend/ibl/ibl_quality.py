@@ -9,7 +9,8 @@
                   criteria: "종목명·수치 포함, items 에 없는 주장 없음"}
 
 의미론:
-  · criteria 선언 step 은 실행 직후 경량 판정자(기어 실행 축, background 역할) 1회 심사.
+  · criteria 선언 step 은 실행 직후 판정자 1회 심사 — 판정자의 모델 수준은 **기어의
+    평가 축**(role="evaluate")이 정한다(절약·균형=경량, 최대=고급. 단언 금지 — 기어가 정본).
   · 미달 → **재시도 1회**(판정 사유를 instruction 에 얹어 재실행 — ai_call 액션이
     instruction 을 선언한 경우만. JSON 재시도 1회·others:ask 1회 자가교정과 같은 규약)
     → 재판정 → 그래도 미달이면 error_type="quality" 실패(트레이스백이 그 step 을 가리킴).
@@ -96,14 +97,18 @@ def pop_criteria(tool_input: Any) -> Optional[str]:
 
 
 def _call_judge(prompt: str) -> Optional[str]:
-    """경량 판정자 1회 호출 — 테스트가 이 이름을 패치한다.
+    """판정자 1회 호출 — 테스트가 이 이름을 패치한다.
 
-    구현(인지층 oneshot)은 능력 테이블로 주입받는다(_cap — 라우팅층은 인지층을
-    모른다, 의존 역전). 미등록(부팅 배선 밖 스크립트)이면 예외 → 호출자가
+    ★모델 수준은 여기가 아니라 **기어의 평가 축**(role="evaluate")이 정한다 —
+    cognitive_eval 의 달성 기준 평가자와 같은 축이다(절약·균형=경량, 최대=고급 이
+    사용자 설정의 실물, 2026-08-27 정정: 옛 배선은 background(분류 축)로 박아
+    "경량 판정자"를 단언했는데, 그건 기어의 평가-축 의도를 우회하는 티어 하드코딩의
+    변형이었다). 구현(인지층 oneshot)은 능력 테이블로 주입받는다(_cap — 라우팅층은
+    인지층을 모른다, 의존 역전). 미등록(부팅 배선 밖 스크립트)이면 예외 → 호출자가
     '판정 불능=통과+신고' 로 처리한다."""
     from ibl_routing import _cap
     return _cap("oneshot_ai_call")(prompt=prompt, system_prompt=_JUDGE_SYSTEM,
-                                   role="background")
+                                   role="evaluate")
 
 
 def _judge(criteria: str, result: Any, node: str, action: str,

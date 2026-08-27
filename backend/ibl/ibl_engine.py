@@ -902,7 +902,7 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     """모든 IBL 실행 모양에 공개 결과 계약 + criteria 품질 계약을 적용하는 최외곽 관문.
 
     criteria (표준 기능어 param, 2026-08-27 언어 개정): leaf 액션의 params 에서 엔진이
-    꺼내(핸들러 불도달) 실행 결과를 경량 판정자로 심사한다 — 미달이면 재시도 1회 후
+    꺼내(핸들러 불도달) 실행 결과를 판정자(기어 평가 축)로 심사한다 — 미달이면 재시도 1회 후
     error_type="quality" 실패(트레이스백이 그 step 을 가리킴). 액션이 criteria 를 자기
     param 으로 선언했으면(image_read op:critic) 그 액션의 것 — 가로채지 않는다.
     정본 = docs/IBL_QUALITY_CONTRACT_HANDOFF.md, 구현 = ibl_quality.py.

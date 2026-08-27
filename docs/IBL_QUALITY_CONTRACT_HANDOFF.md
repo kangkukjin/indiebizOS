@@ -38,8 +38,11 @@ IBL 문장은 중간에 원샷 AI 단계(`ai_call: true` — `table:ai`·`table:
 ```
 
 1. `execute_ibl` 최외곽 관문이 leaf 액션 params 에서 `criteria` 를 pop(핸들러 불도달 —
-   미인식 param 경고 경로도 안 탄다). 실행 → 구조적 성공이면 경량 판정자
-   (`consciousness_agent.oneshot_ai_call`, role=background) 1회:
+   미인식 param 경고 경로도 안 탄다). 실행 → 구조적 성공이면 판정자
+   (`oneshot_ai_call`, **role=evaluate — 기어 평가 축**, GoalEval 평가자와 같은 축.
+   2026-08-27 정정: 초판은 background(분류 축)로 박아 "경량"을 단언했는데 그건 기어의
+   평가-축 의도를 우회하는 티어 하드코딩의 변형 — 사용자 지적으로 수리. 절약·균형=경량,
+   최대=고급이 기어 실물) 1회:
    `{"pass": bool, "reason"}` JSON 강제, 관용 파싱(PASS/FAIL 토큰 폴백).
 2. **미달 → 재시도 1회**: 판정 사유+기준을 `instruction` 에 얹어 그 step 재실행 —
    `ai_call: true` 이고 `instruction` 을 **선언한** 액션만(선언 = tool.json input_schema,
@@ -82,9 +85,10 @@ goal 은 문장이 끝난 뒤에도 사는 유일한 구조인데, 라운드가 
 
 ## 5. 비용 정직
 
-criteria 1개 = 판정 최대 2회 + 재실행 1회의 추가 원샷(전부 background 역할 경량).
-교재·가이드가 "규칙으로 적을 수 있으면 filter/take/스키마 가드가 먼저"를 가르친다.
-0층(구조 가드)은 여전히 무료·항상 on.
+criteria 1개 = 판정 최대 2회 + 재실행 1회의 추가 원샷. **판정 비용의 수준은 기어
+평가 축이 정한다** — 절약·균형이면 경량, 최대면 고급(평가 품질과 비용을 사용자가
+기어 한 손잡이로 트레이드). 교재·가이드가 "규칙으로 적을 수 있으면
+filter/take/스키마 가드가 먼저"를 가르친다. 0층(구조 가드)은 여전히 무료·항상 on.
 
 ## 6. 증류 게이트 셋째 신호 — ✅ 같은 날 집행 (2026-08-27 후속 판정)
 

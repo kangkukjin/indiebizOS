@@ -430,7 +430,7 @@ def register_all() -> None:
         "self_check": _cap_self_check,
         "self_check_results": _cap_self_check_results,
         "reset_consciousness": _cap_reset_consciousness,
-        # criteria 품질 계약의 경량 판정자 (ibl_quality._call_judge) — ibl 층은
-        # 인지층을 모른다(의존 역전, 2026-08-27).
+        # criteria 품질 계약의 판정자 (ibl_quality._call_judge, 기어 평가 축) —
+        # ibl 층은 인지층을 모른다(의존 역전, 2026-08-27).
         "oneshot_ai_call": _cap_oneshot_ai_call,
     })

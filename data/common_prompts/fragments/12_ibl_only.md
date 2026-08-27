@@ -203,7 +203,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
   - **`_criteria_retried`** — `criteria` 품질 계약이 첫 출력을 미달로 판정해 **재시도본이 통과**했다. 출력의 출처가 재시도라는 뜻이다(`criteria_feedback` 에 첫 미달 사유). `criteria_verdict: "unjudged"` 는 판정 불능이라 통과 처리됐다는 뜻 — "기준을 통과했다"고 말하면 안 된다.
   이 중 하나라도 있으면 **응답에 그 사실을 적어라.** 적지 않고 결과만 말하는 것이 이 시스템에서 가장 흔한 거짓말이다.
 
-**criteria — AI step 의 품질 계약 (2026-08-27 언어 개정)**: 원샷 AI 낱말(`[table:ai]`·`[table:brief]`·`[self:struct]` 등)은 실패 대신 *그럴듯하지만 나쁜 결과*를 낸다. 출력이 표면(write·notify·발행)으로 직행하면 `criteria` 로 기준을 선언하라 — 엔진이 경량 판정자로 심사하고, 미달이면 사유를 지시에 얹어 1회 재시도, 그래도 미달이면 `error_type: "quality"` 실패로 그 step 을 트레이스백에 찍는다(`rejected_result` 에 미달 출력 동봉). 판정 2회+재실행 1회의 추가 비용이 드니 규칙으로 적을 수 있으면 filter/take 가 먼저다. 예: `[table:brief]{instruction: "3문장 보고", criteria: "종목명·수치 포함, items 에 없는 주장 없음"}`. ★`[engines:image_read]{op:"critic"}` 의 criteria 는 그 도구 자신의 입력(화면 심사 기준)이다 — 이 계약이 아니다.
+**criteria — AI step 의 품질 계약 (2026-08-27 언어 개정)**: 원샷 AI 낱말(`[table:ai]`·`[table:brief]`·`[self:struct]` 등)은 실패 대신 *그럴듯하지만 나쁜 결과*를 낸다. 출력이 표면(write·notify·발행)으로 직행하면 `criteria` 로 기준을 선언하라 — 엔진이 판정자(모델 수준은 기어 평가 축이 정한다)로 심사하고, 미달이면 사유를 지시에 얹어 1회 재시도, 그래도 미달이면 `error_type: "quality"` 실패로 그 step 을 트레이스백에 찍는다(`rejected_result` 에 미달 출력 동봉). 판정 최대 2회+재실행 1회의 추가 비용이 들고 그 비용도 기어를 따라가니 규칙으로 적을 수 있으면 filter/take 가 먼저다. 예: `[table:brief]{instruction: "3문장 보고", criteria: "종목명·수치 포함, items 에 없는 주장 없음"}`. ★`[engines:image_read]{op:"critic"}` 의 criteria 는 그 도구 자신의 입력(화면 심사 기준)이다 — 이 계약이 아니다.
 
 **상태 변수·블록-인-파이프·반환 (M6)** — 긴 프로그램이 파이썬처럼 상태를 들고 돈다:
 ```

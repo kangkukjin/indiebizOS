@@ -48,7 +48,7 @@
                                          criteria: "종목명·수치 포함, items 에 없는 주장 없음"}
 ```
 
-- 엔진 소유 런타임 메타 param — 핸들러에 도달하지 않고, 실행 직후 경량 판정자(기어, background)가 심사한다.
+- 엔진 소유 런타임 메타 param — 핸들러에 도달하지 않고, 실행 직후 판정자가 심사한다. 판정자의 모델 수준은 **기어의 평가 축**(role=evaluate — GoalEval 평가자와 같은 축)이 정한다: 절약·균형=경량, 최대=고급.
 - **미달 → 재시도 1회**(판정 사유를 instruction 에 얹어 재실행 — ai_call+instruction 선언 낱말만) → 재판정 → 그래도 미달이면 `error_type: "quality"` 실패. 트레이스백이 그 step 을 가리키고 `rejected_result` 에 미달 출력이 남는다.
 - 통과=`criteria_verdict: "pass"`, 재시도 통과=`pass_after_retry`+`_criteria_retried`(정직 표지 — 출처가 재시도본), 판정 불능=통과+`unjudged` 신고.
 - **비용**: step 당 판정 최대 2회+재실행 1회의 추가 원샷. 규칙으로 적을 수 있으면(행 수·필드 유무) filter/take/스키마 가드가 먼저다 — criteria 는 의미 품질 전용.

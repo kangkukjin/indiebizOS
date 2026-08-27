@@ -17,6 +17,8 @@ transport에 남는 것: 에피소드 start/end, thread_context 설정, event pu
 DB save_message, 태스크·세션·클라이언트 관리, 취소/타임아웃 처리.
 """
 
+import json
+
 from typing import Generator, Dict, Any, List, Optional
 
 
@@ -44,6 +46,52 @@ def _extract_map_tag_texts(text: str) -> List[str]:
         else:
             break
     return tags
+
+
+def _quality_of_result(rt: Any) -> tuple:
+    """도구 결과 봉투에서 criteria 재시도-통과 표지를 캔다 → (quality, feedback).
+
+    미달(fail)은 봉투 success:false 라 성공 판정이 이미 거르므로 여기서는
+    pass_after_retry 만 찾는다 — 첫 지시가 기준 미달이었다는 사실과 그 사유
+    (criteria_feedback)를 증류의 반성 프롬프트로 나르기 위함이다
+    (docs/IBL_QUALITY_CONTRACT_HANDOFF.md). 표지는 마킹된 결과 dict(단독 실행)
+    또는 파이프 봉투의 results[] step 기록(_quality_meta 승격)에 산다.
+    실패는 조용히 (None, None) — 여기서 턴을 깨지 않는다.
+    """
+    try:
+        s = rt if isinstance(rt, str) else json.dumps(rt, ensure_ascii=False, default=str)
+        if "pass_after_retry" not in s:
+            return None, None
+
+        def _probe(obj):
+            if not isinstance(obj, dict):
+                return None
+            if obj.get("criteria_verdict") == "pass_after_retry" or obj.get("_criteria_retried"):
+                return obj.get("criteria_feedback") or ""
+            return None
+
+        obj = json.loads(s) if isinstance(rt, str) else rt
+        if not isinstance(obj, dict):
+            return None, None
+        fb = _probe(obj)
+        if fb is None:
+            for r in (obj.get("results") or []):
+                fb = _probe(r)
+                if fb is not None:
+                    break
+        if fb is None:
+            fr = obj.get("final_result")
+            if isinstance(fr, str) and fr.lstrip().startswith("{"):
+                try:
+                    fr = json.loads(fr)
+                except Exception:
+                    fr = None
+            fb = _probe(fr)
+        if fb is None:
+            return None, None
+        return "pass_after_retry", (fb or None)
+    except Exception:
+        return None, None
 
 
 def drain_stream(gen) -> Dict[str, Any]:
@@ -359,6 +407,15 @@ class CognitivePipelineMixin:
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err
+                        # criteria 재시도-통과 표지를 증류로 나른다(품질 계약 셋째 신호).
+                        # 미달(fail)은 봉투 success:false → 위 판정이 이미 거른다. 재시도
+                        # 통과는 success 지만 첫 지시가 약했다는 사실 — 증류가 이걸 모르면
+                        # 약한 지시가 그대로 코퍼스에 들어간다(복리 출혈의 품질판).
+                        _q, _fb = _quality_of_result(_rt)
+                        if _q:
+                            tool_calls_log[_idx]["quality"] = _q
+                            if _fb:
+                                tool_calls_log[_idx]["quality_feedback"] = _fb
 
         try:
             from thread_context import clear_tool_calls as _clear_tc

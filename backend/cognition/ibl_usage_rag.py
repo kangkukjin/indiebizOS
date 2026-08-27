@@ -657,7 +657,14 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         return False
 
     # 성공한 IBL 호출만 필터 (점수 게이트의 회상 사용 판정도 이 목록을 씀)
+    # ★품질 계약(criteria)과의 접속: 미달(fail) 호출은 봉투 success:false 라
+    #   이 필터가 이미 거른다(agent_pipeline 이 is_error_result 로 재판정).
+    #   재시도-통과(pass_after_retry)는 성공이지만 *첫 지시가 약했다* 는 사실 —
+    #   그대로 증류하면 약한 지시가 코퍼스에 들어가므로, 반성 프롬프트에 미달
+    #   사유를 먹여 개선된 지시로 일반화하게 한다(품질 계약 셋째 신호,
+    #   docs/IBL_QUALITY_CONTRACT_HANDOFF.md §6).
     ibl_calls = []
+    retry_notes = []
     for tc in tool_calls:
         if not isinstance(tc, dict):
             continue
@@ -669,6 +676,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         code = tc.get("input", {}).get("code", "")
         if code:
             ibl_calls.append(code)
+            if tc.get("quality") == "pass_after_retry":
+                fb = tc.get("quality_feedback")
+                retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
 
     if not ibl_calls:
         return False
@@ -685,6 +695,13 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     # 증류: 실행 에이전트와 같은 모델로 반성
     try:
         tool_log = "\n".join(f"  {i+1}. {code}" for i, code in enumerate(ibl_calls))
+        retry_block = ""
+        if retry_notes:
+            retry_block = ("\n\n다음 코드는 첫 실행이 criteria 기준 미달로 판정돼 "
+                           "재시도 후에야 통과했다:\n" + "\n".join(retry_notes) +
+                           "\n→ 용례를 만들 때 instruction 을 미달 사유가 재발하지 않게 "
+                           "다듬어라 — 재시도 비용을 물지 않는 지시가 좋은 용례다. "
+                           "criteria 파라미터 자체는 보존하라(품질 계약).")
 
         prompt = f"""다음은 사용자 명령과 그에 대해 실행된 IBL 코드 목록이다.
 이 경험에서 핵심 패턴을 추출하여 용례로 만들어라.
@@ -692,7 +709,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
 사용자 명령: {user_message}
 
 실행된 IBL 코드:
-{tool_log}
+{tool_log}{retry_block}
 
 규칙:
 1. 사용자 명령을 일반화하라 (고유명사는 유지하되, 패턴으로서 재사용 가능하게)

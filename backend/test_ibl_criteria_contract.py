@@ -181,6 +181,34 @@ def c8_honesty():
           str(m))
 
 
+def c9_distill_exclusion_chain():
+    print("C9. 증류 배제 사슬 — quality 실패 봉투는 is_error_result=True")
+    from ibl.workflow_engine import is_error_result
+    fail = {"success": False, "error": "criteria 미달: x", "criteria_verdict": "fail"}
+    check("dict 실패 판정", is_error_result(fail) is True)
+    check("JSON 문자열 실패 판정", is_error_result(json.dumps(fail, ensure_ascii=False)) is True)
+
+
+def c10_quality_of_result():
+    print("C10. 증류 셋째 신호 — 재시도-통과 표지 추출")
+    from agent_pipeline import _quality_of_result
+    # 단독 실행: 마킹된 결과 dict (JSON 문자열)
+    single = json.dumps({"success": True, "message": "보고", "criteria_verdict": "pass_after_retry",
+                         "criteria_feedback": "수치 누락", "_criteria_retried": True},
+                        ensure_ascii=False)
+    q, fb = _quality_of_result(single)
+    check("단독 결과에서 추출", q == "pass_after_retry" and fb == "수치 누락", f"{q}, {fb}")
+    # 파이프 봉투: results[] step 기록(_quality_meta 승격 모양)
+    env = json.dumps({"success": True, "results": [
+        {"step": 1, "node": "table", "action": "brief",
+         "criteria_verdict": "pass_after_retry", "criteria_feedback": "3문장 초과"}],
+        "final_result": "보고"}, ensure_ascii=False)
+    q2, fb2 = _quality_of_result(env)
+    check("파이프 봉투에서 추출", q2 == "pass_after_retry" and fb2 == "3문장 초과", f"{q2}, {fb2}")
+    # 표지 없는 성공 — (None, None)
+    check("무표지=무신호", _quality_of_result('{"success": true, "items": []}') == (None, None))
+
+
 def _battery():
     c1_pass()
     c2_nonai_fail()
@@ -190,6 +218,8 @@ def _battery():
     c6_retry_fail()
     c7_declared_collision()
     c8_honesty()
+    c9_distill_exclusion_chain()
+    c10_quality_of_result()
 
 
 def test_criteria_배터리_전건이_pytest_에도_보인다():

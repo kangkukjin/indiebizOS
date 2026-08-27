@@ -35,6 +35,13 @@ class IBLRequest(BaseModel):
                                        # 소리·저장 같은 "어디서 나야 하는가"의 판정 축 — 실행하는 몸이
                                        # 아니라 보고 있는 표면이 정한다(thread_context.set_current_surface).
                                        # 데스크탑 일렉트론은 맥 자신이라 보내지 않는다(= 맥 재생이 곧 여기서 재생).
+    ticket: Optional[str] = None       # ★표면 티켓(F51-1, 2026-08-27) — 표면의 HTTP 대기가 실행보다
+                                       # 먼저 끊겨도 최종 봉투를 잃지 않는 통로. 실리면 시작·결말을
+                                       # data/spill/ 에 남기고(/ibl/recover 로 회수), hex 8~32자만
+                                       # 받는다(네트워크 값이 파일명이 된다 — common.spill.valid_ticket).
+                                       # agent_id·task_id 와 같은 **전송 계층 필드**라 도구 스키마
+                                       # (tool_loader)에는 없는 것이 맞다(B23-1 드리프트 아님 —
+                                       # 모델이 아니라 표면(mcp_server)이 생성·소비한다).
 
 
 class EmbedRequest(BaseModel):
@@ -79,6 +86,14 @@ class DistillRequest(BaseModel):
 
 @router.post("/execute")
 async def execute_ibl_code(req: IBLRequest):
+    # 표면 티켓(F51-1) — 시작 표식은 실행 전에, 결말 표식은 모든 출구(성공 2·예외 1)에서.
+    # 검증은 try 밖: 형식 오류는 실행 이전의 요청 결함이라 400 이 맞고, 아래 except 가
+    # HTTPException 을 500 으로 다시 싸는 것을 피한다.
+    from common.spill import valid_ticket, ticket_begin, ticket_finish
+    if req.ticket is not None and not valid_ticket(req.ticket):
+        raise HTTPException(status_code=400, detail="ticket 형식은 hex 8~32자입니다.")
+    if req.ticket:
+        ticket_begin(req.ticket)
     try:
         # project_id가 오면 절대경로로 해소해 project_path로 넘긴다 (해소 우선순위 1 — race 없음).
         # 활성 프로젝트 컨텍스트가 없는 수동/앱 모드 호출이 프로젝트 경로를 확보하는 통로.
@@ -166,6 +181,8 @@ async def execute_ibl_code(req: IBLRequest):
             try:
                 result = json.loads(result)
             except json.JSONDecodeError:
+                if req.ticket:
+                    ticket_finish(req.ticket, {"result": result})
                 return {"result": result}
         # 단일 통화 정규화 — 이 엔드포인트가 *렌더러 경계*(앱/수동/원격/폰 표면이 모두
         # /ibl/execute 로 들어옴, 에이전트의 내부 execute_ibl 은 안 거침). 여기서 옛 형태
@@ -179,9 +196,32 @@ async def execute_ibl_code(req: IBLRequest):
         # 비어 있어(위에서 system_ai 로 채워지기 *전* 값 기준) 결정론 결과가 오염되지 않는다.
         from common.value_semantics import public_result
         envelope = _attach_steer(derive_items(result), req.agent_id)
-        return public_result(envelope, producer="POST /ibl/execute")
+        out = public_result(envelope, producer="POST /ibl/execute")
+        if req.ticket:
+            # 표면(HTTP 클라이언트)이 이미 끊겼어도 이 핸들러는 완주한다 — 봉투는 여기 남는다.
+            ticket_finish(req.ticket, out)
+        return out
     except Exception as e:
+        if req.ticket:
+            # 실패도 결말이다 — running 으로 영영 남으면 회수자가 "아직 도는 중"으로 오독한다.
+            ticket_finish(req.ticket, {"success": False, "error": str(e)})
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class RecoverRequest(BaseModel):
+    """표면 티켓 회수(F51-1) — 표면 대기가 끊긴 실행의 최종 봉투를 되찾는다."""
+    ticket: str
+
+
+@router.post("/recover")
+async def recover_ibl_result(req: RecoverRequest):
+    """티켓의 결말을 묻는다 — done(원 봉투)/running(진행 중)/unknown(만료 또는 미탑재).
+
+    실행이 아니라 조회라 가볍고 유한하다: 어떤 길이의 실행도 '유한 대기의 반복'으로
+    덮는 것이 이 규약의 요지다(무한 대기 금지 — 틀린 대기가 틀린 쓰기보다 싸도,
+    안 끝나는 대기는 표면을 인질로 잡는다)."""
+    from common.spill import ticket_recover
+    return ticket_recover(req.ticket)
 
 
 def _attach_steer(envelope, explicit_agent_id: str):

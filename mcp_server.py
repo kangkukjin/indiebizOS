@@ -243,7 +243,28 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
     except urllib.error.HTTPError as e:
         return json.dumps({"error": e.read().decode()})
     except Exception as e:
+        # ★타임아웃은 다른 실패와 다른 사건이다(F51-1): 실행은 백엔드에서 계속 돌고
+        #   결말 봉투는 티켓으로 남는다. 뭉개면 호출자가 "실행이 죽었다"로 오독한다.
+        #   read 타임아웃=TimeoutError(socket.timeout), connect 타임아웃=URLError(reason=...).
+        _reason = getattr(e, "reason", None)
+        if isinstance(e, TimeoutError) or isinstance(_reason, TimeoutError):
+            return json.dumps({"error": "timed out", "_surface_timeout": True,
+                               "_timeout_s": timeout})
         return json.dumps({"error": str(e)})
+
+
+def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
+    """표면 대기가 끊겼을 때의 정직한 봉투(F51-1) — '죽었다'가 아니라 '기다림이 끝났다'.
+
+    실행은 백엔드에서 계속 돌고, 최종 봉투는 티켓(data/spill/, 24h)으로 남는다.
+    회수는 유한 대기의 반복이라 어떤 길이의 실행도 덮는다."""
+    return json.dumps({
+        "success": False, "surface_timeout": True, "ticket": ticket,
+        "error": (f"표면 대기({timeout_s}초)가 실행보다 먼저 끝났습니다 — 실행은 백엔드에서 "
+                  "계속 돌고 있고, 결과 봉투는 잃지 않습니다."),
+        "note": (f'회수: execute_ibl{{code: "", recover: "{ticket}"}} — 완료면 원 봉투가, '
+                 "아직 돌고 있으면 진행 상태가 옵니다(보관 24h). 완료를 기다렸다 다시 부르세요."),
+    }, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -251,6 +272,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       resume: Optional[dict] = None,
                       files: Optional[List[str]] = None,
                       verbose: bool = False,
+                      recover: Optional[str] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -268,6 +290,10 @@ async def execute_ibl(code: str, project_path: str = "",
         다시 돈다(앞 단 재실행 없음, 스필 24h 유효).
     files: 긴 텍스트/코드를 IBL 파서 밖에서 전달. 코드에서 $file:0, $file:1 로 참조.
     verbose: 파이프 봉투 results[] 를 step 원형으로 받는다(기본 false = step 요약).
+    recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
+        (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
+        기록 없음이면 만료(24h)/미탑재를 정직하게 알린다. 긴 실행은 완료까지
+        이 회수를 반복하면 된다(F51-1: 표면 대기가 끊겨도 결과는 잃지 않는다).
 
     ★2026-08-22 B23-1: 이 셋은 도구 스키마(tool_loader)와 엔진에는 있었는데 이 MCP 표면에만
     없어서, 봉투 note 가 안내하는 대로 보낸 resume 이 조용히 사라졌다. 표면은 도구 스키마와
@@ -294,16 +320,34 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["task_id"] = task_id  # 태스크 컨텍스트 복원 (시스템 AI cross 위임 체인)
     if origin:
         payload["origin"] = origin  # 태스크 출처 복원 — 원장 행위자·자기수정 게이트 축
-    raw = await anyio.to_thread.run_sync(
-        lambda: _post_backend("/ibl/execute", payload, 120)
-    )
+    if recover:
+        # 회수 경로(F51-1) — 실행이 아니라 조회. 신원·payload 는 필요 없다.
+        raw = await anyio.to_thread.run_sync(
+            lambda: _post_backend("/ibl/recover", {"ticket": recover}, 30)
+        )
+    else:
+        # 표면 티켓(F51-1) — 아래 대기(120초)가 실행보다 먼저 끝나도 백엔드가 이 티켓으로
+        # 최종 봉투를 남긴다(data/spill/, 24h). hex 12자 = api_ibl 의 valid_ticket 계약.
+        import uuid
+        ticket = uuid.uuid4().hex[:12]
+        payload["ticket"] = ticket
+        raw = await anyio.to_thread.run_sync(
+            lambda: _post_backend("/ibl/execute", payload, 120)
+        )
+        try:
+            if isinstance(raw, str) and json.loads(raw).get("_surface_timeout"):
+                raw = _surface_timeout_envelope(ticket, 120)
+        except Exception:
+            pass
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)
     text = _trim_for_agent(cleaned)
     # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
-    guard_key = agent_id or task_id or "stdio"
-    text += _repeat_advisory(guard_key, f"{code.strip()}|{effective_path}")
+    # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
+    if not recover:
+        guard_key = agent_id or task_id or "stdio"
+        text += _repeat_advisory(guard_key, f"{code.strip()}|{effective_path}")
     if images:
         import base64 as _b64
         from mcp.server.fastmcp import Image as _McpImage

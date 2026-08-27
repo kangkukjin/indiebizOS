@@ -463,10 +463,25 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             tail = [dict(st) if isinstance(st, dict) else st for st in parsed[from_step - 1:]]
             # 앞 단을 참조하는 $변수({{_step_N_result}}·_vars N < from_step-1)가 남아 있으면 정직 거절 — 빈 값 치환은 침묵 오답
             blob = json.dumps(tail, ensure_ascii=False)
-            early = sorted({int(m) for m in re.findall(r"\{\{_step_(\d+)_result", blob) if int(m) < from_step - 1})
+            from workflow_binding import step_ref_indices
+            from ibl_parser import BORN_SLOT_BASE
+            _refs = step_ref_indices(blob)                       # 자리표 정규식은 주인 모듈 한 벌 (49회차 후속)
+            early = sorted({n for n in _refs if n < from_step - 1})
             for st in tail:
                 if isinstance(st, dict):
                     early += [int(ix) for ix in (st.get("_vars") or {}).values() if int(ix) < from_step - 1]
+            # ★V49-1 후속: 블록 몸에서 태어난 이름은 팬텀 슬롯(>= BORN_SLOT_BASE)이라 위의
+            #   "인덱스가 앞이냐" 비교에 안 걸린다. 그 슬롯을 **낳는 블록이 tail 안에 없으면**
+            #   재개해도 그 변수는 영영 안 채워진다 — 정직 거절이 옳다(빈 값 치환 금지와 같은 이유).
+            _born_here = set()
+            for st in tail:
+                if isinstance(st, dict):
+                    _born_here |= {int(v) for v in (st.get("_born_vars") or {}).values()}
+            _orphan = sorted({n for n in _refs if n >= BORN_SLOT_BASE} - _born_here)
+            if _orphan:
+                return json.dumps({"error": "resume 불가 — step %d 이후가 앞선 블록이 낳은 $변수를 "
+                                            "참조하는데 그 블록은 재실행되지 않습니다. 처음부터 다시 실행하세요."
+                                            % from_step}, ensure_ascii=False)
             if early:
                 return json.dumps({"error": f"resume 불가 — step {from_step} 이후가 재실행하지 않는 앞 단(step {sorted(set(x + 1 for x in early))})의 $변수를 참조합니다. 처음부터 다시 실행하세요."}, ensure_ascii=False)
             if isinstance(tail[0], dict):

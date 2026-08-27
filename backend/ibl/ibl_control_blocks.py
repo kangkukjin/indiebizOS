@@ -13,7 +13,7 @@ from common.currency import currency_shape_note
 from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
                            _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
 # 경계가 떨군 변수의 신고 (B49-2) — 잎 모듈에 두어 ibl_executors 의 분기 실행기와 한 벌을 쓴다.
-from ibl_honesty import note_vars_dropped as _note_vars_dropped
+from ibl_honesty import note_vars_dropped as _note_vars_dropped, var_updates_from, merge_into
 
 import copy as _copy
 import time as _time
@@ -196,8 +196,14 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
         if not isinstance(out, dict):
             out = {"result": out}
         out.setdefault("_caught", caught_meta)
-    # try/catch 몸의 할당은 추적 슬롯이 아예 없다 — 전량이 경계에서 떨어진다 (B49-2)
-    out = _note_vars_dropped(out, [body, catch] if caught_meta is not None else body)
+    # ★V49-1: 몸(또는 실제로 탄 catch)이 할당한 이름을 바깥으로 되쓴다. B49-2 의 표지는
+    #   남되, 이제 *못 나간 것만* 말한다(중첩 블록 안에서 태어난 이름 등).
+    _ran = catch if caught_meta is not None else body
+    _ups = var_updates_from(_ran, out)
+    if _ups and isinstance(out, dict):
+        out.setdefault("_var_updates", _ups)
+    out = _note_vars_dropped(out, [body, catch] if caught_meta is not None else body,
+                             kept=set(_ups))
     return out
 
 
@@ -265,19 +271,27 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         nonlocal skipped_rounds
         if not rep:
             return
-        if rep.get("truncated") is True:
-            carried["truncated"] = True
-        sk = rep.get("skipped_steps")
-        if isinstance(sk, list) and sk:
+        if isinstance(rep.get("skipped_steps"), list) and rep["skipped_steps"]:
             skipped_rounds += 1
-            carried.setdefault("skipped_steps", []).extend(
-                [{"iteration": round_no, "step": s} for s in sk])
-        for key in ("condition_errors", "_caught"):
-            v = rep.get(key)
-            if isinstance(v, list) and v:
-                carried.setdefault(key, []).extend(
-                    [{**e, "iteration": round_no} if isinstance(e, dict) else {"iteration": round_no, "detail": e}
-                     for e in v])
+        # ★표지 이름을 여기서 **손으로 열거하지 않는다** (관문 check_honesty_propagation).
+        #   옛 판은 truncated·skipped_steps·condition_errors·_caught **넷만** 걷어, 나머지
+        #   표지(error_count·errors·rows_replaced·passthrough_rows·branches_failed·halted·
+        #   _fallback_used·vars_dropped…)가 repeat **회차 경계**에서 조용히 사라졌다 —
+        #   B27-4 가 고쳤다고 여긴 자리에 남아 있던 잔당이다. 목록은 HONESTY_KEYS 한 벌이라
+        #   앞으로 표지를 늘리면 이 경계가 저절로 따라온다.
+        _round: Dict[str, Any] = {}
+        merge_into(rep, _round)
+        for _k, _v in _round.items():
+            if isinstance(_v, list):
+                carried.setdefault(_k, []).extend(
+                    [{**e, "iteration": round_no} if isinstance(e, dict)
+                     else {"iteration": round_no, "detail": e} for e in _v])
+            elif isinstance(_v, bool):
+                carried[_k] = _v
+            elif isinstance(_v, (int, float)):
+                carried[_k] = (carried.get(_k) or 0) + _v
+            else:
+                carried[_k] = _v
 
     cur_vars = dict(outer_vars)
     body_len = len(body) if isinstance(body, list) else 1
@@ -320,7 +334,12 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 collected.extend(d)
             elif d is not None:
                 collected.append(d)
-        cur_vars = {**outer_vars, **{n: by_idx.get(int(ix), "") for n, ix in body_vars.items()}}
+        # ★V49-1: 값을 **실제로 받은** 이름만 싣는다. 종전 `.get(ix, "")` 는 안쪽 파이프가
+        #   그 인덱스를 안 냈을 때(중첩 블록에서 태어난 이름은 안쪽 step_results 에 있고
+        #   results[] 에는 없다) 빈 문자열을 값으로 삼아, 못 건진 변수가 "" 로 밖에 나갔다.
+        #   빠뜨리면 _upd 에서도 빠지고 vars_dropped 가 그 사실을 말한다.
+        cur_vars = {**outer_vars,
+                    **{n: by_idx[int(ix)] for n, ix in body_vars.items() if int(ix) in by_idx}}
         if mode == "until":
             try:
                 ok, _ = evaluate(cond, _resolve, cur_vars)
@@ -366,7 +385,12 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         elif halted == "budget":
             notes.append(f"하위 step 예산 {_REPEAT_MAX_SUBSTEPS} 초과로 중단")
     # 몸이 재할당한 바깥 변수의 최종값 — 바깥 파이프가 step_results 에 되쓴다(루프 뒤 `$n` 이 최신값).
-    _upd = {n: cur_vars[n] for n in body_vars if n in (tool_input.get("_var_values") or {}) and n in cur_vars}
+    # ★V49-1: 되쓸 슬롯이 있으면 되쓴다 — 바깥에 이미 있던 이름(_var_values)이든, 파서가
+    #   몸의 출생에 발급한 팬텀 슬롯(_vars/_born_vars)이든. 종전엔 앞의 것만 봐서 몸에서
+    #   태어난 이름이 경계에서 사라졌다.
+    _slots = tool_input.get("_vars") or {}
+    _outer = tool_input.get("_var_values") or {}
+    _upd = {n: cur_vars[n] for n in body_vars if n in cur_vars and (n in _outer or n in _slots)}
     if _upd:
         out["_var_updates"] = _upd
     # 되쓸 슬롯이 없어 떨군 이름은 조용히 두지 않는다 (B49-2) — 바깥에 없던 이름은

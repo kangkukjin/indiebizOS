@@ -118,6 +118,32 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
     statements, assign_names = _m_stmts, _m_names
 
     all_steps = []
+    # ★V49-1 (49회차 상상훈련 · 사용자 판정 A, 2026-08-27): **블록은 스코프를 만들지 않는다.**
+    #   종전엔 바깥에 *이미 있던* 이름의 재할당만 블록 밖으로 나가고(`_var_updates` 는 되쓸
+    #   step_results 슬롯이 있어야 쓴다), 몸에서 **태어난** 이름은 슬롯이 없어 통째로 사라졌다
+    #   — 어떤 스코프 모델로도 설명 안 되는 비대칭이었다(파이썬이면 둘 다 나가고, 블록
+    #   스코프면 둘 다 못 나간다). 처방: 태어난 이름에도 바깥 슬롯을 준다. 실제 step 이 없는
+    #   이름이므로 step 인덱스 공간과 겹치지 않는 **팬텀 슬롯**을 발급한다.
+    #   ★바깥에 같은 이름이 이미 있으면 발급하지 않는다 — 그건 재할당이고, 기존 M6 계약
+    #     (`$n = 0` 뒤 `[repeat:]{$n = $n + 1}`)이 쓰는 진짜 슬롯을 빼앗으면 안 된다.
+    _born_seq = [0]
+
+    def _register_born(blk_step: dict) -> None:
+        from ibl_honesty import assigned_in_body
+        # 블록 자신의 `_assign_name`($x = [if:…]{…})은 제외 — 그건 문장 단위 할당 경로가 이미 맡는다.
+        names = assigned_in_body({k: v for k, v in blk_step.items() if k != "_assign_name"})
+        born = {}
+        for n in names:
+            if n in variables:
+                continue          # 재할당 — 바깥 슬롯을 그대로 쓴다(M6 불변)
+            born[n] = BORN_SLOT_BASE + _born_seq[0]
+            _born_seq[0] += 1
+            variables[n] = born[n]
+        if born:
+            blk_step["_born_vars"] = born
+            # `_vars` 에도 실어야 실행기가 어디에 되쓸지 안다(workflow_engine 의 _var_updates 배선).
+            blk_step["_vars"] = {**(blk_step.get("_vars") or {}), **born}
+
     # 변수명 → 그 변수가 할당된 문장의 *최종* step 인덱스 (파이프라인이면 마지막 step).
     # 문장이 step 으로 펼쳐진 *뒤* 채워지므로, 뒤 문장의 $var 참조가 정확한 인덱스로
     # 치환된다({{_step_N_result}} — 실행기가 step 별 결과를 저장해 치환. D4).
@@ -169,6 +195,7 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             all_steps.append(blk)
             if assign_names[_stmt_idx]:
                 variables[assign_names[_stmt_idx]] = len(all_steps) - 1
+            _register_born(blk)                                   # V49-1: 몸에서 태어난 이름도 밖으로
             continue
         # 파이프 문법 설탕(| where:/sort:/take:/select:/dedup:)을 >> [table:동사] 로 desugar.
         # 의미는 engines 변환자에 이미 있고, 이건 빈도 높은 단항 변환자의 짧은 문법 표면.
@@ -201,6 +228,8 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             if _stmt_idx > 0 and idx == 0:
                 parsed["_seq_boundary"] = True
             all_steps.append(parsed)
+            if _is_block_step(parsed):
+                _register_born(parsed)                            # V49-1: 파이프 속 블록도 같은 규칙
         if _on_err:
             for _st in all_steps[_stmt_start:]:
                 _st["_on_error"] = _on_err
@@ -288,6 +317,11 @@ _register_parse_vars(parse_with_vars)
 
 # [on_error: stop|skip|null] 문장 접두 (M3)
 _ON_ERROR_RE = re.compile(r'^\s*\[on_error:\s*(stop|skip|null)\s*\]\s*', re.I)
+
+#: 블록 몸에서 **태어난** $변수에 발급하는 팬텀 슬롯의 시작 번호 (V49-1, 2026-08-27).
+#: 실제 step 인덱스는 문장 수만큼만 자라므로 이 위는 영구히 비어 있다 — 슬롯 공간을
+#: 나누는 것으로 "실행된 step 의 결과"와 "블록이 낳은 값"이 같은 사전에 섞여도 안 부딪친다.
+BORN_SLOT_BASE = 1_000_000
 
 
 _STEP_PATTERN = re.compile(

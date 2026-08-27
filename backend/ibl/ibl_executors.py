@@ -222,8 +222,16 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     prev = _prev_of(tool_input)
     # ★B49-2(49회차): 분기 몸의 할당은 되쓸 슬롯이 없어 경계에서 전량 떨어진다.
     #   치환 전 원본에서 이름을 걷는다(치환이 모양을 바꾸기 전에).
-    from ibl_honesty import note_vars_dropped as _note_vars_dropped
+    from ibl_honesty import note_vars_dropped as _note_vars_dropped, var_updates_from
     _body_src = action
+
+    def _carry(out):
+        """분기 몸의 할당을 바깥으로 (V49-1) — 되쓸 값은 봉투에, 못 나간 것만 표지로."""
+        ups = var_updates_from(_body_src, out)
+        if ups and isinstance(out, dict):
+            out.setdefault("_var_updates", ups)
+        return _note_vars_dropped(out, _body_src, kept=set(ups))
+
     try:
         action = _subst_var_refs(copy.deepcopy(action), tool_input.get("_var_values") or {})
     except ValueError as e:
@@ -232,16 +240,14 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
         from workflow_engine import execute_pipeline
         steps = [_nest(s, tool_input) for s in action]
         _stamp_var_values(steps, tool_input.get("_var_values") or {})
-        return _note_vars_dropped(
-            execute_pipeline(steps, project_path, agent_id=agent_id,
-                             context=({"_prev_result": prev} if prev else None)),
-            _body_src)
+        return _carry(execute_pipeline(steps, project_path, agent_id=agent_id,
+                                       context=({"_prev_result": prev} if prev else None)))
     from ibl_engine import execute_ibl
     from workflow_engine import _auto_inject_prev
     st = _nest(action, tool_input)
     if prev and isinstance(st, dict) and not st.get("_assign"):
         st = _auto_inject_prev(st, prev)
-    return _note_vars_dropped(execute_ibl(st, project_path, agent_id), _body_src)
+    return _carry(execute_ibl(st, project_path, agent_id))
 
 
 def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> Any:

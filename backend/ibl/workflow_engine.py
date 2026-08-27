@@ -375,8 +375,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 if step.get("_vars"):
                     step = dict(step)
                     # 바깥(스탬프)보다 이 파이프의 최신 결과가 우선 (M6: 안쪽 재할당)
+                    # ★V49-1: 아직 **기록되지 않은** 슬롯은 싣지 않는다. 종전엔 `.get(i, "")` 라
+                    #   슬롯이 비어 있어도 빈 문자열이 값으로 들어가, 안 탄 분기가 낳았어야 할
+                    #   변수(`[if: false]{$k = 7}` 뒤의 `$k`)가 "미할당"이 아니라 **빈 값**으로
+                    #   조건에 들어갔다 — 판정 불능이어야 할 자리가 조용히 거짓이 된다.
+                    #   빠뜨리면 술어 언어가 기존대로 정직하게 "미할당"을 신고한다.
                     step["_var_values"] = {**(step.get("_var_values") or {}),
-                                           **{n: step_results.get(int(i), "") for n, i in step["_vars"].items()}}
+                                           **{n: step_results[int(i)] for n, i in step["_vars"].items()
+                                              if int(i) in step_results}}
             except ValueError as e:
                 results.append({
                     "step": i + 1,
@@ -773,6 +779,22 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _seq["list_in_text"]:
         out["list_in_text"] = list(_seq["list_in_text"])
         _warns.append(_list_in_text_warning(_seq["list_in_text"]))
+    # ★F48-7 (48회차 상상훈련, 수리 2026-08-27): **표지의 승격 규칙을 한 벌로.**
+    #   종전엔 파이프 표지(_fallback_used·skipped_steps·halted…)만 최상위로 오르고,
+    #   마지막 step 이 낸 표지(error_count·errors·rows_replaced·passthrough_rows·rows_in·
+    #   truncated…)는 `final_result` **JSON 문자열** 안에만 살았다. 교재는 "보고 전에 이
+    #   키들을 확인하라"고 한 줄로 가르치는데 읽는 쪽은 두 규칙을 동시에 외워야 했다
+    #   (48회차 운용 실측: 이 턴의 계측기가 그걸 놓쳐 두 번 오독했다).
+    #   이제 통화 안의 표지도 봉투 최상위로 올린다 — 걷는 쪽은 `HONESTY_KEYS` 한 벌
+    #   (markers_of)이라 표지를 늘려도 승격이 자동으로 따라온다.
+    #   ★통화(final_result)는 건드리지 않는다 — 복사만 한다(하류 계약 불변).
+    _promoted = _honesty_markers_of(prev_result)
+    _new = [k for k in _promoted if k not in out]
+    for _k in _new:
+        out[_k] = _promoted[_k]
+    if _new:
+        _warns.append("마지막 통화가 부분 실패·절단을 신고했습니다(" + ", ".join(sorted(_new)) +
+                      ") — success 만 보고 '다 됐다'로 읽지 말 것.")
     if _warns:
         out["warning"] = " / ".join(_warns)
     return out

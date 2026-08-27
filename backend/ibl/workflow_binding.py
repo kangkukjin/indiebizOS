@@ -41,6 +41,17 @@ def blank_step_refs(text: str, repl: str = "1") -> str:
     return _STEP_RESULT_RE.sub(repl, text or "")
 
 
+def step_ref_indices(text: str) -> set:
+    """텍스트가 참조하는 `{{_step_N_result}}` 의 인덱스 집합.
+
+    자리표를 읽어야 하는 곳이 정규식을 손으로 다시 적으면 방언이 갈린다 — 실측으로
+    세 벌이 있었다(이 모듈의 `_STEP_RESULT_RE`, api_ibl 의 재파싱 재시도, resume 진단의
+    `r"\\{\\{_step_(\\d+)_result"`). 마지막 것은 닫는 괄호를 안 봐서 `{{_step_1_resultXYZ`
+    같은 것도 집었다. 발견은 이 함수, 지우기는 `blank_step_refs` — 자리표의 주인은 하나다.
+    """
+    return {int(m.group(1)) for m in _STEP_RESULT_RE.finditer(text or "")}
+
+
 def _extract_result_field(raw: str, path: str) -> str:
     """저장된 step 결과 문자열에서 .field.path 를 추출해 스칼라 문자열로.
 

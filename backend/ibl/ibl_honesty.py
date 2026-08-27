@@ -64,9 +64,52 @@ def assigned_in_body(body: Any) -> list:
             n = b.get("_assign_name") or (b.get("name") if b.get("_assign") else None)
             if isinstance(n, str) and n and n not in out:
                 out.append(n)
+            # ★값으로도 내려간다 — 몸은 평탄하지 않다. `[if:]` 의 할당은 blk 자신이 아니라
+            #   `branches[].action` 안에 있고, `[try]` 는 body/catch/finally 아래에 있다.
+            #   49회차 판(내려가지 않음)은 평탄한 몸(repeat 의 step 리스트·단일 action dict)만
+            #   맞아서 구멍이 안 보였다 — 파서가 블록 통째로 물어 오자 이름 0개가 나왔다.
+            for v in b.values():
+                if isinstance(v, (list, dict)):
+                    _walk(v)
 
     _walk(body)
     return out
+
+
+def var_updates_from(body: Any, out: Any) -> Dict[str, Any]:
+    """블록 몸이 할당한 이름 → **되쓸 값 문자열** (★V49-1, 사용자 판정 A 2026-08-27).
+
+    블록이 스코프를 만들지 않으려면 경계가 "무엇이 할당됐고 그 값이 무엇인지"를 바깥에
+    돌려줘야 한다. `assigned_in_body` 의 짝 — 저쪽은 *이름만*, 이쪽은 *이름과 값*.
+
+    값의 모양은 문장 단위 할당과 **같은 규약**이다: 그 할당 step 의 결과를 직렬화한 문자열
+    (`step_results[N]` 에 들어가는 것과 동형). 그래야 `$k` 참조가 v4 추출을 똑같이 타고,
+    블록 안에서 태어났는지 밖에서 태어났는지가 읽는 쪽에 보이지 않는다.
+
+    body 가 단일 dict 면 out 자체가 그 변수의 값이고, list(파이프)면 out 봉투의
+    `results[]` 에서 step 별로 집는다(`_run_body` 의 by_idx 와 같은 배선).
+    """
+    import json as _json
+
+    def _ser(v: Any) -> str:
+        return v if isinstance(v, str) else _json.dumps(v, ensure_ascii=False, default=str)
+
+    ups: Dict[str, Any] = {}
+    if isinstance(body, dict):
+        n = body.get("_assign_name")
+        if isinstance(n, str) and n:
+            ups[n] = _ser(out)
+    elif isinstance(body, list):
+        by = {}
+        if isinstance(out, dict):
+            for r in (out.get("results") or []):
+                if isinstance(r, dict) and isinstance(r.get("step"), int) and "result" in r:
+                    by[r["step"] - 1] = r["result"]
+        for i, s in enumerate(body):
+            n = s.get("_assign_name") if isinstance(s, dict) else None
+            if isinstance(n, str) and n and i in by:
+                ups[n] = _ser(by[i])
+    return ups
 
 
 def note_vars_dropped(out: Any, body: Any, kept: Any = ()) -> Any:

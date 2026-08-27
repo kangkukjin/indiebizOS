@@ -305,6 +305,23 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 동시성 규율 OK ✓"
 fi
 
+# 정직 표지 전파 — 부분 실패의 *사실*을 나르는 봉투 키의 정본은 HONESTY_KEYS 한 벌이다.
+# 경계마다 표지를 손으로 열거하면 빠진 키가 그 경계에서 조용히 사라진다(B24-1·B27-4·
+# F35-1·B48-1·B48-2 — 같은 속으로 다섯 번). 여섯 번째 회차 대신 탄생을 차단한다.
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_honesty_propagation\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 정직 표지 전파 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_honesty_propagation.py"; then
+    echo "" >&2
+    echo "[pre-commit] 정직 표지 전파 — 커밋 차단." >&2
+    echo "[pre-commit]   • 표지 목록은 backend/ibl/ibl_honesty.py 의 HONESTY_KEYS 하나" >&2
+    echo "[pre-commit]   • 걷기는 markers_of/merge_into 위임, 불가피하면 \`# hp-ok: <사유>\`" >&2
+    echo "[pre-commit]   • 새 전파 경계는 BOUNDARY_FILES 에 등록" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 정직 표지 전파 OK ✓"
+fi
+
 # 은퇴 계약 잔재 — 낱말의 뜻을 바꾸면 카탈로그·파생물만이 아니라 코드 안의 문장
 # (핸들러 오류 문구·독스트링·가이드 산문)까지 따라와야 한다. 47회차가 flatten 의
 # `each >> flatten` 은퇴를 카탈로그에서만 집행해 런타임 문구가 옛 계약을 계속 가르쳤다.

@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-08-25
+last_updated: 2026-08-28
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -134,10 +134,11 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/stop` - 자동응답 중지
 
 ### IBL 실행·번역 (/ibl) — api_ibl.py
-- `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트)
+- `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트) · `POST /ibl/recover`(표면 티켓 회수 — 아래)
 - **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
 - **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
 - **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
+- **표면 티켓 회수 규약**(2026-08-27 F51-1): 표면(MCP 등)이 `ticket`(hex 12자, 전송 계층 필드)을 실어 보내면 백엔드가 시작·결말 봉투를 `data/spill/` 에 남긴다(24h GC 동승). 표면의 HTTP 대기가 먼저 끊겨도 그것은 "실행이 죽었다"가 아니라 **"기다림이 끝났다"** 이므로, 정직한 봉투(ticket + 회수법)를 돌려주고 결과는 `execute_ibl{recover}` → `POST /ibl/recover` 로 회수한다. 상태 셋(`done`/`running`/`unknown`)을 뭉개지 않는다. ★타임아웃 연장은 임시방편이다 — 어떤 한도든 더 긴 문장에 진다. 유한 대기의 반복이라야 어떤 길이의 실행도 덮는다. 티켓 검증은 hex 만 통과(네트워크 값이 파일명이 되는 자리 — 경로 탈출 차단). 가드 `backend/test_surface_ticket_recovery.py` T1~T8.
 - 실행은 워커 스레드에서 돈다(`asyncio.to_thread`) — 블로킹 핸들러가 이벤트 루프를 잡으면 그 대기를 풀어줄 요청 자체를 못 받아 자기교착한다.
 
 ### 몸 사이 소통 (/nodes) — api_nodes.py
@@ -227,6 +228,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **고급 AI 슬롯 (구 '본격' / 시스템 AI config 재사용)**: `data/system_ai_config.json`
 - **중급 AI 슬롯**: `data/midtier_ai_config.json`
 - **경량 AI 슬롯 (원샷=분류·평가·증류 등)**: `data/lightweight_ai_config.json`
+- **비전 슬롯 (`modality.image`, 2026-08-27)**: `data/vision_ai_config.json` — `{provider, model}` **데이터**(키는 `.env` 정본). 텍스트 4축 티어에는 비전이 없어 기어의 예약석을 실채운 자리다. `get_vision_provider()` 가 해소하고, 원샷(`oneshot`/`system_ai_call`)이 `images` 를 감지하면 **0차로 우선**한다 — GoalEval 의 시각 평가까지 같은 이음매를 타므로 프리셋과 무관하다. 미설정이면 `(None, 사유)` 를 돌려 role-축 프로바이더로 **정직하게 폴백**한다(새 설치가 조용히 깨지지 않는다). ★**벤더 이름이 코드에 박히면 그 모델의 은퇴가 곧 몸의 고장이다** — 실제로 구 하드코딩 모델의 은퇴 404 를 데이터 한 줄 교체로 흡수했다. 벤더 URL·키 직참조 금지는 관문(`test_vision_gear_contract`)이 지킨다. 정본 = `docs/MODEL_GEAR_DESIGN.md` 모달리티 절.
 - **스위치 목록**: `data/switches.json`
 - **프로젝트 목록**: `projects/projects.json`
 - **프로젝트 에이전트**: `projects/{id}/agents.yaml`
@@ -263,6 +265,8 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 ### Tool Result 절삭
 - **기본 한도**: 16KB — tool result가 이 크기를 초과하면 절삭
 - **파이프라인 시**: `_action_count × 16KB` 허용 (다중 액션 실행 시 비례 확장)
+- **계기: 결과천자**(2026-08-28) — 등록 스크립트 `에피소드통계` 가 에피소드별로 **모델이 도구 결과로 읽은 문자수**를 낸다. `tool_result` 줄의 보이는 몫 + 절단 표식 `(+N자)` 의 숨긴 글자수 = 정확값(로그 절단은 기록을 자른 것이지 모델이 받은 결과를 자른 게 아니다). 옛 `...` 행은 하한 표지 동반, 결과 줄이 없는 in-process 방언은 `None`(0 과 구분).
+- **왜 재는가**: 15일 실측에서 도구 실행은 총 시간의 한 자릿수 %이고 거의 전부가 모델 왕복인데, **왕복당 모델 시간이 읽는 양에 따라 20~28초로 움직였다** — 속도의 지렛대는 왕복 수가 아니라 읽은 문자수다. 처방은 목록·후보를 표 꼬리로 얇게 흘리고 원문 정독은 선별 통과분에만 하는 **읽기-접기**(내용 판단에 필요한 정독까지 접는 것은 아니다).
 
 ### 감각 전처리 (Sensory Preprocessing)
 - 액션 출력을 경량 AI로 압축해 컨텍스트 폭발을 막는 층. 코어 src 또는 패키지 `ibl_actions.yaml`의 `postprocess` 블록으로 액션별 선언
@@ -351,4 +355,4 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<current_context>` - 현재 컨텍스트 (이웃 정보, 근무지침, 비즈니스 문서, 대화 기록)
 
 ---
-*최근 변경(2026-08-25): 코어/패키지 어휘 소유권, 카탈로그·코퍼스·관측 인자 경계, 패키지 리로드 범위, THINK GoalEval/EXECUTE SelfReflect 및 평가 fail-open의 현행 의미를 기술. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-08-28): `/ibl/recover` 표면 티켓 회수 규약, 비전 슬롯(`modality.image`)의 벤더 중립화, Tool Result 절삭 절에 '결과천자' 계기 추가. 모델명·수치는 슬롯 설정과 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

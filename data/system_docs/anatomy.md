@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-08-25
+last_updated: 2026-08-28
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -60,6 +60,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   - **한 문장 = 한 프로그램 (2026-08-22)**: 문장이 프로그램급으로 올라갔다 — 술어 언어(`count()`/`empty()`/`matches`/`and`·`or`·`not`, AI 술어) · 오류 처리(`[try][catch][finally]`, `[on_error: skip|null]`) · 반복(`[repeat: N|until|while]`) · 상태(`$n = $n + 1` 한 줄 식) · 블록을 파이프 한 칸으로 · `$return` 반환. **어휘 증가는 `[table:reduce]` 하나뿐, 나머지는 전부 문법**이다. 범용 자료구조·재귀는 언어로 끌어들이지 않고 `[self:script]` 로 얼린다.
   - **워크플로우 = 함수**: 저장한 문장을 이름·인자(미할당 `$이름`)·반환값(`$return`)·닫힌 스코프로 부른다.
   - **어휘는 작아지면서 세졌다**: 2026-08-05~17 압축으로 163→**144**. 복합어를 지우고 보편어를 세우는 것(`pew_research`→`[sense:feed]`)·같은 개념의 낱말을 `op`/`source` 축으로 접는 것(사업 4형제→`[self:ledger]{store, op}`)이 표준 수술이다. 반대 방향의 압력은 `[self:script]`(등록 스크립트)가 받는다 — "새 낱말 만들까?"의 기본 답은 "스크립트로 얼려라".
+  - **언어의 한계는 진짜 프로그램이 적발한다 (2026-08-27~28)**: 매일 손으로 돌리던 세 일간 보고서를 *한 문장 프로그램*으로 다시 쓰는 실험이 표현 공백 여덟 자리를 드러냈고(확장 경로 `${x.items.*.f}`·옵셔널 `?`·`[table:each]{on_error:"keep"}`·파이프 속 `if` 불일치=직전 통화 통과 등) 일괄 개정으로 닫혔다 — 팁 23문장·동향 24문장·부동산 21문장이 전부 품질 기준을 충족했다. 같은 시기 **실패가 위치를 갖게** 됐다: 모든 실패 봉투의 `traceback`, AI step 품질 미달을 `error_type:"quality"` 로 만드는 `criteria` 계약.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 ---
@@ -151,4 +152,4 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 → 더 깊이: [vision.md](vision.md) (인지 외골격의 4문제의식·모양·기반 철학)
 
 ---
-*최근 변경(2026-08-22): 2장 IBL — 프로그램급 문법·워크플로우=함수 반영, 6장에 몸 원장 추가. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-08-28): 2장 IBL — '언어의 한계는 진짜 프로그램이 적발한다'(08-27~28 개정 여덟·세 보고서 완성 프로그램)와 '실패가 위치를 갖는다'(트레이스백·criteria) 추가. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

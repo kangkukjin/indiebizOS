@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-08-25
+last_updated: 2026-08-28
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -85,6 +85,7 @@ see_also: [architecture.md, ibl.md]
 - **증류**: 해마 점수 < 0.7(유사 선례 없음) + 실행 성공 시 → 반성 에이전트가 일반화 → DB + `ibl_distilled.json` 누적 → 다음 검색부터 반영
 - **첫 등록의 닭과 달걀**: 새 액션/op는 아직 성공 실행이 없어 자동 증류가 시작될 재료도 없다. `description`/`ops.values`는 존재를 알리지만 자연어→op 선택과 인자 모양을 대신하지 않는다. 그래서 첫 등록은 manual seed를 넣고 실제 연상 프로브를 통과시켜야 한다. 코퍼스·실행에서 관측된 키는 `ibl_param_sweep.py`가 카탈로그의 `⟨인자: …⟩`로 올린다.
 - 임계값: 표시 MIN_SCORE 0.65 / 증류 DISTILL_THRESHOLD 0.7 — 단 점수 ≥ 0.7이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면(가짜 유사도) 새 패턴으로 보고 증류 진행(`_recall_was_used`, 2026-08-07 ep949 학습 유실 수리. top_code 없는 조종실 경로는 점수 게이트 그대로)
+- **증류 게이트 셋째 신호 — 품질**(2026-08-27): 구조 실패·목표 미달성에 이어 **AI step 품질 미달**이 학습 회로에 붙었다. ①미달(`error_type:"quality"`) 봉투는 `success:false` → 이미 있던 증류 성공 필터가 거른다(새 코드 0줄, 사슬 핵심 고리를 회귀로 고정) ②재시도로 통과한 건은 `pass_after_retry`+`criteria_feedback` 을 봉투에서 캐 반성 프롬프트에 병기 — "첫 미달 사유가 재발하지 않게 instruction 을 다듬어라(criteria 보존)"로 먹여, 약한 지시 대신 **개선된 지시**가 증류된다. ★게이트 규칙(미달 용례를 학습하지 마라)은 판정 데이터가 쌓인 뒤에 정당화되는 것이 아니라 지금 참이다 — 미루면 그 사이 오염 용례가 코퍼스에 들어가 재학습 때 해마에 구워진다. 정본 = `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 - 상세: 아래 **부록: 연상기억 심층**
 
 **(c) 워크플로우** — 명시적으로 저장된 조합, **2026-08-22부터 함수 쪽으로 한 칸**
@@ -698,4 +699,4 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 
 ---
 
-*최근 변경(2026-08-25): GoalEval의 THINK 전용·EXECUTE SelfReflect 분기와 nullable 평가값을 명시하고, 새 어휘 첫 등록의 manual seed·관측 인자 생명주기를 절차기억에 연결. 빠르게 변하는 라이브 코퍼스 건수는 DB 질의가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-08-28): 증류 게이트 셋째 신호(품질) — quality 실패의 학습 배제와 재시도-통과 신호가 반성 프롬프트로 들어가는 통로 명문화. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

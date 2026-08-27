@@ -7033,7 +7033,7 @@ nodes:
         group: media_produce
         router: handler
         tool: read_image
-        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier).
+        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier·rubric — 적용 기준표 정직 신고, 미지정=일러스트 기본표 경고).
         target_key: op
         ops:
           default: read

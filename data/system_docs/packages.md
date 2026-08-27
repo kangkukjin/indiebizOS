@@ -2,7 +2,7 @@
 title: 도구 패키지 시스템
 scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘는 코어 `ibl_nodes_src`와 패키지 `ibl_actions.yaml`이 소유권별 정본이며, op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-08-25
+last_updated: 2026-08-28
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -313,7 +313,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 | study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
 | system_essentials | System Essentials | 파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회, 웹앱 등기부 `[self:webapp]{op}`(파생 우선 — 진실 소스 7곳 재계산 + 전 함대 생존 실측) |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
-| web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용) |
+| web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용). 2026-08-28 검색 통화 계약 둘: ①모든 소스가 **발행일 `date`(ISO 8601)** 를 싣는다(gnews=RFC2822 파싱·naver=news pubDate/blog postdate — 파싱 불능이면 필드를 달지 않는다, 모르는 날짜 미주장) → 신선도를 `[table:filter]` 술어로 세울 수 있다 ②`queries` 파라미터 선언이 `[string, array]` 유니온(핸들러가 이미 하던 배치 팬아웃을 문장 안에서 쓸 수 있게 — 선언이 능력보다 좁아 정직 거절되던 비대칭 수리). 가드 `backend/test_search_date_field.py` D1~D6 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 <!-- PACKAGES_TABLE:END -->
@@ -383,4 +383,4 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 - `GET /packages/search-nostr` - Nostr에서 패키지 검색
 
 ---
-*최근 변경(2026-08-25): 표준 ToolContext handler 서명, 패키지 fragment 제거 대칭, 새 어휘의 구현→빌드→코퍼스 시드→param sweep→연상/fixture 검증 생명주기를 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-08-28): web 패키지 검색 통화 계약 둘(발행일 `date` ISO 8601 · `queries` 유니온 선언) 반영. 패키지 표의 행 집합은 빌드가, 설명 산문은 문서가 소유한다. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

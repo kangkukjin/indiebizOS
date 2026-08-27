@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-08-25
+last_updated: 2026-08-28
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -75,6 +75,8 @@ EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞
 | 앱 | 결정화된 sense 호출을 아이콘/GUI로 직접 조작 (부동산 실거래가·상권, 도서검색). 구 '액션' | 0(코드 실행) | 결정화된 워크플로 |
 
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.*
+
+★**결정화는 절반이다 — 가이드가 통로를 지정해야 실제로 쓰인다**(2026-08-28 실측). 같은 세 일간 보고서의 셸 사용이 0/5/13회로 갈렸는데 셸 몫은 세 편 모두 같은 부류(JSON 원장 갱신·md→HTML 변환)였다. 원인은 능력이 아니라 통로 지정이었다 — "셸은 IBL 등가물이 없는 일에만" 조항을 둔 편만 0회였고, 조항 없는 두 편은 이미 등록돼 있는 스크립트를 놔두고 매 호 히어독을 새로 썼다. 같은 부류가 계기 쪽에서도 나왔다: `criteria` 품질 계약이 살아 있는데 세 보고서 주행에서 한 번도 불리지 않았다. **등록·출하만으로는 부족하고, 정본 가이드가 그 통로를 명시해야 한다**(반대로 가이드에 구체 IBL 문장을 적는 것은 금지 — 원리·낱말 이름·경계만. 좋은 조합의 정본 통로는 해마다).
 
 - 조종실: `backend/surface/api_ibl.py` (`/ibl/translate`·`/ibl/validate`(dry-run)·`/ibl/execute`·`/ibl/distill`) + `frontend/src/components/ManualMode.tsx`. 부작용 step은 명시적 확인 게이팅, 해마 증류는 사용자 승인 시에만.
 - 앱: **선언 기반 단일소스**. 각 계기는 IBL 액션의 `app:` 블록(`data/ibl_nodes_src/`)이고 `/launcher/instruments`로 자동 파생 → **데스크탑(`GenericInstrument.tsx`)·원격 런처·폰이 같은 선언을 같은 어휘로 렌더**(app 블록 1개 = 전 표면 동시 등장). 어휘: modes 탭, view 프리미티브 12종(metric/kv/kv_list/card_list+드릴/image_grid/sparkline/list_action/thread/form/editable_list/map(인터랙티브 leaflet)/calendar), `on:` 뷰-이벤트(지도 moveend→재조회·marker_click→IBL 액션 또는 `{stream:true}`→HLS 영상), filter 필터칩(정적 단일선택 재조회 + 동적 `from_field`=결과-필드 distinct 칩, 클라이언트 측 거르기), 표시 템플릿 `{path|filter}`. 0토큰 IBL 직접 실행. escape hatch 2층: OVERRIDES(photo 풍부창·네이티브 창 등 손제작 풍부판) + STATIC_DOMAINS(부동산 실거래가·길찾기 등 렌더 어휘 밖 — 2026-06-29 상권은 인터랙티브 map+동적필터+드릴로 흡수돼 은퇴). `build_ibl_nodes --check`에 app 블록 정합성 합류.
@@ -179,9 +181,11 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
   - 술어 언어(`$변수[.경로]`·`count/empty/exists`·`matches`·`and/or/not`·AI 술어) · 제어 블록(`[try][catch][finally]`·`[on_error:]`·`[repeat:]`) · 상태(`$n = $n + 1` 한 줄 식·`while` 이 몸 변수를 봄) · 블록-인-파이프 · `$return` 반환
   - 봉투 다이어트·자동 스필·재개는 **엔진 규약**(언어 밖) — 아래 '감각 피드백' 절.
   - 워크플로우는 **함수 쪽으로 한 칸** 옮겨졌다: 이름·인자(미할당 `$이름`=시그니처, `params_required`/`params_default`)·반환값(`$return`)·스코프 격리·합성(파이프로 다음 문장에 통화를 넘김) + 순환·깊이(5) 가드.
+  - **개정은 실제 프로그램이 끌었다**(2026-08-27~28, 여덟 건). 매일 사람이 손으로 돌리던 세 일간 보고서(AI 동향·부동산·유튜브 팁)를 **한 문장 = 한 프로그램**으로 다시 쓰는 실험이 표현 공백을 적발했고, 사용자 판정("언어의 한계는 다 고쳐")으로 일괄 집행했다 — 치환 의미론(통짜 `.path`=원형)·`$변수 >>` 파이프 머리·변환자 `items` 개방·식 문자열 함수, 그리고 괄호형 확장 경로 `${x.items.*.f}`/옵셔널 `?`·`[table:each]{on_error:"keep"}`(실패 행을 `_error` 를 달아 통화로 흘림)·파이프 세그먼트 `if` 불일치=**직전 통화 통과**·document blocks 의 `when` 절. 검증 결과 팁 23문장·동향 24문장·부동산 21문장이 전부 가이드 품질 기준을 충족했다(원문·산출물=`data/_backups/2026-08-28_report_program_experiments/`, 상태=`docs/IBL_REPORT_PROGRAMS_HANDOFF.md`). ★교훈: **언어의 표현 공백은 진짜 프로그램을 써 봐야 드러난다** — 상상훈련이 못 잡는 부류다.
+  - **실패는 위치를 갖는다**(2026-08-27): 모든 실패 봉투에 `traceback`(frames 바깥→안쪽·`error_type`·실패 지점 입력 통화 요약·예외 꼬리)이 붙고 — each 행·병렬 가지 같은 부분 실패도 예외 없다 — AI step 의 품질 미달은 `criteria` 품질 계약이 `error_type:"quality"` 로 **위치 있는 실패**로 만든다(판정 불능=통과+`unjudged`, 재시도 통과=`_criteria_retried` 정직 표지). 둘 다 봉투 다이어트 밖. 정본 = `docs/IBL_TRACEBACK_HANDOFF.md` · `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
   - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
-- **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/text/structure/other), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
+- **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/**datetime**/text/structure/other — datetime 은 2026-08-27 신설), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→날짜→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 151): handler 122 · system 19 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
@@ -210,6 +214,11 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 - 바뀐 것은 **에이전트 경계**다: `results[]`는 step 요약(shape·count·bytes·columns·preview, 실패 step은 오류문 원형)으로 접히고 **`final_result` 하나만 원형**으로 나간다. 옛 모양은 `verbose: true`.
   - 원칙은 유지된다("각 단계가 무엇을 냈는지 보인다") — 접힌 것은 *같은 내용의 중복 전송*이지 관측 자체가 아니다.
 - `[self:write]{spill:true}` 스필 싱크와 **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조 봉투)도 같은 계열: 통화를 참조로 바꾸고 소비자가 투명 해소.
+- ★**진단은 다이어트 대상이 아니다**(2026-08-28). `[table:each]` 의 부분 실패가 다문장 요약에 통째로 접히고 `message` 만 "errors 참조"를 가리켜 **참조 대상 없는 참조**가 되던 침묵 모순을 수리했다 — 요약 봉투가 `errors[]` 다이제스트(상한 3건·건당 300자)와 `error_count` 를 함께 나르고, 넘치면 `errors_digest_truncated` 로 절단을 신고한다(침묵 클램프 금지). 모듈 자신이 이미 선언한 원칙의 집행이지 새 정책이 아니다. 가드 `backend/test_envelope_errors_digest.py`.
+
+**속도의 지렛대는 왕복 수가 아니라 '모델이 읽은 문자수'다**(2026-08-28 실측)
+- 15일치 일간 보고서에서 벽시계가 IBL 조합 증가에도 접히지 않아 시간을 갈라 봤더니, 도구 실행은 총 시간의 한 자릿수 %이고 거의 전부가 모델 왕복인데 **왕복당 모델 시간이 읽는 양에 따라 20~28초로 움직였다**. 재는 계기가 없던 자리라 등록 스크립트 `에피소드통계` 에 **결과천자**를 신설했다 — `tool_result` 줄의 보이는 몫 + 절단 표식 `(+N자)` 의 숨긴 글자수를 더한 **정확값**(로그 절단은 기록을 자른 것이지 모델이 받은 결과를 자른 게 아니다). 옛 `...` 행은 하한 표지를 달고, 결과 줄이 없는 in-process 방언은 `None`(0 과 다름).
+- 처방은 **읽기-접기**: 목록·후보는 표 꼬리로 얇게 흘리고 원문 정독은 선별 통과분에만. 경계 — 내용 판단에 필요한 정독까지 접지 말 것(두 단으로 나누는 것이 원리이지 깊이 제거가 아니다). 세 보고서 가이드 §0 에 조항으로 들어갔다.
 
 **>> 연산자 실패 규약**
 - 기본은 **즉시 중단**(`stop`) — 앞 단계가 실패하면 뒤를 돌리지 않는다.
@@ -232,7 +241,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 ### 몸 원장 (Body Ledger, 2026-08-21)
 "몸이 언제 어떻게 바뀌었나"를 몸 스스로 회상하는 네 기둥. 계기는 `[self:grep]` 사건이었다 — 2026-08-05 층 분리 같은 **몸 개조가 회상 불가능**해서 낡은 가정이 6주간 잠복했다. 몸이 바뀌면 몸에 대한 가정이 깨지므로, 변화 자체가 연상 가능한 기억이어야 한다.
 1. **소유 선언 레지스트리**(`backend/cognition/data_ownership.py`) — 데이터 가족마다 주인·수명·백업 계급을 선언. 새 데이터 가족을 만들면 `DECLARATIONS` 등재가 의무다.
-2. **어휘**(`[self:body]{op}`) — `changes`(최근 파일 변화, 미커밋 포함) / `log`(커밋) / `file`(한 파일의 일생, 이름변경·이동 관통) / `diff` / `writes`. 전 op 읽기 전용 — 원장은 git 과 관문이 쓴다.
+2. **어휘**(`[self:body]{op}`) — 읽기 여섯: `changes`(최근 파일 변화, 미커밋 포함) / `log`(커밋) / `file`(한 파일의 일생, 이름변경·이동 관통) / `diff`(실제 바뀐 줄) / `writes`(관문 통과 쓰기) / `trajectory`(한 실행의 핵심 사건 순서 — hash·ref, 원문 아님). **쓰기 하나: `commit`(각인, 2026-08-27)** — 지정한 `paths` 만 원장에 기록한다(`message`·`paths` 필수, 관문 통과 필요). 명명 헌법 2조대로 `[self:commit]` 신조어가 아니라 몸 원장 낱말의 **굴절**로 들어왔고, 공유 인덱스 계약을 지킨다(남의 스테이징 생존 + 각인 후 인덱스 동기화). 부작용 op 라 fixture 를 두지 않는다(건강검진이 실행해 버린다) — 용례는 `data/guides/body.md`. 가드 `test_body_commit.py` C1~C8. 정본 = `docs/SELF_EVOLUTION_AUTOMATION_HANDOFF.md`.
 3. **쓰기 관문 원장**(`backend/base/write_ledger.py`) — git 이 못 보는 런타임 쓰기(`data/`·`outputs/`)를 관문 통과 시 append-only 로 한 줄. 행위자(agent·task·origin)가 실려 episode·tasks 와 조인된다. ★**전수 감시 데몬은 두지 않는다**(관문 훅만) — 그래서 관문 밖 직접 쓰기는 원리적으로 미기록이고, `writes` op 는 그 **부분성을 정직하게 광고**한다. 폴링류(심장박동 가족)의 행위자 없는 쓰기는 6시간당 1건으로 압축.
 4. **정본 서열** — git 커밋(사건) > `docs/`(설계) > `data/system_docs/`(장기기억). 하네스 뷰(`CLAUDE.md`)는 시스템 *바깥*이라, 바깥 뷰에만 있는 사실은 누출로 친다.
 
@@ -425,6 +434,13 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
    그 위에 표면 하나가 파이프라인을 우회했다: `api_agents._run_agent_command` 만 `cognitive_stream` 을 건너뛰고 AI 를 직접 불러, **분류·의식·모델 승격·그랜트가 통째로 없는 턴**을 만들었다. 실측(ep1915, 2026-08-24): 사용자가 `#repair` 를 붙였는데 그 턴의 로그에 `[무의식] 분류` 가 0줄이고 RED 가 "REPAIR 경로로 발급된 적이 없습니다"로 거절했다 — 사용자는 태그를 붙였고, 그 표면에는 태그를 읽는 코드가 없었다.
    ⇒ 조건은 정본(커밋·이 문서)으로 되돌리고, 표면 포크는 **관문**으로 잠갔다(`test_user_surface_pipeline`: `set_task_origin("user")` 를 세우는 함수는 자기 호출 그래프 안에서 `cognitive_stream` 에 닿아야 한다). 사람이 고른 grep 은 반드시 샌다 — 부류는 관문이 지킨다.
 
+5. **보호 구역의 판정은 판정자의 집이 아니라 과녁의 뿌리에서 유도한다.**
+   RED 판정(`backend/`·`data/packages/`)이 *로드된 게이트 사본의 집*에 고정돼 있어서, 라이브 게이트에게 `.worktrees/…/frontend/` 는 RED 가 아니었다 — 회귀 시험이 워크트리의 `frontend/index.html` 을 실제로 덮어썼다. 격리 사본은 apply 로 라이브가 될 원본이라, **여기가 오염되면 검증을 통과한 척하는 코드가 라이브로 간다**. 거울상도 같이 나왔다: 워크트리 게이트에게는 본체 `backend/` 가 RED 가 아니어서 격리 안 코드가 절대경로로 기질을 그랜트 없이 쓸 수 있었다.
+   ⇒ `red_zone_family.py` 가 기준 루트를 **과녁 경로에서** 유도한다. 본체와 그 git 워크트리(`.git` 파일 → 본체 `.git/worktrees`)는 **한 가족**이고, `backend/`·`frontend/` 이름만 같은 남의 저장소는 종전대로 허용이다. 게이트 자신은 가족 판정 *이전에* 항상 보호된다. 가드 `test_red_zone_body_family.py` F1~F6(네 방향 종단).
+
+6. **부류를 이름 열거로 막으면 반드시 샌다 — 자연 작명을 부류로 덮어라.**
+   2026-08-23 에 `test_*.py` 신규 생성의 리로드 절단을 이름 열거로 봉했는데, 08-27 에 같은 부류가 **다른 이름으로 재발**했다: 수리 턴이 만든 실측 사본(선행 밑줄 하나로 시작하는 스크래치 이름)이 리로드를 불러 그 턴 자신을 apply 전에 절단하고 좌초시켰다. 열거 대신 스크래치의 자연 작명(선행 밑줄 하나)을 부류로 덮었다 — `_[!_]*.py`(`[!_]` 가 `__init__.py` 같은 산 배관을 지킨다). ★**제외 목록은 uvicorn 부팅 때 읽힌다** — 재기동 전의 몸은 옛 목록으로 판단한다. 그리고 가드는 선언(fnmatch)이 아니라 **실판정자**(설치본 uvicorn FileFilter, `pathlib.match`)로 종단 실측해야 한다. 둘의 의미론이 업그레이드로 갈리면 선언만 초록인 채 샌다.
+
 상세: `docs/SELF_MODIFICATION_SAFETY_DESIGN.md`
 
 ## 표준 코어 vs 사용자 경계 (설치·업데이트 이음매)
@@ -449,6 +465,16 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - **부팅 관측**(`boot_status.py`): lifespan 의 `except: print(...실패 무시)` 블록 10개를 성패 양쪽 계측(제어 흐름 무변경). `/world-pulse/health` 가 `boot` 절을 함께 내보내고 부팅 실패가 하나라도 있으면 overall 을 degraded 로 올린다 — 사흘 뒤 "왜 스케줄이 안 도나"의 답이 터미널 스크롤 저편에 있지 않게.
 - **윈도우 이식성 게이트**(`check_win_portability.py`): 유닉스 전용 stdlib 의 무가드 톱레벨 import 탐지. ★위험지대는 규율 잡힌 `backend/` 가 아니라 **데이터 취급되는 실행 코드** `data/packages/`.
 
+**밭 폐쇄 — 발견을 기다리지 않고 탄생을 차단한다**(2026-08-27). 상상훈련이 같은 속(屬)의 새 종을 네 회차 연속 발견한 뒤, 구조 원인이 "판정 자리의 전수 목록이 없고 *발견*이 스윕의 입구였던 것"으로 밝혀졌다. 교리 「부류 스윕은 관문을 먼저 쓰고 고쳐라」를 밭마다 적용해 **census → 일괄 스윕 → 상설 관문**의 연쇄로 닫았고, census 가능한 밭 여섯(값 판정·경로 해석·compute 식 비교·파라미터 표면 일치·시간 의미론·동시성)이 전부 닫혔다.
+
+- **사설 값 판정**(`check_value_judgment.py`) — AST census 267 원시 히트 → 유의 60자리, 15자리를 `text_match`/`values_equal`/`relation_identity` 위임으로 스윕. 잔여 34자리는 **동결 목록이 아니라** 자리마다 `# vj-ok: <사유>`(침묵 클램프 교리와 같은 태도).
+- **경로 해석**(`check_field_path.py`) — `"items.0.title"` 이 표면마다 값/None/오류로 갈리던 워커 5방언을 `common/field_path.py` 한 벌로. 결측(MISSING)≠null 구별을 보존한다.
+- **compute 식 비교** — `safe_expr` 의 파이썬 원시 비교(`"Seoul"=="seoul"` 이 거짓·혼합 타입은 TypeError)를 AST 재작성으로 값 코어에 위임. 같은 몸의 `filter` 와 다른 선고를 내던 마지막 조건 표면이었다.
+- **파라미터 표면 일치**(`test_surface_param_parity`) — 도구 스키마 ⊆ REST ⊆ MCP 포함을 기계가 단언(주석 의무를 검사로 승격).
+- **시간 의미론**(2026-08-27, 사용자 판정) — 값 코어에 `DATETIME` 종류 신설. **선언 표기(`YYYY-MM-DD`[+시각][+`Z`/±HH:MM])만 날짜**이고 표기 밖·달력 위반은 수선 없이 텍스트다. 같은 순간은 같은 실체로 접히고(Z↔+00:00, +09:00 10시↔Z 01시, 날짜만↔그날 00:00 — 동등·순서·관계 키·그룹 키까지), naive/aware 혼합이나 날짜 vs 비표기 텍스트의 순서는 **판정 불능(정직 거절)**이다. ★표면 스윕이 0이었다 — 앞선 밭 폐쇄가 모든 판정을 코어 한 벌로 접어 둔 덕에 종류 하나를 더하니 filter·블록·compute·정렬·키·응답 변환이 자동 승계했다. **밭을 먼저 닫으면 언어 개정이 싸진다.**
+- **동시성**(`check_concurrency.py`) — 기계로 판정 가능한 셋만 정직하게: `sqlite3.connect` timeout 미선언 67자리를 전부 명시(다중 프로세스가 같은 DB 를 쓰는 몸에서 **잠금 대기는 기본값 암묵 의존이 아니라 저자의 결정**), 리로드 워커 안 Thread 13자리에 수명 설계 사유(`# cc-ok`), `check_same_thread=False` 1자리에 잠금 풀 설계 명시. 수용된 잔여(엔진 스레드 50자리·"긴 작업" 판정·락 없는 공유 상태)는 관문 헤더에 명문화하고 그 규율은 pitfall 원장이 소유한다.
+- ★**자동 편입은 기각**: 명단 밖의 정규화 없는 원시 비교를 기계가 자동으로 끌어오면 *한 벌을 채택하는 것이 벌칙*이 되는 역유인이 생긴다 — 관문 헤더에 명문으로 남겼다.
+
 ## 시스템 통계
 
 > 아래 마커 구간의 수치는 `scripts/build_ibl_nodes.py`가 레지스트리 실측으로 재생성한다(손 수정 금지). 마커 밖 항목(프로젝트·해마 등 런타임 수치)은 날짜를 달아 손으로 갱신.
@@ -470,4 +496,4 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*최근 변경(2026-08-25): 인지 파이프라인을 THINK=GoalEval, EXECUTE=조건부 SelfReflect 두 검증 갈래로 명시하고 `evaluation_result=NULL`의 뜻을 교정. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-08-28): 밭 폐쇄 여섯(값 판정·경로 해석·compute 식·파라미터 표면·시간 의미론·동시성)과 상시 관문, RED 몸-가족·리로드 스크래치 부류 원칙 둘, `[self:body]` 쓰기 굴절 `commit` 반영. 봉투의 errors 다이제스트와 '속도의 지렛대=읽은 문자수' 계기, '결정화는 통로 지정까지' 교훈 추가. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

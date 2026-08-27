@@ -199,7 +199,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
   - `ok_count` / `error_count` / `errors` — `[table:each]` 의 **행별 부분 실패**. `error_count > 0` 이면 통화에는 **성공분만** 흐르고, 실패한 원 행과 사유는 봉투의 `errors: [{원 행…, _error}]` 에 있다(2026-08-23 계약 개정 — 옛 판은 실패를 통화 안에 `_ok: false` 로 섞었다). "3곳 다 조회했다"가 아니라 "3곳 중 2곳" 이다. `passthrough_rows` 가 있으면 그 행들의 `do` 가 통화를 안 내서(효과·스칼라) **원 행**이 흐른 것이니, 통화에 있는 값을 `do` 의 결과로 읽지 마라.
   - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행이거나 값 열이 없음). 입력이 아예 없었던 것과 다른 사건이다.
   - `skipped_steps` / `warning` (`[on_error:]`) · `_caught` (`[try]` 가 실패를 삼키고 catch 로 갔다 — **catch 결과가 평문이어도 붙는다**, B48-1) · `condition_errors` (`[if:]` 판정 불능) · `halted` (`[repeat:]` 상한) · `truncated` / `rows_dropped` (원천 절단).
-  - `branches_failed` (`&` 가지가 **통째로** 죽음) / **`branches_honesty`** (가지는 살았는데 그 **안**에서 부분 실패·경로 변경이 있었다 — B48-2. `success: true` 인 병렬 봉투에 이게 있으면 "다 됐다"가 아니다) · `empty_notes` (중간 step 이 0행을 낸 사유 — 0건이 '없다'는 뜻이 아닐 수 있다) · `statements_failed` (줄바꿈으로 나뉜 독립 문장 중 죽은 수).
+  - `branches_failed` (`&` 가지가 **통째로** 죽음) / **`branches_honesty`** (가지는 살았는데 그 **안**에서 부분 실패·경로 변경이 있었다 — B48-2. `success: true` 인 병렬 봉투에 이게 있으면 "다 됐다"가 아니다) · `empty_notes` (중간 step 이 0행을 낸 사유 — 0건이 '없다'는 뜻이 아닐 수 있다) · `statements_failed` (줄바꿈으로 나뉜 독립 문장 중 죽은 수) · **`vars_dropped`** (블록 몸(`[if]`/`[case]`/`[try]`/`[repeat:]`) 안에서 **태어난** `$변수`가 블록 밖으로 못 나갔다 — B49-2. 이게 붙었으면 뒤 문장의 그 변수는 미할당이라 조건이 판정 불능이 된다. 블록 밖에서 쓸 값은 블록 **앞에서** 한 번 할당해 두고 몸에서 재할당하라).
   이 중 하나라도 있으면 **응답에 그 사실을 적어라.** 적지 않고 결과만 말하는 것이 이 시스템에서 가장 흔한 거짓말이다.
 
 **상태 변수·블록-인-파이프·반환 (M6)** — 긴 프로그램이 파이썬처럼 상태를 들고 돈다:

@@ -154,6 +154,11 @@ _PROTECTED_STATE_FILES = ("data/system_ai_state/install_approvals.json",)
 # 게이트 자신 — RED 밖(data/)에 살지만 안전장치의 집이라 그랜트 없이는 못 쓴다
 # (③검증자 없는 영역 보강, 2026-08-05: 게이트를 지키는 게이트).
 _SELF_FILE = os.path.realpath(__file__)
+# 몸-가족 판정(과녁 기준 루트) — 로직과 왜(48회차 별건 실측)는 형제 모듈 docstring 에.
+_red_family = _load_sibling("red_zone_family")
+# 게이트를 이루는 파일들(루트 상대) — 어느 사본(격리 워크트리 포함)이든 그랜트 없이 못 쓴다.
+_GATE_RELS = ("data/packages/installed/tools/system_essentials/handler.py",
+              "data/packages/installed/tools/system_essentials/red_zone_family.py")
 
 
 def _safety_watch_files():
@@ -161,7 +166,8 @@ def _safety_watch_files():
     out = {_SELF_FILE}
     if _REPO_ROOT is not None:
         for rel in ("backend/datastore/red_grant.py", "backend/datastore/red_watchdog.py",
-                    "scripts/red_safety_selftest.py"):
+                    "scripts/red_safety_selftest.py",
+                    "data/packages/installed/tools/system_essentials/red_zone_family.py"):
             out.add(os.path.realpath(str(_REPO_ROOT / rel)))
     return out
 
@@ -191,13 +197,11 @@ def _grant_denial_note() -> str:
         return ""
 
 
-def _is_static_asset(real: str) -> bool:
-    """backend/static/ 아래 비-파이썬 정적 자산인가 — RED 면제 대상.
+def _is_static_asset(real: str, root: str) -> bool:
+    """backend/static/ 아래 비-파이썬 정적 자산인가 — RED 면제 대상(과녁 루트 기준).
     프로세스가 import 하지 않고 요청마다 디스크에서 읽어 서빙하므로 reload 절단이
     원리적으로 불가능하다(2026-08-05 구역 재구획 — 자막 수리 하루 지연의 교훈)."""
-    if _REPO_ROOT is None:
-        return False
-    static_root = str(_REPO_ROOT / "backend" / "static")
+    static_root = os.path.join(root, "backend", "static")
     return ((real == static_root or real.startswith(static_root + os.sep))
             and not real.endswith(".py"))
 
@@ -209,19 +213,35 @@ def _red_zone_violation(abs_path: str) -> str | None:
     헌법 개정(2026-08-05): 사람 승인 게이트(Floor #4) 폐기. 대신
     ①사람 명령 태스크 ②고급 모델 ③의식 각성으로 발급된 그랜트(red_grant)가 있으면
     RED 직접 쓰기를 허용한다 — 쓰기 지점의 기계 안전판(사전 구문검증·백업·워치독
-    자동 롤백)이 함께 작동한다. backend/static/ 비-py 정적 자산은 RED 가 아니다."""
+    자동 롤백)이 함께 작동한다. backend/static/ 비-py 정적 자산은 RED 가 아니다.
+
+    ★개정(2026-08-27, 48회차 별건): 기준 루트를 판정자의 집(_REPO_ROOT)이 아니라
+    **과녁이 속한 몸의 루트**(_red_family.body_root_of)에서 유도한다 — 격리 워크트리의
+    RED 도, 워크트리 게이트가 본 라이브의 RED 도 같은 헌법의 보호를 받는다(실측·거울상은
+    red_zone_family.py docstring). 남의 저장소는 가족 판정으로 걸러 종전대로 허용한다."""
     if _REPO_ROOT is None:
         return None
     real = os.path.realpath(abs_path)
+    # 게이트 자신(로드된 바로 그 파일)은 가족 판정 **이전에** 항상 보호 —
+    # 판정자는 제 발을 지킨다(어느 루트를 집으로 알고 있든).
+    if real == _SELF_FILE and not _red_grant_active():
+        return (
+            "Error: 이 파일은 RED 쓰기 게이트 자신입니다 — 그랜트 없는 수정이 금지됩니다.\n"
+            "수정하려면 사용자가 수리 경로('#repair' 또는 '시스템 수리' 명시)로 명령해야 하며, "
+            "적용 후 안전장치 기능 스모크(red_safety_selftest)를 통과하지 못하면 자동 롤백됩니다."
+        )
+    root = _red_family.body_root_of(real, str(_REPO_ROOT))
+    if root is None:
+        return None  # 이 몸 밖(남의 저장소·시스템 파일·/tmp) — 종전대로 허용
     for pf in _PROTECTED_STATE_FILES:
-        if real == str(_REPO_ROOT / pf):
+        if real == os.path.join(root, pf):
             return (
                 f"Error: 사람 전용 승인 상태 파일은 IBL 쓰기가 금지됩니다: {pf}\n"
                 f"이 파일은 [self:install_lib] 공급망 방어 게이트의 승인 원장입니다. "
                 f"승인·거부는 사용자가 HTTP 채널(/install-approvals/*)로만 합니다."
             )
-    # 게이트 자신 변조 보호 — data/ 구역이지만 안전장치의 집이라 그랜트 필요
-    if real == _SELF_FILE:
+    # 게이트 사본 변조 보호(격리 워크트리 포함) — data/ 구역이지만 안전장치의 집이라 그랜트 필요
+    if any(real == os.path.join(root, r) for r in _GATE_RELS):
         if _red_grant_active():
             return None
         return (
@@ -230,13 +250,13 @@ def _red_zone_violation(abs_path: str) -> str | None:
             "적용 후 안전장치 기능 스모크(red_safety_selftest)를 통과하지 못하면 자동 롤백됩니다."
         )
     for d in _RED_ZONE_DIRS:
-        red_root = str(_REPO_ROOT / d)
+        red_root = os.path.join(root, d)
         if real == red_root or real.startswith(red_root + os.sep):
-            if _is_static_asset(real):
+            if _is_static_asset(real, root):
                 return None  # 정적 자산 — 살아있는 기질이 아님
             if _red_grant_active():
                 return None  # 수리 그랜트 — 쓰기 지점 안전판이 이어받는다
-            rel = os.path.relpath(real, str(_REPO_ROOT))
+            rel = os.path.relpath(real, root)
             # ★사유를 한 줄로 말한다 — 옛 문구는 어떤 거절이든 "지금 태스크는 조건 밖"이라
             #   단정해, 만료로 막힌 수리 턴까지 자기를 '수리 경로 밖'으로 오진하게 했다.
             _why = _grant_denial_note() or "이 턴에 유효한 수리 그랜트가 없습니다."
@@ -265,7 +285,7 @@ def _red_is_live_path(abs_path: str) -> bool:
     real = os.path.realpath(abs_path)
     if real == _SELF_FILE:
         return True  # 게이트 자신 — data/ 구역이지만 RED 대우(백업·워치독)
-    if _is_static_asset(real):
+    if _is_static_asset(real, str(_REPO_ROOT)):
         return False
     for d in _RED_ZONE_DIRS:
         red_root = str(_REPO_ROOT / d)
@@ -577,7 +597,8 @@ _OP_DISPATCHERS = {
         "status": _sib_op("script_ops", "op_status"),
         "remove": _sib_op("script_ops", "op_remove"),
     },
-    # 몸 변화 회상 — git 원장을 items 로 (전 op 읽기 전용, 원장은 git 이 쓴다)
+    # 몸 변화 회상 6 + 각인 1 — git 원장을 items 로. commit 만이 유일한 쓰기 굴절
+    # (개서·전파는 낱말이 없다 — body_ops.py 머리말·docs/SELF_EVOLUTION_AUTOMATION_HANDOFF.md)
     "body_op": {
         "changes": _sib_op("body_ops", "op_changes"),
         "log": _sib_op("body_ops", "op_log"),
@@ -585,6 +606,7 @@ _OP_DISPATCHERS = {
         "writes": _sib_op("body_ops", "op_writes"),
         "trajectory": _sib_op("body_ops", "op_trajectory"),
         "diff": _sib_op("body_ops", "op_diff"),
+        "commit": _sib_op("body_ops", "op_commit"),
     },
     # 자기개조 패치 생애주기 — 제안(자율 태스크) / 적용·현황·폐기(수리 경로).
     # 안전판 콜백(_red_prepare/_red_finalize)은 게이트가 쥔 채 넘긴다(_patch_op).

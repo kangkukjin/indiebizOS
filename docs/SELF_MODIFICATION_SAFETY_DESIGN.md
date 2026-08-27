@@ -236,6 +236,7 @@
 
 > **구현 상태 (2026-07-12 갱신):**
 > - **Floor #1 ✅ 구현·커밋** (`30a4116`): RED 구역 직접 쓰기 차단. `system_essentials/handler.py` `_validate_path_in_scope` 에 `_red_zone_violation`(realpath 정규화, repo 루트 backend+frontend 독립 탐지) 게이트. 쓰기 계열 단일 초크포인트 전부 커버, 읽기는 유지. 에피소드 551 구멍 폐쇄.
+>   - **개정 (2026-08-27, 48회차 별건)**: 구역의 기준 루트를 판정자의 집(`_REPO_ROOT`)에서 **과녁이 속한 몸의 루트**로(`red_zone_family.body_root_of` — 본체와 그 git 워크트리는 한 가족, 남의 저장소는 종전대로 허용). 종전 판정은 라이브 게이트가 격리 워크트리의 RED 를(거울상으로 워크트리 게이트가 본체의 RED 를) 못 봤다 — Floor #2 의 격리 사본이 정작 Floor #1 밖이었다. 실측·근거는 `red_zone_family.py` docstring, 가드는 `test_red_zone_body_family.py`.
 > - **Floor #2 ✅ 구현·커밋** (`9838830`): `[self:patch]`(액션 150, RED 전용). git worktree(HEAD 격리 사본)에만 기록 + py_compile·plain build 기계검증 + `data/system_ai_state/patch_proposals/` 기록(★그 별도 원장은 2026-08-18 에 세션 원장으로 통합됐다 — 아래 '원장 단일화'). 라이브 무변경. **주의**: `build --check` 의 코퍼스/fixture/gitignore-매니페스트 검사는 런타임 DB·미추적 파생물 의존이라 바레 worktree 에서 못 돎 → 격리 게이트는 plain build(삼각 검증)로 한정, 완전 검증은 사람 머지 시(pre-commit).
 > - **Floor #2·#3 △ 사용자 경로까지 확장** (2026-08-17, 위 '격리 스테이징' 절): 격리가
 >   `patch`(자율 태스크 전용)에만 있고 실제로 도는 수리 경로는 라이브 직행이던

@@ -328,6 +328,7 @@
     "test_public_result_boundary_matrix": "force_exclude_glob",
     "test_public_result_contract": "force_exclude_glob",
     "test_red_grant_liveness": "force_exclude_glob",
+    "test_red_zone_body_family": "force_exclude_glob",
     "test_registered_report_scripts": "force_exclude_glob",
     "test_reload_scope": "force_exclude_glob",
     "test_render_core": "force_exclude_glob",
@@ -359,8 +360,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 353,
+    "total": 354,
     "engine": 226,
-    "blocklist": 127
+    "blocklist": 128
   }
 }

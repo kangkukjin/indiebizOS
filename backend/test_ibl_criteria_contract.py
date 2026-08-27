@@ -230,6 +230,6 @@ def test_criteria_배터리_전건이_pytest_에도_보인다():
 
 
 if __name__ == "__main__":
-    _battery()
-    print(f"\n{PASS} ok / {FAIL} fail")
-    sys.exit(1 if FAIL else 0)
+    # 러너는 하나 — pytest 위임 (test_single_runner R2: 손으로 적은 러너는 드리프트한다).
+    import pytest as _pytest
+    sys.exit(_pytest.main([__file__] + sys.argv[1:]))

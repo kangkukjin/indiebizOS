@@ -668,6 +668,26 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     if tool_input.get("_assign"):
         from ibl_control_blocks import _execute_assign
         return _execute_assign(tool_input, project_path, agent_id)
+    if tool_input.get("_var_emit"):
+        # `$변수 >> [액션]` 파이프 머리 (언어 개정 2026-08-27, 사용자 판정) — 변수의 저장
+        # 결과를 통화로 방출. 값은 실행기가 _vars 로 실어 준 _var_values(원 step 결과
+        # 그대로)에서 읽는다 — 파이프의 _to_prev_currency 가 종전 규약대로 나른다.
+        # `.path` 가 붙으면 원형 추출(치환 의미론 개정과 같은 눈 — 문자열화하지 않는다).
+        _name = tool_input.get("name")
+        _vals = tool_input.get("_var_values") or {}
+        if _name not in _vals:
+            # 파서가 미할당은 걸렀으므로 여기는 "아직 기록 전"(안 탄 분기 등) — V49-1 규약.
+            return {"success": False,
+                    "error": f"변수 ${_name} 이(가) 아직 값을 기록하지 않았습니다 — "
+                             f"할당 문장이 실행되지 않은 경로(분기 미진입 등)입니다."}
+        _vpath = (tool_input.get("path") or "").lstrip(".")
+        if _vpath:
+            from workflow_binding import _extract_result_field_obj
+            try:
+                return _extract_result_field_obj(_vals[_name], _vpath)
+            except ValueError as e:
+                return {"success": False, "error": str(e)}
+        return _vals[_name]
 
     # 병렬(`[A] & [B]`)도 여기서 받는다 — 소유자(파이프 실행기)에게 위임 (30회차 B30-1).
     # 파서는 병렬을 `{"_parallel": [...]}` 한 step 으로 낸다. 최상위 경로는 파이프 실행기가

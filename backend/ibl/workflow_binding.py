@@ -52,9 +52,11 @@ def step_ref_indices(text: str) -> set:
     return {int(m.group(1)) for m in _STEP_RESULT_RE.finditer(text or "")}
 
 
-def _extract_result_field(raw: str, path: str) -> str:
-    """저장된 step 결과 문자열에서 .field.path 를 추출해 스칼라 문자열로.
+def _extract_result_field_obj(raw: str, path: str) -> Any:
+    """저장된 step 결과 문자열에서 .field.path 를 **원형(list/dict/스칼라)** 으로 추출.
 
+    ★통짜 참조의 원형 보존(언어 개정 2026-08-27, 사용자 판정)이 쓴다 — param 값이
+    `$변수.path` 하나뿐이면 JSON *문자열*이 아니라 이 원형이 param 에 들어간다.
     실패는 조용한 빈 문자열이 아니라 ValueError — 없는 필드가 침묵히 "" 로 치환되면
     하류가 빈 param 으로 "성공"하는 침묵 실패 부류가 된다(P 시리즈 원칙)."""
     obj: Any = raw
@@ -82,7 +84,12 @@ def _extract_result_field(raw: str, path: str) -> str:
             f"$변수 필드 추출 실패: '{key}' 필드가 없습니다 (경로 {path}, 사용 가능: {avail}).")
 
     # 걷는 규칙의 정본은 common.field_path 한 벌 (2026-08-27 경로 방언 통일)
-    obj = walk_path(obj, path, on_missing=_missing)
+    return walk_path(obj, path, on_missing=_missing)
+
+
+def _extract_result_field(raw: str, path: str) -> str:
+    """문장 **속** 참조용 문자열판 — 통짜가 아니면 글자 자리이므로 문자열화가 맞다."""
+    obj = _extract_result_field_obj(raw, path)
     if isinstance(obj, (dict, list)):
         return json.dumps(obj, ensure_ascii=False)
     return "" if obj is None else str(obj)
@@ -152,8 +159,19 @@ def _is_json_list(text: str):
 def _sub_step_refs(text: str, step_results: Dict[int, str], names: Dict[int, str],
                    sink, param_key):
     """문자열 하나의 {{_step_N_result[.path]}} 를 치환. sink 가 있으면 **문장 속**(통짜가
-    아닌) 참조가 목록을 JSON 으로 넣은 경우를 표식 후보로 모은다."""
-    sole = _STEP_RESULT_RE.fullmatch(text.strip()) is not None
+    아닌) 참조가 목록을 JSON 으로 넣은 경우를 표식 후보로 모은다.
+
+    ★언어 개정 (2026-08-27, 사용자 판정 — 치환 의미론): 값이 **통짜 `.path` 참조 하나**면
+    문자열 치환이 아니라 **원형(list/dict/스칼라)** 을 돌려준다. 옛 동작(항상 JSON 문자열)은
+    같은 병을 소비자마다 되읽기로 때우게 했다(B19-2 items → P30 파이프 원형 → B52 blocks —
+    세 번째 문에서 뿌리를 뽑는다). bare `$var`(경로 없음)는 v4 추출 계약(F17-3) 그대로 —
+    산문 정본을 뽑는 그 계약은 이 개정과 다른 사건이다. 문장 **속** 참조는 글자 자리이므로
+    종전대로 문자열화(+G31-1 목록 표식)."""
+    _m_sole = _STEP_RESULT_RE.fullmatch(text.strip())
+    if _m_sole is not None and _m_sole.group(2):
+        return _extract_result_field_obj(step_results.get(int(_m_sole.group(1)), ""),
+                                         _m_sole.group(2))
+    sole = _m_sole is not None
 
     def _sub(m):
         n = int(m.group(1))

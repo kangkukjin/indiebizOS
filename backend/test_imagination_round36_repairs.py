@@ -66,17 +66,20 @@ def test_sort_keeps_missing_last_and_type_order_stable(data_ops, desc, expected)
 ])
 def test_pipeline_only_items_warns_before_execution_and_guides_pipeline(
         action_name, tool_name, extra):
+    """★계약 은퇴 (언어 개정 2026-08-27, 사용자 판정): 옛 계약은 "단항 변환자의 items
+    직접 입력=비공개(take 로만 진입)"였고 이 시험이 그 거절을 지켰다. 새 계약: items 는
+    단항 변환자 전부의 공개 파라미터(array) — 경고 없이 씨앗으로 수용한다(치환 의미론
+    개정으로 `$변수` 가 원형 목록을 넣게 되면서, 리터럴만 거절하는 비대칭이 무의미해졌다).
+    이 시험은 같은 자리에서 **새 계약**을 지킨다."""
     action = load_nodes_installed()["nodes"]["table"]["actions"][action_name]
     params = {"items": [{"x": 1}], **extra}
     warning = check_params("table", action_name, params, action)
-    assert warning and "공개 파라미터가 아닙니다" in warning["message"]
-    assert "[table:take]" in warning["message"] and "앞 통화" in warning["message"]
-    assert "핸들러가 읽지 않는 키" not in warning["message"]
+    assert not (warning and "공개 파라미터가 아닙니다" in (warning.get("message") or "")), \
+        f"items 는 이제 공개 파라미터다 — 옛 경고가 살아 있다: {warning}"
 
     out = _route_handler(tool_name, params, ".", scope="workspace")
-    assert out["success"] is False
-    assert "[table:take]" in out["error"] and f"[table:{action_name}]" in out["error"]
-    assert "table:each" not in out["error"]
+    assert out.get("success") is not False or "입력 통화가 없습니다" not in str(out.get("error")), \
+        f"items 씨앗이 거절됐다: {out.get('error')}"
 
 
 def test_try_catch_reports_unparseable_body_not_missing_catch():

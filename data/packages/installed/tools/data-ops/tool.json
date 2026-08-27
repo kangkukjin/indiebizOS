@@ -11,6 +11,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "where": {
             "type": [
               "string",
@@ -40,6 +44,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "by": {
             "type": "string",
             "description": "정렬 기준 필드/열 이름."
@@ -81,6 +89,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "fields": {
             "type": "array",
             "description": "남길 필드 이름 배열(columns 의 동의 표기)."
@@ -104,6 +116,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "set": {
             "type": "object",
             "description": "{새열: \"식\"} — 예 {전세가율: \"round(보증금 / 매매가 * 100, 1)\"}"
@@ -120,6 +136,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "map": {
             "type": "object",
             "description": "{옛이름: 새이름} 딕셔너리."
@@ -136,6 +156,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "field": {
             "type": "string",
             "description": "중첩 목록 경로(점 표기). 값이 {items:[...]} 봉투면 items 자동 승격. 생략 시 옛 문장의 정직한 이행 오류만 제공."
@@ -156,6 +180,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "by": {
             "type": "string",
             "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열)."
@@ -201,6 +229,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "by": {
             "type": "string",
             "description": "그룹 키 열 이름."
@@ -246,7 +278,12 @@
       "description": "두 table(또는 두 records)을 행 결합. 같은 통화끼리. table은 열 이름으로 통합(순서 보존), records는 concat. & 병렬 두 입력. 중복 제거는 뒤에 >> dedup.",
       "input_schema": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          }
+        }
       }
     },
     {
@@ -255,6 +292,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "by": {
             "type": "string",
             "description": "중복 제거 키 필드(미지정 시 단순 concat)."
@@ -268,6 +309,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "items": {
+            "type": "array",
+            "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
           "blocks": {
             "type": "array",
             "description": "문서 IR 블록 배열 (각 블록 {type, ...}). blocks/items/markdown 중 하나.",

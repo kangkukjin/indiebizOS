@@ -203,6 +203,29 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
         # >> 로 파이프라인 분리
         segments = _split_pipeline(stmt)  # [(text, operator), ...]
         for idx, (seg_text, operator) in enumerate(segments):
+            _st0 = seg_text.strip()
+            # ★`$변수 >> [액션]` — 변수를 파이프 머리(통화 방출)로 (언어 개정 2026-08-27,
+            #   사용자 판정). 종전엔 "파싱 실패: $평가" — 변수 소비가 param 주입(items:"$x")
+            #   뿐이라 프로그램이 부자연스러웠다. 세그먼트가 통짜 변수 참조면 `_var_emit`
+            #   스텝으로 탈당의 — 실행기(ibl_engine)가 저장된 결과를 통화로 방출한다.
+            #   미할당은 파싱 시점 정직 에러(실행까지 끌고 가지 않는다).
+            from common.ibl_vars import REF_RE as _VREF, split_ref as _vsplit
+            _vm = _VREF.fullmatch(_st0)
+            if _vm is not None:
+                _vn, _vp = _vsplit(_vm)
+                if _vn == "items":                 # `$items` 는 집합 바인딩 예약어 — 그 규약대로
+                    _vm = None
+                elif _vn not in variables:
+                    raise IBLSyntaxError(
+                        f"변수 ${_vn} 이(가) 앞에서 할당되지 않았습니다 — 파이프 머리 변수는 "
+                        f"앞 문장의 `${_vn} = …` 할당이 필요합니다.")
+            if _vm is not None:
+                parsed = {"_var_emit": True, "name": _vn, "path": _vp,
+                          "_vars": {_vn: variables[_vn]}}
+                if _stmt_idx > 0 and idx == 0:
+                    parsed["_seq_boundary"] = True
+                all_steps.append(parsed)
+                continue
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
             parsed = _parse_group(seg_text.strip())
             if parsed is None:

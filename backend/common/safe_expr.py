@@ -9,7 +9,26 @@ import math as _math
 from typing import Any, Dict, List, Tuple
 
 FUNCS: Dict[str, Any] = {"round": round, "abs": abs, "min": min, "max": max, "int": int,
-                         "float": float, "len": len, "str": str, "sqrt": _math.sqrt, "log": _math.log}
+                         "float": float, "len": len, "str": str, "sqrt": _math.sqrt, "log": _math.log,
+                         # ★문자열 함수 (언어 개정 2026-08-27, 사용자 판정): 지역명 추출 같은
+                         #   결정론 가공이 AI 한 칸(비용·비결정)으로 우회되던 것을 연다.
+                         #   메서드가 아니라 함수형 — 이 식 언어의 기존 문법 그대로.
+                         #   split(s, sep)[0] 꼴은 Subscript 가 이미 NODES 에 있어 그대로 된다.
+                         "split": lambda s, sep=None: str(s).split(sep if sep is not None else None),
+                         "replace": lambda s, a, b: str(s).replace(str(a), str(b)),
+                         "strip": lambda s, chars=None: str(s).strip(chars),
+                         "upper": lambda s: str(s).upper(),
+                         "lower": lambda s: str(s).lower(),
+                         "contains": lambda s, sub: _contains(s, sub),
+                         "join": lambda sep, parts: str(sep).join(str(p) for p in parts)}
+
+
+def _contains(s, sub):
+    """contains 는 조건 언어와 같은 한 벌 판정(value_semantics.text_match, B46-6) —
+    한 낱말이 식과 조건에서 다른 판결을 내면 안 된다. 지연 임포트는 아래
+    _semantic_compare 와 같은 관례."""
+    from common.value_semantics import text_match
+    return text_match("contains", s, sub)
 NODES = (_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Name, _ast.Load,
          _ast.Call, _ast.Compare, _ast.BoolOp, _ast.IfExp, _ast.Subscript, _ast.Tuple,
          _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.FloorDiv, _ast.Mod, _ast.Pow,

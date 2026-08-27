@@ -11,7 +11,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
-    target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이") · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용(리터럴 행 목록은 [table:take]{items: […]} 로 진입해 이어라). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
+    target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이") · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용하고, items 파라미터로 행 목록(리터럴·`$변수` 원형)을 직접 받을 수도 있다(언어 개정 2026-08-27). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
     group: transform
     router: handler
     tool: data_filter
@@ -79,7 +79,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
-    target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby.'
+    target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby.'
     group: transform
     router: handler
     tool: data_compute
@@ -315,6 +315,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         where:
           type: [string, object, array]
           description: 필터 조건. 문자열("필드 op 값" — 기호 또는 워드 contains/in/matches/startswith/endswith · 연산자 없으면 전 필드 부분일치)·{field,op,value}·{열:값}·배열(AND). 비교 필드의 결측은 !=/ne·순서 비교에서도 불일치.
@@ -323,6 +326,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         by:
           type: string
           description: 정렬 기준 필드/열 이름.
@@ -350,6 +356,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         fields:
           type: array
           description: 남길 필드 이름 배열(columns 의 동의 표기).
@@ -365,6 +374,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         set:
           type: object
           description: '{새열: "식"} — 예 {전세가율: "round(보증금 / 매매가 * 100, 1)"}'
@@ -375,6 +387,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         map:
           type: object
           description: '{옛이름: 새이름} 딕셔너리.'
@@ -385,6 +400,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         field:
           type: string
           description: 중첩 목록 경로(점 표기). 값이 {items:[...]} 봉투면 items 자동 승격. 생략 시 옛 문장의 정직한 이행 오류만 제공.
@@ -398,6 +416,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         by:
           type: string
           description: 중복 판정 키 필드/열(미지정 시 records=title, table=첫 열).
@@ -429,6 +450,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         by:
           type: string
           description: 그룹 키 열 이름.
@@ -455,12 +479,18 @@ tool_json:
     description: 두 table(또는 두 records)을 행 결합. 같은 통화끼리. table은 열 이름으로 통합(순서 보존), records는 concat. & 병렬 두 입력. 중복 제거는 뒤에 >> dedup.
     input_schema:
       type: object
-      properties: {}
+      properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
   - name: data_merge
     description: 두 records를 합침(concat). by 지정 시 그 키로 중복 제거. 여러 검색 결과를 한 목록으로. & 병렬 두 입력. (표형 결합은 union.)
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         by:
           type: string
           description: 중복 제거 키 필드(미지정 시 단순 concat).
@@ -478,6 +508,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        items:
+          type: array
+          description: 변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27).
         blocks:
           type: array
           description: 문서 IR 블록 배열 (각 블록 {type, ...}). blocks/items/markdown 중 하나.

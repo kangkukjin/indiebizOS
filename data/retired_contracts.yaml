@@ -41,3 +41,14 @@ retired:
       - "each 결과의 _result"
       - "each 결과를 한 표로"
       - "each >> flatten"
+  - id: transformer_items_take_only
+    retired: 2026-08-27
+    reason: >-
+      단항 변환자의 items 직접 입력을 비공개로 두고 take 만 씨앗 진입점으로 강제하던
+      계약 — 치환 의미론 개정($변수 통짜 경로=원형)으로 변수는 원형 목록을 넣게 되면서
+      리터럴만 거절하는 비대칭이 무의미해졌고, 사용자 판정으로 전면 개방.
+    instead: >-
+      단항 변환자 전부(filter/sort/take/select/compute/rename/flatten/dedup/since/
+      groupby/union/merge, render_document)가 items(array) 를 공개 파라미터로 받는다 —
+      리터럴·$변수 원형 어느 쪽으로도 씨앗이 된다.
+    phrases: ["[table:take]{items: […]} 로 진입해 이어라"]

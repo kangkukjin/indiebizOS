@@ -220,7 +220,9 @@ def get_performances(stdate, eddate, shcate=None, signgucode=None, prfstate="02"
             "genre": shcate,
             "region": signgucode,
             "status": prfstate,
-            "keyword": keyword
+            "keyword": keyword,
+            "page": cpage,            # 어느 페이지를 봤는지 봉투가 말한다(종전엔 안 말했다)
+            "rows": params["rows"],   # 실제로 요청한 값 그대로 (깎기는 위 한 곳이 소유)
         }
         result["message"] = f"총 {result.get('count', 0)}개의 공연을 찾았습니다."
 
@@ -386,7 +388,8 @@ def get_region_list():
     }
 
 
-def search_by_keyword(keyword, genre=None, region=None, status="공연중", days=90):
+def search_by_keyword(keyword, genre=None, region=None, status="공연중", days=90,
+                      rows=20, cpage=1):
     """
     키워드로 공연 검색 (편의 함수)
 
@@ -396,6 +399,13 @@ def search_by_keyword(keyword, genre=None, region=None, status="공연중", days
         region: 지역
         status: 공연 상태
         days: 검색 기간 (오늘부터 N일 후까지)
+        rows: 결과 수 (KOPIS rows)
+        cpage: 페이지 번호 (KOPIS cpage)
+
+    ★2026-08-27: rows·cpage 를 받지 않아 스키마가 선언한 `page`·`rows` 가
+      op=search 에서만 조용히 버려졌다(venue op 은 처음부터 넘기고 있었다).
+      실측 — page 1 과 2 의 20행이 mt20id 까지 완전히 동일했다. 선언한 param 은
+      효과가 있거나 거절되어야 하고, 조용히 사라지면 안 된다(25·26회차 원장 항목).
     """
     today = datetime.now()
     stdate = today.strftime("%Y%m%d")
@@ -408,5 +418,6 @@ def search_by_keyword(keyword, genre=None, region=None, status="공연중", days
         signgucode=region,
         prfstate=status,
         keyword=keyword,
-        rows=20
+        rows=rows,
+        cpage=cpage,
     )

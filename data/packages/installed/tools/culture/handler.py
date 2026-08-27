@@ -77,6 +77,8 @@ def _perf_search(ti: dict):
         region=ti.get("region"),
         status=ti.get("status", "공연중"),
         days=ti.get("days", 90),
+        rows=ti.get("rows", 20),
+        cpage=ti.get("page", 1),   # 스키마가 선언한 page — 종전엔 여기서 조용히 버려졌다
     )
     # 단일 통화 — native data 목록을 items로 노출.
     if isinstance(result, dict) and isinstance(result.get("data"), list):

@@ -1142,4 +1142,31 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 
 - **수리 없음** — 셋 다 오류 아님이라 backend 편집 0건, 격리 스테이징 0건(`[self:patch]{op:"status"}` → "미적용 0건"). 49회차의 RED 적용 예약분은 이미 라이브에 반영돼 있음을 코드 실측으로 확인.
 - 회귀: `pytest backend/test_red_zone_body_family.py backend/test_imagination_round49_repairs.py backend/test_emitter_output_path.py -o addopts=` → **35 passed**.
+### 범위밖·보고만 잔여 **전수 재판정** (2026-08-27 `#repair` 턴 — 근거는 전부 이 턴의 실행 출력)
+
+직전 판정이 48·49회차로 좁혀 **서술**로 닫은 것을 사용자가 되돌렸다(`#repair`). 이번엔 원장 전 회차를 `범위 밖|보고만|미수리|보류` 로 다시 훑어 항목을 세우고, **각 항목을 그 자리에서 재현 실행**해 갈랐다.
+
+| # | 항목 (원장 위치) | 이 턴의 재현 실행 | 판정 |
+|---|---|---|---|
+| 1 | `??` 폴백 표지 전파 (49회차:217) | `[sense:stock]{ZZZZINVALID} ?? ([table:each]{2행 중 1행 실패} >> take)` | **오류 아님** — 최상위에 `_fallback_used·errors·error_count·passthrough_rows·warning` 전부 |
+| 2 | 자리표 정규식 3번째 방언 (49회차:198) | `/tmp/it50_probe2.py` — 옛 손방언 `{{_step_1_resultXYZ`→`[1]` / 주인 모듈 `[]`, 소비 지점은 `step_ref_indices` 임포트 | **오류 아님**(통합 완료) |
+| 3 | RED 관문 × 격리 워크트리 (48회차 §7) | 라이브 `_red_zone_violation()` 직접 호출(그랜트 off): 워크트리 `backend/`·`frontend/` **RED 거절**, 남의 저장소·`data/` 허용 | **오류 아님**(근본 수리 생존) |
+| 4 | `[sense:performance]{page}` 무효 (25회차:247·26회차:316) | page 1 vs 2 → **mt20id 20/20 동일**, 봉투 `search_params` 에 page 없음 | ★**결함 재현 → 수리함** |
+| 5 | V49-1 블록 스코프 (49회차 미수리·보류표) | `[if: 1 == 1]{$k = [self:time]}` 뒤 `$k` → `변수 $k 이(가) … 할당되지 않았습니다` (파서는 팬텀 슬롯 발급 `{'k': 1000000}`) | ★**결함 재현 → 수리함** |
+| 6 | B35-1 string 자리 숫자 (35회차:168) | `[sense:weather]{city: 123}` → 정상(`"123"` 해소) · `[sense:stock]{ticker: 005930}` → **앞자리 0 보존**, 005930.KS | 오류 아님 — 값 census(`75e420cc`)가 닫았다 |
+| 7 | B35-2 조용한 타입 강제 (35회차:204) | `[table:take]{n: 3.7}` → **명시 거절**("버림이 생기면 답이 조용히 달라집니다") | 오류 아님 — 같은 census |
+| 8 | F27-1 블록 결과 `{result: 문자열}` (27회차:258) | 문장 자리 `[if]`·`[case]×[each]` 실행 → 통화가 최상위로 그대로, `matched` 만 추가 | 오류 아님(재현 불가 — 규약이 이미 정리됨) |
+| 9 | F29-2 emitter 산출 경로 3규약 (29회차:208) | 같은 파이프 끝에 셋을 각각 → `/tmp/it50/{a.xlsx, a.md, a.png}` **셋 다 절대경로 존중** | 오류 아님(수렴 완료 — 판정 요청도 자연 해소) |
+| 10 | since 첫 검침 note 소실 (29회차 지표) | `feed >> since{새 key} >> take` → `empty_notes` + `warning` 최상위 승격 | 오류 아님(수리 생존). 스크래치 스트림 5행 삭제 완료 |
+| 11 | G1-③ 파이프 items 배열 소비 (2회차:102) | `restaurant >> take >> show_map{markers: "$items"}` dry-run → `valid: true` | 오류 아님 — `$items` 문법이 갭을 메웠다(실행은 UI 부작용이라 검수까지, §3-5) |
+| 12 | repeat 안 `$변수` 대기 × 차단기 (30회차:216) | `[repeat: until $r.success == true, max: 3]{$r = <실패문장>}` → 1회차에서 `halted: "error"` 로 정지 | 오류 아님 — 차단기까지 가지도 않는다(연속 실패가 안 쌓임) |
+| 13 | 부재 판정 12자리(28회차:306) · `self:body` count 부재(26회차:313) · `?, ?, ?` 표기(31회차:271) | `[self:body]{op:changes}` → `total`·`truncated` 로 절단 정직 신고, count 는 변환자가 채움 | 오류 아님(원 판정 유지) |
+
+**수리 2건**
+
+- `B50-1` **`[sense:performance]{op: "search"}` 가 스키마에 선언된 `page`·`rows` 를 조용히 버린다 — 수리됨(라이브).** 진범은 `venue` op 이 아니라 `search` op 이었다: `_perf_search` 가 `page`/`rows` 를 안 읽고, 그 아래 `search_by_keyword` 는 `rows=20`·`cpage=1` 을 **하드코딩**했다(`venue` 는 처음부터 넘기고 있어 25회차가 핸들러 113행을 보고 배선이 있다고 오독했다). 수리=`search_by_keyword(rows, cpage)` 관통 + `_perf_search` 가 `ti` 에서 집음 + `search_params` 봉투가 `page`·`rows` 를 말한다. 실측: 수리 전 page1∩page2=20/20 → 수리 후 **0/20**(완전히 다른 20행). ★`tool_kopis.py` 는 서브모듈이라 `/packages/reload` 밖 — 워커가 옛 판을 드는 동안 `search_by_keyword() got an unexpected keyword argument 'rows'` 가 난다. 이번 턴의 backend 적용이 리로드를 부르면 해소된다(같은 리로드가 서브모듈을 새로 import).
+- `B50-2` **V49-1 의 되쓰기가 몸 결과가 평문 스칼라면 완전 침묵한다 — 수리됨(검증 통과·적용 예약).** `[if: 1 == 1]{$k = [self:time]}` 뒤 `$k` 가 미할당(파서는 팬텀 슬롯을 발급했고 몸도 성공했는데 경계에서 증발). 진범=`_run_branch._carry`·`_execute_try` 의 되쓰기가 둘 다 `isinstance(out, dict)` 뒤에 있고, `vars_dropped` 표지조차 dict 전용(통화 불침범 판정)이라 **표지도 안 남았다**. 49회차 가드가 초록이었던 이유는 `$k = 7`(식 할당 → dict 봉투)만 밟았기 때문 — B48-1 이 `_caught` 에서 고친 "평문 스칼라라는 세 번째 모양"의 정확한 재발. 수리=잎 모듈에 `carry_var_updates()` 한 벌(되쓸 것이 있을 때만 `{"result": …}` 승격)을 세우고 두 자리를 그리로. 실측 대조 — 수리 전 if·try 둘 다 `판정 불능` / 수리 후 `success: true` + `_var_updates`, **안 탄 분기는 그대로 미할당**(침묵 차단 유지). 가드 3건 신설(라이브에서 3 FAIL → 격리에서 통과). 회귀 **1018 passed, 6 skipped**(기준선 1015 + 신규 3).
+
+**교훈**: 원장의 '보고만' 줄은 *가설*이고, 그 가설의 진단도 틀릴 수 있다(#4 는 핸들러의 다른 op 을 보고 "배선은 있다"고 적어 두 회차를 건너뛰었다). 재현 실행 없이 서술만으로 닫으면 살아 있는 결함이 원장에서 초록으로 보인다.
+
 - **교훈 재확인**: 원장의 '범위 밖' 줄은 *그때의 상태*이고, 같은 파일 아래쪽 '집행 완료' 절이 그것을 뒤집어 놓고도 위 표를 고치지 않으면 다음 턴이 낡은 줄을 미판정으로 읽는다. 한 회차 안에서 상태가 바뀌면 **두 절을 함께** 고칠 것.

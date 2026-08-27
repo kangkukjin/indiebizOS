@@ -142,10 +142,15 @@ def critique_image(tool_input, output_base):
     # criteria: data/criteria/*.yaml 취향 파일 — 지정 시 preset 기본 체크 대신 이 파일이 기준.
     criteria_name = (tool_input.get("criteria") or "").strip()
 
+    # 적용 기준표를 verdict 에 정직 신고한다 (2026-08-28) — 08-27 실측: criteria·preset
+    # 둘 다 미지정이면 슬라이드 일러스트 기준표가 **조용히** 적용돼, 공유창고 HTML 문서
+    # 스크린샷이 "한글 텍스트가 들어갔다"로 1/10 실패 판정을 받았다. 오판 자체보다
+    # 어느 기준표였는지가 verdict 에 없어 원인을 소스 대조로만 찾을 수 있던 것이 침묵이다.
     if criteria_name:
         crit, cerr = _load_criteria(criteria_name)
         if cerr:
             return json.dumps({"success": False, "error": cerr}, ensure_ascii=False)
+        rubric = f"criteria:{criteria_name}"
         default_checks = list(crit["checks"])
         if style_preset:
             default_checks.append(f"스타일/톤이 '{style_preset}'와 일관되는가?")
@@ -157,6 +162,7 @@ def critique_image(tool_input, output_base):
         else:
             hard_rule = ""
     elif preset == "general":
+        rubric = "preset:general"
         default_checks = [
             "이미지가 의도(intent)를 정확하고 충분히 충족하는가?",
             "시각적 결함(텍스트 잘림·겹침, 레이아웃 불균형, 깨짐, 저해상도, 빈 공간 과다)이 없는가?",
@@ -166,6 +172,9 @@ def critique_image(tool_input, output_base):
         intro = "당신은 산출물 품질 평가자입니다. 아래 이미지가 의도를 잘 충족하는지 엄격하게 평가하세요."
         hard_rule = ""
     else:
+        rubric = ("preset:slide_illustration(기본값 — criteria·preset 미지정)"
+                  if not (tool_input.get("preset") or "").strip()
+                  else "preset:slide_illustration")
         default_checks = [
             "이 일러스트는 회화적 '씬(scene)'이 아니라 정보를 전달하는 '다이어그램/인포그래픽'인가? (NotebookLM 양식)",
             "한글(Hangul) 문자가 일러스트 안에 들어가 있는가? (있으면 실패 — 한글은 텍스트 레이어에서 처리)",
@@ -216,12 +225,18 @@ def critique_image(tool_input, output_base):
         return json.dumps({"success": False, "error": "VLM 응답 파싱 실패", "raw": text[:500]}, ensure_ascii=False)
     if isinstance(verdict, dict):
         verdict.setdefault("tier", "vision")  # 0층(prescreen) 단락과 판정 출처를 구분
+        verdict.setdefault("rubric", rubric)  # 어느 기준표로 심사했는가 — 침묵 기본값 방지
 
     summary_lines = [
         f"이미지 평가: {image_path}",
         f"의도: {intent[:80]}{'...' if len(intent) > 80 else ''}",
+        f"기준표: {rubric}",
         f"평가 결과: {'✓ 통과' if verdict.get('passed') else '✗ 실패'} (score={verdict.get('score', '?')}/10)",
     ]
+    if rubric.endswith("미지정)"):
+        summary_lines.append(
+            "  ⚠ 슬라이드 일러스트 기본 기준표로 심사됨 — 문서·웹·장부 검수라면 "
+            "criteria(web/visual_base/sheet …) 또는 preset: 'general' 을 지정할 것.")
     issues = verdict.get("issues") or []
     if issues:
         summary_lines.append("문제점:")

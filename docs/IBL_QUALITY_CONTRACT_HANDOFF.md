@@ -123,4 +123,5 @@ criteria 1개 = 판정 최대 2회 + 재실행 1회의 추가 원샷(전부 back
 | 정직 표지 | `ibl_honesty.HONESTY_FLAG_KEYS` + 교재 12_ibl_only.md | `_criteria_retried` |
 | param 어휘 | `ibl_param_vocab.RUNTIME_META_KEYS` | criteria (액션 선언 우선 규칙 주석) |
 | goal | `cognition/agent_goals.py` | 라운드 실패 tb+goal 프레임 · 미달 종료 quality tb |
-| 회귀 | `backend/test_ibl_criteria_contract.py` | C1~C8 (판정자 패치, 원샷 호출 0) |
+| 증류 신호 | `cognition/agent_pipeline.py`(`_quality_of_result`) · `cognition/ibl_usage_rag.py` | 재시도-통과 표지→반성 프롬프트 (§6) |
+| 회귀 | `backend/test_ibl_criteria_contract.py` | C1~C10 (판정자 패치, 원샷 호출 0) |

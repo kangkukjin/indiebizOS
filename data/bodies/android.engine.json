@@ -333,6 +333,7 @@
     "test_repair_staging": "force_exclude_glob",
     "test_repair_status_git_column": "force_exclude_glob",
     "test_repair_verdict_owner": "force_exclude_glob",
+    "test_retired_contracts_gate": "force_exclude_glob",
     "test_runtime_shape": "force_exclude_glob",
     "test_shape_variant_axis": "force_exclude_glob",
     "test_single_runner": "force_exclude_glob",
@@ -354,8 +355,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 348,
+    "total": 349,
     "engine": 225,
-    "blocklist": 123
+    "blocklist": 124
   }
 }

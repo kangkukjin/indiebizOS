@@ -33,6 +33,12 @@
   재생성하고 `--check` 로 검증하라.
 - backend 파일을 바꾸면 `python3 scripts/build_body_bundle.py android` 로 폰 번들
   매니페스트를 재생성해야 커밋이 통과한다(pre-commit 이 강제).
+- **설명을 고쳤으면 거기서 끝이 아니다.** 한 낱말의 교재는 카탈로그·파생물만이 아니라
+  **핸들러의 오류·도움말 문자열과 독스트링**까지다 — 앞은 `--check` 가 대조하지만 뒤는
+  아무도 안 본다(2026-08-27 실측 `aa904ffc`: 카탈로그는 참인데 런타임 문구가 은퇴한
+  관용구를 계속 가르쳤다). 계약을 은퇴시켰으면 `data/retired_contracts.yaml` 에 한 줄
+  등록하라 — 관문 `scripts/check_retired_contracts.py` 가 매 커밋 전 표면을 훑는다.
+  절차 정본 = `data/guides/new_action_checklist.md` 0단계 7항.
 
 ## 3. 코드 규칙
 

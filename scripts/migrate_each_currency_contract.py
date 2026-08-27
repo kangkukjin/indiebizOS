@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""migrate_each_currency_contract.py — 옛 `each >> flatten` 관용구를 코퍼스에서 걷어낸다.
+"""migrate_each_currency_contract.py — 옛 `each >> flatten` 을 코퍼스에서 걷어낸다.  (retired-ok: 그 관용구를 지우는 연장 자신이므로 이름을 부른다)
 
 멱등: 이미 이관된 코퍼스면 0건. 기본은 dry-run, `--write` 로 반영.
 

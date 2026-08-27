@@ -219,7 +219,8 @@ def _each_input_rows(params: dict) -> Tuple[Optional[list], Any]:
 def _each_carry(rows: list, base: dict, keep: list) -> list:
     """부모 행의 지목된 필드를 결과 행에 승계 — 옛 `flatten{keep: […]}` 의 자리 이동.
 
-    옛 관용구 `each >> flatten{keep: ["city"]}` 는 팬아웃 결과에 "어느 부모에서 왔는지"를
+    옛 관용구 `each >> flatten{keep: ["city"]}`(retired-ok: 그 관용구가 하던 일을 keep 이
+    어떻게 승계했는지 설명하는 자리) 는 팬아웃 결과에 "어느 부모에서 왔는지"를
     붙이는 유일한 방법이었다. each 가 통화를 그대로 내게 되면서 flatten 이 파이프에서
     빠지므로, 그 능력이 사라지지 않도록 부모 행이 아직 손에 있는 이 자리로 옮긴다
     (능력을 없애는 개정이 아니라 자리를 옮기는 개정이다).
@@ -475,7 +476,8 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             # ★F17 (2026-08-17 상상훈련 12회차): 입력 0행은 실수가 아니라 정당한 빈손 —
             # 0회 실행=성공(공허 참)으로 0건 통화를 내려 파이프가 완주하게 한다.
             # take/filter 는 빈손을 통과시키는데 each 만 실패로 파이프를 끊던 비대칭
-            # (검색 0건 >> each >> flatten 이 step 3 에서 죽던 실측, P14 빈손 계약 정합).
+            # (검색 0건 >> each >> flatten 이 step 3 에서 죽던 실측 — retired-ok: 은퇴
+            #  전에 일어난 사건의 기록이다. P14 빈손 계약 정합).
             out["success"] = True
             out["message"] = "each: 입력 0행 — 실행 0회 (빈 목록)"
         else:

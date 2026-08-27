@@ -1224,7 +1224,8 @@ def _op_flatten(prev, params):
         sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
         # ★기본 field(_result)로 왔는데 어느 행에도 _result 가 없다 = 입력이 **이미 평탄**하다.
         #   `[table:each]` 가 통화를 그대로 내게 된 뒤(2026-08-23 언어 개정) 옛 관용구
-        #   `each >> flatten` 이 정확히 여기로 온다. "목록이 없다"만 말하면 사용자는 field 를
+        #   `each >> flatten` 이 정확히 여기로 온다(retired-ok: 옛 문장을 이름 불러
+        #   거절하는 이행 진단). "목록이 없다"만 말하면 사용자는 field 를
         #   고치려 들지만, 참인 처방은 **flatten 을 빼는 것**이다.
         if field == "_result":
             return {"success": False,

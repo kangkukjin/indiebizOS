@@ -61,7 +61,19 @@ def coerce_items_payload(value: Any) -> Any:
         return value
     if isinstance(value, dict):
         rows = value.get("items")
-        return rows if isinstance(rows, list) else None
+        if isinstance(rows, list):
+            return rows
+        # ★2026-08-27: `$변수` 가 **파이프 결과**를 담고 있으면 items 가 없다.
+        #   파이프 이음매만 통화를 파생하고(`_to_prev_currency`) step_results 는 "원형 유지
+        #   = 토큰 중복 0" 인데, 그 저장소가 $변수 슬롯을 겸하기 때문이다. 실측:
+        #     $표 = [sense:host]{…} >> [table:select]{columns:["cpu_percent"]}
+        #     [table:brief]{items: "$표"}   → "입력 통화가 없습니다"  (변수엔 columns/rows 만)
+        #     $단일 = [sense:host]{…}
+        #     [table:brief]{items: "$단일"} → 정상            (생산자가 items 를 직접 방출)
+        #   같은 문장이 앞 단계의 모양에 따라 되고 안 되는 것은 통화의 약속이 아니다.
+        #   모양 판정은 여기서 다시 알아보지 않고 **몸의 단일 게이트**에 위임한다.
+        derived = derive_items(dict(value)).get("items")
+        return derived if isinstance(derived, list) else None
     if isinstance(value, str):
         s = value.strip()
         if not s or s[0] not in "[{":

@@ -970,6 +970,38 @@ def test_p29_empty_hand_contract_is_one_rule():
     print("P29 OK — 빈손 계약이 verb 전수 한 규칙(부재 주장 금지) · 행 있으면 시끄러운 거절 유지")
 
 
+def test_P30_파이프결과_변수를_items_로_주입할_수_있다():
+    """P30 — `$변수`(파이프 결과)를 `items:` 로 주입하면 통화로 읽혀야 한다 (2026-08-27).
+
+    P2 가 고친 것은 items 가 **리스트**로 인라인될 때였다. 같은 병이 다른 문으로 재발했다:
+    변수 치환은 통화를 **JSON 문자열**로 넣는데, 그 문자열이 담은 것은 파이프 결과의
+    *원형*이라 `items` 가 없다(파이프 이음매만 파생한다 — step_results 는 토큰 중복을
+    피하려고 원형을 유지하고, 그 저장소가 $변수 슬롯을 겸한다).
+
+        $표 = [sense:host]{…} >> [table:select]{columns: ["cpu_percent"]}
+        [table:spreadsheet]{items: "$표", path: …}   → success + **1×1 빈 xlsx** (조용한 실패)
+        [table:document]{items: "$표"}                 → "blocks 가 필요합니다"
+        [table:brief]{items: "$표"}                    → "입력 통화가 없습니다"
+        $단일 = [sense:host]{…}                        (생산자 직접 방출 items)
+        [table:brief]{items: "$단일"}                   → 정상  ← 같은 문장이 앞 모양에 따라 갈렸다
+
+    수리 = 되읽기 관문이 모양 판정을 몸의 단일 게이트(derive_items)에 위임한다.
+    """
+    from common.currency import coerce_items_payload
+    PIPE = json.dumps({"success": True, "cpu_percent": 9.9,
+                       "columns": ["cpu_percent"], "rows": [[9.9], [12.1]]}, ensure_ascii=False)
+    assert coerce_items_payload(PIPE) == [{"cpu_percent": 9.9}, {"cpu_percent": 12.1}]
+    # 생산자 직접 방출 items 는 그대로 (파생이 덮지 않는다)
+    assert coerce_items_payload('{"items": [{"a": 1}]}') == [{"a": 1}]
+    # blocks 통화(document 생산자)도 같은 눈
+    assert coerce_items_payload('{"blocks": [{"type": "paragraph", "text": "x"}]}') == \
+        [{"type": "paragraph", "text": "x"}]
+    # 통화가 아닌 것은 여전히 None — 호출자의 진단 경로를 뺏지 않는다
+    assert coerce_items_payload("그냥 문자열") is None
+    assert coerce_items_payload('{"success": true, "path": "/tmp/x"}') is None
+    print("P30 OK — 파이프 결과 변수도 통화로 읽힌다(판정은 단일 게이트)")
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
     # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.

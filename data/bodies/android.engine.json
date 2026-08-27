@@ -277,6 +277,7 @@
     "test_field_path_single_owner": "force_exclude_glob",
     "test_framing_amend_gate": "force_exclude_glob",
     "test_framing_privilege_inherit": "force_exclude_glob",
+    "test_gemini_http_images_contract": "force_exclude_glob",
     "test_gemini_provider_contract": "force_exclude_glob",
     "test_goal_eval_streaming": "force_exclude_glob",
     "test_grep_glob_dialect": "force_exclude_glob",
@@ -349,14 +350,15 @@
     "test_value_semantics_root_convergence": "force_exclude_glob",
     "test_value_semantics_single_owner": "force_exclude_glob",
     "test_venv_pinned": "force_exclude_glob",
+    "test_vision_gear_contract": "force_exclude_glob",
     "test_workflow_params": "force_exclude_glob",
     "test_world_noun_refutable": "force_exclude_glob",
     "test_write_ledger": "force_exclude_glob",
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 349,
+    "total": 351,
     "engine": 225,
-    "blocklist": 124
+    "blocklist": 126
   }
 }

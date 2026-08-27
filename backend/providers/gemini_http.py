@@ -99,15 +99,37 @@ class GeminiHTTPProvider(BaseProvider):
         return [{"function_declarations": decls}]
 
     # ── contents 빌드 ───────────────────────────────────────
-    def _build_contents(self, message: str, history: List[Dict]) -> list:
+    @staticmethod
+    def _image_part(img: Dict) -> dict:
+        """images 항목({base64, media_type}) → REST inline_data part.
+
+        REST 는 base64 문자열을 그대로 싣는다(SDK 처럼 bytes 디코드 불요).
+        base64 가 없으면 ValueError — 침묵 폐기 금지(silent-clamp 부류)."""
+        data = (img or {}).get("base64")
+        if not data:
+            raise ValueError("이미지 항목에 base64 가 없습니다 — images=[{base64, media_type}] 계약")
+        return {"inline_data": {"mime_type": img.get("media_type", "image/png"),
+                                "data": data}}
+
+    def _build_contents(self, message: str, history: List[Dict],
+                        images: List[Dict] = None) -> list:
         contents = []
         for h in (history or []):
             role = "user" if h.get("role") == "user" else "model"
             tag = "user_message" if role == "user" else "assistant_message"
-            contents.append({"role": role,
-                             "parts": [{"text": f"<{tag}>\n{h.get('content','')}\n</{tag}>"}]})
-        contents.append({"role": "user",
-                         "parts": [{"text": f"<current_user_request>\n{message}\n</current_user_request>"}]})
+            parts = []
+            for img in (h.get("images") or []):
+                try:
+                    parts.append(self._image_part(img))
+                except ValueError:
+                    pass  # 히스토리 이미지는 best-effort — gemini.py(SDK)와 대칭
+            parts.append({"text": f"<{tag}>\n{h.get('content','')}\n</{tag}>"})
+            contents.append({"role": role, "parts": parts})
+        # 현재 턴 이미지는 계약 위반 시 정직 오류(ValueError 전파) — 여기서만 엄격
+        current_parts = [self._image_part(img) for img in (images or [])]
+        current_parts.append(
+            {"text": f"<current_user_request>\n{message}\n</current_user_request>"})
+        contents.append({"role": "user", "parts": current_parts})
         return contents
 
     # ── REST 호출 ───────────────────────────────────────────
@@ -180,7 +202,11 @@ class GeminiHTTPProvider(BaseProvider):
                         images: List[Dict] = None, execute_tool: Callable = None) -> str:
         if not self._client:
             return "AI가 초기화되지 않았습니다. GEMINI_API_KEY를 확인해주세요."
-        contents = self._build_contents(message, history or [])
+        try:
+            contents = self._build_contents(message, history or [], images)
+        except ValueError as e:
+            # 이미지 계약 위반 — 침묵 폐기 대신 정직 오류로 착지
+            return f"[이미지 입력 오류] {e}"
         tools = self._gemini_tools()
         accumulated = ""
         iteration = 0

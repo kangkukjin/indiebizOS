@@ -1,7 +1,9 @@
-"""system_essentials 몸 변화 회상 층 ([self:body] — 2026-08-21 신설)
+"""system_essentials 몸 변화 회상·각인 층 ([self:body] — 2026-08-21 신설, 각인 2026-08-27)
 
 몸(이 코드가 사는 저장소의 파일들)의 변화 이력을 git 원장에서 읽어 items 통화로 낸다.
-전 op 읽기 전용 — 원장은 git 이 이미 쓰고 있고, 이 어휘는 **회상 통로**다.
+회상 6 + 각인 1(commit) — commit 이 이 낱말의 유일한 쓰기 굴절이다. 개서(amend/rebase)와
+전파(push)는 낱말이 없다: 개서는 파괴라 사람 손의 일이고, push 낱말의 부재는 원격 URL 이
+이 몸의 코드에 존재할 자리 자체를 없앤다(하네스는 남의 클론에서도 몸이어야 한다).
 (설계 배경: 08-05 층 분리 같은 몸 개조가 회상 불가능해 grep 방언 사건이 6주 잠복했다.
  몸이 바뀌면 몸에 대한 가정이 깨진다 — 변화 자체가 연상 가능한 기억이어야 한다.)
 
@@ -12,10 +14,13 @@
 - diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·한 커밋·구간(ref..HEAD). 파일별 items + 본문
   (2026-08-21 추가: 7일간 Bash git 서브커맨드 1위가 `git diff` 95회 — 회상 통로가 "무엇이"
    까지만 답하고 "어떻게"는 못 답해 셸로 떨어지던 자리)
+- commit: 각인 — 지정한 경로만 원장에 기록 (paths·message 필수, 정본=docs/SELF_EVOLUTION_AUTOMATION_HANDOFF.md)
 """
 import os
 import shutil
 import subprocess
+import tempfile
+import time
 
 _TIMEOUT_S = 20
 _DEFAULT_DAYS = 7
@@ -506,3 +511,204 @@ def op_diff(tool_input):
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "range": label, "text": text}
+
+
+# ── 각인 (2026-08-27 신설) ──────────────────────────────────────────────────
+# 이 낱말이 스크립트가 아니라 어휘인 이유 = 절차 지식의 캡슐:
+#   ① 공유 인덱스 불가침 — 동시 세션이 같은 .git/index 를 쓴다(운영 함정 원장).
+#      각인은 임시 인덱스(GIT_INDEX_FILE)로만 조립해 남의 스테이징을 절대 만지지 않는다.
+#   ② 관문 보존 — porcelain `git commit` 만 쓴다. plumbing(commit-tree)은 pre-commit 을
+#      우회하므로 금지 — 관문은 커밋 시점의 안전판이고, 관문은 저장소의 소유물이다.
+#   ③ pathspec 강제 — "전부 커밋"이라는 굴절은 없다.
+# 이식성: 저장소=코드 위치의 .git 조상(_repo_root), 저자=그 클론의 git config,
+# 메시지=호출자 원문 그대로(서명 주입 금지), 원격은 조회조차 하지 않는다.
+
+_COMMIT_TIMEOUT_S = 300   # pre-commit 관문 체인이 수십 초를 쓴다 — 회상용 _TIMEOUT_S(20s)와 별도
+_LOCK_STALE_S = 600       # 이보다 오래된 잠금 = 죽은 소유자로 보고 회수
+_LOCK_WAIT_S = 30
+
+
+def _git_env(root, args, env, timeout=_COMMIT_TIMEOUT_S):
+    """각인 전용 실행기 — 임시 인덱스 env 와 긴 timeout. 반환 규약은 _git 과 동일하되
+    관문(pre-commit) 거부문이 stdout 으로 나오는 경우가 많아 stdout·stderr 둘 다 싣는다."""
+    git = _find_git()
+    if not git:
+        return None, "git 실행파일을 찾을 수 없습니다 (이 몸에는 git 이 없음)."
+    try:
+        # quotepath=false — 한글 등 비ASCII 파일명이 8진수 인용("\354…")으로 깨지지 않게
+        proc = subprocess.run([git, "-C", root, "-c", "core.quotepath=false"] + args,
+                              capture_output=True,
+                              text=True, encoding="utf-8", errors="replace",
+                              timeout=timeout, env=env)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, f"git 실행 실패: {e}"
+    if proc.returncode != 0:
+        detail = ((proc.stdout or "").strip() + "\n" + (proc.stderr or "").strip()).strip()
+        return None, f"git 오류 (exit {proc.returncode}): {detail[:1000]}"
+    return proc.stdout, None
+
+
+def _acquire_imprint_lock(root):
+    """몸 안 각인끼리의 직렬화 — O_EXCL 잠금파일 (fcntl 은 Windows 부재라 배제).
+    외부 세션(Claude Code)과의 경합은 잠금이 아니라 op_commit 의 부모 검증+재시도가 맡는다."""
+    path = os.path.join(root, ".git", "ibl_body_commit.lock")
+    deadline = time.time() + _LOCK_WAIT_S
+    while True:
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            return path, None
+        except FileExistsError:
+            try:
+                if time.time() - os.path.getmtime(path) > _LOCK_STALE_S:
+                    os.unlink(path)
+                    continue
+            except OSError:
+                continue  # 방금 사라짐 — 다음 루프에서 재시도
+            if time.time() > deadline:
+                return None, ("다른 각인이 진행 중입니다 (.git/ibl_body_commit.lock) — "
+                              "잠시 후 다시 시도하세요.")
+            time.sleep(0.5)
+        except OSError as e:
+            return None, f"각인 잠금 실패: {e}"
+
+
+def _norm_commit_paths(tool_input, root):
+    """paths 정규화 — 각 경로를 저장소 상대·슬래시 표기로. 밖이면 거절."""
+    raw = tool_input.get("paths")
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raw = []
+    cleaned = [str(p).strip() for p in raw if str(p or "").strip()]
+    if not cleaned:
+        return None, ('commit 은 paths(1개 이상)가 필수입니다 — "전부 커밋"이라는 굴절은 없습니다'
+                      " (동시 세션의 공유 인덱스 보호). "
+                      '예: [self:body]{op: "commit", message: "수리 요지", paths: ["backend/x.py"]}')
+    out = []
+    for s in cleaned:
+        q = os.path.expanduser(s)
+        rel = os.path.relpath(q, root) if os.path.isabs(q) else s
+        rel = rel.rstrip("/").replace(os.sep, "/")
+        if rel.startswith(".."):
+            return None, f"저장소 밖 경로입니다: {s} (몸={root})"
+        out.append(rel)
+    return out, None
+
+
+def _commit_author(root):
+    """저자 = 그 클론의 git config. 미설정 = 정직한 안내(특정인 폴백 금지 — 이식성)."""
+    name, _ = _git(root, ["config", "user.name"])
+    email, _ = _git(root, ["config", "user.email"])
+    name = (name or "").strip()
+    email = (email or "").strip()
+    if not name or not email:
+        return None, ("git 저자가 설정되지 않았습니다 — 이 클론의 소유자를 설정하세요: "
+                      'git config user.name "이름" / git config user.email "메일"')
+    return name, None
+
+
+def _hook_state(root):
+    """pre-commit 관문이 이 클론에 설치돼 있는지 — 관문은 저장소의 소유물이라 없어도 각인은 된다."""
+    hooks_dir, err = _git(root, ["rev-parse", "--git-path", "hooks"])
+    if err:
+        return "불명"
+    hp = hooks_dir.strip()
+    if not os.path.isabs(hp):
+        hp = os.path.join(root, hp)
+    return "통과" if os.path.isfile(os.path.join(hp, "pre-commit")) else "없음"
+
+
+def op_commit(tool_input):
+    """각인 — 지정한 경로의 현재 작업트리 상태만 몸 원장에 기록한다."""
+    root, err = _guard_root()
+    if err:
+        return err
+    message = str(tool_input.get("message") or "").strip()
+    if not message:
+        return {"success": False,
+                "message": ("commit 은 message 가 필수입니다 — 이 요지가 원장(log op)의 회상 단위가 됩니다. "
+                            '예: [self:body]{op: "commit", message: "수리 요지", paths: ["backend/x.py"]}')}
+    paths, perr = _norm_commit_paths(tool_input, root)
+    if perr:
+        return {"success": False, "message": perr}
+    author, aerr = _commit_author(root)
+    if aerr:
+        return {"success": False, "message": aerr}
+
+    lock, lerr = _acquire_imprint_lock(root)
+    if lerr:
+        return {"success": False, "message": lerr}
+    tmp_fd, tmp_index = tempfile.mkstemp(prefix="ibl_body_index_")
+    os.close(tmp_fd)
+    env = os.environ.copy()
+    env["GIT_INDEX_FILE"] = tmp_index
+    try:
+        last_err = None
+        for _attempt in range(2):  # 외부 세션과 경합 시 1회 재시도 (부모 검증이 판정)
+            start_head, _ = _git(root, ["rev-parse", "--verify", "-q", "HEAD"])
+            start_head = (start_head or "").strip() or None  # None = 무연고 HEAD(첫 커밋 전)
+
+            # 임시 인덱스를 HEAD 스냅샷으로 초기화 → 지정 경로만 반영
+            _, gerr = _git_env(root, ["read-tree", "HEAD"] if start_head else ["read-tree", "--empty"], env)
+            if gerr:
+                return {"success": False, "message": gerr}
+            _, gerr = _git_env(root, ["add", "-A", "--"] + paths, env)
+            if gerr:
+                return {"success": False,
+                        "message": f"경로를 반영할 수 없습니다 (존재하지 않는 pathspec 등) — {gerr}"}
+
+            staged_out, gerr = _git_env(
+                root, ["diff", "--cached", "--name-only"] if start_head else ["ls-files"], env)
+            if gerr:
+                return {"success": False, "message": gerr}
+            staged = [ln.strip() for ln in (staged_out or "").splitlines() if ln.strip()]
+            if not staged:
+                return {"success": False,
+                        "message": f"지정한 경로에 기록할 변화가 없습니다 (빈 커밋 금지): {', '.join(paths)}"}
+
+            # porcelain commit — pre-commit 관문이 같은 env(임시 인덱스)를 상속해 정확히 검사한다
+            _, gerr = _git_env(root, ["commit", "-m", message], env)
+            if gerr:
+                return {"success": False,
+                        "message": f"커밋되지 않았습니다 (관문 pre-commit 거부 또는 git 오류) — {gerr}"}
+
+            new_head, gerr = _git(root, ["rev-parse", "HEAD"])
+            if gerr:
+                return {"success": False, "message": gerr}
+            new_head = new_head.strip()
+            if start_head:
+                parent, _ = _git(root, ["rev-parse", f"{new_head}^"])
+                parent = (parent or "").strip()
+                if parent != start_head:
+                    # 사이에 남의 커밋이 착륙 — 내 트리는 그 변화를 모른 채 조립됐다(되돌림 위험).
+                    # 내 커밋만 회수(CAS)하고 새 HEAD 에서 재조립한다. 작업트리는 건드리지 않는다.
+                    _git(root, ["update-ref", "HEAD", parent, new_head])
+                    last_err = "다른 세션의 커밋과 경합해 재시도했습니다"
+                    continue
+            # 공유 인덱스의 '내 경로' 항목만 새 HEAD 로 동기화 — `git commit -- paths` 의
+            # 원 의미 재현. 안 하면 그 경로가 남들에게 유령 스테이징(HEAD 대비 낡은 항목)으로
+            # 보인다. 남의 스테이징(다른 경로)은 건드리지 않고, 실패해도 커밋은 이미 사실이다.
+            _, rerr = _git(root, ["reset", "-q", "HEAD", "--"] + paths)
+            short, _ = _git(root, ["rev-parse", "--short", new_head])
+            gates = _hook_state(root)
+            row = {"커밋": (short or new_head[:9]).strip(), "요지": message.splitlines()[0],
+                   "파일": staged, "파일수": len(staged), "저자": author, "관문": gates}
+            note = f" · {last_err}" if last_err else ""
+            if rerr:
+                note += " · 공유 인덱스 동기화 실패(다른 세션 사용 중?) — git status 가 이 경로를 이중 표시할 수 있습니다"
+            text = (f"각인 완료: {row['커밋']} — 파일 {len(staged)}개, "
+                    f"관문 {gates}{note}")
+            return {"success": True, "items": [row], "total": 1, "truncated": False, "text": text}
+        return {"success": False,
+                "message": "동시 커밋과 두 번 연속 경합해 중단했습니다 — 저장소가 조용해진 뒤 다시 시도하세요 (작업트리는 그대로입니다)."}
+    finally:
+        try:
+            os.unlink(tmp_index)
+        except OSError:
+            pass
+        try:
+            os.unlink(lock)
+        except OSError:
+            pass

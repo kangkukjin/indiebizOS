@@ -4831,18 +4831,28 @@ nodes:
                 - '{summary|opt:}'
       body:
         returns: items
-        side_effect: false
+        side_effect: true
         fixture: '[self:body]{days: 7, limit: 10}'
-        description: 내 몸의 변화·실행 이력 회상. git 변화, 런타임 쓰기, 한 run의 요청→IBL→검증→부작용 trajectory(hash/ref)를 읽는다. 집계는 table:groupby.
+        description: 내 몸의 변화·실행 이력 회상 + 각인(commit). git 변화, 런타임 쓰기, 한 run의 요청→IBL→검증→부작용 trajectory(hash/ref)를 읽고, 수리를 마친 경로를 원장에 기록한다. 집계는 table:groupby.
         group: system
-        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: 한 실행의 request·model·IBL·validation·side-effect 순번 원장(run_id·episode_id·task_id 중 하나, 없으면 최근 episode; 원문 대신 hash/ref) / diff: 실제 바뀐 줄. limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
+        target_description: 'op — changes(기본): 최근 파일 단위 변화(days 기본 7, path 스코프, 미커밋 포함) / log: 커밋 단위 이력 / file: 한 파일의 일생(path 필수) / writes: 런타임 쓰기 원장(관문 통과분만) / trajectory: 한 실행의 request·model·IBL·validation·side-effect 순번 원장(run_id·episode_id·task_id 중 하나, 없으면 최근 episode; 원문 대신 hash/ref) / diff: 실제 바뀐 줄 / commit: 각인 — message·paths 필수(전부-커밋 굴절 없음), 임시 인덱스로 공유 인덱스 불가침, pre-commit 관문 통과 필요, 저자=클론의 git config. limit 기본 200·상한 1000(초과 요청은 신고 후 상한).'
         target_key: op
         router: handler
         tool: body_op
-        implementation: system_essentials/body_ops.py — git 변화 원장 + world_pulse.db trajectory_event 회상. 전 op 읽기 전용(이 어휘는 회상 통로).
+        implementation: system_essentials/body_ops.py — git 변화 원장 + world_pulse.db trajectory_event 회상, commit 은 임시 인덱스+porcelain 각인(관문 보존). 정본=docs/SELF_EVOLUTION_AUTOMATION_HANDOFF.md.
         runs_on: pc_only
+        params:
+          message: string
+          paths: array
         ops:
           default: changes
+          side_effect:
+            changes: false
+            log: false
+            file: false
+            writes: false
+            trajectory: false
+            diff: false
           fixture:
             log: '[self:body]{op: "log", days: 7, limit: 10}'
             file: '[self:body]{op: "file", path: "backend/api.py", limit: 10}'
@@ -4856,6 +4866,7 @@ nodes:
             writes: 런타임 쓰기 원장 — 관문 통과 쓰기의 행위자·작업 (전수 아님)
             trajectory: 한 실행의 핵심 사건 — request·model·IBL·validation·side-effect 순서(hash/ref, 원문 아님)
             diff: 실제 바뀐 줄 — 미커밋 작업분(기본)·commit·ref..HEAD, 파일별 본문
+            commit: 각인 — 지정한 경로만 원장에 기록 (message·paths 필수, 관문 통과 필요)
         keywords:
         - 몸
         - 변화 이력

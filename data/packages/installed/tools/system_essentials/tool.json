@@ -659,7 +659,8 @@
               "file",
               "writes",
               "trajectory",
-              "diff"
+              "diff",
+              "commit"
             ],
             "default": "changes"
           },
@@ -674,6 +675,14 @@
           "limit": {
             "type": "integer",
             "description": "최대 행 수. 기본 200, 상한 1000 (초과 요청은 신고 후 상한 적용)"
+          },
+          "message": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "paths": {
+            "type": "array",
+            "description": "self:body 파라미터"
           }
         }
       }

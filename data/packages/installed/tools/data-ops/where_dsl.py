@@ -7,9 +7,14 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
   · 문자열 "필드 op 값" — 기호(>= <= > < == != =)와 워드(contains/in/matches/
     startswith/endswith/eq/ne/lt/le/gt/ge)를 **같은 계약**으로 판다.
   · 연산자가 없는 문자열은 전-필드 부분일치(검색어).
-  · " and " 로 이은 문자열은 **조각 전부가 비교식일 때만** AND 로 나눈다(리스트 형과 같은 뜻).
-    조각 하나라도 비교식이 아니면 값 속의 and 이므로 나누지 않는다("제목 contains 국밥 and 라면").
-    " or " 는 리스트 형으로 옮길 수 없으므로 조용히 삼키지 않고 정직 거절.
+  · " and "/" or " 로 이은 문자열은 **조각 전부가 비교식일 때만** 논리식으로 나눈다.
+    우선순위는 SQL 과 같다 — or 가 가장 낮고 and 가 그 위("A and B or C" = (A and B) or C).
+    (or 지원 = 2026-08-27 filter 마찰 수리 — 옛 정직 거절은 ep1879 실측에서 모델의
+    자연스러운 SQL 식 문장을 두 번 죽였다. 거절보다 지원이 근본 수리다.)
+  · 조각이 전부 비교식이 아니면(연산자가 어디에도 없으면) 통째 값/전-필드 검색 — 옛 동작.
+    **비교식과 비-비교식이 섞이면 중의성 정직 거절**("summary contains 복층 and 테라스" 는
+    '둘 다 포함'인지 '값 속의 and' 인지 문장만으로 판정 불능 — 옛 동작은 값으로 읽어
+    조용한 0건을 냈다, ep1879 실측). 값 속의 and/or 는 구조형 {field,op,value} 로.
   · 모르는 op·깨진 정규식은 침묵 폴백이 아니라 _WhereError(정직 거절).
   · matches 는 `[if:]` 술어와 같은 뜻(re.search) — 한 몸 안의 두 조건 언어를 같게 둔다.
   · 비교 필드가 없거나 null 이면 !=/ne·순서 비교는 불일치. 모르는 값을 "다르다/더 크다"고
@@ -161,17 +166,22 @@ def _parse_where_str(where):
 _CONJ_RE = re.compile(r"\s+(and|or)\s+", re.IGNORECASE)
 
 
-def _split_conjunction(where):
-    """" and " 로 이은 문자열 → 조각 목록 · 나눌 수 없으면 None.
+def _split_bool(where):
+    """" and "/" or " 로 이은 문자열 → OR-of-AND 조각 구조 [[frag, …], …] · 나눌 수 없으면 None.
 
     ★2026-08-24 B36-1(주거 보고서 실측): `"price >= 200000000 and price <= 400000000"` 은
     _CMP_RE 의 비탐욕 필드 때문에 (price, >=, "200000000 and price <= 400000000") 으로 읽혔다.
     값이 숫자가 아니니 _num_cmp 가 문자열 비교로 내려앉아 3천만원이 '2억 이상'을 통과했고
     (같은 60행 입력에서 28행 통과), 봉투는 success: true 였다 — 조용히 틀린 답.
-    '상한만 무시'가 아니라 **두 조건이 다 무의미해지는** 사고다.
 
-    나누는 조건은 **조각 전부가 비교식**일 때뿐 — 값 속의 and("제목 contains 국밥 and 라면")
-    를 쪼개면 멀쩡하던 검색이 죽는다. 그 경우엔 옛 동작(단일 비교)을 그대로 둔다.
+    ★2026-08-27 filter 마찰 수리(ep1879 실측 2건):
+      · " or " — 옛 정직 거절을 **지원**으로 바꾼다. 우선순위 = SQL(or 최하위):
+        "A and B or C" = [[A,B],[C]]. 거절문이 가르치던 union>>dedup 우회는 세 문장짜리
+        일을 만들었고, 모델은 그냥 or 를 계속 썼다 — 언어가 화자를 따라간다.
+      · 비교식·비-비교식 **혼합은 중의성 정직 거절** — 옛 동작은 값 속의 and 로 읽어
+        ("summary contains 복층 and 테라스" → '복층 and 테라스' 리터럴 검색) 조용한
+        0건을 냈다. 어느 뜻인지 문장만으로 알 수 없으니 고쳐 쓸 두 형태를 안내한다.
+    조각 전부가 비-비교식이면(연산자가 어디에도 없으면) None — 통째 전-필드 검색(옛 동작).
     """
     if not isinstance(where, str):
         return None
@@ -179,14 +189,26 @@ def _split_conjunction(where):
     if len(parts) < 3:
         return None
     frags = [p.strip() for p in parts[0::2]]
-    if not all(_parse_where_str(f) for f in frags):
-        return None  # 값 속의 and — 옛 동작 유지
-    if any(str(c).lower() == "or" for c in parts[1::2]):
+    conns = [str(c).lower() for c in parts[1::2]]
+    parsed = [bool(_parse_where_str(f)) for f in frags]
+    if not any(parsed):
+        return None  # 연산자가 어디에도 없다 — 통째 값/전-필드 검색
+    if not all(parsed):
+        bad = [f for f, ok in zip(frags, parsed) if not ok]
         raise _WhereError(
-            "where 문자열의 'or' 는 지원하지 않습니다 — 리스트 형([\"조건\", \"조건\"])은 AND 뿐입니다. "
-            "OR 이 필요하면 조건마다 따로 거른 뒤 [table:union] >> [table:dedup] 으로 합치세요."
+            f"조건이 중의적입니다 — and/or 로 이었는데 비교식이 아닌 조각이 있습니다: {bad}. "
+            "두 조건 모두라면 조각마다 '필드 op 값' 으로 쓰고"
+            "(예: \"summary contains 복층 and summary contains 테라스\"), "
+            "값 자체에 and/or 가 든 검색이라면 구조형 {field: \"필드\", op: \"contains\", "
+            "value: \"… and …\"} 로 쓰세요."
         )
-    return frags
+    groups = [[frags[0]]]
+    for conn, frag in zip(conns, frags[1:]):
+        if conn == "or":
+            groups.append([frag])
+        else:
+            groups[-1].append(frag)
+    return groups
 
 
 def _match(item, where):
@@ -197,8 +219,9 @@ def _match(item, where):
                             startswith/endswith/eq/ne/lt/le/gt/ge)가 있으면 단일 비교로 파싱
                             (예 "연도 >= 2000" · "아파트명 matches 자이").
                             모델이 자연스럽게 쓰는 SQL식 문자열을 침묵 부분일치로 삼키지 않는다.
-      - str "A and B"    : 조각이 전부 비교식이면 AND 분해 (리스트 형과 같은 뜻, B36-1).
-                            값 속의 and 는 안 쪼갠다. ' or ' 는 정직 거절.
+      - str "A and B or C": 조각이 전부 비교식이면 논리식 분해 — 우선순위는 SQL 과 같다
+                            (or 최하위: (A and B) or C). 비교식·비-비교식 혼합은 중의성
+                            정직 거절, 연산자가 어디에도 없으면 통째 전-필드 검색 (B36-1→08-27).
       - str S            : 연산자 없으면 아무 필드 값에 S가 부분일치 (전 필드 substring)
       - {field, op, value}: SQL식 단일 조건 (op 기본 ==; field=col/column 별칭)
       - {col: value, ...}: 각 열=값 동등(AND) 단축형
@@ -207,9 +230,9 @@ def _match(item, where):
     if where is None or where == "":
         return True
     if isinstance(where, str):
-        frags = _split_conjunction(where)
-        if frags:  # "A and B" → 리스트 형과 같은 뜻 (B36-1)
-            return all(_match(item, f) for f in frags)
+        groups = _split_bool(where)
+        if groups:  # OR-of-AND — "A and B or C" = (A and B) or C
+            return any(all(_match(item, f) for f in g) for g in groups)
         parsed = _parse_where_str(where)
         if parsed:  # 기호·워드 연산자가 든 문자열 → 단일 비교 (침묵 부분일치 함정 제거)
             field, op, val = parsed
@@ -251,9 +274,9 @@ def _where_fields(where):
     전-필드 substring 형태(연산자 없는 문자열)는 필드를 지목하지 않으므로 [].
     """
     if isinstance(where, str):
-        frags = _split_conjunction(where)
-        if frags:  # 조각마다 필드를 지목한다 — 존재 검증도 조각 단위로 (B36-1)
-            return [_parse_where_str(f)[0] for f in frags]
+        groups = _split_bool(where)
+        if groups:  # 조각마다 필드를 지목한다 — 존재 검증도 조각 단위로 (B36-1)
+            return [_parse_where_str(f)[0] for g in groups for f in g]
         parsed = _parse_where_str(where)
         return [parsed[0]] if parsed else []
     if isinstance(where, list):

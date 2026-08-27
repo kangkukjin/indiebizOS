@@ -11,7 +11,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
-    target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이") · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용. 도메인 무관 — 모든 검색·목록 생산자에 적용.'
+    target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이") · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용(리터럴 행 목록은 [table:take]{items: […]} 로 진입해 이어라). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
     group: transform
     router: handler
     tool: data_filter
@@ -175,7 +175,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
-    target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
+    target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
     group: transform
     router: handler
     tool: data_groupby

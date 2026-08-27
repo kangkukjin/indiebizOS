@@ -634,7 +634,8 @@ def _op_dedup(prev, params):
 # 명시 count(field)는 실존(non-null) 관측 수. 기본 그룹 행수 count는 _op_groupby가
 # 내부 명세 row_count 로 별도 처리한다(G39-1) — 공개 op를 하나 더 만들지 않는다.
 # 관측·누산의 실제 판정은 value_semantics.aggregate_members 한 벌이다.
-_AGG = {"count", "sum", "avg", "min", "max"}
+_agg_spec = _load_sibling_where(__file__, "agg_spec")
+_AGG = _agg_spec._AGG
 
 _aggregate_members = _value_semantics.aggregate_members
 
@@ -708,39 +709,11 @@ def _op_groupby(prev, params):
         return _field_missing_error("groupby", by, dicts)
     _, env = _get_table(prev)
     env = env or {}
-    agg = params.get("agg")
-    if isinstance(agg, str) and agg.strip().lower() == "count":
-        # 'count' 는 원본열이 필요 없는 유일한 op — 스칼라 철자가 중의성 0 이라 agg 생략
-        # (그룹별 count)과 같은 뜻으로 받는다 (ep1258: 거절→같은 철자 재시도가 두 왕복을
-        # 태웠다). 다른 스칼라("sum" 등)는 대상 열 없이는 의미가 성립하지 않아 거절 유지.
-        agg = None
-    # agg 정규화 → [(out_col, op, src_col)]
-    specs = []
-    auto_named = []
-    if isinstance(agg, dict):
-        for k, v in agg.items():
-            if isinstance(v, (list, tuple)) and len(v) == 2:  # {새열: [op, 원본열]}
-                specs.append((str(k), str(v[0]).lower(), str(v[1])))
-            else:  # {원본열: op} — 집계열 이름은 'op_원본열' 자동 명명
-                specs.append((f"{v}_{k}", str(v).lower(), str(k)))
-                auto_named.append(f"{v}_{k}")
-    elif agg:
-        # dict 아닌 agg("sum:size" 등)를 조용히 버리면 count 로 위장된다(⑧′ 실측)
-        return {"success": False,
-                "error": f"groupby: agg 는 dict 여야 합니다 — {{원본열: op}} 또는 {{새열명: [op, 원본열]}}, "
-                         f"op={'/'.join(sorted(_AGG))}. 예: {{매출: [\"sum\", \"금액\"]}}. 받은 값: {agg!r} "
-                         f"(스칼라는 'count' 만 허용 — 원본열이 필요 없는 유일한 op)"}
-    for out_col, op, src in specs:
-        if op not in _AGG:
-            return {"success": False, "error": f"groupby: 알 수 없는 집계 op '{op}' (가능: {'/'.join(sorted(_AGG))})"}
-        # 명시 count(field)의 field도 장식이 아니다. 기본 행수 count는 이 검사가 끝난 뒤
-        # 내부 명세 row_count 로 만들어지므로, 전 행에 없는 명시 필드는 다른 집계와 같이 거절한다.
-        if not any(src in d for d in dicts):
-            return _field_missing_error("groupby", src, dicts)
-    if not specs:
-        # agg 생략은 행 수다. 명시 count(열)의 non-null 의미와 섞으면 null/부재
-        # 그룹이 2행이어도 0으로 나온다(B40-3).
-        specs = [("count", "row_count", "")]
+    # agg 모양 사전·정규화는 형제 모듈(agg_spec.py, 1500줄 규칙 분리 2026-08-27)
+    specs, auto_named, _agg_err = _agg_spec.normalize_agg(
+        params.get("agg"), dicts, _field_missing_error)
+    if _agg_err:
+        return _agg_err
     # 그룹핑 (입력 순서 보존). 표시값은 엄격 JSON — NaN/Infinity 키가 통화에 실려
     # 직렬화를 깨지 않게 하되, 강제한 수를 group_key_coercions 로 자백한다.
     groups, labels, order = {}, {}, []

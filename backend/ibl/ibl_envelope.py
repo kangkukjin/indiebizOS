@@ -196,7 +196,14 @@ def summarize_step(entry: Any) -> Any:
 
 
 def diet_envelope(result: Any, verbose: bool = False) -> Any:
-    """파이프 봉투의 results[] 를 요약으로. 봉투가 아니거나 verbose 면 원형."""
+    """파이프 봉투의 results[] 를 요약으로. 봉투가 아니거나 verbose 면 원형.
+
+    ★거대 필드는 꼬리로 (2026-08-28): 에피소드 로그는 봉투 직렬화의 꼬리를 절단한다.
+    종전엔 results·final_result 가 가운데 있고 정직 표지(warning·traceback·statements_failed·
+    criteria_steps·_fallback_used…)가 dict 에 나중에 붙어 **표지 전부가 절단 구간에**
+    떨어졌다 — 08-28 실측: 트레이스백 프레임·품질 판정이 로그에서 확인 불능이었다.
+    JSON 키 순서는 소비자 계약이 아니므로(파서는 이름으로 읽는다) 여기 한 이음매의
+    재배열로 모든 생산자(성공·실패·중단 봉투)의 표지가 절단 생존이 된다."""
     if verbose or not isinstance(result, dict):
         return result
     results = result.get("results")
@@ -208,4 +215,7 @@ def diet_envelope(result: Any, verbose: bool = False) -> Any:
     out["results"] = [summarize_step(e) for e in results]
     out["_results_summarized"] = True
     out["_hint"] = _HINT
+    for k in ("results", "final_result"):
+        if k in out:
+            out[k] = out.pop(k)          # 재삽입 = 직렬화 순서상 맨 뒤로
     return out

@@ -297,7 +297,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             "fallback_used": [],
             # ★B48-2 (48회차): 병렬 가지가 *성공*으로 돌아왔을 때 그 안의 부분 실패
             #   (each 의 error_count·errors, truncated, _fallback_used …) 를 담는 누산기.
-            "branch_honesty": []}
+            "branch_honesty": [],
+            # criteria 품질 계약(ibl_quality)의 step 별 판정 누산기 (2026-08-28) —
+            # 판정이 step 기록에만 살면 뒷 step 의 표지가 로그 절단에 통째로 사라져
+            # 라이브 관찰이 성립하지 않았다. skipped/halted 와 같은 승격 규약.
+            "criteria": []}
 
     def _handle_failure(idx: int, abort_payload: dict, tb=None):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -707,10 +711,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if isinstance(_bmeta, dict):
             _rec.update(_bmeta)
         # criteria 품질 계약의 관측 메타(ibl_quality) — 스칼라 결과도 step 기록으로 신고
-        # (F19-1 과 같은 side-channel 규약).
+        # (F19-1 과 같은 side-channel 규약). 봉투 최상위 승격용으로도 누산한다(2026-08-28).
         _qmeta = tool_input.get("_quality_meta") if isinstance(tool_input, dict) else None
         if isinstance(_qmeta, dict):
             _rec.update(_qmeta)
+            if _qmeta.get("criteria_verdict"):
+                _seq["criteria"].append({
+                    "step": i + 1, "action": f'{_rec["node"]}:{_rec["action"]}',
+                    "verdict": _qmeta["criteria_verdict"],
+                    **({"retried": True} if _qmeta.get("_criteria_retried")
+                       or _qmeta.get("quality_retried") else {})})
         # ★G31-1(2026-08-23 판정): 문장 속 참조가 목록을 JSON 으로 넣은 사실을 step 기록과 봉투
         #   최상위 경고로 올린다. 표식은 바인딩·주입기·블록 실행기가 같은 키로 남기고, 번역은 여기
         #   한 번(_list_in_text_warning). 실패로 뒤집지 않는다 — 데이터를 AI 에 먹이는 정당한 용법이다.
@@ -832,6 +842,17 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _seq["list_in_text"]:
         out["list_in_text"] = list(_seq["list_in_text"])
         _warns.append(_list_in_text_warning(_seq["list_in_text"]))
+    if _seq["criteria"]:
+        # criteria 판정을 봉투 최상위로 (2026-08-28) — pass 도 싣는다: 라이브 관찰의
+        # 분모(판정 총수)가 없으면 unjudged 비율·재시도 통과율을 셀 수 없다. 항목당
+        # 한 줄 요약이라 다이어트 위반이 아니다. fail 은 여기 안 온다(step 실패 경로).
+        out["criteria_steps"] = list(_seq["criteria"])
+        _nq = [c for c in _seq["criteria"] if c["verdict"] != "pass"]
+        if _nq:
+            _cs = ", ".join(f"step {c['step']}({c['verdict']})" for c in _nq)
+            _warns.append(f"[criteria] 무조건 통과가 아니었습니다: {_cs} — "
+                          "unjudged=판정 불능 통과, pass_after_retry=재시도로 통과"
+                          "(첫 출력은 기준 미달이었음).")
     # ★F48-7 (48회차 상상훈련, 수리 2026-08-27): **표지의 승격 규칙을 한 벌로.**
     #   종전엔 파이프 표지(_fallback_used·skipped_steps·halted…)만 최상위로 오르고,
     #   마지막 step 이 낸 표지(error_count·errors·rows_replaced·passthrough_rows·rows_in·

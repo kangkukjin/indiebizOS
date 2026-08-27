@@ -154,17 +154,22 @@ def _judge(criteria: str, result: Any, node: str, action: str,
 
 def _mark(result: Any, extra: Dict[str, Any]) -> Any:
     """판정 사실을 결과에 병기 — dict 는 키로, JSON 문자열은 파싱-병기, 스칼라는 불변
-    (스칼라의 신고는 _quality_meta 사이드채널이 step 기록으로 나른다, F19-1 규약)."""
+    (스칼라의 신고는 _quality_meta 사이드채널이 step 기록으로 나른다, F19-1 규약).
+
+    ★표지는 **머리에** 넣는다 (2026-08-28 실측): 에피소드 로그는 꼬리를 절단하므로,
+    꼬리에 붙인 판정 표지는 결과가 크면 매번 잘려 라이브 관찰(unjudged 비율·재시도
+    통과율)이 원리적으로 불가능했다. JSON 객체의 키 순서는 의미가 아니라 직렬화
+    순서일 뿐이라 소비자 계약은 불변이다."""
     if isinstance(result, dict):
-        return {**result, **{k: v for k, v in extra.items() if k not in result}}
+        return {**{k: v for k, v in extra.items() if k not in result}, **result}
     if isinstance(result, str):
         s = result.lstrip()
         if s.startswith("{"):
             try:
                 obj = json.loads(s)
                 if isinstance(obj, dict):
-                    obj.update({k: v for k, v in extra.items() if k not in obj})
-                    return json.dumps(obj, ensure_ascii=False)
+                    merged = {**{k: v for k, v in extra.items() if k not in obj}, **obj}
+                    return json.dumps(merged, ensure_ascii=False)
             except Exception:
                 pass
     return result

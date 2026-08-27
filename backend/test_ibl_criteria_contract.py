@@ -209,6 +209,34 @@ def c10_quality_of_result():
     check("무표지=무신호", _quality_of_result('{"success": true, "items": []}') == (None, None))
 
 
+def c11_truncation_survival():
+    """C11 (2026-08-28). 표지의 절단 생존 — 에피소드 로그는 봉투 직렬화의 꼬리를
+    자르므로, 판정 표지가 꼬리에 있으면 라이브 관찰(unjudged 비율·재시도 통과율)이
+    원리적으로 불가능하다. 세 자리를 고정한다:
+      ① _mark 는 표지를 결과 dict 의 **머리**에 넣는다
+      ② 파이프 봉투 최상위에 criteria_steps 승격(pass 포함 — 분모가 있어야 비율을 센다)
+      ③ 에이전트 경계(diet_envelope)에서 results·final_result 가 직렬화 **꼬리**로 간다"""
+    print("C11. 표지 절단 생존 (머리 표지 + criteria_steps 승격 + 거대 필드 꼬리)")
+    # ① _mark 머리
+    marked = iq._mark({"success": True, "items": [{"x": 1}]}, {"criteria_verdict": "pass"})
+    check("_mark 표지가 머리", list(marked.keys())[0] == "criteria_verdict", str(list(marked.keys())))
+    # ② 파이프 최상위 승격 — 통과 판정도 봉투에 보인다
+    iq._call_judge = FakeJudge(J_PASS)
+    with actor_context(agent_id="test", origin="test"):
+        env = execute_pipeline(ibl_parse(
+            '[table:take]{items: [{"a": 1}], n: 1, criteria: "행이 1개"} >> [table:take]{n: 1}'), ".")
+    cs = env.get("criteria_steps")
+    check("criteria_steps 승격", isinstance(cs, list) and cs
+          and cs[0].get("step") == 1 and cs[0].get("verdict") == "pass", str(cs))
+    # ③ 경계 다이어트 후 거대 필드가 꼬리
+    from ibl_envelope import diet_envelope
+    dieted = diet_envelope(dict(env))
+    keys = list(dieted.keys())
+    check("results·final_result 가 꼬리", keys[-2:] == ["results", "final_result"], str(keys))
+    s = json.dumps(dieted, ensure_ascii=False)
+    check("직렬화에서 표지가 results 앞", s.index('"criteria_steps"') < s.index('"results"'))
+
+
 def _battery():
     c1_pass()
     c2_nonai_fail()
@@ -220,6 +248,7 @@ def _battery():
     c8_honesty()
     c9_distill_exclusion_chain()
     c10_quality_of_result()
+    c11_truncation_survival()
 
 
 def test_criteria_배터리_전건이_pytest_에도_보인다():

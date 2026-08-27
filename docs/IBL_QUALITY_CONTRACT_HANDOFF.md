@@ -128,4 +128,27 @@ filter/take/스키마 가드가 먼저"를 가르친다. 0층(구조 가드)은 
 | param 어휘 | `ibl_param_vocab.RUNTIME_META_KEYS` | criteria (액션 선언 우선 규칙 주석) |
 | goal | `cognition/agent_goals.py` | 라운드 실패 tb+goal 프레임 · 미달 종료 quality tb |
 | 증류 신호 | `cognition/agent_pipeline.py`(`_quality_of_result`) · `cognition/ibl_usage_rag.py` | 재시도-통과 표지→반성 프롬프트 (§6) |
-| 회귀 | `backend/test_ibl_criteria_contract.py` | C1~C10 (판정자 패치, 원샷 호출 0) |
+| 회귀 | `backend/test_ibl_criteria_contract.py` | C1~C11 (판정자 패치, 원샷 호출 0) |
+
+## 9. 표지의 절단 생존 (2026-08-28 수리)
+
+출하 이튿날 라이브 관찰을 시도하니 **관찰 자체가 성립하지 않았다** — 에피소드 로그는 봉투
+직렬화의 꼬리를 절단하는데(`episode_logger.truncate_for_log`, 머리 보존), 판정 표지가 전부
+꼬리에 실리고 있었다: `_mark` 는 결과 dict 끝에 병기, 파이프 표지(warning·traceback·
+`_fallback_used`…)는 `results`·`final_result` **뒤에** append. 08-28 세 보고서 주행에서 부분
+실패 봉투의 트레이스백 프레임이 로그로 확인 불능이었던 것이 이 부류다. 표지가 잘리면
+"없다"와 "안 보인다"가 구별되지 않는다 — unjudged 비율·재시도 통과율을 영영 못 센다.
+
+세 자리 수리 (JSON 키 순서는 소비자 계약이 아니다 — 파서는 이름으로 읽는다):
+
+1. **`_mark` 머리 삽입** — 판정 표지를 결과 dict/JSON 문자열의 앞 키로.
+2. **`criteria_steps` 최상위 승격** (`workflow_engine`, skipped/halted 와 같은 규약) —
+   step 별 `{step, action, verdict, retried?}`. **pass 도 싣는다**: 관찰의 분모(판정 총수)가
+   없으면 비율을 못 센다. fail 은 여기 안 온다(step 실패 경로가 traceback 으로 나른다).
+3. **거대 필드 꼬리 재배열** (`ibl_envelope.diet_envelope`, 에이전트 경계 단일 이음매) —
+   `results`·`final_result` 를 직렬화 맨 뒤로. 이 한 자리로 **모든 생산자**(성공·실패·중단
+   봉투)의 최상위 표지 — criteria 만이 아니라 traceback·warning·statements_failed 전부 —
+   가 절단 생존이 된다.
+
+회귀 = C11. 관찰 계수는 이제 로그에서 직접: `grep -c criteria_verdict` 분모, `unjudged`·
+`pass_after_retry` 분자.

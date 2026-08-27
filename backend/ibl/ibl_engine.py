@@ -675,16 +675,25 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         # `.path` 가 붙으면 원형 추출(치환 의미론 개정과 같은 눈 — 문자열화하지 않는다).
         _name = tool_input.get("name")
         _vals = tool_input.get("_var_values") or {}
+        _vpath = (tool_input.get("path") or "").lstrip(".")
+        # 끝의 `?` = 옵셔널 방출(언어 개정 2026-08-28) — 분기 미진입으로 아직 기록 전인
+        # 변수를 오류 대신 **빈 통화**로 흘린다(조건 프로그램의 연쇄 오류 차단). 결측은
+        # 침묵이 아니라 note 로 말한다. 물음표 없는 참조는 종전대로 정직 오류(V49-1).
+        _opt = _vpath.endswith("?")
+        if _opt:
+            _vpath = _vpath[:-1]
         if _name not in _vals:
+            if _opt:
+                return {"success": True, "items": [], "rows_in": 0,
+                        "note": f"${_name} 미기록(분기 미진입 등) — 옵셔널 참조라 빈 통화로 흘립니다."}
             # 파서가 미할당은 걸렀으므로 여기는 "아직 기록 전"(안 탄 분기 등) — V49-1 규약.
             return {"success": False,
                     "error": f"변수 ${_name} 이(가) 아직 값을 기록하지 않았습니다 — "
                              f"할당 문장이 실행되지 않은 경로(분기 미진입 등)입니다."}
-        _vpath = (tool_input.get("path") or "").lstrip(".")
         if _vpath:
             from workflow_binding import _extract_result_field_obj
             try:
-                return _extract_result_field_obj(_vals[_name], _vpath)
+                return _extract_result_field_obj(_vals[_name], _vpath + ("?" if _opt else ""))
             except ValueError as e:
                 return {"success": False, "error": str(e)}
         return _vals[_name]

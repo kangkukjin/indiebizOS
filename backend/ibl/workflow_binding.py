@@ -23,7 +23,10 @@ from typing import Any, Dict, Tuple
 # $var.field.path 를 {{_step_N_result.field.path}} 로 치환한다 (G1, 2026-08-16).
 from common.field_path import walk_path
 
-_STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result((?:\.\w+)*)\}\}")
+# 경로부는 ibl_vars._XPATH 와 같은 확장(벡터 `*`·옵셔널 `?`, 2026-08-28) — 자리표 해석기가
+# 참조 표기보다 좁으면 확장 경로가 리터럴 `{{_step_…}}` 로 하류에 새는 침묵 실패가 된다
+# (라이브 실증이 적발 — 발견·치환·해석 세 자리의 경로 문법은 한 벌이어야 한다).
+_STEP_RESULT_RE = re.compile(r"\{\{_step_(\d+)_result((?:\.(?:\w+|\*))*\??)\}\}")
 
 
 def blank_step_refs(text: str, repl: str = "1") -> str:
@@ -58,7 +61,17 @@ def _extract_result_field_obj(raw: str, path: str) -> Any:
     ★통짜 참조의 원형 보존(언어 개정 2026-08-27, 사용자 판정)이 쓴다 — param 값이
     `$변수.path` 하나뿐이면 JSON *문자열*이 아니라 이 원형이 param 에 들어간다.
     실패는 조용한 빈 문자열이 아니라 ValueError — 없는 필드가 침묵히 "" 로 치환되면
-    하류가 빈 param 으로 "성공"하는 침묵 실패 부류가 된다(P 시리즈 원칙)."""
+    하류가 빈 param 으로 "성공"하는 침묵 실패 부류가 된다(P 시리즈 원칙).
+
+    ★끝의 `?` = 옵셔널(언어 개정 2026-08-28, 괄호형 전용 — ibl_vars._XPATH): 결측·
+    비구조 결과를 오류 대신 None 으로. P 원칙의 예외가 아니라 **선언된 관용**이다 —
+    맨몸 경로는 종전대로 정직 오류이고, 물음표를 적은 자리만 "없으면 빈"을 뜻한다
+    (조건부 문서 절 when·분기 미진입 변수 참조가 이걸 쓴다)."""
+    if isinstance(path, str) and path.endswith("?"):
+        try:
+            return _extract_result_field_obj(raw, path[:-1])
+        except ValueError:
+            return None
     obj: Any = raw
     if isinstance(obj, str):
         s = obj.strip()

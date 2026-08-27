@@ -56,9 +56,23 @@ def walk_path(obj: Any, path: str, *, brackets: bool = False,
 
     한 단계의 판정 순서: dict 문자열 키 → 리스트 숫자 인덱스 → fallback → 결측.
     int 조각(대괄호)은 리스트 인덱스만 뜻한다(dict 에는 결측 — 기존 추출기 계약).
+
+    `*` 조각 = 열 벡터 사상 (언어 개정 2026-08-28, 사용자 판정 "언어의 한계는 다 고쳐"):
+    리스트의 각 원소에 나머지 경로를 적용해 목록을 낸다 — `$성공.items.*.video_id` 가
+    id 벡터(원형 list)가 되어 not_in 안티조인의 value 로 들어간다. 계약:
+      · dict 에 문자열 키 "*" 가 실제로 있으면 그 키가 우선(기존 판정 순서 보존).
+      · 리스트가 아니면 결측(억지 사상 없음).
+      · 원소별 결측은 None 자리 유지($items.field 바인딩 선례 — 위치 보존),
+        단 **전 원소 결측이면 정직 오류**(오타가 침묵 [] 로 새는 것 방지).
     """
-    cur = obj
-    for seg in parse_path(path, brackets=brackets):
+    return _walk_parts(obj, parse_path(path, brackets=brackets), path,
+                       fallback=fallback, on_missing=on_missing)
+
+
+def _walk_parts(cur: Any, parts: List[Union[str, int]], path: str, *,
+                fallback: Optional[Callable[[Any, str], Any]] = None,
+                on_missing: Optional[Callable[[Any, Union[str, int]], Any]] = None) -> Any:
+    for i, seg in enumerate(parts):
         nxt = MISSING
         if isinstance(seg, int):
             if isinstance(cur, list) and 0 <= seg < len(cur):
@@ -66,7 +80,18 @@ def walk_path(obj: Any, path: str, *, brackets: bool = False,
         elif isinstance(cur, dict):
             if seg in cur:
                 nxt = cur[seg]
-        elif isinstance(cur, list) and seg.isdigit() and int(seg) < len(cur):
+        elif seg == "*" and isinstance(cur, list):
+            rest = parts[i + 1:]
+            if not rest:
+                return list(cur)
+            mapped = [_walk_parts(el, rest, path, fallback=fallback, on_missing=None)
+                      for el in cur]
+            if cur and all(v is MISSING for v in mapped):
+                if on_missing is not None:
+                    return on_missing(cur, ".".join(str(p) for p in rest))
+                return MISSING
+            return [None if v is MISSING else v for v in mapped]
+        elif isinstance(cur, list) and isinstance(seg, str) and seg.isdigit() and int(seg) < len(cur):
             nxt = cur[int(seg)]
         if nxt is MISSING and fallback is not None and isinstance(seg, str):
             found = fallback(cur, seg)

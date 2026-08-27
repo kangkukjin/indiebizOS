@@ -277,6 +277,7 @@ actions:
       - cards{columns(기본2), items:[{title, meta?, summary?, url?, link_label?}]}(링크 카드 그리드 — 뉴스·검색결과·북마크·상품목록)
 
       - quote{text, cite?} · code{text, lang?} · divider
+어느 블록이든 when(선택 — 조건부 절, 언어 개정 2026-08-28)을 달 수 있다. when 값(치환 후)이 비어 있으면(null·빈/공백 문자열·빈 배열·빈 객체) 그 블록을 렌더에서 뺀다 — "해당 없으면 섹션 자체 생략" 규약을 blocks 로. 뺀 수는 blocks_omitted 로 신고. 예 — 절 제목·본문 둘 다 {when:"${함의문.message?}"} 를 달면 함의 없는 날 섹션이 통째로 사라진다(옵셔널 ? 는 결측을 빈 값으로).
 
       title(선택, 최상단 제목) · meta(선택, 제목 아래 부제/발행정보 한 줄) · theme(default 기본/newspaper 제호+카드그리드)
 

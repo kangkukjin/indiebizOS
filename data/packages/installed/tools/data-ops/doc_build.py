@@ -363,6 +363,32 @@ class _PlacementRefused(Exception):
     """산출 경로 해소기가 범위를 이유로 거절 — 사용자 봉투로 그대로 올린다."""
 
 
+def _apply_when(blocks):
+    """블록 조건부 절 `when` (언어 개정 2026-08-28, 사용자 판정 "언어의 한계는 다 고쳐").
+
+    블록에 when 이 있으면 그 값(치환 후 도착)이 **비어 있을 때 블록을 떨군다** —
+    "함의 없으면 섹션 자체를 생략(빈 줄도 남기지 않는다)" 류의 가이드 규약을 blocks 로
+    쓸 수 있게. 빈 값 = null / 빈 문자열·공백뿐 / 빈 배열·객체 / JSON 문자열로 온 그것들.
+    when 키는 렌더 전에 벗긴다(문서에 배관을 남기지 않음). 반환: (blocks, 떨군 수) —
+    떨궜으면 호출자가 blocks_omitted 로 신고한다(침묵 클램프 금지).
+    """
+    from common.currency import coerce_json_param as _coerce
+    if not (isinstance(blocks, list) and any(isinstance(b, dict) and "when" in b for b in blocks)):
+        return blocks, 0
+    kept, omitted = [], 0
+    for b in blocks:
+        if isinstance(b, dict) and "when" in b:
+            w = _coerce(b.get("when"))
+            empty = (w is None or (isinstance(w, str) and not w.strip())
+                     or (isinstance(w, (list, dict)) and not w))
+            if empty:
+                omitted += 1
+                continue
+            b = {k: v for k, v in b.items() if k != "when"}
+        kept.append(b)
+    return kept, omitted
+
+
 def render_document(tool_input, output_base=".", context=None):
     """[table:document] 진입점. 경로 거절만 여기서 봉투로 바꾸고 나머지는 본체가 한다."""
     import json as _json
@@ -495,6 +521,14 @@ def _render_document(tool_input, output_base=".", context=None):
         return _json.dumps({"success": False, "error": "blocks(문서 IR 블록 배열)가 필요합니다."},
                            ensure_ascii=False)
 
+    # 조건부 절 — 모든 입구(직접 blocks·파이프 유입·markdown 파싱)를 지난 뒤 한 자리에서.
+    blocks, _omitted_when = _apply_when(blocks)
+    if not blocks:
+        return _json.dumps({"success": True, "blocks": 0, "blocks_omitted": _omitted_when,
+                            "message": f"when 조건으로 전 블록({_omitted_when})이 생략돼 "
+                                       "렌더할 내용이 없습니다 — 파일을 만들지 않았습니다."},
+                           ensure_ascii=False)
+
     title = tool_input.get("title") or ""
     meta = tool_input.get("meta") or ""
     theme = (tool_input.get("theme") or "default").strip().lower()
@@ -553,7 +587,7 @@ def _render_document(tool_input, output_base=".", context=None):
             out_path = ""
         return _json.dumps({"success": True, "path": out_path, "file": out_path,
                             "title": title, "format": "markdown", "markdown": md_text,
-                            "blocks": len(blocks),
+                            "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
                             "message": f"문서 {len(blocks)}블록을 마크다운으로 렌더했습니다.{note}"},
                            ensure_ascii=False)
 
@@ -563,7 +597,7 @@ def _render_document(tool_input, output_base=".", context=None):
             out_path = _place(".pdf")
             _doc_blocks_to_typst(blocks, title, meta, out_path)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": "typst_pdf", "blocks": len(blocks),
+                                "title": title, "format": "typst_pdf", "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
                                 "message": f"문서 {len(blocks)}블록을 typst 책 품질 PDF로 조판했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -579,7 +613,7 @@ def _render_document(tool_input, output_base=".", context=None):
             else:
                 _doc_blocks_to_pptx(blocks, title, out_path)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": fmt, "blocks": len(blocks),
+                                "title": title, "format": fmt, "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
                                 "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -615,7 +649,7 @@ def _render_document(tool_input, output_base=".", context=None):
                     pg.screenshot(path=out_path, full_page=True)
                 br.close()
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": fmt, "blocks": len(blocks),
+                                "title": title, "format": fmt, "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
                                 "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -626,7 +660,7 @@ def _render_document(tool_input, output_base=".", context=None):
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(doc)
     return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                        "title": title, "format": "html", "blocks": len(blocks),
+                        "title": title, "format": "html", "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
                         # 렌더된 HTML을 결과에 동봉 — 액션이 다른 몸(맥)으로 포워드돼 파일이
                         # 거기 생겨도, 호출한 몸(폰)이 파일 위치 의존 없이 콘텐츠로 바로 띄운다.
                         "html": doc,

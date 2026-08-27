@@ -52,3 +52,14 @@ retired:
       groupby/union/merge, render_document)가 items(array) 를 공개 파라미터로 받는다 —
       리터럴·$변수 원형 어느 쪽으로도 씨앗이 된다.
     phrases: ["[table:take]{items: […]} 로 진입해 이어라"]
+
+  - id: if-nomatch-message-envelope
+    retired: 2026-08-28
+    reason: >-
+      파이프 세그먼트의 if 블록이 어느 분기도 안 걸리면 message 봉투("모든 조건 불일치")가
+      직전 통화를 갈아치워 뒤 step 이 끊겼다 — 빈 통화 폴백 "A >> [if: empty($items)]{대안}"
+      관용구가 원리적으로 불가능했다(언어 개정 2026-08-28, 사용자 판정). 단독 문장(파이프 밖)은
+      옛 계약 그대로다.
+    instead: >-
+      파이프 안 불일치 = 직전 통화 통과 + "_if_skipped"(평가한 조건 목록) 표식.
+    phrases: ["모든 조건 불일치가 통화를 대체"]

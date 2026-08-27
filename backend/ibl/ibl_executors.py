@@ -319,6 +319,32 @@ def _execute_condition(tool_input: dict, project_path: str, agent_id: str) -> An
             "error": f"조건 평가 실패 {len(cond_errors)}건 — 어느 분기도 실행하지 못했습니다.",
             "condition_errors": cond_errors,
         }
+    # ★파이프 세그먼트의 불일치 = 직전 통화 통과 (언어 개정 2026-08-28, 사용자 판정).
+    #   M6(2026-08-22)이 블록을 파이프 세그먼트로 열 때 "결과가 다음 통화"라고 계약했는데,
+    #   어느 분기도 안 걸린 날은 message 봉투가 통화를 **갈아치워** 뒤 step 이 끊겼다 —
+    #   그래서 `A >> [if: empty($items)]{대안}` 라는 빈 통화 폴백 관용구가 원리적으로
+    #   불가능했다(비었으면 대안이, 안 비었으면 A 가 흘러야 코얼레스가 된다).
+    #   불일치는 "이 블록이 할 일 없음"이지 통화의 죽음이 아니다 — halted/skipped 부류처럼
+    #   사실은 표식(_if_skipped)으로 남기고 데이터는 그대로 흘린다. 단독 문장(파이프 밖)은
+    #   통과시킬 통화가 없으므로 옛 message 봉투 그대로다(무회귀).
+    prev = _prev_of(tool_input)
+    if prev is not None:
+        obj = prev
+        if isinstance(obj, str):
+            s = obj.strip()
+            if s[:1] in "{[":
+                try:
+                    obj = json.loads(s)
+                except Exception:
+                    obj = None
+            else:
+                obj = None
+        if isinstance(obj, dict):
+            out = dict(obj)
+            out["_if_skipped"] = [str(b.get("condition")) for b in branches
+                                  if b.get("condition") is not None]
+            return out
+        return prev
     return {"message": "모든 조건 불일치, 실행할 분기 없음"}
 
 

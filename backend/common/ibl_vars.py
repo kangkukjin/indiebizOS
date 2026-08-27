@@ -22,10 +22,16 @@ from typing import Callable, Iterable, List, Tuple
 # 곳(시그니처)은 발견 후 이름으로 판단한다 — 표기 규칙과 정책을 섞지 않는다.
 _NAME = r"\w+"
 _PATH = r"(?:\.\w+)*"
+# 확장 경로(언어 개정 2026-08-28, 사용자 판정 "언어의 한계는 다 고쳐") — **괄호형 전용**:
+#   · `*` 조각 = 열 벡터 사상(`${성공.items.*.video_id}` → id 목록 원형) — common.field_path 가 걷는다.
+#   · 끝의 `?` = 옵셔널 — 결측 경로/미기록 변수를 오류 대신 빈 값으로(치환·방출층이 해석).
+#   맨몸형에 안 여는 이유: `$x.*` 는 산문·마크다운 강조와, `$x?` 는 물음표 문장과 충돌한다 —
+#   경계를 사람이 긋는 자리(괄호)가 이 파일의 존재 이유였고, 확장 문법도 그 자리에만 산다.
+_XPATH = r"(?:\.(?:\w+|\*))*\??"
 
 # 발견용 — group: (괄호이름, 괄호경로, 맨몸이름, 맨몸경로)
 REF_RE = re.compile(
-    r"\$(?:\{\s*(" + _NAME + r")(" + _PATH + r")\s*\}"
+    r"\$(?:\{\s*(" + _NAME + r")(" + _XPATH + r")\s*\}"
     r"|(" + _NAME + r")(" + _PATH + r"))"
 )
 
@@ -63,7 +69,7 @@ def ref_pattern(name: str) -> str:
     group(1)=괄호형 경로(괄호형이 아니면 None), group(2)=맨몸 경로.
     맨몸형에만 `(?!\\w)` 경계가 붙는다 — 괄호가 닫히면 경계는 이미 명시적이다."""
     n = re.escape(name)
-    return (r"\$(?:\{\s*" + n + r"(" + _PATH + r")\s*\}"
+    return (r"\$(?:\{\s*" + n + r"(" + _XPATH + r")\s*\}"
             r"|" + n + r"(" + _PATH + r")(?!\w))")
 
 
@@ -80,7 +86,7 @@ def refs_pattern(names: Iterable[str]) -> str:
 
     group: (괄호이름, 괄호경로, 맨몸이름, 맨몸경로) — REF_RE 와 같은 배치."""
     alt = "|".join(re.escape(n) for n in names)
-    return (r"\$(?:\{\s*(" + alt + r")(" + _PATH + r")\s*\}"
+    return (r"\$(?:\{\s*(" + alt + r")(" + _XPATH + r")\s*\}"
             r"|(" + alt + r")(" + _PATH + r")(?!\w))")
 
 

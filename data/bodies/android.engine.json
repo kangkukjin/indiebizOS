@@ -122,6 +122,7 @@
     "ibl/ibl_parser_blocks",
     "ibl/ibl_parser_values",
     "ibl/ibl_predicates",
+    "ibl/ibl_quality",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
     "ibl/ibl_traceback",
@@ -256,8 +257,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 247,
-    "engine": 227,
+    "total": 248,
+    "engine": 228,
     "blocklist": 20
   }
 }

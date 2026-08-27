@@ -706,6 +706,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bmeta = tool_input.get("_branch_meta") if isinstance(tool_input, dict) else None
         if isinstance(_bmeta, dict):
             _rec.update(_bmeta)
+        # criteria 품질 계약의 관측 메타(ibl_quality) — 스칼라 결과도 step 기록으로 신고
+        # (F19-1 과 같은 side-channel 규약).
+        _qmeta = tool_input.get("_quality_meta") if isinstance(tool_input, dict) else None
+        if isinstance(_qmeta, dict):
+            _rec.update(_qmeta)
         # ★G31-1(2026-08-23 판정): 문장 속 참조가 목록을 JSON 으로 넣은 사실을 step 기록과 봉투
         #   최상위 경고로 올린다. 표식은 바인딩·주입기·블록 실행기가 같은 키로 남기고, 번역은 여기
         #   한 번(_list_in_text_warning). 실패로 뒤집지 않는다 — 데이터를 AI 에 먹이는 정당한 용법이다.

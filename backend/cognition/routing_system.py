@@ -401,6 +401,12 @@ def _cap_self_check_results(params: dict) -> Any:
     return out
 
 
+def _cap_oneshot_ai_call(**kwargs):
+    """criteria 판정자용 원샷 — ibl_quality 가 능력 테이블로만 도달한다(층 역전)."""
+    from consciousness_agent import oneshot_ai_call
+    return oneshot_ai_call(**kwargs)
+
+
 def _cap_reset_consciousness() -> None:
     from consciousness_agent import reset_consciousness_agent
     reset_consciousness_agent()
@@ -424,4 +430,7 @@ def register_all() -> None:
         "self_check": _cap_self_check,
         "self_check_results": _cap_self_check_results,
         "reset_consciousness": _cap_reset_consciousness,
+        # criteria 품질 계약의 경량 판정자 (ibl_quality._call_judge) — ibl 층은
+        # 인지층을 모른다(의존 역전, 2026-08-27).
+        "oneshot_ai_call": _cap_oneshot_ai_call,
     })

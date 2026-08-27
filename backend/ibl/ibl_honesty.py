@@ -43,6 +43,7 @@ HONESTY_FLAG_KEYS = (
     "truncated",          # 원천 절단
     "_fallback_used",     # ?? 가 갈아탔 — 데이터의 *출처가 바뀜다*
     "halted",             # [repeat:] 상한으로 중단
+    "_criteria_retried",  # criteria 미달 → 재시도본이 통과 — 출력의 *출처가 재시도*다 (ibl_quality)
 )
 
 HONESTY_KEYS = HONESTY_LIST_KEYS + HONESTY_COUNT_KEYS + HONESTY_FLAG_KEYS

@@ -5,6 +5,7 @@ AgentRunner에서 분리된 Goal 실행 관련 메서드들을 포함하는 Mixi
 Phase 26 목표/시간/조건 시스템의 핵심 로직을 담당한다.
 """
 
+import json
 import os
 from datetime import datetime
 from typing import Any, Optional
@@ -252,6 +253,7 @@ class AgentGoalsMixin:
 
         db = self._get_goals_db()
         accumulated_results = []  # 라운드별 결과 누적 (AI 판단용 컨텍스트)
+        last_judgment = None      # 마지막 NOT_ACHIEVED 판정 사유 — 미달 종료 보고에 싣는다
 
         while self.running:
             goal = db.get_goal(goal_id)
@@ -266,7 +268,8 @@ class AgentGoalsMixin:
                 else:
                     db.update_goal_status(goal_id, "limit_reached")
                 self._log(f"[Goal] 종료: {goal['name']} - {termination}")
-                return self._report_goal_result(goal_id, termination)
+                return self._report_goal_result(goal_id, termination,
+                                                last_judgment=last_judgment)
 
             # 다음 라운드 실행
             round_num = goal['current_round'] + 1
@@ -280,6 +283,9 @@ class AgentGoalsMixin:
                     db.update_goal_status(goal_id, "achieved")
                     self._log(f"[Goal] 달성: {goal['name']}")
                     return self._report_goal_result(goal_id, "achieved")
+                # 미달 판정 사유는 버리지 않는다 — 종전엔 로그로만 흘려 종료 보고에서
+                # "왜 못 미쳤나"가 사라졌다(GoalEval 침묵 부류).
+                last_judgment = judgment
 
             # strategy가 있으면 조건에 따라 분기
             strategy = goal.get('strategy')
@@ -296,10 +302,31 @@ class AgentGoalsMixin:
                 # 직접 실행 가능한 IBL step
                 try:
                     result = execute_ibl(action, self.project_path, self.config.get("id", ""))
-                    round_result = str(result)[:500] if result else "실행 완료"
+                    # 라운드 실패의 트레이스백 승계 + goal 프레임 — 경계 규약
+                    # (docs/IBL_TRACEBACK_HANDOFF.md). 종전엔 str(result)[:500] 절단이
+                    # 봉투째 뭉갰다 — "몇 라운드째의 어느 액션이 무슨 입력으로"가 사라졌다.
+                    from workflow_engine import is_error_result
+                    if is_error_result(result):
+                        from ibl_traceback import tb_of, build_tb, push_frame
+                        _err = (result.get("error") if isinstance(result, dict)
+                                else str(result))
+                        _tb = tb_of(result) or build_tb(_err)
+                        push_frame(_tb, {"kind": "goal", "goal_id": goal_id,
+                                         "round": round_num})
+                        round_result = json.dumps(
+                            {"error": str(_err)[:500], "traceback": _tb},
+                            ensure_ascii=False, default=str)
+                    else:
+                        round_result = str(result)[:500] if result else "실행 완료"
                     round_cost = self._estimate_action_cost(action)
                 except Exception as e:
-                    round_result = f"실행 오류: {str(e)}"
+                    from ibl_traceback import build_tb, py_tail_of
+                    round_result = json.dumps(
+                        {"error": f"실행 오류: {str(e)[:300]}",
+                         "traceback": build_tb(str(e), "exception", py_tail=py_tail_of(e),
+                                               frame={"kind": "goal", "goal_id": goal_id,
+                                                      "round": round_num})},
+                        ensure_ascii=False, default=str)
                     round_cost = 0.005
             elif action and isinstance(action, dict) and action.get("_goal"):
                 # 중첩 Goal (strategy 분기에서 Goal이 나온 경우)
@@ -665,7 +692,8 @@ class AgentGoalsMixin:
         )
         return round(cost, 6)
 
-    def _report_goal_result(self, goal_id: str, reason: str) -> dict:
+    def _report_goal_result(self, goal_id: str, reason: str,
+                            last_judgment: Optional[str] = None) -> dict:
         """Goal 결과 보고"""
         db = self._get_goals_db()
         goal = db.get_goal(goal_id)
@@ -675,7 +703,7 @@ class AgentGoalsMixin:
         rounds_data = goal.get("rounds_data", [])
         last_rounds = rounds_data[-3:] if isinstance(rounds_data, list) else []
 
-        return {
+        out = {
             "goal_id": goal_id,
             "name": goal.get("name"),
             "status": goal.get("status"),
@@ -687,6 +715,20 @@ class AgentGoalsMixin:
                        f"{goal.get('current_round', 0)}라운드 실행, "
                        f"비용 ${goal.get('cumulative_cost', 0):.2f}"
         }
+        if reason != "achieved":
+            # 목표 미달 종료 = 품질 축의 "위치 있는 실패" 형식으로 보고
+            # (docs/IBL_QUALITY_CONTRACT_HANDOFF.md). success 는 뒤집지 않는다 —
+            # repeat halted 와 같은 규약("성공도 실패도 아님·신고는 크게").
+            from ibl_traceback import build_tb
+            _why = f"목표 미달성 종료({reason})"
+            if last_judgment:
+                _why += f" — 마지막 판정: {str(last_judgment)[:300]}"
+            out["not_achieved"] = True
+            out["traceback"] = build_tb(
+                _why, "quality",
+                frame={"kind": "goal", "goal_id": goal_id,
+                       "round": goal.get("current_round", 0)})
+        return out
 
     def recover_active_goals(self):
         """

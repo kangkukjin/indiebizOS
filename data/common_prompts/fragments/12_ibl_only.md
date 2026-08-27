@@ -200,7 +200,10 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
   - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행이거나 값 열이 없음). 입력이 아예 없었던 것과 다른 사건이다.
   - `skipped_steps` / `warning` (`[on_error:]`) · `_caught` (`[try]` 가 실패를 삼키고 catch 로 갔다 — **catch 결과가 평문이어도 붙는다**, B48-1) · `condition_errors` (`[if:]` 판정 불능) · `halted` (`[repeat:]` 상한) · `truncated` / `rows_dropped` (원천 절단).
   - `branches_failed` (`&` 가지가 **통째로** 죽음) / **`branches_honesty`** (가지는 살았는데 그 **안**에서 부분 실패·경로 변경이 있었다 — B48-2. `success: true` 인 병렬 봉투에 이게 있으면 "다 됐다"가 아니다) · `empty_notes` (중간 step 이 0행을 낸 사유 — 0건이 '없다'는 뜻이 아닐 수 있다) · `statements_failed` (줄바꿈으로 나뉜 독립 문장 중 죽은 수) · **`vars_dropped`** (블록 몸(`[if]`/`[case]`/`[try]`/`[repeat:]`) 안에서 **태어난** `$변수`가 블록 밖으로 못 나갔다 — B49-2. 이게 붙었으면 뒤 문장의 그 변수는 미할당이라 조건이 판정 불능이 된다. 블록 밖에서 쓸 값은 블록 **앞에서** 한 번 할당해 두고 몸에서 재할당하라).
+  - **`_criteria_retried`** — `criteria` 품질 계약이 첫 출력을 미달로 판정해 **재시도본이 통과**했다. 출력의 출처가 재시도라는 뜻이다(`criteria_feedback` 에 첫 미달 사유). `criteria_verdict: "unjudged"` 는 판정 불능이라 통과 처리됐다는 뜻 — "기준을 통과했다"고 말하면 안 된다.
   이 중 하나라도 있으면 **응답에 그 사실을 적어라.** 적지 않고 결과만 말하는 것이 이 시스템에서 가장 흔한 거짓말이다.
+
+**criteria — AI step 의 품질 계약 (2026-08-27 언어 개정)**: 원샷 AI 낱말(`[table:ai]`·`[table:brief]`·`[self:struct]` 등)은 실패 대신 *그럴듯하지만 나쁜 결과*를 낸다. 출력이 표면(write·notify·발행)으로 직행하면 `criteria` 로 기준을 선언하라 — 엔진이 경량 판정자로 심사하고, 미달이면 사유를 지시에 얹어 1회 재시도, 그래도 미달이면 `error_type: "quality"` 실패로 그 step 을 트레이스백에 찍는다(`rejected_result` 에 미달 출력 동봉). 판정 2회+재실행 1회의 추가 비용이 드니 규칙으로 적을 수 있으면 filter/take 가 먼저다. 예: `[table:brief]{instruction: "3문장 보고", criteria: "종목명·수치 포함, items 에 없는 주장 없음"}`. ★`[engines:image_read]{op:"critic"}` 의 criteria 는 그 도구 자신의 입력(화면 심사 기준)이다 — 이 계약이 아니다.
 
 **상태 변수·블록-인-파이프·반환 (M6)** — 긴 프로그램이 파이썬처럼 상태를 들고 돈다:
 ```

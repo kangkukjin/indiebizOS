@@ -34,10 +34,13 @@ from typing import Any, Dict, List, Optional, Set
 # 모든 액션이 자연히 받는 보편 키 (op 디스패치/레거시 target).
 UNIVERSAL_PARAM_KEYS = {"op", "target"}
 
-# 런타임 메타 키 — 핸들러 인자가 아니라 라우팅이 읽는 키.
+# 런타임 메타 키 — 핸들러 인자가 아니라 라우팅/엔진이 읽는 키.
 #   project_id: ibl_routing.resolve_project_path · scope: ibl_routing scope 해소
 #   (same/system/cross/workspace, ibl_routing.py params.get("scope") + ibl_engine action scope).
-RUNTIME_META_KEYS = {"project_id", "scope"}
+#   criteria: 품질 계약(ibl_quality, 2026-08-27 언어 개정) — execute_ibl 이 pop 해
+#   판정자에 넘기므로 핸들러 불도달. ★액션이 criteria 를 자기 param 으로 선언하면
+#   (engines:image_read op:critic) 그 액션의 것 — pop 하지 않고 정상 param 으로 흐른다.
+RUNTIME_META_KEYS = {"project_id", "scope", "criteria"}
 
 # 라우팅이 *가로채는* 키 — 작가가 params 에 적어도 핸들러까지 도달하지 못한다.
 #   project_path: ibl_routing.resolve_project_path 가 호출자 정체성 경로(2번 우선순위)를

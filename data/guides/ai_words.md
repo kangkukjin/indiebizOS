@@ -38,6 +38,22 @@
 - **비용 = 집합 단위 1호출** — items 전체를 한 번에. 입력 상한(6만 자) 초과=정직 거절(take/filter 로 줄이기). 0행 입력=**세 낱말 모두 호출 생략(비용 0)·빈손 성공** — `table:ai` 는 `items:[]`, `brief` 는 `message` 없이 `note`+`rows_in:0`(F20-3 판정 2026-08-22: 0행은 고장이 아니라 정당한 빈손이다. 감시자 문형 `[table:since] >> [table:brief]` 이 첫 실행마다 error 로 끝나던 원인). **통화 자체가 없으면 여전히 정직 거절** — 두 갈래를 섞지 말 것.
 - **`ai_call: true`** — dry-run 이 "실행마다 모델 호출(비용·편차)" 을 고지하고, 포털 대여 계기에서는 기본 거부된다.
 
+## criteria — 품질 계약 (2026-08-27 언어 개정)
+
+원샷 낱말의 지배적 실패는 예외가 아니라 **그럴듯하지만 나쁜 출력의 성공 반환**이다.
+출력이 표면(write·notify·발행)으로 직행하는 자리에는 `criteria` 로 기준을 선언하라:
+
+```
+[sense:feed]{url: "…"} >> [table:brief]{instruction: "급변 종목 3문장 보고",
+                                         criteria: "종목명·수치 포함, items 에 없는 주장 없음"}
+```
+
+- 엔진 소유 런타임 메타 param — 핸들러에 도달하지 않고, 실행 직후 경량 판정자(기어, background)가 심사한다.
+- **미달 → 재시도 1회**(판정 사유를 instruction 에 얹어 재실행 — ai_call+instruction 선언 낱말만) → 재판정 → 그래도 미달이면 `error_type: "quality"` 실패. 트레이스백이 그 step 을 가리키고 `rejected_result` 에 미달 출력이 남는다.
+- 통과=`criteria_verdict: "pass"`, 재시도 통과=`pass_after_retry`+`_criteria_retried`(정직 표지 — 출처가 재시도본), 판정 불능=통과+`unjudged` 신고.
+- **비용**: step 당 판정 최대 2회+재실행 1회의 추가 원샷. 규칙으로 적을 수 있으면(행 수·필드 유무) filter/take/스키마 가드가 먼저다 — criteria 는 의미 품질 전용.
+- ★`[engines:image_read]{op:"critic"}` 의 criteria 는 그 도구 자신의 입력이다(화면 심사 기준) — 액션이 선언한 param 이 항상 이긴다.
+
 ## 함정·경계
 
 - **지시문 자리는 `instruction`** — `do` 는 IBL *문장*을 나르는 자리(each·schedule)라 자연어 지시에 쓰지 않는다(별칭 do·prompt 는 수용).

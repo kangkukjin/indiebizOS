@@ -653,6 +653,32 @@ def _items_to_table(rows_src) -> dict | None:
     return {"columns": _cols, "rows": [[x.get(c) for c in _cols] for x in _it]}
 
 
+def _empty_currency_columns(tool_input: dict):
+    """0행 **통화를 받았는가** — 받았으면 그 열 목록(없으면 []), 아니면 None.
+
+    '입력이 아예 없었다'와 '입력이 왔는데 0행'을 가른다 — 교재의 `rows_in` 계약이 바로
+    이 구별이다("emitter 가 입력을 받긴 받았는데 쓸 수 없었다").
+    """
+    src = tool_input.get("items")
+    if isinstance(src, list):
+        return [] if not src else None
+    pr = tool_input.get("_prev_result")
+    if not pr:
+        return None
+    try:
+        po = json.loads(pr) if isinstance(pr, str) else pr
+    except Exception:
+        return None
+    if not isinstance(po, dict):
+        return None
+    tbl = po.get("table")
+    if isinstance(tbl, dict) and isinstance(tbl.get("rows"), list) and not tbl["rows"]:
+        return list(tbl.get("columns") or [])
+    if isinstance(po.get("items"), list) and not po["items"]:
+        return []
+    return None
+
+
 def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, context=None) -> str:
     # [table:spreadsheet] — 행 데이터 → xlsx 산출 (값만, 수식/서식은 범위 밖)
     import openpyxl
@@ -687,6 +713,21 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, con
             tool_input["headers"] = _table["columns"]
         if _table.get("rows"):
             tool_input["rows"] = _table["rows"]
+
+    # ★F48-6 (48회차 상상훈련, 수리 2026-08-27): 형제 emitter 와 같은 0행 규약.
+    #   chart·document 는 0행 통화를 `rows_in: 0` 으로 정직 거절하는데 여기만 **빈 통합문서를
+    #   만들고 success** 를 냈다(실측: 0행 입력 → 4,785바이트 xlsx 생성). 산출물이 생겼으니
+    #   읽는 쪽은 앞 단계가 0행이었다는 사실을 영영 모른다 — emitter 셋 중 가장 조용한 실패였다.
+    #   ★파일을 만들기 *전에* 거절한다(경로 해소보다 앞) — 빈 파일이 남으면 거절이 무의미하다.
+    if not tool_input.get("sheets") and not tool_input.get("rows"):
+        _empty_cols = _empty_currency_columns(tool_input)
+        if _empty_cols is not None:
+            return json.dumps({
+                "success": False, "rows_in": 0, "columns": _empty_cols,
+                "error": ("입력 0행 — 표로 쓸 내용이 없습니다. [table:spreadsheet] 는 앞 단계 "
+                          "통화를 받았지만 행이 하나도 없습니다"
+                          + (f"(열: {_empty_cols})" if _empty_cols else "")
+                          + ". 앞 단계의 필터·검침을 보세요.")}, ensure_ascii=False)
 
     # 확장자 보정은 emitter 의 몫(형식이 정한다), 배치는 몸의 단일 해소기가 한다.
     # (J29-1 — 세 emitter 가 서로 다른 배치 규칙을 들고 있던 것을 하나로 접었다.

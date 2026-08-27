@@ -9,7 +9,7 @@ nodes:
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
-        target_description: 검색어. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·queries(배치 팬아웃)·curate(경량 편집장) 지원. ★hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days(최근 N일) 를 줄 것. 결과의 date 필드가 ISO8601 게시일.
+        target_description: 검색어. source 로 엔진 선택(기본 ddg — 한국어는 naver 권장). naver 는 type(webkr/news/blog/cafe/kin/encyc)·sort, gnews/hn 은 headlines(톱 헤드라인/프론트페이지)·queries(배치 팬아웃)·curate(경량 편집장) 지원. ★hn 은 기본이 전체 기간 인기순이라 몇 년 된 글이 1위로 온다 — 최신 동향을 볼 땐 days(최근 N일) 를 줄 것. hn·gnews·naver(news/blog) 결과의 date 필드가 ISO8601 게시일(발행일 파싱 불능 행은 date 없음 — 신선도는 [table:filter] 의 where "date >= …" 술어로).
         router: handler
         tool: search
         implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.

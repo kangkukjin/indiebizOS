@@ -68,6 +68,24 @@ def _normalize_type(type_: str) -> str:
     return _TYPE_ALIASES.get(type_, type_)
 
 
+def _item_date_iso(it: dict) -> dict:
+    """news pub_date(RFC 2822)·blog post_date(YYYYMMDD) → {"date": ISO8601} · 불능이면 {}.
+
+    gnews·hn 의 date 필드와 같은 계약 — 모르는 날짜는 싣지 않는다(미주장).
+    """
+    pub = it.get("pub_date", "")
+    if pub:
+        try:
+            from email.utils import parsedate_to_datetime
+            return {"date": parsedate_to_datetime(pub).isoformat()}
+        except Exception:
+            return {}
+    post = it.get("post_date", "")
+    if post and len(post) == 8 and post.isdigit():
+        return {"date": f"{post[:4]}-{post[4:6]}-{post[6:]}"}
+    return {}
+
+
 def _format_item(item: dict, type_: str) -> dict:
     """도메인별 응답 item을 통일된 형식으로 변환"""
     base = {
@@ -159,7 +177,10 @@ def search_naver(
         "type": normalized_type,
         "total": data.get("total", 0) if isinstance(data, dict) else 0,
         # 단일 통화 items(records-관습 카드 shape) — 과적 legacy items 제거(§7.5 함정), 카드 shape만.
+        # date = 발행일 ISO8601 (gnews·hn 과 같은 계약, 2026-08-28) — news 의 pubDate(RFC 2822)·
+        # blog 의 postdate(YYYYMMDD)가 통화 밖에 갇혀 신선도 술어를 못 세우던 비대칭 수리.
         "items": [{"title": it.get("title", ""), "meta": "",
-                   "summary": it.get("snippet", ""), "url": it.get("link", "")} for it in items],
+                   "summary": it.get("snippet", ""), "url": it.get("link", ""),
+                   **_item_date_iso(it)} for it in items],
         "source": "네이버 검색 API",
     }

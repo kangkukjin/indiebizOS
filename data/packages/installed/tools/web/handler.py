@@ -105,6 +105,42 @@ def _text_to_blocks(title, text):
     return blocks or [{"type": "paragraph", "text": str(text or "")}]
 
 
+def _rfc2822_iso(published: str) -> dict:
+    """RFC 2822 발행일 → {"date": ISO8601} · 파싱 불능이면 {} (모르는 날짜 미주장).
+
+    hn 의 date 필드(2026-08-20)와 같은 계약 — 통화 행의 date 는 ISO8601 이고,
+    [table:filter]{where: "date >= …"}·value_semantics 시각 비교가 그대로 먹는다.
+    """
+    if not published:
+        return {}
+    try:
+        from email.utils import parsedate_to_datetime
+        return {"date": parsedate_to_datetime(published).isoformat()}
+    except Exception:
+        return {}
+
+
+def _gnews_item(r: dict, tag: str) -> dict:
+    """gnews 결과 한 건 → 통화 행(카드 shape) — **단일 생성자**.
+
+    2026-08-28 수리: 디스패치의 세 갈래(queries 팬아웃 `_to_items`·headlines·단일 query)가
+    각자 행을 재조립하며 search_gnews 의 items 를 덮었다 — 한 곳을 고쳐도 세 곳이 옛
+    모양을 내는 hand-picked-sweep 부류. date(ISO8601, hn 과 같은 계약)를 포함해 여기
+    한 벌로 모은다.
+    """
+    summary = r.get("summary") or ""
+    if summary == r.get("title"):
+        summary = ""
+    return {
+        "title": r.get("title", ""),
+        "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
+        "summary": summary,
+        "url": r.get("url", ""), "link_label": "기사 보기",
+        "query": tag,
+        **_rfc2822_iso(r.get("published", "")),
+    }
+
+
 def search_gnews(query: str = "", count: int = 10, language: str = "ko", region: str = None, headlines: bool = False) -> dict:
     """Google News RSS 검색
 
@@ -161,12 +197,16 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
             "results": results,
             # 단일 통화 items(records-관습 카드 shape) — 뉴스 목록 >> 파이프/렌더러.
             # query 필드 = 어느 검색어가 낸 항목인지 태그 → group 뷰(by:"{query}")·table:groupby 로 섹션화 가능.
+            # date = 발행일 ISO8601 (hn 과 같은 계약, 2026-08-28) — RSS published(RFC 2822)가
+            # meta 문자열에만 갇혀 있어 신선도 하드룰([table:filter] date 술어)을 세울 수 없던
+            # 비대칭 수리. 파싱 불능이면 필드를 싣지 않는다(모르는 날짜를 주장하지 않음).
             "items": [{
                 "title": r.get("title", ""),
                 "meta": " · ".join(x for x in [r.get("source", ""), r.get("published", "")] if x),
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""),
                 "query": query,
+                **_rfc2822_iso(r.get("published", "")),
             } for r in results],
         }
 
@@ -737,12 +777,8 @@ def execute(tool_input: dict, context):
             # RSS 병렬 페치(키워드당 GET 1회) + 경량 AI 일괄 편집(전 섹션 1회 호출) —
             # 직렬 (RSS+AI)×N 루프가 신문 조립을 느리게 하던 것을 해소(2026-07-11).
             def _to_items(res, tag):
-                return [{
-                    "title": r.get("title", ""),
-                    "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
-                    "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
-                    "url": r.get("url", ""), "link_label": "기사 보기", "query": tag,
-                } for r in (res.get("results") or [])]
+                # 행 조립은 단일 생성자 _gnews_item 한 벌 (date 포함, 2026-08-28)
+                return [_gnews_item(r, tag) for r in (res.get("results") or [])]
 
             _sources = str(tool_input.get("sources") or "gnews,guardian")
 
@@ -789,13 +825,7 @@ def execute(tool_input: dict, context):
             _fetch = 100 if _curate else tool_input.get("limit", tool_input.get("count", 12))   # 헤드라인 피드는 실제 최대 ~34
             result = search_gnews(count=_fetch, language=language, headlines=True)
             if isinstance(result, dict) and isinstance(result.get("results"), list):
-                result["items"] = [{
-                    "title": r.get("title", ""),
-                    "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
-                    "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
-                    "url": r.get("url", ""), "link_label": "기사 보기",
-                    "query": "오늘의 핫토픽",
-                } for r in result["results"]]
+                result["items"] = [_gnews_item(r, "오늘의 핫토픽") for r in result["results"]]
                 if _curate:
                     cr = _curate_sections_batch([{"topic": "오늘의 핫토픽", "items": result["items"]}], _curate)[0]
                     result["items"], result["pool"] = cr["picks"], cr["rest"]
@@ -821,13 +851,8 @@ def execute(tool_input: dict, context):
             language=language
         )
         if isinstance(result, dict) and isinstance(result.get("results"), list):
-            result["items"] = [{  # 단일 통화 items(records-관습 카드 shape)
-                "title": r.get("title", ""),
-                "meta": " · ".join(x for x in [r.get("source"), r.get("published")] if x),
-                "summary": "" if (r.get("summary") or "") == r.get("title") else (r.get("summary") or ""),
-                "url": r.get("url", ""), "link_label": "기사 보기",
-                "query": query,  # 검색어 태그 → group 뷰/table:groupby 섹션화용
-            } for r in result["results"]]
+            # 단일 통화 items — 행 조립은 _gnews_item 한 벌 (date 포함, 2026-08-28)
+            result["items"] = [_gnews_item(r, query) for r in result["results"]]
             if _curate:
                 # 가디언 합류(영어 키워드): 정본=study search_guardian, 실패 시 조용히 gnews만
                 if "guardian" in str(tool_input.get("sources") or "gnews,guardian") and language == "en":

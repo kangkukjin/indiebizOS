@@ -165,11 +165,11 @@ def _struct(tool_input: dict) -> str:
 
     if src.get("kind") == "image":
         # 비전 패스스루(ingest_engine 정본 — 모달리티는 기어 무관, 2026-08-13 원칙)
-        from ingest_engine import _gemini_vision_json, _strip_json
+        from ingest_engine import _vision_json, _strip_json
         prompt = system + "\n\n[이미지에서 추출]"
         if src.get("text"):
             prompt += f"\n[사용자 메모] {src['text']}"
-        raw, err = _gemini_vision_json(prompt, src["images"])
+        raw, err = _vision_json(prompt, src["images"])
         parsed = _strip_json(raw) if not err else None
         if err or parsed is None:
             return _fail(f"구조화 실패: {err or f'모델 출력을 JSON으로 못 읽음: {str(raw)[:200]}'}")

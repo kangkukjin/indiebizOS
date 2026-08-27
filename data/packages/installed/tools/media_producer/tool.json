@@ -218,8 +218,8 @@
       }
     },
     {
-      "name": "read_gemini_image",
-      "description": "Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes} + 사람 가독 요약).",
+      "name": "read_image",
+      "description": "이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -266,10 +266,6 @@
           "prescreen": {
             "type": "string",
             "description": "(critic) render 행의 0층 기계 관측 문자열($it.prescreen) — 비어 있지 않으면 비전 호출 없이 즉시 실패 verdict(tier: prescreen, 비용 계층화)"
-          },
-          "api_key": {
-            "type": "string",
-            "description": "선택. 미지정 시 GEMINI_API_KEY 환경변수 사용"
           }
         },
         "required": [

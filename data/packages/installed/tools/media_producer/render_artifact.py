@@ -5,7 +5,7 @@
 (CSV·표)를 그림으로 만드는 것은 표현 판단이 들어가는 생성 행위 — 이 낱말 밖이다.
 심사 루프([engines:image_read]{op:"critic"})의 신뢰가 이 결정론에 걸려 있다.
 
-handler.py 에서 spec-load 로 묶인다 (1500줄 규칙 — gemini_vision.py 와 같은 분리).
+handler.py 에서 spec-load 로 묶인다 (1500줄 규칙 — vision_read.py 와 같은 분리).
 디스패치 표(_OP_DISPATCHERS)는 AST 가드 때문에 handler.py 에 남고, 구현만 여기 산다.
 
 반환 통화: {"items":[{op,label,page,width,height,path}, …], "total": N, "message": …}

@@ -80,10 +80,11 @@ def execute(tool_input: dict, context) -> str:
         return generate_gemini_image(tool_input, output_base)
     elif tool_name == "generate_icon":
         return generate_icon(tool_input, output_base)
-    elif tool_name == "read_gemini_image":
-        # 단일 액션 + op 분기 (2026-08-05 image_critic 흡수 — 같은 Gemini Vision, 변형=op)
+    elif tool_name == "read_image":
+        # 단일 액션 + op 분기 (2026-08-05 image_critic 흡수, 변형=op).
+        # 구 read_gemini_image — 2026-08-27 벤더 중립화(모델은 기어가 단독 결정, vision_read.py).
         op = (tool_input.get("op") or "read").strip() or "read"
-        fn = _OP_DISPATCHERS["read_gemini_image"].get(op)
+        fn = _OP_DISPATCHERS["read_image"].get(op)
         if fn is None:
             return json.dumps({"success": False,
                                "error": f"알 수 없는 op '{op}' — read(시각 QA·OCR) | critic(의도 정합 채점)"},
@@ -125,7 +126,7 @@ def _normalize_tts_text(text):
 
 
 # TTS 엔진 층은 tts_engines.py (2026-08-10 분리 — 1500줄 규칙).
-# gemini_vision 과 같은 sys.modules 미등록 spec-load(싱글턴 임포트 레이스 없음).
+# vision_read 와 같은 sys.modules 미등록 spec-load(싱글턴 임포트 레이스 없음).
 import importlib.util as _ilu_tts
 _tts_spec = _ilu_tts.spec_from_file_location(
     "mp_tts_engines", os.path.join(os.path.dirname(__file__), "tts_engines.py"))
@@ -1078,18 +1079,19 @@ def generate_icon(tool_input, output_base):
 
 
 
-# Gemini Vision 구현은 gemini_vision.py (2026-08-05 분리 — 1500줄 규칙).
+# 이미지 읽기·평가 구현은 vision_read.py (2026-08-05 분리 — 1500줄 규칙 /
+# 2026-08-27 벤더 중립화 — 구 gemini_vision.py, 모델은 기어-해소 system_ai_call).
 # sys.modules 미등록 spec-load: 반쪽 모듈 노출(싱글턴 임포트 레이스) 없음.
 import importlib.util as _ilu
 _gv_spec = _ilu.spec_from_file_location(
-    "mp_gemini_vision", os.path.join(os.path.dirname(__file__), "gemini_vision.py"))
+    "mp_vision_read", os.path.join(os.path.dirname(__file__), "vision_read.py"))
 _gv = _ilu.module_from_spec(_gv_spec)
 _gv_spec.loader.exec_module(_gv)
-critique_gemini_image = _gv.critique_gemini_image
-read_gemini_image = _gv.read_gemini_image
+critique_image = _gv.critique_image
+read_image = _gv.read_image
 
 # Gemini 이미지 생성/편집(STYLE_PRESETS·input_image 편집·image_data 봉투)은 gemini_image.py
-# (2026-08-13 분리 — 1500줄 규칙, gemini_vision 과 동일한 spec-load 패턴).
+# (2026-08-13 분리 — 1500줄 규칙, vision_read 와 동일한 spec-load 패턴).
 _gi_spec = _ilu.spec_from_file_location(
     "mp_gemini_image", os.path.join(os.path.dirname(__file__), "gemini_image.py"))
 _gi = _ilu.module_from_spec(_gi_spec)
@@ -1337,8 +1339,8 @@ def render_html_video(tool_input, output_base):
 # --check 가 src ops.values 와 이 표의 키를 AST 정확 비교한다 (op-bearing 패키지 표준).
 # 함수 정의 뒤에 두어 전방 참조 없이 실제 함수를 값으로 묶는다.
 _OP_DISPATCHERS = {
-    "read_gemini_image": {"read": read_gemini_image, "critic": critique_gemini_image},
+    "read_image": {"read": read_image, "critic": critique_image},
     "render_artifact": {"html": render_op_html, "pdf": render_op_pdf, "svg": render_op_svg,
                         "xlsx": render_op_xlsx},
 }
-_OP_DEFAULTS = {"read_gemini_image": "read", "render_artifact": "html"}
+_OP_DEFAULTS = {"read_image": "read", "render_artifact": "html"}

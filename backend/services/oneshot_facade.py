@@ -10,7 +10,7 @@
   · 낱말의 자격 = AI 호출이 아니라 그 뒤의 **결정론 검증 관문**(설계 §5):
     스키마 파싱 + 실패 되먹임 재시도 1회 + 재실패=정직 실패(빈 결과 위장 금지),
     grounded 원문 대조(notebook 인용 후검증 부류), _ai provenance.
-  · 이미지 입력은 이 파사드가 아니라 비전 패스스루(ingest_engine._gemini_vision_json) —
+  · 이미지 입력은 이 파사드가 아니라 비전 패스스루(ingest_engine._vision_json, 기어-해소) —
     모달리티는 기어 무관(model_gear _doc 원칙, 2026-08-13 경량 비전 부재 실측).
 """
 import re

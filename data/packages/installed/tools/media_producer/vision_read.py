@@ -1,7 +1,13 @@
-"""Gemini Vision 읽기·평가 — [engines:image_read]{op: read|critic} 구현.
+"""이미지 읽기·평가 — [engines:image_read]{op: read|critic} 구현 (벤더 중립).
 
-handler.py 에서 2026-08-05 분리 (1500줄 규칙 — image_critic 흡수로 래칫 상한 초과).
-디스패치 표(_OP_DISPATCHERS)는 AST 가드 때문에 handler.py 에 남고, 구현만 여기 산다.
+handler.py 에서 2026-08-05 분리 (1500줄 규칙). 디스패치 표(_OP_DISPATCHERS)는 AST 가드
+때문에 handler.py 에 남고, 구현만 여기 산다.
+
+★모델은 기어가 단독 결정한다 (2026-08-27 수리 — 구 gemini_vision.py 벤더 고정 폐지).
+시각 읽기·채점은 범용 능력이라 벤더 SDK 직호출이 아니라 기어-해소 원샷(system_ai_call)을
+탄다: read=실행 축(role "execution") / critic=평가 축(role "evaluate") — GoalEval 평가자와
+같은 눈. 벤더 고유 기능(이미지 *생성*)만 gemini_image.py 에 남는다.
+재발 방지 관문 = test_vision_gear_contract(이 파일에 벤더 URL 금지).
 """
 import os
 import json
@@ -11,6 +17,36 @@ from pathlib import Path
 # 사용자의 비평이 이 디렉토리 yaml 의 diff 로 축적된다.
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _CRITERIA_DIR = _ROOT / "data" / "criteria"
+
+
+def _ai_call(prompt, system_prompt=None, images=None, role="evaluate"):
+    """기어-해소 멀티모달 원샷 — 모델·키는 기어에서 흘러나온다(에이전트별 설정 금지).
+
+    consciousness_agent.system_ai_call 과 같은 계약(반환 str|None). 함수 한 겹인 이유:
+    패키지 로드 시점에 backend import 를 강제하지 않고, 시험이 이 이음매를 바꿔치기한다.
+    """
+    from consciousness_agent import system_ai_call
+    return system_ai_call(prompt, system_prompt=system_prompt, images=images, role=role)
+
+
+def _load_image_b64(image_path):
+    """(dict|None, err) — 절대 경로 또는 data URI → {"base64", "media_type"}."""
+    import base64
+    if image_path.startswith("data:"):
+        try:
+            _, b64data = image_path.split(",", 1)
+            mime = image_path.split(";", 1)[0].split(":", 1)[1]
+        except Exception:
+            return None, "잘못된 data URI."
+        return {"base64": b64data, "media_type": mime}, None
+    if not os.path.exists(image_path):
+        return None, f"파일이 없습니다: {image_path}"
+    with open(image_path, "rb") as f:
+        b64data = base64.b64encode(f.read()).decode("utf-8")
+    ext = os.path.splitext(image_path)[1].lower()
+    mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+            ".webp": "image/webp", ".gif": "image/gif"}.get(ext, "image/png")
+    return {"base64": b64data, "media_type": mime}, None
 
 
 def _load_criteria(name_or_path, _seen=None):
@@ -54,22 +90,20 @@ def _load_criteria(name_or_path, _seen=None):
     return merged, None
 
 
-def critique_gemini_image(tool_input, output_base):
-    """Gemini Vision으로 이미지를 평가한다 — 일러스트가 의도와 정합하는지 검증.
+def critique_image(tool_input, output_base):
+    """이미지를 기준에 대고 채점한다 — 의도 정합 verdict (기어 평가 축).
 
     파라미터:
       - image_path (필수): 평가할 이미지 절대 경로 (또는 base64 data URI)
-      - intent (필수): "이 일러스트가 무엇을 표현해야 하는가" — 자연어 설명
-      - checks (선택): 추가 체크 리스트 (예: ["다이어그램형인가", "한글이 들어갔는가", "오른쪽 1/3이 비어있는가"])
-      - style_preset (선택): 디자인 시스템 톤 일관성 평가 기준 (vintage_book 등)
-      - api_key (선택)
+      - intent (필수): "이 이미지가 무엇을 표현해야 하는가" — 자연어 설명
+      - checks (선택): 추가 체크 리스트
+      - criteria (선택): data/criteria/*.yaml 취향 파일 (extends 사슬)
+      - style_preset (선택): 디자인 시스템 톤 일관성 평가 기준
+      - prescreen (선택): render 행의 0층 기계 관측 — 차 있으면 비전 호출 없이 즉시 실패
 
     반환:
-      JSON 문자열 — {"passed": bool, "score": 0-10, "issues": [...], "notes": "..."}
-      그리고 사람이 읽을 수 있는 요약 텍스트가 앞에 옴.
+      사람 가독 요약 + "verdict_json: {passed, score, issues, notes, tier}"
     """
-    import httpx
-    import base64
     import json as _json
 
     # path 는 IBL 표준 파라미터(self:read/grep/edit 모두 path) — image_path 미지정 시 폴백 수용.
@@ -83,7 +117,7 @@ def critique_gemini_image(tool_input, output_base):
     # ── 0층 단락 (검수 비용 계층화, INSPECTION_COST_TIER 2026-08-27) ──
     # render 가 행에 동봉한 기계 관측(prescreen)이 비어 있지 않으면 이미 구체적 실패
     # 증거(콘솔 오류·빈 화면·수식 오류 표식)가 있다 — 유료 비전 호출 없이 즉시 실패
-    # verdict 를 같은 모양으로 반환한다. API 키 검사보다 앞이라 키 없이도 돈다.
+    # verdict 를 같은 모양으로 반환한다. 모델 호출보다 앞이라 기어 상태와 무관하게 돈다.
     prescreen = str(tool_input.get("prescreen") or "").strip()
     if prescreen:
         verdict = {"passed": False, "score": 0,
@@ -97,25 +131,9 @@ def critique_gemini_image(tool_input, output_base):
             "문제점:", *(f"  - {i}" for i in verdict["issues"]), "",
             f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"])
 
-    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return json.dumps({"success": False, "error": "GEMINI_API_KEY가 설정되지 않았습니다."}, ensure_ascii=False)
-
-    # 이미지 로드 (절대 경로 또는 data URI)
-    if image_path.startswith("data:"):
-        # data URI → base64 페이로드만 추출
-        try:
-            _, b64data = image_path.split(",", 1)
-            mime = image_path.split(";", 1)[0].split(":", 1)[1]
-        except Exception:
-            return json.dumps({"success": False, "error": "잘못된 data URI."}, ensure_ascii=False)
-    else:
-        if not os.path.exists(image_path):
-            return json.dumps({"success": False, "error": f"파일이 없습니다: {image_path}"}, ensure_ascii=False)
-        with open(image_path, "rb") as f:
-            b64data = base64.b64encode(f.read()).decode("utf-8")
-        ext = os.path.splitext(image_path)[1].lower()
-        mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}.get(ext, "image/png")
+    image, ierr = _load_image_b64(image_path)
+    if ierr:
+        return json.dumps({"success": False, "error": ierr}, ensure_ascii=False)
 
     checks = tool_input.get("checks") or []
     style_preset = tool_input.get("style_preset", "")
@@ -166,7 +184,7 @@ def critique_gemini_image(tool_input, output_base):
         f"**의도 (이 결과물이 충족해야 할 것)**:\n{intent}\n\n"
         f"**체크 항목** ({len(all_checks)}개):\n"
         + "\n".join(f"{i+1}. {c}" for i, c in enumerate(all_checks))
-        + "\n\n반드시 다음 JSON 형식 한 개만 출력하세요. 다른 텍스트 금지.\n"
+        + "\n\n첨부된 이미지를 평가하라. 반드시 다음 JSON 형식 한 개만 출력하세요. 다른 텍스트 금지.\n"
         "```json\n"
         "{\n"
         '  "passed": true|false,\n'
@@ -178,37 +196,13 @@ def critique_gemini_image(tool_input, output_base):
         "passed는 issues가 없거나 score>=7일 때 true." + hard_rule
     )
 
-    payload = {
-        "contents": [{
-            "parts": [
-                {"inlineData": {"mimeType": mime, "data": b64data}},
-                {"text": instruction},
-            ]
-        }],
-        "generationConfig": {"temperature": 0.2, "responseModalities": ["TEXT"]},
-    }
-
-    # VLM 모델 — pro 우선, fallback flash
-    model = tool_input.get("model") or "gemini-3-pro-preview"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-    try:
-        with httpx.Client(timeout=120.0) as client:
-            r = client.post(url, params={"key": api_key}, json=payload,
-                            headers={"Content-Type": "application/json"})
-            if r.status_code == 404:
-                # 폴백 모델
-                model = "gemini-2.5-pro"
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-                r = client.post(url, params={"key": api_key}, json=payload,
-                                headers={"Content-Type": "application/json"})
-            r.raise_for_status()
-            data = r.json()
-    except Exception as e:
-        return json.dumps({"success": False, "error": f"VLM 호출 실패: {e}"}, ensure_ascii=False)
-
-    parts = (data.get("candidates", [{}])[0].get("content", {}) or {}).get("parts", [])
-    text = "".join(p.get("text", "") for p in parts).strip()
+    # 채점 = 평가 축 — GoalEval 평가자(system_ai_call role="evaluate")와 같은 눈.
+    text = _ai_call(instruction, images=[image], role="evaluate")
+    if not text or not str(text).strip():
+        return json.dumps({"success": False,
+                           "error": "기어 모델 호출 실패 — 평가 축 모델이 비전을 지원하는지 기어 설정을 확인하세요."},
+                          ensure_ascii=False)
+    text = str(text).strip()
     # ```json ... ``` 코드 펜스 제거
     if text.startswith("```"):
         text = text.strip("`")
@@ -239,86 +233,42 @@ def critique_gemini_image(tool_input, output_base):
     return "\n".join(summary_lines)
 
 
-def read_gemini_image(tool_input, output_base):
-    """Gemini Vision으로 이미지를 *읽어* 질문에 자유서술로 답한다 (시각 QA / OCR / 검증).
+def read_image(tool_input, output_base):
+    """이미지를 *읽어* 질문에 자유서술로 답한다 (시각 QA / OCR / 검증 — 기어 실행 축).
 
-    critique_gemini_image 와 다른 점: 합격/점수 채점이 아니라, 주어진 질문에 대한 자유 텍스트
-    답을 돌려준다. "스크린샷의 숫자를 읽어줘", "이 그림에 무엇이 보이나", "이 통계 수치가
-    332인가 136인가" 같은 시각 읽기·검증에 쓴다. 생성 일러스트 품질 평가는 image_critic 을 쓸 것.
+    critique_image 와 다른 점: 합격/점수 채점이 아니라, 주어진 질문에 대한 자유 텍스트
+    답을 돌려준다. "스크린샷의 숫자를 읽어줘", "이 그림에 무엇이 보이나" 같은 시각
+    읽기·검증에 쓴다. 산출물 품질 평가는 op:critic 을 쓸 것.
 
     파라미터:
       - image_path (또는 path): 읽을 이미지 절대 경로 또는 base64 data URI (필수)
-      - question (또는 query/intent/prompt): 무엇을 읽거나 답할지 (없으면 전체 묘사)
-      - api_key (선택), model (선택)
+      - question (또는 query/prompt): 무엇을 읽거나 답할지 (없으면 전체 묘사)
     """
-    import httpx
-    import base64
-
     image_path = tool_input.get("image_path") or tool_input.get("path")
     if not image_path:
         return json.dumps({"success": False, "error": "image_path(또는 path)가 필요합니다."}, ensure_ascii=False)
     question = (tool_input.get("question") or tool_input.get("query")
-               or tool_input.get("intent") or tool_input.get("prompt") or "").strip()
+                or tool_input.get("intent") or tool_input.get("prompt") or "").strip()
 
-    api_key = tool_input.get("api_key") or os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return json.dumps({"success": False, "error": "GEMINI_API_KEY가 설정되지 않았습니다."}, ensure_ascii=False)
-
-    # 이미지 로드 (절대 경로 또는 data URI) — critique_gemini_image 와 동일.
-    if image_path.startswith("data:"):
-        try:
-            _, b64data = image_path.split(",", 1)
-            mime = image_path.split(";", 1)[0].split(":", 1)[1]
-        except Exception:
-            return json.dumps({"success": False, "error": "잘못된 data URI."}, ensure_ascii=False)
-    else:
-        if not os.path.exists(image_path):
-            return json.dumps({"success": False, "error": f"파일이 없습니다: {image_path}"}, ensure_ascii=False)
-        with open(image_path, "rb") as f:
-            b64data = base64.b64encode(f.read()).decode("utf-8")
-        ext = os.path.splitext(image_path)[1].lower()
-        mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                ".webp": "image/webp", ".gif": "image/gif"}.get(ext, "image/png")
+    image, ierr = _load_image_b64(image_path)
+    if ierr:
+        return json.dumps({"success": False, "error": ierr}, ensure_ascii=False)
 
     if question:
         instruction = (
-            "당신은 이미지를 정확히 읽는 시각 분석가입니다. 아래 이미지를 보고 질문에 "
+            "당신은 이미지를 정확히 읽는 시각 분석가입니다. 첨부된 이미지를 보고 질문에 "
             "사실에 근거해 답하세요. 이미지에 적힌 텍스트·숫자는 보이는 그대로 정확히 옮기고, "
             "보이지 않거나 불확실하면 추측하지 말고 그렇다고 밝히세요.\n\n"
             f"**질문**: {question}"
         )
     else:
-        instruction = ("아래 이미지를 보고 무엇이 있는지 상세히 묘사하세요. 이미지에 적힌 "
+        instruction = ("첨부된 이미지를 보고 무엇이 있는지 상세히 묘사하세요. 이미지에 적힌 "
                        "텍스트·숫자가 있으면 보이는 그대로 정확히 옮기세요.")
 
-    payload = {
-        "contents": [{
-            "parts": [
-                {"inlineData": {"mimeType": mime, "data": b64data}},
-                {"text": instruction},
-            ]
-        }],
-        "generationConfig": {"temperature": 0.0, "responseModalities": ["TEXT"]},
-    }
-    model = tool_input.get("model") or "gemini-3-pro-preview"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-    try:
-        with httpx.Client(timeout=120.0) as client:
-            r = client.post(url, params={"key": api_key}, json=payload,
-                            headers={"Content-Type": "application/json"})
-            if r.status_code == 404:
-                model = "gemini-2.5-pro"
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-                r = client.post(url, params={"key": api_key}, json=payload,
-                                headers={"Content-Type": "application/json"})
-            r.raise_for_status()
-            data = r.json()
-    except Exception as e:
-        return json.dumps({"success": False, "error": f"VLM 호출 실패: {e}"}, ensure_ascii=False)
-
-    parts = (data.get("candidates", [{}])[0].get("content", {}) or {}).get("parts", [])
-    text = "".join(p.get("text", "") for p in parts).strip()
-    if not text:
-        return json.dumps({"success": False, "error": "VLM 빈 응답 (이미지를 읽지 못했습니다)."}, ensure_ascii=False)
-    return text
+    # 읽기 = 실행 중 지각 — 실행 축.
+    text = _ai_call(instruction, images=[image], role="execution")
+    if not text or not str(text).strip():
+        return json.dumps({"success": False,
+                           "error": "기어 모델 호출 실패 — 실행 축 모델이 비전을 지원하는지 기어 설정을 확인하세요."},
+                          ensure_ascii=False)
+    return str(text).strip()

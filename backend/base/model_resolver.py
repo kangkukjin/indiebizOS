@@ -428,16 +428,13 @@ def clear_provider_cache():
     _provider_cache.clear()
 
 
-def get_provider_for(role: str, agent_id: Optional[str] = None,
-                     system_prompt: str = "", tools=None,
-                     oneshot: bool = False) -> Tuple[Any, dict]:
-    """역할에 맞는 provider 객체와 디스크립터 반환. 모델 없으면 (None, desc).
+def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
+                        oneshot: bool = False):
+    """디스크립터({provider, model, api_key}) → 캐시된 provider 객체 (실패/모델 없음=None).
 
-    oneshot=True: 원샷 버킷(세션 비활성). 변이형(reflex)과 캐시 객체를 분리.
-    """
-    d = resolve(role, agent_id)
+    get_provider_for 와 get_vision_provider 가 같은 구성·캐시를 쓴다 — 사본이면 드리프트."""
     if not d.get("model"):
-        return None, d
+        return None
     keyhash = hashlib.md5((d["api_key"] or "").encode()).hexdigest()[:8]
     bucket = "oneshot" if oneshot else "session"
     cache_key = f"{bucket}|{d['provider']}|{d['model']}|{keyhash}"
@@ -460,8 +457,54 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
             _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")
-            return None, d
+            return None
+    return prov
+
+
+def get_provider_for(role: str, agent_id: Optional[str] = None,
+                     system_prompt: str = "", tools=None,
+                     oneshot: bool = False) -> Tuple[Any, dict]:
+    """역할에 맞는 provider 객체와 디스크립터 반환. 모델 없으면 (None, desc).
+
+    oneshot=True: 원샷 버킷(세션 비활성). 변이형(reflex)과 캐시 객체를 분리.
+    """
+    d = resolve(role, agent_id)
+    prov = _provider_from_desc(d, system_prompt=system_prompt, tools=tools, oneshot=oneshot)
     return prov, d
+
+
+def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:
+    """비전(이미지 입력) 모달리티 프로바이더 — gear `modality.image` 가 단독 결정.
+
+    텍스트 4축(분류/평가/실행/의식)의 티어 모델은 비전이 없을 수 있다(경량 deepseek 실측).
+    모달리티는 기어 축과 무관한 별도 슬롯(model_gear._doc 의 예약석)이며, 값은 티어 json 과
+    같은 모양({provider, model})의 설정 파일 이름이다. 키는 티어와 같은 규약(.env 정본).
+    미설정(None)이면 (None, desc) — 호출자는 role-축 프로바이더로 폴백한다(고급 티어처럼
+    그 축 모델이 비전을 지원할 수 있으므로). 벤더는 코드가 아니라 이 데이터에 산다
+    (2026-08-27 비전 벤더 중립화 — 구 gemini_vision.py/_gemini_vision_json 직호출 폐지).
+    """
+    gear = _load_gear()
+    fname = str(((gear.get("modality") or {}).get("image")) or "").strip()
+    if not fname:
+        return None, {"provider": "", "model": "", "api_key": "",
+                      "tier": "(modality)", "axis": "(vision)", "source": "modality.image 미설정"}
+    cfg = {}
+    p = _data_path() / fname
+    if p.exists():
+        try:
+            cfg = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"[model_resolver] 비전 설정 로드 실패 ({fname}): {e}")
+    provider = (cfg.get("provider") or "").strip()
+    model = (cfg.get("model") or "").strip()
+    api_key = env_key_for_provider(provider)
+    if not api_key and provider.lower() not in _NO_KEY_PROVIDERS:
+        legacy = (cfg.get("apiKey") or cfg.get("api_key") or "").strip()
+        if legacy:
+            api_key = legacy
+    d = {"provider": provider, "model": model, "api_key": api_key,
+         "tier": "(modality)", "axis": "(vision)", "source": f"modality.image→{fname}"}
+    return _provider_from_desc(d, oneshot=oneshot), d
 
 
 def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) -> dict:

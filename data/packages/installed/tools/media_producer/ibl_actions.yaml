@@ -150,26 +150,26 @@ nodes:
         - screenshot
         - preview
       image_read:
-        # gemini_vision.py 가 코드에서 풀던 별칭을 데이터로(2026-08-23). ★intent 는 제외 —
+        # vision_read.py(구 gemini_vision)가 코드에서 풀던 별칭을 데이터로(2026-08-23). ★intent 는 제외 —
         # op:critic 의 *정규 키*라 question 으로 접으면 두 자리가 섞인다.
         aliases:
           image_path: [path]
           question: [query, prompt]
-        # 세계를 바꾸지 않는 순수 읽기(Gemini Vision 조회) — 반환은 단일값 → scalar.
-        # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 —
-        # 같은 Gemini Vision, 프레이밍만 달랐다. 변형=op 명명 헌법).
+        # 세계를 바꾸지 않는 순수 읽기(기어-해소 비전 조회) — 반환은 단일값 → scalar.
+        # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 — 변형=op
+        # 명명 헌법). 2026-08-27 벤더 중립화: 모델은 기어가 단독 결정(vision_read.py).
         returns: scalar
-        side_effect: false   # 두 op 모두 순수 읽기(Gemini Vision 조회) — 세계를 바꾸지 않는다
+        side_effect: false   # 두 op 모두 순수 읽기(비전 조회) — 세계를 바꾸지 않는다
         # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
-        exempt: Gemini Vision 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
+        exempt: 기어-해소 비전 모델 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
-        description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=시각 QA·OCR·자유서술 답변, critic=의도 정합 채점(passed/score/issues/notes) — criteria 로 data/criteria/*.yaml 취향 파일을 기준으로 심사.
+        description: 이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=시각 QA·OCR·자유서술 답변(실행 축), critic=의도 정합 채점(passed/score/issues/notes, 평가 축 — GoalEval 평가자와 같은 눈) — criteria 로 data/criteria/*.yaml 취향 파일을 기준으로 심사.
         target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
         group: media_produce
         router: handler
-        tool: read_gemini_image
-        implementation: Gemini 3 Pro Vision(폴백 2.5 Pro). read=자유서술(temperature=0, 보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(다이어그램형·한글 검출 시 passed=false·빈 공간·객체 명확성·톤 일관성, 반환 verdict_json).
+        tool: read_image
+        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier).
         target_key: op
         ops:
           default: read
@@ -335,8 +335,8 @@ tool_json:
           description: '저장할 파일명 (예: narration_01.mp3)'
       required:
       - text
-  - name: read_gemini_image
-    description: Gemini Vision 이미지 읽기·평가 (op 분기). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes} + 사람 가독 요약).
+  - name: read_image
+    description: 이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).
     input_schema:
       type: object
       properties:
@@ -369,8 +369,5 @@ tool_json:
         prescreen:
           type: string
           description: '(critic) render 행의 0층 기계 관측 문자열($it.prescreen) — 비어 있지 않으면 비전 호출 없이 즉시 실패 verdict(tier: prescreen, 비용 계층화)'
-        api_key:
-          type: string
-          description: 선택. 미지정 시 GEMINI_API_KEY 환경변수 사용
       required:
       - image_path

@@ -11,9 +11,10 @@
 
 모델 선택 원칙:
   텍스트 = 경량 AI(consciousness_agent.oneshot_ai_call — 기어 리졸버 존중).
-  이미지 = Gemini 비전 직접 호출 — 모달리티는 기어 무관 패스스루(model_gear _doc)이고,
-           현 경량(딥시크)은 비전이 없다(2026-08-13 전환). ★모델명은 gemini-2.5-flash 명시
-           (flash-latest+thinkingBudget:0=400 함정, 2026-07-22 실측).
+  이미지 = 같은 oneshot_ai_call 에 images 를 얹는다(2026-08-27 벤더 중립화 — 구 Gemini REST
+           직호출 폐지). 경량(딥시크)은 비전이 없지만, 원샷이 이미지 입력을 감지하면
+           기어의 비전 모달리티 슬롯(model_gear modality.image → vision_ai_config.json)을
+           우선 해소한다 — 벤더는 코드가 아니라 그 데이터에 산다.
 """
 import os
 import json
@@ -185,35 +186,21 @@ def _strip_json(raw: str):
     return None
 
 
-def _gemini_vision_json(prompt: str, images: list):
-    """이미지 → Gemini REST (모달리티 패스스루). returns (raw_text, err)."""
-    api_key = (os.environ.get("GEMINI_API_KEY") or "").strip()
-    if not api_key:
-        return None, "GEMINI_API_KEY 없음 — 이미지 추출을 하려면 .env에 키를 넣으세요."
+def _vision_json(prompt: str, images: list):
+    """이미지 → 기어-해소 원샷 (모달리티 패스스루). returns (raw_text, err).
+
+    구 _gemini_vision_json(벤더 REST 직호출) — 2026-08-27 벤더 중립화. 텍스트 자매
+    (_lightweight_json)가 이미 타던 기어 통로에 이미지만 얹는다: 같은 ③구조화 단계라
+    같은 분류 축(role="classify"). oneshot_ai_call 은 images 멀티모달을 지원한다.
+    """
     try:
-        import requests
-    except ImportError:
-        return None, "requests 미설치"
-    parts = [{"text": prompt}]
-    for img in images:
-        parts.append({"inline_data": {"mime_type": img["media_type"], "data": img["base64"]}})
-    try:
-        r = requests.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-            headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
-            json={"contents": [{"parts": parts}],
-                  "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4096,
-                                       "thinkingConfig": {"thinkingBudget": 0}}},
-            timeout=60,
-        )
-    except Exception as e:
-        return None, f"Gemini 호출 실패: {e}"
-    if r.status_code != 200:
-        return None, f"Gemini {r.status_code}: {r.text[:200]}"
-    try:
-        return r.json()["candidates"][0]["content"]["parts"][0]["text"], None
-    except (KeyError, IndexError, ValueError):
-        return None, f"Gemini 응답 형식 이상: {r.text[:200]}"
+        from consciousness_agent import oneshot_ai_call
+    except ImportError as e:
+        return None, f"oneshot_ai_call 임포트 불가(백엔드 밖 실행?): {e}"
+    raw = oneshot_ai_call(prompt, images=list(images or []), role="classify")
+    if not raw:
+        return None, "비전 AI 응답 없음 — 분류 축 모델이 비전을 지원하는지 기어 설정을 확인하세요."
+    return raw, None
 
 
 def _lightweight_json(prompt: str, system_prompt: str):
@@ -242,7 +229,7 @@ def extract_records(source: dict, schema_prompt: str, domain_label: str = "기�
     )
     if source.get("kind") == "image":
         prompt = system + "\n\n[이미지에서 추출]" + (f"\n[사용자 메모] {source['text']}" if source.get("text") else "")
-        raw, err = _gemini_vision_json(prompt, source["images"])
+        raw, err = _vision_json(prompt, source["images"])
     else:
         raw, err = _lightweight_json(f"[원문]\n{source['text']}", system)
     if err:

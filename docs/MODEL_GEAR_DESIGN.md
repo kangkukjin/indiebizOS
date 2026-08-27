@@ -38,8 +38,17 @@
 ## 모달리티는 기어 밖
 
 이미지·동영상·임베딩(해마)은 모달리티 고정 모델 — 이미지 모델을 opus로 변속할 수 없다.
-기어와 무관한 **별도 설정**(현재는 핸들러 패스스루: Gemini 이미지 키, 해마 fine-tuned 모델).
+기어와 무관한 **별도 설정**(생성=핸들러 패스스루: Gemini 이미지 키, 해마=fine-tuned 모델).
 계기판 설정창에서 별도 구역으로 노출.
+
+**비전 입력(이미지를 *읽는* 것)은 2026-08-27 예약석이 채워졌다**: `modality.image` =
+설정 파일 이름(`vision_ai_config.json`, 티어 json 과 같은 {provider, model} 모양, 키는 .env).
+`model_resolver.get_vision_provider()` 가 해소하고, 원샷(oneshot/system_ai_call)은 images
+가 있으면 이 슬롯을 **0차**로 우선한다(텍스트 축 경량=deepseek 은 비전이 없으므로) —
+미설정이면 role-축 모델에 그대로 싣는다. 소비처: image_read(read/critic)·ingest 이미지
+추출·GoalEval 시각 평가. 벤더·모델명은 코드가 아니라 이 데이터에 산다(모델 은퇴 시
+설정 한 줄 교체 — 2026-08-27 실측: gemini-3-pro-preview 은퇴를 데이터로 흡수).
+관문: `backend/test_vision_gear_contract.py`(범용 비전 경로에 벤더 URL·키 직참조 금지).
 
 ## 해소 흐름 (resolve)
 

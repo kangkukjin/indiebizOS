@@ -38,7 +38,7 @@ def ra():
 
 @pytest.fixture(scope="module")
 def gv():
-    return _load("gemini_vision.py", "mp_gv_prescreen_test")
+    return _load("vision_read.py", "mp_gv_prescreen_test")
 
 
 # ── 0층 관측: render 행의 prescreen ───────────────────────────────
@@ -98,12 +98,14 @@ def test_xlsx_formula_error_marker_flagged(ra, tmp_path):
 # ── 1층 단락: critic 의 prescreen param ───────────────────────────
 
 
-def test_critic_prescreen_shortcircuit_needs_no_api_key(gv, tmp_path, monkeypatch):
-    """★단락은 키 검사 앞: 비전 호출·키 없이 즉시 tier=prescreen 실패 verdict."""
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+def test_critic_prescreen_shortcircuit_calls_no_model(gv, tmp_path, monkeypatch):
+    """★단락은 모델 호출 앞: 기어 상태와 무관하게 즉시 tier=prescreen 실패 verdict."""
+    def _boom(*a, **k):
+        raise AssertionError("0층 단락인데 모델이 호출됐다 — 비용 계층화 위반")
+    monkeypatch.setattr(gv, "_ai_call", _boom)
     img = tmp_path / "x.png"
     img.write_bytes(b"png-stub")            # 단락 경로는 이미지를 읽지 않는다
-    out = gv.critique_gemini_image(
+    out = gv.critique_image(
         {"image_path": str(img), "intent": "웹 페이지 품질",
          "prescreen": "콘솔 오류 2건: TypeError…; 빈 화면(잉크 0.00%)"}, ".")
     assert "verdict_json:" in out
@@ -115,14 +117,16 @@ def test_critic_prescreen_shortcircuit_needs_no_api_key(gv, tmp_path, monkeypatc
 
 
 def test_critic_without_prescreen_keeps_normal_path(gv, tmp_path, monkeypatch):
-    """단락이 정상 경로를 삼키지 않는다 — prescreen 없으면(빈 문자열 포함) 기존 키 요구 그대로."""
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    """단락이 정상 경로를 삼키지 않는다 — prescreen 없으면(빈 문자열 포함) 기어 호출로 간다."""
+    calls = []
+    monkeypatch.setattr(gv, "_ai_call", lambda *a, **k: calls.append(k) or None)
     img = tmp_path / "x.png"
     img.write_bytes(b"png-stub")
     for tin in ({"image_path": str(img), "intent": "t"},
                 {"image_path": str(img), "intent": "t", "prescreen": ""}):
-        out = json.loads(gv.critique_gemini_image(tin, "."))
-        assert out["success"] is False and "GEMINI_API_KEY" in out["error"]
+        out = json.loads(gv.critique_image(tin, "."))
+        assert out["success"] is False and "기어" in out["error"]
+    assert len(calls) == 2                  # 두 경우 모두 실제로 기어 호출까지 갔다
 
 
 # ── 배선: 화면검수 워크플로우가 0층을 실제로 통과시키는가 ─────────

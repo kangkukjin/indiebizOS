@@ -124,6 +124,7 @@
     "ibl/ibl_predicates",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
+    "ibl/ibl_traceback",
     "ibl/ibl_translate",
     "ibl/package_manager",
     "ibl/tool_context",
@@ -255,8 +256,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 246,
-    "engine": 226,
+    "total": 247,
+    "engine": 227,
     "blocklist": 20
   }
 }

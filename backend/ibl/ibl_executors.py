@@ -105,6 +105,15 @@ def _attach_branch_meta(result: Any, matched: str, matched_value: Any,
     if isinstance(result, dict):
         result.setdefault("matched", matched)
         result.setdefault("matched_value", mv)
+        # 분기 몸의 실패가 블록 경계를 넘는다 — 어느 분기 안이었는지 프레임으로 (경계 규약,
+        # docs/IBL_TRACEBACK_HANDOFF.md). 몸통 봉투의 트레이스백이 있으면 승계, 없으면 생성.
+        if not result.get("success", True):
+            from ibl_traceback import build_tb, push_frame
+            tb = result.get("traceback")
+            if not isinstance(tb, dict):
+                tb = build_tb(result.get("error") or "실행 실패")
+                result["traceback"] = tb
+            push_frame(tb, {"kind": "block", "block": "branch", "matched": matched})
     else:
         print(f"[IBL_COND] matched={matched} value={mv} (비-dict 분기 결과 — 봉투로만 신고)")
     return result

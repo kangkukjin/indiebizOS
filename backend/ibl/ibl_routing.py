@@ -495,7 +495,12 @@ def _route_handler(mapped_tool: str, params: dict,
         }
     except Exception as _exec_err:
         print(f"[IBL] 도구 실행 실패 ({mapped_tool}): {_exec_err}")
-        return {"error": f"도구 실행 실패 ({mapped_tool}): {_exec_err}"}
+        # 파이썬 트레이스백이 str(e) 로 죽는 유일한 관문 — 씨앗 트레이스백에 꼬리를 싣는다.
+        # 파이프가 이 봉투를 받으면 tb_of 로 승계해 위치 프레임을 얹는다(경계 규약).
+        from ibl_traceback import build_tb, py_tail_of
+        return {"error": f"도구 실행 실패 ({mapped_tool}): {_exec_err}",
+                "traceback": build_tb(f"도구 실행 실패 ({mapped_tool}): {_exec_err}",
+                                      "exception", py_tail=py_tail_of(_exec_err))}
 
     # async 핸들러 지원 (persistent 이벤트 루프 + 타임아웃)
     if asyncio.iscoroutine(result):
@@ -525,7 +530,11 @@ def _route_handler(mapped_tool: str, params: dict,
             })
         except Exception as e:
             print(f"[IBL] async 핸들러 실행 실패: {e}")
-            result = json.dumps({"success": False, "error": f"async 실행 오류: {str(e)}"})
+            from ibl_traceback import build_tb, py_tail_of
+            result = json.dumps({"success": False, "error": f"async 실행 오류: {str(e)}",
+                                 "traceback": build_tb(f"async 실행 오류: {str(e)}",
+                                                       "exception", py_tail=py_tail_of(e))},
+                                ensure_ascii=False)
 
     return result
 

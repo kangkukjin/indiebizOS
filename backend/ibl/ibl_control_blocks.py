@@ -105,20 +105,24 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
     honesty(선택): 몸통 봉투의 정직 신고를 담아 갈 dict — 주면 `_collect_honesty` 가 채운다(B27-4).
     """
     from workflow_engine import execute_pipeline, is_error_result, _auto_inject_prev
+    from ibl_traceback import build_tb, tb_of, py_tail_of
     prev = _prev_of(tool_input)
     if context is None and prev:
         context = {"_prev_result": prev}
     try:
         body = _subst_var_refs(_copy.deepcopy(body), {k: v for k, v in (tool_input.get("_var_values") or {}).items()})
     except ValueError as e:
-        return None, True, {"error": f"몸의 $변수 치환 실패: {e}", "step": 1, "summary": str(e)[:200]}, {}
+        return None, True, {"error": f"몸의 $변수 치환 실패: {e}", "step": 1, "summary": str(e)[:200],
+                            "traceback": build_tb(f"몸의 $변수 치환 실패: {e}", "binding")}, {}
     if isinstance(body, list):
         steps = [_nest(s, tool_input) for s in body]
         _stamp_var_values(steps, tool_input.get("_var_values") or {})
         try:
             env = execute_pipeline(steps, project_path, context=context, agent_id=agent_id)
         except Exception as e:
-            return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200]}, {}
+            return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200],
+                                "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",
+                                                      py_tail=py_tail_of(e))}, {}
         _collect_honesty(env, honesty)     # 봉투를 버리기 전에 신고만 건져낸다 (B27-4)
         by_idx: Dict[int, str] = {}
         for r in (env.get("results") or []) if isinstance(env, dict) else []:
@@ -130,6 +134,9 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
                     "step": (env.get("steps_completed") or 0) + 1,
                     "node": last.get("node"), "action": last.get("action")}
             info["summary"] = str(info["error"])[:200]
+            # 몸통 봉투의 트레이스백을 승계 — 블록 경계 프레임은 바깥(각 블록 실행기)이 얹는다.
+            if isinstance(env.get("traceback"), dict):
+                info["traceback"] = env["traceback"]
             return _parse_final(env.get("final_result")), True, info, by_idx
         return _parse_final(env.get("final_result") if isinstance(env, dict) else env), False, {}, by_idx
     from ibl_engine import execute_ibl
@@ -141,15 +148,34 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
     except Exception as e:
         return None, True, {"error": f"{type(e).__name__}: {e}", "step": 1, "summary": str(e)[:200],
                             "node": body.get("_node") if isinstance(body, dict) else None,
-                            "action": body.get("action") if isinstance(body, dict) else None}, {}
+                            "action": body.get("action") if isinstance(body, dict) else None,
+                            "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",
+                                                  py_tail=py_tail_of(e))}, {}
     if is_error_result(res):
         obj = _parse_final(res)
         msg = (obj.get("error") or obj.get("message")) if isinstance(obj, dict) else str(obj)
         info = {"error": str(msg), "step": 1, "summary": str(msg)[:200],
                 "node": body.get("_node") if isinstance(body, dict) else None,
                 "action": body.get("action") if isinstance(body, dict) else None}
+        _rt = tb_of(res)
+        if _rt:
+            info["traceback"] = _rt
         return obj, True, info, {0: res if isinstance(res, str) else json.dumps(res, ensure_ascii=False, default=str)}
     return _parse_final(res), False, {}, {0: res if isinstance(res, str) else json.dumps(res, ensure_ascii=False, default=str)}
+
+
+def _block_tb(err: Any, block: str) -> dict:
+    """블록 몸의 실패(err = _run_body 의 오류 정보)에 블록 경계 프레임을 얹는다 — 경계 규약.
+
+    err.traceback 은 몸통 봉투에서 승계된 것(있으면 그것이 진실). 없으면 여기서 만든다.
+    같은 객체를 err 도 들고 있으므로(try_error 등) 프레임이 양쪽에 보이는 것은 의도다 —
+    같은 실패의 같은 경로다.
+    """
+    from ibl_traceback import build_tb, push_frame
+    tb = err.get("traceback") if isinstance(err, dict) else None
+    if not isinstance(tb, dict):
+        tb = build_tb((err or {}).get("error") if isinstance(err, dict) else str(err))
+    return push_frame(tb, {"kind": "block", "block": block})
 
 
 def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
@@ -166,14 +192,18 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
         c_body = _subst_tokens(_copy.deepcopy(catch), {"error": err})
         c_res, c_failed, c_err, _ = _run_body(c_body, tool_input, project_path, agent_id)
         if c_failed:
+            # 파이썬과 같은 규약: 처리 중의 실패가 최종 오류 — catch 의 트레이스백이 바깥으로.
+            # try 쪽 경로는 try_error.traceback 에 그대로 남는다.
             out = {"success": False,
                    "error": f"try·catch 모두 실패 — try: {err.get('summary')} / catch: {c_err.get('summary')}",
-                   "try_error": err, "catch_error": c_err}
+                   "try_error": err, "catch_error": c_err,
+                   "traceback": _block_tb(c_err, "catch")}
         else:
             out = c_res
             caught_meta = err
     else:
-        out = {"success": False, "error": f"try 실패(catch 없음): {err.get('summary')}", "try_error": err}
+        out = {"success": False, "error": f"try 실패(catch 없음): {err.get('summary')}", "try_error": err,
+               "traceback": _block_tb(err, "try")}
     if fin is not None:
         f_body = _subst_tokens(_copy.deepcopy(fin), {"error": err if failed else {"error": None, "summary": ""}})
         _, f_failed, f_err, _ = _run_body(f_body, tool_input, project_path, agent_id)
@@ -377,6 +407,9 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         out["error"] = (f"repeat {iterations}회차에서 중단 — {err_info.get('error')}" if halted == "error"
                         else f"repeat 종료 조건 판정 불능 — {err_info.get('error')}")
         out["repeat_error"] = err_info
+        # 몸통 트레이스백 승계 + repeat 경계 프레임(어느 회차였는지) — 경계 규약.
+        out["traceback"] = _block_tb(err_info, "repeat")
+        out["traceback"]["frames"][0]["iteration"] = err_info.get("iteration") or iterations
     else:
         out["success"] = True
         if halted == "max":

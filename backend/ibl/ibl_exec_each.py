@@ -348,6 +348,19 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     halted: Optional[str] = None
 
     processed = noncurrency = currency_n = 0
+    # 트레이스백 경계 규약(docs/IBL_TRACEBACK_HANDOFF.md): 행 하나의 실패에도 do 문장
+    # 안의 경로가 붙는다. 동일 오류의 무거운 상세(py_tail·input)는 첫 행에만(fold_heavy).
+    from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, fold_heavy
+    _tb_seen: dict = {}
+    _tb_folds = 0
+
+    def _row_tb(tb, row_no: int):
+        nonlocal _tb_folds
+        push_frame(tb, {"kind": "each", "item": row_no, "of": len(target)})
+        if fold_heavy(tb, _tb_seen, row_no):
+            _tb_folds += 1
+        return tb
+
     for idx, row in enumerate(target):
         processed += 1
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
@@ -362,8 +375,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
             else:
                 avail = [_EACH_SCALAR_FIELD]
-            errors.append({**base, "_error": (
-                f"행에 없는 필드: {', '.join(sorted(set(missing)))} (행 필드: {avail})")})
+            _emsg = f"행에 없는 필드: {', '.join(sorted(set(missing)))} (행 필드: {avail})"
+            errors.append({**base, "_error": _emsg,
+                           "_traceback": _row_tb(build_tb(_emsg, "binding"), idx + 1)})
             if on_error == "stop":
                 halted = "on_error"
                 break
@@ -373,7 +387,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             steps = ibl_parse(sentence)
         except IBLSyntaxError as e:
             err_n += 1
-            errors.append({**base, "_error": f"IBL 문법 오류: {e}"})
+            errors.append({**base, "_error": f"IBL 문법 오류: {e}",
+                           "_traceback": _row_tb(build_tb(f"IBL 문법 오류: {e}", "syntax"),
+                                                 idx + 1)})
             if on_error == "stop":
                 halted = "on_error"
                 break
@@ -394,7 +410,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         try:
             res = execute_pipeline(steps, project_path, agent_id=agent_id)
         except Exception as e:  # 실행기 자체가 터진 경우도 행 단위로 정직하게
-            res = {"success": False, "error": f"{type(e).__name__}: {e}"}
+            res = {"success": False, "error": f"{type(e).__name__}: {e}",
+                   "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",
+                                         py_tail=py_tail_of(e))}
 
         final = res.get("final_result") if isinstance(res, dict) else res
         if isinstance(final, str):
@@ -407,7 +425,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
         if isinstance(res, dict) and not res.get("success", True):
             err_n += 1
-            errors.append({**base, "_error": res.get("error") or "실행 실패"})
+            # do 문장 안의 트레이스백을 승계하고 each 프레임 한 칸을 얹는다 — 어느 행의,
+            # 몇 번째 step 에서, 무슨 입력으로 죽었는지가 행별로 남는다(경계 규약에 예외 없음).
+            _rtb = tb_of(res) or build_tb(res.get("error") or "실행 실패")
+            errors.append({**base, "_error": res.get("error") or "실행 실패",
+                           "_traceback": _row_tb(_rtb, idx + 1)})
             if on_error == "stop":
                 halted = "on_error"
                 break
@@ -438,6 +460,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     if errors:
         # 실패는 통화에 섞지 않고 봉투로 — halted_steps·branches_failed·empty_notes 와 같은 규약.
         out["errors"] = errors
+        if _tb_folds:
+            # 접었으면 접었다고 말한다(침묵 클램프 금지) — 원형은 detail_at 이 가리키는 행에.
+            notes.append(f"동일 오류의 트레이스백 상세(py_tail·input)는 첫 발생 행에만 원형으로 "
+                         f"남기고 {_tb_folds}건은 detail_at 참조로 접었습니다.")
     if noncurrency:
         # ★침묵 금지: 통화를 안 내는 do(효과·스칼라)면 원 행이 그대로 흘렀다는 사실을 말한다.
         #   말 없이 원 행을 흘리면 소비자가 그걸 do 의 결과로 오독한다.
@@ -471,6 +497,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         out["success"] = False
         out["error"] = (f"each: {err_n}건 전부 실패 — 첫 오류: "
                         f"{errors[0].get('_error') if errors else '실행 실패'}")
+        # 전량 실패 = 문장이 죽는다 — 첫 실패 행의 트레이스백이 문장 트레이스백이 된다
+        # (첫 행이라 py_tail·input 원형 보유). 파이프가 이걸 승계해 위 프레임을 얹는다.
+        if errors and isinstance(errors[0].get("_traceback"), dict):
+            out["traceback"] = errors[0]["_traceback"]
     elif not processed:
         if not rows:
             # ★F17 (2026-08-17 상상훈련 12회차): 입력 0행은 실수가 아니라 정당한 빈손 —

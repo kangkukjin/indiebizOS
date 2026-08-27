@@ -28,6 +28,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 # 정직 표지의 단일 소스 (B48-1/2) — 잎 모듈이라 순환 참조가 없다.
 from ibl_honesty import markers_of as _honesty_markers_of  # noqa: F401
+# 트레이스백의 단일 소스 (2026-08-27, docs/IBL_TRACEBACK_HANDOFF.md) — 역시 잎 모듈.
+from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, attach_input
 
 
 # === 경로 ===
@@ -248,7 +250,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     normalized.extend(ibl_parse(s))
                 except IBLSyntaxError as e:
                     return {"success": False, "error": f"IBL 문법 오류: {s} → {str(e)}",
-                            "steps_completed": 0, "steps_total": len(steps)}
+                            "steps_completed": 0, "steps_total": len(steps),
+                            "traceback": build_tb(f"IBL 문법 오류: {s} → {str(e)}", "syntax")}
             else:
                 normalized.append(s)
         steps = normalized
@@ -296,11 +299,26 @@ def execute_pipeline(steps: list, project_path: str = ".",
             #   (each 의 error_count·errors, truncated, _fallback_used …) 를 담는 누산기.
             "branch_honesty": []}
 
-    def _handle_failure(idx: int, abort_payload: dict):
+    def _handle_failure(idx: int, abort_payload: dict, tb=None):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
         ②뒤에 독립 문장이 있으면 거기로 건너뛰고 계속(None 반환),
         ③없으면 중단 payload — 2단 이상 진행했으면 재개 지점(resume)을 스필해 싣는다(M5 §2.6)."""
         st = steps[idx] if isinstance(steps[idx], dict) else {}
+        # ── 트레이스백 조립의 단일 지점 (docs/IBL_TRACEBACK_HANDOFF.md) ──
+        # 호출부가 tb 를 안 만든 실패(앞으로 생길 새 실패 지점 포함)도 여기서 기본
+        # 프레임을 얻는다 — 등록 목록이 아니라 통과 지점이 규약을 강제한다(B48-1).
+        # 실패 프레임의 입력 통화(prev_result)도 여기 한 곳에서만 단다.
+        if tb is None:
+            _n, _a = _step_label(st)
+            tb = build_tb(abort_payload.get("error"),
+                          frame={"kind": "pipeline", "step": idx + 1, "of": total,
+                                 "node": _n, "action": _a})
+        attach_input(tb, prev_result)
+        abort_payload["traceback"] = tb
+        # 계속-실행 경로(문장 건너뛰기·on_error)에서도 실패 step 기록에 남긴다 —
+        # 봉투 다이어트(summarize_step)는 result 외 키를 보존하므로 그대로 살아남는다.
+        if results and isinstance(results[-1], dict) and results[-1].get("step") == idx + 1:
+            results[-1].setdefault("traceback", tb)
         mode = st.get("_on_error")
         if mode in ("skip", "null"):
             _seq["last_mode"] = mode
@@ -395,7 +413,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": None,
                     "error": f"Step {i+1} 변수 치환 실패: {str(e)}",
-                })
+                }, tb=build_tb(str(e), "binding",
+                               frame={"kind": "pipeline", "step": i + 1, "of": total,
+                                      "node": _step_label(step)[0],
+                                      "action": step.get("action", "?")}))
                 if _abort is not None:
                     return _abort
                 prev_result = _after_failure(prev_result)
@@ -417,7 +438,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": None,
                     "error": f"Step {i+1} 병렬 실행 예외: {str(e)}",
-                })
+                }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
+                               frame={"kind": "parallel", "step": i + 1, "of": total}))
                 if _abort is not None:
                     return _abort
                 prev_result = _after_failure(prev_result)
@@ -447,12 +469,19 @@ def execute_pipeline(steps: list, project_path: str = ".",
                         _bd = json.loads(_bd)
                     except Exception:
                         pass
-                _bfail.append({
+                _bf = {
                     "branch": _bi + 1,
                     "node": (_bs.get("_node") or _bs.get("node") or "?") if isinstance(_bs, dict) else "?",
                     "action": (_bs.get("action") or "?") if isinstance(_bs, dict) else "?",
                     "error": (_bd.get("error") if isinstance(_bd, dict) else str(_bd))[:300],
-                })
+                }
+                # 가지 하나의 실패에도 그 안의 경로를 싣는다 — 경계 규약에 예외 없음.
+                # 잎 오류(중첩 트레이스백 없는 가지)도 여기서 프레임을 얻는다.
+                _bf["traceback"] = build_tb(
+                    _bf["error"], nested=tb_of(_br),
+                    frame={"kind": "parallel", "step": i + 1, "branch": _bi + 1,
+                           "of": len(_branches), "node": _bf["node"], "action": _bf["action"]})
+                _bfail.append(_bf)
             _rec = {
                 "step": i + 1, "type": "parallel",
                 "branches": len(step["branches"]),
@@ -490,11 +519,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _branches and len(_bfail) == len(_branches):
                 _why = "; ".join(f"분기 {b['branch']}([{b['node']}:{b['action']}]): {b['error'][:120]}"
                                  for b in _bfail)
+                # 첫 실패 가지의 트레이스백이 문장 트레이스백이 된다(가지별 원형은 branches_failed 에).
                 _abort = _handle_failure(i, {
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": result_str,
                     "error": f"Step {i+1} 병렬 전 가지 실패({len(_bfail)}/{len(_branches)}): {_why}",
-                })
+                }, tb=(_bfail[0].get("traceback")
+                       or build_tb(_why, frame={"kind": "parallel", "step": i + 1,
+                                                "of": total, "branch": _bfail[0]["branch"]})))
                 if _abort is not None:
                     return _abort
                 prev_result = _after_failure(prev_result)
@@ -518,7 +550,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": None,
                     "error": f"Step {i+1} fallback 실행 예외: {str(e)}",
-                })
+                }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
+                               frame={"kind": "fallback", "step": i + 1, "of": total}))
                 if _abort is not None:
                     return _abort
                 prev_result = _after_failure(prev_result)
@@ -563,11 +596,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
             step_results[i] = result_str
 
             if is_err:
+                # 결과는 마지막 시도의 실패 봉투 — 그 안의 트레이스백을 승계(파이썬과 같은 규약:
+                # 폴백 전체 실패의 오류는 마지막 시도의 오류다). attempts[] 가 앞 시도들을 나른다.
                 _abort = _handle_failure(i, {
                     "success": False, "steps_completed": i, "steps_total": total,
                     "results": results, "final_result": result,
                     "error": f"Step {i+1} fallback 체인 전체 실패",
-                })
+                }, tb=build_tb(f"fallback 체인 전체 실패({len(step['_fallback_chain'])}시도)",
+                               nested=tb_of(result),
+                               frame={"kind": "fallback", "step": i + 1, "of": total,
+                                      "attempts": len(step["_fallback_chain"])}))
                 if _abort is not None:
                     return _abort
                 prev_result = _after_failure(prev_result)
@@ -598,7 +636,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "success": False, "steps_completed": i, "steps_total": total,
                 "results": results, "final_result": None,
                 "error": f"Step {i+1} {_bind_err}",
-            })
+            }, tb=build_tb(_bind_err, "binding",
+                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                                  "node": _step_label(tool_input)[0],
+                                  "action": _step_label(tool_input)[1]}))
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
@@ -635,7 +676,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "results": results,
                 "final_result": None,
                 "error": f"Step {i+1} 실행 중 예외: {str(e)}",
-            })
+            }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
+                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                                  "node": _step_label(tool_input)[0],
+                                  "action": _step_label(tool_input)[1]}))
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
@@ -704,6 +748,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if is_err:
             err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
             err_msg = _items_bound_note(tool_input, err_msg)   # ★B31-1: 집합 바인딩 사실을 실패에 실어 준다
+            # 결과가 중첩 실행(run_pipeline·워크플로우·each·블록)의 봉투면 그 안의
+            # 트레이스백을 승계하고 이 파이프의 프레임 한 칸만 얹는다 — 경계 규약.
             _abort = _handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
@@ -711,7 +757,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 "results": results,
                 "final_result": result,
                 "error": f"Step {i+1} 에러: {err_msg}",
-            })
+            }, tb=build_tb(err_msg, nested=tb_of(result),
+                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                                  "node": _rec["node"], "action": _rec["action"]}))
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
@@ -1139,6 +1187,9 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     result = execute_pipeline(steps, project_path)
     result["workflow_id"] = workflow_id
     result["workflow_name"] = wf_name
+    # 실패가 워크플로우 경계를 넘는다 — 어느 워크플로우 안이었는지 프레임으로 (경계 규약).
+    if not result.get("success", True) and isinstance(result.get("traceback"), dict):
+        push_frame(result["traceback"], {"kind": "workflow", "name": workflow_id})
     if required:
         result["params_required"] = required
     if inject_meta:

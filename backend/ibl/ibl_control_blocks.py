@@ -84,16 +84,14 @@ def _collect_honesty(env: Any, into: Optional[dict]) -> None:
     쥐고 있는 **유일한 자리**인 여기서 건넨다 — 블록 종류가 늘어도 계약이 따라온다.
     통화 흐름·반환 튜플 arity 는 불변(신고를 원하는 호출자만 out-param 을 준다).
     """
-    if into is None or not isinstance(env, dict):
+    # ★B48-1(48회차): 여기 있던 세 키(`skipped_steps`·`condition_errors`·`_caught`)+truncated
+    #   는 **손으로 적은 목록**이었다 — 그래서 each 의 행별 실패(error_count·errors)나
+    #   passthrough_rows·rows_replaced 는 블록 경계에서 여전히 사라졌다. 같은 속의 결함이
+    #   B24-1·B27-4·F35-1 에 이어 네 번째라, 목록을 단일 소스(ibl_honesty)로 옮긴다.
+    if into is None:
         return
-    for k in ("skipped_steps", "condition_errors", "_caught"):
-        v = env.get(k)
-        if isinstance(v, list) and v:
-            into.setdefault(k, []).extend(v)
-        elif isinstance(v, dict) and v:
-            into.setdefault(k, []).append(v)
-    if env.get("truncated") is True:
-        into["truncated"] = True
+    from ibl_honesty import merge_into
+    merge_into(env, into)
 
 
 def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
@@ -182,7 +180,19 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 out["finally_error"] = f_err
             else:
                 print(f"[IBL_TRY] finally 실패(결과 불변): {f_err.get('summary')}")
-    if caught_meta is not None and isinstance(out, dict):
+    if caught_meta is not None:
+        # ★B48-1(48회차 상상훈련): catch 결과가 **스칼라**면 `_caught` 를 실을 dict 가
+        #   없어 표지가 조용히 버려졌다. 실측:
+        #     [try]{[self:read]{path:"없는파일"}}[catch]{[self:time]}
+        #       → {"result": "2026-08-27 09:50:29"}          ← try 가 삼켰다는 사실이 없다
+        #     [try]{같은 실패}[catch]{[sense:host]{op:"status"}}
+        #       → {"_caught": {...}, "cpu_percent": ...}      ← dict 일 때만 정직
+        #   즉 **성공 경로에서만 침묵**했다(catch 도 실패하면 try_error/catch_error 로 정직).
+        #   스칼라를 {"result": …} 로 싸는 것은 api_ibl 이 어찌피 하는 래핑이므로
+        #   (surface/api_ibl.py — str 은 JSON 파싱 실패 시 {"result": result}) 그걸 앞당길 뿐,
+        #   소비자가 보는 최종 JSON 모양은 기존과 같다(키 하나 추가).
+        if not isinstance(out, dict):
+            out = {"result": out}
         out.setdefault("_caught", caught_meta)
     return out
 

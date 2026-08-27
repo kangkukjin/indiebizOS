@@ -26,6 +26,8 @@ import yaml
 from pathlib import Path
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+# 정직 표지의 단일 소스 (B48-1/2) — 잎 모듈이라 순환 참조가 없다.
+from ibl_honesty import markers_of as _honesty_markers_of  # noqa: F401
 
 
 # === 경로 ===
@@ -289,7 +291,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
             "branches_failed": [], "empty_notes": [], "list_in_text": [],
             # ★F35-1 (35회차): `??` 가 갈아탄 사실을 봉투 최상위로 올리는 누산기.
             #   교재는 `_fallback_used` 를 정직 표지 **1번**으로 가르치는데 실물이 없었다.
-            "fallback_used": []}
+            "fallback_used": [],
+            # ★B48-2 (48회차): 병렬 가지가 *성공*으로 돌아왔을 때 그 안의 부분 실패
+            #   (each 의 error_count·errors, truncated, _fallback_used …) 를 담는 누산기.
+            "branch_honesty": []}
 
     def _handle_failure(idx: int, abort_payload: dict):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -452,6 +457,24 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 _rec["branches_failed"] = _bfail
                 _seq["branches_failed"].append({"step": i + 1, "failed": _bfail,
                                                 "of": len(_branches)})
+            # ★B48-2(48회차 상상훈련): B24-1 이 고친 것은 가지가 **통째로** 죽은 경우뿐이다.
+            #   가지가 success:true 로 돌아오면 그 안의 부분 실패는 봉투에서 통째로 증발했다:
+            #     ([table:each]{2행, 1행 실패}) & [sense:host]{op:"status"} >> [table:union]
+            #       → success:true, error_count 없음   ← "2종목 중 1종목 실패"가 "성공"이 된다
+            #     같은 each 를 단독으로 돌리면 error_count:1 + errors[원 행] 로 정직하다.
+            #   가지 봉투를 손에 쥔 유일한 자리가 여기이므로 여기서 걷는다(승격 규약은
+            #   branches_failed 와 같다 — _seq 누산 후 최상위 + warning).
+            _bhon = []
+            for _bi, _br in enumerate(_branches):
+                if is_error_result(_br):
+                    continue          # 전체 실패는 위 branches_failed 가 이미 신고했다
+                _m = _honesty_markers_of(_br)
+                if _m:
+                    _bhon.append({"branch": _bi + 1, "markers": _m})
+            if _bhon:
+                _rec["branches_honesty"] = _bhon
+                _seq["branch_honesty"].append({"step": i + 1, "branches": _bhon,
+                                               "of": len(_branches)})
             results.append(_rec)
             step_results[i] = result_str
             # 전 가지 실패 = 아무것도 못 가져온 것. 그것을 성공이라 부르면 그 뒤의 모든 단계가
@@ -727,6 +750,18 @@ def execute_pipeline(steps: list, project_path: str = ".",
         _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in _seq["branches_failed"])
         _warns.append(f"[병렬] 분기 실패: {_bs} — 결과는 부분입니다"
                       "(살아남은 분기만 다음 step 으로 흐릅니다. results[] 의 branches_failed 참조).")
+    if _seq["branch_honesty"]:
+        # ★B48-2: 가지가 죽지 않았어도 가지 *안*에서 부분 실패가 있었다는 사실.
+        #   이게 없으면 "3곳 다 조회했다"가 실제로는 "3곳 중 2곳"이다.
+        out["branches_honesty"] = list(_seq["branch_honesty"])
+        _bh = ", ".join(
+            "step {}({}/{} 분기: {})".format(
+                b["step"], len(b["branches"]), b["of"],
+                ", ".join(sorted({k for br in b["branches"] for k in br["markers"]})))
+            for b in _seq["branch_honesty"])
+        _warns.append(f"[병렬] 살아남은 분기 안에 부분 실패·경로 변경 신고가 있습니다: {_bh} — "
+                      "분기가 success 로 돌아왔다고 그 안이 온전한 것은 아닙니다"
+                      "(results[] 의 branches_honesty 참조).")
     if _seq["fallback_used"]:
         # ★F35-1: `??` 가 갈아탄 사실 — 데이터의 **출처가 바뀌었다**는 뜻이라
         #   최상위에 없으면 읽는 쪽이 첫 가지 결과로 착각한다(교재의 정직 표지 1번).

@@ -115,6 +115,7 @@
     "ibl/ibl_exec_output",
     "ibl/ibl_exec_sense",
     "ibl/ibl_executors",
+    "ibl/ibl_honesty",
     "ibl/ibl_ops",
     "ibl/ibl_param_vocab",
     "ibl/ibl_parser",
@@ -251,6 +252,7 @@
     "repair_verdict_distill": "force_exclude (프로파일 명시)",
     "test_aggregate_finite_result_gate": "force_exclude_glob",
     "test_ai_ops_words": "force_exclude_glob",
+    "test_body_commit": "force_exclude_glob",
     "test_body_vocab": "force_exclude_glob",
     "test_compute_condition_semantics": "force_exclude_glob",
     "test_concurrency_gate": "force_exclude_glob",
@@ -357,8 +359,8 @@
     "test_youtube_channel_resolution": "force_exclude_glob"
   },
   "counts": {
-    "total": 351,
-    "engine": 225,
-    "blocklist": 126
+    "total": 353,
+    "engine": 226,
+    "blocklist": 127
   }
 }

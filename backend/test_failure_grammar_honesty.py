@@ -180,6 +180,102 @@ def test_R8_fallback_표지가_교재뿐_아니라_실물로도_나온다(monkey
     assert "_fallback_used" not in out2, out2
 
 
+# ── B48-1 / B48-2 (48회차, 2026-08-27): 표지가 조합 경계를 못 건넌다 ──────────
+#
+# 48회차 축 = **정직 표지 × 조합 경로**. 표지가 *붙는지*(R7·R8 이 본 것)와
+# 표지가 *경계를 건너는지*는 다른 질문이고, 후자는 한 번도 시험된 적이 없었다.
+
+
+def test_R9_표지_목록은_단일_소스다():
+    """B48-1: 표지 목록이 자리마다 **손으로 열거**돼 있어서, 열거에서 빠진 키는
+    그 경계에서 조용히 사라졌다(B24-1 병렬·B27-4 블록몸·F35-1 폴백에 이은 네 번째).
+    교재가 가르치는 표지와 코드가 아는 표지가 어긋나면 모델은 없는 것을 찾는다."""
+    from ibl_honesty import HONESTY_KEYS, markers_of
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    frag = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    src = open(frag, encoding="utf-8").read()
+    for marker in HONESTY_KEYS:
+        assert marker in src, f"코드는 표지 '{marker}' 를 아는데 교재가 안 가르친다"
+    # 걷는 쪽도 같은 목록을 쓴다 — 빈 값은 소음이므로 싣지 않는다.
+    assert markers_of({"error_count": 2, "passthrough_rows": 0, "items": [1]}) == {"error_count": 2}
+    assert markers_of('{"truncated": true}') == {"truncated": True}   # 문자열 봉투도 푼다
+    assert markers_of("평문") == {} and markers_of(None) == {}
+
+
+def test_R10_try_가_삼킨_사실은_스칼라_결과에서도_남는다(monkeypatch):
+    """B48-1 실측(48회차):
+
+        [try]{[self:read]{path:"없는파일"}}[catch]{[self:time]}
+          → {"result": "2026-08-27 09:50:29"}      ← try 가 삼켰다는 사실이 **어디에도 없다**
+        [try]{같은 실패}[catch]{[sense:host]{op:"status"}}
+          → {"_caught": {...}, "cpu_percent": ...}  ← catch 결과가 dict 일 때만 정직
+
+    `isinstance(out, dict)` 가드가 표지를 조용히 버렸다. F35-1 이 폴백에서 고친 것과
+    **같은 모양의 결함**(평문 스칼라라는 세 번째 모양)이 try 에 남아 있었다.
+    ★catch 도 실패하면 try_error/catch_error 로 정직했다 — 성공 경로에서만 침묵했다.
+    """
+    import ibl_engine, ibl_control_blocks as cb
+
+    def _fake(tool_input, project_path, agent_id=None, **kw):
+        if tool_input.get("action") == "read":
+            return {"success": False, "error": "No such file"}
+        return "2026-08-27 09:50:29"              # ★평문 스칼라 catch 결과
+
+    monkeypatch.setattr(ibl_engine, "execute_ibl", _fake)
+    out = cb._execute_try({"body": {"_node": "self", "action": "read"},
+                           "catch": {"_node": "self", "action": "time"}}, ".", None)
+    assert isinstance(out, dict), f"스칼라 결과를 실을 자리가 없어 표지가 버려졌다: {out!r}"
+    assert "_caught" in out, f"try 가 삼킨 사실이 없다: {out!r}"
+    assert out["result"] == "2026-08-27 09:50:29", out   # 값 자체는 그대로 흐른다
+
+    # 대조: 실패가 없으면 표지도 없다(거짓 경보 금지)
+    monkeypatch.setattr(ibl_engine, "execute_ibl",
+                        lambda *a, **k: "2026-08-27 09:50:29")
+    ok = cb._execute_try({"body": {"_node": "self", "action": "time"}}, ".", None)
+    assert not (isinstance(ok, dict) and "_caught" in ok), ok
+
+
+def test_R11_병렬은_가지_안의_부분실패도_신고한다(monkeypatch):
+    """B48-2 실측(48회차):
+
+        ([table:each]{2행 중 1행 실패}) & [sense:host]{op:"status"} >> [table:union]{}
+          → success: true, error_count 없음   ← "2종목 중 1종목 실패"가 "성공"이 된다
+        같은 each 를 단독으로 돌리면 error_count:1 + errors[원 행] 로 정직하다.
+
+    B24-1 이 고친 것은 가지가 **통째로** 죽은 경우뿐이었다. 가지가 success 로
+    돌아오면 그 안의 부분 실패는 봉투에서 증발했다 — 병렬은 행동 기준 가장 많이
+    쓰이는 조합 문법(17%)이라 이 침묵의 사정거리가 넓다."""
+    import ibl_engine, workflow_engine
+    from ibl_parser import parse
+
+    def _fake(tool_input, project_path, agent_id=None, **kw):
+        if tool_input.get("action") == "each":
+            # 가지 자신은 성공 — 그러나 행 하나가 죽었다고 스스로 신고한다
+            return {"success": True, "items": [{"v": 1}], "count": 1,
+                    "ok_count": 1, "error_count": 1,
+                    "errors": [{"t": "ZZZZINVALID", "_error": "없는 종목"}]}
+        return {"success": True, "items": [{"v": 2}], "count": 1}
+
+    monkeypatch.setattr(ibl_engine, "execute_ibl", _fake)
+    out = workflow_engine.execute_pipeline(
+        parse('[table:each]{items: [{t: "a"}]} & [sense:host]{op: "status"}'), ".")
+
+    assert out.get("success"), out
+    assert "branches_honesty" in out, \
+        f"가지 안의 부분 실패가 봉투에서 사라졌다: {sorted(out.keys())}"
+    bh = out["branches_honesty"][0]
+    assert bh["of"] == 2 and bh["branches"][0]["branch"] == 1, bh
+    assert bh["branches"][0]["markers"]["error_count"] == 1, bh
+    assert "부분 실패" in (out.get("warning") or ""), out.get("warning")
+
+    # 대조: 두 가지 모두 온전하면 표지가 없다(거짓 경보 금지)
+    monkeypatch.setattr(ibl_engine, "execute_ibl",
+                        lambda *a, **k: {"success": True, "items": [{"v": 1}], "count": 1})
+    out2 = workflow_engine.execute_pipeline(
+        parse('[table:each]{items: [{t: "a"}]} & [sense:host]{op: "status"}'), ".")
+    assert "branches_honesty" not in out2, out2
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import sys as _sys
     try:

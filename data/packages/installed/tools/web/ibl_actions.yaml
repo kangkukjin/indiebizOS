@@ -213,8 +213,8 @@ tool_json:
           type: boolean
           description: gnews/hn 전용 — true 면 키워드 없이 톱 헤드라인(gnews)/프론트페이지(hn). curate 와 함께 '오늘의 핫토픽' 섹션. query 불필요.
         queries:
-          type: string
-          description: gnews/hn 전용 — 여러 키워드(쉼표/개행) 배치 팬아웃, 각 검색어를 query 태그로 섹션화해 한 목록으로. 신문 계기용.
+          type: [string, array]
+          description: gnews/hn 전용 — 여러 키워드 배치 팬아웃(배열 또는 쉼표/개행 문자열 — 핸들러가 양쪽 처리하는데 선언이 string 뿐이라 배열 리터럴이 관문에서 죽던 비대칭 수리 2026-08-28), 각 검색어를 query 태그로 섹션화해 한 목록으로.
         sources:
           type: string
           description: gnews curate 전용 — 큐레이션 풀 합류 소스(쉼표 나열). 기본 "gnews,guardian" — 영어 키워드면 가디언 기사 합류. "gnews"만 주면 끔.

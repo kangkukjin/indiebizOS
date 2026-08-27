@@ -640,7 +640,11 @@ async def serve_image(path: str):
 # ============ 메인 ============
 
 # 리로드 감시에서 빼는 것 — 서버가 import 하지 않는 파일들(가드가 이 이름을 읽는다).
-RELOAD_EXCLUDES = ["test_*.py", "*_test.py", "conftest.py"]
+# ★`_[!_]*.py` = 밑줄 하나로 시작하는 스크래치(2026-08-27 실측 사고: 수리 턴이 이빨
+#   실측 사본을 `backend/_it51_teeth.py` 로 만들자 리로드가 그 턴 자신을 끊어 격리
+#   스테이징이 apply 전에 좌초했다 — 08-23 `test_*.py` 사건과 같은 부류, 다른 이름).
+#   `[!_]` 가 `__init__.py`(산 배관)를 지킨다 — 가드 L5·L6 이 양쪽을 실측한다.
+RELOAD_EXCLUDES = ["test_*.py", "*_test.py", "conftest.py", "_[!_]*.py"]
 
 
 if __name__ == "__main__":

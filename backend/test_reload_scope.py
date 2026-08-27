@@ -75,16 +75,49 @@ def test_L2_시험_파일이_제외된다():
 def test_L3_서버가_실제로_안_읽는_것만_뺀다():
     """제외는 '안 읽는 것'에만 정당하다 — 산 배관을 빼면 편집이 조용히 반영 안 된다.
 
-    backend/*.py 중 app 이 import 하는 이름이 제외 패턴에 걸리면 안 된다.
+    backend/**/*.py 중 app 이 import 하는 이름이 제외 패턴에 걸리면 안 된다.
+    (층 디렉토리까지 걷는다 — `_[!_]*.py` 제외가 층 안의 산 모듈을 물면 여기서 잡힌다.
+    `__init__.py` 는 산 배관이므로 목록에 남긴다 — 패턴이 그걸 물면 이 시험이 실패한다.)
     """
     import fnmatch
     pats = _reload_excludes_const()
     here = os.path.dirname(os.path.abspath(__file__))
-    live = [f for f in os.listdir(here)
-            if f.endswith(".py") and not f.startswith("test_") and f != "conftest.py"]
+    live = []
+    for root, dirs, files in os.walk(here):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
+        live += [f for f in files
+                 if f.endswith(".py") and not f.startswith("test_") and f != "conftest.py"]
     assert live, "backend 에 산 모듈이 없다고? 경로가 틀렸다"
     caught = [f for f in live if any(fnmatch.fnmatch(f, p) for p in pats)]
     assert not caught, f"산 모듈이 감시에서 빠졌다 — 편집이 조용히 반영 안 된다: {caught}"
+
+
+def test_L5_스크래치_이름도_제외된다():
+    """08-23 사건의 재발(2026-08-27, 같은 부류·다른 이름): 수리 턴이 이빨 실측 사본을
+    `backend/_it51_teeth.py` 로 만들자(당시 제외 목록에 없던 이름) WatchFiles 리로드가
+    **그 턴 자신을** 끊었고, 격리 스테이징(task_sysai_9c6fb012)이 apply 전에 좌초했다.
+    이름 열거는 반드시 샌다 — 스크래치의 자연스러운 작명(선행 밑줄 하나)을 부류로 덮는다.
+    반대쪽 경계: `__init__.py`(밑줄 둘)는 산 배관이므로 물리면 안 된다."""
+    import fnmatch
+    pats = _reload_excludes_const()
+    for name in ("_it51_teeth.py", "_teeth.py", "_scratch_probe.py"):
+        assert any(fnmatch.fnmatch(name, p) for p in pats), f"{name} 이 감시에 남아 있다: {pats}"
+    assert not any(fnmatch.fnmatch("__init__.py", p) for p in pats), \
+        "__init__.py(산 배관)가 제외에 걸렸다 — 패키지 편집이 조용히 반영 안 된다"
+
+
+def test_L6_설치된_uvicorn_이_같은_판정을_한다():
+    """선언 가드(L2·L5)는 fnmatch 로 모형을 검사한다 — 실제 판정자는 uvicorn 의
+    FileFilter(pathlib.match)다. 두 의미론이 갈리면(업그레이드 포함) 선언 가드만
+    초록인 채 감시가 새므로, 설치본으로 종단 실측한다."""
+    from pathlib import Path
+    from uvicorn.config import Config
+    from uvicorn.supervisors.watchfilesreload import FileFilter
+    ff = FileFilter(Config("api:app", reload=True, reload_excludes=_reload_excludes_const()))
+    for name, watched in (("_it51_teeth.py", False), ("test_x.py", False),
+                          ("currency.py", True), ("__init__.py", True)):
+        got = bool(ff(Path(os.path.dirname(os.path.abspath(__file__)), "common", name)))
+        assert got == watched, f"{name}: 감시={got}, 기대={watched} — uvicorn 판정이 선언과 갈렸다"
 
 
 def test_L4_디바운스는_그대로_있다():

@@ -211,6 +211,14 @@ run_command: cd /Users/kangkukjin/Desktop/AI/indiebizOS && .venv/bin/python -m p
   로그 파일로 넘길 때도 **파일이 비어 있으면 실패로 읽는다.**
 - 무엇을 돌릴지 모르면 전체를 돌린다: `.venv/bin/python -m pytest backend -q`
   (CI 와 같게 하려면 `-m "not local"`).
+- ★**라이브 트리에 실측용 스크래치 `.py` 를 만들 때는 리로드 감시 밖 이름만** —
+  `test_*.py`·`conftest.py`·`_이름.py`(선행 밑줄 하나). 감시 트리에 새 `.py` 가 생기면
+  WatchFiles 리로드 = **자기 절단**이다(2026-08-27 실측: 수리 턴이 이빨 실측 사본을
+  backend 루트에 `_it51_teeth.py` 라는 이름으로 만들자 — 당시 제외 목록 밖 이름 —
+  리로드가 그 턴을 끊어 격리 스테이징이 apply 전에 좌초했다). 지금은 `_이름.py` 도 제외되지만 제외 목록은
+  uvicorn **부팅 때** 읽힌다 — 재기동 전의 몸은 옛 목록으로 감시하므로, 이름 규약을
+  지키는 것이 언제나 먼저다. 원칙은 하나: **자기 죽음 이후에 실행돼야 하는 단계(rm·
+  보고·apply)를 리로드 후보 행위 뒤에 두지 말 것.**
 - 이 규약 자체는 `backend/test_single_runner.py` 가 회귀로 지킨다 — 새 배터리가 pytest 에
   0건으로 잡히거나 `__main__` 이 위임하지 않으면 그 가드가 실패한다.
 

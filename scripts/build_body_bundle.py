@@ -12,6 +12,9 @@ substrate 예외)만 뺀다. 그래야 새 기능이 자연히 모든 몸으로 
     import 하는 모듈 + 그걸 가드 없이 import 하는 모듈(전이) + force_exclude.
     (가드된 import = try/except·지연 import 는 런타임에 건너뛰므로 무관.)
   - 즉 blocklist 는 손-큐레이션이 아니라 '없는 능력'에서 파생된다.
+  - **글롭 제외(`_force_exclude_glob`, 예: `test_*`)는 규칙만 기록하고 전개하지 않는다.**
+    그건 "없는 능력"이 아니라 "애초에 엔진 모듈이 아니다"라는 선언이라, 파일별로 펼치면
+    시험 파일 하나가 늘 때마다 파생본이 흔들려 관문이 무관한 커밋을 막는다(2026-08-27).
 
 새 몸 추가 = data/bodies/<body>.json 하나 작성 → 이 도구가 매니페스트 파생.
 
@@ -89,7 +92,15 @@ def derive(body):
     glob_exclude = profile.get("force_exclude_glob", []) or profile.get("_force_exclude_glob", [])
 
     paths = _backend_module_paths()
-    mods = set(paths)
+    # ★글롭 제외는 **전개하지 않는다 — 규칙만 기록한다**(2026-08-27).
+    #   `test_*` 같은 글롭은 "이 파일들은 애초에 엔진 모듈이 아니다"라는 *선언*이지,
+    #   몸이 못 돌리는 능력의 목록이 아니다. 그런데 옛 코드는 이 규칙을 파일별 키로
+    #   펼쳐 blocklist 에 넣었고(128건 중 108건이 test_*), 그 바람에 backend 에 시험
+    #   파일이 하나 생길 때마다 파생본이 흔들려 pre-commit 이 **무관한 커밋을 막았다**
+    #   — 49회차 상상훈련 수리 커밋이 실제로 이 덫에 걸려 미커밋으로 남았다.
+    #   규칙만 기록하면 파생본은 '무엇이 폰에 못 가는가'의 함수로만 남는다.
+    glob_covered = {m for m in paths if any(fnmatch.fnmatch(m, g) for g in glob_exclude)}
+    mods = set(paths) - glob_covered
     ext_imports, be_imports = {}, {}
     for m in mods:
         e, b = _toplevel_imports(BACKEND / (paths[m] + ".py"))
@@ -104,17 +115,17 @@ def derive(body):
     # 2) force_exclude (프로토타입/맥 진입점/비-엔진)
     for m in force_exclude & mods:
         reasons.setdefault(m, "force_exclude (프로파일 명시)")
-    for m in mods:
-        if any(fnmatch.fnmatch(m, g) for g in glob_exclude):
-            reasons.setdefault(m, "force_exclude_glob")
-    # 3) 전이: blocklist 모듈을 *가드 없이* 최상위 import 하면 자기도 blocklist
+    # 3) 전이: blocklist 모듈을 *가드 없이* 최상위 import 하면 자기도 blocklist.
+    #    글롭에 걸린 모듈(mods 밖)도 전이의 씨앗이다 — 엔진 모듈이 시험 파일을 최상위
+    #    import 하면 폰에서 즉사하므로, 그건 조용히 넘길 게 아니라 blocklist 에 사유째
+    #    남아야 한다(`via test_foo` 로 읽힌다).
     changed = True
     while changed:
         changed = False
         for m in mods:
             if m in reasons:
                 continue
-            via = sorted(be_imports[m] & set(reasons))
+            via = sorted(be_imports[m] & (set(reasons) | glob_covered))
             if via:
                 reasons[m] = f"via {','.join(via)}"
                 changed = True
@@ -128,8 +139,48 @@ def derive(body):
         "body": body,
         "engine_modules": engine,
         "blocklist": {m: reasons[m] for m in blocklist},
+        # 규칙 자체(전개본 아님) — 이 글롭에 걸린 파일은 엔진 모듈 후보에서 아예 빠진다.
+        "blocklist_globs": sorted(glob_exclude),
+        # total = 글롭 밖 backend 모듈 수(= engine + blocklist). 시험 파일이 늘어도
+        # 흔들리지 않는다 — 흔들리는 수를 파생본에 적으면 그게 곧 드리프트가 된다.
         "counts": {"total": len(mods), "engine": len(engine), "blocklist": len(blocklist)},
     }
+
+
+def diff_against(cur, derived):
+    """기록본 ↔ 파생본 차이를 **사람이 읽는 줄들**로 — 비면 일치.
+
+    ★관문이 "다름"이라고만 말하고 이유를 못 대던 자리(2026-08-27 수리).
+    옛 코드는 *판정*(engine_modules + blocklist 키 비교)과 *설명*(engine_modules 집합
+    차이만 출력)을 서로 다른 식으로 계산했다. 그래서 차이가 blocklist 쪽에만 있으면
+    "✗ 드리프트 … 재생성 필요" 한 줄만 나오고 **무엇이 다른지가 빈칸**이었다 — 실제로
+    49회차 커밋이 막혔을 때 이유가 로그 어디에도 없어 원장 JSON 을 파야 했다.
+    이제 판정과 설명이 같은 목록 하나에서 나오므로, 드리프트가 이유 없이 신고되는
+    경우가 원리적으로 없다(그 성질을 시험이 지킨다).
+    """
+    out = []
+
+    def _cmp(label, a, b):
+        sa, sb = set(a), set(b)
+        if sb - sa:
+            out.append(f"  + {label}: 새로 들어와야 함 — {sorted(sb - sa)}")
+        if sa - sb:
+            out.append(f"  - {label}: 더 이상 아님 — {sorted(sa - sb)}")
+        if sa == sb and list(a) != list(b):
+            out.append(f"  ~ {label}: 항목은 같고 순서만 다름 — 재생성하면 정렬된다")
+
+    _cmp("engine_modules", cur.get("engine_modules", []), derived["engine_modules"])
+    _cmp("blocklist", list(cur.get("blocklist", {})), list(derived["blocklist"]))
+    _cmp("blocklist_globs", cur.get("blocklist_globs", []), derived["blocklist_globs"])
+
+    # 키는 같은데 *사유*가 달라진 것도 파생 드리프트다(무엇 때문에 빠지는지가 바뀌었다).
+    ca, cb = cur.get("blocklist", {}), derived["blocklist"]
+    moved = [m for m in cb if m in ca and ca[m] != cb[m]]
+    for m in moved[:5]:
+        out.append(f"  ~ blocklist 사유 변경: {m} — \"{ca[m]}\" → \"{cb[m]}\"")
+    if len(moved) > 5:
+        out.append(f"  ~ blocklist 사유 변경 …외 {len(moved) - 5}건")
+    return out
 
 
 def derive_nodes_registry(body):
@@ -174,14 +225,12 @@ def main():
             print(f"✗ {out_path.name} 없음 — `python3 scripts/build_body_bundle.py {body}` 먼저", file=sys.stderr)
             return 1
         cur = json.loads(out_path.read_text(encoding="utf-8"))
-        if cur.get("engine_modules") != derived["engine_modules"] or \
-           list(cur.get("blocklist", {})) != list(derived["blocklist"]):
+        # 판정과 설명이 같은 목록에서 나온다 — 이유 없는 드리프트 신고가 불가능하다.
+        problems = diff_against(cur, derived)
+        if problems:
             print(f"✗ 드리프트: {body} 파생 결과가 기록본과 다름 — 재생성 필요.", file=sys.stderr)
-            a, b = set(cur.get("engine_modules", [])), set(derived["engine_modules"])
-            if b - a:
-                print(f"  + 새로 번들돼야 할 모듈: {sorted(b - a)}", file=sys.stderr)
-            if a - b:
-                print(f"  - 더 이상 번들 안 되는 모듈: {sorted(a - b)}", file=sys.stderr)
+            for line in problems:
+                print(line, file=sys.stderr)
             return 1
         print(f"✓ {body} 엔진 번들 일치 ({derived['counts']})")
         return 0
@@ -190,7 +239,8 @@ def main():
     kept, npath = derive_nodes_registry(body)
     print(f"✓ {npath.relative_to(ROOT)} 파생: 몸-사전 {kept}개 어휘 (남의 어휘 미탑재)")
     c = derived["counts"]
-    print(f"✓ {out_path.relative_to(ROOT)} 파생: 엔진 {c['engine']} / blocklist {c['blocklist']} / 전체 {c['total']}")
+    print(f"✓ {out_path.relative_to(ROOT)} 파생: 엔진 {c['engine']} / blocklist {c['blocklist']} / 전체 {c['total']}"
+          f"  (글롭 제외 규칙 {derived['blocklist_globs']} — 전개하지 않음)")
     for m, why in derived["blocklist"].items():
         print(f"    blocklist  {m:28s} {why}")
     return 0

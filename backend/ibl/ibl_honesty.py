@@ -112,6 +112,33 @@ def var_updates_from(body: Any, out: Any) -> Dict[str, Any]:
     return ups
 
 
+def carry_var_updates(out: Any, body: Any):
+    """블록 몸의 할당을 바깥으로 되쓰게 봉투에 싣는다 — **몸 결과가 평문 스칼라여도**.
+
+    ★2026-08-27(범위밖 판정턴): V49-1 의 되쓰기가 두 자리 모두 `isinstance(out, dict)`
+    뒤에 있어, 몸이 스칼라를 내면 `_var_updates` 가 통째로 사라졌다. 실측:
+
+        [if: 1 == 1]{$k = [self:time]}
+        [if: $k matches "2026"]{…}[else]{…}
+          → "변수 $k 이(가) 이 문장 앞에서 할당되지 않았습니다"  ← 파서는 팬텀 슬롯을
+            발급했고(variables={'k': 1000000}) 몸도 성공했는데 경계에서 값이 증발
+
+    `vars_dropped` 표지조차 dict 에만 붙으므로(아래 note_vars_dropped) 이 경로는
+    **완전 침묵**이었다 — B48-1 이 `_caught` 에서 고친 "평문 스칼라라는 세 번째 모양"의
+    같은 부류. 처방도 같다: 되쓸 것이 있을 때만 `{"result": …}` 로 승격한다
+    (api_ibl 이 어차피 하는 래핑이라 소비자가 보는 최종 JSON 모양은 불변,
+    승격 조건이 '몸에 할당이 있다' 라서 사정거리도 그 문장들로 한정된다).
+
+    반환: `(out, ups)` — out 은 승격됐을 수 있으므로 호출자는 반환값을 써야 한다.
+    """
+    ups = var_updates_from(body, out)
+    if ups and not isinstance(out, dict):
+        out = {"result": out}
+    if ups and isinstance(out, dict):
+        out.setdefault("_var_updates", ups)
+    return out, ups
+
+
 def note_vars_dropped(out: Any, body: Any, kept: Any = ()) -> Any:
     """몸이 할당했지만 바깥으로 못 나간 변수를 봉투에 신고한다 (★B49-2, 49회차 상상훈련).
 

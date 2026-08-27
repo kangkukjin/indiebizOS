@@ -404,11 +404,16 @@ def _render_document(tool_input, output_base=".", context=None):
     # 다른 사건이다. 뒤엣것을 "blocks 가 필요합니다"로 보고하면 사용자는 자기가 줄 필요도
     # 없는 파라미터를 찾아 헤맨다(같은 파이프가 행이 있을 땐 blocks 없이 잘 흐른다).
     _arrived_rows = None
-    if isinstance(tool_input.get("items"), list):
-        _arrived_rows = len(tool_input["items"])
     # 직접 items 파라미터 (조립된 단일 통화 items 전달 — >> 파이프 밖 호출, 예: 데스크탑 신문)
-    if not blocks and isinstance(tool_input.get("items"), list) and tool_input["items"]:
-        blocks = _items_to_blocks(tool_input["items"], group_by)
+    # ★2026-08-27: list 만 보던 탓에 `[table:document]{items: "$변수"}` 가 죽었다 —
+    #   변수 치환은 통화를 **JSON 문자열**로 넣는다(B19-2 가 each·reduce·ai·brief 에 대해
+    #   이미 세운 정본을 emitter 가 안 쓰고 있었다). 되읽기는 몸의 정본 하나로.
+    from common.currency import coerce_items_payload as _coerce_items
+    _inline = _coerce_items(tool_input.get("items"))
+    if isinstance(_inline, list):
+        _arrived_rows = len(_inline)
+    if not blocks and _inline:
+        blocks = _items_to_blocks(_inline, group_by)
     # 직접 표 통화 (인라인 table/columns+rows — spreadsheet 인라인 items 와 같은 부류)
     if not blocks:
         _tb = _table_block_of(tool_input)
@@ -500,16 +505,29 @@ def _render_document(tool_input, output_base=".", context=None):
     _outdir = output_base   # 확장자별 out_path 조립의 기준 — 아래에서 해소 결과로 덮인다
 
     def _place(ext: str) -> str:
-        """base+ext 를 몸의 단일 규약으로 배치한 절대경로. 해소 실패는 예외로 올린다."""
+        """base+ext 를 몸의 단일 규약으로 배치한 절대경로. 해소 실패는 예외로 올린다.
+
+        ★2026-08-27: 기본 이름(`document.*`)은 두 번 부르면 **앞 산출물을 말없이 덮어썼다**
+        (23·24회차 원장이 '보고만' 으로 남긴 항목 — 매일 보고서를 두 번 뽑으면 아침 판이
+        사라지고 봉투는 아무 말도 안 했다). 위치 규약은 그대로 둔다(파일이 어디 생기는지를
+        바꾸는 것은 사용자 판정 사안 — F29-2). 대신 **덮어썼다는 사실을 말한다**:
+        `note` 는 모든 format 분기의 message 에 실리므로 한 자리로 전 분기가 정직해진다.
+        """
+        nonlocal note
         _name = f"{base}{ext}"
         if context is None or not hasattr(context, "resolve_output_path"):
             # 구 호출자(context 없음) — 옛 동작 유지. 있는 척하지 않는다.
-            return os.path.join(output_base, _name)
-        _r = context.resolve_output_path(
-            os.path.join(_dirpart, _name) if _dirpart else _name)
-        if _r.get("error"):
-            raise _PlacementRefused(_r["error"])
-        return _r["path"]
+            _p = os.path.join(output_base, _name)
+        else:
+            _r = context.resolve_output_path(
+                os.path.join(_dirpart, _name) if _dirpart else _name)
+            if _r.get("error"):
+                raise _PlacementRefused(_r["error"])
+            _p = _r["path"]
+        if os.path.exists(_p):
+            note += (f" ★기존 파일을 덮어썼습니다: {_p}"
+                     " — 앞 산출물을 남기려면 filename 으로 다른 이름을 주세요.")
+        return _p
 
     # markdown emitter — 문서 IR → md 텍스트(+.md 파일). NIP-23 발행 등 텍스트 파이프.
     if fmt == "markdown":

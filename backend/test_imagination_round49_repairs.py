@@ -235,5 +235,36 @@ def test_B49_2_바깥에_있던_이름의_재할당은_신고_대상이_아니�
     assert (out.get("_var_updates") or {}).get("n") is not None, out
 
 
+@pytest.mark.parametrize("code,name", [
+    ('[if: 1 == 1]{$k = [self:time]}', "k"),
+    ('[try]{$t = [self:time]}[catch]{[self:time]}', "t"),
+])
+def test_V49_1_몸_결과가_평문_스칼라여도_되쓴다(code, name):
+    """★2026-08-27(범위밖 판정턴) — 위 배터리가 못 본 자리.
+
+    `test_V49_1_블록_몸의_할당이_경계를_넘는다` 는 `$k = 7`(식 할당 → dict 봉투)만 밟아
+    초록이었는데, 몸이 **평문 스칼라**를 내는 `$k = [self:time]` 은 되쓰기가
+    `isinstance(out, dict)` 뒤에 있어 통째로 사라졌다. `vars_dropped` 표지조차 dict
+    전용이라(통화 불침범 판정) 이 경로는 **완전 침묵**이었고, 뒤 문장은 "판정 불능" 으로
+    엉뚱한 곳을 탓했다 — B48-1 이 `_caught` 에서 고친 "평문 스칼라라는 세 번째 모양"의
+    같은 부류, 같은 처방(되쓸 것이 있을 때만 승격).
+    """
+    out = _run(code)
+    assert isinstance(out, dict), out
+    assert (out.get("_var_updates") or {}).get(name), out
+    assert name not in (out.get("vars_dropped") or []), out
+
+
+def test_V49_1_스칼라_할당도_뒤_문장이_읽는다():
+    """종단 — 승격이 `step_results` 되쓰기까지 이어지나(수리 전엔 '판정 불능'으로 죽었다)."""
+    from ibl_parser import parse_with_vars
+    from workflow_engine import execute_pipeline
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    steps, _ = parse_with_vars('[if: 1 == 1]{$k = [self:time]}\n'
+                               '[if: $k matches ":"]{[self:time]}[else]{[sense:host]{op: "status"}}')
+    env = execute_pipeline(steps, root, agent_id="test")
+    assert env.get("success") is True, env.get("error")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

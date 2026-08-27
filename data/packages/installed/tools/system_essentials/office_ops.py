@@ -660,8 +660,12 @@ def _empty_currency_columns(tool_input: dict):
     이 구별이다("emitter 가 입력을 받긴 받았는데 쓸 수 없었다").
     """
     src = tool_input.get("items")
-    if isinstance(src, list):
-        return [] if not src else None
+    if src is not None:
+        # 0행 판정도 같은 눈으로 — 리스트든 통화 봉투·JSON 문자열이든(2026-08-27).
+        from common.currency import coerce_items_payload as _coerce_items
+        _rows = _coerce_items(src)
+        if isinstance(_rows, list):
+            return [] if not _rows else None
     pr = tool_input.get("_prev_result")
     if not pr:
         return None
@@ -686,7 +690,12 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, con
     # 직접 호출: 인라인 items 수용 (2026-08-07 — 이전엔 _prev_result 만 읽어
     # [table:spreadsheet]{items:[...]} 가 success:true + 빈 파일이 됐다).
     if not tool_input.get("table") and not tool_input.get("rows") and not tool_input.get("sheets"):
-        _t = _items_to_table(tool_input.get("items"))
+        # ★2026-08-27: 통화 되읽기는 몸의 정본 하나로(common.currency). 종전엔 items 가
+        #   **리스트일 때만** 표가 됐는데, `$변수` 치환은 통화를 JSON 문자열로 넣는다 —
+        #   그래서 `[table:spreadsheet]{items: "$파이프결과"}` 가 아래 0행 거절에도 안 걸리고
+        #   **1×1 빈 xlsx + success** 로 끝났다(실측 2026-08-27, emitter 중 가장 조용한 실패).
+        from common.currency import coerce_items_payload as _coerce_items
+        _t = _items_to_table(_coerce_items(tool_input.get("items")))
         if _t:
             tool_input["table"] = _t
 

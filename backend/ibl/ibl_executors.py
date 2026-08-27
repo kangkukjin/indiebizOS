@@ -222,14 +222,17 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     prev = _prev_of(tool_input)
     # ★B49-2(49회차): 분기 몸의 할당은 되쓸 슬롯이 없어 경계에서 전량 떨어진다.
     #   치환 전 원본에서 이름을 걷는다(치환이 모양을 바꾸기 전에).
-    from ibl_honesty import note_vars_dropped as _note_vars_dropped, var_updates_from
+    from ibl_honesty import note_vars_dropped as _note_vars_dropped, carry_var_updates
     _body_src = action
 
     def _carry(out):
-        """분기 몸의 할당을 바깥으로 (V49-1) — 되쓸 값은 봉투에, 못 나간 것만 표지로."""
-        ups = var_updates_from(_body_src, out)
-        if ups and isinstance(out, dict):
-            out.setdefault("_var_updates", ups)
+        """분기 몸의 할당을 바깥으로 (V49-1) — 되쓸 값은 봉투에, 못 나간 것만 표지로.
+
+        ★몸 결과가 **평문 스칼라**여도 되쓴다(2026-08-27 판정턴). 종전엔 `isinstance(out, dict)`
+        뒤에 있어 `[if: 1 == 1]{$k = [self:time]}` 의 `$k` 가 소리 없이 사라졌다 —
+        승격 판단은 `carry_var_updates` 한 곳이 소유한다(if·case·try 공용).
+        """
+        out, ups = carry_var_updates(out, _body_src)
         return _note_vars_dropped(out, _body_src, kept=set(ups))
 
     try:

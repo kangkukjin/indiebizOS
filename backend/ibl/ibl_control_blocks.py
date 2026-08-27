@@ -13,7 +13,7 @@ from common.currency import currency_shape_note
 from ibl_executors import (_nest, _get_sense_value_checked, _each_input_rows,
                            _prev_of, _vars_with_items, _stamp_var_values, _subst_var_refs)
 # 경계가 떨군 변수의 신고 (B49-2) — 잎 모듈에 두어 ibl_executors 의 분기 실행기와 한 벌을 쓴다.
-from ibl_honesty import note_vars_dropped as _note_vars_dropped, var_updates_from, merge_into
+from ibl_honesty import note_vars_dropped as _note_vars_dropped, carry_var_updates, merge_into
 
 import copy as _copy
 import time as _time
@@ -199,9 +199,10 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
     # ★V49-1: 몸(또는 실제로 탄 catch)이 할당한 이름을 바깥으로 되쓴다. B49-2 의 표지는
     #   남되, 이제 *못 나간 것만* 말한다(중첩 블록 안에서 태어난 이름 등).
     _ran = catch if caught_meta is not None else body
-    _ups = var_updates_from(_ran, out)
-    if _ups and isinstance(out, dict):
-        out.setdefault("_var_updates", _ups)
+    # ★2026-08-27 판정턴: 되쓰기가 `isinstance(out, dict)` 뒤에 있어 몸이 평문 스칼라를
+    #   내는 성공 경로(`[try]{$k = [self:time]}`)에서 통째로 사라졌다 — B48-1 이 `_caught`
+    #   에서 고친 그 모양. 승격 판단은 잎 모듈 한 곳(carry_var_updates)이 소유한다.
+    out, _ups = carry_var_updates(out, _ran)
     out = _note_vars_dropped(out, [body, catch] if caught_meta is not None else body,
                              kept=set(_ups))
     return out

@@ -14,7 +14,10 @@ args (stdin JSON):
   include_test true 면 시험 주행(source='test')도 포함 (기본 false)
   mode         "episodes"(기본, 주행 한 줄씩) | "totals"(에이전트별 합계)
 
-산출: {"items": [...], "message": "..."}
+산출: {"items": [...], "message": "..."} — 행에 결과천자(모델이 도구 결과로 읽은
+  문자수, 천 단위. 절단 표식의 숨긴 글자수까지 복원한 정확값 · 옛 '...' 행은 하한
+  표지 동반 · in-process 방언=None) 포함. 왕복 수가 아니라 이 수가 시간·비용의
+  지렛대다(2026-08-28 실측: 벽시계의 ~98%가 모델 시간).
 
 ★숫자의 뜻 (이 스크립트가 무엇을 세는지 — 안 읽으면 오독한다):
   · 도구 호출은 **두 로그 방언**을 모두 읽는다 (vocab_crystallization._parse_episode 와 같은 문법):
@@ -55,6 +58,8 @@ TOOL_LINE = re.compile(r"^\[[^\]]+\] tool_use (\S+)(?: (.*))?$")
 ARROW_LINE = re.compile(
     r"^\[\d{2}:\d{2}:\d{2}\] \[[^\]]*\] \[([^\]]+)\](?: \(.*\))? -> \S+ \(\d+ms\)\s*$")
 DEBUG_LINE = re.compile(r"^\[IBL_DEBUG\] code=(.*)$")
+RESULT_LINE = re.compile(r"^\[[^\]]+\] tool_result ?(.*)$")
+TRUNC_FALLBACK = re.compile(r"…\(\+(\d+)자\)$")   # 로거 표식 예비(파서 못 불렀을 때)
 # 여러 문장 IBL 코드는 줄바꿈째 찍히므로 뒤따르는 줄을 이어붙인다. 다른 로그 줄과
 # 겹치지 않는 모양만 인정 — 화살표는 '[숫자', 프로바이더 태그는 대문자로 시작한다.
 IBL_CONT = re.compile(
@@ -122,19 +127,50 @@ def _measure(code, parse):
     return m
 
 
-def _collect(log):
-    """에피소드 로그 → (도구 계수, 관측된 IBL 코드 [(종류, 원문)], 도구 줄 수).
+def _result_chars(payload, trunc_re):
+    """tool_result 한 줄 → 모델이 실제로 받은 문자수.
+
+    로그 절단은 **기록**을 자른 것이지 모델이 받은 결과를 자른 게 아니다 — 표식
+    `(+N자)` 가 숨긴 글자수를 정확히 말해 주므로 보이는 몫 + N 이 정확한 값이다.
+    옛 표식('...')은 N 이 없어 보이는 몫만 = 하한. 반환 (문자수, 하한여부)."""
+    if trunc_re is not None:
+        m = trunc_re.search(payload)
+        if m:
+            return len(trunc_re.sub("", payload)) + int(m.group(1)), False
+    m = TRUNC_FALLBACK.search(payload)
+    if m:
+        return len(payload[:m.start()]) + int(m.group(1)), False
+    if payload.rstrip().endswith("..."):
+        return len(payload), True
+    return len(payload), False
+
+
+def _collect(log, trunc_re=None):
+    """에피소드 로그 → (도구 계수, 관측된 IBL 코드 [(종류, 원문)], 도구 줄 수,
+    결과 문자수, 결과 문자수 하한 여부).
 
     두 방언을 한 번에 읽는다(위 '숫자의 뜻' 참조). 계수는 tool_use/화살표에서만 세고,
     [IBL_DEBUG] 는 코드 원문 공급만 한다 — 디듀프 때문에 계수로 쓰면 적게 나온다.
+    ★결과 문자수 = tool_result 로 모델 문맥에 들어간 문자의 합 — 시스템 프롬프트·
+    대화·자기 출력은 밖이다. 왕복 수가 아니라 이 수가 시간·비용의 지렛대다
+    (2026-08-28 실측: 벽시계의 ~98% 가 모델 시간, 왕복당 모델 시간은 읽는 양에 따라
+    20~28초로 움직였다). in-process 방언은 결과 줄이 없어 미측정(None) — 0 과 다르다.
     """
     counts = {"IBL": 0, "Bash": 0, "기타도구": 0}
     codes, tool_lines = [], 0
+    rchars, rchars_seen, rchars_lower = 0, False, False
     lines = (log or "").split("\n")
     i = 0
     while i < len(lines):
         line = lines[i]
         i += 1
+        mr = RESULT_LINE.match(line)        # ⓪ 도구 결과 — 모델이 읽은 몫
+        if mr:
+            n, low = _result_chars(mr.group(1), trunc_re)
+            rchars += n
+            rchars_seen = True
+            rchars_lower = rchars_lower or low
+            continue
         mt = TOOL_LINE.match(line)          # ① 아웃오브프로세스(claude_code)
         if mt:
             tool_lines += 1
@@ -166,7 +202,7 @@ def _collect(log):
             else:                            # [node:action] = execute_ibl 한 번
                 counts["IBL"] += 1
             continue
-    return counts, codes, tool_lines
+    return counts, codes, tool_lines, (rchars if rchars_seen else None), rchars_lower
 
 
 def _code_of(kind, raw, trunc_re):
@@ -238,8 +274,10 @@ def _scan(log, parse, trunc_re=None):
     """에피소드 로그 한 건 → 도구·조합 계수."""
     acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
-    counts, codes, tool_lines = _collect(log)
+    counts, codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
     acc.update(counts)
+    acc["_결과문자"] = rchars
+    acc["_결과문자하한"] = rchars_lower
     for kind, raw in codes:
         if parse is None:
             break
@@ -363,6 +401,10 @@ def main():
             "총초": round(r["total_ms"] / 1000) if r["total_ms"] else None,
             "IBL": a["IBL"], "Bash": a["Bash"], "기타도구": a["기타도구"],
             "IBL비중": _pct(a["IBL"], tools),
+            # 모델이 도구 결과로 읽은 문자수(천 단위) — 절단 표식의 숨긴 글자수까지 복원한
+            # 정확값(옛 '...' 행만 하한). None = in-process 방언이라 결과 줄이 없음(0 아님).
+            "결과천자": (round(a["_결과문자"] / 1000, 1) if a["_결과문자"] is not None else None),
+            "결과천자하한": a["_결과문자하한"] or None,
             "문장": a["문장"], "조합": a["조합"], "조합률": _pct(a["조합"], a["문장"]),
             "최대단계": a["최대단계"] or None,
             "seq": a["seq"], "par": a["par"], "fb": a["fb"], "블록": a["블록"], "each": a["each"],
@@ -374,15 +416,20 @@ def main():
         for it in items:
             g = groups.setdefault(it["에이전트"] or "?", {"에이전트": it["에이전트"], "주행": 0})
             g["주행"] += 1
-            for k in ("IBL", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록", "each"):
-                g[k] = g.get(k, 0) + (it[k] or 0)
+            for k in ("IBL", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록", "each",
+                      "결과천자"):
+                g[k] = round(g.get(k, 0) + (it[k] or 0), 1)
             g["최대단계"] = max(g.get("최대단계") or 0, it["최대단계"] or 0)
         for g in groups.values():
             g["IBL비중"] = _pct(g["IBL"], g["IBL"] + g["Bash"] + g["기타도구"])
             g["조합률"] = _pct(g["조합"], g["문장"])
         items = sorted(groups.values(), key=lambda x: -x["주행"])
 
+    rlow = sum(1 for it in items if it.get("결과천자하한"))
     msg = f"주행 {len(rows)}건 집계"
+    if rlow:
+        msg += (f" · 결과천자 {rlow}건은 옛 절단 행(숨긴 글자수 미기록)이라 **하한**입니다 "
+                "— 현행 표식 행(2026-08-22 이후)의 정확값과 나란히 비교하지 말 것")
     if parse is None:
         msg += " · ★IBL 파서를 못 불러 조합 지표는 비어 있습니다(도구 계수만 유효)"
     if skipped:

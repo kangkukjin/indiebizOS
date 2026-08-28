@@ -190,6 +190,22 @@ def get_current_project_id() -> str:
     return getattr(_thread_local, 'project_id', None)
 
 
+def set_surface_ticket(ticket):
+    """표면 티켓(F51-1) — 이 스레드의 실행이 진행 상태를 남길 티켓 (2026-08-29 ⑨).
+
+    표면(api_ibl)이 실행 전에 싣고 실행 후 복원한다. 엔진(execute_pipeline)의
+    **최외곽** 파이프라인이 이 값을 읽어 step 경계마다 ticket_progress 를 쓰고,
+    안쪽 실행이 겹쳐 쓰지 못하게 자기 범위에서 비운다(claim-by-clear — 값 소유권이
+    곧 진행 신고권). snapshot()이 전 칸을 통째로 옮기므로 워커 스레드에도 규약이
+    그대로 전파된다(빈 값 전파 = 자식은 신고하지 않음)."""
+    _thread_local.surface_ticket = ticket
+
+
+def get_surface_ticket():
+    """현재 스레드의 표면 티켓 (없으면 None)."""
+    return getattr(_thread_local, 'surface_ticket', None)
+
+
 def set_current_surface(surface: str):
     """현재 실행을 요청한 *표면* 설정 ('web' = 브라우저 표면, None = 이 기계에서 직접).
 
@@ -529,6 +545,7 @@ def clear_all_context():
     _thread_local.tool_calls = []
     _thread_local.health_check_mode = False
     _thread_local.call_channel = None
+    _thread_local.surface_ticket = None
 
 
 def get_context_summary() -> dict:

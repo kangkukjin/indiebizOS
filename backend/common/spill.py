@@ -166,6 +166,30 @@ def ticket_begin(ticket: str) -> bool:
     return True
 
 
+def ticket_progress(ticket: str, progress: dict) -> bool:
+    """running 기록에 진행 상태를 덧쓴다 — 결말(done)은 절대 덮지 않는다 (2026-08-29 ⑨).
+
+    실측 배경: 120초 표면 대기를 넘긴 216초 실행을 recover 로 물었더니 `status:
+    "running"` 뿐이라 3회 헛폴링 — 어디까지 왔는지 없는 대기는 눈 감은 대기다.
+    엔진의 최외곽 파이프라인이 step 경계마다 이 함수를 부른다. 진행 신고는
+    best-effort 다: 실패해도 조용히(진행 표식이 본 실행을 깨면 안 된다)."""
+    if not valid_ticket(ticket):
+        return False
+    path = _ticket_path(ticket)
+    try:
+        with open(path, encoding="utf-8") as f:
+            rec = json.load(f)
+        if rec.get("status") != "running":
+            return False
+        rec["progress"] = dict(progress)
+        rec["progress"]["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False)
+        return True
+    except Exception:
+        return False
+
+
 def ticket_finish(ticket: str, envelope) -> bool:
     """최종 봉투 보관 — 성공이든 실패든 **결말**을 남긴다(모름과 실패는 다른 사건)."""
     if not valid_ticket(ticket):
@@ -198,9 +222,18 @@ def ticket_recover(ticket: str) -> dict:
         return {"success": False, "status": "unreadable",
                 "error": f"티켓 기록을 읽지 못했습니다: {e}"}
     if rec.get("status") == "running":
-        return {"success": True, "status": "running",
-                "started_at": rec.get("started_at"),
-                "note": "실행이 아직 돌고 있습니다 — 잠시 후 같은 recover 로 다시 물으세요."}
+        out = {"success": True, "status": "running",
+               "started_at": rec.get("started_at"),
+               "note": "실행이 아직 돌고 있습니다 — 잠시 후 같은 recover 로 다시 물으세요."}
+        prog = rec.get("progress")
+        if isinstance(prog, dict):
+            # 진행 동봉(2026-08-29 ⑨) — 헛폴링 방지: 어느 step 이 언제부터 돌고 있는지.
+            out["progress"] = prog
+            if prog.get("step") and prog.get("of"):
+                out["note"] = (f"실행이 아직 돌고 있습니다 — step {prog['step']}/{prog['of']}"
+                               f" {prog.get('action') or ''} 진행 중(마지막 갱신 "
+                               f"{prog.get('updated_at')}). 잠시 후 같은 recover 로 다시 물으세요.")
+        return out
     env = rec.get("envelope")
     if isinstance(env, dict):
         env.setdefault("_recovered_from_ticket", ticket)

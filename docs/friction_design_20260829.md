@@ -153,3 +153,15 @@ C1·C2·C3 집행 완료, C4 보류 유지, C5 기각 유지. 커밋 = git log �
 - **⑨ recover 진행률**: 엔진→티켓 진행 상태 쓰기 신설이 필요한 설계 건 — 미착수.
 - 부산물: 2차의 "transcript 긴 경로 스필 ref 미실측" 잔여는 이번 검증 실행(283 세그먼트
   스필→투명 해소)으로 **실전 폐쇄**.
+
+## 10. 4차 집행 기록 (2026-08-29 ⑨ recover 진행률)
+
+설계 = **엔진→티켓 진행 쓰기**: ① thread_context 에 `surface_ticket` 칸 신설(표면이
+싣고 finally 복원 — 기존 set/restore 규율 그대로, snapshot 통째 승계로 워커 전파 자동).
+② 엔진 execute_pipeline 최외곽이 **claim-by-clear**(티켓을 집으며 스레드에서 비움 —
+each 하위·블록·중첩·병렬 가지가 겹쳐 쓰지 못함, 값 소유권=진행 신고권)로 소유하고
+step 경계마다 `ticket_progress`(best-effort, 실패 침묵) 기록. ③ `ticket_progress` 는
+running 기록에만 덧쓰고 **done 을 절대 덮지 않는다**(결말 우선). ④ recover 의 running
+응답에 progress(step/of/action/updated_at)+사람이 읽는 note 동봉 — 헛폴링 소거.
+라이브 종단: 6-step 문장 실행 중 `running step 1/6 [sense:crawl]` → 완주 후 봉투 회수
+(6/6). 단위: done 뒤 progress 덮기 거부·결말 보존 확인.

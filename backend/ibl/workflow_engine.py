@@ -183,6 +183,20 @@ def execute_pipeline(steps: list, project_path: str = ".",
     results = []
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)
+
+    # 표면 티켓 진행 신고 (2026-08-29 ⑨) — claim-by-clear: 최외곽 파이프라인이 티켓을
+    # 집어 들며 스레드에서 비워, 안쪽 실행(each 하위 파이프·블록·중첩 워크플로우·병렬
+    # 가지의 스냅샷 승계)이 겹쳐 쓰지 못하게 한다(값 소유권 = 진행 신고권). 복원은
+    # 불필요 — 표면(api_ibl)이 자기 finally 에서 이전 값으로 되돌린다. step 경계마다
+    # ticket_progress(best-effort)를 써서 recover 의 "running" 이 어디까지 왔는지 말한다.
+    _ticket = None
+    try:
+        from thread_context import get_surface_ticket, set_surface_ticket
+        _ticket = get_surface_ticket()
+        if _ticket:
+            set_surface_ticket(None)
+    except Exception:
+        _ticket = None
     # $var 바인딩 저장소: step 인덱스 → 결과 문자열. 파서가 $var 를 {{_step_N_result}} 로
     # 치환해 두므로, 여기 저장된 값으로 실행 시점에 실제 결과가 주입된다 (문장 경계와 무관).
     step_results: Dict[int, str] = {}
@@ -335,6 +349,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 prev_result = _after_failure(prev_result)
                 continue
         step_start = time.time()
+
+        if _ticket:
+            # 진행 신고(⑨) — step 시작 시점: "지금 몇 번째 step 의 무엇이 돌고 있나".
+            try:
+                from common.spill import ticket_progress
+                _pn, _pa = _step_label(step)
+                ticket_progress(_ticket, {"step": i + 1, "of": total,
+                                          "action": f"[{_pn}:{_pa}]"})
+            except Exception:
+                pass
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
         if step.get("_parallel"):

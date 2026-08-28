@@ -333,6 +333,43 @@ def body_noun_leak(text: str) -> Optional[str]:
     return None
 
 
+_URL_RE = re.compile(r'https?://[^\s"\'`()\[\]{}<>,;]+')
+
+
+def extract_path_claims(text: str) -> List[str]:
+    """본문이 주장하는 절대경로 토큰(기계 추출, 무LLM).
+
+    반증 패스의 재료 — 세계의 명사=반증 가능한 데이터(헌법 '명사의 자리')이므로,
+    경로 주장은 실존 검사로 주기적으로 반증한다. 실존 판정은 호출자(정리 패스) 몫.
+    """
+    out = []
+    for raw in _PATHLIKE_RE.findall(text or ""):
+        tok = raw.strip('.,;:!?"\'`()[]{}<>')
+        if tok.startswith("/") and "://" not in tok:
+            out.append(tok)
+    return out
+
+
+def extract_url_claims(text: str) -> List[str]:
+    """본문이 주장하는 URL(기계 추출). 응답 검사는 호출자 몫."""
+    return [u.rstrip('.,;:!?"\'`)]}>')
+            for u in _URL_RE.findall(text or "")]
+
+
+def delete_at(db_path: str, memory_id: int) -> bool:
+    """db_path 직접 삭제 (행+vec 동시) — 정리 패스 전용 (count_at·list_all 짝)."""
+    conn = sqlite3.connect(db_path, timeout=10)
+    try:
+        cur = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        conn.commit()
+        ok = cur.rowcount > 0
+    finally:
+        conn.close()
+    if ok:
+        _delete_vec(db_path, memory_id)
+    return ok
+
+
 def _reject_body_noun(content: str):
     leak = body_noun_leak(content)
     if leak:

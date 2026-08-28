@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from runtime_utils import get_base_path
+from runtime_utils import get_base_path, parse_first_json
 
 CADENCE_HOURS = 24      # DB당 정리 최소 간격
 MIN_ROWS_FOR_CLUSTER = 8   # 이 미만이면 클러스터 병합 스킵 (가지치기만)
@@ -29,6 +29,24 @@ MAX_CLUSTERS_PER_DB = 12   # 한 사이클에서 LLM 병합할 클러스터 상�
 BOCHUNG_COMPACT_MIN = 4    # [보충] 줄이 이 이상인 단일 레코드 = 압축 후보(자석 비대)
 COMPACT_LEN_FLOOR = 800    # 또는 content 길이가 이 이상이면 후보
 MAX_COMPACT_PER_DB = 8     # 한 사이클 단일레코드 압축 LLM 호출 상한 (비용 가드)
+
+# ── 반증 패스 (stage 4) — 낡음=사용 빈도가 아니라 '사실이 더는 참이 아님'.
+#    경로 주장은 실존 검사로 직접 반증(AI 0·결정론). LRU 가 못 잡는 '자주 회상되는
+#    틀린 사실'을 잡는다. URL 은 네트워크 소음(일시 장애·봇차단)이 있어 보고만.
+FALSIFY_CADENCE_HOURS = 168     # 주 1회/DB
+MAX_FALSIFY_ACTIONS_PER_DB = 10 # 한 사이클 자동 수리(삭제·절단) 상한
+FALSIFY_HEAD_DELETE_LEN = 220   # 머리 조각이 이보다 길면 삭제 대신 보고(혼합 기억 보호)
+MAX_URL_CHECKS_PER_DB = 20      # 한 사이클 URL 응답 검사 상한
+URL_TIMEOUT_SEC = 6
+
+# ── 원거리 모순 스캔 (stage 5) — 쓰기 시점 판정·클러스터 병합은 임베딩이 가까운
+#    쌍만 본다. 표현이 달라 멀어진 모순은 전체를 한눈에 보는 배치 판정 1회로 잡는다.
+#    모순이 실제로 문제가 되는 카테고리(의사결정·사용자선호)만 — 작업기록은 시점이
+#    다르면 둘 다 참이라 제외.
+CONTRA_CADENCE_HOURS = 168      # 주 1회/DB
+CONTRA_CATEGORIES = ("의사결정", "사용자선호")
+MAX_CONTRA_ROWS = 60            # 배치 목록 상한 (초과 시 최신 우선)
+MAX_CONTRA_DELETES_PER_DB = 6   # 한 사이클 자동 삭제 상한
 
 
 def _memory_db():
@@ -185,8 +203,204 @@ JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
     return {"content": new_content, "keywords": new_keywords}
 
 
+def _cadence_due(mdb, db_path: str, key: str, hours: int, force: bool) -> bool:
+    """스테이지별 카덴스 게이트 (_is_dirty 의 일반형 — meta 키·간격 매개변수화)."""
+    if force:
+        return True
+    last = mdb.get_meta(db_path, key)
+    if not last:
+        return True
+    try:
+        return datetime.now() - datetime.fromisoformat(last) >= timedelta(hours=hours)
+    except Exception:
+        return True
+
+
+def _is_fs_claim(tok: str) -> bool:
+    """파일시스템 주장인가 — 첫 마디가 실존 루트 디렉토리인 절대경로만.
+
+    API 라우트(/api/quotes)·게시판 경로(/b/…)·분수 표기(…16곳/12파일)·루트상대
+    표기(/outputs/…)는 슬래시로 시작해도 파일시스템 주장이 아니다(시운전 오탐 실측).
+    """
+    parts = tok.strip("/").split("/")
+    return bool(parts and parts[0] and os.path.isdir("/" + parts[0]))
+
+
+def _path_alive(tok: str) -> bool:
+    """경로 주장 생존 검사.
+
+    관용 둘(시운전 오탐 실측): ①한글 조사가 붙은 토큰("…png이며")은 조사를 떼고도
+    본다. ②공백 든 경로가 절단된 토큰("…/집필/하네스란"←"하네스란 무엇인가?")은
+    디렉토리가 살아있고 basename 이 그 안 항목의 접두이면 생존으로 친다.
+    """
+    import re
+    for cand in {tok, re.sub(r"[가-힣]+$", "", tok)}:
+        if not cand:
+            continue
+        if os.path.exists(cand):
+            return True
+        base_dir, base_name = os.path.split(cand.rstrip("/"))
+        if base_name and os.path.isdir(base_dir):
+            try:
+                if any(entry.startswith(base_name)
+                       for entry in os.listdir(base_dir)):
+                    return True
+            except Exception:
+                pass
+    return False
+
+
+def _url_dead(url: str) -> bool:
+    """정의된 죽음만 True — 404/410/NXDOMAIN. 403·429·타임아웃 등 소음은 불확정(생존 취급)."""
+    import socket
+    import urllib.request
+    import urllib.error
+    ua = {"User-Agent": "Mozilla/5.0"}
+    try:
+        urllib.request.urlopen(
+            urllib.request.Request(url, method="HEAD", headers=ua),
+            timeout=URL_TIMEOUT_SEC)
+        return False
+    except urllib.error.HTTPError as e:
+        if e.code in (404, 410):
+            return True
+        if e.code == 405:  # HEAD 미지원 → GET 재시도
+            try:
+                urllib.request.urlopen(
+                    urllib.request.Request(url, headers=ua), timeout=URL_TIMEOUT_SEC)
+                return False
+            except urllib.error.HTTPError as e2:
+                return e2.code in (404, 410)
+            except Exception:
+                return False
+        return False
+    except urllib.error.URLError as e:
+        return isinstance(getattr(e, "reason", None), socket.gaierror)  # NXDOMAIN
+    except Exception:
+        return False
+
+
+def _falsify_pass(mdb, db_path: str, force: bool = False) -> Dict:
+    """stage 4 — 반증 패스 (AI 0, 주 1회/DB).
+
+    낡음의 본질은 '안 쓰임'(LRU)이 아니라 '더는 참이 아님'이다. 세계의 명사=반증
+    가능한 데이터(헌법)이므로 실제로 반증한다: 경로 주장은 실존 검사(결정론 → 자동
+    수리 — 죽은 경로가 머리 조각이고 짧으면(경로 지배 한줄) 행 삭제, 보충에 있으면
+    그 보충만 절단, 머리가 길면(혼합 기억) 보고만). URL 주장은 소음이 있어 정의된
+    죽음(404/410/NXDOMAIN)만 보고한다 — 자동 삭제 없음."""
+    if not _cadence_due(mdb, db_path, "last_falsified", FALSIFY_CADENCE_HOURS, force):
+        return {}
+    stats = {"falsify_deleted": 0, "falsify_trimmed": 0,
+             "falsify_reported": 0, "url_dead": 0}
+    url_budget = MAX_URL_CHECKS_PER_DB
+    name = os.path.basename(db_path)
+    for rec in mdb.list_all(db_path):
+        content = rec.get("content") or ""
+        # 1) 경로 주장 반증 (결정론 → 자동 수리, 상한 가드)
+        dead = [p for p in mdb.extract_path_claims(content)
+                if not p.startswith("/Volumes")
+                and _is_fs_claim(p) and not _path_alive(p)]
+        acted = stats["falsify_deleted"] + stats["falsify_trimmed"]
+        if dead and acted < MAX_FALSIFY_ACTIONS_PER_DB:
+            segs = content.split("\n[보충] ")
+            head_dead = any(p in segs[0] for p in dead)
+            if head_dead and len(content) <= FALSIFY_HEAD_DELETE_LEN:
+                mdb.delete_at(db_path, rec["id"])
+                stats["falsify_deleted"] += 1
+                print(f"[반증] {name}#{rec['id']} 삭제 — 죽은 경로 {dead[0]} "
+                      f"| \"{content[:60]}\"")
+                continue
+            if head_dead:
+                stats["falsify_reported"] += 1
+                print(f"[반증] {name}#{rec['id']} 보고만 — 혼합 기억 머리에 "
+                      f"죽은 경로 {dead[0]}")
+            keep = [segs[0]] + [s for s in segs[1:]
+                                if not any(p in s for p in dead)]
+            if len(keep) < len(segs):
+                mdb.apply_merge(db_path, rec["id"], "\n[보충] ".join(keep),
+                                rec.get("keywords") or "",
+                                rec.get("category") or "", [])
+                stats["falsify_trimmed"] += 1
+                print(f"[반증] {name}#{rec['id']} 보충절단 — 죽은 경로 {dead[0]}")
+        # 2) URL 주장 검사 (소음 → 보고만, 상한 가드)
+        if url_budget > 0:
+            for url in mdb.extract_url_claims(content)[:3]:
+                if url_budget <= 0:
+                    break
+                url_budget -= 1
+                if _url_dead(url):
+                    stats["url_dead"] += 1
+                    print(f"[반증] {name}#{rec['id']} URL 죽음(보고만): {url}")
+    mdb.set_meta(db_path, "last_falsified", datetime.now().isoformat())
+    return stats
+
+
+def _contradiction_scan(mdb, db_path: str, today: str, force: bool = False) -> Dict:
+    """stage 5 — 원거리 모순 스캔 (주 1회/DB, 배치 LLM 1회).
+
+    쓰기 시점 판정과 클러스터 병합은 임베딩이 가까운 쌍만 본다 — 표현이 달라
+    멀어진 모순은 영영 안 만난다. 그래서 모순이 실제로 문제가 되는 카테고리
+    (의사결정·사용자선호)를 통째로 한 판에 놓고 양립 불가 쌍만 골라 낡은 쪽을
+    지운다. 무판정이 오판보다 낫다는 규칙 + 사이클당 삭제 상한이 가드."""
+    if not _cadence_due(mdb, db_path, "last_contra_scan", CONTRA_CADENCE_HOURS, force):
+        return {}
+    rows = [r for r in mdb.list_all(db_path)
+            if (r.get("category") or "").strip() in CONTRA_CATEGORIES]
+    if len(rows) < 2:
+        mdb.set_meta(db_path, "last_contra_scan", datetime.now().isoformat())
+        return {}
+    rows = sorted(rows, key=lambda r: str(r.get("created_at") or ""))[-MAX_CONTRA_ROWS:]
+
+    from consciousness_agent import oneshot_ai_call
+    listing = "\n".join(
+        f'- id={r["id"]} ({str(r.get("created_at", ""))[:10]}, {r.get("category")}): '
+        f'{(r.get("content") or "")[:240]}'
+        for r in rows)
+    prompt = f"""아래는 한 에이전트의 의사결정·사용자선호 기억 전체다. 오늘은 {today}.
+서로 **모순**인 쌍만 골라라. 모순 = 양립 불가(하나가 참이면 다른 하나는 거짓).
+- 다른 시점의 다른 작업·다른 대상·단순 유사·보완 관계는 모순이 아니다 → 내지 마라.
+- 모순이면 어느 쪽이 낡았는지 판정하라: 보통 더 최신이거나 더 구체적인 쪽이 우세.
+- 확실하지 않으면 내지 마라(무판정이 오판보다 낫다).
+
+{listing}
+
+JSON으로만 응답:
+{{"contradictions": [{{"obsolete_id": <낡은 쪽 id>, "kept_id": <우세한 쪽 id>, "reason": "<한 문장>"}}]}}
+모순이 없으면 {{"contradictions": []}}."""
+    resp = oneshot_ai_call(
+        prompt=prompt,
+        system_prompt="기억 모순 판정기. 양립 불가 쌍만. JSON으로만 응답.",
+        role="background",
+    )
+    stats = {"contra_rows": len(rows), "contra_deleted": 0}
+    if not resp:
+        # LLM 무응답(키 부재·장애) = 스캔 미수행 — 카덴스를 소진하지 않아야
+        # 다음 사이클이 재시도한다(무응답이 일주일 침묵으로 굳는 것 방지).
+        print(f"[모순] {os.path.basename(db_path)} 판정 불가(LLM 무응답) — "
+              f"카덴스 미소진, 다음 사이클 재시도")
+        return stats
+    data = parse_first_json(resp)
+    items = data.get("contradictions", []) if isinstance(data, dict) else []
+    valid = {r["id"] for r in rows}
+    by_id = {r["id"]: r for r in rows}
+    for c in items[:MAX_CONTRA_DELETES_PER_DB]:
+        if not isinstance(c, dict):
+            continue
+        o, k = c.get("obsolete_id"), c.get("kept_id")
+        if o not in valid or k not in valid or o == k:
+            continue
+        mdb.delete_at(db_path, o)
+        stats["contra_deleted"] += 1
+        print(f"[모순] {os.path.basename(db_path)}#{o} 삭제 (vs #{k}): "
+              f"{(c.get('reason') or '')[:80]} "
+              f"| \"{(by_id[o].get('content') or '')[:60]}\"")
+    mdb.set_meta(db_path, "last_contra_scan", datetime.now().isoformat())
+    return stats
+
+
 def consolidate_one(db_path: str, force: bool = False) -> Dict:
-    """단일 DB 정리 — 카테고리 정규화 → 근접중복 병합 → [보충] 비대 압축 → LRU 가지치기."""
+    """단일 DB 정리 — 카테고리 정규화 → 근접중복 병합 → [보충] 비대 압축 → LRU 가지치기
+    → (주 1회) 반증 패스 → (주 1회) 원거리 모순 스캔."""
     mdb = _memory_db()
     if not _is_dirty(db_path, force):
         return {"db": db_path, "skipped": "cadence"}
@@ -246,6 +460,18 @@ def consolidate_one(db_path: str, force: bool = False) -> Dict:
     # 3) 상한 초과 시 LRU 가지치기 (보호 카테고리 제외)
     stats["pruned"] = mdb.prune_lru(db_path)
 
+    # 4) 반증 패스 — 반증 가능한 주장 재검증 (AI 0, 주 1회/DB 자체 카덴스)
+    try:
+        stats.update(_falsify_pass(mdb, db_path, force=force))
+    except Exception as e:
+        print(f"[반증] 패스 실패 (스킵) {os.path.basename(db_path)}: {e}")
+
+    # 5) 원거리 모순 스캔 — 의사결정·선호 배치 판정 (주 1회/DB 자체 카덴스)
+    try:
+        stats.update(_contradiction_scan(mdb, db_path, today, force=force))
+    except Exception as e:
+        print(f"[모순] 스캔 실패 (스킵) {os.path.basename(db_path)}: {e}")
+
     mdb.set_meta(db_path, "last_consolidated", datetime.now().isoformat())
     return stats
 
@@ -267,6 +493,14 @@ def run_memory_consolidation(force: bool = False) -> Dict:
                 if r.get("merged") or r.get("pruned") or r.get("normalized"):
                     print(f"[정리] {r['db']}: 정규화 {r['normalized']} / "
                           f"병합 {r['merged']}(삭제 {r['dropped']}) / 가지치기 {r['pruned']}")
+                if (r.get("falsify_deleted") or r.get("falsify_trimmed")
+                        or r.get("falsify_reported") or r.get("url_dead")
+                        or r.get("contra_deleted")):
+                    print(f"[정리] {r['db']}: 반증 삭제 {r.get('falsify_deleted', 0)}"
+                          f"·절단 {r.get('falsify_trimmed', 0)}"
+                          f"·보고 {r.get('falsify_reported', 0)}"
+                          f"·URL죽음 {r.get('url_dead', 0)} / "
+                          f"모순 삭제 {r.get('contra_deleted', 0)}")
         except Exception as e:
             print(f"[정리] DB 처리 실패 (스킵) {os.path.basename(db)}: {e}")
     return {"databases": len(dbs), "consolidated": touched, "details": results}

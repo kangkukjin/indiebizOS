@@ -39,6 +39,7 @@ from urllib.parse import quote
 
 from .base import BaseProvider
 from episode_logger import truncate_for_log
+from ibl_honesty import HONESTY_KEYS   # 정직 표지 목록의 단일 소스 (손으로 적지 않는다)
 
 # 로그 절단 폭 — 회고 가치 대 로그 예산의 값. 자른 자리는 truncate_for_log 가 반드시
 # `…(+N자)` 표식을 남기므로, 읽는 쪽은 "짧다"와 "잘렸다"를 추정 없이 가른다.
@@ -54,6 +55,75 @@ from episode_logger import truncate_for_log
 _TOOLUSE_CAP = 300
 _TOOLUSE_CAP_IBL = 2000
 _TOOLRESULT_CAP = 300
+# ★결과 폭이 두 벌인 이유(2026-08-28 실측): 원장이 자기 실패를 못 보는 것이 이 로그의 가장 큰
+# 결함이었다. 최근 200 에피소드에서 tool_result 4,103줄 중 2,281줄(55.6%)이 300자에서 잘렸고,
+# (error) 태그 줄도 43줄 중 21줄(49%)이 잘렸다. 잘리는 자리는 하필 봉투의 정직 표지
+# (success:false·error·_fallback_used·error_count·errors·skipped_steps·condition_errors·
+# halted·branches_failed·truncated …)가 사는 뒤쪽이라, vocab_crystallization 의 실패
+# 스캐너는 '있는 실패'를 못 본다. 무제한 확대는 답이 아니다 — 같은 표본의 숨은 글자 합계가
+# 7.8M자(절단분 1건당 평균 3,438자)라 로그 예산이 무너진다. 그래서 실패 신호만 우선 건진다:
+#   ① (error) 줄은 폭 자체를 넓힌다 — 평문 traceback 은 키가 없어 요약이 안 되므로 본문이
+#      유일한 단서다.
+#   ② 나머지는 300자 머리에 '정직 표지 요약'을 이어 붙인다. 살아있는 표지가 없는 성공 결과는
+#      요약이 비어 폭도 예전 그대로다(비용은 실패한 결과에만 붙는다).
+_TOOLRESULT_CAP_ERROR = 2000
+_FAILDIGEST_CAP = 240
+
+
+# 봉투의 정직 표지 — 절단에 삼켜지면 안 되는 키들. 값이 '살아있을' 때만 요약에 싣는다
+# (truncated:false · error_count:0 처럼 죽은 값은 신호가 아니라 잡음이다).
+# ★목록을 손으로 적지 않는다(scripts/check_honesty_propagation.py 관문): 정본은
+# ibl_honesty.HONESTY_KEYS 한 벌이고, 여기서는 **엔진 봉투 밖** — 외부 CLI 의 결과
+# 텍스트에만 나타나는 신호만 더한다. 첫 판(2026-08-28)은 이 목록을 손으로 적다가
+# rows_replaced 를 빠뜨렸고 관문이 그걸 잡았다 — 정본이 자라면 이 스캐너도 같이 자란다.
+_RESULT_ONLY_SIGNALS = (
+    "error", "error_type", "success", "warning",
+    "branches_honesty", "criteria_verdict", "approval_required",
+)
+_HONESTY_KEYS = tuple(dict.fromkeys(HONESTY_KEYS + _RESULT_ONLY_SIGNALS))
+_HONESTY_RE = re.compile(
+    '"(' + "|".join(_HONESTY_KEYS) + ')"\\s*:\\s*'
+    '("[^"]{0,160}"|\\[[^\\]]{0,160}\\]?|\\{[^}]{0,160}\\}?|[-\\w.]+)'
+)
+_DEAD_VALUE_RE = re.compile(
+    '^(false|null|none|0|0[.]0|\\[\\]|\\{\\}|"")$', re.IGNORECASE)
+
+
+def _failure_digest(text: str, cap: int = _FAILDIGEST_CAP) -> str:
+    """결과 본문 전체에서 살아있는 정직 표지만 추려 한 줄로 (없으면 빈 문자열).
+
+    절단된 뒷쪽에 실패가 숨는 것을 막는 장치라 본문 **전체**를 훑는다 — 머리에 이미
+    보이는 표지가 중복될 수 있지만, 못 보는 것보다 싸다."""
+    flat = (text or "").replace('\\"', '"')   # 중첩 JSON 이스케이프 평탄화
+    parts: List[str] = []
+    seen = set()
+    for key, val in _HONESTY_RE.findall(flat):
+        v = val.strip()
+        live = not _DEAD_VALUE_RE.match(v)
+        if key == "success":        # success 는 false 일 때만 신호
+            live = v.lower() == "false"
+        elif key == "truncated":    # truncated 는 true 일 때만 신호
+            live = v.lower() == "true"
+        if not live or key in seen:
+            continue
+        seen.add(key)
+        # 표기는 JSON 짝("키": 값)으로 맞춘다 — 기존 실패 스캐너
+        # (vocab_crystallization._CC_RESULT_FAIL_RE 의 '"success": false')가
+        # 요약에서도 그대로 걸리도록.
+        parts.append(f'"{key}": {truncate_for_log(v, 80)}')
+    if not parts:
+        return ""
+    return " ⚠signals " + truncate_for_log(" · ".join(parts), cap)
+
+
+def _preview_with_signals(flat: str, cap: int) -> str:
+    """로그용 미리보기 — cap 자 머리 + (잘렸다면) 정직 표지 요약 + 절단 표식.
+
+    요약을 절단 경계에 끼우고 폭을 요약 길이만큼만 늘려 자르므로, 표식의 N 은 원문
+    숨김량 그대로이고 표식은 문자열 끝에 남는다 — truncate_for_log 의 읽는 쪽 계약
+    (TRUNC_MARK_RE 가 끝에 걸림 = 절단분)이 깨지지 않는다."""
+    digest = _failure_digest(flat) if len(flat) > cap else ""
+    return truncate_for_log(flat[:cap] + digest + flat[cap:], cap + len(digest))
 
 
 _IMG_EXT_BY_MEDIA = {
@@ -864,9 +934,12 @@ class ClaudeCodeProvider(BaseProvider):
                 else:
                     result_text = str(result_content)
                 is_error = bool(block.get("is_error"))
-                # episode_logger 캡처용 — 결과는 앞부분만
-                result_preview = truncate_for_log(
-                    result_text.replace("\n", " "), _TOOLRESULT_CAP)
+                # episode_logger 캡처용 — 머리는 자르되 **실패 신호는 삼키지 않는다**.
+                # (error) 줄은 폭 자체가 넓고(평문 traceback 은 본문이 유일한 단서),
+                # 나머지는 300자 머리에 봉투의 정직 표지 요약을 이어 붙인다.
+                _cap = _TOOLRESULT_CAP_ERROR if is_error else _TOOLRESULT_CAP
+                result_preview = _preview_with_signals(
+                    result_text.replace("\n", " "), _cap)
                 err_tag = " (error)" if is_error else ""
                 print(f"[ClaudeCode/{self.agent_name}] tool_result{err_tag} {result_preview}")
                 # 지도 봉투(route_map/location_map)를 캡처해 최종 응답 끝에 재주입 예약.

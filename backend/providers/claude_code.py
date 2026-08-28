@@ -684,6 +684,7 @@ class ClaudeCodeProvider(BaseProvider):
                     print(f"[ClaudeCode/{self.agent_name}] stdin 프롬프트 쓰기 실패: {e}")
 
                 accumulated_text = ""
+                self._last_stop_reason = None   # 이번 attempt 의 마지막 턴 stop_reason (절단 신고용)
                 captured_session_id: Optional[str] = None
                 committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
                 final_seen = False         # 이번 attempt 에서 final 을 방출했나
@@ -862,6 +863,11 @@ class ClaudeCodeProvider(BaseProvider):
                     + int(_u.get("cache_read_input_tokens") or 0)
                     + int(_u.get("cache_creation_input_tokens") or 0)
                 )
+            # 마지막 턴의 stop_reason 포착 (2026-08-29 ⑫) — max_tokens 절단이 종전엔
+            # 여기서 버려져 침묵했다(실측 ep2307: 서로 다른 두 세대가 같은 ~11K자에서
+            # 문장 중간 절단, 표지 없음 → GoalEval 재실행이 전체 재작성→재절단 루프).
+            if msg.get("stop_reason"):
+                self._last_stop_reason = msg.get("stop_reason")
             for block in msg.get("content", []):
                 btype = block.get("type")
                 if btype == "text":
@@ -999,11 +1005,23 @@ class ClaudeCodeProvider(BaseProvider):
                     out.append(({"type": "error", "content": f"Claude Code 응답 오류: {final_text}"}, None))
             else:
                 final_content = (final_text or "").strip()
+                _truncated = getattr(self, "_last_stop_reason", None) == "max_tokens"
+                if _truncated and final_content:
+                    # 절단의 정직 신고 + 처방 (2026-08-29 ⑫): 표지 없는 절단은 읽는 쪽
+                    # (사용자·GoalEval·다음 턴)이 "짧게 완결"로 오독한다. 처방을 표지에
+                    # 싣는 이유 — 재실행이 전체를 다시 쓰면 같은 상한에서 또 잘린다.
+                    final_content += (
+                        "\n\n⚠ 이 응답은 출력 토큰 상한에서 절단되었습니다(stop_reason="
+                        "max_tokens) — 마지막 부분이 미완일 수 있습니다. 이어쓸 때는 전체 "
+                        "재작성 대신 **잘린 지점 이후의 미완 부분만** 이어서 출력하십시오.")
                 # 이번 턴에 캡처한 지도 태그를 최종 응답 끝에 재주입 → 프론트 parseMapData 가 렌더.
                 if self._pending_map_tags:
                     final_content = (final_content + "\n\n" + "\n".join(self._pending_map_tags)).strip()
                     self._pending_map_tags = []
-                out.append(({"type": "final", "content": final_content}, None))
+                _fin = {"type": "final", "content": final_content}
+                if _truncated:
+                    _fin["truncated_output"] = True
+                out.append((_fin, None))
 
         return out
 

@@ -48,100 +48,9 @@ def _get_workflows_path() -> Path:
 
 # === 실패 판정 (단일 소스) ===
 
-def is_error_result(result) -> bool:
-    """도구 결과가 실패인지 판정한다 — `>>`·`??` 공용 **단일 소스**.
-
-    도구가 실패를 알리는 방식이 **네 갈래**라 판정이 곳곳에 복제됐다가 갈라졌었다
-    (2026-07-18: `??` 만 문자열 에러를 성공으로 세어, NameError 를 고친 뒤에도 폴백이 안 됨).
-    새 소비자는 이 함수를 부를 것 — 판정을 다시 손으로 적지 말 것.
-
-    실패로 치는 것:
-      1. dict: `success is False`, 또는 최상위 `error` 키가 있고 success 가 참이 아님
-      2. str `"Error:"`·`"오류:"` 접두 — system_essentials 계열(self:read/delete/copy).
-         ★한글 접두는 2026-08-22 추가(B21-1): 영어판만 등록돼 있어 `"오류: …"` 를 내던
-         media_producer 계열이 통째로 성공으로 샜다. 다만 이건 **그물**일 뿐이다 —
-         같은 계열 26자리 중 10자리는 애초에 접두가 없었으므로(`FFmpeg 오류:`·
-         `렌더링 중 오류 발생:`) 접두를 늘리는 것으로는 못 고친다. 진짜 수리는 그쪽
-         핸들러를 error dict 계약으로 옮긴 것이고, 이 줄은 다음 위반자를 잡는 안전망이다.
-      3. **JSON 문자열** — handler 라우터는 `format_json(...)` 으로 *문자열*을 돌려주므로
-         `{"success": false, "message": …}` 가 문자열에 실려 온다. 파싱해서 1번 규칙 적용.
-         ★이걸 안 보면 handler 도구의 실패가 전부 성공으로 샌다(2026-07-18 블로그 파이프에서
-         실측: `[self:blog]` 가 실패했는데 파이프가 success=True 로 보고).
-      4. 예외 — 호출부가 잡아서 별도 처리(이 함수 밖).
-
-    실패로 치지 않는 것:
-      - `status == "not_implemented"` — 미구현은 고장이 아님
-      - `{"success": true, "error": null}` — 성공인데 error 키가 있는 모양
-        (서킷 브레이커가 `verify.error: null` 로 성공을 실패로 오인했던 전례를 판정에 반영)
-
-    ★한계: `"Error:"` 접두 판정은 **휴리스틱**이다. 본문이 그렇게 시작하는 정당한 콘텐츠
-    (로그 요약·코드 스니펫)를 실패로 오인할 수 있다. 도구 반환 규약을 통화로 수렴시키기 전까지의
-    잠정 규칙이며, **최상위 result 에만** 적용한다(중첩 dict 의 error 키는 보지 않는다).
-    """
-    if isinstance(result, dict):
-        if result.get("status") == "not_implemented":
-            return False
-        if result.get("success") is False:
-            return True
-        return ("error" in result) and not result.get("success")
-    if isinstance(result, str):
-        s = result.lstrip()
-        if s.startswith("Error:") or s.startswith("오류:"):
-            return True
-        # handler 라우터의 JSON 문자열 — 최상위만 파싱해 dict 규칙 재사용
-        if s.startswith("{"):
-            try:
-                import json as _json
-                parsed = _json.loads(s)
-            except Exception:
-                return False
-            if isinstance(parsed, dict):
-                return is_error_result(parsed)
-        return False
-    return False
-
-
-def _is_empty_result(result) -> bool:
-    """도구 결과가 **빈손**인지 판정한다 — `??` 전용 보조 술어 (2026-08-08, 실험 7 ⑯).
-
-    두 연산자의 술어는 원래 다르다:
-      - `>>` 순차: "앞이 죽었으면 멈춰라" → 고장(is_error_result)만. 0건은 죽음이
-        아니고, 0건 위의 take/filter 가 0건을 내는 것이 정답이다.
-      - `??` 폴백: "원하는 걸 못 얻었으면 딴 데로" → **빈손도 못 얻은 것**.
-        폴백을 거는 대상은 대개 검색이고 목록형 검색의 흔한 실패 모드가 0건이라,
-        고장 판정만으로는 발동해야 할 자리의 다수를 통과시킨다(실측: [sense:used]
-        total:0 이 status ok 로 기록되고 뒤의 웹 검색이 손도 안 대진 채 남았다).
-    2026-07-18 의 판정 통일(is_error_result 단일 소스)은 유지 — 이 술어는 or 로만 얹는다.
-
-    빈손 판정은 **구조 신호만** (산문 휴리스틱 없음):
-      - dict(또는 JSON 문자열)의 items == [] (빈 리스트)
-      - total == 0 / count == 0 (명시된 0 — 키 부재는 판정 밖)
-      - 표 통화의 rows == [] (columns 가 함께 있을 때만 — 우연한 rows 키 오판 방지)
-    """
-    if isinstance(result, str):
-        s = result.lstrip()
-        if not s.startswith("{"):
-            return False
-        try:
-            import json as _json
-            result = _json.loads(s)
-        except Exception:
-            return False
-    if not isinstance(result, dict):
-        return False
-    items = result.get("items")
-    if isinstance(items, list) and not items:
-        return True
-    for k in ("total", "count"):
-        v = result.get(k)
-        if isinstance(v, (int, float)) and not isinstance(v, bool) and v == 0:
-            return True
-    t = result.get("table")
-    holder = t if isinstance(t, dict) else result
-    rows = holder.get("rows")
-    if isinstance(rows, list) and not rows and isinstance(holder.get("columns"), list):
-        return True
-    return False
+# 판정·사유 3형제는 2026-08-29 형제 모듈로 이동(1500줄 규칙) — 재수출로 기존
+# `from workflow_engine import is_error_result` 경로 전부 유지. 정본은 workflow_verdict.
+from workflow_verdict import is_error_result, err_reason_of, _is_empty_result  # noqa: F401
 
 
 # === 파이프라인 실행 ===
@@ -477,7 +386,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     "branch": _bi + 1,
                     "node": (_bs.get("_node") or _bs.get("node") or "?") if isinstance(_bs, dict) else "?",
                     "action": (_bs.get("action") or "?") if isinstance(_bs, dict) else "?",
-                    "error": (_bd.get("error") if isinstance(_bd, dict) else str(_bd))[:300],
+                    "error": err_reason_of(_bd)[:300],
                 }
                 # 가지 하나의 실패에도 그 안의 경로를 싣는다 — 경계 규약에 예외 없음.
                 # 잎 오류(중첩 트레이스백 없는 가지)도 여기서 프레임을 얻는다.
@@ -514,6 +423,36 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 _rec["branches_honesty"] = _bhon
                 _seq["branch_honesty"].append({"step": i + 1, "branches": _bhon,
                                                "of": len(_branches)})
+            # 가지 표시 스필 (2026-08-29, "results[]는 원형" 규약 개정 — 사용자 판정):
+            # 원형이 ENVELOPE_KEEP_MAX 를 넘는 가지는 표시 사본에서 스필 참조+preview 로
+            # 바꾼다. 종전엔 providers 의 구조-무지 절단(머리 2/3·꼬리 1/3)이 첫 큰 가지
+            # 뒤의 가지들을 통째로 증발시켰다(실측: 자막 2편 & → "39,685자 생략", 둘째 가지
+            # 실종). 스필은 복구 가능하고 절단은 불가하다. 파이프 통화(중간 step 의 prev)와
+            # $step 바인딩(step_results)은 원형 유지 — 판정·정직 신고도 위에서 원형으로 끝났다.
+            _spilled_bi = []
+            _display = _branches or result
+            try:
+                from common.spill import spill_write as _spill_write, ENVELOPE_KEEP_MAX as _KEEP
+                if _branches:
+                    _display = []
+                    for _bi, _br in enumerate(_branches):
+                        _bstr = _to_string(_br)
+                        if len(_bstr) <= _KEEP:
+                            _display.append(_br)
+                            continue
+                        _benv = _spill_write(_bstr, tag=f"step{i + 1}_branch{_bi + 1}")
+                        _benv["preview"] = _bstr[:1000]
+                        _benv["note"] = (f"가지 {_bi + 1} 원형 {len(_bstr):,}자 > 표시 한도 {_KEEP:,} — "
+                                         "스필 파일로 내리고 참조만 실었습니다. 본문은 ref.path 를 "
+                                         "[self:grep]→[self:read]{start_line/end_line} 으로 부분 읽기. "
+                                         "파이프·$바인딩은 원형을 그대로 받았습니다.")
+                        _display.append(_benv)
+                        _spilled_bi.append(_bi + 1)
+            except Exception:
+                _display, _spilled_bi = (_branches or result), []
+            if _spilled_bi:
+                _rec["result"] = _to_string(_display)
+                _rec["branches_spilled"] = _spilled_bi
             results.append(_rec)
             step_results[i] = result_str
             # 전 가지 실패 = 아무것도 못 가져온 것. 그것을 성공이라 부르면 그 뒤의 모든 단계가
@@ -535,7 +474,12 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     return _abort
                 prev_result = _after_failure(prev_result)
                 continue
-            prev_result = _spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — results[]는 원형 · 임계 초과=자동 스필(M5)
+            if _spilled_bi and i == total - 1:
+                # 마지막 step 의 prev = final_result(봉투로 나감) — 소비할 다음 step 이 없으니
+                # 표시 사본(스필 반영)을 낸다. 중간 step 은 아래 원형 경로(다음 step 이 소비).
+                prev_result = _to_prev_currency(_display)
+            else:
+                prev_result = _spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — 임계 초과=자동 스필(M5)
 
             continue
 
@@ -761,7 +705,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     step_results[int(_ix)] = _raw if isinstance(_raw, str) else json.dumps(_raw, ensure_ascii=False)
 
         if is_err:
-            err_msg = result.get("error", "") if isinstance(result, dict) else str(result)
+            err_msg = err_reason_of(result)   # error→message→중첩 회수 — 빈 "Step N 에러: " 방지
             err_msg = _items_bound_note(tool_input, err_msg)   # ★B31-1: 집합 바인딩 사실을 실패에 실어 준다
             # 결과가 중첩 실행(run_pipeline·워크플로우·each·블록)의 봉투면 그 안의
             # 트레이스백을 승계하고 이 파이프의 프레임 한 칸만 얹는다 — 경계 규약.

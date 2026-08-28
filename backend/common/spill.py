@@ -18,6 +18,10 @@ from typing import Any, Dict, Optional, Tuple
 
 SPILL_TTL_S = 24 * 3600
 AUTO_SPILL_THRESHOLD = 200_000          # 문자 — 이 위는 모델 컨텍스트로 돌려 보낼 크기가 아니다
+# 봉투 **표시 사본**의 가지당 상한 — providers 절단(액션당 MAX_TOOL_RESULT_LENGTH=16,000,
+# 3벌 동일)과 동율. 병렬 가지 원형이 이 위면 표시 사본을 스필 참조+preview 로 바꾼다
+# (2026-08-29: 구조-무지 머리·꼬리 절단이 첫 큰 가지 뒤의 가지를 통째로 증발시키던 자리).
+ENVELOPE_KEEP_MAX = 16_000
 
 
 def _root() -> str:

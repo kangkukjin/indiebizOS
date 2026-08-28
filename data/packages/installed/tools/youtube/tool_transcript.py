@@ -464,7 +464,7 @@ def get_youtube_transcript(
                 f.write(save_content)
 
             preview = full_text[:2000]
-            return {
+            out = {
                 'success': True,
                 'saved_to_file': True,
                 'file_path': filepath,
@@ -485,12 +485,27 @@ def get_youtube_transcript(
                     f'  전체 흐름만 필요하면 preview 필드(앞 2,000자)로 충분한 경우가 많습니다.'
                 )
             }
+            # 파이프 통화(2026-08-29): 봉투는 파일 참조로 작게 유지하되, 세그먼트 통화를
+            # 스필 참조로 싣는다 — `transcript >> [table:brief]` 류 파이프의 소비자
+            # (_get_items·each·$items 바인딩)가 resolve_ref 로 투명하게 전체 세그먼트를
+            # 받는다(어제·오늘 이틀 연속 마찰: "입력 통화가 없습니다"). 미가용 시 종전 모양.
+            try:
+                from common.spill import spill_write
+                _env = spill_write(json.dumps({"items": segments}, ensure_ascii=False),
+                                   tag=f"transcript_{video_id}")
+                out.update({"items": [], "ref": _env["ref"], "_spilled": True})
+            except Exception:
+                pass
+            return out
 
         return {
             'success': True,
             'transcript': full_text,
             'formatted_transcript': formatted_transcript,
             'segments': segments,
+            # 단일 통화(2026-08-29): 세그먼트를 items 로도 싣는다 — `>> [table:brief]` 등
+            # 파이프 변환자가 통화를 받는 자리. segments 키는 기존 독자용으로 유지.
+            'items': segments,
             'language': used_language,
             'title': title,
             'duration': duration,

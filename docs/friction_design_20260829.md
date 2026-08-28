@@ -109,3 +109,28 @@ C1·C2·C3 집행 완료, C4 보류 유지, C5 기각 유지. 커밋 = git log �
   (263행 "현재 몸" 모순 문구도 정정).
 - **부수 관찰**: forage_map 의 body 명명 드리프트 — `code:indiebizOS` ·
   `code:IndieBiz OS` · `code:IndieBizOS` 세 표기가 공존한다. 데이터 위생 건으로 별도.
+
+---
+
+## 8. 2차 집행 기록 (2026-08-29 friction 후속 보고 → 수리 3건)
+
+- **빈 에러(신규 발견)**: 스윕 결과 `{"success": False, "message": …}` 모양이 **89자리**
+  — 위반이 아니라 관례였다. 89개 리터럴 대신 읽는 쪽을 고침: `err_reason_of`
+  (error→message→중첩 results/final_result 회수, workflow_verdict 단일 소스) 신설,
+  파이프 Step 에러 조립·병렬 가지 실패 사유 추출 두 곳에 배선. 종전 병렬 가지 쪽은
+  error 부재 시 `None[:300]` TypeError 잠복 결함도 함께 소거. 라이브 실증:
+  KMS3VwGh3HY(힌디어만) → 최상위 error 에 전체 사유 실림.
+- **병렬 봉투 절단(#2)**: "results[]는 원형" 규약 개정(사용자 판정) — 가지 원형이
+  `ENVELOPE_KEEP_MAX`(16,000 = providers 절단과 동율)를 넘으면 **표시 사본**을 스필
+  참조+preview 로 교체(`branches_spilled` 신고). 파이프 통화(중간 step)·$바인딩은 원형
+  유지. 실증: 자막 2가지 & 봉투 71,000자→3,628자, 두 가지 모두 ref 로 회수 가능.
+  `& >> take` 중간 단계는 원형 그대로(무회귀).
+- **transcript 통화(#1)**: 짧은 경로 `items`(=segments) 추가, 긴 경로(>10,000자)는
+  세그먼트를 스필 참조 봉투(`items:[]+ref+_spilled`)로 — 소비자(_get_items·each·
+  $items)가 resolve_ref 로 투명하게 읽는다. 실증: `transcript >> [table:take]{n:3}`
+  세그먼트 3개 수신(이틀 연속 마찰 소거). 동반 가드: `_is_empty_result` 가 스필 봉투의
+  `items:[]` 를 빈손으로 오판해 `??` 오발하던 자리 봉인.
+- 부수: err_reason_of 신설로 workflow_engine 1,528줄 → 판정·사유 3형제를
+  `workflow_verdict.py` 로 분리(재수출로 호출자 유지, LAYERS 등재), 1,405줄.
+- **미검증 잔여**: transcript 긴 경로(>10,000자 실영상)의 스필 ref 라이브 종단은 짧은
+  영상뿐이라 미실측(코드 경로는 병렬 가지 스필과 동일 관용구). 다음 긴 영상 실사용이 판정.

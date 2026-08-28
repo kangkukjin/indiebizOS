@@ -64,6 +64,27 @@ import boot_paths  # noqa: E402,F401 — import 자체가 설치
 # sys.path 에 자동으로 넣지 않아, 이 줄보다 앞에 두면 backend 모듈을 못 찾고 죽는다
 # (맥 표준 파이썬만 sys.path[0]=스크립트 폴더라 통과 — v1.3.6 윈도우 기동 실패의 원인).
 import mime_compat  # noqa: F401, E402  (임포트 = 전역 레지스트리 보강)
+
+# ── 유령 워커 봉인 ① 고아 감시 (2026-08-28) ──────────────────────────────────
+# uvicorn reload 워커는 multiprocessing spawn 자식이다. 부모(리로더)가 어떤 이유로든
+# 죽으면 워커는 :8765 를 문 채 고아(ppid=1)로 살아남는데, argv 가 "… spawn_main …"이라
+# start.sh 의 pkill 패턴("… api.py")에 안 잡힌다 — 07-19(리로드 누적)·08-28(재기동 절차
+# 중 발견, 부모는 이미 죽어 있었다) 두 번 실측된 부류. 부모 sentinel 을 join 으로
+# 지켜보다(이벤트 구동 — 폴링·os.kill 생존질문 아님, 3 OS 동일) 부모가 죽으면 그 즉시
+# 따라 죽는다. 리로더 자신·프로덕션 직기동은 parent_process()=None 이라 설치되지 않고,
+# 정상 리로드는 부모가 살아 있으므로 발화하지 않는다(옛 워커는 부모가 직접 죽인다).
+import multiprocessing as _mp  # noqa: E402
+_parent_proc = _mp.parent_process()
+if _parent_proc is not None:
+    import threading as _threading  # noqa: E402
+
+    def _die_with_parent():
+        _parent_proc.join()          # 부모 종료까지 블록
+        print("[worker] 부모(리로더) 사망 감지 — 고아 생존 금지, 즉시 종료", flush=True)
+        os._exit(1)
+
+    _threading.Thread(target=_die_with_parent, daemon=True,
+                      name="parent-death-watch").start()
 import boot_status  # 부팅 서브시스템 성패 원장 (관측 — /world-pulse/health 가 노출)
 
 # 매니저 임포트
@@ -305,6 +326,27 @@ async def lifespan(app: FastAPI):
 
     # 통합 스케줄러 종료
     calendar_manager.stop()
+
+    # ── 유령 워커 봉인 ② 종료 시한 (2026-08-28) ──
+    # 07-19 실측: non-daemon 스레드가 graceful shutdown 을 막아 옛 워커가 리로드마다
+    # 누적됐다(어느 스레드인지 미규명 — "재발 시 py-spy 로 볼 것"으로 남아 있었다).
+    # 종료 절차가 여기(마지막 줄)까지 왔는데도 15초 안에 프로세스가 못 죽으면, 막고
+    # 있는 non-daemon 스레드 **이름을 신고하고** 강제 종료한다 — 유령 누적이
+    # "15초 지연 + 범인 이름 로그"로 바뀌고, 로그가 미규명 원인을 스스로 지목한다.
+    # 정상 종료면 프로세스가 시한 전에 죽으므로 이 데몬 스레드도 함께 사라진다.
+    import threading as _th
+    import time as _tm
+
+    def _shutdown_deadline(grace: int = 15):
+        _tm.sleep(grace)
+        blockers = sorted(t.name for t in _th.enumerate()
+                          if not t.daemon and t is not _th.main_thread())
+        print(f"[shutdown] {grace}초 내 종료 실패 — 막은 non-daemon 스레드: "
+              f"{blockers or '(없음 — 메인 스레드 대기)'} — 강제 종료", flush=True)
+        os._exit(0)
+
+    _th.Thread(target=_shutdown_deadline, daemon=True,
+               name="shutdown-deadline").start()
     print("👋 IndieBiz OS 서버 종료")
 
 app = FastAPI(

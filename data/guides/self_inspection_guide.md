@@ -493,6 +493,9 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
 
 ## 실측 기록 (자동 누적)
+- 2026-08-28 실측: `[self:body]{op:"diff"}` 로 작업 트리 미커밋 변경(파일별 +/-)을 실측할 수 있다 — 가이드는 self:body 의 op 로 trajectory 만 적고 있어, 점검분과 기존 미커밋분을 구분할 때 이 op 를 몰라 grep 으로 돌 뻔했다.
+- 2026-08-28 실측: `[self:body]{op:"log"}` → `[table:filter]` 로 커밋을 추릴 때, 매칭 61건 중 상위 40건만 돌아오고 봉투가 `truncated: true` 를 신고한다 — 이 결과로 빈도·전수 집계를 하면 과소 계산된다(신고 플래그를 읽고 '전수 아님'을 명시해야 함).
+- 2026-08-28 실측: episode_log 원문의 tool_result 줄은 backend/providers/claude_code.py 의 _TOOLRESULT_CAP=300 으로 잘려 저장된다 — 최근 200 에피소드 4,094줄 중 2,279줄(55.7%)이 `…(+N자)` 표식을 달고 있어, 원문 grep으로 실패 원인을 캐면 증거의 절반 이상이 이미 소실된 상태다.
 - 2026-08-23 실측: `[sense:self_check]`에는 가이드가 적은 `run_daily_health_check` 트리거 외에 `{op:"results", source:"usage", limit:N}` 형태가 있고, 이쪽은 self_checks 테이블(정적·fixture·골든 결과)이 아니라 실사용 원장을 돌려준다 — 이번 턴 실패 6건/200건은 전부 이 경로에서만 보였다.
 - 2026-08-23 실측: `[self:body]{op:"diff"}` 로 미커밋 변경(13파일)을 IBL 안에서 바로 볼 수 있다 — 직전 턴에 제안만 했던 수정이 이미 라이브에 적용돼 있는지를 이걸로 분별했다.
 - 2026-08-23 실측: `pytest backend -m "not local"` 회귀 배터리가 '기존부터 실패하던 것'과 '이번에 내가 깬 것'을 가르는 기준선 역할을 했다. ★단 그때 '기존 실패'로 판정한 `test_repair_staging::test_battery_under_pytest` 1건은 **유령이었다** — 그 배터리의 S10 이 띄우는 실수행자가 진짜 몸(`/health`)에게 물어 "지금 도는 턴 있음"을 듣고 기다렸고, 그 턴은 이 pytest 가 끝나야 닫히므로 순환 대기로 180초 timeout 에 죽은 것이다. **턴 밖에서 돌리면 6.6초에 통과한다.** 수리 완료(수행자에게 닿지 않는 health URL 을 준다). ⇒ 자기 턴 안에서 돌린 배터리의 빨강은 시스템의 건강이 아니라 **관찰자 효과**일 수 있으니, '기존 실패'로 넘기기 전에 턴 밖 기준선과 대조할 것.

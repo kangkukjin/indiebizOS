@@ -174,9 +174,15 @@ def _detect_body() -> str:
 
 
 def _forage_recall(tool_input: dict) -> str:
-    """[self:forage]{op:recall} — 냄새지도 회상."""
+    """[self:forage]{op:recall} — 냄새지도 회상.
+
+    기본 = 전 공간(body 미지정 → None) — 주입 경로(cognitive_recall 의
+    recall_xml(body=None))와 같은 축이다. 하드웨어 감지는 게이트지 회상 파티션이
+    아니다(FORAGER_MULTIBODY_DESIGN §1 두 축 분리). 한 몸의 부피가 limit 을
+    독점하는 회귀는 forage_memory 의 몸별 공정 인터리브가 막는다.
+    body 명시 지정은 여전히 그 몸으로 좁힌다."""
     import forage_memory as FM
-    body = tool_input.get("body") or _detect_body()
+    body = tool_input.get("body") or None
     query = tool_input.get("query") or tool_input.get("q")
     try:
         limit = int(tool_input.get("limit") or 20)

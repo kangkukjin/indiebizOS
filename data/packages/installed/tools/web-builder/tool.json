@@ -149,6 +149,10 @@
           "url": {
             "type": "string",
             "description": "engines:web 파라미터"
+          },
+          "checks": {
+            "type": "array",
+            "description": "engines:web 파라미터"
           }
         },
         "required": []

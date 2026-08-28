@@ -346,9 +346,36 @@ def _stale_of(locus: str, stored_mtime: float) -> str:
     return ""
 
 
+def _fair_by_body(rows: List) -> List:
+    """body=None 전 공간 회상의 몸별 라운드로빈 — 부피 큰 한 몸이 limit 을 독점하지
+    않게 한다(2026-08-29 실측: code:indiebizOS 166건이 mac 78건을 압도해 '파일' 질의
+    상위 20 중 mac 3건만 생존 — 90% 유실). 몸 순서는 최고 신뢰도 항목의 등장 순,
+    몸 안 순서는 원래 정렬(confidence DESC, last_seen DESC) 유지. 단일 몸이면 무변."""
+    groups: Dict[str, List] = {}
+    for r in rows:
+        groups.setdefault(r["body"], []).append(r)
+    if len(groups) <= 1:
+        return list(rows)
+    out: List = []
+    active = list(groups.values())
+    while active:
+        nxt = []
+        for q in active:
+            out.append(q.pop(0))
+            if q:
+                nxt.append(q)
+        active = nxt
+    return out
+
+
 def recall(*, body: Optional[str] = None, query: Optional[str] = None,
            limit: int = 20, filter_owner: bool = True) -> Dict[str, Any]:
     """포식 회상 — 몸별 지도(body 일치, query 필터) + 주인모델.
+
+    body=None 이면 전 공간(모든 몸) — 주입 경로(cognitive_recall)와 같은 축이다.
+    이때 map/territory 는 몸별 공정 인터리브(_fair_by_body)로 채워, 항목 수가 많은
+    몸이 limit 을 독점하지 않는다(두 축 분리: 하드웨어 감지=게이트, 회상=전 공간 —
+    FORAGER_MULTIBODY_DESIGN §1).
 
     filter_owner=False 면 owner_model 을 query 로 거르지 않고 *전부* 반환 — 주인모델은
     '냄새(scent)'라 상시 노출이 능동 포식을 촉발한다(FORAGER_MULTIBODY_DESIGN §주입).
@@ -376,32 +403,28 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
 
     # 영토(상시-on, query 면제, 상한) — '내가 가진 것'의 거친 윤곽.
     # 단 질의가 그 영토를 *지명*하면 짧은 냄새 대신 아래 map 에서 상세로 보여준다.
+    terr_cands = [r for r in map_rows if r["territory"]
+                  and not (terms and (_match(r["claim"], terms) or _match(r["locus"], terms)))]
+    if not body:
+        terr_cands = _fair_by_body(terr_cands)  # 질의 지명 → territory 냄새 생략, map 상세로 넘김
     territory_items: List[Dict[str, Any]] = []
-    for r in map_rows:
-        if not r["territory"]:
-            continue
-        if terms and (_match(r["claim"], terms) or _match(r["locus"], terms)):
-            continue  # 질의 지명 → territory 냄새 생략, map 상세로 넘김
+    for r in terr_cands[:_TERRITORY_CAP]:  # 하드 상한 — 무한정 증가 차단
         d = dict(r)
         d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
         d["short"] = _short(r["claim"])
         territory_items.append(d)
-        if len(territory_items) >= _TERRITORY_CAP:
-            break  # 하드 상한 — 무한정 증가 차단
 
     # map(상세, query 필터) — territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함)
     terr_ids = {t["id"] for t in territory_items}
+    map_cands = [r for r in map_rows if r["id"] not in terr_ids
+                 and not (terms and not (_match(r["claim"], terms) or _match(r["locus"], terms)))]
+    if not body:
+        map_cands = _fair_by_body(map_cands)
     map_items: List[Dict[str, Any]] = []
-    for r in map_rows:
-        if r["id"] in terr_ids:
-            continue
-        if terms and not (_match(r["claim"], terms) or _match(r["locus"], terms)):
-            continue
+    for r in map_cands[:limit]:
         d = dict(r)
         d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
         map_items.append(d)
-        if len(map_items) >= limit:
-            break
     # owner — 냄새 모드(filter_owner=False)에서도 *결정화된 것만* 상시 노출.
     #   임시(scent=0, 1회 관측)는 map 처럼 query 가 지명할 때만 나온다 → 정보는 남고 상시 비용만 사라짐.
     owner_items: List[Dict[str, Any]] = []

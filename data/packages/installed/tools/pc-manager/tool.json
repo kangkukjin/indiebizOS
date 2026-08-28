@@ -72,7 +72,7 @@
     },
     {
       "name": "forage_op",
-      "description": "포식 기억(냄새지도) — [self:forage]. 과거 디스크·웹 포식에서 배운 폴더 정체·관습·죽은가지·주인모델을 세션 너머로 누적·회상. 루프(forager)는 AI 자신이고 이 도구는 그 *지속 기억*이다.\n- op=recall (기본): 누적된 냄새지도 회상. query(주제)·body(몸, 생략 시 현재 몸).\n- op=note: 단언 누적. layer=map(locus+kind+claim) 또는 layer=owner(facet+value). prior_class=structural만 committal prune 허용(semantic은 위험).\n- op=forget: 잘못된·낡은 항목 폐기 (id + table).\n\n## 예시\n- forage_op(op='recall', query='여행')\n- forage_op(op='note', layer='map', locus='/Volumes/SSD/total/journal', kind='dead_branch', claim='출판논문 — 여행자료 없음', prune_reason='논문폴더', prior_class='structural')\n- forage_op(op='note', layer='owner', facet='domain', value='계산신경과학')\n- forage_op(op='forget', id=3, table='forage_map')",
+      "description": "포식 기억(냄새지도) — [self:forage]. 과거 디스크·웹 포식에서 배운 폴더 정체·관습·죽은가지·주인모델을 세션 너머로 누적·회상. 루프(forager)는 AI 자신이고 이 도구는 그 *지속 기억*이다.\n- op=recall (기본): 누적된 냄새지도 회상. query(주제)·body(몸, 생략 시 전 공간 — 몸별 공정 인터리브).\n- op=note: 단언 누적. layer=map(locus+kind+claim) 또는 layer=owner(facet+value). prior_class=structural만 committal prune 허용(semantic은 위험).\n- op=forget: 잘못된·낡은 항목 폐기 (id + table).\n\n## 예시\n- forage_op(op='recall', query='여행')\n- forage_op(op='note', layer='map', locus='/Volumes/SSD/total/journal', kind='dead_branch', claim='출판논문 — 여행자료 없음', prune_reason='논문폴더', prior_class='structural')\n- forage_op(op='note', layer='owner', facet='domain', value='계산신경과학')\n- forage_op(op='forget', id=3, table='forage_map')",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -92,7 +92,7 @@
           },
           "body": {
             "type": "string",
-            "description": "몸 신원 (mac/disk:uuid 등, 생략 시 현재 몸)"
+            "description": "몸 신원 (mac/disk:uuid 등, 생략 시 전 공간 회상 — note 는 현재 몸에 기록)"
           },
           "limit": {
             "type": "integer",

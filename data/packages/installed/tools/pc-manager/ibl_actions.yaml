@@ -260,7 +260,7 @@ tool_json:
     description: '포식 기억(냄새지도) — [self:forage]. 과거 디스크·웹 포식에서 배운 폴더 정체·관습·죽은가지·주인모델을 세션 너머로 누적·회상. 루프(forager)는 AI 자신이고 이 도구는
       그 *지속 기억*이다.
 
-      - op=recall (기본): 누적된 냄새지도 회상. query(주제)·body(몸, 생략 시 현재 몸).
+      - op=recall (기본): 누적된 냄새지도 회상. query(주제)·body(몸, 생략 시 전 공간 — 몸별 공정 인터리브).
 
       - op=note: 단언 누적. layer=map(locus+kind+claim) 또는 layer=owner(facet+value). prior_class=structural만 committal prune 허용(semantic은
       위험).
@@ -289,7 +289,7 @@ tool_json:
           description: '[recall] 주제 필터(부분일치)'
         body:
           type: string
-          description: 몸 신원 (mac/disk:uuid 등, 생략 시 현재 몸)
+          description: 몸 신원 (mac/disk:uuid 등, 생략 시 전 공간 회상 — note 는 현재 몸에 기록)
         limit:
           type: integer
           description: '[recall] 결과 상한 (기본 20)'

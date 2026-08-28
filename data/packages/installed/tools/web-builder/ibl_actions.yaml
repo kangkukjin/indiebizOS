@@ -38,6 +38,7 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       url: string
+      checks: array
     returns: effect
     runs_on: pc_only
     description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.

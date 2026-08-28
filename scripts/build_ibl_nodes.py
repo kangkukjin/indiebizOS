@@ -131,7 +131,7 @@ from iblbuild_appview import (  # noqa: E402,F401
     _template_param_keys,
     validate_app_template_params,
 )
-from iblbuild_params_check import validate_declared_params
+from iblbuild_params_check import validate_declared_params, validate_impl_reads
 from iblbuild_validators import (  # noqa: E402,F401
     _extract_op_dispatchers,
     _extract_op_defaults,
@@ -278,6 +278,20 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print(f"  ✗ {issue}", file=sys.stderr)
         else:
             print("[build_ibl_nodes] param 선언 완전성 통과 ✓ (미선언 0)")
+
+        # --- 구현-읽기 감사 (2026-08-29 #repair) ---
+        # 위 두 검사는 코퍼스 앵커라 코퍼스가 안 쓰는 param 자리를 원리적으로 못 본다.
+        # 그 틈으로 web-builder checks(구현 O·가이드 O·선언 X)가 런타임 컨테이너
+        # 관문에 거절돼 죽어 있었다. 앵커를 구현 자신에 둔다 — 컨테이너 기대 미선언은
+        # 즉시, 스칼라 미선언은 동결 대장(IMPL_READ_BASELINE) 밖 신규만 빌드 실패.
+        rissues = validate_impl_reads(data, root)
+        if rissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 구현-읽기 감사 실패: {len(rissues)}건", file=sys.stderr)
+            for issue in rissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 구현-읽기 감사 통과 ✓ (죽은 컨테이너 자리 0 · 신규 미선언 0)")
 
         # 코퍼스 어휘 생존 검사 (2026-08-22) — param 정합은 "핸들러가 이 키를 읽나" 만 묻고
         # "이 액션이 아직 있나" 는 묻지 않았다. 그 틈으로 은퇴 어휘 20여 종 208항목이

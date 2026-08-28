@@ -513,6 +513,12 @@ def _detect_android_body() -> dict:
     return info
 
 
+# 홈디스크(데스크탑) 몸 이름의 정본 집합 — forage body 스탬프·fs-공간 분류가 이걸 본다.
+# "pc" 는 미지 OS·감지 실패의 중립 폴백이자 비(非)맥 데스크탑 kind 관례(아래 branch).
+# 'mac' 을 폴백으로 쓰면 윈도우/리눅스 설치본에서 남의 이름이 된다(맥 중심 이름 금지).
+DESKTOP_PROFILES = {"mac", "windows", "linux", "pc"}
+
+
 def _detect_desktop_body() -> dict:
     """맥/PC 프로세스 — platform + macOS sysctl로 칩/OS 정체성 읽기."""
     system = platform.system()        # Darwin / Windows / Linux
@@ -563,7 +569,7 @@ def detect_body() -> dict:
         # *거짓말하는* 몸에만 필요: 안드로이드 파이썬은 platform.system()=='Linux' 로 위장하므로
         # phone_api 가 INDIEBIZ_PROFILE='phone' 을 명시 주입한다. 맥은 'mac' 그대로(무변경).
         profile = {"Darwin": "mac", "Windows": "windows", "Linux": "linux"}.get(
-            platform.system(), "mac")
+            platform.system(), "pc")
     body = {"profile": profile}
     if profile == "phone":
         body.update(_detect_android_body())
@@ -616,7 +622,7 @@ def _self_identity(body: dict) -> str:
     따라 나오는 것(샌드박스·scoped storage·권한·Doze·아웃바운드 …)은 AI 가 이미
     아니까 *연역에 맡긴다*. 열거 = 연역 불신 = 토큰 낭비. 부팅 시점 정적이라 stale 없음.
     """
-    kind = body.get("kind", "mac")
+    kind = body.get("kind", "pc")
     if kind == "phone":
         # 핵심: Chaquopy류(내가 만든 앱에 Python 내장) + manifest 권한 범위 안 SDK 전체 in-process 호출.
         # 이 한 사실에서 샌드박스·권한·Doze·아웃바운드가 다 따라 나온다 → 열거 안 함.
@@ -640,7 +646,7 @@ def _self_identity(body: dict) -> str:
 def build_capability_portrait() -> dict:
     """능력 자기-모델 — 정체성(class+권한봉투) + 마이크로 명령어 집합 + 빌림 상대(피어 설정 시)."""
     body = detect_body()
-    kind = body.get("kind", "mac")
+    kind = body.get("kind", "pc")
     p = {"body": body.get("label", ""), "kind": kind}
     p["identity"] = _self_identity(body)  # 나를 올바른 class로 부르는 정체성 한 줄
     p["micros"] = detect_local_micros()   # 내가 직접 할 수 있는 / 빌려야 하는 실행 원시

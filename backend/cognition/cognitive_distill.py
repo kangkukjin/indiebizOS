@@ -16,6 +16,29 @@ from typing import Optional, Tuple
 from cognitive_trace import _merge_keywords
 
 
+def _desktop_bodies() -> set:
+    """홈디스크(데스크탑) 몸 이름 집합 — 정본 = runtime_utils.DESKTOP_PROFILES.
+
+    지연 import: 이 모듈은 backend 층 경로가 안 깔린 문맥에서도 import 될 수 있어
+    (메서드들의 sys.path 방어와 같은 이유), 미가용 시에만 동결 사본으로 버틴다.
+    """
+    try:
+        from runtime_utils import DESKTOP_PROFILES
+        return DESKTOP_PROFILES
+    except ImportError:
+        return {"mac", "windows", "linux", "pc"}
+
+
+def _home_body() -> str:
+    """이 몸의 홈디스크 body 이름 = detect_body profile — 'mac' 고정은 윈도우/리눅스
+    설치본에서 남의 이름이 된다. 감지 실패의 중립 폴백은 'pc'."""
+    try:
+        from runtime_utils import detect_body
+        return detect_body().get("profile") or "pc"
+    except Exception:
+        return "pc"
+
+
 class CognitiveDistillMixin:
     """턴 종료 후 메모리 쓰기(증류) 메서드 모음."""
 
@@ -97,12 +120,13 @@ class CognitiveDistillMixin:
         """증류기 LLM 이 명명한 공간 라벨을 body 키로 정규화(매체 무관).
 
         AI 가 무엇을 포식했는지 안다(forager=AI) → 키워드로 재유추하지 않고 *명명*을 받는다.
-        'code'(레포명 없음)면 .git 으로 보강, 빈 값이면 'mac'(기본 디스크). 그 외엔 라벨 그대로
+        'code'(레포명 없음)면 .git 으로 보강, 빈 값이면 *이 몸의 홈디스크*(profile — 맥이면
+        'mac', 윈도우면 'windows'). 그 외엔 라벨 그대로
         (web/book:<제목>/disk:<라벨>/… 매체가 늘어도 코드 변경 0 — FORAGER_MULTIBODY_DESIGN §9).
         """
         s = (space or "").strip()
         if not s:
-            return "mac"
+            return _home_body()
         # bare "code"(레포명 없음)면 .git basename 으로 보강(케이스 보존 — repo/label 은 식별자).
         if s.lower() == "code":
             repo = self._repo_identity(ai_response, user_message)
@@ -111,9 +135,13 @@ class CognitiveDistillMixin:
 
     @staticmethod
     def _is_fs_space(body: str) -> bool:
-        """파일시스템 공간인가 — mac(홈디스크)·code:<repo>·disk:<label>. web/book 은 추상."""
+        """파일시스템 공간인가 — 홈디스크(데스크탑 몸)·code:<repo>·disk:<label>. web/book 은 추상.
+
+        홈디스크 이름은 'mac' 하드코딩이 아니라 몸 자기-감지의 집합(DESKTOP_PROFILES) —
+        윈도우/리눅스 설치본은 'windows'/'linux' 로 찍히므로 이름 고정은 그 몸에서 샌다.
+        """
         b = body or ""
-        return b == "mac" or b.startswith("code") or b.startswith("disk")
+        return b in _desktop_bodies() or b.startswith("code") or b.startswith("disk")
 
     def _resolve_fs_locus(self, loc: str, repo_root: Optional[str], body: str) -> Tuple[str, bool]:
         """파일시스템 공간 locus 를 *실존 검증*해 정규화(Fix 1). 반환 (locus, is_real).
@@ -368,9 +396,9 @@ AI: {ai_response[:500]}"""
             # 하드웨어 자아 게이트(누가 포식) — 공간 body 와 분리(§1)
             try:
                 from runtime_utils import detect_body
-                hw = detect_body().get("profile") or "mac"
+                hw = detect_body().get("profile") or "pc"
             except Exception:
-                hw = "mac"
+                hw = "pc"
             if hw == "phone":
                 return  # 폰 자아는 미디어-한정(A3 후속)
             # 2차 싼 게이트(매체 무관): 응답이 실제 navigable/반구조 공간을 뒤졌나(맛집·영상 검색 등 LLM 낭비 차단).

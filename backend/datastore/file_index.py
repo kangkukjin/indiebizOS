@@ -521,7 +521,7 @@ def _adb_item(row: Dict[str, Optional[str]], kind: str,
 def _adb_query(*, kind, q, start, end, has_gps, ext, path, limit, sort, facets,
                min_size=None):
     """USB 로 연결된 안드로이드 폰의 MediaStore 라이브 질의 (파일 복사 0)."""
-    if (detect_body().get("profile") or "mac") == "phone":
+    if (detect_body().get("profile") or "pc") == "phone":
         return {"success": False, "items": [],
                 "error": "source:usb 는 폰을 USB 로 연결한 PC 에서만 동작합니다"
                          " (폰 자신의 사진은 source 없이 조회하세요)"}
@@ -630,7 +630,7 @@ def usb_pull(phone_path: str, dst: str, *, timeout: int = 120):
 # ----------------------------------------------------------------------------
 def describe(path: str, facets: Sequence[str] = ()) -> Dict[str, Any]:
     """단일 파일의 보편 필드 + facet (경로가 곧 신원). 맥=mdls. 폰은 Phase 3."""
-    if (detect_body().get("profile") or "mac") == "phone":
+    if (detect_body().get("profile") or "pc") == "phone":
         return {"path": path, "name": os.path.basename(path)}  # Phase 3 보강
     return _item_from_meta(path, tuple(facets))
 
@@ -839,7 +839,7 @@ def query(*, kind: str = "any", q: Optional[str] = None,
         limit = max(1, int(limit))
     except (TypeError, ValueError):
         limit = 50
-    body = detect_body().get("profile") or "mac"
+    body = detect_body().get("profile") or "pc"
     args = dict(kind=kind, q=q, start=start, end=end, has_gps=_truthy(has_gps),
                 ext=ext, path=path, limit=limit, sort=sort, facets=tuple(facets),
                 min_size=min_size)

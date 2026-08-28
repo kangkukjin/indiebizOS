@@ -278,9 +278,9 @@ class CognitiveRecallMixin:
             # 하드웨어 자아 게이트(누가 포식) — 폰 자아는 미디어-한정(A3 후속)
             try:
                 from runtime_utils import detect_body
-                hw = detect_body().get("profile") or "mac"
+                hw = detect_body().get("profile") or "pc"
             except Exception:
-                hw = "mac"
+                hw = "pc"
             if hw == "phone":
                 return ""
             import forage_memory
@@ -316,9 +316,9 @@ class CognitiveRecallMixin:
                 sys.path.insert(0, bk)
             try:
                 from runtime_utils import detect_body
-                profile = detect_body().get("profile") or "mac"
+                profile = detect_body().get("profile") or "pc"
             except Exception:
-                profile = "mac"
+                profile = "pc"
             if profile == "phone":
                 return ""  # 폰 미지원(스코프드 스토리지·실익 작음)
             import focus_map

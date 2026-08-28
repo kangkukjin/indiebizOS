@@ -35,9 +35,9 @@ _cache = {"text": None, "at": 0.0, "key": None}
 def _profile() -> str:
     try:
         from runtime_utils import detect_body
-        return detect_body().get("profile") or "mac"
+        return detect_body().get("profile") or "pc"
     except Exception:
-        return "mac"
+        return "pc"
 
 
 def _default_focus_folders(profile: str) -> List[str]:

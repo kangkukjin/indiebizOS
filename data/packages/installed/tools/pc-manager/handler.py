@@ -168,9 +168,9 @@ def _get_folder_annotations(tool_input: dict) -> str:
 def _detect_body() -> str:
     try:
         import runtime_utils
-        return (runtime_utils.detect_body().get("profile") or "mac")
+        return (runtime_utils.detect_body().get("profile") or "pc")
     except Exception:
-        return "mac"
+        return "pc"
 
 
 def _forage_recall(tool_input: dict) -> str:

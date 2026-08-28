@@ -174,9 +174,9 @@ async def peer_status():
     import os
     try:
         from runtime_utils import detect_body
-        kind = detect_body().get("kind", "mac")
+        kind = detect_body().get("kind", "pc")
     except Exception:
-        kind = "mac"
+        kind = "pc"
 
     # 폰 → 맥(집 PC) 생존 핑
     if kind == "phone":

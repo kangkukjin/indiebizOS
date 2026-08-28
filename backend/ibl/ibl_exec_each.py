@@ -493,9 +493,16 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         #   ★한 방향만 신고하는 비대칭이 결함이었으므로 처방도 그 자리 한 곳이다 — 소비자마다
         #   추적 코드를 심는 길(열거)은 반드시 뒤처진다. keep 이 이미 답을 갖고 있으니 가리킨다.
         out["rows_replaced"] = currency_n
-        notes.append(f"{currency_n}행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다"
-                     f"(입력 {processed}행 → 출력 {len(out_items)}행) — 어느 행에서 나온 결과인지는 "
-                     f"통화에 남지 않습니다. 원 행의 필드를 함께 보려면 keep: [\"필드\"] 를 쓰세요.")
+        # keep 지정 여부로 안내를 가른다(2026-08-29 ⑥) — keep 을 이미 준 호출에 "keep 을
+        # 쓰세요"라고 말하면 작동 중인 처방이 미적용으로 읽힌다(안내문의 늑대소년).
+        if keep:
+            notes.append(f"{currency_n}행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다"
+                         f"(입력 {processed}행 → 출력 {len(out_items)}행) — 원 행의 필드 "
+                         f"{keep} 는 keep 으로 각 행에 보존돼 있습니다.")
+        else:
+            notes.append(f"{currency_n}행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다"
+                         f"(입력 {processed}행 → 출력 {len(out_items)}행) — 어느 행에서 나온 결과인지는 "
+                         f"통화에 남지 않습니다. 원 행의 필드를 함께 보려면 keep: [\"필드\"] 를 쓰세요.")
     # ★`collect` 은퇴(2026-08-23): 이 파라미터가 하던 일("_result 를 이어붙인 하나의 items")이
     #   이제 기본 동작이다. 낱말을 남겨 두면 "켜야 되는 것"으로 읽혀 어휘가 무거워진다.
     if skipped:

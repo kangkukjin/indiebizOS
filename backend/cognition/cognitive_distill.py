@@ -201,6 +201,10 @@ class CognitiveDistillMixin:
 (이름, 중요한 날짜, 사용자 선호, 결정사항, 작업 결과 등)
 일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외.
 
+★이 시스템(IndieBiz OS) *자신의 내부 구현*(내부 DB·파일 경로·테이블·모듈 구조)은 기억 대상이
+아니다 — 몸의 정본은 코드·문서가 관리하며, 여기 적히면 어휘를 우회한 접근로가 각인된다 → 제외.
+(나쁜 예: "대화 DB 파일 경로: projects/X/conversations.db" — 저장 금지.)
+
 ★사용자선호 = *지속적* 성향·취향·환경만(예: "중고는 안 삼", "존댓말 선호", "라벨 프린터는 Netum POS9260 보유").
 이번 한 번의 요청·지시("~찾아줘", "~해줘")나 이번 검색의 일회성 조건(용량·가격대·수량)은
 선호가 아니다 → 저장하지 마라. 요청문 자체를 그대로 content 로 옮기는 것 금지.
@@ -242,6 +246,14 @@ AI: {ai_response[:500]}"""
                 fact["content"] = content
                 fact["keywords"] = fact.get("keywords", "").strip()
                 fact["category"] = fact.get("category", "").strip()
+
+                # 몸-명사 관문(저장소 계약의 앞단 거부 — 뒷단 memory_db.save 도 같은 검사로 raise).
+                # 몸 내부 경로가 기억되면 어휘 우회로가 각인된다(ep2279). 조각만 버리고 배치는 계속.
+                leak = memory_db.body_noun_leak(content)
+                if leak:
+                    print(f"[심층메모리] 몸-명사 거부: \"{content[:50]}\" "
+                          f"(몸 내부 {leak} — 정본은 코드·system_docs)")
+                    continue
 
                 existing = memory_db.search(
                     project_path=project_path, agent_id=agent_id,

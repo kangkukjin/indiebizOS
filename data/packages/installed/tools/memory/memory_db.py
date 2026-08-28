@@ -6,6 +6,7 @@ memory_db.py - 에이전트별 메모리 SQLite 저장소
 임베딩 모델: backend/ibl_usage_db.py의 fine-tuned 모델 공유 사용
 """
 import os
+import re
 import sys
 import struct
 import sqlite3
@@ -281,6 +282,68 @@ def get_db(project_path: str, agent_id: str):
 
 
 # =============================================================================
+# 몸-명사 관문 (IBL 헌법 '명사의 자리' 집행 — 2026-08-28 ep2279 우회 각인 수리)
+# =============================================================================
+
+# 경로꼴 토큰. 뒤 조각이 스스로 슬래시를 품으면 공백 하나를 건너 이어붙인다 —
+# "projects/추천 프로젝트/outputs/x.html" 처럼 공백 든 폴더명이 절단되면
+# outputs 예외 판정을 못 받아 오탐이 된다(감사 실측).
+_PATHLIKE_RE = re.compile(
+    r'[^\s"\'`(),;]*/[^\s"\'`(),;]+(?: [^\s"\'`(),;/]*/[^\s"\'`(),;]+)*')
+
+
+def body_noun_leak(text: str) -> Optional[str]:
+    """이 저장소의 계약 관문: 심층메모리는 *세계의 명사*만 담는다.
+
+    몸(이 시스템 자신의 레포) 내부를 가리키는 경로가 기억으로 저장되면, 어휘를
+    우회한 내부 접근로가 장기기억에 각인되어 다음 회상 때 우회를 강화한다
+    (ep2279 실측: 대화 DB 원시 경로가 어휘 대신 각인). 몸의 명사의 정본은
+    코드·system_docs 이지 기억 DB 가 아니다.
+
+    판정은 반증 가능한 기계 검사 — 절대경로는 몸 루트 포함 여부, 상대경로는
+    몸 루트 아래 실존 여부. URL 은 세계의 명사라 통과. 예외 하나: 경로 마디에
+    `outputs` 가 들면 통과 — 그곳은 몸의 살이 아니라 몸의 작업대 위 *세계의
+    산물* 보관소다(산출 경로 단일 해소기 규약, tool_context.resolve_output_path).
+    반환: 몸 내부를 가리키는 첫 토큰 / None(깨끗).
+    """
+    if not text:
+        return None
+    try:
+        from runtime_utils import get_base_path
+        base = Path(get_base_path()).resolve()
+    except Exception:
+        return None  # 백엔드 밖 단독 사용 — 루트 해소 불가 시 저장을 살린다
+    base_s = str(base)
+    for raw in _PATHLIKE_RE.findall(text):
+        tok = raw.strip('.,;:!?"\'`()[]{}<>')
+        if "/" not in tok or "://" in tok:
+            continue
+        if tok.startswith("/"):
+            norm = os.path.normpath(tok)
+            if norm != base_s and not norm.startswith(base_s + os.sep):
+                continue
+            rel_parts = os.path.relpath(norm, base_s).split(os.sep)
+        elif (base / tok).exists():
+            rel_parts = tok.strip("/").split("/")
+        else:
+            continue
+        if "outputs" in rel_parts:
+            continue  # 산출물 공간 — 세계의 산물
+        return tok
+    return None
+
+
+def _reject_body_noun(content: str):
+    leak = body_noun_leak(content)
+    if leak:
+        raise ValueError(
+            f"몸-명사 거부: 기억 내용이 몸 내부 경로({leak})를 가리킵니다 — "
+            "심층메모리는 세계의 명사만 담습니다. 몸의 구조·경로의 정본은 "
+            "코드·system_docs 이고, 본체 조회는 해당 어휘로 하세요(원시 경로 기억 금지)."
+        )
+
+
+# =============================================================================
 # CRUD
 # =============================================================================
 
@@ -292,6 +355,7 @@ def save(project_path: str, agent_id: str,
     source_ref: 이 기억의 출처(발화 스팬·task id 등 JSON 문자열). 기억은 출처를 기억한다.
     """
     category = normalize_category(category)
+    _reject_body_noun(content)
     content = mask_secrets(content)
     keywords = mask_secrets(keywords)
     if source_ref:
@@ -453,6 +517,8 @@ def update(project_path: str, agent_id: str, memory_id: int,
            content: str = None, keywords: str = None, category: str = None,
            source_ref: str = None) -> bool:
     """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성)"""
+    if content is not None:
+        _reject_body_noun(content)
     db_path = _get_db_path(project_path, agent_id)
     get_db(project_path, agent_id).close()  # source_ref 등 지연 마이그레이션 보장
     conn = sqlite3.connect(db_path, timeout=10)

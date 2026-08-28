@@ -49,6 +49,50 @@ def _load_image_b64(image_path):
     return {"base64": b64data, "media_type": mime}, None
 
 
+_IMG_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
+
+
+def _image_path_from_prev(prev) -> str:
+    """파이프 통화(_prev_result)에서 이미지 경로 회수 (2026-08-29 마찰 ②).
+
+    `[engines:web]{op:"check"} >> [engines:image_read]` 처럼 앞 액션이 만든 이미지
+    (items 행의 path/file_path/screenshot 자리)를 image_path 미지정 시 집어 온다 —
+    종전엔 파이프가 "image_path 가 필요합니다"로 끊겨 매번 file_find 재탐색이 필요했다.
+    실존하는 이미지 확장자 경로만, items 뒤쪽(최신 산출) 우선.
+    """
+    if not prev:
+        return ""
+    obj = prev
+    if isinstance(obj, str):
+        s = obj.strip()
+        if not s.startswith("{"):
+            return s if s.lower().endswith(_IMG_EXTS) and os.path.exists(s) else ""
+        try:
+            obj = json.loads(s)
+        except Exception:
+            return ""
+    if not isinstance(obj, dict):
+        return ""
+    candidates = []
+    for row in reversed(obj.get("items") or []):
+        if isinstance(row, dict):
+            for k in ("path", "file_path", "image_path", "screenshot"):
+                v = row.get(k)
+                if isinstance(v, str):
+                    candidates.append(v)
+    for k in ("path", "file_path", "image_path"):
+        v = obj.get(k)
+        if isinstance(v, str):
+            candidates.append(v)
+    sc = obj.get("screenshot")
+    if isinstance(sc, dict) and isinstance(sc.get("path"), str):
+        candidates.append(sc["path"])
+    for c in candidates:
+        if c.lower().endswith(_IMG_EXTS) and os.path.exists(c):
+            return c
+    return ""
+
+
 def _load_criteria(name_or_path, _seen=None):
     """data/criteria/*.yaml 로딩 (+extends 사슬 병합).
 
@@ -107,10 +151,13 @@ def critique_image(tool_input, output_base):
     import json as _json
 
     # path 는 IBL 표준 파라미터(self:read/grep/edit 모두 path) — image_path 미지정 시 폴백 수용.
-    image_path = tool_input.get("image_path") or tool_input.get("path")
+    image_path = (tool_input.get("image_path") or tool_input.get("path")
+                  or _image_path_from_prev(tool_input.get("_prev_result")))
     intent = tool_input.get("intent", "")
     if not image_path:
-        return json.dumps({"success": False, "error": "image_path(또는 path)가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": (
+            "image_path(또는 path)가 필요합니다 — 파이프로 받을 때는 앞 액션의 통화에 "
+            "이미지 경로(items 행의 path 등)가 실려 있어야 합니다.")}, ensure_ascii=False)
     if not intent:
         return json.dumps({"success": False, "error": "intent(이 일러스트가 무엇을 표현해야 하는지)가 필요합니다."}, ensure_ascii=False)
 
@@ -138,7 +185,7 @@ def critique_image(tool_input, output_base):
     checks = tool_input.get("checks") or []
     style_preset = tool_input.get("style_preset", "")
     # preset: "slide_illustration"(기본, 현행 슬라이드 일러스트 체크) | "general"(임의 산출물 범용)
-    preset = (tool_input.get("preset") or "slide_illustration").strip().lower()
+    preset = (tool_input.get("preset") or "").strip().lower()   # 미지정 = general (2026-08-29 ③)
     # criteria: data/criteria/*.yaml 취향 파일 — 지정 시 preset 기본 체크 대신 이 파일이 기준.
     criteria_name = (tool_input.get("criteria") or "").strip()
 
@@ -161,20 +208,12 @@ def critique_image(tool_input, output_base):
             hard_rule = " 금지([금지]) 항목이 하나라도 발견되면 무조건 passed=false."
         else:
             hard_rule = ""
-    elif preset == "general":
-        rubric = "preset:general"
-        default_checks = [
-            "이미지가 의도(intent)를 정확하고 충분히 충족하는가?",
-            "시각적 결함(텍스트 잘림·겹침, 레이아웃 불균형, 깨짐, 저해상도, 빈 공간 과다)이 없는가?",
-        ]
-        if style_preset:
-            default_checks.append(f"스타일/톤이 '{style_preset}'와 일관되는가?")
-        intro = "당신은 산출물 품질 평가자입니다. 아래 이미지가 의도를 잘 충족하는지 엄격하게 평가하세요."
-        hard_rule = ""
-    else:
-        rubric = ("preset:slide_illustration(기본값 — criteria·preset 미지정)"
-                  if not (tool_input.get("preset") or "").strip()
-                  else "preset:slide_illustration")
+    elif preset == "slide_illustration":
+        # 슬라이드 일러스트 기준표 — 2026-08-29 마찰 ③ 로 **명시 요청제**가 됐다.
+        # 종전엔 criteria·preset 미지정의 기본값이어서, 웹 스크린샷·문서 화면이
+        # "한글 렌더링 → 무조건 실패" 같은 무관 판정을 받았다(08-27·08-29 두 번 실측).
+        # 도메인 기준표를 보편 기본으로 두는 것이 결함 — 기본은 아래 general.
+        rubric = "preset:slide_illustration"
         default_checks = [
             "이 일러스트는 회화적 '씬(scene)'이 아니라 정보를 전달하는 '다이어그램/인포그래픽'인가? (NotebookLM 양식)",
             "한글(Hangul) 문자가 일러스트 안에 들어가 있는가? (있으면 실패 — 한글은 텍스트 레이어에서 처리)",
@@ -185,6 +224,20 @@ def critique_image(tool_input, output_base):
             default_checks.append(f"디자인 시스템 톤이 '{style_preset}'와 일관되는가? (색·선·분위기)")
         intro = "당신은 강의 슬라이드 일러스트 평가자입니다. 다음 일러스트가 의도를 잘 표현하는지 엄격하게 평가하세요."
         hard_rule = " 한글이 일러스트에 들어가 있으면 무조건 passed=false."
+    else:
+        # 기본 = 매체 중립 (2026-08-29 ③): 기준표 미지정이면 의도 충족 + 보편 결함만 본다.
+        # 매체 기준이 필요하면 criteria(web/sheet/visual_base) 또는 preset: slide_illustration.
+        rubric = ("preset:general(기본값 — criteria·preset 미지정; 매체 기준은 "
+                  "criteria: web|sheet|visual_base 또는 preset: slide_illustration)"
+                  if not (tool_input.get("preset") or "").strip() else "preset:general")
+        default_checks = [
+            "이미지가 의도(intent)를 정확하고 충분히 충족하는가?",
+            "시각적 결함(텍스트 잘림·겹침, 레이아웃 불균형, 깨짐, 저해상도, 빈 공간 과다)이 없는가?",
+        ]
+        if style_preset:
+            default_checks.append(f"스타일/톤이 '{style_preset}'와 일관되는가?")
+        intro = "당신은 산출물 품질 평가자입니다. 아래 이미지가 의도를 잘 충족하는지 엄격하게 평가하세요."
+        hard_rule = ""
 
     all_checks = default_checks + checks
 
@@ -259,9 +312,12 @@ def read_image(tool_input, output_base):
       - image_path (또는 path): 읽을 이미지 절대 경로 또는 base64 data URI (필수)
       - question (또는 query/prompt): 무엇을 읽거나 답할지 (없으면 전체 묘사)
     """
-    image_path = tool_input.get("image_path") or tool_input.get("path")
+    image_path = (tool_input.get("image_path") or tool_input.get("path")
+                  or _image_path_from_prev(tool_input.get("_prev_result")))
     if not image_path:
-        return json.dumps({"success": False, "error": "image_path(또는 path)가 필요합니다."}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": (
+            "image_path(또는 path)가 필요합니다 — 파이프로 받을 때는 앞 액션의 통화에 "
+            "이미지 경로(items 행의 path 등)가 실려 있어야 합니다.")}, ensure_ascii=False)
     question = (tool_input.get("question") or tool_input.get("query")
                 or tool_input.get("intent") or tool_input.get("prompt") or "").strip()
 

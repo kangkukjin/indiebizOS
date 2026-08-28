@@ -254,14 +254,23 @@ def run(tool_input: dict, package_dir: Path) -> dict:
     if site_id:
         result["site_id"] = site_id
 
+    # 수행한 점검을 items 통화로도 방출 (2026-08-29 마찰 ②) — 종전엔 effect 모양뿐이라
+    # `check >> image_read` 파이프가 스크린샷 경로를 못 받아 끊겼고(가이드는 잇는 절차로
+    # 서술), 매번 file_find 로 최신 파일을 되찾아야 했다. 기존 키는 그대로(비파괴 ADD).
+    items = []
     if "status" in checks:
         result["status"] = check_status(url)
+        items.append({"check": "status", **result["status"]})
 
     if "lighthouse" in checks:
         result["lighthouse"] = check_lighthouse(url, label)
+        items.append({"check": "lighthouse", **result["lighthouse"]})
 
     if "screenshot" in checks:
         result["screenshot"] = check_screenshot(url, label)
+        items.append({"check": "screenshot", **result["screenshot"]})
+
+    result["items"] = items
 
     # 등록된 사이트면 last_checked 업데이트
     if site_id:

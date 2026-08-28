@@ -190,3 +190,24 @@ final 에 정직 표지(⚠ 절단 고지 + `truncated_output: true`) 와 **처�
 마지막 턴 정본). 시스템 AI 의 자가 처방("미완 섹션 분리 출력")과 합치 — 그 처방이
 필요한 순간(절단 직후)에 읽히는 자리로 통로화한 것. 실전 max_tokens 재현은 미실측
 (대형 생성 필요) — 다음 장문 보고서 실행이 판정.
+
+## 13. ep2310 마찰 보고 5건 (2026-08-29)
+
+- **① file_find 중괄호 글롭 + 오진단 힌트 — 수리**: `_expand_braces` 로 `{tsx,css}` 를
+  펼쳐 합집합 매칭(글롭/fnmatch 는 중괄호를 리터럴 취급 — 0건의 뿌리). 0건 힌트는
+  path 기지정 여부로 가름 — 준 것을 안 준 것처럼 말하던 오진단 소거. 라이브 실증.
+- **② check >> image_read 파이프 단절 — 양쪽 수리**: live_check op:check 가 수행 점검을
+  items 통화로도 방출(비파괴 ADD) + vision_read 가 image_path 미지정 시 파이프 통화
+  (_prev_result items 의 path 류, 실존 이미지 확장자만·최신 우선)에서 회수. 라이브 종단:
+  `check{screenshot} >> image_read` 가 경로 인자 없이 화면 판독·critic 채점까지 성공 —
+  "매번 file_find 재탐색" 마찰 소거.
+- **③ critic 기본 기준표 — 명시 요청제 전환**: 기본이 슬라이드 일러스트 표("한글=실패")
+  라 웹·문서 화면이 무관 판정(08-27·08-29 두 번 실측). 기본=preset:general(매체 중립,
+  rubric 에 안내 동봉), 슬라이드 표는 `preset: slide_illustration` 명시로. 어휘 설명
+  4곳 동기(YAML 비인용 스칼라에 콜론 삽입 실수 1회 — 빌드 관문이 즉시 잡음). 코퍼스의
+  무-criteria 슬라이드 시드 1건은 재학습 사이클에서 preset 명시로 갱신 대상.
+- **④ browser evaluate scrollTo → screenshot — 비수리 판정**: 정석이 이미 있다
+  (screenshot 의 full_page:true·selector, 어휘에 선언·서술됨). 스크롤 무반영은 사이트
+  스크롤 컨테이너 CSS 또는 iframe 활성 시 evaluate(frame)↔screenshot(top) 비대칭
+  가능성 — 후자는 관찰 별건.
+- **⑤ 자기 실수 2건** — 봉투가 즉시 드러냄(설계 의도대로), 조치 없음.

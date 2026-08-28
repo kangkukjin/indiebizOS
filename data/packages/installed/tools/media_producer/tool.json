@@ -246,7 +246,7 @@
           },
           "preset": {
             "type": "string",
-            "description": "(critic) 평가 프리셋 — slide_illustration(기본) | general"
+            "description": "(critic) 평가 프리셋 — general(기본, 매체 중립) | slide_illustration"
           },
           "criteria": {
             "type": "string",

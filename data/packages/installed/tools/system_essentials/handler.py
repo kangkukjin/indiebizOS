@@ -1007,18 +1007,36 @@ def execute(tool_input: dict, context) -> str:
             except (TypeError, ValueError):
                 max_results = 200
 
+            # 중괄호 확장 (2026-08-29 마찰 ①): glob/fnmatch 는 `{tsx,css}` 를 리터럴로
+            # 취급해 0건이 됐다 — `**/*.{tsx,css}` → [`**/*.tsx`, `**/*.css`] 로 펼쳐
+            # 각각 매칭 후 합집합. 중첩·복수 그룹은 재귀로 푼다.
+            def _expand_braces(pat: str) -> list:
+                m = re.search(r"\{([^{}]*)\}", pat)
+                if not m or "," not in m.group(1):
+                    return [pat]
+                head, tail = pat[:m.start()], pat[m.end():]
+                out = []
+                for alt in m.group(1).split(","):
+                    out.extend(_expand_braces(head + alt + tail))
+                return out
+
             partial = False
-            if "/" not in pattern and "**" not in pattern:
-                # 재귀 basename 검색(지배적 케이스) — 바운드 walk: 정크 가지치기 + 시간예산.
-                # glob.glob('~/**/*X*') 의 색인없는 홈 전체 stat(=타임아웃)을 회피.
-                matches, partial = _bounded_find(root, pattern, max_results)
-            else:
-                # 명시 경로/패턴(`/`·`**` 포함) — 보통 앵커돼 빠름. glob 유지.
-                search_pattern = pattern if "**" in pattern else f"**/{pattern}"
-                try:
-                    matches = glob.glob(os.path.join(root, search_pattern), recursive=True)
-                except Exception as e:
-                    return f"검색 오류: {e}"
+            matches = []
+            for _pat in _expand_braces(pattern):
+                if "/" not in _pat and "**" not in _pat:
+                    # 재귀 basename 검색(지배적 케이스) — 바운드 walk: 정크 가지치기 + 시간예산.
+                    # glob.glob('~/**/*X*') 의 색인없는 홈 전체 stat(=타임아웃)을 회피.
+                    _m, _p = _bounded_find(root, _pat, max_results)
+                    partial = partial or _p
+                else:
+                    # 명시 경로/패턴(`/`·`**` 포함) — 보통 앵커돼 빠름. glob 유지.
+                    search_pattern = _pat if "**" in _pat else f"**/{_pat}"
+                    try:
+                        _m = glob.glob(os.path.join(root, search_pattern), recursive=True)
+                    except Exception as e:
+                        return f"검색 오류: {e}"
+                matches.extend(_m)
+            matches = list(dict.fromkeys(matches))
 
             absolute_paths = sorted(os.path.abspath(m) for m in matches)
             total = len(absolute_paths)
@@ -1073,12 +1091,21 @@ def execute(tool_input: dict, context) -> str:
                                    "total": total, "truncated": truncated},
                                   ensure_ascii=False)
 
-            # 결과 없을 때 — 안내 메시지에 path 옵션 힌트 포함
-            hint = (
-                f"매칭 없음: pattern={pattern!r} root={root}\n"
-                "힌트: 프로젝트 밖을 검색하려면 path 파라미터를 사용하세요. "
-                '예: {pattern: "*.docx", path: "~/Desktop"} 또는 {pattern: "*.docx", path: "/Users"}'
-            )
+            # 결과 없을 때 — 힌트는 준 것을 안 준 것처럼 말하지 않는다(2026-08-29 ①:
+            # path 를 이미 준 호출에 "path 를 쓰세요"는 오진단 — 다른 원인을 못 보게 한다).
+            if tool_input.get("path") or tool_input.get("root_path"):
+                hint = (
+                    f"매칭 없음: pattern={pattern!r} root={root}\n"
+                    "힌트: 그 경로 아래 실제로 없거나 패턴이 어긋난 것입니다 — 패턴은 글롭"
+                    "(*·?·**·{a,b} 중괄호 확장)이고, / 없는 패턴은 하위 전체를 재귀 검색합니다. "
+                    "패턴을 넓혀 재시도하거나 위치가 불확실하면 메타 검색(search_term)을 쓰세요."
+                )
+            else:
+                hint = (
+                    f"매칭 없음: pattern={pattern!r} root={root}\n"
+                    "힌트: 프로젝트 밖을 검색하려면 path 파라미터를 사용하세요. "
+                    '예: {pattern: "*.docx", path: "~/Desktop"} 또는 {pattern: "*.docx", path: "/Users"}'
+                )
             # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어가 못 잡는다
             return json.dumps({"success": True, "items": [], "total": 0,
                                "truncated": False, "text": hint}, ensure_ascii=False)

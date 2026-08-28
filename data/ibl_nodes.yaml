@@ -7029,18 +7029,18 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=시각 QA·OCR·자유서술 답변(실행 축), critic=의도 정합 채점(passed/score/issues/notes, 평가 축 — GoalEval 평가자와 같은 눈) — criteria 로 data/criteria/*.yaml 취향 파일을 기준으로 심사.
-        target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(slide_illustration 기본|general)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
+        target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(general 기본|slide_illustration — 슬라이드 일러스트 기준표는 명시 요청제)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
         group: media_produce
         router: handler
         tool: read_image
-        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier·rubric — 적용 기준표 정직 신고, 미지정=일러스트 기본표 경고).
+        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier·rubric — 적용 기준표 정직 신고, 미지정=general 기본표(매체 중립) — 매체 기준은 criteria/preset 명시).
         target_key: op
         ops:
           default: read
           values:
             read: 시각 QA·OCR — 질문에 자유서술로 답함 (question)
             critic: 의도 정합 채점 — passed/score/issues/notes (intent 필수)
-        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 한글 검출 시 passed=false. prescreen 이 차 있으면 비전 호출 0회에 tier=prescreen 실패 verdict(관측 사실이 issues 로 승계).
+        achievement_criteria: read — 보이는 내용을 환각 없이 옮김. critic — JSON 파싱 성공, issues가 구체적, 적용 기준표(rubric) 정직 신고(슬라이드 기준표의 한글 금지는 preset=slide_illustration 명시 시에만). prescreen 이 차 있으면 비전 호출 0회에 tier=prescreen 실패 verdict(관측 사실이 issues 로 승계).
         keywords:
         - 이미지 읽기
         - 스크린샷 읽기

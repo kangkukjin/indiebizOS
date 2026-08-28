@@ -34,7 +34,11 @@ HONESTY_COUNT_KEYS = (
     "passthrough_rows",   # each do 가 통화를 안 내서 원 행이 흘렀다
     "rows_replaced",      # each do 결과가 원 행을 대체했다(출처 행 소실)
     "rows_dropped",       # 원천 절단
-    "rows_in",            # emitter 가 입력을 받았으나 쓸 수 없었다
+    # rows_in 은 2026-08-29 제명 — "받았으나 못 씀" 의미의 발신자는 전수 스윕 결과 전부
+    # success:False 경로(office_ops·visualization·doc_build, 이미 오류로 신고됨)였고,
+    # 성공 경로의 rows_in>0 은 ai-ops(table:ai/brief)의 **정보성 입력 계수**뿐이다.
+    # 표지 승격은 성공한 마지막 통화·생존 가지에만 닿으므로 이 키는 원리적으로
+    # 오탐만 가능했다(실측: brief 완전 성공에 "부분 실패 신고" 경고 — 늑대소년).
     "statements_failed",  # 독립 문장 실패 수
 )
 

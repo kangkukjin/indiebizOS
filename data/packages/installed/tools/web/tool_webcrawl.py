@@ -157,11 +157,27 @@ def _parse_html(html: str, url: str) -> tuple[str, str]:
 
     # 본문 추출: <article> → <main> → <body>
     container = soup.find('article') or soup.find('main') or soup.find('body') or soup
-    text = container.get_text(separator='\n')
 
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    text = '\n'.join(lines)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    # 블록 요소(잎) 단위 추출 — 문단 경계를 DOM 에서 직접 얻는다 (2026-08-29 ⑦).
+    # 종전 get_text('\n') + 빈 줄 제거는 문단 경계를 안 남겨, handler._text_to_blocks 의
+    # \n\n 분리가 통짜 1문단을 냈다(카탈로그의 "items=문단 단위" 약속 위반).
+    # 중첩 블록(li 안의 p 등)은 잎만 취해 중복을 막는다.
+    _BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote',
+                   'pre', 'td', 'th', 'dt', 'dd']
+    paras = []
+    for el in container.find_all(_BLOCK_TAGS):
+        if el.find(_BLOCK_TAGS):
+            continue                      # 자기 안에 다른 블록이 있으면 잎이 아니다
+        t = el.get_text(separator=' ', strip=True)
+        if t:
+            paras.append(t)
+    if paras:
+        text = '\n\n'.join(paras)
+    else:
+        # 블록 요소가 없는 페이지(div/span 만) — 종전 평문 추출로 폴백하되 빈 줄은 보존
+        text = container.get_text(separator='\n')
+        lines = [line.strip() for line in text.splitlines()]
+        text = re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
     return title, text
 
 
@@ -423,8 +439,11 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
                 result["reason"] = reason
             return result
 
-        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-        text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines))
+        # 빈 줄을 **보존**한다 — inner_text 의 블록 경계(빈 줄)가 문단 경계다. 종전의
+        # `if ln.strip()` 필터가 빈 줄을 다 버려 handler._text_to_blocks 의 \n\n 분리가
+        # 가를 곳을 잃었다(2026-08-29 ⑦ 실측: 8,580자가 paragraph 1행). 3연속+만 2로 접는다.
+        lines = [ln.strip() for ln in text.splitlines()]
+        text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
         reason = _diagnose(status, final_url, url, text, title)
         text, original_length, truncated = _truncate(text, max_length)
         result = {

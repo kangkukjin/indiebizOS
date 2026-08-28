@@ -134,3 +134,22 @@ C1·C2·C3 집행 완료, C4 보류 유지, C5 기각 유지. 커밋 = git log �
   `workflow_verdict.py` 로 분리(재수출로 호출자 유지, LAYERS 등재), 1,405줄.
 - **미검증 잔여**: transcript 긴 경로(>10,000자 실영상)의 스필 ref 라이브 종단은 짧은
   영상뿐이라 미실측(코드 경로는 병렬 가지 스필과 동일 관용구). 다음 긴 영상 실사용이 판정.
+
+## 9. 3차 집행 기록 (2026-08-29 검증 실행 보고 ⑤~⑨ → 수리 3건)
+
+- **⑤ rows_in 늑대소년**: HONESTY_COUNT_KEYS 에서 제명. 전수 스윕 근거 — "받았으나 못
+  씀" 의미 발신자는 전부 success:False 경로(이미 오류 신고됨), 성공 경로의 rows_in>0 은
+  ai-ops 의 정보성 계수뿐 → 표지 승격 맥락(성공 통화·생존 가지)에서는 원리적으로 오탐만
+  가능했다. 진짜 표지(rows_dropped·error_count·truncated 등) 생존 단위검증.
+- **⑧ 스필 요약 count:0**: summarize_result 가 스필 봉투(items:[]+ref)를 인지 —
+  ref.count(283)·spilled·spill_path 를 요약에 싣는다. 진짜 빈손(items:[] 무ref)은 0 유지.
+- **⑦ crawl 문단 분해**: 두 경로 모두 수리. BS4 = 블록 요소(잎) 단위 추출(p/h/li/
+  blockquote/pre/td…, 중첩은 잎만) + 블록 없는 페이지는 빈 줄 보존 폴백. playwright =
+  빈 줄 보존(`if ln.strip()` 필터가 문단 경계를 버리던 자리). 라이브 실증: 위키 문서
+  crawl >> take{n:6} → heading+문단 5행(종전 통짜 2행). playwright 경로는 동종 수리로
+  코드 검증만(JS 필요 사이트 실사용이 판정).
+- **⑥ each keep 안내문**: 뿌리 확인(ibl_exec_each.py:509, keep 지정 여부 무관 부착)
+  — 동시 세션 미커밋 파일이라 보류. 그 작업 커밋 후 수리.
+- **⑨ recover 진행률**: 엔진→티켓 진행 상태 쓰기 신설이 필요한 설계 건 — 미착수.
+- 부산물: 2차의 "transcript 긴 경로 스필 ref 미실측" 잔여는 이번 검증 실행(283 세그먼트
+  스필→투명 해소)으로 **실전 폐쇄**.

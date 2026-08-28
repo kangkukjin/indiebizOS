@@ -151,6 +151,17 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
     if shape == "items":
         out["shape"] = "items"
         out["count"] = len(items)
+        # 스필 참조 봉투 — items:[] 는 0건이 아니라 **외부화**다(2026-08-29 실측:
+        # 자막 283행이 스필됐는데 요약이 count:0 이라 "0건 실패"로 오독됐다 — 다음
+        # step 은 참조를 투명 해소해 283행을 정상 수신). ref 의 실측 계수·경로를 싣는다.
+        if isinstance(obj, dict) and (obj.get("_spilled") or obj.get("spilled")):
+            _ref = obj.get("ref")
+            if isinstance(_ref, dict) and not items:
+                if isinstance(_ref.get("count"), int):
+                    out["count"] = _ref["count"]
+                out["spilled"] = True
+                if isinstance(_ref.get("path"), str):
+                    out["spill_path"] = _ref["path"]
         if _derived:
             # keys 엔 items 가 없는데 shape 은 items — 왜인지 밝힌다(표 형 방출).
             out["items_derived"] = True

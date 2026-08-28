@@ -799,7 +799,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                           "(첫 출력은 기준 미달이었음).")
     # ★F48-7 (48회차 상상훈련, 수리 2026-08-27): **표지의 승격 규칙을 한 벌로.**
     #   종전엔 파이프 표지(_fallback_used·skipped_steps·halted…)만 최상위로 오르고,
-    #   마지막 step 이 낸 표지(error_count·errors·rows_replaced·passthrough_rows·rows_in·
+    #   마지막 step 이 낸 표지(error_count·errors·rows_replaced·passthrough_rows·
     #   truncated…)는 `final_result` **JSON 문자열** 안에만 살았다. 교재는 "보고 전에 이
     #   키들을 확인하라"고 한 줄로 가르치는데 읽는 쪽은 두 규칙을 동시에 외워야 했다
     #   (48회차 운용 실측: 이 턴의 계측기가 그걸 놓쳐 두 번 오독했다).

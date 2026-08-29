@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import time
 
-# handler._FIND_DEADLINE_S 와 동일 값 (엔진 타임아웃 전에 부분결과라도 반환)
+# fs_find.FIND_DEADLINE_S 와 동일 값 (엔진 타임아웃 전에 부분결과라도 반환)
 _DEADLINE_S = 25.0
 
 # === grep_files 내용 검색 2층 =====================================================

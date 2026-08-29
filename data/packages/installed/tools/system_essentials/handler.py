@@ -3,8 +3,6 @@ import sys
 import glob
 import re
 import time
-import fnmatch
-import unicodedata
 import subprocess
 import shlex
 import shutil
@@ -24,58 +22,11 @@ def _load_sibling(module_name):
     return module
 
 
-# file_find 무경계 재귀 glob 방지 — 매 호출 홈 전체(node_modules·캐시)를 색인 없이
-# stat 하던 게 타임아웃 원인. 절대-dead 가지치기 + 시간 예산으로 바운드.
-# ★ 절대-dead 목록은 file_index(포식 substrate)와 *공유* — fs_query 와 같은 단일 출처라
-#   드리프트 없음. path-substring 판정이라 ~/Library 통째가 아니라 캐시류만 쳐냄(iCloud 보존).
-try:
-    from file_index import ABSOLUTE_DEAD_SUBSTR as _DEAD_SUBSTR
-except Exception:  # import 경로 미확보 시 폴백(동일 내용)
-    _DEAD_SUBSTR = (
-        "/System/", "/Applications/", "/Library/Caches/",
-        "/Library/Application Support/", "/Library/Containers/",
-        "/Library/Group Containers/", "/node_modules/", "/.Trash", ".app/",
-        "/__pycache__/", "/site-packages/", "/.venv/", "/venv/",
-        "/.git/", "/DerivedData/", "/.gradle/", "/.cargo/", "/.npm/",
-    )
-_FIND_DEADLINE_S = 25.0  # 엔진 타임아웃 전에 부분결과라도 반환
-
-
-def _is_dead_dir(path):
-    """절대-dead(설치트리·캐시) 디렉토리면 True — walk 가 안 들어감(의도 불문 제외)."""
-    p = path.rstrip("/") + "/"
-    return any(n in p for n in _DEAD_SUBSTR)
-
-
-
-def _bounded_find(root, basename_pat, max_results):
-    """root 하위를 바운드 재귀 순회 — 정크 가지치기 + dot-dir 스킵(glob ** 와 동일) + 시간 예산.
-
-    무한정 walk 로 시스템을 멈추지 않는다. 시간 초과/상한 도달 시 partial=True 로 알린다.
-    """
-    deadline = time.time() + _FIND_DEADLINE_S
-    # macOS 한글 파일명=NFD(자모분해), 패턴은 보통 NFC → fnmatch 바이트비교가 침묵 누락.
-    # 양쪽을 NFC 로 정규화해 비교(mdfind 는 정규화하지만 fnmatch 는 안 함. forage_map #33).
-    pat = unicodedata.normalize("NFC", basename_pat)
-    pat_lower = pat.lower()
-    matches, partial = [], False
-    for dirpath, dirs, files in os.walk(root, topdown=True):
-        if time.time() > deadline:
-            partial = True
-            break
-        # 가지치기: 절대-dead(공유 목록, path-substring) + dot-dir. 제자리 수정으로 walk 가 안 들어감.
-        #   ~/Library 통째가 아니라 캐시류만 → ~/Library/Mobile Documents(iCloud) 는 보존.
-        dirs[:] = [d for d in dirs
-                   if not d.startswith(".") and not _is_dead_dir(os.path.join(dirpath, d))]
-        # 매칭: 파일 + 디렉토리 둘 다 (glob.glob 은 둘 다 매칭했음 — 예: .epub 번들·iCloud 책은 디렉토리).
-        # macOS 파일시스템은 대소문자 무시 → 소문자 비교로 맞춤.
-        for name in files + dirs:
-            nfc = unicodedata.normalize("NFC", name)
-            if fnmatch.fnmatch(nfc.lower(), pat_lower):
-                matches.append(os.path.join(dirpath, name))
-                if len(matches) >= max_results:
-                    return matches, True
-    return matches, partial
+# 파일 찾기 하부는 형제 모듈이 안다 — handler 에는 분기와 봉투만 (2026-08-29 분리).
+_fs_find = _load_sibling("fs_find")
+_FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S
+_bounded_find = _fs_find.bounded_find
+_expand_braces = _fs_find.expand_braces
 
 # 시스템 AI 전용 상태 폴더 (data/system_ai_state/)
 DATA_PATH = Path(__file__).parent.parent.parent.parent
@@ -1006,19 +957,6 @@ def execute(tool_input: dict, context) -> str:
                 max_results = int(tool_input.get("limit", tool_input.get("max_results", 200)))
             except (TypeError, ValueError):
                 max_results = 200
-
-            # 중괄호 확장 (2026-08-29 마찰 ①): glob/fnmatch 는 `{tsx,css}` 를 리터럴로
-            # 취급해 0건이 됐다 — `**/*.{tsx,css}` → [`**/*.tsx`, `**/*.css`] 로 펼쳐
-            # 각각 매칭 후 합집합. 중첩·복수 그룹은 재귀로 푼다.
-            def _expand_braces(pat: str) -> list:
-                m = re.search(r"\{([^{}]*)\}", pat)
-                if not m or "," not in m.group(1):
-                    return [pat]
-                head, tail = pat[:m.start()], pat[m.end():]
-                out = []
-                for alt in m.group(1).split(","):
-                    out.extend(_expand_braces(head + alt + tail))
-                return out
 
             partial = False
             matches = []

@@ -873,8 +873,15 @@ async def validate_ibl(req: ValidateRequest):
     # 먼저 받아야 한다 — 다른 table 변환자를 바로 물리면 검수 초록 뒤 실행에서 굶는
     # 사각이었다. 소프트 경고(실행기의 정직 거절이 최종 심판).
     _BINARY_AFTER_PARALLEL = {"union", "merge", "join"}
+    # T1 (2026-08-29): 머리 변환자가 변환할 통화 없이 서 있으면 검수에서 미리 경고 —
+    # 실행기(execute_pipeline·단일 step 경로)의 정직 거절과 같은 판정(ibl_pipe_types 한 벌).
+    try:
+        from ibl_pipe_types import head_transform_error
+        _head_warn = head_transform_error(parsed)
+    except Exception:
+        _head_warn = None
     for _pi, st in enumerate(parsed):
-        _pw = None
+        _pw = _head_warn if _pi == 0 else None
         if (_pi > 0 and isinstance(parsed[_pi - 1], dict) and parsed[_pi - 1].get("_parallel")
                 and isinstance(st, dict) and not st.get("_seq_boundary")
                 and st.get("_node") == "table"

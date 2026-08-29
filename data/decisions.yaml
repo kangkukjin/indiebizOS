@@ -29,6 +29,19 @@
   source: "사용자 판정 (Claude Code 세션 2026-08, 2026-08-29 재확인)"
   status: active
 
+- id: grammar-friction-explicit-fork
+  date: 2026-08-29
+  verdict: 채택
+  ruling: "문법 마찰(foot-gun) 발견 시 '힌트로 덮을까/문법에서 뺄까'를 명시적 갈림길로 판정 — 기본값-힌트 금지"
+  why: >
+    그간의 관성은 무의식적으로 힌트(안내문)만 붙이고 넘어가는 것이었다($이름 경계 힌트 등).
+    제거가 항상 답은 아니다(IBL 은 사람이 읽는 언어) — 요구하는 것은 결론이 아니라
+    갈림길을 세웠다는 기록(판정 사유가 changelog 에 남을 것). 정본 = ibl.md '언어의 경계' 규칙 절.
+  keywords: [foot-gun, 풋건, 힌트, boundary_hint, 문법 마찰, 안내문, 반창고, 오류율]
+  source: "사용자 승인 2026-08-29 (외부 조사 보고서 배울 것 1번 항목 채택)"
+  status: active
+  scent: false
+
 - id: no-switch-by-usage-frequency
   date: 2026-08
   verdict: 기각

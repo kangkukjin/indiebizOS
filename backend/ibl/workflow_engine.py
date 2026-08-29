@@ -180,6 +180,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
             _propagate_project_id(steps, _head_pid)
 
     prev_result = context.get("_prev_result", "") if context else ""
+
+    # 파이프 정적 타입 검사 (T1, 2026-08-29) — returns 선언의 소비자. 머리 변환자가
+    # 변환할 통화 없이 서 있으면 실행 전에 정직 거절한다(빈 입력 위 rows_in:0 "성공" 방지).
+    # 블록 몸·each 하위 파이프는 직전 통화가 들어오므로(has_incoming) 검사 밖.
+    from ibl_pipe_types import head_transform_error
+    _type_err = head_transform_error(steps, has_incoming=bool(prev_result))
+    if _type_err:
+        return {"success": False, "error": _type_err,
+                "steps_completed": 0, "steps_total": len(steps),
+                "traceback": build_tb(_type_err, "binding")}
     results = []
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)

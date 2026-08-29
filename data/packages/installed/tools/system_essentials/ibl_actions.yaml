@@ -403,6 +403,11 @@ nodes:
           message: string
           paths: array
           lines: integer   # diff 전용 — 파일당 실을 본문 줄 수 상한(기본/상한은 body_ops._clamp 가 신고).
+          run_id: string     # trajectory 전용 — 셋 중 하나만 (2026-08-29 구현-읽기 감사 상환).
+          episode_id: integer  # trajectory 전용.
+          task_id: string    # trajectory 전용.
+          commit: string     # diff 전용 — 한 커밋의 변경.
+          ref: string        # diff 전용 — ref..HEAD 구간.
         ops:
           default: changes
           side_effect:

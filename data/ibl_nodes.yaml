@@ -4846,6 +4846,11 @@ nodes:
           message: string
           paths: array
           lines: integer
+          run_id: string
+          episode_id: integer
+          task_id: string
+          commit: string
+          ref: string
         ops:
           default: changes
           side_effect:

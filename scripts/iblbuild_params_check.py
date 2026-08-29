@@ -31,8 +31,14 @@ from iblbuild_validators import _load_corpus_param_keys
 IMPL_READ_ALLOW: dict[str, set[str]] = {
     # html_video 갈래는 2026-08-05 어휘 은퇴 — create_html_video/render_html_video 는
     # lecture_workspace 가 함수층에서 차용하는 엔진으로만 잔류(handler.py 상단 주석).
+    # slide 갈래(shadcn_slides·slide_native·slide_image)도 같은 은퇴 부류 —
+    # lecture_workspace·REST 표면이 함수층에서 쓰는 렌더러 엔진(2026-08-29 2차 확장 때 편입).
     "media_producer": {"scenes", "narration_texts", "narration_audio_paths",
-                       "scene_files", "narration_files"},
+                       "scene_files", "narration_files",
+                       "slides", "style_reference_images", "aesthetic", "composition",
+                       "content", "critique", "critique_rounds", "design_system",
+                       "format", "instruction", "output_dir", "theme",
+                       "verify", "verify_rounds"},
     # 워크플로우 봉투를 벗기는 내부 배관: tool_input.get("params",{}).get("_prev_result")
     "system_essentials": {"params"},
 }
@@ -53,6 +59,8 @@ IMPL_READ_BASELINE: dict[str, set[str]] = {
     "computer-use": {"amount", "button", "clicks", "duration", "interval", "region",
                      "screenshot_after"},
     "contest": {"keyword"},
+    # group_by 는 doc_build 의 산 param(독스트링 문서화·선언만 없음) — 상환 후보 1순위.
+    "data-ops": {"group_by"},
     "culture": {"date", "from_age", "loan_info", "max_results", "order_by", "to_age"},
     "guest-helper": {"device_id", "job_id", "wait"},
     "investment": {"days"},
@@ -64,9 +72,11 @@ IMPL_READ_BASELINE: dict[str, set[str]] = {
                           "style_reference_images", "width"},
     "legal": {"law_id", "precedent_id"},
     "location-services": {"place"},
+    # input_image_path·quality 는 산 통로 gemini_image.py 의 스칼라 읽기(2차 확장 편입).
     "media_producer": {"bgm_path", "capture_mode", "duration_per_scene", "fps",
-                       "model", "narration_padding", "on_progress", "q", "scene_dir",
-                       "seed", "topic", "transition", "transition_duration"},
+                       "input_image_path", "model", "narration_padding", "on_progress",
+                       "q", "quality", "scene_dir", "seed", "topic", "transition",
+                       "transition_duration"},
     "pc-manager": {"provenance", "q", "surface_flag"},
     "radio": {"bitrateMin", "order", "state"},
     # count_per_month 는 2026-08-29 상환 — ibl_actions.yaml realty.params 에 선언.
@@ -75,8 +85,12 @@ IMPL_READ_BASELINE: dict[str, set[str]] = {
     "study": {"authorID", "display", "keyword", "lodID", "name_ko", "open_access",
               "orgName_ko", "page", "q", "qid", "searchTerm", "sort_by", "type",
               "year", "year_from", "year_to"},
-    "system_essentials": {"client", "end", "mime", "new", "old", "rationale",
-                          "system"},
+    # 2차 확장(패키지 루트 *_ops.py 편입, 2026-08-29)으로 드러난 부채:
+    # office_ops(extract_images·max_blocks·max_rows·output_path·pages)·
+    # fs_meta(q·volume_name). body_ops 다섯 키는 같은 날 선언 상환으로 대장 미편입.
+    "system_essentials": {"client", "end", "extract_images", "max_blocks",
+                          "max_rows", "mime", "new", "old", "output_path", "pages",
+                          "q", "rationale", "system", "volume_name"},
     "visualization": {"color_scale", "donut", "horizontal", "layout", "ma_periods",
                       "show_percentage", "show_trendline", "show_values",
                       "show_volume", "spec", "stacked", "x_labels", "y_labels"},
@@ -213,9 +227,13 @@ def _scan_impl_reads(py: Path) -> dict[str, bool]:
 
 
 def validate_impl_reads(data: dict, root: Path) -> list[str]:
-    """구현-읽기 감사 (2026-08-29 #repair): 각 패키지 구현(handler.py·tools/*.py·
-    tool_*.py)이 실제로 읽는 tool_input 키 중 그 패키지 tool.json 어디에도 선언이
+    """구현-읽기 감사 (2026-08-29 #repair): 각 패키지 구현(패키지 루트 *.py 전체
+    + tools/*.py)이 실제로 읽는 tool_input 키 중 그 패키지 tool.json 어디에도 선언이
     없는 것을 보고한다. 형제 검사들의 코퍼스 앵커가 못 보는 축이다.
+
+    수집 규칙이 handler.py·tool_*.py 만 보던 첫 판은 system_essentials 의 서브모듈
+    규약(패키지 루트 *_ops.py — body_ops·office_ops·script_ops …)을 통째로 놓쳤다
+    (2026-08-29 2차 확장). `_` 접두 파일은 스크래치/배관 봉인 규약이라 제외.
 
     두 급으로 닫는다:
     - 컨테이너 기대 + 미선언 = **즉시 빌드 실패** (런타임 관문이 거절하는 죽은 기능,
@@ -252,10 +270,9 @@ def validate_impl_reads(data: dict, root: Path) -> list[str]:
         known = (pkg_declared[pkg_dir] | set(UNIVERSAL_PARAM_KEYS)
                  | set(RUNTIME_META_KEYS) | pkg_alias.get(pkg_dir, set()))
         reads: dict[str, bool] = {}
-        files = [pkg_dir / "handler.py"]
+        files = sorted(p for p in pkg_dir.glob("*.py") if not p.name.startswith("_"))
         if (pkg_dir / "tools").is_dir():
             files += sorted((pkg_dir / "tools").glob("*.py"))
-        files += sorted(pkg_dir.glob("tool_*.py"))
         for f in files:
             if f.is_file():
                 for k, c in _scan_impl_reads(f).items():

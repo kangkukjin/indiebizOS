@@ -687,6 +687,26 @@
           "lines": {
             "type": "integer",
             "description": "self:body 파라미터"
+          },
+          "run_id": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "episode_id": {
+            "type": "integer",
+            "description": "self:body 파라미터"
+          },
+          "task_id": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "commit": {
+            "type": "string",
+            "description": "self:body 파라미터"
+          },
+          "ref": {
+            "type": "string",
+            "description": "self:body 파라미터"
           }
         }
       }

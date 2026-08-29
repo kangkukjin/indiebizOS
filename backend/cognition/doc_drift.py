@@ -11,6 +11,9 @@ data_ownership 이 잡은 my_profile.txt 선언 부패와 같은 부류. 이 감
 1) 복합 수치 주장 — "N노드 M 액션"·"N nodes, M actions" ↔ 레지스트리 실측
 2) 죽은 참조 — 백틱 `모듈.py`(실존)·`식별자()`(코드에 부재)
 3) 날짜 모순 — 프론트매터 last_updated 보다 꼬리 "*마지막/최종 업데이트*" 가 최신
+4) 스크립트 등록 설명 args ↔ 소스 실인자 — data/scripts/registry.yaml 의 설명은
+   손으로 쓴 둘째 사본이다. 실증: json원장 set 은 value 를 받는데 설명 args 목록에
+   없어, 설명만 보고 호출한 갱신이 대상을 null 로 덮고 성공을 보고했다(2026-08-30 사고)
 
 ## 규율
 - 역사 서술은 침범하지 않는다: 꼬리 changelog 줄(`*마지막/최종 업데이트`)·화살표(→)·
@@ -209,6 +212,80 @@ def _check_dates(rel: str, text: str) -> List[Dict]:
     return []
 
 
+# ── 검사 4: 스크립트 등록 설명 args 드리프트 ─────────────────────────────────
+
+_SCRIPT_DESC_ARGS_RE = re.compile(r"args\s*:\s*(.+)", re.DOTALL)
+_SCRIPT_ARG_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# 소스의 인자 읽기 세 형태: args.get("x") · args["x"] · "x" in args
+_SCRIPT_SRC_READ_RE = re.compile(
+    r"""args\.get\(\s*["']([A-Za-z_][A-Za-z0-9_]*)["']"""
+    r"""|args\[\s*["']([A-Za-z_][A-Za-z0-9_]*)["']\s*\]"""
+    r"""|["']([A-Za-z_][A-Za-z0-9_]*)["']\s+(?:not\s+)?in\s+args\b""")
+
+
+def _script_desc_args(desc: str):
+    """등록 설명에서 args 나열 토큰 추출 — 'args:' 구간이 없으면 None(나열 자체가 없음)."""
+    m = _SCRIPT_DESC_ARGS_RE.search(desc)
+    if not m:
+        return None
+    seg = re.split(r"\.\s|\.$", m.group(1))[0]  # 첫 문장 끝까지가 나열
+    seg = re.sub(r"\([^)]*\)", " ", seg)        # 괄호 안=기본값·값 후보 설명
+    seg = re.sub(r"\[[^\]]*\]", " ", seg)       # 대괄호 안=예시
+    tokens = []
+    for part in re.split(r"[,·|/=\s]+", seg):
+        t = _SCRIPT_ARG_NAME_RE.fullmatch(part.strip(":"))
+        if t and t.group(0) not in tokens:
+            tokens.append(t.group(0))
+    return tokens
+
+
+def _script_args_flags(name: str, desc: str, src: str) -> List[Dict]:
+    """한 스크립트의 설명↔소스 양방향 대조 (순수 함수 — 시험용 분리)."""
+    doc = f"data/scripts/registry.yaml#{name}"
+    read = set()
+    for m in _SCRIPT_SRC_READ_RE.finditer(src):
+        read.add(next(g for g in m.groups() if g))
+    claimed = _script_desc_args(desc)
+    flags = []
+    # 설명에만 있는 인자 — 죽은 주장 (대조는 dead_refs 와 같은 grep 정밀도: 소스에 따옴표로 실존?)
+    if claimed:
+        dead = [t for t in claimed if f'"{t}"' not in src and f"'{t}'" not in src]
+        if dead:
+            flags.append({"kind": "script_args_drift", "doc": doc, "line": 0,
+                          "claim": f"설명에만 있는 args: {', '.join(dead)}",
+                          "hint": "소스가 읽지 않는 인자 — 설명에서 빼거나 소스를 맞출 것"})
+    # 소스만 아는 인자 — 설명 누락 (json원장 value 사고 부류). 단어 경계로 설명 전문 대조.
+    hidden = [k for k in sorted(read)
+              if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(k)}(?![A-Za-z0-9_])", desc)]
+    if hidden:
+        flags.append({"kind": "script_args_drift", "doc": doc, "line": 0,
+                      "claim": f"설명에 없는 args: {', '.join(hidden)}",
+                      "hint": "소스는 읽는데 설명이 침묵하는 인자 — 설명만 보고 호출하면 반드시 틀린다"})
+    return flags
+
+
+def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:
+    import yaml
+    reg_path = _ROOT / "data" / "scripts" / "registry.yaml"
+    if not reg_path.is_file():
+        return
+    try:
+        registry = yaml.safe_load(reg_path.read_text(encoding="utf-8")) or {}
+    except Exception as e:
+        unchecked.append(f"data/scripts/registry.yaml({e.__class__.__name__})")
+        return
+    for name, entry in registry.items():
+        if not isinstance(entry, dict):
+            continue
+        fp = _ROOT / "data" / "scripts" / str(entry.get("file") or "")
+        try:
+            src = fp.read_text(encoding="utf-8")
+        except Exception as e:
+            unchecked.append(f"data/scripts/{entry.get('file')}({e.__class__.__name__})")
+            continue
+        flags.extend(_script_args_flags(name, str(entry.get("description") or ""), src))
+
+
 # ── 진입점 ───────────────────────────────────────────────────────────────────
 
 def _should_run(force: bool = False) -> bool:
@@ -243,6 +320,7 @@ def measure() -> Dict:
         flags.extend(_check_dates(rel, text))
         per_doc_tokens[rel] = _collect_ident_tokens(masked)
     _check_dead_refs(flags, per_doc_tokens)
+    _check_script_registry(flags, unchecked)
     if len(flags) > _MAX_FLAGS:
         flags = flags[:_MAX_FLAGS]
     return {"flags": flags, "unchecked": unchecked,

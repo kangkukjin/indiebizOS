@@ -54,6 +54,37 @@ def test_json_ledger_append_upsert_and_rolling(tmp_path, monkeypatch, capsys):
     assert saved == [{"id": "a", "v": 3}, {"id": "c", "v": 4}]
 
 
+def test_json_ledger_set_requires_value_key(tmp_path, monkeypatch, capsys):
+    # 사고 재현(2026-08-30): value 대신 items 로 부른 set 이 대상을 조용히 null 로
+    # 덮고 성공을 보고했다. 이제 value 키 부재는 정직 거절 — 파일은 그대로여야 한다.
+    import pytest
+    module = _load("json원장")
+    monkeypatch.setattr(module, "_ROOT", tmp_path)
+    path = "outputs/policy.json"
+    _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "set", "target": "explore_first", "value": True,
+    })
+
+    for bad in [
+        {"path": path, "op": "set", "target": "explore_first", "items": [False]},
+        {"path": path, "op": "set"},  # target 도 value 도 없음 = 파일 전체 null 폭탄이던 경로
+    ]:
+        with pytest.raises(SystemExit):
+            _run_main(module, monkeypatch, capsys, bad)
+        refused = json.loads(capsys.readouterr().out)
+        assert refused["success"] is False and "value" in refused["error"]
+        saved = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+        assert saved == {"explore_first": True}
+
+    # 명시적 null 은 여전히 표현 가능 — 키 부재와 null 값은 다른 사건이다
+    ok = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "set", "target": "explore_first", "value": None,
+    })
+    assert ok["success"]
+    saved = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+    assert saved == {"explore_first": None}
+
+
 def test_json_ledger_nested_target(monkeypatch, capsys, tmp_path):
     module = _load("json원장")
     monkeypatch.setattr(module, "_ROOT", tmp_path)

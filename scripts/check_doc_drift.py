@@ -22,7 +22,7 @@ def main():
         print(f"⚠ 측정 실패: {r.get('error_message')}")
         return 2
     if not flags:
-        print("✓ 문서 드리프트 깃발 0 (복합 수치·죽은 참조·날짜 모순 없음)")
+        print("✓ 문서 드리프트 깃발 0 (복합 수치·죽은 참조·날짜 모순·스크립트 등록 설명 args 없음)")
     else:
         print(f"✗ 문서 드리프트 {len(flags)}건 — data/doc_drift_flags.json")
         for f in flags:

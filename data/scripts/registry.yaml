@@ -1,27 +1,27 @@
 arxiv최신피드:
   description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본
-    60), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'
+    60, 별칭 max_results), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'
   file: arxiv최신피드.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
 github저장소메타:
-  description: 'GitHub 저장소 탐색·메타 다건 조회 — args: repos:[owner/repo,...] 또는 query, limit·sort·order.
-    repos는 최대 8개 병렬 조회, items에 stars·forks·pushed 등 반환'
+  description: 'GitHub 저장소 탐색·메타 다건 조회 — args: repos:[owner/repo,...](별칭 repositories)
+    또는 query, limit·sort·order. repos는 최대 8개 병렬 조회, items에 stars·forks·pushed 등 반환'
   file: github저장소메타.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
 json원장:
   description: 'JSON 배열 원장 원자 갱신 — args: path, op(append|upsert|set), target(선택),
-    item|items, key(기본 id), max_items. 저장소 밖 쓰기 거절'
+    item|items(append/upsert 전용), value(set 전용·키 필수), key(기본 id), max_items. 저장소 밖 쓰기 거절'
   file: json원장.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 60
 나레이션생성:
-  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts.
-    표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
+  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts,
+    voice(기본 kkj), gpu(기본 T4), out_dir, force(재생성). 표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
   file: 나레이션생성.py
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
@@ -35,7 +35,8 @@ json원장:
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
 수리적용상태:
-  description: ''
+  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args:
+    key(특정 세션만), commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
   file: 수리적용상태.py
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
@@ -56,7 +57,9 @@ json원장:
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
 잔여추정:
-  description: 탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체
+  description: '탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체. args: mode(estimate|sample),
+    estimate=relevant·sampled(별칭 n)·unseen(별칭 pool), sample=n·q(별칭 query)·kind·path·seen·start·end·ext(별칭
+    extension)'
   file: 잔여추정.py
   interpreter: python
   registered_at: '2026-08-15T14:02:43'

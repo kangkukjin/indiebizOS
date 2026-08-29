@@ -133,14 +133,20 @@ def main():
                     del array[:len(array) - keep]
             count = len(array)
         elif op == "set":
+            # 키 부재와 명시적 null 은 다르다 — get() 으로 읽으면 value 를 빠뜨린
+            # 호출이 대상을(target 없으면 파일 전체를) 조용히 null 로 덮고 성공을
+            # 보고한다. null 을 정말 쓰려면 {"value": null} 로 명시할 것.
+            if "value" not in args:
+                raise ValueError("set 에는 value 키가 필요합니다 (item/items 는 append/upsert 전용).")
+            value = args["value"]
             if not target:
-                root = args.get("value")
+                root = value
             else:
                 parent, key = _slot(root, target, create=True)
                 if not isinstance(parent, dict):
                     raise ValueError("set target의 부모가 객체가 아닙니다.")
-                parent[key] = args.get("value")
-            changed = [{"target": ".".join(target) or "/", "value": args.get("value")}]
+                parent[key] = value
+            changed = [{"target": ".".join(target) or "/", "value": value}]
             count = 1
         else:
             raise ValueError("op은 append|upsert|set 중 하나여야 합니다.")

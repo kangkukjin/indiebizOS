@@ -11,6 +11,7 @@ import boot_paths  # noqa: E402,F401
 from doc_drift import (  # noqa: E402
     _check_dates, _check_dead_refs, _check_stats_claims,
     _collect_ident_tokens, _is_historical, _mask, measure,
+    _script_args_flags, _script_desc_args,
 )
 
 FACTS = {"node_count": 6, "total": 149, "tools_n": 41, "exts_n": 5}
@@ -75,6 +76,28 @@ def test_t5_dead_refs():
     assert not any("run_maintenance_bundle" in c for c in claims), flags
     assert not any("doc_drift.py" == c for c in claims), flags
     assert not any("launcher_surface" in c for c in claims), flags
+
+
+def test_t7_script_registry_args_drift():
+    # 사고 재현(2026-08-30): 소스는 value 를 읽는데 설명 args 나열에 없다 → 깃발
+    desc = "JSON 원장 갱신 — args: path, op(append|upsert|set), target(선택), item|items, key(기본 id)"
+    src = 'args.get("path")\nargs.get("op")\nargs.get("target")\nargs.get("item")\n' \
+          'args.get("items")\nargs.get("key")\n"value" not in args\nargs["value"]\n'
+    flags = _script_args_flags("json원장", desc, src)
+    assert len(flags) == 1 and "value" in flags[0]["claim"], flags
+    # 설명에 value 가 오르면 깃발 0
+    assert not _script_args_flags("json원장", desc + ", value(set 전용)", src)
+    # 역방향: 설명에만 있는 인자(소스가 안 읽음)도 깃발
+    ghost = _script_args_flags("x", "요약 — args: path, ghost_arg", 'args.get("path")')
+    assert len(ghost) == 1 and "ghost_arg" in ghost[0]["claim"], ghost
+    # 단어 경계 — 'n' 은 설명 산문의 부분 문자열('Wilson')로는 못 숨는다
+    hid = _script_args_flags("y", "Wilson CI 측정 — args: relevant", 'args.get("relevant") or args.get("n")')
+    assert len(hid) == 1 and hid[0]["claim"].endswith("args: n"), hid
+    # 괄호 안 값 후보(append|upsert|set)·대괄호 예시는 인자로 오해하지 않는다
+    toks = _script_desc_args("args: repos:[owner/repo,...] 또는 query, op(a|b), limit(기본 60). 꼬리 설명")
+    assert toks == ["repos", "query", "op", "limit"], toks
+    # 'args:' 나열이 아예 없고 소스도 인자를 안 읽으면 깃발 0
+    assert not _script_args_flags("z", "인자 없는 요약 스크립트", "print(1)")
 
 
 def test_t6_real_repo_clean():

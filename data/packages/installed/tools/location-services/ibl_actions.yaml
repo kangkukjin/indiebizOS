@@ -4,6 +4,7 @@ nodes:
       weather:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           lng: [lon]
+          city: [place]
         returns: items
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'

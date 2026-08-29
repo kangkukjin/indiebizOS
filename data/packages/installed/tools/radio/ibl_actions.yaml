@@ -273,6 +273,15 @@ tool_json:
         language:
           type: string
           description: '[search] 언어'
+        state:
+          type: string
+          description: '[search] 지역·주 이름 (Radio Browser state)'
+        order:
+          type: string
+          description: '[search] 정렬 votes(기본)/clickcount/random/name/bitrate'
+        bitrateMin:
+          type: integer
+          description: '[search] 최소 비트레이트 kbps'
         limit:
           type: integer
           description: '[search] 결과 수(기본 10)'

@@ -18,6 +18,8 @@ nodes:
         group: system
         target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
         target_key: prompt
+        params:
+          system: string   # 시스템 프롬프트 대체 — 생략 시 내장 조수 프롬프트 (2026-08-29 구현-읽기 감사 상환).
         router: handler
         tool: ai_ask
         implementation: consciousness_agent.oneshot_ai_call(role="background") — 모델은 기어가 분류 축으로 해소(세 프리셋 모두 경량 티어). 도구·다단계·대화맥락 없음.
@@ -31,6 +33,14 @@ nodes:
           limit: integer
           tables: boolean
           blocks: boolean   # 문단 items 분할 — B35-3 params 블록에 빠져 있던 실존 param (2026-08-24)
+          # 2026-08-29 구현-읽기 감사 상환 — format 별 옵션(전부 read_file/office_ops 가 읽음).
+          end: integer      # text 전용 — 끝 줄(별칭 아닌 계산이라 여기 선언, limit = end − offset 로 흡수).
+          client: boolean   # 파일을 b64 봉투로 반환해 부른 몸(폰)이 네이티브 저장하게 한다.
+          mime: string      # client 전용 — 저장 MIME 타입(생략 시 확장자로 추정).
+          pages: string     # pdf 전용 — 페이지 범위(예 '1-5').
+          extract_images: boolean  # docx 전용 — 이미지 추출 여부(기본 true).
+          max_blocks: integer      # docx 전용 — 블록(문단·표) 상한(기본 300, 0=무제한).
+          max_rows: integer        # xlsx 전용 — 시트당 행 상한(기본 200).
         returns: scalar
         # 변이 축이 op 이 아니라 **param** 인 통화 (F20-1 shape_variants 판정의 동형 —
         # "변이 축은 param" 문제를 op 로 바꾸지 않고 선언의 입도를 param 축으로 확장한다).
@@ -65,6 +75,9 @@ nodes:
         description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
         group: file
         target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'
+        aliases:
+          # output_path — 형제 emitter 관습어 수용 (2026-08-29 구현-읽기 감사 상환).
+          output: [output_path]
         router: handler
         tool: fill_op
         implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake), DOCX는 {{자리표시자}} 치환. data 없으면 필드 열거.
@@ -113,8 +126,9 @@ nodes:
         # 기제이지 어휘가 아니다. pattern 있으면 glob, 메타 파라미터만 있으면 Spotlight.
         aliases:
           limit: [max_results]
-          query: [search_term]
+          query: [search_term, q]   # q — fs_meta 관습어 수용 (2026-08-29 구현-읽기 감사 상환).
           min_size_mb: [min_size]
+          root_path: [volume_name]  # 볼륨명으로 검색 루트 지정하던 관습어 (2026-08-29 구현-읽기 감사 상환).
         returns: items
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
         description: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
@@ -278,6 +292,11 @@ nodes:
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
         target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
+        aliases:
+          # 관습어 수용 — 핸들러 _patch_op 이 읽던 별칭을 데이터로 (2026-08-29 구현-읽기 감사 상환).
+          old_string: [old]
+          new_string: [new]
+          reason: [rationale]
         router: handler
         tool: patch_op
         implementation: repair_staging.py (system_essentials 형제 모듈) — 세션별 worktree(.worktrees/repair-<task>)에 라이브 원본을 씨로 스테이징, verify() 배터리, apply 가 _red_write_prepare/_red_write_finalize(백업·keeper·워치독)를 통과해 라이브 반영.

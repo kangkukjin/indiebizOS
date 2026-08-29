@@ -447,5 +447,8 @@ tool_json:
         coin_id:
           type: string
           description: 코인 ID 또는 심볼 (bitcoin, BTC 등)
+        days:
+          type: integer
+          description: 일별 시세 이력 일수 (기본 0=현재가만)
       required:
       - coin_id

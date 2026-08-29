@@ -89,6 +89,9 @@ nodes:
   limbs:
     actions:
       android:
+        aliases:   # ★정본(check_param_canon) — 핸들러의 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
+          key: [keycode]
+          package_name: [package]
         returns: effect
         description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
         target_description: 흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.
@@ -126,6 +129,12 @@ nodes:
         - 터치
         - 탭
       phone:
+        aliases:   # ★정본(check_param_canon) — 핸들러의 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
+          to: [number]
+          filename: [name]
+          mime: [mime_type]
+          image_path: [path]
+          image_b64: [image]
         returns: effect
         description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행/파일저장·공유. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
         group: device
@@ -242,7 +251,10 @@ tool_json:
       폰 네이티브 전용(맥/원격은 분산 IBL 로 폰에 포워드).
     input_schema:
       type: object
-      properties: {}
+      properties:
+        refresh:
+          type: boolean
+          description: true 면 캐시 무시하고 강제 재측정 (데스크탑 몸 — 이사·이동 후)
       additionalProperties: true
   - name: phone_listen
     description: '폰 마이크 온디맨드 입력. op=transcribe(기본): 지금 발화를 받아써 텍스트로(STT, ko-KR, timeout_sec 대기). record: duration_sec 초 녹음해
@@ -304,3 +316,21 @@ tool_json:
         package_name:
           type: string
           description: '실행할 앱 패키지명 (op=open_app), 예: com.kakao.talk'
+        content:
+          type: string
+          description: 저장·공유할 텍스트 내용 (op=save/share — b64 와 택일, 생략 시 파이프 이전 결과)
+        b64:
+          type: string
+          description: 저장·공유할 바이너리의 base64 (op=save/share — content 와 택일)
+        filename:
+          type: string
+          description: 저장 파일명 (op=save/share/clipboard — name 별칭 허용)
+        mime:
+          type: string
+          description: MIME 타입 (op=save/share/clipboard, 기본 text/plain·image/png — mime_type 별칭 허용)
+        image_path:
+          type: string
+          description: 클립보드에 얹을 이미지의 로컬 경로 (op=clipboard — path 별칭 허용)
+        image_b64:
+          type: string
+          description: 클립보드에 얹을 이미지의 base64 또는 data URI (op=clipboard — image·b64 도 수용)

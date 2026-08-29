@@ -2,13 +2,21 @@ node: sense
 actions:
   paper:
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-      limit: [max_results]
+      limit: [max_results, display]
+      query: [q, keyword]
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       arxiv_id: string
       pmcid: string
+      year: [string, integer]    # search source=nanet — 발행연도 후필터(정확 일치)
+      type: string               # search source=nanet — 자료유형 후필터(학위논문|학술논문|단행본 또는 divFlag 값)
+      page: integer              # search source=nanet — 시작 페이지(pageNo, 기본 1·페이지당 5건 고정)
+      year_from: integer         # search source=openalex·semantic — 발행연도 하한
+      year_to: integer           # search source=openalex — 발행연도 상한
+      open_access: boolean       # search source=openalex — true=오픈액세스만
+      sort_by: string            # search source=openalex — relevance(기본)|cited|recent 정렬
     returns: items
     side_effect: true    # download 가 PDF 를 로컬에 저장한다
     fixture: '[sense:paper]{query: "attention"}'
@@ -37,7 +45,10 @@ actions:
     - 학위논문
   researcher:
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
-      limit: [max_results]
+      limit: [max_results, display]
+      name: [name_ko, searchTerm]
+      org: [orgName_ko]
+      id: [lodID, authorID]
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:researcher]{op: "find", query: "정은정"}'
@@ -65,6 +76,8 @@ actions:
   entity:
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       limit: [max_results]
+      query: [q]
+      id: [qid]
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:entity]{query: "강국진"}'

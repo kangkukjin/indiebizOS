@@ -15,6 +15,50 @@
             "type": "string",
             "description": "동작 분기 — target_description 참조"
           },
+          "org_id": {
+            "type": "string",
+            "description": "통계 작성 기관 ID (예 101=통계청 — query 검색으로 확인)"
+          },
+          "tbl_id": {
+            "type": "string",
+            "description": "통계표 ID (org_id 와 함께 데이터 조회)"
+          },
+          "info": {
+            "type": "boolean",
+            "description": "true 면 org_id+tbl_id 통계표의 메타정보 조회 (기본 false=데이터)"
+          },
+          "itm_id": {
+            "type": "string",
+            "description": "KOSIS 항목 ID (기본 ALL)"
+          },
+          "obj_l1": {
+            "type": "string",
+            "description": "KOSIS 분류1 코드 (기본 ALL)"
+          },
+          "obj_l2": {
+            "type": "string",
+            "description": "KOSIS 분류2 코드 (기본 ALL)"
+          },
+          "obj_l3": {
+            "type": "string",
+            "description": "KOSIS 분류3 코드 (기본 ALL)"
+          },
+          "prd_se": {
+            "type": "string",
+            "description": "수록 주기 (Y=년 기본, Q=분기, M=월, D=일)"
+          },
+          "start_prd_de": {
+            "type": "string",
+            "description": "시작 수록시점 (예 \"2020\", 월이면 \"202001\")"
+          },
+          "end_prd_de": {
+            "type": "string",
+            "description": "종료 수록시점 (start_prd_de 와 같은 형식)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "통합 검색 결과 수 (query 검색, 기본 10 — count 별칭 허용)"
+          },
           "query": {
             "type": "string",
             "description": "sense:kosis 의 주 파라미터"

@@ -1,6 +1,8 @@
 node: sense
 actions:
   legal:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      id: [law_id, precedent_id]
     returns: items
     fixture: '[sense:legal]{query: "개인정보"}'
     description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").

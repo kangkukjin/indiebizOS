@@ -154,6 +154,14 @@
           "count_per_month": {
             "type": "integer",
             "description": "sense:realty 파라미터"
+          },
+          "months": {
+            "type": "integer",
+            "description": "sense:realty 파라미터"
+          },
+          "name": {
+            "type": "string",
+            "description": "sense:realty 파라미터"
           }
         },
         "required": []

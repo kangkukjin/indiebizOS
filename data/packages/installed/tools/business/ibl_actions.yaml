@@ -15,10 +15,12 @@ nodes:
       ledger:
         aliases:
           op: [action]
+          id: [item_id]      # 핸들러의 `id or item_id` 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
+          search: [q]        # _item_list 의 `search or q`
+          path: [source]     # _item_add_image 의 `path or source`
           # ★id 에 business_id 를 별칭으로 걸지 말 것 — _item_save 가
           #   `ti.get("id") or ti.get("item_id")` 로 생성/수정을 가르므로,
           #   생성 호출(business_id + title)이 "아이템 #business_id 수정"으로 오독된다.
-          #   store 별 함수들은 이미 id·item_id 를 둘 다 읽는다(별칭 불필요).
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:ledger]{store: "business", op: "list"}'
@@ -530,6 +532,8 @@ nodes:
         - 메신저
         - 받은메시지
       neighbor:
+        aliases:
+          from: [from_id, from_name]   # _nb_merge 의 `from or from_id or from_name`
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[others:neighbor]{op: "list"}'
@@ -702,6 +706,15 @@ tool_json:
         contact_value:
           type: string
           description: 연락처 값 (contact_add)
+        npub:
+          type: string
+          description: nostr 연락처 동시 연결 (save — IndieNet 팔로우→이웃 승격용, 멱등)
+        warehouse_score:
+          type: integer
+          description: 이웃의 창고에 주는 창고점수 0-3 (save — 창고 연락처 있는 이웃만 유효)
+        'from':
+          type: string
+          description: 합칠 이웃의 이름 또는 id (merge — from_id·from_name 별칭 허용)
   - name: ledger_op
     description: '사업 원장 CRUD (store x op). 2026-08-15 통합 — 옛 business_op /
       business_item_op / business_document_op / work_guideline_op.
@@ -759,6 +772,12 @@ tool_json:
         path:
           type: string
           description: 이미지 경로 (add_image/remove_image)
+        details:
+          type: string
+          description: 아이템 설명 (store=item 의 save)
+        attachment_path:
+          type: string
+          description: 아이템 첨부 경로(JSON 배열 문자열) — store=item 의 save. 사진은 add_image/remove_image 권장
   - name: auto_response_op
     description: '외부 메시지(Gmail/Nostr) 자동응답 서비스 제어.
 

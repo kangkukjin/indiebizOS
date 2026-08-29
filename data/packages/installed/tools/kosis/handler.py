@@ -53,7 +53,7 @@ def execute(tool_input: dict, context):
         elif query:
             return kosis_api.integrated_search(
                 keyword=query,
-                count=tool_input.get("count", 10),
+                count=tool_input.get("limit") or tool_input.get("count") or 10,
             )
         else:
             return {"success": False, "error": "query / indicator / (org_id + tbl_id) 중 하나가 필요합니다."}

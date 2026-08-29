@@ -233,6 +233,8 @@ nodes:
         aliases:
           limit:
           - count
+          query:
+          - keyword
         returns: items
         fixture: '[sense:contest]{}'
         description: Kaggle 국제 AI/데이터 경진대회 검색(현재 소스=Kaggle 하나, 영문 대회). 상금·마감일·주최로 출품 기회 탐색. 국내 공모전·대회는 [sense:search] 웹 검색이 정직한 경로.
@@ -395,6 +397,10 @@ nodes:
         aliases:
           query:
           - keyword
+          base_date:
+          - date
+          rows:
+          - max_results
         params:
           query: string
         returns: items
@@ -1104,6 +1110,13 @@ nodes:
       kosis:
         params:
           indicator: string
+        aliases:
+          query:
+          - keyword
+          indicator:
+          - indicator_id
+          limit:
+          - count
         returns: items
         fixture: '[sense:kosis]{query: "인구"}'
         description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히 read_guide(query="통계").
@@ -1122,6 +1135,10 @@ nodes:
         - 물가
         - 실업률
       legal:
+        aliases:
+          id:
+          - law_id
+          - precedent_id
         returns: items
         fixture: '[sense:legal]{query: "개인정보"}'
         description: 대한민국 법률 통합 검색 (law.go.kr). query/id 분기, target 10종(법령/판례/규칙 등). 자세히 read_guide(query="법률").
@@ -1143,6 +1160,8 @@ nodes:
         aliases:
           lng:
           - lon
+          city:
+          - place
         returns: items
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
@@ -1611,6 +1630,8 @@ nodes:
           - longitude
           - lon
           - x
+          query:
+          - area
         returns: items
         fixture: '[sense:commercial]{lat: 37.5, lng: 127.0}'
         description: 상권 점포 목록 (소상공인진흥공단). 지명·좌표·행정동으로 영역 지정, 업종 필터. 집계는 [table:groupby]로.
@@ -1672,11 +1693,19 @@ nodes:
           query: string
           year_month: string
           count_per_month: integer
+          months: integer
+          name: string
         aliases:
           region_code:
           - district_code
           - dong_code
           - code
+          year_month:
+          - month
+          region:
+          - region_name
+          name:
+          - q
         returns: items
         side_effect: false
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
@@ -1986,6 +2015,8 @@ nodes:
         aliases:
           limit:
           - count
+          query:
+          - keyword
         returns: items
         fixture: '[sense:startup]{query: "AI"}'
         description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.
@@ -2039,9 +2070,22 @@ nodes:
         aliases:
           limit:
           - max_results
+          - display
+          query:
+          - q
+          - keyword
         params:
           arxiv_id: string
           pmcid: string
+          year:
+          - string
+          - integer
+          type: string
+          page: integer
+          year_from: integer
+          year_to: integer
+          open_access: boolean
+          sort_by: string
         returns: items
         side_effect: true
         fixture: '[sense:paper]{query: "attention"}'
@@ -2072,6 +2116,15 @@ nodes:
         aliases:
           limit:
           - max_results
+          - display
+          name:
+          - name_ko
+          - searchTerm
+          org:
+          - orgName_ko
+          id:
+          - lodID
+          - authorID
         returns: items
         side_effect: false
         fixture: '[sense:researcher]{op: "find", query: "정은정"}'
@@ -2100,6 +2153,10 @@ nodes:
         aliases:
           limit:
           - max_results
+          query:
+          - q
+          id:
+          - qid
         returns: items
         side_effect: false
         fixture: '[sense:entity]{query: "강국진"}'
@@ -2149,6 +2206,8 @@ nodes:
           - display
           - page_size
           - max_results
+          headlines:
+          - front_page
         returns: items
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
@@ -2209,6 +2268,9 @@ nodes:
 
           '
         target_key: op
+        aliases:
+          language:
+          - languages
         group: media
         router: handler
         tool: video_op
@@ -2948,6 +3010,12 @@ nodes:
         aliases:
           op:
           - action
+          id:
+          - item_id
+          search:
+          - q
+          path:
+          - source
         returns: items
         side_effect: true
         fixture: '[self:ledger]{store: "business", op: "list"}'
@@ -3512,6 +3580,9 @@ nodes:
                 - '{meta}'
                 - '{summary}'
       limb:
+        aliases:
+          target:
+          - device_id
         returns: items
         side_effect: true
         fixture: '[self:limb]{op: "list"}'
@@ -4348,6 +4419,9 @@ nodes:
             detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
+        aliases:
+          query:
+          - q
         returns: scalar
         side_effect: true
         fixture: '[self:forage]{op: "recall", query: "test"}'
@@ -4480,6 +4554,8 @@ nodes:
         group: system
         target_description: prompt(지시/질문)에 할 일을, context(선택)에 대상 텍스트/데이터를 준다.
         target_key: prompt
+        params:
+          system: string
         router: handler
         tool: ai_ask
         implementation: consciousness_agent.oneshot_ai_call(role="background") — 모델은 기어가 분류 축으로 해소(세 프리셋 모두 경량 티어). 도구·다단계·대화맥락 없음.
@@ -4501,6 +4577,13 @@ nodes:
           limit: integer
           tables: boolean
           blocks: boolean
+          end: integer
+          client: boolean
+          mime: string
+          pages: string
+          extract_images: boolean
+          max_blocks: integer
+          max_rows: integer
         returns: scalar
         returns_variants:
           blocks=true: items
@@ -4523,6 +4606,9 @@ nodes:
         description: 양식 채우기 — PDF 폼/DOCX 템플릿에 값을 넣어 완성 문서를 만든다. read 의 짝(문서→문서, 구조 보존). data 없이 부르면 채울 수 있는 필드 목록을 돌려준다(먼저 필드 파악 → 채우기).
         group: file
         target_description: 'path — 템플릿 문서(.pdf 폼 또는 {{자리표시자}} 든 .docx). data — 필드→값 매핑({이름: 값}); 생략하면 채울 수 있는 필드 목록 반환(introspection). output — 출력 경로(생략 시 원본 옆 _filled). flatten — PDF 전용, true면 폼을 정적 내용으로 구워 제출용(수정 불가, 기본 false). 스캔 이미지 PDF는 폼 필드가 없어 채울 수 없다(별도 OCR 대상).'
+        aliases:
+          output:
+          - output_path
         router: handler
         tool: fill_op
         implementation: handler.py가 확장자로 분기 — PDF는 PyMuPDF widget 값 설정(+flatten=bake), DOCX는 {{자리표시자}} 치환. data 없으면 필드 열거.
@@ -4565,8 +4651,11 @@ nodes:
           - max_results
           query:
           - search_term
+          - q
           min_size_mb:
           - min_size
+          root_path:
+          - volume_name
         returns: items
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
         description: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
@@ -4724,6 +4813,13 @@ nodes:
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
         target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
+        aliases:
+          old_string:
+          - old
+          new_string:
+          - new
+          reason:
+          - rationale
         router: handler
         tool: patch_op
         implementation: repair_staging.py (system_essentials 형제 모듈) — 세션별 worktree(.worktrees/repair-<task>)에 라이브 원본을 씨로 스테이징, verify() 배터리, apply 가 _red_write_prepare/_red_write_finalize(백업·keeper·워치독)를 통과해 라이브 반영.
@@ -5027,6 +5123,11 @@ nodes:
         - 사진창
         - 폴더
       android:
+        aliases:
+          key:
+          - keycode
+          package_name:
+          - package
         returns: effect
         description: 안드로이드 폰 화면 조작 (op 분기) — snapshot으로 요소 읽고 ref/좌표로 탭. 집 PC=USB-ADB 연결 폰, 폰 자신=네이티브 접근성(자급). 데스크톱은 limbs:screen, 웹은 limbs:browser.
         target_description: 흐름 — snapshot(요소+라벨+좌표 읽기, 기본) → tap(query 라벨/id 일부 권장, 또는 x,y) → type(text). 입력 후 전송 등 동적 버튼은 반드시 snapshot 다시. 주요 파라미터 — query(탭할 요소 라벨), x/y(snapshot이 준 좌표), text(입력), key(back/home/recent), package_name(앱 실행, 예 com.kakao.talk), direction(swipe up/down/left/right). device_id 생략 시 첫 기기(PC 경로). 가이드 android.md 참조.
@@ -5064,6 +5165,17 @@ nodes:
         - 터치
         - 탭
       phone:
+        aliases:
+          to:
+          - number
+          filename:
+          - name
+          mime:
+          - mime_type
+          image_path:
+          - path
+          image_b64:
+          - image
         returns: effect
         description: 폰 네이티브 동작 (op 분기) — 알림/진동/토스트/복사/음성/앱실행/파일저장·공유. 동작 요청은 sense:phone 진단 없이 바로 실행 — 도달성은 sense:phone(푸시 피드) 신선도와 무관, 미도달이면 phone_unreachable 명시됨.
         group: device
@@ -5206,10 +5318,17 @@ nodes:
         - Pages
       screen:
         params:
+          amount: integer
+          button: string
+          clicks: integer
           direction: string
+          duration: number
           end_x: integer
           end_y: integer
+          interval: number
           key: string
+          region: object
+          screenshot_after: boolean
           start_x: integer
           start_y: integer
           text: string
@@ -5272,6 +5391,8 @@ nodes:
         aliases:
           limit:
           - display
+          job:
+          - job_id
         returns: effect
         description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
         target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
@@ -5431,6 +5552,15 @@ nodes:
         aliases:
           limit:
           - count
+          output_path:
+          - output
+          - filename
+          - path
+          - file
+          - name
+          position:
+          - seconds
+          - time
         returns: effect
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
@@ -6158,6 +6288,10 @@ nodes:
         - 메신저
         - 받은메시지
       neighbor:
+        aliases:
+          from:
+          - from_id
+          - from_name
         returns: items
         side_effect: true
         fixture: '[others:neighbor]{op: "list"}'
@@ -6908,9 +7042,13 @@ nodes:
           - array
           path: string
           style_preset: string
+          quality: string
+          model: string
         aliases:
           output_path:
           - filename
+          input_image:
+          - input_image_path
         returns: effect
         runs_on: anywhere
         description: Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt 지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
@@ -6954,6 +7092,9 @@ nodes:
         prompt_hidden: true
         description: 앱 전용 아이콘 생성. 사용자 아이디어를 AI가 귀여운 만화(kawaii/카툰) 스티커 프롬프트로 확장 → Pollinations flux(무료) 저해상도 아이콘 → 미리보기 + 폰이면 클립보드 자동 복사(카톡 붙여넣기).
         target_description: prompt(무엇을 그릴지 짧게, 한국어 가능) 필수. size(정사각 px, 기본 384)·style(스타일 힌트)·copy(폰 클립보드 자동복사, 기본 true) 옵션.
+        aliases:
+          prompt:
+          - q
         group: media_produce
         router: handler
         tool: generate_icon
@@ -7081,6 +7222,9 @@ nodes:
           local_path: string
           name: string
           site_id: string
+          repo_url: string
+          deploy_url: string
+          description: string
         returns: effect
         runs_on: pc_only
         description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
@@ -7109,6 +7253,8 @@ nodes:
         params:
           url: string
           checks: array
+          output_dir: string
+          analyze: boolean
         returns: effect
         runs_on: pc_only
         description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
@@ -7153,6 +7299,7 @@ nodes:
       web_component:
         params:
           site_id: string
+          components: array
         returns: effect
         runs_on: pc_only
         description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).
@@ -7595,6 +7742,19 @@ nodes:
         params:
           x: string
           y: string
+          spec: object
+          horizontal: boolean
+          stacked: boolean
+          show_volume: boolean
+          ma_periods: array
+          show_percentage: boolean
+          donut: boolean
+          show_trendline: boolean
+          x_labels: array
+          y_labels: array
+          color_scale: string
+          show_values: boolean
+          layout: string
         aliases:
           chart_type:
           - type

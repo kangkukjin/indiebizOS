@@ -4,6 +4,7 @@ nodes:
       guestpc:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           limit: [display]
+          job: [job_id]      # shell 응답 필드명 그대로 되넣는 관습어
         returns: effect   # effector — 셸/파일을 남의 PC 에서 실행(부작용). effect 는 자가점검이 자동 실행하지 않는다.
         description: USB 헬퍼(손발)가 붙은 게스트 PC 에서 셸·파일 작업 + 화면 보기 실행 (op 분기) — 허브에서 명령을 내려보낸다. 데스크톱 자기 조작은 limbs:screen, 폰은 limbs:android.
         target_description: 'op=shell(기본): cmd 를 그 PC 셸(win=cmd, mac/linux=sh)로 실행 — cwd(작업 디렉토리)·timeout(초)·shell(윈도우: cmd 기본 | powershell) 선택. ★cwd 를 생략하면 **직전 명령이 끝난 자리에서 이어진다**(cd 가 유지됨 — 결과의 cwd 필드가 지금 위치). **환경변수·venv 활성화도 이어진다**(source .venv/bin/activate 를 한 번 하면 다음 명령부터 그 파이썬이 쓰인다 — 결과의 session_env 가 이어지는 변수 개수). 단 **셸 함수·별칭은 안 이어진다**(상주 셸이 아니라 매번 새 셸에 환경만 다시 깔기 때문) — 그래서 `deactivate` 같은 *함수*는 부를 수 없고, venv 를 벗으려면 `reset: true` 를 쓴다(기억한 디렉토리·환경을 버리고 그 PC 원래 환경으로). stdin 으로 비밀번호·y/n 같은 프롬프트 입력을 미리 물릴 수 있다(대화형 명령이 멈추지 않게). ★오래 걸리는 명령(설치·빌드·다운로드)은 background: true 로 — 즉시 job_id 가 돌아오고 결과는 op=result 로 회수(같은 명령 재전송 금지=이중 실행 위험). result: job(작업 ID)의 결과 회수 — 아직이면 pending 이면서 **progress.tail(지금까지의 출력 꼬리)** 를 함께 준다(길게 도는 설치·빌드가 진행 중인지 멎었는지 이걸로 판단. 재전송 금지). read: path 파일 내용 읽기(200KB 상한). write: path 에 content 쓰기. list: path 디렉토리 목록(생략 시 현재). info: 그 PC 신상 한 방 — os·버전·사용자·관리자여부·PATH·설치된 셸/패키지매니저/도구·GUI 가능여부·화면 해상도. **낯선 PC 에서 첫 명령으로 부를 것**(문법·패키지매니저를 추측해 실패하는 왕복을 없앤다). 접속 때 이미 한 번 수확돼 있어 [self:limb]{op:list} 의 env 로도 볼 수 있다. screen: 그 PC 화면을 캡처해 **직접 본다** — 셸 결과 시각 확인·GUI 상태 파악용(max_width 기본 1280·format png|jpeg|auto·display 다중 모니터 인덱스). 설치 마법사·에러 팝업처럼 셸로 안 보이는 것은 screen 으로 확인할 것. ★GUI 조작(손) — click(x,y[,button,clicks])·move·type(text)·key(key)·scroll(direction,amount)·drag(x,y→x2,y2): **x·y 는 반드시 직전 screen 이 보낸 이미지 위의 좌표**다(원본 해상도로 환산할 필요 없음 — 헬퍼가 배율을 안다). 그래서 순서가 곧 규율이다: screen 으로 보고 → 좌표를 정해 click → 결과 확인. 눈대중 좌표 금지. 입력 op 는 기본으로 조작 후 화면을 다시 찍어 돌려주므로(shot:false 로 끔) 한 번의 호출에 조작과 확인이 함께 온다. type 은 **현재 포커스**에 들어가니 먼저 클릭해 포커스를 잡을 것. 셸로 되는 일은 셸이 더 정확하다 — GUI 조작은 셸로 안 되는 일(설치 마법사·로그인 창·GUI 전용 앱)에 쓸 것. detach: 볼일 끝 해제 — 그 PC 헬퍼 종료(그 PC 무잔류, 재실행 시 자동 재연결). ★limb=대상 손발 이름 — 손발이 둘 이상이면 필수(자동승인 체제의 오배송 방어: 이름 없이는 엉뚱한 PC 로 갈 수 있어 실행 거부하고 목록 제시). 하나뿐이면 생략 가능. 손발은 [self:limb]{op:issue}로 이름 지어 USB 발급 → 그 PC 에서 실행해 붙인다.'
@@ -63,6 +64,8 @@ nodes:
   self:
     actions:
       limb:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          target: [device_id]
         # list op 가 목록을 낸다 — self:switch·self:trigger·self:package 와 같은 부류.
         returns: items
         # ★발급·폐기는 부작용 — 종전엔 returns:effect 가 그 뜻을 겸했다. 통화를 items 로
@@ -143,6 +146,9 @@ tool_json:
         job:
           type: string
           description: 결과를 회수할 작업 ID (op=result — shell 응답의 job_id)
+        wait:
+          type: number
+          description: 결과 대기 초 (op=result, 기본 5)
         path:
           type: string
           description: 대상 파일/디렉토리 경로 (op=read/write/list)

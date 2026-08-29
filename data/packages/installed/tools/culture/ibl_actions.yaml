@@ -73,6 +73,8 @@ actions:
   book:
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       query: [keyword]
+      base_date: [date]        # trending 기준일 관습어
+      rows: [max_results]      # Google Books 원어 관습어
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -620,6 +622,18 @@ tool_json:
         base_date:
           type: string
           description: '[trending] 기준일 YYYY-MM-DD (기본 어제)'
+        from_age:
+          type: integer
+          description: '[popular] 연령 시작(세, 예 30)'
+        to_age:
+          type: integer
+          description: '[popular] 연령 끝(세, 예 39)'
+        loan_info:
+          type: boolean
+          description: '[search, isbn+detail] 대출 통계 포함 여부 (기본 true)'
+        order_by:
+          type: string
+          description: '[search, source=google] 정렬 (기본 relevance, newest=최신순)'
         isbn:
           type: string
           description: '[search] ISBN 조회'

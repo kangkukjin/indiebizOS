@@ -85,6 +85,37 @@
           "pmcid": {
             "type": "string",
             "description": "sense:paper 파라미터"
+          },
+          "year": {
+            "type": [
+              "string",
+              "integer"
+            ],
+            "description": "sense:paper 파라미터"
+          },
+          "type": {
+            "type": "string",
+            "description": "sense:paper 파라미터"
+          },
+          "page": {
+            "type": "integer",
+            "description": "sense:paper 파라미터"
+          },
+          "year_from": {
+            "type": "integer",
+            "description": "sense:paper 파라미터"
+          },
+          "year_to": {
+            "type": "integer",
+            "description": "sense:paper 파라미터"
+          },
+          "open_access": {
+            "type": "boolean",
+            "description": "sense:paper 파라미터"
+          },
+          "sort_by": {
+            "type": "string",
+            "description": "sense:paper 파라미터"
           }
         },
         "required": []

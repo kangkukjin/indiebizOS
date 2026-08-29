@@ -10,6 +10,7 @@ actions:
       region_code: [district_code, dong_code, code]
       lat: [latitude, y]
       lng: [longitude, lon, x]
+      query: [area]
     returns: items
     fixture: '[sense:commercial]{lat: 37.5, lng: 127.0}'
     description: 상권 점포 목록 (소상공인진흥공단). 지명·좌표·행정동으로 영역 지정, 업종 필터. 집계는 [table:groupby]로.
@@ -74,8 +75,13 @@ actions:
       query: string
       year_month: string
       count_per_month: integer   # source=molit 전용 월별 반환 상한(기본 30). zigbang·naver 는 무시하고 무시된_파라미터 로 신고 — 그쪽 상한은 limit.
+      months: integer            # source=molit 상대기간 — 최근 N개월(명시 start/end_month 우선). 앱 기간 select 어휘.
+      name: string               # source=molit 후필터 — 단지/건물 명칭으로 결과 좁히기(앱 드릴다운).
     aliases:
       region_code: [district_code, dong_code, code]
+      year_month: [month]
+      region: [region_name]
+      name: [q]
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:realty]{op: "query", region: "강남구"}'

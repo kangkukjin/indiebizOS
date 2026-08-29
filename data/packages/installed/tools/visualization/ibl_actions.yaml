@@ -7,6 +7,20 @@ actions:
     params:
       x: string
       y: string
+      # 2026-08-29 구현-읽기 감사 상환 — chart_type 별 옵션 knob 전체를 선언(전부 handler 렌더러가 읽음).
+      spec: object            # Plotly figure JSON {data, layout} 그대로 렌더 — chart_type knob 밖 롱테일용.
+      horizontal: boolean     # bar 전용 — 가로 막대(기본 false).
+      stacked: boolean        # bar 전용 — 누적 막대(기본 false).
+      show_volume: boolean    # candlestick 전용 — 거래량 서브플롯(기본 true).
+      ma_periods: array       # candlestick 전용 — 이동평균선 기간 목록(예 [5, 20, 60]).
+      show_percentage: boolean  # pie 전용 — 퍼센트 표시(기본 true).
+      donut: boolean          # pie 전용 — 도넛형(기본 false).
+      show_trendline: boolean # scatter 전용 — 추세선(기본 false).
+      x_labels: array         # heatmap 전용 — x축 라벨 배열.
+      y_labels: array         # heatmap 전용 — y축 라벨 배열.
+      color_scale: string     # heatmap 전용 — 색상 스케일(기본 viridis).
+      show_values: boolean    # heatmap 전용 — 셀 값 표시(기본 true).
+      layout: string          # multi 전용 — 서브플롯 배치(기본 auto).
     aliases:
       chart_type: [type]
       # 형제 emitter([table:document]·[table:spreadsheet])는 산출 경로를 `path` 로 받는다.

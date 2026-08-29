@@ -68,6 +68,10 @@
             "type": "string",
             "description": "결과를 회수할 작업 ID (op=result — shell 응답의 job_id)"
           },
+          "wait": {
+            "type": "number",
+            "description": "결과 대기 초 (op=result, 기본 5)"
+          },
           "path": {
             "type": "string",
             "description": "대상 파일/디렉토리 경로 (op=read/write/list)"

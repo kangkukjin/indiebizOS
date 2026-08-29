@@ -152,6 +152,22 @@
             "type": "string",
             "description": "[trending] 기준일 YYYY-MM-DD (기본 어제)"
           },
+          "from_age": {
+            "type": "integer",
+            "description": "[popular] 연령 시작(세, 예 30)"
+          },
+          "to_age": {
+            "type": "integer",
+            "description": "[popular] 연령 끝(세, 예 39)"
+          },
+          "loan_info": {
+            "type": "boolean",
+            "description": "[search, isbn+detail] 대출 통계 포함 여부 (기본 true)"
+          },
+          "order_by": {
+            "type": "string",
+            "description": "[search, source=google] 정렬 (기본 relevance, newest=최신순)"
+          },
           "isbn": {
             "type": "string",
             "description": "[search] ISBN 조회"

@@ -122,6 +122,10 @@
           "context": {
             "type": "string",
             "description": "판단 대상이 되는 텍스트/데이터 (선택)"
+          },
+          "system": {
+            "type": "string",
+            "description": "self:ask 파라미터"
           }
         },
         "required": [
@@ -528,6 +532,34 @@
           },
           "blocks": {
             "type": "boolean",
+            "description": "self:read 파라미터"
+          },
+          "end": {
+            "type": "integer",
+            "description": "self:read 파라미터"
+          },
+          "client": {
+            "type": "boolean",
+            "description": "self:read 파라미터"
+          },
+          "mime": {
+            "type": "string",
+            "description": "self:read 파라미터"
+          },
+          "pages": {
+            "type": "string",
+            "description": "self:read 파라미터"
+          },
+          "extract_images": {
+            "type": "boolean",
+            "description": "self:read 파라미터"
+          },
+          "max_blocks": {
+            "type": "integer",
+            "description": "self:read 파라미터"
+          },
+          "max_rows": {
+            "type": "integer",
             "description": "self:read 파라미터"
           }
         },

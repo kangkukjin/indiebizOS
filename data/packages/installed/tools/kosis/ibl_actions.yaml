@@ -6,6 +6,10 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       indicator: string
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      query: [keyword]
+      indicator: [indicator_id]
+      limit: [count]   # 핸들러도 limit 정본 읽기로 개명 (2026-08-29 구현-읽기 감사 상환)
     returns: items
     fixture: '[sense:kosis]{query: "인구"}'
     description: 통계청 KOSIS. query 검색, indicator(주요지표), org_id+tbl_id(특정 통계표) 분기. items 통화. 자세히 read_guide(query="통계").
@@ -47,4 +51,37 @@ tool_json:
         op:
           type: string
           description: 동작 분기 — target_description 참조
+        org_id:
+          type: string
+          description: 통계 작성 기관 ID (예 101=통계청 — query 검색으로 확인)
+        tbl_id:
+          type: string
+          description: 통계표 ID (org_id 와 함께 데이터 조회)
+        info:
+          type: boolean
+          description: true 면 org_id+tbl_id 통계표의 메타정보 조회 (기본 false=데이터)
+        itm_id:
+          type: string
+          description: KOSIS 항목 ID (기본 ALL)
+        obj_l1:
+          type: string
+          description: KOSIS 분류1 코드 (기본 ALL)
+        obj_l2:
+          type: string
+          description: KOSIS 분류2 코드 (기본 ALL)
+        obj_l3:
+          type: string
+          description: KOSIS 분류3 코드 (기본 ALL)
+        prd_se:
+          type: string
+          description: 수록 주기 (Y=년 기본, Q=분기, M=월, D=일)
+        start_prd_de:
+          type: string
+          description: 시작 수록시점 (예 "2020", 월이면 "202001")
+        end_prd_de:
+          type: string
+          description: 종료 수록시점 (start_prd_de 와 같은 형식)
+        limit:
+          type: integer
+          description: 통합 검색 결과 수 (query 검색, 기본 10 — count 별칭 허용)
       additionalProperties: true

@@ -93,6 +93,58 @@
           "y": {
             "type": "string",
             "description": "table:chart 파라미터"
+          },
+          "spec": {
+            "type": "object",
+            "description": "table:chart 파라미터"
+          },
+          "horizontal": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "stacked": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "show_volume": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "ma_periods": {
+            "type": "array",
+            "description": "table:chart 파라미터"
+          },
+          "show_percentage": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "donut": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "show_trendline": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "x_labels": {
+            "type": "array",
+            "description": "table:chart 파라미터"
+          },
+          "y_labels": {
+            "type": "array",
+            "description": "table:chart 파라미터"
+          },
+          "color_scale": {
+            "type": "string",
+            "description": "table:chart 파라미터"
+          },
+          "show_values": {
+            "type": "boolean",
+            "description": "table:chart 파라미터"
+          },
+          "layout": {
+            "type": "string",
+            "description": "table:chart 파라미터"
           }
         }
       }

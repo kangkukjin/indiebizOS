@@ -27,6 +27,8 @@ nodes:
 
           '
         target_key: op
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          language: [languages]   # 복수형 관습어 (2026-08-29 구현-읽기 감사 상환).
         group: media
         router: handler
         tool: video_op
@@ -277,6 +279,9 @@ nodes:
       music:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           limit: [count]
+          # download 저장 경로·seek 위치의 관습어들 — 핸들러가 읽던 폴백 사슬을 데이터로 (2026-08-29 구현-읽기 감사 상환).
+          output_path: [output, filename, path, file, name]
+          position: [seconds, time]
         returns: effect
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].

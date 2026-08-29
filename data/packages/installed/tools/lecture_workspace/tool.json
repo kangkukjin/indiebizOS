@@ -67,6 +67,10 @@
             "type": "object",
             "description": "슬라이드별 스피커 노트 {slide_id: note}."
           },
+          "note": {
+            "type": "string",
+            "description": "note — slide_id 와 함께 단건 스피커 노트 본문 (빈 문자열=제거, 일괄은 notes 객체)"
+          },
           "slides": {
             "type": "array",
             "description": "슬라이드 spec 배열."
@@ -107,6 +111,10 @@
           "render": {
             "type": "string",
             "description": "create/edit 옵션 — 이 한 장만 덱 기본과 다른 **렌더 방식**으로. native(이미지 only — 이미지 모델이 글자까지 통째로, 기본)/image(이미지+글자 — 글자 없는 그림 위에 타이포 합성)/html(글자도 그림도 HTML — 빠르고 무료, 나중에 필드 편집 가능). 톤이 그 방식을 지원해야 한다."
+          },
+          "image_quality": {
+            "type": "string",
+            "description": "create/edit/image_edit 옵션 — 이미지 품질 (pro 기본=고품질·2K / fast=저가·1K)"
           },
           "layout": {
             "type": "string",
@@ -287,6 +295,22 @@
           "output_filename": {
             "type": "string",
             "description": "video 옵션 — 결과 파일명 (기본 lecture_video.mp4)"
+          },
+          "rate": {
+            "type": "string",
+            "description": "video 옵션 — TTS 말속도 (예 '+10%', 기본 '+0%')"
+          },
+          "duration_per_scene": {
+            "type": "number",
+            "description": "video 옵션 — 나레이션 없는 씬의 길이(초, 기본 5)"
+          },
+          "width": {
+            "type": "integer",
+            "description": "video 옵션 — 출력 해상도 가로(px, 기본 1280)"
+          },
+          "height": {
+            "type": "integer",
+            "description": "video 옵션 — 출력 해상도 세로(px, 기본 720)"
           }
         },
         "required": [

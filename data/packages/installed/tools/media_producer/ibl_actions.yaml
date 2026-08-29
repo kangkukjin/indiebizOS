@@ -32,8 +32,11 @@ nodes:
           input_image: [string, array]
           path: string
           style_preset: string
+          quality: string
+          model: string
         aliases:
           output_path: [filename]
+          input_image: [input_image_path]
         returns: effect
         runs_on: anywhere
         description: Gemini AI 이미지 생성·편집 (Nano Banana 2 기본). input_image에 원본 파일 경로를 주면 그 사진을 prompt 지시대로 편집(인물 보정·배경 교체 등, 나머지 보존). style_preset으로 슬라이드 design_system과 일관된 일러스트. 옵션·모델은 read_guide(query="Gemini 이미지").
@@ -77,6 +80,8 @@ nodes:
         prompt_hidden: true
         description: 앱 전용 아이콘 생성. 사용자 아이디어를 AI가 귀여운 만화(kawaii/카툰) 스티커 프롬프트로 확장 → Pollinations flux(무료) 저해상도 아이콘 → 미리보기 + 폰이면 클립보드 자동 복사(카톡 붙여넣기).
         target_description: prompt(무엇을 그릴지 짧게, 한국어 가능) 필수. size(정사각 px, 기본 384)·style(스타일 힌트)·copy(폰 클립보드 자동복사, 기본 true) 옵션.
+        aliases:
+          prompt: [q]
         group: media_produce
         router: handler
         tool: generate_icon

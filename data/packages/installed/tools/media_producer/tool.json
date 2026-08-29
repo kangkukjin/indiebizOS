@@ -132,6 +132,14 @@
           "style_preset": {
             "type": "string",
             "description": "engines:image_gemini 파라미터"
+          },
+          "quality": {
+            "type": "string",
+            "description": "engines:image_gemini 파라미터"
+          },
+          "model": {
+            "type": "string",
+            "description": "engines:image_gemini 파라미터"
           }
         },
         "required": [

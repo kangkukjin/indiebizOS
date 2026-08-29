@@ -29,16 +29,24 @@ from iblbuild_validators import _load_corpus_param_keys
 # 어휘가 아닌 프로그램 배관 — IBL 라우팅을 거치지 않는 함수층 호출 전용 키.
 # 새 항목은 반드시 "왜 어휘가 아닌지"를 적을 것.
 IMPL_READ_ALLOW: dict[str, set[str]] = {
+    # 은퇴 레거시 _TOOL_FNS 직행 경로(blog_search·blog_save_summary) 전용 —
+    # 2026-07-03 죽은 tool.json 항목 제거 때 은퇴, 어느 액션도 미라우팅(삭제 후보).
+    "blog": {"search_in", "summary", "keywords"},
     # html_video 갈래는 2026-08-05 어휘 은퇴 — create_html_video/render_html_video 는
     # lecture_workspace 가 함수층에서 차용하는 엔진으로만 잔류(handler.py 상단 주석).
     # slide 갈래(shadcn_slides·slide_native·slide_image)도 같은 은퇴 부류 —
     # lecture_workspace·REST 표면이 함수층에서 쓰는 렌더러 엔진(2026-08-29 2차 확장 때 편입).
+    # 3차(대장 전량 상환): 은퇴 갈래의 나머지 키 + on_progress(콜백 — IBL 문장에
+    # 실을 수 없는 함수 객체) + seed(generate_ai_image — 디스패치에 없는 도달 불가).
     "media_producer": {"scenes", "narration_texts", "narration_audio_paths",
                        "scene_files", "narration_files",
                        "slides", "style_reference_images", "aesthetic", "composition",
                        "content", "critique", "critique_rounds", "design_system",
                        "format", "instruction", "output_dir", "theme",
-                       "verify", "verify_rounds"},
+                       "verify", "verify_rounds",
+                       "bgm_path", "capture_mode", "duration_per_scene", "fps",
+                       "narration_padding", "on_progress", "scene_dir", "seed",
+                       "topic", "transition", "transition_duration"},
     # 워크플로우 봉투를 벗기는 내부 배관: tool_input.get("params",{}).get("_prev_result")
     "system_essentials": {"params"},
 }
@@ -49,54 +57,8 @@ IMPL_READ_ALLOW: dict[str, set[str]] = {
 # ibl_actions.yaml 의 params/tool_json 에 타입을 선언하고 이 대장에서 지운다.
 # 어휘가 아닌 배관이면 IMPL_READ_ALLOW 로 옮긴다(사유 필수). 목표 = 빈 사전.
 IMPL_READ_BASELINE: dict[str, set[str]] = {
-    "android": {"b64", "content", "filename", "image", "image_b64", "image_path",
-                "keycode", "mime", "mime_type", "name", "number", "package", "path",
-                "refresh"},
-    "blog": {"keywords", "offset", "only_without_summary", "search_in", "summary",
-             "with_summary"},
-    "business": {"attachment_path", "details", "from", "from_id", "from_name",
-                 "item_id", "npub", "q", "source", "warehouse_score"},
-    "computer-use": {"amount", "button", "clicks", "duration", "interval", "region",
-                     "screenshot_after"},
-    "contest": {"keyword"},
-    "culture": {"date", "from_age", "loan_info", "max_results", "order_by", "to_age"},
-    "guest-helper": {"device_id", "job_id", "wait"},
-    "investment": {"days"},
-    "kosis": {"count", "end_prd_de", "indicator_id", "info", "itm_id", "keyword",
-              "obj_l1", "obj_l2", "obj_l3", "org_id", "prd_se", "start_prd_de",
-              "tbl_id"},
-    "lecture_workspace": {"duration_per_scene", "height", "image_quality",
-                          "image_size", "note", "quality", "rate",
-                          "style_reference_images", "width"},
-    "legal": {"law_id", "precedent_id"},
-    "location-services": {"place"},
-    # input_image_path·quality 는 산 통로 gemini_image.py 의 스칼라 읽기(2차 확장 편입).
-    "media_producer": {"bgm_path", "capture_mode", "duration_per_scene", "fps",
-                       "input_image_path", "model", "narration_padding", "on_progress",
-                       "q", "quality", "scene_dir", "seed", "topic", "transition",
-                       "transition_duration"},
-    "pc-manager": {"provenance", "q", "surface_flag"},
-    "radio": {"bitrateMin", "order", "state"},
-    # count_per_month 는 2026-08-29 상환 — ibl_actions.yaml realty.params 에 선언.
-    "real-estate": {"area", "month", "months", "name", "q", "region_name"},
-    "startup": {"keyword"},
-    "study": {"authorID", "display", "keyword", "lodID", "name_ko", "open_access",
-              "orgName_ko", "page", "q", "qid", "searchTerm", "sort_by", "type",
-              "year", "year_from", "year_to"},
-    # 2차 확장(패키지 루트 *_ops.py 편입, 2026-08-29)으로 드러난 부채:
-    # office_ops(extract_images·max_blocks·max_rows·output_path·pages)·
-    # fs_meta(q·volume_name). body_ops 다섯 키는 같은 날 선언 상환으로 대장 미편입.
-    "system_essentials": {"client", "end", "extract_images", "max_blocks",
-                          "max_rows", "mime", "new", "old", "output_path", "pages",
-                          "q", "rationale", "system", "volume_name"},
-    "visualization": {"color_scale", "donut", "horizontal", "layout", "ma_periods",
-                      "show_percentage", "show_trendline", "show_values",
-                      "show_volume", "spec", "stacked", "x_labels", "y_labels"},
-    "web": {"front_page"},
-    "web-builder": {"analyze", "components", "deploy_url", "description",
-                    "output_dir", "repo_url"},
-    "youtube": {"file", "filename", "languages", "name", "output", "path", "seconds",
-                "time"},
+    # 2026-08-29 3차: 대장 전량 상환(빈 사전 달성) — 159키를 선언·별칭·ALLOW 로 분해.
+    # 새 미선언 읽기는 이제 예외 없이 빌드 실패다. 정본 기록 = git log(3차 커밋).
 }
 
 _IMPL_VAR_NAMES = {"tool_input", "ti"}
@@ -211,7 +173,10 @@ def _scan_impl_reads(py: Path) -> dict[str, bool]:
         elif (isinstance(node, ast.Subscript) and isinstance(node.value, ast.Name)
                 and node.value.id in _IMPL_VAR_NAMES
                 and isinstance(node.slice, ast.Constant)
-                and isinstance(node.slice.value, str)):
+                and isinstance(node.slice.value, str)
+                # Load 만 읽기 — ti["k"]=v 같은 쓰기(엔진에 넘길 dict 조립)는 param
+                # 읽기가 아니다(2026-08-29 3차: lecture_workspace 오탐 3키로 발견).
+                and isinstance(node.ctx, ast.Load)):
             key = node.slice.value
         elif (isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or)
                 and len(node.values) == 2

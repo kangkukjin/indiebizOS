@@ -158,6 +158,8 @@ nodes:
             detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
+        aliases:
+          query: [q]
         returns: scalar
         side_effect: true    # note 가 누적하고 forget 이 폐기한다
         fixture: '[self:forage]{op: "recall", query: "test"}'
@@ -341,6 +343,12 @@ tool_json:
         generalizes:
           type: boolean
           description: '[note map convention] 새 가지에도 적용되나'
+        provenance:
+          type: [object, string]
+          description: '[note] 출처 근거 — {observed:[...]} 객체 또는 JSON 문자열(평문이면 observed 한 건으로 감쌈)'
+        surface_flag:
+          type: boolean
+          description: '[note map] 라벨 의심 표식 — 폴더 이름과 이질적인 내용을 발견했을 때 true'
         id:
           type: integer
           description: '[forget] 항목 id'

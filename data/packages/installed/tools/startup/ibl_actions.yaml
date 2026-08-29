@@ -9,6 +9,7 @@ actions:
       source: string
     aliases:
       limit: [count]      # ★정본은 limit(check_param_canon) — 코퍼스 관습어 count 는 별칭
+      query: [keyword]    # 관습어는 별칭으로 수용
     returns: items
     fixture: '[sense:startup]{query: "AI"}'
     description: 정부 창업/중소기업 지원사업 공고 검색 (K-Startup). 다중 키워드는 OR 합집합.

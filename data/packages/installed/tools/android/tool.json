@@ -120,7 +120,12 @@
       "description": "폰의 현재 위치를 즉석에서 한 번 조회 (fused GPS). 상시 추적/저장 없이 물을 때만. 위경도+주소(역지오코딩) 반환. '지금 어디', '내 위치', 날씨/맛집/길찾기의 출발점. 폰 네이티브 전용(맥/원격은 분산 IBL 로 폰에 포워드).",
       "input_schema": {
         "type": "object",
-        "properties": {},
+        "properties": {
+          "refresh": {
+            "type": "boolean",
+            "description": "true 면 캐시 무시하고 강제 재측정 (데스크탑 몸 — 이사·이동 후)"
+          }
+        },
         "additionalProperties": true
       }
     },
@@ -219,6 +224,30 @@
           "package_name": {
             "type": "string",
             "description": "실행할 앱 패키지명 (op=open_app), 예: com.kakao.talk"
+          },
+          "content": {
+            "type": "string",
+            "description": "저장·공유할 텍스트 내용 (op=save/share — b64 와 택일, 생략 시 파이프 이전 결과)"
+          },
+          "b64": {
+            "type": "string",
+            "description": "저장·공유할 바이너리의 base64 (op=save/share — content 와 택일)"
+          },
+          "filename": {
+            "type": "string",
+            "description": "저장 파일명 (op=save/share/clipboard — name 별칭 허용)"
+          },
+          "mime": {
+            "type": "string",
+            "description": "MIME 타입 (op=save/share/clipboard, 기본 text/plain·image/png — mime_type 별칭 허용)"
+          },
+          "image_path": {
+            "type": "string",
+            "description": "클립보드에 얹을 이미지의 로컬 경로 (op=clipboard — path 별칭 허용)"
+          },
+          "image_b64": {
+            "type": "string",
+            "description": "클립보드에 얹을 이미지의 base64 또는 data URI (op=clipboard — image·b64 도 수용)"
           }
         }
       }

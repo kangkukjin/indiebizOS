@@ -101,6 +101,18 @@
           "contact_value": {
             "type": "string",
             "description": "연락처 값 (contact_add)"
+          },
+          "npub": {
+            "type": "string",
+            "description": "nostr 연락처 동시 연결 (save — IndieNet 팔로우→이웃 승격용, 멱등)"
+          },
+          "warehouse_score": {
+            "type": "integer",
+            "description": "이웃의 창고에 주는 창고점수 0-3 (save — 창고 연락처 있는 이웃만 유효)"
+          },
+          "from": {
+            "type": "string",
+            "description": "합칠 이웃의 이름 또는 id (merge — from_id·from_name 별칭 허용)"
           }
         }
       }
@@ -165,6 +177,14 @@
           "path": {
             "type": "string",
             "description": "이미지 경로 (add_image/remove_image)"
+          },
+          "details": {
+            "type": "string",
+            "description": "아이템 설명 (store=item 의 save)"
+          },
+          "attachment_path": {
+            "type": "string",
+            "description": "아이템 첨부 경로(JSON 배열 문자열) — store=item 의 save. 사진은 add_image/remove_image 권장"
           }
         }
       }

@@ -8,6 +8,10 @@ actions:
       local_path: string
       name: string
       site_id: string
+      # 2026-08-29 구현-읽기 감사 상환 — register/update 가 읽는 선택 필드(tools/registry.py).
+      repo_url: string     # 저장소 URL (register/update 선택).
+      deploy_url: string   # 배포 URL (register/update 선택).
+      description: string  # 사이트 한 줄 설명 (register/update 선택).
     returns: effect
     runs_on: pc_only
     description: '사이트 레지스트리 CRUD. op: list/register/remove/update (기본 list). sites.json 직접 편집도 가능.'
@@ -39,6 +43,9 @@ actions:
     params:
       url: string
       checks: array
+      # 2026-08-29 구현-읽기 감사 상환 — handler op 핸들러가 읽던 미선언 키.
+      output_dir: string   # create(target=site) 전용 — 프로젝트 생성 위치(생략 시 기본 경로).
+      analyze: boolean     # build 전용 — 번들 분석 리포트 생성(기본 false).
     returns: effect
     runs_on: pc_only
     description: 웹 프로젝트 생애주기 작업 (op 분기) — 생성·빌드·배포·미리보기·점검·스타일. UI 컴포넌트는 web_component, 사이트 목록은 web_site.
@@ -86,6 +93,7 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       site_id: string
+      components: array   # add 전용 — 설치할 컴포넌트 이름 목록(단수 component 도 수용) (2026-08-29 구현-읽기 감사 상환).
     returns: effect
     runs_on: pc_only
     description: 웹 UI 컴포넌트 (op 분기). catalog(카탈로그 조회)/fetch(외부 다운로드, 기본)/add(프로젝트 설치).

@@ -26,6 +26,18 @@
           "site_id": {
             "type": "string",
             "description": "engines:web_site 파라미터"
+          },
+          "repo_url": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
+          },
+          "deploy_url": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
+          },
+          "description": {
+            "type": "string",
+            "description": "engines:web_site 파라미터"
           }
         },
         "additionalProperties": true
@@ -153,6 +165,14 @@
           "checks": {
             "type": "array",
             "description": "engines:web 파라미터"
+          },
+          "output_dir": {
+            "type": "string",
+            "description": "engines:web 파라미터"
+          },
+          "analyze": {
+            "type": "boolean",
+            "description": "engines:web 파라미터"
           }
         },
         "required": []
@@ -208,6 +228,10 @@
           },
           "site_id": {
             "type": "string",
+            "description": "engines:web_component 파라미터"
+          },
+          "components": {
+            "type": "array",
             "description": "engines:web_component 파라미터"
           }
         },

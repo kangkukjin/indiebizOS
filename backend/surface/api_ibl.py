@@ -13,6 +13,8 @@ class IBLRequest(BaseModel):
     verbose: bool = False              # 파이프 봉투 results[] 원형(true) / step 요약(기본) — ibl_envelope (2026-08-22 M1)
     resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
     files: Optional[List[str]] = None  # 긴 텍스트/코드를 IBL 파서 밖에서 전달 ($file:0 로 참조).
+    files_from: Optional[List[str]] = None  # files 의 경로 참조판 — 서버가 읽어 files 뒤에 병합.
+                                       # 수십 KB급 본문이 도구 호출 JSON 을 깨뜨리던 부류의 봉인(ep2356).
     # ★2026-08-22 B23-1(상상훈련 23회차): 위 두 필드는 도구 스키마(tool_loader)와 엔진
     # (system_tools_ibl)에는 처음부터 있었는데 **이 요청 모델에만 없어서**, body 에 실어 보낸
     # resume/files 가 pydantic 단계에서 조용히 탈락했다. 봉투의 실패 note 는 표면을 가리지 않고
@@ -184,6 +186,8 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["resume"] = req.resume
                     if req.files is not None:
                         _ti["files"] = req.files
+                    if req.files_from is not None:
+                        _ti["files_from"] = req.files_from
                     return _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
                 finally:
                     set_current_project_id(_prev_pid)

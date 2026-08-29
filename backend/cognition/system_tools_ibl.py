@@ -6,6 +6,7 @@ system_tools 가 재수출하므로 기존 `from system_tools import _execute_ib
 """
 import json
 import hashlib
+import os
 import re
 import time
 from typing import Dict, Optional
@@ -166,6 +167,47 @@ def _replace_file_refs_in_list(lst: list, files: list):
             _replace_file_refs_in_dict(val, files)
         elif isinstance(val, list):
             _replace_file_refs_in_list(val, files)
+
+
+# files_from 파일당 상한 — 자동 스필 임계(200K자)와 같은 자릿수로 묶는다.
+# 이 봉투는 "본문을 도구 호출 JSON 밖으로" 가 목적이지 대용량 스트리밍이 아니다.
+_FILES_FROM_CAP_BYTES = 2 * 1024 * 1024
+
+
+def _resolve_files_from(files, files_from):
+    """files_from(경로 목록)을 읽어 files(인라인 목록) 뒤에 이어붙인다.
+
+    2026-08-30 ep2356: 60KB 한글 본문을 인라인 files 로 실었더니 도구 호출 JSON 자체가
+    하네스에서 파싱 실패(InputValidationError)했다 — 큰 본문은 tool_use JSON 을 아예
+    통과하지 않아야 한다. 경로 참조면 호출 JSON 은 경로 한 줄이고, 본문은 서버가 읽는다.
+
+    번호는 인라인 files 다음부터 이어진다: files=[A], files_from=[p] → $file:0=A, $file:1=내용(p).
+    반환: (병합된 files 리스트, 오류 문자열 또는 None) — 오류는 조용히 삼키지 않는다.
+    """
+    merged = list(files) if isinstance(files, list) else []
+    if not files_from:
+        return merged, None
+    if not isinstance(files_from, list):
+        return merged, "files_from 은 파일 경로 문자열의 배열이어야 합니다."
+    for p in files_from:
+        if not isinstance(p, str) or not p.strip():
+            return merged, f"files_from 항목이 경로 문자열이 아닙니다: {p!r}"
+        path = os.path.expanduser(p.strip())
+        if not os.path.isfile(path):
+            return merged, f"files_from 파일이 없습니다: {path}"
+        try:
+            size = os.path.getsize(path)
+            if size > _FILES_FROM_CAP_BYTES:
+                return merged, (f"files_from 파일이 상한({_FILES_FROM_CAP_BYTES // 1024}KB)을 "
+                                f"넘습니다: {path} ({size} bytes) — 큰 데이터는 경로를 "
+                                f"[self:read]/[self:script] 에 직접 넘기세요.")
+            with open(path, "r", encoding="utf-8") as f:
+                merged.append(f.read())
+        except UnicodeDecodeError:
+            return merged, f"files_from 파일이 UTF-8 텍스트가 아닙니다: {path}"
+        except OSError as e:
+            return merged, f"files_from 읽기 실패: {path} — {e}"
+    return merged, None
 
 
 def _collect_step_nodes(obj, out: set):
@@ -350,7 +392,11 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         }, ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
-    files = tool_input.get("files")
+    # files_from(경로 참조)은 여기서 인라인 files 뒤에 병합된다 — 번호 연속.
+    files, _ff_err = _resolve_files_from(tool_input.get("files"),
+                                         tool_input.get("files_from"))
+    if _ff_err:
+        return json.dumps({"success": False, "error": _ff_err}, ensure_ascii=False)
 
     # 디버그 — 잘림 한도 2000자. 표식 모양은 episode_logger 가 소유한다(단일 진실):
     # 옛 판은 `... [trunc, total=N]` 로 자기만의 모양을 썼는데, 같은 사실을 두 모양으로

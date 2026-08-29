@@ -204,7 +204,20 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                     "description": (
                         "긴 텍스트/코드 콘텐츠를 IBL 파서 밖에서 전달. "
                         'IBL 코드에서 $file:0, $file:1 등으로 참조. '
-                        '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."]'
+                        '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."] '
+                        "★수십 KB급 본문은 인라인 대신 files_from 으로 — 도구 호출 JSON 이 "
+                        "커지면 호출 자체가 전송에서 깨진다(2026-08-30 60KB 실측)."
+                    )
+                },
+                "files_from": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "files 의 경로 참조판: 로컬 파일 경로 목록 — 서버가 내용을 읽어 "
+                        "인라인 files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: "
+                        "먼저 임시 파일에 쓰고 여기에 경로만 싣는다. "
+                        '예: code=[self:write]{path: "보고서.md", content: "$file:0"}, '
+                        'files_from=["/tmp/report_body.md"]'
                     )
                 },
                 "resume": {

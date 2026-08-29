@@ -674,6 +674,20 @@ param 값이 **통짜 `.path` 참조 하나**(`items: "$순회.queue"`, `columns
 - `$file:1` → files 배열의 두 번째 항목으로 치환
 - 이스케이프 문제 없이 코드, JSON, 마크다운 등 모든 텍스트를 안전하게 전달 가능
 
+**크기 경계와 `files_from`(2026-08-30, ep2356)**: 인라인 `files` 는 본문이 도구 호출 JSON
+안에 실리므로, 수십 KB급이 되면 **호출 자체가 전송에서 깨진다**(60KB 한글 본문이
+InputValidationError 로 파싱 실패한 실측). 큰 본문의 정본 통로는 `files_from` — 로컬 파일
+경로 목록을 주면 서버가 내용을 읽어 인라인 `files` 뒤에 이어붙인다(`$file` 번호 연속,
+파일당 상한 2MB·UTF-8 텍스트만·오류는 정직 거절).
+
+```
+# 먼저 본문을 임시 파일에 쓰고(Write 등), 호출 JSON 에는 경로만 싣는다
+{
+  "code": "[self:write]{path: \"outputs/보고서.md\", content: \"$file:0\"}",
+  "files_from": ["/tmp/report_body.md"]
+}
+```
+
 ---
 
 ## 워크플로우 — 이름 붙은 함수 (2026-08-22 개정)

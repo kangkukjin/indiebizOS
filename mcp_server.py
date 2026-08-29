@@ -292,6 +292,7 @@ def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
 async def execute_ibl(code: str, project_path: str = "",
                       resume: Optional[dict] = None,
                       files: Optional[List[str]] = None,
+                      files_from: Optional[List[str]] = None,
                       verbose: bool = False,
                       recover: Optional[str] = None,
                       ctx: Context = None):
@@ -310,6 +311,11 @@ async def execute_ibl(code: str, project_path: str = "",
     resume: 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터
         다시 돈다(앞 단 재실행 없음, 스필 24h 유효).
     files: 긴 텍스트/코드를 IBL 파서 밖에서 전달. 코드에서 $file:0, $file:1 로 참조.
+        ★수십 KB급 본문은 인라인 대신 files_from 으로 — 도구 호출 JSON 이 커지면
+        호출 자체가 전송에서 깨진다(2026-08-30 ep2356, 60KB 실측).
+    files_from: files 의 경로 참조판(로컬 파일 경로 목록) — 서버가 내용을 읽어 인라인
+        files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
+        쓰고 여기에 경로만 싣는다.
     verbose: 파이프 봉투 results[] 를 step 원형으로 받는다(기본 false = step 요약).
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
@@ -333,6 +339,8 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["resume"] = resume
     if files is not None:
         payload["files"] = files
+    if files_from is not None:
+        payload["files_from"] = files_from
     if verbose:
         payload["verbose"] = True
     if agent_id:

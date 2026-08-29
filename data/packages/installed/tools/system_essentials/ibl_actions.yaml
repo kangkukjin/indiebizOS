@@ -402,6 +402,7 @@ nodes:
         params:
           message: string
           paths: array
+          lines: integer   # diff 전용 — 파일당 실을 본문 줄 수 상한(기본/상한은 body_ops._clamp 가 신고).
         ops:
           default: changes
           side_effect:

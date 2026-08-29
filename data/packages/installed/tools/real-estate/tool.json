@@ -150,6 +150,10 @@
           "year_month": {
             "type": "string",
             "description": "sense:realty 파라미터"
+          },
+          "count_per_month": {
+            "type": "integer",
+            "description": "sense:realty 파라미터"
           }
         },
         "required": []

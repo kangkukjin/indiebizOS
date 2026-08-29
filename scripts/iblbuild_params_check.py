@@ -69,8 +69,8 @@ IMPL_READ_BASELINE: dict[str, set[str]] = {
                        "seed", "topic", "transition", "transition_duration"},
     "pc-manager": {"provenance", "q", "surface_flag"},
     "radio": {"bitrateMin", "order", "state"},
-    "real-estate": {"area", "count_per_month", "month", "months", "name", "q",
-                    "region_name"},
+    # count_per_month 는 2026-08-29 상환 — ibl_actions.yaml realty.params 에 선언.
+    "real-estate": {"area", "month", "months", "name", "q", "region_name"},
     "startup": {"keyword"},
     "study": {"authorID", "display", "keyword", "lodID", "name_ko", "open_access",
               "orgName_ko", "page", "q", "qid", "searchTerm", "sort_by", "type",

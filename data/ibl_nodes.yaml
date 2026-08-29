@@ -1671,6 +1671,7 @@ nodes:
         params:
           query: string
           year_month: string
+          count_per_month: integer
         aliases:
           region_code:
           - district_code
@@ -4844,6 +4845,7 @@ nodes:
         params:
           message: string
           paths: array
+          lines: integer
         ops:
           default: changes
           side_effect:

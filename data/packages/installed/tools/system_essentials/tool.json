@@ -683,6 +683,10 @@
           "paths": {
             "type": "array",
             "description": "self:body 파라미터"
+          },
+          "lines": {
+            "type": "integer",
+            "description": "self:body 파라미터"
           }
         }
       }

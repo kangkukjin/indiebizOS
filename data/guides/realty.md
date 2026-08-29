@@ -59,7 +59,7 @@
 | `deal` | (기본 trade) | `trade` \| `rent` |
 | `start_month` | (기본 이번달) | `YYYYMM` 형식 (예: `202604`) |
 | `end_month` | (기본 start_month) | `YYYYMM` 형식. 범위 조회 |
-| `count_per_month` | (기본 30) | 월별 반환 건수 상한 |
+| `count_per_month` | (기본 30) | 월별 반환 건수 상한. **`source=molit` 전용** — zigbang·naver 는 이 키를 무시하고 응답에 `무시된_파라미터` 로 신고한다(호가 소스의 상한은 `limit`) |
 
 ### region_code 조회
 

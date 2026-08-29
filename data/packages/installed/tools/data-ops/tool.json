@@ -340,6 +340,10 @@
             "type": "string",
             "description": "HTML 테마 (선택, default/newspaper)"
           },
+          "group_by": {
+            "type": "string",
+            "description": "items 입구 전용 — 이 필드로 섹션(heading+카드/표) 분할 (선택, 예 \"query\"). 2026-08-29 구현-읽기 감사 상환."
+          },
           "format": {
             "type": "string",
             "enum": [

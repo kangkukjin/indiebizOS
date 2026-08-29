@@ -59,8 +59,6 @@ IMPL_READ_BASELINE: dict[str, set[str]] = {
     "computer-use": {"amount", "button", "clicks", "duration", "interval", "region",
                      "screenshot_after"},
     "contest": {"keyword"},
-    # group_by 는 doc_build 의 산 param(독스트링 문서화·선언만 없음) — 상환 후보 1순위.
-    "data-ops": {"group_by"},
     "culture": {"date", "from_age", "loan_info", "max_results", "order_by", "to_age"},
     "guest-helper": {"device_id", "job_id", "wait"},
     "investment": {"days"},

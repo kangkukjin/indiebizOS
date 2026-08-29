@@ -383,7 +383,18 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 avail = (_names[:12] + [f"…외 {len(_names) - 12}개"]) if len(_names) > 12 else _names
             else:
                 avail = [_EACH_SCALAR_FIELD]
-            _emsg = f"행에 없는 필드: {', '.join(sorted(set(missing)))} (행 필드: {avail})"
+            # 관찰만 말하고 처방을 안 말하면 어휘를 포기한다(ba2cd50c 가 each 에서 배운 것).
+            # `$it.n.md` 부류는 '없는 필드'가 아니라 '경계를 못 그은 것' — 판정은
+            # 표기 규약을 아는 곳(common.ibl_vars) 한 벌이 한다.
+            from common.ibl_vars import boundary_hint
+            _row_fields = row if isinstance(row, dict) else ()
+            _hint = ""
+            for _miss in sorted(set(missing)):
+                _hint = boundary_hint(_miss, _row_fields, var)
+                if _hint:
+                    break
+            _emsg = (f"행에 없는 필드: {', '.join(sorted(set(missing)))} "
+                     f"(행 필드: {avail}){_hint}")
             errors.append({**base, "_error": _emsg,
                            "_traceback": _row_tb(build_tb(_emsg, "binding"), idx + 1)})
             if on_error == "keep":

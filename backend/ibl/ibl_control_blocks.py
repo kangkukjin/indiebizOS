@@ -474,9 +474,13 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
         path = path[1:]
         if vn not in vals:
             raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
-        v = walk_path(_load_var(vals[vn]), path or None)
+        _loaded = _load_var(vals[vn])
+        v = walk_path(_loaded, path or None)
         if v is _MISSING:
-            raise ValueError(f"${vn}.{path} 경로가 값에 없습니다.")
+            # each 와 같은 부류 — `${x.y}` 를 안 쓰면 뒤에 붙은 글자가 경로에 먹힌다.
+            from common.ibl_vars import boundary_hint
+            raise ValueError(f"${vn}.{path} 경로가 값에 없습니다."
+                             + boundary_hint(path, _loaded if isinstance(_loaded, dict) else (), vn))
         key = f"_v{len(scope)}"
         scope[key] = _scalar_of(v)
         return key

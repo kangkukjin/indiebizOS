@@ -127,3 +127,25 @@ def is_sole_ref(text: str, name: str) -> bool:
         return False
     path = m.group(1) if m.group(1) is not None else (m.group(2) or "")
     return not path
+
+
+def boundary_hint(path: str, available, var: str = "it") -> str:
+    """경로가 값에 없을 때, 원인이 **경계를 못 그은 것**이면 처방을 돌려준다(아니면 '').
+
+    `'/tmp/$it.n.md'` 는 이름 경계가 `\\w`·`.` 라서 `n.md` 를 필드로 읽는다 — 실재하는
+    접두 경로(`n`)가 있으면 없는 필드가 아니라 **끝을 안 닫은 참조**다. 오류문이 관찰만
+    말하고 처방을 안 말하면 읽는 쪽은 어휘를 포기한다(`ba2cd50c` 가 each 에서 배운 것).
+
+    ★힌트 생성을 이 파일에 두는 이유는 이 모듈의 첫 규칙과 같다 — `$` 를 자리마다 직접
+    훑으면 방언이 갈린다. 경계 규칙을 아는 곳이 처방도 안다.
+    """
+    from common.field_path import parse_path   # 점 경로 분해는 한 벌만 (사설 방언 금지)
+    parts = [str(seg) for seg in parse_path(path)]
+    avail = set(available or ())
+    for i in range(len(parts) - 1, 0, -1):
+        head = ".".join(parts[:i])
+        if head in avail:
+            tail = "." + ".".join(parts[i:])
+            return (f" — 혹시 `${{{var}.{head}}}{tail}` 를 뜻했나요? "
+                    f"변수 뒤에 글자가 붙으면 괄호로 경계를 그으세요（맨몸형은 글자·점을 이름에 먹습니다）.")
+    return ""

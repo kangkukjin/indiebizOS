@@ -17,6 +17,7 @@ r"""IBL `$변수` 괄호 표기 `${이름}` 회귀 테스트 (2026-08-22)
     B7. 블록 — 식 할당·if 조건의 괄호형 바인딩 (실행까지)
     B8. $items 집합 바인딩 예약어의 괄호형
     B9. 표기 혼용·공백 관용
+    B10. 경계 실패가 처방을 말한다 — `$it.n.md` → `${it.n}.md` (each·블록 공용 힌트)
 
 실행: python3 backend/test_ibl_var_notation.py
 """
@@ -139,6 +140,58 @@ def test_b9_mixed_and_spaces():
     finally:
         workflow_engine.delete_workflow("_t_brace")
     print("B9 OK — 표기 혼용·공백 관용·저장→시그니처→거절/실행 종단")
+
+
+def test_b10_경계_실패는_처방을_말한다():
+    """`$it.n.md` 는 '없는 필드'가 아니라 '경계를 못 그은 것' — 오류문이 그걸 말해야 한다.
+
+    ba2cd50c(each 가 안 쓰이던 이유 — 오류문이 \"다음에 뭘 하라\"를 안 말했다)와 같은 부류.
+    실측(48회차): 이 처방이 없어 실행기가 언어의 구멍으로 오진하고 우회했다.
+    """
+    from common.ibl_vars import boundary_hint
+    # 실재하는 접두 경로가 있으면 = 경계 문제 → 처방
+    h = boundary_hint("n.md", {"n"}, "it")
+    assert "${it.n}.md" in h, h
+    assert "괄호" in h, h
+    # 진짜 없는 필드면 = 잡음 금지 (빈 문자열)
+    assert boundary_hint("folder", {"path", "name"}, "it") == ""
+    assert boundary_hint("", {"n"}, "it") == ""
+    # 변수 이름도 그대로 실린다(each 는 as, 블록은 $변수 이름)
+    assert "${r.file}.bak" in boundary_hint("file.bak", {"file"}, "r")
+
+    # 종단 — each 가 실제로 그 처방을 봉투에 싣는가
+    from ibl_parser import parse
+    from workflow_engine import execute_pipeline
+    env = execute_pipeline(parse(
+        '[table:each]{items: [{"n": "a"}], do: "[self:read]{path: \'/tmp/x_$it.n.md\'}"}'
+    ), ".")
+    _err = str(env)
+    assert "${it.n}" in _err, _err[:400]
+    print("B10 OK — 경계 실패가 ${...} 처방을 말한다")
+
+
+def test_b11_교재가_표기_형태를_전부_가르친다():
+    """문법이 자란 날과 가르치는 글이 갱신된 날의 간극을 기계가 직접 대조한다.
+
+    실측(2026-08-28): 괄호형은 08-22에, 확장 경로(`*`·`?`)는 08-28에 문법에 들어왔는데
+    교재(12_ibl_only.md)에는 둘 다 0회였다 — 같은 병이 두 번 연속으로 난 자리다.
+    교재는 모델이 매 턴 읽는 유일한 문법서라, 안 실린 문법은 없는 문법이다
+    (ibl_honesty.py 가 이미 선언한 계약: "교재가 가르치는 키와 이 목록은 함께 움직인다").
+    """
+    import os
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    frag = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    text = open(frag, encoding="utf-8").read()
+    missing = [label for label, probe in (
+        ("괄호형 ${이름}", "${"),
+        ("열 벡터 ${x.items.*.f}", ".*."),
+        ("옵셔널 ${x.y?}", "?}"),
+    ) if probe not in text]
+    assert not missing, (
+        f"교재가 안 가르치는 표기: {missing} — common/ibl_vars.py 가 정의한 형태는\n"
+        f"12_ibl_only.md 에 최소 한 번 등장해야 한다(문법을 늘렸으면 교재도 같이)."
+    )
+    print("B11 OK — 교재가 표기 3형태를 전부 가르친다")
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

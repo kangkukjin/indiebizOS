@@ -137,6 +137,7 @@
     "ibl/workflow_engine",
     "ibl/workflow_fallback",
     "ibl/workflow_parallel",
+    "ibl/workflow_verdict",
     "ibl_embedding_trainer",
     "ibl_synthetic_opus",
     "migrate_alias_retirement",
@@ -257,8 +258,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 248,
-    "engine": 228,
+    "total": 249,
+    "engine": 229,
     "blocklist": 20
   }
 }

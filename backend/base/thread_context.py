@@ -518,13 +518,31 @@ def snapshot() -> dict:
     IBL 핸들러를 워커 스레드로 오프로드할 때(async 안전), agent_id/allowed_nodes/
     task_id 등 컨텍스트를 워커 스레드로 전파하기 위해 사용한다.
     threading.local은 스레드 간 자동 전파가 안 되므로 명시적으로 떠서 옮긴다.
+
+    ★궤적 손잡이(contextvars)도 함께 뜬다 — threading.local 만 나르면 워커에서
+    실행되는 핸들러의 쓰기(write_ledger)·사건(record_trajectory_event)이 부모 run 을
+    못 보고 고아가 된다(2026-08-29 실측). 이 이음매를 지나는 모든 스레드 이동
+    (핸들러 타임아웃 스레드·오프로드풀·병렬 분기)이 이 한 벌로 척추를 잇는다.
     """
-    return dict(_thread_local.__dict__)
+    snap = dict(_thread_local.__dict__)
+    try:
+        from episode_logger import capture_trace
+        snap["_trajectory_trace"] = capture_trace()
+    except Exception:
+        pass
+    return snap
 
 
 def restore(snap: dict):
     """snapshot()으로 떠둔 컨텍스트를 현재 스레드의 thread-local에 복원."""
-    for k, v in (snap or {}).items():
+    snap = dict(snap or {})
+    trace = snap.pop("_trajectory_trace", None)
+    try:
+        from episode_logger import adopt_trace
+        adopt_trace(trace)   # None 포함 set — 풀 스레드 재사용의 잔류 trace 청소
+    except Exception:
+        pass
+    for k, v in snap.items():
         setattr(_thread_local, k, v)
 
 

@@ -123,8 +123,12 @@ def _current_trace():
 
 
 @contextmanager
-def trajectory_scope(task_id: str = "", parent_run_id: str = ""):
-    """episode 밖 실행에 run 을 세운다. 이미 run 안이면 중첩 생성하지 않는다."""
+def trajectory_scope(task_id: str = "", parent_run_id: str = "", episode_id=None):
+    """episode 밖 실행에 run 을 세운다. 이미 run 안이면 중첩 생성하지 않는다.
+
+    episode_id/parent_run_id: 재진입 봉투(MCP→/ibl/execute 등)가 복원한 부모 신원 —
+    contextvar 는 프로세스 경계를 못 건너므로, 부모가 env/헤더→payload 로 실어 보낸
+    값을 여기서 채택해 자식 run 이 같은 척추(episode)에 걸리게 한다(task_id 복원 선례)."""
     existing = _current_trace()
     if existing is not None:
         yield existing
@@ -136,11 +140,34 @@ def trajectory_scope(task_id: str = "", parent_run_id: str = ""):
         except Exception:
             task_id = ""
     trace = _Trajectory(trajectory_run_id(task_id), task_id, parent_run_id)
+    if episode_id is not None:
+        try:
+            trace.episode_id = int(episode_id)
+        except (TypeError, ValueError):
+            pass
     token = _current_trajectory.set(trace)
     try:
         yield trace
     finally:
         _current_trajectory.reset(token)
+
+
+def capture_trace():
+    """현재 컨텍스트의 궤적 손잡이 — 스레드 이음매가 신원을 나르는 통로.
+
+    thread_context.snapshot() 이 threading.local 과 함께 이 손잡이를 떠 가고,
+    restore() 가 워커 쪽에서 adopt_trace() 로 건다. contextvar 는 스레드 이동에
+    자동 전파되지 않아, 이 한 쌍이 없으면 워커의 쓰기·사건이 run 에서 고아가 된다
+    (2026-08-29 실측: write_ledger run 0%·ibl.* episode_id 98% 결손의 뿌리)."""
+    return _current_trace()
+
+
+def adopt_trace(trace):
+    """capture_trace() 손잡이를 현재 컨텍스트에 건다(워커 스레드 쪽).
+
+    ★None 도 반드시 set 한다 — 풀 스레드는 재사용되므로, 이전 작업의 trace 가
+    contextvar 에 잔류하면 다음 무관한 작업의 사건이 남의 run 에 실린다."""
+    _current_trajectory.set(trace if isinstance(trace, _Trajectory) else None)
 
 
 def current_trajectory_identity() -> dict:

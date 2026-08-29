@@ -618,6 +618,27 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         return json.dumps({"error": f"IBL 실행 오류: {str(e)}"}, ensure_ascii=False)
 
 
+def _collect_honesty_markers(obj) -> dict:
+    """봉투 최상위의 정직 표지를 집계로 압축한다 (목록=ibl_honesty.HONESTY_KEYS 한 벌).
+
+    표지가 봉투 최상위에 오는 것은 엔진의 책임이다(workflow_engine 승격 — B24/B27/
+    F35/B48 부류의 관문이 지킨다). 여기서 깊은 스캔을 다시 짜면 목록·지형이 두 벌이 된다.
+    궤적 data 는 4KB 캡 + 원문 금지 계약이라 값 원문(_caught 전문·errors 행) 대신
+    **집계만** 싣는다: 목록=길이, 수량=값, 플래그=1. step 원형은 봉투(스필)가 정본."""
+    from ibl_honesty import markers_of
+    out = {}
+    for k, v in markers_of(obj).items():
+        if isinstance(v, bool):
+            out[k] = 1
+        elif isinstance(v, (int, float)):
+            out[k] = v
+        elif isinstance(v, (list, tuple)):
+            out[k] = len(v)
+        else:
+            out[k] = 1
+    return out
+
+
 def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None,
                          cancel_check=None) -> str:
     """전 IBL 표면의 trajectory choke point.
@@ -664,14 +685,20 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 obj.get("success") is False or ("error" in obj and not obj.get("success"))))
             raw = result if isinstance(result, str) else json.dumps(
                 result, ensure_ascii=False, sort_keys=True, default=str)
-            record_trajectory_event("ibl.finished", {
+            _finished = {
                 "success": not failed,
                 "elapsed_ms": int((time.monotonic() - start) * 1000),
                 "result_sha256": hashlib.sha256(raw.encode(
                     "utf-8", "replace")).hexdigest(),
                 "result_chars": len(raw),
                 "resumed_from": obj.get("resumed_from") if isinstance(obj, dict) else None,
-            })
+            }
+            # 정직 표지 집계 — `??` 갈아탐·행별 부분 실패가 success:true 한 줄로
+            # 뭉개지지 않게 한다. 빈 집계는 싣지 않는다(평시 봉투 무변).
+            _markers = _collect_honesty_markers(obj) if isinstance(obj, dict) else {}
+            if _markers:
+                _finished["markers"] = _markers
+            record_trajectory_event("ibl.finished", _finished)
             return result
     except Exception as e:
         # trajectory 는 관측이다. 계측 실패가 IBL 실행을 막지 않는다.

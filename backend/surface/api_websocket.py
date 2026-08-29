@@ -405,7 +405,11 @@ async def handle_chat_message(client_id: str, data: dict):
             finally:
                 _clear()
 
-        result = await loop.run_in_executor(executor, _work)
+        # 에피소드 contextvar 를 워커로 전파(스트림 경로의 copy_context 선례 합류) —
+        # run_in_executor 는 컨텍스트를 복사하지 않아, 이 줄이 없으면 워커의 IBL 실행이
+        # episode 없는 고아 run 으로 남는다(2026-08-29 척추 수리).
+        result = await loop.run_in_executor(
+            executor, contextvars.copy_context().run, _work)
 
         if result.get("clarify"):
             _clarify_text = result["clarify"]

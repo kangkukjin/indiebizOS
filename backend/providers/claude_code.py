@@ -1147,6 +1147,21 @@ class ClaudeCodeProvider(BaseProvider):
             return None
 
     @staticmethod
+    def _current_trajectory_identity() -> dict:
+        """spawn 시점(요청 워커 스레드)의 episode/run 신원 — task_id 와 같은 부류.
+
+        contextvar(에피소드·궤적)는 subprocess→MCP→HTTP 재진입을 못 건너므로,
+        여기서 떠서 env(stdio)/헤더(HTTP)로 동봉한다. 재진입 /ibl/execute 가 이 값을
+        채택하면 그 실행의 ibl.*·side_effect.* 사건이 부모 에피소드 척추에 실린다
+        (없던 시절 98.4%가 고아 run — 2026-08-29 실측). 에피소드 밖 spawn(스케줄러
+        직행 등)은 빈 dict → 미동봉(fail-closed)."""
+        try:
+            from episode_logger import current_trajectory_identity
+            return current_trajectory_identity() or {}
+        except Exception:
+            return {}
+
+    @staticmethod
     def _current_task_origin() -> Optional[str]:
         """spawn 시점(요청 워커 스레드)의 task_origin — task_id 와 같은 부류.
 
@@ -1181,6 +1196,12 @@ class ClaudeCodeProvider(BaseProvider):
         origin = self._current_task_origin()
         if origin:
             headers["X-IndieBiz-Task-Origin"] = quote(str(origin))
+        # 궤적 신원(에피소드·부모 run) — 재진입 실행을 부모 척추에 잇는다 (task_id 선례)
+        ident = self._current_trajectory_identity()
+        if ident.get("episode_id") is not None:
+            headers["X-IndieBiz-Episode-Id"] = quote(str(ident["episode_id"]))
+        if ident.get("run_id"):
+            headers["X-IndieBiz-Parent-Run-Id"] = quote(str(ident["run_id"]))
         cfg = {"mcpServers": {"indiebizos": {
             "type": "http",
             # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
@@ -1302,6 +1323,13 @@ class ClaudeCodeProvider(BaseProvider):
         origin = self._current_task_origin()
         if origin:
             env["INDIEBIZOS_TASK_ORIGIN"] = str(origin)
+        # 궤적 신원(에피소드·부모 run): contextvar 도 프로세스 경계를 못 건너므로
+        # task_id 와 같은 통로로 동봉해 재진입 /ibl/execute 가 채택한다(2026-08-29 척추).
+        ident = self._current_trajectory_identity()
+        if ident.get("episode_id") is not None:
+            env["INDIEBIZOS_EPISODE_ID"] = str(ident["episode_id"])
+        if ident.get("run_id"):
+            env["INDIEBIZOS_PARENT_RUN_ID"] = str(ident["run_id"])
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

@@ -35,6 +35,12 @@ class IBLRequest(BaseModel):
                                        # 소리·저장 같은 "어디서 나야 하는가"의 판정 축 — 실행하는 몸이
                                        # 아니라 보고 있는 표면이 정한다(thread_context.set_current_surface).
                                        # 데스크탑 일렉트론은 맥 자신이라 보내지 않는다(= 맥 재생이 곧 여기서 재생).
+    episode_id: Optional[int] = None   # 부모 에피소드 신원(궤적 척추, 2026-08-29). claude_code 재진입은
+                                       # 원 요청과 다른 스레드/프로세스라 contextvar 의 episode 가 안 보여,
+                                       # 이 실행의 ibl.*·side_effect.* 사건이 전부 고아 run 으로 남았다
+                                       # (실측 98.4%) → task_id 와 같은 통로(env/헤더→payload)로 복원.
+    parent_run_id: Optional[str] = None  # 부모 run(에피소드의 run_id) — 자식 run 의 parent_run_id 로
+                                       # 실려 "이 실행이 어느 턴의 일부였나" 조인을 닫는다. episode_id 와 한 쌍.
     ticket: Optional[str] = None       # ★표면 티켓(F51-1, 2026-08-27) — 표면의 HTTP 대기가 실행보다
                                        # 먼저 끊겨도 최종 봉투를 잃지 않는 통로. 실리면 시작·결말을
                                        # data/spill/ 에 남기고(/ibl/recover 로 회수), hex 8~32자만
@@ -157,8 +163,18 @@ async def execute_ibl_code(req: IBLRequest):
             #     표면의 직접 실행=사람의 명령. ★재진입(req.agent_id 실림)은 부모가 보낸
             #     값만 신뢰, 빈 값이면 빈 채로 둔다(모르는 출처를 'user' 로 단정 금지).
             _origin = req.origin or (None if req.agent_id else "user")
-            with actor_context(agent_id=agent_id, task_id=req.task_id or None,
-                               origin=_origin):
+            # 궤적 신원 채택(2026-08-29) — 재진입 봉투가 복원한 episode/parent run 을
+            # 실행 전에 걸어, 이 run 의 모든 사건(ibl.*·side_effect.*)이 부모 에피소드에
+            # 실리게 한다. 신원이 안 실린 직접 호출은 종전대로(초크포인트가 run 을 세움).
+            from contextlib import nullcontext
+            _adopt = nullcontext()
+            if req.episode_id is not None or req.parent_run_id:
+                from episode_logger import trajectory_scope
+                _adopt = trajectory_scope(task_id=req.task_id or "",
+                                          parent_run_id=req.parent_run_id or "",
+                                          episode_id=req.episode_id)
+            with _adopt, actor_context(agent_id=agent_id, task_id=req.task_id or None,
+                                       origin=_origin):
                 try:
                     from system_tools import _execute_ibl_unified
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서

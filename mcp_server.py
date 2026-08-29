@@ -24,6 +24,11 @@ DEFAULT_TASK_ID = os.environ.get("INDIEBIZOS_TASK_ID", "")
 # 태스크 출처('user'=사람의 직접 명령) — task_id 와 같은 부류. 쓰기 관문 원장(write_ledger)
 # 행위자·자기수정 게이트의 축이라 재진입에서도 끊기면 안 된다 (2026-08-21).
 DEFAULT_TASK_ORIGIN = os.environ.get("INDIEBIZOS_TASK_ORIGIN", "")
+# 궤적 신원(부모 에피소드·부모 run) — task_id 와 같은 부류 (2026-08-29 척추).
+# contextvar 는 프로세스 경계를 못 건너므로 부모(claude_code 프로바이더)가 env 로 주입,
+# payload 로 복원해 재진입 실행의 사건이 부모 에피소드에 실리게 한다.
+DEFAULT_EPISODE_ID = os.environ.get("INDIEBIZOS_EPISODE_ID", "")
+DEFAULT_PARENT_RUN_ID = os.environ.get("INDIEBIZOS_PARENT_RUN_ID", "")
 
 # ── 신원 주입: 두 전송 경로 대응 ──────────────────────────────────────────
 # stdio  : 부모가 매 spawn 마다 env(INDIEBIZOS_*)로 주입 → 위 DEFAULT_* 가 그 값.
@@ -34,6 +39,8 @@ _HDR_AGENT = "x-indiebiz-agent-id"
 _HDR_PROJECT = "x-indiebiz-project-path"
 _HDR_TASK = "x-indiebiz-task-id"
 _HDR_ORIGIN = "x-indiebiz-task-origin"
+_HDR_EPISODE = "x-indiebiz-episode-id"
+_HDR_PARENT_RUN = "x-indiebiz-parent-run-id"
 
 
 def _http_identity(ctx):
@@ -53,6 +60,20 @@ def _http_identity(ctx):
     except Exception:
         pass
     return (None, None, None, None)
+
+
+def _http_trajectory(ctx):
+    """HTTP 마운트 경로의 궤적 신원(episode_id, parent_run_id) — _http_identity 와 한 부류.
+    stdio(요청 없음)면 (None, None) → 호출부가 env 기본값으로 폴백."""
+    from urllib.parse import unquote
+    try:
+        req = ctx.request_context.request if ctx is not None else None
+        if req is not None:
+            return (unquote(req.headers.get(_HDR_EPISODE) or "") or None,
+                    unquote(req.headers.get(_HDR_PARENT_RUN) or "") or None)
+    except Exception:
+        pass
+    return (None, None)
 
 
 def _trim_for_agent(raw: str) -> str:
@@ -320,6 +341,17 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["task_id"] = task_id  # 태스크 컨텍스트 복원 (시스템 AI cross 위임 체인)
     if origin:
         payload["origin"] = origin  # 태스크 출처 복원 — 원장 행위자·자기수정 게이트 축
+    # 궤적 신원 복원(2026-08-29 척추) — 이 실행을 부모 에피소드의 자식 run 으로 잇는다
+    h_epi, h_prun = _http_trajectory(ctx)
+    episode_id = h_epi or DEFAULT_EPISODE_ID
+    parent_run_id = h_prun or DEFAULT_PARENT_RUN_ID
+    if episode_id:
+        try:
+            payload["episode_id"] = int(episode_id)
+        except (TypeError, ValueError):
+            pass
+    if parent_run_id:
+        payload["parent_run_id"] = parent_run_id
     if recover:
         # 회수 경로(F51-1) — 실행이 아니라 조회. 신원·payload 는 필요 없다.
         raw = await anyio.to_thread.run_sync(

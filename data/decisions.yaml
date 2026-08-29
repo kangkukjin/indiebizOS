@@ -1,0 +1,124 @@
+# decisions.yaml — 사용자 판정 원장 (결정 기억)
+#
+# 무엇: 사용자가 내린 설계 판정(기각·채택·보류)의 단일 원장. 회상 0단계가
+#   활성 판정의 다이제스트를 상시 주입하고, 질의가 keywords 에 걸리면 상세(사유·출처)를 얹는다.
+#   목적 = 조사·제안형 턴이 이미 기각된 방향을 다시 제안하거나, 이미 결정된 사안을
+#   재론하는 것을 막는다 (2026-08-29 실측: 외부 조사 보고서가 노드 스코핑 기각을 모르고
+#   같은 방향을 우선순위 3으로 재제안).
+#
+# 규약 (세계의 명사=반증 가능한 데이터):
+#   - 추가·개정은 이 파일 편집만으로 한다 — 판정 이름을 파서·엔진 코드에 넣지 말 것.
+#   - 판정이 뒤집히면 삭제하지 말고 status: superseded + superseded_by/왜를 남긴다(반증 가능).
+#   - ruling 은 한 줄(다이제스트에 그대로 실림), why 는 상세(질의 일치 시만 노출).
+#   - keywords 는 그 사안을 재론할 때 나올 법한 말들 — 한글·영어·식별자 너그럽게.
+#   - scent: false 로 두면 상시 다이제스트에서 빠지고 질의 일치 때만 나온다(기본 true).
+#
+# 스키마: id(고유 슬러그)·date·verdict(기각|채택|보류)·ruling(한 줄)·why·keywords[]·source·status(active|superseded)
+
+- id: node-scoping-rejected
+  date: 2026-08
+  verdict: 기각
+  ruling: "노드 스코핑(작업별 어휘 카탈로그 축소) 기각 — 어휘 전체가 창의성의 재료다"
+  why: >
+    작업 유형으로 카탈로그를 좁히면 토큰은 아끼지만 예상 밖 조합의 발견을 죽인다.
+    실측 근거: 증류 예제의 조합 연산자 사용률이 다른 소스보다 크게 높았다 — 넓은 카탈로그가
+    조합 발견의 조건. 2026-08-29 재확인: capability_focus 로 매 턴 allowed_nodes 를 좁히자는
+    재제안도 같은 사유로 기각. allowed_nodes 는 권한(에이전트가 뭘 쓸 수 있나)이지
+    초점(이번 턴에 뭘 보여줄까)이 아니다.
+  keywords: [스코핑, 카탈로그 축소, 카탈로그 다이어트, allowed_nodes, capability_focus, scoping, 노드 제한, 어휘 축소, 프롬프트 예산]
+  source: "사용자 판정 (Claude Code 세션 2026-08, 2026-08-29 재확인)"
+  status: active
+
+- id: no-switch-by-usage-frequency
+  date: 2026-08
+  verdict: 기각
+  ruling: "사용 빈도를 근거로 어휘를 스위치화(끄기)하지 않는다 — 처방은 시딩·설명 개선"
+  why: >
+    안 쓰이는 어휘의 원인은 대개 모델이 몰라서(회상·설명 부족)이지 무가치해서가 아니다.
+    빈도 기준 정리는 결정화 사다리를 거꾸로 태운다.
+  keywords: [스위치화, 사용 빈도, 저사용, 안 쓰는 액션, 어휘 정리, 은퇴 기준, usage frequency]
+  source: "사용자 판정 (Claude Code 세션 2026-08)"
+  status: active
+
+- id: verdict-scope-two-kinds
+  date: 2026-08
+  verdict: 채택
+  ruling: "사용자 판정 요청은 언어 개정·파괴적 변경 2종만 — 나머지는 묻지 않고 근본 집행"
+  why: >
+    배선·수리·관문 추가 같은 비파괴 작업을 '어느 것부터 할까요'로 묻는 것은 규범 위반.
+    물을 것은 IBL 표준(문법·기능어 코어) 개정과 데이터 파괴·되돌리기 어려운 변경뿐.
+  keywords: [판정 요청, 어느 쪽부터, 할까요, 우선순위 질문, 승인 요청, 물어보기]
+  source: "사용자 판정 (Claude Code 세션 2026-08)"
+  status: active
+
+- id: anti-vocab-proliferation
+  date: 2026-07
+  verdict: 채택
+  ruling: "새 낱말의 기본 답 = 아니오 — [self:script] 로 얼려라 (반-어휘-증식)"
+  why: >
+    새 기능이 필요할 때 1급 어휘 추가는 마지막 수단. 먼저 기존 어휘 조합, 다음 script 결정화,
+    빈도가 증명했을 때만 승격(결정화 사다리).
+  keywords: [새 액션, 새 어휘, 낱말 추가, 어휘 추가, 액션 추가, 1급 승격, new action]
+  source: "CLAUDE.md 개발 원칙 5 (사용자 확정)"
+  status: active
+
+- id: no-concrete-ibl-in-guides
+  date: 2026-08-27
+  verdict: 채택
+  ruling: "가이드에 구체 IBL 문장 금지 — 원리·경계·'직접 조합하라'만. 좋은 조합의 통로=해마"
+  why: >
+    가이드에 적힌 문장은 처방으로 굳는다. 문장은 진화해야 하고, 좋은 조합은 가이드가 아니라
+    해마(증류)가 흔적으로 배운다. ("가이드에 초안 문장을 구체적으로 담지 마 — 그러면 그렇게 하게 된다.")
+  keywords: [가이드, 예시 문장, 초안 문장, 템플릿, 코드 블록, guide, 처방]
+  source: "사용자 교정 2026-08-27 (changelog)"
+  status: active
+
+- id: public-content-user-authored
+  date: 2026-08
+  verdict: 채택
+  ruling: "공개 발행물에 verbatim 으로 나가는 글은 사용자가 직접 쓴 것만"
+  why: "AI 생성문을 사용자 이름의 공개면에 그대로 싣지 않는다 — 초안·재료는 가능, 발행은 사용자 저작."
+  keywords: [공개, 발행, 블로그, 게시, 티스토리, 홈페이지 글, publish, 포스팅]
+  source: "사용자 판정 (Claude Code 세션 2026-08)"
+  status: active
+
+- id: no-temporary-patches
+  date: 2026-07
+  verdict: 채택
+  ruling: "임시방편 금지 — 뿌리를 고친다. '카운터 심고 두고 보자'도 수리 미루기다"
+  why: >
+    셀 수 있으면 관문이 실패시키게 하라. 관찰용 카운터·경고 로그로 덮는 것은
+    근본 수리의 연기일 뿐이다.
+  keywords: [임시, 워크어라운드, workaround, 카운터, 두고 보자, 나중에, 일단, TODO]
+  source: "사용자 판정 (Claude Code 세션, 반복 확정)"
+  status: active
+
+- id: notebook-phase3-hold
+  date: 2026-08
+  verdict: 보류
+  ruling: "notebook 접지 질의 Phase 3 = 사용자 보류 — 착수 금지"
+  why: "Phase 1+2 완료 상태에서 사용자가 명시적으로 보류. 사용자 재개 판정 전 착수하지 않는다."
+  keywords: [notebook, 노트북, grounded query, 접지 질의, phase 3]
+  source: "사용자 보류 판정 (Claude Code 세션 2026-08)"
+  status: active
+  scent: false
+
+- id: no-os-centric-naming
+  date: 2026-08
+  verdict: 채택
+  ruling: "맥 중심 이름 금지(runs_on=pc_only) · 레벨 0~4 는 숫자만(의미 라벨 금지)"
+  why: "몸은 이식 가능해야 한다 — OS 이름이 어휘·설정에 박히면 이식 때 죽는다. 레벨에 의미 라벨을 붙이면 라벨이 정책이 된다."
+  keywords: [mac_only, 맥 전용, runs_on, 레벨 이름, level label, 플랫폼 이름]
+  source: "사용자 판정 (Claude Code 세션 2026-08)"
+  status: active
+  scent: false
+
+- id: empty-body-generic-substrate
+  date: 2026-08
+  verdict: 채택
+  ruling: "indiebizOS = 빈 몸(범용 기질), 어휘 = 사용자의 팔 — '1인 맞춤형=이전 불가' 판정 금지"
+  why: "코어는 누구에게나 설치되는 빈 몸이고 개인성은 전부 데이터(사전·기억)에 있다. 맞춤형이라 이전 불가라는 결론은 설계 오해."
+  keywords: [맞춤형, 이전 불가, 범용성, 제품화, 다른 사용자, 설치본, 일반화]
+  source: "사용자 판정 (Claude Code 세션 2026-08)"
+  status: active
+  scent: false

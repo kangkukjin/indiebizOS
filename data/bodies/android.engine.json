@@ -72,6 +72,7 @@
     "datastore/business_manager",
     "datastore/calendar_manager",
     "datastore/conversation_db",
+    "datastore/decision_ledger",
     "datastore/face_config",
     "datastore/file_index",
     "datastore/focus_map",
@@ -258,8 +259,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 249,
-    "engine": 229,
+    "total": 250,
+    "engine": 230,
     "blocklist": 20
   }
 }

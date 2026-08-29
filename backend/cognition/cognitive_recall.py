@@ -85,6 +85,15 @@ class CognitiveRecallMixin:
             if repair:
                 result = (result + "\n" + repair) if result else repair
 
+            # 결정 원장(사용자 판정) — ★상시 다이제스트 + 질의 일치 상세.
+            #   제안·설계는 턴 *중간*에 생기므로(ep 실측: 외부 조사 턴이 노드 스코핑 기각을
+            #   모르고 재제안 — 사용자 메시지엔 '스코핑'이 없었다) 키워드 게이트만으로는 못
+            #   잡는다 → 활성 판정 한 줄 다이제스트는 owner 냄새처럼 상시 노출(수백 자),
+            #   사유·출처 상세만 질의 게이트. 원장이 비면 0토큰.
+            decisions = self._decision_scent(user_message)
+            if decisions:
+                result = (result + "\n" + decisions) if result else decisions
+
             # 거친 디스크 골격(어디에) — ★포식 의도일 때만(상시-on 폐기, 웹랜드마크와 같은 게이트).
             #   집중 관심 폴더 아래 거친 디렉토리 트리(맥/윈도우/리눅스 각자 자기 루트). ~5천 자라
             #   파일·디스크 질의에만 값을 하고 그 외엔 무관 → _FORAGE_CUES 없으면 빈 결과(메서드 내 게이트).
@@ -108,6 +117,8 @@ class CognitiveRecallMixin:
                     parts.append("포식기억")
                 if "connected_limbs" in result:
                     parts.append("손발")
+                if "decision_ledger" in result:
+                    parts.append("결정원장")
                 if "disk_skeleton" in result:
                     parts.append("디스크골격")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
@@ -176,6 +187,15 @@ class CognitiveRecallMixin:
             return red_report.pending_scent(str(get_base_path()),
                                             owner=red_report.current_owner())
         except Exception:
+            return ""
+
+    def _decision_scent(self, user_message: str) -> str:
+        """사용자 판정 원장 회상 — 상시 다이제스트+질의 상세. 실패는 무시(파이프라인 불변)."""
+        try:
+            import decision_ledger
+            return decision_ledger.scent_xml(user_message)
+        except Exception as e:
+            print(f"[결정원장] 회상 실패 (무시): {e}")
             return ""
 
     def _search_related_memory(self, user_message: str) -> str:

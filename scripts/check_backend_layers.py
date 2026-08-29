@@ -47,7 +47,7 @@ LAYERS = {
     },
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",
-        "calendar_manager", "conversation_db", "face_config", "file_index", "focus_map",
+        "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "guide_registry", "health_sync", "ibl_registry", "ibl_usage_db",
         "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager",

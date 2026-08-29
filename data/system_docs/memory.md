@@ -153,6 +153,7 @@ see_also: [architecture.md, ibl.md]
   ├─[4b 해마]     유사 IBL 선례 검색 → 점수 산출 ┐
   ├─[5 심층메모리] 관련 사용자 사실 Top-3 검색   ┘→ 연상기억(<execution_memory>+<related_memory>) 합성
   ├─[7 포식기억]   포식 의도 시 냄새지도 주입 (<forage_memory>, 해마 옆)
+  ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
   │     ├ 해마 점수 높음 → Reflex(EXECUTE): 의식 건너뜀, 중급 모델로 즉시 실행
   │     └ 해마 점수 낮음 → THINK: 의식 에이전트 호출
@@ -166,6 +167,13 @@ see_also: [architecture.md, ibl.md]
   ├─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프
   └─[7 포식기억]   포식 시 지도 델타 증류 → surface 표식 → 정리     ← 공간 학습 루프
 ```
+
+> **결정 원장** (2026-08-29 신설): `data/decisions.yaml` — 사용자가 내린 설계 판정(기각·채택·보류)의
+> 단일 원장. 회상 0단계(`cognitive_recall._decision_scent` → `decision_ledger.scent_xml`)가 활성 판정의
+> 한 줄 다이제스트를 **상시** 주입하고(제안은 턴 *중간*에 생기므로 키워드 게이트만으로는 못 잡는다 —
+> ep 실측: 외부 조사 턴이 노드 스코핑 기각을 모르고 재제안), 질의가 keywords 에 걸리면 사유·출처
+> 상세를 얹는다. 추가·개정은 YAML 편집만(판정 이름을 코드에 넣지 말 것) · 뒤집힌 판정은 삭제 아닌
+> `status: superseded`(반증 가능). 관문=`backend/test_decision_ledger.py` D1~D5.
 
 **핵심**: 메모리가 곧 라우팅이다. 해마 점수(절차 기억의 친숙도)가 "반사로 처리할지, 의식을 동원할지"를 결정한다. 두 개의 자기 학습 루프(해마 증류 / 심층메모리 증류)가 사용할수록 시스템을 빠르고 개인화되게 만든다.
 

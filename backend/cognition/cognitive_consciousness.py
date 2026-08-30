@@ -69,18 +69,18 @@ def clear_framing_cache(key: str = None):
 def handle_session_reset() -> str:
     """SESSION_RESET 분류 후 호출.
 
-    현재 thread_context의 agent에 해당하는 Claude Code 세션 매핑을 제거하여
-    다음 호출이 fresh Claude Code 세션으로 시작되도록 한다.
-    Claude Code provider가 아닌 경우 no-op (안전).
+    현재 thread_context의 agent에 해당하는 CLI 프로바이더 세션 매핑을 제거하여
+    다음 호출이 fresh 세션으로 시작되도록 한다.
+    CLI 프로바이더(claude_code·codex)가 아닌 경우 no-op (안전).
 
     Returns:
         사용자에게 보여줄 표준 응답 텍스트
     """
     try:
-        from providers.claude_code import clear_session_for_agent
+        from providers import clear_cli_sessions_for_agent
         from thread_context import get_current_registry_key
         key = get_current_registry_key() or "default"
-        clear_session_for_agent(key)
+        clear_cli_sessions_for_agent(key)
         clear_framing_cache(key)  # 저장된 의식 framing도 함께 폐기
         print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
     except Exception as e:

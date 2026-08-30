@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-08-28
+last_updated: 2026-08-31
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -257,8 +257,11 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **업데이트 시 사용자 보존 규칙 (`frontend/electron/main.js` `initUserData`)**: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
-`backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code
-- **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**(맥 하네스 렌트)
+`backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex
+- **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**·**codex**(하네스 렌트)
+- **아웃오브프로세스 CLI 프로바이더 두 종**(`claude_code`·`codex`, 2026-08-31 codex 신설): CLI 를 subprocess 로 띄워 JSONL 을 내부 이벤트 어휘로 번역한다. 몸통은 `providers/cli_provider.py` 의 `CliSubprocessProvider` 공유 — 세션 영속(resume+크기 리셋)·신원 전파(episode/run/task/origin/agent_id 를 env·헤더로)·지도 봉투 재주입·정직 표지 요약·resume 실패 폴백·과부하 backoff 가 전부 거기 산다. 벤더 파일에는 바이너리 탐지·인증 격리·이벤트 번역·도구 정책만 남는다. 둘 다 **구독 인증**이라 API 키가 없다(`model_resolver._NO_KEY_PROVIDERS`; 판정은 `provider_needs_api_key()` 한 곳에서만 — 손복사 집합은 관문 `test_cli_provider_gates` 가 금지한다). 도구 브리지는 같은 `mcp_server.py`(execute_ibl·read_guide)를 공유하며 실명도 `mcp__indiebizos__*` 로 같다.
+  - ★**어휘 누수 방어가 서로 다르다**: claude_code 는 `--disallowed-tools` 로 Read·Grep·WebSearch 를 하드 차단해 IBL 등가물을 강제하지만, codex 의 파일 접근은 전부 shell 하나로 들어와 끌 수 없다(끄면 아무 일도 못 한다). codex 에서 설정으로 막는 건 web_search 뿐이고 나머지는 프롬프트가 감당한다 — 즉 **codex 쪽 누수 위험이 구조적으로 크다**. 누수가 의심되면 프롬프트를 덧대지 말고 `episode_log` 로 실측한 뒤 판정할 것.
+  - ★**codex 는 시스템 프롬프트를 붙일 플래그가 없다**(`--append-system-prompt` 등가물 부재). fresh 턴 프롬프트 머리에 싣고 resume 턴엔 생략하므로, 프롬프트가 바뀌면 세션 키(`키#프롬프트해시`)가 바뀌어 자동으로 fresh 로 끊긴다. '새 대화' 리셋은 `providers.clear_cli_sessions_for_agent` 가 접두 스윕으로 파생 키까지 지운다.
 - 모델·API 키는 **모델 기어**가 해소한 티어에서 상속(에이전트별 설정 폐지). 구체 모델 ID 는 `data/*_ai_config.json` 슬롯이 보유 — 이 문서는 목록만 유지(모델명은 빨리 낡는다).
 - ★함정: Gemini `flash-latest` 별칭은 `thinkingConfig.thinkingBudget:0` 을 400 으로 거부 — 버전 명시(`gemini-2.5-flash`) 필요.
 
@@ -305,10 +308,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(23) → `datastore`(36) → `ibl`(39) → `cognition`(43) → `services`(28) → `surface`(60). `.py` 총 285개(test 제외).
+  `base`(23) → `datastore`(36) → `ibl`(39) → `cognition`(43) → `services`(28) → `surface`(60). `.py` 총 287개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
-  - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(11, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
+  - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (**41개** — op 분기 **28개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)

@@ -2,6 +2,16 @@
  * IndieBiz 타입 정의
  */
 
+// 아웃오브프로세스 CLI 프로바이더 — 자체 인증(구독 로그인)이라 API 키 칸이 필요 없고,
+// 디스크에 세션을 남기므로 '새 대화'(세션 리셋) 버튼이 의미가 있다.
+// ★UI 가 이 성질을 물을 때는 프로바이더 이름을 직접 비교하지 말고 isCliProvider 를 쓸 것 —
+//   백엔드 정본은 providers/cli_provider.py 의 CliSubprocessProvider 다.
+export const CLI_PROVIDERS = ['claude_code', 'codex'] as const;
+
+export function isCliProvider(provider?: string | null): boolean {
+  return !!provider && (CLI_PROVIDERS as readonly string[]).includes(provider);
+}
+
 // 프로젝트
 export interface Project {
   id: string;
@@ -56,7 +66,7 @@ export interface Agent {
   email?: string;
   active: boolean;
   ai: {
-    provider: 'anthropic' | 'openai' | 'google' | 'openrouter' | 'deepseek' | 'claude_code' | 'ollama';
+    provider: 'anthropic' | 'openai' | 'google' | 'openrouter' | 'deepseek' | 'claude_code' | 'codex' | 'ollama';
     api_key?: string;
     model: string;
   };

@@ -964,9 +964,12 @@ class ChannelPoller:
 
             # 시스템 AI 설정 로드 (모델 기어 'system_ai' 역할로 해소 — 실행처와 일치)
             config = self._load_system_ai_config()
-            no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
+            # 키 불요 판정은 model_resolver 한 곳에서만 한다 — 여기 있던 손복사 집합은
+            # codex 추가 때 드리프트해서, 기어가 codex 인 동안 채널 수신이 통째로
+            # "모델/키 없음"으로 조용히 죽을 뻔했다(2026-08-31).
+            from model_resolver import provider_needs_api_key
             if not config.get('model') or (
-                not config.get('apiKey') and config.get('provider', '').lower() not in no_key):  # vj-ok: 프로바이더 설정 식별자
+                not config.get('apiKey') and provider_needs_api_key(config.get('provider'))):
                 self._log("시스템 AI 모델/키 없음")
                 return
 

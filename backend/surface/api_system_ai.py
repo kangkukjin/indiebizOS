@@ -1208,15 +1208,15 @@ async def get_system_ai_status():
 
 @router.post("/system-ai/reset-session")
 async def reset_system_ai_session():
-    """Claude Code 세션 매핑 클리어 — 다음 호출이 fresh 세션으로 시작.
+    """CLI 프로바이더 세션 매핑 클리어 — 다음 호출이 fresh 세션으로 시작.
 
     누적된 도구 결과·resume 컨텍스트를 끊고 싶을 때 사용.
-    Claude Code provider가 아니면 no-op이지만 200 OK 반환 (안전).
+    CLI 프로바이더(claude_code·codex)가 아니면 no-op이지만 200 OK 반환 (안전).
     """
     try:
-        from providers.claude_code import clear_session_for_agent
+        from providers import clear_cli_sessions_for_agent
         # 시스템 AI의 registry_key는 "system:system_ai"
-        clear_session_for_agent("system:system_ai")
+        clear_cli_sessions_for_agent("system:system_ai")
         return {"ok": True, "message": "새 세션을 시작했습니다."}
     except Exception as e:
         return {"ok": False, "error": str(e)}

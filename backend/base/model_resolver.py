@@ -36,8 +36,13 @@ def _nfc(s):
 
 logger = logging.getLogger(__name__)
 
-# claude_code/ollama는 자체 인증(OAuth/로컬)이라 api_key 불요.
-_NO_KEY_PROVIDERS = {"claude_code", "claude-code", "claudecode", "ollama"}
+# claude_code(Claude 구독 OAuth)·codex(ChatGPT 구독 로그인)·ollama(로컬)는
+# 자체 인증 경로를 갖고 있어 api_key 가 불요다.
+_NO_KEY_PROVIDERS = {
+    "claude_code", "claude-code", "claudecode",
+    "codex", "codex_cli", "codex-cli",
+    "ollama",
+}
 
 
 def provider_needs_api_key(provider) -> bool:

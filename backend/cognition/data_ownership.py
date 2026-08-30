@@ -160,6 +160,7 @@ DECLARATIONS: List[tuple] = [
     ("data/hidden_dm_peers.json",   "DM 숨김 목록",                              "state"),
     ("data/auto_response_state.json", "자동응답 on/off(auto_response)",          "state"),
     ("data/claude_code_*.json",     "claude_code 프로바이더 상태",               "state"),
+    ("data/codex_*.json",           "codex 프로바이더 상태",                     "state"),
     ("data/world_pulse_db.json",    "World Pulse 판(world_pulse.PULSE_DB_PATH)", "state"),
     ("data/phone_agent.json",       "인가 폰 신원(phone_notifications)",         "state"),
     ("data/peer_cards/**",          "이웃 몸 명함 캐시(peer_cards)",             "state"),

@@ -42,7 +42,7 @@ class ConsciousnessAgent:
         이제 model_resolver.resolve('consciousness') 로 의식 축을 따로 해소한다(기어 프리셋이
         의식과 실행을 다른 티어로 가를 수 있음). 키/모델 비면 비활성(기존 동작 보존)."""
         try:
-            from model_resolver import resolve
+            from model_resolver import resolve, provider_needs_api_key
             from providers import get_provider
 
             d = resolve("consciousness")
@@ -50,9 +50,10 @@ class ConsciousnessAgent:
             model = d.get("model") or ""
             api_key = d.get("api_key") or ""
 
-            # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 키 불요. 그 외엔 키 없으면 비활성.
-            no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-            if not model or (not api_key and provider_name.lower() not in no_key):  # vj-ok: 프로바이더 설정 식별자
+            # 자체 인증 프로바이더(claude_code·codex·ollama)는 키 불요. 그 외엔 키 없으면 비활성.
+            # ★판정은 model_resolver 한 곳에서만 한다 — 여기 있던 손복사본 집합이
+            #   codex 추가 때 드리프트할 뻔했다(2026-08-31). 목록을 두 벌 두지 말 것.
+            if not model or (not api_key and provider_needs_api_key(provider_name)):
                 logger.warning(f"[ConsciousnessAgent] 모델/키 없음 — 비활성 (source={d.get('source')})")
                 return
 

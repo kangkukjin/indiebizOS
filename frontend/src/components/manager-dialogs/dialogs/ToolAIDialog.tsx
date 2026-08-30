@@ -52,6 +52,7 @@ export function ToolAIDialog({
               <option value="openrouter">OpenRouter</option>
               <option value="deepseek">DeepSeek</option>
               <option value="claude_code">Claude Code (Max 플랜)</option>
+              <option value="codex">Codex (ChatGPT 구독)</option>
             </select>
           </div>
 

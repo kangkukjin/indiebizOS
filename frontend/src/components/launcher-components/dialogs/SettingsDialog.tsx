@@ -9,6 +9,7 @@
 import { useCallback, useState, useRef } from 'react';
 import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
+import { isCliProvider } from '../../../types';
 import { api } from '../../../lib/api';
 import { useRetryingLoad } from '../../../lib/use-retrying-load';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
@@ -77,7 +78,7 @@ export function SettingsDialog({
     ...current, apiKey,
     providerApiKeys: { ...(current.providerApiKeys || {}), [current.provider]: apiKey },
   });
-  const keyPlaceholder = (current: TierSettings) => current.provider === 'claude_code'
+  const keyPlaceholder = (current: TierSettings) => isCliProvider(current.provider)
     ? 'API 키가 필요하지 않습니다'
     : current.providerHasApiKey?.[current.provider]
       ? '저장된 API 키 사용 중 — 새 키를 입력하면 교체됩니다'
@@ -326,6 +327,7 @@ export function SettingsDialog({
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
                     <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
+                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
                   </select>
                 </div>
 
@@ -437,6 +439,7 @@ export function SettingsDialog({
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
                     <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
+                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
                   </select>
                 </div>
 
@@ -510,6 +513,7 @@ export function SettingsDialog({
                     <option value="openrouter">OpenRouter (650+ 모델)</option>
                     <option value="deepseek">DeepSeek (V4 Pro/Flash)</option>
                     <option value="claude_code">Claude Code (Max 플랜, CLI 호출)</option>
+                    <option value="codex">Codex (ChatGPT 구독, CLI 호출)</option>
                   </select>
                 </div>
 

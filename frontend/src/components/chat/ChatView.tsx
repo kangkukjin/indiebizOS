@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cancelAllAgents, api } from '../../lib/api';
 import type { Agent } from '../../types';
+import { isCliProvider } from '../../types';
 import { CameraPreview } from '../CameraPreview';
 import { SystemAIChatHistoryDialog } from '../launcher-components/dialogs/SystemAIChatHistoryDialog';
 import {
@@ -184,7 +185,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const currentProvider = isAgent
     ? chatTarget.agent.ai?.provider
     : systemAiProvider;
-  const showResetSessionButton = currentProvider === 'claude_code';
+  const showResetSessionButton = isCliProvider(currentProvider);
 
   const handleResetSession = async () => {
     try {

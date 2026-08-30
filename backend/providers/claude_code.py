@@ -5,6 +5,11 @@ IndieBiz OS Core
 Claude Code를 indiebizOS의 provider로 노출. 다른 provider와 동일한 인터페이스이므로
 시스템 AI·중급·프로젝트 에이전트 어디서든 드롭다운으로 선택 가능.
 
+★몸통은 `cli_provider.CliSubprocessProvider` 에 있다 — 세션 영속·신원 전파·스트림
+오케스트레이션·지도 재주입·로그 절단은 아웃오브프로세스 CLI 라면 벤더 무관이라 거기 산다.
+이 파일에는 **Claude Code 에만 있는 것**만 남는다: 바이너리 탐지, OAuth/API 과금 격리,
+stream-json 이벤트 어휘, --allowed-tools 계열 플래그, 네이티브 도구 정책.
+
 특성:
 - 한계비용 0 (Claude Max 플랜 사용 시) — 토큰 기반 과금 안 함
 - 강력한 에이전틱 코딩/조사 능력 (Read·Edit·Bash·Grep 내장)
@@ -12,7 +17,7 @@ Claude Code를 indiebizOS의 provider로 노출. 다른 provider와 동일한 �
 - 인증: 토큰 → CLAUDE_CODE_OAUTH_TOKEN 또는 ANTHROPIC_API_KEY (subprocess env)
 
 지원 기능:
-- IBL 액션 호출: data/claude_code_mcp.json MCP 브리지로 execute_ibl 노출 → 311 액션 접근
+- IBL 액션 호출: data/claude_code_mcp.json MCP 브리지로 execute_ibl 노출
 - 이미지 입력: base64 → 임시 파일 → Claude Code Read 도구로 시각 처리
 - 스트리밍: process_message_stream (--output-format stream-json)
 - 대화 히스토리: 매 호출 stateless, history는 프롬프트에 텍스트로 직렬화 주입
@@ -25,161 +30,38 @@ config 예시 (data/system_ai_config.json 등):
   }
 """
 
-import base64
 import json
 import os
-import re
 import shutil
-import subprocess
 import tempfile
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List, Optional
-from urllib.parse import quote
+from typing import Any, Dict, List, Optional
 
-from .base import BaseProvider
-from episode_logger import truncate_for_log
-from ibl_honesty import HONESTY_KEYS   # 정직 표지 목록의 단일 소스 (손으로 적지 않는다)
-
-# 로그 절단 폭 — 회고 가치 대 로그 예산의 값. 자른 자리는 truncate_for_log 가 반드시
-# `…(+N자)` 표식을 남기므로, 읽는 쪽은 "짧다"와 "잘렸다"를 추정 없이 가른다.
-#
-# ★execute_ibl 만 폭이 다른 이유(2026-08-22 실측): IBL 코드는 **조합 구조가 사는 자리**라
-# 뒷부분이 잘리면 `>>`·`&`·`??` 를 셀 수 없어 조합률 지표가 통째로 하한이 된다
-# (창 1,720건 중 436건=25% 가 300자에서 잘렸다). 400건 표본의 실제 길이 분포는
-# p50=125 · p90=957 · p95=1,473 · p98=3,273 이고, 그 위의 꼬리는 전부
-# [self:edit]·[self:write]·[self:patch] 의 **내용** payload(최대 51,987자)다.
-# 그래서 '면제'가 아니라 폭이다 — 무제한은 예산의 대부분을 편집 payload 에 쓰고
-# (표본 합계 6배), 2,000자는 호출의 97%를 온전히 담으면서 episode_log 총량을
-# 약 +5% 늘린다(측정: log 10.3M자 중 tool_use 18.8% · 그중 execute_ibl 8.7%).
-_TOOLUSE_CAP = 300
-_TOOLUSE_CAP_IBL = 2000
-_TOOLRESULT_CAP = 300
-# ★결과 폭이 두 벌인 이유(2026-08-28 실측): 원장이 자기 실패를 못 보는 것이 이 로그의 가장 큰
-# 결함이었다. 최근 200 에피소드에서 tool_result 4,103줄 중 2,281줄(55.6%)이 300자에서 잘렸고,
-# (error) 태그 줄도 43줄 중 21줄(49%)이 잘렸다. 잘리는 자리는 하필 봉투의 정직 표지
-# (success:false·error·_fallback_used·error_count·errors·skipped_steps·condition_errors·
-# halted·branches_failed·truncated …)가 사는 뒤쪽이라, vocab_crystallization 의 실패
-# 스캐너는 '있는 실패'를 못 본다. 무제한 확대는 답이 아니다 — 같은 표본의 숨은 글자 합계가
-# 7.8M자(절단분 1건당 평균 3,438자)라 로그 예산이 무너진다. 그래서 실패 신호만 우선 건진다:
-#   ① (error) 줄은 폭 자체를 넓힌다 — 평문 traceback 은 키가 없어 요약이 안 되므로 본문이
-#      유일한 단서다.
-#   ② 나머지는 300자 머리에 '정직 표지 요약'을 이어 붙인다. 살아있는 표지가 없는 성공 결과는
-#      요약이 비어 폭도 예전 그대로다(비용은 실패한 결과에만 붙는다).
-_TOOLRESULT_CAP_ERROR = 2000
-_FAILDIGEST_CAP = 240
-
-
-# 봉투의 정직 표지 — 절단에 삼켜지면 안 되는 키들. 값이 '살아있을' 때만 요약에 싣는다
-# (truncated:false · error_count:0 처럼 죽은 값은 신호가 아니라 잡음이다).
-# ★목록을 손으로 적지 않는다(scripts/check_honesty_propagation.py 관문): 정본은
-# ibl_honesty.HONESTY_KEYS 한 벌이고, 여기서는 **엔진 봉투 밖** — 외부 CLI 의 결과
-# 텍스트에만 나타나는 신호만 더한다. 첫 판(2026-08-28)은 이 목록을 손으로 적다가
-# rows_replaced 를 빠뜨렸고 관문이 그걸 잡았다 — 정본이 자라면 이 스캐너도 같이 자란다.
-_RESULT_ONLY_SIGNALS = (
-    "error", "error_type", "success", "warning",
-    "branches_honesty", "criteria_verdict", "approval_required",
+from .cli_provider import (
+    CliSessionStore,
+    CliSubprocessProvider,
+    _data_dir,
+    # 재수출 — 옛 임포트 경로(`from providers.claude_code import _TOOLUSE_CAP`)를 지킨다.
+    _TOOLUSE_CAP,
+    _TOOLUSE_CAP_IBL,
+    _TOOLRESULT_CAP,
+    _TOOLRESULT_CAP_ERROR,
+    _extract_map_tags,
+    _failure_digest,
+    _preview_with_signals,
 )
-_HONESTY_KEYS = tuple(dict.fromkeys(HONESTY_KEYS + _RESULT_ONLY_SIGNALS))
-_HONESTY_RE = re.compile(
-    '"(' + "|".join(_HONESTY_KEYS) + ')"\\s*:\\s*'
-    '("[^"]{0,160}"|\\[[^\\]]{0,160}\\]?|\\{[^}]{0,160}\\}?|[-\\w.]+)'
-)
-_DEAD_VALUE_RE = re.compile(
-    '^(false|null|none|0|0[.]0|\\[\\]|\\{\\}|"")$', re.IGNORECASE)
 
-
-def _failure_digest(text: str, cap: int = _FAILDIGEST_CAP) -> str:
-    """결과 본문 전체에서 살아있는 정직 표지만 추려 한 줄로 (없으면 빈 문자열).
-
-    절단된 뒷쪽에 실패가 숨는 것을 막는 장치라 본문 **전체**를 훑는다 — 머리에 이미
-    보이는 표지가 중복될 수 있지만, 못 보는 것보다 싸다."""
-    flat = (text or "").replace('\\"', '"')   # 중첩 JSON 이스케이프 평탄화
-    parts: List[str] = []
-    seen = set()
-    for key, val in _HONESTY_RE.findall(flat):
-        v = val.strip()
-        live = not _DEAD_VALUE_RE.match(v)
-        if key == "success":        # success 는 false 일 때만 신호
-            live = v.lower() == "false"
-        elif key == "truncated":    # truncated 는 true 일 때만 신호
-            live = v.lower() == "true"
-        if not live or key in seen:
-            continue
-        seen.add(key)
-        # 표기는 JSON 짝("키": 값)으로 맞춘다 — 기존 실패 스캐너
-        # (vocab_crystallization._CC_RESULT_FAIL_RE 의 '"success": false')가
-        # 요약에서도 그대로 걸리도록.
-        parts.append(f'"{key}": {truncate_for_log(v, 80)}')
-    if not parts:
-        return ""
-    return " ⚠signals " + truncate_for_log(" · ".join(parts), cap)
-
-
-def _preview_with_signals(flat: str, cap: int) -> str:
-    """로그용 미리보기 — cap 자 머리 + (잘렸다면) 정직 표지 요약 + 절단 표식.
-
-    요약을 절단 경계에 끼우고 폭을 요약 길이만큼만 늘려 자르므로, 표식의 N 은 원문
-    숨김량 그대로이고 표식은 문자열 끝에 남는다 — truncate_for_log 의 읽는 쪽 계약
-    (TRUNC_MARK_RE 가 끝에 걸림 = 절단분)이 깨지지 않는다."""
-    digest = _failure_digest(flat) if len(flat) > cap else ""
-    return truncate_for_log(flat[:cap] + digest + flat[cap:], cap + len(digest))
-
-
-_IMG_EXT_BY_MEDIA = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/jpg": ".jpg",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-}
-
-# 프론트엔드가 채팅 텍스트에서 인식하는 지도 봉투 타입 (chatUtils.parseMapData 계약).
-_MAP_ENVELOPE_TYPES = ("route_map", "location_map")
-
-
-def _extract_map_tags(tool_result_text: str) -> List[str]:
-    """도구 결과 텍스트에서 지도 봉투(route_map/location_map)를 찾아 [MAP:{...}] 태그로 반환.
-
-    IBL 실행 경로는 지도 결과를 map_data 키(봉투)로만 담고 [MAP:] 태그를 붙이지 않으며,
-    파이프라인(`>>`)이면 봉투가 중첩 JSON 문자열 안에 있다. 그래서 문자열을 재귀적으로
-    파싱해(안쪽 JSON 문자열도 다시 loads) `type in (route_map, location_map)`인 dict 를
-    전부 찾아 프론트엔드 계약대로 [MAP:{clean json}] 로 직렬화한다. 중복은 제거.
-    파싱 불가 조각은 조용히 건너뜀(graceful).
-    """
-    found: List[dict] = []
-    seen: set = set()
-
-    def walk(obj, depth=0):
-        # 상한 16: CLI relay 는 MCP str 반환을 {"result": "<json>"} 로 한 겹 더 감싸고
-        # (문자열+dict = +2 깊이), 병렬(`&`) 파이프라인은 봉투를 깊이 9까지 밀어넣는다
-        # (에피소드 802 실측). 옛 상한 8은 이 조합에서 1칸 모자라 지도가 조용히 유실됐다.
-        if depth > 16:
-            return
-        if isinstance(obj, dict):
-            if obj.get("type") in _MAP_ENVELOPE_TYPES:
-                key = json.dumps(obj, ensure_ascii=False, sort_keys=True)
-                if key not in seen:
-                    seen.add(key)
-                    found.append(obj)
-            for v in obj.values():
-                walk(v, depth + 1)
-        elif isinstance(obj, list):
-            for v in obj:
-                walk(v, depth + 1)
-        elif isinstance(obj, str):
-            s = obj.strip()
-            if s.startswith(("{", "[")) and len(s) < 500_000:
-                try:
-                    walk(json.loads(s), depth + 1)
-                except (json.JSONDecodeError, ValueError):
-                    pass
-
-    try:
-        walk(json.loads(tool_result_text))
-    except (json.JSONDecodeError, ValueError, TypeError):
-        return []
-    return [f"[MAP:{json.dumps(m, ensure_ascii=False)}]" for m in found]
+__all__ = [
+    "ClaudeCodeProvider",
+    "find_claude_binary",
+    "load_oauth_token_from_central_config",
+    "get_mcp_config_path",
+    "load_session_map", "save_session_map", "clear_session_for_agent",
+    "load_session_sizes", "save_session_sizes",
+    "record_session_size", "clear_session_size",
+    "SESSION_RESET_TOKEN_THRESHOLD",
+]
 
 
 def find_claude_binary() -> Optional[str]:
@@ -229,21 +111,6 @@ def find_claude_binary() -> Optional[str]:
     return None
 
 
-def _data_dir() -> Path:
-    """데이터 디렉토리 경로. 다른 백엔드 모듈과 동일한 관례(runtime_utils.get_base_path)로
-    해석한다 — 프로덕션(패키지 앱)에선 INDIEBIZ_BASE_PATH(=userData), 개발에선 repo 루트.
-
-    ★윈도우 패키지 앱 버그 방지: 하드코딩 parents[2]/data 는 설치폴더(resources, 읽기전용)를
-    가리켜, 사용자가 userData(%APPDATA%\\IndieBiz OS\\data)에 넣은 OAuth 토큰을 못 봤다.
-    이 헬퍼로 통일해 토큰·세션·MCP 파일을 모두 userData 기준으로 읽는다. (맥/개발은 동일 경로.)
-    """
-    try:
-        from runtime_utils import get_base_path
-        return get_base_path() / "data"
-    except Exception:
-        return Path(__file__).resolve().parents[2] / "data"
-
-
 def load_oauth_token_from_central_config() -> Optional[str]:
     """data/claude_code_config.json에서 OAuth 토큰 로드.
 
@@ -268,773 +135,165 @@ def get_mcp_config_path() -> Optional[str]:
     return str(mcp_path) if mcp_path.exists() else None
 
 
-# ============ 세션 매핑 (--resume 연속성) ============
-# Claude Code가 자기 과거 도구 호출·plan·파일 편집 이력을 기억하도록
-# agent별로 session_id를 저장하고 다음 호출에 재사용한다.
+# ============ 세션 상태 저장소 ============
+# 실체는 cli_provider.CliSessionStore. 아래 모듈 함수들은 옛 임포트 경로를 지키는 얇은 껍질이다
+# (api_agents·api_system_ai·cognitive_consciousness 가 clear_session_for_agent 를 부른다).
+_STORE = CliSessionStore("claude_code", "ClaudeCodeProvider")
 
-def _session_map_path() -> Path:
-    return _data_dir() / "claude_code_sessions.json"
+SESSION_RESET_TOKEN_THRESHOLD = CliSubprocessProvider.SESSION_RESET_TOKEN_THRESHOLD
 
 
 def load_session_map() -> Dict[str, str]:
-    p = _session_map_path()
-    if not p.exists():
-        return {}
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, dict) else {}
-    except (json.JSONDecodeError, OSError):
-        return {}
+    return _STORE.load_map()
 
 
 def save_session_map(m: Dict[str, str]):
-    p = _session_map_path()
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(m, f, ensure_ascii=False, indent=2)
-    except OSError as e:
-        print(f"[ClaudeCodeProvider] 세션 매핑 저장 실패: {e}")
+    _STORE.save_map(m)
 
 
 def clear_session_for_agent(session_key: str):
-    """특정 agent의 세션 매핑 제거. UI '새 대화' 등에서 호출."""
-    m = load_session_map()
-    if session_key in m:
-        del m[session_key]
-        save_session_map(m)
+    """특정 agent의 세션 매핑 제거. UI '새 대화' 등에서 호출.
 
-
-# ============ 세션 컨텍스트 크기 추적 (크기 기반 리셋) ============
-# --resume 은 CLI 가 디스크의 전체 트랜스크립트를 재생하므로 세션이 무한 성장한다.
-# (indiebizOS 가 넘기는 5턴/요약 트림은 resume 경로에서 버려짐.) 의미 있는 장기
-# 연속성은 이미 indiebizOS 기억층(연상·심층메모리·의식 요약·포식)이 주입하므로,
-# raw 트랜스크립트가 임계 토큰을 넘으면 다음 턴에 fresh 세션으로 끊고 트림 히스토리로
-# 재시드한다. 턴 수가 아니라 *실측 토큰*(in+cache_read+cache_create)에 거는 이유:
-# 턴 크기가 비균일하다 — 이미지/긴 산출물 한 턴이 폭발 주범이지 턴 수가 아니다.
-# ★임계값은 truncation 방어가 아니다: 모델(Opus 4.8)의 컨텍스트 윈도우는 1M 이라 이 값이
-# 조절하는 건 천장이 아니라 비용/지연/품질(낡은 tool_result 희석)이다. 옛 150K(윈도우 15%)는
-# goal-eval 재실행 3라운드를 태스크 도중에 끊어 탈선시켰다(episode 718) → 300K(30%).
-# 2026-07-28 사용자 결정으로 500K(50%, 여유 500K)로 재상향 — 리셋 빈도 축소가 목적.
-# 트레이드: 세션이 길수록 턴당 캐시 읽기 비용과 낡은 tool_result 희석은 커진다.
-# 되돌릴 때 "200K 벽" 가정 금지 — 옛 Opus 200K 기억은 stale, 현 모델은 1M.
-# 비용이 문제면 값 낮추기보다 낡은 tool_result 비우기.
-SESSION_RESET_TOKEN_THRESHOLD = 500_000
-
-
-def _session_size_path() -> Path:
-    return _data_dir() / "claude_code_session_sizes.json"
+    ★프로바이더 무관 리셋이 필요하면 `providers.clear_cli_sessions_for_agent` 를 쓸 것 —
+    이 함수는 Claude Code 매핑만 비운다.
+    """
+    _STORE.clear_agent(session_key)
 
 
 def load_session_sizes() -> Dict[str, int]:
-    p = _session_size_path()
-    if not p.exists():
-        return {}
-    try:
-        with open(p, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, dict) else {}
-    except (json.JSONDecodeError, OSError):
-        return {}
+    return _STORE.load_sizes()
 
 
 def save_session_sizes(m: Dict[str, int]):
-    p = _session_size_path()
-    try:
-        p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump(m, f, ensure_ascii=False, indent=2)
-    except OSError as e:
-        print(f"[ClaudeCodeProvider] 세션 크기 저장 실패: {e}")
+    _STORE.save_sizes(m)
 
 
 def record_session_size(session_key: str, size: int):
     """직전 턴의 실측 컨텍스트 토큰 수를 기록 (다음 턴 리셋 판단용)."""
-    if not session_key or size <= 0:
-        return
-    m = load_session_sizes()
-    m[session_key] = int(size)
-    save_session_sizes(m)
+    _STORE.record_size(session_key, size)
 
 
 def clear_session_size(session_key: str):
-    m = load_session_sizes()
-    if session_key in m:
-        del m[session_key]
-        save_session_sizes(m)
+    _STORE.clear_size(session_key)
 
 
-class ClaudeCodeProvider(BaseProvider):
+class ClaudeCodeProvider(CliSubprocessProvider):
     """Claude Code CLI를 subprocess로 호출하는 provider."""
 
-    DEFAULT_TIMEOUT_SEC = 600  # 10분
-
-    # 서버측 일시 과부하(529 Overloaded / overloaded_error 등) 자동 재시도.
-    # 본문이 아직 하나도 안 온(not committed) 경우에만 backoff 후 다시 호출한다.
-    # 입력 크기와 무관한 서버 포화 신호라, 강의 저작처럼 "유효 JSON 한 방"이
-    # 필요한 일회성 호출이 단 한 번의 과부하로 통째 실패하던 걸 흡수한다.
-    OVERLOADED_MAX_RETRIES = 3
-    OVERLOADED_BASE_DELAY_SEC = 2.0
-    OVERLOADED_MAX_DELAY_SEC = 30.0
-
-    @staticmethod
-    def _is_overloaded_error(text: str) -> bool:
-        """일시적 서버 과부하 에러인지 판정 (대소문자 무시).
-
-        주의: 이 검사는 *에러 텍스트*(resume_err_text+stderr)에만 적용된다.
-        'overloaded' 키워드가 1차 신호. '529'는 에러 맥락(error 동반)일 때만
-        인정해 본문 숫자 등 우발적 부분일치 오탐을 막는다.
-        """
-        low = (text or "").lower()
-        if "overloaded" in low:  # "API Error: 529 Overloaded" / overloaded_error 등
-            return True
-        return "529" in low and "error" in low
+    CLI_LABEL = "ClaudeCode"
+    CLI_DISPLAY = "Claude Code"
+    STATE_PREFIX = "claude_code"
+    SESSION_STORE = _STORE
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._binary_path: Optional[str] = None
         self._effective_token: Optional[str] = None
-        # 메타 역할(의식·평가 등) provider는 세션 연속성이 의미 없고
-        # 메인 에이전트와 session_key가 충돌하므로 비활성화 가능.
-        # 호출 측이 init_client 후 True로 설정.
-        self.disable_session_persistence: bool = False
-        # 직전 턴의 실측 컨텍스트 토큰 수(in+cache_read+cache_create) 릴레이.
-        # _translate_stream_event 가 result 이벤트에서 채우고, 세션 저장부가 읽어 영속화.
-        self._last_context_size: int = 0
-        # 도구 실행 결과 (non-streaming 경로에서 evaluator가 사용).
-        # process_message 시작 시 비워지고 stream 이벤트 소비 중 누적된다.
-        self._last_tool_results: List[str] = []
-        # 도구 호출 구조화 이력 ({name, input, result, is_error}) — evaluator 시퀀스 근거용.
-        # tool_start와 tool_result를 인덱스로 페어링하여 누적한다.
-        self._last_tool_calls: List[Dict[str, Any]] = []
-        # 이번 턴 도구 결과에서 발견한 지도 봉투(route_map/location_map)를 [MAP:...] 태그로 모아,
-        # 최종 응답 끝에 재주입한다. in-process 프로바이더(anthropic/gemini/openai/ollama)는
-        # execute_tool 이 [MAP:] 태그를 붙이고 각자 재주입하지만, 아웃오브프로세스인 이 프로바이더는
-        # CLI 서브프로세스가 도구 결과를 산문으로 요약하며 마커를 흘려버려 프론트 지도가 안 뜬다.
-        # process_message_stream 시작 시 비워지고, tool_result 소비 중 누적된다.
-        self._pending_map_tags: List[str] = []
+        self._mcp_temp_path: Optional[str] = None
 
-    def init_client(self) -> bool:
-        """claude CLI 바이너리 탐지 + OAuth 토큰 로드 + 검증."""
-        self._binary_path = find_claude_binary()
-        if not self._binary_path:
-            print(
-                "[ClaudeCodeProvider] claude CLI를 찾을 수 없음. "
-                "Claude Desktop 설치 또는 'npm install -g @anthropic-ai/claude-code' 필요"
-            )
-            return False
+    # ================= 인증·바이너리 =================
 
-        # 토큰 우선순위:
-        # 1. provider config의 api_key (단, sk-ant- 형식일 때만 — 다른 provider 키가 폴백으로
-        #    잘못 흘러들어오는 경우 방어)
-        # 2. 중앙 config 파일 (data/claude_code_config.json)의 OAuth 토큰
+    @classmethod
+    def _find_binary(cls) -> Optional[str]:
+        return find_claude_binary()
+
+    def _resolve_auth(self) -> str:
+        """토큰 우선순위 해소 + 로그용 출처 설명 반환.
+
+        1. provider config의 api_key (단, sk-ant- 형식일 때만 — 다른 provider 키가 폴백으로
+           잘못 흘러들어오는 경우 방어)
+        2. 중앙 config 파일 (data/claude_code_config.json)의 OAuth 토큰
+        """
         provided_key = (self.api_key or "").strip()
         if provided_key.startswith("sk-ant-"):
             self._effective_token = provided_key
-            token_source = "config.api_key"
+            return "config.api_key"
+
+        self._effective_token = load_oauth_token_from_central_config()
+        if provided_key and not self._effective_token:
+            return "config.api_key (비Anthropic 형식 무시, 중앙 토큰 없음)"
+        if provided_key:
+            return "중앙 OAuth (config.api_key는 비Anthropic 형식이라 무시)"
+        if self._effective_token:
+            return "data/claude_code_config.json"
+        return "없음"
+
+    def _build_env(self) -> Dict[str, str]:
+        """subprocess에 전달할 env 구성.
+
+        - OAuth 토큰 (sk-ant-oat...) → CLAUDE_CODE_OAUTH_TOKEN (Max/Pro 구독 빌링)
+        - API 키 (sk-ant-api...) → ANTHROPIC_API_KEY (per-call 빌링)
+        - 신원(INDIEBIZOS_*) 은 상위(CliSubprocessProvider)가 채운다.
+        """
+        env = super()._build_env()
+        # ★구독(OAuth) vs API 과금 경로를 코드로 격리한다. 기본은 "구독만" —
+        #  .env 의 ANTHROPIC_API_KEY 가 claude 서브프로세스에 새어들어 구독 대신 API 로
+        #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
+        #  명시적으로 API 키(sk-ant-api…)를 준 경우에만 API 과금 경로를 연다.
+        #  ANTHROPIC_API_KEY 는 os.environ(.env)에 그대로 남아 *다른* 프로바이더에서는 계속 쓰인다.
+        tok = self._effective_token
+        if tok and tok.startswith("sk-ant-api"):
+            env["ANTHROPIC_API_KEY"] = tok
+            env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
         else:
-            self._effective_token = load_oauth_token_from_central_config()
-            if provided_key and not self._effective_token:
-                token_source = f"config.api_key (비Anthropic 형식 무시, 중앙 토큰 없음)"
-            elif provided_key:
-                token_source = f"중앙 OAuth (config.api_key는 비Anthropic 형식이라 무시)"
-            elif self._effective_token:
-                token_source = "data/claude_code_config.json"
-            else:
-                token_source = "없음"
+            env.pop("ANTHROPIC_API_KEY", None)
+            if tok:  # sk-ant-oat… (구독 토큰)
+                env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
+        return env
 
-        # BaseProvider.is_ready 만족을 위한 마커
-        self._client = {"binary": self._binary_path}
-        print(
-            f"[ClaudeCodeProvider] {self.agent_name}: 초기화 완료 "
-            f"(binary={self._binary_path}, model={self.model or '기본'}, token={token_source})"
+    # ================= 세션 =================
+
+    def _is_session_issue(self, combined: str) -> bool:
+        """resume 실패(세션 만료/무효) 판정 — Claude CLI 의 문구."""
+        low = (combined or "").lower()
+        return ("no conversation found" in low) or (
+            "session" in low and ("not found" in low or "invalid" in low)
         )
-        return True
 
-    def process_message(
-        self,
-        message: str,
-        history: List[Dict] = None,
-        images: List[Dict] = None,
-        execute_tool: Callable = None,
-    ) -> str:
-        """동기 호출. 내부적으로 process_message_stream을 collect하여 최종 텍스트 반환.
+    # ================= 도구 브리지 =================
 
-        부수효과: tool_start/tool_result 이벤트를 self._last_tool_results와
-        self._last_tool_calls에 누적해 non-streaming 호출 측(이메일 응답·시스템 AI 등)이
-        evaluator에 호출 시퀀스를 통째로 전달할 수 있게 한다.
+    def _mcp_bridge_acquire(self) -> Optional[str]:
+        """MCP 브리지: HTTP 우선(플래그 ON일 때) → stdio 폴백."""
+        self._mcp_temp_path = self._http_mcp_config_path()
+        return self._mcp_temp_path or get_mcp_config_path()
+
+    def _mcp_bridge_release(self, handle: Optional[str]) -> None:
+        """HTTP 모드에서 spawn 마다 만든 유니크 temp config 정리 (stdio 경로는 영속 파일)."""
+        if self._mcp_temp_path:
+            try:
+                os.remove(self._mcp_temp_path)
+            except OSError:
+                pass
+            self._mcp_temp_path = None
+
+    def _http_mcp_config_path(self) -> Optional[str]:
+        """HTTP MCP config 를 spawn 마다 유니크 temp 파일로 쓴다 (플래그 ON일 때만).
+
+        INDIEBIZOS_MCP_HTTP="1" 이 아니면 None → 호출부에서 stdio(get_mcp_config_path())로 폴백.
+        신원(agent_id/project_path)은 config 안 헤더로 실린다. 동시에 여러 에이전트가
+        돌 수 있으므로 고정 파일을 덮어쓰면 서로의 신원을 읽는 레이스가 난다 → spawn 마다
+        유니크 파일로 쓰고 실행 후 정리한다.
         """
-        final_text = ""
-        self._last_tool_results = []  # 턴 시작 시 초기화
-        self._last_tool_calls = []  # 턴 시작 시 초기화
-        _pair_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (n번째 결과 = n번째 호출)
-        for event in self.process_message_stream(message, history, images, execute_tool):
-            etype = event.get("type")
-            if etype == "text":
-                final_text += event.get("content", "")
-            elif etype == "tool_start":
-                # 호출 헤더(이름·인풋) 우선 적재 — 결과는 다음 tool_result 이벤트에서 채운다.
-                self._last_tool_calls.append({
-                    "id": event.get("id", ""),
-                    "name": event.get("name", ""),
-                    "input": event.get("input", {}),
-                    "result": "",
-                    "is_error": False,
-                })
-            elif etype == "tool_result":
-                # evaluator 노출용 — 결과 텍스트는 legacy 리스트에도 보존.
-                _result = event.get("result", "")
-                if _result:
-                    self._last_tool_results.append(_result)
-                # tool_use_id로 페어링 — 병렬 호출 시 옛 [-1] 페어링은 A의 결과를 B에
-                # 붙이고 B의 결과(실패 포함)를 유실했다(2026-08-15 수리). id가 비면
-                # 도착 순서 커서로 폴백 (결과는 tool_start 순서대로 도착한다).
-                _rid = event.get("id", "")
-                _slot = None
-                if _rid:
-                    _slot = next(
-                        (tc for tc in self._last_tool_calls if tc.get("id") == _rid),
-                        None,
-                    )
-                if _slot is None and _pair_cursor < len(self._last_tool_calls):
-                    _slot = self._last_tool_calls[_pair_cursor]
-                _pair_cursor += 1
-                if _slot is not None:
-                    _slot["result"] = _result
-                    _slot["is_error"] = bool(event.get("is_error", False))
-            elif etype == "final":
-                final_text = event.get("content", final_text)
-            elif etype == "error":
-                return event.get("content", "[Claude Code 오류]")
-        return final_text or "[Claude Code가 빈 응답을 반환했습니다]"
+        if os.environ.get("INDIEBIZOS_MCP_HTTP", "0") != "1":
+            return None
+        cfg = {"mcpServers": {"indiebizos": {
+            "type": "http",
+            # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
+            "url": "http://localhost:8765/mcp/",
+            "headers": self._identity_headers(),
+        }}}
+        fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(cfg, f)
+        return path
 
-    def process_message_stream(
-        self,
-        message: str,
-        history: List[Dict] = None,
-        images: List[Dict] = None,
-        execute_tool: Callable = None,
-        cancel_check: Callable = None,
-    ) -> Generator[Dict[str, Any], None, None]:
-        """스트리밍 호출. stream-json 출력을 파싱하여 이벤트 yield.
+    def _image_prompt_prefix(self, image_paths: List[str]) -> str:
+        img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
+        return (
+            f"{img_lines}\n"
+            f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
+        )
 
-        Yields:
-            {"type": "text", "content": "..."}
-            {"type": "tool_start", "name": "...", "input": {...}}
-            {"type": "tool_result", "name": "...", "result": "...", "is_error": bool}
-            {"type": "thinking", "content": "..."}
-            {"type": "final", "content": "..."}
-            {"type": "error", "content": "..."}
-        """
-        if not self._client:
-            yield {"type": "error", "content": "Claude Code provider가 초기화되지 않았습니다."}
-            return
-
-        # 턴 시작 시 라운드별 컨텍스트 크기 릴레이 초기화 (이전 턴 값 잔류 방지)
-        self._last_context_size = 0
-        # 턴 시작 시 지도 태그 누적 초기화 (이전 턴 지도가 새 응답에 새는 것 방지)
-        self._pending_map_tags = []
-
-        # 1) 이미지 → 임시 파일 → 프롬프트에 path 주입
-        image_paths: List[str] = self._save_images_to_temp(images or [])
-
-        # 2) MCP 브리지: HTTP 우선(플래그 ON일 때) → stdio 폴백
-        _http_cfg = self._http_mcp_config_path()
-        mcp_config_path = _http_cfg or get_mcp_config_path()
-        try:
-
-            # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피 — _build_command 주석 참조).
-            #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
-            system_prompt_file = self._write_system_prompt_file()
-
-            # 3) 세션 연속성 결정 (--resume)
-            # 정책: history가 비어있으면 새 대화로 간주하여 fresh session, 그렇지 않으면 저장된 session_id로 resume
-            # 단, disable_session_persistence가 True면 (의식·평가 등 메타 역할) 항상 fresh.
-            if self.disable_session_persistence:
-                session_key_val = None
-                session_map = {}
-                stored_session_id = None
-                resume_session_id = None
-            else:
-                session_key_val = self._get_session_key()
-                session_map = load_session_map()
-                stored_session_id = session_map.get(session_key_val)
-                resume_session_id = stored_session_id if (history and stored_session_id) else None
-                # history 없으면 (= 새 대화) 기존 매핑 무효화
-                if not history and stored_session_id:
-                    clear_session_for_agent(session_key_val)
-                    stored_session_id = None
-                # 크기 기반 리셋: 직전 턴 컨텍스트가 임계 초과면 fresh 로 끊는다.
-                # fresh 경로는 _build_prompt_with_history 로 트림된 5턴 히스토리를 재시드하므로
-                # 맥락은 indiebizOS 기억층 + 트림 히스토리로 이어진다 (raw 중복만 제거).
-                if resume_session_id:
-                    prev_size = int(load_session_sizes().get(session_key_val) or 0)
-                    if prev_size > SESSION_RESET_TOKEN_THRESHOLD:
-                        print(
-                            f"[ClaudeCodeProvider] {self.agent_name}: 세션 컨텍스트 "
-                            f"{prev_size:,} > {SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → fresh 리셋"
-                        )
-                        clear_session_for_agent(session_key_val)
-                        clear_session_size(session_key_val)
-                        stored_session_id = None
-                        resume_session_id = None
-
-            # 4~6) resume 시도 → 만료/무효 시 fresh 로 자동 재시도 (resume→fresh 1회)
-            #      + 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 (최대 N회)
-            # CLI 가 `--resume <소멸한 세션>` 을 만나면 stdout JSON 이 아니라 stderr +
-            # 종료코드 1("No conversation found with session ID")로 즉사한다. 첫 시도가
-            # 그렇게 실패하면 그 에러를 사용자에게 노출하지 않고 삼킨 뒤(deferred) 매핑을
-            # 폐기하고 fresh 로 한 번 더 돌린다. 그래야 stale 매핑이 고착되지 않는다.
-            # 과부하(529)는 입력과 무관한 서버측 신호 → 본문 미수신이면 backoff 후 같은 호출 반복.
-            resume_attempt = 0       # resume→fresh 폴백 횟수 (0 또는 1)
-            overloaded_retries = 0   # 529 과부하 재시도 횟수
-            while True:
-                is_resume_attempt = bool(resume_session_id)
-
-                # 프롬프트 빌드 — resume 면 CLI 가 자체 세션에서 history 를 알므로 현재 메시지만,
-                # fresh 면 직렬화된 history 를 함께 보낸다.
-                if resume_session_id:
-                    full_prompt = message
-                else:
-                    full_prompt = self._build_prompt_with_history(message, history or [])
-
-                if image_paths:
-                    img_lines = "\n".join(f"첨부 이미지 경로: {p}" for p in image_paths)
-                    full_prompt = (
-                        f"{img_lines}\n"
-                        f"(위 이미지 파일을 Read 도구로 읽어 시각 내용을 확인할 수 있다)\n\n"
-                        f"{full_prompt}"
-                    )
-
-                _tools_mode = None
-                if getattr(self, "no_tools", False):
-                    _tools_mode = "read" if image_paths else "none"
-                cmd = self._build_command(
-                    mcp_config_path=mcp_config_path,
-                    stream=True,
-                    resume_session_id=resume_session_id,
-                    system_prompt_file=system_prompt_file,
-                    tools_mode=_tools_mode,
-                )
-
-                _sp_len = len(self.system_prompt or "")
-                _msg_len = len(full_prompt or "")
-                _resumed = "resume" if resume_session_id else "new"
-                print(
-                    f"[ClaudeCode/{self.agent_name}] call: session={_resumed} "
-                    f"system_prompt={_sp_len}자 message={_msg_len}자"
-                )
-
-                env = self._build_env()
-                start = time.time()
-                cwd = self.project_path if self.project_path and self.project_path != "." else None
-                try:
-                    # ★유저 프롬프트는 argv 가 아니라 stdin 으로 넘긴다: 윈도우 명령줄 상한
-                    #  (32,767자)에 걸려 [WinError 206]로 실행 자체가 실패하던 걸 회피. claude
-                    #  --print 는 stdin EOF까지 읽은 뒤 응답하므로 먼저 써넣고 닫는다.
-                    #  encoding=utf-8 명시: 윈도우 기본 로케일 인코딩(cp949 등)으로 stdin/stdout이
-                    #  깨지지 않도록(한글 프롬프트·응답 JSON 보존).
-                    def _spawn():
-                        # cmd[0]=self._binary_path 를 참조하도록 매 호출 시 갱신값을 반영
-                        return subprocess.Popen(
-                            cmd,
-                            stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            text=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            bufsize=1,
-                            cwd=cwd,
-                            env=env,
-                        )
-
-                    proc = _spawn()
-                except FileNotFoundError as e:
-                    # 세션 도중 Claude Code 데스크톱 앱이 자동 업데이트되면 init 때 캐시한
-                    # self._binary_path(예: .../claude-code/2.1.205/...)가 삭제되어 spawn이
-                    # [Errno 2]로 터진다. 바이너리를 재해석해 새 버전 경로로 갱신하고 1회 재시도.
-                    new_bin = find_claude_binary()
-                    if new_bin and new_bin != self._binary_path:
-                        print(
-                            f"[ClaudeCode/{self.agent_name}] 바이너리 경로 재해석: "
-                            f"{self._binary_path} → {new_bin} (자동 업데이트 감지, 재시도)"
-                        )
-                        self._binary_path = new_bin
-                        self._client = {"binary": new_bin}
-                        cmd[0] = new_bin
-                        try:
-                            proc = _spawn()
-                        except FileNotFoundError as e2:
-                            self.metrics.record_error()
-                            yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패(재해석 후에도): {e2}"}
-                            return
-                    else:
-                        self.metrics.record_error()
-                        yield {"type": "error", "content": f"Claude Code 바이너리 실행 실패: {e}"}
-                        return
-
-                # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → claude 가 응답 시작)
-                try:
-                    if proc.stdin:
-                        proc.stdin.write(full_prompt)
-                        proc.stdin.close()
-                except (BrokenPipeError, OSError) as e:
-                    print(f"[ClaudeCode/{self.agent_name}] stdin 프롬프트 쓰기 실패: {e}")
-
-                accumulated_text = ""
-                self._last_stop_reason = None   # 이번 attempt 의 마지막 턴 stop_reason (절단 신고용)
-                captured_session_id: Optional[str] = None
-                committed = False          # 실제 본문(text/tool/thinking)을 하나라도 받았나
-                final_seen = False         # 이번 attempt 에서 final 을 방출했나
-                resume_err_text = ""       # stdout result 에러 텍스트 (보통 비어있음)
-                deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
-                try:
-                    for raw_line in proc.stdout:
-                        if cancel_check and cancel_check():
-                            proc.kill()
-                            yield {"type": "error", "content": "사용자 취소"}
-                            return
-
-                        line = raw_line.strip()
-                        if not line:
-                            continue
-                        try:
-                            event = json.loads(line)
-                        except json.JSONDecodeError:
-                            continue
-
-                        sid = event.get("session_id")
-                        if sid:
-                            captured_session_id = sid
-
-                        if event.get("type") == "result" and event.get("is_error"):
-                            resume_err_text = str(event.get("result") or "")
-
-                        yielded = self._translate_stream_event(event, accumulated_text, start)
-                        for out_event, new_acc in yielded:
-                            if new_acc is not None:
-                                accumulated_text = new_acc
-                            t2 = out_event.get("type")
-                            if t2 in ("text", "tool_start", "tool_result", "thinking"):
-                                committed = True
-                            # 아직 본문이 안 왔으면(committed=False) 터미널 에러/final 은 보류.
-                            # resume 실패(만료 세션)·일시 과부하(529) 둘 다 본문 도착 전에만
-                            # 재시도 가능하므로, 보류해 두고 스트림 종료 후 재시도 여부를 판단한다.
-                            if not committed and t2 in ("error", "final"):
-                                deferred.append(out_event)
-                            else:
-                                if t2 == "final":
-                                    final_seen = True
-                                yield out_event
-
-                    proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
-
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    self.metrics.record_error()
-                    yield {"type": "error", "content": f"Claude Code 호출 타임아웃 ({self.DEFAULT_TIMEOUT_SEC}초)"}
-                    return
-                except Exception as e:
-                    self.metrics.record_error()
-                    yield {"type": "error", "content": f"Claude Code 스트림 오류: {e}"}
-                    return
-                finally:
-                    if proc.poll() is None:
-                        proc.kill()
-
-                # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
-                stderr_text = ""
-                if proc.returncode is not None and proc.returncode != 0 and not accumulated_text:
-                    stderr_text = (proc.stderr.read() if proc.stderr else "").strip()
-
-                # --- resume 실패 판정 (stdout result 텍스트 + stderr 종합) ---
-                combined = (resume_err_text + " " + stderr_text).lower()
-                session_issue = ("no conversation found" in combined) or (
-                    "session" in combined
-                    and ("not found" in combined or "invalid" in combined)
-                )
-                # session 만료/무효일 때만 재시도 — rate limit·인증 등 일시적 에러로는
-                # 멀쩡한 매핑을 폐기하지 않는다 (그 에러는 그대로 사용자에게 보고).
-                resume_failed = is_resume_attempt and not committed and session_issue
-
-                if resume_attempt == 0 and resume_failed:
-                    # 매핑 폐기 + fresh 재시도 (보류했던 에러는 버린다 → 사용자에 미노출)
-                    resume_attempt += 1
-                    if session_key_val:
-                        clear_session_for_agent(session_key_val)
-                    print(
-                        f"[ClaudeCodeProvider] {self.agent_name}: 저장된 세션"
-                        f"({(stored_session_id or '')[:8]}...) 만료/무효 → fresh 재시도"
-                    )
-                    resume_session_id = None
-                    stored_session_id = None
-                    continue
-
-                # --- 일시 서버 과부하(529 Overloaded) → backoff 후 재시도 ---
-                # 본문 미수신(not committed) + 과부하 신호일 때만. 보류한 에러는 버리고
-                # (continue 시 deferred 가 다음 루프 진입부에서 초기화됨) 잠시 쉰 뒤 같은 호출 반복.
-                # 한 번의 transient 과부하가 강의 저작 같은 일회성 호출을 통째 실패시키던 걸 흡수.
-                if (
-                    not committed
-                    and self._is_overloaded_error(combined)
-                    and overloaded_retries < self.OVERLOADED_MAX_RETRIES
-                ):
-                    delay = min(
-                        self.OVERLOADED_BASE_DELAY_SEC * (2 ** overloaded_retries),
-                        self.OVERLOADED_MAX_DELAY_SEC,
-                    )
-                    overloaded_retries += 1
-                    self.metrics.record_retry()
-                    print(
-                        f"[ClaudeCodeProvider] {self.agent_name}: 서버 과부하(529) → "
-                        f"{delay:.0f}초 후 재시도 {overloaded_retries}/{self.OVERLOADED_MAX_RETRIES}"
-                    )
-                    time.sleep(delay)
-                    continue
-
-                # --- 최종 attempt: 결과 확정 ---
-                for ev in deferred:          # 보류했던 터미널 이벤트 방출
-                    # ★본문이 온 뒤라면, 본문 이전에 보류된 *빈* final 은 이미 무효다.
-                    #  그대로 흘리면 맨 마지막에 도착해 진짜 최종 응답을 덮는다 —
-                    #  2026-08-19 ep1253·1254: resume 직후 `result in=0 out=0` 이 보류됐다가
-                    #  22분치 작업의 최종 보고를 빈 문자열로 덮어써 사용자가 아무 말도 못 받았다.
-                    if (committed and ev.get("type") == "final"
-                            and not (ev.get("content") or "").strip()):
-                        continue
-                    if ev.get("type") == "final":
-                        final_seen = True
-                    yield ev
-                # ★result 이벤트 없이 스트림이 끝난 경우(프로세스가 조용히 사라짐):
-                #  흘러나온 본문이라도 최종으로 올린다 — 안 그러면 한 턴이 통째로 증발한다
-                #  (2026-08-19 ep1251: 22분 작업 뒤 result 미도달 → 최종 0자).
-                if not final_seen and accumulated_text.strip():
-                    print(f"[ClaudeCode/{self.agent_name}] result 이벤트 없이 종료 — "
-                          f"누적 본문 {len(accumulated_text)}자를 최종으로 승격")
-                    yield {"type": "final", "content": accumulated_text.strip()}
-                if proc.returncode not in (0, None) and not accumulated_text and not deferred:
-                    yield {
-                        "type": "error",
-                        "content": f"Claude Code 종료 코드 {proc.returncode}: {stderr_text[:500]}",
-                    }
-
-                # 세션 매핑 갱신 (disable_session_persistence면 스킵)
-                if not self.disable_session_persistence and session_key_val:
-                    if captured_session_id and captured_session_id != stored_session_id:
-                        session_map[session_key_val] = captured_session_id
-                        save_session_map(session_map)
-                        print(
-                            f"[ClaudeCodeProvider] {self.agent_name}: 세션 저장 "
-                            f"({session_key_val} → {captured_session_id[:8]}...)"
-                        )
-                    # 컨텍스트 크기 기록 — resume 세션은 매 턴 성장하므로 id 변동과 무관하게
-                    # 매번 갱신해 다음 턴 리셋 판단의 최신 값을 유지한다.
-                    record_session_size(session_key_val, self._last_context_size)
-                break
-        finally:
-            if _http_cfg:
-                try:
-                    os.remove(_http_cfg)
-                except OSError:
-                    pass
-
-    def _translate_stream_event(
-        self, event: Dict, accumulated_text: str, start_time: float
-    ) -> List[tuple]:
-        """Claude Code stream-json 이벤트 → indiebizOS provider 이벤트 형식 변환.
-
-        Returns:
-            [(event_dict, new_accumulated_text_or_None), ...]
-        """
-        out: List[tuple] = []
-        etype = event.get("type")
-
-        if etype == "assistant":
-            msg = event.get("message") or {}
-            # 라운드별 컨텍스트 크기 추적 — 매 assistant 라운드의 입력 컨텍스트
-            # (in+cache_read+cache_create)를 갱신해 *마지막* 라운드 값을 남긴다.
-            # result 이벤트의 usage 는 라운드 누적이라 세션 크기를 7배 부풀린다(버그).
-            # 마지막 라운드 컨텍스트 = 다음 --resume 에서 재생될 트랜스크립트 크기 근사.
-            _u = msg.get("usage") or {}
-            if _u:
-                self._last_context_size = (
-                    int(_u.get("input_tokens") or 0)
-                    + int(_u.get("cache_read_input_tokens") or 0)
-                    + int(_u.get("cache_creation_input_tokens") or 0)
-                )
-            # 마지막 턴의 stop_reason 포착 (2026-08-29 ⑫) — max_tokens 절단이 종전엔
-            # 여기서 버려져 침묵했다(실측 ep2307: 서로 다른 두 세대가 같은 ~11K자에서
-            # 문장 중간 절단, 표지 없음 → GoalEval 재실행이 전체 재작성→재절단 루프).
-            if msg.get("stop_reason"):
-                self._last_stop_reason = msg.get("stop_reason")
-            for block in msg.get("content", []):
-                btype = block.get("type")
-                if btype == "text":
-                    text = block.get("text", "")
-                    if text:
-                        out.append(({"type": "text", "content": text}, accumulated_text + text))
-                        accumulated_text = accumulated_text + text
-                elif btype == "tool_use":
-                    tool_name = block.get("name", "")
-                    tool_input = block.get("input", {})
-                    # episode_logger가 stdout을 캡처 → 회고 자료로 보존
-                    try:
-                        input_repr = json.dumps(tool_input, ensure_ascii=False)
-                    except (TypeError, ValueError):
-                        input_repr = str(tool_input)
-                    _cap = (_TOOLUSE_CAP_IBL if tool_name.endswith("execute_ibl")
-                            else _TOOLUSE_CAP)
-                    input_repr = truncate_for_log(input_repr, _cap)
-                    print(f"[ClaudeCode/{self.agent_name}] tool_use {tool_name} {input_repr}")
-                    out.append((
-                        {
-                            "type": "tool_start",
-                            "id": block.get("id", ""),
-                            "name": tool_name,
-                            "input": tool_input,
-                        },
-                        None,
-                    ))
-                elif btype == "thinking":
-                    # Anthropic 표준: {"type":"thinking","thinking":"...","signature":"..."}
-                    _t = (
-                        block.get("thinking")
-                        or block.get("text")
-                        or block.get("content")
-                        or ""
-                    )
-                    if isinstance(_t, list):
-                        _t = " ".join(
-                            (c.get("text", "") if isinstance(c, dict) else str(c))
-                            for c in _t
-                        )
-                    _t_str = str(_t).strip()
-                    if not _t_str and block.get("signature"):
-                        # signature만 있고 텍스트 비어있음 = Anthropic 안전 정책으로 redact됨
-                        # (특히 opus는 thinking 텍스트가 거의 항상 redact됨)
-                        # 사실 발생 자체는 회고에 의미 있으므로 명확한 마커로 기록.
-                        _t_str = "[extended_thinking — 텍스트 redacted (Anthropic 안전 정책), signature만 보존됨]"
-                    out.append((
-                        {"type": "thinking", "content": _t_str},
-                        None,
-                    ))
-                elif btype == "redacted_thinking":
-                    out.append((
-                        {"type": "thinking", "content": "[redacted_thinking — 안전 정책으로 감춰짐]"},
-                        None,
-                    ))
-
-        elif etype == "user":
-            # tool_result blocks (Claude Code가 자기 도구 호출한 결과)
-            msg = event.get("message") or {}
-            for block in msg.get("content", []):
-                if block.get("type") != "tool_result":
-                    continue
-                result_content = block.get("content", "")
-                if isinstance(result_content, list):
-                    result_text = " ".join(
-                        c.get("text", "") for c in result_content
-                        if isinstance(c, dict) and c.get("type") == "text"
-                    )
-                else:
-                    result_text = str(result_content)
-                is_error = bool(block.get("is_error"))
-                # episode_logger 캡처용 — 머리는 자르되 **실패 신호는 삼키지 않는다**.
-                # (error) 줄은 폭 자체가 넓고(평문 traceback 은 본문이 유일한 단서),
-                # 나머지는 300자 머리에 봉투의 정직 표지 요약을 이어 붙인다.
-                _cap = _TOOLRESULT_CAP_ERROR if is_error else _TOOLRESULT_CAP
-                result_preview = _preview_with_signals(
-                    result_text.replace("\n", " "), _cap)
-                err_tag = " (error)" if is_error else ""
-                print(f"[ClaudeCode/{self.agent_name}] tool_result{err_tag} {result_preview}")
-                # 지도 봉투(route_map/location_map)를 캡처해 최종 응답 끝에 재주입 예약.
-                # CLI 서브프로세스는 결과를 산문으로 요약하며 마커를 흘려버리므로 여기서 붙잡는다.
-                if not is_error:
-                    try:
-                        for tag in _extract_map_tags(result_text):
-                            if tag not in self._pending_map_tags:
-                                self._pending_map_tags.append(tag)
-                    except Exception:
-                        pass
-                out.append((
-                    {
-                        "type": "tool_result",
-                        "id": block.get("tool_use_id", ""),  # start↔result 페어링 키
-                        "name": "",  # stream-json의 tool_result에는 name 없음
-                        "result": result_text,
-                        "is_error": is_error,
-                    },
-                    None,
-                ))
-
-        elif etype == "result":
-            final_text = event.get("result") or accumulated_text
-            latency_ms = (time.time() - start_time) * 1000
-            usage = event.get("usage") or {}
-            input_tokens = int(usage.get("input_tokens") or 0)
-            output_tokens = int(usage.get("output_tokens") or 0)
-            # 캐시 통계 — 어제 한 prefix 분리 작업의 실효성 측정.
-            # cache_read = 캐시 hit으로 즉시 처리된 input (저렴, 빠름)
-            # cache_create = 새로 캐시에 쓰인 input (write 비용)
-            cache_read = int(usage.get("cache_read_input_tokens") or 0)
-            cache_create = int(usage.get("cache_creation_input_tokens") or 0)
-            # _last_context_size 는 assistant 라운드별로 갱신됨(마지막 라운드 = 세션 크기).
-            # result.usage 는 라운드 누적이라 여기서 쓰면 안 된다.
-            self.metrics.record_request(latency_ms, input_tokens, output_tokens)
-            err_flag = " (error)" if event.get("is_error") else ""
-            cache_info = f" cache_read={cache_read} cache_create={cache_create}" if (cache_read or cache_create) else ""
-            print(
-                f"[ClaudeCode/{self.agent_name}] result{err_flag} "
-                f"{latency_ms:.0f}ms in={input_tokens} out={output_tokens}{cache_info}"
-            )
-
-            if event.get("is_error"):
-                if isinstance(final_text, str) and ("Not logged in" in final_text or "/login" in final_text):
-                    out.append((
-                        {
-                            "type": "error",
-                            "content": (
-                                "Claude Code 인증 필요. 터미널에서 한 번 실행:\n"
-                                f"  '{self._binary_path}' setup-token"
-                            ),
-                        },
-                        None,
-                    ))
-                else:
-                    out.append(({"type": "error", "content": f"Claude Code 응답 오류: {final_text}"}, None))
-            else:
-                final_content = (final_text or "").strip()
-                _truncated = getattr(self, "_last_stop_reason", None) == "max_tokens"
-                if _truncated and final_content:
-                    # 절단의 정직 신고 + 처방 (2026-08-29 ⑫): 표지 없는 절단은 읽는 쪽
-                    # (사용자·GoalEval·다음 턴)이 "짧게 완결"로 오독한다. 처방을 표지에
-                    # 싣는 이유 — 재실행이 전체를 다시 쓰면 같은 상한에서 또 잘린다.
-                    final_content += (
-                        "\n\n⚠ 이 응답은 출력 토큰 상한에서 절단되었습니다(stop_reason="
-                        "max_tokens) — 마지막 부분이 미완일 수 있습니다. 이어쓸 때는 전체 "
-                        "재작성 대신 **잘린 지점 이후의 미완 부분만** 이어서 출력하십시오.")
-                # 이번 턴에 캡처한 지도 태그를 최종 응답 끝에 재주입 → 프론트 parseMapData 가 렌더.
-                if self._pending_map_tags:
-                    final_content = (final_content + "\n\n" + "\n".join(self._pending_map_tags)).strip()
-                    self._pending_map_tags = []
-                _fin = {"type": "final", "content": final_content}
-                if _truncated:
-                    _fin["truncated_output"] = True
-                out.append((_fin, None))
-
-        return out
-
-    def _get_session_key(self) -> str:
-        """세션 매핑의 키. thread_context의 registry_key 우선, 없으면 agent_id/이름 폴백."""
-        try:
-            from thread_context import get_current_registry_key
-            key = get_current_registry_key()
-            if key:
-                return key
-        except ImportError:
-            pass
-        return self.agent_id or self.agent_name or "default"
+    # ================= 도구 정책 =================
 
     # ToolSearch 우회용 eager 도구 목록.
     # --allowed-tools 는 restrictive이므로 Claude Code가 흔히 쓰는 built-in + MCP IBL을 명시.
@@ -1111,107 +370,7 @@ class ClaudeCodeProvider(BaseProvider):
         "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라."
     )
 
-    def _write_system_prompt_file(self) -> Optional[str]:
-        """시스템 프롬프트+도구정책을 에이전트별 고정 임시 파일에 쓰고 경로를 반환.
-
-        --append-system-prompt-file 로 넘기기 위함(윈도우 argv 상한 회피 — _build_command 참조).
-        에이전트별 고정 경로에 매 호출 덮어써 리트라이 간 재사용하므로 별도 정리가 필요 없다
-        (누적되지 않고 덮어써짐). 생성 실패 시 None → 호출 측이 인자 방식으로 폴백.
-        """
-        # 도구 없는 원샷에는 도구 정책(차단 네이티브→IBL 안내)이 무의미 — 싣지 않는다
-        text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False) else self.TOOL_POLICY)
-        safe = re.sub(
-            r"[^A-Za-z0-9_.-]", "_",
-            str(self.agent_id or self.agent_name or "default"),
-        )[:60]
-        path = os.path.join(tempfile.gettempdir(), f"claude_code_sys_{safe}.txt")
-        try:
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(text)
-            return path
-        except OSError as e:
-            print(f"[ClaudeCodeProvider] {self.agent_name}: 시스템 프롬프트 파일 생성 실패({e}) → 인자 폴백")
-            return None
-
-    @staticmethod
-    def _current_task_id() -> Optional[str]:
-        """spawn 시점(요청 워커 스레드)의 task_id.
-
-        threading.local 은 subprocess→MCP→HTTP 재진입 스레드로 전파되지 않으므로,
-        여기서 떠서 env(stdio)/헤더(HTTP)로 동봉한다 — agent_id 전파와 같은 부류.
-        시스템 AI cross 위임(_execute_call_project_agent)이 부모 task 를 찾는 데 필요."""
-        try:
-            from thread_context import get_current_task_id
-            return get_current_task_id()
-        except Exception:
-            return None
-
-    @staticmethod
-    def _current_trajectory_identity() -> dict:
-        """spawn 시점(요청 워커 스레드)의 episode/run 신원 — task_id 와 같은 부류.
-
-        contextvar(에피소드·궤적)는 subprocess→MCP→HTTP 재진입을 못 건너므로,
-        여기서 떠서 env(stdio)/헤더(HTTP)로 동봉한다. 재진입 /ibl/execute 가 이 값을
-        채택하면 그 실행의 ibl.*·side_effect.* 사건이 부모 에피소드 척추에 실린다
-        (없던 시절 98.4%가 고아 run — 2026-08-29 실측). 에피소드 밖 spawn(스케줄러
-        직행 등)은 빈 dict → 미동봉(fail-closed)."""
-        try:
-            from episode_logger import current_trajectory_identity
-            return current_trajectory_identity() or {}
-        except Exception:
-            return {}
-
-    @staticmethod
-    def _current_task_origin() -> Optional[str]:
-        """spawn 시점(요청 워커 스레드)의 task_origin — task_id 와 같은 부류.
-
-        이게 없던 시절 아웃오브프로세스 실행의 재진입 /ibl/execute 는 출처를 몰라,
-        사람 명령에서 온 쓰기까지 전부 무출처로 원장(write_ledger)에 남았다
-        (2026-08-21 실측). 부모가 안 세운 경우(스케줄러 등)는 None → 미동봉(fail-closed)."""
-        try:
-            from thread_context import get_task_origin
-            return get_task_origin()
-        except Exception:
-            return None
-
-    def _http_mcp_config_path(self) -> Optional[str]:
-        """HTTP MCP config 를 spawn 마다 유니크 temp 파일로 쓴다 (플래그 ON일 때만).
-
-        INDIEBIZOS_MCP_HTTP="1" 이 아니면 None → 호출부에서 stdio(get_mcp_config_path())로 폴백.
-        신원(agent_id/project_path)은 config 안 헤더로 실린다. 동시에 여러 에이전트가
-        돌 수 있으므로 고정 파일을 덮어쓰면 서로의 신원을 읽는 레이스가 난다 → spawn 마다
-        유니크 파일로 쓰고 실행 후 finally 에서 정리한다.
-        ★헤더는 ASCII 전용이라 한글 신원은 quote() 로 퍼센트 인코딩(서버가 unquote).
-        """
-        if os.environ.get("INDIEBIZOS_MCP_HTTP", "0") != "1":
-            return None
-        headers: Dict[str, str] = {}
-        if self.agent_id:
-            headers["X-IndieBiz-Agent-Id"] = quote(str(self.agent_id))
-        if self.project_path and self.project_path != ".":
-            headers["X-IndieBiz-Project-Path"] = quote(str(self.project_path))
-        task_id = self._current_task_id()
-        if task_id:
-            headers["X-IndieBiz-Task-Id"] = quote(str(task_id))
-        origin = self._current_task_origin()
-        if origin:
-            headers["X-IndieBiz-Task-Origin"] = quote(str(origin))
-        # 궤적 신원(에피소드·부모 run) — 재진입 실행을 부모 척추에 잇는다 (task_id 선례)
-        ident = self._current_trajectory_identity()
-        if ident.get("episode_id") is not None:
-            headers["X-IndieBiz-Episode-Id"] = quote(str(ident["episode_id"]))
-        if ident.get("run_id"):
-            headers["X-IndieBiz-Parent-Run-Id"] = quote(str(ident["run_id"]))
-        cfg = {"mcpServers": {"indiebizos": {
-            "type": "http",
-            # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
-            "url": "http://localhost:8765/mcp/",
-            "headers": headers,
-        }}}
-        fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(cfg, f)
-        return path
+    # ================= 명령 조립 =================
 
     def _build_command(
         self,
@@ -1221,7 +380,7 @@ class ClaudeCodeProvider(BaseProvider):
         system_prompt_file: Optional[str] = None,
         tools_mode: Optional[str] = None,
     ) -> List[str]:
-        """공통 CLI 인자 구성 (positional prompt는 호출 측에서 append).
+        """공통 CLI 인자 구성 (유저 프롬프트는 stdin 으로 간다).
 
         tools_mode(2026-08-21, 원샷 다이어트): None=평소(eager 내장 도구+MCP) / "none"=`--tools ""`
         (도구 스키마 0 — 원샷 텍스트 호출) / "read"=`--tools Read`(원샷이 이미지를 봐야 할 때만).
@@ -1277,7 +436,8 @@ class ClaudeCodeProvider(BaseProvider):
         if system_prompt_file:
             cmd += ["--append-system-prompt-file", system_prompt_file]
         else:
-            cmd += ["--append-system-prompt", (self.system_prompt or "") + ("" if tools_mode else self.TOOL_POLICY)]
+            cmd += ["--append-system-prompt",
+                    (self.system_prompt or "") + ("" if tools_mode else self.TOOL_POLICY)]
 
         # MCP 브리지 (IBL execute_ibl 등) — 도구 없는 원샷은 브리지도 안 세운다(프로세스 기동 비용)
         if mcp_config_path and tools_mode is None:
@@ -1285,110 +445,159 @@ class ClaudeCodeProvider(BaseProvider):
 
         return cmd
 
-    def _build_env(self) -> Dict[str, str]:
-        """subprocess에 전달할 env 구성.
+    # ================= 이벤트 번역 =================
 
-        - OAuth 토큰 (sk-ant-oat...) → CLAUDE_CODE_OAUTH_TOKEN (Max/Pro 구독 빌링)
-        - API 키 (sk-ant-api...) → ANTHROPIC_API_KEY (per-call 빌링)
-        - INDIEBIZOS_PROJECT_PATH → MCP 서버가 execute_ibl 기본 project_path로 사용
+    def _stream_error_text(self, event: Dict) -> Optional[str]:
+        if event.get("type") == "result" and event.get("is_error"):
+            return str(event.get("result") or "")
+        return None
+
+    def _translate_stream_event(
+        self, event: Dict, accumulated_text: str, start_time: float
+    ) -> List[tuple]:
+        """Claude Code stream-json 이벤트 → indiebizOS provider 이벤트 형식 변환.
+
+        Returns:
+            [(event_dict, new_accumulated_text_or_None), ...]
         """
-        env = os.environ.copy()
-        # ★구독(OAuth) vs API 과금 경로를 코드로 격리한다. 기본은 "구독만" —
-        #  .env 의 ANTHROPIC_API_KEY 가 claude 서브프로세스에 새어들어 구독 대신 API 로
-        #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
-        #  명시적으로 API 키(sk-ant-api…)를 준 경우에만 API 과금 경로를 연다.
-        #  ANTHROPIC_API_KEY 는 os.environ(.env)에 그대로 남아 *다른* 프로바이더에서는 계속 쓰인다.
-        tok = self._effective_token
-        if tok and tok.startswith("sk-ant-api"):
-            env["ANTHROPIC_API_KEY"] = tok
-            env.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
-        else:
-            env.pop("ANTHROPIC_API_KEY", None)
-            if tok:  # sk-ant-oat… (구독 토큰)
-                env["CLAUDE_CODE_OAUTH_TOKEN"] = tok
-        if self.project_path and self.project_path != ".":
-            env["INDIEBIZOS_PROJECT_PATH"] = str(self.project_path)
-        # 발신 신원: subprocess(claude)가 MCP→/ibl/execute로 IBL을 돌릴 때 자기 agent_id를 갖고 가게 한다.
-        # in-process 프로바이더는 execute_tool(..., self.agent_id)로 직접 넘기지만, out-of-process인 이 프로바이더는
-        # env가 유일한 통로. channel_send/read의 신원 게이트(시스템 AI=system_ai, 프로젝트 에이전트=자기 계정)에 필요.
-        if self.agent_id:
-            env["INDIEBIZOS_AGENT_ID"] = str(self.agent_id)
-        # 태스크 컨텍스트: 시스템 AI cross 위임의 부모 task_id 도 같은 통로로 동봉
-        # (threading.local 은 재진입 /ibl/execute 스레드에 없다 — _current_task_id 참조).
-        task_id = self._current_task_id()
-        if task_id:
-            env["INDIEBIZOS_TASK_ID"] = str(task_id)
-        # 태스크 출처: 'user'(사람의 직접 명령) 여부가 원장 행위자·자기수정 게이트의 축 —
-        # task_id 와 같은 통로로 동봉해 재진입 /ibl/execute 가 복원한다.
-        origin = self._current_task_origin()
-        if origin:
-            env["INDIEBIZOS_TASK_ORIGIN"] = str(origin)
-        # 궤적 신원(에피소드·부모 run): contextvar 도 프로세스 경계를 못 건너므로
-        # task_id 와 같은 통로로 동봉해 재진입 /ibl/execute 가 채택한다(2026-08-29 척추).
-        ident = self._current_trajectory_identity()
-        if ident.get("episode_id") is not None:
-            env["INDIEBIZOS_EPISODE_ID"] = str(ident["episode_id"])
-        if ident.get("run_id"):
-            env["INDIEBIZOS_PARENT_RUN_ID"] = str(ident["run_id"])
-        return env
+        out: List[tuple] = []
+        etype = event.get("type")
 
-    def _save_images_to_temp(self, images: List[Dict]) -> List[str]:
-        """base64 이미지를 임시 파일로 저장하고 경로 리스트 반환.
+        if etype == "assistant":
+            msg = event.get("message") or {}
+            # 라운드별 컨텍스트 크기 추적 — 매 assistant 라운드의 입력 컨텍스트
+            # (in+cache_read+cache_create)를 갱신해 *마지막* 라운드 값을 남긴다.
+            # result 이벤트의 usage 는 라운드 누적이라 세션 크기를 7배 부풀린다(버그).
+            # 마지막 라운드 컨텍스트 = 다음 --resume 에서 재생될 트랜스크립트 크기 근사.
+            _u = msg.get("usage") or {}
+            if _u:
+                self._last_context_size = (
+                    int(_u.get("input_tokens") or 0)
+                    + int(_u.get("cache_read_input_tokens") or 0)
+                    + int(_u.get("cache_creation_input_tokens") or 0)
+                )
+            # 마지막 턴의 stop_reason 포착 (2026-08-29 ⑫) — max_tokens 절단이 종전엔
+            # 여기서 버려져 침묵했다(실측 ep2307: 서로 다른 두 세대가 같은 ~11K자에서
+            # 문장 중간 절단, 표지 없음 → GoalEval 재실행이 전체 재작성→재절단 루프).
+            if msg.get("stop_reason"):
+                self._last_stop_reason = msg.get("stop_reason")
+            for block in msg.get("content", []):
+                btype = block.get("type")
+                if btype == "text":
+                    text = block.get("text", "")
+                    if text:
+                        out.append(({"type": "text", "content": text}, accumulated_text + text))
+                        accumulated_text = accumulated_text + text
+                elif btype == "tool_use":
+                    tool_name = block.get("name", "")
+                    tool_input = block.get("input", {})
+                    self._log_tool_use(tool_name, tool_input)
+                    out.append((
+                        {
+                            "type": "tool_start",
+                            "id": block.get("id", ""),
+                            "name": tool_name,
+                            "input": tool_input,
+                        },
+                        None,
+                    ))
+                elif btype == "thinking":
+                    # Anthropic 표준: {"type":"thinking","thinking":"...","signature":"..."}
+                    _t = (
+                        block.get("thinking")
+                        or block.get("text")
+                        or block.get("content")
+                        or ""
+                    )
+                    if isinstance(_t, list):
+                        _t = " ".join(
+                            (c.get("text", "") if isinstance(c, dict) else str(c))
+                            for c in _t
+                        )
+                    _t_str = str(_t).strip()
+                    if not _t_str and block.get("signature"):
+                        # signature만 있고 텍스트 비어있음 = Anthropic 안전 정책으로 redact됨
+                        # (특히 opus는 thinking 텍스트가 거의 항상 redact됨)
+                        # 사실 발생 자체는 회고에 의미 있으므로 명확한 마커로 기록.
+                        _t_str = "[extended_thinking — 텍스트 redacted (Anthropic 안전 정책), signature만 보존됨]"
+                    out.append((
+                        {"type": "thinking", "content": _t_str},
+                        None,
+                    ))
+                elif btype == "redacted_thinking":
+                    out.append((
+                        {"type": "thinking", "content": "[redacted_thinking — 안전 정책으로 감춰짐]"},
+                        None,
+                    ))
 
-        images 형식: [{"base64": "...", "media_type": "image/png"}, ...]
-        Claude Code의 Read 도구가 vision으로 이미지 내용을 읽음.
-        """
-        paths: List[str] = []
-        for img in images:
-            if not isinstance(img, dict):
-                continue
-            b64 = (img.get("base64") or "").strip()
-            if not b64:
-                continue
-            media = (img.get("media_type") or "image/png").lower()
-            ext = _IMG_EXT_BY_MEDIA.get(media, ".png")
-            try:
-                fd, path = tempfile.mkstemp(suffix=ext, prefix="claude_code_img_")
-                with os.fdopen(fd, "wb") as f:
-                    f.write(base64.b64decode(b64))
-                paths.append(path)
-            except (ValueError, OSError) as e:
-                print(f"[ClaudeCodeProvider] {self.agent_name}: 이미지 저장 실패: {e}")
-        return paths
+        elif etype == "user":
+            # tool_result blocks (Claude Code가 자기 도구 호출한 결과)
+            msg = event.get("message") or {}
+            for block in msg.get("content", []):
+                if block.get("type") != "tool_result":
+                    continue
+                result_content = block.get("content", "")
+                if isinstance(result_content, list):
+                    result_text = " ".join(
+                        c.get("text", "") for c in result_content
+                        if isinstance(c, dict) and c.get("type") == "text"
+                    )
+                else:
+                    result_text = str(result_content)
+                is_error = bool(block.get("is_error"))
+                self._log_tool_result(result_text, is_error)
+                out.append((
+                    {
+                        "type": "tool_result",
+                        "id": block.get("tool_use_id", ""),  # start↔result 페어링 키
+                        "name": "",  # stream-json의 tool_result에는 name 없음
+                        "result": result_text,
+                        "is_error": is_error,
+                    },
+                    None,
+                ))
 
-    def _build_prompt_with_history(self, message: str, history: List[Dict]) -> str:
-        """history를 텍스트로 직렬화해서 message 앞에 붙임 (stateless 모드)."""
-        if not history:
-            return message
+        elif etype == "result":
+            final_text = event.get("result") or accumulated_text
+            latency_ms = (time.time() - start_time) * 1000
+            usage = event.get("usage") or {}
+            input_tokens = int(usage.get("input_tokens") or 0)
+            output_tokens = int(usage.get("output_tokens") or 0)
+            # 캐시 통계 — prefix 분리 작업의 실효성 측정.
+            # cache_read = 캐시 hit으로 즉시 처리된 input (저렴, 빠름)
+            # cache_create = 새로 캐시에 쓰인 input (write 비용)
+            cache_read = int(usage.get("cache_read_input_tokens") or 0)
+            cache_create = int(usage.get("cache_creation_input_tokens") or 0)
+            # _last_context_size 는 assistant 라운드별로 갱신됨(마지막 라운드 = 세션 크기).
+            # result.usage 는 라운드 누적이라 여기서 쓰면 안 된다.
+            self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+            err_flag = " (error)" if event.get("is_error") else ""
+            cache_info = (f" cache_read={cache_read} cache_create={cache_create}"
+                          if (cache_read or cache_create) else "")
+            self._log(
+                f"result{err_flag} {latency_ms:.0f}ms "
+                f"in={input_tokens} out={output_tokens}{cache_info}"
+            )
 
-        lines = ["[이전 대화]"]
-        for turn in history:
-            role = turn.get("role", "user")
-            content = turn.get("content", "")
+            if event.get("is_error"):
+                if isinstance(final_text, str) and ("Not logged in" in final_text or "/login" in final_text):
+                    out.append((
+                        {
+                            "type": "error",
+                            "content": (
+                                "Claude Code 인증 필요. 터미널에서 한 번 실행:\n"
+                                f"  '{self._binary_path}' setup-token"
+                            ),
+                        },
+                        None,
+                    ))
+                else:
+                    out.append(({"type": "error", "content": f"Claude Code 응답 오류: {final_text}"}, None))
+            else:
+                _truncated = self._last_stop_reason == "max_tokens"
+                _fin = {"type": "final", "content": self._finalize_text((final_text or "").strip())}
+                if _truncated:
+                    _fin["truncated_output"] = True
+                out.append((_fin, None))
 
-            # 복합 content (tool calls 등) → 텍스트만 추출
-            if isinstance(content, list):
-                parts = []
-                for c in content:
-                    if isinstance(c, dict):
-                        if c.get("type") == "text":
-                            parts.append(c.get("text", ""))
-                        elif c.get("type") == "tool_use":
-                            parts.append(f"[도구 호출: {c.get('name', '')}]")
-                        elif c.get("type") == "tool_result":
-                            tr = c.get("content", "")
-                            if isinstance(tr, str):
-                                parts.append(f"[도구 결과] {tr[:500]}")
-                    elif isinstance(c, str):
-                        parts.append(c)
-                content = " ".join(parts)
-            elif not isinstance(content, str):
-                content = str(content)
-
-            role_label = "사용자" if role == "user" else "어시스턴트"
-            lines.append(f"{role_label}: {content}")
-
-        lines.append("")
-        lines.append("[현재 메시지]")
-        lines.append(message)
-        return "\n".join(lines)
+        return out

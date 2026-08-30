@@ -65,15 +65,25 @@ _ARROW_RE = re.compile(
 _IBL_CODE_RE = re.compile(r"^\[IBL_DEBUG\] code=(.*)$")
 _STEP_RE = re.compile(r"\[(\w+:\w+)\]")
 
-# claude_code 프로바이더 라인 (2026-07-21 실명 수리 — 화살표는 in-process 전용이라
+# 아웃오브프로세스 CLI 프로바이더 라인 (2026-07-21 실명 수리 — 화살표는 in-process 전용이라
 # 주력 프로바이더의 Bash 42·execute_ibl 162/7일이 통째로 불가시였다. 형식 사양은
-# providers/claude_code.py 759·817행: input JSON은 300자에서 잘릴 수 있음(…접미),
-# tool_result 는 (error) 태그 + 300자 preview):
+# providers/cli_provider.py 의 _log_tool_use·_log_tool_result: input JSON은 300자에서
+# 잘릴 수 있음(…접미), tool_result 는 (error) 태그 + 300자 preview + 정직 표지 요약):
 #   [ClaudeCode/집사] tool_use Bash {"command": "ADB=...", ...}
 #   [ClaudeCode/집사] tool_use mcp__indiebizos__execute_ibl {"code": "[self:read]{...}"}
+#   [Codex/집사]      tool_use mcp__indiebizos__execute_ibl {"code": "[self:read]{...}"}
 #   [ClaudeCode/집사] tool_result (error) Exit code 1 ...
-_CC_TOOLUSE_RE = re.compile(r"^\[ClaudeCode/[^\]]*\] tool_use (\S+) ?(.*)$")
-_CC_TOOLRESULT_RE = re.compile(r"^\[ClaudeCode/[^\]]*\] tool_result( \(error\))? ?(.*)$")
+#
+# ★라벨 목록은 손으로 적지만 관문이 지킨다: CLI 프로바이더가 늘 때 여기를 빠뜨리면
+# 그 프로바이더의 주행이 통째로 불가시가 된다(2026-07-21 과 같은 사고). 정본은
+# CliSubprocessProvider.CLI_LABEL 이고, backend/test_cli_provider_labels.py 가
+# '모든 서브클래스의 라벨이 이 튜플에 있는가'를 대조한다.
+_CLI_LABELS = ("ClaudeCode", "Codex")
+_CLI_LABEL_ALT = "|".join(re.escape(x) for x in _CLI_LABELS)
+_CC_TOOLUSE_RE = re.compile(
+    rf"^\[(?:{_CLI_LABEL_ALT})/[^\]]*\] tool_use (\S+) ?(.*)$")
+_CC_TOOLRESULT_RE = re.compile(
+    rf"^\[(?:{_CLI_LABEL_ALT})/[^\]]*\] tool_result( \(error\))? ?(.*)$")
 # 잘린 JSON 대비 — json.loads 대신 값 앞부분만 정규식으로 뜯는다(집계 키·shape 추출에 충분).
 _CC_CMD_RE = re.compile(r'"command"\s*:\s*"([^"]*)')
 _CC_CODE_RE = re.compile(r'"code"\s*:\s*"(.*)')

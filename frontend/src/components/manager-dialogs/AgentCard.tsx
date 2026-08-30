@@ -19,6 +19,7 @@ const providerColors: Record<string, string> = {
   openrouter: 'bg-purple-500',
   deepseek: 'bg-indigo-500',
   claude_code: 'bg-amber-600',
+  codex: 'bg-slate-600',
 };
 
 export function AgentCard({

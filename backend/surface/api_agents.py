@@ -231,16 +231,16 @@ async def stop_agent(project_id: str, agent_id: str):
 
 @router.post("/projects/{project_id}/agents/{agent_id}/reset-session")
 async def reset_agent_session(project_id: str, agent_id: str):
-    """Claude Code 세션 매핑 클리어 — 다음 호출이 fresh 세션으로 시작.
+    """CLI 프로바이더 세션 매핑 클리어 — 다음 호출이 fresh 세션으로 시작.
 
     누적된 도구 결과·resume 컨텍스트를 끊고 싶을 때 사용.
-    Claude Code provider가 아니면 no-op이지만 200 OK 반환 (안전).
+    CLI 프로바이더(claude_code·codex)가 아니면 no-op이지만 200 OK 반환 (안전).
     """
     try:
-        from providers.claude_code import clear_session_for_agent
+        from providers import clear_cli_sessions_for_agent
         # registry_key 형식: "{project_id}:{agent_id}"
         key = f"{project_id}:{agent_id}"
-        clear_session_for_agent(key)
+        clear_cli_sessions_for_agent(key)
         return {"ok": True, "message": "새 세션을 시작했습니다.", "key": key}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

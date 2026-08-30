@@ -529,8 +529,12 @@ class SqliteDriver(Driver):
             if not sconn:
                 return self._err(f"시스템 AI 대화 DB를 열 수 없습니다: {sysai_db}")
             try:
+                # ★length(content)를 함께 떠 절단을 봉투에 신고한다 — 옛 구현은
+                # substr 만 돌려줘 *잘림*을 *전부*로 보이게 했다(2026-08-30 수리,
+                # 같은 부류: 2026-08-18 "*못 봄*을 *없음*으로" — 아래 주석).
                 srows = [dict(r) for r in sconn.execute(
-                    "SELECT id, timestamp, role, substr(content, 1, 300) AS content_preview "
+                    "SELECT id, timestamp, role, substr(content, 1, 300) AS content_preview, "
+                    "length(content) AS content_len "
                     "FROM conversations ORDER BY id DESC LIMIT ?",
                     (params.get("limit", 10),)
                 ).fetchall()]
@@ -538,12 +542,20 @@ class SqliteDriver(Driver):
                 return self._err(f"시스템 AI 대화 조회 실패: {e}")
             finally:
                 sconn.close()
-            sresult = self._ok(srows, f"최근 대화 {len(srows)}건 (시스템 AI 자신)")
+            for r in srows:
+                r["truncated"] = (r.get("content_len") or 0) > 300
+            n_cut = sum(1 for r in srows if r["truncated"])
+            smsg = f"최근 대화 {len(srows)}건 (시스템 AI 자신)"
+            if n_cut:
+                smsg += f" — {n_cut}건은 300자 절단(전문은 content_len 참조, DB 직접 조회로 복구 가능)"
+            sresult = self._ok(srows, smsg)
             if isinstance(sresult, dict):
+                sresult["truncated"] = bool(n_cut)
                 sresult["items"] = [{
                     "title": r.get("role") or "?",
                     "meta": r.get("timestamp") or "",
-                    "summary": r.get("content_preview") or "",
+                    "summary": (r.get("content_preview") or "") + (
+                        f" …(잘림 300/{r.get('content_len')}자)" if r["truncated"] else ""),
                     "url": "",
                 } for r in srows]
             return sresult
@@ -569,6 +581,7 @@ class SqliteDriver(Driver):
         sql = """
             SELECT m.id, a_from.name as from_agent, a_to.name as to_agent,
                    substr(m.content, 1, 300) as content_preview,
+                   length(m.content) as content_len,
                    m.message_time
             FROM messages m
             LEFT JOIN agents a_from ON m.from_agent_id = a_from.id
@@ -586,7 +599,17 @@ class SqliteDriver(Driver):
 
         rows = conn.execute(sql, args).fetchall()
         items = [dict(r) for r in rows]
-        return self._ok(items, f"대화 검색 '{keyword}' → {len(items)}건")
+        # 절단 신고 — recent_chats 시스템 AI 분기와 같은 규약(2026-08-30 수리)
+        for r in items:
+            r["truncated"] = (r.get("content_len") or 0) > 300
+        n_cut = sum(1 for r in items if r["truncated"])
+        msg = f"대화 검색 '{keyword}' → {len(items)}건"
+        if n_cut:
+            msg += f" — {n_cut}건은 300자 절단(전문은 content_len 참조)"
+        result = self._ok(items, msg)
+        if isinstance(result, dict):
+            result["truncated"] = bool(n_cut)
+        return result
 
     def _memory_recent(self, conn, params: dict) -> dict:
         limit = params.get("limit", 10)
@@ -595,6 +618,7 @@ class SqliteDriver(Driver):
         sql = """
             SELECT m.id, a_from.name as from_agent, a_to.name as to_agent,
                    substr(m.content, 1, 300) as content_preview,
+                   length(m.content) as content_len,
                    m.message_time
             FROM messages m
             LEFT JOIN agents a_from ON m.from_agent_id = a_from.id
@@ -610,13 +634,22 @@ class SqliteDriver(Driver):
 
         rows = conn.execute(sql, args).fetchall()
         items = [dict(r) for r in rows]
-        result = self._ok(items, f"최근 대화 {len(items)}건")
+        # 절단 신고 — recent_chats 시스템 AI 분기와 같은 규약(2026-08-30 수리)
+        for r in items:
+            r["truncated"] = (r.get("content_len") or 0) > 300
+        n_cut = sum(1 for r in items if r["truncated"])
+        msg = f"최근 대화 {len(items)}건"
+        if n_cut:
+            msg += f" — {n_cut}건은 300자 절단(전문은 content_len 참조)"
+        result = self._ok(items, msg)
         # 단일 통화 items(records-관습 카드 shape) — 대화 로그 >> 파이프/렌더러. native rows는 data에 잔류.
         if isinstance(result, dict):
+            result["truncated"] = bool(n_cut)
             result["items"] = [{
                 "title": f"{r.get('from_agent') or '?'} → {r.get('to_agent') or '?'}",
                 "meta": r.get("message_time") or "",
-                "summary": r.get("content_preview") or "",
+                "summary": (r.get("content_preview") or "") + (
+                    f" …(잘림 300/{r.get('content_len')}자)" if r["truncated"] else ""),
                 "url": "",
             } for r in items]
         return result

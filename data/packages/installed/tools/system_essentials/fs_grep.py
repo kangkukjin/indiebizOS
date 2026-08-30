@@ -313,7 +313,7 @@ def run(tool_input: dict, project_path: str) -> str:
         truncated = ("\n... (결과가 너무 큽니다 — root_path/file_pattern 으로 범위를 좁히거나, "
                      "output_mode='files_with_matches'/'count' 로 먼저 분포를 보세요.)")
     elif truncated_flag and output_mode == "content":
-        truncated = f"\n... (매칭 {grand_total}건 중 {len(match_rows)}건만 표시 — max_results 로 조절, 집계는 output_mode='count' 가 전수)"
+        truncated = f"\n... (매칭 {grand_total}건 중 {len(match_rows)}건만 표시 — limit 로 조절(별칭 max_results, 최대 2000), 집계는 output_mode='count' 가 전수)"
     else:
         truncated = ""
     truncated += regex_note

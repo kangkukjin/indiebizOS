@@ -133,6 +133,61 @@ def test_침묵_구간이_유휴_타임아웃_안에_들어온다():
     assert runner.ai.stream_calls == 2
 
 
+class _LedgerRunner(_Runner):
+    """라운드별 평가자에게 건너간 action_ledger 를 기록하는 러너."""
+
+    def __init__(self, verdicts):
+        super().__init__(verdicts)
+        self.ledgers = []
+
+    def _evaluate_achievement(self, *a, **kw):
+        self.ledgers.append(kw.get("action_ledger", ""))
+        return super()._evaluate_achievement(*a, **kw)
+
+
+def test_재실행_도구호출이_다음_라운드_원장에_실린다():
+    """★2026-08-30 실사건: 재실행이 실제 수행한 self:edit·self:patch 가 다음 라운드
+    원장에 없어 평가자가 "원장에 없으면 안 한 것" 규칙으로 적용된 수리를 "미수행"으로
+    뒤집었다. 재실행 원장의 1차 소스는 방금 흘려보낸 스트림의 tool_start/tool_result 다
+    — thread_context 델타는 claude_code(도구가 CLI 서브프로세스)에서 항상 빈다."""
+    runner = _LedgerRunner([(False, "편집이 원장에 없다", 2), (True, "", 0)])
+    events, result = _run(runner)
+
+    assert result == "보완된 응답"
+    assert len(runner.ledgers) == 2, "평가가 2라운드 돌아야 한다"
+    assert "self:time" not in runner.ledgers[0], "라운드 1 원장에 재실행분이 미리 있을 수 없다"
+    assert "self:time" in runner.ledgers[1], \
+        f"재실행의 도구 호출이 라운드 2 원장에 없다 — 실제 수행을 '안 했다=조작'으로 " \
+        f"뒤집는 거짓 판정의 재발: {runner.ledgers[1]!r}"
+    # 라운드 1 원장(호출자 전달 tool_calls)도 보존되어야 한다 — 교체가 아니라 누적.
+    assert "Bash" in runner.ledgers[1], f"기존 원장이 유실됐다: {runner.ledgers[1]!r}"
+
+
+class _EmptyFinalAI(_FakeAI):
+    """도구는 돌았는데 final 이 빈 재실행 대역 (503 등)."""
+
+    def process_message_stream(self, message_content, history=None,
+                               images=None, cancel_check=None):
+        self.stream_calls += 1
+        yield {"type": "tool_start", "name": "execute_ibl",
+               "input": {"code": "[self:edit]{path: \"x.py\"}"}}
+        yield {"type": "tool_result", "name": "execute_ibl", "result": "{}"}
+        yield {"type": "final", "content": ""}
+
+
+def test_빈_final_이어도_돈_도구는_원장에_남는다():
+    """응답 채택 여부와 무관하게 원장은 사실을 따른다 — 도구는 실제로 돌았고
+    세계는 이미 바뀌었으므로, 다음 라운드 평가가 그 사실 위에서 판정해야 한다."""
+    runner = _LedgerRunner([(False, "부족", 1), (True, "", 0)])
+    runner.ai = _EmptyFinalAI()
+    events, result = _run(runner)
+
+    assert result == "초안", "빈 재실행 결과가 이전 응답을 덮으면 안 된다"
+    assert len(runner.ledgers) == 2
+    assert "self:edit" in runner.ledgers[1], \
+        f"빈 final 라운드의 도구 호출이 원장에서 증발했다: {runner.ledgers[1]!r}"
+
+
 def test_중단이_평가루프에도_닿는다():
     """cancel_check 배선 — 옛 판은 평가 루프에 들어간 뒤 중단 버튼이 무력했다."""
     runner = _Runner([(True, "", 0)])

@@ -591,46 +591,85 @@ class CognitiveEvalMixin:
             try:
                 # ★스트리밍 재실행 — 이벤트를 그대로 흘린다. `final` 만 회수해
                 #  응답으로 삼는다(빈 final 이 채워진 final 을 못 덮게: ep1251 규약).
+                #  흘려보내는 김에 tool_start/tool_result 를 구조화 수집한다 — 이게
+                #  재실행 원장의 1차 소스다(아래 누적 주석 참조).
                 retry_response = ""
+                _stream_calls: list = []  # 이번 재실행의 {name,input,result,is_error}
+                _sc_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (claude_code.process_message 와 동일 규약)
                 for ev in self.ai.process_message_stream(
                     message_content=feedback_message,
                     history=retry_history,
                     images=None,
                     cancel_check=cancel_check,
                 ):
-                    if ev.get("type") == "final":
+                    _et = ev.get("type")
+                    if _et == "final":
                         _c = ev.get("content", "")
                         if _c or not retry_response:
                             retry_response = _c
                         continue
+                    if _et == "tool_start":
+                        _stream_calls.append({
+                            "id": ev.get("id", ""),
+                            "name": ev.get("name", ""),
+                            "input": ev.get("input") or {},
+                            "result": "",
+                            "is_error": False,
+                        })
+                    elif _et == "tool_result":
+                        _rid = ev.get("id", "")
+                        _slot = None
+                        if _rid:
+                            _slot = next(
+                                (tc for tc in _stream_calls if tc.get("id") == _rid),
+                                None,
+                            )
+                        if _slot is None and _sc_cursor < len(_stream_calls):
+                            _slot = _stream_calls[_sc_cursor]
+                        _sc_cursor += 1
+                        if _slot is not None:
+                            _slot["result"] = ev.get("result", "")
+                            _slot["is_error"] = bool(ev.get("is_error", False))
                     yield ev
+
+                # ★재실행이 만든 새 도구 호출을 누적해 ledger·trace 를 갱신한다.
+                # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
+                # 판정 → 실제로 작업해 놓고도 "원장에 없으니 안 했다 = 조작"이라는
+                # 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함).
+                # 1차 소스 = 방금 흘려보낸 스트림의 tool_start/tool_result — 프로바이더
+                # 계약이라 전 프로바이더가 방출하고, 이 스레드에서 직접 관측한 값이다.
+                # thread_context 델타는 폴백 — claude_code 는 도구가 CLI 서브프로세스에서
+                # 돌아 threading.local 에 안 잡히므로 델타가 항상 빈다(2026-08-30 실측:
+                # 재실행의 self:edit·self:patch 가 원장에 누락 → 실제 적용된 수리를
+                # "미수행"으로 뒤집는 거짓 판정). 델타 커서는 소스와 무관하게 전진시켜
+                # 같은 호출이 뒤 라운드에 이중 적재되지 않게 한다.
+                # ★옛 `get_last_tool_calls()` 폴백은 제거했다(2026-08-22): 그 속성은
+                # provider 의 **논스트림** 래퍼만 채우는데 재실행이 스트리밍으로 바뀌어
+                # 영영 안 채워진다 — 남겨 두면 델타가 빈 라운드에서 *이전 논스트림
+                # 호출의 잔여*를 이번 라운드 원장으로 오적재한다(빈손보다 나쁜 거짓 원장).
+                # 누적은 응답이 비어도(503 등) 수행한다 — 도구는 실제로 돌았고 세계는
+                # 이미 바뀌었으므로, 원장은 응답 채택 여부가 아니라 사실을 따른다.
+                _all_tc = _tc_calls()
+                _tc_new = _all_tc[_tc_seen:]
+                _tc_seen = len(_all_tc)
+                _new_calls = _stream_calls if _stream_calls else _tc_new
+                if _new_calls:
+                    if trace_source and isinstance(trace_source[0], dict):
+                        trace_source = list(trace_source) + list(_new_calls)
+                    else:
+                        trace_source = list(_new_calls)
+                    tool_results_str = serialize_tool_trace(trace_source)
+                    action_ledger = build_action_ledger(trace_source)
+                    _trace_dicts = trace_source
+
                 # 재실행 결과가 비어있으면 (503 등) 이전 응답 유지
                 if retry_response and retry_response.strip():
                     response = retry_response
-                    self._log(f"[GoalEval] 재실행 완료: {len(response)}자")
-                    # ★재실행이 만든 새 도구 호출을 누적해 ledger·trace 를 갱신한다.
-                    # 안 하면 다음 라운드 평가가 라운드 1의 stale 원장으로 새 응답을
-                    # 판정 → 실제로 크롤링/검색을 해놓고도 "원장에 없으니 안 했다 = 조작"
-                    # 이라는 거짓 양성이 난다(재실행 루프가 영원히 통과 못 함).
-                    # 소스: thread_context 델타 하나 — 실행기(execute_tool/ibl_engine)가
-                    # 채우므로 provider·스트리밍 여부와 무관한 진실 소스다.
-                    # ★옛 `get_last_tool_calls()` 폴백은 제거했다(2026-08-22): 그 속성은
-                    # provider 의 **논스트림** 래퍼만 채우는데 재실행이 스트리밍으로 바뀌어
-                    # 영영 안 채워진다 — 남겨 두면 델타가 빈 라운드에서 *이전 논스트림
-                    # 호출의 잔여*를 이번 라운드 원장으로 오적재한다(빈손보다 나쁜 거짓 원장).
-                    _all_tc = _tc_calls()
-                    _new_calls = _all_tc[_tc_seen:]
-                    _tc_seen = len(_all_tc)
-                    if _new_calls:
-                        if trace_source and isinstance(trace_source[0], dict):
-                            trace_source = list(trace_source) + list(_new_calls)
-                        else:
-                            trace_source = list(_new_calls)
-                        tool_results_str = serialize_tool_trace(trace_source)
-                        action_ledger = build_action_ledger(trace_source)
-                        _trace_dicts = trace_source
+                    self._log(f"[GoalEval] 재실행 완료: {len(response)}자 "
+                              f"(도구 {len(_new_calls)}회 원장 누적)")
                 else:
-                    self._log(f"[GoalEval] 재실행 결과 비어있음, 이전 응답 유지 ({len(response)}자)")
+                    self._log(f"[GoalEval] 재실행 결과 비어있음, 이전 응답 유지 ({len(response)}자, "
+                              f"도구 {len(_new_calls)}회는 원장에 누적)")
             except Exception as e:
                 self._log(f"[GoalEval] 재실행 실패: {e}")
                 return initial_response

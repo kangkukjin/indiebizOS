@@ -3,8 +3,8 @@
       recent_chats:
         returns: items
         fixture: '[self:recent_chats]{}'
-        description: '최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). 다른 프로젝트를 보려면 {project_id: "투자"} — ★project_path 는 무시된다(조용히 자기 대화가 나옴). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.'
-        target_description: 'limit 건수 제한 (기본 10). project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것.'
+        description: '최근 대화 메시지 조회 (현재 에이전트 기준 시간 역순). 본문은 300자 미리보기 — 절단은 truncated/content_len 으로 신고. 다른 프로젝트를 보려면 {project_id: "투자"} — ★project_path 는 무시된다(조용히 자기 대화가 나옴). conversations.db 기반 — 심층 메모리(memory 액션)와 별개.'
+        target_description: 'limit 건수 제한 (기본 10). project_id 로 대상 프로젝트 지정 — 예 {project_id: "투자"}(id 또는 절대경로). ★project_path 는 라우팅에 안 먹힌다: 호출자 정체성 경로가 이겨(ibl_routing.resolve_project_path 2번 우선순위) 조용히 무시되고 자기 대화가 정상 형태로 반환된다 — 오답을 참으로 믿게 되니 쓰지 말 것. 본문 300자 초과분은 행 truncated=true·content_len(전체 길이)과 봉투 truncated·summary 집계로 신고(2026-08-30) — 전문이 필요하면 해당 DB 직접 조회.'
         group: conversation
         router: driver
         driver: sqlite

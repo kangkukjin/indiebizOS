@@ -837,8 +837,11 @@
             "description": "register 선택 — 스크립트 설명 (목록에 표시)"
           },
           "args": {
-            "type": "object",
-            "description": "run 선택 — JSON 객체, 스크립트 stdin 으로 전달"
+            "type": [
+              "object",
+              "string"
+            ],
+            "description": "run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 배치는 파일에 쓰고 args: \"$file:0\" + files_from 로 (2026-08-30 ep2357)"
           },
           "timeout": {
             "type": "number",

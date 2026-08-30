@@ -59,6 +59,29 @@ _STDERR_TAIL = 2000
 _DEFAULT_TIMEOUT = 300
 
 
+def _coerce_args(args):
+    """run 의 args 경계 관용 (2026-08-30, ep2357): dict 또는 JSON 객체 *문자열*.
+
+    받은 dict 는 어차피 json.dumps 로 stdin 에 나가므로, 문자열이 JSON 객체면 같은
+    바이트다 — dict 만 고집하던 제약이 41건짜리 원장 배치를 IBL 문장 8KB 인라인
+    또는 Bash stdin 우회(등록 통로 밖 실행)로 내몰았다. 이 관용으로
+    args: "$file:0" + files_from(큰 본문의 정본 통로)와 조합된다.
+    반환: (dict|None, 에러 문자열|None) — 객체 아닌 JSON(배열·스칼라)은 정직 거절.
+    """
+    if args is None or isinstance(args, dict):
+        return args, None
+    if isinstance(args, str):
+        try:
+            parsed = json.loads(args)
+        except (ValueError, TypeError):
+            return None, ("args 문자열이 JSON 으로 파싱되지 않습니다 — JSON 객체({키: 값}) "
+                          "리터럴이나 그 문자열($file:0/files_from 경유 포함)을 주세요.")
+        if isinstance(parsed, dict):
+            return parsed, None
+        return None, f"args 는 JSON 객체({{키: 값}})여야 합니다 — 문자열을 파싱하니 {type(parsed).__name__} 이(가) 나왔습니다."
+    return None, "args 는 JSON 객체({키: 값}) 또는 그 JSON 문자열이어야 합니다 — 스크립트 stdin 으로 전달됩니다."
+
+
 def _atomic_write(path, text):
     """무-flock 원자쓰기 (limb_keys 선례)."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -315,12 +338,10 @@ def op_run(tool_input):
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 
-    args = tool_input.get("args")
-    stdin_data = None
-    if args is not None:
-        if not isinstance(args, dict):
-            return {"success": False, "error": "args 는 JSON 객체({키: 값})여야 합니다 — 스크립트 stdin 으로 전달됩니다."}
-        stdin_data = json.dumps(args, ensure_ascii=False)
+    args, _aerr = _coerce_args(tool_input.get("args"))
+    if _aerr:
+        return {"success": False, "error": _aerr}
+    stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
     try:
         timeout = int(tool_input.get("timeout") or entry.get("timeout") or _DEFAULT_TIMEOUT)
     except (TypeError, ValueError):

@@ -26,6 +26,7 @@ on:
       - 'scripts/check_render_core.py'
       - 'scripts/check_backend_layers.py'
       - 'scripts/check_tracked_ignored.py'
+      - 'scripts/check_pinned_deps.py'
       - '.gitignore'
       - 'scripts/test_render_core.js'
       - 'frontend/src/components/**'
@@ -101,6 +102,21 @@ jobs:
         run: python scripts/check_render_core.py --self-test
       - name: 렌더 코어 단일 소스 검사
         run: python scripts/check_render_core.py
+
+  # 핀 정합 가드 (2026-08-30): 정확 핀 선언이 사실인지 — 그리고 판정 로직 자체의 회귀.
+  # CI 는 매번 선언대로 새로 설치하므로 본 판정은 스스로 건너뛴다(그게 정직한 결과다).
+  # 여기서 값진 것은 --self-test — 가드가 무뎌지면 로컬에서만 도는 관문이 조용히 죽는다.
+  pinned-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 가드 자체 회귀 (핀 선별 + 건너뜀 + 어긋남 탐지)
+        run: python scripts/check_pinned_deps.py --self-test
+      - name: 핀 정합 검사
+        run: python scripts/check_pinned_deps.py
 
   # backend 층 가드 (2026-08-05 감사 부채 ⑦): 아래층→위층 import 신규 차단.
   # 기존 47간선은 스크립트 내 BASELINE 동결 — 절단이 진행되며 줄어든다. 의존성 0.

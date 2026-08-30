@@ -9,7 +9,7 @@
 import { useCallback, useState, useRef } from 'react';
 import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
 import type { SystemAISettings, LightweightAISettings, MidtierAISettings } from '../types';
-import { isCliProvider } from '../../../types';
+import { isCliProvider, modelPlaceholder, modelFieldHint } from '../../../types';
 import { api } from '../../../lib/api';
 import { useRetryingLoad } from '../../../lib/use-retrying-load';
 import { SettingsChannelsTab } from './SettingsChannelsTab';
@@ -338,9 +338,12 @@ export function SettingsDialog({
                     type="text"
                     value={settings.model}
                     onChange={(e) => onSettingsChange(changeModel(settings, e.target.value))}
-                    placeholder="gemini-2.0-flash-exp"
+                    placeholder={modelPlaceholder(settings.provider, 'gemini-2.0-flash-exp')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  {modelFieldHint(settings.provider) && (
+                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(settings.provider)}</p>
+                  )}
                 </div>
 
                 {/* API 키 */}
@@ -450,9 +453,12 @@ export function SettingsDialog({
                     type="text"
                     value={lightweightSettings.model}
                     onChange={(e) => onLightweightSettingsChange(changeModel(lightweightSettings, e.target.value))}
-                    placeholder="gemini-2.5-flash-lite"
+                    placeholder={modelPlaceholder(lightweightSettings.provider, 'gemini-2.5-flash-lite')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  {modelFieldHint(lightweightSettings.provider) && (
+                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(lightweightSettings.provider)}</p>
+                  )}
                 </div>
 
                 {/* API 키 */}
@@ -524,9 +530,12 @@ export function SettingsDialog({
                     type="text"
                     value={midtierSettings.model}
                     onChange={(e) => onMidtierSettingsChange(changeModel(midtierSettings, e.target.value))}
-                    placeholder="gemini-2.5-flash"
+                    placeholder={modelPlaceholder(midtierSettings.provider, 'gemini-2.5-flash')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  {modelFieldHint(midtierSettings.provider) && (
+                    <p className="text-xs text-gray-500 mt-1">{modelFieldHint(midtierSettings.provider)}</p>
+                  )}
                 </div>
 
                 {/* API 키 */}

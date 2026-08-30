@@ -12,6 +12,28 @@ export function isCliProvider(provider?: string | null): boolean {
   return !!provider && (CLI_PROVIDERS as readonly string[]).includes(provider);
 }
 
+// 모델 칸의 예시 문구. CLI 프로바이더는 full 모델 ID 가 아니라 **그 CLI 의 모델 선택자**를
+// 받는다 — claude_code 는 별칭(`opus`), codex 는 슬러그(+선택적 `:추론강도`).
+// ★모델 목록을 여기 나열하지 않는다(은퇴하면 낡는다) — 예시 하나만 둔다.
+export function modelPlaceholder(provider?: string | null, fallback = ''): string {
+  if (provider === 'codex') return 'gpt-5.6-sol:high';
+  if (provider === 'claude_code') return 'opus';
+  return fallback;
+}
+
+// 모델 칸 아래 보조 설명. 칸 하나가 두 축을 싣는 경우처럼, 적는 법을 모르면
+// 쓸 수 없는 프로바이더에만 뜬다(빈 문자열이면 표시하지 않는다).
+export function modelFieldHint(provider?: string | null): string {
+  if (provider === 'codex') {
+    return '모델 뒤에 `:추론강도` 를 붙여 강도까지 지정합니다 — low · medium · high · xhigh · max · ultra '
+      + '(모델마다 지원 범위가 다릅니다). 생략하면 Codex 앱의 설정을 따릅니다.';
+  }
+  if (provider === 'claude_code') {
+    return 'Claude Code 의 모델 별칭을 씁니다 — opus · sonnet · haiku (또는 전체 모델 ID).';
+  }
+  return '';
+}
+
 // 프로젝트
 export interface Project {
   id: string;

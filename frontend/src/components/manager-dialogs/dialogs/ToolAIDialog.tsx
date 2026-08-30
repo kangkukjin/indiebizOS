@@ -4,6 +4,7 @@
 
 import { X, Wrench } from 'lucide-react';
 import type { ToolAIForm } from '../types';
+import { modelPlaceholder, modelFieldHint } from '../../../types';
 
 interface ToolAIDialogProps {
   show: boolean;
@@ -63,9 +64,12 @@ export function ToolAIDialog({
               type="text"
               value={toolAIForm.model}
               onChange={(e) => setToolAIForm({ ...toolAIForm, model: e.target.value })}
-              placeholder="gemini-2.0-flash"
+              placeholder={modelPlaceholder(toolAIForm.provider, 'gemini-2.0-flash')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-cyan-500 focus:outline-none text-gray-900"
             />
+            {modelFieldHint(toolAIForm.provider) && (
+              <p className="text-xs text-gray-500 mt-1">{modelFieldHint(toolAIForm.provider)}</p>
+            )}
             <p className="text-xs text-gray-500 mt-1">
               예: gemini-2.0-flash, gemini-3-flash-preview, gpt-4o, claude-3-5-sonnet-20241022
             </p>

@@ -554,6 +554,16 @@ SHELL_PANEL_MANUAL_HTML = """
       <div id="peerStatus" style="display:none"></div>
       <!-- 모델 기어 — 계기판 변속 레버 (절약/균형/최대) + 설정(프리셋·핀) -->
       <div id="gearLever" class="card" style="display:none"></div>
+      <!-- 주행기록계 — 지난 주행 목록 + 전체 로그 + 분석 스위치.
+           PC 조종실(ManualMode 의 EpisodeJournal)과 같은 화면·같은 API 를 이 표면에도 둔다.
+           기본 접힘(지연 로드) — 폰 회선에서 열지도 않은 목록을 받지 않는다. -->
+      <div id="mJournal" class="card" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <button id="jHeadBtn" onclick="jToggle()" style="background:none;border:none;padding:0;font-weight:700;font-size:14px;color:var(--txt);text-align:left">📊 주행기록</button>
+          <button id="jReloadBtn" onclick="jLoad()" style="display:none;font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">새로고침</button>
+        </div>
+        <div id="jBody" style="display:none;margin-top:10px"></div>
+      </div>
       <div class="step">
         <div class="step-label">① 의도 (자연어)</div>
         <div class="row">

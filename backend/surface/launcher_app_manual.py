@@ -128,4 +128,112 @@ function seedAction(seed){
   document.getElementById('palette').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+/* ================= 주행기록계 =================
+   PC 조종실(EpisodeJournal.tsx)과 같은 화면을 이 표면에도 둔다 — 지난 주행 목록,
+   행을 누르면 그 주행의 실행기억(전체 로그), 분석 스위치.
+   API 도 데스크탑과 같은 것을 쓴다: /world-pulse/episodes · /xray/episodes/{id} ·
+   /world-pulse/episodes/{id}/analysis-prompt. 이 셋은 is_public_remote_path 목록에
+   없으므로 외부(터널)에서는 런처 세션 쿠키가 있어야 통과한다 — 주행기록이 무인가
+   접근에 열리지 않는다는 뜻이고, 새 인증 경계를 만들지 않았다는 뜻이기도 하다.
+   데스크탑은 Electron 창을 열어 분석하지만 여기엔 창이 없으므로, 같은 프롬프트를
+   자율주행 탭의 시스템 AI 입력칸에 실어 준다(보내기는 사용자가 누른다). */
+let jOpen=false, jRows=null, jExpanded=null, jLogs={};
+function jRel(iso){
+  if(!iso) return '';
+  const t=Date.parse(iso); if(isNaN(t)) return '';
+  const s=Math.max(0,Math.floor((Date.now()-t)/1000));
+  if(s<60) return s+'초 전';
+  if(s<3600) return Math.floor(s/60)+'분 전';
+  if(s<86400) return Math.floor(s/3600)+'시간 전';
+  return Math.floor(s/86400)+'일 전';
+}
+function jMeta(ep){
+  const m=[];
+  const rel=jRel(ep.started_at); if(rel) m.push(rel);
+  if(ep.agent) m.push(String(ep.agent));
+  if(ep.hippocampus_score!=null) m.push('확신 '+Math.round(ep.hippocampus_score*100)+'%');
+  if(ep.execution_rounds!=null&&ep.execution_rounds>1) m.push(ep.execution_rounds+'라운드');
+  if(ep.total_ms!=null) m.push((ep.total_ms/1000).toFixed(1)+'초');
+  const d=ep.unconscious_decision;
+  if(d) m.push(d==='THINK'?'숙고':(d==='EXECUTE'?'실행':String(d)));
+  const r=ep.evaluation_result;
+  if(r) m.push(r==='ACHIEVED'?'달성':'미달');
+  return m.join(' · ');
+}
+function jRender(){
+  const b=document.getElementById('jBody'); if(!b) return;
+  if(jRows===null){ b.innerHTML='<p class="muted">기록 불러오는 중…</p>'; return; }
+  if(!jRows.length){ b.innerHTML='<p class="muted">아직 기록된 주행이 없습니다.</p>'; return; }
+  let h='';
+  jRows.forEach(function(ep){
+    const open=(jExpanded===ep.id), st=jLogs[ep.id];
+    h+='<div style="padding:8px 0;border-bottom:1px solid var(--line)">';
+    h+='<div style="display:flex;align-items:flex-start;gap:8px">';
+    h+='<button onclick="jToggleLog('+ep.id+')" title="이 주행의 실행기억(전체 로그)을 펼칩니다" style="flex:1;min-width:0;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;background:none;border:none;padding:0;font-size:13px;color:var(--txt)">';
+    h+=(open?'▾ ':'▸ ')+esc(ep.user_message||'(요청 없음)')+'</button>';
+    h+='<button onclick="jAnalyze('+ep.id+')" title="이 주행을 시스템 AI로 분석 — 잘된 점·문제점·고칠 것" style="flex-shrink:0;font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">🔬 분석</button>';
+    h+='</div>';
+    h+='<div style="font-size:11px;color:var(--dim);margin-top:4px">'+esc(jMeta(ep))+'</div>';
+    if(open){
+      h+='<div style="margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--bg3);max-height:320px;overflow:auto">';
+      if(!st||st.s==='loading') h+='<p class="muted" style="padding:8px 10px;margin:0">실행기억 불러오는 중…</p>';
+      else if(st.s==='error') h+='<p class="muted" style="padding:8px 10px;margin:0">기록을 불러오지 못했습니다 (로그가 만료됐을 수 있습니다).</p>';
+      else h+='<pre style="margin:0;padding:8px 10px;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word">'+esc(st.t||'(로그가 비어 있습니다)')+'</pre>';
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  b.innerHTML=h;
+}
+async function jLoad(){
+  jRows=null; jRender();
+  try{
+    const r=await jfetch('/world-pulse/episodes?limit=20');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    jRows=d.episodes||[];
+  }catch(e){
+    jRows=[];
+    const b=document.getElementById('jBody');
+    if(b) b.innerHTML='<p class="muted">주행기록을 불러오지 못했습니다 — '+esc(e.message)+'</p>';
+    return;
+  }
+  jRender();
+}
+function jToggle(){
+  jOpen=!jOpen;
+  const b=document.getElementById('jBody'); if(b) b.style.display=jOpen?'block':'none';
+  const rb=document.getElementById('jReloadBtn'); if(rb) rb.style.display=jOpen?'block':'none';
+  if(jOpen&&jRows===null) jLoad();
+}
+async function jToggleLog(id){
+  const willOpen=(jExpanded!==id);
+  jExpanded=willOpen?id:null;
+  jRender();
+  if(!willOpen) return;
+  if(jLogs[id]&&jLogs[id].s==='ok') return;
+  try{
+    const r=await jfetch('/xray/episodes/'+id);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    jLogs[id]={s:'ok',t:d.log||''};
+  }catch(e){ jLogs[id]={s:'error'}; }
+  jRender();
+}
+async function jAnalyze(id){
+  try{
+    const r=await jfetch('/world-pulse/episodes/'+id+'/analysis-prompt');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    if(typeof setSurface!=='function'||typeof apPickSystem!=='function'){
+      alert('이 표면에는 시스템 AI 채팅이 없습니다.'); return;
+    }
+    setSurface('autopilot'); apPickSystem();
+    setTimeout(function(){
+      const inp=document.getElementById('apInput');
+      if(inp){ inp.value=d.prompt||''; inp.focus(); }
+    },80);
+  }catch(e){ alert('분석 준비 실패: '+e.message); }
+}
+
 """

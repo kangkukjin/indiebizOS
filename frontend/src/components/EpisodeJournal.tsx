@@ -9,7 +9,16 @@ import { useState, useCallback } from 'react';
 import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
-const API_BASE = 'http://127.0.0.1:8765';
+// API 포트 가져오기 — PCManager·PhotoManager 와 같은 이디엄(window.electron.getApiPort).
+// 지금 API_PORT 는 electron/main.js 의 상수 8765 라 동작 차이는 없다. 포트가 상수를 벗어나는
+// 날 이 패널만 홀로 깨지지 않게 해 두는 것이 이 함수의 몫이다.
+const getApiUrl = async () => {
+  if (window.electron?.getApiPort) {
+    const port = await window.electron.getApiPort();
+    return `http://127.0.0.1:${port}`;
+  }
+  return 'http://127.0.0.1:8765';
+};
 
 interface EpisodeRow {
   id: number;
@@ -78,7 +87,8 @@ export function EpisodeJournal() {
     // 펼치는 순간, 아직 못 받았거나 실패했던 로그만 (다시) 가져온다 — 전체 로그를 그대로 보여준다.
     if (willExpand && (!logs[id] || logs[id].status === 'error')) {
       setLogs((p) => ({ ...p, [id]: { status: 'loading' } }));
-      fetch(`${API_BASE}/xray/episodes/${id}`)
+      getApiUrl()
+        .then((base) => fetch(`${base}/xray/episodes/${id}`))
         .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
         .then((data) => setLogs((p) => ({ ...p, [id]: { status: 'ok', text: data.log || '' } })))
         .catch(() => setLogs((p) => ({ ...p, [id]: { status: 'error' } })));
@@ -88,7 +98,7 @@ export function EpisodeJournal() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/world-pulse/episodes?limit=20`);
+      const res = await fetch(`${await getApiUrl()}/world-pulse/episodes?limit=20`);
       const data = await res.json();
       setRows(data.episodes || []);
     } finally {

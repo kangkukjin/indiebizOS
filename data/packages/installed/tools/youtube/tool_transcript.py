@@ -536,28 +536,43 @@ def load_system_ai_config() -> dict:
 
 
 def get_summary_ai_client():
-    """요약용 AI 클라이언트 반환 (시스템 AI 설정 사용)"""
-    config = load_system_ai_config()
+    """요약용 AI provider 반환 — 모델 기어 'content_text' 역할(실행 축).
 
-    provider = config.get("provider", "google")
-    model = config.get("model", "gemini-2.0-flash")
-    api_key = config.get("apiKey") or config.get("api_key", "")
+    정책: 콘텐츠를 만드는 AI 는 실행 AI 와 같은 모델을 쓴다 — 사용자가 기어로 조정한다
+    (lecture_workspace/slide_ai.py 가 2026-08-04 에 옮겨간 것과 같은 관용).
 
-    # provider 이름 정규화
-    if provider in ["google", "gemini"]:
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        return client, "gemini", model
-    elif provider == "openai":
-        import openai
-        client = openai.OpenAI(api_key=api_key)
-        return client, "openai", model
-    elif provider == "anthropic":
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        return client, "anthropic", model
-    else:
-        raise ValueError(f"Unknown provider: {provider}")
+    ★왜 옮겼나(2026-08-30): 옛 판은 고급 티어 파일을 직접 읽고 provider 이름을 손으로
+    분기해 두 군데서 동시에 깨졌다 — ①분기가 google/openai/anthropic 세 이름만 알아서
+    기어가 claude_code·deepseek 로 바뀌자 'Unknown provider' 로 죽었고(세 티어 어느
+    것도 통과 못 함), ②키를 티어 json 의 apiKey 에서만 찾아 .env 로 옮겨간 정본 키를
+    못 봤다. 둘 다 기어 우회라는 한 뿌리에서 나온 증상이라 통로 자체를 바꾼다.
+    """
+    from model_resolver import resolve, provider_needs_api_key
+
+    d = resolve("content_text")
+    provider_name = (d.get("provider") or "").strip()
+    model_name = (d.get("model") or "").strip()
+    api_key = (d.get("api_key") or "").strip()
+
+    if not provider_name or not model_name:
+        raise RuntimeError(
+            "요약 모델을 해소하지 못했습니다 — 모델 기어(실행 축) 설정을 확인하세요.")
+    # claude_code·ollama 는 자체 인증이라 키가 없는 것이 정상이다.
+    if not api_key and provider_needs_api_key(provider_name):
+        raise RuntimeError(
+            f"{provider_name} 키가 없습니다 — .env 의 프로바이더 키를 확인하세요.")
+
+    from providers import get_provider
+    provider = get_provider(
+        provider_name,
+        api_key=api_key,
+        model=model_name,
+        system_prompt="당신은 영상 자막을 읽고 핵심을 정리하는 요약 전문가다.",
+        tools=[],
+    )
+    provider.init_client()
+    print(f"      · 요약 모델: {provider_name}/{model_name} ({d.get('source', '')})")
+    return provider
 
 
 def summarize_youtube(
@@ -635,30 +650,13 @@ def summarize_youtube(
 """
 
     try:
-        ai_result = get_summary_ai_client()
+        # 프로바이더별 SDK 분기는 provider 계층이 이미 흡수한다 — 여기서 다시 갈래를
+        # 치면 새 프로바이더가 생길 때마다 이 파일이 뒤처진다(그게 옛 결함이었다).
+        ai = get_summary_ai_client()
+        summary_content = ai.process_message(summary_prompt, history=[])
 
-        if ai_result[1] == "gemini":
-            client, _, model_name = ai_result
-            response = client.models.generate_content(
-                model=model_name,
-                contents=summary_prompt
-            )
-            summary_content = response.text
-        elif ai_result[1] == "openai":
-            client, _, model_name = ai_result
-            response = client.chat.completions.create(
-                model=model_name,
-                messages=[{"role": "user", "content": summary_prompt}]
-            )
-            summary_content = response.choices[0].message.content
-        elif ai_result[1] == "anthropic":
-            client, _, model_name = ai_result
-            response = client.messages.create(
-                model=model_name,
-                max_tokens=8192,
-                messages=[{"role": "user", "content": summary_prompt}]
-            )
-            summary_content = response.content[0].text
+        if not (summary_content or "").strip():
+            raise RuntimeError("요약 모델이 빈 응답을 냈습니다")
 
         print(f"      ✓ AI 요약 완료 ({len(summary_content)}자)")
 

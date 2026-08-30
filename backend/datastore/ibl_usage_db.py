@@ -57,6 +57,7 @@ class UsageExample:
     score: float
     source: str
     success_rate: float
+    avg_ms: float = -1.0  # 평균 실행시간 EWMA(-1=미측정) — 시간 선택압의 회상 표면
 
 
 # =============================================================================
@@ -137,11 +138,19 @@ class IBLUsageDB:
                 source TEXT DEFAULT 'synthetic',
                 success_count INTEGER DEFAULT 0,
                 fail_count INTEGER DEFAULT 0,
+                avg_ms REAL DEFAULT -1.0,
                 tags TEXT DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
         """)
+
+        # 마이그레이션: 기존 DB 에 avg_ms(성공 실행시간 EWMA, -1=미측정) 컬럼 보강.
+        # 시간을 비용으로 만드는 축 — 같은 목표의 표현 중 빠른 쪽이 정리 패스에서 살아남고
+        # 회상 표면에 표시된다(2026-08-30 시간 선택압).
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
+        if "avg_ms" not in cols:
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN avg_ms REAL DEFAULT -1.0")
 
         # FTS5 키워드 인덱스
         conn.execute("""
@@ -410,8 +419,11 @@ class IBLUsageDB:
     def add_example(self, intent: str, ibl_code: str,
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
-                    tags: str = "") -> int:
-        """용례 추가 (임베딩 자동 생성). Returns: example ID (남의 어휘로 거부되면 0)"""
+                    tags: str = "", avg_ms: float = -1.0) -> int:
+        """용례 추가 (임베딩 자동 생성). Returns: example ID (남의 어휘로 거부되면 0)
+
+        avg_ms: 출생 실측 — 증류 경로가 원 실행의 소요시간을 첫 관측으로 심는다.
+        미측정(-1)이면 이후 Reflex 귀속이 채운다."""
         if self._is_foreign_vocab(ibl_code):
             logger.warning(f"[IBL Usage DB] 남의 어휘 용례 거부(입구 소유-게이트): {ibl_code}")
             return 0
@@ -419,9 +431,10 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (intent, ibl_code, nodes, category, difficulty, source, tags, now, now)
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (intent, ibl_code, nodes, category, difficulty, source, tags,
+                 float(avg_ms) if avg_ms and avg_ms > 0 else -1.0, now, now)
             )
             example_id = cursor.lastrowid
             conn.commit()
@@ -497,18 +510,35 @@ class IBLUsageDB:
             'semantic_available': self._model is not None
         }
 
-    def update_success(self, example_id: int, success: bool):
-        """성공/실패 카운트 업데이트"""
+    # 시간 EWMA 가중: 최근 관측 30%. 몸·부하에 따른 요동을 흡수하면서도
+    # 표현이 실제로 빨라지면(예: ai 한 칸→결정론 함수) 수 회 안에 반영된다.
+    AVG_MS_ALPHA = 0.3
+
+    def update_success(self, example_id: int, success: bool,
+                       elapsed_ms: Optional[int] = None):
+        """성공/실패 카운트 + (성공 시) 실행시간 EWMA 갱신.
+
+        elapsed_ms 는 성공 실행에서만 반영한다 — 실패의 소요시간은 '그 표현의 빠르기'가
+        아니라 실패 양상의 시간이라 섞으면 오염된다. -1(미측정)에서 첫 관측은 그대로 채택."""
         field = "success_count" if success else "fail_count"
+        time_sql = ""
+        args: list = [datetime.now().isoformat()]
+        if success and elapsed_ms is not None and elapsed_ms > 0:
+            time_sql = (", avg_ms = CASE WHEN avg_ms IS NULL OR avg_ms < 0 THEN ? "
+                        f"ELSE avg_ms * {1 - self.AVG_MS_ALPHA} + ? * {self.AVG_MS_ALPHA} END")
+            args += [float(elapsed_ms), float(elapsed_ms)]
+        args.append(example_id)
         with self._get_connection() as conn:
             conn.execute(
-                f"UPDATE ibl_examples SET {field} = {field} + 1, updated_at = ? WHERE id = ?",
-                (datetime.now().isoformat(), example_id)
+                f"UPDATE ibl_examples SET {field} = {field} + 1, updated_at = ?{time_sql} "
+                f"WHERE id = ?",
+                args
             )
             conn.commit()
 
-    def update_success_by_code(self, ibl_code: str, success: bool) -> bool:
-        """ibl_code 정확 일치로 example을 찾아 성공/실패 카운트 갱신.
+    def update_success_by_code(self, ibl_code: str, success: bool,
+                               elapsed_ms: Optional[int] = None) -> bool:
+        """ibl_code 정확 일치로 example을 찾아 성공/실패(+실행시간)를 갱신.
 
         연상 Reflex 경로의 top-1 귀속용 — top_code(연상 최고점 항목의 코드)로
         해당 용례를 찾아 실행 결과를 피드백한다. 여러 개면 가장 최근 갱신본 하나.
@@ -523,7 +553,7 @@ class IBLUsageDB:
             if not row:
                 return False
             example_id = row['id']
-        self.update_success(example_id, success)
+        self.update_success(example_id, success, elapsed_ms=elapsed_ms)
         return True
 
     # =========================================================================
@@ -643,6 +673,20 @@ class IBLUsageDB:
                 vconn.close()
         self._search_cache.clear()
 
+    @staticmethod
+    def _dedup_quality(r: Dict) -> tuple:
+        """근접중복 클러스터에서 살아남을 최선 1개의 정렬키 — max() 용.
+
+        성공률 → 시도수 → **빠르기**(시간 선택압: 같은 목표를 같은 신뢰로 달성하면
+        빠른 표현이 생존한다. 실측이 미측정을 이긴다 — avg_ms 없는 항목은 이 축 최하위)
+        → 최신(id). 시간이 성공률·검증량보다 앞서지 않는 순서가 계약이다 —
+        빠르지만 덜 검증된 표현이 검증된 표현을 밀어내면 안 된다."""
+        total = r["success_count"] + r["fail_count"]
+        sr = (r["success_count"] / total) if total else -1.0
+        ms = r.get("avg_ms")
+        speed = -float(ms) if (ms is not None and ms >= 0) else float("-inf")
+        return (sr, total, speed, r["id"])
+
     def consolidate_distilled(self, cap: int = 200,
                               dup_threshold: float = 0.92,
                               min_fails_to_prune: int = 2) -> Dict[str, Any]:
@@ -656,7 +700,7 @@ class IBLUsageDB:
         """
         with self._get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
-                "SELECT id, intent, ibl_code, success_count, fail_count, created_at "
+                "SELECT id, intent, ibl_code, success_count, fail_count, avg_ms, created_at "
                 "FROM ibl_examples WHERE source='distilled'"
             ).fetchall()]
 
@@ -697,18 +741,13 @@ class IBLUsageDB:
                     if mid != r["id"] and mid in alive_ids and sim >= dup_threshold:
                         union(r["id"], mid)
 
-            def quality(r):
-                total = r["success_count"] + r["fail_count"]
-                sr = (r["success_count"] / total) if total else -1.0
-                return (sr, total, r["id"])  # 성공률 → 시도수 → 최신
-
             groups: Dict[int, List[int]] = {}
             for i in alive_ids:
                 groups.setdefault(find(i), []).append(i)
             for g in groups.values():
                 if len(g) < 2:
                     continue
-                keep = max(g, key=lambda i: quality(by_id[i]))
+                keep = max(g, key=lambda i: self._dedup_quality(by_id[i]))
                 for i in g:
                     if i != keep:
                         to_delete.add(i)
@@ -957,6 +996,7 @@ class IBLUsageDB:
                 score=round(float(sims[int(i)]), 4),
                 source=meta.get("source", "synthetic"),
                 success_rate=round(success_rate, 2) if total else -1.0,
+                avg_ms=float(meta.get("avg_ms", -1.0)),
             ))
             if len(results) >= top_k:
                 break
@@ -1131,7 +1171,7 @@ class IBLUsageDB:
             placeholders = ','.join('?' * len(all_ids))
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
-                           source, success_count, fail_count
+                           source, success_count, fail_count, avg_ms
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1167,7 +1207,8 @@ class IBLUsageDB:
                 difficulty=meta['difficulty'],
                 score=round(float(score), 4),
                 source=meta['source'],
-                success_rate=round(success_rate, 2) if total else -1.0
+                success_rate=round(success_rate, 2) if total else -1.0,
+                avg_ms=round(float(meta['avg_ms']), 0) if (meta['avg_ms'] or -1) >= 0 else -1.0
             ))
 
             if len(results) >= top_k:

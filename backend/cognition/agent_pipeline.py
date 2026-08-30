@@ -374,13 +374,16 @@ class CognitivePipelineMixin:
             접두)는 다른 갈래이고, 후자가 IBL 실패의 주된 모양이다.
             """
             nonlocal _pair_cursor
+            import time as _time
             et = ev.get("type")
             if et == "tool_start":
                 _raw = ev.get("name", "")
                 _name = _raw[len("mcp__indiebizos__"):] if _raw.startswith("mcp__indiebizos__") else _raw
                 # success 는 결과 도착 시 확정된다 — 여기서는 미확정 표시로 True 를 둔다
                 # (결과가 끝내 안 오는 취소·중단 턴에서는 옛 동작 그대로).
-                tool_calls_log.append({"tool_name": _name, "input": ev.get("input", {}), "success": True})
+                # _t0 = 시간 선택압의 측정 이음매 — 결과 도착 시 elapsed_ms 로 환산·제거된다.
+                tool_calls_log.append({"tool_name": _name, "input": ev.get("input", {}),
+                                       "success": True, "_t0": _time.monotonic()})
                 eval_tool_calls.append({"id": ev.get("id", ""), "name": _name,
                                         "input": ev.get("input", {}),
                                         "result": "", "is_error": False})
@@ -407,6 +410,10 @@ class CognitivePipelineMixin:
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err
+                        _t0 = tool_calls_log[_idx].pop("_t0", None)
+                        if _t0 is not None:
+                            tool_calls_log[_idx]["elapsed_ms"] = \
+                                int((_time.monotonic() - _t0) * 1000)
                         # criteria 재시도-통과 표지를 증류로 나른다(품질 계약 셋째 신호).
                         # 미달(fail)은 봉투 success:false → 위 판정이 이미 거른다. 재시도
                         # 통과는 success 지만 첫 지시가 약했다는 사실 — 증류가 이걸 모르면

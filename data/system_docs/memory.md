@@ -246,8 +246,10 @@ see_also: [architecture.md, ibl.md]
 
 | 부채 | 해결 | 구현 |
 |---|---|---|
-| **① 피드백 루프 죽음** | ✅ Reflex top-1 성공/실패 기록 → success_rate 표시 | `record_recall_outcome()` — 고점수(≥0.85, 귀속 깔끔한 Reflex 경로)에서 top-1 example의 execute_ibl 성공/실패를 `update_success_by_code()`로 기록. 3개 증류 지점(websocket×2 + agent_communication)에 배선. `_format_references`가 success_rate를 표시(0.0=실패 포함, -1=미검증은 숨김) → 연상이 검증된 사례를 선호. 리랭킹이 아니라 **표시로 AI가 판단**(last_seen과 동일 철학) |
+| **① 피드백 루프 죽음** | ✅ Reflex top-1 성공/실패 기록 → success_rate 표시 | `record_recall_outcome()` — 고점수(≥0.85, 귀속 깔끔한 Reflex 경로)에서 top-1 example의 execute_ibl 성공/실패를 `update_success_by_code()`로 기록. 3개 증류 지점(websocket×2 + agent_communication)에 배선(→2026-08 `_after_response` 초크포인트로 흡수). `_format_references`가 success_rate를 표시(0.0=실패 포함, -1=미검증은 숨김) → 연상이 검증된 사례를 선호. 리랭킹이 아니라 **표시로 AI가 판단**(last_seen과 동일 철학) |
 | **② 증류 검증 게이트** | ✅ 환각 액션 차단 | `_validate_ibl_actions()` — distilled code의 모든 `[node:action]`이 `ibl_nodes.yaml`에 실재하는지 정적 검증, 미존재 시 증류 폐기. add_example 전에 호출 |
+
+**시간 선택압 (2026-08-30)**: 시간이 좌표(타임스탬프)로만 있고 **비용**으로는 없어 같은 목표를 빨리 이루는 표현에 유인이 없던 공백(사용자 판정으로 집행)을 ①의 같은 배선에 축 하나로 추가. `agent_pipeline._collect`가 tool_start→tool_result 이음매에서 `elapsed_ms` 도장 → `record_recall_outcome`이 **성공 실행만** `avg_ms`(EWMA α=0.3, -1=미측정)로 귀속, 증류는 원 실행 소요시간을 출생 실측으로 심음(`_ibl_elapsed_ms`). 소비 2곳 — 회상 XML `avg_ms` 속성(표시로 AI가 판단, success_rate 규약과 동일) + 근접중복 정리 생존키(`_dedup_quality`: 성공률→시도수→**빠르기**→최신 — 시간은 신뢰를 넘지 못하고, 실측이 미측정을 이긴다). 훈계(프롬프트 문장) 0 — 전부 이음매. 폰 렌트 인덱스도 avg_ms 동반(export_hippo_index). 관문=`test_time_selection.py` T1~T5.
 
 **검증(2026-05-31)**: 고점수+성공→success_count, 고점수+실패→fail_count, 저점수(THINK)·비IBL→무시, 표시 가드(tried 0.5/0.0 표시·untried 숨김), 환각 액션(sense:teleport 등) 폐기 모두 확인.
 
@@ -258,7 +260,7 @@ see_also: [architecture.md, ibl.md]
 | 부채 | 해결 | 구현 |
 |---|---|---|
 | **⑤ 증류물 가지치기 없음** | ✅ 검증실패 가지치기 | `consolidate_distilled` — `fail_count≥2 & success_count==0`인 입증된 나쁜 사례 삭제 (①의 피드백 루프가 살아나 가능해짐) |
-| **③ 증류 쓰기 중복 누적** | ✅ 근접중복 제거 | 증류물끼리 임베딩 코사인≥0.92 클러스터 → 최선(성공률→시도수→최신) 1개만 유지. 0.92 미만 유사 항목은 보존 |
+| **③ 증류 쓰기 중복 누적** | ✅ 근접중복 제거 | 증류물끼리 임베딩 코사인≥0.92 클러스터 → 최선(성공률→시도수→빠르기→최신, `_dedup_quality`) 1개만 유지. 0.92 미만 유사 항목은 보존 |
 | **④ json 무한 append** | ✅ dedup + 상한 | `_consolidate_distilled_json` — 완전중복(intent+code) 제거 + 최신 800건만 유지 |
 | 상한 | ✅ | distilled가 200 초과 시 미검증(trial 0)부터 오래된 순 삭제 |
 

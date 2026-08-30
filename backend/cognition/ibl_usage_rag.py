@@ -171,7 +171,8 @@ class IBLUsageRAG:
                     "execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.")
         else:
             note = ("참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. "
-                    "success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증).")
+                    "success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증). "
+                    "avg_ms는 과거 성공 실행의 평균 소요시간(ms) — 같은 목표라면 빠른 패턴이 좋다.")
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -179,9 +180,12 @@ class IBLUsageRAG:
             # `'`·`&`·`<` 를 담고 있어 그 블록 전체가 비적합 XML 이었다).
             attrs = f'intent="{_xml_attr(ex.intent)}" score="{ex.score}"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
-            # -1.0(미검증)은 표시하지 않아 노이즈를 줄인다.
+            # -1.0(미검증)은 표시하지 않아 노이즈를 줄인다. avg_ms 도 같은 규약(-1=미측정 숨김)
+            # — 리랭킹이 아니라 표시로 AI가 판단한다(success_rate·last_seen 과 동일 철학).
             if ex.success_rate >= 0:
                 attrs += f' success_rate="{ex.success_rate}"'
+            if getattr(ex, "avg_ms", -1.0) >= 0:
+                attrs += f' avg_ms="{int(ex.avg_ms)}"'
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
@@ -513,17 +517,38 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
 RECALL_RECORD_THRESHOLD = 0.85
 
 
+def _ibl_elapsed_ms(tool_calls: list) -> Optional[int]:
+    """성공한 execute_ibl 호출들의 소요시간 합(ms). 측정된 호출이 없으면 None.
+
+    agent_pipeline._collect 가 tool_start→tool_result 이음매에서 도장 찍은 elapsed_ms 를
+    합산한다 — 시간 선택압의 귀속 축. 실패 호출의 시간은 섞지 않는다(그 표현의 빠르기가
+    아니라 실패 양상의 시간이다). 다른 진입 경로(스레드 수집 등)의 호출은 elapsed_ms 가
+    없을 수 있고, 그 경우 미측정(None)으로 정직하게 비운다."""
+    total, measured = 0, False
+    for tc in tool_calls or []:
+        if not isinstance(tc, dict) or tc.get("tool_name") != "execute_ibl":
+            continue
+        if not tc.get("success", True):
+            continue
+        ms = tc.get("elapsed_ms")
+        if isinstance(ms, (int, float)) and ms > 0:
+            total += int(ms)
+            measured = True
+    return total if measured else None
+
+
 def record_recall_outcome(top_code: str, top_score: float, tool_calls: list) -> bool:
-    """Reflex 경로에서 연상 top-1 example의 실행 성공/실패를 해마에 피드백한다.
+    """Reflex 경로에서 연상 top-1 example의 실행 성공/실패(+소요시간)를 해마에 피드백한다.
 
     이것이 해마의 강화-감쇠 루프다. 기록된 성공/실패는 success_rate로 환산되어
     이후 연상 시 참조 XML에 표시되고(검증된 사례 부상), 정리 패스의 가지치기
-    신호로도 쓸 수 있다.
+    신호로도 쓸 수 있다. 성공 실행의 소요시간은 avg_ms EWMA 로 누적되어
+    같은 목표의 표현들 사이에 빠르기 축(시간 선택압)을 만든다.
 
     Args:
         top_code: 연상 최고점 항목의 ibl_code (build_execution_memory 반환)
         top_score: 해마 최고 점수
-        tool_calls: 도구 실행 이력 [{tool_name, input, success}, ...]
+        tool_calls: 도구 실행 이력 [{tool_name, input, success, elapsed_ms?}, ...]
     Returns:
         기록 여부 (귀속 불가/저점수 시 False)
     """
@@ -545,13 +570,16 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list) -> 
     if ibl_success is None:
         return False  # IBL 실행이 없었으면 귀속 불가
 
+    elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
+
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        ok = db.update_success_by_code(top_code, ibl_success)
+        ok = db.update_success_by_code(top_code, ibl_success, elapsed_ms=elapsed_ms)
         if ok:
+            _t = f", {elapsed_ms}ms" if elapsed_ms else ""
             print(f"[해마피드백] top-1 {'성공' if ibl_success else '실패'} 기록 "
-                  f"(score={top_score:.2f}): {top_code[:50]}")
+                  f"(score={top_score:.2f}{_t}): {top_code[:50]}")
             # 성공률이 바뀌었으니 연상 캐시 무효화
             IBLUsageRAG().clear_cache()
         return ok
@@ -802,9 +830,12 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         # 파이프라인 여부
         category = "pipeline" if (">>" in code or "&" in code) else "single"
 
-        # 해마에 저장 (임베딩도 즉시 생성)
+        # 해마에 저장 (임베딩도 즉시 생성). avg_ms=출생 실측 — 이 용례가 압축한 원 실행의
+        # 소요시간 합을 첫 관측으로 심는다(없으면 -1, 이후 Reflex 귀속이 채움). 근접중복
+        # 정리에서 빠른 표현이 살아남는 시간 선택압의 시작점.
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
+        _birth_ms = _ibl_elapsed_ms(tool_calls)
         example_id = db.add_example(
             intent=intent,
             ibl_code=code,
@@ -813,6 +844,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             difficulty=1,
             source="distilled",
             tags="auto",
+            avg_ms=float(_birth_ms) if _birth_ms else -1.0,
         )
 
         # 학습용 JSON 파일에 누적 (재학습 시 기존 데이터와 합쳐서 사용)

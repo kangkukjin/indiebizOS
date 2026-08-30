@@ -8,7 +8,7 @@
 
 출력 2종 (data/):
 - ibl_hippo_index.json : {dim, count, examples:[{id,intent,ibl_code,nodes,category,difficulty,
-  source,success_count,fail_count}]}  (벡터 행 순서와 1:1)
+  source,success_count,fail_count,avg_ms}]}  (벡터 행 순서와 1:1)
 - ibl_hippo_vecs.f32   : raw float32, (count, dim) — examples[i] 의 L2정규화 임베딩.
   폰은 np.frombuffer(...).reshape(count, dim) 로 즉시 행렬화 → query_vec 와 dot = 코사인.
 
@@ -41,7 +41,7 @@ def main() -> int:
     with db._get_connection() as conn:
         rows = conn.execute(
             """SELECT id, intent, ibl_code, nodes, category, difficulty,
-                      source, success_count, fail_count
+                      source, success_count, fail_count, avg_ms
                FROM ibl_examples ORDER BY id"""
         ).fetchall()
     if not rows:
@@ -89,6 +89,8 @@ def main() -> int:
             "source": row["source"] or "synthetic",
             "success_count": _safe_int(row["success_count"], 0),
             "fail_count": _safe_int(row["fail_count"], 0),
+            # 시간 선택압(2026-08-30): 성공 실행시간 EWMA(-1=미측정) — 렌트 몸도 표시 규약 공유
+            "avg_ms": float(row["avg_ms"]) if row["avg_ms"] is not None else -1.0,
         }
         vec = vec_by_id.get(rid)
         if vec is None:

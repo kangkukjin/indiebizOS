@@ -200,6 +200,61 @@ def test_codex_session_key_tracks_system_prompt():
     assert ka.startswith("ag#"), f"키 형식이 접두 스윕과 안 맞는다: {ka}"
 
 
+def test_codex_model_carries_reasoning_effort():
+    """`슬러그:강도` 표기가 -m 과 model_reasoning_effort 두 인자로 갈린다.
+
+    ★강도가 `model` 칸에 사는 이유는 편의가 아니라 캐시 정합이다: 프로바이더 캐시 키가
+    `bucket|provider|model|keyhash` 라, 강도가 그 문자열 밖에 있으면 같은 슬러그를 쓰는
+    두 티어(고급=sol:max · 중급=sol:low)가 캐시에서 충돌해 **에러 없이 강도가 뒤바뀐다**.
+    """
+    from providers import get_provider
+
+    def cmd_for(model):
+        p = get_provider("codex", api_key="", model=model, system_prompt="")
+        p._binary_path = "/fake/codex"
+        return p._build_command(stream=True)
+
+    # 강도 명시 → 두 인자로 갈린다
+    c = cmd_for("gpt-5.6-sol:high")
+    assert "-m" in c and c[c.index("-m") + 1] == "gpt-5.6-sol", f"슬러그가 안 갈렸다: {c}"
+    assert 'model_reasoning_effort="high"' in c, f"강도 오버라이드가 없다: {c}"
+
+    # 강도 없음 → 오버라이드를 보내지 않는다(사용자 config.toml 을 따른다)
+    c = cmd_for("gpt-5.6-sol")
+    assert c[c.index("-m") + 1] == "gpt-5.6-sol"
+    assert not any("model_reasoning_effort" in str(x) for x in c), \
+        f"강도를 안 적었는데 오버라이드가 실렸다: {c}"
+
+    # 철자 오류 → 무시하고 원문 유지(모르는 값을 흘리면 codex 가 턴을 통째로 거절한다)
+    c = cmd_for("gpt-5.6-sol:extreme")
+    assert not any("model_reasoning_effort" in str(x) for x in c), \
+        f"알 수 없는 강도가 그대로 흘렀다: {c}"
+
+    # 캐시 키 정합: 강도가 다르면 model 문자열이 달라야 한다(= 캐시 키가 갈린다)
+    a = get_provider("codex", api_key="", model="gpt-5.6-sol:max", system_prompt="")
+    b = get_provider("codex", api_key="", model="gpt-5.6-sol:low", system_prompt="")
+    assert a.model != b.model, "강도가 캐시 키에 안 실린다 — 두 티어가 프로바이더를 나눠 쓴다"
+
+
+def test_codex_oneshot_does_not_drop_user_config():
+    """원샷이 `--ignore-user-config` 로 추론강도를 조용히 떨어뜨리지 않는다.
+
+    2026-08-31 실측: 그 플래그는 17,222→16,270(5.5%)만 아끼면서 사용자의
+    model_reasoning_effort 를 빼앗아 **원샷만 모델 기본 강도로** 돌게 만든다.
+    경로마다 강도가 다르면 비용도 품질도 재현되지 않는다.
+    """
+    from providers import get_provider
+
+    p = get_provider("codex", api_key="", model="gpt-5.6-sol", system_prompt="")
+    p._binary_path = "/fake/codex"
+    p.no_tools = True
+    c = p._build_command(stream=True, tools_mode="none")
+    assert "--ignore-user-config" not in c, (
+        "원샷이 사용자 config 를 버린다 — 추론강도가 경로마다 갈린다 "
+        "(절감 5.5% 대가로는 비싸다, 2026-08-31 실측)"
+    )
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 로 위임한다(두 번째 러너는 드리프트한다).
     import sys

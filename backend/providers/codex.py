@@ -29,9 +29,14 @@ OpenAI Codex CLI 를 indiebizOS 의 provider 로 노출. `claude_code` 와 같�
 config 예시 (data/system_ai_config.json 등):
   {
     "provider": "codex",
-    "model": "gpt-5.6-sol",     // 비우면 ~/.codex/config.toml 의 model
+    "model": "gpt-5.6-sol:high", // `슬러그` 또는 `슬러그:추론강도` — _model_and_effort 참조
     "apiKey": ""                 // 비우면 ChatGPT 구독 로그인(~/.codex/auth.json) 사용
   }
+
+모델 슬러그와 지원 추론강도의 **정본은 우리가 아니라 Codex** 다 —
+`~/.codex/models_cache.json`(원격에서 갱신되는 캐시)에 산다. 여기에 목록을 베껴 두면
+모델이 은퇴하거나 새로 나올 때 낡는다([[vision-gear-neutralization]] 과 같은 부류).
+지금 무엇을 쓸 수 있는지는 그 파일을 읽어 볼 것.
 """
 
 import hashlib
@@ -145,6 +150,13 @@ class CodexProvider(CliSubprocessProvider):
     # (vocab_crystallization 이 두 프로바이더의 로그를 같은 잣대로 세려면 실명이 같아야 한다).
     MCP_SERVER_NAME = "indiebizos"
     MCP_TOOL_PREFIX = "mcp__indiebizos__"
+
+    # Codex 의 추론강도 어휘 (`model_reasoning_effort`). 모델마다 지원 범위가 다르다 —
+    # 실측 2026-08-31 `~/.codex/models_cache.json`: sol·terra 는 ultra 까지, luna 는 max 까지,
+    # gpt-5.5/5.4 계열은 xhigh 까지. 여기서는 **철자만** 검사하고 모델별 지원 여부는 Codex 가
+    # 판정하게 둔다 — 카탈로그는 원격에서 갱신되는 캐시라 우리가 베끼면 낡는다
+    # (모델명 하드코딩이 은퇴로 죽는 것과 같은 부류).
+    REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -285,6 +297,39 @@ class CodexProvider(CliSubprocessProvider):
         "임의 Python/Node 실행. 등가물이 있는 일을 셸로 하지 마라."
     )
 
+    # ================= 모델·추론강도 =================
+
+    def _model_and_effort(self) -> tuple:
+        """설정의 `model` 을 (슬러그, 추론강도|None) 로 가른다.
+
+        표기: `gpt-5.6-sol` 또는 `gpt-5.6-sol:high`.
+
+        ★왜 별도 설정 칸이 아니라 `model` 한 칸에 싣는가:
+        ①**프로바이더 캐시 키가 `bucket|provider|model|keyhash`** 다
+          (model_resolver._provider_from_desc). 추론강도가 키 밖에 있으면 같은 슬러그를 쓰는
+          두 티어(예: 고급=sol:max · 중급=sol:low)가 **캐시에서 충돌해** 먼저 만들어진 쪽의
+          프로바이더를 조용히 나눠 쓴다 — 에러 없이 강도가 뒤바뀐다.
+        ②`model` 칸은 이미 "이 CLI 의 모델 선택자"다 — claude_code 도 여기에 별칭 `opus` 를
+          넣지 full 모델 ID 를 넣지 않는다. Codex 의 선택자가 2차원일 뿐이다.
+        ③티어 설정 스키마·프로바이더 생성자 시그니처를 건드리지 않는다(다른 프로바이더 무영향).
+
+        강도를 안 적으면 None → 오버라이드를 보내지 않고 사용자의 `~/.codex/config.toml`
+        (`model_reasoning_effort`)을 그대로 따른다. 철자가 틀리면 경고 후 무시한다 —
+        모르는 값을 그대로 흘리면 codex 가 통째로 거절해 턴이 죽는다.
+        """
+        raw = (self.model or "").strip()
+        if ":" not in raw:
+            return raw, None
+        slug, _, effort = raw.rpartition(":")
+        slug, effort = slug.strip(), effort.strip().lower()
+        if effort not in self.REASONING_EFFORTS:
+            self._log(
+                f"알 수 없는 추론강도 '{effort}' 무시 — 가능한 값: "
+                f"{', '.join(self.REASONING_EFFORTS)} (모델 설정 '{raw}')"
+            )
+            return raw, None
+        return slug, effort
+
     # ================= 명령 조립 =================
 
     def _write_system_prompt_file(self) -> Optional[str]:
@@ -322,9 +367,12 @@ class CodexProvider(CliSubprocessProvider):
         `codex exec [OPTIONS] resume <ID> [PROMPT]`. 뒤에 두면 clap 이 거절한다.
 
         tools_mode(원샷 다이어트): claude_code 만큼 깎이지 않는다. Codex 는 셸/편집 도구를
-        끌 수 없으므로 ①MCP 브리지 미장착 ②web_search off ③`--ignore-user-config`
-        (플러그인·notify 훅·프로젝트 신뢰목록 미로딩; 인증은 CODEX_HOME 에서 계속 읽는다)
-        까지가 한계다.
+        끌 수 없으므로 ①MCP 브리지 미장착 ②web_search off 까지가 한계다.
+        ★`--ignore-user-config` 는 **쓰지 않는다**(2026-08-31 실측 기각): 같은 원샷 질문에서
+        17,222 → 16,270 토큰, 5.5% 절감뿐인데 대가로 사용자의 `model_reasoning_effort` 가
+        빠져 **원샷만 모델 기본 강도로 조용히 떨어진다**(경로마다 다른 강도 = 재현 불가능한
+        비용·품질). 남는 16K 는 Codex 자신의 기본 지침·AGENTS.md·작업공간 맥락이라
+        어차피 이 플래그로는 못 깎는다.
         """
         cmd = [
             self._binary_path,
@@ -344,14 +392,18 @@ class CodexProvider(CliSubprocessProvider):
         # web_search 는 IBL [sense:search] 와 1:1 중복 → 끄고 IBL 로 강제 (TOOL_POLICY 참조)
         cmd += ["-c", "tools.web_search=false"]
 
-        if tools_mode:
-            # 원샷: 플러그인·훅·프로젝트 설정 미로딩 (인증은 CODEX_HOME 에서 계속 읽힘)
-            cmd += ["--ignore-user-config"]
-        else:
+        # 원샷은 도구 브리지를 안 세운다(프로세스 기동 비용) — 그 외 다이어트 수단은 없다.
+        if not tools_mode:
             cmd += self._bridge_config_args(mcp_config_path)
 
-        if self.model:
-            cmd += ["-m", self.model]
+        slug, effort = self._model_and_effort()
+        if slug:
+            cmd += ["-m", slug]
+        if effort:
+            # 강도를 명시하면 경로(평소/원샷)와 무관하게 **결정적**이다. 안 적으면
+            # 사용자의 ~/.codex/config.toml 을 따른다 — 그건 ChatGPT 데스크톱 앱이
+            # 바꾸는 값이라, 재현 가능한 비용·품질을 원하면 티어에 적어 둘 것.
+            cmd += ["-c", f"model_reasoning_effort={_toml_str(effort)}"]
 
         # 세션 이어가기 — 옵션 뒤, 프롬프트 앞
         if resume_session_id:

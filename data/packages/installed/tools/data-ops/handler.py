@@ -982,11 +982,20 @@ def _extract_many(prev):
     return out
 
 
+# 죽은 분기 규약(2026-08-30 언어 개정, ep2355) — 정본=branch_protocol.py, 통화 getter 는 주입.
+_branch_proto = _load_sibling_where(__file__, "branch_protocol")
+
+
+def _handle_dead_branches(op_name, objs, params):
+    return _branch_proto.handle_dead_branches(op_name, objs, params, _get_items, _get_table)
+
+
 def _op_union(prev, params):
-    """병렬(&) 분기들의 table(또는 items)을 행 결합. 같은 통화끼리. params 없음.
+    """병렬(&) 분기들의 table(또는 items)을 행 결합. 같은 통화끼리.
 
     table: 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 다른쪽 None). items: 단순 concat.
     중복 제거가 필요하면 뒤에 >> dedup. 분기 수 제한 없음(셋 이상 전부).
+    죽은 분기=기본 건너뛰고 신고, on_error:"stop"=전부-아니면-실패 (2026-08-30 개정).
     """
     objs = _extract_many(prev)
     if not objs:
@@ -997,6 +1006,10 @@ def _op_union(prev, params):
         return {"success": False,
                 "error": f"union: 분기 {len(objs)}개 중 {_bad}개의 출력이 통화(items/table)로 파싱되지 않습니다"
                          f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
+    _total = len(objs)
+    objs, _dead, _err = _handle_dead_branches("union", objs, params)
+    if _err:
+        return _err
     tables = [_get_table(o)[0] for o in objs]
     if all(t is not None for t in tables):
         cols = []
@@ -1018,7 +1031,8 @@ def _op_union(prev, params):
             all_rows.extend(remap(t))
         env = _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
         col_sets = [{str(c) for c in (t.get("columns") or [])} for t in tables if t.get("columns")]
-        return _attach_branch_warning(_attach_shape_warning(env, col_sets), objs)
+        return _branch_proto.attach_dead_note(
+            _attach_branch_warning(_attach_shape_warning(env, col_sets), objs), _dead, _total)
     item_lists = [_get_items(o)[0] for o in objs]
     if all(il is not None for il in item_lists):
         out = []
@@ -1035,8 +1049,11 @@ def _op_union(prev, params):
                     ks |= {k for k, v in it.items() if v is not None}
             if ks:
                 key_sets.append(ks)
-        return _attach_branch_warning(_attach_shape_warning(env, key_sets), objs)
-    return {"success": False, "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items)."}
+        return _branch_proto.attach_dead_note(
+            _attach_branch_warning(_attach_shape_warning(env, key_sets), objs), _dead, _total)
+    return {"success": False,  # 죽은 분기는 걸러진 뒤 = 진짜 통화 혼합 — 분기별 통화를 이름 대 준다
+            "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items). "
+                     f"분기별 통화: {_branch_proto.currency_kinds(objs, _get_items, _get_table)}."}
 
 
 def _attach_branch_warning(env, objs):
@@ -1073,6 +1090,7 @@ def _op_merge(prev, params):
     """병렬(&) 분기들의 items를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
 
     여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.) 분기 수 제한 없음.
+    죽은 분기=기본 건너뛰고 신고, on_error:"stop"=전부-아니면-실패 (union 과 한 벌).
     """
     objs = _extract_many(prev)
     if not objs:
@@ -1083,9 +1101,16 @@ def _op_merge(prev, params):
         return {"success": False,
                 "error": f"merge: 분기 {len(objs)}개 중 {_bad}개의 출력이 통화(items)로 파싱되지 않습니다"
                          f"(스칼라·평문 반환 등) — 통화를 내는 액션·op 으로 바꾸세요."}
+    _total = len(objs)
+    objs, _dead, _err = _handle_dead_branches("merge", objs, params)
+    if _err:
+        return _err
     item_lists = [_get_items(o)[0] for o in objs]
     if any(il is None for il in item_lists):
-        return {"success": False, "error": "merge: 모든 입력이 items 통화여야 합니다(표형 결합은 table:union)."}
+        _no = [str(i) for i, il in enumerate(item_lists, 1) if il is None]  # 죽은 분기는 걸러진 뒤 — 남은 건 table 전용 산 분기
+        return {"success": False,
+                "error": f"merge: 분기 {', '.join(_no)} 에 items 통화가 없습니다(표형 table 만 실림) — "
+                         f"표형 결합은 table:union."}
     out = []
     for il in item_lists:
         out.extend(il)
@@ -1102,7 +1127,8 @@ def _op_merge(prev, params):
             seen.add(k)
             dd.append(r)
         out = dd
-    return _attach_branch_warning(_emit_items(_carry_flags(objs), out), objs)
+    return _branch_proto.attach_dead_note(
+        _attach_branch_warning(_emit_items(_carry_flags(objs), out), objs), _dead, _total)
 
 
 def _op_flatten(prev, params):

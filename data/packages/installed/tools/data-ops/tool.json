@@ -282,6 +282,10 @@
           "items": {
             "type": "array",
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
+          },
+          "on_error": {
+            "type": "string",
+            "description": "table:union 파라미터"
           }
         }
       }
@@ -299,6 +303,10 @@
           "by": {
             "type": "string",
             "description": "중복 제거 키 필드(미지정 시 단순 concat)."
+          },
+          "on_error": {
+            "type": "string",
+            "description": "table:merge 파라미터"
           }
         }
       }

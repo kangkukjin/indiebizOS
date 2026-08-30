@@ -644,6 +644,93 @@ def _build_dynamic_context(
     )
 
 
+# ── 상상실행 초안 (2026-08-31, 사용자 판정 집행) ─────────────────────────────
+# 의식이 문제를 규정하며 핵심 작업의 IBL 문장을 초안(imagined_ibl)으로 짓는다 — 사람이
+# 행동 전에 동작을 상상실행하듯, 계획을 액추에이터의 언어로 강제해 산문 절차가 숨기는
+# 불가능성(안 흐르는 통화·없는 파라미터)을 실행 전에 드러낸다. 초안은 명령이 아니라
+# **검증 대상**: 기계 앞모형(파서·액션 실재·파라미터 어휘·T1/T2 통화 타입, LLM 0)을
+# 통과해야 강한 출발점이 되고, 실패하면 오류를 붙여 참고로 강등된다. 초안은 턴-로컬 —
+# 해마에는 절대 직접 들어가지 않는다(합성 접지 원칙: 기억은 실행된 문장만. 초안이
+# 채택·실행·성공하면 기존 증류가 *실행된 형태*를 거둬간다 — 상상→실행→기억 일방향 밸브).
+
+import re as _re
+
+_DRAFT_ACTION_RE = _re.compile(r'\[([a-z_-]+):([a-z_0-9-]+)\]')
+
+
+def validate_imagined_draft(code: str) -> tuple:
+    """상상실행 초안의 기계 앞모형 검증. 반환 (ok: bool, error: str).
+
+    검사 4겹 — ①파서(문법) ②액션 실재(환각 어휘) ③파라미터 어휘(미인식 키)
+    ④T1/T2 통화 타입(안 흐르는 파이프). 전부 기존 자산 재사용, LLM 0.
+    검사기 자체가 미가용이면 그 겹은 보수적 통과(초안은 힌트일 뿐 — 실행기의
+    정직 거절이 최종 심판이라 여기서 턴을 깨지 않는다)."""
+    code = (code or "").strip()
+    if not code:
+        return (False, "빈 초안")
+    # ⓪ 액션 존재 — 파서는 산문·미완성 조각을 조용히 삼킬 수 있으니(빈 params 강등 등),
+    #   [node:action] 이 하나도 없는 초안은 IBL 이 아니라고 먼저 거절한다.
+    if not _DRAFT_ACTION_RE.search(code):
+        return (False, "IBL 액션([node:action])이 없는 초안")
+    # ① 문법
+    try:
+        from ibl_parser import parse
+        parsed = parse(code)
+    except ImportError:
+        return (True, "")
+    except Exception as e:
+        return (False, f"파싱 실패: {e}")
+    # ② 액션 실재 (미존재 노드/액션 = 환각 — ibl_usage_rag._validate_ibl_actions 와 같은 판정)
+    try:
+        from ibl_access import load_nodes_raw
+        nodes = (load_nodes_raw() or {}).get("nodes", {})
+        if nodes:
+            for n, a in _DRAFT_ACTION_RE.findall(code):
+                if a not in ((nodes.get(n) or {}).get("actions") or {}):
+                    return (False, f"미존재 액션 [{n}:{a}]")
+    except Exception:
+        pass
+    # ③ 파라미터 어휘
+    try:
+        from ibl_param_vocab import check_code_params
+        issues = check_code_params(code)
+        if issues:
+            detail = ", ".join(f"{i['action']}({','.join(i['unknown'])})" for i in issues)
+            return (False, f"미인식 파라미터: {detail}")
+    except Exception:
+        pass
+    # ④ 통화 타입 (T1 머리 변환자 기아 · T2 이음매 기아 — 실행기와 한 벌)
+    try:
+        from ibl_pipe_types import head_transform_error, seam_starvation_error
+        err = head_transform_error(parsed)
+        if err:
+            return (False, err)
+        seam = seam_starvation_error(parsed)
+        if seam:
+            return (False, seam[1])
+    except Exception:
+        pass
+    return (True, "")
+
+
+def draft_adoption(draft_code: str, tool_calls: list):
+    """초안의 액션이 실제 실행에 등장했는가 — True/False/None(초안 또는 실행 없음).
+
+    관찰 계기(리랭킹·게이트 아님): _recall_was_used 와 같은 액션 교집합 판정.
+    턴 끝에 [상상실행] 로그 한 줄 — 초안이 실제로 채택되는지의 실측 데이터."""
+    pairs = set(_DRAFT_ACTION_RE.findall(draft_code or ""))
+    if not pairs:
+        return None
+    executed = set()
+    for tc in tool_calls or []:
+        if isinstance(tc, dict) and tc.get("tool_name") == "execute_ibl":
+            executed |= set(_DRAFT_ACTION_RE.findall(
+                (tc.get("input") or {}).get("code", "") or ""))
+    if not executed:
+        return None
+    return bool(pairs & executed)
+
+
 def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     """의식 경로 '사용자 명령 변형기' — [사용자 원문 명령 + 의식의 보강]을 하나의 '사용자 명령'
     프레임으로 융합하되, 그 사이에 **당위 앵커**를 끼운다.
@@ -684,6 +771,19 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.
         aug.append(f"수행 절차: {hint}")
+
+    # 상상실행 초안 — 검증 통과분만 강한 출발점, 실패분은 오류 동반 참고로 강등.
+    # (당위 앵커 아래 실리므로 통과분은 명령 권위를 갖는다 — 그래서 관문이 앞선다.)
+    draft = (co.get("imagined_ibl") or "").strip()
+    if draft:
+        ok, err = validate_imagined_draft(draft)
+        if ok:
+            aug.append("실행 초안(기계 검증 통과):\n" + draft +
+                       "\n이 초안을 출발점으로 삼되, 그대로 복사하지 말고 실행 결과에 따라 "
+                       "파라미터·구성을 검증하며 다듬어라.")
+        else:
+            aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +
+                       "\n이 초안은 그대로 쓰지 말 것. 위 오류를 감안해 직접 재구성하라.")
 
     guide_files = co.get("guide_files") or []
     if guide_files:

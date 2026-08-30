@@ -263,7 +263,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, self_awareness, world_state
+  - 출력: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
 - **framing 재사용 게이트 (2026-05-31)** — `agent_cognitive._run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
@@ -481,7 +481,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
-- backend **.py 285개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 36 · ibl 39 · cognition 43 · services 28 · surface 60`(+ common 16·providers 11·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
+- backend **.py 287개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 36 · ibl 39 · cognition 43 · services 28 · surface 60`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
 - op 분기 액션 **70개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 41·false 15·미선언 95)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

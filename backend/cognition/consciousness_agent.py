@@ -158,7 +158,8 @@ class ConsciousnessAgent:
                     "tools": list              # IBL 외 가용 도구
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
-                "context_notes": str       # 추가 상황 메모
+                "context_notes": str,      # 추가 상황 메모
+                "imagined_ibl": str        # 상상실행 초안(선택) — 기계 검증 후 융합
             }
         """
         if not self.is_ready:

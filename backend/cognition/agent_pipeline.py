@@ -601,6 +601,17 @@ class CognitivePipelineMixin:
                     print(f"[턴비용] tokens={turn_tokens}")
             except Exception:
                 turn_tokens = None
+            # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에
+            # 등장했는지 로그 한 줄(관찰 계기 — 초안 제도의 실측 근거를 쌓는다).
+            try:
+                _draft = ((consciousness_output or {}).get("imagined_ibl") or "").strip()
+                if _draft:
+                    from prompt_builder import draft_adoption
+                    _ad = draft_adoption(_draft, tool_calls_log)
+                    if _ad is not None:
+                        print(f"[상상실행] 초안 {'채택' if _ad else '미채택'}: {_draft[:60]}")
+            except Exception:
+                pass
             # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(_after_response).
             # ★force_role 표면(포식 등)은 제외 — stateless 검색이 심층/의미 메모리를
             # 더럽히지 않도록 메모리 정책을 진입점이 직접 관장한다(포식 브라우저는

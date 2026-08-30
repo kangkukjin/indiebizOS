@@ -14,14 +14,16 @@ github저장소메타:
   timeout: 180
 json원장:
   description: 'JSON 배열 원장 원자 갱신 — args: path, op(append|upsert|set), target(선택),
-    item|items(append/upsert 전용), value(set 전용·키 필수), key(기본 id), max_items. 저장소 밖 쓰기 거절'
+    item|items(append/upsert 전용), value(set 전용·키 필수), key(기본 id), max_items. 저장소 밖
+    쓰기 거절'
   file: json원장.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 60
 나레이션생성:
   description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts,
-    voice(기본 kkj), gpu(기본 T4), out_dir, force(재생성). 표준 낭독 속도 0.9x(10% 느리게) 자동 적용, speed 로 조정'
+    voice(기본 kkj), gpu(기본 T4), out_dir, force(재생성). 표준 낭독 속도 0.9x(10% 느리게) 자동 적용,
+    speed 로 조정'
   file: 나레이션생성.py
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
@@ -35,8 +37,8 @@ json원장:
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
 수리적용상태:
-  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args:
-    key(특정 세션만), commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
+  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
+    commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
   file: 수리적용상태.py
   interpreter: python
   registered_at: '2026-08-24T03:39:12'

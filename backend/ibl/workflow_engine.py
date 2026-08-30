@@ -187,7 +187,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
     # 통화가 안 들어온다(행은 $it 치환뿐, 2026-08-30 정정) — 검사는 적용되고, 처방만
     # do 문맥(_each_do)에 맞춘다. 거절도 실패 봉투다 — 트레이스백 경계 규약(frames 에
     # pipeline 경로, 예외 없음)을 지킨다.
-    from ibl_pipe_types import head_transform_error
+    from ibl_pipe_types import head_transform_error, seam_starvation_error
     _type_err = head_transform_error(steps, has_incoming=bool(prev_result),
                                      each_do=bool((context or {}).get("_each_do")))
     if _type_err:
@@ -199,6 +199,20 @@ def execute_pipeline(steps: list, project_path: str = ".",
                                              "of": len(steps),
                                              "node": _h.get("_node") or _h.get("node", "?"),
                                              "action": _h.get("action", "?")})}
+    # T2 (2026-08-30) — 이음매 기아: effect >> 변환자 는 실행하면 "items 통화를 찾지
+    # 못했습니다"로 죽는다. 같은 판정을 실행 전으로 앞당긴다(op·param 조건부 통화까지
+    # 해소 — 액션 단위로만 읽으면 오거절, 코퍼스 3,676건 실측 26건의 교훈).
+    _seam = seam_starvation_error(steps)
+    if _seam:
+        _si, _seam_err = _seam
+        _b = steps[_si] if isinstance(steps[_si], dict) else {}
+        return {"success": False, "error": _seam_err,
+                "steps_completed": 0, "steps_total": len(steps),
+                "traceback": build_tb(_seam_err, "binding",
+                                      frame={"kind": "pipeline", "step": _si + 1,
+                                             "of": len(steps),
+                                             "node": _b.get("_node") or _b.get("node", "?"),
+                                             "action": _b.get("action", "?")})}
     results = []
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)

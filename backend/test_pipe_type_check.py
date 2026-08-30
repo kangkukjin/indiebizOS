@@ -70,6 +70,76 @@ def test_p7_pipeline_rejects_before_execution():
     assert (res.get("traceback") or {}).get("error_type") == "binding"
 
 
+# ── T2. 이음매 기아 (2026-08-30) ─────────────────────────────────────────────
+# effect >> 변환자 = 실행 전 정직 거절. A 통화는 op·param 조건부까지 해소한다 —
+# 액션 단위로만 읽으면 오거절(코퍼스 3,676건 실측 26건: self:script op:run 4 ·
+# self:write spill:true 2 등). 음성 대조(출하 시 실측): 사전 정정 후 T2 거절 0.
+from ibl_pipe_types import seam_starvation_error  # noqa: E402
+
+
+def test_t2_effect_into_transform_rejected():
+    # 동기 실례: 통화 없는 effect op 뒤에 변환자 — 런타임 "items 통화를 찾지
+    # 못했습니다" 를 실행 전으로 앞당긴다.
+    hit = seam_starvation_error(
+        parse('[limbs:browser]{op: "click", ref: "b1"} >> [table:filter]{where: "a > 1"}'))
+    assert hit and hit[0] == 1 and "effect" in hit[1] and "table:filter" in hit[1]
+
+
+def test_t2_op_override_resolved_not_action_level():
+    # others:feed 는 액션=items 이지만 op:post 는 effect 오버라이드 — op 로 판정해야 거절
+    hit = seam_starvation_error(
+        parse('[others:feed]{op: "post", content: "x"} >> [table:take]{n: 1}'))
+    assert hit and "others:feed" in hit[1]
+    # 반대 방향: 액션 단위로 effect 로 읽힐 자리가 op 해소로 통과해야 한다
+    assert seam_starvation_error(
+        parse('[self:script]{op: "run", id: "x"} >> [table:take]{n: 1}')) is None
+
+
+def test_t2_returns_variants_param_conditional():
+    # self:write 는 effect 지만 spill:true 는 {items:[], ref:…} 통과자(B36-3 변형 선언)
+    assert seam_starvation_error(
+        parse('[self:write]{path: "a.json", spill: true} >> [table:take]{n: 1}')) is None
+    hit = seam_starvation_error(
+        parse('[self:write]{path: "a.json"} >> [table:take]{n: 1}'))
+    assert hit and "self:write" in hit[1]
+
+
+def test_t2_abstains_are_conservative():
+    # 동적 op — 실행 시점에야 정해진다 (파서 우회, step 직접 구성)
+    assert seam_starvation_error(
+        [{"_node": "others", "action": "feed", "params": {"op": "$mode"}},
+         {"_node": "table", "action": "take", "params": {"n": 1}}]) is None
+    # scalar = 데이터 의존 승격(파일 읽기 등) 가능 — 기권 (코퍼스 실측으로 기각된 부류)
+    assert seam_starvation_error(
+        parse('[self:read]{path: "a.json"} >> [table:take]{n: 1}')) is None
+    # B 가 items 를 직접 실었다(언어 개정 ③) — 이음매 통화 불요
+    assert seam_starvation_error(
+        parse('[limbs:os_open]{path: "x"} >> [table:take]{items: [{"a": 1}], n: 1}')) is None
+    # 문장 경계 — 통화가 안 넘는 자리라 이음매가 아니다 (그 머리는 T1 관할)
+    assert seam_starvation_error(
+        [{"_node": "limbs", "action": "os_open", "params": {"path": "x"}},
+         {"_seq_boundary": True, "_node": "table", "action": "take",
+          "params": {"n": 1}}]) is None
+    # 미지 액션 — 사전 불능은 통과
+    assert seam_starvation_error(
+        [{"_node": "limbs", "action": "없는액션", "params": {}},
+         {"_node": "table", "action": "take", "params": {"n": 1}}]) is None
+
+
+def test_t2_pipeline_rejects_before_execution():
+    from workflow_engine import execute_pipeline
+    res = execute_pipeline(
+        parse('[limbs:browser]{op: "click", ref: "b1"} >> [table:filter]{where: "a > 1"}'),
+        project_path=".")
+    assert res.get("success") is False
+    assert res.get("steps_completed") == 0, "실행 전에 거절돼야 한다"
+    assert "굶습니다" in (res.get("error") or "")
+    tb = res.get("traceback") or {}
+    assert tb.get("error_type") == "binding"
+    frames = tb.get("frames") or []
+    assert frames and frames[-1].get("step") == 2, "프레임은 굶는 변환자 자리"
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-v"]))

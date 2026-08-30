@@ -4626,6 +4626,8 @@ nodes:
         params:
           spill: boolean
         returns: effect
+        returns_variants:
+          spill=true: items
         description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 봉투에 참조(ref)만 싣는다(뒤 step 은 투명 해소 — 데이터 흐름 불변).
         group: file
         target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
@@ -5034,7 +5036,7 @@ nodes:
           default: list
           returns:
             register: effect
-            run: effect
+            run: scalar
             remove: effect
           side_effect:
             list: false

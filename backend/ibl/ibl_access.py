@@ -110,6 +110,10 @@ CATALOG_LEGEND = (
     "'|' 로 갈린 것은 그 파라미터에 따라 열이 달라진다는 뜻(앞자리=기본값의 열). "
     "⟨인자: a·b·(c)⟩ = 실측 입력 인자 이름(교재·실행에서 실제 쓰인 키) — 호출의 {…} 키는 "
     "이걸 쓴다; 괄호 없음 = 거의 항상 함께 오는 인자, (괄호) = 가끔 쓰는 선택 인자. "
+    "⟨동반: >>a·&b⟩ = 교재·실행에서 그 낱말 **뒤에 실제로 이어진** 낱말(관측 상위 2, "
+    "`&같은액션` = 같은 액션을 파라미터만 바꿔 병렬로 접은 자리). ★안 붙은 줄은 '조합 불가'가 "
+    "아니라 '관측 없음'이다 — items 를 내는 액션이면 예외 없이 `>> [table:*]` 변환자를 물릴 수 있고, "
+    "동반은 처방이 아니라 흔적이라 새 조합을 막지 않는다. "
     "(dormant: 키이름) = API 키가 없어 휴면 중."
 )
 
@@ -254,6 +258,43 @@ def _param_suffix(qualified: str, op: str = None) -> str:
     return " ⟨인자: " + "·".join(parts) + "⟩"
 
 
+_PARTNER_CACHE = {"mtime": None, "data": {}}
+
+
+def _partners() -> dict:
+    """교재·실행 실측 조합 파트너(data/ibl_partners.json, scripts/ibl_partner_sweep.py 산출) — mtime 캐시.
+
+    2026-08-30: ⟨열⟩(반환)·⟨인자⟩(입력)은 관측으로 채워졌는데 **이웃만 비어 있었다** — 상시
+    카탈로그 148줄에 조합 정보가 한 글자도 없어 낱말이 저마다 섬으로 제시된다. 문장이 닿는
+    통로는 문법 프롬프트의 예문 29개(등장 32/148)와 회상 top-3(조합 20.1%)뿐이라 116 낱말은
+    문장 안에 있는 모습을 본 적이 없다. 실측: 낱말별 '교재 조합 노출률→실행 조합률' r=0.72."""
+    try:
+        from runtime_utils import get_base_path
+        path = get_base_path() / "data" / "ibl_partners.json"
+        mt = path.stat().st_mtime
+    except Exception:
+        return {}
+    if _PARTNER_CACHE["mtime"] != mt:
+        try:
+            import json as _json
+            _PARTNER_CACHE["data"] = _json.loads(path.read_text(encoding="utf-8")).get("partners", {}) or {}
+        except Exception:
+            _PARTNER_CACHE["data"] = {}
+        _PARTNER_CACHE["mtime"] = mt
+    return _PARTNER_CACHE["data"]
+
+
+def _partner_suffix(qualified: str) -> str:
+    """'⟨동반: >>table:filter · &같은액션⟩' — 관측된 조합 파트너 상위(스윕이 top_n·min_count 로 이미 자름).
+
+    액션 줄에만 붙인다(op 줄까지 가르면 폭 예산을 넘고 op 별 표본이 얇다). 관측이 없으면
+    빈 문자열 — **없음은 '조합 불가'가 아니다**(범례가 그 규칙을 한 번 말한다)."""
+    ent = _partners().get(qualified)
+    if not ent or not ent.get("top"):
+        return ""
+    return " ⟨동반: " + " · ".join(t for t, _ in ent["top"]) + "⟩"
+
+
 def _op_adds_information(ent: dict, base: dict, always: float) -> bool:
     """op 줄의 ⟨인자⟩ 는 액션 줄이 못 말한 것이 있을 때만 — 새 키가 있거나, 액션 줄에선
     (선택)이던 키가 이 op 에선 거의 항상 오는 키로 승격될 때. 그 밖엔 중복이라 카탈로그만 부푼다."""
@@ -290,7 +331,7 @@ def _emit_action_line(node_name: str, action_name: str, action_config, indent: s
     ops = action_config.get("ops")
 
     lines = [f"{indent}{qualified} :: {desc}{_param_suffix(qualified)}"
-             f"{_shape_suffix(qualified, None, ops)}{dormant_suffix}"]
+             f"{_shape_suffix(qualified, None, ops)}{_partner_suffix(qualified)}{dormant_suffix}"]
     if isinstance(ops, dict) and ops.get("values"):
         default = ops.get("default")
         for op_name, op_desc in (ops.get("values") or {}).items():

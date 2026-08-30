@@ -537,37 +537,14 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 좀비 건강기록 청소 실패 (무시): {e}")
 
-    # 8.5) returns 선언 드리프트 스윕 (주간 카덴스) — 선언(returns/ops.returns)과 실측
-    #      출력의 대조. 순찰(§1B)은 선언=items 인 것만 통화를 단언하므로, 선언이 scalar 로
-    #      낡으면 실제 items 출력이 깨져도 그물 밖이다(2026-08-19 조사: 드리프트 11건 실측
-    #      — 병기 수리가 선언 갱신을 빠뜨리는 부류가 재발함을 확인). fixture 를 라이브
-    #      실행하므로 주간만·subprocess(라이브 프로세스 무접촉, red_safety 선례).
+    # 8.5~8.6b) 주간 스윕 다섯(returns 드리프트·반환 모양·입력 모양·동반 낱말·정직성)은
+    #      호출부가 아니라 fixture_sweeps 가 소유한다 — 스윕이 늘 때마다 이 파일이 자라던
+    #      자리(2026-08-30 1500줄 규칙에 걸림). 각 스윕의 실패는 거기서 개별 격리된다.
     try:
-        from fixture_sweeps import run_returns_drift_sweep
-        result["returns_drift"] = run_returns_drift_sweep()
+        from fixture_sweeps import run_all_sweeps
+        result.update(run_all_sweeps())
     except Exception as e:
-        logger.warning(f"[Maintenance] returns 드리프트 스윕 실패 (무시): {e}")
-
-    # 8.6) 반환 모양 관측 스윕 (주간 카덴스) — 카탈로그 ⟨열: …⟩ 의 원천(data/ibl_return_shapes.json).
-    try:
-        from fixture_sweeps import run_shape_sweep
-        result["shape_sweep"] = run_shape_sweep()
-    except Exception as e:
-        logger.warning(f"[Maintenance] 반환 모양 스윕 실패 (무시): {e}")
-
-    # 8.6c) 입력 모양 관측 스윕 (주간 카덴스) — 카탈로그 ⟨인자: …⟩ 의 원천(data/ibl_param_shapes.json).
-    try:
-        from fixture_sweeps import run_param_sweep
-        result["param_sweep"] = run_param_sweep()
-    except Exception as e:
-        logger.warning(f"[Maintenance] 입력 모양 스윕 실패 (무시): {e}")
-
-    # 8.6b) 정직성 불변식 스윕 (주간 카덴스) — 침묵/거짓 성공 부류를 봉투 입구 하나에서(2026-08-23).
-    try:
-        from fixture_sweeps import run_honesty_sweep
-        result["honesty_sweep"] = run_honesty_sweep()
-    except Exception as e:
-        logger.warning(f"[Maintenance] 정직성 스윕 실패 (무시): {e}")
+        logger.warning(f"[Maintenance] 주간 스윕 묶음 실패 (무시): {e}")
 
     # 8.7) 데이터 소유 감사 (주간 카덴스) — 소유 선언 레지스트리(data_ownership.DECLARATIONS)
     #      에 안 잡히는 data/·outputs/ 항목을 깃발로. 고아 캐시 소탕의 기계화 —

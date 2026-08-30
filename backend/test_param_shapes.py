@@ -63,16 +63,18 @@ def test_no_observation_means_no_change():
 
 
 def test_emit_line_places_params_before_columns():
-    """액션 줄: '설명 ⟨인자⟩ ⟨열⟩' 순서 — 인자(입력)가 열(출력)보다 앞."""
+    """액션 줄: '설명 ⟨인자⟩ ⟨열⟩ ⟨동반⟩' 순서 — 입력 → 출력 → 이웃(2026-08-30 ⟨동반⟩ 합류)."""
     import ibl_access
     with _params({"table:filter": {"keys": [["where", 0.99]]}}):
-        saved = ibl_access._return_shapes
+        saved = (ibl_access._return_shapes, ibl_access._partners)
         ibl_access._return_shapes = lambda: {"table:filter": {"keys": ["a", "b"]}}
+        ibl_access._partners = lambda: {"table:filter": {"n": 9, "top": [[">>table:sort", 4]]}}
         try:
             line = ibl_access._emit_action_line("table", "filter", {"description": "걸러낸다"})
         finally:
-            ibl_access._return_shapes = saved
-    assert line.strip() == "table:filter :: 걸러낸다 ⟨인자: where⟩ ⟨열: a·b⟩", line
+            ibl_access._return_shapes, ibl_access._partners = saved
+    assert line.strip() == (
+        "table:filter :: 걸러낸다 ⟨인자: where⟩ ⟨열: a·b⟩ ⟨동반: >>table:sort⟩"), line
 
 
 def test_legend_explains_parentheses():

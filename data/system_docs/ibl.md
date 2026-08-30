@@ -250,7 +250,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 | **교재** | `ibl_usage.db`의 자연어→IBL 용례 + 재학습용 데이터 | 어떤 표현에서 이 액션/op를 떠올리는가 |
 | **관측** | `ibl_param_shapes.json` + fixture 반환 shape | 어떤 인자와 반환 열을 실제로 쓰는가 |
 
-`target_description`과 `tool_json.input_schema`에 인자를 자세히 적어도 그것만으로 에이전트의 IBL 카탈로그에 인자명이 실리는 것은 아니다. 런타임 카탈로그는 `ibl_access._emit_action_line()`이 `description`·`ops.values`를 방출하고, `⟨인자: …⟩`는 코퍼스와 실행 로그에서 **관측된 키**만 `ibl_param_sweep.py`가 만든다. 따라서 새 op의 설명만 추가하면 AI는 존재는 보되 호출 모양을 몰라 범용 크롤·셸로 우회할 수 있다. 첫 등록은 자동 증류를 기다리지 말고 `data/guides/new_action_checklist.md`에 따라 다양한 manual seed를 넣고 실제 연상 프로브를 통과시킨다.
+`target_description`과 `tool_json.input_schema`에 인자를 자세히 적어도 그것만으로 에이전트의 IBL 카탈로그에 인자명이 실리는 것은 아니다. 런타임 카탈로그는 `ibl_access._emit_action_line()`이 `description`·`ops.values`를 방출하고, `⟨인자: …⟩`는 코퍼스와 실행 로그에서 **관측된 키**만 `ibl_param_sweep.py`가 만든다. 같은 규율로 `⟨동반: …⟩`(그 낱말 뒤에 실제로 이어진 낱말)은 `ibl_partner_sweep.py`가 만든다 — 선언이 아니라 흔적이라 새 액션은 첫 조합이 관측될 때까지 비어 있다. 따라서 새 op의 설명만 추가하면 AI는 존재는 보되 호출 모양을 몰라 범용 크롤·셸로 우회할 수 있다. 첫 등록은 자동 증류를 기다리지 말고 `data/guides/new_action_checklist.md`에 따라 다양한 manual seed를 넣고 실제 연상 프로브를 통과시킨다.
 
 ## 6. 가능성을 여는 세 가지 모드 — *큐레이션이 어디 있는가*로 고른다
 

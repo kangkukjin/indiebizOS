@@ -2,6 +2,7 @@
 
 - run_returns_drift_sweep: returns 선언 ↔ 실측 통화 모양 대조 (scripts/returns_drift_sweep.py)
 - run_shape_sweep: 실측 반환 열 관측 → data/ibl_return_shapes.json → 카탈로그 ⟨열: …⟩ (scripts/ibl_shape_sweep.py)
+- run_partner_sweep: 실측 조합 파트너 관측 → data/ibl_partners.json → 카탈로그 ⟨동반: …⟩ (scripts/ibl_partner_sweep.py)
 - run_honesty_sweep: 정직성 불변식 A/B/C(거짓 성공·통화 부재·0행 거짓) — 침묵 부류를 봉투 입구 하나에서 (scripts/honesty_invariants_sweep.py)
 둘 다 subprocess(라이브 프로세스 무접촉)·주간 카덴스(상태 파일)·self_checks 기록. run_maintenance_bundle 이 부른다.
 """
@@ -177,6 +178,48 @@ def run_param_sweep() -> Dict:
     return out
 
 
+def run_partner_sweep() -> Dict:
+    """동반 낱말(조합 파트너) 관측 스윕 (주간 카덴스, §8.6d) — scripts/ibl_partner_sweep.py.
+
+    카탈로그의 ⟨동반: …⟩ 은 교재·실행 실측이라 새 조합이 자리 잡을수록 바뀐다 — 주간 재관측이
+    없으면 08-30 의 습관이 카탈로그에 화석으로 굳는다(⟨열⟩·⟨인자⟩의 형제). 광고가 처방이 되지
+    않으려면 흔적이 계속 갱신돼야 한다. 백엔드 API 를 두드리지 않는다(DB 만 읽음)."""
+    import subprocess
+    from world_pulse_health import save_self_check
+    _root = Path(__file__).parent.parent.parent
+    state_path = _root / "data" / "ibl_partner_sweep_state.json"
+    now = _time.time()
+    try:
+        state = json.loads(state_path.read_text()) if state_path.exists() else {}
+    except Exception:
+        state = {}
+    if now - float(state.get("last_run", 0)) < 7 * 86400:
+        return {"skipped": "cadence", "last_run": state.get("last_run")}
+    script = _root / "scripts" / "ibl_partner_sweep.py"
+    if not script.exists():
+        return {"error": "scripts/ibl_partner_sweep.py 없음"}
+    try:
+        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+                              capture_output=True, text=True, timeout=600)
+    except Exception as e:
+        return {"error": f"스윕 실행 실패: {str(e)[:150]}"}
+    tail = (proc.stdout or "").strip().splitlines()[-1:] or [""]
+    out = {"rc": proc.returncode, "summary": tail[0][:200]}
+    try:
+        save_self_check({"node": "__ibl_health__", "action": "partner_sweep",
+                         "success": proc.returncode == 0, "response_ms": 0,
+                         "data_quality": "ok" if proc.returncode == 0 else "sweep_failed",
+                         "error_message": None if proc.returncode == 0 else (proc.stderr or "")[-200:]})
+    except Exception:
+        pass
+    state["last_run"] = now
+    try:
+        state_path.write_text(json.dumps(state, ensure_ascii=False))
+    except Exception:
+        pass
+    return out
+
+
 def run_honesty_sweep() -> Dict:
     """정직성 불변식 스윕 (주간 카덴스, §8.6b) — scripts/honesty_invariants_sweep.py.
 
@@ -239,4 +282,26 @@ def run_honesty_sweep() -> Dict:
         state_path.write_text(json.dumps(state, ensure_ascii=False))
     except Exception:
         pass
+    return out
+
+
+def run_all_sweeps() -> Dict:
+    """주간 스윕 다섯을 한 입구로 — 호출부(world_pulse_health §8.5~8.6b)가 스윕마다
+    자라지 않게(2026-08-30). 하나가 죽어도 나머지는 돈다(개별 격리, 옛 호출부와 같은 규율).
+
+    반환 키는 옛 호출부와 동일하다 — 유지보수 번들 결과를 읽는 쪽(계기판·로그)이 그대로 산다."""
+    import logging
+    log = logging.getLogger(__name__)
+    out: Dict = {}
+    for key, fn_name, label in (
+        ("returns_drift", "run_returns_drift_sweep", "returns 드리프트"),
+        ("shape_sweep", "run_shape_sweep", "반환 모양"),
+        ("param_sweep", "run_param_sweep", "입력 모양"),
+        ("partner_sweep", "run_partner_sweep", "동반 낱말"),
+        ("honesty_sweep", "run_honesty_sweep", "정직성"),
+    ):
+        try:
+            out[key] = globals()[fn_name]()
+        except Exception as e:  # noqa: BLE001 — 한 스윕의 죽음이 나머지를 끌고 가지 않는다
+            log.warning(f"[Maintenance] {label} 스윕 실패 (무시): {e}")
     return out

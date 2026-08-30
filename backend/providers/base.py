@@ -9,9 +9,36 @@ IndieBiz OS Core
 """
 
 import time
+import contextvars
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
+
+
+# ── 턴 토큰 원장 (시간·토큰 선택압의 토큰 축, 2026-08-30) ──────────────────
+# 토큰은 시간과 달리 도구 호출이 아니라 *모델 호출*에서 소모되고, 한 턴이 프로바이더를
+# 갈아탈 수 있어(midtier/role 스왑·평가/반성의 oneshot) 인스턴스 누적치로는 턴을 못
+# 가른다. 그래서 record_request 라는 단일 길목에서 contextvar 원장에 겹쳐 적는다 —
+# 궤적 척추(contextvars 승계)와 같은 결. 원장이 없으면(파이프라인 밖 호출) 무기록.
+_turn_token_ledger: contextvars.ContextVar = contextvars.ContextVar(
+    "turn_token_ledger", default=None)
+
+
+def begin_turn_token_ledger() -> None:
+    """턴 시작 — 이 컨텍스트의 토큰 원장을 새로 편다(agent_pipeline 이 턴 머리에서 호출)."""
+    _turn_token_ledger.set({"input": 0, "output": 0})
+
+
+def read_turn_tokens() -> Optional[int]:
+    """턴 동안 이 컨텍스트의 모델 호출이 소모한 토큰 합(input+output).
+
+    원장이 없거나 아무 기록이 없으면 None — 0 으로 오보하지 않는다(미측정≠공짜).
+    일부 프로바이더는 output 추정치만 적으므로 하한 실측으로 읽는다."""
+    led = _turn_token_ledger.get()
+    if not led:
+        return None
+    total = int(led.get("input", 0)) + int(led.get("output", 0))
+    return total if total > 0 else None
 
 
 @dataclass
@@ -32,6 +59,10 @@ class ProviderMetrics:
         self.total_requests += 1
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
+        led = _turn_token_ledger.get()
+        if led is not None:
+            led["input"] += int(input_tokens or 0)
+            led["output"] += int(output_tokens or 0)
         self.last_request_latency_ms = latency_ms
         self._latencies.append(latency_ms)
         # 최근 100개만 유지

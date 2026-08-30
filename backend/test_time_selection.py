@@ -1,17 +1,18 @@
-"""시간 선택압 관문 — 해마에 '빠르기' 축이 실제로 흐르는지 (2026-08-30).
+"""시간·토큰 선택압 관문 — 해마에 '비용' 축이 실제로 흐르는지 (2026-08-30).
 
 배경: 시스템에 시간이 좌표(스케줄러·타임스탬프)로는 있었지만 **비용**으로는 없었다 —
 같은 목표를 3초에 이루든 3분에 이루든 같은 성공이라 빨라질 유인이 없었다(사용자 판정:
-"어떤 일을 시키면 그걸 더 빨리 하는 것에 인센티브가 없어" → 2번안 집행).
+"어떤 일을 시키면 그걸 더 빨리 하는 것에 인센티브가 없어" → 2번안 집행). 같은 세션에서
+토큰 축 추가(사용자: "토큰 소모를 상관없어하는 태도도 문제" — 단 품질을 깎아 아끼는 것은
+금물). 두 축은 다른 낭비를 잰다 — avg_ms=IBL 실행의 빠르기, avg_tokens=그 표현을 두른
+턴의 모델 소요(불필요한 서치·재시도가 찍히는 자리).
 
-처방은 훈계(프롬프트 문장)가 아니라 이음매 4곳:
-  ① 측정: agent_pipeline._collect 가 tool_start→tool_result 에서 elapsed_ms 도장
-  ② 귀속: record_recall_outcome → update_success_by_code(avg_ms EWMA, 성공 실행만)
-  ③ 생존: consolidate_distilled 근접중복 정리에서 같은 신뢰면 빠른 표현이 살아남음
-  ④ 표시: 회상 XML 에 avg_ms 속성 — 리랭킹이 아니라 표시로 AI 가 판단(success_rate 철학)
-
-이 배터리는 ②③④와 증류 출생 실측(_ibl_elapsed_ms)을 잰다. ①은 프로세스 내 스트림
-이벤트라 여기선 계약(키 이름 elapsed_ms)만 ②의 입력으로 공유한다.
+처방은 훈계(프롬프트 문장)가 아니라 이음매:
+  ① 측정: agent_pipeline._collect 의 elapsed_ms 도장 + providers.base 턴 토큰 원장
+           (contextvar — 프로바이더 스왑·oneshot 을 한 턴으로 겹쳐 적음)
+  ② 귀속: record_recall_outcome → update_success_by_code(avg_ms·avg_tokens EWMA, 성공만)
+  ③ 생존: 근접중복 정리 생존키 성공률→시도수→빠르기→토큰 검약→최신
+  ④ 표시: 회상 XML avg_ms·avg_tokens 속성 — 리랭킹이 아니라 표시로 AI 가 판단
 
 실행: .venv/bin/python -m pytest backend/test_time_selection.py
 """
@@ -159,6 +160,90 @@ def test_t5_reference_xml_shows_avg_ms():
     assert 'avg_ms="1300"' in xml
     assert xml.count("avg_ms=") == 1  # 미측정은 숨김(-1 sentinel 미노출)
     assert "avg_ms는 과거 성공 실행의 평균 소요시간" in xml  # 필드 설명이 note 에 있음
+
+
+# ── T6: 토큰 EWMA — 성공만, 시간과 독립 누적 ──────────────────────────────
+
+def _avg_tokens(db, example_id):
+    with db._get_connection() as conn:
+        return conn.execute("SELECT avg_tokens FROM ibl_examples WHERE id=?",
+                            (example_id,)).fetchone()["avg_tokens"]
+
+
+def test_t6_token_ewma_success_only(db):
+    eid = db.add_example("파일 정리", "[self:files]{}", source="distilled")
+    assert _avg_tokens(db, eid) == -1.0
+
+    db.update_success_by_code("[self:files]{}", True, elapsed_ms=500, tokens=10000)
+    assert _avg_tokens(db, eid) == 10000.0 and _avg_ms(db, eid) == 500.0
+
+    db.update_success_by_code("[self:files]{}", True, tokens=20000)  # 시간 미측정 턴
+    assert _avg_tokens(db, eid) == pytest.approx(13000.0)  # 0.7*10000 + 0.3*20000
+    assert _avg_ms(db, eid) == 500.0                       # 미측정 축은 불변(독립)
+
+    db.update_success_by_code("[self:files]{}", False, tokens=999999)  # 실패=불반영
+    assert _avg_tokens(db, eid) == pytest.approx(13000.0)
+
+
+def test_t6b_birth_tokens(db):
+    eid = db.add_example("검색 요약", "[sense:search]{}", source="distilled",
+                         avg_ms=3000.0, avg_tokens=15000.0)
+    assert _avg_tokens(db, eid) == 15000.0
+
+
+# ── T7: 턴 토큰 원장 — 프로바이더 스왑을 한 턴으로 겹쳐 적고, 0은 미측정 ────
+
+def test_t7_turn_token_ledger():
+    from providers.base import (ProviderMetrics, begin_turn_token_ledger,
+                                read_turn_tokens)
+    begin_turn_token_ledger()
+    m1, m2 = ProviderMetrics(), ProviderMetrics()   # 실행 기어 + 스왑/oneshot 기어
+    m1.record_request(100.0, input_tokens=8000, output_tokens=1200)
+    m2.record_request(50.0, input_tokens=3000, output_tokens=800)
+    assert read_turn_tokens() == 13000              # 인스턴스 무관, 턴 합산
+
+    begin_turn_token_ledger()                       # 다음 턴 — 원장 리셋
+    assert read_turn_tokens() is None               # 기록 0 = 미측정(0 오보 금지)
+    m1.record_request(10.0)                         # usage 미보고 프로바이더(0,0)
+    assert read_turn_tokens() is None
+
+
+# ── T8: 생존 — 토큰 검약은 빠르기 다음, 신뢰를 넘지 못함 ───────────────────
+
+def test_t8_dedup_token_axis():
+    from ibl_usage_db import IBLUsageDB
+    q = IBLUsageDB._dedup_quality
+    base = {"success_count": 3, "fail_count": 0, "avg_ms": 2000.0}
+    thrifty = {**base, "id": 1, "avg_tokens": 5000.0}
+    wasteful = {**base, "id": 2, "avg_tokens": 40000.0}
+    unmeasured = {**base, "id": 3, "avg_tokens": -1.0}
+    assert max([wasteful, thrifty], key=q) is thrifty     # 같은 신뢰·같은 빠르기 → 검약 생존
+    assert max([unmeasured, wasteful], key=q) is wasteful  # 실측이 미측정을 이긴다
+
+    # 품질을 깎아 아끼는 선택은 키에서 불가능 — 성공률이 언제나 앞선다
+    cheap_flaky = {"id": 4, "success_count": 1, "fail_count": 1,
+                   "avg_ms": 100.0, "avg_tokens": 100.0}
+    proven_costly = {"id": 5, "success_count": 5, "fail_count": 0,
+                     "avg_ms": 9000.0, "avg_tokens": 90000.0}
+    assert max([cheap_flaky, proven_costly], key=q) is proven_costly
+
+
+# ── T9: 표시 — avg_tokens 속성(미측정 숨김) ───────────────────────────────
+
+def test_t9_reference_xml_shows_avg_tokens():
+    from ibl_usage_db import UsageExample
+    from ibl_usage_rag import IBLUsageRAG
+    ex = UsageExample(id=1, intent="메일 확인", ibl_code="[sense:email]{}",
+                      nodes="sense", category="single", difficulty=1,
+                      score=0.9, source="distilled", success_rate=1.0,
+                      avg_ms=1300.0, avg_tokens=12500.0)
+    bare = UsageExample(id=2, intent="가격 조회", ibl_code="[sense:price]{}",
+                        nodes="sense", category="single", difficulty=1,
+                        score=0.88, source="distilled", success_rate=-1.0)
+    xml = IBLUsageRAG()._format_references([ex, bare])
+    assert 'avg_tokens="12500"' in xml
+    assert xml.count("avg_tokens=") == 1
+    assert "품질을 깎아 아끼는 것은 금물" in xml  # 사용자 계약이 note 에 그대로
 
 
 if __name__ == "__main__":

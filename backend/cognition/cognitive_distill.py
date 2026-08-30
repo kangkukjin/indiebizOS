@@ -556,7 +556,7 @@ AI 답변: {ai_response[:1400]}
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
                         write_forage: bool = True, assume_forage: bool = False,
-                        guides_used=None):
+                        guides_used=None, turn_tokens: int = None):
         """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
 
         WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
@@ -575,8 +575,10 @@ AI 답변: {ai_response[:1400]}
         if write_experience and tool_calls:
             try:
                 from ibl_usage_rag import distill_experience, record_recall_outcome
-                distill_experience(user_message, tool_calls, hippo_score, top_code=top_code)
-                record_recall_outcome(top_code, hippo_score, tool_calls)
+                distill_experience(user_message, tool_calls, hippo_score, top_code=top_code,
+                                   turn_tokens=turn_tokens)
+                record_recall_outcome(top_code, hippo_score, tool_calls,
+                                      turn_tokens=turn_tokens)
             except Exception as e:
                 log(f"[경험증류] 오류 (무시): {e}")
         # 2) 심층/의미 메모리 증류.
@@ -610,7 +612,8 @@ AI 답변: {ai_response[:1400]}
                 log(f"[가이드되먹임] 오류 (무시): {e}")
 
     def _after_response_async(self, user_message: str, response: str, *,
-                              tool_calls=None, hippo_score: float = None, top_code: str = None):
+                              tool_calls=None, hippo_score: float = None, top_code: str = None,
+                              turn_tokens: int = None):
         """_after_response 를 백그라운드 스레드로 — 증류가 턴(스트림 종료·에피소드 END·
         총 소요 측정)을 붙잡지 않게 한다(ep889: 실작업 4.6분에 증류 꼬리 6분).
 
@@ -660,6 +663,7 @@ AI 답변: {ai_response[:1400]}
                     self._after_response, user_message, response,
                     tool_calls=tool_calls, hippo_score=hippo_score, top_code=top_code,
                     guides_used=guides_used,   # 메인에서 뜬 스냅샷을 값으로 전달
+                    turn_tokens=turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
                 )
             except Exception as e:
                 print(f"[증류] 백그라운드 오류 (무시): {e}")

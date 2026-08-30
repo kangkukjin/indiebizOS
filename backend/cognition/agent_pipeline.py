@@ -427,6 +427,9 @@ class CognitivePipelineMixin:
         try:
             from thread_context import clear_tool_calls as _clear_tc
             _clear_tc()  # 턴 시작 — 이전 턴 잔여 이력 제거
+            # 턴 토큰 원장 개시 — 실행·평가·반성의 모든 모델 호출(스왑 포함)이 겹쳐 적힌다.
+            from providers.base import begin_turn_token_ledger
+            begin_turn_token_ledger()
 
             # 6. 실행
             for event in self.ai.process_message_stream(
@@ -590,6 +593,14 @@ class CognitivePipelineMixin:
                 pass
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)
             self._collect_thread_tool_calls(tool_calls_log)
+            # 턴 토큰 원장 마감 — 이 턴의 모델 소요(토큰 선택압의 귀속 입력, 미측정=None).
+            try:
+                from providers.base import read_turn_tokens
+                turn_tokens = read_turn_tokens()
+                if turn_tokens:
+                    print(f"[턴비용] tokens={turn_tokens}")
+            except Exception:
+                turn_tokens = None
             # 턴 종료 메모리 쓰기(경험+심층+포식) — 초크포인트 한 곳(_after_response).
             # ★force_role 표면(포식 등)은 제외 — stateless 검색이 심층/의미 메모리를
             # 더럽히지 않도록 메모리 정책을 진입점이 직접 관장한다(포식 브라우저는
@@ -600,6 +611,7 @@ class CognitivePipelineMixin:
                 self._after_response_async(
                     message, final_content,
                     tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
+                    turn_tokens=turn_tokens,
                 )
 
         if _error_text is not None:

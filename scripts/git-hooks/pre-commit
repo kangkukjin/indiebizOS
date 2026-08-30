@@ -322,6 +322,23 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|sc
   echo "[pre-commit] 정직 표지 전파 OK ✓"
 fi
 
+# data.go.kr 신청 링크 커버리지 — 이 포털은 인증키 하나에 권한은 데이터셋마다 따로라
+# "키는 맞는데 403"이 기본 실패다. 그때 안내가 포털 첫 화면을 가리키면 아무 쓸모가 없다
+# (2026-08-30: 설정 탭의 MOLIT 링크가 데이터셋 하나에 고정돼 빌라 403 을 못 도왔다).
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_datagokr_signup\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] data.go.kr 신청 링크 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_datagokr_signup.py"; then
+    echo "" >&2
+    echo "[pre-commit] data.go.kr 신청 링크 미등록 — 커밋 차단." >&2
+    echo "[pre-commit]   • backend/common/datagokr_catalog.py 의 DATASETS 에 {path, env_var, label, id} 추가" >&2
+    echo "[pre-commit]   • 403 문구는 permission_error(BASE_URL, e.code) 로 (이름·링크를 손으로 적지 말 것)" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] data.go.kr 신청 링크 OK ✓"
+fi
+
 # 은퇴 계약 잔재 — 낱말의 뜻을 바꾸면 카탈로그·파생물만이 아니라 코드 안의 문장
 # (핸들러 오류 문구·독스트링·가이드 산문)까지 따라와야 한다. 47회차가 flatten 의
 # `each >> flatten` 은퇴를 카탈로그에서만 집행해 런타임 문구가 옛 계약을 계속 가르쳤다.

@@ -17,6 +17,8 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from common.auth_manager import get_api_key, check_api_key
+# 403 문구의 정본 — 데이터셋 이름·신청 링크를 여기서 손으로 적지 않는다.
+from common.datagokr_catalog import permission_error
 
 SERVICE_KEY = get_api_key('MOLIT_API_KEY') or ''
 BASE_URL = 'https://apis.data.go.kr/1613000/RTMSDataSvcRHTrade/getRTMSDataSvcRHTrade'
@@ -150,7 +152,7 @@ def get_villa_trade_range(region_code: str, start_month: str, end_month: str = N
 
     except urllib.error.HTTPError as e:
         if e.code in (401, 403):
-            return {"success": False, "error": "연립다세대 실거래가 API 권한이 없습니다(403). data.go.kr에서 '국토교통부_연립다세대 매매 실거래가 자료'를 동일 키로 활용신청하면 바로 됩니다."}
+            return {"success": False, "error": permission_error(BASE_URL, e.code)}
         return {"success": False, "error": f"HTTP {e.code}: {e.reason}"}
     except Exception as e:
         return {"success": False, "error": str(e)}

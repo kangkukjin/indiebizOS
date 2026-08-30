@@ -19,6 +19,7 @@ import yaml
 from fastapi import APIRouter, HTTPException
 
 from api_config import _read_env_value, _write_env_value, ENV_PATH
+from common.datagokr_catalog import datasets_for as _datagokr_datasets_for
 from runtime_utils import get_data_path as _get_data_path
 
 router = APIRouter()
@@ -34,6 +35,9 @@ _NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 #   restart     True면 저장 후 백엔드 재시작 필요 (부팅 시 읽는 값)
 #   test        실사용 테스트 스펙 {url, headers?, method?, ok_when_absent?}
 #               url/headers 안의 {v}=이 키의 값, {OTHER_VAR}=다른 환경변수 값
+#
+# 데이터셋별 신청 링크는 여기 적지 않는다 — common/datagokr_catalog.py 가 정본이고
+# _entry_payload 가 env_var 로 조회해 붙인다(data.go.kr 은 키 하나에 신청은 데이터셋마다).
 # ============================================================
 
 ENV_CATALOG: Dict[str, Dict[str, list]] = {
@@ -75,11 +79,13 @@ ENV_CATALOG: Dict[str, Dict[str, list]] = {
         "label": "한국 공공데이터",
         "entries": [
             {"name": "DATA_GO_KR_API_KEY", "label": "공공데이터포털 인증키",
-             "desc": "data.go.kr 공통 인증키 (부동산·창업·관광 등). 활용신청한 API에서만 동작.",
+             "desc": "data.go.kr 공통 인증키 (창업·문화·관광·상권 등). 키는 하나지만 "
+                     "권한은 데이터셋마다 따로 열린다 — 아래 목록을 각각 활용신청.",
              "signup_url": "https://www.data.go.kr/"},
             {"name": "MOLIT_API_KEY", "label": "국토교통부 실거래가 키",
-             "desc": "부동산 실거래가 조회용 (data.go.kr에서 활용신청).",
-             "signup_url": "https://www.data.go.kr/data/15058017/openapi.do"},
+             "desc": "부동산 실거래가 조회용. 부동산 유형(아파트·빌라·단독)마다 별개 "
+                     "데이터셋이라, 같은 키로 아래를 각각 활용신청해야 한다.",
+             "signup_url": "https://www.data.go.kr/"},
             {"name": "KOSIS_API_KEY", "label": "통계청 KOSIS 키",
              "desc": "KOSIS 공유서비스 → 활용신청 후 발급.",
              "signup_url": "https://kosis.kr/openapi/"},
@@ -400,6 +406,8 @@ def _entry_payload(entry: Dict[str, Any], usage: Dict[str, Dict[str, Any]]) -> D
         "label": entry.get("label", name),
         "desc": entry.get("desc", ""),
         "signup_url": entry.get("signup_url", ""),
+        # data.go.kr 계열: 이 키로 부르는 데이터셋별 활용신청 링크 (없으면 빈 목록)
+        "datasets": _datagokr_datasets_for(name),
         "secret": secret,
         "restart_required": entry.get("restart", False),
         "testable": "test" in entry,

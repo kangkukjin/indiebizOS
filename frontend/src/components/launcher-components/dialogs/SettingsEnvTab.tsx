@@ -12,11 +12,20 @@ import { useRetryingLoad } from '../../../lib/use-retrying-load';
 
 const API = 'http://127.0.0.1:8765';
 
+// data.go.kr 계열: 인증키는 하나인데 권한은 데이터셋마다 따로 열린다 —
+// 그래서 '키 발급' 링크 하나로는 403 을 만난 사람을 못 돕는다 (정본: common/datagokr_catalog.py).
+interface EnvDataset {
+  label: string;
+  url: string;
+  note?: string;
+}
+
 interface EnvEntry {
   name: string;
   label: string;
   desc: string;
   signup_url: string;
+  datasets?: EnvDataset[];
   secret: boolean;
   restart_required: boolean;
   testable: boolean;
@@ -167,6 +176,27 @@ export function SettingsEnvTab({ show }: { show: boolean }) {
                     )}
                   </div>
                   {entry.desc && <p className="text-xs text-gray-500 mb-1.5">{entry.desc}</p>}
+                  {/* 데이터셋별 활용신청 — 키가 있어도 신청 안 한 데이터셋은 403 이다 */}
+                  {entry.datasets && entry.datasets.length > 0 && (
+                    <div className="mb-2 rounded border border-gray-200 bg-gray-50 px-2 py-1.5">
+                      <p className="text-[10px] text-gray-500 mb-1">
+                        데이터셋별 활용신청 (같은 키 · 각각 신청해야 열림)
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        {entry.datasets.map(ds => (
+                          <button
+                            key={ds.url}
+                            onClick={() => openExternalUrl(ds.url)}
+                            title={ds.note || ds.url}
+                            className="text-left text-[11px] text-[#D97706] hover:underline flex items-start gap-1"
+                          >
+                            <ExternalLink size={10} className="mt-0.5 shrink-0" />
+                            <span>{ds.label}{ds.note ? ' *' : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {/* 키 → 어휘: 이 키가 없으면 잠자는 IBL 어휘 (코드에서 파생) */}
                   {entry.used_by && entry.used_by.actions.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1 mb-2">

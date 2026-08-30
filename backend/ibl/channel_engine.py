@@ -800,12 +800,17 @@ def _nostr_identity(params: dict) -> dict:
 # === 내부 구현 ===
 
 def _record_outgoing(channel_type: str, to: str, content: str,
-                     subject: Optional[str] = None, external_id: Optional[str] = None) -> None:
+                     subject: Optional[str] = None, external_id: Optional[str] = None,
+                     status: str = "sent", error_message: Optional[str] = None) -> None:
     """보낸 메시지를 주소록 스레드(business.db messages)에 남긴다.
 
     ★메신저 '대화'의 정본은 business.db 다 — 여기에 안 남기면 내가 보낸 말이 어디에도
     보이지 않는다(Gmail 보낸편지함·Nostr 릴레이엔 남지만 스레드 뷰는 business.db 와
     수신 DM 캐시만 읽는다). 기록 실패가 발신 성공을 뒤집지 않도록 전부 삼킨다.
+
+    ★실패한 발신도 남긴다(status="failed") — 안 남기면 내가 친 말이 통째로 증발해
+    "무슨 일이 있었는지" 가 어디에도 없다. 스레드 뷰가 status 를 그대로 그리므로
+    실패는 ⚠ 로 보인다(2026-08-30 수리).
     """
     try:
         from business_manager import BusinessManager
@@ -822,9 +827,10 @@ def _record_outgoing(channel_type: str, to: str, content: str,
             subject=subject,
             neighbor_id=(nb or {}).get("id"),
             is_from_user=1,
-            status="sent",
+            status=status,
             external_id=external_id,
             message_time=_dt.now().isoformat(),
+            error_message=error_message,
         )
     except Exception as e:
         try:
@@ -873,6 +879,8 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                 "subject": subject
             }
         except Exception as e:
+            _record_outgoing("email", to, body, subject=subject,
+                             status="failed", error_message=str(e))
             return {"success": False, "channel": "email", "error": str(e)}
 
     elif channel_type == "nostr":
@@ -917,8 +925,22 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
                     "event_id": event_id,
                     "to": to[:20] + "..."
                 }
-            return {"success": False, "channel": "nostr", "error": "DM 전송 실패"}
+            # 실패 사유는 릴레이가 준 그대로 — "DM 전송 실패" 한 줄은 무엇 때문에 못 갔는지
+            # (간헐 503 인가·거부인가·상대 릴레이가 없는가) 를 하나도 말해 주지 않는다.
+            reason = ""
+            try:
+                reason = indienet.dm_failure_reason()
+            except Exception:
+                pass
+            err = "DM 전송 실패 — 수신자 릴레이가 받지 않았습니다"
+            if reason:
+                err += f" ({reason})"
+            _record_outgoing("nostr", to, content, subject="Nostr DM",
+                             status="failed", error_message=err)
+            return {"success": False, "channel": "nostr", "error": err}
         except Exception as e:
+            _record_outgoing("nostr", to, content, subject="Nostr DM",
+                             status="failed", error_message=str(e))
             return {"success": False, "channel": "nostr", "error": str(e)}
 
     return {"error": f"send 미지원 채널: {channel_type}"}

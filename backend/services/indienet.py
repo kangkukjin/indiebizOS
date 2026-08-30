@@ -19,7 +19,7 @@ from typing import Optional, List, Dict, Any
 from indienet_common import (  # noqa: E402,F401
     HAS_NOSTR, _ON_PHONE,
     INDIENET_DIR, IDENTITY_FILE, SETTINGS_FILE, CACHE_DIR, POSTS_DB, DMS_DB,
-    DEFAULT_RELAYS, INDIENET_TAG,
+    DEFAULT_RELAYS, DEFAULT_DM_RELAYS, INDIENET_TAG,
     Event, EventKind, PrivateKey, PublicKey,
 )
 from indienet_publish import IndieNetPublishMixin  # noqa: E402
@@ -200,6 +200,9 @@ class IndieNetSettings:
 
     def __init__(self):
         self.relays: List[str] = DEFAULT_RELAYS.copy()
+        # NIP-17 DM inbox 릴레이 — 일반 relays 와 별도(연결이 열려도 kind:1059 를 거부하는
+        # 릴레이가 있다). 여기가 정본이고, kind:10050 선언·수신 구독이 전부 이걸 읽는다.
+        self.dm_relays: List[str] = DEFAULT_DM_RELAYS.copy()
         self.default_tags: List[str] = [INDIENET_TAG]
         self.auto_refresh: bool = True
         self.refresh_interval: int = 60  # 초
@@ -218,6 +221,7 @@ class IndieNetSettings:
                 with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 self.relays = data.get('relays', DEFAULT_RELAYS)
+                self.dm_relays = data.get('dm_relays') or DEFAULT_DM_RELAYS
                 self.default_tags = data.get('default_tags', [INDIENET_TAG])
                 self.auto_refresh = data.get('auto_refresh', True)
                 self.refresh_interval = data.get('refresh_interval', 60)
@@ -236,6 +240,7 @@ class IndieNetSettings:
 
             data = {
                 'relays': self.relays,
+                'dm_relays': self.dm_relays,
                 'default_tags': self.default_tags,
                 'auto_refresh': self.auto_refresh,
                 'refresh_interval': self.refresh_interval,

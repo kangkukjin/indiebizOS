@@ -76,6 +76,31 @@ def _load_owner_identities() -> Dict[str, set]:
     return identities
 
 
+def _union_with_dm_inbox(relays, log=None):
+    """구독 릴레이 ∪ 우리가 kind:10050 으로 선언한 NIP-17 DM inbox. 구독 순서는 보존.
+
+    선언(indienet settings.dm_relays)과 실시간 구독(business.db 채널 config)은 저장소가
+    달라 말없이 어긋날 수 있다. 안 듣는 릴레이로 배달된 gift-wrap 은 오류 한 줄 없이
+    사라지므로, 선언한 곳은 무조건 구독에 합류시킨다 (2026-08-30).
+    """
+    try:
+        from indienet import get_indienet
+        declared = get_indienet()._self_dm_relays() or []
+    except Exception as e:
+        if log:
+            log(f"DM inbox 선언 조회 실패(구독 목록 그대로 사용): {e}")
+        return list(relays)
+    out = list(relays)
+    seen = {u.rstrip("/") for u in out}
+    for u in declared:
+        if u.rstrip("/") not in seen:
+            out.append(u)
+            seen.add(u.rstrip("/"))
+            if log:
+                log(f"DM inbox 선언 릴레이 구독 추가: {u}")
+    return out
+
+
 class ChannelPoller:
     """통신채널 메시지 수신 관리자"""
 
@@ -320,6 +345,11 @@ class ChannelPoller:
                     continue
                 config = json.loads(channel.get('config', '{}'))
                 relays = config.get('relays') or ['wss://relay.damus.io']
+                # ★우리가 kind:10050 으로 "여기로 DM 보내세요" 라고 선언한 릴레이는 반드시
+                # 듣는다. 선언 목록(indienet settings.dm_relays)과 이 config 는 서로 다른
+                # 저장소라 손대는 사이 어긋날 수 있는데, 안 듣는 곳으로 배달된 gift-wrap 은
+                # 오류 한 줄 없이 사라진다 — 합집합으로 그 구멍을 닫는다 (2026-08-30).
+                relays = _union_with_dm_inbox(relays, self._log)
                 break
             except Exception as e:
                 self._log(f"Nostr 오류: {e}")

@@ -10,11 +10,16 @@ from typing import Optional, List, Dict, Any
 from indienet_common import (
     HAS_NOSTR, _ON_PHONE,
     INDIENET_DIR, IDENTITY_FILE, SETTINGS_FILE, CACHE_DIR, POSTS_DB, DMS_DB,
-    DEFAULT_RELAYS, INDIENET_TAG,
+    DEFAULT_RELAYS, DEFAULT_DM_RELAYS, INDIENET_TAG,
     Event, EventKind, PrivateKey, PublicKey,
 )
 if HAS_NOSTR:
     import websocket
+
+# NIP-17 DM 발행 재시도 — 공개 릴레이의 간헐 거절(503·타임아웃)은 상태가 아니라 순간이다.
+# 같은 gift_wrap 재발행은 이벤트 id 가 같아 멱등이라 중복 배달 위험이 없다.
+_DM_PUBLISH_ATTEMPTS = 3
+_DM_PUBLISH_BACKOFF = (1.0, 3.0)
 
 
 class IndieNetSocialMixin:
@@ -428,8 +433,14 @@ class IndieNetSocialMixin:
         return list(self.settings.relays)
 
     def _self_dm_relays(self) -> List[str]:
-        """우리가 NIP-17 DM을 수신할 relay (kind:10050으로 선언한 것과 일치)."""
-        return ["wss://nos.lol", "wss://relay.damus.io"]
+        """우리가 NIP-17 DM을 수신할 relay = kind:10050 으로 선언하는 목록 (같은 것이어야 한다).
+
+        ★단일 소스: 설정(settings.dm_relays) → 없으면 DEFAULT_DM_RELAYS. 예전엔 이 함수와
+        publish_dm_relays() 가 각자 목록을 손에 쥐고 있어(둘 다 하드코딩) "선언한 곳"과
+        "듣는 곳"이 말없이 어긋날 수 있었다 — 그러면 남이 보낸 DM 이 아무 오류 없이 사라진다.
+        """
+        relays = list(getattr(self.settings, "dm_relays", None) or DEFAULT_DM_RELAYS)
+        return relays
 
     def fetch_dms_nip17(self, limit: int = 50, since: int = None) -> List[dict]:
         """NIP-17 수신 DM 조회. 우리 DM relay에서 kind:1059(#p=우리) 구독 → unwrap.
@@ -501,8 +512,9 @@ class IndieNetSocialMixin:
             print("✗ IndieNet이 초기화되지 않음")
             return None
         if not dm_relays:
-            # 무인증 쓰기 가능한 신뢰 relay (우리가 수신 구독할 곳)
-            dm_relays = ["wss://nos.lol", "wss://relay.damus.io"]
+            # 우리가 실제로 수신 구독하는 곳과 같은 목록(단일 소스) — 어긋나면 남이 보낸 DM 이
+            # 우리가 안 듣는 릴레이로 배달돼 조용히 사라진다.
+            dm_relays = self._self_dm_relays()
         try:
             event = Event(
                 content="",
@@ -518,6 +530,14 @@ class IndieNetSocialMixin:
         except Exception as e:
             print(f"✗ DM inbox relay 발행 실패 - {e}")
             return None
+
+    def dm_failure_reason(self) -> str:
+        """마지막 DM 발행의 릴레이별 결말을 한 줄로 — 발신 실패를 사람에게 그대로 보인다."""
+        rep = getattr(self, "last_dm_publish", None) or {}
+        outcome = rep.get("outcome") or {}
+        if not outcome:
+            return "릴레이 응답 없음"
+        return " · ".join(f"{u}: {r}" for u, r in outcome.items())
 
     def send_dm_nip17(self, to_pubkey: str, content: str,
                       extra_tags: Optional[list] = None) -> Optional[str]:
@@ -555,12 +575,27 @@ class IndieNetSocialMixin:
                 peer_tags.extend(extra_tags)
             gift_wrap = nip17.wrap_dm(self.identity.private_key.hex(), to_hex, content,
                                       extra_tags=peer_tags)
-            event_id = self._publish_event(gift_wrap, relays=dm_relays)
+
+            # 공개 릴레이는 간헐적으로 문을 닫는다(Cloudflare 503·ping/pong 타임아웃) —
+            # 5초 창 한 번에 OK 가 0개면 그건 "보낼 수 없는 상대"가 아니라 "지금 그 문이
+            # 잠깐 닫혔다" 는 뜻이다. 같은 gift_wrap 재발행은 이벤트 id 가 같아 멱등이므로
+            # 짧은 간격으로 다시 두드린다 (2026-08-30 수리 — 간헐 장애가 사용자 눈에는
+            # '발송 실패'로 보이고 메시지 자체가 사라지던 문제).
+            event_id = None
+            for attempt in range(_DM_PUBLISH_ATTEMPTS):
+                if attempt:
+                    time.sleep(_DM_PUBLISH_BACKOFF[min(attempt - 1, len(_DM_PUBLISH_BACKOFF) - 1)])
+                    print(f"  NIP-17 DM 재시도 {attempt + 1}/{_DM_PUBLISH_ATTEMPTS}")
+                self.last_dm_publish = {}
+                event_id = self._publish_event(gift_wrap, relays=dm_relays,
+                                               report=self.last_dm_publish)
+                if event_id:
+                    break
 
             if event_id:
                 print(f"✓ NIP-17 DM 발송 완료 - gift_wrap_id={event_id[:16]}...")
             else:
-                print("✗ NIP-17 DM 발송 실패 (relay OK 응답 없음)")
+                print(f"✗ NIP-17 DM 발송 실패 ({self.dm_failure_reason()})")
             return event_id
         except Exception as e:
             print(f"✗ NIP-17 DM 발송 실패 - {e}")

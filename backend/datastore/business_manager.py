@@ -1347,8 +1347,9 @@ class BusinessManager:
                        attachment_path: Optional[str] = None,
                        status: str = "received",
                        external_id: Optional[str] = None,
-                       message_time: Optional[str] = None) -> Dict:
-        """메시지 생성 (수신 메시지 저장)"""
+                       message_time: Optional[str] = None,
+                       error_message: Optional[str] = None) -> Dict:
+        """메시지 생성 (수신 메시지 저장 · 발신 기록 — 실패 발신은 status="failed"+error_message)"""
         conn = self._get_connection()
         cursor = conn.cursor()
 
@@ -1364,10 +1365,12 @@ class BusinessManager:
         cursor.execute("""
             INSERT INTO messages (
                 neighbor_id, subject, content, message_time, is_from_user,
-                contact_type, contact_value, attachment_path, status, external_id, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                contact_type, contact_value, attachment_path, status, external_id,
+                error_message, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (neighbor_id, subject, content, msg_time, is_from_user,
-              contact_type, contact_value, attachment_path, status, external_id, now))
+              contact_type, contact_value, attachment_path, status, external_id,
+              error_message, now))
 
         message_id = cursor.lastrowid
         conn.commit()

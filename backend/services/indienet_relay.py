@@ -20,10 +20,18 @@ if HAS_NOSTR:
 class IndieNetRelayMixin:
     """indienet.py 에서 verbatim 이동 — IndieNet 에 믹스인 합성(self 속성 공유)."""
 
-    def _publish_event(self, event, relays: List[str] = None) -> Optional[str]:
+    def _publish_event(self, event, relays: List[str] = None,
+                       report: Optional[dict] = None) -> Optional[str]:
         """이벤트를 릴레이에 발행. event는 Event 객체 또는 이벤트 dict.
         relays 미지정 시 우리 일반 relay 목록, 지정 시 그 목록으로만 발행
-        (NIP-17은 수신자의 kind:10050 DM relay로 발행해야 함)."""
+        (NIP-17은 수신자의 kind:10050 DM relay로 발행해야 함).
+
+        ★릴레이의 OK 응답은 ["OK", <id>, <수락여부>, <사유>](NIP-01) — 세 번째 칸이
+        false 면 **거부**다(rate-limited·blocked·invalid). 이걸 안 보고 OK 프레임만
+        세면 거부당한 발행을 "성공"으로 보고하게 된다(2026-08-30 수리).
+        report(dict)를 주면 릴레이별 결말({relay: "ok"|"거부: …"|"연결 실패: …"|"무응답"})을
+        채워 준다 — 실패 사유를 사람에게 그대로 보여 주기 위한 통로.
+        """
         if not relays:
             relays = self.settings.relays if self.settings.relays else DEFAULT_RELAYS
         event_dict = event if isinstance(event, dict) else event.to_dict()
@@ -32,22 +40,31 @@ class IndieNetRelayMixin:
         first_event_id = None
         success = threading.Event()
         ok_count = [0]
+        outcome: Dict[str, str] = {}
 
         def _send_to_relay(relay_url: str):
             nonlocal first_event_id
 
             relay_success = threading.Event()
+            outcome[relay_url] = "무응답(시간 초과)"
 
             def on_message(ws, message):
                 nonlocal first_event_id
                 try:
                     data = json.loads(message)
-                    if data[0] == "OK":
+                    if data[0] != "OK":
+                        return
+                    accepted = data[2] if len(data) >= 3 else True
+                    if accepted:
                         if first_event_id is None:
                             first_event_id = data[1]
                         ok_count[0] += 1
-                        relay_success.set()
+                        outcome[relay_url] = "ok"
                         success.set()
+                    else:
+                        reason = data[3] if len(data) >= 4 else ""
+                        outcome[relay_url] = f"거부: {reason or '사유 없음'}"
+                    relay_success.set()
                 except:
                     pass
 
@@ -55,6 +72,8 @@ class IndieNetRelayMixin:
                 ws.send(event_message)
 
             def on_error(ws, error):
+                if outcome.get(relay_url, "").startswith("무응답"):
+                    outcome[relay_url] = f"연결 실패: {error}"
                 relay_success.set()
 
             def on_close(ws, close_status_code, close_msg):
@@ -73,6 +92,7 @@ class IndieNetRelayMixin:
                 relay_success.wait(timeout=5)
                 ws.close()
             except Exception as e:
+                outcome[relay_url] = f"연결 실패: {e}"
                 print(f"  릴레이 전송 실패 ({relay_url}): {e}")
 
         # 모든 릴레이에 병렬 전송
@@ -91,6 +111,14 @@ class IndieNetRelayMixin:
 
         if ok_count[0] > 0:
             print(f"  릴레이 {ok_count[0]}/{len(relays)}개 발행 성공")
+        else:
+            print(f"  릴레이 0/{len(relays)}개 발행 — " +
+                  " · ".join(f"{u}: {outcome.get(u, '무응답')}" for u in relays))
+
+        if report is not None:
+            report["relays"] = list(relays)
+            report["ok_count"] = ok_count[0]
+            report["outcome"] = dict(outcome)
 
         return first_event_id
 

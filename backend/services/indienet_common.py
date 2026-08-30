@@ -52,6 +52,21 @@ DEFAULT_RELAYS = [
     'wss://purplepag.es',
 ]
 
+# NIP-17 DM inbox 릴레이 (kind:10050 으로 선언 = 남이 나에게 gift-wrap 을 보낼 주소).
+# 일반 릴레이와 목록이 다른 이유: 연결이 열린다고 kind:1059 를 받아 주는 게 아니다.
+# 2026-08-30 실측(일회용 키로 만든 gift-wrap 을 릴레이별로 던져 OK 판정을 읽음, 3회):
+#   relay.primal.net 3/3 · relay.nostr.net 3/3 · relay.damus.io 2/3(Cloudflare 503 간헐)
+#   nos.lol 2/4(간헐 무응답) · nostr.mom 2/3(무응답, NIP-11 없음)
+#   purplepag.es 0/3 — "blocked: kind 1059 is not allowed" (메타데이터 전용 릴레이)
+# ★핸드셰이크 성공률로 고르면 purplepag.es 를 뽑는 함정이 있다 — 판정은 OK 프레임의
+#   수락 플래그로만 내린다(같은 날 _publish_event 수리와 한 벌).
+DEFAULT_DM_RELAYS = [
+    'wss://nos.lol',
+    'wss://relay.damus.io',
+    'wss://relay.primal.net',
+    'wss://relay.nostr.net',
+]
+
 # IndieNet 해시태그
 INDIENET_TAG = "IndieNet"
 

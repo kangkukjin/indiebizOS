@@ -67,6 +67,57 @@ def _run(tool_name, tool_input):
     return json.loads(out) if isinstance(out, str) else out
 
 
+def test_performance_date_range_contract_reaches_kopis(monkeypatch):
+    """공연 날짜 범위는 액션 핸들러에서 KOPIS 요청까지 보존된다."""
+    kopis = _load("_t_kopis_dates", os.path.join(_PKG, "culture", "tool_kopis.py"))
+    seen = {}
+
+    def fake_get_performances(**kwargs):
+        seen.update(kwargs)
+        return {"count": 0, "data": []}
+
+    monkeypatch.setattr(kopis, "get_performances", fake_get_performances)
+    monkeypatch.setitem(sys.modules, "tool_kopis", kopis)
+    culture = _load("_t_culture_dates", os.path.join(_PKG, "culture", "handler.py"))
+    culture._perf_search({
+        "query": "음악회",
+        "date_from": "2026-09-01",
+        "date_to": "2026-09-01",
+    })
+    assert seen["stdate"] == "2026-09-01"
+    assert seen["eddate"] == "2026-09-01"
+    assert seen["keyword"] == "음악회"
+    bad = culture._perf_search({"date_from": "2026-09-01"})
+    assert bad["success"] is False and "함께 입력" in bad["error"]
+
+
+def test_performance_default_days_contract_is_preserved(monkeypatch):
+    """날짜를 생략하면 기존 search_by_keyword의 days 경로를 그대로 쓴다."""
+    kopis = _load("_t_kopis_default_days", os.path.join(_PKG, "culture", "tool_kopis.py"))
+    seen = {}
+
+    def fake_search_by_keyword(**kwargs):
+        seen.update(kwargs)
+        return {"count": 0, "data": []}
+
+    monkeypatch.setattr(kopis, "search_by_keyword", fake_search_by_keyword)
+    monkeypatch.setitem(sys.modules, "tool_kopis", kopis)
+    culture = _load("_t_culture_default_days", os.path.join(_PKG, "culture", "handler.py"))
+    culture._perf_search({"query": "음악회", "days": 7})
+    assert seen["days"] == 7
+    assert seen["keyword"] == "음악회"
+
+
+def test_performance_tool_schema_exposes_date_range():
+    """빌드된 실행 스키마가 날짜 범위 두 인자를 정식으로 노출한다."""
+    with open(os.path.join(_PKG, "culture", "tool.json"), encoding="utf-8") as f:
+        tools = json.load(f)["tools"]
+    performance = next(t for t in tools if t["name"] == "performance_op")
+    props = performance["input_schema"]["properties"]
+    assert props["date_from"]["type"] == "string"
+    assert props["date_to"]["type"] == "string"
+
+
 # 주가 봉투 표본 — 곡선 투영 table(날짜·종가) + 원천 data.prices(전 필드)
 _PRICES = [
     {"date": "2026-07-29", "open": 1, "high": 1, "low": 1, "close": 100, "volume": 900},

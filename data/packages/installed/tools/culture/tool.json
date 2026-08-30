@@ -28,7 +28,7 @@
     },
     {
       "name": "performance_op",
-      "description": "공연·공연장 조회 (op 분기) — [sense:performance], KOPIS.\n- op=search (기본): 공연 검색 (연극·뮤지컬·음악회). keyword·genre·region·status·days 옵션.\n- op=venue: 공연장·문화시설 검색. keyword(시설명)·region.\n- op=genres: 장르 코드 목록 (검색 필터용, 파라미터 없음).\n- op=regions: 지역 코드 목록 (검색 필터용, 파라미터 없음).",
+      "description": "공연·공연장 조회 (op 분기) — [sense:performance], KOPIS.\n- op=search (기본): 공연 검색 (연극·뮤지컬·음악회). query·genre·region·status·date_from·date_to·days 옵션.\n- op=venue: 공연장·문화시설 검색. keyword(시설명)·region.\n- op=genres: 장르 코드 목록 (검색 필터용, 파라미터 없음).\n- op=regions: 지역 코드 목록 (검색 필터용, 파라미터 없음).",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -61,7 +61,15 @@
           },
           "days": {
             "type": "integer",
-            "description": "[search] 검색 기간(일, 기본 90)"
+            "description": "[search] 날짜 범위를 생략했을 때 오늘부터 검색할 기간(일, 기본 90)"
+          },
+          "date_from": {
+            "type": "string",
+            "description": "[search] 검색 시작일 YYYY-MM-DD (date_to와 함께 입력)"
+          },
+          "date_to": {
+            "type": "string",
+            "description": "[search] 검색 종료일 YYYY-MM-DD (date_from과 함께 입력)"
           },
           "facility_id": {
             "type": "string",

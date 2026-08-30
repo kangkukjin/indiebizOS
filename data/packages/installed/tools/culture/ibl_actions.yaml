@@ -8,12 +8,14 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       query: string
+      date_from: string
+      date_to: string
     returns: items
     side_effect: false    # 전 op 읽기 전용
     fixture: '[sense:performance]{}'
     description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
     group: culture
-    target_description: search — query(공연명/키워드)·genre·region·status·days 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
+    target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
     target_key: op
     router: handler
     tool: performance_op
@@ -529,7 +531,7 @@ tool_json:
   - name: performance_op
     description: '공연·공연장 조회 (op 분기) — [sense:performance], KOPIS.
 
-      - op=search (기본): 공연 검색 (연극·뮤지컬·음악회). keyword·genre·region·status·days 옵션.
+      - op=search (기본): 공연 검색 (연극·뮤지컬·음악회). query·genre·region·status·date_from·date_to·days 옵션.
 
       - op=venue: 공연장·문화시설 검색. keyword(시설명)·region.
 
@@ -556,7 +558,13 @@ tool_json:
           description: '[search] 공연상태 (기본 공연중)'
         days:
           type: integer
-          description: '[search] 검색 기간(일, 기본 90)'
+          description: '[search] 날짜 범위를 생략했을 때 오늘부터 검색할 기간(일, 기본 90)'
+        date_from:
+          type: string
+          description: '[search] 검색 시작일 YYYY-MM-DD (date_to와 함께 입력)'
+        date_to:
+          type: string
+          description: '[search] 검색 종료일 YYYY-MM-DD (date_from과 함께 입력)'
         facility_id:
           type: string
           description: '[venue] 시설 ID'

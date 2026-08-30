@@ -70,16 +70,34 @@ def _attach_period(items, from_key: str, to_key: str):
 
 def _perf_search(ti: dict):
     """[sense:performance]{op:search} — KOPIS 공연 검색."""
-    from tool_kopis import search_by_keyword
-    result = search_by_keyword(
-        keyword=ti.get("query") or ti.get("keyword"),  # query 우선(sense 검색 관례), keyword 별칭
-        genre=ti.get("genre"),
-        region=ti.get("region"),
-        status=ti.get("status", "공연중"),
-        days=ti.get("days", 90),
-        rows=ti.get("rows", 20),
-        cpage=ti.get("page", 1),   # 스키마가 선언한 page — 종전엔 여기서 조용히 버려졌다
-    )
+    from tool_kopis import get_performances, search_by_keyword
+    date_from = ti.get("date_from")
+    date_to = ti.get("date_to")
+    if bool(date_from) != bool(date_to):
+        return {"success": False,
+                "error": "date_from과 date_to는 날짜 범위의 양 끝이므로 함께 입력해야 합니다."}
+    common = {
+        "keyword": ti.get("query") or ti.get("keyword"),  # query 우선(sense 검색 관례), keyword 별칭
+        "rows": ti.get("rows", 20),
+        "cpage": ti.get("page", 1),  # 스키마가 선언한 page — 종전엔 여기서 조용히 버려졌다
+    }
+    if date_from:
+        result = get_performances(
+            stdate=date_from,
+            eddate=date_to,
+            shcate=ti.get("genre"),
+            signgucode=ti.get("region"),
+            prfstate=ti.get("status", "공연중"),
+            **common,
+        )
+    else:
+        result = search_by_keyword(
+            genre=ti.get("genre"),
+            region=ti.get("region"),
+            status=ti.get("status", "공연중"),
+            days=ti.get("days", 90),
+            **common,
+        )
     # 단일 통화 — native data 목록을 items로 노출.
     if isinstance(result, dict) and isinstance(result.get("data"), list):
         result["items"] = result.pop("data")  # 단일 통화: native dict 직접(records 손실변환 은퇴)

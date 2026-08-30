@@ -92,13 +92,13 @@ def _writer_of(root: Path, rel: str):
 def test_t6_real_repo_no_vanished(_):
     """선언은 **실체** 아니면 **실체를 만드는 코드** 를 가리켜야 한다 — 둘 다 없으면 부패."""
     root = Path(__file__).parent.parent
-    # ★환경 부재는 실패가 아니다(2026-08-24 #repair C7). 자기수리 격리 사본(git worktree)
-    #   에는 gitignore 된 런타임 파일(ibl_examples.db·ai_desktop_map.json…)이 없어서 이
-    #   시험이 늘 빨강이었고, 회차마다 사람이 "환경 탓"이라고 **설명**해 왔다. 설명은 한 번,
-    #   판정은 코드로 — 링크된 워크트리는 `.git` 이 디렉토리가 아니라 파일이다(정확한 표지).
-    if (root / ".git").is_file():
-        pytest.skip("git worktree 격리 사본 — gitignore 된 런타임 파일이 없어 선언 부패를 "
-                    "판정할 수 없다(본 저장소에서 돌 때만 의미 있음)")
+    # ★2026-08-30: 옛 worktree 스킵을 걷어냈다. "gitignore 된 런타임 파일이 없는 사본"이라는
+    #   부류를 `.git` 이 파일인가(=worktree)라는 **손으로 고른 표지**로 잡았더니, 같은 부류의
+    #   다른 몸인 CI 신선 클론에서 그대로 샜다 — 8/27~8/30 Seam Guards 를 나흘간 빨강으로
+    #   묶은 원인. 실체 부재는 애초에 실패 조건이 아니다(_writer_of 가 '만드는 코드'로 판정한다).
+    #   실측: 그 클론에서 vanished 로 남은 둘은 환경 탓이 아니라 진짜 부패였고(ibl_examples.db
+    #   =0바이트 유령·진짜는 ibl_usage.db, ai_desktop_map.json=만드는 코드가 존재한 적 없음),
+    #   은퇴시키자 실체 없는 몸에서도 초록이 된다. 스킵은 그 신고를 나흘간 가려온 셈이다.
     vanished = []
     for pat, owner, _kind in do.DECLARATIONS:
         if any(c in pat for c in "*?[") or (root / pat).exists():

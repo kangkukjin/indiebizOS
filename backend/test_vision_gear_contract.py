@@ -108,8 +108,14 @@ def test_oneshot_prefers_vision_modality_slot(monkeypatch):
     assert out2 == "SENTINEL_VISION_OK"
 
 
+@pytest.mark.local
 def test_vision_slot_resolves_from_gear_data():
-    """라이브 기어: modality.image 예약석이 데이터로 채워져 있고 리졸버가 그걸 읽는다."""
+    """라이브 기어: modality.image 예약석이 데이터로 채워져 있고 리졸버가 그걸 읽는다.
+
+    ★local — 검사 대상이 **사용자의 기어 설정**(data/model_gear.json, gitignore)이라
+      실체가 없는 몸에선 원리적으로 판정할 수 없다. 위쪽 형제들은 monkeypatch 로
+      배선만 보므로 CI 시민 그대로 — 데이터를 보는 이 한 칸만 로컬로 내린다.
+    """
     import model_resolver
     _prov, d = model_resolver.get_vision_provider(oneshot=True)
     assert d["source"].startswith("modality.image→"), d

@@ -23,6 +23,30 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MP = os.path.join(ROOT, "data/packages/installed/tools/media_producer")
 
 
+def _browser_ready() -> str:
+    """실제로 한 장 구울 수 있는 몸인가 — 아니면 못 구는 **이유**를 돌려준다.
+
+    ★모듈 유무로는 모자란다(2026-08-30): playwright 가 깔려도 브라우저 바이너리를 안 받은
+      몸이 있다. 여기서 스킵되는 세 칸은 CI 의 playwright-render job(브라우저를 실제로 받는
+      유일한 몸)에서 돈다 — 스킵이 침묵이 되지 않도록 배치를 그쪽에 걸어 두었다.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ModuleNotFoundError:
+        return "playwright 미설치 — requirements-tools.txt 티어"
+    try:
+        with sync_playwright() as pw:
+            pw.chromium.launch().close()
+    except Exception as e:
+        return f"chromium 미가용: {type(e).__name__}"
+    return ""
+
+
+_NO_BROWSER = _browser_ready()
+needs_browser = pytest.mark.skipif(bool(_NO_BROWSER),
+                                   reason=f"실 브라우저가 필요한 계약 — {_NO_BROWSER}")
+
+
 def _load(fname, name):
     import importlib.util
     spec = importlib.util.spec_from_file_location(name, os.path.join(MP, fname))
@@ -44,6 +68,7 @@ def gv():
 # ── 0층 관측: render 행의 prescreen ───────────────────────────────
 
 
+@needs_browser
 def test_html_console_and_pageerror_and_reqfail_captured(ra, tmp_path):
     """콘솔 오류·페이지 예외·요청 실패가 관측 사실로 행에 실린다."""
     p = tmp_path / "broken.html"
@@ -61,6 +86,7 @@ def test_html_console_and_pageerror_and_reqfail_captured(ra, tmp_path):
     assert result["prescreen_flagged"] == 1
 
 
+@needs_browser
 def test_html_clean_page_has_empty_prescreen(ra, tmp_path):
     """★오탐 금지: 깨끗한 페이지의 prescreen 은 빈 문자열 — 아니면 유료 심사가 통째로 우회된다."""
     p = tmp_path / "clean.html"
@@ -72,6 +98,7 @@ def test_html_clean_page_has_empty_prescreen(ra, tmp_path):
     assert result["prescreen_flagged"] == 0
 
 
+@needs_browser
 def test_html_blank_page_flagged(ra, tmp_path):
     """아무것도 안 그려진 렌더 = 빈 화면 사실 (잉크율 관측)."""
     p = tmp_path / "blank.html"

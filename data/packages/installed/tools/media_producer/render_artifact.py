@@ -220,8 +220,6 @@ def _finish(rows, output_base, extra=None):
 
 def render_op_html(tool_input, output_base="."):
     """HTML(파일 path 또는 문자열 html, 생략 시 파이프 통화)→ 뷰포트별 PNG 1행."""
-    from playwright.sync_api import sync_playwright
-
     src_path = tool_input.get("path")
     html = tool_input.get("html")
     if src_path:
@@ -237,6 +235,11 @@ def render_op_html(tool_input, output_base="."):
     viewports, verr = _parse_viewports(tool_input)
     if verr:
         return _err(verr)
+    # ★브라우저는 **입력을 다 받은 뒤**에 든다(2026-08-30). 맨 윗줄에 있던 시절에는 인자를
+    #   빠뜨린 호출이 "path 또는 html 이 필요합니다" 대신 ModuleNotFoundError 로 죽었다 —
+    #   브라우저를 안 깐 몸에서 입력 오류가 의존성 오류로 둔갑하던 자리.
+    from playwright.sync_api import sync_playwright
+
     full_page = tool_input.get("full_page", True)
     selector = tool_input.get("selector")
     scale = float(tool_input.get("scale", 1))

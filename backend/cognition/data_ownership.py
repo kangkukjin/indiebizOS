@@ -77,7 +77,6 @@ DECLARATIONS: List[tuple] = [
 
     # 해마·학습 (실행기억 = 코퍼스가 몸)
     ("data/ibl_usage.db",           "해마 코퍼스(ibl_usage_db)",                 "state"),
-    ("data/ibl_examples.db",        "해마 예제 DB(ibl_usage_db)",                "state"),
     ("data/ibl_hippo_index.json",   "해마 색인 export(파생)",                    "derived"),
     ("data/ibl_hippo_vecs.f32",     "해마 벡터 export(파생)",                    "derived"),
     ("data/training/**",            "학습 코퍼스(gitignore — 몸)",               "state"),
@@ -161,7 +160,6 @@ DECLARATIONS: List[tuple] = [
     ("data/hidden_dm_peers.json",   "DM 숨김 목록",                              "state"),
     ("data/auto_response_state.json", "자동응답 on/off(auto_response)",          "state"),
     ("data/claude_code_*.json",     "claude_code 프로바이더 상태",               "state"),
-    ("data/ai_desktop_map.json",    "자율주행 데스크탑 배치",                    "state"),
     ("data/world_pulse_db.json",    "World Pulse 판(world_pulse.PULSE_DB_PATH)", "state"),
     ("data/phone_agent.json",       "인가 폰 신원(phone_notifications)",         "state"),
     ("data/peer_cards/**",          "이웃 몸 명함 캐시(peer_cards)",             "state"),

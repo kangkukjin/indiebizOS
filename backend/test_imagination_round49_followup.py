@@ -63,11 +63,10 @@ def test_F48_5_교재가_ok_필터를_명시_거절로_가르친다():
 
 # ─────────────────── F48-6 emitter 0행 규약 ───────────────────
 
-def _spreadsheet(tool_input):
-    from packages.installed.tools.system_essentials import office_ops  # noqa
-    return office_ops
-
-
+# ★죽은 로더 _spreadsheet() 를 걷어냈다(2026-08-30). 아무도 부르지 않는데 그 안의
+#   `from packages.installed…` 은 저장소에 존재한 적 없는 경로여서, import 커버리지
+#   감사가 매 푸시 'packages 의존성 결손' 으로 신고했다 — Portability 를 나흘간 빨강으로
+#   묶은 유일한 원인. 실제 로더는 바로 아래 _office_ops() 하나다(파일 경로 직적재).
 def _office_ops():
     path = os.path.join(ROOT, "data", "packages", "installed", "tools",
                         "system_essentials", "office_ops.py")

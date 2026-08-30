@@ -146,3 +146,13 @@ jobs:
         run: .venv/bin/python3 scripts/check_playwright_browsers.py --install --with-deps
       - name: 실제 렌더 스모크 (받은 곳 == 보는 곳)
         run: .venv/bin/python3 scripts/ci_playwright_smoke.py
+      # 브라우저가 실제로 있는 유일한 몸 = 여기. Seam Guards 의 pytest 는 코어 티어라
+      # 이 세 칸을 needs_browser 로 스킵한다 — 그 스킵이 침묵이 되지 않게 배치를 건다
+      # (2026-08-30). 스킵으로 새어나가면 계약이 아니라 장식이 되므로 실제 실행을 강제한다.
+      - name: 검수 0층 계약 (실 브라우저 필요분 — 스킵 시 실패)
+        run: |
+          .venv/bin/python3 -m pip install --quiet pytest
+          .venv/bin/python3 -m pytest backend/test_render_prescreen_contract.py \
+            -p no:cacheprovider -rs --no-header \
+            -k "console_and_pageerror or clean_page or blank_page" | tee /tmp/pw.log
+          grep -q "3 passed" /tmp/pw.log || { echo "✗ 브라우저 있는 몸에서 3칸이 안 돌았다(스킵=침묵)"; exit 1; }

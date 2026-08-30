@@ -78,3 +78,20 @@ retired:
       - "속*에는 넣을 수 없다"
       - "파이프 속에는 넣을 수 없다"
       - "파이프 안에 넣을 수 없다"
+
+  - id: system-ai-providers-endpoint
+    retired: 2026-08-31
+    reason: >-
+      `GET /system-ai/providers` 는 프로바이더 목록·모델 ID 를 핸들러 안에 손으로 적어
+      돌려주던 죽은 계약이다 — 프론트 소비자 0건(2026-08-31 실측)에, 목록은
+      anthropic/openai/google 3종뿐이라 claude_code·codex·deepseek·openrouter·ollama·
+      gemini_http 가 통째로 빠졌고 모델 ID 도 낡았다(claude-sonnet-4-20250514·gpt-4o·
+      gemini-2.0-flash-exp). 아무도 안 읽는 자리에서 조용히 썩는 두 번째 진실 —
+      되살리면 레지스트리와 갈라진다.
+    instead: >-
+      프로바이더의 정본은 `backend/providers/__init__.py` 의 `get_provider` 레지스트리
+      하나다. 목록이 다시 필요해지면 하드코딩이 아니라 그 레지스트리에서 파생시킨다
+      (모델 ID 는 `model_resolver`). 설정 UI 는 프론트의 `<option>` 목록을 쓴다.
+    phrases:
+      - "/system-ai/providers"
+      - "get_available_providers"

@@ -1222,45 +1222,6 @@ async def reset_system_ai_session():
         return {"ok": False, "error": str(e)}
 
 
-@router.get("/system-ai/providers")
-async def get_available_providers():
-    """사용 가능한 AI 프로바이더 목록"""
-    return {
-        "providers": [
-            {
-                "id": "anthropic",
-                "name": "Anthropic Claude",
-                "models": [
-                    {"id": "claude-sonnet-4-20250514", "name": "Claude Sonnet 4 (추천)"},
-                    {"id": "claude-3-5-sonnet-20241022", "name": "Claude 3.5 Sonnet"},
-                    {"id": "claude-3-5-haiku-20241022", "name": "Claude 3.5 Haiku (빠름)"},
-                ],
-                "api_url": "https://console.anthropic.com"
-            },
-            {
-                "id": "openai",
-                "name": "OpenAI GPT",
-                "models": [
-                    {"id": "gpt-4o", "name": "GPT-4o (추천)"},
-                    {"id": "gpt-4o-mini", "name": "GPT-4o Mini (빠름)"},
-                    {"id": "gpt-4-turbo", "name": "GPT-4 Turbo"},
-                ],
-                "api_url": "https://platform.openai.com/api-keys"
-            },
-            {
-                "id": "google",
-                "name": "Google Gemini",
-                "models": [
-                    {"id": "gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash (추천)"},
-                    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro"},
-                    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash (빠름)"},
-                ],
-                "api_url": "https://aistudio.google.com/apikey"
-            }
-        ]
-    }
-
-
 # ============ 메모리 관련 API ============
 
 @router.get("/system-ai/conversations")

@@ -428,4 +428,14 @@ if ! python3 "$repo_root/scripts/check_tracked_ignored.py"; then
   exit 1
 fi
 
+# 핀 정합 (2026-08-30): 정확 핀 선언과 이 몸의 .venv 가 어긋나면 로컬 초록이 거짓말이 된다.
+# 오프라인·즉시(pip 메타데이터만 읽는다) — .venv 없는 몸에서는 스스로 건너뛴다.
+echo "[pre-commit] 핀 정합 검사 실행..."
+if ! python3 "$repo_root/scripts/check_pinned_deps.py"; then
+  echo "" >&2
+  echo "[pre-commit] 핀과 .venv 불일치 — 커밋 차단." >&2
+  exit 1
+fi
+echo "[pre-commit] 핀 정합 OK ✓"
+
 exit 0

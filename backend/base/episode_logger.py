@@ -648,6 +648,63 @@ def _ensure_episode_tables():
 
 ORPHAN_MARK = "[Episode ORPHAN] 종료 기록 없이 끊긴 턴 — 다음 부팅이 회수함"
 
+# ─── 자식 run 은 주인보다 오래 산다 (2026-08-30, ep2393 실측) ──────────────────
+# ★무엇이 틀렸었나: 행의 '주인'은 턴을 연 **백엔드 프로세스**인데, 정작 일을 하는 것은
+#   그 프로세스가 띄운 **자식 run**(Claude Code 하위 프로세스)이다. 자식은 부모의 죽음을
+#   넘어 살아남아 새 백엔드에 MCP 로 계속 붙는다. 실측: ep2393 은 19:13:56 에 고아로
+#   회수됐지만 자식 run_cfe1362740d6aab22c53 은 **19:56:06까지** IBL 을 쐈고, 그 사이
+#   19:37 에 같은 메시지의 재시도(ep2406)가 떠 19분간 두 실행이 겹쳤다.
+# ★그래서 생사의 출처를 두 벌로 둔다: ①주인 프로세스 ②이 에피소드에 달린 궤적의 최신성.
+#   둘 중 하나라도 살아 있으면 보존한다 — 위 _owner_is_alive 의 원칙("틀린 보존이 틀린
+#   회수보다 싸다")을 자식 쪽으로 그대로 연장한 것이다.
+_CHILD_TRACE_FRESH_SEC = 900     # 궤적이 이만큼 안에 찍혔으면 그 run 은 아직 도는 중
+
+# ★왜 여기서 궤적을 되읽나: 고아 행의 로그는 죽은 프로세스의 **메모리 버퍼**에 있어서
+#   함께 사라진다. 하지만 자식이 남긴 trajectory_event 에는 액션명·성공·소요가 이미
+#   있다(비밀 없는 구조 흔적). 회수할 때 그걸 로그로 되돌려 적어야 증류가 끊기지 않는다.
+def _episode_trajectory_trace(conn, episode_id):
+    """이 에피소드 궤적의 (마지막 시각, 호출 수, 액션명 목록). 없으면 None."""
+    try:
+        rows = conn.execute(
+            "SELECT ts, kind, data FROM trajectory_event WHERE episode_id = ? ORDER BY ts",
+            (episode_id,)).fetchall()
+    except Exception:
+        return None            # 궤적 테이블이 없는 몸 — 판정 불능은 '없음'으로 두고 주인만 본다
+    if not rows:
+        return None
+    import json as _json
+    actions, calls = [], 0
+    for _ts, kind, data in rows:
+        if kind != "ibl.started":
+            continue
+        calls += 1
+        try:
+            actions.extend(_json.loads(data or "{}").get("actions") or [])
+        except Exception:
+            pass
+    return rows[-1][0], calls, actions
+
+
+def _trace_is_fresh(last_ts) -> bool:
+    """마지막 흔적이 아직 따끈한가 — 판정 불능은 '살아 있다'로 둔다(보존 우선)."""
+    try:
+        return (datetime.now() - datetime.fromisoformat(last_ts)).total_seconds() \
+            < _CHILD_TRACE_FRESH_SEC
+    except Exception:
+        return True
+
+
+def _orphan_trace_line(calls, actions):
+    """회수 행에 붙일 구조 흔적 한 줄 — 액션명·횟수만(값·결과는 넣지 않는다)."""
+    if not calls:
+        return ""
+    from collections import Counter
+    top = ", ".join(f"{a}×{n}" if n > 1 else a
+                    for a, n in Counter(actions).most_common(12))
+    more = "" if len(set(actions)) <= 12 else f" 외 {len(set(actions)) - 12}종"
+    return (f"[Episode ORPHAN 궤적] 이 턴은 로그 버퍼를 잃었지만 자식 run 의 흔적이 "
+            f"남아 있다 — IBL {calls}회: {top}{more}\n")
+
 # ─── 행의 주인 — 회수는 **죽은 프로세스의 행만** 닫는다 (2026-08-23, ep1689) ────────
 # ★왜: 옛 회수는 "지금 막 뜬 프로세스보다 먼저 시작된 미종료 행은 정의상 죽은 턴"을
 #   전제했다. 그 전제는 **서버 진입점에서만** 참이다. 실측(31회차): 살아 있는 백엔드가
@@ -715,17 +772,31 @@ def _sweep_orphan_episodes():
         now = datetime.now().isoformat()
         rows = conn.execute(
             "SELECT id, owner FROM episode_log WHERE ended_at IS NULL").fetchall()
-        dead = [r[0] for r in rows if not _owner_is_alive(r[1])]
-        alive = len(rows) - len(dead)
+        # 생사의 출처 두 벌: ①주인 프로세스 ②이 에피소드 궤적의 최신성(자식 run).
+        # 자식이 아직 돌고 있으면 주인이 죽었어도 회수하지 않는다 — 회수해 버리면
+        # 그 턴은 원장에서 사라진 채 계속 일하고, 사용자의 재시도와 겹친다(ep2393).
+        dead, alive, breathing = [], 0, 0
+        for _id, _owner in rows:
+            if _owner_is_alive(_owner):
+                alive += 1
+                continue
+            trace = _episode_trajectory_trace(conn, _id)
+            if trace and _trace_is_fresh(trace[0]):
+                breathing += 1
+                continue
+            dead.append((_id, trace))
         n = 0
-        if dead:
-            marks = ",".join("?" * len(dead))
+        for _id, trace in dead:
+            # 끝난 시각은 **자식의 마지막 흔적**이 있으면 그것 — 회수를 돌린 부팅 시각으로
+            # 적으면 원장이 거짓말을 한다(ep2393: 19:13:56 로 닫혔지만 일은 19:56 까지).
+            ended = trace[0] if trace else now
+            tail = "\n" + ORPHAN_MARK + "\n"
+            if trace:
+                tail += _orphan_trace_line(trace[1], trace[2])
             cur = conn.execute(
-                f"UPDATE episode_log SET ended_at = ?, "
-                f"log = COALESCE(log, '') || ? WHERE id IN ({marks})",
-                [now, "\n" + ORPHAN_MARK + "\n"] + dead,
-            )
-            n = cur.rowcount or 0
+                "UPDATE episode_log SET ended_at = ?, log = COALESCE(log, '') || ? "
+                "WHERE id = ?", (ended, tail, _id))
+            n += cur.rowcount or 0
         conn.commit()
         conn.close()
         if n or alive:
@@ -734,7 +805,9 @@ def _sweep_orphan_episodes():
                     EpisodeLogger._original_stdout.write(
                         f"[EpisodeLogger] 미종료 에피소드 {n}건 회수 — 이전 프로세스가 "
                         f"끊긴 자리(리로드·크래시). 기록은 보존됩니다."
-                        + (f" (주인이 살아 있어 건드리지 않음: {alive}건)\n" if alive else "\n"))
+                        + (f" (주인이 살아 있어 건드리지 않음: {alive}건)" if alive else "")
+                        + (f" (주인은 죽었지만 자식 run 이 도는 중: {breathing}건)"
+                           if breathing else "") + "\n")
             except Exception:
                 pass
     except Exception:

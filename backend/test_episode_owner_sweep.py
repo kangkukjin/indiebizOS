@@ -274,6 +274,84 @@ def test_o10_cleanup_is_gated_at_the_call_site():
     assert gated, "완료 task 정리가 게이트 밖에 있다 — 프로브가 라이브를 정리한다"
 
 
+# ─── O11~O13: 자식 run 은 주인보다 오래 산다 (2026-08-30, ep2393) ────────────────
+# 재현하는 사고: 19:13:29 턴 시작(주인 pid 11816) → 19:13:56 백엔드가 죽고 새 백엔드가
+# 부팅하며 그 행을 고아로 회수 → 그런데 **자식 run 은 살아서** 19:56:06 까지 IBL 을 쐈다.
+# 원장에서 사라진 턴이 계속 일하는 동안 19:37 에 같은 메시지의 재시도가 떠 19분 겹쳤다.
+
+def _traj(path, episode_id, ts, kind="ibl.started", actions=("self:read",)):
+    """궤적 한 줄 — 자식 run 이 남기는 흔적(비밀 없는 구조 정보)."""
+    import json
+    conn = sqlite3.connect(path)          # 스키마는 _ensure_episode_tables 가 이미 세웠다
+    seq = (conn.execute("SELECT COALESCE(MAX(event_seq), 0) + 1 FROM trajectory_event"
+                        " WHERE run_id = 'run_child'").fetchone()[0])
+    conn.execute("INSERT INTO trajectory_event (run_id, event_seq, episode_id, task_id,"
+                 " parent_run_id, ts, kind, data, source)"
+                 " VALUES ('run_child', ?, ?, '', 'run_parent', ?, ?, ?, 'usage')",
+                 (seq, episode_id, ts, kind, json.dumps({"actions": list(actions)})))
+    conn.commit()
+    conn.close()
+
+
+def test_o11_row_with_breathing_child_is_not_swept(tmp_path):
+    """★사고의 심장: 주인은 죽었어도 **자식이 도는 중**이면 회수하지 않는다."""
+    import episode_logger as EL
+    from datetime import datetime
+    path, orig = _tmp_db(tmp_path)
+    try:
+        eid = _open_row(path, f"{_dead_pid()}:1")       # 주인은 확실히 죽음
+        _traj(path, eid, datetime.now().isoformat())     # 그러나 자식은 방금 흔적을 남김
+        EL._sweep_orphan_episodes()
+        ended, log = _row(path, eid)
+        assert ended is None, "자식이 도는 턴을 회수했다 — ep2393 재발(중복 실행·학습 유실)"
+        assert EL.ORPHAN_MARK not in log
+    finally:
+        EL._get_db = orig
+
+
+def test_o12_stale_child_closes_at_last_trace_not_boot_time(tmp_path):
+    """자식도 조용해지면 닫되, **끝난 시각은 자식의 마지막 흔적**이다.
+
+    부팅 시각으로 닫으면 원장이 거짓말을 한다(ep2393 은 19:13:56 로 닫혔지만 19:56 까지 일했다).
+    """
+    import episode_logger as EL
+    from datetime import datetime, timedelta
+    path, orig = _tmp_db(tmp_path)
+    try:
+        eid = _open_row(path, f"{_dead_pid()}:1")
+        last = (datetime.now() - timedelta(hours=3)).isoformat()
+        _traj(path, eid, last, actions=("engines:web_site",))
+        EL._sweep_orphan_episodes()
+        ended, log = _row(path, eid)
+        assert ended == last, f"끝난 시각이 자식의 마지막 흔적이 아니다: {ended}"
+        assert EL.ORPHAN_MARK in log
+    finally:
+        EL._get_db = orig
+
+
+def test_o13_orphan_keeps_structural_trace_for_distillation(tmp_path):
+    """고아로 닫히더라도 **구조 흔적**(액션명·횟수)은 남아야 증류가 끊기지 않는다.
+
+    로그 버퍼는 죽은 프로세스와 함께 사라지지만 궤적은 살아 있다 — 그걸 되돌려 적는다.
+    값·결과는 넣지 않는다(비밀이 섞일 자리를 만들지 않는다).
+    """
+    import episode_logger as EL
+    from datetime import datetime, timedelta
+    path, orig = _tmp_db(tmp_path)
+    try:
+        eid = _open_row(path, f"{_dead_pid()}:1")
+        old = (datetime.now() - timedelta(hours=3)).isoformat()
+        _traj(path, eid, old, actions=("limbs:browser", "engines:image_gemini"))
+        _traj(path, eid, old, actions=("limbs:browser",))
+        EL._sweep_orphan_episodes()
+        _, log = _row(path, eid)
+        assert "IBL 2회" in log, f"호출 수가 남지 않았다: {log!r}"
+        assert "limbs:browser×2" in log, f"액션 흔적이 남지 않았다: {log!r}"
+        assert "engines:image_gemini" in log
+    finally:
+        EL._get_db = orig
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import pytest
     raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))

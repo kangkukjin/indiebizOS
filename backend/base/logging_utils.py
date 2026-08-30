@@ -109,13 +109,43 @@ _SECRET_TOKEN_RES = [re.compile(p) for p in (
     r'AKIA[0-9A-Z]{16}',                            # AWS Access Key ID
     r'nsec1[a-z0-9]{58}',                           # Nostr 개인키
     r'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}',  # JWT
+    r'vc[apsu]_[A-Za-z0-9]{20,}',                   # Vercel (vcp_ 개인/vca_/vcs_)
+    r'npm_[A-Za-z0-9]{30,}',                        # npm
+    r'hf_[A-Za-z0-9]{30,}',                         # HuggingFace
+    r'glpat-[A-Za-z0-9_-]{16,}',                    # GitLab PAT
+    r'dop_v1_[a-f0-9]{40,}',                        # DigitalOcean
+    r'[sr]k_(?:live|test)_[A-Za-z0-9]{20,}',        # Stripe
+    r'\b\d{8,10}:AA[A-Za-z0-9_-]{30,}',              # Telegram 봇 토큰
 )]
+
+# ─── 근접 규칙: 이름 옆에 붙은 '값처럼 생긴 것' ────────────────────────────────
+# ★왜 접두 목록만으로는 못 막나(2026-08-30, ep2426 실측): 새는 자리는 `key=value` 도
+# 벤더 접두도 아니었다. `echo "token set: ${VERCEL_TOKEN:+yes}${VERCEL_TOKEN:-no}"` —
+# `:-` 는 변수가 있을 때 **값을 내놓는다**. 그래서 "token set: yes<60자토큰>" 이 그대로
+# 박제됐다. 벤더 목록은 다음 벤더에서 또 샌다(=손으로 고른 스윕). 그래서 부류로 막는다:
+# 자격증명 낱말 근처의 고엔트로피 덩어리는 문장 모양과 무관하게 가린다.
+_SECRET_NEAR_RE = re.compile(
+    r'(?i)\b(?:token|secret|api[_-]?key|apikey|password|passwd|credential|bearer)\b'
+    r'[^\n]{0,24}?([A-Za-z0-9_\-]{24,})'
+)
+
+
+def _looks_like_credential(blob: str) -> bool:
+    """영문+숫자가 섞이고 엔트로피가 높은 덩어리인가 — 경로·문장·id 오탐을 줄인다."""
+    if not (re.search(r'[A-Za-z]', blob) and re.search(r'\d', blob)):
+        return False
+    from collections import Counter
+    import math
+    n = len(blob)
+    ent = -sum((v / n) * math.log2(v / n) for v in Counter(blob).values())
+    return ent >= 3.5
 
 
 def mask_secrets(text: str) -> str:
     """디스크에 영속될 텍스트에서 자격증명을 마스킹한다. PRODUCTION_MODE 무관 항상 적용.
 
-    필드명 매칭은 값 전체를 ****로, 형식 매칭은 식별용 접두 4자만 남기고 가린다."""
+    세 층이다: ①필드명 매칭(값 전체 ****) ②벤더 접두 형식 매칭 ③이름 근접 +
+    고엔트로피 매칭. ②③은 식별용 접두 4자만 남긴다."""
     if not text:
         return text
     if not isinstance(text, str):
@@ -123,7 +153,14 @@ def mask_secrets(text: str) -> str:
     text = _SECRET_FIELD_RE.sub(r'\1\2****\2', text)
     for token_re in _SECRET_TOKEN_RES:
         text = token_re.sub(lambda m: m.group(0)[:4] + '****', text)
-    return text
+
+    def _near(m):
+        blob = m.group(1)
+        if not _looks_like_credential(blob):
+            return m.group(0)
+        return m.group(0).replace(blob, blob[:4] + '****')
+
+    return _SECRET_NEAR_RE.sub(_near, text)
 
 
 def truncate_content(content: str, max_length: int = 100) -> str:

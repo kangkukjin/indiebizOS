@@ -493,6 +493,8 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
 
 ## 실측 기록 (자동 누적)
+- 2026-08-31 실측: `[sense:self_check]` 표면 호출은 120초에 먼저 종료돼도 백엔드 검사가 계속 실행될 수 있으며, 최종 결과는 회수 티켓으로 받아야 했다.
+- 2026-08-31 실측: 진단 중 잘못 작성한 필터 조건이 실패 기록 1건을 새로 남겨 점검 데이터 자체를 오염시킬 수 있었다.
 - 2026-08-28 실측: `[self:body]{op:"diff"}` 로 작업 트리 미커밋 변경(파일별 +/-)을 실측할 수 있다 — 가이드는 self:body 의 op 로 trajectory 만 적고 있어, 점검분과 기존 미커밋분을 구분할 때 이 op 를 몰라 grep 으로 돌 뻔했다.
 - 2026-08-28 실측: `[self:body]{op:"log"}` → `[table:filter]` 로 커밋을 추릴 때, 매칭 61건 중 상위 40건만 돌아오고 봉투가 `truncated: true` 를 신고한다 — 이 결과로 빈도·전수 집계를 하면 과소 계산된다(신고 플래그를 읽고 '전수 아님'을 명시해야 함).
 - 2026-08-28 실측: episode_log 원문의 tool_result 줄은 backend/providers/claude_code.py 의 _TOOLRESULT_CAP=300 으로 잘려 저장된다 — 최근 200 에피소드 4,094줄 중 2,279줄(55.7%)이 `…(+N자)` 표식을 달고 있어, 원문 grep으로 실패 원인을 캐면 증거의 절반 이상이 이미 소실된 상태다.

@@ -48,6 +48,18 @@ class IndieNetRelayMixin:
             relay_success = threading.Event()
             outcome[relay_url] = "무응답(시간 초과)"
 
+            def settle(text: str):
+                """결말은 **한 번 확정되면 덮이지 않는다** (2026-08-30 수리).
+
+                on_message 가 "ok"/"거부: …" 를 정확히 써 놓아도, 그 뒤 정리(ws.close())가
+                던진 예외가 같은 칸을 "연결 실패: …" 로 덮어써 **성공한 발송이 실패로 보고**
+                됐다. websocket-client 1.9.1 에서 sock 이 이미 없을 때 close() 가 예외를
+                던지게 바뀌며 드러났다(1.9.0 은 조용히 넘어가 로컬에서만 초록이었다).
+                발송의 결말을 정하는 것은 릴레이의 대답이지 우리 뒷정리가 아니다.
+                """
+                if outcome.get(relay_url, "").startswith("무응답"):
+                    outcome[relay_url] = text
+
             def on_message(ws, message):
                 nonlocal first_event_id
                 try:
@@ -72,8 +84,7 @@ class IndieNetRelayMixin:
                 ws.send(event_message)
 
             def on_error(ws, error):
-                if outcome.get(relay_url, "").startswith("무응답"):
-                    outcome[relay_url] = f"연결 실패: {error}"
+                settle(f"연결 실패: {error}")
                 relay_success.set()
 
             def on_close(ws, close_status_code, close_msg):
@@ -90,9 +101,12 @@ class IndieNetRelayMixin:
                 wst = threading.Thread(target=ws.run_forever, daemon=True)
                 wst.start()
                 relay_success.wait(timeout=5)
-                ws.close()
+                try:
+                    ws.close()
+                except Exception as ce:      # 뒷정리 사고는 발송 결말이 아니다
+                    print(f"  릴레이 소켓 정리 중 무시된 예외 ({relay_url}): {ce}")
             except Exception as e:
-                outcome[relay_url] = f"연결 실패: {e}"
+                settle(f"연결 실패: {e}")
                 print(f"  릴레이 전송 실패 ({relay_url}): {e}")
 
         # 모든 릴레이에 병렬 전송

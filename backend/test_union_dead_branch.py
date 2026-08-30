@@ -107,7 +107,6 @@ def test_merge_same_contract():
 
 
 if __name__ == "__main__":
-    fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
-    for fn in fns:
-        fn()
-    print(f"OK — 죽은 분기 규약 {len(fns)}/{len(fns)} 통과")
+    # 러너는 하나 — pytest 에 위임 (test_single_runner 규약).
+    import pytest
+    sys.exit(pytest.main([__file__] + sys.argv[1:]))

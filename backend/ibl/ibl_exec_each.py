@@ -431,7 +431,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             from workflow_contract import _stamp_wf_stack
             _stamp_wf_stack(steps, _wf_stack)
         try:
-            res = execute_pipeline(steps, project_path, agent_id=agent_id)
+            # _each_do: do 하위 파이프에는 통화가 안 흐른다(행은 $it 치환뿐) — T1 머리
+            # 변환자 거절이 do 문맥에 맞는 처방을 싣도록 알린다(2026-08-30).
+            res = execute_pipeline(steps, project_path,
+                                   context={"_each_do": True}, agent_id=agent_id)
         except Exception as e:  # 실행기 자체가 터진 경우도 행 단위로 정직하게
             res = {"success": False, "error": f"{type(e).__name__}: {e}",
                    "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",

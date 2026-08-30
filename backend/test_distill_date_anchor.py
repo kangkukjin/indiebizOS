@@ -41,6 +41,6 @@ def test_today_is_computed_before_prompt():
 
 
 if __name__ == "__main__":
-    test_date_anchor_present()
-    test_today_is_computed_before_prompt()
-    print("OK — 날짜 앵커 2/2 통과")
+    # 러너는 하나 — pytest 에 위임 (test_single_runner 규약).
+    import pytest
+    sys.exit(pytest.main([__file__] + sys.argv[1:]))

@@ -94,7 +94,9 @@ def test_w1_saved_run_injects_params():
 def test_w2_type_preservation():
     wf_id = _save_tmp_workflow("_t_params_w2", {
         "name": "_t_params_w2",
-        "steps": ['[table:take]{n: "$count", note: "상한 $count 건"}'],
+        # items 는 T1 머리 변환자 관문(2026-08-29) 통과용 — 이 시험의 관심사는
+        # params 주입의 타입 보존뿐이다.
+        "steps": ['[table:take]{items: [{"a": 1}], n: "$count", note: "상한 $count 건"}'],
     })
     try:
         with _FakeEngine() as eng:
@@ -133,7 +135,10 @@ def test_w3_unmatched_param_warns():
 def test_w4_reserved_names_protected():
     wf_id = _save_tmp_workflow("_t_params_w4", {
         "name": "_t_params_w4",
-        "steps": ['[table:each]{do: "[self:notify_user]{message: \'$it.title\'}", as: "it"}'],
+        # items 는 T1 머리 변환자 관문(2026-08-29) 통과용 — 이 시험의 관심사는
+        # 예약어 $it 이 params 주입에 침식되지 않는 것뿐이다.
+        "steps": ['[table:each]{items: [{"title": "t"}], '
+                  'do: "[self:notify_user]{message: \'$it.title\'}", as: "it"}'],
     })
     try:
         with _FakeEngine() as eng:

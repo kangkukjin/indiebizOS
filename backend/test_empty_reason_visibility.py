@@ -30,8 +30,16 @@ from ibl.workflow_engine import execute_pipeline  # noqa: E402
 
 
 def _run(script):
-    """action 이름 → 결과 로 굳힌 파이프를 돌린다."""
+    """action 이름 → 결과 로 굳힌 파이프를 돌린다.
+
+    머리 step 의 items 는 T1 머리 변환자 관문(2026-08-29) 통과용이다 — 없으면
+    변환자 머리가 실행 전에 거절돼 E1~E6 전부가 승격 로직을 안 밟는다(긍정 단정
+    시험은 실패하고, 부정 단정 시험은 공허하게 통과한다). 실행 결과는 어차피
+    _FakeEngine 급 몽키패치가 script 값으로 대체하므로 items 내용은 무의미하다.
+    """
     steps = [{"node": "table", "action": a} for a in script]
+    if steps:
+        steps[0]["params"] = {"items": [{"seed": 1}]}
     orig = ibl_engine.execute_ibl
     ibl_engine.execute_ibl = lambda ti, pp, agent_id=None: dict(script[ti.get("action")])
     try:
@@ -86,7 +94,8 @@ def test_E5_items_키가_없으면_대상이_아니다():
 
 def test_E6_다른_경고와_함께_실려도_서로_지우지_않는다():
     """경고 생산자가 넷 — 한 키에 덮어쓰면 뒤엣것이 앞엣것을 지운다(B24-1 부류)."""
-    steps = [{"node": "table", "action": "since"},
+    # 머리 items = T1 머리 변환자 관문 통과용(_run 의 머릿말 참조).
+    steps = [{"node": "table", "action": "since", "params": {"items": [{"seed": 1}]}},
              {"node": "table", "action": "mid"},
              {"node": "table", "action": "last"}]
     script = {"since": SEEDED, "mid": dict(SEEDED, note="두 번째 사유"), "last": ROWS}

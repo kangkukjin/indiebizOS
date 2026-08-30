@@ -122,12 +122,20 @@ def test_F48_6_입력이_아예_없는_것과_0행은_다른_사건이다(tmp_pa
 
 # ─────────────────── F48-7 표지 최상위 승격 ───────────────────
 
-def test_F48_7_마지막_통화의_표지가_봉투_최상위로_오른다():
+def test_F48_7_마지막_통화의_표지가_봉투_최상위로_오른다(tmp_path):
     """종전엔 `error_count`/`errors` 가 final_result JSON **문자열 안**에만 살아서,
-    읽는 쪽이 파이프 표지와 통화 표지의 **두 규칙**을 동시에 외워야 했다."""
+    읽는 쪽이 파이프 표지와 통화 표지의 **두 규칙**을 동시에 외워야 했다.
+
+    픽스처는 결정론이어야 한다 — 옛 판은 /tmp 의 첫 두 항목이 읽기 실패하리라
+    가정했고, 둘 다 읽히는 날 error_count=0 으로 무너졌다(2026-08-30 실측).
+    한 행은 실재하는 파일, 한 행은 없는 경로로 부분 실패를 스스로 만든다.
+    """
     from ibl_parser import parse
     from workflow_engine import execute_pipeline
-    code = ('[self:list]{path: "/tmp"} >> [table:take]{n: 2} '
+    ok_file = tmp_path / "ok.txt"
+    ok_file.write_text("살아있는 행", encoding="utf-8")
+    code = (f'[table:take]{{items: [{{"url": "{ok_file}"}}, '
+            f'{{"url": "{tmp_path}/없는파일.txt"}}], n: 2}} '
             '>> [table:each]{do: "[self:read]{path: \\"$it.url\\"}"}')
     env = execute_pipeline(parse(code), ROOT, agent_id="test")
     assert "error_count" in env, list(env)

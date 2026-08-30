@@ -382,6 +382,24 @@ if echo "$staged" | grep -qE "$safety_trigger"; then
   echo "[pre-commit] 안전장치 기능 스모크 OK ✓"
 fi
 
+# 러너는 하나 (2026-08-30 승격) — 새 시험 파일이 pytest 위임 규약을 어긴 채 main 에
+# 들어오는 부류(08-30 실측: 손 러너 4 + __main__ 없음 1 이 커밋을 통과해 있었다).
+# test_single_runner.py 는 파일 정적 스캔이라 싸다 — 시험 파일이 스테이징될 때만.
+if echo "$staged" | grep -qE '^backend/test_.*\.py$'; then
+  echo "[pre-commit] 단일 러너 규약 검사 실행..."
+  _pyrunner="$repo_root/.venv/bin/python"
+  [ -x "$_pyrunner" ] || _pyrunner=python3
+  if ! "$_pyrunner" -m pytest "$repo_root/backend/test_single_runner.py" -q --no-header; then
+    echo "" >&2
+    echo "[pre-commit] 단일 러너 규약 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • __main__ 은 pytest.main([__file__]) 위임으로 (손 러너는 드리프트한다)" >&2
+    echo "[pre-commit]   • 직접 실행 전용이면 pytest.skip(..., allow_module_level=True) 로 말하고 빠질 것" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 단일 러너 규약 OK ✓"
+fi
+
 # 추적 ∩ 무시 = 0 (2026-08-24 신설) — 생산물·런타임 부산물이 저장소에 눌러앉는 부류.
 #
 # ★방아쇠 없음, 매 커밋 실행. 누출은 "어떤 파일을 만졌는가"가 아니라 "무엇이 인덱스에

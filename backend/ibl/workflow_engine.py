@@ -183,13 +183,22 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
     # 파이프 정적 타입 검사 (T1, 2026-08-29) — returns 선언의 소비자. 머리 변환자가
     # 변환할 통화 없이 서 있으면 실행 전에 정직 거절한다(빈 입력 위 rows_in:0 "성공" 방지).
-    # 블록 몸·each 하위 파이프는 직전 통화가 들어오므로(has_incoming) 검사 밖.
+    # 블록 몸은 직전 통화가 들어오므로(has_incoming) 검사 밖. ★each 의 do 하위 파이프는
+    # 통화가 안 들어온다(행은 $it 치환뿐, 2026-08-30 정정) — 검사는 적용되고, 처방만
+    # do 문맥(_each_do)에 맞춘다. 거절도 실패 봉투다 — 트레이스백 경계 규약(frames 에
+    # pipeline 경로, 예외 없음)을 지킨다.
     from ibl_pipe_types import head_transform_error
-    _type_err = head_transform_error(steps, has_incoming=bool(prev_result))
+    _type_err = head_transform_error(steps, has_incoming=bool(prev_result),
+                                     each_do=bool((context or {}).get("_each_do")))
     if _type_err:
+        _h = steps[0] if isinstance(steps[0], dict) else {}
         return {"success": False, "error": _type_err,
                 "steps_completed": 0, "steps_total": len(steps),
-                "traceback": build_tb(_type_err, "binding")}
+                "traceback": build_tb(_type_err, "binding",
+                                      frame={"kind": "pipeline", "step": 1,
+                                             "of": len(steps),
+                                             "node": _h.get("_node") or _h.get("node", "?"),
+                                             "action": _h.get("action", "?")})}
     results = []
     total = len(steps)
     action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)

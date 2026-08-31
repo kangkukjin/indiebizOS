@@ -352,6 +352,7 @@ backend/*.log
 data/*.log
 data/*.log.1
 data/*.log.old
+data/boot_profile.jsonl
 data/backend_keeper.pid
 data/.intentional_shutdown
 

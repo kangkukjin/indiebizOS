@@ -103,10 +103,13 @@ def provision_async(enabled: bool = True):
     """
     if not enabled:
         return
-    if _model_present() and _libs_present():
-        return  # 이미 완비 — 조용히 통과(개발기 맥 포함)
 
     def _run():
+        # ★완비 점검(_libs_present)은 import sentence_transformers(=torch)라 점검 자체가
+        #   무겁다(2026-08-31 윈도우 실측: 14.0초 — 부팅 23.5초의 60%). "이미 완비면
+        #   즉시 통과"의 그 점검이 lifespan 을 막고 있었다 — 점검부터 스레드 안에서.
+        if _model_present() and _libs_present():
+            return  # 이미 완비 — 조용히 통과(개발기 맥 포함)
         try:
             libs = ensure_runtime_libs()
             model = download_model()

@@ -69,3 +69,33 @@ def snapshot() -> Dict[str, Any]:
 
 def failed_names() -> List[str]:
     return snapshot()["failed"]
+
+
+def persist(path, platform_label: str = "") -> None:
+    """부팅 완료 시점의 원장을 append-only jsonl 로 한 줄 남긴다.
+
+    왜: _ENTRIES 는 메모리 전용이라 재시작마다 증발한다 — "이번 부팅 23.5초"는 있어도
+    "평소보다 느려졌나 / 윈도우가 맥보다 느린가"를 물을 과거가 없었다(2026-08-31 윈도우
+    실측). 부팅당 한 줄(~1KB)이라 로테이션 불요. 실패해도 부팅은 계속된다(관측층 교리).
+    platform_label(몸 간 비교 라벨)은 이음매인 호출자가 공급한다 — 이 모듈은 몸 독립 코어라
+    OS 를 직접 묻지 않는다(OS-가드).
+    """
+    import json
+    from pathlib import Path as _P
+    try:
+        snap = snapshot()
+        row = {
+            "at": time.time(),
+            "platform": platform_label or "unknown",
+            "total_s": _elapsed(),
+            "ok": snap["ok"],
+            "failed": snap["failed"],
+            "phases": [{"name": e["name"], "ok": e["ok"], "elapsed": e.get("elapsed")}
+                       for e in snap["entries"]],
+        }
+        p = _P(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"[boot] 부팅 프로파일 영속화 실패(무시): {e}")

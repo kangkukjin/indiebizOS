@@ -227,25 +227,33 @@ async def lifespan(app: FastAPI):
     from system_ai_runner import start_system_ai_runner, stop_system_ai_runner
     system_ai_runner = start_system_ai_runner()
 
-    # Cloudflare 터널 자동 시작 (설정에 따라)
-    try:
-        from api_tunnel import auto_start_if_enabled as tunnel_auto_start
-        tunnel_auto_start()
-    except Exception as e:
-        print(f"[Tunnel] 자동 시작 중 오류: {e}")
-
-    # 공개면 자가검증 (백그라운드) — 터널 기동 후 내 공개 주소를 찔러 보고,
-    # cloudflared catch-all(빈 404)이면 낡은 ingress 를 물고 있는 것이므로 재기동해
-    # 설정을 다시 받아오게 한다(같은 내용 재PUT 은 CF 가 푸시하지 않아 무효 — 실측).
-    # 발급된 몸에서만 동작(맥의 로컬관리 터널은 스킵), 오프라인 부팅 무해.
+    # Cloudflare 터널 자동 시작 + 공개면 자가검증 — 한 백그라운드 스레드로(순서 보존).
+    # ★기동을 lifespan 동기로 두면 내부 sleep(1.5+2)+프로세스 점검이 요청 수신을 막는다
+    #   (2026-08-31 윈도우 실측: 6.0초 — 부팅 23.5초의 26%). 터널은 어차피 접속 완료까지
+    #   수 초 걸리는 외부 연결이라 부팅이 기다릴 이유가 없고, 자가검증은 원래 8초 유예
+    #   후 찌르므로(face_provision.verify_public_face) 순서만 지키면 의미가 같다.
+    #   검증 내용: catch-all(빈 404)이면 낡은 ingress — cloudflared 재기동으로 재수렴
+    #   (같은 내용 재PUT 은 CF 가 푸시하지 않아 무효 — 실측). 발급된 몸에서만 동작,
+    #   맥의 로컬관리 터널은 스킵, 오프라인 부팅 무해.
     try:
         import threading
-        from face_provision import verify_public_face
-        threading.Thread(target=verify_public_face, daemon=True,
-                         name="public-face-verify").start()
+
+        def _tunnel_boot():
+            try:
+                from api_tunnel import auto_start_if_enabled as tunnel_auto_start
+                tunnel_auto_start()
+            except Exception as e:
+                print(f"[Tunnel] 자동 시작 중 오류: {e}")
+            try:
+                from face_provision import verify_public_face
+                verify_public_face()
+            except Exception as e:
+                print(f"[Tunnel] 공개면 자가검증 실패 (무시): {e}")
+
+        threading.Thread(target=_tunnel_boot, daemon=True, name="tunnel-boot").start()
         boot_status.record("Tunnel", True)
     except Exception as e:
-        print(f"[Tunnel] 공개면 자가검증 시작 실패 (무시): {e}")
+        print(f"[Tunnel] 기동 스레드 시작 실패 (무시): {e}")
         boot_status.record("Tunnel", False, e)
 
     # 첫 실행 공유창고 — 창고 폴더(공유창고/0~4)를 부팅 시점에 보장한다(멱등).
@@ -317,6 +325,11 @@ async def lifespan(app: FastAPI):
     boot_status.record("lifespan", True, detail=f"부팅 총 {_boot_total:.1f}s")
     print(f"[boot] 부팅 완료 — 프로세스 시작 후 {_boot_total:.1f}초 "
           f"(단계별 소요 = /world-pulse/health 의 boot 원장 elapsed)", flush=True)
+    # 원장 영속화 — 메모리 전용이면 재시작마다 증발해 추이·몸 간 비교가 불가하다.
+    # platform 라벨은 OS 이음매인 여기(api.py)가 공급 — boot_status 는 몸 독립 코어.
+    from runtime_utils import get_data_path
+    boot_status.persist(get_data_path() / "boot_profile.jsonl",
+                        platform_label=sys.platform)
 
     # IBL MCP HTTP 세션 매니저를 앱 수명 동안 켠다(마운트한 /mcp 가 동작하려면 필수).
     # 실패/미준비면 nullcontext 로 조용히 통과(기존 stdio 경로는 영향 없음).

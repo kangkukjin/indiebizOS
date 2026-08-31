@@ -622,6 +622,79 @@ def run():
         import shutil
         shutil.rmtree(tmp6, ignore_errors=True)
 
+    # ══ S14 — propose 관문: 구역 소속과 그랜트 위반을 갈라 묻는다 (2026-08-31 ep2461) ══
+    # 옛 관문은 _red_check(위반 판정)의 None 을 '비-RED'로 읽어, 수리 그랜트가 활성인
+    # 턴에서 backend/ 경로 propose 를 "RED 전용"이라며 오거절했다(5연속 → 게이트 밖
+    # 우회 각인). 소속은 _red_is_live 로, 그랜트 활성은 정직한 재안내로 답해야 한다.
+    tmp7 = Path(tempfile.mkdtemp(prefix="stg_prop_")).resolve()
+    try:
+        _make_repo(tmp7)
+        # 몸 판정(body_root_of)은 backend+frontend 동시 존재로 저장소를 알아본다 —
+        # 이 구역 검사들은 진짜 몸 모양이 필요하다(없으면 위반 판정이 항상 None).
+        (tmp7 / "frontend").mkdir()
+        h._REPO_ROOT = tmp7
+        task14 = _grant(h, "task_propose_gate")
+        base14 = {"_repo_root": str(tmp7), "_red_check": h._red_zone_violation,
+                  "_red_is_live": h._red_is_live_path,
+                  "reason": "propose 관문 배터리", "content": "FOURTEEN = 1\n"}
+        r = st.op_propose({**base14, "path": str(tmp7 / "backend" / "cognition" / "prop14.py")})
+        check("S14a_grant_active_not_misread_as_nonred",
+              r.get("success") is False and "전용" not in (r.get("error") or ""),
+              json.dumps(r, ensure_ascii=False)[:300])
+        check("S14a_redirects_to_staged_write",
+              "직접 쓰기가 허용" in (r.get("error") or "") and "self:write" in (r.get("error") or ""),
+              (r.get("error") or "")[:300])
+        r = st.op_propose({**base14, "path": str(tmp7 / "data" / "note14.txt")})
+        check("S14b_nonred_still_refused_as_red_only",
+              r.get("success") is False and "전용" in (r.get("error") or ""),
+              json.dumps(r, ensure_ascii=False)[:300])
+        _ungrant()
+        r = st.op_propose({**base14, "path": str(tmp7 / "backend" / "cognition" / "prop14.py")})
+        check("S14c_no_grant_red_propose_works",
+              r.get("success") is True and bool(r.get("proposal_id")),
+              json.dumps(r, ensure_ascii=False)[:300])
+
+        # ══ S15 — 적재 파일 자체의 라이브 드리프트 (2026-08-31 ep2461 봉합) ══
+        # 예약~수행 사이에 **같은 경로**가 라이브에서 다른 내용으로 바뀌면(재실행 턴의
+        # 직접 커밋 등) live_sync 는 적재분을 건너뛰어 못 본다 — staged_drift 관문이
+        # 잡아야 한다. 조용히 덮으면 나중 판본이 옛 초안에 진다(last-writer-loses).
+        task15 = _grant(h, "task_staged_drift")
+        imp15 = tmp7 / "backend" / "cognition" / "imp15.py"
+        s15 = h._red_stage(str(imp15), for_write=True)
+        Path(s15).parent.mkdir(parents=True, exist_ok=True)
+        Path(s15).write_text("FIFTEEN = 'stale_draft'\n")
+        r = st.op_apply({"_repo_root": str(tmp7), "_grant_key": st.task_key(task15),
+                         "_red_prepare": h._red_write_prepare,
+                         "_red_finalize": h._red_write_finalize})
+        check("S15_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
+        imp15.write_text("FIFTEEN = 'refined_live'\n")   # 예약~수행 사이 라이브 직접 판본
+        r = st.perform_scheduled_apply(str(tmp7), st.task_key(task15),
+                                       prepare=h._red_write_prepare,
+                                       finalize=h._red_write_finalize)
+        check("S15_drift_blocks_clobber",
+              r.get("applied") is not True and imp15.read_text() == "FIFTEEN = 'refined_live'\n",
+              json.dumps(r, ensure_ascii=False)[:300])
+        sess15 = st.read_session(str(tmp7), st.task_key(task15))
+        check("S15_session_back_to_staging",
+              bool(sess15) and sess15.get("status") == "staging",
+              str(sess15 and sess15.get("status")))
+        res15 = (tmp7 / "data" / "system_ai_state" / "red_backups"
+                 / st.task_key(task15) / "result.json")
+        check("S15_deferred_result_reported",
+              res15.exists() and json.loads(res15.read_text()).get("outcome") == "deferred_verify_failed",
+              res15.read_text()[:200] if res15.exists() else "no result.json")
+        # 라이브가 격리본과 **같은** 내용이 된 경우는 무해 — 관문이 막지 않아야 한다
+        imp15.write_text("FIFTEEN = 'stale_draft'\n")
+        ok15, checks15 = st.verify(str(tmp7), sess15)
+        drift_gate = next((c for c in checks15 if c["gate"] == "staged_drift"), None)
+        check("S15_identical_live_is_harmless",
+              bool(drift_gate) and drift_gate["passed"] is True,
+              json.dumps(drift_gate, ensure_ascii=False)[:200] if drift_gate else "관문 없음")
+    finally:
+        _ungrant()
+        import shutil
+        shutil.rmtree(tmp7, ignore_errors=True)
+
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:
         print(f"  ✗ {f}")

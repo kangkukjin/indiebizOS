@@ -48,6 +48,7 @@ Claude Code 세션(자체 Edit/Bash), `[self:script]{op:run}`, `run_command`, �
 원장: data/system_ai_state/repair_sessions/<task_key>.json
 격리: .worktrees/repair-<task_key>/
 """
+import hashlib
 import json
 import os
 import re
@@ -317,6 +318,15 @@ def can_stage(repo: str, key: str, live_abs: str) -> bool:
     return ensure_session(repo, key) is not None
 
 
+def _file_sha(path: str):
+    """파일 내용 sha256 (없으면 None) — 스테이징 시점의 라이브 지문."""
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        return None
+
+
 def stage_file(repo: str, key: str, live_abs: str):
     """쓰기 대상을 격리 사본 경로로 바꾼다(첫 접촉 시 라이브 원본에서 씨 뿌리기).
 
@@ -337,7 +347,8 @@ def stage_file(repo: str, key: str, live_abs: str):
         existed = os.path.exists(live_abs)
         if existed and not os.path.exists(st_abs):
             shutil.copy2(live_abs, st_abs)     # ★씨는 라이브에서 — HEAD 가 아니다
-        files[live_abs] = {"op": "write", "staged": st_abs, "rel": rel, "existed": existed}
+        files[live_abs] = {"op": "write", "staged": st_abs, "rel": rel, "existed": existed,
+                           "base_sha": _file_sha(live_abs) if existed else None}
         _save_session(repo, sess)
     return st_abs
 
@@ -361,7 +372,8 @@ def stage_delete(repo: str, key: str, live_abs: str) -> bool:
     except OSError as e:
         print(f"[수리 스테이징] 격리 사본 삭제 실패(계속): {e}")
     sess.setdefault("files", {})[live_abs] = {
-        "op": "delete", "rel": rel, "staged": st_abs, "existed": os.path.exists(live_abs)}
+        "op": "delete", "rel": rel, "staged": st_abs, "existed": os.path.exists(live_abs),
+        "base_sha": _file_sha(live_abs)}
     _save_session(repo, sess)
     return True
 
@@ -568,6 +580,35 @@ def verify(repo: str, sess: dict):
     checks.append({"gate": "live_sync", "passed": ok_sync, "detail": sync_detail[:800]})
     if not ok_sync:
         return False, checks               # 낡은 베이스 위의 관문은 초록도 빨강도 못 믿는다
+
+    # ★적재 파일 자체의 라이브 드리프트 (2026-08-31 ep2461 봉합) — live_sync 는 세션
+    # 적재분을 건너뛰므로(스테이징이 이긴다), 스테이징~적용 사이에 **같은 경로**가
+    # 라이브에서 다른 내용으로 바뀌면(재실행 턴의 직접 커밋 등) 여기서만 잡을 수 있다.
+    # 조용히 덮으면 나중 판본이 옛 초안에 진다(last-writer-loses). 지문 셋 비교:
+    # 라이브가 씨(base_sha)도 격리본도 아닌 제3의 내용이면 충돌 — 라이브 무변경으로 거절.
+    drifted = []
+    for live_abs, rec in (sess.get("files") or {}).items():
+        if "base_sha" not in rec:
+            continue                       # 옛 세션(지문 없음) — 소급 판정 불가, 종전 동작
+        live_sha = _file_sha(live_abs)
+        if live_sha == rec["base_sha"]:
+            continue                       # 라이브 불변 — 정상
+        if rec.get("op") == "delete":
+            if live_sha is None:
+                continue                   # 이미 사라짐 — 삭제 적용은 무해한 no-op
+        elif live_sha is not None and live_sha == _file_sha(rec.get("staged") or ""):
+            continue                       # 라이브가 이미 격리본과 동일 — 무해
+        drifted.append(rec.get("rel") or live_abs)
+    checks.append({
+        "gate": "staged_drift", "passed": not drifted,
+        "detail": ("" if not drifted else
+                   "적재 파일이 스테이징 이후 라이브에서 다른 내용으로 바뀌었습니다: "
+                   + ", ".join(drifted)
+                   + " — 조용히 덮지 않습니다. 라이브 현재본을 확인해 격리본에 합치든가, "
+                     "이 세션의 해당 적재를 discard 후 다시 쓰세요.")[:1200],
+    })
+    if drifted:
+        return False, checks
 
     # 0. 삭제 — 남는 쪽의 import 가 깨지지 않는지 (삭제 고유의 위험)
     if del_rels:
@@ -1210,10 +1251,26 @@ def op_propose(ti):
 
     abs_target = os.path.realpath(raw_path if os.path.isabs(raw_path)
                                   else os.path.join(repo, raw_path))
-    if red_check and red_check(abs_target) is None:
+    # ★구역 소속과 위반 여부를 가른다(2026-08-31 ep2461): _red_check(위반 판정)는
+    # 수리 그랜트가 활성이면 RED 경로에도 None 을 주는데, 옛 코드는 그 None 을
+    # '비-RED'로 읽어 backend/ 경로의 propose 를 "RED 전용"이라며 5연속 오거절했고,
+    # 오답 안내가 우회(게이트 밖 직접 쓰기)를 각인시켰다. 소속은 _red_is_live 로 묻는다.
+    red_is_live = ti.get("_red_is_live")
+    in_red = (bool(red_is_live(abs_target, repo)) if red_is_live
+              else (red_check is not None and red_check(abs_target) is not None))
+    if not in_red:
         return {"success": False, "error":
                 "propose 는 RED 구역(backend/·frontend/·scripts/) 전용입니다. "
                 "그 밖의 파일은 [self:write]/[self:edit] 로 직접 쓰세요."}
+    if red_check and red_check(abs_target) is None:
+        # RED 인데 위반 없음 = 직접 쓰기가 허용된 상태(수리 그랜트 활성 등). propose 는
+        # 그랜트 없는 자율 태스크의 입구다 — 여기서 별도 proposal 세션을 열면
+        # apply(그랜트 키)가 못 보는 곳에 쌓인다.
+        return {"success": False, "error":
+                "이 경로는 지금 직접 쓰기가 허용된 상태입니다(수리 그랜트 활성 등) — "
+                "[self:write]/[self:edit] 가 자동으로 격리 세션에 적재되고 "
+                "[self:patch]{op:\"apply\"} 가 검증 후 반영합니다. "
+                "propose 대신 [self:write]/[self:edit] 를 쓰세요."}
     rel_target = os.path.relpath(abs_target, repo)
     if rel_target.startswith(".."):
         return {"success": False, "error": f"repo 밖 경로는 propose 대상이 아닙니다: {abs_target}"}

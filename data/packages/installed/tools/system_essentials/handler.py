@@ -229,17 +229,22 @@ def _red_zone_violation(abs_path: str) -> str | None:
 # 워치독(backend/red_watchdog.py)은 start_new_session 분리 프로세스라 uvicorn 이
 # 깨진 import 로 죽어도 살아남아 백업을 복원하고 touch 로 재기동을 유발한다.
 
-def _red_is_live_path(abs_path: str) -> bool:
-    """RED 구역 실경로인가(정적 자산 면제·안전장치 파일 승격 반영). 안전판 적용 대상 판정."""
-    if _REPO_ROOT is None:
+def _red_is_live_path(abs_path: str, root=None) -> bool:
+    """RED 구역 실경로인가(정적 자산 면제·안전장치 파일 승격 반영). 안전판 적용 대상 판정.
+
+    root 를 주면 그 저장소 기준으로 판정한다(기본=판정자의 집 _REPO_ROOT) — propose 의
+    '구역 소속' 물음은 위반 여부와 달리 **그랜트와 무관**해야 해서 이 술어를 빌려 쓴다
+    (2026-08-31 ep2461: 위반 없음=비-RED 로 읽던 propose 가 수리 그랜트 중 5연속 오거절)."""
+    base = Path(root) if root else _REPO_ROOT
+    if base is None:
         return False
     real = os.path.realpath(abs_path)
     if real == _SELF_FILE:
         return True  # 게이트 자신 — data/ 구역이지만 RED 대우(백업·워치독)
-    if _is_static_asset(real, str(_REPO_ROOT)):
+    if _is_static_asset(real, str(base)):
         return False
     for d in _RED_ZONE_DIRS:
-        red_root = str(_REPO_ROOT / d)
+        red_root = str(base / d)
         if real == red_root or real.startswith(red_root + os.sep):
             return True
     return False
@@ -523,6 +528,7 @@ def _patch_op(fn_name):
             "_grant_key": _staging_key(),
             "_grant_denial": _grant_denial_note(),
             "_red_check": _red_zone_violation,
+            "_red_is_live": _red_is_live_path,
             "_red_prepare": _red_write_prepare,
             "_red_finalize": _red_write_finalize,
         })

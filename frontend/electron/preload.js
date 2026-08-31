@@ -37,6 +37,11 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.removeAllListeners('forage-retweet-link');
   },
 
+  // 내장 alert/confirm 의 메인프로세스 판 — 윈도우 포커스 유실 버그(electron#19977) 우회.
+  // src/main.tsx 부트스트랩이 window.alert/confirm 을 이걸로 갈아끼운다.
+  dialogAlert: (message) => ipcRenderer.sendSync('native-dialog', 'alert', message),
+  dialogConfirm: (message) => ipcRenderer.sendSync('native-dialog', 'confirm', message),
+
   // 앱 정보
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),
 

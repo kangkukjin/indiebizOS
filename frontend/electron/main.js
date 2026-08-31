@@ -336,6 +336,19 @@ function setupIPC() {
     return null;
   });
 
+  // 내장 alert()/confirm() 대체 (sync) — 윈도우에서 Chromium JS 다이얼로그가 닫힌 뒤
+  // 렌더러가 키보드 포커스를 잃어 입력창이 죽는 버그(electron#19977) 우회.
+  // 렌더러 부트스트랩(src/main.tsx)이 window.alert/confirm 을 이 IPC 판으로 갈아끼운다.
+  ipcMain.on('native-dialog', (event, kind, message) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const opts = kind === 'confirm'
+      ? { type: 'question', message: String(message ?? ''), buttons: ['확인', '취소'], defaultId: 0, cancelId: 1, noLink: true }
+      : { type: 'info', message: String(message ?? ''), buttons: ['확인'], noLink: true };
+    const r = win && !win.isDestroyed() ? dialog.showMessageBoxSync(win, opts) : dialog.showMessageBoxSync(opts);
+    if (process.platform === 'win32' && win && !win.isDestroyed()) { win.blur(); win.focus(); }
+    event.returnValue = kind === 'confirm' ? r === 0 : true;
+  });
+
   // 폴더 선택 다이얼로그
   ipcMain.handle('select-folder', async () => {
     const result = await dialog.showOpenDialog({

@@ -106,6 +106,10 @@
             "type": "string",
             "description": "nostr 연락처 동시 연결 (save — IndieNet 팔로우→이웃 승격용, 멱등)"
           },
+          "warehouse": {
+            "type": "string",
+            "description": "창고 주소 url (save — 창고이웃 등록. 연락처+등기부+첫 폴링, npub 앵커·중복 방지 멱등)"
+          },
           "warehouse_score": {
             "type": "integer",
             "description": "이웃의 창고에 주는 창고점수 0-3 (save — 창고 연락처 있는 이웃만 유효)"

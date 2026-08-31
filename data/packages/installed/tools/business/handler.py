@@ -413,7 +413,24 @@ def _nb_save(bm, ti: dict) -> str:
     """이웃 생성(id 없음)/수정(id 있음) — 이름·정보레벨·평점·정보공유·메모·비즈니스문서.
 
     npub 옵션: nostr 연락처를 함께 연결(IndieNet 팔로우→이웃 승격 다리). 같은 npub 이
-    이미 이웃이면 새로 만들지 않고 그 이웃을 반환(멱등 — 승격 버튼 중복 클릭 안전)."""
+    이미 이웃이면 새로 만들지 않고 그 이웃을 반환(멱등 — 승격 버튼 중복 클릭 안전).
+
+    warehouse 옵션(url): 창고이웃 등록 — 창고 연락처+등기부+첫 폴링을 코어
+    (warehouse_feed.register_neighbor)로 수행. 이웃찾기·게시판의 등록 버튼과 단일 로직.
+    npub 신원 앵커·주소 중복 방지 전부 코어가 쥔다(멱등 — 재클릭 안전)."""
+    wh_url = (ti.get("warehouse") or "").strip()
+    if wh_url:
+        import warehouse_feed as _wf
+        try:
+            r = _wf.register_neighbor(url=wh_url, npub=(ti.get("npub") or ""),
+                                      name=(ti.get("name") or ""),
+                                      neighbor_id=_int_or(ti.get("id") or ti.get("neighbor_id")))
+        except (ValueError, LookupError) as e:
+            return _err(str(e))
+        nb = r["neighbor"]
+        msg = (f"이미 등록된 창고입니다: {nb.get('name', '')}" if r.get("already")
+               else f"창고이웃으로 등록했습니다: {nb.get('name', '')} — 이웃 탭 피드에 소식이 흐릅니다.")
+        return _ok({"neighbor": nb, "poll": r.get("poll")}, msg)
     nid = _int_or(ti.get("id") or ti.get("neighbor_id"))
     npub = (ti.get("npub") or "").strip()
     fields = {}

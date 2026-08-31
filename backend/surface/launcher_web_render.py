@@ -344,11 +344,17 @@ function renderPrim(p,vi,data){
   if(p.type==='thread'){
     const arr=viewList(data,p.from);
     if(!arr.length) return emptyMsg(p,data);
-    return '<div class="thread">'+arr.map(it=>{
+    // 항목 버튼(item_button) — 본문이 match(정규식, i)와 일치하는 항목에만 붙는 선언형 버튼
+    // (2026-08-31 뷰 어휘 개정). 계약(정규식·라벨·액션)은 매니페스트 데이터 — 렌더러는 내용어를 모른다.
+    let ibRe=null;
+    if(p.item_button&&p.item_button.action&&p.item_button.match){ try{ ibRe=new RegExp(p.item_button.match,'i'); }catch(e){} }
+    return '<div class="thread">'+arr.map((it,ri)=>{
       const mine=p.mine?!!jget(it,p.mine):false;
       const st=p.status?statusGlyph(jget(it,p.status)||''):'';
       const foot=[p.meta?tpl(p.meta,it):'', p.time?tpl(p.time,it):'', st].filter(Boolean).join(' · ');
-      return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+tpl(p.text,it)+'</div>'+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
+      const txt=tpl(p.text,it);
+      const ibtn=(ibRe&&ibRe.test(txt))?'<div><button class="btn2" style="margin-top:4px" onclick="threadIbBtn('+vi+','+ri+',this)">'+esc(p.item_button.label||'실행')+'</button></div>':'';
+      return '<div class="tmsg'+(mine?' me':'')+'"><div class="tbub">'+txt+'</div>'+ibtn+(foot?'<div class="tfoot">'+foot+'</div>':'')+'</div>';
     }).join('')+'</div>';
   }
   if(p.type==='blocks'){
@@ -680,6 +686,25 @@ async function rowBtn(vi,ri,btn,key){
       if(d&&d.message) toast(d.message);
       if(r.prim[key].refresh) await refreshCurrent();
     }
+  }
+  catch(e){ alert('실행 실패: '+e.message); }
+  finally{ btn.disabled=false; btn.textContent=old; }
+}
+/* thread 항목 버튼 — 본문 정규식 재실행으로 캡처 그룹({match1}..{matchN})을 행 필드에 합쳐
+   액션 템플릿에 공급한다 (데스크탑 GenericInstrument thread item_button 과 동형). */
+async function threadIbBtn(vi,ri,btn){
+  const r=rowItem(vi,ri); const ib=r&&r.prim.item_button;
+  if(!ib||!ib.action) return;
+  let re=null; try{ re=new RegExp(ib.match||'','i'); }catch(e){ return; }
+  const m=tpl(r.prim.text,r.item).match(re); if(!m) return;
+  const item=Object.assign({},r.item);
+  for(let gi=1;gi<m.length;gi++) item['match'+gi]=m[gi]==null?'':m[gi];
+  const action=rowAction(ib.action,item);
+  btn.disabled=true; const old=btn.textContent; btn.textContent='…';
+  try{
+    const d=await ibl(action);
+    if(d&&d.error) alert(d.error);
+    else{ if(d&&d.message) toast(d.message); if(ib.refresh) await refreshCurrent(); }
   }
   catch(e){ alert('실행 실패: '+e.message); }
   finally{ btn.disabled=false; btn.textContent=old; }

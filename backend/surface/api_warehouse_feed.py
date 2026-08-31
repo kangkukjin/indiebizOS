@@ -106,56 +106,25 @@ async def add_warehouse_neighbor(request: Request):
     neighbor_id → 기존 이웃에 달기 / name → 그 이름 이웃(없으면 생성)에 달기 /
     둘 다 없으면 → 창고 제목(매니페스트 title)·호스트명으로 이웃 생성(주소만 아는 상대)."""
     body = await _body(request)
+    # 몸통은 warehouse_feed.register_neighbor 코어(2026-08-31 하강) — IBL 어휘
+    # ([others:neighbor]{op:"save", warehouse})와 단일 로직. ★스레드로(자기교착 방지:
+    # 루프에서 동기 HTTP(첫 폴링)를 하면 Worker→터널로 돌아오는 자기 manifest 요청을 못 받는다)
+    try:
+        r = await to_thread.run_sync(lambda: wf.register_neighbor(
+            url=body.get("url") or "",
+            npub=body.get("npub") or "",
+            name=body.get("name") or "",
+            neighbor_id=body.get("neighbor_id"),
+            adapter=body.get("adapter") or "",
+            memo=body.get("memo"),
+        ))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     url = wf.normalize_base(body.get("url") or "")
-    if not url:
-        raise HTTPException(status_code=400, detail="창고 주소(url)가 필요해요")
-    # npub = 서명된 신원(선택) — 이웃찾기 탭이 소개 작성자의 npub 을 함께 보낸다.
-    # 창고(풀)·nostr(푸시) 두 접점을 한 이웃에 모으고, 신원 기준 중복 등록을 막는 앵커.
-    npub = (body.get("npub") or "").strip()
-    if not npub.startswith("npub"):
-        npub = ""                      # hex·축약 등 비정형은 버림 (contacts 규약 = npub 문자열)
-    bm = _bm()
-    # 같은 주소가 이미 등기부에 있으면 그 카드 반환 (중복 등록 방지).
-    # npub 이 딸려 왔고 아직 누구에게도 없으면 그 이웃에게 붙여준다 — 재클릭이 신원을 치유.
-    dup = bm.get_neighbor_by_contact("warehouse", url)
-    if dup:
-        if npub and not bm.get_neighbor_by_contact("nostr", npub):
-            bm.add_contact(dup["id"], "nostr", npub)
-        return {"neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None),
-                "poll": {"ok": True, "note": "이미 등록된 창고"}}
-    # 첫 폴링을 먼저 — 연결 확인 + 이름 유도(title)에 쓴다. ★스레드로(자기교착 방지:
-    # 루프에서 동기 HTTP 를 하면 Worker→터널로 돌아오는 자기 manifest 요청을 못 받는다)
-    # adapter = 등록하는 쪽이 이미 아는 정체(장르 둘러보기의 'neocities|<사이트명>').
-    # 커스텀 도메인 Neocities 는 자동 감지가 'page' 로 떨어져 변화 피드가 얇아진다.
-    hint = (body.get("adapter") or "").strip()
-    poll = await to_thread.run_sync(lambda: wf.poll_warehouse(url, hint=hint))
-    # 호출자가 npub 을 안 줬으면(주소만 등록) 매니페스트의 자기선언 npub 을 앵커로 —
-    # 주소만 아는 상대도 신원 있는 레코드로 합류해 "같은 사람 2명"을 처음부터 막는다.
-    if not npub:
-        m_npub = (poll.get("npub") or "").strip()
-        npub = m_npub if m_npub.startswith("npub") else ""
-    neighbor_id = body.get("neighbor_id")
-    name = (body.get("name") or "").strip()
-    # ★신원 앵커 우선: 같은 npub 의 이웃이 이미 있으면(커뮤니티/메신저 경로로 등록된 그 사람)
-    #   새 이웃을 만들지 않고 그에게 창고 연락처를 단다 — 경로가 달라도 레코드는 하나.
-    n = bm.get_neighbor_by_contact("nostr", npub) if npub else None
-    if n is None and neighbor_id:
-        n = bm.get_neighbor(int(neighbor_id))
-        if not n:
-            raise HTTPException(status_code=404, detail="이웃을 찾을 수 없어요")
-    elif n is None:
-        if not name:
-            # 주소만 아는 상대 — 창고 제목이 곧 그 사람의 이름표
-            name = (poll.get("title") or "").strip() or (urlparse(url).hostname or url)
-        matches = [x for x in bm.get_neighbors(search=name) if x["name"] == name]
-        n = matches[0] if matches else bm.create_neighbor(name=name, info_level=0)
-    bm.add_contact(n["id"], "warehouse", url)
-    if npub and not bm.get_neighbor_by_contact("nostr", npub):
-        bm.add_contact(n["id"], "nostr", npub)
-    if body.get("memo") is not None:
-        bm.update_neighbor_warehouse(n["id"], warehouse_memo=str(body.get("memo")))
     return {"neighbor": next((c for c in _cards() if c["warehouse_url"] == url), None),
-            "poll": poll}
+            "poll": r["poll"]}
 
 
 @router.post("/neighbors/remove")

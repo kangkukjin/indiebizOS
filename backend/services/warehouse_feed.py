@@ -171,6 +171,61 @@ def _bm():
     return _bm_instance
 
 
+def register_neighbor(url: str, npub: str = "", name: str = "",
+                      neighbor_id: Optional[int] = None, adapter: str = "",
+                      memo: Optional[str] = None) -> Dict:
+    """창고이웃 등록 코어 — 창고 연락처 추가 + 첫 폴링 + npub 신원 앵커.
+
+    /warehouse-feed/neighbors/add 엔드포인트의 몸통을 내린 것(2026-08-31) —
+    IBL 어휘([others:neighbor]{op:"save", warehouse})가 같은 로직을 재사용한다.
+    두 벌로 갈라 두면 중복 방지·신원 앵커가 한쪽만 고쳐져 조용히 갈라진다.
+
+    반환: {"neighbor": 이웃 dict, "poll": 폴링 결과, "already": 기등록 여부}.
+    실패는 ValueError(주소 없음)·LookupError(neighbor_id 미실존)로 던진다 — 표면이 번역.
+    """
+    from urllib.parse import urlparse
+    url = normalize_base(url or "")
+    if not url:
+        raise ValueError("창고 주소(url)가 필요해요")
+    npub = (npub or "").strip()
+    if not npub.startswith("npub") or len(npub) != 63:
+        npub = ""    # hex·축약(…표시 잘림 포함) 등 비정형은 버림 — 잘린 npub 이 prefix 검사를
+                     # 통과해 유령 연락처가 붙었던 실측(2026-08-31 contact 56). bech32 npub=63자.
+    bm = _bm()
+    # 같은 주소가 이미 등기부에 있으면 그 이웃 반환 (중복 등록 방지).
+    # npub 이 딸려 왔고 아직 누구에게도 없으면 그 이웃에게 붙여준다 — 재클릭이 신원을 치유.
+    dup = bm.get_neighbor_by_contact("warehouse", url)
+    if dup:
+        if npub and not bm.get_neighbor_by_contact("nostr", npub):
+            bm.add_contact(dup["id"], "nostr", npub)
+        return {"neighbor": dup, "poll": {"ok": True, "note": "이미 등록된 창고"}, "already": True}
+    # 첫 폴링 — 연결 확인 + 이름 유도(title). adapter = 등록하는 쪽이 이미 아는 정체.
+    poll = poll_warehouse(url, hint=(adapter or "").strip())
+    # 호출자가 npub 을 안 줬으면(주소만 등록) 매니페스트의 자기선언 npub 을 앵커로.
+    if not npub:
+        m_npub = (poll.get("npub") or "").strip()
+        npub = m_npub if m_npub.startswith("npub") else ""
+    name = (name or "").strip()
+    # ★신원 앵커 우선: 같은 npub 의 이웃이 이미 있으면 새 이웃을 만들지 않고 그에게 단다.
+    n = bm.get_neighbor_by_contact("nostr", npub) if npub else None
+    if n is None and neighbor_id:
+        n = bm.get_neighbor(int(neighbor_id))
+        if not n:
+            raise LookupError("이웃을 찾을 수 없어요")
+    elif n is None:
+        if not name:
+            # 주소만 아는 상대 — 창고 제목이 곧 그 사람의 이름표
+            name = (poll.get("title") or "").strip() or (urlparse(url).hostname or url)
+        matches = [x for x in bm.get_neighbors(search=name) if x["name"] == name]
+        n = matches[0] if matches else bm.create_neighbor(name=name, info_level=0)
+    bm.add_contact(n["id"], "warehouse", url)
+    if npub and not bm.get_neighbor_by_contact("nostr", npub):
+        bm.add_contact(n["id"], "nostr", npub)
+    if memo is not None:
+        bm.update_neighbor_warehouse(n["id"], warehouse_memo=str(memo))
+    return {"neighbor": n, "poll": poll, "already": False}
+
+
 def fetch_manifest(url: str) -> Dict:
     """창고 매니페스트 한 번 가져오기 (등록 시 제목 유도 등에도 사용)."""
     base = normalize_base(url)

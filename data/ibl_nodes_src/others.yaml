@@ -155,6 +155,12 @@
               text: '{content}'
               meta: '{author}'
               time: '{time}'
+              # 창고 소개 계약("공유창고 Warehouse : <url>" — indienet_publish.publish_intro)이
+              # 실린 글에만 등록 버튼. 계약=데이터(이 정규식), 등록 로직=warehouse_feed.register_neighbor.
+              item_button:
+                match: '공유창고\s*Warehouse\s*:\s*(https?://\S+)'
+                label: 📦 창고이웃 등록
+                action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
             compose:
               placeholder: 이 게시판에 글 쓰기…
               action: '[others:feed]{op: "post", content: "$text", hashtag: "$tag"}'
@@ -183,6 +189,10 @@
                   text: '{content}'
                   meta: '{author}'
                   time: '{time}'
+                  item_button:
+                    match: '공유창고\s*Warehouse\s*:\s*(https?://\S+)'
+                    label: 📦 창고이웃 등록
+                    action: '[others:neighbor]{op: "save", npub: "{author_full}", warehouse: "{match1}"}'
                 compose:
                   placeholder: 이 게시판에 글 쓰기…
                   action: '[others:feed]{op: "post", content: "$text", hashtag: "{hashtag}"}'

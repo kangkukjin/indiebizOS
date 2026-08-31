@@ -242,6 +242,13 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   if (p.type === 'thread') {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
+    // 항목 버튼(item_button) — 본문이 match(정규식, i 플래그)와 일치하는 항목에만 붙는
+    // 선언형 버튼 (2026-08-31 뷰 어휘 개정). 캡처 그룹은 {match1}..{matchN} 필드로 액션
+    // 템플릿에 들어간다. 계약(정규식·라벨·액션)은 전부 매니페스트 데이터 — 렌더러는
+    // 내용어(창고 등)를 모른다(표준/사전 경계).
+    const ib = p.item_button as { match?: string; label?: string; action?: string; refresh?: boolean } | undefined;
+    let ibRe: RegExp | null = null;
+    try { ibRe = ib?.match && ib?.action ? new RegExp(ib.match, 'i') : null; } catch { ibRe = null; }
     return (
       <div className="flex flex-col gap-1.5 py-1">
         {arr.map((it, i) => {
@@ -250,12 +257,26 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
           const time = p.time ? tpl(p.time, it) : '';
           const status = p.status ? statusGlyph(String(jget(it, p.status as string) || '')) : '';
           const foot = [meta, time, status].filter(Boolean).join(' · ');
+          const text = tpl(p.text, it);
+          const m = ibRe ? text.match(ibRe) : null;
+          const rowKey = `${p.type}-ib-${i}`;
           return (
             <div key={i} className={`flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
               <div className={`max-w-[78%] px-3.5 py-2 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
                 mine ? 'bg-stone-800 text-white rounded-br-sm' : 'bg-white border border-stone-200 text-stone-800 rounded-bl-sm'}`}>
-                {tpl(p.text, it)}
+                {text}
               </div>
+              {m && (
+                <button disabled={busyRow === rowKey}
+                  onClick={() => {
+                    const ext: Json = { ...it };
+                    m.slice(1).forEach((g, gi) => { ext[`match${gi + 1}`] = g ?? ''; });
+                    onRowAction(ib!.action!, ext, rowKey, ib!.refresh);
+                  }}
+                  className="mt-1 px-2.5 py-1 rounded-lg border border-stone-200 text-xs text-stone-600 hover:border-stone-400 disabled:opacity-40">
+                  {busyRow === rowKey ? '…' : (ib!.label || '실행')}
+                </button>
+              )}
               {foot && <div className="text-[10px] text-stone-400 mt-0.5 px-1">{foot}</div>}
             </div>
           );

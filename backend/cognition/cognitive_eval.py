@@ -238,6 +238,69 @@ class CognitiveEvalMixin:
             self._log(f"[GoalEval] 시각 산출물 {len(valid)}개 중 {len(artifacts)}개만 평가 첨부(상한)")
         return artifacts
 
+    # 예약이 이보다 오래 apply_scheduled 로 남아 있으면 수행자(red_apply) 좌초로 보고
+    # 주입하지 않는다 — red_report.SCHEDULED_STALE_S 와 같은 값(그쪽이 좌초 재보고를 맡는다).
+    _SCHEDULED_FRESH_S = 30 * 60
+
+    def _scheduled_repair_note(self) -> str:
+        """이 턴에 걸린 backend 지연 적용 예약을 평가자용 사실 문단으로 만든다 (없으면 "").
+
+        ★왜(2026-08-31, ep2386 실측): backend/*.py 가 낀 수리는 검증 통과 후 라이브 쓰기가
+        턴 종료 뒤 분리 수행자(red_apply)로 미뤄진다 — 증상 소멸의 실측은 구조적으로 이 턴
+        밖이다(재현·회귀는 verify_cmd 위탁, 판정 보고는 red_report 가 다음 턴에). 평가자가
+        이 사실을 모르면 정직한 "적용 예약됨" 보고를 미완으로 찍고 재실행을 라운드 소진까지
+        돌린 뒤 증류에서도 제외한다 — 올바른 수리 패턴이 학습되지 못해 헤맴이 재생산된다.
+        상태는 수리 세션 원장(데이터)에서 읽는다 — 산문 지시가 아니라 기계 판독이 진실.
+        """
+        try:
+            import json as _json
+            from datetime import datetime as _dt
+            from thread_context import get_current_task_id
+            from runtime_utils import get_base_path
+            tid = (get_current_task_id() or "").strip()
+            if not tid:
+                return ""
+            # 키 규칙은 repair_staging.task_key 와 동일 — 정본은 그쪽(데이터 계약 복제 1줄).
+            key = re.sub(r"[^A-Za-z0-9_-]", "_", tid)[:48] or "notask"
+            sess_dir = get_base_path() / "data" / "system_ai_state" / "repair_sessions"
+            sess_path = sess_dir / f"{key}.json"
+            if not sess_path.is_file():
+                return ""
+            sess = _json.loads(sess_path.read_text(encoding="utf-8"))
+            if sess.get("status") != "apply_scheduled":
+                return ""
+            try:
+                age_s = (_dt.now() - _dt.fromisoformat(sess["scheduled_at"])).total_seconds()
+                if age_s > self._SCHEDULED_FRESH_S:
+                    return ""   # 좌초된 옛 예약 — 이 턴의 사실이 아니다
+            except Exception:
+                pass
+            rels = sorted(r.get("rel") or "" for r in (sess.get("files") or {}).values())
+            files_str = ", ".join(f"`{r}`" for r in rels if r) or "(파일 목록 미기재)"
+            verify_cmd = ""
+            try:
+                job = _json.loads((sess_dir / f"{key}.apply.json").read_text(encoding="utf-8"))
+                verify_cmd = (job.get("verify_cmd") or "").strip()
+            except Exception:
+                pass
+            verify_line = (
+                f"적용 후 재현 검증은 verify_cmd(`{verify_cmd[:160]}`)로 수행자에게 위탁되었다."
+                if verify_cmd else
+                "적용 후 재현 검증 명령(verify_cmd)은 위탁되지 않았다 — 이 부재는 경미한 "
+                "피드백으로 지적해도 되나, 아래 판정 규칙을 뒤집는 사유는 아니다.")
+            return (
+                "## 자기수리 지연 적용 상태 (기계 판독 — 수리 세션 원장)\n"
+                f"이 턴의 backend 수리는 검증 관문 통과 후 **적용이 예약**되었다(대상: {files_str}). "
+                "라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자(red_apply)가 재검증 후 수행하고, "
+                f"{verify_line} 판정은 다음 턴 보고(red_report)가 소유한다.\n"
+                "**판정 규칙**: 증상 소멸·수리 효과의 턴 내 실측은 구조적으로 불가능하다 — "
+                "달성 기준에 '재실행으로 증상 소멸 실측' 류 항목이 있어도, 이 턴에서는 "
+                "\"검증 통과·적용 예약됨(판정은 다음 턴)\" 보고가 그 항목의 충족이다. "
+                "턴 내 미실측을 이유로 NOT_ACHIEVED 를 내리지 마라 — 재실행해도 같은 벽에 "
+                "부딪히는 낭비만 반복된다.\n\n")
+        except Exception:
+            return ""   # 주입은 보강 — 실패해도 평가 자체를 막지 않는다
+
     _evaluator_prompt_cache: str = ""
 
     @classmethod
@@ -288,6 +351,10 @@ class CognitiveEvalMixin:
             f"## 사용자 요청\n{user_message}\n\n"
             f"## 달성 기준\n{criteria}\n\n"
         )
+
+        # 지연 적용 예약이 걸린 턴이면 그 사실을 기준 직후에 주입 — 평가자가 "증상 소멸
+        # 미실측"을 미달 사유로 삼아 재실행 루프를 헛돌리지 않게 한다(ep2386 실측).
+        prompt += self._scheduled_repair_note()
 
         # 검증용 액션 원장 — 기준 직후에 배치(인접성). 에이전트의 '서술'이 아니라
         # 실제 호출 로그에서 추출한 '사실'. 안 한 일의 부재를 평가자가 볼 수 있게 한다.

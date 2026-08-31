@@ -238,7 +238,7 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
                         "[if: 조건]{[액션]} [else]{[액션]} / "
                         '[case: 소스]{"값": [액션], default: [액션]}. '
                         "헤더와 몸을 줄로 나누면 파싱되지 않습니다.")
-                raise IBLSyntaxError(f"파싱 실패: {_st}")
+                raise IBLSyntaxError(f"파싱 실패: {_st}{_foreign_comment_hint(_st)}")
             # 변수 참조 치환 — 앞 문장들에서 할당된 변수만 보인다(자기/앞선 참조 방지)
             # 파이프 속 블록(M6: `[A] >> [if:…]{…} >> [B]`, `[repeat:…]{…} >> [table:dedup]`)은 블록 규약으로.
             if _is_block_step(parsed):
@@ -359,6 +359,33 @@ _STEP_PATTERN = re.compile(
 from common.ibl_vars import (ASSIGN_RE as _VAR_ASSIGN_PATTERN,  # noqa: E402
                              REF_RE as _VAR_REF_PATTERN,
                              find_names as _var_names, sub_ref as _sub_var_ref)
+
+
+# 타 언어 주석 표식 — IBL 의 주석은 `#` 하나뿐인데, 모델은 자기 모어(母語)의 표식을
+# 그대로 쓴다. 맨 "파싱 실패: // 투자·경제…" 는 무엇이 틀렸는지 안 알려줘 자가교정을
+# 못 이끈다(실측 ep2455 AI동향 보고서 04:07 — Codex 가 `// 투자·경제: 한국어/영어 4회`
+# 를 앞줄에 달아 4-액션 배치가 통째로 거절, 라운드 하나를 버렸다).
+# ★여기서 `//` 를 주석으로 *받아들이지는* 않는다 — 주석 표식은 문법이고, 문법 변경은
+#   언어 개정(사용자 판정 사안)이다. 이 자리가 하는 일은 진단뿐이다.
+_FOREIGN_COMMENT_MARKS = (
+    ("<!--", "HTML"), ("//", "C·JS 계열"), ("/*", "C 블록"), ("*/", "C 블록"),
+    ("--", "SQL·Lua"), (chr(34) * 3, "파이썬 독스트링"), (chr(39) * 3, "파이썬 독스트링"),
+    (";", "Lisp·어셈블리"), ("%", "LaTeX·MATLAB"), ("REM ", "배치"), ("rem ", "배치"),
+)
+
+
+def _foreign_comment_hint(text: str) -> str:
+    """세그먼트가 타 언어 주석으로 시작하면 IBL 주석 규약을 일러주는 문장, 아니면 ''.
+
+    긴 표식이 앞에 오도록 정렬돼 있다(`<!--` 가 `-` 계열보다, `/*` 가 `//` 보다 먼저).
+    """
+    t = (text or "").lstrip()
+    for mark, lang in _FOREIGN_COMMENT_MARKS:
+        if t.startswith(mark):
+            body = t[len(mark):].strip()[:40]
+            return (" — `%s` 는 %s 주석 표식입니다. IBL 의 주석은 `#` 하나뿐이니 "
+                    "`# %s` 처럼 쓰거나 지우세요." % (mark, lang, body))
+    return ""
 
 
 def _preprocess(code: str) -> List[str]:
@@ -942,8 +969,8 @@ def _parse_step(text: str) -> Optional[Dict]:
     #   c:d 가 실행되지 않았다. 단, `#` 로 시작하는 잔여는 인라인 주석으로 무해 폐기
     #   (기존 관대함 유지 — 코드가 아니라 실행 유실이 없다).
     if leftover and not leftover.startswith('#'):
-        hint = ""
-        if _STEP_PATTERN.search(leftover):
+        hint = _foreign_comment_hint(leftover)
+        if not hint and _STEP_PATTERN.search(leftover):
             hint = " 여러 스텝을 이으려면 >> (순차), & (병렬), ?? (폴백) 연산자를 쓰세요."
         raise IBLSyntaxError(
             f"스텝 뒤에 해석되지 않은 텍스트가 있습니다: '{leftover[:80]}'.{hint}\n"

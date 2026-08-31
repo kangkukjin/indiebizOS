@@ -59,9 +59,12 @@ WRONG: [sense:stock]("AAPL")             # positional 인자 없음 — 모든 �
 RIGHT: [self:time]                        # 직접 액션명 사용
 RIGHT: [sense:stock]{op: "quote", ticker: "AAPL"}    # 모든 값은 named parameter
 RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여도 named
+WRONG: // 1단계: 검색                     # //, /*, --, <!-- 는 IBL 주석이 아님 — 문장째 거절된다
+RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머리·꼬리 모두 가능)
 ```
 - 일반 동사(get, run 등)는 액션명이 아니다. 항상 구체적 액션명을 사용하라.
 - 괄호 positional 인자는 존재하지 않는다. 모든 값은 `{key: val}` 안에 작성.
+- 주석 표식은 `#` 하나다. 다른 언어의 표식(`//` `/*` `--` `<!--`)은 액션으로 파싱을 시도하다 배치 전체가 거절된다.
 
 ## 단일 액션 + op 분기 패턴 (라운드 2 통합 후 표준)
 

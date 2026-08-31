@@ -79,6 +79,25 @@ retired:
       - "파이프 속에는 넣을 수 없다"
       - "파이프 안에 넣을 수 없다"
 
+  - id: business-four-siblings-to-ledger
+    retired: 2026-08-15
+    reason: >-
+      사업 원장 통합(390e3bcd)이 self:business/business_item/business_document/
+      work_guideline 4형제를 [self:ledger]{store, op} 로 흡수했다. 그러나 이 은퇴는
+      등록부(2026-08-27 탄생) 이전이라 등재가 없었고, 관문 스캔 표면에 frontend/ 도
+      빠져 있어서, 소개발행 버튼 2곳(WarehouseView.tsx·launcher_app_warehouse.py)이
+      은퇴 어휘 [self:business_document] 를 16일간 호출하며 "액션이 없습니다"로
+      죽었다(윈도우 설치본 실측 2026-08-31). 소급 등재 의무는 없지만 잔재가 실증된
+      은퇴는 등재한다 — 재발이 곧 사유다.
+    instead: >-
+      [self:ledger]{store: "business"|"item"|"document"|"guideline", op: ...} 하나.
+      공개인사프로필 발행은 [self:ledger]{store: "document", op: "publish"}.
+    phrases:
+      - "[self:business]"
+      - "[self:business_item]"
+      - "[self:business_document]"
+      - "[self:work_guideline]"
+
   - id: system-ai-providers-endpoint
     retired: 2026-08-31
     reason: >-

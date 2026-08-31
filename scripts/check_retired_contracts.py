@@ -51,6 +51,12 @@ SCAN_GLOBS = [
     "data/common_prompts/**/*.md",
     "backend/**/*.py",
     "scripts/*.py",
+    # 프론트 표면 — 2026-08-31 실측: 8/15 원장 통합의 은퇴 어휘 [self:business_document]
+    # 가 소개발행 버튼(WarehouseView.tsx)에 16일간 살아남았는데 여기 없어서 못 잡았다.
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "frontend/src/**/*.js",
+    "frontend/electron/*.js",
 ]
 SKIP_PARTS = {"__pycache__", "node_modules", "_backups", "red_backups",
               "_archive", ".venv", "build", "dist"}

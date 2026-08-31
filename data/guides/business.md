@@ -14,6 +14,7 @@
 > | 메시지 조회 | **`[others:messages]{op}`** |
 > | 외부 발신(이메일·Nostr) | **`[others:channel_send]{channel_type, to, subject, body}`** |
 >
+<!-- retired-ok: 은퇴 어휘를 이름 불러 거절하고 참 계약(ledger)으로 안내하는 자리 -->
 > 옛 이름 `[self:business]`·`[self:business_item]`·`[self:business_document]`·`[self:work_guideline]` 은
 > 2026-08-15 에 `[self:ledger]{store}` 하나로 통합됐고, `[others:contact]` 는 `[others:neighbor]` 의 op 로
 > 흡수됐습니다. `[limbs:gmail_send]`·`[others:indienet_send]` 는 존재한 적 없거나 은퇴한 이름입니다 —

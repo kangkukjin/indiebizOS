@@ -28,7 +28,7 @@ ops:
   side_effect:       # op 별 부작용. 아래 해소 규칙 참조.
     list: false
   fixture:           # op 별 '올바른 파라미터 예 하나' (읽기 op 전용)
-    list: '[self:business_item]{op: "list"}'
+    list: '[self:ledger]{store: "item", op: "list"}'
   exempt:            # 실행 인자 의존이라 자동 실행 불가한 읽기 op — 사유
     detail: 존재하는 item_id 필요(고정 fixture 부적합)
 ```

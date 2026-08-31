@@ -21,6 +21,22 @@ from typing import Any, Dict, List, Optional
 _LOCK = threading.Lock()
 _ENTRIES: Dict[str, Dict[str, Any]] = {}
 
+# 프로세스 기동 기준점(monotonic) — 진입점(api.py 등)이 최상단에서 set_process_start 로
+# 심는다. 이게 있으면 원장의 각 entry 에 elapsed(기동 후 경과초)가 붙어, 원장이 곧
+# 부팅 프로파일이 된다("윈도우에서 백엔드가 느리게 뜬다"를 설치본이 스스로 신고).
+_T0: Optional[float] = None
+
+
+def set_process_start(t0: Optional[float] = None) -> None:
+    """프로세스 기동 기준점을 심는다(멱등 — 먼저 심은 쪽이 이긴다)."""
+    global _T0
+    if _T0 is None:
+        _T0 = t0 if t0 is not None else time.monotonic()
+
+
+def _elapsed() -> Optional[float]:
+    return None if _T0 is None else round(time.monotonic() - _T0, 2)
+
 
 def record(name: str, ok: bool, error: Optional[BaseException | str] = None,
            detail: str = "") -> None:
@@ -33,6 +49,7 @@ def record(name: str, ok: bool, error: Optional[BaseException | str] = None,
                       if isinstance(error, BaseException) else (str(error) if error else None)),
             "detail": detail or None,
             "at": time.time(),
+            "elapsed": _elapsed(),
         }
 
 

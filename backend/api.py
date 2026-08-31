@@ -6,7 +6,12 @@ api.py - IndieBiz OS Core API Server
 import os
 import sys
 import json
+import time as _boot_time
 from pathlib import Path
+
+# 부팅 프로파일 기준점 — 아래 무거운 임포트들보다 먼저 심어야 "임포트에 몇 초"가 보인다.
+# boot_status 원장의 각 entry 에 elapsed(기동 후 경과초)로 붙는다(/world-pulse/health).
+_PROC_T0 = _boot_time.monotonic()
 
 # Windows 인코딩 문제 해결 (한글 등 비-ASCII 문자 처리)
 if sys.platform == 'win32':
@@ -128,6 +133,12 @@ except Exception as _e:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """앱 시작/종료 시 실행"""
+
+    # 부팅 프로파일: 여기 도달 = 모듈 임포트 전부 끝. 이후 각 boot_status.record 의
+    # elapsed 가 단계별 소요를 말한다(느린 부팅 신고는 이 원장을 읽는 것으로 시작).
+    boot_status.set_process_start(_PROC_T0)
+    boot_status.record("import", True,
+                       detail=f"모듈 임포트 {_boot_time.monotonic() - _PROC_T0:.1f}s")
 
     # 번들 런타임 PATH 설정 (내장 Python의 Scripts/site-packages를 PATH/sys.path에 등록)
     # → subprocess에서 yt-dlp 등 pip CLI 도구를 찾을 수 있고, import도 정상 동작
@@ -300,6 +311,12 @@ async def lifespan(app: FastAPI):
             boot_status.record("WorldPulse:today", False, e)
     threading.Thread(target=_deferred_world_pulse, daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
+
+    # 부팅 완료 신고 — 이 줄 이후 uvicorn 이 요청을 받기 시작한다. 느리면 원장을 보라.
+    _boot_total = _boot_time.monotonic() - _PROC_T0
+    boot_status.record("lifespan", True, detail=f"부팅 총 {_boot_total:.1f}s")
+    print(f"[boot] 부팅 완료 — 프로세스 시작 후 {_boot_total:.1f}초 "
+          f"(단계별 소요 = /world-pulse/health 의 boot 원장 elapsed)", flush=True)
 
     # IBL MCP HTTP 세션 매니저를 앱 수명 동안 켠다(마운트한 /mcp 가 동작하려면 필수).
     # 실패/미준비면 nullcontext 로 조용히 통과(기존 stdio 경로는 영향 없음).

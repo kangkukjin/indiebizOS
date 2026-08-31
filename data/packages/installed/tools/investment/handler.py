@@ -416,15 +416,35 @@ def _stock_history(ti: dict):
     if market == "kr":
         tool = load_module("tool_krx")
         price_symbol = re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)  # krx는 bare 6자리 코드
+        _res = tool.get_stock_price(
+            symbol=price_symbol,
+            start_date=ti.get("start_date"),
+            end_date=ti.get("end_date"),
+            max_points=ti.get("max_points", 10),
+        )
     else:
         tool = load_module("tool_fmp")
-        price_symbol = ticker
-    _res = tool.get_stock_price(
-        symbol=price_symbol,
-        start_date=ti.get("start_date"),
-        end_date=ti.get("end_date"),
-        max_points=ti.get("max_points", 10),
-    )
+        _res = tool.get_stock_price(
+            symbol=ticker,
+            start_date=ti.get("start_date"),
+            end_date=ti.get("end_date"),
+            max_points=ti.get("max_points", 10),
+        )
+        error = _res.get("error", "") if isinstance(_res, dict) else ""
+        if not _res.get("success") and "HTTP 402" in error:
+            yahoo = load_module("tool_yfinance")
+            _res = yahoo.get_stock_price(
+                symbol=ticker,
+                period=ti.get("period", "1mo"),
+                interval=ti.get("interval", "1d"),
+                max_points=ti.get("max_points", 10),
+            )
+            if isinstance(_res, dict) and _res.get("success"):
+                _res["_fallback_used"] = True
+                _res["fallback_from"] = "fmp_http_402"
+                _res["fallback_to"] = "yahoo_chart"
+                if isinstance(_res.get("data"), dict):
+                    _res["data"]["source"] = "yahoo_chart"
     return _attach_price_table(_res)
 
 

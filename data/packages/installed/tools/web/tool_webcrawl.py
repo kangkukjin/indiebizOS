@@ -17,9 +17,11 @@ iframe 전용 호스트(정적 텍스트가 본문이 아닌 사이트)도 감�
 import os
 import re
 import sys
+import json
 import asyncio
+import tempfile
 import importlib.util
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urljoin, urlparse
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "backend")
@@ -282,22 +284,133 @@ def _decode_body(response) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _http_get(url: str):
+    """정적 HTML과 그 안의 PDF가 같은 HTTP 신원을 쓰게 하는 단일 다운로드 경로."""
+    if has_curl_cffi():
+        return chrome_get(
+            url, timeout=15, allow_redirects=True,
+            headers={'Accept-Language': HEADERS['Accept-Language']},
+        )
+    return requests.get(url, headers=HEADERS, timeout=15)
+
+
+def _is_pdf_response(response) -> bool:
+    """Content-Type이 부정확한 관공서 서버까지 PDF 매직 바이트로 확인한다."""
+    try:
+        headers = getattr(response, "headers", {}) or {}
+        ctype = headers.get("Content-Type") or headers.get("content-type") or ""
+        raw = response.content or b""
+    except Exception:
+        return False
+    return "application/pdf" in str(ctype).lower() or raw[:5] == b"%PDF-"
+
+
+def _pdf_target_from_viewer(html: str, base_url: str):
+    """얇은 PDF 뷰어의 iframe/embed/object가 가리키는 실제 PDF와 제목을 찾는다."""
+    soup = BeautifulSoup(html, "html.parser")
+    for tag in soup.find_all(("iframe", "embed", "object")):
+        raw = tag.get("src") or tag.get("data") or ""
+        if not raw:
+            continue
+        candidate = urljoin(base_url, unquote(raw))
+        parsed = urlparse(candidate)
+        query = parse_qs(parsed.query)
+        nested = (query.get("file") or [None])[0]
+        if nested:
+            nested_url = urljoin(candidate, unquote(nested))
+            if urlparse(nested_url).path.lower().endswith(".pdf"):
+                return nested_url, (tag.get("title") or "").strip()
+        if parsed.path.lower().endswith(".pdf"):
+            return candidate, (tag.get("title") or "").strip()
+    return None, ""
+
+
+_pdf_reader = None
+
+
+def _extract_pdf_response(response, requested_url: str, pdf_url: str,
+                          max_length: int, method: str, viewer_title: str = "") -> dict:
+    """받은 PDF를 self:read의 PyMuPDF 구현으로 읽어 crawl 통화 모양으로 바꾼다."""
+    global _pdf_reader
+    tmp_path = ""
+    try:
+        if _pdf_reader is None:
+            office_path = os.path.join(
+                os.path.dirname(__file__), "..", "system_essentials", "office_ops.py")
+            spec = importlib.util.spec_from_file_location("webcrawl_office_ops", office_path)
+            if spec is None or spec.loader is None:
+                raise ImportError("self:read PDF 구현을 불러오지 못했습니다.")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            _pdf_reader = mod.read_pdf
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(response.content or b"")
+            tmp_path = tmp.name
+        payload = json.loads(_pdf_reader({"path": tmp_path}, os.path.dirname(tmp_path)))
+        if not payload.get("success"):
+            raise ValueError(payload.get("error") or "PDF 텍스트 추출 실패")
+
+        text = payload.get("text") or ""
+        metadata = payload.get("metadata") or {}
+        title = (viewer_title or metadata.get("title")
+                 or os.path.basename(urlparse(pdf_url).path))
+        reason = _diagnose(200, pdf_url, requested_url, text, title)
+        text, original_length, truncated = _truncate(text, max_length)
+        result = {
+            "success": True,
+            "url": requested_url,
+            "resolved_url": pdf_url,
+            "title": title,
+            "text": text,
+            "length": original_length,
+            "truncated": truncated,
+            "method": method + "_pdf",
+            "total_pages": payload.get("total_pages"),
+        }
+        if reason:
+            result["reason"] = reason
+        return result
+    except Exception as e:
+        return {
+            "success": False,
+            "url": requested_url,
+            "resolved_url": pdf_url,
+            "method": method + "_pdf",
+            "reason": "insufficient_content",
+            "error": f"PDF 텍스트 추출 실패: {e}",
+        }
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+
 def _crawl_static(url: str, max_length: int) -> dict:
     """정적 크롤링. curl_cffi(TLS 크롬 위장)가 있으면 그것으로, 없으면 requests."""
     try:
-        if has_curl_cffi():
-            response = chrome_get(
-                url, timeout=15, allow_redirects=True,
-                headers={'Accept-Language': HEADERS['Accept-Language']},
-            )
-            method = "curl_cffi"
-        else:
-            response = requests.get(url, headers=HEADERS, timeout=15)
-            method = "requests"
-
+        response = _http_get(url)
+        method = "curl_cffi" if has_curl_cffi() else "requests"
         status = response.status_code
         final_url = str(getattr(response, 'url', '') or url)
+
+        # 직접 PDF 응답 — HTML 파서에 바이너리를 먹이지 않고 self:read의 추출기로 보낸다.
+        if status < 400 and _is_pdf_response(response):
+            return _extract_pdf_response(
+                response, url, final_url, max_length, method)
+
         html = _decode_body(response)
+
+        # 얇은 전자책 뷰어 — iframe/embed/object의 실제 PDF를 한 번 해소한다.
+        pdf_url, viewer_title = _pdf_target_from_viewer(html, final_url)
+        if status < 400 and pdf_url:
+            pdf_response = _http_get(pdf_url)
+            if pdf_response.status_code < 400 and _is_pdf_response(pdf_response):
+                resolved_pdf = str(getattr(pdf_response, "url", "") or pdf_url)
+                return _extract_pdf_response(
+                    pdf_response, url, resolved_pdf, max_length, method, viewer_title)
 
         # 에러 페이지도 파싱한다 — 봇차단/로그인 벽 진단에 본문이 필요
         title, text = _parse_html(html, url)

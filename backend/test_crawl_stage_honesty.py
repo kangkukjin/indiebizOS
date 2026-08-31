@@ -100,6 +100,63 @@ def test_c4_success_path_unchanged():
     assert "stages" not in r, "성공 경로에 진단 잡음이 끼었다"
 
 
+class _FakeResponse:
+    def __init__(self, body, url, content_type):
+        self.content = body
+        self.url = url
+        self.status_code = 200
+        self.headers = {"Content-Type": content_type}
+
+
+def _sample_pdf_bytes():
+    import fitz
+    doc = fitz.open()
+    page = doc.new_page()
+    for i in range(20):
+        page.insert_text(
+            (72, 72 + i * 18),
+            "PDF body line %02d with enough text for extraction and regression." % i)
+    raw = doc.tobytes()
+    doc.close()
+    return raw
+
+
+def test_c5_direct_pdf_reuses_self_read_extractor():
+    """C5: 직접 PDF 응답은 HTML 파서가 아니라 self:read의 PDF 구현으로 간다."""
+    m = _load()
+    pdf_url = "https://예시/문서.pdf"
+    response = _FakeResponse(_sample_pdf_bytes(), pdf_url, "application/pdf")
+    m._http_get = lambda url: response                       # noqa: E731
+
+    r = m._crawl_static(pdf_url, 10000)
+    assert r["success"] is True, r
+    assert r["method"].endswith("_pdf"), r
+    assert r["resolved_url"] == pdf_url, r
+    assert "PDF body line" in r["text"] and r["length"] > 200, r
+
+
+def test_c6_pdf_viewer_resolves_iframe_pdf():
+    """C6: 아산시형 뷰어 껍데기는 활성 iframe의 PDF를 따라가 본문을 돌려준다."""
+    m = _load()
+    viewer_url = "https://예시/pdf_ebook.php?pds_no=1"
+    pdf_url = "https://예시/upload/book.pdf"
+    html = (
+        '<html><body><iframe src="/upload/book.pdf" '
+        'title="주요업무 추진계획"></iframe></body></html>'
+    ).encode()
+    responses = iter([
+        _FakeResponse(html, viewer_url, "text/html; charset=utf-8"),
+        _FakeResponse(_sample_pdf_bytes(), pdf_url, "application/octet-stream"),
+    ])
+    m._http_get = lambda url: next(responses)                # noqa: E731
+
+    r = m._crawl_static(viewer_url, 10000)
+    assert r["success"] is True, r
+    assert r["url"] == viewer_url and r["resolved_url"] == pdf_url, r
+    assert r["title"] == "주요업무 추진계획", r
+    assert "PDF body line" in r["text"] and "reason" not in r, r
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
     # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.

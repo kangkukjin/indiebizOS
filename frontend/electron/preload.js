@@ -39,6 +39,10 @@ contextBridge.exposeInMainWorld('electron', {
 
   // 내장 alert/confirm 의 메인프로세스 판 — 윈도우 포커스 유실 버그(electron#19977) 우회.
   // src/main.tsx 부트스트랩이 window.alert/confirm 을 이걸로 갈아끼운다.
+  // ★dialogPing 핸드셰이크가 먼저다: sendSync 는 메인에 리스너가 없으면 영원히 블록한다 —
+  //   개발 모드에서 메인(기동 시 로드)이 옛 코드인 채 렌더러만 리로드되면 정확히 그 상태가
+  //   된다(2026-08-31 실측: 런처 전체 먹통). invoke 는 리스너가 없으면 reject 라 안전한 탐침.
+  dialogPing: () => ipcRenderer.invoke('native-dialog-ping'),
   dialogAlert: (message) => ipcRenderer.sendSync('native-dialog', 'alert', message),
   dialogConfirm: (message) => ipcRenderer.sendSync('native-dialog', 'confirm', message),
 

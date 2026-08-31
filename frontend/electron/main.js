@@ -339,6 +339,9 @@ function setupIPC() {
   // 내장 alert()/confirm() 대체 (sync) — 윈도우에서 Chromium JS 다이얼로그가 닫힌 뒤
   // 렌더러가 키보드 포커스를 잃어 입력창이 죽는 버그(electron#19977) 우회.
   // 렌더러 부트스트랩(src/main.tsx)이 window.alert/confirm 을 이 IPC 판으로 갈아끼운다.
+  // 핸드셰이크 — 렌더러는 이 invoke 가 성공할 때만 alert/confirm 을 sendSync 판으로
+  // 갈아끼운다(리스너 없는 메인에 sendSync = 렌더러 영구 블록, 2026-08-31 실측).
+  ipcMain.handle('native-dialog-ping', () => true);
   ipcMain.on('native-dialog', (event, kind, message) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const opts = kind === 'confirm'

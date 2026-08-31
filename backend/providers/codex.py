@@ -55,6 +55,66 @@ __all__ = [
 ]
 
 
+def _codex_home() -> Path:
+    """Codex 의 상태 뿌리 (~/.codex 또는 CODEX_HOME)."""
+    return Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
+
+
+# 롤아웃 꼬리를 몇 바이트나 읽을지 — 마지막 token_count 는 파일 끝에서 1KB 안쪽에 있다
+# (실측 2026-08-31: 77MB 파일에서 EOF−787B). 256KB 면 여유가 크다.
+_ROLLOUT_TAIL_BYTES = 256 * 1024
+
+
+def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
+    """스레드의 **현재 컨텍스트**와 스레드 누적 입력을 Codex 자신의 롤아웃에서 읽는다.
+
+    왜 필요한가(실측 2026-08-31): `turn.completed` 의 `usage` 는 그 턴의 컨텍스트가 아니라
+    스레드가 살아온 **모든 라운드의 입력 합계**(`total_token_usage`)다. 도구를 24번 쓴 턴은
+    in=3,195,716 으로 보고되지만 실제 마지막 라운드 컨텍스트는 144,266 이었다. 이 합계를
+    세션 크기로 오인하면 멀쩡한 세션이 매번 끊긴다(ep2442~2485 에서 19턴 중 7턴 오리셋).
+    진짜 값은 롤아웃의 `token_count` 이벤트에 `last_token_usage` 로 들어 있다.
+
+    Returns: {"context": 마지막 라운드 입력, "total": 스레드 누적 입력,
+              "window": 모델 컨텍스트 창} — 못 읽으면 None (추정하지 않는다).
+    """
+    if not thread_id:
+        return None
+    try:
+        hits = sorted(
+            _codex_home().glob(f"sessions/**/rollout-*-{thread_id}.jsonl"),
+            key=lambda q: q.stat().st_mtime, reverse=True)
+        if not hits:
+            return None
+        path = hits[0]
+        size = path.stat().st_size
+        with open(path, "rb") as fh:
+            if size > _ROLLOUT_TAIL_BYTES:
+                fh.seek(size - _ROLLOUT_TAIL_BYTES)
+                fh.readline()          # 잘린 첫 줄 버리기
+            tail = fh.read()
+        info = None
+        for line in reversed(tail.splitlines()):
+            if b'"token_count"' not in line:
+                continue
+            try:
+                payload = json.loads(line.decode("utf-8", "replace")).get("payload") or {}
+            except (ValueError, AttributeError):
+                continue
+            cand = payload.get("info") or {}
+            if cand.get("last_token_usage"):
+                info = cand
+                break
+        if not info:
+            return None
+        return {
+            "context": int((info["last_token_usage"] or {}).get("input_tokens") or 0),
+            "total": int((info.get("total_token_usage") or {}).get("input_tokens") or 0),
+            "window": int(info.get("model_context_window") or 0),
+        }
+    except OSError:
+        return None
+
+
 def find_codex_binary() -> Optional[str]:
     """codex CLI 위치 탐지 (크로스플랫폼).
 
@@ -159,6 +219,36 @@ class CodexProvider(CliSubprocessProvider):
     # (모델명 하드코딩이 은퇴로 죽는 것과 같은 부류).
     REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
+    # 리셋 임계는 **모델 창에서 파생**한다. 상속받는 500K 는 창 1M 짜리 Claude 기준이라
+    # Codex(창 272K, 실효 95% = 258.4K)에서는 창보다 커서 관문이 영영 안 걸린다 — 실측
+    # 2026-08-31 스토리텔러 스레드는 한 턴에 229,322/258,400(89%)까지 찼는데도 조용했다.
+    # 창의 절반에서 끊는 이유는 claude_code 와 같다(비용·지연·낡은 tool_result 희석).
+    # 창 값의 정본은 우리가 아니라 `~/.codex/models_cache.json` 이다(모델명 하드코딩 금지).
+    WINDOW_RESET_RATIO = 0.5
+    FALLBACK_CONTEXT_WINDOW = 272_000
+
+    @property
+    def SESSION_RESET_TOKEN_THRESHOLD(self) -> int:      # noqa: N802 (상속 상수 자리)
+        window = self._observed_window or self._catalog_context_window()
+        return int(window * self.WINDOW_RESET_RATIO)
+
+    def _catalog_context_window(self) -> int:
+        """models_cache.json 에서 현재 슬러그의 실효 컨텍스트 창을 읽는다."""
+        try:
+            slug, _ = self._model_and_effort()
+            cache = json.loads(
+                (_codex_home() / "models_cache.json").read_text(encoding="utf-8"))
+            for entry in cache.get("models") or []:
+                if entry.get("slug") != slug:
+                    continue
+                window = int(entry.get("context_window") or 0)
+                pct = int(entry.get("effective_context_window_percent") or 100)
+                if window:
+                    return window * pct // 100
+        except (OSError, ValueError, TypeError):
+            pass
+        return self.FALLBACK_CONTEXT_WINDOW
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._effective_key: Optional[str] = None
@@ -167,6 +257,11 @@ class CodexProvider(CliSubprocessProvider):
         #   매 턴 처음부터 다시 매겨진다 — 잔재를 남기면 다음 턴의 같은 id 가 '이미 냈다'로
         #   오인돼 도구 호출 헤더가 통째로 사라진다.
         self._started_items: set = set()
+        # 이 턴이 시작될 때의 스레드 누적 입력 — turn.completed 의 누적 합계에서 빼야
+        # '이 턴이 쓴 토큰'이 나온다 (resume 스레드는 지난 턴들까지 합산돼 오기 때문).
+        self._turn_base_total: int = 0
+        # 롤아웃에서 읽은 모델 컨텍스트 창 (리셋 임계의 근거)
+        self._observed_window: int = 0
 
     # ================= 인증·바이너리 =================
 
@@ -186,7 +281,7 @@ class CodexProvider(CliSubprocessProvider):
             self._effective_key = provided
             return "config.api_key (OpenAI API 과금)"
         self._effective_key = None
-        auth_path = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex")) / "auth.json"
+        auth_path = _codex_home() / "auth.json"
         if provided:
             return "ChatGPT 구독 (config.api_key 는 비OpenAI 형식이라 무시)"
         return "ChatGPT 구독 (~/.codex/auth.json)" if auth_path.exists() else "없음"
@@ -208,6 +303,22 @@ class CodexProvider(CliSubprocessProvider):
 
     def _reset_turn_state(self) -> None:
         self._started_items.clear()
+        self._turn_base_total = 0
+
+    def _measure_context_size(self, session_id: str) -> Optional[int]:
+        """세션 크기를 Codex 의 롤아웃에서 실측한다 (read_thread_usage 참조).
+
+        같은 읽기로 이 턴의 비용 기준선(_turn_base_total)도 잡는다 — 두 값이 같은
+        파일의 같은 이벤트에서 나오므로 따로 저장해 둘 상태가 없다.
+        """
+        usage = read_thread_usage(session_id)
+        if not usage:
+            self._log(f"세션 {session_id[:8]}… 롤아웃을 못 읽음 — 컨텍스트 미측정")
+            return None
+        self._turn_base_total = usage["total"]
+        if usage["window"]:
+            self._observed_window = usage["window"]
+        return usage["context"] or None
 
     # ================= 세션 =================
 
@@ -631,19 +742,24 @@ class CodexProvider(CliSubprocessProvider):
             output_tokens = int(usage.get("output_tokens") or 0)
             cached = int(usage.get("cached_input_tokens") or 0)
             cache_write = int(usage.get("cache_write_input_tokens") or 0)
-            # 세션 크기(다음 턴 fresh 리셋 판단) — resume 은 트랜스크립트를 재생하므로
-            # 이 턴의 입력 토큰이 곧 세션 크기다.
-            # ★max() 인 이유: Codex 가 input_tokens 를 '캐시 포함 총량'으로 주는지
-            #  '캐시 제외분'으로 주는지 문서로 확정하지 못했다(실측 표본 1건: in=16,030
-            #  cached=11,008 — 총량 해석에 부합). 어느 해석이든 과소평가하지 않도록 큰 쪽을 쓴다.
-            #  이 값은 과금이 아니라 리셋 임계 판단에만 쓰이므로 보수적 추정이 맞다.
-            self._last_context_size = max(input_tokens, cached + cache_write)
-            self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+            # ★input_tokens 는 **컨텍스트 크기가 아니다**(실측 2026-08-31 롤아웃 대조):
+            #  Codex 의 usage 는 스레드가 살아온 모든 라운드의 입력 **합계**
+            #  (`total_token_usage`)다. 세션 크기 판정은 그래서 여기가 아니라 턴 시작의
+            #  _measure_context_size(롤아웃 `last_token_usage`)가 맡는다 — 여기서 0 을
+            #  남기면 상위의 record_size 가 그 실측값을 덮어쓰지 않는다.
+            self._last_context_size = 0
+            # 이 턴의 비용 = 누적 − 턴 시작 누적. 기준선을 못 잡았으면(fresh 턴이거나
+            # 롤아웃을 못 읽음) 누적 그대로 — fresh 턴에서는 둘이 같다.
+            turn_input = max(0, input_tokens - self._turn_base_total)
+            self.metrics.record_request(latency_ms, turn_input, output_tokens)
+            # 누적 수치(input_tokens·cached·cache_write)는 전부 **스레드 생애 합계**다 —
+            # 턴 몫과 섞어 적으면 다시 오독을 부르므로 괄호 안에 따로 묶는다.
             cache_info = (f" cached={cached} cache_write={cache_write}"
                           if (cached or cache_write) else "")
             self._log(
                 f"turn.completed {latency_ms:.0f}ms "
-                f"in={input_tokens} out={output_tokens}{cache_info}"
+                f"in={turn_input} out={output_tokens} "
+                f"(스레드누적 in={input_tokens}{cache_info})"
             )
             out.append((
                 {"type": "final", "content": self._finalize_text(accumulated_text.strip())},

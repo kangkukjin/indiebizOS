@@ -497,6 +497,16 @@ class CliSubprocessProvider(BaseProvider):
         """임시 핸들 정리 (temp 파일 삭제 등)."""
         return None
 
+    def _measure_context_size(self, session_id: str) -> Optional[int]:
+        """세션의 *현재* 컨텍스트 토큰 수를 벤더가 직접 잴 수 있으면 재서 돌려준다.
+
+        기본은 None = "못 잰다" → 리셋 판정은 지난 턴 끝에 기록해 둔 값(_store)을 쓴다.
+        벤더가 턴 usage 를 **컨텍스트 크기가 아니라 라운드/스레드 누적 합계**로 주는 경우
+        (Codex 의 total_token_usage) 그 값을 세션 크기로 오인하면 도구를 몇 번만 써도
+        임계를 넘어 멀쩡한 세션이 끊긴다 — 그런 벤더가 이 자리를 덮어쓴다.
+        """
+        return None
+
     def _reset_turn_state(self) -> None:
         """턴 시작 시 어댑터가 들고 있는 턴-국소 상태를 비운다.
 
@@ -665,7 +675,13 @@ class CliSubprocessProvider(BaseProvider):
                 # fresh 경로는 _build_prompt_with_history 로 트림된 히스토리를 재시드하므로
                 # 맥락은 indiebizOS 기억층 + 트림 히스토리로 이어진다 (raw 중복만 제거).
                 if resume_session_id:
-                    prev_size = int(self._store.load_sizes().get(session_key_val) or 0)
+                    # 벤더가 세션을 직접 잴 수 있으면 그 실측이 저장값을 이긴다
+                    # (_measure_context_size 참조 — 저장값은 '지난 턴 끝'의 추정이다).
+                    measured = self._measure_context_size(resume_session_id)
+                    if measured:
+                        self._store.record_size(session_key_val, measured)
+                    prev_size = int(
+                        measured or self._store.load_sizes().get(session_key_val) or 0)
                     if prev_size > self.SESSION_RESET_TOKEN_THRESHOLD:
                         print(
                             f"[{self.CLI_LABEL}] {self.agent_name}: 세션 컨텍스트 "

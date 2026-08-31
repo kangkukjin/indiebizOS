@@ -297,7 +297,12 @@ class CognitiveEvalMixin:
                 "달성 기준에 '재실행으로 증상 소멸 실측' 류 항목이 있어도, 이 턴에서는 "
                 "\"검증 통과·적용 예약됨(판정은 다음 턴)\" 보고가 그 항목의 충족이다. "
                 "턴 내 미실측을 이유로 NOT_ACHIEVED 를 내리지 마라 — 재실행해도 같은 벽에 "
-                "부딪히는 낭비만 반복된다.\n\n")
+                "부딪히는 낭비만 반복된다. **이 문단 자체가 '적용 예약 선언'이다** — 달성 "
+                "기준의 '지연 적용·적용 예약 선언' 류 항목은 이 기계 판독 사실로 충족이며, "
+                "에이전트 응답의 선언 문구 유무·형식은 미달 사유가 될 수 없다(형식적 누락은 "
+                "경미 지적까지만). 예약 대기 중인 파일은 라이브에 아직 없다 — 재실행 턴이 "
+                "그 파일을 '없다'고 보고 중복 작성하면 지연 적용과 충돌한다"
+                "(2026-08-31 ep2461 실측).\n\n")
         except Exception:
             return ""   # 주입은 보강 — 실패해도 평가 자체를 막지 않는다
 
@@ -581,15 +586,22 @@ class CognitiveEvalMixin:
             try:
                 import hashlib as _hashlib
                 from episode_logger import record_trajectory_event
+                # ★피드백 **전문**을 원장에 남긴다(2026-08-31 ep2461: sha256 만 남겨
+                #   NOT_ACHIEVED 사유가 회수 불능이었다 — 로그의 [:200] 은 표시용 절단일
+                #   뿐, 판정 근거의 정본은 여기다). 상한 초과는 표식으로 정직하게.
+                _fb = feedback or ""
                 record_trajectory_event("validation.completed", {
                     "validator": "goal_eval",
                     "round": round_num,
                     "achieved": bool(achieved),
                     "severity": int(severity or 0),
                     "elapsed_ms": int(eval_time * 1000),
+                    "criteria": (criteria or "")[:2000],
                     "criteria_sha256": _hashlib.sha256((criteria or "").encode(
                         "utf-8", "replace")).hexdigest(),
-                    "feedback_sha256": _hashlib.sha256((feedback or "").encode(
+                    "feedback_text": _fb[:8000],
+                    "feedback_truncated": len(_fb) > 8000,
+                    "feedback_sha256": _hashlib.sha256(_fb.encode(
                         "utf-8", "replace")).hexdigest(),
                 })
             except Exception:

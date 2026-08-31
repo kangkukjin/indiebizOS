@@ -252,37 +252,12 @@ class CognitiveEvalMixin:
         돌린 뒤 증류에서도 제외한다 — 올바른 수리 패턴이 학습되지 못해 헤맴이 재생산된다.
         상태는 수리 세션 원장(데이터)에서 읽는다 — 산문 지시가 아니라 기계 판독이 진실.
         """
+        state = self._scheduled_repair_state()
+        if not state:
+            return ""
         try:
-            import json as _json
-            from datetime import datetime as _dt
-            from thread_context import get_current_task_id
-            from runtime_utils import get_base_path
-            tid = (get_current_task_id() or "").strip()
-            if not tid:
-                return ""
-            # 키 규칙은 repair_staging.task_key 와 동일 — 정본은 그쪽(데이터 계약 복제 1줄).
-            key = re.sub(r"[^A-Za-z0-9_-]", "_", tid)[:48] or "notask"
-            sess_dir = get_base_path() / "data" / "system_ai_state" / "repair_sessions"
-            sess_path = sess_dir / f"{key}.json"
-            if not sess_path.is_file():
-                return ""
-            sess = _json.loads(sess_path.read_text(encoding="utf-8"))
-            if sess.get("status") != "apply_scheduled":
-                return ""
-            try:
-                age_s = (_dt.now() - _dt.fromisoformat(sess["scheduled_at"])).total_seconds()
-                if age_s > self._SCHEDULED_FRESH_S:
-                    return ""   # 좌초된 옛 예약 — 이 턴의 사실이 아니다
-            except Exception:
-                pass
-            rels = sorted(r.get("rel") or "" for r in (sess.get("files") or {}).values())
-            files_str = ", ".join(f"`{r}`" for r in rels if r) or "(파일 목록 미기재)"
-            verify_cmd = ""
-            try:
-                job = _json.loads((sess_dir / f"{key}.apply.json").read_text(encoding="utf-8"))
-                verify_cmd = (job.get("verify_cmd") or "").strip()
-            except Exception:
-                pass
+            files_str = ", ".join(f"`{r}`" for r in state["rels"]) or "(파일 목록 미기재)"
+            verify_cmd = state["verify_cmd"]
             verify_line = (
                 f"적용 후 재현 검증은 verify_cmd(`{verify_cmd[:160]}`)로 수행자에게 위탁되었다."
                 if verify_cmd else
@@ -305,6 +280,70 @@ class CognitiveEvalMixin:
                 "(2026-08-31 ep2461 실측).\n\n")
         except Exception:
             return ""   # 주입은 보강 — 실패해도 평가 자체를 막지 않는다
+
+    def _scheduled_repair_state(self):
+        """이 턴 수리 세션의 신선한 적용 예약 상태 (없으면 None) — 원장에서 기계 판독.
+
+        평가자 주입(_scheduled_repair_note)과 재실행 주입(_scheduled_repair_agent_note)의
+        공통 읽기 — 상태 출처는 수리 세션 원장 하나다."""
+        try:
+            import json as _json
+            from datetime import datetime as _dt
+            from thread_context import get_current_task_id
+            from runtime_utils import get_base_path
+            tid = (get_current_task_id() or "").strip()
+            if not tid:
+                return None
+            # 키 규칙은 repair_staging.task_key 와 동일 — 정본은 그쪽(데이터 계약 복제 1줄).
+            key = re.sub(r"[^A-Za-z0-9_-]", "_", tid)[:48] or "notask"
+            sess_dir = get_base_path() / "data" / "system_ai_state" / "repair_sessions"
+            sess_path = sess_dir / f"{key}.json"
+            if not sess_path.is_file():
+                return None
+            sess = _json.loads(sess_path.read_text(encoding="utf-8"))
+            if sess.get("status") != "apply_scheduled":
+                return None
+            try:
+                age_s = (_dt.now() - _dt.fromisoformat(sess["scheduled_at"])).total_seconds()
+                if age_s > self._SCHEDULED_FRESH_S:
+                    return None   # 좌초된 옛 예약 — 이 턴의 사실이 아니다
+            except Exception:
+                pass
+            rels = sorted(r for r in (rr.get("rel") or ""
+                          for rr in (sess.get("files") or {}).values()) if r)
+            verify_cmd = ""
+            try:
+                job = _json.loads((sess_dir / f"{key}.apply.json").read_text(encoding="utf-8"))
+                verify_cmd = (job.get("verify_cmd") or "").strip()
+            except Exception:
+                pass
+            return {"rels": rels, "worktree": sess.get("worktree") or "",
+                    "verify_cmd": verify_cmd}
+        except Exception:
+            return None
+
+    def _scheduled_repair_agent_note(self) -> str:
+        """재실행 턴에 주입하는 **재작성 금지** 기계 판독 문단 (예약 없으면 "").
+
+        ★왜(2026-08-31 ep2461 실측): 재실행은 새 컨텍스트다 — 자기 세션에 적용 예약분이
+        대기 중인 줄 모르면, file_find·grep·git 에 안 보이는 그 파일을 '없다'고 판단해
+        재작성·직접 커밋하고, 턴 종료 후 지연 적용이 그 나중 판본을 옛 초안으로 덮는다
+        (last-writer-loses). patch status 에 있어도 목록에 파묻힌다 — 앞에서 들이민다."""
+        state = self._scheduled_repair_state()
+        if not state:
+            return ""
+        files_str = ", ".join(f"`{r}`" for r in state["rels"]) or "(파일 목록 미기재)"
+        wt = state["worktree"]
+        read_hint = (f" 내용 확인이 필요하면 격리본을 읽어라(예: `{wt}/{state['rels'][0]}`)."
+                     if wt and state["rels"] else "")
+        return (
+            "\n\n## 자기수리 지연 적용 상태 (기계 판독 — 재작성 금지)\n"
+            f"이 턴의 수리 세션에는 검증 관문을 통과하고 **적용이 예약**된 파일이 대기 중이다: "
+            f"{files_str}. 이 파일들은 이미 작성·검증·예약 완료됐고, 라이브 트리와 git 에는 "
+            "**턴이 닫힌 뒤에야** 나타난다 — file_find·grep·git ls-files 에 안 보이는 것이 "
+            "정상이며 '없어졌다'가 아니다. **같은 경로를 재작성·직접 커밋하지 마라** — "
+            f"턴 종료 후 지연 적용과 충돌해 나중 판본이 덮인다.{read_hint} "
+            "피드백 보완은 예약분을 전제로 부족한 부분만 더하라.")
 
     _evaluator_prompt_cache: str = ""
 
@@ -651,7 +690,10 @@ class CognitiveEvalMixin:
                 f"(심각도: {severity_label})\n\n"
                 f"달성 기준: {criteria}\n\n"
                 f"부족한 점:\n{feedback}\n\n"
-                f"{retry_directive}\n\n"
+                f"{retry_directive}"
+                # 재실행은 새 컨텍스트 — 자기 세션의 적용 예약분을 모르면 그 파일을
+                # '없다'고 보고 재작성해 지연 적용과 충돌한다(ep2461). 원장 기반 주입.
+                f"{self._scheduled_repair_agent_note()}\n\n"
                 f"⚠️ 중요: 이 재실행은 비대화형 모드입니다. "
                 f"ask_user_question을 사용하지 마세요. 사용자에게 질문할 수 없습니다. "
                 f"현재 가진 정보만으로 최선의 결과를 만드세요."

@@ -690,6 +690,39 @@ def run():
         check("S15_identical_live_is_harmless",
               bool(drift_gate) and drift_gate["passed"] is True,
               json.dumps(drift_gate, ensure_ascii=False)[:200] if drift_gate else "관문 없음")
+        imp15.unlink()
+
+        # ══ S16 — status 의 자기수용감각 (2026-08-31 ep2461 봉합) ══
+        # 재실행 턴이 op:status 를 보고도 자기 세션의 적용 예약분을 못 알아봤다 —
+        # 현재 세션이 목록에 파묻히고, 요약이 staging 만 세며 apply_scheduled 를
+        # 침묵했기 때문. 전면 배치 + 재작성 금지 외침을 계약으로 고정한다.
+        task16 = _grant(h, "task_status_aware")
+        imp16 = tmp7 / "backend" / "cognition" / "imp16.py"
+        s16 = h._red_stage(str(imp16), for_write=True)
+        Path(s16).parent.mkdir(parents=True, exist_ok=True)
+        Path(s16).write_text("SIXTEEN = 1\n")
+        r = st.op_apply({"_repo_root": str(tmp7), "_grant_key": st.task_key(task16),
+                         "_red_prepare": h._red_write_prepare,
+                         "_red_finalize": h._red_write_finalize})
+        check("S16_scheduled", r.get("scheduled") is True, json.dumps(r, ensure_ascii=False)[:200])
+        r = st.op_status({"_repo_root": str(tmp7), "_grant_key": st.task_key(task16)})
+        check("S16_current_session_first",
+              bool(r.get("items")) and r["items"][0].get("current") is True
+              and r["items"][0].get("status") == "apply_scheduled",
+              json.dumps((r.get("items") or [{}])[0], ensure_ascii=False)[:200])
+        check("S16_scheduled_current_surfaced",
+              (r.get("scheduled_current") or {}).get("files") == ["backend/cognition/imp16.py"],
+              json.dumps(r.get("scheduled_current"), ensure_ascii=False)[:200])
+        check("S16_message_forbids_rewrite",
+              "재작성" in (r.get("message") or "") and "예약분" in (r.get("message") or ""),
+              (r.get("message") or "")[:300])
+        # 남의 예약은 소유를 밝혀 알린다 — 내 것으로 오인하지도, 침묵하지도 않게
+        r = st.op_status({"_repo_root": str(tmp7), "_grant_key": "other_task"})
+        check("S16_foreign_schedule_disclosed",
+              "다른 턴 소유" in (r.get("message") or "")
+              and not r.get("scheduled_current"),
+              (r.get("message") or "")[:300])
+        st.op_discard({"_repo_root": str(tmp7), "_grant_key": st.task_key(task16)})
     finally:
         _ungrant()
         import shutil

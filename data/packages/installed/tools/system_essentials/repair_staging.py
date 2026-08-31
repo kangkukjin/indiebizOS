@@ -1128,6 +1128,8 @@ def op_status(ti):
     for name in sorted(os.listdir(d)) if os.path.isdir(d) else []:
         if not name.endswith(".json"):
             continue
+        if name.endswith(".apply.json"):
+            continue   # 수행자 잡 파일 — 세션이 아니다(status null '유령 항목'의 정체, ep2461)
         try:
             with open(os.path.join(d, name), encoding="utf-8") as f:
                 s = json.load(f)
@@ -1141,8 +1143,12 @@ def op_status(ti):
             "worktree": s.get("worktree"), "created_at": s.get("created_at"),
             "applied_at": s.get("applied_at"), "current": s.get("key") == key,
         })
+    # ★현재 태스크의 세션을 맨 앞에 — 자기 상태가 남의 세션 더미에 파묻히지 않게
+    #   (2026-08-31 ep2461: 재실행 턴이 55KB 목록 속 자기 예약분을 못 알아봤다).
+    items.sort(key=lambda i: not i["current"])
     pending = [i for i in items if i["status"] == "staging"]
     props = [i for i in pending if i.get("kind") == "proposal"]
+    scheduled = [i for i in items if i["status"] == "apply_scheduled"]
     msg = (f"스테이징 세션 {len(items)}건 (미적용 {len(pending)}건 · 그중 적용 대기 제안 "
            f"{len(props)}건). 미적용은 라이브에 아무 영향이 없습니다.")
     if props:
@@ -1154,6 +1160,20 @@ def op_status(ti):
                           "verified": i.get("verified"), "created_at": i["created_at"]}
                          for i in props],
            "message": msg}
+    cur_sched = next((i for i in scheduled if i["current"]), None)
+    if cur_sched:
+        files_str = ", ".join(f"`{r}`" for r in cur_sched["files"]) or "(파일 목록 미기재)"
+        out["scheduled_current"] = {"files": cur_sched["files"],
+                                    "worktree": cur_sched["worktree"]}
+        out["message"] = (
+            f"★이 턴의 세션({cur_sched['key']})에 **적용 예약분이 대기 중**: {files_str} — "
+            "검증 통과·작성 완료 상태이며, 라이브 트리·git 에는 턴이 닫힌 뒤에야 나타난다"
+            "(file_find·grep 에 안 보이는 것이 정상). **같은 경로를 재작성·직접 커밋하지 "
+            f"마라** — 지연 적용과 충돌한다. 내용 확인은 격리본(`{cur_sched['worktree']}/…`)을 "
+            "읽어라. | " + msg)
+    elif scheduled:
+        out["message"] += (f" 적용 예약 대기 {len(scheduled)}건(다른 턴 소유) — "
+                           f"턴 종료 후 수행자가 적용합니다.")
     stranded = list_legacy_proposals(repo)
     if stranded:   # 통합 전 세대가 남긴 살아있는 제안 — 이관 안내(코드는 안 읽는다)
         out["legacy_stranded"] = [x.get("id") for x in stranded]

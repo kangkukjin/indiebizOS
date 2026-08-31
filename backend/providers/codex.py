@@ -93,8 +93,9 @@ def _stdio_bridge_command() -> Optional[List[str]]:
     어떻게 띄우는가)은 프로바이더 무관이라 CLI 프로바이더들이 **한 파일을 공유**한다.
     두 벌로 갈라 두면 경로가 바뀔 때 한쪽만 고쳐져 조용히 죽는다.
     """
-    path = _data_dir() / "claude_code_mcp.json"
-    if not path.exists():
+    from .cli_provider import ensure_mcp_bridge_config
+    path = ensure_mcp_bridge_config()
+    if not path or not path.exists():
         return None
     try:
         with open(path, "r", encoding="utf-8") as f:

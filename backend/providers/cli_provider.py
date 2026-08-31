@@ -199,6 +199,55 @@ def _data_dir() -> Path:
         return Path(__file__).resolve().parents[2] / "data"
 
 
+def ensure_mcp_bridge_config() -> Optional[Path]:
+    """CLI 프로바이더 공유 stdio MCP 브리지 설정(claude_code_mcp.json)을 파생 보장.
+
+    ★이 파일은 2026-05 맥에서 손으로 한 번 만든 뒤 어디에도 생성자가 없었다 — git 밖
+      (data/*.json 무시)이라 새 몸(윈도우 설치)엔 존재하지 않고, 두 CLI 프로바이더가
+      조용히 MCP 없이 떴다(2026-08-31 윈도우 실측: execute_ibl 부재). 경로·인터프리터는
+      설치본마다 다르므로(하부/상부 이음매) 몸이 자기 값으로 파생한다:
+      command=sys.executable(이 백엔드의 파이썬 — 윈도우 임베디드/맥 .venv),
+      script=백엔드 옆 루트의 mcp_server.py(개발=repo 루트, 패키지=resources 루트).
+
+    재생성 조건 = 없거나 **깨졌을 때만**(command 미해석 또는 script 미실존 — 다른 몸의
+    절대경로 포함). 이 몸에서 실제로 도는 커스텀 설정은 존중해 덮지 않는다.
+    반환: 설정 파일 경로(보장 실패 시에도 기존 파일이 있으면 그 경로), 둘 다 없으면 None.
+    """
+    import shutil
+    import sys
+    path = _data_dir() / "claude_code_mcp.json"
+    server = Path(__file__).resolve().parents[2] / "mcp_server.py"
+
+    def _broken() -> bool:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                srv = ((json.load(f).get("mcpServers") or {}).get("indiebizos") or {})
+            cmd = str(srv.get("command") or "")
+            if not cmd or not (Path(cmd).exists() or shutil.which(cmd)):
+                return True
+            scripts = [a for a in (srv.get("args") or []) if str(a).endswith(".py")]
+            return any(not Path(str(a)).exists() for a in scripts)
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            return True
+
+    if path.exists() and not _broken():
+        return path
+    if not server.exists():
+        return path if path.exists() else None   # 파생 재료가 없으면 손대지 않는다
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"mcpServers": {"indiebizos": {
+                "command": sys.executable,
+                "args": [str(server)],
+            }}}, f, ensure_ascii=False, indent=2)
+        print(f"[MCP] 브리지 설정 파생 생성: {path} (python={sys.executable})")
+        return path
+    except OSError as e:
+        print(f"[MCP] 브리지 설정 생성 실패(무시): {e}")
+        return path if path.exists() else None
+
+
 # ============ 세션 상태 저장소 (--resume 연속성 + 크기 기반 리셋) ============
 # CLI 가 자기 과거 도구 호출·plan·파일 편집 이력을 기억하도록 agent별로 세션 id를
 # 저장하고 다음 호출에 재사용한다. 프로바이더마다 파일이 갈리는 이유는 세션 id 의

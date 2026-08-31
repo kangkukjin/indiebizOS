@@ -130,9 +130,10 @@ def load_oauth_token_from_central_config() -> Optional[str]:
 
 
 def get_mcp_config_path() -> Optional[str]:
-    """IBL MCP 설정 파일 경로. 없으면 None."""
-    mcp_path = _data_dir() / "claude_code_mcp.json"
-    return str(mcp_path) if mcp_path.exists() else None
+    """IBL MCP 설정 파일 경로 — 없거나 깨졌으면 이 몸의 값으로 파생 생성 후 반환."""
+    from .cli_provider import ensure_mcp_bridge_config
+    mcp_path = ensure_mcp_bridge_config()
+    return str(mcp_path) if mcp_path else None
 
 
 # ============ 세션 상태 저장소 ============

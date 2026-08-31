@@ -911,7 +911,14 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
 
       {loading && <div className="flex justify-center py-8"><div className="w-6 h-6 border-2 border-stone-200 border-t-stone-600 rounded-full animate-spin" /></div>}
       {error && <p className="text-sm text-stone-400">오류: {error}</p>}
-      {notice && <p className="mb-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5">{notice}</p>}
+      {/* 행 액션 성공 메시지 — 뜨는 토스트(원격 렌더러 toast 와 동형). 인라인(계기 상단)으로 두면
+          긴 게시판을 스크롤한 상태에서 화면 밖이라, 버튼이 죽은 듯 보여 연타를 부른다
+          (2026-08-31 실측: "이미 등록된 창고입니다" 6연타). */}
+      {notice && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-stone-800 text-white text-sm shadow-lg max-w-[80%] text-center">
+          {notice}
+        </div>
+      )}
 
       {/* === master-detail 반응형: PC=2분할(리스트+상세 동시) / 폰=드릴(선택→상세→뒤로) === */}
       {isSplit && !loading && data && (

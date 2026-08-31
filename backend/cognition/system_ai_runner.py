@@ -353,12 +353,18 @@ class SystemAIRunner:
                             pass
 
                     try:
-                        response = self.ai.process_message_with_history(
-                            message_content=ai_message,
-                            from_email=f"{from_agent}@internal",
-                            history=history,
-                            reply_to=f"{from_agent}@internal"
-                        )
+                        if _is_health_check:
+                            # 자가점검 프로브 — 인지 파이프라인 밖(에피소드·태스크 원장에서
+                            # 빼는 것과 같은 근거). 12시간 전수 순찰마다 연상·분류·평가를
+                            # 돌리면 프로브가 실사용 코퍼스를 밀어낸다.
+                            response = self.ai.process_message_with_history(
+                                message_content=ai_message,
+                                from_email=f"{from_agent}@internal",
+                                history=history,
+                                reply_to=f"{from_agent}@internal"
+                            )
+                        else:
+                            response = self._process_via_cognition(ai_message, history)
                         print(f"[SystemAIRunner] 응답 생성: {len(response)}자")
 
                         # 시스템 AI가 에이전트 보고를 받아 처리한 결과는 사용자에게 전달됨
@@ -399,6 +405,40 @@ class SystemAIRunner:
                 if not SystemAIRunner.internal_messages:
                     break
                 msg_dict = SystemAIRunner.internal_messages.pop(0)
+
+    def _process_via_cognition(self, ai_message: str, history: list) -> str:
+        """위임 한 턴을 인지 파이프라인으로 돌린다 (연상→분류→의식→실행→평가→반성→증류).
+
+        ★2026-08-31: 이 루프는 그동안 `self.ai.process_message_with_history` 를 직접 불러
+        파이프라인을 통째로 우회했다. 스케줄러 하달(`[others:delegate]{scope:system}`)이
+        지나는 유일한 통로가 바로 여기라, **매일 도는 세 보고서가 인지 밖에서 살았다** —
+        실측(ep2455 AI동향·ep2456 부동산·ep2457 AI팁, 08-31 04·05·06시): 로그에
+        `[연상:실행기억]` 0줄, episode_summary 의 hippocampus_score·unconscious_decision·
+        evaluation_result 전부 NULL, trajectory_event 에 model.round·validation.completed
+        부재, 그날 증류된 코퍼스 4건 중 이 셋에서 온 것 0건. 같은 날 다른 에피소드는
+        전부 채워져 있었다. 회상 없이 맨몸으로 짓다 보니 IBL 에 C 스타일 `//` 주석을
+        넣어 파싱 실패하는 등, 코퍼스가 이미 아는 실수를 되풀이했다.
+
+        api_agents._run_agent_command 가 2026-08-25 에 같은 부류로 합류한 자리와 동형이다
+        (test_user_surface_pipeline 의 진입점 포크 관문 — 그 관문은 origin='user' 표식을
+        보므로, 표식을 안 세우는 스케줄러 경로는 그물 밖이었다. 관문을 에피소드 진입점
+        기준으로 넓힌다 → test_episode_entry_pipeline).
+
+        모델 핀 보존: 위임 경로는 `system_ai_delegation` 핀(기본 고급, 2026-08-09 사용자
+        판정)을 쓴다. 파이프라인 바깥에서 걸고 finally 에서 되돌린다 — 안쪽의 THINK/REPAIR
+        스왑은 '진입 시점 provider' 로 복원하므로 겹쳐도 서로를 지우지 않는다.
+        """
+        from system_ai_core import (
+            get_system_ai_runner, process_system_ai_message,
+            _switch_to_role, _restore_provider,
+        )
+        runner = get_system_ai_runner()
+        original = _switch_to_role(runner, "system_ai", agent_id="system_ai_delegation")
+        try:
+            response, _images = process_system_ai_message(ai_message, history)
+            return response
+        finally:
+            _restore_provider(runner, original)
 
     def _build_history_from_completed(self, completed: list) -> list:
         """완료된 위임 기록을 AI 히스토리 형식으로 변환

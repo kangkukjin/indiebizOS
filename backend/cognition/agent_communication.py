@@ -545,14 +545,17 @@ class AgentCommunicationMixin:
 - 추가 작업이 필요하면 다른 에이전트에게 위임하세요.
 - 모든 작업이 완료되었으면 요청자에게 결과를 보고하세요."""
 
-                    # cognitive_stream 우회 경로라 기어 동기화를 직접 호출
-                    self._sync_execution_gear()
-                    response = self.ai.process_message_with_history(
-                        message_content=ai_message,
-                        from_email=f"{from_agent}@internal",
-                        history=history,
-                        reply_to=f"{from_agent}@internal"
-                    )
+                    # AI 처리 — 인지 파이프라인 제너레이터를 drain 하는 블로킹 어댑터.
+                    # ★2026-08-31: 여기도 `process_message_with_history` 직호출로 파이프라인을
+                    # 우회하고 있었다 — 위 이메일/통신 경로(같은 파일 320행대)와 아래 시스템 AI
+                    # 위임 루프(system_ai_runner._process_via_cognition)가 이미 합류한 자리인데,
+                    # 에이전트 간 위임·보고 회수만 홀로 남아 연상·분류·의식·평가·반성·증류가
+                    # 통째로 없었다. 기어 동기화는 파이프라인 0단계라 따로 부르지 않는다.
+                    from agent_pipeline import drain_stream
+                    _res = drain_stream(self.cognitive_stream(
+                        ai_message, history, agent_name=my_name,
+                    ))
+                    response = _res.get("final") or _res.get("error") or ""
                     print(f"[AgentRunner] {my_name} 응답 생성: {len(response)}자")
 
                     # 에이전트 간 응답 메시지 DB 기록

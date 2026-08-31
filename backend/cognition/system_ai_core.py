@@ -219,15 +219,19 @@ def _restore_provider(runner, original_provider):
             pass
 
 
-def _switch_to_role(runner, role):
+def _switch_to_role(runner, role, agent_id: str = None):
     """지정 역할(예: 'forage')로 해소된 provider 로 전환 — _switch_to_midtier 의 일반화.
 
     model_resolver 가 role → 티어 → 모델로 해소(forage 는 기본 경량, 계기판 override 로 변경).
     현재 provider 의 실행 컨텍스트 묶음(_CONTEXT_FIELDS)을 원자적으로 옮겨
-    IBL 도구를 그대로 쓰게 한다. 전환 성공 시 원래 provider 반환(호출 측이 finally 에서 복원)."""
+    IBL 도구를 그대로 쓰게 한다. 전환 성공 시 원래 provider 반환(호출 측이 finally 에서 복원).
+
+    agent_id: 역할보다 우선하는 구체 핀(model_gear.overrides 의 키). 위임 경로가
+    'system_ai_delegation' 핀을 파이프라인 바깥에서 걸 때 쓴다 — 파이프라인 안쪽의
+    THINK/REPAIR 스왑은 진입 시점 provider 로 복원하므로 바깥 핀과 겹쳐도 안전하다."""
     try:
         from model_resolver import get_provider_for
-        prov, d = get_provider_for(role, oneshot=False)
+        prov, d = get_provider_for(role, agent_id=agent_id, oneshot=False)
         if prov is None:
             return None  # 해당 티어 설정/키 없음 → 기존(본격) 모델 유지
         cur = runner.ai._provider

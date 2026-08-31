@@ -110,7 +110,10 @@ def test_long_ibl_payload_still_truncates_but_says_how_much(capsys):
 def test_ibl_debug_uses_the_same_mark_as_tool_use():
     """IBL_DEBUG 도 자기만의 모양(`[trunc, total=N]`)을 쓰지 않는다."""
     import cognition.system_tools_ibl as sti
-    src = "backend/cognition/system_tools_ibl.py"
+    # ★경로는 판정 대상 모듈 자신에게 묻는다 (2026-08-31). 종전엔 저장소 루트 기준
+    # 상대경로가 박혀 있어, pytest 를 backend/ 에서 돌리면 FileNotFoundError 로 죽었다 —
+    # '통과도 실패도 아닌' 관문이 된다(pitfall_judge_home_pinned_path_checks).
+    src = sti.__file__
     assert "[trunc, total={len(code)}]" not in open(src, encoding="utf-8").read()
     out = truncate_for_log("가" * (sti._IBL_DEBUG_CAP + 42), sti._IBL_DEBUG_CAP)
     assert hidden_chars(out) == 42

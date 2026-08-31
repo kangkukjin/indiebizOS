@@ -707,6 +707,15 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
 
     code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
     actions = [f"{n}:{a}" for n, a in re.findall(r"\[([a-z_]+):([a-z_]+)\]", code)]
+    # 조합 모양의 **관측**(판정 아님) — 여기가 전 IBL 표면의 유일한 초크포인트라
+    # 편향 없는 모집단이다. 조합률 지표(scripts/vocab_composition_metrics.py)는
+    # 그동안 해마 코퍼스의 `distilled` 행만 볼 수 있었는데, 그건 '새로운 실행'만
+    # 남는 자리라 조합률이 구조적으로 과대추정된다(그 스크립트의 편향 고지 참조).
+    # 옛 예정석(ibl_usage.db.ibl_execution_logs)은 2026-07-03 이래 호출자 0·0행으로
+    # 죽어 있었고 2026-08-31 에 제거했다 — 자리를 여기로 옮긴다.
+    # ★원시값만 적고 "조합인가"의 판정은 지표 쪽이 소유한다(판정을 두 벌 두지 않는다).
+    _pipes = code.count(">>")
+    _nested = bool(re.search(r"\bdo\s*:\s*[\"'\[]", code))
     resume = (tool_input or {}).get("resume")
     called = False
     result = None
@@ -718,6 +727,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "code_chars": len(code),
                 "actions": actions[:100],
                 "action_count": len(actions),
+                "pipes": _pipes,
+                "nested": _nested,
                 "agent": agent_id or "",
             })
             if isinstance(resume, dict):

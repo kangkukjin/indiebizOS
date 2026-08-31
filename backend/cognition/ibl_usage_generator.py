@@ -768,7 +768,6 @@ def print_stats():
     print(f"총 용례: {stats['total_examples']}개")
     print(f"카테고리별: {stats['by_category']}")
     print(f"소스별: {stats['by_source']}")
-    print(f"실행 로그: {stats['execution_logs']}개 (성공: {stats['successful_logs']})")
     print(f"시맨틱 검색: {'가능' if stats['semantic_available'] else '불가 (FTS5만 사용)'}")
 
 

@@ -23,7 +23,9 @@ vocab_crystallization.py — 어휘 결정화 감지기 (§4 마찰 신호 텔�
 데이터 소스: episode_log(world_pulse.db) 의 구조화 stdout 라인만 쓴다 —
   도구/액션 호출:  [HH:MM:SS] [agent] [tool:run_command|node:action] (입력…) -> OK|… (Nms)
   IBL 코드 원문:   [IBL_DEBUG] code=[node:action]{…} >> …
-  (ibl_execution_logs 테이블은 2026-07-03 현재 호출자 없는 죽은 배관이라 쓰지 않는다.)
+  (구 ibl_execution_logs 테이블은 0행 죽은 배관이라 2026-08-31 제거. 전 실행의 구조화
+   원장이 필요하면 trajectory_event(world_pulse.db) 의 ibl.started/finished 를 볼 것 —
+   단 코드 원문은 없다(해시·액션 목록·조합 모양만). 원문은 여기 episode_log 가 정본이다.)
 
 카덴스: 주 1회 (ibl_description_audit 선례). run_maintenance_bundle 항목 6.
 산출: data/vocab_crystallization_flags.json + self_checks(__telemetry__:vocab_crystallization)

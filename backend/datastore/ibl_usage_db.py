@@ -186,31 +186,25 @@ class IBLUsageDB:
             END;
         """)
 
-        # 실행 로그 테이블
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS ibl_execution_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_input TEXT DEFAULT '',
-                generated_ibl TEXT DEFAULT '',
-                node TEXT DEFAULT '',
-                action TEXT DEFAULT '',
-                target TEXT DEFAULT '',
-                params_json TEXT DEFAULT '{}',
-                success INTEGER DEFAULT 1,
-                error_message TEXT DEFAULT '',
-                duration_ms INTEGER DEFAULT 0,
-                agent_id TEXT DEFAULT '',
-                project_id TEXT DEFAULT '',
-                created_at TEXT NOT NULL
-            )
-        """)
+        # ★실행 로그 테이블(ibl_execution_logs)은 2026-08-31 에 제거했다.
+        # 스키마만 있고 호출자 0·0행으로 2026-07-03 부터 죽어 있었다. 같은 사실을
+        # 적는 원장이 이미 셋 있다 — 어느 것도 이 테이블을 필요로 하지 않는다:
+        #   · trajectory_event(world_pulse.db) — 전 IBL 실행의 초크포인트.
+        #     ibl.started 가 액션 목록·조합 모양(pipes/nested)·해시를, ibl.finished 가
+        #     성공·소요를 남긴다. **편향 없는 모집단은 여기다.**
+        #   · action_usage_daily(이 DB) — 날짜×액션×origin 집계
+        #   · episode_log(world_pulse.db) — 턴 원문(절단 표식 동반)
+        # 살아 있는 자리를 두고 빈 테이블을 남겨 두면 "채우면 된다"는 미래형 주석이
+        # 지표 문서에 박제된다(실측: vocab_composition_metrics 가 3주간 그 자리를
+        # 가리키고 있었다). 되살릴 일이 생기면 이 무덤 표식을 지우고 새로 판다.
 
         # 인덱스
         conn.execute("CREATE INDEX IF NOT EXISTS idx_examples_category ON ibl_examples(category)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_examples_nodes ON ibl_examples(nodes)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_examples_source ON ibl_examples(source)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_created ON ibl_execution_logs(created_at)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_node_action ON ibl_execution_logs(node, action)")
+        conn.execute("DROP INDEX IF EXISTS idx_logs_created")
+        conn.execute("DROP INDEX IF EXISTS idx_logs_node_action")
+        conn.execute("DROP TABLE IF EXISTS ibl_execution_logs")
 
         conn.commit()
         conn.close()
@@ -502,17 +496,11 @@ class IBLUsageDB:
             by_source = conn.execute(
                 "SELECT source, COUNT(*) as cnt FROM ibl_examples GROUP BY source"
             ).fetchall()
-            log_count = conn.execute("SELECT COUNT(*) FROM ibl_execution_logs").fetchone()[0]
-            log_success = conn.execute(
-                "SELECT COUNT(*) FROM ibl_execution_logs WHERE success = 1"
-            ).fetchone()[0]
 
         return {
             'total_examples': total,
             'by_category': {row['category']: row['cnt'] for row in by_category},
             'by_source': {row['source']: row['cnt'] for row in by_source},
-            'execution_logs': log_count,
-            'successful_logs': log_success,
             'semantic_available': self._model is not None
         }
 
@@ -566,44 +554,6 @@ class IBLUsageDB:
             example_id = row['id']
         self.update_success(example_id, success, elapsed_ms=elapsed_ms, tokens=tokens)
         return True
-
-    # =========================================================================
-    # CRUD - 실행 로그
-    # =========================================================================
-
-    def log_execution(self, user_input: str = "", generated_ibl: str = "",
-                      node: str = "", action: str = "", target: str = "",
-                      params: dict = None, success: bool = True,
-                      error_message: str = "", duration_ms: int = 0,
-                      agent_id: str = "", project_id: str = ""):
-        """실행 로그 저장"""
-        try:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """INSERT INTO ibl_execution_logs
-                       (user_input, generated_ibl, node, action, target, params_json,
-                        success, error_message, duration_ms, agent_id, project_id, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (
-                        user_input, generated_ibl, node, action, target,
-                        json.dumps(params or {}, ensure_ascii=False),
-                        1 if success else 0, error_message, duration_ms,
-                        agent_id, project_id, datetime.now().isoformat()
-                    )
-                )
-                conn.commit()
-        except Exception as e:
-            logger.error(f"[IBL Usage DB] 로그 저장 실패: {e}")
-
-    def get_recent_logs(self, limit: int = 50, success_only: bool = False) -> List[Dict]:
-        """최근 실행 로그 조회"""
-        with self._get_connection() as conn:
-            where = "WHERE success = 1" if success_only else ""
-            rows = conn.execute(
-                f"SELECT * FROM ibl_execution_logs {where} ORDER BY created_at DESC LIMIT ?",
-                (limit,)
-            ).fetchall()
-            return [dict(row) for row in rows]
 
     # =========================================================================
     # 구 승격 시스템 제거됨 — 경험 증류(ibl_usage_rag.distill_experience)로 대체

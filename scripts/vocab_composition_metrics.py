@@ -52,8 +52,13 @@ ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
 #   남는다. 즉 **조합률이 구조적으로 과대추정된다**(상한이지 추정치가 아니다).
 #   → "실사용 22% > 교재 8% 이므로 AI 가 배운 것보다 더 조합한다" 같은 추론은 이 편향
 #     때문에 성립하지 않는다. 말할 수 있는 것은 "새로 하는 것 중에는 조합이 많다" 뿐이다.
-#   편향 없는 모집단은 *전 실행 로그*여야 하는데, 그 자리(ibl_usage.db.ibl_execution_logs)는
-#   스키마만 있고 0행이다 — 채우면 이 지표가 비로소 '행동'을 잰다.
+#   편향 없는 모집단은 *전 실행 로그*다. 그 자리는 2026-08-31 부터
+#   **trajectory_event(world_pulse.db) 의 ibl.started** 다 — 전 IBL 표면의 유일한
+#   초크포인트(system_tools_ibl)가 매 실행마다 actions·action_count·pipes·nested 를
+#   남긴다. 옛 예정석(ibl_usage.db.ibl_execution_logs)은 3주 넘게 0행이던 죽은
+#   배관이라 같은 날 제거했다.
+#   ★아직 이 스크립트는 그 자리를 읽지 않는다(코퍼스만 읽는다). 읽게 되면 조합률의
+#     상한이 아니라 추정치를 말할 수 있다 — 그때까지 아래 숫자는 여전히 상한이다.
 BEHAVIOR_SOURCES = {"distilled"}   # 실행 경험 증류 = AI 가 실제로 쓴 문장 중 **새로운 것만**
 
 # ★조합은 파이프만이 아니다 (2026-08-15 2차 수리) — `do:` 안에 문장을 싣는 것이
@@ -241,7 +246,8 @@ def render(full, before=None):
     print("   행동은 못 건드린다(그래서 시딩으로 못 속이는 지표다).")
     print(" ★단 [행동]=증류는 해마 점수<0.7 인 **새 실행만** 담는다 — 단발 조회는 대개")
     print("   고점수라 빠지고 새 조합은 남는다. 조합률은 상한이지 추정치가 아니다.")
-    print("   (편향 없는 모집단=전 실행 로그. ibl_execution_logs 는 아직 0행.)")
+    print("   (편향 없는 모집단=trajectory_event.ibl.started — 2026-08-31 부터 pipes/nested")
+    print("    까지 적힌다. 이 스크립트는 아직 그 자리를 안 읽는다 → 아래는 여전히 상한.)")
     src = full.get("출처별") or {}
     if src:
         print("   출처: " + " · ".join(f"{k} {v:,}" for k, v in list(src.items())[:5]))

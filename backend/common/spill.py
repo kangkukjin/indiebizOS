@@ -105,19 +105,37 @@ def read_ref(ref: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
 
 
 def resolve_ref(obj: Any) -> Tuple[Any, Optional[str]]:
-    """참조 봉투면 본문(파싱 시도)으로, 아니면 그대로. (값, 오류문)."""
+    """참조 봉투면 본문을 복원한다. 혼합 봉투의 생산자 메타는 보존한다.
+
+    순수 스필 봉투(items/ref/_spilled)면 예전처럼 저장 본문 자체를 돌려준다.
+    생산자가 file_path·preview 같은 형제 메타와 items 참조를 함께 냈다면,
+    참조가 대표하는 items 만 복원하고 형제 메타는 잃지 않는다. 파이프 주입부가
+    혼합 봉투를 통째로 참조로 오인해 본문 위치를 버리면 소비자가 계약을 잘못
+    판정하므로, 참조를 해소하는 이 한 관문에서 봉투를 다시 합친다.
+    """
     if not is_ref(obj):
         return obj, None
     body, err = read_ref(obj["ref"])
     if err:
         return obj, err
+    resolved = body
     s = body.lstrip()
     if s[:1] in "{[":
         try:
-            return json.loads(body), None
+            resolved = json.loads(body)
         except Exception:
             pass
-    return body, None
+
+    ref_keys = {"items", "ref", "_spilled", "spilled"}
+    if set(obj) - ref_keys:
+        merged = {k: v for k, v in obj.items() if k not in ref_keys}
+        if isinstance(resolved, dict):
+            merged.update(resolved)
+            return merged, None
+        if isinstance(resolved, list):
+            merged["items"] = resolved
+            return merged, None
+    return resolved, None
 
 
 def resolve_ref_str(raw: Any) -> Tuple[Any, Optional[str]]:

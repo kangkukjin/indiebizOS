@@ -290,6 +290,33 @@ def test_s1_auto_spill_transparent(tmp_spill, monkeypatch):
     assert recs and recs[0]["title"] == "a"
 
 
+def test_s1b_mixed_spill_envelope_preserves_sibling_metadata(tmp_spill):
+    """items 참조와 본문 메타를 함께 낸 생산자는 주입 이음매에서 메타를 잃지 않는다."""
+    payload = {"items": [{"text": "첫 세그먼트"}, {"text": "둘째 세그먼트"}]}
+    env = spill_mod.spill_write(json.dumps(payload, ensure_ascii=False), tag="mixed")
+    mixed = {
+        **env,
+        "saved_to_file": True,
+        "file_path": "/tmp/transcript.txt",
+        "preview": "자막 앞부분",
+        "message": "자막이 길어서 파일로 저장했습니다",
+    }
+
+    resolved, err = spill_mod.resolve_ref(mixed)
+    assert err is None
+    assert resolved["items"] == payload["items"]
+    assert resolved["file_path"] == mixed["file_path"]
+    assert resolved["preview"] == mixed["preview"]
+    assert "ref" not in resolved and "_spilled" not in resolved
+
+    tool_input = workflow_engine._auto_inject_prev(
+        {"params": {}}, json.dumps(mixed, ensure_ascii=False))
+    seen = json.loads(tool_input["params"]["_prev_result"])
+    assert seen["items"] == payload["items"]
+    assert seen["saved_to_file"] is True
+    assert seen["file_path"] == mixed["file_path"]
+
+
 def test_s2_resume(tmp_spill):
     from system_tools_ibl import _execute_ibl_unified
     calls, state = [], {}

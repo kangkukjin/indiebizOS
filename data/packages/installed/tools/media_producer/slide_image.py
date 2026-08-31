@@ -29,12 +29,15 @@ def _load_styles():
     return mod
 
 
-def _system_ai_config() -> dict:
-    from runtime_utils import get_base_path
-    p = get_base_path() / "data" / "system_ai_config.json"
-    if p.exists():
-        return json.load(open(p, encoding="utf-8"))
-    return {"provider": "anthropic", "model": "", "apiKey": ""}
+def _gemini_key() -> str:
+    """Gemini(이미지 생성·비전) 키 — `.env` 의 GEMINI_API_KEY 가 정본.
+
+    ★티어 설정의 apiKey 를 여기에 쓰면 안 된다: 그 칸은 *텍스트* 모델의 키이고,
+    기어가 키 불요 프로바이더(claude_code·codex)면 원래 비어 있다. 옛 판이 그 칸을
+    Gemini 키로 쓰다가 2026-08-31 슬라이드 저작이 통째로 죽었다(ep2482).
+    """
+    from model_resolver import env_key_for_provider
+    return env_key_for_provider("google")
 
 
 # ── 저작 시스템 프롬프트 ───────────────────────────────────────────
@@ -81,13 +84,25 @@ _AUTHOR_PROMPT = """당신은 프리미엄 일러스트 슬라이드 한 장을 
 
 
 def _get_ai():
-    cfg = _system_ai_config()
-    api_key = (cfg.get("apiKey") or "").strip()
-    if not api_key:
-        raise RuntimeError("시스템 AI API 키가 없습니다 (설정 → 시스템 AI).")
+    """저작 AI = 모델 기어 'content_text' 역할(실행 축) — 사용자가 기어로 조정한다.
+
+    (2026-08-31 이전엔 고급 티어 파일의 apiKey 를 직접 검사해 기어를 우회했고, 기어가
+    키 불요 프로바이더일 때 "시스템 AI API 키가 없습니다"로 저작 전체가 죽었다.
+    slide_ai(08-04)·youtube(08-30)가 먼저 옮겨간 것과 같은 통로다.)
+    """
+    from model_resolver import resolve, provider_needs_api_key
+
+    d = resolve("content_text")
+    provider_name = (d.get("provider") or "").strip()
+    model_name = (d.get("model") or "").strip()
+    api_key = (d.get("api_key") or "").strip()
+    if not provider_name or not model_name:
+        raise RuntimeError("저작 모델을 해소하지 못했습니다 — 모델 기어(실행 축)를 확인하세요.")
+    if not api_key and provider_needs_api_key(provider_name):
+        raise RuntimeError(f"{provider_name} 키가 없습니다 — .env 의 프로바이더 키를 확인하세요.")
     from providers import get_provider
-    prov = get_provider((cfg.get("provider") or "anthropic").strip(), api_key=api_key,
-                        model=(cfg.get("model") or "").strip(), system_prompt=_AUTHOR_PROMPT, tools=[])
+    prov = get_provider(provider_name, api_key=api_key, model=model_name,
+                        system_prompt=_AUTHOR_PROMPT, tools=[])
     prov.init_client()
     return prov
 
@@ -104,8 +119,9 @@ def _extract_json(text: str) -> dict:
 
 
 def _gen_image(scene_prompt: str, out_path: str, quality: str = "pro"):
-    cfg = _system_ai_config()
-    api_key = (cfg.get("apiKey") or "").strip()
+    api_key = _gemini_key()
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY가 없습니다 (.env 또는 환경변수).")
     model = {"pro": "gemini-3-pro-image-preview", "fast": "gemini-3.1-flash-image-preview"}.get(quality, "gemini-3-pro-image-preview")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {"contents": [{"parts": [{"text": scene_prompt}]}],
@@ -294,8 +310,7 @@ def _critique(img_path: str, scene: str, style: str) -> dict:
     ★fail-open: 키 부재·읽기 실패·VLM 실패 시 {"passed": True, "_error": ...} —
     비평은 품질 향상기이지 산출을 막는 게이트가 아니다.
     """
-    cfg = _system_ai_config()
-    api_key = (cfg.get("apiKey") or "").strip()
+    api_key = _gemini_key()
     if not api_key:
         return {"passed": True, "_error": "no_api_key"}
     try:

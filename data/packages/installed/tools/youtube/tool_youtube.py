@@ -28,9 +28,7 @@ if _backend_dir not in sys.path:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
-# 시스템 AI 설정 경로 (indiebizOS/data/system_ai_config.json)
 INDIEBIZ_DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", ".."))
-SYSTEM_AI_CONFIG_PATH = os.path.join(INDIEBIZ_DATA_DIR, "system_ai_config.json")
 OUTPUTS_DIR = os.path.join(INDIEBIZ_DATA_DIR, "outputs")
 
 
@@ -49,7 +47,6 @@ get_youtube_info = _tx.get_youtube_info
 extract_video_id = _tx.extract_video_id
 list_available_transcripts = _tx.list_available_transcripts
 get_youtube_transcript = _tx.get_youtube_transcript
-load_system_ai_config = _tx.load_system_ai_config
 get_summary_ai_client = _tx.get_summary_ai_client
 summarize_youtube = _tx.summarize_youtube
 

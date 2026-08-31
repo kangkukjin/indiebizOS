@@ -21,7 +21,6 @@ if _backend_dir not in sys.path:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 INDIEBIZ_DATA_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", ".."))
-SYSTEM_AI_CONFIG_PATH = os.path.join(INDIEBIZ_DATA_DIR, "system_ai_config.json")
 OUTPUTS_DIR = os.path.join(INDIEBIZ_DATA_DIR, "outputs")
 
 
@@ -518,21 +517,6 @@ def get_youtube_transcript(
             'success': False,
             'message': f'자막 가져오기 실패: {str(e)}'
         }
-
-
-def load_system_ai_config() -> dict:
-    """시스템 AI 설정 로드"""
-    if os.path.exists(SYSTEM_AI_CONFIG_PATH):
-        try:
-            with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {
-        "provider": "google",
-        "model": "gemini-2.0-flash",
-        "apiKey": ""
-    }
 
 
 def get_summary_ai_client():

@@ -27,20 +27,15 @@ import httpx
 # 설정/공통
 # ─────────────────────────────────────────────────────────────────────
 
-def _system_ai_config() -> dict:
-    from runtime_utils import get_base_path
-    p = get_base_path() / "data" / "system_ai_config.json"
-    if p.exists():
-        return json.load(open(p, encoding="utf-8"))
-    return {"provider": "anthropic", "model": "", "apiKey": ""}
-
-
 def _gemini_key() -> str:
-    """Gemini 이미지/Vision API 키. 정식 경로(generate_gemini_image)와 동일하게 GEMINI_API_KEY env
-    우선 — system_ai provider가 claude_code/anthropic일 때 그 apiKey는 Gemini 키가 아니므로.
-    폴백으로만 system_ai apiKey(provider가 google일 때 유효)를 본다."""
-    return (os.environ.get("GEMINI_API_KEY")
-            or (_system_ai_config().get("apiKey") or "").strip())
+    """Gemini 이미지/Vision API 키 — `.env` 의 GEMINI_API_KEY 가 정본.
+
+    ★티어 설정의 apiKey 폴백은 2026-08-31 에 없앴다: 그 칸은 *텍스트* 모델의 키이고,
+    기어가 키 불요 프로바이더(claude_code·codex)면 원래 비어 있다. 폴백이 있으면
+    '가끔 우연히 맞는' 값이 섞여 진단만 흐려진다(ep2482 는 그 우연이 끝난 날이었다).
+    """
+    from model_resolver import env_key_for_provider
+    return env_key_for_provider("google")
 
 
 def _fix_json_escapes(s: str) -> str:
@@ -219,30 +214,26 @@ _AUTHOR_PROMPT = """당신은 NotebookLM 수준의 발표 슬라이드 한 장�
 """
 
 
-def _resolve_content_text_config() -> dict:
-    """슬라이드 *텍스트* 저작 모델을 모델 기어 'content_text' 역할(실행 축)로 해소.
-    (슬라이드 이미지=Gemini 는 모달리티=기어 밖, _gemini_key 가 따로 다룬다.) 실패 시 옛 config."""
-    try:
-        from model_resolver import resolve
-        d = resolve("content_text")
-        if d.get("model"):
-            return {"provider": d.get("provider", "anthropic"),
-                    "model": d["model"], "apiKey": d.get("api_key", "")}
-    except Exception:
-        pass
-    return _system_ai_config()
-
-
 def _get_author_ai():
-    cfg = _resolve_content_text_config()
-    provider_name = (cfg.get("provider") or "anthropic").strip()
-    api_key = (cfg.get("apiKey") or "").strip()
-    no_key = {"claude_code", "claude-code", "claudecode", "ollama"}
-    if not api_key and provider_name.lower() not in no_key:  # vj-ok: 프로바이더 설정 식별자
-        raise RuntimeError("텍스트 생성 모델 키가 없습니다 (모델 기어 실행 축 / 시스템 AI 설정 확인).")
+    """슬라이드 *텍스트* 저작 모델 = 모델 기어 'content_text' 역할(실행 축).
+
+    (슬라이드 이미지=Gemini 는 모달리티라 기어 밖 — _gemini_key 가 따로 다룬다.)
+    ★옛 판의 티어 파일 폴백과 손으로 적은 '키 불요' 집합은 2026-08-31 에 없앴다:
+    그 집합에 codex 가 빠져 있어, 기어가 codex 인 동안 저작이 "키가 없습니다"로 죽었다.
+    """
+    from model_resolver import resolve, provider_needs_api_key
+
+    d = resolve("content_text")
+    provider_name = (d.get("provider") or "").strip()
+    model_name = (d.get("model") or "").strip()
+    api_key = (d.get("api_key") or "").strip()
+    if not provider_name or not model_name:
+        raise RuntimeError("저작 모델을 해소하지 못했습니다 — 모델 기어(실행 축)를 확인하세요.")
+    if not api_key and provider_needs_api_key(provider_name):
+        raise RuntimeError(f"{provider_name} 키가 없습니다 — .env 의 프로바이더 키를 확인하세요.")
     from providers import get_provider
     prov = get_provider(provider_name, api_key=api_key,
-                        model=(cfg.get("model") or "").strip(), system_prompt=_AUTHOR_PROMPT, tools=[])
+                        model=model_name, system_prompt=_AUTHOR_PROMPT, tools=[])
     # 저작 계약=긴 JSON 한 방 — 하이브리드 thinking 모델(deepseek-v4-flash 등)이 thinking에
     # 빠지면 max_tokens를 추론에 다 태우고 본문 0자("AI 응답이 비어 있습니다") — 원샷 버킷과 동일 차단.
     prov.disable_thinking = True

@@ -11,7 +11,6 @@ Blog Insight Tool for IndieBiz
 
 import os
 import sys
-import json
 import sqlite3
 import requests
 import re
@@ -34,7 +33,6 @@ DB_PATH = os.path.join(DATA_DIR, "blog_insight.db")
 
 # 시스템 AI 설정 경로
 BACKEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "..", "..", "..", "backend"))
-SYSTEM_AI_CONFIG_PATH = os.path.join(BACKEND_DIR, "data", "system_ai_config.json")
 
 BLOG_URL = "https://irepublic.tistory.com"
 RSS_URL = f"{BLOG_URL}/rss"
@@ -85,42 +83,32 @@ def markdown_to_html(content: str, title: str, date_str: str, doc_type: str = "r
 </html>"""
 
 
-def load_system_ai_config() -> dict:
-    """시스템 AI 설정 로드"""
-    if os.path.exists(SYSTEM_AI_CONFIG_PATH):
-        try:
-            with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            pass
-    return {
-        "provider": "google",
-        "model": "gemini-2.0-flash",
-        "apiKey": ""
-    }
+def get_report_ai() -> Any:
+    """보고서 생성용 AI provider — 모델 기어 'content_text' 역할(실행 축).
 
+    ★2026-08-31 통로 교체: 옛 판은 고급 티어 파일을 직접 읽고 벤더 SDK 를 손으로
+    분기했다(google/openai/anthropic 셋만). 기어가 그 밖(claude_code·codex·deepseek)을
+    고르면 'Unknown provider' 로 죽고, 설령 통과해도 분기에 없는 벤더는 응답 변수를
+    안 채워 NameError 로 갔다. youtube(08-30)·slide_*(08-31)와 같은 뿌리라 같이 옮긴다.
+    벤더 분기 대신 provider 추상을 쓰므로 호출부도 한 줄이 된다.
+    """
+    from model_resolver import resolve, provider_needs_api_key
 
-def get_report_ai_client():
-    """보고서 생성용 AI 클라이언트 반환"""
-    config = load_system_ai_config()
-    provider = config.get("provider", "google")
-    model = config.get("model", "gemini-2.0-flash")
-    api_key = config.get("apiKey") or config.get("api_key", "")
+    d = resolve("content_text")
+    provider_name = (d.get("provider") or "").strip()
+    model_name = (d.get("model") or "").strip()
+    api_key = (d.get("api_key") or "").strip()
+    if not provider_name or not model_name:
+        raise RuntimeError("보고서 모델을 해소하지 못했습니다 — 모델 기어(실행 축)를 확인하세요.")
+    if not api_key and provider_needs_api_key(provider_name):
+        raise RuntimeError(f"{provider_name} 키가 없습니다 — .env 의 프로바이더 키를 확인하세요.")
 
-    if provider in ["google", "gemini"]:
-        from google import genai
-        client = genai.Client(api_key=api_key)
-        return client, "gemini", model
-    elif provider == "openai":
-        import openai
-        client = openai.OpenAI(api_key=api_key)
-        return client, "openai", model
-    elif provider == "anthropic":
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        return client, "anthropic", model
-    else:
-        raise ValueError(f"Unknown provider: {provider}")
+    from providers import get_provider
+    prov = get_provider(provider_name, api_key=api_key, model=model_name,
+                        system_prompt="당신은 블로그 글들을 읽고 관심사와 학습 방향을 짚어 주는 분석가다.",
+                        tools=[])
+    prov.init_client()
+    return prov
 
 
 def get_db() -> sqlite3.Connection:
@@ -576,12 +564,11 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
             conn = get_db()
             missing = conn.execute("SELECT p.post_id, p.title, p.content FROM posts p LEFT JOIN summaries s ON p.post_id = s.post_id WHERE s.post_id IS NULL ORDER BY p.pub_date DESC LIMIT 5").fetchall()
             if missing:
-                client, provider, model = get_report_ai_client()
+                ai = get_report_ai()
                 for m in missing:
                     prompt = f"다음 블로그 글을 500자 내외로 요약하고 핵심 키워드 3개를 추출해줘. 형식: 요약내용 | 키워드1,키워드2,키워드3\n\n제목: {m['title']}\n내용: {m['content'][:2000]}"
                     try:
-                        if provider == "gemini": res = client.models.generate_content(model=model, contents=prompt).text
-                        elif provider == "openai": res = client.chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}]).choices[0].message.content
+                        res = ai.process_message(prompt, history=[])
                         if "|" in res:
                             summ, kws = res.split("|", 1)
                             blog_save_summary(m['post_id'], summ.strip(), kws.strip())
@@ -593,12 +580,10 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
 
         # 2. AI 분석 및 키워드 추출
         print("🧠 AI 인사이트 분석 중...")
-        client, provider, model = get_report_ai_client()
+        ai = get_report_ai()
         context = "\n".join([f"- {s['title']} ({s['category']}): {s['summary'][:100]}..." for s in summaries[:20]])
         prompt = f"다음 블로그 요약들을 분석하여 1.최근 관심사 분석, 2.학습 방향 제안(3가지 구체적 영역과 프로젝트), 3.검색할 뉴스 키워드 3개를 마크다운으로 작성해줘.\n\n{context}"
-        
-        if provider == "gemini": analysis = client.models.generate_content(model=model, contents=prompt).text
-        elif provider == "openai": analysis = client.chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}]).choices[0].message.content
+        analysis = ai.process_message(prompt, history=[])
         
         # 뉴스 키워드 파싱 (간단히)
         news_keywords = ["AI", "기술", "비즈니스"]

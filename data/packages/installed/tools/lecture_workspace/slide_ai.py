@@ -36,22 +36,20 @@ if str(_BACKEND_PATH) not in sys.path:
 _slide_ai_provider = None
 _slide_ai_config_sig = None
 
-# 자체 인증 프로바이더(키 불요) — slide_native/_get_author_ai 와 동일 목록.
-_NO_KEY_PROVIDERS = {"claude_code", "claude-code", "claudecode", "ollama"}
 
+def _gemini_cache_model() -> str:
+    """Gemini 컨텍스트 캐시를 걸 수 있는 모델 이름 — 못 걸면 빈 문자열.
 
-def _load_system_ai_config() -> dict:
-    """고급 티어 설정 파일 직접 로드.
-
-    ★이름 주의: system_ai_config.json 은 '시스템 AI 가 쓰는 모델'이 아니라 **고급 티어의 설정
-    파일**이다(model_gear.json tiers 매핑). 시스템 AI 자신도 기어를 거쳐 모델을 정한다.
-    여기선 Gemini 컨텍스트 캐시(키·모델명) 용도로만 남는다 — 텍스트 저작은 _resolve_content_text()."""
-    from runtime_utils import get_base_path
-    cfg_path = get_base_path() / "data" / "system_ai_config.json"
-    if cfg_path.exists():
-        with open(cfg_path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"provider": "anthropic", "model": "claude-sonnet-4-20250514", "apiKey": ""}
+    캐시는 **Gemini 전용 기능**이라 지금 기어가 고른 저작 모델이 Gemini 계열일 때만
+    성립한다. 다른 벤더면 캐시 없이 진행한다(호출자 계약: None/빈 값 = inline 폴백).
+    ★옛 판은 고급 티어 파일을 직접 읽어 그 모델·apiKey 를 썼다 — 기어가 무엇을 고르든
+    캐시는 남의 티어를 보고 있었고, 키 불요 프로바이더에선 apiKey 가 비어 조용히 꺼졌다.
+    """
+    from model_resolver import resolve
+    d = resolve("content_text")
+    if (d.get("provider") or "").strip().lower() not in ("google", "gemini"):
+        return ""
+    return (d.get("model") or "").strip()
 
 
 def _resolve_content_text() -> dict:
@@ -66,8 +64,8 @@ def _resolve_content_text() -> dict:
             return {"provider": d.get("provider", "anthropic"),
                     "model": d["model"], "apiKey": d.get("api_key", "")}
     except Exception as e:
-        print(f"[SlideAI] 기어 해소 실패(옛 config 폴백): {e}")
-    return _load_system_ai_config()
+        print(f"[SlideAI] 기어 해소 실패: {e}")
+    return {"provider": "", "model": "", "apiKey": ""}
 
 
 def _get_slide_ai():
@@ -78,11 +76,13 @@ def _get_slide_ai():
     api_key = (cfg.get("apiKey") or "").strip()
     provider_name = (cfg.get("provider") or "anthropic").strip()
     model_name = (cfg.get("model") or "").strip()
-    # claude_code/ollama 는 자체 인증이라 키 불요.
-    if not api_key and provider_name.lower() not in _NO_KEY_PROVIDERS:
+    from model_resolver import provider_needs_api_key
+    if not provider_name or not model_name:
+        raise RuntimeError("저작 모델을 해소하지 못했습니다 — 모델 기어(실행 축)를 확인하세요.")
+    # claude_code·codex·ollama 는 자체 인증이라 키가 없는 것이 정상이다(판정의 정본 한 곳).
+    if not api_key and provider_needs_api_key(provider_name):
         raise RuntimeError(
-            "텍스트 생성 모델 키가 설정되지 않았습니다. "
-            "모델 기어(실행 축) 또는 시스템 AI 설정을 확인하세요."
+            f"{provider_name} 키가 없습니다 — .env 의 프로바이더 키를 확인하세요."
         )
     sig = (provider_name, model_name, api_key[-8:])  # 키 변경 감지용
 
@@ -749,11 +749,11 @@ def _delete_cache_state(lecture_id: str) -> None:
 
 
 def _get_genai_client():
-    """google-genai Client 인스턴스 (싱글턴). cache API 호출용."""
-    cfg = _load_system_ai_config()
-    api_key = cfg.get("apiKey", "").strip()
+    """google-genai Client 인스턴스. cache API 호출용 — 키는 `.env` 의 GEMINI_API_KEY."""
+    from model_resolver import env_key_for_provider
+    api_key = env_key_for_provider("google")
     if not api_key:
-        raise RuntimeError("시스템 AI API 키가 없습니다.")
+        raise RuntimeError("GEMINI_API_KEY가 없습니다 (.env 또는 환경변수).")
     from google import genai
     return genai.Client(api_key=api_key)
 
@@ -777,10 +777,9 @@ def invalidate_lecture_cache(lecture_id: str) -> None:
 def _ensure_lecture_cache(deck: dict, lecture_dir: Path) -> Optional[str]:
     """강의별 캐시 보장. 캐시 이름 반환. 캐시 못 만들면 None (호출자가 폴백 처리)."""
     lecture_id = deck["lecture_id"]
-    cfg = _load_system_ai_config()
-    model_name = cfg.get("model", "").strip()
-    if not cfg.get("apiKey", "").strip():
-        return None
+    model_name = _gemini_cache_model()
+    if not model_name:
+        return None      # 저작 모델이 Gemini 계열이 아니면 캐시는 성립하지 않는다
 
     signature = _compute_cache_signature(deck, lecture_dir, model_name)
 
@@ -1230,11 +1229,12 @@ def outline_from_materials(
     if not materials_text.strip():
         raise ValueError("강의 자료가 없습니다. 먼저 자료(파일/메모)를 추가하세요.")
 
+    from model_resolver import provider_needs_api_key
     cfg = _resolve_content_text()
     api_key = (cfg.get("apiKey") or "").strip()
-    if not api_key and (cfg.get("provider") or "").strip().lower() not in _NO_KEY_PROVIDERS:
+    if not api_key and provider_needs_api_key(cfg.get("provider")):
         raise RuntimeError(
-            "텍스트 생성 모델 키가 설정되지 않았습니다. (모델 기어 실행 축 / 시스템 AI 설정)"
+            f"{cfg.get('provider') or '저작'} 모델 키가 없습니다 — .env 의 프로바이더 키를 확인하세요."
         )
 
     if count is not None:

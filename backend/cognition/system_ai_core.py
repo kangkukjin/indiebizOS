@@ -197,6 +197,12 @@ def _switch_to_midtier(runner):
         if midtier is None:
             return None  # 중급 설정 없으면 본격 모델 유지
 
+        # ★캐시 공유 객체를 그대로 변이하지 않는다 (2026-08-31): model_resolver 는
+        # provider 를 (프로바이더|모델|키) 로 캐시한다 — 같은 티어로 스왑하는 동시 턴이
+        # 같은 객체를 받는다. 거기에 _carry_context 로 system_prompt·agent_id 를 쓰면
+        # 서로의 신원·프롬프트를 덮는다. 턴 사유 사본에 실어 옮긴다.
+        from agent_pipeline import per_turn_provider_view
+        midtier = per_turn_provider_view(midtier)
         original_provider = runner.ai._provider
         _carry_context(midtier, original_provider)
         runner.ai._provider = midtier
@@ -234,6 +240,9 @@ def _switch_to_role(runner, role, agent_id: str = None):
         prov, d = get_provider_for(role, agent_id=agent_id, oneshot=False)
         if prov is None:
             return None  # 해당 티어 설정/키 없음 → 기존(본격) 모델 유지
+        # 캐시 공유 객체 변이 금지 — _switch_to_midtier 의 같은 주석 참조.
+        from agent_pipeline import per_turn_provider_view
+        prov = per_turn_provider_view(prov)
         cur = runner.ai._provider
         _carry_context(prov, cur)
         runner.ai._provider = prov

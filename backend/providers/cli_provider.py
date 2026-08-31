@@ -33,6 +33,7 @@ import os
 import re
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, List, Optional
@@ -944,11 +945,21 @@ class CliSubprocessProvider(BaseProvider):
         return self.agent_id or self.agent_name or "default"
 
     def _write_system_prompt_file(self) -> Optional[str]:
-        """시스템 프롬프트+도구정책을 에이전트별 고정 임시 파일에 쓰고 경로를 반환.
+        """시스템 프롬프트+도구정책을 (에이전트, 스레드)별 고정 임시 파일에 쓰고 경로를 반환.
 
         인자가 아니라 파일로 넘기기 위함(윈도우 argv 상한 회피).
-        에이전트별 고정 경로에 매 호출 덮어써 리트라이 간 재사용하므로 별도 정리가 필요 없다
+        고정 경로에 매 호출 덮어써 리트라이 간 재사용하므로 별도 정리가 필요 없다
         (누적되지 않고 덮어써짐). 생성 실패 시 None → 호출 측이 인자 방식으로 폴백.
+
+        ★스레드 식별자가 경로에 들어가는 이유 (2026-08-31): 종전엔 키가 agent_id 뿐이라
+        **같은 에이전트의 동시 턴이 한 파일을 공유**했다. 시스템 AI 는 러너가 싱글턴이라
+        채팅 턴과 위임/스케줄러 턴이 둘 다 agent_id="system_ai" 로 온다 — 각 턴의 의식
+        framing·실행기억이 박힌 서로 다른 프롬프트가 같은 경로를 덮어써, 나중에 spawn 하는
+        subprocess 가 **남의 턴 프롬프트**를 읽을 수 있었다. 객체를 사유화해도(turn_ai_scope)
+        이 파일이 새면 소용없다 — 격리는 가장 바깥 경계까지 가야 한다.
+        턴은 한 스레드가 처음부터 끝까지 몰고(WS 두 경로 모두 워커 스레드에서 drain),
+        한 스레드에 동시 턴은 없다. 그래서 스레드 식별자면 충분하고, 파일 수도 워커
+        스레드 수로 묶인다(내용 해시로 가르면 턴마다 새 파일이 쌓인다).
         """
         # 도구 없는 원샷에는 도구 정책(차단 네이티브→IBL 안내)이 무의미 — 싣지 않는다
         text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False) else self.TOOL_POLICY)
@@ -956,7 +967,9 @@ class CliSubprocessProvider(BaseProvider):
             r"[^A-Za-z0-9_.-]", "_",
             str(self.agent_id or self.agent_name or "default"),
         )[:60]
-        path = os.path.join(tempfile.gettempdir(), f"{self.STATE_PREFIX}_sys_{safe}.txt")
+        path = os.path.join(
+            tempfile.gettempdir(),
+            f"{self.STATE_PREFIX}_sys_{safe}_t{threading.get_ident():x}.txt")
         try:
             with open(path, "w", encoding="utf-8") as f:
                 f.write(text)

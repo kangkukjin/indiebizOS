@@ -17,7 +17,10 @@ transport에 남는 것: 에피소드 start/end, thread_context 설정, event pu
 DB save_message, 태스크·세션·클라이언트 관리, 취소/타임아웃 처리.
 """
 
+import copy as _copy
 import json
+import threading as _threading
+from contextlib import contextmanager as _contextmanager
 
 from typing import Generator, Dict, Any, List, Optional
 
@@ -123,11 +126,113 @@ def drain_stream(gen) -> Dict[str, Any]:
             "clarify": clarify, "session_reset": session_reset}
 
 
+def per_turn_provider_view(provider):
+    """provider 의 얕은 사본 — 턴마다 달라지는 값 속성만 사유화한다.
+
+    비싼 것(_client·세션 저장소·소켓)은 참조로 공유하고, `system_prompt`·`agent_id`·
+    도구 수확 버퍼처럼 **턴마다 값이 달라지는 속성**만 사본에 둔다. 사본을 못 만드는
+    프로바이더면 원본을 그대로 돌려준다 — 격리가 턴을 죽여선 안 된다(옛 동작으로 후퇴).
+    """
+    if provider is None:
+        return None
+    try:
+        view = _copy.copy(provider)
+    except Exception as e:
+        print(f"[턴격리] provider 사본 실패 — 공유 객체로 진행 (무시): {e}")
+        return provider
+    for f in ("_last_tool_images", "_last_tool_results", "_last_tool_calls"):
+        if hasattr(view, f):
+            setattr(view, f, [])
+    return view
+
+
 class CognitivePipelineMixin:
     """AgentRunner용 인지 파이프라인 드라이버 — 프로젝트/시스템AI 공용.
 
     차이는 self.config['_is_system_ai'] 플래그와 파라미터로 흡수한다(별도 집 없음).
     """
+
+    # ── 턴 사유 AI 뷰 (2026-08-31) ────────────────────────────────────────────
+    # ★러너는 상주 객체다. 시스템 AI 러너는 **싱글턴**이라 채팅 턴·위임 턴·스케줄러
+    # 턴이 같은 self.ai / self.ai._provider 를 공유한다. 그런데 파이프라인은 그 공유
+    # 객체에 **턴마다 달라지는 값**을 쓴다 —
+    #   · `self.ai.system_prompt` / `self.ai._provider.system_prompt`
+    #     = 이 턴의 의식 framing·실행기억이 박힌 프롬프트 (4단계)
+    #   · `self.ai._provider` 슬롯 = THINK/REPAIR/reflex 모델 스왑 (3단계)
+    #   · `_last_tool_images/_results/_calls` = 이 턴의 도구 수확
+    # 동시 턴이 겹치면 나중 턴의 대입이 앞 턴의 값을 덮는다. 스왑은 finally 에서
+    # '진입 시점 provider' 로 복원하므로 최종 상태는 맞아도, **겹치는 구간 동안**
+    # 한쪽이 남의 프롬프트·남의 모델로 돈다.
+    #
+    # 이 위험은 위임 루프를 파이프라인에 합류시키면서(2026-08-31, fbad190d) 비로소
+    # 닿게 됐다 — 그전엔 위임이 파이프라인 밖이라 프롬프트를 안 썼다.
+    #
+    # 처방: **턴별 상태는 이미 이 코드베이스가 정한 집이 있다 — threading.local**
+    # (thread_context 가 그 규약이고, WS 두 경로 모두 워커 스레드 안에서 턴 컨텍스트를
+    # 다시 세운다). provider 슬롯만 스레드-사유화하면 `system_prompt` 대입이 여전히
+    # 공유 객체를 때리므로, **self.ai 자체를 턴 사유 얕은 사본으로** 바꾼다. 그러면
+    # 지금 있는 것도 앞으로 늘어날 턴 속성도 자동으로 사유화된다(속성마다 프로퍼티를
+    # 하나씩 다는 방식은 반드시 새 속성에서 샌다 — pitfall_hand_picked_sweep_leaks).
+    #
+    # 잠금이 아니라 격리를 고른 이유: 잠금은 자기 위임(턴 안에서 [others:delegate] →
+    # 위임 루프는 다른 스레드)이 같은 잠금을 기다리면 교착이다. 격리엔 그 위험이 없다.
+
+    def _turn_local(self):
+        """인스턴스별 threading.local (첫 접근 때 생성)."""
+        tl = self.__dict__.get("_turn_local_store")
+        if tl is None:
+            tl = _threading.local()
+            self.__dict__["_turn_local_store"] = tl
+        return tl
+
+    @property
+    def ai(self):
+        """이 턴의 AI. 턴 스코프 안이면 스레드-사유 사본, 밖이면 바탕 객체."""
+        tl = self._turn_local()
+        if getattr(tl, "depth", 0):
+            return tl.ai
+        return self.__dict__.get("_ai_base")
+
+    @ai.setter
+    def ai(self, value):
+        # 턴 안의 대입은 사본에만, 턴 밖의 대입(_init_ai·기어 전파)은 바탕에.
+        # 턴이 바탕을 바꾸면 남의 턴에 샌다.
+        tl = self._turn_local()
+        if getattr(tl, "depth", 0):
+            tl.ai = value
+        else:
+            self.__dict__["_ai_base"] = value
+
+    @_contextmanager
+    def turn_ai_scope(self):
+        """이 턴 동안 self.ai 를 스레드-사유 사본으로 세운다. 재진입 가능.
+
+        중첩(위임 어댑터가 바깥에서 열고 파이프라인이 안에서 또 여는 경우)은 바깥
+        스코프를 잇는다 — 안쪽이 또 사본을 뜨면 바깥이 건 모델 핀이 사라진다.
+        """
+        tl = self._turn_local()
+        depth = getattr(tl, "depth", 0)
+        base = self.__dict__.get("_ai_base")
+        if depth == 0:
+            view = base
+            if base is not None:
+                try:
+                    view = _copy.copy(base)
+                    view._provider = per_turn_provider_view(getattr(base, "_provider", None))
+                    for f in ("_last_tool_images", "_last_tool_results", "_last_tool_calls"):
+                        if hasattr(view, f):
+                            setattr(view, f, [])
+                except Exception as e:
+                    print(f"[턴격리] AI 사본 실패 — 공유 객체로 진행 (무시): {e}")
+                    view = base
+            tl.ai = view
+        tl.depth = depth + 1
+        try:
+            yield
+        finally:
+            tl.depth = depth
+            if depth == 0:
+                tl.ai = None
 
     def _collect_thread_tool_calls(self, tool_calls_log: list):
         """thread_context에 쌓인 node/action/ms 도구 이력을 수집(X-Ray용)하고 비운다."""
@@ -140,7 +245,17 @@ class CognitivePipelineMixin:
         except Exception:
             pass
 
-    def cognitive_stream(
+    def cognitive_stream(self, message: str, history: Optional[list] = None, **kwargs):
+        """턴 사유 AI 뷰를 세우고 본체를 흘린다 (동시 턴 격리 — turn_ai_scope 참조).
+
+        ★기어 동기화(0단계)는 스코프 **밖**이다 — 그건 상주 러너의 바탕 모델을 바꾸는
+        일이라 사본에만 적으면 다음 턴이 옛 모델로 돌아간다.
+        """
+        self._sync_execution_gear()
+        with self.turn_ai_scope():
+            yield from self._cognitive_stream_body(message, history, **kwargs)
+
+    def _cognitive_stream_body(
         self,
         message: str,
         history: Optional[list] = None,
@@ -167,9 +282,9 @@ class CognitivePipelineMixin:
         history = history or []
         agent_name = agent_name or self.config.get("name", "")
 
-        # 0. 실행 축 기어 동기화 — 기어 변경을 상주 러너에 전파(불변이면 무비용).
-        # reflex/force_role 스왑보다 먼저여야 복원(original_provider)도 새 기어로 돌아온다.
-        self._sync_execution_gear()
+        # 0. 실행 축 기어 동기화는 래퍼(cognitive_stream)가 **스코프 밖에서** 끝냈다 —
+        # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. reflex/force_role
+        # 스왑보다 먼저라는 순서는 그대로다(복원도 새 기어로 돌아온다).
 
         # 1. 연상 — 해마+심층+포식+디스크골격 (검색 1회로 점수/코드까지 확보)
         # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.

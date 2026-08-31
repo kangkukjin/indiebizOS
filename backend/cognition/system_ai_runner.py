@@ -433,12 +433,17 @@ class SystemAIRunner:
             _switch_to_role, _restore_provider,
         )
         runner = get_system_ai_runner()
-        original = _switch_to_role(runner, "system_ai", agent_id="system_ai_delegation")
-        try:
-            response, _images = process_system_ai_message(ai_message, history)
-            return response
-        finally:
-            _restore_provider(runner, original)
+        # ★핀을 턴 스코프 **안에서** 건다 (2026-08-31): 러너는 싱글턴이라 스코프 밖
+        # 대입은 바탕 객체를 바꿔 동시에 도는 채팅 턴까지 이 핀에 끌려간다. 스코프는
+        # 재진입 가능하므로 안쪽 파이프라인이 다시 열어도 이 사본을 잇는다(핀 유지).
+        with runner.turn_ai_scope():
+            original = _switch_to_role(runner, "system_ai",
+                                       agent_id="system_ai_delegation")
+            try:
+                response, _images = process_system_ai_message(ai_message, history)
+                return response
+            finally:
+                _restore_provider(runner, original)
 
     def _build_history_from_completed(self, completed: list) -> list:
         """완료된 위임 기록을 AI 히스토리 형식으로 변환

@@ -1345,6 +1345,7 @@ def _deck_video(tool_input: dict) -> str:
         "rate": tool_input.get("rate"),
         "transition": tool_input.get("transition"),
         "output_filename": tool_input.get("output_filename"),
+        "captions": tool_input.get("captions"),
         "bgm_path": tool_input.get("bgm_path"),
         "duration_per_scene": tool_input.get("duration_per_scene"),
         "width": tool_input.get("width"),

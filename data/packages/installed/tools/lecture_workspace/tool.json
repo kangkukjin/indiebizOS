@@ -226,7 +226,7 @@
     },
     {
       "name": "deck_op",
-      "description": "강의 데크 조작 통합 도구. op 파라미터로 분기:\n- reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.\n- export: PDF/PPTX/이미지 폴더로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.\n- video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. 기본 백그라운드(별도 프로세스라 백엔드 리로드에 안 죽음, 즉시 반환), 진행=check:true 또는 video_state.json, wait:true=동기. lecture_dir/video/ 저장.",
+      "description": "강의 데크 조작 통합 도구. op 파라미터로 분기:\n- reorder: 슬라이드 순서 변경 (lecture_id, order=slide_id 배열). 파일은 안 건드림.\n- export: PDF/PPTX/이미지 폴더로 내보내기 (lecture_id, format). outputs/lectures/{id}/exports/ 저장.\n- video: 나레이션 동영상 렌더 (lecture_id) — 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 MP4 로. captions=true면 libass 없이 자막을 영상에 합성하고 ASS 원본도 저장(기본 false). 기본 백그라운드(별도 프로세스라 백엔드 리로드에 안 죽음, 즉시 반환), 진행=check:true 또는 video_state.json, wait:true=동기. lecture_dir/video/ 저장.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -295,6 +295,10 @@
           "output_filename": {
             "type": "string",
             "description": "video 옵션 — 결과 파일명 (기본 lecture_video.mp4)"
+          },
+          "captions": {
+            "type": "boolean",
+            "description": "video 옵션 — true면 스피커 노트를 실제 나레이션 길이에 맞춰 자막으로 영상에 합성하고 .captions.ass 원본도 보존 (기본 false, libass 불필요)"
           },
           "rate": {
             "type": "string",

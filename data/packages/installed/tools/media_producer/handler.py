@@ -460,6 +460,9 @@ def create_html_video(tool_input, output_base):
         for i, scene in enumerate(scenes):
             original_dur = scene.get("duration", default_duration)
             narr_dur = narration_durations[i] if i < len(narration_durations) else 0
+            # 덱 렌더가 libass 비의존 자막 타임코드를 만들 수 있게 실측 음성 길이를
+            # 같은 scene 객체에 되돌린다. 공개 입력이 아닌 렌더 내부 메타다.
+            scene["_narration_duration"] = float(narr_dur)
 
             if narr_dur > 0:
                 needed_dur = narr_dur + NARRATION_PADDING

@@ -26,18 +26,18 @@
      `stage`·`index`/`total`(씬 몇 장째)이 하트비트로 갱신되고, 렌더가 죽으면 pid 로 판정해 **`interrupted`** 로 확정된다.
      즉 `building` 은 "지금 살아서 돌고 있다"는 뜻이다 — 죽은 렌더를 기다리는 일은 없다.
    - 소요: 정지 슬라이드 덱은 **장당 수 초**(12장 ≈ 1분). 프레임을 장마다 수백 장 찍지 않고 한 장을 늘여 인코딩한다.
-   - 옵션: `engine`(기본 **gemini** / `edge`=무과금) · `voice`(gemini 기본 **Charon**, `Sulafat`·`Achird` 등 / edge 는 `ko-KR-SunHiNeural` 등) · `style`(gemini 전용 자연어 연기 지시) · `rate`(edge 전용) / `transition`(fade 기본) / `bgm_path` / `output_filename`.
+   - 옵션: `engine`(기본 **gemini** / `edge`=무과금) · `voice`(gemini 기본 **Charon**, `Sulafat`·`Achird` 등 / edge 는 `ko-KR-SunHiNeural` 등) · `style`(gemini 전용 자연어 연기 지시) · `rate`(edge 전용) / `transition`(fade 기본) / `bgm_path` / `output_filename` / `captions`(기본 false, true면 스피커 노트 기반 자막을 영상에 합성).
    - **나레이션 비용**: 기본 gemini 는 문자 수 과금이라 장수가 많은 덱은 그만큼 든다. 시험 렌더는 `engine: "edge"` 로 돌리고 최종만 gemini 로 굽는 게 싸다.
-   - 노트 없는 장 = 무나레이션 씬(기본 길이). 결과의 `missing_notes` 로 확인.
+   - 노트 없는 장 = 무나레이션 씬(기본 길이). 결과의 `missing_notes` 로 확인.\n   - **자막 옵션**: 실제 나레이션 길이에 맞춰 스피커 노트를 짧은 2줄 구간으로 나누고 영상에 직접 합성한다. 시스템 ffmpeg의 `subtitles`/libass 필터에 의존하지 않으며, 편집 가능한 `.captions.ass`도 함께 남긴다. 요청했는데 원문·한글 폰트·합성 중 하나가 실패하면 무자막 영상을 성공으로 반환하지 않는다.
    - **★내 목소리로 굽기**: 렌더 전에 `[self:script]{op:"run", id:"나레이션생성", args:{lecture_id}}` 를
      한 번 돌리면 장별 스피커 노트가 사용자 본인 목소리로 구워져 `narration/<slide_id>.wav` 에 쌓인다.
      그다음 이 op 를 평소대로 부르면 된다 — **그 장에 wav 가 있으면 TTS 대신 그 파일을 쓴다**(engine·voice 무관).
      장별로 섞여도 된다(어떤 장은 내 목소리, 나머지는 TTS). 결과의 `preset_narration` 이 쓰인 장 수.
-     **낭독 속도는 0.9x(10% 느리게)가 표준**이라 스크립트가 알아서 적용한다 — 그만큼 씬이 길어지고
-     씬 길이는 나레이션에 맞춰지므로 타임라인은 자동으로 다시 맞는다(2026-08-17 사용자 판정).
+     **낭독 속도는 1.0x(본래 속도·보정 없음)가 표준**이다 — 옛 0.9x 감속 보정은 폐지(2026-09-01 사용자 판정).
+     느리게 하려면 `args.speed` 를 넘긴다. 씬 길이는 나레이션에 맞춰지므로 타임라인은 자동으로 다시 맞는다.
      시험 렌더는 `engine:"edge"` 로 싸게 돌리고 **최종만 내 목소리**로 굽는 게 시간·과금 모두 유리하다
      (목소리 복제는 문장당 40~60초). 상세·함정·레퍼런스 교체 = `voice_narration.md`.
-3. **산출물** — `outputs/lectures/<id>/video/lecture_video.mp4` (h264+aac).
+3. **산출물** — `outputs/lectures/<id>/video/lecture_video.mp4` (h264+aac). 자막 옵션을 켜면 같은 이름의 `.captions.ass` 원본이 함께 생기고 결과 봉투에 `caption_burned`·`captions`·`caption_file`이 실린다.
 
 ## 원칙
 

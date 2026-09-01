@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -30,6 +31,7 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 import lecture_store  # noqa: E402
+import lecture_video_captions  # noqa: E402
 
 # 하트비트가 이만큼 멎으면 죽은 것으로 본다. pid 확인이 우선이고, 이건 pid 를 못 믿을 때의 바닥.
 # 가장 느린 단계(TTS 한 장·나레이션 긴 씬 인코딩)보다 넉넉해야 산 렌더를 죽었다고 오판하지 않는다.
@@ -268,9 +270,26 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
     if not scenes:
         raise RuntimeError("렌더할 슬라이드가 없습니다 (PNG 미존재).")
 
+    captions_enabled = opts.get("captions") in (True, "true", "True", 1, "1")
+    if captions_enabled and live_info:
+        raise RuntimeError(
+            "실강 녹음은 스피커 노트와 실제 발화가 다를 수 있어 자동 자막을 만들지 않습니다. "
+            "정렬된 전문이 있는 나레이션 렌더에서 captions를 사용하세요."
+        )
+    if captions_enabled and not any(narrations):
+        raise RuntimeError("자막 원문이 없습니다 — 스피커 노트를 먼저 작성하세요.")
+
     mh = _load_media_handler()
     video_dir = lecture_dir_path / "video"
     video_dir.mkdir(exist_ok=True)
+    requested_filename = opts.get("output_filename") or "lecture_video.mp4"
+    render_filename = requested_filename
+    if captions_enabled:
+        requested_path = Path(requested_filename)
+        render_filename = (
+            f".{requested_path.stem}.caption-source-{os.getpid()}"
+            f"{requested_path.suffix or '.mp4'}"
+        )
     tool_input = {
         "scenes": scenes,
         "narration_texts": narrations,
@@ -284,7 +303,7 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         #   그래서 기본을 뒤집는다(사용자가 transition 을 명시하면 그건 존중).
         "transition": opts.get("transition") or ("none" if live_info else "fade"),
         "narration_padding": 0.0 if live_info else None,
-        "output_filename": opts.get("output_filename") or "lecture_video.mp4",
+        "output_filename": render_filename,
         "width": width, "height": height,
         "on_progress": on_progress,
     }
@@ -302,13 +321,67 @@ def build(lecture_id: str, opts: dict, on_progress=None) -> dict:
         raise RuntimeError(str(result_msg)[:500])
     # "HTML 동영상 제작 완료: <경로> | 씬 전환: fade (0.5초)" → 경로만.
     # ★" | " 를 안 자르면 output 이 경로가 아니게 된다(2026-08-17 실측 — 전환 정보가 붙어 왔다).
-    output = str(result_msg).split(":", 1)[1].strip().split(" | ")[0].split(" (")[0]
+    # ★" (" 로 자르면 괄호가 든 파일명이 통째로 잘린다(2026-09-01 실측 —
+    #   "…읽고 (새 목소리).mp4" 가 "…읽고" 로 truncate 돼 자막 단계가 원본을 못 찾았다).
+    #   전환 꼬리표는 "(0.5초)" 형태라 그 모양만 정확히 떼어낸다.
+    output = str(result_msg).split(":", 1)[1].strip().split(" | ")[0]
+    output = re.sub(r"\s*\([^()]*초\)\s*$", "", output)
+
+    caption_info: dict = {}
+    if captions_enabled:
+        raw_output = Path(output)
+        final_output = video_dir / requested_filename
+        sidecar = final_output.with_suffix(".captions.ass")
+        transition_match = re.search(r"씬 전환: .*?\(([0-9.]+)초\)", str(result_msg))
+        actual_transition = float(transition_match.group(1)) if transition_match else 0.0
+        scene_durations = [float(scene.get("duration") or 0) for scene in scenes]
+        narration_durations = [
+            float(scene.get("_narration_duration") or 0) for scene in scenes
+        ]
+        cues = lecture_video_captions.build_cues(
+            narrations,
+            scene_durations,
+            narration_durations,
+            transition_duration=actual_transition,
+        )
+        if not cues:
+            try:
+                raw_output.unlink()
+            except OSError:
+                pass
+            raise RuntimeError("스피커 노트에서 합성할 자막 구간을 만들지 못했습니다.")
+        try:
+            lecture_video_captions.write_ass(
+                sidecar, cues, width, height, title=deck.get("title") or lecture_id
+            )
+            burned = lecture_video_captions.burn_captions(
+                raw_output, cues, final_output, on_progress=on_progress
+            )
+        except Exception:
+            for path in (raw_output, sidecar):
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+            raise
+        if raw_output != final_output:
+            try:
+                raw_output.unlink()
+            except OSError:
+                pass
+        output = str(final_output)
+        caption_info = {
+            "captions": burned["captions"],
+            "caption_file": str(sidecar),
+            "caption_burned": True,
+        }
+
     return {
         "output": output, "slides": len(scenes),
         "narrated": len(scenes) - len(missing_notes),
         "preset_narration": sum(1 for p in preset_audio if p),   # 미리 구운 오디오를 쓴 장 수
         "missing_notes": missing_notes, "skipped": skipped,
-        **live_info,
+        **caption_info, **live_info,
     }
 
 

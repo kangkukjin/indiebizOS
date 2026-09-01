@@ -43,6 +43,12 @@
 
 **quote 실시간 오버레이(2026-08-01)**: 한국 종목(6자리)·코스피/코스닥 지수는 현재가·전일대비·고저·거래량을 네이버 폴링 API(무키, delayTime=0)가 덮는다 — 응답에 `source: "naver_realtime"`, `quote_time`(체결시각), `market_status`(OPEN/CLOSE)가 추가로 실림. 차트용 `prices` 일봉 시계열은 Yahoo 그대로. 네이버 실패 시 자동으로 Yahoo(~20분 지연) 값 — 이때 `source` 필드 없음. 미국·원자재·환율은 종전과 동일(Yahoo).
 
+**quote 의 거래일 계약(2026-09-01)**: quote 봉투는 자기가 말하는 거래일을 `as_of` 로, 전일종가가 어느 날 것인지를 `previous_close_date` 로 밝힌다 — history 의 마지막 행 날짜와 그대로 대조할 수 있다(대조군 없이 quote 를 쓰지 않아도 된다). 두 소스가 어긋나면 봉투가 말한다: `series_gap`(Yahoo 일봉이 `close: null` 로 준 결측 거래일) · `prev_close_source`(전일종가를 krx/fmp 로 다시 잡았을 때) · `quote_lag`(`yahoo_series_gap_reconciled`=구멍을 history 소스로 보정함 / `series_behind_quote`=네이버 스냅샷이 일봉에 아직 없는 장을 가리킴 / `prev_close_disagreement`=네이버가 보는 전일종가 ≠ 일봉 직전 행). 장전·휴장에는 네이버가 '아직 시작 안 한 오늘' 기준 등락(=0)을 주므로 quote 는 일봉의 마지막 **완결된 장**을 보고한다.
+
+**history 의 행별 `change` (2026-09-01 통일)**: 행의 `change`·`change_percent` 는 KR·US 모두 **전일 종가 대비**다. 그 전엔 소스마다 다른 양이 같은 열에 담겨 있었다(FMP=종가−시가, KRX=등락률%, FDR=등락 비율). 창 밖의 전일은 모르므로 **첫 행은 null** — 추측하지 않는다.
+
+**지수 일봉 소스 (2026-09-01)**: 한국 지수(`^KS11`·`^KQ11`·`^KS200`)의 일봉은 네이버다(`series_source: naver_daily`). Yahoo 가 한국 거래일을 통째로 `close: null` 로 주는 일이 잦아 quote 와 history 가 같이 며칠 뒤처졌기 때문이다. 네이버가 실패하면 Yahoo 로 조용히 폴백한다(그때는 `series_source` 없음). ★미국 지수(`^GSPC`·`^IXIC`)는 여전히 Yahoo 하나뿐이라 결측일이 있으면 전일종가가 밀린다 — 대조 소스가 없어 보정도 못 한다. 다만 `series_gap` 으로 신고는 한다.
+
 ### period / interval (quote 전용)
 - period: `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`
 - interval: `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`, `1mo`

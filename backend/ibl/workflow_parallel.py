@@ -9,7 +9,8 @@
 PARALLEL_BRANCH_TIMEOUT = 90
 
 
-def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: bool = False) -> list:
+def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: bool = False,
+                      var_values: dict = None) -> list:
     """
     병렬 실행 - 여러 IBL 액션을 동시에 실행 (Phase 9)
     각 브랜치에 타임아웃 적용 — 한 브랜치가 멈춰도 전체가 멈추지 않음.
@@ -21,6 +22,9 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
         raw: 병렬 step이 >> 파이프 중간단계일 때 True — 각 분기에 _raw 주입해
              postprocess:compress가 분기의 구조화 통화(records/table)를 죽이지 않게.
              ([A] & [B] >> [table:join/union/merge] 같은 이항 변환자가 분기 통화를 소비)
+        var_values: 분기가 참조하는 `$변수`의 값 (`$a & $b`, 언어 개정 2026-09-01).
+             실행기가 병렬 step 의 _vars 로 해소해 넘긴다 — 여기서 분기 **사본**에만
+             싣는다(파싱된 프로그램을 건드리면 두 번째 실행이 옛 값을 본다).
 
     Returns:
         각 branch 결과를 리스트로 합침
@@ -86,6 +90,9 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
             return last
 
         tool_input = dict(branch)
+        if tool_input.get("_var_emit") and var_values:
+            # 변수 분기 — 값은 실행기가 해소해 넘긴 것을 쓴다(분기 사본에만 싣는다).
+            tool_input["_var_values"] = {**var_values, **(tool_input.get("_var_values") or {})}
         if "node" in tool_input and "_node" not in tool_input:
             tool_input["_node"] = tool_input.pop("node")
         tool_input = _inject_prev_result(tool_input, prev_result)

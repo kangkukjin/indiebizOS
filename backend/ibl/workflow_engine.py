@@ -392,7 +392,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if step.get("_parallel"):
             # 병렬 실행
             try:
-                result = _execute_parallel(step["branches"], project_path, prev_result, raw=(i < total - 1))
+                result = _execute_parallel(step["branches"], project_path, prev_result,
+                                           raw=(i < total - 1),
+                                           var_values=step.get("_var_values"))
             except Exception as e:
                 results.append({
                     "step": i + 1, "type": "parallel",

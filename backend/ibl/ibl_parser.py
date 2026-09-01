@@ -209,25 +209,14 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             #   뿐이라 프로그램이 부자연스러웠다. 세그먼트가 통짜 변수 참조면 `_var_emit`
             #   스텝으로 탈당의 — 실행기(ibl_engine)가 저장된 결과를 통화로 방출한다.
             #   미할당은 파싱 시점 정직 에러(실행까지 끌고 가지 않는다).
-            from common.ibl_vars import REF_RE as _VREF, split_ref as _vsplit
-            _vm = _VREF.fullmatch(_st0)
-            if _vm is not None:
-                _vn, _vp = _vsplit(_vm)
-                if _vn == "items":                 # `$items` 는 집합 바인딩 예약어 — 그 규약대로
-                    _vm = None
-                elif _vn not in variables:
-                    raise IBLSyntaxError(
-                        f"변수 ${_vn} 이(가) 앞에서 할당되지 않았습니다 — 파이프 머리 변수는 "
-                        f"앞 문장의 `${_vn} = …` 할당이 필요합니다.")
-            if _vm is not None:
-                parsed = {"_var_emit": True, "name": _vn, "path": _vp,
-                          "_vars": {_vn: variables[_vn]}}
+            parsed = _var_emit_step(_st0, variables, "파이프 머리")
+            if parsed is not None:
                 if _stmt_idx > 0 and idx == 0:
                     parsed["_seq_boundary"] = True
                 all_steps.append(parsed)
                 continue
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
-            parsed = _parse_group(seg_text.strip())
+            parsed = _parse_group(seg_text.strip(), variables)
             if parsed is None:
                 _st = seg_text.strip()
                 # F16-1 (2026-08-20 상상훈련 16회차): 분기 헤더가 홀로 오면(중괄호 몸 누락)
@@ -578,7 +567,32 @@ def _split_pipeline(text: str) -> List[tuple]:
     return segments
 
 
-def _parse_group(text: str) -> Optional[Dict]:
+def _var_emit_step(text: str, variables: Optional[Dict], where: str) -> Optional[Dict]:
+    """통짜 변수 참조(`$이름` · `$이름.경로`)를 통화 방출 step 으로 — 표기의 **단일 주인**.
+
+    두 자리가 이 한 벌을 쓴다: 파이프 머리(`$변수 >> [액션]`, 언어 개정 2026-08-27)와
+    병렬 분기(`$변수 & $변수`, 언어 개정 2026-09-01 — 사용자 판정). 표기를 자리마다
+    다시 읽으면 방언이 갈린다(같은 `$a.b?` 가 한 자리에선 되고 다른 자리에선 안 되는 부류).
+
+    반환: _var_emit step / None(변수 표기가 아니거나 예약어 `$items`).
+    미할당은 여기서 정직한 파싱 에러 — 실행까지 끌고 가지 않는다(V49-1 규약).
+    """
+    from common.ibl_vars import REF_RE as _VREF, split_ref as _vsplit
+    m = _VREF.fullmatch((text or "").strip())
+    if m is None:
+        return None
+    name, path = _vsplit(m)
+    if name == "items":            # `$items` 는 집합 바인딩 예약어 — 그 규약대로 둔다
+        return None
+    if not variables or name not in variables:
+        raise IBLSyntaxError(
+            f"변수 ${name} 이(가) 앞에서 할당되지 않았습니다 — {where} 변수는 "
+            f"앞 문장의 `${name} = …` 할당이 필요합니다.")
+    return {"_var_emit": True, "name": name, "path": path,
+            "_vars": {name: variables[name]}}
+
+
+def _parse_group(text: str, variables: Optional[Dict] = None) -> Optional[Dict]:
     """
     >> 로 분리된 하나의 세그먼트를 파싱.
     내부에 & 또는 ?? 연산자가 있으면 특수 노드로 변환.
@@ -587,6 +601,10 @@ def _parse_group(text: str) -> Optional[Dict]:
     - 일반 step: {_node, action, target, params}
     - 병렬: {_parallel: True, branches: [step, ...]}
     - Fallback: {_fallback_chain: [step, ...]}
+
+    variables: 지금까지 할당된 `$이름 → step 인덱스`. 병렬 분기의 변수 참조
+    (`$a & $b`)를 해석하는 데 쓴다 — 없으면 그 자리는 변수를 못 읽는다(미할당과
+    같은 정직 에러). 파서의 문장 루프가 자기 표를 넘긴다.
     """
     if not text:
         return None
@@ -612,17 +630,33 @@ def _parse_group(text: str) -> Optional[Dict]:
         )
     if len(parallel_parts) > 1:
         branches = []
+        merged_vars: Dict[str, int] = {}
         for part in parallel_parts:
             p = part.strip()
-            # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): 분기 하나에만
-            # 전처리를 붙이는 표현 — [A] & ([B] >> [table:rename]{...}) >> [table:merge].
-            branch = _parse_paren_branch(p)
+            # ★`$변수 & $변수` — 이미 손에 있는 결과를 분기 자리에 놓는다 (언어 개정
+            #   2026-09-01, 사용자 판정). 종전엔 "병렬 요소 파싱 실패: $apt재고" —
+            #   두 팬아웃 결과를 합치려는 가장 자연스러운 문장(`$a & $b >> [table:join]`)이
+            #   말할 수 없었다(09-01 부동산 보고서 실측: 그날 세 주행의 유일한 진짜 문법
+            #   오류였다). 변수를 파이프 머리로 놓는 길은 이미 열려 있었는데(2026-08-27),
+            #   같은 값이 분기 자리에만 못 서던 **자리의 비대칭**이 결함이었다.
+            branch = _var_emit_step(p, variables, "병렬 분기의")
+            if branch is None:
+                # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): 분기 하나에만
+                # 전처리를 붙이는 표현 — [A] & ([B] >> [table:rename]{...}) >> [table:merge].
+                branch = _parse_paren_branch(p)
             if branch is None:
                 branch = _parse_step(p)
             if branch is None:
                 raise IBLSyntaxError(f"병렬 요소 파싱 실패: {p}")
+            merged_vars.update(branch.pop("_vars", None) or {})
             branches.append(branch)
-        return {"_parallel": True, "branches": branches}
+        out: Dict = {"_parallel": True, "branches": branches}
+        if merged_vars:
+            # 분기가 쓰는 변수는 **병렬 step 이 대표로** 들고 있어야 한다 — 실행기의
+            # 값 주입(_inject_step_results)이 step 단위로 돌기 때문. 실행기가 이 표로
+            # 값을 채워 _execute_parallel 에 넘기고, 거기서 분기 사본에 실린다.
+            out["_vars"] = merged_vars
+        return out
 
     # ?? 연산자 확인 (fallback)
     if len(fallback_parts) > 1:
@@ -633,7 +667,18 @@ def _parse_group(text: str) -> Optional[Dict]:
             if step is None:
                 step = _parse_step(part.strip())
             if step is None:
-                raise IBLSyntaxError(f"fallback 요소 파싱 실패: {part.strip()}")
+                _p = part.strip()
+                # 경계를 이름 불러 말한다 (2026-09-01): 변수는 파이프 머리(`$a >> …`)와
+                # 병렬 분기(`$a & $b`)에서 쓸 수 있고 폴백 자리는 **아직 언어에 없다**.
+                # 맨 "파싱 실패" 는 저자가 표기를 의심하게 만든다 — 자리의 문제인데.
+                from common.ibl_vars import REF_RE as _VREF2
+                if _VREF2.fullmatch(_p):
+                    raise IBLSyntaxError(
+                        f"폴백(??) 분기에는 변수({_p})를 놓을 수 없습니다 — 변수는 파이프 "
+                        f"머리(`{_p} >> [액션]`)와 병렬 분기(`{_p} & …`)에서 쓸 수 있습니다. "
+                        "폴백은 '앞이 실패하면 뒤를 실행'이라 이미 값이 된 변수와는 뜻이 "
+                        "맞지 않습니다(필요하면 언어 개정 사안).")
+                raise IBLSyntaxError(f"fallback 요소 파싱 실패: {_p}")
             chain.append(step)
         return {"_fallback_chain": chain}
 

@@ -6,7 +6,7 @@ import re
 import sys
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -209,7 +209,7 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
         if cl is None:
             continue
         bars.append({
-            "date": datetime.utcfromtimestamp(t).strftime("%Y-%m-%d"),
+            "date": datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"),
             "open": round(o[i], 2) if i < len(o) and o[i] is not None else round(cl, 2),
             "high": round(h[i], 2) if i < len(h) and h[i] is not None else round(cl, 2),
             "low": round(l[i], 2) if i < len(l) and l[i] is not None else round(cl, 2),

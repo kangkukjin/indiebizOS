@@ -283,8 +283,10 @@ def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
         "success": False, "surface_timeout": True, "ticket": ticket,
         "error": (f"표면 대기({timeout_s}초)가 실행보다 먼저 끝났습니다 — 실행은 백엔드에서 "
                   "계속 돌고 있고, 결과 봉투는 잃지 않습니다."),
-        "note": (f'회수: execute_ibl{{code: "", recover: "{ticket}"}} — 완료면 원 봉투가, '
-                 "아직 돌고 있으면 진행 상태가 옵니다(보관 24h). 완료를 기다렸다 다시 부르세요."),
+        "note": (f'회수: execute_ibl{{code: "", recover: "{ticket}", wait: 120}} — wait 초 동안 '
+                 "결말을 기다렸다가 돌려줍니다(≤240, 생략하면 즉답). 완료면 원 봉투가, 아직 "
+                 "돌고 있으면 진행 상태(마지막 움직임 시각 포함)가 옵니다(보관 24h). "
+                 "★셸 sleep 으로 기다리지 말 것 — 그 자리는 이 wait 가 맡는다."),
     }, ensure_ascii=False)
 
 
@@ -295,6 +297,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       files_from: Optional[List[str]] = None,
                       verbose: bool = False,
                       recover: Optional[str] = None,
+                      wait: float = 0,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -319,8 +322,14 @@ async def execute_ibl(code: str, project_path: str = "",
     verbose: 파이프 봉투 results[] 를 step 원형으로 받는다(기본 false = step 요약).
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
-        기록 없음이면 만료(24h)/미탑재를 정직하게 알린다. 긴 실행은 완료까지
-        이 회수를 반복하면 된다(F51-1: 표면 대기가 끊겨도 결과는 잃지 않는다).
+        기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도
+        결과는 잃지 않는다).
+    wait: recover 와 함께 — 결말이 날 때까지 **유한 대기**할 초(≤240). 기다렸는데도
+        안 끝나면 진행 상태를 돌려준다(대기가 끝난 것이지 실행이 죽은 것이 아니다).
+        ★긴 실행을 기다릴 때 셸 `sleep` 을 쓰지 말 것 — 전경 sleep 은 막히고 배경
+        sleep 은 즉시 돌아와, 대기가 몇 초 간격 폴링으로 무너진다(폴링 1회 = 모델
+        왕복 1회. 2026-09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림이었다).
+        `[self:script]{op:"status", wait}` 와 같은 계약이다.
 
     ★2026-08-22 B23-1: 이 셋은 도구 스키마(tool_loader)와 엔진에는 있었는데 이 MCP 표면에만
     없어서, 봉투 note 가 안내하는 대로 보낸 resume 이 조용히 사라졌다. 표면은 도구 스키마와
@@ -362,8 +371,12 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["parent_run_id"] = parent_run_id
     if recover:
         # 회수 경로(F51-1) — 실행이 아니라 조회. 신원·payload 는 필요 없다.
+        # wait 를 주면 백엔드가 그만큼 유한 대기하므로 HTTP 대기도 그 위로 잡는다
+        # (여기가 먼저 끊기면 유한 대기를 준 의미가 없다).
+        _w = max(0.0, min(float(wait or 0), 240.0))
         raw = await anyio.to_thread.run_sync(
-            lambda: _post_backend("/ibl/recover", {"ticket": recover}, 30)
+            lambda: _post_backend("/ibl/recover",
+                                  {"ticket": recover, "wait": _w}, int(_w) + 30)
         )
     else:
         # 표면 티켓(F51-1) — 아래 대기(120초)가 실행보다 먼저 끝나도 백엔드가 이 티켓으로

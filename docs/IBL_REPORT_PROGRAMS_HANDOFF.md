@@ -52,7 +52,7 @@ passthrough_rows)를 읽고 어느 가지가 왜 비었는지 판단**할 것.
 1. **가이드를 먼저 정독** — 품질 기준의 정본은 각 가이드다(`youtube_ai_tips_report.md`
    §1 증류 헌법 / `ai_trend_report.md` §3 델타 서술·§2-4 신뢰도·§2-5 신선도 /
    `housing_report.md` §1 주거 철학·§1-5/1-6 평가표). 프로그램의 채점표가 이것이다.
-2. **완성 프로그램 조립 → 실행** (`/ibl/execute` + ticket, 긴 실행은 recover 폴링).
+2. **완성 프로그램 조립 → 실행** (`/ibl/execute` + ticket, 긴 실행은 `recover{wait: 초}` 유한 대기 — 폴링·셸 sleep 아님).
 3. **산출물을 가이드 기준으로 채점** — 실제 최근호(outputs/ 폴더)와 나란히 놓고 비교하면
    갭이 구체화된다.
 4. **갭을 분해**: (a) 일처리(지시문·파라미터·조합 선택) → 문장 수정 후 재실행.
@@ -91,6 +91,8 @@ passthrough_rows)를 읽고 어느 가지가 왜 비었는지 판단**할 것.
   아니라 스크래치에(정본 폴더는 정기보고 앱·아카이브 규약이 읽는다).
 - ★라이브 backend/ 에 스크래치 .py 를 만들 땐 감시 밖 이름(`test_*.py`·`_이름.py`)만.
 - ★120초 넘는 실행은 표면이 끊겨도 정상 — ticket 을 싣고 recover 로 회수(F51-1 규약).
+  기다릴 땐 `recover{wait: 초}`(≤240) 한 번으로 — 셸 `sleep` 은 전경이 막히고 배경은 즉시
+  돌아와 대기가 몇 초 간격 폴링으로 무너진다(2026-09-01 실측: 도구 호출의 36%가 기다림).
 - ★zsh 로 봉투 JSON 을 다룰 때 `echo "$JSON"` 금지(백슬래시 훼손) — printf/파일로.
 - ★어휘·문법을 고치면: 가드 시험 신설, 옛 계약은 `data/retired_contracts.yaml` 등록,
   `python3 scripts/build_ibl_nodes.py` 재생성(+android 번들), ibl.md 언어의 경계 갱신,

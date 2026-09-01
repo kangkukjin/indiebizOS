@@ -30,6 +30,13 @@ args (stdin JSON):
   · in-process 의 도구 계수 정본은 **화살표 라인**이다. [IBL_DEBUG] 는 같은 코드가 30초
     안에 되풀이되면 생략되므로(system_tools_ibl._IBL_LOG_WINDOW) 계수로 쓰면 적게 나온다.
     코드를 못 본 호출 수는 상태=코드미기록 N 으로 신고한다(조합 지표에서만 빠진 것).
+  · **회수 폴링은 문장이 아니다** (2026-09-01): `execute_ibl{code: "", recover: "티켓"}` 는
+    실행이 아니라 조회다. 빈 code 는 파서를 통과할 수 없으므로 옛 판은 이것을 '문법오류'로
+    셌고, 09-01 주행의 회수 9회가 "그 주행에서 실제로 깨진 문장 9건"으로 읽혔다(정상 사용을
+    결함으로 신고 — 계기가 오독을 만든 자리). 이제 `회수` 칸으로 따로 세고 조합 지표에서
+    뺀다. 그 수 자체가 관측이다 — **결과를 기다리며 쓴 모델 왕복 수**이고, 회수에 wait 초를
+    주면(유한 대기) 한 번으로 줄어든다. `IBL` 칸은 여전히 execute_ibl 호출 총수라
+    실질 문장 수 = IBL − 회수 − 코드미기록 이다.
   · 도구 줄이 0일 때는 상태로 갈라 적는다 — 도구없음(읽히는 방언인데 안 씀=사실) /
     끊김(Episode ORPHAN) / 로그없음 / 형식밖(모르는 방언 = 0 은 관측이 아니라 무지).
   · IBL 조합 판정은 정규식이 아니라 실제 파서(ibl_parser.parse)로 한다. 파서를 못 부르면
@@ -72,6 +79,10 @@ READABLE = re.compile(r"^\[[^\]]+\] 라운드 \d+|^\[ClaudeCode/|^\[IBL_DEBUG\] 
 TAIL_OP = re.compile(r"^\s*(>>|\?\?|&|\|)")
 # 잘린 JSON 에서 code 값의 시작점 — 뒤따르는 키(files 등)가 잘려도 코드는 온전할 수 있다.
 CODE_KEY = re.compile(r'"code"\s*:\s*"')
+# 회수 폴링 — `execute_ibl{code: "", recover: "티켓"}`. 문장이 아니라 **조회**다.
+# ★없으면 빈 code 가 파서에 걸려 '문법오류'로 신고된다 — 정상 사용을 결함으로 세는 것이라,
+#   09-01 실측에서 회수 9회가 "그 주행에서 실제로 깨진 문장 9건"으로 읽혔다(오독 유발 확인).
+RECOVER_KEY = re.compile(r'"recover"\s*:\s*"[0-9a-f]{8,32}"')
 BLOCK_KEYS = ("_condition", "_try", "_repeat", "_case", "_goal")
 
 
@@ -273,6 +284,7 @@ def _measure_prefix(code, parse):
 def _scan(log, parse, trunc_re=None):
     """에피소드 로그 한 건 → 도구·조합 계수."""
     acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
+           "회수": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
     counts, codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
     acc.update(counts)
@@ -285,6 +297,11 @@ def _scan(log, parse, trunc_re=None):
             code, cut = _code_of(kind, raw, trunc_re)
         except Exception:
             acc["파싱실패"] += 1        # 로그 줄 자체를 못 읽었다 = 형식 변화 신호
+            continue
+        if not code.strip() and RECOVER_KEY.search(raw):
+            # 회수 폴링은 문장이 아니다 — 조합·단계 지표에서 빼고 따로 센다.
+            # (이 수 자체가 관측이다: 그 주행이 결과를 기다리며 쓴 모델 왕복 수)
+            acc["회수"] += 1
             continue
         try:
             got = _measure_prefix(code, parse) if cut else _measure(code, parse)
@@ -355,7 +372,7 @@ def main():
     rows = conn.execute(sql, params + [limit]).fetchall()
     conn.close()
 
-    items, skipped, unparsed, nocode, lowered, uncut, bad_ibl = [], 0, 0, 0, 0, 0, 0
+    items, skipped, unparsed, nocode, lowered, uncut, bad_ibl, polls = [], 0, 0, 0, 0, 0, 0, 0
     for r in rows:
         a = _scan(r["log"], parse, trunc_re)
         tools = a["IBL"] + a["Bash"] + a["기타도구"]
@@ -365,6 +382,7 @@ def main():
         lowered += a["절단"]
         uncut += a["절단불가"]
         bad_ibl += a["문법오류"]
+        polls += a["회수"]
         nocode += a["코드미기록"]
         if a["_tool_lines"] == 0:
             _log = r["log"] or ""
@@ -389,6 +407,8 @@ def main():
             state = f"절단하한 {a['절단']}"   # 조합·단계는 '실제 이상은 아닌 값'
         elif a["코드미기록"]:
             state = f"코드미기록 {a['코드미기록']}"
+        elif a["회수"]:
+            state = f"회수폴링 {a['회수']}"   # 결함이 아니라 '기다린 왕복' — 칸이 비면 ok
         else:
             state = "ok"
         ts = (r["started_at"] or "")[5:16].replace("T", " ")
@@ -399,7 +419,7 @@ def main():
             "분류": r["unconscious_decision"], "평가": r["evaluation_result"],
             "라운드": r["execution_rounds"],
             "총초": round(r["total_ms"] / 1000) if r["total_ms"] else None,
-            "IBL": a["IBL"], "Bash": a["Bash"], "기타도구": a["기타도구"],
+            "IBL": a["IBL"], "회수": a["회수"], "Bash": a["Bash"], "기타도구": a["기타도구"],
             "IBL비중": _pct(a["IBL"], tools),
             # 모델이 도구 결과로 읽은 문자수(천 단위) — 절단 표식의 숨긴 글자수까지 복원한
             # 정확값(옛 '...' 행만 하한). None = in-process 방언이라 결과 줄이 없음(0 아님).
@@ -416,7 +436,7 @@ def main():
         for it in items:
             g = groups.setdefault(it["에이전트"] or "?", {"에이전트": it["에이전트"], "주행": 0})
             g["주행"] += 1
-            for k in ("IBL", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록", "each",
+            for k in ("IBL", "회수", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록", "each",
                       "결과천자"):
                 g[k] = round(g.get(k, 0) + (it[k] or 0), 1)
             g["최대단계"] = max(g.get("최대단계") or 0, it["최대단계"] or 0)
@@ -445,6 +465,10 @@ def main():
     if uncut:
         msg += (f" · IBL 호출 {uncut}건은 잘린 자리에 완결된 문장이 하나도 없어 조합 지표에서 "
                 "빠졌습니다(도구 계수는 온전 — 대부분 2026-08-22 이전 300자 상한 시절 행)")
+    if polls:
+        msg += (f" · IBL 호출 {polls}건은 코드 없는 **회수 폴링**(execute_ibl{{recover}})이었습니다 "
+                "— 문장이 아니므로 조합 지표에서 뺐습니다(문법오류 아님). 이 수는 그 주행이 "
+                "결과를 기다리며 쓴 모델 왕복 수입니다 — 회수에 wait 초를 주면 한 번으로 줄어듭니다")
     if bad_ibl:
         msg += (f" · IBL 호출 {bad_ibl}건은 코드 자체가 문법 오류였습니다 "
                 "— 로그 문제가 아니라 그 주행에서 실제로 깨진 문장을 보냈다는 관측입니다")

@@ -17,6 +17,8 @@ import ast
 import json
 import os
 import sys
+import threading
+import time
 import uuid
 
 import pytest
@@ -156,6 +158,100 @@ def test_T8_회수_엔드포인트가_저장소와_같은_판정을_한다():
         assert got.get("done") == 1
     finally:
         _cleanup(t)
+
+
+# ── T9~T13: 회수의 유한 대기 (2026-09-01) ─────────────────────────────────
+# 왜 생겼나: 회수의 유일한 처방이 "잠시 후 다시 물으세요"뿐이라, 멈춘 실행을 기다리는
+# 주행이 셸 `sleep` 으로 대기를 흉내 내다 무너졌다(전경 sleep 은 하네스가 막고 배경
+# sleep 은 즉시 반환 → 4~5초 간격 폴링). 09-01 06:00 실측: 도구 호출 45건 중 16건
+# (회수 폴링 9 + sleep 7)이 **기다리는 데만** 쓰였다. 형제 낱말
+# `[self:script]{op:"status", wait}` 가 이미 갖고 있던 유한 대기를 같은 계약으로 옮긴다.
+
+
+def test_T9_끝난_티켓은_기다리지_않는다():
+    """done/unknown/invalid 는 기다릴 이유가 없다 — 즉답이어야 한다."""
+    from common.spill import ticket_wait
+    t = _fresh_ticket()
+    try:
+        ticket_begin(t)
+        ticket_finish(t, {"success": True, "steps_completed": 3})
+        started = time.time()
+        env = ticket_wait(t, 30)
+        assert env.get("steps_completed") == 3
+        assert time.time() - started < 1.0, "끝난 티켓을 기다렸다"
+    finally:
+        _cleanup(t)
+    started = time.time()
+    assert ticket_wait("deadbeef1234", 30).get("status") == "unknown"
+    assert ticket_wait("나쁜티켓", 30).get("status") == "invalid"
+    assert time.time() - started < 1.0, "기록 없는/형식 틀린 티켓을 기다렸다"
+
+
+def test_T10_대기_중_결말이_나면_그때_돌아온다():
+    """폴링 왕복 없이 한 번의 호출이 결말을 물어온다 — 이 낱말의 존재 이유."""
+    from common.spill import ticket_wait
+    t = _fresh_ticket()
+    try:
+        ticket_begin(t)
+        threading.Timer(1.0, lambda: ticket_finish(t, {"success": True, "steps_completed": 9})).start()
+        started = time.time()
+        env = ticket_wait(t, 30)
+        elapsed = time.time() - started
+        assert env.get("steps_completed") == 9, env
+        assert 0.5 < elapsed < 10, f"{elapsed:.1f}초 — 결말을 기다리지 않았거나 너무 늦게 돌아왔다"
+    finally:
+        _cleanup(t)
+
+
+def test_T11_대기가_끝나는_것과_실행이_끝나는_것은_다르다():
+    """상한까지 안 끝나면 running 을 정직하게 — 실패로 위장하지 않는다(F51-1 규율)."""
+    from common.spill import ticket_wait
+    t = _fresh_ticket()
+    try:
+        ticket_begin(t)
+        env = ticket_wait(t, 3)
+        assert env.get("status") == "running", env
+        assert env.get("success") is True, "기다림이 끝난 것을 실패로 만들면 안 된다"
+        assert env.get("waited") is not None, "얼마를 기다렸는지 말해야 한다"
+        assert "기다림이 끝난" in (env.get("note") or ""), env.get("note")
+    finally:
+        _cleanup(t)
+
+
+def test_T12_wait_상한은_줄이고_신고한다():
+    """`[self:script]{op:"status", wait}` 와 같은 규율 — 조용히 깎지 않는다(silent clamp 금지)."""
+    import common.spill as spill_mod
+    from common.spill import ticket_wait
+    t = _fresh_ticket()
+    _orig = spill_mod.TICKET_MAX_WAIT_S
+    try:
+        ticket_begin(t)
+        spill_mod.TICKET_MAX_WAIT_S = 2          # 시험용 — 실물 240
+        env = ticket_wait(t, 9999)
+        assert "줄임" in (env.get("note") or ""), env.get("note")
+        assert env.get("waited") <= 4
+    finally:
+        spill_mod.TICKET_MAX_WAIT_S = _orig
+        _cleanup(t)
+
+
+def test_T13_표면이_wait_를_나른다():
+    """엔드포인트·MCP 표면 둘 다 통로를 가져야 한다 — 한쪽만 늘리면 안내대로 보낸 값이
+    조용히 사라진다(B23-1 이 겪은 부류: 봉투가 안내한 파라미터가 pydantic 에서 탈락)."""
+    sys.path.insert(0, os.path.join(_REPO, "backend", "surface"))
+    import asyncio
+    from api_ibl import recover_ibl_result, RecoverRequest
+    t = _fresh_ticket()
+    try:
+        ticket_begin(t)
+        ticket_finish(t, {"success": True, "done": 1})
+        got = asyncio.run(recover_ibl_result(RecoverRequest(ticket=t, wait=5)))
+        assert got.get("done") == 1, "wait 를 준 회수가 결말을 못 가져왔다"
+    finally:
+        _cleanup(t)
+    mcp_src = open(os.path.join(_REPO, "mcp_server.py"), encoding="utf-8").read()
+    assert '"wait": _w' in mcp_src, "MCP 표면이 wait 를 백엔드로 안 나른다"
+    assert 'wait: 120' in mcp_src, "타임아웃 봉투가 wait 통로를 안내하지 않는다(통로 미지정)"
 
 
 if __name__ == "__main__":

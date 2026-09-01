@@ -17,6 +17,9 @@ import uuid
 from typing import Any, Dict, Optional, Tuple
 
 SPILL_TTL_S = 24 * 3600
+# 회수의 유한 대기 상한 (2026-09-01) — `[self:script]{op:"status", wait}` 와 같은 값·같은 규율.
+TICKET_MAX_WAIT_S = 240
+TICKET_POLL_S = 2.0
 AUTO_SPILL_THRESHOLD = 200_000          # 문자 — 이 위는 모델 컨텍스트로 돌려 보낼 크기가 아니다
 # 봉투 **표시 사본**의 가지당 상한 — providers 절단(액션당 MAX_TOOL_RESULT_LENGTH=16,000,
 # 3벌 동일)과 동율. 병렬 가지 원형이 이 위면 표시 사본을 스필 참조+preview 로 바꾼다
@@ -256,11 +259,13 @@ def _progress_note(prog: dict) -> str:
         parts.append(f"하위 step {d['substep']}/{d['substeps']} "
                      f"{d.get('subaction') or ''}".strip())
     if not parts:
-        return "실행이 아직 돌고 있습니다 — 잠시 후 같은 recover 로 다시 물으세요."
+        return ("실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 "
+                f"wait 초(≤{TICKET_MAX_WAIT_S})를 주세요. 셸 sleep 폴링은 쓰지 마세요.")
     return (f"실행이 아직 돌고 있습니다 — {' · '.join(parts)} 진행 중"
             f"(마지막 움직임 {prog.get('updated_at')}). "
             f"★이 시각이 물을 때마다 새로워지면 도는 중이고, 멈춰 있으면 멈춘 것입니다. "
-            f"잠시 후 같은 recover 로 다시 물으세요.")
+            f"끝날 때까지 기다리려면 같은 회수에 wait 초(≤{TICKET_MAX_WAIT_S})를 주세요 — "
+            f"셸 sleep 폴링은 쓰지 마세요.")
 
 
 def ticket_finish(ticket: str, envelope) -> bool:
@@ -274,11 +279,54 @@ def ticket_finish(ticket: str, envelope) -> bool:
     return True
 
 
+def ticket_wait(ticket: str, wait_s=0) -> dict:
+    """회수의 **유한 대기** — 결말이 날 때까지 최대 wait 초 기다렸다가 회수한다 (2026-09-01).
+
+    ★왜 생겼나 (09-01 06:00 실측): 회수의 유일한 처방이 "잠시 후 다시 물으세요"뿐이라,
+    멈춘 실행을 기다리는 주행이 **셸 `sleep` 으로 대기를 흉내 내다** 무너졌다. 하네스가
+    전경 sleep 을 막고 배경 sleep 은 즉시 돌아오니, 대기는 4~5초 간격 폴링이 됐다 —
+    폴링 1회 = 모델 왕복 1회. 그 주행의 도구 호출 45건 중 16건(회수 폴링 9 + sleep 7)이
+    **기다리는 데만** 쓰였다. 형제 낱말은 이미 답을 갖고 있었다:
+    `[self:script]{op:"status", wait: 초}` 의 유한 대기. 같은 값(≤240초)·같은 규율로 옮긴다.
+
+    규율은 종전과 같다 — **대기가 끝나는 것과 실행이 끝나는 것은 다른 사건**이다.
+    상한까지 기다려도 안 끝났으면 running 봉투를 그대로 돌려주고 `waited` 로 얼마를
+    기다렸는지 말한다(기다림이 끝났을 뿐 실행은 계속 돈다). 결말·미상·형식오류는
+    기다릴 이유가 없으므로 즉시 돌아온다.
+    """
+    try:
+        wait_s = float(wait_s or 0)
+    except (TypeError, ValueError):
+        wait_s = 0.0
+    capped = wait_s > TICKET_MAX_WAIT_S
+    wait_s = min(max(wait_s, 0.0), float(TICKET_MAX_WAIT_S))
+    started = time.time()
+    while True:
+        env = ticket_recover(ticket)
+        # running 이 아니면 기다릴 것이 없다(done=원 봉투 · unknown/invalid=기다려도 안 생김).
+        if not (isinstance(env, dict) and env.get("status") == "running"):
+            break
+        left = wait_s - (time.time() - started)
+        if left <= 0:
+            break
+        time.sleep(min(TICKET_POLL_S, left))
+    if wait_s and isinstance(env, dict):
+        waited = round(time.time() - started, 1)
+        if env.get("status") == "running":
+            env["waited"] = waited
+            env["note"] = (f"{env.get('note') or ''} ★유한 대기 {waited}초가 먼저 끝났습니다 — "
+                           f"실행이 죽은 것이 아니라 **기다림이 끝난 것**입니다. 위 '마지막 움직임' "
+                           f"시각이 이전 회수 때보다 새로우면 도는 중입니다.").strip()
+        if capped:
+            env["note"] = f"{env.get('note') or ''} (wait 상한 {TICKET_MAX_WAIT_S}초로 줄임)".strip()
+    return env
+
+
 def ticket_recover(ticket: str) -> dict:
     """티켓의 현재 상태 — 3상태를 뭉개지 않는다(B28-1: '못 봤다'와 '없다'는 다른 사건).
 
     done    → 보관된 원 봉투(+회수 표식)
-    running → 아직 도는 중(started_at 동봉) — 잠시 후 같은 recover 로 다시
+    running → 아직 도는 중(started_at 동봉) — 기다리려면 ticket_wait(유한 대기). 다시
     unknown → 기록 없음: 24h 만료 **또는** 티켓 미탑재 실행 — 어느 쪽인지 여기선 모른다
     """
     if not valid_ticket(ticket):
@@ -297,7 +345,8 @@ def ticket_recover(ticket: str) -> dict:
     if rec.get("status") == "running":
         out = {"success": True, "status": "running",
                "started_at": rec.get("started_at"),
-               "note": "실행이 아직 돌고 있습니다 — 잠시 후 같은 recover 로 다시 물으세요."}
+               "note": ("실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 "
+                        f"wait 초(≤{TICKET_MAX_WAIT_S})를 주세요. 셸 sleep 폴링은 쓰지 마세요.")}
         prog = rec.get("progress")
         if isinstance(prog, dict):
             # 진행 동봉(2026-08-29 ⑨) — 헛폴링 방지: 어느 step 이 언제부터 돌고 있는지.

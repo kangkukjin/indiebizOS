@@ -243,6 +243,10 @@ async def execute_ibl_code(req: IBLRequest):
 class RecoverRequest(BaseModel):
     """표면 티켓 회수(F51-1) — 표면 대기가 끊긴 실행의 최종 봉투를 되찾는다."""
     ticket: str
+    # 유한 대기(2026-09-01) — 0이면 종전대로 즉답. `[self:script]{op:"status", wait}` 와
+    # 같은 계약(상한 240초, 넘기면 줄이고 신고). 없으면 부르는 쪽이 sleep 으로 대기를
+    # 흉내 내다 폴링으로 무너진다(09-01 06:00 실측: 도구 호출의 36%가 기다림이었다).
+    wait: float = 0
 
 
 @router.post("/recover")
@@ -251,9 +255,16 @@ async def recover_ibl_result(req: RecoverRequest):
 
     실행이 아니라 조회라 가볍고 유한하다: 어떤 길이의 실행도 '유한 대기의 반복'으로
     덮는 것이 이 규약의 요지다(무한 대기 금지 — 틀린 대기가 틀린 쓰기보다 싸도,
-    안 끝나는 대기는 표면을 인질로 잡는다)."""
-    from common.spill import ticket_recover
-    return ticket_recover(req.ticket)
+    안 끝나는 대기는 표면을 인질로 잡는다).
+
+    wait 초를 주면 그 안에서 결말을 기다린다. **대기는 워커 스레드로 내린다** — 이
+    함수가 이벤트 루프 위에서 잠들면 그 대기를 풀어 줄 요청(진행 신고·실행 완료)을
+    서버가 못 받아 자기교착한다(api_ibl 실행 경로가 to_thread 를 쓰는 것과 같은 이유)."""
+    import asyncio
+    from common.spill import ticket_recover, ticket_wait
+    if not req.wait:
+        return ticket_recover(req.ticket)
+    return await asyncio.to_thread(ticket_wait, req.ticket, req.wait)
 
 
 def _attach_steer(envelope, explicit_agent_id: str):

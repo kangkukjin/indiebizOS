@@ -204,9 +204,11 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
     q = ((res0.get("indicators") or {}).get("quote") or [{}])[0]
     o, h, l, c, v = (q.get(k) or [] for k in ("open", "high", "low", "close", "volume"))
     bars = []
+    dropped = []          # close 결측 바 = '거래일인데 값이 없는 구멍'. 조용히 버리면 전일종가가 한 장 밀린다.
     for i, t in enumerate(ts):
         cl = c[i] if i < len(c) else None
         if cl is None:
+            dropped.append(datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"))
             continue
         bars.append({
             "date": datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d"),
@@ -216,6 +218,8 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
             "close": round(cl, 2),
             "volume": int(v[i]) if i < len(v) and v[i] is not None else 0,
         })
+    if meta_sink is not None:
+        meta_sink["_dropped_dates"] = dropped
     return bars
 
 

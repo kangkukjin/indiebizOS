@@ -32,6 +32,8 @@ class ConsciousnessAgent:
     def __init__(self):
         self._provider = None
         self._prompt = None
+        self._prompt_path = None
+        self._prompt_mtime = None
         self._init_provider()
         self._load_prompt()
 
@@ -74,12 +76,41 @@ class ConsciousnessAgent:
             print(f"[ConsciousnessAgent] 초기화 실패: {e}")
             self._provider = None
 
+    # --- 프롬프트 캐시 무효화 (mtime) -------------------------------------
+    # ★이 프롬프트는 싱글턴 수명 = 프로세스 수명이라, mtime 검사가 없으면
+    #   consciousness_prompt.md 를 고쳐도 백엔드 재기동(또는 /packages/reload)
+    #   전까지 모든 턴에 옛 교리가 주입된다. 수리 교리·되묻기 규칙 같은 행동
+    #   규범이 여기 살기 때문에 "고쳤는데 안 바뀐다"가 조용히 오래 간다.
+    #   prompt_builder._read_cached 와 같은 규약(2026-09-01).
+
+    @staticmethod
+    def _file_mtime(path) -> Optional[float]:
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            return None
+
+    def _reload_prompt_if_changed(self):
+        """역할 프롬프트 파일이 바뀌었으면 다시 읽는다(구조·IBL 환경도 함께 재조립)."""
+        if not self._prompt_path:
+            return
+        mtime = self._file_mtime(self._prompt_path)
+        if mtime is None or mtime == self._prompt_mtime:
+            return
+        try:
+            self._load_prompt()
+            print("[ConsciousnessAgent] 역할 프롬프트 변경 감지 — 재적재")
+        except Exception as e:
+            logger.warning(f"[ConsciousnessAgent] 프롬프트 재적재 실패(옛 본문 유지): {e}")
+
     def _load_prompt(self):
         """의식 에이전트 전용 프롬프트 로드 (베이스 프롬프트 불필요 — 도구를 쓰지 않고 JSON만 출력)"""
         from runtime_utils import get_base_path
 
         base_path = get_base_path()
         role_path = base_path / "data" / "common_prompts" / "consciousness_prompt.md"
+        self._prompt_path = role_path
+        self._prompt_mtime = self._file_mtime(role_path)
         if role_path.exists():
             self._prompt = role_path.read_text(encoding='utf-8')
         else:
@@ -165,6 +196,9 @@ class ConsciousnessAgent:
         if not self.is_ready:
             print("[ConsciousnessAgent] 비활성 — 패스스루")
             return None
+
+        # 역할 프롬프트가 손으로 고쳐졌으면 이 턴부터 새 본문으로 (stat 1회)
+        self._reload_prompt_if_changed()
 
         # 입력 구성
         input_text = self._build_input(

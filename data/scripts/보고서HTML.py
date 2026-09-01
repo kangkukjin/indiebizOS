@@ -92,7 +92,12 @@ def main():
             raise ValueError(f"theme 은 {'|'.join(_THEMES)} 중 하나여야 합니다.")
         accent = str(args.get("accent") or _THEMES[theme])
 
-        drop = [str(x) for x in (args.get("drop_lines") or []) if str(x).strip()]
+        _drop_arg = args.get("drop_lines") or []
+        # 문자열 하나를 주면 그대로 순회해 *글자* 하나하나가 토큰이 된다 —
+        # '건'·':' 같은 흔한 글자가 문서 절반을 조용히 지운다(2026-09-01 실측: 225줄 중 71줄).
+        if isinstance(_drop_arg, str):
+            _drop_arg = [_drop_arg]
+        drop = [str(x) for x in _drop_arg if str(x).strip()]
         lines, dropped = [], 0
         for line in io.open(src, encoding="utf-8").read().split("\n"):
             if drop and any(token in line for token in drop):

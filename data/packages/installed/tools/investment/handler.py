@@ -345,16 +345,67 @@ def _stock_quote(ti: dict):
     if _refused:
         return _refused
     tool = load_module("tool_yfinance")
-    return _attach_quote_items(tool.get_stock_price(
+    res = tool.get_stock_price(
         symbol=ticker,
         period=ti.get("period", "5d"),
         interval=ti.get("interval", "1d"),
         max_points=ti.get("max_points", 10),
-    ))
+    )
+    _reconcile_quote_prev_close(res, ticker, market)
+    return _attach_quote_items(res)
+
+
+def _reconcile_quote_prev_close(res, ticker, market):
+    """quote 의 '직전 거래일'을 history 가 쓰는 바로 그 소스에 맞춘다 (2026-09-01).
+
+    quote 의 달력은 Yahoo chart, history 의 달력은 KRX/FMP 다. Yahoo 가 어떤 날 바를
+    `close: null` 로 주면 그 거래일이 quote 의 달력에서만 사라져, 전일종가가 한 장 밀리고
+    등락 부호까지 뒤집혔다(실측: AAPL 8/28 결측 → 8/27 기준). 구멍이 감지된 경우에만
+    history 소스의 그 날 종가로 전일종가를 다시 잡는다 — 두 op 가 같은 날을 가리키게.
+    지수(^)는 history 도 같은 Yahoo 경로라 이미 같은 달력이므로 보정하지 않는다.
+    """
+    try:
+        data = res.get("data") if isinstance(res, dict) else None
+        if not isinstance(data, dict) or not res.get("success"):
+            return
+        gap, as_of = data.get("series_gap"), data.get("as_of")
+        if not gap or not as_of or str(ticker or "").startswith("^"):
+            return
+        start = (date.fromisoformat(as_of) - timedelta(days=14)).isoformat()
+        if market == "kr":
+            src, bare = "krx", re.sub(r"\.(KS|KQ)$", "", str(ticker or ""), flags=re.I)
+            ref = load_module("tool_krx").get_stock_price(symbol=bare, start_date=start, end_date=as_of, max_points=60)
+        else:
+            src = "fmp"
+            ref = load_module("tool_fmp").get_stock_price(symbol=ticker, start_date=start, end_date=as_of, max_points=60)
+        rows = ((ref or {}).get("data") or {}).get("prices") or []
+        prior = [r for r in rows if r.get("date") and r["date"] < as_of and r.get("close") is not None]
+        if not prior:
+            return
+        true_prev = max(prior, key=lambda r: r["date"])
+        old_close, old_date = data.get("previous_close"), data.get("previous_close_date")
+        if true_prev["date"] == old_date:
+            return                                    # 구멍이 있었어도 직전 장은 같았다
+        cur, prev = data.get("current_price"), float(true_prev["close"])
+        data["previous_close"], data["previous_close_date"] = round(prev, 2), true_prev["date"]
+        data["prev_close_source"] = src
+        if cur is not None and prev:
+            data["change"] = round(cur - prev, 2)
+            data["change_percent"] = round((cur - prev) / prev * 100, 2)
+        data["quote_lag"] = {"reason": "yahoo_series_gap_reconciled", "missing_sessions": gap,
+                             "yahoo_prev_close": old_close, "yahoo_prev_date": old_date,
+                             "reconciled_with": src}
+        d = "▲" if (data.get("change") or 0) >= 0 else "▼"
+        res["summary"] = (f"[{as_of} 기준] 현재가 {cur} {data.get('currency')} {d} "
+                          f"{abs(data.get('change') or 0)} ({data.get('change_percent'):+.2f}%), "
+                          f"전일({true_prev['date']}) {data['previous_close']}. "
+                          f"(Yahoo 일봉 결측 {', '.join(gap)} → {src} 로 전일종가 보정)")
+    except Exception:
+        return                                        # 보정 실패는 원 봉투를 해치지 않는다
 
 
 # items 행에서 제외할 data 키 — 목록·파생 메타(스냅샷 스칼라만 1행으로).
-_QUOTE_ITEMS_SKIP = {"prices", "sample", "file_path", "truncated"}
+_QUOTE_ITEMS_SKIP = {"prices", "sample", "file_path", "truncated", "quote_lag", "series_gap"}
 
 
 def _attach_quote_items(result):

@@ -255,10 +255,23 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
             "low": item.get("low"),
             "close": item.get("close"),
             "volume": item.get("volume"),
-            "change": item.get("change"),
-            "change_percent": item.get("changePercent"),
             "vwap": item.get("vwap")
         })
+
+    # 행별 change 의미 통일 (2026-09-01): FMP 원본의 change/changePercent 는 '종가 − 시가'
+    # 라서 KR(전일 대비)과 같은 열 이름에 다른 양이 담겨 있었다. 두 시장을 같은 자로.
+    # 창 밖의 전일은 모르므로 첫 행은 None. 다운샘플 전 전체 시계열에 적용한다.
+    _prev = None
+    for _row in prices:
+        _close = _row.get("close")
+        if _prev and _close is not None:
+            _row["change"] = round(_close - _prev, 4)
+            _row["change_percent"] = round((_close - _prev) / _prev * 100, 2)
+        else:
+            _row["change"] = None
+            _row["change_percent"] = None
+        if _close is not None:
+            _prev = _close
 
     latest = prices[-1] if prices else {}
     total_days = len(prices)
@@ -274,7 +287,9 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
         "prices": compact,
         "truncated": truncated,
     }
-    summary = f"{symbol} 현재가: ${latest.get('close', 'N/A')}, 변동: {latest.get('change_percent', 0):.2f}%"
+    _pct = latest.get('change_percent')   # 첫 행뿐인 창에서는 None (전일이 창 밖)
+    summary = (f"{symbol} 현재가: ${latest.get('close', 'N/A')}, "
+               + (f"전일 대비: {_pct:.2f}%" if isinstance(_pct, (int, float)) else "전일 대비: 미상(창 밖)"))
     if truncated:
         file_path = save_large_data(prices, "investment", f"us_prices_{symbol}")
         data["file_path"] = file_path     # 전체 데이터 파일 경로 (시각화 data_file용)

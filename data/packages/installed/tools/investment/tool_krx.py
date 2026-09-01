@@ -223,6 +223,27 @@ def _find_stock_code(symbol: str):
     return None
 
 
+def _normalize_row_change(prices):
+    """행별 change/change_percent 를 '전일 종가 대비'로 통일 (2026-09-01).
+
+    소스마다 뜻이 갈려 있었다 — FDR=등락 비율(소수), KRX=등락률(%), FMP=종가−시가.
+    같은 op 의 같은 열 이름이 소스에 따라 다른 양을 담으면 비교가 조용히 틀린다.
+    창 밖의 전일은 모르므로 첫 행은 None(추측 금지). 다운샘플 전 전체 시계열에 적용할 것.
+    """
+    prev = None
+    for row in prices:
+        close = row.get("close")
+        if prev and close is not None:
+            row["change"] = close - prev
+            row["change_percent"] = round((close - prev) / prev * 100, 2)
+        else:
+            row["change"] = None
+            row["change_percent"] = None
+        if close is not None:
+            prev = close
+    return prices
+
+
 def _fetch_stock_price_fdr(code: str, start_date: str, end_date: str):
     """FinanceDataReader로 주가 조회"""
     try:
@@ -336,6 +357,8 @@ def get_stock_price(symbol: str, start_date: str = None, end_date: str = None, m
             "success": False,
             "error": f"'{symbol}'의 주가 데이터를 조회할 수 없습니다. FinanceDataReader 라이브러리를 설치해보세요: pip install finance-datareader"
         }
+
+    _normalize_row_change(prices)
 
     # 최신 데이터 추출
     latest = prices[-1] if prices else {}

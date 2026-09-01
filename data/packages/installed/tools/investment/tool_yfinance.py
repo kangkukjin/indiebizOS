@@ -6,7 +6,7 @@ import re
 import sys
 import json
 import requests
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 # common 유틸리티 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -315,10 +315,55 @@ def _naver_realtime(symbol: str):
         return None
 
 
+# ── 한국 지수 일봉: 네이버 (2026-09-01) ────────────────────────────
+# 지수(^KS11·^KQ11)는 quote 도 history 도 같은 Yahoo chart 를 쓰는데, Yahoo 가 한국
+# 거래일을 close=null 로 통째 빠뜨린다(실측: 8/28·8/31 둘 다 null → 시계열이 8/27 에서
+# 멈추고 quote 만 네이버로 앞서 나갔다). 종목은 KRX/FMP 라는 대조 소스가 있어 핸들러가
+# 보정하지만 지수엔 없었다 — 그래서 일봉 자체를 네이버(무키, 같은 KRX 원천)로 바꾼다.
+_NAVER_SISE = "https://api.finance.naver.com/siseJson.naver"
+_NAVER_INDEX_DAILY = {"^KS11": "KOSPI", "^KQ11": "KOSDAQ", "^KS200": "KPI200"}
+_PERIOD_DAYS = {"1d": 5, "5d": 10, "1mo": 31, "3mo": 93, "6mo": 186,
+                "1y": 366, "2y": 731, "5y": 1827, "10y": 3653, "ytd": 366, "max": 3653}
+
+
+def _naver_index_daily(symbol: str, period: str = "5d") -> list:
+    """한국 지수의 일봉 시계열(네이버). 비대상·실패=[] → 호출자가 Yahoo 로 폴백.
+
+    응답은 JSON 이 아니라 파이썬 리터럴에 가까운 텍스트(작은따옴표 헤더)라 눈으로 파싱한다.
+    반환 모양은 _yahoo_chart 와 동일 — [{date, open, high, low, close, volume}] 오름차순.
+    """
+    code = _NAVER_INDEX_DAILY.get((symbol or "").upper())
+    if not code:
+        return []
+    days = _PERIOD_DAYS.get(str(period or "5d").lower(), 31)
+    end = datetime.now()
+    start = end - timedelta(days=days)
+    try:
+        r = requests.get(_NAVER_SISE, params={
+            "symbol": code, "requestType": 1, "timeframe": "day",
+            "startTime": start.strftime("%Y%m%d"), "endTime": end.strftime("%Y%m%d"),
+        }, headers={"User-Agent": "Mozilla/5.0", "Referer": "https://finance.naver.com/"}, timeout=10)
+        if r.status_code != 200:
+            return []
+        bars = []
+        for m in re.finditer(r'\["(\d{8})",\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*(\d+)', r.text):
+            d, o, h, l, c, v = m.groups()
+            bars.append({
+                "date": f"{d[:4]}-{d[4:6]}-{d[6:]}",
+                "open": round(float(o), 2), "high": round(float(h), 2),
+                "low": round(float(l), 2), "close": round(float(c), 2),
+                "volume": int(v),
+            })
+        return bars
+    except Exception:
+        return []
+
+
 def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
     """
     Yahoo Finance를 통해 주식/ETF/원자재(선물) 가격 조회
     (한국 종목·지수의 현재가 스냅샷은 네이버 실시간이 덮는다 — _naver_realtime)
+    (한국 지수의 일봉은 네이버 — Yahoo 가 거래일을 통째 빠뜨린다, _naver_index_daily)
     """
     if not symbol:
         return {"success": False, "error": "symbol 파라미터가 필요합니다."}
@@ -339,13 +384,25 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
     try:
         # yfinance 라이브러리(봇차단) 대신 Yahoo chart API 직접(requests) — 폰·데스크탑 공통.
         chart_meta: dict = {}
-        all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta)
+        series_source = None
+        all_history = []
+        if str(interval or "1d").lower() in ("1d", "1day", "d"):
+            # 한국 지수는 네이버 일봉이 먼저 (Yahoo 는 거래일을 통째 빠뜨린다)
+            all_history = _naver_index_daily(symbol, period)
+            if all_history:
+                series_source = "naver_daily"
+                chart_meta["currency"] = "KRW"
+        if not all_history:
+            all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta)
         if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
         latest = all_history[-1]
+        as_of = latest["date"]                       # 이 시세가 말하는 거래일 = history 마지막 행의 날짜
         current_price = latest["close"]
-        prev_close = all_history[-2]["close"] if len(all_history) >= 2 else current_price
+        prev_row = all_history[-2] if len(all_history) >= 2 else None
+        prev_close = prev_row["close"] if prev_row else current_price
+        prev_close_date = prev_row["date"] if prev_row else None
         snap_open, snap_high, snap_low, snap_volume = latest["open"], latest["high"], latest["low"], latest["volume"]
 
         if prev_close and prev_close > 0:
@@ -357,20 +414,57 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
 
         # ★한국 종목·지수: 현재가 스냅샷을 네이버 실시간으로 덮음(Yahoo KRX ~20분 지연).
         #   시계열(prices)은 Yahoo 일봉 유지 — 차트 계약 불변. 실패 시 Yahoo 값 그대로.
+        #   ★거래일 정합(2026-09-01): 스냅샷이 *어느 장*의 것인지(quote_time 날짜)를 일봉의
+        #   마지막 행(as_of)과 먼저 대조한다. 장전·휴장에는 네이버가 '아직 시작 안 한 오늘'
+        #   기준 등락(=0)을 주는데 가격은 전 장 종가라, 옛 역산(prev_close = price - change)은
+        #   전일종가를 그 장 종가 자신으로 만들어 history 의 마지막 행과 어긋났다.
         realtime = _naver_realtime(symbol)
+        quote_lag = None                             # 일봉과 스냅샷이 다른 장을 가리킬 때의 정직 표지
         if realtime:
-            current_price = realtime["price"]
-            change = realtime["change"]
-            prev_close = current_price - change
-            if realtime["change_percent"] is not None:
-                change_percent = realtime["change_percent"]
-            elif prev_close > 0:
-                change_percent = (change / prev_close) * 100
-            snap_open = realtime["open"] if realtime["open"] is not None else snap_open
-            snap_high = realtime["high"] if realtime["high"] is not None else snap_high
-            snap_low = realtime["low"] if realtime["low"] is not None else snap_low
-            snap_volume = realtime["volume"] if realtime["volume"] is not None else snap_volume
+            rt_day = (realtime["quote_time"] or "")[:10] or datetime.now().strftime("%Y-%m-%d")
+            if rt_day == as_of:
+                # ① 같은 장 — 현재가만 실시간으로 덮고, 전일종가는 일봉 직전 행에 고정한다.
+                current_price = realtime["price"]
+                if prev_close and prev_close > 0:
+                    change = current_price - prev_close
+                    change_percent = (change / prev_close) * 100
+                else:
+                    change = realtime["change"]
+                    change_percent = realtime["change_percent"] or 0
+                naver_prev = realtime["price"] - realtime["change"]
+                if prev_close and abs(naver_prev - prev_close) > max(abs(prev_close) * 0.005, 0.01):
+                    # 네이버가 보는 전일종가 ≠ 일봉 직전 행 = 일봉에 구멍/지연. 정합은 일봉 쪽에
+                    # 맞추되(quote 와 history 가 같은 자), 불일치 자체를 숨기지 않는다.
+                    quote_lag = {"reason": "prev_close_disagreement",
+                                 "naver_implied_prev_close": round(naver_prev, 2),
+                                 "series_prev_close": round(prev_close, 2),
+                                 "series_prev_date": prev_close_date}
+                snap_open = realtime["open"] if realtime["open"] is not None else snap_open
+                snap_high = realtime["high"] if realtime["high"] is not None else snap_high
+                snap_low = realtime["low"] if realtime["low"] is not None else snap_low
+                snap_volume = realtime["volume"] if realtime["volume"] is not None else snap_volume
+            elif realtime["change"]:
+                # ② 네이버가 일봉에 아직 없는 장을 이미 갖고 있다(일봉 지연) — 그 장으로 옮기되
+                #    history 가 한 장 뒤처져 있음을 표지로 남긴다.
+                as_of = rt_day
+                current_price = realtime["price"]
+                change = realtime["change"]
+                prev_close_date = None               # 네이버의 전 장 = 일봉에 없는 장일 수 있다(추측 금지)
+                prev_close = current_price - change
+                change_percent = realtime["change_percent"] if realtime["change_percent"] is not None \
+                    else ((change / prev_close) * 100 if prev_close else 0)
+                quote_lag = {"reason": "series_behind_quote", "series_last_date": latest["date"]}
+                snap_open = realtime["open"] if realtime["open"] is not None else snap_open
+                snap_high = realtime["high"] if realtime["high"] is not None else snap_high
+                snap_low = realtime["low"] if realtime["low"] is not None else snap_low
+                snap_volume = realtime["volume"] if realtime["volume"] is not None else snap_volume
+            # ③ 다른 날짜 + 등락 0 = 아직 시작 안 한 장(장전·휴장). 스냅샷에 새 장 정보가 없으니
+            #    일봉의 마지막 완결 장(as_of)을 그대로 쓴다 — quote 와 history 가 같은 날을 가리킨다.
 
+        # 일봉 구멍: as_of 와 전일종가로 쓴 행 *사이*에 결측 거래일이 있으면, 전일종가는
+        # 진짜 직전 장이 아니다(옛 증상: 8/28 결측 → 8/27 기준 계산 → 부호 반전).
+        series_gap = [d for d in (chart_meta.get("_dropped_dates") or [])
+                      if (prev_close_date or "") < d < as_of]
         direction = "▲" if change >= 0 else "▼"
         currency = _resolve_currency(symbol, chart_meta)
         total_days = len(all_history)
@@ -382,6 +476,8 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             "change": round(change, 2),
             "change_percent": round(change_percent, 2),
             "previous_close": round(prev_close, 2),
+            "as_of": as_of,                          # 이 시세가 말하는 거래일 (history 마지막 행과 대조 가능)
+            "previous_close_date": prev_close_date,
             "open": snap_open,
             "high": snap_high,
             "low": snap_low,
@@ -390,12 +486,18 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             "total_days": total_days,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
+        if series_source:
+            base_data["series_source"] = series_source   # 일봉이 어느 소스인지 (기본=yahoo_chart)
         if realtime:
             base_data["source"] = "naver_realtime"      # 한국 시세=실시간(delayTime 0)
             if realtime["quote_time"]:
                 base_data["quote_time"] = realtime["quote_time"]
             if realtime["market_status"]:
                 base_data["market_status"] = realtime["market_status"]
+        if quote_lag:
+            base_data["quote_lag"] = quote_lag       # 일봉과 스냅샷의 거래일/전일종가 불일치 신고
+        if series_gap:
+            base_data["series_gap"] = series_gap     # 전일종가와 as_of 사이의 결측 거래일(핸들러가 정합 보정)
 
         msg = f"{symbol.upper()}: {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%)"
 
@@ -413,7 +515,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
             summary = f"{msg}, 총 {total_days}거래일. 차트 생성 시 line_chart 도구의 data 파라미터에 prices 배열을 전달하세요."
         else:
             # 짧은 현재가 조회(기본 5일) → 현재가 중심 요약 (차트 안내 생략, prices는 최근 맥락일 뿐)
-            summary = f"현재가 {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%), 전일 {round(prev_close, 2)}. 최근 {total_days}거래일 시세 포함."
+            summary = f"[{as_of} 기준] 현재가 {round(current_price, 2)} {currency} {direction} {abs(round(change, 2))} ({change_percent:+.2f}%), 전일({prev_close_date or '?'}) {round(prev_close, 2)}. 최근 {total_days}거래일 시세 포함."
         if realtime:
             summary += " (네이버 실시간)"
         return {"success": True, "data": base_data, "summary": summary}

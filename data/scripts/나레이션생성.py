@@ -9,10 +9,10 @@ args (stdin JSON):
                (deck video 가 이 폴더를 먼저 보고, 있으면 TTS 대신 그 파일을 쓴다)
   texts      : {"이름": "문장"} — 임시 문장용. out_dir 과 함께 쓴다.
   out_dir    : texts 모드의 저장 폴더 (기본 outputs/narration)
-  voice      : data/voice/voices.json 의 키 (기본 kkj)
+  voice      : data/voice/voices.json 의 키 (기본 kkj3)
   gpu        : T4(기본)/L4/A100 — 계정 티어에 따라 가용성 다름
   force      : true 면 이미 있는 wav 도 다시 굽는다 (기본 false)
-  speed      : 낭독 속도 배율 (기본 0.9 = 10% 느리게 — 표준). 1.0 이면 원속도.
+  speed      : 낭독 속도 배율 (기본 1.0 = 원속도 — 표준). 0.9 면 10% 느리게.
 
 산출: {"items":[{"title","meta","summary","url"}], "message": ...}
 
@@ -38,9 +38,9 @@ ROOT = Path("/Users/kangkukjin/Desktop/AI/indiebizOS")
 VOICE_DIR = ROOT / "data" / "voice"
 SESSION = f"narr{os.getpid()}"
 
-# 표준 낭독 속도 (2026-08-17 사용자 판정: 기본이 빠르다 → 10% 느리게를 표준으로)
-# 값의 뜻 = 재생 배율. 0.9 면 길이가 1/0.9 = 약 1.11 배가 된다.
-DEFAULT_SPEED = 0.9
+# 표준 낭독 속도 (2026-09-01 사용자 판정: 보정을 없애고 본래 목소리 속도로)
+# 값의 뜻 = 재생 배율. 1.0 = 무보정(retime 이 그대로 통과). 0.9 를 넘기면 10% 느리게.
+DEFAULT_SPEED = 1.0
 
 # 함정 6(colab.md): 세션 상태 파일을 공유하면 다른 콜랩 작업과 얽힌다 → 전용 config
 CFG = Path(tempfile.gettempdir()) / f"colab_{SESSION}.json"
@@ -213,7 +213,7 @@ def main():
     raw = sys.stdin.read().strip()
     args = json.loads(raw) if raw else {}
 
-    ref_wav, ref_text = load_voice(args.get("voice") or "kkj")
+    ref_wav, ref_text = load_voice(args.get("voice") or "kkj3")
     items, out_dir = collect_jobs(args)
 
     if not items:

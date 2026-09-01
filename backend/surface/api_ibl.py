@@ -138,6 +138,7 @@ async def execute_ibl_code(req: IBLRequest):
                                     set_current_surface, get_current_surface,
                                     set_call_channel, get_call_channel, clear_call_channel,
                                     set_surface_ticket, get_surface_ticket,
+                                    set_progress_ticket, get_progress_ticket,
                                     actor_context)
 
         def _run_in_context():
@@ -145,9 +146,13 @@ async def execute_ibl_code(req: IBLRequest):
             _prev_surface = get_current_surface()
             _prev_channel = get_call_channel()
             _prev_ticket = get_surface_ticket()
+            _prev_prog_ticket = get_progress_ticket()
             # 표면 티켓을 스레드에 싣는다(⑨) — 엔진 최외곽 파이프라인이 step 경계마다
             # ticket_progress 를 쓴다. to_thread 풀 스레드 재사용 → 복원 필수(선례 동일).
             set_surface_ticket(req.ticket or None)
+            # 신고 슬롯은 실행 중 엔진이 채운다(claim) — 들어올 때 비워 두고 나갈 때
+            # 되돌린다. 풀 스레드 재사용이라 잔류하면 남의 티켓에 진행을 쓴다.
+            set_progress_ticket(None)
             if req.project_id:
                 set_current_project_id(req.project_id)
             set_current_surface(req.surface)
@@ -193,6 +198,7 @@ async def execute_ibl_code(req: IBLRequest):
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)
                     set_surface_ticket(_prev_ticket)
+                    set_progress_ticket(_prev_prog_ticket)
                     if _prev_channel is None:
                         clear_call_channel()
                     else:

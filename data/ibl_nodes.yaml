@@ -3892,7 +3892,7 @@ nodes:
         runs_on: pc_only
         description: 강의 데크 조작 (op 분기). 슬라이드 순서 변경 / 파일 내보내기 / 나레이션 동영상 렌더.
         group: lecture
-        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx|images). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(별도 프로세스, 즉시 반환), 진행 확인은 check:true, wait:true=동기. 옵션 engine/voice/style/rate/transition/bgm_path/output_filename (나레이션 기본 = Gemini TTS Charon). 노트 없는 장은 무나레이션 씬.
+        target_description: 공통 lecture_id 필수. reorder는 order(slide_id 배열), export는 format(pdf|pptx|images). video는 슬라이드 PNG+장별 스피커 노트를 TTS 나레이션 동영상(MP4)으로 — 기본 백그라운드(별도 프로세스, 즉시 반환), 진행 확인은 check:true, wait:true=동기. 옵션 engine/voice/style/rate/transition/bgm_path/output_filename/captions (captions=true면 스피커 노트 기반 자막을 영상에 합성하고 ASS 원본도 보존, 기본 false). 나레이션 기본 = Gemini TTS Charon. 노트 없는 장은 무나레이션 씬.
         target_key: op
         router: handler
         tool: deck_op
@@ -3900,8 +3900,8 @@ nodes:
           values:
             reorder: 슬라이드 순서 변경 (order=slide_id 배열, deck.json만 갱신)
             export: 파일 내보내기 (format=pdf|pptx=합본, images=슬라이드별 PNG 폴더+ZIP)
-            video: 나레이션 동영상 렌더 (슬라이드 PNG+스피커 노트→TTS→MP4, 기본 백그라운드·check=진행조회·wait=동기)
-        implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본. video는 deck_video.py 로 위임 — 덱을 scenes/narration_texts 로 조립해 media_producer create_html_video 차용(TTS→씬 길이 자동 맞춤→FFmpeg 합성), 기본은 별도 프로세스(start_new_session, 리로드 면역)+video_state.json 하트비트(pid·stage), check=status()가 pid 로 생사 판정해 죽었으면 interrupted 확정. lecture_dir/video/ 저장.
+            video: 나레이션 동영상 렌더 (captions=true 자막 합성, 기본 백그라운드·check 진행조회·wait 동기)
+        implementation: handler.py가 op로 분기. reorder는 deck.json만 갱신, export는 PIL/python-pptx로 합본. video는 deck_video.py 로 위임 — 덱을 scenes/narration_texts 로 조립해 media_producer create_html_video 차용(TTS→씬 길이 자동 맞춤→FFmpeg 합성), captions=true면 lecture_video_captions.py가 ffmpeg rawvideo+Pillow로 자막을 합성(libass 비의존). 기본은 별도 프로세스(start_new_session, 리로드 면역)+video_state.json 하트비트(pid·stage), check=status()가 pid 로 생사 판정해 죽었으면 interrupted 확정. lecture_dir/video/ 저장.
         keywords:
         - 슬라이드 순서 변경
         - 강의 내보내기
@@ -5028,7 +5028,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin; 큰 배치=args "$file:0"+files_from), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).

@@ -206,6 +206,23 @@ def get_surface_ticket():
     return getattr(_thread_local, 'surface_ticket', None)
 
 
+def set_progress_ticket(ticket):
+    """진행 **신고** 티켓 (2026-09-01) — 좌표 소유권과 분리된 두 번째 슬롯.
+
+    surface_ticket 은 "프로그램 좌표(step/of)를 누가 쓰는가"의 소유권이라 집는 즉시
+    비운다. 그런데 옛 규약은 비우기만 해서, 소유자 **아래**의 실행(each 의 각 행·
+    하위 파이프)은 살아 움직이면서도 아무 말도 못 했다 — 회수가 본 마지막 갱신 시각이
+    1행 시작에서 얼어 멈춤과 느림이 구별 불가였다(09-01 실측).
+    이 슬롯은 소유자가 채우고 아래 전부가 읽는다: 좌표는 못 건드리고 detail 칸만
+    갱신한다(규약 정본=ibl/ibl_progress.py)."""
+    _thread_local.progress_ticket = ticket
+
+
+def get_progress_ticket():
+    """현재 스레드의 진행 신고 티켓 (없으면 None)."""
+    return getattr(_thread_local, 'progress_ticket', None)
+
+
 def set_current_surface(surface: str):
     """현재 실행을 요청한 *표면* 설정 ('web' = 브라우저 표면, None = 이 기계에서 직접).
 
@@ -564,6 +581,7 @@ def clear_all_context():
     _thread_local.health_check_mode = False
     _thread_local.call_channel = None
     _thread_local.surface_ticket = None
+    _thread_local.progress_ticket = None
 
 
 def get_context_summary() -> dict:

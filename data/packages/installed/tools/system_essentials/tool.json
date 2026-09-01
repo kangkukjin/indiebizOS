@@ -841,7 +841,11 @@
               "object",
               "string"
             ],
-            "description": "run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 배치는 파일에 쓰고 args: \"$file:0\" + files_from 로 (2026-08-30 ep2357)"
+            "description": "run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 payload 는 args_file 로 가리킬 것(나르지 말고)"
+          },
+          "args_file": {
+            "type": "string",
+            "description": "run 선택 — stdin 으로 보낼 JSON 객체가 담긴 **파일 경로**(상대경로는 저장소 루트 기준). 원장 배치처럼 킬로바이트급 payload 를 문장에 리터럴로 박지 않는 통로. args 와 함께 주면 정직 거절(stdin 은 하나)"
           },
           "timeout": {
             "type": "number",

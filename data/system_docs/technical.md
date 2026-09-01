@@ -139,6 +139,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
 - **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
 - **표면 티켓 회수 규약**(2026-08-27 F51-1): 표면(MCP 등)이 `ticket`(hex 12자, 전송 계층 필드)을 실어 보내면 백엔드가 시작·결말 봉투를 `data/spill/` 에 남긴다(24h GC 동승). 표면의 HTTP 대기가 먼저 끊겨도 그것은 "실행이 죽었다"가 아니라 **"기다림이 끝났다"** 이므로, 정직한 봉투(ticket + 회수법)를 돌려주고 결과는 `execute_ibl{recover}` → `POST /ibl/recover` 로 회수한다. 상태 셋(`done`/`running`/`unknown`)을 뭉개지 않는다. ★타임아웃 연장은 임시방편이다 — 어떤 한도든 더 긴 문장에 진다. 유한 대기의 반복이라야 어떤 길이의 실행도 덮는다. 티켓 검증은 hex 만 통과(네트워크 값이 파일명이 되는 자리 — 경로 탈출 차단). 가드 `backend/test_surface_ticket_recovery.py` T1~T8.
+- **진행 신고 규약 — 좌표는 소유하고 움직임은 공유한다**(2026-09-01, 정본=`backend/ibl/ibl_progress.py`): `running` 회수는 프로그램 좌표(`step`/`of`/`action`)와 회차(`detail`: each 의 `row`/`rows`, 하위 파이프의 `substep`/`substeps`)를 함께 싣는다. 좌표는 **프로그램의 좌표를 아는 자**가 한 번만 집고(파이프면 `execute_pipeline`, 단일 step 이면 초크포인트 `system_tools_ibl`), 그 아래 모든 깊이는 `detail` 칸만 갱신한다 — 안쪽이 바깥의 좌표를 덮으면 좌표가 거짓이 된다. `updated_at` 은 **마지막 움직임** 시각이라, 회수를 두 번 물어 그 값이 바뀌면 도는 중이고 안 바뀌면 멈춘 것이다(멈춤 ↔ 느림 판별의 유일한 증거 — 이게 없어 23분 무한 대기를 눈감고 기다린 09-01 사고). 가드 `backend/test_each_progress_visibility.py`.
 - 실행은 워커 스레드에서 돈다(`asyncio.to_thread`) — 블로킹 핸들러가 이벤트 루프를 잡으면 그 대기를 풀어줄 요청 자체를 못 받아 자기교착한다.
 
 ### 몸 사이 소통 (/nodes) — api_nodes.py
@@ -310,7 +311,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(23) → `datastore`(36) → `ibl`(39) → `cognition`(43) → `services`(28) → `surface`(60). `.py` 총 287개(test 제외).
+  `base`(23) → `datastore`(36) → `ibl`(40) → `cognition`(44) → `services`(28) → `surface`(60). `.py` 총 289개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

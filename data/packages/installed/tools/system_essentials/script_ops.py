@@ -82,6 +82,64 @@ def _coerce_args(args):
     return None, "args 는 JSON 객체({키: 값}) 또는 그 JSON 문자열이어야 합니다 — 스크립트 stdin 으로 전달됩니다."
 
 
+def _args_from_file(path_str):
+    """args_file — stdin 으로 보낼 JSON 객체를 **파일에서** 읽는다 (2026-09-01).
+
+    왜 필요했나 (2026-08-30 실측 ④ → 09-01 실측 ⑥ 재발): args 는 JSON 객체(또는 그
+    문자열)여야 하는데, 원장 48행 upsert 처럼 payload 가 킬로바이트급인 호출은
+    **IBL 문장 안에 8KB 를 리터럴로 박는 것** 말고는 길이 없었다. `$file:0`+files_from
+    은 표면이 그 본문을 인라인으로 실어 보내야 해서 같은 값을 두 번 나르고, MCP
+    호출 크기 한도에도 걸린다. 그래서 이틀 연속 셸 stdin 우회를 썼다 — 등록 통로 밖
+    실행이라 실행 이력·상태·해마가 전부 굶었다(어휘가 있는데 못 쓰는 상태).
+
+    ★파일은 이미 이 몸 안에 있다. 나르지 말고 **가리키면** 된다:
+        [self:write]{path: "…/payload.json", content: …} >> …
+        [self:script]{op: "run", id: "json원장", args_file: "…/payload.json"}
+
+    계약은 args 와 **같다** — JSON 객체 하나. 배열·스칼라는 정직 거절(스크립트들이
+    `{op, path, items}` 모양의 dict 를 stdin 으로 받기로 한 규약).
+    반환: (dict|None, 에러 문자열|None)
+    """
+    p = Path(str(path_str)).expanduser()
+    if not p.is_absolute():
+        p = (_ROOT / p)
+    if not p.is_file():
+        return None, (f"args_file 을 찾지 못했습니다: {p} — 실존 파일 경로를 주세요"
+                      "(상대경로는 저장소 루트 기준).")
+    try:
+        text = p.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        return None, f"args_file 을 읽지 못했습니다: {e}"
+    try:
+        parsed = json.loads(text)
+    except ValueError as e:
+        return None, (f"args_file 이 JSON 이 아닙니다 ({e}) — {p} 의 내용은 JSON 객체"
+                      "({키: 값}) 하나여야 합니다.")
+    if not isinstance(parsed, dict):
+        return None, (f"args_file 은 JSON 객체({{키: 값}})여야 합니다 — {p} 를 파싱하니 "
+                      f"{type(parsed).__name__} 이(가) 나왔습니다.")
+    return parsed, None
+
+
+def _resolve_run_args(tool_input):
+    """run 의 stdin payload 해소 — args(인라인) 또는 args_file(가리키기) 하나.
+
+    둘 다 오면 정직 거절한다: 어느 쪽이 stdin 이 되는지 조용히 고르면, 고르지 않은
+    쪽을 준 사람은 자기 값이 갔다고 믿는다(침묵 오선택 금지).
+    반환: (dict|None, 에러|None, 출처 표시 문자열|None)
+    """
+    has_file = bool(str(tool_input.get("args_file") or "").strip())
+    has_args = tool_input.get("args") is not None
+    if has_file and has_args:
+        return None, ("args 와 args_file 을 함께 줬습니다 — stdin 은 하나입니다. "
+                      "큰 payload 면 args_file 만, 작은 리터럴이면 args 만 주세요."), None
+    if has_file:
+        args, err = _args_from_file(str(tool_input["args_file"]).strip())
+        return args, err, str(tool_input["args_file"]).strip()
+    args, err = _coerce_args(tool_input.get("args"))
+    return args, err, None
+
+
 def _atomic_write(path, text):
     """무-flock 원자쓰기 (limb_keys 선례)."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -338,7 +396,7 @@ def op_run(tool_input):
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 
-    args, _aerr = _coerce_args(tool_input.get("args"))
+    args, _aerr, _args_src = _resolve_run_args(tool_input)
     if _aerr:
         return {"success": False, "error": _aerr}
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
@@ -397,6 +455,11 @@ def op_run(tool_input):
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
     if interp_note:
         res["interpreter_note"] = interp_note
+    if _args_src:
+        # 어디서 온 payload 로 돌았는지 말한다 — 파일을 고쳤는데 옛 값으로 돈 것을
+        # 결과만 보고는 알 수 없다(가리키기의 값은 호출 밖에서 바뀐다).
+        res["args_file"] = _args_src
+        res["args_bytes"] = len(stdin_data or "")
     # stdout 이 JSON 이고 items/table 을 실으면 통화로 승격 — 파이프로 흐른다.
     parsed = None
     try:

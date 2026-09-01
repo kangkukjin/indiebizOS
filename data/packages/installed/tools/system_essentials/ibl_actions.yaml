@@ -514,7 +514,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin; 큰 배치=args "$file:0"+files_from), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
@@ -1447,7 +1447,10 @@ tool_json:
           description: register 선택 — 스크립트 설명 (목록에 표시)
         args:
           type: [object, string]
-          description: 'run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 배치는 파일에 쓰고 args: "$file:0" + files_from 로 (2026-08-30 ep2357)'
+          description: 'run 선택 — JSON 객체 또는 그 JSON 문자열(둘 다 stdin 으로 전달). 큰 payload 는 args_file 로 가리킬 것(나르지 말고)'
+        args_file:
+          type: string
+          description: 'run 선택 — stdin 으로 보낼 JSON 객체가 담긴 **파일 경로**(상대경로는 저장소 루트 기준). 원장 배치처럼 킬로바이트급 payload 를 문장에 리터럴로 박지 않는 통로. args 와 함께 주면 정직 거절(stdin 은 하나)'
         timeout:
           type: number
           description: 실행 제한 초 (기본 300)

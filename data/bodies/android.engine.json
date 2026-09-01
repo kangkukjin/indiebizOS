@@ -38,6 +38,7 @@
     "cognition/cognitive_trace",
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
+    "cognition/derived_freshness",
     "cognition/doc_drift",
     "cognition/fixture_sweeps",
     "cognition/forage_consolidation",
@@ -124,6 +125,7 @@
     "ibl/ibl_parser_values",
     "ibl/ibl_pipe_types",
     "ibl/ibl_predicates",
+    "ibl/ibl_progress",
     "ibl/ibl_quality",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
@@ -260,8 +262,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 251,
-    "engine": 231,
+    "total": 253,
+    "engine": 233,
     "blocklist": 20
   }
 }

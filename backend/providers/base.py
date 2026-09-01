@@ -213,6 +213,14 @@ class BaseProvider(ABC):
         # 내부 상태
         self._pending_map_tags: List[str] = []
 
+        # ★직전 턴의 실패 종류 (2026-09-01) — 텍스트 반환 계약(process_message 는
+        # 실패도 문자열로 돌려준다)이 삼키는 **범주**를 옆으로 실어 나르는 자리.
+        # 지금 쓰는 값: None(정상/미분류) · "deadline"(마감으로 끊음).
+        # 왜 필요한가: 마감으로 끊긴 호출에 "JSON 형식이 틀렸으니 다시 출력하라"는
+        # 재시도를 붙이면 범주 오류다 — 출력이 틀린 게 아니라 **없다**. 문자열을
+        # 냄새 맡아 분기하면(문구 매칭) 문구가 바뀌는 날 조용히 죽으므로 값으로 나른다.
+        self.last_failure_kind: Optional[str] = None
+
     def _notify_round(self, round_no: int, budget: int):
         """도구 루프 라운드 시작 1건 — 구조화 스텝 원장 기록 + 사람용 마커 print.
 

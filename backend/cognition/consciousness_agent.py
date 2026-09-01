@@ -496,6 +496,16 @@ _lightweight_provider_initialized = False
 # 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 호출은 수 초라 직렬화 비용은 미미.
 import threading as _threading
 _oneshot_call_lock = _threading.Lock()
+
+# 직전 원샷 호출의 **실패 범주** (2026-09-01) — 반환은 문자열 하나뿐이라 "왜 실패했나"가
+# 실릴 자리가 없다. 프로바이더가 값으로 말한 범주(base.last_failure_kind)를 호출한
+# 스레드에 남겨, 관문(oneshot_facade)이 재시도 여부를 문구 냄새가 아니라 값으로 고른다.
+_oneshot_failure = _threading.local()
+
+
+def last_oneshot_failure() -> Optional[str]:
+    """이 스레드의 직전 oneshot_ai_call 실패 범주 (None | "deadline")."""
+    return getattr(_oneshot_failure, "kind", None)
 _midtier_provider = None  # 중급 AI 전용 프로바이더 (싱글톤)
 _midtier_provider_initialized = False
 _system_oneshot_provider = None  # 본격(system_ai) 원샷 프로바이더 (싱글톤, 도구·세션 없음)
@@ -777,6 +787,7 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
                 set_step_role(f"oneshot:{role}")
             except Exception:
                 pass
+            _oneshot_failure.kind = None
             return provider.process_message(
                 message=prompt,
                 history=[],
@@ -787,6 +798,8 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
             logger.warning(f"[oneshot_ai_call] 실패: {e}")
             return None
         finally:
+            # 프로바이더가 값으로 말한 실패 범주를 이 스레드에 남긴다 (성공이면 None).
+            _oneshot_failure.kind = getattr(provider, "last_failure_kind", None)
             try:
                 from episode_logger import set_step_role
                 set_step_role("")

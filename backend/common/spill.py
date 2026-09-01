@@ -208,6 +208,61 @@ def ticket_progress(ticket: str, progress: dict) -> bool:
         return False
 
 
+def ticket_beat(ticket: str, detail: dict) -> bool:
+    """진행 기록의 **detail 칸만** 갱신하고 마지막 움직임 시각을 새로 찍는다 (2026-09-01).
+
+    ticket_progress 와 갈라 두는 이유: 소유자(최외곽)의 좌표(step/of/action)를 안쪽
+    실행이 덮으면 좌표가 거짓이 된다 — 09-01 실측에서 단일 step 프로그램
+    (`[table:each]` 하나)의 하위 파이프가 자기 `step 2/2` 를 프로그램 좌표로 신고했다.
+    여기서는 좌표를 읽지도 쓰지도 않고 detail 만 병합한다. 규약 정본=ibl/ibl_progress.py.
+    """
+    if not valid_ticket(ticket) or not isinstance(detail, dict):
+        return False
+    path = _ticket_path(ticket)
+    try:
+        with open(path, encoding="utf-8") as f:
+            rec = json.load(f)
+        if rec.get("status") != "running":
+            return False
+        prog = rec.get("progress")
+        if not isinstance(prog, dict):
+            prog = {}
+            rec["progress"] = prog
+        d = prog.get("detail")
+        if not isinstance(d, dict):
+            d = {}
+        d.update(detail)
+        prog["detail"] = d
+        prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False)
+        return True
+    except Exception:
+        return False
+
+
+def _progress_note(prog: dict) -> str:
+    """running 상태의 사람이 읽는 한 줄 — 좌표 + 회차(detail) + 마지막 움직임."""
+    parts = []
+    if prog.get("step") and prog.get("of"):
+        parts.append(f"step {prog['step']}/{prog['of']} {prog.get('action') or ''}".strip())
+    d = prog.get("detail") if isinstance(prog.get("detail"), dict) else {}
+    if d.get("row") and d.get("rows"):
+        row = f"each {d['row']}/{d['rows']}행"
+        if d.get("row_label"):
+            row += f"({d['row_label']})"
+        parts.append(row)
+    if d.get("substep") and d.get("substeps"):
+        parts.append(f"하위 step {d['substep']}/{d['substeps']} "
+                     f"{d.get('subaction') or ''}".strip())
+    if not parts:
+        return "실행이 아직 돌고 있습니다 — 잠시 후 같은 recover 로 다시 물으세요."
+    return (f"실행이 아직 돌고 있습니다 — {' · '.join(parts)} 진행 중"
+            f"(마지막 움직임 {prog.get('updated_at')}). "
+            f"★이 시각이 물을 때마다 새로워지면 도는 중이고, 멈춰 있으면 멈춘 것입니다. "
+            f"잠시 후 같은 recover 로 다시 물으세요.")
+
+
 def ticket_finish(ticket: str, envelope) -> bool:
     """최종 봉투 보관 — 성공이든 실패든 **결말**을 남긴다(모름과 실패는 다른 사건)."""
     if not valid_ticket(ticket):
@@ -246,11 +301,10 @@ def ticket_recover(ticket: str) -> dict:
         prog = rec.get("progress")
         if isinstance(prog, dict):
             # 진행 동봉(2026-08-29 ⑨) — 헛폴링 방지: 어느 step 이 언제부터 돌고 있는지.
+            # 2026-09-01: 회차(detail)도 함께 — 좌표만으로는 팬아웃의 몇 번째 행인지
+            # 알 수 없어 멈춤과 느림이 구별 불가였다.
             out["progress"] = prog
-            if prog.get("step") and prog.get("of"):
-                out["note"] = (f"실행이 아직 돌고 있습니다 — step {prog['step']}/{prog['of']}"
-                               f" {prog.get('action') or ''} 진행 중(마지막 갱신 "
-                               f"{prog.get('updated_at')}). 잠시 후 같은 recover 로 다시 물으세요.")
+            out["note"] = _progress_note(prog)
         return out
     env = rec.get("envelope")
     if isinstance(env, dict):

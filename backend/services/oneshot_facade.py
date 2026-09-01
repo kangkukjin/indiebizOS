@@ -50,6 +50,20 @@ def oneshot_json(prompt: str, system_prompt: str, role: str = "execution"):
             return parsed, None
     err0 = ("모델 응답 없음(모델 미설정 가능)" if not raw
             else f"모델 출력을 JSON으로 못 읽음: {str(raw)[:200]}")
+
+    # ★마감으로 끊긴 호출은 재시도하지 않는다 (2026-09-01).
+    # 이 재시도의 처방은 "코드펜스·설명 없이 유효한 JSON만 다시 출력하라" — **출력이
+    # 틀렸을 때**의 되먹임이다. 마감은 출력이 틀린 게 아니라 아예 오지 않은 사건이라
+    # 같은 처방이 듣지 않고, 대기 시간만 두 배가 된다(무출력 10분 × 2 = 20분).
+    # 범주 판정은 프로바이더가 값으로 말한 것을 그대로 읽는다(문구 매칭 금지).
+    try:
+        from consciousness_agent import last_oneshot_failure
+        if last_oneshot_failure() == "deadline":
+            return None, (f"{err0} — 모델 호출이 마감으로 끊겼습니다(출력 없음). "
+                          "형식 되먹임 재시도는 듣지 않는 범주라 건너뜁니다.")
+    except ImportError:
+        pass
+
     retry = (f"{prompt}\n\n[재시도] 직전 출력이 실패했다({err0[:120]}). "
              "코드펜스·설명 없이 유효한 JSON만 다시 출력하라.")
     raw2 = execution_oneshot(retry, system_prompt=system_prompt, role=role)

@@ -222,14 +222,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
     # 가지의 스냅샷 승계)이 겹쳐 쓰지 못하게 한다(값 소유권 = 진행 신고권). 복원은
     # 불필요 — 표면(api_ibl)이 자기 finally 에서 이전 값으로 되돌린다. step 경계마다
     # ticket_progress(best-effort)를 써서 recover 의 "running" 이 어디까지 왔는지 말한다.
-    _ticket = None
-    try:
-        from thread_context import get_surface_ticket, set_surface_ticket
-        _ticket = get_surface_ticket()
-        if _ticket:
-            set_surface_ticket(None)
-    except Exception:
-        _ticket = None
+    # 2026-09-01: 소유(claim)와 신고(beat)의 분리는 ibl_progress 한 벌이 소유한다 —
+    # 소유자가 아니면(안쪽 파이프) 좌표 대신 detail 로 자기 위치를 말한다.
+    from ibl_progress import claim as _claim_progress, report_step as _report_step, beat as _beat
+    _ticket = _claim_progress(len(steps))
     # $var 바인딩 저장소: step 인덱스 → 결과 문자열. 파서가 $var 를 {{_step_N_result}} 로
     # 치환해 두므로, 여기 저장된 값으로 실행 시점에 실제 결과가 주입된다 (문장 경계와 무관).
     step_results: Dict[int, str] = {}
@@ -383,15 +379,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 continue
         step_start = time.time()
 
+        # 진행 신고(⑨) — step 시작 시점: "지금 몇 번째 step 의 무엇이 돌고 있나".
+        # 소유자면 좌표를, 아니면(each 의 do·블록 몸 같은 하위 파이프) detail 로.
+        _pn, _pa = _step_label(step)
         if _ticket:
-            # 진행 신고(⑨) — step 시작 시점: "지금 몇 번째 step 의 무엇이 돌고 있나".
-            try:
-                from common.spill import ticket_progress
-                _pn, _pa = _step_label(step)
-                ticket_progress(_ticket, {"step": i + 1, "of": total,
-                                          "action": f"[{_pn}:{_pa}]"})
-            except Exception:
-                pass
+            _report_step(_ticket, i + 1, total, f"[{_pn}:{_pa}]")
+        else:
+            _beat({"substep": i + 1, "substeps": total,
+                   "subaction": f"[{_pn}:{_pa}]"})
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
         if step.get("_parallel"):

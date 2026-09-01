@@ -557,6 +557,18 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if len(parsed) == 1 and not has_special:
             # 단일 step 직접 실행
             step = parsed[0]
+            # ★진행 신고의 소유권도 여기서 집는다 (2026-09-01).
+            #   이 분기는 execute_pipeline 을 지나지 않는다 — 그래서 표면 티켓을 아무도
+            #   안 집었고, 안쪽에서 처음 만난 파이프(예 `[table:each]` 의 do)가 주워서
+            #   **자기 좌표를 프로그램 좌표로** 신고했다(실측: 1 step 짜리 each 프로그램이
+            #   `step 2/2 [self:struct]` 로 보였다). 좌표를 아는 자가 소유한다 —
+            #   파이프면 파이프 실행기, 단일 step 이면 여기.
+            from ibl_progress import claim as _claim_progress, report_step as _report_step
+            _prog_ticket = _claim_progress(1)
+            if _prog_ticket:
+                _report_step(_prog_ticket, 1, 1,
+                             f"[{step.get('_node', step.get('node', '?'))}:"
+                             f"{step.get('action', '?')}]")
             if step.get("_goal") or step.get("_condition") or step.get("_case") or step.get("_try") or step.get("_repeat") or step.get("_assign"):
                 # 복합 블록([goal:]/[if:]/[case:])은 step 통짜 전달 — 아래처럼 키를 골라
                 # 담으면 _goal/_condition/_case 가 유실돼 엔진의 블록 디스패치에 못 닿고

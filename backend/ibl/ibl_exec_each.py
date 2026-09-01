@@ -270,6 +270,26 @@ def _each_success_rows(final: Any, base: dict):
     return [dict(base)], False
 
 
+def _row_label(base: dict) -> str:
+    """행을 사람이 알아볼 짧은 이름 — 진행 신고에 싣는다(어느 행에서 멈췄나).
+
+    관습 키를 앞에서부터 훑고, 없으면 첫 스칼라 값. 40자에서 자른다(진행 표시는
+    한 줄이다). 값이 없으면 빈 문자열 — 없는 이름을 지어내지 않는다.
+    """
+    if not isinstance(base, dict):
+        return ""
+    for k in ("title", "name", "label", "id", "video_id", "url", _EACH_SCALAR_FIELD):
+        v = base.get(k)
+        if isinstance(v, (str, int, float)) and str(v).strip():
+            s = str(v).strip()
+            return s[:40] + ("…" if len(s) > 40 else "")
+    for v in base.values():
+        if isinstance(v, (str, int, float)) and str(v).strip():
+            s = str(v).strip()
+            return s[:40] + ("…" if len(s) > 40 else "")
+    return ""
+
+
 def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -> Any:
     """[table:each]{do, as, limit, on_error} — items 의 각 행에 IBL 문장을 적용.
 
@@ -372,6 +392,14 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     for idx, row in enumerate(target):
         processed += 1
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
+
+        # ★회차 신고 (2026-09-01 실측 수리): 팬아웃은 "몇 번째 행"이 유일하게 의미 있는
+        #   진행 단위인데 그동안 아무 신고도 없어서, 회수가 본 마지막 갱신 시각이 1행
+        #   시작에 얼어 **멈춤과 느림이 구별 불가**였다(23분 무한 대기 사고의 절반).
+        #   좌표(step/of)는 소유자 것이므로 건드리지 않고 detail 칸만 쓴다.
+        from ibl_progress import beat as _beat
+        _beat({"row": idx + 1, "rows": len(target),
+               "row_label": _row_label(base), "depth": depth})
 
         sentence, missing = _each_substitute(do, row, var)
         if missing:

@@ -27,6 +27,9 @@
   같은 id 재등록 = 갱신(수리 후 재등록이 유지보수 루프). timeout 기본 300초 —
   **재등록 시 생략하면 기존 값을 승계**한다(안 그러면 2400초짜리가 조용히 300으로 깎인다).
 - **run**: **등록된 id 만** — 임의 경로·코드 문자열 실행 불가. cwd = 스크립트의 폴더.
+  stdin payload 는 두 통로 중 **하나**다 — 작은 리터럴은 `args`,
+  큰 payload(원장 배치 등)는 **`args_file`(그 JSON 객체가 담긴 파일 경로)**.
+  둘을 함께 주면 거절한다(stdin 은 하나다).
 
 ### 왜 `data/scripts/` 인가 (2026-08-16 개정)
 
@@ -61,6 +64,21 @@ import sys, json
 args = json.loads(sys.stdin.read() or "{}")
 print(json.dumps({"items": [...]}, ensure_ascii=False))
 ```
+
+## 큰 payload — 나르지 말고 가리킨다 (`args_file`, 2026-09-01)
+
+수십 행짜리 원장 갱신을 `args` 리터럴로 쓰면 IBL 문장 안에 킬로바이트가 박힌다.
+그 마찰이 이틀 연속 셸 stdin 우회를 낳았고(등록 통로 밖 실행 = 실행 이력·상태·해마가
+굶는다), 그래서 **payload 를 파일로 두고 경로만 넘기는 통로**가 생겼다.
+계약은 `args` 와 같다 — **JSON 객체 하나**(배열·스칼라는 거절). 상대경로는 저장소 루트 기준.
+
+```
+[self:write]{path: "<payload 경로>", content: "<{op, path, items…} JSON>"}
+[self:script]{op: "run", id: "<등록 id>", args_file: "<payload 경로>"}
+```
+
+결과에 `args_file`·`args_bytes` 가 실린다 — 가리키는 값은 호출 밖에서 바뀌므로
+**무엇으로 돌았는지**를 결과만 보고 알 수 있어야 한다.
 
 ## 어디서나 도는 원장 — 인터프리터는 역할 이름만 (2026-08-22)
 

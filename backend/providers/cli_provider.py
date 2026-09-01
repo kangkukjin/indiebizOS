@@ -12,6 +12,8 @@ IndieBiz OS Core
   spawn 시점에 떠서 env/헤더로 동봉
 - 스트림 오케스트레이션: spawn → stdin 프롬프트 → JSONL 소비 → 이벤트 번역 →
   resume 실패 폴백 → 일시 과부하 backoff → result 미도달 시 본문 승격
+- **무출력 마감**(2026-09-01): 자식이 파이프를 연 채 침묵하면 읽기·쓰기가 영원히 블록된다.
+  프로세스에 감시를 걸어 유한한 정직 실패로 착지시킨다(STREAM_IDLE_TIMEOUT_SEC 참조)
 - 로그 절단 폭과 정직 표지 요약(실패 신호가 절단에 삼켜지지 않게)
 - 지도 봉투([MAP:]) 재주입 — CLI 가 도구 결과를 산문으로 요약하며 마커를 흘리는 문제
 - 이미지 임시 파일화, history 직렬화
@@ -373,7 +375,23 @@ class CliSubprocessProvider(BaseProvider):
     STATE_PREFIX = "cli"         # data/<prefix>_sessions.json
     SESSION_STORE: Optional[CliSessionStore] = None   # 서브클래스가 생성해 붙인다
 
-    DEFAULT_TIMEOUT_SEC = 600  # 10분
+    DEFAULT_TIMEOUT_SEC = 600  # 10분 — 스트림이 EOF 로 끝난 뒤 종료를 기다리는 한도
+
+    # ★무출력 마감 (2026-09-01 실측 수리 — ep 유튜브팁 배관 사고).
+    # 사고: `[table:each]` 2행째의 `[self:struct]` 원샷이 **23분 동안 무한 대기**했다.
+    # 거절도 실패도 아니고 그냥 안 돌아왔다. 원인은 이 파일에 있었다 —
+    # 옛 코드의 유일한 시간 한도는 `proc.wait(timeout=DEFAULT_TIMEOUT_SEC)` 였는데,
+    # 그 자리는 **stdout 이 이미 EOF 로 닫힌 뒤**다. 즉 한도가 지키던 것은
+    # "다 뱉고 안 죽는 자식"(사실상 안 일어나는 사건)이었고, 진짜로 멈추는 자리
+    # (`for raw_line in proc.stdout` 의 블로킹 읽기 = 자식이 파이프를 연 채 침묵)는
+    # 아무 한도도 없는 무한 대기였다. 한도가 있다는 착시가 10개월 산 셈이다.
+    # ★규율: **읽기·쓰기 블로킹에는 마감이 붙는다.** 프로세스를 죽이면 파이프가 닫혀
+    # 두 블로킹(stdin 쓰기·stdout 읽기)이 함께 풀리므로, 감시는 프로세스 하나에 건다.
+    # 값은 관대하게 — 도구를 오래 도는 에이전트 런의 침묵(긴 Bash·큰 편집)을 죽이면
+    # 안 된다. "한 줄도 안 오는 10분"은 정상 실행에 존재하지 않는다(실측: 성공한
+    # 같은 부류 호출 67초).
+    STREAM_IDLE_TIMEOUT_SEC = 600      # 출력 한 줄도 없는 침묵의 한도
+    STREAM_IDLE_POLL_SEC = 5.0         # 감시 스레드의 확인 주기
 
     # 서버측 일시 과부하(529 Overloaded / overloaded_error 등) 자동 재시도.
     # 본문이 아직 하나도 안 온(not committed) 경우에만 backoff 후 다시 호출한다.
@@ -634,6 +652,8 @@ class CliSubprocessProvider(BaseProvider):
         #  살아남는다).
         # 라운드별 컨텍스트 크기 릴레이 (이전 턴 값 잔류 방지)
         self._last_context_size = 0
+        # 실패 범주도 턴 상태다 — 지난 턴의 마감이 이번 턴 판단에 새면 안 된다.
+        self.last_failure_kind = None
         # 지도 태그 누적 (이전 턴 지도가 새 응답에 새는 것 방지)
         self._pending_map_tags = []
         # 벤더 어댑터가 턴 사이에 들고 있는 상태도 함께 비운다
@@ -784,6 +804,32 @@ class CliSubprocessProvider(BaseProvider):
                                "content": f"{self.CLI_DISPLAY} 바이너리 실행 실패: {e}"}
                         return
 
+                # ── 무출력 감시 (STREAM_IDLE_TIMEOUT_SEC 참조) ──────────────────
+                # stdin 쓰기 **전에** 건다: 큰 프롬프트(자막 전문 등)는 파이프 버퍼를
+                # 넘겨 자식이 읽어 주기를 기다리며 블로킹하므로, 그 자리도 자식이
+                # 침묵하면 무한 대기다. 감시는 프로세스를 죽여 두 블로킹을 함께 푼다.
+                _idle = {"last": time.time(), "fired": 0.0}
+                _idle_stop = threading.Event()
+
+                def _idle_watch(_p=None):
+                    while not _idle_stop.wait(self.STREAM_IDLE_POLL_SEC):
+                        if proc.poll() is not None:
+                            return
+                        silent = time.time() - _idle["last"]
+                        if silent > self.STREAM_IDLE_TIMEOUT_SEC:
+                            _idle["fired"] = silent
+                            self._log(f"무출력 {int(silent)}초 — 프로세스 종료(마감)")
+                            try:
+                                proc.kill()
+                            except Exception:
+                                pass
+                            return
+
+                _idle_thread = threading.Thread(
+                    target=_idle_watch, daemon=True,
+                    name=f"{self.STATE_PREFIX}-idle-watchdog")
+                _idle_thread.start()
+
                 # 유저 프롬프트 주입 후 stdin 닫기 (EOF 신호 → CLI 가 응답 시작)
                 try:
                     if proc.stdin:
@@ -801,6 +847,7 @@ class CliSubprocessProvider(BaseProvider):
                 deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
                 try:
                     for raw_line in proc.stdout:
+                        _idle["last"] = time.time()     # 한 줄 = 살아 있다는 신호
                         if cancel_check and cancel_check():
                             proc.kill()
                             yield {"type": "error", "content": "사용자 취소"}
@@ -841,6 +888,22 @@ class CliSubprocessProvider(BaseProvider):
 
                     proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
 
+                    if _idle["fired"]:
+                        # 감시가 죽인 것이므로 EOF 는 "끝"이 아니라 "끊김"이다 —
+                        # 조용히 빈 응답·재시도 루프로 흘려보내지 않는다(무한 대기의
+                        # 자리를 무한 재시도로 옮기는 꼴). 실패는 여기서 끝난다.
+                        self.metrics.record_error()
+                        self.last_failure_kind = "deadline"
+                        _got = len(accumulated_text)
+                        yield {"type": "error",
+                               "content": (f"{self.CLI_DISPLAY} 무응답 마감 — "
+                                           f"{int(_idle['fired'])}초 동안 출력이 한 줄도 오지 않아 "
+                                           f"프로세스를 종료했습니다"
+                                           f"(총 {int(time.time() - start)}초 경과, 수신 {_got}자). "
+                                           f"모델 호출이 멈춘 것이지 거절된 것이 아닙니다 — "
+                                           f"같은 호출을 다시 시도하거나 입력을 줄이세요.")}
+                        return
+
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     self.metrics.record_error()
@@ -852,6 +915,7 @@ class CliSubprocessProvider(BaseProvider):
                     yield {"type": "error", "content": f"{self.CLI_DISPLAY} 스트림 오류: {e}"}
                     return
                 finally:
+                    _idle_stop.set()          # 감시 해제 (프로세스보다 먼저 — 오살 방지)
                     if proc.poll() is None:
                         proc.kill()
 

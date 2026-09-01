@@ -30,7 +30,11 @@ def _cli_provider_classes():
     # 서브클래스가 등록되려면 모듈이 임포트돼 있어야 한다 — 패키지 __init__ 이 전부 올린다.
     import providers  # noqa: F401
     walk(CliSubprocessProvider)
-    return seen
+    # ★모집단은 **providers/ 에 실린 벤더 어댑터**다 (2026-09-01). 같은 세션에서
+    #   시험용 대역(test_cli_stream_deadline 의 가짜 CLI)이 임포트되면 그것도
+    #   __subclasses__ 에 잡히는데, 그건 등록할 벤더가 아니라 시험 장치다 —
+    #   등록 관문이 시험 장치를 요구하면 관문이 자기 뜻을 잃는다.
+    return [c for c in seen if (c.__module__ or "").startswith("providers.")]
 
 
 def test_labels_registered_in_vocab_crystallization():

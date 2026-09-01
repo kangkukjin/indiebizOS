@@ -668,16 +668,22 @@ def _parse_group(text: str, variables: Optional[Dict] = None) -> Optional[Dict]:
                 step = _parse_step(part.strip())
             if step is None:
                 _p = part.strip()
-                # 경계를 이름 불러 말한다 (2026-09-01): 변수는 파이프 머리(`$a >> …`)와
-                # 병렬 분기(`$a & $b`)에서 쓸 수 있고 폴백 자리는 **아직 언어에 없다**.
-                # 맨 "파싱 실패" 는 저자가 표기를 의심하게 만든다 — 자리의 문제인데.
-                from common.ibl_vars import REF_RE as _VREF2
-                if _VREF2.fullmatch(_p):
+                # ★거절문은 **자리 목록이 아니라 규칙**을 말한다 (2026-09-01 개정, 사용자 판정).
+                #   첫 판은 열린 자리를 나열했다("파이프 머리와 병렬 분기에서 쓸 수 있습니다").
+                #   목록은 반드시 뒤처진다 — 통화를 받는 자리가 하나 더 생기는 날 이 문장은
+                #   조용히 거짓이 된다(pitfall: 파생본에 규칙을 자리별로 전개하지 말 것).
+                #   규칙으로 적으면 경계가 선언이 아니라 **도출**이 되고, 새 자리의 답이
+                #   저절로 따라온다. 그리고 거절은 더 싼 처방을 가리켜야 한다.
+                from common.ibl_vars import REF_RE as _VREF2, split_ref as _vsplit2
+                _m2 = _VREF2.fullmatch(_p)
+                if _m2:
+                    _n2 = _vsplit2(_m2)[0]
                     raise IBLSyntaxError(
-                        f"폴백(??) 분기에는 변수({_p})를 놓을 수 없습니다 — 변수는 파이프 "
-                        f"머리(`{_p} >> [액션]`)와 병렬 분기(`{_p} & …`)에서 쓸 수 있습니다. "
-                        "폴백은 '앞이 실패하면 뒤를 실행'이라 이미 값이 된 변수와는 뜻이 "
-                        "맞지 않습니다(필요하면 언어 개정 사안).")
+                        f"폴백(??) 분기에는 변수({_p})를 놓을 수 없습니다. "
+                        f"변수는 **통화를 내는 자리**에 놓습니다(예: 파이프 머리·병렬 분기). "
+                        f"`??` 는 *시도*를 받는 자리입니다 — 앞이 되면 뒤를 **실행하지 않는 것**이 "
+                        f"이 연산자의 값인데, 이미 값이 된 변수끼리는 둘 다 치른 뒤라 아낄 것이 "
+                        f"없습니다. 폴백은 값을 **만들 때** 거세요: `${_n2} = [액션] ?? [액션]`.")
                 raise IBLSyntaxError(f"fallback 요소 파싱 실패: {_p}")
             chain.append(step)
         return {"_fallback_chain": chain}

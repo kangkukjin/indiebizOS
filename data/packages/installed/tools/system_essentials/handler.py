@@ -290,6 +290,15 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
     """그랜트된 RED 쓰기 직전 안전판: (py면) 사전 구문검증 + 원본 백업/매니페스트.
     RED 대상이 아니거나 그랜트가 없으면 no-op(None). 오류 시 거부 메시지 반환."""
     abs_path = os.path.realpath(path)
+    # 패키지 .py 구문 사전검증 — 그랜트 무관(09-01 ep2519: 안전판 술어만 넓힘). fail-open.
+    try:
+        _pkg_err = _vocab_gate_mod().syntax_guard(
+            abs_path, new_content, _red_family.body_root_of,
+            str(_REPO_ROOT) if _REPO_ROOT is not None else None)
+        if _pkg_err:
+            return _pkg_err
+    except Exception:
+        pass
     if not _red_is_live_path(abs_path):
         return None
     grant = _red_grant_active()
@@ -402,6 +411,21 @@ def _staging_mod():
     if mod is None:
         mod = _SIBLING_MODS["repair_staging"] = _load_sibling("repair_staging")
     return mod
+
+
+def _vocab_gate_mod():
+    return _SIBLING_MODS.get("vocab_write_gate") or \
+        _SIBLING_MODS.setdefault("vocab_write_gate", _load_sibling("vocab_write_gate"))
+
+
+def _vocab_enforce(path: str):
+    """어휘 빌드 입력 쓰기 직후의 파생물 재생성 집행(09-01 ep2519) — 형제 vocab_write_gate."""
+    try:
+        return _vocab_gate_mod().enforce_on_write(
+            str(_REPO_ROOT) if _REPO_ROOT is not None else "",
+            path, _staging_mod(), _red_is_live_path)
+    except Exception:
+        return None
 
 
 def _red_stage(path: str, for_write: bool) -> str:
@@ -833,6 +857,8 @@ def execute(tool_input: dict, context) -> str:
                 pass
             abs_path = os.path.abspath(path)
             result = {"success": True, "path": abs_path, "size": len(content)}
+            if (_vg := _vocab_enforce(path)):   # 어휘 빌드 입력이면 파생물 재생성(09-01)
+                result["live_derived"] = _vg
             if path != _live_target:   # 격리 사본에 쌓였다 — 라이브는 아직 무변경
                 result.update({
                     "staged": True, "live_path": os.path.abspath(_live_target),
@@ -1104,7 +1130,9 @@ def execute(tool_input: dict, context) -> str:
                     "path": os.path.abspath(file_path),
                     "live_path": os.path.abspath(_live_target),
                     "message": f"격리 사본을 수정했습니다. {_STAGED_NOTE}"}, ensure_ascii=False)
-            return f"Successfully edited {os.path.abspath(file_path)}"
+            _vg = _vocab_enforce(file_path)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
+            return (f"Successfully edited {os.path.abspath(file_path)}"
+                    + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "run_command":
             command = tool_input.get("command", "").strip()
@@ -1216,7 +1244,9 @@ def execute(tool_input: dict, context) -> str:
                 # 파일 복사
                 shutil.copy2(src, dst)
                 _red_write_finalize(dst)
-                return f"파일을 복사했습니다: {os.path.abspath(dst)}"
+                _vg = _vocab_enforce(dst)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
+                return (f"파일을 복사했습니다: {os.path.abspath(dst)}"
+                        + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "move_path":
             _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭

@@ -16,6 +16,12 @@ from typing import Dict, List, Any, Optional
 _tool_handlers_cache: Dict[str, Any] = {}
 # 패키지 ID -> 핸들러 모듈 캐시 (같은 패키지의 도구들이 모듈 인스턴스를 공유)
 _package_handlers_cache: Dict[str, Any] = {}
+# 패키지 ID -> handler.py mtime (로드 시점) — handler.py 편집의 자동 무효화용.
+# ★왜 (2026-09-01): mtime 무효화가 tool.json 에만 걸려 있어, handler.py 만 고치면
+# /packages/reload 나 재기동 전까지 메모리에 옛 모듈이 그대로 남았다(조용한 부정합).
+# tool.json 의 기존 패턴(_scan_tool_json_mtimes)을 handler.py 로 확장한 것.
+# 형제 모듈(tool_*.py 등)은 여전히 재기동 필요 — 이 무효화는 handler.py 만 본다.
+_package_handler_mtimes: Dict[str, float] = {}
 # 도구 이름 -> 패키지 ID 매핑
 _tool_to_package_map: Dict[str, str] = {}
 # tool.json mtime 스냅샷 (자동 캐시 무효화용 — 2026-05-28 추가)
@@ -280,6 +286,28 @@ def load_tool_schema(tool_name: str) -> Optional[dict]:
     return None  # 파일은 멀쩡한데 이 이름이 없다 = 진짜 없음
 
 
+def _invalidate_stale_handler(package_id: str) -> bool:
+    """handler.py 가 로드 시점보다 새로우면 그 패키지의 핸들러 캐시를 비운다(True=비움).
+
+    비교 실패(파일 소실 등)는 무효화하지 않는다 — 로드된 모듈이 마지막 진실이다."""
+    try:
+        mtime = (get_tools_path() / package_id / "handler.py").stat().st_mtime
+    except OSError:
+        return False
+    if _package_handler_mtimes.get(package_id) == mtime:
+        return False
+    if package_id not in _package_handlers_cache:
+        _package_handler_mtimes[package_id] = mtime   # 기록만 낡음 — 비울 캐시가 없다
+        return False
+    _package_handlers_cache.pop(package_id, None)
+    _package_handler_mtimes.pop(package_id, None)
+    for _t, _p in list(_tool_to_package_map.items()):
+        if _p == package_id:
+            _tool_handlers_cache.pop(_t, None)
+    print(f"[도구 핸들러 무효화] {package_id}: handler.py 변경 감지 — 다음 호출이 재로드")
+    return True
+
+
 def load_tool_handler(tool_name: str) -> Optional[Any]:
     """
     도구 핸들러를 동적으로 로드
@@ -295,9 +323,12 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
     """
     global _tool_handlers_cache, _package_handlers_cache
 
-    # 도구 이름 캐시에 있으면 반환
+    # 도구 이름 캐시에 있으면 반환 — 단 handler.py 가 디스크에서 바뀌었으면 낡은 모듈이다
     if tool_name in _tool_handlers_cache:
-        return _tool_handlers_cache[tool_name]
+        _pkg = _tool_to_package_map.get(tool_name)
+        if not (_pkg and _invalidate_stale_handler(_pkg)):
+            return _tool_handlers_cache[tool_name]
+        # 낡음 — 캐시가 비워졌으니 아래 재로드 경로로 계속
 
     # 매핑 구축
     build_tool_package_map()
@@ -308,7 +339,7 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         return None
 
     # 같은 패키지의 다른 도구가 이미 로드했으면 그 모듈 인스턴스를 재사용
-    if package_id in _package_handlers_cache:
+    if package_id in _package_handlers_cache and not _invalidate_stale_handler(package_id):
         module = _package_handlers_cache[package_id]
         _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 재사용] {tool_name} <- {package_id} (공유 모듈)")
@@ -322,13 +353,18 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         return None
 
     try:
-        # 동적 모듈 로드
+        # 동적 모듈 로드 — mtime 은 exec **전에** 뜬다(로드 중 편집이면 다음 호출이 재로드)
+        try:
+            _mtime = handler_path.stat().st_mtime
+        except OSError:
+            _mtime = 0.0
         spec = importlib.util.spec_from_file_location(f"tool_handler_{package_id}", handler_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
         # 패키지 캐시와 도구 캐시 모두에 저장
         _package_handlers_cache[package_id] = module
+        _package_handler_mtimes[package_id] = _mtime
         _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 로드] {tool_name} <- {package_id}")
 
@@ -605,6 +641,7 @@ def clear_cache():
     global _tool_handlers_cache, _package_handlers_cache, _tool_to_package_map, _tool_json_mtimes, _all_tools_cache, _all_tools_cache_time, _all_tools_cache_mtimes, _agents_yaml_cache, _guide_content_cache, _tool_guide_map, _tool_guide_map_built
     _tool_handlers_cache.clear()
     _package_handlers_cache.clear()
+    _package_handler_mtimes.clear()
     _tool_to_package_map.clear()
     _tool_json_mtimes.clear()
     _all_tools_cache = []

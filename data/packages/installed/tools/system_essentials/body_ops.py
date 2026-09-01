@@ -220,7 +220,7 @@ def op_log(tool_input):
     total = len(rows)
     truncated = total > limit
     rows = rows[:limit]
-    text = f"최근 {days}일 커밋 {total}건" + (f" — {limit}건만 표시" if truncated else "")
+    text = f"최근 {days}일 커밋 {total}건" + (f" — {limit}건만 표시 (limit 로 조절, 최대 {_MAX_LIMIT})" if truncated else "")
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}

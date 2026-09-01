@@ -50,17 +50,17 @@ def _close_turn(eid):
 
 
 def _age(seconds):
-    """시간을 앞으로 감는다(sleep 없이) — 발급·마지막 사용을 함께 뒤로 민다."""
-    g = rg._grant
-    g["issued_at"] -= seconds
-    g["last_used_at"] -= seconds
+    """시간을 앞으로 감는다(sleep 없이) — 발급·마지막 사용을 함께 뒤로 민다(전 슬롯)."""
+    for g in rg._grants.values():
+        g["issued_at"] -= seconds
+        g["last_used_at"] -= seconds
 
 
 def test_g1_live_turn_keeps_grant_past_old_ttl():
     """★사고 재현: 45분짜리 턴의 apply 가 34분째에 왔다. 옛 코드는 여기서 None 을 냈다."""
     eid = _open_turn()
     rg.issue_grant(agent_id="system_ai", task_id="task_sysai_7ef2c1a4", reason="상상훈련 33회차")
-    assert rg._grant["episode_ids"] == {eid}          # 발급이 주인을 붙잡았다
+    assert rg._grants["task_sysai_7ef2c1a4"]["episode_ids"] == {eid}   # 발급이 주인을 붙잡았다
     _age(34 * 60)
     assert rg.active_grant(task_id="task_sysai_7ef2c1a4") is not None
     _age(4 * 60 * 60)                                  # 4시간 더 — 턴이 살아 있는 한 안 죽는다
@@ -123,13 +123,35 @@ def test_g6_bodies_without_a_turn_ledger_still_expire():
     """열린 턴을 물어볼 곳이 없는 몸(폰·red_apply 분리 수행자)은 종전대로 시계가 회수한다 —
     판정 불능이 '무기한 유효'로 번지지 않는다(거절 방향은 언제나 안전한 쪽)."""
     rg.issue_grant(agent_id="system_ai", task_id="task_headless", reason="분리 수행자")
-    assert rg._grant["episode_ids"] == set()                   # 물어볼 곳 없음
-    assert rg._issuer_alive(rg._grant) is None
+    assert rg._grants["task_headless"]["episode_ids"] == set()         # 물어볼 곳 없음
+    assert rg._issuer_alive(rg._grants["task_headless"]) is None
     assert rg.active_grant(task_id="task_headless") is not None
     _age(rg._IDLE_TTL_SEC + 60)
     assert rg.active_grant(task_id="task_headless") is None
     assert "판정 불능" in rg.denial_note(task_id="task_headless")
 
+
+
+def test_g8_concurrent_runs_each_keep_their_own_grant():
+    """★ep2519/ep2520 재현 (2026-08-31 23:24): 싱글턴 슬롯에서는 59초 뒤 시작된 병행
+    REPAIR 런(녹음기)의 발급이 위임 런(자막 수리, storyteller)의 그랜트를 **덮어써**,
+    밀려난 턴이 정상 경로(write 자동 적재→apply)를 잃고 propose/discard 루프로 밀려나
+    파생물을 만들고 죽이다 미완으로 끝났다. 다중 슬롯: 발급·회수는 자기 슬롯만."""
+    _open_turn(90001)
+    rg.issue_grant(agent_id="storyteller", task_id="task_e06d14d3", reason="자막 수리")
+    rg.issue_grant(agent_id="system_ai", task_id="task_sysai_854eda60", reason="녹음기")
+    # 두 그랜트가 공존한다 — 후발 발급이 선발을 덮어쓰지 않는다
+    assert rg.active_grant(task_id="task_e06d14d3") is not None
+    assert rg.active_grant(task_id="task_sysai_854eda60") is not None
+    # 한 런의 finally 회수는 자기 슬롯만 지운다 — 남의 회수에 안 죽는다
+    rg.revoke_grant(task_id="task_sysai_854eda60")
+    assert rg.active_grant(task_id="task_sysai_854eda60") is None
+    assert rg.active_grant(task_id="task_e06d14d3") is not None
+    # 무태스크 발급분(신원 유실 심)은 agent 슬롯 — agent 로 회수한다
+    rg.issue_grant(agent_id="system_ai", task_id="", reason="신원 유실 심")
+    assert rg.active_grant(task_id=None, agent_id="system_ai") is not None
+    rg.revoke_grant(agent_id="system_ai")
+    assert rg.active_grant(task_id=None, agent_id="system_ai") is None
 
 
 def test_g7_grant_condition_is_only_what_the_constitution_declared():

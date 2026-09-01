@@ -209,6 +209,28 @@
 >   깨진다.** 지워진 모듈은 import 해볼 수조차 없으니(없는 게 정상) 스모크로는 원리적
 >   으로 안 잡힌다. 그래서 격리 사본의 추적 .py 를 훑어 아직 그 모듈을 import 하는
 >   파일을 찾아 이름을 대고 막는다.
+> - **★라이브 파생물 게이트 `live_derived`** (2026-09-01 신설, ep2519 봉합): 격리에서
+>   난 초록이 **라이브 판정으로 승격되던** 자리를 닫는다. `ibl_triangle` 게이트는 격리
+>   사본 안에서 plain build 를 돌리는데, 그 빌드는 검사만 하는 게 아니라 `ibl_nodes.yaml`·
+>   `tool.json` 같은 **파생물을 워크트리에 쓴다**. 수리 에이전트의 셸 cwd 도 워크트리라,
+>   이어서 손으로 돌린 `build --check` 도 초록이고 `git status` 에도 파생물이 갱신된 것처럼
+>   찍힌다. 그 상태로 `discard` 하면 워크트리와 함께 **빌드 산출물이 같이 죽고** 라이브는
+>   처음 그대로 낡아 있다. 실측(ep2519 자막 합성 옵션): `ibl_actions.yaml`·핸들러·렌더러엔
+>   새 낱말이 살아 있는데 `data/ibl_nodes.yaml` 에는 없어서, **시스템이 제 낱말을 못 보는
+>   채로** 턴이 끝났다. 관문은 "빌드하면 통과한다"만 증명했지 "라이브가 빌드돼 있다"를
+>   증명한 적이 없다.
+>   처방을 문장으로 돌려주지 않고 **집행**한다 — 파생물은 기계 소유이므로(`data_ownership`
+>   derived · CLAUDE.md "직접 편집 금지, 다음 빌드가 되돌린다") keeper 표식과 같은 부류다:
+>   기계가 세우고 기계가 회수한다. 사람/AI 의 다음 단계로 미루면 그 단계는 **턴이 죽는
+>   자리에서 영영 안 온다**(ep2519 는 백엔드 종료로 끝났다). 갈래는 둘로 정직히 나눈다 —
+>   **드리프트**는 라이브 재생성으로 닫고 무엇이 재생성됐는지 이름을 대며 초록,
+>   **소스 결함**(빌드 자체가 검증에 걸림)은 재생성으로 못 닫으므로 빌더의 말 그대로 빨강.
+>   방아쇠는 목록을 새로 두지 않고 빌더에게 묻는다(`--inputs-regex`, pre-commit 훅과 같은
+>   출처 — 목록을 두 벌 두면 한쪽만 늙는다). 자리는 `verify()`(propose·apply)와
+>   **`op_discard()`(워크트리를 지우기 전)** 둘 다. 같은 날 `discard` 응답에서 무조건
+>   "라이브는 무변경이었습니다"라고 말하던 문장도 걷었다 — 적재분 기준으로만 참인데,
+>   ep2519 에선 라이브에 이미 6파일이 바뀐 채여서 그 문장이 '아무것도 안 남았다'는 오독을
+>   거들었다. 이제 남은 미커밋을 세어서 말한다. 가드: `test_repair_staging.py` S17.
 > - **★frontend 타입검사 게이트 `frontend_tsc`** (2026-08-22 신설): RED 구역은
 >   `("backend", "frontend", "scripts")` 인데 관문은 전부 파이썬용이었다 — **타입은
 >   아무도 안 봤다**(실측: 이 경로로 `.tsx`/`.ts` 10건이 무검사 통과. NarrationStudio.tsx
@@ -385,7 +407,8 @@ RED 변경은 라이브 파일이 아니라 **git worktree(격리 사본)**에�
 ## 6. 잔여 위험 (정직하게)
 
 - **`run_command`(shell=True)** 는 튜링완전이라 구조적 완전 차단 불가. 최선 = 위험 패턴 승인 + `cwd` 제한 + (강경책) 시스템 AI에게서 raw shell 쓰기 능력을 아예 거두고 파일 조작을 IBL 어휘로만. 이건 별도 결정.
-- **YELLOW(package handler.py) 라이브 핫리로드** 는 `--check` 없이 mtime로 반영될 수 있음 → Floor #3를 handler.py **쓰기 시점**에도 강제하려면 tool_loader 재임포트에 `--check` 훅을 걸어야. Phase 2 범위.
+- ~~**YELLOW(package handler.py) 라이브 핫리로드** 는 `--check` 없이 mtime로 반영될 수 있음 → Floor #3를 handler.py **쓰기 시점**에도 강제하려면 tool_loader 재임포트에 `--check` 훅을 걸어야. Phase 2 범위.~~ → **닫힘 (2026-09-01, ep2519 사슬 수리 — 두 달 미룬 청구서였다.** 어휘 부정합이 이 틈으로 라이브에 남은 실사고 후 집행): ①쓰기 시점 — `[self:write]/edit/copy` 가 빌드 입력(빌더 `--inputs-regex` 가 단일 출처)에 쓰면 그 자리에서 `sync_live_derived` 재생성 집행 + 패키지 `.py` 는 그랜트 무관 `compile()` 사전검증(`vocab_write_gate.py`). ②적용 시점 — `_perform_apply` 가 라이브에 쓴 **후** 재생성(verify 의 초록은 적용 *전* 신선도만 증명한다). ③핫리로드 시점 — tool_loader 가 handler.py mtime 로 낡은 모듈을 자동 무효화. ④순찰 — 부팅 + 일일점검이 아웃오브프로세스 편집(초크포인트 밖 넷: Claude Code 세션·`[self:script]`·`run_command`·핸들러 자신의 `open()`)의 잔여 드리프트를 재생성으로 닫는다(`world_pulse_health.enforce_derived_freshness`). ⑤빌더 정직화 — handler.py `SyntaxError` 는 폴백 초록이 아니라 빨강(`iblbuild_validators._handler_syntax_issue`; `_OP_DISPATCHERS` 부재 폴백은 정당한 호환 경로라 유지).
+- **RED 그랜트 다중 슬롯 (2026-09-01)**: 옛 싱글턴 슬롯의 전제("시스템 AI 는 동시 런이 없다")가 위임 런으로 반증됐다 — ep2520 발급이 ep2519(storyteller 위임)의 그랜트를 덮어써 정상 경로(write 자동 적재→apply)를 봉쇄, propose/discard 루프로 밀어 넣었다. 그랜트는 task_id 별 슬롯에 살고 발급·회수는 자기 슬롯만 건드린다(`red_grant.py`).
 - **소프트 가드 의존 잔재:** consciousness_prompt의 훈계는 유지하되(천장), 안전은 위 구조(바닥)에 건다.
 
 ## 7. 한 줄 요약

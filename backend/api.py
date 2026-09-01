@@ -320,6 +320,24 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=_deferred_world_pulse, daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
 
+    # 파생물 신선도 순찰(2026-09-01, ep2519 사슬 수리) — 백엔드가 죽어 있던 사이의
+    # 아웃오브프로세스 편집(Claude Code 세션·스크립트)이 남긴 드리프트를 부팅에서
+    # 재생성으로 닫는다. 부팅을 블로킹하지 않게 별도 스레드(빌드 ~수 초).
+    def _deferred_derived_freshness():
+        try:
+            from derived_freshness import enforce_derived_freshness
+            ev = enforce_derived_freshness()
+            if ev.get("success"):
+                print(f"[boot] 파생물 신선도 ✓ ({ev.get('response_ms', 0)}ms)")
+            else:
+                print(f"[boot] 파생물 신선도 ✗ — {ev.get('error_message')}")
+            boot_status.record("파생물신선도", bool(ev.get("success")),
+                               detail=ev.get("error_message") or f"{ev.get('response_ms', 0)}ms")
+        except Exception as e:
+            print(f"[boot] 파생물 신선도 순찰 실패 (무시): {e}")
+            boot_status.record("파생물신선도", False, e)
+    threading.Thread(target=_deferred_derived_freshness, daemon=True).start()
+
     # 부팅 완료 신고 — 이 줄 이후 uvicorn 이 요청을 받기 시작한다. 느리면 원장을 보라.
     _boot_total = _boot_time.monotonic() - _PROC_T0
     boot_status.record("lifespan", True, detail=f"부팅 총 {_boot_total:.1f}s")

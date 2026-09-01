@@ -47,6 +47,8 @@ SAFETY_SUFFIXES = (
     # 폴백하거나(격리 상실) 적용이 안 되고도 됐다고 보고될 수 있다. /health 로는
     # 둘 다 안 잡히는 침묵 결함이라 기능 스모크 대상이다.
     "tools/system_essentials/repair_staging.py",
+    # 검증 관문 형제(2026-09-01 분리, 1500줄 규칙) — 관문이 죽으면 거짓 초록 부류.
+    "tools/system_essentials/repair_gates.py",
     "scripts/red_safety_selftest.py",
 )
 

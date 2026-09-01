@@ -728,6 +728,91 @@ def run():
         import shutil
         shutil.rmtree(tmp7, ignore_errors=True)
 
+    # ══ S17 — 라이브 파생물 신선도 (2026-09-01 ep2519 봉합) ══
+    # ★재현하는 사건: ibl_triangle 관문이 **워크트리 안에서** plain build 를 돌려
+    #   파생물을 거기 쓴다. 에이전트의 셸 cwd 도 워크트리라 이어서 돌린 --check 가
+    #   초록을 냈고, git status 에도 파생물이 갱신된 것처럼 보였다. 그 상태로 discard
+    #   하면 워크트리와 함께 빌드 산출물이 죽고 라이브는 처음 그대로 낡아 있다.
+    #   실측 결과: 새 어휘(자막 옵션)가 소스엔 있고 카탈로그엔 없어, 시스템이 제
+    #   낱말을 못 보는 채로 턴이 끝났다.
+    tmp17 = Path(tempfile.mkdtemp(prefix="repair_live_derived_")).resolve()
+    try:
+        _make_repo(tmp17)
+        h._REPO_ROOT = tmp17
+        genv = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+
+        # 빌더 대역 — 진짜 build_ibl_nodes.py 의 계약 셋만 흉내낸다:
+        #   --inputs-regex(트리거 선언) / --check(신선도, 불일치면 rc≠0) / 무인자(재생성)
+        (tmp17 / "scripts" / "build_ibl_nodes.py").write_text(
+            "import sys, pathlib\n"
+            "root = pathlib.Path(__file__).resolve().parents[1]\n"
+            "src, derived = root / 'data' / 'src.txt', root / 'data' / 'derived.txt'\n"
+            "if '--inputs-regex' in sys.argv:\n"
+            "    print(r'^(data/src\\.txt)$'); raise SystemExit(0)\n"
+            "want = src.read_text() if src.exists() else ''\n"
+            "if want.startswith('BROKEN'):\n"
+            "    print('검증 실패: 소스가 규약을 어깁니다'); raise SystemExit(1)\n"
+            "if '--check' in sys.argv:\n"
+            "    have = derived.read_text() if derived.exists() else ''\n"
+            "    raise SystemExit(0 if have == want else 1)\n"
+            "derived.write_text(want)\n"
+        )
+        (tmp17 / "data" / "src.txt").write_text("v1\n")
+        (tmp17 / "data" / "derived.txt").write_text("v1\n")
+        for args in (["add", "-A"], ["commit", "-qm", "builder"]):
+            subprocess.run(["git"] + args, cwd=tmp17, env=genv, capture_output=True)
+
+        # S17a: 트리거 밖 변경만 — 관문이 아예 뜨지 않는다(빌드 비용을 안 문다)
+        (tmp17 / "backend" / "cognition" / "bystander.py").write_text("OTHER = 'edited'\n")
+        check("S17a_untriggered_gate_absent",
+              st.sync_live_derived(str(tmp17)) is None)
+
+        # S17b: 소스만 바뀌고 파생물이 낡음 = ep2519 상태 → 라이브에서 재생성한다
+        (tmp17 / "data" / "src.txt").write_text("v2\n")
+        r17 = st.sync_live_derived(str(tmp17))
+        check("S17b_stale_live_regenerated",
+              bool(r17) and r17["passed"] is True
+              and (tmp17 / "data" / "derived.txt").read_text() == "v2\n"
+              and "data/derived.txt" in (r17 or {}).get("regenerated", []),
+              json.dumps(r17, ensure_ascii=False)[:300])
+
+        # S17c: 이미 신선하면 아무것도 안 쓰고 초록 — 재생성을 사유로 삼지 않는다
+        r17c = st.sync_live_derived(str(tmp17))
+        check("S17c_fresh_live_no_regen",
+              bool(r17c) and r17c["passed"] is True and r17c["regenerated"] == [],
+              json.dumps(r17c, ensure_ascii=False)[:300])
+
+        # S17d: 소스 결함은 드리프트와 다르다 — 재생성으로 못 닫으므로 빨강 + 빌더의 말
+        (tmp17 / "data" / "src.txt").write_text("BROKEN\n")
+        r17d = st.sync_live_derived(str(tmp17))
+        check("S17d_source_defect_is_red",
+              bool(r17d) and r17d["passed"] is False
+              and "검증 실패" in (r17d.get("detail") or ""),
+              json.dumps(r17d, ensure_ascii=False)[:300])
+        (tmp17 / "data" / "src.txt").write_text("v3\n")
+
+        # S17e: ★사건 그대로 — discard 가 워크트리를 지우기 **전에** 라이브를 맞춘다.
+        #   옛 동작: 워크트리만 사라지고 라이브는 낡은 채 "라이브는 무변경" 이라고 답했다.
+        task17 = _grant(h, "task_live_derived")
+        s17 = h._red_stage(str(tmp17 / "backend" / "cognition" / "seventeen.py"), for_write=True)
+        Path(s17).parent.mkdir(parents=True, exist_ok=True)
+        Path(s17).write_text("SEVENTEEN = 1\n")
+        rd = st.op_discard({"_repo_root": str(tmp17), "_grant_key": st.task_key(task17)})
+        check("S17e_discard_syncs_live_derived",
+              (tmp17 / "data" / "derived.txt").read_text() == "v3\n"
+              and (rd.get("live_derived") or {}).get("passed") is True,
+              json.dumps(rd, ensure_ascii=False)[:300])
+        # 그리고 "라이브는 무변경"이라고 뭉뚱그리지 않는다 — 남은 미커밋을 센다
+        check("S17e_discard_does_not_claim_clean_live",
+              "무변경이었습니다" not in (rd.get("message") or "")
+              and "미커밋 변경" in (rd.get("message") or ""),
+              (rd.get("message") or "")[:300])
+    finally:
+        _ungrant()
+        import shutil
+        shutil.rmtree(tmp17, ignore_errors=True)
+
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:
         print(f"  ✗ {f}")

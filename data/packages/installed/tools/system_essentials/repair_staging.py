@@ -49,6 +49,7 @@ Claude Code 세션(자체 Edit/Bash), `[self:script]{op:run}`, `run_command`, �
 격리: .worktrees/repair-<task_key>/
 """
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -58,6 +59,32 @@ import sys
 import time
 from datetime import datetime, timedelta
 
+# ── 형제 모듈: 검증 관문·라이브 파생물 신선도 (2026-09-01 분리, 1500줄 규칙) ──
+# 스모크·tsc·live_derived 관문과 공용 git 유틸의 정본은 repair_gates.py.
+# 별칭은 기존 표면(테스트의 st._tsc_check 등·vocab_write_gate 의
+# staging.sync_live_derived)을 보존한다. spec-load 는 handler._load_sibling 과
+# 같은 방식 — __file__ 옆을 읽으므로 워크트리 사본에서도 짝이 갈라지지 않는다.
+_gates_spec = importlib.util.spec_from_file_location(
+    "repair_gates",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "repair_gates.py"))
+_gates = importlib.util.module_from_spec(_gates_spec)
+_gates_spec.loader.exec_module(_gates)
+
+GIT_TIMEOUT = _gates.GIT_TIMEOUT
+SMOKE_TIMEOUT = _gates.SMOKE_TIMEOUT
+BUILD_TIMEOUT = _gates.BUILD_TIMEOUT
+_git = _gates._git
+_is_git_repo = _gates._is_git_repo
+_file_sha = _gates._file_sha
+_module_name = _gates._module_name
+_smoke_env = _gates._smoke_env
+_orphan_importers = _gates._orphan_importers
+_tsc_errors = _gates._tsc_errors
+_tsc_check = _gates._tsc_check
+_live_build_inputs_touched = _gates._live_build_inputs_touched
+sync_live_derived = _gates.sync_live_derived
+_derived_fingerprint = _gates._derived_fingerprint
+
 SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 # ★옛 제안 원장(통합 전 세대). propose 가 여기+selfpatch-* 워크트리를 따로 써서 apply 가
 # 원리적으로 못 봤다(실측 08-18: 제안 7건 누적 / 적용 0건). 지금은 제안도 세션이라
@@ -65,9 +92,6 @@ SESSION_DIRNAME = os.path.join("data", "system_ai_state", "repair_sessions")
 PROPOSAL_DIRNAME = os.path.join("data", "system_ai_state", "patch_proposals")
 WORKTREE_PREFIX = os.path.join(".worktrees", "repair-")
 SESSION_TTL_DAYS = 7          # 이보다 오래된 종료 세션은 기회주의적으로 청소
-GIT_TIMEOUT = 120
-SMOKE_TIMEOUT = 180
-BUILD_TIMEOUT = 300
 
 # 안전장치 파일 — 수정되면 기능 스모크(red_safety_selftest)까지 통과해야 한다.
 # red_watchdog.SAFETY_SUFFIXES 와 같은 목록(둘 다 접미사 매칭).
@@ -76,16 +100,12 @@ SAFETY_SUFFIXES = (
     "backend/datastore/red_watchdog.py",
     "tools/system_essentials/handler.py",
     "tools/system_essentials/repair_staging.py",
+    "tools/system_essentials/repair_gates.py",
     "scripts/red_safety_selftest.py",
 )
 
 
 # ── 기본 유틸 ─────────────────────────────────────────────────────────────
-
-def _git(args, cwd):
-    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True,
-                          text=True, timeout=GIT_TIMEOUT)
-
 
 def task_key(raw) -> str:
     """세션 키 — _red_backup_dir 과 같은 규칙(백업 폴더와 세션이 같은 이름을 갖는다)."""
@@ -175,13 +195,6 @@ def list_legacy_proposals(repo: str):
 def _save_session(repo: str, sess: dict):
     with open(_session_path(repo, sess["key"]), "w", encoding="utf-8") as f:
         json.dump(sess, f, ensure_ascii=False, indent=2)
-
-
-def _is_git_repo(repo: str) -> bool:
-    try:
-        return _git(["rev-parse", "--git-dir"], repo).returncode == 0
-    except Exception:
-        return False
 
 
 # ── 세션 (격리 사본) ──────────────────────────────────────────────────────
@@ -318,15 +331,6 @@ def can_stage(repo: str, key: str, live_abs: str) -> bool:
     return ensure_session(repo, key) is not None
 
 
-def _file_sha(path: str):
-    """파일 내용 sha256 (없으면 None) — 스테이징 시점의 라이브 지문."""
-    try:
-        with open(path, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()
-    except OSError:
-        return None
-
-
 def stage_file(repo: str, key: str, live_abs: str):
     """쓰기 대상을 격리 사본 경로로 바꾼다(첫 접촉 시 라이브 원본에서 씨 뿌리기).
 
@@ -379,189 +383,6 @@ def stage_delete(repo: str, key: str, live_abs: str) -> bool:
 
 
 # ── 검증 배터리 (격리 사본 안에서만) ──────────────────────────────────────
-
-def _module_name(rel: str, base_abs: str = None):
-    """backend 하위 .py → import 스모크가 실제로 쓸 수 있는 모듈명.
-
-    ★backend 안에 두 규약이 공존한다(2026-08-18 실측):
-      · 층 디렉토리(base·datastore·ibl·cognition·services·surface) = `__init__.py` **없음**
-        → boot_paths 가 각 디렉토리를 sys.path 에 올려 **평면 이름**(`import ibl_engine`)
-      · 진짜 패키지(drivers·providers·channels·common) = `__init__.py` **있음**
-        → backend/ 가 sys.path 라 **점 표기**(`import providers.claude_code`)
-    옛 구현은 전부 평면으로 뭉개서 후자를 `ModuleNotFoundError` 로 무조건 탈락시켰다.
-    제안 내용과 무관하게 import_smoke 가 ✗ 라 **apply 가 영원히 막혔다**
-    (실측: backend/drivers/sqlite_driver.py · backend/providers/claude_code.py 제안 2건).
-    디렉토리 목록을 박지 않고 `__init__.py` 존재로 판정한다 — 새 패키지가 생겨도 따라온다.
-    """
-    if not (rel.startswith("backend" + os.sep) and rel.endswith(".py")):
-        return None
-    base = os.path.basename(rel)
-    if base == "__init__.py":
-        return None
-    mod = base[:-3]
-    if not base_abs:
-        return mod
-    parts = rel.split(os.sep)                     # backend, <디렉토리...>, 파일.py
-    pkg = []
-    for i in range(1, len(parts) - 1):
-        d = os.path.join(base_abs, *parts[:i + 1])
-        if not os.path.exists(os.path.join(d, "__init__.py")):
-            pkg = []                              # 층 디렉토리 — 평면 이름
-            break
-        pkg.append(parts[i])
-    return ".".join(pkg + [mod]) if pkg else mod
-
-
-def _smoke_env(wt_abs: str):
-    """격리 사본을 향하는 환경 — ★라이브 INDIEBIZ_BASE_PATH 를 물려받으면 스모크가
-    라이브 data/ 를 건드린다(격리가 깨진다)."""
-    env = dict(os.environ)
-    env["INDIEBIZ_BASE_PATH"] = wt_abs
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return env
-
-
-def _orphan_importers(wt_abs: str, mod: str, dropped_rels: set):
-    """격리 사본에서 `mod` 를 아직 import 하는 파일들 — 삭제가 남길 고아 참조.
-
-    ★왜 별도 검사인가: 쓰기의 위험은 *그 파일이 깨지는* 것이라 그 모듈만 import 해보면
-    잡힌다. 삭제의 위험은 반대다 — **남의 import 가 깨진다**. 지워진 모듈은 import 해볼
-    수도 없으니(없는 게 정상) 스모크로는 원리적으로 안 잡힌다."""
-    esc = re.escape(mod)
-    pats = [r"^\s*(?:from\s+%s\s+import|import\s+%s\b)" % (esc, esc)]
-    if "." in mod:
-        # 패키지 내부 상대 import — providers/__init__.py 의 `from .claude_code import ...`
-        # 는 점 표기 패턴에 안 걸린다. 삭제 고아 검출에서 가장 가까운 참조를 놓치는 자리.
-        pats.append(r"^\s*from\s+\.%s\s+import" % re.escape(mod.rsplit(".", 1)[-1]))
-    pat = re.compile("|".join(pats), re.MULTILINE)
-    hits = []
-    try:
-        listed = subprocess.run(["git", "ls-files", "*.py"], cwd=wt_abs,
-                                capture_output=True, text=True, timeout=GIT_TIMEOUT).stdout
-    except Exception:
-        return hits
-    for rel in listed.splitlines():
-        if not rel or rel in dropped_rels:
-            continue
-        try:
-            with open(os.path.join(wt_abs, rel), encoding="utf-8", errors="replace") as f:
-                if pat.search(f.read()):
-                    hits.append(rel)
-        except OSError:
-            continue
-        if len(hits) >= 12:
-            break
-    return hits
-
-
-_TSC_ERR = re.compile(r"^(?P<file>[^(]+)\((?P<line>\d+),(?P<col>\d+)\):\s+(?P<rest>error TS\d+:.*)$")
-
-
-def _tsc_errors(text: str):
-    """tsc 출력 → **자리(줄·칸)를 뺀** 오류 집합. 델타 판정용 — 델타가 줄 번호를 밀면
-    같은 선행 오류가 새 오류로 보인다(파일+메시지로만 동일성 판정)."""
-    out = set()
-    for ln in (text or "").splitlines():
-        m = _TSC_ERR.match(ln.strip())
-        if m:
-            out.add((m.group("file").strip(), m.group("rest").strip()))
-    return out
-
-
-def _run_tsc(fe_dir: str, tsc_bin: str, wt_abs: str):
-    p = subprocess.run([tsc_bin, "-p", "tsconfig.app.json", "--noEmit"], cwd=fe_dir,
-                       capture_output=True, text=True, timeout=SMOKE_TIMEOUT,
-                       env=_smoke_env(wt_abs))
-    return p.returncode, ((p.stdout or "") + (p.stderr or "")).strip()
-
-
-def _tsc_check(repo: str, wt_abs: str, ts_rels: list):
-    """frontend 타입검사 관문 (2026-08-22 신설).
-
-    ★왜: RED 구역은 `("backend", "frontend", "scripts")` 인데 관문은 전부 파이썬용이라
-    **타입은 아무도 안 봤다** — 실측으로 이 경로를 이미 `.tsx`/`.ts` 10건이 무검사로
-    통과했다(NarrationStudio.tsx 등). 브릭은 아니지만(프런트가 깨져도 백엔드는 산다)
-    빌드 때까지 조용한 부류다.
-
-    두 가지를 **빌린다**:
-    - `node_modules` — 의존성은 델타가 아니다. 워크트리는 HEAD 로 뜨고 node_modules 는
-      gitignore 라 없으므로 라이브 것을 심링크로 읽고 **검증 후 즉시 회수**한다(격리
-      사본에 남기면 워크트리 청소가 라이브를 향하게 된다).
-    - **선행 상태** — 실패했을 때만 라이브에서 한 번 더 돌려(읽기 전용·noEmit) 델타가
-      *새로* 만든 오류만 빨강으로 친다. 선행 파손이 무관한 수리를 볼모로 잡지 않게
-      (`build --check` 를 격리에 못 들인 것과 같은 이유가 여기선 이렇게 풀린다).
-
-    ★검사할 수 없으면 초록도 빨강도 아닌 **건너뜀**을 적는다 — node_modules 없는 몸에서
-    apply 가 영원히 막히는 것은 import 스모크가 패키지 모듈을 탈락시켜 apply 를 막던
-    2026-08-18 부류의 재생산이다. 대신 침묵하지 않는다(사유를 detail 에 적는다).
-    """
-    gate = {"gate": "frontend_tsc", "files": ts_rels[:12]}
-    fe_wt = os.path.join(wt_abs, "frontend")
-    if not os.path.exists(os.path.join(fe_wt, "tsconfig.app.json")):
-        return dict(gate, passed=True, skipped=True,
-                    detail="frontend/tsconfig.app.json 없음 — 타입검사 건너뜀")
-
-    nm_wt = os.path.join(fe_wt, "node_modules")
-    nm_live = os.path.join(repo, "frontend", "node_modules")
-    borrowed = False
-    if not os.path.exists(nm_wt):
-        if not os.path.isdir(nm_live):
-            return dict(gate, passed=True, skipped=True,
-                        detail="frontend/node_modules 미설치 — 타입검사 불가"
-                               "(npm install 후 재검증하면 이 관문이 켜집니다)")
-        try:
-            os.symlink(nm_live, nm_wt)
-            borrowed = True
-        except OSError as e:
-            return dict(gate, passed=True, skipped=True,
-                        detail=f"node_modules 를 빌리지 못함 — 타입검사 건너뜀 ({e})")
-
-    tsc_bin = os.path.join(nm_wt, ".bin", "tsc")
-    try:
-        if not os.path.exists(tsc_bin):
-            return dict(gate, passed=True, skipped=True,
-                        detail="node_modules/.bin/tsc 없음 — 타입검사 건너뜀")
-        try:
-            rc, out = _run_tsc(fe_wt, tsc_bin, wt_abs)
-        except (OSError, subprocess.SubprocessError) as e:
-            return dict(gate, passed=True, skipped=True,
-                        detail=f"tsc 실행 실패 — 타입검사 건너뜀 ({e})")
-        if rc == 0:
-            return dict(gate, passed=True, detail="타입 오류 없음")
-
-        # 실패 — 선행 상태와 대조해 '이 델타가 만든 오류'만 빨강으로
-        after = _tsc_errors(out)
-        base_bin = os.path.join(nm_live, ".bin", "tsc")
-        before = None
-        if after and os.path.exists(base_bin):
-            try:
-                # ★선행 상태 실측 — 라이브 소스를 읽기만 한다(noEmit·incremental 없음).
-                #   _smoke_env 에 라이브 루트를 넘기지 않는다(격리 규약: 라이브
-                #   INDIEBIZ_BASE_PATH 를 물려주지 않는다 — tsc 는 안 읽지만 규약을 지킨다).
-                _, base_out = _run_tsc(os.path.join(repo, "frontend"), base_bin,
-                                       os.path.join(repo, "frontend"))
-                before = _tsc_errors(base_out)
-            except (OSError, subprocess.SubprocessError):
-                before = None
-        if before is not None:
-            new = after - before
-            if not new:
-                return dict(gate, passed=True, preexisting=len(after),
-                            detail=(f"타입 오류 {len(after)}건은 전부 **선행 파손**"
-                                    f"(이 델타가 만든 것 아님) — 통과시킵니다.\n"
-                                    + out[-800:]))
-            return dict(gate, passed=False, preexisting=len(after) - len(new),
-                        detail=(f"이 델타가 만든 타입 오류 {len(new)}건"
-                                f"(선행 {len(after) - len(new)}건 제외):\n"
-                                + "\n".join(f"{f}: {m}" for f, m in sorted(new))[:1500]))
-        return dict(gate, passed=False, detail=out[-1500:])
-    finally:
-        if borrowed:
-            try:
-                os.unlink(nm_wt)           # ★심링크만 끊는다(라이브는 못 건드린다)
-            except OSError:
-                pass
-
 
 def verify(repo: str, sess: dict):
     """격리 사본에서 기계 검증. (통과여부, checks[]) — 자기채점 아닌 pass/fail 기계값."""
@@ -659,6 +480,11 @@ def verify(repo: str, sess: dict):
                            env=_smoke_env(wt_abs))
         checks.append({"gate": "ibl_triangle", "passed": p.returncode == 0,
                        "detail": ((p.stdout or "") + (p.stderr or "")).strip()[-800:]})
+        # ★위 빌드는 **워크트리에** 파생물을 쓴다 — 그 초록은 격리 안에서만 참이다.
+        #   라이브도 빌드돼 있는지는 라이브에서만 물을 수 있다(ep2519 봉합).
+        live = sync_live_derived(repo)
+        if live:
+            checks.append(live)
 
     # 4. frontend 타입검사 — RED 구역에 frontend 가 있으므로 .ts/.tsx 도 이 층을 지난다.
     #    삭제도 방아쇠에 넣는다: 지워진 모듈을 아직 import 하는 쪽은 파이썬만 고아 검사가
@@ -874,7 +700,7 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
         "수행자가 적용 후 돌려 다음 턴에 보고합니다. 이 턴에서 기다려서는 볼 수 없습니다.")
     return {
         "success": True, "applied": False, "scheduled": True, "verified": True,
-        "checks": [{"gate": c["gate"], "passed": True} for c in checks],
+        "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
         "files": rels,
         "waiting_on_episode": eid,
         "do_not_wait": True,
@@ -1101,6 +927,13 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
         for live_abs in list(staged_contents) + list(to_delete):
             finalize(live_abs)             # backend .py 면 워치독(헬스체크·자동 롤백)
 
+    # ★적용 **후** 파생물 재생성 (2026-09-01): verify 의 live_derived 는 적용 *전*
+    # 라이브의 신선도만 증명한다 — 방금 쓴 파일이 빌드 입력이면 그 순간 다시 낡는다.
+    # 즉시·지연 적용이 공유하는 단일 쓰기 코어라, 여기가 유일한 봉합 지점이다.
+    live_after = sync_live_derived(repo)
+    if live_after is not None:
+        checks = checks + [live_after]
+
     sess["status"] = "applied"
     sess["applied_at"] = datetime.now().isoformat()
     sess["checks"] = checks
@@ -1110,7 +943,7 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
     return {
         "success": True, "applied": True, "verified": True,
         "files": written, "removed": removed,
-        "checks": [{"gate": c["gate"], "passed": True} for c in checks],
+        "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
         "message": (f"검증 통과 후 라이브 적용 {_n}건(쓰기 {len(written)}·삭제 {len(removed)}). "
                     f"backend/*.py 가 포함되면 지금 리로드가 일어나고, 분리 워치독이 "
                     f"/health 를 확인해 실패 시 자동 롤백합니다(판정은 다음 턴에 보고됩니다)."),
@@ -1196,12 +1029,31 @@ def op_discard(ti):
         return {"success": False, "error":
                 f"그런 스테이징 세션이 없습니다: {target}. "
                 f"propose 로 올린 제안을 지우려면 proposal_id 를 주세요(op:status 에 목록)."}
+    # ★폐기 = 워크트리가 사라지는 순간이다. 관문이 그 안에 써 둔 파생물도 같이 죽으므로,
+    #   지우기 **전에** 라이브를 스스로 맞춰 둔다(ep2519: 여기서 자막 어휘가 증발했다).
+    live = sync_live_derived(repo)
     _remove_worktree(repo, sess)
     sess["status"] = "discarded"
     sess["discarded_at"] = datetime.now().isoformat()
+    if live:
+        sess["live_derived"] = live
     _save_session(repo, sess)
-    return {"success": True, "key": target,
-            "message": f"격리 사본을 폐기했습니다({len(sess.get('files') or {})}건). 라이브는 무변경이었습니다."}
+    # ★"라이브는 무변경"을 무조건 말하지 않는다 — 적재분 기준으로만 참인 문장이고,
+    #   ep2519 에선 그 문장이 '아무것도 안 남았다'는 오독을 거들었다(라이브엔 이미
+    #   6파일이 바뀐 채였다). 실제로 남은 것을 세어서 말한다.
+    dirty = [f for f in _derived_fingerprint(repo)]
+    message = f"격리 사본을 폐기했습니다({len(sess.get('files') or {})}건). 적재분은 라이브로 가지 않았습니다."
+    if dirty:
+        message += (f" 다만 이 저장소엔 미커밋 변경 {len(dirty)}건이 남아 있습니다"
+                    " — 폐기는 그것들을 되돌리지 않습니다.")
+    if live and not live["passed"]:
+        message += " ⚠ " + live["detail"]
+    elif live and live.get("regenerated"):
+        message += " " + live["detail"]
+    out = {"success": True, "key": target, "message": message}
+    if live:
+        out["live_derived"] = live
+    return out
 
 
 def _remove_worktree(repo: str, sess: dict):

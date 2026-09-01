@@ -1135,6 +1135,15 @@ def run_daily_health_check() -> Dict:
         return {"status": "disabled"}
 
     reds = []
+    # 파생물 신선도 — 검사들보다 **먼저** 집행한다(재생성 뒤의 정적 검사가 참 신선도를 본다)
+    try:
+        from derived_freshness import enforce_derived_freshness
+        _fresh = enforce_derived_freshness()
+        save_self_check(_fresh)
+        if not _fresh.get("success"):
+            reds.append(f"[__static__:derived_freshness] {_fresh.get('error_message') or ''}".strip())
+    except Exception as e:
+        logger.warning(f"[HealthCheck] 파생물 신선도 집행 실패: {e}")
     try:
         for ev in run_ibl_health_check():
             save_self_check(ev)

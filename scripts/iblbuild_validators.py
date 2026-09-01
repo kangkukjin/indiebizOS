@@ -26,12 +26,30 @@ from iblbuild_derive import build_tool_index
 from iblbuild_appview import validate_app_blocks, validate_standalone_instruments
 
 
+def _handler_syntax_issue(pkg_name: str, handler_text: str) -> str | None:
+    """handler.py 구문 오류를 **정직 빨강**으로. 멀쩡하면 None.
+
+    ★왜 (2026-09-01, ep2519 사슬 수리): 아래 _extract_* 들은 SyntaxError 를 None 으로
+    돌려주고, 호출부는 None 을 "구식 핸들러(_OP_DISPATCHERS 없음)"로 읽어 substring
+    폴백으로 흘린다 — 즉 **구문이 깨진 handler.py 가 빌드를 초록으로 통과**할 수 있었다.
+    같은 빌더가 backend 소스에는 정반대로 굴었다(iblbuild_derive._AUTH_REGISTRY:
+    SyntaxError = RuntimeError — "실패를 조용히 넘기지 않는다"). 두 경우를 가른다:
+    (a) 구문 오류 = 여기서 빨강, (b) _OP_DISPATCHERS 부재 = 종전 폴백(정당한 호환 경로)."""
+    try:
+        ast.parse(handler_text)
+        return None
+    except SyntaxError as e:
+        return (f"{pkg_name}/handler.py: 파이썬 구문 오류 line {e.lineno}: {e.msg} — "
+                f"깨진 핸들러는 로드 시 그 패키지 도구가 조용히 사라집니다(폴백 초록 금지)")
+
+
 def _extract_op_dispatchers(handler_text: str) -> dict[str, tuple[set[str], object]] | None:
     """handler.py 본문에서 _OP_DISPATCHERS dict 를 AST 로 파싱.
 
     Returns:
         {tool_name: (op_key_set, raw_dict_node)} 또는 None (dict 없음).
         타입이 dict 가 아니거나 키가 문자열 상수가 아니면 None.
+        구문 오류도 None — 정직 빨강은 _handler_syntax_issue 가 따로 세운다.
     """
     try:
         tree = ast.parse(handler_text)
@@ -378,6 +396,9 @@ def _check_action(
             handler_py = pkg_dir / "handler.py"
             if handler_py.is_file():
                 src_text = handler_py.read_text(encoding="utf-8")
+                _syn = _handler_syntax_issue(pkg_name, src_text)
+                if _syn and _syn not in issues:   # 패키지당 1회 (도구 루프 안이다)
+                    issues.append(_syn)
                 src_op_keys = set(ops.get("values", {}).keys())
                 dispatchers = _extract_op_dispatchers(src_text)
 
@@ -776,9 +797,10 @@ def validate_enum_handler_branches(root: Path) -> list[str]:
         handler_py = pkg_dir / "handler.py"
         if not handler_py.is_file():
             continue
-        got = _enum_param_branch_literals(
-            handler_py.read_text(encoding="utf-8"), set(enum_map)
-        )
+        _text = handler_py.read_text(encoding="utf-8")
+        if _handler_syntax_issue(pkg_dir.name, _text):
+            continue   # 구문 오류 빨강은 op-dispatch 검사가 이미 세웠다 — 중복 신고 방지
+        got = _enum_param_branch_literals(_text, set(enum_map))
         if not got:
             continue
         for pname, lits in sorted(got.items()):

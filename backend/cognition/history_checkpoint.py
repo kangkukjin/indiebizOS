@@ -166,7 +166,20 @@ def _update(db_path: str, key: str, keep_recent: int,
         if summary is None:
             _store_error(conn, key, "요약 실패(빈 응답 또는 형식 비적합)")
             return "error:summary"
-        _store_ckpt(conn, key, summary, batch[-1][0])
+        # ★저장은 모집단 재확인과 한 트랜잭션(2026-09-02): 요약(LLM, 수초~수십초) 사이에
+        #   대화 삭제(clear_conversations, BEGIN IMMEDIATE)가 끼면 지운 대화의 요약을
+        #   되살려 놓게 된다. IMMEDIATE 잠금 안에서 요약한 행이 아직 있는지 보고, 하나라도
+        #   사라졌으면 버린다 — 삭제가 먼저면 여기서 걸리고, 저장이 먼저면 삭제가 지운다.
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            alive = {r[0] for r in fetch_eligible(conn)}
+            if any(_id not in alive for _id, _who, _c in batch):
+                conn.rollback()
+                return "stale:deleted"
+            _store_ckpt(conn, key, summary, batch[-1][0])  # commit
+        except Exception:
+            conn.rollback()
+            raise
         return "updated"
     except Exception as e:
         try:

@@ -1,7 +1,8 @@
 """기억 위생 수리 3종 회귀 테스트 (2026-09-02 기억관리 감사).
 
-  ① 대화 삭제 = 원문 + 요약 체크포인트 한 트랜잭션 (system_ai_memory.clear_conversations)
-     — 원문만 지우면 지운 대화가 다음 대화 머리에 되살아났다.
+  ① 대화 삭제 = 원문 + 요약 체크포인트 한 트랜잭션 + 이미지 파일 (system_ai_memory.clear_conversations)
+     — 원문만 지우면 지운 대화가 다음 대화 머리에 되살아났다. 갱신 스레드는 요약 뒤
+     IMMEDIATE 잠금 안에서 행 생존을 재확인하고 저장한다(요약 도중 삭제 → stale:deleted).
   ② 해마 귀속 관문 — 회상 top-1 액션이 실행에 안 쓰였으면 성공/실패를 귀속하지 않는다
      (record_recall_outcome ← _recall_was_used).
   ③ 심층기억 자동 회상은 used_at 을 올리지 않는다 (memory_db.read(touch=False))
@@ -27,6 +28,7 @@ def test_clear_conversations_drops_checkpoints(tmp_path, monkeypatch):
     import history_checkpoint as hc
     db = tmp_path / "system_ai_memory.db"
     monkeypatch.setattr(sam, "MEMORY_DB_PATH", db)
+    monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
     sam.init_memory_db()
 
     conn = sqlite3.connect(str(db))
@@ -40,7 +42,7 @@ def test_clear_conversations_drops_checkpoints(tmp_path, monkeypatch):
     assert hc._head_message(str(db), "system_ai") is not None  # 삭제 전엔 머리 주입
 
     deleted = sam.clear_conversations()
-    assert deleted == {"conversations": 3, "checkpoints": 1}
+    assert deleted == {"conversations": 3, "checkpoints": 1, "images": 0}
 
     conn = sqlite3.connect(str(db))
     assert conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0] == 0
@@ -54,8 +56,69 @@ def test_clear_conversations_without_checkpoint_table(tmp_path, monkeypatch):
     import system_ai_memory as sam
     db = tmp_path / "system_ai_memory.db"
     monkeypatch.setattr(sam, "MEMORY_DB_PATH", db)
+    monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
     sam.init_memory_db()
-    assert sam.clear_conversations() == {"conversations": 0, "checkpoints": 0}
+    assert sam.clear_conversations() == {"conversations": 0, "checkpoints": 0, "images": 0}
+
+
+def _fake_llm(prompt, system_prompt):
+    return ("## 핵심 사실과 결정\n- 요약\n## 미해결 과제\n(없음)\n"
+            "## 다음 단계\n(없음)\n## 주의할 맥락\n(없음)")
+
+
+def _seed_system_rows(db, n):
+    conn = sqlite3.connect(str(db))
+    for i in range(n):
+        conn.execute("INSERT INTO conversations(timestamp, role, content) VALUES (?,?,?)",
+                     (f"2026-09-02T00:{i:02d}:00", "user" if i % 2 == 0 else "assistant", f"대화 {i}"))
+    conn.commit()
+    conn.close()
+
+
+def test_checkpoint_update_dropped_when_deleted_mid_summary(tmp_path, monkeypatch):
+    """요약(LLM) 도중 대화 삭제가 끼면 체크포인트를 저장하지 않는다(경주 봉합)."""
+    import system_ai_memory as sam
+    import history_checkpoint as hc
+    db = tmp_path / "system_ai_memory.db"
+    monkeypatch.setattr(sam, "MEMORY_DB_PATH", db)
+    monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
+    sam.init_memory_db()
+    _seed_system_rows(db, 12)
+    fetch = hc._fetch_system("system_ai")
+
+    def llm_then_delete(prompt, system_prompt):
+        sam.clear_conversations()            # 요약이 도는 사이 사용자가 삭제
+        return _fake_llm(prompt, system_prompt)
+    monkeypatch.setattr(hc, "_call_llm", llm_then_delete)
+
+    assert hc._update(str(db), "system_ai", hc.KEEP_RECENT_SYSTEM, fetch) == "stale:deleted"
+    assert hc._head_message(str(db), "system_ai") is None   # 지운 대화의 요약이 되살아나지 않는다
+
+    # 대조: 삭제가 없으면 같은 입력이 정상 저장된다
+    _seed_system_rows(db, 12)
+    monkeypatch.setattr(hc, "_call_llm", _fake_llm)
+    assert hc._update(str(db), "system_ai", hc.KEEP_RECENT_SYSTEM, fetch) == "updated"
+    assert hc._head_message(str(db), "system_ai") is not None
+
+
+def test_clear_conversations_removes_image_files(tmp_path, monkeypatch):
+    """대화 이미지는 행이 아니라 파일 — 삭제가 파일까지 미친다."""
+    import base64
+    import system_ai_memory as sam
+    db = tmp_path / "system_ai_memory.db"
+    monkeypatch.setattr(sam, "MEMORY_DB_PATH", db)
+    monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
+    sam.init_memory_db()
+    cid = sam.save_conversation("user", "그림 보냄",
+                                images=[{"base64": base64.b64encode(b"png").decode(),
+                                         "media_type": "image/png"}])
+    img_dir = tmp_path / "system_ai_images"
+    assert cid and any(img_dir.iterdir())
+
+    deleted = sam.clear_conversations()
+    assert deleted["conversations"] == 1 and deleted["images"] == 1
+    assert "images_failed" not in deleted
+    assert not any(img_dir.iterdir())
 
 
 # ---------- ② 해마 귀속 관문 ----------

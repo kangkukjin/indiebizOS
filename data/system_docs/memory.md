@@ -60,7 +60,7 @@ see_also: [architecture.md, ibl.md]
   - 최근 2턴: 원본 유지 (이미지도 최근 턴만 로드)
   - 그 이전 + 500자 초과: `[이전 대화: {첫줄}… ({길이}자)]`로 축약
 - **요약 체크포인트** (2026-08-14, `history_checkpoint.py`): 창 밖으로 밀려난 턴은 경량 AI가 **재귀 요약**해 `history_checkpoints` 테이블(시스템 AI 는 `system_ai_memory.db`, 프로젝트/위임 쌍은 그 `conversations.db`)에 보존하고 히스토리 머리에 주입한다. 저장 깔때기(`save_conversation`/`save_message`)가 SQL 선판정 후 백그라운드로 갱신, 키별 동시 1개.
-- **삭제 의미** (2026-09-02): 대화 삭제 = 원문 + 체크포인트 **한 트랜잭션** (`system_ai_memory.clear_conversations`). 요약만 남기면 지운 대화가 다음 대화 머리에 되살아난다.
+- **삭제 의미** (2026-09-02): 대화 삭제 = 원문 + 체크포인트 **한 트랜잭션** + 대화 이미지 파일(`system_ai_images/`) (`system_ai_memory.clear_conversations`). 요약만 남기면 지운 대화가 다음 대화 머리에 되살아난다. 체크포인트 갱신 스레드는 요약(LLM) 뒤 **IMMEDIATE 잠금 안에서 요약한 행이 아직 있는지 재확인**하고 저장한다 — 요약 도중 삭제가 끼면 버린다(`stale:deleted`).
 
 ## 3. 일화 기억 — 에피소드 로그/요약 (경험·반성의 재료)
 

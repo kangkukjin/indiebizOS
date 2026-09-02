@@ -230,11 +230,16 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
 
 
 def clear_conversations() -> Dict[str, int]:
-    """대화 이력 삭제 — conversations 와 history_checkpoints 를 **한 트랜잭션**으로.
+    """대화 이력 삭제 — conversations + history_checkpoints 를 **한 트랜잭션**으로, 이어서
+    대화 이미지 파일(`system_ai_images/`)까지.
 
     체크포인트는 창 밖으로 밀려난 대화의 재귀 요약이다. 원문만 지우고 요약을 남기면
     삭제한 대화가 다음 대화의 머리에 되살아난다(삭제 의미·사생활 경계 결함, 2026-09-02).
-    삭제 경로는 이 함수 하나 — 표면(API)은 여기만 부른다. 반환=삭제 행수.
+    이미지는 행이 아니라 파일(`_save_images_to_files`)이라 DELETE 가 못 미친다 — 전체 삭제
+    뒤에는 그 폴더의 파일 전부가 주인 없는 잔존물이므로 폴더째 비운다(DB 커밋 뒤 — 파일이
+    먼저 사라지면 실패한 커밋의 행이 빈 파일을 가리킨다). 지우지 못한 파일 수는 숨기지
+    않고 `images_failed` 로 신고한다.
+    삭제 경로는 이 함수 하나 — 표면(API)은 여기만 부른다. 반환=삭제 행수·파일 수.
     """
     conn = _get_connection()
     try:
@@ -248,12 +253,27 @@ def clear_conversations() -> Dict[str, int]:
         if has_ckpt:
             n_ckpt = cur.execute("DELETE FROM history_checkpoints").rowcount
         conn.commit()
-        return {"conversations": n_conv, "checkpoints": n_ckpt}
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
+
+    n_img, n_img_failed = 0, 0
+    images_dir = DATA_PATH / "system_ai_images"
+    if images_dir.is_dir():
+        for f in images_dir.iterdir():
+            if not f.is_file():
+                continue
+            try:
+                f.unlink()
+                n_img += 1
+            except OSError:
+                n_img_failed += 1
+    out = {"conversations": n_conv, "checkpoints": n_ckpt, "images": n_img}
+    if n_img_failed:
+        out["images_failed"] = n_img_failed
+    return out
 
 
 def get_conversation_image_paths(conversation_id: int) -> List[str]:

@@ -552,6 +552,11 @@ class CognitivePipelineMixin:
                 _pair_cursor += 1
                 if _idx is not None:
                     eval_tool_calls[_idx]["result"] = _rt
+                    # 스트리밍 프로바이더(OpenAI 계열)는 tool_start 때 인자가 아직 없어 input={} 로
+                    # 시작한다 — 결과 이벤트가 실어 온 input 으로 채운다(반성 게이트의 셸 읽기 분류·
+                    # 평가자가 빈 인자를 보지 않도록. 2026-09-02 실측: run_command 명령이 '' 로 보였다).
+                    if not eval_tool_calls[_idx].get("input") and isinstance(ev.get("input"), dict) and ev.get("input"):
+                        eval_tool_calls[_idx]["input"] = ev["input"]
                     eval_tool_calls[_idx]["is_error"] = _is_err
                     if _idx < len(tool_calls_log):
                         if not _is_err:
@@ -643,9 +648,10 @@ class CognitivePipelineMixin:
                     _refl_cfg = _load_wp_config().get("execution_reflection", {})
                 except Exception:
                     _refl_cfg = {}
-                # 게이트 (2026-07-21): 짧고·성공했고·읽기만인 궤적은 반성이 재작성 비용만
-                # 낸다(에피소드 806~808 실측 +45~58%). 실패 신호·복잡도·세계 변경 중
-                # 하나라도 있어야 반성 — 판정·사유는 cognitive_trace.should_self_reflect.
+                # 게이트 (2026-07-21, 2026-09-02 개정): 읽기만 한 궤적은 길어도 반성하지 않는다
+                # — 반성이 값을 내는 실패 오해·표류·세계 변경 검증이 읽기 궤적엔 없다(git 상태
+                # 읽기 9회에 반성 5라운드 +60s 실측). 실패 신호·세계 변경·분류 불가 호출이 섞인
+                # 긴 궤적만 반성 — 판정·사유는 cognitive_trace.should_self_reflect.
                 from cognitive_trace import should_self_reflect
                 _do_reflect, _refl_reason = should_self_reflect(
                     eval_tool_calls,

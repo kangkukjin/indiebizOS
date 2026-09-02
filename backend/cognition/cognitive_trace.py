@@ -334,24 +334,109 @@ def _ibl_safety_map() -> dict:
     return _SAFETY_MAP_CACHE
 
 
+# 셸(run_command) 읽기 전용 인식 — 보수적 화이트리스트. 여기 없는 동사·리다이렉트·-i·-delete·xargs 는
+# "분류 불가"(읽기가 아님)로 두어 복잡도 규칙이 잡게 한다. 누락의 방향은 항상 "반성 한 번 더"(안전).
+_SHELL_READ_VERBS = {
+    "ls", "cat", "head", "tail", "grep", "egrep", "fgrep", "rg", "find", "wc", "awk", "echo", "printf",
+    "pwd", "which", "stat", "file", "du", "df", "ps", "whoami", "date", "uname", "sort", "uniq", "cut",
+    "tr", "jq", "tree", "true", "cd", "type", "env", "printenv", "basename", "dirname", "realpath",
+    "md5", "shasum", "diff", "cmp", "column", "nl", "od", "xxd", "strings", "sqlite3",
+}
+_GIT_READ_SUBCMDS = {"status", "log", "diff", "show", "branch", "rev-parse", "ls-files", "remote",
+                     "describe", "blame", "shortlog", "tag", "config", "reflog", "cat-file", "grep",
+                     "rev-list", "name-rev", "check-ignore", "count-objects", "ls-tree", "whatchanged"}
+_SHELL_SPLIT_RE = re.compile(r'\|\||&&|;|\|')
+_SHELL_NOT_READ_RE = re.compile(r'(^|[^>])>(?!&2)|\bxargs\b|\s-i\b|\s-delete\b|\s-exec\b|\s-ok\b|`|\$\(')
+
+
+def shell_command_is_read_only(command: str) -> bool:
+    """셸 명령이 *알려진 읽기 동사만으로* 이뤄졌는가. 불확실하면 False(분류 불가).
+
+    파이프 각 단계·&&/;/|| 각 구간의 첫 동사(환경변수 대입 건너뜀)가 읽기 동사여야 한다.
+    git 은 읽기 하위명령만. 리다이렉트(>)·xargs·sed/find 의 -i/-delete/-exec·명령 치환은 False.
+    sqlite3 는 SELECT/.schema/.tables 류만 읽기 — 안에 insert/update/delete/drop/create 가 있으면 False."""
+    cmd = (command or "").strip()
+    if not cmd:
+        return False
+    if _SHELL_NOT_READ_RE.search(cmd):
+        return False
+    for seg in _SHELL_SPLIT_RE.split(cmd):
+        toks = seg.strip().split()
+        while toks and re.match(r'^[A-Za-z_][A-Za-z0-9_]*=', toks[0]):
+            toks = toks[1:]
+        if not toks:
+            return False
+        verb = toks[0].rsplit("/", 1)[-1]
+        if verb == "git":
+            sub = next((t for t in toks[1:] if not t.startswith("-")), "")
+            if sub not in _GIT_READ_SUBCMDS:
+                return False
+            continue
+        if verb == "sed":
+            if "-n" not in toks[1:]:
+                return False
+            continue
+        if verb == "sqlite3":
+            low = seg.lower()
+            if re.search(r'\b(insert|update|delete|drop|create|alter|replace|vacuum|pragma\s+\w+\s*=)\b', low):
+                return False
+            continue
+        if verb not in _SHELL_READ_VERBS:
+            return False
+    return True
+
+
+def _classify_call(tc: dict, safety: dict):
+    """도구 호출 1건 → ("read"|"write"|"unknown", 사유). 실패 판정은 호출자가 먼저 한다."""
+    name = str(tc.get("name", ""))
+    base_name = name.rsplit("__", 1)[-1]  # mcp__indiebizos__execute_ibl → execute_ibl
+    inp = tc.get("input") if isinstance(tc.get("input"), dict) else {}
+    if base_name in _FILE_WRITE_TOOL_NAMES:
+        return "write", f"파일 변경 ({base_name})"
+    if base_name == "execute_ibl":
+        code = str(inp.get("code", ""))
+        actions = _IBL_ACTION_RE.findall(code)
+        if not actions:
+            return "unknown", f"IBL 액션 없음 ({name})"
+        for node, action in actions:
+            # 안전지도에 없거나(미등록) safe=False → 부작용 취급 (보수적)
+            if not safety.get((node, action), False):
+                return "write", f"부작용 액션 ([{node}:{action}])"
+        return "read", ""
+    if base_name == "run_command":
+        cmd = str(inp.get("command", ""))
+        if shell_command_is_read_only(cmd):
+            return "read", ""
+        return "unknown", f"셸 분류 불가 ({cmd[:40]!r})"
+    if base_name in _READ_ONLY_TOOL_NAMES:
+        return "read", ""
+    return "unknown", f"미분류 도구 ({base_name})"
+
+
+# 읽기만 하는 하네스 도구(파일·검색·스키마 로더) — 궤적 분류용.
+_READ_ONLY_TOOL_NAMES = {"Read", "Grep", "Glob", "LS", "ToolSearch", "WebSearch", "WebFetch",
+                         "read_file", "search_files", "list_directory", "get_current_time"}
+
+
 def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool, str]:
     """자기반성 턴을 돌릴 가치가 있는 궤적인가 → (돌릴지, 사유).
 
     반성 조건(하나라도): ①실패 신호(is_error·결과 내 실패 마커·빈 결과)
-    ②궤적 복잡도(호출 수 ≥ min_tool_calls) ③세계 변경(파일 쓰기 도구,
-    또는 IBL 코드에 부작용 액션 — ibl_safety 안전지도 파생, 미등록=보수적 변경 취급).
-    셋 다 아니면 스킵 — 짧고 성공한 읽기 궤적.
+    ②세계 변경(파일 쓰기 도구, 또는 IBL 부작용 액션 — ibl_safety 안전지도 파생, 미등록=보수적 변경 취급)
+    ③궤적 복잡도(호출 수 ≥ min_tool_calls) — 단, **읽기만 한 궤적은 제외**(2026-09-02 사용자 판정):
+      모든 호출이 읽기(안전지도 safe 액션·읽기 셸 동사·읽기 도구)로 분류되고 실패가 없으면 길어도 스킵.
+      분류 불가 호출(미지 셸 동사·미분류 도구)이 섞인 긴 궤적만 복잡도로 잡는다.
+    실측 근거: git 상태 확인 턴이 읽기 9회로 반성 5라운드(+60s)를 더 돌았다 — 반성이 값을 내는
+    (a) 실패 오해 (b) 표류 (c) 세계 변경 검증 중 어느 것도 읽기 궤적엔 없다.
     """
     n = len(tool_calls or [])
-    if n >= min_tool_calls:
-        return True, f"궤적 복잡도 (도구 {n}회 ≥ {min_tool_calls})"
-
     safety = _ibl_safety_map()
+    unknown = []
     for tc in (tool_calls or []):
         if not isinstance(tc, dict):
             continue
         name = str(tc.get("name", ""))
-        base_name = name.rsplit("__", 1)[-1]  # mcp__indiebizos__execute_ibl → execute_ibl
+        base_name = name.rsplit("__", 1)[-1]
         result = tc.get("result", "")
         if tc.get("is_error"):
             return True, f"도구 오류 ({name})"
@@ -361,18 +446,17 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
             return True, f"빈 결과 ({name}) — 빈 껍데기 오해 위험"
         if _RESULT_FAILURE_RE.search(str(result)):
             return True, f"결과 내 실패 신호 ({name})"
-        if base_name in _FILE_WRITE_TOOL_NAMES:
-            return True, f"파일 변경 ({base_name})"
-        if base_name == "execute_ibl":
-            code = ""
-            if isinstance(tc.get("input"), dict):
-                code = str(tc["input"].get("code", ""))
-            for node, action in _IBL_ACTION_RE.findall(code):
-                # 안전지도에 없거나(미등록) safe=False → 부작용 취급 (보수적)
-                if not safety.get((node, action), False):
-                    return True, f"부작용 액션 ([{node}:{action}])"
+        kind, why = _classify_call(tc, safety)
+        if kind == "write":
+            return True, why
+        if kind == "unknown":
+            unknown.append(why)
 
-    return False, f"짧고 성공한 읽기 궤적 (도구 {n}회, 실패·변경 없음)"
+    if unknown and n >= min_tool_calls:
+        return True, f"궤적 복잡도 (도구 {n}회 ≥ {min_tool_calls}, 분류 불가 {len(unknown)}회: {unknown[0]})"
+    if not unknown:
+        return False, f"읽기만 한 궤적 (도구 {n}회, 실패·변경 없음)"
+    return False, f"짧고 성공한 궤적 (도구 {n}회, 분류 불가 {len(unknown)}회 < 복잡도 하한)"
 
 
 # ============================================================

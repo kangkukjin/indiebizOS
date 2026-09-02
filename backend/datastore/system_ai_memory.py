@@ -229,6 +229,33 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     return conversation_id
 
 
+def clear_conversations() -> Dict[str, int]:
+    """대화 이력 삭제 — conversations 와 history_checkpoints 를 **한 트랜잭션**으로.
+
+    체크포인트는 창 밖으로 밀려난 대화의 재귀 요약이다. 원문만 지우고 요약을 남기면
+    삭제한 대화가 다음 대화의 머리에 되살아난다(삭제 의미·사생활 경계 결함, 2026-09-02).
+    삭제 경로는 이 함수 하나 — 표면(API)은 여기만 부른다. 반환=삭제 행수.
+    """
+    conn = _get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("BEGIN IMMEDIATE")
+        n_conv = cur.execute("DELETE FROM conversations").rowcount
+        n_ckpt = 0
+        has_ckpt = cur.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='history_checkpoints'"
+        ).fetchone()
+        if has_ckpt:
+            n_ckpt = cur.execute("DELETE FROM history_checkpoints").rowcount
+        conn.commit()
+        return {"conversations": n_conv, "checkpoints": n_ckpt}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 def get_conversation_image_paths(conversation_id: int) -> List[str]:
     """대화 한 건의 첨부 이미지 **절대 경로** 목록. 없으면 빈 목록.
 

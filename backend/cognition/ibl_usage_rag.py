@@ -567,6 +567,7 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
 
     # execute_ibl 호출들의 성공 여부 집계 (하나라도 실패하면 실패로 귀속)
     ibl_success = None
+    ibl_codes = []
     for tc in tool_calls:
         if not isinstance(tc, dict):
             continue
@@ -574,9 +575,19 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
             continue
         s = bool(tc.get("success", True))
         ibl_success = s if ibl_success is None else (ibl_success and s)
+        code = (tc.get("input") or {}).get("code", "")
+        if code:
+            ibl_codes.append(code)
 
     if ibl_success is None:
         return False  # IBL 실행이 없었으면 귀속 불가
+
+    # ★귀속 관문(2026-09-02): 회상 top-1 의 액션이 실행에 실제로 등장했을 때만 귀속.
+    #   증류 쪽(distill_experience)은 이미 이 관문을 썼는데 귀속 쪽만 없어서, 표면 어휘만
+    #   닮은 고점수 회상이 전혀 안 쓰인 턴의 성공/실패까지 흡수했다 — 잘못된 강화·감쇠.
+    if not _recall_was_used(top_code, ibl_codes):
+        print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score:.2f}): {top_code[:50]}")
+        return False
 
     elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
     tokens = turn_tokens if (ibl_success and turn_tokens and turn_tokens > 0) else None

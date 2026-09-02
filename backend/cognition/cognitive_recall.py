@@ -237,10 +237,12 @@ class CognitiveRecallMixin:
             # 전문 조회 (preview는 100자 잘림이므로)
             items = []
             for r in results:
-                # last_seen은 read()가 used_at을 now로 갱신하기 전 값(search 결과)에서 취한다.
                 # 마지막으로 확인된(사용되거나 만들어진) 날짜 — 에이전트가 낡음을 스스로 판단하도록.
+                # ★touch=False: 자동 회상은 used_at 을 올리지 않는다(2026-09-02). 검색에 걸린 것과
+                #   쓰인 것은 다르다 — 자동 조회가 used_at 을 갱신하면 오검색 기억이 LRU 를 영원히
+                #   피한다. 명시 읽기·증류 SAME/UPDATE 만 used_at 을 올린다.
                 last_seen = (r.get("used_at") or r.get("created_at") or "")[:10]
-                full = memory_db.read(project_path, agent_id, r["id"])
+                full = memory_db.read(project_path, agent_id, r["id"], touch=False)
                 if full:
                     cat = full.get("category", "")
                     kw = full.get("keywords", "")

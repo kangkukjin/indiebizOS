@@ -529,8 +529,15 @@ def search(project_path: str, agent_id: str,
     return [by_id[mid] for mid in sorted_ids if mid in by_id]
 
 
-def read(project_path: str, agent_id: str, memory_id: int) -> Optional[Dict]:
-    """메모리 전문 조회 + used_at 갱신"""
+def read(project_path: str, agent_id: str, memory_id: int,
+         touch: bool = True) -> Optional[Dict]:
+    """메모리 전문 조회. touch=True(기본) 면 used_at 갱신.
+
+    ★touch=False = 자동 회상(프롬프트 주입) 전용(2026-09-02). used_at 은 '쓰였다'의
+    기록이지 '검색에 걸렸다'의 기록이 아니다 — 자동 조회가 used_at 을 올리면 오검색된
+    기억이 LRU 가지치기를 영원히 피한다(회상 자석). 명시 읽기([self:memory] read)·
+    증류 SAME/UPDATE 만 used_at 을 올린다.
+    """
     conn = get_db(project_path, agent_id)
     try:
         row = conn.execute(
@@ -539,12 +546,12 @@ def read(project_path: str, agent_id: str, memory_id: int) -> Optional[Dict]:
         if not row:
             return None
 
-        now = datetime.now().isoformat()
-        conn.execute("UPDATE memories SET used_at = ? WHERE id = ?", (now, memory_id))
-        conn.commit()
-
         result = dict(row)
-        result['used_at'] = now
+        if touch:
+            now = datetime.now().isoformat()
+            conn.execute("UPDATE memories SET used_at = ? WHERE id = ?", (now, memory_id))
+            conn.commit()
+            result['used_at'] = now
         return result
     finally:
         conn.close()

@@ -1320,18 +1320,13 @@ async def get_conversations_by_date(date: str):
 
 @router.delete("/system-ai/conversations")
 async def clear_conversations():
-    """시스템 AI 대화 이력 삭제"""
-    import sqlite3
-    from system_ai_memory import MEMORY_DB_PATH
+    """시스템 AI 대화 이력 삭제 — 원문(conversations)+요약 체크포인트를 함께 지운다.
 
-    conn = sqlite3.connect(str(MEMORY_DB_PATH), timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM conversations")
-    conn.commit()
-    conn.close()
-
-    return {"status": "cleared"}
+    삭제 의미는 datastore(`system_ai_memory.clear_conversations`) 한 곳이 소유한다.
+    """
+    import system_ai_memory
+    deleted = system_ai_memory.clear_conversations()
+    return {"status": "cleared", "deleted": deleted}
 
 
 # ============ 프롬프트 설정 API ============

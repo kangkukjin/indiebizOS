@@ -64,6 +64,18 @@
       "newspaper",
       "report"
     ],
+    "scripts": [
+      "arxiv최신피드.py",
+      "github저장소메타.py",
+      "json원장.py",
+      "나레이션생성.py",
+      "보고서HTML.py",
+      "샘플_폴더용량.py",
+      "수리적용상태.py",
+      "에피소드통계.py",
+      "음성받아쓰기.py",
+      "잔여추정.py"
+    ],
     "vocab_fragments": [
       "engines.yaml",
       "limbs.yaml",
@@ -81,6 +93,7 @@
     "packages.tools": [],
     "packages.extensions": [],
     "instruments": [],
+    "scripts": [],
     "vocab_fragments": []
   }
 }

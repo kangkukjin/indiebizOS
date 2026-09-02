@@ -156,6 +156,8 @@ data/showcase_stage/
 # 목소리 복제 레퍼런스(생체정보) — ★이 저장소는 public 이다. 8초짜리 깨끗한 샘플 하나면
 # 누구나 목소리를 복제할 수 있다(voice_narration.md). 절대 커밋 금지 — 로컬에만 둔다.
 data/voice/
+# 개인 명사 관문 목록(check_private_nouns.py) — 이름 자체가 저장소에 들어오면 관문의 목적이 무너진다
+data/private_nouns.txt
 # 공유창고 동영상 트랜스코드 캐시(파생물 — 원본은 공유창고/에)
 data/warehouse_media_web/
 !data/guide_db.json

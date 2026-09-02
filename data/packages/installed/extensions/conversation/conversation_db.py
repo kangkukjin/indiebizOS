@@ -2,7 +2,7 @@
 대화 히스토리 데이터베이스 관리 모듈 (새 스키마)
 
 구조:
-- agents: 주체들 (kukjin + AI 에이전트들)
+- agents: 주체들 (user + AI 에이전트들)
 - neighbors: 각 agent의 이웃들 (my_agent_id 기준)
 - messages: from_agent_id → to_agent_id (단방향)
 """
@@ -18,6 +18,10 @@ from contextlib import contextmanager
 HISTORY_LIMIT_USER = 5       # 사용자 ↔ 에이전트 대화 히스토리
 HISTORY_LIMIT_AGENT = 4      # 에이전트 ↔ 에이전트 내부 메시지 히스토리
 # ========================================================
+
+
+# 이 몸을 쓰는 사람 에이전트의 자리 이름 — 사람의 실명은 코드에 두지 않는다.
+DEFAULT_HUMAN_AGENT = "user"
 
 
 class ConversationDB:
@@ -115,10 +119,18 @@ class ConversationDB:
                 )
             ''')
 
-            # 기본 사용자 생성 (kukjin)
-            cursor.execute('''
-                INSERT OR IGNORE INTO agents (name, type) VALUES ('kukjin', 'human')
-            ''')
+            # 기본 사용자(사람) — 이름은 몸의 명사가 아니라 *자리*다(DEFAULT_HUMAN_AGENT).
+            # 사람 에이전트가 이미 있으면 그가 이 몸의 사용자다: 옛 DB 는 사람 이름으로
+            # 등록돼 있었으므로 자리 이름으로 정규화한다(이름이 코드에 남지 않게).
+            human = cursor.execute(
+                "SELECT id, name FROM agents WHERE type='human' ORDER BY id LIMIT 1").fetchone()
+            if human is None:
+                cursor.execute("INSERT INTO agents (name, type) VALUES (?, 'human')", (DEFAULT_HUMAN_AGENT,))
+            elif human[1] != DEFAULT_HUMAN_AGENT:
+                # name 은 UNIQUE — 자리 이름을 이미 다른 행이 쓰고 있으면 건드리지 않는다
+                taken = cursor.execute("SELECT id FROM agents WHERE name=?", (DEFAULT_HUMAN_AGENT,)).fetchone()
+                if taken is None:
+                    cursor.execute("UPDATE agents SET name=? WHERE id=?", (DEFAULT_HUMAN_AGENT, human[0]))
 
             # ✅ 기존 DB 마이그레이션: delegation_context, parent_task_id 열 추가
             try:
@@ -564,10 +576,10 @@ class ConversationDB:
 if __name__ == "__main__":
     db = ConversationDB()
     
-    # 1. kukjin(1)과 집사(2)의 대화
-    print("=== 예시 1: kukjin → 집사 ===")
+    # 1. user(1)과 집사(2)의 대화
+    print("=== 예시 1: user → 집사 ===")
     db.save_message(
-        from_agent_id=1,  # kukjin
+        from_agent_id=1,  # user
         to_agent_id=2,    # 집사
         content="오늘 할 일 알려줘",
         contact_type='gui'
@@ -575,17 +587,17 @@ if __name__ == "__main__":
     
     db.save_message(
         from_agent_id=2,  # 집사
-        to_agent_id=1,    # kukjin
+        to_agent_id=1,    # user
         content="오늘 회의가 3개 있습니다",
         contact_type='gui'
     )
     
     # 2. 히스토리 조회
-    print("\n=== kukjin과 집사의 대화 ===")
+    print("\n=== user과 집사의 대화 ===")
     history = db.get_conversation_history(agent1_id=1, agent2_id=2)
     for msg in history:
         if msg['from_agent_id'] == 1:
-            print(f"[kukjin] {msg['content']}")
+            print(f"[user] {msg['content']}")
         else:
             print(f"[집사] {msg['content']}")
     

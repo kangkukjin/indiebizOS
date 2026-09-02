@@ -906,7 +906,7 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                   type="text"
                   value={publishDialog.signature}
                   onChange={(e) => setPublishDialog(prev => ({ ...prev, signature: e.target.value }))}
-                  placeholder="예: Made by KukJin"
+                  placeholder="예: Made by 홍길동"
                   className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-gray-800 placeholder:text-gray-400"
                 />
               </div>

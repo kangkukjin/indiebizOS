@@ -471,3 +471,19 @@ if echo "$staged" | grep -qE '^(backend/ibl/.*\.py|data/packages/installed/tools
   fi
   echo "[pre-commit] items 주입 게이트 OK ✓"
 fi
+
+# 개인 명사 관문 (2026-09-02) — 가족·개인의 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히면
+# 빈 몸이 아니라 한 가족 전용 프로그램이 된다. 목록은 data/private_nouns.txt(gitignore, 로컬 전용)라
+# 이름 자체는 저장소에 들어오지 않는다. 어떤 파일이든 스테이지되면 돈다(경로 방아쇠 없음).
+if [ -n "$staged" ]; then
+  echo "[pre-commit] 개인 명사 관문 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_private_nouns.py"; then
+    echo "" >&2
+    echo "[pre-commit] 개인 명사가 몸에 박혔다 — 커밋 차단." >&2
+    echo "[pre-commit]   • 이름을 역할 명사('사용자'·'가족 구성원')나 중립 예시로 바꾸고, 기본값은 데이터(원장)로" >&2
+    echo "[pre-commit]   • 저자 서명·연구 기록처럼 개작이 위조인 문서는 목록의 'allow: <경로>' 로 면제" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 개인 명사 관문 OK ✓"
+fi

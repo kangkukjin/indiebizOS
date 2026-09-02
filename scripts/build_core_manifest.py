@@ -41,18 +41,25 @@ MANIFEST_PATH = REPO_ROOT / "data" / "core_manifest.json"
 
 
 def _git_tracked(subpath: str) -> list[str]:
-    """subpath 아래의 git 추적 파일 목록 (리포 루트 상대경로)."""
+    """subpath 아래의 git 추적 파일 목록 (리포 루트 상대경로).
+
+    ★`-z`(NUL 구분): 기본 출력은 비-ASCII 경로를 8진수 이스케이프+따옴표로 인용한다
+    (core.quotepath). 한글 파일명(등록 스크립트)이 `\\353\\202…py"` 로 매니페스트에
+    들어가 설치 필터가 코어 스크립트 10개를 통째로 뺀 실측(2026-09-02). NFC 로 정규화해
+    맥 파일시스템(NFD)과 대조 가능하게 한다.
+    """
+    import unicodedata
     try:
         out = subprocess.run(
-            ["git", "ls-files", subpath],
+            ["git", "ls-files", "-z", subpath],
             cwd=REPO_ROOT,
             capture_output=True,
-            text=True,
             check=True,
         )
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
-    return [line for line in out.stdout.splitlines() if line.strip()]
+    return [unicodedata.normalize("NFC", x.decode("utf-8", errors="surrogateescape"))
+            for x in out.stdout.split(b"\0") if x.strip()]
 
 
 def _top_level_dirs(tracked: list[str], prefix: str) -> list[str]:
@@ -104,6 +111,47 @@ def _yaml_opted_out(rel_file: str) -> bool:
     return False
 
 
+def _registry_user_scripts(registry: Path | None = None) -> set[str]:
+    """data/scripts/registry.yaml 에서 `origin: user` 를 선언한 항목의 file 이름 집합.
+
+    계기 yaml 의 `origin: user` 와 같은 규약(2026-09-02 개통). 의존성 없이 라인 스캔 —
+    최상위 키(들여쓰기 0, 콜론 종료)가 항목, 그 아래 `file:` 과 `origin:` 을 읽는다.
+    """
+    path = registry or (REPO_ROOT / "data" / "scripts" / "registry.yaml")
+    if not path.is_file():
+        return set()
+    out, cur_file, cur_user = set(), None, False
+
+    def _flush():
+        if cur_file and cur_user:
+            out.add(cur_file)
+
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        if raw and raw[:1] not in (" ", "\t", "#") and raw.rstrip().endswith(":"):
+            _flush()
+            cur_file, cur_user = None, False
+            continue
+        s = raw.strip()
+        if s.startswith("file:"):
+            import unicodedata
+            cur_file = unicodedata.normalize("NFC", s.split(":", 1)[1].strip().strip("'\""))
+        elif s.startswith("origin:"):
+            cur_user = s.split(":", 1)[1].strip().strip("'\"").lower() == "user"
+    _flush()
+    return out
+
+
+def _core_script_files() -> list[str]:
+    """data/scripts/ 의 git 추적 스크립트 파일(registry.yaml 제외) 중 opt-out 안 한 것."""
+    user = _registry_user_scripts()
+    return sorted(
+        Path(f).name
+        for f in _git_tracked("data/scripts")
+        if Path(f).name != "registry.yaml" and not Path(f).name.startswith(".")
+        and Path(f).name not in user
+    )
+
+
 def _core_package_names(kind: str) -> list[str]:
     """installed + not_installed 양쪽의 git 추적 패키지 이름 합집합.
 
@@ -145,9 +193,13 @@ def build_manifest() -> dict:
     if _git_tracked("data/ibl_nodes.yaml"):
         vocab_artifacts.append("ibl_nodes.yaml")
 
+    # 등록 스크립트(절차) — registry.yaml 의 `origin: user` 로 opt-out (2026-09-02)
+    scripts = _core_script_files()
+
     core = {
         "packages": {"tools": tools, "extensions": extensions},
         "instruments": instruments,
+        "scripts": scripts,
         "vocab_fragments": vocab_fragments,
         "vocab_artifacts": vocab_artifacts,
     }
@@ -166,7 +218,7 @@ def build_manifest() -> dict:
 # 2026-09-02: 매니페스트 차집합은 기계 계산이라 오판 시 복구 가능해야 한다).
 # 이름이 다시 코어로 돌아오면 은퇴 목록에서 빠진다.
 
-_RETIRED_KEYS = ("packages.tools", "packages.extensions", "instruments", "vocab_fragments")
+_RETIRED_KEYS = ("packages.tools", "packages.extensions", "instruments", "scripts", "vocab_fragments")
 
 
 def _get_path(d: dict, dotted: str) -> list:
@@ -223,6 +275,7 @@ def main() -> int:
         f"[core-manifest] ✓ 생성: tools {len(core['packages']['tools'])} · "
         f"extensions {len(core['packages']['extensions'])} · "
         f"instruments {len(core['instruments'])} · "
+        f"scripts {len(core['scripts'])} · "
         f"vocab_fragments {len(core['vocab_fragments'])} · "
         f"vocab_artifacts {len(core['vocab_artifacts'])} · "
         f"retired {sum(len(v) for v in manifest['retired'].values())}"

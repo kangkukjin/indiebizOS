@@ -135,7 +135,7 @@ def test_cap_evicts_test_rows_first(tmp_path):
         old_usage = _row(conn, "episode_log", "usage", "데이터")      # 가장 오래된 실사용
         t1 = _row(conn, "episode_log", "test", "test_a")
         t2 = _row(conn, "episode_log", "test", "test_b")
-        new_usage = _row(conn, "episode_log", "usage", "희정")
+        new_usage = _row(conn, "episode_log", "usage", "여행")
         conn.commit()
         conn.close()
         EL.MAX_EPISODES = 2

@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 
 # === 폰↔PC 동기화용 식별자 (business.db 선례 — backend/business_sync.py) ===
 # 정수 rowid 는 기기마다 충돌 → uuid 로 레코드 동일성 판정. 인물은 이름 자연키라 결정적 uuid
-# (양 기기의 "강국진"이 같은 식별자로 수렴 → 중복 인물 방지). 자식 기록은 무작위 uuid.
+# (양 기기의 같은 이름 인물이 같은 식별자로 수렴 → 중복 인물 방지). 자식 기록은 무작위 uuid.
 _SYNC_NS = _uuid.UUID("6f1b2c3d-0000-4000-8000-000000000001")  # business_manager 와 동일 네임스페이스
 
 

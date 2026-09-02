@@ -110,6 +110,8 @@ def _load_manifest_core() -> dict:
         "tools": set(pkgs.get("tools", [])),
         "extensions": set(pkgs.get("extensions", [])),
         "instruments": set(core.get("instruments", [])),
+        # 매니페스트가 아직 scripts 범주를 모르면(옛 판) 제외하지 않는다 — 전부 빼는 사고 방지
+        "scripts": None if core.get("scripts") is None else set(core["scripts"]),
     }
 
 
@@ -139,6 +141,30 @@ def _noncore_instrument_excludes(core: dict) -> list[str]:
     return out
 
 
+def _noncore_script_excludes(core: dict) -> list[str]:
+    """data/scripts/ 의 on-disk 스크립트 중 매니페스트 core.scripts 에 없는 것 → 제외 (2026-09-02).
+
+    registry.yaml 은 항상 실린다(항목 단위로 쪼갤 수 없는 원장) — 빠진 파일의 항목은
+    실행기가 '파일 없음'으로 정직하게 거절한다.
+    """
+    if core.get("scripts") is None:
+        return []
+    import unicodedata
+    nfc = lambda s: unicodedata.normalize("NFC", s)
+    # ★한글 파일명: 맥 파일시스템은 NFD 로 돌려주고 git(매니페스트)은 NFC 다 — 정규화 없이
+    #   비교하면 전부 불일치해 코어 스크립트 10개를 통째로 제외했다(2026-09-02 실측).
+    core_scripts = {nfc(x) for x in core["scripts"]}
+    out = []
+    d = REPO_ROOT / "data" / "scripts"
+    if d.is_dir():
+        for f in sorted(d.iterdir(), key=lambda x: nfc(x.name)):
+            if not f.is_file() or f.name.startswith(".") or f.name == "registry.yaml":
+                continue
+            if nfc(f.name) not in core_scripts:
+                out.append(f"!scripts/{nfc(f.name)}")
+    return out
+
+
 def _generated_block() -> list[str]:
     core = _load_manifest_core()
     block = [GEN_START]
@@ -146,6 +172,7 @@ def _generated_block() -> list[str]:
     block += PERSONAL_STATE_PATTERNS
     block += _noncore_package_excludes(core)
     block += _noncore_instrument_excludes(core)
+    block += _noncore_script_excludes(core)
     block.append(GEN_END)
     return block
 
@@ -196,9 +223,10 @@ def main() -> int:
     gen = _generated_block()
     n_pkg = sum(1 for x in gen if x.startswith("!packages/"))
     n_inst = sum(1 for x in gen if x.startswith("!instruments/"))
+    n_scr = sum(1 for x in gen if x.startswith("!scripts/"))
     print(f"[dist-filter] ✓ 재생성: 크러프트 {len(CRUFT_PATTERNS)} · "
           f"몸 전속 신원·개인 {len(PERSONAL_STATE_PATTERNS)} · "
-          f"비-코어 패키지 제외 {n_pkg} · 비-코어 계기 제외 {n_inst}")
+          f"비-코어 패키지 제외 {n_pkg} · 비-코어 계기 제외 {n_inst} · 비-코어 스크립트 제외 {n_scr}")
     print(f"[dist-filter]   → {PKG_JSON}")
     return 0
 

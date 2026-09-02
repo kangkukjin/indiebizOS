@@ -87,7 +87,7 @@
     "sense:crypto": "[sense:crypto]{symbol: \"BTC\"}",
     "sense:devdocs": "[sense:devdocs]{op: \"resolve\", library_name: \"react\"}",
     "sense:devdocs#search": "[sense:devdocs]{op: \"search\", library_id: \"/reactjs/react.dev\", query: \"useState\"}",
-    "sense:entity": "[sense:entity]{query: \"강국진\"}",
+    "sense:entity": "[sense:entity]{query: \"이순신\"}",
     "sense:entity#detail": "[sense:entity]{op: \"detail\", id: \"Q42\"}",
     "sense:exhibit": "[sense:exhibit]{query: \"미술\"}",
     "sense:feed": "[sense:feed]{url: \"https://www.pewresearch.org/feed/\", limit: 3}",

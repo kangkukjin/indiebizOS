@@ -441,7 +441,7 @@ def _wikidata_resolve(tool_input: dict) -> str:
     """개체 후보 검색 — 동명이인/동음이의를 QID·설명으로 분리."""
     query = tool_input.get("query") or tool_input.get("q") or tool_input.get("name")
     if not query:
-        return {"success": False, "error": "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"강국진\"}", "items": []}
+        return {"success": False, "error": "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"이순신\"}", "items": []}
     lang = (tool_input.get("lang") or "ko").strip()
     limit = int(tool_input.get("limit") or tool_input.get("max_results") or 7)
     try:

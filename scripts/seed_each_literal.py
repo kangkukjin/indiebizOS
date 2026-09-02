@@ -48,7 +48,7 @@ NEW = [
     ("이 URL 세 개 본문을 각각 읽어와",
      '[table:each]{items: [{u: "https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/171986/view"}, {u: "https://gonggam.korea.kr/newsContentView.es?news_id=ec9765ba"}, {u: "https://alphasquare.co.kr/home/insight/posts/5738d338"}], do: "[sense:crawl]{url: \'$it.u\'}"}',
      "table,sense", "research", "팬아웃,리터럴,크롤"),
-    # ── 여행(희정 — 이미 & 로 잘 접던 자리, each 형도 병기) ──
+    # ── 여행(가족 여행 — 이미 & 로 잘 접던 자리, each 형도 병기) ──
     ("수원→춘천, 춘천→속초, 속초→강릉 구간 경로를 각각 알려줘",
      '[table:each]{items: [{o: "수원역", d: "춘천역"}, {o: "춘천역", d: "속초 체스터톤스 호텔"}, {o: "속초 체스터톤스 호텔", d: "강릉 안목해변"}], do: "[sense:navigate_route]{origin: \'$it.o\', destination: \'$it.d\'}"}',
      "table,sense", "travel", "팬아웃,리터럴,경로"),

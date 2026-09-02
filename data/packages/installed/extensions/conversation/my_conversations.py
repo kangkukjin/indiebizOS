@@ -20,7 +20,7 @@ class MyConversations:
     def __init__(self, agent_name: str, agent_type: str = 'ai_agent', db_path: str = None):
         """
         Args:
-            agent_name: 에이전트 이름 (예: 'kukjin', '집사', '코더')
+            agent_name: 에이전트 이름 (예: 'user', '집사', '코더')
             agent_type: 'human' 또는 'ai_agent'
             db_path: DB 경로 (None이면 기본 경로 사용)
         """
@@ -558,20 +558,20 @@ class MyConversations:
 # ==================== 사용 예시 ====================
 
 if __name__ == "__main__":
-    # 1. kukjin의 대화 관리
-    kukjin = MyConversations('kukjin', 'human')
+    # 1. user의 대화 관리
+    user = MyConversations('user', 'human')
     
     # 2. 집사와 대화
-    print("=== kukjin이 집사에게 메시지 보내기 ===")
-    butler_id = kukjin.find_agent_by_name('집사')
-    kukjin.send_message(butler_id, "오늘 할 일 알려줘")
+    print("=== user이 집사에게 메시지 보내기 ===")
+    butler_id = user.find_agent_by_name('집사')
+    user.send_message(butler_id, "오늘 할 일 알려줘")
     
     # 3. 집사의 대화 관리 (독립적)
     butler = MyConversations('집사', 'ai_agent')
     
-    # 집사가 kukjin의 메시지를 확인하고 응답
-    kukjin_id = butler.find_agent_by_name('kukjin')
-    butler.send_message(kukjin_id, "오늘 회의 3개 있습니다: 10시, 14시, 16시")
+    # 집사가 user의 메시지를 확인하고 응답
+    user_id = butler.find_agent_by_name('user')
+    butler.send_message(user_id, "오늘 회의 3개 있습니다: 10시, 14시, 16시")
     
     # 4. 집사가 출판에게 작업 위임
     print("\n=== 집사가 출판에게 작업 위임 ===")
@@ -590,18 +590,18 @@ if __name__ == "__main__":
     )
     
     # 6. 각자의 대화 상대 확인
-    kukjin.print_my_conversations()
+    user.print_my_conversations()
     butler.print_my_conversations()
     publisher.print_my_conversations()
     
     # 7. 각자의 관점에서 대화 히스토리 확인
-    kukjin.print_history_with(butler_id)
-    butler.print_history_with(kukjin_id)
+    user.print_history_with(butler_id)
+    butler.print_history_with(user_id)
     butler.print_history_with(publisher_id)
     
     # 8. AI 프롬프트용 포맷
     print("\n=== 집사가 AI 응답 생성을 위해 히스토리 로드 ===")
-    ai_history = butler.get_history_for_ai(kukjin_id, limit=30)
+    ai_history = butler.get_history_for_ai(user_id, limit=30)
     print(f"로드된 메시지 수: {len(ai_history)}개")
     for msg in ai_history[:3]:  # 처음 3개만 출력
         print(f"  {msg['role']}: {msg['content']}")

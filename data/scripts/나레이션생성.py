@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""내 목소리 나레이션 생성 (Qwen3-TTS 목소리 복제, 콜랩 GPU)
+"""등록된 목소리로 나레이션 생성 (Qwen3-TTS 목소리 복제, 콜랩 GPU)
 
 [self:script]{op:"run", id:"나레이션생성", args:{...}} 로 호출한다.
 
@@ -9,7 +9,7 @@ args (stdin JSON):
                (deck video 가 이 폴더를 먼저 보고, 있으면 TTS 대신 그 파일을 쓴다)
   texts      : {"이름": "문장"} — 임시 문장용. out_dir 과 함께 쓴다.
   out_dir    : texts 모드의 저장 폴더 (기본 outputs/narration)
-  voice      : data/voice/voices.json 의 키 (기본 kkj3)
+  voice      : data/voice/voices.json 의 키·이름·별칭 (기본 = 원장에서 default: true 인 항목)
   gpu        : T4(기본)/L4/A100 — 계정 티어에 따라 가용성 다름
   force      : true 면 이미 있는 wav 도 다시 굽는다 (기본 false)
   speed      : 낭독 속도 배율 (기본 1.0 = 원속도 — 표준). 0.9 면 10% 느리게.
@@ -159,14 +159,56 @@ def retime(path, speed):
     return True
 
 
-def load_voice(key):
+def _ledger():
     meta_path = VOICE_DIR / "voices.json"
     if not meta_path.exists():
         fail(f"목소리 원장이 없습니다: {meta_path}")
-    voices = json.loads(meta_path.read_text(encoding="utf-8"))
-    if key not in voices:
-        fail(f"'{key}' 목소리가 없습니다. 등록된 것: {sorted(voices)}")
-    v = voices[key]
+    return json.loads(meta_path.read_text(encoding="utf-8"))
+
+
+def default_voice():
+    """기본 목소리 키 — 원장에서 `default: true` 인 항목. 기본값은 코드가 아니라 데이터다.
+
+    이 몸을 쓰는 사람이 누구든 스크립트는 같다: 표시가 없고 목소리가 하나뿐이면 그것,
+    여럿인데 표시가 없으면 고르지 않고 거절한다(추측한 기본값은 남의 목소리다).
+    """
+    voices = _ledger()
+    marked = [k for k, v in voices.items() if v.get("default")]
+    if len(marked) == 1:
+        return marked[0]
+    if len(marked) > 1:
+        fail(f"원장에 default 가 여럿입니다: {sorted(marked)} — voices.json 에서 하나만 남기세요.")
+    if len(voices) == 1:
+        return next(iter(voices))
+    fail("기본 목소리가 없습니다 — voices.json 의 한 항목에 \"default\": true 를 표시하거나 voice 를 지정하세요.")
+
+
+def load_voice(key):
+    """원장에서 목소리 해소 — 키 · 이름 · 별칭(aliases) 순 (2026-09-02 별칭 개통).
+
+    별칭은 코드가 아니라 원장(voices.json)의 데이터다 — 사람이 부르는 이름("홍길동")과
+    파일 키("hgd")는 다른 층이고, 부르는 이름이 늘어난다고 코드가 늘면 안 된다.
+    """
+    voices = _ledger()
+
+    def norm(s):
+        return "".join(str(s or "").split()).lower()
+
+    if key in voices:
+        resolved = key
+    else:
+        want = norm(key)
+        hits = [k for k, meta in voices.items()
+                if want and (norm(k) == want or norm(meta.get("name")) == want
+                             or want in [norm(a) for a in (meta.get("aliases") or [])])]
+        if len(hits) > 1:
+            fail(f"'{key}' 가 여러 목소리에 걸립니다: {sorted(hits)} — 키로 지정하세요.")
+        if not hits:
+            known = ", ".join(f"{k}({v.get('name')})" for k, v in sorted(voices.items()))
+            fail(f"'{key}' 목소리가 없습니다. 등록된 것: {known}")
+        resolved = hits[0]
+        print(f"[voice] 별칭 해소: {key} → {resolved}")
+    v = voices[resolved]
     wav = VOICE_DIR / v["audio"]
     if not wav.exists():
         fail(f"레퍼런스 오디오가 없습니다: {wav}")
@@ -213,7 +255,7 @@ def main():
     raw = sys.stdin.read().strip()
     args = json.loads(raw) if raw else {}
 
-    ref_wav, ref_text = load_voice(args.get("voice") or "kkj3")
+    ref_wav, ref_text = load_voice(args.get("voice") or default_voice())
     items, out_dir = collect_jobs(args)
 
     if not items:

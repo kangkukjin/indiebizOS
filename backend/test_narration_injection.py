@@ -11,15 +11,24 @@ from pathlib import Path
 
 # 스크립트형 테스트(모듈 레벨 실행 + sys.exit) — pytest 수집이 임포트만 해도 본문이
 # 돌아버리므로 pytest 아래서는 모듈 단위 스킵. 의존도 로컬 전용이다:
-# 음성 참조 파일(data/voice/kkj.wav, 미추적 개인 데이터)·playwright(requirements-tools).
+# 음성 참조 파일(data/voice/ 원장의 default 항목, 미추적 개인 데이터)·playwright(requirements-tools).
 if __name__ != "__main__":
     import pytest
     pytest.skip("로컬 전용 스크립트 테스트 — .venv/bin/python3 backend/test_narration_injection.py 로 직접 실행",
                 allow_module_level=True)
 
 ROOT = Path(__file__).resolve().parents[1]
-REF = ROOT / "data" / "voice" / "kkj.wav"      # 8.59초짜리 실파일
-REF_SECONDS = 8.59
+def _default_ref() -> Path:
+    """원장(voices.json)에서 default: true 인 목소리의 wav — 개인 파일 이름을 시험에 박지 않는다."""
+    voices = json.loads((ROOT / "data" / "voice" / "voices.json").read_text(encoding="utf-8"))
+    key = next((k for k, v in voices.items() if v.get("default")), next(iter(voices)))
+    return ROOT / "data" / "voice" / voices[key]["audio"]
+
+
+REF = _default_ref()
+import wave as _wave
+with _wave.open(str(REF)) as _w:
+    REF_SECONDS = _w.getnframes() / _w.getframerate()
 fails = []
 
 

@@ -80,9 +80,9 @@ actions:
       id: [qid]
     returns: items
     side_effect: false    # 전 op 읽기 전용
-    fixture: '[sense:entity]{query: "강국진"}'
+    fixture: '[sense:entity]{query: "이순신"}'
     description: 개체 해소·구조화된 사실 (op 분기, Wikidata 지식 그래프). 동명이인·동음이의를 QID로 못박고 속성·사실을 구조화. 일반 인물/뉴스는 search(웹 검색), 국내 연구자는 researcher.
-    target_description: "op로 분기 (기본 resolve).\n- resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 '강국진'=여러 인물). QID는 개체를 못박는 신원자.\n- detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등, 속성:값 records). query만 주면 최상위 후보로 자동 해소.\n"
+    target_description: "op로 분기 (기본 resolve).\n- resolve: query(필수) + lang(기본 ko) + max_results → 후보 개체별 QID·라벨·설명. 동명이인/동음이의 해소(예 '이순신'=여러 인물). QID는 개체를 못박는 신원자.\n- detail: id(QID 예 Q42) 또는 query → 구조화된 속성·사실(출생·직업·소속 등, 속성:값 records). query만 주면 최상위 후보로 자동 해소.\n"
     target_key: op
     group: research
     router: handler
@@ -259,7 +259,7 @@ tool_json:
           description: 지식 그래프. 현재 wikidata(무API키)만 지원.
         query:
           type: string
-          description: '[resolve/detail] 개체명·검색어 (예 "강국진")'
+          description: '[resolve/detail] 개체명·검색어 (예 "이순신")'
         id:
           type: string
           description: '[detail] Wikidata QID (예 Q42). resolve로 먼저 획득.'

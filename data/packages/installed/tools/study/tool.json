@@ -181,7 +181,7 @@
           },
           "query": {
             "type": "string",
-            "description": "[resolve/detail] 개체명·검색어 (예 \"강국진\")"
+            "description": "[resolve/detail] 개체명·검색어 (예 \"이순신\")"
           },
           "id": {
             "type": "string",

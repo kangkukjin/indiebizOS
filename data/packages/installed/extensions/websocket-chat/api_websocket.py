@@ -130,7 +130,7 @@ async def handle_chat_message(client_id: str, data: dict):
         set_current_agent_id(agent_id)
 
         # 대화 DB 및 히스토리 로드
-        my_conv = MyConversations("kukjin", "human")
+        my_conv = MyConversations("user", "human")
         my_conv.db = ConversationDB(str(project_path / "conversations.db"))
 
         # 에이전트를 이웃으로 찾기
@@ -169,7 +169,7 @@ async def handle_chat_message(client_id: str, data: dict):
         try:
             my_conv.db.create_task(
                 task_id=task_id,
-                requester="kukjin@gui",
+                requester="user@gui",
                 requester_channel="gui",
                 original_request=message,
                 delegated_to=agent_name,
@@ -185,9 +185,9 @@ async def handle_chat_message(client_id: str, data: dict):
         # AI 응답 생성 (task_id를 직접 전달하여 스레드 간 공유)
         response = ai_agent.process_message_with_history(
             message_content=message,
-            from_email="kukjin@gui",
+            from_email="user@gui",
             history=history,
-            reply_to="kukjin@gui",
+            reply_to="user@gui",
             task_id=task_id,  # 스레드 간 전달을 위해 직접 전달
             images=images  # 이미지 데이터 전달
         )

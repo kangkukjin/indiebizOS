@@ -9,7 +9,8 @@
 순서대로 소비한다. 성공=행 삭제, 실패=attempts·last_error 기록 후 재시도(상한 3회 →
 failed 로 남김), 종료=drain(유한 대기, 남은 행은 pending 그대로), 부팅=resume(이전
 프로세스의 pending/running 행을 러너를 다시 찾아 재개 — 못 찾으면 orphaned 로 신고).
-워커 하나 = 경량 프로바이더 원샷 잠금(_oneshot_call_lock)을 두고 증류끼리 다투지 않는다.
+워커 하나 = 경량 프로바이더 원샷 잠금(_oneshot_call_lock)을 두고 증류끼리 다투지 않고, 워커는
+배경으로 표식돼 전경(분류기)이 기다리면 다음 잡기에서 양보한다.
 
 층: cognition. 러너 해소는 system AI(system_ai_core 싱글턴)·프로젝트(agent_registry)만 —
 그 밖의 키는 orphaned(침묵 폐기 금지).
@@ -116,6 +117,12 @@ class DistillQueue:
     # ---------- 소비 ----------
 
     def _loop(self):
+        # 이 스레드의 원샷 호출은 배경 — 전경(다음 턴 분류기 등)이 기다리면 다음 잡기에서 양보.
+        try:
+            from consciousness_agent import mark_oneshot_background
+            mark_oneshot_background(True)
+        except Exception as e:
+            print(f"[증류큐] 배경 표식 실패 (무시 — 선착순으로 동작): {e}")
         while True:
             try:
                 job = self._q.get(timeout=1.0)

@@ -528,8 +528,70 @@ _lightweight_provider_initialized = False
 # 원샷 호출 직렬화 — oneshot_ai_call 이 공유 프로바이더의 system_prompt 를 임시 교체하는
 # 방식이라, 백그라운드 증류(_after_response_async)와 다음 턴 분류가 겹치면 프롬프트가 교차
 # 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 호출은 수 초라 직렬화 비용은 미미.
+#
+# ★전경 우선(2026-09-02): 평범한 Lock 은 선착순이라, 증류 워커가 원샷을 연달아 잡으면
+# 다음 턴의 분류기(전경 — 사용자가 기다리는 왕복)가 그 뒤에 줄을 섰다. 잠금은 하나의
+# 호출을 원자화할 뿐이므로 진행 중인 호출은 끝까지 가되, **다음 잡기**에서는 전경 대기자가
+# 있으면 배경(증류 워커 스레드)이 양보한다. 배경 판정은 스레드 표식(mark_oneshot_background)
+# — 이름 냄새가 아니라 워커가 스스로 선언한다.
 import threading as _threading
-_oneshot_call_lock = _threading.Lock()
+from contextlib import contextmanager as _contextmanager
+
+_bg_local = _threading.local()
+
+
+def mark_oneshot_background(flag: bool = True) -> None:
+    """이 스레드의 원샷 호출을 배경(저우선)으로 선언 — 증류 워커가 시작 시 1회."""
+    _bg_local.background = bool(flag)
+
+
+def is_oneshot_background() -> bool:
+    return bool(getattr(_bg_local, "background", False))
+
+
+class _PriorityLock:
+    """전경 우선 뮤텍스 — 배경은 전경 대기자가 없을 때만 잡는다(진행 중 호출은 선점 안 함)."""
+
+    def __init__(self):
+        self._cond = _threading.Condition()
+        self._held = False
+        self._fg_waiting = 0
+        self._bg_waiting = 0
+        self.bg_yields = 0   # 전경이 대기 중인 배경을 앞질러 잡은 횟수(관찰용 — 게이트 아님)
+
+    def acquire(self, background: bool = False) -> None:
+        with self._cond:
+            if background:
+                self._bg_waiting += 1
+            else:
+                self._fg_waiting += 1
+            try:
+                while self._held or (background and self._fg_waiting > 0):
+                    self._cond.wait()
+                self._held = True
+                if not background and self._bg_waiting > 0:
+                    self.bg_yields += 1
+            finally:
+                if background:
+                    self._bg_waiting -= 1
+                else:
+                    self._fg_waiting -= 1
+
+    def release(self) -> None:
+        with self._cond:
+            self._held = False
+            self._cond.notify_all()
+
+    @_contextmanager
+    def held(self, background: bool = False):
+        self.acquire(background=background)
+        try:
+            yield
+        finally:
+            self.release()
+
+
+_oneshot_call_lock = _PriorityLock()
 
 # 직전 원샷 호출의 **실패 범주** (2026-09-01) — 반환은 문자열 하나뿐이라 "왜 실패했나"가
 # 실릴 자리가 없다. 프로바이더가 값으로 말한 범주(base.last_failure_kind)를 호출한
@@ -804,7 +866,7 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
 
     # ★직렬화: system_prompt 임시 교체가 공유 싱글턴 변이라 동시 호출 시 프롬프트 교차 오염
     # (백그라운드 증류 스레드 + 메인 턴 분류가 같은 provider 를 만짐). 락으로 스왑~복원을 원자화.
-    with _oneshot_call_lock:
+    with _oneshot_call_lock.held(background=is_oneshot_background()):
         # 시스템 프롬프트 임시 교체
         original_system_prompt = None
         if system_prompt is not None:

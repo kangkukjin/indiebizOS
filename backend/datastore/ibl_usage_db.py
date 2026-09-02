@@ -62,6 +62,48 @@ class UsageExample:
 
 
 # =============================================================================
+# 구문 검증자 슬롯 — 층 계약 역전 (2026-09-02)
+# =============================================================================
+# 원장 문 앞에서 "이게 IBL 로 파싱되나"를 물어야 하는데, 파서는 ibl 층에 살고
+# datastore -> ibl 은 상향 간선이라 여기서 import 할 수 없다(층 가드 BASELINE 신규
+# 추가 금지). 그래서 검사를 *주입*으로 받는다 — 조립 뿌리 boot_paths 가 모든 진입점의
+# 첫 import 에서 검증자(ibl_param_vocab.code_syntax_error, 지연 import)를 이 슬롯에 꽂는다.
+#
+# ★슬롯이 비면 쓰기를 거절한다(RuntimeError). 비었을 때 통과시키면 이 관문은
+#   '등록을 잊으면 조용히 사라지는 관문'이 되고, 그건 관문이 아니라 주석이다.
+#   pre-commit 훅의 "게이트 고장이 곧 무검사가 된다"와 같은 결 — fail-closed.
+#
+# 왜 문에 두나(2026-09-02 실측): 기록기(ibl_usage_rag) 한 곳에만 두면 원장의 다른
+# 살아있는 기록기(package_manager -> ibl_usage_generator 의 패키지 설치 시 자동 생성)가
+# 무관문으로 남는다. 그건 관문이 아니라 '지금 내용이 마침 안전한 상태'다.
+_CODE_VALIDATOR = None
+
+
+def set_code_validator(fn) -> None:
+    """구문 검증자 등록 — fn(ibl_code) -> 사유 문자열 | None(유효).
+
+    등록처: boot_paths.wire_ledger_syntax_gate — 단 한 곳. 진입점(api·스크립트·conftest)이
+    `import boot_paths` 하는 순간 배선된다. 시험은 이 함수로 가짜 검증자를 꽂을 수 있다.
+    """
+    global _CODE_VALIDATOR
+    _CODE_VALIDATOR = fn
+
+
+def _syntax_reason(ibl_code: str) -> Optional[str]:
+    """구문 사유 한 줄 (유효하면 None). 미등록이면 예외 — fail-closed."""
+    if _CODE_VALIDATOR is None:
+        raise RuntimeError(
+            "[IBL Usage DB] 구문 검증자 미등록 — 원장 쓰기 거부(fail-closed). "
+            "진입점이 `import boot_paths` 를 거쳤는지 확인할 것(배선처=boot_paths.wire_ledger_syntax_gate)."
+        )
+    try:
+        return _CODE_VALIDATOR(ibl_code)
+    except Exception as e:
+        # 검증자 자체가 고장 = 검증 불가 = 거절. 침묵 통과는 관문의 자살.
+        return f"검증자 예외: {e.__class__.__name__}: {e}"
+
+
+# =============================================================================
 # IBLUsageDB 클래스
 # =============================================================================
 
@@ -424,10 +466,15 @@ class IBLUsageDB:
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
                     avg_tokens: float = -1.0) -> int:
-        """용례 추가 (임베딩 자동 생성). Returns: example ID (남의 어휘로 거부되면 0)
+        """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
         첫 관측으로 심는다. 미측정(-1)이면 이후 Reflex 귀속이 채운다."""
+        _syn = _syntax_reason(ibl_code)
+        if _syn:
+            logger.warning(f"[IBL Usage DB] 파싱 불가 용례 거부(입구 구문-게이트): "
+                           f"{_syn} / {ibl_code[:100]}")
+            return 0
         if self._is_foreign_vocab(ibl_code):
             logger.warning(f"[IBL Usage DB] 남의 어휘 용례 거부(입구 소유-게이트): {ibl_code}")
             return 0
@@ -453,10 +500,22 @@ class IBLUsageDB:
 
         Args:
             examples: [{intent, ibl_code, nodes?, category?, difficulty?, source?, tags?}]
-        Returns: 추가된 수 (남의 어휘 용례는 입구 소유-게이트가 걸러 제외)
+        Returns: 추가된 수 (파싱 불가·남의 어휘 용례는 입구 게이트가 걸러 제외)
         """
         if not examples:
             return 0
+
+        bad = [(ex['ibl_code'], _syntax_reason(ex['ibl_code'])) for ex in examples]
+        bad = [(c, r) for c, r in bad if r]
+        if bad:
+            logger.warning(
+                f"[IBL Usage DB] 파싱 불가 용례 {len(bad)}건 거부(입구 구문-게이트): "
+                + "; ".join(f"{r} / {c[:60]}" for c, r in bad[:5])
+                + (" …" if len(bad) > 5 else ""))
+            _badset = {c for c, _ in bad}
+            examples = [ex for ex in examples if ex['ibl_code'] not in _badset]
+            if not examples:
+                return 0
 
         dropped = [ex['ibl_code'] for ex in examples if self._is_foreign_vocab(ex['ibl_code'])]
         if dropped:

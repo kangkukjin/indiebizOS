@@ -27,3 +27,30 @@ def install() -> None:
 
 
 install()
+
+
+def wire_ledger_syntax_gate() -> None:
+    """해마 원장 문(ibl_usage_db)에 구문 검증자를 꽂는다 — 조립 뿌리(composition root)의 배선.
+
+    왜 여기인가(2026-09-02): 원장(datastore)은 파서(ibl 층)를 import 할 수 없고(상향 간선),
+    파서 쪽 자기등록은 '누군가 ibl_param_vocab 을 먼저 import 했는가'에 매달려 진입점마다
+    한 줄씩 손으로 심어야 했다 — 스크립트 32개에 전개하고도 패키지 설치 경로·프로비전·
+    수리 스크립트가 샜다(실측). 규칙은 파생본에 전개하지 않는다: 모든 진입점이 이미
+    지나는 이 모듈 한 곳이 배선처다. 층 가드는 boot_paths 를 부트스트랩으로 면제한다.
+
+    지연 배선: 검증자 본체(ibl_param_vocab)는 첫 원장 쓰기 때 import 된다 — 부트 비용 0.
+    파서가 없는 몸이면 검증자가 예외를 내고 원장이 쓰기를 거절한다(fail-closed 유지).
+    """
+    try:
+        import ibl_usage_db
+    except Exception:
+        return  # 원장이 없는 몸이면 꽂을 문도 없다
+
+    def _validator(ibl_code: str):
+        from ibl_param_vocab import code_syntax_error
+        return code_syntax_error(ibl_code)
+
+    ibl_usage_db.set_code_validator(_validator)
+
+
+wire_ledger_syntax_gate()

@@ -24,6 +24,7 @@ scripts/build_ibl_nodes.py 의 코퍼스 param 정합 검사와 같은 수 — �
 import ast
 import difflib
 import json
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -429,6 +430,67 @@ def check_code_params(code: str) -> List[dict]:
             issues.append({"action": f"{node}:{action}", **w})
     return issues
 
+
+# === 구문 관문 (해마 적재 전 정규화·거부, 2026-09-02) ===
+
+_FENCE_RE = re.compile(r"^\s*```[a-zA-Z]*\s*\n(.*?)\n?\s*```\s*$", re.S)
+
+
+def normalize_corpus_code(code: str) -> str:
+    """모델이 씨운 *명백한* 포장만 벗긴다 (해마 적재 전 정규화).
+
+    벗기는 것은 둘뿐 — 마크다운 코드펜스와 {"code": "..."} JSON 봉투.
+    둘 다 '이건 IBL 이 아니다'가 자명한 포장이라 추측이 없다. 산문 접두·번호매김처럼
+    어디까지가 코드인지 사람이 정해야 하는 것은 벗기지 않는다 — 그건 정규화가 아니라
+    창작이고, 창작된 용례는 해마가 영구히 재생산한다. 그런 입력은 code_syntax_error 가
+    거절하는 것이 정직하다.
+    """
+    s = (code or "").strip()
+    m = _FENCE_RE.match(s)
+    if m:
+        s = m.group(1).strip()
+    # {"intent": ..., "code": "[...]"} 가 통째로 code 칸에 들어온 부류(2026-09-02 실측 id 4374):
+    # 반성기가 JSON 을 이중으로 감싸면 바깥은 정상 파싱돼 안쪽 봉투가 코드로 저장된다.
+    if s.startswith("{") and '"code"' in s:
+        try:
+            obj = json.loads(s)
+            inner = obj.get("code") if isinstance(obj, dict) else None
+            if isinstance(inner, str) and inner.strip():
+                s = inner.strip()
+        except Exception:
+            pass
+    return s
+
+
+def code_syntax_error(code: str) -> Optional[str]:
+    """이 코드가 IBL 로 파싱되나 — 안 되면 사유 한 줄, 되면 None.
+
+    ★해마 적재의 구문 관문. 이 모듈·증류 경로의 다른 검사들(어휘 소유·액션 실존·인자)는
+    전부 `[node:action]` 정규식 수준이라, IBL 이 아닌 문자열이라도 그 안에 액션 모양이
+    들어 있으면 다 통과시킨다 — 실측(2026-09-02): JSON 봉투가 통째로 code 칸에 들어온 행이
+    code_is_own·액션 실존·check_code_params 셋을 전부 통과했다. '파싱되나'를 묻는 곳이
+    한 군데도 없었던 것이 그 행이 원장에 들어온 이유다.
+
+    check_code_params 가 파싱 실패에 [] 를 돌려주는 것과 헷갈리지 말 것 — 그건
+    '인자 문제 없음'이지 '유효한 코드'가 아니다. 순서상 이 관문이 먼저다.
+    """
+    s = (code or "").strip()
+    if not s:
+        return "빈 코드"
+    try:
+        from ibl_parser import parse
+        parse(s)
+        return None
+    except Exception as e:
+        first = str(e).splitlines()[0] if str(e) else e.__class__.__name__
+        return first[:200]
+
+
+
+# 등록처는 여기가 아니다 — 원장 문(ibl_usage_db)의 구문 검증자 슬롯에 code_syntax_error 를
+# 꽂는 배선은 조립 뿌리 boot_paths.wire_ledger_syntax_gate 가 맡는다(2026-09-02).
+# 이 모듈이 자기등록하면 '누가 먼저 import 했는가'에 관문이 매달려 진입점마다 한 줄을
+# 손으로 심어야 했고, 그 스윕은 샜다. 모든 진입점이 지나는 한 곳에서만 배선한다.
 
 # === 마찰 로그 (결정화 감지기 신호 D) ===
 

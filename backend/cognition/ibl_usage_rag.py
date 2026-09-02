@@ -814,6 +814,19 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 print(f"[경험증류] 재사용 IBL 패턴 없음 — 증류 스킵: \"{user_message[:40]}\"")
             return False
 
+        # 구문 관문 (2026-09-02): 포장을 벗기고, 그래도 IBL 로 파싱 안 되면 적재하지 않는다.
+        # ★이 관문이 없어서 반성기가 JSON 을 이중으로 감싼 출력이 그대로 code 칸에 박혔고
+        #   (실측 id 4374), 아래 게이트들은 전부 정규식 수준이라 그걸 통과시켰다 —
+        #   그 행 하나가 pre-commit 코퍼스 검사를 막아 저장소 전체의 커밋을 세웠다.
+        #   순서가 중요하다: 아래 인자 게이트(check_code_params)는 파싱 실패를 [] 로
+        #   돌려주므로, 구문은 반드시 그보다 먼저 묻는다.
+        from ibl_param_vocab import normalize_corpus_code, code_syntax_error
+        code = normalize_corpus_code(code)
+        _syntax_err = code_syntax_error(code)
+        if _syntax_err:
+            print(f"[경험증류] 파싱 불가 — 증류 스킵: {_syntax_err} / {code[:80]}")
+            return False
+
         # 합성 접지 게이트: 실행에 없던 >>·&·; 합성(거짓 관용구)은 코퍼스에 못 들어온다.
         # 규칙 3 의 기계판 — 반성기가 별개 호출들을 파이프로 봉합한 경우 여기서 잡힌다.
         if not _composition_grounded(code, ibl_calls):
@@ -871,6 +884,14 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
         )
 
+        # 원장의 판정을 존중한다 (2026-09-02): add_example 은 입구 게이트에 걸리면 0 을
+        # 돌려준다. 예전엔 그 반환값을 안 보고 학습 파일에는 그대로 append 해서, DB 가
+        # 거부한 코드가 ibl_distilled.json 에만 남아 두 원장이 어긋났다 — 빌드의 코퍼스
+        # 검사는 파일 쪽도 읽으므로 거부당한 코드가 계속 커밋을 막는다.
+        if not example_id:
+            print(f"[경험증류] 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
+            return False
+
         # 학습용 JSON 파일에 누적 (재학습 시 기존 데이터와 합쳐서 사용)
         from pathlib import Path
         import json as _json
@@ -879,8 +900,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
             existing.append({"intent": intent, "ibl_code": code})
             distilled_path.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            # 두 원장 어긋남의 형제 — DB 엔 들어갔는데 학습 파일에 못 남았으면 침묵이 아니라 소리.
+            print(f"[경험증류] 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
 
         # RAG 캐시 무효화
         rag = IBLUsageRAG()

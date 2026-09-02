@@ -26,6 +26,7 @@ import hashlib
 import logging
 import sqlite3
 import threading
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
@@ -579,7 +580,7 @@ def add_source(name: str, path: str = "", text: str = "", title: str = "") -> Di
         src_title = (title or "").strip() or auto_title or src_path
         mtime = 0.0
     elif path and str(path).strip():
-        src_path = os.path.abspath(os.path.expanduser(str(path).strip()))
+        src_path = os.path.abspath(expand_body_path(str(path).strip()))
         if not os.path.isfile(src_path):
             return {"success": False, "error": f"파일이 없습니다: {src_path}"}
         paras, err = extract_file(src_path)

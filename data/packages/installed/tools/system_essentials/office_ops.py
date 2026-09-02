@@ -8,6 +8,7 @@ _get_path 는 여기가 정의처 — handler 가 별칭으로 재수출(다른 
 import os
 import re
 import json
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from pathlib import Path
 
 def _get_path(tool_input: dict) -> str:
@@ -15,7 +16,7 @@ def _get_path(tool_input: dict) -> str:
     expanduser 는 '~' 없는 절대/상대 경로엔 무영향이라 기존 동작은 불변이다.
     ('~/...' 가 project_path 아래로 잘못 붙어 파일을 못 찾던 버그 방지 — read/write/edit 공통)"""
     raw = tool_input.get("file_path") or tool_input.get("path") or tool_input.get("target") or ""
-    return os.path.expanduser(raw) if raw else raw
+    return expand_body_path(raw) if raw else raw
 
 
 def _truthy(v) -> bool:

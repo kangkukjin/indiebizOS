@@ -9,6 +9,7 @@ import hashlib
 import os
 import re
 import time
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from typing import Dict, Optional
 
 from common.value_semantics import dumps_public_result
@@ -192,7 +193,7 @@ def _resolve_files_from(files, files_from):
     for p in files_from:
         if not isinstance(p, str) or not p.strip():
             return merged, f"files_from 항목이 경로 문자열이 아닙니다: {p!r}"
-        path = os.path.expanduser(p.strip())
+        path = expand_body_path(p.strip())
         if not os.path.isfile(path):
             return merged, f"files_from 파일이 없습니다: {path}"
         try:

@@ -10,6 +10,7 @@ import sqlite3
 import subprocess
 import threading
 import unicodedata
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from pathlib import Path
@@ -173,7 +174,7 @@ def list_scans() -> Dict:
 
 def create_scan(root_path: str, name: Optional[str] = None) -> Dict:
     """새 스캔 생성"""
-    root_path = os.path.expanduser(root_path)
+    root_path = expand_body_path(root_path)
     root_path = os.path.abspath(root_path)
     root_path = _normalize_path(root_path)
 
@@ -296,7 +297,7 @@ def update_scan_stats(scan_id: int, file_count: int, total_size: int):
 
 def scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None) -> Dict:
     """디렉토리 스캔하여 파일 메타데이터 수집"""
-    path = os.path.expanduser(path)
+    path = expand_body_path(path)
     path = os.path.abspath(path)
     path = _normalize_path(path)
 
@@ -411,7 +412,7 @@ def get_summary_all() -> Dict:
 
 def get_summary(root_path: str) -> Dict:
     """스캔 요약 정보"""
-    root_path = _normalize_path(os.path.abspath(os.path.expanduser(root_path)))
+    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
 
     # 스캔 찾기
     scans = _load_scans_json()
@@ -467,7 +468,7 @@ def get_summary(root_path: str) -> Dict:
 
 def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
     """폴더에 주석 추가"""
-    root_path = _normalize_path(os.path.abspath(os.path.expanduser(root_path)))
+    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
 
     # 스캔 찾기
     scans = _load_scans_json()
@@ -530,7 +531,7 @@ def get_annotations_all() -> Dict:
 
 def get_annotations(root_path: str) -> Dict:
     """폴더 주석 조회"""
-    root_path = _normalize_path(os.path.abspath(os.path.expanduser(root_path)))
+    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
 
     # 스캔 찾기
     scans = _load_scans_json()

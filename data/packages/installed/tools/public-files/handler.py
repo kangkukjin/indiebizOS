@@ -23,6 +23,7 @@ _BACKEND = str(_ROOT / "backend")
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
 from common.currency import items  # IBL 단일 통화 생성자
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 _DATA_DIR = _ROOT / "data"
 _STATE_PATH = _DATA_DIR / "showcase_state.json"
@@ -76,7 +77,7 @@ def _canon(path: str) -> str:
     if not path:
         return ""
     try:
-        return str(Path(path).expanduser().resolve())
+        return str(Path(expand_body_path(path)).resolve())
     except Exception:
         return str(path).strip()
 
@@ -196,7 +197,7 @@ def _sc_add(params: dict) -> str:
     path = (params.get("path") or "").strip()
     if not path:
         return json.dumps(items([], success=False, message="폴더 경로가 필요합니다."), ensure_ascii=False)
-    p = Path(path).expanduser()
+    p = Path(expand_body_path(path))
     if not p.is_dir():
         return json.dumps(items([], success=False, message=f"폴더가 아닙니다: {path}"), ensure_ascii=False)
     path = _canon(path)

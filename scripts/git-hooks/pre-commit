@@ -487,3 +487,18 @@ if [ -n "$staged" ]; then
   fi
   echo "[pre-commit] 개인 명사 관문 OK ✓"
 fi
+
+# 경로 펼침 단일 해소점 (2026-09-02 언어 개정 A안) — IBL 표면이 경로 값을 expanduser 로 직접 펼치면
+# `~workspace/` 토큰이 그 자리에서만 조용히 안 먹는다. 정본 = runtime_utils.expand_body_path 하나.
+if echo "$staged" | grep -qE '^(backend/ibl/.*\.py|backend/cognition/system_tools_ibl\.py|data/packages/installed/tools/.*\.py|scripts/check_body_path_expansion\.py)$'; then
+  echo "[pre-commit] 경로 펼침 단일 해소점 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_body_path_expansion.py"; then
+    echo "" >&2
+    echo "[pre-commit] 경로를 직접 펼치는 자리 — 커밋 차단." >&2
+    echo "[pre-commit]   • os.path.expanduser / Path(...).expanduser() → runtime_utils.expand_body_path" >&2
+    echo "[pre-commit]   • 정당한 예외는 그 줄에 \`# path-ok: <사유>\`" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 경로 펼침 단일 해소점 OK ✓"
+fi

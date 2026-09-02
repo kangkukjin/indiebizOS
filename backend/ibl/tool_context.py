@@ -17,6 +17,7 @@ ToolContext는 디스패처(ibl_routing._route_handler)가 항상 주입한다.
 from __future__ import annotations
 
 import os
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from typing import Optional
 
 
@@ -102,7 +103,7 @@ class ToolContext:
         redirected = False
         if not raw:
             raw = f"{stem}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
-        raw = os.path.expanduser(raw)
+        raw = expand_body_path(raw)
 
         path = os.path.join(self.project_path, raw)
         note = ""
@@ -141,7 +142,8 @@ class ToolContext:
         return None
 
     def resolve_path(self, path: str) -> str:
-        """상대경로면 project_path 기준 절대경로로, 절대경로면 그대로."""
+        """`~workspace/…`·`~` 를 펼친 뒤, 상대경로면 project_path 기준 절대경로로, 절대경로면 그대로."""
+        path = expand_body_path(path)
         if os.path.isabs(path):
             return path
         return os.path.abspath(os.path.join(self.project_path, path))

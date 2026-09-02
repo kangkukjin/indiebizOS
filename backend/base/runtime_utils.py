@@ -12,6 +12,31 @@ import platform
 from pathlib import Path
 
 
+# 경로 값의 몸 기준 토큰 (2026-09-02 언어 개정, 사용자 판정 A안). ibl.md 'scope' 표의 workspace
+# (= get_base_path(): 저장소 루트 / 배포판 userData)를 경로 *값* 안에서 가리키는 유일한 표기.
+# `$…` 는 IBL 변수라 못 쓰고, `~` 는 사람의 홈이라 몸의 기준과 다르다.
+WORKSPACE_TOKEN = "~workspace"
+
+
+def expand_body_path(raw) -> str:
+    """경로 값 펼침의 **단일 해소점** — IBL 표면(엔진·system_tools·패키지)의 모든 경로 파라미터는
+    os.path.expanduser 대신 이 함수를 지난다(scripts/check_body_path_expansion.py 가 집행).
+
+      `~workspace/outputs/x` → <get_base_path()>/outputs/x   (몸의 기준 — 설치 위치 독립)
+      `~/x`                  → <홈>/x                         (종전 규약 그대로)
+      절대·상대 경로          → 불변 (상대 경로의 기준은 호출자가 정한다: 보통 project_path)
+
+    왜: 보고서 가이드·정기보고 계기의 폴더가 `/Users/<계정>/…` 로 박혀 있었고, 시스템 프로젝트
+    루트(projects/system)로는 <repo>/outputs/ 에 닿을 수 없어 계정명 없는 표기가 없었다.
+    """
+    s = str(raw or "")
+    if s == WORKSPACE_TOKEN or s.startswith(WORKSPACE_TOKEN + "/") or s.startswith(WORKSPACE_TOKEN + "\\"):
+        rest = s[len(WORKSPACE_TOKEN):].lstrip("/\\")
+        base = get_base_path()
+        return str(base / rest) if rest else str(base)
+    return os.path.expanduser(s)  # path-ok: 단일 해소점 자신
+
+
 def get_base_path() -> Path:
     """
     IndieBiz OS 기본 경로 반환

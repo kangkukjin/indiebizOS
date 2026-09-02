@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 _TIMEOUT_S = 20
 _DEFAULT_DAYS = 7
@@ -132,7 +133,7 @@ def _scope_of(tool_input, root):
     raw = (tool_input.get("path") or "").strip()
     if not raw:
         return None, None
-    p = os.path.expanduser(raw)
+    p = expand_body_path(raw)
     if os.path.isabs(p):
         rel = os.path.relpath(p, root)
         if rel.startswith(".."):
@@ -588,7 +589,7 @@ def _norm_commit_paths(tool_input, root):
                       '예: [self:body]{op: "commit", message: "수리 요지", paths: ["backend/x.py"]}')
     out = []
     for s in cleaned:
-        q = os.path.expanduser(s)
+        q = expand_body_path(s)
         rel = os.path.relpath(q, root) if os.path.isabs(q) else s
         rel = rel.rstrip("/").replace(os.sep, "/")
         if rel.startswith(".."):

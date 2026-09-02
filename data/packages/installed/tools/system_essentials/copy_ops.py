@@ -11,6 +11,7 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). "몇 장을 어디에 저�
 """
 import json
 import os
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 try:   # 통화 되읽기 정본(B19-2) — 모든 소비자가 같은 눈으로 읽는다
     from common.currency import coerce_items_payload as _coerce_items, currency_shape_note as _shape_note
@@ -70,7 +71,7 @@ def copy_piped_items(tool_input: dict, dest: str, project_path: str, path_guard)
         # "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다(is_error_result 규약).
         return "입력 0행 — 복사할 파일이 없습니다 (0개 저장, 빈손). 앞 단계가 0행을 냈습니다."
 
-    dst_dir = os.path.join(project_path, os.path.expanduser(dest))
+    dst_dir = os.path.join(project_path, expand_body_path(dest))
     scope_err = path_guard(dst_dir, project_path)
     if scope_err:
         return scope_err

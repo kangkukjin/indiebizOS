@@ -7,6 +7,7 @@ ibl_exec_output.py — 출력 핸들러 (gui/open/clipboard/download) + 파이�
 import os
 import re
 import json
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -234,7 +235,7 @@ def _output_download(url: str, params: dict, project_path: str) -> Any:
     # 절대/~ 는 그대로, 상대 경로는 프로젝트 기준(write 와 동일 규약).
     raw_path = params.get("path")
     if raw_path:
-        save_path = os.path.expanduser(str(raw_path))
+        save_path = expand_body_path(str(raw_path))
         if not os.path.isabs(save_path):
             save_path = os.path.join(project_path or ".", save_path)
         os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)

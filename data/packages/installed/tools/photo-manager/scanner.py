@@ -6,6 +6,7 @@ EXIF 추출, MD5 해시 계산, 메타데이터 수집
 import os
 import hashlib
 import subprocess
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -214,7 +215,7 @@ def scan_media(path: str, scan_id: int, progress_callback=None) -> Dict:
     """
     import photo_db
 
-    path = os.path.expanduser(path)
+    path = expand_body_path(path)
     path = os.path.abspath(path)
 
     if not os.path.exists(path):
@@ -346,7 +347,7 @@ def quick_scan(path: str) -> Dict:
     Returns:
         파일 개수 및 예상 스캔 시간
     """
-    path = os.path.expanduser(path)
+    path = expand_body_path(path)
     path = os.path.abspath(path)
 
     if not os.path.exists(path):

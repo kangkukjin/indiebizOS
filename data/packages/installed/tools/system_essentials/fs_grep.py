@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import time
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 # fs_find.FIND_DEADLINE_S 와 동일 값 (엔진 타임아웃 전에 부분결과라도 반환)
 _DEADLINE_S = 25.0
@@ -219,7 +220,7 @@ def run(tool_input: dict, project_path: str) -> str:
     # 검색 루트: path > root_path > project_path (glob_files 와 동일 규칙).
     # ★과거엔 root_path 만 읽어 src 가 광고하는 path 가 조용히 무시됐다(param 불일치 버그).
     raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
-    expanded = os.path.expanduser(raw_root)
+    expanded = expand_body_path(raw_root)
     root = expanded if os.path.isabs(expanded) else os.path.join(project_path, expanded)
     # ★존재하지 않는 경로 = 판정 불능(2026-08-21, ep1357): rg 도 파이썬 glob 도 없는 루트에서
     # 조용히 0건을 내 "패턴이 안 잡힘"과 "경로 자체가 없음"이 구분되지 않았다 — 시스템 AI 가

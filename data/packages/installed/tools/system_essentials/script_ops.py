@@ -42,6 +42,7 @@ from pathlib import Path
 import yaml
 
 from common import platform_utils  # OS 이식성 단일 소스(분리 실행·생존 판정)
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _SCRIPT_DIR = _ROOT / "data" / "scripts"           # 본문 (추적)
@@ -100,7 +101,7 @@ def _args_from_file(path_str):
     `{op, path, items}` 모양의 dict 를 stdin 으로 받기로 한 규약).
     반환: (dict|None, 에러 문자열|None)
     """
-    p = Path(str(path_str)).expanduser()
+    p = Path(expand_body_path(str(path_str)))
     if not p.is_absolute():
         p = (_ROOT / p)
     if not p.is_file():

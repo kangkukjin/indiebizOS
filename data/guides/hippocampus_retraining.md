@@ -53,7 +53,7 @@ cp -R data/models/ibl_embedding "data/models/ibl_embedding.bak.$(date +%Y%m%d_%H
 | 옛 맥에어 | OOM(batch 4→2 강제) — 클라우드 경로가 이때 생겼다 |
 
 ```bash
-cd ~/Desktop/AI/indiebizOS
+cd "$INDIEBIZ_BASE_PATH"
 nohup python3 backend/ibl_embedding_trainer.py > /tmp/retrain.log 2>&1 &
 ```
 

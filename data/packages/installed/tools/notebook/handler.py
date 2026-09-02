@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import json
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
@@ -46,7 +47,7 @@ def _op_add(tool_input: dict, context) -> str:
     # 동일)대로 **프로젝트 기준**, 없으면 저장소 루트 폴백. 옛 동작은 backend cwd 기준이라
     # 같은 문장 안에서 write(프로젝트)와 add(cwd)의 기준이 갈려 예측 불가였다(14회차 I9 실측).
     if path and not core.is_url(path):
-        expanded = os.path.expanduser(path)
+        expanded = expand_body_path(path)
         if not os.path.isabs(expanded):
             repo_root = os.environ.get("INDIEBIZ_ROOT") or os.path.abspath(
                 os.path.join(CURRENT_DIR, "..", "..", "..", "..", ".."))

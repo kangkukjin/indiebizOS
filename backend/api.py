@@ -57,6 +57,9 @@ BACKEND_PATH = Path(__file__).parent
 # 프로덕션에서는 Electron이 INDIEBIZ_BASE_PATH를 사용자 데이터 폴더로 지정
 # 개발 모드에서는 기존처럼 backend의 상위 폴더 사용
 BASE_PATH = Path(os.environ.get("INDIEBIZ_BASE_PATH", str(BACKEND_PATH.parent)))
+# 셸 표면(가이드 run_command·등록 스크립트·자식 프로세스)이 같은 기준을 보게 env 로 수출한다 —
+# IBL 경로 값의 `~workspace/` 와 셸의 `$INDIEBIZ_BASE_PATH` 는 같은 것(get_base_path)을 가리킨다.
+os.environ.setdefault("INDIEBIZ_BASE_PATH", str(BASE_PATH))
 DATA_PATH = BASE_PATH / "data"
 DATA_PATH.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(BACKEND_PATH))

@@ -10,6 +10,7 @@ import sys
 import shutil
 import re
 import json
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from common.platform_utils import find_binary, install_hint, open_url
@@ -81,7 +82,7 @@ def download_youtube_music(url: str, filename: str = "output.mp3", mode: str = "
             filename = os.path.join(_tmpdir, "track.mp3")
         else:
             # 동적으로 Desktop 경로 설정 (크로스 플랫폼 지원)
-            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            desktop_path = os.path.join(expand_body_path("~"), "Desktop")
             if not os.path.isabs(filename):
                 filename = os.path.join(desktop_path, filename)
             if not filename.endswith('.mp3'):

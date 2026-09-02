@@ -20,6 +20,7 @@ _BACKEND_DIR = os.path.abspath(os.path.join(CURRENT_DIR, *([".."] * 5), "backend
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 import file_index  # noqa: E402
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 # photo_db/scanner = 맥 풍부창(REST)·폴백 스캔 전용. 폰 질의 경로는 file_index 만 쓰므로
 # import 실패해도 무상태 질의는 동작하도록 guard (폰 import 안전).
@@ -49,7 +50,7 @@ def _resolve_scan_path(params: Dict[str, Any]) -> str:
     scans = result.get("scans", []) if result.get("success") else []
 
     if path:
-        expanded = os.path.abspath(os.path.expanduser(path))
+        expanded = os.path.abspath(expand_body_path(path))
         # 스캔된 경로와 정확히 매칭?
         for scan in scans:
             if scan["root_path"] == expanded:
@@ -159,7 +160,7 @@ def _query_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     # 단일 파일 상세 (옛 detail 대체 — id 대신 경로가 곧 신원).
     one = params.get("file") or params.get("media_path")
     if one and source not in ("usb", "phone_usb", "android"):
-        one = os.path.abspath(os.path.expanduser(one))
+        one = os.path.abspath(expand_body_path(one))
         if not os.path.isfile(one):
             return {"success": False, "error": f"파일이 없습니다: {one}"}
         item = file_index.describe(one, facets=_PHOTO_FACETS)
@@ -258,7 +259,7 @@ def _photo_detail(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "error": f"media_id는 정수여야 합니다: {media_id}"}
     root_path = params.get("path")
     if root_path:
-        root_path = os.path.abspath(os.path.expanduser(root_path))
+        root_path = os.path.abspath(expand_body_path(root_path))
     return photo_db.get_media_detail(media_id, root_path=root_path)
 
 
@@ -268,7 +269,7 @@ def scan_photos(params: Dict[str, Any]) -> Dict[str, Any]:
     if not path:
         return {"success": False, "error": "경로를 지정해주세요."}
 
-    path = os.path.expanduser(path)
+    path = expand_body_path(path)
     path = os.path.abspath(path)
 
     if not os.path.exists(path):
@@ -406,7 +407,7 @@ def find_duplicates(params: Dict[str, Any]) -> Dict[str, Any]:
     if not path:
         return {"success": False, "error": "경로를 지정해주세요."}
 
-    path = os.path.expanduser(path)
+    path = expand_body_path(path)
     path = os.path.abspath(path)
 
     result = photo_db.get_duplicates(path)

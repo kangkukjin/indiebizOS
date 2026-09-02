@@ -113,7 +113,7 @@ def execute(tool_input: dict, context):
         return _my_action(tool_input, context)
     return {"success": False, "error": f"알 수 없는 도구: {name}"}
 ```
-> `context`는 `ToolContext`(backend/ibl/tool_context.py): `tool_name`, `project_path`(절대경로), `project_id`, `agent_id`, `task_id` + `output_dir()`, `resolve_path()`. 산출물은 `context.output_dir()` 아래에 쓴다.
+> `context`는 `ToolContext`(backend/ibl/tool_context.py): `tool_name`, `project_path`(절대경로), `project_id`, `agent_id`, `task_id` + `output_dir()`, `resolve_path()`. 산출물은 `context.output_dir()` 아래에 쓴다. 경로 파라미터를 직접 펼치지 말 것 — `context.resolve_path()` 또는 `runtime_utils.expand_body_path`(`~workspace/`·`~` 단일 해소점, pre-commit 관문)를 지난다.
 
 ### 도구 정의 — `ibl_actions.yaml` 의 `tool_json:` 블록 템플릿
 ```yaml

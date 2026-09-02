@@ -17,12 +17,13 @@ import os
 import re
 import json
 import sqlite3
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from typing import Dict, List, Any, Optional, Iterator
 
 # vault 위치 — 환경변수로 덮어쓸 수 있음
 VAULT_DIR = os.environ.get(
     "IREPUBLIC_VAULT_DIR",
-    os.path.expanduser("~/Documents/iRepublic-Vault"),
+    expand_body_path("~/Documents/iRepublic-Vault"),
 )
 
 BLOG_URL = "https://irepublic.tistory.com"

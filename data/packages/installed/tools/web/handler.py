@@ -10,6 +10,7 @@ import sys
 import difflib
 import webbrowser
 import importlib.util
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
 from urllib.parse import quote_plus
 from pathlib import Path
@@ -405,7 +406,7 @@ def _load_perspective_core() -> str:
     mtime 캐시. 없으면 빈 문자열 → 뉴스가치-only 폴백(신문은 항상 나옴).
     경로는 PERSPECTIVE_CORE_PATH 환경변수로 재지정 가능(이식성)."""
     global _PERSPECTIVE_CACHE
-    path = os.environ.get("PERSPECTIVE_CORE_PATH") or os.path.expanduser(
+    path = os.environ.get("PERSPECTIVE_CORE_PATH") or expand_body_path(
         "~/Documents/iRepublic-Vault/위키/관점 코어.md")
     try:
         mtime = os.path.getmtime(path)

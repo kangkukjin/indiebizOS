@@ -22,6 +22,7 @@ import re
 import sqlite3
 import threading
 import unicodedata
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
@@ -49,7 +50,7 @@ except ImportError:                     # 미설치여도 파일명 폴백으로
 
 def norm_path(p: str) -> str:
     """macOS NFD → NFC 정규화 + 절대경로 (photo_db 선례 — 한글 경로 비교 필수)."""
-    return unicodedata.normalize("NFC", os.path.abspath(os.path.expanduser(str(p or ""))))
+    return unicodedata.normalize("NFC", os.path.abspath(expand_body_path(str(p or ""))))
 
 
 def _now_iso() -> str:

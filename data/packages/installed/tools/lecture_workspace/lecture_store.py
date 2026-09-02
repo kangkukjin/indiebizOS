@@ -54,6 +54,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 
 DECK_SCHEMA_VERSION = 1
@@ -636,7 +637,7 @@ def _detect_material_type(filename: str) -> str:
 
 def add_material_from_file(lecture_id: str, source_path: str) -> dict:
     """외부 파일을 materials/로 복사."""
-    src = Path(source_path).expanduser().resolve()
+    src = Path(expand_body_path(source_path)).resolve()
     if not src.exists():
         raise FileNotFoundError(f"원본 파일이 없습니다: {source_path}")
     md = materials_dir(lecture_id)

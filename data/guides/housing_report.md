@@ -12,7 +12,7 @@
 
 ## 0. 저장·DB·배포·실행 규약 (예외 없음)
 
-- **고정 폴더** `~/Desktop/AI/indiebizOS/outputs/housing_reports/` · **보고서 파일명** `housing_report_YYYY-MM-DD_<오늘의 지역>.md`(날짜 우선 순서 불변 — 사전순=시간순이 §2-3과 정기보고 앱의 전제. 지역명은 H1 제목과 같은 짧은 표기).
+- **고정 폴더** `~workspace/outputs/housing_reports/` · **보고서 파일명** `housing_report_YYYY-MM-DD_<오늘의 지역>.md`(날짜 우선 순서 불변 — 사전순=시간순이 §2-3과 정기보고 앱의 전제. 지역명은 H1 제목과 같은 짧은 표기).
 - **DB** `db/rotation.json`(순회 큐·커서, §2-2) · `db/regions/<슬러그>.json`(지역당 파일 하나 — 프로필·판정·방문 이력·발굴 매물 전부, §4). **보조** `_report_config.json`(예산·선호, §2-1) · `_thesis.md`(연구 노트, §2-4) · `_coverage_ledger.json`(심층 코너 주제 롤링, §3-4) · `_scan_log.json`(순회 불가 날, §5-1).
 - **배포 = 로컬 md 누적 + 공유창고 누적 등재.** 매 호 HTML을 `공유창고/0/부동산 보고서/부동산 보고서 <YYYY-MM-DD> <지역>.html`로 **새 파일로 쌓는다**(덮어쓰기 금지 — 호마다 지역이 달라 어제 호를 오늘 호가 대체할 수 없다. 파일명 고정, 사용자 지시 08-12). 렌더의 유일한 통로는 등록 스크립트 **`보고서HTML`**(어제 HTML 스타일 베끼기·`/tmp` 즉석 변환기 금지). 공유판 머리글에 예산 수치 등 탐색 조건 상세를 싣지 않는다. `/r/` 공개면 발행은 하지 않는다.
 - **저장·검증은 IBL 액션으로**, 셸은 IBL 등가물이 없는 일에만. JSON 갱신은 **`json원장`**(파이썬 원라이너·히어독·손 문자열 치환 금지). **`json원장` 규약 셋**: ①`set`은 `target` 필수 — target 없는 set은 파일 전체를 갈아치우므로 거절된다(08-31: `{op:"set", key:"explore_first"}` 한 줄이 순회 원장을 105B로 덮었다. `key`는 upsert의 것) ②지역·순회 upsert엔 `enum_fields: {verdict: ["미판정","관심","보류","기각"]}` ③커버리지 append엔 `list_limits`.

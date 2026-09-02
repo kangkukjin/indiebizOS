@@ -65,6 +65,7 @@ def get_state_paths(project_path: str, agent_id: str = None) -> dict:
 # 위험한 명령어 패턴 (정규식, 사용자 승인 필요)
 # 단어 경계(\b)를 사용하여 'add'에서 'dd'가 매칭되는 등의 오탐 방지
 import re
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 DANGEROUS_PATTERNS_RE = [
     # 파일 삭제/수정
@@ -787,7 +788,7 @@ def execute(tool_input: dict, context) -> str:
             return _office.fill_op(tool_input, project_path)
 
         elif tool_name == "list_directory":
-            dir_path = os.path.join(project_path, os.path.expanduser(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
+            dir_path = os.path.join(project_path, expand_body_path(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
             items = os.listdir(dir_path)
             text = "\n".join(items)
             # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
@@ -868,7 +869,7 @@ def execute(tool_input: dict, context) -> str:
             # - 상대경로: project_path 기준
             # - 미지정: project_path
             raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
-            expanded = os.path.expanduser(raw_root)
+            expanded = expand_body_path(raw_root)
             if os.path.isabs(expanded):
                 root = expanded
             else:
@@ -1082,8 +1083,8 @@ def execute(tool_input: dict, context) -> str:
                     tool_input, _dst, project_path, _validate_path_in_scope)
             if not _src or not _dst:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
-            src = os.path.join(project_path, os.path.expanduser(_src))
-            dst = os.path.join(project_path, os.path.expanduser(_dst))
+            src = os.path.join(project_path, expand_body_path(_src))
+            dst = os.path.join(project_path, expand_body_path(_dst))
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
@@ -1142,8 +1143,8 @@ def execute(tool_input: dict, context) -> str:
             _dst = tool_input.get("dest") or tool_input.get("destination")
             if not _src or not _dst:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
-            src = os.path.join(project_path, os.path.expanduser(_src))
-            dst = os.path.join(project_path, os.path.expanduser(_dst))
+            src = os.path.join(project_path, expand_body_path(_src))
+            dst = os.path.join(project_path, expand_body_path(_dst))
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
@@ -1207,7 +1208,7 @@ def execute(tool_input: dict, context) -> str:
             return f"이동 완료: {os.path.abspath(dst)}"
 
         elif tool_name == "delete_path":
-            target = os.path.join(project_path, os.path.expanduser(tool_input["path"]))
+            target = os.path.join(project_path, expand_body_path(tool_input["path"]))
             scope_err = _validate_path_in_scope(target, project_path)
             if scope_err:
                 return scope_err
@@ -1251,7 +1252,7 @@ def execute(tool_input: dict, context) -> str:
             raw_path = _get_path(tool_input)
             if not raw_path:
                 return json.dumps({"success": False, "error": "폴더 경로(path)가 지정되지 않았습니다."}, ensure_ascii=False)
-            target = os.path.join(project_path, os.path.expanduser(raw_path))
+            target = os.path.join(project_path, expand_body_path(raw_path))
             scope_err = _validate_path_in_scope(target, project_path)
             if scope_err:
                 return scope_err

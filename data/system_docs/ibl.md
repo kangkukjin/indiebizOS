@@ -775,6 +775,15 @@ steps:
 | `workspace` | 인스턴스 전체에 걸친 데이터 | `get_base_path()` (indiebizOS 루트 / userData) | `self:lecture_list`, `self:lecture_open` — `outputs/lectures/` |
 | `system` | indiebizOS 자체 작업 | `get_base_path()` | 설정·패키지 관리 등 (향후 권한 모델 분리 예정) |
 
+**경로 값의 몸 기준 토큰 `~workspace/`** (2026-09-02 언어 개정, 사용자 판정 A안): 경로 *파라미터 값* 안에서
+위 표의 workspace(`get_base_path()`)를 가리키는 유일한 표기 — `[self:file_find]{path: "~workspace/outputs/ai_trend_reports"}`.
+`~` 는 사람의 홈, `$…` 는 IBL 변수라 몸의 기준을 적을 표기가 없었고, 시스템 프로젝트 루트(`projects/system`)로는
+상대 경로가 `<workspace>/outputs/` 에 닿지 못해 가이드·계기가 `/Users/<계정>/…` 를 박고 있었다(개인 명사 관문이 적발).
+펼침은 **단일 해소점** `runtime_utils.expand_body_path` 하나 — IBL 표면(엔진·system_tools·패키지 도구)의 경로 펼침은
+전부 이 함수를 지나며 `scripts/check_body_path_expansion.py`(pre-commit)가 직접 `expanduser` 를 막는다.
+`ToolContext.resolve_path` 도 같은 함수를 먼저 지난다. 셸 표면(가이드 `run_command`·등록 스크립트)은 같은 값을
+`$INDIEBIZ_BASE_PATH` 로 본다(백엔드가 부팅 때 env 로 수출). 가드 `backend/test_body_path_token.py`.
+
 **선언 위치** — `ibl_nodes_src/<node>.yaml`에 두 곳에 쓸 수 있음:
 - **노드 레벨** (전체 액션 기본값): 해당 노드 dict 안에 `scope: workspace`
 - **액션 레벨** (개별 오버라이드): 해당 액션 dict 안에 `scope:`

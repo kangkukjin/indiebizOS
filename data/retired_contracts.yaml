@@ -142,3 +142,16 @@ retired:
       - 'weekdays:["mon"'
       - 'repeat:"daily", interval_hours'
 
+  - id: ai-trend-report-pending-contribution
+    retired: 2026-09-02
+    reason: >-
+      AI 동향 보고서가 매일 특별기고 대기열을 읽고, 도래 원고가 있으면 NEW 계수
+      게이트를 우회해 발행하던 별도 분기를 사용자 판정으로 폐지했다. 보고서 본연의
+      동향 조사와 무관한 확인 비용과 자기감사 문구가 매 호 반복됐다.
+    instead: >-
+      AI 동향 보고서는 최신 보고서·커버리지 원장·방법론 규칙만 기준선으로 읽고,
+      전체 보고서 발행 여부는 섹션별 NEW 행 합계만으로 판정한다.
+    phrases:
+      - "특별기고 대기 목록을 반드시 읽"
+      - "특별기고 게재 가능일 도래"
+      - "_pending_contributions.md` — 04시 프로세스"

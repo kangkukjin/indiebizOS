@@ -245,6 +245,7 @@ export interface ElectronAPI {
   openMessengerWindow: () => Promise<void>;
   openSystemAIWindow: () => Promise<void>;
   openMultiChatWindow: (roomId: string, roomName: string) => Promise<void>;
+  openProjectPanelWindow?: (panel: 'teamchat' | 'switches', projectId: string, projectName: string) => Promise<void>;
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
   openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;
   openLectureWorkspaceWindow: (lectureId?: string | null) => Promise<void>;

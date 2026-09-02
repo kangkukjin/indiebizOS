@@ -962,8 +962,9 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       {/* 계획 모드 패널 */}
       <PlanModePanel planMode={planMode} onApprove={handleApprovePlan} onReject={handleRejectPlan} />
 
-      {/* 메시지+입력 래퍼 — flex-1 min-h-0으로 남은 공간 전부 차지, 내부에서 메시지 스크롤 */}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      {/* 메시지+입력 래퍼 — flex-1 min-h-0으로 남은 공간 전부 차지, 내부에서 메시지 스크롤.
+          relative: 히스토리 판이 이 안(헤더 아래)에만 덮이게 하는 좌표계 — 헤더를 덮으면 창 이동이 죽는다. */}
+      <div className="relative flex-1 min-h-0 flex flex-col overflow-hidden">
 
       {/* 메시지 영역 */}
       <div className={`flex-1 min-h-0 overflow-y-auto p-4 space-y-4 ${isDialog ? 'bg-gray-50 selectable-text dialog-messages-scroll' : ''}`}>
@@ -1083,6 +1084,11 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         showHelpText={isDialog}
       />
 
+      {/* 히스토리 (시스템 AI) — 창 안에 갇힌 판. 헤더(창 이동 손잡이)는 늘 드러나 있다. */}
+      {!isAgent && (
+        <SystemAIChatHistoryDialog show={showHistory} onClose={() => setShowHistory(false)} />
+      )}
+
       </div>{/* 메시지+입력 래퍼 닫기 */}
 
       {/* 마법책 (IBL 액션 사전) 모달 */}
@@ -1101,11 +1107,6 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         onClose={() => fileAttachments.setIsCameraOpen(false)}
         onCapture={fileAttachments.handleCameraCapture}
       />
-
-      {/* 히스토리 (시스템 AI) */}
-      {!isAgent && (
-        <SystemAIChatHistoryDialog show={showHistory} onClose={() => setShowHistory(false)} />
-      )}
     </>
   );
 

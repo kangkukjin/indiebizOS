@@ -42,6 +42,35 @@ interface ManagerProps {
   initialAgent?: string | null;
 }
 
+// ── 팀내 대화 창의 경계 ──
+// 이 창은 프로젝트 창 안에 사는 DOM 이라 창 밖으로 나간 부분은 그려질 자리가 없다(잘린다).
+// 그래서 '자를지'가 아니라 '나가지 못하게' 가 답 — 열 때·끌 때·크기 바꿀 때·창 크기가
+// 변할 때 모두 이 관문 하나를 지난다(2026-09-02 사용자 신고: 끌면 잘려 나갔다).
+const CHAT_MARGIN_X = 16;       // 좌우 여백
+const CHAT_MARGIN_TOP = 56;     // 상단 여백(창 드래그바 h-12=48px 아래)
+const CHAT_MARGIN_BOTTOM = 16;  // 하단 여백
+const CHAT_MIN_WIDTH = 600;
+const CHAT_MIN_HEIGHT = 400;
+
+function clampChatDialog(
+  pos: { x: number; y: number },
+  size: { width: number; height: number },
+) {
+  const maxW = Math.max(320, window.innerWidth - CHAT_MARGIN_X * 2);
+  const maxH = Math.max(320, window.innerHeight - CHAT_MARGIN_TOP - CHAT_MARGIN_BOTTOM);
+  const width = Math.min(size.width, maxW);
+  const height = Math.min(size.height, maxH);
+  const maxX = Math.max(CHAT_MARGIN_X, window.innerWidth - width - CHAT_MARGIN_X);
+  const maxY = Math.max(CHAT_MARGIN_TOP, window.innerHeight - height - CHAT_MARGIN_BOTTOM);
+  return {
+    size: { width, height },
+    pos: {
+      x: Math.min(Math.max(CHAT_MARGIN_X, pos.x), maxX),
+      y: Math.min(Math.max(CHAT_MARGIN_TOP, pos.y), maxY),
+    },
+  };
+}
+
 export function Manager({ initialAgent }: ManagerProps = {}) {
   const {
     currentProject,
@@ -222,22 +251,29 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   useEffect(() => {
     if (showTeamChatDialog && currentProject) {
-      // 다이얼로그를 현재 창 크기에 맞춰 클램프 — 창이 900×600 보다 작아도
-      // 내용이 잘리거나(음수 위치로) 화면 밖으로 밀려나지 않게 한다.
-      const MARGIN_X = 16;       // 좌우 여백
-      const MARGIN_TOP = 44;     // 상단 여백(창 신호등 버튼 영역 확보)
-      const MARGIN_BOTTOM = 16;  // 하단 여백
-      const maxW = Math.max(320, window.innerWidth - MARGIN_X * 2);
-      const maxH = Math.max(320, window.innerHeight - MARGIN_TOP - MARGIN_BOTTOM);
-      const width = Math.min(900, maxW);
-      const height = Math.min(600, maxH);
-      setChatDialogSize({ width, height });
-      setChatDialogPos({
-        x: Math.max(MARGIN_X, Math.round((window.innerWidth - width) / 2)),
-        y: Math.max(MARGIN_TOP, Math.round((window.innerHeight - height) / 2)),
-      });
+      // 창 한가운데에 놓고 관문 통과 — 창이 900×600 보다 작아도 잘리지 않는다.
+      const wanted = { width: 900, height: 600 };
+      const centered = {
+        x: Math.round((window.innerWidth - wanted.width) / 2),
+        y: Math.round((window.innerHeight - wanted.height) / 2),
+      };
+      const { pos, size } = clampChatDialog(centered, wanted);
+      setChatDialogSize(size);
+      setChatDialogPos(pos);
     }
   }, [showTeamChatDialog, currentProject]);
+
+  // 창 크기가 바뀌면 다이얼로그를 다시 창 안으로 — 줄인 창 밖에 남아 잘리지 않게.
+  useEffect(() => {
+    if (!showTeamChatDialog) return;
+    const onResize = () => {
+      const { pos, size } = clampChatDialog(chatDialogPos, chatDialogSize);
+      if (pos.x !== chatDialogPos.x || pos.y !== chatDialogPos.y) setChatDialogPos(pos);
+      if (size.width !== chatDialogSize.width || size.height !== chatDialogSize.height) setChatDialogSize(size);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [showTeamChatDialog, chatDialogPos, chatDialogSize]);
 
   // 대화 에이전트가 바뀌면 상대·메시지 선택을 초기화 (조회는 아래 useRetryingLoad 가 담당)
   useEffect(() => {
@@ -250,15 +286,19 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        setChatDialogPos({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y
-        });
+        setChatDialogPos(clampChatDialog(
+          { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y },
+          chatDialogSize,
+        ).pos);
       }
       if (isResizing) {
-        const newWidth = Math.max(600, e.clientX - chatDialogPos.x);
-        const newHeight = Math.max(400, e.clientY - chatDialogPos.y);
-        setChatDialogSize({ width: newWidth, height: newHeight });
+        // 오른쪽·아래 모서리 잡기 — 창 오른쪽/아래 여백까지만 자란다.
+        const maxWidth = Math.max(CHAT_MIN_WIDTH, window.innerWidth - CHAT_MARGIN_X - chatDialogPos.x);
+        const maxHeight = Math.max(CHAT_MIN_HEIGHT, window.innerHeight - CHAT_MARGIN_BOTTOM - chatDialogPos.y);
+        setChatDialogSize({
+          width: Math.min(maxWidth, Math.max(CHAT_MIN_WIDTH, e.clientX - chatDialogPos.x)),
+          height: Math.min(maxHeight, Math.max(CHAT_MIN_HEIGHT, e.clientY - chatDialogPos.y)),
+        });
       }
     };
 
@@ -276,7 +316,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, dragOffset, chatDialogPos]);
+  }, [isDragging, isResizing, dragOffset, chatDialogPos, chatDialogSize]);
 
   // ============ 데이터 로딩 함수들 ============
 
@@ -337,6 +377,18 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
   };
 
   // ============ 이벤트 핸들러들 ============
+
+  // 보조 패널 열기 — 정본은 전용 창(창 밖으로 옮겨 프로젝트 창과 나란히 볼 수 있게).
+  // Electron 이 아닌 표면(브라우저·원격)에는 창이 없으니 창 안 다이얼로그로 물러선다.
+  const openProjectPanel = (panel: 'teamchat' | 'switches', fallback: () => void) => {
+    if (!currentProject) return;
+    const open = window.electron?.openProjectPanelWindow;
+    if (open) {
+      open(panel, currentProject.id, currentProject.name);
+      return;
+    }
+    fallback();
+  };
 
   const handleDragStart = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -770,7 +822,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
           </button>
 
           <button
-            onClick={() => setShowTeamChatDialog(true)}
+            onClick={() => openProjectPanel('teamchat', () => setShowTeamChatDialog(true))}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-600 transition-colors text-white"
             title="팀내 대화"
           >
@@ -779,7 +831,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
           </button>
 
           <button
-            onClick={() => setShowSwitchDialog(true)}
+            onClick={() => openProjectPanel('switches', () => setShowSwitchDialog(true))}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#D97706] hover:bg-[#B45309] transition-colors text-white"
             title="스위치"
           >

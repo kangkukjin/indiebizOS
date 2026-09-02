@@ -1,10 +1,14 @@
 /**
- * TeamChatDialog - 팀내 대화 다이얼로그
+ * TeamChatDialog - 팀내 대화 다이얼로그 (Electron 밖 대비 예비 경로)
+ *
+ * 정본은 전용 창(TeamChatView, `#/projectpanel/teamchat/<projectId>`) — 창 안 DOM 은 창 밖으로
+ * 나갈 수 없어 끌면 잘리기 때문이다. 여기 남은 판은 `window.electron` 이 없는 표면
+ * (브라우저·원격)에서만 쓰인다. 알맹이는 TeamChatPanes 하나를 같이 쓴다.
  */
 
 import { useRef } from 'react';
 import { X, RefreshCw } from 'lucide-react';
-import { MessageContent } from '../MessageContent';
+import { TeamChatPanes } from './TeamChatPanes';
 import type { ChatAgent, ChatPartner, TeamChatMessage, DialogSize, DialogPosition } from '../types';
 
 interface TeamChatDialogProps {
@@ -50,9 +54,13 @@ export function TeamChatDialog({
 
   return (
     <div className="fixed inset-0 bg-black/30 z-50">
+      {/* 창 이동 손잡이 되살리기 — 이 판이 프로젝트 창의 드래그바(Manager 헤더 h-12)를 덮는다.
+          같은 자리에 drag 를 다시 선언하고, 다이얼로그 자신은 no-drag 로 빼둔다
+          (안 그러면 다이얼로그 헤더를 끌 때 창이 함께 끌린다). */}
+      <div className="absolute inset-x-0 top-0 h-12 drag" />
       <div
         ref={chatDialogRef}
-        className="absolute bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col"
+        className="absolute bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col no-drag"
         style={{
           left: chatDialogPos.x,
           top: chatDialogPos.y,
@@ -74,113 +82,17 @@ export function TeamChatDialog({
             <X size={20} className="text-gray-500" />
           </button>
         </div>
-        <div className="flex-1 flex overflow-hidden min-h-0">
-          {/* 왼쪽: 대화 주체 목록 */}
-          <div className="w-44 border-r border-gray-200 bg-gray-50 overflow-y-auto">
-            <div className="p-2">
-              <p className="text-xs text-gray-500 px-2 py-1 font-medium">대화 주체</p>
-              {chatAgents.map((agent) => (
-                <button
-                  key={agent.id}
-                  onClick={() => setSelectedChatAgent(agent.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg mb-1 transition-colors ${
-                    selectedChatAgent === agent.id
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'hover:bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  <span className="text-sm">{agent.type === 'human' ? '👤' : '🤖'} {agent.name}</span>
-                </button>
-              ))}
-              {chatAgents.length === 0 && (
-                <p className="text-xs text-gray-400 px-2 py-4 text-center">에이전트 없음</p>
-              )}
-            </div>
-          </div>
-          {/* 중간: 대화 상대 목록 */}
-          <div className="w-52 border-r border-gray-200 bg-white overflow-y-auto">
-            <div className="p-2">
-              {selectedChatAgent ? (
-                <>
-                  <p className="text-xs text-gray-500 px-2 py-1 font-medium">
-                    대화 상대 ({chatPartners.length})
-                  </p>
-                  {chatPartners.map((partner) => (
-                    <button
-                      key={partner.id}
-                      onClick={() => setSelectedPartner(partner.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg mb-1 transition-colors ${
-                        selectedPartner === partner.id
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'hover:bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">{partner.type === 'ai_agent' ? '🤖' : '👤'} {partner.name}</span>
-                        <span className="text-xs text-gray-400">{partner.message_count}</span>
-                      </div>
-                    </button>
-                  ))}
-                  {chatPartners.length === 0 && (
-                    <p className="text-xs text-gray-400 px-2 py-4 text-center">대화 상대 없음</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-gray-400 px-2 py-4 text-center">주체를 선택하세요</p>
-              )}
-            </div>
-          </div>
-          {/* 오른쪽: 메시지 목록 */}
-          <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-            {selectedPartner && selectedChatAgent ? (
-              <>
-                <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
-                  <span className="text-sm font-medium text-gray-700">
-                    {getAgentNameById(selectedChatAgent)} ↔ {getAgentNameById(selectedPartner)} 대화
-                  </span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-                  {teamChatLoading ? (
-                    <div className="flex items-center justify-center h-full">
-                      <RefreshCw className="animate-spin text-gray-400" size={24} />
-                    </div>
-                  ) : teamChatMessages.length > 0 ? (
-                    [...teamChatMessages].reverse().map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.from_agent_id === selectedChatAgent ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                            msg.from_agent_id === selectedChatAgent
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-200 text-gray-800'
-                          }`}
-                        >
-                          <div className="text-xs opacity-70 mb-1">
-                            {getAgentNameById(msg.from_agent_id)}
-                          </div>
-                          <MessageContent content={msg.content} />
-                          <div className="text-xs opacity-50 mt-1">
-                            {new Date(msg.timestamp).toLocaleString('ko-KR')}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
-                      대화 기록이 없습니다
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                {selectedChatAgent ? '대화 상대를 선택하세요' : '주체와 대화 상대를 선택하세요'}
-              </div>
-            )}
-          </div>
-        </div>
+        <TeamChatPanes
+          chatAgents={chatAgents}
+          selectedChatAgent={selectedChatAgent}
+          setSelectedChatAgent={setSelectedChatAgent}
+          chatPartners={chatPartners}
+          selectedPartner={selectedPartner}
+          setSelectedPartner={setSelectedPartner}
+          teamChatMessages={teamChatMessages}
+          teamChatLoading={teamChatLoading}
+          getAgentNameById={getAgentNameById}
+        />
         <div className="flex justify-between px-6 py-4 border-t border-gray-200 bg-gray-50 shrink-0">
           <button
             onClick={onRefresh}

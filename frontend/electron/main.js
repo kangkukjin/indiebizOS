@@ -27,7 +27,7 @@ import {
   createProjectWindow, createFolderWindow, createSystemAIWindow,
   createBusinessWindow, createCommunityWindow, createMessengerWindow,
   createPCManagerWindow, createPhotoManagerWindow,
-  createLectureWorkspaceWindow, createMultiChatWindow,
+  createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow,
 } from './windows.js';
 import { setTray, bumpBadge } from './badge.js';
 
@@ -267,6 +267,11 @@ function setupIPC() {
   // 다중채팅방 창 열기
   ipcMain.handle('open-multichat-window', (_, roomId, roomName) => {
     createMultiChatWindow(roomId, roomName);
+  });
+
+  // 프로젝트 보조 패널 창 열기 — 대화 관리·스위치 등(패널 종류 × 프로젝트별)
+  ipcMain.handle('open-project-panel-window', (_, panel, projectId, projectName) => {
+    createProjectPanelWindow(panel, projectId, projectName);
   });
 
   // 강의 만들기 워크스페이스 창 열기

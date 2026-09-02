@@ -20,6 +20,7 @@ const API_PORT = 8765;
 let projectWindows = new Map(); // 프로젝트 창 관리
 let folderWindows = new Map(); // 폴더 창 관리
 let multiChatWindows = new Map(); // 다중채팅방 창 관리
+let projectPanelWindows = new Map(); // 프로젝트 보조 패널 창 — `${panel}:${projectId}` 키
 let businessWindow = null; // 비즈니스 관리 창
 let communityWindow = null; // 커뮤니티 창 (옛 IndieNet — IBL 커뮤니티 계기)
 let messengerWindow = null; // 메신저 창 (옛 이웃관리·빠른 연락처 — IBL 메신저 계기)
@@ -626,6 +627,77 @@ function createMultiChatWindow(roomId, roomName) {
   return multiChatWindow;
 }
 
+/**
+ * 프로젝트 보조 패널 창 생성 — 패널 종류 × 프로젝트별 1개
+ *
+ * ★프로젝트 창 안의 다이얼로그가 아니라 독립 창인 이유: 창 안의 DOM 은 창 밖에 그려질
+ *   자리가 없어, 옮기면 잘리거나 아예 못 나간다. 프로젝트 창 옆에 나란히 놓고 보려면
+ *   OS 창이어야 한다(2026-09-02 사용자 판정). 패널마다 창 만들기를 새로 배선하지 않게
+ *   생성기는 하나 — 새 패널은 아래 PANELS 에 한 줄, 렌더러 ProjectPanelView 에 한 줄.
+ */
+const PANELS = {
+  teamchat: { title: '대화 관리', width: 1000, height: 680, minWidth: 640, minHeight: 420 },
+  switches: { title: '스위치',   width: 760,  height: 720, minWidth: 520, minHeight: 480 },
+};
+
+function createProjectPanelWindow(panel, projectId, projectName) {
+  const spec = PANELS[panel];
+  if (!spec) {
+    console.warn(`[Electron] 알 수 없는 프로젝트 패널: ${panel}`);
+    return null;
+  }
+
+  const key = `${panel}:${projectId}`;
+  const existing = projectPanelWindows.get(key);
+  if (existing && !existing.isDestroyed()) {
+    raiseWindow(existing);
+    return existing;
+  }
+
+  const panelWindow = new BrowserWindow({
+    width: spec.width,
+    height: spec.height,
+    minWidth: spec.minWidth,
+    minHeight: spec.minHeight,
+    title: projectName ? `${spec.title} — ${projectName}` : spec.title,
+    titleBarStyle: 'hiddenInset',
+    trafficLightPosition: { x: 15, y: 15 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  const hash = `/projectpanel/${panel}/${encodeURIComponent(projectId)}`;
+  if (isDev) {
+    panelWindow.loadURL(`http://localhost:5173/#${hash}`);
+  } else {
+    panelWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { hash });
+  }
+
+  // 외부 링크는 기본 브라우저에서 열기
+  panelWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  panelWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  projectPanelWindows.set(key, panelWindow);
+
+  panelWindow.on('closed', () => {
+    projectPanelWindows.delete(key);
+  });
+
+  return panelWindow;
+}
+
 // ★folderWindows 는 main.js 의 setupIPC 도 읽는다(폴더 간 드래그드롭·열린 창 목록).
 // 레지스트리 자체를 내보낸다 — 소유자는 여기 하나, 읽는 쪽은 여럿.
 export { folderWindows };
@@ -633,4 +705,4 @@ export { folderWindows };
 export { raiseWindow, createProjectWindow, createFolderWindow, createSystemAIWindow,
          createBusinessWindow, createCommunityWindow, createMessengerWindow,
          createPCManagerWindow, createPhotoManagerWindow,
-         createLectureWorkspaceWindow, createMultiChatWindow };
+         createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow };

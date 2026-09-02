@@ -1,5 +1,13 @@
 /**
  * SystemAIChatHistoryDialog - 시스템 AI 대화 히스토리
+ *
+ * ★전체화면 모달이 아니라 **채팅 창 안(헤더 아래)에 덮이는 판**이다.
+ *   옛 판은 `fixed inset-0` 로 화면 전체를 덮었는데, 그 위치엔 창을 잡아 옮기는
+ *   헤더(다이얼로그 모드=onMouseDown 드래그, 풀페이지 모드=-webkit-app-region:drag)가
+ *   있어서 히스토리를 여는 순간 창을 움직일 수 없게 됐다(2026-09-02 사용자 신고).
+ *   판을 창 안에 가두면 헤더가 항상 드러나 창 이동이 살아 있고, 크기도 창을 따라간다
+ *   (옛 판의 고정 900x700 은 700px 창에서 넘쳐 닫기 버튼까지 가렸다).
+ *   놓이는 자리는 ChatView 의 '메시지+입력 래퍼'(relative) 안.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -47,6 +55,14 @@ export function SystemAIChatHistoryDialog({ show, onClose }: SystemAIChatHistory
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversations]);
+
+  // ESC 로 닫기 — 판이 창을 덮는 동안의 유일한 키보드 출구
+  useEffect(() => {
+    if (!show) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [show, onClose]);
 
   const loadDates = async () => {
     try {
@@ -97,8 +113,8 @@ export function SystemAIChatHistoryDialog({ show, onClose }: SystemAIChatHistory
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-xl shadow-2xl w-[900px] h-[700px] flex flex-col overflow-hidden">
+    <div className="absolute inset-0 z-30 flex flex-col bg-white overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0">
           <div className="flex items-center gap-3">
@@ -125,7 +141,7 @@ export function SystemAIChatHistoryDialog({ show, onClose }: SystemAIChatHistory
         {/* 본문 */}
         <div className="flex-1 flex overflow-hidden">
           {/* 왼쪽: 날짜 목록 */}
-          <div className="w-56 border-r border-gray-200 bg-gray-50 overflow-y-auto">
+          <div className="w-40 shrink-0 border-r border-gray-200 bg-gray-50 overflow-y-auto">
             <div className="p-2">
               <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-500 font-medium">
                 <Calendar size={14} />
@@ -185,7 +201,7 @@ export function SystemAIChatHistoryDialog({ show, onClose }: SystemAIChatHistory
                           className={`flex ${conv.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
+                            className={`max-w-[75%] min-w-0 break-words rounded-2xl px-4 py-2.5 ${
                               conv.role === 'user'
                                 ? 'bg-amber-500 text-white rounded-br-md'
                                 : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
@@ -197,7 +213,7 @@ export function SystemAIChatHistoryDialog({ show, onClose }: SystemAIChatHistory
                               {formatTime(conv.timestamp)}
                             </div>
                             {conv.role === 'assistant' ? (
-                              <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2">
+                              <div className="prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2 chat-markdown">
                                 <ReactMarkdown>{conv.content}</ReactMarkdown>
                               </div>
                             ) : (

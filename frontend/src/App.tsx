@@ -14,6 +14,7 @@ import { MultiChat } from './components/MultiChat';
 import { PCManager } from './components/PCManager';
 import { PhotoManager } from './components/PhotoManager';
 import { SystemAIView } from './components/SystemAIView';
+import { ProjectPanelView } from './components/ProjectPanelView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { api } from './lib/api';
 import { useRetryingLoad } from './lib/use-retrying-load';
@@ -26,6 +27,8 @@ interface HashRoute {
   initialAgent: string | null;
   folderId: string | null;
   multiChatRoomId: string | null;
+  projectPanel: 'teamchat' | 'switches' | null;
+  projectPanelProjectId: string | null;
   isCommunity: boolean;
   isMessenger: boolean;
   isBusiness: boolean;
@@ -40,6 +43,7 @@ interface HashRoute {
 
 const EMPTY_ROUTE: HashRoute = {
   projectId: null, initialAgent: null, folderId: null, multiChatRoomId: null,
+  projectPanel: null, projectPanelProjectId: null,
   isCommunity: false, isMessenger: false, isBusiness: false,
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
@@ -73,6 +77,14 @@ function parseHash(hash: string): HashRoute {
   const multiChatMatch = hash.match(/^#\/multichat\/(.+)$/);
   if (multiChatMatch) return { ...EMPTY_ROUTE, multiChatRoomId: decodeURIComponent(multiChatMatch[1]) };
 
+  // 프로젝트 보조 패널(대화 관리·스위치) — 프로젝트 창 옆에 나란히 서는 독립 창
+  const panelMatch = hash.match(/^#\/projectpanel\/(teamchat|switches)\/(.+)$/);
+  if (panelMatch) return {
+    ...EMPTY_ROUTE,
+    projectPanel: panelMatch[1] as 'teamchat' | 'switches',
+    projectPanelProjectId: decodeURIComponent(panelMatch[2]),
+  };
+
   // 프로젝트 (URL 인코딩된 ID 디코딩, ?agent= 쿼리로 초기 에이전트 — 스케줄 결과 전달용)
   const projectMatch = hash.match(/^#\/project\/([^?]+)(\?.*)?$/);
   if (projectMatch) {
@@ -95,7 +107,7 @@ function App() {
   const { currentView, setCurrentProject, setIsConnected, setError } = useAppStore();
   const [route, setRoute] = useState<HashRoute>(() => parseHash(window.location.hash));
   const {
-    projectId, initialAgent, folderId, multiChatRoomId,
+    projectId, initialAgent, folderId, multiChatRoomId, projectPanel, projectPanelProjectId,
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
@@ -263,6 +275,17 @@ function App() {
       <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
         <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
           <FolderView folderId={folderId} />
+        </div>
+      </div>
+    );
+  }
+
+  // 프로젝트 보조 패널 창(대화 관리·스위치) — 프로젝트 창과 나란히 놓고 보는 독립 창
+  if (projectPanel && projectPanelProjectId) {
+    return (
+      <div className="h-screen w-screen overflow-hidden bg-[#F5F1EB] p-3">
+        <div className="h-full w-full rounded-xl overflow-hidden shadow-lg">
+          <ProjectPanelView panel={projectPanel} projectId={projectPanelProjectId} />
         </div>
       </div>
     );

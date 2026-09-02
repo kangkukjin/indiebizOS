@@ -73,6 +73,10 @@ contextBridge.exposeInMainWorld('electron', {
   openMultiChatWindow: (roomId, roomName) =>
     ipcRenderer.invoke('open-multichat-window', roomId, roomName),
 
+  // 프로젝트 보조 패널 창 열기 (panel: 'teamchat' | 'switches')
+  openProjectPanelWindow: (panel, projectId, projectName) =>
+    ipcRenderer.invoke('open-project-panel-window', panel, projectId, projectName),
+
   // PC Manager 창 열기
   openPCManagerWindow: (initialPath) =>
     ipcRenderer.invoke('open-pcmanager-window', initialPath),

@@ -323,7 +323,9 @@ def _items_from_prev(tool_input):
         return None
     if not isinstance(data, dict):
         return None
-    if isinstance(data.get("items"), list) and data["items"]:
+    # 빈 items 도 "통화가 도착했다"(0행) — None(통화 없음)과 다른 사건이다 (2026-09-02, 53회차 시드 검증:
+    # 안티조인이 새 행 0건을 내자 append 가 "items 가 필요합니다" 로 죽었다 — 0행은 빈손 성공, F20-3 판정).
+    if isinstance(data.get("items"), list):
         return [it for it in data["items"] if isinstance(it, dict)]
     tbl = data.get("table")
     if isinstance(tbl, dict) and tbl.get("columns") and isinstance(tbl.get("rows"), list):
@@ -348,8 +350,15 @@ def op_append(tool_input):
                 items = _rows
         except ImportError:
             pass
+    _arrived = isinstance(items, list)       # 통화가 도착했는가(0행 포함) — "없음"과 가른다
     if not items:
-        items = _items_from_prev(tool_input)
+        _pv = _items_from_prev(tool_input)
+        if _pv is not None:
+            items, _arrived = _pv, True
+    if _arrived and isinstance(items, list) and not items:
+        # 0행 도착 = 빈손 성공(장부 무변경) — 안티조인·필터가 새 행을 못 찾은 정상 결과다.
+        return {"success": True, "appended": 0, "items": [],
+                "message": "추가할 행이 0건입니다 — 앞 통화가 비어 있어 장부는 무변경입니다."}
     if not items or not isinstance(items, list):
         return {"success": False,
                 "error": "items 가 필요합니다 — [{열이름: 값}, …] 목록 (또는 파이프 직전 step 의 items/table 자동 사용)."}

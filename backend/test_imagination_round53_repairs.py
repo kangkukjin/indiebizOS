@@ -330,5 +330,21 @@ def test_B51_4_promotion_wording_separates_route_markers():
     assert "describe_promoted" in src and "부분 실패·절단을 신고했습니다" not in src
 
 
+def test_S53_sheet_append_zero_rows_is_empty_handed_success():
+    """시드 검증(2026-09-02)에서 난 결함: 안티조인이 새 행 0건을 내자 append 가 "items 가 필요합니다" 로
+    죽었다 — 0행 도착은 통화 없음과 다른 사건이고 빈손 성공이다(F20-3 판정)."""
+    import openpyxl
+    with tempfile.TemporaryDirectory() as td:
+        p = os.path.join(td, "장부.xlsx")
+        wb = openpyxl.Workbook(); ws = wb.active; ws.append(["a", "b"]); ws.append([1, 2]); wb.save(p)
+        r0 = _sheet.op_append({"path": p, "_prev_result": json.dumps({"success": True, "items": [], "count": 0})})
+        assert r0.get("success") is True and r0.get("appended") == 0, r0
+        r1 = _sheet.op_append({"path": p, "items": []})
+        assert r1.get("success") is True and r1.get("appended") == 0, r1
+        r2 = _sheet.op_append({"path": p})                       # 통화 자체가 없음 — 종전대로 정직 거절
+        assert r2.get("success") is False and "items 가 필요합니다" in r2["error"], r2
+        assert _sheet.op_find({"path": p})["matched"] == 1
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

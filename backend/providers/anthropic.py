@@ -287,7 +287,7 @@ class AnthropicProvider(BaseProvider):
                 create_params["tools"] = self.tools
 
             # Extended Thinking
-            if self.thinking_budget > 0:
+            if self.thinking_budget > 0 and self.reasoning_mode != "off":
                 create_params["thinking"] = {
                     "type": "enabled",
                     "budget_tokens": self.thinking_budget

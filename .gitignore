@@ -387,3 +387,6 @@ data/_backups/*
 
 # 가이드 개선 제안 원장 — guide_feedback.py 가 append 하는 런타임 로그
 data/guide_proposals.jsonl
+
+# 오염 DB — memory_id=None 경로로 실수 생성 (커밋 제외)
+memory_None.db

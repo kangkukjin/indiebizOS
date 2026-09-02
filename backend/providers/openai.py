@@ -311,7 +311,7 @@ class OpenAIProvider(BaseProvider):
                 create_params["tools"] = openai_tools
 
             # Reasoning (o1/o3 모델)
-            if self.thinking_budget > 0:
+            if self.thinking_budget > 0 and self.reasoning_mode != "off":
                 model_lower = self.model.lower()
                 if "o1" in model_lower or "o3" in model_lower:
                     create_params["reasoning_effort"] = "medium"
@@ -323,7 +323,7 @@ class OpenAIProvider(BaseProvider):
             # 파라미터는 프로바이더별(_thinking_off_params 오버라이드) — 기본은 no-op.
             # force_thinking_off: 추론이 max_tokens를 전부 태워 본문 0자가 났을 때의
             # 재시도 전용 — 이번 호출 한 번만 추론을 끄고 본문을 받아낸다.
-            if self.disable_thinking or force_thinking_off:
+            if self.disable_thinking or force_thinking_off or self.reasoning_mode == "off":
                 _off = self._thinking_off_params()
                 if _off:
                     create_params.setdefault("extra_body", {}).update(_off)

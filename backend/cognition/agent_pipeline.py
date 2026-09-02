@@ -401,6 +401,19 @@ class CognitivePipelineMixin:
                 original_provider = _switch_to_midtier(self)
 
         # Clarification fast-path — 의식이 정보 부족으로 확인을 요청하면 실행 스킵
+        # 추론 예산은 차선에 걸린다(EXECUTE=off, THINK/REPAIR=default — 정본 model_gear.json
+        # lane_reasoning). 모델·티어가 아니라 무의식 관문의 판정이 정하므로 모델 교체를 살아남는다.
+        # 위의 provider 전환(_switch_to_*)이 끝난 뒤, 턴 사본에만 찍는다(캐시 객체 불변).
+        try:
+            from model_resolver import reasoning_for_lane
+            _lane = "EXECUTE" if force_role else request_type
+            _prov = getattr(self.ai, "_provider", None)
+            if _prov is not None:
+                _prov.reasoning_mode = reasoning_for_lane(_lane)
+                if _prov.reasoning_mode != "default":
+                    print(f"[추론예산] 차선={_lane} → {_prov.reasoning_mode}")
+        except Exception as _re:
+            print(f"[추론예산] 적용 실패(기본 유지): {_re}")
         _clarify_text = self._consciousness_clarification(consciousness_output) if consciousness_output else None
         if _clarify_text:
             print(f"[의식] clarification fast-path: 실행 에이전트 스킵")
@@ -744,6 +757,7 @@ class CognitivePipelineMixin:
                     print(f"[턴비용] tokens={turn_tokens}{_cr}")
             except Exception:
                 turn_tokens = None
+                turn_cache_read = None
             # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에
             # 등장했는지 로그 한 줄(관찰 계기 — 초안 제도의 실측 근거를 쌓는다).
             try:
@@ -770,4 +784,7 @@ class CognitivePipelineMixin:
 
         if _error_text is not None:
             yield {"type": "error", "content": _error_text}
-        yield {"type": "_turn_meta", "tool_calls": list(tool_calls_log)}
+        # 턴 예산(토큰·캐시 적중)을 메타에 동봉 — WS 가 end 이벤트에 실어 고정물(scripts/
+        # probe_turn_budget.py)이 로그 긁기 없이 읽는다.
+        yield {"type": "_turn_meta", "tool_calls": list(tool_calls_log),
+               "turn_tokens": turn_tokens, "turn_cache_read": turn_cache_read}

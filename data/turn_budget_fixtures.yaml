@@ -1,0 +1,26 @@
+# 턴 예산 회귀 고정물 (2026-09-02) — 같은 턴 묶음을 라이브로 돌려 정답·차선·라운드·시간·비캐시 토큰을 단언한다.
+# 목적: 최적화(캐시 정렬·차선별 추론 예산 등)가 모델 교체를 살아남는지 — 모델을 바꾼 날 이 고정물이 먼저 빨갛게 된다.
+# 실행: .venv/bin/python scripts/probe_turn_budget.py [--gear 절약] [--only 이름]  (백엔드 :8765 필요, 기어는 끝나면 복원)
+# 자리표: {today_ymd}=2026-09-02 / {today_md}=9월 2일|09월 02일 / {weekday}=수
+# 임계값은 예산이지 상수가 아니다 — 깨지면 "모델·하네스가 느려졌다" 신호이지 임계값을 올릴 신호가 아니다.
+defaults:
+  gear: 절약            # 기본 측정 기어(경량 실행) — 강한 모델은 --gear 최대 로 같은 묶음
+  max_total_s: 40
+  max_rounds: 4
+  max_uncached_tokens: 20000   # 턴 토큰 − 캐시 적중. 프리픽스가 깨지면 이 값이 먼저 튄다
+turns:
+  - name: 날짜
+    message: "오늘 날짜와 요일 알려줘"
+    expect_lane: EXECUTE
+    expect: ["({today_ymd}|{today_md})", "{weekday}요일"]
+    max_total_s: 12
+    max_rounds: 2
+  - name: git상태
+    message: "git 상태 확인해줘"
+    expect_lane: EXECUTE
+    expect: ["(main|브랜치|커밋|변경|깨끗|clean)"]
+    # 기준선 2026-09-02(경량 deepseek-v4-flash, 추론 off, 작업트리 더러움): 34s · 6라운드 · 비캐시 25K.
+    # 경량 모델은 미커밋 변경을 파고들어 라운드가 는다 — 깨끗한 트리에서는 2~3라운드. 예산은 더러운 트리 기준.
+    max_total_s: 45
+    max_rounds: 6
+    max_uncached_tokens: 30000

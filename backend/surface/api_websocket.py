@@ -978,6 +978,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         # 스트리밍 처리 (AIAgent 사용)
         event_queue = asyncio.Queue()
         final_content = ""
+        turn_budget = {}  # 턴 토큰·캐시 적중 — _turn_meta 에서 수신, end 이벤트에 동봉(고정물이 읽음)
         tool_results_list = []  # 도구 실행 결과 기록용
         collected_tool_images = []  # 도구 결과 이미지 수집
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
@@ -1019,7 +1020,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
 
                     event_type = event.get("type")
                     if event_type == "_turn_meta":
-                        continue  # 내부 메타 — 클라이언트 미전달
+                        for _k in ("turn_tokens", "turn_cache_read"):
+                            if event.get(_k) is not None:
+                                turn_budget[_k] = event[_k]
+                        continue  # 내부 메타 — 클라이언트 미전달(턴 예산만 회수)
                     if event_type == "tool_result" and event.get("images"):
                         collected_tool_images.extend(event["images"])
 
@@ -1286,6 +1290,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             # 위임 없이 완료: "end" 전송 후 태스크 삭제
             await manager.send_message(client_id, {
                 "type": "end",
+                **turn_budget,  # turn_tokens·turn_cache_read (미측정이면 키 없음)
                 "agent": "system_ai"
             })
             try:

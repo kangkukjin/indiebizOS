@@ -450,6 +450,11 @@ class BaseProvider(ABC):
     # 지원 프로바이더만 해석(DeepSeek/Gemini/OpenRouter 등), 나머지는 무시. ep889: thinking이
     # max_tokens를 전부 태워 텍스트 0자 → Auto-Continue/빈응답 재시도 연쇄로 증류 1건에 7콜 4.5분.
     disable_thinking = False
+    # 턴 단위 추론 예산 — 차선(EXECUTE/THINK/REPAIR)이 정한다(model_resolver.reasoning_for_lane).
+    # "off"=이 턴의 요청에서 확장 추론·하이브리드 thinking 을 싣지 않는다(프로바이더가 자기 표기로
+    # 번역: DeepSeek thinking disabled / Anthropic·Gemini budget 0 / o-시리즈 effort 생략).
+    # "default"=티어·프로바이더 기본. 턴 사본(per_turn_provider_view)에만 찍혀 캐시 객체는 불변.
+    reasoning_mode = "default"
     # 원샷 버킷(분류·증류·brief 등 도구 없는 1회 호출) — 지원 프로바이더(claude_code)는 내장 도구
     # 스키마·MCP 브리지·도구 정책을 싣지 않는다(컨텍스트 29.5K→3.9K 실측, 2026-08-21).
     no_tools = False

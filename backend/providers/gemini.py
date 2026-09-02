@@ -210,12 +210,12 @@ class GeminiProvider(BaseProvider):
 
         # Extended Thinking 설정
         thinking = None
-        if self.thinking_budget > 0:
+        if self.thinking_budget > 0 and self.reasoning_mode != "off":
             try:
                 thinking = types.ThinkingConfig(thinking_budget=self.thinking_budget)
             except Exception as e:
                 print(f"[Gemini] ThinkingConfig 생성 실패 (무시): {e}")
-        elif self.disable_thinking and not self._thinking_off_unsupported:
+        elif (self.disable_thinking or self.reasoning_mode == "off") and not self._thinking_off_unsupported:
             # 원샷 계약(분류·증류 등): 2.5 flash 계열은 config 미지정 시 *기본 thinking ON*
             # (dynamic) — 추론이 출력 예산을 태우는 DeepSeek ep889 부류의 Gemini 판 방지.
             # ★일부 모델(flash-latest 별칭, 2026-07~)은 budget 0 을 400 거부 →

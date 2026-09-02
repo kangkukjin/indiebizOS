@@ -296,6 +296,22 @@ AXES = ["분류", "평가", "실행", "의식"]
 TIERS = ["경량", "중급", "고급"]
 
 
+REASONING_MODES = ("off", "default")
+
+
+def reasoning_for_lane(lane: str) -> str:
+    """차선(EXECUTE/THINK/REPAIR) → 추론 예산 모드("off"|"default"). 정본=model_gear.json lane_reasoning.
+
+    모델·티어가 아니라 작업의 모양(무의식 관문의 판정)에 걸린 규칙이라 모델을 바꿔도 남는다.
+    미설정·미지 값이면 "default"(프로바이더 기본) — 부재가 동작을 바꾸지 않는다."""
+    try:
+        table = (_load_gear().get("lane_reasoning") or {})
+        mode = str(table.get(str(lane or "").upper(), "default")).strip().lower()
+        return mode if mode in REASONING_MODES else "default"
+    except Exception:
+        return "default"
+
+
 def get_gear() -> str:
     return _load_gear().get("current_gear", "균형")
 

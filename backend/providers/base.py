@@ -26,7 +26,7 @@ _turn_token_ledger: contextvars.ContextVar = contextvars.ContextVar(
 
 def begin_turn_token_ledger() -> None:
     """턴 시작 — 이 컨텍스트의 토큰 원장을 새로 편다(agent_pipeline 이 턴 머리에서 호출)."""
-    _turn_token_ledger.set({"input": 0, "output": 0})
+    _turn_token_ledger.set({"input": 0, "output": 0, "cache_read": 0})
 
 
 def read_turn_tokens() -> Optional[int]:
@@ -41,11 +41,49 @@ def read_turn_tokens() -> Optional[int]:
     return total if total > 0 else None
 
 
+def read_turn_cache_read_tokens() -> Optional[int]:
+    """턴 동안 프리픽스 캐시에 적중한 입력 토큰 합(input 의 부분집합).
+
+    원장이 없으면 None. 기록이 0 이면 0 — 캐시 미적중은 실측값이라 None 으로 숨기지
+    않는다(2026-09-02 계측: "5만 토큰 절약" 류 주장은 이 값 없이는 검증 불가)."""
+    led = _turn_token_ledger.get()
+    if not led:
+        return None
+    return int(led.get("cache_read", 0))
+
+
+def extract_cached_prompt_tokens(usage) -> int:
+    """프로바이더 usage 에서 프리픽스 캐시 적중 입력 토큰을 벤더 중립으로 뽑는다.
+
+    - DeepSeek: usage.prompt_cache_hit_tokens (top-level)
+    - OpenAI 호환: usage.prompt_tokens_details.cached_tokens
+    - Anthropic: usage.cache_read_input_tokens
+    객체(SDK pydantic)·dict 양쪽 수용. 없으면 0 — 필드 부재는 "미적중" 이 아니라
+    "벤더가 안 알려줌" 이지만, 합산 원장에서는 0 으로 둔다(하한 실측)."""
+    if usage is None:
+        return 0
+    def _get(obj, key):
+        if isinstance(obj, dict):
+            return obj.get(key)
+        return getattr(obj, key, None)
+    for key in ("prompt_cache_hit_tokens", "cache_read_input_tokens"):
+        v = _get(usage, key)
+        if v:
+            return int(v)
+    det = _get(usage, "prompt_tokens_details")
+    if det is not None:
+        v = _get(det, "cached_tokens")
+        if v:
+            return int(v)
+    return 0
+
+
 @dataclass
 class ProviderMetrics:
     """프로바이더 성능 메트릭"""
     total_input_tokens: int = 0
     total_output_tokens: int = 0
+    total_cache_read_tokens: int = 0  # 입력 중 프리픽스 캐시 적중분(부분집합)
     total_requests: int = 0
     total_retries: int = 0
     total_errors: int = 0
@@ -54,15 +92,18 @@ class ProviderMetrics:
     avg_request_latency_ms: float = 0
     _latencies: List[float] = field(default_factory=list)
 
-    def record_request(self, latency_ms: float, input_tokens: int = 0, output_tokens: int = 0):
-        """요청 메트릭 기록"""
+    def record_request(self, latency_ms: float, input_tokens: int = 0, output_tokens: int = 0,
+                       cache_read_tokens: int = 0):
+        """요청 메트릭 기록. cache_read_tokens = input_tokens 중 캐시 적중분(별도 합산 아님)."""
         self.total_requests += 1
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
+        self.total_cache_read_tokens += int(cache_read_tokens or 0)
         led = _turn_token_ledger.get()
         if led is not None:
             led["input"] += int(input_tokens or 0)
             led["output"] += int(output_tokens or 0)
+            led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
         self.last_request_latency_ms = latency_ms
         self._latencies.append(latency_ms)
         # 최근 100개만 유지
@@ -87,6 +128,7 @@ class ProviderMetrics:
         return {
             "total_input_tokens": self.total_input_tokens,
             "total_output_tokens": self.total_output_tokens,
+            "total_cache_read_tokens": self.total_cache_read_tokens,
             "total_requests": self.total_requests,
             "total_retries": self.total_retries,
             "total_errors": self.total_errors,

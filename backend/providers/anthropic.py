@@ -367,8 +367,13 @@ class AnthropicProvider(BaseProvider):
                     latency_ms = (time.time() - start_time) * 1000
                     input_tokens = getattr(final_message.usage, 'input_tokens', 0)
                     output_tokens = getattr(final_message.usage, 'output_tokens', 0)
-                    self.metrics.record_request(latency_ms, input_tokens, output_tokens)
-                    print(f"[Anthropic] 토큰: 입력={input_tokens}, 출력={output_tokens}, 지연={latency_ms:.0f}ms")
+                    # Anthropic 은 input_tokens 에 캐시분이 *빠져* 있다 — 원장의 input 은
+                    # 전체 프롬프트(=input+cache_read)로 적어 다른 벤더와 같은 뜻으로 맞춘다.
+                    from providers.base import extract_cached_prompt_tokens
+                    cache_read = extract_cached_prompt_tokens(final_message.usage)
+                    self.metrics.record_request(latency_ms, input_tokens + cache_read, output_tokens,
+                                                cache_read_tokens=cache_read)
+                    print(f"[Anthropic] 토큰: 입력={input_tokens + cache_read}, 출력={output_tokens}, 캐시적중={cache_read}, 지연={latency_ms:.0f}ms")
 
             # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
             if not collected_text.strip() and not tool_uses and depth > 0 and empty_response_retries < 2:

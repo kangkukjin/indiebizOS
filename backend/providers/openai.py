@@ -397,12 +397,18 @@ class OpenAIProvider(BaseProvider):
             if usage_info:
                 input_tokens = getattr(usage_info, 'prompt_tokens', 0)
                 output_tokens = getattr(usage_info, 'completion_tokens', 0)
-                self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+                # 프리픽스 캐시 적중(DeepSeek prompt_cache_hit_tokens / OpenAI cached_tokens)
+                # — 2026-09-02 계측: 경량 티어 52K 입력이 캐시를 타는지 이 값 없이는 모른다.
+                from providers.base import extract_cached_prompt_tokens
+                cache_read = extract_cached_prompt_tokens(usage_info)
+                self.metrics.record_request(latency_ms, input_tokens, output_tokens,
+                                            cache_read_tokens=cache_read)
                 # 추론 토큰 가시화 — "출력=4096인데 텍스트 0자" 부류(ep889)를 로그에서 즉시 판별
                 _det = getattr(usage_info, 'completion_tokens_details', None)
                 _rt = getattr(_det, 'reasoning_tokens', 0) if _det else 0
                 _rt_note = f", 추론={_rt}" if _rt else ""
-                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}{_rt_note}, 지연={latency_ms:.0f}ms")
+                _cache_note = f", 캐시적중={cache_read}" if input_tokens else ""
+                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}{_rt_note}{_cache_note}, 지연={latency_ms:.0f}ms")
             else:
                 self.metrics.record_request(latency_ms)
 

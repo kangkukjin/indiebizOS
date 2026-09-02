@@ -289,9 +289,9 @@ def _cap_schedule(params: dict, agent_id: str = None, project_path: str = None) 
     return _execute_schedule(params, agent_id=agent_id, project_path=project_path)
 
 
-def _cap_manage_events(params: dict) -> Any:
+def _cap_manage_events(params: dict, project_path: str = None) -> Any:
     from system_ai_tools import _execute_manage_events
-    return _execute_manage_events(params)
+    return _execute_manage_events(params, project_path=project_path)
 
 
 def _cap_list_switches(params: dict) -> Any:

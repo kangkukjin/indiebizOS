@@ -10,9 +10,13 @@
 import json
 import os
 import shutil
+import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+_SAVE_LOCK = threading.RLock()
 
 
 def safe_load_json(path, default: Any) -> Any:
@@ -41,11 +45,22 @@ def safe_save_json(path, data: Any) -> None:
             shutil.copy(p, p.with_suffix(p.suffix + ".bak"))
         except Exception:
             pass
-    # 임시파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지)
-    tmp = p.with_suffix(p.suffix + ".tmp")
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp, p)
+    # 임시파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지).
+    # ★B54-4: 임시 이름이 `<path>.tmp` 하나면 동시 저장 스레드들이 os.replace 에서 서로의
+    #   임시 파일을 빼앗아 FileNotFoundError 로 죽는다(calendar_manager 와 같은 부류). 잠금 +
+    #   스레드별 고유 임시 파일(같은 디렉터리라 원자 교체 유지).
+    with _SAVE_LOCK:
+        fd, tmp = tempfile.mkstemp(prefix=p.name + ".", suffix=".tmp", dir=str(p.parent))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, p)
+        finally:
+            if os.path.exists(tmp):
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
     # 쓰기 관문 원장 — 행위자 동반 사건 기록(관측일 뿐, 실패해도 본 쓰기 무영향)
     try:
         from write_ledger import log_write

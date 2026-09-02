@@ -191,27 +191,21 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
 
         print(f"[Schedule] 크로스 위임: {agent_id} → {project_id}/{owner_agent}")
     else:
-        # 셀프: 호출한 에이전트 자신의 스케줄
-        # 시스템 AI 판별: agent_id가 "system_ai"이거나, project_path가 data/ 디렉토리인 경우
-        _is_system_ai_caller = (agent_id == "system_ai")
-        if not _is_system_ai_caller and project_path and project_path != ".":
-            from pathlib import Path as _Path
-            _pp = _Path(project_path)
-            # data 디렉토리면 시스템 AI (projects/ 하위가 아님)
-            _is_system_ai_caller = (_pp.name == "data" or _pp.name == "system_ai"
-                                    or "projects" not in str(_pp))
-
-        if _is_system_ai_caller:
-            project_id = "__system_ai__"
+        # 셀프: 호출한 에이전트 자신의 스케줄.
+        # ★B54-2 (2026-09-02 54회차): 옛 판은 `agent_id == "system_ai"` 를 먼저 봤는데, 표면
+        #   (/ibl/execute 앱·수동 모드)은 agent_id 가 없으면 "system_ai" 로 채워 보낸다(채널 신원용
+        #   기본값) — 그래서 프로젝트 "컨텐츠"에서 건 5초 지연이 시스템 AI 의 스케줄로 귀속되고,
+        #   at/repeat 모드는 "보이는 실행"으로 시스템 AI 창을 열어 LLM 턴을 태웠다.
+        #   정체성은 **구체 프로젝트 경로가 먼저**다. 표면 등록(진짜 에이전트 없음)은 소유
+        #   에이전트를 비워 발화가 그 프로젝트에서 직접 실행되게 한다(B54-1 과 한 벌).
+        from trigger_engine import project_id_of_path as _pid_of
+        _pid = _pid_of(project_path)
+        if _pid:
+            project_id = _pid
+            owner_agent = agent_id if (agent_id and agent_id != "system_ai") else ""
         else:
-            # project_path에서 project_id 추출 (예: ".../projects/투자" → "투자")
-            project_id = ""
-            if project_path and project_path != ".":
-                from pathlib import Path as _Path
-                project_id = _Path(project_path).name
-            if not project_id:
-                project_id = "__system_ai__"
-        owner_agent = agent_id
+            project_id = "__system_ai__"
+            owner_agent = agent_id
 
     try:
         total_seconds = float(minutes) * 60 + float(seconds)
@@ -256,7 +250,9 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
         _is_cross = bool(target_project_id or target_agent_id)
         _timer_project_path = "." if _is_cross else (project_path or ".")
         _timer_project_id = project_id
-        _timer_agent_id = owner_agent or agent_id
+        # 표면 등록(진짜 에이전트 없음)은 행위자도 비운다 — 옛 판은 기본값 "system_ai" 가 새어
+        # 알림 라벨·실행 신원이 "컨텐츠/system_ai" 로 찍혔다(B54-2 잔재).
+        _timer_agent_id = owner_agent or ("system_ai" if project_id == "__system_ai__" else "")
 
         def _delayed_run():
             try:
@@ -287,18 +283,18 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                     result = execute_pipeline(steps, run_path, agent_id=_timer_agent_id)
                     print(f"[Schedule] 완료: success={result.get('success')}")
 
-                    # 결과를 owner의 대화창에 전달
-                    if result.get("success") and (_timer_project_id or _timer_agent_id):
-                        try:
-                            task_for_delivery = {
-                                "title": title,
-                                "owner_project_id": _timer_project_id,
-                                "owner_agent_id": _timer_agent_id,
-                                "action_params": {"pipeline": pipeline},
-                            }
-                            cm._deliver_result_to_chat(task_for_delivery, _timer_agent_id, pipeline, result)
-                        except Exception as e:
-                            print(f"[Schedule] 결과 전달 실패: {e}")
+                    # 결과를 소유자에게 전달 — 성공·실패 모두 (B54-3: 옛 판은 성공만, 그것도
+                    # 없는 메서드를 불러 삼켰다 → 지연 실행의 실패가 아무에게도 안 닿았다).
+                    try:
+                        task_for_delivery = {
+                            "title": title,
+                            "owner_project_id": _timer_project_id,
+                            "owner_agent_id": _timer_agent_id,
+                            "action_params": {"pipeline": pipeline},
+                        }
+                        cm._deliver_result_to_chat(task_for_delivery, _timer_agent_id, pipeline, result)
+                    except Exception as e:
+                        print(f"[Schedule] 결과 전달 실패: {e}")
             except Exception as e:
                 print(f"[Schedule] 실행 실패: {e}")
 
@@ -365,6 +361,22 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
 
         if not event_date and not is_recurring:
             event_date = datetime.now().strftime("%Y-%m-%d")
+
+        # ★F54-2 (54회차): 날짜 없는 `at:"00:01"` 이 "오늘 00:01"로 등록돼 따라잡기로 **다음 틱에
+        #   즉시** 돌았다(A5). 1회 예약의 예정 시각이 이미 지났으면 정직 거절 — 내일이면 date 를,
+        #   잠깐 뒤면 minutes/seconds 를.
+        if not is_recurring:
+            try:
+                _target = datetime.strptime(f"{event_date} {event_time}", "%Y-%m-%d %H:%M")
+            except (ValueError, TypeError):
+                return json.dumps({"success": False,
+                                   "error": f"date/time 을 읽을 수 없습니다: {event_date} {event_time} (YYYY-MM-DD, HH:MM)"},
+                                  ensure_ascii=False)
+            if _target <= datetime.now():
+                return json.dumps({"success": False,
+                                   "error": (f"예정 시각 {event_date} {event_time} 이(가) 이미 지났습니다. "
+                                             "내일이면 date 를 명시하고, 잠깐 뒤면 minutes/seconds 지연을 쓰세요.")},
+                                  ensure_ascii=False)
 
         try:
             event = cm.add_event(

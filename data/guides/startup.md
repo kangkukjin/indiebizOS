@@ -61,10 +61,8 @@
 
 ### 5) 정기 모니터링 (새 공고 자동 알림)
 ```
-[self:trigger]{op:"create", trigger_id:"weekly_startup_check",
-  type:"schedule", config:{repeat:"weekly", weekdays:["mon"], time:"09:00"},
-  pipeline:'[sense:startup]{query:"<관심분야>"} >> [self:notify_user]{message:"이번주 공고"}'
-}
+[self:trigger]{op:"create", name:"weekly_startup_check", cron:"0 9 * * 1",
+  do:"[sense:startup]{query: '<관심분야>'} >> [self:notify_user]{message: '이번주 공고'}"}
 ```
 
 ---

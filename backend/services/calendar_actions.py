@@ -175,7 +175,7 @@ class CalendarActionsMixin:
                     owner_project_id, owner_agent_id, user_message, task
                 )
             else:
-                # ── 소유자 없는 스케줄: 파이프라인 직접 실행 (레거시) ──
+                # ── 소유 에이전트 없는 스케줄: 파이프라인 직접 실행 ──
                 from ibl_parser import parse as ibl_parse, IBLSyntaxError
                 from workflow_engine import execute_pipeline
 
@@ -185,8 +185,12 @@ class CalendarActionsMixin:
                     self._log(f"IBL 문법 오류: {e}")
                     return {"success": False, "error": f"IBL 문법 오류: {e}"}
 
-                self._log(f"[레거시] 파이프라인 직접 실행: {pipeline[:60]}...")
-                result = execute_pipeline(steps, ".", agent_id=owner_agent_id)
+                # ★B54-1 (2026-09-02 54회차): 옛 판은 project_path "." 고정이라 발화한 문장의
+                #   패키지 도구가 전부 "활성 프로젝트 경로를 확보할 수 없어"로 죽었다(등록한
+                #   프로젝트를 트리거가 몰랐다). 소유 프로젝트가 있으면 그 경로에서 돈다.
+                run_path = self._owner_run_path(owner_project_id)
+                self._log(f"[직접 실행] 파이프라인: {pipeline[:60]}... (project={owner_project_id or '-'})")
+                result = execute_pipeline(steps, run_path, agent_id=owner_agent_id)
 
             duration_ms = int((_time.time() - start) * 1000)
 
@@ -194,12 +198,17 @@ class CalendarActionsMixin:
             if trigger_id:
                 try:
                     from trigger_engine import add_history
+                    _fr = result.get("final_result", result) if isinstance(result, dict) else result
+                    _items = _fr.get("items") if isinstance(_fr, dict) else None
                     add_history(
                         trigger_id=trigger_id,
                         trigger_name=task.get("title", ""),
                         success=result.get("success", False),
                         result_summary=str(result.get("final_result", ""))[:500],
-                        duration_ms=duration_ms
+                        duration_ms=duration_ms,
+                        error=(result.get("error") if not result.get("success") else None),
+                        count=(len(_items) if isinstance(_items, list) else None),
+                        shape=("items" if isinstance(_items, list) else None),
                     )
                 except Exception:
                     pass
@@ -231,6 +240,52 @@ class CalendarActionsMixin:
             traceback.print_exc()
             self._log(f"파이프라인 실행 오류: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    @staticmethod
+    def _owner_run_path(owner_project_id: str) -> str:
+        """소유 프로젝트 id → 실행 경로. 시스템 AI·미지정·미존재는 "."(종전 동작)."""
+        if not owner_project_id or owner_project_id == "__system_ai__":
+            return "."
+        try:
+            from project_manager import ProjectManager
+            p = ProjectManager().get_project_path(owner_project_id)
+            if p and p.exists():
+                return str(p)
+        except Exception:
+            pass
+        return "."
+
+    def _deliver_result_to_chat(self, task: dict, agent_id: str, pipeline: str, result: dict) -> dict:
+        """지연/예약 실행의 결과를 소유자에게 전한다 — 알림함 한 통(성공·실패 모두).
+
+        ★B54-3 (2026-09-02 54회차): 이 이름을 `_execute_schedule._delayed_run` 이 불렀지만
+        정의가 없어 AttributeError 를 삼키고("결과 전달 실패") 성공은 아무에게도, 실패는
+        호출조차 없이 사라졌다. 스케줄러 틱 경로(_action_run_pipeline)와 같은 알림 규약으로
+        전한다. 채팅 주입은 소유 에이전트가 있는 "보이는 실행" 경로의 몫이라 여기선 안 한다.
+        """
+        title = str((task or {}).get("title") or pipeline[:40])
+        owner = ""
+        if isinstance(task, dict) and task.get("owner_project_id"):
+            owner = f"{task.get('owner_project_id')}/{task.get('owner_agent_id') or agent_id or ''}".rstrip("/")
+        ok = bool(isinstance(result, dict) and result.get("success"))
+        fr = result.get("final_result", result) if isinstance(result, dict) else result
+        items = fr.get("items") if isinstance(fr, dict) else None
+        try:
+            from notification_manager import get_notification_manager
+            nm = get_notification_manager()
+            if ok:
+                body = f"'{title}'"
+                if isinstance(items, list):
+                    body += f" — {len(items)}행"
+                nm.success(title=f"예약 실행 완료{' — ' + owner if owner else ''}", message=body, source="scheduler")
+            else:
+                err = (result.get("error") if isinstance(result, dict) else None) or "알 수 없는 오류"
+                nm.warning(title=f"예약 실행 실패{' — ' + owner if owner else ''}",
+                           message=f"'{title}': {str(err)[:300]}", source="scheduler")
+            return {"delivered": True, "channel": "notification"}
+        except Exception as e:
+            self._log(f"예약 실행 결과 전달 실패: {e}")
+            return {"delivered": False, "error": str(e)}
 
     # =========================================================================
     # 스케줄 실행: "보이는 실행" — 창을 열고 에이전트가 채팅에서 작업

@@ -342,12 +342,41 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
 
 
-def _execute_manage_events(tool_input: dict) -> str:
+def _looks_like_ibl(text) -> bool:
+    """`do` 값이 IBL 문장인가(액션 이름이 아니라)."""
+    t = str(text or "").strip()
+    return t.startswith("[") or "]{" in t
+
+
+def _split_date_time(event_date, event_time):
+    """`date:"2026-09-03 14:00"`·`"2026-09-03T14:00"` 같은 합쳐 쓴 값을 date/time 으로 가른다 (F54-3).
+
+    옛 판은 원문을 그대로 저장해 실행 판정(`strptime("%Y-%m-%d")`)이 못 읽고 **침묵 미발화**했다.
+    `_execute_schedule` 이 같은 입력을 가르던 규칙을 한 벌로.
+    """
+    d = str(event_date).strip() if event_date else None
+    t = str(event_time).strip() if event_time else None
+    if d and (" " in d or "T" in d):
+        try:
+            from datetime import datetime as _dt
+            parsed = _dt.fromisoformat(d.replace(" ", "T"))
+            d = parsed.strftime("%Y-%m-%d")
+            if not t:
+                t = parsed.strftime("%H:%M")
+        except (ValueError, TypeError):
+            pass
+    if t and len(t) == 8 and t.count(":") == 2:
+        t = t[:5]
+    return d, t
+
+
+def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
     """manage_events 통합 도구 실행 (캘린더 + 스케줄러)
 
     정규 키=op (2026-07-21 op 어휘 단일화 합류, trigger 선례 — 입구 재매핑 후 기존 분기 그대로).
     action= 은 별칭: IBL 경로는 aliases 선언으로 op 정규화되지만, 레거시 도구 경로
     (별칭 정규화 미경유 직접 호출)도 있어 여기서도 폴백으로 받는다.
+    project_path: 등록 프로젝트(발화 문맥, B54-1) — 실행 이벤트의 owner_project_id 가 된다.
     """
     from calendar_manager import get_calendar_manager
 
@@ -370,10 +399,25 @@ def _execute_manage_events(tool_input: dict) -> str:
             if not title:
                 return json.dumps({"success": False, "error": "title은 필수입니다."}, ensure_ascii=False)
 
-            event_date = tool_input.get("date")
-            event_time = tool_input.get("time")
+            event_date, event_time = _split_date_time(tool_input.get("date"), tool_input.get("time"))
             event_action = tool_input.get("event_action")
+            action_params = tool_input.get("action_params")
             repeat = tool_input.get("repeat", "none")
+            owner_project_id = None
+            # ★B54-5 (54회차): 카탈로그는 "do 에 IBL 문장이 있으면 실행 이벤트"라 약속했는데 옛 판은
+            #   문장을 액션 **이름**으로 저장해 발화 때 "알 수 없는 작업" 로그 한 줄만 남겼다.
+            #   IBL 이면 run_pipeline + action_params.pipeline 로 정규화하고 등록 프로젝트를 싣는다.
+            if event_action and _looks_like_ibl(event_action):
+                action_params = dict(action_params or {})
+                action_params["pipeline"] = str(event_action)
+                event_action = "run_pipeline"
+                from trigger_engine import project_id_of_path as _pid_of
+                owner_project_id = _pid_of(project_path) or None
+            elif event_action and event_action not in cm.actions:
+                return json.dumps({"success": False,
+                                   "error": (f"알 수 없는 실행 액션 '{str(event_action)[:60]}' — 등록된 액션: {sorted(cm.actions)}. "
+                                             "IBL 문장을 실행하려면 do 에 문장을 주세요.")},
+                                  ensure_ascii=False)
 
             # start_time 호환: "2026-03-09T17:44:00" → date + time 자동 분리
             start_time = tool_input.get("start_time")
@@ -400,12 +444,13 @@ def _execute_manage_events(tool_input: dict) -> str:
                 description=tool_input.get("description", ""),
                 event_time=event_time,
                 action=event_action,
-                action_params=tool_input.get("action_params"),
+                action_params=action_params,
                 enabled=tool_input.get("enabled", True),
                 weekdays=tool_input.get("weekdays"),
                 month=tool_input.get("month"),
                 day=tool_input.get("day"),
                 interval_hours=tool_input.get("interval_hours"),
+                owner_project_id=owner_project_id,
             )
             return json.dumps({"success": True, "event": event, "message": f"이벤트 '{title}' 추가됨"}, ensure_ascii=False)
 
@@ -419,8 +464,25 @@ def _execute_manage_events(tool_input: dict) -> str:
                          "enabled", "weekdays", "month", "day", "interval_hours", "action_params"]:
                 if key in tool_input:
                     updates[key] = tool_input[key]
+            if "date" in updates or "time" in updates:
+                _d, _t = _split_date_time(updates.get("date"), updates.get("time"))
+                if _d:
+                    updates["date"] = _d
+                if _t:
+                    updates["time"] = _t
             if "event_action" in tool_input:
-                updates["action"] = tool_input["event_action"]
+                _ea = tool_input["event_action"]
+                if _ea and _looks_like_ibl(_ea):
+                    _ap = dict(updates.get("action_params") or {})
+                    _ap["pipeline"] = str(_ea)
+                    updates["action_params"] = _ap
+                    updates["action"] = "run_pipeline"
+                elif _ea and _ea not in cm.actions:
+                    return json.dumps({"success": False,
+                                       "error": f"알 수 없는 실행 액션 '{str(_ea)[:60]}' — 등록된 액션: {sorted(cm.actions)}."},
+                                      ensure_ascii=False)
+                else:
+                    updates["action"] = _ea
 
             if cm.update_event(event_id, **updates):
                 return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 수정됨"}, ensure_ascii=False)
@@ -448,6 +510,9 @@ def _execute_manage_events(tool_input: dict) -> str:
             event_id = tool_input.get("event_id")
             if not event_id:
                 return json.dumps({"success": False, "error": "event_id는 필수입니다."}, ensure_ascii=False)
+            _why = cm.explain_run_now(event_id)
+            if _why:
+                return json.dumps({"success": False, "error": _why}, ensure_ascii=False)
             if cm.run_task_now(event_id):
                 return json.dumps({"success": True, "message": f"이벤트 '{event_id}' 즉시 실행 시작"}, ensure_ascii=False)
             return json.dumps({"success": False, "error": f"이벤트 '{event_id}'를 찾을 수 없습니다. (실행 가능한 이벤트만 run_now 가능)"}, ensure_ascii=False)

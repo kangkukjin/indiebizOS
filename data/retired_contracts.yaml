@@ -127,3 +127,18 @@ retired:
       표·문서 산출은 종전대로 table:spreadsheet/structure.
     phrases:
       - "구조 보존이 필요하면 table:spreadsheet/structure 로 저장하세요"
+  - id: trigger_config_weekday_names_and_once
+    retired: 2026-09-02
+    reason: >-
+      옛 트리거 가이드가 config:{repeat:"once"}·weekdays:["mon",…]·repeat:"daily"+interval_hours 를
+      가르쳤는데 캘린더는 요일을 정수(0=월)로만 비교하고 once 라는 repeat 이 없어, 영원히 안 도는
+      트리거가 성공으로 등록됐다(54회차 B54-8). 지금은 등록 입구가 정규화·검증한다.
+    instead: >-
+      cron 문자열이 정본("0 9 * * 1-5" 평일, "0 */2 * * *" 2시간마다). config 를 쓰면
+      repeat ∈ daily/weekly/monthly/yearly/none/interval, weekdays 는 0=월..6=일(mon..sun 도 정규화),
+      1회는 none + date, interval 은 interval_hours.
+    phrases:
+      - 'repeat:"once"'
+      - 'weekdays:["mon"'
+      - 'repeat:"daily", interval_hours'
+

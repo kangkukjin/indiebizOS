@@ -787,6 +787,35 @@ def validate_code(code: str) -> dict:
         except Exception:
             return None
 
+    def _check_trigger_schedule_params(st: dict, key: tuple):
+        """트리거 create/update 의 cron·config 를 실행기와 같은 파서로 미리 판정한다 (F54-1, 54회차).
+
+        검수는 param **값**을 안 보므로(1회차 F2) `cron:"0 9 * * 1-5"` 가 valid:true 로 통과한 뒤
+        등록에서 죽었다 — 검수↔실행 정합(53회차 관문)의 값 사각. 실행기의 `_cron_to_config`·
+        `normalize_schedule_config` 한 벌을 그대로 써 거짓 초록·거짓 빨강이 둘 다 없다."""
+        nonlocal all_valid
+        if key != ("self", "trigger") or not steps:
+            return
+        params = st.get("params", {}) or {}
+        if str(params.get("op") or "").strip() not in ("create", "update", "watch"):
+            return
+        try:
+            from trigger_engine import cron_to_config, normalize_schedule_config
+        except Exception:
+            return
+        err = None
+        if params.get("config"):
+            r = normalize_schedule_config(params["config"])
+            err = r.get("error")
+        elif isinstance(params.get("cron"), str) and params["cron"].strip():
+            r = cron_to_config(params["cron"])
+            err = r.get("error")
+        if err:
+            last = steps[-1]
+            last["valid"] = False
+            last["error"] = f"cron/config: {err}"
+            all_valid = False
+
     def _walk(st, depth: int = 0, label: str = None, group: str = None, warn: str = None):
         """구조 step(병렬/폴백/블록)을 가지 단위로 펼쳐 전부 검증한다.
 
@@ -802,6 +831,7 @@ def validate_code(code: str) -> dict:
         if _is_plain(st):
             _emit_action(st, label=label, group=group, warn=warn)
             _key = (st.get("_node"), st.get("action"))
+            _check_trigger_schedule_params(st, _key)
             _dk = _DO_CARRYING.get(_key)
             if _dk:
                 _gname = "each" if st.get("action") == "each" else st.get("action")

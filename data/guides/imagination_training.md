@@ -95,6 +95,14 @@ run_command: curl -s -X POST http://127.0.0.1:8765/ibl/validate -H "Content-Type
     훈련 턴이 라이브 코어를 고쳤던 22회차 사고와 같은 방향의 보호다.
   - 회차 뒤 대조: `sqlite3 data/world_pulse.db "select source, count(*) from action_health
     where timestamp >= '<회차 시작>' group by 1"` — `training` 으로 쌓였는지 눈으로 확인한다.
+- ★**발화 실측은 시간 경계를 넘는다** (2026-09-02 54회차 신설): 트리거·스케줄의 *발화*(스케줄러
+  틱·타이머 스레드·run_now)는 `origin:"training"` 이 실린 요청 스레드 밖에서 돌므로 건강 원장에
+  `usage`(channel `scheduler`·빈 채널·`agent`)로 쌓이고, 소유자가 시스템 AI 로 귀속되면 시스템 AI
+  **채팅 턴**까지 만든다(54회차 A5 실측: 대화 2행·LLM 턴 1회). 발화를 실측했으면 회차 뒤에
+  ①`action_health` 를 창(회차 시각)·channel 로 대조해 리허설 행을 제거하고 ②`data/event_triggers.json`
+  history 의 스크래치 행 ③`system_ai_memory.db` conversations 의 주입 행 ④알림함을 되돌려라.
+  스크래치 트리거는 `IT<회차>_` 접두 이름으로만 만들고, 예정 시각은 회차 안에 오게 잡되
+  등록 즉시 발화 규칙(반복형은 오늘 지난 시각이면 내일)을 알고 잡는다 — 1회성 `date`+`time` 이 빠르다.
 - 쓰기가 필요한 프로브는 **스크래치 원칙**: 임시 이름(예: "상상훈련_스크래치")으로 만들고
   프로브 후 반드시 삭제·원상복구한다. 사용자 데이터(기존 노트북·원장·이웃)는 건드리지 않는다.
 - ★**오진 격리 의무**: 이상 동작을 발견하면 결함으로 단정하기 전에 최소 재현으로 격리한다

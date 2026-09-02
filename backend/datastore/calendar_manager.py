@@ -33,6 +33,7 @@ calendar_events.json이 유일한 정보 원천(Single Source of Truth)입니다
 import json
 import os
 import shutil
+import tempfile
 import time
 import uuid
 import threading
@@ -43,6 +44,8 @@ from typing import Callable, Dict, List, Optional
 from runtime_utils import get_base_path
 
 BASE_PATH = get_base_path()
+# 설정 저장 잠금 — 동시 발화 스레드들의 _save_config 경주 봉쇄(B54-4). 프로세스 전역 한 개.
+_SAVE_LOCK = threading.RLock()
 DATA_PATH = BASE_PATH / "data"
 OUTPUTS_PATH = BASE_PATH / "outputs"
 CALENDAR_CONFIG_PATH = DATA_PATH / "calendar_events.json"
@@ -126,19 +129,36 @@ class CalendarManagerBase:
         return {"events": []}
 
     def _save_config(self):
-        """설정 파일 저장 — 원자적 쓰기 + 이전 파일 .bak 보존(로직 오류로 인한 유실 대비)."""
-        DATA_PATH.mkdir(parents=True, exist_ok=True)
-        # 직전 파일을 .bak으로 보존 (1단계 롤백 안전망)
-        if CALENDAR_CONFIG_PATH.exists():
+        """설정 파일 저장 — 원자적 쓰기 + 이전 파일 .bak 보존(로직 오류로 인한 유실 대비).
+
+        ★B54-4 (2026-09-02 상상훈련 54회차): 같은 분에 due 인 작업은 각자 스레드에서
+        `_execute_task → _save_config` 를 부른다. 임시 파일 이름이 `<path>.json.tmp` **하나**
+        였고 잠금이 없어, 첫 스레드가 `os.replace` 로 옮긴 뒤 나머지 스레드가 없는 파일을
+        옮기려다 `FileNotFoundError` 로 죽었다 — 죽는 자리가 "작업 시작" 로그 앞이라
+        흔적 없이 **같은 분의 작업 중 하나만 돌았다**(라이브 7건 중 4건, 격리 4건 중 1건).
+        잠금 한 개 + 스레드별 고유 임시 파일(같은 디렉터리 → 같은 파일시스템, 원자 교체 유지).
+        """
+        with _SAVE_LOCK:
+            DATA_PATH.mkdir(parents=True, exist_ok=True)
+            # 직전 파일을 .bak으로 보존 (1단계 롤백 안전망)
+            if CALENDAR_CONFIG_PATH.exists():
+                try:
+                    shutil.copy(CALENDAR_CONFIG_PATH, CALENDAR_CONFIG_PATH.with_suffix(".json.bak"))
+                except Exception:
+                    pass
+            # 임시 파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지)
+            fd, tmp = tempfile.mkstemp(prefix=CALENDAR_CONFIG_PATH.name + ".", suffix=".tmp",
+                                       dir=str(CALENDAR_CONFIG_PATH.parent))
             try:
-                shutil.copy(CALENDAR_CONFIG_PATH, CALENDAR_CONFIG_PATH.with_suffix(".json.bak"))
-            except Exception:
-                pass
-        # 임시 파일에 쓰고 원자적 교체 (부분 쓰기 손상 방지)
-        tmp = CALENDAR_CONFIG_PATH.with_suffix(".json.tmp")
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(self.config, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, CALENDAR_CONFIG_PATH)
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(self.config, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, CALENDAR_CONFIG_PATH)
+            finally:
+                if os.path.exists(tmp):
+                    try:
+                        os.unlink(tmp)
+                    except OSError:
+                        pass
         # 쓰기 관문 원장 — 일정·스케줄 변경 사건(관측, 실패 무해)
         try:
             from write_ledger import log_write
@@ -482,6 +502,20 @@ class CalendarManagerBase:
             pass
         return None
 
+    @staticmethod
+    def _registered_after_today_slot(task: dict, now: datetime, task_min: int) -> bool:
+        """오늘 등록됐고 그 등록 시각이 오늘의 예정 시각(task_min)보다 뒤인가 (F54-2)."""
+        created = task.get("created_at")
+        if not created:
+            return False
+        try:
+            c = datetime.fromisoformat(created)
+        except (ValueError, TypeError):
+            return False
+        if c.date() != now.date():
+            return False
+        return (c.hour * 60 + c.minute) > task_min
+
     def _should_run_task(self, task: dict, now: datetime) -> bool:
         """작업 실행 여부 판단"""
         if not task.get("enabled", True):
@@ -501,6 +535,13 @@ class CalendarManagerBase:
             task_min = self._time_to_minutes(task_time)
             now_min = self._time_to_minutes(current_time)
             if task_min is None or now_min is None or now_min < task_min:
+                return False
+            # ★F54-2 (2026-09-02 54회차): 따라잡기는 "그 분에 몸이 죽어 있던" 결번을 만회하려는
+            # 것인데 **새 등록**도 같은 판정("오늘 아직 안 돌았다")에 걸려, "매일 9시 브리핑"을
+            # 15시에 등록하면 15시에 브리핑이 왔다(실측 7건 전부 이 경로로 즉시 발화). 반복형은
+            # 등록 시각이 오늘의 예정 시각 뒤면 오늘 몫이 아니다 — 첫 발화 = 다음 예정 시각.
+            # 1회성(repeat none, 명시 date)은 현행 유지(지난 예정 = 밀린 일, 만회한다).
+            if repeat != "none" and self._registered_after_today_slot(task, now, task_min):
                 return False
 
         last_run = task.get("last_run")
@@ -643,8 +684,26 @@ class CalendarManagerBase:
                 except Exception:
                     pass
 
+    def explain_run_now(self, task_id: str) -> Optional[str]:
+        """run_now 가 못 도는 이유(없으면 None). B54-5: 저장된 action 이 등록된 액션 이름이
+        아니면(예: IBL 원문이 그대로 action 에 들어간 옛 이벤트) `_execute_task` 는 로그 한 줄만
+        남기고 아무것도 안 했는데 호출자는 "즉시 실행 시작"을 받았다 — 여기서 먼저 말한다."""
+        for evt in self.config.get("events", []):
+            if evt["id"] != task_id:
+                continue
+            action = evt.get("action")
+            if not action:
+                return "실행 이벤트가 아닙니다(action 없음 — 캘린더 일정). do 에 IBL 문장을 주어 등록하세요."
+            if action not in self.actions:
+                return (f"알 수 없는 작업 '{str(action)[:60]}' — 등록된 액션: {sorted(self.actions)}. "
+                        "IBL 문장은 do 로 주면 run_pipeline 으로 저장됩니다.")
+            return None
+        return f"이벤트 '{task_id}'를 찾을 수 없습니다."
+
     def run_task_now(self, task_id: str) -> bool:
-        """작업 즉시 실행"""
+        """작업 즉시 실행 — 미등록 액션이면 False(사유는 explain_run_now)."""
+        if self.explain_run_now(task_id):
+            return False
         for evt in self.config.get("events", []):
             if evt["id"] == task_id and evt.get("action"):
                 threading.Thread(

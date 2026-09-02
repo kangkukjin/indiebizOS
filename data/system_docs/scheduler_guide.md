@@ -44,7 +44,13 @@ see_also: [architecture.md, communication.md]
 | `none` | 1회 실행 후 자동 비활성화 | time, date |
 | `interval` | N시간 간격 반복 | time (첫 실행), interval_hours |
 
-**주의**: 1회성 스케줄의 repeat 값은 `"none"`입니다 (`"once"`가 아님).
+**주의**: 1회성 스케줄의 repeat 값은 `"none"`입니다 (`"once"`가 아님 — 트리거 `config` 에 `once` 를 쓰면 `none` 으로 정규화되고, 알 수 없는 repeat 은 거절된다).
+
+**첫 발화 규칙 (2026-09-02 54회차 F54-2)**: 반복형(daily/weekly/monthly/yearly)을 **오늘 예정 시각이 이미 지난 뒤에 등록**하면 오늘은 돌지 않고 다음 예정 시각에 처음 돈다. 따라잡기(latest-only catch-up)는 등록 **전**의 결번(그 분에 백엔드가 죽어 있던 날)에만 적용된다 — 판정 근거는 이벤트의 `created_at`. 1회성(`none`, 명시 date)은 예정 시각이 지나 있으면 다음 틱에 만회한다. `[self:schedule]` 의 날짜 없는 `at:"HH:MM"` 이 이미 지난 시각이면 등록 자체가 정직 거절된다.
+
+**실행 이벤트의 `do`**: `[self:manage_events]{op:"create", do:"<IBL 문장>"}` 는 `action: run_pipeline` + `action_params.pipeline` 으로 저장되고, 호출한 프로젝트(`owner_project_id`)에서 발화한다. 등록되지 않은 액션 이름(`launch_x` 등)은 create 에서 거절되고, `run_now` 는 실행 이벤트가 아니거나 액션이 미등록이면 "즉시 실행 시작" 대신 사유를 돌려준다.
+
+**동시 발화**: 같은 분에 due 인 작업은 전부 각자 스레드에서 돈다(설정 저장은 잠금 + 스레드별 임시 파일 — 54회차 B54-4 전엔 하나만 돌았다).
 
 ### 3. 요일 코드 (weekdays)
 weekly 타입에서 사용합니다. 리스트로 여러 요일 지정 가능:

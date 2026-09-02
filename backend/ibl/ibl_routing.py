@@ -618,7 +618,7 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
         return _cap("schedule")(params, agent_id=agent_id, project_path=project_path)
 
     elif func_name == "manage_events":
-        return _cap("manage_events")(params)
+        return _cap("manage_events")(params, project_path=project_path)
 
     elif func_name == "launcher_command":
         # 신규: params.app ("project" 등) → "open_<app>" 합성

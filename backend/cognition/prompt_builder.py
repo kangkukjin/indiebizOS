@@ -596,6 +596,20 @@ def _build_system_ai_stable_prompt(
     return "\n\n".join(parts)
 
 
+def _repair_turn_block(builder) -> str:
+    """이 턴에 RED 그랜트가 살아 있으면 fragments/13_repair.md 본문, 아니면 빈 문자열."""
+    try:
+        from thread_context import get_current_task_id, get_current_agent_id
+        from red_grant import active_grant
+        if active_grant(task_id=get_current_task_id() or None,
+                        agent_id=get_current_agent_id() or None) is None:
+            return ""
+        return builder._load_file("fragments/13_repair.md") or ""
+    except Exception as e:
+        logger.debug(f"[prompt_builder] 수리 교리 주입 생략 (무시): {e}")
+        return ""
+
+
 def _build_dynamic_context(
     consciousness_output: dict = None,
     model_name: str = "",
@@ -634,6 +648,17 @@ def _build_dynamic_context(
     else:
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
+
+    # 수리 턴 교리 — 실행자에게 *직접* (2026-09-02).
+    # ★왜 여기인가: 의식 프롬프트의 수리 안전수칙은 task_framing(1-2문장 병목)을 거쳐야
+    #   실행자에 닿는데, 실행자 자신의 base 프롬프트에는 "요청 밖의 개선 금지"가 직접
+    #   걸려 있어 반대 압력만 온전히 도달했다 — 그 결과가 "발견한 뿌리를 범위 밖이라
+    #   안 고침 + 고칠까요?"(사용자 관찰 09-01). 소비처에 소비처 말로 둔다.
+    #   신호 = RED 그랜트(사람 명령 수리 턴에만 발급, 3단계) — 프롬프트 조립(4단계)보다 앞선다.
+    #   dynamic 에 두므로 stable prefix 캐시는 그대로다. 실패는 어느 겹이든 프롬프트를 못 깬다.
+    repair_block = _repair_turn_block(builder)
+    if repair_block:
+        parts.append(repair_block)
 
     if not parts:
         return ""

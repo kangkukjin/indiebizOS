@@ -24,7 +24,7 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)�
 | 반사 신경 | 경량 AI (분류) | EXECUTE/THINK 분류 — 의식 각성(THINK)은 **장기 작업 또는 위험 작업**일 때만(2026-08-10 기준 상향), 그 외 전부 의식 건너뜀 |
 | 자기 교정 | 평가 에이전트 | 달성 기준 대비 평가, NOT_ACHIEVED 시 재시도 |
 | 자의식/각성 | World Pulse | 매시간 세계/사용자/자기 상태 수집 |
-| 면역계 | 일일 건강 점검 + action_health | 매일 1회 fixture·골든 검사(**AI 0** — 옛 'AI가 assumed 액션을 순찰'하던 배선은 은퇴), 모든 액션 실행을 자동 기록 |
+| 면역계 | 일일 건강 점검 + action_health | 매일 1회 fixture·골든 검사(**AI 0** — 옛 'AI가 assumed 액션을 순찰'하던 배선은 은퇴), 모든 액션 실행을 자동 기록 · **세포 사멸**(`component_lifecycle`, 2026-09-02): 참조도 쓸모 실행도 없는 가이드·워크플로우·스크립트·낱말이 유예 뒤 candidate(보이는 표식)→retired 로 — 가역 층은 기계가 `_retired/` 이동+커밋, 낱말은 판정 큐 · **수면 후반부**(`guide_downscale`): 예산(36KB) 초과 가이드를 주간 압축, 기계 대조(어휘 참조·절 제목·경로 보존)가 관문. 정본 docs/COMPONENT_APOPTOSIS_HANDOFF.md |
 | 자율신경계 | 스케줄러, 이벤트 엔진 | 의식 없이 돌아가는 리듬 |
 | 해마 | 실행기억 (해마 + discover) | 1회 생성, 전 에이전트 공유. fine-tuned 임베딩으로 관련 기억 자동 인출 |
 | 에피소딕 메모리 | episode_log + episode_summary | 에피소드(명령→응답)별 실행 로그 기록, 인지 품질 지표 영구 추적 |
@@ -484,7 +484,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
-- backend **.py 294개**(test 제외, git 추적 기준) — 층 디렉토리 `base 26 · datastore 38 · ibl 40 · cognition 45 · services 28 · surface 61`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
+- backend **.py 296개**(test 제외, git 추적 기준) — 층 디렉토리 `base 26 · datastore 38 · ibl 40 · cognition 47 · services 28 · surface 61`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
 - op 분기 액션 **70개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 41·false 15·미선언 95)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

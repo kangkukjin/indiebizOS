@@ -56,6 +56,9 @@ DECLARATIONS: List[tuple] = [
     ("data/instruments/**",         "standalone 계기 선언",                      "source"),
     ("data/system_ai_prompts/**",   "시스템 AI 프롬프트 저술물",                 "source"),
     ("data/api_registry.yaml",      "API 레지스트리(api_engine)",                "source"),
+    ("data/lifecycle_policy.yaml",  "구성요소 생명주기 정책(component_lifecycle)", "source"),
+    ("data/lifecycle_flags.json",   "생명주기 전이 깃발(component_lifecycle)",     "derived"),
+    ("data/guide_downscale_flags.json", "가이드 하향 정규화 깃발(guide_downscale)", "derived"),
     ("data/*_role.txt",             "역할 저술물(appmaker·forage·system_ai)",    "source"),
     ("data/system_ai_memo.txt",     "사용자 메모(시스템 AI 참조)",               "source"),
     ("data/world_pulse_config.example.json", "설정 예시(저술물)",                "source"),
@@ -287,6 +290,15 @@ def run_data_ownership_check(force: bool = False) -> Dict:
     orphans = report.get("orphans", [])
     stale = report.get("stale_backups", [])
     vanished = report.get("vanished_declarations", [])
+    # 비가역 층의 죽음은 사전 판정(2026-09-02, docs/COMPONENT_APOPTOSIS_HANDOFF.md §D):
+    # "보고만" 이 영구 방치로 새지 않게 판정 큐(PENDING_VERDICTS.md)에 적립한다. 실삭제는 종전대로 사용자.
+    try:
+        from component_lifecycle import queue_verdict
+        for sb in stale:
+            queue_verdict(f"backup:{sb['path']}",
+                          f"{sb['path']} — 백업 30일 초과(mtime {sb.get('mtime')}). 삭제?")
+    except Exception as e:
+        logger.debug(f"[DataOwnership] 판정 큐 적립 실패 (무시): {e}")
     try:
         _STATE_PATH.write_text(json.dumps({
             "last_run": started.isoformat(), "orphans": report.get("orphans_total", 0),

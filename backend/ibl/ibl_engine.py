@@ -903,14 +903,20 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
             from thread_context import is_health_check_mode, get_call_channel
             _src = "self_check" if agent_id == "__self_check__" or is_health_check_mode() else "usage"
             try:
-                from ibl_envelope import shape_of
-                _shape = shape_of(result) if result is not None else None
+                from ibl_envelope import classify_currency
+                if result is not None:
+                    _shape, _obj, _items, _derived = classify_currency(result)
+                    # n_items: "성공"과 "쓸모"를 가르는 한 숫자 — 빈 items 성공은
+                    # 구성요소 생명주기(component_lifecycle)에서 생존 신호로 안 센다.
+                    _n_items = len(_items) if isinstance(_items, list) else None
+                else:
+                    _shape, _n_items = None, None
             except Exception:
-                _shape = None
+                _shape, _n_items = None, None
             record_action_health(node, action, _action_success, _action_ms, source=_src,
                                  channel=get_call_channel(),
                                  error=(None if _action_success else _action_err),
-                                 shape=_shape)
+                                 shape=_shape, n_items=_n_items)
         except Exception:
             pass
 

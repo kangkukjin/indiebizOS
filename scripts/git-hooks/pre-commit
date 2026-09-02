@@ -205,14 +205,15 @@ fi
 
 # 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
 # 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
-if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$'; then
+if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$|^data/guides/[^/]+\.md$|^data/lifecycle_policy\.yaml$'; then
   repo_root=$(git rev-parse --show-toplevel)
-  echo "[pre-commit] 파일 크기 검사 실행..."
+  echo "[pre-commit] 파일 크기 검사 실행(1500줄 + 가이드 바이트 예산)..."
   if ! python3 "$repo_root/scripts/check_file_size.py"; then
     echo "" >&2
     echo "[pre-commit] 파일 크기 위반 — 커밋 차단." >&2
     echo "[pre-commit]   • 1500줄 초과분을 형제 모듈로 분리 (CLAUDE.md 파일 크기 규칙)" >&2
     echo "[pre-commit]   • 부채 파일(BASELINE)은 더 자랄 수 없음 — 변경분을 새 모듈로" >&2
+    echo "[pre-commit]   • 가이드 예산(data/lifecycle_policy.yaml guide_budget_bytes) 초과는 압축·분할로 — 삭제 금지" >&2
     echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
     exit 1
   fi

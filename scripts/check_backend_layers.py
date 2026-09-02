@@ -86,7 +86,7 @@ LAYERS = {
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools",
         "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",
-        "vocab_overlap_audit",
+        "vocab_overlap_audit", "component_lifecycle", "guide_downscale",
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {

@@ -546,6 +546,14 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 주간 스윕 묶음 실패 (무시): {e}")
 
+    # 9) 구성요소 생명주기(일일)·가이드 하향 정규화(주간) — 세포 사멸·수면 후반부.
+    #    깃발이 아니라 전이를 집행한다. 정본 docs/COMPONENT_APOPTOSIS_HANDOFF.md
+    try:
+        from component_lifecycle import run_lifecycle_bundle
+        result.update(run_lifecycle_bundle(save_self_check))
+    except Exception as e:
+        logger.warning(f"[Maintenance] 생명주기 번들 실패 (무시): {e}")
+
     # 8.7) 데이터 소유 감사 (주간 카덴스) — 소유 선언 레지스트리(data_ownership.DECLARATIONS)
     #      에 안 잡히는 data/·outputs/ 항목을 깃발로. 고아 캐시 소탕의 기계화 —
     #      **보고만, 삭제 없음**(실집행=사용자). _backups 30일 초과분도 삭제 후보로 보고.

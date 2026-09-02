@@ -1219,9 +1219,20 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
         steps, inject_meta = _apply_caller_params(steps, effective)
 
     _stamp_wf_stack(steps, stack)
+    _t0 = time.monotonic()
     result = execute_pipeline(steps, project_path)
     result["workflow_id"] = workflow_id
     result["workflow_name"] = wf_name
+    # 실행 원장(2026-09-02) — 저장 워크플로우의 생존 신호. 없으면 생명주기 측정 밖이라
+    # 앱(단백질) 층 전체가 '기록 없음=고아'로 오판되거나 영원히 산다. 실패는 삼킨다.
+    try:
+        from pulse_db import record_workflow_run
+        from ibl_envelope import shape_of
+        record_workflow_run(workflow_id, bool(result.get("success", True)),
+                            round((time.monotonic() - _t0) * 1000),
+                            shape=shape_of(result))
+    except Exception:
+        pass
     # 실패가 워크플로우 경계를 넘는다 — 어느 워크플로우 안이었는지 프레임으로 (경계 규약).
     if not result.get("success", True) and isinstance(result.get("traceback"), dict):
         push_frame(result["traceback"], {"kind": "workflow", "name": workflow_id})

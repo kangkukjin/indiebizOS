@@ -40,6 +40,38 @@ EXCLUDE_SUBSTR = ("node_modules", "__pycache__", "/pylibs/", "/build/", "/dist/"
 # 부채 0. 이제 이 가드는 예외 없는 한도다 — 1500줄을 넘기려면 먼저 쪼개야 한다.
 BASELINE = {}
 
+# ── 두 번째 규칙 집합: 가이드 바이트 예산 (2026-09-02, 사용자 승인) ─────────────────────
+# 가이드는 절차 기억이라 자라기만 했다(79KB 까지) — 1500줄 규칙과 같은 논리로 관문이 집행한다.
+# 예산 값은 data/lifecycle_policy.yaml(guide_budget_bytes) 이 정본이고 여기는 읽기만 한다.
+# 초과분은 삭제가 아니라 압축·분할로 맞춘다(야간 guide_downscale 이 예산 초과분부터 압축).
+GUIDE_PATTERNS = ["data/guides/*.md"]
+GUIDE_BUDGET_DEFAULT = 36000
+GUIDE_BASELINE = {}   # 부채 래칫(악화 금지). 예산 안으로 내려오면 항목 삭제 — 재진입 봉인.
+
+
+def guide_budget() -> int:
+    try:
+        import yaml
+        d = yaml.safe_load(open(os.path.join(ROOT, "data", "lifecycle_policy.yaml"), encoding="utf-8")) or {}
+        return int(d.get("guide_budget_bytes") or GUIDE_BUDGET_DEFAULT)
+    except Exception:
+        # yaml 없이도 관문은 선다 — 한 줄 파싱 폴백
+        try:
+            for ln in open(os.path.join(ROOT, "data", "lifecycle_policy.yaml"), encoding="utf-8"):
+                if ln.strip().startswith("guide_budget_bytes"):
+                    return int(ln.split(":", 1)[1].split("#")[0].strip())
+        except Exception:
+            pass
+        return GUIDE_BUDGET_DEFAULT
+
+
+def scan_guides(root: str):
+    for pat in GUIDE_PATTERNS:
+        for f in sorted(glob.glob(os.path.join(root, pat))):
+            rel = os.path.relpath(f, root)
+            if os.path.isfile(f):
+                yield rel, os.path.getsize(f)
+
 
 def count_lines(path: str) -> int:
     with open(path, encoding="utf-8", errors="replace") as f:
@@ -65,7 +97,7 @@ def main() -> int:
         for rel, n in sorted(sizes.items(), key=lambda x: -x[1])[:20]:
             mark = "★" if n > LIMIT else " "
             print(f"{mark} {n:5d}  {rel}")
-        return 0
+        print("— 가이드(바이트) —")
 
     issues = []
     for rel, n in sorted(sizes.items()):
@@ -82,12 +114,34 @@ def main() -> int:
         if n is not None and n <= LIMIT:
             print(f"ℹ {rel} 이 {n}줄로 내려옴 — BASELINE 에서 제거하세요(재진입 봉인)")
 
+    # 가이드 예산 — 두 번째 규칙 집합(파일별 전개 X: 규칙 하나·glob 하나)
+    budget = guide_budget()
+    gsizes = dict(scan_guides(ROOT))
+    if "--list" in sys.argv:
+        for rel, n in sorted(gsizes.items(), key=lambda x: -x[1])[:10]:
+            mark = "★" if n > budget else " "
+            print(f"{mark} {n:6d}B {rel}")
+        return 0
+    for rel, n in sorted(gsizes.items()):
+        cap = GUIDE_BASELINE.get(rel)
+        if cap is not None:
+            if n > cap:
+                issues.append(f"{rel}: {n}B — 가이드 래칫 상한 {cap}B 초과(부채 가이드는 더 자랄 수 없음. 압축·분할할 것)")
+        elif n > budget:
+            issues.append(f"{rel}: {n}B — 가이드 예산 {budget}B 초과(신규). 압축(자리표 골격·실측 기록 이관)"
+                          f" 또는 분할할 것 — 삭제로 맞추지 말 것")
+    for rel, cap in GUIDE_BASELINE.items():
+        n = gsizes.get(rel)
+        if n is not None and n <= budget:
+            print(f"ℹ {rel} 이 {n}B 로 내려옴 — GUIDE_BASELINE 에서 제거하세요(재진입 봉인)")
+
     if issues:
         print(f"✗ 파일 크기 위반 {len(issues)}건:")
         for i in issues:
             print(f"  - {i}")
         return 1
-    print(f"✓ 파일 크기 OK (한도 {LIMIT}줄, 부채 {len(BASELINE)}건 동결)")
+    print(f"✓ 파일 크기 OK (한도 {LIMIT}줄, 부채 {len(BASELINE)}건 동결 · 가이드 예산 {budget}B, "
+          f"{len(gsizes)}개 안)")
     return 0
 
 

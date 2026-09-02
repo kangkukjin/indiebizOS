@@ -162,6 +162,11 @@ def _ensure_action_health_cols(conn):
             conn.execute("ALTER TABLE action_health ADD COLUMN error TEXT")
         if "shape" not in cols:
             conn.execute("ALTER TABLE action_health ADD COLUMN shape TEXT")
+        if "n_items" not in cols:
+            # n_items = items 통화의 행 수(2026-09-02, 구성요소 생명주기). "성공했다"와
+            # "쓸모가 있었다"는 다르다 — sense:search_local 은 계수 19 에 결과 0 이었다
+            # (2026-08-15). 빈 items 성공은 생존 신호가 아니므로 행 수를 함께 적는다.
+            conn.execute("ALTER TABLE action_health ADD COLUMN n_items INTEGER")
         _AH_COLS_ENSURED = True
     except Exception:
         pass  # 마이그레이션 실패 시 아래 INSERT 가 구 스키마 폴백으로 감
@@ -220,7 +225,7 @@ NOT_ISOLATED_SQL = "COALESCE(source, 'usage') NOT IN ('test', 'training')"
 
 def record_action_health(node: str, action: str, success: bool, response_ms: int = None,
                          source: str = "usage", channel: str = None, error: str = None,
-                         shape: str = None):
+                         shape: str = None, n_items: int = None):
     """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
     if source == "usage" and _in_test_process():
         source = "test"   # 시험의 의도된 실패를 실사용 통계에서 격리 (B18-1)
@@ -234,10 +239,10 @@ def record_action_health(node: str, action: str, success: bool, response_ms: int
         err = (str(error)[:300] if error else None)
         try:
             conn.execute(
-                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp, channel, error, shape) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp, channel, error, shape, n_items) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (node, action, 1 if success else 0, response_ms, source,
-                 datetime.now().isoformat(), channel, err, shape)
+                 datetime.now().isoformat(), channel, err, shape, n_items)
             )
         except sqlite3.OperationalError:
             # 구 스키마 폴백 (마이그레이션 실패 시에도 기록 자체는 산다)
@@ -250,6 +255,60 @@ def record_action_health(node: str, action: str, success: bool, response_ms: int
         conn.close()
     except Exception:
         pass  # 기록 실패가 액션 실행에 영향 주면 안 됨
+
+
+_WF_RUN_ENSURED = False
+
+
+def _ensure_workflow_run(conn):
+    """workflow_run 지연 생성 (멱등, 프로세스당 1회).
+
+    저장 워크플로우는 2026-09-02 까지 **실행 기록이 없었다** — 액션은 action_health 에,
+    스크립트는 script_runs 로그에 남는데 워크플로우만 아무 원장이 없어 구성요소 생명주기
+    (component_lifecycle)의 측정 밖이었다. 앱(단백질)의 생존 신호가 이 표다.
+    action_health 에 node='workflow' 로 섞지 않는 이유: 좀비 청소가 어휘에 없는 (node,
+    action) 행을 지우고, returns 스윕이 어휘 계약과 대조한다 — 워크플로우는 낱말이 아니다.
+    """
+    global _WF_RUN_ENSURED
+    if _WF_RUN_ENSURED:
+        return
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS workflow_run (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                workflow_id TEXT NOT NULL,
+                success INTEGER NOT NULL,
+                response_ms INTEGER,
+                source TEXT NOT NULL DEFAULT 'usage',
+                shape TEXT,
+                timestamp TEXT NOT NULL
+            )""")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_workflow_run_id ON workflow_run(workflow_id)")
+        _WF_RUN_ENSURED = True
+    except Exception:
+        pass
+
+
+def record_workflow_run(workflow_id: str, success: bool, response_ms: int = None,
+                        shape: str = None, source: str = "usage"):
+    """저장 워크플로우 실행 결과 기록 — 경량, 실패 시 무시. 출처 격리는 action_health 와 같은 규율."""
+    if source == "usage" and _in_test_process():
+        source = "test"
+    elif source == "usage":
+        source = _context_isolation_source() or source
+    try:
+        conn = _get_pulse_db()
+        _ensure_workflow_run(conn)
+        conn.execute(
+            "INSERT INTO workflow_run (workflow_id, success, response_ms, source, shape, timestamp) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (str(workflow_id), 1 if success else 0, response_ms, source, shape,
+             datetime.now().isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 
 _NOTIFY_LOG_ENSURED = False

@@ -320,6 +320,25 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 - **사용 후 증류**(`backend/cognition/guide_feedback.py`): 턴 종료 증류 4단계 — 실제 사용된 가이드의 갱신 필요를 경량 AI 가 판정(깃발만, 수정은 사람/AI 별도 턴).
 - 죽은 참조·고아는 build `--check` 의 가이드 부패 경고(비차단)가 잡는다.
 
+### 구성요소 생명주기 — 세포 사멸과 수면 후반부 (2026-09-02, 사용자 판정 2건 승인)
+
+기억 7종 중 DB 기억(심층·해마·포식)에는 LRU·cap 가지치기가 있었지만 **가이드·워크플로우·스크립트·낱말**에는
+망각이 없었다 — 깃발 순찰 일곱이 보고만 하고 정리는 사람 손이었다(2026-08-17 81KB, 09-02 세 가이드 다이어트).
+세대 교체가 없는 한 개체는 죽음을 구성요소 수준으로 들여와야 한다는 설계(docs/COMPONENT_APOPTOSIS_HANDOFF.md):
+- **죽음**(`backend/cognition/component_lifecycle.py`, 일일·무LLM): 생존 = 영양 지지(가이드·프롬프트·트리거·일정·
+  경험 코퍼스·어휘 `guides:`·phone_only 몸의 **살아 있는** 참조) ∨ 쓸모 실행(success∧usage∧≠self_check∧¬빈 items —
+  `action_health.n_items`·`workflow_run` 원장 신설·스크립트 last_run·가이드 주입). 유예 30일 → candidate(보이는
+  표식: 가이드 첫 줄 주석·yaml `lifecycle` 필드 — **숨김 아님**) → 90일 더 무신호면 retired. 결정권=가역성: git 층은
+  `_retired/` 이동+guide_db 항목 제거+`[self:body]{op:commit}` 라벨 `apoptosis:`, **낱말은 항상 판정 큐**(언어 개정),
+  비가역 층(`_backups` 30일)도 판정 큐. 부활은 `lifecycle_state.json` revivals 에 남아 정책(`lifecycle_policy.yaml`)
+  재조정 근거. 후보끼리의 참조는 지지가 아니다(고아 섬).
+- **하향 정규화**(`backend/cognition/guide_downscale.py`, 주간·LLM): 가이드 바이트 예산 36KB(`check_file_size.py` 두 번째
+  규칙 집합, pre-commit) 초과분과 `guide_audit` 깃발 가이드를 죽은 참조 → 은퇴 문구 → 미사용 절 순으로 압축.
+  미사용 절은 **절 단위 사용 귀속**(`guide_registry.guide_section_use` — guide_feedback 이 매 턴 실행 궤적의 `[node:action]`
+  으로 어느 절이 쓰였는지 적는다, 해마 `_recall_was_used` 와 같은 판정)이 3턴 이상 관측했을 때만 말한다(아니면 '못 봤음').
+  **기계 대조가 관문**: 살아 있는 어휘 참조·절 제목·코드 경로 보존 + 더 짧음. 탈락은 파일 무접촉·`unchecked`.
+- 회귀 고정물 `backend/test_component_lifecycle.py`·`backend/test_guide_downscale.py`. 자기점검 노드 `__telemetry__:component_lifecycle`·`guide_downscale`.
+
 *이 문서는 7종 메모리의 통합 지도다. 개별 시스템 변경 시 본 표와 흐름도를 함께 갱신할 것.*
 
 

@@ -39,6 +39,7 @@
     "cognition/cognitive_eval",
     "cognition/cognitive_recall",
     "cognition/cognitive_trace",
+    "cognition/component_lifecycle",
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
     "cognition/derived_freshness",
@@ -48,6 +49,7 @@
     "cognition/forage_consolidation",
     "cognition/goal_evaluator",
     "cognition/guide_audit",
+    "cognition/guide_downscale",
     "cognition/guide_feedback",
     "cognition/history_checkpoint",
     "cognition/ibl_description_audit",
@@ -267,8 +269,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 258,
-    "engine": 238,
+    "total": 260,
+    "engine": 240,
     "blocklist": 20
   }
 }

@@ -280,6 +280,31 @@ def _review_one(guide: str, user_message: str, response: str,
         return {}
 
 
+_PAIR_RE = re.compile(r"\[([a-z_][a-z0-9_-]*):([a-z_][a-z0-9_-]*)\]")
+
+
+def _executed_pairs(tool_calls) -> set:
+    """도구 호출 목록에서 실행된 (node, action) 쌍 — IBL 코드 문자열·node/action 필드 양쪽."""
+    pairs = set()
+    for c in (tool_calls or []):
+        try:
+            if isinstance(c, dict):
+                inp = c.get("input") or {}
+                if isinstance(inp, dict) and inp.get("node") and inp.get("action"):
+                    pairs.add((str(inp["node"]), str(inp["action"])))
+                blob = json.dumps(inp, ensure_ascii=False) if not isinstance(inp, str) else inp
+                pairs.update(_PAIR_RE.findall(blob))
+                name = str(c.get("name") or c.get("tool_name") or "")
+                if name.startswith("ibl:") and name.count(":") == 2:
+                    _, n, a = name.split(":")
+                    pairs.add((n, a))
+            else:
+                pairs.update(_PAIR_RE.findall(str(c)))
+        except Exception:
+            continue
+    return pairs
+
+
 def review_used_guides(guides: List[str], user_message: str, response: str,
                        tool_calls=None) -> Dict:
     """이번 턴에 쓰인 가이드를 검토하고 되돌려 쓴다. 증류 4단계.
@@ -299,6 +324,17 @@ def review_used_guides(guides: List[str], user_message: str, response: str,
             tool_summary = ", ".join(names[:20])
     except Exception:
         pass
+
+    # 절 단위 사용 귀속(2026-09-02) — LLM 0 이라 쿨다운·상한 앞에서 모든 주입 가이드에 적는다.
+    # 실행된 [node:action] 은 도구 호출 입력(execute_ibl 의 code·action)에서 뽑는다.
+    try:
+        from guide_registry import record_section_use
+        pairs = _executed_pairs(tool_calls)
+        if pairs:
+            for guide in dict.fromkeys(guides):
+                record_section_use(guide, pairs)
+    except Exception as e:
+        logger.debug(f"[GuideFeedback] 절 귀속 실패 (무시): {e}")
 
     live = _live_actions()
     for guide in list(dict.fromkeys(guides))[:MAX_GUIDES_PER_TURN]:

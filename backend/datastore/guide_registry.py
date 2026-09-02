@@ -42,10 +42,11 @@ degrade — 정확도는 떨어져도 "언제쯤"은 남는다.
 import json
 import logging
 import os
+import re
 import sqlite3
 import subprocess
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -77,10 +78,92 @@ def _conn() -> sqlite3.Connection:
                UNIQUE(guide, used_on, origin)
            )"""
     )
+    # 절 단위 사용 귀속(2026-09-02, 구성요소 생명주기·하향 정규화의 입력).
+    # 가이드는 통째로 주입되므로 파일 단위 신호만 있었다 — 어느 절이 실제로 쓰였는지는
+    # 그 턴의 실행 궤적에 그 절이 언급한 [node:action] 이 나타났는가로 귀속한다
+    # (해마의 _recall_was_used 와 같은 판정). section='*' 행은 "귀속이 관측할 기회가
+    # 있었다"(실행된 액션이 1개 이상)는 표지 — 이게 없으면 '미사용'은 '못 봤음'이다.
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS guide_section_use (
+               id INTEGER PRIMARY KEY AUTOINCREMENT,
+               guide TEXT NOT NULL,
+               section TEXT NOT NULL,
+               used_on TEXT NOT NULL,
+               n INTEGER NOT NULL DEFAULT 1,
+               UNIQUE(guide, section, used_on)
+           )"""
+    )
     return conn
 
 
 _injected = threading.local()
+
+_ACTION_PAIR_RE = re.compile(r"\[([a-z_][a-z0-9_-]*):([a-z_][a-z0-9_-]*)\]")
+_SECTION_RE = re.compile(r"^(#{2,3})\s+(.+?)\s*$", re.M)
+
+
+def guide_sections(text: str) -> List[tuple]:
+    """가이드 본문을 (절 제목, 절 본문) 목록으로 — `##`/`###` 헤더 단위. 머리(첫 헤더 전)는 '__head__'."""
+    out: List[tuple] = []
+    pos = 0
+    title = "__head__"
+    for m in _SECTION_RE.finditer(text):
+        out.append((title, text[pos:m.start()]))
+        title = m.group(2).strip()
+        pos = m.end()
+    out.append((title, text[pos:]))
+    return out
+
+
+def record_section_use(guide: str, executed_pairs) -> int:
+    """이번 턴에 실행된 [node:action] 집합으로 가이드의 어느 절이 쓰였는지 귀속해 적는다.
+
+    LLM 0·실패 무시. 반환 = 귀속된 절 수. executed_pairs 가 비면(도구 실행 없는 턴) 관측
+    기회가 없었으므로 아무 것도 적지 않는다(section='*' 표지도 안 남긴다).
+    """
+    try:
+        pairs = {tuple(p) for p in (executed_pairs or [])}
+        if not guide or not pairs:
+            return 0
+        text = (GUIDES_DIR / guide).read_text(encoding="utf-8")
+    except Exception:
+        return 0
+    hit = 0
+    today = date.today().isoformat()
+    try:
+        with _lock, _conn() as conn:
+            conn.execute(
+                "INSERT INTO guide_section_use(guide, section, used_on, n) VALUES(?,?,?,1) "
+                "ON CONFLICT(guide, section, used_on) DO UPDATE SET n = n + 1",
+                (guide, "*", today),
+            )
+            for title, body in guide_sections(text):
+                mentioned = set(_ACTION_PAIR_RE.findall(body))
+                if mentioned & pairs:
+                    conn.execute(
+                        "INSERT INTO guide_section_use(guide, section, used_on, n) VALUES(?,?,?,1) "
+                        "ON CONFLICT(guide, section, used_on) DO UPDATE SET n = n + 1",
+                        (guide, title, today),
+                    )
+                    hit += 1
+    except Exception as e:
+        logger.debug(f"[guide_registry] 절 귀속 기록 실패 (무시): {e}")
+    return hit
+
+
+def section_uses(guide: str, days: int = 60) -> Dict[str, int]:
+    """관찰창 안 절별 사용 합계 {절 제목: n}. '*' 키 = 관측 기회(턴) 수."""
+    try:
+        since = (date.today() - timedelta(days=days)).isoformat()
+        with _conn() as conn:
+            rows = conn.execute(
+                "SELECT section, SUM(n) FROM guide_section_use "
+                "WHERE guide=? AND used_on >= ? GROUP BY section",
+                (guide, since),
+            ).fetchall()
+        return {r[0]: int(r[1] or 0) for r in rows}
+    except Exception:
+        return {}
 
 
 def mark_injected(guide: str) -> None:

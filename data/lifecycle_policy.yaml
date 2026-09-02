@@ -1,0 +1,17 @@
+# 구성요소 생명주기 정책 — 세계의 명사는 데이터 (docs/COMPONENT_APOPTOSIS_HANDOFF.md §2·§A·§C)
+#
+# 기본값 반전: 생존 신호(살아 있는 상위 구조의 참조 ∨ 쓸모 있는 실행)가 없으면 죽는다.
+# 수치는 정책이지 코드가 아니다 — 부활 원장(data/lifecycle_state.json 의 revivals)이
+# 비어 있지 않으면(오살 직전 부활이 있었으면) candidate_after_days 를 늘릴 근거가 여기서 생긴다.
+
+grace_days: 30            # 신생 유예 — 처음 관측된 날부터 이 기간은 무조건 산다
+candidate_after_days: 60  # 무참조·무신호가 이 기간 이어지면 candidate (보이는 표식, 숨김 아님)
+retire_after_days: 90     # candidate 로 이 기간 더 무신호면 retired (가역 층=기계 집행, 어휘=판정 큐)
+cadence_hours: 24         # 전이 계산 카덴스 (무LLM)
+
+# 가이드 바이트 예산 — scripts/check_file_size.py 의 두 번째 규칙 집합이 커밋을 막고,
+# guide_downscale(주간 하향 정규화)이 예산 초과분부터 압축한다. 초기값은 2026-09-02 사용자가
+# 만족한 다이어트 결과(21·30·34KB) 위에 잡았다.
+guide_budget_bytes: 36000
+downscale_per_run: 2      # 하향 정규화 회차당 가이드 수 (LLM 비용 절제, guide_audit PER_RUN 과 같은 태도)
+section_unused_min_turns: 3   # 절 단위 '미사용' 판정 최소 관측 턴 — 귀속이 이만큼 돌았을 때만 3부류 압축

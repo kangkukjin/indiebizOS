@@ -22,10 +22,14 @@ export interface DocumentAttachment {
 }
 
 export interface ToolActivity {
+  /** 프로바이더가 부여한 호출 id — 병렬 호출의 start↔result 페어링 키(없을 수 있음) */
+  id?: string;
   name: string;
   status: 'running' | 'done' | 'completed';
   input?: Record<string, unknown>;
   result?: string;
+  /** 호출이 실패했나 — backend tool_result.is_error 그대로. 미표명이면 undefined */
+  isError?: boolean;
 }
 
 export interface TodoItem {

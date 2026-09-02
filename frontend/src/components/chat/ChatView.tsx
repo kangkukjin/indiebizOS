@@ -260,7 +260,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
               timestamp: new Date(),
             }]);
           }
-          const newTool: ToolActivity = { name: data.name, status: 'running', input: data.input };
+          const newTool: ToolActivity = { id: data.id, name: data.name, status: 'running', input: data.input };
           setToolHistory(prev => {
             const next = [...prev, newTool];
             toolHistoryRef.current = next;
@@ -273,29 +273,42 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           break;
         }
 
-        case 'tool_result':
-          setCurrentToolLabel(`✓ ${data.name} 완료`);
+        case 'tool_result': {
+          const failed = data.is_error === true;
+          setCurrentToolLabel(`${failed ? '✖' : '✓'} ${data.name} ${failed ? '실패' : '완료'}`);
           setToolHistory(prev => {
             const updated = [...prev];
-            // 마지막으로 실행 중인 해당 도구 찾기
+            // ★짝짓기는 id 가 정답이다 — 병렬 호출은 같은 이름이 여러 개 동시에 돌아
+            // 이름만으로 찾으면 엉뚱한 호출에 결과가 붙는다. id 가 없는 프로바이더는
+            // 예전대로 이름·순서로 폴백한다.
             let idx = -1;
-            for (let i = updated.length - 1; i >= 0; i--) {
-              if (updated[i].name === data.name && updated[i].status === 'running') {
-                idx = i;
-                break;
+            if (data.id) {
+              idx = updated.findIndex(t => t.id === data.id);
+            }
+            if (idx === -1) {
+              for (let i = updated.length - 1; i >= 0; i--) {
+                if (updated[i].name === data.name && updated[i].status === 'running') {
+                  idx = i;
+                  break;
+                }
               }
             }
+            if (idx === -1 && updated.length > 0) idx = updated.length - 1;
             if (idx !== -1) {
-              updated[idx] = { ...updated[idx], result: data.result, status: 'done' };
-            } else if (updated.length > 0) {
-              // fallback: 마지막 항목 업데이트
-              updated[updated.length - 1] = { ...updated[updated.length - 1], result: data.result, status: 'done' };
+              updated[idx] = {
+                ...updated[idx],
+                result: data.result,
+                status: 'done',
+                isError: failed,
+                input: updated[idx].input ?? data.input,
+              };
             }
             toolHistoryRef.current = updated;
             return updated;
           });
           if (data.todos) setTodos(data.todos);
           break;
+        }
 
         case 'thinking':
           setThinkingText(data.content);

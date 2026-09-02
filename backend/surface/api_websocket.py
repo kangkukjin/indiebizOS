@@ -84,6 +84,32 @@ def _process_documents(documents: list, message: str) -> str:
     return message
 
 
+# 도구 이벤트 → 표면 페이로드. 에이전트·시스템AI 양단이 **같은 이름·같은 필드**로 나른다.
+# ★손으로 다시 짓지 않는다(2026-09-02 수리): 옛 코드는 두 곳에서 각각
+# {type, name, result, agent} 만 골라 담아 프로바이더가 실어 보낸 두 필드를 떨어뜨렸다 —
+#   · is_error : 그 호출이 성공했나 실패했나 (표면의 유일한 판정 근거)
+#   · id       : 병렬 호출의 start↔result 페어링 키(anthropic.py 가 '유일한 정답'이라 적어 둔 것)
+# 그래서 표면은 실패한 도구도 초록 체크로 그렸고, 병렬 호출은 이름으로 짝을 찾다 엇갈렸다.
+# 방출부(providers/*)도 이벤트 타입(tool_start/tool_result)도 멀쩡했고, 내부 소비자
+# (agent_pipeline._collect)는 같은 두 필드를 이미 쓰고 있었다 — 끊긴 고리는 이 transport 하나였다.
+# images 는 일부러 뺀다: base64 라 WS 로 두 번 흐르면 무겁고, 최종 메시지에 이미 실린다.
+_TOOL_EVENT_FIELDS = ("id", "name", "input", "result")
+
+
+def tool_event_payload(event: dict, agent: str) -> dict:
+    """프로바이더 도구 이벤트를 표면 계약 그대로 옮긴다 (tool_start/tool_result 공용)."""
+    payload = {"type": event.get("type"), "agent": agent}
+    for key in _TOOL_EVENT_FIELDS:
+        value = event.get(key)
+        if value is not None:
+            payload[key] = value
+    payload.setdefault("name", "unknown")
+    if payload["type"] == "tool_result":
+        # 판정은 언제나 실린다 — 없으면 '성공'이 아니라 '미표명'이 되어 옛 병이 되살아난다.
+        payload["is_error"] = bool(event.get("is_error", False))
+    return payload
+
+
 def is_cancelled(client_id: str) -> bool:
     """클라이언트의 중단 요청 여부 확인"""
     return cancel_flags.get(client_id, False)
@@ -749,24 +775,14 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 })
 
             elif event_type == "tool_start":
-                # 도구 시작 알림
-                await manager.send_message(client_id, {
-                    "type": "tool_start",
-                    "name": event.get("name", "unknown"),
-                    "agent": agent_name
-                })
+                # 도구 시작 알림 (input 포함 — 시스템AI 경로와 같은 계약)
+                await manager.send_message(client_id, tool_event_payload(event, agent_name))
 
             elif event_type == "tool_result":
-                # 도구 결과 알림
-                tool_name = event.get("name", "unknown")
-                tool_input = event.get("input", {})
-
-                message_data = {
-                    "type": "tool_result",
-                    "name": tool_name,
-                    "result": event.get("result", ""),
-                    "agent": agent_name
-                }
+                # 도구 결과 알림 (id·is_error 포함 — 표면이 성공/실패를 구별하고 병렬 호출을 짝짓는다)
+                message_data = tool_event_payload(event, agent_name)
+                tool_name = message_data["name"]
+                tool_input = event.get("input") or {}
 
                 # todo_write 도구인 경우 TODO 데이터 추가
                 # Phase 17: execute_ibl 경유 시 params에서 추출
@@ -1135,32 +1151,25 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 })
 
             elif event_type == "tool_start":
-                await manager.send_message(client_id, {
-                    "type": "tool_start",
-                    "name": event.get("name", "unknown"),
-                    "input": event.get("input", {}),
-                    "agent": "system_ai"
-                })
+                await manager.send_message(client_id, tool_event_payload(event, "system_ai"))
 
             elif event_type == "tool_result":
-                tool_result = event.get("result", "")
-                tool_name = event.get("name", "unknown")
+                message_data = tool_event_payload(event, "system_ai")
+                tool_result = message_data.get("result", "")
+                tool_name = message_data["name"]
 
                 # 도구 결과 기록 (final이 비어있을 때 사용)
+                # ★판정은 두 층이다: 프로바이더의 is_error(호출 자체가 죽음) ∪ 본문 휴리스틱
+                # (호출은 성공했으나 IBL 봉투가 실패인 부류). 앞을 새로 얻었다고 뒤를 버리지 않는다.
                 tool_results_list.append({
                     "name": tool_name,
                     "result": tool_result,
-                    "has_error": "error" in tool_result.lower() or '"success": false' in tool_result.lower()
+                    "has_error": bool(message_data.get("is_error"))
+                                 or "error" in tool_result.lower()
+                                 or '"success": false' in tool_result.lower()
                 })
 
-                tool_input = event.get("input", {})
-
-                message_data = {
-                    "type": "tool_result",
-                    "name": tool_name,
-                    "result": tool_result,
-                    "agent": "system_ai"
-                }
+                tool_input = event.get("input") or {}
 
                 # todo_write 도구인 경우 TODO 데이터 추가
                 # Phase 17: execute_ibl 경유 시 params에서 추출

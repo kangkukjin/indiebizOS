@@ -1,7 +1,7 @@
 /**
  * 도구 실행 히스토리 패널 (Claude Desktop 스타일)
  */
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import type { ToolActivity } from './types';
 import { parseImagePaths } from './chatUtils';
 
@@ -57,12 +57,17 @@ export function ToolHistoryPanel({ toolHistory, variant = 'warm' }: ToolHistoryP
           <div className={`flex items-center gap-2 px-3 py-2 ${styles.headerBg} border-b ${styles.headerBorder}`}>
             {tool.status === 'running' ? (
               <Loader2 size={14} className={`animate-spin ${styles.spinColor} shrink-0`} />
+            ) : tool.isError ? (
+              <XCircle size={14} className="text-red-500 shrink-0" />
             ) : (
               <CheckCircle2 size={14} className="text-green-500 shrink-0" />
             )}
             <span className={`font-semibold ${styles.textColor}`}>{tool.name}</span>
             {tool.status === 'running' && (
               <span className={`ml-auto text-[10px] ${styles.badgeText} ${styles.badgeBg} px-2 py-0.5 rounded-full`}>실행 중</span>
+            )}
+            {tool.status !== 'running' && tool.isError && (
+              <span className="ml-auto text-[10px] text-red-600 bg-red-100 px-2 py-0.5 rounded-full">실패</span>
             )}
           </div>
 
@@ -82,9 +87,9 @@ export function ToolHistoryPanel({ toolHistory, variant = 'warm' }: ToolHistoryP
           {tool.result && (() => {
             const parsed = parseImagePaths(tool.result);
             return (
-              <div className={`px-3 py-2 ${styles.resultBg}`}>
-                <div className="text-[10px] text-green-600 font-medium mb-1 flex items-center gap-1">
-                  <span>📤</span> 결과
+              <div className={`px-3 py-2 ${tool.isError ? 'bg-red-50/40' : styles.resultBg}`}>
+                <div className={`text-[10px] font-medium mb-1 flex items-center gap-1 ${tool.isError ? 'text-red-600' : 'text-green-600'}`}>
+                  <span>{tool.isError ? '⚠️' : '📤'}</span> {tool.isError ? '실패' : '결과'}
                 </div>
                 <pre className={`text-[11px] ${styles.preText} ${styles.preBg} p-2 rounded border ${styles.preBorder} overflow-x-auto max-h-60 overflow-y-auto whitespace-pre-wrap break-words`}>
                   {tool.result}

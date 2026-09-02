@@ -414,7 +414,7 @@ class GeminiProvider(BaseProvider):
                 yield {"type": "thinking", "content": f"도구 실행 중: {fc.name}"}
 
                 # 도구 실행 (content/details/images 분리 적용)
-                tool_output, ui_details, tool_images = self._execute_single_tool(fc, execute_tool, iteration)
+                tool_output, ui_details, tool_images, tool_is_error = self._execute_single_tool(fc, execute_tool, iteration)
 
                 # 승인 요청 감지
                 if tool_output.startswith("[[APPROVAL_REQUESTED]]"):
@@ -439,7 +439,8 @@ class GeminiProvider(BaseProvider):
                     "type": "tool_result",
                     "name": fc.name,
                     "input": tool_input,
-                    "result": ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result
+                    "result": ui_result[:3000] + "..." if len(str(ui_result)) > 3000 else ui_result,
+                    "is_error": bool(tool_is_error),  # 판정 — 다른 프로바이더와 같은 계약
                 }
                 if tool_images:
                     event["images"] = tool_images
@@ -707,9 +708,16 @@ class GeminiProvider(BaseProvider):
         """단일 도구 실행 (검증 및 메트릭 포함)
 
         Returns:
-            (tool_output, ui_details): AI용 결과와 UI용 상세 정보
+            (tool_output, ui_details, tool_images, is_error)
             - tool_output: AI에게 전달할 문자열
             - ui_details: UI에 표시할 상세 정보 (없으면 tool_output과 동일)
+            - tool_images: 도구가 반환한 이미지 [{base64, media_type}]
+            - is_error: 이 호출이 실패했나 — tool_result 이벤트의 판정 필드
+
+        ★is_error 를 돌려주는 이유(2026-09-02 수리): 예전엔 _verify_tool_result 가
+        돌려준 판정을 이 안에서 print 만 하고 버렸다. 그래서 Gemini 로 도는 자율주행은
+        다른 프로바이더(anthropic·openai·ollama·codex)와 달리 tool_result 에 판정 자체가
+        실리지 않아, transport 를 고쳐도 표면에 전할 것이 없었다.
         """
         tool_input = dict(fc.args) if fc.args else {}
 
@@ -724,7 +732,9 @@ class GeminiProvider(BaseProvider):
         self.metrics.record_tool_call()
 
         if not execute_tool:
-            return "도구 실행 함수가 제공되지 않았습니다.", None
+            # ★예전엔 2-tuple 이라 호출부(3개 언패킹)에서 ValueError 로 터졌다 — 이번에
+            # 반환 개수를 늘리면서 같은 자리를 나머지와 같은 모양으로 맞춘다.
+            return "도구 실행 함수가 제공되지 않았습니다.", None, None, True
 
         try:
             raw_output = execute_tool(fc.name, tool_input, self.project_path, self.agent_id)
@@ -758,12 +768,12 @@ class GeminiProvider(BaseProvider):
             output_preview = str(tool_output)[:200] + "..." if output_len > 200 else str(tool_output)
             print(f"[Gemini][round={iteration}]   결과({output_len}자): {output_preview}")
 
-            return tool_output, ui_details, tool_images
+            return tool_output, ui_details, tool_images, is_error
 
         except Exception as tool_err:
             self.metrics.record_error()
             print(f"[Gemini][round={iteration}] 도구 실행 예외: {fc.name} - {tool_err}")
-            return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요.", None, None
+            return f"도구 실행 실패: {fc.name} - {str(tool_err)}. 다른 방법을 시도하거나 사용자에게 알려주세요.", None, None, True
 
     def _build_contents(
         self,

@@ -119,6 +119,7 @@ see_also: [architecture.md, ibl.md]
 - **저장**:
   - `pulse_log` (30일 보존): 경제·뉴스·날씨·user/self 상태의 **정기 수집은 2026-06-28 폐지** — 정기 갱신은 위치+금주 일정만 `world_pulse.md` 로 쓴다(`collect_world_pulse`). on-demand `[sense:world]`·계기판 live pull 은 별도 경로. 테이블은 잔존 데이터 보존·정리 대상으로만 남아 있다.
   - `self_checks` (매일 1회, 30일): 결정론 건강 점검 — §1A 정적 정합성(`__static__:ibl_consistency`) + §1B fixture 통화 무결성 + §1C 골든 파이프. **AI 0**
+  - **보존정책** (2026-09-02): `pulse_schedule.retention_days`(기본 30일) 하나가 pulse_log·self_checks·**action_health**·distill_queue 종결 행을 함께 정리(`_cleanup_old_data`). action_health 는 실행마다 한 행이라 무상한 누적이었는데 소비자(X-Ray·건강 요약·만성 실패)는 전부 최근 7일 창이다 — 읽는 이 없는 장기 집계표는 심지 않는다(소비자가 생기면 그때).
   - `action_health` (실행마다): 실사용 기반 액션 건강. 2026-08-21부터 `channel`·`error` 칸 — *어느 통로에서 왜* 실패했는지가 남는다. ★`assumed` 는 '미검증'이 아니라 '실사용 기록 없음'이다 · 시험 프로세스의 기록은 `source='test'` 로 격리(2026-08-21 B18-1) — 같은 판정을 주행기록도 쓴다(위 §3)
 - **사용**: 프롬프트에 압축 주입 + 면역 순찰(만성 실패 감지) + `diagnostic_report.md`.
 
@@ -557,6 +558,7 @@ LIKE만 있던 시절(2026-05-16 이전)에는 0건 반환 → "방금 저장한
 - **하이브리드 추론 모델의 thinking**: 증류·분류 같은 **원샷 호출**에서 모델이 추론에 `max_tokens` 를 전부 쓰고 본문 0자를 냈다 → 프로바이더 층에서 원샷 경로의 thinking 차단 파라미터를 명시(DeepSeek 계열 실측).
 - **0자 응답 가드**: 길이 초과로 빈 응답이 오면 그 자리에서 판정(조용한 재시도 루프 방지).
 - **`_after_response` 백그라운드화**: 응답 전송 후 처리를 에피소드 refresh 와 함께 백그라운드로 — 꼬리 6분 → **4초**.
+- **증류 영속 큐** (2026-09-02, `distill_queue.py`): 백그라운드가 데몬 스레드 한 장이라 프로세스와 함께 죽고 실패는 print 한 줄이었다. 이제 `world_pulse.db:distill_queue` 행으로 먼저 남기고(영속) 단일 워커가 순서대로 소비 — 성공=행 삭제, 실패=attempts·last_error 원장 후 재시도(상한 3 → failed), 종료=drain(유한 대기, 남은 행은 pending), 부팅=resume(러너를 다시 찾아 재개, 못 찾으면 orphaned 로 신고). 워커 하나라 증류끼리 경량 프로바이더 잠금을 다투지 않는다. 종결 행(failed/orphaned)은 보존기간(§6) 으로 정리.
 
 ### 증류 파이프라인
 

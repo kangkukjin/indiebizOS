@@ -35,6 +35,16 @@ _ckpt_schedule = None   # fn(thread)
 _ckpt_apply = None      # fn(thread, history) -> history
 
 
+# 대화 삭제 훅 — 삭제의 의미가 미치는 상위층 재고(의식 framing 캐시 등)를 상위층이 등록한다
+# (datastore 는 cognition 을 임포트할 수 없다). cognitive_consciousness.install() 이 호출.
+_clear_hooks: list = []
+
+
+def register_clear_hook(fn) -> None:
+    if fn not in _clear_hooks:
+        _clear_hooks.append(fn)
+
+
 def register_checkpoint_hooks(schedule_fn, apply_fn) -> None:
     """history_checkpoint.install() 이 호출 (register_probe 선례)."""
     global _ckpt_schedule, _ckpt_apply
@@ -258,6 +268,14 @@ def clear_conversations() -> Dict[str, int]:
         raise
     finally:
         conn.close()
+
+    # 상위층 재고 폐기(의식 framing 캐시 등) — 대화가 사라졌는데 그 대화에서 뜬 지도가 남으면
+    # 다음 대화가 옛 지도를 재사용한다. 실패는 말하고 계속(파일 청산은 이어져야 한다).
+    for hook in list(_clear_hooks):
+        try:
+            hook()
+        except Exception as e:
+            print(f"[system_ai_memory] 대화 삭제 훅 실패 (무시): {getattr(hook, '__name__', hook)}: {e}")
 
     n_img, n_img_failed = 0, 0
     images_dir = DATA_PATH / "system_ai_images"

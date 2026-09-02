@@ -53,21 +53,39 @@ _config_cache: Optional[Dict] = None
 # _init_pulse_db/_get_pulse_db 는 pulse_db(데이터층)로 이동 (2026-08-05 ⑦ 후반부).
 
 
-def _cleanup_old_data():
-    """오래된 의식 데이터 정리 (retention_days 기준)"""
+def _cleanup_old_data() -> Dict[str, int]:
+    """오래된 자기상태 원본 정리 (pulse_schedule.retention_days 기준, 기본 30일).
+
+    대상: pulse_log · self_checks · **action_health**(2026-09-02 — 실행마다 한 행이라 무상한
+    누적이었다; 소비자는 전부 최근 7일 창(X-Ray·건강 요약·만성 실패)이라 보존기간 밖 원본은
+    아무도 읽지 않는다. 장기 집계는 소비자가 생기면 그때 — 읽는 이 없는 집계표는 심지 않는다)
+    · distill_queue 의 종결 행(failed/orphaned — 원장은 남기되 무한은 아니다).
+    반환=테이블별 삭제 행수.
+    """
     config = _load_config()
     cp_config = config.get("pulse_schedule", {})
     retention = cp_config.get("retention_days", 30)
     cutoff = (datetime.now() - timedelta(days=retention)).isoformat()
 
+    deleted: Dict[str, int] = {}
     try:
         conn = _get_pulse_db()
-        conn.execute("DELETE FROM pulse_log WHERE timestamp < ?", (cutoff,))
-        conn.execute("DELETE FROM self_checks WHERE timestamp < ?", (cutoff,))
+        for table in ("pulse_log", "self_checks", "action_health"):
+            deleted[table] = conn.execute(
+                f"DELETE FROM {table} WHERE timestamp < ?", (cutoff,)).rowcount
+        has_dq = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='distill_queue'").fetchone()
+        if has_dq:
+            deleted["distill_queue"] = conn.execute(
+                "DELETE FROM distill_queue WHERE status IN ('failed', 'orphaned') "
+                "AND COALESCE(updated_at, created_at) < ?", (cutoff,)).rowcount
         conn.commit()
         conn.close()
+        if any(deleted.values()):
+            logger.info(f"[WorldPulse] 보존기간({retention}일) 밖 정리: {deleted}")
     except Exception as e:
         logger.debug(f"[WorldPulse] 정리 실패: {e}")
+    return deleted
 
 
 # 오래된 데이터 정리는 하루 한 번이면 충분하다. 확률(random<0.04) 대신

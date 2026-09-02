@@ -614,31 +614,35 @@ AI 답변: {ai_response[:1400]}
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
                               turn_tokens: int = None):
-        """_after_response 를 백그라운드 스레드로 — 증류가 턴(스트림 종료·에피소드 END·
-        총 소요 측정)을 붙잡지 않게 한다(ep889: 실작업 4.6분에 증류 꼬리 6분).
+        """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
+        에피소드 END·총 소요 측정)을 붙잡지 않게(ep889: 실작업 4.6분에 증류 꼬리 6분) 하되,
+        데몬 스레드 시절과 달리 프로세스가 죽어도 작업이 사라지지 않는다(2026-09-02: 행으로
+        먼저 남기고 → 단일 워커 소비 → 실패 재시도 원장 → 종료 drain → 부팅 resume).
 
-        컨텍스트 동반 3종:
-        - thread_context(threading.local — 스레드 자동 전파 안 됨): agent_id/project_id/
-          agent_name 을 메인에서 스냅샷해 스레드에서 재설정. goal_eval_outcome 은 메인에서
-          읽고 *메인에서 소비(clear)* 후 스레드에 값으로 전달 — 안 그러면 NOT_ACHIEVED
-          게이트가 스레드에서 안 보여 실패 실행이 해마에 증류된다(복리 출혈 방어 무력화).
-        - 에피소드 버퍼(contextvars): copy_context 로 같은 _Episode 를 공유 — 증류 print 가
-          버퍼에 계속 쌓이고, 완료 시 refresh_episode 가 저장된 행에 꼬리를 재합류시킨다.
-        - 경량 프로바이더 동시성: oneshot_ai_call 의 _oneshot_call_lock 이 직렬화.
+        컨텍스트 동반 3종(메인에서 스냅샷해 값으로 넘긴다 — threading.local 은 스레드로 안 간다):
+        - thread_context: agent_id/project_id/agent_name → ident. goal_eval_outcome 은 메인에서
+          읽고 *메인에서 소비(clear)* 후 payload 로 — 안 그러면 NOT_ACHIEVED 게이트가 워커에서
+          안 보여 실패 실행이 해마에 증류된다(복리 출혈 방어 무력화).
+        - 에피소드 버퍼(contextvars): copy_context 로 같은 _Episode 를 공유 — 워커의 증류 print 가
+          버퍼에 쌓이고, 완료 시 refresh_episode 가 저장된 행에 꼬리를 재합류시킨다.
+        - 경량 프로바이더 동시성: 워커가 하나라 증류끼리는 안 다투고, 분류기와는
+          oneshot_ai_call 의 _oneshot_call_lock 이 직렬화.
+        큐 적재 자체가 실패하면(DB 잠금 등) 옛 데몬 스레드 경로로 **강등해 실행하고 그 사실을
+        말한다** — 영속은 잃어도 이번 턴의 기억은 잃지 않는다.
         """
-        import threading
         import contextvars
         from thread_context import (
-            get_current_agent_id, set_current_agent_id,
-            get_current_project_id, set_current_project_id,
-            get_current_agent_name, set_current_agent_name,
-            get_goal_eval_outcome, clear_goal_eval_outcome, set_goal_eval_outcome,
+            get_current_agent_id, get_current_project_id, get_current_agent_name,
+            get_current_registry_key, get_goal_eval_outcome, clear_goal_eval_outcome,
         )
         from episode_logger import EpisodeLogger
 
-        agent_id = get_current_agent_id()
-        project_id = get_current_project_id()
-        agent_name = get_current_agent_name()
+        ident = {
+            "registry_key": get_current_registry_key(),
+            "project_id": get_current_project_id(),
+            "agent_id": get_current_agent_id(),
+            "agent_name": get_current_agent_name(),
+        }
         _ge = get_goal_eval_outcome()
         clear_goal_eval_outcome()  # 소비는 메인 컨텍스트에서 — 다음 메시지로 안 새게(기존 계약 유지)
         try:
@@ -646,25 +650,28 @@ AI 답변: {ai_response[:1400]}
             guides_used = take_injected()   # ★메인에서 스냅샷 — threading.local 은 스레드로 안 간다
         except Exception:
             guides_used = []
+        payload = {
+            "user_message": user_message, "response": response,
+            "tool_calls": tool_calls, "hippo_score": hippo_score, "top_code": top_code,
+            "guides_used": guides_used,
+            "turn_tokens": turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
+            "goal_eval": _ge,
+        }
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()
+        try:
+            from distill_queue import DistillQueue
+            DistillQueue.get().enqueue(self, payload, ident=ident, ctx=ctx, ep=ep)
+            return
+        except Exception as e:
+            print(f"[증류큐] 적재 실패 — 비영속 스레드로 강등 실행: {type(e).__name__}: {e}")
+
+        import threading
+        from distill_queue import _Job, DistillQueue as _DQ
 
         def _run():
             try:
-                if agent_id:
-                    set_current_agent_id(agent_id)
-                if project_id:
-                    set_current_project_id(project_id)
-                if agent_name:
-                    set_current_agent_name(agent_name)
-                if _ge is not None:
-                    set_goal_eval_outcome(_ge.get("achieved", True), _ge.get("severity", 0) or 0)
-                ctx.run(
-                    self._after_response, user_message, response,
-                    tool_calls=tool_calls, hippo_score=hippo_score, top_code=top_code,
-                    guides_used=guides_used,   # 메인에서 뜬 스냅샷을 값으로 전달
-                    turn_tokens=turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
-                )
+                _DQ._execute(_Job(None, self, payload, ident, ctx=ctx, ep=ep))
             except Exception as e:
                 print(f"[증류] 백그라운드 오류 (무시): {e}")
             finally:

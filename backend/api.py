@@ -366,6 +366,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Tunnel] 종료 중 오류: {e}")
 
+    # 증류 영속 큐 drain — 유한 대기 뒤 남은 작업은 행으로 남아 다음 부팅이 재개한다.
+    try:
+        from distill_queue import DistillQueue
+        DistillQueue.get().drain()
+    except Exception as e:
+        print(f"[증류큐] drain 실패 (무시): {e}")
+
     # 시스템 AI Runner 종료
     stop_system_ai_runner()
 

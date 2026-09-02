@@ -550,9 +550,14 @@ class SystemAIRunner:
 
 # 편의 함수
 def start_system_ai_runner(config: dict = None) -> SystemAIRunner:
-    """시스템 AI Runner 시작"""
+    """시스템 AI Runner 시작 (+ 증류 영속 큐 재개 — boot_common 이 무장한 경우만)"""
     runner = SystemAIRunner(config)
     runner.start()
+    try:
+        from distill_queue import DistillQueue
+        DistillQueue.get().resume()
+    except Exception as e:
+        print(f"[증류큐] 재개 실패 (무시): {e}")
     return runner
 
 

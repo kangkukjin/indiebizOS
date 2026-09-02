@@ -66,6 +66,42 @@ def clear_framing_cache(key: str = None):
         _FRAMING_CACHE.clear()
 
 
+def clear_framing_for_agent(agent_id: str) -> list:
+    """agent_id 가 같은 모든 registry_key(project:agent) 의 framing 재고 폐기. 반환=지운 키."""
+    keys = [k for k in list(_FRAMING_CACHE) if k == agent_id or k.endswith(f":{agent_id}")]
+    for k in keys:
+        _FRAMING_CACHE.pop(k, None)
+    return keys
+
+
+def _on_system_conversations_cleared():
+    """시스템 AI 대화 삭제 → 그 대화에서 뜬 framing 재고도 폐기 (2026-09-02).
+
+    시스템 AI 대화에는 conversation id 가 없다 — '새 대화'의 경계는 SESSION_RESET·TTL·
+    **삭제** 셋뿐인데 삭제만 캐시에 닿지 않아, 지운 대화의 지도가 30분 안의 다음 대화에
+    재사용됐다(fit 게이트는 옛 지도가 '맞는지'만 보지 '어느 대화 것인지'는 모른다).
+    """
+    keys = clear_framing_for_agent("system_ai")
+    if keys:
+        print(f"[framing] 대화 삭제 → 재고 폐기: {', '.join(keys)}")
+
+
+_HOOK_INSTALLED = False
+
+
+def install():
+    """datastore 층에 대화 삭제 훅 등록 (멱등 — 임포트 시 1회, history_checkpoint.install 선례)."""
+    global _HOOK_INSTALLED
+    if _HOOK_INSTALLED:
+        return
+    try:
+        import system_ai_memory
+        system_ai_memory.register_clear_hook(_on_system_conversations_cleared)
+        _HOOK_INSTALLED = True
+    except Exception:
+        pass
+
+
 def handle_session_reset() -> str:
     """SESSION_RESET 분류 후 호출.
 
@@ -530,3 +566,6 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")
             return "EXECUTE"  # 실패 시 기본값 — 실행 에이전트(본격 모델)가 감당, 의식은 장기·위험 전용
+
+
+install()

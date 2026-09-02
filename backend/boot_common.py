@@ -52,6 +52,21 @@ def wire_local_subsystems(profile: str = None) -> dict:
         print(f"{tag} 에피소드 로거 설치 실패 (무시): {e}")
         results["episode_logger"] = False
 
+    # 증류 영속 큐 재개 **무장**: 이전 프로세스가 못 끝낸 기억 쓰기(pending/running 행)는
+    # 부팅 주체만 이어 돈다 — 프로브가 라이브 큐를 집어 가면 두 몸이 같은 턴을 두 번 증류한다.
+    # 실제 재개는 system AI 러너가 선 뒤(start_system_ai_runner)가 한다 — 여기서 러너를
+    # 만들면 패키지·프롬프트가 서기 전의 러너가 싱글턴으로 굳는다.
+    if other_body:
+        results["distill_resume"] = "skipped"
+    else:
+        try:
+            from distill_queue import DistillQueue
+            DistillQueue.get().arm_resume()
+            results["distill_resume"] = "armed"
+        except Exception as e:
+            print(f"{tag} 증류 큐 무장 실패 (무시): {e}")
+            results["distill_resume"] = False
+
     # 이전 세션의 완료된 task 기록 정리: 프로젝트별 conversations.db + system_ai_memory.db 의
     # status='completed' 행을 비운다(현재 세션 task만 보존). 순수 로컬 SQLite, 하드웨어 무관 —
     # 폰-자아도 로컬에서 에이전트를 돌려 task 를 쌓으므로 같이 정리받아야 한다(맥 진입점에만

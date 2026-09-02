@@ -39,6 +39,7 @@
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
     "cognition/derived_freshness",
+    "cognition/distill_queue",
     "cognition/doc_drift",
     "cognition/fixture_sweeps",
     "cognition/forage_consolidation",
@@ -262,8 +263,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 253,
-    "engine": 233,
+    "total": 254,
+    "engine": 234,
     "blocklist": 20
   }
 }

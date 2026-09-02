@@ -269,7 +269,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **framing 재사용 게이트 (2026-05-31)** — `agent_cognitive._run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
   - 설계 원리: THINK = "framing이 필요하다"는 *수요* 선언. 분류기(무의식)는 history-blind라 "직전 태스크의 변주"를 알 수 없다 — 그래서 의식 호출 직전에 "그 수요를 *재고*로 충당할 수 있나"를 별개 신호로 묻는다 (분류기를 재심사하지 않음)
   - 같은 대화(registry_key)에서 만든 framing이 30분 내 재고에 있고 경량 fit 게이트가 적합 판정 → 의식(Opus) 호출 스킵, 재사용. turn마다 바뀌는 achievement_criteria만 게이트가 새로 생성 (비싼 framing 재사용 / 싼 criteria 갱신)
-  - 캐시: 모듈 레벨 `_FRAMING_CACHE` (30분 TTL), SESSION_RESET·재시작 시 폐기. fits=false·재고 없음·게이트 실패 시 풀 의식 폴백(품질 손실 0)
+  - 캐시: 모듈 레벨 `_FRAMING_CACHE` (30분 TTL), SESSION_RESET·재시작·**대화 삭제**(2026-09-02 — 시스템 AI 대화에는 conversation id 가 없어 '새 대화'의 경계는 리셋·TTL·삭제 셋뿐인데 삭제만 캐시에 닿지 않았다; `system_ai_memory.clear_conversations` 의 삭제 훅이 그 에이전트 키의 재고를 폐기) 시 폐기. fits=false·재고 없음·게이트 실패 시 풀 의식 폴백(품질 손실 0)
   - 효과: 연속 THINK turn에서 의식 40~54초 + Opus 호출 제거. 주제 전환은 명시적=SESSION_RESET / 암묵적=fit 게이트가 분담
 - **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
   - achievement_criteria 대비 평가. NOT_ACHIEVED 시 재실행 (최대 3라운드)
@@ -481,7 +481,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **41개** (+ 백엔드 extensions **5개**), IBL: **6노드 151 액션** (sense 40·self 50·limbs 14·others 17·engines 9·table 21)
-- backend **.py 289개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 36 · ibl 40 · cognition 44 · services 28 · surface 60`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
+- backend **.py 290개**(test 제외, git 추적 기준) — 층 디렉토리 `base 23 · datastore 36 · ibl 40 · cognition 45 · services 28 · surface 60`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **68개**(guide_db 등록 **67**)
 - op 분기 액션 **70개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**28개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 41·false 15·미선언 95)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

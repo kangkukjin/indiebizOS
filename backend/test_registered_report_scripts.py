@@ -128,6 +128,80 @@ def test_json_ledger_set_requires_value_key(tmp_path, monkeypatch, capsys):
     assert saved == {"explore_first": None}
 
 
+def test_json_ledger_set_refuses_root_replace_and_key_typo(tmp_path, monkeypatch, capsys):
+    # 사고 재현(2026-08-31): {op:"set", key:"explore_first", value:[…]} — target 이 비어
+    # 파일 전체가 105B 배열로 덮였고 봉투는 success 였다. 이제 둘 다 정직 거절, 파일 불변.
+    import pytest
+    module = _load("json원장")
+    monkeypatch.setattr(module, "_ROOT", tmp_path)
+    path = "outputs/rotation.json"
+    _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "upsert", "target": "queue", "key": "slug",
+        "item": {"slug": "wonju", "verdict": "관심"},
+    })
+    before = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+    for bad, needle in [
+        ({"path": path, "op": "set", "key": "explore_first", "value": ["asan"]}, "target"),
+        ({"path": path, "op": "set", "value": ["asan"]}, "replace_root"),
+    ]:
+        with pytest.raises(SystemExit):
+            _run_main(module, monkeypatch, capsys, bad)
+        refused = json.loads(capsys.readouterr().out)
+        assert refused["success"] is False and needle in refused["error"]
+        assert json.loads((tmp_path / path).read_text(encoding="utf-8")) == before
+    # target 을 주면 최상위 키 갱신, replace_root 를 명시하면 루트 교체 — 둘 다 여전히 가능
+    ok = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "set", "target": "explore_first", "value": ["asan"],
+    })
+    assert ok["success"]
+    saved = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+    assert saved["explore_first"] == ["asan"] and saved["queue"] == before["queue"]
+    ok = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "set", "value": {"fresh": True}, "replace_root": True,
+    })
+    assert ok["success"]
+    assert json.loads((tmp_path / path).read_text(encoding="utf-8")) == {"fresh": True}
+
+
+def test_json_ledger_enum_fields_and_list_limits(tmp_path, monkeypatch, capsys):
+    # 판정 문장("노원=보류 / 도봉=관심")이 verdict 에 들어와 재방문 규칙이 한 번도 안 걸리던 자리 —
+    # 스키마를 산문이 아니라 관문이 집행한다. 태그 상한(list_limits)도 같은 부류.
+    import pytest
+    module = _load("json원장")
+    monkeypatch.setattr(module, "_ROOT", tmp_path)
+    path = "outputs/rotation.json"
+    enums = {"verdict": ["미판정", "관심", "보류", "기각"]}
+    ok = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "upsert", "target": "queue", "key": "slug",
+        "item": {"slug": "nowon", "verdict": "관심", "sub_verdicts": {"노원": "보류", "도봉": "관심"}},
+        "enum_fields": enums,
+    })
+    assert ok["success"]
+    with pytest.raises(SystemExit):
+        _run_main(module, monkeypatch, capsys, {
+            "path": path, "op": "upsert", "target": "queue", "key": "slug",
+            "item": {"slug": "nowon", "verdict": "노원=보류 / 도봉=관심"}, "enum_fields": enums,
+        })
+    refused = json.loads(capsys.readouterr().out)
+    assert refused["success"] is False and "sub_verdicts" in refused["error"]
+    saved = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+    assert saved["queue"][0]["verdict"] == "관심"
+    limits = {"tags": {"max_items": 2, "max_item_len": 5}}
+    with pytest.raises(SystemExit):
+        _run_main(module, monkeypatch, capsys, {
+            "path": "outputs/cov.json", "op": "append", "item": {"tags": ["짧다", "이건 너무 긴 태그다"]},
+            "list_limits": limits,
+        })
+    refused = json.loads(capsys.readouterr().out)
+    assert refused["success"] is False and "5자" in refused["error"]
+    with pytest.raises(SystemExit):
+        _run_main(module, monkeypatch, capsys, {
+            "path": "outputs/cov.json", "op": "append", "item": {"tags": ["a", "b", "c"]},
+            "list_limits": limits,
+        })
+    assert not (tmp_path / "outputs/cov.json").exists()
+
+
 def test_json_ledger_nested_target(monkeypatch, capsys, tmp_path):
     module = _load("json원장")
     monkeypatch.setattr(module, "_ROOT", tmp_path)

@@ -6,7 +6,15 @@
   {"path":"outputs/x.json", "op":"upsert", "target":"covered", "key":"id", "items":[...]}
   {"path":"outputs/x.json", "op":"set", "target":"cursor", "value":3}
   {"path":"outputs/x.json", "op":"append", "item":{...},
-   "list_limits":{"tags":{"max_items":25, "max_item_len":24}}}
+   "list_limits":{"tags":{"max_items":25, "max_item_len":24}},
+   "enum_fields":{"verdict":["미판정","관심","보류","기각"]}}
+     — enum_fields: 항목 필드의 허용값 집합. 밖의 값은 쓰지 않고 실패한다(2026-09-02: 부동산
+       순회 원장의 verdict 가 "노원=보류 / 도봉=관심(…)" 같은 문장이 되어 재방문 규칙이 한 번도
+       안 걸리던 자리 — 스키마를 가이드 산문이 아니라 이 관문이 집행한다).
+     — ★set 은 target 필수. target 없는 set 은 파일 전체를 value 로 갈아치우므로 거절한다.
+       정말 루트를 바꾸려면 "replace_root": true 를 명시. set 에 key 를 넘기면(target 오타)
+       거절한다. (2026-08-31 실사고: {op:"set", key:"explore_first", value:[…]} 한 줄이
+       순회 원장 15KB 를 105B 배열로 덮었고 봉투는 success 였다.)
      — list_limits: 항목 안 배열 필드의 개수·원소 길이 상한. 넘으면 쓰지 않고 실패한다.
        (2026-09-02: 커버리지 원장 태그가 60자 문장 × 호당 70개로 자라 매일 63KB 를 읽게
        된 자리 — "명사구 태그" 규약을 가이드 산문이 아니라 이 관문이 집행한다.)
@@ -100,6 +108,25 @@ def _check_list_limits(item, limits):
                     f"(예: {bad[0][:40]}) — 문장이 아니라 명사구로 적어라.")
 
 
+def _check_enum_fields(item, enums):
+    """항목 필드의 값을 허용 집합에 가둔다 — 밖이면 정직 실패(자유 문장이 스키마를 침식하는 것을 막는다)."""
+    if not enums or not isinstance(item, dict):
+        return
+    if not isinstance(enums, dict):
+        raise ValueError("enum_fields 는 {필드: [허용값…]} 객체여야 합니다.")
+    for field, allowed in enums.items():
+        if field not in item:
+            continue
+        if not isinstance(allowed, list) or not allowed:
+            raise ValueError(f"enum_fields['{field}'] 는 비어 있지 않은 배열이어야 합니다.")
+        value = item.get(field)
+        if value not in allowed:
+            shown = str(value)[:60]
+            raise ValueError(
+                f"'{field}' 값 '{shown}' 은 허용값 {allowed} 밖입니다 — "
+                f"소지역별 판정은 sub_verdicts 에, 사유는 verdict_note 에 적어라.")
+
+
 def _atomic_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
@@ -142,6 +169,7 @@ def main():
                 raise ValueError("item 또는 items가 필요합니다.")
             for item in incoming:
                 _check_list_limits(item, args.get("list_limits"))
+                _check_enum_fields(item, args.get("enum_fields"))
 
             if op == "append":
                 array.extend(incoming)
@@ -172,8 +200,18 @@ def main():
             # 보고한다. null 을 정말 쓰려면 {"value": null} 로 명시할 것.
             if "value" not in args:
                 raise ValueError("set 에는 value 키가 필요합니다 (item/items 는 append/upsert 전용).")
+            if "key" in args:
+                # key 는 upsert 의 식별 필드다. set 에 key 가 오면 십중팔구 target 의 오타이고,
+                # 그대로 두면 target 이 비어 아래 루트 교체로 떨어진다(2026-08-31 실사고).
+                raise ValueError(
+                    f"set 은 key 를 받지 않습니다 — target: \"{args['key']}\" 을 뜻했습니까? "
+                    "(set 은 target 의 값을 바꾸는 연산, key 는 upsert 의 식별 필드)")
             value = args["value"]
             if not target:
+                if args.get("replace_root") is not True:
+                    raise ValueError(
+                        "target 없는 set 은 파일 전체를 value 로 갈아치웁니다 — 거절합니다. "
+                        "특정 키를 바꾸려면 target 을 주고, 정말 루트를 교체하려면 replace_root: true 를 명시하세요.")
                 root = value
             else:
                 parent, key = _slot(root, target, create=True)

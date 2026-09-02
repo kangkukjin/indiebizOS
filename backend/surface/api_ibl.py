@@ -512,6 +512,15 @@ async def validate_ibl(req: ValidateRequest):
     code = (req.code or "").strip()
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
+    return validate_code(code)
+
+
+def validate_code(code: str) -> dict:
+    """dry-run 본체 — 라우터(`/ibl/validate`)와 관문(`scripts/check_validate_parity.py`)이
+    **같은 함수**를 쓴다 (B53-1, 2026-09-02). 검수기가 파서 개정을 모르면 멀쩡한 문장에
+    거짓 빨강이 난다(B49-1 `do` 재파싱 · B53-1 `$변수 >>` 파이프 머리 — 같은 속 두 번).
+    그 부류는 "실행되는 문장 전수를 검수에 넣어 valid:false 가 0" 인 관문으로만 닫힌다."""
+    code = (code or "").strip()
     # 조건식 검수용 — 이 코드가 할당하는 $변수 이름(조건의 미할당 $변수를 미리 잡는다, M2)
     import re as _re
     _assigned_vars = set(_re.findall(r'^\s*\$(\w+)\s*=', code, _re.M))
@@ -672,7 +681,26 @@ async def validate_ibl(req: ValidateRequest):
         return isinstance(st, dict) and not (
             st.get("_parallel") or "_fallback_chain" in st or st.get("_branch_steps")
             or st.get("_condition") or st.get("_case") or st.get("_goal")
-            or st.get("_try") or st.get("_repeat") or st.get("_assign"))
+            or st.get("_try") or st.get("_repeat") or st.get("_assign")
+            or st.get("_var_emit"))
+
+    def _emit_var(st: dict, label: str = None, group: str = None):
+        """`$변수[.경로] >>` 파이프 머리 · `$변수 & $변수` 병렬 분기 — 파서의 `_var_emit` step.
+
+        ★B53-1 (53회차 상상훈련): 파서는 이 자리를 08-27(파이프 머리)·09-01(병렬 분기)에
+        열었는데 검수기는 그 step 을 빈 액션으로 읽어 "노드가 지정되지 않았습니다" 거짓
+        빨강을 냈다(실행은 정상). 변수 방출은 읽기(앞 문장이 이미 만든 값)이며 미할당은
+        파서가 이미 정직 에러로 걸렀다."""
+        _p = st.get("path") or ""
+        _opt = _p.endswith("?")
+        eff = (f"변수 ${st.get('name')}{_p} 의 값을 통화로 방출"
+               + ("(옵셔널 — 미기록이면 빈 통화)" if _opt else "(앞 문장이 할당한 결과)"))
+        steps.append({
+            "node": "var", "action": f"${st.get('name')}{_p}", "params": {},
+            "kind": "var", "effect": f"{label} {eff}" if label else eff,
+            "safety": "read", "valid": True, "error": None, "param_warning": None,
+            "group": group or "var",
+        })
 
     # do(문장을 param 문자열로 나르는 자리)를 가진 액션들 — each 외에 M1 `do` 통일 자리 전부.
     # (2026-08-16 상상훈련 G2: each·goal.strategy 는 펼치는데 schedule.do 는 안 펼쳐,
@@ -767,6 +795,9 @@ async def validate_ibl(req: ValidateRequest):
         멀쩡한 문장을 반려하거나, 반대로 속을 안 본 채 초록불을 켠다."""
         nonlocal has_side_effect
         if not isinstance(st, dict) or depth > 6:
+            return
+        if st.get("_var_emit"):
+            _emit_var(st, label=label, group=group)
             return
         if _is_plain(st):
             _emit_action(st, label=label, group=group, warn=warn)

@@ -1,67 +1,65 @@
 arxiv최신피드:
-  description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본
-    60, 별칭 max_results), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'
+  description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본 60, 별칭 max_results),
+    sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'
   file: arxiv최신피드.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
 github저장소메타:
-  description: 'GitHub 저장소 탐색·메타 다건 조회 — args: repos:[owner/repo,...](별칭 repositories)
-    또는 query, limit·sort·order. repos는 최대 8개 병렬 조회, items에 stars·forks·pushed 등 반환'
+  description: 'GitHub 저장소 탐색·메타 다건 조회 — args: repos:[owner/repo,...](별칭 repositories) 또는 query, limit·sort·order.
+    repos는 최대 8개 병렬 조회, items에 stars·forks·pushed 등 반환'
   file: github저장소메타.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
 json원장:
-  description: 'JSON 배열 원장 원자 갱신 — args: path, op(append|upsert|set), target(선택),
-    item|items(append/upsert 전용), value(set 전용·키 필수), key(기본 id), max_items. 저장소 밖
-    쓰기 거절'
+  description: 'JSON 배열 원장 원자 갱신·조회 — args: path, op(append|upsert|set|select), target(set·select 는 지목,
+    set 은 target 없으면 거절·루트를 정말 바꿀 때만 replace_root:true), item|items(append/upsert 전용), key(기본 id), max_items(배열
+    상한), value(set 전용), 쓰기 관문 list_limits{필드:{max_items,max_item_len}}·enum_fields{필드:[허용값]}(넘으면 쓰지 않고
+    실패). select 는 읽기 전용: fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items 통화. 저장소 밖 쓰기 거절'
   file: json원장.py
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 60
 나레이션생성:
-  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts,
-    voice(기본 kkj3), gpu(기본 T4), out_dir, force(재생성). 표준 낭독 속도 1.0x(원속도·무보정), speed
-    로 조정'
+  description: '내 목소리 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts, voice(기본 kkj3), gpu(기본
+    T4), out_dir, force(재생성). 표준 낭독 속도 1.0x(원속도·무보정), speed 로 조정'
   file: 나레이션생성.py
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
   timeout: 2400
 보고서HTML:
-  description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
-    h1) · subtitle(머리 한 줄) · theme(plain|card) · accent · drop_lines(그 문자열이 든 줄 제거
-    — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행). items 로 링크·표·제목 수와 제거한 줄 수를 신고'
+  description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫 h1) · subtitle(머리
+    한 줄) · theme(plain|card) · accent · drop_lines(그 문자열이 든 줄 제거 — 공유판 배포 규약을 사람 손이 아니라 변환기가 집행). items
+    로 링크·표·제목 수와 제거한 줄 수를 신고'
   file: 보고서HTML.py
   interpreter: python
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
 수리적용상태:
-  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
-    commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
+  description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만), commits(최근 N커밋 파일
+    포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
   file: 수리적용상태.py
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
   timeout: 300
 에피소드통계:
-  description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
-    도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.
-    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로'
+  description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals). 도구 계수(IBL/Bash)와
+    실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로. 조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로'
   file: 에피소드통계.py
   interpreter: python
   registered_at: '2026-08-23T21:52:31'
   timeout: 300
 음성받아쓰기:
-  description: '오디오/영상 파일 받아쓰기(Gemini) — args: path(필수), out, segment_seconds(기본 300),
-    prompt, model. 축약 금지·인사말 보존 verbatim. [sense:listen]은 마이크 전용이라 파일 STT의 유일한 경로.'
+  description: '오디오/영상 파일 받아쓰기(Gemini) — args: path(필수), out, segment_seconds(기본 300), prompt, model.
+    축약 금지·인사말 보존 verbatim. [sense:listen]은 마이크 전용이라 파일 STT의 유일한 경로.'
   file: 음성받아쓰기.py
   interpreter: python
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
 잔여추정:
-  description: '탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체. args: mode(estimate|sample),
-    estimate=relevant·sampled(별칭 n)·unseen(별칭 pool), sample=n·q(별칭 query)·kind·path·seen·start·end·ext(별칭
-    extension)'
+  description: '탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체. args: mode(estimate|sample), estimate=relevant·sampled(별칭
+    n)·unseen(별칭 pool), sample=n·q(별칭 query)·kind·path·seen·start·end·ext(별칭 extension)'
   file: 잔여추정.py
   interpreter: python
   registered_at: '2026-08-15T14:02:43'

@@ -5,6 +5,11 @@
   {"path":"outputs/x.json", "op":"append", "item":{...}, "max_items":10}
   {"path":"outputs/x.json", "op":"upsert", "target":"covered", "key":"id", "items":[...]}
   {"path":"outputs/x.json", "op":"set", "target":"cursor", "value":3}
+  {"path":"outputs/x.json", "op":"append", "item":{...},
+   "list_limits":{"tags":{"max_items":25, "max_item_len":24}}}
+     — list_limits: 항목 안 배열 필드의 개수·원소 길이 상한. 넘으면 쓰지 않고 실패한다.
+       (2026-09-02: 커버리지 원장 태그가 60자 문장 × 호당 70개로 자라 매일 63KB 를 읽게
+       된 자리 — "명사구 태그" 규약을 가이드 산문이 아니라 이 관문이 집행한다.)
 """
 import json
 import os
@@ -68,6 +73,33 @@ def _key_value(item, dotted):
     return value
 
 
+def _check_list_limits(item, limits):
+    """항목의 배열 필드에 개수·원소 길이 상한을 건다 — 넘으면 정직 실패(조용한 절단 금지)."""
+    if not limits or not isinstance(item, dict):
+        return
+    if not isinstance(limits, dict):
+        raise ValueError("list_limits 는 {필드: {max_items, max_item_len}} 객체여야 합니다.")
+    for field, spec in limits.items():
+        values = item.get(field)
+        if values is None:
+            continue
+        if not isinstance(values, list):
+            raise ValueError(f"'{field}' 는 배열이어야 합니다 (list_limits 적용 대상).")
+        spec = spec or {}
+        max_items = spec.get("max_items")
+        max_len = spec.get("max_item_len")
+        if max_items not in (None, "") and len(values) > int(max_items):
+            raise ValueError(
+                f"'{field}' 항목 수 {len(values)} 가 상한 {int(max_items)} 을 넘습니다 — "
+                f"태그는 호당 핵심 명사구만 남겨라.")
+        if max_len not in (None, ""):
+            bad = [str(v) for v in values if len(str(v)) > int(max_len)]
+            if bad:
+                raise ValueError(
+                    f"'{field}' 원소 {len(bad)}개가 {int(max_len)}자를 넘습니다 "
+                    f"(예: {bad[0][:40]}) — 문장이 아니라 명사구로 적어라.")
+
+
 def _atomic_json(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
@@ -108,6 +140,8 @@ def main():
                 incoming = [incoming]
             if any(item is None for item in incoming):
                 raise ValueError("item 또는 items가 필요합니다.")
+            for item in incoming:
+                _check_list_limits(item, args.get("list_limits"))
 
             if op == "append":
                 array.extend(incoming)

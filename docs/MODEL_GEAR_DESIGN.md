@@ -35,6 +35,23 @@
 | 의식 | consciousness |
 | 실행 | 프로젝트 에이전트 / 시스템AI / Reflex / 수동번역 / android / auto_response / **임베디드 텍스트 생성(슬라이드·정기보고·신문 본문)** |
 
+## 차선별 추론 예산 (lane_reasoning, 2026-09-02)
+
+추론 예산(하이브리드 thinking·확장 추론)은 **티어·모델이 아니라 차선**에 걸린다 — 무의식 관문의
+판정(EXECUTE/THINK/REPAIR)이 "숙고가 필요한가"를 모델 독립적으로 정하므로, 그 판정에 예산을 얹으면
+모델을 바꿔도 규칙이 남는다(사용자 원칙: 모델 교체를 살아남는 최적화만 한다).
+
+- 정본: `model_gear.json` 의 `lane_reasoning` (`EXECUTE: off`, `THINK/REPAIR: default`). 새 설치는
+  `model_resolver._DEFAULT_GEAR` 가 같은 값을 준다. 키 부재·미지 값 = `default`(동작 불변).
+- 적용: `agent_pipeline` 이 provider 전환 뒤 턴 사본에 `reasoning_mode` 를 찍는다. 프로바이더가 자기
+  표기로 번역(DeepSeek `thinking disabled` / Anthropic·Gemini budget 0 / o-시리즈 effort 생략 / CLI
+  프로바이더는 no-op).
+- 회귀 고정물: `scripts/probe_turn_budget.py` + `data/turn_budget_fixtures.yaml` — 같은 턴 묶음의
+  정답·차선·라운드·시간·비캐시 토큰을 단언(WS end 이벤트 turn_tokens·turn_cache_read + episode_summary).
+  모델을 바꾼 날 이 고정물이 먼저 빨갛게 된다. 임계값은 예산이지 상수가 아니다.
+- 실측(경량 deepseek-v4-flash): EXECUTE 추론 off 로 날짜 턴 10→3.1s, git 상태 턴 99→11s(깨끗한 트리)
+  /34s(더러운 트리), 답 동일.
+
 ## 모달리티는 기어 밖
 
 이미지·동영상·임베딩(해마)은 모달리티 고정 모델 — 이미지 모델을 opus로 변속할 수 없다.

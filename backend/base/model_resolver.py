@@ -81,6 +81,9 @@ _DEFAULT_GEAR = {
     },
     "overrides": {},
     "consciousness_enabled": True,
+    # 차선별 추론 예산 — 모델·티어가 아니라 무의식 관문의 판정에 걸린 규칙(2026-09-02).
+    # EXECUTE 는 확장 추론 없이(실측: 품질 동일, 지연 1/3), THINK/REPAIR 는 프로바이더 기본.
+    "lane_reasoning": {"EXECUTE": "off", "THINK": "default", "REPAIR": "default"},
 }
 
 # 미등록 역할/축의 보수적 기본값.

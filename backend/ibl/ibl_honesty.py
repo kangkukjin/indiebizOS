@@ -52,6 +52,33 @@ HONESTY_FLAG_KEYS = (
 
 HONESTY_KEYS = HONESTY_LIST_KEYS + HONESTY_COUNT_KEYS + HONESTY_FLAG_KEYS
 
+#: 위 표지 가운데 **실패가 아니라 경로·출처의 사실**을 나르는 것 — 승격 경고문이 이것들을
+#: "부분 실패·절단" 이라 부르면 늑대소년이 된다 (B51-4 · 53회차 관찰 ①: each 로 효과를
+#: 돌리면 매번 `passthrough_rows` 에 "부분 실패" 경고가 붙어 다음 진짜 경보를 죽였다).
+#: 경고문의 낱말은 이 분류가 정한다 — 호출부가 키를 보고 손으로 가르지 않는다.
+HONESTY_ROUTE_KEYS = (
+    "passthrough_rows",   # do 가 통화를 안 내서 원 행이 흘렀다 — 실패 아님
+    "rows_replaced",      # do 결과가 원 행을 대체했다 — 출처 행 소실의 사실
+    "_fallback_used",     # 출처가 바뀌었다
+    "_criteria_retried",  # 출력의 출처가 재시도본이다
+)
+
+
+def describe_promoted(keys) -> str:
+    """승격된 표지 이름들을 **뜻대로 갈라** 한 문장으로 — 실패·절단 / 경로·출처 (B51-4).
+
+    호출부(workflow_engine 승격 경고)가 낱말을 고르지 않고 여기서 받는다 — 표지가 늘거나
+    분류가 바뀌어도 경고문이 자동으로 따라오게(HONESTY_KEYS 한 벌과 같은 이유)."""
+    ks = sorted(str(k) for k in (keys or []))
+    route = [k for k in ks if k in HONESTY_ROUTE_KEYS]
+    fail = [k for k in ks if k not in HONESTY_ROUTE_KEYS]
+    parts = []
+    if fail:
+        parts.append("부분 실패·절단(" + ", ".join(fail) + ")")
+    if route:
+        parts.append("경로·출처 표지(" + ", ".join(route) + " — 실패가 아니라 *어떻게 흘렀나*의 사실)")
+    return " + ".join(parts)
+
 
 def assigned_in_body(body: Any) -> list:
     """블록 몸이 **스스로 할당하는** 변수 이름들 — 경계가 무엇을 떨궜는지 신고하려고.

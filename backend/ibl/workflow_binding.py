@@ -125,12 +125,29 @@ def _v4_var_payload(raw: str) -> str:
         return raw
     if not isinstance(obj, dict):
         return raw
+    # ★B53-3 (53회차 상상훈련, 2026-09-02): `$변수` 가 **파이프 결과**를 담고 있으면 슬롯엔
+    #   변환자 봉투 원형(columns/rows + 생산자 형제 `data`)이 있고 items 가 없다(B51-1 속).
+    #   그 원형을 그대로 문자열화하면 `[self:write]{content:"$s"}` 파일에 select 가 버린
+    #   전 필드(data)가 실려 선별이 무효가 되고, 되읽으면 통화도 아니다. 판정 전에
+    #   ①변환자가 자백한 형제(`_untransformed`)와 `_`메타는 값이 아니므로 뺀다,
+    #   ②columns/rows·table 봉투는 몸의 단일 게이트(derive_items)로 items 를 파생한다,
+    #   ③table/columns/rows/summary/count/success 는 같은 통화의 다른 얼굴·다이제스트라
+    #     "다른 페이로드"로 세지 않는다. 오분류는 여전히 안전 방향(봉투 원형)으로.
+    _skip = set(obj.get("_untransformed") or [])
+    obj = {k: v for k, v in obj.items() if k not in _skip and not str(k).startswith("_")}
+    if not isinstance(obj.get("items"), list):
+        try:
+            from common.currency import derive_items as _derive_items
+            obj = _derive_items(obj)
+        except ImportError:
+            pass
     msg = obj.get("message")
     has_msg = isinstance(msg, str) and bool(msg.strip())
     items = obj.get("items")
     items_nonempty = isinstance(items, list) and bool(items)
+    _same_face = ("items", "message", "table", "columns", "rows", "summary", "count", "success")
     other_payload = any(isinstance(v, (dict, list)) and v
-                        for k, v in obj.items() if k not in ("items", "message"))
+                        for k, v in obj.items() if k not in _same_face)
     if has_msg and not other_payload:
         doc_shaped = ("\n" in msg.strip()) or (len(msg) >= 200)
         if doc_shaped or not items_nonempty:

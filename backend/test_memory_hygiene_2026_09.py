@@ -7,6 +7,9 @@
      (record_recall_outcome ← _recall_was_used).
   ③ 심층기억 자동 회상은 used_at 을 올리지 않는다 (memory_db.read(touch=False))
      — 검색에 걸린 것과 쓰인 것은 다르다.
+  ④ 귀속 관문 — agent_id 없는 호출은 MemoryOwnerError(파일 생성 0), 몸(저장소 루트·data/)·
+     system_ai 는 시스템 DB. 자동 회상은 스레드 신원이 없으면 self.agent_id 로 폴백
+     (2026-09-02 저장소 루트 memory_None.db 실측).
 
 실행: .venv/bin/python -m pytest -q backend/test_memory_hygiene_2026_09.py
 """
@@ -195,6 +198,53 @@ def test_read_touch_false_keeps_used_at(tmp_path, memory_db):
 
     again = memory_db.read(str(project), "agent_x", mid, touch=False)
     assert again["used_at"] == after["used_at"]                    # 자동 회상이 덮지 않는다
+
+
+# ---------- ④ 귀속 관문 (memory_None.db 수리) ----------
+
+def test_db_path_rejects_missing_owner(tmp_path, memory_db):
+    project = tmp_path / "proj"
+    project.mkdir()
+    for bad in (None, "", "None", "  "):
+        with pytest.raises(memory_db.MemoryOwnerError):
+            memory_db._get_db_path(str(project), bad)
+    with pytest.raises(memory_db.MemoryOwnerError):
+        memory_db.search(str(project), None, "아침")               # 공개 API 도 같은 관문
+    assert not list(project.glob("*.db"))                           # 거부 = 파일도 안 생긴다
+
+
+def test_db_path_body_and_system_ai_go_to_system_db(tmp_path, memory_db):
+    from runtime_utils import get_base_path
+    base = get_base_path().resolve()
+    sysdb = str(base / "data" / "system_ai_state" / "memory_system_ai.db")
+    assert memory_db._get_db_path(str(base), None) == sysdb            # 저장소 루트 = 몸
+    assert memory_db._get_db_path(str(base / "data"), None) == sysdb
+    assert memory_db._get_db_path("", None) == sysdb
+    assert memory_db._get_db_path(".", None) == sysdb                  # 옛 규약 유지(cwd 무관)
+    assert memory_db._get_db_path(str(tmp_path), "system_ai") == sysdb  # 위임 중에도 자기 DB
+    project = tmp_path / "p"
+    project.mkdir()
+    assert memory_db._get_db_path(str(project), "agent_007") == str(project / "memory_007.db")
+
+
+def test_recall_falls_back_to_self_agent_id(tmp_path, monkeypatch, memory_db):
+    """스레드 컨텍스트에 agent_id 가 없어도 자기 신원(self.agent_id)으로 검색한다."""
+    import thread_context
+    import cognitive_recall as cr
+    thread_context.set_current_agent_id(None)
+    seen = {}
+
+    def fake_search(**kw):
+        seen.update(kw)
+        return []
+    monkeypatch.setattr(memory_db, "search", fake_search)
+
+    class Stub(cr.CognitiveRecallMixin):
+        def __init__(self):
+            self.project_path = tmp_path
+            self.agent_id = "agent_z"
+    assert Stub()._search_related_memory("아침") == ""
+    assert seen["agent_id"] == "agent_z"
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest

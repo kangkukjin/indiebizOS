@@ -507,7 +507,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 
 | 측면 | 설명 |
 |---|---|
-| **DB 위치** | 시스템 AI: `data/system_ai_state/memory_system_ai.db`<br>프로젝트 에이전트: `projects/{id}/memory_{agent}.db` |
+| **DB 위치** | 시스템 AI: `data/system_ai_state/memory_system_ai.db`<br>프로젝트 에이전트: `projects/{id}/memory_{agent}.db`<br>귀속 관문(2026-09-02): project_path 가 몸(저장소 루트·`data/`)이거나 agent 가 `system_ai` 면 시스템 DB, agent 가 비면 `MemoryOwnerError` 로 거부 — 이름 없는 호출이 `memory_None.db` 를 만들던 경로 봉쇄. 자동 회상·증류는 스레드 신원이 없으면 `self.agent_id` 로 폴백 |
 | **격리** | 에이전트별 분리 (설계 의도 — 각 에이전트가 자기 도메인 지식만 유지) |
 | **현재 규모** | 28개 DB / 622건 |
 | **검색** | **시맨틱 우선 + LIKE 폴백** (해마와 동일 패턴) |

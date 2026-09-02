@@ -388,5 +388,9 @@ data/_backups/*
 # 가이드 개선 제안 원장 — guide_feedback.py 가 append 하는 런타임 로그
 data/guide_proposals.jsonl
 
-# 오염 DB — memory_id=None 경로로 실수 생성 (커밋 제외)
-memory_None.db
+# 저장소 루트의 SQLite 는 전부 부산물 — 이름 없는 메모리 호출이 루트에 memory_None.db 를
+# 만든 실측(2026-09-02). 존재 자체는 scripts/check_tracked_ignored.py 가 커밋을 막는다.
+/*.db
+/*.db-wal
+/*.db-shm
+/*.db-journal

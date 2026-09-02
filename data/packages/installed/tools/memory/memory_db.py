@@ -202,23 +202,42 @@ def _search_semantic(db_path: str, query: str, top_k: int = 10) -> List[Tuple[in
 # DB 경로/연결
 # =============================================================================
 
+class MemoryOwnerError(ValueError):
+    """심층메모리 소유자(agent_id)가 비어 있다 — 침묵 생성 대신 명시 거부 (2026-09-02)."""
+
+
 def _get_db_path(project_path: str, agent_id: str) -> str:
     """에이전트별 메모리 DB 경로
 
     프로젝트 에이전트: projects/{project_id}/memory_{agent_name}.db
     시스템 AI: data/system_ai_state/memory_system_ai.db
-    """
-    project_dir = Path(project_path).resolve()
 
-    # 시스템 AI인지 확인
-    if str(project_dir).endswith("data") or project_dir == Path(".").resolve():
-        from runtime_utils import get_base_path
-        db_dir = get_base_path() / "data" / "system_ai_state"
+    귀속 규칙(2026-09-02 저장소 루트 memory_None.db 수리):
+      · project_path 가 몸 자신(저장소 루트·data/)이거나 비어 있거나('.'), 또는 agent_id 가
+        system_ai 면 → 시스템 AI DB. 옛 판정은 cwd 기준(`Path(".")`)이라 backend/ 에서 띄운
+        프로세스가 저장소 루트를 프로젝트로 오인했다.
+      · agent_id 가 비면(None·""·"None") → MemoryOwnerError. sqlite 는 connect 만으로 파일을
+        만들므로 이름 없는 호출을 통과시키면 어디든 memory_None.db 가 생긴다(projects/ 7곳 실측).
+        호출자(핸들러·자동 회상·증류)는 예외를 잡아 오류로 보고한다 — 침묵 생성 금지.
+    """
+    from runtime_utils import get_base_path
+    base = get_base_path().resolve()
+    raw = (project_path or "").strip()
+    project_dir = Path(raw).resolve() if raw and raw != "." else base
+    agent = (agent_id or "").strip()
+
+    if project_dir in (base, base / "data") or agent == "system_ai":
+        db_dir = base / "data" / "system_ai_state"
         db_dir.mkdir(parents=True, exist_ok=True)
         return str(db_dir / "memory_system_ai.db")
-    else:
-        agent_name = agent_id.replace("agent_", "") if agent_id and agent_id.startswith("agent_") else agent_id
-        return str(project_dir / f"memory_{agent_name}.db")
+
+    if not agent or agent == "None":
+        raise MemoryOwnerError(
+            f"심층메모리 소유자(agent_id)가 비어 있다 — project_path={project_dir}. "
+            "thread_context.agent_id 또는 ToolContext.agent_id 를 채워서 호출하라 "
+            "(이름 없는 호출은 memory_None.db 를 만들므로 거부).")
+    agent_name = agent[len("agent_"):] if agent.startswith("agent_") else agent
+    return str(project_dir / f"memory_{agent_name}.db")
 
 
 def _ensure_schema(db_path: str):

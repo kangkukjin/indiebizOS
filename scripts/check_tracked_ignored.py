@@ -22,6 +22,15 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parent.parent
 
 
+# 저장소 루트에 굴러다니는 SQLite 파일(추적 여부 무관). 2026-09-02 실측: 이름 없는 메모리 호출이
+# 루트에 memory_None.db 를 만들었다 — 무시 규칙은 커밋만 막고 존재 자체는 못 본다.
+_ROOT_LITTER_GLOBS = ("*.db", "*.db-wal", "*.db-shm", "*.db-journal", "*.sqlite", "*.sqlite3")
+
+
+def root_litter() -> list[str]:
+    return sorted(p.name for g in _ROOT_LITTER_GLOBS for p in _ROOT.glob(g) if p.is_file())
+
+
 def tracked_but_ignored() -> list[str]:
     out = subprocess.run(
         ["git", "ls-files", "-i", "-c", "--exclude-standard", "-z"],
@@ -31,6 +40,14 @@ def tracked_but_ignored() -> list[str]:
 
 
 def main() -> int:
+    litter = root_litter()
+    if litter:
+        print(f"❌ 저장소 루트에 DB 파일 {len(litter)}개 — 이름 없는 호출의 부산물이다(memory_None.db 부류):\n")
+        for p in litter:
+            print(f"  - {p}")
+        print("\n내용을 확인해 정본 DB(data/ 또는 projects/<id>/)로 옮긴 뒤 지워라. 루트는 DB 자리가 아니다.")
+        return 1
+
     leaks = tracked_but_ignored()
     if not leaks:
         print("✅ 추적 ∩ 무시 = 0 — 저장소에 생산물·런타임 부산물이 없다.")

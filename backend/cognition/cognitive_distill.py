@@ -215,7 +215,10 @@ class CognitiveDistillMixin:
             from thread_context import get_current_agent_id, get_current_task_id
             from consciousness_agent import oneshot_ai_call
 
-            agent_id = get_current_agent_id()
+            # 신원 = 스레드 컨텍스트 우선, 없으면 자기 자신(self.agent_id). 스레드 값만 믿으면
+            # 컨텍스트 없는 호출(스크립트·백그라운드 스레드)이 agent_id=None 으로 내려가
+            # memory_None.db 를 만들었다(2026-09-02 저장소 루트 실측). 둘 다 없으면 memory_db 가 거부.
+            agent_id = get_current_agent_id() or getattr(self, "agent_id", None)
             project_path = str(self.project_path)
 
             # 기억은 출처를 기억한다 — 추출된 사실(claim)과 별개로 원 발화 스팬을 동봉.

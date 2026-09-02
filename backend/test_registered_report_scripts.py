@@ -202,6 +202,34 @@ def test_json_ledger_enum_fields_and_list_limits(tmp_path, monkeypatch, capsys):
     assert not (tmp_path / "outputs/cov.json").exists()
 
 
+def test_json_ledger_select_reads_only_needed_columns(tmp_path, monkeypatch, capsys):
+    # 2026-09-02: 197KB 원장을 통째로 읽고 id 585개를 문장에 박던 자리 — 읽기 전용 select 로
+    # 필요한 열만 items 통화로. where 는 등치 AND, limit 는 앞에서 자른다.
+    module = _load("json원장")
+    monkeypatch.setattr(module, "_ROOT", tmp_path)
+    path = "outputs/covered.json"
+    _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "upsert", "target": "covered", "key": "id",
+        "items": [{"id": "a", "verdict": "tips_3", "topic": "코딩", "note": "긴 메모"},
+                  {"id": "b", "verdict": "too_old", "topic": "코딩"},
+                  {"id": "c", "verdict": "tips_2", "topic": "보안"}],
+    })
+    out = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "select", "target": "covered", "fields": ["id", "verdict"],
+    })
+    assert out["success"] and out["count"] == 3 and out["total"] == 3
+    assert out["items"] == [{"id": "a", "verdict": "tips_3"}, {"id": "b", "verdict": "too_old"},
+                            {"id": "c", "verdict": "tips_2"}]
+    out = _run_main(module, monkeypatch, capsys, {
+        "path": path, "op": "select", "target": "covered", "fields": ["id"],
+        "where": {"topic": "코딩"}, "limit": 1,
+    })
+    assert out["count"] == 1 and out["total"] == 2 and out["items"] == [{"id": "a"}]
+    # 읽기 전용 — 파일은 그대로
+    saved = json.loads((tmp_path / path).read_text(encoding="utf-8"))
+    assert len(saved["covered"]) == 3 and saved["covered"][0]["note"] == "긴 메모"
+
+
 def test_json_ledger_nested_target(monkeypatch, capsys, tmp_path):
     module = _load("json원장")
     monkeypatch.setattr(module, "_ROOT", tmp_path)

@@ -127,6 +127,45 @@ def test_S4_외부화_파일이_사라졌으면_봉투_본문으로_폴백(aiops
     assert out.get("success") is not False or out.get("error")
 
 
+def test_S5_스필_참조_봉투는_본문을_복원한다(aiops, tmp_path, monkeypatch):
+    """2026-09-02 실측: & 가지 원형이 표시 한도를 넘으면 {items:[], ref:{path}} 참조로 온다 —
+    파이프로 그 참조를 받은 struct 는 본문을 따라가야 한다(옛 코드는 빈 본문 → 거절)."""
+    mod, seen = aiops
+    import common.spill as spill
+    monkeypatch.setattr(spill, "spill_dir", lambda: str(tmp_path))
+    env = spill.spill_write(json.dumps({"success": True, "transcript": "스필된 자막 전문이다 " * 30}), tag="t")
+    out = json.loads(mod._struct({"schema": "팁(tip)", "_prev_result": json.dumps(env)}))
+    assert out.get("success") is not False, out
+    assert "스필된 자막 전문이다" in _body_of(seen)
+
+
+def test_S6_json_봉투_파일은_파이프와_같은_눈으로_읽는다(aiops, tmp_path):
+    """모델이 스필 note 대로 ref.path(.json) 를 file 로 넘기던 자리 — 확장자 거절이 아니라
+    봉투 해석(transcript 본문 사슬)이어야 한다."""
+    mod, seen = aiops
+    f = tmp_path / "20260902_060230_step1_branch3_f97d41.json"
+    f.write_text(json.dumps({"success": True, "transcript": "파일 봉투의 자막이다 " * 30,
+                             "message": "자막을 성공적으로 가져왔습니다"}), encoding="utf-8")
+    out = json.loads(mod._struct({"schema": "팁(tip)", "file": str(f)}))
+    assert out.get("success") is not False, out
+    body = _body_of(seen)
+    assert "파일 봉투의 자막이다" in body and "성공적으로 가져왔습니다" not in body
+    assert "JSON 봉투" in (out.get("note") or "")
+
+
+def test_S7_json_봉투_속_외부화_경로도_따라간다(aiops, tmp_path):
+    mod, seen = aiops
+    tr = tmp_path / "transcript_y.txt"
+    tr.write_text("# 제목\n[00:05] 외부화 파일의 첫 팁\n[00:09] 외부화 파일의 둘째 팁\n", encoding="utf-8")
+    f = tmp_path / "branch.json"
+    f.write_text(json.dumps({"success": True, "saved_to_file": True, "file_path": str(tr),
+                             "preview": "외부화", "message": "★통째로 읽지 마세요"}), encoding="utf-8")
+    out = json.loads(mod._struct({"schema": "팁(tip)", "file": str(f)}))
+    assert out.get("success") is not False, out
+    body = _body_of(seen)
+    assert "외부화 파일의 첫 팁" in body and "둘째 팁" in body and "[00:05]" not in body
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다.
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

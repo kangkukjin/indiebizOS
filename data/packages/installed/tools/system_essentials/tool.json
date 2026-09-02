@@ -27,6 +27,10 @@
           "spill": {
             "type": "boolean",
             "description": "self:write 파라미터"
+          },
+          "format": {
+            "type": "string",
+            "description": "self:write 파라미터"
           }
         },
         "required": [

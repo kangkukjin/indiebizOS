@@ -31,7 +31,7 @@
           },
           "category": {
             "type": "string",
-            "description": "save 옵션 또는 search 필터 — 분류"
+            "description": "save 옵션 또는 search 필터 — 분류 (유효값 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 밖의 값은 save 가 '기타' 로 정규화·신고, search 는 거절)"
           },
           "query": {
             "type": "string",

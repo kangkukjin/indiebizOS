@@ -506,7 +506,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
                         _benv["preview"] = _bstr[:1000]
                         _benv["note"] = (f"가지 {_bi + 1} 원형 {len(_bstr):,}자 > 표시 한도 {_KEEP:,} — "
                                          "스필 파일로 내리고 참조만 실었습니다. 본문은 ref.path 를 "
-                                         "[self:grep]→[self:read]{start_line/end_line} 으로 부분 읽기. "
+                                         "[self:grep]→[self:read]{start_line/end_line} 으로 부분 읽기, "
+                                         "구조화 추출은 [self:struct]{file: ref.path} 가 봉투째 받습니다. "
                                          "파이프·$바인딩은 원형을 그대로 받았습니다.")
                         _display.append(_benv)
                         _spilled_bi.append(_bi + 1)

@@ -21,6 +21,7 @@
 모듈레벨 = stdlib 만(폰 import-safe 불변식, data-ops 선례) — 무거운 것은 함수 안 지연 import.
 """
 import json
+import os
 import re
 
 _ITEMS_CAP = 60_000       # items 직렬화 상한(자) — ingest_engine._TEXT_CAP 과 동률
@@ -104,6 +105,75 @@ def execute(tool_input: dict, context) -> str:
 
 # ───────────────────────── 입구: [self:struct] ─────────────────────────
 
+def _resolve_spill(prev):
+    """스필 참조 봉투({items:[], ref:{path}, _spilled})면 본문을 복원한다 — 파이프·파일 양쪽 입구 공용.
+
+    2026-09-02 실측(유튜브 팁 06시 주행): 자막 4편을 & 로 뽑으면 가지 원형이 표시 한도를
+    넘어 스필 참조로 내려오고, 모델은 그 ref.path(.json)를 struct 의 file 로 넘긴다 —
+    옛 코드는 확장자만 보고 거절했다("지원하지 않는 형식: .json"). 참조는 소비자가
+    투명하게 따라가야 한다는 스필 규약(common.spill)을 여기서도 지킨다."""
+    try:
+        from common.spill import resolve_ref_str
+    except ImportError:
+        return prev, None
+    try:
+        return resolve_ref_str(prev)
+    except Exception as e:      # 참조 해소가 문장을 죽이면 안 된다 — 원형으로 계속
+        return prev, str(e)
+
+
+def _load_json_envelope(path: str):
+    """.json 파일을 봉투로 읽는다. (obj, err). 스필 참조·중첩 봉투는 여기서 풀린다."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = f.read()
+    except OSError as e:
+        return None, f"파일 읽기 실패: {e}"
+    try:
+        obj = json.loads(raw)
+    except Exception:
+        return raw, None         # JSON 이 아니면 평문 본문으로 본다
+    obj, _ = _resolve_spill(obj)
+    return obj, None
+
+
+def _src_from_envelope(prev, label="파이프 본문"):
+    """봉투(dict|str) → (src, pipe_note, body). src 가 None 이면 body 로 판단한다.
+
+    외부화 봉투(saved_to_file+file_path)는 파일 전문을 따라가 타임스탬프·헤더를 걷고,
+    본문 필드 사슬은 transcript·text·content·summary·preview, message 는 최후 폴백.
+    """
+    src, pipe_note, body = None, None, ""
+    if isinstance(prev, str):
+        body = prev.strip()
+        return src, pipe_note, body
+    if not isinstance(prev, dict):
+        return src, pipe_note, body
+    if prev.get("saved_to_file") and prev.get("file_path"):
+        # 파일이 사라졌으면(24h 정리 등) 조용히 아래 본문 사슬(preview 폴백)로 —
+        # 따라가기 실패가 문장을 죽이면 안 된다.
+        try:
+            from ingest_engine import extract_source
+            _fsrc = extract_source(path=str(prev["file_path"]), text=None)
+        except Exception:
+            _fsrc = {"ok": False}
+        if _fsrc.get("ok"):
+            # 자막류 외부화 파일은 `[MM:SS] 문장` 병기 포맷이다 — 표식·헤더를 걷어 흐르는
+            # 본문으로 정규화해야 grounded 대조(_quote 부분열)가 성립한다(2026-08-27 실측).
+            if isinstance(_fsrc.get("text"), str):
+                _lines = [re.sub(r"^\[[0-9:.]+\]\s*", "", ln)
+                          for ln in _fsrc["text"].splitlines()
+                          if not ln.lstrip().startswith("#")]
+                _fsrc["text"] = re.sub(r"\s+", " ", " ".join(_lines)).strip()
+            src = _fsrc
+            pipe_note = "외부화 봉투(saved_to_file)를 따라가 파일 전문을 원문으로 썼습니다."
+            return src, pipe_note, body
+    body = str(prev.get("transcript") or prev.get("text") or prev.get("content")
+               or prev.get("summary") or prev.get("preview")
+               or prev.get("message") or "").strip()
+    return src, pipe_note, body
+
+
 def _struct(tool_input: dict) -> str:
     schema = str(tool_input.get("schema") or "").strip()
     if not schema:
@@ -115,49 +185,30 @@ def _struct(tool_input: dict) -> str:
 
     # 입력 획득: file/text 우선, 없으면 >> 파이프 본문(예: [sense:crawl] 결과)
     pipe_note = None
+    prev = None
+    label = "파이프 본문"
+    if file_path and file_path.lower().endswith((".json", ".jsonl")):
+        # ★.json 은 문서가 아니라 봉투다 — 스필 참조·자막 봉투·외부화 봉투를 파이프와
+        #   같은 눈으로 읽는다(2026-09-02 이음매 수리). ingest_engine 은 문서 형식 전용이라
+        #   여기서 갈라 보낸다.
+        prev, _err = _load_json_envelope(file_path)
+        if _err:
+            return _fail(_err)
+        label = os.path.basename(file_path)
+        file_path = ""
+        if isinstance(prev, list):
+            prev = {"items": prev}
+        pipe_note = f"JSON 봉투 파일({label})을 파이프 본문과 같은 규약으로 읽었습니다."
     if file_path or text:
         from ingest_engine import extract_source
         src = extract_source(path=file_path or None, text=text or None)
     else:
-        prev = _parse_prev(tool_input.get("_prev_result"))
-        src = None
-        body = ""
-        if isinstance(prev, str):
-            body = prev.strip()
-        elif isinstance(prev, dict):
-            # ★외부화 봉투를 따라간다 (2026-08-27, 51회차 후속 실측): transcript 는
-            #   10,000자 초과분을 파일로 내리고(saved_to_file+file_path) 봉투엔 preview·
-            #   안내 message 만 남긴다. 아래 본문 사슬은 그걸 몰라 **안내문을 원문으로
-            #   오독**했다 — struct 가 사용법 안내에서 "기록"을 추출하는 조용한 품질 실패.
-            #   생산자의 외부화 계약을 소비자가 따라가면 파이프도 전문을 읽는다
-            #   (`transcript >> struct` = 자막 증류가 한 문장에 들어오는 열쇠).
-            if prev.get("saved_to_file") and prev.get("file_path"):
-                # 파일이 사라졌으면(24h 정리 등) 조용히 아래 본문 사슬(preview 폴백)로 —
-                # 따라가기 실패가 문장을 죽이면 안 된다.
-                try:
-                    from ingest_engine import extract_source
-                    _fsrc = extract_source(path=str(prev["file_path"]), text=None)
-                except Exception:
-                    _fsrc = {"ok": False}
-                if _fsrc.get("ok"):
-                    # 자막류 외부화 파일은 `[MM:SS] 문장` 병기 포맷이다 — 세그먼트마다
-                    # 표식이 끼어 어떤 발췌도 원문의 연속 부분열이 될 수 없고, grounded
-                    # 대조(_quote 원문 대조)가 구조적으로 전멸한다(2026-08-27 실측:
-                    # 추출 16건 전원 탈락). 표식·헤더를 걷어 흐르는 본문으로 정규화 —
-                    # 모델 입력과 대조 기준이 같은 텍스트가 되어 grounded 가 성립한다.
-                    if isinstance(_fsrc.get("text"), str):
-                        _lines = [re.sub(r"^\[[0-9:.]+\]\s*", "", ln)
-                                  for ln in _fsrc["text"].splitlines()
-                                  if not ln.lstrip().startswith("#")]
-                        _fsrc["text"] = re.sub(r"\s+", " ", " ".join(_lines)).strip()
-                    src = _fsrc
-                    pipe_note = "외부화 봉투(saved_to_file)를 따라가 파일 전문을 원문으로 썼습니다."
-            if src is None:
-                # 본문 필드 사슬 — transcript(자막 전문)·preview(외부화 봉투의 앞부분)도
-                # 본문이다. message(상태 안내문)는 최후 폴백으로만 남긴다.
-                body = str(prev.get("transcript") or prev.get("text") or prev.get("content")
-                           or prev.get("summary") or prev.get("preview")
-                           or prev.get("message") or "").strip()
+        if prev is None:
+            prev = _parse_prev(tool_input.get("_prev_result"))
+            prev, _ = _resolve_spill(prev)
+        src, _note, body = _src_from_envelope(prev, label)
+        if _note:
+            pipe_note = (pipe_note + " " + _note) if pipe_note else _note
         if src is None and isinstance(prev, dict) and isinstance(prev.get("items"), list):
             # 본문 병기 봉투(crawl: text=본문 + items=링크 부속)는 본문을 원문으로 쓴다 —
             # "이미 items 통화" 거절은 쓸 본문이 없거나 요약 한 줄뿐일 때만 (2026-08-20
@@ -169,13 +220,14 @@ def _struct(tool_input: dict) -> str:
                              "산문 종합은 [table:brief] 를 쓰세요. (본문 텍스트가 함께 오는 "
                              "봉투면 본문을 원문으로 씁니다 — 이 봉투엔 쓸 본문이 없습니다.)")
             if prev["items"]:
-                pipe_note = (f"파이프 봉투의 items {len(prev['items'])}건은 부속(링크 목록 등)으로 "
-                             "보고 본문 텍스트를 원문으로 썼습니다.")
+                _n = (f"파이프 봉투의 items {len(prev['items'])}건은 부속(링크 목록 등)으로 "
+                      "보고 본문 텍스트를 원문으로 썼습니다.")
+                pipe_note = (pipe_note + " " + _n) if pipe_note else _n
         if src is None:
             if not body:
                 return _fail("입력이 없습니다 — file(경로)·text(본문)·>> 파이프 본문 중 하나를 주세요.")
             src = {"ok": True, "kind": "text", "text": body[:_ITEMS_CAP],
-                   "images": None, "label": "파이프 본문"}
+                   "images": None, "label": label}
     if not src.get("ok"):
         return _fail(src.get("error") or "원문 추출 실패")
 

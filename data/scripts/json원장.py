@@ -5,6 +5,11 @@
   {"path":"outputs/x.json", "op":"append", "item":{...}, "max_items":10}
   {"path":"outputs/x.json", "op":"upsert", "target":"covered", "key":"id", "items":[...]}
   {"path":"outputs/x.json", "op":"set", "target":"cursor", "value":3}
+  {"path":"outputs/x.json", "op":"select", "target":"covered", "fields":["id","verdict"],
+   "where":{"topic":"코딩"}, "limit":500}
+     — select: 읽기 전용. 배열의 필요한 열만 items 통화로 돌려준다(where 는 필드=값 등치,
+       여러 키면 AND). 2026-09-02: 197KB 원장을 통째로 읽고 id 585개를 문장에 박던 자리 —
+       원장 제외 필터는 `${원장.items.*.id}` 로, 재탕 대조는 오늘 주제 행만으로 접는다.
   {"path":"outputs/x.json", "op":"append", "item":{...},
    "list_limits":{"tags":{"max_items":25, "max_item_len":24}},
    "enum_fields":{"verdict":["미판정","관심","보류","기각"]}}
@@ -156,6 +161,28 @@ def main():
             root = [] if not target and op in ("append", "upsert") else {}
 
         changed = []
+        if op == "select":
+            array = _get_target(root, target, create_list=False)
+            if not isinstance(array, list):
+                raise ValueError("select target 은 JSON 배열이어야 합니다.")
+            fields = args.get("fields")
+            if fields is not None and not isinstance(fields, list):
+                raise ValueError("fields 는 배열이어야 합니다.")
+            where = args.get("where") or {}
+            if not isinstance(where, dict):
+                raise ValueError("where 는 {필드: 값} 객체여야 합니다.")
+            rows = [r for r in array if isinstance(r, dict)
+                    and all(_key_value(r, k) == v for k, v in where.items())]
+            total = len(rows)
+            limit = args.get("limit")
+            if limit not in (None, ""):
+                rows = rows[:max(0, int(limit))]
+            if fields:
+                rows = [{k: _key_value(r, k) for k in fields} for r in rows]
+            print(json.dumps({"success": True, "op": "select", "path": str(path),
+                              "count": len(rows), "total": total, "items": rows},
+                             ensure_ascii=False))
+            return
         if op in ("append", "upsert"):
             array = _get_target(root, target, create_list=True)
             if not isinstance(array, list):
@@ -221,7 +248,7 @@ def main():
             changed = [{"target": ".".join(target) or "/", "value": value}]
             count = 1
         else:
-            raise ValueError("op은 append|upsert|set 중 하나여야 합니다.")
+            raise ValueError("op은 append|upsert|set|select 중 하나여야 합니다.")
 
         _atomic_json(path, root)
         print(json.dumps({"success": True, "op": op, "path": str(path),

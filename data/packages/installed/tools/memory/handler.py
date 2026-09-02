@@ -68,18 +68,29 @@ def _memory_save(db, tool_input, project_path, agent_id):
     if not content.strip():
         return json.dumps({"success": False, "error": "content가 필요합니다."}, ensure_ascii=False)
 
+    # ★B53-5 (53회차 상상훈련, 2026-09-02): 유효집합 밖 category 는 저장소가 '기타' 로
+    #   정규화하는데 종전엔 **말없이** 그랬다 — 같은 값으로 검색하면 영원히 0건(침묵 강등).
+    #   정규화 자체는 저장소의 계약(normalize_category 한 벌)이고, 여기서는 그 사실을 신고한다.
+    _given = str(tool_input.get("category") or "").strip()
+    _used = db.normalize_category(_given)
     memory_id = db.save(
         project_path=project_path,
         agent_id=agent_id,
         content=content,
         keywords=tool_input.get("keywords", ""),
-        category=tool_input.get("category", "")
+        category=_used,
     )
 
-    return json.dumps({
+    out = {
         "memory_id": memory_id,
-        "message": f"메모리 저장 완료 (ID: {memory_id})"
-    }, ensure_ascii=False, indent=2)
+        "message": f"메모리 저장 완료 (ID: {memory_id})",
+    }
+    if _given and _used != _given:
+        _valid = sorted(db.VALID_CATEGORIES)
+        out["category_normalized"] = {"given": _given, "used": _used, "valid": _valid}
+        out["warning"] = (f"category '{_given}' 은(는) 유효 분류가 아니라 '{_used}' 로 저장했습니다 "
+                          f"— 유효: {_valid}. 같은 값으로 검색하면 0건이 됩니다(search 는 이 값을 거절합니다).")
+    return json.dumps(out, ensure_ascii=False, indent=2)
 
 
 def _memory_search(db, tool_input, project_path, agent_id):
@@ -93,12 +104,22 @@ def _memory_search(db, tool_input, project_path, agent_id):
     limit = tool_input.get("top_k", tool_input.get("limit", 10))
     results = []
 
+    # ★B53-5: 저장이 '기타' 로 정규화하는 값을 검색이 원문 그대로 대조하면 영원히 0건 —
+    #   유효집합 밖 category 는 0건(침묵) 대신 명시 거절(유효 값 동반). 대칭이 서야 왕복이 산다.
+    _cat = str(tool_input.get("category") or "").strip() or None
+    if _cat and _cat not in db.VALID_CATEGORIES:
+        return json.dumps({
+            "success": False, "items": [],
+            "error": (f"category '{_cat}' 은(는) 유효 분류가 아닙니다 — 유효: {sorted(db.VALID_CATEGORIES)}. "
+                      f"(save 는 이 값을 '기타' 로 정규화해 저장합니다 — 그 기억은 category 없이 query 로 찾으세요)"),
+        }, ensure_ascii=False)
+
     # 1) 심층 메모리 검색
     deep_results = db.search(
         project_path=project_path,
         agent_id=agent_id,
         query=query,
-        category=tool_input.get("category"),
+        category=_cat,
         limit=limit
     )
     for r in deep_results:

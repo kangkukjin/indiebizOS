@@ -213,13 +213,35 @@ def _tx_points(txs: list):
     return [{"date": d, "value": int(v)} for d, v in sorted(by_date.items())]
 
 
+def _num(v):
+    """금액·평가액을 통화 행의 **숫자**로 — 표시는 title/summary 의 `_won` 이 맡는다."""
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return v
+    return int(n) if n == int(n) else n
+
+
 def _tx_items(txs: list):
+    """거래 → 통화 행. ★B53-6 (53회차 상상훈련, 2026-09-02): 종전엔 카드 4필드(title/meta/
+    summary/url)만 투영해 되읽은 원장으로 합계(reduce)·조건(if)·되먹임 삭제(each delete)가
+    전부 불가했다 — 같은 봉투의 `table` 은 데이터를 갖고 `text` 에만 #번호가 있어 통화가
+    둘이고 내용이 달랐다(단일 통화 위반). 데이터 필드를 행에 싣고 카드 필드는 덧붙인다
+    (ledger·sheet·notebook·memory 는 이미 id 를 싣는다 — finance 만 남은 카드 통화였다)."""
     return [{
         "title": f"{t.get('counterparty') or t.get('category') or _TX_KO.get(t['tx_type'], '')} · {_won(t['amount'])}",
         "meta": f"{_TX_KO.get(t['tx_type'], '')} · {t.get('occurred_at') or ''}"
                 + (f" · {t.get('category')}" if t.get('category') and t.get('counterparty') else ""),
         "summary": t.get('note') or '',
         "url": "",
+        "record_id": t.get('id'),
+        "record_type": "transaction",
+        "kind": _TX_KO.get(t['tx_type'], t['tx_type']),
+        "date": t.get('occurred_at') or '',
+        "category": t.get('category') or '',
+        "counterparty": t.get('counterparty') or '',
+        "amount": _num(t['amount']),
+        "source": t.get('source') or '',
     } for t in txs]
 
 
@@ -231,6 +253,13 @@ def _hold_items(holds: list):
                 + f" · {h.get('as_of') or ''}",
         "summary": _won(h['value']) if h.get('value') is not None else '',
         "url": "",
+        "record_id": h.get('id'),
+        "record_type": "holding",
+        "kind": _HOLD_KIND_KO.get(h['kind'], h['kind']),
+        "name": h['name'],
+        "value": _num(h['value']) if h.get('value') is not None else None,
+        "asset_type": h.get('asset_type') or '',
+        "as_of": h.get('as_of') or '',
     } for h in holds]
 
 

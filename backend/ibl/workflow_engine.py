@@ -873,8 +873,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
     for _k in _new:
         out[_k] = _promoted[_k]
     if _new:
-        _warns.append("마지막 통화가 부분 실패·절단을 신고했습니다(" + ", ".join(sorted(_new)) +
-                      ") — success 만 보고 '다 됐다'로 읽지 말 것.")
+        # ★B51-4 (53회차 관찰 ①에서 재확인): 낱말은 표지의 분류(ibl_honesty.describe_promoted)가
+        #   정한다 — `passthrough_rows` 같은 경로 표지를 "부분 실패" 라 부르면 늑대소년.
+        from ibl_honesty import describe_promoted as _describe_promoted
+        _warns.append("마지막 통화가 정직 표지를 실었습니다: " + _describe_promoted(_new) +
+                      " — success 만 보고 '다 됐다'로 읽지 말고 표지의 뜻대로 보고할 것.")
     if _warns:
         out["warning"] = " / ".join(_warns)
     return out

@@ -23,12 +23,12 @@ modes:
       - key: folder
         type: select
         placeholder: 보고서 종류
-        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
+        default: "~/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
         options:
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
     action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc | take: 1 >> [self:read]{blocks: true}@hub'
     view:
       - type: blocks
@@ -50,12 +50,12 @@ modes:
       - key: folder
         type: select
         placeholder: 보고서 종류
-        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
+        default: "~/Desktop/AI/indiebizOS/outputs/ai_trend_reports"
         options:
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_trend_reports",   label: AI 동향 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_startup_reports", label: AI 창업·응모 정보 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/housing_reports",   label: 부동산 발굴 보고서}
+          - {value: "~/Desktop/AI/indiebizOS/outputs/ai_tips_reports",   label: 유튜브 AI 팁 보고서}
     action: '[self:file_find]{pattern: "*report_*.md", path: "$folder"}@hub | sort: title desc'
     view:
       - type: card_list
@@ -79,12 +79,12 @@ modes:
       - key: guide
         type: select
         placeholder: 보고서 종류
-        default: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md"
+        default: "~/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md"
         options:
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md",   label: AI 동향 보고서 가이드}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/housing_report.md",   label: 부동산 발굴 보고서 가이드}
-          - {value: "/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/youtube_ai_tips_report.md", label: 유튜브 AI 팁 보고서 가이드}
+          - {value: "~/Desktop/AI/indiebizOS/data/guides/ai_trend_report.md",   label: AI 동향 보고서 가이드}
+          - {value: "~/Desktop/AI/indiebizOS/data/guides/ai_startup_report.md", label: AI 창업·응모 정보 보고서 가이드}
+          - {value: "~/Desktop/AI/indiebizOS/data/guides/housing_report.md",   label: 부동산 발굴 보고서 가이드}
+          - {value: "~/Desktop/AI/indiebizOS/data/guides/youtube_ai_tips_report.md", label: 유튜브 AI 팁 보고서 가이드}
     action: '[self:read]{path: "$guide", blocks: true}@hub'
     view:
       - type: blocks

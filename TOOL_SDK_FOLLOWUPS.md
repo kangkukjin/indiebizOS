@@ -18,7 +18,7 @@
 
 **왜 도입했는가**: 162번 사고에서 `project_path=" ."` 디폴트가 발동해 백엔드 cwd 기준 상대경로(`./outputs/...`)로 슬라이드가 떨어지고, AI가 그 상대경로를 그대로 사용자에게 안내해 거짓 보고가 되었다. 사후 검증이 아니라 신경계에서 "거짓말 할 재료를 안 주는" 방향을 선택. 단일 시그니처 통일, 임시방편 X — 사용자 명시 결정.
 
-**관련 메모리**: `~/.claude/projects/-Users-kangkukjin-Desktop-AI/memory/project_tool_context_sdk.md`, `project_episodic_memory.md`, `project_strategic_thesis_commodity.md`
+**관련 메모리**: `~/.claude/projects/<workspace>/memory/project_tool_context_sdk.md`, `project_episodic_memory.md`, `project_strategic_thesis_commodity.md`
 
 ---
 
@@ -34,7 +34,7 @@
 >
 > 1. 백엔드 재시작 (사용자가 직접 `./start.sh` 실행할 수 있게 안내)
 > 2. 슬라이드 만들기 명령 (예: 책 한 챕터를 강의할 슬라이드 3장)
-> 3. `/Users/kangkukjin/Desktop/AI/indiebizOS/data/world_pulse.db`의 `episode_log`에서 최신 에피소드 SELECT
+> 3. `<repo>/data/world_pulse.db`의 `episode_log`에서 최신 에피소드 SELECT
 > 4. 검증 포인트:
 >    - `output_dir`이 절대경로(`/Users/.../projects/<프로젝트>/outputs/shadcn_slides_xxx`)로 반환되는가
 >    - AI가 사용자에게 안내한 경로 = 실제 파일 위치인가
@@ -168,7 +168,7 @@
 **의존**: 없음
 
 162번 사고 이전에 같은 패턴으로 잘못 떨어진 디렉토리 8개:
-- 경로: `/Users/kangkukjin/Desktop/AI/indiebizOS/backend/outputs/`
+- 경로: `<repo>/backend/outputs/`
 - 디렉토리: `house-designs/`, `indiebiz_slides_v1`, `slides/`, `indiebiz_slides_v2`, `slides_ac60b3b5`, `slides_35c9d929`, `v3_images/`, `shadcn_slides_196381ab`
 
 각 디렉토리 내용 확인 후, 필요한 것만 해당 프로젝트의 `projects/<프로젝트명>/outputs/`로 이동, 나머지 삭제. 사용자 판단.

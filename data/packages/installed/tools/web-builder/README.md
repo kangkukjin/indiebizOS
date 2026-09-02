@@ -219,4 +219,4 @@ analyze_site(url="https://my-site.vercel.app")
 
 ## 출력 경로
 
-기본 출력 경로: `/Users/kangkukjin/Desktop/AI/outputs/web-projects/`
+기본 출력 경로: `outputs/web-projects/`(IndieBiz 기준 경로 `INDIEBIZ_BASE_PATH`, 없으면 저장소 루트)

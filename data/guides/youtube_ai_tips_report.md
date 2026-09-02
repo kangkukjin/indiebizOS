@@ -12,7 +12,7 @@
 
 ## 0. 저장·원장·배포·실행 규약 (예외 없음)
 
-- **고정 폴더** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_tips_reports/` · **파일명** `ai_tips_report_YYYY-MM-DD_<주제>.md`(주제는 한 단어, H1과 같은 표기. 날짜 우선 순서 불변 — 사전순=시간순이 정기보고 앱과 §2-1의 전제).
+- **고정 폴더** `~/Desktop/AI/indiebizOS/outputs/ai_tips_reports/` · **파일명** `ai_tips_report_YYYY-MM-DD_<주제>.md`(주제는 한 단어, H1과 같은 표기. 날짜 우선 순서 불변 — 사전순=시간순이 정기보고 앱과 §2-1의 전제).
 - **원장·DB**: `_covered_videos.json`(다룬·탈락 영상 원장, 중복 방지의 단일 진실 §4) · `db/tips.json`(팁 누적, append-only) · `_scan_log.json`(수집 불가 날, §2-7).
 - **배포 = 로컬 md 누적 + 공유창고 누적 등재.** 매 호 HTML을 `공유창고/0/AI 팁들/AI 팁 보고서 <YYYY-MM-DD> <주제>.html`로 **새 파일로 쌓는다**(덮어쓰기 금지 — 호마다 주제가 다르다). 렌더의 유일한 통로는 등록 스크립트 **`보고서HTML`**(`drop_lines`는 **리스트** — 문자열을 주면 글자 단위로 쪼개져 66줄이 지워진 사고가 있다). 공유판에는 "우리 시스템 함의" 절 등 개인 시스템 맥락을 싣지 않는다 — 제거는 변환기의 `drop_lines`가 집행하고 `dropped_lines`가 팁 수와 같은지, `links`가 영상+출처 건수 이상인지 검산한다. `/r/` 공개면 발행은 하지 않는다.
 - **셸은 IBL 등가물이 없는 일에만.** 원장·DB는 **`json원장`**(읽기 `op:"select"` · 갱신 `upsert`/`append` · 최상위 키는 `set`에 `target` 필수). 큰 payload는 `[self:write]`로 파일에 고정한 뒤 **`args_file`**로 가리킨다(리터럴로 박지 않는다). 손 전사 금지 — 원장 행은 소스에서 팬아웃해 파일로 고정한 뒤 그 파일을 넘긴다.

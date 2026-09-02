@@ -123,7 +123,7 @@ def _ingress_config(hostname: str) -> dict:
     is_direct_host 미스로 공개면 404 (2026-07-20 윈도우 실측).
 
     ★tunnel_config `extra_hostnames` 도 함께 선언한다 — 한 몸이 역사적 이유로 주소를
-    여러 개 가질 때(맥: launcher.kukjinkang.uk 가 폰 위임 INDIEBIZ_MAC_URL 에 박혀
+    여러 개 가질 때(맥: launcher.<zone> 가 폰 위임 INDIEBIZ_MAC_URL 에 박혀
     있어 즉시 접을 수 없음, 2026-07-21 수제 터널 이주). 여기(단일 소스)에 안 넣고
     발급 때만 일회성으로 넣으면 부팅 재선언이 그 규칙을 지워버린다."""
     hosts = [hostname]
@@ -494,8 +494,8 @@ def provision_open(req: UseReq):
 # ── ② cloudflare 발급 — CF API 원격관리 터널 + DNS + 직접 서빙 ────────────────────
 
 class CloudflareReq(BaseModel):
-    domain: str = ""          # zone 이름 (예: kukjinkang.uk)
-    subdomain: str = ""       # 머신별 서브도메인 (예: win) → win.kukjinkang.uk
+    domain: str = ""          # zone 이름 (예: example.com)
+    subdomain: str = ""       # 머신별 서브도메인 (예: win) → win.example.com
     dry_run: bool = False     # true = 변이 없이 계획만
     skip_cdn: bool = False    # true = Worker+R2 없이 직접 서빙만 (옛 동작)
 

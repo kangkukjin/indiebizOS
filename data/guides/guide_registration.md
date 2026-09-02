@@ -4,14 +4,14 @@
 
 ## 1. 가이드 파일 생성
 새로운 가이드는 마크다운(`.md`) 형식으로 작성하며, 다음 경로에 저장합니다.
-- **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/`
+- **경로**: `data/guides/`(저장소 루트 기준)
 - **파일명**: 영문 소문자와 언더바(`_`)를 사용한 직관적인 이름 (예: `my_new_guide.md`)
 
 ## 2. 가이드 DB 등록
 
 파일을 생성한 후, 시스템이 검색할 수 있도록 DB에 등록해야 합니다.
 
-- **DB 파일**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/guide_db.json`
+- **DB 파일**: `data/guide_db.json`(저장소 루트 기준)
 
 ### 등록 항목
 

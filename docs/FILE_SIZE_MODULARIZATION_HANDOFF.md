@@ -273,7 +273,7 @@ CLAUDE.md 개발 규칙에 원래 "각 파일 1500줄 이하로 모듈화"가 �
   포크-가드·OS-가드 등이 backend 파일을 스캔.
 - `scripts/consciousness_schema_check.py` CONSUMER_FILES — consciousness_output 키 소비 파일 목록.
 - pre-commit 훅 — 몸 번들 파생 검사(backend 모듈 목록) + 의식 스키마 검사.
-- `/Users/kangkukjin/Desktop/AI/CLAUDE.md` — backend/frontend 파일 목록(갱신함).
+- `<workspace>/CLAUDE.md` — backend/frontend 파일 목록(갱신함).
 - 폰 번들은 자동(engine.json 재파생만). 데스크탑 Electron 재빌드 불필요(HMR).
 
 ## 5. 잔여 대기열 (읽기빈도×크기 순, 2026-07-18 기준)

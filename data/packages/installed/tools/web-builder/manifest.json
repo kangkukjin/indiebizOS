@@ -67,7 +67,7 @@
     }
   ],
   "config": {
-    "default_output_dir": "/Users/kangkukjin/Desktop/AI/outputs/web-projects",
+    "default_output_dir": "outputs/web-projects",
     "node_version": ">=18.0.0"
   }
 }

@@ -27,7 +27,7 @@
 `Bash` 도구로 background 실행:
 
 ```bash
-cd /Users/kangkukjin/Desktop/AI/indiebizOS && PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 python3 backend/ibl_embedding_trainer.py 2>&1 | tee /tmp/ibl_train_v9_$(date +%Y%m%d_%H%M%S).log
+cd <repo> && PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 python3 backend/ibl_embedding_trainer.py 2>&1 | tee /tmp/ibl_train_v9_$(date +%Y%m%d_%H%M%S).log
 ```
 
 - `run_in_background: true`로 띄울 것
@@ -61,7 +61,7 @@ cd /Users/kangkukjin/Desktop/AI/indiebizOS && PYTORCH_MPS_HIGH_WATERMARK_RATIO=0
 grep -E "\[Epoch [0-9]+\] 검증 점수|결과 비교|OOM|RuntimeError|Top-[0-9]+:" /tmp/ibl_train_v9_*.log | tail -20
 
 # epoch 산출 디렉토리
-ls -d /Users/kangkukjin/Desktop/AI/indiebizOS/data/models/ibl_embedding/epoch_* 2>/dev/null
+ls -d <repo>/data/models/ibl_embedding/epoch_* 2>/dev/null
 
 # 메모리
 vm_stat | awk '/Pages free/ {f=$3+0} /Pages inactive/ {i=$3+0} /Pages speculative/ {s=$3+0} /Pages wired/ {w=$4+0} END { printf "available=%.1fGB  wired=%.0fMB\n", (f+i+s)*16/1024/1024, w*16/1024 }'
@@ -75,7 +75,7 @@ ps aux | grep ibl_embedding_trainer | grep -v grep
 `pilot_results.json` 갱신되면 백업(0.948)과 비교:
 
 ```bash
-cat /Users/kangkukjin/Desktop/AI/indiebizOS/data/models/ibl_embedding/pilot_results.json
+cat <repo>/data/models/ibl_embedding/pilot_results.json
 ```
 
 **결정 기준**:
@@ -85,7 +85,7 @@ cat /Users/kangkukjin/Desktop/AI/indiebizOS/data/models/ibl_embedding/pilot_resu
 
 백업 복원 명령:
 ```bash
-cd /Users/kangkukjin/Desktop/AI/indiebizOS/data/models && rm -rf ibl_embedding && cp -R ibl_embedding.bak.pre_op_vocab_20260528_181842 ibl_embedding
+cd <repo>/data/models && rm -rf ibl_embedding && cp -R ibl_embedding.bak.pre_op_vocab_20260528_181842 ibl_embedding
 ```
 
 ---

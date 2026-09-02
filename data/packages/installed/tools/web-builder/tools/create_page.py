@@ -913,7 +913,7 @@ export default function Page() {{
 if __name__ == "__main__":
     # 테스트
     result = run(
-        project_path="/Users/kangkukjin/Desktop/AI/outputs/web-projects/test-project",
+        project_path="outputs/web-projects/test-project",
         page_name="index",
         sections=[
             {

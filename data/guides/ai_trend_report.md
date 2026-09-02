@@ -12,7 +12,7 @@
 
 ## 0. 저장·실행 규약 (예외 없음)
 
-- **고정 폴더** `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_trend_reports/` · **파일명** `ai_trend_report_YYYY-MM-DD.md`(작성 당일, 사전순=시간순). 상태 파일 3종이 같은 폴더에 산다: `_coverage_ledger.json`(최근 10호 태그) · `_methodology_rules.md`(규칙 원장) · `_scan_log.json`(빈 날 점검 로그, §4-1).
+- **고정 폴더** `~/Desktop/AI/indiebizOS/outputs/ai_trend_reports/` · **파일명** `ai_trend_report_YYYY-MM-DD.md`(작성 당일, 사전순=시간순). 상태 파일 3종이 같은 폴더에 산다: `_coverage_ledger.json`(최근 10호 태그) · `_methodology_rules.md`(규칙 원장) · `_scan_log.json`(빈 날 점검 로그, §4-1).
 - **저장·검증은 IBL 액션으로** — `[self:write]`·`[self:edit]`·`[self:list]`·`[self:grep]`·`[self:read]`. 네이티브 `Write`·Bash `ls`/`grep` 금지: 결과 파일은 같아도 **네이티브 경로는 경험 증류에 접지되지 않아 해마에 남지 않는다**(08-20 실측 — 산출물이 정상이라 더 조용히 샜다).
 - **셸은 IBL 등가물이 없는 일에만.** 등록 스크립트: GitHub 다건 = `github저장소메타` · JSON 원장 = `json원장` · arXiv 카테고리 피드 = `arxiv최신피드` · HTML 렌더 = `보고서HTML`.
 - **파이프 안 AI step(`[table:ai]`·`[table:brief]`)에는 `criteria`를 단다** — 뒤 step이 의존하는 **재료 관문**에만, 기준은 **반증 가능한 속성**(행 수·필수 열·날짜 하한·중복 여부)으로. 취향 산문은 판정 불능만 낳고, 결정론 step에 걸면 재시도 없이 실패만 남는다. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.

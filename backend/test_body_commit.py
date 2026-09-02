@@ -191,7 +191,8 @@ def test_c8_portability_no_personal_literals():
     src = open(_MOD, encoding="utf-8").read()
     lowered = src.lower()
     for banned in ("github", "gitlab", "http://", "https://",
-                   "/users/", "c:\\", "/home/", "kangkukjin"):
+                   "/users/", "c:\\", "/home/",
+                   os.path.basename(os.path.expanduser("~")).lower()):  # 이 몸 주인의 계정명
         assert banned not in lowered, f"이식성 위반 리터럴: {banned}"
     # push 는 낱말이 없다 — 전파 서브커맨드가 소스에 존재하지 않아야 한다
     assert '"push"' not in src and "'push'" not in src

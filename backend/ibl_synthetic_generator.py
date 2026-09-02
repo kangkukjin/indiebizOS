@@ -5,7 +5,7 @@ IBL 합성 데이터 생성: LLM으로 다양한 자연어 변형 생성
 비정형/구어체/다양한 표현의 자연어 변형을 생성한다.
 
 사용법:
-    cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend
+    cd <repo>/backend
     python3 ibl_synthetic_generator.py
 """
 

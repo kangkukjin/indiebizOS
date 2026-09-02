@@ -31,12 +31,15 @@ TOOL_PARAMETERS = {
     },
     "output_dir": {
         "type": "string",
-        "description": "프로젝트 생성 경로",
-        "default": "/Users/kangkukjin/Desktop/AI/outputs/web-projects"
+        "description": "프로젝트 생성 경로 (기본: <IndieBiz 기준 경로>/outputs/web-projects)",
+        "default": "outputs/web-projects"
     }
 }
 
-DEFAULT_OUTPUT_DIR = "/Users/kangkukjin/Desktop/AI/outputs/web-projects"
+# 기본 출력 경로는 사람의 홈 레이아웃이 아니라 몸의 기준 경로에서 계산한다
+# (INDIEBIZ_BASE_PATH — 배포판은 Electron 이 지정, 개발 모드는 저장소 루트).
+_BASE = Path(os.environ.get("INDIEBIZ_BASE_PATH") or Path(__file__).resolve().parents[6])
+DEFAULT_OUTPUT_DIR = str(_BASE / "outputs" / "web-projects")
 
 # 기본 shadcn 컴포넌트 (템플릿별)
 TEMPLATE_COMPONENTS = {

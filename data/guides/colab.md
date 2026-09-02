@@ -5,7 +5,7 @@
 IBL에서는 `run_command`(셸)로 부르고, 자주 쓰는 잡은 `[self:script]`에 등록한다 — 전용 액션 없음(의도적).
 
 - 설치 위치: `~/.local/bin/colab` (v0.6.0 실측, `colab update`로 갱신 확인)
-- 인증: **oauth2 로그인 완료**(kangkukjin@gmail.com, 토큰 `~/.config/colab-cli/token.json` 자동 갱신)
+- 인증: **oauth2 로그인 완료**(등록된 구글 계정, 토큰 `~/.config/colab-cli/token.json` 자동 갱신)
 - 상태 확인: `colab whoami`(계정·스코프·만료), `colab sessions`(활성 세션 = 인증 겸 확인)
 - 자가 문서: `colab skill`(에이전트용 정본 문서), `colab readme`, `colab help <명령>`
 

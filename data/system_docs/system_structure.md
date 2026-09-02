@@ -11,7 +11,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 시스템 관리, 확장, 디버깅, 개발 작업 시 참조하는 핵심 구조 정보.
 
 ## 개요
-- **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS`
+- **경로**: 저장소 루트(로컬 클론 위치 — 배포판은 `INDIEBIZ_BASE_PATH`)
 - **설명**: AI 기반 통합 관리 시스템 (IBL 추상화 위에서 개인·조직 규모 무관하게 동작)
 - **핵심 가치**: 개인화, 자동화, 연결성
 
@@ -31,7 +31,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 ---
 
 ## 시스템 문서 (System AI 참조)
-- **경로**: `/Users/kangkukjin/Desktop/AI/indiebizOS/data/system_docs/`
+- **경로**: `data/system_docs/`(저장소 루트 기준)
 - 시스템 AI가 장기 기억으로 참조하는 문서들
 - **문서 신뢰 규약**: 정본 서열 = git 커밋(사건) > docs/(설계) > system_docs/(장기기억). 문서 속 수치·파일명·함수명은 *쓰인 당시의 기록*일 수 있다 — 행동 전 `[self:body]`·`[self:grep]` 로 실재를 확인하라. `<!-- …:START/END -->` 마커 구간은 빌드가 재생성하는 기계 소유(손 수정 금지).
 - **파일 목록** (13 문서 + changelog):

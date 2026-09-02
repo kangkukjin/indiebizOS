@@ -77,7 +77,7 @@
 
 ## 7. 빠른 시작 (콜드 스타트)
 ```
-cd /Users/kangkukjin/Desktop/AI/indiebizOS
+cd <repo>
 git log --oneline -12                         # 이번 세션 커밋들(f48d914~9c6c2e5)
 python3 scripts/build_ibl_nodes.py --check    # 어휘 정합·포크가드·매니페스트 상태
 curl -s localhost:8765/health                 # 맥 백엔드 살아있나(dev 상시)

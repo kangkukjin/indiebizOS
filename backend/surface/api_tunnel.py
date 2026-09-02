@@ -603,7 +603,7 @@ def origin_host() -> str:
     8765 전체를 서빙한다(/launcher/app·/nas/* 포함). 반면 finder/launcher 호스트명은
     옛 경로(tunnel_config.json 수기값 + ~/.cloudflared/config.yml ingress)만 보고 있었고
     발급기가 그 둘을 안 건드려서, 새 몸에서 **남의 몸 주소가 그대로 표시**됐다
-    (윈도우 PC 에서 맥의 finder/launcher.kukjinkang.uk 가 보인 사고 — 그 주소로 가면
+    (윈도우 PC 에서 맥의 finder/launcher.<zone> 가 보인 사고 — 그 주소로 가면
     DNS 가 맥 터널을 가리키므로 그 몸의 런처가 아니라 맥이 응답한다).
 
     ★**public_base(창고 공개주소)와 다른 개념이다.** Worker 를 얼굴로 쓰는 몸은 공개주소가

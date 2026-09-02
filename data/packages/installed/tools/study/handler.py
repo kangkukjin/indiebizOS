@@ -20,7 +20,9 @@ _OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find", "entity_op": "res
 # 우리는 그동안 UA 도 안 밝히고(기본 python-requests) 재시도도 없이 단발 호출 후
 # raise_for_status() 로 즉사했다 → 503 한 번이면 그 호의 논문 채널이 통째로 죽고,
 # 보고서엔 "arXiv 장애, 우리 쪽 문제 아님"으로 적혔다(2026-08-12 호). 근거가 없던 단정이다.
-_ARXIV_UA = "indiebizOS/1.0 (personal research agent; mailto:kangkukjin@gmail.com)"
+# 연락처(공손한 UA 규약)는 몸의 명사가 아니다 — INDIEBIZ_CONTACT_EMAIL 이 있을 때만 붙인다.
+_CONTACT = os.environ.get("INDIEBIZ_CONTACT_EMAIL", "").strip()
+_ARXIV_UA = "indiebizOS/1.0 (personal research agent" + (f"; mailto:{_CONTACT}" if _CONTACT else "") + ")"
 
 
 def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
@@ -368,7 +370,7 @@ def _search_nanet(tool_input: dict) -> str:
 # www.wikidata.org/w/api.php — wbsearchentities(검색)·wbgetentities(상세).
 # 무API키(공개), 순수 requests(맥·폰 공통). Wikimedia는 서술적 User-Agent 요구.
 _WD_API = "https://www.wikidata.org/w/api.php"
-_WD_HEADERS = {"User-Agent": "IndieBizOS/1.0 (entity resolution; contact kangkukjin@gmail.com)"}
+_WD_HEADERS = {"User-Agent": "IndieBizOS/1.0 (entity resolution" + (f"; contact {_CONTACT}" if _CONTACT else "") + ")"}
 
 
 def _wd_get(params: dict) -> dict:

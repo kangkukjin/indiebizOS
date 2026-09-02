@@ -31,7 +31,7 @@ IBL의 상상 훈련은 선수의 심상 훈련보다 유리하다 — 선수는
 
 ### 3-1. 메뉴 준비
 ```
-run_command: cd /Users/kangkukjin/Desktop/AI/indiebizOS && .venv/bin/python scripts/vocab_composition_metrics.py --list-never
+run_command: cd ~/Desktop/AI/indiebizOS && .venv/bin/python scripts/vocab_composition_metrics.py --list-never
 ```
 - **미조합 액션 목록(행동 기준)이 훈련 메뉴**다. 4지표(파이프 길이 중앙값·미조합 수·문형 수·
   파트너 다양성)도 함께 기록해 둔다 — 회차 간 추이가 훈련의 성적표다.
@@ -205,7 +205,7 @@ intent + code 쌍. 관문: 실행까지 통과 + 갭 제약 없는 것만.
 수리 턴이 보고서에 "회귀 확인: 전부 통과"라고 적으려면 **그 문장이 실측이어야 한다.**
 
 ```
-run_command: cd /Users/kangkukjin/Desktop/AI/indiebizOS && .venv/bin/python -m pytest backend/test_X.py -q
+run_command: cd ~/Desktop/AI/indiebizOS && .venv/bin/python -m pytest backend/test_X.py -q
 ```
 
 - ★**`python backend/test_X.py` 로 판단하지 말 것.** 27·28회차가 그렇게 했고, 그 배터리들엔

@@ -5,7 +5,7 @@ IBL 해마 파일럿: 학습된 임베딩 검색 모델 구축
 검색 정확도를 비교하는 실험 스크립트.
 
 사용법:
-    cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend
+    cd <repo>/backend
     python ibl_embedding_trainer.py
 """
 

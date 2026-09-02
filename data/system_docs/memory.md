@@ -646,7 +646,7 @@ data/training/
 
 ```bash
 cp -R data/models/ibl_embedding "data/models/ibl_embedding.bak.$(date +%Y%m%d_%H%M%S)"   # ★먼저
-cd /Users/kangkukjin/Desktop/AI/indiebizOS/backend
+cd <repo>/backend
 python ibl_embedding_trainer.py
 ```
 

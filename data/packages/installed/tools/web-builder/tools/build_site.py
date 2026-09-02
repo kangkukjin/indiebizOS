@@ -150,6 +150,6 @@ def run(project_path: str, analyze: bool = False) -> dict:
 
 if __name__ == "__main__":
     result = run(
-        project_path="/Users/kangkukjin/Desktop/AI/outputs/web-projects/test-project"
+        project_path="outputs/web-projects/test-project"
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))

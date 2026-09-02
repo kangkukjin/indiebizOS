@@ -1,6 +1,8 @@
+import os
+_TOOL_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tool.json')
 import json
 
-with open('/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/youtube/tool.json', 'r', encoding='utf-8') as f:
+with open(_TOOL_JSON, 'r', encoding='utf-8') as f:
     data = json.load(f)
 
 # 요약 도구 추가
@@ -31,7 +33,7 @@ new_tool = {
 data['tools'] = [t for t in data['tools'] if t['name'] not in ['summarize_youtube', 'summarize_video']]
 data['tools'].insert(4, new_tool)
 
-with open('/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/youtube/tool.json', 'w', encoding='utf-8') as f:
+with open(_TOOL_JSON, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False, indent=2)
 
 print("tool.json patched")

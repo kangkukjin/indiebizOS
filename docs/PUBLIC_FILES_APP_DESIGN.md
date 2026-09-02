@@ -137,7 +137,7 @@ media/<folder_id>/<item_id>        # 원본/변환본 — ★온디맨드 캐시
 
 **★원본 = 온디맨드(option 1, P4 개정).** sync 는 썸네일·manifest 만 R2 에 올린다.
 원본은 벌크 업로드하지 않는다 — 방문자가 사진을 클릭할 때 Worker 가 맥
-(`ORIGIN_BASE=finder.kukjinkang.uk` 터널)의 `/showcase/origin/<fid>/<iid>` 에서 하나만
+(`ORIGIN_BASE=finder.<zone>` 터널)의 `/showcase/origin/<fid>/<iid>` 에서 하나만
 끌어와 스트리밍하며 동시에 R2 `media/` 에 캐시한다(`worker.js` `body.tee()`). 그래서
 136GB 폴더도 R2 에 통째로 안 올라가고, 실제로 열람된 것만 캐시된다. 맥이 꺼져 있으면
 캐시 안 된 원본은 503(썸네일 그리드는 계속 보임).

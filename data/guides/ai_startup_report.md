@@ -14,7 +14,7 @@
 
 과거 보고서를 찾으려면 저장 위치가 한 곳으로 고정되어 있어야 한다. **예외 없이** 아래를 따른다.
 
-- **고정 폴더**: `/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports/`
+- **고정 폴더**: `~/Desktop/AI/indiebizOS/outputs/ai_startup_reports/`
 - **파일명 규약**: `ai_startup_report_YYYY-MM-DD.md` (예: `ai_startup_report_2026-06-22.md`)
   - 날짜는 작성 당일 기준. 현재 날짜는 시스템 프롬프트 "현재 시점" 또는 `[self:time]`으로 확인.
   - 날짜 기반 파일명이므로 사전순 정렬이 곧 시간순 정렬이다(최신 보고서 찾기의 핵심).
@@ -29,7 +29,7 @@
 ### 1-1. 최신 보고서 파일 찾기
 
 ```
-[self:file_find]{path: "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/ai_startup_reports/", pattern: "ai_startup_report_*.md"}
+[self:file_find]{path: "~/Desktop/AI/indiebizOS/outputs/ai_startup_reports/", pattern: "ai_startup_report_*.md"}
 ```
 
 - 결과 목록에서 **파일명 사전순으로 가장 마지막** 파일이 최신 보고서다.

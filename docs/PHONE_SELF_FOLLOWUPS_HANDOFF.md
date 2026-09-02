@@ -58,7 +58,7 @@ stdlib만이라 폰 import 위험0 → 다음 APK 빌드 자동 번들. 액션 1
 
 ## 3. 빠른 시작 (콜드 스타트)
 ```
-cd /Users/kangkukjin/Desktop/AI/indiebizOS
+cd <repo>
 git log --oneline -5                          # 842e1f8·f5a269e·ab8a7a6 이번 세션
 python3 scripts/build_ibl_nodes.py --check    # 어휘·runs_on 정합·포크가드·매니페스트
 curl -s localhost:8765/health                 # 맥 백엔드(dev 상시)

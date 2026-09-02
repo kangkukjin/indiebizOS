@@ -61,7 +61,7 @@ def test_existing_rules_still_hold():
 def test_no_false_positive_on_ordinary_text():
     """평범한 경로·문장·해시는 살아 있어야 한다 — 로그가 읽을 수 없게 되면 안 된다."""
     for keep in (
-        "/Users/kangkukjin/Desktop/AI/indiebizOS/backend/base/logging_utils.py",
+        "/Users/someone/Desktop/AI/indiebizOS/backend/base/logging_utils.py",
         "에피소드 2426 의 주행기록을 확인했습니다",
         "commit 9f5a8b4c478144149a6161a6320f11b1 을 되돌림",   # 이름 낱말이 근처에 없음
     ):

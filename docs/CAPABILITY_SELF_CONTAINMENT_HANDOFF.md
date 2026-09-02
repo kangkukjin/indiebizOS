@@ -51,7 +51,7 @@
 
 ### 1.1 하네스 사용법 (Phase 4/5에서도 그대로 유용 — 신규 패키지 추가 시)
 ```bash
-cd /Users/kangkukjin/Desktop/AI/indiebizOS
+cd <repo>
 python3 scripts/migrate_package_vocab.py <package_name> --dry-run   # 대상 미리보기
 python3 scripts/migrate_package_vocab.py <package_name>             # 실이관 + 재빌드 + 의미동일단언 + --check
 ```
@@ -130,7 +130,7 @@ header(주석) + meta.yaml + "nodes:\n" + sense.yaml + self.yaml + ... + table.y
 ## 6. 검증 명령 (복붙용)
 
 ```bash
-cd /Users/kangkukjin/Desktop/AI/indiebizOS
+cd <repo>
 
 # 현재 상태 정상 확인 (바이트 일치·전 가드·exit 0)
 python3 scripts/build_ibl_nodes.py --check; echo "exit=$?"

@@ -31,7 +31,7 @@ def _make_homepage_workflow_fixture():
     for i in range(4):
         calls.append({
             "name": "Read",
-            "input": {"file_path": f"/Users/kangkukjin/Desktop/AI/HomePages/indiebizOS-home/components/section-{i}.tsx"},
+            "input": {"file_path": f"/Users/someone/Desktop/AI/HomePages/indiebizOS-home/components/section-{i}.tsx"},
             "result": "(파일 내용 200줄)",
             "is_error": False,
         })
@@ -40,7 +40,7 @@ def _make_homepage_workflow_fixture():
         calls.append({
             "name": "Edit",
             "input": {
-                "file_path": f"/Users/kangkukjin/Desktop/AI/HomePages/indiebizOS-home/components/indie-hero.tsx",
+                "file_path": f"/Users/someone/Desktop/AI/HomePages/indiebizOS-home/components/indie-hero.tsx",
                 "old_string": f"...{i}...",
                 "new_string": f"...{i} updated...",
             },

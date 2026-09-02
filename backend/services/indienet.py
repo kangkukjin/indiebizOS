@@ -207,7 +207,7 @@ class IndieNetSettings:
         self.auto_refresh: bool = True
         self.refresh_interval: int = 60  # 초
         # 커스텀 보드 (해시태그 기반 비공개 게시판)
-        self.boards: List[Dict[str, Any]] = []  # [{"name": "내 보드", "hashtag": "indienetkukjin", "created_at": "..."}]
+        self.boards: List[Dict[str, Any]] = []  # [{"name": "내 보드", "hashtag": "indienet<핸들>", "created_at": "..."}]
         self.active_board: Optional[str] = None  # 현재 활성 보드의 hashtag (None이면 기본 IndieNet)
         # 팔로우 목록 (로컬 저장). [{"pubkey": npub_or_hex, "name": "표시이름", "added_at": "..."}]
         # 지금은 로컬 settings에만 둔다. 나중에 이 목록을 kind:3(NIP-02)으로 발행하면

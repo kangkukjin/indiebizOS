@@ -98,7 +98,7 @@ data/packages/installed/tools/<pkg>/
 
 ### Phase 0 — 준비 (20분)
 ```bash
-cd /Users/kangkukjin/Desktop/AI/indiebizOS
+cd <repo>
 git checkout -b ibl-source-unification
 # 백업 폴더
 mkdir -p /tmp/ibl_backup_$(date +%Y%m%d)
@@ -230,7 +230,7 @@ ibl_nodes_src → 더 명확한 이름으로:
   ```bash
   for code in '[sense:legal]{query:"민법",project_id:"법률"}' \
               '[engines:web_catalog]{kind:"components",project_id:"컨텐츠"}' \
-              '[others:channel_read]{channel_type:"gmail",account:"indienetkukjin@gmail.com",max_results:3}' \
+              '[others:channel_read]{channel_type:"gmail",account:"user@example.com",max_results:3}' \
               '[self:time]' \
               '[self:goal]{op:"list"}'; do
     curl -s -X POST localhost:8765/ibl/execute -H 'Content-Type: application/json' -d "{\"code\":\"$code\"}" | head -c 200

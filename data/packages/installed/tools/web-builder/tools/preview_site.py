@@ -276,7 +276,7 @@ def run(project_path: str, port: int = 3000, action: str = "start") -> dict:
 
 if __name__ == "__main__":
     result = run(
-        project_path="/Users/kangkukjin/Desktop/AI/outputs/web-projects/test-project",
+        project_path="outputs/web-projects/test-project",
         action="status"
     )
     print(json.dumps(result, indent=2, ensure_ascii=False))

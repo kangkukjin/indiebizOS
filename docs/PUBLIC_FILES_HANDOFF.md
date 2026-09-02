@@ -8,7 +8,7 @@
 
 ## 🟢 지금 라이브 (동작 확인됨)
 
-- **공개 URL**: https://public-files.kangkukjin.workers.dev (완전 공개, 토큰 게이트 없음)
+- **공개 URL**: https://<worker>.workers.dev (완전 공개, 토큰 게이트 없음)
 - **작동**: 앱 모드 🌐 공개파일에서 폴더 선택(GUI) → 공개 → 썸네일 그리드 → 사진 클릭 시
   **온디맨드로 맥에서 원본을 끌어와 표시 + R2 캐시**(본 것만 업로드). 브라우저 종단 검증 완료.
 - **어휘**: `[others:showcase]{op: status(기본)/add/remove/sync/config/detail}` — 노드 others, 액션 152.
@@ -20,9 +20,9 @@
 |------|-----|
 | R2 버킷 | `public-files` (계정 a82e4254f22e89f3e52948418cc7b459) |
 | R2 S3 키 | `.env`: `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` |
-| 맥 노출 터널 | 기존 `indiebiz-os` cloudflared: **`finder.kukjinkang.uk` → localhost:8765** (재사용) |
+| 맥 노출 터널 | 기존 `indiebiz-os` cloudflared: **`finder.<zone>` → localhost:8765** (재사용) |
 | 온디맨드 시크릿 | `.env`: `SHOWCASE_ORIGIN_SECRET` == Worker secret `SHOWCASE_SECRET` (동일값) |
-| Worker env | `ORIGIN_BASE=https://finder.kukjinkang.uk`, `BUCKET`(R2), `SHOWCASE_SECRET`, (`SHOWCASE_TOKEN` 선택) |
+| Worker env | `ORIGIN_BASE=https://finder.<zone>`, `BUCKET`(R2), `SHOWCASE_SECRET`, (`SHOWCASE_TOKEN` 선택) |
 | Worker 배포 | `cd data/packages/installed/tools/public-files/site && CLOUDFLARE_API_TOKEN=… CLOUDFLARE_ACCOUNT_ID=… npx wrangler@4 deploy` |
 
 ## 📁 핵심 파일
@@ -63,7 +63,7 @@ data/
  └ api_showcase /showcase/origin                 Worker (worker.js)
      (시크릿+published+경로검증)                    media/* 요청:
         ▲                                           R2 캐시 있으면 → 서빙
-        │ finder.kukjinkang.uk (터널)               없으면 → 맥 /showcase/origin 끌어옴
+        │ finder.<zone> (터널)               없으면 → 맥 /showcase/origin 끌어옴
         └───────── Worker가 시크릿으로 pull ──────────  (tee 스트림) + R2 캐시
 ```
 
@@ -119,7 +119,7 @@ curl -s http://localhost:8765/ping -w " %{http_code}\n"
 curl -s http://localhost:8765/ibl/execute -X POST -H "Content-Type: application/json" \
   -d '{"code":"[others:showcase]{op:\"status\", project_id:\"컨텐츠\"}"}'
 # 원본 엔드포인트 (SECRET=.env SHOWCASE_ORIGIN_SECRET)
-curl -s "https://finder.kukjinkang.uk/showcase/origin/<fid>/<iid>" -H "X-Showcase-Secret: $SECRET" -o /dev/null -w "%{http_code}\n"  # 200
+curl -s "https://finder.<zone>/showcase/origin/<fid>/<iid>" -H "X-Showcase-Secret: $SECRET" -o /dev/null -w "%{http_code}\n"  # 200
 # SigV4 self-test
 python3 backend/r2_client.py   # SigV4 self-test: PASS
 # 빌드 삼각검증

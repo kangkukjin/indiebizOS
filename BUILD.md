@@ -80,6 +80,23 @@ IndieBiz/
 
 ---
 
+## 릴리스 관문 (2026-09-02, docs/FIRST_SUCCESS_AND_UPGRADE_GATE_HANDOFF.md ②)
+
+체크리스트가 아니라 **실패하는 테스트**다. 태그를 붙이기 전에 전부 초록이어야 한다(version-tag-sync 와 함께).
+
+| 관문 | 무엇을 증명하나 | 명령 / CI 잡 |
+|---|---|---|
+| 빈 설치본 부팅 | 정본 레시피(bootstrap.py)로 설치한 빈 몸이 /health 200 | `python3 scripts/ci_boot_smoke.py` · `boot-smoke`(3 OS) |
+| 노후 설치본 업그레이드 | 직전 태그로 설치·개인화한 몸이 지금 트리로 올라간 뒤 부팅 (git 경로 + 설치본 동기화 경로) | `python3 scripts/ci_upgrade_smoke.py` · `upgrade-smoke` |
+| 사용자 소유물 보존 | 끈 패키지·자작 패키지·설정 json·DB 행·사용자 파일이 해시/행수 그대로 | (같은 스크립트) |
+| 실패 시 원상복구 | 동기화가 도중에 죽으면 다음 기동이 저널로 되감고 재동기화 | (같은 스크립트 — `failAfterEntries` 재현) |
+| 은퇴 코어 잔존 검사 | git 경로=사라진 추적 파일 삭제, 설치본 경로=매니페스트 `retired` 격리 이동 | (같은 스크립트) |
+| git 경로 업그레이드 레시피 | `scripts/update.py`(배치 되돌림 → ff pull → 재적용)가 사용자가 옮긴 패키지를 상류 변경에도 살린다 | (같은 스크립트 — 깨끗한 트리면 진짜 레시피, 아니면 배치 함수+에뮬레이션) |
+| 스키마 따라잡기 | 옛 DB 가 `user_version` 으로 마이그레이션(옛 액션명 행 정리) | (같은 스크립트) + `pytest backend/test_schema_migrations.py` |
+
+로컬 실행은 `.venv` 와 `node` 가 필요하고 직전 태그를 `git worktree` 로 꺼내므로 2~5분 걸린다.
+`--keep` 으로 산출물(worktree·userData·저널)을 남겨 디버그할 수 있다.
+
 ## 트러블슈팅
 
 ### Python 패키지 설치 오류

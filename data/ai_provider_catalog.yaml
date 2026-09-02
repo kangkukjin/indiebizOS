@@ -1,0 +1,76 @@
+# ai_provider_catalog.yaml — 모델 프로바이더 카탈로그 (2026-09-02, 첫 성공 온보딩)
+#
+# 세계의 명사(어느 벤더의 어떤 환경변수·명령·URL·기본 모델)는 코드가 아니라 여기 산다.
+# 읽는 쪽: backend/base/ai_candidates.py(후보 탐지·실응답 검증), model_resolver(.env 변수 이름).
+# 모델이 은퇴하거나 벤더가 바뀌면 이 파일 한 줄을 고친다 — 코드가 아니라 데이터가 반증된다.
+#
+# 필드:
+#   name            프로바이더 이름 (providers.get_provider 가 아는 이름)
+#   aliases         같은 프로바이더의 다른 표기
+#   kind            api (키 필요) | cli (설치된 하네스, 자체 로그인) | local (로컬 모델 서버, 키 없음)
+#   env             kind=api 의 .env 변수 이름 (탐지 원천 = 이 변수가 차 있는가)
+#   command         kind=cli 의 실행 파일 이름 (shutil.which)
+#   bundle_globs    PATH 밖 번들 실행 파일 위치 패턴 (데스크톱 앱 동봉판)
+#   login_markers   로그인 흔적 파일 — 있으면 login=yes, 없으면 unknown(맥은 키체인이라 파일이 없을 수 있다)
+#   tags_url        kind=local 의 모델 목록 URL (없으면 후보 없음, 오류 아님)
+#   default_model   후보로 제안할 기본 모델 (사용자가 바꿀 수 있다)
+#   signup_url      키 발급 페이지 (후보가 하나도 없을 때 안내)
+providers:
+  - name: ollama
+    label: Ollama (로컬 모델)
+    kind: local
+    tags_url: http://localhost:11434/api/tags
+    default_model: ""
+  - name: claude_code
+    aliases: [claude-code, claudecode]
+    label: Claude Code CLI (Claude 구독)
+    kind: cli
+    command: claude
+    bundle_globs:
+      - "~/Library/Application Support/Claude/claude-code/*/claude.app/Contents/MacOS/claude"
+      - "%APPDATA%/Claude/claude-code/*/claude.exe"
+      - "%LOCALAPPDATA%/Claude/claude-code/*/claude.exe"
+    login_markers:
+      - "~/.claude/.credentials.json"
+      - "~/.claude.json"
+    default_model: sonnet
+  - name: codex
+    aliases: [codex_cli, codex-cli]
+    label: Codex CLI (ChatGPT 구독)
+    kind: cli
+    command: codex
+    login_markers:
+      - "~/.codex/auth.json"
+      - "$CODEX_HOME/auth.json"
+    default_model: gpt-5.6-sol
+  - name: google
+    aliases: [gemini]
+    label: Google Gemini API
+    kind: api
+    env: GEMINI_API_KEY
+    default_model: gemini-3-flash-preview
+    signup_url: https://aistudio.google.com
+  - name: anthropic
+    label: Anthropic Claude API
+    kind: api
+    env: ANTHROPIC_API_KEY
+    default_model: claude-sonnet-4-20250514
+    signup_url: https://console.anthropic.com
+  - name: openai
+    label: OpenAI API
+    kind: api
+    env: OPENAI_API_KEY
+    default_model: gpt-4.1-mini
+    signup_url: https://platform.openai.com
+  - name: deepseek
+    label: DeepSeek API
+    kind: api
+    env: DEEPSEEK_API_KEY
+    default_model: deepseek-v4-flash
+    signup_url: https://platform.deepseek.com
+  - name: openrouter
+    label: OpenRouter
+    kind: api
+    env: OPENROUTER_API_KEY
+    default_model: ""
+    signup_url: https://openrouter.ai

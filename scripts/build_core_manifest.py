@@ -145,16 +145,55 @@ def build_manifest() -> dict:
     if _git_tracked("data/ibl_nodes.yaml"):
         vocab_artifacts.append("ibl_nodes.yaml")
 
+    core = {
+        "packages": {"tools": tools, "extensions": extensions},
+        "instruments": instruments,
+        "vocab_fragments": vocab_fragments,
+        "vocab_artifacts": vocab_artifacts,
+    }
     return {
         "_comment": "표준 코어 경계의 단일 진실. build_core_manifest.py 가 git 추적 집합에서 파생. 손으로 편집 금지.",
         "generated_from": "git ls-files",
-        "core": {
-            "packages": {"tools": tools, "extensions": extensions},
-            "instruments": instruments,
-            "vocab_fragments": vocab_fragments,
-            "vocab_artifacts": vocab_artifacts,
-        },
+        "core": core,
+        "retired": _retired(core),
     }
+
+
+# --- 은퇴 목록 (2026-09-02, docs/FIRST_SUCCESS_AND_UPGRADE_GATE_HANDOFF.md ② C) -----------
+# 코어였다가 사라진 이름은 옛 설치본에 영원히 남는다(08-31 윈도우 실전: 은퇴 어휘 yaml 이
+# stale). 직전 매니페스트의 core 와 지금 core 의 차집합을 **누적**해 기록하고, 설치본 동기화
+# (frontend/electron/userdata_sync.js)가 그 이름을 격리 이동한다(실삭제 아님 — 사용자 판정
+# 2026-09-02: 매니페스트 차집합은 기계 계산이라 오판 시 복구 가능해야 한다).
+# 이름이 다시 코어로 돌아오면 은퇴 목록에서 빠진다.
+
+_RETIRED_KEYS = ("packages.tools", "packages.extensions", "instruments", "vocab_fragments")
+
+
+def _get_path(d: dict, dotted: str) -> list:
+    cur = d
+    for seg in dotted.split("."):
+        cur = (cur or {}).get(seg) if isinstance(cur, dict) else None
+    return list(cur or [])
+
+
+def _previous_manifest() -> dict:
+    """직전 커밋된 매니페스트(작업 트리 파일). 없으면 빈 dict — 첫 생성은 은퇴 0."""
+    try:
+        return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _retired(core: dict) -> dict:
+    prev = _previous_manifest()
+    prev_core, prev_retired = prev.get("core") or {}, prev.get("retired") or {}
+    out = {}
+    for key in _RETIRED_KEYS:
+        now = set(_get_path(core, key))
+        gone = set(_get_path(prev_core, key)) - now
+        kept = set(prev_retired.get(key) or []) - now
+        out[key] = sorted(gone | kept)
+    return out
 
 
 def _serialize(manifest: dict) -> str:
@@ -185,7 +224,8 @@ def main() -> int:
         f"extensions {len(core['packages']['extensions'])} · "
         f"instruments {len(core['instruments'])} · "
         f"vocab_fragments {len(core['vocab_fragments'])} · "
-        f"vocab_artifacts {len(core['vocab_artifacts'])}"
+        f"vocab_artifacts {len(core['vocab_artifacts'])} · "
+        f"retired {sum(len(v) for v in manifest['retired'].values())}"
     )
     print(f"[core-manifest]   → {MANIFEST_PATH}")
     return 0

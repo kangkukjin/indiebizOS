@@ -204,6 +204,23 @@ def save_conversation(role: str, content: str, importance: int = 0, source: str 
     Returns:
         저장된 대화 ID
     """
+    # 첫 성공 온보딩의 종료조건 — 시스템 AI 가 실제로 답한 사실은 여기 한 곳을 지난다
+    # (HTTP·WS 양 경로 공통). 이미 기록돼 있으면 프로세스 플래그로 즉시 반환(비용 0).
+    if role == "assistant" and content:
+        try:
+            import onboarding_state
+            if not onboarding_state._marked_this_process:
+                _cfg = {}
+                try:
+                    from model_resolver import SYSTEM_AI_CONFIG_PATH
+                    if SYSTEM_AI_CONFIG_PATH.exists():
+                        _cfg = json.loads(SYSTEM_AI_CONFIG_PATH.read_text(encoding="utf-8"))
+                except Exception:
+                    _cfg = {}
+                onboarding_state.mark_first_reply(_cfg.get("provider"), _cfg.get("model"))
+        except Exception:
+            pass
+
     init_memory_db()
 
     conn = _get_connection()

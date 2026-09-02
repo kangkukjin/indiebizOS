@@ -118,6 +118,10 @@ def _init_pulse_db():
         CREATE INDEX IF NOT EXISTS idx_trajectory_task
             ON trajectory_event(task_id, event_seq);
     """ + _NOTIFY_LOG_DDL)
+    # 스키마 버전 레지스트리(schema_migrations, 2026-09-02) — 옛 액션명 행 정리 등 자동 따라잡기.
+    # 실패 = 예외(반쯤 적용 금지) → 호출한 서브시스템이 boot_status 에 실패로 기록한다.
+    import schema_migrations
+    schema_migrations.apply(conn, "world_pulse")
     conn.close()
 
 

@@ -1,5 +1,12 @@
 # 첫 성공 온보딩 · 업그레이드 트랜잭션 핸드오프
 
+> **2026-09-02 진행 상태 — ①·② 구현 완료(같은 날, 미커밋).** 사용자 판정 2건 확정:
+> (1) 은퇴 코어 파일 = **격리 이동**(`data/_backups/<날짜>_upgrade/retired/`, 실삭제 아님) —
+> 매니페스트 차집합은 기계 계산이라 오판(런타임 생성물로 바뀌어 추적에서 빠진 파일 등)이
+> 복구 가능해야 한다. (2) GUIDE "외부 하네스 사실상 필수" = **시점 이동** — 설치 대장장이 이유는
+> 온보딩이 대체하므로 삭제, 복구 경로 이유는 원문 그대로 "정비소" 절로 독립(첫 성공 뒤).
+> 아래 계획에서 실제 구현이 달라진 곳은 각 항목의 **[구현]** 줄이 정본이다.
+
 2026-09-02. OpenClaw 2.0 발표문(https://openclaw.ai/blog/openclaw-2-accidentally)을
 IndieBiz OS 와 대조한 대화에서 사용자가 채택한 두 과제. 이 문서는 그 두 과제의
 현황 실측·목표·작업 계획·관문을 담는다. 두 과제는 독립이지만 뿌리가 같다 —
@@ -39,7 +46,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 
 ### 작업 계획 (A→E, A 는 독립 수리라 먼저)
 
-**A. `/system-ai/status` 의 ready 판정 근본 수리** (작음, 독립)
+**A. `/system-ai/status` 의 ready 판정 근본 수리** (작음, 독립) — ✅ [구현] `api_system_ai._system_ai_readiness`(welcome 도 파생) · `backend/test_system_ai_ready.py`(T4=surface 부류 관문)
 - `ready = enabled and (not provider_needs_api_key(provider) or has_api_key)`.
   `has_api_key` 는 그대로 노출하되 의미를 "키 칸이 차 있다"로 한정.
 - 회귀: `backend/test_system_ai_ready.py` — provider=claude_code·키 빈칸 → ready True;
@@ -47,7 +54,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
   `grep -rn "apiKey" backend/surface | grep -v provider_needs_api_key` 로 같은 부류를 먼저 훑을 것.
   사람이 고른 범위는 샌다 — 부류 스윕은 관문을 먼저 쓴다.)
 
-**B. 후보 탐지 `GET /system-ai/candidates`**
+**B. 후보 탐지 `GET /system-ai/candidates`** — ✅ [구현] `backend/base/ai_candidates.detect_candidates` · 카탈로그 `data/ai_provider_catalog.yaml`(model_resolver 의 env 표도 여기서) · 라우터 `backend/surface/api_onboarding.py` · `test_onboarding_candidates.py`
 - 반환 `{items:[{provider, model, source, needs_key}]}` (통화 = items 하나).
 - 탐지원 3종, 순서대로: (1) 환경변수·`.env` 의 알려진 키(ANTHROPIC_API_KEY·OPENAI_API_KEY·
   GEMINI_API_KEY·OPENROUTER_API_KEY·DEEPSEEK_API_KEY) (2) `shutil.which("claude"|"codex")`
@@ -59,7 +66,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 - 자리: `backend/surface/` (표면) + 탐지 함수는 `backend/base/model_resolver.py` 옆 새 모듈
   (`check_backend_layers.py` LAYERS 배정 잊지 말 것).
 
-**C. 실응답 검증 `POST /system-ai/probe`**
+**C. 실응답 검증 `POST /system-ai/probe`** — ✅ [구현] `ai_candidates.probe`(실패 kind 12종, 원문 동봉) · `test_onboarding_probe.py`
 - 입력 `{provider, model, api_key?}`. 저장하지 않고 oneshot 1턴("한 단어로 답하세요: 준비됐나요?")
   호출 → `{ok, reply, latency_ms, error}`. 키 틀림·모델명 오타·잔액 0·CLI 미로그인이 **각각 다른
   문장**으로 돌아와야 한다(정직 — "설정되지 않았습니다" 하나로 뭉개지 말 것).
@@ -67,7 +74,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 - 재사용: `api_env.py` 의 test 정신, `model_resolver.resolve` 의 provider 캐시(키가 달라지면
   캐시 키가 달라져 자동 교체 — probe 가 캐시를 오염시키지 않는지 확인).
 
-**D. 첫 실행 표면 = 상태기계**
+**D. 첫 실행 표면 = 상태기계** — ✅ [구현] `frontend/src/components/OnboardingDialog.tsx`(loading→pick→probing→verified/failed, 검증 뒤 저장, "첫 대화 시작"=시스템 AI 창) · 상태 원장 `backend/datastore/onboarding_state.py`(`first_reply_at` 은 `save_conversation("assistant")` 한 곳에서 기록) · Launcher 첫 실행 = 온보딩 → 가이드
 - GuideDialog 를 "후보 목록 → 선택(또는 직접 입력) → probe → 첫 대화로 이동" 4상태로.
   후보가 1개면 선택을 건너뛰고 바로 probe. 후보 0 이면 지금의 키 발급 안내.
 - `/system-ai/welcome` 의 `needs_api_key` 를 고정값에서 status 파생으로. 정적 문구에서
@@ -76,7 +83,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
   원격 런처·다른 표면에서도 같은 상태를 본다(3표면 파리티).
 - 첫 성공 뒤 Cloudflare·폰 제안은 **시스템 AI 의 첫 대화 프롬프트에 한 줄**로 — 새 다이얼로그 0.
 
-**E. 문서**
+**E. 문서** — ✅ [구현] GUIDE.md/GUIDE_EN.md 기둥①="사용 가능한 AI(첫 응답)", 정비소 절 신설, 체크리스트 2·6 · technical.md API·설정 절 (★공개 문서 문장은 사용자 검토 대상)
 - GUIDE.md 기둥①·체크리스트: "최소 동작 = 첫 응답". "외부 하네스 사실상 필수" 문구는
   **사용자 판정** — 첫 성공까지는 하네스 없이 도달 가능해지므로 "설치 위임 선택지"로 낮출지
   사용자가 정한다(문구 하나지만 제품 정의라 묻는다).
@@ -118,7 +125,8 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 
 ### 작업 계획 (B 먼저 — 관문을 먼저 쓰고 고친다)
 
-**B. 노후 설치본 픽스처 + 업그레이드 스모크** (`scripts/make_aged_install.py` · `scripts/ci_upgrade_smoke.py`)
+**B. 노후 설치본 픽스처 + 업그레이드 스모크** (`scripts/make_aged_install.py` · `scripts/ci_upgrade_smoke.py`) — ✅ [구현] 직전 태그 worktree → 옛 부팅 → 개인화(태그 이후 상류 변경 없는 최소 패키지 끔·자작 패키지·파일·설정·DB 행·옛 액션명 행·은퇴 예정 어휘 조각) → 경로 B(설치본 동기화, resources=지금 트리의 배포 집합 근사) → 경로 A(git pull 등가 = 상류가 바꾼 파일만) → 부팅·보존·롤백·은퇴 단언. 로컬 실측 통과(v1.5.2 → 작업 트리).
+  ★발견→✅닫힘(같은 날): git 경로에서 패키지 켜고/끄기 = 추적 디렉토리 이동이라 상류가 그 패키지를 바꾸면 맨손 `git pull` 이 상류가 고친 파일만 옛 자리에 되살려 **반쪽 패키지**를 만든다(ai-ops 로 실측: installed/ 에 tool.json 등 일부만 부활). 뿌리 = **업그레이드 레시피 부재**(bootstrap.py 만 있고 짝이 없었다, 문서에 git pull 0회). 처방 = `scripts/update.py`: 사용자 배치 걷기 → ff pull → 재적용(실패 시 원복, 양쪽 존재=충돌 신고). 폴더 위치=진실 규칙은 유지 — 런타임 독자 20여 곳(tool_loader·api_packages·portal·bulletin…)을 오버레이로 바꾸는 건 과대. 픽스처는 이제 **상류가 바꾼 패키지를 우선** 끄고(어려운 경우), 경로 A 는 깨끗한 트리(CI)에서 진짜 레시피를 돌린다. 진짜 레시피는 worktree 실측(v1.5.2→HEAD, ai-ops 이동)으로 확인.
 - 픽스처: 직전 태그(`git describe --abbrev=0`)를 `git worktree` 로 꺼내 `bootstrap.py --core-only`
   → 개인화 주입: 코어 패키지 1개를 not_installed 로, 사용자 패키지 1개 추가(`origin=user`),
   자작 앱 1개, `business.db` 행 N, 설정 키, 프로젝트 1개, 사용자 어휘 yaml 1개 → **소유물 해시
@@ -130,7 +138,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
   은퇴 목록(C)의 경로가 dest 에 없음 · `build_ibl_nodes.py --check` 초록(파생물 신선).
 - `pytest.ini` 는 backend/ 만 수집 — 이 스모크는 CI 잡으로(F). 로컬은 `python3 scripts/ci_upgrade_smoke.py`.
 
-**C. 은퇴 목록** (`build_core_manifest.py` `retired` 구간)
+**C. 은퇴 목록** (`build_core_manifest.py` `retired` 구간) — ✅ [구현] 직전 매니페스트(작업 트리 파일) core 와의 차집합을 누적, 돌아오면 해제. `userdata_sync.quarantineRetired` 가 격리 이동(판정 (1)). 현재 retired 는 전부 빈 배열.
 - 빌드 때 직전 커밋된 매니페스트의 `core` 와 현재 `git ls-files` 차집합을 `retired` 에 **누적**
   (커밋됨, 빈 배열이 정상). `bootstrap.js` 는 dest 에 `retired` 경로가 있으면 제거 — 단
   판정은 "매니페스트가 코어였다고 기억하는 것"만, 사용자 파일은 이름이 같아도 건드리지 않는다
@@ -138,7 +146,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 - ★**실삭제 vs `data/_backups/YYYY-MM-DD_upgrade_retired/` 격리 이동 — 사용자 판정**
   (파괴적 변경 부류). 기본 제안 = 격리 이동 + 30일 규약(백업 README).
 
-**D. 트랜잭션화** (`bootstrap.js`)
+**D. 트랜잭션화** (`bootstrap.js`) — ✅ [구현, 설계 변경] 스테이징 폴더 스왑이 아니라 **저널 트랜잭션**(`frontend/electron/userdata_sync.js`, electron 무의존): 덮어쓰기 전 원본 백업+저널 한 줄(JSONL) → `data/.upgrade_pending` 표식 → 완료 시 회수 · 도중 죽음은 다음 기동이 되감고 재동기화 · 내용 같은 파일 무변경. 이유: userData 의 사용자 DB(해마·포식 수백 MB) 통째 복사가 무겁고, 동기화가 건드리는 범위(코어 파일)만 저널이 정확히 덮는다 — red_watchdog 의 `{path→backup|null}` 형식과 같은 꼴. "/health 실패 시 롤백"은 채택 안 함: 설치본 경로에선 앱 바이너리를 되돌릴 수 없어 데이터만 되돌리면 새 코드↔옛 데이터 불일치가 더 나쁘다. 트랜잭션의 의미 = 원자성(전부 또는 전무)+수동 복구용 백업.
 - `initUserData` 를 3단으로: 스테이징(`userData/_staging_<ts>/` 에 전체 적용) → 검증
   (필수 파일 존재·JSON 파싱·`core_manifest` 일치) → 디렉토리 단위 rename 스왑. 실패는 어느
   단에서든 스테이징 삭제 = 이전 설치본 무손상.
@@ -150,7 +158,7 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
   다음 기동에 표식이 남아 있으면 백업 복원).
 - 관문: B 에 "중간 실패 주입"(스테이징 중 예외) 케이스 추가 → 이전 설치본 해시 불변.
 
-**E. 스키마 버전** (`backend/datastore/schema_migrations.py`)
+**E. 스키마 버전** (`backend/datastore/schema_migrations.py`) — ✅ [구현] `PRAGMA user_version` 레지스트리, ibl_usage·world_pulse v1(옛 액션명 개편 흡수), `_init_db` 훅 2곳, `test_schema_migrations.py`. **"부팅 거절"은 "서브시스템 실패 기록(boot_status → /health degraded)"으로** — 마이그레이션은 트랜잭션이라 반쯤 적용된 DB 는 없고, 정직한 실패 표시가 기존 부팅 교리와 맞는다. `migrate_storage_action.py`·`migrate_cctv_action.py` 은퇴, `migrate_nodes.py` 는 유지(프로젝트 agents.yaml 대상, --reverse 보유 — 다른 부류).
 - `PRAGMA user_version` + 단일 마이그레이션 레지스트리(DB 파일별 `[(version, sql|fn)]`).
   8개 파일의 `CREATE TABLE IF NOT EXISTS` 는 version 0 으로 흡수, 이후 컬럼 추가는 여기에만.
   부팅 시 자동 적용, 실패 = **부팅 거절**(반쯤 마이그레이션된 DB 로 뜨지 않는다 — 정직).
@@ -159,13 +167,13 @@ GUIDE 의 "최소 동작" 정의가 "키 입력"에서 "첫 응답"으로 바뀐
 - 관문: `backend/test_schema_migrations.py` — version 0 DB 에 전체 적용 후 컬럼 목록 = 최신 스키마,
   중간 버전에서 재적용 시 멱등.
 
-**F. CI** — `portability.yml` 에 `upgrade-smoke` 잡(3 OS 매트릭스 중 최소 1 OS 부터).
+**F. CI** — ✅ [구현] `portability.yml` `upgrade-smoke`(ubuntu, fetch-depth 0 + node 22) · BUILD.md "릴리스 관문" 절.
 릴리스 태그는 이 잡 초록이 전제(version-tag-sync 규약에 한 줄 추가).
 
 ### 순서와 판정
 - 순서: **B → C → E → D → F**. B 없이 C·D·E 를 하면 "고쳤다"를 증명할 자리가 없다.
-- 사용자 판정 2건: (1) C 의 은퇴 파일 실삭제/격리 (2) ① E 의 GUIDE "하네스 필수" 문구.
-  나머지는 묻지 않고 근본 집행.
+- 사용자 판정 2건 — ✅ 확정(머리 참조): (1) 격리 이동 (2) 정비소 절로 시점 이동.
+- 남은 열린 것: 온보딩 UI 실기(빈 사용자 데이터로 앱 기동 → ollama 만 있는 기계 → 키 입력 0회) 는 아직 실측 전.
 - 문서 갱신 의무: BUILD.md(릴리스 관문 5종), technical.md(스키마 버전·백업 경로), `data/_backups/README.md`
   (upgrade 백업 항목), system_docs 꼬리.
 

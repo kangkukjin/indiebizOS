@@ -50,6 +50,10 @@ see_also: [architecture.md, ibl.md]
 - `PUT /system-ai/prompts/config` - 프롬프트 설정 업데이트 (역할 프롬프트 토글)
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회
 - `PUT /system-ai/prompts/role` - 역할 프롬프트 업데이트
+- `GET /system-ai/status` - 준비 판정. `ready` 는 provider 를 본다(무키 프로바이더 claude_code·codex·ollama 는 키 없이 ready — `provider_needs_api_key` 정본, 2026-09-02 수리)
+- `GET /system-ai/candidates` - 이 기계가 이미 가진 AI 후보 `{items:[{provider, model, source, kind, login?}]}` — 환경변수 키 · 설치된 CLI · 로컬 모델 서버 (`backend/base/ai_candidates.py`, 카탈로그=`data/ai_provider_catalog.yaml`)
+- `POST /system-ai/probe` - `{provider, model, api_key?}` 실응답 1턴 검증. 실패는 원인별 kind(no_key/auth/model/cli_login/local_down/timeout…). 저장 안 함 — 검증 → 저장 순서 (첫 성공 온보딩, `api_onboarding.py`, 로컬 전용)
+- `GET /system-ai/onboarding` · `POST /system-ai/onboarding/dismiss` - 온보딩 상태(`data/onboarding_state.json`, first_reply_at = `save_conversation("assistant")` 첫 기록)
 
 ### 도구 패키지 관리
 - `GET /packages` - 전체 패키지 목록
@@ -255,7 +259,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **부팅 관측**: `backend/datastore/boot_status.py` — lifespan 의 '실패(무시)' 블록 10개를 성패 계측, `/world-pulse/health` 의 `boot` 절로 노출(하나라도 실패면 overall=degraded).
 - **표준 코어 경계 (설치·업데이트 이음매, 2026-07-10~)**: `data/core_manifest.json` — 코어 vs 사용자(어휘·앱) 경계의 **단일 진실**. `scripts/build_core_manifest.py`가 **git 추적 집합**(=배포에 딸려오는 것)에서 파생·커밋(installed+not_installed 양쪽 패키지·계기·중앙 어휘). 손목록 없음. **opt-out**: 개인 패키지·앱을 커밋해도 코어에서 빼려면 `<패키지>/.origin` 파일에 `user`(또는 계기 yaml 최상위 `origin: user`). 런타임 origin은 `backend/package_manager.resolve_package_origin()`가 이 매니페스트로 해소해 `/packages` 응답에 `origin: core|user` 노출. **가드**: pre-commit + `build_ibl_nodes.py --check`에 core_manifest·dist_filter 신선도 합류.
 - **설치 파일 필터 (코어 기준 배포)**: `scripts/build_dist_filter.py` — `frontend/package.json`의 electron-builder `data` 필터에서 sentinel(`!__GEN_START/END__`) 구간을 매니페스트 주도로 생성(비-코어 패키지·계기 제외 + 개인 크러프트 `.fuse_hidden*`·최상위 `*.md/*.html/*.png`·`*.bak*` 제외). 기존 secret 손목록은 보존(순수 추가). `npm run electron:build*`가 `dist:filter`(predist=매니페스트 재생성)를 프리스텝으로 실행.
-- **업데이트 시 사용자 보존 규칙 (`frontend/electron/main.js` `initUserData`)**: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
+- **git 경로 업그레이드 레시피**: `scripts/update.py`(bootstrap.py 의 짝, 2026-09-02) — 코어 패키지의 사용자 배치(installed↔not_installed, git 기본과 다른 것)를 걷었다가 `git pull --ff-only` 뒤 다시 놓는다. 폴더 위치=진실 규칙은 그대로(런타임 독자 20여 곳 무변경), 당기는 동안만 배치를 비운다. 실패 시 배치 원복·정직한 중단(stash 없음). 양쪽에 다 있는 패키지(맨손 pull 의 흔적 — 상류가 고친 파일만 옛 자리에 되살아난 반쪽)는 충돌로 신고. requirements 변경 시 .venv 재설치. 상류 은퇴 패키지는 신고만.
+- **모델 프로바이더 카탈로그**: `data/ai_provider_catalog.yaml` — 프로바이더별 env 변수·CLI 명령·로그인 흔적·로컬 tags URL·기본 모델(세계의 명사=데이터). `model_resolver.env_var_for_provider` 와 온보딩 후보 탐지가 읽는다. 새 벤더는 코드가 아니라 여기.
+- **스키마 버전 레지스트리**: `backend/datastore/schema_migrations.py` — SQLite `PRAGMA user_version` 기준, DB 이름별 `(version, 설명, fn)` 목록. 각 DB 모듈 `_init_db` 가 CREATE TABLE 뒤 `apply()`. 한 버전=한 트랜잭션, 실패=예외(반쯤 적용 금지 → 서브시스템 실패로 boot_status 기록). 옛 `migrate_storage_action.py`·`migrate_cctv_action.py` 의 DB 부분은 v1 로 흡수·은퇴.
+- **업데이트 시 사용자 보존 규칙 (`frontend/electron/userdata_sync.js`, 2026-09-02 트랜잭션화 — 종전 `bootstrap.js` `initUserData` 위임)**: 덮어쓰기 전 원본을 `data/_backups/<날짜>_upgrade/files/` 로 뜨고 저널(`journal.jsonl`, `{op, path, backup}`)에 한 줄 → `data/.upgrade_pending` 표식 → 완료 시 회수. 다음 기동에 표식이 남아 있으면(도중 죽음) 저널로 되감고 재동기화. 내용 같은 파일은 무변경(같은 버전 재기동=저널 0줄). 매니페스트 `retired`(코어였다가 사라진 패키지·계기·어휘 조각, `build_core_manifest.py` 가 직전 매니페스트 차집합을 누적)는 **격리 이동**(`_backups/<날짜>_upgrade/retired/`, 실삭제 아님 — 사용자 판정). 관문=`scripts/ci_upgrade_smoke.py`(직전 태그 설치본 → 업그레이드 → 부팅·보존·롤백·은퇴, CI `upgrade-smoke`). 종전 규칙: 재설치·업데이트가 **코어 소유 파일만 갱신**하고 사용자 것은 불가침. (1) 코어 어휘 산출물(`ibl_nodes.yaml`·코어 패키지 `ibl_actions.yaml`·코어 계기 yaml)은 매니페스트 기준 강제 갱신(`makeCoreForceOverwrite`). (2) 패키지 **설치 상태**(installed/not_installed 폴더 배치=사용자의 켜고/끈 선택)는 `syncPackagesPreservingState`가 userData의 *현재 위치*에서 그 자리 갱신, 신규만 번들 기본 폴더로 추가 → 사용자 선택 불가침. (3) 대화(`.db`)·설정(json)·사용자 직접만든(미추적) 패키지는 애초에 건드리지 않음.
 
 ## 지원 AI 프로바이더 (모두 스트리밍 지원)
 `backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex
@@ -311,7 +318,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(25) → `datastore`(36) → `ibl`(40) → `cognition`(45) → `services`(28) → `surface`(60). `.py` 총 292개(test 제외).
+  `base`(26) → `datastore`(38) → `ibl`(40) → `cognition`(45) → `services`(28) → `surface`(61). `.py` 총 294개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

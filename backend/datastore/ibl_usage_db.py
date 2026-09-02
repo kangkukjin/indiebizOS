@@ -156,6 +156,11 @@ class IBLUsageDB:
             if _col not in cols:
                 conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {_col} REAL DEFAULT -1.0")
 
+        # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
+        # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
+        import schema_migrations
+        schema_migrations.apply(conn, "ibl_usage")
+
         # FTS5 키워드 인덱스
         conn.execute("""
             CREATE VIRTUAL TABLE IF NOT EXISTS ibl_examples_fts USING fts5(

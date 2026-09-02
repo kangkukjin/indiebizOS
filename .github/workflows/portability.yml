@@ -32,6 +32,10 @@ on:
       - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/ci_upgrade_smoke.py'
+      - 'scripts/make_aged_install.py'
+      - 'frontend/electron/userdata_sync.js'
+      - 'data/core_manifest.json'
       - 'scripts/ci_playwright_smoke.py'
       - 'scripts/check_playwright_browsers.py'
       - 'scripts/bootstrap.py'
@@ -45,6 +49,10 @@ on:
       - 'scripts/check_import_coverage.py'
       - 'scripts/ci_import_smoke.py'
       - 'scripts/ci_boot_smoke.py'
+      - 'scripts/ci_upgrade_smoke.py'
+      - 'scripts/make_aged_install.py'
+      - 'frontend/electron/userdata_sync.js'
+      - 'data/core_manifest.json'
       - 'scripts/ci_playwright_smoke.py'
       - 'scripts/check_playwright_browsers.py'
       - 'scripts/bootstrap.py'
@@ -121,6 +129,29 @@ jobs:
         run: python scripts/bootstrap.py --core-only
       - name: 서버 실기동 → /health 200 (scripts/ci_boot_smoke.py)
         run: python scripts/ci_boot_smoke.py
+
+  upgrade-smoke:
+    # 노후·개인화 설치본 위의 업그레이드 관문 (2026-09-02, docs/FIRST_SUCCESS_AND_UPGRADE_GATE_HANDOFF.md ②).
+    # boot-smoke 가 "빈 설치본이 뜬다"라면 여기는 "직전 태그로 설치한 사람이 업그레이드해도 뜬다·
+    # 사용자 것이 남는다·도중에 죽어도 되감긴다·은퇴 코어가 남지 않는다". git 경로와 설치본
+    # 동기화(userdata_sync.js) 경로를 둘 다 돈다. 우분투 한 몸부터(다른 OS 는 로컬에서 같은 스크립트).
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0          # 직전 태그를 worktree 로 꺼내야 한다
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 부트스트랩 (정본 레시피 — venv+코어)
+        run: python scripts/bootstrap.py --core-only
+      - name: 직전 태그 설치본 → 업그레이드 → 부팅·보존·롤백·은퇴 (scripts/ci_upgrade_smoke.py)
+        run: .venv/bin/python3 scripts/ci_upgrade_smoke.py
 
   playwright-render:
     # 브라우저 주소 드리프트 그물 (2026-08-15) — 부팅 스모크가 원리적으로 못 잡는 층.

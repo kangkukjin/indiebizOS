@@ -531,6 +531,7 @@ from api_config import router as config_router, init_manager as init_config_mana
 from api_config_tiers import router as config_tiers_router
 from api_env import router as env_router
 from api_system_ai import router as system_ai_router
+from api_onboarding import router as onboarding_router  # 첫 성공 온보딩(후보 탐지·실응답 검증)
 from api_agents import router as agents_router, init_manager as init_agents_manager
 from api_conversations import router as conversations_router, init_manager as init_conversations_manager
 from api_websocket import router as websocket_router, init_manager as init_websocket_manager
@@ -588,6 +589,7 @@ import public_face as _public_face
 _public_face.attach_app(app)  # 직접 서빙 인프로세스 프록시 연결
 app.include_router(_public_face.router, tags=["public-face"])  # 로컬 전용 — is_public_remote_path 등록 금지
 app.include_router(system_ai_router, tags=["system-ai"])
+app.include_router(onboarding_router, tags=["system-ai"])  # 로컬 전용 — 키를 받는다, is_public_remote_path 등록 금지
 app.include_router(agents_router, tags=["agents"])
 app.include_router(conversations_router, tags=["conversations"])
 app.include_router(websocket_router, tags=["websocket"])

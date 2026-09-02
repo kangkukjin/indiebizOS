@@ -73,8 +73,8 @@ With that purpose in hand, what you need to get started is clearly defined: **tw
 
 | What you get | What it is | What it needs |
 |---|---|---|
-| AI agent system | Three surfaces (autopilot / cockpit / apps) — your own AI running on your PC | Pillar ① AI API key |
-| Installation & repair | An external hand that builds the system and fixes it when it breaks | Pillar ① External harness |
+| AI agent system | Three surfaces (autopilot / cockpit / apps) — your own AI running on your PC | Pillar ① A usable AI (first reply confirmed) |
+| Repair | An external hand that fixes the system when the backend itself is down | Garage — external harness (after first success) |
 | Shared Warehouse | Drop a file in and it's published to the world + a feed of your neighbors' warehouses | Pillar ② Cloudflare + domain |
 | Remote launcher, remote NAS, portal, family newspaper, bulletin board | Every public surface you use from a browser, anywhere | Pillar ② Cloudflare + domain |
 | Using it from your phone | Any phone via browser (zero install) · on Android, the phone itself becomes a second node | Pillar ③ (Android only) app install |
@@ -95,7 +95,9 @@ With pillar ① alone the agent system runs. But without pillar ② every public
 
 When the app starts, the backend server automatically starts with it.
 
-An even better way is to **hand the whole installation to an AI harness like Claude Desktop (or Claude Code)** — one line, "Install https://github.com/kangkukjin/indiebizOS on my PC", and it clones, installs dependencies, and walks the initial setup with you in conversation. Why we recommend this is explained in pillar ① below.
+You can also **hand the whole installation to an AI harness like Claude Desktop (or Claude Code)** — one line, "Install https://github.com/kangkukjin/indiebizOS on my PC", and it clones, installs dependencies, and walks the initial setup with you in conversation. That is an option, not a prerequisite — you reach the first conversation without a harness. The harness's real place is the **Garage** section below.
+
+**Updating**: if you installed from source (git clone), run `python3 scripts/update.py` — it wraps git pull and preserves which packages you turned on or off (a bare pull resurrects half of a package you moved, or refuses). For the packaged app (.dmg/.exe), installing the new version is the update; your own data is left untouched.
 
 **For Developers (Running from Source)**
 
@@ -104,24 +106,26 @@ cd backend && python api.py        # Terminal 1
 cd frontend && npm run electron:dev # Terminal 2
 ```
 
-### Pillar ① — AI API Key + External Harness (Essential)
+### Pillar ① — A Usable AI (Essential) — the exit condition is "first reply"
 
-**You need at least one AI API key.** This is the only variable cost and the first gate. Once past it, you can ask or instruct the System AI for everything else.
+**This pillar stands the moment the System AI actually answers one sentence.** Entering a key is not the gate; getting a reply is. Once you are past it, everything else can be asked of, or delegated to, the System AI.
 
-**Recommended as of 2026: Google Gemini API (free to start)**
+The first-run screen does this in order:
+
+1. **Finds the AI this machine already has** — a local model server (Ollama), installed CLIs (Claude Code, Codex — using their own logins as they are), keys in environment variables or `.env`.
+2. You pick one of the candidates (if there is exactly one, it is picked for you), or enter provider, model and key by hand.
+3. **"Confirm" makes one real call and waits for the answer.** A wrong key, a wrong model name, or a CLI that is not logged in each come back as a different sentence. Only a pass gets saved.
+4. On to the first conversation. The rest — Cloudflare, phone — is suggested during conversation when it becomes needed.
+
+**If there are no candidates at all — recommended in 2026: Google Gemini API (free to start)**
 
 1. Get an API key at https://aistudio.google.com
-2. Enter it in Settings → API Keys tab
-3. Select a model:
-   - `gemini-3-flash-preview`: fast and lightweight (recommended for general use)
-   - `gemini-3-pro-preview`: more powerful (for complex tasks)
+2. In the first-run screen (or Settings → Models), enter provider `google`, a model and the key, then "Confirm"
+3. Model choice:
+   - `gemini-3-flash-preview`: fast and light (recommended for general use)
+   - `gemini-3-pro-preview`: stronger (for complex tasks)
 
-If you don't know how to get an API key, ask any AI: "How do I get a Gemini API key?" Once the key is in, the System AI wakes up, and from then on you install tools, create projects, and change settings by conversation.
-
-**An external harness (Claude Desktop, Claude Code, etc.) is effectively essential too.** Not an alternative — the other half of this pillar. Two reasons:
-
-- **The installing blacksmith**: IndieBiz OS is not a static app finished by `npm install`; it is a system continuously forged to fit you. The harness that installs it becomes that blacksmith.
-- **The recovery path**: the System AI can repair its own system, but **not when the backend itself is broken** — a patient who has lost consciousness cannot operate on themselves. That is when the external harness opens the system folder and fixes it. You can only drive a car with confidence if there is a garage to tow it to when it won't start.
+If you do not know how to get a key, ask any AI "how do I get a Gemini API key". AI API usage is the only variable cost.
 
 **Tool API keys (weather, real estate, statistics, …) are optional and for later.** The moment you need one, the System AI tells you which key and where to get it (Settings → API Keys has per-key signup guidance and live tests).
 
@@ -156,6 +160,14 @@ Rung 1 is enough for daily use. Climb to rung 2 when the phone becomes a place y
 
 Nostr is a communication protocol with no signup: generating a key *is* opening an account. IndieBiz OS generates the key automatically, and its public key (npub) becomes your contact address, automatically attached to what you publish in the Shared Warehouse. There is nothing for you to do.
 
+### Garage — External Harness (after first success, strongly recommended)
+
+You do not need a harness to reach the first conversation. After that you **do** — for one reason:
+
+- **The recovery path**: the System AI can repair its own system, but **not when the backend itself is broken** — a patient who has lost consciousness cannot operate on themselves. That is when the external harness opens the system folder and fixes it. You can only drive a car with confidence if there is a garage to tow it to when it won't start.
+
+Claude Desktop, Claude Code or Codex is that garage. If the first-run screen found a `claude` or `codex` CLI on this machine, the garage is already there. If not, set one up after the first success — one line to the harness, "open the https://github.com/kangkukjin/indiebizOS folder and check its state", is enough.
+
 ### Optional — More Communication Channels
 
 Set these up only when you want them. Let the System AI drive, but know the difficulty going in:
@@ -168,7 +180,7 @@ Set these up only when you want them. Let the System AI drive, but know the diff
 ### Getting-Started Checklist
 
 1. **Install** — tell Claude Desktop "install it" (or download from Releases)
-2. **Enter an AI API key** — the System AI wakes up (minimum working system ends here)
+2. **Confirm a usable AI** — the first-run screen finds this machine's AI and confirms a real reply → first conversation (this is the minimum working state)
 3. **Cloudflare + domain** — the public face turns on (strongly recommended — without it the system is half of itself)
 4. **Phone** — open the remote launcher in a browser; on Android, install the app
 5. **Everything else** — by conversation with the System AI: create projects, install tools, add channels

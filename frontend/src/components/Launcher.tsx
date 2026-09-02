@@ -22,6 +22,7 @@ import {
   SwitchEditDialog,
 } from './launcher-components';
 import { GuideDialog } from './GuideDialog';
+import { OnboardingDialog } from './OnboardingDialog';
 import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
 import ManualMode from './ManualMode';
@@ -110,6 +111,7 @@ export function Launcher() {
   const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [showGuideDialog, setShowGuideDialog] = useState(false);
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showUserManualDialog, setShowUserManualDialog] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const mainMenuRef = useRef<HTMLDivElement>(null);
@@ -263,17 +265,26 @@ export function Launcher() {
     else localStorage.removeItem('indiebiz_launcher_app');
   }, [activeAppId]);
 
-  // 첫 실행 시 가이드 표시
-  useEffect(() => {
+  // 첫 실행: ① 첫 성공 온보딩(서버 상태 — 시스템 AI 가 실제로 답한 적이 없고 건너뛴 적도 없으면)
+  //         ② 그 다음에 가이드(로컬 1회). 온보딩 상태는 서버 원장이라 3표면이 같은 것을 본다.
+  const showGuideOnce = () => {
     const hasSeenGuide = localStorage.getItem('indiebiz_has_seen_guide');
     if (!hasSeenGuide) {
-      // 약간의 딜레이 후 가이드 표시 (앱이 로드된 후)
-      const timer = setTimeout(() => {
-        setShowGuideDialog(true);
-        localStorage.setItem('indiebiz_has_seen_guide', 'true');
-      }, 500);
-      return () => clearTimeout(timer);
+      setShowGuideDialog(true);
+      localStorage.setItem('indiebiz_has_seen_guide', 'true');
     }
+  };
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const ob = await api.getOnboarding();
+        if (cancelled) return;
+        if (!ob.completed && !ob.state.dismissed_at) { setShowOnboardingDialog(true); return; }
+      } catch { /* 백엔드가 아직이면 가이드만 */ }
+      if (!cancelled) showGuideOnce();
+    }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, []);
 
   // 메인 메뉴 외부 클릭 시 닫기
@@ -1149,6 +1160,12 @@ export function Launcher() {
           setShowSwitchEditDialog(false);
           setEditingSwitchData(null);
         }}
+      />
+
+      {/* 첫 성공 온보딩 — 닫히면(완료든 건너뜀이든) 가이드로 이어진다 */}
+      <OnboardingDialog
+        show={showOnboardingDialog}
+        onClose={() => { setShowOnboardingDialog(false); showGuideOnce(); }}
       />
 
       {/* 시작 가이드 다이얼로그 */}

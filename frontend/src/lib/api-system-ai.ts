@@ -198,6 +198,34 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
       }>('/system-ai/status');
     },
 
+    // ============ 첫 성공 온보딩 (2026-09-02) ============
+
+    async getSystemAICandidates() {
+      return client.request<{ items: Array<{
+        provider: string; model: string; source: string; kind: 'api' | 'cli' | 'local';
+        needs_key: boolean; login?: 'yes' | 'unknown'; label?: string;
+      }> }>('/system-ai/candidates');
+    },
+
+    async probeSystemAI(body: { provider: string; model: string; api_key?: string; timeout_s?: number }) {
+      return client.request<{
+        ok: boolean; kind: string; message: string; reply?: string; latency_ms?: number; error?: string;
+      }>('/system-ai/probe', { method: 'POST', body: JSON.stringify(body) });
+    },
+
+    async getOnboarding() {
+      return client.request<{
+        completed: boolean;
+        state: { first_reply_at: string | null; dismissed_at: string | null };
+        readiness: { ready: boolean; provider: string; model: string; needs_api_key: boolean };
+      }>('/system-ai/onboarding');
+    },
+
+    async dismissOnboarding() {
+      return client.request<{ state: { dismissed_at: string | null } }>(
+        '/system-ai/onboarding/dismiss', { method: 'POST' });
+    },
+
     async resetSystemAISession() {
       return client.request<{ ok: boolean; message?: string; error?: string }>(
         '/system-ai/reset-session',

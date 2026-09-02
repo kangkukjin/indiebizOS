@@ -76,5 +76,11 @@
     "vocab_artifacts": [
       "ibl_nodes.yaml"
     ]
+  },
+  "retired": {
+    "packages.tools": [],
+    "packages.extensions": [],
+    "instruments": [],
+    "vocab_fragments": []
   }
 }

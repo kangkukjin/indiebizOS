@@ -18,6 +18,11 @@
   `.gitignore` 는 이미 추적 중인 파일을 되돌리지 못한다. `scripts/check_tracked_ignored.py`
   가 그 부류를 매 커밋 차단한다.)
 
+## 업그레이드 백업 (`YYYY-MM-DD_upgrade/`, 2026-09-02)
+설치본 동기화(`frontend/electron/userdata_sync.js`)가 코어 파일을 덮어쓸 때 자동으로 만든다 —
+`files/`(덮어쓴 원본) · `retired/`(은퇴 코어의 격리본, 실삭제 아님) · `journal.jsonl`(되감기 원장) ·
+`manifest.json`. 내용이 같은 파일은 안 뜨므로 같은 버전 재기동엔 생기지 않는다. 30일 규약 동일.
+
 ## 예외 (여기 안 둠)
 - `safe_store.py` 가 저장 시마다 만드는 `*.bak` 직전-세대 사본 — 설계된 기능, 원본 옆에 산다.
 - LRU 캐시(`showcase_stage/`, `youtube_cache/` 등) — 백업이 아니라 스스로 비우는 캐시.

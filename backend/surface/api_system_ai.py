@@ -1162,23 +1162,52 @@ def clear_system_ai_plan_mode():
     return {"status": "cleared"}
 
 
+def _system_ai_readiness(config: dict) -> dict:
+    """설정 한 벌의 준비 판정 — ★"키가 있나"로 "쓸 수 있나"를 재지 않는다.
+
+    claude_code(구독 OAuth)·codex(ChatGPT 로그인)·ollama(로컬)는 키가 원래 없다.
+    이 자리가 apiKey 만 보면 무키 프로바이더가 잡혀 있어도 "키를 넣으라"고 한다 —
+    2026-08-17 사고(채팅 3 진입점)와 같은 부류의 잔존 위반이었다(2026-09-02 수리,
+    docs/FIRST_SUCCESS_AND_UPGRADE_GATE_HANDOFF.md ① A). 판정 정본 = model_resolver.
+    """
+    from model_resolver import provider_needs_api_key
+    provider = config.get("provider", "anthropic")
+    has_api_key = bool(config.get("apiKey", ""))
+    needs_key = provider_needs_api_key(provider)
+    enabled = bool(config.get("enabled", True))
+    return {
+        "enabled": enabled,
+        "provider": provider,
+        "model": config.get("model", "claude-sonnet-4-20250514"),
+        "has_api_key": has_api_key,          # "키 칸이 차 있다" — 준비 여부가 아니다
+        "needs_api_key": needs_key and not has_api_key,
+        "ready": enabled and (has_api_key or not needs_key),
+    }
+
+
 @router.get("/system-ai/welcome")
 async def get_welcome_message():
     """
     첫 실행 시 환영 메시지
     (API 키 없이도 표시 가능한 정적 메시지)
+
+    needs_api_key 는 고정값이 아니라 현재 설정의 준비 판정에서 파생한다 —
+    무키 프로바이더가 이미 잡혀 있으면 키 안내가 붙지 않는다.
     """
+    st = _system_ai_readiness(load_system_ai_config())
+    if st["ready"]:
+        setup = "설정이 잡혀 있습니다. 바로 저와 대화하면서 IndieBiz를 배워보세요!"
+    else:
+        setup = """시작하려면 먼저 사용할 AI를 정해주세요:
+1. 시작 화면의 후보 목록에서 이 기계가 이미 가진 AI(로컬 모델·설치된 CLI·환경변수 키)를 고르거나
+2. 설정(⚙️) → 모델 탭에서 프로바이더와 모델을 고르고 필요하면 키를 넣습니다
+3. "확인" 이 실제 응답을 받아야 첫 대화로 넘어갑니다"""
     return {
-        "message": """안녕하세요! IndieBiz OS에 오신 걸 환영합니다.
+        "message": f"""안녕하세요! IndieBiz OS에 오신 걸 환영합니다.
 
 저는 시스템 AI입니다. IndieBiz 사용을 도와드릴게요.
 
-시작하려면 먼저 AI API 키를 설정해주세요:
-1. 오른쪽 상단의 설정(⚙️) 버튼을 클릭
-2. AI 프로바이더 선택 (Claude/GPT/Gemini)
-3. API 키 입력
-
-설정이 완료되면 저와 대화하면서 IndieBiz를 배워보세요!
+{setup}
 
 무엇이든 물어보세요:
 • "뭘 할 수 있어?"
@@ -1186,24 +1215,15 @@ async def get_welcome_message():
 • "에이전트가 뭐야?"
 • "도구 설치하려면?"
 """,
-        "needs_api_key": True
+        "needs_api_key": st["needs_api_key"],
+        "ready": st["ready"],
     }
 
 
 @router.get("/system-ai/status")
 async def get_system_ai_status():
-    """시스템 AI 상태 확인"""
-    config = load_system_ai_config()
-
-    has_api_key = bool(config.get("apiKey", ""))
-
-    return {
-        "enabled": config.get("enabled", True),
-        "provider": config.get("provider", "anthropic"),
-        "model": config.get("model", "claude-sonnet-4-20250514"),
-        "has_api_key": has_api_key,
-        "ready": has_api_key and config.get("enabled", True)
-    }
+    """시스템 AI 상태 확인 — ready 판정은 _system_ai_readiness (provider 를 본다)."""
+    return _system_ai_readiness(load_system_ai_config())
 
 
 @router.post("/system-ai/reset-session")

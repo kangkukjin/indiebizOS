@@ -111,7 +111,9 @@ UNCONSCIOUS_AI_CONFIG_PATH = _data_path() / "unconscious_ai_config.json"
 # ②티어의 provider 를 바꿔도 옛 프로바이더의 키가 남아 엉뚱한 벤더로 실려 가고
 # ③키가 늘어난 파일 수만큼 유출면이 넓어졌다(실측: claude_code 티어가 Gemini 키를 나름).
 # `.env` 는 gitignore 되어 있고 부팅 시 load_dotenv 로 올라온다.
-_PROVIDER_ENV = {
+# ★정본은 data/ai_provider_catalog.yaml(세계의 명사=데이터, 2026-09-02). 아래 표는 카탈로그가
+# 없거나 깨졌을 때의 바닥일 뿐이다 — 새 벤더는 여기가 아니라 카탈로그에 적는다.
+_PROVIDER_ENV_FALLBACK = {
     "google": "GEMINI_API_KEY", "gemini": "GEMINI_API_KEY",
     "deepseek": "DEEPSEEK_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
@@ -120,12 +122,23 @@ _PROVIDER_ENV = {
 }
 
 
+def _provider_env_map() -> dict:
+    try:
+        from ai_candidates import catalog_env_map
+        m = catalog_env_map()
+        if m:
+            return m
+    except Exception as e:   # 카탈로그 부재/손상 — 바닥으로, 단 조용히는 아니다
+        logger.warning(f"[model_resolver] ai_provider_catalog 사용 불가, 내장 표로 폴백: {e}")
+    return _PROVIDER_ENV_FALLBACK
+
+
 def env_var_for_provider(provider: str) -> str:
     """프로바이더 → `.env` 변수 이름. 키가 필요 없는 프로바이더는 빈 문자열."""
     p = (provider or "").strip().lower()
     if p in _NO_KEY_PROVIDERS:
         return ""
-    return _PROVIDER_ENV.get(p, "")
+    return _provider_env_map().get(p, "")
 
 
 def env_key_for_provider(provider: str) -> str:

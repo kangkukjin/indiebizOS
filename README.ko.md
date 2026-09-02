@@ -395,6 +395,7 @@ Claude Desktop이 없다면 빌드된 데스크탑 앱을 받으세요. Python·
 git clone https://github.com/kangkukjin/indiebizOS.git
 cd indiebizOS
 python3 scripts/bootstrap.py     # 윈도우: py scripts\bootstrap.py
+python3 scripts/update.py        # 나중에 업그레이드 (git pull 을 감싸 패키지 켜고/끈 배치를 보존)
 ```
 
 bootstrap 이 `.venv`(Python 3.10~3.13 자동 선택)를 만들고, 백엔드 의존성(코어=엄격 / 도구·시맨틱 메모리=최선 — 후자가 빠지면 회상이 키워드 검색으로 저하)을 설치하고, `.env` 를 `.env.example` 에서 시드하고(LLM API 키를 채우세요), `npm` 이 있으면 데스크탑 UI 까지 설치합니다 — 없으면 백엔드 전용(원격 런처/REST 사용 가능).

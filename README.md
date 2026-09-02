@@ -404,6 +404,7 @@ This is the **canonical install path** — CI verifies this exact recipe on all 
 git clone https://github.com/kangkukjin/indiebizOS.git
 cd indiebizOS
 python3 scripts/bootstrap.py     # Windows: py scripts\bootstrap.py
+python3 scripts/update.py        # upgrade later (keeps your package on/off choices across git pull)
 ```
 
 The bootstrap creates `.venv` (auto-selecting Python 3.10–3.13), installs backend dependencies (core strictly; tools and semantic-memory extras best-effort — without the latter, recall degrades to keyword search), seeds `.env` from `.env.example` (put your LLM API key there), and installs the Electron desktop UI if `npm` is present — backend-only otherwise (remote launcher/REST still work).

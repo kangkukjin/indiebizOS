@@ -2,6 +2,7 @@
   "_doc": "scripts/build_body_bundle.py 가 data/bodies/android.json 에서 파생. 직접 편집 금지 — 프로파일을 고치고 재생성하라.",
   "body": "android",
   "engine_modules": [
+    "base/ai_candidates",
     "base/desktop_notify",
     "base/device_registry",
     "base/doc_ir",
@@ -90,12 +91,14 @@
     "datastore/node_registry",
     "datastore/notification_manager",
     "datastore/notify_dispatch",
+    "datastore/onboarding_state",
     "datastore/peer_cards",
     "datastore/project_manager",
     "datastore/pulse_db",
     "datastore/red_grant",
     "datastore/red_report",
     "datastore/red_watchdog",
+    "datastore/schema_migrations",
     "datastore/service_status",
     "datastore/switch_manager",
     "datastore/system_ai_memory",
@@ -149,13 +152,11 @@
     "ibl_synthetic_opus",
     "migrate_alias_retirement",
     "migrate_blog_action",
-    "migrate_cctv_action",
     "migrate_culture_action",
     "migrate_finance_action",
     "migrate_health_persons",
     "migrate_nodes",
     "migrate_paper_action",
-    "migrate_storage_action",
     "migrate_video_action",
     "migrate_web_action",
     "migrate_webcam_action",
@@ -202,6 +203,7 @@
     "surface/api_nas_lite",
     "surface/api_nodes",
     "surface/api_notifications",
+    "surface/api_onboarding",
     "surface/api_packages",
     "surface/api_pcmanager",
     "surface/api_phone",
@@ -265,8 +267,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 256,
-    "engine": 236,
+    "total": 258,
+    "engine": 238,
     "blocklist": 20
   }
 }

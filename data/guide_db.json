@@ -219,7 +219,7 @@
     {
       "id": "real_estate",
       "name": "부동산 시세·매물 검색 가이드",
-      "description": "부동산 3개 층(실거래가 시세 source=molit / 현재 매물 호가·사진·링크 source=zigbang / 다가구 주인세대 등 희소 직거래). 직방 source 사용법·내부 API 레퍼런스(geohash·엔드포인트·필드), 당근 SSR JSON-LD 추출과 동·필터 미적용 함정, 네이버 미연동, 다가구 주인세대=현지 부동산 직접 문의. 분석 기준(126%룰·전세가율·수익률·호가-실거래 갭).",
+      "description": "부동산 3개 층(실거래가 시세 source=molit / 현재 매물 호가·사진·링크 source=zigbang / 다가구 주인세대 등 희소 직거래). 직방 source 사용법·내부 API 레퍼런스(geohash·엔드포인트·필드), 당근 SSR JSON-LD 추출과 동·필터 미적용 함정, 네이버부동산 연동(source=naver, 단지·동 검색·deposit 서버필터), 다가구 주인세대=현지 부동산 직접 문의. §9 순회 실측 함정 — molit region_code·시도코드 재편(강원 51·전북 52·전남광주 12, 낡은 코드는 조용히 0건)·naver deposit_min/max·zigbang price 없음·commercial 반경·kosis region 무시. 분석 기준(126%룰·전세가율·수익률·호가-실거래 갭).",
       "keywords": [
         "부동산",
         "아파트",

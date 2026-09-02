@@ -436,10 +436,18 @@ def execute_pipeline(steps: list, project_path: str = ".",
                         _bd = json.loads(_bd)
                     except Exception:
                         pass
+                # 괄호 분기 래퍼에는 node/action 이 없다. 실패 결과가 말하는 현재 하위
+                # step 을 우선해 [?:?]로 원인을 지우지 않는다(2026-09-02).
+                _src_node = ((_bs.get("_node") or _bs.get("node"))
+                             if isinstance(_bs, dict) else None)
+                _src_action = (_bs.get("action") if isinstance(_bs, dict) else None)
+                if isinstance(_bd, dict):
+                    _src_node = _src_node or _bd.get("_node") or _bd.get("node")
+                    _src_action = _src_action or _bd.get("action")
                 _bf = {
                     "branch": _bi + 1,
-                    "node": (_bs.get("_node") or _bs.get("node") or "?") if isinstance(_bs, dict) else "?",
-                    "action": (_bs.get("action") or "?") if isinstance(_bs, dict) else "?",
+                    "node": _src_node or "?",
+                    "action": _src_action or "?",
                     "error": err_reason_of(_bd)[:300],
                 }
                 # 가지 하나의 실패에도 그 안의 경로를 싣는다 — 경계 규약에 예외 없음.
@@ -872,10 +880,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
     return out
 
 
-# 병렬 실행 브랜치별 타임아웃 (초)
 # 병렬(&) 분기 실행기는 형제 모듈로 분리 (2026-08-19, 1500줄 규칙 — G13-1 괄호 분기
-# 파이프 추가로 초과). 재수출로 기존 import 경로 불변.
-from workflow_parallel import PARALLEL_BRANCH_TIMEOUT, _execute_parallel  # noqa: F401
+# 파이프 추가로 초과). 실행·시간 예산의 소유자는 workflow_parallel 한 곳이다.
+from workflow_parallel import _execute_parallel  # noqa: F401
 
 
 # 폴백(??) 실행기는 형제 모듈 workflow_fallback.py 로 분리 (2026-08-22, 1500줄 규칙 — M3 괄호 가지 추가로 초과).

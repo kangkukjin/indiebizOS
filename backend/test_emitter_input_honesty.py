@@ -129,7 +129,8 @@ def test_R6_병렬_전체_타임아웃이_내부_문구를_흘리지_않는다(m
     import ibl_engine
     import workflow_parallel as wp
 
-    monkeypatch.setattr(wp, "PARALLEL_BRANCH_TIMEOUT", 1)
+    monkeypatch.setattr(wp, "_action_timeout_budget", lambda: 1)
+    monkeypatch.setattr(wp, "PARALLEL_TIMEOUT_GRACE", 0.0)
 
     def _slow(tool_input, project_path=None):
         import time

@@ -6,14 +6,39 @@
 호출 시점에 지연 import 한다(본체가 이 모듈을 top-level import 하므로 — 순환 회피).
 """
 
-PARALLEL_BRANCH_TIMEOUT = 90
+PARALLEL_MAX_WORKERS = 8
+PARALLEL_TIMEOUT_GRACE = 5.0
+
+
+def _action_timeout_budget() -> float:
+    """병렬층 한 step 의 예산 — 실제 라우터 한도의 관찰자이지 별도 정책이 아니다.
+
+    옛 90초 상수는 하위 액션의 정상 실행 한도(sync 300초·async 60초)보다 먼저 호출을
+    잘랐다. 병렬층은 멈춘 워커를 수습하는 바깥 안전망만 맡고, 액션 한도보다 먼저
+    판정하지 않는다. async 경로의 future.result 는 5초 여유를 이미 쓴다.
+    """
+    from ibl_routing import SYNC_TOOL_EXECUTION_TIMEOUT, TOOL_EXECUTION_TIMEOUT
+    return float(max(SYNC_TOOL_EXECUTION_TIMEOUT, TOOL_EXECUTION_TIMEOUT + 5))
+
+
+def _branch_step_count(branch: dict) -> int:
+    steps = branch.get("_branch_steps") if isinstance(branch, dict) else None
+    return max(1, len(steps) if isinstance(steps, list) else 1)
+
+
+def _branch_budget(branch: dict) -> float:
+    """괄호 파이프는 각 step 이 자기 라우터 한도를 온전히 쓸 수 있게 합산한다."""
+    return _action_timeout_budget() * _branch_step_count(branch) + PARALLEL_TIMEOUT_GRACE
 
 
 def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: bool = False,
                       var_values: dict = None) -> list:
     """
-    병렬 실행 - 여러 IBL 액션을 동시에 실행 (Phase 9)
-    각 브랜치에 타임아웃 적용 — 한 브랜치가 멈춰도 전체가 멈추지 않음.
+    병렬 실행 - 여러 IBL 액션을 동시에 실행 (Phase 9).
+
+    최대 8개씩 실행하되 시간 예산은 제출 시점이 아니라 각 워커의 실제 시작 시점부터
+    흐른다. 괄호 분기 파이프는 step 수만큼 액션 예산을 합산한다. 한 가지가 한도를
+    넘으면 그 가지만 현재 하위 step 이름으로 실패하고, 완료된 가지 결과는 보존한다.
 
     Args:
         branches: 병렬로 실행할 step 리스트
@@ -27,12 +52,14 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
              싣는다(파싱된 프로그램을 건드리면 두 번째 실행이 옛 값을 본다).
 
     Returns:
-        각 branch 결과를 리스트로 합침
+        각 branch 결과를 입력 순서대로 합친 리스트
     """
     from ibl_engine import execute_ibl
-    from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+    from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
     from workflow_engine import (_inject_prev_result, _auto_inject_prev,
                                  is_error_result, _to_prev_currency)
+    import threading
+    import time
 
     # 부모 스레드의 thread_context 를 **통째로** 떠서 자식 스레드에 승계한다.
     #
@@ -53,7 +80,25 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     import thread_context as _tc
     _parent_ctx = _tc.snapshot()
 
-    def _run_branch(branch):
+    branch_results = [None] * len(branches)
+    budgets = [_branch_budget(b) for b in branches]
+    states = [
+        {"started_at": None, "step": 1, "steps": _branch_step_count(b),
+         "node": "?", "action": "?"}
+        for b in branches
+    ]
+    state_lock = threading.Lock()
+
+    def _mark_step(idx: int, step_no: int, steps: int, tool_input: dict) -> None:
+        node = tool_input.get("_node") or tool_input.get("node") or "?"
+        action = tool_input.get("action") or "?"
+        with state_lock:
+            state = states[idx]
+            if state["started_at"] is None:
+                state["started_at"] = time.monotonic()
+            state.update({"step": step_no, "steps": steps, "node": node, "action": action})
+
+    def _run_branch(idx: int, branch: dict):
         _tc.restore(_parent_ctx)   # 부모 컨텍스트 승계 (origin 포함 — 열거 없음)
 
         # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): (A >> B >> C) —
@@ -75,6 +120,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
                         _p = {}
                         ti["params"] = _p
                     _p["_raw"] = True
+                _mark_step(idx, j + 1, len(subs), ti)
                 try:
                     last = execute_ibl(ti, project_path)
                 except Exception as e:
@@ -103,52 +149,89 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
                 _p = {}
                 tool_input["params"] = _p
             _p["_raw"] = True
+        _mark_step(idx, 1, 1, tool_input)
         try:
             return execute_ibl(tool_input, project_path)
         except Exception as e:
             return {"error": str(e), "_node": tool_input.get("_node", "?"),
                     "action": tool_input.get("action", "?")}
 
-    # ThreadPoolExecutor로 동시 실행 (타임아웃 적용)
-    branch_results = [None] * len(branches)
-    executor = ThreadPoolExecutor(max_workers=min(len(branches), 8))
-    try:
-        future_to_idx = {
-            executor.submit(_run_branch, branch): idx
-            for idx, branch in enumerate(branches)
+    def _timeout_result(idx: int) -> dict:
+        with state_lock:
+            state = dict(states[idx])
+        budget = budgets[idx]
+        started = state.get("started_at")
+        elapsed = max(0.0, time.monotonic() - started) if started is not None else 0.0
+        node, action = state.get("node", "?"), state.get("action", "?")
+        budget_s, elapsed_s = round(budget, 3), round(elapsed, 3)
+        print(f"[IBL] 병렬 가지 시간 예산 소진: [{node}:{action}] "
+              f"({elapsed_s:g}/{budget_s:g}초)")
+        out = {
+            "success": False,
+            "error": (f"병렬 가지 실행 시간 초과 — 시간 예산 소진 "
+                      f"({elapsed_s:g}/{budget_s:g}초): [{node}:{action}]. "
+                      "다른 방법을 시도하세요."),
+            "_node": node,
+            "action": action,
+            "budget_s": budget_s,
+            "elapsed_s": elapsed_s,
         }
-        try:
-            for future in as_completed(future_to_idx, timeout=PARALLEL_BRANCH_TIMEOUT):
-                idx = future_to_idx[future]
-                try:
-                    branch_results[idx] = future.result(timeout=PARALLEL_BRANCH_TIMEOUT)
-                except FuturesTimeoutError:
-                    node = branches[idx].get("node", branches[idx].get("_node", "?"))
-                    action = branches[idx].get("action", "?")
-                    print(f"[IBL] 병렬 브랜치 타임아웃: [{node}:{action}] ({PARALLEL_BRANCH_TIMEOUT}초)")
-                    branch_results[idx] = {
-                        "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
-                    }
-                except Exception as e:
-                    branch_results[idx] = {"error": str(e)}
-        except FuturesTimeoutError:
-            # as_completed 자신의 타임아웃. 여기서 잡지 않으면 이 예외가 함수 밖으로 튀어
-            # concurrent.futures 의 내부 문구("1 (of 2) futures unfinished")가 그대로 사용자
-            # 봉투에 실리고, 아래의 "미완료 브랜치 처리"(어느 가지가 몇 초에 걸렸는지 말해 주는
-            # 정직한 신고)는 영영 실행되지 않는 죽은 코드가 된다. (29회차 B29-3)
-            print(f"[IBL] 병렬 전체 타임아웃 ({PARALLEL_BRANCH_TIMEOUT}초) — 미완료 브랜치를 개별 신고합니다")
-    finally:
-        # wait=False: 타임아웃이 벽시계를 실제로 묶는다. with 문의 암묵적
-        # shutdown(wait=True)은 낙오 가지가 끝날 때까지 기다려 타임아웃을 무력화했다.
-        executor.shutdown(wait=False, cancel_futures=True)
+        if state.get("steps", 1) > 1:
+            out["_branch_step_failed"] = f"{state.get('step', 1)}/{state['steps']}"
+        return out
 
-    # as_completed 자체가 타임아웃된 경우 미완료 브랜치 처리
-    for idx, result in enumerate(branch_results):
-        if result is None:
-            node = branches[idx].get("node", branches[idx].get("_node", "?"))
-            action = branches[idx].get("action", "?")
-            branch_results[idx] = {
-                "error": f"실행 시간 초과 ({PARALLEL_BRANCH_TIMEOUT}초): [{node}:{action}]. 다른 방법을 시도하세요."
+    # 8개씩 명시적으로 시작한다. 옛 단일 executor는 9번째 이후 future도 제출 시점부터
+    # 전역 90초를 소비해, 실행을 시작하기 전에 이미 타임아웃될 수 있었다. 배치는 워커
+    # 상한을 지키면서도 각 가지의 시계를 실제 시작점에 건다. 시간 초과 스레드는 파이썬이
+    # 강제 종료할 수 없어 daemon으로 완주하지만, 다음 배치는 새 executor라 굶지 않는다.
+    for batch_start in range(0, len(branches), PARALLEL_MAX_WORKERS):
+        indices = list(range(batch_start,
+                             min(batch_start + PARALLEL_MAX_WORKERS, len(branches))))
+        executor = ThreadPoolExecutor(max_workers=len(indices))
+        try:
+            future_to_idx = {
+                executor.submit(_run_branch, idx, branches[idx]): idx
+                for idx in indices
             }
+            pending = set(future_to_idx)
+            while pending:
+                now = time.monotonic()
+                with state_lock:
+                    started = {idx: states[idx]["started_at"] for idx in indices}
+                remaining = [
+                    max(0.0, started[idx] + budgets[idx] - now)
+                    for idx in indices
+                    if started[idx] is not None
+                    and any(future_to_idx[f] == idx for f in pending)
+                ]
+                wait_s = max(0.001, min(remaining)) if remaining else 0.01
+                done, _ = wait(pending, timeout=wait_s, return_when=FIRST_COMPLETED)
+                for future in done:
+                    pending.discard(future)
+                    idx = future_to_idx[future]
+                    try:
+                        branch_results[idx] = future.result()
+                    except Exception as e:
+                        with state_lock:
+                            state = dict(states[idx])
+                        branch_results[idx] = {
+                            "error": str(e), "_node": state.get("node", "?"),
+                            "action": state.get("action", "?"),
+                        }
+
+                now = time.monotonic()
+                for future in list(pending):
+                    if future.done():
+                        continue
+                    idx = future_to_idx[future]
+                    with state_lock:
+                        began = states[idx]["started_at"]
+                    if began is not None and now - began >= budgets[idx]:
+                        pending.remove(future)
+                        future.cancel()
+                        branch_results[idx] = _timeout_result(idx)
+        finally:
+            # wait=False: 시간 예산을 넘긴 워커를 다시 기다려 바깥 안전망을 무력화하지 않는다.
+            executor.shutdown(wait=False, cancel_futures=True)
 
     return branch_results

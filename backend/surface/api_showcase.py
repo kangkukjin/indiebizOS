@@ -335,22 +335,16 @@ async def media(slug: str, fid: str, rel: str = Query(...), t: float = Query(def
         cache = _WEB_MEDIA / fid / (key + (f".{qual}.mp4" if low else ".mp4"))
         use_cache = cache.exists() and cache.stat().st_size > 0
         src = str(cache) if use_cache else abspath
-        # 캐시가 소스면 그 캐시가 이미 요청된 화질이므로 그냥 -c copy(재인코딩 0).
-        # 원본이 소스일 때만: 저대역이면 저대역 재인코딩 / 아니면 웹 코덱 여부로 v-copy 판정.
-        vcopy = (False if (use_cache or low)
-                 else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
         total = await run_in_threadpool(thumbnails.probe_video_duration, src)
-        proc = thumbnails.start_offset_stream(src, t, copy=use_cache, video_copy=vcopy,
-                                              quality=("" if use_cache else qual))
+        # 오프셋 스트림은 캐시가 있어도 재인코딩한다. stream copy는 직전 키프레임부터
+        # 영상을 내보내지만 자막은 정확히 t만큼 당겨져 GOP 길이만큼 싱크가 어긋난다.
+        proc = thumbnails.start_offset_stream(src, t, quality=("" if use_cache else qual))
         head = await _read_init_segment(proc)
         if not head and use_cache:
             # 캐시 스트림 복사 실패(드묾) — 원본 재인코딩 재시도.
             thumbnails.kill_stream(proc)
             total = await run_in_threadpool(thumbnails.probe_video_duration, abspath)
-            vcopy = (False if low
-                     else await run_in_threadpool(thumbnails.video_codec_web_playable, abspath))
-            proc = thumbnails.start_offset_stream(abspath, t, copy=False, video_copy=vcopy,
-                                                  quality=qual)
+            proc = thumbnails.start_offset_stream(abspath, t, quality=qual)
             head = await _read_init_segment(proc)
         if not head:
             thumbnails.kill_stream(proc)

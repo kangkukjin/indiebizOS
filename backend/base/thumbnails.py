@@ -494,23 +494,18 @@ def start_stream_transcode(src: str, cache_dst: str, video_copy: bool = False,
     return proc, tmp
 
 
-def start_offset_stream(src: str, t: float, copy: bool = False, video_copy: bool = False,
-                        quality: str = ""):
+def start_offset_stream(src: str, t: float, quality: str = ""):
     """t초 지점부터의 fMP4 오프셋 스트림(캐시 tee 없음 — 부분이라 캐시 부적격).
-    copy=True 면 재인코딩 없이 스트림 복사(이미 H.264 캐시가 소스일 때, 즉시 시작).
-    video_copy=True 면 비디오만 copy·오디오는 AAC(원본 비디오가 웹 코덱, 오디오만 DTS/AC3).
-    타임라인은 0 기준(mov 머서가 리베이스) — 자막은 subtitle?shift= 로 맞춘다."""
-    # quality="low"/"lowh" = 저대역 재인코딩(copy 계열을 이긴다). 단 소스가 *이미*
-    # 저대역 캐시면 호출자가 copy=True 로 부르므로 여기 오지 않는다(재인코딩 낭비 없음).
+    타임라인은 요청한 t를 정확한 0으로 삼는다 — 자막은 subtitle?shift= 로 맞춘다.
+
+    오프셋 스트림에는 stream copy를 쓰면 안 된다. 입력 앞의 -ss와 copy를 함께 쓰면
+    직전 키프레임부터 영상이 나오지만 자막은 정확히 t만큼 당겨져, GOP 길이만큼 싱크가
+    어긋난다. 재인코딩은 ffmpeg의 accurate seek가 키프레임~t 구간을 버리게 한다."""
     if quality in ("low", "lowh", "tiny", "nano"):
         codec = ((list(_NANO_VIDEO) if quality == "nano" else
                   list(_TINY_VIDEO) if quality == "tiny" else
                   _low_hevc_video() if quality == "lowh" else list(_LOW_VIDEO))
                  + list(_LOW_AUDIO))
-    elif copy:
-        codec = ["-c", "copy"]
-    elif video_copy:
-        codec = ["-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]
     else:
         codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
                  "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ac", "2"]

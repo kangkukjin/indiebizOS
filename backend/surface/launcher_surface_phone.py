@@ -47,6 +47,7 @@ function setSurface(s){
     document.getElementById('p-'+k).classList.toggle('on',k===s);
   });
   if(s==='app' && !appHomeRendered) renderAppHome();
+  if(typeof _npSync==='function') _npSync();  /* 미니플레이어=앱모드 전용 — 표면이 바뀌면 다시 판단 */
 }
 
 """

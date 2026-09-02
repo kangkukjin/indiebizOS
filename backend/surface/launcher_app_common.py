@@ -319,5 +319,6 @@ function setSurface(s){
   if(s==='app' && !appHomeRendered) renderAppHome();
   if(s==='forage' && !fgInit){ fgInit=true; fgNav('board'); }
   if(s==='warehouse') whLoad(WH_LEVEL);
+  if(typeof _npSync==='function') _npSync();  /* 미니플레이어=앱모드 전용 — 표면이 바뀌면 다시 판단 */
 }
 """

@@ -210,8 +210,20 @@ function _npBar(){
   }
   return b;
 }
-function _npShow(label){ const b=_npBar(); const t=document.getElementById('npTitle'); if(t) t.textContent=label||'\\uc7ac\\uc0dd \\uc911'; b.style.display='flex'; }
-function _npHide(){ const b=document.getElementById('nowPlaying'); if(b) b.style.display='none'; }
+function _npShow(label){ _npLabel=label||''; const b=_npBar(); const t=document.getElementById('npTitle'); if(t) t.textContent=label||'\\uc7ac\\uc0dd \\uc911'; b.style.display=_npInApp()?'flex':'none'; }
+function _npHide(){ _npLabel=null; const b=document.getElementById('nowPlaying'); if(b) b.style.display='none'; }
+/* 미니플레이어는 앱모드 전용이다 — 자율주행·조종실의 화면 하단은 채팅 입력창의 자리라,
+   재생 중이라고 그 위를 덮으면 대화 자체가 막힌다(실사고 2026-09-02). 표면 판별은
+   setSurface 가 갱신하는 전역 surface 를 그대로 재사용하고, 검색브라우저(forage)는
+   setSurface 자신이 앱 탭으로 매핑하는 앱모드의 앱이라 같이 센다.
+   숨김은 표시만 끄는 것이고 재생은 전역 audio 라 계속된다 — 앱 탭으로 돌아오면
+   _npSync 가 같은 곡의 바를 그대로 되살린다. */
+var _npLabel=null;
+function _npInApp(){ return typeof surface==='undefined' || surface==='app' || surface==='forage'; }
+function _npSync(){
+  if(!_npLabel){ const b0=document.getElementById('nowPlaying'); if(b0) b0.style.display='none'; return; }
+  const b=_npBar(); b.style.display=_npInApp()?'flex':'none';
+}
 /* 진행바(중간 점프): #radioAudio 는 실제 브라우저 <audio> 라 native seek 가 공짜.
    유한 길이(유튜브뮤직)면 스크러버를 띄우고, 라이브 스트림(라디오, duration=Infinity)이면 숨긴다. */
 function _npFmtT(s){ if(!isFinite(s)||s<0) return '0:00'; s=Math.floor(s); var m=Math.floor(s/60), x=s%60, h=Math.floor(m/60); if(h>0){ m=m%60; return h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0'); } return m+':'+String(x).padStart(2,'0'); }

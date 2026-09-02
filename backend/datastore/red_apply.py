@@ -9,6 +9,11 @@ red_apply.py - 지연 적용 수행자 (분리 프로세스, 2026-08-19)
   ①턴이 완전히 닫히기를 기다린다 — 주행기록 ended_at(=응답 전송·버퍼 저장 완료)
     → 증류 재합류(cognitive_distill 의 finally 가 refresh_episode 로 log 를 한 번
     다시 쓴다 — 그 길이 변화가 신호)
+  ①′**도는 턴이 0 이 될 때까지** 기다린다 (2026-09-02, wait_quiescent) — 예약한 턴만
+    기다리면 그 뒤에 시작한 **다음 턴**을 리로드가 자른다(실측 ep1917, #repair 절단율
+    16%). /health 의 live_turns 가 출처. 0 을 본 순간 재기동 관문(reload_gate)을 세우고
+    한 번 더 확인한 뒤에야 쓴다 — 관문은 쓰기~새 몸 부팅 사이의 창에 들어온 새 턴을
+    정직하게 되돌려보낸다(옛 몸 안에서 기다리게 하면 그 기다림은 옛 몸과 함께 죽는다).
   ②쓰기 직전 재검증한다 — 예약~수행 사이의 라이브 드리프트까지 live_sync 가 맞춘다
   ③라이브에 쓰고 워치독(red_watchdog)에게 헬스 판정·자동 롤백을 넘긴다
 
@@ -47,6 +52,18 @@ UNKNOWN_LIVE_GRACE_S = float(os.environ.get("RED_APPLY_UNKNOWN_LIVE_GRACE_S", 60
 VERIFY_HEALTH_WAIT_S = float(os.environ.get("RED_APPLY_VERIFY_HEALTH_WAIT_S", 120))
 VERIFY_TIMEOUT_S = float(os.environ.get("RED_APPLY_VERIFY_TIMEOUT_S", 180))
 VERIFY_OUTPUT_CAP = 4000
+# 정적(quiescence) 대기 (2026-09-02) — 도는 턴이 0 이 될 때까지. 상한에 닿으면 강행하되
+# 결말(quiesce_outcome="cap")을 다음 턴 보고에 싣는다. 좌초 신고(30분)보다 짧게 —
+# 턴 상한 900 + 증류 120 + 정적 600 = 27분.
+QUIESCE_CAP_S = float(os.environ.get("RED_APPLY_QUIESCE_CAP_S", 600))
+QUIESCE_POLL_S = float(os.environ.get("RED_APPLY_QUIESCE_POLL_S", 2))
+# 관문을 세운 뒤 되묻기까지의 정착 — 관문 파일이 보이기 전에 진입한 턴을 잡는 창.
+GATE_SETTLE_S = float(os.environ.get("RED_APPLY_GATE_SETTLE_S", 0.5))
+# 몸이 안 닿을 때 '몸이 없다'로 확정하기까지 — 리로드 전이(남의 적용·바깥 편집) 중의
+# 일시 불통을 '없음'으로 오판해 부팅 위에 또 쓰지 않게 한다.
+UNREACHABLE_CONFIRM_S = float(os.environ.get("RED_APPLY_UNREACHABLE_CONFIRM_S", 30))
+# 정적 판정에서 원장 폴백(옛 몸)이 '도는 턴'으로 셀 행의 나이 상한 — 고아 행은 제외.
+LEDGER_LIVE_WINDOW_S = float(os.environ.get("RED_APPLY_LEDGER_LIVE_WINDOW_S", 3600))
 HEALTH_URL = os.environ.get(
     "RED_APPLY_HEALTH_URL",
     f"http://127.0.0.1:{os.environ.get('INDIEBIZ_API_PORT', '8765')}/health")
@@ -124,6 +141,98 @@ def _resolve_open_episode(db_path: str, agent_id):
         return row[0] if row else None
     except Exception:
         return None
+
+
+def _ledger_open_ids(db_path: str, exclude=None) -> list:
+    """원장 폴백 — 열린(ended_at NULL) 비시험 행 중 최근 LEDGER_LIVE_WINDOW_S 안에 시작한 것.
+    옛 몸(/health 에 live_turns 가 없는)에서만 쓴다. 고아 행(죽은 프로세스가 남긴 NULL)을
+    '도는 턴'으로 세면 정적이 영영 안 오므로 나이로 자른다."""
+    try:
+        conn = sqlite3.connect(db_path, timeout=5)
+        rows = conn.execute(
+            "SELECT id FROM episode_log WHERE ended_at IS NULL "
+            "AND COALESCE(source, 'usage') <> 'test' "
+            "AND started_at >= datetime('now', 'localtime', ?)",
+            (f"-{int(LEDGER_LIVE_WINDOW_S)} seconds",)).fetchall()
+        conn.close()
+        return [r[0] for r in rows if r[0] != exclude]
+    except Exception:
+        return []
+
+
+def _live_turns_now(repo: str, exclude=None):
+    """지금 도는 턴 → 목록 / None(몸이 안 닿음). 출처 = 몸(/health) > 원장(옛 몸 폴백)."""
+    reached, live = _probe_live_turns()
+    if not reached:
+        return None
+    if live is None:
+        db_path = os.path.join(repo, "data", "world_pulse.db")
+        live = _ledger_open_ids(db_path, exclude) if os.path.exists(db_path) else []
+    return [i for i in live if i != exclude]
+
+
+def _gate_mod():
+    import reload_gate
+    return reload_gate
+
+
+def wait_quiescent(repo: str, key: str, exclude_episode=None) -> dict:
+    """도는 턴이 0 이 될 때까지 기다리고, 그 순간 재기동 관문을 세운다 (2026-09-02).
+
+    반환 {"outcome": "observed" | "cap" | "no_body", "waited_s", "live_turns": [...],
+          "gate": bool}.
+    - observed: 0 을 봤고, 관문을 세운 뒤 되물어도 0 — 쓸 수 있다.
+    - cap: 상한까지 0 이 안 됐다 — 관문을 세우고 강행한다(도는 턴이 잘릴 수 있다).
+      ★상한은 안전망이지 시간표가 아니다 — 결말을 followup 에 실어 다음 턴이 본다.
+    - no_body: 몸이 UNREACHABLE_CONFIRM_S 동안 안 닿았다 — 자를 턴이 없다.
+
+    ★예약한 턴이 닫힌 뒤 시작한 턴도 턴이다 — 옛 코드는 예약한 턴 하나만 기다렸고 그래서
+    **다음 턴**이 잘렸다(ep1917). 남의 관문이 서 있으면(다른 수행자가 쓰는 중) 그것도
+    '도는 것'으로 보고 기다린다 — 그 리로드 위에 또 쓰지 않는다.
+    """
+    gate = _gate_mod()
+    t0 = time.time()
+    unreachable_since = None
+    live = []
+    while True:
+        other = gate.read_gate(repo)
+        if other and other.get("key") != key:
+            _log(f"남의 재기동 관문({other.get('key')}, {other.get('phase')}) — 기다림")
+            time.sleep(QUIESCE_POLL_S)
+            if time.time() - t0 > QUIESCE_CAP_S:
+                break
+            continue
+        live = _live_turns_now(repo, exclude_episode)
+        if live is None:
+            unreachable_since = unreachable_since or time.time()
+            if time.time() - unreachable_since >= UNREACHABLE_CONFIRM_S:
+                _log(f"몸이 {UNREACHABLE_CONFIRM_S:.0f}초 동안 안 닿음 — 자를 턴이 없다고 보고 진행")
+                return {"outcome": "no_body", "waited_s": int(time.time() - t0),
+                        "live_turns": [], "gate": False}
+            time.sleep(min(QUIESCE_POLL_S, 1.0))
+            continue
+        unreachable_since = None
+        if not live:
+            # 0 을 봤다 — 관문을 세우고, 관문이 보이기 전에 들어온 턴이 없는지 되묻는다.
+            gate.raise_gate(repo, key, phase="raised")
+            time.sleep(GATE_SETTLE_S)
+            again = _live_turns_now(repo, exclude_episode)
+            if not again:
+                _log(f"도는 턴 0 확인 ({int(time.time() - t0)}초) — 재기동 관문 세움, 쓰기 진행")
+                return {"outcome": "observed", "waited_s": int(time.time() - t0),
+                        "live_turns": [], "gate": True}
+            # 그 사이 턴이 들어왔다 — 관문을 내리고 그 턴을 살린다(적용이 양보한다).
+            gate.lower_gate(repo, key)
+            _log(f"관문 직후 턴 진입 {again} — 관문 내리고 다시 기다림")
+            live = again
+        if time.time() - t0 > QUIESCE_CAP_S:
+            break
+        time.sleep(QUIESCE_POLL_S)
+    gate.raise_gate(repo, key, phase="raised")
+    _log(f"★정적 대기 상한({QUIESCE_CAP_S:.0f}초) — 도는 턴 {live} 이 남은 채 강행. "
+         f"그 턴은 리로드에 잘릴 수 있다. 다음 턴 보고에 싣는다.")
+    return {"outcome": "cap", "waited_s": int(time.time() - t0),
+            "live_turns": list(live or []), "gate": True}
 
 
 def wait_turn_closed(repo: str, episode_id, agent_id=None) -> str:
@@ -290,6 +399,9 @@ def main() -> int:
     from red_grant import issue_grant
     from thread_context import set_current_task_id, set_current_agent_id
 
+    # ①′ 도는 턴 0 + 재기동 관문 — 예약한 턴 다음에 시작한 턴도 자르지 않는다(2026-09-02)
+    quiesce = wait_quiescent(repo, job["key"], exclude_episode=job.get("episode_id"))
+
     task_id = job.get("task_id") or job["key"]
     agent_id = job.get("agent_id") or "system_ai"
     set_current_task_id(task_id)
@@ -297,12 +409,22 @@ def main() -> int:
     issue_grant(agent_id=agent_id, task_id=task_id,
                 reason=f"지연 적용 수행: {job.get('reason') or job['key']}")
 
-    handler = _load_handler(job)
-    staging = handler._staging_mod()
-    out = staging.perform_scheduled_apply(
-        repo, job["key"],
-        prepare=handler._red_write_prepare, finalize=handler._red_write_finalize)
+    gate = _gate_mod()
+    try:
+        handler = _load_handler(job)
+        staging = handler._staging_mod()
+        out = staging.perform_scheduled_apply(
+            repo, job["key"],
+            prepare=handler._red_write_prepare, finalize=handler._red_write_finalize)
+    except BaseException:
+        gate.lower_gate(repo, job["key"])       # 못 썼으면 관문은 거짓말이다 — 즉시 내린다
+        raise
     _log(f"결과: {json.dumps(out, ensure_ascii=False)[:500]}")
+    if out.get("applied"):
+        # 썼다 — 리로드가 온다. 관문을 written 으로 올려 새 몸이 부팅에서 회수하게 한다.
+        gate.mark_written(repo, job["key"])
+    else:
+        gate.lower_gate(repo, job["key"])
 
     # 적용 후 검증 — 위탁받았을 때만. 적용이 안 일어났으면 돌릴 이유가 없다.
     cmd = (job.get("verify_cmd") or "").strip()
@@ -318,6 +440,10 @@ def main() -> int:
             "wait_outcome": wait_outcome,
             "turn_cap_s": TURN_CLOSE_CAP_S,
             "episode_id": job.get("episode_id"),
+            "quiesce_outcome": quiesce.get("outcome"),
+            "quiesce_wait_s": quiesce.get("waited_s"),
+            "quiesce_cap_s": QUIESCE_CAP_S,
+            "live_turns_at_cap": quiesce.get("live_turns") if quiesce.get("outcome") == "cap" else [],
             "post_verify": post,
         })
     except Exception as e:
@@ -327,6 +453,8 @@ def main() -> int:
         job["done_at"] = datetime.now().isoformat()
         job["applied"] = bool(out.get("applied"))
         job["wait_outcome"] = wait_outcome
+        job["quiesce_outcome"] = quiesce.get("outcome")
+        job["quiesce_wait_s"] = quiesce.get("waited_s")
         if post is not None:
             job["post_verify"] = post
         job["outcome_note"] = (out.get("error") or out.get("message") or out.get("note") or "")[:300]

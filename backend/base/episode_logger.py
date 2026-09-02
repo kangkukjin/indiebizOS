@@ -270,6 +270,14 @@ class EpisodeLogger:
         # 이제 로거가 직접 보장 → 어느 몸에서든 기록된다(world_pulse 의존 제거).
         _ensure_episode_tables()
         _sweep_orphan_episodes()
+        # 재기동 관문 회수 (2026-09-02): 지연 적용이 세운 written 관문은 이 부팅이 곧 그 리로드.
+        # 부팅이 곧 회수다 — 사람/AI 의 다음 단계에 맡기지 않는다(TTL 은 폴백).
+        try:
+            from reload_gate import clear_at_boot
+            if clear_at_boot(get_base_path()):
+                print("[boot] 재기동 관문 회수 — 지연 적용 리로드 완료")
+        except Exception:
+            pass
 
     @classmethod
     def start_episode(cls, agent: str, user_message: str, project_id: str = ""):

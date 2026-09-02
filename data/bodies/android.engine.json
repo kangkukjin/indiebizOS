@@ -14,6 +14,7 @@
     "base/model_resolver",
     "base/phone_jobs",
     "base/r2_client",
+    "base/reload_gate",
     "base/repeat_guard",
     "base/runtime_utils",
     "base/safe_store",
@@ -263,8 +264,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 254,
-    "engine": 234,
+    "total": 255,
+    "engine": 235,
     "blocklist": 20
   }
 }

@@ -18,6 +18,8 @@ REPAIR 경로가 라이브 substrate 를 직접 수술하지 않고 격리 사�
   S10 분리 수행자(red_apply) 실프로세스 종단 — 부트스트랩·핸들러 로드·그랜트 이월
   S13 예약을 낸 턴이 자기가 병목인 줄 안다 (2026-08-25 ep1934) — 예약 응답이 대기를
      금지하고, 적용 후 검증은 수행자에게 위탁되며, 상한 강행은 결말로 보고된다
+  S18 적용은 도는 턴이 0 일 때만 (2026-09-02, #repair 절단율 16%) — 수행자가 예약한 턴
+     **다음** 턴도 기다리고, 쓰기~재기동 창은 재기동 관문이 새 턴을 정직하게 되돌린다
 
 실행: python3 backend/test_repair_staging.py   (exit 0 = 전부 통과)
 """
@@ -369,6 +371,7 @@ def run():
         #   주면 수행자는 '백엔드 없음'으로 판정해 원장(빈 가짜 repo)만 보고 진행한다.
         #   (살아 있는 턴을 실제로 기다리는지는 test_episode_owner_sweep 이 따로 지킨다.)
         env10 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0",
+                 "RED_APPLY_UNREACHABLE_CONFIRM_S": "0", "RED_APPLY_GATE_SETTLE_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env10.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
         p10 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
@@ -549,6 +552,7 @@ def run():
               job13.read_text()[:200] if job13.exists() else "no job")
         # 실프로세스 종단 — 적용 + 검증 실행 + 후속 기록까지 (S10 과 같은 격리: 닿지 않는 몸)
         env13 = {**os.environ, "RED_APPLY_NO_EPISODE_GRACE_S": "0", "RED_APPLY_SETTLE_S": "0",
+                 "RED_APPLY_UNREACHABLE_CONFIRM_S": "0", "RED_APPLY_GATE_SETTLE_S": "0",
                  "RED_APPLY_VERIFY_HEALTH_WAIT_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env13.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
@@ -812,6 +816,152 @@ def run():
         _ungrant()
         import shutil
         shutil.rmtree(tmp17, ignore_errors=True)
+
+    # ══ S18 — 적용은 도는 턴이 0 일 때만 (2026-09-02, #repair 절단율 16% 의 뿌리) ══
+    # 실측(08-05~09-02): 수행자는 **예약한 턴**만 기다렸다. 그 턴이 닫힌 뒤 사용자가 곧바로
+    # 다음 명령을 내리면(ep1917 "#repair 수리가 적용된거야?") 수행자는 그 새 턴을 모르고
+    # 라이브에 썼고 리로드가 다음 턴을 잘랐다. 봉합 두 겹을 못 박는다:
+    #   (가) 수행자는 도는 턴이 0 이 될 때까지 기다린다 — 예약한 턴 다음에 시작한 턴도 턴이다
+    #   (나) 0 을 본 순간 재기동 관문을 세우고 되묻는다 — 관문 직후 들어온 턴에는 적용이 양보한다
+    #   (다) 상한 강행은 잘렸을 수 있는 턴의 이름과 함께 결말로 보고된다
+    #   (라) 관문은 쓰기~새 몸 부팅 창의 새 턴을 되돌리고, 새 몸의 부팅이 관문을 회수한다
+    #   (마) 파이프라인 진입점(cognitive_stream)이 관문을 **첫 문장**으로 묻는다
+    import reload_gate as _rg
+    tmp18 = Path(tempfile.mkdtemp(prefix="stg_quiesce_")).resolve()
+    try:
+        _saved = (_ra._probe_live_turns, _ra.QUIESCE_CAP_S, _ra.QUIESCE_POLL_S,
+                  _ra.GATE_SETTLE_S, _ra.UNREACHABLE_CONFIRM_S)
+        _ra.QUIESCE_POLL_S, _ra.GATE_SETTLE_S, _ra.UNREACHABLE_CONFIRM_S = 0.01, 0.0, 0.05
+        _ra.QUIESCE_CAP_S = 5
+        calls = []
+
+        def _seq(seq):
+            it = iter(seq)
+            last = [seq[-1]]
+            def _probe(url=None):
+                try:
+                    last[0] = next(it)
+                except StopIteration:
+                    pass
+                calls.append(last[0])
+                return last[0]
+            return _probe
+
+        # (가) 다음 턴(7)이 도는 동안 기다리다 0 이 되면 진행
+        calls.clear()
+        _ra._probe_live_turns = _seq([(True, [7]), (True, [7]), (True, [7]), (True, []), (True, [])])
+        q = _ra.wait_quiescent(str(tmp18), "task_q1")
+        check("S18a_waits_for_next_turn_then_proceeds",
+              q.get("outcome") == "observed" and len(calls) >= 4,
+              json.dumps(q) + f" calls={len(calls)}")
+        g = _rg.read_gate(tmp18)
+        check("S18a_gate_raised_before_write",
+              bool(g) and g.get("key") == "task_q1" and g.get("phase") == "raised",
+              str(g))
+        _rg.lower_gate(tmp18, "task_q1")
+
+        # (나) 관문을 세운 직후 턴(9)이 들어오면 관문을 내리고 양보한다 — 그 턴이 끝나면 진행
+        calls.clear()
+        _ra._probe_live_turns = _seq([(True, []), (True, [9]), (True, [9]), (True, []), (True, [])])
+        q = _ra.wait_quiescent(str(tmp18), "task_q2")
+        check("S18b_yields_to_turn_that_slipped_in",
+              q.get("outcome") == "observed" and len(calls) >= 5,
+              json.dumps(q) + f" calls={len(calls)}")
+        check("S18b_gate_is_own_after_retry",
+              (_rg.read_gate(tmp18) or {}).get("key") == "task_q2")
+        _rg.lower_gate(tmp18, "task_q2")
+
+        # (다) 상한 — 턴(5)이 끝내 안 닫히면 강행하되 그 턴을 이름으로 돌려준다
+        _ra.QUIESCE_CAP_S = 0.05
+        _ra._probe_live_turns = lambda url=None: (True, [5])
+        q = _ra.wait_quiescent(str(tmp18), "task_q3")
+        check("S18c_cap_names_the_turn_at_risk",
+              q.get("outcome") == "cap" and q.get("live_turns") == [5] and q.get("gate") is True,
+              json.dumps(q))
+        check("S18c_gate_raised_even_on_cap", (_rg.read_gate(tmp18) or {}).get("key") == "task_q3")
+        _rg.lower_gate(tmp18, "task_q3")
+        _ra.QUIESCE_CAP_S = 5
+
+        # 몸이 없으면 자를 턴도 없다 — 관문 없이 진행 (S10/S13 의 닿지 않는 몸과 같은 판정)
+        _ra._probe_live_turns = lambda url=None: (False, None)
+        q = _ra.wait_quiescent(str(tmp18), "task_q4")
+        check("S18c_no_body_means_nothing_to_cut",
+              q.get("outcome") == "no_body" and _rg.read_gate(tmp18) is None, json.dumps(q))
+
+        # 남의 관문(다른 수행자가 쓰는 중)은 '도는 것'이다 — 그 리로드 위에 또 쓰지 않는다
+        _rg.raise_gate(tmp18, "task_other", phase="written", ttl_s=0.03)
+        _ra._probe_live_turns = lambda url=None: (True, [])
+        q = _ra.wait_quiescent(str(tmp18), "task_q5")
+        check("S18c_waits_for_foreign_gate",
+              q.get("outcome") == "observed" and (_rg.read_gate(tmp18) or {}).get("key") == "task_q5",
+              json.dumps(q))
+        _rg.lower_gate(tmp18, "task_q5")
+
+        # 옛 몸(live_turns 를 모르는) → 원장 폴백: 최근 열린 행은 도는 턴, 오래된 고아는 아님
+        import sqlite3 as _sq
+        db18 = tmp18 / "data" / "world_pulse.db"
+        c18 = _sq.connect(db18)
+        c18.execute("CREATE TABLE episode_log (id INTEGER PRIMARY KEY, started_at TEXT, "
+                    "ended_at TEXT, agent TEXT, user_message TEXT, log TEXT, total_ms INTEGER, source TEXT)")
+        c18.execute("INSERT INTO episode_log (id, started_at, ended_at, source) VALUES "
+                    "(41, datetime('now','localtime'), NULL, 'usage')")
+        c18.execute("INSERT INTO episode_log (id, started_at, ended_at, source) VALUES "
+                    "(40, datetime('now','localtime','-2 days'), NULL, 'usage')")
+        c18.execute("INSERT INTO episode_log (id, started_at, ended_at, source) VALUES "
+                    "(42, datetime('now','localtime'), NULL, 'test')")
+        c18.commit(); c18.close()
+        _ra._probe_live_turns = lambda url=None: (True, None)
+        check("S18c_ledger_fallback_counts_recent_open_only",
+              _ra._live_turns_now(str(tmp18)) == [41], str(_ra._live_turns_now(str(tmp18))))
+
+        # (라) 관문 의미론 — 부팅 회수는 written 만, raised 는 남기고, 만료는 사라진다
+        _rg.raise_gate(tmp18, "k", phase="raised")
+        check("S18d_boot_keeps_raised_gate",
+              _rg.clear_at_boot(tmp18) is False and _rg.read_gate(tmp18) is not None)
+        _rg.mark_written(tmp18, "k")
+        check("S18d_bounce_notice_while_gate_up",
+              "재기동" in _rg.bounce_notice(tmp18) and "다시 보내" in _rg.bounce_notice(tmp18))
+        check("S18d_boot_clears_written_gate",
+              _rg.clear_at_boot(tmp18) is True and _rg.read_gate(tmp18) is None
+              and _rg.bounce_notice(tmp18) == "")
+        _rg.raise_gate(tmp18, "k2", phase="raised", ttl_s=0.02)
+        import time as _t; _t.sleep(0.05)
+        check("S18d_expired_gate_is_gone", _rg.read_gate(tmp18) is None and _rg.bounce_notice(tmp18) == "")
+        _rg.raise_gate(tmp18, "mine")
+        check("S18d_lower_refuses_foreign_key",
+              _rg.lower_gate(tmp18, "theirs") is False and _rg.lower_gate(tmp18, "mine") is True)
+
+        # (마) 진입점이 관문을 첫 문장으로 묻는다 — 기어 동기화·스코프보다 먼저
+        _ap_src = (REPO / "backend" / "cognition" / "agent_pipeline.py").read_text(encoding="utf-8")
+        _cs = _ap_src.split("def cognitive_stream(", 1)[1].split("def _cognitive_stream_body", 1)[0]
+        check("S18e_pipeline_entry_asks_gate_first",
+              "_reload_gate_notice()" in _cs
+              and _cs.index("_reload_gate_notice()") < _cs.index("_sync_execution_gear()"),
+              "cognitive_stream 이 관문을 안 묻거나 기어 동기화 뒤에 묻는다")
+        check("S18e_bounce_ends_turn_without_work",
+              '"reload_gate": True' in _cs
+              and "return" in _cs.split('"reload_gate": True', 1)[1][:120])
+        # 결말 보고 — 정적 상한 강행이 잘렸을 수 있는 턴 이름과 함께 다음 턴에 실린다
+        import red_report as _rr2
+        bd18 = tmp18 / "data" / "system_ai_state" / "red_backups" / "task_qcap"
+        bd18.mkdir(parents=True, exist_ok=True)
+        (bd18 / "result.json").write_text(json.dumps(
+            {"outcome": "healthy", "files": ["backend/y.py"], "finished_at": 9e9}), encoding="utf-8")
+        (bd18 / "followup.json").write_text(json.dumps(
+            {"wait_outcome": "observed", "quiesce_outcome": "cap", "quiesce_cap_s": 600,
+             "live_turns_at_cap": [2607]}), encoding="utf-8")
+        scent18 = _rr2.pending_scent(str(tmp18))
+        check("S18f_report_names_turn_cut_by_cap",
+              'outcome="quiesce_cap"' in scent18 and "2607" in scent18 and "600" in scent18,
+              scent18[:300])
+        # 예약 문구가 새 계약(다른 턴이 안 도는 순간)을 말하는가 — 문구와 실제의 출처는 하나
+        check("S18g_schedule_message_source_is_red_apply",
+              st._quiesce_cap_s() == int(_ra.QUIESCE_CAP_S))
+    finally:
+        (_ra._probe_live_turns, _ra.QUIESCE_CAP_S, _ra.QUIESCE_POLL_S,
+         _ra.GATE_SETTLE_S, _ra.UNREACHABLE_CONFIRM_S) = _saved
+        import shutil
+        shutil.rmtree(tmp18, ignore_errors=True)
 
     print(f"[repair_staging_selftest] {len(_passed)} 통과 / {len(_failed)} 실패")
     for f in _failed:

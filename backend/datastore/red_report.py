@@ -119,6 +119,17 @@ def followup_rows(followup: dict) -> list:
             f'닫히지 않아 대기 상한{f"({cap}초)" if cap else ""}으로 강행했다 — 대개 그 턴이 '
             f'적용을 기다리며 살아 있던 경우다(자기가 자기 병목). 다음부터 예약 뒤에는 곧바로 '
             f'턴을 닫아라 — 그러면 몇 초 안에 적용된다.</wait>')
+    if fu.get("quiesce_outcome") == "cap":
+        # 도는 턴이 0 이 되기를 상한까지 기다리다 강행 — 잘렸을 수 있는 턴을 이름으로 댄다.
+        qcap = int(fu.get("quiesce_cap_s") or 0)
+        cut = fu.get("live_turns_at_cap") or []
+        cut_s = ("(" + ", ".join(str(i) for i in cut) + ")") if cut else ""
+        cap_s = f"({qcap}초)" if qcap else ""
+        rows.append(
+            f'    <wait outcome="quiesce_cap">다른 턴{cut_s}이 '
+            f'도는 채로 정적 대기 상한{cap_s}에 닿아 강행했다 — 그 턴은 '
+            f'리로드에 잘렸을 수 있다(주행기록 고아 확인). 긴 턴이 이어지는 시간대라면 수리 적용을 '
+            f'그 뒤로 미루는 편이 낫다.</wait>')
     pv = fu.get("post_verify") or {}
     if pv.get("ran"):
         code = pv.get("exit_code")

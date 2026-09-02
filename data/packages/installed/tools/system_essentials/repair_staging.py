@@ -640,6 +640,15 @@ def _turn_cap_s() -> int:
         return 900      # 수행자를 못 읽는 자리(가짜 저장소 시험 등) — 문구용 폴백
 
 
+def _quiesce_cap_s() -> int:
+    """수행자의 정적(도는 턴 0) 대기 상한 — 출처는 red_apply 하나."""
+    try:
+        import red_apply
+        return int(red_apply.QUIESCE_CAP_S)
+    except Exception:
+        return 600
+
+
 def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: str = ""):
     """지연 적용 예약 — 라이브 쓰기를 '이 턴이 닫힌 뒤'로 미뤄 분리 수행자에 맡긴다.
 
@@ -709,8 +718,11 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
                     f"그러니 이 턴에서 적용을 기다리거나 폴링하지 마십시오. 기다리면 적용은 "
                     f"오지 않고 대기 상한 {_cap}초를 통째로 태운 뒤에야 강행됩니다. "
                     f"**지금 턴을 닫는 것이 이 작업의 완결입니다.** "
-                    f"턴이 닫히면(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 쓰기 직전 "
-                    f"재검증 후 적용하고, 리로드는 그때 한 번 일어납니다. 적용·헬스 판정은 "
+                    f"턴이 닫히면(응답 전송·주행기록 저장·증류 완료) 분리 수행자가 **다른 턴이 "
+                    f"하나도 안 도는 순간**(정적, 상한 {_quiesce_cap_s()}초)을 골라 쓰기 직전 "
+                    f"재검증 후 적용하고, 리로드는 그때 한 번 일어납니다 — 그 사이 들어온 새 명령은 "
+                    f"정상 처리되고, 쓰기~재기동의 몇 초에 들어온 새 턴만 '재기동 중' 안내를 "
+                    f"받습니다. 적용·헬스 판정은 "
                     f"다음 턴에 자동으로 보고됩니다. {_verify_note} "
                     f"사용자에게는 '검증 통과, 적용 예약됨'으로 알리세요 — "
                     f"아직 라이브에 반영되지 않았습니다."),

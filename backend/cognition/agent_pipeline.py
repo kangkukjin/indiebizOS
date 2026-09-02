@@ -146,6 +146,16 @@ def per_turn_provider_view(provider):
     return view
 
 
+def _reload_gate_notice() -> str:
+    """재기동 관문이 서 있으면 안내문, 아니면 "" — 실패는 정상(관문 없음)으로 접는다."""
+    try:
+        from runtime_utils import get_base_path
+        from reload_gate import bounce_notice
+        return bounce_notice(get_base_path())
+    except Exception:
+        return ""
+
+
 class CognitivePipelineMixin:
     """AgentRunner용 인지 파이프라인 드라이버 — 프로젝트/시스템AI 공용.
 
@@ -251,6 +261,16 @@ class CognitivePipelineMixin:
         ★기어 동기화(0단계)는 스코프 **밖**이다 — 그건 상주 러너의 바탕 모델을 바꾸는
         일이라 사본에만 적으면 다음 턴이 옛 모델로 돌아간다.
         """
+        # 재기동 관문 (2026-09-02): 지연 적용이 쓰기~새 몸 부팅 사이면 일을 시작하지 않는다.
+        # 옛 몸 안에서 기다리는 것은 답이 아니다(그 기다림은 옛 몸과 함께 죽는다) — 정직하게
+        # 되돌려보내는 것이 유일한 선택. 사용자 표면은 전부 여기를 지난다(test_user_surface_pipeline).
+        _notice = _reload_gate_notice()
+        if _notice:
+            print("[재기동 관문] 새 턴 되돌림 — 지연 적용 리로드 창")
+            yield {"type": "text", "content": _notice}
+            yield {"type": "final", "content": _notice}
+            yield {"type": "_turn_meta", "tool_calls": [], "reload_gate": True}
+            return
         self._sync_execution_gear()
         with self.turn_ai_scope():
             yield from self._cognitive_stream_body(message, history, **kwargs)
@@ -716,10 +736,12 @@ class CognitivePipelineMixin:
             self._collect_thread_tool_calls(tool_calls_log)
             # 턴 토큰 원장 마감 — 이 턴의 모델 소요(토큰 선택압의 귀속 입력, 미측정=None).
             try:
-                from providers.base import read_turn_tokens
+                from providers.base import read_turn_tokens, read_turn_cache_read_tokens
                 turn_tokens = read_turn_tokens()
+                turn_cache_read = read_turn_cache_read_tokens()
                 if turn_tokens:
-                    print(f"[턴비용] tokens={turn_tokens}")
+                    _cr = f" cache_read={turn_cache_read}" if turn_cache_read is not None else ""
+                    print(f"[턴비용] tokens={turn_tokens}{_cr}")
             except Exception:
                 turn_tokens = None
             # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에

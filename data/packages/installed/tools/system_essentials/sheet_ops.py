@@ -83,9 +83,15 @@ def _match(cell_val, want):
 
 
 def _jsonable(v):
-    if isinstance(v, (datetime, date, time)):
-        return v.isoformat()
-    return v
+    # ★F53-3 (2026-09-02): 셀 타입 정규화는 read xlsx 와 **한 벌**(common.currency.normalize_cell)
+    #   — 같은 셀을 두 독자가 다른 타입으로 내던 비대칭 봉합.
+    try:
+        from common.currency import normalize_cell
+        return normalize_cell(v, none=None)
+    except ImportError:
+        if isinstance(v, (datetime, date, time)):
+            return v.isoformat()
+        return v
 
 
 def _validate_keys(keys, hmap, what):
@@ -329,8 +335,19 @@ def _items_from_prev(tool_input):
 def op_append(tool_input):
     """마지막 데이터 행 뒤에 행 추가 — 기존 수식·서식 불변. 값이 "=..." 문자열이면 수식으로 들어간다."""
     items = tool_input.get("items")
-    if isinstance(items, dict):
-        items = [items]
+    if isinstance(items, dict) and not isinstance(items.get("items"), list) \
+            and not (isinstance(items.get("columns"), list) and isinstance(items.get("rows"), list)) \
+            and not isinstance(items.get("table"), dict):
+        items = [items]                       # 행 하나를 직접 준 경우
+    else:
+        # `items: "$변수"`(JSON 문자열·통화 봉투·columns/rows) — 되읽기는 몸의 정본 하나 (B53-2 census)
+        try:
+            from common.currency import coerce_items_payload
+            _rows = coerce_items_payload(items)
+            if _rows is not None:
+                items = _rows
+        except ImportError:
+            pass
     if not items:
         items = _items_from_prev(tool_input)
     if not items or not isinstance(items, list):

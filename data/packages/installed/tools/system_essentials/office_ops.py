@@ -560,20 +560,25 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
         # 첫 행을 헤더로. 시트 미지정이면 가장 큰(셀 수 최대) 시트, 지정이면 그 시트.
         # read(데이터.xlsx) >> chart / spreadsheet 로 흐를 수 있게 함.
         def _num(v):
-            # 가능하면 숫자로 — table 통화는 값이 숫자면 더 유용
-            if isinstance(v, (int, float)):
-                return v
-            if isinstance(v, str):
-                s = v.strip().replace(",", "")
-                try:
-                    return int(s)
-                except (ValueError, TypeError):
-                    pass
-                try:
-                    return float(s)
-                except (ValueError, TypeError):
-                    pass
-            return "" if v is None else v
+            # 가능하면 숫자로 — table 통화는 값이 숫자면 더 유용.
+            # ★F53-3 (2026-09-02): 규칙의 주인은 common.currency.normalize_cell 한 벌(sheet find 와 공유).
+            try:
+                from common.currency import normalize_cell
+                return normalize_cell(v, none="")
+            except ImportError:
+                if isinstance(v, (int, float)):
+                    return v
+                if isinstance(v, str):
+                    s = v.strip().replace(",", "")
+                    try:
+                        return int(s)
+                    except (ValueError, TypeError):
+                        pass
+                    try:
+                        return float(s)
+                    except (ValueError, TypeError):
+                        pass
+                return "" if v is None else v
 
         table = None
         if sheet_name and sheet_name in all_sheets:

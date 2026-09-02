@@ -6,7 +6,7 @@ actions:
     fixture: '[self:memory]{op: "search", query: "test"}'
     description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
     group: memory
-    target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
+    target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
     target_key: op
     router: handler
     tool: memory_op
@@ -74,7 +74,7 @@ tool_json:
           description: save 옵션 — 검색 키워드(쉼표 구분)
         category:
           type: string
-          description: save 옵션 또는 search 필터 — 분류
+          description: save 옵션 또는 search 필터 — 분류 (유효값 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 밖의 값은 save 가 '기타' 로 정규화·신고, search 는 거절)
         query:
           type: string
           description: search 필수 — 검색어

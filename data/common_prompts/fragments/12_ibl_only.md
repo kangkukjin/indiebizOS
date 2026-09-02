@@ -106,10 +106,11 @@ Chain multiple steps with operators:
 - 병렬(`&`)의 가지는 **괄호로 파이프를 묶을 수 있다**(2026-08-19 문법 개정): `[A] & ([B] >> [table:rename]{map: {title: "name"}}) >> [table:merge]{by: "name"}` — 분기 하나에만 전처리를 붙이는 표현(교차 소스 키 정합이 대표 용례). 괄호 안은 일반 step 을 `>>` 로 이은 파이프만 — 중첩 병렬·폴백·블록은 명시 에러. **`??` 의 가지에도 같은 괄호가 선다**(2026-08-22 실측 정정 — 옛 문구는 '단일 액션만'이라 했으나 구현은 처음부터 지원했다): `[sense:stock]{op: "quote", ticker: "…"} ?? ([sense:search]{query: "…"} >> [table:take]{n: 2})` → 첫 가지 실패 시 둘째 가지가 `node: "pipe"` 로 통째 실행된다. 괄호 없는 가지는 단일 액션. 더 복잡한 묶음이 필요하면: ①변수로 나눠 담고(`$a = A >> B` 후 참조) ②파이프 묶음을 `[self:workflow]{op: "save", name: "이름", do: "..."}` 로 저장해 가지엔 `[self:workflow]{op: "run", name: "이름"}` 을 세운다(run 은 몸통 마지막 문장의 items 를 통화로 낸다) ③행별 반복이면 `[table:each]`.
 - `&` 병렬을 `>> [table:join/union/merge]`로 받으려면 **각 가지가 통화(items)를 내야** 한다. 스칼라 가지(예: `[self:time]`)는 결합 불가. **병렬 뒤 첫 변환자는 이항(join/union/merge)이어야** 한다 — 다른 변환자를 바로 물리면 실행이 정직하게 거절한다(분기별 전처리는 괄호 분기로).
 
-**여러 문장과 변수** — 줄바꿈(또는 `;`)으로 나뉜 문장은 서로 **독립**이다(앞 결과가 자동으로 안 넘어감). 앞 결과를 뒤에서 쓰려면 변수에 담아 뒤 문장의 param 값 안에서 참조한다:
+**여러 문장과 변수** — 줄바꿈(또는 `;`)으로 나뉜 문장은 서로 **독립**이다(앞 결과가 자동으로 안 넘어감). 앞 결과를 뒤에서 쓰려면 변수에 담아 뒤 문장의 param 값 안에서 참조하거나, **변수를 파이프 머리에 세운다**(`$변수 >> [액션]` · `$변수.경로 >> [액션]` — 앞 문장의 결과(또는 그 안의 배열 필드)가 통화로 방출된다. 되읽은 JSON 원장을 변환자에 물릴 때의 자리: `$본 = [self:read]{path: "seen.json"}` 뒤 `$본.items >> [table:filter]{…}`):
 ```
 $뉴스 = [sense:search]{source: "gnews", query: "반도체"}
 [self:write]{path: "뉴스.md", content: "$뉴스"}
+$뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
 ```
 
 ## 통화와 변환자 (Currency & Transformers) — 조합으로 증식
@@ -226,7 +227,7 @@ $avg = $total.value / 10
 - `while` 은 몸 변수를 본다(첫 회차 전엔 바깥 값만). 몸이 재할당한 바깥 변수는 루프 뒤에도 최신값.
 - `[self:workflow]{op: "save", do: "…$return = …"}`: 몸통에 `$return = …` 이 있으면 run 의 반환값은 그 문장의 결과(마지막이 알림이어도 됨). 없으면 옛 규약(마지막 문장의 items).
 
-**봉투 읽는 법** — **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "기록이 없습니다"}` 는 '통화 0행'이지 실패가 아니다 — 키가 없다고 실패로 읽지 말 것). `final_result` 는 파이프·병렬 봉투에만 있다. 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. ★`results` 라는 키가 보인다고 step 요약이라 단정하지 마라 — **단일 액션·블록 문장(`[try]`·`[if:]` 등)의 결과는 핸들러 원문**이라 그 `results` 는 액션 자신의 필드다(예: `[sense:search]` 는 `results: [{title, url, snippet}]`). 판별자는 `_results_summarized`·`steps_total`·`final_result` — 이것들이 있으면 파이프 봉투, 없으면 원문이다(블록 봉투엔 대신 `_caught`(try 가 삼킨 오류 전문)·`_untransformed` 같은 표지가 붙는다). 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 덩치 큰 중간 결과를 **봉투·컨텍스트에서만** 덜어내려면 `[self:write]{path, spill: true}` — step 봉투엔 `{items: [], ref: {path, kind, count, bytes}}` 만 실리지만 **뒤 step 은 그 참조를 투명하게 해소해 원래 데이터를 그대로 본다**(파이프 흐름 불변 · 가벼워지는 건 `results[]`·모델 컨텍스트뿐). 나중에 다시 읽으려면 `[self:read]{path}`.
+**봉투 읽는 법** — **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "기록이 없습니다"}` 는 '통화 0행'이지 실패가 아니다 — 키가 없다고 실패로 읽지 말 것). `final_result` 는 파이프·병렬 봉투에만 있다. 파이프(`>>`) 결과의 `results[]` 는 **step 요약**(shape·count·bytes·preview)이고 데이터 전체는 `final_result` 에 있다. ★`results` 라는 키가 보인다고 step 요약이라 단정하지 마라 — **단일 액션·블록 문장(`[try]`·`[if:]` 등)의 결과는 핸들러 원문**이라 그 `results` 는 액션 자신의 필드다(예: `[sense:search]` 는 `results: [{title, url, snippet}]`). 판별자는 `_results_summarized`·`steps_total`·`final_result` — 이것들이 있으면 파이프 봉투, 없으면 원문이다(블록 봉투엔 대신 `_caught`(try 가 삼킨 오류 전문)·`_untransformed` 같은 표지가 붙는다). 중간 step 원형이 꼭 필요할 때만 `verbose: true`. 덩치 큰 중간 결과를 **봉투·컨텍스트에서만** 덜어내려면 `[self:write]{path, spill: true}` — step 봉투엔 `{items: [], ref: {path, kind, count, bytes}}` 만 실리지만 **뒤 step 은 그 참조를 투명하게 해소해 원래 데이터를 그대로 본다**(파이프 흐름 불변 · 가벼워지는 건 `results[]`·모델 컨텍스트뿐). 나중에 다시 읽으려면 `[self:read]{path}`. ★파이프 싱크 `>> [self:write]{path}` 는 통화에 **message(산문)가 있으면 산문을, 없으면 JSON** 을 쓴다 — 되읽어 통화로 다시 쓸 **JSON 원장**이 목적이면 `format: "json"` 을 준다(`{items, count}` 만 저장, 정직 표지·`_`메타는 파일에서 빠지고 `excluded_meta` 로 신고). 원장 누적 관용구: `$본 = [self:read]{path: "원장.json"}` ⏎ `$본.items & ([sense:feed]{…} >> [table:take]{n: 6}) >> [table:union] >> [table:dedup]{by: "url"} >> [self:write]{path: "원장.json", format: "json"}` — 반복해도 멱등. 새 것만 고르려면 `[table:filter]{where: {field: "url", op: "not_in", value: "${본.items.*.url}"}}`(목록 값은 **구조형 where** 로 — 문자열 where 엔 JSON 이 박힌다).
 
 **goal** — "매일 아침 확인해줘", "조건 충족까지 반복" 같은 **목적 선언**은 `[goal: "..."]{...}` 블록. 헤더엔 이름만, **모든 파라미터(every/until/deadline·안전장치)는 중괄호 안**:
 ```

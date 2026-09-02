@@ -63,6 +63,9 @@ def _get_items(obj):
         r = obj.get("items")            # 단일 통화 — 모든 생산자가 items 방출
         if isinstance(r, list):
             return r, obj
+        # (B53-2 의 자리는 여기가 아니라 `items:` 파라미터 주입 경로다 — execute 의 coerce_items_payload.
+        #  여기서 columns/rows 를 items 로 파생하면 38회차 계약(명시 표형은 표형 유지·혼합 입력 정직
+        #  거절)이 깨진다 — 2026-09-02 배터리 실측 7건.)
     if isinstance(obj, list):
         # F13-2 (2026-08-19 상상훈련 13회차): 병렬(&) 결과 봉투(분기별 JSON 봉투 문자열
         # 리스트)를 items 로 오인 채택하면 단항 변환자가 문자열 행으로 죽으며 원인을
@@ -154,102 +157,13 @@ def _get_table(obj):
     return None, None
 
 
-_CURRENCY_KEYS = ("items", "table", "columns", "rows", "count")
+# 봉투 범위·거울 재투영은 형제 envelope_scope 로 분리(2026-09-02, 1500줄 규칙). 재수출이라 호출부는 그대로다.
+from common.pkg_utils import load_sibling as _load_sibling_scope
 
-
-def _reproject_mirrors(out, originals, new_rows):
-    """거울 키(=통화를 도메인 이름으로 병기한 키)를 변환 결과로 함께 갱신한다.
-
-    ★B15-1 (2026-08-20 상상훈련 15회차): `[self:trigger]{op:"list"}` 는 `items` 와
-    `triggers` 에 **같은 리스트**를 병기한다(items 병행 방출 규약 — 그래야 `>> [table:*]`
-    가 통화를 찾는다). 그런데 변환자는 `items` 만 갈아끼우고 `triggers` 는 그대로 두어,
-    `take{n:1}` 뒤에도 `triggers` 에 전 건이 남았다 — **변환자는 일했는데 봉투가**
-    **거짓말을 한다**(실측: items 1건/count 1 인데 triggers 3건, filter 전멸 뒤에도 3건).
-    읽는 쪽(모델·사람·표면)은 도메인 이름을 먼저 믿으므로 "n개만 골라 알림"이 전량으로
-    번진다. `message`/`text`/`table` 을 이미 여기서 떨어내는 것과 **같은 부류**이고,
-    거울 키는 이름을 미리 알 수 없으므로 이름 목록이 아니라 **동일성**으로 찾는다.
-
-    ★생산자 7곳(trigger list/history·switch·agents·guestpc limbs·pc-manager top·web
-    sections)을 각각 고치지 않고 이 병목에서 닫는 이유: 8번째 병행 방출이 다시 감염된다
-    (입구를 하나로 접은 `_get_items_for_fields` 선례, F6).
-
-    판정 순서(오폭 방지): ①객체 동일성(is) 먼저 — 병기는 같은 객체를 두 키에 넣으므로
-    대부분 여기서 잡힌다 ②값 동등(==) 폴백 — 복사본 병기(`list(x)`)용. 빈 리스트는
-    값 동등을 건너뛴다(무관한 빈 리스트 오폭 방지). 원본과 **다른** 컬렉션은 손대지
-    않는다 — 예: trigger list 의 `existing_schedules` 는 종류가 다른 원장이라 보존된다.
-
-    `_mirrored` 는 순찰용 계수 표식이다(거울 키 증식 압력계 — 재투영이 "거울 키를
-    마음껏 만들어도 된다"는 면허로 오독되지 않게. 하우스 교리는 단일 통화 {items}).
-    """
-    cands = [o for o in (originals or []) if isinstance(o, list)]
-    mirrors = []
-    for k, v in list(out.items()):
-        if not cands or k in _CURRENCY_KEYS or not isinstance(v, list):
-            continue
-        hit = any(v is o for o in cands) or any(o and v == o for o in cands)
-        if hit:
-            out[k] = list(new_rows)
-            mirrors.append(k)
-    if mirrors:
-        out["_mirrored"] = sorted(mirrors)
-
-    # ★자백(2026-08-20 사용자 판정): 거울이 **아닌** 형제 컬렉션은 변환을 따라가지 못한다.
-    #   두 부류가 있고 둘 다 기계가 대신 정할 수 없다 —
-    #   ①종류가 다른 형제 원장(trigger list 의 existing_schedules): 애초에 다른 데이터라
-    #     변환 대상이 아니다. 손대면 그건 통화 수리가 아니라 의미 결정이다.
-    #   ②파생 원천(others:agents 의 projects 트리 — items 는 이걸 *펼쳐서* 만든 것):
-    #     평평한 items 로는 되돌릴 수 없어 재투영이 원리적으로 불가능하다.
-    #   그래서 드롭도 재투영도 아닌 **자백**을 택한다: 이 키들은 변환 전 상태라고 봉투에
-    #   적어 둔다. 읽는 쪽(모델·사람)이 도메인 이름을 통화로 오독하는 것이 B15-1 의 실제
-    #   피해였고, 자백은 그 오독만 막으면서 데이터는 하나도 안 버린다.
-    untouched = [k for k, v in out.items()
-                 if k not in _CURRENCY_KEYS and k not in mirrors and not str(k).startswith("_")
-                 and isinstance(v, list) and v and any(isinstance(x, dict) for x in v)]
-    if untouched:
-        out["_untransformed"] = sorted(untouched)
-    return out
-
-
-def _restate_scope(out, prior_len, new_len):
-    """변환 뒤 봉투가 **자기 기수를 다시 말하게** 한다 (B26-1·B26-2, 상상훈련 26회차).
-
-    이 시스템은 `truncated` 를 스스로 이렇게 정의해 둔다 — **truncated == total > len(items)**
-    (`surface/portal_warehouse.py:304` · `test_body_vocab` T1/T5). 그런데 단항 변환자는
-    `total` 을 그대로 물고 내려가면서 `truncated` 를 재계산하지 않아, 봉투가 자기
-    불변식을 깨뜨렸다. 실측(2026-08-23):
-        [self:grep]{…}                    → total 29 · items 29 · truncated false   (참)
-        … >> [table:take]{n: 1}            → total 29 · items  1 · truncated false   (거짓)
-        … >> [table:filter]{…}            → total 29 · items 27 · truncated false   (거짓)
-        … >> [table:dedup]{by: "파일"}      → total 29 · items  1 · truncated false   (거짓)
-    즐 "29건 전부를 보여준다"고 말하면서 1건을 낸다. ★이것은 새 부류가 아니라
-    이미 세 번 봉한 '잘림 침묵'의 네 번째 자리다 — ⑥′(file_find `truncated/total` 봉투키)·
-    ⑫(grep 전수 계수)·⑭(`_carry_flags` 로 이항 변환자 승계). 그 스윗이 **단항 경로에만**
-    안 닿았고, 단항은 이 병목(`_emit_items`/`_emit_table`) 하나로 전부 통과한다.
-
-    규칙은 전부 기존 계약에서 끌어왔다 — 새 의미를 만들지 않는다:
-      ① `truncated` 는 **켜기만** 한다(단조). `total` 이 결과 기수보다 크면 True.
-         끄지 않는 이유: 상류가 *다른 사유*로 잘렸을 수 있고, 그걸 지우면 새 거짓말이다
-         (`_carry_flags` 의 truncated=OR 승계와 같은 방향).
-      ② `total` 은 **지어내지 않는다** — 없으면 없는 채로 둔다. 이것은 `_carry_flags` 의
-         join 조항("지어낸 total 은 또 다른 거짓말")을 단항에 그대로 적용한 것.
-         그래서 take 가 아무 신고도 안 뿌리는 경우가 남는데, **침묵은 거짓말이 아니다** —
-         고치는 것은 `truncated: false` 라는 *적극적 거짓 주장*뿐이다.
-      ③ 기수가 **변한** 변환 뒤의 봉투 `summary` 는 변환 전 집계라 stale 이다.
-         실측: `[sense:realty]{…} >> [table:groupby]{by: "법정동", agg: {평균가: ["avg", "거래금액"]}}`
-         → items 는 법정동별 평균 14행인데 봉투는 `summary.평균가: "31,952만원"`(전체 평균)·
-         `summary.총거래건수: 90` 을 그대로 들고 있다. `message`/`text` 를 여기서 떨어내는
-         것과 **같은 부류**다(변환 전 집합을 서술하는 다이제스트).
-         단, message/text 처럼 무조건이 아니라 **기수 변경 시에만** 지우는 이유:
-         그 둘은 O(items) 산문이라 파이프 블로업까지 걸리지만, summary 는 작은 집계라
-         유일한 문제가 stale 이고 그건 집합이 바뀌었을 때만 발생한다(sort·select 뒤엔 참).
-         → 오폭을 피하면서 거짓말만 정확히 지운다.
-    """
-    tot = out.get("total")
-    if isinstance(tot, int) and not isinstance(tot, bool) and tot > new_len:  # vj-ok: 봉투 계수 비교
-        out["truncated"] = True
-    if prior_len is not None and prior_len != new_len and isinstance(out.get("summary"), (dict, str)):  # vj-ok: 봉투 계수 비교
-        out.pop("summary", None)
-    return out
+_scope = _load_sibling_scope(__file__, "envelope_scope")
+_CURRENCY_KEYS = _scope._CURRENCY_KEYS
+_reproject_mirrors = _scope._reproject_mirrors
+_restate_scope = _scope._restate_scope
 
 
 def _emit_items(envelope, new_items):
@@ -318,9 +232,15 @@ def _no_currency_error(verb, prev):
                          f"(union/merge/join)가 먼저 받아야 합니다. 예: [A] & [B] >> [table:union] "
                          f">> [table:{verb}]. 분기 하나에만 전처리를 붙이려면 괄호 분기: "
                          "[A] & ([B] >> [table:rename]{map: {…}}) >> [table:merge]{by: \"…\"}."}
-    keys = sorted(prev.keys()) if isinstance(prev, dict) else type(prev).__name__
+    # ★B53-2: 키만 찍으면 "찾지 못했습니다. 받은 봉투의 키: ['items']" 라는 자기모순이 난다 —
+    #   그 자기모순을 막으려 세운 진단 한 벌(common.currency.currency_shape_note, B19-2)을 쓴다.
+    try:
+        from common.currency import currency_shape_note as _shape_note
+        keys = _shape_note(prev)
+    except ImportError:
+        keys = sorted(prev.keys()) if isinstance(prev, dict) else type(prev).__name__
     return {"success": False,
-            "error": f"{verb}: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투의 키: {keys} — "
+            "error": f"{verb}: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {keys} — "
                      f"앞 액션이 통화(items/table)를 내지 않는 생산자(returns: scalar/effect)일 수 "
                      f"있습니다. 통화를 내는 액션·op 으로 바꾸거나 선언(returns)을 확인하세요."}
 
@@ -1478,17 +1398,24 @@ def execute(tool_input: dict, context):
                 prev = params["inputs"]
             elif params.get("items") is not None:
                 _it = params["items"]
-                if isinstance(_it, str):
-                    # `items: "$변수"` — 변수 치환은 items JSON 문자열을 넣는다(v4 추출). 목록으로 되읽는다 (2026-08-22 M4).
-                    try:
-                        _parsed = json.loads(_it)
-                        if isinstance(_parsed, list):
-                            _it = _parsed
-                        elif isinstance(_parsed, dict) and isinstance(_parsed.get("items"), list):
-                            _it = _parsed["items"]
-                    except Exception:
-                        pass
-                prev = {"items": _it}
+                # ★B53-2 (2026-09-02): 되읽기는 몸의 정본 하나 — coerce_items_payload(list · {items} ·
+                #   columns/rows·table 봉투 · 그 JSON 문자열). 종전엔 여기서 list/{items} 만 손으로
+                #   풀어 `$변수`(변환자 결과=columns/rows) 주입이 죽었다(brief 는 통과 — 게이트가 갈렸다).
+                #   못 읽으면 **원형을 그대로** 넘겨 _no_currency_error 가 실제 모양을 말하게 한다.
+                try:
+                    from common.currency import coerce_items_payload as _coerce_items_payload
+                    _rows = _coerce_items_payload(_it)
+                except ImportError:
+                    _rows = _it if isinstance(_it, list) else None
+                if _rows is not None:
+                    prev = {"items": _rows}
+                else:
+                    if isinstance(_it, str):
+                        try:
+                            _it = json.loads(_it)
+                        except Exception:
+                            pass
+                    prev = _it if isinstance(_it, dict) else {"items": _it}
             elif params.get("table") is not None:
                 prev = {"table": params["table"]}
     if prev is None:

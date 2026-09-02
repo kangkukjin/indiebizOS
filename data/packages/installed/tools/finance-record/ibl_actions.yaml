@@ -24,7 +24,7 @@ actions:
     runs_on: pc_only
     description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
     group: finance
-    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회 출력의 #번호). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
     target_key: op
     router: handler
     tool: finance_op

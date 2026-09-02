@@ -198,3 +198,36 @@ def derive_items(result: Any) -> Any:
         return result
 
     return result
+
+
+def normalize_cell(v: Any, none: Any = None) -> Any:
+    """표 셀 값의 타입 정규화 **한 벌** — 독자들이 같은 눈으로 (F53-3, 2026-09-02).
+
+    같은 xlsx 셀 "92,000" 을 `[self:read]` 는 92000(숫자)으로, `[self:sheet]{find}` 는 문자열로
+    냈다(53회차 실측) — filter 는 수치 강제로 둘 다 통과했지만 compute/reduce 는 갈린다.
+    규칙(read_xlsx 의 옛 `_num` 을 승격): 숫자는 그대로 · 날짜류는 isoformat · 쉼표 있는 숫자
+    문자열은 int→float 순으로 · 수식("=…")·그 밖의 문자열은 그대로. `none` = 결측의 표기
+    (표형 rows 는 "" 를, 행 dict 는 None 을 쓴다 — 호출부 규약 유지).
+    """
+    if v is None:
+        return none
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, (int, float)):
+        return v
+    if hasattr(v, "isoformat"):
+        try:
+            return v.isoformat()
+        except Exception:
+            return str(v)
+    if isinstance(v, str):
+        s = v.strip().replace(",", "")
+        if s and (s[0].isdigit() or (s[0] in "-+." and len(s) > 1 and s[1].isdigit())):
+            try:
+                return int(s)
+            except ValueError:
+                try:
+                    return float(s)
+                except ValueError:
+                    pass
+    return v

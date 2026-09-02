@@ -53,7 +53,7 @@ nodes:
         exempt: '파일 경로 인자 필요(고정 fixture 부적합)'
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 start_line/end_line(1-기반 양끝 포함) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 start_line/end_line(1-기반 양끝 포함) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -97,6 +97,7 @@ nodes:
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
         params:
           spill: boolean
+          format: string    # "json" = 통화 보존 스위치 (V53-1 ⓑ, 2026-09-02) — 파이프 통화를 {items, count} JSON 원장으로
         returns: effect
         # spill=true 는 봉투에 {items:[], ref:…} 를 실어 뒤 step 이 투명 해소한다 —
         # 통화가 계속 흐르는 파이프 통과자다. 액션 단위 effect 만 읽으면 이음매 정적
@@ -104,9 +105,9 @@ nodes:
         # (2026-08-30 실측 2건). B36-3 param-조건부 통화 선언으로 정정.
         returns_variants:
           spill=true: items
-        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 봉투에 참조(ref)만 싣는다(뒤 step 은 투명 해소 — 데이터 흐름 불변).
+        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:"json" 이면 통화 {items, count} JSON 원장. spill:true 면 봉투에 참조(ref)만.
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
+        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:"json" = 통화 보존 스위치 — 생산자 모양과 무관하게 {items, count} JSON 원장으로 저장(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).

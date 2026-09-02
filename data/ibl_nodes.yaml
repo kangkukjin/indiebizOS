@@ -3355,7 +3355,7 @@ nodes:
         runs_on: pc_only
         description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
         group: finance
-        target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회 출력의 #번호). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+        target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
         target_key: op
         router: handler
         tool: finance_op
@@ -3916,7 +3916,7 @@ nodes:
         fixture: '[self:memory]{op: "search", query: "test"}'
         description: 심층 메모리 관리 (op 분기). save/search/read/delete. 장기 기억 — 최근 대화 로그는 recent/agents 별도. 자아별 사적 기억(폰·맥 각자 로컬, 동기화 안 함). 폰선 시맨틱 모델 없어 키워드(LIKE/FTS) 검색.
         group: memory
-        target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션. read/delete — memory_id (search 결과의 id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
+        target_description: save — content 필수(+category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
         target_key: op
         router: handler
         tool: memory_op
@@ -4593,7 +4593,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 start_line/end_line(1-기반 양끝 포함) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션, 시트를 TSV 텍스트로. 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용) 또는 start_line/end_line(1-기반 양끝 포함) 또는 blocks(빈 줄 기준 문단 items 로 분할, 문서 뷰어용). pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -4627,12 +4627,13 @@ nodes:
       write:
         params:
           spill: boolean
+          format: string
         returns: effect
         returns_variants:
           spill=true: items
-        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(구 output op:file 흡수 2026-08-05). spill:true 면 봉투에 참조(ref)만 싣는다(뒤 step 은 투명 해소 — 데이터 흐름 불변).
+        description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:"json" 이면 통화 {items, count} JSON 원장. spill:true 면 봉투에 참조(ref)만.
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
+        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:"json" = 통화 보존 스위치 — 생산자 모양과 무관하게 {items, count} JSON 원장으로 저장(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).

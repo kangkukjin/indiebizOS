@@ -439,3 +439,34 @@ fi
 echo "[pre-commit] 핀 정합 OK ✓"
 
 exit 0
+
+# 검수↔실행 정합 (2026-09-02, B49-1·B53-1 밭 이관) — 파서 개정을 검수기가 모르면 멀쩡한 문장에
+# 거짓 빨강. 카탈로그 fixture·교재 코드 블록 전수를 dry-run 에 넣어 valid:false 가 0 이어야 통과.
+# 백엔드 모듈이라 .venv 로 돈다(스크립트가 스스로 재실행).
+if echo "$staged" | grep -qE '^(backend/(ibl|surface|common)/.*\.py|data/common_prompts/fragments/12_ibl_only\.md|data/ibl_nodes\.yaml|scripts/check_validate_parity\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 검수↔실행 정합 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_validate_parity.py"; then
+    echo "" >&2
+    echo "[pre-commit] dry-run 거짓 빨강 — 커밋 차단." >&2
+    echo "[pre-commit]   • api_ibl.validate_code 의 _walk 에 파서의 새 step 모양을 가르치세요" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 검수↔실행 정합 OK ✓"
+fi
+
+# items 주입 게이트 (2026-09-02, B19-2·B51-1·B53-2 밭 이관) — `items:` 파라미터를 소비자가 자기 눈으로
+# 읽으면 같은 문장이 소비자에 따라 되고 안 된다. 정본은 common.currency.coerce_items_payload 하나.
+if echo "$staged" | grep -qE '^(backend/ibl/.*\.py|data/packages/installed/tools/.*\.py|scripts/check_items_injection\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] items 주입 게이트 검사 실행..."
+  if ! python3 "$repo_root/scripts/check_items_injection.py"; then
+    echo "" >&2
+    echo "[pre-commit] items 주입을 손으로 읽는 자리 — 커밋 차단." >&2
+    echo "[pre-commit]   • coerce_items_payload 로 되읽거나 \`# items-ok: <사유>\`" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] items 주입 게이트 OK ✓"
+fi

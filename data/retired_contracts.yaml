@@ -114,3 +114,16 @@ retired:
     phrases:
       - "/system-ai/providers"
       - "get_available_providers"
+
+  - id: write_sink_structure_hint
+    retired: 2026-09-02
+    reason: >-
+      파이프 싱크 [self:write] 가 message 를 추출하며 동반 items 의 처방을
+      "table:spreadsheet/structure 로 저장" 이라 안내했다 — JSON 원장(원장 누적 관용구
+      `$본.items & (새 조회) >> union >> dedup >> write`)의 답이 아니었다
+      (53회차 F53-1 · 사용자 판정 V53-1 ⓑ, 2026-09-02).
+    instead: >-
+      [self:write]{path, format: "json"} — 통화(items)를 JSON 원장으로 보존하는 명시 스위치.
+      표·문서 산출은 종전대로 table:spreadsheet/structure.
+    phrases:
+      - "구조 보존이 필요하면 table:spreadsheet/structure 로 저장하세요"

@@ -505,10 +505,18 @@ S12 frontend tsc, S13 예약-대기 계약 14검사 포함).
   `test_user_surface_pipeline`). 스케줄러·위임 턴은 ①이 덮고, ②의 되돌림은 받지 않는다
   (그 루프는 스스로 재시도한다).
 
-남는 절단 원인은 시스템 밖에 있다 — 08-22 이후 백엔드 리로드 416건 중 210건이 어떤 수리
-세션에도 없는 파일(Claude Code 세션 등 아웃오브프로세스 편집)이었다. 격리 스테이징도
-이 관문도 그 손은 못 막는다(§6 첫 항목과 같은 부류). 그 편집자가 같은 규율("도는 턴 0 에
-쓰라")을 지키려면 `/health` 의 `live_turns` 를 보면 된다 — 그 정보는 이미 공개돼 있다.
+**아웃오브프로세스 편집자도 같은 규율 — 리로더가 묻는다 (같은 날 후속)**: 08-22 이후
+백엔드 리로드 416건 중 210건이 어떤 수리 세션에도 없는 파일(Claude Code 세션의 Edit·
+`[self:script]`·`run_command`·git checkout)이었다. 편집자마다 협조를 요구하면 손이 하나
+늘 때마다 그물이 샌다 — 그물은 **리로드 한 자리**에 쳤다. `backend/base/quiescent_reload.py`
+가 uvicorn 의 `WatchFilesReload` 를 서브클래스해 `restart()` 앞에 같은 의례를 끼운다: `/health`
+`live_turns` 가 0 이 될 때까지 대기(상한 600초, 강행 시 잘릴 수 있는 턴을 로그에 이름으로) →
+관문(written) → 되묻기(직후 진입 턴엔 양보) → 재기동. api.py `__main__` 이 `uvicorn.run` 직전
+`install()` 로 `uvicorn.main.ChangeReload` 를 갈아 끼운다(호출 자체는 그대로 — `test_reload_scope`
+가 인자를 읽는 자리). ★리로더는 부모 프로세스라 자기 파일 변경으로는 안 바뀐다 — 이 층의
+변경은 백엔드 **완전 재기동**(keeper 처방 또는 앱 재시작)으로만 산다. 이음매·의례·순서는
+`backend/test_quiescent_reload.py` Q1~Q6 이 지킨다. red_apply 의 자체 대기·관문은 그대로
+둔다(쓰기 전 재검증과 순서를 소유하는 층) — 리로더는 그 뒤의 마지막 그물이다.
 
 검증 = `backend/test_repair_staging.py` S18 (18검사 — 다음 턴 대기·양보·상한 이름·몸 없음·
 남의 관문·원장 폴백·관문 생애·진입점 첫 문장·보고·문구 출처), 배터리 115/115.

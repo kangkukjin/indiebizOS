@@ -42,7 +42,7 @@ LAYERS = {
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "hls_ladder", "korean_utils", "limb_keys",
         "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
-        "phone_jobs", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store",
+        "phone_jobs", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {

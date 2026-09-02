@@ -13,6 +13,7 @@
     "base/mime_compat",
     "base/model_resolver",
     "base/phone_jobs",
+    "base/quiescent_reload",
     "base/r2_client",
     "base/reload_gate",
     "base/repeat_guard",
@@ -264,8 +265,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 255,
-    "engine": 235,
+    "total": 256,
+    "engine": 236,
     "blocklist": 20
   }
 }

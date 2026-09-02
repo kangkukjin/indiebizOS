@@ -754,6 +754,14 @@ if __name__ == "__main__":
     # 프로덕션(패키징)에서는 reload 비활성화 (파일 감시자 오류 방지)
     is_production = os.environ.get("INDIEBIZ_PRODUCTION", "").lower() in ("1", "true")
 
+    # ★리로드는 도는 턴이 0 일 때만 (2026-09-02): 누가 backend/*.py 를 썼든(Claude Code
+    #   세션·[self:script]·run_command·git) 파일 변경은 결국 리로더의 restart() 를 지난다.
+    #   거기서 /health 의 live_turns 가 빌 때까지 기다리고 관문을 세운 뒤 재기동한다 —
+    #   편집자마다 협조를 구하는 대신 그물을 한 자리에 친다. uvicorn.run 호출은 그대로다.
+    if not is_production:
+        from quiescent_reload import install as _install_quiescent_reload
+        _install_quiescent_reload(BASE_PATH)
+
     # reload_delay: 시스템 AI가 backend/*.py를 여러 번 빠르게 편집할 때 (예:
     # 패치 → 검증 → 추가 패치) 매 편집마다 reload되어 WebSocket이 끊기고 자기
     # 컨텍스트를 잃는 자해 패턴을 방지. 2초 디바운스로 일반적인 연쇄 편집은

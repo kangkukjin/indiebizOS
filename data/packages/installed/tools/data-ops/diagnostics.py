@@ -74,4 +74,10 @@ def _field_missing_error(verb, missing, rows):
         # 워드 연산자 합류(B19-1) 뒤엔 "필드 op 값" 문자열이 조건으로 읽히므로, 전-필드
         # 검색을 의도했던 문장이 여기로 온다 — 그 갈림길을 오류문이 직접 안내한다.
         hint += " (모든 필드에서 그냥 찾으려면 연산자 없는 문자열을 주세요: where: \"자이\")"
+        # ★F53-4 (53회차 상상훈련): `where: "url not_in ${본.items.*.url}"` — 열 벡터가 문자열
+        #   where 에 JSON 목록으로 박혀 "필드"가 통째로 여기 온다. 정답(구조형 where)을 오류문이
+        #   직접 가리켜야 자가교정이 된다(종전 처방 brief/each 는 이 경우의 답이 아니었다).
+        if any(tok in miss for tok in (" in [", " not_in [", " in {", " not_in {")):
+            hint += (" ★목록 값(배열·${x.items.*.f} 열 벡터)은 문자열 where 에 못 들어갑니다 — "
+                     "구조형으로 적으세요: where: {field: \"url\", op: \"not_in\", value: \"${본.items.*.url}\"}")
     return {"success": False, "error": f"{verb}: '{miss}' 필드가 어느 행에도 없습니다.{hint}"}

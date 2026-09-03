@@ -194,7 +194,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
         <div className="w-20" /> {/* 트래픽 라이트 공간 */}
         <div className="flex-1 flex items-center justify-center">
           <Monitor className="w-4 h-4 text-[#6B5B4F] mr-2" />
-          <span className="text-sm font-medium text-[#4A4A4A]">PC Manager</span>
+          <span className="text-sm font-medium text-[#4A4A4A]">시스템</span>
         </div>
         {/* 모드 전환 버튼 */}
         <div className="w-60 flex justify-end gap-1 no-drag">

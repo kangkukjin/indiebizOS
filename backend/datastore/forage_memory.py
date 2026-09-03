@@ -17,6 +17,7 @@ prior_class 게이팅 / surface 카운터패스 / provenance)를 스키마가 �
 from __future__ import annotations
 
 import os
+import re
 import json
 import sqlite3
 from datetime import datetime
@@ -401,6 +402,90 @@ def _match(text: str, terms: List[str]) -> bool:
     return any(term in t for term in terms)
 
 
+# ---------------------------------------------------------------------------
+# 위치 기반 회상 도우미 (2026-09-03, FOLDER_SURVEY_HANDOFF §3) — 낱말 일치 → 위치 위계
+# ---------------------------------------------------------------------------
+_HANGUL_CH = re.compile(r"[가-힣]")
+_CHILD_CAP = 6     # 초점 폴더의 자식 골격 한 줄 상한
+_FOCUS_CAP = 3     # 초점으로 삼는 상위 일치 위치 수
+
+
+def _spaceless(text: str) -> str:
+    return re.sub(r"[\s\W_]+", "", (text or "").lower())
+
+
+# 질의 기능어 — 내용이 아니라 문형(vj-ok: 코드 소유 어휘, 세계의 명사 아님). 단언에 흔히 섞여 잡음이 됐다(실측: "있어"·"어디").
+_QUERY_STOP = frozenset((
+    "있어", "있나", "있나요", "있는", "있을까", "있지", "없어", "없나", "어디", "어디에", "어디야", "뭐", "뭐가", "뭐야",
+    "뭔가", "무엇", "어떤", "어떻게", "어때", "해줘", "해봐", "줘", "좀", "중에", "중에서", "그거", "이거", "그것", "이것",
+    "볼까", "찾아", "찾아줘", "찾아봐", "알려줘", "보여줘", "골라줘", "추천", "관련", "대해", "대한", "그리고", "또는",
+    "the", "and", "for", "with", "what", "where", "which", "show", "find", "list",
+))
+
+
+def _query_terms(query: Optional[str]):
+    """(낱말 목록, 이어붙인 구절 집합).
+
+    구절 = 띄어 쓴 *짧은 한글 토막*(1~2글자) 2~3개를 붙인 것(3글자 이상) — '미 시청 작품'→'미시청작품'.
+    띄어쓰기만 다른 같은 낱말을 잇되, 임의 2-gram 겹침(실측 잡음: "이하·하드")은 세지 않는다.
+    기능어(_QUERY_STOP)는 낱말·구절 둘 다에서 뺀다."""
+    raw = [t for t in (query or "").split() if t]
+    kept = [t for t in raw if t.lower().rstrip("?!.,") not in _QUERY_STOP]
+    terms = [t.lower() for t in kept if len(t) >= 2]
+    short = [t if (len(t) <= 2 and all(_HANGUL_CH.match(c) for c in t)) else None for t in kept]
+    phrases = set()
+    for i in range(len(short)):
+        for w in (2, 3):
+            win = short[i:i + w]
+            if len(win) == w and all(win):
+                ph = "".join(win)
+                if len(ph) >= 3:
+                    phrases.add(ph)
+    return terms, phrases
+
+
+def _score(text: str, terms: List[str], grams) -> int:
+    """일치 점수: 낱말 통째 일치 3점씩(영문은 단어 경계) + 이어붙인 구절 일치 3점씩."""
+    if not terms and not grams:
+        return 0
+    t = (text or "").lower()
+    sc = 0
+    for term in terms:
+        if term.isascii():
+            # 영문·숫자 낱말은 단어 경계 — "sf" 가 "transform" 안에서 걸리던 잡음(실측)
+            if re.search(r"(?<![a-z0-9])" + re.escape(term) + r"(?![a-z0-9])", t):
+                sc += 3
+        elif term in t:
+            sc += 3
+    if grams:
+        st = _spaceless(text)
+        sc += 3 * sum(1 for ph in grams if ph in st)  # 구절은 낱말과 같은 무게
+    return sc
+
+
+def _norm_locus(locus: str) -> str:
+    loc = (locus or "").rstrip("/")
+    return loc[:-2] if loc.endswith("/*") else loc
+
+
+def _is_path(locus: str) -> bool:
+    return bool(locus) and (locus.startswith("/") or locus.startswith("~"))
+
+
+def _depth(locus: str) -> int:
+    return _norm_locus(locus).count("/") if _is_path(locus) else 0
+
+
+def _is_ancestor(a: str, b: str) -> bool:
+    """a 가 b 의 진(strict) 조상 경로인가."""
+    a, b = _norm_locus(a), _norm_locus(b)
+    return _is_path(a) and _is_path(b) and b.startswith(a + "/")
+
+
+def _is_child(parent: str, child: str) -> bool:
+    return _is_ancestor(parent, child) and _depth(child) == _depth(parent) + 1
+
+
 def _stale_of(locus: str, stored_mtime: float) -> str:
     """lazy 부패 판정 — 삭제하지 않고 노출만(판단은 AI). '' | 'stale' | 'missing'.
 
@@ -461,7 +546,13 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     상한을 둬 프롬프트가 무한정 늘지 않게 한다(상위 confidence 만 노출). 'dead' 는 장소 속성이
     아니라 (장소×의도) 관계이므로 영토 정체만 띄우고 배제는 AI 가 판단한다.
     """
-    terms = [t.lower() for t in (query or "").split() if len(t) >= 2]
+    terms, grams = _query_terms(query)
+
+    def _hit(r) -> int:
+        """행 일치 점수 — claim + locus *끝 이름*(전체 경로가 아니라: 루트 이름이 후손 전부를 잡지 않게)."""
+        base = os.path.basename(_norm_locus(r["locus"])) if _is_path(r["locus"]) else (r["locus"] or "")
+        return _score(r["claim"], terms, grams) + _score(base, terms, grams)
+
     conn = _connect()
     try:
         if body:
@@ -478,8 +569,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
 
     # 영토(상시-on, query 면제, 상한) — '내가 가진 것'의 거친 윤곽.
     # 단 질의가 그 영토를 *지명*하면 짧은 냄새 대신 아래 map 에서 상세로 보여준다.
-    terr_cands = [r for r in map_rows if r["territory"]
-                  and not (terms and (_match(r["claim"], terms) or _match(r["locus"], terms)))]
+    terr_cands = [r for r in map_rows if r["territory"] and not _hit(r)]
     if not body:
         terr_cands = _fair_by_body(terr_cands)  # 질의 지명 → territory 냄새 생략, map 상세로 넘김
     territory_items: List[Dict[str, Any]] = []
@@ -489,17 +579,12 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         d["short"] = _short(r["claim"])
         territory_items.append(d)
 
-    # map(상세, query 필터) — territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함)
+    # map(상세) — 위치 기반 조립(§3): 일치(match) → 초점 위치의 자기 단언(own) → 조상 상속(inherit)
+    # → 자식 골격(child, 한 줄). territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함).
     terr_ids = {t["id"] for t in territory_items}
-    map_cands = [r for r in map_rows if r["id"] not in terr_ids
-                 and not (terms and not (_match(r["claim"], terms) or _match(r["locus"], terms)))]
-    if not body:
-        map_cands = _fair_by_body(map_cands)
-    map_items: List[Dict[str, Any]] = []
-    for r in map_cands[:limit]:
-        d = dict(r)
-        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
-        map_items.append(d)
+    pool = [r for r in map_rows if r["id"] not in terr_ids]
+    map_items, surveys = _assemble_by_locus(pool, _hit, limit, fair=not body,
+                                            no_query=not (terms or grams))
     # owner — 냄새 모드(filter_owner=False)에서도 *결정화된 것만* 상시 노출.
     #   임시(scent=0, 1회 관측)는 map 처럼 query 가 지명할 때만 나온다 → 정보는 남고 상시 비용만 사라짐.
     owner_items: List[Dict[str, Any]] = []
@@ -523,9 +608,80 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         if len(owner_items) >= limit:
             break
     return {"success": True, "map": map_items, "owner": owner_items,
-            "territory": territory_items,
+            "territory": territory_items, "surveys": surveys,
             "map_count": len(map_items), "owner_count": len(owner_items),
             "territory_count": len(territory_items)}
+
+
+def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: bool):
+    """위치 기반 조립. 반환 (map_items, surveys).
+
+    - match: 질의에 맞는 행(점수 순, 같은 점수면 더 구체적 위치·높은 confidence 먼저) — 전문(全文).
+    - own: 상위 일치 위치(초점, 최대 _FOCUS_CAP)의 나머지 단언 — 그 폴더의 전체 프로필.
+    - inherit: 초점의 조상 중 generalizes=1 관습·기질 — 하위에 그대로 적용되는 것만(가림 규칙의 반대면).
+    - child: 초점의 직계 자식 폴더 한 줄씩(short) — 골격. 자세한 건 그 폴더를 지명해 회상.
+    - surveys: 초점을 덮는 조사 원장(가장 구체적 조사) — 아이템 목록 조회 통로.
+    무질의(no_query)는 옛 동작(전부, 몸별 공정 인터리브, limit).
+    """
+    if no_query:
+        rows = _fair_by_body(pool) if fair else pool
+        out = []
+        for r in rows[:limit]:
+            d = dict(r); d["via"] = "all"; d["freshness"] = _stale_of(r["locus"], r["locus_mtime"]); out.append(d)
+        return out, []
+    scored = [(hit(r), r) for r in pool]
+    matched = sorted([(sc, r) for sc, r in scored if sc > 0],
+                     key=lambda x: (-x[0], -_depth(x[1]["locus"]), -x[1]["confidence"]))
+    by_locus: Dict[str, List] = {}
+    for r in pool:
+        by_locus.setdefault(_norm_locus(r["locus"]), []).append(r)
+    included: Dict[int, Dict[str, Any]] = {}
+    order: List[Dict[str, Any]] = []
+
+    def add(r, via: str, score: int = 0, short: bool = False):
+        if r["id"] in included:
+            return
+        d = dict(r)
+        d["via"], d["score"] = via, score
+        d["freshness"] = _stale_of(r["locus"], r["locus_mtime"])
+        if short:
+            d["short"] = _short(r["claim"])
+        included[r["id"]] = d
+        order.append(d)
+
+    for sc, r in matched:
+        add(r, "match", sc)
+    focus: List[str] = []
+    for _sc, r in matched:
+        L = _norm_locus(r["locus"])
+        if _is_path(L) and L not in focus:
+            focus.append(L)
+        if len(focus) >= _FOCUS_CAP:
+            break
+    for L in focus:
+        for r in by_locus.get(L, []):
+            add(r, "own")
+        for P, rows in by_locus.items():
+            if _is_ancestor(P, L):
+                for r in rows:
+                    if r["generalizes"] or r["kind"] == "substrate":
+                        add(r, "inherit")
+        kids = [(C, rows) for C, rows in by_locus.items() if _is_child(L, C)]
+        kids.sort(key=lambda x: -max(r["confidence"] for r in x[1]))
+        for C, rows in kids[:_CHILD_CAP]:
+            r = next((x for x in rows if x["kind"] == "identity"), rows[0])
+            add(r, "child", short=True)
+    surveys: List[Dict[str, Any]] = []
+    seen_sv = set()
+    for L in focus:
+        try:
+            sv = survey_covering(L)
+        except Exception:
+            sv = None
+        if sv and sv["locus"] not in seen_sv:
+            seen_sv.add(sv["locus"])
+            surveys.append({k: sv.get(k) for k in ("locus", "body", "surveyed_at", "item_resolution", "freshness", "depth")})
+    return order[:limit], surveys
 
 
 def territory_loci(body: Optional[str] = None) -> List[str]:
@@ -569,7 +725,9 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
         note = ('과거 포식에서 누적한 냄새지도입니다. 참고용이며 폐기가능(defeasible) — '
                 'prune_reason과 지금 목표가 안 겹치면 그 가지를 재오픈하세요. prior_class=semantic은 '
                 'committal하게 prune하지 말 것. freshness=stale/missing이면 디스크가 변했으니 재탐침 판단. '
-                'surface=1은 이 라벨이 이질 내용으로 흔들린 표식입니다.')
+                'surface=1은 이 라벨이 이질 내용으로 흔들린 표식입니다. '
+                'via=match 질의 일치 · own 그 폴더의 나머지 단언 · inherit 상위 폴더에서 물려받은 관습·기질 · '
+                'child 하위 폴더 한 줄 골격(자세한 건 그 폴더를 지명해 recall).')
     else:
         note = ('주인(나)에 대해 과거 포식에서 배운 모델입니다. 이 주제로 *내 디스크/코드/웹에 자료가 '
                 '있을* 가능성을 떠올리는 단서 — 필요하면 포식(검색)을 시작하세요.')
@@ -596,9 +754,22 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
                 attrs += ' generalizes="1"'
             if m.get("surface_flag"):
                 attrs += ' surface="1"'
+            if m.get("via"):
+                attrs += f' via="{m["via"]}"'
             loc = m["locus"] if m["locus"] != "__substrate__" else "(기질)"
-            lines.append(f'    <locus path="{loc}" {attrs}>{m["claim"]}</locus>')
+            text = m.get("short") if m.get("via") == "child" else m["claim"]
+            lines.append(f'    <locus path="{loc}" {attrs}>{text}</locus>')
         lines.append('  </map>')
+    if res.get("surveys"):
+        snote = ('조사 원장 — 이 폴더는 조사됐다(FOLDER_SURVEY). items=1 이면 파일 단위 아이템 목록이 있어 '
+                 '[self:script]{op:"run", id:"폴더조사", args:{op:"items", path:"<폴더>", q:"<낱말>", '
+                 'where:{<필드>:<값>}}} 로 디스크 미장착에도 조회된다. freshness=stale 이면 재조사 권고.')
+        lines.append(f'  <surveys note="{snote}">')
+        for sv in res["surveys"]:
+            fr = f' freshness="{sv["freshness"]}"' if sv.get("freshness") else ''
+            lines.append(f'    <survey path="{sv["locus"]}" items="{1 if sv.get("item_resolution") else 0}" '
+                         f'depth="{sv.get("depth")}" at="{sv.get("surveyed_at")}"{fr}/>')
+        lines.append('  </surveys>')
     if res["owner"]:
         onote = ('provisional="1" 은 *단 한 번의 포식*에서 추론된 미확인 항목입니다 — 참고만 하고 '
                  '주인에 관한 사실로 단정하지 마세요(다른 포식에서 재확인되면 결정화됩니다).')

@@ -62,12 +62,13 @@ async def master(request: Request, path: str = Query(...), r: str = Query(defaul
 
     if not r:
         rungs = await run_in_threadpool(hls_ladder.available_rungs, orig_cache)
-        hls_ladder.ensure_ladder(str(src), orig_cache,
-                                 prune_root=str(_CACHE_DIR), prune_cap=_CACHE_CAP)
+        await run_in_threadpool(hls_ladder.ensure_ladder, str(src), orig_cache,
+                                prune_root=str(_CACHE_DIR), prune_cap=_CACHE_CAP)
         if not rungs:
             raise HTTPException(status_code=404, detail="사다리 준비 전 — 프로그레시브로 폴백")
         # 상대 URI — 마스터가 /nas/hls/master.m3u8 에 있으니 그대로 형제 해석
-        body = hls_ladder.master_m3u8(rungs, lambda rung: f"master.m3u8?{qs}&r={rung}")
+        body = await run_in_threadpool(   # rung_meta 의 ffprobe(첫 회) — 루프 밖에서
+            hls_ladder.master_m3u8, rungs, lambda rung: f"master.m3u8?{qs}&r={rung}")
     else:
         if r not in hls_ladder.RUNG_ORDER:
             raise HTTPException(status_code=404, detail="없는 렁")

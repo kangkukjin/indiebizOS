@@ -699,7 +699,7 @@ def open_hosts() -> list:
 
 
 @router.get("/config")
-async def get_tunnel_config():
+def get_tunnel_config():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """터널 설정 조회"""
     config = load_config()
 
@@ -796,7 +796,7 @@ def api_stop_tunnel():
 
 
 @router.get("/status")
-async def get_tunnel_status():
+def get_tunnel_status():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """터널 상태 조회 — provider 분기"""
     config = load_config()
     provider = config.get("provider", "cloudflare")

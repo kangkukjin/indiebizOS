@@ -752,7 +752,7 @@ async def encode_package_get(package_id: str):
 
 
 @router.post("/packages/decode")
-async def decode_package_api(request: DecodePackageRequest):
+def decode_package_api(request: DecodePackageRequest):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """
     인코딩된 텍스트를 패키지 폴더로 디코딩
 
@@ -779,7 +779,7 @@ async def decode_package_api(request: DecodePackageRequest):
 
 
 @router.post("/packages/install-from-text")
-async def install_from_text_api(request: DecodePackageRequest):
+def install_from_text_api(request: DecodePackageRequest):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """
     인코딩된 텍스트에서 패키지 디코딩 + 검증
 

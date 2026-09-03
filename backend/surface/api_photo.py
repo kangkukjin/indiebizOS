@@ -299,7 +299,7 @@ async def get_video(path: str = Query(...), request: Request = None):
 
 
 @router.get("/video-thumbnail")
-async def get_video_thumbnail(path: str = Query(...), size: int = Query(200)):
+def get_video_thumbnail(path: str = Query(...), size: int = Query(200)):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """동영상 썸네일 생성/반환 (ffmpeg 사용)"""
     import subprocess
 
@@ -456,8 +456,9 @@ async def get_usb_thumbnail(path: str = Query(...), size: int = Query(200)):
     from starlette.concurrency import run_in_threadpool
 
     # 원본 캐시와 같은 이유로 기기 시리얼을 키에 섞는다(폰 교체 시 옛 썸네일 오표시 방지).
+    dev_id = await run_in_threadpool(file_index.usb_device_id)   # adb 호출 — 루프 밖에서
     path_hash = hashlib.md5(
-        f"usb:{file_index.usb_device_id()}:{path}:{size}".encode()).hexdigest()
+        f"usb:{dev_id}:{path}:{size}".encode()).hexdigest()
     os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
     cache_path = os.path.join(THUMBNAIL_CACHE_DIR, f"{path_hash}.jpg")
     if os.path.exists(cache_path) and os.path.getsize(cache_path) > 0:

@@ -823,7 +823,7 @@ async def upload_material(lecture_id: str, file: UploadFile = File(...)):
                     dest = cand
                     break
                 n += 1
-        shutil.copy2(tmp_path, dest)
+        await run_in_threadpool(shutil.copy2, tmp_path, dest)
 
         deck = ls.read_deck(lecture_id)
         rel = f"materials/{dest.name}"

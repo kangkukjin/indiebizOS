@@ -149,7 +149,7 @@ def _apply(level_dir: Path, want: dict) -> None:
                                      encoding="utf-8")
                 else:  # copy — 크기 비교로 재복사 판단(이미지는 내용 불변 파일)
                     if not p.exists() or p.stat().st_size != payload.stat().st_size:
-                        shutil.copy2(str(payload), str(p))
+                        shutil.copy2(str(payload), str(p))  # eventloop-ok: 시딩 수렴 1회(크기 같으면 건너뜀) — 소형 이미지
             except Exception:
                 continue
         new_side[folder] = sorted(files.keys())

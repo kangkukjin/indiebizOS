@@ -263,7 +263,7 @@ async def recover_ibl_result(req: RecoverRequest):
     import asyncio
     from common.spill import ticket_recover, ticket_wait
     if not req.wait:
-        return ticket_recover(req.ticket)
+        return await asyncio.to_thread(ticket_recover, req.ticket)
     return await asyncio.to_thread(ticket_wait, req.ticket, req.wait)
 
 

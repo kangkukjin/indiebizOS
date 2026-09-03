@@ -416,6 +416,7 @@ def _hevc_encoder() -> str:
     if _HEVC_ENC is None:
         found = ""
         try:
+            # eventloop-ok: 프로세스당 1회 감지 후 캐시(_HEVC_ENC) — 요청마다 도는 자리가 아니다
             r = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"],
                                capture_output=True, timeout=20)
             out = r.stdout.decode("utf-8", "ignore")

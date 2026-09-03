@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 @router.get("/phone/notifications")
-async def get_phone_notifications(limit: int = 30, pkg: Optional[str] = None):
+def get_phone_notifications(limit: int = 30, pkg: Optional[str] = None):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """최근 폰 알림 목록 (시간 내림차순). pkg 로 앱 필터."""
     items = phone_notifications.recent(limit=limit, pkg=pkg)
     return {"notifications": items, "count": len(items)}

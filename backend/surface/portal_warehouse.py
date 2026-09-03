@@ -14,6 +14,7 @@ api_portal.py 1903줄 분할(2026-08-05 감사 부채 ⑨)에서 갈라져 나�
 import os
 import json
 import time
+import asyncio
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -319,7 +320,7 @@ def _fmt_bytes(n: float) -> str:
 
 
 @router.get("/home")
-async def node_home(request: Request, x_showcase_secret: str = Header(default="")):
+def node_home(request: Request, x_showcase_secret: str = Header(default="")):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """창고 홈(사람용 HTML) — 내 레벨 이하 창고의 파일들 + 로그인. 루트(/)에서 서빙."""
     import html as _h
     _check_secret(x_showcase_secret)
@@ -538,7 +539,7 @@ return false}}
 
 
 @router.get("/manifest")
-async def node_manifest(request: Request, x_showcase_secret: str = Header(default="")):
+def node_manifest(request: Request, x_showcase_secret: str = Header(default="")):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """노드의 공개 얼굴 — 슬러그 없는 canonical 창고 목록. 익명=레벨0, 쿠키(pk)=회원 레벨."""
     _check_secret(x_showcase_secret)
     core = _core()
@@ -642,7 +643,7 @@ def _serve_warehouse_file(abspath: Path, strip_exif: bool, download: bool = Fals
 
 
 @router.get("/file")
-async def node_file(request: Request, path: str = "", download: int = 0,
+def node_file(request: Request, path: str = "", download: int = 0,  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
                     x_showcase_secret: str = Header(default="")):
     """공개 파일 서빙. `download=1` 이면 저장(내려받기) — 방문자·외부 AI 가 바이트를 가져간다."""
     _check_secret(x_showcase_secret)
@@ -747,7 +748,7 @@ def _gb_for_level(level: int) -> list:
 
 
 @router.get("/gb")
-async def gb_list(request: Request, about: str = "", x_showcase_secret: str = Header(default="")):
+def gb_list(request: Request, about: str = "", x_showcase_secret: str = Header(default="")):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """방명록 목록(내 레벨 절단). about= 주면 그 파일에 달린 글만 = '파일별 댓글' 조회."""
     _check_secret(x_showcase_secret)
     core = _core()
@@ -787,7 +788,8 @@ async def gb_post(request: Request, x_showcase_secret: str = Header(default=""),
     about = str(body.get("about", "")).strip()[:400]
     about_mtime = ""
     if about:
-        mine = {f["name"]: f.get("mtime", "") for f in _accessible_files(level)}
+        mine = {f["name"]: f.get("mtime", "")
+                for f in await asyncio.to_thread(_accessible_files, level)}   # 창고 rglob — 루프 밖에서
         if about not in mine:
             raise HTTPException(status_code=404, detail="no such file")
         about_mtime = mine[about]

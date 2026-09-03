@@ -12,6 +12,7 @@ api_portal.py 분할(2026-08-05 감사 부채 ⑨).
 import os
 import json
 import time
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
@@ -46,7 +47,7 @@ def _admin_level(level) -> int:
 
 
 @router.get("/warehouse-admin/list")
-async def warehouse_admin_list(level: int = 0):
+def warehouse_admin_list(level: int = 0):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     lv = _admin_level(level)
     _ensure_warehouses()
     counts = {}
@@ -132,6 +133,12 @@ async def warehouse_admin_add(request: Request):
         body = json.loads((await request.body()).decode("utf-8"))
     except Exception:
         raise HTTPException(status_code=400, detail="bad json")
+    # 폴더 rglob·copytree·copy2 는 워커 스레드로 — 이벤트 루프 위에서 폴더를 통째로 복사하면
+    # 서버 전체가 선다(2026-09-03 사진 스캔 사고와 같은 부류).
+    return await asyncio.to_thread(_warehouse_admin_add_sync, body)
+
+
+def _warehouse_admin_add_sync(body: dict) -> dict:
     lv = _admin_level(body.get("level", 0))
     paths = body.get("paths") or []
     if not isinstance(paths, list) or not paths:
@@ -278,7 +285,7 @@ async def warehouse_admin_mkdir(request: Request):
 
 
 @router.get("/warehouse-admin/trash")
-async def warehouse_admin_trash():
+def warehouse_admin_trash():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """휴지통 내용 — 뺀 단위(파일·폴더) 그대로, 전 레벨 합쳐서. 복구 목적지를 알아야
     하니 각 항목에 원래 레벨이 실린다(휴지통/<level>/ 구조가 그 기억)."""
     items = []
@@ -339,6 +346,10 @@ async def warehouse_admin_trash_delete(request: Request):
         body = json.loads((await request.body()).decode("utf-8"))
     except Exception:
         raise HTTPException(status_code=400, detail="bad json")
+    return await asyncio.to_thread(_warehouse_admin_trash_delete_sync, body)   # rmtree — 루프 밖에서
+
+
+def _warehouse_admin_trash_delete_sync(body: dict) -> dict:
     import shutil
     trash_root = _WAREHOUSE_ROOT / "휴지통"
     if body.get("all"):
@@ -366,7 +377,7 @@ async def warehouse_admin_trash_delete(request: Request):
 
 
 @router.get("/warehouse-admin/file")
-async def warehouse_admin_file(level: int = 0, name: str = "", download: int = 0):
+def warehouse_admin_file(level: int = 0, name: str = "", download: int = 0):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """소유자 열람·내려받기 — 런처 창고 표면(데스크탑·원격)에서 파일을 연다/받는다.
 
     공개면과 달리 EXIF 를 벗기지 않는다(내 파일의 원본을 본다). 동영상 변환은 열람에만 —

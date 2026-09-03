@@ -478,7 +478,7 @@ def start_ollama():
 
 
 @router.post("/ollama/stop")
-async def stop_ollama():
+def stop_ollama():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """Ollama 서버 중지"""
     import subprocess
     global ollama_process, ollama_running
@@ -714,7 +714,7 @@ from fastapi.responses import StreamingResponse
 
 
 @router.post("/config/export")
-async def export_config():
+def export_config():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """
     설정 및 프로젝트를 ZIP 파일로 내보내기
 
@@ -867,7 +867,7 @@ def _copy_agents_yaml_without_secrets(src: Path, dst: Path):
 
 
 @router.post("/config/import")
-async def import_config(file: UploadFile = File(...)):
+def import_config(file: UploadFile = File(...)):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """
     ZIP 파일에서 설정 및 프로젝트 가져오기
 
@@ -882,7 +882,7 @@ async def import_config(file: UploadFile = File(...)):
 
         # 업로드된 파일을 임시 저장
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp:
-            upload_content = await file.read()
+            upload_content = file.file.read()
             tmp.write(upload_content)
             tmp_path = tmp.name
 

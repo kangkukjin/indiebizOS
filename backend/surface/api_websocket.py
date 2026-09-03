@@ -311,7 +311,7 @@ async def handle_chat_message(client_id: str, data: dict):
     project_id = data.get("project_id", "")
     images = data.get("images", [])
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
-    message = _process_documents(data.get("documents", []), message)
+    message = await asyncio.to_thread(_process_documents, data.get("documents", []), message)  # 문서 변환(textutil 등)은 스레드로
 
     try:
         # 시작 알림
@@ -490,7 +490,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     project_id = data.get("project_id", "")
     images = data.get("images", [])
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
-    message = _process_documents(data.get("documents", []), message)
+    message = await asyncio.to_thread(_process_documents, data.get("documents", []), message)  # 문서 변환(textutil 등)은 스레드로
 
     # 에피소드 로그 시작 (project_id 전달 — 종료 시 조종실 액티브 유령 청소용)
     try:
@@ -915,7 +915,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     message = data.get("message", "")
     images = data.get("images", [])
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
-    message = _process_documents(data.get("documents", []), message)
+    message = await asyncio.to_thread(_process_documents, data.get("documents", []), message)  # 문서 변환(textutil 등)은 스레드로
 
     # 앱메이커 표면 — 시스템 AI에 앱메이커 role(extra_role)을 씌우고 대화를 분리(source='appmaker').
     # forage_role 선례와 같은 방식. 전체 파이프라인 유지(force_role 없음 = 의식 프레이밍 1회 활용).

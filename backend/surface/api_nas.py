@@ -823,7 +823,7 @@ async def get_subtitle_file(
 # ============ 트랜스코딩 API ============
 
 @router.get("/probe")
-async def probe_file(
+def probe_file(  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     request: Request,
     path: str = Query(..., description="동영상 파일 경로"),
 ):
@@ -848,7 +848,7 @@ async def probe_file(
 
 
 @router.get("/transcode")
-async def transcode_video(
+def transcode_video(  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     request: Request,
     path: str = Query(..., description="동영상 파일 경로"),
     start: float = Query(default=0, description="시작 시간 (초)"),

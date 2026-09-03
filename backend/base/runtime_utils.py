@@ -500,6 +500,7 @@ def _sysctl(key: str) -> str:
     """macOS sysctl 단일 키 조회 (실패 시 빈 문자열)."""
     try:
         import subprocess
+        # eventloop-ok: sysctl 은 수 ms · 호출자 detect_body 가 프로세스당 1회 캐시(_BODY_CACHE)
         out = subprocess.run(
             ["sysctl", "-n", key], capture_output=True, text=True, timeout=3
         )

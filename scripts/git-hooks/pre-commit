@@ -224,9 +224,16 @@ fi
 # 세우고, 이 서버는 자기 자신을 부르는 경로가 많아 자기교착까지 간다(같은 부류 3회
 # 재발: 창고 폴러 · public_face 인프로세스 프록시 · /ibl/execute). 이식성 검사와 같은
 # AST 기법·같은 대상이라 비용도 같은 수준.
-if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_event_loop\.py)$'; then
+if echo "$staged" | grep -qE '^(backend/.*\.py|data/packages/installed/.*\.py|scripts/check_event_loop.*\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 이벤트 루프 규율 검사 실행..."
+  # 가드 자체의 정확도 회귀(오탐/미탐 픽스처, 간접 추적) — CI(seam-guards.yml)와 같은 쌍.
+  # 가드 스크립트가 바뀌었는데 픽스처가 안 돌면 "오탐 한 번이면 꺼지는" 가드가 조용히 퇴화한다.
+  if ! python3 "$repo_root/scripts/check_event_loop_fixtures.py"; then
+    echo "" >&2
+    echo "[pre-commit] 이벤트 루프 가드 정확도 회귀 — 커밋 차단 (scripts/check_event_loop_fixtures.py)." >&2
+    exit 1
+  fi
   if ! python3 "$repo_root/scripts/check_event_loop.py"; then
     echo "" >&2
     echo "[pre-commit] 이벤트 루프 블로킹 — 커밋 차단." >&2

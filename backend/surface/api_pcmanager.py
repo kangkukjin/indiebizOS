@@ -247,7 +247,7 @@ async def list_scanned_volumes_compat():
 
 
 @router.post("/analyze/scan")
-async def scan_path_for_analysis(path: str = Query(...)):
+def scan_path_for_analysis(path: str = Query(...)):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """경로 스캔하여 분석 데이터 생성"""
     storage_db = _get_storage_db()
     result = storage_db.scan_directory(path)

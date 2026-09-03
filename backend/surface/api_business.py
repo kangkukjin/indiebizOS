@@ -465,7 +465,7 @@ async def create_business(data: BusinessCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/items/copy-images")
-async def copy_images_for_item(data: ImageCopyRequest):
+def copy_images_for_item(data: ImageCopyRequest):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """이미지 파일들을 business_images 디렉토리로 복사"""
     try:
         images_dir = get_data_path() / "business_images"

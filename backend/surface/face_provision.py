@@ -244,7 +244,7 @@ def _effective_public_base(face: dict) -> str:
 
 
 @router.get("/status")
-async def provision_status():
+def provision_status():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """양 갈래 준비 상태 + 현재 창고 신원(public_base). 설정 UI 의 첫 화면."""
     face = face_config.load_config()
     tcfg = api_tunnel.load_config()
@@ -291,7 +291,7 @@ async def provision_status():
 
 
 @router.get("/zones")
-async def provision_zones():
+def provision_zones():  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
     """CF 계정의 도메인(zone) 목록 — 발급 UI 의 도메인 셀렉터용."""
     creds = _cf_creds()
     if not creds["token"]:

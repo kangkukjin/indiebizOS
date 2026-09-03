@@ -425,11 +425,12 @@ async def hls_playlist(slug: str, fid: str, rel: str = Query(...), r: str = Quer
     if not r:
         rungs = await run_in_threadpool(hls_ladder.available_rungs, orig_cache)
         # 결핍 렁 빌드 enqueue(중복 dedupe·전역 단일 워커) + 10분 주기 LRU 정리
-        hls_ladder.ensure_ladder(abspath, orig_cache,
-                                 prune_root=str(_WEB_MEDIA), prune_cap=_WEB_MEDIA_CAP)
+        await run_in_threadpool(hls_ladder.ensure_ladder, abspath, orig_cache,
+                                prune_root=str(_WEB_MEDIA), prune_cap=_WEB_MEDIA_CAP)
         if not rungs:
             raise HTTPException(status_code=404, detail="사다리 준비 전 — 프로그레시브로 폴백")
-        body = hls_ladder.master_m3u8(
+        body = await run_in_threadpool(   # rung_meta 의 ffprobe(첫 회) — 루프 밖에서
+            hls_ladder.master_m3u8,
             rungs, lambda rung: f"{base}/hls/{quote(fid, safe='')}?{qs}&r={rung}")
     else:
         if r not in hls_ladder.RUNG_ORDER:

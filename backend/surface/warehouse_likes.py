@@ -17,6 +17,7 @@ api_portal 과의 관계: 이 모듈이 라우터(/portal/like)를 갖고, api_p
 """
 
 import json
+import asyncio
 import threading
 import time
 from pathlib import Path
@@ -111,7 +112,7 @@ async def like(request: Request, x_showcase_secret: str = Header(default=""),
     _LAST_BY_IP[ip] = now
 
     portal_warehouse._ensure_warehouses()
-    mine = {f["name"] for f in portal_warehouse._accessible_files(level)}
+    mine = {f["name"] for f in await asyncio.to_thread(portal_warehouse._accessible_files, level)}   # 창고 rglob — 루프 밖에서
     if path not in mine:
         raise HTTPException(status_code=404, detail="no such file")
 

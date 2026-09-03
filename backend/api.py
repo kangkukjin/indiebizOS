@@ -165,7 +165,7 @@ async def lifespan(app: FastAPI):
     # 몸 종속만 각 진입점이 profile 게이트로 명시 분기). 폰은 phone_api.serve() 가 같이 호출.
     try:
         from boot_common import wire_local_subsystems
-        wire_local_subsystems(profile="mac")
+        wire_local_subsystems(profile="mac")  # eventloop-ok: 부팅 1회(서비스 시작 전), 요청 경로 아님
         boot_status.record("boot", True)
     except Exception as e:
         print(f"[boot] 부팅 배선 실패 (무시): {e}")
@@ -179,7 +179,7 @@ async def lifespan(app: FastAPI):
     # 폰들이 부팅 시 /nodes/register 로 합류 → "지금 연결된 노드"를 연결로 확인(폰 수 무고정).
     try:
         import device_registry as _dr
-        _self = _dr.ensure_self(auth="launcher_session", primary=True)
+        _self = _dr.ensure_self(auth="launcher_session", primary=True)  # eventloop-ok: 부팅 1회, 요청 경로 아님
         print(f"[device_registry] 자기등록: {_self.get('alias')} ({_self.get('device_id')}) "
               f"caps={_self.get('capabilities')}")
         boot_status.record("device_registry", True)
@@ -363,7 +363,7 @@ async def lifespan(app: FastAPI):
     # 아무도 다시 안 띄우는 상태로 남는다(api_tunnel.stop_tunnel 주석의 실측 참조).
     try:
         from api_tunnel import stop_tunnel
-        result = stop_tunnel(own_only=True)
+        result = stop_tunnel(own_only=True)  # eventloop-ok: 종료 1회(서비스 끝난 뒤), 요청 경로 아님
         if result.get("success"):
             print(f"[Tunnel] {result.get('message', '터널 종료됨')}")
     except Exception as e:

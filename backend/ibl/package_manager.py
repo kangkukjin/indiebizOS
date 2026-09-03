@@ -21,6 +21,7 @@ available = not_installed + installed (논리적 합집합)
 
 import json
 import shutil
+import asyncio
 import inspect
 import importlib.util
 from pathlib import Path
@@ -566,7 +567,7 @@ class PackageManager:
             raise ValueError(f"AI 분석 실패: {str(e)}")
 
         # 3. 파일 복사
-        shutil.copytree(src_path, dst_path)
+        await asyncio.to_thread(shutil.copytree, src_path, dst_path)  # 패키지 복사 — 루프 밖에서
 
         installation_log = []
 
@@ -610,7 +611,7 @@ class PackageManager:
         validation = validate_tool_package(dst_path)
         if not validation["valid"]:
             # 검증 실패 시 설치 롤백
-            shutil.rmtree(dst_path)
+            await asyncio.to_thread(shutil.rmtree, dst_path)
             raise ValueError(f"패키지 검증 실패 (롤백됨): {'; '.join(validation['errors'])}")
 
         if validation.get("warnings"):

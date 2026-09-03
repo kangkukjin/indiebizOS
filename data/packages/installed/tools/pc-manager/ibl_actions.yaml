@@ -349,6 +349,9 @@ tool_json:
         surface_flag:
           type: boolean
           description: '[note map] 라벨 의심 표식 — 폴더 이름과 이질적인 내용을 발견했을 때 true'
+        territory:
+          type: boolean
+          description: '[note map] 거친 영토 앵커로 표식 — 폴더 조사의 루트 등 상시-on 냄새지도에 올릴 최상위 가지(기본 false)'
         id:
           type: integer
           description: '[forget] 항목 id'

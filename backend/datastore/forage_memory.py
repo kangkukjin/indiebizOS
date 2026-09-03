@@ -63,6 +63,22 @@ CREATE TABLE IF NOT EXISTS forage_meta (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+-- 조사 원장(2026-09-03, FOLDER_SURVEY_HANDOFF §2): "어디에 예산을 얼마나 썼나" = 해상도 지도.
+-- 단언(forage_map)은 판단, 이 표는 그 판단이 어느 축척의 관측 위에 섰는지의 기록.
+CREATE TABLE IF NOT EXISTS survey (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    body            TEXT NOT NULL,
+    locus           TEXT NOT NULL,             -- 조사한 폴더 절대경로
+    surveyed_at     TEXT NOT NULL,
+    depth           INTEGER NOT NULL DEFAULT 2, -- 골격 보고 깊이
+    budget          TEXT,                      -- JSON 요청 예산
+    spent           TEXT,                      -- JSON 실사용 {dirs, files, items, seconds}
+    dir_mtime       REAL NOT NULL DEFAULT 0,   -- 조사 시점 locus mtime (축척별 신선도)
+    item_resolution INTEGER NOT NULL DEFAULT 0,-- 1 = 아이템 목록까지 내려감
+    artifact_dir    TEXT,                      -- skeleton.json / items.json / report.md 자리
+    truncated       INTEGER NOT NULL DEFAULT 0,-- 예산 초과로 잘렸나
+    UNIQUE(body, locus)
+);
 """
 
 _MAP_KINDS = ("identity", "convention", "dead_branch", "substrate")
@@ -319,6 +335,65 @@ def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
 # ---------------------------------------------------------------------------
 # recall — 포식 시작 시 회상 (lazy 부패 체크 동반)
 # ---------------------------------------------------------------------------
+def record_survey(*, body: str, locus: str, depth: int, budget: Dict[str, Any],
+                  spent: Dict[str, Any], item_resolution: bool, artifact_dir: str,
+                  truncated: bool = False) -> Dict[str, Any]:
+    """조사 원장 upsert (키=body+locus). 재조사는 덮어쓴다 — 원장은 '현재 해상도'다."""
+    locus = os.path.abspath(os.path.expanduser(locus))
+    conn = _connect()
+    try:
+        conn.execute(
+            "INSERT INTO survey(body, locus, surveyed_at, depth, budget, spent, dir_mtime, "
+            "item_resolution, artifact_dir, truncated) VALUES (?,?,?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(body, locus) DO UPDATE SET surveyed_at=excluded.surveyed_at, "
+            "depth=excluded.depth, budget=excluded.budget, spent=excluded.spent, "
+            "dir_mtime=excluded.dir_mtime, item_resolution=excluded.item_resolution, "
+            "artifact_dir=excluded.artifact_dir, truncated=excluded.truncated",
+            (body, locus, _now(), int(depth), json.dumps(budget, ensure_ascii=False),
+             json.dumps(spent, ensure_ascii=False), _locus_mtime(locus),
+             1 if item_resolution else 0, artifact_dir, 1 if truncated else 0))
+        conn.commit()
+        row = conn.execute("SELECT id FROM survey WHERE body=? AND locus=?", (body, locus)).fetchone()
+        return {"success": True, "id": int(row["id"]), "locus": locus}
+    finally:
+        conn.close()
+
+
+def list_surveys(*, body: Optional[str] = None) -> List[Dict[str, Any]]:
+    """조사 원장 목록 + 축척별 신선도(자기 locus mtime 만 본다 — 하위 변화는 상위를 안 낡힌다)."""
+    conn = _connect()
+    try:
+        if body:
+            rows = conn.execute("SELECT * FROM survey WHERE body=? ORDER BY locus", (body,)).fetchall()
+        else:
+            rows = conn.execute("SELECT * FROM survey ORDER BY body, locus").fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["freshness"] = _stale_of(r["locus"], r["dir_mtime"])
+        for k in ("budget", "spent"):
+            try:
+                d[k] = json.loads(d[k]) if d[k] else {}
+            except Exception:
+                pass
+        out.append(d)
+    return out
+
+
+def survey_covering(path: str, *, body: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """path 를 덮는 가장 가까운(가장 구체적인) 조사 — 겹침 규칙 '가림'의 조회 축(§3)."""
+    path = os.path.abspath(os.path.expanduser(path))
+    best = None
+    for s in list_surveys(body=body):
+        loc = s["locus"].rstrip(os.sep)
+        if path == loc or path.startswith(loc + os.sep):
+            if best is None or len(loc) > len(best["locus"].rstrip(os.sep)):
+                best = s
+    return best
+
+
 def _match(text: str, terms: List[str]) -> bool:
     if not terms:
         return True

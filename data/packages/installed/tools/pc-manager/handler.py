@@ -230,7 +230,8 @@ def _forage_note(tool_input: dict) -> str:
                     provenance=prov,
                     prune_reason=tool_input.get("prune_reason"),
                     generalizes=bool(tool_input.get("generalizes")),
-                    surface_flag=bool(tool_input.get("surface_flag")))
+                    surface_flag=bool(tool_input.get("surface_flag")),
+                    territory=bool(tool_input.get("territory")))  # 조사 루트 앵커(2026-09-03)
     return json.dumps(r, ensure_ascii=False)
 
 

@@ -74,3 +74,12 @@ json원장:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
+폴더조사:
+  description: '폴더 조사(FOLDER_SURVEY_HANDOFF) — 지명 폴더를 예산 안에서 관측: 골격(자식 폴더마다 한 줄)·아이템
+    목록(파일명 파싱: 제목·연도·자막·부속)·조사 원장. args: op(survey|items|status), survey: path·depth(기본2)·items(auto|true|false)·parse(auto|media|plain)·budget{dirs,files,items,sample};
+    items: path·q·where{필드:값}·limit; status: body. 판단(축·예외·죽은 가지)은 AI 가 report 를 읽고
+    [self:forage]{op:note} 로 적는다'
+  file: 폴더조사.py
+  interpreter: python
+  registered_at: '2026-09-03T03:20:00'
+  timeout: 600

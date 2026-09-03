@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import forage_memory as FM
@@ -103,7 +104,7 @@ def _scan_docs() -> List[Tuple[str, str, str]]:
     if not os.path.isdir(DOC_DIR):
         return out
     for cur, dirs, files in os.walk(DOC_DIR):
-        dirs.sort()
+        dirs[:] = sorted(d for d in dirs if d != GONE_DIR)
         if DOC_NAME in files:
             p = os.path.join(cur, DOC_NAME)
             mk = _read_marker(p)
@@ -136,7 +137,7 @@ def docs_below(body: str, root: str) -> List[str]:
     if not os.path.isdir(base):
         return out
     for cur, dirs, files in os.walk(base):
-        dirs.sort()
+        dirs[:] = sorted(d for d in dirs if d != GONE_DIR)
         if cur != base and DOC_NAME in files:
             out.append(os.path.join(cur, DOC_NAME))
     return out
@@ -506,3 +507,216 @@ def migrate_all() -> Dict[str, Any]:
             written.append({"doc": os.path.basename(p), "body": body, "root": root, "rows": n})
     refresh_all_docs()
     return {"success": True, "docs": len(written), "written": written}
+
+
+# ----------------------------------------------------------------- 대조(reconcile) — 실제 트리 ↔ 기억 트리
+# 2026-09-03 사용자 판정: "기억 문서의 폴더 구조와 지금의 폴더 구조가 바뀌면 자동 갱신 — 옮겨진 건지 삭제된 건지에 따라".
+# 관측은 기계(존재·이름·자식 겹침), 애매한 판단만 AI·사람에게 남긴다.
+GONE_DIR = "_gone"
+_MOVE_STRONG = 0.5          # 기억이 아는 자식 이름의 절반 이상이 후보에 있으면 이사로 본다
+_RECONCILE_MIN_INTERVAL = 3600
+
+
+def _mounted(path: str) -> bool:
+    """볼륨이 안 꽂힌 것은 '사라짐'이 아니다."""
+    m = re.match(r"^(/Volumes/[^/]+)", path)
+    return os.path.isdir(m.group(1)) if m else True
+
+
+def _search_dirs_by_name(name: str) -> List[str]:
+    """이름이 같은 폴더 후보 — OS 색인 이음매(file_index.find_folders_named)를 빌린다. 다른 OS 는 빈 목록. 시험은 이 함수를 바꿔 끼운다."""
+    try:
+        import file_index
+        return file_index.find_folders_named(name)
+    except Exception:
+        return []
+
+
+def known_children(body: str, root: str) -> List[str]:
+    """기억이 아는 직계 자식 이름 — 하위 문서와 단언 locus 에서."""
+    r = _norm(root)
+    names = set()
+    for p in docs_below(body, r):
+        rel = _norm(root_of_doc(p))[len(r) + 1:]
+        if rel:
+            names.add(rel.split("/")[0])
+    for x in rows_for_doc(body, r) + [dict(y) for y in _rows_under(body, r)]:
+        loc = _norm(os.path.expanduser(x["locus"]))
+        if loc.startswith(r + "/"):
+            names.add(loc[len(r) + 1:].split("/")[0])
+    return sorted(n for n in names if n and not n.startswith("*"))
+
+
+def _rows_under(body: str, root: str):
+    conn = FM._connect()
+    try:
+        return conn.execute("SELECT * FROM forage_map WHERE body=? AND (locus=? OR locus LIKE ?)",
+                            (body, root, root + "/%")).fetchall()
+    finally:
+        conn.close()
+
+
+def find_move_candidates(body: str, root: str) -> List[Dict[str, Any]]:
+    """사라진 폴더의 이사 후보 — 같은 이름 폴더들을 찾아 기억이 아는 자식 이름과의 겹침으로 점수."""
+    r = _norm(root)
+    name = os.path.basename(r)
+    if not name:
+        return []
+    known = set(known_children(body, r))
+    out = []
+    for cand in _search_dirs_by_name(name):
+        c = _norm(cand)
+        if c == r or c.startswith(DOC_DIR) or not os.path.isdir(c):
+            continue
+        try:
+            actual = set(os.listdir(c))
+        except OSError:
+            continue
+        score = (len(known & actual) / len(known)) if known else None
+        out.append({"path": c, "score": score, "overlap": sorted(known & actual)[:8]})
+    out.sort(key=lambda x: -(x["score"] if x["score"] is not None else -1))
+    return out
+
+
+def _append_record(doc_path: str, line: str) -> None:
+    """문서 `## 갱신 기록` 에 한 줄(없으면 절을 만든다)."""
+    if not os.path.exists(doc_path):
+        return
+    text = open(doc_path, encoding="utf-8").read()
+    if "## 갱신 기록" not in text:
+        text = text.rstrip() + "\n\n## 갱신 기록\n"
+    text = text.rstrip("\n") + "\n" + line + "\n"
+    open(doc_path, "w", encoding="utf-8").write(text)
+    _stamp(doc_path)
+
+
+def _parent_doc(body: str, root: str) -> Optional[str]:
+    r = _norm(root)
+    parent = os.path.dirname(r)
+    return (_ancestor_chain(body, parent) or [None])[0] if parent and parent != r else None
+
+
+def move_node(body: str, old_root: str, new_root: str, *, why: str = "") -> Dict[str, Any]:
+    """기억 가지 이사: 문서 디렉토리를 옮기고 단언 locus 의 접두를 바꾼다. 비춘 트리라 폴더를 옮기듯 기억을 옮긴다."""
+    o, n = _norm(old_root), _norm(os.path.expanduser(new_root))
+    src, dst = node_dir(body, o), node_dir(body, n)
+    today = FM._now()[:10]
+    if os.path.isdir(src):
+        if os.path.exists(dst):
+            os.renames(src, dst + f".moved-from.{today}.bak")
+        else:
+            os.renames(src, dst)
+    conn = FM._connect()
+    try:
+        cur = conn.execute("UPDATE forage_map SET locus = ? || substr(locus, ?) WHERE body=? AND (locus=? OR locus LIKE ?)",
+                           (n, len(o) + 1, body, o, o + "/%"))
+        conn.commit()
+        moved_rows = cur.rowcount
+    finally:
+        conn.close()
+    # 새 노드 문서 머리·절 갱신 + 옛/새 부모 기록
+    doc = doc_path_at(body, n)
+    if os.path.exists(doc):
+        text = open(doc, encoding="utf-8").read()
+        text = MARKER_RE.sub(f'<!-- forage-doc body="{body}" root="{n}" -->', text, count=1)
+        open(doc, "w", encoding="utf-8").write(text)
+        refresh_doc(doc, body, n)
+        _append_record(doc, f"- {today} 이사: `{o}` → `{n}` (기억 가지·단언 {moved_rows}건 이동{(' — ' + why) if why else ''})")
+    for parent in {_parent_doc(body, o), _parent_doc(body, n)}:
+        if parent:
+            _append_record(parent, f"- {today} `{os.path.basename(o)}` 이사: `{o}` → `{n}`{(' — ' + why) if why else ''}")
+            refresh_doc(parent, body, root_of_doc(parent))
+    return {"success": True, "from": o, "to": n, "rows": moved_rows, "doc": doc if os.path.exists(doc) else None}
+
+
+def tombstone_node(body: str, root: str, candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """사라진 폴더: 후보 없음 → 삭제로 보고 문서를 `_gone/` 으로 접고 부모에 한 줄. 후보 여럿 → 문서 머리에 후보를 적고 판단을 남긴다.
+    단언 행은 지우지 않고 '폴더 사라짐' 표식(prune_reason·surface_flag)만."""
+    r = _norm(root)
+    today = FM._now()[:10]
+    conn = FM._connect()
+    try:
+        conn.execute("UPDATE forage_map SET surface_flag=1, prune_reason=COALESCE(prune_reason, ?) WHERE body=? AND (locus=? OR locus LIKE ?)",
+                     (f"폴더 사라짐 {today}", body, r, r + "/%"))
+        conn.commit()
+    finally:
+        conn.close()
+    doc = doc_path_at(body, r)
+    parent = _parent_doc(body, r)
+    if candidates:
+        names = ", ".join(f"`{c['path']}`" + (f"(겹침 {c['score']:.0%})" if c.get("score") is not None else "") for c in candidates[:4])
+        if os.path.exists(doc):
+            text = open(doc, encoding="utf-8").read()
+            note = f"\n> ⚠ 실제 폴더 없음({today}) — 이사 후보: {names}. 어디로 갔는지 판단해 `[self:forage]{{op: \"move\", from: \"{r}\", to: \"<후보>\"}}` 또는 삭제로 접기.\n"
+            if "⚠ 실제 폴더 없음" not in text:
+                text = MARKER_RE.sub(lambda m: m.group(0) + note, text, count=1) if MARKER_RE.search(text) else note + text
+                open(doc, "w", encoding="utf-8").write(text); _stamp(doc)
+        if parent:
+            _append_record(parent, f"- {today} `{os.path.basename(r)}` 실제 폴더 없음 — 이사 후보 {len(candidates)}개(판단 필요): {names}")
+        return {"success": True, "root": r, "action": "ambiguous", "candidates": candidates[:4]}
+    # 삭제로 판단
+    src = node_dir(body, r)
+    gone = os.path.join(DOC_DIR, slug(body), GONE_DIR, *[p for p in r.split("/") if p])
+    if os.path.isdir(src):
+        if os.path.exists(gone):
+            os.renames(src, gone + f".{today}.bak")
+        else:
+            os.renames(src, gone)
+    if parent:
+        _append_record(parent, f"- {today} `{os.path.basename(r)}` 사라짐(삭제로 판단, 이사 후보 없음) — 옛 기억은 `{os.path.relpath(gone, DOC_DIR)}`")
+        refresh_doc(parent, body, root_of_doc(parent))
+    return {"success": True, "root": r, "action": "gone", "archived": os.path.relpath(gone, DOC_DIR)}
+
+
+def reconcile(body: Optional[str] = None, locus: Optional[str] = None, *, apply: bool = True) -> Dict[str, Any]:
+    """실제 트리 ↔ 기억 트리 대조. 문서 노드(디스크 몸·경로 뿌리)마다 존재를 보고, 없으면 이사(강한 후보 하나)/삭제(후보 없음)/판단 보류(후보 여럿)."""
+    loc = _norm(os.path.expanduser(locus)) if locus else None
+    nodes = [(p, b, _norm(r)) for p, b, r in _scan_docs() if _path_body(b) and _is_path(_norm(r))]
+    if body:
+        nodes = [x for x in nodes if x[1] == body]
+    if loc:
+        nodes = [x for x in nodes if x[2] == loc or x[2].startswith(loc + "/") or loc.startswith(x[2] + "/")]
+    nodes.sort(key=lambda x: -x[2].count("/"))   # 깊은 것부터 — 자식을 먼저 처리해야 부모 이사가 자식을 덮어쓰지 않는다
+    report = {"checked": 0, "unmounted": [], "missing": [], "moved": [], "gone": [], "ambiguous": []}
+    handled: List[str] = []
+    for p, b, r in nodes:
+        if any(r.startswith(h + "/") for h in handled):
+            continue   # 조상이 이미 이사했으면 자식은 같이 갔다
+        if not _mounted(r):
+            report["unmounted"].append(r); continue
+        report["checked"] += 1
+        if os.path.isdir(os.path.expanduser(r)):
+            continue
+        report["missing"].append(r)
+        if not apply:
+            continue
+        cands = find_move_candidates(b, r)
+        strong = [c for c in cands if (c["score"] is not None and c["score"] >= _MOVE_STRONG)]
+        if len(strong) == 1 or (len(cands) == 1 and cands[0]["score"] is None):
+            target = (strong or cands)[0]["path"]
+            res = move_node(b, r, target, why=f"자동 대조(자식 겹침 {(strong or cands)[0]['score'] if (strong or cands)[0]['score'] is not None else '이름만'})")
+            report["moved"].append({"from": r, "to": target, "rows": res.get("rows")}); handled.append(r)
+        else:
+            res = tombstone_node(b, r, cands if cands else [])
+            report["gone" if res.get("action") == "gone" else "ambiguous"].append(res)
+            handled.append(r)
+    return {"success": True, **report}
+
+
+def reconcile_lazy(locus: str, body: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """회상 앞에서 — 이 위치를 덮는 문서 뿌리가 실제로 없을 때만(그리고 한 시간에 한 번만) 그 가지를 대조한다. 비용=stat 하나."""
+    for p in _covering_docs(locus, body):
+        mk = _read_marker(p)
+        if not mk or not (_path_body(mk[0]) and _is_path(_norm(mk[1]))):
+            continue
+        r = _norm(mk[1])
+        if os.path.isdir(os.path.expanduser(r)) or not _mounted(r):
+            continue
+        key = "reconcile:" + p
+        last = FM.get_meta(key)
+        now = time.time()
+        if last and now - float(last) < _RECONCILE_MIN_INTERVAL:
+            continue
+        FM.set_meta(key, str(now))
+        return reconcile(mk[0], r)
+    return None

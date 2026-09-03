@@ -517,6 +517,11 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     loc = _norm_locus(os.path.expanduser(locus)) if locus else None
     if loc:
         _doc_lazy_sync(loc, body)   # 정본=문서: 사람·AI 가 문서를 고쳤으면 색인이 따라온다(stat 한 번)
+        try:
+            import forage_doc
+            forage_doc.reconcile_lazy(loc, body)   # 실제 폴더가 사라졌으면 이사/삭제 대조(시간당 1회)
+        except Exception as e:
+            print(f"[포식기억] 대조 실패(무시): {e}")
 
     def _hit(r) -> int:
         """행 일치 점수 — claim + locus *끝 이름*(전체 경로가 아니라: 루트 이름이 후손 전부를 잡지 않게)."""
@@ -580,8 +585,17 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
                     docs_below = []
         except Exception:
             doc_path = None
+        root_missing = False
+        try:
+            if doc_path:
+                _mk = forage_doc._read_marker(doc_path)
+                _r = forage_doc._norm(_mk[1]) if _mk else ""
+                root_missing = bool(_r and forage_doc._is_path(_r) and forage_doc._mounted(_r) and not os.path.isdir(os.path.expanduser(_r)))
+        except Exception:
+            root_missing = False
         return {"success": True, "map": map_items, "owner": owner_items_locus,
                 "territory": territory_items, "locus": loc, "doc": doc_path, "docs_below": docs_below,
+                "root_missing": root_missing,
                 "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]

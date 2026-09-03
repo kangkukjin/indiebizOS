@@ -219,6 +219,8 @@ nodes:
             note: effect
             forget: effect
             sync: effect
+            reconcile: effect
+            move: effect
           side_effect:
             recall: false
           values:
@@ -226,6 +228,8 @@ nodes:
             note: 지도/주인모델에 단언 누적 (layer=map/owner)
             forget: 잘못된·낡은 항목 폐기 (id + table)
             sync: 문서(정본)의 단언 절을 색인에 맞춤 (locus) — 판·편집기에서 문서를 고친 뒤
+            reconcile: 실제 트리와 기억 트리 대조 — 사라진 폴더를 이사(강한 후보 하나)/삭제(후보 없음)/보류(후보 여럿)로 (locus·body·apply)
+            move: 기억 가지 이사 — 문서 디렉토리와 단언 경로를 새 자리로 (from·to)
         keywords:
         - 포식기억
         - 냄새지도
@@ -331,6 +335,18 @@ tool_json:
         op:
           type: string
           description: recall=회상(기본), note=누적, forget=폐기
+        from:
+          type: string
+          description: '[move] 옛 경로'
+        to:
+          type: string
+          description: '[move] 새 경로'
+        why:
+          type: string
+          description: '[move] 사유(옵션) — 문서 갱신 기록에 남는다'
+        apply:
+          type: boolean
+          description: '[reconcile] false 면 보고만(기본 true=적용)'
         locus:
           type: string
           description: '[recall] 폴더 경로 지명 — 그 폴더의 단언 전부 + 조상 관습·기질 + 자식 폴더 골격 + 조사 원장. 위치 질문이면 query 보다 이것'

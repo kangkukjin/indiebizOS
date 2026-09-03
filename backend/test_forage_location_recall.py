@@ -19,7 +19,8 @@ ROOT = "/x/media"
 @pytest.fixture
 def fm(monkeypatch, tmp_path):
     monkeypatch.setattr(FM, "_DB_PATH", str(tmp_path / "forage.db"))
-    monkeypatch.setattr(FD, "DOC_DIR", str(tmp_path / "docs"))   # 정본=문서: 시험이 실제 문서 폴더에 쓰지 않게
+    monkeypatch.setattr(FD, "DOC_DIR", str(tmp_path / "docs"))
+    monkeypatch.setattr(FD, "reconcile_lazy", lambda *a, **k: None)   # 시험의 가짜 경로는 실재하지 않는다 — 대조는 전용 시험에서만   # 정본=문서: 시험이 실제 문서 폴더에 쓰지 않게
     b = "disk:T"
     FM.note_map(body=b, locus=ROOT, kind="identity", claim="미디어 보관 폴더 — 축이 섞임(장르/나라/상태). 주제어: 영화 자막",
                 confidence=0.9, territory=True)

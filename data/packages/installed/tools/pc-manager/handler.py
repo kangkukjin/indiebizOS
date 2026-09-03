@@ -245,6 +245,24 @@ def _forage_sync(tool_input: dict) -> str:
     return json.dumps(forage_doc.sync_for_locus(str(locus), tool_input.get("body") or None), ensure_ascii=False)
 
 
+def _forage_reconcile(tool_input: dict) -> str:
+    """[self:forage]{op:reconcile, locus?, body?, apply?} — 실제 트리와 기억 트리 대조(이사/삭제/보류)."""
+    import forage_doc
+    apply = tool_input.get("apply")
+    return json.dumps(forage_doc.reconcile(tool_input.get("body") or None, tool_input.get("locus") or tool_input.get("path") or None,
+                                           apply=(True if apply is None else bool(apply))), ensure_ascii=False)
+
+
+def _forage_move(tool_input: dict) -> str:
+    """[self:forage]{op:move, from, to, body?} — 기억 가지 이사(문서 디렉토리 + 단언 locus)."""
+    import forage_doc
+    src, dst = tool_input.get("from") or tool_input.get("locus"), tool_input.get("to")
+    if not src or not dst:
+        return json.dumps({"success": False, "error": "move 는 from(옛 경로)·to(새 경로) 필요"}, ensure_ascii=False)
+    body = tool_input.get("body") or _detect_body()
+    return json.dumps(forage_doc.move_node(body, str(src), str(dst), why=str(tool_input.get("why") or "")), ensure_ascii=False)
+
+
 def _forage_forget(tool_input: dict) -> str:
     """[self:forage]{op:forget} — 항목 폐기."""
     import forage_memory as FM
@@ -426,7 +444,8 @@ _OP_DISPATCHERS = {
     "host_op": {"status": _host_status, "apps": _host_apps,
                 "resources": _host_resources},
     "forage_op": {"recall": _forage_recall, "note": _forage_note,
-                  "forget": _forage_forget, "sync": _forage_sync},
+                  "forget": _forage_forget, "sync": _forage_sync,
+                  "reconcile": _forage_reconcile, "move": _forage_move},
 }
 _OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "detail", "host_op": "status",
                 "forage_op": "recall"}

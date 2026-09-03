@@ -190,6 +190,7 @@ def run_forage_consolidation(force: bool = False) -> Dict:
     # 정본=문서(2026-09-03): 병합·가지치기로 색인이 바뀌었으니 표식 있는 문서의 `## 단언` 절을 다시 그린다
     try:
         import forage_doc
+        forage_doc.reconcile()          # 실제 트리 ↔ 기억 트리 대조(이사/삭제/보류) — 주간
         forage_doc.refresh_all_docs()
     except Exception as e:
         print(f"[포식정리] 문서 재렌더 실패(무시): {e}")

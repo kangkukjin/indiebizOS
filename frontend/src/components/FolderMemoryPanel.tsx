@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { iblExecuteApp } from '../lib/instrument';
 
 type PhotoScan = { exists: boolean; photo_count?: number; video_count?: number; last_scan?: string | null };
-type Recall = { doc?: string | null; docs_below?: string[]; map_count?: number } | null;
+type Recall = { doc?: string | null; docs_below?: string[]; map_count?: number; root_missing?: boolean } | null;
 
 const getApiUrl = async () => {
   if (window.electron?.getApiPort) return `http://127.0.0.1:${await window.electron.getApiPort()}`;
@@ -33,6 +33,7 @@ export function FolderMemoryPanel({ path }: { path: string }) {
   const [docText, setDocText] = useState('');
   const [docDirty, setDocDirty] = useState(false);
   const [docsBelow, setDocsBelow] = useState<string[]>([]);
+  const [rootMissing, setRootMissing] = useState(false);
   const [photo, setPhoto] = useState<PhotoScan | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -49,6 +50,7 @@ export function FolderMemoryPanel({ path }: { path: string }) {
       const doc = r?.doc ?? null;
       setDocPath(doc);
       setDocsBelow(r?.docs_below ?? []);
+      setRootMissing(!!r?.root_missing);
       if (doc) {
         const t = (await iblExecuteApp(`[self:read]{path: ${q(doc)}}`)) as { result?: unknown } | string | null;
         setDocText(typeof t === 'string' ? t : String((t as { result?: unknown })?.result ?? ''));
@@ -122,6 +124,7 @@ export function FolderMemoryPanel({ path }: { path: string }) {
               ? <div>📄 이 폴더의 문서 — <span className="font-mono">{relDoc(docPath)}</span></div>
               : <div>📄 이 폴더 자체의 문서는 없음 — 덮는 상위 문서를 보는 중: <span className="font-mono">{relDoc(docPath)}</span></div>
           ) : <div>📄 이 위치를 덮는 문서 없음</div>}
+          {rootMissing && <div className="text-red-600">📁 이 문서가 덮는 실제 폴더가 없습니다 — 대조가 이사/삭제를 판정했거나 판단이 필요합니다(문서 머리·갱신 기록 참조)</div>}
           {docsBelow.length > 0 && <div title={docsBelow.join('\n')}>🌳 더 자세한 하위 문서 {docsBelow.length}개 — {docsBelow.map((d) => baseName(d.replace(/\/memory\.md$/, ''))).join(', ')}</div>}
           {photo?.exists && <div>📷 사진 관리 스캔 있음 — 사진 {photo.photo_count ?? 0}장 · 동영상 {photo.video_count ?? 0}개{photo.last_scan ? ` · ${String(photo.last_scan).slice(0, 16)}` : ''}</div>}
         </div>

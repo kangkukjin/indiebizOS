@@ -83,9 +83,27 @@
               "recall",
               "note",
               "forget",
-              "sync"
+              "sync",
+              "reconcile",
+              "move"
             ],
             "default": "recall"
+          },
+          "from": {
+            "type": "string",
+            "description": "[move] 옛 경로"
+          },
+          "to": {
+            "type": "string",
+            "description": "[move] 새 경로"
+          },
+          "why": {
+            "type": "string",
+            "description": "[move] 사유(옵션) — 문서 갱신 기록에 남는다"
+          },
+          "apply": {
+            "type": "boolean",
+            "description": "[reconcile] false 면 보고만(기본 true=적용)"
           },
           "locus": {
             "type": "string",

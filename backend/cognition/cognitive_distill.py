@@ -479,7 +479,7 @@ AI 답변: {ai_response[:1400]}
 
 응답 형식(빈 배열 허용):
 {{"space":"mac|code:<repo>|web|book:<title>|disk:<label>",
- "map":[{{"locus":"위치(파일시스템이면 절대경로)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
+ "map":[{{"locus":"위치(파일시스템이면 절대경로, 웹이면 URL host/path — 주제 이름이 아니라 자리)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
  "owner":[{{"facet":"domain|identity|...","value":"...","prior_class":"semantic"}}],
  "surface":[{{"locus":"(있으면)","value":"(owner면)","why":"..."}}]}}"""
 

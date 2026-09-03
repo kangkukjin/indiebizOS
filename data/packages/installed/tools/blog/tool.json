@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "blog_op",
-      "description": "내 블로그 조회·검색·관리 (op 분기) — [self:blog].\n- op=posts(기본): 글 목록. category/count.\n- op=search: RAG 검색. query + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.\n- op=check_new: 마지막 조회 이후 새 글.\n- op=rebuild_index: 검색 인덱스(벡터) 재구축.\n- op=stats: 글 수·분포·트렌드.\n- op=vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link.",
+      "description": "내 블로그 조회·검색·관리 (op 분기) — [self:blog].\n- op=posts(기본): 글 목록. category/count.\n- op=search: RAG 검색. query + mode(hybrid 기본/semantic/content) + limit + category(폴더 필터). content는 post_id 또는 title.\n- op=check_new: 마지막 조회 이후 새 글.\n- op=rebuild_index: 검색 인덱스(벡터) 재구축.\n- op=stats: 글 수·분포·트렌드.\n- op=vault: Obsidian vault(진실소스) 운영. mode stats(기본)/export/rebuild/link.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -67,8 +67,11 @@
             "description": "[search content] 제목(부분일치)"
           },
           "category": {
-            "type": "string",
-            "description": "[posts] 카테고리 필터"
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "[posts|search] 폴더(카테고리) 필터 — 전체 경로(\"그룹/폴더\")·잎 이름(\"폴더\")·상위 그룹(\"그룹\"=그 아래 전부) 모두 허용"
           },
           "offset": {
             "type": "integer",

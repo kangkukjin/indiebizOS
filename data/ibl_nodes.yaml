@@ -2957,9 +2957,9 @@ nodes:
         description: 내 블로그 조회·검색·관리 (op 분기). RAG 검색 + 글 목록·통계·인덱스 + vault 운영.
         target_description: 'op로 분기 (기본 posts).
 
-          - posts: 글 목록. category/count 옵션.
+          - posts: 글 목록. category(폴더 필터)/count 옵션.
 
-          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit. content는 post_id 또는 title.
+          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit + category(폴더 필터 — 전체 경로·잎 이름·상위 그룹, 값 또는 목록). content는 post_id 또는 title. 결과에 category 가 실린다.
 
           - check_new: 마지막 조회 이후 새로 추가된 글 확인.
 

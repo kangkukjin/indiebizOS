@@ -67,6 +67,9 @@ class BlogHybridSearch:
 
     # 텍스트 전처리 설정 (KThoughts에서 이식)
     TITLE_REPEAT = 3
+    CATEGORY_REPEAT = 2   # 폴더 잎 이름 반복 — 제목보다 약하게, 본문보다 강하게
+    NO_CATEGORY_LABELS = frozenset({'카테고리없음'})  # 플랫폼이 '없음'을 라벨로 쓰는 값
+    EMBEDDING_VERSION = 'v2'  # v2 = 폴더 라벨을 임베딩 텍스트에 포함 (2026-09-03)
     MAX_TEXT_LENGTH = 800
 
     # 임베딩 설정
@@ -75,7 +78,7 @@ class BlogHybridSearch:
     BATCH_SIZE = 32
 
     # 검색 설정
-    DEFAULT_ALPHA = 0.7  # 70% 시맨틱 + 30% BM25
+    DEFAULT_ALPHA = 0.7  # 시맨틱 on(>0)/off(0)·캐시 키 — 융합은 RRF 라 가중치로 안 쓴다(2026-09-03)
     MIN_CONTENT_LENGTH = 200  # 최소 글 길이
 
     # 싱글톤
@@ -115,15 +118,32 @@ class BlogHybridSearch:
         return truncated
 
     @staticmethod
-    def prepare_search_text(title: str, content: str) -> str:
-        """검색용 텍스트 준비 (제목 가중치 + 본문 절단)"""
+    def prepare_search_text(title: str, content: str, category: str = '') -> str:
+        """검색용 텍스트 준비 (제목 가중치 + 폴더 라벨 + 본문 절단)
+
+        폴더(category)는 주인이 글에 새긴 분류 판단이라 임베딩에 싣는다(2026-09-03).
+        빠져 있던 동안 검색은 폴더를 전혀 몰랐다 — 사전이 지목한 폴더가 벡터에 안 실렸다.
+        """
         clean_title = title.strip()
         clean_content = BlogHybridSearch.smart_truncate(
             content, BlogHybridSearch.MAX_TEXT_LENGTH
         )
         # 제목 3회 반복으로 중요도 증가
         title_part = ' '.join([clean_title] * BlogHybridSearch.TITLE_REPEAT)
-        return f"{title_part} {clean_content}"
+        category_part = BlogHybridSearch.category_text(category)
+        return ' '.join(p for p in (title_part, category_part, clean_content) if p)
+
+    @staticmethod
+    def category_text(category: str) -> str:
+        """폴더 라벨의 임베딩용 표현: 잎 이름 반복 + 전체 경로 한 번. 없음/무라벨은 빈 문자열."""
+        cat = (category or '').strip()
+        if not cat or cat in BlogHybridSearch.NO_CATEGORY_LABELS:
+            return ''
+        leaf = cat.rsplit('/', 1)[-1].strip()
+        parts = [leaf] * BlogHybridSearch.CATEGORY_REPEAT
+        if cat != leaf:
+            parts.append(cat)
+        return ' '.join(parts)
 
     # =========================================================================
     # 모델/의존성 관리 (Lazy loading)
@@ -259,7 +279,9 @@ class BlogHybridSearch:
         try:
             self._ensure_vec_table(conn)
             texts = [
-                self.prepare_search_text(r['title'], r['content'])
+                self.prepare_search_text(
+                    r['title'], r['content'], r.get('category') or ''
+                )
                 for r in post_rows
             ]
             embeddings = self.generate_embeddings_batch(texts)
@@ -273,8 +295,8 @@ class BlogHybridSearch:
                 conn.execute(
                     "INSERT OR REPLACE INTO search_index_status"
                     "(post_id, indexed_at, embedding_version) "
-                    "VALUES (?, datetime('now'), 'v1')",
-                    (row['post_id'],)
+                    "VALUES (?, datetime('now'), ?)",
+                    (row['post_id'], self.EMBEDDING_VERSION)
                 )
             conn.commit()
             return len(embeddings)
@@ -292,7 +314,7 @@ class BlogHybridSearch:
         try:
             self._ensure_vec_table(conn)
             rows = conn.execute("""
-                SELECT p.id, p.post_id, p.title, p.content
+                SELECT p.id, p.post_id, p.title, p.category, p.content
                 FROM posts p
                 LEFT JOIN search_index_status s ON p.post_id = s.post_id
                 WHERE s.post_id IS NULL AND p.char_count >= ?
@@ -333,7 +355,7 @@ class BlogHybridSearch:
             conn.commit()
             # 전체 포스트 로드
             rows = conn.execute(
-                "SELECT id, post_id, title, content FROM posts "
+                "SELECT id, post_id, title, category, content FROM posts "
                 "WHERE char_count >= ? ORDER BY pub_date DESC",
                 (self.MIN_CONTENT_LENGTH,)
             ).fetchall()
@@ -363,8 +385,10 @@ class BlogHybridSearch:
     # 검색
     # =========================================================================
 
-    def search_semantic(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
-        """시맨틱 검색. (posts.id, similarity_score) 리스트 반환"""
+    def search_semantic(
+        self, query: str, top_k: int = 10, category=None
+    ) -> List[Tuple[int, float]]:
+        """시맨틱 검색. (posts.id, similarity_score) 리스트 반환. category=폴더 필터(category_clause)."""
         emb = self.generate_embedding(query)
         if emb is None:
             return []
@@ -373,13 +397,15 @@ class BlogHybridSearch:
             return []
         try:
             self._ensure_vec_table(conn)
-            rows = conn.execute("""
-                SELECT rowid, distance
-                FROM posts_vec
-                WHERE embedding MATCH ?
-                  AND k = ?
-                ORDER BY distance
-            """, (emb, top_k)).fetchall()
+            where_cat, cat_params = category_clause(category)
+            sql = "SELECT rowid, distance FROM posts_vec WHERE embedding MATCH ? AND k = ?"
+            params: list = [emb, top_k]
+            if where_cat:
+                # vec0 KNN 의 rowid IN 사전 필터(sqlite-vec ≥0.1.2) — 후필터 과잉 인출 없이 정확히 top_k
+                sql += f" AND rowid IN (SELECT id FROM posts WHERE {where_cat})"
+                params.extend(cat_params)
+            sql += " ORDER BY distance"
+            rows = conn.execute(sql, params).fetchall()
             # L2 정규화된 벡터에서: cos_sim = 1 - (distance^2 / 2)
             results = []
             for row in rows:
@@ -393,8 +419,10 @@ class BlogHybridSearch:
         finally:
             conn.close()
 
-    def search_fts5(self, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
-        """FTS5 BM25 키워드 검색. (posts.id, bm25_score) 리스트 반환"""
+    def search_fts5(
+        self, query: str, top_k: int = 10, category=None
+    ) -> List[Tuple[int, float]]:
+        """FTS5 BM25 키워드 검색. (posts.id, bm25_score) 리스트 반환. category=폴더 필터."""
         conn = self._get_plain_connection()
         try:
             # FTS5 특수문자 이스케이프
@@ -402,15 +430,22 @@ class BlogHybridSearch:
             tokens = [t for t in safe_query.split() if len(t) >= 2]
             if not tokens:
                 return []
-            fts_query = ' OR '.join(tokens)
-            rows = conn.execute("""
-                SELECT p.id, bm25(posts_fts) as score
-                FROM posts_fts fts
-                JOIN posts p ON p.id = fts.rowid
-                WHERE posts_fts MATCH ?
-                ORDER BY score
-                LIMIT ?
-            """, (fts_query, top_k)).fetchall()
+            # 접두 일치(token*) — 한국어 조사가 붙은 어절(예: "사과의"·"사과는")을 어간 질의("사과")로
+            # 잡는다. unicode61 토크나이저는 어절 단위라 정확 일치만으로는 조사 붙은 글을 전부 놓쳤다(2026-09-03 실측).
+            fts_query = ' OR '.join(f'{t}*' for t in tokens)
+            where_cat, cat_params = category_clause(category, column='p.category')
+            sql = (
+                "SELECT p.id, bm25(posts_fts) as score "
+                "FROM posts_fts fts JOIN posts p ON p.id = fts.rowid "
+                "WHERE posts_fts MATCH ?"
+            )
+            params: list = [fts_query]
+            if where_cat:
+                sql += " AND " + where_cat
+                params.extend(cat_params)
+            sql += " ORDER BY score LIMIT ?"
+            params.append(top_k)
+            rows = conn.execute(sql, params).fetchall()
             # bm25()은 음수 반환 (더 관련 있을수록 더 작음) → 양수로 변환
             results = [(int(row['id']), -float(row['score'])) for row in rows]
             return results
@@ -427,37 +462,37 @@ class BlogHybridSearch:
         alpha: float
     ) -> List[Tuple[int, float]]:
         """
-        하이브리드 스코어 결합 (KThoughts에서 이식).
-        각 스코어 타입별 max-normalization 후 가중 합산.
+        하이브리드 결합 = 역순위 융합(RRF, k=60), [0,1] 정규화.
+
+        옛 방식(점수 max-정규화 가중합, alpha=0.7)은 한쪽 목록에만 있는 글의 상한이
+        시맨틱 0.7 / 키워드 0.3 이라, 시맨틱이 헛짚은 단어 질의에서 정확 일치
+        글이 키워드 목록 1위여도 시맨틱 잡음 20건 아래에 깔렸다(2026-09-03 실측 —
+        두 목록 교집합 0). 순위 기반 융합은 점수 척도가 달라도 양쪽 1위를 같은 무게로
+        본다. alpha 는 시맨틱 on/off·캐시 키로만 남는다.
         """
-        combined = {}
-
-        # 시맨틱 스코어 (max-normalized)
-        max_sem = max((s for _, s in semantic_results), default=1.0) or 1.0
-        for idx, score in semantic_results:
-            combined[idx] = alpha * (score / max_sem)
-
-        # FTS5 BM25 스코어 (max-normalized)
-        max_fts = max((s for _, s in fts5_results), default=1.0) or 1.0
-        for idx, score in fts5_results:
-            normalized = score / max_fts
-            if idx in combined:
-                combined[idx] += (1 - alpha) * normalized
-            else:
-                combined[idx] = (1 - alpha) * normalized
-
-        return sorted(combined.items(), key=lambda x: x[1], reverse=True)
+        k = 60
+        combined: Dict[int, float] = {}
+        for results in (semantic_results, fts5_results):
+            for rank, (idx, _score) in enumerate(results, start=1):
+                combined[idx] = combined.get(idx, 0.0) + 1.0 / (k + rank)
+        # 양쪽 모두 1위 = 1.0, 한쪽만 1위 = 0.5 — relevance 라벨 척도 유지
+        top = 2.0 / (k + 1)
+        return sorted(
+            ((idx, sc / top) for idx, sc in combined.items()),
+            key=lambda x: x[1], reverse=True
+        )
 
     def search_hybrid(
-        self, query: str, top_k: int = 5, alpha: Optional[float] = None
+        self, query: str, top_k: int = 5, alpha: Optional[float] = None,
+        category=None
     ) -> List[SearchResult]:
-        """메인 하이브리드 검색"""
+        """메인 하이브리드 검색. category=폴더 필터(전체 경로·잎 이름·상위 그룹, 값 또는 목록)."""
         if alpha is None:
             alpha = self.DEFAULT_ALPHA
 
         # 캐시 확인
         cache_key = hashlib.md5(
-            f"{query}_{top_k}_{alpha}".encode()
+            f"{query}_{top_k}_{alpha}_{category!r}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -468,9 +503,10 @@ class BlogHybridSearch:
 
         # 각 검색 실행
         semantic_results = (
-            self.search_semantic(query, over_fetch) if use_semantic else []
+            self.search_semantic(query, over_fetch, category=category)
+            if use_semantic else []
         )
-        fts5_results = self.search_fts5(query, over_fetch)
+        fts5_results = self.search_fts5(query, over_fetch, category=category)
 
         # 유효 알파 결정
         if not semantic_results and not fts5_results:
@@ -609,12 +645,19 @@ class BlogHybridSearch:
             fts_count = conn.execute(
                 "SELECT COUNT(*) FROM posts_fts"
             ).fetchone()[0]
+            stale_indexed = conn.execute(
+                "SELECT COUNT(*) FROM search_index_status "
+                "WHERE COALESCE(embedding_version, '') != ?",
+                (self.EMBEDDING_VERSION,)
+            ).fetchone()[0]
             semantic_available = self.is_semantic_available()
             return {
                 'success': True,
                 'total_posts': total_posts,
                 'eligible_posts': eligible_posts,
                 'indexed_posts': indexed_posts,
+                'stale_indexed': stale_indexed,   # 현 EMBEDDING_VERSION 이전 것 — >0 이면 rebuild_index 필요
+                'embedding_version': self.EMBEDDING_VERSION,
                 'fts5_indexed': fts_count,
                 'semantic_available': semantic_available,
                 'search_mode': 'hybrid' if semantic_available and indexed_posts > 0
@@ -631,11 +674,31 @@ class BlogHybridSearch:
 # 모듈 레벨 API (handler.py에서 호출)
 # =============================================================================
 
-def search_blog(query: str, limit: int = 5) -> dict:
-    """하이브리드 검색 (메인 진입점)"""
+def category_clause(category, column: str = 'category') -> Tuple[str, list]:
+    """폴더 필터 SQL 조각 (where 문자열, params). 값 하나 또는 목록.
+
+    각 값은 전체 경로("그룹/폴더")·잎 이름("폴더")·상위 그룹("그룹" → 그 아래 전부) 중
+    무엇이든 맞는다. 폴더 라우팅 사전은 잎 이름으로 말하는데 전체 경로만 받던 posts 는
+    0건 함정이었다(2026-09-03). 빈 값이면 ("", []).
+    """
+    if category is None:
+        return "", []
+    values = category if isinstance(category, (list, tuple)) else [category]
+    values = [str(v).strip() for v in values if str(v or '').strip()]
+    if not values:
+        return "", []
+    ors, params = [], []
+    for v in values:
+        ors.append(f"({column} = ? OR {column} LIKE ? OR {column} LIKE ?)")
+        params.extend([v, f"%/{v}", f"{v}/%"])
+    return "(" + " OR ".join(ors) + ")", params
+
+
+def search_blog(query: str, limit: int = 5, category=None) -> dict:
+    """하이브리드 검색 (메인 진입점). category=폴더 필터."""
     try:
         engine = BlogHybridSearch()
-        results = engine.search_hybrid(query, top_k=limit)
+        results = engine.search_hybrid(query, top_k=limit, category=category)
 
         if not results:
             return {
@@ -662,6 +725,7 @@ def search_blog(query: str, limit: int = 5) -> dict:
         return {
             'success': True,
             'query': query,
+            'category': category,
             'results': formatted,
             'message': f'{len(formatted)}개의 관련 글을 찾았습니다. ({results[0].search_type} 검색)'
         }
@@ -672,11 +736,13 @@ def search_blog(query: str, limit: int = 5) -> dict:
         return {'success': False, 'results': [], 'message': f'검색 실패: {str(e)}'}
 
 
-def search_blog_semantic(query: str, limit: int = 5) -> dict:
-    """시맨틱 검색만 사용"""
+def search_blog_semantic(query: str, limit: int = 5, category=None) -> dict:
+    """시맨틱 검색만 사용. category=폴더 필터."""
     try:
         engine = BlogHybridSearch()
-        results = engine.search_hybrid(query, top_k=limit, alpha=1.0)
+        results = engine.search_hybrid(
+            query, top_k=limit, alpha=1.0, category=category
+        )
 
         formatted = []
         for i, r in enumerate(results):
@@ -686,11 +752,16 @@ def search_blog_semantic(query: str, limit: int = 5) -> dict:
                 'content': r.content_preview,
                 'similarity': r.score,
                 'search_type': r.search_type,
+                'post_id': r.post_id,
+                'date': r.publish_date,
+                'category': r.category,
                 'relevance': r.relevance
             })
 
         return {
             'success': True,
+            'query': query,
+            'category': category,
             'results': formatted,
             'message': f'{len(formatted)}개 발견 (Semantic Search)'
         }

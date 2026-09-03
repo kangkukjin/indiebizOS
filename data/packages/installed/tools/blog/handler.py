@@ -190,13 +190,15 @@ def _op_search(tool_input: dict, context) -> str:
         from tool_blog_rag import search_blog
         result = search_blog(
             query=tool_input.get("query"),
-            limit=tool_input.get("limit", 5)
+            limit=tool_input.get("limit", 5),
+            category=tool_input.get("category")
         )
     elif mode == "semantic":
         from tool_blog_rag import search_blog_semantic
         result = search_blog_semantic(
             query=tool_input.get("query"),
-            limit=tool_input.get("limit", 5)
+            limit=tool_input.get("limit", 5),
+            category=tool_input.get("category")
         )
     elif mode == "content":
         # post_id 없이 query만 온 호출은 query를 제목 검색어로 폴백

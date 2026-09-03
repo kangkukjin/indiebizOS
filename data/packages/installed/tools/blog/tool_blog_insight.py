@@ -430,8 +430,12 @@ def blog_get_posts(count: int = 20, offset: int = 0, category: Optional[str] = N
             params = []
         
         if category:
-            query += " AND p.category = ?"
-            params.append(category)
+            # 전체 경로·잎 이름·상위 그룹 모두 허용 — 검색(search)과 같은 규칙(2026-09-03)
+            from tool_blog_rag import category_clause
+            where_cat, cat_params = category_clause(category, column='p.category')
+            if where_cat:
+                query += " AND " + where_cat
+                params.extend(cat_params)
         
         query += " ORDER BY p.pub_date DESC LIMIT ? OFFSET ?"
         params.extend([count, offset])

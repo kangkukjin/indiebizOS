@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import type React from 'react';
 import {
   Folder,
   File,
@@ -59,11 +60,13 @@ export function PCManager({ initialPath }: PCManagerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [isAnalyzeMode, setIsAnalyzeMode] = useState(false);
-  const [showMemory, setShowMemory] = useState(false);   // 🧠 이 폴더의 포식 기억 판(옛 폴더 조사 앱 흡수)
-  // '시스템' 모드 — 앱 모드의 시스템 계기(상태·프로세스·자원·검색·문서·큰 파일)를 이 창 안에 심는다.
-  // 2026-09-03 사용자 판정: 파일 앱과 시스템 앱은 하나 — 홈에선 system:true 로 숨고 여기가 진입점.
-  const [isSystemMode, setIsSystemMode] = useState(false);
+  // 표면 셋 — 시스템(상태·프로세스·자원·검색·문서·큰 파일) / 탐색(폴더) / 분석(용량). 스위치 하나.
+  // 2026-09-03 사용자 판정: 파일 앱과 시스템 앱은 하나(홈에선 system:true 로 숨고 여기가 진입점), 기억은 탐색 표면의 일부.
+  type Surface = 'system' | 'browse' | 'analyze';
+  const [surface, setSurface] = useState<Surface>('browse');
+  const isSystemMode = surface === 'system';
+  const isAnalyzeMode = surface === 'analyze';
+  const [showMemory, setShowMemory] = useState(false);   // 🧠 이 폴더의 포식 기억 판 — 탐색 표면 안의 스위치
   const [systemInst, setSystemInst] = useState<AppInstrument | null>(null);
   useEffect(() => {
     if (!isSystemMode || systemInst) return;
@@ -196,50 +199,27 @@ export function PCManager({ initialPath }: PCManagerProps) {
           <Monitor className="w-4 h-4 text-[#6B5B4F] mr-2" />
           <span className="text-sm font-medium text-[#4A4A4A]">시스템</span>
         </div>
-        {/* 모드 전환 버튼 */}
-        <div className="w-60 flex justify-end gap-1 no-drag">
-          <button
-            onClick={() => { setIsSystemMode(!isSystemMode); if (!isSystemMode) setIsAnalyzeMode(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-              isSystemMode ? 'bg-[#6B5B4F] text-white' : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
-            }`}
-            title="이 기계의 상태·프로세스·자원과 파일 검색·문서·큰 파일"
-          >
-            <Activity className="w-4 h-4" />
-            시스템
-          </button>
-          {!isAnalyzeMode && !isSystemMode && (
-            <button
-              onClick={() => setShowMemory(!showMemory)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                showMemory ? 'bg-[#6B5B4F] text-white' : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
-              }`}
-              title="이 폴더의 포식 기억 보기·만들기"
-            >
-              🧠 기억
-            </button>
-          )}
-          <button
-            onClick={() => { setIsAnalyzeMode(!isAnalyzeMode); setIsSystemMode(false); }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-              isAnalyzeMode
-                ? 'bg-[#6B5B4F] text-white'
-                : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
-            }`}
-            title={isAnalyzeMode ? '탐색 모드로 전환' : '분석 모드로 전환'}
-          >
-            {isAnalyzeMode ? (
-              <>
-                <FolderOpen className="w-4 h-4" />
-                탐색
-              </>
-            ) : (
-              <>
-                <BarChart3 className="w-4 h-4" />
-                분석
-              </>
-            )}
-          </button>
+        {/* 표면 스위치 — 시스템 · 탐색 · 분석 */}
+        <div className="w-60 flex justify-end no-drag">
+          <div className="flex rounded-md bg-[#E8E4DC] p-0.5">
+            {([
+              ['system', '시스템', <Activity key="s" className="w-4 h-4" />],
+              ['browse', '탐색', <FolderOpen key="b" className="w-4 h-4" />],
+              ['analyze', '분석', <BarChart3 key="a" className="w-4 h-4" />],
+            ] as [Surface, string, React.ReactNode][]).map(([key, label, icon]) => (
+              <button
+                key={key}
+                onClick={() => setSurface(key)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded text-sm transition-colors ${
+                  surface === key ? 'bg-[#6B5B4F] text-white' : 'text-[#6B5B4F] hover:bg-[#DDD8D0]'
+                }`}
+                title={key === 'system' ? '이 기계의 상태·프로세스·자원과 파일 검색·문서·큰 파일' : key === 'browse' ? '폴더 탐색(+ 이 폴더의 기억)' : '용량 분석'}
+              >
+                {icon}
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -325,6 +305,18 @@ export function PCManager({ initialPath }: PCManagerProps) {
                   </span>
                 ))}
               </div>
+
+              {/* 🧠 기억 — 탐색 표면 안의 스위치: 지금 보고 있는 폴더의 포식 기억 판 */}
+              <button
+                onClick={() => setShowMemory(!showMemory)}
+                disabled={!currentPath}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors disabled:opacity-40 ${
+                  showMemory ? 'bg-[#6B5B4F] text-white' : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
+                }`}
+                title="이 폴더의 포식 기억 보기·만들기"
+              >
+                🧠 기억
+              </button>
             </div>
 
             {/* 파일 목록 */}

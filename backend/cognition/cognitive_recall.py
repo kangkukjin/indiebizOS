@@ -195,6 +195,16 @@ class CognitiveRecallMixin:
             print(f"[결정원장] 회상 실패 (무시): {e}")
             return ""
 
+    _FORAGE_CUES = (
+        "찾", "검색", "어디", "뒤져", "뒤지", "파일", "사진", "자료", "폴더",
+        "문서", "디스크", "볼륨", "찍은", "받은", "저장한", "예전", "지난",
+        "코드", "코드베이스", "함수", "클래스", "구현", "정의", "모듈", "리포",
+        "웹", "온라인", "인터넷", "구글", "논문", "기사",
+        "find", "search", "where", "locate", "file", "photo", "folder",
+        "document", "disk", "volume", "code", "codebase", "function",
+        "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
+    )
+
     def _memory_map_scent(self) -> str:
         """심층 기억의 **지도(목차)** 를 <memory_map> 으로 돌려준다 — 가지 이름·건수·한 줄 요약만.
 

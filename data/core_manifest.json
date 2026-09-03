@@ -61,7 +61,6 @@
     },
     "instruments": [
       "audio_briefing",
-      "folder_survey",
       "newspaper",
       "report"
     ],
@@ -93,7 +92,9 @@
   "retired": {
     "packages.tools": [],
     "packages.extensions": [],
-    "instruments": [],
+    "instruments": [
+      "folder_survey"
+    ],
     "scripts": [
       "폴더조사.py"
     ],

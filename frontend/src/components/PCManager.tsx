@@ -17,6 +17,7 @@ import {
   FolderOpen
 } from 'lucide-react';
 import { PCManagerAnalyze } from './PCManagerAnalyze';
+import { FolderMemoryPanel } from './FolderMemoryPanel';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
 // API 포트 가져오기
@@ -56,6 +57,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isAnalyzeMode, setIsAnalyzeMode] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);   // 🧠 이 폴더의 포식 기억 판(옛 폴더 조사 앱 흡수)
 
   // 드라이브 목록 로드
   const loadDrives = useCallback(async () => {
@@ -176,7 +178,18 @@ export function PCManager({ initialPath }: PCManagerProps) {
           <span className="text-sm font-medium text-[#4A4A4A]">PC Manager</span>
         </div>
         {/* 모드 전환 버튼 */}
-        <div className="w-32 flex justify-end no-drag">
+        <div className="w-44 flex justify-end gap-1 no-drag">
+          {!isAnalyzeMode && (
+            <button
+              onClick={() => setShowMemory(!showMemory)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                showMemory ? 'bg-[#6B5B4F] text-white' : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
+              }`}
+              title="이 폴더의 포식 기억 보기·만들기"
+            >
+              🧠 기억
+            </button>
+          )}
           <button
             onClick={() => setIsAnalyzeMode(!isAnalyzeMode)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
@@ -328,6 +341,9 @@ export function PCManager({ initialPath }: PCManagerProps) {
               {selectedItem && ` • 선택됨: ${items.find(i => i.path === selectedItem)?.name || ''}`}
             </div>
           </div>
+
+          {/* 기억 판 — 지금 보고 있는 폴더의 포식 기억 */}
+          {showMemory && currentPath && <FolderMemoryPanel path={currentPath} />}
         </div>
       )}
     </div>

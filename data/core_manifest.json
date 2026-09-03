@@ -75,8 +75,7 @@
       "수리적용상태.py",
       "에피소드통계.py",
       "음성받아쓰기.py",
-      "잔여추정.py",
-      "폴더조사.py"
+      "잔여추정.py"
     ],
     "vocab_fragments": [
       "engines.yaml",
@@ -95,7 +94,9 @@
     "packages.tools": [],
     "packages.extensions": [],
     "instruments": [],
-    "scripts": [],
+    "scripts": [
+      "폴더조사.py"
+    ],
     "vocab_fragments": []
   }
 }

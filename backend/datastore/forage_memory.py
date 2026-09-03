@@ -64,22 +64,6 @@ CREATE TABLE IF NOT EXISTS forage_meta (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
--- 조사 원장(2026-09-03, FOLDER_SURVEY_HANDOFF §2): "어디에 예산을 얼마나 썼나" = 해상도 지도.
--- 단언(forage_map)은 판단, 이 표는 그 판단이 어느 축척의 관측 위에 섰는지의 기록.
-CREATE TABLE IF NOT EXISTS survey (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    body            TEXT NOT NULL,
-    locus           TEXT NOT NULL,             -- 조사한 폴더 절대경로
-    surveyed_at     TEXT NOT NULL,
-    depth           INTEGER NOT NULL DEFAULT 2, -- 골격 보고 깊이
-    budget          TEXT,                      -- JSON 요청 예산
-    spent           TEXT,                      -- JSON 실사용 {dirs, files, items, seconds}
-    dir_mtime       REAL NOT NULL DEFAULT 0,   -- 조사 시점 locus mtime (축척별 신선도)
-    item_resolution INTEGER NOT NULL DEFAULT 0,-- 1 = 아이템 목록까지 내려감
-    artifact_dir    TEXT,                      -- skeleton.json / items.json / report.md 자리
-    truncated       INTEGER NOT NULL DEFAULT 0,-- 예산 초과로 잘렸나
-    UNIQUE(body, locus)
-);
 """
 
 _MAP_KINDS = ("identity", "convention", "dead_branch", "substrate")
@@ -336,65 +320,6 @@ def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
 # ---------------------------------------------------------------------------
 # recall — 포식 시작 시 회상 (lazy 부패 체크 동반)
 # ---------------------------------------------------------------------------
-def record_survey(*, body: str, locus: str, depth: int, budget: Dict[str, Any],
-                  spent: Dict[str, Any], item_resolution: bool, artifact_dir: str,
-                  truncated: bool = False) -> Dict[str, Any]:
-    """조사 원장 upsert (키=body+locus). 재조사는 덮어쓴다 — 원장은 '현재 해상도'다."""
-    locus = os.path.abspath(os.path.expanduser(locus))
-    conn = _connect()
-    try:
-        conn.execute(
-            "INSERT INTO survey(body, locus, surveyed_at, depth, budget, spent, dir_mtime, "
-            "item_resolution, artifact_dir, truncated) VALUES (?,?,?,?,?,?,?,?,?,?) "
-            "ON CONFLICT(body, locus) DO UPDATE SET surveyed_at=excluded.surveyed_at, "
-            "depth=excluded.depth, budget=excluded.budget, spent=excluded.spent, "
-            "dir_mtime=excluded.dir_mtime, item_resolution=excluded.item_resolution, "
-            "artifact_dir=excluded.artifact_dir, truncated=excluded.truncated",
-            (body, locus, _now(), int(depth), json.dumps(budget, ensure_ascii=False),
-             json.dumps(spent, ensure_ascii=False), _locus_mtime(locus),
-             1 if item_resolution else 0, artifact_dir, 1 if truncated else 0))
-        conn.commit()
-        row = conn.execute("SELECT id FROM survey WHERE body=? AND locus=?", (body, locus)).fetchone()
-        return {"success": True, "id": int(row["id"]), "locus": locus}
-    finally:
-        conn.close()
-
-
-def list_surveys(*, body: Optional[str] = None) -> List[Dict[str, Any]]:
-    """조사 원장 목록 + 축척별 신선도(자기 locus mtime 만 본다 — 하위 변화는 상위를 안 낡힌다)."""
-    conn = _connect()
-    try:
-        if body:
-            rows = conn.execute("SELECT * FROM survey WHERE body=? ORDER BY locus", (body,)).fetchall()
-        else:
-            rows = conn.execute("SELECT * FROM survey ORDER BY body, locus").fetchall()
-    finally:
-        conn.close()
-    out = []
-    for r in rows:
-        d = dict(r)
-        d["freshness"] = _stale_of(r["locus"], r["dir_mtime"])
-        for k in ("budget", "spent"):
-            try:
-                d[k] = json.loads(d[k]) if d[k] else {}
-            except Exception:
-                pass
-        out.append(d)
-    return out
-
-
-def survey_covering(path: str, *, body: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """path 를 덮는 가장 가까운(가장 구체적인) 조사 — 겹침 규칙 '가림'의 조회 축(§3)."""
-    path = os.path.abspath(os.path.expanduser(path))
-    best = None
-    for s in list_surveys(body=body):
-        loc = s["locus"].rstrip(os.sep)
-        if path == loc or path.startswith(loc + os.sep):
-            if best is None or len(loc) > len(best["locus"].rstrip(os.sep)):
-                best = s
-    return best
-
-
 def _match(text: str, terms: List[str]) -> bool:
     if not terms:
         return True
@@ -586,16 +511,16 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         # 폴더 지명(locus) — 그 자리 통째: 냄새(territory·owner)는 끄고 그 폴더 자체가 own 으로 온다.
         # 어휘가 기억의 입구(2026-09-03): 자동 주입이 없으므로 AI 가 폴더를 지명해 묻는 기본 경로.
         territory_items = []
-        map_items, surveys = _assemble_by_locus(map_rows, _hit, limit, fair=False,
-                                                no_query=not (terms or grams), focus_override=[loc])
+        map_items = _assemble_by_locus(map_rows, _hit, limit, fair=False,
+                                       no_query=not (terms or grams), focus_override=[loc])
         owner_items_locus: List[Dict[str, Any]] = []
         return {"success": True, "map": map_items, "owner": owner_items_locus,
-                "territory": territory_items, "surveys": surveys, "locus": loc,
+                "territory": territory_items, "locus": loc,
                 "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]
-    map_items, surveys = _assemble_by_locus(pool, _hit, limit, fair=not body,
-                                            no_query=not (terms or grams))
+    map_items = _assemble_by_locus(pool, _hit, limit, fair=not body,
+                                   no_query=not (terms or grams))
     # owner — 냄새 모드(filter_owner=False)에서도 *결정화된 것만* 상시 노출.
     #   임시(scent=0, 1회 관측)는 map 처럼 query 가 지명할 때만 나온다 → 정보는 남고 상시 비용만 사라짐.
     owner_items: List[Dict[str, Any]] = []
@@ -619,20 +544,19 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         if len(owner_items) >= limit:
             break
     return {"success": True, "map": map_items, "owner": owner_items,
-            "territory": territory_items, "surveys": surveys,
+            "territory": territory_items,
             "map_count": len(map_items), "owner_count": len(owner_items),
             "territory_count": len(territory_items)}
 
 
 def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: bool,
                        focus_override: Optional[List[str]] = None):
-    """위치 기반 조립. 반환 (map_items, surveys).
+    """위치 기반 조립. 반환 map_items.
 
     - match: 질의에 맞는 행(점수 순, 같은 점수면 더 구체적 위치·높은 confidence 먼저) — 전문(全文).
     - own: 상위 일치 위치(초점, 최대 _FOCUS_CAP)의 나머지 단언 — 그 폴더의 전체 프로필.
     - inherit: 초점의 조상 중 generalizes=1 관습·기질 — 하위에 그대로 적용되는 것만(가림 규칙의 반대면).
     - child: 초점의 직계 자식 폴더 한 줄씩(short) — 골격. 자세한 건 그 폴더를 지명해 회상.
-    - surveys: 초점을 덮는 조사 원장(가장 구체적 조사) — 아이템 목록 조회 통로.
     무질의(no_query)는 옛 동작(전부, 몸별 공정 인터리브, limit).
     focus_override=[locus]: 폴더 지명 — 초점을 그 폴더로 고정하고 일치(match)는 그 하위 나무 안에서만,
     자식 골격은 limit 까지(골격 상한 _CHILD_CAP 대신) — "그 자리의 기억 통째".
@@ -642,7 +566,7 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
         out = []
         for r in rows[:limit]:
             d = dict(r); d["via"] = "all"; d["freshness"] = _stale_of(r["locus"], r["locus_mtime"]); out.append(d)
-        return out, []
+        return out
     if focus_override:
         L0 = focus_override[0]
         pool_q = [r for r in pool if _norm_locus(r["locus"]) == L0 or _is_ancestor(L0, r["locus"])]
@@ -691,17 +615,7 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
         for C, rows in kids[:child_cap]:
             r = next((x for x in rows if x["kind"] == "identity"), rows[0])
             add(r, "child", short=True)
-    surveys: List[Dict[str, Any]] = []
-    seen_sv = set()
-    for L in focus:
-        try:
-            sv = survey_covering(L)
-        except Exception:
-            sv = None
-        if sv and sv["locus"] not in seen_sv:
-            seen_sv.add(sv["locus"])
-            surveys.append({k: sv.get(k) for k in ("locus", "body", "surveyed_at", "item_resolution", "freshness", "depth")})
-    return order[:limit], surveys
+    return order[:limit]
 
 
 def territory_loci(body: Optional[str] = None) -> List[str]:
@@ -780,16 +694,6 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
             text = m.get("short") if m.get("via") == "child" else m["claim"]
             lines.append(f'    <locus path="{loc}" {attrs}>{text}</locus>')
         lines.append('  </map>')
-    if res.get("surveys"):
-        snote = ('조사 원장 — 이 폴더는 조사됐다(FOLDER_SURVEY). items=1 이면 파일 단위 아이템 목록이 있어 '
-                 '[self:script]{op:"run", id:"폴더조사", args:{op:"items", path:"<폴더>", q:"<낱말>", '
-                 'where:{<필드>:<값>}}} 로 디스크 미장착에도 조회된다. freshness=stale 이면 재조사 권고.')
-        lines.append(f'  <surveys note="{snote}">')
-        for sv in res["surveys"]:
-            fr = f' freshness="{sv["freshness"]}"' if sv.get("freshness") else ''
-            lines.append(f'    <survey path="{sv["locus"]}" items="{1 if sv.get("item_resolution") else 0}" '
-                         f'depth="{sv.get("depth")}" at="{sv.get("surveyed_at")}"{fr}/>')
-        lines.append('  </surveys>')
     if res["owner"]:
         onote = ('provisional="1" 은 *단 한 번의 포식*에서 추론된 미확인 항목입니다 — 참고만 하고 '
                  '주인에 관한 사실로 단정하지 마세요(다른 포식에서 재확인되면 결정화됩니다).')

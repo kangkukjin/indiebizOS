@@ -1,4 +1,4 @@
-"""위치 기반 회상(FOLDER_SURVEY_HANDOFF §3) — 2-gram 매칭·초점 조립·상속·자식 골격·조사 원장 힌트.
+"""위치 기반 회상(FOLDER_SURVEY_HANDOFF §3) — 구절 매칭·초점 조립·상속·자식 골격·locus 지명.
 
 실행: .venv/bin/python -m pytest backend/test_forage_location_recall.py -q
 """
@@ -30,8 +30,6 @@ def fm(monkeypatch, tmp_path):
     FM.note_map(body=b, locus=ROOT + "/sf", kind="dead_branch", claim="1편뿐 — 믿지 말 것", confidence=0.9)
     FM.note_map(body=b, locus=ROOT + "/horror/deep", kind="identity", claim="손자 폴더 — 부속 자료", confidence=0.5)
     FM.note_map(body="mac", locus="/y/other", kind="identity", claim="무관한 다른 공간", confidence=0.7)
-    FM.record_survey(body=b, locus=ROOT, depth=2, budget={"dirs": 10}, spent={"dirs": 3},
-                     item_resolution=True, artifact_dir=str(tmp_path / "art"))
     return FM
 
 
@@ -69,15 +67,12 @@ def test_root_focus_lists_children_skeleton(fm):
 
 def test_unrelated_query_matches_nothing(fm):
     res = fm.recall(query="오늘 회의 일정", limit=12)
-    assert res["map"] == [] and res["surveys"] == []
+    assert res["map"] == []
 
 
-def test_survey_hint_for_focus(fm):
-    res = fm.recall(query="자막 있는 영화", limit=12)
-    assert [s["locus"] for s in res["surveys"]] == [ROOT]
-    assert res["surveys"][0]["item_resolution"] == 1
+def test_xml_carries_via(fm):
     xml = fm.recall_xml(query="자막 있는 영화", limit=12)
-    assert '<survey path="/x/media" items="1"' in xml and 'via="' in xml
+    assert 'via="' in xml
 
 
 def test_no_query_keeps_full_listing(fm):
@@ -103,7 +98,6 @@ def test_locus_recall_brings_the_folder_whole(fm):
     vias = {(m["locus"], m["via"]) for m in res["map"]}
     assert (ROOT + "/horror", "own") in vias and (ROOT + "/horror/deep", "child") in vias
     assert any(m["via"] == "inherit" and m["claim"] == "파일명 = 원제.연도.태그" for m in res["map"])
-    assert res["surveys"] and res["surveys"][0]["locus"] == ROOT
     assert res["territory"] == [] and res["owner"] == []
 
 

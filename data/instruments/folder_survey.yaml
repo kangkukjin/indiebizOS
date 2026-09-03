@@ -1,12 +1,10 @@
-# 폴더 조사 앱 — 어휘 없는 순수 매니페스트 (FOLDER_SURVEY_HANDOFF §5 계기).
+# 폴더 조사 앱 — 입구일 뿐(FOLDER_SURVEY_HANDOFF §5). 판단도 관측도 앱이 하지 않는다.
 #
-#   폴더   = [self:script] 폴더조사 status → 카드 → 드릴: 사전(dictionary.md) 편집·저장([self:write]) + AI 판단 요청([others:delegate])
-#   조사   = 폴더 고르기(folder 필드) → [self:script] 폴더조사 survey → 골격 카드
-#   기억   = [self:forage]{recall, locus} 목록 + 빼기(forget) + 주인 선언 추가(note, provenance=주인)
-#   보고서 = [self:read]{blocks} 로 report.md
+#   만들기 = 폴더를 고르면 [others:delegate]{scope: system} — AI 가 가이드 '폴더 조사'(folder_survey)대로 포식 기억을 만든다
+#   문서   = AI 가 쓴 문서(~workspace/data/forage_surveys/*.md)를 읽고 고쳐 저장 — 고친 줄은 주인의 선언
+#   기억   = [self:forage]{recall, locus} 통째 보기 · 빼기(forget) · 주인 선언 추가(note)
 #
-# 판단(축·겹침·예외·죽은 가지·기질)은 앱이 아니라 AI 가 한다 — 앱은 조사를 부르고, 판단을 요청하고, 사람이 고쳐 승인하는 입구다.
-# 두 입구(말·앱)는 같은 원장·같은 단언 저장소에 쓴다. 산출물(data/forage_surveys/)은 개인정보라 저장소 밖.
+# 말로 시키는 길과 같은 저장소(단언·문서)에 쓴다. 산출물은 개인정보라 저장소 밖(gitignore).
 
 instrument: folder_survey
 icon: 🗂️
@@ -15,102 +13,75 @@ order: 31
 phone_render: false
 
 modes:
-  # ── 폴더: 조사된 폴더 목록(신선도·해상도) → 사전 편집·승인 ──
-  - name: 폴더
+  - name: 만들기
     auto_run: true
-    note: 조사된 폴더입니다. 카드를 열면 AI 가 쓴 사전을 고쳐 저장할 수 있습니다 — 고친 줄은 주인의 선언이 됩니다.
-    action: '[self:script]{op: "run", id: "폴더조사", args: {op: "status"}}'
+    note: 폴더를 고르면 AI 가 지침대로 그 폴더를 보고 포식 기억(단언 + 문서)을 만듭니다. 이미 있으면 차이만 갱신하고, 당신이 고친 줄은 보존합니다.
+    action: '[self:file_find]{pattern: "*.md", path: "~workspace/data/forage_surveys"}'
+    view:
+      - type: form
+        title: 이 폴더의 포식 기억을 만들어 주세요
+        fields:
+          - key: path
+            label: 폴더
+            type: folder
+            value: ''
+          - key: hint
+            label: AI 에게 한마디(옵션 — 이 폴더가 무엇인지, 무엇을 찾고 싶은지)
+            type: textarea
+            value: ''
+        action: '[others:delegate]{scope: "system", message: "폴더 조사: $path 의 포식 기억을 만들어라. 먼저 read_guide 로 가이드 폴더 조사(folder_survey)를 읽고 그대로 한다 — 단언은 self:forage note 로, 문서는 그 가이드가 정한 자리에. 이미 문서가 있으면 차이만 갱신하고 주인이 고친 줄은 보존한다. 주인의 말: $hint", from_agent: "폴더조사앱"}'
+        button: AI 에게 맡기기
+        confirm: AI 가 이 폴더를 살펴보고 포식 기억을 만듭니다(시간이 걸릴 수 있습니다). 진행할까요?
+      - type: card_list
+        from: items
+        empty: 아직 만든 포식 기억 문서가 없습니다.
+        card:
+          title: '{title}'
+          lines:
+            - '{meta}'
+
+  - name: 문서
+    auto_run: true
+    note: AI 가 쓴 폴더 문서입니다. 열어서 고치면 그 줄은 주인의 선언이 됩니다.
+    action: '[self:file_find]{pattern: "*.md", path: "~workspace/data/forage_surveys"}'
     view:
       - type: card_list
         from: items
         master_detail: true
-        empty: 아직 조사한 폴더가 없습니다 — "조사" 탭에서 폴더를 골라 조사해 보세요.
+        empty: 아직 문서가 없습니다 — "만들기" 탭에서 폴더를 골라 AI 에게 맡겨 보세요.
         card:
           title: '{title}'
           lines:
             - '{meta}'
-            - '{body}'
         item_click:
-          action: '[self:script]{op: "run", id: "폴더조사", args: {op: "dictionary", path: "{title}"}}'
-          tabs:
-            - name: 사전
-              view:
-                - type: form
-                  title: 폴더 사전 — 축·겹침·우선순위·명명 관습·예외·죽은 가지·기질·주제어
-                  fields:
-                    - key: body
-                      label: 사전(마크다운)
-                      type: textarea
-                      value: '{content}'
-                      ai_dock:
-                        action: '[self:ask]{prompt: "지시대로 고쳐 본문만 답하라: $dock", context: "$body"}'
-                        modes: [replace, append]
-                        placeholder: AI에게 시키기 — 더 간결하게 / 예외 항목 표로
-                  action: '[self:write]{path: "{dictionary}", content: "$body"}'
-                  button: 저장
-                  actions:
-                    - label: 🧠 AI에게 판단 요청(재작성)
-                      action: '[others:delegate]{scope: "system", message: "폴더 조사 판단 요청: {locus} 의 조사 보고 {report} 를 읽고, 디스크 검색 가이드 1b 절대로 분할의 축·겹치는 축·우선순위·명명 관습·예외·죽은 가지·기질·주제어를 self:forage note 어휘로 적고, 같은 내용을 사람이 읽을 사전 {dictionary} 에 마크다운으로 써라. 기존 사전이 있으면 주인이 고친 줄은 지우지 말고 보존하라.", from_agent: "폴더조사앱"}'
-                      confirm: AI 에게 이 폴더의 판단(사전·단언)을 다시 쓰게 할까요? 주인이 고친 줄은 보존하라고 지시합니다.
+          action: '[self:read]{path: "{url}"}'
+          view:
+            - type: form
+              title: 폴더 문서(마크다운) — 고친 줄은 선언이 됩니다
+              fields:
+                - key: body
+                  label: 본문
+                  type: textarea
+                  value: '{result}'
+                  ai_dock:
+                    action: '[self:ask]{prompt: "지시대로 고쳐 본문만 답하라: $dock", context: "$body"}'
+                    modes: [replace, append]
+                    placeholder: AI에게 시키기 — 더 간결하게 / 예외 항목을 표로
+              action: '[self:write]{path: "{_item.url}", content: "$body"}'
+              button: 저장
 
-  # ── 조사: 폴더를 골라 예산 안에서 관측 (폼 = folder 필드) ──
-  - name: 조사
-    auto_run: true
-    note: 폴더를 고르면 예산 안에서 관측합니다(골격 + 아이템 목록). 판단은 그다음 "AI에게 판단 요청"으로.
-    action: '[self:script]{op: "run", id: "폴더조사", args: {op: "status"}}'
-    view:
-      - type: form
-        title: 새 조사 · 재조사
-        fields:
-          - key: path
-            label: 조사할 폴더
-            type: folder
-            value: ''
-          - key: depth
-            label: 골격 깊이
-            type: select
-            value: "2"
-            options:
-              - {value: "2", label: 2단}
-              - {value: "3", label: 3단}
-          - key: items
-            label: 아이템 목록
-            type: select
-            value: auto
-            options:
-              - {value: auto, label: 자동(파일 5천 이하면 만든다)}
-              - {value: "true", label: 만들기}
-              - {value: "false", label: 골격만}
-        action: '[self:script]{op: "run", id: "폴더조사", args: {op: "survey", path: "$path", depth: $depth, items: "$items"}}'
-        button: 조사 실행
-        actions:
-          - label: 🧠 AI에게 판단 요청
-            action: '[others:delegate]{scope: "system", message: "폴더 조사 판단 요청: $path 의 조사 산출물 report.md 를 읽고, 디스크 검색 가이드 1b 절대로 분할의 축·겹치는 축·우선순위·명명 관습·예외·죽은 가지·기질·주제어를 self:forage note 어휘로 적고(루트는 territory), 같은 산출물 폴더의 dictionary.md 에 사람이 읽을 사전을 마크다운으로 써라. 기존 사전의 주인이 고친 줄은 보존하라.", from_agent: "폴더조사앱"}'
-            confirm: 조사가 끝난 폴더의 판단(사전·단언 작성)을 AI 에게 맡깁니다. 진행할까요?
-      - type: card_list
-        from: items
-        empty: 아직 조사한 폴더가 없습니다.
-        card:
-          title: '{title}'
-          lines:
-            - '{meta}'
-
-  # ── 기억: 폴더의 포식 기억 통째 보기·빼기·주인 선언 추가 ──
   - name: 기억
-    note: 그 폴더의 기억을 통째로 봅니다 — 자기 단언(own)·물려받은 관습(inherit)·자식 골격(child). 틀린 줄은 빼고, 아는 것은 선언으로 더하세요.
+    note: 폴더를 적으면 그 폴더의 기억이 통째로 옵니다 — 자기 단언(own)·물려받은 관습(inherit)·자식 골격(child). 틀린 줄은 빼고, AI 가 못 보는 것은 선언으로 더하세요.
     inputs:
-      - key: folder
-        type: select
-        placeholder: 조사한 폴더
-        options_action: '[self:script]{op: "run", id: "폴더조사", args: {op: "status"}}'
-        options_from: items
-        option_value: title
-        option_label: title
-    action: '[self:forage]{op: "recall", locus: "$folder", limit: 40}'
+      - key: locus
+        type: text
+        placeholder: 폴더 경로
+        required: true
+    action: '[self:forage]{op: "recall", locus: "$locus", limit: 40}'
     view:
       - type: list_action
         from: map
-        empty: 이 폴더에 적힌 기억이 없습니다 — "조사" 탭에서 AI 판단을 요청하거나 아래에서 직접 선언하세요.
+        empty: 이 폴더에 적힌 기억이 없습니다 — "만들기" 탭에서 AI 에게 맡기거나 아래에서 직접 선언하세요.
         title: '{kind} · {via} · {locus}'
         sub: '{claim}'
         button:
@@ -141,21 +112,5 @@ modes:
             options:
               - {value: "false", label: 이 폴더만}
               - {value: "true", label: 하위 폴더에도(관습·기질)}
-        action: '[self:forage]{op: "note", layer: "map", locus: "$folder", kind: "$kind", claim: "$claim", generalizes: $gen, confidence: 0.95, provenance: {observed: ["주인 선언(폴더 조사 앱)"]}}'
+        action: '[self:forage]{op: "note", layer: "map", locus: "$locus", kind: "$kind", claim: "$claim", generalizes: $gen, confidence: 0.95, provenance: {observed: ["주인 선언(폴더 조사 앱)"]}}'
         button: 선언 저장
-
-  # ── 보고서: 관측 보고(report.md) 읽기 ──
-  - name: 보고서
-    inputs:
-      - key: report
-        type: select
-        placeholder: 조사한 폴더
-        options_action: '[self:script]{op: "run", id: "폴더조사", args: {op: "status"}}'
-        options_from: items
-        option_value: report
-        option_label: title
-    action: '[self:read]{path: "$report", blocks: true}'
-    view:
-      - type: blocks
-        from: items
-        empty: 보고서가 없습니다 — 먼저 "조사" 탭에서 조사하세요.

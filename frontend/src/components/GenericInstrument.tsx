@@ -33,7 +33,7 @@ import {
   type AppInstrument, type Json, type Dispatch, type ViewEvent,
   runIBL, jget, tpl, buildAction, rowAction, trendClass, asList,
   composeChannelOptions, mediaSrc, audioUrl, statusGlyph, IMAGE_BASE,
-  groupPartition, mediaModel, isSlowNet, hasMasterDetail, dynFilterCats, applyDynFilter,
+  groupPartition, mediaModel, isSlowNet, shuffleNext, hasMasterDetail, dynFilterCats, applyDynFilter,
 } from './generic/manifest';
 import { linkify, Card, EmptyMsg, KvRow, Sparkline, DocBlock } from './generic/prims-basic';
 import { FormPrim, EditableListPrim } from './generic/prims-edit';
@@ -301,20 +301,54 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
   if (p.type === 'media_player') {
     const arr = asList(data, p.from);
     if (!arr.length) return <EmptyMsg p={p} data={data} />;
-    // continuous: 한 곡이 끝나면 같은 프리미티브의 다음 곡 자동 재생 (앨범·플레이리스트 연속 듣기)
+    // continuous: 한 곡이 끝나면 같은 프리미티브의 다음 곡 자동 재생 (앨범·플레이리스트 연속 듣기).
+    // 🔀 랜덤이 켜져 있으면 다음 순서 대신 셔플이 고른 곡 — 그 규칙(섞은 자루)은 공용 코어
+    // shuffleNext 가 정본이라 원격 표면과 단일 소스다 — 여기선 DOM 만 만진다.
+    type MpGroup = HTMLElement & { __mpPlayed?: number[] };
+    const mpPlayAt = (all: HTMLAudioElement[], i: number) => {
+      const a = all[i];
+      if (a) { a.play().catch(() => {}); a.scrollIntoView({ block: 'nearest' }); }
+    };
     const onEnded = p.continuous ? (e: { currentTarget: HTMLAudioElement }) => {
-      const group = e.currentTarget.closest('[data-mp-group]');
+      const group = e.currentTarget.closest('[data-mp-group]') as MpGroup | null;
       if (!group) return;
       const all = Array.from(group.querySelectorAll('audio'));
-      const next = all[all.indexOf(e.currentTarget) + 1];
-      if (next) { next.play().catch(() => {}); next.scrollIntoView({ block: 'nearest' }); }
+      const cur = all.indexOf(e.currentTarget);
+      if (group.dataset.mpShuffle === '1') {
+        const r = shuffleNext(all.length, cur, group.__mpPlayed || []) as { index: number; played: number[] };
+        group.__mpPlayed = r.played;
+        if (r.index >= 0) mpPlayAt(all, r.index);
+        return;
+      }
+      mpPlayAt(all, cur + 1);
     } : undefined;
+    // 토글: 켜면 그 자리에서 무작위 한 곡으로 옮겨 재생하고, 끄면 순서 재생으로 돌아간다
+    // (끄는 순간엔 듣던 곡을 건드리지 않는다).
+    const onShuffle = (e: { currentTarget: HTMLButtonElement }) => {
+      const btn = e.currentTarget;
+      const group = btn.closest('[data-mp-group]') as MpGroup | null;
+      if (!group) return;
+      const on = group.dataset.mpShuffle !== '1';
+      group.dataset.mpShuffle = on ? '1' : '0';
+      btn.textContent = on ? '🔀 랜덤 켜짐' : '🔀 랜덤';
+      if (!on) return;
+      const all = Array.from(group.querySelectorAll('audio'));
+      let cur = -1;
+      all.forEach((a, i) => { if (!a.paused) cur = i; });
+      const r = shuffleNext(all.length, cur, []) as { index: number; played: number[] };
+      group.__mpPlayed = r.played;
+      if (r.index >= 0) mpPlayAt(all, r.index);
+    };
     // 소스 결정(lazy preload·src_low 저대역 선택·video 분기·HLS)은 공용 렌더 코어(mediaModel/
     // isSlowNet) — 원격 표면과 단일 소스. 여기선 그 결정을 데스크탑 URL(백엔드 origin 부착)과
     // 마크업으로 옮기기만 한다. navigator.connection 은 크로미움 계열에 존재(테슬라 실측).
     const slowNet = isSlowNet((navigator as unknown as { connection?: { downlink?: number; rtt?: number } }).connection);
     return (
       <div className="flex flex-col gap-3" data-mp-group={p.continuous ? '1' : undefined}>
+        {!!p.continuous && arr.length > 1 && (
+          <button type="button" onClick={onShuffle}
+            className="self-start text-xs px-2 py-1 rounded border border-stone-300 text-stone-600 hover:bg-stone-50">🔀 랜덤</button>
+        )}
         {arr.map((it, i) => {
           const m = mediaModel(p, it, tpl, slowNet) as
             { src: string; hls: string; isVideo: boolean; poster: string; title: string; preload: 'none' | 'metadata' };

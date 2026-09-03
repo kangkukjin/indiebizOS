@@ -46,11 +46,36 @@ function trendColor(p,data){ const up=trendUp(p,data); return up==null?null:(up?
 function emptyMsg(p,data){
   return '<p class="muted" style="margin-top:10px">'+esc(emptyText(p,data))+'</p>';
 }
-/* media_player continuous — 끝난 곡의 다음 audio(data-mp)를 자동 재생 (데스크탑 onEnded 파리티) */
+/* media_player continuous — 끝난 곡의 다음 audio(data-mp)를 자동 재생 (데스크탑 onEnded 파리티).
+   곡은 그 플레이어 묶음(data-mp-group) 안에서만 찾는다 — 문서 전체를 뒤지면 한 화면에
+   플레이어가 둘일 때 옆 묶음으로 넘어간다(데스크탑은 이미 group 단위). */
+function mpGroup(el){ return (el&&el.closest&&el.closest('[data-mp-group]'))||null; }
+function mpList(g){ return Array.prototype.slice.call((g||document).querySelectorAll('audio[data-mp]')); }
+function mpPlay(a){ if(!a) return; a.play().catch(function(){}); a.scrollIntoView({block:'nearest'}); }
 function mpNext(el){
-  const all=Array.prototype.slice.call(document.querySelectorAll('audio[data-mp]'));
-  const nx=all[all.indexOf(el)+1];
-  if(nx){ nx.play().catch(function(){}); nx.scrollIntoView({block:'nearest'}); }
+  const g=mpGroup(el), all=mpList(g), cur=all.indexOf(el);
+  /* 🔀 랜덤이 켜져 있으면 다음 순서 대신 섞은 자루가 고른 곡 — 규칙은 공용 코어(shuffleNext)가 정본. */
+  if(g&&g.dataset.mpShuffle==='1'){
+    const r=shuffleNext(all.length,cur,g.__mpPlayed||[]);
+    g.__mpPlayed=r.played;
+    if(r.index>=0) mpPlay(all[r.index]);
+    return;
+  }
+  mpPlay(all[cur+1]);
+}
+/* 🔀 랜덤 토글 — 켜면 그 자리에서 무작위 한 곡으로 재생을 옮긴다. 끄는 순간엔 재생 중인 곡을
+   건드리지 않고 다음 곡부터 순서로 돌아간다(듣던 곡이 끊기는 것이 더 놓란다). */
+function mpShuffle(btn){
+  const g=mpGroup(btn); if(!g) return;
+  const on=g.dataset.mpShuffle!=='1';
+  g.dataset.mpShuffle=on?'1':'0';
+  btn.textContent=on?'🔀 랜덤 켜짐':'🔀 랜덤';
+  if(!on) return;
+  const all=mpList(g);
+  let cur=-1; for(let i=0;i<all.length;i++) if(!all[i].paused) cur=i;
+  const r=shuffleNext(all.length,cur,[]);
+  g.__mpPlayed=r.played;
+  if(r.index>=0) mpPlay(all[r.index]);
 }
 /* 지도 render 프리미티브 — leaflet. innerHTML 후 initMaps()로 지연 초기화.
    봉투: route_map{origin,destination,path:[[lat,lng]],summary} | location_map{center,markers:[{name,lat,lng}]}.
@@ -322,7 +347,10 @@ function renderPrim(p,vi,data){
       window.__mpHlsObs.observe(document.body,{childList:true,subtree:true});
       arm();
     }
-    return arr.map(it=>{
+    // 🔀 랜덤 — 연속 재생(continuous) 자리에만 붙는다. 묶음 div 가 셔플 상태·자루를 들고,
+    // 다음 곡 결정은 공용 코어(shuffleNext)가 한다 — 데스크탑과 같은 규칙.
+    const shBtn=(p.continuous&&arr.length>1)?'<button class="btn2" style="margin-bottom:8px" onclick="mpShuffle(this)">🔀 랜덤</button>':'';
+    return '<div'+(p.continuous?' data-mp-group="1"':'')+'>'+shBtn+arr.map(it=>{
       const mm=mediaModel(p,it,tpl,slowNet);   // tpl=원격판(값 esc) — 속성 안에 들어가므로 그대로
       // 소스 해소(절대 URL / 백엔드 라우트 / 파일경로)는 공용 코어가 정본 — 원격은 동일오리진이라 base=''.
       // ★'/' 로 시작한다고 site-relative 가 아니다: 파일시스템 절대경로도 '/' 로 시작한다(isBackendRoute).
@@ -339,7 +367,7 @@ function renderPrim(p,vi,data){
         ?'<video controls playsinline preload="'+pre+'"'+vAttr+(poster?' poster="'+poster+'"':'')+' style="width:100%;max-width:880px;display:block;margin:0 auto;border-radius:10px;background:#000;aspect-ratio:16/9"></video>'
         :'<audio controls preload="'+pre+'" src="'+src+'" style="width:100%"'+cont+'></audio>';
       return '<div class="card">'+(title?'<div class="step-label">'+esc(title)+'</div>':'')+((src||canHlsJs)?media:'<div class="m">재생할 오디오가 없습니다.</div>')+'</div>';
-    }).join('');
+    }).join('')+'</div>';
   }
   if(p.type==='thread'){
     const arr=viewList(data,p.from);

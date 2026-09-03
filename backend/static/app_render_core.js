@@ -316,6 +316,37 @@ function mediaModel(p, it, T, slowNet) {
   };
 }
 
+/**
+ * 셔플(랜덤 재생)의 다음 곡 — '섞은 자루': 이번 바퀴에 아직 안 나온 곡에서만 고르고,
+ * 다 돌면 자루를 새로 채운다. 매번 균등하게 다시 뽑는 방식과 달리 한 바퀴 안에서는 같은 곡이
+ * 두 번 나오지 않고(즉시 반복 없음) 목록 전체가 반드시 한 번씩 나온다(영영 안 나오는 곡 없음).
+ *
+ * count=곡 수 · current=지금 곡 인덱스(없으면 -1) · played=이번 바퀴에 이미 나온 인덱스들.
+ * 상태를 안 들고 인자로 받는다 — 순수 함수라야 두 표면(데스크탑 TSX · 원격 JS)이 같은 규칙을 나눈다.
+ * 반환 {index, played} — index<0 은 재생할 것이 없다는 뜻(곡 0개). rnd 는 시험용 주입구(생략=Math.random).
+ */
+function shuffleNext(count, current, played, rnd) {
+  var n = Math.max(0, count | 0);
+  if (!n) return { index: -1, played: [] };
+  var R = rnd || Math.random;
+  var prev = played || [];
+  // 지금 듣고 있는 곡도 '이번 바퀴에 나온 곡'이다 — 자루를 열 때 넣어 두지 않으면
+  // 출발한 곡이 같은 바퀴에 한 번 더 걸린다(바퀴가 목록보다 한 곡 짧아진다).
+  if (!prev.length && current >= 0 && current < n) prev = [current];
+  var seen = {}, i;
+  for (i = 0; i < prev.length; i++) seen[prev[i]] = 1;
+  var pool = [];
+  for (i = 0; i < n; i++) if (!seen[i] && i !== current) pool.push(i);
+  // 자루가 비었으면 새 바퀴 — 지금 곡만 빼고 다시 채운다(한 곡뿐이면 그 곡을 다시).
+  if (!pool.length) {
+    prev = [];
+    for (i = 0; i < n; i++) if (i !== current) pool.push(i);
+    if (!pool.length) pool = [current];
+  }
+  var pick = pool[Math.floor(R() * pool.length) % pool.length];
+  return { index: pick, played: prev.concat([pick]) };
+}
+
 /* ===== 모드-레벨 결정 ===== */
 
 /** master_detail card_list 가 있으면 2분할 레이아웃 */
@@ -367,7 +398,7 @@ export {
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
   groupPartition, fmtSpark, sparkModel,
   CAL_PERIODIC, calendarModel, calShift, pad2,
-  composeChannelOptions, isSlowNet, preloadOf, mediaModel,
+  composeChannelOptions, isSlowNet, preloadOf, mediaModel, shuffleNext,
   BACKEND_MEDIA_ROUTES, isBackendRoute, resolveMediaUrl,
   hasMasterDetail, dynFilterCats, applyDynFilter, parseImagePaths,
   RECURRENCE_OPTS, dateInputType,

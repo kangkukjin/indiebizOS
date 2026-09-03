@@ -33,7 +33,7 @@
 [self:photo]{q:"iPhone"}                                # 기종·파일명 검색
 [self:photo]{kind:"video", start:"2026-03", end:"2026-03"}
 [self:photo]{has_gps:true, limit:100}                   # 위치 가진 사진
-[self:photo]{path:"/Volumes/Extreme SSD/사진", limit:50} # 특정 폴더만
+[self:photo]{path:"/Volumes/<외장 라벨>/사진", limit:50} # 특정 폴더만
 ```
 
 파생 조회는 별도 op 가 아니라 조합이다:

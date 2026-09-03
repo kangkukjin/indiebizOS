@@ -5,7 +5,11 @@
 쓰기는 어느 쪽으로 들어오든 둘을 같게 만든다:
   - DB 로 들어오는 쓰기(note/forget/정리 패스)   → 절을 다시 그린다(refresh_doc_for)
   - 문서로 들어오는 쓰기(판·편집기·AI)           → 절을 읽어 색인을 맞춘다(sync_doc_to_db; recall 이 mtime 으로 게을러도 잡는다)
-문서 단위: 경로 locus 는 상위 세 단(예: ~/Desktop, /Volumes/X/Y)마다 하나, 경로 아닌 locus(웹·코드·책)는 몸(body)마다 하나.
+저장 구조 = **폴더 트리를 비춘 트리**(2026-09-03 사용자 판정 "그런 구조로"): `data/forage_surveys/<몸>/<경로 그대로>/memory.md`.
+  mac/Users/u/Desktop/memory.md · mac/Users/u/Desktop/AI/memory.md(있으면 "AI 는 따로 조사됨") · disk_X/Volumes/X/영화/memory.md
+  · code_repo/memory.md(경로 아닌 몸은 몸 폴더 하나) · mac/memory.md(경로 없는 locus 들).
+  위계가 곧 저장 구조라 문서 찾기 = 경로를 그대로 옮기기, 조상 = 부모 디렉토리 올라가기, 하위 문서 = 아래 걷기(표식 스캔 없음).
+  새 문서가 생기는 자리: 처음엔 상위 세 단(~/Desktop 급) · 영토 앵커(territory)를 찍은 폴더는 자기 노드에 문서를 갖는다(조사된 뿌리).
 절의 표기는 최소: `- [종류] 표식 한 줄 ‹메타›` — 판단은 AI·주인 것, 여기는 표기만.
 """
 from __future__ import annotations
@@ -67,75 +71,103 @@ def slug(s: str) -> str:
     return re.sub(r'[<>:"|?*\x00-\x1f]', "_", s) or "root"
 
 
+DOC_NAME = "memory.md"
+
+
+def node_dir(body: str, root: str) -> str:
+    """이 (몸, 뿌리)의 문서가 사는 디렉토리 — 트리를 비춘다."""
+    base = os.path.join(DOC_DIR, slug(body))
+    r = _norm(os.path.expanduser(root or ""))
+    if _path_body(body) and _is_path(r):
+        return os.path.join(base, *[p for p in r.split("/") if p])
+    return base
+
+
+def doc_path_at(body: str, root: str) -> str:
+    return os.path.join(node_dir(body, root), DOC_NAME)
+
+
+def _read_marker(path: str) -> Optional[Tuple[str, str]]:
+    try:
+        with open(path, encoding="utf-8") as f:
+            head = f.read(2000)
+    except OSError:
+        return None
+    m = MARKER_RE.search(head)
+    return (m.group(1), m.group(2)) if m else None
+
+
 def _scan_docs() -> List[Tuple[str, str, str]]:
-    """[(path, body, root)] — 표식이 있는 문서만."""
+    """[(path, body, root)] — 트리 전체의 memory.md(표식이 몸·뿌리의 진실, 경로는 색인)."""
     out = []
     if not os.path.isdir(DOC_DIR):
         return out
-    for name in sorted(os.listdir(DOC_DIR)):
-        if not name.endswith(".md"):
-            continue
-        p = os.path.join(DOC_DIR, name)
-        try:
-            with open(p, encoding="utf-8") as f:
-                head = f.read(2000)
-        except OSError:
-            continue
-        m = MARKER_RE.search(head)
-        if m:
-            out.append((p, m.group(1), m.group(2)))
+    for cur, dirs, files in os.walk(DOC_DIR):
+        dirs.sort()
+        if DOC_NAME in files:
+            p = os.path.join(cur, DOC_NAME)
+            mk = _read_marker(p)
+            if mk:
+                out.append((p, mk[0], mk[1]))
     return out
 
 
+def _ancestor_chain(body: str, locus: str) -> List[str]:
+    """locus 자기 노드부터 위로 올라가며 존재하는 문서 경로들(가까운 것부터). 경로 아닌 몸은 몸 문서 하나."""
+    loc = _norm(os.path.expanduser(locus or ""))
+    found = []
+    if _path_body(body) and _is_path(loc):
+        parts = [p for p in loc.split("/") if p]
+        for k in range(len(parts), 0, -1):
+            cand = doc_path_at(body, "/" + "/".join(parts[:k]))
+            if os.path.exists(cand):
+                found.append(cand)
+    else:
+        cand = doc_path_at(body, body)
+        if os.path.exists(cand):
+            found.append(cand)
+    return found
+
+
+def docs_below(body: str, root: str) -> List[str]:
+    """root 노드 아래(자기 제외)의 문서 경로들 — '하위 폴더가 더 자세한 기억을 가진다'가 디렉토리에서 바로 드러난다."""
+    base = node_dir(body, root)
+    out = []
+    if not os.path.isdir(base):
+        return out
+    for cur, dirs, files in os.walk(base):
+        dirs.sort()
+        if cur != base and DOC_NAME in files:
+            out.append(os.path.join(cur, DOC_NAME))
+    return out
+
+
+def root_of_doc(path: str) -> str:
+    """문서 경로 → 뿌리(표식 우선, 없으면 경로에서)."""
+    mk = _read_marker(path)
+    if mk:
+        return mk[1]
+    rel = os.path.relpath(os.path.dirname(path), DOC_DIR).split(os.sep)
+    return "/" + "/".join(rel[1:]) if len(rel) > 1 else rel[0]
+
+
 def doc_path_for(body: str, locus: str, *, create_default: bool = True) -> Optional[str]:
-    """locus 를 덮는 가장 구체적인 기존 문서 → 없으면 기본 뿌리의 문서 경로(파일은 아직 없을 수 있음)."""
-    best = None
-    for p, b, root in _scan_docs():
-        if b != body or not _covers(body, root, locus):
-            continue
-        if best is None or len(_norm(root)) > len(_norm(best[1])):
-            best = (p, root)
-    if best:
-        return best[0]
-    root = doc_root_for(body, locus)
-    legacy = _legacy_doc_path(body, root)
-    if legacy:
-        return legacy
+    """locus 를 덮는 가장 가까운 기존 문서(자기 노드 → 조상) → 없으면 기본 뿌리(상위 세 단)의 문서 경로(아직 없을 수 있음)."""
+    chain = _ancestor_chain(body, locus)
+    if chain:
+        return chain[0]
     if not create_default:
         return None
-    return default_doc_path(body, root)
-
-
-def _legacy_doc_path(body: str, root: str) -> Optional[str]:
-    """표식 없이 AI·사람이 지은 문서 인수 — 경로 슬러그 이름(예: Volumes_Expansion_영화.md)이 있으면 그 문서(표식은 다음 렌더 때 붙는다)."""
-    if not (_path_body(body) and _is_path(root)):
-        return None
-    cand = os.path.join(DOC_DIR, slug(root) + ".md")
-    if os.path.exists(cand):
-        try:
-            head = open(cand, encoding="utf-8").read(2000)
-        except OSError:
-            return None
-        m = MARKER_RE.search(head)
-        if not m or (m.group(1) == body and _norm(m.group(2)) == _norm(root)):
-            return cand
-    return None
+    return doc_path_at(body, doc_root_for(body, locus))
 
 
 def existing_doc_for_root(body: str, root: str) -> Optional[str]:
-    """정확히 이 (body, root) 의 문서 — 표식 일치 또는 옛 이름."""
-    for p, b, r in _scan_docs():
-        if b == body and _norm(r) == _norm(root):
-            return p
-    return _legacy_doc_path(body, root)
+    p = doc_path_at(body, root)
+    return p if os.path.exists(p) else None
 
 
 def default_doc_path(body: str, root: str) -> str:
-    """기본 파일명: 맥은 경로 슬러그, 다른 디스크 몸은 `몸__경로`(같은 경로 뿌리가 몸마다 충돌하지 않게), 그 밖은 몸 이름.
-    기존 문서는 이름이 아니라 머리의 표식(body·root)으로 찾는다 — AI 가 지은 이름(예: Volumes_Expansion_영화.md)도 그대로 산다."""
-    if _path_body(body) and _is_path(root):
-        return os.path.join(DOC_DIR, (slug(root) if body == "mac" else slug(body) + "__" + slug(root)) + ".md")
-    return os.path.join(DOC_DIR, slug(body) + ".md")
+    return doc_path_at(body, root)
 
 
 # ----------------------------------------------------------------- 렌더 / 파싱
@@ -253,7 +285,7 @@ def rows_for_doc(body: str, root: str) -> List[Dict[str, Any]]:
         return rows
     if not _is_path(r):
         return [x for x in rows if not _is_path(_norm(os.path.expanduser(x["locus"])))]   # 경로 없는 locus 들만
-    deeper = [_norm(rt) for _p, b, rt in _scan_docs() if b == body and _norm(rt) != r and _norm(rt).startswith(r + "/")]
+    deeper = [_norm(root_of_doc(p)) for p in docs_below(body, r)]
     out = []
     for x in rows:
         loc = _norm(os.path.expanduser(x["locus"]))
@@ -265,23 +297,29 @@ def rows_for_doc(body: str, root: str) -> List[Dict[str, Any]]:
     return out
 
 
-def refresh_doc_for(body: str, locus: str) -> Optional[str]:
-    """DB(색인)가 바뀐 뒤 그 위치를 덮는 문서의 `## 단언` 절을 다시 그린다. 문서가 없으면 최소 머리로 만든다."""
+def refresh_doc_for(body: str, locus: str, *, own_node: bool = False) -> Optional[str]:
+    """DB(색인)가 바뀐 뒤 그 위치를 덮는 문서의 `## 단언` 절을 다시 그린다. 문서가 없으면 최소 머리로 만든다.
+    own_node=True(영토 앵커): 이 locus 자기 노드에 문서를 만들고, 그 행들을 잃는 조상 문서도 다시 그린다."""
+    loc = _norm(os.path.expanduser(locus or ""))
+    if own_node and _path_body(body) and _is_path(loc):
+        path = doc_path_at(body, loc)
+        chain_before = _ancestor_chain(body, loc)
+        out = refresh_doc(path, body, loc)
+        for anc in chain_before:
+            if anc != path:
+                refresh_doc(anc, body, root_of_doc(anc))
+                break
+        return out
     path = doc_path_for(body, locus)
     if not path:
         return None
-    root = None
-    for p, b, r in _scan_docs():
-        if p == path:
-            root = r
-    if root is None:
-        root = doc_root_for(body, locus)
+    root = root_of_doc(path) if os.path.exists(path) else doc_root_for(body, locus)
     return refresh_doc(path, body, root)
 
 
 def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
     rows = rows_for_doc(body, root)
-    os.makedirs(DOC_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
         text = open(path, encoding="utf-8").read()
         if not MARKER_RE.search(text[:2000]):
@@ -322,6 +360,11 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
         return {"success": False, "error": "forage-doc 표식이 없는 문서"}
     body, root = m.group(1), m.group(2)
     parsed = parse_section(text)
+    # 더 구체적인 하위 문서가 덮는 위치의 줄은 이 문서 소관이 아니다(옛 렌더의 잔재) — 건너뛰고, 다음 재렌더가 절에서 걷어낸다
+    deeper = [_norm(root_of_doc(d)) for d in docs_below(body, root)] if (_path_body(body) and _is_path(_norm(root))) else []
+    if deeper:
+        parsed = [q for q in parsed
+                  if not any(_norm(os.path.expanduser(q["locus"])) == d or _norm(os.path.expanduser(q["locus"])).startswith(d + "/") for d in deeper)]
     existing = rows_for_doc(body, root)
     ex_by = {(_norm(os.path.expanduser(r["locus"])), r["kind"], _claim_key(r["claim"])): r for r in existing}
     seen = {(_norm(os.path.expanduser(p["locus"])), p["kind"], _claim_key(p["claim"])) for p in parsed}
@@ -360,16 +403,22 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
             "inserted": inserted, "updated": updated, "deleted": deleted, "lines": len(parsed)}
 
 
+def _covering_docs(locus: str, body: Optional[str]) -> List[str]:
+    """locus 를 덮는 문서들(자기 노드+조상). 몸을 모르면: 경로 locus 는 디스크 몸들의 사슬, 아니면 모든 몸 문서."""
+    loc = _norm(os.path.expanduser(locus or ""))
+    bodies = [body] if body else sorted({b for _p, b, _r in _scan_docs()})
+    out: List[str] = []
+    for b in bodies:
+        if not body and _is_path(loc) and not _path_body(b):
+            continue
+        out.extend(_ancestor_chain(b, loc))
+    return out
+
+
 def lazy_sync(locus: str, body: Optional[str] = None) -> List[Dict[str, Any]]:
     """locus 를 덮는 문서가 색인보다 새로우면(사람·AI 가 문서를 고쳤으면) 색인을 맞춘다. 회상 앞에서 부른다 — stat 한 번."""
     out = []
-    for p, b, root in _scan_docs():
-        if body and b != body:
-            continue
-        if not body and _is_path(_norm(os.path.expanduser(locus or ""))) and not _path_body(b):
-            continue  # 경로 질의에 웹·코드·책 문서는 무관(몸을 모르면 디스크 몸만)
-        if not _covers(b, root, locus):
-            continue
+    for p in _covering_docs(locus, body):
         try:
             mtime = os.path.getmtime(p)
         except OSError:
@@ -382,30 +431,73 @@ def lazy_sync(locus: str, body: Optional[str] = None) -> List[Dict[str, Any]]:
 
 def sync_for_locus(locus: str, body: Optional[str] = None) -> Dict[str, Any]:
     """어휘 `[self:forage]{op:"sync", locus}` — 그 위치를 덮는 문서(들)를 색인에 맞춘다(시각 무관, 강제)."""
-    done = []
-    for p, b, root in _scan_docs():
-        if body and b != body:
-            continue
-        if not body and _is_path(_norm(os.path.expanduser(locus or ""))) and not _path_body(b):
-            continue
-        if _covers(b, root, locus):
-            done.append(sync_doc_to_db(p))
+    done = [sync_doc_to_db(p) for p in _covering_docs(locus, body)]
     if not done:
         return {"success": False, "error": f"이 위치를 덮는 포식 기억 문서가 없습니다: {locus}"}
     return {"success": True, "synced": done}
 
 
 # ----------------------------------------------------------------- 이관
+def _prose_len(text: str) -> int:
+    """`## 단언` 절과 표식을 뺀 본문 길이 — '누가 더 많이 썼나'의 잣대."""
+    t = MARKER_RE.sub("", text)
+    if SECTION in t:
+        i = t.index(SECTION); rest = t[i + len(SECTION):]
+        m = re.search(r"^## ", rest, re.M)
+        t = t[:i] + (rest[m.start():] if m else "")
+    return len(t.strip())
+
+
+def migrate_layout() -> Dict[str, Any]:
+    """옛 평평한 문서(`<slug>.md`, 표식 있음)를 트리 자리(`<몸>/<경로>/memory.md`)로 옮긴다. 멱등."""
+    moved = []
+    if not os.path.isdir(DOC_DIR):
+        return {"success": True, "moved": moved}
+    for name in sorted(os.listdir(DOC_DIR)):
+        p = os.path.join(DOC_DIR, name)
+        if not (name.endswith(".md") and os.path.isfile(p)):
+            continue
+        mk = _read_marker(p)
+        if not mk:
+            continue
+        dst = doc_path_at(mk[0], mk[1])
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        if os.path.exists(dst):
+            # 트리 자리에 이미 문서가 있어도 옛 평평한 문서가 이긴다 — 그건 사람·AI 가 쓴 것이고, 트리 것은 그 사이 기계가 만든 껍데기다
+            os.replace(dst, dst + ".tree.bak")
+        os.replace(p, dst)
+        try:
+            refresh_doc(dst, mk[0], mk[1])   # 절은 색인에서 다시 그린다
+        except Exception:
+            pass
+        moved.append({"from": name, "to": os.path.relpath(dst, DOC_DIR)})
+    if moved:
+        refresh_all_docs()   # 전부 옮긴 뒤에 그려야 상위 절이 하위 문서 소관의 행을 뺀다
+    return {"success": True, "moved": moved}
+
+
 def migrate_all() -> Dict[str, Any]:
-    """DB 의 모든 단언을 위치별 문서로 — 문서가 이미 있으면(AI 가 쓴 것) 표식과 `## 단언` 절만 더한다."""
+    """DB 의 모든 단언을 위치별 문서로 — 문서가 이미 있으면(AI 가 쓴 것) 표식과 `## 단언` 절만 더한다.
+    영토 앵커(territory=1)가 있는 경로 locus 는 자기 노드에 문서를 갖는다(조사된 뿌리)."""
     conn = FM._connect()
     try:
         rows = [dict(x) for x in conn.execute("SELECT body, locus FROM forage_map").fetchall()]
     finally:
         conn.close()
+    migrate_layout()
     groups: Dict[Tuple[str, str], int] = {}
+    conn = FM._connect()
+    try:
+        terr = [dict(x) for x in conn.execute("SELECT body, locus FROM forage_map WHERE territory=1").fetchall()]
+    finally:
+        conn.close()
+    for t in terr:  # 영토 앵커 = 자기 노드 문서
+        loc = _norm(os.path.expanduser(t["locus"]))
+        if _path_body(t["body"]) and _is_path(loc):
+            groups[(t["body"], loc)] = groups.get((t["body"], loc), 0)
     for r in rows:
-        groups[(r["body"], doc_root_for(r["body"], r["locus"]))] = groups.get((r["body"], doc_root_for(r["body"], r["locus"])), 0) + 1
+        key = (r["body"], doc_root_for(r["body"], r["locus"]))
+        groups[key] = groups.get(key, 0) + 1
     written = []
     # 구체적(긴) 뿌리부터 만들어야 상위 문서의 절이 하위 문서가 덮는 행을 뺀다 — 끝에 전부 한 번 더 그린다
     for (body, root), n in sorted(groups.items(), key=lambda kv: (kv[0][0], -len(kv[0][1]))):

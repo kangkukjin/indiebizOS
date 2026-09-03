@@ -26,6 +26,7 @@ const baseName = (p: string) => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() ||
 export function FolderMemoryPanel({ path }: { path: string }) {
   const [items, setItems] = useState<MapItem[]>([]);
   const [docPath, setDocPath] = useState<string | null>(null);
+  const [docsBelow, setDocsBelow] = useState<string[]>([]);
   const [docText, setDocText] = useState('');
   const [docDirty, setDocDirty] = useState(false);
   const [photo, setPhoto] = useState<PhotoScan | null>(null);
@@ -40,9 +41,10 @@ export function FolderMemoryPanel({ path }: { path: string }) {
     if (!path) return;
     setBusy('불러오는 중'); setMsg(null); setDocDirty(false);
     try {
-      const r = (await iblExecuteApp(`[self:forage]{op: "recall", locus: ${q(path)}, limit: 40}`)) as { map?: MapItem[]; doc?: string | null } | null;
+      const r = (await iblExecuteApp(`[self:forage]{op: "recall", locus: ${q(path)}, limit: 40}`)) as { map?: MapItem[]; doc?: string | null; docs_below?: string[] } | null;
       const map = r?.map ?? [];
       setItems(map);
+      setDocsBelow(r?.docs_below ?? []);
       // 문서(정본): 회상이 이 위치를 덮는 문서 경로(doc)를 준다 — 없으면 옛 규칙(루트 단언·이름 일치)
       let doc: string | null = r?.doc ?? null;
       for (const m of doc ? [] : map) {
@@ -124,7 +126,8 @@ export function FolderMemoryPanel({ path }: { path: string }) {
 
         {/* 머리: 문서·사진 스캔 */}
         <div className="text-xs text-[#6B5B4F] space-y-1">
-          <div>{docPath ? `📄 문서 있음 — ${baseName(docPath)}` : '📄 문서 없음'}</div>
+          <div>{docPath ? `📄 문서 있음 — ${docPath.replace(/^.*forage_surveys\//, '')}` : '📄 문서 없음'}</div>
+          {docsBelow.length > 0 && <div title={docsBelow.join('\n')}>🌳 더 자세한 하위 문서 {docsBelow.length}개 — {docsBelow.map((d) => d.replace(/\/memory\.md$/, '').split('/').pop()).join(', ')}</div>}
           {photo?.exists && <div>📷 사진 관리 스캔 있음 — 사진 {photo.photo_count ?? 0}장 · 동영상 {photo.video_count ?? 0}개{photo.last_scan ? ` · ${String(photo.last_scan).slice(0, 16)}` : ''}</div>}
         </div>
 

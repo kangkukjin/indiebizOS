@@ -287,7 +287,7 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
         conn.commit()
     finally:
         conn.close()
-    _doc_refresh(body, locus)   # 정본=문서: 색인이 바뀌면 그 위치 문서의 `## 단언` 절을 다시 그린다
+    _doc_refresh(body, locus, own_node=bool(territory))   # 정본=문서: 절 재렌더. 영토 앵커면 그 폴더 자기 노드에 문서
     return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
             "promoted_territory": promoted}
 
@@ -437,10 +437,10 @@ def _is_child(parent: str, child: str) -> bool:
     return _is_ancestor(parent, child) and _depth(child) == _depth(parent) + 1
 
 
-def _doc_refresh(body: str, locus: str) -> None:
+def _doc_refresh(body: str, locus: str, own_node: bool = False) -> None:
     try:
         import forage_doc
-        forage_doc.refresh_doc_for(body, locus)
+        forage_doc.refresh_doc_for(body, locus, own_node=own_node)
     except Exception as e:  # 문서 실패가 기억 쓰기를 막지 않는다
         print(f"[포식기억] 문서 재렌더 실패(무시): {e}")
 
@@ -561,23 +561,27 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         doc_path = None
         try:
             import forage_doc
-            doc_path = forage_doc.doc_path_for(body or "", loc, create_default=False) if body else None
-            if doc_path is None:
-                best_len = -1
-                for _p, _b, _r in forage_doc._scan_docs():
-                    if not forage_doc._covers(_b, _r, loc):
-                        continue
-                    _rn = forage_doc._norm(_r)
-                    # 경로 몸의 뿌리는 길이로(더 구체적인 것), 몸 하나 문서(웹·코드)는 경로 locus 를 덮지 않는다
-                    if not (forage_doc._path_body(_b) and forage_doc._is_path(_rn)):
-                        continue
-                    score = len(_rn) * 2 + (1 if _b == "mac" else 0)   # 같은 뿌리면 이 컴퓨터(mac) 문서 우선
-                    if score > best_len:
-                        best_len, doc_path = score, _p
+            chain = forage_doc._covering_docs(loc, body)   # 자기 노드 → 조상 (몸을 모르면 디스크 몸들)
+            # 같은 깊이면 mac 우선, 더 깊은 뿌리 우선
+            best = None
+            for p in chain:
+                depth = len([x for x in forage_doc._norm(forage_doc.root_of_doc(p)).split("/") if x])
+                score = depth * 2 + (1 if os.sep + "mac" + os.sep in p else 0)
+                if best is None or score > best[0]:
+                    best = (score, p)
+            doc_path = best[1] if best else None
+            docs_below = []
+            if doc_path:
+                try:
+                    _b = forage_doc._read_marker(doc_path)
+                    if _b:
+                        docs_below = [os.path.relpath(x, forage_doc.DOC_DIR) for x in forage_doc.docs_below(_b[0], _b[1])]
+                except Exception:
+                    docs_below = []
         except Exception:
             doc_path = None
         return {"success": True, "map": map_items, "owner": owner_items_locus,
-                "territory": territory_items, "locus": loc, "doc": doc_path,
+                "territory": territory_items, "locus": loc, "doc": doc_path, "docs_below": docs_below,
                 "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]

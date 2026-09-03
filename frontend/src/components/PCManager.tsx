@@ -2,7 +2,7 @@
  * PCManager - AI 파일 탐색기
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Folder,
   File,
@@ -12,12 +12,15 @@ import {
   RefreshCw,
   ArrowUp,
   Monitor,
+  Activity,
   Usb,
   BarChart3,
   FolderOpen
 } from 'lucide-react';
 import { PCManagerAnalyze } from './PCManagerAnalyze';
 import { FolderMemoryPanel } from './FolderMemoryPanel';
+import { GenericInstrument } from './GenericInstrument';
+import type { AppInstrument } from './generic/manifest';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
 // API 포트 가져오기
@@ -58,6 +61,22 @@ export function PCManager({ initialPath }: PCManagerProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [isAnalyzeMode, setIsAnalyzeMode] = useState(false);
   const [showMemory, setShowMemory] = useState(false);   // 🧠 이 폴더의 포식 기억 판(옛 폴더 조사 앱 흡수)
+  // '시스템' 모드 — 앱 모드의 시스템 계기(상태·프로세스·자원·검색·문서·큰 파일)를 이 창 안에 심는다.
+  // 2026-09-03 사용자 판정: 파일 앱과 시스템 앱은 하나 — 홈에선 system:true 로 숨고 여기가 진입점.
+  const [isSystemMode, setIsSystemMode] = useState(false);
+  const [systemInst, setSystemInst] = useState<AppInstrument | null>(null);
+  useEffect(() => {
+    if (!isSystemMode || systemInst) return;
+    (async () => {
+      try {
+        const apiUrl = await getApiUrl();
+        const res = await fetch(`${apiUrl}/launcher/instruments`);
+        const list = (await res.json()) as AppInstrument[] | { instruments?: AppInstrument[] };
+        const arr = Array.isArray(list) ? list : (list.instruments ?? []);
+        setSystemInst(arr.find((i) => i.id === 'host') ?? null);
+      } catch (e) { console.error('시스템 계기 로드 실패:', e); }
+    })();
+  }, [isSystemMode, systemInst]);
 
   // 드라이브 목록 로드
   const loadDrives = useCallback(async () => {
@@ -178,8 +197,18 @@ export function PCManager({ initialPath }: PCManagerProps) {
           <span className="text-sm font-medium text-[#4A4A4A]">PC Manager</span>
         </div>
         {/* 모드 전환 버튼 */}
-        <div className="w-44 flex justify-end gap-1 no-drag">
-          {!isAnalyzeMode && (
+        <div className="w-60 flex justify-end gap-1 no-drag">
+          <button
+            onClick={() => { setIsSystemMode(!isSystemMode); if (!isSystemMode) setIsAnalyzeMode(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+              isSystemMode ? 'bg-[#6B5B4F] text-white' : 'bg-[#E8E4DC] text-[#6B5B4F] hover:bg-[#DDD8D0]'
+            }`}
+            title="이 기계의 상태·프로세스·자원과 파일 검색·문서·큰 파일"
+          >
+            <Activity className="w-4 h-4" />
+            시스템
+          </button>
+          {!isAnalyzeMode && !isSystemMode && (
             <button
               onClick={() => setShowMemory(!showMemory)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
@@ -191,7 +220,7 @@ export function PCManager({ initialPath }: PCManagerProps) {
             </button>
           )}
           <button
-            onClick={() => setIsAnalyzeMode(!isAnalyzeMode)}
+            onClick={() => { setIsAnalyzeMode(!isAnalyzeMode); setIsSystemMode(false); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
               isAnalyzeMode
                 ? 'bg-[#6B5B4F] text-white'
@@ -214,7 +243,14 @@ export function PCManager({ initialPath }: PCManagerProps) {
         </div>
       </div>
 
-      {isAnalyzeMode ? (
+      {isSystemMode ? (
+        /* 시스템 모드 — 앱 모드 시스템 계기 임베드 */
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {systemInst ? <GenericInstrument instrument={systemInst} /> : (
+            <div className="flex items-center justify-center h-32 text-[#8B7B6B]">시스템 계기 불러오는 중…</div>
+          )}
+        </div>
+      ) : isAnalyzeMode ? (
         /* 분석 모드 */
         <PCManagerAnalyze />
       ) : (

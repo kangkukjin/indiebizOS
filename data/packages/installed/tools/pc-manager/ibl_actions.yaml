@@ -40,11 +40,14 @@ nodes:
         - 내몸
         - 프로세스
         app:
+          # 2026-09-03 파일 앱 + 시스템 앱 병합(사용자 판정): 상태·프로세스·자원 + 검색·문서·큰 파일 이 한 계기.
+          # system:true = 데스크탑 홈 그리드에서 숨김 — 진입점은 PC 관리 창의 '시스템' 모드(원격·폰 그리드는 그대로 노출).
+          # 옛 phone_render:false 는 뗐다 — 폰에선 실행 라우팅이 맥 위임으로 처리(관찰 항목).
           instrument: host
           icon: 🖥️
           name: 시스템
           order: 15
-          phone_render: false
+          system: true
           modes:
           - name: 상태
             auto_run: true
@@ -99,6 +102,46 @@ nodes:
               from: disks
               k: '{mount}'
               v: '{free_gb} GB 여유 / {total_gb} GB ({percent}%)'
+          - name: 검색
+            auto_run: true
+            inputs:
+            - key: q
+              type: text
+              placeholder: 파일명·확장자 검색 (예 report, pdf)
+            action: '[self:file_find]{search_term: "$q", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 문서
+            auto_run: true
+            phone_render: false
+            note: 최근 PDF·문서 (OS 색인 직접 — 스캔 불필요·항상 최신). 폰은 MediaStore=미디어 전용이라 문서 미색인 → mac/원격만.
+            action: '[self:file_find]{kind: "pdf", sort: "mtime", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
+          - name: 큰 파일
+            auto_run: true
+            note: 100MB 이상 — 용량 정리 대상 (큰 순).
+            action: '[self:file_find]{min_size_mb: 100, sort: "size", limit: 50}'
+            view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{path}'
   self:
     actions:
       storage:

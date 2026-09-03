@@ -37,6 +37,7 @@ export function FolderMemoryPanel({ path }: { path: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [hint, setHint] = useState('');
+  const [scale, setScale] = useState<'coarse' | 'fine'>('coarse');   // 예산=해상도(가이드 folder_survey): 거칠게 20회·5분·6KB / 자세히 60회·15분·20KB
   const [quickKind, setQuickKind] = useState('identity');
   const [quickLine, setQuickLine] = useState('');
 
@@ -86,7 +87,8 @@ export function FolderMemoryPanel({ path }: { path: string }) {
   const build = () => {
     const has = ownNode;
     if (!confirm(has ? 'AI 가 이 폴더를 다시 살펴 기억 문서를 갱신합니다(차이만, 당신이 고친 줄은 보존). 진행할까요?' : 'AI 가 이 폴더를 살펴보고 포식 기억 문서를 만듭니다. 시간이 걸릴 수 있습니다. 진행할까요?')) return;
-    const message = `폴더 조사: ${path} 의 포식 기억을 ${has ? '갱신해라(차이만)' : '만들어라'}. 먼저 read_guide 로 가이드 폴더 조사(folder_survey)를 읽고 그대로 한다 — 루트 단언은 territory 로 적어 이 폴더 자기 노드에 문서가 생기게 하고, 그 문서에 산문을 채운다. 이미 문서가 있으면 주인이 고친 줄은 보존한다.${hint.trim() ? ' 주인의 말: ' + hint.trim() : ''}`;
+    const scaleText = scale === 'fine' ? '축척: 자세히(아이템까지 — 기본 예산 도구 60회·15분·문서 20KB 안팎)' : '축척: 거칠게(골격 — 기본 예산 도구 20회·5분·문서 6KB 안팎)';
+    const message = `폴더 조사: ${path} 의 포식 기억을 ${has ? '갱신해라(차이만)' : '만들어라'}. 먼저 read_guide 로 가이드 폴더 조사(folder_survey)를 읽고 그대로 한다 — 루트 단언은 territory 로 적어 이 폴더 자기 노드에 문서가 생기게 하고, 그 문서에 산문을 채운다. 이미 문서가 있으면 주인이 고친 줄은 보존한다. ${scaleText}. 예산이 차면 멈추고 문서 머리에 어디까지 봤는지 적는다.${hint.trim() ? ' 주인의 말: ' + hint.trim() : ''}`;
     run('AI 에게 맡기기', `[others:delegate]{scope: "system", message: ${q(message)}, from_agent: "시스템 창 기억판"}`);
   };
 
@@ -124,9 +126,14 @@ export function FolderMemoryPanel({ path }: { path: string }) {
           {photo?.exists && <div>📷 사진 관리 스캔 있음 — 사진 {photo.photo_count ?? 0}장 · 동영상 {photo.video_count ?? 0}개{photo.last_scan ? ` · ${String(photo.last_scan).slice(0, 16)}` : ''}</div>}
         </div>
 
-        {/* 만들기 / 갱신 */}
+        {/* 만들기 / 갱신 — 축척 선택(예산=해상도) + 한마디 */}
         <div className="space-y-1">
-          <textarea value={hint} onChange={(e) => setHint(e.target.value)} placeholder="AI 에게 한마디(옵션) — 이 폴더가 무엇인지, 무엇을 찾고 싶은지, 자세히/거칠게" rows={2}
+          <div className="flex rounded-md bg-[#E8E4DC] p-0.5 text-xs">
+            {([['coarse', '거칠게 — 골격만 (도구 20회 · 5분 · 6KB 안팎)'], ['fine', '자세히 — 아이템까지 (60회 · 15분 · 20KB 안팎)']] as ['coarse' | 'fine', string][]).map(([k, label]) => (
+              <button key={k} onClick={() => setScale(k)} className={`flex-1 px-2 py-1 rounded transition-colors ${scale === k ? 'bg-[#6B5B4F] text-white' : 'text-[#6B5B4F] hover:bg-[#DDD8D0]'}`}>{label}</button>
+            ))}
+          </div>
+          <textarea value={hint} onChange={(e) => setHint(e.target.value)} placeholder="AI 에게 한마디(옵션) — 이 폴더가 무엇인지, 무엇을 찾고 싶은지" rows={2}
             className="w-full text-xs p-2 rounded border border-[#E5E0D8] bg-white" />
           <button onClick={build} disabled={!!busy} className="w-full text-xs px-2 py-1.5 rounded bg-[#6B5B4F] text-white hover:bg-[#5A4B3F] disabled:opacity-40">
             {ownNode ? '🧠 AI 에게 갱신 맡기기' : '🧠 AI 에게 이 폴더의 기억 만들기 맡기기'}

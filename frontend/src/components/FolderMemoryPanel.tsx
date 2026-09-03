@@ -46,13 +46,18 @@ export function FolderMemoryPanel({ path }: { path: string }) {
       // 문서: 루트 단언이 경로를 말하면 그것, 아니면 forage_surveys 에서 폴더 이름이 든 .md
       let doc: string | null = null;
       for (const m of map) {
+        if (m.via && m.via !== 'own') continue;   // 조상(inherit)·자식(child) 단언이 가리키는 문서는 이 폴더 것이 아니다
         const hit = m.claim.match(/(\S*forage_surveys\/[^\s'"`)]+\.md)/);
         if (hit) { doc = hit[1]; break; }
       }
       if (!doc) {
+        // 예비 규칙: 문서 파일 이름(확장자 뺀 것)이 폴더 이름 또는 경로 슬러그와 **정확히** 같을 때만.
+        // 부분 일치는 금물 — 워크스페이스 경로에 든 "Desktop" 이 바탕화면에서 다른 폴더 문서를 잡았다(2026-09-03 사용자 신고).
         const f = (await iblExecuteApp(`[self:file_find]{pattern: "*.md", path: "~workspace/data/forage_surveys"}`)) as { items?: { title?: string; url?: string }[] } | null;
         const name = baseName(path);
-        const cand = (f?.items ?? []).find((it) => (it.title || '').includes(name) || (it.url || '').includes(name));
+        const slug = path.replace(/^[\\/]+/, '').replace(/[\\/]+/g, '_');
+        const stem = (u: string) => (u.split(/[\\/]/).pop() || '').replace(/\.md$/i, '');
+        const cand = (f?.items ?? []).find((it) => { const st = stem(it.url || it.title || ''); return st === name || st === slug; });
         doc = cand?.url ?? null;
       }
       setDocPath(doc);

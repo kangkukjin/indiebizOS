@@ -82,9 +82,9 @@ const STATIC_DOMAINS: Domain[] = [
     ],
   },
   {
-    id: 'directions', icon: '🛣️', label: '길찾기·CCTV',
+    id: 'directions', icon: '🛣️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도. id 는 저장된 배치 보존을 위해 유지
     instruments: [
-      { id: 'directions', icon: '🛣️', label: '길찾기·CCTV', el: <DirectionsInstrument /> },
+      { id: 'directions', icon: '🛣️', label: '지도', el: <DirectionsInstrument /> },
     ],
   },
   // 검색(포식) 브라우저 — 구 런처 모드에서 앱으로 이사. ForageBrowser 오버레이는 Launcher 에

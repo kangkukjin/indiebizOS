@@ -991,6 +991,36 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
         return {"success": False, "error": f"날씨 조회 실패: {str(e)}"}
 
 
+# ── [sense:place] 장소 검색·상세 — 구현은 tool_place.py(서브모듈, 백엔드 재기동 시 로드) ──
+_place_mod = None
+
+
+def _load_place():
+    global _place_mod
+    if _place_mod is None:
+        import importlib.util as _ilu
+        _p = os.path.join(os.path.dirname(__file__), "tool_place.py")
+        _spec = _ilu.spec_from_file_location("tool_place", _p)
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        _place_mod = _mod
+    return _place_mod
+
+
+def place_search(tool_input: dict) -> dict:
+    return _load_place().place_search(tool_input)
+
+
+def place_detail(tool_input: dict) -> dict:
+    # 네이버 설명·블로그 근거는 맛집 검색과 같은 헬퍼를 쓴다(구현 한 곳).
+    return _load_place().place_detail(tool_input, naver_local=search_naver_local,
+                                      blog_evidence=_blog_evidence, norm_name=_norm_name)
+
+
+_OP_DISPATCHERS = {"search_place": {"search": place_search, "detail": place_detail}}
+_OP_DEFAULTS = {"search_place": "search"}
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
@@ -1014,6 +1044,13 @@ def execute(tool_input: dict, context) -> str:
         _spec.loader.exec_module(_mod)
         result = _mod.search_stay(tool_input)
         return json.dumps(result, ensure_ascii=False, indent=2)
+
+    elif tool_name == "search_place":
+        op = str(tool_input.get("op") or _OP_DEFAULTS["search_place"]).strip()
+        func = _OP_DISPATCHERS["search_place"].get(op)
+        if func is None:
+            return json.dumps({"success": False, "error": f"알 수 없는 op '{op}' — search | detail"}, ensure_ascii=False)
+        return json.dumps(func(tool_input), ensure_ascii=False, indent=2)
 
     elif tool_name == "search_restaurants":
         query = tool_input.get("query", "")

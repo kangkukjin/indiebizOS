@@ -103,6 +103,8 @@
     "sense:performance#regions": "[sense:performance]{op: \"regions\"}",
     "sense:performance#venue": "[sense:performance]{op: \"venue\", query: \"예술의전당\"}",
     "sense:phone": "[sense:phone]{}",
+    "sense:place": "[sense:place]{query: \"강남역 카페\", limit: 5}",
+    "sense:place#detail": "[sense:place]{op: \"detail\", name: \"치폴레 강남점\"}",
     "sense:radio": "[sense:radio]{op: \"search\", query: \"jazz\"}",
     "sense:radio#korean": "[sense:radio]{op: \"korean\"}",
     "sense:realty": "[sense:realty]{op: \"query\", region: \"강남구\"}",

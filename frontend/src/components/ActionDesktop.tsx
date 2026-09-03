@@ -15,7 +15,7 @@
  */
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
-import { DirectionsInstrument } from './DirectionsInstrument';
+import { MapInstrument } from './MapInstrument';
 import { NewspaperInstrument } from './NewspaperInstrument';
 import { AudioBriefingInstrument } from './AudioBriefingInstrument';
 import { BinNote } from './BinNote';
@@ -82,9 +82,9 @@ const STATIC_DOMAINS: Domain[] = [
     ],
   },
   {
-    id: 'directions', icon: '🛣️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도. id 는 저장된 배치 보존을 위해 유지
+    id: 'directions', icon: '🗺️', label: '지도',  // 2026-09-03 길찾기·CCTV→지도(장소 검색·저장·상세·길찾기). id 는 저장된 배치 보존을 위해 유지
     instruments: [
-      { id: 'directions', icon: '🛣️', label: '지도', el: <DirectionsInstrument /> },
+      { id: 'directions', icon: '🗺️', label: '지도', el: <MapInstrument /> },
     ],
   },
   // 검색(포식) 브라우저 — 구 런처 모드에서 앱으로 이사. ForageBrowser 오버레이는 Launcher 에

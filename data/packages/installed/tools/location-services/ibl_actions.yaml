@@ -88,6 +88,47 @@ nodes:
               link:
                 href: '{url}'
                 label: 지도/상세 →
+      place:
+        aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+          lng: [lon]
+        returns: items
+        side_effect: false    # 전 op 읽기 전용
+        fixture: '[sense:place]{query: "강남역 카페", limit: 5}'
+        description: 장소 검색 (카카오 로컬, 전 업종 — 가게·카페·편의점·주차장·병원·관광지…). op:search=키워드/카테고리(lat·lng 주변, radius m) · op:detail=한 곳 상세(카카오 기본+네이버 설명+블로그 언급, 1행). 맛집 후기순 추천은 [sense:restaurant], 길찾기는 navigate_route.
+        group: places
+        target_description: search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
+        router: handler
+        tool: search_place
+        implementation: tool_place.py — 키워드는 keyword.json, 카테고리만이면 category.json(좌표 필수), 15×3 페이지네이션, 좌표 없는 항목 드롭. detail 은 keyword 재조회로 id 일치 항목을 고른 뒤 네이버 local(설명·링크)·blog(blog_count·reason) 부착.
+        target_key: op
+        params:
+          query: string
+          category: string
+          lat: number
+          lng: number
+          radius: integer
+          sort: string
+          limit: integer
+          name: string
+          id: string
+        keywords:
+        - 장소
+        - 장소 검색
+        - 가게
+        - 근처
+        - 주변
+        - 카페
+        - 편의점
+        - 주차장
+        - place
+        - nearby
+        ops:
+          default: search
+          fixture:
+            detail: '[sense:place]{op: "detail", name: "치폴레 강남점"}'
+          values:
+            search: 키워드/카테고리로 장소 검색 (기본)
+            detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
       navigate_route:
         # 핸들러(handler.py:992-993)가 from/to 를 먼저 읽고 origin/destination 을 별칭으로
         # 받는다 — 그 사실을 데이터로 옮긴다(2026-08-23). 관측 destination 97 / to 18.
@@ -350,6 +391,59 @@ tool_json:
           description: 블로그 후기 근거 부착 여부 (기본 true, false면 빠름)
       required:
       - query
+  - name: search_place
+    description: '카카오 로컬 API 장소 검색(전 업종)·상세 — [sense:place].
+
+      - op=search (기본): query(키워드) 또는 category(카테고리) 로 검색. lat·lng 를 주면 그 주변(radius m,
+      최대 20000), sort=distance 는 좌표 필수. category 만 주면 lat·lng 필수(category.json).
+
+      - op=detail: name(+id·lat·lng) 한 곳 상세 — 카카오 기본(분류·주소·전화·place_url)에 네이버 설명·링크,
+      블로그 언급 수(blog_count)·후기 제목(reason) 부착. items 1행.
+
+
+      출력 items 는 항상 id·name·category·cat·address·phone·url·lat·lng(float) 포함. 좌표 없는 항목은 드롭.
+
+
+      ## 예시
+
+      - search_place(query=''강남역 카페'')
+
+      - search_place(category=''주차장'', lat=37.4979, lng=127.0276, radius=800, sort=''distance'')
+
+      - search_place(op=''detail'', name=''치폴레 강남점'', lat=37.5003, lng=127.0258)'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: search(기본) | detail
+        query:
+          type: string
+          description: '검색어 (예: ''강남역 카페'', ''서울시청'')'
+        category:
+          type: string
+          description: 카테고리 — 한글 라벨(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산·어린이집) 또는 카카오 코드(CE7·CS2·PK6…)
+        lat:
+          type: number
+          description: 중심 위도
+        lng:
+          type: number
+          description: 중심 경도
+        radius:
+          type: integer
+          description: 검색 반경 m (최대 20000, 카테고리 검색 기본 5000)
+        sort:
+          type: string
+          description: accuracy(기본) | distance(좌표 필수)
+        limit:
+          type: integer
+          description: 결과 수 (기본 15, 최대 45)
+        name:
+          type: string
+          description: detail 전용 — 장소 이름(검색 결과의 name)
+        id:
+          type: string
+          description: detail 전용 — 카카오 place id(검색 결과의 id, 동명 판별)
   - name: kakao_navigation
     description: '카카오모빌리티 API로 자동차 길찾기를 수행합니다.
 

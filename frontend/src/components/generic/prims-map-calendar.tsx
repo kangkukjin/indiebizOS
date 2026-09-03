@@ -14,7 +14,7 @@ import {
 } from './manifest';
 import { Card } from './prims-basic';
 
-// 지도 마커 아이콘 — 번들러 이미지 의존 없는 divIcon (DirectionsInstrument 선례)
+// 지도 마커 아이콘 — 번들러 이미지 의존 없는 divIcon (MapInstrument map/icons.ts 선례)
 const dotIcon = (color: string) => L.divIcon({
   className: '',
   html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,

@@ -67,6 +67,60 @@
       }
     },
     {
+      "name": "search_place",
+      "description": "카카오 로컬 API 장소 검색(전 업종)·상세 — [sense:place].\n- op=search (기본): query(키워드) 또는 category(카테고리) 로 검색. lat·lng 를 주면 그 주변(radius m, 최대 20000), sort=distance 는 좌표 필수. category 만 주면 lat·lng 필수(category.json).\n- op=detail: name(+id·lat·lng) 한 곳 상세 — 카카오 기본(분류·주소·전화·place_url)에 네이버 설명·링크, 블로그 언급 수(blog_count)·후기 제목(reason) 부착. items 1행.\n\n출력 items 는 항상 id·name·category·cat·address·phone·url·lat·lng(float) 포함. 좌표 없는 항목은 드롭.\n\n## 예시\n- search_place(query='강남역 카페')\n- search_place(category='주차장', lat=37.4979, lng=127.0276, radius=800, sort='distance')\n- search_place(op='detail', name='치폴레 강남점', lat=37.5003, lng=127.0258)",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "search(기본) | detail",
+            "enum": [
+              "search",
+              "detail"
+            ],
+            "default": "search"
+          },
+          "query": {
+            "type": "string",
+            "description": "검색어 (예: '강남역 카페', '서울시청')"
+          },
+          "category": {
+            "type": "string",
+            "description": "카테고리 — 한글 라벨(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산·어린이집) 또는 카카오 코드(CE7·CS2·PK6…)"
+          },
+          "lat": {
+            "type": "number",
+            "description": "중심 위도"
+          },
+          "lng": {
+            "type": "number",
+            "description": "중심 경도"
+          },
+          "radius": {
+            "type": "integer",
+            "description": "검색 반경 m (최대 20000, 카테고리 검색 기본 5000)"
+          },
+          "sort": {
+            "type": "string",
+            "description": "accuracy(기본) | distance(좌표 필수)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "결과 수 (기본 15, 최대 45)"
+          },
+          "name": {
+            "type": "string",
+            "description": "detail 전용 — 장소 이름(검색 결과의 name)"
+          },
+          "id": {
+            "type": "string",
+            "description": "detail 전용 — 카카오 place id(검색 결과의 id, 동명 판별)"
+          }
+        }
+      }
+    },
+    {
       "name": "kakao_navigation",
       "description": "카카오모빌리티 API로 자동차 길찾기를 수행합니다.\n\n## 반환 정보\n- 거리, 예상 소요시간, 톨비\n- 경로 지도 (map_data)\n- 주요 구간 안내\n\n## 출발지/목적지 형식\n- 장소명: '오송역', '수원 포레파크원' (자동 좌표 변환)\n- 좌표: '127.0276,37.4979'\n\n## 경로 옵션\n- priority: RECOMMEND(추천), TIME(최단시간), DISTANCE(최단거리)\n- avoid: toll(유료도로), motorway(고속도로) 회피",
       "input_schema": {

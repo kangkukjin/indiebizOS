@@ -46,7 +46,7 @@
 **살아있는 선례 (표현은 커스텀, 능력은 기존 어휘):**
 - 빈노트(문서) = `[self:write]` · `[self:read]` · `[self:file_find]` · `[self:delete]` (파일 어휘 그대로)
 - 신문 = `[sense:search]{source: "gnews"}` 를 키워드마다 팬아웃
-- 길찾기 = `[sense:navigate_route]` · `[sense:cctv]`
+- 지도 = `[sense:place]`(검색·상세) · `[sense:navigate_route]` · `[sense:cctv]` · `[sense:reverse_geocode]` · `[sense:here]` + 저장 장소는 `[self:read]`/`[self:write]{format:"json"}` 원장(`MapInstrument.tsx` + `map/` 하위 모듈로 분할 — 1500줄 규칙)
 - 정기보고 = `[self:file_find]`→`[self:read]` + 작성은 `[others:delegate]{scope:system}`
 
 **어휘가 없으면?** 그 능력이 IBL 액션 기준(조합성·빈도·실시간성·외부 접근)을 만족하면 **먼저 `new_action_checklist.md` 로 액션을 만들고**, 그 다음 이 계기(표현)를 붙인다. **능력 로직을 컴포넌트에 하드코딩하지 말 것** — 그러면 재사용도, 모델 불문도, 조합(`>>`)도 안 되고, 다른 앱·자율주행·조종실이 같은 능력을 못 쓴다. (IBL 명명 헌법: *특수보다 보편 우선, 중복 금지*.)
@@ -69,7 +69,7 @@
 
 ## 인라인 계기 만들기 (표준 경로 — 이것만 하면 끝)
 
-기존 인라인 계기를 **모방하라**: `NewspaperInstrument.tsx`(뷰어), `DirectionsInstrument.tsx`(입력+결과), `BinNote.tsx`(편집기+AI채팅).
+기존 인라인 계기를 **모방하라**: `NewspaperInstrument.tsx`(뷰어), `MapInstrument.tsx`(지도+패널, 하위 `map/`), `BinNote.tsx`(편집기+AI채팅).
 
 ### 1) 컴포넌트 작성 — `frontend/src/components/MyThing.tsx`
 ```tsx
@@ -211,7 +211,7 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 3. **`project_id: '앱모드'` 누락** — 앱 모드 `[self:*]` 저장/읽기가 "활성 프로젝트 경로 확보 불가"로 실패. `iblExecuteApp` 헬퍼를 import 하면 구조적으로 방지(복붙 말 것).
 4. **응답 shape 추측** — 라이브 `/ibl/execute`로 확인 후 파싱. items 통화 관습(`{items:[{title,meta,url}]}`).
 5. **선언형으로 될 걸 커스텀으로** — 데이터-모양이면 `app:` 블록이 먼저(원격·폰 파리티 공짜).
-6. **탐색을 바닥부터** — 저술 전 `codebase_map` 가이드와 가장 비슷한 기존 계기(Newspaper/Directions/BinNote)를 먼저 읽어 모방한다.
+6. **탐색을 바닥부터** — 저술 전 `codebase_map` 가이드와 가장 비슷한 기존 계기(Newspaper/MapInstrument/BinNote)를 먼저 읽어 모방한다.
 
 ## 관련
 - `new_action_checklist.md` — IBL 액션 저술 + 선언형 `app:` 블록

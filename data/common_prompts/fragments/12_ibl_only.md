@@ -153,7 +153,7 @@ $뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
 
 ## Key Principles
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
-2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선 사용. 예: 건강기록→`[self:health]{op: "query"}`, 메모리→`[self:memory]{op: "search"}`, **폴더·파일·자료의 위치→`[self:forage]{op: "recall", locus: "<폴더>"}`**(포식 기억 — 자동 주입되지 않으니 위치 질문이면 답하기 전에 직접 본다; 폴더를 모르면 `query`)
+2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선 사용. 예: 건강기록→`[self:health]{op: "query"}`, 메모리→`[self:memory]{op: "search"}`, **폴더·파일·자료의 위치→`[self:forage]{op: "recall", locus: "<폴더>"}`**(포식 기억 — 자동 주입되지 않으니 위치 질문이면 답하기 전에 직접 본다; 폴더를 모르면 `query`). **그 기억으로 답하다 새로 안 것**(예외·흩어짐·틀린 단언·편수 보정)은 답하고 끝내지 말고 **그 자리에서 남긴다**: `[self:forage]{op: "note", layer: "map", locus: "<폴더>", kind: …, claim: "<한 줄>"}` + 그 폴더 문서(`~workspace/data/forage_surveys/<폴더 이름>.md`)의 `## 갱신 기록` 에 일시와 한 줄 append. 검색이 사전을 고친다 — 안 남기면 다음 질문이 같은 6분을 다시 쓴다.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
 5. `>>` 순차, `&` 병렬(분기 파이프는 괄호: `A & (B >> C) >> [table:merge]`), `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)

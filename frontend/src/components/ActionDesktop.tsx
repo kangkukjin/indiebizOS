@@ -152,7 +152,7 @@ function readCache<T>(key: string, fallback: T): T {
   } catch { return fallback; }
 }
 
-export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {}) {
+export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | null; openNonce?: number } = {}) {
   // 레벨2로 열린 앱 id(인라인 el). null = 홈. 도메인→계기 2단이 없어져 단일 상태로 충분.
   const [openId, setOpenId] = useState<string | null>(null);
   const [manifest, setManifest] = useState<AppInstrument[]>(() => readCache(MANIFEST_CACHE_KEY, []));
@@ -233,17 +233,23 @@ export function ActionDesktop({ openAppId }: { openAppId?: string | null } = {})
   // 승격 앱 딥링크 — openAppId 가 주어지면 그 앱을 바로 연다(계기 인라인 or 네이티브 창).
   // APPS 는 매니페스트 비동기 로드 후 채워지므로 준비될 때까지 대기하고, 같은 id 재적용은 스킵
   // (window focus 로 매니페스트 재조회 시 사용자 내비게이션을 되감지 않도록).
+  // ★가드 키는 id 가 아니라 (열기 신호, id) 쌍이다. id 만 보면 '이미 그 앱이 활성'인 상태에서
+  //   다시 고른 선택이 통째로 삼켜진다 — 네이티브 창 앱(시스템·사진·강의)은 창을 닫아도 id 가
+  //   그대로 남고 localStorage 로 재시작까지 살아남아 두 번째부터 영영 안 열렸다. 인라인 앱도
+  //   BackBar 로 나온 뒤 같은 앱을 다시 고르면 같은 이유로 안 열렸다.
+  //   nonce 를 키에 넣으면 '다시 고름'은 열리고, 매니페스트 재조회 같은 APPS 변동은 여전히 안 연다.
   const deepLinkRef = useRef<string | null>(null);
   useEffect(() => {
     if (!openAppId) { deepLinkRef.current = null; return; }
-    if (deepLinkRef.current === openAppId) return;
+    const key = `${openNonce ?? 0}:${openAppId}`;
+    if (deepLinkRef.current === key) return;
     const a = APPS.find((x) => x.id === openAppId);
     if (!a) return;  // 매니페스트 아직 로드 전 — 다음 렌더에서 재시도
-    deepLinkRef.current = openAppId;
+    deepLinkRef.current = key;
     if (a.onOpen) { a.onOpen(); setOpenId(null); }  // 네이티브 창 — 앱 홈은 그대로
     else if (a.el) setOpenId(a.id);                 // 인라인 → 바로 레벨2
     else setOpenId(null);
-  }, [openAppId, APPS]);
+  }, [openAppId, openNonce, APPS]);
 
   const folderTargets = useMemo(() => Object.keys(layout.folders), [layout.folders]);
 

@@ -71,6 +71,8 @@ export function Launcher() {
   const [activeAppId, setActiveAppId] = useState<string | null>(() =>
     localStorage.getItem('indiebiz_launcher_app') || null
   );
+  // 승격 앱 열기 신호 — 선택할 때마다 증가. 같은 앱 재선택도 새 열기가 되게 하는 유일한 근거.
+  const [appOpenNonce, setAppOpenNonce] = useState(0);
   const [promotedIds, setPromotedIds] = useState<string[]>([]);
   // 승격 앱 아이콘·라벨 해소용 — static 도메인 메타 + 매니페스트(런타임) 병합.
   const [appMetaById, setAppMetaById] = useState<Record<string, { icon: string; label: string }>>({});
@@ -595,7 +597,18 @@ export function Launcher() {
   // 기본 다섯 모드 선택 — 승격 딥링크 해제. 검색 브라우저 오버레이도 닫는다(모드가 가려지는 사고 방지).
   const selectMode = (m: LauncherMode) => { setActiveAppId(null); setLauncherTab(m); setShowModeMenu(false); setBrowserOpen(false); };
   // 승격 앱 선택 — 앱 모드로 전환하고 그 앱을 딥링크로 연다.
-  const selectPromoted = (id: string) => { setActiveAppId(id); setLauncherTab('app'); setShowModeMenu(false); setBrowserOpen(false); };
+  // ★열기는 '상태'가 아니라 '행위'다: 이미 activeAppId 인 앱을 다시 골라도 열려야 한다.
+  //   (네이티브 창 앱은 창을 닫아도 activeAppId 가 그대로 남고 localStorage 로 재시작까지 살아남아,
+  //    id 동일성만 보면 두 번째부터 영영 no-op 이 된다 — 시스템(files) 앱이 안 열리던 원인.)
+  //   nonce 를 올려 매 선택이 새 열기 신호가 되게 한다. 매니페스트 재조회 같은 무관한 리렌더는
+  //   nonce 가 그대로라 여전히 앱을 다시 열지 않는다.
+  const selectPromoted = (id: string) => {
+    setActiveAppId(id);
+    setAppOpenNonce((n) => n + 1);
+    setLauncherTab('app');
+    setShowModeMenu(false);
+    setBrowserOpen(false);
+  };
   // 승격 앱 빼기 — 드롭다운 ✕에서 바로. 레이아웃을 읽어 promoted 만 걷어내고 다시 저장(다른 필드 보존).
   const demotePromoted = async (id: string) => {
     setPromotedIds((prev) => prev.filter((x) => x !== id));  // 낙관적
@@ -864,7 +877,8 @@ export function Launcher() {
       >
         {launcherTab === 'app' ? (
           // key 에 activeAppId 를 넣어 승격 앱 전환 시 깨끗이 remount(딥링크 재적용).
-          <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} />
+          // openNonce 는 '같은 앱 재선택'을 위한 신호 — remount 없이도 열기가 다시 돈다.
+          <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} openNonce={appOpenNonce} />
         ) : launcherTab === 'warehouse' ? (
           <WarehouseView />
         ) : launcherTab === 'manual' ? (

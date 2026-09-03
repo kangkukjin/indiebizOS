@@ -876,7 +876,10 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
         if not r:
             continue
         if _src:
-            from value_semantics import text_match, values_equal   # 값 판정은 한 벌로(사설 정규화 금지)
+            try:
+                from value_semantics import text_match, values_equal   # 값 판정은 한 벌로(사설 정규화 금지)
+            except ImportError:
+                from common.value_semantics import text_match, values_equal
             if not (values_equal(str(r.get("source_id")), _src) or text_match("contains", str(r.get("source") or ""), _src)):
                 continue
         r["score"] = round(float(score), 4)

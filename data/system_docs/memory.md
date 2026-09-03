@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-08-28
+last_updated: 2026-09-03
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -36,7 +36,7 @@ see_also: [architecture.md, ibl.md]
 | 4 | **절차 기억** (방법) | IBL 액션 + 워크플로우 + **해마** | `ibl_nodes.yaml`, `data/workflows/*.yaml`, `ibl_usage.db` | "어떻게 하는가" — 자연어→IBL 코드 |
 | 5 | **관계 기억** (사용자 사실) | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
 | 6 | **자기 상태** (항상성) | World Pulse + Self-Check | `world_pulse.db:pulse_log / self_checks / action_health` | 세계·사용자·자신의 실시간 상태와 건강 |
-| 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | `forage_memory.db:forage_map / owner_model` | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
+| 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | 정본=문서 트리 `data/forage_surveys/<몸>/<경로>/memory.md` · `forage_memory.db:forage_map`=색인 · `owner_model`=DB | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
 
 > **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은
 > #4 해마(`<execution_memory>`)와 #5 심층메모리의 **지도**(`<memory_map>`, 목차만·내용 없음)를 **하나로 합성**한다.
@@ -134,7 +134,7 @@ see_also: [architecture.md, ibl.md]
 > **"쓰면서 *공간*에 대한 지식을 흡수"의 실현체.** 해마(#4)가 "어떻게 하는가"를 증류한다면, 포식 기억은 "어디에 무엇이 사는가"를 증류한다.
 
 - **문제**: AI는 stateless라 디스크를 한 시간 뒤져 알아낸 것(폴더 정체·죽은 가지·주인 관습)을 세션이 끝나면 잊고 매번 콜드 스타트한다. 그 "어떻게 뒤지나"는 *나만의 것*이라 가중치에도 없다.
-- **저장소** (`backend/datastore/forage_memory.py`, `data/forage_memory.db`): **2층** — `forage_map`(이 디스크 전속: 폴더 정체·관습·죽은가지·기질) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유).
+- **저장소** (2026-09-03 개정, `backend/datastore/forage_doc.py` + `forage_memory.py`): **정본은 문서**다 — 위치마다 `data/forage_surveys/<몸>/<경로 그대로>/memory.md`(폴더 트리를 비춘 트리, 저장소 밖·개인정보) 의 `## 단언` 절. 절대 경로를 가진 단언은 몸 표기와 무관하게 `mac/<경로>/memory.md` 한 곳(`code:`·`web`·`book:` 문서에는 경로 없는 단언만). `data/forage_memory.db` 는 **2층** — `forage_map`(폴더 정체·관습·죽은가지·기질)은 그 절의 **색인**(DB 쓰기→문서 재렌더, 문서 편집→mtime 으로 색인 재동기화) + `owner_model`(몸독립 주인모델: 정체·분야·신호·습관 — 디스크·웹·코드 공유)은 DB 에만 산다(문서 이관 없음).
 - **닫힌 루프**: ③ 포식 의도 시 `<forage_memory>` 주입(`_search_forage_memory`, 해마 `<execution_memory>` 옆) → ② AI가 포식(`file_find`/`grep`/`read`) → ④ 종료 훅에서 *일반화 가능한 지도 델타만* 증류(`_distill_forage_memory`, 날 내용·특정 파일 제외) → ⑤ 기존 라벨 위반 이질 내용은 surface 표식(필터버블 반대힘).
 - **안전판 4**(누적의 그림자 방지): 폐기가능(prune_reason)·prior_class 게이팅(구조적만 committal prune)·surface 카운터패스·provenance+confidence.
 - **★owner 빈도 게이트**(2026-07-29): 주인모델은 상시 노출이라 **1회 추론이 영구 주입**되는 구멍이 있었다(실측: 66건 전부 obs=1, 질문 *대상*이 주인의 "소속"이 되는 오염). → 첫 관측은 **임시**(`scent=0`, map처럼 query 필터), **서로 다른 포식에서 재확인**되면 상시 냄새로 결정화(`_OWNER_SCENT_PROMOTE_AT=2`, 상한 8). territory 승격과 같은 '빈도가 결정화한다' 모티프. 임시 항목도 지워지지 않아 **잃는 정보 0**, 모델에는 `provisional="1"`로 노출. 상세=`docs/FORAGER_MULTIBODY_DESIGN.md` §10-1.

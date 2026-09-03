@@ -4,6 +4,7 @@
 """
 import os
 import sys
+import time
 
 import pytest
 
@@ -142,60 +143,47 @@ def test_territory_makes_own_node_and_ancestors_see_it(env):
 
 def _mk_real(tmp, rel, children):
     d = tmp / rel
+    d.mkdir(parents=True, exist_ok=True)
     for c in children:
         (d / c).mkdir(parents=True, exist_ok=True)
     return str(d)
 
 
-def test_reconcile_moves_when_one_strong_candidate(env, monkeypatch):
-    real = env / "real"
-    old = _mk_real(real, "Desktop/photos", ["2019", "2020", "misc"])
-    FM.note_map(body="mac", locus=old, kind="identity", claim="사진 모음", confidence=0.8, territory=True)
-    FM.note_map(body="mac", locus=old + "/2019", kind="identity", claim="2019년", confidence=0.7)
-    FM.note_map(body="mac", locus=old + "/2020", kind="identity", claim="2020년", confidence=0.7)
-    new = str(real / "Archive/photos"); os.makedirs(os.path.dirname(new), exist_ok=True); os.rename(old, new)
-    decoy = _mk_real(real, "Other/photos", ["a", "b"])   # 이름만 같은 폴더
-    monkeypatch.setattr(FD, "_search_dirs_by_name", lambda name: [new, decoy])
-    rep = FD.reconcile("mac")
-    assert rep["moved"] and rep["moved"][0]["from"] == old and rep["moved"][0]["to"] == new and rep["moved"][0]["rows"] == 3
-    assert os.path.exists(FD.doc_path_at("mac", new)) and not os.path.exists(FD.doc_path_at("mac", old))
-    res = FM.recall(locus=new, limit=10)
-    assert {m["claim"] for m in res["map"] if m["via"] in ("own", "child")} >= {"사진 모음"}
-    assert "이사" in open(FD.doc_path_at("mac", new), encoding="utf-8").read()
-
-
-def test_reconcile_tombstones_when_no_candidate(env, monkeypatch):
+def test_reconcile_tombstones_missing_and_skips_unmounted(env):
+    """폴더가 없어지면 그 노드(와 밑)의 문서를 _gone 으로 접고 부모에 한 줄, 단언은 표식만. 안 꽂힌 볼륨은 건너뜀. 이사 감지는 하지 않는다(사용자 판정)."""
     real = env / "real"
     parent = _mk_real(real, "Desktop", [])
     gone = _mk_real(real, "Desktop/temp", ["x"])
     FM.note_map(body="mac", locus=parent, kind="identity", claim="바탕화면", confidence=0.8, territory=True)
     FM.note_map(body="mac", locus=gone, kind="identity", claim="임시", confidence=0.7, territory=True)
+    FM.note_map(body="mac", locus=gone + "/x", kind="identity", claim="임시 x", confidence=0.6, territory=True)
+    FM.note_map(body="disk:Q", locus="/Volumes/NotMounted-zz/stuff", kind="identity", claim="외장", confidence=0.7, territory=True)
     import shutil; shutil.rmtree(gone)
-    monkeypatch.setattr(FD, "_search_dirs_by_name", lambda name: [])
-    rep = FD.reconcile("mac")
-    assert rep["gone"] and rep["gone"][0]["root"] == gone
+    rep = FD.reconcile()
+    assert [g["root"] for g in rep["gone"]] == [gone]            # 밑의 x 는 통째로 같이 접힌다
+    assert "/Volumes/NotMounted-zz/stuff" in rep["unmounted"]
     assert not os.path.exists(FD.doc_path_at("mac", gone))
-    assert os.path.exists(os.path.join(FD.DOC_DIR, "mac", FD.GONE_DIR, *[p for p in gone.split("/") if p], "memory.md"))
+    archived = os.path.join(FD.DOC_DIR, "mac", FD.GONE_DIR, *[p for p in gone.split("/") if p])
+    assert os.path.exists(os.path.join(archived, "memory.md")) and os.path.exists(os.path.join(archived, "x", "memory.md"))
     ptext = open(FD.doc_path_at("mac", parent), encoding="utf-8").read()
     assert "사라짐" in ptext and "temp" in ptext
-    res = FM.recall(locus=gone, limit=10)   # 단언은 남되 표식이 붙는다
+    res = FM.recall(locus=gone, limit=10)
     assert any(m["claim"] == "임시" and m.get("surface_flag") for m in res["map"])
     assert FD.docs_below("mac", parent) == []
 
 
-def test_reconcile_holds_when_ambiguous_and_skips_unmounted(env, monkeypatch):
+def test_purge_gone_after_a_week(env):
     real = env / "real"
-    gone = _mk_real(real, "Desktop/notes", ["a", "b"])
-    FM.note_map(body="mac", locus=gone, kind="identity", claim="메모", confidence=0.7, territory=True)
-    FM.note_map(body="mac", locus=gone + "/a", kind="identity", claim="a", confidence=0.6)
-    c1 = _mk_real(real, "X/notes", ["a", "b"]); c2 = _mk_real(real, "Y/notes", ["a", "b"])
+    gone = _mk_real(real, "Desktop/old", [])
+    FM.note_map(body="mac", locus=gone, kind="identity", claim="옛것", confidence=0.7, territory=True)
     import shutil; shutil.rmtree(gone)
-    monkeypatch.setattr(FD, "_search_dirs_by_name", lambda name: [c1, c2])
-    FM.note_map(body="disk:Q", locus="/Volumes/NotMounted-zz/stuff", kind="identity", claim="외장", confidence=0.7, territory=True)
-    rep = FD.reconcile()
-    assert rep["ambiguous"] and rep["ambiguous"][0]["root"] == gone and len(rep["ambiguous"][0]["candidates"]) == 2
-    assert os.path.exists(FD.doc_path_at("mac", gone)) and "이사 후보" in open(FD.doc_path_at("mac", gone), encoding="utf-8").read()
-    assert "/Volumes/NotMounted-zz/stuff" in rep["unmounted"]
+    FD.reconcile("mac")
+    archived = os.path.join(FD.DOC_DIR, "mac", FD.GONE_DIR, *[p for p in gone.split("/") if p], "memory.md")
+    assert os.path.exists(archived)
+    assert FD.purge_gone(days=7)["removed"] == []                 # 아직 일주일 안 됨
+    old = time.time() - 8 * 86400; os.utime(archived, (old, old))
+    assert FD.purge_gone(days=7)["removed"]
+    assert not os.path.exists(archived)
 
 
 if __name__ == "__main__":

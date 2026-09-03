@@ -24,7 +24,7 @@ import forage_memory as FM
 
 DOC_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "forage_surveys"))
 SECTION = "## 단언"
-MARKER_RE = re.compile(r"<!--\s*forage-doc\s+body=\"([^\"]*)\"\s+root=\"([^\"]*)\"\s*-->")
+MARKER_RE = re.compile(r"<!--\s*forage-doc\s+body=\"([^\"]*)\"\s+root=\"([^\"]*)\"(?:\s+dir_id=\"[^\"]*\")?\s*-->")
 LINE_RE = re.compile(r"^- \[(identity|convention|dead_branch|substrate)\]\s*([⚑↓≈?]*)\s*(.*?)\s*(?:‹(.*?)›)?\s*$")
 SECTION_NOTE = ("<!-- 기계가 읽는 절: 한 줄 = 단언 하나. `- [종류]` 뒤 표식 ⚑영토 ↓하위에도 적용 ≈의미적 ?의심 · "
                 "끝의 ‹확신 · 시각 · 출처 · prune: 이유›는 메타. 줄을 고치면 색인이 따라온다(recall 이 문서 시각을 본다). -->")
@@ -86,6 +86,10 @@ def node_dir(body: str, root: str) -> str:
 
 def doc_path_at(body: str, root: str) -> str:
     return os.path.join(node_dir(body, root), DOC_NAME)
+
+
+def _marker_line(body: str, root: str) -> str:
+    return f'<!-- forage-doc body="{body}" root="{root}" -->'
 
 
 def _read_marker(path: str) -> Optional[Tuple[str, str]]:
@@ -324,10 +328,10 @@ def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
     if os.path.exists(path):
         text = open(path, encoding="utf-8").read()
         if not MARKER_RE.search(text[:2000]):
-            text = f'<!-- forage-doc body="{body}" root="{root}" -->\n' + text
+            text = _marker_line(body, root) + "\n" + text
     else:
         title = root if _is_path(root) else body
-        text = (f'<!-- forage-doc body="{body}" root="{root}" -->\n# 포식 기억 — {title}\n\n'
+        text = (_marker_line(body, root) + f'\n# 포식 기억 — {title}\n\n'
                 f"| 머리 | |\n|---|---|\n| 조사 일시 | (아직 조사 안 함 — 단언은 대화·포식에서 쌓인 것) |\n"
                 f"| 예산 (어디까지 봤나) | — |\n| 거칠기 | — |\n| 상위 문서 | — |\n| 하위 문서 | — |\n\n"
                 f"## 갱신 기록\n")
@@ -510,72 +514,18 @@ def migrate_all() -> Dict[str, Any]:
 
 
 # ----------------------------------------------------------------- 대조(reconcile) — 실제 트리 ↔ 기억 트리
-# 2026-09-03 사용자 판정: "기억 문서의 폴더 구조와 지금의 폴더 구조가 바뀌면 자동 갱신 — 옮겨진 건지 삭제된 건지에 따라".
-# 관측은 기계(존재·이름·자식 겹침), 애매한 판단만 AI·사람에게 남긴다.
+# 2026-09-03 사용자 판정: "폴더가 위치를 바꾸면 그냥 포식 기억을 포기하자 — 다시 얻는 게 이사를 찾는 것만큼 힘들지 않다. _gone 은 일주일마다 지워."
+# 그래서 관측은 존재 여부 하나뿐: 폴더가 없어졌으면 그 노드(와 그 밑)의 문서를 `_gone/` 으로 접고 부모 문서에 한 줄, 단언은 '폴더 사라짐' 표식.
+# 내용물만 바뀐 흔한 경우는 낡음 표식만 — 아무것도 지우지 않는다. 옮긴 폴더는 새 자리에서 다시 조사한다.
 GONE_DIR = "_gone"
-_MOVE_STRONG = 0.5          # 기억이 아는 자식 이름의 절반 이상이 후보에 있으면 이사로 본다
 _RECONCILE_MIN_INTERVAL = 3600
+GONE_PURGE_DAYS = 7
 
 
 def _mounted(path: str) -> bool:
     """볼륨이 안 꽂힌 것은 '사라짐'이 아니다."""
     m = re.match(r"^(/Volumes/[^/]+)", path)
     return os.path.isdir(m.group(1)) if m else True
-
-
-def _search_dirs_by_name(name: str) -> List[str]:
-    """이름이 같은 폴더 후보 — OS 색인 이음매(file_index.find_folders_named)를 빌린다. 다른 OS 는 빈 목록. 시험은 이 함수를 바꿔 끼운다."""
-    try:
-        import file_index
-        return file_index.find_folders_named(name)
-    except Exception:
-        return []
-
-
-def known_children(body: str, root: str) -> List[str]:
-    """기억이 아는 직계 자식 이름 — 하위 문서와 단언 locus 에서."""
-    r = _norm(root)
-    names = set()
-    for p in docs_below(body, r):
-        rel = _norm(root_of_doc(p))[len(r) + 1:]
-        if rel:
-            names.add(rel.split("/")[0])
-    for x in rows_for_doc(body, r) + [dict(y) for y in _rows_under(body, r)]:
-        loc = _norm(os.path.expanduser(x["locus"]))
-        if loc.startswith(r + "/"):
-            names.add(loc[len(r) + 1:].split("/")[0])
-    return sorted(n for n in names if n and not n.startswith("*"))
-
-
-def _rows_under(body: str, root: str):
-    conn = FM._connect()
-    try:
-        return conn.execute("SELECT * FROM forage_map WHERE body=? AND (locus=? OR locus LIKE ?)",
-                            (body, root, root + "/%")).fetchall()
-    finally:
-        conn.close()
-
-
-def find_move_candidates(body: str, root: str) -> List[Dict[str, Any]]:
-    """사라진 폴더의 이사 후보 — 같은 이름 폴더들을 찾아 기억이 아는 자식 이름과의 겹침으로 점수."""
-    r = _norm(root)
-    name = os.path.basename(r)
-    if not name:
-        return []
-    known = set(known_children(body, r))
-    out = []
-    for cand in _search_dirs_by_name(name):
-        c = _norm(cand)
-        if c == r or c.startswith(DOC_DIR) or not os.path.isdir(c):
-            continue
-        try:
-            actual = set(os.listdir(c))
-        except OSError:
-            continue
-        score = (len(known & actual) / len(known)) if known else None
-        out.append({"path": c, "score": score, "overlap": sorted(known & actual)[:8]})
-    out.sort(key=lambda x: -(x["score"] if x["score"] is not None else -1))
-    return out
 
 
 def _append_record(doc_path: str, line: str) -> None:
@@ -596,42 +546,8 @@ def _parent_doc(body: str, root: str) -> Optional[str]:
     return (_ancestor_chain(body, parent) or [None])[0] if parent and parent != r else None
 
 
-def move_node(body: str, old_root: str, new_root: str, *, why: str = "") -> Dict[str, Any]:
-    """기억 가지 이사: 문서 디렉토리를 옮기고 단언 locus 의 접두를 바꾼다. 비춘 트리라 폴더를 옮기듯 기억을 옮긴다."""
-    o, n = _norm(old_root), _norm(os.path.expanduser(new_root))
-    src, dst = node_dir(body, o), node_dir(body, n)
-    today = FM._now()[:10]
-    if os.path.isdir(src):
-        if os.path.exists(dst):
-            os.renames(src, dst + f".moved-from.{today}.bak")
-        else:
-            os.renames(src, dst)
-    conn = FM._connect()
-    try:
-        cur = conn.execute("UPDATE forage_map SET locus = ? || substr(locus, ?) WHERE body=? AND (locus=? OR locus LIKE ?)",
-                           (n, len(o) + 1, body, o, o + "/%"))
-        conn.commit()
-        moved_rows = cur.rowcount
-    finally:
-        conn.close()
-    # 새 노드 문서 머리·절 갱신 + 옛/새 부모 기록
-    doc = doc_path_at(body, n)
-    if os.path.exists(doc):
-        text = open(doc, encoding="utf-8").read()
-        text = MARKER_RE.sub(f'<!-- forage-doc body="{body}" root="{n}" -->', text, count=1)
-        open(doc, "w", encoding="utf-8").write(text)
-        refresh_doc(doc, body, n)
-        _append_record(doc, f"- {today} 이사: `{o}` → `{n}` (기억 가지·단언 {moved_rows}건 이동{(' — ' + why) if why else ''})")
-    for parent in {_parent_doc(body, o), _parent_doc(body, n)}:
-        if parent:
-            _append_record(parent, f"- {today} `{os.path.basename(o)}` 이사: `{o}` → `{n}`{(' — ' + why) if why else ''}")
-            refresh_doc(parent, body, root_of_doc(parent))
-    return {"success": True, "from": o, "to": n, "rows": moved_rows, "doc": doc if os.path.exists(doc) else None}
-
-
-def tombstone_node(body: str, root: str, candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """사라진 폴더: 후보 없음 → 삭제로 보고 문서를 `_gone/` 으로 접고 부모에 한 줄. 후보 여럿 → 문서 머리에 후보를 적고 판단을 남긴다.
-    단언 행은 지우지 않고 '폴더 사라짐' 표식(prune_reason·surface_flag)만."""
+def tombstone_node(body: str, root: str) -> Dict[str, Any]:
+    """사라진 폴더: 노드 문서(와 그 밑 전부)를 `_gone/` 으로 접고 부모 문서에 한 줄. 단언은 지우지 않고 '폴더 사라짐' 표식."""
     r = _norm(root)
     today = FM._now()[:10]
     conn = FM._connect()
@@ -641,20 +557,6 @@ def tombstone_node(body: str, root: str, candidates: List[Dict[str, Any]]) -> Di
         conn.commit()
     finally:
         conn.close()
-    doc = doc_path_at(body, r)
-    parent = _parent_doc(body, r)
-    if candidates:
-        names = ", ".join(f"`{c['path']}`" + (f"(겹침 {c['score']:.0%})" if c.get("score") is not None else "") for c in candidates[:4])
-        if os.path.exists(doc):
-            text = open(doc, encoding="utf-8").read()
-            note = f"\n> ⚠ 실제 폴더 없음({today}) — 이사 후보: {names}. 어디로 갔는지 판단해 `[self:forage]{{op: \"move\", from: \"{r}\", to: \"<후보>\"}}` 또는 삭제로 접기.\n"
-            if "⚠ 실제 폴더 없음" not in text:
-                text = MARKER_RE.sub(lambda m: m.group(0) + note, text, count=1) if MARKER_RE.search(text) else note + text
-                open(doc, "w", encoding="utf-8").write(text); _stamp(doc)
-        if parent:
-            _append_record(parent, f"- {today} `{os.path.basename(r)}` 실제 폴더 없음 — 이사 후보 {len(candidates)}개(판단 필요): {names}")
-        return {"success": True, "root": r, "action": "ambiguous", "candidates": candidates[:4]}
-    # 삭제로 판단
     src = node_dir(body, r)
     gone = os.path.join(DOC_DIR, slug(body), GONE_DIR, *[p for p in r.split("/") if p])
     if os.path.isdir(src):
@@ -662,44 +564,35 @@ def tombstone_node(body: str, root: str, candidates: List[Dict[str, Any]]) -> Di
             os.renames(src, gone + f".{today}.bak")
         else:
             os.renames(src, gone)
+    parent = _parent_doc(body, r)
     if parent:
-        _append_record(parent, f"- {today} `{os.path.basename(r)}` 사라짐(삭제로 판단, 이사 후보 없음) — 옛 기억은 `{os.path.relpath(gone, DOC_DIR)}`")
+        _append_record(parent, f"- {today} `{os.path.basename(r)}` 사라짐 — 기억은 `{os.path.relpath(gone, DOC_DIR)}` 에 접어 둠(일주일 뒤 삭제). 옮긴 것이면 새 자리에서 다시 조사")
         refresh_doc(parent, body, root_of_doc(parent))
     return {"success": True, "root": r, "action": "gone", "archived": os.path.relpath(gone, DOC_DIR)}
 
 
 def reconcile(body: Optional[str] = None, locus: Optional[str] = None, *, apply: bool = True) -> Dict[str, Any]:
-    """실제 트리 ↔ 기억 트리 대조. 문서 노드(디스크 몸·경로 뿌리)마다 존재를 보고, 없으면 이사(강한 후보 하나)/삭제(후보 없음)/판단 보류(후보 여럿)."""
+    """실제 트리 ↔ 기억 트리 대조. 문서 노드(디스크 몸·경로 뿌리)마다 존재를 보고, 없으면 `_gone/` 으로 접는다."""
     loc = _norm(os.path.expanduser(locus)) if locus else None
     nodes = [(p, b, _norm(r)) for p, b, r in _scan_docs() if _path_body(b) and _is_path(_norm(r))]
     if body:
         nodes = [x for x in nodes if x[1] == body]
     if loc:
         nodes = [x for x in nodes if x[2] == loc or x[2].startswith(loc + "/") or loc.startswith(x[2] + "/")]
-    nodes.sort(key=lambda x: -x[2].count("/"))   # 깊은 것부터 — 자식을 먼저 처리해야 부모 이사가 자식을 덮어쓰지 않는다
-    report = {"checked": 0, "unmounted": [], "missing": [], "moved": [], "gone": [], "ambiguous": []}
+    nodes.sort(key=lambda x: x[2].count("/"))   # 얕은 것부터 — 조상이 사라졌으면 그 밑은 통째로 접힌다
+    report = {"checked": 0, "unmounted": [], "missing": [], "gone": []}
     handled: List[str] = []
     for p, b, r in nodes:
-        if any(r.startswith(h + "/") for h in handled):
-            continue   # 조상이 이미 이사했으면 자식은 같이 갔다
+        if any(r == h or r.startswith(h + "/") for h in handled):
+            continue
         if not _mounted(r):
             report["unmounted"].append(r); continue
         report["checked"] += 1
         if os.path.isdir(os.path.expanduser(r)):
             continue
         report["missing"].append(r)
-        if not apply:
-            continue
-        cands = find_move_candidates(b, r)
-        strong = [c for c in cands if (c["score"] is not None and c["score"] >= _MOVE_STRONG)]
-        if len(strong) == 1 or (len(cands) == 1 and cands[0]["score"] is None):
-            target = (strong or cands)[0]["path"]
-            res = move_node(b, r, target, why=f"자동 대조(자식 겹침 {(strong or cands)[0]['score'] if (strong or cands)[0]['score'] is not None else '이름만'})")
-            report["moved"].append({"from": r, "to": target, "rows": res.get("rows")}); handled.append(r)
-        else:
-            res = tombstone_node(b, r, cands if cands else [])
-            report["gone" if res.get("action") == "gone" else "ambiguous"].append(res)
-            handled.append(r)
+        if apply:
+            report["gone"].append(tombstone_node(b, r)); handled.append(r)
     return {"success": True, **report}
 
 
@@ -720,3 +613,31 @@ def reconcile_lazy(locus: str, body: Optional[str] = None) -> Optional[Dict[str,
         FM.set_meta(key, str(now))
         return reconcile(mk[0], r)
     return None
+
+
+def purge_gone(days: int = GONE_PURGE_DAYS) -> Dict[str, Any]:
+    """`_gone/` 아래 접힌 기억 중 days 일 지난 것을 지운다 — 주간 정리 패스가 부른다(사용자 판정: 일주일마다)."""
+    import shutil
+    cutoff = time.time() - days * 86400
+    removed = []
+    if not os.path.isdir(DOC_DIR):
+        return {"success": True, "removed": removed}
+    for body_dir in os.listdir(DOC_DIR):
+        gone = os.path.join(DOC_DIR, body_dir, GONE_DIR)
+        if not os.path.isdir(gone):
+            continue
+        targets = []
+        for cur, _dirs, files in os.walk(gone):
+            if DOC_NAME in files:
+                try:
+                    if os.path.getmtime(os.path.join(cur, DOC_NAME)) < cutoff:
+                        targets.append(cur)
+                except OSError:
+                    pass
+        for cur in sorted(targets, key=len):   # 얕은 것부터 — 밑은 함께 지워진다
+            if os.path.isdir(cur):
+                shutil.rmtree(cur, ignore_errors=True); removed.append(os.path.relpath(cur, DOC_DIR))
+        for cur, _dirs, _files in os.walk(gone, topdown=False):   # 빈 껍데기 정리
+            if cur != gone and os.path.isdir(cur) and not os.listdir(cur):
+                os.rmdir(cur)
+    return {"success": True, "removed": removed}

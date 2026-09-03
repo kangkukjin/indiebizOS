@@ -29,7 +29,7 @@ import plistlib
 import subprocess
 import sys
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Tuple, Any, Dict, List, Optional, Sequence
 
 _IS_MAC = sys.platform == "darwin"
 
@@ -180,11 +180,6 @@ def _build_mdfind_query(kind: str, q: Optional[str], start: Optional[str],
 # 디스크에서 .ts 는 거의 전부 TypeScript 소스다(실측: 사진 질의 최상단이 utils.ts·types.ts).
 # 확장자만 보고 미디어에서 뺀다. 진짜 방송 스트림 .ts 는 path 를 지정해 찾으면 된다.
 _MEDIA_EXT_DENY = frozenset((".ts",))
-
-
-def find_folders_named(name: str) -> List[str]:
-    """이름이 같은 폴더들 — OS 색인 이음매(맥은 시스템 색인, 다른 OS 는 빈 목록). 포식 기억 대조(이사 후보 찾기)가 쓴다."""
-    return _run_mdfind(f"kMDItemFSName == {json.dumps(name)} && kMDItemContentType == 'public.folder'", None)
 
 
 def _drop_pseudo_media(paths: List[str], kind: str) -> List[str]:

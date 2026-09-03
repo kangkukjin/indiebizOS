@@ -84,22 +84,9 @@
               "note",
               "forget",
               "sync",
-              "reconcile",
-              "move"
+              "reconcile"
             ],
             "default": "recall"
-          },
-          "from": {
-            "type": "string",
-            "description": "[move] 옛 경로"
-          },
-          "to": {
-            "type": "string",
-            "description": "[move] 새 경로"
-          },
-          "why": {
-            "type": "string",
-            "description": "[move] 사유(옵션) — 문서 갱신 기록에 남는다"
           },
           "apply": {
             "type": "boolean",

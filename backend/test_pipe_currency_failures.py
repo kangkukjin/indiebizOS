@@ -1088,6 +1088,66 @@ def test_P31_blocks_의_변수_주입도_원형으로_읽힌다():
     print("P31 OK — blocks 의 변수 주입도 원형으로(구조 필드만, 산문 불가침)")
 
 
+def test_P32_정렬_파이프는_file_find_통화를_비우지_않는다():
+    """P32 — `| sort: title` · `| sort: title asc` · `>> [table:sort]{by}` 가 file_find 의
+    items 를 **비운다**는 신고(2026-09-03, 칩 task_5a88cb26)의 회귀 고정물.
+
+    실측: 변환자도 설탕 파서도 멀쩡했다. 0 은 세는 쪽이 만든 숫자다 — 신고자의 계수기가
+    /ibl/execute 응답의 **최상위** `items` 를 읽었는데, 단일 액션은 통화가 최상위에 오지만
+    파이프(2단계+)는 봉투(results[]/final_result)로 나가고 통화는 `final_result`
+    **JSON 문자열** 안에 산다(렌더 코어 unwrapFinalResult · ibl_health_check 가 그 규칙으로
+    푼다). 같은 계수기로 재면 `| sort: title desc` 도 0 이다 — asc/desc 차이가 아니었다.
+    그 오독으로 계기(folder_survey.yaml)의 정렬이 떨어져 나갔다.
+
+    ★이 시험이 지키는 것: ① 네 표기가 같은 한 블록으로 펼쳐진다(설탕=표면, 동사=정본)
+    ② 파이프 봉투에서 통화를 *규칙대로* 꺼내면 원천 count 그대로·정렬된 채 나온다
+    (asc 는 기본, desc 는 뒤집힘) ③ step 요약도 같은 수를 신고한다.
+    파이프 통화의 자리(final_result)가 바뀌면 여기가 먼저 알린다.
+    """
+    from ibl_parser import parse
+    from ibl.workflow_engine import execute_pipeline
+    FORMS = {
+        "verb":  '[self:file_find]{pattern: "*.md", path: "%s"} >> [table:sort]{by: "title"}',
+        "plain": '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title',
+        "asc":   '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title asc',
+        "desc":  '[self:file_find]{pattern: "*.md", path: "%s"} | sort: title desc',
+    }
+
+    def _currency(env):
+        # 파이프 봉투의 통화 자리 — 렌더 코어 unwrapFinalResult 와 같은 규칙(문자열이면 JSON)
+        fr = env.get("final_result") if isinstance(env, dict) else None
+        return json.loads(fr) if isinstance(fr, str) else fr
+
+    with tempfile.TemporaryDirectory() as td:
+        for n in ("b.md", "c.md", "a.md"):
+            with open(os.path.join(td, n), "w", encoding="utf-8") as f:
+                f.write(n)
+        steps = {k: parse(v % td) for k, v in FORMS.items()}
+        # ① 설탕 세 표기 = 동사 한 블록. desc 만 desc:true 를 얹는다.
+        for k in ("plain", "asc"):
+            assert steps[k][1] == steps["verb"][1], (k, steps[k][1])
+        assert steps["verb"][1]["params"] == {"by": "title"}, steps["verb"][1]
+        assert steps["desc"][1]["params"] == {"by": "title", "desc": True}, steps["desc"][1]
+        # ② 통화는 비지 않는다 — 원천 3건 그대로, 순서만 바뀐다
+        for k, st in steps.items():
+            env = execute_pipeline(st, td)
+            assert env.get("success") is True, (k, env)
+            cur = _currency(env)
+            titles = [i.get("title") for i in (cur or {}).get("items") or []]
+            expect = ["a.md", "b.md", "c.md"]
+            assert titles == (expect[::-1] if k == "desc" else expect), (k, titles, env)
+            assert cur.get("count") == 3, (k, cur)
+            # ③ 에이전트 경계(/ibl/execute·MCP)가 입히는 봉투 다이어트 뒤에도 step 요약과
+            #    통화가 서로를 반박하지 않는다 — 요약은 count 3, 통화는 그대로 3건.
+            from ibl_envelope import diet_envelope
+            thin = diet_envelope(env, verbose=False)
+            last = (thin.get("results") or [])[-1]
+            assert last.get("action") == "sort" and last.get("count") == 3, (k, last)
+            assert last.get("shape") == "items", (k, last)
+            assert [i.get("title") for i in _currency(thin)["items"]] == titles, k
+    print("P32 OK — 정렬 설탕/동사 네 표기 모두 file_find 통화를 보존 · 통화는 final_result 에")
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     # ★두 번째 러너를 두지 않는다. 손으로 적은 러너는 반드시 드리프트한다 — 새 시험 함수를
     # 러너에 안 적으면 직접 실행이 **그 시험만 조용히 건너뛰고 종료코드 0** 을 낸다.

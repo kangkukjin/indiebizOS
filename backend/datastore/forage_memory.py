@@ -566,15 +566,8 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         doc_path = None
         try:
             import forage_doc
-            chain = forage_doc._covering_docs(loc, body)   # 자기 노드 → 조상 (몸을 모르면 디스크 몸들)
-            # 같은 깊이면 mac 우선, 더 깊은 뿌리 우선
-            best = None
-            for p in chain:
-                depth = len([x for x in forage_doc._norm(forage_doc.root_of_doc(p)).split("/") if x])
-                score = depth * 2 + (1 if os.sep + "mac" + os.sep in p else 0)
-                if best is None or score > best[0]:
-                    best = (score, p)
-            doc_path = best[1] if best else None
+            chain = forage_doc._covering_docs(loc, body)   # 경로면 트리 사슬(자기 노드 → 조상, 몸 표기 무관)
+            doc_path = chain[0] if chain else None
             docs_below = []
             if doc_path:
                 try:

@@ -85,7 +85,7 @@ def test_existing_ai_document_keeps_prose_and_gains_section(env):
     open(flat, "w", encoding="utf-8").write('<!-- forage-doc body="disk:T" root="/x/media" -->\n# 폴더 조사 — /x/media\n\n## 정체\n- 사람이 쓴 산문\n\n## 갱신 기록\n- 2026-09-03 처음\n')
     FM.note_map(body="disk:T", locus=ROOT, kind="identity", claim="정체 한 줄", confidence=0.9, territory=True)
     moved = FD.migrate_layout()
-    p = os.path.join(FD.DOC_DIR, "disk_T/x/media/memory.md")
+    p = os.path.join(FD.DOC_DIR, "mac/x/media/memory.md")   # 경로 문서는 몸 표기와 무관하게 트리
     assert os.path.exists(p) and not os.path.exists(flat) and moved["moved"]
     FD.refresh_doc_for("disk:T", ROOT)
     text = open(p, encoding="utf-8").read()
@@ -102,12 +102,35 @@ def test_two_lines_of_same_kind_coexist(env):
     assert text.count("- [convention]") == 2
 
 
-def test_bodies_sharing_a_root_get_separate_docs(env):
+def test_path_loci_share_one_tree_regardless_of_body(env):
+    """절대 경로 단언은 몸 표기(code:*·disk:*)와 무관하게 mac 트리 문서 하나에 모인다(2026-09-03 사용자 판정)."""
     FM.note_map(body="mac", locus="/Users/u/Desktop/a", kind="identity", claim="맥 것", confidence=0.7)
-    FM.note_map(body="disk:X", locus="/Users/u/Desktop/b", kind="identity", claim="외장 것", confidence=0.7)
-    docs = {b: p for p, b, r in FD._scan_docs()}
-    assert docs["mac"] != docs["disk:X"] and "/mac/Users/u/Desktop/" in docs["mac"] and "/disk_X/Users/u/Desktop/" in docs["disk:X"]
-    assert "맥 것" in open(docs["mac"], encoding="utf-8").read() and "맥 것" not in open(docs["disk:X"], encoding="utf-8").read()
+    FM.note_map(body="code:Repo", locus="/Users/u/Desktop/a/backend", kind="identity", claim="증류가 코드 라벨을 붙인 경로", confidence=0.7)
+    FM.note_map(body="code:Repo", locus="module.x", kind="convention", claim="경로 없는 코드 관습", confidence=0.7)
+    docs = {(b, r): p for p, b, r in FD._scan_docs()}
+    assert set(docs) == {("mac", "/Users/u/Desktop"), ("code:Repo", "code:Repo")}, docs
+    tree = open(docs[("mac", "/Users/u/Desktop")], encoding="utf-8").read()
+    code = open(docs[("code:Repo", "code:Repo")], encoding="utf-8").read()
+    assert "맥 것" in tree and "코드 라벨을 붙인 경로" in tree and "경로 없는 코드 관습" not in tree
+    assert "경로 없는 코드 관습" in code and "코드 라벨을 붙인 경로" not in code
+    # 회상도 트리 문서를 집는다(몸을 code 로 물어도)
+    out = FM.recall(locus="/Users/u/Desktop/a/backend", body="code:Repo", limit=10)
+    assert out["doc"] == docs[("mac", "/Users/u/Desktop")]
+
+
+def test_migrate_layout_moves_body_folder_path_docs_into_tree(env):
+    """옛 배치(disk_X/…경로…/memory.md)의 경로 문서는 한 번의 migrate_layout 으로 mac 트리로 옮겨지고, 산문이 긴 쪽이 남는다."""
+    FM.note_map(body="disk:X", locus="/Volumes/X/movies", kind="identity", claim="영상 폴더", confidence=0.8, territory=True)
+    tree_doc = FD.doc_path_at("mac", "/Volumes/X/movies")
+    assert os.path.exists(tree_doc)
+    old_dir = os.path.join(FD.DOC_DIR, "disk_X", "Volumes", "X", "movies"); os.makedirs(old_dir)
+    old_doc = os.path.join(old_dir, FD.DOC_NAME)
+    open(old_doc, "w", encoding="utf-8").write('<!-- forage-doc body="disk:X" root="/Volumes/X/movies" -->\n# 폴더 조사\n\n## 정체\n- AI 가 길게 쓴 산문 ' + "이야기 " * 40 + '\n')
+    out = FD.migrate_layout()
+    assert any(m["to"].startswith("mac/Volumes/X/movies") for m in out["moved"]), out
+    assert not os.path.exists(old_doc) and not os.path.isdir(os.path.join(FD.DOC_DIR, "disk_X"))
+    text = open(tree_doc, encoding="utf-8").read()
+    assert "AI 가 길게 쓴 산문" in text and "영상 폴더" in text and 'body="mac"' in text
 
 
 def test_nonpath_root_doc_never_covers_path_loci(env):

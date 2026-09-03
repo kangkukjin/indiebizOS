@@ -123,7 +123,7 @@ def currency_shape_note(envelope: Any) -> str:
             except Exception:
                 pass                      # JSON 아닌 문자열 — 아래 타입 이름 경로로
     if isinstance(envelope, list):
-        return f"목록({len(envelope)}행) — 봉투가 아니라 행 목록"
+        return f"목록({len(envelope)}행) — 봉투가 아니라 행 목록" + _non_row_note(envelope)
     if isinstance(envelope, dict):
         keys = list(envelope.keys())[:8]
         payload = envelope.get("items")
@@ -133,11 +133,34 @@ def currency_shape_note(envelope: Any) -> str:
                 preview = preview[:60] + "…"
             return (f"{keys} — items 자리에 목록이 아니라 "
                     f"{type(payload).__name__}({len(str(payload))}자)가 있습니다: {preview}")
+        if isinstance(payload, list):
+            return str(keys) + _non_row_note(payload)
         return str(keys)
     if isinstance(envelope, str):
         preview = envelope if len(envelope) <= 60 else envelope[:60] + "…"
         return f"str({len(envelope)}자): {preview}"
     return type(envelope).__name__
+
+
+def _non_row_note(rows: list) -> str:
+    """목록은 왔는데 행이 dict 가 아닐 때(스칼라 목록 등) 그 사실을 덧붙인다 (2026-09-03).
+
+    `$본.names >> [table:spreadsheet]` 처럼 스칼라 배열 필드를 통화로 방출하면 봉투는
+    `{items:["a","b"]}` 로 멀쩡해 보이지만 표 소비자는 dict 행만 읽어 0행이 된다. 그때
+    진단이 "받은 입력: ['items']" 로 끝나면 자기모순이다 — 키가 아니라 행의 타입을 말해야
+    사람·모델이 앞 단계를 고칠 수 있다.
+    """
+    if not rows:
+        return ""
+    bad = [r for r in rows if not isinstance(r, dict)]
+    if not bad:
+        return ""
+    kinds = sorted({type(r).__name__ for r in bad})
+    preview = str(bad[:3])
+    if len(preview) > 60:
+        preview = preview[:60] + "…"
+    return (f" — items {len(rows)}행 중 {len(bad)}행이 행(dict)이 아니라 "
+            f"{'/'.join(kinds)} 입니다: {preview}")
 
 
 def derive_items(result: Any) -> Any:

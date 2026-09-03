@@ -744,6 +744,29 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, con
                           + (f"(열: {_empty_cols})" if _empty_cols else "")
                           + ". 앞 단계의 필터·검침을 보세요.")}, ensure_ascii=False)
 
+    # ★산출물 없이는 성공도 없다 (2026-09-03) — F48-6 의 남은 반쪽.
+    #   F48-6 은 "0행 **통화**를 받았다"를 막았지만, 입력을 통화로 **못 알아본** 경우는
+    #   그대로 빈 통합문서를 만들고 success 를 냈다(실측: 파이프가 맨 행 목록을 물려
+    #   1×1 빈 xlsx + success:true — 읽는 쪽은 335행이 사라진 걸 영영 모른다).
+    #   형제 emitter 는 이미 이 규율을 지킨다(chart 는 "데이터가 비어있습니다"로 죽는다).
+    #   근본은 생산자 쪽에서 고쳤지만(변수 머리가 통화를 감싼다 — ibl_engine._as_currency)
+    #   이 거절은 그 아래 깔린 안전망이다: 어떤 경로로 입력이 새든 **빈 파일을 성공이라
+    #   부르지 않는다**. 받은 것이 무엇이었는지까지 말해야 진단이 사람·모델에게 닿는다.
+    if (not tool_input.get("sheets") and not tool_input.get("rows")
+            and not tool_input.get("headers")):
+        from common.currency import currency_shape_note
+        _got = tool_input.get("items")
+        if _got is None:
+            _got = tool_input.get("table")
+        if _got is None:
+            _got = tool_input.get("_prev_result")
+        return json.dumps({
+            "success": False, "rows_in": 0,
+            "error": ("입력을 표로 읽지 못했습니다 — [table:spreadsheet] 는 쓸 행이 하나도 "
+                      "없어 빈 통합문서를 만들지 않고 멈춥니다. 받은 입력: "
+                      + (currency_shape_note(_got) if _got is not None else "(없음)")
+                      + ". 앞 단계가 items 통화를 내는지 확인하세요.")}, ensure_ascii=False)
+
     # 확장자 보정은 emitter 의 몫(형식이 정한다), 배치는 몸의 단일 해소기가 한다.
     # (J29-1 — 세 emitter 가 서로 다른 배치 규칙을 들고 있던 것을 하나로 접었다.
     #  path 생략 = 기본 이름 생성은 F4(2026-08-16)에서 이미 형제와 맞춘 규약이다.)

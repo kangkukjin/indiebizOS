@@ -157,6 +157,27 @@ def test_p2_spreadsheet_inline_items():
     print("P2 OK — 인라인 items 실기록")
 
 
+def test_p2b_spreadsheet_non_row_items_loud_and_no_file():
+    """P2b (2026-09-03): 행이 아닌 items(스칼라 목록)·인식 불가 입력 → 빈 파일 없이 정직 거절.
+
+    `$본.names >> [table:spreadsheet]` 는 `{items:["a","b"]}` 를 흘린다 — 봉투는 멀쩡해
+    보이지만 표 소비자는 dict 행만 읽어 0행이다. 옛 동작은 1×1 빈 xlsx + success:true.
+    거절문은 키가 아니라 **행의 타입**을 말해야 한다(받은 입력: ['items'] 는 자기모순).
+    """
+    with tempfile.TemporaryDirectory() as td:
+        p = os.path.join(td, "스칼라.xlsx")
+        res = json.loads(_office.spreadsheet(
+            {"_prev_result": {"items": ["a", "b"]}, "path": p}, td, lambda *a: None))
+        assert res.get("success") is False and res.get("rows_in") == 0, res
+        assert "행(dict)이 아니라 str" in res.get("error", ""), res
+        assert not os.path.exists(p), "거절했으면 빈 파일도 남기지 않는다"
+        # 입력이 아예 없는 직접 호출도 같은 규율
+        res2 = json.loads(_office.spreadsheet({"path": p}, td, lambda *a: None))
+        assert res2.get("success") is False and res2.get("rows_in") == 0, res2
+        assert not os.path.exists(p)
+    print("P2b OK — 비-행 items 정직 거절 + 빈 파일 0건")
+
+
 def test_p3_sort_source_fallback_and_loud_error():
     """P3: 없는 필드 sort 가 원순서를 success 로 돌려줬다 → 원천 행 폴백, 그래도 없으면 에러."""
     # 곡선 투영(table=날짜·종가)이 접은 volume 을 data.prices 까지 거슬러 찾는다

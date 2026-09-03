@@ -268,7 +268,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **per-agent 모델 폐지**: 에이전트 yaml의 provider/model/apiKey 무시 — 모델*과 키*는 실행 티어 상속. 모달리티(이미지·동영상·임베딩)는 기어 밖 패스스루.
 
 - **연상 단계 (단계 0)** — `agent_cognitive._build_execution_memory()`
-  - 해마(`ibl_usage_rag.build_execution_memory()`)와 심층메모리(`_search_related_memory()`)를 합쳐 단일 묶음 반환
+  - 해마(`ibl_usage_rag.build_execution_memory()`)와 심층메모리 지도(`_memory_map_scent()`, `<memory_map>` 목차만 — 내용은 recall 로)를 합쳐 단일 묶음 반환
   - 반환: `(xml, top_score, top_code)` — 검색 한 번으로 점수/코드까지 확보 (이전 3회 중복 호출 제거)
   - 모든 에이전트(무의식/의식/실행/평가)가 같은 묶음을 공유
 - **Reflex 분기** — 호출 측(`agent_communication`, `api_websocket`, `system_ai_core`)이 직접 분기

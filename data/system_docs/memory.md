@@ -39,8 +39,8 @@ see_also: [architecture.md, ibl.md]
 | 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | `forage_memory.db:forage_map / owner_model` | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
 
 > **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은
-> #4 해마(`<execution_memory>`)와 #5 심층메모리(`<related_memory>`)를 **하나로 합성**한다.
-> 둘 다 같은 fine-tuned 임베딩 모델로 검색되며, 모델은 backend에서 1회만 로드되어 공유된다.
+> #4 해마(`<execution_memory>`)와 #5 심층메모리의 **지도**(`<memory_map>`, 목차만·내용 없음)를 **하나로 합성**한다.
+> 해마는 fine-tuned 임베딩으로 검색되고, 심층메모리 내용은 자동 주입하지 않는다 — AI 가 지도를 보고 `[self:memory]{op:"recall", node}` 로 가지를 연다(2026-09-03).
 
 ---
 
@@ -155,7 +155,7 @@ see_also: [architecture.md, ibl.md]
   │
   ├─[2 작업기억]  최근 7턴 회상 (Observation Masking)
   ├─[4b 해마]     유사 IBL 선례 검색 → 점수 산출 ┐
-  ├─[5 심층메모리] 관련 사용자 사실 Top-3 검색   ┘→ 연상기억(<execution_memory>+<related_memory>) 합성
+  ├─[5 심층메모리] 기억 지도(가지 목차) 합성      ┘→ 연상기억(<execution_memory>+<memory_map>) 합성 — 내용은 recall 로
   ├─[7 포식기억]   포식 의도 시 냄새지도 주입 (<forage_memory>, 해마 옆)
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
@@ -231,7 +231,7 @@ see_also: [architecture.md, ibl.md]
 
 ### ✅ 추가 구현 — ⑤ 회상 시 freshness 노출 (2026-05-31)
 
-회상이 recency를 무시하던 문제(⑤)는 **랭킹 재가중이 아니라 타임스탬프를 함께 회상시키는** 방식으로 해결했다 (AI 친화적: 손튜닝 감쇠 곡선 대신 에이전트가 스스로 판단). `_search_related_memory`(agent_cognitive.py)의 `<related_memory>` 각 항목에 `last_seen="YYYY-MM-DD"`(마지막 확인=사용/생성일)를 부착하고, 헤더 note에 "오래된 기억은 현재와 다를 수 있음을 감안" 안내를 추가. 타임스탬프는 search 결과의 `used_at`/`created_at` 에서 취한다. **자동 회상은 `read(touch=False)` 로 `used_at` 을 올리지 않는다**(2026-09-02) — 검색에 걸린 것과 쓰인 것은 다르며, 자동 조회가 used_at 을 갱신하면 오검색 기억이 LRU 가지치기를 영원히 피한다. used_at 을 올리는 것은 명시 읽기(`[self:memory]` read)·증류 SAME/UPDATE 뿐.
+회상이 recency를 무시하던 문제(⑤)는 **랭킹 재가중이 아니라 타임스탬프를 함께 회상시키는** 방식으로 해결했다 (AI 친화적: 손튜닝 감쇠 곡선 대신 에이전트가 스스로 판단). 당시의 자동 회상(`<related_memory>` 각 항목에 `last_seen="YYYY-MM-DD"` 부착 + 헤더 note 안내 — 이 자동 주입 자체는 2026-09-03 지도 주입으로 은퇴, §5 참조). 타임스탬프는 search 결과의 `used_at`/`created_at` 에서 취한다. **자동 회상은 `read(touch=False)` 로 `used_at` 을 올리지 않는다**(2026-09-02) — 검색에 걸린 것과 쓰인 것은 다르며, 자동 조회가 used_at 을 갱신하면 오검색 기억이 LRU 가지치기를 영원히 피한다. used_at 을 올리는 것은 명시 읽기(`[self:memory]` read)·증류 SAME/UPDATE 뿐.
 
 ### ✅ 추가 구현 — ⑦ 쓰기 경로 비용 배치화 (2026-05-31)
 
@@ -362,9 +362,9 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 | 종류 | 출처 | 내용 |
 |------|------|------|
 | **실행기억** (`<execution_memory>`) | 해마 — IBL Usage DB | 과거 IBL 코드 사례 + 도구 implementation |
-| **관련기억** (`<related_memory>`) | 심층메모리 — 에이전트별 SQLite | 사용자 사실·선호·결정·작업 이력 |
+| **기억 지도** (`<memory_map>`) | 심층메모리 — 에이전트별 SQLite + 가지별 memory.md | 가지 이름·건수·한 줄 요약 (내용 없음 — `[self:memory]{op:"recall", node}` 로 연다) |
 
-두 종류 모두 동일한 fine-tuned 임베딩 모델로 검색된다. 모델은 backend에서 한 번만 로드되어 두 시스템이 공유한다 (메모리 중복 없음).
+해마는 fine-tuned 임베딩 모델로 검색된다(backend 에서 한 번만 로드). 심층메모리의 벡터 `search` 는 가지 안에서 부르는 손으로 남고, 자동 주입은 지도만이다(2026-09-03).
 
 ### 왜 연상기억인가
 
@@ -384,7 +384,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 ```python
 # agent_cognitive._build_execution_memory()
 exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
-related = self._search_related_memory(user_message)
+related = self._memory_map_scent()          # 심층 기억은 지도(목차)만 (2026-09-03)
 result = (exec_xml + "\n" + related) if related else exec_xml
 return (result, top_score, top_code)   # 한 번의 검색으로 점수/코드까지 확보
 ```
@@ -400,7 +400,7 @@ return (result, top_score, top_code)   # 한 번의 검색으로 점수/코드�
     ↓
 [0] 연상 단계 — _build_execution_memory()
     └─ 해마 검색 1회로 (xml, top_score, top_code) 확보
-       <execution_memory> + <related_memory> 결합
+       <execution_memory> + <memory_map> 결합
     ↓
 [1] Reflex 분기 (호출 측에서 결정)
     ├─ top_score ≥ 0.85 → 무의식 스킵, 곧장 EXECUTE + reflex_hint
@@ -422,7 +422,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
 ### 주입 위치 (모든 에이전트가 동등하게 self-describing 블록을 받음)
 
 - **무의식**: 사용자 메시지 앞에 prepend
-- **의식**: 외부 래퍼 없이 `<execution_memory>` + `<related_memory>` 직접 노출 (2026-05-17 정리)
+- **의식**: 외부 래퍼 없이 `<execution_memory>` + `<memory_map>` 직접 노출 (2026-05-17 정리, 2026-09-03 지도로 교체)
 - **실행** (프로젝트/시스템 AI): `prompt_builder`가 시스템 프롬프트에 그대로 삽입
 - **평가**: THINK의 GoalEval에만 markdown `## 연상기억` 헤더로 그룹화 (2026-05-17 정정 — 옛 "실행기억" 헤더는 부정확). EXECUTE/Reflex는 이 평가를 받지 않는다.
 - **에이전트 간 위임**: 메시지 prepend
@@ -438,9 +438,9 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
     <impl action="[limbs:music]{op: "play"}" implementation="yt-dlp로 유튜브 URL 추출 + mpv/ffplay로 스트리밍 재생"/>
   </implementations>
 </execution_memory>
-<related_memory note="심층 메모리에서 연상된 관련 기억입니다. 참고용.">
-  <memory category="사용자선호" keywords="바흐,클래식음악">바흐의 음악을 즐김</memory>
-</related_memory>
+<memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 내용은 실리지 않는다. 답하기 전에 [self:memory]{op:&quot;recall&quot;, node:&quot;<가지>&quot;} 로 연다. 새로 안 사실은 save 에 node 를 붙인다.">
+  취향/음악 (3) — 즐겨 듣는 장르·연주자
+</memory_map>
 ```
 
 각 태그가 self-describing이라 별도 외부 래퍼는 불필요.
@@ -725,7 +725,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 | `backend/cognition/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
 | `backend/datastore/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
-| `backend/cognition/agent_cognitive.py` | `_build_execution_memory()` — 해마+심층메모리 합성, `_search_related_memory()` |
+| `backend/cognition/cognitive_recall.py` | `_build_execution_memory()` — 해마+기억 지도 합성, `_memory_map_scent()` (agent_cognitive 믹스인) |
 | `data/packages/installed/tools/memory/memory_db.py` | 심층메모리 (시맨틱 우선 + LIKE 폴백, 2026-05-16 시맨틱 추가) |
 | `backend/surface/api_websocket.py` | GUI/WS 경로 — 연상 단계 → Reflex 분기 → 실행 |
 | `backend/cognition/agent_communication.py` | 채널 경로 — 동일 패턴 (2026-05-17 중급 모델 전환 추가로 일관성 확보) |

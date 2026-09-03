@@ -618,6 +618,34 @@ def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:
 MAX_NEST_DEPTH = 3
 
 
+def _as_currency(value: Any) -> Any:
+    """변수 머리(`$변수` · `$변수.경로`)가 파이프에 내보낼 값을 **통화 모양**으로 (2026-09-03).
+
+    증상(카카오맵 335곳 추출): `$본.items >> [table:spreadsheet]{path}` 가 **빈 1×1 xlsx +
+    success:true** 를 냈다. `[self:read]{path} >> [table:spreadsheet]` 로 바꾸면 정상 336행.
+
+    뿌리: `.경로` 추출은 원형을 그대로 돌려주므로(`_extract_result_field_obj`) `items` 를
+    집으면 **맨 행 목록(list)** 이 파이프에 흐른다. 그런데 통화는 `{items:[…]}` 하나이고,
+    소비자(spreadsheet 의 `_prev_result` 판독·chart 의 `_extract_table_from_prev`·document)는
+    전부 dict 만 읽는다 — 그래서 chart 는 "데이터가 비어있습니다"로 죽고 spreadsheet 는
+    **아무 말 없이 빈 파일**을 만들었다. 옛 주석은 "파이프의 _to_prev_currency 가 종전
+    규약대로 나른다" 고 적었지만 그 이음매는 dict 만 파생한다(맨 list 는 손대지 않는다).
+
+    ★접는 자리를 **이 생산자**로 좁히는 이유: 파이프의 맨 list 는 이미 다른 뜻으로 예약돼
+      있다 — `&` 병렬이 분기 결과들을 맨 list 로 실어 나르고 이항 변환자(union/join/merge)의
+      `_extract_many` 가 그걸 "입력 여러 개"로 읽는다. 그래서 공용 게이트
+      (`common.currency.derive_items`)에서 일괄로 접으면 `$a & $b >> [table:union]` 이
+      "입력이 두 개 이상 필요합니다" 로 깨진다(실측 — test_language_revision_var_parallel
+      P2·P3·P5 가 그 자리에서 붉어졌다). 한 낱말이 두 뜻을 지는 자리에서는 **뜻을 아는
+      생산자**가 감싸야 한다.
+
+    dict·스칼라는 손대지 않는다(효과·스칼라는 통화가 아니고, 그 사실은 소비자가 말한다).
+    """
+    if isinstance(value, list):
+        return {"items": value}
+    return value
+
+
 def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """
     IBL 노드 도구 실행
@@ -693,9 +721,12 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         if _vpath:
             from workflow_binding import _extract_result_field_obj
             try:
-                return _extract_result_field_obj(_vals[_name], _vpath + ("?" if _opt else ""))
+                _out = _extract_result_field_obj(_vals[_name], _vpath + ("?" if _opt else ""))
             except ValueError as e:
                 return {"success": False, "error": str(e)}
+            return _as_currency(_out)
+        # 통짜 `$변수` 는 저장된 step 결과 원형 그대로 — 감싸지 않는다. 변수가 병렬
+        # (`$p = [A] & [B]`) 결과를 들고 있으면 그 맨 list 가 곧 "입력 여러 개" 계약이다.
         return _vals[_name]
 
     # 병렬(`[A] & [B]`)도 여기서 받는다 — 소유자(파이프 실행기)에게 위임 (30회차 B30-1).

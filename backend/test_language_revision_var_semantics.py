@@ -87,9 +87,20 @@ def test_V6_var_emit_실행_방출과_미기록():
     out = execute_ibl({"_var_emit": True, "name": "표", "path": "",
                        "_var_values": {"표": stored}}, _REPO, None)
     assert out == stored, "저장 결과를 그대로 방출해야 파이프 통화 규약이 보존된다"
+    # ★2026-09-03 수리: 경로 머리는 여전히 **원형 추출**(문자열화하지 않는다)이지만,
+    #   추출한 것이 행 목록이면 통화 봉투를 씌워 방출한다. 교재가 약속한 것이 그것이고
+    #   ("$변수.경로 >> [액션] — 그 안의 배열 필드가 **통화로 방출**된다"), 맨 list 로
+    #   흘리면 dict 만 읽는 소비자 전원이 입력을 못 알아본다 — 실측: `$본.items >>
+    #   [table:spreadsheet]` 가 빈 1×1 xlsx + success:true(카카오맵 335곳이 사라졌다).
+    #   맨 list 는 파이프에서 이미 `&` 병렬의 "입력 여러 개"로 예약돼 있어, 감싸는 자리는
+    #   공용 게이트가 아니라 뜻을 아는 이 생산자다(ibl_engine._as_currency).
     out2 = execute_ibl({"_var_emit": True, "name": "표", "path": ".items",
                         "_var_values": {"표": stored}}, _REPO, None)
-    assert out2 == [{"a": 1}], "경로 머리는 원형 추출(치환 개정과 같은 눈)"
+    assert out2 == {"items": [{"a": 1}]}, "경로 머리는 원형 추출 + 통화 봉투"
+    # 목록이 아닌 추출(스칼라·dict)은 감싸지 않는다 — 통화가 아닌 것을 통화인 척하지 않는다.
+    out3 = execute_ibl({"_var_emit": True, "name": "표", "path": ".items.0.a",
+                        "_var_values": {"표": stored}}, _REPO, None)
+    assert out3 == 1, "스칼라 추출은 그대로"
     miss = execute_ibl({"_var_emit": True, "name": "표", "path": "", "_var_values": {}},
                        _REPO, None)
     assert miss.get("success") is False and "기록하지 않았습니다" in miss.get("error", "")

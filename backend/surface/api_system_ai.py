@@ -369,6 +369,7 @@ class RecallPreviewRequest(BaseModel):
 _RECALL_CHANNELS = [
     ("execution_memory", "실행기억 — 해마 (과거 IBL 용례 연상)"),
     ("memory_map", "심층 기억 지도 — 주제 가지 목차 (내용은 recall 로)"),
+    ("execution_map", "실행기억 지도 — IBL 용례 주제 가지 목차 (가지는 recall store:실행)"),
     ("forage_memory", "포식 기억 — 냄새지도 + 주인모델"),
     ("disk_skeleton", "디스크 골격 — 집중 폴더 지도 (포식 의도일 때만)"),
 ]

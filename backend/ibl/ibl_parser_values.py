@@ -126,6 +126,13 @@ def _reject_residue(inner: str, pos: int, parsed: dict) -> None:
     (침묵 절단 — pitfall silent_clamp 부류).
 
     잔여가 공백·쉼표뿐이면 정상 종료로 본다.
+
+    ★2026-09-03: 진단이 원인을 빗나가던 자리. 예전에는 원인을 보지 않고 **항상**
+    "값 문자열 안의 따옴표가 이스케이프되지 않았다"고 안내했다. 그래서 키 표기가
+    깨진 문장(`old_string": "…"` — 키 뒤에 군더더기 따옴표)에도 같은 문구가 붙었고,
+    그대로 믿은 작성자는 멀쩡한 값을 이스케이프하러 갔다. 틀린 진단은 침묵보다
+    나쁘다 — 고치는 사람을 엉뚱한 곳으로 보내기 때문이다. 이제 멈춘 지점의 토큰을
+    보고 원인을 갈라 말한다(_diagnose_residue).
     """
     residue = inner[pos:].strip(" \t\n\r,")
     if not residue:
@@ -134,9 +141,40 @@ def _reject_residue(inner: str, pos: int, parsed: dict) -> None:
     keys = ", ".join(str(k) for k in parsed) or "없음"
     raise IBLSyntaxError(
         f"파라미터를 끝까지 읽지 못했습니다. 해석된 키: [{keys}] / 남은 조각: {snippet!r}\n"
-        f"→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. "
-        f'자유 텍스트(content 등) 안의 " 는 \\" 로 쓰세요.'
+        f"{_diagnose_residue(residue)}"
     )
+
+
+# 멈춘 지점의 모양 → 원인. 위에서부터 좁은 것 먼저(키 표기 오류는 값 이스케이프보다
+# 특징이 뚜렷하다). 어느 것도 안 맞으면 값 이스케이프로 안내한다 — 그때만 '가능성'이다.
+_RESIDUE_CAUSES = (
+    # old_string": "…"  — 키 이름 뒤에 따옴표가 붙었다 (실측 2026-09-03)
+    (re.compile(r'^([A-Za-z_]\w*)\s*(["\'])\s*:'),
+     lambda m: (f"→ 키 표기 오류입니다: 키 `{m.group(1)}` 뒤에 군더더기 따옴표 {m.group(2)} 가 "
+                f"붙었습니다. `{m.group(1)}:` 로 쓰세요(키는 따옴표 없이, 또는 양쪽을 감싼 "
+                f'`"{m.group(1)}":`). 값 이스케이프 문제가 아닙니다.')),
+    # "old_string: "…"  — 키 앞 따옴표가 열리고 안 닫혔다
+    (re.compile(r'^(["\'])([A-Za-z_]\w*)\s*:'),
+     lambda m: (f"→ 키 표기 오류입니다: 키 `{m.group(2)}` 앞의 따옴표 {m.group(1)} 가 닫히지 "
+                f'않았습니다. 양쪽을 감싸거나(`"{m.group(2)}":`) 둘 다 빼세요(`{m.group(2)}:`).')),
+    # old_string = "…"  — 구분자가 = 다
+    (re.compile(r'^([A-Za-z_]\w*)\s*='),
+     lambda m: f"→ 키와 값 사이 구분자는 `=` 가 아니라 `:` 입니다: `{m.group(1)}: 값`."),
+    # old_string "…"  — 구분자가 통째로 빠졌다
+    (re.compile(r'^([A-Za-z_]\w*)\s+["\'\[{]'),
+     lambda m: f"→ 키 `{m.group(1)}` 뒤에 `:` 가 빠졌습니다: `{m.group(1)}: 값`."),
+)
+
+
+def _diagnose_residue(residue: str) -> str:
+    """남은 조각의 첫 토큰으로 원인을 판별해 한 줄 안내를 만든다."""
+    for rx, render in _RESIDUE_CAUSES:
+        m = rx.match(residue)
+        if m:
+            return render(m)
+    return ('→ 값 문자열 안의 따옴표가 이스케이프되지 않았을 가능성이 큽니다. '
+            '자유 텍스트(content 등) 안의 " 는 \\" 로 쓰세요. '
+            '(키 표기 오류로 보이지는 않습니다 — 위 "남은 조각"이 시작되는 자리를 보세요.)')
 
 
 def _parse_relaxed_params(text: str) -> dict:

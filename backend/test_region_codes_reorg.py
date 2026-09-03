@@ -96,6 +96,81 @@ def test_공개_경로가_새_코드를_낸다():
     assert mod.resolve_region_code("나주")["code"] == "12170"
 
 
+# ── 한 층 아래: 시군구 재편 (2026-09-03 수리) ─────────────────────────────
+# 위 관문은 *시도* 접두어만 봤다. 그래서 한 층 아래의 재편 — 구 부활·분구·편입 — 은
+# 그대로 통과했고, 부천 41190 이 카탈로그에 남아 molit 에서 조용히 0건을 냈다
+# (사용자 실측 2026-09-03). 접두어 규칙으로는 영영 못 잡는 부류다.
+#
+# 뿌리 수리: 카탈로그를 손 표가 아니라 네이버부동산 지역 트리(현행 행정구역만 담고
+# cortarNo 앞 5자리 = 법정동 시군구 코드)에서 **생성**한다 —
+# tool_region_codes.refresh_region_catalog(). 아래는 그 결과가 되돌아가지 않게 하는 못이다.
+ABOLISHED_SGG = {
+    "41190": "경기 부천시 — 2024 원미·소사·오정구 부활",
+    "41590": "경기 화성시 — 만세·효행·병점·동탄구 설치",
+    "28110": "인천 중구 — 제물포·영종구로 개편",
+    "28140": "인천 동구 — 제물포구로 통합",
+    "28260": "인천 서구 — 서해·검단구로 분구",
+    "47720": "경북 군위군 — 대구 편입(27720)",
+}
+
+CURRENT_SGG = {
+    "41192": ("경기", "부천시원미구"),
+    "41194": ("경기", "부천시소사구"),
+    "41196": ("경기", "부천시오정구"),
+    "41591": ("경기", "화성시만세구"),
+    "41593": ("경기", "화성시효행구"),
+    "41595": ("경기", "화성시병점구"),
+    "41597": ("경기", "화성시동탄구"),
+    "28125": ("인천", "제물포구"),
+    "28155": ("인천", "영종구"),
+    "28275": ("인천", "서해구"),
+    "28290": ("인천", "검단구"),
+    "27720": ("대구", "군위군"),
+}
+
+
+def test_폐지된_시군구코드가_카탈로그에_없다():
+    live = {c for _, _, c in _all_codes(_load().REGION_CODES)}
+    stale = {c: why for c, why in ABOLISHED_SGG.items() if c in live}
+    assert stale == {}, f"폐지 코드 잔존(molit 에서 조용히 0건이 된다): {stale}"
+
+
+def test_재편된_현행_시군구코드가_카탈로그에_있다():
+    codes = _load().REGION_CODES
+    for code, (sido, gu) in CURRENT_SGG.items():
+        assert codes.get(sido, {}).get(gu) == code, f"{sido} {gu}({code}) 누락/불일치"
+
+
+def test_씨앗표도_현행이다():
+    """생성물(region_codes.json)은 .gitignore(data/**/*.json) 밖으로 안 나간다 —
+    새 클론이 물려받는 것은 .py 안의 씨앗 스냅샷뿐이라, 씨앗이 낡으면 버그가 되살아난다."""
+    seed = _load()._BUILTIN_REGION_CODES
+    flat = {c for regions in seed.values() for c in regions.values()}
+    assert not (flat & set(ABOLISHED_SGG)), f"씨앗 표에 폐지 코드: {sorted(flat & set(ABOLISHED_SGG))}"
+    missing = [c for c in CURRENT_SGG if c not in flat]
+    assert missing == [], f"씨앗 표에 현행 코드 누락: {missing}"
+
+
+def test_관문이_부실한_수집을_거부한다():
+    """수집이 반쯤 실패해도 카탈로그를 지우지 못한다(_validate_catalog)."""
+    mod = _load()
+    assert mod._validate_catalog({}) is not None
+    assert mod._validate_catalog({"서울": {"종로구": "11110"}}) is not None       # 너무 작음
+    assert mod._validate_catalog({"서울": {"종로구": 11110}}) is not None         # 5자리 문자열 아님
+    assert mod._validate_catalog(mod._BUILTIN_REGION_CODES) is None
+
+
+def test_생성물이_깨져도_씨앗표로_되돌아간다(tmp_path):
+    mod = _load()
+    broken = tmp_path / "region_codes.json"
+    broken.write_text("{깨진 json", encoding="utf-8")
+    mod._CATALOG_PATH = str(broken)
+    mod._catalog_cache.update(mtime=None, codes=None, meta=None)
+    codes, meta = mod._load_catalog()
+    assert codes is mod._BUILTIN_REGION_CODES
+    assert meta["source"] == "builtin" and "note" in meta
+
+
 if __name__ == "__main__":
     import sys
 

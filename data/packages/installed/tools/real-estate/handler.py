@@ -47,7 +47,10 @@ def _geocode_query_to_latlng(query):
 def _op_codes(tool_input, context):
     """[sense:realty]{op:codes} — 지역코드 조회 (옛 district_codes)."""
     tool = load_module("tool_region_codes")
-    return tool.get_region_codes(tool_input.get("city") or tool_input.get("region") or "")
+    return tool.get_region_codes(
+        tool_input.get("city") or tool_input.get("region") or "",
+        refresh=bool(tool_input.get("refresh")),  # 행정구역 재편 반영 — 갱신은 손이 아니라 경로가
+    )
 
 
 def _op_query(tool_input, context):

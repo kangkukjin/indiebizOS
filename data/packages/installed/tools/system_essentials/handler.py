@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import fnmatch
 import re
 import time
 import subprocess
@@ -790,6 +791,16 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, expand_body_path(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
             items = os.listdir(dir_path)
+            # 선언(ibl_actions.yaml 의 list.params.pattern)이 약속한 glob 을 실제로 건다.
+            # ★2026-09-03 #repair: 선언만 있고 여기서 읽는 곳이 없어 pattern 이 **조용히**
+            #   무시됐다 — [self:list]{path:"/tmp", pattern:"ait_*.json"} 이 /tmp 전체를
+            #   절단까지 돌려줬다(같은 glob 을 [self:file_find] 는 처리하므로, 어휘가
+            #   약속한 것을 구현이 안 지킨 자리다). 여기서 안 걸면 '0건'과 '필터 없음'이
+            #   구별되지 않는다.
+            pattern = tool_input.get("pattern")
+            total_before = len(items)
+            if pattern:
+                items = [n for n in items if fnmatch.fnmatch(n, pattern)]
             text = "\n".join(items)
             # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
             # 파일 목록 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
@@ -816,7 +827,13 @@ def execute(tool_input: dict, context) -> str:
                     "url": abs_full,
                 })
             table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
-            return json.dumps({"text": text, "table": table, "items": records}, ensure_ascii=False)
+            _out = {"text": text, "table": table, "items": records, "total": len(records)}
+            if pattern:
+                # 필터가 걸렸다는 사실을 봉투가 말한다 — 0건일 때 '없다'와 '패턴이 안 맞았다'를
+                # 부르는 쪽이 구별할 수 있어야 한다.
+                _out["pattern"] = pattern
+                _out["total_before_pattern"] = total_before
+            return json.dumps(_out, ensure_ascii=False)
 
         elif tool_name == "grep_files":
             # 구현=fs_grep.py 형제 모듈 (2026-08-08 분리 — 1500줄 규칙.

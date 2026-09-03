@@ -84,6 +84,109 @@ def test_T3_티켓_이름은_hex만():
     assert valid_ticket("deadbeef") and valid_ticket("f" * 32)
 
 
+def test_T3b_티켓_쓰기는_원자적이다_찢어진_읽기_없음():
+    """2026-09-03 실측(ep2742): 제자리 덮어쓰기라 회수가 `Extra data: line 1 column 224`
+    로 깨졌다 — 긴 done 기록 위에 짧은 기록을 쓰는 중간을 읽으면 새 내용+옛 꼬리가 읽힌다.
+    tmp+os.replace 면 읽는 쪽은 항상 **한 판 전체**를 본다.
+    """
+    from common.spill import ticket_progress
+    t = _fresh_ticket()
+    path = os.path.join(spill_dir(), f"ticket_{t}.json")
+    try:
+        ticket_begin(t)
+        ticket_finish(t, {"success": True, "긴꼬리": "x" * 4000})   # 긴 판
+        ticket_begin(t)                                              # 그 위에 짧은 판
+        with open(path, encoding="utf-8") as f:
+            rec = json.load(f)      # 찢어졌다면 여기서 Extra data 로 죽는다
+        assert rec["status"] == "running"
+
+        stop, errors = threading.Event(), []
+
+        def writer():
+            i = 0
+            while not stop.is_set():
+                ticket_progress(t, {"step": i % 9, "of": 9, "action": "x" * (i % 400)})
+                i += 1
+
+        th = threading.Thread(target=writer, daemon=True)
+        th.start()
+        try:
+            for _ in range(300):
+                got = ticket_recover(t)
+                if got.get("status") not in ("running", "done"):
+                    errors.append(got)
+        finally:
+            stop.set()
+            th.join(timeout=5)
+        assert errors == [], f"동시 쓰기 중 회수가 깨졌다: {errors[:2]}"
+    finally:
+        _cleanup(t)
+
+
+def test_T3d_같은_티켓에_쓰는_자가_여럿이어도_찢어지지_않는다():
+    """원자성은 **교체**의 성질이지 내용의 성질이 아니다 — tmp 이름이 pid 뿐이면
+    같은 프로세스의 두 스레드가 같은 tmp 를 열어(w=truncate) 서로의 바이트에 겹쳐
+    쓰고, os.replace 가 그 찢어진 판을 '원자적으로' 공개한다.
+
+    이 경합은 실재한다: ibl_progress 의 규율("좌표는 소유하고 움직임은 공유한다")대로
+    병렬 가지·each 행·하위 파이프가 thread_context 승계로 **같은 티켓**에 beat 를 쓴다.
+    T3b 는 쓰는 자가 하나라 이 자리를 못 짚었다.
+    """
+    from common.spill import ticket_progress, ticket_beat
+    t = _fresh_ticket()
+    try:
+        ticket_begin(t)
+        stop, errors = threading.Event(), []
+
+        def writer(long: bool):
+            i = 0
+            while not stop.is_set():
+                if long:
+                    ticket_progress(t, {"step": i % 9, "of": 9, "action": "L" * 3000})
+                else:
+                    ticket_beat(t, {"row": i % 7, "rows": 7, "row_label": "s"})
+                i += 1
+
+        ths = [threading.Thread(target=writer, args=(k == 0,), daemon=True) for k in range(4)]
+        for th in ths:
+            th.start()
+        try:
+            for _ in range(400):
+                got = ticket_recover(t)
+                if got.get("status") not in ("running", "done"):
+                    errors.append(got)
+        finally:
+            stop.set()
+            for th in ths:
+                th.join(timeout=5)
+        assert errors == [], f"쓰는 자가 여럿일 때 회수가 깨졌다: {errors[:2]}"
+    finally:
+        _cleanup(t)
+
+
+def test_T3c_읽기실패는_결말이_아니라_찰나다():
+    """읽기 실패를 결말로 단정하면 유한 대기가 즉시 풀려 회수가 폴링으로 무너진다.
+    (ep2742: 같은 티켓을 wait 240 → 200 으로 두 번 물었다.)
+    깨진 파일은 transient 표식을 달고, ticket_wait 는 그 상태에서 **기다린다**.
+    """
+    from common.spill import ticket_wait
+    t = _fresh_ticket()
+    path = os.path.join(spill_dir(), f"ticket_{t}.json")
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write('{"status": "running"} 옛꼬리')      # 찢어진 판 흉내
+        got = ticket_recover(t)
+        assert got.get("status") == "unreadable" and got.get("transient") is True
+        assert "실행에 대한 사실이 아니라" in got.get("note", "")
+
+        started = time.time()
+        waited_env = ticket_wait(t, 1)
+        assert time.time() - started >= 0.9, "transient 를 결말로 보고 즉시 돌아왔다"
+        assert waited_env.get("waited") is not None
+    finally:
+        _cleanup(t)
+
+
 def test_T4_기록없음은_모름이지_없음이_아니다():
     """B28-1: '못 봤다'와 '없다'는 다른 사건 — unknown 은 만료·미탑재 두 가설을 다 말한다."""
     got = ticket_recover(_fresh_ticket())

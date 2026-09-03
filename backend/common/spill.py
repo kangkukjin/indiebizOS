@@ -176,14 +176,42 @@ def _ticket_path(ticket: str) -> str:
     return os.path.join(spill_dir(), f"ticket_{ticket}.json")
 
 
+def _ticket_write(ticket: str, rec: dict) -> None:
+    """티켓 기록을 **원자적으로** 쓴다 — 같은 파일을 쓰는 쪽과 읽는 쪽이 다른 스레드다.
+
+    ★2026-09-03 실측(ep2742): 회수가 `status: "unreadable" / Extra data: line 1
+    column 224` 를 돌려줬다. 제자리 덮어쓰기라 새 기록(짧음)을 쓰는 중간에 읽으면
+    **새 내용 + 옛 꼬리**가 읽혀 JSON 이 깨진다. 그 봉투는 결말이 아닌데 결말처럼
+    생겨서 유한 대기가 즉시 풀렸고, 회수가 폴링으로 무너졌다(같은 티켓을 wait 240
+    → 200 으로 두 번). tmp+os.replace 면 읽는 쪽은 옛 판 아니면 새 판 **전체**를 본다.
+    """
+    path = _ticket_path(ticket)
+    # tmp 이름은 **쓰는 자마다** 달라야 한다. pid 만으로는 같은 프로세스의 두 스레드가
+    # 같은 tmp 를 열어(w = truncate) 서로의 바이트에 겹쳐 쓰고, os.replace 는 그 찢어진
+    # 내용을 '원자적으로' 공개한다 — 원자성은 **교체**의 성질이지 내용의 성질이 아니다.
+    # 이 경합은 가설이 아니다: ibl_progress 의 규율("좌표는 소유하고 움직임은 공유한다")
+    # 대로 병렬 가지·each 행·하위 파이프가 thread_context 승계로 **같은 티켓**에 beat 를
+    # 쓰므로, 한 프로세스 안에서 같은 파일을 동시에 쓰는 자가 여럿이다.
+    tmp = f"{path}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(rec, f, ensure_ascii=False, default=str)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)      # 실패한 판을 디렉토리에 남기지 않는다(gc 는 24h 뒤에나 온다)
+        except OSError:
+            pass
+        raise
+
+
 def ticket_begin(ticket: str) -> bool:
     """실행 시작 표식 — running 상태를 남긴다(끝 표식과 같은 파일을 덮어쓴다)."""
     if not valid_ticket(ticket):
         return False
     gc()
-    with open(_ticket_path(ticket), "w", encoding="utf-8") as f:
-        json.dump({"status": "running",
-                   "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")}, f, ensure_ascii=False)
+    _ticket_write(ticket, {"status": "running",
+                           "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
     return True
 
 
@@ -204,8 +232,7 @@ def ticket_progress(ticket: str, progress: dict) -> bool:
             return False
         rec["progress"] = dict(progress)
         rec["progress"]["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(rec, f, ensure_ascii=False)
+        _ticket_write(ticket, rec)
         return True
     except Exception:
         return False
@@ -237,8 +264,7 @@ def ticket_beat(ticket: str, detail: dict) -> bool:
         d.update(detail)
         prog["detail"] = d
         prog["updated_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(rec, f, ensure_ascii=False)
+        _ticket_write(ticket, rec)
         return True
     except Exception:
         return False
@@ -272,10 +298,9 @@ def ticket_finish(ticket: str, envelope) -> bool:
     """최종 봉투 보관 — 성공이든 실패든 **결말**을 남긴다(모름과 실패는 다른 사건)."""
     if not valid_ticket(ticket):
         return False
-    with open(_ticket_path(ticket), "w", encoding="utf-8") as f:
-        json.dump({"status": "done",
-                   "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                   "envelope": envelope}, f, ensure_ascii=False, default=str)
+    _ticket_write(ticket, {"status": "done",
+                          "finished_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                          "envelope": envelope})
     return True
 
 
@@ -304,7 +329,10 @@ def ticket_wait(ticket: str, wait_s=0) -> dict:
     while True:
         env = ticket_recover(ticket)
         # running 이 아니면 기다릴 것이 없다(done=원 봉투 · unknown/invalid=기다려도 안 생김).
-        if not (isinstance(env, dict) and env.get("status") == "running"):
+        # 단 **읽기 실패(transient)는 결말이 아니다** — 2026-09-03 실측(ep2742)에서 찢어진
+        # 읽기가 결말처럼 대기를 즉시 풀어, wait 를 주고도 회수가 폴링이 됐다.
+        if not (isinstance(env, dict)
+                and (env.get("status") == "running" or env.get("transient"))):
             break
         left = wait_s - (time.time() - started)
         if left <= 0:
@@ -312,6 +340,8 @@ def ticket_wait(ticket: str, wait_s=0) -> dict:
         time.sleep(min(TICKET_POLL_S, left))
     if wait_s and isinstance(env, dict):
         waited = round(time.time() - started, 1)
+        if env.get("transient"):
+            env["waited"] = waited   # 기다렸는데도 읽기가 계속 실패했다 — 그 사실을 말한다
         if env.get("status") == "running":
             env["waited"] = waited
             env["note"] = (f"{env.get('note') or ''} ★유한 대기 {waited}초가 먼저 끝났습니다 — "
@@ -332,16 +362,28 @@ def ticket_recover(ticket: str) -> dict:
     if not valid_ticket(ticket):
         return {"success": False, "status": "invalid",
                 "error": "ticket 형식이 아닙니다 — hex 8~32자."}
-    try:
-        with open(_ticket_path(ticket), encoding="utf-8") as f:
-            rec = json.load(f)
-    except FileNotFoundError:
-        return {"success": False, "status": "unknown",
-                "error": (f"티켓 {ticket} 의 기록이 없습니다 — 보관 만료({SPILL_TTL_S // 3600}h)"
-                          "였거나, 티켓 없이 시작된 실행입니다. 어느 쪽인지는 판정 불능입니다.")}
-    except Exception as e:
-        return {"success": False, "status": "unreadable",
-                "error": f"티켓 기록을 읽지 못했습니다: {e}"}
+    rec, read_error = None, None
+    for attempt in range(3):
+        # 읽기 실패는 대개 **찰나**다(쓰는 중간을 봤다) — 결말로 단정하기 전에 다시 본다.
+        # 원자적 쓰기(_ticket_write)가 근본 수리이고 이 재시도는 옛 판 기록·다른
+        # 프로세스가 남긴 파일에 대한 이중 방어다.
+        try:
+            with open(_ticket_path(ticket), encoding="utf-8") as f:
+                rec = json.load(f)
+            break
+        except FileNotFoundError:
+            return {"success": False, "status": "unknown",
+                    "error": (f"티켓 {ticket} 의 기록이 없습니다 — 보관 만료({SPILL_TTL_S // 3600}h)"
+                              "였거나, 티켓 없이 시작된 실행입니다. 어느 쪽인지는 판정 불능입니다.")}
+        except Exception as e:
+            read_error = e
+            if attempt < 2:
+                time.sleep(0.05)
+    if rec is None:
+        return {"success": False, "status": "unreadable", "transient": True,
+                "error": (f"티켓 기록을 읽지 못했습니다: {read_error}"),
+                "note": ("이것은 **실행에 대한 사실이 아니라 읽기 실패**입니다 — 실행은 계속 "
+                         "돌고 있을 수 있습니다. 같은 회수를 wait 초와 함께 다시 부르세요.")}
     if rec.get("status") == "running":
         out = {"success": True, "status": "running",
                "started_at": rec.get("started_at"),

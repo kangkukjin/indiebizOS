@@ -2,8 +2,10 @@
 부동산 API 지역 코드 조회 모듈
 법정동 코드 앞 5자리 (시군구 코드)
 """
+import json
 import os
 import sys
+from datetime import datetime, timezone
 
 # common 유틸리티 (카카오 키) 사용
 _backend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "backend")
@@ -28,13 +30,20 @@ def get_tool_definition():
         }
     }
 
-# 주요 지역 코드 (법정동 코드 앞 5자리)
-# ★시도코드 재편 이력 — 옛 코드는 molit 실거래 API 에서 오류가 아니라 **조용히 0건**이다:
-#   강원특별자치도 42→51 · 전북특별자치도 45→52 (시군 접미어 불변)
-#   전남광주통합특별시(2026-07-01) 46/29→12 (재번호 — 옛 접미어에서 유추 금지)
-#   2026-09-02 molit 아파트 매매(202607)·네이버 cortarNo 로 60개 코드 전수 대조. 관문 backend/test_region_codes_reorg.py.
-#   재편 없음 확인: 서울 11·부산 26·대구 27·울산 31·충북 43·충남 44·경북 47·경남 48·제주 50.
-REGION_CODES = {
+# 씨앗 표 (법정동 코드 앞 5자리) — **정본이 아니다.**
+# 정본은 옆의 생성물 region_codes.json 이고 이 표는 그것이 없거나 깨졌을 때의 폴백이다.
+# 손으로 고치는 표는 반드시 다시 낡는다 — 행정구역 재편은 두 층에서 계속 일어나고,
+# 폐지 코드는 molit 실거래 API 에서 오류가 아니라 **조용히 0건**이라 호출자가 '거래가 없다'로 오독한다:
+#   · 시도 재편 — 강원 42→51 · 전북 45→52 · 전남광주 46/29→12(재번호)
+#   · 시군구 재편 — 부천 41190→41192/41194/41196(2024 구 부활) · 화성 41590→4159x ·
+#     인천 28110/28140/28260→28125/28155/28275/28290 · 군위 47720→27720(대구 편입)
+# 그래서 갱신은 손이 아니라 경로가 한다: refresh_region_catalog() ([sense:realty]{op:"codes", refresh:true}).
+#
+# ★아래 표는 **기계가 찍은 스냅샷**이다(2026-09-03, refresh_region_catalog 출력). 손으로
+#   고치지 말 것 — 한 지역만 끼워 넣으면 나머지가 조용히 낡는다. 갱신 절차는 위 refresh 를
+#   돌린 뒤 생성물(region_codes.json)을 이 표로 다시 찍는 것이다. 생성물은 .gitignore
+#   (data/**/*.json) 밖으로 안 나가므로, **새 클론이 물려받는 것은 이 스냅샷뿐이다.**
+_BUILTIN_REGION_CODES = {
     "서울": {
         "종로구": "11110",
         "중구": "11140",
@@ -73,7 +82,9 @@ REGION_CODES = {
         "의정부시": "41150",
         "안양시만안구": "41171",
         "안양시동안구": "41173",
-        "부천시": "41190",
+        "부천시원미구": "41192",
+        "부천시소사구": "41194",
+        "부천시오정구": "41196",
         "광명시": "41210",
         "평택시": "41220",
         "동두천시": "41250",
@@ -97,10 +108,30 @@ REGION_CODES = {
         "이천시": "41500",
         "안성시": "41550",
         "김포시": "41570",
-        "화성시": "41590",
+        "화성시만세구": "41591",
+        "화성시효행구": "41593",
+        "화성시병점구": "41595",
+        "화성시동탄구": "41597",
         "광주시": "41610",
         "양주시": "41630",
         "포천시": "41650",
+        "여주시": "41670",
+        "연천군": "41800",
+        "가평군": "41820",
+        "양평군": "41830",
+    },
+    "인천": {
+        "제물포구": "28125",
+        "영종구": "28155",
+        "미추홀구": "28177",
+        "연수구": "28185",
+        "남동구": "28200",
+        "부평구": "28237",
+        "계양구": "28245",
+        "서해구": "28275",
+        "검단구": "28290",
+        "강화군": "28710",
+        "옹진군": "28720",
     },
     "부산": {
         "중구": "26110",
@@ -120,18 +151,6 @@ REGION_CODES = {
         "사상구": "26530",
         "기장군": "26710",
     },
-    "인천": {
-        "중구": "28110",
-        "동구": "28140",
-        "미추홀구": "28177",
-        "연수구": "28185",
-        "남동구": "28200",
-        "부평구": "28237",
-        "계양구": "28245",
-        "서구": "28260",
-        "강화군": "28710",
-        "옹진군": "28720",
-    },
     "대구": {
         "중구": "27110",
         "동구": "27140",
@@ -141,6 +160,14 @@ REGION_CODES = {
         "수성구": "27260",
         "달서구": "27290",
         "달성군": "27710",
+        "군위군": "27720",
+    },
+    "광주": {
+        "동구": "12210",
+        "서구": "12240",
+        "남구": "12270",
+        "북구": "12300",
+        "광산구": "12330",
     },
     "대전": {
         "동구": "30110",
@@ -148,13 +175,6 @@ REGION_CODES = {
         "서구": "30170",
         "유성구": "30200",
         "대덕구": "30230",
-    },
-    "광주": {  # 전남광주통합특별시(2026-07-01) — 29→12, 구 접미어도 재번호
-        "동구": "12210",
-        "서구": "12240",
-        "남구": "12270",
-        "북구": "12300",
-        "광산구": "12330",
     },
     "울산": {
         "중구": "31110",
@@ -237,7 +257,7 @@ REGION_CODES = {
         "고창군": "52790",
         "부안군": "52800",
     },
-    "전남": {  # 전남광주통합특별시(2026-07-01) — 46→12, 시는 접미어 유지(광양 제외)·군은 12710 부터 연번
+    "전남": {
         "목포시": "12110",
         "여수시": "12130",
         "순천시": "12150",
@@ -273,7 +293,6 @@ REGION_CODES = {
         "상주시": "47250",
         "문경시": "47280",
         "경산시": "47290",
-        "군위군": "47720",
         "의성군": "47730",
         "청송군": "47750",
         "영양군": "47760",
@@ -317,6 +336,194 @@ REGION_CODES = {
     },
 }
 
+
+# ── 현행 카탈로그: 생성물 + 갱신 경로 ────────────────────────────────────────
+# molit 은 폐지 코드에 오류 대신 빈 목록을 주므로 '어느 코드가 살아있는지'를 스스로 말하지
+# 않는다. 반면 네이버부동산 지역 트리(/api/regions/list, 키 불요)는 **현행 행정구역만** 담고
+# cortarNo 앞 5자리가 곧 법정동 시군구 코드라, 이 트리가 카탈로그의 현행성 기준이 된다.
+_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "region_codes.json")
+_CATALOG_MIN_SIDO = 15      # 17 시도에서 통합(전남광주)·수집 실패 여유
+_CATALOG_MIN_CODES = 200    # 전국 시군구 약 250
+_CATALOG_STALE_DAYS = 180
+
+_catalog_cache = {"mtime": None, "codes": None, "meta": None}
+
+
+def _validate_catalog(codes):
+    """생성물이 씨앗 표를 대체해도 되는가 — 부실한 수집이 카탈로그를 지우지 못하게 하는 관문.
+
+    반환: 문제 설명 문자열(불합격) 또는 None(합격).
+    """
+    if not isinstance(codes, dict) or len(codes) < _CATALOG_MIN_SIDO:
+        n = len(codes) if isinstance(codes, dict) else 0
+        return f"시도 수 부족 ({n} < {_CATALOG_MIN_SIDO})"
+    flat = [(s, g, c) for s, regions in codes.items() for g, c in (regions or {}).items()]
+    if len(flat) < _CATALOG_MIN_CODES:
+        return f"시군구 수 부족 ({len(flat)} < {_CATALOG_MIN_CODES})"
+    bad = [f"{s} {g}={c!r}" for s, g, c in flat
+           if not (isinstance(c, str) and len(c) == 5 and c.isdigit())]
+    if bad:
+        return f"5자리 숫자가 아닌 코드 {len(bad)}건: {bad[:5]}"
+    dup = len(flat) - len({c for _, _, c in flat})
+    if dup:
+        return f"코드 중복 {dup}건"
+    return None
+
+
+def _load_catalog():
+    """(codes, meta) — 생성물이 있으면 그것, 없거나 무효면 씨앗 표. 파일 mtime 으로 캐시.
+
+    ★캐시를 mtime 에 걸어 두는 이유: refresh 로 파일만 새로 써도 같은 프로세스가
+      즉시 새 표를 본다(패키지 tool_*.py 는 /packages/reload 밖이라 재기동이 필요하지만,
+      **데이터 갱신은 재기동 없이** 반영되어야 갱신 경로가 실제로 쓰인다).
+    """
+    try:
+        mtime = os.path.getmtime(_CATALOG_PATH)
+    except OSError:
+        return _BUILTIN_REGION_CODES, {
+            "source": "builtin",
+            "note": "생성 카탈로그 없음 — [sense:realty]{op:\"codes\", refresh:true} 로 현행화하세요",
+        }
+
+    if _catalog_cache["mtime"] != mtime:
+        codes, meta = None, None
+        try:
+            with open(_CATALOG_PATH, encoding="utf-8") as f:
+                blob = json.load(f)
+            candidate = blob.get("codes") or {}
+            problem = _validate_catalog(candidate)
+            if problem:
+                meta = {"source": "builtin", "note": f"생성 카탈로그가 관문 불합격이라 씨앗 표 사용: {problem}"}
+            else:
+                codes = candidate
+                meta = {"source": "generated", "from": blob.get("from"),
+                        "generated_at": blob.get("generated_at")}
+        except Exception as e:  # 깨진 JSON 이 카탈로그를 통째로 죽이지 않는다
+            meta = {"source": "builtin", "note": f"생성 카탈로그 읽기 실패라 씨앗 표 사용: {e}"}
+        _catalog_cache.update(mtime=mtime, codes=codes, meta=meta)
+
+    if _catalog_cache["codes"] is None:
+        return _BUILTIN_REGION_CODES, dict(_catalog_cache["meta"])
+    return _catalog_cache["codes"], dict(_catalog_cache["meta"])
+
+
+def _catalog():
+    return _load_catalog()[0]
+
+
+def _catalog_meta():
+    """응답에 실어 카탈로그가 자기 나이를 말하게 한다 — 조용한 0건의 첫 번째 단서."""
+    meta = _load_catalog()[1]
+    ts = meta.get("generated_at")
+    if ts:
+        try:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(ts)).days
+            meta["age_days"] = age
+            if age > _CATALOG_STALE_DAYS:
+                meta["note"] = (f"카탈로그가 {age}일 지났습니다. 행정구역이 재편됐다면 폐지 코드는 "
+                                f"오류 없이 0건이 됩니다 — refresh:true 로 현행화하세요")
+        except Exception:
+            pass
+    return meta
+
+
+def __getattr__(name):
+    """옛 이름 REGION_CODES 는 늘 **현행 카탈로그**를 가리킨다 (PEP 562).
+
+    모듈 밖(관문 테스트 등)에서 tool_region_codes.REGION_CODES 로 읽던 코드가
+    씨앗 표에 굳지 않게 하는 다리. 모듈 안에서는 _catalog() 을 직접 쓴다.
+    """
+    if name == "REGION_CODES":
+        return _catalog()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+# 네이버 시도명 → 카탈로그 키. 코드가 아니라 **라벨**만 다루므로 재편이 나도 안 깨진다.
+_SIDO_LABEL = {"충청북": "충북", "충청남": "충남", "경상북": "경북", "경상남": "경남"}
+# 통합 시도 — 한 시도 안에 옛 두 시도가 들어 있어 카탈로그 키를 둘로 가른다.
+# 가르는 기준은 이름의 구조다: 광역시 자치구는 '구'로 끝나고 '시'가 없고("서구"),
+# 도의 시군은 '시'/'군'으로 끝난다("나주시"·"고흥군"). 코드를 손으로 적지 않는다.
+_SIDO_SPLIT = {"전남광주": ("광주", "전남")}
+_SIDO_SUFFIXES = ("특별자치도", "특별자치시", "특별시", "광역시", "자치도", "도", "시")
+
+
+def _sido_key(name):
+    k = (name or "").strip()
+    for suf in _SIDO_SUFFIXES:
+        if k.endswith(suf) and len(k) > len(suf):
+            k = k[: -len(suf)]
+            break
+    return _SIDO_LABEL.get(k, k)
+
+
+def refresh_region_catalog(save=True):
+    """네이버부동산 지역 트리를 걸어 시군구 카탈로그를 현행화한다 (키 불요).
+
+    이것이 이 모듈의 **갱신 경로**다 — 재편 지역을 손으로 끼워 넣는 대신 현행 트리를
+    다시 받아 표 전체를 갈아끼운다. 관문(_validate_catalog)을 통과하지 못하면
+    아무것도 쓰지 않는다(수집 실패가 카탈로그를 지우는 사고 방지).
+    """
+    from common.pkg_utils import load_sibling
+    naver = load_sibling(__file__, "tool_naver")
+
+    def kids(cortar_no):
+        return naver._api_get("/api/regions/list", {"cortarNo": cortar_no}).get("regionList") or []
+
+    try:
+        sido_list = kids("0000000000")
+    except Exception as e:
+        return {"success": False, "error": f"지역 트리를 받지 못했습니다(카탈로그 변경 없음): {e}"}
+
+    codes = {}
+    for sido in sido_list:
+        key = _sido_key(sido.get("cortarName"))
+        split = _SIDO_SPLIT.get(key)
+        try:
+            children = kids(sido.get("cortarNo") or "")
+        except Exception as e:
+            return {"success": False, "error": f"'{key}' 하위를 받지 못했습니다(카탈로그 변경 없음): {e}"}
+        for child in children:
+            name = (child.get("cortarName") or "").replace(" ", "")
+            code = (child.get("cortarNo") or "")[:5]
+            if not name or len(code) != 5 or not code.isdigit():
+                continue
+            bucket = key
+            if split:
+                metro, province = split
+                bucket = metro if (name.endswith("구") and "시" not in name) else province
+            codes.setdefault(bucket, {})[name] = code
+
+    problem = _validate_catalog(codes)
+    if problem:
+        return {"success": False, "error": f"수집 결과가 관문 불합격이라 카탈로그를 바꾸지 않았습니다: {problem}"}
+
+    before = {c: f"{s} {g}" for s, regions in _catalog().items() for g, c in regions.items()}
+    after = {c: f"{s} {g}" for s, regions in codes.items() for g, c in regions.items()}
+    removed = sorted(f"{n}({c})" for c, n in before.items() if c not in after)
+    added = sorted(f"{n}({c})" for c, n in after.items() if c not in before)
+
+    blob = {
+        "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "from": "naver land regions/list (cortarNo 앞 5자리 = 법정동 시군구 코드)",
+        "codes": codes,
+    }
+    if save:
+        tmp = _CATALOG_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(blob, f, ensure_ascii=False, indent=1, sort_keys=True)
+        os.replace(tmp, _CATALOG_PATH)  # 원자적 교체 — 반쯤 쓰인 파일을 읽는 일이 없다
+
+    return {
+        "success": True,
+        "generated_at": blob["generated_at"],
+        "시도": len(codes),
+        "시군구": len(after),
+        "사라진_코드": removed,   # 행정구역 폐지 — 그동안 조용히 0건이던 것들
+        "새_코드": added,
+        "saved": bool(save),
+    }
+
+
 def resolve_region_code(name: str):
     """지역 이름 → 법정동 5자리 시군구 코드 (내부 자동 해소용).
 
@@ -335,7 +542,7 @@ def resolve_region_code(name: str):
                .replace("특별자치시", "").replace("특별자치도", "")
                .replace(" ", ""))
 
-    flat = [(sido, gu, code) for sido, regions in REGION_CODES.items()
+    flat = [(sido, gu, code) for sido, regions in _catalog().items()
             for gu, code in regions.items()]
 
     matched = {}  # code -> "시도 시군구"
@@ -405,41 +612,55 @@ def _resolve_via_kakao(name: str):
     return None
 
 
-def get_region_codes(city: str = ""):
+def get_region_codes(city: str = "", refresh: bool = False):
     """
     지역 코드 조회
 
     Args:
         city: 도시명 (빈 문자열이면 전체 반환)
+        refresh: True 면 먼저 카탈로그를 현행화한다 (네이버 지역 트리, 키 불요)
 
     Returns:
-        dict: 지역 코드 목록
+        dict: 지역 코드 목록 + catalog(출처·생성시각·나이)
     """
+    refreshed = refresh_region_catalog() if refresh else None
+    codes = _catalog()
+    meta = _catalog_meta()
+
     if city:
         city_normalized = city.replace("특별시", "").replace("광역시", "").replace("시", "").replace("도", "").strip()
 
-        for key in REGION_CODES:
+        for key in codes:
             if city_normalized in key or key in city_normalized:
                 # items 통화 — >> 파이프(take/filter/each)로 흐른다.
                 # (dict 만 내던 시절 `[sense:realty]{op:"codes"} >> [table:take]` 가
                 #  ep1116·1334 에서 같은 문장으로 두 번 단절 — 2026-08-21 수리)
-                return {
+                out = {
                     "success": True,
                     "city": key,
-                    "items": [{"지역": name, "코드": code} for name, code in REGION_CODES[key].items()],
-                    "count": len(REGION_CODES[key])
+                    "items": [{"지역": name, "코드": code} for name, code in codes[key].items()],
+                    "count": len(codes[key]),
+                    "catalog": meta,
                 }
+                if refreshed:
+                    out["refreshed"] = refreshed
+                return out
 
         return {
             "success": False,
-            "error": f"'{city}'에 해당하는 지역을 찾을 수 없습니다. 지원 도시: {', '.join(REGION_CODES.keys())}"
+            "error": f"'{city}'에 해당하는 지역을 찾을 수 없습니다. 지원 도시: {', '.join(codes.keys())}",
+            "catalog": meta,
         }
 
     # 전체 목록 — 시/도 단위 items (구/군까지 펼치려면 city 지정)
-    items = [{"시도": city_name, "구군수": len(regions)} for city_name, regions in REGION_CODES.items()]
-    return {
+    items = [{"시도": city_name, "구군수": len(regions)} for city_name, regions in codes.items()]
+    out = {
         "success": True,
-        "total_cities": len(REGION_CODES),
+        "total_cities": len(codes),
         "items": items,
+        "catalog": meta,
         "usage": "특정 도시의 전체 코드를 보려면 city 파라미터에 도시명을 입력하세요. (예: 서울, 경기, 부산)"
     }
+    if refreshed:
+        out["refreshed"] = refreshed
+    return out

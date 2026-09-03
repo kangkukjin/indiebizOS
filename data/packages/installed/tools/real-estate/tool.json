@@ -162,6 +162,10 @@
           "name": {
             "type": "string",
             "description": "sense:realty 파라미터"
+          },
+          "refresh": {
+            "type": "boolean",
+            "description": "sense:realty 파라미터"
           }
         },
         "required": []

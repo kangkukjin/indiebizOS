@@ -136,6 +136,12 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
     result = {"success": True, "path": abs_path, "size": len(content)}
     if _json_mode:
         result["format"] = "json"
+        # 앱 표면(원격·폰 행 버튼)은 message 만 토스트한다 — 저장 행 수를 한 줄로(2026-09-04 지도 저장 버튼).
+        try:
+            _n = len((json.loads(content) or {}).get("items") or [])
+            result["message"] = f"JSON 원장 저장 — {_n}행 ({os.path.basename(path)})"
+        except Exception:
+            pass
     if excluded_meta:
         result["excluded_meta"] = excluded_meta   # 원장에서 뺀 실행 메타·정직 표지(신고, B53-4)
     if (_vg := _vocab_enforce(path)):   # 어휘 빌드 입력이면 파생물 재생성(09-01)

@@ -145,14 +145,14 @@ def place_search(tool_input: dict) -> dict:
     elif sort == "distance":
         return {"success": False, "error": "sort:distance 는 기준 좌표(lat·lng)가 필요합니다."}
 
-    if query:
-        params["query"] = query
+    label = query or next((k for k, v in CATEGORY_CODES.items() if v == code), code)
+    if query or not has_coord:
+        # 키워드 검색 — 카테고리만 왔는데 좌표가 없으면 라벨('카페')을 검색어로 삼아 전국 정확도순(앱의 칩만 고른 첫 조회)
+        params["query"] = query or label
         if code:
             params["category_group_code"] = code
         endpoint = "/v2/local/search/keyword.json"
     else:
-        if not has_coord:
-            return {"success": False, "error": "카테고리만으로 찾을 때는 중심 좌표(lat·lng)가 필요합니다(radius m, 기본 5000)."}
         params["category_group_code"] = code
         params.setdefault("radius", 5000)
         endpoint = "/v2/local/search/category.json"
@@ -160,7 +160,6 @@ def place_search(tool_input: dict) -> dict:
     items, total, err = _paged(endpoint, params, limit)
     if err:
         return err
-    label = query or next((k for k, v in CATEGORY_CODES.items() if v == code), code)
     return {
         "items": items,
         "count": len(items),

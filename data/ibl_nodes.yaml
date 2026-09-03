@@ -1289,6 +1289,144 @@ nodes:
           values:
             search: 키워드/카테고리로 장소 검색 (기본)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
+        app:
+          instrument: directions
+          icon: 🗺️
+          name: 지도
+          order: 10
+          modes:
+          - name: 검색
+            inputs:
+            - key: q
+              type: text
+              placeholder: '장소·가게·주소 (예: 성수동 카페, 서울시청)'
+            - key: category
+              type: select
+              placeholder: 카테고리(선택)
+              options:
+              - value: 카페
+                label: ☕ 카페
+              - value: 음식점
+                label: 🍴 음식점
+              - value: 편의점
+                label: 🏪 편의점
+              - value: 주차장
+                label: 🅿️ 주차장
+              - value: 주유소
+                label: ⛽ 주유소
+              - value: 병원
+                label: 🏥 병원
+              - value: 약국
+                label: 💊 약국
+              - value: 은행
+                label: 🏦 은행
+              - value: 마트
+                label: 🛒 마트
+              - value: 숙박
+                label: 🛏️ 숙박
+              - value: 관광명소
+                label: 🏛️ 관광명소
+              - value: 지하철
+                label: 🚇 지하철
+            action: '[sense:place]{query: "$q", category: "$category", limit: 30}@hub'
+            filter:
+              from_field: cat
+            view:
+            - type: map
+              markers: items
+              'on':
+                search_here: '[sense:place]{query: "$q", category: "$category", lat: "$lat", lng: "$lng", radius: $radius, sort: "distance", limit: 30}@hub'
+            - type: list_action
+              from: items
+              icon: 📍
+              title: '{name}'
+              sub: '{cat}{distance|opt:  ·  📏 ,m}  ·  {address}{phone|opt:  ·  ☎ ,}'
+              empty: 검색 결과가 없습니다
+              button:
+                label: ☆ 저장
+                action: '[self:read]{path: "outputs/map/places.json"}@hub & [sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub >> [table:union] >> [table:dedup]{by: "id"} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                refresh: false
+              item_click:
+                action: '[sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub'
+                view:
+                - type: card_list
+                  from: items
+                  card:
+                    title: '{name}'
+                    lines:
+                    - '{category}'
+                    - '📍 {address}{phone|opt:  ·  ☎ ,}'
+                    - '{description|opt:,}'
+                    - '{blog_count|opt:💬 블로그 언급 ,건}{reason|opt:  ·  “,”}'
+                    link:
+                      href: '{url}'
+                      label: 카카오맵 상세(사진·영업시간·리뷰) →
+                - type: list_action
+                  from: items
+                  icon: ⭐
+                  title: '{name}'
+                  sub: 저장 장소에 추가 (폴더·메모는 데스크탑 지도 앱에서)
+                  button:
+                    label: ☆ 저장
+                    action: '[self:read]{path: "outputs/map/places.json"}@hub & [sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub >> [table:union] >> [table:dedup]{by: "id"} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                    refresh: false
+          - name: 저장
+            auto_run: true
+            action: '[self:read]{path: "outputs/map/places.json"}@hub'
+            filter:
+              from_field: tag
+            view:
+            - type: map
+              markers: items
+            - type: list_action
+              from: items
+              icon: ⭐
+              title: '{name}'
+              sub: '{tag}  ·  {address}{memo|opt:  ·  📝 ,}'
+              empty: 아직 저장한 장소가 없습니다 — 검색 탭에서 ☆ 저장
+              button:
+                label: 삭제
+                confirm: 이 장소를 저장 목록에서 뺄까요?
+                action: '[self:read]{path: "outputs/map/places.json"}@hub >> [table:filter]{where: {field: "id", op: "ne", value: "{id}"}} >> [self:write]{path: "outputs/map/places.json", format: "json"}@hub'
+                refresh: true
+              item_click:
+                action: '[sense:place]{op: "detail", name: "{name}", id: "{id}", lat: {lat}, lng: {lng}}@hub'
+                view:
+                - type: card_list
+                  from: items
+                  card:
+                    title: '{name}'
+                    lines:
+                    - '{category}'
+                    - '📍 {address}{phone|opt:  ·  ☎ ,}'
+                    - '{blog_count|opt:💬 블로그 언급 ,건}{reason|opt:  ·  “,”}'
+                    link:
+                      href: '{url}'
+                      label: 카카오맵 상세 →
+          - name: 길찾기
+            inputs:
+            - key: origin
+              type: text
+              label: 출발
+              placeholder: 출발지 (비우면 이 몸의 위치)
+            - key: destination
+              type: text
+              label: 도착
+              placeholder: 도착지 장소명
+              required: true
+            action: '[sense:navigate_route]{origin: "$origin", destination: "$destination"}'
+            view:
+            - type: map
+              from: map_data
+            - type: metric
+              label: 경로 요약
+              big: '{map_data.summary.distance_km}km'
+              sub: '{map_data.summary.duration_min}분 · 통행료 {map_data.summary.toll}원'
+            - type: kv_list
+              from: key_guides
+              title: 주요 안내
+              k: '{name}'
+              v: '{guidance}'
       navigate_route:
         aliases:
           origin:
@@ -1309,34 +1447,6 @@ nodes:
         - 내비
         - 경로
         - 네비게이션
-        app:
-          instrument: directions
-          icon: 🛣️
-          name: 길찾기
-          order: 10
-          inputs:
-          - key: origin
-            type: text
-            label: 출발
-            placeholder: 출발지 (비우면 기본)
-          - key: destination
-            type: text
-            label: 도착
-            placeholder: 도착지 장소명
-            required: true
-          action: '[sense:navigate_route]{origin: "$origin", destination: "$destination"}'
-          view:
-          - type: map
-            from: map_data
-          - type: metric
-            label: 경로 요약
-            big: '{map_data.summary.distance_km}km'
-            sub: '{map_data.summary.duration_min}분 · 통행료 {map_data.summary.toll}원'
-          - type: kv_list
-            from: key_guides
-            title: 주요 안내
-            k: '{name}'
-            v: '{guidance}'
       reverse_geocode:
         aliases:
           lng:

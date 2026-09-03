@@ -25,6 +25,10 @@
 - 쓰기(AI 가 대신 저장): `$본 = [self:read]{path}` 로 읽어 `items` 에 행을 더해 `[self:write]{path, format: "json"}` 로 통째 다시 쓴다(부분 갱신 어휘 없음 — 원장 누적 관용구). 행에는 반드시 `id·name·lat·lng` 을 채운다(앱은 좌표 없는 행을 버린다).
 - 이 원장은 개인 데이터다 — 내용(가게 이름·메모)을 문서·커밋 메시지에 옮기지 말 것.
 
+## 원격 런처·폰 표면 — 같은 id 의 선언형 3탭 계기
+
+`[sense:place]` 의 `app:` 블록(location-services `ibl_actions.yaml`)이 **🗺️ 지도** 계기를 선언한다(`instrument: directions`, 명시적 `modes:` 검색·저장·길찾기). 데스크탑은 같은 id 를 커스텀 계기(MapInstrument)가 덮고, 원격 런처(`/launcher/app`)·폰 네이티브 앱은 이 선언을 제네릭 렌더러로 그린다 — 표면별 코드 0. 검색 탭 = 검색어+카테고리 select → 지도(이 지역에서 검색)+목록(☆ 저장 행 버튼, 행 클릭=상세 드릴: 블로그 언급·카카오맵 링크) · 저장 탭 = 원장 items(폴더 칩=`filter.from_field: tag`, 삭제 버튼) · 길찾기 탭 = navigate_route. 장소 검색·원장 읽기/쓰기는 전부 `@hub`(PC)로 — 폰도 PC 의 원장 한 곳을 본다. 폰 반영은 APK 재빌드(`phone-companion/scripts/setup_phone.sh --build`, 어휘가 APK 에 번들).
+
 ## 앱 동작 요약 (표현 — `frontend/src/components/MapInstrument.tsx` + `map/`)
 
 검색창(Enter/검색) → 번호 핀 + 결과 목록 · 카테고리 칩 = 현 화면 반경 주변 검색 · 지도를 움직이면 "이 지역에서 재검색" · 항목/핀 클릭 = 상세(정보 탭 / 카카오 상세 탭) · ☆ 저장 → 폴더·메모 · ⭐ 패널 = 저장 목록(폴더 칩) · 지도 빈 곳 클릭 = 주소 카드(출발/도착/주변 음식점/저장) · 🛣️ 길찾기 패널(출발·도착·우리집·CCTV) · 📍 내 위치. 우리집 주소는 브라우저 localStorage(`directions.instrument.home`).

@@ -86,6 +86,10 @@
             ],
             "default": "recall"
           },
+          "locus": {
+            "type": "string",
+            "description": "[note map] 곳(절대경로) 또는 __substrate__"
+          },
           "query": {
             "type": "string",
             "description": "[recall] 주제 필터(부분일치)"
@@ -105,10 +109,6 @@
               "owner"
             ],
             "description": "[note] map=몸별 지도, owner=몸독립 주인모델"
-          },
-          "locus": {
-            "type": "string",
-            "description": "[note map] 곳(절대경로) 또는 __substrate__"
           },
           "kind": {
             "type": "string",

@@ -255,3 +255,7 @@ over-design 금지: 웹 saturation 측정기·berrypicking 컨트롤러 짓지 �
 **자동승격(빈도 게이트, 2026-06-21 완료)**: 증류기는 항목만 만들 뿐 territory 플래그를 안 켜 → 상시-on 지도가 수동 5건에 얼어붙던 문제. **빈도 게이트로 자가성장**: `note_map`이 *identity*를 재강화할 때 `reinforced_by ≥ _TERRITORY_PROMOTE_AT(2)`면(=3회째 포식, 여러 번 되돌아온 가지) **territory 자동 결정화**. `_territory_eligible`=identity ∧ 구체경로(웹 추상 locus·__substrate__·관습 자동 배제 → 웹 영토 안 생김, §11 일관). 모티프="빈도가 결정화"(자율주행→수동→앱)와 동형. **2중 바운드**: ①자기-바운딩(대부분 가지는 1회뿐→소수만 승격) ②cap(10) 2차 백스톱. 멱등(재승격 안 함). `note_map`이 `promoted_territory` 반환→증류기 `⇧territory` 로그. 검증: 1·2회=territory0 / 3회=승격 / 4회=멱등 / 승격 즉시 영토 미지명 질의에 등장.
 
 **남은 것**: ①절대 dead(node_modules·캐시·빌드)만의 하드-skip 목록 ②NFD→mdfind 같은 *범용 관습*도 상시-on 후보(territory는 장소-정체 전용, 관습은 별도 층) ③승격 임계(2) 실사용 튜닝.
+
+
+---
+*개정(2026-09-03, 사용자 판정)*: §10 의 **항상-on 회상(scent) 주입은 폐지**됐다 — 폴더 조사로 기억이 많아지자 선택기가 AI 의 판단을 대신하게 됐기 때문. 이제 기억의 입구는 어휘 `[self:forage]{op:"recall", locus|query}` 이고, 시스템 프롬프트가 "위치 질문이면 답하기 전에 회상" 을 말한다. 정본: `FOLDER_SURVEY_HANDOFF.md` §4.5.

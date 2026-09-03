@@ -61,13 +61,10 @@ class CognitiveRecallMixin:
             if related:
                 result = (result + "\n" + related) if result else related
 
-            # 포식 기억(냄새지도) — ★실행기억처럼 *항상-on*. 회상은 싸고(LLM 0, DB+필터), 무관하면
-            #   query 필터가 빈 결과로 자기-억제한다(비용~0). 주인모델(owner)은 query 무관 상시 노출
-            #   =냄새(scent) → 명시 명령 없이도 능동 포식을 촉발. map 은 query 필터(관련 위치만).
-            #   FORAGER_MULTIBODY_DESIGN §주입(THINK-게이트 폐기, 관련성=query 가 자연 게이트).
-            forage = self._search_forage_memory(user_message)
-            if forage:
-                result = (result + "\n" + forage) if result else forage
+            # 포식 기억 자동 주입 폐지(2026-09-03 사용자 판정): 조사로 기억이 많아지자 "어느 기억이
+            #   관련 있나"를 고르는 선택기가 AI 의 판단을 대신하게 됐다. 이제 AI 가 필요할 때
+            #   [self:forage]{op:"recall", locus|query} 로 직접 본다(fragments/12_ibl_only 원칙 2,
+            #   guides/disk_search §1). 영토·주인 냄새의 상시 노출도 함께 끊는다 — 어휘가 기억의 입구다.
 
             # 연결된 손발(게스트 PC) 프레즌스 — ★강제주입(질의 무관, 라이브일 때만).
             #   손발 별칭(p0 등)=사용자가 지은 런타임 상태라 어휘·해마가 원리적으로 모른다
@@ -287,35 +284,6 @@ class CognitiveRecallMixin:
         "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
     )
 
-    def _search_forage_memory(self, user_message: str) -> str:
-        """포식 기억(냄새지도) 회상 — ★실행기억처럼 항상-on(0단계 _build_execution_memory).
-
-        회상은 싸다(LLM 0, SQLite+키워드필터). 무관하면 query 필터가 빈 결과로 자기-억제(비용~0).
-        map 은 query 필터(관련 위치만), owner(주인모델)는 query 무관 상시 노출=냄새(scent)로 능동
-        포식 촉발(filter_owner=False). 전 body 회상(query 가 자기-스코핑 §9). 해마 <execution_memory>·
-        심층 <related_memory> 의 *공간* 짝(F2). 맥 자아 전용. 실패는 무시(파이프라인 불변).
-        """
-        try:
-            import sys, os
-            bk = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            if bk not in sys.path:
-                sys.path.insert(0, bk)
-            # 하드웨어 자아 게이트(누가 포식) — 폰 자아는 미디어-한정(A3 후속)
-            try:
-                from runtime_utils import detect_body
-                hw = detect_body().get("profile") or "pc"
-            except Exception:
-                hw = "pc"
-            if hw == "phone":
-                return ""
-            import forage_memory
-            xml = forage_memory.recall_xml(body=None, query=user_message, limit=12,
-                                           filter_owner=False)
-            return xml
-        except Exception as e:
-            print(f"[포식기억] 회상 실패 (무시): {e}")
-            return ""
-
     def _build_disk_skeleton(self, user_message: str = "") -> str:
         """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스), *포식 의도일 때만*(웹랜드마크와 같은 게이트).
 
@@ -329,7 +297,7 @@ class CognitiveRecallMixin:
 
         ★폰 제외(의도): 안드로이드 스코프드 스토리지라 os.walk 가 공유 스토리지에 안 먹히고
         (파일 접근은 MediaStore 경유), 폰에선 거친 디스크 지도 실익이 작다(사용자 결정). 빈 결과로
-        '지원하는 척' 안 한다 — _search_forage_memory 의 폰 게이트와 같은 자리.
+        '지원하는 척' 안 한다(폰 게이트).
         """
         # 포식 의도 게이트 — 비포식(아키텍처·대화·버그) 질의엔 골격을 넣지 않는다.
         if not any(cue in (user_message or "").lower() for cue in self._FORAGE_CUES):  # vj-ok: 내부 큐 탐지 — 코드 소유 어휘

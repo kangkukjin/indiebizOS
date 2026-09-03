@@ -529,7 +529,7 @@ def _fair_by_body(rows: List) -> List:
 
 
 def recall(*, body: Optional[str] = None, query: Optional[str] = None,
-           limit: int = 20, filter_owner: bool = True) -> Dict[str, Any]:
+           limit: int = 20, filter_owner: bool = True, locus: Optional[str] = None) -> Dict[str, Any]:
     """포식 회상 — 몸별 지도(body 일치, query 필터) + 주인모델.
 
     body=None 이면 전 공간(모든 몸) — 주입 경로(cognitive_recall)와 같은 축이다.
@@ -547,6 +547,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     아니라 (장소×의도) 관계이므로 영토 정체만 띄우고 배제는 AI 가 판단한다.
     """
     terms, grams = _query_terms(query)
+    loc = _norm_locus(os.path.expanduser(locus)) if locus else None
 
     def _hit(r) -> int:
         """행 일치 점수 — claim + locus *끝 이름*(전체 경로가 아니라: 루트 이름이 후손 전부를 잡지 않게)."""
@@ -581,6 +582,16 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
 
     # map(상세) — 위치 기반 조립(§3): 일치(match) → 초점 위치의 자기 단언(own) → 조상 상속(inherit)
     # → 자식 골격(child, 한 줄). territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함).
+    if loc:
+        # 폴더 지명(locus) — 그 자리 통째: 냄새(territory·owner)는 끄고 그 폴더 자체가 own 으로 온다.
+        # 어휘가 기억의 입구(2026-09-03): 자동 주입이 없으므로 AI 가 폴더를 지명해 묻는 기본 경로.
+        territory_items = []
+        map_items, surveys = _assemble_by_locus(map_rows, _hit, limit, fair=False,
+                                                no_query=not (terms or grams), focus_override=[loc])
+        owner_items_locus: List[Dict[str, Any]] = []
+        return {"success": True, "map": map_items, "owner": owner_items_locus,
+                "territory": territory_items, "surveys": surveys, "locus": loc,
+                "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]
     map_items, surveys = _assemble_by_locus(pool, _hit, limit, fair=not body,
@@ -613,7 +624,8 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
             "territory_count": len(territory_items)}
 
 
-def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: bool):
+def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: bool,
+                       focus_override: Optional[List[str]] = None):
     """위치 기반 조립. 반환 (map_items, surveys).
 
     - match: 질의에 맞는 행(점수 순, 같은 점수면 더 구체적 위치·높은 confidence 먼저) — 전문(全文).
@@ -622,14 +634,21 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
     - child: 초점의 직계 자식 폴더 한 줄씩(short) — 골격. 자세한 건 그 폴더를 지명해 회상.
     - surveys: 초점을 덮는 조사 원장(가장 구체적 조사) — 아이템 목록 조회 통로.
     무질의(no_query)는 옛 동작(전부, 몸별 공정 인터리브, limit).
+    focus_override=[locus]: 폴더 지명 — 초점을 그 폴더로 고정하고 일치(match)는 그 하위 나무 안에서만,
+    자식 골격은 limit 까지(골격 상한 _CHILD_CAP 대신) — "그 자리의 기억 통째".
     """
-    if no_query:
+    if no_query and not focus_override:
         rows = _fair_by_body(pool) if fair else pool
         out = []
         for r in rows[:limit]:
             d = dict(r); d["via"] = "all"; d["freshness"] = _stale_of(r["locus"], r["locus_mtime"]); out.append(d)
         return out, []
-    scored = [(hit(r), r) for r in pool]
+    if focus_override:
+        L0 = focus_override[0]
+        pool_q = [r for r in pool if _norm_locus(r["locus"]) == L0 or _is_ancestor(L0, r["locus"])]
+    else:
+        pool_q = pool
+    scored = [] if no_query else [(hit(r), r) for r in pool_q]
     matched = sorted([(sc, r) for sc, r in scored if sc > 0],
                      key=lambda x: (-x[0], -_depth(x[1]["locus"]), -x[1]["confidence"]))
     by_locus: Dict[str, List] = {}
@@ -651,7 +670,8 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
 
     for sc, r in matched:
         add(r, "match", sc)
-    focus: List[str] = []
+    focus: List[str] = list(focus_override or [])
+    child_cap = limit if focus_override else _CHILD_CAP
     for _sc, r in matched:
         L = _norm_locus(r["locus"])
         if _is_path(L) and L not in focus:
@@ -668,7 +688,7 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
                         add(r, "inherit")
         kids = [(C, rows) for C, rows in by_locus.items() if _is_child(L, C)]
         kids.sort(key=lambda x: -max(r["confidence"] for r in x[1]))
-        for C, rows in kids[:_CHILD_CAP]:
+        for C, rows in kids[:child_cap]:
             r = next((x for x in rows if x["kind"] == "identity"), rows[0])
             add(r, "child", short=True)
     surveys: List[Dict[str, Any]] = []
@@ -712,13 +732,13 @@ def territory_loci(body: Optional[str] = None) -> List[str]:
 
 
 def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
-               limit: int = 12, filter_owner: bool = True) -> str:
+               limit: int = 12, filter_owner: bool = True, locus: Optional[str] = None) -> str:
     """<forage_memory> XML — 인지 파이프라인 주입용(해마 <execution_memory> 짝).
 
     filter_owner=False 면 owner(주인모델)를 query 무관 상시 노출 — 냄새(scent)로 능동 포식 촉발.
     map 이 없고 owner 만 있으면(=냄새만) 짧은 note 로 비용 절약.
     """
-    res = recall(body=body, query=query, limit=limit, filter_owner=filter_owner)
+    res = recall(body=body, query=query, limit=limit, filter_owner=filter_owner, locus=locus)
     if not res["map"] and not res["owner"] and not res.get("territory"):
         return ""
     if res["map"]:

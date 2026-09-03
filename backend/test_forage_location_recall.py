@@ -97,5 +97,27 @@ def test_accidental_syllable_overlap_is_not_a_match(fm):
     assert "/code/hook" not in _paths(res)
 
 
+def test_locus_recall_brings_the_folder_whole(fm):
+    """폴더 지명 — own + 조상 inherit + 자식 child + 조사 원장, 냄새(territory·owner)는 끈다."""
+    res = fm.recall(locus=ROOT + "/horror", limit=20)
+    vias = {(m["locus"], m["via"]) for m in res["map"]}
+    assert (ROOT + "/horror", "own") in vias and (ROOT + "/horror/deep", "child") in vias
+    assert any(m["via"] == "inherit" and m["claim"] == "파일명 = 원제.연도.태그" for m in res["map"])
+    assert res["surveys"] and res["surveys"][0]["locus"] == ROOT
+    assert res["territory"] == [] and res["owner"] == []
+
+
+def test_locus_root_shows_territory_identity_as_own_and_all_children(fm):
+    res = fm.recall(locus=ROOT, limit=20)
+    assert any(m["via"] == "own" and m["territory"] for m in res["map"])
+    assert {m["locus"] for m in res["map"] if m["via"] == "child"} == {ROOT + "/unseen", ROOT + "/horror", ROOT + "/sf"}
+
+
+def test_locus_with_query_matches_inside_subtree_only(fm):
+    fm.note_map(body="mac", locus="/y/other", kind="convention", claim="공포 영화는 여기 없다", confidence=0.6)
+    res = fm.recall(locus=ROOT, query="공포", limit=20)
+    assert "/y/other" not in _paths(res) and ROOT + "/horror" in _paths(res, "match")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

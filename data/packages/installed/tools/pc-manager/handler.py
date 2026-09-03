@@ -184,12 +184,13 @@ def _forage_recall(tool_input: dict) -> str:
     import forage_memory as FM
     body = tool_input.get("body") or None
     query = tool_input.get("query") or tool_input.get("q")
+    locus = tool_input.get("locus") or tool_input.get("path") or tool_input.get("folder_path") or None
     try:
         limit = int(tool_input.get("limit") or 20)
     except (TypeError, ValueError):
         limit = 20
-    res = FM.recall(body=body, query=query, limit=limit)
-    res["xml"] = FM.recall_xml(body=body, query=query, limit=limit)
+    res = FM.recall(body=body, query=query, limit=limit, locus=locus)
+    res["xml"] = FM.recall_xml(body=body, query=query, limit=limit, locus=locus)
     return json.dumps(res, ensure_ascii=False)
 
 

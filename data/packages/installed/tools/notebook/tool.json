@@ -50,6 +50,10 @@
             "type": "string",
             "description": "ask/search 필수 — 질문 또는 검색어"
           },
+          "source": {
+            "type": "string",
+            "description": "ask/search 옵션 — 소스 좁히기(소스 id 또는 제목 부분일치). 노트북 포식 기억([self:forage] recall body notebook:<이름>)으로 어느 문서인지 고른 뒤 그 안에서만 찾을 때"
+          },
           "source_id": {
             "type": "integer",
             "description": "remove 필수 — sources op 가 보여주는 소스 번호"

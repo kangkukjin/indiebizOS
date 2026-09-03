@@ -834,8 +834,10 @@ def _combine(sem: List[Tuple[int, float]], fts: List[Tuple[int, float]], alpha: 
     return sorted(combined.items(), key=lambda x: x[1], reverse=True)
 
 
-def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_ALPHA) -> Dict[str, Any]:
-    """노트북 스코프 하이브리드 검색 → 청크 목록 (LLM 0 — search op 및 ask의 재료)"""
+def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_ALPHA,
+                  source: Any = None) -> Dict[str, Any]:
+    """노트북 스코프 하이브리드 검색 → 청크 목록 (LLM 0 — search op 및 ask의 재료).
+    source: 소스 좁히기(소스 id 또는 제목 부분일치) — 포식 기억(어느 문서가 무엇인가)을 보고 고른 뒤 그 안에서만."""
     nb = get_notebook(name)
     if not nb:
         return {"success": False, "error": f"'{name}' 노트북이 없습니다.", "results": []}
@@ -843,7 +845,7 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
     if not query:
         return {"success": False, "error": "q(질문/검색어)가 필요합니다.", "results": []}
 
-    over = max(top_k * 2, 12)
+    over = max(top_k * (6 if source else 2), 12)
     sem = _search_semantic(nb["id"], query, over) if alpha > 0 else []
     fts = _search_fts(nb["id"], query, over)
     if not sem and not fts:
@@ -856,7 +858,7 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
     else:
         scored, stype = _combine(sem, fts, alpha), "hybrid"
 
-    ids = [i for i, _ in scored[:top_k]]
+    ids = [i for i, _ in (scored if source else scored[:top_k])]
     placeholders = ",".join("?" * len(ids))
     conn = _connect()
     try:
@@ -868,10 +870,18 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
         conn.close()
 
     results = []
-    for cid, score in scored[:top_k]:
+    _src = str(source).strip() if source not in (None, "") else ""
+    for cid, score in scored:
         r = rows.get(cid)
-        if r:
-            r["score"] = round(float(score), 4)
-            results.append(r)
+        if not r:
+            continue
+        if _src:
+            from value_semantics import text_match, values_equal   # 값 판정은 한 벌로(사설 정규화 금지)
+            if not (values_equal(str(r.get("source_id")), _src) or text_match("contains", str(r.get("source") or ""), _src)):
+                continue
+        r["score"] = round(float(score), 4)
+        results.append(r)
+        if len(results) >= top_k:
+            break
     return {"success": True, "notebook": nb["name"], "note": nb.get("note", ""),
-            "results": results, "search_type": stype}
+            "results": results, "search_type": stype, "source_filter": _src or None}

@@ -52,3 +52,11 @@
 - 2026-09-03 실측: `recall{locus}` 로 돌아온 단언이 모두 폴더 조사 산물이라는 보장이 없다 — Desktop 단언 17건은 provenance 가 전부 지난 대화 턴의 사용자 질문 문장이었고(경량 모델 증류 부산물), 폴더를 훑어서 생긴 것은 하나도 없었다.
 - 2026-09-03 실측: 단언은 17건 있는데 `data/forage_surveys/` 에 해당 문서는 없을 수 있다 — Desktop 은 단언만 있고 문서가 없어 territory 단언의 '사람이 읽는 사전: <경로>' 도 없었다(문서 폴더에는 `Volumes_Expansion_영화.md` 하나뿐).
 - 2026-09-03 실측: 대화 증류 단언은 디스크와 크게 어긋난다 — Desktop 단언 17건 중 7건이 이미 사라진 대상(`Desktop/total`·`Desktop/사진자료모음` 은 2026-08-19 에 `/Volumes/<외장 라벨>/` 로 이사)이라 회수했다.
+
+## 노트북(문서 더미)도 폴더다 — 등록하면 자동 조사 (2026-09-03 사용자 판정)
+
+`[self:notebook]` 의 create/add 는 시스템 AI 에게 **노트북 조사**를 자동 위임한다(10분 디바운스). 조사는 이 가이드를 그대로 따르되 대상이 소스 목록이다.
+- 몸 = `notebook:<이름>`, 뿌리 locus = `notebook:<이름>`, 소스별 locus = `notebook:<이름>/<소스 제목>`. `[self:forage]{op:"recall", body:"notebook:<이름>", locus:"notebook:<이름>"}` 의 `doc` 가 문서 자리(`~workspace/data/forage_surveys/notebook_<이름>/memory.md`).
+- 무엇을 적나: 노트북 전체의 정체(무슨 물음에 답하는 더미인가, `territory: true`) · 소스마다 정체(문서가 무엇인가, 연도·저자·형식) · **그 소스가 답할 수 있는 물음과 못 하는 물음** · 소스 간 겹침·모순 · 용어(같은 것을 다르게 부르는 말). 산문은 문서에, 단언은 `note` 로.
+- 어떻게 보나: `[self:notebook]{op:"sources", name}` 로 목록, 소스는 `[self:read]` 로 앞부분·목차를 읽는다(거칠게 축척 — 소스마다 핵심만, 문서 6KB 안). 스캔 PDF·자막 없는 영상은 "읽을 수 없음"을 단언으로 남긴다.
+- 쓰임: `ask` 는 이 문서를 발췌 판단의 지도로 함께 읽고, 어느 소스인지 알면 `source` 로 좁혀 묻는다(`[self:notebook]{op:"ask", name, query, source:"<제목 일부>"}`). 질의로 새로 안 것(오분류·빈 소스·예외)은 되적는다.

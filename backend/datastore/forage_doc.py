@@ -417,10 +417,16 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
 def _covering_docs(locus: str, body: Optional[str]) -> List[str]:
     """locus 를 덮는 문서들(자기 노드+조상). 몸을 모르면: 경로 locus 는 디스크 몸들의 사슬, 아니면 모든 몸 문서."""
     loc = _norm(os.path.expanduser(locus or ""))
-    bodies = [body] if body else sorted({b for _p, b, _r in _scan_docs()})
-    out: List[str] = []
     if _is_path(loc):
         return _ancestor_chain(TREE_BODY, loc)   # 경로는 몸 표기와 무관하게 트리 사슬만
+    all_bodies = sorted({b for _p, b, _r in _scan_docs()})
+    if body:
+        bodies = [body]
+    else:
+        # 몸을 안 줬으면 locus 의 접두로 몸을 추론한다 — `notebook:독서/서론.pdf` 는 몸 `notebook:독서`
+        # (2026-09-03 노트북 포식 기억). 맞는 몸이 없을 때만 옛 동작(모든 몸 문서).
+        bodies = [b for b in all_bodies if b and (loc == b or loc.startswith(b + "/"))] or all_bodies
+    out: List[str] = []
     for b in bodies:
         out.extend(_ancestor_chain(b, loc))
     return out

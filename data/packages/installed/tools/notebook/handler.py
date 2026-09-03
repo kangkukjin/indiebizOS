@@ -35,12 +35,80 @@ def _json(payload: dict) -> str:
 
 # ── op 분기 함수 ─────────────────────────────────────────────────────────────
 
+# ── 포식 기억(노트북 = 문서 더미 = 폴더와 같은 대상, 2026-09-03 사용자 판정 "노트북에도 포식기억 붙여.
+#    등록하면 자동으로 기억트리가 생겨나게") — 조사는 AI 몫(시스템 AI 위임), 여기는 방아쇠·되읽기만 ──
+_SURVEY_DEBOUNCE_S = 600   # 소스를 연달아 넣을 때 조사 위임을 한 번으로 접는다
+
+
+def _memory_body(name: str) -> str:
+    return f"notebook:{name}"
+
+
+def _notebook_memory_text(name: str, cap: int = 4000) -> str:
+    """이 노트북의 포식 기억 문서(있으면) — 산문·단언 절 전부, cap 자 안."""
+    try:
+        import forage_doc
+        p = forage_doc.doc_path_at(_memory_body(name), _memory_body(name))
+        if not os.path.exists(p):
+            return ""
+        text = open(p, encoding="utf-8").read()
+        return text if len(text) <= cap else text[:cap] + "\n…(생략)"
+    except Exception:
+        return ""
+
+
+def _schedule_survey(name: str, context, why: str) -> dict:
+    """등록(create/add) 뒤 시스템 AI 에게 '노트북 조사'를 fire-and-forget 위임. 시험·훈련 출처는 제외, 10분 디바운스."""
+    origin = str(getattr(context, "origin", "") or "")
+    if origin in ("test", "training"):
+        return {"queued": False, "reason": f"origin={origin}"}
+    import time
+    import notebook_core as core
+    mark_dir = core.NOTEBOOK_DIR / ".survey_pending"
+    mark_dir.mkdir(parents=True, exist_ok=True)
+    mark = mark_dir / (re.sub(r"[^\w가-힣.-]+", "_", name) + ".txt")
+    if mark.exists() and time.time() - mark.stat().st_mtime < _SURVEY_DEBOUNCE_S:
+        return {"queued": False, "reason": "debounced"}
+    mark.write_text(str(time.time()))
+    body = _memory_body(name)
+    msg = (f"노트북 조사: '{name}' 노트북의 포식 기억을 만들어라(이미 있으면 갱신). "
+           f"read_guide 로 folder_survey 가이드의 '노트북(문서 더미)' 절을 따른다. "
+           f"소스 목록은 [self:notebook]{{op: \"sources\", name: \"{name}\"}}, 기존 기억과 문서 위치는 "
+           f"[self:forage]{{op: \"recall\", body: \"{body}\", locus: \"{body}\"}} 의 doc. "
+           f"단언은 [self:forage]{{op: \"note\", body: \"{body}\", locus: \"{body}\" 또는 \"{body}/<소스 제목>\", kind, claim}} "
+           f"— 노트북 전체의 정체 단언에는 territory: true. 축척: 거칠게(소스마다 정체·답할 수 있는 물음·겹침, 문서 6KB 안). 사유: {why}")
+    try:
+        from routing_system import _delegate_unified
+        r = _delegate_unified({"scope": "system", "message": msg, "from_agent": "노트북 등록"},
+                              str(getattr(context, "project_path", "") or ""))
+    except Exception as e:
+        return {"queued": False, "reason": f"위임 실패: {e}"}
+    return {"queued": bool(isinstance(r, dict) and r.get("success")), "detail": r}
+
+
 def _op_create(tool_input: dict, context) -> str:
     import notebook_core as core
-    return _json(core.create_notebook(tool_input.get("name", ""), tool_input.get("note", "")))
+    name = tool_input.get("name", "")
+    out = core.create_notebook(name, tool_input.get("note", ""))
+    if isinstance(out, dict) and out.get("success") and name:
+        out["memory_survey"] = _schedule_survey(name, context, "노트북 생성")
+    return _json(out)
 
 
 def _op_add(tool_input: dict, context) -> str:
+    raw = _op_add_inner(tool_input, context)
+    try:
+        out = json.loads(raw)
+    except Exception:
+        return raw
+    name = tool_input.get("name", "")
+    if isinstance(out, dict) and out.get("success") and name:
+        out["memory_survey"] = _schedule_survey(name, context, "소스 추가")
+        return _json(out)
+    return raw
+
+
+def _op_add_inner(tool_input: dict, context) -> str:
     import notebook_core as core
     path = str(tool_input.get("path") or "").strip()
     # ★F14-3 (2026-08-20 14회차): 상대 경로 해석 규약 통일 — 집 규약(write·download 와
@@ -129,7 +197,7 @@ def _op_search(tool_input: dict, context) -> str:
     """생성 없는 발췌 검색 — LLM 0의 싼 경로. items 통화로 table 파이프 직결."""
     import notebook_core as core
     top_k = _as_int(tool_input.get("top_k"), SEARCH_TOP_K)
-    out = core.search_chunks(tool_input.get("name", ""), _query_of(tool_input), top_k=top_k)
+    out = core.search_chunks(tool_input.get("name", ""), _query_of(tool_input), top_k=top_k, source=tool_input.get("source"))
     if not out.get("success"):
         return _json(out)
     items = [{
@@ -152,10 +220,12 @@ def _op_ask(tool_input: dict, context) -> str:
     if not question:
         return _json({"success": False, "error": "query(질문)가 필요합니다."})
 
-    found = core.search_chunks(name, question, top_k=_as_int(tool_input.get("top_k"), ASK_TOP_K))
+    found = core.search_chunks(name, question, top_k=_as_int(tool_input.get("top_k"), ASK_TOP_K),
+                               source=tool_input.get("source"))
     if not found.get("success"):
         return _json(found)
     excerpts = found["results"]
+    memory_text = _notebook_memory_text(name)   # 포식 기억(어느 소스가 무엇인가) — 발췌를 읽는 지도
     if not excerpts:
         msg = ("소스에서 관련 발췌를 찾지 못했습니다 — 소스가 이 주제를 다루지 않거나, "
                "op:sources로 색인 상태(indexing/error/stale)를 확인하세요.")
@@ -163,7 +233,7 @@ def _op_ask(tool_input: dict, context) -> str:
                       "not_in_sources": True, "answer": "", "citations": [], "items": [],
                       "blocks": [{"type": "paragraph", "text": msg}], "message": msg})
 
-    answer_raw, model_err = _grounded_generate(found.get("note", ""), question, excerpts)
+    answer_raw, model_err = _grounded_generate(found.get("note", ""), question, excerpts, memory=memory_text)
     if model_err:
         # 생성층 죽어도 검색층은 살아 있다 — 발췌를 정직 반환 (침묵 실패 금지)
         return _json({"success": False, "error": f"근거 고정 생성 실패: {model_err}",
@@ -200,8 +270,9 @@ def _as_int(v, default: int) -> int:
 
 # ── ask 내부: 제약 생성 + 인용 후검증 ────────────────────────────────────────
 
-def _grounded_generate(note: str, question: str, excerpts: list):
-    """경량 AI 1회 — 발췌만 근거로 [n] 인용 달린 답. 반환 (answer, error)."""
+def _grounded_generate(note: str, question: str, excerpts: list, memory: str = ""):
+    """경량 AI 1회 — 발췌만 근거로 [n] 인용 달린 답. 반환 (answer, error).
+    memory: 노트북 포식 기억 문서(어느 소스가 무엇이고 어떤 물음에 답하나) — 발췌를 고르는 지도이지 근거가 아니다."""
     try:
         from consciousness_agent import oneshot_ai_call
     except ImportError as e:
@@ -212,6 +283,8 @@ def _grounded_generate(note: str, question: str, excerpts: list):
         loc = f" {r['loc']}" if r.get("loc") else ""
         lines.append(f"[{i}] ({r['source']}{loc}) {r['text']}")
     goal = f"\n이 노트북의 목적: {note}" if (note or "").strip() else ""
+    mem = (f"\n\n노트북 기억(어느 소스가 무엇이고 어떤 물음에 답하나 — 발췌를 판단하는 지도일 뿐, 근거는 여전히 아래 발췌만):\n{memory}"
+           if (memory or "").strip() else "")
 
     system_prompt = (
         "당신은 근거 고정(grounded) 조수다. 규칙:\n"
@@ -221,7 +294,7 @@ def _grounded_generate(note: str, question: str, excerpts: list):
         "4) 발췌에 없는 번호를 인용하지 마라.\n"
         "5) 답은 질문의 언어로, 간결하게."
     )
-    prompt = f"질문: {question}{goal}\n\n발췌:\n" + "\n\n".join(lines)
+    prompt = f"질문: {question}{goal}{mem}\n\n발췌:\n" + "\n\n".join(lines)
 
     try:
         answer = oneshot_ai_call(prompt, system_prompt=system_prompt, role="classify")

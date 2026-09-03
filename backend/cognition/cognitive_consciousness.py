@@ -288,7 +288,6 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
         try:
             from consciousness_agent import (
                 get_consciousness_agent,
-                get_guide_list,
                 get_world_pulse_text,
             )
 
@@ -324,8 +323,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
             result = agent.process(
                 user_message=user_message,
                 history=history,
-                associative_memory=execution_memory,  # 연상기억(해마+심층메모리) 묶음
-                guide_list=get_guide_list(user_message),
+                associative_memory=execution_memory,  # 연상기억(해마+지도 2종) 묶음 — 가이드는 <execution_map> 의 guide: 줄
                 world_pulse=get_world_pulse_text(),
                 agent_name=agent_name,
                 agent_role=agent_role,

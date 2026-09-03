@@ -156,7 +156,6 @@ class ConsciousnessAgent:
         user_message: str,
         history: List[Dict],
         associative_memory: str,
-        guide_list: List[str],
         world_pulse: str = "",
         agent_name: str = "",
         agent_role: str = "",
@@ -169,8 +168,8 @@ class ConsciousnessAgent:
             user_message: 사용자의 현재 메시지
             history: 대화 히스토리 원본 (정제 전)
             associative_memory: 연상기억 — <execution_memory>(해마) +
-                <memory_map>(심층기억 지도) self-describing 묶음
-            guide_list: 사용 가능한 가이드 파일 목록
+                <memory_map>(심층기억 지도) + <execution_map>(실행기억 지도 — 가지마다
+                guide: 줄이 그 주제의 가이드를 가리킨다; 가이드 선택의 유일한 입구, 2026-09-03)
             world_pulse: 현재 세계 상태 요약
             agent_name: 에이전트 이름
             agent_role: 에이전트 역할 (전문)
@@ -203,7 +202,7 @@ class ConsciousnessAgent:
         # 입력 구성
         input_text = self._build_input(
             user_message, history, associative_memory,
-            guide_list, world_pulse, agent_name, agent_role, agent_notes,
+            world_pulse, agent_name, agent_role, agent_notes,
             available_tools,
         )
 
@@ -276,7 +275,6 @@ class ConsciousnessAgent:
         user_message: str,
         history: List[Dict],
         associative_memory: str,
-        guide_list: List[str],
         world_pulse: str,
         agent_name: str,
         agent_role: str,
@@ -314,14 +312,13 @@ class ConsciousnessAgent:
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
-        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도)
-        # 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
+        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도) + <execution_map>
+        # (실행기억 지도). 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
+        # ★가이드 목록은 따로 싣지 않는다(2026-09-03): 옛 <available_guides> 는 guide_db 키워드
+        #   점수(코드 선택기)로 고른 최대 10개였는데, 가이드의 자리는 실행기억의 가지이고
+        #   <execution_map> 의 `guide:` 줄이 그 목차다 — 기억 입구는 지도 하나, 선택은 AI.
         if associative_memory:
             parts.append(associative_memory)
-
-        # 가이드 파일 목록
-        if guide_list:
-            parts.append(f"<available_guides>\n{', '.join(guide_list)}\n</available_guides>")
 
         # 가용 도구 목록 — 의식이 capability_focus.tools에 추천할 때
         # 이 목록 밖의 도구를 적으면 실행 에이전트가 헛걸음한다.
@@ -455,56 +452,6 @@ class ConsciousnessAgent:
 
 # ============ 유틸리티 함수 ============
 
-
-def get_guide_list(user_message: str = "") -> List[str]:
-    """사용자 메시지 기반 관련 가이드 상위 10개 반환 (키워드 매칭)
-
-    guide_db.json의 keywords와 사용자 메시지를 매칭하여
-    관련도 높은 순으로 최대 10개를 "파일명 - 설명" 형태로 반환합니다.
-    user_message가 없으면 전체 목록을 반환합니다 (하위 호환).
-    """
-    from runtime_utils import get_base_path
-
-    guide_db_path = get_base_path() / "data" / "guide_db.json"
-    if not guide_db_path.exists():
-        return []
-
-    try:
-        import json as _json
-        data = _json.loads(guide_db_path.read_text(encoding='utf-8'))
-        guides = data.get("guides", [])
-        if not guides:
-            return []
-
-        # 메시지가 없으면 전체 반환 (하위 호환)
-        if not user_message:
-            return [f"{g['file']} - {g['description']}" for g in guides if g.get("file")]
-
-        # 키워드 매칭: 사용자 메시지에 키워드가 포함되면 점수 +1
-        msg_lower = user_message.lower()
-        scored = []
-        for g in guides:
-            score = 0
-            for kw in g.get("keywords", []):
-                if kw.lower() in msg_lower:  # vj-ok: 내부 표식 탐지 — 코드 소유 어휘
-                    score += 1
-            if score > 0:
-                scored.append((score, g))
-
-        # 점수 내림차순 정렬, 상위 10개
-        scored.sort(key=lambda x: x[0], reverse=True)
-        top = scored[:10]
-
-        if not top:
-            # 매칭 0건 — 키워드가 사용자 표현과 안 맞을 수 있으므로 전체 목록을 fallback으로 제공.
-            # 의식 에이전트가 가이드 description을 보고 직접 고르도록.
-            return [f"{g['file']} - {g['description']}" for g in guides if g.get("file")]
-
-        return [f"{g['file']} - {g['description']}" for _, g in top]
-
-    except Exception as e:
-        logger.warning(f"[ConsciousnessAgent] 가이드 목록 생성 실패: {e}")
-        return []
 
 
 def get_world_pulse_text() -> str:

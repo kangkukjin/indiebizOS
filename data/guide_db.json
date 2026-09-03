@@ -20,7 +20,8 @@
         "deadline",
         "달성"
       ],
-      "file": "goal.md"
+      "file": "goal.md",
+      "topic": "일정·트리거"
     },
     {
       "id": "video_workflow",
@@ -44,7 +45,8 @@
         "음성 파일",
         "녹음"
       ],
-      "file": "video_workflow.md"
+      "file": "video_workflow.md",
+      "topic": "슬라이드·영상"
     },
     {
       "id": "slides",
@@ -100,7 +102,8 @@
         "나레이션 원고",
         "말할 내용"
       ],
-      "file": "slides.md"
+      "file": "slides.md",
+      "topic": "슬라이드·영상"
     },
     {
       "id": "web_builder",
@@ -128,7 +131,8 @@
         "만들어줘",
         "제작"
       ],
-      "file": "web_builder.md"
+      "file": "web_builder.md",
+      "topic": "웹앱·홈페이지"
     },
     {
       "id": "cloudflare",
@@ -143,7 +147,8 @@
         "CDN",
         "서버"
       ],
-      "file": "cloudflare.md"
+      "file": "cloudflare.md",
+      "topic": "웹앱·홈페이지"
     },
     {
       "id": "browser_action",
@@ -165,7 +170,8 @@
         "로그인",
         "원격제어"
       ],
-      "file": "browser_action.md"
+      "file": "browser_action.md",
+      "topic": "브라우저·데스크톱 제어"
     },
     {
       "id": "android",
@@ -179,7 +185,8 @@
         "기기",
         "스마트폰"
       ],
-      "file": "android.md"
+      "file": "android.md",
+      "topic": "안드로이드·폰"
     },
     {
       "id": "desktop",
@@ -199,7 +206,8 @@
         "pyautogui",
         "좌표"
       ],
-      "file": "desktop.md"
+      "file": "desktop.md",
+      "topic": "브라우저·데스크톱 제어"
     },
     {
       "id": "investment",
@@ -214,7 +222,8 @@
         "ETF",
         "채권"
       ],
-      "file": "investment.md"
+      "file": "investment.md",
+      "topic": "투자·경제"
     },
     {
       "id": "real_estate",
@@ -252,7 +261,8 @@
         "naver",
         "단지"
       ],
-      "file": "real_estate.md"
+      "file": "real_estate.md",
+      "topic": "부동산"
     },
     {
       "id": "cctv",
@@ -265,7 +275,8 @@
         "영상",
         "카메라"
       ],
-      "file": "cctv.md"
+      "file": "cctv.md",
+      "topic": "센서·시세·CCTV"
     },
     {
       "id": "calendar",
@@ -284,7 +295,8 @@
         "예약",
         "scheduler"
       ],
-      "file": "calendar.md"
+      "file": "calendar.md",
+      "topic": "일정·트리거"
     },
     {
       "id": "video_subtitle",
@@ -299,7 +311,8 @@
         "스토리텔링",
         "나레이션"
       ],
-      "file": "video_subtitle.md"
+      "file": "video_subtitle.md",
+      "topic": "슬라이드·영상"
     },
     {
       "id": "guide_registration",
@@ -314,7 +327,8 @@
         "시스템",
         "DB"
       ],
-      "file": "guide_registration.md"
+      "file": "guide_registration.md",
+      "topic": "개발"
     },
     {
       "id": "newspaper",
@@ -340,7 +354,8 @@
         "신문 발행",
         "새 신문"
       ],
-      "file": "newspaper_guide.md"
+      "file": "newspaper_guide.md",
+      "topic": "뉴스·신문"
     },
     {
       "id": "audio_briefing",
@@ -363,7 +378,8 @@
         "화자",
         "TTS 엔진"
       ],
-      "file": "audio_briefing.md"
+      "file": "audio_briefing.md",
+      "topic": "오디오 브리핑·TTS"
     },
     {
       "id": "deep_research",
@@ -388,7 +404,8 @@
         "전망",
         "시사점"
       ],
-      "file": "deep_research.md"
+      "file": "deep_research.md",
+      "topic": "보고서"
     },
     {
       "id": "workflow",
@@ -403,7 +420,8 @@
         "반복",
         "자동화"
       ],
-      "file": "workflow.md"
+      "file": "workflow.md",
+      "topic": "워크플로·스크립트"
     },
     {
       "id": "delegation_agent",
@@ -418,7 +436,8 @@
         "순차위임",
         "peers"
       ],
-      "file": "delegation_agent.md"
+      "file": "delegation_agent.md",
+      "topic": "메시지·위임"
     },
     {
       "id": "delegation_system_ai",
@@ -431,7 +450,8 @@
         "프로젝트 위임",
         "list_projects"
       ],
-      "file": "delegation_system_ai.md"
+      "file": "delegation_system_ai.md",
+      "topic": "메시지·위임"
     },
     {
       "id": "work_plan_writing",
@@ -446,7 +466,8 @@
         "작업 분배",
         "멀티에이전트"
       ],
-      "file": "work_plan_writing.md"
+      "file": "work_plan_writing.md",
+      "topic": "메시지·위임"
     },
     {
       "id": "web_search",
@@ -474,7 +495,8 @@
         "bot_blocked",
         "login_required"
       ],
-      "file": "web_search.md"
+      "file": "web_search.md",
+      "topic": "웹 검색·크롤링"
     },
     {
       "id": "web_landmarks",
@@ -493,7 +515,8 @@
         "site",
         "source"
       ],
-      "file": "web_landmarks.md"
+      "file": "web_landmarks.md",
+      "topic": "웹 검색·크롤링"
     },
     {
       "id": "disk_search",
@@ -517,7 +540,8 @@
         "grep",
         "잔여추정"
       ],
-      "file": "disk_search.md"
+      "file": "disk_search.md",
+      "topic": "파일·문서"
     },
     {
       "id": "new_action_checklist",
@@ -547,7 +571,8 @@
         "instrument",
         "표면"
       ],
-      "file": "new_action_checklist.md"
+      "file": "new_action_checklist.md",
+      "topic": "개발"
     },
     {
       "id": "action_removal",
@@ -563,7 +588,8 @@
         "학습 데이터",
         "임베딩"
       ],
-      "file": "action_removal.md"
+      "file": "action_removal.md",
+      "topic": "개발"
     },
     {
       "id": "self_inspection",
@@ -594,7 +620,8 @@
         "에피소드 메모리",
         "episode"
       ],
-      "file": "self_inspection_guide.md"
+      "file": "self_inspection_guide.md",
+      "topic": "몸 자기점검·수리"
     },
     {
       "id": "trigger",
@@ -615,7 +642,8 @@
         "매일",
         "매주"
       ],
-      "file": "trigger.md"
+      "file": "trigger.md",
+      "topic": "일정·트리거"
     },
     {
       "id": "realty",
@@ -642,7 +670,8 @@
         "naver",
         "단지"
       ],
-      "file": "realty.md"
+      "file": "realty.md",
+      "topic": "부동산"
     },
     {
       "id": "book",
@@ -662,7 +691,8 @@
         "청구기호",
         "소장"
       ],
-      "file": "book.md"
+      "file": "book.md",
+      "topic": "법령·통계·도서"
     },
     {
       "id": "legal",
@@ -682,7 +712,8 @@
         "선의의 제3자",
         "임대차"
       ],
-      "file": "legal.md"
+      "file": "legal.md",
+      "topic": "법령·통계·도서"
     },
     {
       "id": "kosis",
@@ -700,7 +731,8 @@
         "시계열",
         "통계표"
       ],
-      "file": "kosis.md"
+      "file": "kosis.md",
+      "topic": "법령·통계·도서"
     },
     {
       "id": "startup",
@@ -719,7 +751,8 @@
         "MSS",
         "TIPS"
       ],
-      "file": "startup.md"
+      "file": "startup.md",
+      "topic": "창업·지원사업"
     },
     {
       "id": "open_window",
@@ -739,7 +772,8 @@
         "open_window",
         "메신저"
       ],
-      "file": "open_window.md"
+      "file": "open_window.md",
+      "topic": "앱·계기"
     },
     {
       "id": "photo",
@@ -764,7 +798,8 @@
         "usb",
         "폰 연결"
       ],
-      "file": "photo.md"
+      "file": "photo.md",
+      "topic": "파일·문서"
     },
     {
       "id": "gutenberg",
@@ -783,7 +818,8 @@
         "무료도서",
         "서양고전"
       ],
-      "file": "gutenberg.md"
+      "file": "gutenberg.md",
+      "topic": "법령·통계·도서"
     },
     {
       "id": "ai_trend_report",
@@ -805,7 +841,8 @@
         "매일 보고서",
         "정기 보고"
       ],
-      "file": "ai_trend_report.md"
+      "file": "ai_trend_report.md",
+      "topic": "보고서/AI 동향"
     },
     {
       "id": "ai_startup_report",
@@ -827,7 +864,8 @@
         "마감",
         "공모 정보"
       ],
-      "file": "ai_startup_report.md"
+      "file": "ai_startup_report.md",
+      "topic": "보고서/AI 창업"
     },
     {
       "id": "codebase_map",
@@ -846,7 +884,8 @@
         "소스 코드",
         "아키텍처 파일"
       ],
-      "file": "codebase_map.md"
+      "file": "codebase_map.md",
+      "topic": "개발"
     },
     {
       "id": "custom_app_instrument",
@@ -884,7 +923,8 @@
         "개선",
         "앱개선"
       ],
-      "file": "custom_app_instrument.md"
+      "file": "custom_app_instrument.md",
+      "topic": "앱·계기"
     },
     {
       "id": "used_market",
@@ -906,7 +946,8 @@
         "bunjang",
         "joongna"
       ],
-      "file": "used_market.md"
+      "file": "used_market.md",
+      "topic": "쇼핑·중고"
     },
     {
       "id": "stay",
@@ -934,7 +975,8 @@
         "관광공사",
         "tourapi"
       ],
-      "file": "stay.md"
+      "file": "stay.md",
+      "topic": "여행·숙소·맛집"
     },
     {
       "id": "family_news",
@@ -955,7 +997,8 @@
         "사진 빼기",
         "사진 교체"
       ],
-      "file": "family_news.md"
+      "file": "family_news.md",
+      "topic": "뉴스·신문"
     },
     {
       "id": "bulletin",
@@ -972,7 +1015,8 @@
         "주소로 글쓰기",
         "게시판 포털 연결"
       ],
-      "file": "bulletin.md"
+      "file": "bulletin.md",
+      "topic": "웹앱·홈페이지"
     },
     {
       "id": "portal",
@@ -994,7 +1038,8 @@
         "portal",
         "community"
       ],
-      "file": "portal.md"
+      "file": "portal.md",
+      "topic": "웹앱·홈페이지"
     },
     {
       "id": "body_ask",
@@ -1013,7 +1058,8 @@
         "진동",
         "클립보드"
       ],
-      "file": "body_ask.md"
+      "file": "body_ask.md",
+      "topic": "손발·이웃 몸"
     },
     {
       "id": "guest_helper",
@@ -1044,7 +1090,8 @@
         "설치마법사",
         "권한"
       ],
-      "file": "guest_helper.md"
+      "file": "guest_helper.md",
+      "topic": "손발·이웃 몸"
     },
     {
       "id": "music_player",
@@ -1064,7 +1111,8 @@
         "flac",
         "music"
       ],
-      "file": "music_player.md"
+      "file": "music_player.md",
+      "topic": "음악·미디어 재생"
     },
     {
       "id": "business",
@@ -1088,7 +1136,8 @@
         "연락처",
         "메시지 발신"
       ],
-      "file": "business.md"
+      "file": "business.md",
+      "topic": "사업·장부"
     },
     {
       "id": "webapp",
@@ -1111,7 +1160,8 @@
         "브라우저 앱",
         "등기부"
       ],
-      "file": "webapp.md"
+      "file": "webapp.md",
+      "topic": "웹앱·홈페이지"
     },
     {
       "id": "freelance",
@@ -1138,7 +1188,8 @@
         "외주비",
         "견적"
       ],
-      "file": "freelance.md"
+      "file": "freelance.md",
+      "topic": "쇼핑·중고"
     },
     {
       "id": "shopping",
@@ -1159,7 +1210,8 @@
         "shopping",
         "가격"
       ],
-      "file": "shopping.md"
+      "file": "shopping.md",
+      "topic": "쇼핑·중고"
     },
     {
       "id": "hippocampus_retraining",
@@ -1183,7 +1235,8 @@
         "compare_models",
         "벡터"
       ],
-      "file": "hippocampus_retraining.md"
+      "file": "hippocampus_retraining.md",
+      "topic": "기억"
     },
     {
       "id": "youtube_relay",
@@ -1218,7 +1271,8 @@
         "yttv",
         "RSS"
       ],
-      "file": "youtube_relay.md"
+      "file": "youtube_relay.md",
+      "topic": "음악·미디어 재생"
     },
     {
       "id": "sheet",
@@ -1241,7 +1295,8 @@
         "표 추출",
         "명세서"
       ],
-      "file": "sheet.md"
+      "file": "sheet.md",
+      "topic": "표 다루기"
     },
     {
       "id": "script",
@@ -1259,7 +1314,8 @@
         "결정화",
         "run_pipeline"
       ],
-      "file": "script.md"
+      "file": "script.md",
+      "topic": "워크플로·스크립트"
     },
     {
       "id": "housing_report",
@@ -1285,7 +1341,8 @@
         "housing report",
         "좋은 집"
       ],
-      "file": "housing_report.md"
+      "file": "housing_report.md",
+      "topic": "보고서/주거 발굴"
     },
     {
       "id": "youtube_ai_tips_report",
@@ -1305,7 +1362,8 @@
         "팁 수집",
         "팁 증류"
       ],
-      "file": "youtube_ai_tips_report.md"
+      "file": "youtube_ai_tips_report.md",
+      "topic": "보고서/유튜브 AI 팁"
     },
     {
       "id": "notebook",
@@ -1327,7 +1385,8 @@
         "PDF 질문",
         "발췌"
       ],
-      "file": "notebook.md"
+      "file": "notebook.md",
+      "topic": "블로그·노트북"
     },
     {
       "id": "health",
@@ -1350,7 +1409,8 @@
         "처방전",
         "health"
       ],
-      "file": "health.md"
+      "file": "health.md",
+      "topic": "건강·재무 원장"
     },
     {
       "id": "finance",
@@ -1378,7 +1438,8 @@
         "수거",
         "spending"
       ],
-      "file": "finance_record.md"
+      "file": "finance_record.md",
+      "topic": "건강·재무 원장"
     },
     {
       "id": "marketing",
@@ -1400,7 +1461,8 @@
         "marketing",
         "promotion"
       ],
-      "file": "marketing.md"
+      "file": "marketing.md",
+      "topic": "이미지 생성"
     },
     {
       "id": "colab",
@@ -1426,7 +1488,8 @@
         "무거운 연산",
         "대형 모델"
       ],
-      "file": "colab.md"
+      "file": "colab.md",
+      "topic": "콜랩·GPU"
     },
     {
       "id": "voice_narration",
@@ -1447,7 +1510,8 @@
         "강의 영상 목소리",
         "나레이션 만들어"
       ],
-      "file": "voice_narration.md"
+      "file": "voice_narration.md",
+      "topic": "오디오 브리핑·TTS"
     },
     {
       "id": "imagination_training",
@@ -1468,7 +1532,8 @@
         "training",
         "composition"
       ],
-      "file": "imagination_training.md"
+      "file": "imagination_training.md",
+      "topic": "상상훈련"
     },
     {
       "id": "ai_words",
@@ -1488,7 +1553,8 @@
         "grounded",
         "ai_call"
       ],
-      "file": "ai_words.md"
+      "file": "ai_words.md",
+      "topic": "표 다루기"
     },
     {
       "id": "body",
@@ -1506,7 +1572,8 @@
         "history",
         "git"
       ],
-      "file": "body.md"
+      "file": "body.md",
+      "topic": "몸 자기점검·수리"
     },
     {
       "id": "blog",
@@ -1525,7 +1592,8 @@
         "글 찾기",
         "blog"
       ],
-      "file": "blog.md"
+      "file": "blog.md",
+      "topic": "블로그·노트북"
     },
     {
       "id": "folder_survey",
@@ -1543,7 +1611,8 @@
         "folder survey",
         "forage"
       ],
-      "file": "folder_survey.md"
+      "file": "folder_survey.md",
+      "topic": "기억"
     }
   ]
 }

@@ -45,8 +45,32 @@ def env(tmp_path, monkeypatch):
     import hippo_tree as HT
     db = str(tmp_path / "usage.db"); _mk_db(db)
     monkeypatch.setattr(HT, "DOC_DIR", str(tmp_path / "tree"))
+    monkeypatch.setattr(HT, "GUIDE_DB_PATH", str(tmp_path / "guide_db.json"))   # 기본=씨앗 없음
     monkeypatch.setattr(HT, "_default_db_path", lambda: db)
     return HT, db
+
+
+def test_guide_seed_from_guide_db_when_doc_has_no_line(env, tmp_path):
+    """씨앗(2026-09-03): 가지 문서는 몸-사적이라 빈 몸의 지도에 가이드가 없다 — guide_db.json 의
+    topic 이 껍데기·지도·회상의 guide 를 채우고, 문서의 guide: 줄이 있으면 그것이 이긴다."""
+    HT, db = env
+    (tmp_path / "guide_db.json").write_text(json.dumps({"guides": [
+        {"id": "a", "name": "A", "file": "a.md", "topic": "부동산"},
+        {"id": "b", "name": "B", "file": "b.md", "topic": "부동산"},
+        {"id": "c", "name": "C", "file": "c.md", "topic": "표 다루기"},
+    ]}, ensure_ascii=False))
+    _add(db, "실거래가 조회", '[sense:realty]{source: "molit"}', "부동산", ok=1)
+    _add(db, "가격순 정렬", '[table:sort]{by: "price"}', "표 다루기")
+    HT.refresh_all(db)
+    assert HT.guide_of(HT.doc_path("부동산")) == "a.md, b.md", "껍데기 guide: 줄 = 씨앗"
+    assert "부동산 (1)" in HT.map_text(db) and "guide: a.md, b.md" in HT.map_text(db)
+    # 문서의 guide: 줄이 정본 — 사람이 고치면 씨앗보다 이긴다
+    p = HT.doc_path("표 다루기"); t = _read(p).replace("guide: c.md", "guide: mine.md"); open(p, "w").write(t)
+    assert HT.recall("표 다루기", db)["guide"] == "mine.md"
+    # 문서에 줄이 아예 없어도 지도·회상은 씨앗으로 채운다
+    p2 = HT.doc_path("부동산"); open(p2, "w").write(_read(p2).replace("guide: a.md, b.md\n", ""))
+    assert HT.guide_of(p2) == "" and HT.recall("부동산", db)["guide"] == "a.md, b.md"
+    assert "guide: a.md, b.md" in HT.map_text(db)
 
 
 def _read(p):

@@ -41,7 +41,7 @@
 
 ## 입력
 
-당신은 self-describing한 블록들을 받는다 — `<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<available_guides>`, `<user_message>`. 태그 이름과 note 속성에 의미가 적혀 있으므로 그대로 해석한다.
+당신은 self-describing한 블록들을 받는다 — `<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<user_message>`. 태그 이름과 note 속성에 의미가 적혀 있으므로 그대로 해석한다.
 
 ### 우선 활용 지침
 - **`<memory_map>`**: 이 에이전트의 심층 기억 **지도(목차)** — 가지 이름·건수·한 줄 요약만 실리고 내용은 없다. "내 ~", "지난번 ~", "방금 ~" 같이 **사용자만 아는 정보**를 요구하면 관련 가지를 고르고, task_framing 에 실행자가 `[self:memory]{op:"recall", node:"<가지>"}` 로 먼저 열도록 적는다. 지도에 관련 가지가 없을 때만 묻는다.
@@ -129,7 +129,7 @@
 
 ### 5. guide_files — 문제를 풀 때 참조할 지식
 
-available_guides에서 이 문제에 필요한 가이드를 고른다(없으면 빈 배열, 가장 관련 있는 2-3개로 제한). **심층연구 자동 판단**: 단순 조회가 아니라 분석·비교·전망·보고서 수준의 깊이를 요구하면("~분석해줘", "~전망은?", 복합 가설, 장문) `deep_research.md`를 반드시 포함한다.
+가이드의 목차는 `<execution_map>` 의 각 가지에 붙은 `guide:` 줄이다(가지 하나에 여러 파일이면 쉼표). 문제가 속한 가지의 가이드를 고른다(없으면 빈 배열, 가장 관련 있는 2-3개로 제한). 지도에 없는 가이드를 지어내지 마라 — 실행자는 `read_guide` 에 파일명을 그대로 넣어 연다. **심층연구 자동 판단**: 단순 조회가 아니라 분석·비교·전망·보고서 수준의 깊이를 요구하면("~분석해줘", "~전망은?", 복합 가설, 장문) `deep_research.md`를 반드시 포함한다.
 
 ### 6. imagined_ibl — 상상실행 초안 (선택)
 

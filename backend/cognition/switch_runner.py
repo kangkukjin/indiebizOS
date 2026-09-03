@@ -174,7 +174,7 @@ class SwitchRunner:
             # 3) 가이드 검색 도구
             tools.append({
                 "name": "read_guide",
-                "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라.",
+                "description": "가이드 파일을 여는 도구. 가이드의 목차는 <execution_map> 각 가지의 guide: 줄이다 — 파일명(예: query='investment.md')을 그대로 주면 그 파일을 정확히 연다. 지도에 마땅한 가지가 없을 때만 키워드(예: query='동영상')로 검색한다.",
                 "input_schema": {
                     "type": "object",
                     "properties": {

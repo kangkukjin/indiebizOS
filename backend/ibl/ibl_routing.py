@@ -1081,6 +1081,24 @@ def search_guide(query: str, params: dict) -> Any:
             "message": "가이드 전체 목록입니다. 키워드로 검색하세요.",
         }
 
+    # ★파일명 정확 일치 빠른길 (2026-09-03): 가이드의 입구가 <execution_map> 의 `guide:` 줄로
+    #   옮겨져 실행자는 지도의 파일명을 그대로 넘긴다. 파일명은 점수 경쟁 없이 그 파일이다 —
+    #   토큰 점수에 맡기면 "goal.md" 가 'goal' 낱말을 가진 다른 가이드에 밀릴 수 있다.
+    _q = (query or "").strip().strip("`")
+    if _q.endswith(".md"):
+        _hit = next((g for g in guides if (g.get("file") or "") == _q), None)
+        if _hit:
+            out = {"guides": [{"id": _hit["id"], "name": _hit["name"],
+                               "description": _hit.get("description", ""), "file": _hit.get("file")}],
+                   "count": 1, "match": "filename"}
+            if params.get("read", True):
+                gp = data_dir / "guides" / _q
+                if gp.exists():
+                    out["content"] = gp.read_text(encoding="utf-8")
+                    out["file"] = _q
+                else:
+                    out["error"] = f"guide_db 에는 있으나 파일이 없습니다: {_q}"
+            return out
     # 한국어 정규화: 조사 제거 + 복합어 분리 (korean_utils 공통 모듈)
     from korean_utils import tokenize_korean
     import re as _re

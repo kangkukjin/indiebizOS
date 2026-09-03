@@ -321,6 +321,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 - **주간 산문 감사**(`backend/cognition/guide_audit.py`, `__ibl_health__:guide_drift`): 회차당 6개, 신선도 역순.
 - **사용 후 증류**(`backend/cognition/guide_feedback.py`): 턴 종료 증류 4단계 — 실제 사용된 가이드의 갱신 필요를 경량 AI 가 판정(깃발만, 수정은 사람/AI 별도 턴).
 - 죽은 참조·고아는 build `--check` 의 가이드 부패 경고(비차단)가 잡는다.
+- **입구는 지도 하나**(2026-09-03): 가이드는 실행기억 가지의 산문이다 — 가지 문서 `guide:` 줄(쉼표 목록)이 `<execution_map>` 목차에 실리고, 의식은 거기서 `guide_files` 를 고르며 실행자는 `read_guide` 에 파일명을 그대로 넣어 연다(파일명 정확 일치 빠른길). 옛 `<available_guides>`(guide_db 키워드 점수로 고른 최대 10개 목록)와 "작업 전 항상 read_guide 검색" 지시는 폐지 — 검색은 지도에 가지가 없을 때의 폴백. 가지 문서는 몸-사적(gitignore)이라 씨앗은 `guide_db.json` 의 `topic` 필드(추적)로 나르고, 문서의 `guide:` 줄이 있으면 그것이 이긴다(`hippo_tree.seed_guides`). 생명주기는 둘 다 참조자(`tree:<가지>`·`tree-seed:<가지>`)로 센다.
 
 ### 구성요소 생명주기 — 세포 사멸과 수면 후반부 (2026-09-02, 사용자 판정 2건 승인)
 

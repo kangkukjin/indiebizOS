@@ -282,7 +282,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
   - 출력 필드: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지)
-  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<related_memory>`, `<world_pulse>`, `<available_guides>`, `<user_message>`)
+  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<execution_map>` 의 guide: 줄, 2026-09-03)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
   - THINK 시 같은 대화의 직전 framing이 재고(30분 TTL)에 있고 경량 fit 게이트가 적합 판정하면 의식(Opus) 호출을 스킵·재사용(criteria만 갱신). 없음/안 맞음/실패 또는 SESSION_RESET·재시작 시엔 풀 의식. 상세: architecture.md

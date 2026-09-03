@@ -58,6 +58,7 @@ FLAGS_PATH = DATA / "lifecycle_flags.json"
 VERDICTS_PATH = BASE / "outputs" / "imagination_training" / "PENDING_VERDICTS.md"
 GUIDES_DIR = DATA / "guides"
 GUIDE_INDEX_PATH = DATA / "guide_db.json"
+HIPPO_TREE_DIR = DATA / "hippocampus_tree"      # 실행기억 가지 문서(guide: 줄 = 가이드 참조자)
 WORKFLOWS_DIR = DATA / "workflows"
 SCRIPTS_DIR = DATA / "scripts"
 SCRIPTS_STATE_PATH = DATA / "scripts.json"
@@ -216,6 +217,26 @@ def collect_references(inv: Dict[str, Dict]) -> Dict[str, Set[str]]:
             text = _read(m["path"])
             for t in _refs_in_text(text, inv):
                 _add(t, k)
+
+    # 실행기억 가지 문서의 `guide:` 줄 → 가이드 (지도가 가이드의 입구다, 2026-09-03).
+    #   가지는 항상 지도(<execution_map>)에 실리는 상위 구조라 의사 참조자 tree:<가지> 로 센다.
+    #   이 줄이 없으면 지도로만 닿는 가이드가 '참조 0' 으로 읽혀 오살된다.
+    if HIPPO_TREE_DIR.is_dir():
+        for doc in sorted(HIPPO_TREE_DIR.rglob("memory.md")):
+            topic = str(doc.parent.relative_to(HIPPO_TREE_DIR))
+            m = re.search(r"(?m)^guide:\s*(.+?)\s*$", _read(doc))
+            if not m:
+                continue
+            for g in m.group(1).split(","):
+                _add(f"guide:{Path(g.strip().strip('`')).name}", f"tree:{topic}")
+
+    # guide_db.json 의 topic 씨앗 → 가이드 (가지 문서가 없는 빈 몸에서도 지도에 실린다)
+    try:
+        for g in (json.loads(_read(GUIDE_INDEX_PATH) or "{}").get("guides") or []):
+            if g.get("topic") and g.get("file"):
+                _add(f"guide:{Path(str(g['file'])).name}", f"tree-seed:{g['topic']}")
+    except (ValueError, TypeError):
+        pass
 
     # 어휘 카탈로그의 guides: 목록 → 가이드 (낱말이 교재를 지목한다)
     nodes = _load_yaml(NODES_PATH) or {}

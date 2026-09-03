@@ -355,7 +355,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<agent name="...">` - 이름 + `<role>` + `<notes>`
 - `<world_pulse>` - 매시간 갱신되는 세계/사용자/시스템 상태
 - `<history>` - 대화 히스토리 (`<turn index="..." role="...">`)
-- `<available_guides>` - 가이드 파일 목록
+- `<execution_map>` - 실행기억 지도(가지·용례 수·요약·`guide:` 가이드 목차 — 옛 `<available_guides>` 대체, 2026-09-03)
 - `<user_message>` - 현재 사용자 메시지
 
 **프래그먼트 (fragments/)**

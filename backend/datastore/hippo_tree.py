@@ -16,6 +16,7 @@ hippo_tree.py — 실행기억(해마 용례)의 **주제 가지 트리 문서**
 - 어디에 넣을지는 AI 가 정한다: 증류기가 지도를 보고 topic 을 적는다(코드 분류기 없음). 미배치는
   `file_unfiled` 가 모델에게 배치시킨다.
 """
+import json
 import os
 import re
 import sqlite3
@@ -58,6 +59,39 @@ def _base_dir() -> str:
 
 
 DOC_DIR: Optional[str] = None   # 시험이 바꾼다; None 이면 <base>/data/hippocampus_tree
+GUIDE_DB_PATH: Optional[str] = None   # 시험이 바꾼다; None 이면 <base>/data/guide_db.json
+_seed_cache: Tuple[float, Dict[str, str]] = (-1.0, {})
+
+
+def guide_db_path() -> str:
+    return GUIDE_DB_PATH or os.path.join(_base_dir(), "data", "guide_db.json")
+
+
+def seed_guides(topic: str) -> str:
+    """가이드 씨앗 — guide_db.json 의 `topic` 필드(추적되는 데이터)로 가지↔가이드를 나른다 (2026-09-03).
+
+    가지 문서(data/hippocampus_tree/)는 몸-사적(gitignore)이라 `guide:` 줄만으로는 빈 몸(새 설치)의
+    지도에 가이드가 하나도 안 실린다. 문서의 `guide:` 줄이 정본(사람·AI 가 고친 것이 이긴다)이고,
+    문서가 없거나 줄이 비었을 때만 이 씨앗이 채운다. 반환은 문서와 같은 꼴 — 쉼표 목록.
+    """
+    global _seed_cache
+    p = guide_db_path()
+    try:
+        mt = os.path.getmtime(p)
+    except OSError:
+        return ""
+    if _seed_cache[0] != mt:
+        idx: Dict[str, List[str]] = {}
+        try:
+            with open(p, encoding="utf-8") as f:
+                for g in (json.load(f).get("guides") or []):
+                    t = norm_topic(g.get("topic"))
+                    if t and g.get("file"):
+                        idx.setdefault(t, []).append(str(g["file"]))
+        except (OSError, ValueError):
+            idx = {}
+        _seed_cache = (mt, {t: ", ".join(v) for t, v in idx.items()})
+    return _seed_cache[1].get(norm_topic(topic), "")
 
 
 def doc_dir() -> str:
@@ -257,6 +291,7 @@ def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") ->
             text = _marker(topic) + "\n" + text
     else:
         title = topic or "(뿌리 — 아직 가지가 없는 용례)"
+        guide = guide or seed_guides(topic)      # 껍데기의 guide: 줄은 씨앗(guide_db topic)으로
         text = (f"{_marker(topic)}\n# 실행기억 — {title}\n> {GIST_PLACEHOLDER}\n"
                 + (f"guide: {guide}\n" if guide else "")
                 + f"\n{LEDGER}\n- {datetime.now().strftime('%Y-%m-%d')} 가지 생성\n")
@@ -393,7 +428,7 @@ def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
         p = doc_path(t)
         ex = os.path.exists(p)
         out.append({"topic": t, "count": counts.get(t, 0), "gist": gist_of(p) if ex else "",
-                    "guide": guide_of(p) if ex else "", "doc": p if ex else None})
+                    "guide": (guide_of(p) if ex else "") or seed_guides(t), "doc": p if ex else None})
     return out
 
 
@@ -426,7 +461,7 @@ def recall(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
         refresh_topic(topic, db_path)
     rows = rows_of(topic, db_path)
     counts = topic_counts(db_path)
-    return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path),
+    return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path) or seed_guides(topic),
             "text": open(path, encoding="utf-8").read(),
             "items": rows, "count": len(rows),
             "children": [{"topic": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(c))} for c in children_of(topic, db_path)],

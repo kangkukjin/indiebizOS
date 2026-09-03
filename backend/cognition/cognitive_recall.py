@@ -106,7 +106,7 @@ class CognitiveRecallMixin:
 
             # ★웹 랜드마크(참고지도)는 여기서 bespoke 주입하던 것을 폐기 —
             #   data/guides/web_search.md(웹 검색 가이드) 안으로 접었다. 일반 에이전트는
-            #   read_guide/의식 get_guide_list 로 선택적으로 읽고, 포식 표면은 forage_chat 이
+            #   read_guide/의식의 guide_files(<execution_map> guide: 줄에서 고름) 로 선택적으로 읽고, 포식 표면은 forage_chat 이
             #   그 가이드를 항상 주입한다(포식=정의상 항상 웹검색). 키워드 게이트 사각지대 제거.
 
             if result:
@@ -228,7 +228,7 @@ class CognitiveRecallMixin:
             xml = (
                 '<execution_map note="실행기억(IBL 용례) 주제 지도 — 가지 (용례 수) — 요약 · guide. 내용은 실리지 않는다. '
                 '보고서·정기 작업처럼 큰 일이면 그 주제 가지를 [self:memory]{op:\"recall\", node:\"<가지>\", store:\"실행\"} 로 열어 '
-                '성공한 문장들을 보고 조립한다(가이드는 read_guide). 위 <execution_memory> 의 닮은 용례가 이미 충분하면 열 필요 없다.">\n'
+                '성공한 문장들을 보고 조립한다. guide 는 그 주제의 가이드 파일명 — 가이드의 유일한 목차이니 read_guide 에 파일명을 그대로 넣어 연다. 위 <execution_memory> 의 닮은 용례가 이미 충분하면 가지를 열 필요는 없다.">\n'
                 + text + "\n</execution_map>"
             )
             print(f"[연상:실행지도] {text.count(chr(10)) + 1}가지")

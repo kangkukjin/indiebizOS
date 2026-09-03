@@ -501,13 +501,13 @@ class AgentCognitiveMixin(
         # 3) 가이드 검색 도구 (복잡한 작업 전에 매뉴얼 찾기)
         tools.append({
             "name": "read_guide",
-            "description": "가이드 파일을 읽는 도구. 검색, 투자 분석, 동영상 제작, 웹사이트 빌드 등 복잡한 작업의 단계별 가이드가 저장되어 있다. 작업 전에 이 도구로 가이드를 읽어라. 예: query='검색'이면 검색 가이드를 읽음.",
+            "description": "가이드 파일을 여는 도구. 가이드의 목차는 <execution_map> 각 가지의 guide: 줄이다 — 파일명(예: query='investment.md')을 그대로 주면 그 파일을 정확히 연다. 지도에 마땅한 가지가 없을 때만 키워드(예: query='동영상')로 검색한다.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "검색 키워드 (예: 동영상, 투자분석, 홈페이지, 음악)"
+                        "description": "가이드 파일명(지도의 guide: 줄 그대로, 예: investment.md) 또는 검색 키워드"
                     },
                     "read": {
                         "type": "boolean",

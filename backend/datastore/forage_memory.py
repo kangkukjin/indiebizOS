@@ -414,23 +414,66 @@ def _score(text: str, terms: List[str], grams) -> int:
     return sc
 
 
-def _norm_locus(locus: str) -> str:
-    loc = (locus or "").rstrip("/")
-    return loc[:-2] if loc.endswith("/*") else loc
-
-
 def _is_path(locus: str) -> bool:
     return bool(locus) and (locus.startswith("/") or locus.startswith("~"))
 
 
+# ---- 웹 locus (2026-09-03: 웹 포식 기억도 host/path 트리로 비춘다 — 디스크의 절대 경로에 대응하는 위계)
+_URL_SCHEME_RE = re.compile(r"^https?://", re.I)
+_HOST_RE = re.compile(r"^([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?(/|$)", re.I)
+WEB_BODY = "web"
+
+
+def _is_web_body(body: Optional[str]) -> bool:
+    return body == WEB_BODY or bool(body and body.startswith(WEB_BODY + ":"))
+
+
+def _is_url(locus: str, body: Optional[str] = None) -> bool:
+    """URL 꼴 locus 인가 — 스킴(http/https)이 있으면 몸과 무관하게, 스킴 없는 `host.tld/...` 꼴은 웹 몸(또는 몸 미상)일 때만.
+    (`code:*` 의 `README.md` 같은 파일 이름이 호스트로 오인되지 않게 몸으로 가른다.)"""
+    loc = (locus or "").strip()
+    if not loc or any(ch.isspace() for ch in loc):
+        return False
+    if _URL_SCHEME_RE.match(loc):
+        return True
+    if body is not None and not _is_web_body(body):
+        return False
+    return bool(_HOST_RE.match(loc))
+
+
+def _web_norm(locus: str) -> str:
+    """URL → `host/path` 정규형: 스킴·query·fragment 제거, 호스트 소문자, 끝 `/` 제거."""
+    loc = _URL_SCHEME_RE.sub("", (locus or "").strip())
+    loc = loc.split("#", 1)[0].split("?", 1)[0].rstrip("/")
+    if loc.endswith("/*"):
+        loc = loc[:-2]
+    host, sep, rest = loc.partition("/")
+    return host.lower() + (sep + rest if rest else "")
+
+
+def _norm_locus(locus: str, body: Optional[str] = None) -> str:
+    loc = (locus or "").rstrip("/")
+    loc = loc[:-2] if loc.endswith("/*") else loc
+    return _web_norm(loc) if (not _is_path(loc) and _is_url(loc, body)) else loc
+
+
+def _is_tree(locus: str) -> bool:
+    """위계(조상/자식)를 가진 locus — 절대 경로 또는 URL."""
+    return _is_path(locus) or _is_url(locus)
+
+
 def _depth(locus: str) -> int:
-    return _norm_locus(locus).count("/") if _is_path(locus) else 0
+    return _norm_locus(locus).count("/") if _is_tree(locus) else 0
 
 
 def _is_ancestor(a: str, b: str) -> bool:
-    """a 가 b 의 진(strict) 조상 경로인가."""
+    """a 가 b 의 진(strict) 조상인가 — 같은 종류의 트리(경로↔경로, URL↔URL) 안에서만."""
     a, b = _norm_locus(a), _norm_locus(b)
-    return _is_path(a) and _is_path(b) and b.startswith(a + "/")
+    if _is_path(a) and _is_path(b):
+        return b.startswith(a + "/")
+    if _is_url(a) and _is_url(b):
+        return b.startswith(a + "/")
+    return False
 
 
 def _is_child(parent: str, child: str) -> bool:
@@ -525,7 +568,7 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
 
     def _hit(r) -> int:
         """행 일치 점수 — claim + locus *끝 이름*(전체 경로가 아니라: 루트 이름이 후손 전부를 잡지 않게)."""
-        base = os.path.basename(_norm_locus(r["locus"])) if _is_path(r["locus"]) else (r["locus"] or "")
+        base = os.path.basename(_norm_locus(r["locus"])) if _is_tree(r["locus"]) else (r["locus"] or "")
         return _score(r["claim"], terms, grams) + _score(base, terms, grams)
 
     conn = _connect()
@@ -671,7 +714,7 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
     child_cap = limit if focus_override else _CHILD_CAP
     for _sc, r in matched:
         L = _norm_locus(r["locus"])
-        if _is_path(L) and L not in focus:
+        if _is_tree(L) and L not in focus:
             focus.append(L)
         if len(focus) >= _FOCUS_CAP:
             break

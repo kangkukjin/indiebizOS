@@ -10,6 +10,8 @@
     증류가 code:<저장소> 라벨을 붙여도 위치가 절대 경로면 같은 폴더 문서로). `code:`·`web`·`book:` 문서에는 경로 없는 단언만 남는다.
   mac/Users/u/Desktop/memory.md · mac/Users/u/Desktop/AI/memory.md(있으면 "AI 는 따로 조사됨") · disk_X/Volumes/X/영화/memory.md
   · code_repo/memory.md(경로 아닌 몸은 몸 폴더 하나) · mac/memory.md(경로 없는 locus 들).
+  ★웹도 같은 규칙(2026-09-03): URL locus 는 `host/path` 로 정규화해 `web/<host>/<path>/memory.md` 트리에 둔다(몸 표기가
+    `web:<url>` 이든 `web` 이든 무관). 주제 라벨(`Nature`·`youtube` 같은 URL 아닌 locus)만 `web/memory.md` 에 남는다.
   위계가 곧 저장 구조라 문서 찾기 = 경로를 그대로 옮기기, 조상 = 부모 디렉토리 올라가기, 하위 문서 = 아래 걷기(표식 스캔 없음).
   새 문서가 생기는 자리: 처음엔 상위 세 단(~/Desktop 급) · 영토 앵커(territory)를 찍은 폴더는 자기 노드에 문서를 갖는다(조사된 뿌리).
 절의 표기는 최소: `- [종류] 표식 한 줄 ‹메타›` — 판단은 AI·주인 것, 여기는 표기만.
@@ -43,29 +45,57 @@ def _norm(locus: str) -> str:
 
 
 TREE_BODY = "mac"   # 절대 경로 문서가 사는 트리(이 컴퓨터의 파일 시스템 — 마운트된 볼륨 포함)
+WEB_BODY = FM.WEB_BODY   # URL 문서가 사는 트리(host/path)
+_DEFAULT_ROOT_DEPTH = {TREE_BODY: 3, WEB_BODY: 2}   # 첫 문서가 생기는 깊이: 경로=상위 세 단(~/Desktop 급), 웹=host+첫 단
+
+
+def _tree(locus: str, body: Optional[str] = None) -> Optional[Tuple[str, str]]:
+    """locus 가 위계를 가진 트리 locus 면 (트리 몸, 정규형) — 경로→(mac, /a/b), URL→(web, host/path). 아니면 None."""
+    loc = _norm(os.path.expanduser(locus or ""))
+    if _is_path(loc):
+        return TREE_BODY, loc
+    if FM._is_url(loc, body):
+        return WEB_BODY, FM._web_norm(loc)
+    return None
+
+
+def _canon(locus: str, body: Optional[str] = None) -> str:
+    """비교용 locus — 트리 locus 는 정규형, 그 밖은 _norm."""
+    t = _tree(locus, body)
+    return t[1] if t else _norm(locus)
+
+
+def _parts(canon: str) -> List[str]:
+    return [p for p in canon.split("/") if p]
+
+
+def _join(tree_body: str, parts: List[str]) -> str:
+    """부분 → 그 트리의 locus 표기(경로는 앞 `/`, 웹은 host/path)."""
+    return ("/" + "/".join(parts)) if tree_body == TREE_BODY else "/".join(parts)
 
 
 def doc_root_for(body: str, locus: str) -> str:
-    """문서 단위의 뿌리. 경로 locus 는 상위 세 단(그보다 짧으면 그 경로), 경로가 아니면 몸 이름."""
-    loc = _norm(os.path.expanduser(locus or ""))
-    if not _is_path(loc):
+    """문서 단위의 뿌리. 트리 locus 는 기본 깊이(경로 세 단·웹 host+한 단, 그보다 짧으면 그대로), 아니면 몸 이름."""
+    t = _tree(locus, body)
+    if not t:
         return body
-    parts = [p for p in loc.split("/") if p]
-    return "/" + "/".join(parts[:3]) if parts else "/"
+    parts = _parts(t[1])
+    return _join(t[0], parts[:_DEFAULT_ROOT_DEPTH[t[0]]]) if parts else _join(t[0], [])
 
 
 def doc_body_for(body: str, root: str) -> str:
-    """문서 표식에 적는 몸 — 경로 문서는 트리 몸(mac), 그 밖은 자기 몸."""
-    return TREE_BODY if _is_path(_norm(root)) else body
+    """문서 표식에 적는 몸 — 트리 문서는 트리 몸(mac/web), 그 밖은 자기 몸."""
+    t = _tree(root, body)
+    return t[0] if t else body
 
 
 def _covers(body: str, root: str, locus: str) -> bool:
-    """문서(body, root)가 locus 를 덮나 — 경로 뿌리는 경로 접두로, 경로 아닌 뿌리(몸 문서)는 경로 없는 locus 만.
+    """문서(body, root)가 locus 를 덮나 — 트리 뿌리는 같은 트리의 접두로, 트리 아닌 뿌리(몸 문서)는 트리 없는 locus 만.
     (2026-09-03 사고: 경로 없는 뿌리가 경로를 덮자 동기화가 맥 단언 100여 건을 지웠다 — 이 경계를 지킬 것)"""
-    r = _norm(root); loc = _norm(os.path.expanduser(locus or ""))
-    if _is_path(r):
-        return loc == r or loc.startswith(r + "/")
-    return not _is_path(loc)
+    t = _tree(root, body); lt = _tree(locus, body)
+    if t:
+        return bool(lt) and lt[0] == t[0] and (lt[1] == t[1] or lt[1].startswith(t[1] + "/"))
+    return lt is None
 
 
 def slug(s: str) -> str:
@@ -79,9 +109,10 @@ DOC_NAME = "memory.md"
 
 def node_dir(body: str, root: str) -> str:
     """이 (몸, 뿌리)의 문서가 사는 디렉토리 — 트리를 비춘다."""
-    r = _norm(os.path.expanduser(root or ""))
-    if _is_path(r):   # 경로는 몸 표기와 무관하게 트리 한 곳
-        return os.path.join(DOC_DIR, TREE_BODY, *[p for p in r.split("/") if p])
+    t = _tree(root, body)
+    if t:   # 트리 locus 는 몸 표기와 무관하게 그 트리 한 곳(경로=mac, URL=web)
+        parts = _parts(t[1]) if t[0] == TREE_BODY else [slug(p) for p in _parts(t[1])]
+        return os.path.join(DOC_DIR, t[0], *parts)
     return os.path.join(DOC_DIR, slug(body))
 
 
@@ -120,12 +151,12 @@ def _scan_docs() -> List[Tuple[str, str, str]]:
 
 def _ancestor_chain(body: str, locus: str) -> List[str]:
     """locus 자기 노드부터 위로 올라가며 존재하는 문서 경로들(가까운 것부터). 경로 아닌 몸은 몸 문서 하나."""
-    loc = _norm(os.path.expanduser(locus or ""))
+    t = _tree(locus, body)
     found = []
-    if _is_path(loc):
-        parts = [p for p in loc.split("/") if p]
+    if t:
+        parts = _parts(t[1])
         for k in range(len(parts), 0, -1):
-            cand = doc_path_at(TREE_BODY, "/" + "/".join(parts[:k]))
+            cand = doc_path_at(t[0], _join(t[0], parts[:k]))
             if os.path.exists(cand):
                 found.append(cand)
     else:
@@ -154,7 +185,7 @@ def root_of_doc(path: str) -> str:
     if mk:
         return mk[1]
     rel = os.path.relpath(os.path.dirname(path), DOC_DIR).split(os.sep)
-    return "/" + "/".join(rel[1:]) if len(rel) > 1 else rel[0]
+    return _join(rel[0], rel[1:]) if len(rel) > 1 and rel[0] in _DEFAULT_ROOT_DEPTH else rel[0]
 
 
 def doc_path_for(body: str, locus: str, *, create_default: bool = True) -> Optional[str]:
@@ -281,21 +312,23 @@ def _stamp(path: str) -> None:
 # ----------------------------------------------------------------- DB → 문서
 def rows_for_doc(body: str, root: str) -> List[Dict[str, Any]]:
     """이 문서가 담을 행 — 같은 몸에서 더 구체적인 다른 문서가 덮는 행은 뺀다(상위 문서는 골격, 상세는 하위 문서)."""
-    r = _norm(root)
+    t = _tree(root, body)
     conn = FM._connect()
     try:
-        if _is_path(r):   # 경로 문서 = 모든 몸의 행(code:* 라벨이 붙은 경로 단언도 여기)
-            rows = [dict(x) for x in conn.execute("SELECT * FROM forage_map WHERE locus LIKE '/%' OR locus LIKE '~%'").fetchall()]
+        if t:   # 트리 문서 = 모든 몸의 행(code:*·web:<url> 라벨이 붙은 경로/URL 단언도 여기)
+            rows = [dict(x) for x in conn.execute("SELECT * FROM forage_map").fetchall()]
+            rows = [x for x in rows if (_tree(x["locus"], x["body"]) or (None,))[0] == t[0]]
         else:
             rows = [dict(x) for x in conn.execute("SELECT * FROM forage_map WHERE body=?", (body,)).fetchall()]
     finally:
         conn.close()
-    if not _is_path(r):
-        return [x for x in rows if not _is_path(_norm(os.path.expanduser(x["locus"])))]   # 경로 없는 locus 들만
-    deeper = [_norm(root_of_doc(p)) for p in docs_below(body, r)]
+    if not t:
+        return [x for x in rows if _tree(x["locus"], x["body"]) is None]   # 트리 없는 locus 들만
+    r = t[1]
+    deeper = [_canon(root_of_doc(p), t[0]) for p in docs_below(body, r)]
     out = []
     for x in rows:
-        loc = _norm(os.path.expanduser(x["locus"]))
+        loc = _canon(x["locus"], x["body"])
         if not (loc == r or loc.startswith(r + "/")):
             continue
         if any(loc == d or loc.startswith(d + "/") for d in deeper):
@@ -307,9 +340,10 @@ def rows_for_doc(body: str, root: str) -> List[Dict[str, Any]]:
 def refresh_doc_for(body: str, locus: str, *, own_node: bool = False) -> Optional[str]:
     """DB(색인)가 바뀐 뒤 그 위치를 덮는 문서의 `## 단언` 절을 다시 그린다. 문서가 없으면 최소 머리로 만든다.
     own_node=True(영토 앵커): 이 locus 자기 노드에 문서를 만들고, 그 행들을 잃는 조상 문서도 다시 그린다."""
-    loc = _norm(os.path.expanduser(locus or ""))
-    if own_node and _is_path(loc):
-        path = doc_path_at(body, loc)
+    t = _tree(locus, body)
+    if own_node and t:
+        loc = t[1]
+        path = doc_path_at(t[0], loc)
         chain_before = _ancestor_chain(body, loc)
         out = refresh_doc(path, body, loc)
         for anc in chain_before:
@@ -336,7 +370,7 @@ def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
         elif m.group(1) != body:   # 옛 몸 표기(disk:X·code:*)의 경로 문서 → 트리 몸으로 표식 정정
             text = text[:m.start()] + _marker_line(body, root) + text[m.end():]
     else:
-        title = root if _is_path(root) else body
+        title = root if _tree(root, body) else body
         text = (_marker_line(body, root) + f'\n# 포식 기억 — {title}\n\n'
                 f"| 머리 | |\n|---|---|\n| 조사 일시 | (아직 조사 안 함 — 단언은 대화·포식에서 쌓인 것) |\n"
                 f"| 예산 (어디까지 봤나) | — |\n| 거칠기 | — |\n| 상위 문서 | — |\n| 하위 문서 | — |\n\n"
@@ -372,13 +406,16 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
     body, root = m.group(1), m.group(2)
     parsed = parse_section(text)
     # 더 구체적인 하위 문서가 덮는 위치의 줄은 이 문서 소관이 아니다(옛 렌더의 잔재) — 건너뛰고, 다음 재렌더가 절에서 걷어낸다
-    deeper = [_norm(root_of_doc(d)) for d in docs_below(body, root)] if _is_path(_norm(root)) else []
+    t = _tree(root, body)
+    deeper = [_canon(root_of_doc(d), t[0]) for d in docs_below(body, root)] if t else []
+    # 이 문서 소관이 아닌 줄(다른 트리·몸 문서에 남은 트리 locus 의 잔재)은 건너뛴다 — 경계를 넘는 동기화가 사고의 뿌리였다
+    parsed = [q for q in parsed if _covers(body, root, q["locus"])]
     if deeper:
         parsed = [q for q in parsed
-                  if not any(_norm(os.path.expanduser(q["locus"])) == d or _norm(os.path.expanduser(q["locus"])).startswith(d + "/") for d in deeper)]
+                  if not any(_canon(q["locus"], body) == d or _canon(q["locus"], body).startswith(d + "/") for d in deeper)]
     existing = rows_for_doc(body, root)
-    ex_by = {(_norm(os.path.expanduser(r["locus"])), r["kind"], _claim_key(r["claim"])): r for r in existing}
-    seen = {(_norm(os.path.expanduser(p["locus"])), p["kind"], _claim_key(p["claim"])) for p in parsed}
+    ex_by = {(_canon(r["locus"], r["body"]), r["kind"], _claim_key(r["claim"])): r for r in existing}
+    seen = {(_canon(p["locus"], body), p["kind"], _claim_key(p["claim"])) for p in parsed}
     inserted, updated = 0, 0
     conn = FM._connect()
     try:
@@ -390,7 +427,7 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
                 conn.execute("DELETE FROM forage_map WHERE id=?", (r["id"],))
                 deleted += 1
         for p in parsed:
-            key = (_norm(os.path.expanduser(p["locus"])), p["kind"], _claim_key(p["claim"]))
+            key = (_canon(p["locus"], body), p["kind"], _claim_key(p["claim"]))
             r = ex_by.get(key)
             if r:
                 conn.execute("UPDATE forage_map SET territory=?, generalizes=?, prior_class=?, surface_flag=?, "
@@ -417,8 +454,9 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
 def _covering_docs(locus: str, body: Optional[str]) -> List[str]:
     """locus 를 덮는 문서들(자기 노드+조상). 몸을 모르면: 경로 locus 는 디스크 몸들의 사슬, 아니면 모든 몸 문서."""
     loc = _norm(os.path.expanduser(locus or ""))
-    if _is_path(loc):
-        return _ancestor_chain(TREE_BODY, loc)   # 경로는 몸 표기와 무관하게 트리 사슬만
+    t = _tree(loc, body)
+    if t:
+        return _ancestor_chain(t[0], t[1])   # 트리 locus(경로·URL)는 몸 표기와 무관하게 그 트리 사슬만
     all_bodies = sorted({b for _p, b, _r in _scan_docs()})
     if body:
         bodies = [body]
@@ -455,14 +493,19 @@ def sync_for_locus(locus: str, body: Optional[str] = None) -> Dict[str, Any]:
 
 
 # ----------------------------------------------------------------- 이관
+_SCAFFOLD_LINE_RE = re.compile(r"^(#\s*포식 기억\b.*|\|.*|## 갱신 기록\s*)$")
+
+
 def _prose_len(text: str) -> int:
-    """`## 단언` 절과 표식을 뺀 본문 길이 — '누가 더 많이 썼나'의 잣대."""
+    """`## 단언` 절·표식·기계 머리(제목·머리 표·`## 갱신 기록` 제목)를 뺀 본문 길이 — '누가 더 많이 썼나'의 잣대.
+    (기계가 만든 껍데기의 머리 표가 산문으로 세어져 사람의 짧은 한 줄을 밀어내던 구멍을 막는다.)"""
     t = MARKER_RE.sub("", text)
     if SECTION in t:
         i = t.index(SECTION); rest = t[i + len(SECTION):]
         m = re.search(r"^## ", rest, re.M)
         t = t[:i] + (rest[m.start():] if m else "")
-    return len(t.strip())
+    lines = [ln for ln in t.splitlines() if not _SCAFFOLD_LINE_RE.match(ln.strip())]
+    return len("\n".join(lines).strip())
 
 
 def migrate_layout() -> Dict[str, Any]:
@@ -488,12 +531,14 @@ def migrate_layout() -> Dict[str, Any]:
         except Exception:
             pass
         moved.append({"from": name, "to": os.path.relpath(dst, DOC_DIR)})
-    # 몸 폴더(disk_*·code_* …) 아래에 있던 경로 문서 → 트리 한 곳(2026-09-03: 경로는 몸 표기와 무관)
+    # 몸 폴더(disk_*·code_*·web_* …) 아래에 있던 트리 문서 → 트리 한 곳(2026-09-03: 경로·URL 은 몸 표기와 무관)
     for p, b, root in _scan_docs():
-        r = _norm(root)
-        if not _is_path(r):
+        t = _tree(root, b)
+        if not t and FM._is_web_body(b) and b != WEB_BODY and FM._is_url(b.split(":", 1)[1], WEB_BODY):
+            t = _tree(b.split(":", 1)[1], WEB_BODY)   # 옛 `web:<url>` 몸 문서 — 몸 라벨 속 URL 이 곧 뿌리
+        if not t:
             continue
-        dst = doc_path_at(TREE_BODY, r)
+        dst = doc_path_at(t[0], t[1])
         if os.path.abspath(p) == os.path.abspath(dst):
             continue
         os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -505,6 +550,10 @@ def migrate_layout() -> Dict[str, Any]:
                 os.replace(p, dst + f".{slug(b)}.bak")
         else:
             os.replace(p, dst)
+        try:
+            refresh_doc(dst, t[0], t[1])   # 표식(몸·뿌리)을 트리 것으로 바로잡는다 — 옛 표식이 남으면 다음 렌더가 껍데기를 되살린다
+        except Exception:
+            pass
         moved.append({"from": os.path.relpath(p, DOC_DIR), "to": os.path.relpath(dst, DOC_DIR)})
     for cur, _dirs, _files in os.walk(DOC_DIR, topdown=False):   # 빈 몸 폴더 정리
         if cur != DOC_DIR and not os.listdir(cur):
@@ -530,9 +579,9 @@ def migrate_all() -> Dict[str, Any]:
     finally:
         conn.close()
     for t in terr:  # 영토 앵커 = 자기 노드 문서
-        loc = _norm(os.path.expanduser(t["locus"]))
-        if _is_path(loc):
-            groups[(TREE_BODY, loc)] = groups.get((TREE_BODY, loc), 0)
+        tt = _tree(t["locus"], t["body"])
+        if tt:
+            groups[tt] = groups.get(tt, 0)
     for r in rows:
         root = doc_root_for(r["body"], r["locus"])
         key = (doc_body_for(r["body"], root), root)

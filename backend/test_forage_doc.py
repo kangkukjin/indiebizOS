@@ -211,3 +211,63 @@ def test_purge_gone_after_a_week(env):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ----------------------------------------------------------------- 웹 트리 (2026-09-03: URL locus 는 host/path 트리)
+def test_web_url_loci_land_in_host_path_tree_regardless_of_scheme_and_body(env):
+    FM.note_map(body="web", locus="https://github.com/acme/harness", kind="identity", claim="하네스 저장소", confidence=0.9)
+    FM.note_map(body="web", locus="github.com/acme/harness/docs", kind="convention", claim="문서는 docs/ 아래", confidence=0.8)
+    FM.note_map(body="web:https://github.com/acme", locus="https://github.com/acme?tab=repos", kind="identity", claim="acme 조직", confidence=0.7)
+    FM.note_map(body="web", locus="Nature", kind="identity", claim="학술지", confidence=0.6)
+    tree = FD.doc_path_at("web", "github.com/acme")
+    assert os.path.exists(tree) and tree.endswith(os.path.join("web", "github.com", "acme", "memory.md"))
+    text = open(tree, encoding="utf-8").read()
+    assert "### https://github.com/acme/harness" in text and "### github.com/acme/harness/docs" in text
+    assert "### https://github.com/acme?tab=repos" in text
+    assert FD._read_marker(tree) == ("web", "github.com/acme")
+    # 주제 라벨은 웹 몸 뿌리 문서에, URL 은 거기 없다
+    root_doc = FD.doc_path_at("web", "web")
+    root_text = open(root_doc, encoding="utf-8").read()
+    assert "### Nature" in root_text and "github.com" not in root_text
+    assert not os.path.isdir(os.path.join(FD.DOC_DIR, "web_https__github.com_acme"))
+
+
+def test_host_like_locus_in_non_web_body_stays_in_body_doc(env):
+    FM.note_map(body="code:site", locus="README.md", kind="identity", claim="저장소 소개", confidence=0.9)
+    FM.note_map(body="book:x", locus="irepublic.brain", kind="identity", claim="책 속 상표", confidence=0.9)
+    assert not os.path.isdir(os.path.join(FD.DOC_DIR, "web"))
+    assert "### README.md" in open(FD.doc_path_at("code:site", "code:site"), encoding="utf-8").read()
+    assert "### irepublic.brain" in open(FD.doc_path_at("book:x", "book:x"), encoding="utf-8").read()
+
+
+def test_web_recall_walks_ancestor_chain_and_child_skeleton(env):
+    FM.note_map(body="web", locus="https://claude.ai", kind="substrate", claim="SPA, 로그인 필요", confidence=0.9, generalizes=True)
+    FM.note_map(body="web", locus="claude.ai/design", kind="identity", claim="디자인 캔버스", confidence=0.9)
+    FM.note_map(body="web", locus="claude.ai/design/canvas", kind="identity", claim="아트보드 편집기", confidence=0.8)
+    res = FM.recall(locus="https://claude.ai/design/", limit=20)
+    via = {(m["via"], m["kind"]) for m in res["map"]}
+    assert ("own", "identity") in via and ("inherit", "substrate") in via and ("child", "identity") in via
+    assert res["doc"] == FD.doc_path_at("web", "claude.ai")   # 호스트 문서가 먼저 생겼으니 하위 URL 은 그 조상 문서에(디스크와 같은 규칙)
+    assert res["docs_below"] == []
+    # 사람이 호스트 문서를 고치면 색인이 따라온다(정본=문서)
+    p = res["doc"]
+    text = open(p, encoding="utf-8").read().replace("### claude.ai/design\n", "### claude.ai/design\n- [dead_branch] 옛 베타 경로 없음\n")
+    open(p, "w", encoding="utf-8").write(text); os.utime(p, None)
+    res2 = FM.recall(locus="claude.ai/design", limit=20)
+    assert ("dead_branch", "옛 베타 경로 없음") in {(m["kind"], m["claim"]) for m in res2["map"]}
+
+
+def test_migrate_layout_moves_web_url_body_doc_into_tree(env):
+    FM.note_map(body="web:https://platform.example.com/usage", locus="https://platform.example.com/usage", kind="identity", claim="사용량 대시보드", confidence=0.9)
+    # 옛 배치: 몸 라벨 폴더의 문서(표식은 옛 몸·옛 뿌리) — 사람이 쓴 산문이 있다
+    old_dir = os.path.join(FD.DOC_DIR, FD.slug("web:https://platform.example.com/usage"))
+    os.makedirs(old_dir, exist_ok=True)
+    old = os.path.join(old_dir, "memory.md")
+    open(old, "w", encoding="utf-8").write('<!-- forage-doc body="web:https://platform.example.com/usage" root="web:https://platform.example.com/usage" -->\n# 포식 기억\n\n주간 그래프는 월요일에 갱신된다는 걸 여러 번 확인했다.\n\n## 단언\n')
+    out = FD.migrate_layout()
+    dst = FD.doc_path_at("web", "platform.example.com/usage")
+    assert any(m["to"] == os.path.relpath(dst, FD.DOC_DIR) for m in out["moved"])
+    assert not os.path.exists(old)
+    text = open(dst, encoding="utf-8").read()
+    assert FD._read_marker(dst) == ("web", "platform.example.com/usage")
+    assert "월요일에 갱신" in text and "### https://platform.example.com/usage" in text

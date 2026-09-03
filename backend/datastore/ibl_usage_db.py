@@ -866,7 +866,7 @@ class IBLUsageDB:
         ★capability-gate(프로파일 라벨 분기 아님 — 이음매 위 모듈이라 포크-가드 준수):
         폰(로컬 인코더 없음+맥 렌트)=렌트라 꺼지고, 맥(로컬 인코더)=렌트 아니라 켜지고, 맥 미연결
         폰=렌트 불가→로컬 FTS(빠름)라 켜진다. '폰이라서'가 아니라 '렌트라 느려서' 끈다.
-        강제 토글: INDIEBIZ_HIPPO=on(켬)/off(끔). 심층기억(_search_related_memory=로컬 키워드)은 별개."""
+        강제 토글: INDIEBIZ_HIPPO=on(켬)/off(끔). 심층기억 지도(_memory_map_scent=로컬 목차)는 별개."""
         force = (os.environ.get("INDIEBIZ_HIPPO") or "").strip().lower()
         if force in ("on", "1", "true", "yes"):
             return False

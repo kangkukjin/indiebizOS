@@ -368,7 +368,7 @@ class RecallPreviewRequest(BaseModel):
 # 연상 묶음의 채널 태그 → 조종실 표시 라벨. _build_execution_memory 가 이 순서로 결합한다.
 _RECALL_CHANNELS = [
     ("execution_memory", "실행기억 — 해마 (과거 IBL 용례 연상)"),
-    ("related_memory", "심층 메모리 — 사용자·세계 사실"),
+    ("memory_map", "심층 기억 지도 — 주제 가지 목차 (내용은 recall 로)"),
     ("forage_memory", "포식 기억 — 냄새지도 + 주인모델"),
     ("disk_skeleton", "디스크 골격 — 집중 폴더 지도 (포식 의도일 때만)"),
 ]

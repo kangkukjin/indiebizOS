@@ -227,24 +227,41 @@ def test_db_path_body_and_system_ai_go_to_system_db(tmp_path, memory_db):
     assert memory_db._get_db_path(str(project), "agent_007") == str(project / "memory_007.db")
 
 
-def test_recall_falls_back_to_self_agent_id(tmp_path, monkeypatch, memory_db):
-    """스레드 컨텍스트에 agent_id 가 없어도 자기 신원(self.agent_id)으로 검색한다."""
+def test_memory_map_falls_back_to_self_agent_id(tmp_path, monkeypatch, memory_db):
+    """스레드 컨텍스트에 agent_id 가 없어도 자기 신원(self.agent_id)으로 지도를 찾는다.
+    (2026-09-03: Top-3 자동 주입 폐지 → <memory_map> 목차 주입. 빈 DB 면 0토큰.)"""
     import thread_context
     import cognitive_recall as cr
     thread_context.set_current_agent_id(None)
     seen = {}
 
-    def fake_search(**kw):
-        seen.update(kw)
-        return []
-    monkeypatch.setattr(memory_db, "search", fake_search)
+    def fake_path(project_path, agent_id):
+        seen["agent_id"] = agent_id
+        return str(tmp_path / "memory_z.db")
+    monkeypatch.setattr(memory_db, "_get_db_path", fake_path)
 
     class Stub(cr.CognitiveRecallMixin):
         def __init__(self):
             self.project_path = tmp_path
             self.agent_id = "agent_z"
-    assert Stub()._search_related_memory("아침") == ""
+    assert Stub()._memory_map_scent() == ""
     assert seen["agent_id"] == "agent_z"
+
+
+def test_memory_map_lists_branches_not_contents(tmp_path, monkeypatch, memory_db):
+    """지도는 가지·건수·요약만 — 기억 본문은 실리지 않는다(내용은 recall 로 연다)."""
+    import cognitive_recall as cr
+    project = tmp_path / "proj"; project.mkdir()
+    memory_db.save(str(project), "agent_z", "어머니는 수원에 산다", "어머니", "사용자정보", node="가족/어머니")
+    monkeypatch.setattr(memory_db, "_get_db_path", lambda p, a: str(project / "memory_z.db"))
+
+    class Stub(cr.CognitiveRecallMixin):
+        def __init__(self):
+            self.project_path = project
+            self.agent_id = "agent_z"
+    xml = Stub()._memory_map_scent()
+    assert "<memory_map" in xml and "가족/어머니 (1)" in xml
+    assert "수원" not in xml
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest

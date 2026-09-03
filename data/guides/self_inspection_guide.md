@@ -111,7 +111,7 @@ ORDER BY id DESC LIMIT 30;
 ### E. 심층 메모리 (사용자에 대한 사실)
 중복·모순 검사용.
 
-`[self:memory]{op: "search", query: "키워드"}` 또는:
+기억은 주제 가지 트리(프롬프트 `<memory_map>` 목차)에 있다 — `[self:memory]{op: "recall", node: "<가지>"}` 로 가지를 열고(생략=지도), `search` 는 가지를 모를 때: `[self:memory]{op: "search", query: "키워드"}` 또는:
 ```bash
 sqlite3 data/system_ai_memory.db "
 SELECT id, keywords, substr(content, 1, 100) AS content

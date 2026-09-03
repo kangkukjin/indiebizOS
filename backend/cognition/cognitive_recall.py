@@ -30,7 +30,7 @@ class CognitiveRecallMixin:
 
         Returns:
             (xml: str, top_score: float, top_code: str)
-            - xml: <execution_memory> + <related_memory> 결합된 문자열 (없으면 "")
+            - xml: <execution_memory> + <memory_map> 결합된 문자열 (없으면 "")
             - top_score: 해마 최고 점수 (action_hint 적용 시 1.0)
             - top_code: 해마 최고 점수 항목의 ibl_code (action_hint 적용 시 "[node:action]")
         """
@@ -51,12 +51,12 @@ class CognitiveRecallMixin:
                     allowed_set = resolve_allowed_nodes(allowed_nodes)
                 exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
 
-            # 심층 메모리에서 관련기억 검색 → 연상기억 합성.
+            # 심층 기억의 지도(목차) → 연상기억 합성 (내용 자동 주입 아님 — 2026-09-03).
             #   ★include_related=False(포식 등): 무상태 검색을 개인 사실(심층 메모리)이 하이재킹하지
             #   않도록 관련기억 주입을 끈다 — 포식은 이미 심층 메모리에 *쓰지 않으며*(무상태), 정당한
             #   개인화는 포식기억(owner_model 웹 관습)이 담당한다. 넓은 질의가 최근 관심사로 좁혀지는
             #   필터버블 드리프트 방지. (실행기억[해마]·포식기억·디스크골격은 그대로 유지.)
-            related = self._search_related_memory(user_message) if include_related else ""
+            related = self._memory_map_scent() if include_related else ""
             result = exec_xml
             if related:
                 result = (result + "\n" + related) if result else related
@@ -108,8 +108,8 @@ class CognitiveRecallMixin:
                 parts = []
                 if "execution_memory" in result:
                     parts.append("실행기억")
-                if "related_memory" in result:
-                    parts.append("관련기억")
+                if "memory_map" in result:
+                    parts.append("기억지도")
                 if "forage_memory" in result:
                     parts.append("포식기억")
                 if "connected_limbs" in result:
@@ -195,16 +195,17 @@ class CognitiveRecallMixin:
             print(f"[결정원장] 회상 실패 (무시): {e}")
             return ""
 
-    def _search_related_memory(self, user_message: str) -> str:
-        """심층 메모리에서 관련기억 검색 (top-3)
+    def _memory_map_scent(self) -> str:
+        """심층 기억의 **지도(목차)** 를 <memory_map> 으로 돌려준다 — 가지 이름·건수·한 줄 요약만.
 
-        사용자 메시지를 키워드로 심층 메모리를 검색하여
-        <related_memory> XML 블록으로 반환한다.
+        2026-09-03 사용자 판정: 평면 기억을 벡터 Top-3 로 밀어 넣던 자동 주입을 폐지하고, 주제 트리의
+        목차만 항상 올린다. 단서는 질문이 아니라 지도에서 오고, 가지의 내용은 AI 가
+        [self:memory]{op:"recall", node} 로 연다(포식 기억과 같은 배치 — 어휘가 기억의 입구).
+        문서가 사람 손에 고쳐졌으면 먼저 색인에 반영(싼 mtime 대조). 지도가 비면 0토큰.
         """
         try:
             import sys
             import os
-            # memory_db 패키지 경로 추가
             mem_pkg = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..",
                 "data", "packages", "installed", "tools", "memory"
@@ -212,77 +213,28 @@ class CognitiveRecallMixin:
             if mem_pkg not in sys.path:
                 sys.path.insert(0, mem_pkg)
             import memory_db
+            import memory_tree
 
             from thread_context import get_current_agent_id
-            # 신원 = 스레드 컨텍스트 우선, 없으면 자기 자신(self.agent_id). 스레드 값만 믿으면
-            # 컨텍스트 없는 호출(스크립트·백그라운드 스레드)이 agent_id=None 으로 내려가
-            # memory_None.db 를 만들었다(2026-09-02 저장소 루트 실측). 둘 다 없으면 memory_db 가 거부.
             agent_id = get_current_agent_id() or getattr(self, "agent_id", None)
-            project_path = str(self.project_path)
-
-            # ★점수 바닥(자동 주입은 정밀도 우선): LIKE 폴백 끄고(semantic_only) 시맨틱 컷오프를
-            #   0.45 로 올린다 — 키워드만 겹치는 무관 기억(예: 'kind:operator' 질의에 무의식-분류기)
-            #   이 매번 3건 끌려오던 노이즈 제거. 바닥 미달이면 빈 결과 = 주입 안 함.
-            results = memory_db.search(
-                project_path=project_path,
-                agent_id=agent_id,
-                query=user_message,
-                limit=3,
-                semantic_only=True,
-                min_score=0.45,
-            )
-            if not results:
+            db_path = memory_db._get_db_path(str(self.project_path), agent_id)
+            if not os.path.exists(db_path):
                 return ""
-
-            # 전문 조회 (preview는 100자 잘림이므로)
-            items = []
-            for r in results:
-                # 마지막으로 확인된(사용되거나 만들어진) 날짜 — 에이전트가 낡음을 스스로 판단하도록.
-                # ★touch=False: 자동 회상은 used_at 을 올리지 않는다(2026-09-02). 검색에 걸린 것과
-                #   쓰인 것은 다르다 — 자동 조회가 used_at 을 갱신하면 오검색 기억이 LRU 를 영원히
-                #   피한다. 명시 읽기·증류 SAME/UPDATE 만 used_at 을 올린다.
-                last_seen = (r.get("used_at") or r.get("created_at") or "")[:10]
-                full = memory_db.read(project_path, agent_id, r["id"], touch=False)
-                if full:
-                    cat = full.get("category", "")
-                    kw = full.get("keywords", "")
-                    content = full.get("content", "")
-                    meta = f' category="{cat}"' if cat else ""
-                    meta += f' keywords="{kw}"' if kw else ""
-                    meta += f' last_seen="{last_seen}"' if last_seen else ""
-                    items.append(f"  <memory{meta}>{content}</memory>")
-
-            if not items:
+            memory_tree.sync_all(db_path)
+            text = memory_tree.map_text(db_path)
+            if not text:
                 return ""
-
             xml = (
-                '<related_memory note="심층 메모리에서 연상된 관련 기억입니다. 참고용. '
-                'last_seen은 그 기억이 마지막으로 확인된 날짜이니, 오래된 기억은 현재와 다를 수 있음을 감안하세요.">\n'
-                + "\n".join(items)
-                + "\n</related_memory>"
+                '<memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 내용은 실리지 않는다. '
+                '사용자만 아는 사실(내 ~, 지난번 ~, 선호·결정·사람·물건)이 필요하고 관련 가지가 보이면 '
+                '답하기 전에 [self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다. 새로 안 사실은 save 에 node 를 붙인다.">\n'
+                + text + "\n</memory_map>"
             )
-            print(f"[연상:관련기억] {len(items)}건 검색됨: \"{user_message[:40]}\"")
-            print(f"[연상:관련기억] 내용:\n{xml}")
+            print(f"[연상:기억지도] {text.count(chr(10)) + 1}가지")
             return xml
-
         except Exception as e:
-            print(f"[연상:관련기억] 검색 실패 (무시): {e}")
+            print(f"[연상:기억지도] 실패 (무시): {e}")
             return ""
-
-    # 포식 의도 단서 — *이미 있는 걸 찾기* 의도 게이트(매체 무관, 싸고 너그럽게).
-    #   ★공간(어느 몸: 디스크/코드/웹/책/볼륨…)은 키워드로 재유추하지 않는다 — 증류기 LLM 이
-    #   명명한다(forager=AI, FORAGER_MULTIBODY_DESIGN §9 "불변 2축"). 여기 cue 는 *비용 게이트*일
-    #   뿐: 비포식 잡담에 회상/증류 LLM 을 안 돌리려는 것. 매체가 늘어도 이 목록은 안 늘어난다.
-    #   (회상 게이트=여기 _build_disk_skeleton, 증류 게이트=cognitive_distill 이 self 로 공유.)
-    _FORAGE_CUES = (
-        "찾", "검색", "어디", "뒤져", "뒤지", "파일", "사진", "자료", "폴더",
-        "문서", "디스크", "볼륨", "찍은", "받은", "저장한", "예전", "지난",
-        "코드", "코드베이스", "함수", "클래스", "구현", "정의", "모듈", "리포",
-        "웹", "온라인", "인터넷", "구글", "논문", "기사",
-        "find", "search", "where", "locate", "file", "photo", "folder",
-        "document", "disk", "volume", "code", "codebase", "function",
-        "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
-    )
 
     def _build_disk_skeleton(self, user_message: str = "") -> str:
         """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스), *포식 의도일 때만*(웹랜드마크와 같은 게이트).

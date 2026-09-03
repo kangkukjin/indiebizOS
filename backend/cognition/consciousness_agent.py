@@ -169,7 +169,7 @@ class ConsciousnessAgent:
             user_message: 사용자의 현재 메시지
             history: 대화 히스토리 원본 (정제 전)
             associative_memory: 연상기억 — <execution_memory>(해마) +
-                <related_memory>(심층메모리) self-describing 묶음
+                <memory_map>(심층기억 지도) self-describing 묶음
             guide_list: 사용 가능한 가이드 파일 목록
             world_pulse: 현재 세계 상태 요약
             agent_name: 에이전트 이름
@@ -314,7 +314,7 @@ class ConsciousnessAgent:
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
-        # 연상기억 — <execution_memory>(해마) + <related_memory>(심층메모리)
+        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도)
         # 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
         if associative_memory:
             parts.append(associative_memory)

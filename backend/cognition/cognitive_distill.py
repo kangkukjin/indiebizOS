@@ -211,6 +211,7 @@ class CognitiveDistillMixin:
             if mem_pkg not in sys.path:
                 sys.path.insert(0, mem_pkg)
             import memory_db
+            import memory_tree
 
             from thread_context import get_current_agent_id, get_current_task_id
             from consciousness_agent import oneshot_ai_call
@@ -220,6 +221,13 @@ class CognitiveDistillMixin:
             # memory_None.db 를 만들었다(2026-09-02 저장소 루트 실측). 둘 다 없으면 memory_db 가 거부.
             agent_id = get_current_agent_id() or getattr(self, "agent_id", None)
             project_path = str(self.project_path)
+
+            # 기억 지도(주제 가지 목차) — 어디에 넣을지는 모델이 이 지도를 보고 정한다(2026-09-03 사용자 판정:
+            #   "기억이 발생할 때마다 어디에 넣을지 판단하는 것도 AI 가 할 일"). 코드 분류기 없음.
+            try:
+                tree_map = memory_tree.map_text(memory_db._get_db_path(project_path, agent_id))
+            except Exception:
+                tree_map = ""
 
             # 기억은 출처를 기억한다 — 추출된 사실(claim)과 별개로 원 발화 스팬을 동봉.
             # 나중에 "이 기억이 어디서 왔나"를 대조할 수 있는 최소 단위(검증 기관 없이 기록만).
@@ -249,8 +257,14 @@ class CognitiveDistillMixin:
 (나쁜 예: "4T나 5T 제품을 찾아줘" → 이건 그 순간의 요청이지 선호가 아님 — 제외.
  좋은 예: "중고는 필요없어" 라고 말했다면 → "중고 제품은 원하지 않음" 은 선호.)
 
+★각 조각에 **node(주제 가지)** 를 적어라 — 이 자아의 기억 지도(아래)에서 가장 알맞은 가지를 고른다.
+기존 가지를 우선하고, 정말 새 주제면 새 경로("상위/하위" 꼴, 최대 3단, 한국어 명사)를 만든다.
+가지는 *무엇에 관한 기억인가*(사람·장소·일·물건·주제)로 나눈다 — 종류(선호·결정)는 가지가 아니다.
+[기억 지도]
+{tree_map or "(아직 가지 없음 — 첫 가지를 만들어라)"}
+
 JSON 배열로만 응답.
-[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|사용자정보|작업기록|의사결정|중요날짜"}}]
+[{{"content": "...", "keywords": "k1,k2", "category": "사용자선호|사용자정보|작업기록|의사결정|중요날짜", "node": "가지/경로"}}]
 정보가 없으면 빈 배열 [] 반환.
 
 사용자: {user_message[:500]}
@@ -284,6 +298,7 @@ AI: {ai_response[:500]}"""
                 fact["content"] = content
                 fact["keywords"] = fact.get("keywords", "").strip()
                 fact["category"] = fact.get("category", "").strip()
+                fact["node"] = memory_tree.norm_node(fact.get("node", ""))
 
                 # 몸-명사 관문(저장소 계약의 앞단 거부 — 뒷단 memory_db.save 도 같은 검사로 raise).
                 # 몸 내부 경로가 기억되면 어휘 우회로가 각인된다(ep2279). 조각만 버리고 배치는 계속.
@@ -306,9 +321,10 @@ AI: {ai_response[:500]}"""
                         project_path=project_path, agent_id=agent_id,
                         content=content, keywords=fact["keywords"],
                         category=fact["category"], source_ref=source_ref,
+                        node=fact["node"],
                     )
                     saved_count += 1
-                    print(f"[심층메모리] NEW [{fact['category']}]: \"{content[:50]}\"")
+                    print(f"[심층메모리] NEW [{fact['category']}] @{fact['node'] or '뿌리'}: \"{content[:50]}\"")
 
             # 3단계: 유사쌍이 있으면 '단 한 번'의 배치 호출로 전부 판정 (조각마다 호출 X)
             verdicts = []
@@ -363,9 +379,9 @@ AI: {ai_response[:500]}"""
                 else:  # NEW (또는 불명)
                     memory_db.save(project_path=project_path, agent_id=agent_id,
                                    content=content, keywords=keywords, category=category,
-                                   source_ref=source_ref)
+                                   source_ref=source_ref, node=fact.get("node", ""))
                     saved_count += 1
-                    print(f"[심층메모리] NEW [{category}]: \"{content[:50]}\"")
+                    print(f"[심층메모리] NEW [{category}] @{fact.get('node') or '뿌리'}: \"{content[:50]}\"")
 
             if saved_count or updated_count:
                 print(f"[심층메모리] 저장 {saved_count}건, 업데이트 {updated_count}건: "

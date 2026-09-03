@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "memory_op",
-      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete.\n\n- op=save: content 필수(+keywords, category 옵션, 둘 다 생략 시 자동 추출·분류)\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: memory_id 필수\n- op=delete: memory_id 필수\n\n워크플로: save로 누적 → search로 자연어 검색 → preview 잘렸으면 read로 전문 → 잘못 저장은 delete.",
+      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.\n\n- op=save: content 필수(+keywords, category 옵션, 둘 다 생략 시 자동 추출·분류)\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: memory_id 필수\n- op=delete: memory_id 필수\n\n워크플로: save로 누적 → search로 자연어 검색 → preview 잘렸으면 read로 전문 → 잘못 저장은 delete.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -18,7 +18,9 @@
               "save",
               "search",
               "read",
-              "delete"
+              "delete",
+              "recall",
+              "move"
             ]
           },
           "content": {
@@ -43,7 +45,11 @@
           },
           "memory_id": {
             "type": "integer",
-            "description": "read/delete 필수 — 메모리 ID"
+            "description": "read/delete/move 필수 — 메모리 ID"
+          },
+          "node": {
+            "type": "string",
+            "description": "주제 가지 경로(\"가족/어머니\" 꼴). save 권장(비우면 뿌리) · recall 대상(생략=지도 전체) · move 목적지 · search 필터"
           }
         },
         "required": [

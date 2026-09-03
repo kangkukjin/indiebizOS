@@ -37,6 +37,24 @@ DEFAULT_MEMORY_CAP = 300   # 에이전트당 기억 상한 (초과 시 used_at L
 DUP_SIM_THRESHOLD = 0.85   # 근접중복 클러스터 코사인 임계
 
 
+def _tree_refresh(db_path: str, *nodes) -> None:
+    """행이 바뀐 노드의 문서를 다시 그린다(주제 트리 문서 = 정본, memory_tree). 실패해도 저장소는 산다."""
+    try:
+        import memory_tree
+        for n in {memory_tree.norm_node(x) for x in nodes}:
+            memory_tree.refresh_node(db_path, n)
+    except Exception as e:
+        print(f"[memory_tree] 문서 갱신 실패(무시): {e}")
+
+
+def _tree_refresh_all(db_path: str) -> None:
+    try:
+        import memory_tree
+        memory_tree.refresh_all(db_path)
+    except Exception as e:
+        print(f"[memory_tree] 전체 갱신 실패(무시): {e}")
+
+
 def normalize_category(category: str) -> str:
     """카테고리를 유효 집합으로 정규화. 빈 값/미지 값 → '기타'."""
     cat = (category or "").strip()
@@ -257,11 +275,16 @@ def _ensure_schema(db_path: str):
                 content TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 used_at DATETIME DEFAULT NULL,
-                source_ref TEXT DEFAULT NULL
+                source_ref TEXT DEFAULT NULL,
+                node TEXT DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS idx_mem_keywords ON memories(keywords);
             CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(category);
         ''')
+        try:
+            conn.execute("SELECT node FROM memories LIMIT 1")
+        except sqlite3.OperationalError:
+            conn.execute("ALTER TABLE memories ADD COLUMN node TEXT DEFAULT ''")   # 주제 트리(2026-09-03)
         conn.commit()
     finally:
         conn.close()
@@ -281,7 +304,8 @@ def get_db(project_path: str, agent_id: str):
             content TEXT NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             used_at DATETIME DEFAULT NULL,
-            source_ref TEXT DEFAULT NULL
+            source_ref TEXT DEFAULT NULL,
+            node TEXT DEFAULT ''
         );
         CREATE INDEX IF NOT EXISTS idx_mem_keywords ON memories(keywords);
         CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(category);
@@ -296,6 +320,10 @@ def get_db(project_path: str, agent_id: str):
         conn.execute("SELECT source_ref FROM memories LIMIT 1")
     except sqlite3.OperationalError:
         conn.execute("ALTER TABLE memories ADD COLUMN source_ref TEXT DEFAULT NULL")
+    try:
+        conn.execute("SELECT node FROM memories LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE memories ADD COLUMN node TEXT DEFAULT ''")   # 주제 트리(2026-09-03)
 
     return conn
 
@@ -379,6 +407,7 @@ def delete_at(db_path: str, memory_id: int) -> bool:
     """db_path 직접 삭제 (행+vec 동시) — 정리 패스 전용 (count_at·list_all 짝)."""
     conn = sqlite3.connect(db_path, timeout=10)
     try:
+        _r = conn.execute("SELECT COALESCE(node,'') FROM memories WHERE id = ?", (memory_id,)).fetchone()
         cur = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         conn.commit()
         ok = cur.rowcount > 0
@@ -386,6 +415,7 @@ def delete_at(db_path: str, memory_id: int) -> bool:
         conn.close()
     if ok:
         _delete_vec(db_path, memory_id)
+        _tree_refresh(db_path, _r[0] if _r else "")
     return ok
 
 
@@ -405,11 +435,14 @@ def _reject_body_noun(content: str):
 
 def save(project_path: str, agent_id: str,
          content: str, keywords: str = "", category: str = "",
-         source_ref: str = None) -> int:
+         source_ref: str = None, node: str = "") -> int:
     """메모리 저장 (임베딩 자동 인덱싱)
 
     source_ref: 이 기억의 출처(발화 스팬·task id 등 JSON 문자열). 기억은 출처를 기억한다.
+    node: 주제 가지(`가족/어머니` 꼴, memory_tree). 어디에 넣을지는 호출자(AI)가 정한다 — 빈 값 = 뿌리(미배치).
     """
+    import memory_tree
+    node = memory_tree.norm_node(node)
     category = normalize_category(category)
     _reject_body_noun(content)
     content = mask_secrets(content)
@@ -421,9 +454,9 @@ def save(project_path: str, agent_id: str,
     try:
         now = datetime.now().isoformat()
         conn.execute(
-            "INSERT INTO memories (category, keywords, content, created_at, source_ref) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (category, keywords, content, now, source_ref)
+            "INSERT INTO memories (category, keywords, content, created_at, source_ref, node) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (category, keywords, content, now, source_ref, node)
         )
         conn.commit()
         mem_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -432,6 +465,7 @@ def save(project_path: str, agent_id: str,
 
     # 임베딩 인덱싱 (실패해도 저장은 성공으로 처리)
     _index_one(db_path, mem_id, content, keywords, category)
+    _tree_refresh(db_path, node)
     return mem_id
 
 
@@ -461,7 +495,7 @@ def _search_like(db_path: str, query: str, category: str = None,
         sql = f"""
             SELECT id, category, keywords,
                    SUBSTR(content, 1, 100) as preview,
-                   created_at, used_at
+                   created_at, used_at, COALESCE(node,'') AS node
             FROM memories
             WHERE {where}
             ORDER BY
@@ -537,7 +571,7 @@ def search(project_path: str, agent_id: str,
         ph = ",".join("?" * len(sorted_ids))
         rows = conn.execute(
             f"SELECT id, category, keywords, "
-            f"SUBSTR(content,1,100) as preview, created_at, used_at "
+            f"SUBSTR(content,1,100) as preview, created_at, used_at, COALESCE(node,'') AS node "
             f"FROM memories WHERE id IN ({ph})",
             sorted_ids
         ).fetchall()
@@ -578,8 +612,8 @@ def read(project_path: str, agent_id: str, memory_id: int,
 
 def update(project_path: str, agent_id: str, memory_id: int,
            content: str = None, keywords: str = None, category: str = None,
-           source_ref: str = None) -> bool:
-    """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성)"""
+           source_ref: str = None, node: str = None) -> bool:
+    """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성; node 바뀌면 두 문서 갱신)"""
     if content is not None:
         _reject_body_noun(content)
     db_path = _get_db_path(project_path, agent_id)
@@ -587,7 +621,13 @@ def update(project_path: str, agent_id: str, memory_id: int,
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
+        _old = conn.execute("SELECT COALESCE(node,'') AS node FROM memories WHERE id = ?", (memory_id,)).fetchone()
+        old_node = _old["node"] if _old else ""
         sets, params = [], []
+        if node is not None:
+            import memory_tree
+            node = memory_tree.norm_node(node)
+            sets.append("node = ?"); params.append(node)
         if content is not None:
             sets.append("content = ?"); params.append(mask_secrets(content))
         if keywords is not None:
@@ -623,6 +663,7 @@ def update(project_path: str, agent_id: str, memory_id: int,
 
     if row:
         _index_one(db_path, memory_id, row["content"], row["keywords"], row["category"])
+    _tree_refresh(db_path, old_node, node if node is not None else old_node)
     return True
 
 
@@ -631,6 +672,7 @@ def delete(project_path: str, agent_id: str, memory_id: int) -> bool:
     db_path = _get_db_path(project_path, agent_id)
     conn = sqlite3.connect(db_path, timeout=10)
     try:
+        _r = conn.execute("SELECT COALESCE(node,'') FROM memories WHERE id = ?", (memory_id,)).fetchone()
         cur = conn.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
         conn.commit()
         ok = cur.rowcount > 0
@@ -639,6 +681,7 @@ def delete(project_path: str, agent_id: str, memory_id: int) -> bool:
 
     if ok:
         _delete_vec(db_path, memory_id)
+        _tree_refresh(db_path, _r[0] if _r else "")
     return ok
 
 
@@ -749,7 +792,7 @@ def list_all(db_path: str) -> List[Dict]:
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
-            "SELECT id, category, keywords, content, created_at, used_at "
+            "SELECT id, category, keywords, content, created_at, used_at, COALESCE(node,'') AS node "
             "FROM memories ORDER BY id"
         ).fetchall()
         return [dict(r) for r in rows]
@@ -808,6 +851,8 @@ def prune_lru(db_path: str, cap: int = DEFAULT_MEMORY_CAP,
         conn.close()
     for vid in victims:
         _delete_vec(db_path, vid)
+    if victims:
+        _tree_refresh_all(db_path)
     return len(victims)
 
 
@@ -916,6 +961,7 @@ def apply_merge(db_path: str, keep_id: int, content: str,
     _index_one(db_path, keep_id, content, keywords, category)
     for did in drop_ids:
         _delete_vec(db_path, did)
+    _tree_refresh_all(db_path)
     return True
 
 

@@ -34,10 +34,38 @@ def _op_delete(tool_input: dict, context) -> str:
     return _memory_delete(memory_db, tool_input, context.project_path, context.agent_id)
 
 
+def _op_recall(tool_input: dict, context) -> str:
+    """한 가지(node)를 연다 — 문서 전문 + 그 가지의 기억 + 하위 가지. node 없음 = 지도(목차) 전체."""
+    import memory_db, memory_tree
+    db_path = memory_db._get_db_path(context.project_path, context.agent_id)
+    node = memory_tree.norm_node(tool_input.get("node") or "")
+    if not node and not tool_input.get("node"):
+        memory_tree.sync_all(db_path)
+        return json.dumps({"success": True, "node": "", "map": memory_tree.map_text(db_path),
+                           "nodes": memory_tree.map_lines(db_path),
+                           "items": memory_tree.rows_of(db_path, ""),
+                           "message": "지도(목차). 가지를 열려면 node 를 지정하라."}, ensure_ascii=False, indent=2)
+    out = memory_tree.recall(db_path, node)
+    return json.dumps(out, ensure_ascii=False, indent=2)
+
+
+def _op_move(tool_input: dict, context) -> str:
+    """기억 하나를 다른 가지로 옮긴다(memory_id + node)."""
+    import memory_db, memory_tree
+    memory_id = tool_input.get("memory_id")
+    if memory_id is None:
+        return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
+    if "node" not in tool_input:
+        return json.dumps({"success": False, "error": "node가 필요합니다(빈 문자열 = 뿌리)."}, ensure_ascii=False)
+    db_path = memory_db._get_db_path(context.project_path, context.agent_id)
+    return json.dumps(memory_tree.move(db_path, int(memory_id), tool_input.get("node") or ""), ensure_ascii=False)
+
+
 # 2026-05-28 dispatcher 표준화 → 2026-08-05 진짜 디스패처로 전환 (music-player 동형).
 # --check 가 이 dict 키로 src.ops.values 와 정확 비교 — 키 집합 변경 금지.
 _OP_DISPATCHERS = {
-    "memory_op": {"save": _op_save, "search": _op_search, "read": _op_read, "delete": _op_delete},
+    "memory_op": {"save": _op_save, "search": _op_search, "read": _op_read, "delete": _op_delete,
+                  "recall": _op_recall, "move": _op_move},
 }
 # memory_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
@@ -53,7 +81,7 @@ def execute(tool_input: dict, context) -> str:
             op = (tool_input.get("op") or "").strip()
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
-                return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|search|read|delete)"}, ensure_ascii=False)
+                return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|search|read|delete|recall|move)"}, ensure_ascii=False)
             return fn(tool_input, context)
 
         return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
@@ -73,18 +101,23 @@ def _memory_save(db, tool_input, project_path, agent_id):
     #   정규화 자체는 저장소의 계약(normalize_category 한 벌)이고, 여기서는 그 사실을 신고한다.
     _given = str(tool_input.get("category") or "").strip()
     _used = db.normalize_category(_given)
+    _node = str(tool_input.get("node") or "").strip()
     memory_id = db.save(
         project_path=project_path,
         agent_id=agent_id,
         content=content,
         keywords=tool_input.get("keywords", ""),
         category=_used,
+        node=_node,
     )
 
     out = {
         "memory_id": memory_id,
-        "message": f"메모리 저장 완료 (ID: {memory_id})",
+        "node": _node,
+        "message": f"메모리 저장 완료 (ID: {memory_id}, 가지: {_node or '뿌리'})",
     }
+    if not _node:
+        out["hint"] = "node 를 비우면 뿌리(미배치)에 놓인다 — 지도(memory_map)의 가지 이름을 붙이면 그 문서에 실린다."
     if _given and _used != _given:
         _valid = sorted(db.VALID_CATEGORIES)
         out["category_normalized"] = {"given": _given, "used": _used, "valid": _valid}
@@ -122,6 +155,11 @@ def _memory_search(db, tool_input, project_path, agent_id):
         category=_cat,
         limit=limit
     )
+    # node 필터(옵션): 그 가지와 그 아래만
+    _node = str(tool_input.get("node") or "").strip().strip("/")
+    if _node:
+        deep_results = [r for r in deep_results
+                        if (r.get("node") or "") == _node or (r.get("node") or "").startswith(_node + "/")]
     for r in deep_results:
         r["source"] = "deep_memory"
     results.extend(deep_results)

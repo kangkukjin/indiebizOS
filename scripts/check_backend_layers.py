@@ -48,7 +48,7 @@ LAYERS = {
     "data": {
         "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
-        "forage_memory", "forage_doc", "guide_registry", "health_sync", "ibl_registry", "ibl_usage_db",
+        "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "ibl_registry", "ibl_usage_db",
         "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",

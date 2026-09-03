@@ -87,6 +87,7 @@
     "datastore/forage_memory",
     "datastore/guide_registry",
     "datastore/health_sync",
+    "datastore/hippo_tree",
     "datastore/ibl_registry",
     "datastore/ibl_usage_db",
     "datastore/install_approvals",
@@ -270,8 +271,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 261,
-    "engine": 241,
+    "total": 262,
+    "engine": 242,
     "blocklist": 20
   }
 }

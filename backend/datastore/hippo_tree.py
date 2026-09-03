@@ -1,0 +1,510 @@
+"""
+hippo_tree.py — 실행기억(해마 용례)의 **주제 가지 트리 문서** + 지도(목차)
+
+2026-09-03 사용자 판정: "같은 방식으로 실행기억도 — 주제별 폴더로 만들어 서치할 수 있지 않을까" → 추천대로 착수.
+
+원리(심층 기억 memory_tree 와 같은 배치, 다른 점 하나)
+- 용례(의도 → IBL 문장) 평면 표 위에 **주제 가지**(`topic` 컬럼, `보고서/부동산` 꼴)를 얹는다.
+  가지는 가이드와 맞물린다(`guide:` 줄) — 가이드는 주제의 산문, 가지 문서는 그 주제에서 실제로
+  성공한 문장들. 결정화 사다리(용례 → 워크플로 → 가이드)가 한 자리에 놓인다.
+- 가지마다 문서 하나: `data/hippocampus_tree/<가지>/memory.md`(표식 + `> 한 줄 요약` + `guide:` +
+  `## 용례` 기계 절 + 갱신 기록). 문서가 정본, DB 는 색인 — 사람이 줄을 고치면 색인이 따라온다.
+- **지도(목차)는 항상 올린다**(`<execution_map>`), 가지의 내용은 AI 가 `[self:memory]{op:"recall",
+  node, store:"실행"}` 로 연다.
+- ★다른 점: 매 턴의 유사도 자동 주입(해마 Top-5·반사 0.85)은 **그대로 둔다** — "이 말을 IBL 로 어떻게
+  쓰나"는 사용자 문장 자체가 단서라 벡터가 맞는 도구. 트리는 대체가 아니라 축 하나를 얹는 것.
+- 어디에 넣을지는 AI 가 정한다: 증류기가 지도를 보고 topic 을 적는다(코드 분류기 없음). 미배치는
+  `file_unfiled` 가 모델에게 배치시킨다.
+"""
+import os
+import re
+import sqlite3
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+DOC_NAME = "memory.md"
+SECTION = "## 용례"
+LEDGER = "## 갱신 기록"
+MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
+GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")
+LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄
+NEW_LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*(?:‹[^›]*›)?\s*$')   # 사람이 새로 적은 줄(#id 없음)
+SECTION_NOTE = ("<!-- 기계가 읽는 절: 한 줄 = 용례 하나 `- 의도 → `IBL 문장` ‹#id · ✓성공/✗실패 · 날짜›`. "
+                "줄을 고치면 색인이 따라오고, 지우면 색인에서도 지워지며, #id 없이 `- 의도 → `문장`` 을 적으면 "
+                "새 용례가 된다(구문 관문 통과 시). 요약·guide·산문은 자유롭게 쓴다. -->")
+GIST_PLACEHOLDER = "(한 줄 요약 — 이 주제에서 IBL 로 무엇을 하나. AI 가 채운다; 지도에 실린다)"
+MAX_DEPTH = 3
+
+
+def _default_db_path() -> str:
+    try:
+        import ibl_usage_db as U
+        for name in ("DB_PATH", "_DB_PATH"):
+            if hasattr(U, name):
+                return str(getattr(U, name))
+        for name in ("_db_path", "_resolve_db_path", "resolve_db_path", "db_path"):
+            fn = getattr(U, name, None)
+            if callable(fn):
+                return str(fn())
+    except Exception:
+        pass
+    from runtime_utils import get_base_path
+    return str(get_base_path() / "data" / "ibl_usage.db")
+
+
+def _base_dir() -> str:
+    from runtime_utils import get_base_path
+    return str(get_base_path())
+
+
+DOC_DIR: Optional[str] = None   # 시험이 바꾼다; None 이면 <base>/data/hippocampus_tree
+
+
+def doc_dir() -> str:
+    return DOC_DIR or os.path.join(_base_dir(), "data", "hippocampus_tree")
+
+
+# ─────────────────────────── 위치 ───────────────────────────
+
+def norm_topic(topic: Optional[str]) -> str:
+    parts = []
+    for seg in str(topic or "").replace("\\", "/").split("/"):
+        seg = re.sub(r"\s+", " ", seg).strip().strip(".")
+        if seg:
+            parts.append(seg)
+    return "/".join(parts[:MAX_DEPTH])
+
+
+def topic_dir(topic: str) -> str:
+    t = norm_topic(topic)
+    return os.path.join(doc_dir(), *t.split("/")) if t else doc_dir()
+
+
+def doc_path(topic: str) -> str:
+    return os.path.join(topic_dir(topic), DOC_NAME)
+
+
+def parent_of(topic: str) -> Optional[str]:
+    t = norm_topic(topic)
+    if not t:
+        return None
+    return t.rsplit("/", 1)[0] if "/" in t else ""
+
+
+# ─────────────────────────── 색인(DB) ───────────────────────────
+
+def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
+    conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def ensure_column(db_path: Optional[str] = None) -> None:
+    conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
+    try:
+        try:
+            conn.execute("SELECT topic FROM ibl_examples LIMIT 1")
+        except sqlite3.OperationalError:
+            try:
+                conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
+    finally:
+        conn.close()
+
+
+def rows_of(topic: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    ensure_column(db_path)
+    conn = _conn(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, "
+            "COALESCE(topic,'') AS topic FROM ibl_examples WHERE COALESCE(topic,'') = ? ORDER BY created_at, id",
+            (norm_topic(topic),)).fetchall()
+        return [dict(r) for r in rows]
+    except sqlite3.OperationalError:
+        return []
+    finally:
+        conn.close()
+
+
+def topic_counts(db_path: Optional[str] = None) -> Dict[str, int]:
+    ensure_column(db_path)
+    conn = _conn(db_path)
+    try:
+        rows = conn.execute("SELECT COALESCE(topic,'') AS t, COUNT(*) AS c FROM ibl_examples GROUP BY t").fetchall()
+        return {norm_topic(r["t"]): r["c"] for r in rows}
+    except sqlite3.OperationalError:
+        return {}
+    finally:
+        conn.close()
+
+
+def all_topics(db_path: Optional[str] = None) -> List[str]:
+    topics = set(topic_counts(db_path).keys())
+    root = doc_dir()
+    if os.path.isdir(root):
+        for cur, _d, files in os.walk(root):
+            if DOC_NAME in files:
+                rel = os.path.relpath(cur, root)
+                topics.add("" if rel == "." else norm_topic(rel.replace(os.sep, "/")))
+    for t in list(topics):
+        p = parent_of(t)
+        while p is not None:
+            topics.add(p)
+            p = parent_of(p)
+    topics.add("")
+    return sorted(topics, key=lambda s: (s.count("/"), s))
+
+
+def children_of(topic: str, db_path: Optional[str] = None) -> List[str]:
+    t = norm_topic(topic)
+    return [m for m in all_topics(db_path) if m and parent_of(m) == t]
+
+
+def unfiled(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    return rows_of("", db_path)
+
+
+# ─────────────────────────── 문서 렌더 ───────────────────────────
+
+def _one_line(text: str) -> str:
+    return re.sub(r"\s*\n+\s*", " ", (text or "").strip())
+
+
+def render_line(r: Dict[str, Any]) -> str:
+    s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
+    meta = [f"#{r['id']}"]
+    if s or f:
+        meta.append(f"✓{s}/✗{f}")
+    meta.append((r.get("created_at") or "")[:10])
+    code = _one_line(r.get("ibl_code")).replace("`", "'")
+    return f"- {_one_line(r.get('intent'))} → `{code}` ‹{' · '.join(m for m in meta if m)}›"
+
+
+def render_section(rows: List[Dict[str, Any]]) -> str:
+    body = [SECTION, SECTION_NOTE]
+    body.extend(render_line(r) for r in rows)
+    return "\n".join(body) + "\n"
+
+
+def _split_section(text: str) -> Tuple[str, str, str]:
+    m = re.search(r"(?m)^## 용례\s*$", text)
+    if m:
+        nxt = re.search(r"(?m)^## ", text[m.end():])
+        end = m.end() + nxt.start() if nxt else len(text)
+        return text[:m.start()], text[m.start():end], text[end:]
+    lm = re.search(r"(?m)^## 갱신 기록\s*$", text)
+    if lm:
+        return text[:lm.start()], "", text[lm.start():]
+    return text, "", ""
+
+
+def _replace_section(text: str, section: str) -> str:
+    head, _old, tail = _split_section(text)
+    if head and not head.endswith("\n\n"):
+        head = head.rstrip("\n") + "\n\n"
+    if tail and not tail.startswith("\n"):
+        section = section + "\n"
+    return head + section + tail
+
+
+def _marker(topic: str) -> str:
+    return f'<!-- hippo-topic topic="{norm_topic(topic)}" -->'
+
+
+def gist_of(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read(3000)
+    except OSError:
+        return ""
+    m = re.search(r"(?m)^>\s*(.+?)\s*$", text)
+    g = m.group(1).strip() if m else ""
+    return "" if g.startswith("(한 줄 요약") else g
+
+
+def guide_of(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8") as f:
+            m = GUIDE_RE.search(f.read(3000))
+        return (m.group(1).strip() if m else "").strip("`")
+    except OSError:
+        return ""
+
+
+def _stamp_path(topic: str) -> str:
+    return os.path.join(topic_dir(topic), ".rendered")
+
+
+def _stamp(topic: str, path: str) -> None:
+    try:
+        with open(_stamp_path(topic), "w") as f:
+            f.write(str(os.path.getmtime(path)))
+    except OSError:
+        pass
+
+
+def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") -> str:
+    """DB → 문서(`## 용례` 절만 다시 그린다; 요약·guide·산문·갱신 기록 보존). 없으면 껍데기 생성."""
+    topic = norm_topic(topic)
+    path = doc_path(topic)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.exists(path):
+        text = open(path, encoding="utf-8").read()
+        if not MARKER_RE.search(text[:1500]):
+            text = _marker(topic) + "\n" + text
+    else:
+        title = topic or "(뿌리 — 아직 가지가 없는 용례)"
+        text = (f"{_marker(topic)}\n# 실행기억 — {title}\n> {GIST_PLACEHOLDER}\n"
+                + (f"guide: {guide}\n" if guide else "")
+                + f"\n{LEDGER}\n- {datetime.now().strftime('%Y-%m-%d')} 가지 생성\n")
+    text = _replace_section(text, render_section(rows_of(topic, db_path)))
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+    _stamp(topic, path)
+    return path
+
+
+def refresh_all(db_path: Optional[str] = None) -> List[str]:
+    return [refresh_topic(t, db_path) for t in all_topics(db_path)]
+
+
+# ─────────────────────────── 문서 → 색인 (사람이 고친 줄) ───────────────────────────
+
+def parse_section(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    _h, sec, _t = _split_section(text)
+    known, fresh = [], []
+    for line in sec.splitlines():
+        if not line.startswith("- "):
+            continue
+        m = LINE_RE.match(line)
+        if m:
+            known.append({"intent": m.group(1).strip(), "ibl_code": m.group(2).strip(), "id": int(m.group(3))})
+            continue
+        m = NEW_LINE_RE.match(line)
+        if m and m.group(1).strip() and m.group(2).strip():
+            fresh.append({"intent": m.group(1).strip(), "ibl_code": m.group(2).strip()})
+    return known, fresh
+
+
+def _index(db_path: Optional[str], example_id: int, intent: str, code: str) -> None:
+    """실 DB 일 때만 임베딩 색인(시험 DB 는 벡터 없음)."""
+    if db_path and os.path.abspath(db_path) != os.path.abspath(_default_db_path()):
+        return
+    try:
+        from ibl_usage_db import IBLUsageDB
+        IBLUsageDB()._index_single(example_id, intent, code)
+    except Exception as e:
+        print(f"[hippo_tree] 색인 실패(무시): {e}")
+
+
+def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
+    """문서가 마지막 렌더보다 새로우면 절을 읽어 색인에 반영: 고침=UPDATE · 지움=DELETE · 새 줄=INSERT(구문 관문)."""
+    topic = norm_topic(topic)
+    path = doc_path(topic)
+    if not os.path.exists(path):
+        return {"synced": False, "reason": "no_doc"}
+    try:
+        mtime = os.path.getmtime(path)
+        stamp = float(open(_stamp_path(topic)).read() or 0)
+    except Exception:
+        mtime, stamp = 1.0, 0.0
+    if mtime <= stamp + 1e-6:
+        return {"synced": False, "reason": "fresh"}
+    text = open(path, encoding="utf-8").read()
+    known, fresh = parse_section(text)
+    existing = {r["id"]: r for r in rows_of(topic, db_path)}
+    updated = deleted = inserted = 0
+    rejected: List[str] = []
+    try:
+        from ibl_usage_db import _syntax_reason
+    except Exception:
+        _syntax_reason = lambda code: None   # noqa: E731
+    conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
+    try:
+        now = datetime.now().isoformat()
+        seen = set()
+        for k in known:
+            r = existing.get(k["id"])
+            if r is None:
+                fresh.append({"intent": k["intent"], "ibl_code": k["ibl_code"]})
+                continue
+            seen.add(k["id"])
+            if k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"]:
+                why = _syntax_reason(k["ibl_code"])
+                if why:
+                    rejected.append(f"#{k['id']}: {why}")
+                    continue
+                conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, updated_at=? WHERE id=?",
+                             (k["intent"], k["ibl_code"], now, k["id"]))
+                updated += 1
+                _index(db_path, k["id"], k["intent"], k["ibl_code"])
+        gone = [mid for mid in existing if mid not in seen]
+        if gone:
+            ph = ",".join("?" * len(gone))
+            conn.execute(f"DELETE FROM ibl_examples WHERE id IN ({ph})", gone)
+            deleted += len(gone)
+            try:
+                vconn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
+                import sqlite_vec
+                vconn.enable_load_extension(True); sqlite_vec.load(vconn); vconn.enable_load_extension(False)
+                vconn.execute(f"DELETE FROM ibl_examples_vec WHERE rowid IN ({ph})", gone); vconn.commit(); vconn.close()
+            except Exception:
+                pass
+        for f in fresh:
+            why = _syntax_reason(f["ibl_code"])
+            if why:
+                rejected.append(f"{f['ibl_code'][:40]}: {why}")
+                continue
+            nodes = ",".join(sorted(set(re.findall(r"\[([a-z_-]+):", f["ibl_code"]))))
+            cur = conn.execute(
+                "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (f["intent"], f["ibl_code"], nodes, "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single",
+                 1, "manual", "doc", now, now, topic))
+            inserted += 1
+            _index(db_path, cur.lastrowid, f["intent"], f["ibl_code"])
+        conn.commit()
+    finally:
+        conn.close()
+    refresh_topic(topic, db_path)
+    out = {"synced": True, "updated": updated, "deleted": deleted, "inserted": inserted}
+    if rejected:
+        out["rejected"] = rejected
+    return out
+
+
+def sync_all(db_path: Optional[str] = None) -> Dict[str, int]:
+    n = 0
+    for t in all_topics(db_path):
+        if sync_topic(t, db_path).get("synced"):
+            n += 1
+    return {"synced_docs": n}
+
+
+# ─────────────────────────── 지도 · 회상 · 이동 ───────────────────────────
+
+def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    counts = topic_counts(db_path)
+    out = []
+    for t in all_topics(db_path):
+        p = doc_path(t)
+        ex = os.path.exists(p)
+        out.append({"topic": t, "count": counts.get(t, 0), "gist": gist_of(p) if ex else "",
+                    "guide": guide_of(p) if ex else "", "doc": p if ex else None})
+    return out
+
+
+def map_text(db_path: Optional[str] = None) -> str:
+    """항상 올리는 목차 — `- 주제 (n) — 요약 · guide: x.md`. 뿌리(미배치)는 건수만."""
+    lines = []
+    for row in map_lines(db_path):
+        if row["topic"] == "":
+            if row["count"]:
+                lines.append(f"- (뿌리 — 아직 가지가 없는 용례) ({row['count']})")
+            continue
+        s = f"- {row['topic']} ({row['count']})"
+        if row["gist"]:
+            s += f" — {row['gist']}"
+        if row["guide"]:
+            s += f" · guide: {row['guide']}"
+        lines.append(s)
+    return "\n".join(lines)
+
+
+def recall(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
+    topic = norm_topic(topic)
+    sync_topic(topic, db_path)
+    path = doc_path(topic)
+    if not os.path.exists(path) and topic not in all_topics(db_path):
+        return {"success": False, "topic": topic,
+                "error": f"없는 가지: '{topic}' — 지도(execution_map)의 이름을 쓰거나 증류·move 로 가지를 만든다.",
+                "topics": [m["topic"] for m in map_lines(db_path) if m["topic"]]}
+    if not os.path.exists(path):
+        refresh_topic(topic, db_path)
+    rows = rows_of(topic, db_path)
+    counts = topic_counts(db_path)
+    return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path),
+            "text": open(path, encoding="utf-8").read(),
+            "items": rows, "count": len(rows),
+            "children": [{"topic": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(c))} for c in children_of(topic, db_path)],
+            "parent": parent_of(topic)}
+
+
+def move(example_id: int, topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
+    ensure_column(db_path)
+    topic = norm_topic(topic)
+    conn = _conn(db_path)
+    try:
+        row = conn.execute("SELECT COALESCE(topic,'') AS topic FROM ibl_examples WHERE id=?", (example_id,)).fetchone()
+        if not row:
+            return {"success": False, "error": f"용례 {example_id} 없음"}
+        old = norm_topic(row["topic"])
+        conn.execute("UPDATE ibl_examples SET topic=? WHERE id=?", (topic, example_id))
+        conn.commit()
+    finally:
+        conn.close()
+    refresh_topic(old, db_path)
+    refresh_topic(topic, db_path)
+    return {"success": True, "id": example_id, "from": old, "to": topic}
+
+
+# ─────────────────────────── 미배치 배치(AI 몫) ───────────────────────────
+
+FILE_PROMPT = """아래는 실행기억(IBL 용례)의 주제 지도와, 아직 주제가 없는 용례들이다.
+각 용례를 **가장 알맞은 주제 가지**에 넣어라. 규칙:
+- 기존 가지를 우선한다. 정말 새 주제면 새 경로를 만들어도 된다(`상위/하위` 꼴, 최대 2단, 한국어 명사).
+- 가지는 **무슨 일을 하는 문장인가**(작업 주제 — 부동산·보고서·일정… / 또는 어휘 부류 — 표 다루기·파일·웹 검색…)로 나눈다.
+- 한두 건짜리 가지를 만들지 마라 — 여럿이 모일 주제만 새 가지, 아니면 가장 가까운 기존 가지.
+- 판단 불가면 빈 문자열.
+
+[주제 지도]
+{map}
+
+[배치할 용례]
+{rows}
+
+JSON 객체로만 응답: {{"<id>": "<가지 경로>", ...}}"""
+
+
+def file_unfiled(ai_call: Callable[[str, str], Optional[str]], batch: int = 30,
+                 db_path: Optional[str] = None, extra_map: str = "") -> Dict[str, Any]:
+    import json
+    rows = unfiled(db_path)
+    filed, skipped, new_topics = 0, 0, set()
+    known = set(all_topics(db_path))
+    for i in range(0, len(rows), batch):
+        chunk = rows[i:i + batch]
+        m = map_text(db_path)
+        if extra_map:
+            m = (m + "\n" + extra_map).strip()
+        listing = "\n".join(f"{r['id']}: {_one_line(r['intent'])[:120]} → {_one_line(r['ibl_code'])[:160]}" for r in chunk)
+        resp = ai_call(FILE_PROMPT.format(map=m or "(아직 가지 없음)", rows=listing), "용례 배치기. JSON 객체로만 응답.")
+        try:
+            from runtime_utils import parse_first_json
+            verdict = parse_first_json(resp or "") or {}
+        except Exception:
+            try:
+                verdict = json.loads(resp or "{}")
+            except Exception:
+                verdict = {}
+        if not isinstance(verdict, dict):
+            verdict = {}
+        conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
+        try:
+            for r in chunk:
+                t = norm_topic(verdict.get(str(r["id"])) or verdict.get(r["id"]) or "")
+                if not t:
+                    skipped += 1
+                    continue
+                conn.execute("UPDATE ibl_examples SET topic=? WHERE id=?", (t, r["id"]))
+                filed += 1
+                if t not in known:
+                    new_topics.add(t); known.add(t)
+            conn.commit()
+        finally:
+            conn.close()
+    refresh_all(db_path)
+    return {"total": len(rows), "filed": filed, "skipped": skipped, "new_topics": sorted(new_topics)}

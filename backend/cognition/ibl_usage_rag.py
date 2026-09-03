@@ -190,6 +190,8 @@ class IBLUsageRAG:
                 attrs += f' avg_ms="{int(ex.avg_ms)}"'
             if getattr(ex, "avg_tokens", -1.0) >= 0:
                 attrs += f' avg_tokens="{int(ex.avg_tokens)}"'
+            if getattr(ex, "topic", ""):
+                attrs += f' topic="{_xml_attr(ex.topic)}"'
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
@@ -753,6 +755,11 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                            "다듬어라 — 재시도 비용을 물지 않는 지시가 좋은 용례다. "
                            "criteria 파라미터 자체는 보존하라(품질 계약).")
 
+        try:
+            import hippo_tree
+            _topic_map = hippo_tree.map_text()
+        except Exception:
+            _topic_map = ""
         prompt = f"""다음은 사용자 명령과 그에 대해 실행된 IBL 코드 목록이다.
 이 경험에서 핵심 패턴을 추출하여 용례로 만들어라.
 
@@ -781,9 +788,13 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
    덮고 예상 못 한 모양을 조용히 통과시킨다. 시험은 언제나 위 한 문장이다.
    통과 못 하면 스킵이 옳다 — 없는 용례보다 *틀린* 용례가 해롭다(단발 오시드가 반사로
    굳으면 다음번 같은 요청을 그 한 줄로 끝내 버린다).
-5. 결과는 반드시 JSON으로만 응답:
+5. **topic(주제 가지)** 을 적어라 — 아래 실행기억 지도에서 이 용례가 속할 가지를 고른다. 기존 가지 우선,
+   정말 새 주제면 새 경로(`상위/하위`, 최대 2단, 한국어 명사). 한두 건짜리 가지는 만들지 마라.
+[실행기억 지도]
+{_topic_map or "(아직 가지 없음)"}
+6. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "[node:action]{{params}} 형태의 IBL 코드 (재사용 패턴 없으면 빈 문자열)"}}"""
+{{"intent": "일반화된 사용자 의도", "code": "[node:action]{{params}} 형태의 IBL 코드 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로"}}"""
 
         # 반성 에이전트 프롬프트 로드
         from pathlib import Path
@@ -806,6 +817,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             return False
         intent = distilled.get("intent", "").strip()
         code = distilled.get("code", "").strip()
+        _topic = str(distilled.get("topic", "") or "").strip()
 
         if not intent or not code:
             # code 빈 문자열 = 반성기가 "재사용 IBL 패턴 없음"으로 판단한 의도적 스킵
@@ -882,6 +894,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             tags="auto",
             avg_ms=float(_birth_ms) if _birth_ms else -1.0,
             avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
+            topic=_topic,
         )
 
         # 원장의 판정을 존중한다 (2026-09-02): add_example 은 입구 게이트에 걸리면 0 을

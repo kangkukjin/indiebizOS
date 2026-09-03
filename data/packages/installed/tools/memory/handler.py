@@ -34,9 +34,25 @@ def _op_delete(tool_input: dict, context) -> str:
     return _memory_delete(memory_db, tool_input, context.project_path, context.agent_id)
 
 
+def _store(tool_input: dict) -> str:
+    return "실행" if str(tool_input.get("store") or "").strip() == "실행" else "심층"
+
+
 def _op_recall(tool_input: dict, context) -> str:
-    """한 가지(node)를 연다 — 문서 전문 + 그 가지의 기억 + 하위 가지. node 없음 = 지도(목차) 전체."""
+    """한 가지(node)를 연다 — 문서 전문 + 그 가지의 기억 + 하위 가지. node 없음 = 지도(목차) 전체.
+    store:"실행" 이면 실행기억(해마 용례) 주제 트리(backend hippo_tree)를 연다."""
     import memory_db, memory_tree
+    if _store(tool_input) == "실행":
+        import hippo_tree
+        node = hippo_tree.norm_topic(tool_input.get("node") or "")
+        if not node and not tool_input.get("node"):
+            hippo_tree.sync_all()
+            return json.dumps({"success": True, "store": "실행", "node": "", "map": hippo_tree.map_text(),
+                               "nodes": hippo_tree.map_lines(), "items": hippo_tree.rows_of(""),
+                               "message": "실행기억 지도(목차). 가지를 열려면 node 를 지정하라."}, ensure_ascii=False, indent=2)
+        out = hippo_tree.recall(node)
+        out["store"] = "실행"
+        return json.dumps(out, ensure_ascii=False, indent=2)
     db_path = memory_db._get_db_path(context.project_path, context.agent_id)
     node = memory_tree.norm_node(tool_input.get("node") or "")
     if not node and not tool_input.get("node"):
@@ -57,6 +73,9 @@ def _op_move(tool_input: dict, context) -> str:
         return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
     if "node" not in tool_input:
         return json.dumps({"success": False, "error": "node가 필요합니다(빈 문자열 = 뿌리)."}, ensure_ascii=False)
+    if _store(tool_input) == "실행":
+        import hippo_tree
+        return json.dumps(hippo_tree.move(int(memory_id), tool_input.get("node") or ""), ensure_ascii=False)
     db_path = memory_db._get_db_path(context.project_path, context.agent_id)
     return json.dumps(memory_tree.move(db_path, int(memory_id), tool_input.get("node") or ""), ensure_ascii=False)
 

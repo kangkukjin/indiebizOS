@@ -50,6 +50,14 @@
           "node": {
             "type": "string",
             "description": "주제 가지 경로(\"가족/어머니\" 꼴). save 권장(비우면 뿌리) · recall 대상(생략=지도 전체) · move 목적지 · search 필터"
+          },
+          "store": {
+            "type": "string",
+            "enum": [
+              "심층",
+              "실행"
+            ],
+            "description": "recall/move 의 저장소 — 심층(기본, 사용자·세계 사실) | 실행(해마 IBL 용례의 주제 트리, <execution_map>)"
           }
         },
         "required": [

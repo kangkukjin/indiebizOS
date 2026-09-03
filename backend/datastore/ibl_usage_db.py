@@ -45,6 +45,32 @@ DB_PATH = _resolve_db_path()
 # 데이터 클래스
 # =============================================================================
 
+def _norm_topic(topic) -> str:
+    try:
+        import hippo_tree
+        return hippo_tree.norm_topic(topic)
+    except Exception:
+        return str(topic or "").strip().strip("/")
+
+
+def _tree_refresh(*topics) -> None:
+    """행이 바뀐 주제 가지의 문서를 다시 그린다(hippo_tree 문서 = 정본). 실패해도 원장은 산다."""
+    try:
+        import hippo_tree
+        for t in {hippo_tree.norm_topic(x) for x in topics}:
+            hippo_tree.refresh_topic(t)
+    except Exception as e:
+        logger.warning(f"[hippo_tree] 문서 갱신 실패(무시): {e}")
+
+
+def _tree_refresh_all() -> None:
+    try:
+        import hippo_tree
+        hippo_tree.refresh_all()
+    except Exception as e:
+        logger.warning(f"[hippo_tree] 전체 갱신 실패(무시): {e}")
+
+
 @dataclass
 class UsageExample:
     """용례 검색 결과"""
@@ -59,6 +85,7 @@ class UsageExample:
     success_rate: float
     avg_ms: float = -1.0      # 성공 실행시간 EWMA(-1=미측정) — 시간 선택압의 회상 표면
     avg_tokens: float = -1.0  # 성공 턴 토큰 EWMA(-1=미측정) — 토큰 선택압의 회상 표면
+    topic: str = ""           # 주제 가지(hippo_tree) — 빈 값=뿌리
 
 
 # =============================================================================
@@ -197,6 +224,8 @@ class IBLUsageDB:
         for _col in ("avg_ms", "avg_tokens"):
             if _col not in cols:
                 conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {_col} REAL DEFAULT -1.0")
+        if "topic" not in cols:   # 주제 가지 트리(hippo_tree, 2026-09-03) — 빈 값=뿌리(미배치)
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -465,7 +494,7 @@ class IBLUsageDB:
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
-                    avg_tokens: float = -1.0) -> int:
+                    avg_tokens: float = -1.0, topic: str = "") -> int:
         """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
@@ -482,17 +511,19 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (intent, ibl_code, nodes, category, difficulty, source, tags,
                  float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
-                 float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now)
+                 float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
+                 _norm_topic(topic))
             )
             example_id = cursor.lastrowid
             conn.commit()
 
         # 벡터 인덱스에 추가
         self._index_single(example_id, intent, ibl_code)
+        _tree_refresh(topic)
         return example_id
 
     def add_examples_batch(self, examples: List[Dict]) -> int:
@@ -533,13 +564,13 @@ class IBLUsageDB:
             for ex in examples:
                 cursor = conn.execute(
                     """INSERT INTO ibl_examples
-                       (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                       (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         ex['intent'], ex['ibl_code'],
                         ex.get('nodes', ''), ex.get('category', 'single'),
                         ex.get('difficulty', 1), ex.get('source', 'synthetic'),
-                        ex.get('tags', ''), now, now
+                        ex.get('tags', ''), now, now, _norm_topic(ex.get('topic', ''))
                     )
                 )
                 ids.append(cursor.lastrowid)
@@ -547,6 +578,7 @@ class IBLUsageDB:
 
         # 배치 임베딩
         self._index_batch(ids, examples)
+        _tree_refresh(*[ex.get('topic', '') for ex in examples])
         logger.info(f"[IBL Usage DB] 배치 추가 완료: {len(ids)}개")
         return len(ids)
 
@@ -697,6 +729,7 @@ class IBLUsageDB:
             finally:
                 vconn.close()
         self._search_cache.clear()
+        _tree_refresh_all()
 
     @staticmethod
     def _dedup_quality(r: Dict) -> tuple:
@@ -1130,7 +1163,8 @@ class IBLUsageDB:
     def search_hybrid(self, query: str, top_k: int = 5,
                       alpha: float = None,
                       allowed_nodes: set = None,
-                      category: str = None) -> List[UsageExample]:
+                      category: str = None,
+                      topic: str = None) -> List[UsageExample]:
         """메인 하이브리드 검색
 
         Args:
@@ -1152,7 +1186,7 @@ class IBLUsageDB:
 
         # 캐시 확인
         cache_key = hashlib.md5(
-            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}".encode()
+            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -1164,7 +1198,7 @@ class IBLUsageDB:
             self._set_cached(cache_key, results)
             return results
 
-        over_fetch = top_k * 3  # 필터링 후 충분한 결과를 위해 넉넉히
+        over_fetch = top_k * (10 if topic else 3)  # 필터링 후 충분한 결과를 위해 넉넉히(주제 필터는 더 넓게)
         use_semantic = self.is_semantic_available() and alpha > 0
 
         semantic_results = self.search_semantic(query, over_fetch) if use_semantic else []
@@ -1198,7 +1232,7 @@ class IBLUsageDB:
             placeholders = ','.join('?' * len(all_ids))
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
-                           source, success_count, fail_count, avg_ms, avg_tokens
+                           source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1220,6 +1254,12 @@ class IBLUsageDB:
             if category and meta['category'] != category:
                 continue
 
+            # 주제 가지 필터링(hippo_tree) — 그 가지와 그 아래
+            if topic:
+                _t = meta['topic'] or ""
+                if not (_t == topic or _t.startswith(topic + "/")):
+                    continue
+
             total = meta['success_count'] + meta['fail_count']
             # 시도 이력이 없으면 -1.0 sentinel (미검증). 있으면 0~1 성공률.
             # 0.0(전부 실패)과 미검증을 구분해야 연상이 '실패한 사례'를 표시할 수 있다.
@@ -1236,7 +1276,8 @@ class IBLUsageDB:
                 source=meta['source'],
                 success_rate=round(success_rate, 2) if total else -1.0,
                 avg_ms=round(float(meta['avg_ms']), 0) if (meta['avg_ms'] or -1) >= 0 else -1.0,
-                avg_tokens=round(float(meta['avg_tokens']), 0) if (meta['avg_tokens'] or -1) >= 0 else -1.0
+                avg_tokens=round(float(meta['avg_tokens']), 0) if (meta['avg_tokens'] or -1) >= 0 else -1.0,
+                topic=meta['topic'] or ''
             ))
 
             if len(results) >= top_k:

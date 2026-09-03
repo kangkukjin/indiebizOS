@@ -61,6 +61,11 @@ class CognitiveRecallMixin:
             if related:
                 result = (result + "\n" + related) if result else related
 
+            # 실행기억 지도(주제 가지 목차, hippo_tree) — 해마 Top-5 는 그대로 두고 축 하나를 얹는다(2026-09-03).
+            exec_map = self._execution_map_scent()
+            if exec_map:
+                result = (result + "\n" + exec_map) if result else exec_map
+
             # 포식 기억 자동 주입 폐지(2026-09-03 사용자 판정): 조사로 기억이 많아지자 "어느 기억이
             #   관련 있나"를 고르는 선택기가 AI 의 판단을 대신하게 됐다. 이제 AI 가 필요할 때
             #   [self:forage]{op:"recall", locus|query} 로 직접 본다(fragments/12_ibl_only 원칙 2,
@@ -110,6 +115,8 @@ class CognitiveRecallMixin:
                     parts.append("실행기억")
                 if "memory_map" in result:
                     parts.append("기억지도")
+                if "execution_map" in result:
+                    parts.append("실행지도")
                 if "forage_memory" in result:
                     parts.append("포식기억")
                 if "connected_limbs" in result:
@@ -204,6 +211,31 @@ class CognitiveRecallMixin:
         "document", "disk", "volume", "code", "codebase", "function",
         "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
     )
+
+    def _execution_map_scent(self) -> str:
+        """실행기억(해마 용례)의 **주제 지도** <execution_map> — 가지·용례 수·요약·가이드만.
+
+        2026-09-03 사용자 판정("실행기억도 주제별 폴더로"). 매 턴의 해마 유사도 주입(반사 포함)은 그대로 두고,
+        큰 작업(보고서·정기 작업)에서 그 주제의 성공한 문장들을 한꺼번에 볼 입구를 지도로 준다 —
+        [self:memory]{op:"recall", node, store:"실행"}. 문서가 고쳐졌으면 색인에 반영. 지도가 비면 0토큰.
+        """
+        try:
+            import hippo_tree
+            hippo_tree.sync_all()
+            text = hippo_tree.map_text()
+            if not text:
+                return ""
+            xml = (
+                '<execution_map note="실행기억(IBL 용례) 주제 지도 — 가지 (용례 수) — 요약 · guide. 내용은 실리지 않는다. '
+                '보고서·정기 작업처럼 큰 일이면 그 주제 가지를 [self:memory]{op:\"recall\", node:\"<가지>\", store:\"실행\"} 로 열어 '
+                '성공한 문장들을 보고 조립한다(가이드는 read_guide). 위 <execution_memory> 의 닮은 용례가 이미 충분하면 열 필요 없다.">\n'
+                + text + "\n</execution_map>"
+            )
+            print(f"[연상:실행지도] {text.count(chr(10)) + 1}가지")
+            return xml
+        except Exception as e:
+            print(f"[연상:실행지도] 실패 (무시): {e}")
+            return ""
 
     def _memory_map_scent(self) -> str:
         """심층 기억의 **지도(목차)** 를 <memory_map> 으로 돌려준다 — 가지 이름·건수·한 줄 요약만.

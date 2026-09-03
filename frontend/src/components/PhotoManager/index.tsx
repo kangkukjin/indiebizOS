@@ -196,10 +196,24 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
         setScanProgress(`${preview.total_files}개 파일 스캔 중... (예상 ${Math.ceil(preview.estimated_seconds)}초)`);
       }
 
-      const res = await fetch(`${url}/photo/scan?path=${encodeURIComponent(path)}`, {
-        method: 'POST'
-      });
-      const data = await res.json();
+      // 진행률 폴링 — 스캔은 백엔드 워커 스레드에서 돌고(이벤트 루프를 막지 않음), 2초마다 n/total 을 받아 보여준다.
+      // 없던 시절엔 POST 가 끝날 때까지 화면이 '준비 중' 에 멈춰 무반응으로 보였다(2026-09-03 사용자 신고).
+      const poll = setInterval(async () => {
+        try {
+          const pr = await fetch(`${url}/photo/scan/progress?path=${encodeURIComponent(path)}`);
+          const pj = await pr.json();
+          if (pj && pj.total) setScanProgress(`${pj.current.toLocaleString()} / ${pj.total.toLocaleString()} 파일 스캔 중…`);
+        } catch { /* 폴링 실패는 무시 — 본 요청이 결과를 준다 */ }
+      }, 2000);
+      let data: { success?: boolean; photo_count?: number; video_count?: number; error?: string };
+      try {
+        const res = await fetch(`${url}/photo/scan?path=${encodeURIComponent(path)}`, {
+          method: 'POST'
+        });
+        data = await res.json();
+      } finally {
+        clearInterval(poll);
+      }
 
       if (data.success) {
         setScanProgress(`완료! 사진 ${data.photo_count}개, 동영상 ${data.video_count}개`);

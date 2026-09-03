@@ -5,7 +5,10 @@ api_photo.py - Photo Manager API
 
 import os
 import sys
+import asyncio
 import hashlib
+import threading
+import time
 from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Query, HTTPException, Request
@@ -56,9 +59,31 @@ async def list_scans():
     return photo_db.list_scans()
 
 
+# 진행 중 스캔의 진행률 — 경로별 {current,total,started,done}. 창이 2초마다 /scan/progress 로 읽는다.
+# ★스캔은 워커 스레드(to_thread)에서 돈다: 옛날엔 async 핸들러 안에서 동기로 돌아 **백엔드 이벤트 루프 전체를 막았다**
+#   — /health 까지 무응답이라 keeper 가 콜드 스타트 유예 끝에 백엔드를 죽여 스캔이 날아갈 판이었고, 창은 무반응으로 보였다
+#   (2026-09-03 사용자 신고, 외장 폴더 1만4천 파일 스캔 중 실측).
+_SCAN_PROGRESS: dict = {}
+_SCAN_LOCK = threading.Lock()
+
+
+def _progress_set(path: str, current: int, total: int, done: bool = False):
+    with _SCAN_LOCK:
+        _SCAN_PROGRESS[path] = {"current": current, "total": total, "done": done, "at": time.time()}
+
+
+@router.get("/scan/progress")
+async def scan_progress(path: str = Query(...)):
+    """진행 중(또는 방금 끝난) 스캔의 진행률."""
+    path = os.path.abspath(os.path.expanduser(path))
+    with _SCAN_LOCK:
+        st = _SCAN_PROGRESS.get(path)
+    return {"success": True, "path": path, **(st or {"current": 0, "total": 0, "done": False})}
+
+
 @router.post("/scan")
 async def scan_directory(path: str = Query(...)):
-    """새 스캔 실행"""
+    """새 스캔 실행 — 워커 스레드에서(이벤트 루프 비차단), 진행률은 /scan/progress."""
     photo_db, scanner = _get_photo_modules()
 
     path = os.path.expanduser(path)
@@ -86,8 +111,17 @@ async def scan_directory(path: str = Query(...)):
     photo_db.init_db()
     scan_id = photo_db.get_or_create_scan(scan_name, path)
 
-    # 스캔 실행
-    result = scanner.scan_media(path, scan_id)
+    # 스캔 실행 — 블로킹 I/O(외장 디스크 walk·EXIF·MD5)는 스레드로. 진행률 콜백은 100파일마다.
+    _progress_set(path, 0, 0)
+
+    def _cb(current: int, total: int):
+        _progress_set(path, current, total)
+
+    try:
+        result = await asyncio.to_thread(scanner.scan_media, path, scan_id, _cb)
+    finally:
+        st = _SCAN_PROGRESS.get(path) or {}
+        _progress_set(path, st.get("current", 0), st.get("total", 0), done=True)
     return result
 
 
@@ -102,7 +136,7 @@ async def preview_scan(path: str = Query(...)):
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="경로를 찾을 수 없습니다")
 
-    return scanner.quick_scan(path)
+    return await asyncio.to_thread(scanner.quick_scan, path)  # 미리보기 walk 도 루프 밖에서
 
 
 @router.get("/scan/check")

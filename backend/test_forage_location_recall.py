@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
 boot_paths.install()
 import forage_memory as FM  # noqa: E402
+import forage_doc as FD  # noqa: E402
 
 ROOT = "/x/media"
 
@@ -18,6 +19,7 @@ ROOT = "/x/media"
 @pytest.fixture
 def fm(monkeypatch, tmp_path):
     monkeypatch.setattr(FM, "_DB_PATH", str(tmp_path / "forage.db"))
+    monkeypatch.setattr(FD, "DOC_DIR", str(tmp_path / "docs"))   # 정본=문서: 시험이 실제 문서 폴더에 쓰지 않게
     b = "disk:T"
     FM.note_map(body=b, locus=ROOT, kind="identity", claim="미디어 보관 폴더 — 축이 섞임(장르/나라/상태). 주제어: 영화 자막",
                 confidence=0.9, territory=True)

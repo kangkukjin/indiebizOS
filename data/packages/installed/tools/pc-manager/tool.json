@@ -82,7 +82,8 @@
             "enum": [
               "recall",
               "note",
-              "forget"
+              "forget",
+              "sync"
             ],
             "default": "recall"
           },

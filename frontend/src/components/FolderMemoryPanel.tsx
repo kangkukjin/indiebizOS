@@ -40,12 +40,12 @@ export function FolderMemoryPanel({ path }: { path: string }) {
     if (!path) return;
     setBusy('불러오는 중'); setMsg(null); setDocDirty(false);
     try {
-      const r = (await iblExecuteApp(`[self:forage]{op: "recall", locus: ${q(path)}, limit: 40}`)) as { map?: MapItem[] } | null;
+      const r = (await iblExecuteApp(`[self:forage]{op: "recall", locus: ${q(path)}, limit: 40}`)) as { map?: MapItem[]; doc?: string | null } | null;
       const map = r?.map ?? [];
       setItems(map);
-      // 문서: 루트 단언이 경로를 말하면 그것, 아니면 forage_surveys 에서 폴더 이름이 든 .md
-      let doc: string | null = null;
-      for (const m of map) {
+      // 문서(정본): 회상이 이 위치를 덮는 문서 경로(doc)를 준다 — 없으면 옛 규칙(루트 단언·이름 일치)
+      let doc: string | null = r?.doc ?? null;
+      for (const m of doc ? [] : map) {
         if (m.via && m.via !== 'own') continue;   // 조상(inherit)·자식(child) 단언이 가리키는 문서는 이 폴더 것이 아니다
         const hit = m.claim.match(/(\S*forage_surveys\/[^\s'"`)]+\.md)/);
         if (hit) { doc = hit[1]; break; }
@@ -99,7 +99,8 @@ export function FolderMemoryPanel({ path }: { path: string }) {
   };
   const saveDoc = () => {
     if (!docPath) return;
-    run('문서 저장', `[self:write]{path: ${q(docPath)}, content: ${q(docText)}}`, async () => { setDocDirty(false); });
+    // 문서가 정본 — 저장 뒤 `## 단언` 절을 색인에 맞추고(sync) 다시 읽는다
+    run('문서 저장', `[self:write]{path: ${q(docPath)}, content: ${q(docText)}} >> [self:forage]{op: "sync", locus: ${q(path)}}`, async () => { setDocDirty(false); await load(); });
   };
   const build = () => {
     const has = !!docPath || items.length > 0;

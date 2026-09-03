@@ -187,6 +187,12 @@ def run_forage_consolidation(force: bool = False) -> Dict:
         print(f"[포식정리] map 병합 {stats['map_merged']}(삭제 {stats['map_dropped']}) / "
               f"owner 병합 {stats['owner_merged']}(삭제 {stats['owner_dropped']}) / "
               f"가지치기 map {stats['pruned_map']} owner {stats['pruned_owner']}")
+    # 정본=문서(2026-09-03): 병합·가지치기로 색인이 바뀌었으니 표식 있는 문서의 `## 단언` 절을 다시 그린다
+    try:
+        import forage_doc
+        forage_doc.refresh_all_docs()
+    except Exception as e:
+        print(f"[포식정리] 문서 재렌더 실패(무시): {e}")
     return stats
 
 

@@ -83,6 +83,7 @@
     "datastore/face_config",
     "datastore/file_index",
     "datastore/focus_map",
+    "datastore/forage_doc",
     "datastore/forage_memory",
     "datastore/guide_registry",
     "datastore/health_sync",
@@ -269,8 +270,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 260,
-    "engine": 240,
+    "total": 261,
+    "engine": 241,
     "blocklist": 20
   }
 }

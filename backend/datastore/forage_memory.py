@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS forage_map (
     locus_mtime  REAL NOT NULL DEFAULT 0,     -- 형성 시점 locus mtime (부패 무효화용)
     surface_flag INTEGER NOT NULL DEFAULT 0,  -- 이 라벨을 의심하라(이질 내용 발견)
     territory    INTEGER NOT NULL DEFAULT 0,  -- 거친 영토 앵커(상시-on, 열거가능 공간만). go/skip 은 런타임 파생
-    UNIQUE(body, locus, kind)
+    UNIQUE(body, locus, kind, claim)   -- 2026-09-03: 한 자리에 같은 종류의 단언 여럿(정본=문서 절의 줄들). 옛 키 (body,locus,kind) 는 _migrate_unique_key 가 옮긴다
 );
 CREATE TABLE IF NOT EXISTS owner_model (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,7 +129,31 @@ def _connect() -> sqlite3.Connection:
                 promoted += 1
         conn.commit()
         print(f"[포식기억] owner_model.scent 마이그레이션: 결정화 {promoted}건, 나머지는 임시(질의 필터)")
+    _migrate_unique_key(conn)
     return conn
+
+
+def _migrate_unique_key(conn: sqlite3.Connection) -> None:
+    """(body,locus,kind) 유일 키 → (body,locus,kind,claim). 문서 정본(2026-09-03)은 한 자리에 같은 종류의 줄 여럿을 허용한다.
+    SQLite 는 제약을 못 바꾸므로 표를 다시 만든다(멱등: 옛 제약이 있을 때만)."""
+    row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='forage_map'").fetchone()
+    if not row or "UNIQUE(body, locus, kind, claim)" in (row[0] or ""):
+        return
+    cols = "id, body, locus, kind, claim, prior_class, confidence, provenance, prune_reason, generalizes, last_seen, locus_mtime, surface_flag, territory"
+    conn.executescript(f"""
+        BEGIN;
+        CREATE TABLE forage_map_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, body TEXT NOT NULL, locus TEXT NOT NULL, kind TEXT NOT NULL, claim TEXT NOT NULL,
+            prior_class TEXT NOT NULL DEFAULT 'structural', confidence REAL NOT NULL DEFAULT 0.7, provenance TEXT, prune_reason TEXT,
+            generalizes INTEGER NOT NULL DEFAULT 0, last_seen TEXT, locus_mtime REAL NOT NULL DEFAULT 0,
+            surface_flag INTEGER NOT NULL DEFAULT 0, territory INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(body, locus, kind, claim));
+        INSERT INTO forage_map_new ({cols}) SELECT {cols} FROM forage_map;
+        DROP TABLE forage_map;
+        ALTER TABLE forage_map_new RENAME TO forage_map;
+        COMMIT;
+    """)
+    print("[포식기억] forage_map 유일 키 이관: (body,locus,kind) → (body,locus,kind,claim)")
 
 
 def _locus_mtime(locus: str) -> float:
@@ -223,9 +247,10 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     promoted = False
     conn = _connect()
     try:
+        # 재확인(reinforce)은 같은 문장일 때만 — 같은 종류의 다른 문장은 새 줄(정본=문서 절, 2026-09-03)
         row = conn.execute(
-            "SELECT id, confidence, provenance, territory FROM forage_map WHERE body=? AND locus=? AND kind=?",
-            (body, locus, kind)).fetchone()
+            "SELECT id, confidence, provenance, territory FROM forage_map WHERE body=? AND locus=? AND kind=? AND claim=?",
+            (body, locus, kind, claim)).fetchone()
         if row:
             merged = _merge_provenance(row["provenance"], prov)
             new_conf = max(conf, float(row["confidence"] or 0))  # 재확인은 확신 상향
@@ -260,10 +285,11 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
             entry_id = cur.lastrowid
             action = "noted"
         conn.commit()
-        return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
-                "promoted_territory": promoted}
     finally:
         conn.close()
+    _doc_refresh(body, locus)   # 정본=문서: 색인이 바뀌면 그 위치 문서의 `## 단언` 절을 다시 그린다
+    return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
+            "promoted_territory": promoted}
 
 
 def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
@@ -411,6 +437,22 @@ def _is_child(parent: str, child: str) -> bool:
     return _is_ancestor(parent, child) and _depth(child) == _depth(parent) + 1
 
 
+def _doc_refresh(body: str, locus: str) -> None:
+    try:
+        import forage_doc
+        forage_doc.refresh_doc_for(body, locus)
+    except Exception as e:  # 문서 실패가 기억 쓰기를 막지 않는다
+        print(f"[포식기억] 문서 재렌더 실패(무시): {e}")
+
+
+def _doc_lazy_sync(locus: str, body: Optional[str]) -> None:
+    try:
+        import forage_doc
+        forage_doc.lazy_sync(locus, body)
+    except Exception as e:
+        print(f"[포식기억] 문서 동기화 실패(무시): {e}")
+
+
 def _stale_of(locus: str, stored_mtime: float) -> str:
     """lazy 부패 판정 — 삭제하지 않고 노출만(판단은 AI). '' | 'stale' | 'missing'.
 
@@ -473,6 +515,8 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     """
     terms, grams = _query_terms(query)
     loc = _norm_locus(os.path.expanduser(locus)) if locus else None
+    if loc:
+        _doc_lazy_sync(loc, body)   # 정본=문서: 사람·AI 가 문서를 고쳤으면 색인이 따라온다(stat 한 번)
 
     def _hit(r) -> int:
         """행 일치 점수 — claim + locus *끝 이름*(전체 경로가 아니라: 루트 이름이 후손 전부를 잡지 않게)."""
@@ -514,8 +558,26 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         map_items = _assemble_by_locus(map_rows, _hit, limit, fair=False,
                                        no_query=not (terms or grams), focus_override=[loc])
         owner_items_locus: List[Dict[str, Any]] = []
+        doc_path = None
+        try:
+            import forage_doc
+            doc_path = forage_doc.doc_path_for(body or "", loc, create_default=False) if body else None
+            if doc_path is None:
+                best_len = -1
+                for _p, _b, _r in forage_doc._scan_docs():
+                    if not forage_doc._covers(_b, _r, loc):
+                        continue
+                    _rn = forage_doc._norm(_r)
+                    # 경로 몸의 뿌리는 길이로(더 구체적인 것), 몸 하나 문서(웹·코드)는 경로 locus 를 덮지 않는다
+                    if not (forage_doc._path_body(_b) and forage_doc._is_path(_rn)):
+                        continue
+                    score = len(_rn) * 2 + (1 if _b == "mac" else 0)   # 같은 뿌리면 이 컴퓨터(mac) 문서 우선
+                    if score > best_len:
+                        best_len, doc_path = score, _p
+        except Exception:
+            doc_path = None
         return {"success": True, "map": map_items, "owner": owner_items_locus,
-                "territory": territory_items, "locus": loc,
+                "territory": territory_items, "locus": loc, "doc": doc_path,
                 "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]
@@ -717,11 +779,17 @@ def forget(*, entry_id: int, table: str = "forage_map") -> Dict[str, Any]:
         return {"success": False, "error": "table 은 forage_map 또는 owner_model"}
     conn = _connect()
     try:
+        where = None
+        if table == "forage_map":
+            row = conn.execute("SELECT body, locus FROM forage_map WHERE id=?", (int(entry_id),)).fetchone()
+            where = (row["body"], row["locus"]) if row else None
         cur = conn.execute(f"DELETE FROM {table} WHERE id=?", (int(entry_id),))
         conn.commit()
-        return {"success": cur.rowcount > 0, "deleted": cur.rowcount, "table": table}
     finally:
         conn.close()
+    if where:
+        _doc_refresh(*where)
+    return {"success": cur.rowcount > 0, "deleted": cur.rowcount, "table": table}
 
 
 def mark_surface(*, entry_id: int, table: str = "forage_map", on: bool = True) -> Dict[str, Any]:

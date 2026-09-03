@@ -208,7 +208,7 @@ nodes:
         fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기. ★응답=3층(map/owner/territory) 인지 기억 — items 통화 밖이라 table 파이프 대상 아님(판정 2026-08-17).
         group: file
-        target_description: 'recall(기본) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
+        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
         target_key: op
         router: handler
         tool: forage_op
@@ -218,12 +218,14 @@ nodes:
           returns:
             note: effect
             forget: effect
+            sync: effect
           side_effect:
             recall: false
           values:
             recall: 누적된 냄새지도 회상 (locus=폴더 지명 통째 / query·body 필터, 기본)
             note: 지도/주인모델에 단언 누적 (layer=map/owner)
             forget: 잘못된·낡은 항목 폐기 (id + table)
+            sync: 문서(정본)의 단언 절을 색인에 맞춤 (locus) — 판·편집기에서 문서를 고친 뒤
         keywords:
         - 포식기억
         - 냄새지도

@@ -236,6 +236,15 @@ def _forage_note(tool_input: dict) -> str:
     return json.dumps(r, ensure_ascii=False)
 
 
+def _forage_sync(tool_input: dict) -> str:
+    """[self:forage]{op:sync, locus} — 문서(정본)의 `## 단언` 절을 색인(forage_map)에 맞춘다. 판·편집기에서 문서를 고친 뒤."""
+    import forage_doc
+    locus = tool_input.get("locus") or tool_input.get("path") or tool_input.get("folder_path")
+    if not locus:
+        return json.dumps({"success": False, "error": "sync 는 locus(폴더 경로) 필요"}, ensure_ascii=False)
+    return json.dumps(forage_doc.sync_for_locus(str(locus), tool_input.get("body") or None), ensure_ascii=False)
+
+
 def _forage_forget(tool_input: dict) -> str:
     """[self:forage]{op:forget} — 항목 폐기."""
     import forage_memory as FM
@@ -417,7 +426,7 @@ _OP_DISPATCHERS = {
     "host_op": {"status": _host_status, "apps": _host_apps,
                 "resources": _host_resources},
     "forage_op": {"recall": _forage_recall, "note": _forage_note,
-                  "forget": _forage_forget},
+                  "forget": _forage_forget, "sync": _forage_sync},
 }
 _OP_DEFAULTS = {"storage_op": "volumes", "folder_note_op": "detail", "host_op": "status",
                 "forage_op": "recall"}

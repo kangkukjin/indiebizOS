@@ -345,12 +345,12 @@ You define *who* an agent is, not *which model* runs it — model and API key ar
 ## Under the hood (reference)
 
 <!-- IBL_STATS:START -->
-**6 nodes, 151 composable actions** — one tool (`execute_ibl`), one vocabulary, not 151 schemas:
+**6 nodes, 150 composable actions** — one tool (`execute_ibl`), one vocabulary, not 150 schemas:
 
 | Node | Actions | What lives here |
 |------|---------|-----------------|
 | **sense** | 40 | Retrieval — web/news search (one verb, `source`-branched), any RSS/Atom feed, finance, real estate (official prices + live listings), accommodation, second-hand markets, freelance marketplaces, legal, statistics, classic literature, performances, academic papers/dissertations/researchers, entity resolution (Wikidata), AI grants & contests — plus the *indexical* senses each body answers its own way (notifications, location, mic, camera; no hardware → an honest `no_hardware`, never a guess) |
-| **self** | 50 | System management, workflows, triggers, goals, files (read/write/edit/fill, plus surgical edits to a live spreadsheet), deep + forager memory, **ledgers** (business catalog, personal/company finance, health records), grounded Q&A over your own document piles, registered scripts, phone sync, my music library, USB-limb issuance, the web-app registry, slides & decks, library install (approval-gated) |
+| **self** | 49 | System management, workflows, triggers, goals, files (read/write/edit/fill, plus surgical edits to a live spreadsheet), deep + forager memory, **ledgers** (business catalog, personal/company finance, health records), grounded Q&A over your own document piles, registered scripts, phone sync, my music library, USB-limb issuance, the web-app registry, slides & decks, library install (approval-gated) |
 | **limbs** | 14 | UI automation (browser, Android, desktop screen), phone-native actions, a guest PC reached by USB limb, media playback (YouTube, radio), window opening, maps |
 | **others** | 17 | Collaboration, delegation, **asking another body in plain language**, messaging (DM/feed/board/Nostr NIP-17), neighbor CRM (contacts are ops on a neighbor — a warehouse address is just another contact type), auto-response — and the public-web surfaces others can reach: personal portals, family newspaper, login-free bulletin boards, public file shares |
 | **engines** | 9 | Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation |

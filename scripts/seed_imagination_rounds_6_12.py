@@ -52,8 +52,6 @@ NEW = [
      '[self:time]@폰-9f2b', "self", "body", "몸라우팅"),
     ("가족용 자유게시판 만들어줘",
      '[others:bulletin]{op: "create", title: "가족 게시판"}', "others", "bulletin", "게시판"),
-    ("지도 관련해서 뭘 할 수 있어?",
-     '[self:discover]{query: "지도"}', "self", "meta", "탐색"),
     ("공개 중인 폴더 뭐 있어?",
      '[others:showcase]{op: "status"} >> [table:take]{n: 5}', "others,table", "share", "공개파일"),
     # ── 8회차 ──

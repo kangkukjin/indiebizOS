@@ -558,9 +558,6 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
             return _cap("agent_info")(agent_id)
         return _cap("list_project_agents")(dict(params))
 
-    elif func_name == "discover":
-        return _discover_nodes(params.get("query", ""), params)
-
     # [table:each] — 문장을 값으로 받는 고차 변환자. 다른 table 변환자와 달리 패키지가 아니라
     # 엔진 층에 산다(하위 문장 실행이 execute_ibl 재귀 — 패키지가 엔진을 import 하면 층 역전).
     elif func_name == "table_each":
@@ -958,99 +955,6 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
 
     except Exception as e:
         return {"success": False, "error": f"Launcher 명령 오류: {str(e)}"}
-
-
-def _discover_nodes(query: str, params: dict) -> Any:
-    """노드 디스커버리 (Phase 10)
-
-    해마(fine-tuned 임베딩)로 적합한 노드/액션을 자동 탐색.
-    "이 작업을 할 수 있는 노드가 뭐야?"를 해결.
-    """
-    import re as _re
-    from node_registry import list_nodes, node_summary
-    from ibl_access import load_nodes_raw
-
-    if not query:
-        return node_summary()
-
-    # 해마로 관련 IBL 코드 사례 검색
-    _search_error = None
-    try:
-        from ibl_usage_db import IBLUsageDB
-        db = IBLUsageDB()
-        limit = params.get("limit", 10)
-        search_results = db.search_hybrid(query=query, top_k=limit)
-    except Exception as e:
-        # ★침묵 금지 (2026-08-16 7회차 B5): 검색층 예외를 삼키고 "매칭 없음"으로 위장하면
-        # 사용자는 어휘가 없다고 오독한다 — 빈 결과와 고장은 다른 상태다.
-        search_results = []
-        _search_error = f"{type(e).__name__}: {e}"
-
-    if not search_results:
-        out = {
-            "query": query,
-            "results": [],
-            # 0행도 통화다 — 빈손 성공(F17 계약). items 를 빼면 파이프가 "통화 없음"
-            # (=진짜 오류)으로 읽어 0건과 고장이 접힌다.
-            "items": [],
-            "count": 0,
-            "message": (f"'{query}' 탐색 실패 — 검색층 오류: {_search_error}" if _search_error
-                        else f"'{query}'에 매칭되는 노드를 찾을 수 없습니다."),
-            "total_nodes": len(list_nodes()),
-        }
-        if _search_error:
-            out["error"] = _search_error
-        return out
-
-    # 해마 결과에서 [node:action] 추출 → ibl_nodes.yaml에서 상세 조회
-    nodes_data = load_nodes_raw() or {}
-    nodes_config = nodes_data.get("nodes", {})
-    action_pattern = _re.compile(r'\[([a-z_-]+):([a-z_-]+)\]')
-
-    # 노드별로 그룹화
-    node_actions = {}  # {node_name: {action_name: {desc, impl, example, score}}}
-    for r in search_results:
-        for node_name, action_name in action_pattern.findall(r.ibl_code):
-            if node_name not in node_actions:
-                node_actions[node_name] = {}
-            if action_name not in node_actions[node_name]:
-                node_config = nodes_config.get(node_name, {})
-                action_config = node_config.get("actions", {}).get(action_name, {})
-                node_actions[node_name][action_name] = {
-                    "action": action_name,
-                    "description": action_config.get("description", ""),
-                    "implementation": action_config.get("implementation", ""),
-                    "example": r.ibl_code,
-                }
-
-    # 기존 반환 형식에 맞춰 변환
-    results = []
-    for node_name, actions in node_actions.items():
-        node_config = nodes_config.get(node_name, {})
-        action_details = list(actions.values())
-        suggestion = f"[{node_name}:{action_details[0]['action']}]" if action_details else ""
-        results.append({
-            "node": node_name,
-            "description": node_config.get("description", ""),
-            "score": len(action_details) * 10,
-            "matching_actions": [a["action"] for a in action_details],
-            "suggestion": suggestion,
-            "action_details": action_details,
-        })
-
-    results.sort(key=lambda x: x["score"], reverse=True)
-
-    # ★2026-08-24 B36-2: 목록을 `results` 라는 사적 키에만 담아 파이프가 굶었다
-    # (`[self:discover]{query} >> [table:take]{n:1}` 이 통화 없음으로 거절). 1행 스냅샷
-    # 부류의 형제 — 저쪽은 레코드가 통화가 아니었고, 이쪽은 통화가 남의 이름을 달고
-    # 있었다. `results` 는 기존 소비자·코퍼스를 위해 보존하고 items 를 병기한다.
-    return {
-        "query": query,
-        "results": results,
-        "items": results,
-        "count": len(results),
-        "best_match": results[0]["suggestion"] if results else "",
-    }
 
 
 def search_guide(query: str, params: dict) -> Any:

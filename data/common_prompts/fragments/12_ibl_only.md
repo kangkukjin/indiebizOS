@@ -38,7 +38,7 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 | `table` | 표 — 통화를 변환·산출한다 | 목록 가공(filter/sort/take/select/compute/rename/flatten/dedup/groupby/join/union/merge/each)과 산출(chart/spreadsheet/document/structure), AI 의미 변환·산문 종합(ai/brief) |
 | `others` | 타인 — 소통하고 위임한다 | 에이전트 위임, 메시지 송수신, 연락처 관리 |
 
-**판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `[self:discover]{query: "..."}`.
+**판단 순서**: 동사(뭘 하나) → 노드 선택 → 액션 선택. 모르겠으면 `<execution_map>` 에서 주제 가지를 열어(`[self:memory]{op: "recall", node: "<가지>", store: "실행"}`) 성공한 문장을 본다.
 
 ## How to Use
 
@@ -155,7 +155,7 @@ $뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 우선적으로 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로 한다. IBL 액션이 실패하면 파라미터를 바꿔 재시도하라. Python/Node.js/Shell은 IBL에 해당 액션이 없거나, 복합 처리(읽기+파싱+변환을 한 번에)가 필요할 때 사용한다.
 2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선 사용. 예: 건강기록→`[self:health]{op: "query"}`, **사용자만 아는 사실(선호·결정·사람·물건)→ 프롬프트의 `<memory_map>`(심층 기억 지도, 항상 주입)에서 가지를 고르고 `[self:memory]{op: "recall", node: "<가지>"}` 로 연다**(지도에 없으면 `search`); 대화에서 새로 안 사실은 `[self:memory]{op: "save", node: "<가지>", content: …}` 로 그 가지에 남긴다; **보고서·정기 작업처럼 큰 일**이면 `<execution_map>`(실행기억 주제 지도)에서 그 주제 가지를 `[self:memory]{op: "recall", node: "<가지>", store: "실행"}` 로 열어 이전에 성공한 IBL 문장들을 보고 조립한다(매번 재발명 금지), **폴더·파일·자료의 위치→`[self:forage]{op: "recall", locus: "<폴더>"}`**(포식 기억 — 자동 주입되지 않으니 위치 질문이면 답하기 전에 직접 본다; 폴더를 모르면 `query`). **그 기억으로 답하다 새로 안 것**(예외·흩어짐·틀린 단언·편수 보정)은 답하고 끝내지 말고 **그 자리에서 남긴다**: `[self:forage]{op: "note", layer: "map", locus: "<폴더>", kind: …, claim: "<한 줄>"}` + 그 폴더 문서(`recall` 결과의 `doc` — `~workspace/data/forage_surveys/mac/<경로>/memory.md`)의 `## 갱신 기록` 에 일시와 한 줄 append. 검색이 사전을 고친다 — 안 남기면 다음 질문이 같은 6분을 다시 쓴다.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
-4. 어떤 액션이 있는지 모르겠으면 `[self:discover]` 사용
+4. 어떤 액션이 있는지는 카탈로그가 말한다. 어떻게 잇는지 모르겠으면 `<execution_map>` 의 가지를 연다
 5. `>>` 순차, `&` 병렬(분기 파이프는 괄호: `A & (B >> C) >> [table:merge]`), `??` 폴백 (목록·표 가공은 `>> [table:filter/sort/take/select/dedup/groupby]{...}` 로 잇는다)
 6. 모든 파라미터는 `{key: "value"}` 형태
 7. 작업을 계획만 하고 끝내지 말 것. 계획했으면 반드시 `execute_ibl`로 실행까지 완료할 것.

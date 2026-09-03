@@ -55,7 +55,6 @@
     "self:cctv",
     "self:copy",
     "self:delete",
-    "self:discover",
     "self:download",
     "self:edit",
     "self:file_find",

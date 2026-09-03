@@ -32,7 +32,6 @@
     "self:body#log": "[self:body]{op: \"log\", days: 7, limit: 10}",
     "self:body#trajectory": "[self:body]{op: \"trajectory\", limit: 10}",
     "self:body#writes": "[self:body]{op: \"writes\", days: 7, limit: 10}",
-    "self:discover": "[self:discover]{query: \"주가\"}",
     "self:file_find": "[self:file_find]{pattern: \"*.md\", path: \".\"}",
     "self:finance": "[self:finance]{op: \"query\", query_type: \"summary\"}",
     "self:folder_note": "[self:folder_note]{op: \"detail\"}",

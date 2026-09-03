@@ -3,7 +3,7 @@
 
 배경: 단일 개체 조회가 통화(items)를 안 내서 `[table:each]` 팬아웃이 원 행을 그대로
 흘리던(passthrough_rows) 부류를 수리했다 — sense:video#info · sense:reverse_geocode ·
-self:discover. 기계는 열렸는데 코퍼스에 용례가 없으면 모델은 옛 우회(`&` N중 병렬 +
+옛 탐색 낱말(2026-09-03 은퇴). 기계는 열렸는데 코퍼스에 용례가 없으면 모델은 옛 우회(`&` N중 병렬 +
 머릿속 판별)를 계속 쓴다. 실사용에서 실제로 막혔던 자리를 그대로 접어 시드한다:
   · ep1874(유튜브 AI 팁 보고서) — 후보 18편의 upload_date 6개월 규칙을 `&` 8중으로 우회
   · ep1339(부동산 발굴 보고서) — 좌표 3곳 주소를 `&` 3중으로 우회
@@ -48,11 +48,6 @@ NEW = [
      'do: "[sense:reverse_geocode]{lat: $it.lat, lon: $it.lon}"} '
      '>> [table:groupby]{by: "region_2depth"}',
      "table,sense", "places", "팬아웃,역지오코딩,집계"),
-    # ── self:discover — 후보 목록이 통화가 됐다 ──
-    ("주가 관련해서 쓸 수 있는 액션 상위 3개만 추려줘",
-     '[self:discover]{query: "주가"} >> [table:take]{n: 3} '
-     '>> [table:select]{columns: ["node", "suggestion", "matching_actions"]}',
-     "self,table", "system", "탐색,통화,추림"),
 ]
 
 

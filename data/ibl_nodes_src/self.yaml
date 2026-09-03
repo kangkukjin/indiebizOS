@@ -14,21 +14,6 @@
         - 최근대화
         - 대화이력
         - 이전
-      discover:
-        returns: items   # 후보 목록 — 2026-08-24 B36-2 까지 사적 키(results)에만 담겨 파이프가 굶었다
-        fixture: '[self:discover]{query: "주가"}'
-        description: 키워드로 적합한 IBL 노드·액션 자동 탐색. 어떤 액션 쓸지 모를 때 첫 단계.
-        target_description: 검색 키워드 (자연어). 결과 — 후보 액션 + 사용 예시.
-        group: system
-        target_key: query
-        router: system
-        func: discover
-        implementation: IBL 액션 메타데이터 키워드 매칭으로 관련 액션 탐색
-        keywords:
-        - 탐색
-        - 찾기
-        - 도구검색
-        - 액션
       manage_events:
         aliases:
           op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)

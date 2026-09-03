@@ -673,7 +673,7 @@ def test_p20_workflow_save_syntax_gate():
     등록되고 run 에서야 엉뚱하게 실행됐다(지연 실패). P17 의 register pre-flight 를 문장에 적용.
 
     ★파서만으론 못 잡는다: 파서는 닫히지 않은 따옴표를 관대하게 흡수해
-    `[self:discover]{query: "` 를 query:"" 로 통과시킨다 → 등록 관문이 균형을 따로 본다."""
+    `[self:read]{path: "` 를 path:"" 로 통과시킨다 → 등록 관문이 균형을 따로 본다."""
     from ibl import workflow_engine as _wf
     tmp = tempfile.mkdtemp()
     orig_env = os.environ.get("INDIEBIZ_BASE_PATH")
@@ -684,7 +684,7 @@ def test_p20_workflow_save_syntax_gate():
             return _wf.execute_workflow_action("workflow", p, ".")
 
         # 실측 재현: 따옴표가 잘린 do → 저장 거부 (전엔 success:true)
-        r = save(name="p20_broken", steps='[self:discover]{query: "')
+        r = save(name="p20_broken", steps='[self:read]{path: "')
         assert r.get("success") is False and "따옴표" in r["error"], r
         # 중괄호 잘림 · 산문 · 짝 없는 } 도 같은 관문에서 거부
         assert save(name="p20_brace", steps='[self:read]{path: "a"').get("success") is False

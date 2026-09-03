@@ -486,7 +486,7 @@ def get_node_actions(node_name: str) -> set:
 # === 하위 모듈 import (re-export) ===
 from ibl_routing import (
     _route_api_engine, _route_handler, _route_system,
-    _execute_launcher_command, _discover_nodes, search_guide,
+    _execute_launcher_command, search_guide,
     _route_driver,
 )
 from ibl_executors import (

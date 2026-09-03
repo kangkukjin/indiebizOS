@@ -1047,7 +1047,7 @@ def get_workflow(workflow_id: str) -> Optional[Dict]:
 
 # === 등록 시점 문법 관문 (2026-08-17) ===
 # save 가 do 를 검증 없이 저장해 "저장은 됐는데 돌리면 깨지는" 지연 실패를 냈다
-# (실측: 따옴표가 잘린 do — `[self:discover]{query: "` — 가 success:true 로 저장되고
+# (실측: 따옴표가 잘린 do — `[self:read]{path: "` — 가 success:true 로 저장되고
 # run 에서야 엉뚱하게 실행됐다). [self:script]{op:"register"} 의 pre-flight 선례를
 # 문장에 적용한다: 등록=문법 관문, 실행 가능성은 런타임 몫이라 파싱만 하고 실행 안 함.
 #

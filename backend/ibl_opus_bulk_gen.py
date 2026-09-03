@@ -47,15 +47,6 @@ def gen(code, intents):
     elif a == "self:time":
         results += ["몇 시야", "시간 좀", "오늘 며칠", "무슨 요일이야", "지금 몇 시"]
 
-    # ---- self:discover ----
-    elif a == "self:discover":
-        q = p(code, "query")
-        if q:
-            results += [
-                f"{q} 할 수 있는 거 뭐야?", f"{q} 관련 기능 뭐 있지",
-                f"{q} 어떻게 해?", f"나 {q} 하고 싶은데", f"{q} 되나?"
-            ]
-
     # ---- sense:search ----
     elif a == "sense:search":
         q = p(code, "query")

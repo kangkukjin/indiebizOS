@@ -269,14 +269,30 @@ def _reset_gear_providers():
 
 
 def _list_pinnable_agents() -> list:
-    """핀(고정) 대상 에이전트 목록 — 시스템 AI + 전 프로젝트 에이전트. {id,name,project}.
+    """**핀 키 공간** 열거 — 계기판 핀 패널이 보여줄 수 있는 모든 키. {id,name,project}.
 
-    ★id = 핀 키. 시스템 AI 는 role 'system_ai', 프로젝트 에이전트는 registry_key 형식
-    `{project}:{agent_id}` (agent_id 가 프로젝트 간 중복이라 프로젝트로 한정 — _resolve_execution_config 와 일치)."""
+    ★id = 핀 키 = `model_resolver.resolve(role, agent_id)` 에 실리는 이름 그대로.
+    프로젝트 에이전트만 registry_key 형식 `{project}:{agent_id}` 이고(agent_id 가 프로젝트 간
+    중복이라 한정 — _resolve_execution_config 와 일치), 나머지는 **단일 이름**이다.
+
+    ★이 함수는 '실재 에이전트 목록'이 아니라 '핀 키 공간'을 낸다 — 2026-09-04 수리의 요지.
+    resolve() 는 overrides dict 를 키로 그냥 조회하므로, 코드가 지어낸 경로 이름
+    (`system_ai_delegation` — 위임 경로가 쓰는 가상 agent_id)도 그대로 유효한 핀 키다.
+    여기서 실재 에이전트만 열거하면 그런 키의 핀은 **효력은 있는데 화면에 없는 유령**이 된다:
+    실사고 — system_ai_delegation=고급 핀이 2026-08-09 부터 걸려 있어 정기보고앱 위임이 늘
+    Opus 로 갔는데, 기어 레버를 내려도 왜 그런지 계기판이 말해주지 못했고 사용자는 그 핀을
+    설정한 기억조차 없었다(값은 gitignore 된 data/model_gear.json 에만 있어 이력도 없다).
+    그래서 아래 ②고아 핀 흡수가 이 함수의 계약이다 — **걸려 있는 핀은 예외 없이 보인다.**
+    새 핀 키를 코드에 도입할 때 이 목록을 따로 고칠 필요가 없다(고치면 더 친절할 뿐)."""
+    # ① 코드가 아는 키 — 실재 에이전트 + role/경로 이름
     out = [
         {"id": "system_ai", "name": "시스템 AI", "project": "(시스템)"},
         # 포식 브라우저 검색 에이전트 — 핀 키 'forage'(resolve/force_role 과 일치). 미핀 시 기본 경량.
         {"id": "forage", "name": "포식 에이전트", "project": "(포식 브라우저)"},
+        # 위임(스케줄러·정기보고앱 → 시스템 AI) 경로 — system_ai_runner._resolve_ai_config /
+        # _run_system_ai 가 resolve(agent_id='system_ai_delegation') 로 읽는다(2026-08-09 판정=고급).
+        # 채팅 경로('system_ai')와 갈라 놓은 자리라 별도 키다.
+        {"id": "system_ai_delegation", "name": "시스템 AI (위임 경로)", "project": "(시스템)"},
     ]
     try:
         import yaml
@@ -301,6 +317,27 @@ def _list_pinnable_agents() -> list:
                     pass
     except Exception as e:
         print(f"[model-gear] 에이전트 열거 경고: {e}")
+
+    # ② 고아 핀 흡수 — overrides 에 걸려 있는데 위 열거에 없는 키를 그대로 노출한다.
+    #    이 블록이 "효력 있는 핀은 예외 없이 보인다"는 불변식을 지킨다(2026-09-04 수리의 뿌리).
+    #    키 비교는 resolve() 와 같은 NFC 정규화로 — 한글 프로젝트명이 NFD 로 저장돼도 매칭된다.
+    try:
+        import unicodedata
+        import model_resolver as M
+
+        def _n(s):
+            return unicodedata.normalize("NFC", str(s or ""))
+
+        known = {_n(a["id"]) for a in out}
+        for key in (M.get_overrides() or {}):
+            if _n(key) not in known:
+                out.append({"id": key, "name": f"{key}",
+                            "project": "(등록되지 않은 핀)"})
+                known.add(_n(key))
+    except Exception as e:
+        # 흡수 실패가 목록 자체를 죽이지 않게 — 다만 조용히 넘기지 않고 신고한다.
+        print(f"[model-gear] 고아 핀 흡수 경고: {e}")
+
     return out
 
 

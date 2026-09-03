@@ -142,7 +142,7 @@ see_also: [architecture.md, ibl.md]
 - **음성-단언 측정**: 포식 출력의 "거기 없음 vs 덜 봤음"을 측정으로 가른다(sample=미관측 균일 무작위 표본 / estimate=Wilson 이항추정). 판단은 AI 몫, 도구는 측정·중립 해석만(열거 가능한 공간 전용 — 웹은 무한·비열거라 제외). ★어휘 `[self:residual]` 은 2026-08-15 은퇴하고 **등록 스크립트**로 내려갔다: `[self:script]{op: "run", id: "잔여추정"}` (측정 절차는 낱말이 아니라 절차라는 판정 — 후보 제공자는 `backend/datastore/file_index.py`).
 - **상세**: `docs/FORAGER_MEMORY_GUIDE.md`(설명서), `docs/FORAGER_MEMORY_SCHEMA.md`(스키마), `docs/FORAGER_MULTIBODY_DESIGN.md`(다중 몸), `docs/FILE_FORAGING_RESEARCH.md`(연구).
 - **정리 패스**(`forage_consolidation.py`): 의미적 근접중복을 경량 AI로 병합(같은 공간지식만, surface 보호) + LRU 가지치기. `run_maintenance_bundle` item 4로 합류(24h 카덴스). 증류+정리 대칭 = 심층메모리·해마와 동일.
-- **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). 회상은 실행기억처럼 항상-on, owner 모델은 query 면제(상시 노출=냄새) — 단 2026-07-29부터 *결정화된*(재확인 2회) owner만 상시이고 1회 관측은 임시(query 필터). 증류(쓰기)는 전 티어 post-response 유지.
+- **진행**: 주입→포식→증류→surface→정리 루프 완전히 닫힘 + 다중 몸(코드·웹) + 음성-단언 측정 완료(2026-06-20). **회상은 자동 주입이 아니다**(2026-09-03 사용자 판정 — 옛 항상-on 주입 폐지): AI 가 질문의 장소를 보고 `[self:forage]{op:"recall", locus}` 로 그 폴더의 문서(트리 `data/forage_surveys/mac/<경로>/memory.md`, 조상 사슬·하위 문서)를 스스로 올린다. 시스템 프롬프트 한 문장 + 어휘 입구가 전부이고 선택기는 코드로 두지 않는다. 증류(쓰기)는 전 티어 post-response 유지.
 
 ---
 

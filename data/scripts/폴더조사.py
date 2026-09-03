@@ -7,7 +7,7 @@
 "이 폴더는 아직 거칠다"를 다음 AI 가 안다.
 
 args(stdin JSON):
-  op: survey(기본) | items | status
+  op: survey(기본) | items | status | dictionary
   survey: path(필수) · depth(골격 보고 깊이, 기본 2) · items(auto|true|false — 아이템 목록까지)
           · parse(auto|media|plain) · body(생략=자동: /Volumes/<라벨>→disk:<라벨>, 그 외 몸 profile)
           · budget{dirs(기본 4000), files(기본 20000), items(기본 5000), sample(자식당 예시 이름 수, 기본 6)}
@@ -276,6 +276,8 @@ def op_survey(a: dict) -> dict:
     for v in dirs.values():
         kinds_total.update(_kind(f) for f in v["files"])
     want_items = a.get("items", "auto")
+    if isinstance(want_items, str):  # 계기(select)는 문자열로 보낸다 — "false" 가 참이 되던 함정
+        want_items = {"auto": "auto", "true": True, "false": False}.get(want_items.strip().lower(), "auto")
     do_items = (n_files <= budget["items"]) if want_items == "auto" else bool(want_items)
     parse = a.get("parse", "auto")
     if parse == "auto":
@@ -343,12 +345,44 @@ def op_items(a: dict) -> dict:
             "freshness": sv["freshness"], "total": len(items), "items": items[:limit]}
 
 
+def op_dictionary(a: dict) -> dict:
+    """사전(dictionary.md) 읽기 — 계기의 편집 폼용. 쓰기는 [self:write]{path:"{dictionary}"} 로(있는 동사)."""
+    path = a.get("path")
+    if not path:
+        return {"success": False, "error": "path 가 필요합니다"}
+    p = os.path.abspath(expand_body_path(str(path)))
+    sv = forage_memory.survey_covering(p)
+    if not sv:
+        return {"success": False, "error": f"조사 원장에 없는 폴더입니다: {p} — op:survey 먼저"}
+    art = Path(sv["artifact_dir"] or "")
+    dpath, rpath = art / "dictionary.md", art / "report.md"
+    content = dpath.read_text(encoding="utf-8") if dpath.exists() else ""
+    if not content:
+        content = (f"# 폴더 조사 사전 — {sv['locus']}\n\n(AI 판단 요청 전이거나 아직 비어 있습니다. "
+                   f"report.md 를 읽고 축·겹침·예외·죽은 가지·기질·주제어를 적으세요.)\n")
+    # items 통화를 실어야 스크립트 실행기가 나머지 키(content·dictionary…)도 결과에 합친다(script_ops 승격 규칙)
+    return {"success": True, "locus": sv["locus"], "dictionary": str(dpath), "report": str(rpath),
+            "exists": dpath.exists(), "content": content, "surveyed_at": sv["surveyed_at"],
+            "freshness": sv["freshness"] or "fresh",
+            "items": [{"title": sv["locus"], "meta": f"{sv['surveyed_at']} · 사전 {'있음' if dpath.exists() else '없음'} · {sv['freshness'] or 'fresh'}",
+                       "dictionary": str(dpath), "report": str(rpath)}]}
+
+
 def op_status(a: dict) -> dict:
     rows = forage_memory.list_surveys(body=a.get("body"))
-    return {"success": True, "items": [{"title": r["locus"], "body": r["body"], "surveyed_at": r["surveyed_at"],
-                                        "depth": r["depth"], "item_resolution": bool(r["item_resolution"]),
-                                        "spent": r["spent"], "freshness": r["freshness"] or "fresh",
-                                        "truncated": bool(r["truncated"])} for r in rows]}
+    items = []
+    for r in rows:
+        art = r.get("artifact_dir") or ""
+        sp = r.get("spent") or {}
+        items.append({"title": r["locus"], "body": r["body"], "surveyed_at": r["surveyed_at"],
+                      "depth": r["depth"], "item_resolution": bool(r["item_resolution"]),
+                      "spent": sp, "freshness": r["freshness"] or "fresh", "truncated": bool(r["truncated"]),
+                      # 계기(앱)가 드릴로 여는 산출물 경로 — 없으면 빈 문자열
+                      "artifact_dir": art,
+                      "report": os.path.join(art, "report.md") if art else "",
+                      "dictionary": os.path.join(art, "dictionary.md") if art else "",
+                      "meta": f"{r['surveyed_at']} · 깊이 {r['depth']} · {'아이템 ' + str(sp.get('items', 0)) + '편' if r['item_resolution'] else '골격만'} · {r['freshness'] or 'fresh'}"})
+    return {"success": True, "items": items}
 
 
 def main():
@@ -357,9 +391,9 @@ def main():
     except Exception as e:
         print(json.dumps({"success": False, "error": f"args JSON 파싱 실패: {e}"}, ensure_ascii=False)); return
     op = (args.get("op") or "survey").strip()
-    fn = {"survey": op_survey, "items": op_items, "status": op_status}.get(op)
+    fn = {"survey": op_survey, "items": op_items, "status": op_status, "dictionary": op_dictionary}.get(op)
     if not fn:
-        print(json.dumps({"success": False, "error": f"op 는 survey|items|status (받음: {op})"}, ensure_ascii=False)); return
+        print(json.dumps({"success": False, "error": f"op 는 survey|items|status|dictionary (받음: {op})"}, ensure_ascii=False)); return
     print(json.dumps(fn(args), ensure_ascii=False))
 
 

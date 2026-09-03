@@ -61,6 +61,7 @@
     },
     "instruments": [
       "audio_briefing",
+      "folder_survey",
       "newspaper",
       "report"
     ],

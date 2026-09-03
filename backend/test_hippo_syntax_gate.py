@@ -17,6 +17,11 @@ pre-commit 코퍼스 검사(build_ibl_nodes --check)를 막아 저장소 전체�
         수리 스크립트). 규칙은 파생본에 전개하지 않는다.
   G4  기록기(distill_experience)는 구문을 인자 게이트보다 *먼저* 묻는다 — 인자 게이트가
       파싱 실패를 [] 로 돌려주므로 순서가 곧 계약이다.
+  G5  (2026-09-04, ep2777·2806) 증류 프롬프트에 `[node:action]` 형태 자리표를 두지 않는다 —
+      경량 반성기가 자리표를 글자 그대로 베끼거나(`[node:self:edit]`), 실행 코드의
+      `node:` 인자 값을 자리표의 node 자리에 대입한다(`[가족/어머니:memory]`). 09-03 부터
+      `node` 가 [self:memory] 의 인자 이름이 되면서 낱말이 충돌한 것이 뿌리. 두 모양은
+      구문 관문이 거절하고, 파싱은 되지만 실행에 없던 머리는 머리 접지 게이트가 거절한다.
 
 실행: .venv/bin/python -m pytest backend/test_hippo_syntax_gate.py -q
 """
@@ -173,6 +178,64 @@ def test_g4_recorder_asks_syntax_before_params(monkeypatch, tmp_path):
     )
     assert ok is False
     assert touched == [], f"구문 관문 뒤의 게이트·원장이 호출됐다: {touched}"
+
+
+# ---------------------------------------------------------------- G5 자리표 충돌
+# 실측 원문(ep2777·2806): 자리표 `[node:action]` 를 베낀 두 모양.
+PLACEHOLDER_COPIES = ('[가족/어머니:memory]{op: "recall"}',
+                      '[node:self:edit]{path: "backend/surface/api_config.py"}')
+RECALL = '[self:memory]{op: "recall", node: "가족/어머니"}'
+
+
+def test_g5_distill_prompt_has_no_shape_placeholder():
+    import ibl_usage_rag as rag
+    prompt = rag._build_distill_prompt("내 어머니 연세가 어떻게 되시지?", "  1. " + RECALL, "", "가족/어머니 (3)")
+    assert "[node:" not in prompt, "형태 자리표가 다시 들어왔다 — 경량 모델이 글자 그대로 베낀다"
+    assert RECALL in prompt and "가족/어머니 (3)" in prompt
+
+
+def test_g5_placeholder_copies_are_refused():
+    from ibl_param_vocab import normalize_corpus_code, code_syntax_error
+    for bad in PLACEHOLDER_COPIES:
+        assert code_syntax_error(normalize_corpus_code(bad)) is not None, bad
+    assert code_syntax_error(RECALL) is None
+
+
+def test_g5_unexecuted_head_is_refused_by_grounding():
+    import ibl_usage_rag as rag
+    calls = [RECALL]
+    assert rag._heads_grounded(RECALL, calls)
+    assert rag._heads_grounded('[self:memory]{op: "recall", node: "가족"}', calls)
+    # 파싱은 되지만 이 주행에서 돌지 않은 머리 — 발명된 패턴
+    assert not rag._heads_grounded('[self:time]', calls)
+    assert not rag._heads_grounded(RECALL + ' >> [table:brief]{instruction: "요약"}', calls)
+    assert not rag._heads_grounded("", calls)
+
+
+def test_g5_recorder_drops_placeholder_copy_before_ledger(monkeypatch):
+    import types
+    import ibl_usage_rag as rag
+    import ibl_usage_db as mod
+    import ibl_param_vocab as pv
+    import thread_context
+
+    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: None)
+    monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
+    monkeypatch.setattr(mod.IBLUsageDB, "hippo_disabled", classmethod(lambda cls: False))
+    out = json.dumps({"intent": "어머니 정보 회상", "code": PLACEHOLDER_COPIES[0], "topic": "가족"},
+                     ensure_ascii=False)
+    fake_ca = types.ModuleType("consciousness_agent")
+    fake_ca.oneshot_ai_call = lambda **kw: out
+    monkeypatch.setitem(sys.modules, "consciousness_agent", fake_ca)
+    touched = []
+    monkeypatch.setattr(pv, "check_code_params", lambda code: touched.append(("params", code)) or [])
+    monkeypatch.setattr(mod.IBLUsageDB, "add_example", lambda self, **kw: touched.append(("ledger", kw)) or 1)
+
+    ok = rag.distill_experience(
+        user_message="내 어머니 연세가 어떻게 되시지?",
+        tool_calls=[{"tool_name": "execute_ibl", "input": {"code": RECALL}, "success": True}],
+        top_score=0.0)
+    assert ok is False and touched == []
 
 
 if __name__ == "__main__":

@@ -27,12 +27,12 @@ DOC_NAME = "memory.md"
 SECTION = "## 용례"
 LEDGER = "## 갱신 기록"
 RUNS = "## 주행"
-RUNS_NOTE = ("<!-- 이 가지에서 실제로 성공한 주행의 문장 묶음(실행 순서 그대로). 얼린 프로그램이 아니라 용례 — "
-             "다음 주행이 읽고 고쳐 쓴다. 최근 RUNS_MAX 건·주행당 RUNS_MAX_SENTENCES 문장, 오래된 것부터 빠진다. "
-             "한 주행 = `### 날짜 · 의도 · 문장 n · ✓` 머리 + 번호 목록. -->")
 RUNS_MAX = 20                 # 가지당 보존 주행 수
 RUNS_MAX_SENTENCES = 30       # 주행당 문장 수 상한(넘으면 앞부분만, 절단 신고)
 RUNS_MAX_LEN = 400            # 문장 한 줄 상한(넘으면 꼬리 절단 신고)
+RUNS_NOTE = ("<!-- 이 가지에서 실제로 성공한 주행의 문장 묶음(실행 순서 그대로). 얼린 프로그램이 아니라 용례 — "
+             f"다음 주행이 읽고 고쳐 쓴다. 최근 {RUNS_MAX}건·주행당 {RUNS_MAX_SENTENCES}문장, 오래된 것부터 빠진다. "
+             "한 주행 = `### 날짜 · 의도 · 문장 n · ✓` 머리 + 번호 목록. -->")
 RUN_HEAD_RE = re.compile(r"(?m)^### (\d{4}-\d{2}-\d{2})")
 MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
 GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")

@@ -392,7 +392,7 @@ function renderPrim(p,vi,data){
     return '<div class="card docv">'+arr.map(docBlockHtml).join('')+'</div>';
   }
   if(p.type==='form'){
-    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(tpl(p.title,vi))+'</div>':'');
+    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(tpl(p.title,data))+'</div>':'');
     (p.fields||[]).forEach((f,fi)=>{
       const val=tpl(f.value||'',data); const id='ff_'+vi+'_'+f.key;
       h+='<div style="margin-bottom:8px"><label class="muted" style="display:block;font-size:11px;margin-bottom:3px">'+esc(f.label||'')+'</label>';

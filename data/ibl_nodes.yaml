@@ -4415,10 +4415,12 @@ nodes:
             add: effect
             remove: effect
             delete: effect
+            card_save: effect
           side_effect:
             ask: false
             digest: false
             map: false
+            card_read: false
             search: false
             sources: false
             list: false
@@ -4432,6 +4434,8 @@ nodes:
             ask: 노트북 name+질문 필요 — 고정 fixture 부적합
             digest: 노트북 name(+source) 필요 · 소스 전체를 읽는 LLM n회 — 고정 fixture 부적합
             card: 노트북 name 필요 · 소스마다 LLM 1회 — 고정 fixture 부적합
+            card_read: 노트북 name+source 필요 — 고정 fixture 부적합
+            card_save: 카드 파일을 쓴다 — 부작용
             map: 노트북 name 필요 — 고정 fixture 부적합
             search: 노트북 name+검색어 필요 — 고정 fixture 부적합
             sources: 노트북 name 필요 — 고정 fixture 부적합
@@ -4446,6 +4450,8 @@ nodes:
             digest: 소스 하나를 처음부터 끝까지 읽어 소개 (구간 요지 → 소개문, source 지정, 인용 [구간 n])
             card: 소스 카드 쓰기 — 문서를 한 번 읽어 무엇·구조·핵심·물음 (기본 카드 없는 소스만, force 전부)
             map: 지도 — 소스마다 카드 한 줄 (LLM 0). "무엇이 있나"는 이것으로
+            card_read: 카드 원문 읽기 (name + source) — 앱 편집 폼의 재료
+            card_save: 카드 저장 (name + source + text) — 사람이 고친 정본, `> 한 줄` 필수
             search: 발췌 검색만 (LLM 0 — 인용 확인·파이프용 싼 경로)
             sources: 소스 목록 + 색인 상태 + stale 표시
             remove: 소스 빼기 (source_id)
@@ -4541,6 +4547,46 @@ nodes:
                 lines:
                 - '{meta}'
                 - '{summary}'
+          - name: 카드
+            note: 소스마다 AI 가 쓴 카드(무엇·구조·핵심·물음)가 지도가 됩니다. 고르면 원문을 고칠 수 있고, 고친 한 줄이 지도에 실립니다.
+            inputs:
+            - key: nb
+              type: select
+              placeholder: 노트북 선택
+              options_action: '[self:notebook]{op: "list"}'
+              options_from: notebooks
+              option_value: name
+              option_label: name
+              required: true
+            action: '[self:notebook]{op: "map", name: "$nb"}'
+            view:
+            - type: card_list
+              from: items
+              master_detail: true
+              empty_from: message
+              card:
+                title: '{title}'
+                lines:
+                - '{meta}'
+                - '{summary}'
+              item_click:
+                action: '[self:notebook]{op: "card_read", name: "{notebook}", source: "{source_id}"}'
+                view:
+                - type: form
+                  title: 카드 — {title}
+                  fields:
+                  - key: text
+                    label: 카드 원문 (첫 `> 한 줄` 이 지도에 실립니다 — 고치면 지도와 문서 선택이 따라옵니다)
+                    type: textarea
+                    rows: 28
+                    value: '{text}'
+                  action: '[self:notebook]{op: "card_save", name: "{notebook}", source: "{source_id}", text: "$text"}'
+                  button: 저장
+                  actions:
+                  - label: AI 에게 맡기기 (다시 쓰기)
+                    action: '[self:notebook]{op: "card", name: "{notebook}", source: "{source_id}", force: true}'
+                    confirm: AI 가 문서를 다시 읽어 카드를 새로 씁니다. 지금 원문은 덮입니다.
+                    refresh: true
           - name: 만들기
             auto_run: true
             note: 문서 더미에 이름을 붙여 두면, 그 안에서만 답하는 질문 창구가 생깁니다.

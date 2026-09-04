@@ -2,7 +2,7 @@
  * generic/prims-edit.tsx — 편집 프리미티브 (form / editable_list)
  *
  * GenericInstrument.tsx 에서 분리(2026-07-18, 1500줄 규칙 모듈화).
- * FormPrim(필드 편집+저장+보조액션)·EditableListPrim(행 CRUD)·이미지/폴더/AI독 필드.
+ * FormPrim(필드 편집+저장+보조액션)·EditableListPrim(행 CRUD)·이미지/폴더/파일/AI독 필드.
  * p.type 디스패치는 GenericInstrument.tsx ViewPrim(정본 if-chain)에 있다.
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -71,6 +71,44 @@ function FolderField({ f, value, onPick }: { f: AppFormField; value: string; onP
           📁 찾아보기
         </button>
       )}
+    </div>
+  );
+}
+
+// 파일 선택 필드(다중) — 데스크탑 네이티브 다중 선택(window.electron.selectFiles) 후 고른 파일마다
+// add_action 을 즉시 실행한다. ImagesField 와 같은 계보(form save 와 무관·고르는 즉시 영속+새로고침)
+// 이되 이미지가 아닌 일반 파일용이라 썸네일 대신 진행/결과 줄을 보여준다.
+// 원격(브라우저)엔 네이티브 다이얼로그가 없어 안내만 — folder 필드와 같은 정직한 강등.
+function FilesField({ f, dispatch, busy, setBusy }:
+  { f: AppFormField; dispatch: Dispatch; busy: boolean; setBusy: (b: boolean) => void }) {
+  const electron = (window as unknown as { electron?: { selectFiles?: () => Promise<string[] | null> } }).electron;
+  const canPick = !!(electron?.selectFiles && f.add_action);
+  const [status, setStatus] = useState('');
+  const pick = async () => {
+    if (!electron?.selectFiles || !f.add_action) return;
+    const picked = await electron.selectFiles();
+    if (!picked || !picked.length) return;
+    setBusy(true);
+    let ok = 0;
+    for (let i = 0; i < picked.length; i++) {
+      const base = picked[i].split(/[\\/]/).pop() || picked[i];
+      setStatus(`${i + 1}/${picked.length} ${base} …`);
+      if (await dispatch(f.add_action, { path: picked[i] })) ok++;
+    }
+    setStatus(ok === picked.length ? `${ok}개 넣었습니다` : `${picked.length}개 중 ${ok}개 성공 — 나머지는 실패(폴더·읽을 수 없는 형식)`);
+    setBusy(false);
+  };
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      {canPick ? (
+        <button type="button" disabled={busy} onClick={pick}
+          className="px-3 py-2 rounded-lg border border-stone-300 text-sm text-stone-600 hover:border-stone-500 disabled:opacity-40 shrink-0 whitespace-nowrap">
+          📄 파일 고르기 (여러 개 가능)
+        </button>
+      ) : (
+        <span className="text-xs text-stone-400">파일 선택은 데스크탑에서</span>
+      )}
+      {status && <span className="text-xs text-stone-500 truncate" title={status}>{status}</span>}
     </div>
   );
 }
@@ -161,7 +199,7 @@ export function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown;
 
   return (
     <Card>
-      {p.title != null && <div className="text-xs font-semibold text-stone-400 uppercase mb-2">{String(p.title)}</div>}
+      {p.title != null && <div className="text-xs font-semibold text-stone-400 uppercase mb-2">{tpl(p.title, data)}</div>}
       <div className="flex flex-col gap-2.5">
         {fields.map((f, i) => (
           <div key={i} className="flex flex-col gap-1">
@@ -177,13 +215,15 @@ export function FormPrim({ p, data, dispatch }: { p: AppViewPrim; data: unknown;
               </button>
             ) : f.type === 'textarea' ? (
               <>
-                <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
+                <textarea value={vals[f.key] ?? ''} onChange={(e) => set(f.key, e.target.value)} rows={f.rows || 3} placeholder={f.placeholder || ''} className={`${fieldCls} resize-y`} />
                 {f.ai_dock && <AiDock field={f} value={vals[f.key] ?? ''} vals={vals} onApply={(v) => set(f.key, v)} />}
               </>
             ) : f.type === 'images' ? (
               <ImagesField f={f} value={vals[f.key] ?? ''} dispatch={dispatch} busy={saving} setBusy={setSaving} />
             ) : f.type === 'folder' ? (
               <FolderField f={f} value={vals[f.key] ?? ''} onPick={(v) => set(f.key, v)} />
+            ) : f.type === 'files' ? (
+              <FilesField f={f} dispatch={dispatch} busy={saving} setBusy={setSaving} />
             ) : f.type === 'recurrence' ? (
               <select value={vals[f.key] || 'none'} onChange={(e) => set(f.key, e.target.value)} className={fieldCls}>
                 {RECURRENCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

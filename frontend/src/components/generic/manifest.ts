@@ -88,12 +88,14 @@ export interface AppViewPrim {
 export interface AppFormField {
   key: string;
   label?: string;
-  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images' | 'date' | 'time' | 'datetime' | 'recurrence' | 'folder';
+  type: 'text' | 'select' | 'toggle' | 'textarea' | 'images' | 'date' | 'time' | 'datetime' | 'recurrence' | 'folder' | 'files';
   value?: string;        // 초기값 템플릿 (데이터에서 채움)
   placeholder?: string;
+  rows?: number;         // type:'textarea' — 줄 수(기본 3; 문서 편집 폼은 크게)
   options?: { value: string | number; label: string }[];
-  // type:'images' 전용 — 업로드 즉시 영속(form save 와 무관). add 는 데스크탑(window.electron)만.
-  add_action?: string;    // [..]{op:add_image, ..., path:"$path"} — $path=소스 파일경로
+  // type:'images'·'files' 전용 — 고르는 즉시 영속(form save 와 무관). 선택은 데스크탑(window.electron)만.
+  //   images = 이미지 썸네일 격자, files = 임의 파일 다중 선택(고른 파일마다 add_action 1회).
+  add_action?: string;    // [..]{op:add_image|add, ..., path:"$path"} — $path=소스 파일경로
   remove_action?: string; // [..]{op:remove_image, ..., path:"$path"} — $path=제거할 첨부
   // type:'textarea' 전용 — ai_dock 어피던스(요청→제안→반영/첨부/닫기). BinNote 656 UX 를 어휘로.
   // action 은 $<필드키>(현재 텍스트)·$dock(요청)을 주입받고, 결과 스칼라 텍스트가 제안이 된다.

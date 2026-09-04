@@ -669,6 +669,44 @@ def _op_card(tool_input: dict, context) -> str:
                   "items": items, "message": f"카드 {written}건 작성, {skipped}건 기존, {failed}건 실패 — 지도는 op:map"})
 
 
+def _op_card_read(tool_input: dict, context) -> str:
+    """카드 원문 읽기 — 앱의 카드 편집 폼이 이 결과의 {text} 로 채운다."""
+    import notebook_core as core
+    name = tool_input.get("name", "")
+    res = _resolve_source(core, name, tool_input.get("source") or tool_input.get("source_id"))
+    if not res.get("success"):
+        return _json({**res, "items": []})
+    src = res["source"]; p = _card_path(core, name, src["id"])
+    text = open(p, encoding="utf-8").read() if p.exists() else ""
+    return _json({"success": True, "notebook": name, "source_id": src["id"], "title": src.get("title"), "kind": src.get("kind"),
+                  "chars": src.get("char_count"), "exists": p.exists(), "path": str(p), "gist": _card_gist(p) if p.exists() else "",
+                  "text": text, "items": [],
+                  "message": "" if p.exists() else "카드가 아직 없습니다 — 'AI 에게 맡기기'로 쓰거나 직접 적으세요."})
+
+
+def _op_card_save(tool_input: dict, context) -> str:
+    """카드 저장 — 사람이 고친 원문을 정본 파일에 원자 쓰기. 머리 표식이 없으면 붙여 준다."""
+    import notebook_core as core
+    from datetime import datetime
+    name = tool_input.get("name", "")
+    text = str(tool_input.get("text") or "")
+    if not text.strip():
+        return _json({"success": False, "error": "text(카드 본문)가 비어 있습니다.", "items": []})
+    res = _resolve_source(core, name, tool_input.get("source") or tool_input.get("source_id"))
+    if not res.get("success"):
+        return _json({**res, "items": []})
+    src = res["source"]; p = _card_path(core, name, src["id"])
+    if not text.lstrip().startswith("<!-- notebook-card"):
+        text = (f'<!-- notebook-card notebook="{name}" source_id="{src["id"]}" kind="{src.get("kind") or ""}" via="human" '
+                f'written="{datetime.now().strftime("%Y-%m-%d %H:%M")}" -->\n' + text.lstrip())
+    if "\n> " not in text and not text.lstrip().startswith("> "):
+        return _json({"success": False, "error": "카드에는 `> 한 줄 요약` 줄이 있어야 합니다(지도에 실리는 줄).", "items": []})
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".tmp"); tmp.write_text(text.rstrip("\n") + "\n", encoding="utf-8"); os.replace(tmp, p)
+    return _json({"success": True, "notebook": name, "source_id": src["id"], "path": str(p), "gist": _card_gist(p),
+                  "items": [], "message": f"카드 저장 — 지도 한 줄: {_card_gist(p)[:80]}"})
+
+
 def _op_map(tool_input: dict, context) -> str:
     """지도 — 소스마다 카드 한 줄(LLM 0). "이 노트북에 무엇이 있나"는 이것으로 답한다; 문서를 고르는 눈."""
     import notebook_core as core
@@ -684,7 +722,8 @@ def _op_map(tool_input: dict, context) -> str:
             missing += 1
         lines.append(f"- #{s['id']} {s.get('title')} ({s.get('kind')} · {int(s.get('char_count') or 0):,}자) — {gist or '(카드 없음 — op:card)'}")
         items.append({"source_id": s["id"], "title": s.get("title"), "kind": s.get("kind"), "chars": s.get("char_count"),
-                      "gist": gist, "card": str(p) if p.exists() else None, "summary": gist, "meta": f"#{s['id']} · {s.get('kind')}"})
+                      "gist": gist, "card": str(p) if p.exists() else None, "summary": gist or "(카드 없음)",
+                      "meta": f"#{s['id']} · {s.get('kind')} · {int(s.get('char_count') or 0):,}자", "notebook": ls.get("notebook")})
     text = f"# 지도 — {ls.get('notebook')}\n" + (f"> {ls.get('note')}\n" if ls.get("note") else "") + "\n".join(lines)
     return _json({"success": True, "notebook": ls.get("notebook"), "note": ls.get("note"), "count": len(items),
                   "missing_cards": missing, "text": text, "items": items, "blocks": [{"type": "paragraph", "text": text}]})
@@ -916,6 +955,8 @@ _OP_DISPATCHERS = {
         "ask": _op_ask,
         "digest": _op_digest,
         "card": _op_card,
+        "card_read": _op_card_read,
+        "card_save": _op_card_save,
         "map": _op_map,
         "search": _op_search,
         "sources": _op_sources,

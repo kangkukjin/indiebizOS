@@ -392,12 +392,12 @@ function renderPrim(p,vi,data){
     return '<div class="card docv">'+arr.map(docBlockHtml).join('')+'</div>';
   }
   if(p.type==='form'){
-    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(p.title)+'</div>':'');
+    let h='<div class="card">'+(p.title?'<div class="step-label">'+esc(tpl(p.title,vi))+'</div>':'');
     (p.fields||[]).forEach((f,fi)=>{
       const val=tpl(f.value||'',data); const id='ff_'+vi+'_'+f.key;
       h+='<div style="margin-bottom:8px"><label class="muted" style="display:block;font-size:11px;margin-bottom:3px">'+esc(f.label||'')+'</label>';
       if(f.type==='select') h+='<select class="field" id="'+id+'">'+(f.options||[]).map(o=>'<option value="'+esc(String(o.value))+'"'+(String(o.value)===String(val)?' selected':'')+'>'+esc(o.label)+'</option>').join('')+'</select>';
-      else if(f.type==='textarea'){ h+='<textarea class="field" id="'+id+'" rows="3">'+esc(val)+'</textarea>';
+      else if(f.type==='textarea'){ h+='<textarea class="field" id="'+id+'" rows="'+(f.rows||3)+'">'+esc(val)+'</textarea>';
         if(f.ai_dock){ h+='<div id="aid_sug_'+vi+'_'+fi+'"></div>'
           +'<div class="row" style="margin-top:6px;align-items:flex-end">'
           +'<textarea class="field" id="aid_in_'+vi+'_'+fi+'" rows="1" style="flex:1" placeholder="'+esc(f.ai_dock.placeholder||'AI에게 시키기 — 예: 더 간결하게')+'"></textarea>'
@@ -418,6 +418,9 @@ function renderPrim(p,vi,data){
       else if(f.type==='recurrence') h+=_recurSelect(id,val);
       else if(f.type==='date'||f.type==='time'||f.type==='datetime') h+='<input type="'+dateInputType(f.type)+'" class="field" id="'+id+'" value="'+esc(val)+'">';
       else if(f.type==='folder') h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'폴더 경로 (선택은 데스크탑에서)')+'">';
+      // files: 네이티브 다중 파일 선택은 데스크탑 전용(window.electron.selectFiles) — 원격은 안내만.
+      // 입력을 그리지 않으므로 formSave 의 값 수집(if(el))에서 조용히 빠진다(images 와 같은 강등).
+      else if(f.type==='files') h+='<span class="muted" style="font-size:12px">파일 선택은 데스크탑에서</span>';
       else h+='<input class="field" id="'+id+'" value="'+esc(val)+'" placeholder="'+esc(f.placeholder||'')+'">';
       h+='</div>';
     });

@@ -183,6 +183,26 @@ def test_n9_ask_reads_selected_docs_whole_and_cites(monkeypatch, tmp_path):
     assert out4["mode"] == "none" and out4["not_in_sources"] is True
 
 
+# ---------------------------------------------------------------- N11 카드 읽기·저장(앱 편집)
+def test_n11_card_read_and_human_save_feeds_map(monkeypatch, tmp_path):
+    import json
+    import handler as H
+    import notebook_core as core
+    monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
+    src = {"id": 7, "title": "강의", "kind": "youtube", "status": "ready", "char_count": 100}
+    monkeypatch.setattr(core, "list_sources", lambda name: {"success": True, "notebook": name, "note": "", "sources": [src]})
+    r = json.loads(H._op_card_read({"name": "nb", "source": "7"}, None))
+    assert r["success"] and r["exists"] is False and r["text"] == ""
+    bad = json.loads(H._op_card_save({"name": "nb", "source": "7", "text": "요약 줄 없음"}, None))
+    assert bad["success"] is False and "> 한 줄" in bad["error"]
+    ok = json.loads(H._op_card_save({"name": "nb", "source": "7", "text": "> 사람이 쓴 한 줄\n\n## 무엇인가\n강의."}, None))
+    assert ok["success"] and ok["gist"] == "사람이 쓴 한 줄"
+    r2 = json.loads(H._op_card_read({"name": "nb", "source": "7"}, None))
+    assert r2["exists"] and r2["text"].startswith('<!-- notebook-card notebook="nb" source_id="7"') and "via=\"human\"" in r2["text"]
+    m = json.loads(H._op_map({"name": "nb"}, None))
+    assert m["items"][0]["gist"] == "사람이 쓴 한 줄" and m["items"][0]["notebook"] == "nb"
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

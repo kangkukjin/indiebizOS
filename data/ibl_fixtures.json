@@ -196,6 +196,8 @@
     "self:notebook#add": "소스 색인을 만든다 — 부작용",
     "self:notebook#ask": "노트북 name+질문 필요 — 고정 fixture 부적합",
     "self:notebook#card": "노트북 name 필요 · 소스마다 LLM 1회 — 고정 fixture 부적합",
+    "self:notebook#card_read": "노트북 name+source 필요 — 고정 fixture 부적합",
+    "self:notebook#card_save": "카드 파일을 쓴다 — 부작용",
     "self:notebook#create": "원장에 노트북을 만든다 — 부작용",
     "self:notebook#delete": "노트북을 지운다 — 부작용",
     "self:notebook#digest": "노트북 name(+source) 필요 · 소스 전체를 읽는 LLM n회 — 고정 fixture 부적합",

@@ -28,7 +28,9 @@ APP_EVENT_VARS = {"lat", "lng", "id", "name", "radius", "radius_km", "url"}  # �
 # file: 선택 즉시 POST /launcher/upload → 값=서버 절대경로 (ingest 층 분해 ①운반, 2026-08-14).
 #   accept 로 <input accept> 필터. 렌더러 2곳(GenericInstrument.tsx FileInput · launcher_app_appmode upFile).
 APP_INPUT_TYPES = {"text", "select", "file"}
-APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence", "folder"}
+# files: 데스크탑 네이티브 다중 파일 선택(window.electron.selectFiles) — 고른 파일마다 add_action
+#   1회 실행(images 와 같은 즉시-영속 계보, form save 와 무관). 원격은 안내만(folder 와 같은 강등).
+APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date", "time", "datetime", "recurrence", "folder", "files"}
 # ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). BinNote 656 UX 를
 # 어휘로 흡수 — 어떤 선언형 form 이든 textarea 에 붙일 수 있다. dismiss 는 항상, 아래는 적용 모드.
 APP_AIDOCK_MODES = {"replace", "append"}
@@ -179,7 +181,7 @@ def _app_action_templates(app: dict) -> list[str]:
                 for f in p.get("fields") or []:  # images 필드의 add_image/remove_image · ai_dock 템플릿
                     if not isinstance(f, dict):
                         continue
-                    if f.get("type") == "images":
+                    if f.get("type") in ("images", "files"):
                         for k in ("add_action", "remove_action"):
                             if isinstance(f.get(k), str):
                                 out.append(f[k])
@@ -238,7 +240,7 @@ def _block_local_keys(blk: dict) -> set:
         for f in fields or []:
             if isinstance(f, dict) and f.get("key"):
                 keys.add(f["key"])
-            if isinstance(f, dict) and f.get("type") == "images":  # add/remove_image 가 $path 런타임 주입
+            if isinstance(f, dict) and f.get("type") in ("images", "files"):  # add/remove_action 이 $path 런타임 주입
                 keys.add("path")
             if isinstance(f, dict) and isinstance(f.get("ai_dock"), dict):  # ai_dock.action 이 $dock(요청) 주입
                 keys.add("dock")

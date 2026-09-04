@@ -32,6 +32,7 @@ config 예시 (data/system_ai_config.json 등):
 
 import json
 import os
+import hashlib
 import shutil
 import tempfile
 import time
@@ -296,13 +297,13 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
     # ================= 도구 정책 =================
 
-    # ToolSearch 우회용 eager 도구 목록.
+    # eager 도구 목록(권한 + `--tools` 내장 집합의 원천).
     # --allowed-tools 는 restrictive이므로 Claude Code가 흔히 쓰는 built-in + MCP IBL을 명시.
     # 이 목록에 없는 도구는 사용 불가 (트레이드오프: 속도 향상 vs 도구 범위 제한).
     # 더 많은 도구가 필요해지면 여기에 추가.
     # 원칙: IBL 어휘를 *중복(그림자)* 하는 네이티브는 여기서 빼고 DISALLOWED 로 하드 차단한다.
-    #   MCP execute_ibl 은 deferred(ToolSearch 경유, 2.1.205 실측)인데 네이티브는 eager 라,
     #   중복 네이티브를 남기면 모델이 IBL 대신 그쪽으로 새는 회귀가 생긴다(Read·WebSearch 실측 누수).
+    #   (MCP deferred 문제는 `--tools` 로 해소 — EAGER_BUILTIN_TOOLS 주석 참조.)
     #   → 누수 차단 = 어휘 일관성·해마 학습·폰 이식성·실행 통제(게이팅/로깅/압축) 보존.
     # 남기는 것: 셸 탈출구(Bash 계열 — IBL 에 등가물 없는 의도된 peer: Python/Node/임의 명령) +
     #   파일 쓰기/편집(셸 코드 작성-실행 루프의 짝) + execute_ibl.
@@ -323,7 +324,14 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "mcp__indiebizos__read_guide",
     ]
 
-    # 명시적으로 차단할 도구 — ToolSearch 등을 통해 우회 로드되더라도 호출 거부됨.
+    # `--tools` 에 실을 내장 도구 = EAGER_TOOLS 중 내장(MCP 이름 제외). 2026-09-04 실측(CLI 2.1.258):
+    # `--allowed-tools` 만 주면 내장 36개 + ToolSearch 가 뜨고 MCP 두 도구는 deferred 라 매 에피소드
+    # 첫 왕복이 ToolSearch(스키마 로드)였다. `--tools` 로 내장을 이 목록으로 좁히면 ToolSearch 자체가
+    # 사라지고 MCP 두 도구가 init 부터 eager 로 뜬다(왕복 1회 절감 + 왕복당 컨텍스트 45K→20K 토큰).
+    # 환경변수(ENABLE_TOOL_SEARCH)는 쓰지 않는다 — 플래그 하나가 더 좁고 이식성 있다.
+    EAGER_BUILTIN_TOOLS = [t for t in EAGER_TOOLS if not t.startswith("mcp__")]
+
+    # 명시적으로 차단할 도구 — 우회 로드되더라도 호출 거부됨.
     # AskUserQuestion: indiebizOS UI 미연결, 응답 채널 없음 → IBL [user:ask] 사용.
     # 아래 네이티브들은 IBL 액션과 1:1 중복이라, 모델이 IBL 대신 새지 못하게 강제로 막는다.
     DISALLOWED_TOOLS = [
@@ -353,12 +361,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "가이드 읽기 도구의 정확한 이름은 `mcp__indiebizos__read_guide` 다(맨이름 `read_guide` 아님). "
         "공용 프롬프트·IBL 액션 설명이 `read_guide(query=...)` 로 가르치는 곳은 모두 이 도구를 뜻하니, "
         "`mcp__indiebizos__read_guide` 로 호출하라(file_find 로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
-        "★이 두 MCP 도구는 이 CLI 에서 **deferred** 다 — 세션 시작 직후엔 스키마가 로드돼 있지 않아, "
-        "곧장 호출하면 `No such tool available` 로 한 번 실패한다. 그러니 **이번 턴 첫 IBL/가이드 호출 전에 딱 한 번** "
-        "아래 형태로 정확한 풀네임을 실어 `ToolSearch` 로 스키마를 먼저 로드한 뒤, 위 정확한 이름으로 호출하라:\n"
-        "`ToolSearch{query: \"select:mcp__indiebizos__execute_ibl,mcp__indiebizos__read_guide\"}`\n"
-        "(select 에는 반드시 `mcp__indiebizos__` 풀네임을 써라 — 맨이름 `execute_ibl` 로 찾으면 'no matching deferred tools' 만 나온다.) "
-        "resume 로 이어지는 턴이라도 이 프로세스엔 스키마가 새로 로드돼야 하니, 과거에 성공했더라도 이번 턴 첫 호출 전 ToolSearch 를 한 번 하라.\n"
+        "이 두 MCP 도구는 세션 시작부터 로드돼 있다 — 스키마를 따로 찾거나 불러올 필요 없이 곧장 호출하라.\n"
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
         "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
         "`mcp__indiebizos__execute_ibl` 로 "
@@ -370,6 +373,27 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "— IBL 로 할 수 있는 일을 셸로 하면 그 주행은 경험증류에 접지되지 않아 해마에 아무것도 남지 않는다(실측 2026-08-18). "
         "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라."
     )
+
+    # ================= 세션 =================
+
+    @classmethod
+    def tool_policy_fingerprint(cls) -> str:
+        """도구 집합·정책의 지문 — EAGER/DISALLOWED 목록 + TOOL_POLICY 본문의 md5 앞 8자."""
+        blob = "|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
+        return hashlib.md5(blob.encode("utf-8")).hexdigest()[:8]
+
+    def _get_session_key(self) -> str:
+        """세션 키에 도구 정책 지문을 붙인다 (codex 의 시스템 프롬프트 해시와 같은 선례).
+
+        이유(2026-09-04, ep2811 실측): `--tools` 로 ToolSearch 를 없애고 TOOL_POLICY 에서 그 지시를
+        지운 뒤에도, resume 된 세션은 옛 트랜스크립트(ToolSearch 를 시키던 정책 + 실제 ToolSearch
+        호출들)를 다시 재생해 첫 왕복을 존재하지 않는 도구 호출로 날렸다. 시스템 프롬프트는 매 턴
+        다시 실리지만 **습관은 트랜스크립트에 산다**. 도구 집합·정책이 바뀌면 키가 바뀌어 옛
+        세션이 안 잡히고 자동으로 fresh 가 된다. 옛 키 잔재는 CliSessionStore.clear_agent 의
+        `키#…` 접두 스윕이 '새 대화' 때 함께 지운다.
+        """
+        base = super()._get_session_key()
+        return f"{base}#{self.tool_policy_fingerprint()}"
 
     # ================= 명령 조립 =================
 
@@ -390,11 +414,10 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         --no-session-persistence는 일부러 빼놓음 — Claude Code가 디스크에 세션을 저장해야
         다음 호출 시 --resume으로 자기 과거를 이어볼 수 있음.
 
-        --allowed-tools 는 built-in 도구(Bash/Write/Edit 등)를 eager-load + 권한 부여한다.
-        ★단, CLI 2.1.205 에서 **MCP 도구(execute_ibl/read_guide)는 --allowed-tools 에 넣어도
-        여전히 deferred** 다(allowed=권한이지 schema eager-load 아님, init tools 목록에 안 뜸).
-        그래서 첫 사용 전 ToolSearch 1회 왕복이 CLI 구조상 불가피 — TOOL_POLICY 가 모델에게
-        "곧장 호출" 대신 "먼저 ToolSearch(풀네임 select) 후 호출" 하도록 안내해 헛발질(No such tool)을 없앤다.
+        --allowed-tools 는 권한(permission)이고 스키마 로드가 아니다 — CLI 2.1.205~258 실측:
+        allowed 만 주면 내장 36개+ToolSearch 가 eager, MCP 두 도구는 deferred 라 매 에피소드 첫
+        왕복이 ToolSearch 였다. `--tools EAGER_BUILTIN_TOOLS` 로 내장을 좁히면(2026-09-04) ToolSearch
+        가 사라지고 MCP 도구가 init 부터 뜬다. 그래서 TOOL_POLICY 는 "곧장 호출"이라고 말한다.
         """
         cmd = [
             self._binary_path,
@@ -413,7 +436,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--setting-sources", ""]
         else:
             cmd += [
-                # ToolSearch 우회: 자주 쓰는 도구를 eager-load
+                # 내장 도구 집합 자체를 좁힌다 → ToolSearch 소멸 + MCP eager (위 docstring)
+                "--tools", ",".join(self.EAGER_BUILTIN_TOOLS),
+                # 권한: 내장 + MCP IBL 브리지
                 "--allowed-tools", ",".join(self.EAGER_TOOLS),
                 # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
                 "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),

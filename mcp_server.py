@@ -5,6 +5,7 @@
 """
 import json
 import os
+import re
 import urllib.request
 from typing import Optional, List
 
@@ -76,7 +77,7 @@ def _http_trajectory(ctx):
     return (None, None)
 
 
-def _trim_for_agent(raw: str) -> str:
+def _trim_for_agent(raw: str, actions: int = 1) -> str:
     """에이전트에게 줄 응답에서 중복 필드(final_result) 제거.
 
     파이프라인(>> & ??) 결과에서 final_result는 마지막 step의 '사본'이다 —
@@ -98,12 +99,47 @@ def _trim_for_agent(raw: str) -> str:
             and not data.get("_results_summarized")):
         data.pop("final_result", None)
         raw = json.dumps(data, ensure_ascii=False)
-    return _budget_for_agent(raw, data if isinstance(data, dict) else None)
+    return _budget_for_agent(raw, data if isinstance(data, dict) else None,
+                             budget=_agent_budget_chars(actions))
 
 
-# 에이전트에게 줄 응답의 크기 예산(문자). MCP 도구 결과가 호스트(claude_code) 한도를
-# 넘으면 파일덤프→jq 우회 루프에 빠지므로, 그 전에 여기서 우아하게 줄인다.
-_AGENT_BUDGET_CHARS = 24_000
+# 에이전트에게 줄 응답의 크기 예산(문자) — 2026-09-04 개정: 고정 24,000자 → **프로바이더 규칙과
+# 같은 식**. in-process 프로바이더(anthropic/openai/ollama)는 액션당 MAX_TOOL_RESULT_LENGTH=16,000자
+# × 문장의 액션 수로 자른다. 이 MCP 경계만 문장 크기와 무관한 24K 고정이라, 세 파일을 `&` 로 한
+# 문장에 읽으면(실측 31,909자) 잘리고 에이전트가 파일을 하나씩 다시 읽었다(ep2800: 재읽기 4왕복).
+# 그 뒤 에이전트는 큰 문장을 쓰면 벌 받는다는 걸 학습해 1액션 문장 60~75% 로 굳었다.
+# 상한은 호스트 CLI 자체 한도(MAX_MCP_OUTPUT_TOKENS, 기본 25,000토큰 — 2.1.258 바이너리 실측) ×
+# 실봉투 1.6자/토큰(실측 31,715자=19,425토큰). 호스트가 자기 한도로 구조 무지 절단을 하기 *전에*
+# 여기서 구조 보존 축약(items cap → 꼬리)을 하는 것이 이 경계의 남은 역할이다 — 더 좁게 조이지 않는다.
+# 큰 데이터를 줄이는 일은 언어(table:take/select/brief 등 원샷 낱말)의 몫이지 경계의 몫이 아니다.
+_PER_ACTION_CHARS = 16_000          # = providers.*.MAX_TOOL_RESULT_LENGTH (test_agent_boundary_budget 이 동율 고정)
+_HOST_MCP_TOKENS_DEFAULT = 25_000   # claude CLI MAX_MCP_OUTPUT_TOKENS 기본값
+_CHARS_PER_TOKEN = 1.6              # 한글·JSON 혼합 실봉투 실측
+
+
+def _host_cap_chars() -> int:
+    """호스트 CLI 의 MCP 결과 한도(토큰)를 문자로 — env 로 올리면 여기도 따라 올라간다."""
+    try:
+        tokens = int(os.environ.get("MAX_MCP_OUTPUT_TOKENS") or 0)
+    except ValueError:
+        tokens = 0
+    if tokens <= 0:
+        tokens = _HOST_MCP_TOKENS_DEFAULT
+    return int(tokens * _CHARS_PER_TOKEN)
+
+
+def _agent_budget_chars(actions: int = 1) -> int:
+    """문장의 액션 수에 비례, 호스트 한도 이하. 액션 0·음수는 1 로."""
+    n = max(1, int(actions or 1))
+    return min(_PER_ACTION_CHARS * n, _host_cap_chars())
+
+
+_ACTION_HEAD_RE = re.compile(r"\[[a-z_]+:[a-z_]+\]")
+
+
+def _count_actions(code: str) -> int:
+    """IBL 코드의 액션 머리 수(문자열 안 머리는 과계수될 수 있으나 그건 예산을 넓힐 뿐)."""
+    return max(1, len(_ACTION_HEAD_RE.findall(code or "")))
 
 
 def _condense_items(obj, cap: int):
@@ -136,10 +172,12 @@ def _condense_items(obj, cap: int):
     return obj
 
 
-def _budget_for_agent(raw: str, parsed=None) -> str:
+def _budget_for_agent(raw: str, parsed=None, budget: int = None) -> str:
     """예산 초과 응답을 단계 축약. 층 선택 원칙: 여기는 '에이전트 경계' —
     REST/프론트/웹소켓이 받는 원본 계약은 건드리지 않는다."""
-    if len(raw) <= _AGENT_BUDGET_CHARS:
+    if budget is None:
+        budget = _agent_budget_chars(1)
+    if len(raw) <= budget:
         return raw
     if parsed is None:
         try:
@@ -150,7 +188,7 @@ def _budget_for_agent(raw: str, parsed=None) -> str:
         for cap in (10, 5, 3, 1):
             slim = _condense_items(parsed, cap)
             out = json.dumps(slim, ensure_ascii=False)
-            if len(out) <= _AGENT_BUDGET_CHARS:
+            if len(out) <= budget:
                 if isinstance(slim, dict):
                     slim["_trimmed"] = (f"결과가 커서 items 를 소스당 {cap}개로 줄였습니다"
                                         " — 전체 개수는 total/_omitted_items 참조, "
@@ -159,7 +197,7 @@ def _budget_for_agent(raw: str, parsed=None) -> str:
                 return out
         raw = json.dumps(_condense_items(parsed, 1), ensure_ascii=False)
     # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다.
-    head = raw[:_AGENT_BUDGET_CHARS]
+    head = raw[:budget]
     return head + f" …[{len(raw) - len(head)}자 생략 — 범위를 좁혀 다시 실행하세요]"
 
 
@@ -395,7 +433,7 @@ async def execute_ibl(code: str, project_path: str = "",
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)
-    text = _trim_for_agent(cleaned)
+    text = _trim_for_agent(cleaned, _count_actions(code))
     # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
     # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
     if not recover:

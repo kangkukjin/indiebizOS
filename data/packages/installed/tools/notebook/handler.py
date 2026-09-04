@@ -29,6 +29,8 @@ QUOTE_CHARS = 160       # citations quote 길이 (청크 원문에서 결정론 
 NOT_IN_SOURCES_MARK = "NOT_IN_SOURCES"
 DIGEST_NEEDED_MARK = "DIGEST_NEEDED"   # ask 판정기가 "발췌 단편으론 소개·개요 불가, 소스 전체를 읽어라" 고 넘기는 표식
 DIGEST_WINDOW_CHARS = 5000             # 구간 요지 한 번에 읽는 분량(경량 모델)
+CARD_DIRECT_MAX = 45000                # 이 아래면 문서를 통째로 읽고 카드를 쓴다, 위면 구간 요지를 거쳐 쓴다
+CARD_WAIT_S = 240                      # add 뒤 색인이 끝나길 기다리는 상한(카드는 청크가 있어야 쓴다)
 
 
 def _json(payload: dict) -> str:
@@ -106,6 +108,9 @@ def _op_add(tool_input: dict, context) -> str:
     name = tool_input.get("name", "")
     if isinstance(out, dict) and out.get("success") and name:
         out["memory_survey"] = _schedule_survey(name, context, "소스 추가")
+        if out.get("source_id"):
+            _card_after_index(name, int(out["source_id"]))   # 문서 단위 카드 — 넣을 때 한 번 읽는다
+            out["card"] = "색인 뒤 자동 작성(op:map 으로 확인)"
         return _json(out)
     return raw
 
@@ -166,12 +171,15 @@ def _op_sources(tool_input: dict, context) -> str:
     import notebook_core as core
     out = core.list_sources(tool_input.get("name", ""))
     if out.get("success"):
+        for s in out["sources"]:
+            p = _card_path(core, tool_input.get("name", ""), s["id"])
+            s["card_gist"] = _card_gist(p) if p.exists() else ""
         out["items"] = [{
             "title": s["title"],
             "meta": " · ".join(x for x in [
                 f"#{s['id']}", s["kind"], f"청크 {s['chunk_count']}", s["status"],
-                s.get("stale") and f"⚠️{s['stale']}"] if x),
-            "summary": s.get("error") or (s.get("path") or ""),
+                s.get("stale") and f"⚠️{s['stale']}", (not s.get("card_gist")) and "카드 없음"] if x),
+            "summary": s.get("error") or s.get("card_gist") or (s.get("path") or ""),
             "source_id": s["id"],
             "notebook": out.get("notebook", ""),
             "url": "",
@@ -316,6 +324,172 @@ def _source_chunks(core, source_id: int) -> list:
             "SELECT id, loc, text FROM chunks WHERE source_id=? ORDER BY id", (source_id,)).fetchall()]
     finally:
         conn.close()
+
+
+# =============================================================================
+# 소스 카드 (2026-09-04 사용자 판정 "문서가 단위, 카드가 지도, 답할 때는 골라서 통째로")
+#   정본 = data/notebook/cards/<노트북>/<source_id>.md (사람이 고친다), DB 는 한 줄 요약(gist)만 색인.
+#   650자 청크는 위치 색인으로 남고, 이해의 단위는 문서다. 카드는 "무엇인가·구조·핵심·답할 물음"을
+#   AI 가 한 번 읽고 쓴다(넣을 때 자동, op:card 로 다시). 지도(op:map)는 카드 한 줄들의 목록.
+# =============================================================================
+
+def _card_dir(core, name: str):
+    return core.NOTEBOOK_DIR / "cards" / re.sub(r"[^\w가-힣.-]+", "_", name)
+
+
+def _card_path(core, name: str, source_id: int):
+    return _card_dir(core, name) / f"{int(source_id)}.md"
+
+
+def _card_gist(path) -> str:
+    """카드의 `> 한 줄` — 지도에 실린다. 없으면 빈 문자열."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("> "):
+                    return line[2:].strip()
+    except OSError:
+        pass
+    return ""
+
+
+def _card_prompt(title: str, kind: str, body: str, via_gists: bool) -> tuple:
+    system = ("너는 문서 카드 작성자다. 주어진 본문만 근거로, 아래 형식을 정확히 지켜 한국어로 쓴다(고유명사·용어는 원어 보존). "
+              "추측·평가 금지, 본문에 없는 말 금지. 카드는 이 문서를 읽을지 말지를 고르는 지도이므로 사실·구조·물음을 정확히.")
+    fmt = ("> (한 줄 요약 — 이 문서가 무엇이고 무엇을 말하는지, 80자 안)\n\n"
+           "## 무엇인가\n(종류·저자·시기·목적 2~4문장)\n\n"
+           "## 구조\n(절·주제 전환 순서대로 `- [자리] 제목 — 한 줄`; 자막이면 시각, 문서면 절 제목)\n\n"
+           "## 핵심 주장·수치·이름\n(- 항목 5~12개, 수치·날짜·이름 그대로)\n\n"
+           "## 답할 수 있는 물음\n(- 이 문서가 답해 줄 물음 5~10개, 물음 형태로)")
+    src = "구간별 요지(문서를 처음부터 끝까지 순서대로 읽고 적은 것)" if via_gists else "본문 전체"
+    prompt = f"문서: '{title}' ({kind})\n아래는 {src}다.\n\n형식:\n{fmt}\n\n{src}:\n{body}"
+    return system, prompt
+
+
+def _write_card(core, name: str, src: dict, force: bool = False) -> dict:
+    """소스 하나의 카드를 쓴다(있고 force 아니면 그대로). 반환 {success, path, gist, chars, via}."""
+    from datetime import datetime
+    path = _card_path(core, name, src["id"])
+    if path.exists() and not force:
+        return {"success": True, "path": str(path), "gist": _card_gist(path), "skipped": "exists"}
+    chunks = _source_chunks(core, int(src["id"]))
+    if not chunks:
+        return {"success": False, "error": f"청크 없음(status={src.get('status')})"}
+    try:
+        from consciousness_agent import oneshot_ai_call
+    except ImportError as e:
+        return {"success": False, "error": f"oneshot_ai_call 임포트 불가: {e}"}
+    total = sum(len(c.get("text") or "") for c in chunks)
+    via = "direct"
+    if total <= CARD_DIRECT_MAX:
+        body = "\n\n".join(f"[{(c.get('loc') or '').strip()}] {c.get('text') or ''}" for c in chunks)
+    else:
+        via = "gists"
+        parts = []
+        for i, w in enumerate(_windows(chunks), 1):
+            loc = f"{(w[0].get('loc') or '').strip()}~{(w[-1].get('loc') or '').strip()}".strip("~")
+            text = "\n".join((c.get("text") or "") for c in w)
+            g = oneshot_ai_call(f"다음 구간({loc})의 요지를 사실만 3~6줄로. 고유명사·수치 보존, 추측 금지.\n\n{text}",
+                                system_prompt="너는 문서 구간 요약기다.", role="classify") or ""
+            parts.append(f"[구간 {i} · {loc}]\n{g.strip()}")
+        body = "\n\n".join(parts)
+    system, prompt = _card_prompt(src.get("title") or "", src.get("kind") or "", body, via == "gists")
+    try:
+        card = (oneshot_ai_call(prompt, system_prompt=system, role="classify") or "").strip()
+    except Exception as e:
+        return {"success": False, "error": f"카드 생성 실패: {e}"}
+    if not card.startswith(">"):
+        card = "> " + card.split("\n", 1)[0].strip()[:120] + "\n\n" + card
+    head = (f'<!-- notebook-card notebook="{name}" source_id="{src["id"]}" kind="{src.get("kind") or ""}" chars="{total}" '
+            f'chunks="{len(chunks)}" via="{via}" written="{datetime.now().strftime("%Y-%m-%d %H:%M")}" -->\n'
+            f"# 카드 — {src.get('title') or ''}\n"
+            f"<!-- 이 카드가 정본이다 — 고치면 지도(op:map)와 ask 의 문서 선택이 따라온다. `> 한 줄` 이 지도에 실린다. -->\n")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(head + card + "\n", encoding="utf-8")
+    os.replace(tmp, path)
+    return {"success": True, "path": str(path), "gist": _card_gist(path), "chars": total, "via": via}
+
+
+def _op_card(tool_input: dict, context) -> str:
+    """카드 쓰기 — source 지정(id·제목 일부) 또는 전부(기본: 카드 없는 소스만, force 면 전부 다시)."""
+    import notebook_core as core
+    name = tool_input.get("name", "")
+    ls = core.list_sources(name)
+    if not ls.get("success"):
+        return _json({**ls, "items": []})
+    force = bool(tool_input.get("force"))
+    if tool_input.get("source") not in (None, ""):
+        res = _resolve_source(core, name, tool_input.get("source"))
+        if not res.get("success"):
+            return _json({**res, "items": []})
+        targets = [res["source"]]
+    else:
+        targets = [s for s in ls["sources"] if s.get("status") == "ready"]
+    items, written, skipped, failed = [], 0, 0, 0
+    for s in targets:
+        r = _write_card(core, name, s, force=force)
+        if r.get("success"):
+            if r.get("skipped"):
+                skipped += 1
+            else:
+                written += 1
+        else:
+            failed += 1
+        items.append({"title": s.get("title"), "source_id": s["id"], "summary": r.get("gist") or r.get("error") or "",
+                      "meta": " · ".join(x for x in [f"#{s['id']}", s.get("kind"), r.get("via"), r.get("skipped") and "기존", (not r.get("success")) and "실패"] if x)})
+    return _json({"success": failed == 0, "notebook": name, "written": written, "skipped": skipped, "failed": failed,
+                  "items": items, "message": f"카드 {written}건 작성, {skipped}건 기존, {failed}건 실패 — 지도는 op:map"})
+
+
+def _op_map(tool_input: dict, context) -> str:
+    """지도 — 소스마다 카드 한 줄(LLM 0). "이 노트북에 무엇이 있나"는 이것으로 답한다; 문서를 고르는 눈."""
+    import notebook_core as core
+    name = tool_input.get("name", "")
+    ls = core.list_sources(name)
+    if not ls.get("success"):
+        return _json({**ls, "items": []})
+    items, lines, missing = [], [], 0
+    for s in ls["sources"]:
+        p = _card_path(core, name, s["id"])
+        gist = _card_gist(p) if p.exists() else ""
+        if not gist:
+            missing += 1
+        lines.append(f"- #{s['id']} {s.get('title')} ({s.get('kind')} · {int(s.get('char_count') or 0):,}자) — {gist or '(카드 없음 — op:card)'}")
+        items.append({"source_id": s["id"], "title": s.get("title"), "kind": s.get("kind"), "chars": s.get("char_count"),
+                      "gist": gist, "card": str(p) if p.exists() else None, "summary": gist, "meta": f"#{s['id']} · {s.get('kind')}"})
+    text = f"# 지도 — {ls.get('notebook')}\n" + (f"> {ls.get('note')}\n" if ls.get("note") else "") + "\n".join(lines)
+    return _json({"success": True, "notebook": ls.get("notebook"), "note": ls.get("note"), "count": len(items),
+                  "missing_cards": missing, "text": text, "items": items, "blocks": [{"type": "paragraph", "text": text}]})
+
+
+def _card_after_index(name: str, source_id: int):
+    """add 뒤 색인이 끝나면 카드를 쓴다(데몬 스레드) — 넣는 순간이 문서를 한 번 읽는 자리다."""
+    import threading, time
+
+    def _run():
+        try:
+            import notebook_core as core
+            t0 = time.time()
+            while time.time() - t0 < CARD_WAIT_S:
+                st = core._source_status(int(source_id))
+                if st and st.get("status") == "ready":
+                    conn = core._connect()
+                    try:
+                        row = conn.execute("SELECT * FROM sources WHERE id=?", (int(source_id),)).fetchone()
+                    finally:
+                        conn.close()
+                    if row:
+                        r = _write_card(core, name, dict(row), force=True)
+                        print(f"[notebook] 카드 {'작성' if r.get('success') else '실패'}: {name} #{source_id} {r.get('gist') or r.get('error') or ''}"[:200])
+                    return
+                if st and st.get("status") == "error":
+                    return
+                time.sleep(2)
+            print(f"[notebook] 카드 대기 상한: {name} #{source_id} — op:card 로 다시")
+        except Exception as e:
+            print(f"[notebook] 카드 스레드 오류: {e}")
+    threading.Thread(target=_run, name=f"notebook-card-{source_id}", daemon=True).start()  # cc-ok: 수명 ≤ CARD_WAIT_S(240초) 폴링 뒤 종료, 리로드로 죽어도 카드는 op:card 로 재작성되는 파생물(원자 쓰기)이라 잃는 것이 없다
 
 
 def _windows(chunks: list, limit: int = DIGEST_WINDOW_CHARS) -> list:
@@ -514,6 +688,8 @@ _OP_DISPATCHERS = {
         "add": _op_add,
         "ask": _op_ask,
         "digest": _op_digest,
+        "card": _op_card,
+        "map": _op_map,
         "search": _op_search,
         "sources": _op_sources,
         "remove": _op_remove,

@@ -88,6 +88,46 @@ def test_n6_ask_hands_overview_to_digest(monkeypatch):
     assert out["windows"] >= 1 and len(out["items"]) == out["windows"] and calls[-1] == "evaluate"
 
 
+# ---------------------------------------------------------------- N7·N8 소스 카드·지도
+def test_n7_card_written_and_map_reads_gist(monkeypatch, tmp_path):
+    import types, json
+    import handler as H
+    import notebook_core as core
+    monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
+    src = {"id": 7, "title": "강의", "kind": "youtube", "status": "ready", "char_count": 1200}
+    monkeypatch.setattr(H, "_source_chunks", lambda core_, sid: [{"id": 1, "loc": "[0:00]", "text": "본문 " * 100}, {"id": 2, "loc": "[1:00]", "text": "본문 " * 100}])
+    fake = types.ModuleType("consciousness_agent")
+    fake.oneshot_ai_call = lambda prompt, system_prompt="", role="classify": "> 트랜스포머 강의의 한 줄 요약\n\n## 무엇인가\n강의다.\n\n## 구조\n- [0:00] 서론\n\n## 핵심 주장·수치·이름\n- 어텐션\n\n## 답할 수 있는 물음\n- 트랜스포머란?"
+    monkeypatch.setitem(sys.modules, "consciousness_agent", fake)
+    r = H._write_card(core, "nb", src)
+    assert r["success"] and r["gist"] == "트랜스포머 강의의 한 줄 요약" and r["via"] == "direct"
+    p = H._card_path(core, "nb", 7); text = open(p, encoding="utf-8").read()
+    assert text.startswith('<!-- notebook-card notebook="nb" source_id="7"') and "## 답할 수 있는 물음" in text
+    assert H._write_card(core, "nb", src).get("skipped") == "exists"          # 있으면 다시 안 쓴다
+    # 사람이 카드의 한 줄을 고치면 지도가 따라온다
+    open(p, "w", encoding="utf-8").write(text.replace("> 트랜스포머 강의의 한 줄 요약", "> 사람이 고친 요약"))
+    monkeypatch.setattr(core, "list_sources", lambda name: {"success": True, "notebook": name, "note": "", "sources": [src, {**src, "id": 8, "title": "카드 없음"}]})
+    m = json.loads(H._op_map({"name": "nb"}, None))
+    assert m["success"] and m["count"] == 2 and m["missing_cards"] == 1
+    assert "#7 강의 (youtube · 1,200자) — 사람이 고친 요약" in m["text"] and "(카드 없음 — op:card)" in m["text"]
+
+
+def test_n8_big_source_goes_through_gists(monkeypatch, tmp_path):
+    import types
+    import handler as H
+    import notebook_core as core
+    monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
+    monkeypatch.setattr(H, "CARD_DIRECT_MAX", 500)
+    monkeypatch.setattr(H, "_source_chunks", lambda core_, sid: [{"id": i, "loc": f"[{i}:00]", "text": "x" * 400} for i in range(4)])
+    calls = []
+    fake = types.ModuleType("consciousness_agent")
+    fake.oneshot_ai_call = lambda prompt, system_prompt="", role="classify": (calls.append(system_prompt) or ("> 큰 문서 요약\n\n## 무엇인가\n." if "카드" in system_prompt else "요지"))
+    monkeypatch.setitem(sys.modules, "consciousness_agent", fake)
+    r = H._write_card(core, "nb", {"id": 9, "title": "big", "kind": "file", "status": "ready"})
+    assert r["success"] and r["via"] == "gists" and r["gist"] == "큰 문서 요약"
+    assert sum(c.startswith("너는 문서 구간") for c in calls) >= 1 and calls[-1].startswith("너는 문서 카드")
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

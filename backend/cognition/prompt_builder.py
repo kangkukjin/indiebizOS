@@ -6,6 +6,7 @@ IndieBiz OS Core
 """
 
 import json
+import os
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -276,6 +277,71 @@ class PromptBuilder:
             logger.warning(f"[PromptBuilder] 자원 목록 생성 실패: {e}")
             return ""
 
+    # ── 프로젝트 폴더 포식 기억 (2026-09-05, 사용자 판정 "주입 쪽으로") ─────────────
+    # 프로젝트 에이전트에게 프로젝트 폴더는 곧 cwd 다 — 코딩 하네스가 CLAUDE.md 를 매번 올리듯
+    # 그 폴더의 포식 기억 문서(정본: data/forage_surveys/mac/<경로>/memory.md)를 안정 프롬프트에
+    # 통째로 싣는다. 09-03 "자동 주입 금지" 판정은 *여러 폴더 중 고르는 선택기*를 금한 것이고,
+    # 여기엔 고를 판단이 없다(폴더 하나 고정). 조상 문서(워크스페이스·저장소)는 싣지 않는다 —
+    # 그건 [self:forage]{op:"recall", locus} 의 inherit 몫. 문서가 없으면 아무것도 안 싣는다
+    # (시스템 AI 는 project_path 를 넘기지 않으므로 영향 없음). mtime 캐시라 문서가 바뀔 때만 재읽기.
+    _PROJECT_MEMORY_MAX = 24_000   # 조사 지침의 정리 기준(24KB)과 같은 안전판
+
+    @staticmethod
+    def _project_memory_inherited(project_path: str) -> str:
+        """조상 폴더 단언 중 하위에도 통하는 것(generalizes=1 · substrate) — recall 의 inherit 와 같은 규칙.
+        문서에는 조상 것이 안 실리므로 여기서 색인을 한 번 읽어 덧붙인다(작은 SELECT, 실패=생략)."""
+        try:
+            import forage_memory as FM
+            canon = os.path.abspath(project_path).rstrip("/")
+            conn = FM._connect()
+            try:
+                rows = conn.execute(
+                    "SELECT locus, kind, claim FROM forage_map WHERE body=? AND (generalizes=1 OR kind='substrate') "
+                    "ORDER BY length(locus) DESC, confidence DESC",
+                    (FM.TREE_BODY if hasattr(FM, "TREE_BODY") else "mac",)).fetchall()
+            finally:
+                conn.close()
+        except Exception as e:  # noqa: BLE001
+            print(f"[prompt] 프로젝트 포식 상속 조회 실패 (무시): {e}")
+            return ""
+        out = []
+        for r in rows:
+            loc = (r[0] or "").rstrip("/")
+            if loc and loc != canon and canon.startswith(loc + "/"):
+                out.append(f"- [{r[1]}] {r[2]}  ‹{loc}›")
+            if len(out) >= 20:
+                break
+        return "\n".join(out)
+
+    def _project_memory_block(self, project_path: str) -> str:
+        if not project_path or project_path.strip() in (".", ""):
+            return ""
+        try:
+            import forage_doc
+            doc = forage_doc.doc_path_at(forage_doc.TREE_BODY, os.path.abspath(project_path))
+        except Exception as e:  # noqa: BLE001 — 포식 모듈 결손은 주입 생략일 뿐
+            print(f"[prompt] 프로젝트 포식 문서 경로 해소 실패 (무시): {e}")
+            return ""
+        path = Path(doc)
+        if not path.exists():
+            return ""
+        text = self._read_cached(f"project_memory:{doc}", path).strip()
+        if not text:
+            return ""
+        if len(text.encode("utf-8")) > self._PROJECT_MEMORY_MAX:   # 지침의 24KB 는 바이트 기준
+            text = text.encode("utf-8")[: self._PROJECT_MEMORY_MAX].decode("utf-8", "ignore") + "\n… (문서가 정리 기준을 넘어 잘림 — 재조사 때 압축하라)"
+        inherited = self._project_memory_inherited(project_path)
+        if inherited:
+            text += "\n\n## 상속 관습 (상위 폴더에서 물려받음 — ↓ 표식·기질)\n" + inherited
+        return (
+            '<project_memory note="이 프로젝트 폴더의 포식 기억(정본 문서 통째, 항상 실림) — 폴더에 무엇이 어디 사는지·'
+            '산출물 자리·규약·죽은 가지. 폴더·자료·산출물 질문은 검색보다 이것부터. 새로 안 것(예외·이사·틀린 단언)은 답만 하지 말고 '
+            f'[self:forage]{{op: \"note\", layer: \"map\", locus: \"{project_path}\", kind: …, claim: \"<한 줄>\"}} 로 그 자리에서 남기고, '
+            '문서의 ## 갱신 기록 에 일시와 한 줄을 붙인다. 사용자가 고친 줄은 선언이다." '
+            f'doc="{doc}">\n'
+            + text + "\n</project_memory>"
+        )
+
     def build(self,
               agent_count: int = 1,
               git_enabled: bool = False,
@@ -355,6 +421,12 @@ class PromptBuilder:
             ibl = build_environment(allowed_nodes, project_path, agent_id)
             if ibl:
                 parts.append(ibl)
+
+        # 4.05 프로젝트 폴더 포식 기억 — 프로젝트 에이전트의 CLAUDE.md (안정 부분, 문서 mtime 캐시)
+        if project_path:
+            pm = self._project_memory_block(project_path)
+            if pm:
+                parts.append(pm)
 
         # 4.1 실행기억 (IBL 코드 사례 + 추천 도구 + implementation)
         # skip_dynamic=True면 가변 부분은 외부에서 _build_dynamic_context로 처리

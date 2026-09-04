@@ -111,6 +111,7 @@ def _search_gigs(query: str, limit: int, sort: str, max_price):
             break
         page += 1
     return {"source": "kmong", "type": "gigs", "total": total,
+            "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
             "items": items_out}
 
 
@@ -175,6 +176,7 @@ def _search_experts(query: str, limit: int, sort: str):
             break
         page += 1
     return {"source": "kmong", "type": "experts", "total": total,
+            "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
             "items": items_out}
 
 

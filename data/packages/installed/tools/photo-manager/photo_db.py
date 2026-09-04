@@ -458,6 +458,7 @@ def get_gallery(root_path: str, page: int = 1, limit: int = 50,
     return {
         "success": True,
         "total": total,
+        "truncated": isinstance(total, int) and total > len(items),   # 봉투 규모 불변식(페이지 표본)
         "page": page,
         "limit": limit,
         "items": items

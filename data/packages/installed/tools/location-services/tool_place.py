@@ -100,13 +100,20 @@ def _doc_to_item(doc: dict) -> dict:
 
 
 def _paged(endpoint: str, params: dict, limit: int):
-    """카카오 로컬 페이지네이션(15×최대 3) — (items, total, error)."""
+    """카카오 로컬 페이지네이션(15×최대 3) — (items, total, error).
+
+    total = `meta.pageable_count`(카카오가 실제로 내줄 수 있는 문서 수, 최대 45 — 우리가 뽑은
+    모집단). `meta.total_count` 는 제공자 추정치라 total 이 아니다(봉투 규모 불변식, ibl_honesty)
+    — 호출부가 `total_estimate` 로 따로 싣는다."""
     items, total, page = [], 0, 1
+    _paged.estimate = 0
     while len(items) < limit and page <= 3:
         data = api_call("kakao", endpoint, params={**params, "size": _PAGE, "page": page}, timeout=10)
         if isinstance(data, dict) and "error" in data:
             return items, total, data if page == 1 else None
-        total = (data.get("meta") or {}).get("total_count", total)
+        _meta = data.get("meta") or {}
+        total = _meta.get("pageable_count", total)
+        _paged.estimate = _meta.get("total_count", _paged.estimate)
         for doc in data.get("documents", []):
             it = _doc_to_item(doc)
             if it["lat"] is None or it["lng"] is None:
@@ -164,6 +171,8 @@ def place_search(tool_input: dict) -> dict:
         "items": items,
         "count": len(items),
         "total": total,
+        "total_estimate": getattr(_paged, "estimate", 0),
+        "truncated": isinstance(total, int) and total > len(items),
         "query": query,
         "category": code,
         "message": f"'{label}' 장소 {len(items)}곳 (전체 {total})" + (f" · 반경 {params['radius']}m" if "radius" in params else ""),

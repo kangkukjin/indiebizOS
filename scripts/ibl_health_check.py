@@ -314,7 +314,17 @@ for name, code in PRODUCERS:
         gated += 1
         verdict, reason = "SKIP", "부작용 op — read-only 게이트로 실행 생략(수동: --all-fixtures)"
     else:
-        verdict, reason = classify_currency(execute(code), declared)
+        _d = execute(code)
+        verdict, reason = classify_currency(_d, declared)
+        # 봉투 규모 불변식(ibl_honesty.scope_violation): total>items 인데 truncated 침묵 = YELLOW.
+        # 원천 명사의 결함이라 GREEN 통화라도 건강하지 않다 — 하류가 매 파이프에 거짓 절단 경고를 단다.
+        try:
+            from ibl_honesty import scope_violation as _scope_violation
+            _sv = _scope_violation(_d)
+            if _sv and verdict == "GREEN":
+                verdict, reason = "YELLOW", f"봉투 규모 불변식: {_sv}"
+        except Exception:
+            pass
     buckets[verdict].append((name, reason))
     print(f"  [{verdict:6}] {name:24} returns:{declared:9} {reason}")
 # 커버리지 — fixture 완전성(--check 강제)을 그대로 반영. 면제는 사유와 함께 명시.

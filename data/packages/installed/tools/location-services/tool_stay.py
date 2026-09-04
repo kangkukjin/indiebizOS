@@ -154,6 +154,7 @@ def _search_goodchoice(tool_input: dict) -> dict:
     date_txt = f" {params.get('checkIn', '')}~{params.get('checkOut', '')}" if params.get("checkIn") else ""
     out = {
         "success": True, "source": "goodchoice", "count": len(items_out), "total": total,
+        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
         "message": f"여기어때 '{region}' {stay_type}{date_txt} — {len(items_out)}건 (전체 {total}건, 상세는 items)",
         "items": items_out,
     }
@@ -227,6 +228,7 @@ def _search_33m2(tool_input: dict) -> dict:
 
     out = {
         "success": True, "source": "33m2", "count": len(items_out), "total": total,
+        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
         "message": f"삼삼엠투 '{region}' 한 달 살기 — {len(items_out)}건 (전체 {total}건, 주간요금 기준, 상세는 items)",
         "items": items_out,
     }
@@ -293,6 +295,7 @@ def _search_tourapi(tool_input: dict) -> dict:
 
     out = {
         "success": True, "source": "tourapi", "count": len(items_out), "total": total,
+        "truncated": isinstance(total, int) and total > len(items_out),   # 봉투 규모 불변식(페이지 표본)
         "message": f"관광공사 숙박 디렉토리 '{region}' — {len(items_out)}건 (전체 {total}건, 가격 없음·공식 목록, 상세는 items)",
         "items": items_out,
     }

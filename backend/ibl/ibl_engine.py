@@ -980,6 +980,15 @@ def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> An
     criteria = pop_criteria(tool_input)
     result = public_result(_execute_ibl_impl(tool_input, project_path, agent_id),
                            producer=f"{node}:{action}")
+    # 봉투 규모 불변식 신고 (2026-09-04): 원천이 total>items 를 침묵하면 여기서 이름을 대고
+    # 신고한다 — 픽스처 건강검진(§1B)이 같은 함수로 판정을 내리므로 이 로그는 실사용 누수용.
+    try:
+        from ibl_honesty import scope_violation as _scope_violation
+        _sv = _scope_violation(result)
+        if _sv:
+            print(f"[봉투불변식] [{node}:{action}] {_sv}")
+    except Exception:
+        pass
     if criteria:
         result = apply_criteria(
             criteria, result, tool_input, node, action, project_path, agent_id,

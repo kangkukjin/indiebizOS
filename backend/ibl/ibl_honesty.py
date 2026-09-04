@@ -64,6 +64,43 @@ HONESTY_ROUTE_KEYS = (
 )
 
 
+#: 봉투 규모 불변식 (2026-09-04, ep2814 실측): `total` 은 **items 가 뽑힌 셀 수 있는 모집단의 수**다
+#: — 그래서 `total > len(items)` 면 표본이고 봉투는 스스로 `truncated` 를 켜야 한다
+#: (data-ops `_restate_scope` 가 이 정의로 하류에서 truncated 를 되살린다). 제공자의 추정치
+#: (네이버 검색 "18,804,311건", 카카오 total_count 따위)는 모집단이 아니므로 `total` 이라
+#: 부르면 안 된다 — 그런 수는 `total_estimate` 로 낸다. 실측: 네이버 검색 뒤에 table 낱말이
+#: 하나만 붙어도 "부분 실패·절단" 경고가 매번 붙었다(한 턴에 3/9 봉투) — 늑대소년.
+SCOPE_ESTIMATE_KEY = "total_estimate"
+
+
+def scope_violation(env: Any) -> Optional[str]:
+    """봉투가 규모 불변식을 깨면 사유 한 줄, 아니면 None.
+
+    검사 대상은 items 통화를 낸 봉투뿐(items 가 list 이고 total 이 정수). 위반 = total 이
+    items 수보다 큰데 truncated 를 스스로 켜지 않았다 — 원천이 표본임을 침묵하거나,
+    추정치를 total 이라 부른 것 둘 중 하나다. 어느 쪽이든 원천(핸들러)의 명사를 고친다.
+    """
+    if isinstance(env, str):
+        s = env.strip()
+        if s[:1] != "{":
+            return None
+        try:
+            import json
+            env = json.loads(s)
+        except Exception:
+            return None
+    if not isinstance(env, dict):
+        return None
+    items = env.get("items")
+    total = env.get("total")
+    if not isinstance(items, list) or isinstance(total, bool) or not isinstance(total, int):
+        return None
+    if total > len(items) and not env.get("truncated"):
+        return (f"total {total} > items {len(items)} 인데 truncated 없음 — 표본이면 truncated 를 켜고, "
+                f"제공자 추정치면 {SCOPE_ESTIMATE_KEY} 로 내라")
+    return None
+
+
 def describe_promoted(keys) -> str:
     """승격된 표지 이름들을 **뜻대로 갈라** 한 문장으로 — 실패·절단 / 경로·출처 (B51-4).
 

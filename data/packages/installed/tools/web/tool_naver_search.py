@@ -132,7 +132,7 @@ def search_naver(
         {
           "success": bool,
           "type": 정규화된 type,
-          "total": 전체 결과 수,
+          "total_estimate": 네이버가 보고한 전체 결과 수(추정치 — 모집단이 아니므로 total 이 아니다),
           "items": [...],
           "source": "네이버 검색 API"
         }
@@ -175,7 +175,10 @@ def search_naver(
     return {
         "success": True,
         "type": normalized_type,
-        "total": data.get("total", 0) if isinstance(data, dict) else 0,
+        # 네이버의 total(예: 18,804,311)은 우리가 뽑은 모집단이 아니라 제공자 추정치 — `total` 로
+        # 내면 봉투 규모 불변식(total>items ⇒ truncated)이 하류 table 낱말마다 거짓 절단 경고를
+        # 단다(2026-09-04 ep2814). 추정치의 이름은 total_estimate.
+        "total_estimate": data.get("total", 0) if isinstance(data, dict) else 0,
         # 단일 통화 items(records-관습 카드 shape) — 과적 legacy items 제거(§7.5 함정), 카드 shape만.
         # date = 발행일 ISO8601 (gnews·hn 과 같은 계약, 2026-08-28) — news 의 pubDate(RFC 2822)·
         # blog 의 postdate(YYYYMMDD)가 통화 밖에 갇혀 신선도 술어를 못 세우던 비대칭 수리.

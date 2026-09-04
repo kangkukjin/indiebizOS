@@ -363,7 +363,9 @@ def _search_nanet(tool_input: dict) -> str:
         return {"items": [], "message": f"'{query}'에 대한 국가학술정보 결과가 없습니다{filt}."}
     head = f"국가학술정보 통합검색 '{query}' — {len(records)}건" + (f" (전체 {total:,}건)" if isinstance(total, int) else "") + ":"
     return {"success": True, "message": "\n".join([head] + lines_body),
-            "items": records, "count": len(records), "total": total}
+            "items": records, "count": len(records), "total": total,
+            # 봉투 규모 불변식: total 은 모집단, 우리가 다 못 뽑았으면 스스로 truncated
+            "truncated": isinstance(total, int) and total > len(records)}
 
 
 # ─── Wikidata 개체 해소(entity resolution) — 지식 그래프 ────────────────

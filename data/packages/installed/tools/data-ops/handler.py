@@ -381,6 +381,11 @@ def _op_sort(prev, params):
     return {"success": False, "error": f"sort: '{by}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
+# [table:chunk] 는 형제 모듈 chunk_ops.py (2026-09-05 어휘 개정, 1500줄 규칙 분리) — 형제 로더로만 불러온다(패키지 폴더는 sys.path 에 없다)
+_chunk_ops = _load_sibling_where(__file__, "chunk_ops")
+_op_chunk = _chunk_ops._op_chunk
+
+
 def _op_take(prev, params):
     """items|table → 상위 n. params.n (기본 10). 음수면 뒤에서 n개."""
     n = params.get("n", params.get("limit", 10))
@@ -1358,6 +1363,7 @@ _DISPATCH = {
     "data_filter": _op_filter,
     "data_sort": _op_sort,
     "data_take": _op_take,
+    "data_chunk": _op_chunk,
     "data_select": _op_select,
     "data_rename": _op_rename,
     "data_flatten": _op_flatten,
@@ -1383,6 +1389,18 @@ def execute(tool_input: dict, context):
     if not fn:
         return {"success": False, "error": f"data-ops: 알 수 없는 변환자 '{tool_name}'."}
     params = dict(tool_input or {})
+    if tool_name == "data_chunk":
+        # 평문 통화(자막·크롤 본문)를 받는 유일한 변환자 — _parse_prev 는 JSON 아닌 문자열을 버리므로 원문을 직접 준다.
+        raw = params.get("_prev_result")
+        prev = _parse_prev(raw)
+        if prev is None and isinstance(raw, str) and raw.strip():
+            prev = raw
+        if prev is None and params.get("items") is not None:
+            _it = params["items"]          # 파이프 머리에서 본문을 직접 줄 때 — items: [{text: "…"}]
+            prev = {"items": _it} if isinstance(_it, list) else _it
+        if prev is None and params.get("text") is None:
+            return {"success": False, "error": "chunk: 입력이 없습니다 — >> 앞 통화(문자열/봉투) 또는 text 파라미터."}
+        return fn(prev, params)
     prev = _parse_prev(params.get("_prev_result"))
     if prev is None:
         # 파이프 입력(>>)이 없으면 params 에서 통화를 직접 수용 — 단독 호출/자가점검 지원.

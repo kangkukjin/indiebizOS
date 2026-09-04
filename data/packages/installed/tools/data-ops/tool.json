@@ -84,6 +84,44 @@
       }
     },
     {
+      "name": "data_chunk",
+      "description": "긴 문자열 하나 또는 본문 열이 있는 items → 덩이 items {index, text, chars, start, rows}. size(기본 20000)·by(paragraph|line|chars)·overlap·field·text. >> 앞 평문/봉투 통화를 받음.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "자를 행 배열(앞 통화 대신 직접 줄 때 — 행의 본문 키는 field)."
+          },
+          "text": {
+            "type": "string",
+            "description": "자를 본문(앞 통화 대신 직접 줄 때)."
+          },
+          "size": {
+            "type": "integer",
+            "description": "덩이 상한 자(기본 20000)."
+          },
+          "by": {
+            "type": "string",
+            "enum": [
+              "paragraph",
+              "line",
+              "chars"
+            ],
+            "description": "자르는 경계(기본 paragraph)."
+          },
+          "overlap": {
+            "type": "integer",
+            "description": "겹침 자(chars 전용, 기본 0)."
+          },
+          "field": {
+            "type": "string",
+            "description": "봉투 입력에서 본문을 읽을 키(기본 text/transcript/content/message/body 순)."
+          }
+        }
+      }
+    },
+    {
       "name": "data_select",
       "description": "table → 열 투영(남길 columns만). records면 해당 필드만 추림. columns(필수). >> 앞 통화를 받음.",
       "input_schema": {

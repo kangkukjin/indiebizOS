@@ -382,6 +382,7 @@
     "table:ai": "ai-ops",
     "table:brief": "ai-ops",
     "table:chart": "visualization",
+    "table:chunk": "data-ops",
     "table:compute": "data-ops",
     "table:dedup": "data-ops",
     "table:document": "data-ops",

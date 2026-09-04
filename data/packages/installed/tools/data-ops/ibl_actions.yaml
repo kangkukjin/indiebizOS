@@ -57,6 +57,31 @@ actions:
     - 처음
     - take
     - top
+  chunk:
+    params:
+      items: array
+      size: integer
+      overlap: integer
+      by: string
+      field: string
+      text: string
+    returns: transform
+    runs_on: anywhere
+    scope: workspace
+    description: 통화 변환자 — 긴 문자열 하나(크롤 본문·산문) 또는 본문 열이 있는 items(자막 구간 등)를 덩이 items 로 자른다(size 자 상한, by=paragraph|line|chars, overlap; items 는 행 경계). 긴 원문을 파이프 안에서 나눠 [table:each] 로 덩이마다 요약하고 다시 [table:brief] 로 종합하는 자리.
+    target_description: 'size(덩이 상한 자, 기본 20000) · by(paragraph|line|chars, 기본 paragraph — 경계로 나눈 뒤 size 안에서 이어 붙임, 경계 없는 통짜 본문은 줄·글자로 내려감) · overlap(겹침 자, chars 전용) · field(봉투 입력의 본문 키, 기본 text/transcript/content/message/body 순) · text(직접 본문). 출력 items {index, text, chars, start}. 예: [sense:video]{op: "transcript", video_id: "…"} >> [table:chunk]{size: 15000} >> [table:each]{do: "[table:brief]{items: [$it], instruction: \"이 덩이의 팁만 불릿으로\"}"} >> [table:brief]{instruction: "덩이 요약들을 하나로"}. items 통화(자막 구간·검색 결과)도 받는다 — 행의 본문 키(field, 기본 text 계열)를 행 경계를 지키며 size 안에 담아 {index, text, chars, start(첫 행), rows} 로. 변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면 items: [{text: "…"}] 로(text 파라미터는 $변수 주입용).'
+    group: transform
+    router: handler
+    tool: data_chunk
+    implementation: data-ops handler.py _op_chunk — 평문/봉투(text 계열 필드)에서 본문을 찾아 문단·줄·글자 경계로 size 안에 담는다. 문단 하나가 size 를 넘으면 글자로 내려간다. 비파괴(원문은 items 로만).
+    target_key: size
+    keywords:
+    - 덩이
+    - 자르기
+    - 나누기
+    - chunk
+    - split
+    - 긴 자막
   select:
     returns: transform
     runs_on: anywhere
@@ -356,6 +381,30 @@ tool_json:
         n:
           type: integer
           description: 취할 개수(기본 10). 음수=뒤에서 n개.
+  - name: data_chunk
+    description: 긴 문자열 하나 또는 본문 열이 있는 items → 덩이 items {index, text, chars, start, rows}. size(기본 20000)·by(paragraph|line|chars)·overlap·field·text. >> 앞 평문/봉투 통화를 받음.
+    input_schema:
+      type: object
+      properties:
+        items:
+          type: array
+          description: 자를 행 배열(앞 통화 대신 직접 줄 때 — 행의 본문 키는 field).
+        text:
+          type: string
+          description: 자를 본문(앞 통화 대신 직접 줄 때).
+        size:
+          type: integer
+          description: 덩이 상한 자(기본 20000).
+        by:
+          type: string
+          enum: [paragraph, line, chars]
+          description: 자르는 경계(기본 paragraph).
+        overlap:
+          type: integer
+          description: 겹침 자(chars 전용, 기본 0).
+        field:
+          type: string
+          description: 봉투 입력에서 본문을 읽을 키(기본 text/transcript/content/message/body 순).
   - name: data_select
     description: table → 열 투영(남길 columns만). records면 해당 필드만 추림. columns(필수). >> 앞 통화를 받음.
     input_schema:

@@ -676,14 +676,30 @@ def _heads_grounded(code: str, ibl_calls: list) -> bool:
     return acts <= executed
 
 
+_FLOW_OP_RE = re.compile(r'>>|\?\?|;')
+
+
 def _composition_grounded(code: str, ibl_calls: list) -> bool:
-    """증류 코드가 합성문이면, 실행된 어느 *한* 호출이 그 액션들을 합성문으로
-    담고 있었는지 판정. 단문 증류는 무조건 통과."""
+    """증류 코드가 합성문이면 실행 이력에 접지됐는지 판정. 단문 증류는 무조건 통과.
+
+    두 갈래(2026-09-04 개정, ep2817 실측 — 그 턴의 가장 좋은 문장(지표 7개 `&`)이 버려졌다):
+      · **흐름 합성**(`>>`·`??`·`;`): 데이터가 흐른다는 주장이므로, 실행된 어느 *한* 호출이
+        그 액션들을 합성문으로 담고 있었어야 한다(별개 호출 봉합 = 거짓 관용구, 종전 규칙 그대로).
+      · **병렬만의 합성**(`&` 뿐): "동시에 돌릴 수 있다"는 주장이지 흐름이 아니다 — 가지마다
+        그 액션이 이 주행의 실행(어느 호출이든)에 있었으면 참이다. 08-28~09-04 합성 접지 스킵
+        28건 중 약 3분의 1이 이 부류였다(별개로 성공한 조회들을 `&` 로 묶은 것).
+    """
     if not _composed(code):
         return True
     acts = _actions_of(code)
     if not acts:
         return False
+    stripped = _strip_strings(code)
+    if not _FLOW_OP_RE.search(stripped):
+        executed = set()
+        for call in ibl_calls:
+            executed |= _actions_of(call)
+        return acts <= executed
     return any(_composed(call) and acts <= _actions_of(call) for call in ibl_calls)
 
 

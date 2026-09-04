@@ -238,6 +238,20 @@ def test_g5_recorder_drops_placeholder_copy_before_ledger(monkeypatch):
     assert ok is False and touched == []
 
 
+# ---------------------------------------------------------------- G6 병렬 접지
+def test_g6_parallel_only_composition_grounds_per_branch():
+    """& 만의 합성은 가지별 접지(동시성 주장), 흐름 합성(>>)은 단일 호출 접지(종전) — 2026-09-04 ep2817."""
+    import ibl_usage_rag as rag
+    calls = ['[sense:stock]{op: "quote", ticker: "^TNX"} & [sense:stock]{op: "quote", ticker: "^TYX"}',
+             '[sense:search]{source: "gnews", query: "treasury"}',
+             '[self:memory]{op: "recall", node: "시장 기록"}']
+    assert rag._composition_grounded('[sense:stock]{op: "quote", ticker: "^TNX"} & [sense:search]{source: "gnews", query: "x"}', calls)
+    assert not rag._composition_grounded('[sense:stock]{op: "quote", ticker: "^TNX"} & [sense:realty]{region: "x"}', calls)
+    # 흐름은 여전히 한 호출 안에 있었어야 한다
+    assert not rag._composition_grounded('[sense:search]{source: "gnews", query: "x"} >> [self:memory]{op: "save", content: "y"}', calls)
+    assert rag._composition_grounded('[sense:search]{source: "gnews", query: "x"}', calls)
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

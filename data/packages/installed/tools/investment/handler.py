@@ -10,6 +10,7 @@ Investment Tools Handler
 """
 import os
 import re
+from common import value_semantics as _vs  # 값 동등 판정 단일 코어
 import sys
 import json
 import calendar
@@ -90,6 +91,12 @@ def _looks_like_code(t) -> bool:
         return True
     if re.fullmatch(r"[A-Za-z]{1,6}(\.[A-Za-z]{1,3})?", t):  # AAPL, BRK.B
         return True
+    # 야후 심볼의 하이픈 꼴 — DX-Y.NYB(달러지수)·BRK-B·BTC-USD. ep2817 실측: 'DX-Y.NYB' 가 이름으로
+    # 오인돼 검색→접두 불일치 거절, 에이전트가 표시명("ICE US Dollar Index - Index - C")을 티커로 재시도.
+    if re.fullmatch(r"[A-Za-z]{1,6}-[A-Za-z0-9]{1,4}(\.[A-Za-z]{1,3})?", t):
+        return True
+    if re.fullmatch(r"[A-Za-z]{3,6}=X", t, re.IGNORECASE):     # KRW=X, EURUSD=X 환율
+        return True
     if re.fullmatch(r"\^[A-Za-z0-9.]{1,12}", t):             # ^KS11, ^GSPC
         return True
     if re.fullmatch(r"[A-Za-z0-9]{1,12}=F", t, re.IGNORECASE):  # GC=F, CL=F 선물
@@ -109,6 +116,17 @@ _INDEX_ALIASES = {
     "KS200": ("^KS200", "KOSPI 200"),
     "KOSPI200": ("^KS200", "KOSPI 200"),
     "KOSPI 200": ("^KS200", "KOSPI 200"),
+    # 달러지수·원달러 — 국채·환율 분석에서 반복되는 안정된 시장 명사(ep2817 실측 추가)
+    "DXY": ("DX-Y.NYB", "US Dollar Index (ICE)"),
+    "DX-Y.NYB": ("DX-Y.NYB", "US Dollar Index (ICE)"),
+    "US DOLLAR INDEX": ("DX-Y.NYB", "US Dollar Index (ICE)"),
+    "달러인덱스": ("DX-Y.NYB", "US Dollar Index (ICE)"),
+    "달러지수": ("DX-Y.NYB", "US Dollar Index (ICE)"),
+    "USD/KRW": ("KRW=X", "USD/KRW"),
+    "USDKRW": ("KRW=X", "USD/KRW"),
+    "원달러": ("KRW=X", "USD/KRW"),
+    "달러원": ("KRW=X", "USD/KRW"),
+    "원달러환율": ("KRW=X", "USD/KRW"),
 }
 
 
@@ -145,7 +163,8 @@ def _resolve_ticker(ticker):
             return ticker, None, None   # 검색 자체가 빈손 — 코드일 수도 있으니 원문 유지
         norm = lambda s: re.sub(r"\s+", "", str(s or "")).strip().lower()  # 공백 제거 비교(TIGER 200 == TIGER200)
         q = norm(t)
-        exact = [x for x in quotes if norm(x.get("name")) == q]
+        exact = ([x for x in quotes if norm(x.get("name")) == q]
+                 or [x for x in quotes if _vs.values_equal(str(x.get("symbol") or "").upper(), t.upper())])  # 심볼 등치도 정확 일치
         starts = sorted([x for x in quotes if norm(x.get("name")).startswith(q)],
                         key=lambda x: len(norm(x.get("name"))))  # 질의로 시작하는 최단명 (TIGER200 > TIGER200IT)
         chosen = exact[0] if exact else (starts[0] if starts else None)

@@ -31,6 +31,9 @@ DIGEST_NEEDED_MARK = "DIGEST_NEEDED"   # ask 판정기가 "발췌 단편으론 �
 DIGEST_WINDOW_CHARS = 5000             # 구간 요지 한 번에 읽는 분량(경량 모델)
 CARD_DIRECT_MAX = 45000                # 이 아래면 문서를 통째로 읽고 카드를 쓴다, 위면 구간 요지를 거쳐 쓴다
 CARD_WAIT_S = 240                      # add 뒤 색인이 끝나길 기다리는 상한(카드는 청크가 있어야 쓴다)
+READ_MAX_DOCS = 4                      # ask 가 한 번에 통째로 읽는 문서 수 상한
+READ_MAX_CHARS = 90000                 # ask 가 한 번에 읽는 본문 합 상한(넘으면 카드+발췌로 강등, 신고)
+MAP_MAX_CHARS = 24000                  # 선택 호출에 넣는 지도 상한
 
 
 def _json(payload: dict) -> str:
@@ -223,12 +226,236 @@ def _op_search(tool_input: dict, context) -> str:
                   "message": "" if items else "이 노트북에서 관련 발췌를 찾지 못했습니다."})
 
 
+def _map_items(core, name: str) -> dict:
+    """지도 재료 — 소스마다 카드 한 줄. {success, notebook, note, items, text, missing}"""
+    ls = core.list_sources(name)
+    if not ls.get("success"):
+        return ls
+    items, lines, missing = [], [], 0
+    for s in ls["sources"]:
+        p = _card_path(core, name, s["id"])
+        gist = _card_gist(p) if p.exists() else ""
+        if not gist:
+            missing += 1
+        lines.append(f"- #{s['id']} {s.get('title')} ({s.get('kind')} · {int(s.get('char_count') or 0):,}자) — {gist or '(카드 없음)'}")
+        items.append({**{k: s.get(k) for k in ("id", "title", "kind", "char_count", "status")}, "gist": gist, "card": str(p) if p.exists() else None})
+    return {"success": True, "notebook": ls.get("notebook"), "note": ls.get("note", ""), "items": items,
+            "text": "\n".join(lines), "missing": missing}
+
+
+LEXICAL_MAX_SHARE = 0.25   # 이 비율보다 많은 청크에 나오는 낱말은 증거가 아니다('방법'·'최근' 같은 흔한 말)
+
+
+def _lexical_sources(core, notebook_id: int, question: str) -> set:
+    """질문의 **드문 낱말**이 실제로 나오는 소스 집합 (FTS, LLM 0). 흔한 낱말('방법')은 어느 문서에나 있어
+    증거가 못 된다 — 2026-09-04 감귤 실측: OR 검색이 '방법' 하나로 강행을 발동시켰다."""
+    safe = re.sub(r"[^\w\s가-힣]", " ", question or "")
+    tokens = [t for t in dict.fromkeys(safe.split()) if len(t) >= 2][:12]
+    if not tokens:
+        return set()
+    conn = core._connect()
+    try:
+        total = conn.execute("SELECT count(*) FROM chunks WHERE notebook_id=?", (notebook_id,)).fetchone()[0] or 0
+        if not total:
+            return set()
+        out = set()
+        for t in tokens:
+            q = '"' + t.replace('"', '""') + '"'
+            try:
+                n = conn.execute("SELECT count(*) FROM chunks_fts f JOIN chunks c ON c.id = f.rowid WHERE chunks_fts MATCH ? AND c.notebook_id=?",
+                                 (q, notebook_id)).fetchone()[0]
+                if 0 < n <= max(1, int(total * LEXICAL_MAX_SHARE)):
+                    out |= {int(r[0]) for r in conn.execute(
+                        "SELECT DISTINCT c.source_id FROM chunks_fts f JOIN chunks c ON c.id = f.rowid WHERE chunks_fts MATCH ? AND c.notebook_id=?",
+                        (q, notebook_id)).fetchall()}
+            except Exception:
+                continue
+        return out
+    finally:
+        conn.close()
+
+
+def _search_hints(core, name: str, question: str, top_k: int = 12) -> list:
+    """청크 검색을 **위치 색인**으로 쓴다 — 어느 문서에 질문의 낱말·뜻이 실제로 나오는가(LLM 0). 문서별 최고점·건수."""
+    try:
+        f = core.search_chunks(name, question, top_k=top_k)
+    except Exception:
+        return []
+    # 어휘 일치(FTS)는 따로 센다 — 하이브리드 점수는 정규화돼 무관한 내용도 0.7 이 나오지만(2026-09-04 감귤 실측),
+    # 낱말이 본문에 실제로 있는지는 FTS 만이 말한다. '증거가 판단을 이긴다'의 증거는 이것이다.
+    try:
+        nb = core.get_notebook(name)
+        fts_src = _lexical_sources(core, nb["id"], question) if nb else set()
+    except Exception:
+        fts_src = set()
+    agg = {}
+    for r in (f.get("results") or []):
+        sid = r.get("source_id")
+        if sid is None:
+            continue
+        a = agg.setdefault(int(sid), {"source_id": int(sid), "source": r.get("source"), "score": 0.0, "hits": 0, "loc": r.get("loc"),
+                                      "lexical": int(sid) in fts_src})
+        a["hits"] += 1
+        if float(r.get("score") or 0) > a["score"]:
+            a["score"] = round(float(r.get("score") or 0), 3); a["loc"] = r.get("loc")
+    return sorted(agg.values(), key=lambda x: (-int(x["lexical"]), -x["score"]))[:6]
+
+
+def _select_sources(question: str, note: str, map_text: str, hints: list = None) -> dict:
+    """AI 가 지도(카드 한 줄)와 검색 힌트(어느 문서 본문에 실제로 나오나)를 보고 읽을 문서를 고른다 (경량 1회).
+    {mode: map|read|none, sources: [ids], why}. 분류기가 아니라 판단이다 — 다만 증거(검색 점수)가 판단을 이긴다:
+    none 이라 해도 힌트 최고점 ≥ COVERAGE_SCORE 면 그 문서들을 읽는다(2026-09-04 실측: 카드 한 줄에 '주가'가 없다고
+    삼성 주가 질문을 none 으로 접었는데 본문엔 날짜별 등락이 있었다)."""
+    from consciousness_agent import oneshot_ai_call
+    from runtime_utils import parse_first_json
+    hints = hints or []
+    system = ("너는 노트북 사서다. 질문·소스 지도(소스마다 한 줄)·검색 힌트(질문의 낱말·뜻이 본문에 실제로 나온 문서와 점수)를 보고 "
+              "어느 문서를 통째로 읽어야 답할 수 있는지 고른다. JSON 만 답하라: "
+              "{\"mode\": \"read\"|\"map\"|\"none\", \"sources\": [소스 번호…], \"why\": \"한 줄\"}. "
+              f"mode=read: 읽을 문서 번호(최대 {READ_MAX_DOCS}, 관련성 높은 순). 문서가 그 주제를 *언급*만 해도 read 다 — "
+              "질문을 '주제로 삼은' 문서가 있어야 하는 게 아니다(부분 언급·수치·날짜가 답이 된다). 검색 힌트에 오른 문서는 우선 후보다. "
+              "mode=map: 지도만으로 답이 되는 물음(무엇이 있나·어떤 소스들이 다루나·전체 조망). "
+              "mode=none: 지도·힌트 어디에도 그 주제가 전혀 없을 때만.")
+    hint_text = ("\n검색 힌트(본문 일치, 낱말 일치 우선):\n" + "\n".join(f"- #{h['source_id']} {h['source']} ({'낱말 일치' if h.get('lexical') else '뜻 근접만'}, 점수 {h['score']}, 발췌 {h['hits']}{', 자리 ' + str(h['loc']) if h.get('loc') else ''})" for h in hints)) if hints else "\n검색 힌트: 없음(본문 일치 0)"
+    prompt = f"질문: {question}\n" + (f"노트북 목적: {note}\n" if note else "") + f"\n소스 지도:\n{map_text[:MAP_MAX_CHARS]}" + hint_text
+    raw = oneshot_ai_call(prompt, system_prompt=system, role="classify") or ""
+    d = parse_first_json(raw)
+    if not isinstance(d, dict):
+        return {"mode": "read", "sources": [], "why": "선택 응답 파싱 실패 — 지도 상위로 폴백", "raw": raw[:200]}
+    ids = []
+    for x in (d.get("sources") or []):
+        try:
+            ids.append(int(str(x).lstrip("#")))
+        except ValueError:
+            pass
+    sel = {"mode": str(d.get("mode") or "read"), "sources": ids[:READ_MAX_DOCS], "why": str(d.get("why") or ""), "hints": hints}
+    # 증거가 판단을 이긴다: none 인데 질문의 낱말이 본문에 실제로 있으면(FTS) 그 문서들을 읽는다
+    lexical = [h for h in hints if h.get("lexical")]
+    if sel["mode"] == "none" and lexical:
+        sel["mode"] = "read"; sel["sources"] = [h["source_id"] for h in lexical[:READ_MAX_DOCS]]
+        sel["why"] = f"낱말 일치 증거로 강행({len(lexical)}문서) — 사서 판정: {sel['why']}"
+    elif sel["mode"] == "read" and not sel["sources"] and hints:
+        sel["sources"] = [h["source_id"] for h in hints[:READ_MAX_DOCS]]
+    return sel
+
+
+def _read_whole(core, name: str, src: dict, budget: int) -> tuple:
+    """문서 하나를 통째로(예산 안) — (본문, 읽은 자수, 강등 여부). 큰 문서는 카드 + 앞부분으로 강등하고 신고."""
+    chunks = _source_chunks(core, int(src["id"]))
+    body = "\n\n".join(f"[{(c.get('loc') or '').strip()}] {c.get('text') or ''}" for c in chunks)
+    if len(body) <= budget:
+        return body, len(body), False
+    p = _card_path(core, name, src["id"])
+    card = open(p, encoding="utf-8").read() if p.exists() else ""
+    head = body[:max(0, budget - len(card) - 200)]
+    return (card + "\n\n[본문 앞부분 — 예산으로 절단]\n" + head), len(head) + len(card), True
+
+
+def _answer_from_docs(question: str, note: str, docs: list) -> tuple:
+    """읽은 문서들만 근거로 답 (평가 축 1회). 인용은 [#소스번호 자리]. 반환 (answer, err)."""
+    from consciousness_agent import oneshot_ai_call
+    system = ("당신은 근거 고정(grounded) 조수다. 아래 '문서'들만 근거로 답하라. 일반 지식으로 보충하지 마라. "
+              "문장마다 근거를 [#소스번호 자리] 로 달아라(자리 = 문서 안의 [..] 표지, 예 [#19 3. 주목할 AI 활용 사례] 또는 [#67 12:00]). "
+              "문서들이 질문의 주제를 전혀 다루지 않을 때만 정확히 NOT_IN_SOURCES 라고만 답하라. "
+              "주제를 다루지만 확정 판단·순위가 없으면 문서가 말하는 바를 답하고 마지막 한 문장으로 한계를 밝혀라. 답은 질문의 언어로.")
+    parts = [f"=== 문서 #{d['id']} · {d['title']} ({d['kind']}, {d['chars']:,}자{' · 절단' if d['truncated'] else ''}) ===\n{d['body']}" for d in docs]
+    prompt = f"질문: {question}\n" + (f"노트북 목적: {note}\n" if note else "") + "\n" + "\n\n".join(parts)
+    try:
+        a = oneshot_ai_call(prompt, system_prompt=system, role="evaluate") or ""
+    except Exception as e:
+        return "", str(e)
+    return a.strip(), ("" if a.strip() else "빈 응답")
+
+
+def _answer_from_map(question: str, note: str, map_text: str, cards: list) -> tuple:
+    from consciousness_agent import oneshot_ai_call
+    system = ("당신은 노트북 사서다. 아래 소스 지도와 카드만 근거로, 이 노트북에 무엇이 있고 어느 소스가 무엇을 다루는지 답하라. "
+              "소스는 [#번호] 로 가리켜라. 지도에 없는 내용은 보태지 마라. 답은 질문의 언어로.")
+    prompt = f"질문: {question}\n" + (f"노트북 목적: {note}\n" if note else "") + f"\n소스 지도:\n{map_text[:MAP_MAX_CHARS]}" + ("\n\n카드:\n" + "\n\n".join(cards) if cards else "")
+    try:
+        a = oneshot_ai_call(prompt, system_prompt=system, role="evaluate") or ""
+    except Exception as e:
+        return "", str(e)
+    return a.strip(), ("" if a.strip() else "빈 응답")
+
+
+_DOC_CITE_RE = re.compile(r"\[#(\d+)([^\]]*)\]")
+
+
+def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
+    """문서 단위 ask (2026-09-04 사용자 판정): 지도 → 문서 선택 → 통째로 읽기 → 근거 답."""
+    note = m.get("note") or ""
+    sel = _select_sources(question, note, m["text"], _search_hints(core, name, question))
+    by_id = {int(i["id"]): i for i in m["items"]}
+    if sel["mode"] == "none" and not sel["sources"]:
+        msg = f"지도상 이 노트북은 이 주제를 다루지 않습니다(사서 판정: {sel.get('why') or ''}). 소스 지도는 op:map."
+        return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "none", "not_in_sources": True,
+                      "answer": "", "citations": [], "items": [], "blocks": [{"type": "paragraph", "text": msg}], "message": msg, "selection": sel})
+    if sel["mode"] == "map":
+        cards = []
+        for sid in sel["sources"][:READ_MAX_DOCS]:
+            it = by_id.get(sid)
+            if it and it.get("card"):
+                cards.append(open(it["card"], encoding="utf-8").read()[:6000])
+        answer, err = _answer_from_map(question, note, m["text"], cards)
+        if err:
+            return _json({"success": False, "error": f"지도 답 생성 실패: {err}", "items": m["items"], "message": "지도는 items 로 반환합니다."})
+        return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "map", "not_in_sources": False,
+                      "answer": answer, "blocks": [{"type": "paragraph", "text": answer}], "citations": [], "items": [],
+                      "selection": sel, "map_sources": len(m["items"])})
+    ids = [i for i in sel["sources"] if i in by_id] or [int(i["id"]) for i in m["items"][:1]]
+    docs, budget, degraded = [], READ_MAX_CHARS, []
+    for sid in ids[:READ_MAX_DOCS]:
+        src = by_id[sid]
+        body, used, trunc = _read_whole(core, name, src, max(8000, budget // max(1, (len(ids) - len(docs)))))
+        budget -= used
+        docs.append({"id": sid, "title": src.get("title"), "kind": src.get("kind"), "chars": int(src.get("char_count") or used), "body": body, "truncated": trunc})
+        if trunc:
+            degraded.append(sid)
+        if budget <= 0:
+            break
+    answer, err = _answer_from_docs(question, note, docs)
+    if err:
+        return _json({"success": False, "error": f"근거 고정 생성 실패: {err}", "notebook": m["notebook"], "question": question,
+                      "items": [{"title": d["title"], "source_id": d["id"], "summary": by_id[d["id"]].get("gist", "")} for d in docs],
+                      "message": "생성은 실패했지만 고른 문서 목록을 items 로 반환합니다.", "selection": sel})
+    if NOT_IN_SOURCES_MARK in answer and not _DOC_CITE_RE.search(answer):
+        msg = "고른 문서 안에 이 질문의 답이 없습니다(모델 판정). 읽은 문서: " + ", ".join(f"#{d['id']} {d['title']}" for d in docs)
+        return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "read", "not_in_sources": True,
+                      "answer": "", "citations": [], "items": [], "blocks": [{"type": "paragraph", "text": msg}], "message": msg,
+                      "read": [d["id"] for d in docs], "selection": sel})
+    answer = _strip_mark(answer)
+    read_ids = {d["id"] for d in docs}
+    cites, seen = [], set()
+    for mm in _DOC_CITE_RE.finditer(answer):
+        sid = int(mm.group(1)); loc = mm.group(2).strip()
+        if sid in read_ids and (sid, loc) not in seen:
+            seen.add((sid, loc)); cites.append({"source_id": sid, "source": by_id[sid].get("title"), "loc": loc})
+    blocks = [{"type": "paragraph", "text": answer}]
+    if degraded:
+        blocks.append({"type": "paragraph", "text": "⚠ 예산으로 앞부분만 읽은 문서: " + ", ".join(f"#{i}" for i in degraded)})
+    return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "read", "not_in_sources": False,
+                  "answer": answer, "blocks": blocks, "citations": cites,
+                  "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": "", "source_id": c["source_id"]} for c in cites],
+                  "read": [{"source_id": d["id"], "title": d["title"], "chars": d["chars"], "truncated": d["truncated"]} for d in docs],
+                  "selection": sel})
+
+
 def _op_ask(tool_input: dict, context) -> str:
     import notebook_core as core
     name = tool_input.get("name", "")
     question = _query_of(tool_input)
     if not question:
         return _json({"success": False, "error": "query(질문)가 필요합니다."})
+
+    # 문서 단위 경로 (2026-09-04): 카드가 하나라도 있으면 지도→선택→통째로 읽기. 카드가 없으면 옛 청크 검색 경로.
+    if not tool_input.get("source") and not tool_input.get("chunks"):
+        m = _map_items(core, name)
+        if m.get("success") and m["items"] and m["missing"] < len(m["items"]):
+            try:
+                return _ask_by_cards(core, name, question, m)
+            except Exception as e:
+                print(f"[notebook] 문서 단위 ask 실패 → 청크 경로 폴백: {e}")
 
     found = core.search_chunks(name, question, top_k=_as_int(tool_input.get("top_k"), ASK_TOP_K),
                                source=tool_input.get("source"))

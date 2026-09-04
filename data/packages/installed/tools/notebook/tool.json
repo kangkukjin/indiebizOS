@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "notebook_op",
-      "description": "근거 고정 질의 통합 도구 (op 분기). create/add/ask/search/sources/remove/list/delete.\n\n- op=create: name 필수 (+note 노트북 목적 — ask 응답의 렌즈)\n- op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인\n- op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources\n- op=digest: name (+source id·제목 일부) — 소스 전체를 순서대로 읽어 소개·개요(구간 요지 → 소개문). \"이 동영상/문서 내용을 소개해줘\" 는 이것. ask 가 발췌 단편으로 소개 불가라고 판정하면 스스로 여기로 넘어온다\n- op=card: name (+source | force) — 문서 단위 카드(무엇·구조·핵심 주장·답할 물음)를 AI 가 한 번 읽고 쓴다. add 뒤 자동. 정본 파일 data/notebook/cards/\n- op=map: name — 지도(소스마다 카드 한 줄, LLM 0). \"이 노트북에 무엇이 있나\"는 검색이 아니라 이것\n- op=search: name + query — 생성 없이 발췌만 (LLM 0)\n- op=sources: name — 소스·색인 상태·stale / op=remove: name + source_id\n- op=list / op=delete: name\n\n워크플로: create → add 여러 번 → ask 반복. 웹 검색이 아니라 이미 가진 문서를 심문하는 도구다.",
+      "description": "근거 고정 질의 통합 도구 (op 분기). create/add/ask/search/sources/remove/list/delete.\n\n- op=create: name 필수 (+note 노트북 목적 — ask 응답의 렌즈)\n- op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인\n- op=ask (기본): name + query — 카드 지도로 읽을 문서를 골라(≤4) 통째로 읽고 답. mode=read|map|none, citations[{source_id,source,loc}]. 카드가 없는 노트북은 발췌 검색 경로. chunks:true 로 옛 경로 강제\n- op=digest: name (+source id·제목 일부) — 소스 전체를 순서대로 읽어 소개·개요(구간 요지 → 소개문). \"이 동영상/문서 내용을 소개해줘\" 는 이것. ask 가 발췌 단편으로 소개 불가라고 판정하면 스스로 여기로 넘어온다\n- op=card: name (+source | force) — 문서 단위 카드(무엇·구조·핵심 주장·답할 물음)를 AI 가 한 번 읽고 쓴다. add 뒤 자동. 정본 파일 data/notebook/cards/\n- op=map: name — 지도(소스마다 카드 한 줄, LLM 0). \"이 노트북에 무엇이 있나\"는 검색이 아니라 이것\n- op=search: name + query — 생성 없이 발췌만 (LLM 0)\n- op=sources: name — 소스·색인 상태·stale / op=remove: name + source_id\n- op=list / op=delete: name\n\n워크플로: create → add 여러 번 → ask 반복. 웹 검색이 아니라 이미 가진 문서를 심문하는 도구다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -66,6 +66,10 @@
             "description": "옵션 — ask 발췌 수(기본 12) / search 결과 수(기본 8)"
           },
           "force": {
+            "type": "boolean",
+            "description": "self:notebook 파라미터"
+          },
+          "chunks": {
             "type": "boolean",
             "description": "self:notebook 파라미터"
           }

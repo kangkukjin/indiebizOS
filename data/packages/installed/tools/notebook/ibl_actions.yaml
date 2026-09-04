@@ -18,6 +18,7 @@ nodes:
           path: [url, file]
         params:
           force: boolean   # card — 기존 카드도 다시 쓴다
+          chunks: boolean  # ask — 문서 단위 경로 대신 옛 발췌 검색 경로 강제
         ops:
           default: ask
           returns:
@@ -52,7 +53,7 @@ nodes:
           values:
             create: 노트북 생성 (name + note 목적) — 등록되면 시스템 AI 에 포식 기억 조사가 자동 위임된다(add 도 같음, 10분 디바운스)
             add: 소스 넣기 (path=파일·웹 URL·유튜브 URL[자막] / text 붙여넣기, 재add=재색인)
-            ask: 근거 고정 질문 (기본 op) — 소스 안에서만 답 + [n] 인용, 없으면 not_in_sources, 전체 소개는 digest 로
+            ask: 근거 고정 질문 (기본) — 지도로 문서를 골라 통째로 읽고 답, 인용 [#소스 자리]
             digest: 소스 하나를 처음부터 끝까지 읽어 소개 (구간 요지 → 소개문, source 지정, 인용 [구간 n])
             card: 소스 카드 쓰기 — 문서를 한 번 읽어 무엇·구조·핵심·물음 (기본 카드 없는 소스만, force 전부)
             map: 지도 — 소스마다 카드 한 줄 (LLM 0). "무엇이 있나"는 이것으로
@@ -207,7 +208,7 @@ tool_json:
 
       - op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인
 
-      - op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources
+      - op=ask (기본): name + query — 카드 지도로 읽을 문서를 골라(≤4) 통째로 읽고 답. mode=read|map|none, citations[{source_id,source,loc}]. 카드가 없는 노트북은 발췌 검색 경로. chunks:true 로 옛 경로 강제
 
       - op=digest: name (+source id·제목 일부) — 소스 전체를 순서대로 읽어 소개·개요(구간 요지 → 소개문). "이 동영상/문서 내용을 소개해줘" 는 이것. ask 가 발췌 단편으로 소개 불가라고 판정하면 스스로 여기로 넘어온다
 

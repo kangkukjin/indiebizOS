@@ -128,6 +128,61 @@ def test_n8_big_source_goes_through_gists(monkeypatch, tmp_path):
     assert sum(c.startswith("너는 문서 구간") for c in calls) >= 1 and calls[-1].startswith("너는 문서 카드")
 
 
+# ---------------------------------------------------------------- N9 문서 단위 ask
+def test_n9_ask_reads_selected_docs_whole_and_cites(monkeypatch, tmp_path):
+    import types, json
+    import handler as H
+    import notebook_core as core
+    monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
+    srcs = [{"id": 1, "title": "A보고서", "kind": "file", "char_count": 3000, "status": "ready"},
+            {"id": 2, "title": "B보고서", "kind": "file", "char_count": 3000, "status": "ready"}]
+    monkeypatch.setattr(core, "list_sources", lambda name: {"success": True, "notebook": name, "note": "연구", "sources": srcs})
+    for s in srcs:
+        p = H._card_path(core, "nb", s["id"]); p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(f"<!-- notebook-card -->\n# 카드\n> {s['title']}의 요약\n\n## 무엇인가\n.", encoding="utf-8")
+    monkeypatch.setattr(H, "_source_chunks", lambda core_, sid: [{"id": 10 + sid, "loc": "1절", "text": f"문서{sid} 본문 삼성 주가 하락"}])
+    monkeypatch.setattr(H, "_search_hints", lambda core_, name, q, top_k=12: [{"source_id": 2, "source": "B보고서", "score": 0.7, "hits": 2, "loc": "1절", "lexical": True}])
+    calls = []
+    def fake(prompt, system_prompt="", role="classify"):
+        calls.append((role, system_prompt[:8]))
+        if "노트북 사서다. 질문" in system_prompt:
+            assert "검색 힌트" in prompt and "#2 B보고서 (낱말 일치, 점수 0.7" in prompt
+            return '{"mode": "read", "sources": [2], "why": "B가 주가를 다룬다"}'
+        assert "=== 문서 #2" in prompt and "=== 문서 #1" not in prompt      # 고른 문서만 통째로
+        return "삼성 주가는 하락했다 [#2 1절]. 한계: 원인은 없다."
+    fake_mod = types.ModuleType("consciousness_agent"); fake_mod.oneshot_ai_call = fake
+    monkeypatch.setitem(sys.modules, "consciousness_agent", fake_mod)
+    out = json.loads(H._op_ask({"name": "nb", "query": "삼성 주가는?"}, None))
+    assert out["success"] and out["mode"] == "read" and out["read"][0]["source_id"] == 2
+    assert out["citations"] == [{"source_id": 2, "source": "B보고서", "loc": "1절"}]
+    assert calls[0][0] == "classify" and calls[-1][0] == "evaluate"
+    # 지도 물음
+    def fake2(prompt, system_prompt="", role="classify"):
+        if "노트북 사서다. 질문" in system_prompt:
+            return '{"mode": "map", "sources": [], "why": "무엇이 있나"}'
+        assert "소스 지도:" in prompt
+        return "A보고서 [#1] 와 B보고서 [#2] 가 있다."
+    fake_mod.oneshot_ai_call = fake2
+    out2 = json.loads(H._op_ask({"name": "nb", "query": "이 노트북에 무엇이 있나?"}, None))
+    assert out2["mode"] == "map" and out2["map_sources"] == 2 and "#1" in out2["answer"]
+    # N10 증거가 판단을 이긴다: 사서가 none 이라도 본문 일치 점수가 높으면 그 문서를 읽는다
+    def fake3(prompt, system_prompt="", role="classify"):
+        if "노트북 사서다. 질문" in system_prompt:
+            return '{"mode": "none", "sources": [], "why": "주가를 주제로 한 문서 없음"}'
+        return "삼성 주가는 하락했다 [#2 1절]."
+    fake_mod.oneshot_ai_call = fake3
+    out3 = json.loads(H._op_ask({"name": "nb", "query": "삼성 주가는?"}, None))
+    assert out3["mode"] == "read" and out3["read"][0]["source_id"] == 2 and "낱말 일치 증거로 강행" in out3["selection"]["why"]
+    # 뜻 근접만(어휘 일치 0)인 힌트는 강행하지 못한다 — 하이브리드 점수는 무관한 내용도 0.7 이 나온다
+    monkeypatch.setattr(H, "_search_hints", lambda core_, name, q, top_k=12: [{"source_id": 2, "source": "B보고서", "score": 0.7, "hits": 3, "loc": "1절", "lexical": False}])
+    out3b = json.loads(H._op_ask({"name": "nb", "query": "감귤 농사?"}, None))
+    assert out3b["mode"] == "none" and out3b["not_in_sources"] is True
+    # 힌트도 없고 사서도 none 이면 정직하게 없음
+    monkeypatch.setattr(H, "_search_hints", lambda core_, name, q, top_k=12: [])
+    out4 = json.loads(H._op_ask({"name": "nb", "query": "감귤 농사?"}, None))
+    assert out4["mode"] == "none" and out4["not_in_sources"] is True
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

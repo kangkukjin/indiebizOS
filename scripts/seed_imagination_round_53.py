@@ -46,8 +46,8 @@ NEW = [
      "[if: $차 != 0]{[self:notify_user]{message: \"삼성전자 저장 시세 대비 $차 원 변동\"}} [else]{[self:notify_user]{message: \"삼성전자 시세 변동 없음\"}}",
      "self,sense", "invest", "축적,되읽기,스냅샷,식할당,조건"),
     ("사업 원장에서 '구합니다' 사업을 찾아 새 상품을 붙여줘",
-     "$b = [self:ledger]{store: \"business\", op: \"list\", search: \"구합니다\"}\n"
-     "[self:ledger]{store: \"item\", op: \"save\", business_id: \"$b.items.0.id\", title: \"새 상품\"}",
+     "$b = [self:business]{store: \"business\", op: \"list\", search: \"구합니다\"}\n"
+     "[self:business]{store: \"item\", op: \"save\", business_id: \"$b.items.0.id\", title: \"새 상품\"}",
      "self", "business", "축적,되읽기,ledger,id되먹임"),
     ("본 글 원장에 없는 긱뉴스 새 글만 골라줘",
      "$본 = [self:read]{path: \"본글원장.json\"}\n"

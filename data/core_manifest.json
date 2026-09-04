@@ -67,7 +67,6 @@
     "scripts": [
       "arxiv최신피드.py",
       "github저장소메타.py",
-      "json원장.py",
       "나레이션생성.py",
       "보고서HTML.py",
       "샘플_폴더용량.py",
@@ -96,6 +95,7 @@
       "folder_survey"
     ],
     "scripts": [
+      "json원장.py",
       "폴더조사.py"
     ],
     "vocab_fragments": []

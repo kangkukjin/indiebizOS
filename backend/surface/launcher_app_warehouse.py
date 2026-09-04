@@ -167,7 +167,7 @@ async function whIntro(){
   if(!confirm('공개 인사 프로필과 공개 창고 주소를 #IndieNet 에 발행할까요? (명함 kind:0 + 발견 노트 kind:1)')) return;
   const b=document.getElementById('whIntroBtn'); if(b){ b.disabled=true; b.textContent='발행 중…'; }
   try{
-    const r=await ibl('[self:ledger]{store: "document", op: "publish"}');
+    const r=await ibl('[self:business]{store: "document", op: "publish"}');
     alert((r&&r.message)||'소개를 발행했어요.');
   }catch(e){ alert('소개발행 실패: '+e); }
   if(b){ b.disabled=false; b.textContent='🌐 소개발행'; }

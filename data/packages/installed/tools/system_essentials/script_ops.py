@@ -95,7 +95,7 @@ def _args_from_file(path_str):
 
     ★파일은 이미 이 몸 안에 있다. 나르지 말고 **가리키면** 된다:
         [self:write]{path: "…/payload.json", content: …} >> …
-        [self:script]{op: "run", id: "json원장", args_file: "…/payload.json"}
+        [self:script]{op: "run", id: "<등록 id>", args_file: "…/payload.json"}
 
     계약은 args 와 **같다** — JSON 객체 하나. 배열·스칼라는 정직 거절(스크립트들이
     `{op, path, items}` 모양의 dict 를 stdin 으로 받기로 한 규약).

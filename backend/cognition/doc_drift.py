@@ -12,7 +12,7 @@ data_ownership 이 잡은 my_profile.txt 선언 부패와 같은 부류. 이 감
 2) 죽은 참조 — 백틱 `모듈.py`(실존)·`식별자()`(코드에 부재)
 3) 날짜 모순 — 프론트매터 last_updated 보다 꼬리 "*마지막/최종 업데이트*" 가 최신
 4) 스크립트 등록 설명 args ↔ 소스 실인자 — data/scripts/registry.yaml 의 설명은
-   손으로 쓴 둘째 사본이다. 실증: json원장 set 은 value 를 받는데 설명 args 목록에
+   손으로 쓴 둘째 사본이다. 실증: 옛 JSON 원장 스크립트의 set 은 value 를 받는데 설명 args 목록에
    없어, 설명만 보고 호출한 갱신이 대상을 null 로 덮고 성공을 보고했다(2026-08-30 사고)
 
 ## 규율
@@ -254,7 +254,7 @@ def _script_args_flags(name: str, desc: str, src: str) -> List[Dict]:
             flags.append({"kind": "script_args_drift", "doc": doc, "line": 0,
                           "claim": f"설명에만 있는 args: {', '.join(dead)}",
                           "hint": "소스가 읽지 않는 인자 — 설명에서 빼거나 소스를 맞출 것"})
-    # 소스만 아는 인자 — 설명 누락 (json원장 value 사고 부류). 단어 경계로 설명 전문 대조.
+    # 소스만 아는 인자 — 설명 누락 (옛 JSON 원장 스크립트 value 사고 부류). 단어 경계로 설명 전문 대조.
     hidden = [k for k in sorted(read)
               if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(k)}(?![A-Za-z0-9_])", desc)]
     if hidden:

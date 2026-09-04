@@ -3186,7 +3186,7 @@ nodes:
         - 블로그 통계
         - 인덱스
         - vault
-      ledger:
+      business:
         aliases:
           op:
           - action
@@ -3198,7 +3198,7 @@ nodes:
           - source
         returns: items
         side_effect: true
-        fixture: '[self:ledger]{store: "business", op: "list"}'
+        fixture: '[self:business]{store: "business", op: "list"}'
         description: 사업 원장 조회·관리 (store × op). store=business(사업)/item(상품·서비스)/document(레벨별 공개문서)/guideline(근무지침). op:list 기본.
         group: business
         target_description: 'store 로 원장을 고르고 op 로 연산을 고른다(기본 store=business, op=list).
@@ -3214,7 +3214,7 @@ nodes:
           ★op 이 그 store 에 없으면 거절한다(조용히 무시하지 않는다).'
         target_key: op
         router: handler
-        tool: ledger_op
+        tool: business_op
         ops:
           default: list
           returns:
@@ -3244,7 +3244,7 @@ nodes:
             publish: 공개 프로필·발견 노트 Nostr 발행 (store=document 전용)
             add_image: 아이템 첨부 이미지 추가 (store=item 전용, id·path)
             remove_image: 아이템 첨부 이미지 제거 (store=item 전용, id·path)
-        implementation: business 패키지 ledger_op — op 로 먼저 분기하고 store 로 기존 store 별 함수(_biz_*/_item_*/_doc_*/_guide_*)에 라우팅. 테이블·매니저 무변경.
+        implementation: business 패키지 business_op — op 로 먼저 분기하고 store 로 기존 store 별 함수(_biz_*/_item_*/_doc_*/_guide_*)에 라우팅. 테이블·매니저 무변경.
         keywords:
         - 비즈니스
         - 사업
@@ -3288,15 +3288,15 @@ nodes:
                 value: -1
             buttons:
             - label: ＋ 비즈니스 추가
-              action: '[self:ledger]{store: "business", op: "save", name: "$q"}'
+              action: '[self:business]{store: "business", op: "save", name: "$q"}'
               refresh: true
-            action: '[self:ledger]{store: "business", op: "list", level: "$level", search: "$q"}'
+            action: '[self:business]{store: "business", op: "list", level: "$level", search: "$q"}'
             view:
             - type: card_list
               from: items
               master_detail: true
               item_click:
-                action: '[self:ledger]{store: "business", op: "detail", id: "{id}"}'
+                action: '[self:business]{store: "business", op: "detail", id: "{id}"}'
                 view:
                 - type: form
                   title: 비즈니스 정보
@@ -3326,11 +3326,11 @@ nodes:
                     label: 설명
                     type: textarea
                     value: '{business.description}'
-                  action: '[self:ledger]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  action: '[self:business]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
                   button: 저장
                   actions:
                   - label: 비즈니스 삭제
-                    action: '[self:ledger]{store: "business", op: "delete", id: "{business.id}"}'
+                    action: '[self:business]{store: "business", op: "delete", id: "{business.id}"}'
                     style: danger
                     confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
                     back: true
@@ -3346,7 +3346,7 @@ nodes:
             - key: biz
               type: select
               placeholder: 전체 비즈니스
-              options_action: '[self:ledger]{store: "business", op: "list"}'
+              options_action: '[self:business]{store: "business", op: "list"}'
               options_from: items
               option_value: id
               option_label: name
@@ -3355,16 +3355,16 @@ nodes:
               placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:ledger]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
+              action: '[self:business]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
               refresh: true
-            action: '[self:ledger]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
+            action: '[self:business]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
             view:
             - type: card_list
               from: items
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:ledger]{store: "item", op: "detail", item_id: "{id}"}'
+                action: '[self:business]{store: "item", op: "detail", item_id: "{id}"}'
                 view:
                 - type: form
                   title: 아이템
@@ -3381,13 +3381,13 @@ nodes:
                     label: 사진
                     type: images
                     value: '{item.attachment_path}'
-                    add_action: '[self:ledger]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
-                    remove_action: '[self:ledger]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
-                  action: '[self:ledger]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                    add_action: '[self:business]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
+                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
+                  action: '[self:business]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
                   button: 저장
                   actions:
                   - label: 아이템 삭제
-                    action: '[self:ledger]{store: "item", op: "delete", item_id: "{item.id}"}'
+                    action: '[self:business]{store: "item", op: "delete", item_id: "{item.id}"}'
                     style: danger
                     confirm: 이 아이템을 삭제할까요?
                     back: true
@@ -3401,14 +3401,14 @@ nodes:
             auto_run: true
             buttons:
             - label: ↻ 비즈니스 기반 재생성
-              action: '[self:ledger]{store: "document", op: "regenerate"}'
+              action: '[self:business]{store: "document", op: "regenerate"}'
               refresh: true
-            action: '[self:ledger]{store: "document", op: "list"}'
+            action: '[self:business]{store: "document", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:ledger]{store: "document", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "document", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 공개 비즈니스 문서
@@ -3421,7 +3421,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{document.content}'
-                  action: '[self:ledger]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: '{title}'
@@ -3429,12 +3429,12 @@ nodes:
                 - '{content|trunc:60}'
           - name: 근무지침
             auto_run: true
-            action: '[self:ledger]{store: "guideline", op: "list"}'
+            action: '[self:business]{store: "guideline", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:ledger]{store: "guideline", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "guideline", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 근무 지침
@@ -3447,7 +3447,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{guideline.content}'
-                  action: '[self:ledger]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: 레벨 {level} · {title}
@@ -5205,6 +5205,49 @@ nodes:
         - 정기 실행
         guides:
         - script.md
+      ledger:
+        returns: items
+        side_effect: true
+        fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
+        description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
+        group: system
+        target_description: 'path(저장소 안·~workspace/ 가능) 필수. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
+        router: handler
+        tool: ledger_op
+        implementation: system_essentials/ledger_ops.py — 원자 쓰기(tmp+fsync+replace), 관문 넷(set target 필수·key 거절·enum_fields·list_limits) 전부 실사고 유래. 옛 등록 스크립트(2026-09-04 은퇴) 이식.
+        target_key: op
+        runs_on: anywhere
+        params:
+          path: string
+          target: string
+          key: string
+          max_items: integer
+          limit: integer
+          replace_root: boolean
+          items_file: string
+        ops:
+          default: select
+          returns:
+            append: effect
+            upsert: effect
+            set: effect
+          side_effect:
+            select: false
+          fixture:
+            select: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
+          values:
+            select: 배열의 필요한 열·행만 items 로 — target·fields·where·limit
+            append: 항목 추가 — item|items|items_file, max_items 롤링, enum_fields·list_limits 관문
+            upsert: key(기본 id) 기준 갱신·삽입 — 같은 관문
+            set: target 자리의 값 교체 — target 필수, 루트 교체는 replace_root:true 명시
+        keywords:
+        - 원장
+        - JSON 원장
+        - 커버리지 원장
+        - 순회 큐
+        - 상태 기록
+        - ledger
+        - upsert
     description: '내부: 개인 정보 및 시스템 관리 — 파일, 메모리, 건강, 사진, 설정, 워크플로우, 이벤트, 시스템 유틸리티'
     always_on: true
     tags:

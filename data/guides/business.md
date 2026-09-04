@@ -9,14 +9,14 @@
 >
 > | 무엇 | 어휘 |
 > |---|---|
-> | 사업·아이템·공개문서·근무지침 | **`[self:ledger]{store, op}`** — store=`business`/`item`/`document`/`guideline` |
+> | 사업·아이템·공개문서·근무지침 | **`[self:business]{store, op}`** — store=`business`/`item`/`document`/`guideline` |
 > | 이웃·연락처 | **`[others:neighbor]{op}`** — 연락처는 `contact_add`/`contact_update`/`contact_delete` op |
 > | 메시지 조회 | **`[others:messages]{op}`** |
 > | 외부 발신(이메일·Nostr) | **`[others:channel_send]{channel_type, to, subject, body}`** |
 >
 <!-- retired-ok: 은퇴 어휘를 이름 불러 거절하고 참 계약(ledger)으로 안내하는 자리 -->
 > 옛 이름 `[self:business]`·`[self:business_item]`·`[self:business_document]`·`[self:work_guideline]` 은
-> 2026-08-15 에 `[self:ledger]{store}` 하나로 통합됐고, `[others:contact]` 는 `[others:neighbor]` 의 op 로
+> 2026-08-15 에 `[self:business]{store}` 하나로 통합됐고, `[others:contact]` 는 `[others:neighbor]` 의 op 로
 > 흡수됐습니다. `[limbs:gmail_send]`·`[others:indienet_send]` 는 존재한 적 없거나 은퇴한 이름입니다 —
 > 발신은 `[others:channel_send]` 하나입니다.
 
@@ -36,11 +36,11 @@
   기계가 만든 파일만 사이드카(`.gen_items.json`)로 추적해 지우므로 사용자가 손으로 넣은 파일은 절대 건드리지 않습니다.
 
 ```
-[self:ledger]{store: "item"}                                          # 전체 아이템(비즈니스 무관, op:list 기본)
-[self:ledger]{store: "item", search: "책상"}                           # 제목·설명 검색
-[self:ledger]{store: "item", business_id: 6}                          # 한 비즈니스의 아이템만
-[self:ledger]{store: "item", op: "save", business_id: 6, title: "원목 책상", description: "…"}
-[self:ledger]{store: "item", op: "add_image", id: 9, path: "/…/photo.jpg"}
+[self:business]{store: "item"}                                          # 전체 아이템(비즈니스 무관, op:list 기본)
+[self:business]{store: "item", search: "책상"}                           # 제목·설명 검색
+[self:business]{store: "item", business_id: 6}                          # 한 비즈니스의 아이템만
+[self:business]{store: "item", op: "save", business_id: 6, title: "원목 책상", description: "…"}
+[self:business]{store: "item", op: "add_image", id: 9, path: "/…/photo.jpg"}
 ```
 
 ★파라미터 함정 둘: 아이템 본문은 `details` 가 아니라 **`description`** 이고(DB 컬럼명 `details` 와 다름),
@@ -278,8 +278,8 @@ POST /business/messages {
 1. 이 가이드 로드
     ↓
 2. 요청 유형 분류 — ★먼저 IBL 어휘로 되는지 본다
-   ├ 조회: [self:ledger]{store, op:"list"|"detail"} / [others:neighbor] / [others:messages]
-   ├ 변경: [self:ledger]{op:"save"|"delete"|"add_image"} / [others:neighbor]{op:"save"|"contact_add"}
+   ├ 조회: [self:business]{store, op:"list"|"detail"} / [others:neighbor] / [others:messages]
+   ├ 변경: [self:business]{op:"save"|"delete"|"add_image"} / [others:neighbor]{op:"save"|"contact_add"}
    ├ 발신: [others:channel_send]{channel_type} + 기록(POST /business/messages)
    └ 분석: 조회 >> [table:filter/sort/groupby] 로 추리고, **판단·요약은 당신이 한다**
            (IBL 에는 사고 액션이 없습니다 — 요약 액션을 찾지 마십시오)

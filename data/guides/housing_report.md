@@ -15,7 +15,7 @@
 - **고정 폴더** `~workspace/outputs/housing_reports/` · **보고서 파일명** `housing_report_YYYY-MM-DD_<오늘의 지역>.md`(날짜 우선 순서 불변 — 사전순=시간순이 §2-3과 정기보고 앱의 전제. 지역명은 H1 제목과 같은 짧은 표기).
 - **DB** `db/rotation.json`(순회 큐·커서, §2-2) · `db/regions/<슬러그>.json`(지역당 파일 하나 — 프로필·판정·방문 이력·발굴 매물 전부, §4). **보조** `_report_config.json`(예산·선호, §2-1) · `_thesis.md`(연구 노트, §2-4) · `_coverage_ledger.json`(심층 코너 주제 롤링, §3-4) · `_scan_log.json`(순회 불가 날, §5-1).
 - **배포 = 로컬 md 누적 + 공유창고 누적 등재.** 매 호 HTML을 `공유창고/0/부동산 보고서/부동산 보고서 <YYYY-MM-DD> <지역>.html`로 **새 파일로 쌓는다**(덮어쓰기 금지 — 호마다 지역이 달라 어제 호를 오늘 호가 대체할 수 없다. 파일명 고정, 사용자 지시 08-12). 렌더의 유일한 통로는 등록 스크립트 **`보고서HTML`**(어제 HTML 스타일 베끼기·`/tmp` 즉석 변환기 금지). 공유판 머리글에 예산 수치 등 탐색 조건 상세를 싣지 않는다. `/r/` 공개면 발행은 하지 않는다.
-- **저장·검증은 IBL 액션으로**, 셸은 IBL 등가물이 없는 일에만. JSON 갱신은 **`json원장`**(파이썬 원라이너·히어독·손 문자열 치환 금지). **`json원장` 규약 셋**: ①`set`은 `target` 필수 — target 없는 set은 파일 전체를 갈아치우므로 거절된다(08-31: `{op:"set", key:"explore_first"}` 한 줄이 순회 원장을 105B로 덮었다. `key`는 upsert의 것) ②지역·순회 upsert엔 `enum_fields: {verdict: ["미판정","관심","보류","기각"]}` ③커버리지 append엔 `list_limits`.
+- **저장·검증은 IBL 액션으로**, 셸은 IBL 등가물이 없는 일에만. JSON 갱신은 **`[self:ledger]`**(파이썬 원라이너·히어독·손 문자열 치환 금지). **`[self:ledger]` 규약 셋**: ①`set`은 `target` 필수 — target 없는 set은 파일 전체를 갈아치우므로 거절된다(08-31: `{op:"set", key:"explore_first"}` 한 줄이 순회 원장을 105B로 덮었다. `key`는 upsert의 것) ②지역·순회 upsert엔 `enum_fields: {verdict: ["미판정","관심","보류","기각"]}` ③커버리지 append엔 `list_limits`.
 - **파이프 AI step(`[table:ai]`·`[table:brief]`)에는 `criteria`** — 뒤 step이 의존하는 재료 관문에만, 반증 가능한 속성(행 수·필수 열·값 집합)으로. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 
 ---
@@ -109,9 +109,9 @@
  "verdict_enum": ["미판정", "관심", "보류", "기각"], "revisit_interest_days": 28, "revisit_max_per_week": 2}
 ```
 - **큐 구성**: 단위 = 하루에 훑을 주거 시장 하나. 인구 10만+ 시 · 광역시 구묶음 · 혁신도시·세종 등 계획지구 · 서울·인천·경기 구묶음(`tier: "대도시"` — §5 대조 절 강제). 군 단위 시골 제외, 마포·용산·강남권 제외. 순서 = priority → 혁신도시 등 유망 → 지리적 묶음. 한 바퀴 뒤에도 지우지 않고 2바퀴째(재방문=델타).
-- **판정 필드 규약(09-02)**: `verdict`는 enum 값 **하나**(소지역 중 최선, 관심>보류>기각). 소지역별 판정은 `sub_verdicts: {"노원": "보류", "도봉": "관심"}`, 조건·사유는 `verdict_note`. **`json원장`의 `enum_fields`가 집행한다** — 문장을 넣으면 거절. 배경: 서울 호들이 판정을 문장으로 적어 아래 규칙 1이 한 번도 걸리지 않았다(재방문 실적 원주 1회).
+- **판정 필드 규약(09-02)**: `verdict`는 enum 값 **하나**(소지역 중 최선, 관심>보류>기각). 소지역별 판정은 `sub_verdicts: {"노원": "보류", "도봉": "관심"}`, 조건·사유는 `verdict_note`. **`[self:ledger]`의 `enum_fields`가 집행한다** — 문장을 넣으면 거절. 배경: 서울 호들이 판정을 문장으로 적어 아래 규칙 1이 한 번도 걸리지 않았다(재방문 실적 원주 1회).
 - **오늘의 지역 선정**: ⓪`explore_first`에 미방문이 남으면 그것부터(사용자 지시 탐험 대상, 소진 시 빈 배열로) ①`verdict == "관심"`이고 `last_visited`가 28일 이상 지난 곳 중 가장 오래된 곳 — **단 최근 7일 재방문 2회까지**(관심 12곳+ × 14일이면 매일이 재방문이 되어 미방문 46곳이 멈춘다) ②없으면 미방문 첫 번째, 다 방문했으면 `last_visited` 최고령 ③`기각`은 건너뛰되 `recheck_if` 이벤트 관측 시 재평가 ④사용자가 지목하면 그날은 그 지역.
-- 방문 후 `last_visited`·`visits`·`verdict`(+`sub_verdicts`·`verdict_note`)를 `json원장` upsert(`target: "queue", key: "slug"`, `enum_fields` 동반)로, 최상위 키는 `set`에 **`target`**을 주어 갱신.
+- 방문 후 `last_visited`·`visits`·`verdict`(+`sub_verdicts`·`verdict_note`)를 `[self:ledger]` upsert(`target: "queue", key: "slug"`, `enum_fields` 동반)로, 최상위 키는 `set`에 **`target`**을 주어 갱신.
 
 ### 2-3. 직전 보고서
 `[self:file_find]{path: "<고정 폴더>", pattern: "housing_report_*.md"}` → 사전순 마지막이 직전 호(지켜볼 점·맥락). 오늘 지역이 정해지면 `db/regions/<슬러그>.json`(재방문이면 기준선, 첫 방문이면 없는 게 정상).
@@ -238,7 +238,7 @@ $통과 = $평가 >> [table:filter]{where: {field: "verdict", op: "eq", value: "
 **저장 순서**: ①`db/regions` upsert + `rotation` 갱신 ②심층을 썼으면 `_coverage_ledger.json` append(`list_limits`) ②b 가설을 건드렸으면 `_thesis.md`(옛 문단은 아카이브로) ③md 저장 ④`보고서HTML`로 공유창고 등재 — 실행 후 `links`·`tables`·`dropped_lines`를 읽고 **links가 매물+출처 건수보다 적으면 발행하지 않는다**(`drop_lines`는 리스트) ⑤`[self:notify_user]` 절대경로 + TL;DR.
 
 ### 5-1. 순회 불가 로그
-소스 장애로 그날 순회를 못 한 경우에만 `[self:script]{op: "run", id: "json원장", args: {path: "outputs/housing_reports/_scan_log.json", op: "append", item: {date: "YYYY-MM-DD", reason: "...", resume: "같은 지역"}, max_items: 60}}`. 커서는 전진시키지 않는다.
+소스 장애로 그날 순회를 못 한 경우에만 `[self:ledger]{path: "outputs/housing_reports/_scan_log.json", op: "append", item: {date: "YYYY-MM-DD", reason: "...", resume: "같은 지역"}, max_items: 60}`. 커서는 전진시키지 않는다.
 
 ---
 
@@ -257,7 +257,7 @@ $통과 = $평가 >> [table:filter]{where: {field: "verdict", op: "eq", value: "
 - [ ] 판정을 `verdict` 하나 + `sub_verdicts` + `verdict_note`로 나눠 `enum_fields` upsert 했는가 · `set`엔 `target`
 - [ ] 통과 매물 전부 DB에 `found`와 upsert, 기존은 `last_seen`/`gone` · URL·리스크 표기 · "현장 확인 필요" 정직 표시
 - [ ] 동향은 중요한 것 + 함의 한 줄 · 심층은 원장 대조 · 노트는 가설을 건드린 날만(옛 문단은 아카이브)
-- [ ] 매물 URL은 `[매물 보기](url)` · DB→rotation→md→HTML(`links` 검산)→알림 순서 · 등록 스크립트(`json원장`·`보고서HTML`) 사용
+- [ ] 매물 URL은 `[매물 보기](url)` · DB→rotation→md→HTML(`links` 검산)→알림 순서 · `[self:ledger]`·등록 스크립트 `보고서HTML` 사용
 - [ ] 파일명 `housing_report_YYYY-MM-DD_<지역>.md` · 공유창고 새 파일로 누적 · 공유판에 예산 상세 없음
 
 ---

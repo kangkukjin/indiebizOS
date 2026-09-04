@@ -1031,7 +1031,7 @@ def _phone_sync(bm, ti: dict) -> str:
         _adb("forward", "--remove", f"tcp:{PORT}")
 
 
-# ── [self:ledger]{store, op} — 사업 원장 4형제 통합 (2026-08-15) ────────────────
+# ── [self:business]{store, op} — 사업 원장 4형제 통합 (2026-08-15) ────────────────
 # 헌법 "명사의 자리" 집행: 비즈니스·아이템·문서·지침은 세계의 명사라 어휘 이름이 아니라
 # 데이터(store 라벨)가 나른다. ★저장 구조는 그대로 — 기존 store 별 함수로 라우팅만 한다.
 # op 로 먼저 분기하고(레지스트리 ops 와 1:1 — --check 가 AST 로 키를 정확 비교) store 로
@@ -1086,7 +1086,7 @@ _OP_DISPATCHERS = {
     "neighbor_op": {"list": _nb_list, "detail": _nb_detail, "save": _nb_save, "delete": _nb_delete,
                     "favorite": _nb_favorite, "merge": _nb_merge,
                     "contact_add": _ct_add, "contact_update": _ct_update, "contact_delete": _ct_delete},
-    "ledger_op": {"list": _lg_list, "detail": _lg_detail, "save": _lg_save, "delete": _lg_delete,
+    "business_op": {"list": _lg_list, "detail": _lg_detail, "save": _lg_save, "delete": _lg_delete,
                   "regenerate": _lg_regenerate, "publish": _lg_publish,
                   "add_image": _lg_add_image, "remove_image": _lg_remove_image},
     "auto_response_op": {"status": _ar_status, "start": _ar_start, "stop": _ar_stop},
@@ -1094,7 +1094,7 @@ _OP_DISPATCHERS = {
 _OP_DEFAULTS = {
     "messages_op": "thread",
     "neighbor_op": "list",
-    "ledger_op": "list",
+    "business_op": "list",
     "auto_response_op": "status",
 }
 

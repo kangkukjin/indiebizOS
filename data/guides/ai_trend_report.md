@@ -6,7 +6,7 @@
 
 세 섹션 + 조건부 하나: ①투자·경제 ②기술·연구 ③AI 활용 사례 ④(걸릴 때만) indiebizOS 함의.
 
-> **이 가이드와 두 원장은 매일 04시 주행이 조사 전에 통째로 읽는 재료다 — 크기가 곧 매일의 비용이다.** 상한: 가이드 35KB · 규칙 원장 12KB · 커버리지 태그는 명사구(호당 ≤25개·≤24자, `json원장`이 거절). 개정 이력·위반 실례 문단·실행 기록은 여기가 아니라 `git log`·`data/system_docs/changelog.log`·그날 보고서에 둔다. 규칙에 붙이는 실례는 **한 줄**까지다.
+> **이 가이드와 두 원장은 매일 04시 주행이 조사 전에 통째로 읽는 재료다 — 크기가 곧 매일의 비용이다.** 상한: 가이드 35KB · 규칙 원장 12KB · 커버리지 태그는 명사구(호당 ≤25개·≤24자, `[self:ledger]`이 거절). 개정 이력·위반 실례 문단·실행 기록은 여기가 아니라 `git log`·`data/system_docs/changelog.log`·그날 보고서에 둔다. 규칙에 붙이는 실례는 **한 줄**까지다.
 
 ---
 
@@ -14,7 +14,7 @@
 
 - **고정 폴더** `~workspace/outputs/ai_trend_reports/` · **파일명** `ai_trend_report_YYYY-MM-DD.md`(작성 당일, 사전순=시간순). 상태 파일 3종이 같은 폴더에 산다: `_coverage_ledger.json`(최근 10호 태그) · `_methodology_rules.md`(규칙 원장) · `_scan_log.json`(빈 날 점검 로그, §4-1).
 - **저장·검증은 IBL 액션으로** — `[self:write]`·`[self:edit]`·`[self:list]`·`[self:grep]`·`[self:read]`. 네이티브 `Write`·Bash `ls`/`grep` 금지: 결과 파일은 같아도 **네이티브 경로는 경험 증류에 접지되지 않아 해마에 남지 않는다**(08-20 실측 — 산출물이 정상이라 더 조용히 샜다).
-- **셸은 IBL 등가물이 없는 일에만.** 등록 스크립트: GitHub 다건 = `github저장소메타` · JSON 원장 = `json원장` · arXiv 카테고리 피드 = `arxiv최신피드` · HTML 렌더 = `보고서HTML`.
+- **셸은 IBL 등가물이 없는 일에만.** 등록 스크립트: GitHub 다건 = `github저장소메타` · arXiv 카테고리 피드 = `arxiv최신피드` · HTML 렌더 = `보고서HTML`.
 - **파이프 안 AI step(`[table:ai]`·`[table:brief]`)에는 `criteria`를 단다** — 뒤 step이 의존하는 **재료 관문**에만, 기준은 **반증 가능한 속성**(행 수·필수 열·날짜 하한·중복 여부)으로. 취향 산문은 판정 불능만 낳고, 결정론 step에 걸면 재시도 없이 실패만 남는다. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 - **얇게 훑고 고른 것만 정독.** 벽시계는 왕복 수가 아니라 **모델이 읽는 문자수**를 따른다(측정 = `에피소드통계`의 결과천자, 08-31~09-02 주행 20~63만자). 목록 단계는 `select`·`take`·`filter`로 열을 접어 읽고, `crawl` 전문은 선별을 통과한 것에만. 깊이를 없애라는 뜻이 아니다 — 두 단(훑기→정독)이 원리다.
 
@@ -45,7 +45,7 @@
 4. **게이트 = 계수(§3-0)** — 가지별 NEW 행을 합산해 `[if: $신규합 == 0]`이면 파이프가 점검 로그를 append 하고 끝. 산문 칸은 부르지 않는다.
 5. **조건부 심화** — NEW 상위 2~3건만 `each + crawl`로 원문 확보(유보 문구를 지우는 재료).
 6. **산문·조립** — TL;DR·섹션·함의·점검·지켜볼을 소수의 `brief`/`ask` 칸으로, `[table:document]` blocks로 조립(§3-4 층 규칙은 지시문 안에).
-7. **상태 쓰기** — md 저장, 원장 append(`json원장`, §4). 규칙 승격·은퇴는 문장 밖.
+7. **상태 쓰기** — md 저장, 원장 append(`[self:ledger]`, §4). 규칙 승격·은퇴는 문장 밖.
 8. **에피소드 메모** — 재사용/변형/새로 조립 중 무엇이었는지, 호출 수·소요시간.
 
 자리표 예시(투자 가지 + 게이트만 — 기술·논문·사례 가지는 같은 모양, `<...>`는 반드시 치환):
@@ -60,7 +60,7 @@ $투자신규 = $투자 >> [table:filter]{where: {field: "label", op: "eq", valu
 $투자변경 = $투자 >> [table:filter]{where: {field: "label", op: "eq", value: "CHANGED"}}
 $신규합 = $투자신규.count + $기술신규.count + $논문신규.count + $사례신규.count
 [if: $신규합 == 0]{
-  [self:script]{op: "run", id: "json원장", args: {path: "outputs/ai_trend_reports/_scan_log.json", op: "append", item: {date: "<오늘>", new_count: 0, changed: [<CHANGED 제목들>], scanned: "<가지·질의 요약 한 줄>"}, max_items: 60}}
+  [self:ledger]{path: "outputs/ai_trend_reports/_scan_log.json", op: "append", item: {date: "<오늘>", new_count: 0, changed: [<CHANGED 제목들>], scanned: "<가지·질의 요약 한 줄>"}, max_items: 60}
 } [else]{
   <5~7단: 심화 crawl → 산문 칸들 → document 조립 → 저장·원장 append>
 }
@@ -140,7 +140,7 @@ $신규합 = $투자신규.count + $기술신규.count + $논문신규.count + $
 1. **신규 주제 의무 + 분야 로테이션**: 전체 보고서 날엔 직전에 없던 새 주제 1~2개. 로보틱스·바이오·에이전트·반도체·정책·오픈소스·창작·온디바이스를 돌아가며 — 검색 각(쿼리)을 갈아끼운다. 투자·반도체가 다른 섹션을 잠식하지 않게.
 2. **'지켜볼 점'은 교체되는 목록**: 해소된 항목은 다음 호에서 은퇴, 2~3회 무변화 이월 항목도 내린다. **여러 항목을 '승계' 한 줄로 묶어 은퇴 규칙을 우회하지 않는다** — 항목은 낱개로 세고 **상한 8개**. 반증 조건이 한 번 통과했다고 은퇴시키지 말고 재확인일을 옮기거나 조건의 형태를 바꿔 남긴다(R2 개정).
 3. **분량 채우기 금지는 전 섹션에**: 쓸 게 없는 섹션은 짧게 끝내거나 비운다.
-4. **커버리지 원장**: 전체 보고서를 저장할 때마다 `{date, tags:[...]}` 한 항목 append(10호 롤링). 태그는 **명사구 ≤24자·호당 ≤25개** — `json원장`의 `list_limits`가 거절한다(§4). 다음 호는 직전 1개가 아니라 원장 전체를 기준선으로 대조한다. 의미검색용 `[self:memory]`와는 목적이 다르다.
+4. **커버리지 원장**: 전체 보고서를 저장할 때마다 `{date, tags:[...]}` 한 항목 append(10호 롤링). 태그는 **명사구 ≤24자·호당 ≤25개** — `[self:ledger]`의 `list_limits`가 거절한다(§4). 다음 호는 직전 1개가 아니라 원장 전체를 기준선으로 대조한다. 의미검색용 `[self:memory]`와는 목적이 다르다.
 
 ### 3-3. 방법론 규칙의 생애주기
 
@@ -210,13 +210,13 @@ $신규합 = $투자신규.count + $기술신규.count + $논문신규.count + $
 ```
 
 저장 직후:
-- **커버리지 원장 append**: `[self:script]{op: "run", id: "json원장", args: {path: "outputs/ai_trend_reports/_coverage_ledger.json", op: "append", item: {date: "YYYY-MM-DD", tags: [<명사구 ≤25개>]}, max_items: 10, list_limits: {tags: {max_items: 25, max_item_len: 24}}}}`. 거절되면 태그를 줄여 다시 — 원장을 손으로 고치지 않는다. 전체 보고서 날만.
+- **커버리지 원장 append**: `[self:ledger]{path: "outputs/ai_trend_reports/_coverage_ledger.json", op: "append", item: {date: "YYYY-MM-DD", tags: [<명사구 ≤25개>]}, max_items: 10, list_limits: {tags: {max_items: 25, max_item_len: 24}}}`. 거절되면 태그를 줄여 다시 — 원장을 손으로 고치지 않는다. 전체 보고서 날만.
 - **규칙 원장**: 승격·은퇴 판정이 난 날만 §3-3 템플릿대로 갱신 + 카운터(연속 무값·마지막 값 날짜) 갱신. 판정 없는 날은 카운터만.
 - 사용자에게 절대경로와 핵심 변화 요약을 보고한다. HTML 렌더(`보고서HTML`)·`[self:output]{op: "gui"}`는 사용자가 원할 때.
 
 ### 4-1. 점검 로그 (계수 0인 날)
 
-§3-0에서 `$신규합 == 0`이면 파이프가 `_scan_log.json`에 한 항목을 append 한다(§2-0 골격 4단, `json원장`, `max_items: 60`): `{date, new_count: 0, changed: [CHANGED 제목들], scanned: "가지·질의 요약 한 줄"}`. 사용자에겐 한 줄로 보고한다. 이 파일은 `ai_trend_report_*.md` 패턴 밖이라 다음 호의 기준선(§1-1)은 마지막 전체 보고서로 유지된다. 커버리지·규칙 원장은 건드리지 않는다.
+§3-0에서 `$신규합 == 0`이면 파이프가 `_scan_log.json`에 한 항목을 append 한다(§2-0 골격 4단, `[self:ledger]`, `max_items: 60`): `{date, new_count: 0, changed: [CHANGED 제목들], scanned: "가지·질의 요약 한 줄"}`. 사용자에겐 한 줄로 보고한다. 이 파일은 `ai_trend_report_*.md` 패턴 밖이라 다음 호의 기준선(§1-1)은 마지막 전체 보고서로 유지된다. 커버리지·규칙 원장은 건드리지 않는다.
 
 ---
 
@@ -241,7 +241,7 @@ $신규합 = $투자신규.count + $기술신규.count + $논문신규.count + $
 - [ ] TL;DR을 평문으로 새로 썼고, 기호 항목당 ≤2, 머리말·TL;DR에 장부 문장이 없는가
 - [ ] 함의 세 축을 예/아니오로 판정 — 걸리면 세 토막, 안 걸리면 섹션 생략 + "없음" 문장 0
 - [ ] 자기 점검에 값·판정을 낸 규칙만 적었는가 — 무값 실행은 원장 카운터로
-- [ ] 저장·검증을 IBL 액션으로 했는가 · 커버리지 원장을 `json원장`(`list_limits`)으로 append 했는가
+- [ ] 저장·검증을 IBL 액션으로 했는가 · 커버리지 원장을 `[self:ledger]`(`list_limits`)으로 append 했는가
 - [ ] 사용자에게 절대경로와 핵심 변화를 보고했는가
 
 ---

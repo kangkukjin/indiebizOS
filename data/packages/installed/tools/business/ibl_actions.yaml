@@ -2,7 +2,7 @@ nodes:
   self:
     actions:
       # 2026-08-15 원장 통합: business·business_item·business_document·work_guideline
-      # 네 낱말 → [self:ledger]{store, op}. 헌법 "명사의 자리"(ibl.md) 집행 —
+      # 네 낱말 → [self:business]{store, op}. 헌법 "명사의 자리"(ibl.md) 집행 —
       # 하드코딩할 명사는 *몸의 명사*(작용의 거처)뿐이고 비즈니스·아이템·문서·지침은
       # *세계의 명사*(세계가 이런 곳이다)라 코드가 아니라 데이터가 나를 것이다.
       # 조항은 2026-08-06 에 선포됐는데 이 어휘들은 06-12 부터 있어 소급된 적이 없었다.
@@ -12,7 +12,7 @@ nodes:
       #   어휘·프롬프트 상주비만 줄인다. 데이터 이관 0, 롤백은 이 커밋 되돌리기.
       # ★부수 이득: save(business·item) 와 update(document·guideline) 가 같은 연산인데
       #   이름만 달랐다 → save 로 통일(update 는 별칭).
-      ledger:
+      business:
         aliases:
           op: [action]
           id: [item_id]      # 핸들러의 `id or item_id` 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
@@ -23,7 +23,7 @@ nodes:
           #   생성 호출(business_id + title)이 "아이템 #business_id 수정"으로 오독된다.
         returns: items
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
-        fixture: '[self:ledger]{store: "business", op: "list"}'
+        fixture: '[self:business]{store: "business", op: "list"}'
         description: 사업 원장 조회·관리 (store × op). store=business(사업)/item(상품·서비스)/document(레벨별 공개문서)/guideline(근무지침). op:list 기본.
         group: business
         target_description: 'store 로 원장을 고르고 op 로 연산을 고른다(기본 store=business, op=list).
@@ -39,7 +39,7 @@ nodes:
           ★op 이 그 store 에 없으면 거절한다(조용히 무시하지 않는다).'
         target_key: op
         router: handler
-        tool: ledger_op
+        tool: business_op
         ops:
           default: list
           returns:
@@ -69,7 +69,7 @@ nodes:
             publish: 공개 프로필·발견 노트 Nostr 발행 (store=document 전용)
             add_image: 아이템 첨부 이미지 추가 (store=item 전용, id·path)
             remove_image: 아이템 첨부 이미지 제거 (store=item 전용, id·path)
-        implementation: business 패키지 ledger_op — op 로 먼저 분기하고 store 로 기존
+        implementation: business 패키지 business_op — op 로 먼저 분기하고 store 로 기존
           store 별 함수(_biz_*/_item_*/_doc_*/_guide_*)에 라우팅. 테이블·매니저 무변경.
         keywords:
         - 비즈니스
@@ -117,9 +117,9 @@ nodes:
                 value: -1
             buttons:
             - label: ＋ 비즈니스 추가
-              action: '[self:ledger]{store: "business", op: "save", name: "$q"}'
+              action: '[self:business]{store: "business", op: "save", name: "$q"}'
               refresh: true
-            action: '[self:ledger]{store: "business", op: "list", level: "$level", search: "$q"}'
+            action: '[self:business]{store: "business", op: "list", level: "$level", search: "$q"}'
             view:
             - type: card_list
               from: items
@@ -128,7 +128,7 @@ nodes:
               # (2026-07-29: 여기 있던 editable_list 는 사진을 못 붙여, 같은 일을 하는 두 창구 중
               #  사진 없는 쪽이 자연스러운 자리에 앉아 "사진 기능이 사라졌다"로 읽혔다.)
               item_click:
-                action: '[self:ledger]{store: "business", op: "detail", id: "{id}"}'
+                action: '[self:business]{store: "business", op: "detail", id: "{id}"}'
                 view:
                 - type: form
                   title: 비즈니스 정보
@@ -158,11 +158,11 @@ nodes:
                     label: 설명
                     type: textarea
                     value: '{business.description}'
-                  action: '[self:ledger]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
+                  action: '[self:business]{store: "business", op: "save", id: "{business.id}", name: "$name", level: "$level", description: "$description"}'
                   button: 저장
                   actions:
                   - label: 비즈니스 삭제
-                    action: '[self:ledger]{store: "business", op: "delete", id: "{business.id}"}'
+                    action: '[self:business]{store: "business", op: "delete", id: "{business.id}"}'
                     style: danger
                     confirm: 이 비즈니스를 삭제할까요? 소속 아이템도 함께 사라집니다.
                     back: true
@@ -179,7 +179,7 @@ nodes:
             - key: biz
               type: select
               placeholder: 전체 비즈니스
-              options_action: '[self:ledger]{store: "business", op: "list"}'
+              options_action: '[self:business]{store: "business", op: "list"}'
               options_from: items
               option_value: id
               option_label: name
@@ -188,16 +188,16 @@ nodes:
               placeholder: 제목 검색 · ＋추가할 제목
             buttons:
             - label: ＋ 아이템 추가
-              action: '[self:ledger]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
+              action: '[self:business]{store: "item", op: "save", business_id: "$biz", title: "$q"}'
               refresh: true
-            action: '[self:ledger]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
+            action: '[self:business]{store: "item", op: "list", business_id: "$biz", search: "$q"}'
             view:
             - type: card_list
               from: items
               master_detail: true
               empty_from: message
               item_click:
-                action: '[self:ledger]{store: "item", op: "detail", item_id: "{id}"}'
+                action: '[self:business]{store: "item", op: "detail", item_id: "{id}"}'
                 view:
                 - type: form
                   title: 아이템
@@ -214,13 +214,13 @@ nodes:
                     label: 사진
                     type: images
                     value: '{item.attachment_path}'
-                    add_action: '[self:ledger]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
-                    remove_action: '[self:ledger]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
-                  action: '[self:ledger]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
+                    add_action: '[self:business]{store: "item", op: "add_image", item_id: "{item.id}", path: "$path"}'
+                    remove_action: '[self:business]{store: "item", op: "remove_image", item_id: "{item.id}", path: "$path"}'
+                  action: '[self:business]{store: "item", op: "save", id: "{item.id}", title: "$title", details: "$details"}'
                   button: 저장
                   actions:
                   - label: 아이템 삭제
-                    action: '[self:ledger]{store: "item", op: "delete", item_id: "{item.id}"}'
+                    action: '[self:business]{store: "item", op: "delete", item_id: "{item.id}"}'
                     style: danger
                     confirm: 이 아이템을 삭제할까요?
                     back: true
@@ -234,14 +234,14 @@ nodes:
             auto_run: true
             buttons:
             - label: ↻ 비즈니스 기반 재생성
-              action: '[self:ledger]{store: "document", op: "regenerate"}'
+              action: '[self:business]{store: "document", op: "regenerate"}'
               refresh: true
-            action: '[self:ledger]{store: "document", op: "list"}'
+            action: '[self:business]{store: "document", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:ledger]{store: "document", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "document", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 공개 비즈니스 문서
@@ -254,7 +254,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{document.content}'
-                  action: '[self:ledger]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "document", op: "save", level: "{document.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: '{title}'
@@ -262,12 +262,12 @@ nodes:
                 - '{content|trunc:60}'
           - name: 근무지침
             auto_run: true
-            action: '[self:ledger]{store: "guideline", op: "list"}'
+            action: '[self:business]{store: "guideline", op: "list"}'
             view:
             - type: card_list
               from: items
               item_click:
-                action: '[self:ledger]{store: "guideline", op: "detail", level: "{level}"}'
+                action: '[self:business]{store: "guideline", op: "detail", level: "{level}"}'
                 view:
                 - type: form
                   title: 근무 지침
@@ -280,7 +280,7 @@ nodes:
                     label: 내용
                     type: textarea
                     value: '{guideline.content}'
-                  action: '[self:ledger]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
+                  action: '[self:business]{store: "guideline", op: "save", level: "{guideline.level}", title: "$title", content: "$content"}'
                   button: 저장
               card:
                 title: 레벨 {level} · {title}
@@ -585,9 +585,9 @@ nodes:
       # 2026-08-15 은퇴: others:contact → [others:neighbor]{op: contact_add|contact_update|contact_delete}
       # 되살리지 말 것 — contact 는 대등한 원장이 아니라 **neighbor 의 자식 컬렉션**이었다.
       # 증거: list op 이 없었다(연락처는 neighbor detail 안에 실려 나온다) + 전 op 가 부모 id
-      # (neighbor_id) 또는 자식 id(contact_id)를 요구한다. self:ledger 의 item 이
+      # (neighbor_id) 또는 자식 id(contact_id)를 요구한다. self:business 의 item 이
       # add_image/remove_image 를 자기 op 로 갖는 것과 같은 모양이다.
-      # ★self:ledger{store:"contact"} 로 접지 않은 이유: store 축은 *대등한 원장*의 축인데
+      # ★self:business{store:"contact"} 로 접지 않은 이유: store 축은 *대등한 원장*의 축인데
       #   연락처는 대등하지 않다 — 넣었으면 store 가 거짓말을 시작했을 것이다.
       auto_response:
         returns: effect
@@ -718,7 +718,7 @@ tool_json:
         'from':
           type: string
           description: 합칠 이웃의 이름 또는 id (merge — from_id·from_name 별칭 허용)
-  - name: ledger_op
+  - name: business_op
     description: '사업 원장 CRUD (store x op). 2026-08-15 통합 — 옛 business_op /
       business_item_op / business_document_op / work_guideline_op.
 

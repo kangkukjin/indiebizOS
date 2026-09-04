@@ -12,16 +12,6 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
-json원장:
-  description: 'JSON 배열 원장 원자 갱신·조회 — args: path, op(append|upsert|set|select), target(set·select
-    는 지목, set 은 target 없으면 거절·루트를 정말 바꿀 때만 replace_root:true), item|items(append/upsert
-    전용), key(기본 id), max_items(배열 상한), value(set 전용), 쓰기 관문 list_limits{필드:{max_items,max_item_len}}·enum_fields{필드:[허용값]}(넘으면
-    쓰지 않고 실패). select 는 읽기 전용: fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items
-    통화. 저장소 밖 쓰기 거절'
-  file: json원장.py
-  interpreter: python
-  registered_at: '2026-08-25T12:31:26'
-  timeout: 60
 나레이션생성:
   description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts,
     voice(키·이름·별칭, 기본=원장 voices.json 의 default 항목), gpu(기본 T4), out_dir, force(재생성).

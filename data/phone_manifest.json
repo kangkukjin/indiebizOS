@@ -52,6 +52,7 @@
     "others:nostr",
     "others:publish",
     "self:ask",
+    "self:business",
     "self:cctv",
     "self:copy",
     "self:delete",

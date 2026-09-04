@@ -15,7 +15,7 @@
 - **고정 폴더** `~workspace/outputs/ai_tips_reports/` · **파일명** `ai_tips_report_YYYY-MM-DD_<주제>.md`(주제는 한 단어, H1과 같은 표기. 날짜 우선 순서 불변 — 사전순=시간순이 정기보고 앱과 §2-1의 전제).
 - **원장·DB**: `_covered_videos.json`(다룬·탈락 영상 원장, 중복 방지의 단일 진실 §4) · `db/tips.json`(팁 누적, append-only) · `_scan_log.json`(수집 불가 날, §2-7).
 - **배포 = 로컬 md 누적 + 공유창고 누적 등재.** 매 호 HTML을 `공유창고/0/AI 팁들/AI 팁 보고서 <YYYY-MM-DD> <주제>.html`로 **새 파일로 쌓는다**(덮어쓰기 금지 — 호마다 주제가 다르다). 렌더의 유일한 통로는 등록 스크립트 **`보고서HTML`**(`drop_lines`는 **리스트** — 문자열을 주면 글자 단위로 쪼개져 66줄이 지워진 사고가 있다). 공유판에는 "우리 시스템 함의" 절 등 개인 시스템 맥락을 싣지 않는다 — 제거는 변환기의 `drop_lines`가 집행하고 `dropped_lines`가 팁 수와 같은지, `links`가 영상+출처 건수 이상인지 검산한다. `/r/` 공개면 발행은 하지 않는다.
-- **셸은 IBL 등가물이 없는 일에만.** 원장·DB는 **`json원장`**(읽기 `op:"select"` · 갱신 `upsert`/`append` · 최상위 키는 `set`에 `target` 필수). 큰 payload는 `[self:write]`로 파일에 고정한 뒤 **`args_file`**로 가리킨다(리터럴로 박지 않는다). 손 전사 금지 — 원장 행은 소스에서 팬아웃해 파일로 고정한 뒤 그 파일을 넘긴다.
+- **셸은 IBL 등가물이 없는 일에만.** 원장·DB는 **`[self:ledger]`**(읽기 `op:"select"` · 갱신 `upsert`/`append` · 최상위 키는 `set`에 `target` 필수). 큰 payload는 `[self:write]`로 파일에 고정한 뒤 **`items_file`**로 가리킨다(리터럴로 박지 않는다). 손 전사 금지 — 원장 행은 소스에서 팬아웃해 파일로 고정한 뒤 그 파일을 넘긴다.
 - **파이프 AI step(`[table:ai]`·`[table:brief]`·`[self:struct]`)에는 `criteria`** — 뒤 step이 의존하는 재료 관문에만, 반증 가능한 속성(행 수·필수 열·값 집합)으로. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 - **얇게 훑고 고른 것만 정독.** 벽시계는 모델이 읽는 문자수를 따른다(`에피소드통계` 결과천자). 후보 목록은 `select`·`take`로 열을 접어 읽고, 자막 정독은 §2-3 선별을 통과한 편에만.
 
@@ -40,7 +40,7 @@
 ### 2-0. 성공 배관 재컴파일 골격
 08-28 실증에서 전 절차가 23문장 프로그램으로 완주됐다(정본 `docs/IBL_REPORT_PROGRAMS_HANDOFF.md`). 목적은 **배관을 다시 생각하는 턴을 없애고 판단을 소수의 칸에 모으는 것**.
 
-1. **상태 읽기** — 원장은 `json원장 select`로 `id·verdict`만, 직전 보고서는 사전순 마지막 md. 오늘 주제는 여기서 판단(§2-2).
+1. **상태 읽기** — 원장은 `[self:ledger]{op: "select"}`로 `id·verdict`만, 직전 보고서는 사전순 마지막 md. 오늘 주제는 여기서 판단(§2-2).
 2. **검색 한 묶음** — 질의 다섯 갈래(§2-3)를 `&` 병렬 → `union → dedup(video_id) → 원장 제외(not_in)`. 원장 제외는 산문이 아니라 술어.
 3. **날짜 확인 팬아웃** — `each + [sense:video]{op:"info"}` → 180일 필터 → 정렬 → select. 탈락분은 `too_old`로 원장 델타.
 4. **심사 한 칸** — 신선 후보 전체를 `[table:ai]` 한 칸에, 모든 행 유지 + `selected/reason`, 정확히 N편. `criteria` 필수.
@@ -50,8 +50,8 @@
 
 자리표 예시(`<…>`는 그 회차 값으로 치환):
 ```ibl
-$원장 = [self:script]{op: "run", id: "json원장", args: {path: "outputs/ai_tips_reports/_covered_videos.json", op: "select", target: "covered", fields: ["id", "verdict"]}}
-$기존팁 = [self:script]{op: "run", id: "json원장", args: {path: "outputs/ai_tips_reports/db/tips.json", op: "select", fields: ["tip", "date"], where: {topic: "<주제>"}}}
+$원장 = [self:ledger]{path: "outputs/ai_tips_reports/_covered_videos.json", op: "select", target: "covered", fields: ["id", "verdict"]}
+$기존팁 = [self:ledger]{path: "outputs/ai_tips_reports/db/tips.json", op: "select", fields: ["tip", "date"], where: {topic: "<주제>"}}
 $검색 = [sense:search_youtube]{query: "<한국어 주제 질의>", count: 12} & [sense:search_youtube]{query: "<영어 원천 질의>", count: 12} & [sense:search_youtube]{query: "<고유명사·워크플로 질의>", count: 12} & [sense:search_youtube]{query: "<회의론 질의>", count: 12} >> [table:union] >> [table:dedup]{by: "video_id"} >> [table:filter]{where: {field: "video_id", op: "not_in", value: "${원장.items.*.id}"}}
 $정보 = $검색 >> [table:each]{do: "[sense:video]{op: 'info', video_id: '$it.video_id'}", limit: 40}
 $신선 = $정보 >> [table:filter]{where: "upload_date >= <180일 전 YYYYMMDD>"} >> [table:sort]{by: "view_count", desc: true} >> [table:select]{columns: ["video_id","title","uploader","view_count","duration","upload_date","url"]}
@@ -67,7 +67,7 @@ $팁선별 = $증류 >> [table:ai]{instruction: "팁 절제. 영상당 2~5건·�
 **실행 예산**: 큰 `execute_ibl` 1회 + 후속 최대 2회(자막 실패 교체·검색어 보강). AI 판단은 심사 1 + 절제 1 + 산문 5칸 내외. 선정 2~4편(또는 정직한 실패 기록)·증류·절제·검법(§2-6)·머리줄 M·K 일치가 채워지면 닫는다. 120초를 넘기는 실행은 티켓을 받아 `recover{wait: 120}` 한 번으로 기다린다(셸 sleep 폴링 금지).
 
 ### 2-1. 원장 읽기
-`[self:script]{op:"run", id:"json원장", args:{path:"outputs/ai_tips_reports/_covered_videos.json", op:"select", target:"covered", fields:["id","verdict"]}}` — 다룬·탈락 영상 id(중복 방지)만. `recent_topics`(최근 10 주제)는 `target:"recent_topics"`로 따로. **197KB 원장을 `[self:read]`로 통째 읽지 않는다** — 제목·메모는 제외 판정에 쓰이지 않는다. 직전 보고서의 "지켜볼 점 / 내일 주제 후보"도 읽는다.
+`[self:ledger]{path:"outputs/ai_tips_reports/_covered_videos.json", op:"select", target:"covered", fields:["id","verdict"]}` — 다룬·탈락 영상 id(중복 방지)만. `recent_topics`(최근 10 주제)는 `target:"recent_topics"`로 따로. **197KB 원장을 `[self:read]`로 통째 읽지 않는다** — 제목·메모는 제외 판정에 쓰이지 않는다. 직전 보고서의 "지켜볼 점 / 내일 주제 후보"도 읽는다.
 
 ### 2-2. 오늘의 주제 (한 단어)
 **직전 호의 '지켜볼 점'이 주제 풀보다 앞선다**(08-28 실측: 그 자리에서 고른 '보안'이 컷오프 통과율 63%). 사용자가 지목하면 그날은 그 주제. 최근 10 주제와 겹치지 않게. 참고 풀: `프롬프트 / 자동화 / 코딩 / 이미지생성 / 영상제작 / 글쓰기 / 자료조사 / 에이전트 / 문서업무 / 학습 / 생활 / 마케팅 / 신도구 / 평가 / 보안 / 음성 / 데이터분석 / 검증 / 실패복구 / AX` — 풀 밖으로 나가도 된다.
@@ -94,7 +94,7 @@ $팁선별 = $증류 >> [table:ai]{instruction: "팁 절제. 영상당 2~5건·�
 5. `[self:notify_user]` 절대경로 + TL;DR.
 
 ### 2-7. 장애 로그와 실측 기록
-검색·자막이 전멸하면(낡은 yt-dlp가 조용히 죽는 부류) `[self:script]{op:"run", id:"json원장", args:{path:"outputs/ai_tips_reports/_scan_log.json", op:"append", item:{date:"YYYY-MM-DD", reason:"...", retry:"다음 날"}, max_items:60}}` 후 종료. **새 실측(검색어 처방·주제 특성·도구 마찰)은 가이드가 아니라 `docs/YOUTUBE_TIPS_FIELD_NOTES.md` 끝에 덧붙인다** — 같은 처방이 세 번 반복되면 그때 §2-2~2-4의 규칙으로 승격한다. 도구·어휘 결함은 실측 기록이 아니라 수리 경로(자기수정)로 보낸다.
+검색·자막이 전멸하면(낡은 yt-dlp가 조용히 죽는 부류) `[self:ledger]{path:"outputs/ai_tips_reports/_scan_log.json", op:"append", item:{date:"YYYY-MM-DD", reason:"...", retry:"다음 날"}, max_items:60}` 후 종료. **새 실측(검색어 처방·주제 특성·도구 마찰)은 가이드가 아니라 `docs/YOUTUBE_TIPS_FIELD_NOTES.md` 끝에 덧붙인다** — 같은 처방이 세 번 반복되면 그때 §2-2~2-4의 규칙으로 승격한다. 도구·어휘 결함은 실측 기록이 아니라 수리 경로(자기수정)로 보낸다.
 
 ---
 
@@ -149,7 +149,7 @@ $팁선별 = $증류 >> [table:ai]{instruction: "팁 절제. 영상당 2~5건·�
 - [ ] 팁이 헌법을 통과하는가 — 실행 가능·과장 보정·출처+타임스탬프·재탕은 오늘 주제 팁과 대조
 - [ ] 시도 후보 ≤3, 누적·"부채"·재촉 없음
 - [ ] 저장 순서 원장→DB→md→HTML→알림 · 검법 `날짜 확인 편수 == 원장 행수` · M·K 원장 대조 · `links`·`dropped_lines` 검산
-- [ ] 원장 갱신은 `json원장`+`args_file`, 셸 우회 없음 · 파일명 `ai_tips_report_YYYY-MM-DD_<주제>.md`
+- [ ] 원장 갱신은 `[self:ledger]`+`items_file`, 셸 우회 없음 · 파일명 `ai_tips_report_YYYY-MM-DD_<주제>.md`
 - [ ] 새 실측은 `docs/YOUTUBE_TIPS_FIELD_NOTES.md`에, 도구 결함은 수리 경로로
 
 ---

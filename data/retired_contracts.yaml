@@ -25,6 +25,31 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: json_ledger_script
+    retired: 2026-09-04
+    reason: >-
+      등록 스크립트 `json원장` 은 세 정기 보고서와 폴더 조사·나레이션이 함께 쓰는 몸 수준의
+      원장 원시 연산(관문 넷 = 실사고 유래)이었다 — 어휘 밖(스크립트)에 두면 인자가 JSON
+      덩어리라 파서·빌드 관문·픽스처·해마 결정화 밖에 있고 파이썬 몸에서만 돈다.
+      사용자 판정(언어 개정)으로 [self:ledger] 로 승격, 스크립트는 은퇴.
+    instead: >-
+      [self:ledger]{op: "select"|"append"|"upsert"|"set", path, target, …} — 같은 인자, 같은 관문.
+      옛 [self:script]{op:"run", id:"json원장", args:{…}} 의 args 가 곧 새 낱말의 params 다.
+    phrases:
+      - "json원장"
+      - "id: \"json원장\""
+  - id: business-ledger-renamed
+    retired: 2026-09-04
+    reason: >-
+      사업 원장 낱말이 보편 단어 `ledger` 를 차지하고 있었다(명명 헌법 5조 land-grab 금지 —
+      분야 낱말은 분야가 이름에 드러나야 한다). JSON 원장 원시 연산이 보편 동작으로 승격되며
+      `[self:ledger]` 를 그쪽에 준다. 사용자 판정(언어 개정).
+    instead: >-
+      사업·아이템·공개문서·근무지침은 [self:business]{store: "business"|"item"|"document"|"guideline", op}.
+      JSON 배열 원장(커버리지·순회 큐·판정)은 [self:ledger]{op: "select"|"append"|"upsert"|"set", path, target}.
+    phrases:
+      - "[self:ledger]{store"
+      - "business_op 가 아니라 ledger_op"
   - id: each_result_envelope
     retired: 2026-08-23
     reason: >-
@@ -83,17 +108,17 @@ retired:
     retired: 2026-08-15
     reason: >-
       사업 원장 통합(390e3bcd)이 self:business/business_item/business_document/
-      work_guideline 4형제를 [self:ledger]{store, op} 로 흡수했다. 그러나 이 은퇴는
+      work_guideline 4형제를 [self:business]{store, op} 로 흡수했다. 그러나 이 은퇴는
       등록부(2026-08-27 탄생) 이전이라 등재가 없었고, 관문 스캔 표면에 frontend/ 도
       빠져 있어서, 소개발행 버튼 2곳(WarehouseView.tsx·launcher_app_warehouse.py)이
       은퇴 어휘 [self:business_document] 를 16일간 호출하며 "액션이 없습니다"로
       죽었다(윈도우 설치본 실측 2026-08-31). 소급 등재 의무는 없지만 잔재가 실증된
       은퇴는 등재한다 — 재발이 곧 사유다.
     instead: >-
-      [self:ledger]{store: "business"|"item"|"document"|"guideline", op: ...} 하나.
-      공개인사프로필 발행은 [self:ledger]{store: "document", op: "publish"}.
+      [self:business]{store: "business"|"item"|"document"|"guideline", op: ...} 하나.
+      공개인사프로필 발행은 [self:business]{store: "document", op: "publish"}.
     phrases:
-      - "[self:business]"
+      # "[self:business]" 는 2026-09-04 사업 원장의 새 이름으로 되살아났다(business-ledger-renamed) — 금지 목록에서 제외
       - "[self:business_item]"
       - "[self:business_document]"
       - "[self:work_guideline]"

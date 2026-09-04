@@ -122,7 +122,7 @@
       }
     },
     {
-      "name": "ledger_op",
+      "name": "business_op",
       "description": "사업 원장 CRUD (store x op). 2026-08-15 통합 — 옛 business_op / business_item_op / business_document_op / work_guideline_op.\n\n## store 분기 (기본 business)\n- business: 사업 자체. list(level/search) / detail(id, +소속 아이템) / save(id 없으면 생성·name 필수) / delete(id, 아이템 동반)\n- item: 상품·서비스. list(business_id 없으면 전체·search) / detail(id) / save(business_id·title 필수) / delete(id) / add_image·remove_image(id + path)\n- document: 레벨 0-4 공개문서. list / detail(level) / save(level + title/content) / regenerate(자동 재생성) / publish(Nostr 발행)\n- guideline: 레벨 0-4 근무지침. list / detail(level) / save(level + title/content)\n\n## 주의\n- save 는 옛 business/item 의 save 와 document/guideline 의 update 를 합친 것이다(같은 연산이었다).\n- 그 store 에 없는 op 는 조용히 무시하지 않고 명시 거절한다.",
       "input_schema": {
         "type": "object",

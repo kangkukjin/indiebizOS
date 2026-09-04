@@ -573,6 +573,13 @@ _OP_DISPATCHERS = {
         "append": _sib_op("sheet_ops", "op_append"),
         "update": _sib_op("sheet_ops", "op_update"),
     },
+    # JSON 원장 — 등록 스크립트에서 승격(2026-09-04, 사용자 판정 언어 개정). 관문 넷은 ledger_ops 머리말.
+    "ledger_op": {
+        "select": _sib_op("ledger_ops", "op_select"),
+        "append": _sib_op("ledger_ops", "op_append"),
+        "upsert": _sib_op("ledger_ops", "op_upsert"),
+        "set": _sib_op("ledger_ops", "op_set"),
+    },
     "script_op": {
         "list": _sib_op("script_ops", "op_list"),
         "register": _sib_op("script_ops", "op_register"),
@@ -600,7 +607,7 @@ _OP_DISPATCHERS = {
         "discard": _patch_op("op_discard"),
     },
 }
-_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list",
+_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "ledger_op": "select",
                 "patch_op": "propose", "body_op": "changes"}
 
 

@@ -506,6 +506,49 @@ nodes:
         - 정기 실행
         guides:
         - script.md
+      ledger:
+        returns: items
+        side_effect: true     # append/upsert/set 이 원장을 쓴다 — 통화(returns)와 안전은 다른 축
+        fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
+        description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
+        group: system
+        target_description: 'path(저장소 안·~workspace/ 가능) 필수. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
+        router: handler
+        tool: ledger_op
+        implementation: system_essentials/ledger_ops.py — 원자 쓰기(tmp+fsync+replace), 관문 넷(set target 필수·key 거절·enum_fields·list_limits) 전부 실사고 유래. 옛 등록 스크립트(2026-09-04 은퇴) 이식.
+        target_key: op
+        runs_on: anywhere
+        params:
+          path: string
+          target: string
+          key: string
+          max_items: integer
+          limit: integer
+          replace_root: boolean
+          items_file: string
+        ops:
+          default: select
+          returns:
+            append: effect
+            upsert: effect
+            set: effect
+          side_effect:
+            select: false
+          fixture:
+            select: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
+          values:
+            select: 배열의 필요한 열·행만 items 로 — target·fields·where·limit
+            append: 항목 추가 — item|items|items_file, max_items 롤링, enum_fields·list_limits 관문
+            upsert: key(기본 id) 기준 갱신·삽입 — 같은 관문
+            set: target 자리의 값 교체 — target 필수, 루트 교체는 replace_root:true 명시
+        keywords:
+        - 원장
+        - JSON 원장
+        - 커버리지 원장
+        - 순회 큐
+        - 상태 기록
+        - ledger
+        - upsert
   table:
     actions:
       spreadsheet:
@@ -1371,6 +1414,58 @@ tool_json:
         limit:
           type: number
           description: find 결과 상한 (기본 50)
+  - name: ledger_op
+    description: JSON 원장 원자 갱신·조회 — select/append/upsert/set. 관문(set target 필수·enum_fields·list_limits)은 넘으면 쓰지 않고 실패한다.
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: select(기본)/append/upsert/set
+        path:
+          type: string
+          description: 원장 파일 경로 (저장소 안, ~workspace/ 가능)
+        target:
+          type: string
+          description: 배열·값 자리(점 경로, 예 queue 또는 covered) — set 은 필수
+        item:
+          type: object
+          description: append/upsert 항목 하나
+        items:
+          type: array
+          description: append/upsert 항목 여럿
+        items_file:
+          type: string
+          description: append/upsert — 항목 배열이 든 JSON 파일 경로(큰 payload)
+        key:
+          type: string
+          description: upsert 식별 필드 (기본 id)
+        max_items:
+          type: integer
+          description: append/upsert 후 배열 상한(오래된 앞을 버림)
+        value:
+          type: [object, array, string, number, boolean, "null"]
+          description: set 의 새 값(null 도 명시 가능)
+        replace_root:
+          type: boolean
+          description: set — target 없이 루트 전체 교체를 정말 원할 때만 true
+        enum_fields:
+          type: object
+          description: '쓰기 관문 {필드: [허용값…]}'
+        list_limits:
+          type: object
+          description: '쓰기 관문 {필드: {max_items, max_item_len}}'
+        fields:
+          type: array
+          description: select 열 선택
+        where:
+          type: object
+          description: 'select 행 필터 {필드: 값} (AND)'
+        limit:
+          type: integer
+          description: select 상한
+      required: [path]
+      additionalProperties: true
   - name: script_op
     description: 등록 스크립트 실행기 — list/register/run/status/remove. 코드가 아니라 등록 id 만 나른다. 셸 미경유 argv 실행, stdout JSON 은 통화로. run{background:true}→job_id, status{job_id, wait}.
     input_schema:

@@ -41,7 +41,7 @@ export function WarehouseView() {
     if (!window.confirm('공개 인사 프로필과 공개 창고 주소를 #IndieNet 에 발행할까요? (명함 kind:0 + 발견 노트 kind:1)')) return;
     setIntroBusy(true);
     try {
-      const r = (await runIBL('[self:ledger]{store: "document", op: "publish"}')) as Record<string, unknown>;
+      const r = (await runIBL('[self:business]{store: "document", op: "publish"}')) as Record<string, unknown>;
       const msg = typeof r?.message === 'string' ? r.message
         : r?.error ? String(r.error) : '소개를 발행했어요.';
       window.alert(msg);

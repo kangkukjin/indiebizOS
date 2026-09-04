@@ -211,7 +211,7 @@ nodes:
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
         runs_on: pc_only
-        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함). queries(배열/쉼표 문자열)로 여러 검색어 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections
         group: media
         keywords:
         - youtube
@@ -350,11 +350,14 @@ tool_json:
         query:
           type: string
           description: '검색어. 예: ''김필 너무 아픈 사랑은'', ''빅뱅 판타스틱베이비'''
+        queries:
+          type: [string, array]
+          description: 여러 검색어 배치 팬아웃(배열 또는 쉼표/개행 문자열) — 검색어마다 query 태그를 붙이고 video_id 중복을 걷어 한 목록(items)+sections 로. [sense:search]{source:"gnews"} 의 queries 와 같은 통화(어휘 개정 2026-09-04).
+
         limit:
           type: integer
           description: 검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림
-      required:
-      - query
+      required: []   # query 또는 queries 중 하나 — 핸들러가 검사
   - name: music_op
     description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download/relay 분기 (기본 play).
     input_schema:

@@ -72,6 +72,10 @@ class IBLUsageRAG:
     # 0.45 미만은 무관 노이즈로 보고 넘기지 않는다.
     LOW_CONF_FLOOR = 0.45
     LOW_CONF_MAX = 2
+    # 관용구 채널(2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md §2-c): 낱말 Top-5 옆에 관용구 Top-2 를
+    # 따로 검색해 싣는다. 낱말 임계(MIN_SCORE)와 같은 임계, 저신뢰 폴백 없음 — 틀린 골격이 낱말보다 해롭다.
+    PHRASE_K = 2
+    PHRASE_CATEGORY = "phrase"
     CACHE_TTL = 300  # 5분
 
     _instance = None
@@ -112,37 +116,44 @@ class IBLUsageRAG:
         if cached is not None:
             return cached
 
-        # DB 검색
+        # DB 검색 — 낱말 채널(관용구 제외)
         try:
             from ibl_usage_db import IBLUsageDB
             db = IBLUsageDB()
             results = db.search_hybrid(
                 query=user_query,
                 top_k=k,
-                allowed_nodes=allowed_nodes
+                allowed_nodes=allowed_nodes,
+                exclude_category=self.PHRASE_CATEGORY,
             )
         except Exception as e:
             logger.error(f"[IBL RAG] 검색 실패: {e}")
             return ""
 
-        if not results:
-            self._set_cached(cache_key, "")
-            return ""
-
-        results = _own_only(results)
-        if not results:
-            self._set_cached(cache_key, "")
-            return ""
+        results = _own_only(results or [])
+        phrases = self.search_phrases(user_query, allowed_nodes)
 
         # 점수 게이트: 통과분(>=MIN_SCORE) 우선. 없으면 저신뢰 top-2(>=LOW_CONF_FLOOR).
         selected, low_conf = self._select_references(results)
-        if not selected:
+        if not selected and not phrases:
             self._set_cached(cache_key, "")
             return ""
 
-        xml = self._format_references(selected, low_conf=low_conf)
+        xml = self._format_references(selected, low_conf=low_conf, phrases=phrases)
         self._set_cached(cache_key, xml)
         return xml
+
+    def search_phrases(self, user_query: str, allowed_nodes: set = None) -> list:
+        """관용구 채널 — `category='phrase'` 만 Top-PHRASE_K, MIN_SCORE 이상만(저신뢰 폴백 없음)."""
+        try:
+            from ibl_usage_db import IBLUsageDB
+            res = IBLUsageDB().search_hybrid(
+                query=user_query, top_k=self.PHRASE_K, allowed_nodes=allowed_nodes,
+                category=self.PHRASE_CATEGORY)
+        except Exception as e:
+            logger.error(f"[IBL RAG] 관용구 검색 실패: {e}")
+            return []
+        return [r for r in _own_only(res or []) if r.score >= self.MIN_SCORE]
 
     def _select_references(self, results: list) -> tuple:
         """참조로 보여줄 용례 선별.
@@ -163,9 +174,10 @@ class IBLUsageRAG:
         low = [r for r in results if r.score >= self.LOW_CONF_FLOOR][:self.LOW_CONF_MAX]
         return (low, True)
 
-    def _format_references(self, examples: list, low_conf: bool = False) -> str:
-        """검색 결과를 프롬프트 주입용 XML로 포맷팅"""
-        if low_conf:
+    def _format_references(self, examples: list, low_conf: bool = False, phrases: list = None) -> str:
+        """검색 결과를 프롬프트 주입용 XML로 포맷팅. phrases = 관용구 채널(kind="phrase", 번호 목록 본문)."""
+        phrases = phrases or []
+        if low_conf and examples:
             note = ("참고 용례(저신뢰: 정확히 일치하는 과거 사례가 없어 가장 가까운 후보만 보인다. "
                     "그대로 신뢰하지 말고 액션·파라미터를 직접 검증하라). "
                     "execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라.")
@@ -175,6 +187,9 @@ class IBLUsageRAG:
                     "avg_ms는 과거 성공 실행의 평균 소요시간(ms), avg_tokens는 그 턴의 평균 모델 "
                     "토큰 소요 — 같은 목표를 같은 품질로 이룬다면 빠르고 싼 패턴이 좋다"
                     "(품질을 깎아 아끼는 것은 금물).")
+        if phrases:
+            note += (" kind=\"phrase\" 는 관용구 — 과거에 성공한 문장 여러 개의 골격이다. 슬롯 ${…} 을 채우고 "
+                     "문장을 빼거나 더해 쓰는 모양이지, 그대로 돌리는 프로그램이 아니다. 문장마다 따로 실행한다.")
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -193,6 +208,22 @@ class IBLUsageRAG:
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
+        for ex in phrases:
+            try:
+                import hippo_tree
+                sents = hippo_tree.split_sentences(ex.ibl_code)
+                slots = hippo_tree.slot_names(ex.ibl_code)
+            except Exception:
+                sents, slots = [ex.ibl_code], []
+            attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}"'
+            if slots:
+                attrs += f' slots="{_xml_attr(", ".join(slots))}"'
+            if ex.success_rate >= 0:
+                attrs += f' success_rate="{ex.success_rate}"'
+            if getattr(ex, "topic", ""):
+                attrs += f' topic="{_xml_attr(ex.topic)}"'
+            body = "\n".join(f"{i}. {s}" for i, s in enumerate(sents, 1))
+            lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
 
@@ -287,6 +318,13 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     """
     rag = IBLUsageRAG()
 
+    # 직전 턴의 관용구 회상이 남지 않게 먼저 비운다(무관 턴에서 이른 반환해도 스레드-로컬은 새 턴 것)
+    try:
+        from thread_context import clear_phrase_recall
+        clear_phrase_recall()
+    except Exception:
+        pass
+
     if not user_message or not rag._is_ibl_relevant(user_message):
         return ("", 0.0, "")
 
@@ -306,6 +344,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
             query=query,
             top_k=rag.DEFAULT_K,
             allowed_nodes=allowed_nodes,
+            exclude_category=rag.PHRASE_CATEGORY,   # 낱말 채널 — 반사 top-1 은 낱말만
         )
     except Exception as e:
         logger.error(f"[IBL RAG] 검색 실패: {e}")
@@ -318,6 +357,15 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     if is_long_doc:
         top_score = min(top_score, 0.80)   # Reflex(≥0.85) 발동 금지 — 문서는 반사 대상이 아님
 
+    # 관용구 채널(2026-09-04): 문장 여러 개의 골격 Top-2. 긴 문서엔 싣지 않는다(표면 우연).
+    # 이 턴에 올린 관용구는 스레드-로컬에 두어 턴 끝의 증류(이미 아는 관용구면 재추출 안 함)·귀속이 읽는다.
+    phrases = [] if is_long_doc else rag.search_phrases(query, allowed_nodes)
+    try:
+        from thread_context import set_phrase_recall
+        set_phrase_recall([p.ibl_code for p in phrases])
+    except Exception:
+        pass
+
     # 점수 게이트 (get_references와 동일 정책): 통과분 없으면 저신뢰 top-2.
     # top_score는 위에서 results[0]로 이미 확정 — Reflex/증류 판정엔 영향 없음.
     selected, low_conf = rag._select_references(results)
@@ -326,7 +374,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
         selected, low_conf = selected[:rag.LOW_CONF_MAX], True
 
     sections = []
-    refs_xml = rag._format_references(selected, low_conf=low_conf) if selected else ""
+    refs_xml = rag._format_references(selected, low_conf=low_conf, phrases=phrases) if (selected or phrases) else ""
     if refs_xml:
         sections.append(refs_xml)
 
@@ -562,15 +610,10 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     Returns:
         기록 여부 (귀속 불가/저점수 시 False)
     """
-    if not top_code or top_score < RECALL_RECORD_THRESHOLD:
-        return False
-    if not tool_calls:
-        return False
-
     # execute_ibl 호출들의 성공 여부 집계 (하나라도 실패하면 실패로 귀속)
     ibl_success = None
     ibl_codes = []
-    for tc in tool_calls:
+    for tc in (tool_calls or []):
         if not isinstance(tc, dict):
             continue
         if tc.get("tool_name") != "execute_ibl":
@@ -581,6 +624,12 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
         if code:
             ibl_codes.append(code)
 
+    # 관용구 귀속(2026-09-04): 이 턴에 올린 관용구가 실행 궤적에 순서대로 절반 이상 등장했으면
+    # 그 관용구에 성공/실패(+시간·토큰)를 기록한다. 낱말 top-1 귀속과 독립. 학습은 이 귀속으로 잰다.
+    _record_phrase_recall_outcome(ibl_codes, ibl_success, tool_calls, turn_tokens)
+
+    if not top_code or top_score < RECALL_RECORD_THRESHOLD:
+        return False
     if ibl_success is None:
         return False  # IBL 실행이 없었으면 귀속 불가
 
@@ -610,6 +659,35 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     except Exception as e:
         print(f"[해마피드백] 실패 (무시): {e}")
         return False
+
+
+def _record_phrase_recall_outcome(ibl_codes: list, ibl_success, tool_calls: list, turn_tokens: int = None) -> int:
+    """스레드-로컬의 관용구 회상을 꺼내(비우고) 쓰인 것마다 성공/실패를 기록. 반환=기록 건수."""
+    try:
+        from thread_context import get_phrase_recall, clear_phrase_recall
+        phrases = get_phrase_recall()
+        clear_phrase_recall()
+    except Exception:
+        return 0
+    if not phrases or ibl_success is None or not ibl_codes:
+        return 0
+    n = 0
+    try:
+        from ibl_usage_db import IBLUsageDB
+        db = IBLUsageDB()
+        elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
+        tokens = turn_tokens if (ibl_success and turn_tokens and turn_tokens > 0) else None
+        for code in phrases:
+            if not _phrase_used(code, ibl_codes):
+                continue
+            if db.update_success_by_code(code, ibl_success, elapsed_ms=elapsed_ms, tokens=tokens):
+                n += 1
+                print(f"[해마피드백:관용구] {'성공' if ibl_success else '실패'} 기록: {code[:60]}")
+        if n:
+            IBLUsageRAG().clear_cache()
+    except Exception as e:
+        print(f"[해마피드백:관용구] 실패 (무시): {e}")
+    return n
 
 
 def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
@@ -751,9 +829,25 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
 {topic_map or "(아직 가지 없음)"}
 6. **code 의 대괄호 머리는 실행된 코드의 머리를 글자 그대로 옮겨라** — 머리를 새로 짓거나,
    인자 값(node·path 따위)을 머리 안에 넣지 마라. 머리가 실행에 없던 것이면 그 용례는 버려진다.
-7. 결과는 반드시 JSON으로만 응답:
+7. **관용구(phrase)** — code 와 별개의 두 번째 질문: 「이 주행에서 **되풀이될 모양**은 무엇인가?」
+   실행된 문장들 가운데 되풀이될 뼈대가 되는 문장 3~8개를 **실행 순서 그대로** 골라 목록으로 적되,
+   이 주행에만 속하는 값(경로·이름·질의어·날짜·좌표)은 슬롯으로 비우고, 비운 값은 slots 에
+   `{{"슬롯이름": "이번 주행의 값"}}` 로 적어라(한국어 명사, 짧게). 표기: 따옴표 안의 문자열 값은
+   따옴표를 그대로 두고 안을 `${{슬롯이름}}` 으로, 따옴표 없는 수치 값은 `$슬롯이름` 으로.
+   문장은 실행된 것을 글자 그대로 옮기고 값만 슬롯으로 바꾼다 — 인자를 빼거나 더하지 말고,
+   문장을 새로 짓거나 `>>` 로 이어 붙이지 마라(별개로 실행된 문장은 별개 항목). 되풀이될
+   모양이 없으면(단발 작업·한 문장뿐) phrase 를 빈 목록으로.
+   매번 똑같이 도는 모양(정기 보고서)은 슬롯이 없어도 관용구다.
+8. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로"}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}}}"""
+
+
+# ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
+from ibl_idiom import (  # noqa: E402,F401
+    _blank_slots, _sig, _sentence_matches, _normalize_slot_quoting, _phrase_grounded,
+    _phrase_private_reason, _phrase_used, _distill_phrase,
+)
 
 
 def distill_experience(user_message: str, tool_calls: list, top_score: float,
@@ -884,12 +978,21 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             except Exception as _e:
                 print(f"[경험증류] 주행 기록 실패: {_e}")
 
+        # 관용구 증류 (2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md): 반성기의 두 번째 답. 낱말(code)과
+        # 독립 — 낱말이 스킵돼도 관용구는 저장될 수 있고 그 반대도 같다.
+        phrase_ok = False
+        try:
+            phrase_ok = _distill_phrase(intent or user_message[:80], distilled, ibl_calls, _topic,
+                                        tool_calls, turn_tokens)
+        except Exception as _e:
+            print(f"[경험증류:관용구] 실패(무시): {_e}")
+
         if not intent or not code:
             # code 빈 문자열 = 반성기가 "재사용 IBL 패턴 없음"으로 판단한 의도적 스킵
             # (분석·판단 등). 거짓 >> 관용구를 박제하느니 증류 안 함.
             if intent and not code:
                 print(f"[경험증류] 재사용 IBL 패턴 없음 — 증류 스킵: \"{user_message[:40]}\"")
-            return False
+            return phrase_ok
 
         # 구문 관문 (2026-09-02): 포장을 벗기고, 그래도 IBL 로 파싱 안 되면 적재하지 않는다.
         # ★이 관문이 없어서 반성기가 JSON 을 이중으로 감싼 출력이 그대로 code 칸에 박혔고
@@ -902,18 +1005,18 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         _syntax_err = code_syntax_error(code)
         if _syntax_err:
             print(f"[경험증류] 파싱 불가 — 증류 스킵: {_syntax_err} / {code[:80]}")
-            return False
+            return phrase_ok
 
         # 머리 접지 게이트 (2026-09-04): 실행에 없던 액션 머리는 코퍼스에 못 들어온다.
         if not _heads_grounded(code, ibl_calls):
             print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
-            return False
+            return phrase_ok
 
         # 합성 접지 게이트: 실행에 없던 >>·&·; 합성(거짓 관용구)은 코퍼스에 못 들어온다.
         # 규칙 3 의 기계판 — 반성기가 별개 호출들을 파이프로 봉합한 경우 여기서 잡힌다.
         if not _composition_grounded(code, ibl_calls):
             print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
-            return False
+            return phrase_ok
 
         # 배관 키 스크럽 (2026-08-16): `_raw`(파이프 중간 압축 억제)는 workflow_engine 이
         # 주입하는 내부 배관이지 어휘가 아니다 — 파이프 안 실행이 증류될 때 코드에 박혀
@@ -925,7 +1028,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
 
         # 검증 게이트: 환각된(미존재) 액션이 코퍼스에 진입하지 못하도록 정적 검증
         if not _validate_ibl_actions(code):
-            return False
+            return phrase_ok
 
         # 인자 게이트 (2026-07-03): 핸들러가 읽지 않는 키가 박힌 코드는 증류하지 않는다.
         # 침묵 인자 드리프트가 "성공"으로 위장한 채 코퍼스(몸)에 들어가면 Reflex 가
@@ -936,7 +1039,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             if _param_issues:
                 print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
                       f"{[(i['action'], i['unknown']) for i in _param_issues]}")
-                return False
+                return phrase_ok
         except Exception:
             pass  # 검사기 문제로 증류 자체를 막지는 않는다
 
@@ -973,7 +1076,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         # 검사는 파일 쪽도 읽으므로 거부당한 코드가 계속 커밋을 막는다.
         if not example_id:
             print(f"[경험증류] 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
-            return False
+            return phrase_ok
 
         # 학습용 JSON 파일에 누적 (재학습 시 기존 데이터와 합쳐서 사용)
         from pathlib import Path

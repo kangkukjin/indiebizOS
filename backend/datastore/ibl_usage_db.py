@@ -130,6 +130,37 @@ def _syntax_reason(ibl_code: str) -> Optional[str]:
         return f"검증자 예외: {e.__class__.__name__}: {e}"
 
 
+_QUOTED_RE = re.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
+
+
+def _strip_param_blocks(code: str) -> str:
+    """`[head]{…}` 의 파라미터 블록을 짝 맞춰 벗긴다(따옴표 안 건너뜀) — 관용구 색인용 머리 열 패턴."""
+    out, depth, q, i, n = [], 0, None, 0, len(code or "")
+    while i < n:
+        ch = code[i]
+        if q:
+            if ch == "\\" and i + 1 < n:
+                i += 2; continue
+            if ch == q:
+                q = None
+        elif depth:
+            if ch in "\"'":
+                q = ch
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+        else:
+            if ch == "{":
+                depth = 1
+            elif ch in "\"'":
+                q = ch; out.append(ch)
+            else:
+                out.append(ch)
+        i += 1
+    return "".join(out)
+
+
 # =============================================================================
 # IBLUsageDB 클래스
 # =============================================================================
@@ -415,9 +446,15 @@ class IBLUsageDB:
 
     @staticmethod
     def _prepare_search_text(intent: str, ibl_code: str) -> str:
-        """검색용 텍스트 준비 (intent 가중치 부여)"""
+        """검색용 텍스트 준비 (intent 가중치 부여).
+
+        관용구(2026-09-04, 따옴표 밖 `;` 로 이은 문장 열)는 코드 원문 대신 **머리 열 패턴**만 싣는다 — 긴 인자
+        문자열(지시문·경로)이 벡터를 희석해 의도 질의가 임계(0.65)에 못 미치던 실측(3 질의 중 1 적중)."""
         clean_intent = intent.strip()
         title_part = ' '.join([clean_intent] * IBLUsageDB.INTENT_REPEAT)
+        if ';' in _QUOTED_RE.sub('""', ibl_code or ""):
+            pattern = re.sub(r'\s+', ' ', _strip_param_blocks(ibl_code)).strip()
+            return f"{title_part} {pattern}"
         return f"{title_part} {ibl_code}"
 
     def _generate_embedding(self, text: str) -> Optional[bytes]:
@@ -1023,7 +1060,7 @@ class IBLUsageDB:
             return None
 
     def _search_rented(self, query: str, top_k: int, allowed_nodes: set = None,
-                       category: str = None) -> List["UsageExample"]:
+                       category: str = None, exclude_category: str = None) -> List["UsageExample"]:
         """렌트 모드 검색: 맥 /embed 질의벡터 + 인메모리 brute-force 코사인 → UsageExample.
         벡터·문서 모두 L2 정규화라 dot = 코사인. FTS5 없이 순수 시맨틱(handoff '브루트포스 코사인')."""
         if not self._ensure_rented_index():
@@ -1034,7 +1071,7 @@ class IBLUsageDB:
             return []
         sims = self._rented_vecs @ qv  # (count,)
         # over-fetch 후 필터링(노드/카테고리)
-        over = min(len(sims), max(top_k * 5, top_k))
+        over = min(len(sims), max(top_k * (100 if category else 5), top_k))
         cand = np.argpartition(-sims, over - 1)[:over]
         cand = cand[np.argsort(-sims[cand])]
         results: List[UsageExample] = []
@@ -1045,6 +1082,8 @@ class IBLUsageDB:
                 if ex_nodes and not ex_nodes.intersection(allowed_nodes):
                     continue
             if category and meta.get("category") != category:
+                continue
+            if exclude_category and meta.get("category") == exclude_category:
                 continue
             total = meta.get("success_count", 0) + meta.get("fail_count", 0)
             success_rate = (meta["success_count"] / total) if total else -1.0
@@ -1164,7 +1203,8 @@ class IBLUsageDB:
                       alpha: float = None,
                       allowed_nodes: set = None,
                       category: str = None,
-                      topic: str = None) -> List[UsageExample]:
+                      topic: str = None,
+                      exclude_category: str = None) -> List[UsageExample]:
         """메인 하이브리드 검색
 
         Args:
@@ -1172,7 +1212,10 @@ class IBLUsageDB:
             top_k: 반환할 결과 수
             alpha: 시맨틱 비중 (기본 0.7)
             allowed_nodes: 허용된 노드 필터 (None=전체)
-            category: 카테고리 필터 (None=전체)
+            category: 카테고리 필터 (None=전체). 'phrase'(관용구, 2026-09-04)는 코퍼스의 소수라
+                      후보를 넓게 뽑아 거른다(over_fetch ×100)
+            exclude_category: 이 카테고리는 뺀다 — 낱말 채널이 관용구를 밀어내지 않게(반사 top-1 이
+                      슬롯이 빈 관용구를 그대로 실행하면 안 된다)
 
         Returns:
             UsageExample 리스트 (점수 내림차순)
@@ -1186,7 +1229,7 @@ class IBLUsageDB:
 
         # 캐시 확인
         cache_key = hashlib.md5(
-            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}".encode()
+            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}_{exclude_category}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -1194,11 +1237,12 @@ class IBLUsageDB:
 
         # 렌트 모드(폰-자아 §6): 로컬 시맨틱 스택이 없으면 맥 /embed 렌트 + 인메모리 brute-force.
         if self._rented_mode():
-            results = self._search_rented(query, top_k, allowed_nodes, category)
+            results = self._search_rented(query, top_k, allowed_nodes, category, exclude_category)
             self._set_cached(cache_key, results)
             return results
 
-        over_fetch = top_k * (10 if topic else 3)  # 필터링 후 충분한 결과를 위해 넉넉히(주제 필터는 더 넓게)
+        # 필터링 후 충분한 결과를 위해 넉넉히 — 주제 필터는 더 넓게, 카테고리 필터(관용구)는 훨씬 넓게
+        over_fetch = top_k * (100 if category else (10 if topic else 3))
         use_semantic = self.is_semantic_available() and alpha > 0
 
         semantic_results = self.search_semantic(query, over_fetch) if use_semantic else []
@@ -1252,6 +1296,8 @@ class IBLUsageDB:
 
             # 카테고리 필터링
             if category and meta['category'] != category:
+                continue
+            if exclude_category and meta['category'] == exclude_category:
                 continue
 
             # 주제 가지 필터링(hippo_tree) — 그 가지와 그 아래

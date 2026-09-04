@@ -139,13 +139,27 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
     return variations
 
 
+import re
+import re as _re_mod
+_QUOTED_RE = _re_mod.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
+
+
+def _strip_strings(code: str) -> str:
+    return _QUOTED_RE.sub('""', code or "")
+
+
+def is_phrase_code(ibl_code: str) -> bool:
+    """관용구(2026-09-04) — 따옴표 밖에 `;` 로 이은 독립 문장 열. 낱말·파이프와 다른 버킷으로 센다."""
+    return ';' in _strip_strings(ibl_code)
+
+
 def balance_by_action(data: List[Dict], max_per_action: int = 20) -> List[Dict]:
     """액션별 데이터 밸런싱 — 초과분은 오래된(앞쪽) 데이터부터 제거.
 
     증류 데이터는 시간순으로 쌓이므로, 리스트 뒤쪽이 최신이다.
     같은 액션 패턴이 max_per_action건을 초과하면 오래된 것부터 버린다.
+    관용구(`;` 문장 열)는 낱말 집합이 같아도 별도 버킷 — 머리 열(순서)이 곧 패턴이다.
     """
-    import re
     from collections import defaultdict
 
     action_pattern = re.compile(r'\[(\w+:\w+)\]')
@@ -154,8 +168,11 @@ def balance_by_action(data: List[Dict], max_per_action: int = 20) -> List[Dict]:
     action_indices: Dict[str, List[int]] = defaultdict(list)
     for i, item in enumerate(data):
         code = item.get('ibl_code', '')
-        actions = tuple(sorted(set(action_pattern.findall(code))))
-        key = "+".join(actions) if actions else "_unknown"
+        if is_phrase_code(code):
+            key = "phrase:" + ">".join(action_pattern.findall(_strip_strings(code)))
+        else:
+            actions = tuple(sorted(set(action_pattern.findall(code))))
+            key = "+".join(actions) if actions else "_unknown"
         action_indices[key].append(i)
 
     # 초과분 제거 대상 인덱스 수집
@@ -277,10 +294,34 @@ def normalize_code_to_pattern(ibl_code: str) -> str:
     [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
     [sense:stock]{op: "quote", ticker: "A"} >> [table:chart]{type: "line"} → [sense:stock] >> [table:chart]
     [a:b]{...} & [c:d]{...} → [a:b] & [c:d]
+    관용구: [a:b]{x: "${슬롯}"}; [c:d]{…} → [a:b]; [c:d] — 머리 열(순서)이 패턴이다.
+    ★중괄호 짝을 센다(2026-09-04): 옛 정규식(첫 닫는 중괄호까지)은 `${슬롯}`·`do: "[x:y]{…}"` 처럼 안에 `}` 가 있는
+      블록을 첫 `}` 에서 끊어 잔해를 남겼다. 따옴표 안은 통째로 건너뛴다.
     """
-    import re
-    # {…} 파라미터 블록 제거
-    pattern = re.sub(r'\{[^}]*\}', '', ibl_code)
+    out, depth, q, i, n = [], 0, None, 0, len(ibl_code or "")
+    while i < n:
+        ch = ibl_code[i]
+        if q:
+            if ch == "\\" and i + 1 < n:
+                i += 2; continue
+            if ch == q:
+                q = None
+        elif depth:
+            if ch in "\"'":
+                q = ch
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+        else:
+            if ch == "{":
+                depth = 1
+            elif ch in "\"'":
+                q = ch; out.append(ch)
+            else:
+                out.append(ch)
+        i += 1
+    pattern = "".join(out)
     # 공백 정리
     pattern = re.sub(r'\s+', ' ', pattern).strip()
     return pattern
@@ -529,6 +570,22 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
     print(f"\n=== {label} (code 매칭) ===")
     print(f"  평가 쌍: {len(test_pairs)}개")
     print(f"  Top-1: {results[1]:.1f}%  Top-3: {results[3]:.1f}%  Top-5: {results[5]:.1f}%")
+
+    # 관용구 분리 보고(2026-09-04): 질의→관용구(문장 열) 회상은 낱말 지표에 묻히면 안 보인다.
+    # 채택 조건(compare_models)이 이 값의 회귀를 본다. 평가 쌍이 없으면 n=0 으로 정직하게.
+    phrase_idx = [i for i, (_, c) in enumerate(test_pairs) if is_phrase_code(c)]
+    ph = {"n": len(phrase_idx)}
+    for k in [1, 5]:
+        hit = 0
+        for i in phrase_idx:
+            top_k_codes = [unique_codes[idx] for idx in similarities[i].topk(k).indices.tolist()]
+            hit += test_codes[i] in top_k_codes
+        ph[k] = (hit / len(phrase_idx) * 100) if phrase_idx else None
+    results["phrase"] = ph
+    if phrase_idx:
+        print(f"  관용구 쌍 {ph['n']}개: Top-1 {ph[1]:.1f}%  Top-5 {ph[5]:.1f}%")
+    else:
+        print("  관용구 쌍 0개 — 관용구 회상은 미측정")
 
     # Description 매칭도 평가 (action 단위)
     if action_descs:

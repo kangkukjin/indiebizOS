@@ -272,6 +272,15 @@ def _extract_value(text: str, pos: int):
     if ch in '-0123456789':
         return _extract_number(text, pos)
 
+    # 변수 참조 `${이름.경로}` (언어 개정 2026-09-04, 사용자 판정): 따옴표 밖에서도 `$이름` 과 같다.
+    # 옛 판은 `$` 를 미따옴표 문자열로 읽다가 `{` 에서 끊겨 "파라미터를 끝까지 읽지 못했습니다" 로 죽었다 —
+    # 모델은 수치 자리에도 `${x}` 를 쓴다(관용구 되돌려 묻기 12건 중 2건). 반환은 `${…}` 원문 그대로 —
+    # 치환기(REF_RE)가 괄호형·맨몸형을 같은 참조로 본다.
+    if ch == '$' and text[pos + 1:pos + 2] == '{':
+        j = text.find('}', pos + 2)
+        if j != -1:
+            return text[pos:j + 1], j + 1
+
     # boolean / null
     if text[pos:pos + 4] == 'true':
         return True, pos + 4

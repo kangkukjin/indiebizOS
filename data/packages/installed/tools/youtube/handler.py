@@ -200,6 +200,34 @@ def _op_stop(tool_input, yt):
 
 
 def _direct_search(tool_input, yt):
+    # 배치 팬아웃 queries(배열 또는 쉼표/개행 문자열) — 어휘 개정 2026-09-04(사용자 판정): 반성기가 `&` 셋을
+    # `query: [a, b, c]` 로 줄이려 했던 자리. [sense:search]{source:"gnews"} 의 queries 와 같은 통화 —
+    # 검색어마다 돌려 query 태그를 붙이고 video_id 로 중복을 걷어 한 목록(items)+sections 로.
+    _queries = tool_input.get('queries')
+    if _queries:
+        import re as _re
+        if isinstance(_queries, str):
+            _queries = _re.split(r"[,\n]", _queries)
+        _queries = [str(q).strip() for q in _queries if str(q).strip()]
+        if not _queries:
+            return {"success": False, "error": "검색어(queries)가 비었습니다."}
+        count = tool_input.get('limit', tool_input.get('count', 5))
+        items, seen, sections = [], set(), []
+        for q in _queries:
+            r = yt.search_youtube(query=q, count=count)
+            rows = r.get('results') if isinstance(r, dict) else None
+            rows = rows if isinstance(rows, list) else (r.get('items') if isinstance(r, dict) and isinstance(r.get('items'), list) else [])
+            n = 0
+            for row in rows:
+                vid = row.get('video_id') if isinstance(row, dict) else None
+                if vid and vid in seen:
+                    continue
+                if vid:
+                    seen.add(vid)
+                items.append({**row, "query": q} if isinstance(row, dict) else row)
+                n += 1
+            sections.append({"query": q, "count": n})
+        return {"success": True, "queries": _queries, "count": len(items), "sections": sections, "items": items}
     result = yt.search_youtube(
         query=tool_input.get('query', ''),
         count=tool_input.get('limit', tool_input.get('count', 5)))

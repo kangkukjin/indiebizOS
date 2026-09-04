@@ -536,7 +536,90 @@ def build_environment(
 
     parts.append("</ibl_actions>")
 
+    # 관용구 상시 블록 (2026-09-04, 사용자 판정 "최빈도 관용구는 교재 프롬프트에 넣어 언제나 기억하게"):
+    # 해마 관용구(category='phrase') 가운데 가장 많이 쓰인 것 IDIOMS_TOP 건. 데이터(반증 가능 — 쓰이지
+    # 않으면 순위에서 빠진다)이지 교재 산문이 아니다. 나머지 관용구는 회상 채널(Top-2)로 온다.
+    idioms = _idioms_block(allowed)
+    if idioms:
+        parts.append(idioms)
+
     return "\n".join(parts)
+
+
+IDIOMS_TOP = 6
+_idioms_cache = {"t": 0.0, "text": "", "key": None}
+
+
+def _idioms_block(allowed: Optional[Set[str]]) -> str:
+    """최빈도 관용구 블록 — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
+    순위 = 귀속된 사용 횟수(success+fail) 내림차순, 같으면 최근 것. 허용 노드 밖 어휘가 든 관용구는 뺀다."""
+    import re as _re
+    import sqlite3
+    import time
+    key = tuple(sorted(allowed)) if allowed is not None else None
+    if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
+        return _idioms_cache["text"]
+    text = ""
+    try:
+        from runtime_utils import get_base_path
+        db_path = get_base_path() / "data" / "ibl_usage.db"
+        if db_path.exists():
+            conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+            rows = conn.execute(
+                "SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,'') FROM ibl_examples "
+                "WHERE category='phrase' ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
+                (IDIOMS_TOP * 3,)).fetchall()
+            conn.close()
+            lines = []
+            for intent, code, sc, fc, topic in rows:
+                nodes = set(_re.findall(r"\[([a-z_-]+):", code))
+                if allowed is not None and not nodes <= set(allowed):
+                    continue
+                sents = _split_sentences(code)
+                if len(sents) < 2:
+                    continue
+                used = f" 사용 {sc + fc}회" if (sc + fc) else ""
+                lines.append(f"- {intent}" + (f" ({topic})" if topic else "") + used + ":")
+                lines.extend(f"  {i}. {sent}" for i, sent in enumerate(sents, 1))
+                if sum(1 for l in lines if l.startswith("- ")) >= IDIOMS_TOP:
+                    break
+            if lines:
+                text = ("<ibl_idioms note=\"자주 쓰는 관용구 — 과거에 성공한 문장 여러 개의 골격. ${슬롯} 을 채우고 문장을 "
+                        "빼거나 더해 쓴다(그대로 돌리는 프로그램이 아니다). 문장마다 따로 execute_ibl 한다.\">\n"
+                        + "\n".join(lines) + "\n</ibl_idioms>")
+    except Exception as e:
+        logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
+    _idioms_cache.update({"t": time.time(), "text": text, "key": key})
+    return text
+
+
+def _split_sentences(code: str) -> List[str]:
+    """`;` 로 이은 독립 문장 분할 — 따옴표·괄호 안의 `;` 는 경계가 아니다(hippo_tree.split_sentences 와 같은 규칙)."""
+    out, buf, q, depth = [], [], None, 0
+    i, n = 0, len(code or "")
+    while i < n:
+        ch = code[i]
+        if q:
+            buf.append(ch)
+            if ch == "\\" and i + 1 < n:
+                buf.append(code[i + 1]); i += 2; continue
+            if ch == q:
+                q = None
+        elif ch in "\"'":
+            q = ch; buf.append(ch)
+        elif ch in "{[(":
+            depth += 1; buf.append(ch)
+        elif ch in "}])":
+            depth = max(0, depth - 1); buf.append(ch)
+        elif ch == ";" and depth == 0:
+            out.append("".join(buf).strip()); buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    tail = "".join(buf).strip()
+    if tail:
+        out.append(tail)
+    return [x for x in out if x]
 
 
 # ============ 내부 함수 ============

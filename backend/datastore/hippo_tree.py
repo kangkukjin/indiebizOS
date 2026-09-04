@@ -15,6 +15,10 @@ hippo_tree.py — 실행기억(해마 용례)의 **주제 가지 트리 문서**
   쓰나"는 사용자 문장 자체가 단서라 벡터가 맞는 도구. 트리는 대체가 아니라 축 하나를 얹는 것.
 - 어디에 넣을지는 AI 가 정한다: 증류기가 지도를 보고 topic 을 적는다(코드 분류기 없음). 미배치는
   `file_unfiled` 가 모델에게 배치시킨다.
+- **관용구 절(2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md)**: 낱말(용례 한 문장)과 얼린 워크플로 사이의
+  층. 독립 문장 2~8개를 `;` 로 이은 골격에 구체값은 `${슬롯}` 으로 비운 것 — DB 에는 `category='phrase'`
+  로 살고, 가지 문서의 `## 관용구` 절이 정본(용례 절과 같은 규약: 사람이 고친 블록은 구문 관문을 거쳐
+  색인 반영, 지우면 색인에서도 지워짐). `## 주행`(녹취록)은 관용구의 증거로 남고, 관용구는 그 위의 추상.
 """
 import json
 import os
@@ -34,6 +38,17 @@ RUNS_NOTE = ("<!-- 이 가지에서 실제로 성공한 주행의 문장 묶음(
              f"다음 주행이 읽고 고쳐 쓴다. 최근 {RUNS_MAX}건·주행당 {RUNS_MAX_SENTENCES}문장, 오래된 것부터 빠진다. "
              "한 주행 = `### 날짜 · 의도 · 문장 n · ✓` 머리 + 번호 목록. -->")
 RUN_HEAD_RE = re.compile(r"(?m)^### (\d{4}-\d{2}-\d{2})")
+PHRASES = "## 관용구"
+PHRASE_CATEGORY = "phrase"
+PHRASE_MIN_SENTENCES = 2      # 한 문장은 낱말이다
+PHRASE_MAX_SENTENCES = 10     # 프롬프트는 3~8 을 권하고, 관문은 10 에서 자른다(넘으면 거절)
+PHRASES_NOTE = ("<!-- 기계가 읽는 절: 관용구 = 독립 문장 2~8개의 골격(실행 순서), 구체값은 `${슬롯}` 으로 비어 있다. "
+                "얼린 프로그램이 아니라 다음 주행이 슬롯을 채우고 문장을 빼거나 더해 쓰는 모양이다. "
+                "한 관용구 = `### 의도 · 문장 n · 슬롯 a, b ‹#id · ✓성공/✗실패 · 날짜›` 머리 + 번호 목록(문장마다 `코드`). "
+                "블록을 고치면 색인이 따라오고, 지우면 색인에서도 지워지며, ‹#id› 없이 새 블록을 적으면 새 관용구가 된다(구문 관문 통과 시). -->")
+PHRASE_HEAD_RE = re.compile(r"^### (.*?) · 문장 (\d+)(?: · 슬롯 (.*?))?(?:\s*‹#(\d+)[^›]*›)?\s*$")
+PHRASE_LINE_RE = re.compile(r"^\d+\. `(.+)`\s*$")
+SLOT_RE = re.compile(r"\$\{([^}]+)\}")
 MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
 GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")
 LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄
@@ -156,14 +171,17 @@ def ensure_column(db_path: Optional[str] = None) -> None:
         conn.close()
 
 
-def rows_of(topic: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> List[Dict[str, Any]]:
+    """가지의 용례 행. kind: "all" | "word"(관용구 제외) | "phrase"(관용구만)."""
     ensure_column(db_path)
     conn = _conn(db_path)
     try:
+        where = {"word": " AND COALESCE(category,'') != ?", "phrase": " AND COALESCE(category,'') = ?"}.get(kind, "")
+        args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, "
-            "COALESCE(topic,'') AS topic FROM ibl_examples WHERE COALESCE(topic,'') = ? ORDER BY created_at, id",
-            (norm_topic(topic),)).fetchall()
+            "COALESCE(topic,'') AS topic FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
+            " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
     except sqlite3.OperationalError:
         return []
@@ -171,11 +189,13 @@ def rows_of(topic: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
         conn.close()
 
 
-def topic_counts(db_path: Optional[str] = None) -> Dict[str, int]:
+def _counts(db_path: Optional[str], phrase: bool) -> Dict[str, int]:
     ensure_column(db_path)
     conn = _conn(db_path)
     try:
-        rows = conn.execute("SELECT COALESCE(topic,'') AS t, COUNT(*) AS c FROM ibl_examples GROUP BY t").fetchall()
+        rows = conn.execute(
+            "SELECT COALESCE(topic,'') AS t, COUNT(*) AS c FROM ibl_examples WHERE COALESCE(category,'') "
+            + ("=" if phrase else "!=") + " ? GROUP BY t", (PHRASE_CATEGORY,)).fetchall()
         return {norm_topic(r["t"]): r["c"] for r in rows}
     except sqlite3.OperationalError:
         return {}
@@ -183,8 +203,18 @@ def topic_counts(db_path: Optional[str] = None) -> Dict[str, int]:
         conn.close()
 
 
+def topic_counts(db_path: Optional[str] = None) -> Dict[str, int]:
+    """가지별 낱말(용례) 수 — 관용구는 뺀다(phrase_counts 가 센다)."""
+    return _counts(db_path, phrase=False)
+
+
+def phrase_counts(db_path: Optional[str] = None) -> Dict[str, int]:
+    """가지별 관용구 수."""
+    return _counts(db_path, phrase=True)
+
+
 def all_topics(db_path: Optional[str] = None) -> List[str]:
-    topics = set(topic_counts(db_path).keys())
+    topics = set(topic_counts(db_path).keys()) | set(phrase_counts(db_path).keys())
     root = doc_dir()
     if os.path.isdir(root):
         for cur, _d, files in os.walk(root):
@@ -229,6 +259,122 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
     body = [SECTION, SECTION_NOTE]
     body.extend(render_line(r) for r in rows)
     return "\n".join(body) + "\n"
+
+
+# ─────────────────────────── 관용구 (phrase) ───────────────────────────
+
+def split_sentences(code: str) -> List[str]:
+    """`;` 로 이은 독립 문장들로 자른다 — 따옴표·중괄호 안의 `;` 는 경계가 아니다."""
+    out, buf, q, depth = [], [], None, 0
+    i, n = 0, len(code or "")
+    while i < n:
+        ch = code[i]
+        if q:
+            buf.append(ch)
+            if ch == "\\" and i + 1 < n:
+                buf.append(code[i + 1]); i += 2; continue
+            if ch == q:
+                q = None
+        elif ch in "\"'":
+            q = ch; buf.append(ch)
+        elif ch in "{[(":
+            depth += 1; buf.append(ch)
+        elif ch in "}])":
+            depth = max(0, depth - 1); buf.append(ch)
+        elif ch == ";" and depth == 0:
+            out.append("".join(buf).strip()); buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    tail = "".join(buf).strip()
+    if tail:
+        out.append(tail)
+    return [s for s in out if s]
+
+
+def join_sentences(sentences: List[str]) -> str:
+    return "; ".join(_one_line(s) for s in sentences if s and s.strip())
+
+
+def slot_names(code: str) -> List[str]:
+    seen, out = set(), []
+    for m in SLOT_RE.findall(code or ""):
+        k = m.strip()
+        if k and k not in seen:
+            seen.add(k); out.append(k)
+    return out
+
+
+def render_phrase(r: Dict[str, Any]) -> str:
+    s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
+    meta = [f"#{r['id']}"]
+    if s or f:
+        meta.append(f"✓{s}/✗{f}")
+    meta.append((r.get("created_at") or "")[:10])
+    sents = split_sentences(r.get("ibl_code") or "")
+    slots = slot_names(r.get("ibl_code") or "")
+    head = f"### {_one_line(r.get('intent'))} · 문장 {len(sents)}"
+    if slots:
+        head += " · 슬롯 " + ", ".join(slots)
+    head += f" ‹{' · '.join(m for m in meta if m)}›"
+    lines = [head]
+    for i, sent in enumerate(sents, 1):
+        lines.append(f"{i}. `{_one_line(sent).replace('`', chr(39))}`")
+    return "\n".join(lines)
+
+
+def render_phrases(rows: List[Dict[str, Any]]) -> str:
+    body = [PHRASES, PHRASES_NOTE]
+    body.extend(render_phrase(r) for r in rows)
+    return "\n".join(body) + "\n"
+
+
+def _split_phrases(text: str) -> Tuple[str, str, str]:
+    """`## 관용구` 절을 (앞, 절, 뒤) 로. 없으면 `## 주행` 앞(없으면 갱신 기록 앞)을 자리로 잡는다."""
+    m = re.search(r"(?m)^## 관용구\s*$", text)
+    if m:
+        nxt = re.search(r"(?m)^## ", text[m.end():])
+        end = m.end() + nxt.start() if nxt else len(text)
+        return text[:m.start()], text[m.start():end], text[end:]
+    for anchor in (r"(?m)^## 주행\s*$", r"(?m)^## 갱신 기록\s*$"):
+        am = re.search(anchor, text)
+        if am:
+            return text[:am.start()], "", text[am.start():]
+    return text, "", ""
+
+
+def _replace_phrases(text: str, section: str) -> str:
+    head, _old, tail = _split_phrases(text)
+    if head and not head.endswith("\n\n"):
+        head = head.rstrip("\n") + "\n\n"
+    if tail and not tail.startswith("\n"):
+        section = section + "\n"
+    return head + section + tail
+
+
+def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """`## 관용구` 절 → (색인된 블록, 사람이 새로 적은 블록). 블록 = 머리 + 번호 목록, 코드 = 문장을 `; ` 로 이은 것."""
+    _h, sec, _t = _split_phrases(text)
+    known, fresh = [], []
+    cur = None
+    def _flush():
+        if cur and cur["sentences"]:
+            item = {"intent": cur["intent"], "ibl_code": join_sentences(cur["sentences"])}
+            if cur["id"] is not None:
+                item["id"] = cur["id"]; known.append(item)
+            else:
+                fresh.append(item)
+    for line in sec.splitlines():
+        hm = PHRASE_HEAD_RE.match(line)
+        if hm:
+            _flush()
+            cur = {"intent": hm.group(1).strip(), "id": int(hm.group(4)) if hm.group(4) else None, "sentences": []}
+            continue
+        lm = PHRASE_LINE_RE.match(line)
+        if lm and cur is not None:
+            cur["sentences"].append(lm.group(1).strip())
+    _flush()
+    return known, fresh
 
 
 def _split_section(text: str) -> Tuple[str, str, str]:
@@ -377,7 +523,10 @@ def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") ->
         text = (f"{_marker(topic)}\n# 실행기억 — {title}\n> {GIST_PLACEHOLDER}\n"
                 + (f"guide: {guide}\n" if guide else "")
                 + f"\n{LEDGER}\n- {datetime.now().strftime('%Y-%m-%d')} 가지 생성\n")
-    text = _replace_section(text, render_section(rows_of(topic, db_path)))
+    text = _replace_section(text, render_section(rows_of(topic, db_path, kind="word")))
+    phrases = rows_of(topic, db_path, kind="phrase")
+    if phrases or re.search(r"(?m)^## 관용구\s*$", text):
+        text = _replace_phrases(text, render_phrases(phrases))
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
     _stamp(topic, path)
@@ -432,6 +581,9 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
         return {"synced": False, "reason": "fresh"}
     text = open(path, encoding="utf-8").read()
     known, fresh = parse_section(text)
+    pk, pf = parse_phrases(text)
+    known += pk
+    fresh += [dict(f, category=PHRASE_CATEGORY) for f in pf]
     existing = {r["id"]: r for r in rows_of(topic, db_path)}
     updated = deleted = inserted = 0
     rejected: List[str] = []
@@ -476,11 +628,18 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
                 rejected.append(f"{f['ibl_code'][:40]}: {why}")
                 continue
             nodes = ",".join(sorted(set(re.findall(r"\[([a-z_-]+):", f["ibl_code"]))))
+            if f.get("category") == PHRASE_CATEGORY:
+                n_s = len(split_sentences(f["ibl_code"]))
+                if not (PHRASE_MIN_SENTENCES <= n_s <= PHRASE_MAX_SENTENCES):
+                    rejected.append(f"{f['ibl_code'][:40]}: 관용구 문장 수 {n_s} (허용 {PHRASE_MIN_SENTENCES}~{PHRASE_MAX_SENTENCES})")
+                    continue
+                cat = PHRASE_CATEGORY
+            else:
+                cat = "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single"
             cur = conn.execute(
                 "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic) "
                 "VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (f["intent"], f["ibl_code"], nodes, "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single",
-                 1, "manual", "doc", now, now, topic))
+                (f["intent"], f["ibl_code"], nodes, cat, 1, "manual", "doc", now, now, topic))
             inserted += 1
             _index(db_path, cur.lastrowid, f["intent"], f["ibl_code"])
         conn.commit()
@@ -505,25 +664,27 @@ def sync_all(db_path: Optional[str] = None) -> Dict[str, int]:
 
 def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     counts = topic_counts(db_path)
+    pcounts = phrase_counts(db_path)
     out = []
     for t in all_topics(db_path):
         p = doc_path(t)
         ex = os.path.exists(p)
-        out.append({"topic": t, "count": counts.get(t, 0), "runs": runs_of(p) if ex else 0,
+        out.append({"topic": t, "count": counts.get(t, 0), "phrases": pcounts.get(t, 0), "runs": runs_of(p) if ex else 0,
                     "gist": gist_of(p) if ex else "",
                     "guide": (guide_of(p) if ex else "") or seed_guides(t), "doc": p if ex else None})
     return out
 
 
 def map_text(db_path: Optional[str] = None) -> str:
-    """항상 올리는 목차 — `- 주제 (n · 주행 m) — 요약 · guide: x.md`. 뿌리(미배치)는 건수만."""
+    """항상 올리는 목차 — `- 주제 (n · 관용구 k · 주행 m) — 요약 · guide: x.md`. 뿌리(미배치)는 건수만."""
     lines = []
     for row in map_lines(db_path):
         if row["topic"] == "":
             if row["count"]:
                 lines.append(f"- (뿌리 — 아직 가지가 없는 용례) ({row['count']})")
             continue
-        s = f"- {row['topic']} ({row['count']}" + (f" · 주행 {row['runs']}" if row.get("runs") else "") + ")"
+        s = (f"- {row['topic']} ({row['count']}" + (f" · 관용구 {row['phrases']}" if row.get("phrases") else "")
+             + (f" · 주행 {row['runs']}" if row.get("runs") else "") + ")")
         if row["gist"]:
             s += f" — {row['gist']}"
         if row["guide"]:
@@ -542,11 +703,12 @@ def recall(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
                 "topics": [m["topic"] for m in map_lines(db_path) if m["topic"]]}
     if not os.path.exists(path):
         refresh_topic(topic, db_path)
-    rows = rows_of(topic, db_path)
+    rows = rows_of(topic, db_path, kind="word")
+    phrases = rows_of(topic, db_path, kind="phrase")
     counts = topic_counts(db_path)
     return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path) or seed_guides(topic),
             "text": open(path, encoding="utf-8").read(),
-            "items": rows, "count": len(rows),
+            "items": rows, "count": len(rows), "phrases": phrases, "phrase_count": len(phrases),
             "children": [{"topic": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(c))} for c in children_of(topic, db_path)],
             "parent": parent_of(topic)}
 

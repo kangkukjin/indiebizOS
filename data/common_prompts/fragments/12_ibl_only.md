@@ -134,9 +134,9 @@ $뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
   [sense:restaurant]{query: "청주 맛집"} >> [table:take]{n: 3} >> [limbs:show_map]{markers: "$items"}
   ```
 
-- **표기 — 맨몸형 `$이름` 과 괄호형 `${이름}`** (같은 뜻. 정본=`backend/common/ibl_vars.py`): 이름 경계가 `\w` 라서 **한글 조사·단위·확장자가 이름에 먹힌다** — `"$n건"` 은 변수 `n` 뒤의 글자 `건` 이 아니라 **변수 `n건`** 이고, `'/tmp/$it.n.md'` 는 필드 `n.md` 를 찾다가 `행에 없는 필드: n.md` 로 죽는다. 영어는 공백이 경계를 대신 그어 주지만 한국어는 아니라서, **괄호가 경계를 긋는 유일한 수단이다**: `"${n}건"` · `'/tmp/${it.n}.md'` · `"${items.title}"`. 괄호형에만 있는 확장 경로 둘 — `${x.items.*.f}`(열 벡터: 각 행의 그 필드를 목록으로) · `${x.y?}`(옵셔널: 결측 경로·미할당 변수를 오류 대신 빈 값으로). 맨몸형에 안 여는 이유는 `$x.*`·`$x?` 가 산문·물음표와 충돌해서다.
+- **표기 — 맨몸형 `$이름` 과 괄호형 `${이름}`** (같은 뜻. 정본=`backend/common/ibl_vars.py`): 이름 경계가 `\w` 라서 **한글 조사·단위·확장자가 이름에 먹힌다** — `"$n건"` 은 변수 `n` 뒤의 글자 `건` 이 아니라 **변수 `n건`** 이고, `'/tmp/$it.n.md'` 는 필드 `n.md` 를 찾다가 `행에 없는 필드: n.md` 로 죽는다. 영어는 공백이 경계를 대신 그어 주지만 한국어는 아니라서, **괄호가 경계를 긋는 유일한 수단이다**: `"${n}건"` · `'/tmp/${it.n}.md'` · `"${items.title}"`. 괄호형에만 있는 확장 경로 둘 — `${x.items.*.f}`(열 벡터: 각 행의 그 필드를 목록으로) · `${x.y?}`(옵셔널: 결측 경로·미할당 변수를 오류 대신 빈 값으로). 맨몸형에 안 여는 이유는 `$x.*`·`$x?` 가 산문·물음표와 충돌해서다. 괄호형은 따옴표 밖 수치 자리(`n: ${개수}`)에서도 맨몸형과 같다.
 
-- **AI 낱말**(실행마다 모델 비용·출력 편차 — 규칙으로 적을 수 있으면 filter/sort 가 먼저): 입구 `[self:struct]{file|text, schema}` 비정형(영수증·문서·파이프 본문)→items 구조화 · 중간 `[table:ai]{instruction}` items 를 자연어 지시대로 의미 변환(선별·주석 — 집합 한 번에) · 출구 `[table:brief]{instruction}` items→산문 종합(요약·판정, message=산문 정본 → `>> [self:write]` 로 저장).
+- **AI 낱말**(실행마다 모델 비용·출력 편차 — 규칙으로 적을 수 있으면 filter/sort 가 먼저): 입구 `[self:struct]{file|text, schema}` 비정형(영수증·문서·파이프 본문)→items 구조화 · 중간 `[table:ai]{instruction}` items 를 자연어 지시대로 의미 변환(선별·주석 — 집합 한 번에) · 출구 `[table:brief]{instruction}` items→산문 종합(요약·판정, message=산문 정본 → `>> [self:write]` 로 저장; 변수로 받은 산문은 `$본문` 그대로 또는 `$본문.message`·`.text` — 둘 다 그 산문).
   ```
   [sense:search]{query: "청주 창업 지원", source: "naver"} >> [table:ai]{instruction: "실제 지원사업 공고만"} >> [table:brief]{instruction: "마감 임박 순 3문장 보고"}
   ```

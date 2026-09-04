@@ -2640,7 +2640,7 @@ nodes:
         returns: items
         fixture: '[sense:search_youtube]{query: "jazz"}'
         runs_on: pc_only
-        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함)
+        description: 유튜브 검색 (재생하지 않고 결과 목록만 반환 — video_id, title, url 포함). queries(배열/쉼표 문자열)로 여러 검색어 배치 팬아웃 — 검색어마다 query 태그, video_id 중복 제거, sections
         group: media
         keywords:
         - youtube

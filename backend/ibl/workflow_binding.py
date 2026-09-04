@@ -55,6 +55,9 @@ def step_ref_indices(text: str) -> set:
     return {int(m.group(1)) for m in _STEP_RESULT_RE.finditer(text or "")}
 
 
+_PROSE_PATHS = {"message", "text"}
+
+
 def _extract_result_field_obj(raw: str, path: str) -> Any:
     """저장된 step 결과 문자열에서 .field.path 를 **원형(list/dict/스칼라)** 으로 추출.
 
@@ -81,6 +84,11 @@ def _extract_result_field_obj(raw: str, path: str) -> Any:
             except (json.JSONDecodeError, ValueError):
                 raise ValueError(
                     f"$변수 필드 추출 실패: 결과가 JSON 이 아니라 '{path}' 경로를 풀 수 없습니다.")
+        elif path in _PROSE_PATHS:
+            # 언어 개정 2026-09-04(사용자 판정): 산문 결과(brief·document 같은 문자열 통화)에 `.message`·`.text` 를
+            # 물으면 그 산문이다 — dict 통화의 message 필드와 같은 이름으로 같은 것을 가리키게 해 `$본문.message`
+            # 가 결과 모양(문자열/봉투)에 따라 죽고 살던 비대칭을 없앤다. 다른 경로는 종전대로 정직 오류.
+            return obj
         else:
             raise ValueError(
                 f"$변수 필드 추출 실패: 결과가 구조화 데이터가 아니라 '{path}' 경로를 풀 수 없습니다.")

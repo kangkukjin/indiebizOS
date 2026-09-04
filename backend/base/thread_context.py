@@ -517,6 +517,23 @@ def clear_goal_eval_outcome():
     _thread_local.goal_eval_outcome = None
 
 
+# ============ 관용구 회상 (해마 phrase 채널, 2026-09-04) ============
+# build_execution_memory 가 이 턴에 올린 관용구 코드들을 두고, 턴 끝의 증류(이미 아는 관용구면
+# 다시 뽑지 않음)·귀속(실행 궤적에 순서대로 절반 이상 등장했으면 성공/실패 기록)이 읽는다.
+# 반환 튜플(xml, top_score, top_code)을 바꾸지 않으려고 스레드-로컬로 나른다 — goal_eval_outcome 과 같은 결.
+
+def set_phrase_recall(codes):
+    _thread_local.phrase_recall = [c for c in (codes or []) if isinstance(c, str) and c.strip()]
+
+
+def get_phrase_recall():
+    return list(getattr(_thread_local, 'phrase_recall', None) or [])
+
+
+def clear_phrase_recall():
+    _thread_local.phrase_recall = []
+
+
 # ============ Allowed Nodes (IBL Node Access Control) ============
 
 def set_allowed_nodes(allowed):

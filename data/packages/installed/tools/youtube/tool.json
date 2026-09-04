@@ -15,14 +15,19 @@
             "type": "string",
             "description": "검색어. 예: '김필 너무 아픈 사랑은', '빅뱅 판타스틱베이비'"
           },
+          "queries": {
+            "type": [
+              "string",
+              "array"
+            ],
+            "description": "여러 검색어 배치 팬아웃(배열 또는 쉼표/개행 문자열) — 검색어마다 query 태그를 붙이고 video_id 중복을 걷어 한 목록(items)+sections 로. [sense:search]{source:\"gnews\"} 의 queries 와 같은 통화(어휘 개정 2026-09-04)."
+          },
           "limit": {
             "type": "integer",
             "description": "검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림"
           }
         },
-        "required": [
-          "query"
-        ]
+        "required": []
       }
     },
     {

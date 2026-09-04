@@ -234,6 +234,12 @@ def _op_ask(tool_input: dict, context) -> str:
                       "blocks": [{"type": "paragraph", "text": msg}], "message": msg})
 
     answer_raw, model_err = _grounded_generate(found.get("note", ""), question, excerpts, memory=memory_text)
+    # 되묻기 관문 (2026-09-04): 검색이 주제 발췌를 높은 유사도로 찾았는데 판정기가 **맨 표식만** 내면 그 거절은
+    # 의심스럽다(경량 판정기가 '가장 …' 류 판단 질문을 '없음'으로 접던 실측). 검색 사실을 실어 한 번만 되묻는다 —
+    # 그래도 표식이면 정직하게 '없음'. 티어 승격이 아니라 계약을 증거(검색 점수)에 거는 것.
+    if not model_err and _should_reask(answer_raw, excerpts):
+        answer_raw, model_err = _grounded_generate(found.get("note", ""), question, excerpts, memory=memory_text,
+                                                   reask_score=_top_score(excerpts))
     if model_err:
         # 생성층 죽어도 검색층은 살아 있다 — 발췌를 정직 반환 (침묵 실패 금지)
         return _json({"success": False, "error": f"근거 고정 생성 실패: {model_err}",
@@ -241,14 +247,14 @@ def _op_ask(tool_input: dict, context) -> str:
                       "items": _excerpt_items(excerpts),
                       "message": "생성은 실패했지만 검색된 발췌를 items로 반환합니다."})
 
-    if NOT_IN_SOURCES_MARK in answer_raw:
+    if _is_not_in_sources(answer_raw, len(excerpts)):
         msg = "소스 안에 이 질문의 답이 없습니다(모델 판정). 일반 지식 답이 필요하면 노트북 밖에서 물어보세요."
         return _json({"success": True, "notebook": found["notebook"], "question": question,
                       "not_in_sources": True, "answer": "", "citations": [], "items": [],
                       "blocks": [{"type": "paragraph", "text": msg}],
                       "search_type": found["search_type"], "message": msg})
 
-    answer, citations, dropped = _verify_citations(answer_raw, excerpts)
+    answer, citations, dropped = _verify_citations(_strip_mark(answer_raw), excerpts)
     # blocks = 계기(질문 탭)의 답변 렌더 IR — 데스크탑·원격 blocks 뷰가 그대로 그린다
     blocks = [{"type": "paragraph", "text": answer}]
     if citations:
@@ -270,7 +276,22 @@ def _as_int(v, default: int) -> int:
 
 # ── ask 내부: 제약 생성 + 인용 후검증 ────────────────────────────────────────
 
-def _grounded_generate(note: str, question: str, excerpts: list, memory: str = ""):
+COVERAGE_SCORE = 0.6     # 이 위면 발췌가 질문의 주제를 다룬다고 본다(하이브리드 점수, 실측 0.66~0.70 에서 거절 발생)
+
+
+def _top_score(excerpts: list) -> float:
+    try:
+        return max(float(r.get("score") or 0.0) for r in excerpts) if excerpts else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _should_reask(answer_raw: str, excerpts: list) -> bool:
+    """맨 표식(인용 0) + 검색 최고점 ≥ COVERAGE_SCORE 일 때만 한 번 되묻는다."""
+    return _is_not_in_sources(answer_raw, len(excerpts)) and _top_score(excerpts) >= COVERAGE_SCORE
+
+
+def _grounded_generate(note: str, question: str, excerpts: list, memory: str = "", reask_score: float = None):
     """경량 AI 1회 — 발췌만 근거로 [n] 인용 달린 답. 반환 (answer, error).
     memory: 노트북 포식 기억 문서(어느 소스가 무엇이고 어떤 물음에 답하나) — 발췌를 고르는 지도이지 근거가 아니다."""
     try:
@@ -290,11 +311,18 @@ def _grounded_generate(note: str, question: str, excerpts: list, memory: str = "
         "당신은 근거 고정(grounded) 조수다. 규칙:\n"
         "1) 아래 '발췌'들만 근거로 답하라. 당신의 일반 지식으로 보충하지 마라.\n"
         "2) 답의 모든 주장 문장 끝에 근거 발췌 번호를 [1] [2] 형태로 달아라. 여러 발췌면 [1][3].\n"
-        "3) 발췌들만으로 답할 수 없으면 다른 말 없이 정확히 NOT_IN_SOURCES 라고만 답하라. 추측 금지.\n"
+        "3) 발췌들이 질문의 **주제를 전혀 다루지 않을 때만** 다른 말 없이 정확히 NOT_IN_SOURCES 라고만 답하라. "
+        "발췌가 주제를 다루지만 순위·최상급·확정 판단('가장', '~인가')을 직접 주지 않으면 그것은 '없음'이 아니다 — "
+        "발췌가 말하는 바를 인용해 답하고, 마지막 한 문장으로 소스가 어디까지 말하는지 한계를 밝혀라. 추측 금지.\n"
         "4) 발췌에 없는 번호를 인용하지 마라.\n"
         "5) 답은 질문의 언어로, 간결하게."
     )
-    prompt = f"질문: {question}{goal}{mem}\n\n발췌:\n" + "\n\n".join(lines)
+    reask = ""
+    if reask_score is not None:
+        reask = (f"\n\n★검색이 이 질문의 주제를 다루는 발췌를 찾았다(최고 유사도 {reask_score:.2f}). "
+                 "그러므로 '없음'은 답이 아니다 — 발췌가 이 주제에 대해 말하는 바를 [n] 인용으로 답하고, "
+                 "질문이 요구하는 순위·판단이 발췌에 없으면 마지막 한 문장으로 그 한계를 밝혀라.")
+    prompt = f"질문: {question}{goal}{mem}{reask}\n\n발췌:\n" + "\n\n".join(lines)
 
     try:
         answer = oneshot_ai_call(prompt, system_prompt=system_prompt, role="classify")
@@ -306,6 +334,24 @@ def _grounded_generate(note: str, question: str, excerpts: list, memory: str = "
 
 
 _CITE_RE = re.compile(r"\[(\d{1,2})\]")
+
+
+def _is_not_in_sources(answer_raw: str, n_excerpts: int) -> bool:
+    """'없음' 판정은 표식이 **답을 대신할 때만** (2026-09-04 실측 — 경량 판정기가 '가장 유용한 사례는?' 같은
+    판단 질문에 "발췌는 사례를 나열하지만 순위는 없다 … NOT_IN_SOURCES" 로 설명과 표식을 함께 냈고, 옛 코드는
+    표식이 어디에든 있으면 통째로 거절해 인용 달린 설명까지 버렸다). 규칙: 표식이 있고 유효 인용이 하나도
+    없으면 '없음', 유효 인용이 있으면 표식은 군말로 보고 답을 살린다."""
+    if NOT_IN_SOURCES_MARK not in (answer_raw or ""):
+        return False
+    valid = set(range(1, n_excerpts + 1))
+    cited = [int(m.group(1)) for m in _CITE_RE.finditer(answer_raw) if int(m.group(1)) in valid]
+    return not cited
+
+
+def _strip_mark(answer_raw: str) -> str:
+    """답 속에 섞인 표식·그 줄만 걷어낸다(표식 단독 줄은 통째로)."""
+    lines = [l for l in (answer_raw or "").splitlines() if l.strip() != NOT_IN_SOURCES_MARK]
+    return "\n".join(lines).replace(NOT_IN_SOURCES_MARK, "").strip()
 
 
 def _verify_citations(answer: str, excerpts: list):

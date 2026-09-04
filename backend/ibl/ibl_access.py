@@ -585,7 +585,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                     break
             if lines:
                 text = ("<ibl_idioms note=\"자주 쓰는 관용구 — 과거에 성공한 문장 여러 개의 골격. ${슬롯} 을 채우고 문장을 "
-                        "빼거나 더해 쓴다(그대로 돌리는 프로그램이 아니다). 문장마다 따로 execute_ibl 한다.\">\n"
+                        "빼거나 더해 쓴다(그대로 돌리는 프로그램이 아니다). ★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다(문장마다 따로 부르면 중간 결과가 매번 컨텍스트로 들어온다). 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")

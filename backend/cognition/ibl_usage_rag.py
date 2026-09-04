@@ -189,7 +189,7 @@ class IBLUsageRAG:
                     "(품질을 깎아 아끼는 것은 금물).")
         if phrases:
             note += (" kind=\"phrase\" 는 관용구 — 과거에 성공한 문장 여러 개의 골격이다. 슬롯 ${…} 을 채우고 "
-                     "문장을 빼거나 더해 쓰는 모양이지, 그대로 돌리는 프로그램이 아니다. 문장마다 따로 실행한다.")
+                     "문장을 빼거나 더해 쓰는 모양이지, 그대로 돌리는 프로그램이 아니다. 여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가

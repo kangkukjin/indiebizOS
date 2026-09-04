@@ -154,3 +154,36 @@ def test_gist_and_guide_lines_reach_the_map(env):
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+# ---------------------------------------------------------------- 주행 절 (2026-09-04)
+def test_note_run_writes_runs_section_and_keeps_examples(env, tmp_path):
+    HT, db = env
+    ex = _add(db, "원장 갱신", '[self:ledger]{op: "select", path: "a.json"}', topic="보고서/X")
+    HT.refresh_topic("보고서/X", db)
+    r = HT.note_run("보고서/X", "부동산 보고서 27호", ['[self:memory]{op: "recall", node: "보고서/X"}',
+                                                    '[sense:realty]{region: "의정부"} >> [table:take]{n: 5}',
+                                                    "x" * 500], when="2026-09-04", db_path=db)
+    assert r["success"] and r["sentences"] == 3 and not r["truncated"]
+    text = open(HT.doc_path("보고서/X"), encoding="utf-8").read()
+    assert "## 주행" in text and "### 2026-09-04 · 부동산 보고서 27호 · 문장 3 · ✓" in text
+    assert "…[+100자 절단]" in text                       # 긴 문장은 정직 절단
+    assert text.index("## 용례") < text.index("## 주행") < text.index("## 갱신 기록")
+    # 용례 절은 그대로 살아 있고, DB→문서 재렌더가 주행 절을 지우지 않는다
+    HT.refresh_topic("보고서/X", db)
+    text2 = open(HT.doc_path("보고서/X"), encoding="utf-8").read()
+    assert "### 2026-09-04" in text2 and f"‹#{ex}" in text2
+    known, fresh = HT.parse_section(text2)
+    assert [k["id"] for k in known] == [ex] and not fresh  # 주행 줄은 용례로 색인되지 않는다
+    assert "주행 1" in HT.map_text(db)
+
+
+def test_note_run_trims_to_recent_runs(env):
+    HT, db = env
+    for i in range(HT.RUNS_MAX + 3):
+        HT.note_run("보고서/Y", f"주행 {i}", ["[self:time]", "[self:time]"], when=f"2026-08-{(i % 28) + 1:02d}", db_path=db)
+    text = open(HT.doc_path("보고서/Y"), encoding="utf-8").read()
+    assert HT.runs_of(HT.doc_path("보고서/Y")) == HT.RUNS_MAX
+    assert f"주행 {HT.RUNS_MAX + 2}" in text and "주행 0 " not in text   # 최신 유지, 오래된 것 탈락
+    r = HT.note_run("보고서/Y", "긴 주행", ["[self:time]"] * (HT.RUNS_MAX_SENTENCES + 5), db_path=db)
+    assert r["truncated"] and "문장 더 — 상한" in open(HT.doc_path("보고서/Y"), encoding="utf-8").read()

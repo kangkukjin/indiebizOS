@@ -728,10 +728,13 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
 3. 액션 합성(>> 또는 &)은 *데이터가 실제로 흐를 때만* 하라:
    - 한 액션의 출력이 다음 액션의 입력으로 흐르면(예: 조회 → 변환 → 차트) `>>`,
      한 동작으로 동시에 묶이면 `&`. 이때만 합성이 *참된 관용구*다.
-   - 독립적으로 하나씩 호출한 단계(예: 문서를 읽고 *별개로* 웹을 검색해 사고·종합하는
-     분석·판단·조사)는 절대 합성하지 마라 — `>>`/`&`는 데이터 흐름을 뜻하므로, 흐르지
-     않는 단계를 이으면 *거짓 관용구*가 되어 해마를 오염시킨다. 이런 경우 가장 핵심
-     (load-bearing)인 단일 액션 하나로 대표하라.
+   - ★실행된 코드 가운데 **합성문**(`&`·`>>` 가 든 문장)이 있으면 **그 문장을 대표로** 남겨라
+     (그대로 또는 압축) — 실행에서 함께 돌았던 문장이 가장 참된 관용구다. 단일 액션으로
+     줄이지 마라(2026-09-04: 대표를 단일 액션으로 접던 규칙이 코퍼스를 1액션 문장 80% 로 굳혔다).
+   - 별개로 하나씩 호출한 단계를 `>>` 로 봉합하지 마라 — `>>` 는 데이터 흐름을 뜻하므로
+     흐르지 않는 단계를 이으면 *거짓 관용구*다. `&` 로 묶는 것은 각 가지가 이 주행에서
+     실제로 성공했을 때만. 합성문이 하나도 없었으면 가장 핵심(load-bearing)인 단일 액션
+     하나로 대표하라.
    - ★단, 남은 후보가 *꼬리*뿐이면 대표를 세우지 마라 — 등기·알림·저장·검증처럼 일이
      끝난 뒤 딸려 붙는 부산물, 실패한 탐색, 준비 단계가 그렇다. 실작업이 IBL 밖
      (셸·파일 편집·긴 추론)에서 이뤄진 주행이 이 모양이 된다. 이때는 규칙 4 로 간다.
@@ -867,6 +870,19 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         intent = distilled.get("intent", "").strip()
         code = distilled.get("code", "").strip()
         _topic = str(distilled.get("topic", "") or "").strip()
+
+        # 주행 기록 (2026-09-04, 사용자 판정): 대표 문장이 있든 없든, 이 주행에서 성공한 문장들을
+        # 주제 가지 문서의 `## 주행` 절에 실행 순서대로 남긴다 — 프로그램급 주행이 '재사용 패턴 없음'
+        # 으로 학습 0건이 되던 자리. 코퍼스(유사도)와 별개로 지도→가지 회상이 읽는 자리다.
+        if _topic and len(ibl_calls) >= 2:
+            try:
+                import hippo_tree
+                _run = hippo_tree.note_run(_topic, intent or user_message[:80], ibl_calls, ok=True)
+                if _run.get("success"):
+                    print(f"[경험증류] 주행 기록 → 가지 '{_topic}' ({_run['sentences']}문장"
+                          + (", 절단" if _run.get("truncated") else "") + ")")
+            except Exception as _e:
+                print(f"[경험증류] 주행 기록 실패: {_e}")
 
         if not intent or not code:
             # code 빈 문자열 = 반성기가 "재사용 IBL 패턴 없음"으로 판단한 의도적 스킵

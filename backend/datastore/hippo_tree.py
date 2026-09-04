@@ -26,6 +26,14 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 DOC_NAME = "memory.md"
 SECTION = "## 용례"
 LEDGER = "## 갱신 기록"
+RUNS = "## 주행"
+RUNS_NOTE = ("<!-- 이 가지에서 실제로 성공한 주행의 문장 묶음(실행 순서 그대로). 얼린 프로그램이 아니라 용례 — "
+             "다음 주행이 읽고 고쳐 쓴다. 최근 RUNS_MAX 건·주행당 RUNS_MAX_SENTENCES 문장, 오래된 것부터 빠진다. "
+             "한 주행 = `### 날짜 · 의도 · 문장 n · ✓` 머리 + 번호 목록. -->")
+RUNS_MAX = 20                 # 가지당 보존 주행 수
+RUNS_MAX_SENTENCES = 30       # 주행당 문장 수 상한(넘으면 앞부분만, 절단 신고)
+RUNS_MAX_LEN = 400            # 문장 한 줄 상한(넘으면 꼬리 절단 신고)
+RUN_HEAD_RE = re.compile(r"(?m)^### (\d{4}-\d{2}-\d{2})")
 MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
 GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")
 LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄
@@ -235,6 +243,80 @@ def _split_section(text: str) -> Tuple[str, str, str]:
     return text, "", ""
 
 
+def _split_runs(text: str) -> Tuple[str, str, str]:
+    """`## 주행` 절을 (앞, 절, 뒤) 로. 없으면 갱신 기록 앞을 자리로 잡는다."""
+    m = re.search(r"(?m)^## 주행\s*$", text)
+    if m:
+        nxt = re.search(r"(?m)^## ", text[m.end():])
+        end = m.end() + nxt.start() if nxt else len(text)
+        return text[:m.start()], text[m.start():end], text[end:]
+    lm = re.search(r"(?m)^## 갱신 기록\s*$", text)
+    if lm:
+        return text[:lm.start()], "", text[lm.start():]
+    return text, "", ""
+
+
+def runs_of(path: str) -> int:
+    """문서의 주행 수(`### 날짜` 머리 계수)."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            _h, sec, _t = _split_runs(f.read())
+    except OSError:
+        return 0
+    return len(RUN_HEAD_RE.findall(sec))
+
+
+def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
+             when: Optional[str] = None, db_path: Optional[str] = None) -> Dict[str, Any]:
+    """주행 하나(성공한 문장 묶음)를 가지 문서의 `## 주행` 절에 적는다 (2026-09-04, 사용자 판정).
+
+    왜: 증류는 에피소드당 대표 문장 하나를 코퍼스에 넣는데, 가장 값진 주행(보고서 40문장·앱 개발
+    31문장)은 한 문장으로 대표되지 않아 '재사용 패턴 없음'으로 끝났다 — 학습 0건. 그리고 그
+    코퍼스는 top-1 로 거의 쓰이지 않고(08-28~ 귀속 5회, 증류 출신 0), 에이전트가 실제로 읽는 것은
+    지도→가지 문서(recall{store:"실행"})다. 그러니 주행의 문장들을 그 자리에 실행 순서대로 남긴다.
+    얼린 워크플로가 아니라 용례다 — 다음 주행이 읽고 고쳐 쓴다.
+    상한은 정직하게: 주행 RUNS_MAX 건(오래된 것부터 삭제)·주행당 RUNS_MAX_SENTENCES 문장·문장
+    RUNS_MAX_LEN 자, 넘치면 절단을 표기한다.
+    """
+    topic = norm_topic(topic)
+    sentences = [s for s in (sentences or []) if isinstance(s, str) and s.strip()]
+    if not topic or not sentences:
+        return {"success": False, "error": "topic 과 문장이 필요합니다"}
+    path = doc_path(topic)
+    if not os.path.exists(path):
+        refresh_topic(topic, db_path)
+    text = open(path, encoding="utf-8").read()
+    head, sec, tail = _split_runs(text)
+    day = (when or datetime.now().strftime("%Y-%m-%d"))[:10]
+    shown = sentences[:RUNS_MAX_SENTENCES]
+    lines = [f"### {day} · {_one_line(intent)[:120]} · 문장 {len(sentences)} · {'✓' if ok else '✗'}"]
+    for i, s in enumerate(shown, 1):
+        one = _one_line(s).replace("`", "'")
+        if len(one) > RUNS_MAX_LEN:
+            one = one[:RUNS_MAX_LEN] + f" …[+{len(one) - RUNS_MAX_LEN}자 절단]"
+        lines.append(f"{i}. `{one}`")
+    if len(sentences) > len(shown):
+        lines.append(f"- …[{len(sentences) - len(shown)}문장 더 — 상한 {RUNS_MAX_SENTENCES}]")
+    entry = "\n".join(lines) + "\n"
+    # 기존 절의 주행 블록들(### 머리 기준) — 최신이 위, 오래된 것부터 잘라낸다
+    body = sec.split("\n", 1)[1] if sec else ""
+    body = "\n".join(l for l in body.splitlines() if not l.startswith("<!--")).strip("\n")
+    blocks = [b for b in re.split(r"(?m)^(?=### )", body) if b.strip()]
+    blocks = [entry] + blocks
+    dropped = max(0, len(blocks) - RUNS_MAX)
+    blocks = blocks[:RUNS_MAX]
+    new_sec = RUNS + "\n" + RUNS_NOTE + "\n" + "\n".join(b.rstrip("\n") for b in blocks) + "\n"
+    if head and not head.endswith("\n\n"):
+        head = head.rstrip("\n") + "\n\n"
+    if tail and not tail.startswith("\n"):
+        new_sec += "\n"
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(head + new_sec + tail)
+    _stamp(topic, path)
+    return {"success": True, "topic": topic, "doc": path, "sentences": len(shown),
+            "truncated": len(sentences) > len(shown), "dropped_runs": dropped}
+
+
 def _replace_section(text: str, section: str) -> str:
     head, _old, tail = _split_section(text)
     if head and not head.endswith("\n\n"):
@@ -427,20 +509,21 @@ def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     for t in all_topics(db_path):
         p = doc_path(t)
         ex = os.path.exists(p)
-        out.append({"topic": t, "count": counts.get(t, 0), "gist": gist_of(p) if ex else "",
+        out.append({"topic": t, "count": counts.get(t, 0), "runs": runs_of(p) if ex else 0,
+                    "gist": gist_of(p) if ex else "",
                     "guide": (guide_of(p) if ex else "") or seed_guides(t), "doc": p if ex else None})
     return out
 
 
 def map_text(db_path: Optional[str] = None) -> str:
-    """항상 올리는 목차 — `- 주제 (n) — 요약 · guide: x.md`. 뿌리(미배치)는 건수만."""
+    """항상 올리는 목차 — `- 주제 (n · 주행 m) — 요약 · guide: x.md`. 뿌리(미배치)는 건수만."""
     lines = []
     for row in map_lines(db_path):
         if row["topic"] == "":
             if row["count"]:
                 lines.append(f"- (뿌리 — 아직 가지가 없는 용례) ({row['count']})")
             continue
-        s = f"- {row['topic']} ({row['count']})"
+        s = f"- {row['topic']} ({row['count']}" + (f" · 주행 {row['runs']}" if row.get("runs") else "") + ")"
         if row["gist"]:
             s += f" — {row['gist']}"
         if row["guide"]:

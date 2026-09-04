@@ -27,6 +27,8 @@ SEARCH_TOP_K = 8        # search op 기본
 QUOTE_CHARS = 160       # citations quote 길이 (청크 원문에서 결정론 추출)
 
 NOT_IN_SOURCES_MARK = "NOT_IN_SOURCES"
+DIGEST_NEEDED_MARK = "DIGEST_NEEDED"   # ask 판정기가 "발췌 단편으론 소개·개요 불가, 소스 전체를 읽어라" 고 넘기는 표식
+DIGEST_WINDOW_CHARS = 5000             # 구간 요지 한 번에 읽는 분량(경량 모델)
 
 
 def _json(payload: dict) -> str:
@@ -247,6 +249,10 @@ def _op_ask(tool_input: dict, context) -> str:
                       "items": _excerpt_items(excerpts),
                       "message": "생성은 실패했지만 검색된 발췌를 items로 반환합니다."})
 
+    if DIGEST_NEEDED_MARK in (answer_raw or ""):
+        # 전체 소개·개요는 발췌 검색이 아니라 소스 전체 읽기(map-reduce)의 일이다 — 판정기가 넘기면 코드가 돈다.
+        return _op_digest({**tool_input, "question": question}, context)
+
     if _is_not_in_sources(answer_raw, len(excerpts)):
         msg = "소스 안에 이 질문의 답이 없습니다(모델 판정). 일반 지식 답이 필요하면 노트북 밖에서 물어보세요."
         return _json({"success": True, "notebook": found["notebook"], "question": question,
@@ -275,6 +281,101 @@ def _as_int(v, default: int) -> int:
 
 
 # ── ask 내부: 제약 생성 + 인용 후검증 ────────────────────────────────────────
+
+def _resolve_source(core, name: str, source=None) -> dict:
+    """소스 하나를 고른다 — id 등치 · 제목 부분일치 · 지정 없으면 노트북의 유일한 소스. 여럿인데 지정이 없으면 후보를 들고 거절."""
+    ls = core.list_sources(name)
+    if not ls.get("success"):
+        return ls
+    rows = ls["sources"]
+    if not rows:
+        return {"success": False, "error": f"'{name}' 노트북에 소스가 없습니다."}
+    _src = str(source).strip() if source not in (None, "") else ""
+    if not _src:
+        if len(rows) == 1:
+            return {"success": True, "source": rows[0]}
+        return {"success": False, "error": f"소스가 {len(rows)}개입니다 — source(id 또는 제목 일부)를 지정하세요.",
+                "candidates": [{"id": r["id"], "title": r["title"]} for r in rows[:12]]}
+    try:
+        from value_semantics import text_match, values_equal
+    except ImportError:
+        from common.value_semantics import text_match, values_equal
+    hit = [r for r in rows if values_equal(str(r["id"]), _src) or text_match("contains", str(r.get("title") or ""), _src)]
+    if len(hit) == 1:
+        return {"success": True, "source": hit[0]}
+    if not hit:
+        return {"success": False, "error": f"'{_src}' 에 맞는 소스가 없습니다.", "candidates": [{"id": r["id"], "title": r["title"]} for r in rows[:12]]}
+    return {"success": False, "error": f"'{_src}' 에 맞는 소스가 {len(hit)}개 — id 로 지정하세요.", "candidates": [{"id": r["id"], "title": r["title"]} for r in hit[:12]]}
+
+
+def _source_chunks(core, source_id: int) -> list:
+    """소스 하나의 청크 전부, 문서 순서(id 순 = 색인 순)."""
+    conn = core._connect()
+    try:
+        return [dict(r) for r in conn.execute(
+            "SELECT id, loc, text FROM chunks WHERE source_id=? ORDER BY id", (source_id,)).fetchall()]
+    finally:
+        conn.close()
+
+
+def _windows(chunks: list, limit: int = DIGEST_WINDOW_CHARS) -> list:
+    """청크를 문서 순서대로 limit 자 안팎의 구간으로 묶는다(청크는 자르지 않는다)."""
+    out, cur, size = [], [], 0
+    for c in chunks:
+        t = c.get("text") or ""
+        if cur and size + len(t) > limit:
+            out.append(cur); cur, size = [], 0
+        cur.append(c); size += len(t)
+    if cur:
+        out.append(cur)
+    return out
+
+
+def _op_digest(tool_input: dict, context) -> str:
+    """소스 전체 소개 (2026-09-04 사용자 신고 — "동영상 내용을 소개해줘" 에 발췌 12개로 답하려다 거절).
+    발췌 검색은 '어디에 무엇이 있나'의 도구고, 전체 소개는 소스를 처음부터 끝까지 읽는 일이다:
+    구간별 요지(경량, LLM n회) → 하나의 소개(평가 축, LLM 1회). 인용은 구간 번호·시각 자리(loc)로 남긴다."""
+    import notebook_core as core
+    name = tool_input.get("name", "")
+    question = _query_of(tool_input) or "이 소스의 내용을 소개해줘"
+    res = _resolve_source(core, name, tool_input.get("source"))
+    if not res.get("success"):
+        return _json({**res, "items": []})
+    src = res["source"]
+    chunks = _source_chunks(core, int(src["id"]))
+    if not chunks:
+        return _json({"success": False, "error": f"'{src.get('title')}' 소스에 색인된 청크가 없습니다(status={src.get('status')}).", "items": []})
+    try:
+        from consciousness_agent import oneshot_ai_call
+    except ImportError as e:
+        return _json({"success": False, "error": f"oneshot_ai_call 임포트 불가: {e}", "items": []})
+    wins = _windows(chunks)
+    gists = []
+    for i, w in enumerate(wins, 1):
+        loc = f"{(w[0].get('loc') or '').strip()}~{(w[-1].get('loc') or '').strip()}".strip("~")
+        body = "\n".join((c.get("text") or "") for c in w)
+        p = (f"다음은 '{src.get('title')}' 의 구간 {i}/{len(wins)}({loc})이다. 이 구간의 요지를 사실만, 3~6줄로 적어라. "
+             f"고유명사·수치·주장은 보존하고 해석·추측은 넣지 마라. 언어는 이 요청의 언어(한국어).\n\n{body}")
+        try:
+            g = (oneshot_ai_call(p, system_prompt="너는 문서 구간 요약기다. 요지만, 근거 없는 말 금지.", role="classify") or "").strip()
+        except Exception as e:
+            g = f"(구간 요지 실패: {e})"
+        gists.append({"n": i, "loc": loc, "chunks": len(w), "gist": g})
+    outline = "\n\n".join(f"[구간 {g['n']}] ({g['loc']})\n{g['gist']}" for g in gists)
+    reduce_prompt = (f"요청: {question}\n소스: '{src.get('title')}' ({src.get('kind')}, 구간 {len(wins)}개, 전체 {sum(len(c.get('text') or '') for c in chunks):,}자)\n\n"
+                     f"아래는 소스를 처음부터 끝까지 순서대로 읽고 적은 구간별 요지다. 이것만 근거로 요청에 답하라 — "
+                     f"구조(흐름)·핵심 주장·주요 개념을 요청의 언어로 소개하고, 문장 끝에 근거 구간을 [구간 n] 으로 달아라. "
+                     f"요지에 없는 내용은 보태지 마라.\n\n{outline}")
+    try:
+        answer = (oneshot_ai_call(reduce_prompt, system_prompt="너는 근거 고정 소개문 작성자다. 구간 요지만 근거로 쓴다.", role="evaluate") or "").strip()
+    except Exception as e:
+        return _json({"success": False, "error": f"소개문 생성 실패: {e}", "items": gists,
+                      "message": "구간 요지는 items 로 반환합니다."})
+    blocks = [{"type": "paragraph", "text": answer}, {"type": "heading", "level": 4, "text": f"구간 요지 ({len(wins)}개)"}]
+    blocks += [{"type": "paragraph", "text": f"[구간 {g['n']}] ({g['loc']}) {g['gist']}"} for g in gists]
+    return _json({"success": True, "notebook": name, "question": question, "mode": "digest", "source": {"id": src["id"], "title": src.get("title"), "kind": src.get("kind")},
+                  "not_in_sources": False, "answer": answer, "blocks": blocks, "items": gists, "windows": len(wins), "chunks": len(chunks)})
+
 
 COVERAGE_SCORE = 0.6     # 이 위면 발췌가 질문의 주제를 다룬다고 본다(하이브리드 점수, 실측 0.66~0.70 에서 거절 발생)
 
@@ -315,7 +416,9 @@ def _grounded_generate(note: str, question: str, excerpts: list, memory: str = "
         "발췌가 주제를 다루지만 순위·최상급·확정 판단('가장', '~인가')을 직접 주지 않으면 그것은 '없음'이 아니다 — "
         "발췌가 말하는 바를 인용해 답하고, 마지막 한 문장으로 소스가 어디까지 말하는지 한계를 밝혀라. 추측 금지.\n"
         "4) 발췌에 없는 번호를 인용하지 마라.\n"
-        "5) 답은 질문의 언어로, 간결하게."
+        "5) 답은 질문의 언어로, 간결하게.\n"
+        "6) 질문이 소스 **전체**의 소개·개요·요약·흐름을 요구하는데 발췌가 단편이라 전체를 말할 수 없으면, "
+        "발췌를 하나씩 나열하며 설명하지 말고 다른 말 없이 정확히 DIGEST_NEEDED 라고만 답하라 — 그러면 소스 전체를 순서대로 읽어 소개한다."
     )
     reask = ""
     if reask_score is not None:
@@ -410,6 +513,7 @@ _OP_DISPATCHERS = {
         "create": _op_create,
         "add": _op_add,
         "ask": _op_ask,
+        "digest": _op_digest,
         "search": _op_search,
         "sources": _op_sources,
         "remove": _op_remove,

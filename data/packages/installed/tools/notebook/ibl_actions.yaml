@@ -25,15 +25,18 @@ nodes:
             delete: effect
           side_effect:
             ask: false
+            digest: false
             search: false
             sources: false
             list: false
           ai_call:  # F14-4 (2026-08-20): ask 만 실행마다 모델 호출(생성) — search 는 LLM 0
             ask: true
+            digest: true
           fixture:
             list: '[self:notebook]{op: "list"}'
           exempt:
             ask: '노트북 name+질문 필요 — 고정 fixture 부적합'
+            digest: '노트북 name(+source) 필요 · 소스 전체를 읽는 LLM n회 — 고정 fixture 부적합'
             search: '노트북 name+검색어 필요 — 고정 fixture 부적합'
             sources: '노트북 name 필요 — 고정 fixture 부적합'
             create: '원장에 노트북을 만든다 — 부작용'
@@ -43,7 +46,8 @@ nodes:
           values:
             create: 노트북 생성 (name + note 목적) — 등록되면 시스템 AI 에 포식 기억 조사가 자동 위임된다(add 도 같음, 10분 디바운스)
             add: 소스 넣기 (path=파일·웹 URL·유튜브 URL[자막] / text 붙여넣기, 재add=재색인)
-            ask: 근거 고정 질문 (기본 op) — 소스 안에서만 답 + [n] 인용, 없으면 not_in_sources
+            ask: 근거 고정 질문 (기본 op) — 소스 안에서만 답 + [n] 인용, 없으면 not_in_sources, 전체 소개는 digest 로
+            digest: 소스 하나를 처음부터 끝까지 읽어 소개 (구간 요지 → 소개문, source 지정, 인용 [구간 n])
             search: 발췌 검색만 (LLM 0 — 인용 확인·파이프용 싼 경로)
             sources: 소스 목록 + 색인 상태 + stale 표시
             remove: 소스 빼기 (source_id)
@@ -108,8 +112,12 @@ nodes:
                 - name: 관리
                   view:
                   - type: form
-                    title: 소스 추가 (파일 경로 · 웹 URL · 유튜브 URL 또는 본문 붙여넣기)
+                    title: 소스 추가 (파일 선택 · 경로 · 웹 URL · 유튜브 URL 또는 본문 붙여넣기)
                     fields:
+                    - key: pick
+                      label: 파일 골라 넣기 — 여러 개 선택 가능(고르는 즉시 들어갑니다)
+                      type: files
+                      add_action: '[self:notebook]{op: "add", name: "{notebook}", path: "$path"}'
                     - key: src
                       label: 경로/URL
                       type: text
@@ -192,6 +200,8 @@ tool_json:
       - op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인
 
       - op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources
+
+      - op=digest: name (+source id·제목 일부) — 소스 전체를 순서대로 읽어 소개·개요(구간 요지 → 소개문). "이 동영상/문서 내용을 소개해줘" 는 이것. ask 가 발췌 단편으로 소개 불가라고 판정하면 스스로 여기로 넘어온다
 
       - op=search: name + query — 생성 없이 발췌만 (LLM 0)
 

@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "notebook_op",
-      "description": "근거 고정 질의 통합 도구 (op 분기). create/add/ask/search/sources/remove/list/delete.\n\n- op=create: name 필수 (+note 노트북 목적 — ask 응답의 렌즈)\n- op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인\n- op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources\n- op=search: name + query — 생성 없이 발췌만 (LLM 0)\n- op=sources: name — 소스·색인 상태·stale / op=remove: name + source_id\n- op=list / op=delete: name\n\n워크플로: create → add 여러 번 → ask 반복. 웹 검색이 아니라 이미 가진 문서를 심문하는 도구다.",
+      "description": "근거 고정 질의 통합 도구 (op 분기). create/add/ask/search/sources/remove/list/delete.\n\n- op=create: name 필수 (+note 노트북 목적 — ask 응답의 렌즈)\n- op=add: name + path(PDF·md·txt) 또는 text(붙여넣기), title 옵션. 같은 path 재add=재색인\n- op=ask (기본): name + query — 소스 안에서만 답, citations[{n,source,loc,quote}] 동반, 없으면 not_in_sources\n- op=digest: name (+source id·제목 일부) — 소스 전체를 순서대로 읽어 소개·개요(구간 요지 → 소개문). \"이 동영상/문서 내용을 소개해줘\" 는 이것. ask 가 발췌 단편으로 소개 불가라고 판정하면 스스로 여기로 넘어온다\n- op=search: name + query — 생성 없이 발췌만 (LLM 0)\n- op=sources: name — 소스·색인 상태·stale / op=remove: name + source_id\n- op=list / op=delete: name\n\n워크플로: create → add 여러 번 → ask 반복. 웹 검색이 아니라 이미 가진 문서를 심문하는 도구다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -18,6 +18,7 @@
               "create",
               "add",
               "ask",
+              "digest",
               "search",
               "sources",
               "remove",

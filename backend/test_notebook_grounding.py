@@ -56,6 +56,38 @@ def test_n4_reask_only_when_search_covered_the_topic():
     assert H._top_score([]) == 0.0 and not H._should_reask("NOT_IN_SOURCES", [])
 
 
+# ---------------------------------------------------------------- N5·N6 전체 소개(digest)
+def test_n5_windows_keep_order_and_do_not_split_chunks():
+    import handler as H
+    chunks = [{"id": i, "loc": f"[{i}:00]", "text": "x" * 1200} for i in range(10)]
+    wins = H._windows(chunks, limit=5000)
+    assert [len(w) for w in wins] == [4, 4, 2] and wins[0][0]["id"] == 0 and wins[-1][-1]["id"] == 9
+
+
+def test_n6_ask_hands_overview_to_digest(monkeypatch):
+    import types
+    import handler as H
+    import notebook_core as core
+    monkeypatch.setattr(core, "search_chunks", lambda name, q, top_k=8, source=None: {
+        "success": True, "notebook": name, "note": "", "search_type": "hybrid",
+        "results": [{"id": 1, "loc": "[0:00]", "text": "t", "source": "s", "source_id": 7, "score": 0.7}]})
+    monkeypatch.setattr(H, "_notebook_memory_text", lambda name: "")
+    monkeypatch.setattr(H, "_resolve_source", lambda core_, name, source=None: {"success": True, "source": {"id": 7, "title": "강의", "kind": "youtube"}})
+    monkeypatch.setattr(H, "_source_chunks", lambda core_, sid: [{"id": i, "loc": f"[{i}:00]", "text": "본문 " * 300} for i in range(6)])
+    calls = []
+    def fake_oneshot(prompt, system_prompt="", role="classify"):
+        calls.append(role)
+        if "DIGEST" in system_prompt or "근거 고정(grounded) 조수" in system_prompt:
+            return "DIGEST_NEEDED"
+        return "요지" if role == "classify" else "소개문 [구간 1][구간 2]"
+    fake = types.ModuleType("consciousness_agent"); fake.oneshot_ai_call = fake_oneshot
+    monkeypatch.setitem(sys.modules, "consciousness_agent", fake)
+    import json
+    out = json.loads(H._op_ask({"name": "nb", "query": "이 강의의 내용을 한국어로 자세히 소개해줘"}, None))
+    assert out["success"] and out.get("mode") == "digest" and out["answer"].startswith("소개문")
+    assert out["windows"] >= 1 and len(out["items"]) == out["windows"] and calls[-1] == "evaluate"
+
+
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))

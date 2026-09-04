@@ -117,6 +117,14 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             _m_names.append(_n)
     statements, assign_names = _m_stmts, _m_names
 
+    # 함수 정의 문장(`[def: 이름]{…}`)은 프로그램 앞으로 — 선언은 실행 순서에 없다(언어 개정 2026-09-05). 문장 단계에서
+    # 옮겨야 뒤 문장의 `$변수`→step 번호가 자연스럽게 맞는다(step 재배열은 자리표를 어긋나게 했다 — 라이브 실측).
+    _defs = [(s, n) for s, n in zip(statements, assign_names) if s.lstrip().startswith('[def:')]
+    if _defs:
+        _rest = [(s, n) for s, n in zip(statements, assign_names) if not s.lstrip().startswith('[def:')]
+        statements = [s for s, _ in _defs] + [s for s, _ in _rest]
+        assign_names = [n for _, n in _defs] + [n for _, n in _rest]
+
     all_steps = []
     # ★V49-1 (49회차 상상훈련 · 사용자 판정 A, 2026-08-27): **블록은 스코프를 만들지 않는다.**
     #   종전엔 바깥에 *이미 있던* 이름의 재할당만 블록 밖으로 나가고(`_var_updates` 는 되쓸
@@ -184,6 +192,14 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
             # 파라미터는 일반 step 처럼 {{_step_N_result}} 치환, 조건식·case 소스 안의 $변수는
             # 텍스트 치환이 아니라 *값 바인딩* — 파서는 이름→step 인덱스(_vars)만 적고
             # 실행기(workflow_engine)가 실행 시점에 _var_values 로 값을 실어 준다.
+            if blk.get("_def"):
+                # 함수 정의(2026-09-05): 닫힌 스코프 — 바깥 변수를 보지 않고, 몸의 할당도 밖으로 나가지 않는다.
+                if assign_names[_stmt_idx]:
+                    raise IBLSyntaxError(f"[def: {blk['name']}] 은 값이 아니라 정의입니다 — $변수에 할당할 수 없습니다.")
+                if _stmt_idx > 0:
+                    blk["_seq_boundary"] = True
+                all_steps.append(blk)
+                continue
             if variables:
                 blk = _resolve_block_variables(blk, variables)
             if _stmt_idx > 0:
@@ -252,14 +268,65 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
     if not all_steps:
         raise IBLSyntaxError("실행 가능한 명령이 없습니다.")
 
+    _bind_fn_defs(all_steps)
     return all_steps, variables
 
 
-_BLOCK_PREFIXES = ('[goal:', '[if:', '[case:', '[try]', '[repeat:')
+def _bind_fn_defs(all_steps: List[Dict]) -> None:
+    """프로그램의 [def:] 정의를 모아 `[fn:이름]` 호출 step 에 `_fn_def` 로 붙인다 (언어 개정 2026-09-05).
+
+    호출이 정의보다 앞에 와도 된다(앞당김). 같은 이름의 정의가 둘이면 정직 오류. 정의가 없는 `[fn:이름]` 은
+    붙이지 않는다 — 실행기가 저장 워크플로(원장)에서 같은 이름을 찾는다(두 길이 `[fn:]` 하나로 합쳐진다).
+    블록 몸(if/try/repeat/each 의 do 문자열은 실행 시 파싱되므로 제외)과 함수 몸 안의 호출에도 붙여 재귀·상호 호출이
+    모양으로 가능하되, 실행기의 깊이 가드가 무한 재귀를 끊는다."""
+    defs: Dict[str, Dict] = {}
+    for st in all_steps:
+        if isinstance(st, dict) and st.get("_def"):
+            if st["name"] in defs:
+                raise IBLSyntaxError(f"[def: {st['name']}] 이 두 번 정의됐습니다 — 이름은 프로그램 안에서 하나.")
+            defs[st["name"]] = st
+    if not defs:
+        return
+    # 정의 표는 step 밖(프로그램별 표, id 참조)에 둔다 — 몸통을 호출 step 에 박으면 재귀 정의가 자기 자신을 품는
+    # 순환 구조가 되어 실행기의 치환 걷기가 무한 재귀한다(첫 판 실측). step 은 JSON-안전·비순환으로 남는다.
+    import uuid
+    tid = uuid.uuid4().hex[:12]
+    _FN_TABLES[tid] = {n: {"name": n, "params": list(d.get("signature") or []), "todo": bool(d.get("todo")), "body": d.get("body")}
+                       for n, d in defs.items()}
+    while len(_FN_TABLES) > _FN_TABLES_MAX:
+        _FN_TABLES.pop(next(iter(_FN_TABLES)))
+
+    def _walk(obj):
+        if isinstance(obj, dict):
+            if obj.get("_node") == "fn" and obj.get("action") in defs and "_fn_ref" not in obj:
+                d = defs[obj["action"]]
+                obj["_fn_ref"] = {"table": tid, "name": d["name"], "params": list(d.get("signature") or []), "todo": bool(d.get("todo"))}
+            for v in obj.values():
+                if isinstance(v, (dict, list)):
+                    _walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                _walk(v)
+
+    _walk(all_steps)
+
+
+#: 프로그램별 함수 정의 표 — parse 가 만들고 실행기가 `_fn_ref.table` 로 찾는다(최근 256 프로그램 보존).
+_FN_TABLES: "Dict[str, Dict[str, Dict]]" = {}
+_FN_TABLES_MAX = 256
+
+
+def fn_definition(table_id: str, name: str) -> Optional[Dict]:
+    """실행기용 — 정의 표에서 함수 하나(없으면 None: 표가 밀려났거나 이름이 없다)."""
+    t = _FN_TABLES.get(table_id) or {}
+    return t.get(name)
+
+
+_BLOCK_PREFIXES = ('[goal:', '[if:', '[case:', '[try]', '[repeat:', '[def:')
 
 
 def _is_block_step(st: Any) -> bool:
-    return isinstance(st, dict) and any(st.get(k) for k in ("_goal", "_condition", "_case", "_try", "_repeat", "_assign"))
+    return isinstance(st, dict) and any(st.get(k) for k in ("_goal", "_condition", "_case", "_try", "_repeat", "_assign", "_def"))
 
 
 def _parse_statement_block(stmt: str) -> Optional[Dict]:
@@ -279,6 +346,8 @@ def _parse_statement_block(stmt: str) -> Optional[Dict]:
         return _parse_try_block(s)
     if s.startswith('[repeat:'):
         return _parse_repeat_block(s)
+    if s.startswith('[def:'):
+        return _parse_def_block(s)
     return None
 
 
@@ -320,6 +389,7 @@ from ibl_parser_blocks import (  # noqa: E402,F401
     register_parse as _register_parse,
     _parse_try_block,
     _parse_repeat_block,
+    _parse_def_block,
     register_parse_vars as _register_parse_vars,
 )
 

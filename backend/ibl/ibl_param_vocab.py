@@ -423,8 +423,8 @@ def check_code_params(code: str) -> List[dict]:
     for st in walk(parsed):
         node = st.get("_node") or ""
         action = st.get("action") or ""
-        if not node or not action:
-            continue
+        if not node or not action or node == "fn":
+            continue                        # [fn:이름] 의 인자는 함수 시그니처가 검사한다
         w = check_params(node, action, st.get("params") or {})
         if w:
             issues.append({"action": f"{node}:{action}", **w})

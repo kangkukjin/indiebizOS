@@ -943,11 +943,11 @@ def preflight_sentence(code: Any) -> Dict:
     dead = []
     for st in steps:
         if not isinstance(st, dict) or st.get("_goal") or st.get("_condition") or st.get("_case") \
-                or st.get("_try") or st.get("_repeat") or st.get("_assign"):
+                or st.get("_try") or st.get("_repeat") or st.get("_assign") or st.get("_def"):
             continue                        # 복합 블록은 내부 분기를 정적으로 못 본다
         node, action = st.get("_node"), st.get("action")
-        if not node or not action:
-            continue
+        if not node or not action or node == "fn":
+            continue                        # [fn:이름] 은 어휘가 아니라 함수 호출(정의·원장에서 해소)
         if action not in (get_node_actions(node) or set()):
             q = f"{node}:{action}"
             if q not in dead:
@@ -1447,7 +1447,17 @@ def _promote_final_currency(out, steps: Optional[list] = None):
             if isinstance(st, dict) and st.get("_assign_name") == "return":
                 for r in out.get("results") or []:
                     if isinstance(r, dict) and r.get("step") == idx + 1 and "result" in r:
-                        out["final_result"] = r["result"]
+                        fr = r["result"]
+                        # `$return = $t`·`$return = 식` 은 식 할당 봉투({value, assigned:"return"})로 기록된다 — 반환값은
+                        # 봉투가 아니라 그 value 다(2026-09-05 함수 개정에서 실측: 봉투가 나가면 하류 >> 가 items 를 못 본다).
+                        try:
+                            _obj = json.loads(fr) if isinstance(fr, str) else fr
+                        except Exception:
+                            _obj = None
+                        if isinstance(_obj, dict) and _obj.get("assigned") == "return" and "value" in _obj:
+                            _v = _obj["value"]
+                            fr = _v if isinstance(_v, str) else json.dumps(_v, ensure_ascii=False)
+                        out["final_result"] = fr
                         out["returned"] = "$return"
                         break
                 break

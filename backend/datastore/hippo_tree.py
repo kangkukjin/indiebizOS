@@ -44,9 +44,12 @@ PHRASE_MIN_SENTENCES = 2      # 한 문장은 낱말이다
 PHRASE_MAX_SENTENCES = 10     # 프롬프트는 3~8 을 권하고, 관문은 10 에서 자른다(넘으면 거절)
 PHRASES_NOTE = ("<!-- 기계가 읽는 절: 관용구 = 독립 문장 2~8개의 골격(실행 순서), 구체값은 `${슬롯}` 으로 비어 있다. "
                 "얼린 프로그램이 아니라 다음 주행이 슬롯을 채우고 문장을 빼거나 더해 쓰는 모양이다. "
-                "한 관용구 = `### 의도 · 문장 n · 슬롯 a, b ‹#id · ✓성공/✗실패 · 날짜›` 머리 + 번호 목록(문장마다 `코드`). "
+                "관용구는 이름 붙은 함수다(2026-09-05) — 머리의 이름으로 `[fn:이름]{슬롯…}` 을 부르면 그대로 돌고, 고치려면 "
+                "`[def: 이름]{문장들}` 로 프로그램에 붙여 넣는다. 한 관용구 = `### 이름 — 의도 · 문장 n · 슬롯 a, b ‹#id · ✓성공/✗실패 · 날짜›` "
+                "머리 + `호출: ` 줄 + 번호 목록(문장마다 `코드`). "
                 "블록을 고치면 색인이 따라오고, 지우면 색인에서도 지워지며, ‹#id› 없이 새 블록을 적으면 새 관용구가 된다(구문 관문 통과 시). -->")
-PHRASE_HEAD_RE = re.compile(r"^### (.*?) · 문장 (\d+)(?: · 슬롯 (.*?))?(?:\s*‹#(\d+)[^›]*›)?\s*$")
+PHRASE_HEAD_RE = re.compile(r"^### (?:(\S+) — )?(.*?) · 문장 (\d+)(?: · 슬롯 (.*?))?(?:\s*‹#(\d+)[^›]*›)?\s*$")
+PHRASE_CALL_RE = re.compile(r"^호출: `(.+)`\s*$")
 PHRASE_LINE_RE = re.compile(r"^\d+\. `(.+)`\s*$")
 SLOT_RE = re.compile(r"\$\{([^}]+)\}")
 MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
@@ -159,14 +162,15 @@ def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
 def ensure_column(db_path: Optional[str] = None) -> None:
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
-        try:
-            conn.execute("SELECT topic FROM ibl_examples LIMIT 1")
-        except sqlite3.OperationalError:
+        for col in ("topic", "alias"):
             try:
-                conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
-                conn.commit()
+                conn.execute(f"SELECT {col} FROM ibl_examples LIMIT 1")
             except sqlite3.OperationalError:
-                pass
+                try:
+                    conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {col} TEXT DEFAULT ''")
+                    conn.commit()
+                except sqlite3.OperationalError:
+                    pass
     finally:
         conn.close()
 
@@ -180,7 +184,7 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, "
-            "COALESCE(topic,'') AS topic FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
+            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
     except sqlite3.OperationalError:
@@ -292,8 +296,46 @@ def split_sentences(code: str) -> List[str]:
     return [s for s in out if s]
 
 
+def _sentence_one_line(s: str) -> str:
+    """문장 하나를 한 줄로 — 괄호 안(깊이>0)·따옴표 밖의 줄바꿈은 독립 문장 경계 `;` 로(함수 정의 몸 `[def: x]{줄들}` 보존,
+    2026-09-05), 그 밖의 공백 줄바꿈은 한 칸으로."""
+    out, q, depth, i, n = [], None, 0, 0, len(s or "")
+    while i < n:
+        ch = s[i]
+        if q:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(s[i + 1]); i += 2; continue
+            if ch == q:
+                q = None
+        elif ch in "\"'":
+            q = ch; out.append(ch)
+        elif ch in "{[(":
+            depth += 1; out.append(ch)
+        elif ch in "}])":
+            depth = max(0, depth - 1); out.append(ch)
+        elif ch == "\n":
+            j = len(out) - 1
+            while j >= 0 and out[j] in " \t":
+                j -= 1
+            prev = out[j] if j >= 0 else ""
+            k = i + 1
+            while k < n and s[k] in " \t\r\n":
+                k += 1
+            nxt = s[k] if k < n else ""
+            if depth > 0 and prev not in "{;([,&|>" and nxt not in "}])" and not s[k:k + 2] == ">>":
+                out.append("; ")
+            else:
+                out.append(" ")
+            i = k; continue
+        else:
+            out.append(ch)
+        i += 1
+    return re.sub(r"[ \t]+", " ", "".join(out)).strip()
+
+
 def join_sentences(sentences: List[str]) -> str:
-    return "; ".join(_one_line(s) for s in sentences if s and s.strip())
+    return "; ".join(_sentence_one_line(s) for s in sentences if s and s.strip())
 
 
 def slot_names(code: str) -> List[str]:
@@ -305,19 +347,39 @@ def slot_names(code: str) -> List[str]:
     return out
 
 
+def phrase_call_line(alias: str, code: str) -> str:
+    """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …}` (슬롯은 몸의 `${슬롯}`)."""
+    if not alias:
+        return ""
+    slots = slot_names(code or "")
+    args = ", ".join(f'{s}: "…"' for s in slots)
+    return f"[fn:{alias}]{{{args}}}"
+
+
+def phrase_def_block(alias: str, code: str) -> str:
+    """관용구를 고쳐 쓰는 정의 블록 — 프로그램에 붙여 넣는 `[def: 이름]{ 문장들 }` (여러 줄)."""
+    sents = split_sentences(code or "")
+    body = "\n".join("  " + s for s in sents)
+    return f"[def: {alias or '이름'}]{{\n{body}\n}}"
+
+
 def render_phrase(r: Dict[str, Any]) -> str:
     s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
     meta = [f"#{r['id']}"]
     if s or f:
         meta.append(f"✓{s}/✗{f}")
     meta.append((r.get("created_at") or "")[:10])
-    sents = split_sentences(r.get("ibl_code") or "")
-    slots = slot_names(r.get("ibl_code") or "")
-    head = f"### {_one_line(r.get('intent'))} · 문장 {len(sents)}"
+    code = r.get("ibl_code") or ""
+    sents = split_sentences(code)
+    slots = slot_names(code)
+    alias = (r.get("alias") or "").strip()
+    head = "### " + (f"{alias} — " if alias else "") + f"{_one_line(r.get('intent'))} · 문장 {len(sents)}"
     if slots:
         head += " · 슬롯 " + ", ".join(slots)
     head += f" ‹{' · '.join(m for m in meta if m)}›"
     lines = [head]
+    if alias:
+        lines.append(f"호출: `{phrase_call_line(alias, code)}`")
     for i, sent in enumerate(sents, 1):
         lines.append(f"{i}. `{_one_line(sent).replace('`', chr(39))}`")
     return "\n".join(lines)
@@ -359,7 +421,7 @@ def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
     cur = None
     def _flush():
         if cur and cur["sentences"]:
-            item = {"intent": cur["intent"], "ibl_code": join_sentences(cur["sentences"])}
+            item = {"intent": cur["intent"], "ibl_code": join_sentences(cur["sentences"]), "alias": cur.get("alias") or ""}
             if cur["id"] is not None:
                 item["id"] = cur["id"]; known.append(item)
             else:
@@ -368,8 +430,11 @@ def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
         hm = PHRASE_HEAD_RE.match(line)
         if hm:
             _flush()
-            cur = {"intent": hm.group(1).strip(), "id": int(hm.group(4)) if hm.group(4) else None, "sentences": []}
+            cur = {"alias": (hm.group(1) or "").strip(), "intent": hm.group(2).strip(),
+                   "id": int(hm.group(5)) if hm.group(5) else None, "sentences": []}
             continue
+        if PHRASE_CALL_RE.match(line):
+            continue                                   # 호출 예시 줄은 파생(이름+슬롯) — 색인 대상이 아니다
         lm = PHRASE_LINE_RE.match(line)
         if lm and cur is not None:
             cur["sentences"].append(lm.group(1).strip())
@@ -601,13 +666,14 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
                 fresh.append({"intent": k["intent"], "ibl_code": k["ibl_code"]})
                 continue
             seen.add(k["id"])
-            if k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"]:
+            _alias_changed = ("alias" in k) and (k.get("alias") or "") != (r.get("alias") or "")
+            if k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"] or _alias_changed:
                 why = _syntax_reason(k["ibl_code"])
                 if why:
                     rejected.append(f"#{k['id']}: {why}")
                     continue
-                conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, updated_at=? WHERE id=?",
-                             (k["intent"], k["ibl_code"], now, k["id"]))
+                conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
+                             (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
                 updated += 1
                 _index(db_path, k["id"], k["intent"], k["ibl_code"])
         gone = [mid for mid in existing if mid not in seen]
@@ -637,9 +703,9 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
             else:
                 cat = "pipeline" if (">>" in f["ibl_code"] or "&" in f["ibl_code"]) else "single"
             cur = conn.execute(
-                "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (f["intent"], f["ibl_code"], nodes, cat, 1, "manual", "doc", now, now, topic))
+                "INSERT INTO ibl_examples (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic, alias) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (f["intent"], f["ibl_code"], nodes, cat, 1, "manual", "doc", now, now, topic, f.get("alias") or ""))
             inserted += 1
             _index(db_path, cur.lastrowid, f["intent"], f["ibl_code"])
         conn.commit()

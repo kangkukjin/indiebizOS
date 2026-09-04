@@ -164,6 +164,122 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
     return _parse_final(res), False, {}, {0: res if isinstance(res, str) else json.dumps(res, ensure_ascii=False, default=str)}
 
 
+MAX_FN_DEPTH = 5
+
+
+def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
+    """[fn:이름]{인자} — 같은 프로그램의 [def: 이름] 몸통을 닫힌 스코프로 실행. 정의가 없으면 저장 워크플로(원장)의
+    같은 이름을 부른다(두 길이 하나로). 규약은 워크플로 run 과 같다: 시그니처(미할당 $이름) 누락은 정직 거절,
+    인자는 파스 후 값 층에 주입, 반환은 `$return` 이 있으면 그 문장 아니면 마지막 통화, 앞 통화(>>)는 몸의 첫 문장에
+    흐른다. 재귀·상호 호출은 깊이 MAX_FN_DEPTH 에서 끊는다(무한 재귀 방지, 반복은 [repeat:]/[table:each] 로)."""
+    import copy as _c
+    from ibl_traceback import push_frame
+    name = tool_input.get("action") or ""
+    _p = tool_input.get("params") or {}
+    caller = {k: v for k, v in _p.items() if not str(k).startswith("_")}     # 배관 키(_raw·_prev_result)는 인자가 아니다
+    prev = _p.get("_prev_result") or tool_input.get("_prev_result")         # 파이프 속 호출은 params 로 앞 통화를 받는다
+    depth = int(tool_input.get("_fn_depth") or 0)
+    if depth >= MAX_FN_DEPTH:
+        return {"success": False, "fn": name,
+                "error": f"[fn:{name}] 호출 깊이 상한({MAX_FN_DEPTH})을 넘었습니다 — 재귀·상호 호출 대신 [repeat:]/[table:each] 로 반복하세요."}
+    ref = tool_input.get("_fn_ref")
+    fdef = None
+    if ref:
+        from ibl_parser import fn_definition
+        fdef = fn_definition(ref.get("table"), ref.get("name"))
+        if fdef is None:
+            return {"success": False, "fn": name,
+                    "error": f"[fn:{name}] 의 정의 표를 찾지 못했습니다(프로그램 정의 표가 밀려남) — 프로그램을 다시 실행하세요."}
+    if not fdef:
+        # 둘째 길: 저장 워크플로(원장) · 셋째 길: 이름 붙은 관용구(해마, 2026-09-05 — 관용구는 이름 붙은 함수)
+        from workflow_engine import execute_workflow, get_workflow
+        if get_workflow(name) is not None:
+            res = execute_workflow(name, project_path, params=caller or None)
+            if isinstance(res, dict):
+                res["fn"] = name
+                res["fn_source"] = "workflow"
+            return res
+        row = None
+        try:
+            from ibl_usage_db import IBLUsageDB
+            row = IBLUsageDB().find_phrase_by_alias(name)
+        except Exception:
+            row = None
+        if not row:
+            try:
+                from ibl_usage_db import IBLUsageDB
+                names = IBLUsageDB().phrase_aliases(10)
+            except Exception:
+                names = []
+            return {"success": False, "fn": name,
+                    "error": (f"[fn:{name}] — 이 프로그램에 [def: {name}]{{…}} 정의가 없고, 저장 워크플로에도 관용구에도 '{name}' 이 없습니다. "
+                              "같은 프로그램에 정의를 두거나(정의는 호출 뒤에 와도 됩니다) 있는 이름을 부르세요."
+                              + (f" 관용구 이름: {', '.join(names)}" if names else ""))}
+        from ibl_parser import parse as _parse
+        try:
+            body_steps = _parse(row["ibl_code"])
+        except Exception as e:
+            return {"success": False, "fn": name, "error": f"[fn:{name}] 관용구 골격 파싱 실패: {e}"}
+        from workflow_contract import _free_vars
+        fdef = {"name": name, "params": _free_vars(body_steps), "todo": False, "body": body_steps, "_idiom_code": row["ibl_code"]}
+    if fdef.get("todo"):
+        return {"success": False, "fn": name,
+                "error": f"[fn:{name}] 은 이름만 걸어 둔 함수입니다([def: {name}]{{todo}}) — 몸통을 채우세요."}
+    required = list(fdef.get("params") or [])
+    missing = [n for n in required if n not in caller]
+    if missing:
+        example = ", ".join(f'"{n}": "값"' for n in missing)
+        return {"success": False, "fn": name, "params_required": required, "params_missing": missing,
+                "error": (f"[fn:{name}] 인자 누락: {', '.join('$' + n for n in missing)}. 시그니처는 "
+                          f"{', '.join('$' + n for n in required)} 입니다 — 예: [fn:{name}]{{{example}}}")}
+    steps = _c.deepcopy(fdef.get("body") or [])
+    if not isinstance(steps, list):
+        steps = [steps]
+    inject_meta = None
+    if caller:
+        from workflow_contract import _apply_caller_params
+        steps, inject_meta = _apply_caller_params(steps, caller)
+    from workflow_engine import execute_pipeline, _promote_final_currency
+    nested = []
+    for st in steps:
+        st2 = _nest(st, tool_input) if isinstance(st, dict) else st
+        if isinstance(st2, dict):
+            st2["_fn_depth"] = depth + 1
+        nested.append(st2)
+    context = {"_prev_result": prev} if prev else None
+    try:
+        env = execute_pipeline(nested, project_path, context=context, agent_id=agent_id)
+    except Exception as e:
+        return {"success": False, "fn": name, "error": f"[fn:{name}] 실행 예외: {type(e).__name__}: {e}"}
+    out = _promote_final_currency(env, steps) if isinstance(env, dict) else env
+    if isinstance(out, dict):
+        out["fn"] = name
+        out["fn_source"] = "idiom" if fdef.get("_idiom_code") else "def"
+        if fdef.get("_idiom_code"):
+            # 이름으로 부른 관용구는 쓰인 것 — 해마의 성공/실패 귀속(상시 블록 순위·재학습의 회상 귀속)
+            try:
+                from ibl_usage_db import IBLUsageDB
+                IBLUsageDB().update_success_by_code(fdef["_idiom_code"], bool(out.get("success", True)))
+            except Exception:
+                pass
+        if required:
+            out["params_required"] = required
+        if inject_meta:
+            out.update(inject_meta)
+        if not out.get("success", True) and isinstance(out.get("traceback"), dict):
+            push_frame(out["traceback"], {"kind": "fn", "name": name})
+        # 함수 결과의 통화: final_result 가 있으면 그것이 이 step 의 결과 — 바깥 파이프가 그대로 잇는다
+        if out.get("final_result") is not None and "items" not in out:
+            fr = _parse_final(out.get("final_result"))
+            if isinstance(fr, dict) and isinstance(fr.get("items"), list):
+                out["items"] = fr["items"]
+                out.setdefault("count", len(fr["items"]))
+            elif isinstance(fr, list):                      # `$return = $t` 의 값이 행 목록 그대로일 때
+                out["items"] = fr
+                out.setdefault("count", len(fr))
+    return out
+
+
 def _block_tb(err: Any, block: str) -> dict:
     """블록 몸의 실패(err = _run_body 의 오류 정보)에 블록 경계 프레임을 얹는다 — 경계 규약.
 

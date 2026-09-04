@@ -271,6 +271,33 @@ def _phrase_used(phrase_code: str, ibl_calls: list) -> bool:
     return hit >= need
 
 
+_FN_NAME_RE = re.compile(r'^[\w\uac00-\ud7a3][\w\uac00-\ud7a3.-]*$')
+_FN_NAME_RESERVED = {"if", "else", "case", "goal", "repeat", "try", "catch", "finally", "on_error", "def", "fn"}
+
+
+def sanitize_fn_name(name, fallback: str = "") -> str:
+    """관용구 이름 → `[fn:이름]`/`[def: 이름]` 에 설 수 있는 이름. 공백·기호는 지우고, 비면 의도에서 만든다."""
+    s = re.sub(r"[^\w\uac00-\ud7a3.-]", "", str(name or "").strip())
+    if not s or s in _FN_NAME_RESERVED or not _FN_NAME_RE.match(s) or s[0].isdigit():
+        base = re.sub(r"[^\w\uac00-\ud7a3]", "", str(fallback or ""))[:12]
+        s = ("관용구" + base) if (not base or base[0].isdigit()) else base
+    return s[:40]
+
+
+def unique_fn_name(name: str, db, code: str) -> str:
+    """같은 이름이 다른 골격에 이미 있으면 숫자 접미(이름2, 이름3…). 같은 골격이면 그 이름 그대로."""
+    base, n = name, 1
+    while True:
+        try:
+            row = db.find_phrase_by_alias(name)
+        except Exception:
+            return name
+        if not row or (row.get("ibl_code") == code):
+            return name
+        n += 1
+        name = f"{base}{n}"
+
+
 def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
                     tool_calls: list, turn_tokens: int = None) -> bool:
     """반성기의 두 번째 답(phrase·slots)을 관문에 통과시켜 `category='phrase'` 로 저장한다. 낱말 증류와 독립."""
@@ -330,12 +357,14 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     birth_ms = _ibl_elapsed_ms(tool_calls)
+    # 관용구 = 이름 붙은 함수(2026-09-05): 반성기의 phrase_name → 정리·유일화. `[fn:이름]{슬롯}` 으로 불린다.
+    alias = unique_fn_name(sanitize_fn_name(distilled.get("phrase_name"), intent), db, code)
     example_id = db.add_example(
         intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
         difficulty=2, source="distilled", tags="auto,phrase",
         avg_ms=float(birth_ms) if birth_ms else -1.0,
         avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
-        topic=topic)
+        topic=topic, alias=alias)
     if not example_id:
         print(f"{tag} 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
         return False
@@ -349,5 +378,5 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     except Exception as e:
         print(f"{tag} 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
     IBLUsageRAG().clear_cache()
-    print(f"{tag} 저장 완료 (id={example_id}, 문장 {n}, 슬롯 {len(hippo_tree.slot_names(code))}, 가지 '{topic}'): \"{intent[:40]}\"")
+    print(f"{tag} 저장 완료 (id={example_id}, 이름 [fn:{alias}], 문장 {n}, 슬롯 {len(hippo_tree.slot_names(code))}, 가지 '{topic}'): \"{intent[:40]}\"")
     return True

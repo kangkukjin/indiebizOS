@@ -566,26 +566,37 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
         if db_path.exists():
             conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
             rows = conn.execute(
-                "SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,'') FROM ibl_examples "
+                "SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,'') FROM ibl_examples "
                 "WHERE category='phrase' ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_TOP * 3,)).fetchall()
             conn.close()
             lines = []
-            for intent, code, sc, fc, topic in rows:
-                nodes = set(_re.findall(r"\[([a-z_-]+):", code))
+            for intent, code, sc, fc, topic, alias in rows:
+                nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - {"fn"}
                 if allowed is not None and not nodes <= set(allowed):
                     continue
                 sents = _split_sentences(code)
                 if len(sents) < 2:
                     continue
                 used = f" 사용 {sc + fc}회" if (sc + fc) else ""
-                lines.append(f"- {intent}" + (f" ({topic})" if topic else "") + used + ":")
-                lines.extend(f"  {i}. {sent}" for i, sent in enumerate(sents, 1))
+                slots = []
+                for m in _re.findall(r"\$\{([^}]+)\}", code):
+                    if m.strip() not in slots:
+                        slots.append(m.strip())
+                # 관용구 = 이름 붙은 함수(2026-09-05): 그대로 쓰면 호출 한 줄, 고치면 정의 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한다
+                head = f"- {alias or '(이름 없음)'} — {intent}" + (f" ({topic})" if topic else "") + used
+                lines.append(head)
+                if alias:
+                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}")
+                lines.append(f"  [def: {alias or '이름'}]{{")
+                lines.extend(f"    {sent}" for sent in sents)
+                lines.append("  }")
                 if sum(1 for l in lines if l.startswith("- ")) >= IDIOMS_TOP:
                     break
             if lines:
-                text = ("<ibl_idioms note=\"자주 쓰는 관용구 — 과거에 성공한 문장 여러 개의 골격. ${슬롯} 을 채우고 문장을 "
-                        "빼거나 더해 쓴다(그대로 돌리는 프로그램이 아니다). ★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다(문장마다 따로 부르면 중간 결과가 매번 컨텍스트로 들어온다). 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
+                text = ("<ibl_idioms note=\"자주 쓰는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다), "
+                        "고쳐 쓰려면 [def: 이름]{…} 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한 뒤 [fn:이름]{…} 으로 부른다. "
+                        "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")

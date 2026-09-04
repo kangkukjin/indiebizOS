@@ -674,6 +674,17 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                      f"[self:workflow]에 저장해 id 로 참조하세요.",
         }
 
+    # 함수(언어 개정 2026-09-05): [def:] 정의는 실행 시 무동작(정의 신고), [fn:이름] 호출은 닫힌 스코프의 몸통 실행.
+    if tool_input.get("_def"):
+        _sig = list(tool_input.get("signature") or [])
+        return {"success": True, "defined": tool_input.get("name"), "signature": _sig,
+                "todo": bool(tool_input.get("todo")),
+                "message": f"[def: {tool_input.get('name')}] 정의됨" + (" (todo — 몸통 없음)" if tool_input.get("todo") else
+                           f" — 시그니처 {', '.join('$' + n for n in _sig) or '(인자 없음)'}")}
+    if tool_input.get("_node") == "fn":
+        from ibl_control_blocks import _execute_fn
+        return _execute_fn(tool_input, project_path, agent_id)
+
     # Phase 26: Goal Block 실행
     if tool_input.get("_goal"):
         return _execute_goal_block(tool_input, project_path, agent_id)

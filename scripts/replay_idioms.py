@@ -325,6 +325,56 @@ def rehearse(path: Path, db_path: Path, apply: bool, project_id: str = ""):
     return 0
 
 
+NAME_PROMPT = """아래는 IBL 관용구들(의도 + 골격 문장)이다. 관용구는 이름 붙은 함수라 `[fn:이름]{{슬롯}}` 으로 부른다.
+각 관용구에 **이름**을 붙여라 — 짧은 한국어 동사형 명사, 띄어쓰기 없이 2~5어절을 붙여 쓴다(예: 뉴스모아쓰기·직전보고서읽기·찾아고치기).
+서로 다른 관용구는 다른 이름. 기호·공백·영문 금지, 한글·숫자만.
+
+{rows}
+
+JSON 객체로만 응답: {{"<id>": "이름", ...}}"""
+
+
+def name_idioms(apply: bool):
+    import hippo_tree
+    import ibl_idiom
+    from ibl_usage_db import IBLUsageDB
+    from consciousness_agent import oneshot_ai_call
+    from runtime_utils import parse_first_json
+    db = IBLUsageDB()
+    with db._get_connection() as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT id, intent, ibl_code, COALESCE(alias,'') AS alias, COALESCE(topic,'') AS topic FROM ibl_examples "
+            "WHERE category='phrase' AND COALESCE(alias,'')='' ORDER BY id").fetchall()]
+    if not rows:
+        print("[name] 이름 없는 관용구 없음"); return 0
+    listing = "\n".join(f"{r['id']}: {r['intent']}\n   " + " / ".join(hippo_tree.split_sentences(r['ibl_code']))[:300] for r in rows)
+    res = oneshot_ai_call(prompt=NAME_PROMPT.format(rows=listing), system_prompt="관용구 작명기. JSON 객체로만 응답.", role="background")
+    verdict = parse_first_json(res or "") or {}
+    named = 0
+    for r in rows:
+        raw = verdict.get(str(r["id"])) if isinstance(verdict, dict) else None
+        name = ibl_idiom.unique_fn_name(ibl_idiom.sanitize_fn_name(raw, r["intent"]), db, r["ibl_code"])
+        print(f"  #{r['id']} {r['intent'][:36]:38} → [fn:{name}]")
+        if apply:
+            with db._get_connection() as conn:
+                conn.execute("UPDATE ibl_examples SET alias=? WHERE id=?", (name, r["id"])); conn.commit()
+            named += 1
+    if apply:
+        if hasattr(db, "_load_model_sync"):
+            db._load_model_sync()
+        for r in rows:
+            row = db.find_phrase_by_alias  # noqa — 색인은 이름+의도
+        with db._get_connection() as conn:
+            for r in conn.execute("SELECT id, intent, ibl_code, alias FROM ibl_examples WHERE category='phrase'").fetchall():
+                db._index_single(r["id"], f"{r['alias']} {r['intent']}".strip(), r["ibl_code"])
+        for t in {r["topic"] for r in rows}:
+            hippo_tree.refresh_topic(t)
+        print(f"[name] 이름 {named}건 적용 · 재색인 · 가지 문서 갱신")
+    else:
+        print("[name] dry-run — --apply 로 적용")
+    return 0
+
+
 def apply_report(report: Path, db_path: Path, top: int):
     d = json.loads(report.read_text(encoding="utf-8"))
     chosen = d.get("chosen") or []
@@ -347,6 +397,8 @@ def main():
     ap.add_argument("--rehearse", default=None,
                     help="짓기(상상): 설계한 관용구 JSON [{intent, topic, phrase, slots}] 을 슬롯 값으로 채워 라이브 백엔드(/ibl/execute)에서 한 번 돌리고, 성공한 것만 같은 관문으로 저장(--apply)")
     ap.add_argument("--project", default="", help="리허설 실행의 프로젝트 문맥(project_id) — 검색·논문 등 프로젝트 도구가 요구")
+    ap.add_argument("--name-idioms", action="store_true",
+                    help="이름 없는 관용구에 반성기가 이름을 붙인다(관용구=이름 붙은 함수, 2026-09-05) — 색인·가지 문서 갱신")
     ap.add_argument("--programs", nargs="*", default=None,
                     help="짓기 재료: 완주가 실증된 프로그램 JSON({code, …})들 — 문장 줄을 실행 호출로 보고 같은 질문·같은 관문. 빈도 필터 없음")
     args = ap.parse_args()
@@ -357,6 +409,8 @@ def main():
         return apply_report(Path(args.report), wp, args.top)
     if args.rehearse:
         return rehearse(Path(args.rehearse), wp, apply=args.apply, project_id=args.project)
+    if args.name_idioms:
+        return name_idioms(apply=args.apply)
     if args.programs is not None:
         episodes = load_programs(args.programs)
         shapes = Counter()

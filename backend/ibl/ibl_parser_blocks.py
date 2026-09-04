@@ -640,6 +640,50 @@ def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str
     return parsed, text[end + 1:].strip()
 
 
+_DEF_PREFIX = re.compile(r'^\s*\[def:\s*([^\]\s]+)\s*\]\s*\{')
+_FN_RESERVED_NAMES = {"if", "else", "case", "goal", "repeat", "try", "catch", "finally", "on_error", "def", "fn"}
+
+
+def _parse_def_block(code: str) -> Optional[Dict]:
+    """[def: 이름]{ …IBL 줄들… } → {"_def": True, "name", "body"(step 리스트), "params"(자유 변수=시그니처), "todo"}.
+
+    언어 개정 2026-09-05(사용자 판정 "함수 문법 개정 진행"): 워크플로(이름 붙은 함수)는 정의가 프로그램 밖(원장)에 살고
+    몸통이 따옴표 문자열로 실려 이스케이프 사고가 잦았으며 앞으로 부르기가 안 됐다(실측: 9,117 실행 중 22, 전부 프로브).
+    이 블록은 같은 프로그램 안에 정의를 두고, 몸통은 문자열이 아니라 줄이며, 파서가 프로그램 끝에서 `[fn:이름]` 호출에
+    정의를 붙이므로 정의가 호출 뒤에 와도 된다(앞당김). 스코프는 워크플로처럼 닫혀 있다 — 몸통의 미할당 `$이름` 이
+    인자(시그니처)이고, 바깥 변수는 보이지 않는다. 몸이 `todo` 뿐이면 이름만 걸어 둔 빈 함수(불리면 정직 실패)."""
+    m = _DEF_PREFIX.match(code)
+    if not m:
+        return None
+    name = m.group(1).strip()
+    if not re.match(r'^[\w\uac00-\ud7a3][\w\uac00-\ud7a3.-]*$', name):
+        raise IBLSyntaxError(f"[def:] 함수 이름이 올바르지 않습니다: {name!r} — 글자·숫자·_·. 만 (예: [def: 요약]{{…}})")
+    if name in _FN_RESERVED_NAMES:
+        raise IBLSyntaxError(f"[def:] 함수 이름 {name!r} 은 예약어입니다.")
+    brace = m.end() - 1
+    body, end = _extract_bracket_raw(code, brace, '{', '}')
+    if body is None:
+        raise IBLSyntaxError(f"[def: {name}] 블록 중괄호가 닫히지 않았습니다.")
+    rest = code[end + 1:].strip()
+    if rest:
+        raise IBLSyntaxError(f"[def: {name}] 블록 뒤에 해석되지 않은 텍스트가 있습니다: {rest[:60]!r} — 정의와 다른 문장은 줄로 분리.")
+    body = body.strip()
+    if not body:
+        raise IBLSyntaxError(f"[def: {name}] 몸이 비어 있습니다 — 아직 없으면 몸에 todo 라고 적으세요.")
+    if body.lower() == "todo":
+        return {"_def": True, "name": name, "body": None, "signature": [], "todo": True}
+    if _PARSE_VARS is None:
+        raise RuntimeError("ibl_parser_blocks: parse_with_vars 미주입 — ibl_parser 를 먼저 import 해야 한다")
+    try:
+        steps, _vars = _PARSE_VARS(body)          # 닫힌 스코프 — 바깥 변수 표 없이 따로 파싱
+    except IBLSyntaxError as e:
+        raise IBLSyntaxError(f"[def: {name}] 몸의 문법 오류: {e}")
+    from workflow_contract import _free_vars
+    signature = _free_vars(steps)
+    # ★키 이름은 signature — "params" 는 step 의 인자 dict 자리라 실행 배관(_raw 주입)이 덮어쓴다(라이브 실측: 시그니처 $_raw).
+    return {"_def": True, "name": name, "body": steps, "signature": signature, "todo": False}
+
+
 def _parse_try_block(code: str) -> Optional[Dict]:
     """[try]{…} [catch]{…} [finally]{…} → {"_try": True, "body", "catch", "finally"}.
 

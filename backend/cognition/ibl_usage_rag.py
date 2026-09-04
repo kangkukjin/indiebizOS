@@ -188,8 +188,8 @@ class IBLUsageRAG:
                     "토큰 소요 — 같은 목표를 같은 품질로 이룬다면 빠르고 싼 패턴이 좋다"
                     "(품질을 깎아 아끼는 것은 금물).")
         if phrases:
-            note += (" kind=\"phrase\" 는 관용구 — 과거에 성공한 문장 여러 개의 골격이다. 슬롯 ${…} 을 채우고 "
-                     "문장을 빼거나 더해 쓰는 모양이지, 그대로 돌리는 프로그램이 아니다. 여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
+            note += (" kind=\"phrase\" 는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다), "
+                     "고쳐 쓰려면 [def: 이름]{…} 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한 뒤 부른다. 여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -215,14 +215,22 @@ class IBLUsageRAG:
                 slots = hippo_tree.slot_names(ex.ibl_code)
             except Exception:
                 sents, slots = [ex.ibl_code], []
+            alias = (getattr(ex, "alias", "") or "").strip()
             attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}"'
+            if alias:
+                attrs += f' name="{_xml_attr(alias)}"'
             if slots:
                 attrs += f' slots="{_xml_attr(", ".join(slots))}"'
             if ex.success_rate >= 0:
                 attrs += f' success_rate="{ex.success_rate}"'
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
-            body = "\n".join(f"{i}. {s}" for i, s in enumerate(sents, 1))
+            # 관용구 = 이름 붙은 함수(2026-09-05): 호출 한 줄(그대로) + 정의 블록(고쳐 쓰기)
+            parts = []
+            if alias:
+                parts.append(f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}")
+            parts.append(f"[def: {alias or '이름'}]{{\n" + "\n".join("  " + s for s in sents) + "\n}")
+            body = "\n".join(parts)
             lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
@@ -520,6 +528,7 @@ def _validate_ibl_actions(code: str) -> bool:
     이후 연상으로 추천되어 실패를 유발한다. add_example 전에 정적으로 거른다.
     하나라도 미존재 액션이 있으면 False (증류 폐기)."""
     pairs = re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', code or "")
+    pairs = [(n, a) for n, a in pairs if n != "fn"]     # [fn:이름] 은 함수 호출 — 어휘 검증 대상이 아니다(2026-09-05)
     if not pairs:
         return False  # 액션 패턴이 없으면 용례로서 무의미
     try:
@@ -837,10 +846,12 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    문장은 실행된 것을 글자 그대로 옮기고 값만 슬롯으로 바꾼다 — 인자를 빼거나 더하지 말고,
    문장을 새로 짓거나 `>>` 로 이어 붙이지 마라(별개로 실행된 문장은 별개 항목). 되풀이될
    모양이 없으면(단발 작업·한 문장뿐) phrase 를 빈 목록으로.
-   매번 똑같이 도는 모양(정기 보고서)은 슬롯이 없어도 관용구다.
+   매번 똑같이 도는 모양(정기 보고서)은 슬롯이 없어도 관용구다. 관용구에는 **이름**(phrase_name)을 붙여라 —
+   짧은 한국어 동사형 명사(띄어쓰기 없이 2~5어절 붙여 씀, 예: 뉴스모아쓰기·직전보고서읽기·찾아고치기). 관용구는
+   이름 붙은 함수다: 다음 주행은 이 이름으로 그대로 부르거나 정의를 펼쳐 고쳐 쓴다.
 8. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름"}}"""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──

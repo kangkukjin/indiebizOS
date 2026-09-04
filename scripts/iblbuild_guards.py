@@ -211,7 +211,7 @@ def check_textbook(root: Path, data: dict | None) -> list[str]:
     text = path.read_text(encoding="utf-8")
 
     # 1) 스니펫 실존 (제어 블록 어휘와 [node:action] 플레이스홀더는 제외)
-    _control = {"goal", "if", "else", "case"}
+    _control = {"goal", "if", "else", "case", "fn", "def"}     # fn/def = 함수 호출·정의(언어 개정 2026-09-05) — 어휘가 아니다
     for line in text.splitlines():
         if "WRONG" in line:
             continue

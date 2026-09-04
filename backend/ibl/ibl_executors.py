@@ -72,6 +72,8 @@ def _nest(step: Any, tool_input: dict) -> Any:
     if not isinstance(step, dict):
         return step
     out = {**step, "_depth": (tool_input.get("_depth") or 0) + 1}
+    if tool_input.get("_fn_depth") and "_fn_depth" not in out:
+        out["_fn_depth"] = tool_input["_fn_depth"]          # 함수 몸 안의 [fn:] 호출이 깊이를 잇는다(재귀 가드)
     # 블록 속 블록이 바깥 문장의 $변수를 계속 읽게 — 변수 값 봉투 계승 (2026-08-22 M2)
     if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")
                                           or out.get("_try") or out.get("_repeat") or out.get("_assign")):

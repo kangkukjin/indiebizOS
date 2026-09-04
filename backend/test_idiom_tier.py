@@ -84,6 +84,16 @@ def test_p1_slot_quoting_normalized():
     assert code_syntax_error(rag._normalize_slot_quoting('[sense:place]{query: "x", lat: ${위도}, limit: ${개수}}', slots)) is None
 
 
+def test_p1_def_body_newlines_survive_one_line_join():
+    import hippo_tree
+    from ibl_param_vocab import code_syntax_error
+    sent = '[def: 줄이기]{\n  $선별 = [table:ai]{instruction: "x", fields: ["a"]}\n  $return = $선별 >> [table:brief]{instruction: "$지시"}\n}'
+    one = hippo_tree.join_sentences(['$본문 = [fn:줄이기]{지시: "${지시}"}', sent])
+    assert "\n" not in one and "$선별 = [table:ai]" in one and "; $return = $선별" in one
+    assert code_syntax_error(one) is None                      # 한 줄 표기가 그대로 파싱된다
+    assert hippo_tree.split_sentences(one)[1].startswith("[def: 줄이기]")
+
+
 def test_p1_private_path_rejected_and_slot_names():
     import ibl_usage_rag as rag
     import hippo_tree
@@ -212,11 +222,15 @@ def _mk_db(path):
     conn.commit(); conn.close()
 
 
-def _add(db, intent, code, topic, category="single", ok=0):
+def _add(db, intent, code, topic, category="single", ok=0, alias=""):
     now = datetime.now().isoformat()
     conn = sqlite3.connect(db)
-    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, created_at, updated_at, topic) VALUES (?,?,?,?,?,?,?)",
-                       (intent, code, category, ok, now, now, topic))
+    try:
+        conn.execute("SELECT alias FROM ibl_examples LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
+    cur = conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, created_at, updated_at, topic, alias) VALUES (?,?,?,?,?,?,?,?)",
+                       (intent, code, category, ok, now, now, topic, alias))
     conn.commit(); conn.close()
     return cur.lastrowid
 
@@ -236,18 +250,25 @@ def env(tmp_path, monkeypatch):
 def test_p4_phrase_section_roundtrip_and_map(env):
     HT, db = env
     _add(db, "검색해 상위 5건", PIPE, "개발/프론트", "pipeline")
-    pid = _add(db, "찾아 읽고 고친다", "; ".join(PHRASE), "개발/프론트", "phrase", ok=2)
+    pid = _add(db, "찾아 읽고 고친다", "; ".join(PHRASE), "개발/프론트", "phrase", ok=2, alias="찾아고치기")
     path = HT.refresh_topic("개발/프론트", db)
     text = open(path, encoding="utf-8").read()
     assert "## 용례" in text and "## 관용구" in text
     assert text.index("## 용례") < text.index("## 관용구") < text.index("## 갱신 기록")
-    assert f"찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · ✓2/✗0" in text
+    assert f"### 찾아고치기 — 찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · ✓2/✗0" in text
+    assert '호출: `[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}`' in text   # 관용구 = 이름 붙은 함수
     assert "1. `" + PHRASE[0] + "`" in text
     # 용례 절엔 관용구가 섞이지 않는다
     sec = text[text.index("## 용례"):text.index("## 관용구")]
     assert "${패턴}" not in sec
     known, fresh = HT.parse_phrases(text)
-    assert known == [{"intent": "찾아 읽고 고친다", "ibl_code": "; ".join(PHRASE), "id": pid}] and fresh == []
+    assert known == [{"intent": "찾아 읽고 고친다", "ibl_code": "; ".join(PHRASE), "id": pid, "alias": "찾아고치기"}] and fresh == []
+    # 사람이 머리의 이름을 바꾸면 색인이 따라온다
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text.replace("### 찾아고치기 — ", "### 찾아서고치기 — "))
+    os.utime(path, (os.path.getmtime(path) + 5, os.path.getmtime(path) + 5))
+    assert HT.sync_topic("개발/프론트", db)["updated"] == 1
+    assert HT.rows_of("개발/프론트", db, kind="phrase")[0]["alias"] == "찾아서고치기"
     assert "개발/프론트 (1 · 관용구 1)" in HT.map_text(db)
     r = HT.recall("개발/프론트", db)
     assert r["count"] == 1 and r["phrase_count"] == 1 and r["phrases"][0]["id"] == pid
@@ -313,7 +334,7 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     xml, top_score, top_code = rag.build_execution_memory("컴포넌트 고쳐줘")
     assert top_code == PIPE and top_score == 0.7                      # 반사 top-1 은 낱말
     assert any(k.get("exclude_category") == "phrase" for k in calls)  # 낱말 채널은 관용구 제외
-    assert 'kind="phrase"' in xml and 'sentences="3"' in xml and "1. " + PHRASE[0] in xml
+    assert 'kind="phrase"' in xml and 'sentences="3"' in xml and "[def: 이름]{\n  " + PHRASE[0] in xml   # 이름 없는 옛 관용구도 정의 블록으로
     assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml
     assert thread_context.get_phrase_recall() == ["; ".join(PHRASE)]
     # 관용구 임계: MIN_SCORE 미만은 싣지 않는다(저신뢰 폴백 없음)
@@ -350,9 +371,10 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     now = datetime.now().isoformat()
     rows = [("자주", "; ".join(PHRASE), 5, 1), ("드물", '[sense:search]{query: "${q}"}; [table:take]{n: 3}', 0, 0),
             ("낱말", PIPE, 9, 0)]
+    conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
     for intent, code, sc, fc in rows:
-        conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, fail_count, created_at, updated_at, topic) VALUES (?,?,?,?,?,?,?,?)",
-                     (intent, code, "phrase" if intent != "낱말" else "pipeline", sc, fc, now, now, "개발"))
+        conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, fail_count, created_at, updated_at, topic, alias) VALUES (?,?,?,?,?,?,?,?,?)",
+                     (intent, code, "phrase" if intent != "낱말" else "pipeline", sc, fc, now, now, "개발", "자주찾기" if intent == "자주" else ""))
     conn.commit(); conn.close()
     (tmp_path / "data").mkdir()
     os.replace(db, str(tmp_path / "data" / "ibl_usage.db"))
@@ -360,8 +382,9 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     block = A._idioms_block(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
-    assert block.index("- 자주 (개발) 사용 6회:") < block.index("- 드물 (개발):")
-    assert "  1. " + PHRASE[0] in block and "  3. " + PHRASE[2] in block
+    assert block.index("- 자주찾기 — 자주 (개발) 사용 6회") < block.index("- (이름 없음) — 드물 (개발)")
+    assert '  [fn:자주찾기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block          # 그대로 쓰는 호출 한 줄
+    assert "  [def: 자주찾기]{" in block and "    " + PHRASE[0] in block and "    " + PHRASE[2] in block   # 고쳐 쓰는 정의 블록
     assert PIPE not in block                                   # 낱말은 싣지 않는다
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     assert "드물" not in A._idioms_block({"self"})              # sense 가 허용 밖이면 그 관용구는 빠진다

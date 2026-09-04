@@ -86,6 +86,7 @@ class UsageExample:
     avg_ms: float = -1.0      # 성공 실행시간 EWMA(-1=미측정) — 시간 선택압의 회상 표면
     avg_tokens: float = -1.0  # 성공 턴 토큰 EWMA(-1=미측정) — 토큰 선택압의 회상 표면
     topic: str = ""           # 주제 가지(hippo_tree) — 빈 값=뿌리
+    alias: str = ""           # 관용구 이름(category=phrase) — `[fn:이름]{슬롯}` 으로 호출(2026-09-05)
 
 
 # =============================================================================
@@ -257,6 +258,8 @@ class IBLUsageDB:
                 conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {_col} REAL DEFAULT -1.0")
         if "topic" not in cols:   # 주제 가지 트리(hippo_tree, 2026-09-03) — 빈 값=뿌리(미배치)
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
+        if "alias" not in cols:   # 관용구 이름(2026-09-05, 관용구=이름 붙은 함수) — [fn:이름] 으로 부른다. 낱말은 빈 값
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -531,7 +534,7 @@ class IBLUsageDB:
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
-                    avg_tokens: float = -1.0, topic: str = "") -> int:
+                    avg_tokens: float = -1.0, topic: str = "", alias: str = "") -> int:
         """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
@@ -548,20 +551,37 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (intent, ibl_code, nodes, category, difficulty, source, tags,
                  float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
                  float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
-                 _norm_topic(topic))
+                 _norm_topic(topic), (alias or "").strip())
             )
             example_id = cursor.lastrowid
             conn.commit()
 
-        # 벡터 인덱스에 추가
-        self._index_single(example_id, intent, ibl_code)
+        # 벡터 인덱스에 추가 (관용구는 이름도 검색 텍스트에)
+        self._index_single(example_id, (f"{alias} {intent}" if alias else intent), ibl_code)
         _tree_refresh(topic)
         return example_id
+
+    def find_phrase_by_alias(self, name: str) -> Optional[Dict]:
+        """이름으로 관용구 하나 — `[fn:이름]` 해소의 셋째 길(프로그램 정의 → 저장 워크플로 → 관용구). 없으면 None."""
+        if not name:
+            return None
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias "
+                "FROM ibl_examples WHERE category='phrase' AND alias = ? ORDER BY updated_at DESC LIMIT 1",
+                (name.strip(),)).fetchone()
+        return dict(row) if row else None
+
+    def phrase_aliases(self, limit: int = 12) -> List[str]:
+        with self._get_connection() as conn:
+            rows = conn.execute("SELECT alias FROM ibl_examples WHERE category='phrase' AND COALESCE(alias,'') != '' "
+                                "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?", (limit,)).fetchall()
+        return [r[0] for r in rows]
 
     def add_examples_batch(self, examples: List[Dict]) -> int:
         """배치 추가 (임베딩 배치 생성)
@@ -1276,7 +1296,7 @@ class IBLUsageDB:
             placeholders = ','.join('?' * len(all_ids))
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
-                           source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic
+                           source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1323,7 +1343,8 @@ class IBLUsageDB:
                 success_rate=round(success_rate, 2) if total else -1.0,
                 avg_ms=round(float(meta['avg_ms']), 0) if (meta['avg_ms'] or -1) >= 0 else -1.0,
                 avg_tokens=round(float(meta['avg_tokens']), 0) if (meta['avg_tokens'] or -1) >= 0 else -1.0,
-                topic=meta['topic'] or ''
+                topic=meta['topic'] or '',
+                alias=meta.get('alias') or ''
             ))
 
             if len(results) >= top_k:

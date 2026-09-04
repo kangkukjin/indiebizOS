@@ -257,6 +257,8 @@ def foreign_actions(code: str) -> List[str]:
     nodes = load_nodes_installed().get("nodes") or {}
     bad: List[str] = []
     for node, action in _ACT_RE.findall(code or ""):
+        if node == "fn":
+            continue                        # 함수 호출(언어 개정 2026-09-05) — 어휘가 아니다
         cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
         if cfg is None or not self_can_run(node, action, cfg):
             bad.append(f"{node}:{action}")

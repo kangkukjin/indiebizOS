@@ -30,31 +30,8 @@ tee 되어(공개파일 스트리밍 트랜스코드 선례) 두 번째 재생�
 - duration 패치: yt-dlp 의 총 길이를 fMP4 init(mvhd·tkhd·mdhd)에 박아 생방송에서도
   시크바에 총 길이가 정확히 보인다.
 
-## 앱 표면 — ▶️ 유튜브 (yttv 계기, 시청 전용 앱)
-음악 앱(🎵 유튜브 뮤직=ytmusic)과 별개의 **동영상 시청 앱**. 유튜브 앱을 닮은 3탭:
-- **홈**: `[sense:video]{op:"feed"}` — 추천 피드. 시청 기록(data/youtube_watch.json,
-  릴레이 서버가 재생마다 적재)에서 ①본 채널의 새 영상(채널 RSS) ②본 제목 연관
-  검색(ytsearch)을 병렬로 모아 라운드로빈 병합(본 것 제외). 기록 없으면 콜드스타트
-  기본 카테고리. **볼수록 개인화되는 자기강화 루프**(실측: 1편 시청 후 피드 전환).
-- **검색**: search_youtube → 카드 그리드.
-- **기록**: `op:"history"` — 시청 기록(최신순 dedup).
-- 카드 클릭 → **시청 페이지**(`op:"watch"`): 릴레이 플레이어 + 연관 동영상 8건.
-  연관 클릭=`recursive` 드릴 → 다음 영상 시청 페이지(유튜브식 무한 탐색).
-  watch 는 열리면서 릴레이 해소를 **백그라운드 예열**(`_prewarm_relay`) — 재생 버튼이
-  거의 즉시 시작(실측 0.3초).
-- 구현: `tool_watch.py`(youtube 패키지 — feed/watch/history). ★phone_render:false —
-  폰 네이티브는 relay 상대 URL 이 폰 자신을 가리켜 죽는다(릴레이=PC 몸). 원격 런처는 됨.
-
-렌더러 어휘(이 앱을 위해 신설, 두 렌더러 동기): `media_player` 의 `lazy: true`
-(preload=none — 항목마다 스트림을 미리 물면 항목 수만큼 ffmpeg 가 뜬다),
-`video: '{is_video}'`(또는 true), `poster: '{thumb}'` / `card_list` 카드의
-`wide: true`(16:9 가로 썸네일 상단 — 유튜브 모바일 홈 카드).
-
-## 추천의 정직한 경계
-유튜브 계정 개인화 추천=로그인 쿠키 없인 불가(안 함). 인기 급상승 페이지=2025년
-유튜브가 제거(실측: home 리다이렉트 — feed/trending 다시 시도하지 말 것). 그래서
-추천 재료는 전부 비로그인: 채널 RSS(youtube.com/feeds/videos.xml?channel_id=)·
-ytsearch·자기 시청 기록.
+> 앱 표면(▶️ 유튜브 yttv 계기)과 `op:feed/watch/history` 는 2026-09-05 은퇴했다.
+> 릴레이 자체는 `[limbs:music]{op:"relay"}` 로 살아 있다(아래).
 
 ## 적응형 재생 (HLS — 기본 경로, 넷플릭스식)
 `/yt/hls/{video_id}/master.m3u8` — **유튜브의 화질 사다리(avc1 144~1080p DASH)를

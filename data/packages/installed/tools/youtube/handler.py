@@ -23,11 +23,7 @@ _MODULE_KEY = "tool_youtube_singleton"
 def load_tool_youtube():
     return load_singleton(__file__, "tool_youtube", module_key=_MODULE_KEY)
 
-_WATCH_KEY = "tool_watch_singleton"
 
-def load_tool_watch():
-    """시청 앱 면(피드·시청·기록) — tool_youtube 와 같은 싱글턴 로딩 패턴."""
-    return load_singleton(__file__, "tool_watch", module_key=_WATCH_KEY)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -153,21 +149,10 @@ def _op_seek(tool_input, yt):
     return yt.seek_youtube(pos)
 
 
-def _op_feed(tool_input, yt):
-    return load_tool_watch().feed(limit=tool_input.get('limit', 24))
 
 
-def _op_watch(tool_input, yt):
-    vid = tool_input.get('video_id')
-    if not vid and tool_input.get('url'):
-        vid = yt.extract_video_id(tool_input.get('url', ''))
-    if not vid:
-        return {"success": False, "error": "video_id 또는 url 파라미터가 필요합니다."}
-    return load_tool_watch().watch(vid)
 
 
-def _op_history(tool_input, yt):
-    return load_tool_watch().history(limit=tool_input.get('limit', 40))
 
 
 def _op_channel(tool_input, yt):
@@ -258,9 +243,6 @@ _OP_DISPATCHERS = {
         "transcript": _op_transcript,
         "languages": _op_languages,
         "summarize": _op_summarize,
-        "feed": _op_feed,
-        "watch": _op_watch,
-        "history": _op_history,
         "channel": _op_channel,
     },
 }

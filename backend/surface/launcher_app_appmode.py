@@ -12,9 +12,28 @@ let VIEW_CTX=null; /* 마지막 렌더의 {view,data} — 행 버튼/드릴 디�
 let SPLIT=false, LIST=null; /* master-detail: SPLIT=2분할 모드, LIST={view,data}=리스트 컨텍스트 */
 const CUSTOM_RENDERERS={}; /* escape hatch: manifest renderer:"custom:이름" → 전용 렌더 함수 (지도·플레이어 등) */
 
+let _revalidating=false;
 async function loadInstruments(force){
-  if(INSTRUMENTS.length && !force) return;  /* force=true 면 매니페스트 재fetch (계기/어휘 변경 반영) */
+  if(INSTRUMENTS.length && !force){ _revalidateInstruments(); return; }  /* 캐시로 즉시 그림 — 재확인은 배경에서(아래) */
   try{ const r=await jfetch('/launcher/instruments'); if(r.ok){ const d=await r.json(); INSTRUMENTS=d.instruments||[]; } }catch(e){}
+}
+
+/* 매니페스트 배경 재확인 — 계기가 은퇴하면(어휘 app: 블록·instruments yaml 삭제) 서버 목록은
+   즉시 바뀌는데, 세션이 오래 사는 폰 WebView·원격 탭은 첫 fetch 목록을 영원히 들고 있어
+   죽은 아이콘을 계속 광고했다(2026-09-05). 목록이 달라졌고 홈을 보고 있을 때만 조용히 다시 그린다. */
+async function _revalidateInstruments(){
+  if(_revalidating) return;
+  _revalidating=true;
+  try{
+    const r=await jfetch('/launcher/instruments'); if(!r.ok) return;
+    const fresh=((await r.json()).instruments)||[];
+    const key=l=>l.map(i=>(i.id||'')+':'+(i.name||'')).join('|');
+    if(!fresh.length || key(fresh)===key(INSTRUMENTS)) return;
+    INSTRUMENTS=fresh;
+    const home=document.getElementById('appHome');
+    if(appHomeRendered && home && home.style.display!=='none') await renderAppHome();
+  }catch(e){}
+  finally{ _revalidating=false; }
 }
 """
 

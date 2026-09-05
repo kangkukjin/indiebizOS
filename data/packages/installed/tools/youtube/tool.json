@@ -92,22 +92,19 @@
     },
     {
       "name": "video_op",
-      "description": "유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.\n- op=info(기본): 메타데이터(제목·조회수·채널). url/video_id 필수.\n- op=transcript: 자막/스크립트. language 옵션.\n- op=languages: 사용 가능한 자막 언어 목록.\n- op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.\n- op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션.\n- op=feed: 추천 홈 피드 (시청 기록 기반, 로그인 불요). limit 옵션.\n- op=watch: 시청 페이지 (맥 경유 릴레이 플레이어+연관 동영상). video_id 필수.\n- op=history: 시청 기록 목록. limit 옵션.",
+      "description": "유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.\n- op=info(기본): 메타데이터(제목·조회수·채널). url/video_id 필수.\n- op=transcript: 자막/스크립트. language 옵션.\n- op=languages: 사용 가능한 자막 언어 목록.\n- op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.\n- op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션.\n",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "info(기본)/channel/transcript/languages/summarize/feed/watch/history",
+            "description": "info(기본)/channel/transcript/languages/summarize",
             "enum": [
               "info",
               "transcript",
               "languages",
               "channel",
-              "summarize",
-              "feed",
-              "watch",
-              "history"
+              "summarize"
             ],
             "default": "info"
           },
@@ -137,7 +134,7 @@
           },
           "limit": {
             "type": "integer",
-            "description": "[channel/feed/history] 결과 수 (기본 channel 5 / feed 24 / history 40)"
+            "description": "[channel] 결과 수 (기본 5)"
           }
         },
         "required": []

@@ -10,6 +10,7 @@
     "context7",
     "culture",
     "data-ops",
+    "finance-record",
     "health-record",
     "investment",
     "kosis",
@@ -28,7 +29,6 @@
     "web"
   ],
   "runnable_actions": [
-    "engines:icon",
     "engines:image_gemini",
     "engines:image_read",
     "limbs:android",
@@ -60,6 +60,7 @@
     "self:edit",
     "self:file_find",
     "self:fill",
+    "self:finance",
     "self:folder_note",
     "self:forage",
     "self:goal",

@@ -274,7 +274,6 @@
     }
   },
   "action_owner": {
-    "engines:icon": "media_producer",
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",

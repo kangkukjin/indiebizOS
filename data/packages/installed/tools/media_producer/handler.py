@@ -78,8 +78,6 @@ def execute(tool_input: dict, context) -> str:
         return fn(tool_input, output_base)
     elif tool_name == "generate_gemini_image":
         return generate_gemini_image(tool_input, output_base)
-    elif tool_name == "generate_icon":
-        return generate_icon(tool_input, output_base)
     elif tool_name == "read_image":
         # 단일 액션 + op 분기 (2026-08-05 image_critic 흡수, 변형=op).
         # 구 read_gemini_image — 2026-08-27 벤더 중립화(모델은 기어가 단독 결정, vision_read.py).
@@ -800,14 +798,6 @@ def generate_ai_image(tool_input, output_base):
         return _err(f"이미지 생성 중 오류 발생: {str(e)}")
 
 
-# ─────────────────────────────────────────────────────────────────────
-# [engines:icon] — 앱 전용(prompt_hidden) 아이콘 생성
-#   기본 = Gemini 이미지 모델 단일 호출(한국어 아이디어 직접 이해 — 확장 단계가
-#   모델 안으로 접힘, GEMINI_API_KEY 는 맥·폰 공통 프로비저닝) → 실패/키 없음 시
-#   폴백 = AI 확장 프롬프트 → Pollinations flux(무료).
-#   → 미리보기(data URI) 반환 + (폰이면) 이미지 클립보드 자동 복사(카톡 붙여넣기용).
-#   ★AI 어휘에 노출 안 됨(prompt_hidden). runs_on: anywhere 라 폰서 로컬 실행.
-# ─────────────────────────────────────────────────────────────────────
 
 _ICON_AUTHOR_SYSTEM_PROMPT = """You are an expert prompt engineer for CUTE CARTOON ICON / STICKER generation.
 Given a user's short idea (often written in Korean), output ONE single-line English
@@ -869,53 +859,6 @@ def _flatten_expanded(text: str) -> str:
     return t[:600]
 
 
-def _expand_icon_prompt(user_prompt: str, style_hint: str = "") -> str:
-    """사용자의 짧은 아이디어 → 전문가 영어 아이콘 프롬프트.
-
-    ★Gemini 텍스트 모델로 확장 — GEMINI_API_KEY 는 맥·폰 양쪽에 프로비저닝돼 있어
-    폰-직결에서도 맥 없이 진짜 AI 확장이 된다(폰 인지는 맥 위임이라 Anthropic 키가
-    없다 — 그래서 content_text provider 대신 Gemini 를 쓴다). 실패 시 템플릿 폴백."""
-    base = (user_prompt or "").strip()
-    if not base:
-        return base
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        try:
-            import httpx
-            # ★gemini-flash-latest 별칭은 2026-07 중순 이후 thinkingBudget:0 을
-            # 400 INVALID_ARGUMENT 로 거부(별칭이 tb=0 미지원 모델로 이동) →
-            # 버전 고정 gemini-2.5-flash 사용(body_ask._compile_gemini 와 동일 조합).
-            model = os.environ.get("ICON_EXPAND_MODEL", "gemini-2.5-flash")
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-            umsg = base if not style_hint else f"{base}\n\nStyle hint: {style_hint}"
-            payload = {
-                "systemInstruction": {"parts": [{"text": _ICON_AUTHOR_SYSTEM_PROMPT}]},
-                "contents": [{"parts": [{"text": umsg}]}],
-                # thinkingBudget=0: flash-latest 가 thinking 모델이면 추론이 토큰을 먹어
-                # 출력이 잘려 주제가 유실됨(빈/조각 응답) → thinking 끄고 넉넉히.
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "maxOutputTokens": 400,
-                    "thinkingConfig": {"thinkingBudget": 0},
-                },
-            }
-            with httpx.Client(timeout=30.0) as client:
-                r = client.post(url, params={"key": api_key}, json=payload,
-                                headers={"Content-Type": "application/json"})
-                r.raise_for_status()
-                data = r.json()
-            parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
-            out = "".join(p.get("text", "") for p in parts)
-            out = _flatten_expanded(out)
-            if len(out) >= 4:
-                return out
-            print(f"[icon] Gemini 확장 결과 비어있음 → 템플릿 폴백")
-        except Exception as e:
-            print(f"[icon] Gemini 프롬프트 확장 실패 → 템플릿 폴백: {e}")
-    else:
-        print("[icon] GEMINI_API_KEY 없음 → 템플릿 폴백")
-    extra = f", {style_hint}" if style_hint else ""
-    return f"{base}{extra}, {_ICON_FALLBACK_STYLE}"
 
 
 def _sniff_image_mime(b: bytes):
@@ -933,151 +876,8 @@ def _sniff_image_mime(b: bytes):
 _ICON_GEMINI_MODEL = "gemini-3.1-flash-image"
 
 
-def _icon_via_gemini(user_prompt: str, style_hint: str, api_key: str):
-    """Gemini 이미지 모델 단일 호출 → (이미지 bytes, 사용한 프롬프트).
-
-    지시 이해력이 좋아 한국어 아이디어를 직접 넣는다 — 별도 확장 호출 불필요
-    (2단 호출이 1단으로 접힘). 출력은 1024px 고정이라 호출부에서 다운스케일."""
-    import httpx
-
-    extra = f" Extra style hint: {style_hint}." if style_hint else ""
-    prompt = (f"Draw a KakaoTalk emoticon sticker of: {user_prompt}.{extra} "
-              f"Style: {_ICON_FALLBACK_STYLE}")
-    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{_ICON_GEMINI_MODEL}:generateContent")
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseModalities": ["TEXT", "IMAGE"],
-            "imageConfig": {"aspectRatio": "1:1"},
-        },
-    }
-    with httpx.Client(timeout=120.0) as client:
-        r = client.post(url, params={"key": api_key}, json=payload,
-                        headers={"Content-Type": "application/json"})
-        r.raise_for_status()
-        data = r.json()
-    parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
-    for p in parts:
-        inline = p.get("inlineData") or p.get("inline_data")
-        if inline and inline.get("data"):
-            return base64.b64decode(inline["data"]), prompt
-    raise RuntimeError(f"응답에 이미지 파트 없음: {str(data)[:200]}")
 
 
-def generate_icon(tool_input, output_base):
-    """[engines:icon] 앱 전용 아이콘 생성기. dict 통화 반환(app blocks 미리보기)."""
-    import urllib.parse
-    import httpx
-
-    user_prompt = (tool_input.get("prompt") or tool_input.get("q") or "").strip()
-    if not user_prompt:
-        return {"success": False, "error": "무엇을 그릴지 한 줄로 알려주세요.", "blocks": []}
-
-    try:
-        size = int(tool_input.get("size") or 384)
-    except Exception:
-        size = 384
-    size = max(128, min(size, 1024))
-    style_hint = (tool_input.get("style") or "").strip()
-    do_copy = tool_input.get("copy")
-    do_copy = True if do_copy is None else bool(do_copy)
-
-    # 1순위 = Gemini 이미지(유료 ~$0.07/장, 벡터급 선·스타일 이행) — 키는 맥·폰 공통.
-    img_bytes = None
-    engine = None
-    expanded = None
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        try:
-            img_bytes, expanded = _icon_via_gemini(user_prompt, style_hint, api_key)
-            engine = _ICON_GEMINI_MODEL
-        except Exception as e:
-            print(f"[icon] Gemini 이미지 생성 실패 → Pollinations 폴백: {e}")
-
-    # 폴백 = 확장 프롬프트 → Pollinations flux(무료).
-    # flux 는 ~1024px 학습 분포 — 저해상도 네이티브 생성은 품질 열화라
-    # 크게 생성한 뒤 아래 공통 LANCZOS 다운스케일(슈퍼샘플링)을 태운다.
-    if img_bytes is None:
-        expanded = _expand_icon_prompt(user_prompt, style_hint)
-        gen_size = size if size >= 768 else 768
-        encoded = urllib.parse.quote(expanded)
-        url = (f"https://image.pollinations.ai/prompt/{encoded}"
-               f"?width={gen_size}&height={gen_size}&model=flux&nologo=true")
-        try:
-            with httpx.Client(timeout=120.0, follow_redirects=True) as client:
-                r = client.get(url)
-                r.raise_for_status()
-                img_bytes = r.content
-            engine = "flux"
-        except Exception as e:
-            return {"success": False, "error": f"아이콘 생성 실패: {e}",
-                    "prompt": expanded, "blocks": []}
-
-    # 공통 다운스케일 — 두 엔진 다 요청 size 보다 크게 생성됨. PNG 재인코딩으로 mime 확정.
-    try:
-        from PIL import Image
-        import io
-        im = Image.open(io.BytesIO(img_bytes))
-        if im.size != (size, size):
-            im = im.convert("RGB").resize((size, size), Image.LANCZOS)
-            buf = io.BytesIO()
-            im.save(buf, format="PNG")
-            img_bytes = buf.getvalue()
-    except Exception as e:
-        print(f"[icon] 다운스케일 실패 → 원본 크기 사용: {e}")
-
-    mime, ext = _sniff_image_mime(img_bytes)
-    out_path = os.path.join(output_base, f"icon_{uuid.uuid4().hex[:8]}{ext}")
-    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
-    try:
-        with open(out_path, "wb") as f:
-            f.write(img_bytes)
-    except Exception as e:
-        return {"success": False, "error": f"아이콘 저장 실패: {e}",
-                "prompt": expanded, "blocks": []}
-
-    data_uri = f"data:{mime};base64," + base64.b64encode(img_bytes).decode("utf-8")
-
-    # 이미지 클립보드 자동 복사(ClipData.newUri) — 카톡 등에서 붙여넣기.
-    # ★capability 게이트: `from java import jclass` 는 폰 네이티브 런타임에만 성공
-    # (맥/PC 는 ImportError → 조용히 스킵). 환경변수 프로파일 분기 대신 이 능력감지가 무포크 규율.
-    copied = False
-    copy_note = ""
-    if do_copy:
-        try:
-            from java import jclass  # 폰 전용 브리지 = 능력 감지
-            MS = jclass("com.indiebiz.phoneagent.MediaSaver")
-            res = str(MS.imageToClipboard(img_bytes, f"icon_{uuid.uuid4().hex[:8]}{ext}", mime))
-            copied = res.startswith("OK")
-            if not copied:
-                copy_note = res
-        except ImportError:
-            pass  # 맥/PC — 폰 클립보드 없음(정상)
-        except Exception as e:
-            copy_note = str(e)
-
-    if copied:
-        status = "✓ 클립보드에 복사됨 — 카카오톡 대화창에서 붙여넣기하세요"
-    elif do_copy and copy_note:
-        status = f"생성 완료 (자동 복사 실패: {copy_note})"
-    elif do_copy:
-        status = "생성 완료 (클립보드 복사는 폰에서만 동작)"
-    else:
-        status = "생성 완료"
-
-    return {
-        "success": True,
-        "blocks": [
-            {"type": "image", "src": data_uri, "caption": user_prompt},
-            {"text": status},
-        ],
-        "message": status,
-        "prompt": expanded,
-        "engine": engine,
-        "path": os.path.abspath(out_path),
-        "copied": copied,
-    }
 
 
 

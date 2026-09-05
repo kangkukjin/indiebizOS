@@ -60,7 +60,6 @@
       ]
     },
     "instruments": [
-      "audio_briefing",
       "newspaper",
       "report"
     ],
@@ -95,6 +94,7 @@
     "packages.tools": [],
     "packages.extensions": [],
     "instruments": [
+      "audio_briefing",
       "folder_survey"
     ],
     "scripts": [

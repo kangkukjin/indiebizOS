@@ -19,11 +19,8 @@ nodes:
 
           - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션.
 
-          - feed: 추천 홈 피드 (시청 기록의 채널 RSS + 연관 검색, 기록 없으면 기본 카테고리). limit 옵션.
 
-          - watch: 시청 페이지 (릴레이 스트림 플레이어 + 연관 동영상). video_id 필수.
 
-          - history: 시청 기록 목록. limit 옵션.
 
           '
         target_key: op
@@ -35,10 +32,6 @@ nodes:
         ops:
           default: info
           returns:
-            # feed·history 는 items(카드 행들) 실측 — 08-04 yttv 신설 때 op 레벨 선언
-            # 누락 (2026-08-19 드리프트 스윕 동기화).
-            feed: items
-            history: items
             summarize: effect
             # info 는 6필드 레코드(=표의 한 줄) — 1행 스냅샷 병기 (2026-08-24 B36-2,
             # sense:stock#info 선례). 이걸 안 내주면 upload_date 로 거르지 못한다.
@@ -48,14 +41,10 @@ nodes:
             info: false
             transcript: false
             languages: false
-            history: false
-            feed: false
             channel: false
           fixture:
             transcript: '[sense:video]{op: "transcript", video_id: "jNQXAC9IVRw"}'
             languages: '[sense:video]{op: "languages", video_id: "jNQXAC9IVRw"}'
-            feed: '[sense:video]{op: "feed", limit: 5}'
-            history: '[sense:video]{op: "history", limit: 5}'
             channel: '[sense:video]{op: "channel", handle: "@YouTube", limit: 3}'
           values:
             info: 동영상 메타데이터 (제목·조회수·채널)
@@ -63,10 +52,7 @@ nodes:
             languages: 사용 가능한 자막 언어 목록
             channel: 채널 핸들·URL·ID 해석 + 채널 메타데이터와 최신 영상
             summarize: 자막+AI요약+HTML 보고서 생성
-            feed: 추천 홈 피드 (시청 기록 기반 채널 RSS+연관 검색, 콜드스타트=기본 카테고리)
-            watch: 시청 페이지 (video_id — 맥 경유 릴레이 플레이어 + 연관 동영상)
-            history: 시청 기록 (최신순, limit 옵션)
-        implementation: youtube 패키지 op 분기. info=get_youtube_info, channel=get_youtube_channel(yt-dlp+공개 HTML channelId 폴백+RSS), transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube, feed/watch/history=tool_watch.py(채널 RSS·ytsearch·youtube_watch.json — 재생 로그는 api_ytrelay 가 적재).
+        implementation: youtube 패키지 op 분기. info=get_youtube_info, channel=get_youtube_channel(yt-dlp+공개 HTML channelId 폴백+RSS), transcript=get_youtube_transcript, languages=list_available_transcripts, summarize=summarize_youtube.
         keywords:
         - youtube
         - 유튜브
@@ -78,133 +64,6 @@ nodes:
         - 피드
         - 채널
         - 핸들
-        app:
-          instrument: yttv
-          icon: ▶️
-          name: 유튜브
-          order: 8
-          # 유튜브 앱을 닮은 3탭 — 홈(추천)/검색/기록. 카드 클릭=시청 페이지(플레이어+연관),
-          # 연관 클릭=recursive 드릴로 다음 영상(유튜브식 무한 탐색). 재생=맥 경유 릴레이
-          # (/yt/relay — 브라우저는 유튜브에 직접 접속하지 않음, 한 번 본 것은 캐시 즉시 재생).
-          # ★phone_render:false — 폰 네이티브는 relay 상대 URL 이 폰 자신을 가리켜 죽는다
-          #   (릴레이 서버·ffmpeg=PC 몸). 원격 런처(리모컨)와 데스크탑만.
-          modes:
-          - name: 홈
-            auto_run: true
-            phone_render: false
-            note: 추천은 내 시청 기록으로 만듭니다(본 채널의 새 영상 + 본 주제 연관 검색) — 유튜브 계정 추천과 달리 전부 이 기기 안의 기록입니다. 처음엔 기본 카테고리가 나오고, 보실수록 개인화됩니다.
-            action: '[sense:video]{op: "feed"}'
-            view:
-            - type: card_list
-              from: items
-              empty_from: message
-              card:
-                wide: true
-                title: '{title}'
-                lines:
-                - '{channel} · {src}'
-                image: '{thumb}'
-              item_click:
-                action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                view:
-                - type: media_player
-                  from: items
-                  lazy: true
-                  video: true
-                  src: '{stream}'
-                  src_low: '{stream_low}'
-                  src_hls: '{stream_hls}'
-                  poster: '{thumb}'
-                  title: '{title} · {channel}'
-                - type: card_list
-                  from: related
-                  card:
-                    wide: true
-                    title: '{title}'
-                    lines:
-                    - '{channel} · {duration}'
-                    image: '{thumb}'
-                  item_click:
-                    action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                    recursive: true
-          - name: 검색
-            phone_render: false
-            inputs:
-            - key: q
-              type: text
-              placeholder: 동영상 검색
-              required: true
-            action: '[sense:search_youtube]{query: "$q", count: 12}'
-            view:
-            - type: card_list
-              from: items
-              empty_from: message
-              card:
-                wide: true
-                title: '{title}'
-                lines:
-                - '{channel} · {duration}'
-                image: '{thumb}'
-              item_click:
-                action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                view:
-                - type: media_player
-                  from: items
-                  lazy: true
-                  video: true
-                  src: '{stream}'
-                  src_low: '{stream_low}'
-                  src_hls: '{stream_hls}'
-                  poster: '{thumb}'
-                  title: '{title} · {channel}'
-                - type: card_list
-                  from: related
-                  card:
-                    wide: true
-                    title: '{title}'
-                    lines:
-                    - '{channel} · {duration}'
-                    image: '{thumb}'
-                  item_click:
-                    action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                    recursive: true
-          - name: 기록
-            auto_run: true
-            phone_render: false
-            action: '[sense:video]{op: "history"}'
-            view:
-            - type: card_list
-              from: items
-              empty_from: message
-              card:
-                wide: true
-                title: '{title}'
-                lines:
-                - '{channel} · {duration}'
-                image: '{thumb}'
-              item_click:
-                action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                view:
-                - type: media_player
-                  from: items
-                  lazy: true
-                  video: true
-                  src: '{stream}'
-                  src_low: '{stream_low}'
-                  src_hls: '{stream_hls}'
-                  poster: '{thumb}'
-                  title: '{title} · {channel}'
-                - type: card_list
-                  from: related
-                  card:
-                    wide: true
-                    title: '{title}'
-                    lines:
-                    - '{channel} · {duration}'
-                    image: '{thumb}'
-                  item_click:
-                    action: '[sense:video]{op: "watch", video_id: "{video_id}"}'
-                    recursive: true
       search_youtube:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           limit: [count]
@@ -232,8 +91,6 @@ nodes:
           # 명시적 modes — 검색/큐 두 탭을 한 액션이 선언(주식/음악앱 선례).
           # ★primary 가 modes 를 선언하면 다른 액션의 싱글 mode 블록은 무시되므로
           #   큐 탭도 여기로 이사(limbs:music 의 app 블록은 제거).
-          # 동영상 시청은 별도 앱(yttv ▶️ 유튜브 — sense:video 의 app 블록) — 이 앱은
-          # 원래 목적(음악 재생·저장) 그대로.
           modes:
           - name: 검색
             inputs:
@@ -408,17 +265,13 @@ tool_json:
 
       - op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션.
 
-      - op=feed: 추천 홈 피드 (시청 기록 기반, 로그인 불요). limit 옵션.
-
-      - op=watch: 시청 페이지 (맥 경유 릴레이 플레이어+연관 동영상). video_id 필수.
-
-      - op=history: 시청 기록 목록. limit 옵션.'
+'
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: info(기본)/channel/transcript/languages/summarize/feed/watch/history
+          description: info(기본)/channel/transcript/languages/summarize
         url:
           type: string
           description: 유튜브 URL
@@ -439,5 +292,5 @@ tool_json:
           description: '[summarize] 요약 길이(기본 3000)'
         limit:
           type: integer
-          description: '[channel/feed/history] 결과 수 (기본 channel 5 / feed 24 / history 40)'
+          description: '[channel] 결과 수 (기본 5)'
       required: []

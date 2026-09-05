@@ -663,6 +663,55 @@ def _stamp(topic: str, path: str) -> None:
         pass
 
 
+PROPOSALS_NAME = "_topic_proposals.json"      # 트리 폴더 안(gitignore) — 새 하위 가지 제안의 횟수 원장
+TOPIC_BIRTH_MIN = 2                             # 같은 하위 가지 제안이 이만큼 되풀이돼야 태어난다
+
+
+def settle_topic(proposed: str, db_path: Optional[str] = None) -> Tuple[str, str]:
+    """증류가 적어 낸 topic 을 실제로 기록할 가지로 정한다 — (가지, 안내문).
+
+    반성 프롬프트는 "한두 건짜리 가지는 만들지 마라" 고 말하지만 경량 반성기는 한 주행에도 새 하위 가지를
+    낳는다(2026-09-05 ep2836: '개발/설정 값 올리기' 1건짜리 출생). 산문 규칙은 관문이 아니다 — 여기서
+    데이터로 집행한다: **새 하위 가지(깊이 2+)는 같은 제안이 TOPIC_BIRTH_MIN 번 되풀이돼야 태어나고**,
+    그 전까지는 가장 가까운 기존 조상 가지에 기록한다(빈도가 증명하고 나서 칸이 생기는 결정화 사다리와 같은 규칙).
+    기존 가지·새 최상위 가지(조상이 없는 새 주제)는 그대로 통과한다.
+    """
+    t = norm_topic(proposed)
+    if not t:
+        return "", ""
+    existing = set(all_topics(db_path))
+    if t in existing or "/" not in t:
+        return t, ""
+    ancestor = parent_of(t)
+    while ancestor and ancestor not in existing:
+        ancestor = parent_of(ancestor)
+    if not ancestor:
+        return t, ""                                   # 조상이 하나도 없는 새 주제 — 새 최상위 가지와 같다
+    path = os.path.join(doc_dir(), PROPOSALS_NAME)
+    try:
+        ledger = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
+    except (OSError, ValueError):
+        ledger = {}
+    n = int(ledger.get(t, 0)) + 1
+    if n >= TOPIC_BIRTH_MIN:
+        ledger.pop(t, None)
+        _save_json(path, ledger)
+        return t, f"새 가지 '{t}' 출생(같은 제안 {n}회)"
+    ledger[t] = n
+    _save_json(path, ledger)
+    return ancestor, (f"새 하위 가지 제안 '{t}' 은 {n}회째 — 되풀이가 증명될 때까지({TOPIC_BIRTH_MIN}회) "
+                      f"조상 가지 '{ancestor}' 에 기록")
+
+
+def _save_json(path: str, obj) -> None:
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False, indent=1)
+    except OSError:
+        pass
+
+
 def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") -> str:
     """DB → 문서(`## 용례` 절만 다시 그린다; 요약·guide·산문·갱신 기록 보존). 없으면 껍데기 생성."""
     topic = norm_topic(topic)

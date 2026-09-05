@@ -1057,6 +1057,14 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         intent = distilled.get("intent", "").strip()
         code = distilled.get("code", "").strip()
         _topic = str(distilled.get("topic", "") or "").strip()
+        # 새 하위 가지의 출생은 되풀이가 증명한다(2026-09-05, hippo_tree.settle_topic) — 1건짜리 가지 억제
+        try:
+            import hippo_tree as _ht
+            _topic, _topic_note = _ht.settle_topic(_topic)
+            if _topic_note:
+                print(f"[경험증류] 가지 판정: {_topic_note}")
+        except Exception as _e:
+            print(f"[경험증류] 가지 판정 생략: {_e}")
 
         # 주행 기록 (2026-09-04, 사용자 판정): 대표 문장이 있든 없든, 이 주행에서 성공한 문장들을
         # 주제 가지 문서의 `## 주행` 절에 실행 순서대로 남긴다 — 프로그램급 주행이 '재사용 패턴 없음'

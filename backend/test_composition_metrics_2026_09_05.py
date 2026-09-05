@@ -237,11 +237,15 @@ def test_distill_prompt_asks_for_retyped_and_mergeable():
     assert "[node:" not in p                                                # G5 자리표 금지 유지
 
 
-def test_distill_passes_cost_and_missed_to_note_run(monkeypatch):
+def test_distill_passes_cost_and_missed_to_note_run(monkeypatch, tmp_path):
     import ibl_usage_db as mod
     import thread_context
     import hippo_tree
     import ibl_usage_rag as rag
+    # 가지 출생 관문(settle_topic, 2026-09-05): '보고서/X' 가 임시 트리에 실존해야 그 가지로 기록된다(실 트리 무접촉)
+    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
+    os.makedirs(tmp_path / "tree" / "보고서" / "X")
+    (tmp_path / "tree" / "보고서" / "X" / hippo_tree.DOC_NAME).write_text("# 보고서/X\n", encoding="utf-8")
     monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: None)
     monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
     monkeypatch.setattr(mod.IBLUsageDB, "hippo_disabled", classmethod(lambda cls: False))

@@ -1022,11 +1022,14 @@ def execute(tool_input: dict, context) -> str:
                 # 구현=fs_edit.py 형제 모듈 (1500줄 규칙 — handler 는 부채 파일)
                 return "Error: " + _load_sibling("fs_edit").miss_diagnosis(
                     content, old_string, new_string)
-            elif count > 1:
-                return f"Error: 교체할 문자열이 {count}번 발견되었습니다. 더 구체적인 문자열을 지정하세요."
+            replace_all = bool(tool_input.get("replace_all", False))   # 2026-09-05(ep2836): 모델이 이미 쓰던 인자 — 선언·구현
+            if count > 1 and not replace_all:
+                return (f"Error: 교체할 문자열이 {count}번 발견되었습니다. 더 구체적인 문자열을 지정하거나, "
+                        f"전부 바꾸려면 replace_all: true 를 주세요.")
 
-            # 교체 수행
-            new_content = content.replace(old_string, new_string, 1)
+            # 교체 수행 — replace_all 이면 전부, 아니면(고유) 첫 하나
+            new_content = content.replace(old_string, new_string) if replace_all else content.replace(old_string, new_string, 1)
+            _replaced_n = count if replace_all else 1
 
             _red_err = _red_write_prepare(file_path, new_content)  # RED 안전판(구문검증+백업)
             if _red_err:
@@ -1043,9 +1046,10 @@ def execute(tool_input: dict, context) -> str:
                     "success": True, "staged": True,
                     "path": os.path.abspath(file_path),
                     "live_path": os.path.abspath(_live_target),
-                    "message": f"격리 사본을 수정했습니다. {_STAGED_NOTE}"}, ensure_ascii=False)
+                    "message": f"격리 사본을 수정했습니다({_replaced_n}곳 교체). {_STAGED_NOTE}"}, ensure_ascii=False)
             _vg = _vocab_enforce(file_path)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
             return (f"Successfully edited {os.path.abspath(file_path)}"
+                    + (f" ({_replaced_n}곳 교체)" if _replaced_n > 1 else "")
                     + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "run_command":

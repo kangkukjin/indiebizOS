@@ -104,6 +104,13 @@ def test_p1_private_path_rejected_and_slot_names():
 
 # ---------------------------------------------------------------- P2 증류
 def _arm(monkeypatch, reply, recall=None):
+    # 가지 출생 관문(settle_topic, 2026-09-05)이 실 트리를 읽고 제안 원장을 쓰지 않게 — 임시 트리에 지도의 가지를 실존시킨다
+    import tempfile
+    import hippo_tree as _ht
+    _tree = tempfile.mkdtemp(prefix="idiom_tree_")
+    monkeypatch.setattr(_ht, "DOC_DIR", _tree)
+    os.makedirs(os.path.join(_tree, "개발", "프론트"), exist_ok=True)
+    open(os.path.join(_tree, "개발", "프론트", _ht.DOC_NAME), "w", encoding="utf-8").write("# 개발/프론트\n")
     import ibl_usage_db as mod
     import thread_context
     import hippo_tree
@@ -135,8 +142,13 @@ def _arm(monkeypatch, reply, recall=None):
 TOOL_CALLS = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in CALLS]
 
 
-def test_p2_phrase_saved_independently_of_word(monkeypatch):
+def test_p2_phrase_saved_independently_of_word(monkeypatch, tmp_path):
     import ibl_usage_rag as rag
+    import hippo_tree
+    # 가지 출생 관문(settle_topic, 2026-09-05): 지도가 말하는 가지는 트리에도 있어야 한다 — 임시 트리에 실존시킨다(실 트리 무접촉)
+    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
+    os.makedirs(tmp_path / "tree" / "개발" / "프론트")
+    (tmp_path / "tree" / "개발" / "프론트" / hippo_tree.DOC_NAME).write_text("# 개발/프론트\n", encoding="utf-8")
     saved = _arm(monkeypatch, {"intent": "프론트 컴포넌트를 찾아 읽고 고친다", "code": "", "topic": "개발/프론트",
                                "phrase": PHRASE, "slots": SLOTS})
     assert rag.distill_experience("파일 필드 추가해줘", TOOL_CALLS, top_score=0.3) is True

@@ -2665,7 +2665,7 @@ nodes:
               type: text
               placeholder: 곡·아티스트 검색
               required: true
-            action: '[sense:search_youtube]{query: "$q", count: 15}'
+            action: '[sense:search_youtube]{query: "$q", count: 45}'
             view:
             - type: list_action
               from: items
@@ -4936,6 +4936,7 @@ nodes:
       grep:
         params:
           limit: integer
+          include_logs: boolean
         aliases:
           root_path:
           - path
@@ -4947,7 +4948,7 @@ nodes:
         fixture: '[self:grep]{pattern: "provider", path: "."}'
         description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). content는 max_results(기본 100, 최대 2000)건 표본 + total(진짜 총 매칭 수)·truncated 봉투 키.
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴. path로 검색 루트, include로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). content는 max_results(기본 100, 최대 2000)건 표본 + total(진짜 총 매칭 수)·truncated 봉투 키. 로그(*.log·회전본)·_backups·.worktrees·spill 은 기본 제외(봉투 excluded 로 신고) — 로그를 뒤지려면 include_logs:true.
         keywords:
         - 검색
         - 내용검색
@@ -4958,10 +4959,12 @@ nodes:
         implementation: 2층 — ripgrep(rg) 있고 ASCII 패턴이면 rg --json 고속 경로, 아니면(한글 패턴 포함) 파이썬 줄 스캔. 파이썬 경로는 utf-8→cp949→utf-8(replace) 인코딩 폴백으로 옛 한글(cp949) 문서 침묵 탈락 방지
         target_key: pattern
       edit:
+        params:
+          replace_all: boolean
         returns: effect
-        description: 파일 부분 편집 (old_string → new_string 교체). 전체 덮어쓰기는 write.
+        description: 파일 부분 편집 (old_string → new_string 교체, replace_all:true 면 전부). 전체 덮어쓰기는 write.
         group: file
-        target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정.
+        target_description: 편집할 파일 경로. old_string/new_string 파라미터로 교체할 텍스트 지정. old_string 이 여러 곳이면 기본은 거절 — 전부 바꾸려면 replace_all:true.
         router: handler
         tool: edit_file
         implementation: Python 문자열 치환으로 파일 부분 편집

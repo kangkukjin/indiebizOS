@@ -20,7 +20,13 @@ _DEADLINE_S = 25.0
 # ripgrep(rg) 있으면 --json 고속 경로, 없으면 파이썬 줄 스캔 폴백(윈도우 등 rg 미보장).
 # ★한글(비ASCII) 패턴은 cp949 파일과 바이트 표현이 달라 rg 로는 원리적으로 못 찾으므로
 #   항상 파이썬 경로(인코딩 폴백)를 탄다. ASCII 패턴은 cp949 파일에서도 바이트가 같아 rg 안전.
-_GREP_SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache'}
+_GREP_SKIP_DIRS = {'.git', '.svn', '__pycache__', 'node_modules', '.venv', 'venv', '.tox', '.mypy_cache',
+                   # 잡음 폴더(2026-09-05, ep2836): 일회성 백업·수리 격리 사본(라이브의 중복)·스필 — 검색 모집단이 아니다
+                   '_backups', '.worktrees', 'spill'}
+# 로그는 기본 제외(2026-09-05, ep2836 실측: data/ 루트 grep 이 backend_keeper.log 에 걸려 다른 에피소드의 15.6K자
+# 프로그램을 컨텍스트로 끌어왔다). include_logs:true 로 되살린다. 회전본(.log.1)도 같은 부류.
+_GREP_LOG_RE = re.compile(r'\.log(\.\d+)?$', re.IGNORECASE)
+_GREP_LOG_GLOBS = ('!*.log', '!*.log.[0-9]*')
 _GREP_SKIP_EXTS = {'.pyc', '.pyo', '.so', '.dylib', '.dll', '.exe', '.bin',
                    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp', '.svg',
                    '.mp3', '.mp4', '.wav', '.avi', '.mov', '.mkv',
@@ -47,7 +53,7 @@ def _find_rg():
 _RG_BIN = _find_rg()
 
 
-def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars):
+def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False):
     """ripgrep --json 위임(고속 경로). 성공 시 (rows, search_done, hit_size_cap) —
     rows=[(절대경로, 줄번호, 내용)]. 매칭 0 은 정상 결과([], False, False).
     rg 실행 실패·패턴 문법 오류(exit 2)면 None 반환 → 호출부가 파이썬 경로로 폴백.
@@ -63,6 +69,9 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
         cmd += ["--glob", file_pattern]
     for d in _GREP_SKIP_DIRS:
         cmd += ["--glob", f"!**/{d}/**"]
+    if not include_logs:
+        for g in _GREP_LOG_GLOBS:
+            cmd += ["--glob", g]
     # svg 는 텍스트라 rg 가 검색해버림 — 파이썬 경로의 SKIP_EXTS 와 의미 정렬(나머지는 바이너리 자동 스킵)
     cmd += ["--glob", "!*.svg", "--regexp", pattern, root]
     rows, total_chars = [], 0
@@ -110,7 +119,7 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
     return rows, search_done, hit_size_cap
 
 
-def _rg_count(pattern, root, file_pattern, use_regex):
+def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False):
     """rg --count-matches 전수 계수(2026-08-08, ⑥′ 수리의 핵).
 
     내용을 반환하지 않으므로 토큰 상한이 필요 없다 — 표본이 아니라 **전수**.
@@ -127,6 +136,9 @@ def _rg_count(pattern, root, file_pattern, use_regex):
         cmd += ["--glob", file_pattern]
     for d in _GREP_SKIP_DIRS:
         cmd += ["--glob", f"!**/{d}/**"]
+    if not include_logs:
+        for g in _GREP_LOG_GLOBS:
+            cmd += ["--glob", g]
     cmd += ["--glob", "!*.svg", "--regexp", pattern, root]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
@@ -143,7 +155,7 @@ def _rg_count(pattern, root, file_pattern, use_regex):
     return dict(sorted(counts.items()))
 
 
-def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars):
+def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False):
     """파이썬 스캔 경로 — rg 없거나 한글(비ASCII) 패턴일 때.
     파일별로 _GREP_ENCODINGS 순서로 처음부터 재시도(부분 커밋 없음=중복 방지).
     반환 (rows, search_done, hit_size_cap, regex_error) — rows=[(절대경로, 줄번호, 내용)].
@@ -177,6 +189,7 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
             if os.path.isfile(f)
             and os.path.splitext(f)[1].lower() not in _GREP_SKIP_EXTS
             and not any(skip in f.split(os.sep) for skip in _GREP_SKIP_DIRS)
+            and (include_logs or not _GREP_LOG_RE.search(os.path.basename(f)))
         ]
 
     def _scan_one(fp):
@@ -244,6 +257,8 @@ def run(tool_input: dict, project_path: str) -> str:
     output_mode = (tool_input.get("output_mode") or "content").lower()
     if output_mode not in ("content", "files_with_matches", "count"):
         output_mode = "content"
+    include_logs = bool(tool_input.get("include_logs", False))   # 로그·회전본은 기본 제외(2026-09-05)
+    _excl_note = None if include_logs else "기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true"
     # max_results: 파라미터화(2026-08-08 ⑥′ — 옛 100 하드코딩은 올릴 길이 없었다)
     try:
         # ★정본 limit(별칭 max_results — ibl_actions.yaml aliases). 관문이 정규화하지만
@@ -262,7 +277,7 @@ def run(tool_input: dict, project_path: str) -> str:
     # 실행마다 다른 답), content 는 표본이되 진짜 total 을 봉투에 실을 수 있게 된다.
     full_counts = None  # {절대경로: 매칭수} 전수, 경로순 — None 이면 미가용(폴백)
     if _RG_BIN and pattern.isascii():
-        full_counts = _rg_count(pattern, root, file_pattern, use_regex)
+        full_counts = _rg_count(pattern, root, file_pattern, use_regex, include_logs)
 
     # === 2층 검색: rg 고속 경로 → 파이썬 인코딩-인지 경로 (_rg_grep/_py_grep 참조) ===
     # 한글(비ASCII) 패턴은 cp949 파일을 rg 가 원리적으로 못 찾으므로 파이썬 경로로.
@@ -270,13 +285,13 @@ def run(tool_input: dict, project_path: str) -> str:
     regex_error = None
     if _RG_BIN and pattern.isascii():
         rg_out = _rg_grep(pattern, root, file_pattern, use_regex,
-                          max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS)
+                          max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs)
         if rg_out is not None:
             raw_rows, search_done, hit_size_cap = rg_out
     if raw_rows is None:
         raw_rows, search_done, hit_size_cap, regex_error = _py_grep(
             pattern, root, file_pattern, use_regex,
-            max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS)
+            max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs)
 
     results = []
     match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
@@ -300,7 +315,7 @@ def run(tool_input: dict, project_path: str) -> str:
     if not results and not full_counts:
         # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어와
         # 변환자가 구조로 인식할 수 없다. 사람용 안내는 text 에 그대로.
-        return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0,
+        return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0, "excluded": _excl_note,
                            "truncated": False,
                            "text": f"No matches found for: {pattern}{regex_note}"},
                           ensure_ascii=False)
@@ -325,7 +340,7 @@ def run(tool_input: dict, project_path: str) -> str:
             file_order = [os.path.relpath(p, project_path) for p in full_counts]
         text = "\n".join(file_order) + (regex_note if full_counts is not None else truncated)
         items = [{"파일": fp} for fp in file_order]
-        return json.dumps({"text": text, "items": items, "total": grand_total,
+        return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
                            "truncated": False if full_counts is not None else truncated_flag},
                           ensure_ascii=False)
@@ -339,7 +354,7 @@ def run(tool_input: dict, project_path: str) -> str:
             pairs = [(fp, file_counts[fp]) for fp in file_order]
         text = "\n".join(f"{fp}: {cnt}" for fp, cnt in pairs) + (regex_note if full_counts is not None else truncated)
         items = [{"파일": fp, "매칭 수": cnt} for fp, cnt in pairs]
-        return json.dumps({"text": text, "items": items, "total": grand_total,
+        return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                            "total_files": n_files,
                            "truncated": False if full_counts is not None else truncated_flag},
                           ensure_ascii=False)
@@ -348,6 +363,6 @@ def run(tool_input: dict, project_path: str) -> str:
     text = "\n".join(results) + truncated
     # === 단일 통화 items(행 dict — 파일/줄번호/내용) + 정직한 절단 신고(⑥′) ===
     items = [{"파일": r[0], "줄번호": r[1], "내용": r[2]} for r in match_rows]
-    return json.dumps({"text": text, "items": items, "total": grand_total,
+    return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                        "total_files": n_files, "truncated": truncated_flag},
                       ensure_ascii=False)

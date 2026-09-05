@@ -90,6 +90,10 @@
             ],
             "description": "출력 형태: content(매칭 라인, 기본) / files_with_matches(파일 목록) / count(파일별 매칭 수)"
           },
+          "include_logs": {
+            "type": "boolean",
+            "description": "로그(*.log·회전본) 포함 여부 (기본 false — 로그·_backups·.worktrees·spill 은 검색 모집단에서 제외)"
+          },
           "limit": {
             "type": "integer",
             "description": "self:grep 파라미터"
@@ -223,6 +227,10 @@
           "new_string": {
             "type": "string",
             "description": "새 문자열"
+          },
+          "replace_all": {
+            "type": "boolean",
+            "description": "true 면 old_string 이 여러 곳이어도 전부 교체 (기본 false = 파일 내 고유해야 함)"
           },
           "path": {
             "type": "string",

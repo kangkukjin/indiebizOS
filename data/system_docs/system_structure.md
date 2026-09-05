@@ -297,10 +297,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<<<<<<< HEAD
 <!-- SELF_IMAGE:START -->**현 상태 = 6노드 154 액션(sense 43·self 50·limbs 14·others 17·engines 8·table 22)·41 도구 패키지 + 5 extensions·backend .py 306(test 제외)**<!-- SELF_IMAGE:END -->
-=======
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 154 액션(sense 43·self 50·limbs 14·others 17·engines 8·table 22)·41 도구 패키지 + 5 extensions·backend .py 306(test 제외)**<!-- SELF_IMAGE:END -->
->>>>>>> e58f3c6a (계기 은퇴(engines:icon·오디오 브리핑 계기) + 런처 계기 목록 배경 재확인)
 
 *최근 변경(2026-08-22): system_docs 목록 13문서(harness_haerye 누락분)·유령 파일(my_profile.txt) 제거·자가점검 카덴스 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

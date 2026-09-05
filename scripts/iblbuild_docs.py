@@ -411,6 +411,7 @@ def apply_docs(root: Path, data: dict | None) -> tuple[list[str], list[str]]:
         return [], ["실측 수집 불가(data 없음) — 문서 파생 스킵"]
     written, issues = [], []
     for rel in dict.fromkeys(t[0] for t in DOC_TARGETS):
+        issues.extend(_residue_issues(rel, (root / rel).read_text(encoding="utf-8")))
         new_text, doc_issues = _render_doc(root, rel, facts)
         issues.extend(doc_issues)
         if new_text is None:
@@ -422,13 +423,34 @@ def apply_docs(root: Path, data: dict | None) -> tuple[list[str], list[str]]:
     return written, issues
 
 
+_CONFLICT_MARKS = ("<<<<<<< ", "=======", ">>>>>>> ")
+
+
+def _residue_issues(rel: str, text: str) -> list[str]:
+    """머지 충돌 잔재 관문 (2026-09-06 실측): 커밋 재쌓기(cherry-pick)가 마커 구간에서 충돌하면
+    구간이 두 벌이 되고 `<<<<<<<`/`>>>>>>>` 가 그 사이에 남는다. 렌더러는 첫 START~END 한 벌만 다시
+    쓰므로 나머지 한 벌은 내용이 같아 '일치'로 통과했고, 표식은 구간 밖이라 아무도 대조하지 않았다 —
+    그대로 커밋·푸시됐다. 파생 대상 문서 안의 충돌 표식과 중복 START 는 stale 과 같은 급의 실패다."""
+    out = []
+    lines = text.split("\n")
+    if any(l.startswith(_CONFLICT_MARKS[0]) or l.startswith(_CONFLICT_MARKS[2]) or l == _CONFLICT_MARKS[1]
+           for l in lines):
+        out.append(f"{rel}: 머지 충돌 표식(<<<<<<< / ======= / >>>>>>>)이 남아 있다 — 손으로 풀고 재생성")
+    starts = [l for l in lines if "<!-- " in l and ":START -->" in l]
+    dup = sorted({l.strip() for l in starts if starts.count(l) > 1})
+    if dup:
+        out.append(f"{rel}: 파생 구간 START 마커 중복 {dup} — 구간이 두 벌이면 한 벌만 재생성된다")
+    return out
+
+
 def check_docs(root: Path, data: dict | None) -> list[str]:
-    """--check: 파생 구간이 실측과 일치하는지. 불일치·패턴 불발 전부 issue."""
+    """--check: 파생 구간이 실측과 일치하는지. 불일치·패턴 불발·충돌 잔재 전부 issue."""
     facts = collect_doc_facts(root, data)
     if facts is None:
         return []  # data 파싱 실패는 삼각 검증이 이미 잡는다 — 이중 보고 안 함
     issues: list[str] = []
     for rel in dict.fromkeys(t[0] for t in DOC_TARGETS):
+        issues.extend(_residue_issues(rel, (root / rel).read_text(encoding="utf-8")))
         new_text, doc_issues = _render_doc(root, rel, facts)
         issues.extend(doc_issues)
         if new_text is None:

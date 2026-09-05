@@ -46,8 +46,18 @@ def _get_location_handler():
     if location_path not in sys.path:
         sys.path.insert(0, location_path)
 
-    import handler
-    return handler
+    # ★맨 `import handler` 금지(2026-09-05): 패키지 핸들러는 전부 파일명이 handler.py 라 맨 이름으로 들이면
+    #   sys.modules['handler'] 하나를 여러 패키지가 다투어 뒤에 온 쪽이 남의 모듈을 받는다(CI 실측: notebook 시험이
+    #   web 핸들러를 받아 18건 빨강). tool_loader 와 같은 규약 — 고유 이름으로 spec-load.
+    import importlib.util
+    _name = "tool_handler_location_services"
+    mod = sys.modules.get(_name)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(_name, os.path.join(location_path, "handler.py"))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[_name] = mod
+        spec.loader.exec_module(mod)
+    return mod
 
 
 # ============ 스캔 관련 ============

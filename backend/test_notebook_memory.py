@@ -12,6 +12,24 @@ import pytest
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
+ROOT = str(Path(__file__).resolve().parent.parent)
+
+
+def _pkg_handler(pkg: str):
+    """패키지 handler 를 **고유 이름**으로 spec-load(캐시) — 맨 `import handler` 는 sys.modules 한 칸을 패키지끼리 다투게 해
+    시험 순서에 따라 남의 핸들러가 잡힌다(2026-09-05 CI 실측). 형제 모듈은 그 패키지 폴더가 sys.path 에 있으면 그대로 풀린다."""
+    import importlib.util
+    pkg_dir = os.path.join(ROOT, "data", "packages", "installed", "tools", pkg)
+    if pkg_dir not in sys.path:
+        sys.path.insert(0, pkg_dir)
+    name = f"tool_handler_{pkg.replace('-', '_')}_under_test"
+    mod = sys.modules.get(name)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(name, os.path.join(pkg_dir, "handler.py"))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[name] = mod
+        spec.loader.exec_module(mod)
+    return mod
 
 
 @pytest.fixture
@@ -20,7 +38,7 @@ def nb(tmp_path, monkeypatch):
     if str(pkg) not in sys.path:
         sys.path.insert(0, str(pkg))
     import notebook_core as core
-    import handler as H
+    H = _pkg_handler("notebook")
     monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path / "nb")
     monkeypatch.setattr(core, "DB_PATH", tmp_path / "nb" / "notebooks.db")
     (tmp_path / "nb").mkdir()

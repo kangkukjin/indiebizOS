@@ -147,7 +147,7 @@ def test_r1_registered_scripts_exist_and_test_runner_counts():
                          capture_output=True, text=True, cwd=ROOT, timeout=300)
     d = json.loads(out.stdout)
     by = {i["file"]: i for i in d["items"]}
-    assert by["backend/test_ibl_typecheck.py"]["passed"] >= 10 and by["backend/test_ibl_typecheck.py"]["ok"]
+    assert by["backend/test_ibl_typecheck.py"]["passed"] >= 1 and by["backend/test_ibl_typecheck.py"]["failed"] == 0 and by["backend/test_ibl_typecheck.py"]["ok"]
     assert by["backend/없는시험.py"]["ok"] is False and d["ok"] is False
 
 

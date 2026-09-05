@@ -29,6 +29,15 @@ import ibl_typecheck as TC  # noqa: E402
 SEARCH = '[sense:search]{query: "x", limit: 3}'
 
 
+@pytest.fixture(autouse=True)
+def _fixed_catalog(monkeypatch):
+    """열 카탈로그(data/ibl_return_shapes.json)는 gitignore 된 로컬 관측 파일 — CI 에는 없다. 시험은 고정 카탈로그로 돈다."""
+    import ibl_access
+    cat = {"sense:search": {"kind": "items", "keys": ["title", "meta", "summary", "url"]},
+           "sense:crawl": {"kind": "items", "keys": ["type", "text"]}}
+    monkeypatch.setattr(ibl_access, "_return_shapes", lambda: cat)
+
+
 def _tc(code):
     return TC.typecheck_code(code)
 

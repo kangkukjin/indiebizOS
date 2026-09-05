@@ -110,7 +110,12 @@ def test_l5_select_currency_and_scope_invariant(lg, tmp_path):
 
 
 def test_l6_dispatch_default_and_root_guard(lg):
-    import handler
+    import importlib.util
+    _p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "packages", "installed", "tools", "system_essentials", "handler.py")
+    _spec = importlib.util.spec_from_file_location("tool_handler_system_essentials_under_test", _p)
+    handler = sys.modules.get(_spec.name) or importlib.util.module_from_spec(_spec)
+    if _spec.name not in sys.modules:
+        sys.modules[_spec.name] = handler; _spec.loader.exec_module(handler)   # 맨 import handler 금지(모듈 이름 충돌)
     assert set(handler._OP_DISPATCHERS["ledger_op"]) == {"select", "append", "upsert", "set"}
     assert handler._OP_DEFAULTS["ledger_op"] == "select"
     r = lg.op_append({"path": "/etc/ledger.json", "item": {"id": 1}})

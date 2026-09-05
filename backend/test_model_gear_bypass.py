@@ -21,6 +21,9 @@ import re
 import boot_paths  # noqa: F401
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+import pytest  # noqa: E402
+pytestmark = pytest.mark.skipif(not (ROOT / "data" / "model_gear.json").exists(),
+                                reason="data/model_gear.json(런타임 설정, gitignore) 없음 — 설정이 있는 몸에서만 도는 시험")
 PKG_ROOT = ROOT / "data" / "packages"
 
 # 티어 설정 파일 이름들 — model_gear.json 의 `tiers` 가 정본이므로 거기서 읽는다

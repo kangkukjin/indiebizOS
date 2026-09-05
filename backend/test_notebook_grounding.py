@@ -24,8 +24,25 @@ import boot_paths  # noqa: E402,F401
 sys.path.insert(0, os.path.join(ROOT, "data", "packages", "installed", "tools", "notebook"))
 
 
+def _pkg_handler(pkg: str):
+    """패키지 handler 를 **고유 이름**으로 spec-load(캐시) — 맨 `import handler` 는 sys.modules 한 칸을 패키지끼리 다투게 해
+    시험 순서에 따라 남의 핸들러가 잡힌다(2026-09-05 CI 실측). 형제 모듈은 그 패키지 폴더가 sys.path 에 있으면 그대로 풀린다."""
+    import importlib.util
+    pkg_dir = os.path.join(ROOT, "data", "packages", "installed", "tools", pkg)
+    if pkg_dir not in sys.path:
+        sys.path.insert(0, pkg_dir)
+    name = f"tool_handler_{pkg.replace('-', '_')}_under_test"
+    mod = sys.modules.get(name)
+    if mod is None:
+        spec = importlib.util.spec_from_file_location(name, os.path.join(pkg_dir, "handler.py"))
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[name] = mod
+        spec.loader.exec_module(mod)
+    return mod
+
+
 def test_n1_mark_only_or_uncited_is_not_in_sources():
-    import handler as H
+    H = _pkg_handler("notebook")
     assert H._is_not_in_sources("NOT_IN_SOURCES", 12)
     assert H._is_not_in_sources("발췌는 사례를 나열하지만 순위는 없습니다. 따라서 답할 수 없습니다.\n\nNOT_IN_SOURCES", 12)
     assert H._is_not_in_sources("근거 [99] 로 답합니다. NOT_IN_SOURCES", 12)      # 범위 밖 인용은 무효
@@ -34,20 +51,20 @@ def test_n1_mark_only_or_uncited_is_not_in_sources():
 
 
 def test_n2_strip_mark_keeps_answer():
-    import handler as H
+    H = _pkg_handler("notebook")
     out = H._strip_mark("답 [1][3].\nNOT_IN_SOURCES\n한계: 순위는 없다 [2].")
     assert "NOT_IN_SOURCES" not in out and out.startswith("답 [1][3].") and out.endswith("[2].")
 
 
 def test_n3_prompt_contract():
     import inspect
-    import handler as H
+    H = _pkg_handler("notebook")
     src = inspect.getsource(H._grounded_generate)
     assert "주제를 전혀 다루지 않을 때만" in src and "한계를 밝혀라" in src
 
 
 def test_n4_reask_only_when_search_covered_the_topic():
-    import handler as H
+    H = _pkg_handler("notebook")
     hi = [{"score": 0.70, "text": "x"}, {"score": 0.66, "text": "y"}]
     lo = [{"score": 0.31, "text": "x"}]
     assert H._should_reask("NOT_IN_SOURCES", hi)
@@ -58,7 +75,7 @@ def test_n4_reask_only_when_search_covered_the_topic():
 
 # ---------------------------------------------------------------- N5·N6 전체 소개(digest)
 def test_n5_windows_keep_order_and_do_not_split_chunks():
-    import handler as H
+    H = _pkg_handler("notebook")
     chunks = [{"id": i, "loc": f"[{i}:00]", "text": "x" * 1200} for i in range(10)]
     wins = H._windows(chunks, limit=5000)
     assert [len(w) for w in wins] == [4, 4, 2] and wins[0][0]["id"] == 0 and wins[-1][-1]["id"] == 9
@@ -66,7 +83,7 @@ def test_n5_windows_keep_order_and_do_not_split_chunks():
 
 def test_n6_ask_hands_overview_to_digest(monkeypatch):
     import types
-    import handler as H
+    H = _pkg_handler("notebook")
     import notebook_core as core
     monkeypatch.setattr(core, "search_chunks", lambda name, q, top_k=8, source=None: {
         "success": True, "notebook": name, "note": "", "search_type": "hybrid",
@@ -91,7 +108,7 @@ def test_n6_ask_hands_overview_to_digest(monkeypatch):
 # ---------------------------------------------------------------- N7·N8 소스 카드·지도
 def test_n7_card_written_and_map_reads_gist(monkeypatch, tmp_path):
     import types, json
-    import handler as H
+    H = _pkg_handler("notebook")
     import notebook_core as core
     monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
     src = {"id": 7, "title": "강의", "kind": "youtube", "status": "ready", "char_count": 1200}
@@ -114,7 +131,7 @@ def test_n7_card_written_and_map_reads_gist(monkeypatch, tmp_path):
 
 def test_n8_big_source_goes_through_gists(monkeypatch, tmp_path):
     import types
-    import handler as H
+    H = _pkg_handler("notebook")
     import notebook_core as core
     monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
     monkeypatch.setattr(H, "CARD_DIRECT_MAX", 500)
@@ -131,7 +148,7 @@ def test_n8_big_source_goes_through_gists(monkeypatch, tmp_path):
 # ---------------------------------------------------------------- N9 문서 단위 ask
 def test_n9_ask_reads_selected_docs_whole_and_cites(monkeypatch, tmp_path):
     import types, json
-    import handler as H
+    H = _pkg_handler("notebook")
     import notebook_core as core
     monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
     srcs = [{"id": 1, "title": "A보고서", "kind": "file", "char_count": 3000, "status": "ready"},
@@ -186,7 +203,7 @@ def test_n9_ask_reads_selected_docs_whole_and_cites(monkeypatch, tmp_path):
 # ---------------------------------------------------------------- N11 카드 읽기·저장(앱 편집)
 def test_n11_card_read_and_human_save_feeds_map(monkeypatch, tmp_path):
     import json
-    import handler as H
+    H = _pkg_handler("notebook")
     import notebook_core as core
     monkeypatch.setattr(core, "NOTEBOOK_DIR", tmp_path)
     src = {"id": 7, "title": "강의", "kind": "youtube", "status": "ready", "char_count": 100}
